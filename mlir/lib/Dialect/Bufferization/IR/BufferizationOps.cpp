@@ -908,7 +908,7 @@ std::optional<Value> CloneOp::buildClone(OpBuilder &builder, Value alloc) {
 
 LogicalResult DeallocOp::inferReturnTypes(
     MLIRContext *context, std::optional<::mlir::Location> location,
-    ValueRange operands, DictionaryAttr attributes, OpaqueProperties properties,
+    ValueRange operands, DictionaryAttr attributes, PropertyRef properties,
     RegionRange regions, SmallVectorImpl<Type> &inferredReturnTypes) {
   DeallocOpAdaptor adaptor(operands, attributes, properties, regions);
   inferredReturnTypes = SmallVector<Type>(adaptor.getRetained().size(),

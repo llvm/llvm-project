@@ -271,7 +271,7 @@ body:             |
 
     DRI.clear().reuse(Cst0).reuse(Cst1);
     const RegisterIdx RematAdd01 =
-        Remater.rematerializeToPos(/*RootIdx=*/Add01, NopMI, DRI);
+        Remater.rematerializeToPos(Add01, MBB1, NopMI, DRI);
     // This adds an additional user to the used constants, and does not change
     // existing users for the original register.
     EXPECT_NO_USERS(RematAdd01);
@@ -281,14 +281,14 @@ body:             |
 
     DRI.clear();
     const RegisterIdx RematCst3 =
-        Remater.rematerializeToPos(/*RootIdx=*/Cst3, NopMI, DRI);
+        Remater.rematerializeToPos(Cst3, MBB1, NopMI, DRI);
     // This does not change existing users for the original register.
     EXPECT_NO_USERS(RematCst3);
     EXPECT_NUM_USERS(Cst3, 1);
 
     DRI.clear().useRemat(Add01, RematAdd01).useRemat(Cst3, RematCst3);
     const RegisterIdx RematAdd23 =
-        Remater.rematerializeToPos(/*RootIdx=*/Add23, NopMI, DRI);
+        Remater.rematerializeToPos(Add23, MBB1, NopMI, DRI);
     // This adds a user to used rematerializations, and does not change existing
     // users for the original register.
     EXPECT_NO_USERS(RematAdd23);
@@ -298,7 +298,7 @@ body:             |
 
     // Finally transfer the NOP user from the original to the rematerialized
     // register.
-    Remater.transferUser(Add23, RematAdd23, *NopMI);
+    Remater.transferUser(Add23, RematAdd23, MBB1, *NopMI);
     EXPECT_NO_USERS(Add23);
     EXPECT_NUM_USERS(RematAdd23, 1);
 
@@ -516,24 +516,26 @@ body:             |
   // regions are empty. %2's region ends at the end of its parent block, whereas
   // %3's region ends at a terminator MI (S_BRANCH).
   Remater.rematerializeToRegion(/*RootIdx=*/Cst2, /*UseRegion=*/MBB3, DRI);
-  Remater.rematerializeToRegion(/*RootIdx=*/Cst3, /*UseRegion=*/MBB3, DRI);
+  Remater.rematerializeToRegion(/*RootIdx=*/Cst3, /*UseRegion=*/MBB3,
+                                DRI.clear());
   RegionSizes[MBB1] -= 1;
   RegionSizes[MBB2] -= 1;
   RegionSizes[MBB3] += 2;
   ASSERT_REGION_SIZES(RegionSizes);
 
-  // We can move %0 and %1 to bb.2 because the boundary of bb.2's region points
-  // to the region terminator (S_BRANCH), which is a valid position to insert
-  // before. We couldn't move them to bb.1 however, since after %2 is
-  // rematerialized there is no MI left to reference inside the region.
-  RegisterIdx RematCst0 =
-      Remater.rematerializeToPos(/*RootIdx=*/Cst0, (*Regions)[MBB2].first, DRI);
-  RegisterIdx RematCst1 =
-      Remater.rematerializeToPos(/*RootIdx=*/Cst1, (*Regions)[MBB2].first, DRI);
+  // Move %0 to the empty MBB1 block/region.
+  const RegisterIdx RematCst0 =
+      Remater.rematerializeToRegion(Cst0, MBB1, DRI.clear());
   Remater.transferRegionUsers(Cst0, RematCst0, MBB3);
+
+  // Move %1 to the empty MBB2 region, right before the S_BRANCH terminator.
+  const RegisterIdx RematCst1 = Remater.rematerializeToPos(
+      Cst1, MBB2, (*Regions)[MBB2].first, DRI.clear());
   Remater.transferRegionUsers(Cst1, RematCst1, MBB3);
+
   RegionSizes[MBB0] -= 2;
-  RegionSizes[MBB2] += 2;
+  RegionSizes[MBB1] += 1;
+  RegionSizes[MBB2] += 1;
   ASSERT_REGION_SIZES(RegionSizes);
 
   Remater.updateLiveIntervals();

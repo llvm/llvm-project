@@ -453,17 +453,17 @@ public:
   /// value to a boolean and return that. Otherwise return an error.
   llvm::Expected<bool> GetValueAsBool();
 
-  /// Update an existing integer ValueObject with a new integer value. This
-  /// is only intended to be used with 'temporary' ValueObjects, i.e. ones that
-  /// are not associated with program variables. It does not update program
-  /// memory, registers, stack, etc.
-  void SetValueFromInteger(const llvm::APInt &value, Status &error);
+  /// Update an existing integer ValueObject with a new integer value. If
+  /// can_update_var is true, will allow updating objects associated with
+  /// program variables; otherwise not.
+  void SetValueFromInteger(const llvm::APInt &value, Status &error,
+                           bool can_update_var = true);
 
   /// Update an existing integer ValueObject with an integer value created
-  /// frome 'new_val_sp'.  This is only intended to be used with 'temporary'
-  /// ValueObjects, i.e. ones that are not associated with program variables.
-  /// It does not update program  memory, registers, stack, etc.
-  void SetValueFromInteger(lldb::ValueObjectSP new_val_sp, Status &error);
+  /// frome 'new_val_sp'. If can_update_var is true, will allow updating objects
+  /// associated with program variables; otherwise not.
+  void SetValueFromInteger(lldb::ValueObjectSP new_val_sp, Status &error,
+                           bool can_update_var = true);
 
   virtual bool SetValueFromCString(const char *value_str, Status &error);
 

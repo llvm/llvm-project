@@ -273,15 +273,15 @@ public:
 
   /// Locate the scripting resource given a module specification.
   ///
-  /// Locating the file should happen only on the local computer or using the
-  /// current computers global settings.
-  FileSpecList LocateExecutableScriptingResources(Target *target,
-                                                  Module &module,
-                                                  Stream &feedback_stream);
+  /// Returns a map from a located script's \c FileSpec to the
+  /// \c LoadScriptFromSymFile with which LLDB should load it.
+  llvm::SmallDenseMap<FileSpec, LoadScriptFromSymFile>
+  LocateExecutableScriptingResources(Target *target, Module &module,
+                                     Stream &feedback_stream);
 
   /// Locate the platform-specific scripting resource given a module
   /// specification.
-  virtual FileSpecList
+  virtual llvm::SmallDenseMap<FileSpec, LoadScriptFromSymFile>
   LocateExecutableScriptingResourcesForPlatform(Target *target, Module &module,
                                                 Stream &feedback_stream);
 
@@ -291,8 +291,10 @@ public:
   ///
   /// E.g., for Python it will look for a script at:
   ///   \c <safe-path>/<module-name>/<module-name>.py
-  static FileSpecList LocateExecutableScriptingResourcesFromSafePaths(
-      Stream &feedback_stream, FileSpec module_spec, const Target &target);
+  static llvm::SmallDenseMap<FileSpec, LoadScriptFromSymFile>
+  LocateExecutableScriptingResourcesFromSafePaths(Stream &feedback_stream,
+                                                  FileSpec module_spec,
+                                                  const Target &target);
 
   /// \param[in] module_spec
   ///     The ModuleSpec of a binary to find.

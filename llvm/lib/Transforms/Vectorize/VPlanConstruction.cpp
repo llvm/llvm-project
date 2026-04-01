@@ -1216,11 +1216,21 @@ void VPlanTransforms::attachCheckBlock(VPlan &Plan, Value *Cond,
   addBypassBranch(Plan, CheckBlockVPBB, CondVPV, AddBranchWeights);
 }
 
+/// Return an insert point in \p EntryVPBB after existing VPIRPhi,
+/// VPIRInstruction and VPExpandSCEVRecipe recipes.
+static VPBasicBlock::iterator getExpandSCEVInsertPt(VPBasicBlock *EntryVPBB) {
+  auto InsertPt = EntryVPBB->begin();
+  while (InsertPt != EntryVPBB->end() &&
+         isa<VPExpandSCEVRecipe, VPIRPhi, VPIRInstruction>(&*InsertPt))
+    ++InsertPt;
+  return InsertPt;
+}
+
 void VPlanTransforms::addMinimumIterationCheck(
     VPlan &Plan, ElementCount VF, unsigned UF,
     ElementCount MinProfitableTripCount, bool RequiresScalarEpilogue,
     bool TailFolded, Loop *OrigLoop, const uint32_t *MinItersBypassWeights,
-    DebugLoc DL, PredicatedScalarEvolution &PSE) {
+    DebugLoc DL, PredicatedScalarEvolution &PSE, VPBasicBlock *CheckBlock) {
   // Generate code to check if the loop's trip count is less than VF * UF, or
   // equal to it in case a scalar epilogue is required; this implies that the
   // vector trip count is zero. This check also covers the case where adding one
@@ -1248,7 +1258,9 @@ void VPlanTransforms::addMinimumIterationCheck(
   };
 
   VPBasicBlock *EntryVPBB = Plan.getEntry();
-  VPBuilder Builder(EntryVPBB);
+  // Place compare and branch in CheckBlock if given, ExpandSCEVs in Entry.
+  VPBasicBlock *CheckVPBB = CheckBlock ? CheckBlock : EntryVPBB;
+  VPBuilder Builder(CheckVPBB);
   VPValue *TripCountCheck = Plan.getFalse();
   const SCEV *Step = GetMinTripCount();
   // TripCountCheck = false, folding tail implies positive vector trip
@@ -1266,7 +1278,9 @@ void VPlanTransforms::addMinimumIterationCheck(
                                     TripCount, Step)) {
       // Generate the minimum iteration check only if we cannot prove the
       // check is known to be true, or known to be false.
-      VPValue *MinTripCountVPV = Builder.createExpandSCEV(Step);
+      // ExpandSCEV must be placed in Entry.
+      VPBuilder SCEVBuilder(EntryVPBB, getExpandSCEVInsertPt(EntryVPBB));
+      VPValue *MinTripCountVPV = SCEVBuilder.createExpandSCEV(Step);
       TripCountCheck = Builder.createICmp(
           CmpPred, TripCountVPV, MinTripCountVPV, DL, "min.iters.check");
     } // else step known to be < trip count, use TripCountCheck preset to false.
@@ -1281,12 +1295,25 @@ void VPlanTransforms::addMinimumIterationCheck(
   }
 }
 
+void VPlanTransforms::addIterationCountCheckBlock(
+    VPlan &Plan, ElementCount VF, unsigned UF, bool RequiresScalarEpilogue,
+    Loop *OrigLoop, const uint32_t *MinItersBypassWeights, DebugLoc DL,
+    PredicatedScalarEvolution &PSE) {
+  auto *CheckBlock = Plan.createVPBasicBlock("vector.main.loop.iter.check");
+  insertCheckBlockBeforeVectorLoop(Plan, CheckBlock);
+  addMinimumIterationCheck(Plan, VF, UF, ElementCount::getFixed(0),
+                           RequiresScalarEpilogue, /*TailFolded=*/false,
+                           OrigLoop, MinItersBypassWeights, DL, PSE,
+                           CheckBlock);
+}
+
 void VPlanTransforms::addMinimumVectorEpilogueIterationCheck(
-    VPlan &Plan, Value *TripCount, Value *VectorTripCount,
-    bool RequiresScalarEpilogue, ElementCount EpilogueVF, unsigned EpilogueUF,
-    unsigned MainLoopStep, unsigned EpilogueLoopStep, ScalarEvolution &SE) {
+    VPlan &Plan, Value *VectorTripCount, bool RequiresScalarEpilogue,
+    ElementCount EpilogueVF, unsigned EpilogueUF, unsigned MainLoopStep,
+    unsigned EpilogueLoopStep, ScalarEvolution &SE) {
   // Add the minimum iteration check for the epilogue vector loop.
-  VPValue *TC = Plan.getOrAddLiveIn(TripCount);
+  VPValue *TC = Plan.getTripCount();
+  Value *TripCount = TC->getLiveInIRValue();
   VPBuilder Builder(cast<VPBasicBlock>(Plan.getEntry()));
   VPValue *VFxUF = Builder.createExpandSCEV(SE.getElementCount(
       TripCount->getType(), (EpilogueVF * EpilogueUF), SCEV::FlagNUW));

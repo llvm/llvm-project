@@ -298,7 +298,6 @@ LogicalResult CSEDriver::simplifyOperation(ScopedMapTy &knownValues,
   // Look for an existing definition for the operation.
   if (auto *existing = knownValues.lookup(op)) {
     replaceUsesAndDelete(knownValues, op, existing, hasSSADominance);
-    ++numCSE;
     return success();
   }
 

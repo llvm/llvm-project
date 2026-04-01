@@ -340,6 +340,8 @@ static void fillAMDGCNFeatureMap(StringRef GPU, const Triple &T,
     Features["atomic-fmin-fmax-global-f32"] = true;
     break;
   case GK_GFX1170:
+  case GK_GFX1171:
+  case GK_GFX1172:
     Features["ci-insts"] = true;
     Features["dot7-insts"] = true;
     Features["dot8-insts"] = true;

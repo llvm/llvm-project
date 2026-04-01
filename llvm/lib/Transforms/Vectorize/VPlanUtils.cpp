@@ -432,10 +432,8 @@ bool vputils::isUniformAcrossVFsAndUFs(VPValue *V) {
                all_of(R->operands(), isUniformAcrossVFsAndUFs);
       })
       .Case([](const VPInstruction *VPI) {
-        return (VPI->isScalarCast() &&
-                isUniformAcrossVFsAndUFs(VPI->getOperand(0))) ||
-               (preservesUniformity(VPI->getOpcode()) &&
-                all_of(VPI->operands(), isUniformAcrossVFsAndUFs));
+        return preservesUniformity(VPI->getOpcode()) &&
+               all_of(VPI->operands(), isUniformAcrossVFsAndUFs);
       })
       .Case([](const VPWidenCastRecipe *R) {
         // A cast is uniform according to its operand.

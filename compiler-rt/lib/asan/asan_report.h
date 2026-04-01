@@ -53,6 +53,8 @@ void ReportDeadlySignal(const SignalContext &sig);
 void ReportNewDeleteTypeMismatch(uptr addr, uptr delete_size,
                                  uptr delete_alignment,
                                  BufferedStackTrace *free_stack);
+void ReportFreeSizeMismatch(uptr addr, uptr delete_size, uptr delete_alignment,
+                            BufferedStackTrace* free_stack);
 void ReportDoubleFree(uptr addr, BufferedStackTrace *free_stack);
 void ReportFreeNotMalloced(uptr addr, BufferedStackTrace *free_stack);
 void ReportAllocTypeMismatch(uptr addr, BufferedStackTrace *free_stack,

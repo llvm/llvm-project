@@ -71,31 +71,30 @@ template <> void llvm::GenericUniformityAnalysisImpl<SSAContext>::initialize() {
   // and will be reported as such by isDivergent() (not in UniformValues).
   SmallVector<const Value *, 4> DivergentArgs;
   for (auto &Arg : F.args()) {
-    if (TTI->getInstructionUniformity(&Arg) ==
-        InstructionUniformity::NeverUniform)
+    if (TTI->getValueUniformity(&Arg) == ValueUniformity::NeverUniform)
       DivergentArgs.push_back(&Arg);
     else
       UniformValues.insert(&Arg);
   }
   for (auto &I : instructions(F)) {
-    InstructionUniformity IU = TTI->getInstructionUniformity(&I);
+    ValueUniformity IU = TTI->getValueUniformity(&I);
     switch (IU) {
-    case InstructionUniformity::AlwaysUniform:
+    case ValueUniformity::AlwaysUniform:
       UniformValues.insert(&I);
       addUniformOverride(I);
       continue;
-    case InstructionUniformity::NeverUniform:
+    case ValueUniformity::NeverUniform:
       // Skip inserting -- divergent by definition. Add to Worklist directly
       // so compute() propagates divergence to users.
       if (I.isTerminator())
         DivergentTermBlocks.insert(I.getParent());
       Worklist.push_back(&I);
       continue;
-    case InstructionUniformity::Custom:
+    case ValueUniformity::Custom:
       UniformValues.insert(&I);
       addCustomUniformityCandidate(&I);
       continue;
-    case InstructionUniformity::Default:
+    case ValueUniformity::Default:
       UniformValues.insert(&I);
       break;
     }

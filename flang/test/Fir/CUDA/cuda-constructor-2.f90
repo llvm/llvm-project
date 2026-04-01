@@ -29,7 +29,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<!llvm.ptr, dense<
 // CHECK-DAG: %[[BOX:.*]] = fir.address_of(@_QMmtestsEndev) : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
 // CHECK-DAG: %[[BOXREF:.*]] = fir.convert %[[BOX]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<i8>
 // CHECK-DAG: fir.call @_FortranACUFRegisterVariable(%[[MODULE:.*]], %[[BOXREF]], %{{.*}}, %{{.*}})
-// CHECK: fir.call @_FortranACUFInitModule
+// CHECK-NOT: fir.call @_FortranACUFInitModule
 
 // -----
 
@@ -78,7 +78,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<i8 = dense<8> : vector<2xi64>, i
 // CHECK: llvm.func internal @__cudaFortranConstructor()
 // CHECK: fir.address_of(@_QMmEa00)
 // CHECK: fir.call @_FortranACUFRegisterVariable
-// CHECK: fir.call @_FortranACUFInitModule
+// CHECK-NOT: fir.call @_FortranACUFInitModule
 
 // -----
 

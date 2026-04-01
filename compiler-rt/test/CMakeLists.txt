@@ -86,8 +86,8 @@ if(COMPILER_RT_CAN_EXECUTE_TESTS)
     compiler_rt_test_runtime(ubsan)
     compiler_rt_test_runtime(sanitizer_common)
 
-    # OpenBSD not supporting asan, cannot run the tests
-    if(COMPILER_RT_BUILD_LIBFUZZER AND NOT "${CMAKE_SYSTEM_NAME}" STREQUAL "OpenBSD" AND NOT ANDROID)
+    # GNU/Hurd and OpenBSD not supporting asan, cannot run the tests
+    if(COMPILER_RT_BUILD_LIBFUZZER AND NOT "${CMAKE_SYSTEM_NAME}" STREQUAL "GNU" AND NOT "${CMAKE_SYSTEM_NAME}" STREQUAL "OpenBSD" AND NOT ANDROID)
       compiler_rt_test_runtime(fuzzer)
 
       # These tests don't need an additional runtime but use asan runtime.

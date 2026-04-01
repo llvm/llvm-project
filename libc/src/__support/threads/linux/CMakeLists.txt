@@ -31,23 +31,6 @@ else()
   libc_set_definition(monotonicity_flags LIBC_COPT_TIMEOUT_ENSURE_MONOTONICITY=0)
 endif()
 
-libc_set_definition(rwlock_default_spin_count "LIBC_COPT_RWLOCK_DEFAULT_SPIN_COUNT=${LIBC_CONF_RWLOCK_DEFAULT_SPIN_COUNT}")
-add_header_library(
-  rwlock
-  HDRS
-    rwlock.h
-  COMPILE_OPTIONS
-    ${rwlock_default_spin_count}
-    ${monotonicity_flags}
-  DEPENDS
-    .futex_utils
-    libc.src.__support.threads.raw_mutex
-    libc.src.__support.common
-    libc.src.__support.OSUtil.osutil
-    libc.src.__support.CPP.limits
-    libc.src.__support.threads.identifier
-)
-
 add_object_library(
   thread
   SRCS

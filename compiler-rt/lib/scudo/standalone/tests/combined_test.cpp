@@ -1471,6 +1471,30 @@ TEST(ScudoCombinedTest, FullUsableSize) {
   VerifyIterateOverUsableSize<AllocatorT>(*Allocator);
 }
 
+TEST(ScudoCombinedTest, ReallocUsableSize) {
+  using AllocatorT = TestAllocator<TestFullUsableSizeConfig>;
+  auto Allocator = std::unique_ptr<AllocatorT>(new AllocatorT());
+
+  scudo::uptr Size = 1000;
+  void *P = Allocator->allocate(Size, Origin);
+  scudo::uptr UsableSize = Allocator->getUsableSize(P);
+  std::vector<unsigned char> Buffer(UsableSize);
+  for (size_t I = 0; I < UsableSize; I++) {
+    Buffer[I] = I & 0xff;
+  }
+  memcpy(P, Buffer.data(), UsableSize);
+  EXPECT_LE(Size, UsableSize);
+
+  scudo::uptr NewSize = 2 * UsableSize;
+  void *NewP = Allocator->reallocate(P, NewSize);
+  EXPECT_NE(NewP, P);
+  for (size_t I = 0; I < UsableSize; I++) {
+    EXPECT_EQ((reinterpret_cast<unsigned char *>(NewP))[I], I & 0xff)
+        << "Failed at index " << I;
+  }
+  Allocator->deallocate(NewP, Origin);
+}
+
 struct TestFullUsableSizeMTEConfig : TestFullUsableSizeConfig {
   static const bool MaySupportMemoryTagging = true;
 };

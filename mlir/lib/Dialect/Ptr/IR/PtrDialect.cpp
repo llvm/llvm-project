@@ -355,7 +355,7 @@ OpFoldResult PtrAddOp::fold(FoldAdaptor adaptor) {
 
 LogicalResult PtrAddOp::inferReturnTypes(
     MLIRContext *context, std::optional<Location> location, ValueRange operands,
-    DictionaryAttr attributes, OpaqueProperties properties, RegionRange regions,
+    DictionaryAttr attributes, PropertyRef properties, RegionRange regions,
     SmallVectorImpl<Type> &inferredReturnTypes) {
   // Get the base pointer and offset types.
   Type baseType = operands[0].getType();

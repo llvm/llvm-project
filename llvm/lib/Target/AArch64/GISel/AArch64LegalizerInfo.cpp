@@ -1262,6 +1262,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
           [=](const LegalityQuery &Query) {
             return Query.Types[0].isFixedVector() &&
                    Query.Types[1].isFixedVector() &&
+                   Query.Types[0].getScalarSizeInBits() >= 8 &&
+                   isPowerOf2_64(Query.Types[0].getScalarSizeInBits()) &&
                    Query.Types[0].getSizeInBits() <= 128 &&
                    Query.Types[1].getSizeInBits() <= 64;
           },

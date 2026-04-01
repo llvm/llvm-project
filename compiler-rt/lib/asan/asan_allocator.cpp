@@ -758,12 +758,26 @@ struct Allocator {
                                 (AllocType)alloc_type);
       }
     } else {
-      if (flags()->new_delete_type_mismatch &&
-          (alloc_type == FROM_NEW || alloc_type == FROM_NEW_BR) &&
-          ((delete_size && delete_size != m->UsedSize()) ||
-           ComputeUserRequestedAlignmentLog(delete_alignment) !=
-               m->user_requested_alignment_log)) {
-        ReportNewDeleteTypeMismatch(p, delete_size, delete_alignment, stack);
+      switch (alloc_type) {
+        case FROM_NEW:
+        case FROM_NEW_BR:
+          if (flags()->new_delete_type_mismatch &&
+              ((delete_size && delete_size != m->UsedSize()) ||
+               ComputeUserRequestedAlignmentLog(delete_alignment) !=
+                   m->user_requested_alignment_log)) {
+            ReportNewDeleteTypeMismatch(p, delete_size, delete_alignment,
+                                        stack);
+          }
+          break;
+        case FROM_MALLOC:
+          if (flags()->free_size_mismatch &&
+              ((delete_size && delete_size != m->UsedSize()) ||
+               (delete_alignment &&
+                ComputeUserRequestedAlignmentLog(delete_alignment) !=
+                    m->user_requested_alignment_log))) {
+            ReportFreeSizeMismatch(p, delete_size, delete_alignment, stack);
+          }
+          break;
       }
     }
 
@@ -1043,10 +1057,6 @@ void asan_free(void *ptr, BufferedStackTrace *stack) {
   instance.Deallocate(ptr, 0, 0, stack, FROM_MALLOC);
 }
 
-// TODO: Both the size and alignment arguments of Allocator::Deallocate
-// are actually unused when the alloc type is FROM_MALLOC. We should look
-// into why this is the case, but for now passing the arguments like so
-// is the correct thing to do.
 void asan_free_sized(void* ptr, uptr size, BufferedStackTrace* stack) {
   instance.Deallocate(ptr, size, /*delete_alignment=*/0, stack, FROM_MALLOC);
 }

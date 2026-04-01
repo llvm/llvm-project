@@ -145,12 +145,11 @@ TEST_F(PlatformDarwinLocateTest,
   CreateFile("TestModule.sh", m_tmp_dsym_python_dir);
 
   StreamString ss;
-  FileSpecList fspecs =
-      std::static_pointer_cast<PlatformDarwin>(m_platform_sp)
-          ->LocateExecutableScriptingResourcesFromDSYM(
-              ss, module_fspec, *m_target_sp, dsym_module_fpec);
-  EXPECT_EQ(fspecs.GetSize(), 1u);
-  EXPECT_EQ(fspecs.GetFileSpecAtIndex(0).GetFilename(), "TestModule.py");
+  auto fspecs = std::static_pointer_cast<PlatformDarwin>(m_platform_sp)
+                    ->LocateExecutableScriptingResourcesFromDSYM(
+                        ss, module_fspec, *m_target_sp, dsym_module_fpec);
+  EXPECT_EQ(fspecs.size(), 1u);
+  EXPECT_EQ(fspecs.begin()->getFirst().GetFilename(), "TestModule.py");
 }
 
 TEST_F(PlatformDarwinLocateTest,
@@ -171,12 +170,11 @@ TEST_F(PlatformDarwinLocateTest,
   CreateFile("TestModule.sh", m_tmp_dsym_python_dir);
 
   StreamString ss;
-  FileSpecList fspecs =
-      std::static_pointer_cast<PlatformDarwin>(m_platform_sp)
-          ->LocateExecutableScriptingResourcesFromDSYM(
-              ss, module_fspec, *m_target_sp, dsym_module_fpec);
-  EXPECT_EQ(fspecs.GetSize(), 1u);
-  EXPECT_EQ(fspecs.GetFileSpecAtIndex(0).GetFilename(), "TestModule.py");
+  auto fspecs = std::static_pointer_cast<PlatformDarwin>(m_platform_sp)
+                    ->LocateExecutableScriptingResourcesFromDSYM(
+                        ss, module_fspec, *m_target_sp, dsym_module_fpec);
+  EXPECT_EQ(fspecs.size(), 1u);
+  EXPECT_EQ(fspecs.begin()->getFirst().GetFilename(), "TestModule.py");
 }
 
 TEST_F(PlatformDarwinLocateTest,
@@ -197,11 +195,10 @@ TEST_F(PlatformDarwinLocateTest,
   CreateFile("TestModule.1.py", m_tmp_dsym_python_dir);
 
   StreamString ss;
-  FileSpecList fspecs =
-      std::static_pointer_cast<PlatformDarwin>(m_platform_sp)
-          ->LocateExecutableScriptingResourcesFromDSYM(
-              ss, module_fspec, *m_target_sp, dsym_module_fpec);
-  EXPECT_EQ(fspecs.GetSize(), 0u);
+  auto fspecs = std::static_pointer_cast<PlatformDarwin>(m_platform_sp)
+                    ->LocateExecutableScriptingResourcesFromDSYM(
+                        ss, module_fspec, *m_target_sp, dsym_module_fpec);
+  EXPECT_EQ(fspecs.size(), 0u);
 }
 
 TEST_F(PlatformDarwinLocateTest,
@@ -228,11 +225,10 @@ TEST_F(PlatformDarwinLocateTest,
   CreateFile("TestModule.py", nested_dir);
 
   StreamString ss;
-  FileSpecList fspecs =
-      std::static_pointer_cast<PlatformDarwin>(m_platform_sp)
-          ->LocateExecutableScriptingResourcesFromDSYM(
-              ss, module_fspec, *m_target_sp, dsym_module_fpec);
-  EXPECT_EQ(fspecs.GetSize(), 0u);
+  auto fspecs = std::static_pointer_cast<PlatformDarwin>(m_platform_sp)
+                    ->LocateExecutableScriptingResourcesFromDSYM(
+                        ss, module_fspec, *m_target_sp, dsym_module_fpec);
+  EXPECT_EQ(fspecs.size(), 0u);
 }
 
 TEST_F(
@@ -256,12 +252,11 @@ TEST_F(
   CreateFile("TestModule_import.py", m_tmp_dsym_python_dir);
 
   StreamString ss;
-  FileSpecList fspecs =
-      std::static_pointer_cast<PlatformDarwin>(m_platform_sp)
-          ->LocateExecutableScriptingResourcesFromDSYM(
-              ss, module_fspec, *m_target_sp, dsym_module_fpec);
-  EXPECT_EQ(fspecs.GetSize(), 1u);
-  EXPECT_EQ(fspecs.GetFileSpecAtIndex(0).GetFilename(), "TestModule_import.py");
+  auto fspecs = std::static_pointer_cast<PlatformDarwin>(m_platform_sp)
+                    ->LocateExecutableScriptingResourcesFromDSYM(
+                        ss, module_fspec, *m_target_sp, dsym_module_fpec);
+  EXPECT_EQ(fspecs.size(), 1u);
+  EXPECT_EQ(fspecs.begin()->getFirst().GetFilename(), "TestModule_import.py");
   EXPECT_TRUE(ss.Empty());
 }
 
@@ -285,11 +280,10 @@ TEST_F(PlatformDarwinLocateTest,
   ASSERT_TRUE(script_fspec);
 
   StreamString ss;
-  FileSpecList fspecs =
-      std::static_pointer_cast<PlatformDarwin>(m_platform_sp)
-          ->LocateExecutableScriptingResourcesFromDSYM(
-              ss, module_fspec, *m_target_sp, dsym_module_fpec);
-  EXPECT_EQ(fspecs.GetSize(), 0u);
+  auto fspecs = std::static_pointer_cast<PlatformDarwin>(m_platform_sp)
+                    ->LocateExecutableScriptingResourcesFromDSYM(
+                        ss, module_fspec, *m_target_sp, dsym_module_fpec);
+  EXPECT_EQ(fspecs.size(), 0u);
 
   std::string expected = llvm::formatv(
       "debug script '{0}' cannot be loaded because 'import.py' "
@@ -321,12 +315,11 @@ TEST_F(PlatformDarwinLocateTest,
   ASSERT_TRUE(orig_fspec);
 
   StreamString ss;
-  FileSpecList fspecs =
-      std::static_pointer_cast<PlatformDarwin>(m_platform_sp)
-          ->LocateExecutableScriptingResourcesFromDSYM(
-              ss, module_fspec, *m_target_sp, dsym_module_fpec);
-  EXPECT_EQ(fspecs.GetSize(), 1u);
-  EXPECT_EQ(fspecs.GetFileSpecAtIndex(0).GetFilename(), "_import.py");
+  auto fspecs = std::static_pointer_cast<PlatformDarwin>(m_platform_sp)
+                    ->LocateExecutableScriptingResourcesFromDSYM(
+                        ss, module_fspec, *m_target_sp, dsym_module_fpec);
+  EXPECT_EQ(fspecs.size(), 1u);
+  EXPECT_EQ(fspecs.begin()->getFirst().GetFilename(), "_import.py");
 
   std::string expected = llvm::formatv(
       "debug script '{0}' cannot be loaded because 'import.py' "
@@ -356,12 +349,11 @@ TEST_F(
   CreateFile("_import.py", m_tmp_dsym_python_dir);
 
   StreamString ss;
-  FileSpecList fspecs =
-      std::static_pointer_cast<PlatformDarwin>(m_platform_sp)
-          ->LocateExecutableScriptingResourcesFromDSYM(
-              ss, module_fspec, *m_target_sp, dsym_module_fpec);
-  EXPECT_EQ(fspecs.GetSize(), 1u);
-  EXPECT_EQ(fspecs.GetFileSpecAtIndex(0).GetFilename(), "_import.py");
+  auto fspecs = std::static_pointer_cast<PlatformDarwin>(m_platform_sp)
+                    ->LocateExecutableScriptingResourcesFromDSYM(
+                        ss, module_fspec, *m_target_sp, dsym_module_fpec);
+  EXPECT_EQ(fspecs.size(), 1u);
+  EXPECT_EQ(fspecs.begin()->getFirst().GetFilename(), "_import.py");
   EXPECT_TRUE(ss.GetString().empty());
 }
 
@@ -386,11 +378,10 @@ TEST_F(
   ASSERT_TRUE(script_fspec);
 
   StreamString ss;
-  FileSpecList fspecs =
-      std::static_pointer_cast<PlatformDarwin>(m_platform_sp)
-          ->LocateExecutableScriptingResourcesFromDSYM(
-              ss, module_fspec, *m_target_sp, dsym_module_fpec);
-  EXPECT_EQ(fspecs.GetSize(), 0u);
+  auto fspecs = std::static_pointer_cast<PlatformDarwin>(m_platform_sp)
+                    ->LocateExecutableScriptingResourcesFromDSYM(
+                        ss, module_fspec, *m_target_sp, dsym_module_fpec);
+  EXPECT_EQ(fspecs.size(), 0u);
 
   std::string expected = llvm::formatv(
       "debug script '{0}' cannot be loaded because 'TestModule-1.1 1.py' "
@@ -423,12 +414,11 @@ TEST_F(
   CreateFile("TestModule_1_1_1.py", m_tmp_dsym_python_dir);
 
   StreamString ss;
-  FileSpecList fspecs =
-      std::static_pointer_cast<PlatformDarwin>(m_platform_sp)
-          ->LocateExecutableScriptingResourcesFromDSYM(
-              ss, module_fspec, *m_target_sp, dsym_module_fpec);
-  EXPECT_EQ(fspecs.GetSize(), 1u);
-  EXPECT_EQ(fspecs.GetFileSpecAtIndex(0).GetFilename(), "TestModule_1_1_1.py");
+  auto fspecs = std::static_pointer_cast<PlatformDarwin>(m_platform_sp)
+                    ->LocateExecutableScriptingResourcesFromDSYM(
+                        ss, module_fspec, *m_target_sp, dsym_module_fpec);
+  EXPECT_EQ(fspecs.size(), 1u);
+  EXPECT_EQ(fspecs.begin()->getFirst().GetFilename(), "TestModule_1_1_1.py");
 
   std::string expected = llvm::formatv(
       "debug script '{0}' cannot be loaded because"
@@ -458,12 +448,11 @@ TEST_F(
   CreateFile("TestModule_1_1_1.py", m_tmp_dsym_python_dir);
 
   StreamString ss;
-  FileSpecList fspecs =
-      std::static_pointer_cast<PlatformDarwin>(m_platform_sp)
-          ->LocateExecutableScriptingResourcesFromDSYM(
-              ss, module_fspec, *m_target_sp, dsym_module_fpec);
-  EXPECT_EQ(fspecs.GetSize(), 1u);
-  EXPECT_EQ(fspecs.GetFileSpecAtIndex(0).GetFilename(), "TestModule_1_1_1.py");
+  auto fspecs = std::static_pointer_cast<PlatformDarwin>(m_platform_sp)
+                    ->LocateExecutableScriptingResourcesFromDSYM(
+                        ss, module_fspec, *m_target_sp, dsym_module_fpec);
+  EXPECT_EQ(fspecs.size(), 1u);
+  EXPECT_EQ(fspecs.begin()->getFirst().GetFilename(), "TestModule_1_1_1.py");
   EXPECT_TRUE(ss.GetString().empty());
 }
 
@@ -487,11 +476,10 @@ TEST_F(
   CreateFile("mykeyword-1.1 1.py", m_tmp_dsym_python_dir);
 
   StreamString ss;
-  FileSpecList fspecs =
-      std::static_pointer_cast<PlatformDarwin>(m_platform_sp)
-          ->LocateExecutableScriptingResourcesFromDSYM(
-              ss, module_fspec, *m_target_sp, dsym_module_fpec);
-  EXPECT_EQ(fspecs.GetSize(), 0u);
+  auto fspecs = std::static_pointer_cast<PlatformDarwin>(m_platform_sp)
+                    ->LocateExecutableScriptingResourcesFromDSYM(
+                        ss, module_fspec, *m_target_sp, dsym_module_fpec);
+  EXPECT_EQ(fspecs.size(), 0u);
   EXPECT_TRUE(
       ss.GetString().contains("conflicts with the keyword 'mykeyword_1_1_1'"));
 }
@@ -518,12 +506,11 @@ TEST_F(
   CreateFile("_mykeyword_1_1_1.py", m_tmp_dsym_python_dir);
 
   StreamString ss;
-  FileSpecList fspecs =
-      std::static_pointer_cast<PlatformDarwin>(m_platform_sp)
-          ->LocateExecutableScriptingResourcesFromDSYM(
-              ss, module_fspec, *m_target_sp, dsym_module_fpec);
-  EXPECT_EQ(fspecs.GetSize(), 1u);
-  EXPECT_EQ(fspecs.GetFileSpecAtIndex(0).GetFilename(), "_mykeyword_1_1_1.py");
+  auto fspecs = std::static_pointer_cast<PlatformDarwin>(m_platform_sp)
+                    ->LocateExecutableScriptingResourcesFromDSYM(
+                        ss, module_fspec, *m_target_sp, dsym_module_fpec);
+  EXPECT_EQ(fspecs.size(), 1u);
+  EXPECT_EQ(fspecs.begin()->getFirst().GetFilename(), "_mykeyword_1_1_1.py");
   EXPECT_TRUE(ss.GetString().contains("Ignoring 'mykeyword-1.1 1.py' and "
                                       "loading '_mykeyword_1_1_1.py' instead"));
 }
@@ -550,12 +537,11 @@ TEST_F(
   CreateFile("_mykeyword_1_1_1.py", m_tmp_dsym_python_dir);
 
   StreamString ss;
-  FileSpecList fspecs =
-      std::static_pointer_cast<PlatformDarwin>(m_platform_sp)
-          ->LocateExecutableScriptingResourcesFromDSYM(
-              ss, module_fspec, *m_target_sp, dsym_module_fpec);
-  EXPECT_EQ(fspecs.GetSize(), 1u);
-  EXPECT_EQ(fspecs.GetFileSpecAtIndex(0).GetFilename(), "_mykeyword_1_1_1.py");
+  auto fspecs = std::static_pointer_cast<PlatformDarwin>(m_platform_sp)
+                    ->LocateExecutableScriptingResourcesFromDSYM(
+                        ss, module_fspec, *m_target_sp, dsym_module_fpec);
+  EXPECT_EQ(fspecs.size(), 1u);
+  EXPECT_EQ(fspecs.begin()->getFirst().GetFilename(), "_mykeyword_1_1_1.py");
   EXPECT_TRUE(ss.Empty());
 }
 
@@ -591,11 +577,10 @@ TEST_P(PlatformDarwinLocateWithSpecialCharsTestFixture,
   CreateFile(script_name, m_tmp_dsym_python_dir);
 
   StreamString ss;
-  FileSpecList fspecs =
-      std::static_pointer_cast<PlatformDarwin>(m_platform_sp)
-          ->LocateExecutableScriptingResourcesFromDSYM(
-              ss, module_fspec, *m_target_sp, dsym_module_fpec);
-  EXPECT_EQ(fspecs.GetSize(), 0u);
+  auto fspecs = std::static_pointer_cast<PlatformDarwin>(m_platform_sp)
+                    ->LocateExecutableScriptingResourcesFromDSYM(
+                        ss, module_fspec, *m_target_sp, dsym_module_fpec);
+  EXPECT_EQ(fspecs.size(), 0u);
 
   std::string expected =
       llvm::formatv("please rename it to '{0}'", recommended_script_name);

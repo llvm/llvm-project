@@ -144,9 +144,42 @@ public:
   using Value::eraseMetadata;
   using Value::eraseMetadataIf;
   using Value::getAllMetadata;
-  using Value::getMetadata;
-  using Value::hasMetadata;
   using Value::setMetadata;
+
+  /// Return true if this GlobalObject has any metadata attached to it.
+  bool hasMetadata() const { return MetadataIndex != 0; }
+
+  /// Return true if this instruction has the given type of metadata attached.
+  bool hasMetadata(unsigned KindID) const {
+    return getMetadata(KindID) != nullptr;
+  }
+
+  /// Return true if this instruction has the given type of metadata attached.
+  bool hasMetadata(StringRef Kind) const {
+    return getMetadata(Kind) != nullptr;
+  }
+
+  /// Get the metadata of given kind attached to this GlobalObject.
+  /// If the metadata is not found then return null.
+  MDNode *getMetadata(unsigned KindID) const {
+    return hasMetadata() ? getMetadataImpl(KindID) : nullptr;
+  }
+
+  /// Get the metadata of given kind attached to this GlobalObject.
+  /// If the metadata is not found then return null.
+  MDNode *getMetadata(StringRef Kind) const {
+    return hasMetadata() ? Value::getMetadata(Kind) : nullptr;
+  }
+
+  /// Appends all attachments with the given ID to \c MDs in insertion order.
+  /// If the Value has no attachments with the given ID, or if ID is invalid,
+  /// leaves MDs unchanged.
+  /// @{
+  LLVM_ABI void getMetadata(unsigned KindID,
+                            SmallVectorImpl<MDNode *> &MDs) const;
+  LLVM_ABI void getMetadata(StringRef Kind,
+                            SmallVectorImpl<MDNode *> &MDs) const;
+  /// @}
 
   LLVM_ABI bool hasMetadataOtherThanDebugLoc() const;
 

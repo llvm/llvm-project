@@ -243,9 +243,10 @@ protected:
   /// so we can cast it away here.
   explicit OpState(Operation *state) : state(state) {}
 
-  /// For all op which don't have properties, we keep a single instance of
-  /// `EmptyProperties` to be used where a reference to a properties is needed:
-  /// this allow to bind a pointer to the reference without triggering UB.
+  /// For all ops which don't have properties, we keep a single instance of
+  /// `EmptyProperties` to be used where a pointer to a struct of properties
+  /// is needed: this allows binding a pointer to the reference without
+  /// triggering UB.
   static EmptyProperties &getEmptyProperties() {
     static EmptyProperties emptyProperties;
     return emptyProperties;
@@ -1978,7 +1979,7 @@ public:
     if constexpr (!hasProperties())
       return getEmptyProperties();
     return *getOperation()
-                ->getPropertiesStorageUnsafe()
+                ->getPropertiesStorage()
                 .template as<InferredProperties<T> *>();
   }
 
@@ -2151,5 +2152,7 @@ struct DenseMapInfo<T,
   static bool isEqual(T lhs, T rhs) { return lhs == rhs; }
 };
 } // namespace llvm
+
+MLIR_DECLARE_EXPLICIT_TYPE_ID(mlir::EmptyProperties)
 
 #endif

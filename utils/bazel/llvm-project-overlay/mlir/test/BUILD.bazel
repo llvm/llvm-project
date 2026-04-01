@@ -385,6 +385,7 @@ cc_library(
         "//mlir:ArithDialect",
         "//mlir:BufferizationDialect",
         "//mlir:BufferizationInterfaces",
+        "//mlir:BytecodeDialectInterfaceIncGen",
         "//mlir:BytecodeOpInterface",
         "//mlir:CallOpInterfaces",
         "//mlir:CommonFolders",

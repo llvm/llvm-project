@@ -312,7 +312,7 @@ public:
   /// implementation.
   unsigned getNumberOfParts(Type *Tp) const override;
 
-  InstructionUniformity getInstructionUniformity(const Value *V) const override;
+  ValueUniformity getValueUniformity(const Value *V) const override;
 
   InstructionCost getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
                                        StackOffset BaseOffset, bool HasBaseReg,

@@ -96,10 +96,19 @@ public:
     static void call(void *Ptr) { ((ThreadPoolExecutor *)Ptr)->stop(); }
   };
 
-  void add(std::function<void()> F) {
+  struct WorkItem {
+    std::function<void()> F;
+    std::reference_wrapper<parallel::detail::Latch> L;
+    void operator()() {
+      F();
+      L.get().dec();
+    }
+  };
+
+  void add(std::function<void()> F, parallel::detail::Latch &L) {
     {
       std::lock_guard<std::mutex> Lock(Mutex);
-      WorkStack.push_back(std::move(F));
+      WorkStack.push_back({std::move(F), std::ref(L)});
     }
     Cond.notify_one();
   }
@@ -107,6 +116,15 @@ public:
   size_t getThreadCount() const { return ThreadCount; }
 
 private:
+  // Pop one task from the queue and run it. Must be called with Lock held;
+  // releases Lock before executing the task.
+  void popAndRun(std::unique_lock<std::mutex> &Lock) {
+    auto Item = std::move(WorkStack.back());
+    WorkStack.pop_back();
+    Lock.unlock();
+    Item();
+  }
+
   void work(ThreadPoolStrategy S, unsigned ThreadID) {
     threadIndex = ThreadID;
     S.apply_thread_strategy(ThreadID);
@@ -141,34 +159,26 @@ private:
             [&] { TheJobserver->release(std::move(Slot)); });
 
         while (true) {
-          std::function<void()> Task;
-          {
-            std::unique_lock<std::mutex> Lock(Mutex);
-            Cond.wait(Lock, [&] { return Stop || !WorkStack.empty(); });
-            if (Stop && WorkStack.empty())
-              return;
-            if (WorkStack.empty())
-              break;
-            Task = std::move(WorkStack.back());
-            WorkStack.pop_back();
-          }
-          Task();
+          std::unique_lock<std::mutex> Lock(Mutex);
+          Cond.wait(Lock, [&] { return Stop || !WorkStack.empty(); });
+          if (Stop && WorkStack.empty())
+            return;
+          if (WorkStack.empty())
+            break;
+          popAndRun(Lock);
         }
       } else {
         std::unique_lock<std::mutex> Lock(Mutex);
         Cond.wait(Lock, [&] { return Stop || !WorkStack.empty(); });
         if (Stop)
           break;
-        auto Task = std::move(WorkStack.back());
-        WorkStack.pop_back();
-        Lock.unlock();
-        Task();
+        popAndRun(Lock);
       }
     }
   }
 
   std::atomic<bool> Stop{false};
-  std::vector<std::function<void()>> WorkStack;
+  std::vector<WorkItem> WorkStack;
   std::mutex Mutex;
   std::condition_variable Cond;
   std::promise<void> ThreadsCreated;
@@ -228,10 +238,7 @@ void TaskGroup::spawn(std::function<void()> F) {
 #if LLVM_ENABLE_THREADS
   if (Parallel) {
     L.inc();
-    getDefaultExecutor()->add([&, F = std::move(F)] {
-      F();
-      L.dec();
-    });
+    getDefaultExecutor()->add(std::move(F), L);
     return;
   }
 #endif

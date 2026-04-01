@@ -2,9 +2,8 @@
 
 include "llvm/IR/Intrinsics.td"
 
-// CHECK: error: expected record type for the element with index 2 in list {{.*}}
+// CHECK: error: assertion failed: dependent types must reference an overload index of an 'llvm_any' type
 def int_test : DefaultAttrsIntrinsic<
     [llvm_anyint_ty],
-    [llvm_anyint_ty,
-     LLVMMatchType<2>],
+    [llvm_anyint_ty, LLVMMatchType<2>],
     [IntrNoMem]>;

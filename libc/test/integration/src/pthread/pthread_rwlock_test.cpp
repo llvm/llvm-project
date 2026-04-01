@@ -12,8 +12,8 @@
 #include "src/__support/CPP/new.h"
 #include "src/__support/OSUtil/syscall.h"
 #include "src/__support/macros/config.h"
-#include "src/__support/threads/linux/rwlock.h"
 #include "src/__support/threads/raw_mutex.h"
+#include "src/__support/threads/raw_rwlock.h"
 #include "src/__support/threads/sleep.h"
 #include "src/pthread/pthread_create.h"
 #include "src/pthread/pthread_join.h"
@@ -131,7 +131,8 @@ static void nullptr_test() {
 // counts.
 static void high_reader_count_test() {
   pthread_rwlock_t rwlock = PTHREAD_RWLOCK_INITIALIZER;
-  rwlock.__state = LIBC_NAMESPACE::rwlock::RwLockTester::full_reader_state();
+  rwlock.__raw.__state =
+      LIBC_NAMESPACE::rwlock::RwLockTester::full_reader_state();
   ASSERT_EQ(LIBC_NAMESPACE::pthread_rwlock_rdlock(&rwlock), EAGAIN);
   ASSERT_EQ(LIBC_NAMESPACE::pthread_rwlock_tryrdlock(&rwlock), EAGAIN);
   // allocate 4 reader slots.
@@ -374,20 +375,20 @@ static void randomized_thread_operation(SharedData *data, ThreadGuard &guard) {
   case Operation::READ: {
     LIBC_NAMESPACE::pthread_rwlock_rdlock(&data->lock);
     read_ops();
-    LIBC_NAMESPACE::pthread_rwlock_unlock(&data->lock);
+    ASSERT_EQ(LIBC_NAMESPACE::pthread_rwlock_unlock(&data->lock), 0);
     break;
   }
   case Operation::WRITE: {
     LIBC_NAMESPACE::pthread_rwlock_wrlock(&data->lock);
     write_ops();
-    LIBC_NAMESPACE::pthread_rwlock_unlock(&data->lock);
+    ASSERT_EQ(LIBC_NAMESPACE::pthread_rwlock_unlock(&data->lock), 0);
     break;
   }
   case Operation::TIMED_READ: {
     timespec ts = get_ts();
     if (LIBC_NAMESPACE::pthread_rwlock_timedrdlock(&data->lock, &ts) == 0) {
       read_ops();
-      LIBC_NAMESPACE::pthread_rwlock_unlock(&data->lock);
+      ASSERT_EQ(LIBC_NAMESPACE::pthread_rwlock_unlock(&data->lock), 0);
     }
     break;
   }
@@ -395,7 +396,7 @@ static void randomized_thread_operation(SharedData *data, ThreadGuard &guard) {
     timespec ts = get_ts();
     if (LIBC_NAMESPACE::pthread_rwlock_timedwrlock(&data->lock, &ts) == 0) {
       write_ops();
-      LIBC_NAMESPACE::pthread_rwlock_unlock(&data->lock);
+      ASSERT_EQ(LIBC_NAMESPACE::pthread_rwlock_unlock(&data->lock), 0);
     }
     break;
   }
@@ -404,7 +405,7 @@ static void randomized_thread_operation(SharedData *data, ThreadGuard &guard) {
     if (LIBC_NAMESPACE::pthread_rwlock_clockrdlock(&data->lock, CLOCK_MONOTONIC,
                                                    &ts) == 0) {
       read_ops();
-      LIBC_NAMESPACE::pthread_rwlock_unlock(&data->lock);
+      ASSERT_EQ(LIBC_NAMESPACE::pthread_rwlock_unlock(&data->lock), 0);
     }
     break;
   }
@@ -413,21 +414,21 @@ static void randomized_thread_operation(SharedData *data, ThreadGuard &guard) {
     if (LIBC_NAMESPACE::pthread_rwlock_clockwrlock(&data->lock, CLOCK_MONOTONIC,
                                                    &ts) == 0) {
       write_ops();
-      LIBC_NAMESPACE::pthread_rwlock_unlock(&data->lock);
+      ASSERT_EQ(LIBC_NAMESPACE::pthread_rwlock_unlock(&data->lock), 0);
     }
     break;
   }
   case Operation::TRY_READ: {
     if (LIBC_NAMESPACE::pthread_rwlock_tryrdlock(&data->lock) == 0) {
       read_ops();
-      LIBC_NAMESPACE::pthread_rwlock_unlock(&data->lock);
+      ASSERT_EQ(LIBC_NAMESPACE::pthread_rwlock_unlock(&data->lock), 0);
     }
     break;
   }
   case Operation::TRY_WRITE: {
     if (LIBC_NAMESPACE::pthread_rwlock_trywrlock(&data->lock) == 0) {
       write_ops();
-      LIBC_NAMESPACE::pthread_rwlock_unlock(&data->lock);
+      ASSERT_EQ(LIBC_NAMESPACE::pthread_rwlock_unlock(&data->lock), 0);
     }
     break;
   }

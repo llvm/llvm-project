@@ -201,14 +201,13 @@ namespace Intrinsic {
              Kind == TruncArgument || Kind == SameVecWidthArgument ||
              Kind == VecElementArgument || Kind == Subdivide2Argument ||
              Kind == Subdivide4Argument || Kind == VecOfBitcastsToInt);
-      return ArgumentInfo >> 3;
+      // Overload index is packed into lower 5 bits.
+      return ArgumentInfo & 0x1f;
     }
     ArgKind getArgumentKind() const {
-      assert(Kind == Argument || Kind == ExtendArgument ||
-             Kind == TruncArgument || Kind == SameVecWidthArgument ||
-             Kind == VecElementArgument || Kind == Subdivide2Argument ||
-             Kind == Subdivide4Argument || Kind == VecOfBitcastsToInt);
-      return (ArgKind)(ArgumentInfo & 7);
+      // Argument kind is packed into upper 3 bits.
+      assert(Kind == Argument);
+      return (ArgKind)((ArgumentInfo >> 5) & 0x7);
     }
 
     // VecOfAnyPtrsToElt uses both an overloaded argument (for address space)
@@ -217,12 +216,14 @@ namespace Intrinsic {
       assert(Kind == VecOfAnyPtrsToElt);
       return ArgumentInfo >> 16;
     }
+
     // OneNthEltsVecArguments uses both a divisor N and a reference argument for
     // the full-width vector to match
     unsigned getVectorDivisor() const {
       assert(Kind == OneNthEltsVecArgument);
       return ArgumentInfo >> 16;
     }
+
     unsigned getRefArgNumber() const {
       assert(Kind == VecOfAnyPtrsToElt || Kind == OneNthEltsVecArgument);
       return ArgumentInfo & 0xFFFF;

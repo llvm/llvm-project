@@ -86,14 +86,23 @@ CompilerType ResolveTypeByName(const std::string &name,
   return {};
 }
 
-llvm::Expected<ASTNodeUP>
-DILParser::Parse(llvm::StringRef dil_input_expr, DILLexer lexer,
-                 std::shared_ptr<StackFrame> frame_sp,
-                 lldb::DynamicValueType use_dynamic, bool use_synthetic,
-                 bool fragile_ivar, bool check_ptr_vs_member) {
+llvm::Expected<ASTNodeUP> DILParser::Parse(llvm::StringRef dil_input_expr,
+                                           DILLexer lexer,
+                                           std::shared_ptr<StackFrame> frame_sp,
+
+                                           lldb::DynamicValueType use_dynamic,
+                                           uint32_t options) {
+  const bool check_ptr_vs_member =
+      (options & StackFrame::eExpressionPathOptionCheckPtrVsMember) != 0;
+  const bool no_fragile_ivar =
+      (options & StackFrame::eExpressionPathOptionsNoFragileObjcIvar) != 0;
+  const bool no_synth_child =
+      (options & StackFrame::eExpressionPathOptionsNoSyntheticChildren) != 0;
+
   llvm::Error error = llvm::Error::success();
-  DILParser parser(dil_input_expr, lexer, frame_sp, use_dynamic, use_synthetic,
-                   fragile_ivar, check_ptr_vs_member, error);
+  DILParser parser(dil_input_expr, lexer, frame_sp, use_dynamic,
+                   !no_synth_child, !no_fragile_ivar, check_ptr_vs_member,
+                   error);
 
   ASTNodeUP node_up = parser.Run();
   assert(node_up && "ASTNodeUP must not contain a nullptr");

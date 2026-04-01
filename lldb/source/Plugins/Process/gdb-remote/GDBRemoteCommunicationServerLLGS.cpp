@@ -2873,18 +2873,16 @@ GDBRemoteCommunicationServerLLGS::Handle_qMemoryRegionInfo(
     }
 
     // Flags
-    MemoryRegionInfo::OptionalBool memory_tagged =
-        region_info.GetMemoryTagged();
-    MemoryRegionInfo::OptionalBool is_shadow_stack =
-        region_info.IsShadowStack();
+    LazyBool memory_tagged = region_info.GetMemoryTagged();
+    LazyBool is_shadow_stack = region_info.IsShadowStack();
 
-    if (memory_tagged != MemoryRegionInfo::eDontKnow ||
-        is_shadow_stack != MemoryRegionInfo::eDontKnow) {
+    if (memory_tagged != eLazyBoolDontKnow ||
+        is_shadow_stack != eLazyBoolDontKnow) {
       response.PutCString("flags:");
       // Space is the separator.
-      if (memory_tagged == MemoryRegionInfo::eYes)
+      if (memory_tagged == eLazyBoolYes)
         response.PutCString("mt ");
-      if (is_shadow_stack == MemoryRegionInfo::eYes)
+      if (is_shadow_stack == eLazyBoolYes)
         response.PutCString("ss ");
 
       response.PutChar(';');

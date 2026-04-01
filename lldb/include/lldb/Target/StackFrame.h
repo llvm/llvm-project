@@ -56,7 +56,8 @@ public:
     eExpressionPathOptionsNoSyntheticChildren = (1u << 2),
     eExpressionPathOptionsNoSyntheticArrayRange = (1u << 3),
     eExpressionPathOptionsAllowDirectIVarAccess = (1u << 4),
-    eExpressionPathOptionsInspectAnonymousUnions = (1u << 5)
+    eExpressionPathOptionsInspectAnonymousUnions = (1u << 5),
+    eExpressionPathOptionsAllowVarUpdates = (1u << 6)
   };
 
   enum class Kind {

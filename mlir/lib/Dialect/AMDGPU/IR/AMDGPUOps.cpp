@@ -103,7 +103,7 @@ static FailureOr<MemRefType> getFatRawBufferTypeLike(MemRefType source,
 
 LogicalResult FatRawBufferCastOp::inferReturnTypes(
     MLIRContext *context, std::optional<Location> location, ValueRange operands,
-    DictionaryAttr attributes, OpaqueProperties properties, RegionRange regions,
+    DictionaryAttr attributes, PropertyRef properties, RegionRange regions,
     SmallVectorImpl<Type> &inferredReturnTypes) {
   Adaptor adaptor(operands, attributes, properties, regions);
   auto sourceType =

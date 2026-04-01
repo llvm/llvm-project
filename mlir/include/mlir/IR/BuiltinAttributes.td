@@ -720,6 +720,14 @@ def Builtin_IntegerAttr : Builtin_Attr<"Integer", "integer",
                                         "const APInt &":$value), [{
       if (type.isSignlessInteger(1))
         return BoolAttr::get(type.getContext(), value.getBoolValue());
+      // Validate that the APInt has the correct bit width for the given type.
+      if (auto intTy = ::llvm::dyn_cast<IntegerType>(type)) {
+        assert(value.getBitWidth() == intTy.getWidth() &&
+               "IntegerAttr::get: APInt bit width must match integer type width");
+      } else if (::llvm::isa<IndexType>(type)) {
+        assert(value.getBitWidth() == IndexType::kInternalStorageBitWidth &&
+               "IntegerAttr::get: APInt bit width must match IndexType internal storage bit width");
+      }
       return $_get(type.getContext(), type, value);
     }]>,
     AttrBuilder<(ins "const APSInt &":$value), [{

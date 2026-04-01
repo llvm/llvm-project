@@ -1440,12 +1440,6 @@ bool Module::LoadScriptingResourceInTarget(Target *target, Status &error) {
     return false;
   }
 
-  LoadScriptFromSymFile should_load =
-      target->TargetProperties::GetLoadScriptFromSymbolFile();
-
-  if (should_load == eLoadScriptFromSymFileFalse)
-    return false;
-
   Debugger &debugger = target->GetDebugger();
   const ScriptLanguage script_language = debugger.GetScriptLanguage();
   if (script_language == eScriptLanguageNone)
@@ -1465,22 +1459,21 @@ bool Module::LoadScriptingResourceInTarget(Target *target, Status &error) {
   }
 
   StreamString feedback_stream;
-  FileSpecList file_specs = platform_sp->LocateExecutableScriptingResources(
-      target, *this, feedback_stream);
+  llvm::SmallDenseMap<FileSpec, LoadScriptFromSymFile> file_specs =
+      platform_sp->LocateExecutableScriptingResources(target, *this,
+                                                      feedback_stream);
 
   if (!feedback_stream.Empty())
     debugger.ReportWarning(feedback_stream.GetString().str(), debugger.GetID());
 
-  const uint32_t num_specs = file_specs.GetSize();
-  if (num_specs == 0)
-    return true;
+  for (const auto &[scripting_fspec, load_style] : file_specs) {
+    if (load_style == eLoadScriptFromSymFileFalse)
+      continue;
 
-  for (uint32_t i = 0; i < num_specs; ++i) {
-    FileSpec scripting_fspec(file_specs.GetFileSpecAtIndex(i));
     if (!FileSystem::Instance().Exists(scripting_fspec))
       continue;
 
-    if (should_load == eLoadScriptFromSymFileWarn) {
+    if (load_style == eLoadScriptFromSymFileWarn) {
       // clang-format off
       debugger.ReportWarning(
           llvm::formatv(

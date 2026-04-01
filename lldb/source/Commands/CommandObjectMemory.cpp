@@ -1688,11 +1688,11 @@ protected:
         range_info.GetRange().GetRangeEnd(), range_info.GetReadable(),
         range_info.GetWritable(), range_info.GetExecutable(), name ? " " : "",
         name, section_name ? " " : "", section_name);
-    MemoryRegionInfo::OptionalBool memory_tagged = range_info.GetMemoryTagged();
-    if (memory_tagged == MemoryRegionInfo::OptionalBool::eYes)
+    LazyBool memory_tagged = range_info.GetMemoryTagged();
+    if (memory_tagged == eLazyBoolYes)
       result.AppendMessage("memory tagging: enabled");
-    MemoryRegionInfo::OptionalBool is_shadow_stack = range_info.IsShadowStack();
-    if (is_shadow_stack == MemoryRegionInfo::OptionalBool::eYes)
+    LazyBool is_shadow_stack = range_info.IsShadowStack();
+    if (is_shadow_stack == eLazyBoolYes)
       result.AppendMessage("shadow stack: yes");
 
     const std::optional<std::vector<addr_t>> &dirty_page_list =

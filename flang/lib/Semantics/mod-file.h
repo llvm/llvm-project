@@ -83,7 +83,6 @@ private:
   void PutUserReduction(llvm::raw_ostream &, const Symbol &);
   void PutSubprogram(const Symbol &);
   void PutGeneric(const Symbol &);
-  void PutUseDetails(const UseDetails &);
   void PutUse(const Symbol &);
   void PutUseExtraAttr(Attr, const Symbol &, const Symbol &);
   llvm::raw_ostream &PutAttrs(llvm::raw_ostream &, Attrs,

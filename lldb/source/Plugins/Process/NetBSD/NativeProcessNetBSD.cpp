@@ -647,10 +647,10 @@ Status NativeProcessNetBSD::GetMemoryRegionInfo(lldb::addr_t load_addr,
       range_info.GetRange().SetRangeBase(load_addr);
       range_info.GetRange().SetByteSize(
           proc_entry_info.GetRange().GetRangeBase() - load_addr);
-      range_info.SetReadable(MemoryRegionInfo::OptionalBool::eNo);
-      range_info.SetWritable(MemoryRegionInfo::OptionalBool::eNo);
-      range_info.SetExecutable(MemoryRegionInfo::OptionalBool::eNo);
-      range_info.SetMapped(MemoryRegionInfo::OptionalBool::eNo);
+      range_info.SetReadable(eLazyBoolNo);
+      range_info.SetWritable(eLazyBoolNo);
+      range_info.SetExecutable(eLazyBoolNo);
+      range_info.SetMapped(eLazyBoolNo);
       return error;
     } else if (proc_entry_info.GetRange().Contains(load_addr)) {
       // The target address is within the memory region we're processing here.
@@ -665,10 +665,10 @@ Status NativeProcessNetBSD::GetMemoryRegionInfo(lldb::addr_t load_addr,
   // load address and the end of the memory as size.
   range_info.GetRange().SetRangeBase(load_addr);
   range_info.GetRange().SetRangeEnd(LLDB_INVALID_ADDRESS);
-  range_info.SetReadable(MemoryRegionInfo::OptionalBool::eNo);
-  range_info.SetWritable(MemoryRegionInfo::OptionalBool::eNo);
-  range_info.SetExecutable(MemoryRegionInfo::OptionalBool::eNo);
-  range_info.SetMapped(MemoryRegionInfo::OptionalBool::eNo);
+  range_info.SetReadable(eLazyBoolNo);
+  range_info.SetWritable(eLazyBoolNo);
+  range_info.SetExecutable(eLazyBoolNo);
+  range_info.SetMapped(eLazyBoolNo);
   return error;
 }
 
@@ -696,22 +696,22 @@ Status NativeProcessNetBSD::PopulateMemoryRegionCache() {
     info.Clear();
     info.GetRange().SetRangeBase(vm[i].kve_start);
     info.GetRange().SetRangeEnd(vm[i].kve_end);
-    info.SetMapped(MemoryRegionInfo::OptionalBool::eYes);
+    info.SetMapped(eLazyBoolYes);
 
     if (vm[i].kve_protection & VM_PROT_READ)
-      info.SetReadable(MemoryRegionInfo::OptionalBool::eYes);
+      info.SetReadable(eLazyBoolYes);
     else
-      info.SetReadable(MemoryRegionInfo::OptionalBool::eNo);
+      info.SetReadable(eLazyBoolNo);
 
     if (vm[i].kve_protection & VM_PROT_WRITE)
-      info.SetWritable(MemoryRegionInfo::OptionalBool::eYes);
+      info.SetWritable(eLazyBoolYes);
     else
-      info.SetWritable(MemoryRegionInfo::OptionalBool::eNo);
+      info.SetWritable(eLazyBoolNo);
 
     if (vm[i].kve_protection & VM_PROT_EXECUTE)
-      info.SetExecutable(MemoryRegionInfo::OptionalBool::eYes);
+      info.SetExecutable(eLazyBoolYes);
     else
-      info.SetExecutable(MemoryRegionInfo::OptionalBool::eNo);
+      info.SetExecutable(eLazyBoolNo);
 
     if (vm[i].kve_path[0])
       info.SetName(vm[i].kve_path);

@@ -2608,7 +2608,7 @@ def Vector_CreateMaskOp :
   Vector_Op<"create_mask", [Pure, 
    DeclareOpInterfaceMethods<VectorUnrollOpInterface>
    ]>,
-    Arguments<(ins Variadic<Index>:$operands)>,
+    Arguments<(ins Variadic<Index>:$mask_dim_sizes)>,
     Results<(outs VectorOfAnyRankOf<[I1]>)> {
   let summary = "creates a vector mask";
   let description = [{
@@ -2654,7 +2654,7 @@ def Vector_CreateMaskOp :
 
   let hasCanonicalizer = 1;
   let hasVerifier = 1;
-  let assemblyFormat = "$operands attr-dict `:` type(results)";
+  let assemblyFormat = "$mask_dim_sizes attr-dict `:` type(results)";
 }
 
 def Vector_MaskOp : Vector_Op<"mask", [

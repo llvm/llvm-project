@@ -423,7 +423,7 @@ std::vector<SomeExpr> GetTopLevelDesignators(const SomeExpr &expr) {
 }
 
 static bool HasCommonDesignatorSymbols(
-    const evaluate::SymbolVector &baseSyms, const SomeExpr &other) {
+    const SymbolVector &baseSyms, const SomeExpr &other) {
   // Compare the designators used in "other" with the designators whose
   // symbols are given in baseSyms.
   // This is a part of the check if these two expressions can access the same
@@ -450,28 +450,28 @@ static bool HasCommonDesignatorSymbols(
     return false;
   }
 
-  auto isSubsequence{// Is u a subsequence of v.
-      [](const evaluate::SymbolVector &u, const evaluate::SymbolVector &v) {
-        size_t us{u.size()}, vs{v.size()};
-        if (us > vs) {
-          return false;
+  // Is u a subsequence of v.
+  auto isSubsequence{[](const SymbolVector &u, const SymbolVector &v) {
+    size_t us{u.size()}, vs{v.size()};
+    if (us > vs) {
+      return false;
+    }
+    for (size_t off{0}; off != vs - us + 1; ++off) {
+      bool same{true};
+      for (size_t i{0}; i != us; ++i) {
+        if (u[i] != v[off + i]) {
+          same = false;
+          break;
         }
-        for (size_t off{0}; off != vs - us + 1; ++off) {
-          bool same{true};
-          for (size_t i{0}; i != us; ++i) {
-            if (u[i] != v[off + i]) {
-              same = false;
-              break;
-            }
-          }
-          if (same) {
-            return true;
-          }
-        }
-        return false;
-      }};
+      }
+      if (same) {
+        return true;
+      }
+    }
+    return false;
+  }};
 
-  evaluate::SymbolVector otherSyms{evaluate::GetSymbolVector(other)};
+  SymbolVector otherSyms{evaluate::GetSymbolVector(other)};
   return isSubsequence(baseSyms, otherSyms);
 }
 
@@ -492,7 +492,7 @@ static bool HasCommonTopLevelDesignators(
 
 const SomeExpr *HasStorageOverlap(
     const SomeExpr &base, llvm::ArrayRef<SomeExpr> exprs) {
-  evaluate::SymbolVector baseSyms{evaluate::GetSymbolVector(base)};
+  SymbolVector baseSyms{evaluate::GetSymbolVector(base)};
   std::vector<SomeExpr> baseDsgs{GetTopLevelDesignators(base)};
 
   for (const SomeExpr &expr : exprs) {

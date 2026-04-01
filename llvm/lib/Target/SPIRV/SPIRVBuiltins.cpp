@@ -1279,6 +1279,31 @@ static bool generateExtInst(const SPIRV::IncomingCall *Call,
     MIB.getInstr()->setFlag(MachineInstr::MIFlag::FmNoNans);
     MIB.getInstr()->setFlag(MachineInstr::MIFlag::FmNoInfs);
   }
+
+  // Derive fast-math flags from nofpclass attributes on the called function.
+  // FPFastMathMode decoration is valid on ExtInst in Kernel environments
+  // (SPIR-V core) or with SPV_KHR_float_controls2 for any environment.
+  if (ST.isKernel() ||
+      ST.canUseExtension(SPIRV::Extension::SPV_KHR_float_controls2)) {
+    if (const Function *F = CB.getCalledFunction()) {
+      bool AddNoNan = CB.getRetNoFPClass() & fcNan;
+      bool AddNoInf = CB.getRetNoFPClass() & fcInf;
+      FunctionType *FTy = F->getFunctionType();
+      for (unsigned I = 0, E = FTy->getNumParams();
+           I != E && (AddNoNan || AddNoInf); ++I) {
+        if (!FTy->getParamType(I)->isFloatingPointTy())
+          continue;
+        FPClassTest ArgTest = CB.getParamNoFPClass(I);
+        AddNoNan = AddNoNan && ArgTest & fcNan;
+        AddNoInf = AddNoInf && ArgTest & fcInf;
+      }
+      if (AddNoNan)
+        MIB.getInstr()->setFlag(MachineInstr::MIFlag::FmNoNans);
+      if (AddNoInf)
+        MIB.getInstr()->setFlag(MachineInstr::MIFlag::FmNoInfs);
+    }
+  }
+
   return true;
 }
 

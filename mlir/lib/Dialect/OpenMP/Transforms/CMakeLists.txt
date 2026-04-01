@@ -6,8 +6,8 @@ add_mlir_dialect_library(MLIROpenMPTransforms
   MLIROpenMPPassIncGen
 
   LINK_LIBS PUBLIC
+  MLIRFunctionInterfaces
   MLIRIR
-  MLIRFuncDialect
   MLIRLLVMDialect
   MLIROpenMPDialect
   MLIRPass

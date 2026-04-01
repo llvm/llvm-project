@@ -485,15 +485,16 @@ FIRToMemRef::getMemrefIndices(fir::ArrayCoorOp arrayCoorOp, Operation *memref,
     Value sliceLb = isSliced ? sliceLbs[i] : shift;
 
     // When the array_coor has an explicit slice with a shape_shift (i.e.
-    // non-default lower bounds), the indices are Fortran indices; subtract
-    // the slice lower bound to get 0-based memref indices. Otherwise (the
-    // slice comes from an embox, or the shape has no shift), the indices
-    // are 1-based section indices; subtract 1.
+    // non-default lower bounds), the indices are in the shape_shift
+    // coordinate space; subtract the lower bound (shift) to get 0-based
+    // memref indices. Otherwise (the slice comes from an embox, or the
+    // shape has no shift), the indices are 1-based section indices;
+    // subtract 1.
     bool indicesAreFortran = isShifted && arrayCoorOp.getSlice() != nullptr;
     Value indexAdjustment =
         (isSliced && !indicesAreFortran)
             ? arith::ConstantIndexOp::create(rewriter, loc, 1)
-            : sliceLb;
+            : shift;
     Value delta = arith::SubIOp::create(rewriter, loc, index, indexAdjustment);
 
     Value scaled = arith::MulIOp::create(rewriter, loc, delta, stride);

@@ -129,6 +129,9 @@ public:
   bool vaEndIsNop() { return true; }
   bool vaCopyIsMemcpy() { return true; }
 
+  // Per-target overrides of special symbols.
+  virtual bool ignoreFunction(const Function *F) { return false; }
+
   // Any additional address spaces used in va intrinsics that should be
   // expanded.
   virtual SmallVector<unsigned> getTargetSpecificVaIntrinAddrSpaces() const {
@@ -240,6 +243,9 @@ public:
   bool expansionApplicableToFunction(Module &M, Function *F) {
     if (F->isIntrinsic() || !F->isVarArg() ||
         F->hasFnAttribute(Attribute::Naked))
+      return false;
+
+    if (ABI->ignoreFunction(F))
       return false;
 
     if (!isValidCallingConv(F))
@@ -627,6 +633,9 @@ bool ExpandVariadics::expandCall(Module &M, IRBuilder<> &Builder, CallBase *CB,
   bool Changed = false;
   const DataLayout &DL = M.getDataLayout();
 
+  if (ABI->ignoreFunction(CB->getCalledFunction()))
+    return Changed;
+
   if (!expansionApplicableToFunctionCall(CB)) {
     if (rewriteABI())
       report_fatal_error("Cannot lower callbase instruction");
@@ -982,6 +991,22 @@ struct SPIRV final : public VariadicABIInfo {
     // promoting types to their appropriate size and alignment.
     Align A = DL.getABITypeAlign(Parameter);
     return {A, false};
+  }
+
+  // The SPIR-V backend has special handling for builtins.
+  bool ignoreFunction(const Function *F) override {
+    if (!F->isDeclaration())
+      return false;
+
+    std::string Demangled = llvm::demangle(F->getName());
+    StringRef DemangledName(Demangled);
+
+    // Skip any SPIR-V builtins.
+    if (DemangledName.starts_with("__spirv_") ||
+        DemangledName.starts_with("printf("))
+      return true;
+
+    return false;
   }
 
   // We will likely see va intrinsics in the generic addrspace (4).

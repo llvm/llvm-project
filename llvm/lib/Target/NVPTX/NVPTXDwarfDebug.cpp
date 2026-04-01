@@ -39,11 +39,13 @@ static cl::opt<bool> LineInfoWithInlinedAt(
 NVPTXDwarfDebug::NVPTXDwarfDebug(AsmPrinter *A) : DwarfDebug(A) {
   // PTX emits debug strings inline (no .debug_str section), does not support
   // .debug_ranges, and uses sections as references (no temp symbols inside
-  // DWARF sections).  DWARF v2 is the default for NVPTX.
+  // DWARF sections).  DWARF v2 is the default for NVPTX and does not support
+  // accelerator tables.
   setUseInlineStrings(true);
   setUseRangesSection(false);
   setUseSectionsAsReferences(true);
   Asm->OutStreamer->getContext().setDwarfVersion(2);
+  setTheAccelTableKind(AccelTableKind::None);
 }
 
 /// NVPTX-specific source line recording with inlined_at support.

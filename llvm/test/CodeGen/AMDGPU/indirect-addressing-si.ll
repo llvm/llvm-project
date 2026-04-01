@@ -81,6 +81,10 @@ define amdgpu_kernel void @extract_w_offset(ptr addrspace(1) %out, i32 %in) {
 ; NOOPT-LABEL: extract_w_offset:
 ; NOOPT:       ; %bb.0: ; %entry
 ; NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
+; NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; NOOPT-NEXT:    s_load_dword s0, s[4:5], 0xb
+; NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
 ; NOOPT-NEXT:    s_load_dword s4, s[4:5], 0xb
 ; NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
 ; NOOPT-NEXT:    s_mov_b32 s7, s1
@@ -331,6 +335,11 @@ define amdgpu_kernel void @extract_w_offset_salu_use_vector(ptr addrspace(1) %ou
 ; NOOPT-LABEL: extract_w_offset_salu_use_vector:
 ; NOOPT:       ; %bb.0: ; %entry
 ; NOOPT-NEXT:    s_mov_b64 s[2:3], s[4:5]
+; NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x9
+; NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; NOOPT-NEXT:    s_load_dword s0, s[2:3], 0xb
+; NOOPT-NEXT:    s_load_dwordx16 s[4:19], s[2:3], 0x19
+; NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
 ; NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x9
 ; NOOPT-NEXT:    s_load_dword s4, s[2:3], 0xb
 ; NOOPT-NEXT:    s_load_dwordx16 s[36:51], s[2:3], 0x19
@@ -691,6 +700,10 @@ define amdgpu_kernel void @extract_wo_offset(ptr addrspace(1) %out, i32 %in) {
 ; NOOPT-LABEL: extract_wo_offset:
 ; NOOPT:       ; %bb.0: ; %entry
 ; NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
+; NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; NOOPT-NEXT:    s_load_dword s0, s[4:5], 0xb
+; NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
 ; NOOPT-NEXT:    s_load_dword s4, s[4:5], 0xb
 ; NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
 ; NOOPT-NEXT:    s_mov_b32 s7, s1
@@ -917,6 +930,10 @@ define amdgpu_kernel void @extract_neg_offset_sgpr(ptr addrspace(1) %out, i32 %o
 ;
 ; NOOPT-LABEL: extract_neg_offset_sgpr:
 ; NOOPT:       ; %bb.0: ; %entry
+; NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
+; NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; NOOPT-NEXT:    s_load_dword s0, s[4:5], 0xb
+; NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
 ; NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
 ; NOOPT-NEXT:    s_load_dword s4, s[4:5], 0xb
 ; NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
@@ -1165,6 +1182,12 @@ define amdgpu_kernel void @extract_neg_offset_sgpr_loaded(ptr addrspace(1) %out,
 ;
 ; NOOPT-LABEL: extract_neg_offset_sgpr_loaded:
 ; NOOPT:       ; %bb.0: ; %entry
+; NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
+; NOOPT-NEXT:    s_load_dwordx16 s[8:23], s[4:5], 0x19
+; NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; NOOPT-NEXT:    s_load_dwordx16 s[8:23], s[4:5], 0x29
+; NOOPT-NEXT:    s_load_dword s0, s[4:5], 0x39
+; NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
 ; NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
 ; NOOPT-NEXT:    s_load_dwordx16 s[36:51], s[4:5], 0x19
 ; NOOPT-NEXT:    s_load_dwordx16 s[52:67], s[4:5], 0x29
@@ -1509,6 +1532,8 @@ define amdgpu_kernel void @extract_neg_offset_vgpr(ptr addrspace(1) %out) {
 ; NOOPT-NEXT:    buffer_store_dword v0, off, s[20:23], 0 offset:68 ; 4-byte Folded Spill
 ; NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
 ; NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
+; NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
 ; NOOPT-NEXT:    s_mov_b32 s6, s1
 ; NOOPT-NEXT:    ; kill: def $sgpr0 killed $sgpr0 killed $sgpr0_sgpr1
 ; NOOPT-NEXT:    s_mov_b32 s4, 0xf000
@@ -1802,18 +1827,32 @@ define amdgpu_kernel void @extract_undef_offset_sgpr(ptr addrspace(1) %out, ptr 
 ;
 ; NOOPT-LABEL: extract_undef_offset_sgpr:
 ; NOOPT:       ; %bb.0: ; %entry
+; NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
+; NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
 ; NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0xb
+; NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
+; NOOPT-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0xb
 ; NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
 ; NOOPT-NEXT:    s_mov_b32 s6, s1
 ; NOOPT-NEXT:    ; kill: def $sgpr0 killed $sgpr0 killed $sgpr0_sgpr1
-; NOOPT-NEXT:    s_mov_b32 s4, 0xf000
-; NOOPT-NEXT:    s_mov_b32 s5, -1
+; NOOPT-NEXT:    s_mov_b32 s8, 0xf000
+; NOOPT-NEXT:    s_mov_b32 s9, -1
 ; NOOPT-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_sgpr1_sgpr2_sgpr3
 ; NOOPT-NEXT:    s_mov_b32 s1, s6
-; NOOPT-NEXT:    s_mov_b32 s2, s5
-; NOOPT-NEXT:    s_mov_b32 s3, s4
-; NOOPT-NEXT:    buffer_load_dwordx4 v[0:3], off, s[0:3], 0 glc
+; NOOPT-NEXT:    s_mov_b32 s2, s9
+; NOOPT-NEXT:    s_mov_b32 s3, s8
+; NOOPT-NEXT:    s_mov_b32 s10, s5
+; NOOPT-NEXT:    ; kill: def $sgpr4 killed $sgpr4 killed $sgpr4_sgpr5
+; NOOPT-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5_sgpr6_sgpr7
+; NOOPT-NEXT:    s_mov_b32 s5, s10
+; NOOPT-NEXT:    s_mov_b32 s6, s9
+; NOOPT-NEXT:    s_mov_b32 s7, s8
+; NOOPT-NEXT:    buffer_load_dwordx4 v[0:3], off, s[4:7], 0 glc
 ; NOOPT-NEXT:    s_waitcnt vmcnt(0)
+; NOOPT-NEXT:    ; implicit-def: $sgpr4
+; NOOPT-NEXT:    v_mov_b32_e32 v0, s4
+; NOOPT-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; NOOPT-NEXT:    s_endpgm
 ;
 ; SI-MOVREL-LABEL: extract_undef_offset_sgpr:
@@ -1861,6 +1900,29 @@ define amdgpu_kernel void @insert_undef_offset_sgpr_vector_src(ptr addrspace(1) 
 ;
 ; NOOPT-LABEL: insert_undef_offset_sgpr_vector_src:
 ; NOOPT:       ; %bb.0: ; %entry
+; NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
+; NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0xb
+; NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
+; NOOPT-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0xb
+; NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; NOOPT-NEXT:    s_mov_b32 s8, s1
+; NOOPT-NEXT:    ; kill: def $sgpr0 killed $sgpr0 killed $sgpr0_sgpr1
+; NOOPT-NEXT:    s_mov_b32 s6, 0xf000
+; NOOPT-NEXT:    s_mov_b32 s7, -1
+; NOOPT-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_sgpr1_sgpr2_sgpr3
+; NOOPT-NEXT:    s_mov_b32 s1, s8
+; NOOPT-NEXT:    s_mov_b32 s2, s7
+; NOOPT-NEXT:    s_mov_b32 s3, s6
+; NOOPT-NEXT:    s_load_dwordx4 s[4:7], s[4:5], 0x0
+; NOOPT-NEXT:    ; implicit-def: $sgpr4_sgpr5_sgpr6_sgpr7
+; NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; NOOPT-NEXT:    v_mov_b32_e32 v0, s4
+; NOOPT-NEXT:    v_mov_b32_e32 v1, s5
+; NOOPT-NEXT:    v_mov_b32_e32 v2, s6
+; NOOPT-NEXT:    v_mov_b32_e32 v3, s7
+; NOOPT-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0
 ; NOOPT-NEXT:    s_endpgm
 ;
 ; SI-MOVREL-LABEL: insert_undef_offset_sgpr_vector_src:
@@ -1962,51 +2024,55 @@ define amdgpu_kernel void @insert_w_offset(ptr addrspace(1) %out, i32 %in) {
 ;
 ; NOOPT-LABEL: insert_w_offset:
 ; NOOPT:       ; %bb.0: ; %entry
-; NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
-; NOOPT-NEXT:    s_load_dword s4, s[4:5], 0xb
+; NOOPT-NEXT:    s_mov_b64 s[0:1], s[4:5]
+; NOOPT-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x9
 ; NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
-; NOOPT-NEXT:    s_mov_b32 s7, s1
-; NOOPT-NEXT:    ; kill: def $sgpr0 killed $sgpr0 killed $sgpr0_sgpr1
-; NOOPT-NEXT:    s_mov_b32 s5, 0xf000
-; NOOPT-NEXT:    s_mov_b32 s6, -1
+; NOOPT-NEXT:    s_load_dword s2, s[0:1], 0xb
+; NOOPT-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x9
+; NOOPT-NEXT:    s_load_dword s7, s[0:1], 0xb
+; NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; NOOPT-NEXT:    s_mov_b32 s9, s5
+; NOOPT-NEXT:    s_mov_b32 s0, s4
+; NOOPT-NEXT:    s_mov_b32 s6, 0xf000
+; NOOPT-NEXT:    s_mov_b32 s8, -1
 ; NOOPT-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_sgpr1_sgpr2_sgpr3
-; NOOPT-NEXT:    s_mov_b32 s1, s7
-; NOOPT-NEXT:    s_mov_b32 s2, s6
-; NOOPT-NEXT:    s_mov_b32 s3, s5
-; NOOPT-NEXT:    s_mov_b32 s5, 1
-; NOOPT-NEXT:    s_add_i32 s4, s4, s5
-; NOOPT-NEXT:    s_mov_b32 s5, 0x41800000
-; NOOPT-NEXT:    s_mov_b32 s6, 0x41700000
-; NOOPT-NEXT:    s_mov_b32 s7, 0x41600000
-; NOOPT-NEXT:    s_mov_b32 s8, 0x41500000
-; NOOPT-NEXT:    s_mov_b32 s9, 0x41400000
-; NOOPT-NEXT:    s_mov_b32 s10, 0x41300000
-; NOOPT-NEXT:    s_mov_b32 s11, 0x41200000
-; NOOPT-NEXT:    s_mov_b32 s12, 0x41100000
-; NOOPT-NEXT:    s_mov_b32 s13, 0x41000000
-; NOOPT-NEXT:    s_mov_b32 s14, 0x40e00000
-; NOOPT-NEXT:    s_mov_b32 s15, 0x40c00000
-; NOOPT-NEXT:    s_mov_b32 s16, 0x40a00000
-; NOOPT-NEXT:    s_mov_b32 s17, 4.0
-; NOOPT-NEXT:    s_mov_b32 s18, 0x40400000
-; NOOPT-NEXT:    s_mov_b32 s19, 2.0
-; NOOPT-NEXT:    s_mov_b32 s20, 1.0
-; NOOPT-NEXT:    v_mov_b32_e32 v7, s20
-; NOOPT-NEXT:    v_mov_b32_e32 v30, s19
-; NOOPT-NEXT:    v_mov_b32_e32 v29, s18
-; NOOPT-NEXT:    v_mov_b32_e32 v28, s17
-; NOOPT-NEXT:    v_mov_b32_e32 v27, s16
-; NOOPT-NEXT:    v_mov_b32_e32 v26, s15
-; NOOPT-NEXT:    v_mov_b32_e32 v25, s14
-; NOOPT-NEXT:    v_mov_b32_e32 v24, s13
-; NOOPT-NEXT:    v_mov_b32_e32 v23, s12
-; NOOPT-NEXT:    v_mov_b32_e32 v6, s11
-; NOOPT-NEXT:    v_mov_b32_e32 v5, s10
-; NOOPT-NEXT:    v_mov_b32_e32 v4, s9
-; NOOPT-NEXT:    v_mov_b32_e32 v3, s8
-; NOOPT-NEXT:    v_mov_b32_e32 v2, s7
-; NOOPT-NEXT:    v_mov_b32_e32 v1, s6
-; NOOPT-NEXT:    v_mov_b32_e32 v0, s5
+; NOOPT-NEXT:    s_mov_b32 s1, s9
+; NOOPT-NEXT:    s_mov_b32 s2, s8
+; NOOPT-NEXT:    s_mov_b32 s3, s6
+; NOOPT-NEXT:    s_mov_b32 s8, 1
+; NOOPT-NEXT:    s_add_i32 s7, s7, s8
+; NOOPT-NEXT:    s_mov_b32 s8, 0x41800000
+; NOOPT-NEXT:    s_mov_b32 s9, 0x41700000
+; NOOPT-NEXT:    s_mov_b32 s10, 0x41600000
+; NOOPT-NEXT:    s_mov_b32 s11, 0x41500000
+; NOOPT-NEXT:    s_mov_b32 s12, 0x41400000
+; NOOPT-NEXT:    s_mov_b32 s13, 0x41300000
+; NOOPT-NEXT:    s_mov_b32 s14, 0x41200000
+; NOOPT-NEXT:    s_mov_b32 s15, 0x41100000
+; NOOPT-NEXT:    s_mov_b32 s16, 0x41000000
+; NOOPT-NEXT:    s_mov_b32 s17, 0x40e00000
+; NOOPT-NEXT:    s_mov_b32 s18, 0x40c00000
+; NOOPT-NEXT:    s_mov_b32 s19, 0x40a00000
+; NOOPT-NEXT:    s_mov_b32 s20, 4.0
+; NOOPT-NEXT:    s_mov_b32 s21, 0x40400000
+; NOOPT-NEXT:    s_mov_b32 s22, 2.0
+; NOOPT-NEXT:    s_mov_b32 s23, 1.0
+; NOOPT-NEXT:    v_mov_b32_e32 v7, s23
+; NOOPT-NEXT:    v_mov_b32_e32 v30, s22
+; NOOPT-NEXT:    v_mov_b32_e32 v29, s21
+; NOOPT-NEXT:    v_mov_b32_e32 v28, s20
+; NOOPT-NEXT:    v_mov_b32_e32 v27, s19
+; NOOPT-NEXT:    v_mov_b32_e32 v26, s18
+; NOOPT-NEXT:    v_mov_b32_e32 v25, s17
+; NOOPT-NEXT:    v_mov_b32_e32 v24, s16
+; NOOPT-NEXT:    v_mov_b32_e32 v23, s15
+; NOOPT-NEXT:    v_mov_b32_e32 v6, s14
+; NOOPT-NEXT:    v_mov_b32_e32 v5, s13
+; NOOPT-NEXT:    v_mov_b32_e32 v4, s12
+; NOOPT-NEXT:    v_mov_b32_e32 v3, s11
+; NOOPT-NEXT:    v_mov_b32_e32 v2, s10
+; NOOPT-NEXT:    v_mov_b32_e32 v1, s9
+; NOOPT-NEXT:    v_mov_b32_e32 v0, s8
 ; NOOPT-NEXT:    ; kill: def $vgpr7 killed $vgpr7 def $vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22 killed $exec
 ; NOOPT-NEXT:    v_mov_b32_e32 v8, v30
 ; NOOPT-NEXT:    v_mov_b32_e32 v9, v29
@@ -2024,7 +2090,7 @@ define amdgpu_kernel void @insert_w_offset(ptr addrspace(1) %out, i32 %in) {
 ; NOOPT-NEXT:    v_mov_b32_e32 v21, v1
 ; NOOPT-NEXT:    v_mov_b32_e32 v22, v0
 ; NOOPT-NEXT:    v_mov_b32_e32 v0, 0x41880000
-; NOOPT-NEXT:    s_mov_b32 m0, s4
+; NOOPT-NEXT:    s_mov_b32 m0, s7
 ; NOOPT-NEXT:    v_movreld_b32_e32 v7, v0
 ; NOOPT-NEXT:    v_mov_b32_e32 v4, v22
 ; NOOPT-NEXT:    v_mov_b32_e32 v5, v21
@@ -2034,7 +2100,14 @@ define amdgpu_kernel void @insert_w_offset(ptr addrspace(1) %out, i32 %in) {
 ; NOOPT-NEXT:    v_mov_b32_e32 v1, v6
 ; NOOPT-NEXT:    v_mov_b32_e32 v2, v5
 ; NOOPT-NEXT:    v_mov_b32_e32 v3, v4
-; NOOPT-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0 offset:48
+; NOOPT-NEXT:    s_mov_b32 s8, 0
+; NOOPT-NEXT:    ; kill: def $sgpr8 killed $sgpr8 def $sgpr8_sgpr9
+; NOOPT-NEXT:    s_mov_b32 s9, s6
+; NOOPT-NEXT:    ; kill: def $sgpr4_sgpr5 killed $sgpr4_sgpr5 def $sgpr4_sgpr5_sgpr6_sgpr7
+; NOOPT-NEXT:    s_mov_b64 s[6:7], s[8:9]
+; NOOPT-NEXT:    v_mov_b32_e32 v4, 32
+; NOOPT-NEXT:    v_mov_b32_e32 v5, 0
+; NOOPT-NEXT:    buffer_store_dwordx4 v[0:3], v[4:5], s[4:7], 0 addr64 offset:16
 ; NOOPT-NEXT:    v_mov_b32_e32 v4, v18
 ; NOOPT-NEXT:    v_mov_b32_e32 v5, v17
 ; NOOPT-NEXT:    v_mov_b32_e32 v6, v16
@@ -2316,51 +2389,62 @@ define amdgpu_kernel void @insert_unsigned_base_plus_offset(ptr addrspace(1) %ou
 ;
 ; NOOPT-LABEL: insert_unsigned_base_plus_offset:
 ; NOOPT:       ; %bb.0: ; %entry
-; NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
-; NOOPT-NEXT:    s_load_dword s4, s[4:5], 0xb
+; NOOPT-NEXT:    s_mov_b64 s[0:1], s[4:5]
+; NOOPT-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x9
 ; NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
-; NOOPT-NEXT:    s_mov_b32 s7, s1
-; NOOPT-NEXT:    ; kill: def $sgpr0 killed $sgpr0 killed $sgpr0_sgpr1
-; NOOPT-NEXT:    s_mov_b32 s5, 0xf000
-; NOOPT-NEXT:    s_mov_b32 s6, -1
+; NOOPT-NEXT:    s_mov_b32 s2, s1
+; NOOPT-NEXT:    s_mov_b32 s12, s0
+; NOOPT-NEXT:    s_mov_b32 s6, 0xf000
+; NOOPT-NEXT:    s_mov_b32 s8, -1
+; NOOPT-NEXT:    ; kill: def $sgpr12 killed $sgpr12 def $sgpr12_sgpr13_sgpr14_sgpr15
+; NOOPT-NEXT:    s_mov_b32 s13, s2
+; NOOPT-NEXT:    s_mov_b32 s14, s8
+; NOOPT-NEXT:    s_mov_b32 s15, s6
+; NOOPT-NEXT:    buffer_load_ushort v0, off, s[12:15], 0 offset:44
+; NOOPT-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x9
+; NOOPT-NEXT:    s_load_dword s7, s[0:1], 0xb
+; NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; NOOPT-NEXT:    s_mov_b32 s9, s5
+; NOOPT-NEXT:    s_mov_b32 s0, s4
 ; NOOPT-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_sgpr1_sgpr2_sgpr3
-; NOOPT-NEXT:    s_mov_b32 s1, s7
-; NOOPT-NEXT:    s_mov_b32 s2, s6
-; NOOPT-NEXT:    s_mov_b32 s3, s5
-; NOOPT-NEXT:    s_mov_b32 s5, 0xffff
-; NOOPT-NEXT:    s_and_b32 s4, s4, s5
-; NOOPT-NEXT:    s_mov_b32 s5, 0x41800000
-; NOOPT-NEXT:    s_mov_b32 s6, 0x41700000
-; NOOPT-NEXT:    s_mov_b32 s7, 0x41600000
-; NOOPT-NEXT:    s_mov_b32 s8, 0x41500000
-; NOOPT-NEXT:    s_mov_b32 s9, 0x41400000
-; NOOPT-NEXT:    s_mov_b32 s10, 0x41300000
-; NOOPT-NEXT:    s_mov_b32 s11, 0x41200000
-; NOOPT-NEXT:    s_mov_b32 s12, 0x41100000
-; NOOPT-NEXT:    s_mov_b32 s13, 0x41000000
-; NOOPT-NEXT:    s_mov_b32 s14, 0x40e00000
-; NOOPT-NEXT:    s_mov_b32 s15, 0x40c00000
-; NOOPT-NEXT:    s_mov_b32 s16, 0x40a00000
-; NOOPT-NEXT:    s_mov_b32 s17, 4.0
-; NOOPT-NEXT:    s_mov_b32 s18, 0x40400000
-; NOOPT-NEXT:    s_mov_b32 s19, 2.0
-; NOOPT-NEXT:    s_mov_b32 s20, 1.0
-; NOOPT-NEXT:    v_mov_b32_e32 v7, s20
-; NOOPT-NEXT:    v_mov_b32_e32 v30, s19
-; NOOPT-NEXT:    v_mov_b32_e32 v29, s18
-; NOOPT-NEXT:    v_mov_b32_e32 v28, s17
-; NOOPT-NEXT:    v_mov_b32_e32 v27, s16
-; NOOPT-NEXT:    v_mov_b32_e32 v26, s15
-; NOOPT-NEXT:    v_mov_b32_e32 v25, s14
-; NOOPT-NEXT:    v_mov_b32_e32 v24, s13
-; NOOPT-NEXT:    v_mov_b32_e32 v23, s12
-; NOOPT-NEXT:    v_mov_b32_e32 v6, s11
-; NOOPT-NEXT:    v_mov_b32_e32 v5, s10
-; NOOPT-NEXT:    v_mov_b32_e32 v4, s9
-; NOOPT-NEXT:    v_mov_b32_e32 v3, s8
-; NOOPT-NEXT:    v_mov_b32_e32 v2, s7
-; NOOPT-NEXT:    v_mov_b32_e32 v1, s6
-; NOOPT-NEXT:    v_mov_b32_e32 v0, s5
+; NOOPT-NEXT:    s_mov_b32 s1, s9
+; NOOPT-NEXT:    s_mov_b32 s2, s8
+; NOOPT-NEXT:    s_mov_b32 s3, s6
+; NOOPT-NEXT:    s_mov_b32 s8, 0xffff
+; NOOPT-NEXT:    s_and_b32 s7, s7, s8
+; NOOPT-NEXT:    s_mov_b32 s8, 0x41800000
+; NOOPT-NEXT:    s_mov_b32 s9, 0x41700000
+; NOOPT-NEXT:    s_mov_b32 s10, 0x41600000
+; NOOPT-NEXT:    s_mov_b32 s11, 0x41500000
+; NOOPT-NEXT:    s_mov_b32 s12, 0x41400000
+; NOOPT-NEXT:    s_mov_b32 s13, 0x41300000
+; NOOPT-NEXT:    s_mov_b32 s14, 0x41200000
+; NOOPT-NEXT:    s_mov_b32 s15, 0x41100000
+; NOOPT-NEXT:    s_mov_b32 s16, 0x41000000
+; NOOPT-NEXT:    s_mov_b32 s17, 0x40e00000
+; NOOPT-NEXT:    s_mov_b32 s18, 0x40c00000
+; NOOPT-NEXT:    s_mov_b32 s19, 0x40a00000
+; NOOPT-NEXT:    s_mov_b32 s20, 4.0
+; NOOPT-NEXT:    s_mov_b32 s21, 0x40400000
+; NOOPT-NEXT:    s_mov_b32 s22, 2.0
+; NOOPT-NEXT:    s_mov_b32 s23, 1.0
+; NOOPT-NEXT:    v_mov_b32_e32 v7, s23
+; NOOPT-NEXT:    v_mov_b32_e32 v30, s22
+; NOOPT-NEXT:    v_mov_b32_e32 v29, s21
+; NOOPT-NEXT:    v_mov_b32_e32 v28, s20
+; NOOPT-NEXT:    v_mov_b32_e32 v27, s19
+; NOOPT-NEXT:    v_mov_b32_e32 v26, s18
+; NOOPT-NEXT:    v_mov_b32_e32 v25, s17
+; NOOPT-NEXT:    v_mov_b32_e32 v24, s16
+; NOOPT-NEXT:    v_mov_b32_e32 v23, s15
+; NOOPT-NEXT:    v_mov_b32_e32 v6, s14
+; NOOPT-NEXT:    v_mov_b32_e32 v5, s13
+; NOOPT-NEXT:    v_mov_b32_e32 v4, s12
+; NOOPT-NEXT:    v_mov_b32_e32 v3, s11
+; NOOPT-NEXT:    v_mov_b32_e32 v2, s10
+; NOOPT-NEXT:    v_mov_b32_e32 v1, s9
+; NOOPT-NEXT:    s_waitcnt vmcnt(0)
+; NOOPT-NEXT:    v_mov_b32_e32 v0, s8
 ; NOOPT-NEXT:    ; kill: def $vgpr7 killed $vgpr7 def $vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22 killed $exec
 ; NOOPT-NEXT:    v_mov_b32_e32 v8, v30
 ; NOOPT-NEXT:    v_mov_b32_e32 v9, v29
@@ -2378,7 +2462,7 @@ define amdgpu_kernel void @insert_unsigned_base_plus_offset(ptr addrspace(1) %ou
 ; NOOPT-NEXT:    v_mov_b32_e32 v21, v1
 ; NOOPT-NEXT:    v_mov_b32_e32 v22, v0
 ; NOOPT-NEXT:    v_mov_b32_e32 v0, 0x41880000
-; NOOPT-NEXT:    s_mov_b32 m0, s4
+; NOOPT-NEXT:    s_mov_b32 m0, s7
 ; NOOPT-NEXT:    v_movreld_b32_e32 v8, v0
 ; NOOPT-NEXT:    v_mov_b32_e32 v4, v22
 ; NOOPT-NEXT:    v_mov_b32_e32 v5, v21
@@ -2388,7 +2472,14 @@ define amdgpu_kernel void @insert_unsigned_base_plus_offset(ptr addrspace(1) %ou
 ; NOOPT-NEXT:    v_mov_b32_e32 v1, v6
 ; NOOPT-NEXT:    v_mov_b32_e32 v2, v5
 ; NOOPT-NEXT:    v_mov_b32_e32 v3, v4
-; NOOPT-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0 offset:48
+; NOOPT-NEXT:    s_mov_b32 s8, 0
+; NOOPT-NEXT:    ; kill: def $sgpr8 killed $sgpr8 def $sgpr8_sgpr9
+; NOOPT-NEXT:    s_mov_b32 s9, s6
+; NOOPT-NEXT:    ; kill: def $sgpr4_sgpr5 killed $sgpr4_sgpr5 def $sgpr4_sgpr5_sgpr6_sgpr7
+; NOOPT-NEXT:    s_mov_b64 s[6:7], s[8:9]
+; NOOPT-NEXT:    v_mov_b32_e32 v4, 32
+; NOOPT-NEXT:    v_mov_b32_e32 v5, 0
+; NOOPT-NEXT:    buffer_store_dwordx4 v[0:3], v[4:5], s[4:7], 0 addr64 offset:16
 ; NOOPT-NEXT:    v_mov_b32_e32 v4, v18
 ; NOOPT-NEXT:    v_mov_b32_e32 v5, v17
 ; NOOPT-NEXT:    v_mov_b32_e32 v6, v16
@@ -2671,52 +2762,63 @@ define amdgpu_kernel void @insert_signed_base_plus_offset(ptr addrspace(1) %out,
 ;
 ; NOOPT-LABEL: insert_signed_base_plus_offset:
 ; NOOPT:       ; %bb.0: ; %entry
-; NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
-; NOOPT-NEXT:    s_load_dword s4, s[4:5], 0xb
+; NOOPT-NEXT:    s_mov_b64 s[0:1], s[4:5]
+; NOOPT-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x9
 ; NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
-; NOOPT-NEXT:    s_mov_b32 s7, s1
-; NOOPT-NEXT:    ; kill: def $sgpr0 killed $sgpr0 killed $sgpr0_sgpr1
-; NOOPT-NEXT:    s_mov_b32 s5, 0xf000
-; NOOPT-NEXT:    s_mov_b32 s6, -1
+; NOOPT-NEXT:    s_mov_b32 s2, s1
+; NOOPT-NEXT:    s_mov_b32 s12, s0
+; NOOPT-NEXT:    s_mov_b32 s6, 0xf000
+; NOOPT-NEXT:    s_mov_b32 s8, -1
+; NOOPT-NEXT:    ; kill: def $sgpr12 killed $sgpr12 def $sgpr12_sgpr13_sgpr14_sgpr15
+; NOOPT-NEXT:    s_mov_b32 s13, s2
+; NOOPT-NEXT:    s_mov_b32 s14, s8
+; NOOPT-NEXT:    s_mov_b32 s15, s6
+; NOOPT-NEXT:    buffer_load_ushort v0, off, s[12:15], 0 offset:44
+; NOOPT-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x9
+; NOOPT-NEXT:    s_load_dword s7, s[0:1], 0xb
+; NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; NOOPT-NEXT:    s_mov_b32 s9, s5
+; NOOPT-NEXT:    s_mov_b32 s0, s4
 ; NOOPT-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_sgpr1_sgpr2_sgpr3
-; NOOPT-NEXT:    s_mov_b32 s1, s7
-; NOOPT-NEXT:    s_mov_b32 s2, s6
-; NOOPT-NEXT:    s_mov_b32 s3, s5
-; NOOPT-NEXT:    s_sext_i32_i16 s4, s4
-; NOOPT-NEXT:    s_mov_b32 s5, 1
-; NOOPT-NEXT:    s_add_i32 s4, s4, s5
-; NOOPT-NEXT:    s_mov_b32 s5, 0x41800000
-; NOOPT-NEXT:    s_mov_b32 s6, 0x41700000
-; NOOPT-NEXT:    s_mov_b32 s7, 0x41600000
-; NOOPT-NEXT:    s_mov_b32 s8, 0x41500000
-; NOOPT-NEXT:    s_mov_b32 s9, 0x41400000
-; NOOPT-NEXT:    s_mov_b32 s10, 0x41300000
-; NOOPT-NEXT:    s_mov_b32 s11, 0x41200000
-; NOOPT-NEXT:    s_mov_b32 s12, 0x41100000
-; NOOPT-NEXT:    s_mov_b32 s13, 0x41000000
-; NOOPT-NEXT:    s_mov_b32 s14, 0x40e00000
-; NOOPT-NEXT:    s_mov_b32 s15, 0x40c00000
-; NOOPT-NEXT:    s_mov_b32 s16, 0x40a00000
-; NOOPT-NEXT:    s_mov_b32 s17, 4.0
-; NOOPT-NEXT:    s_mov_b32 s18, 0x40400000
-; NOOPT-NEXT:    s_mov_b32 s19, 2.0
-; NOOPT-NEXT:    s_mov_b32 s20, 1.0
-; NOOPT-NEXT:    v_mov_b32_e32 v7, s20
-; NOOPT-NEXT:    v_mov_b32_e32 v30, s19
-; NOOPT-NEXT:    v_mov_b32_e32 v29, s18
-; NOOPT-NEXT:    v_mov_b32_e32 v28, s17
-; NOOPT-NEXT:    v_mov_b32_e32 v27, s16
-; NOOPT-NEXT:    v_mov_b32_e32 v26, s15
-; NOOPT-NEXT:    v_mov_b32_e32 v25, s14
-; NOOPT-NEXT:    v_mov_b32_e32 v24, s13
-; NOOPT-NEXT:    v_mov_b32_e32 v23, s12
-; NOOPT-NEXT:    v_mov_b32_e32 v6, s11
-; NOOPT-NEXT:    v_mov_b32_e32 v5, s10
-; NOOPT-NEXT:    v_mov_b32_e32 v4, s9
-; NOOPT-NEXT:    v_mov_b32_e32 v3, s8
-; NOOPT-NEXT:    v_mov_b32_e32 v2, s7
-; NOOPT-NEXT:    v_mov_b32_e32 v1, s6
-; NOOPT-NEXT:    v_mov_b32_e32 v0, s5
+; NOOPT-NEXT:    s_mov_b32 s1, s9
+; NOOPT-NEXT:    s_mov_b32 s2, s8
+; NOOPT-NEXT:    s_mov_b32 s3, s6
+; NOOPT-NEXT:    s_sext_i32_i16 s7, s7
+; NOOPT-NEXT:    s_mov_b32 s8, 1
+; NOOPT-NEXT:    s_add_i32 s7, s7, s8
+; NOOPT-NEXT:    s_mov_b32 s8, 0x41800000
+; NOOPT-NEXT:    s_mov_b32 s9, 0x41700000
+; NOOPT-NEXT:    s_mov_b32 s10, 0x41600000
+; NOOPT-NEXT:    s_mov_b32 s11, 0x41500000
+; NOOPT-NEXT:    s_mov_b32 s12, 0x41400000
+; NOOPT-NEXT:    s_mov_b32 s13, 0x41300000
+; NOOPT-NEXT:    s_mov_b32 s14, 0x41200000
+; NOOPT-NEXT:    s_mov_b32 s15, 0x41100000
+; NOOPT-NEXT:    s_mov_b32 s16, 0x41000000
+; NOOPT-NEXT:    s_mov_b32 s17, 0x40e00000
+; NOOPT-NEXT:    s_mov_b32 s18, 0x40c00000
+; NOOPT-NEXT:    s_mov_b32 s19, 0x40a00000
+; NOOPT-NEXT:    s_mov_b32 s20, 4.0
+; NOOPT-NEXT:    s_mov_b32 s21, 0x40400000
+; NOOPT-NEXT:    s_mov_b32 s22, 2.0
+; NOOPT-NEXT:    s_mov_b32 s23, 1.0
+; NOOPT-NEXT:    v_mov_b32_e32 v7, s23
+; NOOPT-NEXT:    v_mov_b32_e32 v30, s22
+; NOOPT-NEXT:    v_mov_b32_e32 v29, s21
+; NOOPT-NEXT:    v_mov_b32_e32 v28, s20
+; NOOPT-NEXT:    v_mov_b32_e32 v27, s19
+; NOOPT-NEXT:    v_mov_b32_e32 v26, s18
+; NOOPT-NEXT:    v_mov_b32_e32 v25, s17
+; NOOPT-NEXT:    v_mov_b32_e32 v24, s16
+; NOOPT-NEXT:    v_mov_b32_e32 v23, s15
+; NOOPT-NEXT:    v_mov_b32_e32 v6, s14
+; NOOPT-NEXT:    v_mov_b32_e32 v5, s13
+; NOOPT-NEXT:    v_mov_b32_e32 v4, s12
+; NOOPT-NEXT:    v_mov_b32_e32 v3, s11
+; NOOPT-NEXT:    v_mov_b32_e32 v2, s10
+; NOOPT-NEXT:    v_mov_b32_e32 v1, s9
+; NOOPT-NEXT:    s_waitcnt vmcnt(0)
+; NOOPT-NEXT:    v_mov_b32_e32 v0, s8
 ; NOOPT-NEXT:    ; kill: def $vgpr7 killed $vgpr7 def $vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22 killed $exec
 ; NOOPT-NEXT:    v_mov_b32_e32 v8, v30
 ; NOOPT-NEXT:    v_mov_b32_e32 v9, v29
@@ -2734,7 +2836,7 @@ define amdgpu_kernel void @insert_signed_base_plus_offset(ptr addrspace(1) %out,
 ; NOOPT-NEXT:    v_mov_b32_e32 v21, v1
 ; NOOPT-NEXT:    v_mov_b32_e32 v22, v0
 ; NOOPT-NEXT:    v_mov_b32_e32 v0, 0x41880000
-; NOOPT-NEXT:    s_mov_b32 m0, s4
+; NOOPT-NEXT:    s_mov_b32 m0, s7
 ; NOOPT-NEXT:    v_movreld_b32_e32 v7, v0
 ; NOOPT-NEXT:    v_mov_b32_e32 v4, v22
 ; NOOPT-NEXT:    v_mov_b32_e32 v5, v21
@@ -2744,7 +2846,14 @@ define amdgpu_kernel void @insert_signed_base_plus_offset(ptr addrspace(1) %out,
 ; NOOPT-NEXT:    v_mov_b32_e32 v1, v6
 ; NOOPT-NEXT:    v_mov_b32_e32 v2, v5
 ; NOOPT-NEXT:    v_mov_b32_e32 v3, v4
-; NOOPT-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0 offset:48
+; NOOPT-NEXT:    s_mov_b32 s8, 0
+; NOOPT-NEXT:    ; kill: def $sgpr8 killed $sgpr8 def $sgpr8_sgpr9
+; NOOPT-NEXT:    s_mov_b32 s9, s6
+; NOOPT-NEXT:    ; kill: def $sgpr4_sgpr5 killed $sgpr4_sgpr5 def $sgpr4_sgpr5_sgpr6_sgpr7
+; NOOPT-NEXT:    s_mov_b64 s[6:7], s[8:9]
+; NOOPT-NEXT:    v_mov_b32_e32 v4, 32
+; NOOPT-NEXT:    v_mov_b32_e32 v5, 0
+; NOOPT-NEXT:    buffer_store_dwordx4 v[0:3], v[4:5], s[4:7], 0 addr64 offset:16
 ; NOOPT-NEXT:    v_mov_b32_e32 v4, v18
 ; NOOPT-NEXT:    v_mov_b32_e32 v5, v17
 ; NOOPT-NEXT:    v_mov_b32_e32 v6, v16
@@ -3031,49 +3140,53 @@ define amdgpu_kernel void @insert_wo_offset(ptr addrspace(1) %out, i32 %in) {
 ;
 ; NOOPT-LABEL: insert_wo_offset:
 ; NOOPT:       ; %bb.0: ; %entry
-; NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
-; NOOPT-NEXT:    s_load_dword s4, s[4:5], 0xb
+; NOOPT-NEXT:    s_mov_b64 s[0:1], s[4:5]
+; NOOPT-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x9
 ; NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
-; NOOPT-NEXT:    s_mov_b32 s7, s1
-; NOOPT-NEXT:    ; kill: def $sgpr0 killed $sgpr0 killed $sgpr0_sgpr1
-; NOOPT-NEXT:    s_mov_b32 s5, 0xf000
-; NOOPT-NEXT:    s_mov_b32 s6, -1
+; NOOPT-NEXT:    s_load_dword s2, s[0:1], 0xb
+; NOOPT-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x9
+; NOOPT-NEXT:    s_load_dword s7, s[0:1], 0xb
+; NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; NOOPT-NEXT:    s_mov_b32 s9, s5
+; NOOPT-NEXT:    s_mov_b32 s0, s4
+; NOOPT-NEXT:    s_mov_b32 s6, 0xf000
+; NOOPT-NEXT:    s_mov_b32 s8, -1
 ; NOOPT-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_sgpr1_sgpr2_sgpr3
-; NOOPT-NEXT:    s_mov_b32 s1, s7
-; NOOPT-NEXT:    s_mov_b32 s2, s6
-; NOOPT-NEXT:    s_mov_b32 s3, s5
-; NOOPT-NEXT:    s_mov_b32 s5, 0x41800000
-; NOOPT-NEXT:    s_mov_b32 s6, 0x41700000
-; NOOPT-NEXT:    s_mov_b32 s7, 0x41600000
-; NOOPT-NEXT:    s_mov_b32 s8, 0x41500000
-; NOOPT-NEXT:    s_mov_b32 s9, 0x41400000
-; NOOPT-NEXT:    s_mov_b32 s10, 0x41300000
-; NOOPT-NEXT:    s_mov_b32 s11, 0x41200000
-; NOOPT-NEXT:    s_mov_b32 s12, 0x41100000
-; NOOPT-NEXT:    s_mov_b32 s13, 0x41000000
-; NOOPT-NEXT:    s_mov_b32 s14, 0x40e00000
-; NOOPT-NEXT:    s_mov_b32 s15, 0x40c00000
-; NOOPT-NEXT:    s_mov_b32 s16, 0x40a00000
-; NOOPT-NEXT:    s_mov_b32 s17, 4.0
-; NOOPT-NEXT:    s_mov_b32 s18, 0x40400000
-; NOOPT-NEXT:    s_mov_b32 s19, 2.0
-; NOOPT-NEXT:    s_mov_b32 s20, 1.0
-; NOOPT-NEXT:    v_mov_b32_e32 v7, s20
-; NOOPT-NEXT:    v_mov_b32_e32 v30, s19
-; NOOPT-NEXT:    v_mov_b32_e32 v29, s18
-; NOOPT-NEXT:    v_mov_b32_e32 v28, s17
-; NOOPT-NEXT:    v_mov_b32_e32 v27, s16
-; NOOPT-NEXT:    v_mov_b32_e32 v26, s15
-; NOOPT-NEXT:    v_mov_b32_e32 v25, s14
-; NOOPT-NEXT:    v_mov_b32_e32 v24, s13
-; NOOPT-NEXT:    v_mov_b32_e32 v23, s12
-; NOOPT-NEXT:    v_mov_b32_e32 v6, s11
-; NOOPT-NEXT:    v_mov_b32_e32 v5, s10
-; NOOPT-NEXT:    v_mov_b32_e32 v4, s9
-; NOOPT-NEXT:    v_mov_b32_e32 v3, s8
-; NOOPT-NEXT:    v_mov_b32_e32 v2, s7
-; NOOPT-NEXT:    v_mov_b32_e32 v1, s6
-; NOOPT-NEXT:    v_mov_b32_e32 v0, s5
+; NOOPT-NEXT:    s_mov_b32 s1, s9
+; NOOPT-NEXT:    s_mov_b32 s2, s8
+; NOOPT-NEXT:    s_mov_b32 s3, s6
+; NOOPT-NEXT:    s_mov_b32 s8, 0x41800000
+; NOOPT-NEXT:    s_mov_b32 s9, 0x41700000
+; NOOPT-NEXT:    s_mov_b32 s10, 0x41600000
+; NOOPT-NEXT:    s_mov_b32 s11, 0x41500000
+; NOOPT-NEXT:    s_mov_b32 s12, 0x41400000
+; NOOPT-NEXT:    s_mov_b32 s13, 0x41300000
+; NOOPT-NEXT:    s_mov_b32 s14, 0x41200000
+; NOOPT-NEXT:    s_mov_b32 s15, 0x41100000
+; NOOPT-NEXT:    s_mov_b32 s16, 0x41000000
+; NOOPT-NEXT:    s_mov_b32 s17, 0x40e00000
+; NOOPT-NEXT:    s_mov_b32 s18, 0x40c00000
+; NOOPT-NEXT:    s_mov_b32 s19, 0x40a00000
+; NOOPT-NEXT:    s_mov_b32 s20, 4.0
+; NOOPT-NEXT:    s_mov_b32 s21, 0x40400000
+; NOOPT-NEXT:    s_mov_b32 s22, 2.0
+; NOOPT-NEXT:    s_mov_b32 s23, 1.0
+; NOOPT-NEXT:    v_mov_b32_e32 v7, s23
+; NOOPT-NEXT:    v_mov_b32_e32 v30, s22
+; NOOPT-NEXT:    v_mov_b32_e32 v29, s21
+; NOOPT-NEXT:    v_mov_b32_e32 v28, s20
+; NOOPT-NEXT:    v_mov_b32_e32 v27, s19
+; NOOPT-NEXT:    v_mov_b32_e32 v26, s18
+; NOOPT-NEXT:    v_mov_b32_e32 v25, s17
+; NOOPT-NEXT:    v_mov_b32_e32 v24, s16
+; NOOPT-NEXT:    v_mov_b32_e32 v23, s15
+; NOOPT-NEXT:    v_mov_b32_e32 v6, s14
+; NOOPT-NEXT:    v_mov_b32_e32 v5, s13
+; NOOPT-NEXT:    v_mov_b32_e32 v4, s12
+; NOOPT-NEXT:    v_mov_b32_e32 v3, s11
+; NOOPT-NEXT:    v_mov_b32_e32 v2, s10
+; NOOPT-NEXT:    v_mov_b32_e32 v1, s9
+; NOOPT-NEXT:    v_mov_b32_e32 v0, s8
 ; NOOPT-NEXT:    ; kill: def $vgpr7 killed $vgpr7 def $vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22 killed $exec
 ; NOOPT-NEXT:    v_mov_b32_e32 v8, v30
 ; NOOPT-NEXT:    v_mov_b32_e32 v9, v29
@@ -3091,7 +3204,7 @@ define amdgpu_kernel void @insert_wo_offset(ptr addrspace(1) %out, i32 %in) {
 ; NOOPT-NEXT:    v_mov_b32_e32 v21, v1
 ; NOOPT-NEXT:    v_mov_b32_e32 v22, v0
 ; NOOPT-NEXT:    v_mov_b32_e32 v0, 0x41880000
-; NOOPT-NEXT:    s_mov_b32 m0, s4
+; NOOPT-NEXT:    s_mov_b32 m0, s7
 ; NOOPT-NEXT:    v_movreld_b32_e32 v7, v0
 ; NOOPT-NEXT:    v_mov_b32_e32 v4, v22
 ; NOOPT-NEXT:    v_mov_b32_e32 v5, v21
@@ -3101,7 +3214,14 @@ define amdgpu_kernel void @insert_wo_offset(ptr addrspace(1) %out, i32 %in) {
 ; NOOPT-NEXT:    v_mov_b32_e32 v1, v6
 ; NOOPT-NEXT:    v_mov_b32_e32 v2, v5
 ; NOOPT-NEXT:    v_mov_b32_e32 v3, v4
-; NOOPT-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0 offset:48
+; NOOPT-NEXT:    s_mov_b32 s8, 0
+; NOOPT-NEXT:    ; kill: def $sgpr8 killed $sgpr8 def $sgpr8_sgpr9
+; NOOPT-NEXT:    s_mov_b32 s9, s6
+; NOOPT-NEXT:    ; kill: def $sgpr4_sgpr5 killed $sgpr4_sgpr5 def $sgpr4_sgpr5_sgpr6_sgpr7
+; NOOPT-NEXT:    s_mov_b64 s[6:7], s[8:9]
+; NOOPT-NEXT:    v_mov_b32_e32 v4, 32
+; NOOPT-NEXT:    v_mov_b32_e32 v5, 0
+; NOOPT-NEXT:    buffer_store_dwordx4 v[0:3], v[4:5], s[4:7], 0 addr64 offset:16
 ; NOOPT-NEXT:    v_mov_b32_e32 v4, v18
 ; NOOPT-NEXT:    v_mov_b32_e32 v5, v17
 ; NOOPT-NEXT:    v_mov_b32_e32 v6, v16
@@ -3365,49 +3485,55 @@ define amdgpu_kernel void @insert_neg_offset_sgpr(ptr addrspace(1) %in, ptr addr
 ;
 ; NOOPT-LABEL: insert_neg_offset_sgpr:
 ; NOOPT:       ; %bb.0: ; %entry
-; NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0xb
-; NOOPT-NEXT:    s_load_dword s4, s[4:5], 0xd
+; NOOPT-NEXT:    s_mov_b64 s[0:1], s[4:5]
+; NOOPT-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x9
 ; NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
-; NOOPT-NEXT:    s_mov_b32 s7, s1
-; NOOPT-NEXT:    ; kill: def $sgpr0 killed $sgpr0 killed $sgpr0_sgpr1
-; NOOPT-NEXT:    s_mov_b32 s5, 0xf000
-; NOOPT-NEXT:    s_mov_b32 s6, -1
+; NOOPT-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0xb
+; NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; NOOPT-NEXT:    s_load_dword s2, s[0:1], 0xd
+; NOOPT-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0xb
+; NOOPT-NEXT:    s_load_dword s7, s[0:1], 0xd
+; NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; NOOPT-NEXT:    s_mov_b32 s9, s5
+; NOOPT-NEXT:    s_mov_b32 s0, s4
+; NOOPT-NEXT:    s_mov_b32 s6, 0xf000
+; NOOPT-NEXT:    s_mov_b32 s8, -1
 ; NOOPT-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_sgpr1_sgpr2_sgpr3
-; NOOPT-NEXT:    s_mov_b32 s1, s7
-; NOOPT-NEXT:    s_mov_b32 s2, s6
-; NOOPT-NEXT:    s_mov_b32 s3, s5
-; NOOPT-NEXT:    s_mov_b32 s5, 15
-; NOOPT-NEXT:    s_mov_b32 s6, 14
-; NOOPT-NEXT:    s_mov_b32 s7, 13
-; NOOPT-NEXT:    s_mov_b32 s8, 12
-; NOOPT-NEXT:    s_mov_b32 s9, 11
-; NOOPT-NEXT:    s_mov_b32 s10, 10
-; NOOPT-NEXT:    s_mov_b32 s11, 9
-; NOOPT-NEXT:    s_mov_b32 s12, 8
-; NOOPT-NEXT:    s_mov_b32 s13, 7
-; NOOPT-NEXT:    s_mov_b32 s14, 6
-; NOOPT-NEXT:    s_mov_b32 s15, 5
-; NOOPT-NEXT:    s_mov_b32 s16, 4
-; NOOPT-NEXT:    s_mov_b32 s17, 3
-; NOOPT-NEXT:    s_mov_b32 s18, 2
-; NOOPT-NEXT:    s_mov_b32 s19, 1
-; NOOPT-NEXT:    s_mov_b32 s20, 0
-; NOOPT-NEXT:    v_mov_b32_e32 v15, s20
-; NOOPT-NEXT:    v_mov_b32_e32 v14, s19
-; NOOPT-NEXT:    v_mov_b32_e32 v13, s18
-; NOOPT-NEXT:    v_mov_b32_e32 v12, s17
-; NOOPT-NEXT:    v_mov_b32_e32 v11, s16
-; NOOPT-NEXT:    v_mov_b32_e32 v10, s15
-; NOOPT-NEXT:    v_mov_b32_e32 v9, s14
-; NOOPT-NEXT:    v_mov_b32_e32 v8, s13
-; NOOPT-NEXT:    v_mov_b32_e32 v7, s12
-; NOOPT-NEXT:    v_mov_b32_e32 v6, s11
-; NOOPT-NEXT:    v_mov_b32_e32 v5, s10
-; NOOPT-NEXT:    v_mov_b32_e32 v4, s9
-; NOOPT-NEXT:    v_mov_b32_e32 v3, s8
-; NOOPT-NEXT:    v_mov_b32_e32 v2, s7
-; NOOPT-NEXT:    v_mov_b32_e32 v1, s6
-; NOOPT-NEXT:    v_mov_b32_e32 v0, s5
+; NOOPT-NEXT:    s_mov_b32 s1, s9
+; NOOPT-NEXT:    s_mov_b32 s2, s8
+; NOOPT-NEXT:    s_mov_b32 s3, s6
+; NOOPT-NEXT:    s_mov_b32 s9, 15
+; NOOPT-NEXT:    s_mov_b32 s10, 14
+; NOOPT-NEXT:    s_mov_b32 s11, 13
+; NOOPT-NEXT:    s_mov_b32 s12, 12
+; NOOPT-NEXT:    s_mov_b32 s13, 11
+; NOOPT-NEXT:    s_mov_b32 s14, 10
+; NOOPT-NEXT:    s_mov_b32 s15, 9
+; NOOPT-NEXT:    s_mov_b32 s16, 8
+; NOOPT-NEXT:    s_mov_b32 s17, 7
+; NOOPT-NEXT:    s_mov_b32 s18, 6
+; NOOPT-NEXT:    s_mov_b32 s19, 5
+; NOOPT-NEXT:    s_mov_b32 s20, 4
+; NOOPT-NEXT:    s_mov_b32 s21, 3
+; NOOPT-NEXT:    s_mov_b32 s22, 2
+; NOOPT-NEXT:    s_mov_b32 s23, 1
+; NOOPT-NEXT:    s_mov_b32 s8, 0
+; NOOPT-NEXT:    v_mov_b32_e32 v15, s8
+; NOOPT-NEXT:    v_mov_b32_e32 v14, s23
+; NOOPT-NEXT:    v_mov_b32_e32 v13, s22
+; NOOPT-NEXT:    v_mov_b32_e32 v12, s21
+; NOOPT-NEXT:    v_mov_b32_e32 v11, s20
+; NOOPT-NEXT:    v_mov_b32_e32 v10, s19
+; NOOPT-NEXT:    v_mov_b32_e32 v9, s18
+; NOOPT-NEXT:    v_mov_b32_e32 v8, s17
+; NOOPT-NEXT:    v_mov_b32_e32 v7, s16
+; NOOPT-NEXT:    v_mov_b32_e32 v6, s15
+; NOOPT-NEXT:    v_mov_b32_e32 v5, s14
+; NOOPT-NEXT:    v_mov_b32_e32 v4, s13
+; NOOPT-NEXT:    v_mov_b32_e32 v3, s12
+; NOOPT-NEXT:    v_mov_b32_e32 v2, s11
+; NOOPT-NEXT:    v_mov_b32_e32 v1, s10
+; NOOPT-NEXT:    v_mov_b32_e32 v0, s9
 ; NOOPT-NEXT:    ; kill: def $vgpr15 killed $vgpr15 def $vgpr15_vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30 killed $exec
 ; NOOPT-NEXT:    v_mov_b32_e32 v16, v14
 ; NOOPT-NEXT:    v_mov_b32_e32 v17, v13
@@ -3425,7 +3551,7 @@ define amdgpu_kernel void @insert_neg_offset_sgpr(ptr addrspace(1) %in, ptr addr
 ; NOOPT-NEXT:    v_mov_b32_e32 v29, v1
 ; NOOPT-NEXT:    v_mov_b32_e32 v30, v0
 ; NOOPT-NEXT:    v_mov_b32_e32 v0, 16
-; NOOPT-NEXT:    s_add_i32 m0, s4, 0xfffffe00
+; NOOPT-NEXT:    s_add_i32 m0, s7, 0xfffffe00
 ; NOOPT-NEXT:    v_movreld_b32_e32 v15, v0
 ; NOOPT-NEXT:    v_mov_b32_e32 v4, v18
 ; NOOPT-NEXT:    v_mov_b32_e32 v5, v17
@@ -3447,7 +3573,13 @@ define amdgpu_kernel void @insert_neg_offset_sgpr(ptr addrspace(1) %in, ptr addr
 ; NOOPT-NEXT:    v_mov_b32_e32 v16, v11
 ; NOOPT-NEXT:    v_mov_b32_e32 v17, v10
 ; NOOPT-NEXT:    v_mov_b32_e32 v18, v9
-; NOOPT-NEXT:    buffer_store_dwordx4 v[15:18], off, s[0:3], 0 offset:48
+; NOOPT-NEXT:    ; kill: def $sgpr8 killed $sgpr8 def $sgpr8_sgpr9
+; NOOPT-NEXT:    s_mov_b32 s9, s6
+; NOOPT-NEXT:    ; kill: def $sgpr4_sgpr5 killed $sgpr4_sgpr5 def $sgpr4_sgpr5_sgpr6_sgpr7
+; NOOPT-NEXT:    s_mov_b64 s[6:7], s[8:9]
+; NOOPT-NEXT:    v_mov_b32_e32 v9, 32
+; NOOPT-NEXT:    v_mov_b32_e32 v10, 0
+; NOOPT-NEXT:    buffer_store_dwordx4 v[15:18], v[9:10], s[4:7], 0 addr64 offset:16
 ; NOOPT-NEXT:    ; kill: def $vgpr8 killed $vgpr8 def $vgpr8_vgpr9_vgpr10_vgpr11 killed $exec
 ; NOOPT-NEXT:    v_mov_b32_e32 v9, v14
 ; NOOPT-NEXT:    v_mov_b32_e32 v10, v13
@@ -3714,18 +3846,25 @@ define amdgpu_kernel void @insert_neg_offset_sgpr_loadreg(ptr addrspace(1) %in, 
 ;
 ; NOOPT-LABEL: insert_neg_offset_sgpr_loadreg:
 ; NOOPT:       ; %bb.0: ; %entry
-; NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0xb
-; NOOPT-NEXT:    s_load_dwordx16 s[8:23], s[4:5], 0x19
-; NOOPT-NEXT:    s_load_dword s4, s[4:5], 0x29
+; NOOPT-NEXT:    s_mov_b64 s[0:1], s[4:5]
+; NOOPT-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x9
 ; NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
-; NOOPT-NEXT:    s_mov_b32 s7, s1
-; NOOPT-NEXT:    ; kill: def $sgpr0 killed $sgpr0 killed $sgpr0_sgpr1
-; NOOPT-NEXT:    s_mov_b32 s5, 0xf000
-; NOOPT-NEXT:    s_mov_b32 s6, -1
+; NOOPT-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0xb
+; NOOPT-NEXT:    s_load_dwordx16 s[4:19], s[0:1], 0x19
+; NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; NOOPT-NEXT:    s_load_dword s2, s[0:1], 0x29
+; NOOPT-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0xb
+; NOOPT-NEXT:    s_load_dwordx16 s[8:23], s[0:1], 0x19
+; NOOPT-NEXT:    s_load_dword s7, s[0:1], 0x29
+; NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; NOOPT-NEXT:    s_mov_b32 s25, s5
+; NOOPT-NEXT:    s_mov_b32 s0, s4
+; NOOPT-NEXT:    s_mov_b32 s6, 0xf000
+; NOOPT-NEXT:    s_mov_b32 s24, -1
 ; NOOPT-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_sgpr1_sgpr2_sgpr3
-; NOOPT-NEXT:    s_mov_b32 s1, s7
-; NOOPT-NEXT:    s_mov_b32 s2, s6
-; NOOPT-NEXT:    s_mov_b32 s3, s5
+; NOOPT-NEXT:    s_mov_b32 s1, s25
+; NOOPT-NEXT:    s_mov_b32 s2, s24
+; NOOPT-NEXT:    s_mov_b32 s3, s6
 ; NOOPT-NEXT:    v_mov_b32_e32 v0, 5
 ; NOOPT-NEXT:    v_mov_b32_e32 v30, s23
 ; NOOPT-NEXT:    v_mov_b32_e32 v29, s22
@@ -3743,7 +3882,7 @@ define amdgpu_kernel void @insert_neg_offset_sgpr_loadreg(ptr addrspace(1) %in, 
 ; NOOPT-NEXT:    v_mov_b32_e32 v17, s10
 ; NOOPT-NEXT:    v_mov_b32_e32 v16, s9
 ; NOOPT-NEXT:    v_mov_b32_e32 v15, s8
-; NOOPT-NEXT:    s_add_i32 m0, s4, 0xfffffe00
+; NOOPT-NEXT:    s_add_i32 m0, s7, 0xfffffe00
 ; NOOPT-NEXT:    v_movreld_b32_e32 v15, v0
 ; NOOPT-NEXT:    v_mov_b32_e32 v4, v18
 ; NOOPT-NEXT:    v_mov_b32_e32 v5, v17
@@ -3765,7 +3904,14 @@ define amdgpu_kernel void @insert_neg_offset_sgpr_loadreg(ptr addrspace(1) %in, 
 ; NOOPT-NEXT:    v_mov_b32_e32 v16, v11
 ; NOOPT-NEXT:    v_mov_b32_e32 v17, v10
 ; NOOPT-NEXT:    v_mov_b32_e32 v18, v9
-; NOOPT-NEXT:    buffer_store_dwordx4 v[15:18], off, s[0:3], 0 offset:48
+; NOOPT-NEXT:    s_mov_b32 s8, 0
+; NOOPT-NEXT:    ; kill: def $sgpr8 killed $sgpr8 def $sgpr8_sgpr9
+; NOOPT-NEXT:    s_mov_b32 s9, s6
+; NOOPT-NEXT:    ; kill: def $sgpr4_sgpr5 killed $sgpr4_sgpr5 def $sgpr4_sgpr5_sgpr6_sgpr7
+; NOOPT-NEXT:    s_mov_b64 s[6:7], s[8:9]
+; NOOPT-NEXT:    v_mov_b32_e32 v9, 32
+; NOOPT-NEXT:    v_mov_b32_e32 v10, 0
+; NOOPT-NEXT:    buffer_store_dwordx4 v[15:18], v[9:10], s[4:7], 0 addr64 offset:16
 ; NOOPT-NEXT:    ; kill: def $vgpr8 killed $vgpr8 def $vgpr8_vgpr9_vgpr10_vgpr11 killed $exec
 ; NOOPT-NEXT:    v_mov_b32_e32 v9, v14
 ; NOOPT-NEXT:    v_mov_b32_e32 v10, v13
@@ -4006,21 +4152,27 @@ define amdgpu_kernel void @insert_neg_offset_vgpr(ptr addrspace(1) %in, ptr addr
 ; NOOPT-NEXT:    s_add_u32 s20, s20, s11
 ; NOOPT-NEXT:    s_addc_u32 s21, s21, 0
 ; NOOPT-NEXT:    buffer_store_dword v0, off, s[20:23], 0 offset:136 ; 4-byte Folded Spill
+; NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
+; NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
 ; NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0xb
 ; NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0xb
+; NOOPT-NEXT:    ; implicit-def: $vgpr31 : SGPR spill to VGPR lane
+; NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; NOOPT-NEXT:    v_writelane_b32 v31, s0, 0
+; NOOPT-NEXT:    v_writelane_b32 v31, s1, 1
 ; NOOPT-NEXT:    s_mov_b32 s6, s1
-; NOOPT-NEXT:    ; kill: def $sgpr0 killed $sgpr0 killed $sgpr0_sgpr1
 ; NOOPT-NEXT:    s_mov_b32 s4, 0xf000
+; NOOPT-NEXT:    v_writelane_b32 v31, s4, 2
 ; NOOPT-NEXT:    s_mov_b32 s5, -1
 ; NOOPT-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_sgpr1_sgpr2_sgpr3
 ; NOOPT-NEXT:    s_mov_b32 s1, s6
 ; NOOPT-NEXT:    s_mov_b32 s2, s5
 ; NOOPT-NEXT:    s_mov_b32 s3, s4
-; NOOPT-NEXT:    ; implicit-def: $vgpr31 : SGPR spill to VGPR lane
-; NOOPT-NEXT:    v_writelane_b32 v31, s0, 0
-; NOOPT-NEXT:    v_writelane_b32 v31, s1, 1
-; NOOPT-NEXT:    v_writelane_b32 v31, s2, 2
-; NOOPT-NEXT:    v_writelane_b32 v31, s3, 3
+; NOOPT-NEXT:    v_writelane_b32 v31, s0, 3
+; NOOPT-NEXT:    v_writelane_b32 v31, s1, 4
+; NOOPT-NEXT:    v_writelane_b32 v31, s2, 5
+; NOOPT-NEXT:    v_writelane_b32 v31, s3, 6
 ; NOOPT-NEXT:    s_mov_b32 s0, 16
 ; NOOPT-NEXT:    s_mov_b32 s1, 15
 ; NOOPT-NEXT:    s_mov_b32 s2, 14
@@ -4089,8 +4241,8 @@ define amdgpu_kernel void @insert_neg_offset_vgpr(ptr addrspace(1) %in, ptr addr
 ; NOOPT-NEXT:    v_mov_b32_e32 v16, 33
 ; NOOPT-NEXT:    buffer_store_dword v16, off, s[20:23], 0 offset:68 ; 4-byte Folded Spill
 ; NOOPT-NEXT:    s_mov_b64 s[0:1], exec
-; NOOPT-NEXT:    v_writelane_b32 v31, s0, 4
-; NOOPT-NEXT:    v_writelane_b32 v31, s1, 5
+; NOOPT-NEXT:    v_writelane_b32 v31, s0, 7
+; NOOPT-NEXT:    v_writelane_b32 v31, s1, 8
 ; NOOPT-NEXT:    s_or_saveexec_b64 s[16:17], -1
 ; NOOPT-NEXT:    buffer_store_dword v31, off, s[20:23], 0 ; 4-byte Folded Spill
 ; NOOPT-NEXT:    s_mov_b64 exec, s[16:17]
@@ -4117,8 +4269,8 @@ define amdgpu_kernel void @insert_neg_offset_vgpr(ptr addrspace(1) %in, ptr addr
 ; NOOPT-NEXT:    buffer_load_dword v31, off, s[20:23], 0 ; 4-byte Folded Reload
 ; NOOPT-NEXT:    s_mov_b64 exec, s[16:17]
 ; NOOPT-NEXT:    s_waitcnt vmcnt(0)
-; NOOPT-NEXT:    v_readlane_b32 s0, v31, 6
-; NOOPT-NEXT:    v_readlane_b32 s1, v31, 7
+; NOOPT-NEXT:    v_readlane_b32 s0, v31, 9
+; NOOPT-NEXT:    v_readlane_b32 s1, v31, 10
 ; NOOPT-NEXT:    buffer_load_dword v0, off, s[20:23], 0 offset:4 ; 4-byte Folded Reload
 ; NOOPT-NEXT:    buffer_load_dword v1, off, s[20:23], 0 offset:8 ; 4-byte Folded Reload
 ; NOOPT-NEXT:    buffer_load_dword v2, off, s[20:23], 0 offset:12 ; 4-byte Folded Reload
@@ -4183,8 +4335,8 @@ define amdgpu_kernel void @insert_neg_offset_vgpr(ptr addrspace(1) %in, ptr addr
 ; NOOPT-NEXT:    buffer_store_dword v14, off, s[20:23], 0 offset:60 ; 4-byte Folded Spill
 ; NOOPT-NEXT:    buffer_store_dword v15, off, s[20:23], 0 offset:64 ; 4-byte Folded Spill
 ; NOOPT-NEXT:    s_mov_b64 s[2:3], s[0:1]
-; NOOPT-NEXT:    v_writelane_b32 v31, s2, 6
-; NOOPT-NEXT:    v_writelane_b32 v31, s3, 7
+; NOOPT-NEXT:    v_writelane_b32 v31, s2, 9
+; NOOPT-NEXT:    v_writelane_b32 v31, s3, 10
 ; NOOPT-NEXT:    s_or_saveexec_b64 s[16:17], -1
 ; NOOPT-NEXT:    buffer_store_dword v31, off, s[20:23], 0 ; 4-byte Folded Spill
 ; NOOPT-NEXT:    s_mov_b64 exec, s[16:17]
@@ -4196,18 +4348,21 @@ define amdgpu_kernel void @insert_neg_offset_vgpr(ptr addrspace(1) %in, ptr addr
 ; NOOPT-NEXT:    buffer_load_dword v31, off, s[20:23], 0 ; 4-byte Folded Reload
 ; NOOPT-NEXT:    s_mov_b64 exec, s[16:17]
 ; NOOPT-NEXT:    s_waitcnt vmcnt(0)
-; NOOPT-NEXT:    v_readlane_b32 s0, v31, 4
-; NOOPT-NEXT:    v_readlane_b32 s1, v31, 5
+; NOOPT-NEXT:    v_readlane_b32 s0, v31, 7
+; NOOPT-NEXT:    v_readlane_b32 s1, v31, 8
 ; NOOPT-NEXT:    s_mov_b64 exec, s[0:1]
 ; NOOPT-NEXT:  ; %bb.3:
 ; NOOPT-NEXT:    s_or_saveexec_b64 s[16:17], -1
 ; NOOPT-NEXT:    buffer_load_dword v31, off, s[20:23], 0 ; 4-byte Folded Reload
 ; NOOPT-NEXT:    s_mov_b64 exec, s[16:17]
 ; NOOPT-NEXT:    s_waitcnt vmcnt(0)
-; NOOPT-NEXT:    v_readlane_b32 s0, v31, 0
-; NOOPT-NEXT:    v_readlane_b32 s1, v31, 1
-; NOOPT-NEXT:    v_readlane_b32 s2, v31, 2
-; NOOPT-NEXT:    v_readlane_b32 s3, v31, 3
+; NOOPT-NEXT:    v_readlane_b32 s0, v31, 3
+; NOOPT-NEXT:    v_readlane_b32 s1, v31, 4
+; NOOPT-NEXT:    v_readlane_b32 s2, v31, 5
+; NOOPT-NEXT:    v_readlane_b32 s3, v31, 6
+; NOOPT-NEXT:    v_readlane_b32 s4, v31, 0
+; NOOPT-NEXT:    v_readlane_b32 s5, v31, 1
+; NOOPT-NEXT:    v_readlane_b32 s6, v31, 2
 ; NOOPT-NEXT:    buffer_load_dword v15, off, s[20:23], 0 offset:140 ; 4-byte Folded Reload
 ; NOOPT-NEXT:    buffer_load_dword v16, off, s[20:23], 0 offset:144 ; 4-byte Folded Reload
 ; NOOPT-NEXT:    buffer_load_dword v17, off, s[20:23], 0 offset:148 ; 4-byte Folded Reload
@@ -4248,7 +4403,14 @@ define amdgpu_kernel void @insert_neg_offset_vgpr(ptr addrspace(1) %in, ptr addr
 ; NOOPT-NEXT:    v_mov_b32_e32 v16, v11
 ; NOOPT-NEXT:    v_mov_b32_e32 v17, v10
 ; NOOPT-NEXT:    v_mov_b32_e32 v18, v9
-; NOOPT-NEXT:    buffer_store_dwordx4 v[15:18], off, s[0:3], 0 offset:48
+; NOOPT-NEXT:    s_mov_b32 s8, 0
+; NOOPT-NEXT:    ; kill: def $sgpr8 killed $sgpr8 def $sgpr8_sgpr9
+; NOOPT-NEXT:    s_mov_b32 s9, s6
+; NOOPT-NEXT:    ; kill: def $sgpr4_sgpr5 killed $sgpr4_sgpr5 def $sgpr4_sgpr5_sgpr6_sgpr7
+; NOOPT-NEXT:    s_mov_b64 s[6:7], s[8:9]
+; NOOPT-NEXT:    v_mov_b32_e32 v9, 32
+; NOOPT-NEXT:    v_mov_b32_e32 v10, 0
+; NOOPT-NEXT:    buffer_store_dwordx4 v[15:18], v[9:10], s[4:7], 0 addr64 offset:16
 ; NOOPT-NEXT:    ; kill: def $vgpr8 killed $vgpr8 def $vgpr8_vgpr9_vgpr10_vgpr11 killed $exec
 ; NOOPT-NEXT:    v_mov_b32_e32 v9, v14
 ; NOOPT-NEXT:    v_mov_b32_e32 v10, v13
@@ -4479,21 +4641,27 @@ define amdgpu_kernel void @insert_neg_inline_offset_vgpr(ptr addrspace(1) %in, p
 ; NOOPT-NEXT:    s_add_u32 s20, s20, s11
 ; NOOPT-NEXT:    s_addc_u32 s21, s21, 0
 ; NOOPT-NEXT:    buffer_store_dword v0, off, s[20:23], 0 offset:136 ; 4-byte Folded Spill
+; NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
+; NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
 ; NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0xb
 ; NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0xb
+; NOOPT-NEXT:    ; implicit-def: $vgpr31 : SGPR spill to VGPR lane
+; NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; NOOPT-NEXT:    v_writelane_b32 v31, s0, 0
+; NOOPT-NEXT:    v_writelane_b32 v31, s1, 1
 ; NOOPT-NEXT:    s_mov_b32 s6, s1
-; NOOPT-NEXT:    ; kill: def $sgpr0 killed $sgpr0 killed $sgpr0_sgpr1
 ; NOOPT-NEXT:    s_mov_b32 s4, 0xf000
+; NOOPT-NEXT:    v_writelane_b32 v31, s4, 2
 ; NOOPT-NEXT:    s_mov_b32 s5, -1
 ; NOOPT-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_sgpr1_sgpr2_sgpr3
 ; NOOPT-NEXT:    s_mov_b32 s1, s6
 ; NOOPT-NEXT:    s_mov_b32 s2, s5
 ; NOOPT-NEXT:    s_mov_b32 s3, s4
-; NOOPT-NEXT:    ; implicit-def: $vgpr31 : SGPR spill to VGPR lane
-; NOOPT-NEXT:    v_writelane_b32 v31, s0, 0
-; NOOPT-NEXT:    v_writelane_b32 v31, s1, 1
-; NOOPT-NEXT:    v_writelane_b32 v31, s2, 2
-; NOOPT-NEXT:    v_writelane_b32 v31, s3, 3
+; NOOPT-NEXT:    v_writelane_b32 v31, s0, 3
+; NOOPT-NEXT:    v_writelane_b32 v31, s1, 4
+; NOOPT-NEXT:    v_writelane_b32 v31, s2, 5
+; NOOPT-NEXT:    v_writelane_b32 v31, s3, 6
 ; NOOPT-NEXT:    s_mov_b32 s0, 16
 ; NOOPT-NEXT:    s_mov_b32 s1, 15
 ; NOOPT-NEXT:    s_mov_b32 s2, 14
@@ -4562,8 +4730,8 @@ define amdgpu_kernel void @insert_neg_inline_offset_vgpr(ptr addrspace(1) %in, p
 ; NOOPT-NEXT:    v_mov_b32_e32 v16, 0x1f4
 ; NOOPT-NEXT:    buffer_store_dword v16, off, s[20:23], 0 offset:68 ; 4-byte Folded Spill
 ; NOOPT-NEXT:    s_mov_b64 s[0:1], exec
-; NOOPT-NEXT:    v_writelane_b32 v31, s0, 4
-; NOOPT-NEXT:    v_writelane_b32 v31, s1, 5
+; NOOPT-NEXT:    v_writelane_b32 v31, s0, 7
+; NOOPT-NEXT:    v_writelane_b32 v31, s1, 8
 ; NOOPT-NEXT:    s_or_saveexec_b64 s[16:17], -1
 ; NOOPT-NEXT:    buffer_store_dword v31, off, s[20:23], 0 ; 4-byte Folded Spill
 ; NOOPT-NEXT:    s_mov_b64 exec, s[16:17]
@@ -4590,8 +4758,8 @@ define amdgpu_kernel void @insert_neg_inline_offset_vgpr(ptr addrspace(1) %in, p
 ; NOOPT-NEXT:    buffer_load_dword v31, off, s[20:23], 0 ; 4-byte Folded Reload
 ; NOOPT-NEXT:    s_mov_b64 exec, s[16:17]
 ; NOOPT-NEXT:    s_waitcnt vmcnt(0)
-; NOOPT-NEXT:    v_readlane_b32 s0, v31, 6
-; NOOPT-NEXT:    v_readlane_b32 s1, v31, 7
+; NOOPT-NEXT:    v_readlane_b32 s0, v31, 9
+; NOOPT-NEXT:    v_readlane_b32 s1, v31, 10
 ; NOOPT-NEXT:    buffer_load_dword v0, off, s[20:23], 0 offset:4 ; 4-byte Folded Reload
 ; NOOPT-NEXT:    buffer_load_dword v1, off, s[20:23], 0 offset:8 ; 4-byte Folded Reload
 ; NOOPT-NEXT:    buffer_load_dword v2, off, s[20:23], 0 offset:12 ; 4-byte Folded Reload
@@ -4656,8 +4824,8 @@ define amdgpu_kernel void @insert_neg_inline_offset_vgpr(ptr addrspace(1) %in, p
 ; NOOPT-NEXT:    buffer_store_dword v14, off, s[20:23], 0 offset:60 ; 4-byte Folded Spill
 ; NOOPT-NEXT:    buffer_store_dword v15, off, s[20:23], 0 offset:64 ; 4-byte Folded Spill
 ; NOOPT-NEXT:    s_mov_b64 s[2:3], s[0:1]
-; NOOPT-NEXT:    v_writelane_b32 v31, s2, 6
-; NOOPT-NEXT:    v_writelane_b32 v31, s3, 7
+; NOOPT-NEXT:    v_writelane_b32 v31, s2, 9
+; NOOPT-NEXT:    v_writelane_b32 v31, s3, 10
 ; NOOPT-NEXT:    s_or_saveexec_b64 s[16:17], -1
 ; NOOPT-NEXT:    buffer_store_dword v31, off, s[20:23], 0 ; 4-byte Folded Spill
 ; NOOPT-NEXT:    s_mov_b64 exec, s[16:17]
@@ -4669,18 +4837,21 @@ define amdgpu_kernel void @insert_neg_inline_offset_vgpr(ptr addrspace(1) %in, p
 ; NOOPT-NEXT:    buffer_load_dword v31, off, s[20:23], 0 ; 4-byte Folded Reload
 ; NOOPT-NEXT:    s_mov_b64 exec, s[16:17]
 ; NOOPT-NEXT:    s_waitcnt vmcnt(0)
-; NOOPT-NEXT:    v_readlane_b32 s0, v31, 4
-; NOOPT-NEXT:    v_readlane_b32 s1, v31, 5
+; NOOPT-NEXT:    v_readlane_b32 s0, v31, 7
+; NOOPT-NEXT:    v_readlane_b32 s1, v31, 8
 ; NOOPT-NEXT:    s_mov_b64 exec, s[0:1]
 ; NOOPT-NEXT:  ; %bb.3:
 ; NOOPT-NEXT:    s_or_saveexec_b64 s[16:17], -1
 ; NOOPT-NEXT:    buffer_load_dword v31, off, s[20:23], 0 ; 4-byte Folded Reload
 ; NOOPT-NEXT:    s_mov_b64 exec, s[16:17]
 ; NOOPT-NEXT:    s_waitcnt vmcnt(0)
-; NOOPT-NEXT:    v_readlane_b32 s0, v31, 0
-; NOOPT-NEXT:    v_readlane_b32 s1, v31, 1
-; NOOPT-NEXT:    v_readlane_b32 s2, v31, 2
-; NOOPT-NEXT:    v_readlane_b32 s3, v31, 3
+; NOOPT-NEXT:    v_readlane_b32 s0, v31, 3
+; NOOPT-NEXT:    v_readlane_b32 s1, v31, 4
+; NOOPT-NEXT:    v_readlane_b32 s2, v31, 5
+; NOOPT-NEXT:    v_readlane_b32 s3, v31, 6
+; NOOPT-NEXT:    v_readlane_b32 s4, v31, 0
+; NOOPT-NEXT:    v_readlane_b32 s5, v31, 1
+; NOOPT-NEXT:    v_readlane_b32 s6, v31, 2
 ; NOOPT-NEXT:    buffer_load_dword v15, off, s[20:23], 0 offset:140 ; 4-byte Folded Reload
 ; NOOPT-NEXT:    buffer_load_dword v16, off, s[20:23], 0 offset:144 ; 4-byte Folded Reload
 ; NOOPT-NEXT:    buffer_load_dword v17, off, s[20:23], 0 offset:148 ; 4-byte Folded Reload
@@ -4721,7 +4892,14 @@ define amdgpu_kernel void @insert_neg_inline_offset_vgpr(ptr addrspace(1) %in, p
 ; NOOPT-NEXT:    v_mov_b32_e32 v16, v11
 ; NOOPT-NEXT:    v_mov_b32_e32 v17, v10
 ; NOOPT-NEXT:    v_mov_b32_e32 v18, v9
-; NOOPT-NEXT:    buffer_store_dwordx4 v[15:18], off, s[0:3], 0 offset:48
+; NOOPT-NEXT:    s_mov_b32 s8, 0
+; NOOPT-NEXT:    ; kill: def $sgpr8 killed $sgpr8 def $sgpr8_sgpr9
+; NOOPT-NEXT:    s_mov_b32 s9, s6
+; NOOPT-NEXT:    ; kill: def $sgpr4_sgpr5 killed $sgpr4_sgpr5 def $sgpr4_sgpr5_sgpr6_sgpr7
+; NOOPT-NEXT:    s_mov_b64 s[6:7], s[8:9]
+; NOOPT-NEXT:    v_mov_b32_e32 v9, 32
+; NOOPT-NEXT:    v_mov_b32_e32 v10, 0
+; NOOPT-NEXT:    buffer_store_dwordx4 v[15:18], v[9:10], s[4:7], 0 addr64 offset:16
 ; NOOPT-NEXT:    ; kill: def $vgpr8 killed $vgpr8 def $vgpr8_vgpr9_vgpr10_vgpr11 killed $exec
 ; NOOPT-NEXT:    v_mov_b32_e32 v9, v14
 ; NOOPT-NEXT:    v_mov_b32_e32 v10, v13
@@ -5003,9 +5181,14 @@ define amdgpu_kernel void @extract_vgpr_offset_multiple_in_block(ptr addrspace(1
 ; NOOPT-NEXT:    s_add_u32 s36, s36, s11
 ; NOOPT-NEXT:    s_addc_u32 s37, s37, 0
 ; NOOPT-NEXT:    buffer_store_dword v0, off, s[36:39], 0 offset:76 ; 4-byte Folded Spill
-; NOOPT-NEXT:    s_load_dwordx2 s[2:3], s[4:5], 0x9
-; NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0xd
+; NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
 ; NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0xb
+; NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0xd
+; NOOPT-NEXT:    s_load_dwordx2 s[2:3], s[4:5], 0x9
+; NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0xd
 ; NOOPT-NEXT:    s_mov_b32 s8, s3
 ; NOOPT-NEXT:    s_mov_b32 s4, s2
 ; NOOPT-NEXT:    s_mov_b32 s2, 0xf000
@@ -5019,18 +5202,19 @@ define amdgpu_kernel void @extract_vgpr_offset_multiple_in_block(ptr addrspace(1
 ; NOOPT-NEXT:    v_writelane_b32 v18, s5, 1
 ; NOOPT-NEXT:    v_writelane_b32 v18, s6, 2
 ; NOOPT-NEXT:    v_writelane_b32 v18, s7, 3
+; NOOPT-NEXT:    v_mov_b32_e32 v2, 0
+; NOOPT-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
+; NOOPT-NEXT:    v_mov_b32_e32 v1, v2
+; NOOPT-NEXT:    s_mov_b32 s3, 2
+; NOOPT-NEXT:    s_waitcnt expcnt(0)
+; NOOPT-NEXT:    v_lshl_b64 v[0:1], v[0:1], s3
 ; NOOPT-NEXT:    s_mov_b32 s4, 0
 ; NOOPT-NEXT:    v_writelane_b32 v18, s4, 4
 ; NOOPT-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5
 ; NOOPT-NEXT:    s_mov_b32 s5, s2
 ; NOOPT-NEXT:    ; kill: def $sgpr0_sgpr1 killed $sgpr0_sgpr1 def $sgpr0_sgpr1_sgpr2_sgpr3
 ; NOOPT-NEXT:    s_mov_b64 s[2:3], s[4:5]
-; NOOPT-NEXT:    s_mov_b32 s4, 2
-; NOOPT-NEXT:    s_waitcnt expcnt(0)
-; NOOPT-NEXT:    v_lshlrev_b32_e64 v0, s4, v0
-; NOOPT-NEXT:    v_mov_b32_e32 v2, 0
-; NOOPT-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
-; NOOPT-NEXT:    v_mov_b32_e32 v1, v2
+; NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
 ; NOOPT-NEXT:    buffer_load_dword v0, v[0:1], s[0:3], 0 addr64 glc
 ; NOOPT-NEXT:    s_waitcnt vmcnt(0)
 ; NOOPT-NEXT:    buffer_store_dword v0, off, s[36:39], 0 offset:72 ; 4-byte Folded Spill
@@ -5768,10 +5952,20 @@ define amdgpu_kernel void @insert_vgpr_offset_multiple_in_block(ptr addrspace(1)
 ; NOOPT-NEXT:    s_add_u32 s28, s28, s11
 ; NOOPT-NEXT:    s_addc_u32 s29, s29, 0
 ; NOOPT-NEXT:    buffer_store_dword v0, off, s[28:31], 0 offset:84 ; 4-byte Folded Spill
+; NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
+; NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0xb
+; NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0xd
+; NOOPT-NEXT:    s_load_dwordx16 s[8:23], s[4:5], 0x19
+; NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
 ; NOOPT-NEXT:    s_load_dwordx2 s[18:19], s[4:5], 0x9
+; NOOPT-NEXT:    ; implicit-def: $vgpr32 : SGPR spill to VGPR lane
+; NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; NOOPT-NEXT:    v_writelane_b32 v32, s18, 0
+; NOOPT-NEXT:    v_writelane_b32 v32, s19, 1
 ; NOOPT-NEXT:    s_load_dwordx2 s[16:17], s[4:5], 0xd
 ; NOOPT-NEXT:    s_load_dwordx16 s[0:15], s[4:5], 0x19
-; NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
 ; NOOPT-NEXT:    s_mov_b32 s24, s19
 ; NOOPT-NEXT:    s_mov_b32 s20, s18
 ; NOOPT-NEXT:    s_mov_b32 s18, 0xf000
@@ -5780,23 +5974,25 @@ define amdgpu_kernel void @insert_vgpr_offset_multiple_in_block(ptr addrspace(1)
 ; NOOPT-NEXT:    s_mov_b32 s21, s24
 ; NOOPT-NEXT:    s_mov_b32 s22, s19
 ; NOOPT-NEXT:    s_mov_b32 s23, s18
-; NOOPT-NEXT:    ; implicit-def: $vgpr32 : SGPR spill to VGPR lane
-; NOOPT-NEXT:    v_writelane_b32 v32, s20, 0
-; NOOPT-NEXT:    v_writelane_b32 v32, s21, 1
-; NOOPT-NEXT:    v_writelane_b32 v32, s22, 2
-; NOOPT-NEXT:    v_writelane_b32 v32, s23, 3
-; NOOPT-NEXT:    s_mov_b32 s20, 0
-; NOOPT-NEXT:    v_writelane_b32 v32, s20, 4
-; NOOPT-NEXT:    ; kill: def $sgpr20 killed $sgpr20 def $sgpr20_sgpr21
-; NOOPT-NEXT:    s_mov_b32 s21, s18
-; NOOPT-NEXT:    ; kill: def $sgpr16_sgpr17 killed $sgpr16_sgpr17 def $sgpr16_sgpr17_sgpr18_sgpr19
-; NOOPT-NEXT:    s_mov_b64 s[18:19], s[20:21]
-; NOOPT-NEXT:    s_mov_b32 s20, 2
-; NOOPT-NEXT:    s_waitcnt expcnt(0)
-; NOOPT-NEXT:    v_lshlrev_b32_e64 v0, s20, v0
+; NOOPT-NEXT:    v_writelane_b32 v32, s20, 2
+; NOOPT-NEXT:    v_writelane_b32 v32, s21, 3
+; NOOPT-NEXT:    v_writelane_b32 v32, s22, 4
+; NOOPT-NEXT:    v_writelane_b32 v32, s23, 5
 ; NOOPT-NEXT:    v_mov_b32_e32 v2, 0
 ; NOOPT-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; NOOPT-NEXT:    v_mov_b32_e32 v1, v2
+; NOOPT-NEXT:    s_mov_b32 s19, 2
+; NOOPT-NEXT:    s_waitcnt expcnt(0)
+; NOOPT-NEXT:    v_lshl_b64 v[0:1], v[0:1], s19
+; NOOPT-NEXT:    s_mov_b32 s20, 0
+; NOOPT-NEXT:    v_writelane_b32 v32, s20, 6
+; NOOPT-NEXT:    ; kill: def $sgpr20 killed $sgpr20 def $sgpr20_sgpr21
+; NOOPT-NEXT:    s_mov_b32 s21, s18
+; NOOPT-NEXT:    v_writelane_b32 v32, s20, 7
+; NOOPT-NEXT:    v_writelane_b32 v32, s21, 8
+; NOOPT-NEXT:    ; kill: def $sgpr16_sgpr17 killed $sgpr16_sgpr17 def $sgpr16_sgpr17_sgpr18_sgpr19
+; NOOPT-NEXT:    s_mov_b64 s[18:19], s[20:21]
+; NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
 ; NOOPT-NEXT:    buffer_load_dword v0, v[0:1], s[16:19], 0 addr64 glc
 ; NOOPT-NEXT:    s_waitcnt vmcnt(0)
 ; NOOPT-NEXT:    buffer_store_dword v0, off, s[28:31], 0 offset:80 ; 4-byte Folded Spill
@@ -5828,8 +6024,8 @@ define amdgpu_kernel void @insert_vgpr_offset_multiple_in_block(ptr addrspace(1)
 ; NOOPT-NEXT:    v_mov_b32_e32 v14, s14
 ; NOOPT-NEXT:    v_mov_b32_e32 v15, s15
 ; NOOPT-NEXT:    s_mov_b64 s[0:1], exec
-; NOOPT-NEXT:    v_writelane_b32 v32, s0, 5
-; NOOPT-NEXT:    v_writelane_b32 v32, s1, 6
+; NOOPT-NEXT:    v_writelane_b32 v32, s0, 9
+; NOOPT-NEXT:    v_writelane_b32 v32, s1, 10
 ; NOOPT-NEXT:    s_or_saveexec_b64 s[26:27], -1
 ; NOOPT-NEXT:    buffer_store_dword v32, off, s[28:31], 0 ; 4-byte Folded Spill
 ; NOOPT-NEXT:    s_mov_b64 exec, s[26:27]
@@ -5856,8 +6052,8 @@ define amdgpu_kernel void @insert_vgpr_offset_multiple_in_block(ptr addrspace(1)
 ; NOOPT-NEXT:    buffer_load_dword v32, off, s[28:31], 0 ; 4-byte Folded Reload
 ; NOOPT-NEXT:    s_mov_b64 exec, s[26:27]
 ; NOOPT-NEXT:    s_waitcnt vmcnt(0)
-; NOOPT-NEXT:    v_readlane_b32 s0, v32, 7
-; NOOPT-NEXT:    v_readlane_b32 s1, v32, 8
+; NOOPT-NEXT:    v_readlane_b32 s0, v32, 11
+; NOOPT-NEXT:    v_readlane_b32 s1, v32, 12
 ; NOOPT-NEXT:    buffer_load_dword v0, off, s[28:31], 0 offset:4 ; 4-byte Folded Reload
 ; NOOPT-NEXT:    buffer_load_dword v1, off, s[28:31], 0 offset:8 ; 4-byte Folded Reload
 ; NOOPT-NEXT:    buffer_load_dword v2, off, s[28:31], 0 offset:12 ; 4-byte Folded Reload
@@ -5922,8 +6118,8 @@ define amdgpu_kernel void @insert_vgpr_offset_multiple_in_block(ptr addrspace(1)
 ; NOOPT-NEXT:    buffer_store_dword v14, off, s[28:31], 0 offset:60 ; 4-byte Folded Spill
 ; NOOPT-NEXT:    buffer_store_dword v15, off, s[28:31], 0 offset:64 ; 4-byte Folded Spill
 ; NOOPT-NEXT:    s_mov_b64 s[2:3], s[0:1]
-; NOOPT-NEXT:    v_writelane_b32 v32, s2, 7
-; NOOPT-NEXT:    v_writelane_b32 v32, s3, 8
+; NOOPT-NEXT:    v_writelane_b32 v32, s2, 11
+; NOOPT-NEXT:    v_writelane_b32 v32, s3, 12
 ; NOOPT-NEXT:    s_or_saveexec_b64 s[26:27], -1
 ; NOOPT-NEXT:    buffer_store_dword v32, off, s[28:31], 0 ; 4-byte Folded Spill
 ; NOOPT-NEXT:    s_mov_b64 exec, s[26:27]
@@ -5935,8 +6131,8 @@ define amdgpu_kernel void @insert_vgpr_offset_multiple_in_block(ptr addrspace(1)
 ; NOOPT-NEXT:    buffer_load_dword v32, off, s[28:31], 0 ; 4-byte Folded Reload
 ; NOOPT-NEXT:    s_mov_b64 exec, s[26:27]
 ; NOOPT-NEXT:    s_waitcnt vmcnt(0)
-; NOOPT-NEXT:    v_readlane_b32 s0, v32, 5
-; NOOPT-NEXT:    v_readlane_b32 s1, v32, 6
+; NOOPT-NEXT:    v_readlane_b32 s0, v32, 9
+; NOOPT-NEXT:    v_readlane_b32 s1, v32, 10
 ; NOOPT-NEXT:    s_mov_b64 exec, s[0:1]
 ; NOOPT-NEXT:  ; %bb.3:
 ; NOOPT-NEXT:    s_or_saveexec_b64 s[26:27], -1
@@ -5962,8 +6158,8 @@ define amdgpu_kernel void @insert_vgpr_offset_multiple_in_block(ptr addrspace(1)
 ; NOOPT-NEXT:    buffer_store_dword v16, off, s[28:31], 0 offset:216 ; 4-byte Folded Spill
 ; NOOPT-NEXT:    s_mov_b64 s[0:1], exec
 ; NOOPT-NEXT:    s_waitcnt vmcnt(14)
-; NOOPT-NEXT:    v_writelane_b32 v32, s0, 9
-; NOOPT-NEXT:    v_writelane_b32 v32, s1, 10
+; NOOPT-NEXT:    v_writelane_b32 v32, s0, 13
+; NOOPT-NEXT:    v_writelane_b32 v32, s1, 14
 ; NOOPT-NEXT:    s_or_saveexec_b64 s[26:27], -1
 ; NOOPT-NEXT:    buffer_store_dword v32, off, s[28:31], 0 ; 4-byte Folded Spill
 ; NOOPT-NEXT:    s_mov_b64 exec, s[26:27]
@@ -5994,8 +6190,8 @@ define amdgpu_kernel void @insert_vgpr_offset_multiple_in_block(ptr addrspace(1)
 ; NOOPT-NEXT:    buffer_load_dword v32, off, s[28:31], 0 ; 4-byte Folded Reload
 ; NOOPT-NEXT:    s_mov_b64 exec, s[26:27]
 ; NOOPT-NEXT:    s_waitcnt vmcnt(0)
-; NOOPT-NEXT:    v_readlane_b32 s0, v32, 11
-; NOOPT-NEXT:    v_readlane_b32 s1, v32, 12
+; NOOPT-NEXT:    v_readlane_b32 s0, v32, 15
+; NOOPT-NEXT:    v_readlane_b32 s1, v32, 16
 ; NOOPT-NEXT:    buffer_load_dword v0, off, s[28:31], 0 offset:152 ; 4-byte Folded Reload
 ; NOOPT-NEXT:    buffer_load_dword v1, off, s[28:31], 0 offset:156 ; 4-byte Folded Reload
 ; NOOPT-NEXT:    buffer_load_dword v2, off, s[28:31], 0 offset:160 ; 4-byte Folded Reload
@@ -6060,8 +6256,8 @@ define amdgpu_kernel void @insert_vgpr_offset_multiple_in_block(ptr addrspace(1)
 ; NOOPT-NEXT:    buffer_store_dword v14, off, s[28:31], 0 offset:208 ; 4-byte Folded Spill
 ; NOOPT-NEXT:    buffer_store_dword v15, off, s[28:31], 0 offset:212 ; 4-byte Folded Spill
 ; NOOPT-NEXT:    s_mov_b64 s[2:3], s[0:1]
-; NOOPT-NEXT:    v_writelane_b32 v32, s2, 11
-; NOOPT-NEXT:    v_writelane_b32 v32, s3, 12
+; NOOPT-NEXT:    v_writelane_b32 v32, s2, 15
+; NOOPT-NEXT:    v_writelane_b32 v32, s3, 16
 ; NOOPT-NEXT:    s_or_saveexec_b64 s[26:27], -1
 ; NOOPT-NEXT:    buffer_store_dword v32, off, s[28:31], 0 ; 4-byte Folded Spill
 ; NOOPT-NEXT:    s_mov_b64 exec, s[26:27]
@@ -6073,19 +6269,23 @@ define amdgpu_kernel void @insert_vgpr_offset_multiple_in_block(ptr addrspace(1)
 ; NOOPT-NEXT:    buffer_load_dword v32, off, s[28:31], 0 ; 4-byte Folded Reload
 ; NOOPT-NEXT:    s_mov_b64 exec, s[26:27]
 ; NOOPT-NEXT:    s_waitcnt vmcnt(0)
-; NOOPT-NEXT:    v_readlane_b32 s0, v32, 9
-; NOOPT-NEXT:    v_readlane_b32 s1, v32, 10
+; NOOPT-NEXT:    v_readlane_b32 s0, v32, 13
+; NOOPT-NEXT:    v_readlane_b32 s1, v32, 14
 ; NOOPT-NEXT:    s_mov_b64 exec, s[0:1]
 ; NOOPT-NEXT:  ; %bb.6:
 ; NOOPT-NEXT:    s_or_saveexec_b64 s[26:27], -1
 ; NOOPT-NEXT:    buffer_load_dword v32, off, s[28:31], 0 ; 4-byte Folded Reload
 ; NOOPT-NEXT:    s_mov_b64 exec, s[26:27]
 ; NOOPT-NEXT:    s_waitcnt vmcnt(0)
-; NOOPT-NEXT:    v_readlane_b32 s0, v32, 4
-; NOOPT-NEXT:    v_readlane_b32 s4, v32, 0
-; NOOPT-NEXT:    v_readlane_b32 s5, v32, 1
-; NOOPT-NEXT:    v_readlane_b32 s6, v32, 2
-; NOOPT-NEXT:    v_readlane_b32 s7, v32, 3
+; NOOPT-NEXT:    v_readlane_b32 s0, v32, 6
+; NOOPT-NEXT:    v_readlane_b32 s4, v32, 2
+; NOOPT-NEXT:    v_readlane_b32 s5, v32, 3
+; NOOPT-NEXT:    v_readlane_b32 s6, v32, 4
+; NOOPT-NEXT:    v_readlane_b32 s7, v32, 5
+; NOOPT-NEXT:    v_readlane_b32 s2, v32, 7
+; NOOPT-NEXT:    v_readlane_b32 s3, v32, 8
+; NOOPT-NEXT:    v_readlane_b32 s8, v32, 0
+; NOOPT-NEXT:    v_readlane_b32 s9, v32, 1
 ; NOOPT-NEXT:    buffer_load_dword v0, off, s[28:31], 0 offset:84 ; 4-byte Folded Reload
 ; NOOPT-NEXT:    buffer_load_dword v16, off, s[28:31], 0 offset:220 ; 4-byte Folded Reload
 ; NOOPT-NEXT:    buffer_load_dword v17, off, s[28:31], 0 offset:224 ; 4-byte Folded Reload
@@ -6127,7 +6327,11 @@ define amdgpu_kernel void @insert_vgpr_offset_multiple_in_block(ptr addrspace(1)
 ; NOOPT-NEXT:    v_mov_b32_e32 v17, v12
 ; NOOPT-NEXT:    v_mov_b32_e32 v18, v11
 ; NOOPT-NEXT:    v_mov_b32_e32 v19, v10
-; NOOPT-NEXT:    buffer_store_dwordx4 v[16:19], off, s[4:7], 0 offset:48
+; NOOPT-NEXT:    ; kill: def $sgpr8_sgpr9 killed $sgpr8_sgpr9 def $sgpr8_sgpr9_sgpr10_sgpr11
+; NOOPT-NEXT:    s_mov_b64 s[10:11], s[2:3]
+; NOOPT-NEXT:    v_mov_b32_e32 v10, 32
+; NOOPT-NEXT:    v_mov_b32_e32 v11, 0
+; NOOPT-NEXT:    buffer_store_dwordx4 v[16:19], v[10:11], s[8:11], 0 addr64 offset:16
 ; NOOPT-NEXT:    s_waitcnt vmcnt(0)
 ; NOOPT-NEXT:    ; kill: def $vgpr9 killed $vgpr9 def $vgpr9_vgpr10_vgpr11_vgpr12 killed $exec
 ; NOOPT-NEXT:    v_mov_b32_e32 v10, v15
@@ -6149,8 +6353,8 @@ define amdgpu_kernel void @insert_vgpr_offset_multiple_in_block(ptr addrspace(1)
 ; NOOPT-NEXT:    s_waitcnt vmcnt(0)
 ; NOOPT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s0
 ; NOOPT-NEXT:    s_mov_b64 s[0:1], exec
-; NOOPT-NEXT:    v_writelane_b32 v32, s0, 13
-; NOOPT-NEXT:    v_writelane_b32 v32, s1, 14
+; NOOPT-NEXT:    v_writelane_b32 v32, s0, 17
+; NOOPT-NEXT:    v_writelane_b32 v32, s1, 18
 ; NOOPT-NEXT:    s_or_saveexec_b64 s[26:27], -1
 ; NOOPT-NEXT:    buffer_store_dword v32, off, s[28:31], 0 ; 4-byte Folded Spill
 ; NOOPT-NEXT:    s_mov_b64 exec, s[26:27]
@@ -6178,8 +6382,8 @@ define amdgpu_kernel void @insert_vgpr_offset_multiple_in_block(ptr addrspace(1)
 ; NOOPT-NEXT:    buffer_load_dword v32, off, s[28:31], 0 ; 4-byte Folded Reload
 ; NOOPT-NEXT:    s_mov_b64 exec, s[26:27]
 ; NOOPT-NEXT:    s_waitcnt vmcnt(0)
-; NOOPT-NEXT:    v_readlane_b32 s0, v32, 13
-; NOOPT-NEXT:    v_readlane_b32 s1, v32, 14
+; NOOPT-NEXT:    v_readlane_b32 s0, v32, 17
+; NOOPT-NEXT:    v_readlane_b32 s1, v32, 18
 ; NOOPT-NEXT:    s_or_b64 exec, exec, s[0:1]
 ; NOOPT-NEXT:    s_endpgm
 ;
@@ -6698,138 +6902,159 @@ define amdgpu_kernel void @insert_w_offset_multiple_in_block(ptr addrspace(1) %o
 ; NOOPT-LABEL: insert_w_offset_multiple_in_block:
 ; NOOPT:       ; %bb.0: ; %entry
 ; NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
-; NOOPT-NEXT:    s_load_dword s4, s[4:5], 0xb
 ; NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
-; NOOPT-NEXT:    s_mov_b32 s7, s1
-; NOOPT-NEXT:    ; kill: def $sgpr0 killed $sgpr0 killed $sgpr0_sgpr1
-; NOOPT-NEXT:    s_mov_b32 s5, 0xf000
+; NOOPT-NEXT:    s_load_dword s0, s[4:5], 0xb
+; NOOPT-NEXT:    s_load_dwordx2 s[14:15], s[4:5], 0x9
+; NOOPT-NEXT:    s_load_dword s5, s[4:5], 0xb
+; NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; NOOPT-NEXT:    s_mov_b32 s7, s15
+; NOOPT-NEXT:    s_mov_b32 s0, s14
+; NOOPT-NEXT:    s_mov_b32 s4, 0xf000
 ; NOOPT-NEXT:    s_mov_b32 s6, -1
 ; NOOPT-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_sgpr1_sgpr2_sgpr3
 ; NOOPT-NEXT:    s_mov_b32 s1, s7
 ; NOOPT-NEXT:    s_mov_b32 s2, s6
-; NOOPT-NEXT:    s_mov_b32 s3, s5
-; NOOPT-NEXT:    s_mov_b32 s5, 1
-; NOOPT-NEXT:    s_add_i32 s5, s4, s5
-; NOOPT-NEXT:    s_mov_b32 s6, 0x41800000
-; NOOPT-NEXT:    s_mov_b32 s7, 0x41700000
-; NOOPT-NEXT:    s_mov_b32 s8, 0x41600000
-; NOOPT-NEXT:    s_mov_b32 s9, 0x41500000
-; NOOPT-NEXT:    s_mov_b32 s10, 0x41400000
-; NOOPT-NEXT:    s_mov_b32 s11, 0x41300000
-; NOOPT-NEXT:    s_mov_b32 s12, 0x41200000
-; NOOPT-NEXT:    s_mov_b32 s13, 0x41100000
-; NOOPT-NEXT:    s_mov_b32 s14, 0x41000000
-; NOOPT-NEXT:    s_mov_b32 s15, 0x40e00000
-; NOOPT-NEXT:    s_mov_b32 s16, 0x40c00000
-; NOOPT-NEXT:    s_mov_b32 s17, 0x40a00000
-; NOOPT-NEXT:    s_mov_b32 s18, 4.0
-; NOOPT-NEXT:    s_mov_b32 s19, 0x40400000
-; NOOPT-NEXT:    s_mov_b32 s20, 2.0
-; NOOPT-NEXT:    s_mov_b32 s21, 1.0
-; NOOPT-NEXT:    v_mov_b32_e32 v23, s21
-; NOOPT-NEXT:    v_mov_b32_e32 v14, s20
-; NOOPT-NEXT:    v_mov_b32_e32 v13, s19
-; NOOPT-NEXT:    v_mov_b32_e32 v12, s18
-; NOOPT-NEXT:    v_mov_b32_e32 v11, s17
-; NOOPT-NEXT:    v_mov_b32_e32 v10, s16
-; NOOPT-NEXT:    v_mov_b32_e32 v9, s15
-; NOOPT-NEXT:    v_mov_b32_e32 v8, s14
-; NOOPT-NEXT:    v_mov_b32_e32 v7, s13
-; NOOPT-NEXT:    v_mov_b32_e32 v6, s12
-; NOOPT-NEXT:    v_mov_b32_e32 v5, s11
-; NOOPT-NEXT:    v_mov_b32_e32 v4, s10
-; NOOPT-NEXT:    v_mov_b32_e32 v3, s9
-; NOOPT-NEXT:    v_mov_b32_e32 v2, s8
-; NOOPT-NEXT:    v_mov_b32_e32 v1, s7
-; NOOPT-NEXT:    v_mov_b32_e32 v0, s6
-; NOOPT-NEXT:    ; kill: def $vgpr23 killed $vgpr23 def $vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31_vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38 killed $exec
-; NOOPT-NEXT:    v_mov_b32_e32 v24, v14
-; NOOPT-NEXT:    v_mov_b32_e32 v25, v13
-; NOOPT-NEXT:    v_mov_b32_e32 v26, v12
-; NOOPT-NEXT:    v_mov_b32_e32 v27, v11
-; NOOPT-NEXT:    v_mov_b32_e32 v28, v10
-; NOOPT-NEXT:    v_mov_b32_e32 v29, v9
-; NOOPT-NEXT:    v_mov_b32_e32 v30, v8
-; NOOPT-NEXT:    v_mov_b32_e32 v31, v7
-; NOOPT-NEXT:    v_mov_b32_e32 v32, v6
-; NOOPT-NEXT:    v_mov_b32_e32 v33, v5
-; NOOPT-NEXT:    v_mov_b32_e32 v34, v4
-; NOOPT-NEXT:    v_mov_b32_e32 v35, v3
-; NOOPT-NEXT:    v_mov_b32_e32 v36, v2
-; NOOPT-NEXT:    v_mov_b32_e32 v37, v1
-; NOOPT-NEXT:    v_mov_b32_e32 v38, v0
+; NOOPT-NEXT:    s_mov_b32 s3, s4
+; NOOPT-NEXT:    s_mov_b32 s6, 1
+; NOOPT-NEXT:    s_add_i32 s6, s5, s6
+; NOOPT-NEXT:    s_mov_b32 s7, 0x41800000
+; NOOPT-NEXT:    s_mov_b32 s8, 0x41700000
+; NOOPT-NEXT:    s_mov_b32 s9, 0x41600000
+; NOOPT-NEXT:    s_mov_b32 s10, 0x41500000
+; NOOPT-NEXT:    s_mov_b32 s11, 0x41400000
+; NOOPT-NEXT:    s_mov_b32 s12, 0x41300000
+; NOOPT-NEXT:    s_mov_b32 s13, 0x41200000
+; NOOPT-NEXT:    s_mov_b32 s16, 0x41100000
+; NOOPT-NEXT:    s_mov_b32 s17, 0x41000000
+; NOOPT-NEXT:    s_mov_b32 s18, 0x40e00000
+; NOOPT-NEXT:    s_mov_b32 s19, 0x40c00000
+; NOOPT-NEXT:    s_mov_b32 s20, 0x40a00000
+; NOOPT-NEXT:    s_mov_b32 s21, 4.0
+; NOOPT-NEXT:    s_mov_b32 s22, 0x40400000
+; NOOPT-NEXT:    s_mov_b32 s23, 2.0
+; NOOPT-NEXT:    s_mov_b32 s24, 1.0
+; NOOPT-NEXT:    v_mov_b32_e32 v25, s24
+; NOOPT-NEXT:    v_mov_b32_e32 v14, s23
+; NOOPT-NEXT:    v_mov_b32_e32 v13, s22
+; NOOPT-NEXT:    v_mov_b32_e32 v12, s21
+; NOOPT-NEXT:    v_mov_b32_e32 v11, s20
+; NOOPT-NEXT:    v_mov_b32_e32 v10, s19
+; NOOPT-NEXT:    v_mov_b32_e32 v9, s18
+; NOOPT-NEXT:    v_mov_b32_e32 v8, s17
+; NOOPT-NEXT:    v_mov_b32_e32 v7, s16
+; NOOPT-NEXT:    v_mov_b32_e32 v6, s13
+; NOOPT-NEXT:    v_mov_b32_e32 v5, s12
+; NOOPT-NEXT:    v_mov_b32_e32 v4, s11
+; NOOPT-NEXT:    v_mov_b32_e32 v3, s10
+; NOOPT-NEXT:    v_mov_b32_e32 v2, s9
+; NOOPT-NEXT:    v_mov_b32_e32 v1, s8
+; NOOPT-NEXT:    v_mov_b32_e32 v0, s7
+; NOOPT-NEXT:    ; kill: def $vgpr25 killed $vgpr25 def $vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31_vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40 killed $exec
+; NOOPT-NEXT:    v_mov_b32_e32 v26, v14
+; NOOPT-NEXT:    v_mov_b32_e32 v27, v13
+; NOOPT-NEXT:    v_mov_b32_e32 v28, v12
+; NOOPT-NEXT:    v_mov_b32_e32 v29, v11
+; NOOPT-NEXT:    v_mov_b32_e32 v30, v10
+; NOOPT-NEXT:    v_mov_b32_e32 v31, v9
+; NOOPT-NEXT:    v_mov_b32_e32 v32, v8
+; NOOPT-NEXT:    v_mov_b32_e32 v33, v7
+; NOOPT-NEXT:    v_mov_b32_e32 v34, v6
+; NOOPT-NEXT:    v_mov_b32_e32 v35, v5
+; NOOPT-NEXT:    v_mov_b32_e32 v36, v4
+; NOOPT-NEXT:    v_mov_b32_e32 v37, v3
+; NOOPT-NEXT:    v_mov_b32_e32 v38, v2
+; NOOPT-NEXT:    v_mov_b32_e32 v39, v1
+; NOOPT-NEXT:    v_mov_b32_e32 v40, v0
 ; NOOPT-NEXT:    v_mov_b32_e32 v0, 0x41880000
+; NOOPT-NEXT:    s_mov_b32 m0, s6
+; NOOPT-NEXT:    v_movreld_b32_e32 v25, v0
+; NOOPT-NEXT:    s_mov_b32 s6, 2
+; NOOPT-NEXT:    s_add_i32 s5, s5, s6
 ; NOOPT-NEXT:    s_mov_b32 m0, s5
-; NOOPT-NEXT:    v_movreld_b32_e32 v23, v0
-; NOOPT-NEXT:    s_mov_b32 s5, 2
-; NOOPT-NEXT:    s_add_i32 s4, s4, s5
-; NOOPT-NEXT:    s_mov_b32 m0, s4
-; NOOPT-NEXT:    v_mov_b32_e32 v7, v23
-; NOOPT-NEXT:    v_mov_b32_e32 v8, v24
-; NOOPT-NEXT:    v_mov_b32_e32 v9, v25
-; NOOPT-NEXT:    v_mov_b32_e32 v10, v26
-; NOOPT-NEXT:    v_mov_b32_e32 v11, v27
-; NOOPT-NEXT:    v_mov_b32_e32 v12, v28
-; NOOPT-NEXT:    v_mov_b32_e32 v13, v29
-; NOOPT-NEXT:    v_mov_b32_e32 v14, v30
-; NOOPT-NEXT:    v_mov_b32_e32 v15, v31
-; NOOPT-NEXT:    v_mov_b32_e32 v16, v32
-; NOOPT-NEXT:    v_mov_b32_e32 v17, v33
-; NOOPT-NEXT:    v_mov_b32_e32 v18, v34
-; NOOPT-NEXT:    v_mov_b32_e32 v19, v35
-; NOOPT-NEXT:    v_mov_b32_e32 v20, v36
-; NOOPT-NEXT:    v_mov_b32_e32 v21, v37
-; NOOPT-NEXT:    v_mov_b32_e32 v22, v38
+; NOOPT-NEXT:    v_mov_b32_e32 v7, v25
+; NOOPT-NEXT:    v_mov_b32_e32 v8, v26
+; NOOPT-NEXT:    v_mov_b32_e32 v9, v27
+; NOOPT-NEXT:    v_mov_b32_e32 v10, v28
+; NOOPT-NEXT:    v_mov_b32_e32 v11, v29
+; NOOPT-NEXT:    v_mov_b32_e32 v12, v30
+; NOOPT-NEXT:    v_mov_b32_e32 v13, v31
+; NOOPT-NEXT:    v_mov_b32_e32 v14, v32
+; NOOPT-NEXT:    v_mov_b32_e32 v15, v33
+; NOOPT-NEXT:    v_mov_b32_e32 v16, v34
+; NOOPT-NEXT:    v_mov_b32_e32 v17, v35
+; NOOPT-NEXT:    v_mov_b32_e32 v18, v36
+; NOOPT-NEXT:    v_mov_b32_e32 v19, v37
+; NOOPT-NEXT:    v_mov_b32_e32 v20, v38
+; NOOPT-NEXT:    v_mov_b32_e32 v21, v39
+; NOOPT-NEXT:    v_mov_b32_e32 v22, v40
 ; NOOPT-NEXT:    v_movreld_b32_e32 v7, v0
-; NOOPT-NEXT:    v_mov_b32_e32 v4, v38
-; NOOPT-NEXT:    v_mov_b32_e32 v5, v37
+; NOOPT-NEXT:    v_mov_b32_e32 v4, v40
+; NOOPT-NEXT:    v_mov_b32_e32 v5, v39
+; NOOPT-NEXT:    v_mov_b32_e32 v6, v38
+; NOOPT-NEXT:    v_mov_b32_e32 v0, v37
+; NOOPT-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1_vgpr2_vgpr3 killed $exec
+; NOOPT-NEXT:    v_mov_b32_e32 v1, v6
+; NOOPT-NEXT:    v_mov_b32_e32 v2, v5
+; NOOPT-NEXT:    v_mov_b32_e32 v3, v4
+; NOOPT-NEXT:    s_mov_b32 s10, 0
+; NOOPT-NEXT:    ; kill: def $sgpr10 killed $sgpr10 def $sgpr10_sgpr11
+; NOOPT-NEXT:    s_mov_b32 s11, s4
+; NOOPT-NEXT:    s_mov_b64 s[4:5], s[14:15]
+; NOOPT-NEXT:    s_mov_b64 s[6:7], s[10:11]
+; NOOPT-NEXT:    v_mov_b32_e32 v4, 32
+; NOOPT-NEXT:    v_mov_b32_e32 v5, 0
+; NOOPT-NEXT:    buffer_store_dwordx4 v[0:3], v[4:5], s[4:7], 0 addr64 offset:16
 ; NOOPT-NEXT:    v_mov_b32_e32 v6, v36
-; NOOPT-NEXT:    v_mov_b32_e32 v0, v35
-; NOOPT-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1_vgpr2_vgpr3 killed $exec
-; NOOPT-NEXT:    v_mov_b32_e32 v1, v6
-; NOOPT-NEXT:    v_mov_b32_e32 v2, v5
-; NOOPT-NEXT:    v_mov_b32_e32 v3, v4
-; NOOPT-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0 offset:48
-; NOOPT-NEXT:    v_mov_b32_e32 v4, v34
-; NOOPT-NEXT:    v_mov_b32_e32 v5, v33
-; NOOPT-NEXT:    v_mov_b32_e32 v6, v32
+; NOOPT-NEXT:    v_mov_b32_e32 v23, v35
+; NOOPT-NEXT:    v_mov_b32_e32 v24, v34
 ; NOOPT-NEXT:    s_waitcnt expcnt(0)
-; NOOPT-NEXT:    v_mov_b32_e32 v0, v31
+; NOOPT-NEXT:    v_mov_b32_e32 v0, v33
 ; NOOPT-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1_vgpr2_vgpr3 killed $exec
-; NOOPT-NEXT:    v_mov_b32_e32 v1, v6
-; NOOPT-NEXT:    v_mov_b32_e32 v2, v5
-; NOOPT-NEXT:    v_mov_b32_e32 v3, v4
+; NOOPT-NEXT:    v_mov_b32_e32 v1, v24
+; NOOPT-NEXT:    v_mov_b32_e32 v2, v23
+; NOOPT-NEXT:    v_mov_b32_e32 v3, v6
 ; NOOPT-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0 offset:32
-; NOOPT-NEXT:    v_mov_b32_e32 v4, v30
-; NOOPT-NEXT:    v_mov_b32_e32 v5, v29
-; NOOPT-NEXT:    v_mov_b32_e32 v6, v28
+; NOOPT-NEXT:    v_mov_b32_e32 v6, v32
+; NOOPT-NEXT:    v_mov_b32_e32 v23, v31
+; NOOPT-NEXT:    v_mov_b32_e32 v24, v30
 ; NOOPT-NEXT:    s_waitcnt expcnt(0)
-; NOOPT-NEXT:    v_mov_b32_e32 v0, v27
+; NOOPT-NEXT:    v_mov_b32_e32 v0, v29
 ; NOOPT-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1_vgpr2_vgpr3 killed $exec
-; NOOPT-NEXT:    v_mov_b32_e32 v1, v6
-; NOOPT-NEXT:    v_mov_b32_e32 v2, v5
-; NOOPT-NEXT:    v_mov_b32_e32 v3, v4
+; NOOPT-NEXT:    v_mov_b32_e32 v1, v24
+; NOOPT-NEXT:    v_mov_b32_e32 v2, v23
+; NOOPT-NEXT:    v_mov_b32_e32 v3, v6
 ; NOOPT-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0 offset:16
-; NOOPT-NEXT:    v_mov_b32_e32 v4, v26
-; NOOPT-NEXT:    v_mov_b32_e32 v5, v25
-; NOOPT-NEXT:    v_mov_b32_e32 v6, v24
+; NOOPT-NEXT:    v_mov_b32_e32 v6, v28
+; NOOPT-NEXT:    v_mov_b32_e32 v23, v27
+; NOOPT-NEXT:    v_mov_b32_e32 v24, v26
 ; NOOPT-NEXT:    s_waitcnt expcnt(0)
-; NOOPT-NEXT:    v_mov_b32_e32 v0, v23
+; NOOPT-NEXT:    v_mov_b32_e32 v0, v25
 ; NOOPT-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1_vgpr2_vgpr3 killed $exec
-; NOOPT-NEXT:    v_mov_b32_e32 v1, v6
-; NOOPT-NEXT:    v_mov_b32_e32 v2, v5
-; NOOPT-NEXT:    v_mov_b32_e32 v3, v4
+; NOOPT-NEXT:    v_mov_b32_e32 v1, v24
+; NOOPT-NEXT:    v_mov_b32_e32 v2, v23
+; NOOPT-NEXT:    v_mov_b32_e32 v3, v6
 ; NOOPT-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0
-; NOOPT-NEXT:    v_mov_b32_e32 v4, v22
-; NOOPT-NEXT:    v_mov_b32_e32 v5, v21
-; NOOPT-NEXT:    v_mov_b32_e32 v6, v20
+; NOOPT-NEXT:    s_mov_b64 s[8:9], 64
+; NOOPT-NEXT:    s_mov_b32 s12, s14
+; NOOPT-NEXT:    s_mov_b32 s13, s15
+; NOOPT-NEXT:    s_mov_b32 s15, s8
+; NOOPT-NEXT:    s_mov_b32 s14, s9
+; NOOPT-NEXT:    s_add_u32 s12, s12, s15
+; NOOPT-NEXT:    s_addc_u32 s14, s13, s14
+; NOOPT-NEXT:    ; kill: def $sgpr12 killed $sgpr12 def $sgpr12_sgpr13
+; NOOPT-NEXT:    s_mov_b32 s13, s14
+; NOOPT-NEXT:    v_mov_b32_e32 v6, v22
+; NOOPT-NEXT:    v_mov_b32_e32 v23, v21
+; NOOPT-NEXT:    v_mov_b32_e32 v24, v20
 ; NOOPT-NEXT:    s_waitcnt expcnt(0)
 ; NOOPT-NEXT:    v_mov_b32_e32 v0, v19
 ; NOOPT-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1_vgpr2_vgpr3 killed $exec
-; NOOPT-NEXT:    v_mov_b32_e32 v1, v6
-; NOOPT-NEXT:    v_mov_b32_e32 v2, v5
-; NOOPT-NEXT:    v_mov_b32_e32 v3, v4
-; NOOPT-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0 offset:112
+; NOOPT-NEXT:    v_mov_b32_e32 v1, v24
+; NOOPT-NEXT:    v_mov_b32_e32 v2, v23
+; NOOPT-NEXT:    v_mov_b32_e32 v3, v6
+; NOOPT-NEXT:    ; kill: def $sgpr12_sgpr13 killed $sgpr12_sgpr13 def $sgpr12_sgpr13_sgpr14_sgpr15
+; NOOPT-NEXT:    s_mov_b64 s[14:15], s[10:11]
+; NOOPT-NEXT:    buffer_store_dwordx4 v[0:3], v[4:5], s[12:15], 0 addr64 offset:16
 ; NOOPT-NEXT:    v_mov_b32_e32 v4, v18
 ; NOOPT-NEXT:    v_mov_b32_e32 v5, v17
 ; NOOPT-NEXT:    v_mov_b32_e32 v6, v16
@@ -6839,7 +7064,9 @@ define amdgpu_kernel void @insert_w_offset_multiple_in_block(ptr addrspace(1) %o
 ; NOOPT-NEXT:    v_mov_b32_e32 v1, v6
 ; NOOPT-NEXT:    v_mov_b32_e32 v2, v5
 ; NOOPT-NEXT:    v_mov_b32_e32 v3, v4
-; NOOPT-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0 offset:96
+; NOOPT-NEXT:    v_mov_b32_e32 v4, s8
+; NOOPT-NEXT:    v_mov_b32_e32 v5, s9
+; NOOPT-NEXT:    buffer_store_dwordx4 v[0:3], v[4:5], s[4:7], 0 addr64 offset:32
 ; NOOPT-NEXT:    v_mov_b32_e32 v4, v14
 ; NOOPT-NEXT:    v_mov_b32_e32 v5, v13
 ; NOOPT-NEXT:    v_mov_b32_e32 v6, v12
@@ -6849,7 +7076,9 @@ define amdgpu_kernel void @insert_w_offset_multiple_in_block(ptr addrspace(1) %o
 ; NOOPT-NEXT:    v_mov_b32_e32 v1, v6
 ; NOOPT-NEXT:    v_mov_b32_e32 v2, v5
 ; NOOPT-NEXT:    v_mov_b32_e32 v3, v4
-; NOOPT-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0 offset:80
+; NOOPT-NEXT:    v_mov_b32_e32 v4, s8
+; NOOPT-NEXT:    v_mov_b32_e32 v5, s9
+; NOOPT-NEXT:    buffer_store_dwordx4 v[0:3], v[4:5], s[4:7], 0 addr64 offset:16
 ; NOOPT-NEXT:    v_mov_b32_e32 v4, v10
 ; NOOPT-NEXT:    v_mov_b32_e32 v5, v9
 ; NOOPT-NEXT:    v_mov_b32_e32 v6, v8
@@ -7201,11 +7430,12 @@ define amdgpu_kernel void @extract_adjacent_blocks(i32 %arg) {
 ; NOOPT-NEXT:    s_mov_b32 s15, 0xe8f000
 ; NOOPT-NEXT:    s_add_u32 s12, s12, s11
 ; NOOPT-NEXT:    s_addc_u32 s13, s13, 0
+; NOOPT-NEXT:    s_load_dword s0, s[4:5], 0x9
 ; NOOPT-NEXT:    s_load_dword s2, s[4:5], 0x9
+; NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
 ; NOOPT-NEXT:    s_mov_b64 s[0:1], -1
 ; NOOPT-NEXT:    ; implicit-def: $sgpr3
 ; NOOPT-NEXT:    s_mov_b32 s3, 0
-; NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
 ; NOOPT-NEXT:    s_cmp_lg_u32 s2, s3
 ; NOOPT-NEXT:    ; implicit-def: $vgpr4 : SGPR spill to VGPR lane
 ; NOOPT-NEXT:    v_writelane_b32 v4, s0, 0
@@ -7224,9 +7454,8 @@ define amdgpu_kernel void @extract_adjacent_blocks(i32 %arg) {
 ; NOOPT-NEXT:    v_readlane_b32 s0, v4, 0
 ; NOOPT-NEXT:    v_readlane_b32 s1, v4, 1
 ; NOOPT-NEXT:    ; implicit-def: $sgpr2
-; NOOPT-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
-; NOOPT-NEXT:    s_mov_b32 s0, 1
-; NOOPT-NEXT:    v_cmp_ne_u32_e64 s[0:1], v0, s0
+; NOOPT-NEXT:    s_mov_b64 s[2:3], -1
+; NOOPT-NEXT:    s_xor_b64 s[0:1], s[0:1], s[2:3]
 ; NOOPT-NEXT:    s_and_b64 vcc, exec, s[0:1]
 ; NOOPT-NEXT:    s_cbranch_vccnz .LBB19_4
 ; NOOPT-NEXT:  ; %bb.2: ; %bb1
@@ -7440,7 +7669,11 @@ define amdgpu_kernel void @insert_adjacent_blocks(i32 %arg, float %val0) {
 ; NOOPT-NEXT:    s_mov_b32 s19, 0xe8f000
 ; NOOPT-NEXT:    s_add_u32 s16, s16, s11
 ; NOOPT-NEXT:    s_addc_u32 s17, s17, 0
+; NOOPT-NEXT:    s_load_dword s0, s[4:5], 0x9
+; NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; NOOPT-NEXT:    s_load_dword s0, s[4:5], 0xa
 ; NOOPT-NEXT:    s_load_dword s2, s[4:5], 0x9
+; NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
 ; NOOPT-NEXT:    s_load_dword s0, s[4:5], 0xa
 ; NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
 ; NOOPT-NEXT:    s_mov_b64 s[0:1], -1
@@ -7464,9 +7697,8 @@ define amdgpu_kernel void @insert_adjacent_blocks(i32 %arg, float %val0) {
 ; NOOPT-NEXT:    v_readlane_b32 s0, v4, 0
 ; NOOPT-NEXT:    v_readlane_b32 s1, v4, 1
 ; NOOPT-NEXT:    ; implicit-def: $sgpr4_sgpr5_sgpr6_sgpr7
-; NOOPT-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
-; NOOPT-NEXT:    s_mov_b32 s0, 1
-; NOOPT-NEXT:    v_cmp_ne_u32_e64 s[0:1], v0, s0
+; NOOPT-NEXT:    s_mov_b64 s[2:3], -1
+; NOOPT-NEXT:    s_xor_b64 s[0:1], s[0:1], s[2:3]
 ; NOOPT-NEXT:    s_and_b64 vcc, exec, s[0:1]
 ; NOOPT-NEXT:    s_cbranch_vccnz .LBB20_4
 ; NOOPT-NEXT:  ; %bb.2: ; %bb1
@@ -7665,23 +7897,17 @@ define amdgpu_kernel void @multi_same_block(i32 %arg) {
 ; NOOPT-LABEL: multi_same_block:
 ; NOOPT:       ; %bb.0: ; %bb
 ; NOOPT-NEXT:    s_load_dword s0, s[4:5], 0x9
+; NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; NOOPT-NEXT:    s_load_dword s0, s[4:5], 0x9
+; NOOPT-NEXT:    s_mov_b32 s1, 0x41c80000
+; NOOPT-NEXT:    s_mov_b32 s2, 0x41c00000
+; NOOPT-NEXT:    s_mov_b32 s3, 0x41b80000
+; NOOPT-NEXT:    s_mov_b32 s4, 0x41b00000
+; NOOPT-NEXT:    s_mov_b32 s5, 0x41a80000
+; NOOPT-NEXT:    s_mov_b32 s6, 0x41a00000
+; NOOPT-NEXT:    s_mov_b32 s7, 0x41980000
 ; NOOPT-NEXT:    s_mov_b32 s8, 0x41900000
-; NOOPT-NEXT:    ; implicit-def: $sgpr9
-; NOOPT-NEXT:    ; implicit-def: $sgpr1
-; NOOPT-NEXT:    ; implicit-def: $sgpr7
-; NOOPT-NEXT:    ; implicit-def: $sgpr1
-; NOOPT-NEXT:    ; implicit-def: $sgpr6
-; NOOPT-NEXT:    ; implicit-def: $sgpr1
-; NOOPT-NEXT:    ; implicit-def: $sgpr5
-; NOOPT-NEXT:    ; implicit-def: $sgpr1
-; NOOPT-NEXT:    ; implicit-def: $sgpr4
-; NOOPT-NEXT:    ; implicit-def: $sgpr1
-; NOOPT-NEXT:    ; implicit-def: $sgpr3
-; NOOPT-NEXT:    ; implicit-def: $sgpr1
-; NOOPT-NEXT:    ; implicit-def: $sgpr2
-; NOOPT-NEXT:    ; implicit-def: $sgpr1
-; NOOPT-NEXT:    ; implicit-def: $sgpr1
-; NOOPT-NEXT:    ; implicit-def: $sgpr10
+; NOOPT-NEXT:    s_mov_b32 s9, 0x41880000
 ; NOOPT-NEXT:    v_mov_b32_e32 v12, s9
 ; NOOPT-NEXT:    v_mov_b32_e32 v7, s8
 ; NOOPT-NEXT:    v_mov_b32_e32 v6, s7
@@ -7704,23 +7930,15 @@ define amdgpu_kernel void @multi_same_block(i32 %arg) {
 ; NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
 ; NOOPT-NEXT:    s_add_i32 m0, s0, -16
 ; NOOPT-NEXT:    v_movreld_b32_e32 v12, v0
+; NOOPT-NEXT:    s_mov_b32 s1, 0x41c8cccd
+; NOOPT-NEXT:    s_mov_b32 s2, 0x41c0cccd
+; NOOPT-NEXT:    s_mov_b32 s3, 0x41b8cccd
 ; NOOPT-NEXT:    s_mov_b32 s4, 0x41b0cccd
-; NOOPT-NEXT:    ; implicit-def: $sgpr9
-; NOOPT-NEXT:    ; implicit-def: $sgpr1
-; NOOPT-NEXT:    ; implicit-def: $sgpr8
-; NOOPT-NEXT:    ; implicit-def: $sgpr1
-; NOOPT-NEXT:    ; implicit-def: $sgpr7
-; NOOPT-NEXT:    ; implicit-def: $sgpr1
-; NOOPT-NEXT:    ; implicit-def: $sgpr6
-; NOOPT-NEXT:    ; implicit-def: $sgpr1
-; NOOPT-NEXT:    ; implicit-def: $sgpr5
-; NOOPT-NEXT:    ; implicit-def: $sgpr1
-; NOOPT-NEXT:    ; implicit-def: $sgpr3
-; NOOPT-NEXT:    ; implicit-def: $sgpr1
-; NOOPT-NEXT:    ; implicit-def: $sgpr2
-; NOOPT-NEXT:    ; implicit-def: $sgpr1
-; NOOPT-NEXT:    ; implicit-def: $sgpr1
-; NOOPT-NEXT:    ; implicit-def: $sgpr10
+; NOOPT-NEXT:    s_mov_b32 s5, 0x41a8cccd
+; NOOPT-NEXT:    s_mov_b32 s6, 0x41a0cccd
+; NOOPT-NEXT:    s_mov_b32 s7, 0x4198cccd
+; NOOPT-NEXT:    s_mov_b32 s8, 0x4190cccd
+; NOOPT-NEXT:    s_mov_b32 s9, 0x4188cccd
 ; NOOPT-NEXT:    v_mov_b32_e32 v3, s9
 ; NOOPT-NEXT:    v_mov_b32_e32 v25, s8
 ; NOOPT-NEXT:    v_mov_b32_e32 v24, s7
@@ -7901,6 +8119,12 @@ define amdgpu_kernel void @extract_largest_inbounds_offset(ptr addrspace(1) %out
 ; NOOPT-LABEL: extract_largest_inbounds_offset:
 ; NOOPT:       ; %bb.0: ; %entry
 ; NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
+; NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0xb
+; NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; NOOPT-NEXT:    s_load_dword s0, s[4:5], 0xd
+; NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
 ; NOOPT-NEXT:    s_load_dwordx2 s[8:9], s[4:5], 0xb
 ; NOOPT-NEXT:    s_load_dword s4, s[4:5], 0xd
 ; NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
@@ -7913,35 +8137,74 @@ define amdgpu_kernel void @extract_largest_inbounds_offset(ptr addrspace(1) %out
 ; NOOPT-NEXT:    s_mov_b32 s2, s6
 ; NOOPT-NEXT:    s_mov_b32 s3, s5
 ; NOOPT-NEXT:    s_mov_b32 s7, s9
-; NOOPT-NEXT:    ; kill: def $sgpr8 killed $sgpr8 killed $sgpr8_sgpr9
-; NOOPT-NEXT:    ; kill: def $sgpr8 killed $sgpr8 def $sgpr8_sgpr9_sgpr10_sgpr11
-; NOOPT-NEXT:    s_mov_b32 s9, s7
-; NOOPT-NEXT:    s_mov_b32 s10, s6
-; NOOPT-NEXT:    s_mov_b32 s11, s5
-; NOOPT-NEXT:    buffer_load_dwordx4 v[0:3], off, s[8:11], 0 glc
+; NOOPT-NEXT:    s_mov_b32 s12, s8
+; NOOPT-NEXT:    ; kill: def $sgpr12 killed $sgpr12 def $sgpr12_sgpr13_sgpr14_sgpr15
+; NOOPT-NEXT:    s_mov_b32 s13, s7
+; NOOPT-NEXT:    s_mov_b32 s14, s6
+; NOOPT-NEXT:    s_mov_b32 s15, s5
+; NOOPT-NEXT:    buffer_load_dwordx4 v[5:8], off, s[12:15], 0 glc
 ; NOOPT-NEXT:    s_waitcnt vmcnt(0)
-; NOOPT-NEXT:    buffer_load_dwordx4 v[4:7], off, s[8:11], 0 offset:16 glc
+; NOOPT-NEXT:    buffer_load_dwordx4 v[9:12], off, s[12:15], 0 offset:16 glc
 ; NOOPT-NEXT:    s_waitcnt vmcnt(0)
-; NOOPT-NEXT:    buffer_load_dwordx4 v[8:11], off, s[8:11], 0 offset:32 glc
+; NOOPT-NEXT:    buffer_load_dwordx4 v[1:4], off, s[12:15], 0 offset:32 glc
 ; NOOPT-NEXT:    s_waitcnt vmcnt(0)
-; NOOPT-NEXT:    buffer_load_dwordx4 v[12:15], off, s[8:11], 0 offset:48 glc
+; NOOPT-NEXT:    v_mov_b32_e32 v0, v12
+; NOOPT-NEXT:    v_mov_b32_e32 v13, v11
+; NOOPT-NEXT:    v_mov_b32_e32 v14, v10
+; NOOPT-NEXT:    v_mov_b32_e32 v15, v9
+; NOOPT-NEXT:    v_mov_b32_e32 v16, v8
+; NOOPT-NEXT:    v_mov_b32_e32 v17, v7
+; NOOPT-NEXT:    v_mov_b32_e32 v18, v6
+; NOOPT-NEXT:    ; kill: def $vgpr5 killed $vgpr5 killed $vgpr5_vgpr6_vgpr7_vgpr8 killed $exec
+; NOOPT-NEXT:    ; kill: def $vgpr5 killed $vgpr5 def $vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12 killed $exec
+; NOOPT-NEXT:    v_mov_b32_e32 v6, v18
+; NOOPT-NEXT:    v_mov_b32_e32 v7, v17
+; NOOPT-NEXT:    v_mov_b32_e32 v8, v16
+; NOOPT-NEXT:    v_mov_b32_e32 v9, v15
+; NOOPT-NEXT:    v_mov_b32_e32 v10, v14
+; NOOPT-NEXT:    v_mov_b32_e32 v11, v13
+; NOOPT-NEXT:    v_mov_b32_e32 v12, v0
+; NOOPT-NEXT:    v_mov_b32_e32 v24, v12
+; NOOPT-NEXT:    v_mov_b32_e32 v25, v11
+; NOOPT-NEXT:    v_mov_b32_e32 v26, v10
+; NOOPT-NEXT:    v_mov_b32_e32 v27, v9
+; NOOPT-NEXT:    v_mov_b32_e32 v28, v8
+; NOOPT-NEXT:    v_mov_b32_e32 v29, v7
+; NOOPT-NEXT:    v_mov_b32_e32 v30, v6
+; NOOPT-NEXT:    v_mov_b32_e32 v0, v5
+; NOOPT-NEXT:    v_mov_b32_e32 v13, v4
+; NOOPT-NEXT:    v_mov_b32_e32 v14, v3
+; NOOPT-NEXT:    v_mov_b32_e32 v15, v2
+; NOOPT-NEXT:    ; kill: def $vgpr1 killed $vgpr1 killed $vgpr1_vgpr2_vgpr3_vgpr4 killed $exec
+; NOOPT-NEXT:    s_mov_b32 s6, 0
+; NOOPT-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; NOOPT-NEXT:    s_mov_b32 s7, s5
+; NOOPT-NEXT:    ; kill: def $sgpr8_sgpr9 killed $sgpr8_sgpr9 def $sgpr8_sgpr9_sgpr10_sgpr11
+; NOOPT-NEXT:    s_mov_b64 s[10:11], s[6:7]
+; NOOPT-NEXT:    v_mov_b32_e32 v2, 32
+; NOOPT-NEXT:    v_mov_b32_e32 v3, 0
+; NOOPT-NEXT:    buffer_load_dwordx4 v[2:5], v[2:3], s[8:11], 0 addr64 offset:16 glc
 ; NOOPT-NEXT:    s_waitcnt vmcnt(0)
-; NOOPT-NEXT:    v_mov_b32_e32 v16, v15
-; NOOPT-NEXT:    v_mov_b32_e32 v17, v14
-; NOOPT-NEXT:    v_mov_b32_e32 v18, v13
-; NOOPT-NEXT:    v_mov_b32_e32 v19, v12
-; NOOPT-NEXT:    v_mov_b32_e32 v20, v11
-; NOOPT-NEXT:    v_mov_b32_e32 v21, v10
-; NOOPT-NEXT:    v_mov_b32_e32 v22, v9
-; NOOPT-NEXT:    v_mov_b32_e32 v23, v8
-; NOOPT-NEXT:    v_mov_b32_e32 v24, v7
-; NOOPT-NEXT:    v_mov_b32_e32 v25, v6
-; NOOPT-NEXT:    v_mov_b32_e32 v26, v5
-; NOOPT-NEXT:    v_mov_b32_e32 v27, v4
-; NOOPT-NEXT:    v_mov_b32_e32 v28, v3
-; NOOPT-NEXT:    v_mov_b32_e32 v29, v2
-; NOOPT-NEXT:    v_mov_b32_e32 v30, v1
-; NOOPT-NEXT:    ; kill: def $vgpr0 killed $vgpr0 killed $vgpr0_vgpr1_vgpr2_vgpr3 killed $exec
+; NOOPT-NEXT:    v_mov_b32_e32 v9, v5
+; NOOPT-NEXT:    v_mov_b32_e32 v10, v4
+; NOOPT-NEXT:    v_mov_b32_e32 v11, v3
+; NOOPT-NEXT:    v_mov_b32_e32 v12, v2
+; NOOPT-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8 killed $exec
+; NOOPT-NEXT:    v_mov_b32_e32 v2, v15
+; NOOPT-NEXT:    v_mov_b32_e32 v3, v14
+; NOOPT-NEXT:    v_mov_b32_e32 v4, v13
+; NOOPT-NEXT:    v_mov_b32_e32 v5, v12
+; NOOPT-NEXT:    v_mov_b32_e32 v6, v11
+; NOOPT-NEXT:    v_mov_b32_e32 v7, v10
+; NOOPT-NEXT:    v_mov_b32_e32 v8, v9
+; NOOPT-NEXT:    v_mov_b32_e32 v16, v8
+; NOOPT-NEXT:    v_mov_b32_e32 v17, v7
+; NOOPT-NEXT:    v_mov_b32_e32 v18, v6
+; NOOPT-NEXT:    v_mov_b32_e32 v19, v5
+; NOOPT-NEXT:    v_mov_b32_e32 v20, v4
+; NOOPT-NEXT:    v_mov_b32_e32 v21, v3
+; NOOPT-NEXT:    v_mov_b32_e32 v22, v2
+; NOOPT-NEXT:    v_mov_b32_e32 v23, v1
 ; NOOPT-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 killed $exec
 ; NOOPT-NEXT:    v_mov_b32_e32 v1, v30
 ; NOOPT-NEXT:    v_mov_b32_e32 v2, v29
@@ -8163,6 +8426,12 @@ define amdgpu_kernel void @extract_out_of_bounds_offset(ptr addrspace(1) %out, p
 ; NOOPT-LABEL: extract_out_of_bounds_offset:
 ; NOOPT:       ; %bb.0: ; %entry
 ; NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
+; NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0xb
+; NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; NOOPT-NEXT:    s_load_dword s0, s[4:5], 0xd
+; NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
 ; NOOPT-NEXT:    s_load_dwordx2 s[8:9], s[4:5], 0xb
 ; NOOPT-NEXT:    s_load_dword s4, s[4:5], 0xd
 ; NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
@@ -8175,35 +8444,74 @@ define amdgpu_kernel void @extract_out_of_bounds_offset(ptr addrspace(1) %out, p
 ; NOOPT-NEXT:    s_mov_b32 s2, s6
 ; NOOPT-NEXT:    s_mov_b32 s3, s5
 ; NOOPT-NEXT:    s_mov_b32 s7, s9
-; NOOPT-NEXT:    ; kill: def $sgpr8 killed $sgpr8 killed $sgpr8_sgpr9
-; NOOPT-NEXT:    ; kill: def $sgpr8 killed $sgpr8 def $sgpr8_sgpr9_sgpr10_sgpr11
-; NOOPT-NEXT:    s_mov_b32 s9, s7
-; NOOPT-NEXT:    s_mov_b32 s10, s6
-; NOOPT-NEXT:    s_mov_b32 s11, s5
-; NOOPT-NEXT:    buffer_load_dwordx4 v[0:3], off, s[8:11], 0 glc
+; NOOPT-NEXT:    s_mov_b32 s12, s8
+; NOOPT-NEXT:    ; kill: def $sgpr12 killed $sgpr12 def $sgpr12_sgpr13_sgpr14_sgpr15
+; NOOPT-NEXT:    s_mov_b32 s13, s7
+; NOOPT-NEXT:    s_mov_b32 s14, s6
+; NOOPT-NEXT:    s_mov_b32 s15, s5
+; NOOPT-NEXT:    buffer_load_dwordx4 v[5:8], off, s[12:15], 0 glc
 ; NOOPT-NEXT:    s_waitcnt vmcnt(0)
-; NOOPT-NEXT:    buffer_load_dwordx4 v[4:7], off, s[8:11], 0 offset:16 glc
+; NOOPT-NEXT:    buffer_load_dwordx4 v[9:12], off, s[12:15], 0 offset:16 glc
 ; NOOPT-NEXT:    s_waitcnt vmcnt(0)
-; NOOPT-NEXT:    buffer_load_dwordx4 v[8:11], off, s[8:11], 0 offset:32 glc
+; NOOPT-NEXT:    buffer_load_dwordx4 v[1:4], off, s[12:15], 0 offset:32 glc
 ; NOOPT-NEXT:    s_waitcnt vmcnt(0)
-; NOOPT-NEXT:    buffer_load_dwordx4 v[12:15], off, s[8:11], 0 offset:48 glc
+; NOOPT-NEXT:    v_mov_b32_e32 v0, v12
+; NOOPT-NEXT:    v_mov_b32_e32 v13, v11
+; NOOPT-NEXT:    v_mov_b32_e32 v14, v10
+; NOOPT-NEXT:    v_mov_b32_e32 v15, v9
+; NOOPT-NEXT:    v_mov_b32_e32 v16, v8
+; NOOPT-NEXT:    v_mov_b32_e32 v17, v7
+; NOOPT-NEXT:    v_mov_b32_e32 v18, v6
+; NOOPT-NEXT:    ; kill: def $vgpr5 killed $vgpr5 killed $vgpr5_vgpr6_vgpr7_vgpr8 killed $exec
+; NOOPT-NEXT:    ; kill: def $vgpr5 killed $vgpr5 def $vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12 killed $exec
+; NOOPT-NEXT:    v_mov_b32_e32 v6, v18
+; NOOPT-NEXT:    v_mov_b32_e32 v7, v17
+; NOOPT-NEXT:    v_mov_b32_e32 v8, v16
+; NOOPT-NEXT:    v_mov_b32_e32 v9, v15
+; NOOPT-NEXT:    v_mov_b32_e32 v10, v14
+; NOOPT-NEXT:    v_mov_b32_e32 v11, v13
+; NOOPT-NEXT:    v_mov_b32_e32 v12, v0
+; NOOPT-NEXT:    v_mov_b32_e32 v24, v12
+; NOOPT-NEXT:    v_mov_b32_e32 v25, v11
+; NOOPT-NEXT:    v_mov_b32_e32 v26, v10
+; NOOPT-NEXT:    v_mov_b32_e32 v27, v9
+; NOOPT-NEXT:    v_mov_b32_e32 v28, v8
+; NOOPT-NEXT:    v_mov_b32_e32 v29, v7
+; NOOPT-NEXT:    v_mov_b32_e32 v30, v6
+; NOOPT-NEXT:    v_mov_b32_e32 v0, v5
+; NOOPT-NEXT:    v_mov_b32_e32 v13, v4
+; NOOPT-NEXT:    v_mov_b32_e32 v14, v3
+; NOOPT-NEXT:    v_mov_b32_e32 v15, v2
+; NOOPT-NEXT:    ; kill: def $vgpr1 killed $vgpr1 killed $vgpr1_vgpr2_vgpr3_vgpr4 killed $exec
+; NOOPT-NEXT:    s_mov_b32 s6, 0
+; NOOPT-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; NOOPT-NEXT:    s_mov_b32 s7, s5
+; NOOPT-NEXT:    ; kill: def $sgpr8_sgpr9 killed $sgpr8_sgpr9 def $sgpr8_sgpr9_sgpr10_sgpr11
+; NOOPT-NEXT:    s_mov_b64 s[10:11], s[6:7]
+; NOOPT-NEXT:    v_mov_b32_e32 v2, 32
+; NOOPT-NEXT:    v_mov_b32_e32 v3, 0
+; NOOPT-NEXT:    buffer_load_dwordx4 v[2:5], v[2:3], s[8:11], 0 addr64 offset:16 glc
 ; NOOPT-NEXT:    s_waitcnt vmcnt(0)
-; NOOPT-NEXT:    v_mov_b32_e32 v16, v15
-; NOOPT-NEXT:    v_mov_b32_e32 v17, v14
-; NOOPT-NEXT:    v_mov_b32_e32 v18, v13
-; NOOPT-NEXT:    v_mov_b32_e32 v19, v12
-; NOOPT-NEXT:    v_mov_b32_e32 v20, v11
-; NOOPT-NEXT:    v_mov_b32_e32 v21, v10
-; NOOPT-NEXT:    v_mov_b32_e32 v22, v9
-; NOOPT-NEXT:    v_mov_b32_e32 v23, v8
-; NOOPT-NEXT:    v_mov_b32_e32 v24, v7
-; NOOPT-NEXT:    v_mov_b32_e32 v25, v6
-; NOOPT-NEXT:    v_mov_b32_e32 v26, v5
-; NOOPT-NEXT:    v_mov_b32_e32 v27, v4
-; NOOPT-NEXT:    v_mov_b32_e32 v28, v3
-; NOOPT-NEXT:    v_mov_b32_e32 v29, v2
-; NOOPT-NEXT:    v_mov_b32_e32 v30, v1
-; NOOPT-NEXT:    ; kill: def $vgpr0 killed $vgpr0 killed $vgpr0_vgpr1_vgpr2_vgpr3 killed $exec
+; NOOPT-NEXT:    v_mov_b32_e32 v9, v5
+; NOOPT-NEXT:    v_mov_b32_e32 v10, v4
+; NOOPT-NEXT:    v_mov_b32_e32 v11, v3
+; NOOPT-NEXT:    v_mov_b32_e32 v12, v2
+; NOOPT-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8 killed $exec
+; NOOPT-NEXT:    v_mov_b32_e32 v2, v15
+; NOOPT-NEXT:    v_mov_b32_e32 v3, v14
+; NOOPT-NEXT:    v_mov_b32_e32 v4, v13
+; NOOPT-NEXT:    v_mov_b32_e32 v5, v12
+; NOOPT-NEXT:    v_mov_b32_e32 v6, v11
+; NOOPT-NEXT:    v_mov_b32_e32 v7, v10
+; NOOPT-NEXT:    v_mov_b32_e32 v8, v9
+; NOOPT-NEXT:    v_mov_b32_e32 v16, v8
+; NOOPT-NEXT:    v_mov_b32_e32 v17, v7
+; NOOPT-NEXT:    v_mov_b32_e32 v18, v6
+; NOOPT-NEXT:    v_mov_b32_e32 v19, v5
+; NOOPT-NEXT:    v_mov_b32_e32 v20, v4
+; NOOPT-NEXT:    v_mov_b32_e32 v21, v3
+; NOOPT-NEXT:    v_mov_b32_e32 v22, v2
+; NOOPT-NEXT:    v_mov_b32_e32 v23, v1
 ; NOOPT-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 killed $exec
 ; NOOPT-NEXT:    v_mov_b32_e32 v1, v30
 ; NOOPT-NEXT:    v_mov_b32_e32 v2, v29
@@ -8426,6 +8734,12 @@ define amdgpu_kernel void @extractelement_v16i32_or_index(ptr addrspace(1) %out,
 ; NOOPT-LABEL: extractelement_v16i32_or_index:
 ; NOOPT:       ; %bb.0: ; %entry
 ; NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
+; NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0xb
+; NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; NOOPT-NEXT:    s_load_dword s0, s[4:5], 0xd
+; NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
 ; NOOPT-NEXT:    s_load_dwordx2 s[8:9], s[4:5], 0xb
 ; NOOPT-NEXT:    s_load_dword s4, s[4:5], 0xd
 ; NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
@@ -8438,35 +8752,74 @@ define amdgpu_kernel void @extractelement_v16i32_or_index(ptr addrspace(1) %out,
 ; NOOPT-NEXT:    s_mov_b32 s2, s6
 ; NOOPT-NEXT:    s_mov_b32 s3, s5
 ; NOOPT-NEXT:    s_mov_b32 s7, s9
-; NOOPT-NEXT:    ; kill: def $sgpr8 killed $sgpr8 killed $sgpr8_sgpr9
-; NOOPT-NEXT:    ; kill: def $sgpr8 killed $sgpr8 def $sgpr8_sgpr9_sgpr10_sgpr11
-; NOOPT-NEXT:    s_mov_b32 s9, s7
-; NOOPT-NEXT:    s_mov_b32 s10, s6
-; NOOPT-NEXT:    s_mov_b32 s11, s5
-; NOOPT-NEXT:    buffer_load_dwordx4 v[0:3], off, s[8:11], 0 glc
+; NOOPT-NEXT:    s_mov_b32 s12, s8
+; NOOPT-NEXT:    ; kill: def $sgpr12 killed $sgpr12 def $sgpr12_sgpr13_sgpr14_sgpr15
+; NOOPT-NEXT:    s_mov_b32 s13, s7
+; NOOPT-NEXT:    s_mov_b32 s14, s6
+; NOOPT-NEXT:    s_mov_b32 s15, s5
+; NOOPT-NEXT:    buffer_load_dwordx4 v[5:8], off, s[12:15], 0 glc
 ; NOOPT-NEXT:    s_waitcnt vmcnt(0)
-; NOOPT-NEXT:    buffer_load_dwordx4 v[4:7], off, s[8:11], 0 offset:16 glc
+; NOOPT-NEXT:    buffer_load_dwordx4 v[9:12], off, s[12:15], 0 offset:16 glc
 ; NOOPT-NEXT:    s_waitcnt vmcnt(0)
-; NOOPT-NEXT:    buffer_load_dwordx4 v[8:11], off, s[8:11], 0 offset:32 glc
+; NOOPT-NEXT:    buffer_load_dwordx4 v[1:4], off, s[12:15], 0 offset:32 glc
 ; NOOPT-NEXT:    s_waitcnt vmcnt(0)
-; NOOPT-NEXT:    buffer_load_dwordx4 v[12:15], off, s[8:11], 0 offset:48 glc
+; NOOPT-NEXT:    v_mov_b32_e32 v0, v12
+; NOOPT-NEXT:    v_mov_b32_e32 v13, v11
+; NOOPT-NEXT:    v_mov_b32_e32 v14, v10
+; NOOPT-NEXT:    v_mov_b32_e32 v15, v9
+; NOOPT-NEXT:    v_mov_b32_e32 v16, v8
+; NOOPT-NEXT:    v_mov_b32_e32 v17, v7
+; NOOPT-NEXT:    v_mov_b32_e32 v18, v6
+; NOOPT-NEXT:    ; kill: def $vgpr5 killed $vgpr5 killed $vgpr5_vgpr6_vgpr7_vgpr8 killed $exec
+; NOOPT-NEXT:    ; kill: def $vgpr5 killed $vgpr5 def $vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12 killed $exec
+; NOOPT-NEXT:    v_mov_b32_e32 v6, v18
+; NOOPT-NEXT:    v_mov_b32_e32 v7, v17
+; NOOPT-NEXT:    v_mov_b32_e32 v8, v16
+; NOOPT-NEXT:    v_mov_b32_e32 v9, v15
+; NOOPT-NEXT:    v_mov_b32_e32 v10, v14
+; NOOPT-NEXT:    v_mov_b32_e32 v11, v13
+; NOOPT-NEXT:    v_mov_b32_e32 v12, v0
+; NOOPT-NEXT:    v_mov_b32_e32 v24, v12
+; NOOPT-NEXT:    v_mov_b32_e32 v25, v11
+; NOOPT-NEXT:    v_mov_b32_e32 v26, v10
+; NOOPT-NEXT:    v_mov_b32_e32 v27, v9
+; NOOPT-NEXT:    v_mov_b32_e32 v28, v8
+; NOOPT-NEXT:    v_mov_b32_e32 v29, v7
+; NOOPT-NEXT:    v_mov_b32_e32 v30, v6
+; NOOPT-NEXT:    v_mov_b32_e32 v0, v5
+; NOOPT-NEXT:    v_mov_b32_e32 v13, v4
+; NOOPT-NEXT:    v_mov_b32_e32 v14, v3
+; NOOPT-NEXT:    v_mov_b32_e32 v15, v2
+; NOOPT-NEXT:    ; kill: def $vgpr1 killed $vgpr1 killed $vgpr1_vgpr2_vgpr3_vgpr4 killed $exec
+; NOOPT-NEXT:    s_mov_b32 s6, 0
+; NOOPT-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; NOOPT-NEXT:    s_mov_b32 s7, s5
+; NOOPT-NEXT:    ; kill: def $sgpr8_sgpr9 killed $sgpr8_sgpr9 def $sgpr8_sgpr9_sgpr10_sgpr11
+; NOOPT-NEXT:    s_mov_b64 s[10:11], s[6:7]
+; NOOPT-NEXT:    v_mov_b32_e32 v2, 32
+; NOOPT-NEXT:    v_mov_b32_e32 v3, 0
+; NOOPT-NEXT:    buffer_load_dwordx4 v[2:5], v[2:3], s[8:11], 0 addr64 offset:16 glc
 ; NOOPT-NEXT:    s_waitcnt vmcnt(0)
-; NOOPT-NEXT:    v_mov_b32_e32 v16, v15
-; NOOPT-NEXT:    v_mov_b32_e32 v17, v14
-; NOOPT-NEXT:    v_mov_b32_e32 v18, v13
-; NOOPT-NEXT:    v_mov_b32_e32 v19, v12
-; NOOPT-NEXT:    v_mov_b32_e32 v20, v11
-; NOOPT-NEXT:    v_mov_b32_e32 v21, v10
-; NOOPT-NEXT:    v_mov_b32_e32 v22, v9
-; NOOPT-NEXT:    v_mov_b32_e32 v23, v8
-; NOOPT-NEXT:    v_mov_b32_e32 v24, v7
-; NOOPT-NEXT:    v_mov_b32_e32 v25, v6
-; NOOPT-NEXT:    v_mov_b32_e32 v26, v5
-; NOOPT-NEXT:    v_mov_b32_e32 v27, v4
-; NOOPT-NEXT:    v_mov_b32_e32 v28, v3
-; NOOPT-NEXT:    v_mov_b32_e32 v29, v2
-; NOOPT-NEXT:    v_mov_b32_e32 v30, v1
-; NOOPT-NEXT:    ; kill: def $vgpr0 killed $vgpr0 killed $vgpr0_vgpr1_vgpr2_vgpr3 killed $exec
+; NOOPT-NEXT:    v_mov_b32_e32 v9, v5
+; NOOPT-NEXT:    v_mov_b32_e32 v10, v4
+; NOOPT-NEXT:    v_mov_b32_e32 v11, v3
+; NOOPT-NEXT:    v_mov_b32_e32 v12, v2
+; NOOPT-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8 killed $exec
+; NOOPT-NEXT:    v_mov_b32_e32 v2, v15
+; NOOPT-NEXT:    v_mov_b32_e32 v3, v14
+; NOOPT-NEXT:    v_mov_b32_e32 v4, v13
+; NOOPT-NEXT:    v_mov_b32_e32 v5, v12
+; NOOPT-NEXT:    v_mov_b32_e32 v6, v11
+; NOOPT-NEXT:    v_mov_b32_e32 v7, v10
+; NOOPT-NEXT:    v_mov_b32_e32 v8, v9
+; NOOPT-NEXT:    v_mov_b32_e32 v16, v8
+; NOOPT-NEXT:    v_mov_b32_e32 v17, v7
+; NOOPT-NEXT:    v_mov_b32_e32 v18, v6
+; NOOPT-NEXT:    v_mov_b32_e32 v19, v5
+; NOOPT-NEXT:    v_mov_b32_e32 v20, v4
+; NOOPT-NEXT:    v_mov_b32_e32 v21, v3
+; NOOPT-NEXT:    v_mov_b32_e32 v22, v2
+; NOOPT-NEXT:    v_mov_b32_e32 v23, v1
 ; NOOPT-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 killed $exec
 ; NOOPT-NEXT:    v_mov_b32_e32 v1, v30
 ; NOOPT-NEXT:    v_mov_b32_e32 v2, v29
@@ -8701,20 +9054,25 @@ define amdgpu_kernel void @insertelement_v16f32_or_index(ptr addrspace(1) %out, 
 ;
 ; NOOPT-LABEL: insertelement_v16f32_or_index:
 ; NOOPT:       ; %bb.0:
-; NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
-; NOOPT-NEXT:    s_load_dwordx16 s[8:23], s[4:5], 0x19
-; NOOPT-NEXT:    s_load_dword s4, s[4:5], 0x29
+; NOOPT-NEXT:    s_mov_b64 s[0:1], s[4:5]
+; NOOPT-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x9
+; NOOPT-NEXT:    s_load_dwordx16 s[4:19], s[0:1], 0x19
 ; NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
-; NOOPT-NEXT:    s_mov_b32 s7, s1
-; NOOPT-NEXT:    ; kill: def $sgpr0 killed $sgpr0 killed $sgpr0_sgpr1
-; NOOPT-NEXT:    s_mov_b32 s5, 0xf000
-; NOOPT-NEXT:    s_mov_b32 s6, -1
+; NOOPT-NEXT:    s_load_dword s2, s[0:1], 0x29
+; NOOPT-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x9
+; NOOPT-NEXT:    s_load_dwordx16 s[8:23], s[0:1], 0x19
+; NOOPT-NEXT:    s_load_dword s7, s[0:1], 0x29
+; NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; NOOPT-NEXT:    s_mov_b32 s25, s5
+; NOOPT-NEXT:    s_mov_b32 s0, s4
+; NOOPT-NEXT:    s_mov_b32 s6, 0xf000
+; NOOPT-NEXT:    s_mov_b32 s24, -1
 ; NOOPT-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_sgpr1_sgpr2_sgpr3
-; NOOPT-NEXT:    s_mov_b32 s1, s7
-; NOOPT-NEXT:    s_mov_b32 s2, s6
-; NOOPT-NEXT:    s_mov_b32 s3, s5
-; NOOPT-NEXT:    s_mov_b32 s5, 2
-; NOOPT-NEXT:    s_lshl_b32 s4, s4, s5
+; NOOPT-NEXT:    s_mov_b32 s1, s25
+; NOOPT-NEXT:    s_mov_b32 s2, s24
+; NOOPT-NEXT:    s_mov_b32 s3, s6
+; NOOPT-NEXT:    s_mov_b32 s24, 2
+; NOOPT-NEXT:    s_lshl_b32 s7, s7, s24
 ; NOOPT-NEXT:    v_mov_b32_e32 v0, 0x40a00000
 ; NOOPT-NEXT:    v_mov_b32_e32 v7, s8
 ; NOOPT-NEXT:    v_mov_b32_e32 v8, s9
@@ -8732,7 +9090,7 @@ define amdgpu_kernel void @insertelement_v16f32_or_index(ptr addrspace(1) %out, 
 ; NOOPT-NEXT:    v_mov_b32_e32 v20, s21
 ; NOOPT-NEXT:    v_mov_b32_e32 v21, s22
 ; NOOPT-NEXT:    v_mov_b32_e32 v22, s23
-; NOOPT-NEXT:    s_mov_b32 m0, s4
+; NOOPT-NEXT:    s_mov_b32 m0, s7
 ; NOOPT-NEXT:    v_movreld_b32_e32 v8, v0
 ; NOOPT-NEXT:    v_mov_b32_e32 v4, v22
 ; NOOPT-NEXT:    v_mov_b32_e32 v5, v21
@@ -8742,7 +9100,14 @@ define amdgpu_kernel void @insertelement_v16f32_or_index(ptr addrspace(1) %out, 
 ; NOOPT-NEXT:    v_mov_b32_e32 v1, v6
 ; NOOPT-NEXT:    v_mov_b32_e32 v2, v5
 ; NOOPT-NEXT:    v_mov_b32_e32 v3, v4
-; NOOPT-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0 offset:48
+; NOOPT-NEXT:    s_mov_b32 s8, 0
+; NOOPT-NEXT:    ; kill: def $sgpr8 killed $sgpr8 def $sgpr8_sgpr9
+; NOOPT-NEXT:    s_mov_b32 s9, s6
+; NOOPT-NEXT:    ; kill: def $sgpr4_sgpr5 killed $sgpr4_sgpr5 def $sgpr4_sgpr5_sgpr6_sgpr7
+; NOOPT-NEXT:    s_mov_b64 s[6:7], s[8:9]
+; NOOPT-NEXT:    v_mov_b32_e32 v4, 32
+; NOOPT-NEXT:    v_mov_b32_e32 v5, 0
+; NOOPT-NEXT:    buffer_store_dwordx4 v[0:3], v[4:5], s[4:7], 0 addr64 offset:16
 ; NOOPT-NEXT:    v_mov_b32_e32 v4, v18
 ; NOOPT-NEXT:    v_mov_b32_e32 v5, v17
 ; NOOPT-NEXT:    v_mov_b32_e32 v6, v16
@@ -8983,12 +9348,16 @@ define amdgpu_kernel void @broken_phi_bb(i32 %arg, i32 %arg1) {
 ; NOOPT-NEXT:    s_mov_b32 s27, 0xe8f000
 ; NOOPT-NEXT:    s_add_u32 s24, s24, s11
 ; NOOPT-NEXT:    s_addc_u32 s25, s25, 0
+; NOOPT-NEXT:    s_load_dword s0, s[4:5], 0x9
+; NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; NOOPT-NEXT:    s_load_dword s0, s[4:5], 0xa
 ; NOOPT-NEXT:    s_load_dword s1, s[4:5], 0x9
+; NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
 ; NOOPT-NEXT:    s_load_dword s0, s[4:5], 0xa
 ; NOOPT-NEXT:    ; implicit-def: $vgpr18 : SGPR spill to VGPR lane
-; NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
 ; NOOPT-NEXT:    v_writelane_b32 v18, s1, 0
 ; NOOPT-NEXT:    s_mov_b32 s1, 8
+; NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
 ; NOOPT-NEXT:    v_writelane_b32 v18, s0, 1
 ; NOOPT-NEXT:    s_or_saveexec_b64 s[20:21], -1
 ; NOOPT-NEXT:    buffer_store_dword v18, off, s[24:27], 0 ; 4-byte Folded Spill
@@ -9003,15 +9372,16 @@ define amdgpu_kernel void @broken_phi_bb(i32 %arg, i32 %arg1) {
 ; NOOPT-NEXT:    buffer_load_dword v18, off, s[24:27], 0 ; 4-byte Folded Reload
 ; NOOPT-NEXT:    s_mov_b64 exec, s[20:21]
 ; NOOPT-NEXT:    s_waitcnt vmcnt(0)
-; NOOPT-NEXT:    v_readlane_b32 s2, v18, 0
+; NOOPT-NEXT:    v_readlane_b32 s3, v18, 0
 ; NOOPT-NEXT:    s_waitcnt expcnt(0)
 ; NOOPT-NEXT:    buffer_load_dword v0, off, s[24:27], 0 offset:4 ; 4-byte Folded Reload
 ; NOOPT-NEXT:    s_mov_b64 s[0:1], -1
-; NOOPT-NEXT:    ; implicit-def: $sgpr4
+; NOOPT-NEXT:    ; implicit-def: $sgpr2
 ; NOOPT-NEXT:    s_waitcnt vmcnt(0)
-; NOOPT-NEXT:    v_cmp_ge_i32_e64 s[2:3], v0, s2
-; NOOPT-NEXT:    v_mov_b32_e32 v0, s4
-; NOOPT-NEXT:    s_and_b64 vcc, exec, s[2:3]
+; NOOPT-NEXT:    v_cmp_lt_i32_e64 s[4:5], v0, s3
+; NOOPT-NEXT:    s_xor_b64 s[4:5], s[4:5], s[0:1]
+; NOOPT-NEXT:    s_and_b64 vcc, exec, s[4:5]
+; NOOPT-NEXT:    v_mov_b32_e32 v0, s2
 ; NOOPT-NEXT:    buffer_store_dword v0, off, s[24:27], 0 offset:8 ; 4-byte Folded Spill
 ; NOOPT-NEXT:    v_writelane_b32 v18, s0, 2
 ; NOOPT-NEXT:    v_writelane_b32 v18, s1, 3
@@ -9210,9 +9580,8 @@ define amdgpu_kernel void @broken_phi_bb(i32 %arg, i32 %arg1) {
 ; NOOPT-NEXT:    v_readlane_b32 s0, v18, 2
 ; NOOPT-NEXT:    v_readlane_b32 s1, v18, 3
 ; NOOPT-NEXT:    buffer_load_dword v0, off, s[24:27], 0 offset:8 ; 4-byte Folded Reload
-; NOOPT-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s[0:1]
-; NOOPT-NEXT:    s_mov_b32 s0, 1
-; NOOPT-NEXT:    v_cmp_ne_u32_e64 s[0:1], v1, s0
+; NOOPT-NEXT:    s_mov_b64 s[2:3], -1
+; NOOPT-NEXT:    s_xor_b64 s[0:1], s[0:1], s[2:3]
 ; NOOPT-NEXT:    s_and_b64 vcc, exec, s[0:1]
 ; NOOPT-NEXT:    s_waitcnt vmcnt(0)
 ; NOOPT-NEXT:    buffer_store_dword v0, off, s[24:27], 0 offset:4 ; 4-byte Folded Spill
@@ -9475,23 +9844,25 @@ define amdgpu_cs void @insert_or_disj_index(ptr addrspace(1) %out, ptr addrspace
 ; NOOPT-NEXT:    s_mov_b32 s5, s0
 ; NOOPT-NEXT:    s_mov_b32 s6, s2
 ; NOOPT-NEXT:    s_mov_b32 s7, s3
-; NOOPT-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
-; NOOPT-NEXT:    v_mov_b32_e32 v1, v2
-; NOOPT-NEXT:    buffer_store_dword v0, off, s[16:19], 0 offset:136 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v1, off, s[16:19], 0 offset:140 ; 4-byte Folded Spill
 ; NOOPT-NEXT:    s_mov_b32 s8, 0xf000
 ; NOOPT-NEXT:    s_mov_b32 s0, 0
 ; NOOPT-NEXT:    v_writelane_b32 v33, s0, 2
 ; NOOPT-NEXT:    s_mov_b32 s2, s0
 ; NOOPT-NEXT:    s_mov_b32 s3, s8
+; NOOPT-NEXT:    v_writelane_b32 v33, s2, 3
+; NOOPT-NEXT:    v_writelane_b32 v33, s3, 4
 ; NOOPT-NEXT:    s_mov_b32 s8, s0
 ; NOOPT-NEXT:    s_mov_b32 s9, s0
 ; NOOPT-NEXT:    ; kill: def $sgpr8_sgpr9 killed $sgpr8_sgpr9 def $sgpr8_sgpr9_sgpr10_sgpr11
 ; NOOPT-NEXT:    s_mov_b64 s[10:11], s[2:3]
-; NOOPT-NEXT:    v_writelane_b32 v33, s8, 3
-; NOOPT-NEXT:    v_writelane_b32 v33, s9, 4
-; NOOPT-NEXT:    v_writelane_b32 v33, s10, 5
-; NOOPT-NEXT:    v_writelane_b32 v33, s11, 6
+; NOOPT-NEXT:    v_writelane_b32 v33, s8, 5
+; NOOPT-NEXT:    v_writelane_b32 v33, s9, 6
+; NOOPT-NEXT:    v_writelane_b32 v33, s10, 7
+; NOOPT-NEXT:    v_writelane_b32 v33, s11, 8
+; NOOPT-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
+; NOOPT-NEXT:    v_mov_b32_e32 v1, v2
+; NOOPT-NEXT:    buffer_store_dword v0, off, s[16:19], 0 offset:136 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v1, off, s[16:19], 0 offset:140 ; 4-byte Folded Spill
 ; NOOPT-NEXT:    ; kill: def $sgpr8_sgpr9_sgpr10_sgpr11 killed $sgpr4_sgpr5_sgpr6_sgpr7
 ; NOOPT-NEXT:    s_waitcnt expcnt(1)
 ; NOOPT-NEXT:    v_mov_b32_e32 v0, s1
@@ -9548,8 +9919,8 @@ define amdgpu_cs void @insert_or_disj_index(ptr addrspace(1) %out, ptr addrspace
 ; NOOPT-NEXT:    buffer_store_dword v14, off, s[16:19], 0 offset:124 ; 4-byte Folded Spill
 ; NOOPT-NEXT:    buffer_store_dword v15, off, s[16:19], 0 offset:128 ; 4-byte Folded Spill
 ; NOOPT-NEXT:    s_mov_b64 s[0:1], exec
-; NOOPT-NEXT:    v_writelane_b32 v33, s0, 7
-; NOOPT-NEXT:    v_writelane_b32 v33, s1, 8
+; NOOPT-NEXT:    v_writelane_b32 v33, s0, 9
+; NOOPT-NEXT:    v_writelane_b32 v33, s1, 10
 ; NOOPT-NEXT:    s_or_saveexec_b64 s[12:13], -1
 ; NOOPT-NEXT:    buffer_store_dword v33, off, s[16:19], 0 ; 4-byte Folded Spill
 ; NOOPT-NEXT:    s_mov_b64 exec, s[12:13]
@@ -9576,8 +9947,8 @@ define amdgpu_cs void @insert_or_disj_index(ptr addrspace(1) %out, ptr addrspace
 ; NOOPT-NEXT:    buffer_load_dword v33, off, s[16:19], 0 ; 4-byte Folded Reload
 ; NOOPT-NEXT:    s_mov_b64 exec, s[12:13]
 ; NOOPT-NEXT:    s_waitcnt vmcnt(0)
-; NOOPT-NEXT:    v_readlane_b32 s0, v33, 9
-; NOOPT-NEXT:    v_readlane_b32 s1, v33, 10
+; NOOPT-NEXT:    v_readlane_b32 s0, v33, 11
+; NOOPT-NEXT:    v_readlane_b32 s1, v33, 12
 ; NOOPT-NEXT:    buffer_load_dword v0, off, s[16:19], 0 offset:4 ; 4-byte Folded Reload
 ; NOOPT-NEXT:    buffer_load_dword v1, off, s[16:19], 0 offset:8 ; 4-byte Folded Reload
 ; NOOPT-NEXT:    buffer_load_dword v2, off, s[16:19], 0 offset:12 ; 4-byte Folded Reload
@@ -9642,8 +10013,8 @@ define amdgpu_cs void @insert_or_disj_index(ptr addrspace(1) %out, ptr addrspace
 ; NOOPT-NEXT:    buffer_store_dword v14, off, s[16:19], 0 offset:60 ; 4-byte Folded Spill
 ; NOOPT-NEXT:    buffer_store_dword v15, off, s[16:19], 0 offset:64 ; 4-byte Folded Spill
 ; NOOPT-NEXT:    s_mov_b64 s[2:3], s[0:1]
-; NOOPT-NEXT:    v_writelane_b32 v33, s2, 9
-; NOOPT-NEXT:    v_writelane_b32 v33, s3, 10
+; NOOPT-NEXT:    v_writelane_b32 v33, s2, 11
+; NOOPT-NEXT:    v_writelane_b32 v33, s3, 12
 ; NOOPT-NEXT:    s_or_saveexec_b64 s[12:13], -1
 ; NOOPT-NEXT:    buffer_store_dword v33, off, s[16:19], 0 ; 4-byte Folded Spill
 ; NOOPT-NEXT:    s_mov_b64 exec, s[12:13]
@@ -9655,18 +10026,20 @@ define amdgpu_cs void @insert_or_disj_index(ptr addrspace(1) %out, ptr addrspace
 ; NOOPT-NEXT:    buffer_load_dword v33, off, s[16:19], 0 ; 4-byte Folded Reload
 ; NOOPT-NEXT:    s_mov_b64 exec, s[12:13]
 ; NOOPT-NEXT:    s_waitcnt vmcnt(0)
-; NOOPT-NEXT:    v_readlane_b32 s0, v33, 7
-; NOOPT-NEXT:    v_readlane_b32 s1, v33, 8
+; NOOPT-NEXT:    v_readlane_b32 s0, v33, 9
+; NOOPT-NEXT:    v_readlane_b32 s1, v33, 10
 ; NOOPT-NEXT:    s_mov_b64 exec, s[0:1]
 ; NOOPT-NEXT:  ; %bb.3:
 ; NOOPT-NEXT:    s_or_saveexec_b64 s[12:13], -1
 ; NOOPT-NEXT:    buffer_load_dword v33, off, s[16:19], 0 ; 4-byte Folded Reload
 ; NOOPT-NEXT:    s_mov_b64 exec, s[12:13]
 ; NOOPT-NEXT:    s_waitcnt vmcnt(0)
-; NOOPT-NEXT:    v_readlane_b32 s0, v33, 3
-; NOOPT-NEXT:    v_readlane_b32 s1, v33, 4
-; NOOPT-NEXT:    v_readlane_b32 s2, v33, 5
-; NOOPT-NEXT:    v_readlane_b32 s3, v33, 6
+; NOOPT-NEXT:    v_readlane_b32 s0, v33, 5
+; NOOPT-NEXT:    v_readlane_b32 s1, v33, 6
+; NOOPT-NEXT:    v_readlane_b32 s2, v33, 7
+; NOOPT-NEXT:    v_readlane_b32 s3, v33, 8
+; NOOPT-NEXT:    v_readlane_b32 s8, v33, 3
+; NOOPT-NEXT:    v_readlane_b32 s9, v33, 4
 ; NOOPT-NEXT:    buffer_load_dword v4, off, s[16:19], 0 offset:136 ; 4-byte Folded Reload
 ; NOOPT-NEXT:    buffer_load_dword v5, off, s[16:19], 0 offset:140 ; 4-byte Folded Reload
 ; NOOPT-NEXT:    buffer_load_dword v17, off, s[16:19], 0 offset:148 ; 4-byte Folded Reload
@@ -9709,9 +10082,12 @@ define amdgpu_cs void @insert_or_disj_index(ptr addrspace(1) %out, ptr addrspace
 ; NOOPT-NEXT:    v_mov_b32_e32 v18, v13
 ; NOOPT-NEXT:    v_mov_b32_e32 v19, v12
 ; NOOPT-NEXT:    v_mov_b32_e32 v20, v11
+; NOOPT-NEXT:    s_mov_b64 s[4:5], 32
+; NOOPT-NEXT:    ; kill: def $sgpr4_sgpr5 killed $sgpr4_sgpr5 def $sgpr4_sgpr5_sgpr6_sgpr7
+; NOOPT-NEXT:    s_mov_b64 s[6:7], s[8:9]
 ; NOOPT-NEXT:    v_mov_b32_e32 v12, v5
 ; NOOPT-NEXT:    v_mov_b32_e32 v11, v4
-; NOOPT-NEXT:    buffer_store_dwordx4 v[17:20], v[11:12], s[0:3], 0 addr64 offset:48
+; NOOPT-NEXT:    buffer_store_dwordx4 v[17:20], v[11:12], s[4:7], 0 addr64 offset:16
 ; NOOPT-NEXT:    ; kill: def $vgpr10 killed $vgpr10 def $vgpr10_vgpr11_vgpr12_vgpr13 killed $exec
 ; NOOPT-NEXT:    v_mov_b32_e32 v11, v16
 ; NOOPT-NEXT:    v_mov_b32_e32 v12, v15
