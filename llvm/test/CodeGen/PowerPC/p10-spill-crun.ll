@@ -150,6 +150,7 @@ define dso_local void @P10_Spill_CR_UN(ptr %arg, ptr %arg1, i32 %arg2) local_unn
 ; CHECK-NEXT:    extsh r9, r3
 ; CHECK-NEXT:    extsw r6, r28
 ; CHECK-NEXT:    li r5, 0
+; CHECK-NEXT:    # implicit-def: $f2
 ; CHECK-NEXT:    li r7, 0
 ; CHECK-NEXT:    std r30, 104(r1)
 ; CHECK-NEXT:    std r29, 96(r1)
@@ -308,6 +309,7 @@ define dso_local void @P10_Spill_CR_UN(ptr %arg, ptr %arg1, i32 %arg2) local_unn
 ; CHECK-BE-NEXT:    extsh r9, r3
 ; CHECK-BE-NEXT:    extsw r6, r28
 ; CHECK-BE-NEXT:    li r5, 0
+; CHECK-BE-NEXT:    # implicit-def: $f2
 ; CHECK-BE-NEXT:    li r7, 0
 ; CHECK-BE-NEXT:    std r30, 120(r1)
 ; CHECK-BE-NEXT:    std r29, 112(r1)

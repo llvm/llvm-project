@@ -1387,6 +1387,12 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       .widenScalarToNextPow2(0, 32)
       .widenScalarToNextPow2(1, 32);
 
+  getActionDefinitionsBuilder(G_CTLS)
+      .customFor({{S32, S32}})
+      .scalarize(0)
+      .clampScalar(0, S32, S32)
+      .clampScalar(1, S32, S32);
+
   // S64 is only legal on SALU, and needs to be broken into 32-bit elements in
   // RegBankSelect.
   getActionDefinitionsBuilder(G_BITREVERSE)
@@ -2310,6 +2316,8 @@ bool AMDGPULegalizerInfo::legalizeCustom(
   case TargetOpcode::G_CTLZ:
   case TargetOpcode::G_CTTZ:
     return legalizeCTLZ_CTTZ(MI, MRI, B);
+  case TargetOpcode::G_CTLS:
+    return legalizeCTLS(MI, MRI, B);
   case TargetOpcode::G_CTLZ_ZERO_UNDEF:
     return legalizeCTLZ_ZERO_UNDEF(MI, MRI, B);
   case TargetOpcode::G_STACKSAVE:
@@ -4682,6 +4690,23 @@ bool AMDGPULegalizerInfo::legalizeCTLZ_ZERO_UNDEF(MachineInstr &MI,
   return true;
 }
 
+bool AMDGPULegalizerInfo::legalizeCTLS(MachineInstr &MI,
+                                       MachineRegisterInfo &MRI,
+                                       MachineIRBuilder &B) const {
+  Register Dst = MI.getOperand(0).getReg();
+  Register Src = MI.getOperand(1).getReg();
+  LLT SrcTy = MRI.getType(Src);
+  const LLT S32 = LLT::scalar(32);
+  assert(SrcTy == S32 && "legalizeCTLS only supports s32");
+  unsigned BitWidth = SrcTy.getSizeInBits();
+
+  auto Sffbh = B.buildIntrinsic(Intrinsic::amdgcn_sffbh, {S32}).addUse(Src);
+  auto Clamped = B.buildUMin(S32, Sffbh, B.buildConstant(S32, BitWidth));
+  B.buildSub(Dst, Clamped, B.buildConstant(S32, 1));
+  MI.eraseFromParent();
+  return true;
+}
+
 // Check that this is a G_XOR x, -1
 static bool isNot(const MachineRegisterInfo &MRI, const MachineInstr &MI) {
   if (MI.getOpcode() != TargetOpcode::G_XOR)
@@ -5944,18 +5969,21 @@ bool AMDGPULegalizerInfo::legalizeFSQRTF64(MachineInstr &MI,
   Register X = MI.getOperand(1).getReg();
   unsigned Flags = MI.getFlags();
 
-  auto ScaleConstant = B.buildFConstant(F64, 0x1.0p-767);
+  Register SqrtX = X;
+  Register Scaling, ZeroInt;
+  if (!MI.getFlag(MachineInstr::FmAfn)) {
+    auto ScaleConstant = B.buildFConstant(F64, 0x1.0p-767);
 
-  auto ZeroInt = B.buildConstant(S32, 0);
-  auto Scaling = B.buildFCmp(FCmpInst::FCMP_OLT, S1, X, ScaleConstant);
+    ZeroInt = B.buildConstant(S32, 0).getReg(0);
+    Scaling = B.buildFCmp(FCmpInst::FCMP_OLT, S1, X, ScaleConstant).getReg(0);
 
-  // Scale up input if it is too small.
-  auto ScaleUpFactor = B.buildConstant(S32, 256);
-  auto ScaleUp = B.buildSelect(S32, Scaling, ScaleUpFactor, ZeroInt);
-  auto SqrtX = B.buildFLdexp(F64, X, ScaleUp, Flags);
+    // Scale up input if it is too small.
+    auto ScaleUpFactor = B.buildConstant(S32, 256);
+    auto ScaleUp = B.buildSelect(S32, Scaling, ScaleUpFactor, ZeroInt);
+    SqrtX = B.buildFLdexp(F64, X, ScaleUp, Flags).getReg(0);
+  }
 
-  auto SqrtY =
-      B.buildIntrinsic(Intrinsic::amdgcn_rsq, {F64}).addReg(SqrtX.getReg(0));
+  auto SqrtY = B.buildIntrinsic(Intrinsic::amdgcn_rsq, {F64}).addReg(SqrtX);
 
   auto Half = B.buildFConstant(F64, 0.5);
   auto SqrtH0 = B.buildFMul(F64, SqrtY, Half);
@@ -5972,21 +6000,27 @@ bool AMDGPULegalizerInfo::legalizeFSQRTF64(MachineInstr &MI,
 
   auto SqrtS2 = B.buildFMA(F64, SqrtD0, SqrtH1, SqrtS1);
 
-  auto NegSqrtS2 = B.buildFNeg(F64, SqrtS2);
-  auto SqrtD1 = B.buildFMA(F64, NegSqrtS2, SqrtS2, SqrtX);
+  Register SqrtRet = SqrtS2.getReg(0);
+  if (!MI.getFlag(MachineInstr::FmAfn)) {
+    auto NegSqrtS2 = B.buildFNeg(F64, SqrtS2);
+    auto SqrtD1 = B.buildFMA(F64, NegSqrtS2, SqrtS2, SqrtX);
+    auto SqrtD2 = B.buildFMA(F64, SqrtD1, SqrtH1, SqrtS2);
 
-  auto SqrtRet = B.buildFMA(F64, SqrtD1, SqrtH1, SqrtS2);
+    // Scale down the result.
+    auto ScaleDownFactor = B.buildConstant(S32, -128);
+    auto ScaleDown = B.buildSelect(S32, Scaling, ScaleDownFactor, ZeroInt);
+    SqrtRet = B.buildFLdexp(F64, SqrtD2, ScaleDown, Flags).getReg(0);
+  }
 
-  // Scale down the result.
-  auto ScaleDownFactor = B.buildConstant(S32, -128);
-  auto ScaleDown = B.buildSelect(S32, Scaling, ScaleDownFactor, ZeroInt);
-  SqrtRet = B.buildFLdexp(F64, SqrtRet, ScaleDown, Flags);
-
-  // TODO: Switch to fcmp oeq 0 for finite only. Can't fully remove this check
-  // with finite only or nsz because rsq(+/-0) = +/-inf
+  Register IsZeroOrInf;
+  if (MI.getFlag(MachineInstr::FmNoInfs)) {
+    auto ZeroFP = B.buildFConstant(F64, 0.0);
+    IsZeroOrInf = B.buildFCmp(FCmpInst::FCMP_OEQ, S1, SqrtX, ZeroFP).getReg(0);
+  } else {
+    IsZeroOrInf = B.buildIsFPClass(S1, SqrtX, fcZero | fcPosInf).getReg(0);
+  }
 
   // TODO: Check for DAZ and expand to subnormals
-  auto IsZeroOrInf = B.buildIsFPClass(LLT::scalar(1), SqrtX, fcZero | fcPosInf);
 
   // If x is +INF, +0, or -0, use its original value
   B.buildSelect(Dst, IsZeroOrInf, SqrtX, SqrtRet, Flags);

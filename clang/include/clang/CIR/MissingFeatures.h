@@ -254,7 +254,6 @@ struct MissingFeatures {
   static bool devirtualizeDestructor() { return false; }
   static bool devirtualizeMemberFunction() { return false; }
   static bool dtorCleanups() { return false; }
-  static bool ehCleanupActiveFlag() { return false; }
   static bool ehCleanupScope() { return false; }
   static bool ehCleanupScopeRequiresEHCleanup() { return false; }
   static bool ehScopeFilter() { return false; }
@@ -327,7 +326,6 @@ struct MissingFeatures {
   static bool setDLLStorageClass() { return false; }
   static bool setNonGC() { return false; }
   static bool setObjCGCLValueClass() { return false; }
-  static bool setTargetAttributes() { return false; }
   static bool shouldSplitConstantStore() { return false; }
   static bool shouldUseBZeroPlusStoresToInitialize() { return false; }
   static bool shouldUseMemSetToInitialize() { return false; }

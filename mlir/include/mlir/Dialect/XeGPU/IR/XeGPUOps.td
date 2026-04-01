@@ -974,7 +974,7 @@ def XeGPU_LoadGatherOp : XeGPU_Op<"load", [MemoryEffects<[MemRead]>, AnchorLayou
       OptionalAttr<XeGPU_CacheHintAttr>:$l2_hint,
       OptionalAttr<XeGPU_CacheHintAttr>:$l3_hint,
       OptionalAttr<DistributeLayoutAttr>:$layout);
-  let results = (outs AnyTypeOf<[XeGPU_ValueType, XeGPU_ScalarType]>:$value);
+  let results = (outs XeGPU_ValueOrScalarType:$value);
 
   let extraClassDeclaration = extraBaseClassDeclaration # [{
 
@@ -1134,7 +1134,7 @@ def XeGPU_StoreScatterOp : XeGPU_Op<"store", [MemoryEffects<[MemWrite]>, AnchorL
 
   }];
 
-  let arguments = (ins AnyTypeOf<[XeGPU_ValueType, XeGPU_ScalarType]>:$value,
+  let arguments = (ins XeGPU_ValueOrScalarType:$value,
       XeGPU_GatherScatterSourceType:$dest,
       Optional<AnyTypeOf<[XeGPU_OffsetType, Index]>>:$offsets,
       AnyTypeOf<[XeGPU_MaskType, I1]>:$mask, OptionalAttr<I64Attr>:$chunk_size,
@@ -1521,10 +1521,10 @@ def XeGPU_ConvertLayoutOp: XeGPU_Op<"convert_layout", [Pure, AllTypesMatch<["sou
             : vector<128x128xf16>
         ```
     }];
-    let arguments = (ins XeGPU_VectorOrOffsetVectorType: $source,
+    let arguments = (ins XeGPU_VectorOrScalarType: $source,
                          DistributeLayoutAttr: $input_layout,
                          DistributeLayoutAttr: $target_layout);
-    let results = (outs XeGPU_VectorOrOffsetVectorType: $result);
+    let results = (outs XeGPU_VectorOrScalarType: $result);
     let assemblyFormat = [{
         $source prop-dict attr-dict `:` type($source)
     }];
@@ -1584,7 +1584,7 @@ def XeGPU_LoadMatrixOp: XeGPU_Op<"load_matrix", [MemoryEffects<[MemRead]>,
     OptionalAttr<UnitAttr>:$subgroup_block_io,
     OptionalAttr<DistributeLayoutAttr>:$layout
   );
-  let results = (outs AnyTypeOf<[XeGPU_ValueType, XeGPU_ScalarType]>:$res);
+  let results = (outs XeGPU_ValueOrScalarType:$res);
   let assemblyFormat = [{
     $mem_desc `` custom<DynamicIndexList>($offsets, $const_offsets)
     prop-dict attr-dict `` `:` type(operands) `->` type(results)
@@ -1652,7 +1652,7 @@ def XeGPU_LoadMatrixOp: XeGPU_Op<"load_matrix", [MemoryEffects<[MemRead]>,
 def XeGPU_StoreMatrixOp: XeGPU_Op<"store_matrix", [MemoryEffects<[MemWrite]>,
                               AllElementTypesMatch<["mem_desc", "data"]>, AnchorLayoutInterface]> {
   let arguments = (ins
-    AnyTypeOf<[XeGPU_ValueType, XeGPU_ScalarType]>:$data,
+    XeGPU_ValueOrScalarType:$data,
     XeGPU_MemDesc:$mem_desc,
     Variadic<Index>: $offsets,
     DenseI64ArrayAttr: $const_offsets,

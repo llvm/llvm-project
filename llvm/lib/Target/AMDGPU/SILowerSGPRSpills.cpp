@@ -20,6 +20,7 @@
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIMachineFunctionInfo.h"
+#include "SISpillUtils.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -524,24 +525,8 @@ bool SILowerSGPRSpills::run(MachineFunction &MF) {
       FuncInfo->updateNonWWMRegMask(NonWwmRegMask);
     }
 
-    for (MachineBasicBlock &MBB : MF) {
-      // FIXME: The dead frame indices are replaced with a null register from
-      // the debug value instructions. We should instead, update it with the
-      // correct register value. But not sure the register value alone is
-      // adequate to lower the DIExpression. It should be worked out later.
-      for (MachineInstr &MI : MBB) {
-        if (MI.isDebugValue()) {
-          uint32_t StackOperandIdx = MI.isDebugValueList() ? 2 : 0;
-          if (MI.getOperand(StackOperandIdx).isFI() &&
-              !MFI.isFixedObjectIndex(
-                  MI.getOperand(StackOperandIdx).getIndex()) &&
-              SpillFIs[MI.getOperand(StackOperandIdx).getIndex()]) {
-            MI.getOperand(StackOperandIdx)
-                .ChangeToRegister(Register(), false /*isDef*/);
-          }
-        }
-      }
-    }
+    for (MachineBasicBlock &MBB : MF)
+      clearDebugInfoForSpillFIs(MFI, MBB, SpillFIs);
 
     // All those frame indices which are dead by now should be removed from the
     // function frame. Otherwise, there is a side effect such as re-mapping of

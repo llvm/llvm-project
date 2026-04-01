@@ -871,7 +871,7 @@ func.func @omp_target(%if_cond : i1, %device : si32,  %num_threads : i32, %devic
     "omp.target"(%device, %if_cond, %num_threads) ({
        // CHECK: omp.terminator
        omp.terminator
-    }) {nowait, operandSegmentSizes = array<i32: 0,0,0,1,0,0,1,0,0,0,0,1>} : ( si32, i1, i32 ) -> ()
+    }) {nowait, operandSegmentSizes = array<i32: 0,0,0,0,1,0,0,1,0,0,0,0,1>} : ( si32, i1, i32 ) -> ()
 
     // Test with optional map clause.
     // CHECK: %[[MAP_A:.*]] = omp.map.info var_ptr(%[[VAL_1:.*]] : memref<?xi32>, tensor<?xi32>)   map_clauses(always, to) capture(ByRef) -> memref<?xi32> {name = ""}
@@ -2269,6 +2269,39 @@ func.func @omp_task_depend(%arg0: memref<i32>, %arg1: memref<i32>) {
   return
 }
 
+// CHECK-LABEL: func.func @omp_task_depend_iterated
+func.func @omp_task_depend_iterated(%lb : index, %ub : index, %step : index,
+                                     %addr : !llvm.ptr) -> () {
+  // CHECK: %[[IT:.*]] = omp.iterator(%[[IV:.*]]: index) = (%{{.*}} to %{{.*}} step %{{.*}}) {
+  // CHECK:   omp.yield(%{{.*}} : !llvm.ptr)
+  // CHECK: } -> !omp.iterated<!llvm.ptr>
+  // CHECK: omp.task depend(taskdependin -> %[[IT]] : !omp.iterated<!llvm.ptr>) {
+  %it = omp.iterator(%iv: index) = (%lb to %ub step %step) {
+    omp.yield(%addr : !llvm.ptr)
+  } -> !omp.iterated<!llvm.ptr>
+
+  omp.task depend(taskdependin -> %it : !omp.iterated<!llvm.ptr>) {
+    omp.terminator
+  }
+  return
+}
+
+// CHECK-LABEL: func.func @omp_task_depend_iterated_mixed
+func.func @omp_task_depend_iterated_mixed(%lb : index, %ub : index, %step : index,
+                                           %addr : !llvm.ptr,
+                                           %plain : memref<i32>) -> () {
+  // CHECK: %[[IT:.*]] = omp.iterator
+  // CHECK: omp.task depend(taskdependout -> %{{.*}} : memref<i32>, taskdependin -> %[[IT]] : !omp.iterated<!llvm.ptr>) {
+  %it = omp.iterator(%iv: index) = (%lb to %ub step %step) {
+    omp.yield(%addr : !llvm.ptr)
+  } -> !omp.iterated<!llvm.ptr>
+
+  omp.task depend(taskdependout -> %plain : memref<i32>, taskdependin -> %it : !omp.iterated<!llvm.ptr>) {
+    omp.terminator
+  }
+  return
+}
+
 
 // CHECK-LABEL: @omp_target_depend
 // CHECK-SAME: (%arg0: memref<i32>, %arg1: memref<i32>) {
@@ -2277,7 +2310,7 @@ func.func @omp_target_depend(%arg0: memref<i32>, %arg1: memref<i32>) {
   omp.target depend(taskdependin -> %arg0 : memref<i32>, taskdependin -> %arg1 : memref<i32>, taskdependinout -> %arg0 : memref<i32>) {
     // CHECK: omp.terminator
     omp.terminator
-  } {operandSegmentSizes = array<i32: 0,0,0,3,0,0,0,0>}
+  } {operandSegmentSizes = array<i32: 0,0,3,0,0,0,0,0,0,0,0,0,0>}
   return
 }
 

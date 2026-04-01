@@ -13285,6 +13285,9 @@ def err_builtin_invalid_arg_type: Error<
   "%plural{0:|: }3"
   "%plural{[0,3]:type|:types}1 (was %4)">;
 
+def err_builtin_requires_double_type: Error<
+  "%ordinal0 argument must be a scalar, vector, or matrix of double type (was %1)">;
+
 def err_bswapg_invalid_bit_width : Error<
   "_BitInt type %0 (%1 bits) must be a multiple of 16 bits for byte swapping">;
 
@@ -14114,6 +14117,47 @@ def note_acc_reduction_combiner_forming
 // AMDGCN builtins diagnostics
 def err_amdgcn_load_lds_size_invalid_value : Error<"invalid size value">;
 def note_amdgcn_load_lds_size_valid_value : Note<"size must be %select{1, 2, or 4|1, 2, 4, 12 or 16}0">;
+def err_amdgcn_processor_is_arg_not_literal
+    : Error<"the argument to __builtin_amdgcn_processor_is must be a string "
+            "literal">;
+def err_amdgcn_processor_is_arg_invalid_value
+    : Error<"the argument to __builtin_amdgcn_processor_is must be a valid "
+            "AMDGCN processor identifier; '%0' is not valid">;
+def note_amdgcn_processor_is_valid_options
+    : Note<"valid AMDGCN processor identifiers are: %0">;
+def err_amdgcn_is_invocable_arg_invalid_value
+    : Error<"the argument to __builtin_amdgcn_is_invocable must be either a "
+            "target agnostic builtin or an AMDGCN target specific builtin; '%0'"
+            " is not valid">;
+def err_amdgcn_predicate_type_is_not_constructible
+    : Error<"%0 has type __amdgpu_feature_predicate_t, which is not"
+            " constructible">;
+def err_amdgcn_predicate_type_needs_explicit_bool_cast
+    : Error<"%0 must be explicitly cast to %1; however, please note that this "
+            "is almost always an error and that it prevents the effective "
+            "guarding of target dependent code, and thus should be avoided">;
+def note_amdgcn_protected_by_predicate : Note<"jump enters statement controlled"
+                                              " by AMDGPU feature predicate">;
+def err_amdgcn_conflicting_is_processor_options
+    : Error<"conflicting check for AMDGCN processor %0 found in a scope already"
+            " controlled by a check for AMDGCN processor">;
+def note_amdgcn_previous_is_processor_guard
+    : Note<"predicate guard, with establishes the context, inserted here">;
+def warn_amdgcn_unguarded_asm_stmt
+    : Warning<"the '%0' ASM sequence might be invalid for some AMDGPU targets">,
+    InGroup<UnguardedBuiltinUsageAMDGPU>, DefaultIgnore;
+def note_amdgcn_unguarded_asm_silence
+  : Note<"enclose the '%0' ASM sequence in a scope controlled by a "
+         "__builtin_amdgcn_is_processor check to silence this warning">;
+def err_amdgcn_incompatible_builtin
+  : Error<"%0 cannot be invoked in the current context, as it requires the "
+          "'%1' feature(s)%select{|, which '%3' does not provide}2">;
+def warn_amdgcn_unguarded_builtin :
+  Warning<"%0 might be unavailable on some AMDGPU targets">,
+  InGroup<UnguardedBuiltinUsageAMDGPU>, DefaultIgnore;
+def note_amdgcn_unguarded_builtin_silence
+  : Note<"enclose %0 in a __builtin_amdgcn_is_invocable check to silence "
+         "this warning">;
 
 def err_amdgcn_coop_atomic_invalid_as : Error<"cooperative atomic requires a global or generic pointer">;
 

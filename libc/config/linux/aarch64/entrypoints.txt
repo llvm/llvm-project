@@ -443,6 +443,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.asin
     libc.src.math.asinf
     libc.src.math.asinhf
+    libc.src.math.asinpi
     libc.src.math.asinpif
     libc.src.math.atan2
     libc.src.math.atan2f
@@ -691,6 +692,7 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.copysignf16
     libc.src.math.cospif16
     libc.src.math.erff16
+    libc.src.math.erfcf16
     libc.src.math.expf16
     libc.src.math.f16add
     libc.src.math.f16addf
@@ -741,6 +743,7 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.llrintf16
     libc.src.math.llroundf16
     libc.src.math.log10p1f16
+    libc.src.math.log2p1f16
     libc.src.math.logbf16
     libc.src.math.lrintf16
     libc.src.math.lroundf16
@@ -871,6 +874,7 @@ endif()
 list(APPEND TARGET_LIBM_ENTRYPOINTS
   # bfloat16 entrypoints
   libc.src.math.atanbf16
+  libc.src.math.asinbf16
   libc.src.math.bf16add
   libc.src.math.bf16addf
   libc.src.math.bf16addl
@@ -1141,6 +1145,12 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.search.lfind
     libc.src.search.lsearch
     libc.src.search.remque
+    libc.src.search.tdelete
+    libc.src.search.tdestroy
+    libc.src.search.tfind
+    libc.src.search.tsearch
+    libc.src.search.twalk
+    libc.src.search.twalk_r
 
     # threads.h entrypoints
     libc.src.threads.call_once
