@@ -180,7 +180,7 @@ LIBC_INLINE ErrorOr<int>
 checked_sigaction(int signal, const struct sigaction *__restrict libc_new,
                   struct sigaction *__restrict libc_old) {
   if (signal <= 0 || signal >= NSIG)
-    return Error(-EINVAL);
+    return Error(EINVAL);
   if (signal == SIGABRT) {
     SigAbortGuard guard(true);
     return unchecked_sigaction(signal, libc_new, libc_old);
