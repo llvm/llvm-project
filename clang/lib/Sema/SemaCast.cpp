@@ -1943,7 +1943,8 @@ TryCastResult TryStaticImplicitCast(Sema &Self, ExprResult &SrcExpr,
   bool CStyle = (CCK == CheckedConversionKind::CStyleCast ||
                  CCK == CheckedConversionKind::FunctionalCast);
   if (InitSeq.Failed() && (CStyle || !DestType->isReferenceType()) &&
-      InitSeq.getFailureKind() != InitializationSequence::FK_HLSLInitListFlatteningFailed)
+      InitSeq.getFailureKind() !=
+          InitializationSequence::FK_HLSLInitListFlatteningFailed)
     return TC_NotApplicable;
 
   ExprResult Result = InitSeq.Perform(Self, Entity, InitKind, SrcExprRaw);

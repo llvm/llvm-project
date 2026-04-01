@@ -4839,12 +4839,15 @@ static void TryConstructorOrParenListInitialization(
 
   // Try list initialization if this is hlsl
   if (S.getLangOpts().HLSL && Sequence.Failed()) {
-    InitListExpr *ILE = new (S.Context) InitListExpr(S.getASTContext(), Args.front()->getBeginLoc(), Args, Args.back()->getEndLoc());
+    InitListExpr *ILE = new (S.Context)
+        InitListExpr(S.getASTContext(), Args.front()->getBeginLoc(), Args,
+                     Args.back()->getEndLoc());
     ILE->setType(S.getASTContext().VoidTy);
     Args[0] = ILE;
     // reset sequence as normal
     Sequence.setSequenceKind(InitializationSequence::NormalSequence);
-    TryListInitialization(S, Entity, Kind, ILE, Sequence, /*TreatUnavailableAsInvalid=*/true);
+    TryListInitialization(S, Entity, Kind, ILE, Sequence,
+                          /*TreatUnavailableAsInvalid=*/true);
     return;
   }
   //       * Otherwise, if no constructor is viable, the destination type
@@ -5980,7 +5983,7 @@ static void TryOrBuildParenListInitialization(
         return false;
 
       if (InitExpr)
-	*InitExpr = ER.get();
+        *InitExpr = ER.get();
       else
         InitExprs.push_back(ER.get());
     }

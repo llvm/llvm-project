@@ -10301,7 +10301,9 @@ AssignConvertType Sema::CheckSingleAssignmentConstraints(QualType LHSType,
       return AssignConvertType::Compatible;
     }
 
-    if (ConvertRHS) // && (!getLangOpts().HLSL || Context.getCanonicalType(RHS.get()->getType()) != Context.getCanonicalType(LHSType)))
+    if (ConvertRHS) // && (!getLangOpts().HLSL ||
+                    // Context.getCanonicalType(RHS.get()->getType()) !=
+                    // Context.getCanonicalType(LHSType)))
       RHS = ImpCastExprToType(E, Ty, Kind);
   }
 
@@ -15447,9 +15449,10 @@ ExprResult Sema::CreateBuiltinBinOp(SourceLocation OpLoc,
     if (getLangOpts().HLSL && LHSExpr->getType()->isRecordType()) {
       InitListExpr *ILE = cast<InitListExpr>(RHSExpr);
       if (!HLSL().transformInitList(Entity, ILE))
-	InitSeq.SetFailed(InitializationSequence::FK_HLSLInitListFlatteningFailed);
+        InitSeq.SetFailed(
+            InitializationSequence::FK_HLSLInitListFlatteningFailed);
       else
-	RHSExpr = ILE;
+        RHSExpr = ILE;
     }
 
     ExprResult Init = InitSeq.Perform(*this, Entity, Kind, RHSExpr);
@@ -15503,19 +15506,23 @@ ExprResult Sema::CreateBuiltinBinOp(SourceLocation OpLoc,
     // If this is HLSL try to perform aggregate initialization.
     if (getLangOpts().HLSL && LHSExpr->getType()->isRecordType()) {
       ResultTy = LHSExpr->getType();
-      InitListExpr *ILE = new (Context) InitListExpr(getASTContext(), RHSExpr->getBeginLoc(), {RHSExpr}, RHSExpr->getEndLoc());
+      InitListExpr *ILE =
+          new (Context) InitListExpr(getASTContext(), RHSExpr->getBeginLoc(),
+                                     {RHSExpr}, RHSExpr->getEndLoc());
       ILE->setType(getASTContext().VoidTy);
-      InitializationKind Kind = InitializationKind::CreateDirectList(RHSExpr->getBeginLoc(), RHSExpr->getBeginLoc(), RHSExpr->getEndLoc());
+      InitializationKind Kind = InitializationKind::CreateDirectList(
+          RHSExpr->getBeginLoc(), RHSExpr->getBeginLoc(), RHSExpr->getEndLoc());
       InitializedEntity Entity =
-	InitializedEntity::InitializeTemporary(ResultTy);
+          InitializedEntity::InitializeTemporary(ResultTy);
       RHSExpr = ILE;
       InitializationSequence InitSeq(*this, Entity, Kind, RHSExpr);
       if (!HLSL().transformInitList(Entity, ILE))
-	InitSeq.SetFailed(InitializationSequence::FK_HLSLInitListFlatteningFailed);
+        InitSeq.SetFailed(
+            InitializationSequence::FK_HLSLInitListFlatteningFailed);
 
       ExprResult Init = InitSeq.Perform(*this, Entity, Kind, RHSExpr);
       if (Init.isInvalid())
-	return Init;
+        return Init;
       RHS = Init.get();
       break;
     }

@@ -762,10 +762,10 @@ public:
   /// Determines whether this class has any user provided special members.
   bool hasUserProvidedSpecialMembers() const {
     return data().UserDeclaredSpecialMembers &
-      (SMF_MoveConstructor | SMF_MoveAssignment | SMF_Destructor |
-       SMF_CopyAssignment | SMF_CopyConstructor) ||
-      data().UserDeclaredConstructor ||
-      data().UserProvidedDefaultConstructor;
+               (SMF_MoveConstructor | SMF_MoveAssignment | SMF_Destructor |
+                SMF_CopyAssignment | SMF_CopyConstructor) ||
+           data().UserDeclaredConstructor ||
+           data().UserProvidedDefaultConstructor;
   }
 
   /// Determine if we need to declare a default constructor for
@@ -774,14 +774,16 @@ public:
   /// This value is used for lazy creation of default constructors.
   bool needsImplicitDefaultConstructor() const {
     return ((!data().UserDeclaredConstructor &&
-            !(data().DeclaredSpecialMembers & SMF_DefaultConstructor) &&
-            (!isLambda() || lambdaIsDefaultConstructibleAndAssignable())) ||
-           // FIXME: Proposed fix to core wording issue: if a class inherits
-           // a default constructor and doesn't explicitly declare one, one
-           // is declared implicitly.
-           (data().HasInheritedDefaultConstructor &&
-            !(data().DeclaredSpecialMembers & SMF_DefaultConstructor))) &&
-      (!getLangOpts().HLSL || (isLambda() && lambdaIsDefaultConstructibleAndAssignable()) || hasUserProvidedSpecialMembers());
+             !(data().DeclaredSpecialMembers & SMF_DefaultConstructor) &&
+             (!isLambda() || lambdaIsDefaultConstructibleAndAssignable())) ||
+            // FIXME: Proposed fix to core wording issue: if a class inherits
+            // a default constructor and doesn't explicitly declare one, one
+            // is declared implicitly.
+            (data().HasInheritedDefaultConstructor &&
+             !(data().DeclaredSpecialMembers & SMF_DefaultConstructor))) &&
+           (!getLangOpts().HLSL ||
+            (isLambda() && lambdaIsDefaultConstructibleAndAssignable()) ||
+            hasUserProvidedSpecialMembers());
   }
 
   /// Determine whether this class has any user-declared constructors.
@@ -808,7 +810,8 @@ public:
   /// constructor to be lazily declared.
   bool needsImplicitCopyConstructor() const {
     return !(data().DeclaredSpecialMembers & SMF_CopyConstructor) &&
-      (!getLangOpts().HLSL || isLambda() || hasUserProvidedSpecialMembers());
+           (!getLangOpts().HLSL || isLambda() ||
+            hasUserProvidedSpecialMembers());
   }
 
   /// Determine whether we need to eagerly declare a defaulted copy
@@ -904,10 +907,9 @@ public:
     return !(data().DeclaredSpecialMembers & SMF_MoveConstructor) &&
            !hasUserDeclaredCopyConstructor() &&
            !hasUserDeclaredCopyAssignment() &&
-           !hasUserDeclaredMoveAssignment() &&
-           !hasUserDeclaredDestructor() &&
-      (!getLangOpts().HLSL || isLambda() || hasUserDeclaredConstructor()
-       || hasUserProvidedDefaultConstructor());
+           !hasUserDeclaredMoveAssignment() && !hasUserDeclaredDestructor() &&
+           (!getLangOpts().HLSL || isLambda() || hasUserDeclaredConstructor() ||
+            hasUserProvidedDefaultConstructor());
   }
 
   /// Determine whether we need to eagerly declare a defaulted move
@@ -937,7 +939,8 @@ public:
   /// assignment operator to be lazily declared.
   bool needsImplicitCopyAssignment() const {
     return !(data().DeclaredSpecialMembers & SMF_CopyAssignment) &&
-      (!getLangOpts().HLSL || isLambda() || hasUserProvidedSpecialMembers());
+           (!getLangOpts().HLSL || isLambda() ||
+            hasUserProvidedSpecialMembers());
   }
 
   /// Determine whether we need to eagerly declare a defaulted copy
@@ -998,10 +1001,11 @@ public:
     return !(data().DeclaredSpecialMembers & SMF_MoveAssignment) &&
            !hasUserDeclaredCopyConstructor() &&
            !hasUserDeclaredCopyAssignment() &&
-           !hasUserDeclaredMoveConstructor() &&
-           !hasUserDeclaredDestructor() &&
+           !hasUserDeclaredMoveConstructor() && !hasUserDeclaredDestructor() &&
            (!isLambda() || lambdaIsDefaultConstructibleAndAssignable()) &&
-      (!getLangOpts().HLSL || (isLambda() && lambdaIsDefaultConstructibleAndAssignable()) || hasUserProvidedSpecialMembers());
+           (!getLangOpts().HLSL ||
+            (isLambda() && lambdaIsDefaultConstructibleAndAssignable()) ||
+            hasUserProvidedSpecialMembers());
   }
 
   /// Determine whether we need to eagerly declare a move assignment

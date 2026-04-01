@@ -14755,9 +14755,10 @@ void Sema::ActOnUninitializedDecl(Decl *RealDecl) {
     // In HLSL don't default initialize user defined structs.
     // Must have failed because there was no valid defined default constructor
     if (InitSeq.Failed() && getLangOpts().HLSL &&
-	InitSeq.getFailureKind() == InitializationSequence::FK_ConstructorOverloadFailed)
-     return;
-    
+        InitSeq.getFailureKind() ==
+            InitializationSequence::FK_ConstructorOverloadFailed)
+      return;
+
     ExprResult Init = InitSeq.Perform(*this, Entity, Kind, {});
 
     if (Init.get()) {
@@ -14765,7 +14766,7 @@ void Sema::ActOnUninitializedDecl(Decl *RealDecl) {
       // This is important for template substitution.
       Var->setInitStyle(VarDecl::CallInit);
     } else if (Init.isInvalid()) {
-      
+
       // If default-init fails, attach a recovery-expr initializer to track
       // that initialization was attempted and failed.
       auto RecoveryExpr =

@@ -15810,7 +15810,7 @@ ExprResult Sema::CreateOverloadedBinOp(SourceLocation OpLoc,
                                                    Args, OpLoc);
       DeferDiagsRAII DDR(*this,
                          CandidateSet.shouldDeferDiags(*this, Args, OpLoc));
-      if (Args[0]->getType()->isRecordType() && !getLangOpts().HLSL && 
+      if (Args[0]->getType()->isRecordType() && !getLangOpts().HLSL &&
           Opc >= BO_Assign && Opc <= BO_OrAssign) {
         Diag(OpLoc,  diag::err_ovl_no_viable_oper)
              << BinaryOperator::getOpcodeStr(Opc)
@@ -15821,20 +15821,20 @@ ExprResult Sema::CreateOverloadedBinOp(SourceLocation OpLoc,
             << Args[0]->getSourceRange() << Args[1]->getSourceRange();
         }
       } else if (getLangOpts().HLSL) {
-	// If this is HLSL fall back to builtin operation
+        // If this is HLSL fall back to builtin operation
 
-	// This is an erroneous use of an operator which can be overloaded by
+        // This is an erroneous use of an operator which can be overloaded by
         // a non-member function. Check for non-member operators which were
         // defined too late to be candidates.
         if (DiagnoseTwoPhaseOperatorLookup(*this, Op, OpLoc, Args))
           // FIXME: Recover by calling the found function.
           return ExprError();
 
-	Result = CreateBuiltinBinOp(OpLoc, Opc, Args[0], Args[1]);
+        Result = CreateBuiltinBinOp(OpLoc, Opc, Args[0], Args[1]);
 
-	if (!Result.isInvalid())
-	  return Result;
-	
+        if (!Result.isInvalid())
+          return Result;
+
       } else {
         // This is an erroneous use of an operator which can be overloaded by
         // a non-member function. Check for non-member operators which were
@@ -15847,10 +15847,9 @@ ExprResult Sema::CreateOverloadedBinOp(SourceLocation OpLoc,
         // produce an error. Then, show the non-viable candidates.
         Result = CreateBuiltinBinOp(OpLoc, Opc, Args[0], Args[1]);
 
-	// If this was HLSL it might not have produced an error.
-	if (getLangOpts().HLSL && !Result.isInvalid())
-	  return Result;
-	  
+        // If this was HLSL it might not have produced an error.
+        if (getLangOpts().HLSL && !Result.isInvalid())
+          return Result;
       }
       assert(Result.isInvalid() &&
              "C++ binary operator overloading is missing candidates!");
