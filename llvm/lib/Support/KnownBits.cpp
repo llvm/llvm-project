@@ -1209,24 +1209,12 @@ KnownBits KnownBits::udiv(const KnownBits &LHS, const KnownBits &RHS,
     return Known;
   }
 
-  if (RHS.isConstant()) {
-    const APInt Divisor = RHS.getConstant();
-    if (Divisor.isOne())
-      return LHS;
-
-    if (Divisor.isPowerOf2()) {
-      unsigned Shift = Divisor.logBase2();
-
-      APInt MaxRes = LHS.getMaxValue().lshr(Shift);
-      unsigned LeadZ = MaxRes.countLeadingZeros();
-
-      Known = LHS;
-      Known.One.lshrInPlace(Shift);
-      Known.Zero.lshrInPlace(Shift);
-      Known.Zero.setHighBits(LeadZ);
-
-      return Known;
-    }
+  if (RHS.isConstant() && RHS.getConstant().isPowerOf2()) {
+    unsigned Shift = RHS.getConstant().logBase2();
+    Known = LHS;
+    Known >>= Shift;
+    Known.Zero.setHighBits(Shift);
+    return Known;
   }
 
   // We can figure out the minimum number of upper zero bits by doing
