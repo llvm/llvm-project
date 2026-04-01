@@ -41,7 +41,7 @@ using namespace clang::interp;
 // to handle the way we use tailcalls.
 // PPC can't tail-call external calls, which is a problem for InterpNext.
 #if defined(_MSC_VER) || defined(__powerpc__) || !defined(MUSTTAIL) ||         \
-    defined(__i386__)
+    defined(__i386__) || defined(__sparc__)
 #undef MUSTTAIL
 #define MUSTTAIL
 #define USE_TAILCALLS 0
