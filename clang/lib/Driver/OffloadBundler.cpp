@@ -1358,7 +1358,6 @@ Error OffloadBundler::ListBundleIDsInFile(
   std::unique_ptr<MemoryBuffer> Buffer;
 
   // Open Input file.
-  // ErrorOr<std::unique_ptr<MemoryBuffer>> CodeOrErr =
   ErrorOr<std::unique_ptr<MemoryBuffer>> Contents =
       MemoryBuffer::getFileOrSTDIN(InputFileName, /*IsText=*/true);
   if (std::error_code EC = Contents.getError())
