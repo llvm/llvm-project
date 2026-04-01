@@ -15,7 +15,6 @@
 
 #include "mlir/IR/Dominance.h"
 #include "mlir/IR/PatternMatch.h"
-#include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/Passes.h"
@@ -147,11 +146,10 @@ static bool isBlockCrossIsIsolatedFromAbove(DominanceInfo *dominate, Block *a,
   if (dominate->dominates(b, a))
     std::swap(b, a);
   while (b && b->getParentOp()) {
-    Operation *parnetOp = b->getParentOp();
     Operation *parentOp = b->getParentOp();
     if (parentOp->mightHaveTrait<OpTrait::IsIsolatedFromAbove>())
       return true;
-    b = parnetOp->getBlock();
+    b = parentOp->getBlock();
     if (b == a)
       return false;
   }
@@ -165,12 +163,13 @@ LogicalResult CSEDriver::hoistPureOp(Operation *existing, Operation *op) {
   if (!ancestorBlock) {
     LDBG() << "hoist " << OpWithFlags(existing, OpPrintingFlags().skipRegions())
            << " and " << OpWithFlags(op, OpPrintingFlags().skipRegions())
-           << "failed";
+           << " failed";
     return failure();
   }
 
   if (isBlockCrossIsIsolatedFromAbove(domInfo, ancestorBlock,
-                                      existing->getBlock()))
+                                      existing->getBlock()) ||
+      isBlockCrossIsIsolatedFromAbove(domInfo, ancestorBlock, op->getBlock()))
     return failure();
 
   // Find the insertion point based on dominance relationships.
@@ -186,6 +185,11 @@ LogicalResult CSEDriver::hoistPureOp(Operation *existing, Operation *op) {
                         : insertPoint;
     }
   }
+
+  // We hoist both `op` and `existing` here because if they are identical
+  // regionOps and we only hoist existing, the two would no longer be congruent.
+  // This would lead to a missed optimization opportunity in subsequent CSE
+  // passes. The test @cse_multiple_regions's `%r2` tests it.
   if (!insertPoint) {
     rewriter.moveOpBefore(existing, ancestorBlock, ancestorBlock->begin());
     rewriter.moveOpAfter(op, existing);
@@ -195,7 +199,7 @@ LogicalResult CSEDriver::hoistPureOp(Operation *existing, Operation *op) {
   }
   LDBG() << "hoist " << OpWithFlags(existing, OpPrintingFlags().skipRegions())
          << " and " << OpWithFlags(op, OpPrintingFlags().skipRegions())
-         << "success";
+         << " success";
   return success();
 }
 
@@ -216,6 +220,12 @@ void CSEDriver::replaceUsesAndDelete(ScopedMapTy &knownValues, Operation *op,
     if (!domInfo->properlyDominates(existing, op)) {
       if (!hoistPureOps || failed(hoistPureOp(existing, op)))
         return;
+    } else {
+      // Hoist `op` even though `existing` already dominates it, because
+      // hoisting op may create further CSE optimization opportunities for
+      // subsequent region operations. The test @cse_multiple_regions's `%r3`
+      // tests it.
+      rewriter.moveOpAfter(op, existing);
     }
     LDBG() << "replace " << OpWithFlags(op, OpPrintingFlags().skipRegions())
            << " with "
@@ -379,27 +389,10 @@ LogicalResult CSEDriver::simplifyOperation(ScopedMapTy &knownValues,
         return success();
       }
     }
-    if (auto *existing = knownPureOps.lookup(op)) {
-      if (existing->getBlock() == op->getBlock() &&
-          !hasOtherSideEffectingOpInBetween(existing, op)) {
-        // The operation that can be deleted has been reach with no
-        // side-effecting operations in between the existing operation and
-        // this one so we can remove the duplicate.
-        replaceUsesAndDelete(knownPureOps, op, existing, hasSSADominance);
-        return success();
-      }
-    }
 
-    if (mlir::isPure(op)) {
-      LDBG() << "insert op: "
-             << OpWithFlags(op, OpPrintingFlags().skipRegions())
-             << "to pureMap";
-      knownPureOps.insert(op, op);
-    } else {
-      LDBG() << "insert op: "
-             << OpWithFlags(op, OpPrintingFlags().skipRegions()) << "to map";
-      knownValues.insert(op, op);
-    }
+    LDBG() << "insert op: " << OpWithFlags(op, OpPrintingFlags().skipRegions())
+           << " to map";
+    knownValues.insert(op, op);
     return failure();
   }
 
@@ -411,18 +404,17 @@ LogicalResult CSEDriver::simplifyOperation(ScopedMapTy &knownValues,
 
   if (auto *existing = knownPureOps.lookup(op)) {
     replaceUsesAndDelete(knownPureOps, op, existing, hasSSADominance);
-    ++numCSE;
     return success();
   }
 
   if (mlir::isPure(op)) {
     LDBG() << "insert op: " << OpWithFlags(op, OpPrintingFlags().skipRegions())
-           << "to pureMap";
+           << " to pureMap";
     knownPureOps.insert(op, op);
   } else {
     // Otherwise, we add this operation to the known values map.
     LDBG() << "insert op: " << OpWithFlags(op, OpPrintingFlags().skipRegions())
-           << "to map";
+           << " to map";
     knownValues.insert(op, op);
   }
   return failure();
@@ -531,11 +523,14 @@ void CSEDriver::simplify(Operation *op, bool *changed) {
   /// Simplify all regions. Added a new scope using curly braces to release the
   /// knownPureOps scope before deleting the operation.
   {
+    /// The entry point for CSE simplification. A top-level scope is added for
+    /// 'knownPureOps' to track pure operations across the entire operation's
+    /// regions, enabling potential hoisting opportunities. Since only pure
+    /// operations are candidates for hoisting, 'knownValues' does not require
+    /// a corresponding top-level scope here.
     ScopedMapTy knownValues;
     ScopedMapTy knownPureOps;
     ScopedMapTy::ScopeTy scope(knownPureOps);
-    for (auto &region : op->getRegions()) {
-      simplifyRegion(knownValues, knownPureOps, region);
     for (auto &region : op->getRegions())
       simplifyRegion(knownValues, knownPureOps, region);
   }

@@ -480,7 +480,7 @@ func.func @failing_issue_59135(%arg0: tensor<2x2xi1>, %arg1: f32, %arg2 : tensor
 
 // -----
 
-func.func @cse_multiple_regions(%c: i1, %t: tensor<5xf32>) -> (tensor<5xf32>, tensor<5xf32>) {
+func.func @cse_multiple_regions(%c: i1, %t: tensor<5xf32>) -> (tensor<5xf32>, tensor<5xf32>, tensor<5xf32>) {
   %r1 = scf.if %c -> (tensor<5xf32>) {
     %0 = tensor.empty() : tensor<5xf32>
     scf.yield %0 : tensor<5xf32>
@@ -493,7 +493,13 @@ func.func @cse_multiple_regions(%c: i1, %t: tensor<5xf32>) -> (tensor<5xf32>, te
   } else {
     scf.yield %t : tensor<5xf32>
   }
-  return %r1, %r2 : tensor<5xf32>, tensor<5xf32>
+  %r3 = scf.if %c -> (tensor<5xf32>) {
+    %0 = tensor.empty() : tensor<5xf32>
+    scf.yield %0 : tensor<5xf32>
+  } else {
+    scf.yield %t : tensor<5xf32>
+  }
+  return %r1, %r2, %r3 : tensor<5xf32>, tensor<5xf32>, tensor<5xf32>
 }
 // CHECK-LABEL: func @cse_multiple_regions
 //       CHECK:   tensor.empty
@@ -503,7 +509,7 @@ func.func @cse_multiple_regions(%c: i1, %t: tensor<5xf32>) -> (tensor<5xf32>, te
 //       CHECK:     scf.yield
 //       CHECK:   }
 //   CHECK-NOT:   scf.if
-//       CHECK:   return %[[if]], %[[if]]
+//       CHECK:   return %[[if]], %[[if]], %[[if]] 
 
 // -----
 
