@@ -1338,7 +1338,9 @@ Value *SCEVExpander::visitAddRecExpr(SCEVUseT<const SCEVAddRecExpr *> S) {
     Value *V = expand(
         SE.getAddRecExpr(NewOps, S->getLoop(), S.getNoWrapFlags(SCEV::FlagNW)));
     BasicBlock::iterator NewInsertPt =
-        findInsertPointAfter(cast<Instruction>(V), &*Builder.GetInsertPoint());
+        isa<Instruction>(V) ? findInsertPointAfter(cast<Instruction>(V),
+                                                   &*Builder.GetInsertPoint())
+                            : Builder.GetInsertPoint();
     V = expand(SE.getTruncateExpr(SE.getUnknown(V), Ty), NewInsertPt);
     return V;
   }
