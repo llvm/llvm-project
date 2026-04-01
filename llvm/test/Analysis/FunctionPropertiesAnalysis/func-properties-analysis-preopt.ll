@@ -1,5 +1,7 @@
 ; REQUIRES: asserts
-; RUN: opt -stats -enable-detailed-function-properties -O3 -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt -stats -enable-detailed-function-properties -disable-output -O3 < %s 2>&1 | FileCheck %s
+; RUN: opt -stats -enable-detailed-function-properties -disable-output -passes='thinlto<O3>' < %s 2>&1 | FileCheck %s
+; RUN: opt -stats -enable-detailed-function-properties -disable-output -passes='thinlto-pre-link<O2>' < %s 2>&1 | FileCheck %s
 
 ; CHECK-DAG: 4 func-properties-stats - Number of basic blocks (before optimizations)
 ; CHECK-DAG: 5 func-properties-stats - Number of instructions (of all types) (before optimizations)

@@ -1,5 +1,7 @@
 ; REQUIRES: asserts
-; RUN: opt -stats -O3 -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt -stats -disable-output -O3 < %s 2>&1 | FileCheck %s
+; RUN: opt -stats -disable-output -passes='thinlto<O3>' < %s 2>&1 | FileCheck %s
+; RUN: opt -stats -disable-output -passes='thinlto-pre-link<O2>' < %s 2>&1 | FileCheck %s
 
 ; CHECK-DAG: 4 instcount - Number of basic blocks (before optimizations)
 ; CHECK-DAG: 1 instcount - Number of basic blocks (after optimizations)
