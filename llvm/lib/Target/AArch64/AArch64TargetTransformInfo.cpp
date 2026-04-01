@@ -6063,7 +6063,7 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
   // Slightly lower the cost of a sub reduction so that it can be considered
   // as candidate for 'cdot' operations. This is a somewhat arbitrary number,
   // because we don't yet model these operations directly.
-  return IsSub ? ((8 * ExpandCost) / 10) : ExpandCost;
+  return ExpandCost.isValid() && IsSub ? ((8 * ExpandCost) / 10) : ExpandCost;
 }
 
 InstructionCost

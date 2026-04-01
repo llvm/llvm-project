@@ -3443,7 +3443,8 @@ public:
       std::optional<FastMathFlags> FMF) const override {
     unsigned Ratio =
         AccumType->getScalarSizeInBits() / InputTypeA->getScalarSizeInBits();
-    if (VF.getKnownMinValue() <= Ratio)
+    if (VF.getKnownMinValue() <= Ratio || VF.getKnownMinValue() % Ratio != 0 ||
+        (BinOp && InputTypeA != InputTypeB))
       return InstructionCost::getInvalid();
 
     Type *InputVectorType = VectorType::get(InputTypeA, VF);
