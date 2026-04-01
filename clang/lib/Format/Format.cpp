@@ -1146,6 +1146,8 @@ template <> struct MappingTraits<FormatStyle> {
                      Style.IndentWrappedFunctionNames);
       IO.mapOptional("IndentRequires", Style.IndentRequiresClause);
       IO.mapOptional("PointerBindsToType", Style.PointerAlignment);
+      IO.mapOptional("SpaceAfterCompoundLiteralType", 
+                     Style.SpaceAfterCompoundLiteralType);
       IO.mapOptional("SpaceAfterControlStatementKeyword",
                      Style.SpaceBeforeParens);
       IO.mapOptional("SpaceInEmptyBlock", SpaceInEmptyBlock);
@@ -1909,6 +1911,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
                             /*IgnoreExtension=*/false};
   LLVMStyle.SortJavaStaticImport = FormatStyle::SJSIO_Before;
   LLVMStyle.SortUsingDeclarations = FormatStyle::SUD_LexicographicNumeric;
+  LLVMStyle.SpaceAfterCompoundLiteralType = false;
   LLVMStyle.SpaceAfterCStyleCast = false;
   LLVMStyle.SpaceAfterLogicalNot = false;
   LLVMStyle.SpaceAfterOperatorKeyword = false;

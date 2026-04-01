@@ -505,6 +505,14 @@ struct FormatStyle {
   /// \version 5
   EscapedNewlineAlignmentStyle AlignEscapedNewlines;
 
+  /// If ``true``, a space is inserted after the type of a compound literal.
+  /// \code
+  ///    true:                                  false:
+  ///    (int) {1, 2, 3}                 vs.    (int){1, 2, 3}
+  /// \endcode
+  /// \version 19
+  bool SpaceAfterCompoundLiteralType;
+
   /// Different styles for aligning operands.
   enum OperandAlignmentStyle : int8_t {
     /// Do not align operands of binary and ternary expressions.

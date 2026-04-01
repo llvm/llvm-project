@@ -18150,6 +18150,96 @@ TEST_F(FormatTest, ConfigurableSpacesInParens) {
                Spaces);
 }
 
+TEST_F(FormatTest, SpaceAfterCompoundLiteralType) {
+  FormatStyle Style = getLLVMStyle();
+
+  // --- Feature enabled ---
+  Style.SpaceAfterCompoundLiteralType = true;
+
+  // Basic primitive type
+  verifyFormat("int i = (int) {1, 2, 3};", Style);
+
+  // Struct type
+  verifyFormat("f((struct foo) {1, 2, 3});", Style);
+
+  // Pointer type
+  verifyFormat("void *p = (void *) {0};", Style);
+
+  // Nested compound literal
+  verifyFormat("int i = (int) {(int) {1}};", Style);
+
+  // Assignment to struct
+  verifyFormat("struct point p = (struct point) {1, 2};", Style);
+
+  // Used as function argument
+  verifyFormat("foo((int) {1, 2, 3});", Style);
+
+  // Multiple arguments, one is compound literal
+  verifyFormat("foo(x, (int) {1, 2, 3}, y);", Style);
+
+  // Empty braces
+  verifyFormat("int i = (int) {};", Style);
+
+  // Multi-line / designated initializers
+  verifyFormat("struct foo s = (struct foo) {.x = 1, .y = 2};", Style);
+
+  // Typedef'd type
+  verifyFormat("MyType t = (MyType) {1, 2, 3};", Style);
+
+  // --- Feature disabled (default behavior) ---
+  Style.SpaceAfterCompoundLiteralType = false;
+
+  // Basic primitive type
+  verifyFormat("int i = (int){1, 2, 3};", Style);
+
+  // Struct type
+  verifyFormat("f((struct foo){1, 2, 3});", Style);
+
+  // Pointer type
+  verifyFormat("void *p = (void *){0};", Style);
+
+  // Nested compound literal
+  verifyFormat("int i = (int){(int){1}};", Style);
+
+  // Assignment to struct
+  verifyFormat("struct point p = (struct point){1, 2};", Style);
+
+  // Used as function argument
+  verifyFormat("foo((int){1, 2, 3});", Style);
+
+  // Multiple arguments, one is compound literal
+  verifyFormat("foo(x, (int){1, 2, 3}, y);", Style);
+
+  // Empty braces
+  verifyFormat("int i = (int){};", Style);
+
+  // Multi-line / designated initializers
+  verifyFormat("struct foo s = (struct foo){.x = 1, .y = 2};", Style);
+
+  // Typedef'd type
+  verifyFormat("MyType t = (MyType){1, 2, 3};", Style);
+
+  // --- Interaction: SpaceAfterCompoundLiteralType=true should NOT
+  //     affect regular C-style casts (no brace follows) ---
+  Style.SpaceAfterCompoundLiteralType = true;
+  Style.SpaceAfterCStyleCast = false;
+
+  // Regular cast — no space, unaffected by our option
+  verifyFormat("int x = (int)y;", Style);
+  verifyFormat("int x = (int)(y + z);", Style);
+  verifyFormat("void *p = (void *)ptr;", Style);
+
+  // --- Interaction: both options enabled ---
+  Style.SpaceAfterCompoundLiteralType = true;
+  Style.SpaceAfterCStyleCast = true;
+
+  // Regular cast gets space from SpaceAfterCStyleCast
+  verifyFormat("int x = (int) y;", Style);
+
+  // Compound literal also gets space from SpaceAfterCompoundLiteralType
+  verifyFormat("int i = (int) {1, 2, 3};", Style);
+}
+
 TEST_F(FormatTest, ConfigurableSpacesInSquareBrackets) {
   verifyFormat("int a[5];");
   verifyFormat("a[3] += 42;");

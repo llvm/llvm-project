@@ -4677,6 +4677,14 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
                ? Style.SpacesInParensOptions.InCStyleCasts
                : Style.SpacesInParensOptions.Other;
   }
+
+
+  if (Style.SpaceAfterCompoundLiteralType && Left.is(tok::r_paren) && 
+      Left.MatchingParen && Left.MatchingParen->is(tok::l_paren) &&
+      Right.is(tok::l_brace)) {
+    return true;
+  }
+
   if (Right.isOneOf(tok::semi, tok::comma))
     return false;
   if (Right.is(tok::less) && Line.Type == LT_ObjCDecl) {
@@ -5611,8 +5619,11 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
   // If the next token is a binary operator or a selector name, we have
   // incorrectly classified the parenthesis as a cast. FIXME: Detect correctly.
   if (Left.is(TT_CastRParen)) {
+    // Compound literal: (Type) {init} — space controlled by dedicated option
+    if (Style.SpaceAfterCompoundLiteralType && Right.is(tok::l_brace))
+      return true;
     return Style.SpaceAfterCStyleCast ||
-           Right.isOneOf(TT_BinaryOperator, TT_SelectorName);
+          Right.isOneOf(TT_BinaryOperator, TT_SelectorName);
   }
 
   auto ShouldAddSpacesInAngles = [this, &Right]() {
