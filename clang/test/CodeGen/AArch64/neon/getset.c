@@ -17,7 +17,7 @@
 #include <arm_neon.h>
 
 //===------------------------------------------------------===//
-// Extract one element from vector
+// 2.1.9.7 Extract one element from vector
 //===------------------------------------------------------===//
 
 // ALL-LABEL: @test_vget_lane_u8(
