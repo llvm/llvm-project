@@ -179,10 +179,11 @@ bool NaryReassociateLegacyPass::runOnFunction(Function &F) {
   auto *TLI = &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
   auto *TTI = &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
 
-  // UniformityInfo is required on all targets, but on targets without branch
-  // divergence it does no work and reports everything as uniform.
-  UniformityInfo *UI =
-      &getAnalysis<UniformityInfoWrapperPass>().getUniformityInfo();
+  // Only compute UniformityInfo on targets with branch divergence to avoid
+  // the compile-time cost of CycleAnalysis on targets that don't need it.
+  UniformityInfo *UI = nullptr;
+  if (TTI->hasBranchDivergence(&F))
+    UI = &getAnalysis<UniformityInfoWrapperPass>().getUniformityInfo();
 
   return Impl.runImpl(F, AC, DT, SE, TLI, TTI, UI);
 }
@@ -195,9 +196,11 @@ PreservedAnalyses NaryReassociatePass::run(Function &F,
   auto *TLI = &AM.getResult<TargetLibraryAnalysis>(F);
   auto *TTI = &AM.getResult<TargetIRAnalysis>(F);
 
-  // UniformityInfo is required on all targets, but on targets without branch
-  // divergence it does no work and reports everything as uniform.
-  UniformityInfo *UI = &AM.getResult<UniformityInfoAnalysis>(F);
+  // Only compute UniformityInfo on targets with branch divergence to avoid
+  // the compile-time cost of CycleAnalysis on targets that don't need it.
+  UniformityInfo *UI = nullptr;
+  if (TTI->hasBranchDivergence(&F))
+    UI = &AM.getResult<UniformityInfoAnalysis>(F);
 
   if (!runImpl(F, AC, DT, SE, TLI, TTI, UI))
     return PreservedAnalyses::all();
