@@ -53,12 +53,12 @@ target triple = "wasm32-unknown-unknown"
 ; LIME1-NEXT: .int8  43
 ; LIME1-NEXT: .int8  22
 ; LIME1-NEXT: .ascii  "call-indirect-overlong"
-; LIME1-NEXT: .int8  45
-; LIME1-NEXT: .int8  22
-; LIME1-NEXT: .ascii  "libcall-thread-context"
 ; LIME1-NEXT: .int8  43
 ; LIME1-NEXT: .int8  14
 ; LIME1-NEXT: .ascii  "extended-const"
+; LIME1-NEXT: .int8  45
+; LIME1-NEXT: .int8  22
+; LIME1-NEXT: .ascii  "libcall-thread-context"
 ; LIME1-NEXT: .int8  43
 ; LIME1-NEXT: .int8  10
 ; LIME1-NEXT: .ascii  "multivalue"
@@ -92,9 +92,6 @@ target triple = "wasm32-unknown-unknown"
 ; BLEEDING-EDGE-NEXT: .int8  43
 ; BLEEDING-EDGE-NEXT: .int8  22
 ; BLEEDING-EDGE-NEXT: .ascii  "call-indirect-overlong"
-; BLEEDING-EDGE-NEXT: .int8  45
-; BLEEDING-EDGE-NEXT: .int8  22
-; BLEEDING-EDGE-NEXT: .ascii  "libcall-thread-context"
 ; BLEEDING-EDGE-NEXT: .int8  43
 ; BLEEDING-EDGE-NEXT: .int8  18
 ; BLEEDING-EDGE-NEXT: .ascii  "exception-handling"
@@ -107,6 +104,9 @@ target triple = "wasm32-unknown-unknown"
 ; BLEEDING-EDGE-NEXT: .int8  43
 ; BLEEDING-EDGE-NEXT: .int8  2
 ; BLEEDING-EDGE-NEXT: .ascii  "gc"
+; BLEEDING-EDGE-NEXT: .int8  45
+; BLEEDING-EDGE-NEXT: .int8  22
+; BLEEDING-EDGE-NEXT: .ascii  "libcall-thread-context"
 ; BLEEDING-EDGE-NEXT: .int8  43
 ; BLEEDING-EDGE-NEXT: .int8  11
 ; BLEEDING-EDGE-NEXT: .ascii  "multimemory"
