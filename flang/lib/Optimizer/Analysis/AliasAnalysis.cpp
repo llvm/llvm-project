@@ -317,6 +317,44 @@ static bool noAliasBasedOnType(mlir::Value lhs, mlir::Value rhs) {
   return false;
 }
 
+/// Return true if two access paths from the same origin variable diverge at
+/// a named component step, meaning they address disjoint subobjects of the
+/// root variable. For example, paths [Component("a")] and [Component("b")]
+/// diverge immediately, while [Component("a"), Component("x")] and
+/// [Component("a"), Component("y")] share a common prefix "a" and diverge
+/// at the second step.
+///
+/// If the paths diverge at steps that are not both Component (e.g., one is
+/// a PointerDeref), or if either path continues through a PointerDeref or
+/// AllocDeref after the divergence, we conservatively return false because
+/// the runtime address after a dereference is not guaranteed to stay within
+/// the subobject.
+static bool pathsDivergeAtComponent(const fir::AliasAnalysis::Source &lhsSrc,
+                                    const fir::AliasAnalysis::Source &rhsSrc) {
+  using PathStep = fir::AliasAnalysis::Source::PathStep;
+  auto &lhsSteps = lhsSrc.accessPath.steps;
+  auto &rhsSteps = rhsSrc.accessPath.steps;
+  size_t minLen = std::min(lhsSteps.size(), rhsSteps.size());
+  for (size_t i = 0; i < minLen; ++i) {
+    if (lhsSteps[i].kind == PathStep::Kind::Component &&
+        rhsSteps[i].kind == PathStep::Kind::Component &&
+        lhsSteps[i].component != rhsSteps[i].component) {
+      auto hasDerefAfter = [](llvm::ArrayRef<PathStep> steps, size_t from) {
+        for (size_t j = from; j < steps.size(); ++j)
+          if (steps[j].kind != PathStep::Kind::Component)
+            return true;
+        return false;
+      };
+      if (hasDerefAfter(lhsSteps, i + 1) || hasDerefAfter(rhsSteps, i + 1))
+        return false;
+      return true;
+    }
+    if (lhsSteps[i] != rhsSteps[i])
+      break;
+  }
+  return false;
+}
+
 AliasResult AliasAnalysis::alias(mlir::Value lhs, mlir::Value rhs) {
   // A wrapper around alias(Source lhsSrc, Source rhsSrc, mlir::Value lhs,
   // mlir::Value rhs) This allows a user to provide Source that may be obtained
@@ -383,8 +421,14 @@ AliasResult AliasAnalysis::alias(Source lhsSrc, Source rhsSrc, mlir::Value lhs,
     if (lhsSrc.origin == rhsSrc.origin) {
       LLVM_DEBUG(llvm::dbgs()
                  << "  aliasing because same source kind and origin\n");
-      if (approximateSource)
+      if (approximateSource) {
+        if (pathsDivergeAtComponent(lhsSrc, rhsSrc)) {
+          LLVM_DEBUG(llvm::dbgs()
+                     << "  no alias: different components of same origin\n");
+          return AliasResult::NoAlias;
+        }
         return AliasResult::MayAlias;
+      }
       // One should be careful about relying on MustAlias.
       // The LLVM definition implies that the two MustAlias
       // memory objects start at exactly the same location.
@@ -418,6 +462,11 @@ AliasResult AliasAnalysis::alias(Source lhsSrc, Source rhsSrc, mlir::Value lhs,
     if (lhsSrc.origin.u == rhsSrc.origin.u &&
         ((isRecordWithPointerComponent(lhs.getType()) && !rhsSrc.isData()) ||
          (isRecordWithPointerComponent(rhs.getType()) && !lhsSrc.isData()))) {
+      if (pathsDivergeAtComponent(lhsSrc, rhsSrc)) {
+        LLVM_DEBUG(llvm::dbgs()
+                   << "  no alias: different components of same origin\n");
+        return AliasResult::NoAlias;
+      }
       LLVM_DEBUG(llvm::dbgs()
                  << "  aliasing between composite and non-data component with "
                  << "same source kind and origin value\n");
