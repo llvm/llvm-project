@@ -31,8 +31,7 @@ class SharedLibTestCase(TestBase):
             self.target, self.shlib_names
         )
 
-        ctx = self.platformContext
-        self.shared_lib_name = ctx.shlib_prefix + "foo." + ctx.shlib_extension
+        self.shared_lib_name = self.platformContext.getFullLibName("foo")
 
     @skipIfWindows
     def test_source_line_breakpoint(self):

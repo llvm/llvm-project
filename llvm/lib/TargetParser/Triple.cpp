@@ -592,7 +592,7 @@ static Triple::ArchType parseARMArch(StringRef ArchName) {
   return arch;
 }
 
-static Triple::ArchType parseArch(StringRef ArchName) {
+Triple::ArchType Triple::parseArch(StringRef ArchName) {
   auto AT =
       StringSwitch<Triple::ArchType>(ArchName)
           .Cases({"i386", "i486", "i586", "i686"}, Triple::x86)

@@ -14,6 +14,7 @@
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/Dialect/XeGPU/Transforms/Passes.h"
 #include "mlir/Dialect/XeGPU/Transforms/Transforms.h"
+#include "mlir/Dialect/XeGPU/Transforms/XeGPULayoutImpl.h"
 #include "mlir/Dialect/XeGPU/Utils/XeGPUUtils.h"
 #include "mlir/Dialect/XeGPU/uArch/IntelGpuXe2.h"
 #include "mlir/IR/Builders.h"
@@ -1519,9 +1520,15 @@ struct XeGPUSgToWiDistributeExperimentalPass
 
 void XeGPUSgToWiDistributeExperimentalPass::runOnOperation() {
 
+  // Recover temporary operand layouts for usage in patterns.
+  Operation *root = getOperation();
+  if (!xegpu::recoverTemporaryLayouts(root)) {
+    signalPassFailure();
+    return;
+  }
+
   // Verify if all XeGPU anchor ops and vector ops have result layouts.
   // TODO: This can be removed once the full layout refactoring is done.
-  Operation *root = getOperation();
   if (failed(verifyLayouts(root))) {
     LLVM_DEBUG(DBGS() << "XeGPUSgToWiDistributeExperimentalPass: layout "
                          "verification failed\n");
