@@ -990,7 +990,7 @@
 // CHECK-ANDROID-RELR-28: "--pack-dyn-relocs=android+relr"
 // CHECK-ANDROID-RELR-28: "--use-android-relr-tags"
 // CHECK-ANDROID-RELR-28-NOT: "--pack-dyn-relocs=android"
-// CHECK-ANDROID-RELR-28-NOT: "--pack-dyn-relocs=android+relr"
+// CHECK-ANDROID-RELR-28-NOT: "--pack-dyn-relocs=relr"
 //
 // Check that we stop passing --use-android-relr-tags for ABI 30+.
 // RUN: %clang %s -### -o %t.o 2>&1 \
@@ -1000,7 +1000,7 @@
 // CHECK-ANDROID-RELR-30: "--pack-dyn-relocs=android+relr"
 // CHECK-ANDROID-RELR-30-NOT: "--use-android-relr-tags"
 // CHECK-ANDROID-RELR-30-NOT: "--pack-dyn-relocs=android"
-// CHECK-ANDROID-RELR-30-NOT: "--pack-dyn-relocs=android+relr"
+// CHECK-ANDROID-RELR-30-NOT: "--pack-dyn-relocs=relr"
 
 // RUN: %clang -### %s -no-pie 2>&1 --target=mips64-linux-gnuabin32 \
 // RUN:   | FileCheck --check-prefix=CHECK-MIPS64EL-GNUABIN32 %s
