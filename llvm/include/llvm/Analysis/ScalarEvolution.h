@@ -82,7 +82,7 @@ struct SCEVUse : PointerIntPair<const SCEV *, 2> {
 
   /// Returns true of the SCEVUse is canonical, i.e. no SCEVUse flags set in any
   /// operands.
-  bool isCanonical() const;
+  bool isCanonical() const { return getCanonical() == getRawPointer(); }
 
   /// Return the canonical SCEV for this SCEVUse.
   const SCEV *getCanonical() const;
@@ -136,10 +136,6 @@ template <> struct DenseMapInfo<SCEVUse> {
     return LHS.getRawPointer() == RHS.getRawPointer();
   }
 };
-
-inline bool SCEVUse::isCanonical() const {
-  return getCanonical() == getPointer() && getFlags() == 0;
-}
 
 template <> struct simplify_type<SCEVUse> {
   using SimpleType = const SCEV *;
