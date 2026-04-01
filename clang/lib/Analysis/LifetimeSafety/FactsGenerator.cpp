@@ -704,15 +704,10 @@ void FactsGenerator::handleFunctionCall(const Expr *Call,
         assert(!Args[I]->isGLValue() || ArgList->getLength() >= 2);
         ArgList = getRValueOrigins(Args[I], ArgList);
       }
-      if (isGslOwnerType(Args[I]->getType())) {
-        // The constructed gsl::Pointer borrows from the Owner's storage, not
-        // from what the Owner itself borrows, so only the outermost origin is
-        // needed.
-        CurrentBlockFacts.push_back(FactMgr.createFact<OriginFlowFact>(
-            CallList->getOuterOriginID(), ArgList->getOuterOriginID(),
-            KillSrc));
-        KillSrc = false;
-      } else if (IsArgLifetimeBound(I)) {
+      if (isGslOwnerType(Args[I]->getType()) || IsArgLifetimeBound(I)) {
+        // The constructed gsl::Pointer is dependent on the argument itself, not
+        // on anything the argument is dependent on, so only the outermost
+        // origin is needed.
         CurrentBlockFacts.push_back(FactMgr.createFact<OriginFlowFact>(
             CallList->getOuterOriginID(), ArgList->getOuterOriginID(),
             KillSrc));
