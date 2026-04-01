@@ -63,7 +63,7 @@ define double @ret_fract_no_nan_no_inf(double nofpclass(inf nan) %x) {
   ret double %fract
 }
 
-; Fract must be <= 1, so this cannot introduce overfloww
+; Fract must be < 1, so this cannot introduce overflow
 define float @ret_not_inf__fmul__fract(float nofpclass(inf) %not.inf, float %x) {
 ; CHECK-LABEL: define nofpclass(inf) float @ret_not_inf__fmul__fract(
 ; CHECK-SAME: float nofpclass(inf) [[NOT_INF:%.*]], float [[X:%.*]]) #[[ATTR1]] {
