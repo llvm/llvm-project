@@ -428,11 +428,9 @@ static bool tryToRecognizePopCount2n3(Instruction &I) {
                              m_Deferred(Add2))))
       return false;
     Add1 = Add2;
-    Add2 = nullptr;
   }
 
   Value *And1 = Add1;
-  Add2 = nullptr;
   // Matching "x = (x + (x >> 4)) & 0x0F0F0F0F".
   if (!match(And1, m_And(m_c_Add(m_LShr(m_Value(Add2), m_SpecificInt(4)),
                                  m_Deferred(Add2)),
