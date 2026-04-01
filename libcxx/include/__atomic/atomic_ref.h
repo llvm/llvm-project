@@ -114,9 +114,6 @@ private:
 
 public:
   using value_type = _Tp;
-#  if _LIBCPP_STD_VER >= 26
-  using __address_return_t = __copy_cv_t<_Tp, void>*;
-#  endif
 
   static constexpr size_t required_alignment = alignof(_Tp) > __min_alignment ? alignof(_Tp) : __min_alignment;
 

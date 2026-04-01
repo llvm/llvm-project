@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // REQUIRES: std-at-least-c++26
+
 // ADDITIONAL_COMPILE_FLAGS(gcc-style-warnings): -Wno-deprecated-volatile
 // ADDITIONAL_COMPILE_FLAGS: -Wno-deprecated-volatile
 
@@ -25,29 +26,29 @@
 template <class _From>
 struct copy_cv {
   template <class _To>
-  using apply _LIBCPP_NODEBUG = _To;
+  using apply = _To;
 };
 
 template <class _From>
 struct copy_cv<const _From> {
   template <class _To>
-  using apply _LIBCPP_NODEBUG = const _To;
+  using apply = const _To;
 };
 
 template <class _From>
 struct copy_cv<volatile _From> {
   template <class _To>
-  using apply _LIBCPP_NODEBUG = volatile _To;
+  using apply = volatile _To;
 };
 
 template <class _From>
 struct copy_cv<const volatile _From> {
   template <class _To>
-  using apply _LIBCPP_NODEBUG = const volatile _To;
+  using apply = const volatile _To;
 };
 
 template <class _From, class _To>
-using copy_cv_t _LIBCPP_NODEBUG = typename copy_cv<_From>::template apply<_To>;
+using copy_cv_t = typename copy_cv<_From>::template apply<_To>;
 
 template <class T>
 using identity_t = T;
