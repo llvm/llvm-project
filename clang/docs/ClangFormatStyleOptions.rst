@@ -6822,7 +6822,7 @@ the configuration (without a prefix: ``Auto``).
 
 .. _SpaceBeforeCtorInitializerColon:
 
-**SpaceBeforeCtorInitializerColon** (``Boolean``) :versionbadge:`clang-format 23` :ref:`¶ <SpaceBeforeCtorInitializerColon>`
+**SpaceBeforeCtorInitializerColon** (``Boolean``) :versionbadge:`clang-format 7` :ref:`¶ <SpaceBeforeCtorInitializerColon>`
   If ``false``, spaces will be removed before constructor initializer
   colon.
 
@@ -6833,7 +6833,7 @@ the configuration (without a prefix: ``Auto``).
 
 .. _SpaceBeforeEnumUnderlyingTypeColon:
 
-**SpaceBeforeEnumUnderlyingTypeColon** (``Boolean``) :versionbadge:`clang-format 7` :ref:`¶ <SpaceBeforeEnumUnderlyingTypeColon>`
+**SpaceBeforeEnumUnderlyingTypeColon** (``Boolean``) :versionbadge:`clang-format 23` :ref:`¶ <SpaceBeforeEnumUnderlyingTypeColon>`
   If ``false``, spaces will be removed before enum underlying type colon.
 
   .. code-block:: c++
