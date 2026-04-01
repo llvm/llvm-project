@@ -1441,9 +1441,8 @@ bool HexagonInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
 
     case Hexagon::PS_crash:
       // PS_crash is handled directly by HexagonAsmPrinter, which emits
-      // a single word (0x00000000) that decodes as an illegal duplex with
-      // both slots writing R0.  The hardware raises a "multiple writes to
-      // register" exception.
+      // the word 0x00110011: a duplex where both slots write R1.  The
+      // hardware raises a "multiple writes to register" exception.
       return false;
 
     case Hexagon::PS_tailcall_i:

@@ -250,6 +250,17 @@ DecodeStatus HexagonDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
   uint64_t BytesToSkip = 0;
 
   if (!CurrentBundle) {
+    // DUPLEX_LOAD_R1R1 is used by PS_crash (__builtin_trap).  It encodes
+    // a duplex where both slots write R1, so the hardware raises a
+    // "multiple writes to register" exception.  Intercept it here because
+    // makeBundle's packet checker would (correctly) reject the duplicate
+    // destination and return a decode failure.
+    if (Bytes.size() >= HEXAGON_INSTR_SIZE &&
+        support::endian::read32le(Bytes.data()) == DUPLEX_LOAD_R1R1) {
+      MI.setOpcode(Hexagon::PS_crash);
+      Size = HEXAGON_INSTR_SIZE;
+      return MCDisassembler::Success;
+    }
     if (!makeBundle(Bytes, Address, BytesToSkip, CS)) {
       Size = BytesToSkip;
       resetBundle();
@@ -274,6 +285,18 @@ DecodeStatus HexagonDisassembler::getInstructionBundle(MCInst &MI,
   Size = 0;
   uint64_t BytesToSkip = 0;
   assert(!CurrentBundle);
+
+  // See getInstruction() for the PS_crash / DUPLEX_LOAD_R1R1 rationale.
+  if (Bytes.size() >= HEXAGON_INSTR_SIZE &&
+      support::endian::read32le(Bytes.data()) == DUPLEX_LOAD_R1R1) {
+    MI.setOpcode(Hexagon::BUNDLE);
+    MI.addOperand(MCOperand::createImm(0));
+    MCInst *CrashInst = getContext().createMCInst();
+    CrashInst->setOpcode(Hexagon::PS_crash);
+    MI.addOperand(MCOperand::createInst(CrashInst));
+    Size = HEXAGON_INSTR_SIZE;
+    return MCDisassembler::Success;
+  }
 
   if (!makeBundle(Bytes, Address, BytesToSkip, CS)) {
     Size = BytesToSkip;

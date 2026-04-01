@@ -1,0 +1,7 @@
+# RUN: llvm-mc -triple hexagon -disassemble < %s | FileCheck %s
+
+## 0x00110011 is used by __builtin_trap.  It encodes the duplex
+## { R1 = memw(R1+#0); R1 = memw(R1+#0) } -- both slots write R1,
+## triggering a hardware exception.
+0x11 0x00 0x11 0x00
+# CHECK: mult_reg_write_fail

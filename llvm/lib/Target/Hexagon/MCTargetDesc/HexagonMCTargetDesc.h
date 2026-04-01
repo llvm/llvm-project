@@ -101,6 +101,11 @@ createHexagonELFObjectWriter(uint8_t OSABI, StringRef CPU);
 unsigned HexagonGetLastSlot();
 unsigned HexagonConvertUnits(unsigned ItinUnits, unsigned *Lanes);
 
+// Raw encoding of the duplex { R1 = memw(R1+#0); R1 = memw(R1+#0) }.
+// Both slots write R1, so the hardware raises a "multiple writes to
+// register" exception.  Used by PS_crash / __builtin_trap.
+constexpr uint32_t DUPLEX_LOAD_R1R1 = 0x00110011;
+
 } // End llvm namespace
 
 // Define symbolic names for Hexagon registers.  This defines a mapping from

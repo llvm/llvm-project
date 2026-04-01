@@ -617,9 +617,11 @@ defm PS_storeri : NewCircularStore<IntRegs, WordAccess>;
 defm PS_storerd : NewCircularStore<DoubleRegs, WordAccess>;
 
 // A pseudo that generates a runtime crash. This is used to implement
-// __builtin_trap.  It is emitted directly by the AsmPrinter as a single
-// 32-bit zero word, which decodes as a duplex with both slots writing R0.
-// The hardware raises a "multiple writes to register" exception.
+// __builtin_trap.  It is emitted directly by the AsmPrinter as the 32-bit
+// word 0x00110011, which decodes as the duplex
+//   { R1 = memw(R1+#0); R1 = memw(R1+#0) }
+// Both slots write R1, so the hardware raises a "multiple writes to
+// register" exception.
 let hasSideEffects = 1, isPseudo = 1, isCodeGenOnly = 1, isSolo = 1 in
 def PS_crash: InstHexagon<(outs), (ins), "", [], "", PSEUDO, TypePSEUDO>;
 
