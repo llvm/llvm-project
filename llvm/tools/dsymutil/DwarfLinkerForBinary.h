@@ -121,6 +121,9 @@ private:
 
     std::optional<std::string> LibInstallName;
 
+    /// Address ranges for symbols with sizes (used for assembly file support).
+    RangesTy AddressRanges;
+
     /// Returns list of valid relocations from \p Relocs,
     /// between \p StartOffset and \p NextOffset.
     ///
@@ -164,6 +167,15 @@ private:
         }
       } else {
         findValidRelocsInDebugSections(Obj, DMO);
+      }
+      // Populate address ranges from debug map symbols that have sizes.
+      // This is used for assembly files where labels may not have high_pc.
+      for (const auto &Entry : DMO.symbols()) {
+        const auto &Mapping = Entry.getValue();
+        if (Mapping.Size && Mapping.ObjectAddress)
+          AddressRanges.insert(
+              {*Mapping.ObjectAddress, *Mapping.ObjectAddress + Mapping.Size},
+              int64_t(Mapping.BinaryAddress) - *Mapping.ObjectAddress);
       }
     }
     ~AddressManager() override { clear(); }
@@ -224,6 +236,14 @@ private:
     void clear() override {
       ValidDebugInfoRelocs.clear();
       ValidDebugAddrRelocs.clear();
+      AddressRanges.clear();
+    }
+
+    std::optional<AssemblyRange>
+    getAssemblyRangeForAddress(uint64_t Addr) override {
+      if (auto Range = AddressRanges.getRangeThatContains(Addr))
+        return AssemblyRange(Range->Range.start(), Range->Range.end());
+      return std::nullopt;
     }
   };
 

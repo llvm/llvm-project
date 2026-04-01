@@ -763,6 +763,24 @@ struct is_inf {
 /// For vectors, this includes constants with undefined elements.
 inline cstfp_pred_ty<is_inf> m_Inf() { return cstfp_pred_ty<is_inf>(); }
 
+template <bool IsNegative> struct is_signed_inf {
+  bool isValue(const APFloat &C) const {
+    return C.isInfinity() && IsNegative == C.isNegative();
+  }
+};
+
+/// Match a positive infinity FP constant.
+/// For vectors, this includes constants with undefined elements.
+inline cstfp_pred_ty<is_signed_inf<false>> m_PosInf() {
+  return cstfp_pred_ty<is_signed_inf<false>>();
+}
+
+/// Match a negative infinity FP constant.
+/// For vectors, this includes constants with undefined elements.
+inline cstfp_pred_ty<is_signed_inf<true>> m_NegInf() {
+  return cstfp_pred_ty<is_signed_inf<true>>();
+}
+
 struct is_noninf {
   bool isValue(const APFloat &C) const { return !C.isInfinity(); }
 };
@@ -2418,6 +2436,13 @@ inline CastInst_match<OpTy, SIToFPInst> m_SIToFP(const OpTy &Op) {
 }
 
 template <typename OpTy>
+inline match_combine_or<CastInst_match<OpTy, UIToFPInst>,
+                        CastInst_match<OpTy, SIToFPInst>>
+m_IToFP(const OpTy &Op) {
+  return m_CombineOr(m_UIToFP(Op), m_SIToFP(Op));
+}
+
+template <typename OpTy>
 inline CastInst_match<OpTy, FPToUIInst> m_FPToUI(const OpTy &Op) {
   return CastInst_match<OpTy, FPToUIInst>(Op);
 }
@@ -2425,6 +2450,13 @@ inline CastInst_match<OpTy, FPToUIInst> m_FPToUI(const OpTy &Op) {
 template <typename OpTy>
 inline CastInst_match<OpTy, FPToSIInst> m_FPToSI(const OpTy &Op) {
   return CastInst_match<OpTy, FPToSIInst>(Op);
+}
+
+template <typename OpTy>
+inline match_combine_or<CastInst_match<OpTy, FPToUIInst>,
+                        CastInst_match<OpTy, FPToSIInst>>
+m_FPToI(const OpTy &Op) {
+  return m_CombineOr(m_FPToUI(Op), m_FPToSI(Op));
 }
 
 template <typename OpTy>

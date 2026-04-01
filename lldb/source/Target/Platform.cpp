@@ -27,6 +27,7 @@
 #include "lldb/Interpreter/OptionValueFileSpec.h"
 #include "lldb/Interpreter/OptionValueProperties.h"
 #include "lldb/Interpreter/Property.h"
+#include "lldb/Interpreter/ScriptInterpreter.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/ModuleCache.h"
 #include "lldb/Target/Platform.h"
@@ -41,6 +42,7 @@
 #include "lldb/Utility/StructuredData.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Path.h"
 
 // Define these constants from POSIX mman.h rather than include the file so
@@ -155,10 +157,85 @@ Status Platform::GetFileWithUUID(const FileSpec &platform_file,
   return Status();
 }
 
-FileSpecList
+llvm::SmallDenseMap<FileSpec, LoadScriptFromSymFile>
+Platform::LocateExecutableScriptingResourcesFromSafePaths(
+    Stream &feedback_stream, FileSpec module_spec, const Target &target) {
+  assert(module_spec);
+  assert(target.GetDebugger().GetScriptInterpreter());
+
+  llvm::SmallDenseMap<FileSpec, LoadScriptFromSymFile> file_specs;
+
+  // For now only Python scripts supported for auto-loading.
+  if (target.GetDebugger().GetScriptLanguage() != eScriptLanguagePython)
+    return file_specs;
+
+  ScriptInterpreter::SanitizedScriptingModuleName sanitized_name =
+      target.GetDebugger()
+          .GetScriptInterpreter()
+          ->GetSanitizedScriptingModuleName(
+              module_spec.GetFileNameStrippingExtension().GetStringRef());
+
+  FileSpecList paths = Debugger::GetSafeAutoLoadPaths();
+
+  // Iterate in reverse so we consider the latest appended path first.
+  for (FileSpec path : llvm::reverse(paths)) {
+    path.AppendPathComponent(sanitized_name.GetOriginalName());
+
+    // Resolve relative paths and '~'.
+    FileSystem::Instance().Resolve(path);
+
+    if (!FileSystem::Instance().Exists(path))
+      continue;
+
+    FileSpec script_fspec = path;
+    script_fspec.AppendPathComponent(
+        llvm::formatv("{0}.py", sanitized_name.GetSanitizedName()).str());
+
+    FileSpec orig_script_fspec = path;
+    orig_script_fspec.AppendPathComponent(
+        llvm::formatv("{0}.py", sanitized_name.GetOriginalName()).str());
+
+    WarnIfInvalidUnsanitizedScriptExists(feedback_stream, sanitized_name,
+                                         orig_script_fspec, script_fspec);
+
+    if (FileSystem::Instance().Exists(script_fspec))
+      file_specs.try_emplace(std::move(script_fspec),
+                             target.GetLoadScriptFromSymbolFile());
+
+    // If we successfully found a directory in a safe auto-load path
+    // stop looking at any other paths.
+    break;
+  }
+
+  return file_specs;
+}
+
+llvm::SmallDenseMap<FileSpec, LoadScriptFromSymFile>
+Platform::LocateExecutableScriptingResourcesForPlatform(
+    Target *target, Module &module, Stream &feedback_stream) {
+  llvm::SmallDenseMap<FileSpec, LoadScriptFromSymFile> empty;
+  return empty;
+}
+
+llvm::SmallDenseMap<FileSpec, LoadScriptFromSymFile>
 Platform::LocateExecutableScriptingResources(Target *target, Module &module,
                                              Stream &feedback_stream) {
-  return FileSpecList();
+  llvm::SmallDenseMap<FileSpec, LoadScriptFromSymFile> empty;
+  if (!target)
+    return empty;
+
+  // Give derived platforms a chance to locate scripting resources.
+  if (auto fspecs = LocateExecutableScriptingResourcesForPlatform(
+          target, module, feedback_stream);
+      !fspecs.empty())
+    return fspecs;
+
+  const FileSpec &module_spec = module.GetFileSpec();
+  if (!module_spec)
+    return empty;
+
+  return LocateExecutableScriptingResourcesFromSafePaths(feedback_stream,
+                                                         module_spec, *target);
 }
 
 Status Platform::GetSharedModule(
@@ -204,10 +281,8 @@ Status Platform::GetSharedModule(
 
 bool Platform::GetModuleSpec(const FileSpec &module_file_spec,
                              const ArchSpec &arch, ModuleSpec &module_spec) {
-  ModuleSpecList module_specs;
-  if (ObjectFile::GetModuleSpecifications(module_file_spec, 0, 0,
-                                          module_specs) == 0)
-    return false;
+  ModuleSpecList module_specs =
+      ObjectFile::GetModuleSpecifications(module_file_spec, 0, 0);
 
   ModuleSpec matched_module_spec;
   return module_specs.FindMatchingModuleSpec(ModuleSpec(module_file_spec, arch),
@@ -2109,6 +2184,37 @@ void Platform::SetLocateModuleCallback(LocateModuleCallback callback) {
 
 Platform::LocateModuleCallback Platform::GetLocateModuleCallback() const {
   return m_locate_module_callback;
+}
+
+void Platform::WarnIfInvalidUnsanitizedScriptExists(
+    Stream &os,
+    const ScriptInterpreter::SanitizedScriptingModuleName &sanitized_name,
+    const FileSpec &original_fspec, const FileSpec &fspec) {
+  if (!sanitized_name.RequiredSanitization())
+    return;
+
+  // Path to unsanitized script name doesn't exist. Nothing to warn about.
+  if (!FileSystem::Instance().Exists(original_fspec))
+    return;
+
+  std::string reason_for_complaint =
+      sanitized_name.IsKeyword()
+          ? llvm::formatv("conflicts with the keyword '{0}'",
+                          sanitized_name.GetConflictingKeyword())
+                .str()
+          : "contains reserved characters";
+
+  if (FileSystem::Instance().Exists(fspec))
+    os.Format("debug script '{0}' cannot be loaded because '{1}' {2}. "
+              "Ignoring '{1}' and loading '{3}' instead.\n",
+              original_fspec.GetPath(), original_fspec.GetFilename(),
+              std::move(reason_for_complaint), fspec.GetFilename());
+  else
+    os.Format("debug script '{0}' cannot be loaded because '{1}' {2}. "
+              "If you intend to have this script loaded, please rename it to "
+              "'{3}' and retry.\n",
+              original_fspec.GetPath(), original_fspec.GetFilename(),
+              std::move(reason_for_complaint), fspec.GetFilename());
 }
 
 PlatformSP PlatformList::GetOrCreate(llvm::StringRef name) {

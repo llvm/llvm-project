@@ -125,9 +125,8 @@ public:
     }
     std::vector<LoanID> LID;
     for (const Loan *L : Analysis.getFactManager().getLoanMgr().getLoans())
-      if (const auto *BL = dyn_cast<PathLoan>(L))
-        if (BL->getAccessPath().getAsValueDecl() == VD)
-          LID.push_back(L->getID());
+      if (L->getAccessPath().getAsValueDecl() == VD)
+        LID.push_back(L->getID());
     if (LID.empty()) {
       ADD_FAILURE() << "Loan for '" << VarName << "' not found.";
       return {};
@@ -136,11 +135,11 @@ public:
   }
 
   bool isLoanToATemporary(LoanID LID) {
-    const Loan *L = Analysis.getFactManager().getLoanMgr().getLoan(LID);
-    if (const auto *BL = dyn_cast<PathLoan>(L)) {
-      return BL->getAccessPath().getAsMaterializeTemporaryExpr() != nullptr;
-    }
-    return false;
+    return Analysis.getFactManager()
+               .getLoanMgr()
+               .getLoan(LID)
+               ->getAccessPath()
+               .getAsMaterializeTemporaryExpr() != nullptr;
   }
 
   // Gets the set of loans that are live at the given program point. A loan is
@@ -169,9 +168,10 @@ public:
   const ExpireFact *
   getExpireFactFromAllFacts(const llvm::ArrayRef<const Fact *> &FactsInBlock,
                             const LoanID &loanID) {
+    const Loan *L = Analysis.getFactManager().getLoanMgr().getLoan(loanID);
     for (const Fact *F : FactsInBlock) {
       if (auto const *CurrentEF = F->getAs<ExpireFact>())
-        if (CurrentEF->getLoanID() == loanID)
+        if (CurrentEF->getAccessPath() == L->getAccessPath())
           return CurrentEF;
     }
     return nullptr;

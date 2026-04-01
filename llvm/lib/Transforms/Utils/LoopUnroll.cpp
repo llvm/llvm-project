@@ -17,6 +17,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopedHashTable.h"
 #include "llvm/ADT/SetVector.h"
@@ -515,7 +516,7 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
     BasicBlock *FirstExitingBlock = nullptr;
     SmallVector<BasicBlock *> ExitingBlocks;
   };
-  DenseMap<BasicBlock *, ExitInfo> ExitInfos;
+  MapVector<BasicBlock *, ExitInfo> ExitInfos;
   SmallVector<BasicBlock *, 4> ExitingBlocks;
   L->getExitingBlocks(ExitingBlocks);
   for (auto *ExitingBlock : ExitingBlocks) {
@@ -1259,37 +1260,6 @@ MDNode *llvm::getUnrollMetadataForLoop(const Loop *L, StringRef Name) {
   if (MDNode *LoopID = L->getLoopID())
     return GetUnrollMetadata(LoopID, Name);
   return nullptr;
-}
-
-// Returns true if the loop has an unroll(full) pragma.
-bool llvm::hasUnrollFullPragma(const Loop *L) {
-  return getUnrollMetadataForLoop(L, "llvm.loop.unroll.full");
-}
-
-// Returns true if the loop has an unroll(enable) pragma. This metadata is used
-// for both "#pragma unroll" and "#pragma clang loop unroll(enable)" directives.
-bool llvm::hasUnrollEnablePragma(const Loop *L) {
-  return getUnrollMetadataForLoop(L, "llvm.loop.unroll.enable");
-}
-
-// Returns true if the loop has an runtime unroll(disable) pragma.
-bool llvm::hasRuntimeUnrollDisablePragma(const Loop *L) {
-  return getUnrollMetadataForLoop(L, "llvm.loop.unroll.runtime.disable");
-}
-
-// If loop has an unroll_count pragma return the (necessarily
-// positive) value from the pragma.  Otherwise return 0.
-unsigned llvm::unrollCountPragmaValue(const Loop *L) {
-  MDNode *MD = getUnrollMetadataForLoop(L, "llvm.loop.unroll.count");
-  if (MD) {
-    assert(MD->getNumOperands() == 2 &&
-           "Unroll count hint metadata should have two operands.");
-    unsigned Count =
-        mdconst::extract<ConstantInt>(MD->getOperand(1))->getZExtValue();
-    assert(Count >= 1 && "Unroll count must be positive.");
-    return Count;
-  }
-  return 0;
 }
 
 std::optional<RecurrenceDescriptor>

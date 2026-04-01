@@ -1648,64 +1648,61 @@ __CLC_TABLE_FUNCTION_VEC(double, SINH_TBL_TAIL, sinh_tbl_tail);
 __CLC_TABLE_FUNCTION_VEC(double, COSH_TBL_HEAD, cosh_tbl_head);
 __CLC_TABLE_FUNCTION_VEC(double, COSH_TBL_TAIL, cosh_tbl_tail);
 
-__CLC_DECLARE_TABLE(uchar, PIBITS_TBL, ) = {
-    224, 241, 27,  193, 12,  88,  33,  116, 53,  126, 196, 126, 237, 175, 169,
-    75,  74,  41,  222, 231, 28,  244, 236, 197, 151, 175, 31,  235, 158, 212,
-    181, 168, 127, 121, 154, 253, 24,  61,  221, 38,  44,  159, 60,  251, 217,
-    180, 125, 180, 41,  104, 45,  70,  188, 188, 63,  96,  22,  120, 255, 95,
-    226, 127, 236, 160, 228, 247, 46,  126, 17,  114, 210, 231, 76,  13,  230,
-    88,  71,  230, 4,   249, 125, 209, 154, 192, 113, 166, 19,  18,  237, 186,
-    212, 215, 8,   162, 251, 156, 166, 196, 114, 172, 119, 248, 115, 72,  70,
-    39,  168, 187, 36,  25,  128, 75,  55,  9,   233, 184, 145, 220, 134, 21,
-    239, 122, 175, 142, 69,  249, 7,   65,  14,  241, 100, 86,  138, 109, 3,
-    119, 211, 212, 71,  95,  157, 240, 167, 84,  16,  57,  185, 13,  230, 139,
-    2,   0,   0,   0,   0,   0,   0,   0};
+__CLC_DECLARE_TABLE(uint, TWO_BY_PI_BITS_TABLE, 37) = {
+    0xa2f9836e, 0x4e441529, 0xfc2757d1, 0xf534ddc0, 0xdb629599, 0x3c439041,
+    0xfe5163ab, 0xdebbc561, 0xb7246e3a, 0x424dd2e0, 0x06492eea, 0x09d1921c,
+    0xfe1deb1c, 0xb129a73e, 0xe88235f5, 0x2ebb4484, 0xe99c7026, 0xb45f7e41,
+    0x3991d639, 0x835339f4, 0x9c845f8b, 0xbdf9283b, 0x1ff897ff, 0xde05980f,
+    0xef2f118b, 0x5a0a6d1f, 0x6d367ecf, 0x27cb09b7, 0x4f463f66, 0x9e5fea2d,
+    0x7527bac7, 0xebe5f17b, 0x3d0739f7, 0x8a5292ea, 0x6bfb5fb1, 0x1f8d5d08,
+    0x56033046};
 
-_CLC_DEF _CLC_OVERLOAD ulong __CLC_TABLE_MANGLE(pibits_tbl)(int idx) {
-  return *(__constant ulong *)(PIBITS_TBL + idx);
+_CLC_DEF _CLC_OVERLOAD uint __CLC_TABLE_MANGLE(two_by_pi_bits_tbl)(int idx) {
+  return *(__constant uint *)(TWO_BY_PI_BITS_TABLE + idx);
 }
-_CLC_DEF _CLC_OVERLOAD ulong2 __CLC_TABLE_MANGLE(pibits_tbl)(int2 idx) {
-  return (ulong2){*(__constant ulong *)(PIBITS_TBL + idx.s0),
-                  *(__constant ulong *)(PIBITS_TBL + idx.s1)};
+_CLC_DEF _CLC_OVERLOAD uint2 __CLC_TABLE_MANGLE(two_by_pi_bits_tbl)(int2 idx) {
+  return (uint2){*(__constant uint *)(TWO_BY_PI_BITS_TABLE + idx.s0),
+                 *(__constant uint *)(TWO_BY_PI_BITS_TABLE + idx.s1)};
 }
-_CLC_DEF _CLC_OVERLOAD ulong3 __CLC_TABLE_MANGLE(pibits_tbl)(int3 idx) {
-  return (ulong3){*(__constant ulong *)(PIBITS_TBL + idx.s0),
-                  *(__constant ulong *)(PIBITS_TBL + idx.s1),
-                  *(__constant ulong *)(PIBITS_TBL + idx.s2)};
+_CLC_DEF _CLC_OVERLOAD uint3 __CLC_TABLE_MANGLE(two_by_pi_bits_tbl)(int3 idx) {
+  return (uint3){*(__constant uint *)(TWO_BY_PI_BITS_TABLE + idx.s0),
+                 *(__constant uint *)(TWO_BY_PI_BITS_TABLE + idx.s1),
+                 *(__constant uint *)(TWO_BY_PI_BITS_TABLE + idx.s2)};
 }
-_CLC_DEF _CLC_OVERLOAD ulong4 __CLC_TABLE_MANGLE(pibits_tbl)(int4 idx) {
-  return (ulong4){*(__constant ulong *)(PIBITS_TBL + idx.s0),
-                  *(__constant ulong *)(PIBITS_TBL + idx.s1),
-                  *(__constant ulong *)(PIBITS_TBL + idx.s2),
-                  *(__constant ulong *)(PIBITS_TBL + idx.s3)};
+_CLC_DEF _CLC_OVERLOAD uint4 __CLC_TABLE_MANGLE(two_by_pi_bits_tbl)(int4 idx) {
+  return (uint4){*(__constant uint *)(TWO_BY_PI_BITS_TABLE + idx.s0),
+                 *(__constant uint *)(TWO_BY_PI_BITS_TABLE + idx.s1),
+                 *(__constant uint *)(TWO_BY_PI_BITS_TABLE + idx.s2),
+                 *(__constant uint *)(TWO_BY_PI_BITS_TABLE + idx.s3)};
 }
-_CLC_DEF _CLC_OVERLOAD ulong8 __CLC_TABLE_MANGLE(pibits_tbl)(int8 idx) {
-  return (ulong8){*(__constant ulong *)(PIBITS_TBL + idx.s0),
-                  *(__constant ulong *)(PIBITS_TBL + idx.s1),
-                  *(__constant ulong *)(PIBITS_TBL + idx.s2),
-                  *(__constant ulong *)(PIBITS_TBL + idx.s3),
-                  *(__constant ulong *)(PIBITS_TBL + idx.s4),
-                  *(__constant ulong *)(PIBITS_TBL + idx.s5),
-                  *(__constant ulong *)(PIBITS_TBL + idx.s6),
-                  *(__constant ulong *)(PIBITS_TBL + idx.s7)};
+_CLC_DEF _CLC_OVERLOAD uint8 __CLC_TABLE_MANGLE(two_by_pi_bits_tbl)(int8 idx) {
+  return (uint8){*(__constant uint *)(TWO_BY_PI_BITS_TABLE + idx.s0),
+                 *(__constant uint *)(TWO_BY_PI_BITS_TABLE + idx.s1),
+                 *(__constant uint *)(TWO_BY_PI_BITS_TABLE + idx.s2),
+                 *(__constant uint *)(TWO_BY_PI_BITS_TABLE + idx.s3),
+                 *(__constant uint *)(TWO_BY_PI_BITS_TABLE + idx.s4),
+                 *(__constant uint *)(TWO_BY_PI_BITS_TABLE + idx.s5),
+                 *(__constant uint *)(TWO_BY_PI_BITS_TABLE + idx.s6),
+                 *(__constant uint *)(TWO_BY_PI_BITS_TABLE + idx.s7)};
 }
-_CLC_DEF _CLC_OVERLOAD ulong16 __CLC_TABLE_MANGLE(pibits_tbl)(int16 idx) {
-  return (ulong16){*(__constant ulong *)(PIBITS_TBL + idx.s0),
-                   *(__constant ulong *)(PIBITS_TBL + idx.s1),
-                   *(__constant ulong *)(PIBITS_TBL + idx.s2),
-                   *(__constant ulong *)(PIBITS_TBL + idx.s3),
-                   *(__constant ulong *)(PIBITS_TBL + idx.s4),
-                   *(__constant ulong *)(PIBITS_TBL + idx.s5),
-                   *(__constant ulong *)(PIBITS_TBL + idx.s6),
-                   *(__constant ulong *)(PIBITS_TBL + idx.s7),
-                   *(__constant ulong *)(PIBITS_TBL + idx.s8),
-                   *(__constant ulong *)(PIBITS_TBL + idx.s9),
-                   *(__constant ulong *)(PIBITS_TBL + idx.sA),
-                   *(__constant ulong *)(PIBITS_TBL + idx.sB),
-                   *(__constant ulong *)(PIBITS_TBL + idx.sC),
-                   *(__constant ulong *)(PIBITS_TBL + idx.sD),
-                   *(__constant ulong *)(PIBITS_TBL + idx.sE),
-                   *(__constant ulong *)(PIBITS_TBL + idx.sF)};
+_CLC_DEF _CLC_OVERLOAD uint16
+__CLC_TABLE_MANGLE(two_by_pi_bits_tbl)(int16 idx) {
+  return (uint16){*(__constant uint *)(TWO_BY_PI_BITS_TABLE + idx.s0),
+                  *(__constant uint *)(TWO_BY_PI_BITS_TABLE + idx.s1),
+                  *(__constant uint *)(TWO_BY_PI_BITS_TABLE + idx.s2),
+                  *(__constant uint *)(TWO_BY_PI_BITS_TABLE + idx.s3),
+                  *(__constant uint *)(TWO_BY_PI_BITS_TABLE + idx.s4),
+                  *(__constant uint *)(TWO_BY_PI_BITS_TABLE + idx.s5),
+                  *(__constant uint *)(TWO_BY_PI_BITS_TABLE + idx.s6),
+                  *(__constant uint *)(TWO_BY_PI_BITS_TABLE + idx.s7),
+                  *(__constant uint *)(TWO_BY_PI_BITS_TABLE + idx.s8),
+                  *(__constant uint *)(TWO_BY_PI_BITS_TABLE + idx.s9),
+                  *(__constant uint *)(TWO_BY_PI_BITS_TABLE + idx.sA),
+                  *(__constant uint *)(TWO_BY_PI_BITS_TABLE + idx.sB),
+                  *(__constant uint *)(TWO_BY_PI_BITS_TABLE + idx.sC),
+                  *(__constant uint *)(TWO_BY_PI_BITS_TABLE + idx.sD),
+                  *(__constant uint *)(TWO_BY_PI_BITS_TABLE + idx.sE),
+                  *(__constant uint *)(TWO_BY_PI_BITS_TABLE + idx.sF)};
 }
 
 #endif // cl_khr_fp64

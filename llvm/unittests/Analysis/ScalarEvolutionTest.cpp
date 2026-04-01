@@ -1789,8 +1789,8 @@ TEST_F(ScalarEvolutionsTest, SimplifyICmpOperands) {
 
     {
       CmpPredicate NewPred = ICmpInst::ICMP_SLT;
-      const SCEV *NewLHS = VSxA;
-      const SCEV *NewRHS = VSxB;
+      SCEVUse NewLHS = VSxA;
+      SCEVUse NewRHS = VSxB;
       EXPECT_TRUE(SE.SimplifyICmpOperands(NewPred, NewLHS, NewRHS));
       EXPECT_EQ(NewPred, ICmpInst::ICMP_SLT);
       EXPECT_EQ(NewLHS, A);
@@ -1799,8 +1799,8 @@ TEST_F(ScalarEvolutionsTest, SimplifyICmpOperands) {
 
     {
       CmpPredicate NewPred = ICmpInst::ICMP_ULT;
-      const SCEV *NewLHS = VSxA;
-      const SCEV *NewRHS = VSxB;
+      SCEVUse NewLHS = VSxA;
+      SCEVUse NewRHS = VSxB;
       EXPECT_TRUE(SE.SimplifyICmpOperands(NewPred, NewLHS, NewRHS));
       EXPECT_EQ(NewPred, ICmpInst::ICMP_ULT);
       EXPECT_EQ(NewLHS, A);
@@ -1809,8 +1809,8 @@ TEST_F(ScalarEvolutionsTest, SimplifyICmpOperands) {
 
     {
       CmpPredicate NewPred = ICmpInst::ICMP_EQ;
-      const SCEV *NewLHS = VSxA;
-      const SCEV *NewRHS = VSxB;
+      SCEVUse NewLHS = VSxA;
+      SCEVUse NewRHS = VSxB;
       EXPECT_TRUE(SE.SimplifyICmpOperands(NewPred, NewLHS, NewRHS));
       EXPECT_EQ(NewPred, ICmpInst::ICMP_EQ);
       EXPECT_EQ(NewLHS, A);
@@ -1827,8 +1827,8 @@ TEST_F(ScalarEvolutionsTest, SimplifyICmpOperands) {
                   isa<SCEVVScale>(cast<SCEVMulExpr>(CxVS)->getOperand(0)));
 
       CmpPredicate NewPred = ICmpInst::ICMP_SLT;
-      const SCEV *NewLHS = VSxA;
-      const SCEV *NewRHS = CxVS;
+      SCEVUse NewLHS = VSxA;
+      SCEVUse NewRHS = CxVS;
       EXPECT_TRUE(SE.SimplifyICmpOperands(NewPred, NewLHS, NewRHS));
       EXPECT_EQ(NewPred, ICmpInst::ICMP_SLT);
       EXPECT_EQ(NewLHS, A);
@@ -1846,15 +1846,15 @@ TEST_F(ScalarEvolutionsTest, SimplifyICmpOperands) {
 
     {
       CmpPredicate NewPred = ICmpInst::ICMP_SLT;
-      const SCEV *NewLHS = VSxA;
-      const SCEV *NewRHS = VSxB;
+      SCEVUse NewLHS = VSxA;
+      SCEVUse NewRHS = VSxB;
       EXPECT_FALSE(SE.SimplifyICmpOperands(NewPred, NewLHS, NewRHS));
     }
 
     {
       CmpPredicate NewPred = ICmpInst::ICMP_ULT;
-      const SCEV *NewLHS = VSxA;
-      const SCEV *NewRHS = VSxB;
+      SCEVUse NewLHS = VSxA;
+      SCEVUse NewRHS = VSxB;
       EXPECT_TRUE(SE.SimplifyICmpOperands(NewPred, NewLHS, NewRHS));
       EXPECT_EQ(NewPred, ICmpInst::ICMP_ULT);
       EXPECT_EQ(NewLHS, A);
@@ -1863,8 +1863,8 @@ TEST_F(ScalarEvolutionsTest, SimplifyICmpOperands) {
 
     {
       CmpPredicate NewPred = ICmpInst::ICMP_EQ;
-      const SCEV *NewLHS = VSxA;
-      const SCEV *NewRHS = VSxB;
+      SCEVUse NewLHS = VSxA;
+      SCEVUse NewRHS = VSxB;
       EXPECT_TRUE(SE.SimplifyICmpOperands(NewPred, NewLHS, NewRHS));
       EXPECT_EQ(NewPred, ICmpInst::ICMP_EQ);
       EXPECT_EQ(NewLHS, A);
@@ -1882,22 +1882,22 @@ TEST_F(ScalarEvolutionsTest, SimplifyICmpOperands) {
 
     {
       CmpPredicate NewPred = ICmpInst::ICMP_SLT;
-      const SCEV *NewLHS = VSxA;
-      const SCEV *NewRHS = VSxB;
+      SCEVUse NewLHS = VSxA;
+      SCEVUse NewRHS = VSxB;
       EXPECT_FALSE(SE.SimplifyICmpOperands(NewPred, NewLHS, NewRHS));
     }
 
     {
       CmpPredicate NewPred = ICmpInst::ICMP_ULT;
-      const SCEV *NewLHS = VSxA;
-      const SCEV *NewRHS = VSxB;
+      SCEVUse NewLHS = VSxA;
+      SCEVUse NewRHS = VSxB;
       EXPECT_FALSE(SE.SimplifyICmpOperands(NewPred, NewLHS, NewRHS));
     }
 
     {
       CmpPredicate NewPred = ICmpInst::ICMP_EQ;
-      const SCEV *NewLHS = VSxA;
-      const SCEV *NewRHS = VSxB;
+      SCEVUse NewLHS = VSxA;
+      SCEVUse NewRHS = VSxB;
       EXPECT_FALSE(SE.SimplifyICmpOperands(NewPred, NewLHS, NewRHS));
     }
   });

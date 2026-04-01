@@ -1169,9 +1169,12 @@ public:
   /// Populates `effects` with side effects implied by this trait.
   void getPotentialTopLevelEffects(
       SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+    Region &region = this->getOperation()->getRegion(0);
+    if (region.empty())
+      return;
     detail::getPotentialTopLevelEffects(
         this->getOperation(), cast<OpTy>(this->getOperation()).getRoot(),
-        *getBodyBlock(), effects);
+        region.front(), effects);
   }
 
   /// Sets up the mapping between the entry block of the given region of this op

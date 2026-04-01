@@ -466,13 +466,11 @@ void GDBRemoteCommunicationServerLLGS::InitializeDelegate(
     NativeProcessProtocol *process) {
   assert(process && "process cannot be NULL");
   Log *log = GetLog(LLDBLog::Process);
-  if (log) {
-    LLDB_LOGF(log,
-              "GDBRemoteCommunicationServerLLGS::%s called with "
-              "NativeProcessProtocol pid %" PRIu64 ", current state: %s",
-              __FUNCTION__, process->GetID(),
-              StateAsCString(process->GetState()));
-  }
+  LLDB_LOGF(log,
+            "GDBRemoteCommunicationServerLLGS::%s called with "
+            "NativeProcessProtocol pid %" PRIu64 ", current state: %s",
+            __FUNCTION__, process->GetID(),
+            StateAsCString(process->GetState()));
 }
 
 GDBRemoteCommunication::PacketResult
@@ -804,14 +802,12 @@ GetJSONThreadsInfo(NativeProcessProtocol &process, bool abridged) {
       return llvm::createStringError("failed to get stop reason");
 
     const int signum = tid_stop_info.signo;
-    if (log) {
-      LLDB_LOGF(log,
-                "GDBRemoteCommunicationServerLLGS::%s pid %" PRIu64
-                " tid %" PRIu64
-                " got signal signo = %d, reason = %d, exc_type = %" PRIu64,
-                __FUNCTION__, process.GetID(), tid, signum,
-                tid_stop_info.reason, tid_stop_info.details.exception.type);
-    }
+    LLDB_LOGF(log,
+              "GDBRemoteCommunicationServerLLGS::%s pid %" PRIu64
+              " tid %" PRIu64
+              " got signal signo = %d, reason = %d, exc_type = %" PRIu64,
+              __FUNCTION__, process.GetID(), tid, signum, tid_stop_info.reason,
+              tid_stop_info.details.exception.type);
 
     json::Object thread_obj;
 
@@ -1157,12 +1153,10 @@ void GDBRemoteCommunicationServerLLGS::ProcessStateChanged(
     NativeProcessProtocol *process, lldb::StateType state) {
   assert(process && "process cannot be NULL");
   Log *log = GetLog(LLDBLog::Process);
-  if (log) {
-    LLDB_LOGF(log,
-              "GDBRemoteCommunicationServerLLGS::%s called with "
-              "NativeProcessProtocol pid %" PRIu64 ", state: %s",
-              __FUNCTION__, process->GetID(), StateAsCString(state));
-  }
+  LLDB_LOGF(log,
+            "GDBRemoteCommunicationServerLLGS::%s called with "
+            "NativeProcessProtocol pid %" PRIu64 ", state: %s",
+            __FUNCTION__, process->GetID(), StateAsCString(state));
 
   switch (state) {
   case StateType::eStateRunning:
@@ -1188,12 +1182,10 @@ void GDBRemoteCommunicationServerLLGS::ProcessStateChanged(
     break;
 
   default:
-    if (log) {
-      LLDB_LOGF(log,
-                "GDBRemoteCommunicationServerLLGS::%s didn't handle state "
-                "change for pid %" PRIu64 ", new state: %s",
-                __FUNCTION__, process->GetID(), StateAsCString(state));
-    }
+    LLDB_LOGF(log,
+              "GDBRemoteCommunicationServerLLGS::%s didn't handle state "
+              "change for pid %" PRIu64 ", new state: %s",
+              __FUNCTION__, process->GetID(), StateAsCString(state));
     break;
   }
 }
@@ -2881,18 +2873,16 @@ GDBRemoteCommunicationServerLLGS::Handle_qMemoryRegionInfo(
     }
 
     // Flags
-    MemoryRegionInfo::OptionalBool memory_tagged =
-        region_info.GetMemoryTagged();
-    MemoryRegionInfo::OptionalBool is_shadow_stack =
-        region_info.IsShadowStack();
+    LazyBool memory_tagged = region_info.GetMemoryTagged();
+    LazyBool is_shadow_stack = region_info.IsShadowStack();
 
-    if (memory_tagged != MemoryRegionInfo::eDontKnow ||
-        is_shadow_stack != MemoryRegionInfo::eDontKnow) {
+    if (memory_tagged != eLazyBoolDontKnow ||
+        is_shadow_stack != eLazyBoolDontKnow) {
       response.PutCString("flags:");
       // Space is the separator.
-      if (memory_tagged == MemoryRegionInfo::eYes)
+      if (memory_tagged == eLazyBoolYes)
         response.PutCString("mt ");
-      if (is_shadow_stack == MemoryRegionInfo::eYes)
+      if (is_shadow_stack == eLazyBoolYes)
         response.PutCString("ss ");
 
       response.PutChar(';');

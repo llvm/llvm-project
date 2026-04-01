@@ -1,6 +1,7 @@
 ! UNSUPPORTED: system-windows
 ! UNSUPPORTED: offload-cuda
 ! UNSUPPORTED: system-darwin
+! UNSUPPORTED: target=powerpc{{.*}}
 
 ! Verify that -fsafe-trampoline produces an executable whose
 ! GNU_STACK program header is RW (not RWE), proving W^X compliance.

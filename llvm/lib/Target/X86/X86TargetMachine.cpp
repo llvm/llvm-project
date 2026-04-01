@@ -108,7 +108,7 @@ extern "C" LLVM_C_ABI void LLVMInitializeX86Target() {
   initializeX86SuppressAPXForRelocationLegacyPass(PR);
   initializeX86WinEHUnwindV2LegacyPass(PR);
   initializeX86PreLegalizerCombinerPass(PR);
-  initializeX86PostLegalizerCombinerPass(PR);
+  initializeX86PostLegalizerCombinerLegacyPass(PR);
 }
 
 static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
@@ -476,7 +476,7 @@ bool X86PassConfig::addIRTranslator() {
 void X86PassConfig::addPreRegBankSelect() {
   bool IsOptNone = getOptLevel() == CodeGenOptLevel::None;
   if (!IsOptNone) {
-    addPass(createX86PostLegalizerCombiner());
+    addPass(createX86PostLegalizerCombinerLegacy());
   }
 }
 bool X86PassConfig::addLegalizeMachineIR() {
