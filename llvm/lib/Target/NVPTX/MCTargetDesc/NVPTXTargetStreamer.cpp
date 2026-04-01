@@ -148,7 +148,7 @@ void NVPTXTargetStreamer::emitValue(const MCExpr *Value) {
 }
 
 //
-// NVPTXAsmTargetStreamer Implemenation
+// NVPTXAsmTargetStreamer Implementation
 //
 
 NVPTXAsmTargetStreamer::NVPTXAsmTargetStreamer(MCStreamer &S,
@@ -168,17 +168,17 @@ void NVPTXAsmTargetStreamer::emitVersionDirective(unsigned PTXVersion) {
 }
 
 void NVPTXAsmTargetStreamer::emitTargetDirective(StringRef Target,
-                                                 bool IsNVOpenCL,
-                                                 bool HasFullDbgInfo) {
+                                                 bool TexModeIndependent,
+                                                 bool HasDebug) {
   OS << ".target " << Target;
-  if (IsNVOpenCL)
+  if (TexModeIndependent)
     OS << ", texmode_independent";
-  if (HasFullDbgInfo)
+  if (HasDebug)
     OS << ", debug";
   OS << "\n";
 }
 
-void NVPTXAsmTargetStreamer::emitAddressSizeDirective(bool Is64Bit) {
-  OS << ".address_size " << (Is64Bit ? "64" : "32") << "\n"
+void NVPTXAsmTargetStreamer::emitAddressSizeDirective(unsigned AddrSize) {
+  OS << ".address_size " << AddrSize << "\n"
      << "\n";
 }

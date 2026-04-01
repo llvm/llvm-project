@@ -32,11 +32,11 @@ public:
   virtual void emitVersionDirective(unsigned PTXVersion) {}
 
   /// Emit architecture and platform target.
-  virtual void emitTargetDirective(StringRef Target, bool IsNVOpenCL,
-                                   bool HasFullDbgInfo) {}
+  virtual void emitTargetDirective(StringRef Target, bool TexModeIndependent,
+                                   bool HasDebug) {}
 
-  /// Emit addresss size used for this PTX module.
-  virtual void emitAddressSizeDirective(bool Is64Bit) {}
+  /// Emit address size used for this PTX module.
+  virtual void emitAddressSizeDirective(unsigned AddrSize) {}
 
   /// Outputs the list of the DWARF '.file' directives to the streamer.
   void outputDwarfFileDirectives();
@@ -77,10 +77,10 @@ public:
 
   void emitVersionDirective(unsigned PTXVersion) override;
 
-  void emitTargetDirective(StringRef Target, bool IsNVOpenCL,
-                           bool HasFullDbgInfo) override;
+  void emitTargetDirective(StringRef Target, bool TexModeIndependent,
+                           bool HasDebug) override;
 
-  void emitAddressSizeDirective(bool Is64Bit) override;
+  void emitAddressSizeDirective(unsigned AddrSize) override;
 };
 
 } // end namespace llvm

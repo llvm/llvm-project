@@ -760,7 +760,6 @@ NVPTXTargetStreamer *NVPTXAsmPrinter::getTargetStreamer() const {
 }
 
 static bool hasFullDebugInfo(Module &M) {
-  bool HasFullDebugInfo = false;
   for (DICompileUnit *CU : M.debug_compile_units()) {
     switch(CU->getEmissionKind()) {
     case DICompileUnit::NoDebug:
@@ -768,14 +767,11 @@ static bool hasFullDebugInfo(Module &M) {
       break;
     case DICompileUnit::LineTablesOnly:
     case DICompileUnit::FullDebug:
-      HasFullDebugInfo = true;
-      break;
+      return true;
     }
-    if (HasFullDebugInfo)
-      break;
   }
 
-  return HasFullDebugInfo;
+  return false;
 }
 
 void NVPTXAsmPrinter::emitHeader(Module &M, const NVPTXSubtarget &STI) {
@@ -787,10 +783,11 @@ void NVPTXAsmPrinter::emitHeader(Module &M, const NVPTXSubtarget &STI) {
   TS->emitVersionDirective(PTXVersion);
 
   const NVPTXTargetMachine &NTM = static_cast<const NVPTXTargetMachine &>(TM);
-  bool IsNVOpenCL = NTM.getDrvInterface() == NVPTX::NVCL;
+  bool TexModeIndependent = NTM.getDrvInterface() == NVPTX::NVCL;
 
-  TS->emitTargetDirective(STI.getTargetName(), IsNVOpenCL, hasFullDebugInfo(M));
-  TS->emitAddressSizeDirective(M.getDataLayout().getPointerSizeInBits() == 64);
+  TS->emitTargetDirective(STI.getTargetName(), TexModeIndependent,
+                          hasFullDebugInfo(M));
+  TS->emitAddressSizeDirective(M.getDataLayout().getPointerSizeInBits());
 }
 
 bool NVPTXAsmPrinter::doFinalization(Module &M) {
