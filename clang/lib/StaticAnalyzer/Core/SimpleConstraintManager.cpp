@@ -88,6 +88,9 @@ ProgramStateRef SimpleConstraintManager::assumeAux(ProgramStateRef State,
   case nonloc::LocAsIntegerKind:
     return assumeInternal(State, Cond.castAs<nonloc::LocAsInteger>().getLoc(),
                           Assumption);
+
+  case nonloc::LazyCompoundValKind:
+    return State;
   } // end switch
 }
 
@@ -124,6 +127,9 @@ ProgramStateRef SimpleConstraintManager::assumeInclusiveRangeInternal(
     bool isFeasible = (IsInRange == InRange);
     return isFeasible ? State : nullptr;
   }
+
+  case nonloc::LazyCompoundValKind:
+    return State;
   } // end switch
 }
 
