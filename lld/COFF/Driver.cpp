@@ -291,10 +291,10 @@ void LinkerDriver::addBuffer(std::unique_ptr<MemoryBuffer> mb,
   case file_magic::windows_resource:
     resources.push_back(mbref);
     break;
-  case file_magic::archive:
+  case file_magic::archive: {
+    std::unique_ptr<Archive> file =
+        CHECK(Archive::create(mbref), filename + ": failed to parse archive");
     if (wholeArchive) {
-      std::unique_ptr<Archive> file =
-          CHECK(Archive::create(mbref), filename + ": failed to parse archive");
       Archive *archive = file.get();
       make<std::unique_ptr<Archive>>(std::move(file)); // take ownership
 
@@ -308,8 +308,9 @@ void LinkerDriver::addBuffer(std::unique_ptr<MemoryBuffer> mb,
 
       return;
     }
-    addFile(make<ArchiveFile>(ctx, mbref));
+    addFile(make<ArchiveFile>(ctx, mbref, file));
     break;
+  }
   case file_magic::bitcode:
     addFile(BitcodeFile::create(ctx, mbref, "", 0, lazy));
     break;
