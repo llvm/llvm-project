@@ -1433,16 +1433,12 @@ static bool LoadScriptingModule(const FileSpec &scripting_fspec,
 }
 
 bool Module::LoadScriptingResourceInTarget(Target *target, Status &error) {
+  Log *log = GetLog(LLDBLog::Modules);
+
   if (!target) {
     error = Status::FromErrorString("invalid destination Target");
     return false;
   }
-
-  LoadScriptFromSymFile should_load =
-      target->TargetProperties::GetLoadScriptFromSymbolFile();
-
-  if (should_load == eLoadScriptFromSymFileFalse)
-    return false;
 
   Debugger &debugger = target->GetDebugger();
   const ScriptLanguage script_language = debugger.GetScriptLanguage();
@@ -1463,22 +1459,21 @@ bool Module::LoadScriptingResourceInTarget(Target *target, Status &error) {
   }
 
   StreamString feedback_stream;
-  FileSpecList file_specs = platform_sp->LocateExecutableScriptingResources(
-      target, *this, feedback_stream);
+  llvm::SmallDenseMap<FileSpec, LoadScriptFromSymFile> file_specs =
+      platform_sp->LocateExecutableScriptingResources(target, *this,
+                                                      feedback_stream);
 
   if (!feedback_stream.Empty())
     debugger.ReportWarning(feedback_stream.GetString().str(), debugger.GetID());
 
-  const uint32_t num_specs = file_specs.GetSize();
-  if (num_specs == 0)
-    return true;
+  for (const auto &[scripting_fspec, load_style] : file_specs) {
+    if (load_style == eLoadScriptFromSymFileFalse)
+      continue;
 
-  for (uint32_t i = 0; i < num_specs; ++i) {
-    FileSpec scripting_fspec(file_specs.GetFileSpecAtIndex(i));
     if (!FileSystem::Instance().Exists(scripting_fspec))
       continue;
 
-    if (should_load == eLoadScriptFromSymFileWarn) {
+    if (load_style == eLoadScriptFromSymFileWarn) {
       // clang-format off
       debugger.ReportWarning(
           llvm::formatv(
@@ -1498,12 +1493,14 @@ To run all discovered debug scripts in this session:
       return false;
     }
 
-    LLDB_LOG(GetLog(LLDBLog::Modules), "Auto-loading {0}",
-             scripting_fspec.GetPath());
+    LLDB_LOG(log, "Auto-loading {0}", scripting_fspec.GetPath());
 
     if (!LoadScriptingModule(scripting_fspec, *script_interpreter, *target,
-                             error))
+                             error)) {
+      LLDB_LOG(log, "Failed to load '{0}'. Remaining scripts won't be loaded.",
+               scripting_fspec.GetPath());
       return false;
+    }
   }
 
   return true;
