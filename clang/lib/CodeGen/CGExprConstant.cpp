@@ -2049,10 +2049,9 @@ llvm::Constant *ConstantEmitter::emitForMemory(CodeGenModule &CGM,
                                                         C->getType())) {
         // Long _BitInt has array of bytes as in-memory type.
         // So, split constant into individual bytes.
-        llvm::Type *DesiredTy = CGM.getTypes().ConvertTypeForMem(destType);
         llvm::APInt Value = cast<llvm::ConstantInt>(Res)->getValue();
         Builder.addBits(Value, /*OffsetInBits=*/0, /*AllowOverwrite=*/false);
-        return Builder.build(DesiredTy, /*AllowOversized*/ false);
+        return Builder.build(MemTy, /*AllowOversized*/ false);
       }
       return Res;
     }
