@@ -109,7 +109,8 @@ bool SPIRVEmitNonSemanticDI::emitGlobalDI(MachineFunction &MF) {
     // NonSemantic.Shader.DebugInfo.100 requires SPV_KHR_non_semantic_info.
     // Bail out if the extension is not available for this target. Targets like
     // spirv64-intel use a restricted extension set by default and do not enable
-    // this extension unless the user passes --spirv-ext=+SPV_KHR_non_semantic_info.
+    // this extension unless the user passes
+    // --spirv-ext=+SPV_KHR_non_semantic_info.
     if (!TM->getSubtargetImpl()->canUseExtension(
             SPIRV::Extension::SPV_KHR_non_semantic_info))
       return false;
