@@ -262,28 +262,60 @@ def hierarchical_merge(items, label):
     total = len(items) - 1
     step = 0
     prefix = f"{label} " if label else ""
-    while len(items) > 1:
-        n = len(items)
+
+    # Pre-compute all pairwise scores before any merging.
+    # sc[(i, j)] with i < j holds the score between items[i] and items[j].
+    # Indices are stable: merged results are appended to items with fresh indices.
+    sc = {}
+    n = len(items)
+    active = list(range(n))
+    for i in range(n):
+        for j in range(i + 1, n):
+            sc[i, j] = score(items[i], items[j])
+
+    while len(active) > 1:
+        # Find the pair with the lowest score; break ties by (i, j) order.
         best_score = None
         best_i = best_j = -1
-        for i in range(n):
-            for j in range(i + 1, n):
-                s = score(items[i], items[j])
-                if best_score is None or s < best_score:
-                    best_score = s
-                    best_i, best_j = i, j
+        for (i, j), s in sc.items():
+            if (
+                best_score is None
+                or s < best_score
+                or (s == best_score and (i, j) < (best_i, best_j))
+            ):
+                best_score = s
+                best_i, best_j = i, j
+
         merged_seq = zipper_merge(items[best_i], items[best_j])
-        # Remove j first (higher index) then i
-        items.pop(best_j)
-        items.pop(best_i)
+        new_idx = len(items)
         items.append(merged_seq)
+
+        # Remove consumed indices so the loops below visit only survivors.
+        active.remove(best_i)
+        active.remove(best_j)
+
+        # Score the merged item against each remaining active item: take the min
+        # of the two inherited scores and the actual diff of the new merged text.
+        for k in active:
+            si = sc[min(k, best_i), max(k, best_i)]
+            sj = sc[min(k, best_j), max(k, best_j)]
+            sc[k, new_idx] = min(si, sj, score(merged_seq, items[k]))
+
+        # Drop all entries that reference the now-consumed indices.
+        for k in active:
+            sc.pop((min(k, best_i), max(k, best_i)))
+            sc.pop((min(k, best_j), max(k, best_j)))
+        sc.pop((best_i, best_j))
+
+        active.append(new_idx)
+
         step += 1
         common.debug(
             f"  {prefix}merge {step}/{total} (score {best_score})", end="\r", flush=True
         )
     common.debug()
 
-    return items[0]
+    return items[-1]
 
 
 # ---------------------------------------------------------------------------
