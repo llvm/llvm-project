@@ -258,7 +258,7 @@ static Value *getNonTriviallyVectorizableIntrinsicCallOperand(Value *V) {
   // Skip trivially vectorizable intrinsics.
   if (isTriviallyVectorizable(ID))
     return nullptr;
-  // Only look through unary intrinsic calls.
+  // Only consider unary intrinsic calls.
   if (CI->arg_size() != 1)
     return nullptr;
   // Check if it is speculatable, no memory access and will return
