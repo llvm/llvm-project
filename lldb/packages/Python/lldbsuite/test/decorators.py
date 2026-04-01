@@ -1331,6 +1331,10 @@ def skipUnlessArm64eSupported(func):
         if not _compiler_supports(compiler_path, "-arch arm64e"):
             return "Compiler cannot target arm64e"
 
+        # Need debugserver built with arm64e support.
+        if not configuration.arm64e_debugserver:
+            return "debugserver not built with arm64e support"
+
         return None
 
     return skipTestIfFn(can_build_and_run_arm64e)(func)

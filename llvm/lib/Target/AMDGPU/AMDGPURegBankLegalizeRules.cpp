@@ -1550,6 +1550,11 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
            {{VgprB32},
             {IntrId, SgprB32_ReadFirstLane, SgprB32_ReadFirstLane, VgprB32}});
 
+  addRulesForIOpcs({amdgcn_permlane16, amdgcn_permlanex16}, Standard)
+      .Div(S32, {{Vgpr32},
+                 {IntrId, Vgpr32, Vgpr32, SgprB32_ReadFirstLane,
+                  SgprB32_ReadFirstLane, Imm, Imm}});
+
   addRulesForIOpcs({amdgcn_wave_reduce_umax, amdgcn_wave_reduce_umin}, Standard)
       .Uni(S32, {{Sgpr32}, {IntrId, Sgpr32}})
       .Div(S32, {{Sgpr32ToVgprDst}, {IntrId, VgprB32}})
@@ -1651,6 +1656,8 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{DivB256}, {{VgprB256}, {IntrId, VgprB256}}})
       .Any({{UniB512}, {{SgprB512}, {IntrId, SgprB512}}})
       .Any({{DivB512}, {{VgprB512}, {IntrId, VgprB512}}});
+
+  addRulesForIOpcs({amdgcn_live_mask}).Any({{S1}, {{Vcc}, {}}});
 
   addRulesForIOpcs({amdgcn_mov_dpp, amdgcn_mov_dpp8}, StandardB)
       .Div(B32, {{VgprB32}, {IntrId, VgprB32}})

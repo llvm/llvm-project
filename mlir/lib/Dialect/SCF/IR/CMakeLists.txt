@@ -1,6 +1,7 @@
 add_mlir_dialect_library(MLIRSCFDialect
   SCF.cpp
   DeviceMappingInterface.cpp
+  MemorySlot.cpp
   ValueBoundsOpInterfaceImpl.cpp
 
   ADDITIONAL_HEADER_DIRS

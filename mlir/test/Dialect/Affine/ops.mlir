@@ -426,3 +426,43 @@ func.func @arith_add_vaild_symbol_lower_bound(%arg : index) {
 // CHECK:   affine.for %[[VAL_3:.*]] = #[[$ATTR_0]](%[[VAL_2]]){{\[}}%[[VAL_0]]] to 7 {
 // CHECK:   }
 // CHECK: }
+
+// -----
+
+// CHECK-LABEL:   func.func @parallel_xori_reduce() {
+// CHECK:           %[[PARALLEL_0:.*]] = affine.parallel (%[[VAL_0:.*]]) = (0) to (100) reduce ("xori") -> (i32) {
+func.func @parallel_xori_reduce() {
+  %0 = memref.alloc() : memref<100xi32>
+  %1 = affine.parallel (%i) = (0) to (100) reduce ("xori") -> (i32) {
+    %2 = affine.load %0[%i] : memref<100xi32>
+    affine.yield %2 : i32
+  }
+  return
+}
+
+// -----
+
+// CHECK-LABEL:   func.func @parallel_maxnumf_reduce() {
+// CHECK:           %[[PARALLEL_0:.*]] = affine.parallel (%[[VAL_0:.*]]) = (0) to (100) reduce ("maxnumf") -> (f32) {
+func.func @parallel_maxnumf_reduce() {
+  %0 = memref.alloc() : memref<100xf32>
+  %1 = affine.parallel (%i) = (0) to (100) reduce ("maxnumf") -> (f32) {
+    %2 = affine.load %0[%i] : memref<100xf32>
+    affine.yield %2 : f32
+  }
+  return
+}
+
+// -----
+
+// CHECK-LABEL:   func.func @parallel_minnumf_reduce() {
+// CHECK:           %[[PARALLEL_0:.*]] = affine.parallel (%[[VAL_0:.*]]) = (0) to (100) reduce ("minnumf") -> (f32) {
+func.func @parallel_minnumf_reduce() {
+  %0 = memref.alloc() : memref<100xf32>
+  %1 = affine.parallel (%i) = (0) to (100) reduce ("minnumf") -> (f32) {
+    %2 = affine.load %0[%i] : memref<100xf32>
+    affine.yield %2 : f32
+  }
+  return
+}
+

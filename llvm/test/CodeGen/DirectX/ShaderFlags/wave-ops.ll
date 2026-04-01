@@ -56,6 +56,13 @@ entry:
   ret i32 %ret
 }
 
+define noundef i32 @wave_bit_and(i32 %x) {
+entry:
+  ; CHECK: Function wave_bit_and : [[WAVE_FLAG]]
+  %ret = call i32 @llvm.dx.wave.reduce.and(i32 %x)
+  ret i32 %ret
+}
+
 define noundef i1 @wave_all_equal(i1 %x) {
 entry:
   ; CHECK: Function wave_all_equal : [[WAVE_FLAG]]
