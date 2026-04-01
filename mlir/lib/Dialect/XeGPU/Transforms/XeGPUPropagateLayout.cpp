@@ -1340,7 +1340,7 @@ private:
   OpBuilder builder;
   LogicalResult resolveTensorDescConsumer(OpOperand &operand);
   LogicalResult resolveVectorConsumer(OpOperand &operand);
-  LogicalResult assignScalarResultLayout(OpResult &result);
+  LogicalResult assignResultLayout(OpResult &result);
 };
 
 } // namespace
@@ -1355,7 +1355,7 @@ LogicalResult ResolveLayoutConflicts::run() {
     if (isa<vector::MultiDimReductionOp>(op) || isa<vector::ReductionOp>(op)) {
       for (OpResult result : op->getResults()) {
         if (result.getType().isIntOrFloat()) {
-          auto res = assignScalarResultLayout(result);
+          auto res = assignResultLayout(result);
           if (failed(res)) {
             DBGS() << "Failed to resolve vector consumer for multi-reduction "
                    << *op << "\n";
@@ -1391,17 +1391,14 @@ LogicalResult ResolveLayoutConflicts::run() {
   return r.wasInterrupted() ? failure() : success();
 }
 
-LogicalResult
-ResolveLayoutConflicts::assignScalarResultLayout(OpResult &result) {
-  Operation *ProducerOp = result.getDefiningOp();
-  // Get the current layout of the vector value.
+LogicalResult ResolveLayoutConflicts::assignResultLayout(OpResult &result) {
+  Operation *producerOp = result.getDefiningOp();
   auto producerLayout = xegpu::getDistributeLayoutAttr(result);
-  // Insert a convert_layout op to resolve the conflict.
+  // Insert a convert_layout op to assign the layout.
   builder.setInsertionPointAfterValue(result);
   auto convertOp = xegpu::ConvertLayoutOp::create(
-      builder, ProducerOp->getLoc(), result.getType(), result, producerLayout,
+      builder, producerOp->getLoc(), result.getType(), result, producerLayout,
       producerLayout);
-  // Update the users to use the converted value.
   result.replaceAllUsesExcept(convertOp.getResult(), convertOp);
   return success();
 }

@@ -462,7 +462,7 @@ xegpu::SliceAttr xegpu::setupMultiReductionResultLayout(
   xegpu::DistributeLayoutAttr srcLayout;
   if (layoutKind == xegpu::LayoutKind::Subgroup) {
     xegpu::SliceAttr consumerSliceLayout =
-        consumerLayout ? dyn_cast<xegpu::SliceAttr>(consumerLayout) : nullptr;
+        dyn_cast_if_present<xegpu::SliceAttr>(consumerLayout);
     if (consumerSliceLayout &&
         consumerSliceLayout.getDims().asArrayRef().equals(reductionDims)) {
       srcLayout = consumerSliceLayout.getParent();
@@ -526,11 +526,11 @@ xegpu::SliceAttr xegpu::setupMultiReductionResultLayout(
   } else if (layoutKind == xegpu::LayoutKind::InstData) {
 
     SmallVector<int64_t> instData(srcRank, 1);
-    instData[srcRank - 2] =
-        std::min(maxReduceVectorSize, srcShape[srcRank - 2]);
     if (srcRank >= 2)
-      instData[srcRank - 1] =
-          std::min(static_cast<int64_t>(subgroupSize), srcShape[srcRank - 1]);
+      instData[srcRank - 2] =
+          std::min(maxReduceVectorSize, srcShape[srcRank - 2]);
+    instData[srcRank - 1] =
+        std::min(static_cast<int64_t>(subgroupSize), srcShape[srcRank - 1]);
     srcLayout = xegpu::LayoutAttr::get(context, toInt32Attr(instData));
   } else if (layoutKind == xegpu::LayoutKind::Lane) {
 
@@ -561,11 +561,11 @@ xegpu::setupReductionResultLayout(xegpu::LayoutKind layoutKind,
   xegpu::LayoutAttr srcLayout;
 
   if (layoutKind == xegpu::LayoutKind::Subgroup) {
-    assert(true &&
-           "subgroup layout assignment not supported for insertStridedSlice.");
+    assert(true && "subgroup layout assignment not supported for reduction (op "
+                   "is not expected at this level).");
   } else if (layoutKind == xegpu::LayoutKind::InstData) {
-    assert(true &&
-           "instData layout assignment not supported for insertStridedSlice.");
+    assert(true && "instData layout assignment not supported for reduction (op "
+                   "is not expected at this level).");
   } else if (layoutKind == xegpu::LayoutKind::Lane) {
     SmallVector<int32_t> laneLayout(1), laneData(1);
     laneLayout[0] = std::min(subgroupSize, static_cast<int32_t>(srcShape[0]));
@@ -686,14 +686,12 @@ xegpu::DistributeLayoutAttr xegpu::setupInsertStridedSliceResultLayout(
     }
   } else if (layoutKind == xegpu::LayoutKind::Lane) {
     for (int dim = 0; dim < srcRank; dim++) {
-      if (consumerLaneData[dim] != srcShape[dim]) {
-        assert(srcShape[dim] % consumerLaneLayout[dim] == 0 &&
-               "srcShape must be divisible by laneLayout for all dimensions");
-        laneDataValue = std::min(srcShape[dim] / consumerLaneLayout[dim],
-                                 consumerLaneData[dim]);
-        requiredResLayout =
-            requiredResLayout.setDimData(dim, -1, -1, laneDataValue);
-      }
+      assert(srcShape[dim] % consumerLaneLayout[dim] == 0 &&
+             "srcShape must be divisible by laneLayout for all dimensions");
+      laneDataValue = std::min(srcShape[dim] / consumerLaneLayout[dim],
+                               consumerLaneData[dim]);
+      requiredResLayout =
+          requiredResLayout.setDimData(dim, -1, -1, laneDataValue);
     }
   }
   return requiredResLayout;
