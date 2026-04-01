@@ -1216,9 +1216,15 @@ KnownBits KnownBits::udiv(const KnownBits &LHS, const KnownBits &RHS,
 
     if (Divisor.isPowerOf2()) {
       unsigned Shift = Divisor.logBase2();
+
+      APInt MaxRes = LHS.getMaxValue().lshr(Shift);
+      unsigned LeadZ = MaxRes.countLeadingZeros();
+
       Known = LHS;
       Known.One.lshrInPlace(Shift);
       Known.Zero.lshrInPlace(Shift);
+      Known.Zero.setHighBits(LeadZ);
+
       return Known;
     }
   }
