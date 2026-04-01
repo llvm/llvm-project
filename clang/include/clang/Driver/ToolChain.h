@@ -286,9 +286,7 @@ public:
   /// this toolchain.
   StringRef getDefaultUniversalArchName() const;
 
-  std::string getTripleString() const {
-    return Triple.getTriple();
-  }
+  StringRef getTripleString() const { return Triple.getTriple(); }
 
   /// Get the toolchain's effective clang triple.
   const llvm::Triple &getEffectiveTriple() const {
