@@ -1623,7 +1623,12 @@ bool DependenceInfo::exactSIVtest(const SCEVAddRecExpr *Src,
   ++ExactSIVapplications;
   assert(0 < Level && Level <= CommonLevels && "Level out of range");
   Level--;
-  return exactTestImpl(Src, Dst, Result, Level);
+  bool Res = exactTestImpl(Src, Dst, Result, Level);
+  if (Res) {
+    ++ExactSIVsuccesses;
+    ++ExactSIVindependence;
+  }
+  return Res;
 }
 
 // Return true if the divisor evenly divides the dividend.
@@ -1811,7 +1816,10 @@ bool DependenceInfo::exactRDIVtest(const SCEVAddRecExpr *Src,
 
   LLVM_DEBUG(dbgs() << "\tExact RDIV test\n");
   ++ExactRDIVapplications;
-  return exactTestImpl(Src, Dst, Result, std::nullopt);
+  bool Res = exactTestImpl(Src, Dst, Result, std::nullopt);
+  if (Res)
+    ++ExactRDIVindependence;
+  return Res;
 }
 
 bool DependenceInfo::exactTestImpl(const SCEVAddRecExpr *Src,
@@ -1848,7 +1856,6 @@ bool DependenceInfo::exactTestImpl(const SCEVAddRecExpr *Src,
   unsigned Bits = AM.getBitWidth();
   if (findGCD(Bits, AM, BM, CM, G, X, Y)) {
     // gcd doesn't divide Delta, no dependence
-    ++ExactRDIVindependence;
     return true;
   }
 
@@ -1941,18 +1948,12 @@ bool DependenceInfo::exactTestImpl(const SCEVAddRecExpr *Src,
   LLVM_DEBUG(dbgs() << "\t    LowerDistance = " << *LowerDistance << "\n");
   LLVM_DEBUG(dbgs() << "\t    UpperDistance = " << *UpperDistance << "\n");
 
-  if (LowerDistance->sle(0) && UpperDistance->sge(0)) {
+  if (LowerDistance->sle(0) && UpperDistance->sge(0))
     NewDirection |= Dependence::DVEntry::EQ;
-    ++ExactSIVsuccesses;
-  }
-  if (LowerDistance->slt(0)) {
+  if (LowerDistance->slt(0))
     NewDirection |= Dependence::DVEntry::GT;
-    ++ExactSIVsuccesses;
-  }
-  if (UpperDistance->sgt(0)) {
+  if (UpperDistance->sgt(0))
     NewDirection |= Dependence::DVEntry::LT;
-    ++ExactSIVsuccesses;
-  }
 
   // finished
   Result.DV[*Level].Direction &= NewDirection;
