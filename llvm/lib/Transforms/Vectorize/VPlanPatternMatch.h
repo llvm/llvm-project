@@ -54,21 +54,6 @@ template <typename... To> inline match_isapred<To...> m_IsA() {
   return match_isapred<To...>();
 }
 
-/// An IsaPred matcher with a sub-pattern.
-template <typename SubPattern, typename... To>
-struct match_class : public match_isapred<To...> {
-  SubPattern P;
-  match_class(const SubPattern &P) : P(P) {}
-  template <typename ArgTy> bool match(const ArgTy *V) const {
-    return match_isapred<To...>::match(V) && P.match(V);
-  }
-};
-
-template <typename... To, typename SubPattern>
-inline match_class<SubPattern, To...> m_IsA(const SubPattern &P) {
-  return P;
-}
-
 /// Match an arbitrary VPValue and ignore it.
 inline auto m_VPValue() { return m_IsA<VPValue>(); }
 
@@ -611,6 +596,12 @@ inline match_combine_or<AllRecipe_match<Instruction::ZExt, Op0_t>,
                         AllRecipe_match<Instruction::SExt, Op0_t>>
 m_ZExtOrSExt(const Op0_t &Op0) {
   return m_CombineOr(m_ZExt(Op0), m_SExt(Op0));
+}
+
+/// A variant of m_IsA that also matches SubPattern.
+template <typename... To, typename SubPattern>
+inline auto m_IsA(const SubPattern &P) {
+  return m_CombineAnd(m_IsA<To...>(), P);
 }
 
 template <typename Op0_t> inline auto m_WidenAnyExtend(const Op0_t &Op0) {
