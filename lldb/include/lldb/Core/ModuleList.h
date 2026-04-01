@@ -560,9 +560,9 @@ protected:
   static constexpr long kUseCountModuleListOrphaned = 1;
 
 private:
-  static bool LoadScriptingResourceInTargetForModule(Module &module,
-                                                     Target &target,
-                                                     Status &error);
+  static bool LoadScriptingResourceInTargetForModule(
+      Module &module, Target &target, Status &error,
+      std::vector<std::string> &warned_script_paths);
 
 public:
   typedef LockingAdaptedIterable<std::recursive_mutex, collection>
