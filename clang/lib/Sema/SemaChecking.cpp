@@ -1238,19 +1238,6 @@ public:
   const DiagnoseAsBuiltinAttr *getDABAttr() const { return DABAttr; }
   unsigned getSizeTypeWidth() const { return SizeTypeWidth; }
 
-  /// Return function name after stripping __builtin_ and _chk affixes.
-  std::string getFunctionName(unsigned BuiltinID, bool IsChkVariant) const {
-    std::string Name = S.getASTContext().BuiltinInfo.getName(BuiltinID);
-    llvm::StringRef Ref = Name;
-    if (IsChkVariant) {
-      Ref = Ref.drop_front(std::strlen("__builtin___"));
-      Ref = Ref.drop_back(std::strlen("_chk"));
-    } else {
-      Ref.consume_front("__builtin_");
-    }
-    return Ref.str();
-  }
-
 private:
   Sema &S;
   CallExpr *TheCall;
