@@ -39,18 +39,17 @@ void instantiate() {
 }
 
 // P3589R2 Section 1.1: profile violations must not affect overload resolution.
-// The reinterpret_cast in the decltype return type is in an unevaluated
-// context, so the profile check is suppressed and doesn't SFINAE out the
-// first overload. The selected overload's body has no violation.
+// If the profile error in the decltype SFINAE'd out the first overload, the
+// fallback (returning 1) would be selected and the static_assert would fire.
 template <typename T>
 auto sfinae_cast(T x) -> decltype(reinterpret_cast<int*>(x)) {
   return nullptr;
 }
 template <typename T>
-int sfinae_cast(...) { return 0; }
-void test_sfinae() {
-  int *p = sfinae_cast<long>(0L);
-}
+auto sfinae_cast(...) -> int { return 1; }
+
+static_assert(__is_same(decltype(sfinae_cast<long>(0L)), int *),
+              "profile violation must not SFINAE out the first overload");
 
 // Profile violations are suppressed in unevaluated contexts.
 void test_unevaluated() {
