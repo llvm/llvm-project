@@ -647,8 +647,7 @@ fir::AliasAnalysis::Source fir::acc::getSourceFromACCValue(
   // queries, so using the host source remains a reasonable tradeoff for
   // disambiguating in-region uses. Finer modeling would require extending
   // AliasAnalysis::Source (with address space) and teaching AA to use it.
-  fir::AliasAnalysis::Source traced =
-      traceValue(mlir::acc::getVar(accOp));
+  fir::AliasAnalysis::Source traced = traceValue(mlir::acc::getVar(accOp));
   traced.attributes |= accumulatedAttrs;
   return traced;
 }
