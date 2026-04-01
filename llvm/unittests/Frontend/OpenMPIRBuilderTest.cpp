@@ -7194,8 +7194,8 @@ TEST_F(OpenMPIRBuilderTest, DebugRecordLoc) {
                       Builder.GetInsertPoint());
     // This variable will point directly to the function argument.
     DILocalVariable *Var2 = DIB.createParameterVariable(
-        SP, "test2", /*ArgNo*/ 3, SP->getFile(), /*LineNo=*/1, VoidPtrTy);
-    DIB.insertDeclare(OutlinedFn->getArg(2), Var2, DIB.createExpression(), Loc,
+        SP, "test2", /*ArgNo*/ 2, SP->getFile(), /*LineNo=*/1, VoidPtrTy);
+    DIB.insertDeclare(OutlinedFn->getArg(1), Var2, DIB.createExpression(), Loc,
                       Builder.GetInsertPoint());
 
     return Builder.saveIP();
