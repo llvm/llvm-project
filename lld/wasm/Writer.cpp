@@ -638,17 +638,19 @@ void Writer::populateTargetFeatures() {
     };
     tlsUsed = tlsUsed || llvm::any_of(file->segments, isTLS);
 
-    // Older versions of LLVM will not disallow the `libcall-thread-context` feature when 
-    // emitting globals for thread context, so we use the presence of an imported `__stack_pointer` symbol 
-    // as a heuristic to detect this case and disallow the feature.
-    if (!disallowed.contains("libcall-thread-context") && ctx.arg.libcallThreadContext) {
-        if (llvm::any_of(file->getSymbols(), [](const auto &sym) {
+    // Older versions of LLVM will not disallow the `libcall-thread-context`
+    // feature when emitting globals for thread context, so we use the presence
+    // of an imported `__stack_pointer` symbol as a heuristic to detect this
+    // case and disallow the feature.
+    if (!disallowed.contains("libcall-thread-context") &&
+        ctx.arg.libcallThreadContext) {
+      if (llvm::any_of(file->getSymbols(), [](const auto &sym) {
             return sym && sym->getName() == "__stack_pointer" &&
                    sym->kind() == Symbol::UndefinedGlobalKind &&
                    sym->importModule && sym->importModule == "env";
           })) {
-            disallowed.insert({"libcall-thread-context", std::string(fileName)});
-        }
+        disallowed.insert({"libcall-thread-context", std::string(fileName)});
+      }
     }
   }
 
@@ -671,12 +673,14 @@ void Writer::populateTargetFeatures() {
               "' feature must be used in order to use shared memory");
   }
 
-  // Special case for `libcall-thread-context` to give a more specific error message
+  // Special case for `libcall-thread-context` to give a more specific error
+  // message
   if (ctx.arg.libcallThreadContext)
     if (disallowed.contains("libcall-thread-context"))
       error("--libcall-thread-context is disallowed by " +
             disallowed["libcall-thread-context"] +
-            " because it uses globals for thread context rather than library function calls.");
+            " because it uses globals for thread context rather than library "
+            "function calls.");
 
   if (tlsUsed) {
     for (auto feature : {"atomics", "bulk-memory"})
@@ -703,7 +707,8 @@ void Writer::populateTargetFeatures() {
         continue;
       objectFeatures.insert(feature.Name);
       // libcall-thread-context is handled as a special case above
-      if (disallowed.contains(feature.Name) && feature.Name != "libcall-thread-context")
+      if (disallowed.contains(feature.Name) &&
+          feature.Name != "libcall-thread-context")
         error(Twine("Target feature '") + feature.Name + "' used in " +
               fileName + " is disallowed by " + disallowed[feature.Name] +
               ". Use --no-check-features to suppress.");
