@@ -1063,7 +1063,7 @@ static void createOptionalSymbols() {
   //
   // __tls_size and __tls_align are not needed in this case since they are only
   // needed for __wasm_init_tls (which we do not create in this case).
-  if (!ctx.sym.tlsBase)
+  if (!ctx.arg.sharedMemory)
     ctx.sym.tlsBase = createOptionalGlobal("__tls_base", false);
 }
 
