@@ -9,8 +9,8 @@
 #include "DiagTool.h"
 #include "DiagnosticNames.h"
 #include "clang/Basic/LLVM.h"
-#include "clang/Driver/CreateInvocationFromArgs.h"
 #include "clang/Frontend/CompilerInstance.h"
+#include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/TextDiagnosticBuffer.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/Frontend/Utils.h"
@@ -56,36 +56,26 @@ static char getCharForLevel(DiagnosticsEngine::Level Level) {
 
 static IntrusiveRefCntPtr<DiagnosticsEngine>
 createDiagnostics(unsigned int argc, char **argv) {
-  DiagnosticOptions DiagOpts;
-
   // Buffer diagnostics from argument parsing so that we can output them using a
   // well formed diagnostic object.
   TextDiagnosticBuffer *DiagsBuffer = new TextDiagnosticBuffer;
 
-  // Try to build a CompilerInvocation.
+  // Try to build the diagnostics parser
   SmallVector<const char *, 4> Args;
   Args.push_back("diagtool");
   Args.append(argv, argv + argc);
-  CreateInvocationOptions CIOpts;
-  CIOpts.Diags = llvm::makeIntrusiveRefCnt<DiagnosticsEngine>(
-      DiagnosticIDs::create(), DiagOpts, DiagsBuffer);
-  std::unique_ptr<CompilerInvocation> Invocation =
-      createInvocation(Args, CIOpts);
-  if (!Invocation)
-    return nullptr;
-
-  // Build the diagnostics parser
-  IntrusiveRefCntPtr<DiagnosticsEngine> FinalDiags =
+  auto DiagOpts = CreateAndPopulateDiagOpts(Args);
+  IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
       CompilerInstance::createDiagnostics(*llvm::vfs::getRealFileSystem(),
-                                          Invocation->getDiagnosticOpts());
-  if (!FinalDiags)
+                                          *DiagOpts);
+  if (!Diags)
     return nullptr;
 
   // Flush any errors created when initializing everything. This could happen
   // for invalid command lines, which will probably give non-sensical results.
-  DiagsBuffer->FlushDiagnostics(*FinalDiags);
+  DiagsBuffer->FlushDiagnostics(*Diags);
 
-  return FinalDiags;
+  return Diags;
 }
 
 int ShowEnabledWarnings::run(unsigned int argc, char **argv, raw_ostream &Out) {
