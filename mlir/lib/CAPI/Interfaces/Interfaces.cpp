@@ -112,7 +112,7 @@ MlirLogicalResult mlirInferTypeOpInterfaceInferReturnTypes(
   // TODO: Create a C API that's more type-safe.
   PropertyRef propertyRef =
       properties ? PropertyRef(info->getOpPropertiesTypeID(), properties)
-                 : PropertyRef(nullptr);
+                 : PropertyRef();
   if (failed(info->getInterface<InferTypeOpInterface>()->inferReturnTypes(
           unwrap(context), maybeLocation, unwrappedOperands, attributeDict,
           propertyRef, unwrappedRegions, inferredTypes)))
@@ -151,7 +151,7 @@ MlirLogicalResult mlirInferShapedTypeOpInterfaceInferReturnTypes(
   // properties type for this operation.
   PropertyRef propertyRef =
       properties ? PropertyRef(info->getOpPropertiesTypeID(), properties)
-                 : PropertyRef(nullptr);
+                 : PropertyRef();
   if (failed(info->getInterface<InferShapedTypeOpInterface>()
                  ->inferReturnTypeComponents(
                      unwrap(context), maybeLocation,

@@ -928,7 +928,7 @@ public:
     if (propertiesStorageSize)
       return PropertyRef(name.getOpPropertiesTypeID(),
                          getRawPropertiesStorageUnsafe());
-    return {nullptr};
+    return {};
   }
 
   PropertyRef getPropertiesStorage() const {
@@ -937,7 +937,7 @@ public:
           name.getOpPropertiesTypeID(),
           reinterpret_cast<void *>(const_cast<detail::OpProperties *>(
               getTrailingObjects<detail::OpProperties>())));
-    return {nullptr};
+    return {};
   }
 
   /// Returns a pointer to the properties storage (if it exists) with no type

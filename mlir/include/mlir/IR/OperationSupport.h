@@ -74,7 +74,6 @@ class ValueTypeRange;
 class PropertyRef {
 public:
   PropertyRef() = default;
-  PropertyRef(std::nullptr_t) {}
   PropertyRef(TypeID typeID, void *data) : typeID(typeID), data(data) {}
   operator bool() const { return data != nullptr; }
   template <typename Dest>

@@ -747,7 +747,7 @@ static void invokeCreateWithInferredReturnType(Operation *op) {
       // Only pass properties if the op's properties type matches OpTy's.
       PropertyRef properties = op->getPropertiesStorage();
       if (properties.getTypeID() != TypeID::get<typename OpTy::Properties>())
-        properties = PropertyRef(nullptr);
+        properties = PropertyRef();
       if (succeeded(OpTy::inferReturnTypes(
               context, std::nullopt, values, op->getDiscardableAttrDictionary(),
               properties, op->getRegions(), inferredReturnTypes))) {
