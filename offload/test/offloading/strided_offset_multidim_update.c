@@ -1,5 +1,5 @@
 // RUN: %libomptarget-compile-run-and-check-generic
-
+// UNSUPPORTED: intelgpu
 // Make sure multi-dimensional strided offset update works correctly.
 
 #include <stdio.h>

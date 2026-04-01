@@ -528,7 +528,15 @@ void ModFileWriter::PutSymbol(
             }
           },
           [&](const UseDetails &) { PutUse(symbol); },
-          [](const UseErrorDetails &) {},
+          [&](const UseErrorDetails &x) {
+            for (const auto &[at, symptr] : x.occurrences()) {
+              if (symptr) {
+                UseDetails details{at, *symptr};
+                PutUseDetails(details);
+                uses_ << symbol.name() << "=>" << symptr->name() << '\n';
+              }
+            }
+          },
           [&](const ProcBindingDetails &x) {
             bool deferred{symbol.attrs().test(Attr::DEFERRED)};
             typeBindings << "procedure";
@@ -852,8 +860,7 @@ void ModFileWriter::PutGeneric(const Symbol &symbol) {
   }
 }
 
-void ModFileWriter::PutUse(const Symbol &symbol) {
-  auto &details{symbol.get<UseDetails>()};
+void ModFileWriter::PutUseDetails(const UseDetails &details) {
   auto &use{details.symbol()};
   const Symbol &module{GetUsedModule(details)};
   if (use.owner().parent().IsIntrinsicModules()) {
@@ -863,9 +870,15 @@ void ModFileWriter::PutUse(const Symbol &symbol) {
     usedNonIntrinsicModules_.insert(module);
   }
   uses_ << module.name() << ",only:";
+}
+
+void ModFileWriter::PutUse(const Symbol &symbol) {
+  const auto &details{symbol.get<UseDetails>()};
+  PutUseDetails(details);
   PutGenericName(uses_, symbol);
   // Can have intrinsic op with different local-name and use-name
   // (e.g. `operator(<)` and `operator(.lt.)`) but rename is not allowed
+  auto &use{details.symbol()};
   if (!IsIntrinsicOp(symbol) && use.name() != symbol.name()) {
     PutGenericName(uses_ << "=>", use);
   }
