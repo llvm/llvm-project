@@ -509,8 +509,6 @@ def hlsl_ldexp : HLSLBuiltin<"ldexp"> {
 to the power of the specified exponent.
 \param X [in] The specified value.
 \param Exp [in] The specified exponent.
-
-This function uses the following formula: X * 2^Exp
 }];
   let ParamNames = ["X", "Exp"];
   let Body = "return exp2(Exp) * X;";
