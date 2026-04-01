@@ -1189,6 +1189,17 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  erfcf
+  SRCS
+    erfcf.cpp
+  HDRS
+    ../erfcf.h
+  DEPENDS
+    libc.src.__support.math.erfcf
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
   erfcf16
   SRCS
     erfcf16.cpp

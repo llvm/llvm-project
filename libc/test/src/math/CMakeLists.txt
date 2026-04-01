@@ -2759,6 +2759,18 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  erfcf_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    erfcf_test.cpp
+  DEPENDS
+    libc.src.math.erfcf
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
   erfcf16_test
   NEED_MPFR
   SUITE

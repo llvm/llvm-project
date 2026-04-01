@@ -402,6 +402,12 @@ functions:
     arguments:
       - type: long double
       - type: long double
+  - name: erfcf
+    standards:
+      - stdc
+    return_type: float
+    arguments:
+      - type: float
   - name: erff
     standards:
       - stdc
