@@ -42,6 +42,14 @@ static cl::opt<unsigned> FunctionSizeThreshold(
              "or equal than this threshold."),
     cl::init(50));
 
+static cl::opt<unsigned>
+    FunctionCallCountThreshold("jump-table-to-switch-call-count-threshold",
+                               cl::Hidden,
+                               cl::desc("Only split jump tables containing "
+                                        "functions with a call count less than "
+                                        "or equal to this threshold."),
+                               cl::init(2));
+
 namespace llvm {
 extern cl::opt<bool> ProfcheckDisableMetadataFixes;
 } // end namespace llvm
@@ -101,8 +109,18 @@ static std::optional<JumpTableTy> parseJumpTable(GetElementPtrInst *GEP,
     Constant *C =
         ConstantFoldLoadFromConst(GV->getInitializer(), PtrTy, Offset, DL);
     auto *Func = dyn_cast_or_null<Function>(C);
-    if (!Func || Func->isDeclaration() ||
-        Func->getInstructionCount() > FunctionSizeThreshold)
+    if (!Func || Func->isDeclaration())
+      return std::nullopt;
+    if (Func->getInstructionCount() > FunctionSizeThreshold)
+      return std::nullopt;
+    unsigned FunctionCallCount = 0;
+    for (const auto &BB : *Func) {
+      for (const auto &I : BB) {
+        if (isa<CallInst>(I))
+          ++FunctionCallCount;
+      }
+    }
+    if (FunctionCallCount > FunctionCallCountThreshold)
       return std::nullopt;
     JumpTable.Funcs.push_back(Func);
   }
