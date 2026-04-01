@@ -1716,8 +1716,8 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    Available starting GFX12.
 
   llvm.amdgcn.s.barrier.signal.isfirst             Performs a barrier *arrive* operation on the barrier *object* determined by the ``i32`` immediate argument.
-                                                   Sets ``SCC=1`` if this was the first wave to *arrive* at the barrier *object*, otherwise sets ``SCC=0``.
-                                                   ``SCC=0`` is also set if the wave is not running in a workgroup.
+                                                   Returns ``i1 1`` if the wave is running in a workgroup, and it was the first wave to *arrive* at the barrier
+                                                   *object*, otherwise returns ``i1 0``.
                                                    See :ref:`amdgpu-amdhsa-execution-barriers`.
                                                    Available starting GFX12.
 
@@ -6847,7 +6847,7 @@ Threads can synchronize execution by performing barrier operations on barrier *o
 * *Thread-barrier-order<BO>* is the subset of *program-order* that only
   relates barrier operations performed on a barrier *object* ``BO``.
 * All barrier modification operations on a barrier *object* ``BO`` occur in a strict total order called
-  *barrier-modification-order<BO>*; It is the order in which ``BO`` observes barrier
+  *barrier-modification-order<BO>*; it is the order in which ``BO`` observes barrier
   operations that change its state. For any valid *barrier-modification-order<BO>*, the
   following must be true:
 
@@ -6917,7 +6917,7 @@ Threads can synchronize execution by performing barrier operations on barrier *o
   transitive closure of: *barrier-participates-in* and its inverse relation.
 * For every barrier operation ``A`` that *barrier-participates-in* a barrier *wait* ``W`` on a barrier *object* ``BO``:
 
-  * There is no barrier operation ``X`` on ``BO`` such that ``A -> X -> B`` in
+  * There is no barrier operation ``X`` on ``BO`` such that ``A -> X -> W`` in
     *barrier-executes-before*, and ``X`` *barrier-phase-with* a non-empty set of operations
     that does not include ``W``.
 
@@ -6948,8 +6948,6 @@ Barrier operations have the following additional target-specific properties:
 
 All barrier *objects* have the following additional target-specific properties:
 
-* Barrier *join* does not increment the *expected count* of a barrier *object*. The *expected count* is set
-  during initialization of the barrier by the hardware.
 * Barrier *objects* are allocated and managed by the hardware.
 
   * Barrier *objects* are stored in an unspecified memory region that does not alias with
@@ -6984,11 +6982,9 @@ Informally, we can deduce from the above formal model that execution barriers be
   ``X`` to complete if ``W -> X`` in *barrier-executes-before*.
 * It is undefined behavior to operate on an uninitialized barrier object.
 * It is undefined behavior for a barrier *wait* to never complete.
-* It is not mandatory to *drop* a barrier after *joining* it. The operations are not opposites; *drop*
-  affects future barrier operations by decrementing the *expected count* of the barrier *object*, which
-  can only be undone by re-*initializing* the barrier.
-* A thread may not *arrive* at then *drop* a barrier *object* unless the barrier completes before the
-  barrier *drop*. Incrementing the *signal count* and decrementing the *expected count* directly
+* It is not mandatory to *drop* a barrier after *joining* it.
+* A thread may not *arrive* and then *drop* a barrier *object* unless the barrier completes before the
+  barrier *drop*. Incrementing the *arrive count* and decrementing the *expected count* directly
   after may cause undefined behavior.
 * *Joining* a barrier is only useful if the thread will *wait* on that same barrier *object* later.
 
@@ -7131,8 +7127,8 @@ The following code sequences can be used to implement the barrier operations des
                                                         if there is a non-zero value contained in the bits ``[22:16]`` of ``m0``,
                                                         the *expected count* of the barrier *object* is set to that value before
                                                         the *arrive count* of the barrier *object* is incremented.
-                                                        The new *expected count* value must be greater than or equal to the old
-                                                        value, otherwise the behavior is undefined.
+                                                        The new *expected count* value must be greater than or equal to the
+                                                        *arrive count*, otherwise the behavior is undefined.
                                                       - For barrier *objects* ``-4`` and ``-3``
                                                         (``cluster`` barriers): only one wave
                                                         per workgroup may arrive at the barrier on behalf of
@@ -7186,14 +7182,14 @@ The following barrier IDs are available:
                                                 barriers ``[1, 16]``.
 
     ``[1, 16]``     ``workgroup``  GFX12.5      *Named barrier object*. All barrier *objects* in this range are
-                                                *barrier-mutually-exclusive* with barriers ``[0, 16]``.
+                                                *barrier-mutually-exclusive* with other barriers in ``[0, 16]``.
     =============== ============== ============ ==============================================================
 
 
 
 Informally, we can note that:
 
-* All operations other than *join* on the *NULL named barrier object* is a no-op.
+* All operations on the *NULL named barrier object* other than *join* are no-ops.
 
   * As the *NULL named barrier object* (barrier ID ``0``) is *barrier-mutually-exclusive* with all other
     *named barrier objects* (barrier IDs ``[1, 16]``), a thread can use a *join* on the *NULL*
