@@ -494,7 +494,8 @@ public:
     // - Define module variables and OpenMP/OpenACC declarative constructs so
     //   they are available before lowering any function that may use them.
     bool hasMainProgram = false;
-    const Fortran::semantics::Symbol *globalOmpRequiresSymbol = nullptr;
+    llvm::SmallVector<const Fortran::semantics::Symbol *>
+        globalOmpRequiresSymbols;
     createBuilderOutsideOfFuncOpAndDo([&]() {
       for (Fortran::lower::pft::Program::Units &u : pft.getUnits()) {
         Fortran::common::visit(
@@ -503,8 +504,7 @@ public:
                   if (f.isMainProgram())
                     hasMainProgram = true;
                   declareFunction(f);
-                  if (!globalOmpRequiresSymbol)
-                    globalOmpRequiresSymbol = f.getScope().symbol();
+                  globalOmpRequiresSymbols.push_back(f.getScope().symbol());
                 },
                 [&](Fortran::lower::pft::ModuleLikeUnit &m) {
                   lowerModuleDeclScope(m);
@@ -512,12 +512,15 @@ public:
                        m.containedUnitList)
                     if (auto *f =
                             std::get_if<Fortran::lower::pft::FunctionLikeUnit>(
-                                &unit))
+                                &unit)) {
                       declareFunction(*f);
+                      globalOmpRequiresSymbols.push_back(
+                          f->getScope().symbol());
+                    }
+                  globalOmpRequiresSymbols.push_back(m.getScope().symbol());
                 },
                 [&](Fortran::lower::pft::BlockDataUnit &b) {
-                  if (!globalOmpRequiresSymbol)
-                    globalOmpRequiresSymbol = b.symTab.symbol();
+                  globalOmpRequiresSymbols.push_back(b.symTab.symbol());
                 },
                 [&](Fortran::lower::pft::CompilerDirectiveUnit &d) {},
                 [&](Fortran::lower::pft::OpenACCDirectiveUnit &d) {},
@@ -567,7 +570,7 @@ public:
                                   Fortran::common::LanguageFeature::Coarray));
       });
 
-    finalizeOpenMPLowering(globalOmpRequiresSymbol);
+    finalizeOpenMPLowering(globalOmpRequiresSymbols);
   }
 
   /// Declare a function.
@@ -7201,7 +7204,8 @@ private:
   /// Performing OpenMP lowering actions that were deferred to the end of
   /// lowering.
   void finalizeOpenMPLowering(
-      const Fortran::semantics::Symbol *globalOmpRequiresSymbol) {
+      llvm::SmallVectorImpl<const Fortran::semantics::Symbol *>
+          &globalOmpRequiresSymbol) {
     if (!ompDeferredDeclareTarget.empty()) {
       bool deferredDeviceFuncFound =
           Fortran::lower::markOpenMPDeferredDeclareTargetFunctions(
@@ -7210,9 +7214,10 @@ private:
     }
 
     // Set the module attribute related to OpenMP requires directives
-    if (ompDeviceCodeFound)
-      Fortran::lower::genOpenMPRequires(getModuleOp().getOperation(),
-                                        globalOmpRequiresSymbol);
+    if (ompDeviceCodeFound) {
+      for (const Fortran::semantics::Symbol *sym : globalOmpRequiresSymbol)
+        Fortran::lower::genOpenMPRequires(getModuleOp().getOperation(), sym);
+    }
   }
 
   /// Record fir.dummy_scope operation for this function.
