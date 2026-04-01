@@ -87,7 +87,7 @@ define amdgpu_ps bfloat @fma_bf16_sss(bfloat inreg %a, bfloat inreg %b, bfloat i
 ; GFX12-NEXT:    s_cmp_u_f32 s2, 0
 ; GFX12-NEXT:    s_cselect_b32 s0, s1, s0
 ; GFX12-NEXT:    s_lshr_b32 s0, s0, 16
-; GFX12-NEXT:    v_mov_b32_e32 v0, s0
+; GFX12-NEXT:    v_mov_b16_e32 v0.l, s0
 ; GFX12-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-LABEL: fma_bf16_sss:
@@ -107,7 +107,7 @@ define amdgpu_ps bfloat @fma_bf16_sss(bfloat inreg %a, bfloat inreg %b, bfloat i
 ; GFX1250-NEXT:    s_cmp_u_f32 s2, 0
 ; GFX1250-NEXT:    s_cselect_b32 s0, s1, s0
 ; GFX1250-NEXT:    s_lshr_b32 s0, s0, 16
-; GFX1250-NEXT:    v_mov_b32_e32 v0, s0
+; GFX1250-NEXT:    v_mov_b16_e32 v0.l, s0
 ; GFX1250-NEXT:    ; return to shader part epilog
   %result = call bfloat @llvm.fma.bf16(bfloat %a, bfloat %b, bfloat %c)
   ret bfloat %result

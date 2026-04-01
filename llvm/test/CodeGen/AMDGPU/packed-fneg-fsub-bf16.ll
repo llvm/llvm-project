@@ -560,9 +560,8 @@ define bfloat @v_fadd_bf16_chain(bfloat %a, bfloat %b, bfloat %c) {
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_pk_add_bf16 v0, v0, v1
-; GFX1250-NEXT:    v_mov_b16_e32 v1.l, v2.l
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-NEXT:    v_pk_add_bf16 v0, v0, v1
+; GFX1250-NEXT:    v_pk_add_bf16 v0, v0, v2
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX1310-LABEL: v_fadd_bf16_chain:

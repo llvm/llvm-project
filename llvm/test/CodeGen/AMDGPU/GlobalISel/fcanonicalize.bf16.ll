@@ -82,7 +82,7 @@ define amdgpu_ps bfloat @fcanonicalize_bf16_s(bfloat inreg %src) {
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_lshr_b32 s0, s0, 16
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-NEXT:    v_mov_b32_e32 v0, s0
+; GFX12-NEXT:    v_mov_b16_e32 v0.l, s0
 ; GFX12-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-LABEL: fcanonicalize_bf16_s:
@@ -101,7 +101,7 @@ define amdgpu_ps bfloat @fcanonicalize_bf16_s(bfloat inreg %src) {
 ; GFX1250-NEXT:    s_cmp_u_f32 s0, 0
 ; GFX1250-NEXT:    s_cselect_b32 s0, s2, s1
 ; GFX1250-NEXT:    s_lshr_b32 s0, s0, 16
-; GFX1250-NEXT:    v_mov_b32_e32 v0, s0
+; GFX1250-NEXT:    v_mov_b16_e32 v0.l, s0
 ; GFX1250-NEXT:    ; return to shader part epilog
   %result = call bfloat @llvm.canonicalize.bf16(bfloat %src)
   ret bfloat %result

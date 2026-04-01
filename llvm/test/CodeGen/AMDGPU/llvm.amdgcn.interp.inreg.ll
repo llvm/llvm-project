@@ -427,7 +427,7 @@ define amdgpu_ps half @v_interp_f16_imm_params(float inreg %i, float inreg %j) #
 ; GFX12-TRUE16-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_2) | instskip(SKIP_1) | instid1(SALU_CYCLE_2)
 ; GFX12-TRUE16-GISEL-NEXT:    s_add_f16 s0, s0, s1
 ; GFX12-TRUE16-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-TRUE16-GISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX12-TRUE16-GISEL-NEXT:    v_mov_b16_e32 v0.l, s0
 ; GFX12-TRUE16-GISEL-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-FAKE16-SDAG-LABEL: v_interp_f16_imm_params:
