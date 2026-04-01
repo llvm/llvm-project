@@ -8,7 +8,7 @@
 
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/Passes/RegionsFromBBs.h"
 #include "llvm/SandboxIR/Function.h"
-#include "llvm/SandboxIR/Region.h"
+#include "llvm/Transforms/Vectorize/SandboxVectorizer/RegionWithScore.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/SandboxVectorizerPassBuilder.h"
 
 namespace llvm::sandboxir {
@@ -18,10 +18,11 @@ RegionsFromBBs::RegionsFromBBs(StringRef Pipeline, StringRef AuxArg)
       RPM("rpm", Pipeline, SandboxVectorizerPassBuilder::createRegionPass) {}
 
 bool RegionsFromBBs::runOnFunction(Function &F, const Analyses &A) {
-  SmallVector<std::unique_ptr<Region>, 16> Regions;
+  SmallVector<std::unique_ptr<RegionWithScore>, 16> Regions;
   // Create a region for each BB.
   for (BasicBlock &BB : F) {
-    Regions.push_back(std::make_unique<Region>(F.getContext(), A.getTTI()));
+    Regions.push_back(
+        std::make_unique<RegionWithScore>(F.getContext(), A.getTTI()));
     auto &RgnPtr = Regions.back();
     for (Instruction &I : BB)
       RgnPtr->add(&I);
