@@ -467,9 +467,9 @@ def emit_check_block(merged_seq, prefix_name_map, comment):
 # ---------------------------------------------------------------------------
 
 
-def process_file(path, base_prefix_override=None, dry_run=False, split=False):
-    with open(path, "r", encoding="utf-8", errors="replace") as fh:
-        lines = fh.readlines()
+def process_lines(lines, path, base_prefix_override=None, split=False):
+    """Process *lines* (as returned by readlines()) for *path* and return the
+    rewritten line list, or None if the file should be skipped."""
 
     # 1. Find RUN lines and extract FileCheck prefixes
     run_lines_raw, run_line_ranges = find_run_lines(path, lines)
@@ -485,7 +485,7 @@ def process_file(path, base_prefix_override=None, dry_run=False, split=False):
     run_line_ranges = _filtered_ranges
     if not run_lines_raw:
         common.warn(f"{path}: no RUN lines found, skipping.")
-        return
+        return None
 
     # Map each run line to its FileCheck prefix(es)
     run_prefix_list = []  # ordered unique run-line strings
@@ -501,7 +501,7 @@ def process_file(path, base_prefix_override=None, dry_run=False, split=False):
 
     if not all_prefixes:
         common.warn(f"{path}: no FileCheck prefixes found, skipping.")
-        return
+        return None
 
     # 2. Collect check lines for each RUN line
     _seq_lnums = [collect_check_lines_for_run(lines, pfxs) for pfxs in run_prefix_map]
@@ -634,6 +634,19 @@ def process_file(path, base_prefix_override=None, dry_run=False, split=False):
             )
         ]
         new_lines[first_run:first_run] = coverage_comments
+
+    return new_lines
+
+
+def process_file(path, base_prefix_override=None, dry_run=False, split=False):
+    with open(path, "r", encoding="utf-8", errors="replace") as fh:
+        lines = fh.readlines()
+
+    new_lines = process_lines(
+        lines, path, base_prefix_override=base_prefix_override, split=split
+    )
+    if new_lines is None:
+        return
 
     if dry_run:
         common.debug("  (dry-run: not modifying file)")
