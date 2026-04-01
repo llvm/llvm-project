@@ -3077,11 +3077,10 @@ bool WaitcntBrackets::merge(const WaitcntBrackets &Other) {
     if (T == LOAD_CNT)
       StrictDom |= mergeScore(M, LastFlatLoadCnt, Other.LastFlatLoadCnt);
 
-    if (T == DS_CNT)
+    if (T == DS_CNT) {
       StrictDom |= mergeScore(M, LastFlatDsCnt, Other.LastFlatDsCnt);
-
-    if (T == DS_CNT)
       StrictDom |= mergeScore(M, LastGDS, Other.LastGDS);
+    }
 
     if (T == KM_CNT) {
       StrictDom |= mergeScore(M, SCCScore, Other.SCCScore);
