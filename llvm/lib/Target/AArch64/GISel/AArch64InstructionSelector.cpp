@@ -5515,19 +5515,6 @@ AArch64InstructionSelector::emitConstantMOVVector(DstOp Dst, APInt Imm,
         }
         return &*Mov;
       }
-      case AArch64::MOVID:
-      case AArch64::MOVIv2d_ns:
-      case AArch64::MOVIv8b_ns:
-      case AArch64::MOVIv16b_ns:
-      case AArch64::FMOVv2f32_ns:
-      case AArch64::FMOVv4f32_ns:
-      case AArch64::FMOVDi:
-      case AArch64::FMOVv2f64_ns: {
-        auto Mov =
-            MIRBuilder.buildInstr(Insn.Opcode, {Dst}, {}).addImm(Insn.Op1);
-        constrainSelectedInstRegOperands(*Mov, TII, TRI, RBI);
-        return &*Mov;
-      }
       case AArch64::MOVIv2i32:
       case AArch64::MOVIv4i32:
       case AArch64::MOVIv4i16:
@@ -5539,17 +5526,27 @@ AArch64InstructionSelector::emitConstantMOVVector(DstOp Dst, APInt Imm,
       case AArch64::MVNIv4i16:
       case AArch64::MVNIv8i16:
       case AArch64::MVNIv2s_msl:
-      case AArch64::MVNIv4s_msl: {
-        auto Mov = MIRBuilder.buildInstr(Insn.Opcode, {Dst}, {})
-                       .addImm(Insn.Op1)
-                       .addImm(Insn.Op2);
+      case AArch64::MVNIv4s_msl:
+      case AArch64::MOVID:
+      case AArch64::MOVIv2d_ns:
+      case AArch64::MOVIv8b_ns:
+      case AArch64::MOVIv16b_ns:
+      case AArch64::FMOVv2f32_ns:
+      case AArch64::FMOVv4f32_ns:
+      case AArch64::FMOVDi:
+      case AArch64::FMOVv2f64_ns: {
+        auto Mov = MIRBuilder.buildInstr(Insn.Opcode, {Dst}, {});
+        if (Insn.Op1)
+          Mov.addImm(*Insn.Op1);
+        if (Insn.Op2)
+          Mov.addImm(*Insn.Op2);
         constrainSelectedInstRegOperands(*Mov, TII, TRI, RBI);
         return &*Mov;
       }
       case AArch64::DUPM_ZI: {
         auto Mov =
             MIRBuilder.buildInstr(Insn.Opcode, {&AArch64::ZPRRegClass}, {})
-                .addImm(Insn.Op1);
+                .addImm(*Insn.Op1);
         constrainSelectedInstRegOperands(*Mov, TII, TRI, RBI);
         Mov = MIB.buildInstr(TargetOpcode::COPY, {Dst}, {})
                   .addReg(Mov.getReg(0), {},
@@ -5563,8 +5560,8 @@ AArch64InstructionSelector::emitConstantMOVVector(DstOp Dst, APInt Imm,
       case AArch64::DUP_ZI_D: {
         auto Mov =
             MIRBuilder.buildInstr(Insn.Opcode, {&AArch64::ZPRRegClass}, {})
-                .addImm(Insn.Op1)
-                .addImm(Insn.Op2);
+                .addImm(*Insn.Op1)
+                .addImm(*Insn.Op2);
         constrainSelectedInstRegOperands(*Mov, TII, TRI, RBI);
         Mov = MIB.buildInstr(TargetOpcode::COPY, {Dst}, {})
                   .addReg(Mov.getReg(0), {},

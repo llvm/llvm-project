@@ -177,7 +177,7 @@ bool AArch64ExpandPseudoImpl::expandMOVImm(MachineBasicBlock &MBB,
         MIBS.push_back(BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(I->Opcode))
                            .add(MI.getOperand(0))
                            .addReg(BitSize == 32 ? AArch64::WZR : AArch64::XZR)
-                           .addImm(I->Op2));
+                           .addImm(*I->Op2));
       } else {
         Register DstReg = MI.getOperand(0).getReg();
         bool DstIsDead = MI.getOperand(0).isDead();
@@ -187,7 +187,7 @@ bool AArch64ExpandPseudoImpl::expandMOVImm(MachineBasicBlock &MBB,
                                     getDeadRegState(DstIsDead && LastItem) |
                                     RenamableState)
                 .addReg(DstReg)
-                .addImm(I->Op2));
+                .addImm(*I->Op2));
       }
       break;
     case AArch64::EONXrs:
@@ -203,32 +203,33 @@ bool AArch64ExpandPseudoImpl::expandMOVImm(MachineBasicBlock &MBB,
                                   RenamableState)
               .addReg(DstReg)
               .addReg(DstReg)
-              .addImm(I->Op2));
+              .addImm(*I->Op2));
     } break;
     case AArch64::MOVNWi:
     case AArch64::MOVNXi:
     case AArch64::MOVZWi:
     case AArch64::MOVZXi: {
       bool DstIsDead = MI.getOperand(0).isDead();
-      MIBS.push_back(BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(I->Opcode))
-        .addReg(DstReg, RegState::Define |
-                getDeadRegState(DstIsDead && LastItem) |
-                RenamableState)
-        .addImm(I->Op1)
-        .addImm(I->Op2));
+      MIBS.push_back(
+          BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(I->Opcode))
+              .addReg(DstReg, RegState::Define |
+                                  getDeadRegState(DstIsDead && LastItem) |
+                                  RenamableState)
+              .addImm(*I->Op1)
+              .addImm(*I->Op2));
       } break;
     case AArch64::MOVKWi:
     case AArch64::MOVKXi: {
       Register DstReg = MI.getOperand(0).getReg();
       bool DstIsDead = MI.getOperand(0).isDead();
-      MIBS.push_back(BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(I->Opcode))
-        .addReg(DstReg,
-                RegState::Define |
-                getDeadRegState(DstIsDead && LastItem) |
-                RenamableState)
-        .addReg(DstReg)
-        .addImm(I->Op1)
-        .addImm(I->Op2));
+      MIBS.push_back(
+          BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(I->Opcode))
+              .addReg(DstReg, RegState::Define |
+                                  getDeadRegState(DstIsDead && LastItem) |
+                                  RenamableState)
+              .addReg(DstReg)
+              .addImm(*I->Op1)
+              .addImm(*I->Op2));
       } break;
     }
   }

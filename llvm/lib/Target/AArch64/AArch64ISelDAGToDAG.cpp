@@ -5056,10 +5056,6 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
         case AArch64::FMOVv4f32_ns:
         case AArch64::FMOVDi:
         case AArch64::FMOVv2f64_ns:
-          Src = CurDAG->getMachineNode(
-              Insn.Opcode, DL, FVT,
-              CurDAG->getTargetConstant(Insn.Op1, DL, MVT::i64));
-          break;
         case AArch64::MOVIv2i32:
         case AArch64::MOVIv4i32:
         case AArch64::MOVIv4i16:
@@ -5071,16 +5067,19 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
         case AArch64::MVNIv4i16:
         case AArch64::MVNIv8i16:
         case AArch64::MVNIv2s_msl:
-        case AArch64::MVNIv4s_msl:
-          Src = CurDAG->getMachineNode(
-              Insn.Opcode, DL, FVT,
-              CurDAG->getTargetConstant(Insn.Op1, DL, MVT::i64),
-              CurDAG->getTargetConstant(Insn.Op2, DL, MVT::i64));
+        case AArch64::MVNIv4s_msl: {
+          SmallVector<SDValue> Ops;
+          if (Insn.Op1)
+            Ops.push_back(CurDAG->getTargetConstant(*Insn.Op1, DL, MVT::i64));
+          if (Insn.Op2)
+            Ops.push_back(CurDAG->getTargetConstant(*Insn.Op2, DL, MVT::i64));
+          Src = CurDAG->getMachineNode(Insn.Opcode, DL, FVT, Ops);
           break;
+        }
         case AArch64::DUPM_ZI:
           Src = CurDAG->getMachineNode(
               Insn.Opcode, DL, MVT::nxv2f64,
-              CurDAG->getTargetConstant(Insn.Op1, DL, MVT::i64));
+              CurDAG->getTargetConstant(*Insn.Op1, DL, MVT::i64));
           Src = CurDAG
                     ->getTargetExtractSubreg(AArch64::zsub, DL, FVT,
                                              SDValue(Src, 0))
@@ -5089,8 +5088,8 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
         case AArch64::DUP_ZI_D:
           Src = CurDAG->getMachineNode(
               Insn.Opcode, DL, MVT::nxv2f64,
-              CurDAG->getTargetConstant(Insn.Op1, DL, MVT::i64),
-              CurDAG->getTargetConstant(Insn.Op2, DL, MVT::i64));
+              CurDAG->getTargetConstant(*Insn.Op1, DL, MVT::i64),
+              CurDAG->getTargetConstant(*Insn.Op2, DL, MVT::i64));
           Src = CurDAG
                     ->getTargetExtractSubreg(AArch64::zsub, DL, FVT,
                                              SDValue(Src, 0))

@@ -732,12 +732,13 @@ bool AArch64_IMM::expandVectorMOVImm(
   if (ST->isNeonAvailable() && Imm.getHiBits(64) == Imm.getLoBits(64)) {
     uint64_t Value = Imm.trunc(64).getZExtValue();
     if (Value == 0) {
-      Insn.push_back({AArch64::FMOVD0, 0, 0});
+      Insn.push_back({AArch64::FMOVD0, std::nullopt, std::nullopt});
       return true;
     }
     if (AArch64_AM::isAdvSIMDModImmType10(Value)) {
       unsigned Opc = Is64Bit ? AArch64::MOVID : AArch64::MOVIv2d_ns;
-      Insn.push_back({Opc, AArch64_AM::encodeAdvSIMDModImmType10(Value), 0});
+      Insn.push_back(
+          {Opc, AArch64_AM::encodeAdvSIMDModImmType10(Value), std::nullopt});
       return true;
     }
     if (AArch64_AM::isAdvSIMDModImmType1(Value)) {
@@ -782,17 +783,20 @@ bool AArch64_IMM::expandVectorMOVImm(
     }
     if (AArch64_AM::isAdvSIMDModImmType9(Value)) {
       unsigned Opc = Is64Bit ? AArch64::MOVIv8b_ns : AArch64::MOVIv16b_ns;
-      Insn.push_back({Opc, AArch64_AM::encodeAdvSIMDModImmType9(Value), 0});
+      Insn.push_back(
+          {Opc, AArch64_AM::encodeAdvSIMDModImmType9(Value), std::nullopt});
       return true;
     }
     if (AArch64_AM::isAdvSIMDModImmType11(Value)) {
       unsigned Opc = Is64Bit ? AArch64::FMOVv2f32_ns : AArch64::FMOVv4f32_ns;
-      Insn.push_back({Opc, AArch64_AM::encodeAdvSIMDModImmType11(Value), 0});
+      Insn.push_back(
+          {Opc, AArch64_AM::encodeAdvSIMDModImmType11(Value), std::nullopt});
       return true;
     }
     if (AArch64_AM::isAdvSIMDModImmType12(Value)) {
       unsigned Opc = Is64Bit ? AArch64::FMOVDi : AArch64::FMOVv2f64_ns;
-      Insn.push_back({Opc, AArch64_AM::encodeAdvSIMDModImmType12(Value), 0});
+      Insn.push_back(
+          {Opc, AArch64_AM::encodeAdvSIMDModImmType12(Value), std::nullopt});
       return true;
     }
 
@@ -852,7 +856,7 @@ bool AArch64_IMM::expandVectorMOVImm(
     }
     uint64_t Encoding;
     if (AArch64_AM::isSVELogicalImm(64, Val64.getZExtValue(), Encoding)) {
-      Insn.push_back({AArch64::DUPM_ZI, Encoding, 0});
+      Insn.push_back({AArch64::DUPM_ZI, Encoding, std::nullopt});
       return true;
     }
   }
