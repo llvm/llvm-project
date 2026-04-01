@@ -4907,6 +4907,7 @@ void CGDebugInfo::emitFunctionStart(GlobalDecl GD, SourceLocation Loc,
     // This is a global initializer or atexit destructor for a global variable.
     Name = getDynamicInitializerName(cast<VarDecl>(D), GD.getDynamicInitKind(),
                                      Fn);
+    LinkageName = Fn->getName();
   } else {
     Name = Fn->getName();
 
