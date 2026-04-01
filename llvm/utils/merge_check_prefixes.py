@@ -552,6 +552,9 @@ def process_lines(lines, path, base_prefix_override=None, split=False):
     if coverage:
         rl_coverage.update(coverage)
         all_prefixes.update(coverage.values())
+    # Snapshot before assign_prefix_names adds generated names, so we can later
+    # identify which names are truly new (not present in the original file).
+    prefixes_before_assign = set(all_prefixes)
     prefix_name_map = assign_prefix_names(
         block_merges, all_rls_fs, base, rl_coverage, run_prefix_map, all_prefixes, split
     )
@@ -621,12 +624,46 @@ def process_lines(lines, path, base_prefix_override=None, split=False):
         else:
             new_lines.append(line)
 
+    first_run = next(
+        (j for j, ln in enumerate(new_lines) if common.RUN_LINE_RE.match(ln)), 0
+    )
+    # In merge mode, insert a comment block before the first RUN line for each
+    # freshly-generated prefix name (i.e. not present in the original file),
+    # describing which run lines it covers and giving a sample rename command.
+    if not split:
+        newly_generated = [
+            (pset, name)
+            for pset, name in sorted(prefix_name_map.items(), key=lambda kv: kv[1])
+            if name not in prefixes_before_assign
+        ]
+        if newly_generated:
+            # Split common.CHECK_RE around the name-capture group so we can
+            # build a Perl substitution that matches the prefix exactly where
+            # CHECK_RE would find it (comment char + whitespace + name + suffix + colon).
+            _check_pat_before, _check_pat_after = common.CHECK_RE.pattern.split(
+                "([^:]+?)", 1
+            )
+            # Escape '/' for use inside a Perl s/.../.../ delimiter.
+            _perl_before = _check_pat_before.replace("/", r"\/")
+
+            hint_comments = []
+            for pset, name in newly_generated:
+                members = ", ".join(str(i) for i in sorted(pset))
+                hint_comments.append(
+                    f"{comment} NOTE: New prefix {name!r} was generated to cover run"
+                    f" line(s) {{{members}}}. To rename it, run:\n"
+                )
+                _esc = re.escape(name)
+                _perl_pat = f"({_perl_before})({_esc})({_check_pat_after})"
+                hint_comments.append(
+                    f"{comment}   perl -pi -e 's/{_perl_pat}/$1YOUR-NAME$3/g'"
+                    f" {os.path.basename(path)}\n"
+                )
+            new_lines[first_run:first_run] = hint_comments
+
     # In split mode, insert a comment block before the first RUN line recording
     # the mapping of each new prefix name to the run-line indices that use it.
     if split:
-        first_run = next(
-            (j for j, ln in enumerate(new_lines) if common.RUN_LINE_RE.match(ln)), 0
-        )
         coverage_comments = [
             f"{comment} --check-prefix={name}={', '.join(str(i) for i in sorted(pset))}\n"
             for pset, name in sorted(
