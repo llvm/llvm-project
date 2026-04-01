@@ -255,20 +255,20 @@ public:
           const struct AssignmentQueryContext Context = {
               LoanPropagation, MovedLoans, LiveOrigins, FactMgr, ADC};
           const auto AliasExprs = getAliasList(Context, UF, LID, IssueExpr);
-          if (!AliasExprs.has_value()) {
-            llvm::dbgs() << "Search variable assignment chain failed\n";
-          }
-
           SemaHelper->reportUseAfterFree(IssueExpr, UF->getUseExpr(), MovedExpr,
                                          AliasExprs, ExpiryLoc);
         }
       } else if (const auto *OEF =
                      CausingFact.dyn_cast<const OriginEscapesFact *>()) {
-        if (const auto *RetEscape = dyn_cast<ReturnEscapeFact>(OEF))
-          // Return stack address.
-          SemaHelper->reportUseAfterReturn(
-              IssueExpr, RetEscape->getReturnExpr(), MovedExpr, ExpiryLoc);
-        else if (const auto *FieldEscape = dyn_cast<FieldEscapeFact>(OEF))
+        if (const auto *RetEscape = dyn_cast<ReturnEscapeFact>(OEF)) {
+          const struct AssignmentQueryContext Context = {
+              LoanPropagation, MovedLoans, LiveOrigins, FactMgr, ADC};
+          const auto AliasExprs =
+              getAliasList(Context, RetEscape, LID, IssueExpr);
+          SemaHelper->reportUseAfterReturn(IssueExpr,
+                                           RetEscape->getReturnExpr(),
+                                           MovedExpr, AliasExprs, ExpiryLoc);
+        } else if (const auto *FieldEscape = dyn_cast<FieldEscapeFact>(OEF))
           // Dangling field.
           SemaHelper->reportDanglingField(
               IssueExpr, FieldEscape->getFieldDecl(), MovedExpr, ExpiryLoc);

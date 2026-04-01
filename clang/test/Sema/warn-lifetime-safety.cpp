@@ -506,7 +506,8 @@ void small_scope_reference_var_no_error() {
 
 MyObj* simple_return_stack_address() {
   MyObj s;      
-  MyObj* p = &s; // expected-warning {{address of stack memory is returned later}}
+  MyObj* p = &s; // expected-warning {{address of stack memory is returned later}} \
+                 // expected-note {{variable 'p' aliases the storage of variable 's'}}
   return p;      // expected-note {{returned here}}
 }
 
@@ -535,7 +536,8 @@ const MyObj* conditional_assign_unconditional_return(const MyObj& safe, bool c) 
   MyObj s; 
   const MyObj* p = &safe;
   if (c) {
-    p = &s;       // expected-warning {{address of stack memory is returned later}}
+    p = &s;       // expected-warning {{address of stack memory is returned later}} \
+                  // expected-note {{variable 'p' aliases the storage of variable 's'}}
   }     
   return p;      // expected-note {{returned here}}
 }
@@ -544,7 +546,8 @@ View conditional_assign_both_branches(const MyObj& safe, bool c) {
   MyObj s;
   View p;
   if (c) {
-    p = s;      // expected-warning {{address of stack memory is returned later}}
+    p = s;      // expected-warning {{address of stack memory is returned later}} \
+                // expected-note {{variable 'p' aliases the storage of variable 's'}}
   } 
   else {
     p = safe;
@@ -556,15 +559,17 @@ View conditional_assign_both_branches(const MyObj& safe, bool c) {
 View reassign_safe_to_local(const MyObj& safe) {
   MyObj local;
   View p = safe;
-  p = local;    // expected-warning {{address of stack memory is returned later}}
+  p = local;    // expected-warning {{address of stack memory is returned later}} \
+                // expected-note {{variable 'p' aliases the storage of variable 'local'}}
   return p;     // expected-note {{returned here}}
 }
 
 View pointer_chain_to_local() {
   MyObj local;
-  View p1 = local;     // expected-warning {{address of stack memory is returned later}}
-  View p2 = p1; 
-  return p2;          // expected-note {{returned here}}
+  View p1 = local;     // expected-warning {{address of stack memory is returned later}} \
+                       // expected-note {{variable 'p1' aliases the storage of variable 'local'}}
+  View p2 = p1;        // expected-note {{variable 'p2' aliases the storage of variable 'local'}}
+  return p2;           // expected-note {{returned here}}
 }
 
 View multiple_assign_multiple_return(const MyObj& safe, bool c1, bool c2) {
@@ -572,11 +577,13 @@ View multiple_assign_multiple_return(const MyObj& safe, bool c1, bool c2) {
   MyObj local2;
   View p;
   if (c1) {
-    p = local1;       // expected-warning {{address of stack memory is returned later}}
+    p = local1;       // expected-warning {{address of stack memory is returned later}} \
+                      // expected-note {{variable 'p' aliases the storage of variable 'local1'}}
     return p;         // expected-note {{returned here}}
   }
   else if (c2) {
-    p = local2;       // expected-warning {{address of stack memory is returned later}}
+    p = local2;       // expected-warning {{address of stack memory is returned later}} \
+                      // expected-note {{variable 'p' aliases the storage of variable 'local2'}}
     return p;         // expected-note {{returned here}}
   }
   p = safe;
@@ -588,15 +595,17 @@ View multiple_assign_single_return(const MyObj& safe, bool c1, bool c2) {
   MyObj local2;
   View p;
   if (c1) {
-    p = local1;      // expected-warning {{address of stack memory is returned later}}
+    p = local1;      // expected-warning {{address of stack memory is returned later}} \
+                     // expected-note {{variable 'p' aliases the storage of variable 'local1'}}
   }
   else if (c2) {
-    p = local2;      // expected-warning {{address of stack memory is returned later}}
+    p = local2;      // expected-warning {{address of stack memory is returned later}} \
+                     // expected-note {{variable 'p' aliases the storage of variable 'local2'}}
   }
   else {
     p = safe;
   }
-  return p;         // expected-note 2 {{returned here}}
+  return p;          // expected-note 2 {{returned here}}
 }
 
 View direct_return_of_local() {
@@ -614,14 +623,16 @@ MyObj& reference_return_of_local() {
 int* trivial_int_uar() {
   int *a;
   int b = 1;
-  a = &b;          // expected-warning {{address of stack memory is returned later}}
+  a = &b;          // expected-warning {{address of stack memory is returned later}} \
+                   // expected-note {{variable 'a' aliases the storage of variable 'b'}}
   return a;        // expected-note {{returned here}}
 }
 
 TriviallyDestructedClass* trivial_class_uar () {
   TriviallyDestructedClass *ptr;
   TriviallyDestructedClass s;
-  ptr = &s;       // expected-warning {{address of stack memory is returned later}}
+  ptr = &s;       // expected-warning {{address of stack memory is returned later}} \
+                  // expected-note {{variable 'ptr' aliases the storage of variable 's'}}
   return ptr;     // expected-note {{returned here}}
 }
 
@@ -636,7 +647,8 @@ int* return_pointer_to_parameter(int a) {
 }
 
 const int& return_reference_to_parameter(int a) {
-    const int &b = a;   // expected-warning {{address of stack memory is returned later}}
+    const int &b = a;   // expected-warning {{address of stack memory is returned later}} \
+                        // expected-note {{variable 'b' aliases the storage of variable 'a'}}
     return b;           // expected-note {{returned here}}
 }
 int return_reference_to_parameter_no_error(int a) {
@@ -646,24 +658,31 @@ int return_reference_to_parameter_no_error(int a) {
 
 MyObj*& return_ref_to_local_ptr_pointing_to_local() {
   MyObj local;
-  MyObj* p = &local; // expected-warning {{address of stack memory is returned later}}
+  MyObj* p = &local; // expected-warning {{address of stack memory is returned later}} \
+                     // expected-note {{variable 'p' aliases the storage of variable 'local'}}
   return p;          // expected-note {{returned here}} \
                      // expected-warning {{address of stack memory is returned later}} \
                      // expected-note {{returned here}}
 }
 
 const int& reference_via_conditional(int a, int b, bool cond) {
-    const int &c = (cond ? ((a)) : (b));  // expected-warning 2 {{address of stack memory is returned later}}
+    const int &c = (cond ? ((a)) : (b));  // expected-warning 2 {{address of stack memory is returned later}} \
+                                          // expected-note {{variable 'c' aliases the storage of variable 'a'}} \
+                                          // expected-note {{variable 'c' aliases the storage of variable 'b'}}
     return c;                             // expected-note 2 {{returned here}}
 }
 const int* return_pointer_to_parameter_via_reference(int a, int b, bool cond) {
-    const int &c = cond ? a : b;  // expected-warning 2 {{address of stack memory is returned later}}
-    const int* d = &c;
+    const int &c = cond ? a : b;  // expected-warning 2 {{address of stack memory is returned later}} \
+                                  // expected-note {{variable 'c' aliases the storage of variable 'a'}} \
+                                  // expected-note {{variable 'c' aliases the storage of variable 'b'}}
+    const int* d = &c;            // expected-note {{variable 'd' aliases the storage of variable 'a'}} \
+                                  // expected-note {{variable 'd' aliases the storage of variable 'b'}}
     return d;                     // expected-note 2 {{returned here}}
 }
 
 const int& return_pointer_to_parameter_via_reference_1(int a) {
-    const int* d = &a; // expected-warning {{address of stack memory is returned later}}
+    const int* d = &a; // expected-warning {{address of stack memory is returned later}} \
+                       // expected-note {{variable 'd' aliases the storage of variable 'a'}}
     return *d;    // expected-note {{returned here}}
 }
 
@@ -700,7 +719,9 @@ struct PtrHolder {
 
 int* const& test_ref_to_ptr() {
   PtrHolder a;
-  int *const &ref = a.getRef();  // expected-warning {{address of stack memory is returned later}}
+  int *const &ref = a.getRef();  // expected-warning {{address of stack memory is returned later}} \
+                                 // expected-note {{function call result aliases the storage of variable 'a'}} \
+                                 // expected-note {{variable 'ref' aliases the storage of variable 'a'}}
   return ref;  // expected-note {{returned here}}
 }
 int* const test_ref_to_ptr_no_error() {
@@ -737,9 +758,13 @@ void test_assign_through_double_ptr() {
 
 int** test_ternary_double_ptr(bool cond) {
   int a = 1, b = 2;
-  int* pa = &a;  // expected-warning {{address of stack memory is returned later}}
-  int* pb = &b;  // expected-warning {{address of stack memory is returned later}}
-  int** result = cond ? &pa : &pb;  // expected-warning 2 {{address of stack memory is returned later}}
+  int* pa = &a;  // expected-warning {{address of stack memory is returned later}} \
+                 // expected-note {{variable 'pa' aliases the storage of variable 'a'}}
+  int* pb = &b;  // expected-warning {{address of stack memory is returned later}} \
+                 // expected-note {{variable 'pb' aliases the storage of variable 'b'}}
+  int** result = cond ? &pa : &pb;  // expected-warning 2 {{address of stack memory is returned later}} \
+                                    // expected-note {{variable 'result' aliases the storage of variable 'pa'}} \
+                                    // expected-note {{variable 'result' aliases the storage of variable 'pb'}}
   return result; // expected-note 4 {{returned here}}
 }
 //===----------------------------------------------------------------------===//
@@ -761,7 +786,8 @@ View uar_before_uaf(const MyObj& safe, bool c) {
   View p;
   {
     MyObj local_obj; 
-    p = local_obj;  // expected-warning {{ddress of stack memory is returned later}}
+    p = local_obj;  // expected-warning {{ddress of stack memory is returned later}} \
+                    // expected-note {{variable 'p' aliases the storage of variable 'local_obj'}}
     if (c) {
       return p;     // expected-note {{returned here}}
     }
@@ -1431,7 +1457,9 @@ void range_based_for_use_after_scope() {
 
 View range_based_for_use_after_return() {
   MyObjStorage s;
-  for (const MyObj &o : s) { // expected-warning {{address of stack memory is returned later}}
+  for (const MyObj &o : s) { // expected-warning {{address of stack memory is returned later}} \
+                             // expected-note {{function call result aliases the storage of variable 's'}} \
+                             // expected-note {{variable '__begin1' aliases the storage of variable 's'}}
     return o;  // expected-note {{returned here}}
   }
   return *s.begin();  // expected-warning {{address of stack memory is returned later}}
@@ -1571,14 +1599,18 @@ MyObj* call_max_with_obj_error() {
 
 const MyObj* call_max_with_ref_obj_error() {
   MyObj oa, ob;
-  const MyObj& refa = oa;     // expected-warning {{address of stack memory is returned later}}
-  const MyObj& refb = ob;     // expected-warning {{address of stack memory is returned later}}
+  const MyObj& refa = oa;     // expected-warning {{address of stack memory is returned later}} \
+                              // expected-note {{variable 'refa' aliases the storage of variable 'oa'}}
+  const MyObj& refb = ob;     // expected-warning {{address of stack memory is returned later}} \
+                              // expected-note {{variable 'refb' aliases the storage of variable 'ob'}}
   return  &MaxT(refa, refb);  // expected-note 2 {{returned here}}
 }
 const MyObj& call_max_with_ref_obj_return_ref_error() {
   MyObj oa, ob;
-  const MyObj& refa = oa;     // expected-warning {{address of stack memory is returned later}}
-  const MyObj& refb = ob;     // expected-warning {{address of stack memory is returned later}}
+  const MyObj& refa = oa;     // expected-warning {{address of stack memory is returned later}} \
+                              // expected-note {{variable 'refa' aliases the storage of variable 'oa'}}
+  const MyObj& refb = ob;     // expected-warning {{address of stack memory is returned later}} \
+                              // expected-note {{variable 'refb' aliases the storage of variable 'ob'}}
   return  MaxT(refa, refb);   // expected-note 2 {{returned here}}
 }
 
@@ -1610,30 +1642,46 @@ const NonTrivialPointer& call_max_with_non_trivial_view_with_error() {
 namespace MultiPointerTypes {
 int** return_2p() {
   int a = 1;
-  int* b = &a;  // expected-warning {{address of stack memory is returned later}}
-  int** c = &b; // expected-warning {{address of stack memory is returned later}}
+  int* b = &a;  // expected-warning {{address of stack memory is returned later}} \
+                // expected-note {{variable 'b' aliases the storage of variable 'a'}}
+  int** c = &b; // expected-warning {{address of stack memory is returned later}} \
+                // expected-note {{variable 'c' aliases the storage of variable 'a'}} \
+                // expected-note {{variable 'c' aliases the storage of variable 'b'}}
   return c;     // expected-note 2 {{returned here}}
 }
 
 int** return_2p_one_is_safe(int& a) {
   int* b = &a;
-  int** c = &b; // expected-warning {{address of stack memory is returned later}}
+  int** c = &b; // expected-warning {{address of stack memory is returned later}} \
+                // expected-note {{variable 'c' aliases the storage of variable 'b'}}
   return c;     // expected-note {{returned here}}
 }
 
 int*** return_3p() {
   int a = 1;
-  int* b = &a;    // expected-warning {{address of stack memory is returned later}}
-  int** c = &b;   // expected-warning {{address of stack memory is returned later}}
-  int*** d = &c;  // expected-warning {{address of stack memory is returned later}}
+  int* b = &a;    // expected-warning {{address of stack memory is returned later}} \
+                  // expected-note {{variable 'b' aliases the storage of variable 'a'}}
+  int** c = &b;   // expected-warning {{address of stack memory is returned later}} \
+                  // expected-note {{variable 'c' aliases the storage of variable 'a'}} \
+                  // expected-note {{variable 'c' aliases the storage of variable 'b'}}
+  int*** d = &c;  // expected-warning {{address of stack memory is returned later}} \
+                  // expected-note {{variable 'd' aliases the storage of variable 'a'}} \
+                  // expected-note {{variable 'd' aliases the storage of variable 'b'}} \
+                  // expected-note {{variable 'd' aliases the storage of variable 'c'}}
   return d;       // expected-note 3 {{returned here}}
 }
 
 View** return_view_p() {
   MyObj a;
-  View b = a;     // expected-warning {{address of stack memory is returned later}}
-  View* c = &b;   // expected-warning {{address of stack memory is returned later}}
-  View** d = &c;  // expected-warning {{address of stack memory is returned later}}
+  View b = a;     // expected-warning {{address of stack memory is returned later}} \
+                  // expected-note {{variable 'b' aliases the storage of variable 'a'}}
+  View* c = &b;   // expected-warning {{address of stack memory is returned later}} \
+                  // expected-note {{variable 'c' aliases the storage of variable 'a'}} \
+                  // expected-note {{variable 'c' aliases the storage of variable 'b'}}
+  View** d = &c;  // expected-warning {{address of stack memory is returned later}} \
+                  // expected-note {{variable 'd' aliases the storage of variable 'a'}} \
+                  // expected-note {{variable 'd' aliases the storage of variable 'b'}} \
+                  // expected-note {{variable 'd' aliases the storage of variable 'c'}}
   return d;       // expected-note 3 {{returned here}}
 }
 
@@ -1770,24 +1818,30 @@ void bar() {
 
 namespace DereferenceViews {
 const MyObj& testDeref(MyObj obj) {
-  View v = obj; // expected-warning {{address of stack memory is returned later}}
+  View v = obj; // expected-warning {{address of stack memory is returned later}} \
+                // expected-note {{variable 'v' aliases the storage of variable 'obj'}}
   return *v;    // expected-note {{returned here}}
 }
 const MyObj* testDerefAddr(MyObj obj) {
-  View v = obj; // expected-warning {{address of stack memory is returned later}}
+  View v = obj; // expected-warning {{address of stack memory is returned later}} \
+                // expected-note {{variable 'v' aliases the storage of variable 'obj'}}
   return &*v;   // expected-note {{returned here}}
 }
 const MyObj* testData(MyObj obj) {
-  View v = obj;     // expected-warning {{address of stack memory is returned later}}
+  View v = obj;     // expected-warning {{address of stack memory is returned later}} \
+                    // expected-note {{variable 'v' aliases the storage of variable 'obj'}}
   return v.data();  // expected-note {{returned here}}
 }
 const int* testLifetimeboundAccessorOfMyObj(MyObj obj) {
-  View v = obj;           // expected-warning {{address of stack memory is returned later}}
-  const MyObj* ptr = v.data();
+  View v = obj;           // expected-warning {{address of stack memory is returned later}} \
+                          // expected-note {{variable 'v' aliases the storage of variable 'obj'}}
+  const MyObj* ptr = v.data(); // expected-note {{function call result aliases the storage of variable 'obj'}} \
+                               // expected-note {{variable 'ptr' aliases the storage of variable 'obj'}}
   return ptr->getData();  // expected-note {{returned here}}
 }
 const int* testLifetimeboundAccessorOfMyObjThroughDeref(MyObj obj) {
-  View v = obj;         // expected-warning {{address of stack memory is returned later}}
+  View v = obj;         // expected-warning {{address of stack memory is returned later}} \
+                        // expected-note {{variable 'v' aliases the storage of variable 'obj'}}
   return v->getData();  // expected-note {{returned here}}
 }
 } // namespace DereferenceViews
@@ -1811,17 +1865,23 @@ It end() const [[clang::lifetimebound]];
 MyObj Global;
 
 const MyObj& ContainerMyObjReturnRef(Container<MyObj> c) {
-  for (const MyObj& x : c) {  // expected-warning {{address of stack memory is returned later}}
+  for (const MyObj& x : c) {  // expected-warning {{address of stack memory is returned later}} \
+                              // expected-note {{function call result aliases the storage of variable 'c'}} \
+                              // expected-note {{variable '__begin1' aliases the storage of variable 'c'}}
     return x;                 // expected-note {{returned here}}
   }
   return Global;
 }
 
 View ContainerMyObjReturnView(Container<MyObj> c) {
-  for (const MyObj& x : c) {  // expected-warning {{address of stack memory is returned later}}
+  for (const MyObj& x : c) {  // expected-warning {{address of stack memory is returned later}} \
+                              // expected-note {{function call result aliases the storage of variable 'c'}} \
+                              // expected-note {{variable '__begin1' aliases the storage of variable 'c'}}
     return x;                 // expected-note {{returned here}}
   }
-  for (View x : c) {  // expected-warning {{address of stack memory is returned later}}
+  for (View x : c) {  // expected-warning {{address of stack memory is returned later}} \
+                      // expected-note {{function call result aliases the storage of variable 'c'}} \
+                      // expected-note {{variable '__begin1' aliases the storage of variable 'c'}}
     return x;         // expected-note {{returned here}}
   }
   return Global;
@@ -2038,12 +2098,14 @@ View test1(std::string a) {
 }
 
 View test2(std::string a) {
-  View b = View(a); // expected-warning {{address of stack memory is returned later}}
+  View b = View(a); // expected-warning {{address of stack memory is returned later}} \
+                    // expected-note {{variable 'b' aliases the storage of variable 'a'}}
   return b;         // expected-note {{returned here}}
 }
 
 View test3(std::string a) {
-  const View& b = View(a);  // expected-warning {{address of stack memory is returned later}}
+  const View& b = View(a);  // expected-warning {{address of stack memory is returned later}} \
+                            // expected-note {{variable 'b' aliases the storage of variable 'a'}}
   return b;                 // expected-note {{returned here}}
 }
 } // namespace non_trivial_views
@@ -2098,7 +2160,8 @@ void test_optional_view_arrow() {
 namespace lambda_captures {
 auto return_ref_capture() {
   int local = 1;
-  auto lambda = [&local]() { return local; }; // expected-warning {{address of stack memory is returned later}}
+  auto lambda = [&local]() { return local; }; // expected-warning {{address of stack memory is returned later}} \
+                                              // expected-note {{variable 'lambda' aliases the storage of variable 'local'}}
   return lambda; // expected-note {{returned here}}
 }
 
@@ -2116,8 +2179,9 @@ auto capture_int_by_value() {
 
 auto capture_view_by_value() {
   MyObj obj;
-  View v(obj); // expected-warning {{address of stack memory is returned later}}
-  auto lambda = [v]() { return v; };
+  View v(obj); // expected-warning {{address of stack memory is returned later}} \
+               // expected-note {{variable 'v' aliases the storage of variable 'obj'}}
+  auto lambda = [v]() { return v; }; // expected-note {{variable 'lambda' aliases the storage of variable 'obj'}}
   return lambda; // expected-note {{returned here}}
 }
 
@@ -2131,13 +2195,15 @@ void capture_view_by_value_safe() {
 auto capture_pointer_by_ref() {
   MyObj obj;
   MyObj* p = &obj;
-  auto lambda = [&p]() { return p; }; // expected-warning {{address of stack memory is returned later}}
+  auto lambda = [&p]() { return p; }; // expected-warning {{address of stack memory is returned later}} \\
+                                      // expected-note {{variable 'lambda' aliases the storage of variable 'p'}}
   return lambda; // expected-note {{returned here}}
 }
 
 auto capture_multiple() {
   int a, b;
-  auto lambda = [
+  auto lambda = [ // expected-note {{variable 'lambda' aliases the storage of variable 'b'}} \
+                  // expected-note {{variable 'lambda' aliases the storage of variable 'a'}}
     &a,  // expected-warning {{address of stack memory is returned later}}
     &b   // expected-warning {{address of stack memory is returned later}}
   ]() { return a + b; };
@@ -2146,42 +2212,48 @@ auto capture_multiple() {
 
 auto capture_raw_pointer_by_value() {
   int x;
-  int* p = &x; // expected-warning {{address of stack memory is returned later}}
-  auto lambda = [p]() { return p; };
+  int* p = &x; // expected-warning {{address of stack memory is returned later}} \
+               // expected-note {{variable 'p' aliases the storage of variable 'x'}}
+  auto lambda = [p]() { return p; }; // expected-note {{variable 'lambda' aliases the storage of variable 'x'}}
   return lambda; // expected-note {{returned here}}
 }
 
 auto capture_raw_pointer_init_capture() {
   int x;
-  int* p = &x; // expected-warning {{address of stack memory is returned later}}
-  auto lambda = [q = p]() { return q; };
+  int* p = &x; // expected-warning {{address of stack memory is returned later}} \
+               // expected-note {{variable 'p' aliases the storage of variable 'x'}}
+  auto lambda = [q = p]() { return q; }; // expected-note {{variable 'lambda' aliases the storage of variable 'x'}}
   return lambda; // expected-note {{returned here}}
 }
 
 auto capture_view_init_capture() {
   MyObj obj;
-  View v(obj); // expected-warning {{address of stack memory is returned later}}
-  auto lambda = [w = v]() { return w; };
+  View v(obj); // expected-warning {{address of stack memory is returned later}} \
+               // expected-note {{variable 'v' aliases the storage of variable 'obj'}}
+  auto lambda = [w = v]() { return w; }; // expected-note {{variable 'lambda' aliases the storage of variable 'obj'}}
   return lambda; // expected-note {{returned here}}
 }
 
 auto capture_lambda() {
   int x;
-  auto inner = [&x]() { return x; }; // expected-warning {{address of stack memory is returned later}}
-  auto outer = [inner]() { return inner(); };
+  auto inner = [&x]() { return x; }; // expected-warning {{address of stack memory is returned later}} \
+                                     // expected-note {{variable 'inner' aliases the storage of variable 'x'}}
+  auto outer = [inner]() { return inner(); }; // expected-note {{variable 'outer' aliases the storage of variable 'x'}}
   return outer; // expected-note {{returned here}}
 }
 
 auto return_copied_lambda() {
   int local = 1;
-  auto lambda = [&local]() { return local; }; // expected-warning {{address of stack memory is returned later}}
-  auto lambda_copy = lambda;
+  auto lambda = [&local]() { return local; }; // expected-warning {{address of stack memory is returned later}} \
+                                              // expected-note {{variable 'lambda' aliases the storage of variable 'local'}}
+  auto lambda_copy = lambda;                  // expected-note {{variable 'lambda_copy' aliases the storage of variable 'local'}}
   return lambda_copy; // expected-note {{returned here}}
 }
 
 auto implicit_ref_capture() {
   int local = 1;
-  auto lambda = [&]() { return local; }; // expected-warning {{address of stack memory is returned later}}
+  auto lambda = [&]() { return local; }; // expected-warning {{address of stack memory is returned later}} \
+                                         // expected-note {{variable 'lambda' aliases the storage of variable 'local'}}
   return lambda; // expected-note {{returned here}}
 }
 
@@ -2190,14 +2262,17 @@ auto implicit_ref_capture() {
 // can point to the same source location.
 auto implicit_ref_capture_multiple() {
   int local = 1, local2 = 2;
-  auto lambda = [&]() { return local + local2; }; // expected-warning 2 {{address of stack memory is returned later}}
+  auto lambda = [&]() { return local + local2; }; // expected-warning 2 {{address of stack memory is returned later}} \
+                                                  // expected-note {{variable 'lambda' aliases the storage of variable 'local'}} \
+                                                  // expected-note {{variable 'lambda' aliases the storage of variable 'local2'}}
   return lambda; // expected-note 2 {{returned here}}
 }
 
 auto implicit_value_capture() {
   MyObj obj;
-  View v(obj); // expected-warning {{address of stack memory is returned later}}
-  auto lambda = [=]() { return v; };
+  View v(obj); // expected-warning {{address of stack memory is returned later}} \
+               // expected-note {{variable 'v' aliases the storage of variable 'obj'}}
+  auto lambda = [=]() { return v; }; // expected-note {{variable 'lambda' aliases the storage of variable 'obj'}}
   return lambda; // expected-note {{returned here}}
 }
 
@@ -2228,16 +2303,22 @@ auto capture_static_address_by_value() {
 auto capture_static_address_by_ref() {
   static int local = 1;
   int* p = &local;
-  auto lambda = [&p]() { return p; }; // expected-warning {{address of stack memory is returned later}}
+  auto lambda = [&p]() { return p; }; // expected-warning {{address of stack memory is returned later}} \
+                                      // expected-note {{variable 'lambda' aliases the storage of variable 'p'}}
   return lambda; // expected-note {{returned here}}
 }
 
 auto capture_multilevel_pointer() {
   int x;
-  int *p = &x; // expected-warning {{address of stack memory is returned later}}
-  int **q = &p; // expected-warning {{address of stack memory is returned later}}
-  int ***r = &q; // expected-warning {{address of stack memory is returned later}}
-  auto lambda = [=]() { return *p + **q + ***r; };
+  int *p = &x;   // expected-warning {{address of stack memory is returned later}} \
+                 // expected-note {{variable 'p' aliases the storage of variable 'x'}}
+  int **q = &p;  // expected-warning {{address of stack memory is returned later}} \
+                 // expected-note {{variable 'q' aliases the storage of variable 'p'}}
+  int ***r = &q; // expected-warning {{address of stack memory is returned later}} \
+                 // expected-note {{variable 'r' aliases the storage of variable 'q'}}
+  auto lambda = [=]() { return *p + **q + ***r; }; // expected-note {{variable 'lambda' aliases the storage of variable 'x'}} \
+                                                   // expected-note {{variable 'lambda' aliases the storage of variable 'q'}} \
+                                                   // expected-note {{variable 'lambda' aliases the storage of variable 'p'}}
   return lambda; // expected-note 3 {{returned here}}
 }
 } // namespace lambda_captures
@@ -2306,7 +2387,8 @@ void element_use_after_scope() {
 
 int* element_use_after_return() {
   int a[10]{};
-  int* p = &a[0]; // expected-warning {{address of stack memory is returned later}}
+  int* p = &a[0]; // expected-warning {{address of stack memory is returned later}} \
+                  // expected-note {{variable 'p' aliases the storage of variable 'a'}}
   return p;       // expected-note {{returned here}}
 }
 
@@ -2373,7 +2455,8 @@ void reversed_subscript_use_after_scope() {
 
 int* return_decayed_array() {
   int a[10]{};
-  int *p = a; // expected-warning {{address of stack memory is returned later}}
+  int *p = a; // expected-warning {{address of stack memory is returned later}} \
+              // expected-note {{variable 'p' aliases the storage of variable 'a'}}
   return p;   // expected-note {{returned here}}
 }
 
@@ -2531,8 +2614,10 @@ void same_scope() {
 
 S copy_propagation() {
   std::string str{"abc"};
-  S a = getS(str); // expected-warning {{address of stack memory is returned later}}
-  S b = a;
+  S a = getS(str); // expected-warning {{address of stack memory is returned later}} \
+                   // expected-note {{function call result aliases the storage of variable 'str'}} \
+                   // expected-note {{variable 'a' aliases the storage of variable 'str'}}
+  S b = a;         // expected-note {{variable 'b' aliases the storage of variable 'str'}}
   return b; // expected-note {{returned here}}
 }
 
@@ -2573,6 +2658,8 @@ S multiple_lifetimebound_params() {
                                          // expected-warning {{object whose reference is captured does not live long enough}} \
                                          // expected-note {{function call result aliases the storage of the temporary}} \
                                          // expected-note {{variable 's' aliases the storage of the temporary}} \
+                                         // expected-note {{function call result aliases the storage of variable 'str'}} \
+                                         // expected-note {{variable 's' aliases the storage of variable 'str'}} \
                                          // expected-note {{destroyed here}}
   return s;                              // expected-note {{returned here}} \
                                          // expected-note {{later used here}}
@@ -2693,8 +2780,10 @@ DefaultedOuter getDefaultedOuter(const std::string &s [[clang::lifetimebound]]);
 // pattern does not fit the ownership model this analysis supports.
 DefaultedOuter nested_defaulted_outer_with_user_defined_inner() {
   std::string str{"abc"};
-  DefaultedOuter o = getDefaultedOuter(str); // expected-warning {{address of stack memory is returned later}}
-  DefaultedOuter copy = o;
+  DefaultedOuter o = getDefaultedOuter(str); // expected-warning {{address of stack memory is returned later}} \
+                                             // expected-note {{function call result aliases the storage of variable 'str'}} \
+                                             // expected-note {{variable 'o' aliases the storage of variable 'str'}}
+  DefaultedOuter copy = o;                   // expected-note {{variable 'copy' aliases the storage of variable 'str'}}
   return copy; // expected-note {{returned here}}
 }
 
@@ -2742,8 +2831,11 @@ void owner_return_unique_ptr_s() {
 std::string_view return_dangling_view_through_owner() {
   std::string local;
   auto ups = getUniqueS(local);
-  S* s = ups.get(); // expected-warning {{address of stack memory is returned later}}
-  std::string_view sv = s->getData();
+  S* s = ups.get(); // expected-warning {{address of stack memory is returned later}} \
+                    // expected-note {{function call result aliases the storage of variable 'ups'}} \
+                    // expected-note {{variable 's' aliases the storage of variable 'ups'}}
+  std::string_view sv = s->getData(); // expected-note {{function call result aliases the storage of variable 'ups'}} \
+                                      // expected-note {{variable 'sv' aliases the storage of variable 'ups'}}
   return sv; // expected-note {{returned here}}
 }
 

@@ -287,28 +287,43 @@ namespace clang::lifetimes::internal {
 std::optional<llvm::SmallVector<AssignmentPair>>
 getAliasList(const AssignmentQueryContext &Context, const Fact *CausingFact,
              const LoanID End, const Expr *IssueExpr) {
-  const auto *UF = llvm::dyn_cast<UseFact>(CausingFact);
+  llvm::SmallVector<OriginID, 4> TargetOIDList;
+  const Expr *WarnningFact = nullptr;
+
+  if (const auto *UF = llvm::dyn_cast<UseFact>(CausingFact)) {
+    WarnningFact = UF->getUseExpr();
+    for (const OriginList *Cur = UF->getUsedOrigins(); Cur;
+         Cur = Cur->peelOuterOrigin())
+      TargetOIDList.push_back(Cur->getOuterOriginID());
+  } else if (const auto *RetEscapeF =
+                 llvm::dyn_cast<ReturnEscapeFact>(CausingFact)) {
+    WarnningFact = RetEscapeF->getReturnExpr();
+    TargetOIDList.push_back(RetEscapeF->getEscapedOriginID());
+  } else {
+    llvm_unreachable("Without a corresponding Fact handler, assignment history "
+                     "traceback will fail.");
+  }
+
   const CFGBlock *StartBlock =
-      Context.ADC.getCFGStmtMap()->getBlock(UF->getUseExpr());
+      Context.ADC.getCFGStmtMap()->getBlock(WarnningFact);
   assert(StartBlock && "Searching CFGBlock failed");
   const CFGBlock *EndBlock = Context.ADC.getCFGStmtMap()->getBlock(IssueExpr);
   assert(EndBlock && "Searching CFGBlock failed");
 
-  for (const OriginList *Cur = UF->getUsedOrigins(); Cur;
-       Cur = Cur->peelOuterOrigin()) {
-    auto TargetOID = Cur->getOuterOriginID();
+  for (auto TargetOID : TargetOIDList) {
     if (StartBlock == EndBlock) {
-      AliasAssignmentSearchResult Result =
+      const AliasAssignmentSearchResult Result =
           getAliasListCore(Context, StartBlock, End, &TargetOID);
       if (!Result.Payload.empty())
         return Result.Payload;
     } else {
-      auto Result =
+      const auto Result =
           getAliasListInMultiBlock(Context, StartBlock, End, &TargetOID);
       if (Result.has_value())
         return Result.value();
     }
   }
+
   return std::nullopt;
 }
 } // namespace clang::lifetimes::internal

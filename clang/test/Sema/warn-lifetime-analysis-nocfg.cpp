@@ -375,7 +375,9 @@ int &usedToBeFalsePositive(std::vector<int> &v) {
 int &doNotFollowReferencesForLocalOwner() {
 // Warning caught by CFG analysis.
   std::unique_ptr<int> localOwner;
-  int &p = *localOwner // cfg-warning {{address of stack memory is returned later}}
+  int &p = *localOwner // cfg-warning {{address of stack memory is returned later}} \
+                       // cfg-note {{function call result aliases the storage of variable 'localOwner'}} \
+                       // cfg-note {{variable 'p' aliases the storage of variable 'localOwner'}}
             .get();
   return p; // cfg-note {{returned here}}
 }
@@ -1035,14 +1037,18 @@ void test4() {
 
 namespace range_based_for_loop_variables {
 std::string_view test_view_loop_var(std::vector<std::string> strings) {
-  for (std::string_view s : strings) {  // cfg-warning {{address of stack memory is returned later}} 
+  for (std::string_view s : strings) {  // cfg-warning {{address of stack memory is returned later}} \
+                                        // cfg-note {{function call result aliases the storage of variable 'strings'}} \
+                                        // cfg-note {{variable '__begin1' aliases the storage of variable 'strings'}}
     return s; //cfg-note {{returned here}}
   }
   return "";
 }
 
 const char* test_view_loop_var_with_data(std::vector<std::string> strings) {
-  for (std::string_view s : strings) {  // cfg-warning {{address of stack memory is returned later}} 
+  for (std::string_view s : strings) {  // cfg-warning {{address of stack memory is returned later}} \
+                                        // cfg-note {{function call result aliases the storage of variable 'strings'}} \
+                                        // cfg-note {{variable '__begin1' aliases the storage of variable 'strings'}}
     return s.data(); //cfg-note {{returned here}}
   }
   return "";
@@ -1056,14 +1062,19 @@ std::string_view test_no_error_for_views(std::vector<std::string_view> views) {
 }
 
 std::string_view test_string_ref_var(std::vector<std::string> strings) {
-  for (const std::string& s : strings) {  // cfg-warning {{address of stack memory is returned later}} 
+  for (const std::string& s : strings) {  // cfg-warning {{address of stack memory is returned later}} \
+                                          // cfg-note {{function call result aliases the storage of variable 'strings'}} \
+                                          // cfg-note {{variable '__begin1' aliases the storage of variable 'strings'}}
     return s; //cfg-note {{returned here}}
   }
   return "";
 }
 
 std::string_view test_opt_strings(std::optional<std::vector<std::string>> strings_or) {
-  for (const std::string& s : *strings_or) {  // cfg-warning {{address of stack memory is returned later}} 
+  for (const std::string& s : *strings_or) {  // cfg-warning {{address of stack memory is returned later}} \
+                                              // cfg-note {{variable '__range1' aliases the storage of variable 'strings_or'}} \
+                                              // cfg-note {{function call result aliases the storage of variable 'strings_or'}} \
+                                              // cfg-note {{variable '__begin1' aliases the storage of variable 'strings_or'}}
     return s; //cfg-note {{returned here}}
   }
   return "";

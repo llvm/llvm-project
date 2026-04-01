@@ -95,9 +95,10 @@ public:
         << UseExpr->getSourceRange();
   }
 
-  void reportUseAfterReturn(const Expr *IssueExpr, const Expr *ReturnExpr,
-                            const Expr *MovedExpr,
-                            SourceLocation ExpiryLoc) override {
+  void reportUseAfterReturn(
+      const Expr *IssueExpr, const Expr *ReturnExpr, const Expr *MovedExpr,
+      const std::optional<llvm::SmallVector<AssignmentPair>> AliasList,
+      SourceLocation ExpiryLoc) override {
     S.Diag(IssueExpr->getExprLoc(),
            MovedExpr ? diag::warn_lifetime_safety_return_stack_addr_moved
                      : diag::warn_lifetime_safety_return_stack_addr)
@@ -105,6 +106,11 @@ public:
     if (MovedExpr)
       S.Diag(MovedExpr->getExprLoc(), diag::note_lifetime_safety_moved_here)
           << MovedExpr->getSourceRange();
+
+    if (AliasList.has_value())
+      for (const auto &AliasStmt : llvm::reverse(AliasList.value()))
+        reportAssignment(S, IssueExpr, AliasStmt.first, AliasStmt.second);
+
     S.Diag(ReturnExpr->getExprLoc(), diag::note_lifetime_safety_returned_here)
         << ReturnExpr->getSourceRange();
   }
