@@ -313,7 +313,6 @@ class HLSLOneArgInlineBuiltin<string name> : HLSLBuiltin<name> {
 // Intrinsic definitions (sorted alphabetically by function name)
 //===----------------------------------------------------------------------===//
 
-// Unsigned abs is a constexpr identity — unsigned values are already non-negative.
 def hlsl_abs_unsigned : HLSLOneArgInlineBuiltin<"abs"> {
   let Doc = [{
 \fn T abs(T Val)
@@ -330,7 +329,6 @@ function returns its input unchanged.
   let VaryingMatDims = [];
 }
 
-// Checks whether the value is fully mapped.
 def hlsl_check_access_fully_mapped : HLSLBuiltin<"CheckAccessFullyMapped"> {
   let Doc = [{
 \fn bool CheckAccessFullyMapped(uint Status)
@@ -343,7 +341,6 @@ def hlsl_check_access_fully_mapped : HLSLBuiltin<"CheckAccessFullyMapped"> {
   let ReturnType = BoolTy;
 }
 
-// Converts a floating-point, 4D vector set by a D3DCOLOR to a UBYTE4.
 def hlsl_d3d_color_to_ubyte4 : HLSLBuiltin<"D3DCOLORtoUBYTE4"> {
   let Doc = [{
 \fn int4 D3DCOLORtoUBYTE4(float4 x)
@@ -369,7 +366,6 @@ function to compensate for the lack of UBYTE4 support in some hardware.
   let IsConstexpr = 1;
 }
 
-// Computes the partial derivative with regard to the x screen space coordinate.
 def hlsl_ddx : HLSLOneArgDetail<"ddx", "ddx_impl"> {
   let Doc = [{
 \fn T ddx(T x)
@@ -382,7 +378,6 @@ the screen-space x-coordinate.
   let VaryingMatDims = [];
 }
 
-// Computes the partial derivative with regard to the y screen space coordinate.
 def hlsl_ddy : HLSLOneArgDetail<"ddy", "ddy_impl"> {
   let Doc = [{
 \fn T ddy(T x)
@@ -395,8 +390,6 @@ the screen-space y-coordinate.
   let VaryingMatDims = [];
 }
 
-// Returns a distance scalar between X and Y.
-// The distance between X and Y is length(X - Y).
 def hlsl_distance : HLSLBuiltin<"distance"> {
   let Doc = [{
 \fn K distance(T X, T Y)
@@ -414,7 +407,6 @@ def hlsl_distance : HLSLBuiltin<"distance"> {
   let VaryingMatDims = [];
 }
 
-// Dot product of 2 half vectors plus a float scalar.
 def hlsl_dot2add : HLSLBuiltin<"dot2add"> {
   let Doc = [{
 \fn float dot2add(half2 A, half2 B, float C)
@@ -430,7 +422,6 @@ def hlsl_dot2add : HLSLBuiltin<"dot2add"> {
   let Availability = SM6_4;
 }
 
-// Calculates a distance vector.
 def hlsl_dst : HLSLBuiltin<"dst"> {
   let Doc = [{
 \fn vector<T, 4> dst(vector<T, 4> Src0, vector<T, 4> Src1)
@@ -449,7 +440,6 @@ Return the computed distance vector.
   let VaryingMatDims = [];
 }
 
-// Flips the surface-normal to face in a direction opposite to I.
 def hlsl_faceforward : HLSLThreeArgDetail<"faceforward", "faceforward_impl"> {
   let Doc = [{
 \fn T faceforward(T N, T I, T Ng)
@@ -468,7 +458,6 @@ direction.
   let VaryingMatDims = [];
 }
 
-// Returns the floating-point remainder of x/y (scalar overloads).
 def hlsl_fmod : HLSLBuiltin<"fmod"> {
   let Doc = [{
 \fn T fmod(T x, T y)
@@ -487,8 +476,6 @@ parameter.
   let VaryingScalar = 1;
   let VaryingMatDims = [];
 }
-
-// Returns the floating-point remainder of x/y (vector overloads).
 def hlsl_fmod_vec : HLSLBuiltin<"fmod"> {
   let DetailFunc = "fmod_vec_impl";
   let ParamNames = ["X", "Y"];
@@ -499,7 +486,6 @@ def hlsl_fmod_vec : HLSLBuiltin<"fmod"> {
   let VaryingMatDims = [];
 }
 
-// Computes the sum of the absolute values of the partial derivatives.
 def hlsl_fwidth : HLSLOneArgDetail<"fwidth", "fwidth_impl"> {
   let Doc = [{
 \fn T fwidth(T x)
@@ -512,8 +498,6 @@ with regard to the x and y screen space coordinates.
   let VaryingMatDims = [];
 }
 
-// Returns the result of multiplying the specified value by two raised
-// to the power of the specified exponent.
 def hlsl_ldexp : HLSLBuiltin<"ldexp"> {
   let Doc = [{
 \fn T ldexp(T X, T Exp)
@@ -524,7 +508,6 @@ to the power of the specified exponent.
 
 This function uses the following formula: X * 2^Exp
 }];
-  // ldexp(X, Exp) = X * 2^Exp, implemented as exp2(Exp) * X.
   let ParamNames = ["X", "Exp"];
   let Body = "return exp2(Exp) * X;";
   let Args = [Varying, Varying];
@@ -535,9 +518,6 @@ This function uses the following formula: X * 2^Exp
   let VaryingMatDims = [];
 }
 
-// Returns the length of the specified floating-point vector.
-// Scalar length is equivalent to abs(X).
-// Vector length is equivalent to sqrt(dot(X, X)).
 def hlsl_length : HLSLBuiltin<"length"> {
   let Doc = [{
 \fn T length(T x)
@@ -556,7 +536,6 @@ Length is based on the following formula: sqrt(x[0]^2 + x[1]^2 + ...).
   let VaryingMatDims = [];
 }
 
-// Returns a lighting coefficient vector.
 def hlsl_lit_half : HLSLBuiltin<"lit"> {
   let Doc = [{
 \fn vector<T, 4> lit(T NDotL, T NDotH, T M)
@@ -583,9 +562,6 @@ def hlsl_lit_float : HLSLBuiltin<"lit"> {
   let ReturnType = VectorType<FloatTy, 4>;
 }
 
-// Returns a reflection vector.
-// Scalar reflect: V = I - 2 * N * I * N (dot product is just multiplication
-// for scalars).
 def hlsl_reflect : HLSLTwoArgDetail<"reflect", "reflect_impl"> {
   let Doc = [{
 \fn T reflect(T I, T N)
@@ -607,8 +583,6 @@ N must already be normalized in order to achieve the desired result.
   let VaryingMatDims = [];
 }
 
-// Returns a refraction vector using an entering ray, a surface normal, and
-// a refraction index.
 def hlsl_refract : HLSLBuiltin<"refract"> {
   let Doc = [{
 \fn T refract(T I, T N, T eta)
@@ -646,8 +620,6 @@ Result type, the type of I, and the type of N must all be the same type.
   let VaryingMatDims = [];
 }
 
-
-// Returns a smooth Hermite interpolation between 0 and 1.
 def hlsl_smoothstep : HLSLThreeArgDetail<"smoothstep", "smoothstep_impl"> {
   let Doc = [{
 \fn T smoothstep(T Min, T Max, T X)
