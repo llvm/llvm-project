@@ -286,27 +286,25 @@ namespace clang::lifetimes::internal {
 
 std::optional<llvm::SmallVector<AssignmentPair>>
 getAliasList(const AssignmentQueryContext &Context, const Fact *CausingFact,
-             const LoanID End, const Expr *IssueExpr) {
+             const LoanID End, const CFGBlock *StartBlock,
+             const Expr *IssueExpr) {
   llvm::SmallVector<OriginID, 4> TargetOIDList;
-  const Expr *WarnningFact = nullptr;
 
   if (const auto *UF = llvm::dyn_cast<UseFact>(CausingFact)) {
-    WarnningFact = UF->getUseExpr();
     for (const OriginList *Cur = UF->getUsedOrigins(); Cur;
          Cur = Cur->peelOuterOrigin())
       TargetOIDList.push_back(Cur->getOuterOriginID());
   } else if (const auto *RetEscapeF =
                  llvm::dyn_cast<ReturnEscapeFact>(CausingFact)) {
-    WarnningFact = RetEscapeF->getReturnExpr();
     TargetOIDList.push_back(RetEscapeF->getEscapedOriginID());
+  } else if (const auto *GlobalEscapeF =
+                 llvm::dyn_cast<GlobalEscapeFact>(CausingFact)) {
+    TargetOIDList.push_back(GlobalEscapeF->getEscapedOriginID());
   } else {
     llvm_unreachable("Without a corresponding Fact handler, assignment history "
                      "traceback will fail.");
   }
 
-  const CFGBlock *StartBlock =
-      Context.ADC.getCFGStmtMap()->getBlock(WarnningFact);
-  assert(StartBlock && "Searching CFGBlock failed");
   const CFGBlock *EndBlock = Context.ADC.getCFGStmtMap()->getBlock(IssueExpr);
   assert(EndBlock && "Searching CFGBlock failed");
 

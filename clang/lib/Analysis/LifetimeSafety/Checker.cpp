@@ -22,6 +22,7 @@
 #include "clang/Analysis/Analyses/LifetimeSafety/Loans.h"
 #include "clang/Analysis/Analyses/PostOrderCFGView.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
+#include "clang/Analysis/CFG.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "llvm/ADT/DenseMap.h"
@@ -47,6 +48,7 @@ namespace {
 struct PendingWarning {
   SourceLocation ExpiryLoc; // Where the loan expired.
   llvm::PointerUnion<const UseFact *, const OriginEscapesFact *> CausingFact;
+  const ExpireFact *ExpiryExpr;
   const Expr *MovedExpr;
   const Expr *InvalidatedByExpr;
   bool CausingFactDominatesExpiry;
@@ -179,6 +181,7 @@ public:
           continue;
         if (causingFactDominatesExpiry(LiveInfo.Kind))
           CurWarning.CausingFactDominatesExpiry = true;
+        CurWarning.ExpiryExpr = EF;
         CurWarning.CausingFact = LiveInfo.CausingFact;
         CurWarning.ExpiryLoc = EF->getExpiryLoc();
         CurWarning.MovedExpr = MovedExpr;
@@ -218,6 +221,7 @@ public:
             FinalWarningsMap[LiveLoanID] = {
                 /*ExpiryLoc=*/{},
                 /*CausingFact=*/LiveInfo.CausingFact,
+                /*ExpiryExpr=*/nullptr,
                 /*MovedExpr=*/nullptr,
                 /*InvalidatedByExpr=*/IOF->getInvalidationExpr(),
                 /*CausingFactDominatesExpiry=*/CurDomination};
@@ -238,6 +242,8 @@ public:
           L->getAccessPath().getAsPlaceholderParam();
       const Expr *MovedExpr = Warning.MovedExpr;
       SourceLocation ExpiryLoc = Warning.ExpiryLoc;
+      const struct AssignmentQueryContext Context = {
+          LoanPropagation, MovedLoans, LiveOrigins, FactMgr, ADC};
 
       if (const auto *UF = CausingFact.dyn_cast<const UseFact *>()) {
         if (Warning.InvalidatedByExpr) {
@@ -252,19 +258,20 @@ public:
 
         } else {
           // Scope-based expiry (use-after-scope).
-          const struct AssignmentQueryContext Context = {
-              LoanPropagation, MovedLoans, LiveOrigins, FactMgr, ADC};
-          const auto AliasExprs = getAliasList(Context, UF, LID, IssueExpr);
+          const auto *StartBlock =
+              ADC.getCFGStmtMap()->getBlock(UF->getUseExpr());
+          const auto AliasExprs =
+              getAliasList(Context, UF, LID, StartBlock, IssueExpr);
           SemaHelper->reportUseAfterFree(IssueExpr, UF->getUseExpr(), MovedExpr,
                                          AliasExprs, ExpiryLoc);
         }
       } else if (const auto *OEF =
                      CausingFact.dyn_cast<const OriginEscapesFact *>()) {
         if (const auto *RetEscape = dyn_cast<ReturnEscapeFact>(OEF)) {
-          const struct AssignmentQueryContext Context = {
-              LoanPropagation, MovedLoans, LiveOrigins, FactMgr, ADC};
+          const auto *StartBlock =
+              ADC.getCFGStmtMap()->getBlock(RetEscape->getReturnExpr());
           const auto AliasExprs =
-              getAliasList(Context, RetEscape, LID, IssueExpr);
+              getAliasList(Context, RetEscape, LID, StartBlock, IssueExpr);
           SemaHelper->reportUseAfterReturn(IssueExpr,
                                            RetEscape->getReturnExpr(),
                                            MovedExpr, AliasExprs, ExpiryLoc);
@@ -272,11 +279,21 @@ public:
           // Dangling field.
           SemaHelper->reportDanglingField(
               IssueExpr, FieldEscape->getFieldDecl(), MovedExpr, ExpiryLoc);
-        else if (const auto *GlobalEscape = dyn_cast<GlobalEscapeFact>(OEF))
+        else if (const auto *GlobalEscape = dyn_cast<GlobalEscapeFact>(OEF)) {
           // Global escape.
+          const auto BlockID = FactMgr.getBlockID(Warning.ExpiryExpr).value();
+          const CFGBlock *StartBlock = nullptr;
+          for (auto *const CFGBlock : *ADC.getCFG()) {
+            if (CFGBlock->getBlockID() == BlockID) {
+              StartBlock = CFGBlock;
+              break;
+            }
+          }
+          const auto AliasExprs =
+              getAliasList(Context, GlobalEscape, LID, StartBlock, IssueExpr);
           SemaHelper->reportDanglingGlobal(IssueExpr, GlobalEscape->getGlobal(),
-                                           MovedExpr, ExpiryLoc);
-        else
+                                           MovedExpr, AliasExprs, ExpiryLoc);
+        } else
           llvm_unreachable("Unhandled OriginEscapesFact type");
       } else
         llvm_unreachable("Unhandled CausingFact type");

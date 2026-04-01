@@ -72,7 +72,8 @@ struct AssignmentQueryContext {
 /// address originated.
 std::optional<llvm::SmallVector<AssignmentPair>>
 getAliasList(const AssignmentQueryContext &Context, const Fact *CausingFact,
-             const LoanID End, const Expr *IssueExpr);
+             const LoanID End, const CFGBlock *StartBlock,
+             const Expr *IssueExpr);
 } // namespace clang::lifetimes::internal
 
 #endif

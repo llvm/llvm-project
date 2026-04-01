@@ -131,10 +131,11 @@ public:
         << DanglingField->getEndLoc();
   }
 
-  void reportDanglingGlobal(const Expr *IssueExpr,
-                            const VarDecl *DanglingGlobal,
-                            const Expr *MovedExpr,
-                            SourceLocation ExpiryLoc) override {
+  void reportDanglingGlobal(
+      const Expr *IssueExpr, const VarDecl *DanglingGlobal,
+      const Expr *MovedExpr,
+      const std::optional<llvm::SmallVector<AssignmentPair>> AliasList,
+      SourceLocation ExpiryLoc) override {
     S.Diag(IssueExpr->getExprLoc(),
            MovedExpr ? diag::warn_lifetime_safety_dangling_global_moved
                      : diag::warn_lifetime_safety_dangling_global)
@@ -142,6 +143,11 @@ public:
     if (MovedExpr)
       S.Diag(MovedExpr->getExprLoc(), diag::note_lifetime_safety_moved_here)
           << MovedExpr->getSourceRange();
+
+    if (AliasList.has_value())
+      for (const auto &AliasStmt : llvm::reverse(AliasList.value()))
+        reportAssignment(S, IssueExpr, AliasStmt.first, AliasStmt.second);
+
     if (DanglingGlobal->isStaticLocal() || DanglingGlobal->isStaticDataMember())
       S.Diag(DanglingGlobal->getLocation(),
              diag::note_lifetime_safety_dangling_static_here)

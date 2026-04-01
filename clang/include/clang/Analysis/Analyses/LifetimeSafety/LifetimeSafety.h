@@ -77,10 +77,11 @@ public:
                                    const Expr *MovedExpr,
                                    SourceLocation ExpiryLoc) {}
 
-  virtual void reportDanglingGlobal(const Expr *IssueExpr,
-                                    const VarDecl *DanglingGlobal,
-                                    const Expr *MovedExpr,
-                                    SourceLocation ExpiryLoc) {}
+  virtual void reportDanglingGlobal(
+      const Expr *IssueExpr, const VarDecl *DanglingGlobal,
+      const Expr *MovedExpr,
+      const std::optional<llvm::SmallVector<AssignmentPair>> AliasList,
+      SourceLocation ExpiryLoc) {}
 
   // Reports when a reference/iterator is used after the container operation
   // that invalidated it.
