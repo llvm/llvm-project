@@ -62,11 +62,19 @@ struct GlobalData {
 
   /// Decode a GlobalData entry from a binary data stream.
   ///
-  /// \param Data The binary stream to read from.
+  /// \param GsymData The binary stream to read from.
   /// \param Offset The offset to start reading from. Updated on success.
   /// \returns A GlobalData entry or an error.
-  LLVM_ABI static llvm::Expected<GlobalData> decode(DataExtractor &Data,
+  LLVM_ABI static llvm::Expected<GlobalData> decode(DataExtractor &GsymData,
                                                     uint64_t &Offset);
+
+  /// Get the bytes for this GlobalData section from a GSYM data stream.
+  ///
+  /// \param GsymData The binary stream to read from.
+  /// \returns The bytes for this section or an error if the data is not fully
+  /// available.
+  LLVM_ABI llvm::Expected<llvm::ArrayRef<uint8_t>>
+  getBytes(DataExtractor &GsymData) const;
 };
 
 } // namespace gsym

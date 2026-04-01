@@ -159,14 +159,15 @@ llvm::Error GsymReaderV2::parse() {
   // Set up the data references for various GlobalData sections.
   // Handles both swapped and non-swapped cases.
   if (!Swap) {
-    AddrOffsets = ArrayRef<uint8_t>(reinterpret_cast<const uint8_t *>(
-                                        Buf.data() + AddrOffsetsGD.FileOffset),
-                                    AddrOffsetsGD.FileSize);
+    auto AddrOffsetsOrErr = AddrOffsetsGD.getBytes(DE);
+    if (!AddrOffsetsOrErr)
+      return AddrOffsetsOrErr.takeError();
+    AddrOffsets = *AddrOffsetsOrErr;
 
-    AddrInfoOffsets =
-        ArrayRef<uint8_t>(reinterpret_cast<const uint8_t *>(
-                              Buf.data() + AddrInfoOffsetsGD.FileOffset),
-                          AddrInfoOffsetsGD.FileSize);
+    auto AddrInfoOffsetsOrErr = AddrInfoOffsetsGD.getBytes(DE);
+    if (!AddrInfoOffsetsOrErr)
+      return AddrInfoOffsetsOrErr.takeError();
+    AddrInfoOffsets = *AddrInfoOffsetsOrErr;
 
     StrTab.Data = Buf.substr(StringTableGD.FileOffset, StringTableGD.FileSize);
   } else {

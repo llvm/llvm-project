@@ -7,8 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/GSYM/GlobalData.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/DebugInfo/GSYM/FileWriter.h"
 #include "llvm/Support/DataExtractor.h"
+#include <inttypes.h>
 
 using namespace llvm;
 using namespace gsym;
@@ -19,14 +21,27 @@ void GlobalData::encode(FileWriter &O) const {
   O.writeU64(FileSize);
 }
 
-llvm::Expected<GlobalData> GlobalData::decode(DataExtractor &Data,
+llvm::Expected<llvm::ArrayRef<uint8_t>>
+GlobalData::getBytes(DataExtractor &GsymData) const {
+  if (!GsymData.isValidOffsetForDataOfSize(FileOffset, FileSize))
+    return createStringError(
+        std::errc::invalid_argument,
+        "GlobalData section type %u data not available "
+        "(offset=%" PRIu64 ", size=%" PRIu64 ", bufsize=%" PRIu64 ")",
+        static_cast<uint32_t>(Type), FileOffset, FileSize,
+        static_cast<uint64_t>(GsymData.getData().size()));
+  return arrayRefFromStringRef(
+      GsymData.getData().substr(FileOffset, FileSize));
+}
+
+llvm::Expected<GlobalData> GlobalData::decode(DataExtractor &GsymData,
                                               uint64_t &Offset) {
-  if (!Data.isValidOffsetForDataOfSize(Offset, 20))
+  if (!GsymData.isValidOffsetForDataOfSize(Offset, 20))
     return createStringError(std::errc::invalid_argument,
                              "not enough data for a GlobalData entry");
   GlobalData GD;
-  GD.Type = static_cast<GlobalInfoType>(Data.getU32(&Offset));
-  GD.FileOffset = Data.getU64(&Offset);
-  GD.FileSize = Data.getU64(&Offset);
+  GD.Type = static_cast<GlobalInfoType>(GsymData.getU32(&Offset));
+  GD.FileOffset = GsymData.getU64(&Offset);
+  GD.FileSize = GsymData.getU64(&Offset);
   return GD;
 }
