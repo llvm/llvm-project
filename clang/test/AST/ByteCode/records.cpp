@@ -1910,3 +1910,22 @@ namespace VirtCallNoRecord {
   int bar(int{((S *const)0)->foo()});
 }
 
+namespace ErroneousVoidDecl {
+#if __cplusplus >= 201703L
+  struct S {};
+  template <auto V> struct M;
+  template <typename C, int N1, int N2> auto f(const C &, M<N1> *, M<N1> *) {} // both-note {{couldn't infer template argument}}
+
+  template <typename F, typename C, typename N1, typename N2>
+  constexpr bool check(const C &c, N1 *n1, N2 *n2) {
+    decltype(f(c, n1, n2)) *chk{}; // both-error {{no matching function}} \
+                                   // ref-note {{destroying object 'chk' whose lifetime has already ended}}
+    return true;
+  }
+
+  template <int N> constexpr M<N> *bar() { return nullptr; }
+  static_assert(check<S>([](int n) constexpr {}, bar<1u>(), bar<1u>())); // both-note {{in instantiation}} \
+                                                                         // ref-error {{not an integral constant expression}} \
+                                                                         // ref-note {{in call to}}
+#endif
+}

@@ -7,25 +7,25 @@ buffer_store_dwordx4 v[0:3], off, s[12:15], s4 offset:4095 glc tfe
 // GFX90A: :[[@LINE-1]]:64: error: invalid operand for instruction
 
 ds_add_src2_f32 v1
-// GFX90A: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX90A: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx90a): ds_add_src2_f32
 
 ds_add_src2_u32 v1
-// GFX90A: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX90A: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx90a): ds_add_src2_u32
 
 ds_add_src2_u64 v1
-// GFX90A: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX90A: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx90a): ds_add_src2_u64
 
 ds_and_src2_b32 v1
-// GFX90A: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX90A: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx90a): ds_and_src2_b32
 
 ds_and_src2_b64 v1
-// GFX90A: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX90A: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx90a): ds_and_src2_b64
 
 ds_dec_src2_u32 v1
-// GFX90A: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX90A: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx90a): ds_dec_src2_u32
 
 ds_dec_src2_u64 v1
-// GFX90A: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX90A: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx90a): ds_dec_src2_u64
 
 ds_gws_barrier a255 offset:4 gds
 // GFX90A: :[[@LINE-1]]:16: error: vgpr must be even aligned
@@ -46,70 +46,70 @@ ds_gws_sema_br v255 offset:65535 gds
 // GFX90A: :[[@LINE-1]]:16: error: vgpr must be even aligned
 
 ds_inc_src2_u32 v1
-// GFX90A: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX90A: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx90a): ds_inc_src2_u32
 
 ds_inc_src2_u64 v1
-// GFX90A: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX90A: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx90a): ds_inc_src2_u64
 
 ds_max_src2_f32 v1
-// GFX90A: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX90A: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx90a): ds_max_src2_f32
 
 ds_max_src2_f64 v1
-// GFX90A: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX90A: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx90a): ds_max_src2_f64
 
 ds_max_src2_i32 v1
-// GFX90A: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX90A: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx90a): ds_max_src2_i32
 
 ds_max_src2_i64 v1
-// GFX90A: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX90A: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx90a): ds_max_src2_i64
 
 ds_max_src2_u32 v1
-// GFX90A: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX90A: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx90a): ds_max_src2_u32
 
 ds_max_src2_u64 v1
-// GFX90A: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX90A: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx90a): ds_max_src2_u64
 
 ds_min_src2_f32 v1
-// GFX90A: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX90A: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx90a): ds_min_src2_f32
 
 ds_min_src2_f64 v1
-// GFX90A: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX90A: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx90a): ds_min_src2_f64
 
 ds_min_src2_i32 v1
-// GFX90A: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX90A: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx90a): ds_min_src2_i32
 
 ds_min_src2_i64 v1
-// GFX90A: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX90A: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx90a): ds_min_src2_i64
 
 ds_min_src2_u32 v1
-// GFX90A: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX90A: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx90a): ds_min_src2_u32
 
 ds_min_src2_u64 v1
-// GFX90A: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX90A: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx90a): ds_min_src2_u64
 
 ds_or_src2_b32 v1
-// GFX90A: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX90A: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx90a): ds_or_src2_b32
 
 ds_or_src2_b64 v1
-// GFX90A: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX90A: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx90a): ds_or_src2_b64
 
 ds_ordered_count v5, v1 offset:65535 gds
-// GFX90A: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX90A: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx90a): ds_ordered_count
 
 ds_read_b32 v0, v1 gds
 // GFX90A: :[[@LINE-1]]:20: error: gds modifier is not supported on this GPU
 
 ds_rsub_src2_u32 v1
-// GFX90A: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX90A: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx90a): ds_rsub_src2_u32
 
 ds_rsub_src2_u64 v1
-// GFX90A: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX90A: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx90a): ds_rsub_src2_u64
 
 ds_sub_src2_u32 v1
-// GFX90A: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX90A: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx90a): ds_sub_src2_u32
 
 ds_sub_src2_u64 v1
-// GFX90A: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX90A: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx90a): ds_sub_src2_u64
 
 ds_write2_b64 v1, a[4:5], v[2:3] offset1:255
 // GFX90A: :[[@LINE-1]]:27: error: invalid operand for instruction
@@ -118,22 +118,22 @@ ds_write2_b64 v1, v[4:5], a[2:3] offset1:255
 // GFX90A: :[[@LINE-1]]:27: error: invalid operand for instruction
 
 ds_write_src2_b32 v1
-// GFX90A: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX90A: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx90a): ds_write_src2_b32
 
 ds_write_src2_b64 v1
-// GFX90A: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX90A: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx90a): ds_write_src2_b64
 
 ds_wrxchg2st64_rtn_b32 v[6:7], v1, a2, a3 offset0:127
 // GFX90A: :[[@LINE-1]]:36: error: invalid operand for instruction
 
 ds_xor_src2_b32 v1
-// GFX90A: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX90A: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx90a): ds_xor_src2_b32
 
 ds_xor_src2_b64 v1
-// GFX90A: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX90A: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx90a): ds_xor_src2_b64
 
 exp pos0 v3, v2, v1, v0
-// GFX90A: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX90A: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx90a): exp
 
 flat_atomic_add a2, v[2:3], v2 glc
 // GFX90A: :[[@LINE-1]]:29: error: invalid operand for instruction
@@ -142,40 +142,40 @@ flat_atomic_add v2, v[2:3], a2 glc
 // GFX90A: :[[@LINE-1]]:29: error: invalid operand for instruction
 
 global_load_lds_dword v[2:3], off
-// GFX90A: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX90A: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx90a): global_load_lds_dword
 
 image_gather4 v[5:8], v1, s[8:15], s[12:15]
-// GFX90A: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX90A: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx90a): image_gather4
 
 image_gather4h v[251:254], v[1:2], s[8:15], s[12:15] dmask:0x1
-// GFX90A: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX90A: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx90a): image_gather4h
 
 image_get_lod v5, v1, s[8:15], s[12:15]
-// GFX90A: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX90A: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx90a): image_get_lod
 
 image_load v[0:4], v2, s[0:7] dmask:0xf unorm tfe
 // GFX90A: :[[@LINE-1]]:47: error: invalid operand for instruction
 
 image_sample_b v[0:3], v[0:1], s[4:11], s[16:19] dmask:0xf
-// GFX90A: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX90A: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx90a): image_sample_b
 
 image_sample_cd v[0:3], v[0:1], s[4:11], s[16:19] dmask:0xf
-// GFX90A: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX90A: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx90a): image_sample_cd
 
 image_sample_cl v[0:3], v[0:1], s[4:11], s[16:19] dmask:0xf
-// GFX90A: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX90A: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx90a): image_sample_cl
 
 image_sample_d v[0:3], v[0:1], s[4:11], s[16:19] dmask:0xf
-// GFX90A: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX90A: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx90a): image_sample_d
 
 image_sample_lz v[0:3], v[0:1], s[4:11], s[16:19] dmask:0xf
-// GFX90A: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX90A: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx90a): image_sample_lz
 
 image_sample_o v[0:3], v[0:1], s[4:11], s[16:19] dmask:0xf
-// GFX90A: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX90A: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx90a): image_sample_o
 
 scratch_load_lds_dword v2, off
-// GFX90A: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX90A: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx90a): scratch_load_lds_dword
 
 tbuffer_store_format_xyzw v[0:3], off, s[4:7],  dfmt:15,  nfmt:2, s1 tfe
 // GFX90A: :[[@LINE-1]]:70: error: invalid operand for instruction
@@ -638,28 +638,28 @@ v_dot8c_i32_i4 v0, v1, v2, v3 op_sel_hi:[1,1]
 // GFX90A: :[[@LINE-1]]:31: error: not a valid operand.
 
 v_interp_mov_f32 v5, p10, attr0.x
-// GFX90A: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX90A: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx90a): v_interp_mov_f32
 
 v_interp_p1_f32 v5, v1, attr0.x
-// GFX90A: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX90A: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx90a): v_interp_p1_f32
 
 v_interp_p1_f32_e64 v5, v2, attr0.x
-// GFX90A: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX90A: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx90a): v_interp_p1_f32
 
 v_interp_p1ll_f16 v5, v2, attr0.x
-// GFX90A: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX90A: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx90a): v_interp_p1ll_f16
 
 v_interp_p1lv_f16 v5, v2, attr0.x, v3
-// GFX90A: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX90A: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx90a): v_interp_p1lv_f16
 
 v_interp_p2_f16 v5, v2, attr0.x, v3
-// GFX90A: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX90A: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx90a): v_interp_p2_f16
 
 v_interp_p2_f32 v5, v1, attr0.x
-// GFX90A: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX90A: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx90a): v_interp_p2_f32
 
 v_interp_p2_legacy_f16 v5, v2, attr0.x, v3
-// GFX90A: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX90A: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx90a): v_interp_p2_legacy_f16
 
 v_mov_b32_dpp v5, v1 row_share:1 row_mask:0x0 bank_mask:0x0
 // GFX90A: :[[@LINE-1]]:22: error: not a valid operand.

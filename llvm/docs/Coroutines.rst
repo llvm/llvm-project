@@ -873,6 +873,8 @@ the coroutine destroy function. Otherwise it is replaced with an indirect call
 based on the function pointer for the destroy function stored in the coroutine
 frame. Destroying a coroutine that is not suspended leads to undefined behavior.
 
+This intrinsic implies `coro.dead`.
+
 .. _coro.resume:
 
 'llvm.coro.resume' Intrinsic
@@ -1167,6 +1169,48 @@ Example (standard deallocation functions):
   cleanup:
     %mem = call ptr @llvm.coro.free(token %id, ptr %frame)
     call void @free(ptr %mem)
+    ret void
+
+.. _coro.dead:
+
+'llvm.coro.dead' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+::
+
+  declare void @llvm.coro.dead(ptr <frame>)
+
+Overview:
+"""""""""
+
+The 'llvm.coro.dead' intrinsic is an optimization hint to help Heap Allocation eLision Optimization (HALO)
+mark the end of lifetime of the coroutine frame.
+
+Arguments:
+""""""""""
+
+The argument is a pointer to the coroutine frame. This should be the same
+pointer that was returned by prior `coro.begin` call.
+
+Semantics:
+""""""""""
+
+A frontend can delegate this intrinsic to indicate that the coroutine frame is dead, allowing
+coroutines that are not explicitly destroyed via `coro.destroy` to be elided.
+
+Example:
+"""""""""""""""""""""""""""""""""""""""
+
+.. code-block:: llvm
+
+  cleanup:
+    %mem = call ptr @llvm.coro.free(token %id, ptr %frame)
+    %mem_not_null = icmp ne ptr %mem, null
+    br i1 %mem_not_null, label %if.then, label %if.end
+  if.then:
+    call void @CustomFree(ptr %mem)
+    br label %if.end
+  if.end:
+    call void @llvm.coro.dead(ptr %frame)
     ret void
 
 .. _coro.alloc:

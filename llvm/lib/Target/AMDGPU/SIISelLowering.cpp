@@ -518,6 +518,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
 
   setOperationAction({ISD::CTLZ, ISD::CTLZ_ZERO_UNDEF}, MVT::i32, Custom);
   setOperationAction({ISD::CTTZ, ISD::CTTZ_ZERO_UNDEF}, MVT::i32, Custom);
+  setOperationAction(ISD::CTLS, MVT::i32, Custom);
 
   // We only really have 32-bit BFE instructions (and 16-bit on VI).
   //
@@ -10648,8 +10649,6 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::amdgcn_fmul_legacy:
     return DAG.getNode(AMDGPUISD::FMUL_LEGACY, DL, VT, Op.getOperand(1),
                        Op.getOperand(2));
-  case Intrinsic::amdgcn_sffbh:
-    return DAG.getNode(AMDGPUISD::FFBH_I32, DL, VT, Op.getOperand(1));
   case Intrinsic::amdgcn_sbfe:
     return DAG.getNode(AMDGPUISD::BFE_I32, DL, VT, Op.getOperand(1),
                        Op.getOperand(2), Op.getOperand(3));
@@ -13417,17 +13416,20 @@ SDValue SITargetLowering::lowerFSQRTF64(SDValue Op, SelectionDAG &DAG) const {
   SDLoc DL(Op);
 
   SDValue X = Op.getOperand(0);
-  SDValue ScaleConstant = DAG.getConstantFP(0x1.0p-767, DL, MVT::f64);
-
-  SDValue Scaling = DAG.getSetCC(DL, MVT::i1, X, ScaleConstant, ISD::SETOLT);
-
   SDValue ZeroInt = DAG.getConstant(0, DL, MVT::i32);
 
-  // Scale up input if it is too small.
-  SDValue ScaleUpFactor = DAG.getConstant(256, DL, MVT::i32);
-  SDValue ScaleUp =
-      DAG.getNode(ISD::SELECT, DL, MVT::i32, Scaling, ScaleUpFactor, ZeroInt);
-  SDValue SqrtX = DAG.getNode(ISD::FLDEXP, DL, MVT::f64, X, ScaleUp, Flags);
+  SDValue SqrtX = X;
+  SDValue Scaling;
+  if (!Flags.hasApproximateFuncs()) {
+    SDValue ScaleConstant = DAG.getConstantFP(0x1.0p-767, DL, MVT::f64);
+    Scaling = DAG.getSetCC(DL, MVT::i1, X, ScaleConstant, ISD::SETOLT);
+
+    // Scale up input if it is too small.
+    SDValue ScaleUpFactor = DAG.getConstant(256, DL, MVT::i32);
+    SDValue ScaleUp =
+        DAG.getNode(ISD::SELECT, DL, MVT::i32, Scaling, ScaleUpFactor, ZeroInt);
+    SqrtX = DAG.getNode(ISD::FLDEXP, DL, MVT::f64, X, ScaleUp, Flags);
+  }
 
   SDValue SqrtY = DAG.getNode(AMDGPUISD::RSQ, DL, MVT::f64, SqrtX);
 
@@ -13449,24 +13451,31 @@ SDValue SITargetLowering::lowerFSQRTF64(SDValue Op, SelectionDAG &DAG) const {
 
   SDValue SqrtS2 = DAG.getNode(ISD::FMA, DL, MVT::f64, SqrtD0, SqrtH1, SqrtS1);
 
-  SDValue NegSqrtS2 = DAG.getNode(ISD::FNEG, DL, MVT::f64, SqrtS2);
-  SDValue SqrtD1 =
-      DAG.getNode(ISD::FMA, DL, MVT::f64, NegSqrtS2, SqrtS2, SqrtX);
+  SDValue SqrtRet = SqrtS2;
+  if (!Flags.hasApproximateFuncs()) {
+    SDValue NegSqrtS2 = DAG.getNode(ISD::FNEG, DL, MVT::f64, SqrtS2);
+    SDValue SqrtD1 =
+        DAG.getNode(ISD::FMA, DL, MVT::f64, NegSqrtS2, SqrtS2, SqrtX);
 
-  SDValue SqrtRet = DAG.getNode(ISD::FMA, DL, MVT::f64, SqrtD1, SqrtH1, SqrtS2);
+    SqrtRet = DAG.getNode(ISD::FMA, DL, MVT::f64, SqrtD1, SqrtH1, SqrtS2);
 
-  SDValue ScaleDownFactor = DAG.getSignedConstant(-128, DL, MVT::i32);
-  SDValue ScaleDown =
-      DAG.getNode(ISD::SELECT, DL, MVT::i32, Scaling, ScaleDownFactor, ZeroInt);
-  SqrtRet = DAG.getNode(ISD::FLDEXP, DL, MVT::f64, SqrtRet, ScaleDown, Flags);
-
-  // TODO: Switch to fcmp oeq 0 for finite only. Can't fully remove this check
-  // with finite only or nsz because rsq(+/-0) = +/-inf
+    SDValue ScaleDownFactor = DAG.getSignedConstant(-128, DL, MVT::i32);
+    SDValue ScaleDown = DAG.getNode(ISD::SELECT, DL, MVT::i32, Scaling,
+                                    ScaleDownFactor, ZeroInt);
+    SqrtRet = DAG.getNode(ISD::FLDEXP, DL, MVT::f64, SqrtRet, ScaleDown, Flags);
+  }
 
   // TODO: Check for DAZ and expand to subnormals
-  SDValue IsZeroOrInf =
-      DAG.getNode(ISD::IS_FPCLASS, DL, MVT::i1, SqrtX,
-                  DAG.getTargetConstant(fcZero | fcPosInf, DL, MVT::i32));
+
+  SDValue IsZeroOrInf;
+  if (Flags.hasNoInfs()) {
+    SDValue Zero = DAG.getConstantFP(0.0, DL, MVT::f64);
+    IsZeroOrInf = DAG.getSetCC(DL, MVT::i1, SqrtX, Zero, ISD::SETOEQ);
+  } else {
+    IsZeroOrInf =
+        DAG.getNode(ISD::IS_FPCLASS, DL, MVT::i1, SqrtX,
+                    DAG.getTargetConstant(fcZero | fcPosInf, DL, MVT::i32));
+  }
 
   // If x is +INF, +0, or -0, use its original value
   return DAG.getNode(ISD::SELECT, DL, MVT::f64, IsZeroOrInf, SqrtX, SqrtRet,
@@ -15760,6 +15769,21 @@ SDValue SITargetLowering::performMinMaxCombine(SDNode *N,
     }
   }
 
+  // umin(sffbh(x), bitwidth) -> sffbh(x) if x is known to be not 0 or -1.
+  SDValue FfbhSrc;
+  uint64_t Clamp = 0;
+  if (Opc == ISD::UMIN &&
+      sd_match(Op0,
+               m_IntrinsicWOChain<Intrinsic::amdgcn_sffbh>(m_Value(FfbhSrc))) &&
+      sd_match(Op1, m_ConstInt(Clamp))) {
+    unsigned BitWidth = FfbhSrc.getValueType().getScalarSizeInBits();
+    if (Clamp >= BitWidth) {
+      KnownBits Known = DAG.computeKnownBits(FfbhSrc);
+      if (Known.isNonZero() && !Known.isAllOnes())
+        return Op0;
+    }
+  }
+
   // min(max(x, K0), K1), K0 < K1 -> med3(x, K0, K1)
   // max(min(x, K0), K1), K1 < K0 -> med3(x, K1, K0)
   if (Opc == ISD::SMIN && Op0.getOpcode() == ISD::SMAX && Op0.hasOneUse()) {
@@ -17008,6 +17032,10 @@ SDValue SITargetLowering::performPtrAddCombine(SDNode *N,
   return SDValue();
 }
 
+static bool isCtlzOpc(unsigned Opc) {
+  return Opc == ISD::CTLZ || Opc == ISD::CTLZ_ZERO_UNDEF;
+}
+
 SDValue SITargetLowering::performSubCombine(SDNode *N,
                                             DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -17053,6 +17081,27 @@ SDValue SITargetLowering::performSubCombine(SDNode *N,
     SDValue Args[] = {LHS.getOperand(0), RHS, LHS.getOperand(2)};
     return DAG.getNode(ISD::USUBO_CARRY, SDLoc(N), LHS->getVTList(), Args);
   }
+
+  // sub (ctlz (xor x, (sra x, 31))), 1 -> ctls x.
+  if (isOneConstant(RHS) && isCtlzOpc(LHS.getOpcode())) {
+    SDValue CtlzSrc = LHS.getOperand(0);
+    // Check for xor x, (sra x, 31) pattern.
+    if (CtlzSrc.getOpcode() == ISD::XOR) {
+      SDValue X = CtlzSrc.getOperand(0);
+      SDValue SignExt = CtlzSrc.getOperand(1);
+      // Try both ordering of XOR operands.
+      if (SignExt.getOpcode() != ISD::SRA)
+        std::swap(X, SignExt);
+      if (SignExt.getOpcode() == ISD::SRA && SignExt.getOperand(0) == X) {
+        ConstantSDNode *ShiftAmt =
+            dyn_cast<ConstantSDNode>(SignExt.getOperand(1));
+        unsigned BitWidth = X.getValueType().getScalarSizeInBits();
+        if (ShiftAmt && ShiftAmt->getZExtValue() == BitWidth - 1)
+          return DAG.getNode(ISD::CTLS, SL, VT, X);
+      }
+    }
+  }
+
   return SDValue();
 }
 

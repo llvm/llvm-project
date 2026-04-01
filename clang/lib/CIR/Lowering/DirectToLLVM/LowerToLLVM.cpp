@@ -1094,11 +1094,16 @@ getLLVMAtomicBinOp(cir::AtomicFetchKind k, bool isInt, bool isSignedInt) {
     return isSignedInt ? mlir::LLVM::AtomicBinOp::min
                        : mlir::LLVM::AtomicBinOp::umin;
   }
+  case cir::AtomicFetchKind::UIncWrap:
+    return mlir::LLVM::AtomicBinOp::uinc_wrap;
+  case cir::AtomicFetchKind::UDecWrap:
+    return mlir::LLVM::AtomicBinOp::udec_wrap;
   }
   llvm_unreachable("Unknown atomic fetch opcode");
 }
 
-static llvm::StringLiteral getLLVMBinop(cir::AtomicFetchKind k, bool isInt) {
+static llvm::StringLiteral getLLVMBinopForPostAtomic(cir::AtomicFetchKind k,
+                                                     bool isInt) {
   switch (k) {
   case cir::AtomicFetchKind::Add:
     return isInt ? mlir::LLVM::AddOp::getOperationName()
@@ -1118,6 +1123,9 @@ static llvm::StringLiteral getLLVMBinop(cir::AtomicFetchKind k, bool isInt) {
   case cir::AtomicFetchKind::Max:
   case cir::AtomicFetchKind::Min:
     llvm_unreachable("handled in buildMinMaxPostOp");
+  case cir::AtomicFetchKind::UIncWrap:
+  case cir::AtomicFetchKind::UDecWrap:
+    llvm_unreachable("uinc_wrap and udec_wrap are always fetch_first");
   }
   llvm_unreachable("Unknown atomic fetch opcode");
 }
@@ -1130,7 +1138,8 @@ mlir::Value CIRToLLVMAtomicFetchOpLowering::buildPostOp(
   SmallVector<mlir::Type> atomicResTys = {rmwVal.getType()};
   return rewriter
       .create(op.getLoc(),
-              rewriter.getStringAttr(getLLVMBinop(op.getBinop(), isInt)),
+              rewriter.getStringAttr(
+                  getLLVMBinopForPostAtomic(op.getBinop(), isInt)),
               atomicOperands, atomicResTys, {})
       ->getResult(0);
 }
