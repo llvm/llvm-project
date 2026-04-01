@@ -4152,7 +4152,7 @@ protected:
 };
 
 /// Support casting from VPRecipeBase -> VPPhiAccessors.
-struct CastInfoVPPhiAccessors {
+template <> struct CastInfo<VPPhiAccessors, VPRecipeBase *> {
   // Used by isa.
   static inline bool isPossible(VPRecipeBase *R) {
     // TODO: include VPPredInstPHIRecipe too, once it implements VPPhiAccessors.
@@ -4178,8 +4178,7 @@ struct CastInfoVPPhiAccessors {
     return doCast(R);
   }
 };
-template <>
-struct CastInfo<VPPhiAccessors, VPRecipeBase *> : CastInfoVPPhiAccessors {};
+
 template <>
 struct CastInfo<VPPhiAccessors, const VPRecipeBase *>
     : public ConstStrippingForwardingCast<
