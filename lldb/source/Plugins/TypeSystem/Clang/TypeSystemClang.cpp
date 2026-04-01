@@ -7077,6 +7077,8 @@ TypeSystemClang::GetNumTemplateArguments(lldb::opaque_compiler_type_t type,
     return 0;
 
   clang::QualType qual_type = RemoveWrappingTypes(GetCanonicalQualType(type));
+  if (qual_type->isPointerOrReferenceType())
+    qual_type = qual_type->getPointeeType();
   const clang::Type::TypeClass type_class = qual_type->getTypeClass();
   switch (type_class) {
   case clang::Type::Record:
@@ -7116,6 +7118,8 @@ TypeSystemClang::GetAsTemplateSpecialization(
     return nullptr;
 
   clang::QualType qual_type(RemoveWrappingTypes(GetCanonicalQualType(type)));
+  if (qual_type->isPointerOrReferenceType())
+    qual_type = qual_type->getPointeeType();
   const clang::Type::TypeClass type_class = qual_type->getTypeClass();
   switch (type_class) {
   case clang::Type::Record: {

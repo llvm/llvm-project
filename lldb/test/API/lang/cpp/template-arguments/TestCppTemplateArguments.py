@@ -12,40 +12,43 @@ class TestCase(TestBase):
         self.build()
         target = self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
 
-        value = self.expect_expr("temp1", result_type="C<int, 2>")
-        template_type = value.GetType()
-        self.assertEqual(template_type.GetNumberOfTemplateArguments(), 2)
+        temp1 = self.expect_expr("temp1", result_type="C<int, 2>")
+        ptemp1 = self.expect_expr("ptemp1", result_type="C<int, 2> *")
+        for value in (temp1, ptemp1):
+            template_type = value.GetType()
+            self.assertEqual(template_type.GetNumberOfTemplateArguments(), 2)
 
-        # Check a type argument.
-        self.assertEqual(
-            template_type.GetTemplateArgumentKind(0), lldb.eTemplateArgumentKindType
-        )
-        self.assertEqual(template_type.GetTemplateArgumentType(0).GetName(), "int")
+            # Check a type argument.
+            self.assertEqual(
+                template_type.GetTemplateArgumentKind(0), lldb.eTemplateArgumentKindType
+            )
+            self.assertEqual(template_type.GetTemplateArgumentType(0).GetName(), "int")
 
-        # Check a integral argument.
-        self.assertEqual(
-            template_type.GetTemplateArgumentKind(1), lldb.eTemplateArgumentKindIntegral
-        )
-        self.assertEqual(
-            template_type.GetTemplateArgumentType(1).GetName(), "unsigned int"
-        )
+            # Check a integral argument.
+            self.assertEqual(
+                template_type.GetTemplateArgumentKind(1),
+                lldb.eTemplateArgumentKindIntegral,
+            )
+            self.assertEqual(
+                template_type.GetTemplateArgumentType(1).GetName(), "unsigned int"
+            )
 
-        # Template parameter isn't a NTTP.
-        self.assertFalse(template_type.GetTemplateArgumentValue(target, 0))
+            # Template parameter isn't a NTTP.
+            self.assertFalse(template_type.GetTemplateArgumentValue(target, 0))
 
-        # Template parameter index out-of-bounds.
-        self.assertFalse(template_type.GetTemplateArgumentValue(target, 2))
+            # Template parameter index out-of-bounds.
+            self.assertFalse(template_type.GetTemplateArgumentValue(target, 2))
 
-        # Template parameter is a NTTP.
-        param_val = template_type.GetTemplateArgumentValue(target, 1)
-        self.assertEqual(param_val.GetTypeName(), "unsigned int")
-        self.assertEqual(param_val.GetValueAsUnsigned(), 2)
+            # Template parameter is a NTTP.
+            param_val = template_type.GetTemplateArgumentValue(target, 1)
+            self.assertEqual(param_val.GetTypeName(), "unsigned int")
+            self.assertEqual(param_val.GetValueAsUnsigned(), 2)
 
-        # Try to get an invalid template argument.
-        self.assertEqual(
-            template_type.GetTemplateArgumentKind(2), lldb.eTemplateArgumentKindNull
-        )
-        self.assertEqual(template_type.GetTemplateArgumentType(2).GetName(), "")
+            # Try to get an invalid template argument.
+            self.assertEqual(
+                template_type.GetTemplateArgumentKind(2), lldb.eTemplateArgumentKindNull
+            )
+            self.assertEqual(template_type.GetTemplateArgumentType(2).GetName(), "")
 
         value = self.expect_expr("temp2", result_type="Foo<short, -2>")
 
