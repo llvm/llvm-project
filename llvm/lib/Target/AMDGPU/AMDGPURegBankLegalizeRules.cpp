@@ -215,6 +215,14 @@ bool matchUniformityAndLLT(Register Reg, UniformityLLTOpPredicateID UniID,
         static_cast<const SIRegisterInfo *>(MRI.getTargetRegisterInfo());
     return TRI->getSGPRClassForBitWidth(MRI.getType(Reg).getSizeInBits());
   }
+  case BRC: {
+    // Check if there is SGPR and VGPR register class of same size as the LLT.
+    const SIRegisterInfo *TRI =
+        static_cast<const SIRegisterInfo *>(MRI.getTargetRegisterInfo());
+    unsigned LLTSize = MRI.getType(Reg).getSizeInBits();
+    return LLTSize >= 32 && TRI->getSGPRClassForBitWidth(LLTSize) &&
+           TRI->getVGPRClassForBitWidth(LLTSize);
+  }
   case _:
     return true;
   default:
@@ -673,16 +681,12 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
   addRulesForGOpcs({G_EXTRACT_VECTOR_ELT})
       .Any({{UniB32, UniBRC, UniS32}, {{SgprB32}, {SgprBRC, Sgpr32}}})
       .Any({{DivB32, DivBRC, UniS32}, {{VgprB32}, {VgprBRC, Sgpr32}}})
-      .Any({{DivB32, UniBRC, DivS32},
-            {{VgprB32}, {VgprBRC, Vgpr32}, ExtrVecEltToSel}})
-      .Any({{DivB32, DivBRC, DivS32},
+      .Any({{DivB32, BRC, DivS32},
             {{VgprB32}, {VgprBRC, Vgpr32}, ExtrVecEltToSel}})
       .Any({{UniB64, UniBRC, UniS32}, {{SgprB64}, {SgprBRC, Sgpr32}}})
       .Any({{DivB64, DivBRC, UniS32},
             {{VgprB64}, {VgprBRC, Sgpr32}, ExtrVecEltTo32}})
-      .Any({{DivB64, UniBRC, DivS32},
-            {{VgprB64}, {VgprBRC, Vgpr32}, ExtrVecEltToSel}})
-      .Any({{DivB64, DivBRC, DivS32},
+      .Any({{DivB64, BRC, DivS32},
             {{VgprB64}, {VgprBRC, Vgpr32}, ExtrVecEltToSel}});
 
   // LOAD       {Div}, {{VgprDst...}, {VgprSrc, ..., Sgpr_WF_RsrcIdx}}

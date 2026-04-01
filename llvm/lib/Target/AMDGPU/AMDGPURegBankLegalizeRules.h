@@ -116,6 +116,7 @@ enum UniformityLLTOpPredicateID {
   B160,
   B256,
   B512,
+  BRC,
 
   UniB32,
   UniB64,

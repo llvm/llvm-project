@@ -906,37 +906,39 @@ bool RegBankLegalizeHelper::lowerExtrVecEltToSel(MachineInstr &MI) {
   LLT ScalarTy = VecTy.getScalarType();
   unsigned NumElts = VecTy.getNumElements();
 
-  SmallVector<Register, 16> Elts;
-  for (unsigned I = 0; I < NumElts; ++I)
-    Elts.push_back(MRI.createVirtualRegister({VgprRB, ScalarTy}));
+  auto Unmerge = B.buildUnmerge({VgprRB, ScalarTy}, Src);
 
-  B.buildUnmerge(Elts, Src);
-  Register PrevSelect = Elts[0];
-  for (unsigned I = 1; I < NumElts; ++I) {
-    auto IdxConst = B.buildConstant({SgprRB, MRI.getType(Idx)}, I);
-    auto Cmp = B.buildICmp(CmpInst::ICMP_EQ, {VccRB, S1}, Idx, IdxConst);
-
-    MachineInstrBuilder Sel;
-    if (ScalarTy.getSizeInBits() == 32) {
-      Sel = B.buildSelect({VgprRB, ScalarTy}, Cmp, Elts[I], PrevSelect);
-    } else if (ScalarTy.getSizeInBits() == 64) {
-      auto EltsUnmerge = B.buildUnmerge({VgprRB, S32}, Elts[I]);
-      auto PrevSelectUnmerge = B.buildUnmerge({VgprRB, S32}, PrevSelect);
-      auto SelLo = B.buildSelect({VgprRB, S32}, Cmp, EltsUnmerge.getReg(0),
-                                 PrevSelectUnmerge.getReg(0));
-      auto SelHi = B.buildSelect({VgprRB, S32}, Cmp, EltsUnmerge.getReg(1),
-                                 PrevSelectUnmerge.getReg(1));
-      Sel = B.buildMergeValues({VgprRB, ScalarTy},
-                               {SelLo.getReg(0), SelHi.getReg(0)});
-    } else {
-      llvm_unreachable(
-          "expected s32 or s64 element type for extract vector elt");
+  if (ScalarTy.getSizeInBits() == 32) {
+    Register PrevSelect = Unmerge.getReg(0);
+    for (unsigned I = 1; I < NumElts; ++I) {
+      auto IdxConst = B.buildConstant({SgprRB, MRI.getType(Idx)}, I);
+      auto Cmp = B.buildICmp(CmpInst::ICMP_EQ, {VccRB, S1}, Idx, IdxConst);
+      PrevSelect =
+          B.buildSelect({VgprRB, ScalarTy}, Cmp, Unmerge.getReg(I), PrevSelect)
+              .getReg(0);
     }
-
-    PrevSelect = Sel.getReg(0);
+    B.buildCopy(Dst, PrevSelect);
+  } else if (ScalarTy.getSizeInBits() == 64) {
+    auto InitUnmerge = B.buildUnmerge({VgprRB, S32}, Unmerge.getReg(0));
+    Register PrevLo = InitUnmerge.getReg(0);
+    Register PrevHi = InitUnmerge.getReg(1);
+    for (unsigned I = 1; I < NumElts; ++I) {
+      auto IdxConst = B.buildConstant({SgprRB, MRI.getType(Idx)}, I);
+      auto Cmp = B.buildICmp(CmpInst::ICMP_EQ, {VccRB, S1}, Idx, IdxConst);
+      auto EltUnmerge = B.buildUnmerge({VgprRB, S32}, Unmerge.getReg(I));
+      PrevLo = B.buildSelect({VgprRB, S32}, Cmp, EltUnmerge.getReg(0), PrevLo)
+                   .getReg(0);
+      PrevHi = B.buildSelect({VgprRB, S32}, Cmp, EltUnmerge.getReg(1), PrevHi)
+                   .getReg(0);
+    }
+    B.buildMergeLikeInstr(Dst, {PrevLo, PrevHi});
+  } else {
+    reportGISelFailure(
+        MF, MORE, "amdgpu-regbanklegalize",
+        "AMDGPU RegBankLegalize: ExtrVecEltToSel unsupported element type", MI);
+    return false;
   }
 
-  B.buildCopy(Dst, PrevSelect);
   MI.eraseFromParent();
   return true;
 }
@@ -949,8 +951,7 @@ bool RegBankLegalizeHelper::lowerExtrVecEltTo32(MachineInstr &MI) {
   //   result = merge(lo, hi)
   //
   // When the index is uniform, all lanes extract the same element, so we can
-  // just split the s64 extract into two s32 extracts which lower to MOVREL,
-  // avoiding the O(N) compare-select chain in ExtrVecEltToSel.
+  // just split the s64 extract into two s32 extracts which lower to MOVREL.
   Register Dst = MI.getOperand(0).getReg();
   Register Src = MI.getOperand(1).getReg();
   Register Idx = MI.getOperand(2).getReg();
@@ -958,15 +959,15 @@ bool RegBankLegalizeHelper::lowerExtrVecEltTo32(MachineInstr &MI) {
   LLT SrcTy = MRI.getType(Src);
   LLT Vec32Ty = LLT::fixed_vector(2 * SrcTy.getNumElements(), 32);
 
-  const RegisterBank *SrcRB = MRI.getRegBank(Src);
-  const RegisterBank *IdxRB = MRI.getRegBank(Idx);
+  assert(MRI.getRegBank(Src) == VgprRB && MRI.getRegBank(Idx) == SgprRB &&
+         "expected VGPR src and SGPR idx");
 
-  auto CastSrc = B.buildBitcast({SrcRB, Vec32Ty}, Src);
+  auto CastSrc = B.buildBitcast({VgprRB, Vec32Ty}, Src);
 
   // Calculate new Lo and Hi indices
   auto One = B.buildConstant({SgprRB, S32}, 1);
-  auto IdxLo = B.buildShl({IdxRB, S32}, Idx, One);
-  auto IdxHi = B.buildAdd({IdxRB, S32}, IdxLo, One);
+  auto IdxLo = B.buildShl({SgprRB, S32}, Idx, One);
+  auto IdxHi = B.buildAdd({SgprRB, S32}, IdxLo, One);
 
   auto ExtLo = B.buildExtractVectorElement({VgprRB, S32}, CastSrc, IdxLo);
   auto ExtHi = B.buildExtractVectorElement({VgprRB, S32}, CastSrc, IdxHi);
