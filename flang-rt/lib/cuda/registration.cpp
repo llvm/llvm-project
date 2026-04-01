@@ -27,7 +27,6 @@ extern void __cudaRegisterVar(void **fatCubinHandle, char *hostVar,
 extern void __cudaRegisterManagedVar(void **fatCubinHandle,
     void **hostVarPtrAddress, char *deviceAddress, const char *deviceName,
     int ext, size_t size, int constant, int global);
-extern char __cudaInitModule(void **fatCubinHandle);
 
 void *RTDECL(CUFRegisterModule)(void *data) {
   void **fatHandle{__cudaRegisterFatBinary(data)};
@@ -50,8 +49,6 @@ void RTDEF(CUFRegisterManagedVariable)(
     void **module, void **varSym, char *varName, int64_t size) {
   __cudaRegisterManagedVar(module, varSym, varName, varName, 0, size, 0, 0);
 }
-
-void RTDEF(CUFInitModule)(void **module) { __cudaInitModule(module); }
 
 } // extern "C"
 

@@ -252,13 +252,13 @@ class EncAnyType<int ArgCode=0> {
   int ret = !or(ID, ArgCode);
 }
 
-// (Mapping[Num] << 3) | AK.MatchType
+// (Num << 3) | AK.MatchType
 class EncMatchType<int Num=0> {
   int ID = 0x200;
   int ret = !or(ID, Num);
 }
 
-// (Mapping[Num] << 3) | ArgCodes[Mapping[Num]]
+// (Num << 3) | ArgCodes[Num]
 class EncSameWidth<int Num=0> {
   int ID = 0x300;
   int ret = !or(ID, Num);
@@ -270,26 +270,24 @@ class EncNextArgA<int dummy=0> {
   int ret = !or(ID, dummy);
 }
 
-// Mapping[Num]
+// Num
 class EncNextArgN<int Num=0> {
   int ID = 0x500;
   int ret = !or(ID, Num);
 }
 
 class ResolveArgCode<
-    list<int> Mapping,
     list<int> ArgCodes,
     int ACIdx,
     int ax> {
   int ah = !and(ax, 0xFF00);
   int al = !and(ax, 0x00FF);
-  int num = Mapping[al];
   int ret = !cond(
     !eq(ah, EncAnyType<>.ID)   : !or(!shl(ACIdx, 3), al),
-    !eq(ah, EncMatchType<>.ID) : !or(!shl(num, 3), ArgKind.MatchType),
-    !eq(ah, EncSameWidth<>.ID) : !or(!shl(num, 3), ArgCodes[num]),
+    !eq(ah, EncMatchType<>.ID) : !or(!shl(al, 3), ArgKind.MatchType),
+    !eq(ah, EncSameWidth<>.ID) : !or(!shl(al, 3), ArgCodes[al]),
     !eq(ah, EncNextArgA<>.ID)  : ACIdx,
-    !eq(ah, EncNextArgN<>.ID)  : num,
+    !eq(ah, EncNextArgN<>.ID)  : al,
     true : al);
 }
 
@@ -448,12 +446,28 @@ class LLVMAnyPointerType : LLVMAnyType<pAny> {
   assert isAny, "pAny should have isOverloaded";
 }
 
-// Match the type of another intrinsic parameter.  Number is an index into the
-// list of overloaded types for the intrinsic, excluding all the fixed types.
-// The Number value must refer to a previously listed type.  For example:
+// Match the type of another intrinsic parameter. Number is an index into the
+// list of overloaded types for the intrinsic (i.e, the overload index),
+// excluding all the fixed types and all fully dependent types (i.e., all
+// sub-classes of LLVMMatchType, except LLVMMatchTypeNextArg). The Number
+// value must refer to a previously listed type. For example:
+//
 //   Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_anyfloat_ty, LLVMMatchType<0>]>
-// has two overloaded types, the 2nd and 3rd arguments.  LLVMMatchType<0>
-// refers to the first overloaded type, which is the 2nd argument.
+//
+// has one overloaded type, the 2nd argument. LLVMMatchType<0> refers to this
+// first overloaded type, which is the 2nd argument. As another example,
+//
+//   Intrinsic<[llvm_anyint_ty],
+//     [llvm_anyfloat_ty, LLVMMatchType<0>, llvm_anyfloat_ty, LLVMMatchType<2>]>
+//
+// has 3 overloaded types:
+//   overload index 0 = return type
+//   overload index 1 = first argument
+//   overload index 2 = third argument
+//
+// LLVMMatchType<0> therefore will match the return type, and
+// LLVMMatchType<2> will match the 3rd argument.
+
 class LLVMMatchType<int num, IIT_Base IIT_Info = IIT_ARG>
   : LLVMType<OtherVT>{
   let Number = num;
@@ -649,12 +663,7 @@ class MakeIdx<list<int> Set> {
       !foldl(0, !range(0, i), m, j, !add(m, Set[j])),
       -1));
 
-  list<int> RIdxsR = !foreach(i, !range(Set),
-    !foldl(-1, !range(Set), m, j,
-      !if(!and(Set[j], !eq(IdxsR[j], i)), j, m)));
-
   list<int> Idxs  = !foreach(a, IdxsR,  !if(!ge(a, 0), a, ?));
-  list<int> RIdxs = !foreach(a, RIdxsR, !if(!ge(a, 0), a, ?));
 }
 
 class TypeInfoGen<
@@ -673,16 +682,26 @@ class TypeInfoGen<
 
   list<int> ArgCodes = !foreach(ty, ACTys, ty.ArgCode);
 
-  // Mappings MatchTypeIdx to ACTys
-  list<int> MappingRIdxs = MakeIdx<
-    !foreach(ty, ACTys, ty.isAny)>.RIdxs;
+  bit isOverloaded = !not(!empty(ACTys));
 
-  // D63507: Exclude LLVMPointerType<llvm_any_ty>
-  bit isOverloaded = !not(!empty(!filter(ty, AllTypes,
-    !isa<LLVMAnyType>(ty))));
+  // Validate that the overload index referenced by dependent types always
+  // references an "isAny" type.
+  list<int> InvalidOverload = !foreach(ty, AllTypes,
+    // an entry in the list will be 1 if its a dependent type and it
+    // references another overload type that is not `Any`.
+    !and(
+      !or(!isa<LLVMMatchType>(ty), !isa<LLVMMatchTypeNextArg>(ty)),
+      !if(!ge(ty.Number, !size(ACTys)),
+        1,
+        !not(ACTys[ty.Number].isAny)
+      )
+    )
+  );
+  assert !eq(!foldl(0, InvalidOverload, a, x, !add(a, x)), 0),
+     "dependent types must reference an overload index of an \'llvm_any\' type";
 
   list<LLVMType> Types = !foreach(ty, AllTypes,
-    !if(!isa<LLVMMatchType>(ty), ACTys[MappingRIdxs[ty.Number]], ty));
+    !if(!isa<LLVMMatchType>(ty), ACTys[ty.Number], ty));
 
   list<int> TypeSig = !listflatten(!listconcat(
     [!cond(
@@ -692,7 +711,6 @@ class TypeInfoGen<
     !foreach(i, !range(AllTypes),
       !foreach(a, AllTypes[i].Sig,
         ResolveArgCode<
-          MappingRIdxs,
           ArgCodes,
           ACIdxs[i],
           a>.ret))));
