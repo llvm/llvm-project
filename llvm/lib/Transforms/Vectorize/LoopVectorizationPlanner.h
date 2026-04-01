@@ -575,18 +575,22 @@ public:
   /// Generate the IR code for the vectorized loop captured in VPlan \p BestPlan
   /// according to the best selected \p VF and  \p UF.
   ///
-  /// TODO: \p VectorizingEpilogue indicates if the executed VPlan is for the
-  /// epilogue vector loop. It should be removed once the re-use issue has been
+  /// TODO: \p EpilogueVecKind should be removed once the re-use issue has been
   /// fixed.
   ///
   /// Returns a mapping of SCEVs to their expanded IR values.
   /// Note that this is a temporary workaround needed due to the current
   /// epilogue handling.
-  DenseMap<const SCEV *, Value *> executePlan(ElementCount VF, unsigned UF,
-                                              VPlan &BestPlan,
-                                              InnerLoopVectorizer &LB,
-                                              DominatorTree *DT,
-                                              bool VectorizingEpilogue);
+  enum class EpilogueVectorizationKind {
+    None,     ///< Not part of epilogue vectorization.
+    MainLoop, ///< Vectorizing the main loop of epilogue vectorization.
+    Epilogue  ///< Vectorizing the epilogue loop.
+  };
+  DenseMap<const SCEV *, Value *>
+  executePlan(ElementCount VF, unsigned UF, VPlan &BestPlan,
+              InnerLoopVectorizer &LB, DominatorTree *DT,
+              EpilogueVectorizationKind EpilogueVecKind =
+                  EpilogueVectorizationKind::None);
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   void printPlans(raw_ostream &O);
