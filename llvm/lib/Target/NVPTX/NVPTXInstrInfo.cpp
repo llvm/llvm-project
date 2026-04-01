@@ -381,37 +381,53 @@ bool NVPTXInstrInfo::invertCompareInstr(MachineInstr &MI) const {
   return false;
 }
 
-bool NVPTXInstrInfo::invertPredicateWithUsers(MachineInstr &MI,
-                                              MachineRegisterInfo &MRI) const {
-  if (!invertCompareInstr(MI))
-    return false;
+bool NVPTXInstrInfo::findCommutedOpIndices(const MachineInstr &MI,
+                                           unsigned &SrcOpIdx1,
+                                           unsigned &SrcOpIdx2) const {
+  // "Commute" these by inverting their predicates, see commuteInstructionImpl.
+  if (isIntegerSetp(MI) || isFloatSetp(MI))
+    return fixCommutedOpIndices(SrcOpIdx1, SrcOpIdx2, 1, 2);
+  return TargetInstrInfo::findCommutedOpIndices(MI, SrcOpIdx1, SrcOpIdx2);
+}
 
-  // Collect parent MBBs of all branch users up front. The
-  // analyzeBranch/removeBranch/insertBranch sequence erases and recreates
-  // branch instructions, which invalidates the use-chain iterator.
+MachineInstr *NVPTXInstrInfo::commuteInstructionImpl(MachineInstr &MI,
+                                                     bool NewMI,
+                                                     unsigned OpIdx1,
+                                                     unsigned OpIdx2) const {
+  assert(!NewMI && "this should never be used");
+
+  if (!isIntegerSetp(MI) && !isFloatSetp(MI))
+    return TargetInstrInfo::commuteInstructionImpl(MI, NewMI, OpIdx1, OpIdx2);
+
+  // The logic here is "commuting" the compare instruction by
+  // generating the inverse compare using the inversed predicate.
+  // The goal is to allow the compare instruction to be CSE'd with
+  // their inverted counterparts.
+  if (!invertCompareInstr(MI))
+    return nullptr;
+
+  // For now all users must be invertible conditional branches.
   // TODO: support other users such as selects.
-  SmallVector<MachineBasicBlock *, 4> BranchMBBs;
+  bool AllInverted = true;
+  MachineRegisterInfo &MRI = MI.getParent()->getParent()->getRegInfo();
   for (MachineInstr &UseMI :
        MRI.use_nodbg_instructions(MI.getOperand(0).getReg())) {
-    if (!UseMI.isConditionalBranch()) {
-      invertCompareInstr(MI);
-      return false;
-    }
-    BranchMBBs.push_back(UseMI.getParent());
-  }
-
-  unsigned NumInverted = 0;
-  for (MachineBasicBlock *MBB : BranchMBBs) {
-    if (!invertPredicateBranchInstr(*MBB))
+    if (!(UseMI.isConditionalBranch() &&
+          invertPredicateBranchInstr(*UseMI.getParent()))) {
+      AllInverted = false;
       break;
-    ++NumInverted;
+    }
   }
 
-  if (NumInverted != BranchMBBs.size()) {
-    for (unsigned I = 0; I < NumInverted; ++I)
-      invertPredicateBranchInstr(*BranchMBBs[I]);
+  if (!AllInverted) {
+    for (MachineInstr &UseMI :
+         MRI.use_nodbg_instructions(MI.getOperand(0).getReg())) {
+      if (!(UseMI.isConditionalBranch() &&
+            invertPredicateBranchInstr(*UseMI.getParent())))
+        break;
+    }
     invertCompareInstr(MI);
-    return false;
+    return nullptr;
   }
-  return true;
+  return &MI;
 }

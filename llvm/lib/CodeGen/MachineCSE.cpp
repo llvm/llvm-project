@@ -58,17 +58,12 @@ STATISTIC(NumPhysCSEs,
           "Number of physreg referencing common subexpr eliminated");
 STATISTIC(NumCrossBBCSEs,
           "Number of cross-MBB physreg referencing CS eliminated");
-STATISTIC(NumCommutes,  "Number of copies coalesced after commuting");
-STATISTIC(NumPredicateInversions, "Number of predicate inversions for CSE");
+STATISTIC(NumCommutes, "Number of copies coalesced after commuting");
 
 // Threshold to avoid excessive cost to compute isProfitableToCSE.
 static cl::opt<int>
     CSUsesThreshold("csuses-threshold", cl::Hidden, cl::init(1024),
                     cl::desc("Threshold for the size of CSUses"));
-
-static cl::opt<bool> EnablePredicateInversionMCSE(
-    "predicate-inversion-mcse", cl::Hidden, cl::init(true),
-    cl::desc("Enable predicate inversion to find CSE opportunities"));
 
 static cl::opt<bool> AggressiveMachineCSE(
     "aggressive-machine-cse", cl::Hidden, cl::init(false),
@@ -569,20 +564,6 @@ bool MachineCSEImpl::ProcessBlockCSE(MachineBasicBlock *MBB) {
       }
     }
 
-    // Invert predicate + users for potential CSE.
-    bool InvertedPredicate = false;
-    if (EnablePredicateInversionMCSE && !FoundCSE && MI.isCompare()) {
-      InvertedPredicate = TII->invertPredicateWithUsers(MI, *MRI);
-      if (InvertedPredicate) {
-        FoundCSE = VNT.count(&MI);
-        if (!FoundCSE) {
-          // Didn't help, invert back so MI can serve as base for future VN.
-          TII->invertPredicateWithUsers(MI, *MRI);
-          InvertedPredicate = false;
-        }
-      }
-    }
-
     // If the instruction defines physical registers and the values *may* be
     // used, then it's not safe to replace it with a common subexpression.
     // It's also not safe if the instruction uses physical registers.
@@ -747,14 +728,8 @@ bool MachineCSEImpl::ProcessBlockCSE(MachineBasicBlock *MBB) {
         ++NumPhysCSEs;
       if (Commuted)
         ++NumCommutes;
-      if (InvertedPredicate)
-        ++NumPredicateInversions;
       Changed = true;
     } else {
-      // If the CSE was not profitable, invert the predicate + users back.
-      if (InvertedPredicate)
-        TII->invertPredicateWithUsers(MI, *MRI);
-
       VNT.insert(&MI, CurrVN++);
       Exps.push_back(&MI);
     }
