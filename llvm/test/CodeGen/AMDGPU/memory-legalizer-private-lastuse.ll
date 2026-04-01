@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -O0 -mcpu=gfx1200 < %s | FileCheck --check-prefix=GFX12 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -O0 -mcpu=gfx1200 -mattr=+cumode < %s | FileCheck --check-prefix=GFX12 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -O0 -mcpu=gfx1250 < %s | FileCheck --check-prefixes=GFX1250,GFX1250-NOGAS %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -O0 -mcpu=gfx1250 -mattr=+globally-addressable-scratch < %s | FileCheck --check-prefixes=GFX1250,GFX1250-GAS %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -O0 -mcpu=gfx1250 -amdgpu-globally-addressable-scratch < %s | FileCheck --check-prefixes=GFX1250,GFX1250-GAS %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -O0 -mcpu=gfx1310 < %s | FileCheck --check-prefix=GFX13 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -O0 -mcpu=gfx1310 -mattr=+cumode < %s | FileCheck --check-prefix=GFX13 %s
 

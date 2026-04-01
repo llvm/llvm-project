@@ -9,7 +9,7 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -O0 -mcpu=gfx1200 < %s | FileCheck --check-prefixes=GFX12-WGP %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -O0 -mcpu=gfx1200 -mattr=+cumode < %s | FileCheck --check-prefixes=GFX12-CU %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -O0 -mcpu=gfx1250 < %s | FileCheck --check-prefixes=GFX1250,GFX1250-NOGAS %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -O0 -mcpu=gfx1250 -mattr=+globally-addressable-scratch < %s | FileCheck --check-prefixes=GFX1250,GFX1250-GAS %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -O0 -mcpu=gfx1250 -amdgpu-globally-addressable-scratch < %s | FileCheck --check-prefixes=GFX1250,GFX1250-GAS %s
 
 define amdgpu_kernel void @private_volatile_load_0(
 ; GFX6-LABEL: private_volatile_load_0:

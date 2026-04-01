@@ -1375,13 +1375,7 @@ defm XF32Insts : AMDGPUSubtargetFeature<"xf32-insts",
 def FeatureGloballyAddressableScratchSupport : SubtargetFeature<"globally-addressable-scratch-support",
   "HasGloballyAddressableScratchSupport",
   "true",
-  "Hardware supports globally-addressable-scratch"
->;
-
-def FeatureGloballyAddressableScratch : SubtargetFeature<"globally-addressable-scratch",
-  "EnableGloballyAddressableScratch",
-  "true",
-  "FLAT instructions can access scratch memory from any thread in any wave"
+  "Hardware supports Globally Addressable Scratch"
 >;
 
 // Enable the use of SCRATCH_STORE/LOAD_BLOCK instructions for saving and
