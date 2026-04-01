@@ -637,8 +637,22 @@ void LookupResult::resolveKind() {
     getSema().diagnoseEquivalentInternalLinkageDeclarations(
         getNameLoc(), HasNonFunction, EquivalentNonFunctions);
 
-  if ((HasNonFunction && (HasFunction || HasUnresolved)) ||
-      (HideTags && HasTag && (HasFunction || HasNonFunction || HasUnresolved)))
+  // A lookup can be ambiguous if we find multiple declarations that cannot
+  // coexist. This occurs if:
+  //
+  // 1. We have a non-function (like a variable or namespace), which cannot
+  //    be overloaded, and either a function or an unresolved using declaration.
+  bool ConflictWithNonFunction =
+      HasNonFunction && (HasFunction || HasUnresolved);
+
+  // 2. We have a hidden tag (struct or enum) and another declaration, and
+  //    Because they both remain in the results, they must be from different
+  //    scopes. If they were in the same scope, the tag would have been hidden
+  //    and removed prior.
+  bool HiddenTagConflict =
+      HideTags && HasTag && (HasFunction || HasNonFunction || HasUnresolved);
+
+  if (ConflictWithNonFunction || HiddenTagConflict)
     Ambiguous = true;
 
   if (Ambiguous && UnresolvedUsingDecls.count()) {
