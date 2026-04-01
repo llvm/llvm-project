@@ -288,6 +288,16 @@ static bool foldAnyOrAllBitsSet(Instruction &I) {
   return true;
 }
 
+/// Helper function to replace an instruction with a popcount intrinsic.
+/// This creates the ctpop intrinsic and replaces all uses of the instruction.
+static void replaceWithPopCount(Instruction &I, Value *Root) {
+  LLVM_DEBUG(dbgs() << "Recognized popcount intrinsic\n");
+  IRBuilder<> Builder(&I);
+  I.replaceAllUsesWith(
+      Builder.CreateIntrinsic(Intrinsic::ctpop, I.getType(), {Root}));
+  ++NumPopCountRecognized;
+}
+
 // Try to recognize below function as popcount intrinsic.
 // This is the "best" algorithm from
 // http://graphics.stanford.edu/~seander/bithacks.html#CountBitsSetParallel
@@ -357,11 +367,7 @@ static bool tryToRecognizePopCount(Instruction &I) {
           };
 
           if (CheckAndMask()) {
-            LLVM_DEBUG(dbgs() << "Recognized popcount intrinsic\n");
-            IRBuilder<> Builder(&I);
-            I.replaceAllUsesWith(
-                Builder.CreateIntrinsic(Intrinsic::ctpop, I.getType(), {Root}));
-            ++NumPopCountRecognized;
+            replaceWithPopCount(I, Root);
             return true;
           }
         }
@@ -374,8 +380,6 @@ static bool tryToRecognizePopCount(Instruction &I) {
 
 // Try to recognize below function as popcount intrinsic.
 // Ref. Hacker Delights
-// Also used in TargetLowering::expandCTPOP().
-//
 // int popcount32(unsigned int i) {
 // uWord = (uWord & 0x55555555) + ((uWord>>1) & 0x55555555);
 // uWord = (uWord & 0x33333333) + ((uWord>>2) & 0x33333333);
@@ -418,20 +422,16 @@ static bool tryToRecognizePopCount1(Instruction &I) {
     // OR
     // Matching "(uWord & Mask) + ((uWord>>I/2) &
     // Mask)".
-    if (!(match(Start,
-                m_c_Add(m_And(m_LShr(m_Value(ShiftOp), m_SpecificInt(I / 2)),
-                              m_SpecificInt(Mask)),
-                        m_And(m_Deferred(ShiftOp), m_SpecificInt(Mask)))) ||
-          match(Start,
-                m_c_Add(m_LShr(m_Value(ShiftOp), m_SpecificInt(I / 2)),
-                        m_And(m_Deferred(ShiftOp), m_SpecificInt(Mask))))))
+    if (!match(Start,
+               m_c_Add(m_And(m_LShr(m_Value(ShiftOp), m_SpecificInt(I / 2)),
+                             m_SpecificInt(Mask)),
+                       m_And(m_Deferred(ShiftOp), m_SpecificInt(Mask)))) &&
+        !match(Start, m_c_Add(m_LShr(m_Value(ShiftOp), m_SpecificInt(I / 2)),
+                              m_And(m_Deferred(ShiftOp), m_SpecificInt(Mask)))))
       return false;
-
     Start = ShiftOp;
-    ShiftOp = nullptr;
   }
 
-  ShiftOp = nullptr;
   // Matching "uWord = (uWord & Mask33) + ((uWord>>2) & Mask33)".
   if (!match(Start, m_c_Add(m_And(m_LShr(m_Value(ShiftOp), m_SpecificInt(2)),
                                   m_SpecificInt(Mask33)),
@@ -439,19 +439,15 @@ static bool tryToRecognizePopCount1(Instruction &I) {
     return false;
 
   Start = ShiftOp;
-  ShiftOp = nullptr;
   // Matching "uWord = (uWord & Mask55) + ((uWord>>1) &
   // Mask55)".
-  if (!match(Start, m_c_Add(m_And(m_LShr(m_Value(ShiftOp), m_SpecificInt(1)),
+  Value *Root;
+  if (!match(Start, m_c_Add(m_And(m_LShr(m_Value(Root), m_SpecificInt(1)),
                                   m_SpecificInt(Mask55)),
-                            m_And(m_Deferred(ShiftOp), m_SpecificInt(Mask55)))))
+                            m_And(m_Deferred(Root), m_SpecificInt(Mask55)))))
     return false;
 
-  LLVM_DEBUG(dbgs() << "Recognized popcount intrinsic\n");
-  IRBuilder<> Builder(&I);
-  I.replaceAllUsesWith(
-      Builder.CreateIntrinsic(Intrinsic::ctpop, I.getType(), {ShiftOp}));
-  ++NumPopCountRecognized;
+  replaceWithPopCount(I, Root);
   return true;
 }
 
