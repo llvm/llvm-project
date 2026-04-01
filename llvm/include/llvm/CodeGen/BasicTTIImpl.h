@@ -3441,10 +3441,11 @@ public:
       TTI::PartialReductionExtendKind OpBExtend, std::optional<unsigned> BinOp,
       TTI::TargetCostKind CostKind,
       std::optional<FastMathFlags> FMF) const override {
-    unsigned Ratio =
-        AccumType->getScalarSizeInBits() / InputTypeA->getScalarSizeInBits();
+    unsigned EltSizeAcc = AccumType->getScalarSizeInBits();
+    unsigned EltSizeInA = InputTypeA->getScalarSizeInBits();
+    unsigned Ratio = EltSizeAcc / EltSizeInA;
     if (VF.getKnownMinValue() <= Ratio || VF.getKnownMinValue() % Ratio != 0 ||
-        (BinOp && InputTypeA != InputTypeB))
+        EltSizeAcc % EltSizeInA != 0 || (BinOp && InputTypeA != InputTypeB))
       return InstructionCost::getInvalid();
 
     Type *InputVectorType = VectorType::get(InputTypeA, VF);
@@ -3452,7 +3453,7 @@ public:
     Type *AccumVectorType =
         VectorType::get(AccumType, VF.divideCoefficientBy(Ratio));
 
-    auto ExtendCostA = InstructionCost(0);
+    InstructionCost ExtendCostA = 0;
     if (OpAExtend != TTI::PartialReductionExtendKind::PR_None)
       ExtendCostA = getCastInstrCost(
           TTI::getOpcodeForPartialReductionExtendKind(OpAExtend),
@@ -3461,13 +3462,13 @@ public:
 
     // TODO: add cost of extracting subvectors from the source vector that
     // is to be partially reduced.
-    auto ReductionOpCost =
+    InstructionCost ReductionOpCost =
         Ratio * getArithmeticInstrCost(Opcode, AccumVectorType, CostKind);
 
     if (!BinOp)
       return ExtendCostA + ReductionOpCost;
 
-    auto ExtendCostB = InstructionCost(0);
+    InstructionCost ExtendCostB = 0;
     if (OpBExtend != TTI::PartialReductionExtendKind::PR_None)
       ExtendCostB = getCastInstrCost(
           TTI::getOpcodeForPartialReductionExtendKind(OpBExtend),
