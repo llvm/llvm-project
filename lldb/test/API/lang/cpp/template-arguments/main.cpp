@@ -4,6 +4,7 @@ struct C {
 };
 
 C<int, 2> temp1;
+auto *ptemp1 = &temp1;
 
 template <typename T, T value> struct Foo {};
 Foo<short, -2> temp2;
