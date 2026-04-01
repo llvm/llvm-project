@@ -1,52 +1,314 @@
 // RUN: rm -rf %t && mkdir -p %t
-// RUN: clang-doc --format=html --doxygen --output=%t --executor=standalone %s
-// RUN: clang-doc --format=md --doxygen --output=%t --executor=standalone %s
-// RUN: FileCheck %s < %t/html/GlobalNamespace/index.html --check-prefix=HTML-INDEX-LINE
+// RUN: clang-doc --format=html --doxygen --output=%t --executor=standalone %S/Inputs/enum.cpp
+// RUN: clang-doc --format=md --doxygen --output=%t --executor=standalone %S/Inputs/enum.cpp
+// RUN: clang-doc --format=md_mustache --doxygen --output=%t --executor=standalone %S/Inputs/enum.cpp
 // RUN: FileCheck %s < %t/html/GlobalNamespace/index.html --check-prefix=HTML-INDEX
-// RUN: FileCheck %s < %t/html/GlobalNamespace/_ZTV7Animals.html --check-prefix=HTML-ANIMAL-LINE
 // RUN: FileCheck %s < %t/html/GlobalNamespace/_ZTV7Animals.html --check-prefix=HTML-ANIMAL
-// RUN: FileCheck %s < %t/html/GlobalNamespace/_ZTV15FilePermissions.html --check-prefix=HTML-PERM-LINE
 // RUN: FileCheck %s < %t/html/GlobalNamespace/_ZTV15FilePermissions.html --check-prefix=HTML-PERM
-// RUN: FileCheck %s < %t/html/Vehicles/index.html --check-prefix=HTML-VEHICLES-LINE
 // RUN: FileCheck %s < %t/html/Vehicles/index.html --check-prefix=HTML-VEHICLES
-// RUN: FileCheck %s < %t/GlobalNamespace/index.md --check-prefix=MD-INDEX-LINE
 // RUN: FileCheck %s < %t/GlobalNamespace/index.md --check-prefix=MD-INDEX
-// RUN: FileCheck %s < %t/GlobalNamespace/Animals.md --check-prefix=MD-ANIMAL-LINE
 // RUN: FileCheck %s < %t/GlobalNamespace/Animals.md --check-prefix=MD-ANIMAL
-// RUN: FileCheck %s < %t/GlobalNamespace/FilePermissions.md --check-prefix=MD-PERM-LINE
 // RUN: FileCheck %s < %t/GlobalNamespace/FilePermissions.md --check-prefix=MD-PERM
-// RUN: FileCheck %s < %t/Vehicles/index.md --check-prefix=MD-VEHICLES-LINE
 // RUN: FileCheck %s < %t/Vehicles/index.md --check-prefix=MD-VEHICLES
-
-
-// RUN: clang-doc --format=md_mustache --doxygen --output=%t --executor=standalone %s
-// RUN: FileCheck %s < %t/md/GlobalNamespace/index.md --check-prefix=MD-MUSTACHE-INDEX-LINE
 // RUN: FileCheck %s < %t/md/GlobalNamespace/index.md --check-prefix=MD-MUSTACHE-INDEX
-// RUN: FileCheck %s < %t/md/GlobalNamespace/_ZTV7Animals.md --check-prefix=MD-MUSTACHE-ANIMAL-LINE
 // RUN: FileCheck %s < %t/md/GlobalNamespace/_ZTV7Animals.md --check-prefix=MD-MUSTACHE-ANIMAL
-// RUN: FileCheck %s < %t/md/Vehicles/index.md --check-prefix=MD-MUSTACHE-VEHICLES-LINE
 // RUN: FileCheck %s < %t/md/Vehicles/index.md --check-prefix=MD-MUSTACHE-VEHICLES
+// RUN: FileCheck %s < %t/json/GlobalNamespace/index.json --check-prefix=JSON-INDEX
+// RUN: FileCheck %s < %t/json/Vehicles/index.json --check-prefix=JSON-VEHICLES-INDEX
 
-/**
- * @brief For specifying RGB colors
- */
-enum Color {
-  // MD-INDEX-LINE: *Defined at {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp#[[@LINE-1]]*
-  // HTML-INDEX-LINE: <p>Defined at line [[@LINE-2]] of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp</p>
-  // MD-MUSTACHE-INDEX-LINE: *Defined at {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp#[[@LINE-3]]*
-  Red,   ///< Comment 1
-  Green, ///< Comment 2
-  Blue   ///< Comment 3
-};
-
-// MD-INDEX: ## Enums
-// MD-INDEX: | enum Color |
-// MD-INDEX: | Name | Value | Comments |
-// MD-INDEX: |---|---|---|
-// MD-INDEX: | Red | 0 | Comment 1 |
-// MD-INDEX: | Green | 1 | Comment 2 |
-// MD-INDEX: | Blue | 2 | Comment 3 |
-// MD-INDEX: **brief** For specifying RGB colors
+// JSON-INDEX:      {
+// JSON-INDEX-NEXT:  "DocumentationFileName": "index",
+// JSON-INDEX-NEXT:  "Enums": [
+// JSON-INDEX-NEXT:    {
+// JSON-INDEX-NEXT:      "Description": {
+// JSON-INDEX-NEXT:        "BriefComments": [
+// JSON-INDEX-NEXT:          [
+// JSON-INDEX-NEXT:            {
+// JSON-INDEX-NEXT:              "TextComment": "For specifying RGB colors"
+// JSON-INDEX-NEXT:            }
+// JSON-INDEX-NEXT:          ]
+// JSON-INDEX-NEXT:        ],
+// JSON-INDEX-NEXT:        "HasBriefComments": true
+// JSON-INDEX-NEXT:      },
+// JSON-INDEX-NEXT:      "HasComments": true,
+// JSON-INDEX-NEXT:      "InfoType": "enum",
+// JSON-INDEX-NEXT:      "Location": {
+// JSON-INDEX-NEXT:        "Filename": "{{.*}}enum.cpp",
+// JSON-INDEX-NEXT:        "LineNumber": 4
+// JSON-INDEX-NEXT:      },
+// JSON-INDEX-NEXT:      "Members": [
+// JSON-INDEX-NEXT:        {
+// JSON-INDEX-NEXT:          "Description": {
+// JSON-INDEX-NEXT:            "HasParagraphComments": true,
+// JSON-INDEX-NEXT:            "ParagraphComments": [
+// JSON-INDEX-NEXT:              [
+// JSON-INDEX-NEXT:                {
+// JSON-INDEX-NEXT:                  "TextComment": "Comment 1"
+// JSON-INDEX-NEXT:                }
+// JSON-INDEX-NEXT:              ]
+// JSON-INDEX-NEXT:            ]
+// JSON-INDEX-NEXT:          },
+// JSON-INDEX-NEXT:          "HasEnumMemberComments": true,
+// JSON-INDEX-NEXT:          "Name": "Red",
+// JSON-INDEX-NEXT:          "Value": "0"
+// JSON-INDEX-NEXT:        },
+// JSON-INDEX-NEXT:        {
+// JSON-INDEX-NEXT:          "Description": {
+// JSON-INDEX-NEXT:            "HasParagraphComments": true,
+// JSON-INDEX-NEXT:            "ParagraphComments": [
+// JSON-INDEX-NEXT:              [
+// JSON-INDEX-NEXT:                {
+// JSON-INDEX-NEXT:                  "TextComment": "Comment 2"
+// JSON-INDEX-NEXT:                }
+// JSON-INDEX-NEXT:              ]
+// JSON-INDEX-NEXT:            ]
+// JSON-INDEX-NEXT:          },
+// JSON-INDEX-NEXT:          "HasEnumMemberComments": true,
+// JSON-INDEX-NEXT:          "Name": "Green",
+// JSON-INDEX-NEXT:          "Value": "1"
+// JSON-INDEX-NEXT:        },
+// JSON-INDEX-NEXT:        {
+// JSON-INDEX-NEXT:          "Description": {
+// JSON-INDEX-NEXT:            "HasParagraphComments": true,
+// JSON-INDEX-NEXT:            "ParagraphComments": [
+// JSON-INDEX-NEXT:              [
+// JSON-INDEX-NEXT:                {
+// JSON-INDEX-NEXT:                  "TextComment": "Comment 3"
+// JSON-INDEX-NEXT:                }
+// JSON-INDEX-NEXT:              ]
+// JSON-INDEX-NEXT:            ]
+// JSON-INDEX-NEXT:          },
+// JSON-INDEX-NEXT:          "End": true,
+// JSON-INDEX-NEXT:          "HasEnumMemberComments": true,
+// JSON-INDEX-NEXT:          "Name": "Blue",
+// JSON-INDEX-NEXT:          "Value": "2"
+// JSON-INDEX-NEXT:        }
+// JSON-INDEX-NEXT:      ],
+// JSON-INDEX-NEXT:      "Name": "Color",
+// JSON-INDEX-NEXT:      "Scoped": false,
+// JSON-INDEX-NEXT:      "USR": "{{([0-9A-F]{40})}}"
+// JSON-INDEX-NEXT:    },
+// JSON-INDEX-NEXT:    {
+// JSON-INDEX-NEXT:      "Description": {
+// JSON-INDEX-NEXT:        "BriefComments": [
+// JSON-INDEX-NEXT:          [
+// JSON-INDEX-NEXT:            {
+// JSON-INDEX-NEXT:              "TextComment": "Shape Types"
+// JSON-INDEX-NEXT:            }
+// JSON-INDEX-NEXT:          ]
+// JSON-INDEX-NEXT:        ],
+// JSON-INDEX-NEXT:        "HasBriefComments": true
+// JSON-INDEX-NEXT:      },
+// JSON-INDEX-NEXT:      "HasComments": true,
+// JSON-INDEX-NEXT:      "InfoType": "enum",
+// JSON-INDEX-NEXT:      "Location": {
+// JSON-INDEX-NEXT:        "Filename": "{{.*}}enum.cpp",
+// JSON-INDEX-NEXT:        "LineNumber": 13
+// JSON-INDEX-NEXT:      },
+// JSON-INDEX-NEXT:      "Members": [
+// JSON-INDEX-NEXT:        {
+// JSON-INDEX-NEXT:          "Description": {
+// JSON-INDEX-NEXT:            "HasParagraphComments": true,
+// JSON-INDEX-NEXT:            "ParagraphComments": [
+// JSON-INDEX-NEXT:              [
+// JSON-INDEX-NEXT:                {
+// JSON-INDEX-NEXT:                  "TextComment": "Comment 1"
+// JSON-INDEX-NEXT:                }
+// JSON-INDEX-NEXT:              ]
+// JSON-INDEX-NEXT:            ]
+// JSON-INDEX-NEXT:          },
+// JSON-INDEX-NEXT:          "HasEnumMemberComments": true,
+// JSON-INDEX-NEXT:          "Name": "Circle",
+// JSON-INDEX-NEXT:          "Value": "0"
+// JSON-INDEX-NEXT:        },
+// JSON-INDEX-NEXT:        {
+// JSON-INDEX-NEXT:          "Description": {
+// JSON-INDEX-NEXT:            "HasParagraphComments": true,
+// JSON-INDEX-NEXT:            "ParagraphComments": [
+// JSON-INDEX-NEXT:              [
+// JSON-INDEX-NEXT:                {
+// JSON-INDEX-NEXT:                  "TextComment": "Comment 2"
+// JSON-INDEX-NEXT:                }
+// JSON-INDEX-NEXT:              ]
+// JSON-INDEX-NEXT:            ]
+// JSON-INDEX-NEXT:          },
+// JSON-INDEX-NEXT:          "HasEnumMemberComments": true,
+// JSON-INDEX-NEXT:          "Name": "Rectangle",
+// JSON-INDEX-NEXT:          "Value": "1"
+// JSON-INDEX-NEXT:        },
+// JSON-INDEX-NEXT:        {
+// JSON-INDEX-NEXT:          "Description": {
+// JSON-INDEX-NEXT:            "HasParagraphComments": true,
+// JSON-INDEX-NEXT:            "ParagraphComments": [
+// JSON-INDEX-NEXT:              [
+// JSON-INDEX-NEXT:                {
+// JSON-INDEX-NEXT:                  "TextComment": "Comment 3"
+// JSON-INDEX-NEXT:                }
+// JSON-INDEX-NEXT:              ]
+// JSON-INDEX-NEXT:            ]
+// JSON-INDEX-NEXT:          },
+// JSON-INDEX-NEXT:          "End": true,
+// JSON-INDEX-NEXT:          "HasEnumMemberComments": true,
+// JSON-INDEX-NEXT:          "Name": "Triangle",
+// JSON-INDEX-NEXT:          "Value": "2"
+// JSON-INDEX-NEXT:        }
+// JSON-INDEX-NEXT:      ],
+// JSON-INDEX-NEXT:      "Name": "Shapes",
+// JSON-INDEX-NEXT:      "Scoped": true,
+// JSON-INDEX-NEXT:      "USR": "{{([0-9A-F]{40})}}"
+// JSON-INDEX-NEXT:    },
+// JSON-INDEX-NEXT:    {
+// JSON-INDEX-NEXT:      "BaseType": {
+// JSON-INDEX-NEXT:        "Name": "uint8_t",
+// JSON-INDEX-NEXT:        "QualName": "uint8_t",
+// JSON-INDEX-NEXT:        "USR": "0000000000000000000000000000000000000000"
+// JSON-INDEX-NEXT:      },
+// JSON-INDEX-NEXT:      "Description": {
+// JSON-INDEX-NEXT:        "BriefComments": [
+// JSON-INDEX-NEXT:          [
+// JSON-INDEX-NEXT:            {
+// JSON-INDEX-NEXT:              "TextComment": "Specify the size"
+// JSON-INDEX-NEXT:            }
+// JSON-INDEX-NEXT:          ]
+// JSON-INDEX-NEXT:        ],
+// JSON-INDEX-NEXT:        "HasBriefComments": true
+// JSON-INDEX-NEXT:      },
+// JSON-INDEX-NEXT:      "HasComments": true,
+// JSON-INDEX-NEXT:      "InfoType": "enum",
+// JSON-INDEX-NEXT:      "Location": {
+// JSON-INDEX-NEXT:        "Filename": "{{.*}}enum.cpp",
+// JSON-INDEX-NEXT:        "LineNumber": 26
+// JSON-INDEX-NEXT:      },
+// JSON-INDEX-NEXT:      "Members": [
+// JSON-INDEX-NEXT:        {
+// JSON-INDEX-NEXT:          "Description": {
+// JSON-INDEX-NEXT:            "HasParagraphComments": true,
+// JSON-INDEX-NEXT:            "ParagraphComments": [
+// JSON-INDEX-NEXT:              [
+// JSON-INDEX-NEXT:                {
+// JSON-INDEX-NEXT:                  "TextComment": "A pearl."
+// JSON-INDEX-NEXT:                },
+// JSON-INDEX-NEXT:                {
+// JSON-INDEX-NEXT:                  "TextComment": "Pearls are quite small."
+// JSON-INDEX-NEXT:                }
+// JSON-INDEX-NEXT:              ],
+// JSON-INDEX-NEXT:              [
+// JSON-INDEX-NEXT:                {
+// JSON-INDEX-NEXT:                  "TextComment": "Pearls are used in jewelry."
+// JSON-INDEX-NEXT:                }
+// JSON-INDEX-NEXT:              ]
+// JSON-INDEX-NEXT:            ]
+// JSON-INDEX-NEXT:          },
+// JSON-INDEX-NEXT:          "HasEnumMemberComments": true,
+// JSON-INDEX-NEXT:          "Name": "Small",
+// JSON-INDEX-NEXT:          "Value": "0"
+// JSON-INDEX-NEXT:        },
+// JSON-INDEX-NEXT:        {
+// JSON-INDEX-NEXT:          "Description": {
+// JSON-INDEX-NEXT:            "BriefComments": [
+// JSON-INDEX-NEXT:              [
+// JSON-INDEX-NEXT:                {
+// JSON-INDEX-NEXT:                  "TextComment": "A tennis ball."
+// JSON-INDEX-NEXT:                }
+// JSON-INDEX-NEXT:              ]
+// JSON-INDEX-NEXT:            ],
+// JSON-INDEX-NEXT:            "HasBriefComments": true
+// JSON-INDEX-NEXT:          },
+// JSON-INDEX-NEXT:          "HasEnumMemberComments": true,
+// JSON-INDEX-NEXT:          "Name": "Medium",
+// JSON-INDEX-NEXT:          "Value": "1"
+// JSON-INDEX-NEXT:        },
+// JSON-INDEX-NEXT:        {
+// JSON-INDEX-NEXT:          "Description": {
+// JSON-INDEX-NEXT:            "HasParagraphComments": true,
+// JSON-INDEX-NEXT:            "ParagraphComments": [
+// JSON-INDEX-NEXT:              [
+// JSON-INDEX-NEXT:                {
+// JSON-INDEX-NEXT:                  "TextComment": "A football."
+// JSON-INDEX-NEXT:                }
+// JSON-INDEX-NEXT:              ]
+// JSON-INDEX-NEXT:            ]
+// JSON-INDEX-NEXT:          },
+// JSON-INDEX-NEXT:          "End": true,
+// JSON-INDEX-NEXT:          "HasEnumMemberComments": true,
+// JSON-INDEX-NEXT:          "Name": "Large",
+// JSON-INDEX-NEXT:          "Value": "2"
+// JSON-INDEX-NEXT:        }
+// JSON-INDEX-NEXT:      ],
+// JSON-INDEX-NEXT:      "Name": "Size",
+// JSON-INDEX-NEXT:      "Scoped": false,
+// JSON-INDEX-NEXT:      "USR": "{{([0-9A-F]{40})}}"
+// JSON-INDEX-NEXT:    },
+// JSON-INDEX-NEXT:    {
+// JSON-INDEX-NEXT:      "BaseType": {
+// JSON-INDEX-NEXT:        "Name": "long long",
+// JSON-INDEX-NEXT:        "QualName": "long long",
+// JSON-INDEX-NEXT:        "USR": "0000000000000000000000000000000000000000"
+// JSON-INDEX-NEXT:      },
+// JSON-INDEX-NEXT:      "Description": {
+// JSON-INDEX-NEXT:        "BriefComments": [
+// JSON-INDEX-NEXT:          [
+// JSON-INDEX-NEXT:            {
+// JSON-INDEX-NEXT:              "TextComment": "Very long number"
+// JSON-INDEX-NEXT:            }
+// JSON-INDEX-NEXT:          ]
+// JSON-INDEX-NEXT:        ],
+// JSON-INDEX-NEXT:        "HasBriefComments": true
+// JSON-INDEX-NEXT:      },
+// JSON-INDEX-NEXT:      "HasComments": true,
+// JSON-INDEX-NEXT:      "InfoType": "enum",
+// JSON-INDEX-NEXT:      "Location": {
+// JSON-INDEX-NEXT:        "Filename": "{{.*}}enum.cpp",
+// JSON-INDEX-NEXT:        "LineNumber": 43
+// JSON-INDEX-NEXT:      },
+// JSON-INDEX-NEXT:      "Members": [
+// JSON-INDEX-NEXT:        {
+// JSON-INDEX-NEXT:          "Description": {
+// JSON-INDEX-NEXT:            "HasParagraphComments": true,
+// JSON-INDEX-NEXT:            "ParagraphComments": [
+// JSON-INDEX-NEXT:              [
+// JSON-INDEX-NEXT:                {
+// JSON-INDEX-NEXT:                  "TextComment": "A very large value"
+// JSON-INDEX-NEXT:                }
+// JSON-INDEX-NEXT:              ]
+// JSON-INDEX-NEXT:            ]
+// JSON-INDEX-NEXT:          },
+// JSON-INDEX-NEXT:          "End": true,
+// JSON-INDEX-NEXT:          "HasEnumMemberComments": true,
+// JSON-INDEX-NEXT:          "Name": "BigVal",
+// JSON-INDEX-NEXT:          "ValueExpr": "999999999999"
+// JSON-INDEX-NEXT:        }
+// JSON-INDEX-NEXT:      ],
+// JSON-INDEX-NEXT:      "Scoped": false,
+// JSON-INDEX-NEXT:      "USR": "{{([0-9A-F]{40})}}"
+// JSON-INDEX-NEXT:    },
+// JSON-INDEX-NEXT:    {
+// JSON-INDEX-NEXT:      "End": true,
+// JSON-INDEX-NEXT:      "InfoType": "enum",
+// JSON-INDEX-NEXT:      "Location": {
+// JSON-INDEX-NEXT:        "Filename": "{{.*}}enum.cpp",
+// JSON-INDEX-NEXT:        "LineNumber": 47
+// JSON-INDEX-NEXT:      },
+// JSON-INDEX-NEXT:      "Members": [
+// JSON-INDEX-NEXT:        {
+// JSON-INDEX-NEXT:          "Name": "RedUserSpecified",
+// JSON-INDEX-NEXT:          "ValueExpr": "'A'"
+// JSON-INDEX-NEXT:        },
+// JSON-INDEX-NEXT:        {
+// JSON-INDEX-NEXT:          "Name": "GreenUserSpecified",
+// JSON-INDEX-NEXT:          "ValueExpr": "2"
+// JSON-INDEX-NEXT:        },
+// JSON-INDEX-NEXT:        {
+// JSON-INDEX-NEXT:          "End": true,
+// JSON-INDEX-NEXT:          "Name": "BlueUserSpecified",
+// JSON-INDEX-NEXT:          "ValueExpr": "'C'"
+// JSON-INDEX-NEXT:        }
+// JSON-INDEX-NEXT:      ],
+// JSON-INDEX-NEXT:      "Name": "ColorUserSpecified",
+// JSON-INDEX-NEXT:      "Scoped": false,
+// JSON-INDEX-NEXT:      "USR": "{{([0-9A-F]{40})}}"
+// JSON-INDEX-NEXT:    }
+// JSON-INDEX-NEXT:  ],
 
 // HTML-INDEX-LABEL:  <div id="{{([0-9A-F]{40})}}" class="delimiter-container">
 // HTML-INDEX-NEXT:     <div>
@@ -93,8 +355,16 @@ enum Color {
 // HTML-INDEX-NEXT:           <p>For specifying RGB colors</p>
 // HTML-INDEX-NEXT:       </div>
 // HTML-INDEX-NEXT:     </div>
-// HTML-INDEX-NEXT:     <p>Defined at line [[@LINE-63]] of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp</p>
-// HTML-INDEX-NEXT:   </div>
+// HTML-INDEX:        </div>
+
+// MD-INDEX: ## Enums
+// MD-INDEX: | enum Color |
+// MD-INDEX: | Name | Value | Comments |
+// MD-INDEX: |---|---|---|
+// MD-INDEX: | Red | 0 | Comment 1 |
+// MD-INDEX: | Green | 1 | Comment 2 |
+// MD-INDEX: | Blue | 2 | Comment 3 |
+// MD-INDEX: **brief** For specifying RGB colors
 
 // MD-MUSTACHE-INDEX: ## Enums
 // MD-MUSTACHE-INDEX: | enum Color |
@@ -103,30 +373,6 @@ enum Color {
 // MD-MUSTACHE-INDEX: | Green |
 // MD-MUSTACHE-INDEX: | Blue |
 // MD-MUSTACHE-INDEX: **brief** For specifying RGB colors
-
-/**
- * @brief Shape Types
- */
-enum class Shapes {
-  // MD-INDEX-LINE: *Defined at {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp#[[@LINE-1]]*
-  // HTML-INDEX-LINE: <p>Defined at line [[@LINE-2]] of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp</p>
-  // MD-MUSTACHE-INDEX-LINE: *Defined at {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp#[[@LINE-3]]*
-
-  /// Comment 1
-  Circle,
-  /// Comment 2
-  Rectangle,
-  /// Comment 3
-  Triangle
-};
-
-// MD-INDEX: | enum class Shapes |
-// MD-INDEX: | Name | Value | Comments |
-// MD-INDEX: |---|---|---|
-// MD-INDEX: | Circle | 0 | Comment 1 |
-// MD-INDEX: | Rectangle | 1 | Comment 2 |
-// MD-INDEX: | Triangle | 2 | Comment 3 |
-// MD-INDEX: **brief** Shape Types
 
 // HTML-INDEX-LABEL:  <div id="{{([0-9A-F]{40})}}" class="delimiter-container">
 // HTML-INDEX-NEXT:     <div>
@@ -173,37 +419,15 @@ enum class Shapes {
 // HTML-INDEX-NEXT:           <p>Shape Types</p>
 // HTML-INDEX-NEXT:       </div>
 // HTML-INDEX-NEXT:     </div>
-// HTML-INDEX-NEXT:     <p>Defined at line [[@LINE-66]] of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp</p>
-// HTML-INDEX-NEXT:   </div>
+// HTML-INDEX:        </div>
 
-typedef unsigned char uint8_t;
-/**
- * @brief Specify the size
- */
-enum Size : uint8_t {
-  // MD-INDEX-LINE: *Defined at {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp#[[@LINE-1]]*
-  // HTML-INDEX-LINE: <p>Defined at line [[@LINE-2]] of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp</p>
-
-  /// A pearl.
-  /// Pearls are quite small.
-  ///
-  /// Pearls are used in jewelry.
-  Small,
-
-  /// @brief A tennis ball.
-  Medium,
-
-  /// A football.
-  Large
-};
-
-// MD-INDEX: | enum Size : uint8_t |
+// MD-INDEX: | enum class Shapes |
 // MD-INDEX: | Name | Value | Comments |
 // MD-INDEX: |---|---|---|
-// MD-INDEX: | Small | 0 | A pearl.<br>Pearls are quite small.<br><br>Pearls are used in jewelry. |
-// MD-INDEX: | Medium | 1 | A tennis ball. |
-// MD-INDEX: | Large | 2 | A football. |
-// MD-INDEX: **brief** Specify the size
+// MD-INDEX: | Circle | 0 | Comment 1 |
+// MD-INDEX: | Rectangle | 1 | Comment 2 |
+// MD-INDEX: | Triangle | 2 | Comment 3 |
+// MD-INDEX: **brief** Shape Types
 
 // HTML-INDEX-LABEL:   <div id="{{([0-9A-F]{40})}}" class="delimiter-container">
 // HTML-INDEX-NEXT:     <div>
@@ -252,23 +476,15 @@ enum Size : uint8_t {
 // HTML-INDEX-NEXT:           <p>Specify the size</p>
 // HTML-INDEX-NEXT:       </div>
 // HTML-INDEX-NEXT:     </div>
-// HTML-INDEX-NEXT:     <p>Defined at line [[@LINE-72]] of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp</p>
-// HTML-INDEX-NEXT:   </div>
+// HTML-INDEX:        </div>
 
-/**
- * @brief Very long number
- */
-enum : long long {
-  // MD-INDEX-LINE: *Defined at {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp#[[@LINE-1]]*
-  // HTML-INDEX-LINE: <p>Defined at line [[@LINE-2]] of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp</p>
-  BigVal = 999999999999   ///< A very large value
-};
-
-// MD-INDEX: | enum (unnamed) : long long |
+// MD-INDEX: | enum Size : uint8_t |
 // MD-INDEX: | Name | Value | Comments |
 // MD-INDEX: |---|---|---|
-// MD-INDEX: | BigVal | 999999999999 | A very large value |
-// MD-INDEX: **brief** Very long number
+// MD-INDEX: | Small | 0 | A pearl.<br>Pearls are quite small.<br><br>Pearls are used in jewelry. |
+// MD-INDEX: | Medium | 1 | A tennis ball. |
+// MD-INDEX: | Large | 2 | A football. |
+// MD-INDEX: **brief** Specify the size
 
 // HTML-INDEX-LABEL:  <div id="{{([0-9A-F]{40})}}" class="delimiter-container">
 // HTML-INDEX-NEXT:     <div>
@@ -297,32 +513,52 @@ enum : long long {
 // HTML-INDEX-NEXT:           <p>Very long number</p>
 // HTML-INDEX-NEXT:       </div>
 // HTML-INDEX-NEXT:     </div>
-// HTML-INDEX-NEXT:     <p>Defined at line [[@LINE-39]] of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp</p>
-// HTML-INDEX-NEXT:   </div>
+// HTML-INDEX:        </div>
 
-class FilePermissions {
-// MD-PERM-LINE: *Defined at {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp#[[@LINE-1]]*
-// HTML-PERM-LINE: <p>Defined at line [[@LINE-2]] of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp</p>
-public:
-  /**
-   * @brief File permission flags
-   */
-  enum {
-  // MD-PERM-LINE: *Defined at {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp#[[@LINE-1]]*
-  // HTML-PERM-LINE: <p>Defined at line [[@LINE-2]] of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp</p>
-    Read    = 1,     ///< Permission to READ r
-    Write   = 2,     ///< Permission to WRITE w
-    Execute = 4      ///< Permission to EXECUTE x
-  };
-};
+// MD-INDEX: | enum (unnamed) : long long |
+// MD-INDEX: | Name | Value | Comments |
+// MD-INDEX: |---|---|---|
+// MD-INDEX: | BigVal | 999999999999 | A very large value |
+// MD-INDEX: **brief** Very long number
 
-// MD-PERM: | enum (unnamed) |
-// MD-PERM: | Name | Value | Comments |
-// MD-PERM: |---|---|---|
-// MD-PERM: | Read | 1 | Permission to READ r |
-// MD-PERM: | Write | 2 | Permission to WRITE w |
-// MD-PERM: | Execute | 4 | Permission to EXECUTE x |
-// MD-PERM: **brief** File permission flags
+// HTML-INDEX-LABEL:  <div id="{{([0-9A-F]{40})}}" class="delimiter-container">
+// HTML-INDEX-NEXT:     <div>
+// HTML-INDEX-NEXT:       <pre><code class="language-cpp code-clang-doc">enum ColorUserSpecified</code></pre>
+// HTML-INDEX-NEXT:     </div>
+// HTML-INDEX-NEXT:     <table class="table-wrapper">
+// HTML-INDEX-NEXT:         <tbody>
+// HTML-INDEX-NEXT:             <tr>
+// HTML-INDEX-NEXT:                 <th>Name</th>
+// HTML-INDEX-NEXT:                 <th>Value</th>
+// HTML-INDEX-NEXT:             </tr>
+// HTML-INDEX-NEXT:             <tr>
+// HTML-INDEX-NEXT:                 <td>RedUserSpecified</td>
+// HTML-INDEX-NEXT:                 <td>&#39;A&#39;</td>
+// HTML-INDEX-NEXT:             </tr>
+// HTML-INDEX-NEXT:             <tr>
+// HTML-INDEX-NEXT:                 <td>GreenUserSpecified</td>
+// HTML-INDEX-NEXT:                 <td>2</td>
+// HTML-INDEX-NEXT:             </tr>
+// HTML-INDEX-NEXT:             <tr>
+// HTML-INDEX-NEXT:                 <td>BlueUserSpecified</td>
+// HTML-INDEX-NEXT:                 <td>&#39;C&#39;</td>
+// HTML-INDEX-NEXT:             </tr>
+// HTML-INDEX-NEXT:         </tbody>
+// HTML-INDEX-NEXT:     </table>
+// HTML-INDEX:        </div>
+
+// MD-INDEX: | enum ColorUserSpecified |
+// MD-INDEX: | Name | Value |
+// MD-INDEX: |---|---|
+// MD-INDEX: | RedUserSpecified | 65 |
+// MD-INDEX: | GreenUserSpecified | 2 |
+// MD-INDEX: | BlueUserSpecified | 67 |
+
+// MD-MUSTACHE-INDEX: | enum ColorUserSpecified |
+// MD-MUSTACHE-INDEX: --
+// MD-MUSTACHE-INDEX: | RedUserSpecified |
+// MD-MUSTACHE-INDEX: | GreenUserSpecified |
+// MD-MUSTACHE-INDEX: | BlueUserSpecified |
 
 // HTML-PERM-LABEL:  <section id="Enums" class="section-container">
 // HTML-PERM-NEXT:     <h2>Enumerations</h2>
@@ -370,29 +606,15 @@ public:
 // HTML-PERM-NEXT:         <div class="nested-delimiter-container">
 // HTML-PERM-NEXT:             <p>File permission flags</p>
 // HTML-PERM-NEXT:         </div>
-// HTML-PERM-NEXT:       </div>
-// HTML-PERM-NEXT:         <p>Defined at line [[@LINE-64]] of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp</p>
-// HTML-PERM-NEXT:     </div>
-// HTML-PERM-NEXT:   </section>
+// HTML-PERM:        </section>
 
-// COM: FIXME: Add enums declared inside of classes to class template
-class Animals {
-  // MD-ANIMAL-LINE: *Defined at {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp#[[@LINE-1]]*
-  // HTML-ANIMAL-LINE: <p>Defined at line [[@LINE-2]] of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp</p>
-  // MD-MUSTACHE-ANIMAL-LINE: *Defined at {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp#[[@LINE-3]]*
-public:
-  /**
-   * @brief specify what animal the class is
-   */
-  enum AnimalType {
-    // MD-ANIMAL-LINE: *Defined at {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp#[[@LINE-1]]*
-    // HTML-ANIMAL-LINE: <p>Defined at line [[@LINE-2]] of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp</p>
-    // MD-MUSTACHE-ANIMAL-LINE: *Defined at {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp#[[@LINE-3]]*
-    Dog,   ///< Man's best friend
-    Cat,   ///< Man's other best friend
-    Iguana ///< A lizard
-  };
-};
+// MD-PERM: | enum (unnamed) |
+// MD-PERM: | Name | Value | Comments |
+// MD-PERM: |---|---|---|
+// MD-PERM: | Read | 1 | Permission to READ r |
+// MD-PERM: | Write | 2 | Permission to WRITE w |
+// MD-PERM: | Execute | 4 | Permission to EXECUTE x |
+// MD-PERM: **brief** File permission flags
 
 // HTML-ANIMAL-LABEL:   <section id="Enums" class="section-container">
 // HTML-ANIMAL-NEXT:      <h2>Enumerations</h2>
@@ -441,8 +663,7 @@ public:
 // HTML-ANIMAL-NEXT:                 <p>specify what animal the class is</p>
 // HTML-ANIMAL-NEXT:             </div>
 // HTML-ANIMAL-NEXT:         </div>
-// HTML-ANIMAL-NEXT:         <p>Defined at line [[@LINE-57]] of file {{.*}}enum.cpp</p>
-// HTML-ANIMAL-NEXT:      </div>
+// HTML-ANIMAL:           </div>
 // HTML-ANIMAL-NEXT:    </section>
 
 // MD-ANIMAL: # class Animals
@@ -463,33 +684,6 @@ public:
 // MD-MUSTACHE-ANIMAL: | Cat |
 // MD-MUSTACHE-ANIMAL: | Iguana |
 // MD-MUSTACHE-ANIMAL: **brief** specify what animal the class is
-
-namespace Vehicles {
-/**
- * @brief specify type of car
- */
-enum Car {
-  // MD-VEHICLES-LINE: *Defined at {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp#[[@LINE-1]]*
-  // HTML-VEHICLES-LINE: Defined at line [[@LINE-2]] of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp
-  // MD-MUSTACHE-VEHICLES-LINE: *Defined at {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp#[[@LINE-3]]*
-
-  Sedan,    ///< Comment 1
-  SUV,      ///< Comment 2
-  Pickup,
-  Hatchback ///< Comment 4
-};
-} // namespace Vehicles
-
-// MD-VEHICLES: # namespace Vehicles
-// MD-VEHICLES: ## Enums
-// MD-VEHICLES: | enum Car |
-// MD-VEHICLES: | Name | Value | Comments |
-// MD-VEHICLES: |---|---|---|
-// MD-VEHICLES: | Sedan | 0 | Comment 1 |
-// MD-VEHICLES: | SUV | 1 | Comment 2 |
-// MD-VEHICLES: | Pickup | 2 | -- |
-// MD-VEHICLES: | Hatchback | 3 | Comment 4 |
-// MD-VEHICLES: **brief** specify type of car
 
 // HTML-VEHICLES-LABEL:   <div id="{{([0-9A-F]{40})}}" class="delimiter-container">
 // HTML-VEHICLES-NEXT:      <div>
@@ -541,8 +735,18 @@ enum Car {
 // HTML-VEHICLES-NEXT:           <p>specify type of car</p>
 // HTML-VEHICLES-NEXT:        </div>
 // HTML-VEHICLES-NEXT:      </div>
-// HTML-VEHICLES-NEXT:      <p>Defined at line [[@LINE-73]] of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp</p>
-// HTML-VEHICLES-NEXT:    </div>
+// HTML-VEHICLES:         </div>
+
+// MD-VEHICLES: # namespace Vehicles
+// MD-VEHICLES: ## Enums
+// MD-VEHICLES: | enum Car |
+// MD-VEHICLES: | Name | Value | Comments |
+// MD-VEHICLES: |---|---|---|
+// MD-VEHICLES: | Sedan | 0 | Comment 1 |
+// MD-VEHICLES: | SUV | 1 | Comment 2 |
+// MD-VEHICLES: | Pickup | 2 | -- |
+// MD-VEHICLES: | Hatchback | 3 | Comment 4 |
+// MD-VEHICLES: **brief** specify type of car
 
 // MD-MUSTACHE-VEHICLES: # namespace Vehicles
 // MD-MUSTACHE-VEHICLES: ## Enums
@@ -554,48 +758,82 @@ enum Car {
 // MD-MUSTACHE-VEHICLES: | Hatchback |
 // MD-MUSTACHE-VEHICLES: **brief** specify type of car
 
-enum ColorUserSpecified {
-  RedUserSpecified = 'A',
-  GreenUserSpecified = 2,
-  BlueUserSpecified = 'C'
-};
-
-// MD-INDEX: | enum ColorUserSpecified |
-// MD-INDEX: | Name | Value |
-// MD-INDEX: |---|---|
-// MD-INDEX: | RedUserSpecified | 65 |
-// MD-INDEX: | GreenUserSpecified | 2 |
-// MD-INDEX: | BlueUserSpecified | 67 |
-
-// HTML-INDEX-LABEL:  <div id="{{([0-9A-F]{40})}}" class="delimiter-container">
-// HTML-INDEX-NEXT:     <div>
-// HTML-INDEX-NEXT:       <pre><code class="language-cpp code-clang-doc">enum ColorUserSpecified</code></pre>
-// HTML-INDEX-NEXT:     </div>
-// HTML-INDEX-NEXT:     <table class="table-wrapper">
-// HTML-INDEX-NEXT:         <tbody>
-// HTML-INDEX-NEXT:             <tr>
-// HTML-INDEX-NEXT:                 <th>Name</th>
-// HTML-INDEX-NEXT:                 <th>Value</th>
-// HTML-INDEX-NEXT:             </tr>
-// HTML-INDEX-NEXT:             <tr>
-// HTML-INDEX-NEXT:                 <td>RedUserSpecified</td>
-// HTML-INDEX-NEXT:                 <td>&#39;A&#39;</td>
-// HTML-INDEX-NEXT:             </tr>
-// HTML-INDEX-NEXT:             <tr>
-// HTML-INDEX-NEXT:                 <td>GreenUserSpecified</td>
-// HTML-INDEX-NEXT:                 <td>2</td>
-// HTML-INDEX-NEXT:             </tr>
-// HTML-INDEX-NEXT:             <tr>
-// HTML-INDEX-NEXT:                 <td>BlueUserSpecified</td>
-// HTML-INDEX-NEXT:                 <td>&#39;C&#39;</td>
-// HTML-INDEX-NEXT:             </tr>
-// HTML-INDEX-NEXT:         </tbody>
-// HTML-INDEX-NEXT:     </table>
-// HTML-INDEX-NEXT:     <p>Defined at line [[@LINE-37]] of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp</p>
-// HTML-INDEX-NEXT:   </div>
-
-// MD-MUSTACHE-INDEX: | enum ColorUserSpecified |
-// MD-MUSTACHE-INDEX: --
-// MD-MUSTACHE-INDEX: | RedUserSpecified |
-// MD-MUSTACHE-INDEX: | GreenUserSpecified |
-// MD-MUSTACHE-INDEX: | BlueUserSpecified |
+// JSON-VEHICLES-INDEX-LABEL:   "DocumentationFileName": "index",
+// JSON-VEHICLES-INDEX-NEXT:    "Enums": [
+// JSON-VEHICLES-INDEX-NEXT:      {
+// JSON-VEHICLES-INDEX-NEXT:        "Description": {
+// JSON-VEHICLES-INDEX-NEXT:          "BriefComments": [
+// JSON-VEHICLES-INDEX-NEXT:            [
+// JSON-VEHICLES-INDEX-NEXT:              {
+// JSON-VEHICLES-INDEX-NEXT:                "TextComment": "specify type of car"
+// JSON-VEHICLES-INDEX-NEXT:              }
+// JSON-VEHICLES-INDEX-NEXT:            ]
+// JSON-VEHICLES-INDEX-NEXT:          ],
+// JSON-VEHICLES-INDEX-NEXT:          "HasBriefComments": true
+// JSON-VEHICLES-INDEX-NEXT:        },
+// JSON-VEHICLES-INDEX-NEXT:        "End": true,
+// JSON-VEHICLES-INDEX-NEXT:        "HasComments": true,
+// JSON-VEHICLES-INDEX-NEXT:        "InfoType": "enum",
+// JSON-VEHICLES-INDEX-NEXT:        "Location": {
+// JSON-VEHICLES-INDEX-NEXT:          "Filename": "{{.*}}enum.cpp",
+// JSON-VEHICLES-INDEX-NEXT:          "LineNumber": 82
+// JSON-VEHICLES-INDEX-NEXT:        },
+// JSON-VEHICLES-INDEX-NEXT:        "Members": [
+// JSON-VEHICLES-INDEX-NEXT:          {
+// JSON-VEHICLES-INDEX-NEXT:            "Description": {
+// JSON-VEHICLES-INDEX-NEXT:              "HasParagraphComments": true,
+// JSON-VEHICLES-INDEX-NEXT:              "ParagraphComments": [
+// JSON-VEHICLES-INDEX-NEXT:                [
+// JSON-VEHICLES-INDEX-NEXT:                  {
+// JSON-VEHICLES-INDEX-NEXT:                    "TextComment": "Comment 1"
+// JSON-VEHICLES-INDEX-NEXT:                  }
+// JSON-VEHICLES-INDEX-NEXT:                ]
+// JSON-VEHICLES-INDEX-NEXT:              ]
+// JSON-VEHICLES-INDEX-NEXT:            },
+// JSON-VEHICLES-INDEX-NEXT:            "HasEnumMemberComments": true,
+// JSON-VEHICLES-INDEX-NEXT:            "Name": "Sedan",
+// JSON-VEHICLES-INDEX-NEXT:            "Value": "0"
+// JSON-VEHICLES-INDEX-NEXT:          },
+// JSON-VEHICLES-INDEX-NEXT:          {
+// JSON-VEHICLES-INDEX-NEXT:            "Description": {
+// JSON-VEHICLES-INDEX-NEXT:              "HasParagraphComments": true,
+// JSON-VEHICLES-INDEX-NEXT:              "ParagraphComments": [
+// JSON-VEHICLES-INDEX-NEXT:                [
+// JSON-VEHICLES-INDEX-NEXT:                  {
+// JSON-VEHICLES-INDEX-NEXT:                    "TextComment": "Comment 2"
+// JSON-VEHICLES-INDEX-NEXT:                  }
+// JSON-VEHICLES-INDEX-NEXT:                ]
+// JSON-VEHICLES-INDEX-NEXT:              ]
+// JSON-VEHICLES-INDEX-NEXT:            },
+// JSON-VEHICLES-INDEX-NEXT:            "HasEnumMemberComments": true,
+// JSON-VEHICLES-INDEX-NEXT:            "Name": "SUV",
+// JSON-VEHICLES-INDEX-NEXT:            "Value": "1"
+// JSON-VEHICLES-INDEX-NEXT:          },
+// JSON-VEHICLES-INDEX-NEXT:          {
+// JSON-VEHICLES-INDEX-NEXT:            "Name": "Pickup",
+// JSON-VEHICLES-INDEX-NEXT:            "Value": "2"
+// JSON-VEHICLES-INDEX-NEXT:          },
+// JSON-VEHICLES-INDEX-NEXT:          {
+// JSON-VEHICLES-INDEX-NEXT:            "Description": {
+// JSON-VEHICLES-INDEX-NEXT:              "HasParagraphComments": true,
+// JSON-VEHICLES-INDEX-NEXT:              "ParagraphComments": [
+// JSON-VEHICLES-INDEX-NEXT:                [
+// JSON-VEHICLES-INDEX-NEXT:                  {
+// JSON-VEHICLES-INDEX-NEXT:                    "TextComment": "Comment 4"
+// JSON-VEHICLES-INDEX-NEXT:                  }
+// JSON-VEHICLES-INDEX-NEXT:                ]
+// JSON-VEHICLES-INDEX-NEXT:              ]
+// JSON-VEHICLES-INDEX-NEXT:            },
+// JSON-VEHICLES-INDEX-NEXT:            "End": true,
+// JSON-VEHICLES-INDEX-NEXT:            "HasEnumMemberComments": true,
+// JSON-VEHICLES-INDEX-NEXT:            "Name": "Hatchback",
+// JSON-VEHICLES-INDEX-NEXT:            "Value": "3"
+// JSON-VEHICLES-INDEX-NEXT:          }
+// JSON-VEHICLES-INDEX-NEXT:        ],
+// JSON-VEHICLES-INDEX-NEXT:        "Name": "Car",
+// JSON-VEHICLES-INDEX-NEXT:        "Namespace": [
+// JSON-VEHICLES-INDEX-NEXT:          "Vehicles"
+// JSON-VEHICLES-INDEX-NEXT:        ],
+// JSON-VEHICLES-INDEX-NEXT:        "Scoped": false,
+// JSON-VEHICLES-INDEX-NEXT:        "USR": "{{([0-9A-F]{40})}}"
+// JSON-VEHICLES-INDEX-NEXT:      }

@@ -860,8 +860,11 @@ unsigned TargetTransformInfo::getMaximumVF(unsigned ElemWidth,
 }
 
 unsigned TargetTransformInfo::getStoreMinimumVF(unsigned VF, Type *ScalarMemTy,
-                                                Type *ScalarValTy) const {
-  return TTIImpl->getStoreMinimumVF(VF, ScalarMemTy, ScalarValTy);
+                                                Type *ScalarValTy,
+                                                Align Alignment,
+                                                unsigned AddrSpace) const {
+  return TTIImpl->getStoreMinimumVF(VF, ScalarMemTy, ScalarValTy, Alignment,
+                                    AddrSpace);
 }
 
 bool TargetTransformInfo::shouldConsiderAddressTypePromotion(
