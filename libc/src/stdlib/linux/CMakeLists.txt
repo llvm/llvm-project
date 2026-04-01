@@ -6,7 +6,7 @@ add_header_library(
     libc.include.stdlib
     libc.src.signal.raise
     libc.src.__support.OSUtil.osutil
-    libc.src.__support.threads.linux.rwlock
+    libc.src.__support.threads.raw_rwlock
     libc.src.signal.linux.__restore
 )
 

@@ -17,7 +17,7 @@
 #include "src/__support/OSUtil/syscall.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
-#include "src/__support/threads/linux/rwlock.h"
+#include "src/__support/threads/raw_rwlock.h"
 #include "src/signal/linux/signal_utils.h"
 
 namespace LIBC_NAMESPACE_DECL {
@@ -28,17 +28,17 @@ namespace abort_utils {
 class AbortLockGuard {
 private:
   sigset_t old_mask;
-  LIBC_INLINE_VAR static RwLock abort_lock;
+  LIBC_INLINE_VAR static RawRwLock abort_lock;
 
 public:
   LIBC_INLINE constexpr AbortLockGuard(bool exclusive) : old_mask{} {
-    RwLock::LockResult result = RwLock::LockResult::Success;
+    RawRwLock::LockResult result = RawRwLock::LockResult::Success;
     do {
       if (exclusive)
         result = abort_lock.write_lock(cpp::nullopt);
       else
         result = abort_lock.read_lock(cpp::nullopt);
-    } while (result == RwLock::LockResult::Overflow);
+    } while (result == RawRwLock::LockResult::Overflow);
 
     (void)block_all_signals(old_mask);
   }
