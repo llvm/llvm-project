@@ -86,7 +86,6 @@ static cl::opt<bool> ManifestInternal(
     cl::desc("Manifest Attributor internal string attributes."),
     cl::init(false));
 
-
 static cl::opt<int> MaxHeapToStackSize("max-heap-to-stack-size", cl::init(128),
                                        cl::Hidden);
 
@@ -1413,9 +1412,10 @@ struct AAPointerInfoImpl
       // reachable set but their successors are NOT explored.
       //
       // Note: we do NOT block I's block even if it contains an ExclusionSet
-      // instruction after I. This matches isPotentiallyReachable / isReachableImpl
-      // semantics, which check SuccBB == ToBB before ExclusionBlocks and thus
-      // always consider direct successors as reachable.
+      // instruction after I. This matches isPotentiallyReachable /
+      // isReachableImpl semantics, which check SuccBB == ToBB before
+      // ExclusionBlocks and thus always consider direct successors as
+      // reachable.
       auto EnsureReachableFromI = [&]() {
         if (ReachableFromIComputed)
           return;
@@ -1648,13 +1648,13 @@ struct AAPointerInfoImpl
       }
 
       // Process cross-function accesses.
-        for (auto &It : InterFnAccesses) {
-          if ((!AllInSameNoSyncFn && !IsThreadLocalObj && !ExecDomainAA) ||
-              !CanSkipAccess(*It.first, It.second)) {
-            if (!UserCB(*It.first, It.second))
-              return false;
-          }
+      for (auto &It : InterFnAccesses) {
+        if ((!AllInSameNoSyncFn && !IsThreadLocalObj && !ExecDomainAA) ||
+            !CanSkipAccess(*It.first, It.second)) {
+          if (!UserCB(*It.first, It.second))
+            return false;
         }
+      }
     }
     return true;
   }
