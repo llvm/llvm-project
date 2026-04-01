@@ -301,9 +301,9 @@ Register RegScavenger::scavengeRegisterBackwards(const TargetRegisterClass &RC,
   const MachineFunction &MF = *MBB.getParent();
 
   // Obtain a list of candidate registers in allocation order of RC.
-  // If the instruction at MBBI has any early-clobber def regs, we must exclude
-  // them from the candidates, without including the whole of that instruction's
-  // constraints. We achieve this by filtering the allocation order of RC.
+  // If InspectNext is set, we must examine the instruction at MBBI,
+  // and exclude any early-clobber def regs it may have from consideration.
+  // We achieve this by filtering the allocation order of RC.
   // First, determine if there are any such early-clobber def regs.
   SmallVector<MCPhysReg> FilteredAllocationOrder;
   SmallVector<MCPhysReg> ECDefs;
@@ -312,14 +312,18 @@ Register RegScavenger::scavengeRegisterBackwards(const TargetRegisterClass &RC,
       if (Op.isReg() && Op.isDef() && Op.isEarlyClobber())
         ECDefs.push_back(Op.getReg());
   if (!ECDefs.empty()) {
+    auto RawAlloc = RC.getRawAllocationOrder(MF);
+
     // If so, obtain the filtered version.
-    for (MCPhysReg Reg : RC.getRawAllocationOrder(MF)) {
-      // Only add Reg if it does not overlap with any element of ECDefs.
-      if (!llvm::any_of(ECDefs, [&](MCPhysReg ECReg) {
-            return TRI->regsOverlap(Reg, ECReg);
-          }))
-        FilteredAllocationOrder.push_back(Reg);
-    }
+    std::copy_if(RawAlloc.begin(), RawAlloc.end(),
+                 std::back_inserter(FilteredAllocationOrder),
+                 [this, &ECDefs](MCPhysReg Reg) {
+                   // Only add Reg if it does not overlap with any element of
+                   // ECDefs.
+                   return !llvm::any_of(ECDefs, [&](MCPhysReg ECReg) {
+                     return TRI->regsOverlap(Reg, ECReg);
+                   });
+                 });
   } else
     FilteredAllocationOrder =
         SmallVector<MCPhysReg>(RC.getRawAllocationOrder(MF));
@@ -359,9 +363,8 @@ Register RegScavenger::scavengeRegisterBackwards(const TargetRegisterClass &RC,
 /// \p ReserveAfter controls whether the scavenged register needs to be reserved
 /// after the current instruction, otherwise it will only be reserved before the
 /// current instruction.
-/// \p InspectNext controls whether the instruction at MBBI needs to be checked
-/// by scavengeRegisterBackwards for an early-clobber def reg that might
-/// constrain the register allocation.
+/// \p InspectNext controls whether the current instruction needs to be checked
+/// for an early-clobber def reg.
 static Register scavengeVReg(MachineRegisterInfo &MRI, RegScavenger &RS,
                              Register VReg, bool ReserveAfter,
                              bool InspectNext) {
@@ -406,8 +409,9 @@ static Register scavengeVReg(MachineRegisterInfo &MRI, RegScavenger &RS,
   // spill/reload if necessary.
   int SPAdj = 0;
   const TargetRegisterClass &RC = *MRI.getRegClass(VReg);
-  Register SReg = RS.scavengeRegisterBackwards(
-      RC, DefMI.getIterator(), ReserveAfter, SPAdj, true, InspectNext);
+  Register SReg =
+      RS.scavengeRegisterBackwards(RC, DefMI.getIterator(), ReserveAfter, SPAdj,
+                                   /*AllowSpill=*/true, InspectNext);
   MRI.replaceRegWith(VReg, SReg);
   ++NumScavengedRegs;
   return SReg;
@@ -445,7 +449,8 @@ static bool scavengeFrameVirtualRegsInBlock(MachineRegisterInfo &MRI,
         if (!MO.readsReg())
           continue;
 
-        Register SReg = scavengeVReg(MRI, RS, Reg, true, true);
+        Register SReg = scavengeVReg(MRI, RS, Reg, /*ReserveAfter=*/true,
+                                     /*InspectNext=*/true);
         N->addRegisterKilled(SReg, &TRI, false);
         RS.setRegUsed(SReg);
       }
@@ -470,7 +475,8 @@ static bool scavengeFrameVirtualRegsInBlock(MachineRegisterInfo &MRI,
         NextInstructionReadsVReg = true;
       }
       if (MO.isDef()) {
-        Register SReg = scavengeVReg(MRI, RS, Reg, false, false);
+        Register SReg = scavengeVReg(MRI, RS, Reg, /*ReserveAfter=*/false,
+                                     /*InspectNext=*/false);
         I->addRegisterDead(SReg, &TRI, false);
       }
     }
