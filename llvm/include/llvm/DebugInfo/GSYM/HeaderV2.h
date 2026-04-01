@@ -23,8 +23,6 @@ class DataExtractor;
 namespace gsym {
 class FileWriter;
 
-constexpr uint32_t GSYM_VERSION_2 = 2;
-
 /// Encoding format for the string table.
 enum class StringTableEncoding : uint8_t {
   /// A list of NULL-terminated strings (same as V1). The first string at
@@ -93,11 +91,14 @@ struct HeaderV2 {
   uint8_t StrpSize;
   /// String table encoding. Allows for future encoding for string table.
   StringTableEncoding StrTableEncoding;
-  // The GlobalData array immediately follows the header at offset
-  // sizeof(HeaderV2). Each GlobalData entry describes a section in the GSYM
-  // file (e.g. AddrOffsets, FunctionInfo, UUID, StringTable). The array is
-  // terminated by an entry with Type set to EndOfList and all other fields
-  // set to zero. See GlobalData.h for details.
+  /// The GlobalData array immediately follows the header at offset
+  /// sizeof(HeaderV2). Each GlobalData entry describes a section in the GSYM
+  /// file (e.g. AddrOffsets, FunctionInfo, UUID, StringTable). The array is
+  /// terminated by an entry with Type set to EndOfList and all other fields
+  /// set to zero. See GlobalData.h for details.
+
+  /// Return the version of this header.
+  static constexpr uint32_t getVersion() { return 2; }
 
   /// Check if a header is valid and return an error if anything is wrong.
   ///

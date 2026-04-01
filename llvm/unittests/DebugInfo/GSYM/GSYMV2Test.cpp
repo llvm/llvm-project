@@ -133,7 +133,7 @@ static void TestV2HeaderAndGlobalData(llvm::endianness ByteOrder,
   ASSERT_THAT_EXPECTED(HdrOrErr, Succeeded());
   const HeaderV2 &Hdr = *HdrOrErr;
   EXPECT_EQ(Hdr.Magic, GSYM_MAGIC);
-  EXPECT_EQ(Hdr.Version, GSYM_VERSION_2);
+  EXPECT_EQ(Hdr.Version, HeaderV2::getVersion());
   EXPECT_EQ(Hdr.Padding, 0u);
   EXPECT_EQ(Hdr.BaseAddress, BaseAddr);
   EXPECT_EQ(Hdr.NumAddresses, ExpectedNumAddresses);
@@ -648,7 +648,7 @@ static SmallString<512> buildMinimalV2Binary(uint64_t BaseAddr,
 
   // Write header.
   FW.writeU32(GSYM_MAGIC);     // Magic
-  FW.writeU16(GSYM_VERSION_2); // Version
+  FW.writeU16(HeaderV2::getVersion()); // Version
   FW.writeU16(0);              // Padding
   FW.writeU64(BaseAddr);       // BaseAddress
   FW.writeU32(NumAddresses);   // NumAddresses
@@ -709,7 +709,7 @@ TEST(GSYMV2Test, TestReaderV2ParseHandCrafted) {
 
   const HeaderV2 &Hdr = GR->getHeader();
   EXPECT_EQ(Hdr.Magic, GSYM_MAGIC);
-  EXPECT_EQ(Hdr.Version, GSYM_VERSION_2);
+  EXPECT_EQ(Hdr.Version, HeaderV2::getVersion());
   EXPECT_EQ(Hdr.BaseAddress, 0x1000u);
   EXPECT_EQ(Hdr.NumAddresses, 1u);
   EXPECT_EQ(Hdr.AddrOffSize, 1u);

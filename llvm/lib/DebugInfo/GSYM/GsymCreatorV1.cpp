@@ -51,7 +51,7 @@ llvm::Error GsymCreatorV1::encode(FileWriter &O) const {
     return Err;
   Header Hdr;
   Hdr.Magic = GSYM_MAGIC;
-  Hdr.Version = GSYM_VERSION_1;
+  Hdr.Version = Header::getVersion();
   Hdr.AddrOffSize = getAddressOffsetSize();
   Hdr.UUIDSize = static_cast<uint8_t>(UUID.size());
   Hdr.BaseAddress = *BaseAddress;

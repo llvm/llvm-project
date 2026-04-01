@@ -66,13 +66,13 @@ GsymReader::openFile(StringRef Path) {
   if (!VersionOrErr)
     return VersionOrErr.takeError();
   switch (*VersionOrErr) {
-  case GSYM_VERSION_1: {
+  case Header::getVersion(): {
     auto R = GsymReaderV1::openFile(Path);
     if (!R)
       return R.takeError();
     return std::make_unique<GsymReaderV1>(std::move(*R));
   }
-  case GSYM_VERSION_2: {
+  case HeaderV2::getVersion(): {
     auto R = GsymReaderV2::openFile(Path);
     if (!R)
       return R.takeError();
@@ -90,13 +90,13 @@ GsymReader::copyBuffer(StringRef Bytes) {
   if (!VersionOrErr)
     return VersionOrErr.takeError();
   switch (*VersionOrErr) {
-  case GSYM_VERSION_1: {
+  case Header::getVersion(): {
     auto R = GsymReaderV1::copyBuffer(Bytes);
     if (!R)
       return R.takeError();
     return std::make_unique<GsymReaderV1>(std::move(*R));
   }
-  case GSYM_VERSION_2: {
+  case HeaderV2::getVersion(): {
     auto R = GsymReaderV2::copyBuffer(Bytes);
     if (!R)
       return R.takeError();

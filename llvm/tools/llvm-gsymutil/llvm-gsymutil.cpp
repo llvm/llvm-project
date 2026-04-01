@@ -46,6 +46,7 @@
 #include "llvm/DebugInfo/GSYM/GsymCreatorV2.h"
 #include "llvm/DebugInfo/GSYM/GsymReader.h"
 #include "llvm/DebugInfo/GSYM/Header.h"
+#include "llvm/DebugInfo/GSYM/HeaderV2.h"
 #include "llvm/DebugInfo/GSYM/InlineInfo.h"
 #include "llvm/DebugInfo/GSYM/LineTable.h"
 #include "llvm/DebugInfo/GSYM/LookupResult.h"
@@ -107,9 +108,8 @@ static bool UseMergedFunctions = false;
 static bool LoadDwarfCallSites = false;
 static std::string CallSiteYamlPath;
 static std::vector<std::string> MergedFunctionsFilters;
-
-enum class OutputVersion { V1, V2 };
-static OutputVersion ForceOutputVersion = OutputVersion::V1;
+// Default output version. Can be overridden by --output-version.
+static uint32_t OutputVersion = Header::getVersion();
 
 static void parseArgs(int argc, char **argv) {
   GSYMUtilOptTable Tbl;
@@ -225,9 +225,9 @@ static void parseArgs(int argc, char **argv) {
   if (const llvm::opt::Arg *A = Args.getLastArg(OPT_output_version_EQ)) {
     StringRef Val = A->getValue();
     if (Val == "v1")
-      ForceOutputVersion = OutputVersion::V1;
+      OutputVersion = Header::getVersion();
     else if (Val == "v2")
-      ForceOutputVersion = OutputVersion::V2;
+      OutputVersion = HeaderV2::getVersion();
     else {
       llvm::errs() << ToolName << ": for the --output-version option: '" << Val
                    << "' is invalid. Use 'v1' or 'v2'.\n";
@@ -371,10 +371,17 @@ static llvm::Error handleObjectFile(ObjectFile &Obj, const std::string &OutFile,
       NumThreads > 0 ? NumThreads : std::thread::hardware_concurrency();
 
   std::unique_ptr<GsymCreator> GsymPtr;
-  if (ForceOutputVersion == OutputVersion::V2)
-    GsymPtr = std::make_unique<GsymCreatorV2>(Quiet);
-  else
+  switch (OutputVersion) {
+  case Header::getVersion():
     GsymPtr = std::make_unique<GsymCreatorV1>(Quiet);
+    break;
+  case HeaderV2::getVersion():
+    GsymPtr = std::make_unique<GsymCreatorV2>(Quiet);
+    break;
+  default:
+    return createStringError(std::errc::invalid_argument,
+                             "invalid --output-version option");
+  }
   GsymCreator &Gsym = *GsymPtr;
 
   // See if we can figure out the base address for a given object file, and if
@@ -598,10 +605,17 @@ static llvm::Error handleGSYMConversion(StringRef Filename,
   auto &Reader = **ReaderOrErr;
 
   std::unique_ptr<GsymCreator> CreatorPtr;
-  if (ForceOutputVersion == OutputVersion::V2)
-    CreatorPtr = std::make_unique<GsymCreatorV2>(Quiet);
-  else
+  switch (OutputVersion) {
+  case Header::getVersion():
     CreatorPtr = std::make_unique<GsymCreatorV1>(Quiet);
+    break;
+  case HeaderV2::getVersion():
+    CreatorPtr = std::make_unique<GsymCreatorV2>(Quiet);
+    break;
+  default:
+    return createStringError(std::errc::invalid_argument,
+                             "invalid --output-version option");
+  }
   GsymCreator &Creator = *CreatorPtr;
 
   // Transfer all function infos, re-inserting strings and files.
@@ -616,9 +630,7 @@ static llvm::Error handleGSYMConversion(StringRef Filename,
   if (auto Err = Creator.finalize(Out))
     return Err;
 
-  Out << "Output file ("
-      << (ForceOutputVersion == OutputVersion::V2 ? "v2" : "v1")
-      << "): " << OutFile << "\n";
+  Out << "Output file (v" << OutputVersion << "): " << OutFile << "\n";
 
   if (auto Err = Creator.save(OutFile, llvm::endianness::native))
     return Err;

@@ -138,7 +138,7 @@ llvm::Error GsymCreatorV2::encode(FileWriter &O) const {
   // Build and write the header.
   HeaderV2 Hdr;
   Hdr.Magic = GSYM_MAGIC;
-  Hdr.Version = GSYM_VERSION_2;
+  Hdr.Version = HeaderV2::getVersion();
   Hdr.Padding = 0;
   Hdr.BaseAddress = *BaseAddr;
   Hdr.NumAddresses = static_cast<uint32_t>(Funcs.size());
