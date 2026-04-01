@@ -5200,19 +5200,18 @@ void Clang::ConstructJob(Compilation &C, const JobAction &Job,
   if (IsCuda || IsHIP) {
     // We have to pass the triple of the host if compiling for a CUDA/HIP device
     // and vice-versa.
-    std::string NormalizedTriple;
+    StringRef TripleStr;
     if (JA.isDeviceOffloading(Action::OFK_Cuda) ||
         JA.isDeviceOffloading(Action::OFK_HIP))
-      NormalizedTriple = C.getSingleOffloadToolChain<Action::OFK_Host>()
-                             ->getTriple()
-                             .normalize();
+      TripleStr =
+          C.getSingleOffloadToolChain<Action::OFK_Host>()->getTriple().str();
     else {
       // Host-side compilation.
-      NormalizedTriple =
+      TripleStr =
           (IsCuda ? C.getOffloadToolChains(Action::OFK_Cuda).first->second
                   : C.getOffloadToolChains(Action::OFK_HIP).first->second)
               ->getTriple()
-              .normalize();
+              .str();
       if (IsCuda) {
         // We need to figure out which CUDA version we're compiling for, as that
         // determines how we load and launch GPU kernels.
@@ -5226,7 +5225,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &Job,
       }
     }
     CmdArgs.push_back("-aux-triple");
-    CmdArgs.push_back(Args.MakeArgString(NormalizedTriple));
+    CmdArgs.push_back(Args.MakeArgString(TripleStr));
 
     if (JA.isDeviceOffloading(Action::OFK_HIP) &&
         (getToolChain().getTriple().isAMDGPU() ||
