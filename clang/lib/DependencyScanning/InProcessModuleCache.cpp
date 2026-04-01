@@ -11,6 +11,8 @@
 #include "clang/Serialization/InMemoryModuleCache.h"
 #include "llvm/Support/AdvisoryLock.h"
 #include "llvm/Support/Chrono.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Support/IOSandbox.h"
 
 using namespace clang;
 using namespace dependencies;
@@ -130,6 +132,16 @@ public:
   InMemoryModuleCache &getInMemoryModuleCache() override { return InMemory; }
   const InMemoryModuleCache &getInMemoryModuleCache() const override {
     return InMemory;
+  }
+
+  Expected<std::unique_ptr<llvm::MemoryBuffer>>
+  read(StringRef FileName, off_t &Size, time_t &ModTime) override {
+    // This is a compiler-internal input/output, let's bypass the sandbox.
+    auto BypassSandbox = llvm::sys::sandbox::scopedDisable();
+
+    // FIXME: This only needs to go to disk once per build, not in every
+    // compilation. Introduce in-memory cache.
+    return readImpl(FileName, Size, ModTime);
   }
 };
 } // namespace
