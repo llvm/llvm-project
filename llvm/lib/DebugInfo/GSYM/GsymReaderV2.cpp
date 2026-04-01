@@ -21,6 +21,7 @@ using namespace gsym;
 
 GsymReaderV2::GsymReaderV2(std::unique_ptr<MemoryBuffer> Buffer)
     : GsymReader(std::move(Buffer)),
+      AddrInfoOffsetsData(StringRef(), true, 8),
       FileData(StringRef(), true, 8) {}
 
 GsymReaderV2::GsymReaderV2(GsymReaderV2 &&RHS) = default;
@@ -157,70 +158,65 @@ llvm::Error GsymReaderV2::parse() {
     return createStringError(std::errc::invalid_argument,
                              "AddrInfoOffsets section size mismatch");
 
-  // Set up the data references for various GlobalData sections.
-  // Handles both swapped and non-swapped cases.
+  // AddrOffsets
   if (!Swap) {
     llvm::Expected<llvm::ArrayRef<uint8_t>> Bytes = AddrOffsetsGD.getBytes(DE);
     if (!Bytes)
       return Bytes.takeError();
     AddrOffsets = *Bytes;
-
-    Bytes = AddrInfoOffsetsGD.getBytes(DE);
-    if (!Bytes)
-      return Bytes.takeError();
-    AddrInfoOffsets = *Bytes;
   } else {
     // Do the byte-swapping for the AddrOffsets section for byte size 1-8.
-    {
-      uint64_t AOff = AddrOffsetsGD.FileOffset;
-      const size_t TotalBytes =
-          static_cast<size_t>(Hdr->NumAddresses) * Hdr->AddrOffSize;
-      Swap->AddrOffsets.resize(TotalBytes);
-      for (uint32_t I = 0; I < Hdr->NumAddresses; ++I) {
-        uint64_t Val = DE.getUnsigned(&AOff, Hdr->AddrOffSize);
-        memcpy(Swap->AddrOffsets.data() + I * Hdr->AddrOffSize, &Val,
-               Hdr->AddrOffSize);
-      }
-      AddrOffsets = ArrayRef<uint8_t>(Swap->AddrOffsets);
+    uint64_t AOff = AddrOffsetsGD.FileOffset;
+    const size_t TotalBytes =
+        static_cast<size_t>(Hdr->NumAddresses) * Hdr->AddrOffSize;
+    Swap->AddrOffsets.resize(TotalBytes);
+    for (uint32_t I = 0; I < Hdr->NumAddresses; ++I) {
+      uint64_t Val = DE.getUnsigned(&AOff, Hdr->AddrOffSize);
+      memcpy(Swap->AddrOffsets.data() + I * Hdr->AddrOffSize, &Val,
+             Hdr->AddrOffSize);
     }
-
-    // Do the byte-swapping for the AddrInfoOffsets section for byte size 1-8.
-    {
-      uint64_t AIOff = AddrInfoOffsetsGD.FileOffset;
-      const size_t TotalBytes =
-          static_cast<size_t>(Hdr->NumAddresses) * Hdr->AddrInfoOffSize;
-      Swap->AddrInfoOffsets.resize(TotalBytes);
-      for (uint32_t I = 0; I < Hdr->NumAddresses; ++I) {
-        uint64_t Val = DE.getUnsigned(&AIOff, Hdr->AddrInfoOffSize);
-        memcpy(Swap->AddrInfoOffsets.data() + I * Hdr->AddrInfoOffSize, &Val,
-               Hdr->AddrInfoOffSize);
-      }
-      AddrInfoOffsets = ArrayRef<uint8_t>(Swap->AddrInfoOffsets);
-    }
-
+    AddrOffsets = ArrayRef<uint8_t>(Swap->AddrOffsets);
   }
 
-  // String table bytes are endian-neutral, so no swap needed.
-  auto StrTabData = StringTableGD.getStringRef(DE);
-  if (!StrTabData)
-    return StrTabData.takeError();
-  StrTab.Data = *StrTabData;
+  // AddrInfoOffsets
+  {
+    Expected<StringRef> Data = AddrInfoOffsetsGD.getStringRef(DE);
+    if (!Data)
+      return Data.takeError();
+    // The above getStringRef() already returns the correct data range.
+    // DataExtractor will ensure that accesses are within the range.
+    AddrInfoOffsetsData =
+        DataExtractor(*Data, IsLittleEndian, 8);
+  }
 
+  // String table
+  //
+  // Bytes are endian-neutral, so no swap needed.
+  {
+    Expected<StringRef> Data = StringTableGD.getStringRef(DE);
+    if (!Data)
+      return Data.takeError();
+    StrTab.Data = *Data;
+  }
+
+  // File table
+  //
   // Validate and cache file table metadata for on-demand decoding via
   // getFile(). The file table has variable-width Dir/Base fields (StrpSize),
   // so entries are decoded on access rather than pre-parsed.
   {
-    if (FileTableGD.FileSize < 4)
-      return createStringError(std::errc::invalid_argument,
-                               "FileTable section too small");
-    uint64_t FTOff = FileTableGD.FileOffset;
-    uint32_t NumFiles = DE.getU32(&FTOff);
+    Expected<StringRef> Data = FileTableGD.getStringRef(DE);
+    if (!Data)
+      return Data.takeError();
+    DataExtractor FileTableDE(*Data, IsLittleEndian, 8);
+    uint64_t Offset = 0;
+    uint32_t NumFiles = FileTableDE.getU32(&Offset);
     uint64_t EntriesSize = static_cast<uint64_t>(NumFiles) * 2 * Hdr->StrpSize;
-    if (FileTableGD.FileSize < 4 + EntriesSize)
+    if (Data->size() < 4 + EntriesSize)
       return createStringError(std::errc::invalid_argument,
                                "FileTable section too small for %u files",
                                NumFiles);
-    FileData = DataExtractor(Buf.substr(FTOff, EntriesSize), IsLittleEndian, 8);
+    FileData = DataExtractor(Data->substr(Offset, EntriesSize), IsLittleEndian, 8);
     FileData.setStringOffsetSize(Hdr->StrpSize);
   }
   return Error::success();
@@ -245,11 +241,13 @@ std::optional<FileEntry> GsymReaderV2::getFile(uint32_t Index) const {
 }
 
 std::optional<uint64_t> GsymReaderV2::getAddressInfoOffset(size_t Index) const {
-  auto RelOff =
-      getUnsigned(AddrInfoOffsets, getAddressInfoOffsetByteSize(), Index);
-  if (!RelOff)
+  uint64_t Offset = Index * getAddressInfoOffsetByteSize();
+  if (!AddrInfoOffsetsData.isValidOffsetForDataOfSize(
+          Offset, getAddressInfoOffsetByteSize()))
     return std::nullopt;
-  return *RelOff +
+  uint64_t RelOff =
+      AddrInfoOffsetsData.getUnsigned(&Offset, getAddressInfoOffsetByteSize());
+  return RelOff +
          GlobalDataSections.at(GlobalInfoType::FunctionInfo).FileOffset;
 }
 
