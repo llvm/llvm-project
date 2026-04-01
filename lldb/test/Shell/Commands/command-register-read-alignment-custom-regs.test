@@ -1,0 +1,13 @@
+# REQUIRES: x86
+
+# RUN: %clang_host -g -O0 %S/Inputs/main.c -o %t.out
+# RUN: %lldb -b -o "breakpoint set --name main" \
+# RUN:        -o run \
+# RUN:        -o "register read pc ymm7 ymm12 fs_base" \
+# RUN:        %t.out | FileCheck --strict-whitespace %s
+
+# CHECK: (lldb) register read pc ymm7 ymm12 fs_base
+# CHECK: {{^      rip = }}
+# CHECK: {{^     ymm7 = }}
+# CHECK: {{^    ymm12 = }}
+# CHECK: {{^  fs_base = }}

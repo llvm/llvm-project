@@ -254,6 +254,7 @@ protected:
                            "registers names are supplied as arguments\n");
       } else {
         int alignment = ComputeMatchingAlignment(command, reg_ctx, !m_command_options.dump_all_sets.GetCurrentValue());
+        alignment += 2; // Extra ident to be consistent with register sets dumping
         for (auto &entry : command) {
           // in most LLDB commands we accept $rbx as the name for register RBX
           // - and here we would reject it and non-existant. we should be more
