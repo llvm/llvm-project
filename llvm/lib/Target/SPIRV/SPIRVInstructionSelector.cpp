@@ -6114,17 +6114,17 @@ bool SPIRVInstructionSelector::loadVec3BuiltinInputID(
   MIRBuilder.getMRI()->setType(NewRegister, LLT::pointer(0, 64));
   GR.assignSPIRVTypeToVReg(PtrType, NewRegister, MIRBuilder.getMF());
 
-  // Emit the OpVariable into the first MBB before its terminator to ensure
-  // the def dominates all uses across all MBBs.
+  // Emit the OpVariable into the entry block to ensure the def dominates
+  // all uses across all MBBs.
   MachineBasicBlock &EntryBB = MIRBuilder.getMF().front();
-  MachineIRBuilder FirstBlockBuilder;
-  FirstBlockBuilder.setMF(MIRBuilder.getMF());
-  FirstBlockBuilder.setInsertPt(EntryBB, EntryBB.getFirstTerminator());
+  MachineIRBuilder GVBuilder(MIRBuilder.getState());
+  if (&GVBuilder.getMBB() != &EntryBB)
+    GVBuilder.setInsertPt(EntryBB, EntryBB.getFirstTerminator());
 
   Register Variable = GR.buildGlobalVariable(
       NewRegister, PtrType, getLinkStringForBuiltIn(BuiltInValue), nullptr,
-      SPIRV::StorageClass::Input, nullptr, true, std::nullopt,
-      FirstBlockBuilder, false);
+      SPIRV::StorageClass::Input, nullptr, true, std::nullopt, GVBuilder,
+      false);
 
   // Create new register for loading value.
   MachineRegisterInfo *MRI = MIRBuilder.getMRI();
@@ -6172,17 +6172,17 @@ bool SPIRVInstructionSelector::loadBuiltinInputID(
                    GR.getPointerSize()));
   GR.assignSPIRVTypeToVReg(PtrType, NewRegister, MIRBuilder.getMF());
 
-  // Emit the OpVariable into the first MBB to ensure the def dominates all
-  // uses across all MBBs.
+  // Emit the OpVariable into the entry block to ensure the def dominates
+  // all uses across all MBBs.
   MachineBasicBlock &EntryBB = MIRBuilder.getMF().front();
-  MachineIRBuilder FirstBlockBuilder;
-  FirstBlockBuilder.setMF(MIRBuilder.getMF());
-  FirstBlockBuilder.setInsertPt(EntryBB, EntryBB.getFirstTerminator());
+  MachineIRBuilder GVBuilder(MIRBuilder.getState());
+  if (&GVBuilder.getMBB() != &EntryBB)
+    GVBuilder.setInsertPt(EntryBB, EntryBB.getFirstTerminator());
 
   Register Variable = GR.buildGlobalVariable(
       NewRegister, PtrType, getLinkStringForBuiltIn(BuiltInValue), nullptr,
-      SPIRV::StorageClass::Input, nullptr, true, std::nullopt,
-      FirstBlockBuilder, false);
+      SPIRV::StorageClass::Input, nullptr, true, std::nullopt, GVBuilder,
+      false);
 
   // Load uint value from the global variable.
   auto MIB = BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpLoad))

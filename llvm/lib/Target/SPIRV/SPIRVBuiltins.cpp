@@ -518,17 +518,17 @@ static Register buildBuiltinVariableLoad(
       VariableType, MIRBuilder, SPIRV::StorageClass::Input);
   GR->assignSPIRVTypeToVReg(PtrType, NewRegister, MIRBuilder.getMF());
 
-  // Emit the OpVariable and its decorations into the first MBB to ensure
-  // VReg definition dependencies are valid across all MBBs.
+  // Emit the OpVariable into the entry block to ensure the def dominates
+  // all uses across all MBBs.
   MachineBasicBlock &EntryBB = MIRBuilder.getMF().front();
-  MachineIRBuilder FirstBlockBuilder;
-  FirstBlockBuilder.setMF(MIRBuilder.getMF());
-  FirstBlockBuilder.setMBB(EntryBB);
+  MachineIRBuilder GVBuilder(MIRBuilder.getState());
+  if (&GVBuilder.getMBB() != &EntryBB)
+    GVBuilder.setInsertPt(EntryBB, EntryBB.getFirstTerminator());
 
   Register Variable = GR->buildGlobalVariable(
       NewRegister, PtrType, getLinkStringForBuiltIn(BuiltinValue), nullptr,
       SPIRV::StorageClass::Input, nullptr, /* isConst= */ isConst, LinkageTy,
-      FirstBlockBuilder, false);
+      GVBuilder, false);
 
   // Load the value from the global variable.
   Register LoadedRegister =
