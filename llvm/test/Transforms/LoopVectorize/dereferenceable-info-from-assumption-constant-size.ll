@@ -1317,7 +1317,7 @@ exit:
   ret void
 }
 
-define void @deref_assumption_in_header_constant_trip_count_nofree_via_context_but_missing_nosync(ptr noalias noundef %a, ptr noalias %b, ptr noalias %c) {
+define void @deref_assumption_in_header_constant_trip_count_nofree_and_nosync_via_context(ptr noalias noundef %a, ptr noalias %b, ptr noalias %c) {
 ; CHECK-LABEL: define void @deref_assumption_in_header_constant_trip_count_nofree_via_context_but_missing_nosync(
 ; CHECK-SAME: ptr noalias noundef [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
