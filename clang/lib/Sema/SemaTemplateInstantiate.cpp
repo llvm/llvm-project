@@ -1620,17 +1620,18 @@ namespace {
     }
 
     // Override the default version to handle a rewrite-template-arg-pack case
-    // for building a deduction guide.
+    // for building a deduction guide, and to cache substitution results in
+    // concepts checking.
     bool TransformTemplateArgument(const TemplateArgumentLoc &Input,
                                    TemplateArgumentLoc &Output,
                                    bool Uneval = false) {
       const TemplateArgument &Arg = Input.getArgument();
-      std::vector<TemplateArgument> TArgs;
       if (auto *Cache = SemaRef.CurrentCachedTemplateArgs;
-          TemplateArgsHashValue && Cache) {
+          Cache && TemplateArgsHashValue) {
         llvm::FoldingSetNodeID ID = *TemplateArgsHashValue;
         ID.AddInteger(SemaRef.ArgPackSubstIndex.toInternalRepresentation());
-        Input.getArgument().Profile(ID, SemaRef.Context);
+        // FIXME: We can lose sugars when profiling Arg.
+        Arg.Profile(ID, SemaRef.Context);
         if (auto Iter = Cache->find(ID); Iter != Cache->end()) {
           Output = Iter->second;
           return false;
@@ -1641,7 +1642,8 @@ namespace {
         return Ret;
       }
       switch (Arg.getKind()) {
-      case TemplateArgument::Pack:
+      case TemplateArgument::Pack: {
+        std::vector<TemplateArgument> TArgs;
         assert(SemaRef.CodeSynthesisContexts.empty() ||
                SemaRef.CodeSynthesisContexts.back().Kind ==
                    Sema::CodeSynthesisContext::BuildingDeductionGuides);
@@ -1659,6 +1661,7 @@ namespace {
             TemplateArgument(llvm::ArrayRef(TArgs).copy(SemaRef.Context)),
             QualType(), SourceLocation{});
         return false;
+      }
       default:
         break;
       }

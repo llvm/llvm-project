@@ -570,6 +570,7 @@ OpenMP Support
 
 Improvements
 ^^^^^^^^^^^^
+- Improved substitution performance in concept checking. (#GH172266)
 
 Additional Information
 ======================

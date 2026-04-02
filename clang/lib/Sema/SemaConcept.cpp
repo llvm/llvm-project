@@ -487,7 +487,8 @@ class ConstraintSatisfactionChecker {
   // right context.
   ConceptDecl *ParentConcept = nullptr;
 
-public:
+  // This is for TemplateInstantiator to not instantiate the same template
+  // parameter mapping many times, in order to improve substitution performance.
   llvm::DenseMap<llvm::FoldingSetNodeID, TemplateArgumentLoc>
       CachedTemplateArgs;
 
