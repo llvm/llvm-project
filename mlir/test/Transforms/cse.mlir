@@ -738,3 +738,58 @@ func.func @cse_pointer_write_does_not_block_non_addressable_read() -> i32 {
   %2 = arith.addi %0, %1 : i32
   return %2 : i32
 }
+
+// -----
+
+func.func @cse_hoist_blocked_by_isolated_region() -> (i32, i32) {
+  %0 = "test.always_speculatable_op"() : () -> i32
+  %1 = "test.isolated_one_region_op"() ({
+      %1 = "test.always_speculatable_op"() : () -> i32
+      %2 = "test.always_speculatable_op"() : () -> i32
+      %3 = arith.addi %1, %2 : i32
+      "test.region_yield"(%3) : (i32) -> ()
+  }) : () -> (i32)
+  return %0, %1 : i32, i32
+}
+// CHECK-LABEL: func @cse_hoist_blocked_by_isolated_region
+//       CHECK:   %[[PURE_0:.*]] = "test.always_speculatable_op"()
+//       CHECK:   %[[ISOLATED_ONE_REGION_OP:.*]] = test.isolated_one_region_op  {
+//       CHECK:      %[[PURE_1:.*]] = "test.always_speculatable_op"()
+//       CHECK:      %[[ADDI:.*]] = arith.addi %[[PURE_1]], %[[PURE_1]]
+//       CHECK:      test.region_yield %[[ADDI]]
+//       CHECK:    } :  -> i32
+//       CHECK:    return %[[PURE_0]], %[[ISOLATED_ONE_REGION_OP]]
+//       CHECK: }
+
+// -----
+
+func.func @cse_no_hoist_opportunity_with_nested_isolated_regions() -> (i32) {
+  %1 = "test.always_speculatable_op"() : () -> i32
+  test.isolated_regions {
+    %2 = "test.always_speculatable_op"() : () -> i32
+    test.region_yield %2 : i32
+  }, {
+    %2 = "test.always_speculatable_op"() : () -> i32
+    test.isolated_regions {
+      %3 = "test.always_speculatable_op"() : () -> i32
+      test.region_yield %3 : i32
+    }
+    test.region_yield %2 : i32
+  }
+  return %1 : i32
+}
+// CHECK-LABEL: func @cse_no_hoist_opportunity_with_nested_isolated_regions
+//       CHECK:   %[[PURE_0:.*]] = "test.always_speculatable_op"()
+//       CHECK:   test.isolated_regions {
+//       CHECK:     %[[PURE_1:.*]] = "test.always_speculatable_op"()
+//       CHECK:     test.region_yield %[[PURE_1]]
+//       CHECK:   }, {
+//       CHECK:     %[[PURE_2:.*]] = "test.always_speculatable_op"() 
+//       CHECK:       test.isolated_regions {
+//       CHECK:         %[[PURE_3:.*]] = "test.always_speculatable_op"()
+//       CHECK:         test.region_yield %[[PURE_3]]
+//       CHECK:       }
+//       CHECK:     test.region_yield %[[PURE_2]]
+//       CHECK:   }
+//       CHECK:   return %[[PURE_0]]
+//       CHECK: }
