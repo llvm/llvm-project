@@ -124,7 +124,7 @@ void MarkLive<ELFT, TrackWhyLive>::resolveReloc(InputSectionBase &sec,
   } else {
     sym = &sec.file->getRelocTargetSym(rel);
   }
-  sym->used = true;
+  sym->setFlags(USED);
 
   LiveReason reason;
   if (TrackWhyLive) {
@@ -547,7 +547,7 @@ template <class ELFT> void elf::markLive(Ctx &ctx) {
   // is used from a live section.
   parallelForEach(ctx.symtab->getSymbols(), [](Symbol *sym) {
     if (auto *ss = dyn_cast<SharedSymbol>(sym))
-      if (ss->used && !ss->isWeak())
+      if (ss->hasFlag(USED) && !ss->isWeak())
         cast<SharedFile>(ss->file)->isNeeded = true;
   });
 
