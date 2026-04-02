@@ -430,7 +430,7 @@ int gettimeofday(timeval *tv, void *) {
   // Convert to Unix epoch time
   time -= epoch_offset;
 
-  auto [sec, usec] = std::lldiv(time, 10000000L);
+  auto [sec, usec] = std::lldiv(time, 10'000'000l);
   tv->tv_sec = sec;
   tv->tv_usec = usec;
   return 0;
