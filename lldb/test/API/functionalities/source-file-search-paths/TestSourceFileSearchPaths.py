@@ -13,10 +13,7 @@ import shutil
 class TestSourceFileSearchPaths(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
-    def test_source_file_search_paths(self):
-        """Test that target.source-file-search-paths finds relocated source
-        files and auto-creates source mappings."""
-
+    def build(self) -> None:
         # Sources need to be relocated to the build dir first before we can
         # build. The structure here must be consistent with the Makefile's
         # expectations.
@@ -26,6 +23,12 @@ class TestSourceFileSearchPaths(TestBase):
                 self.getSourcePath(relative_src_path),
                 self.getBuildArtifact(relative_src_path),
             )
+
+        super().build()
+
+    def test_source_file_search_paths(self):
+        """Test that target.source-file-search-paths finds relocated source
+        files and auto-creates source mappings."""
         self.build()
 
         main_line_number = line_number("main.cpp", "// SOURCE THIS LINE")
@@ -109,4 +112,17 @@ class TestSourceFileSearchPaths(TestBase):
             stream.GetData(),
             ".*result = add.*",
             "couldn't find the expected source lines",
+        )
+
+        # This should result in two source-map entries, due to us flattening
+        # `foo.cpp` (it was built in `$BUILDDIR/subdir/foo.cpp` but moved to
+        # `$BUILDDIR/relocated/foo.cpp`).
+        # I don't know if this is too important to test -- more of a performance
+        # optimization to avoid multiple scans.
+        self.expect(
+            "settings show target.source-map",
+            substrs=[
+                f'"{self.getBuildDir()}" -> "{self.getBuildArtifact("relocated")}"',
+                f'"{self.getBuildArtifact("subdir")}" -> "{self.getBuildArtifact("relocated")}"',
+            ],
         )
