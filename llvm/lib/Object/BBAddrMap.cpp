@@ -19,9 +19,9 @@ using namespace object;
 
 namespace {
 
-// Helper to extract and decode the next ULEB128 value as unsigned int.
-// Returns zero and sets ULEBSizeErr if the ULEB128 value exceeds the unsigned
-// int limit.
+// Helper to extract and decode the next ULEB128 value as an unsigned integer
+// type. Returns zero and sets ULEBSizeErr if the ULEB128 value exceeds the
+// destination type's limit.
 // Also returns zero if ULEBSizeErr is already in an error state.
 // ULEBSizeErr is an out variable if an error occurs.
 template <typename IntTy, std::enable_if_t<std::is_unsigned_v<IntTy>, int> = 0>
