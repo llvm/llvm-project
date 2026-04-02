@@ -475,7 +475,7 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
 
   DenormalMode getCurrentDenormalMode(Instruction &I) {
     return CurrentFrame->Func.getDenormalMode(
-        I.getType()->getScalarType()->getFltSemantics());
+        I.getOperand(0)->getType()->getScalarType()->getFltSemantics());
   }
 
 public:
