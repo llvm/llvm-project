@@ -10487,7 +10487,7 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
     case LoadsState::Vectorize:
       return TreeEntry::Vectorize;
     case LoadsState::CompressVectorize:
-      if (!IsGraphTransformMode && !VectorizableTree.empty()) {
+      if (!IsGraphTransformMode && VectorizableTree.size() > 1) {
         // Delay slow vectorized nodes for better vectorization attempts.
         LoadEntriesToVectorize.insert(VectorizableTree.size());
         return TreeEntry::NeedToGather;
@@ -10495,7 +10495,7 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
       return IsGatheredNode() ? TreeEntry::NeedToGather
                               : TreeEntry::CompressVectorize;
     case LoadsState::ScatterVectorize:
-      if (!IsGraphTransformMode && !VectorizableTree.empty()) {
+      if (!IsGraphTransformMode && VectorizableTree.size() > 1) {
         // Delay slow vectorized nodes for better vectorization attempts.
         LoadEntriesToVectorize.insert(VectorizableTree.size());
         return TreeEntry::NeedToGather;
