@@ -5019,34 +5019,23 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   if (IsCuda || IsHIP) {
+    CmdArgs.push_back("-aux-triple");
+
     // We have to pass the triple of the host if compiling for a CUDA/HIP device
     // and vice-versa.
-    StringRef TripleStr;
-    if (JA.isDeviceOffloading(Action::OFK_Cuda) ||
-        JA.isDeviceOffloading(Action::OFK_HIP))
-      TripleStr =
+    if (IsCudaDevice || IsHIPDevice) {
+      StringRef AuxTripleStr =
           C.getSingleOffloadToolChain<Action::OFK_Host>()->getTriple().str();
-    else {
+      CmdArgs.push_back(Args.MakeArgStringRef(AuxTripleStr));
+    } else {
       // Host-side compilation.
-      TripleStr =
+      StringRef AuxTripleStr =
           (IsCuda ? C.getOffloadToolChains(Action::OFK_Cuda).first->second
                   : C.getOffloadToolChains(Action::OFK_HIP).first->second)
               ->getTriple()
               .str();
-      if (IsCuda) {
-        // We need to figure out which CUDA version we're compiling for, as that
-        // determines how we load and launch GPU kernels.
-        auto *CTC = static_cast<const toolchains::CudaToolChain *>(
-            C.getSingleOffloadToolChain<Action::OFK_Cuda>());
-        assert(CTC && "Expected valid CUDA Toolchain.");
-        if (CTC && CTC->CudaInstallation.version() != CudaVersion::UNKNOWN)
-          CmdArgs.push_back(Args.MakeArgString(
-              Twine("-target-sdk-version=") +
-              CudaVersionToString(CTC->CudaInstallation.version())));
-      }
+      CmdArgs.push_back(Args.MakeArgStringRef(AuxTripleStr));
     }
-    CmdArgs.push_back("-aux-triple");
-    CmdArgs.push_back(Args.MakeArgString(TripleStr));
 
     if (JA.isDeviceOffloading(Action::OFK_HIP) &&
         (getToolChain().getTriple().isAMDGPU() ||
@@ -5062,6 +5051,18 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
             Args.MakeArgString("-Werror=format-invalid-specifier"));
       }
     }
+  }
+
+  if (IsCuda && !IsCudaDevice) {
+    // We need to figure out which CUDA version we're compiling for, as that
+    // determines how we load and launch GPU kernels.
+    auto *CTC = static_cast<const toolchains::CudaToolChain *>(
+        C.getSingleOffloadToolChain<Action::OFK_Cuda>());
+    assert(CTC && "Expected valid CUDA Toolchain.");
+    if (CTC && CTC->CudaInstallation.version() != CudaVersion::UNKNOWN)
+      CmdArgs.push_back(Args.MakeArgString(
+          Twine("-target-sdk-version=") +
+          CudaVersionToString(CTC->CudaInstallation.version())));
   }
 
   // Optimization level for CodeGen.
