@@ -628,6 +628,25 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
       return InstructionCost::getInvalid();
 
   switch (ICA.getID()) {
+  case Intrinsic::speculative_load: {
+    // Speculative loads are only valid for types <= 16 bytes due to MTE
+    // (Memory Tagging Extension) using 16-byte tag granules. Loads larger
+    // than 16 bytes could cross a tag granule boundary.
+    auto LT = getTypeLegalizationCost(RetTy);
+    if (!LT.first.isValid())
+      return InstructionCost::getInvalid();
+    // For scalable vectors, check that we use a single register (which means
+    // <= 16 bytes at minimum vscale). For fixed types, compute the actual size.
+    if (isa<ScalableVectorType>(RetTy)) {
+      if (LT.first.getValue() != 1)
+        return InstructionCost::getInvalid();
+    } else {
+      if (LT.first.getValue() * LT.second.getStoreSize() > 16)
+        return InstructionCost::getInvalid();
+    }
+    // Return cost of a regular load.
+    return getMemoryOpCost(Instruction::Load, RetTy, Align(1), 0, CostKind);
+  }
   case Intrinsic::experimental_vector_histogram_add: {
     InstructionCost HistCost = getHistogramCost(ST, ICA);
     // If the cost isn't valid, we may still be able to scalarize
