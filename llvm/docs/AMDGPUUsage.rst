@@ -2209,10 +2209,10 @@ The AMDGPU backend supports the following LLVM IR attributes.
                                                       scan for integer LDS atomics. When set to a positive integer n, the
                                                       optimizer emits a dynamic branch: if the number of active lanes exceeds
                                                       n, the DPP scan path is taken; otherwise each lane independently issues
-                                                      its own atomic. A value of 0 (the default) disables the dynamic branch 
-                                                      and always uses the DPP scan path when the DPP strategy is selected. 
-                                                      Values greater than or equal to the wavefront size effectively disable 
-                                                      DPP optimization for LDS atomics. Floating-point LDS atomics are not 
+                                                      its own atomic. A value of 0 (the default) disables the dynamic branch
+                                                      and always uses the DPP scan path when the DPP strategy is selected.
+                                                      Values greater than or equal to the wavefront size effectively disable
+                                                      DPP optimization for LDS atomics. Floating-point LDS atomics are not
                                                       affected by this attribute.
 
                                                       Relevant for GFX10+.
