@@ -57,7 +57,10 @@ def int_aarch64_frint64x
     : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ], [ LLVMMatchType<0> ],
                             [ IntrNoMem ]>;
 
-
+def int_aarch64_sys  : DefaultAttrsIntrinsic<[], [llvm_i32_ty, llvm_i32_ty,
+                       llvm_i32_ty, llvm_i32_ty, llvm_i64_ty],
+                       [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>,
+                       ImmArg<ArgIndex<3>>]>;
 //===----------------------------------------------------------------------===//
 // HINT
 

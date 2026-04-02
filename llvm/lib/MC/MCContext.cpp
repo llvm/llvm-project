@@ -208,7 +208,7 @@ MCSymbol *MCContext::getOrCreateSymbol(const Twine &Name) {
 
   MCSymbolTableEntry &Entry = getSymbolTableEntry(NameRef);
   if (!Entry.second.Symbol) {
-    bool IsRenamable = NameRef.starts_with(MAI->getPrivateGlobalPrefix());
+    bool IsRenamable = NameRef.starts_with(MAI->getInternalSymbolPrefix());
     bool IsTemporary = IsRenamable && !SaveTempLabels;
     if (!Entry.second.Used) {
       Entry.second.Used = true;
@@ -253,17 +253,17 @@ MCSymbol *MCContext::parseSymbol(const Twine &Name) {
 
 MCSymbol *MCContext::getOrCreateFrameAllocSymbol(const Twine &FuncName,
                                                  unsigned Idx) {
-  return getOrCreateSymbol(MAI->getPrivateGlobalPrefix() + FuncName +
+  return getOrCreateSymbol(MAI->getInternalSymbolPrefix() + FuncName +
                            "$frame_escape_" + Twine(Idx));
 }
 
 MCSymbol *MCContext::getOrCreateParentFrameOffsetSymbol(const Twine &FuncName) {
-  return getOrCreateSymbol(MAI->getPrivateGlobalPrefix() + FuncName +
+  return getOrCreateSymbol(MAI->getInternalSymbolPrefix() + FuncName +
                            "$parent_frame_offset");
 }
 
 MCSymbol *MCContext::getOrCreateLSDASymbol(const Twine &FuncName) {
-  return getOrCreateSymbol(MAI->getPrivateGlobalPrefix() + "__ehtable$" +
+  return getOrCreateSymbol(MAI->getInternalSymbolPrefix() + "__ehtable$" +
                            FuncName);
 }
 
@@ -360,12 +360,12 @@ MCSymbol *MCContext::createRenamableSymbol(const Twine &Name,
 MCSymbol *MCContext::createTempSymbol(const Twine &Name, bool AlwaysAddSuffix) {
   if (!UseNamesOnTempLabels)
     return createSymbolImpl(nullptr, /*IsTemporary=*/true);
-  return createRenamableSymbol(MAI->getPrivateGlobalPrefix() + Name,
+  return createRenamableSymbol(MAI->getInternalSymbolPrefix() + Name,
                                AlwaysAddSuffix, /*IsTemporary=*/true);
 }
 
 MCSymbol *MCContext::createNamedTempSymbol(const Twine &Name) {
-  return createRenamableSymbol(MAI->getPrivateGlobalPrefix() + Name, true,
+  return createRenamableSymbol(MAI->getInternalSymbolPrefix() + Name, true,
                                /*IsTemporary=*/!SaveTempLabels);
 }
 

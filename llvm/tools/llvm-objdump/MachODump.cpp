@@ -82,7 +82,7 @@ bool objdump::ObjcMetaData;
 std::string objdump::DisSymName;
 bool objdump::IsOtool;
 bool objdump::SymbolicOperands;
-static std::vector<std::string> ArchFlags;
+std::vector<std::string> objdump::ArchFlags;
 
 static bool ArchAll = false;
 static std::string ThumbTripleName;
@@ -2765,9 +2765,7 @@ void objdump::parseInputMachO(MachOUniversalBinary *UB) {
         }
         if (MachOObjectFile *O =
                 dyn_cast<MachOObjectFile>(&*ChildOrErr.get())) {
-          if (MachOObjectFile *MachOOF = dyn_cast<MachOObjectFile>(O))
-            ProcessMachO(Filename, MachOOF, MachOOF->getFileName(),
-                          ArchitectureName);
+          ProcessMachO(Filename, O, O->getFileName(), ArchitectureName);
         }
       }
       if (Err)

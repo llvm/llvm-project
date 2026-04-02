@@ -39,6 +39,17 @@ struct FileIOResult {
 // suitable for their platform.
 class File {
 public:
+  static void add_file(File *f);
+  static void remove_file(File *f);
+  static File *get_first_file();
+  static void lock_list();
+  static void unlock_list();
+
+  static File *list_all;
+  static Mutex list_lock;
+
+  File *get_next() const { return next; }
+
   static constexpr size_t DEFAULT_BUFFER_SIZE = 1024;
 
   using LockFunc = void(File *);
@@ -161,7 +172,7 @@ public:
                                   /*robust=*/false, /*pshared=*/false),
         ungetc_buf(0), buf(buffer), bufsize(buffer_size), bufmode(buffer_mode),
         own_buf(owned), mode(modeflags), pos(0), prev_op(FileOp::NONE),
-        read_limit(0), eof(false), err(false) {
+        read_limit(0), eof(false), err(false), prev(nullptr), next(nullptr) {
     adjust_buf();
   }
 
@@ -310,22 +321,20 @@ private:
       // affect the behavior experienced by the user.
       buf = &ungetc_buf;
       bufsize = 1;
-      own_buf = false; // We shouldn't call free on |buf| when closing the file.
     }
   }
+
+  File *prev;
+  File *next;
 };
 
-// The implementaiton of this function is provided by the platform_file
+// The implementation of this function is provided by the platform_file
 // library.
 ErrorOr<File *> openfile(const char *path, const char *mode);
 
 // The platform_file library should implement it if it relevant for that
 // platform.
 int get_fileno(File *f);
-
-extern File *stdin;
-extern File *stdout;
-extern File *stderr;
 
 } // namespace LIBC_NAMESPACE_DECL
 

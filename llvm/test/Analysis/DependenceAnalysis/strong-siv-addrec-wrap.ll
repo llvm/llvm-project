@@ -20,9 +20,6 @@
 ;  A[(2^62+1)*i]     |        | A[4]
 ;  A[(2^62+1)*i + 4] | A[4]   |
 ;
-; FIXME: DependenceAnalysis fails to detect the dependency between the two
-; stores.
-;
 define void @strong_siv_no_nsw(ptr %A) {
 ; CHECK-LABEL: 'strong_siv_no_nsw'
 ; CHECK-NEXT:  Src: store i8 0, ptr %gep.0, align 1 --> Dst: store i8 0, ptr %gep.0, align 1

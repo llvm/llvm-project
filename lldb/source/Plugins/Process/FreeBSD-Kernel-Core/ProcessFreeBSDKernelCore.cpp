@@ -67,8 +67,13 @@ ProcessFreeBSDKernelCore::ProcessFreeBSDKernelCore(lldb::TargetSP target_sp,
     : PostMortemProcess(target_sp, listener_sp, core_file), m_kvm(kvm) {}
 
 ProcessFreeBSDKernelCore::~ProcessFreeBSDKernelCore() {
-  if (m_kvm)
-    kvm_close(m_kvm);
+  m_thread_list.Clear();
+
+  // We need to call finalize on the process before destroying ourselves to
+  // make sure all of the broadcaster cleanup goes as planned. If we destruct
+  // this class, then Process::~Process() might have problems trying to fully
+  // destroy the broadcaster.
+  Finalize(/*destructing=*/true);
 }
 
 lldb::ProcessSP ProcessFreeBSDKernelCore::CreateInstance(
@@ -114,6 +119,8 @@ bool ProcessFreeBSDKernelCore::CanDebug(lldb::TargetSP target_sp,
 
 Status ProcessFreeBSDKernelCore::DoLoadCore() {
   // The core is already loaded by CreateInstance().
+  SetKernelDisplacement();
+
   return Status();
 }
 
@@ -124,7 +131,13 @@ DynamicLoader *ProcessFreeBSDKernelCore::GetDynamicLoader() {
   return m_dyld_up.get();
 }
 
-Status ProcessFreeBSDKernelCore::DoDestroy() { return Status(); }
+Status ProcessFreeBSDKernelCore::DoDestroy() {
+  if (!m_kvm)
+    return Status::FromErrorString("kvm file descriptor is not set.");
+
+  kvm_close(m_kvm);
+  return Status();
+}
 
 void ProcessFreeBSDKernelCore::RefreshStateAfterStop() {
   if (!m_printed_unread_message) {
@@ -163,7 +176,10 @@ bool ProcessFreeBSDKernelCore::DoUpdateThreadList(ThreadList &old_thread_list,
     // LLDB but we can construct a process without threads to provide minimal
     // memory reading support.
     switch (GetTarget().GetArchitecture().GetMachine()) {
+    case llvm::Triple::arm:
     case llvm::Triple::aarch64:
+    case llvm::Triple::ppc64le:
+    case llvm::Triple::riscv64:
     case llvm::Triple::x86:
     case llvm::Triple::x86_64:
       break;
@@ -213,7 +229,33 @@ bool ProcessFreeBSDKernelCore::DoUpdateThreadList(ThreadList &old_thread_list,
         ReadSignedIntegerFromMemory(FindSymbol("pcb_size"), 4, -1, error);
     lldb::addr_t stoppcbs = FindSymbol("stoppcbs");
 
-    // from FreeBSD sys/param.h
+    // Read stopped_cpus bitmask and mp_maxid for CPU validation.
+    lldb::addr_t stopped_cpus = FindSymbol("stopped_cpus");
+    uint32_t mp_maxid = 0;
+
+    if (stopped_cpus != LLDB_INVALID_ADDRESS) {
+      // https://cgit.freebsd.org/src/tree/sys/kern/subr_smp.c
+      mp_maxid =
+          ReadSignedIntegerFromMemory(FindSymbol("mp_maxid"), 4, 0, error);
+      if (error.Fail())
+        stopped_cpus = LLDB_INVALID_ADDRESS;
+    }
+
+    uint32_t long_size_bytes = GetAddressByteSize();
+    uint32_t long_bit = long_size_bytes * 8;
+
+    if (auto type_system_or_err =
+            GetTarget().GetScratchTypeSystemForLanguage(eLanguageTypeC)) {
+      CompilerType long_type =
+          (*type_system_or_err)->GetBasicTypeFromAST(eBasicTypeLong);
+      if (long_type.IsValid())
+        if (auto size = long_type.GetByteSize(nullptr))
+          long_size_bytes = *size;
+      long_bit = long_size_bytes * 8;
+    } else
+      llvm::consumeError(type_system_or_err.takeError());
+
+    // https://cgit.freebsd.org/src/tree/sys/sys/param.h
     constexpr size_t fbsd_maxcomlen = 19;
 
     // Iterate through a linked list of all processes. New processes are added
@@ -221,11 +263,12 @@ bool ProcessFreeBSDKernelCore::DoUpdateThreadList(ThreadList &old_thread_list,
     // the end of the list, so we have to walk it backwards. First collect all
     // the processes in the list order.
     std::vector<lldb::addr_t> process_addrs;
-    for (lldb::addr_t proc =
-             ReadPointerFromMemory(FindSymbol("allproc"), error);
-         proc != 0 && proc != LLDB_INVALID_ADDRESS;
-         proc = ReadPointerFromMemory(proc + offset_p_list, error)) {
-      process_addrs.push_back(proc);
+    if (lldb::addr_t allproc_addr = FindSymbol("allproc");
+        allproc_addr != LLDB_INVALID_ADDRESS) {
+      for (lldb::addr_t proc = ReadPointerFromMemory(allproc_addr, error);
+           proc != 0 && proc != LLDB_INVALID_ADDRESS && error.Success();
+           proc = ReadPointerFromMemory(proc + offset_p_list, error))
+        process_addrs.push_back(proc);
     }
 
     // Processes are in the linked list in descending PID order, so we must walk
@@ -276,12 +319,27 @@ bool ProcessFreeBSDKernelCore::DoUpdateThreadList(ThreadList &old_thread_list,
           pcb_addr = dumppcb;
           thread_desc += " (crashed)";
         } else if (oncpu != -1) {
-          // If we managed to read stoppcbs and pcb_size, use them to find
-          // the correct PCB.
-          if (stoppcbs != LLDB_INVALID_ADDRESS && pcbsize > 0)
+          // Verify the CPU is actually in the stopped set before using
+          // its stoppcbs entry.
+          bool is_stopped = false;
+          if (oncpu >= 0 && static_cast<uint32_t>(oncpu) <= mp_maxid &&
+              stopped_cpus != LLDB_INVALID_ADDRESS) {
+            uint32_t bit = oncpu % long_bit;
+            uint32_t word = oncpu / long_bit;
+            lldb::addr_t mask_addr = stopped_cpus + word * long_size_bytes;
+            uint64_t mask = ReadUnsignedIntegerFromMemory(
+                mask_addr, long_size_bytes, 0, error);
+            if (error.Success())
+              is_stopped = (mask & (1ULL << bit)) != 0;
+          }
+
+          // If we managed to read stoppcbs and pcb_size and the cpu is marked
+          // as stopped, use them to find the correct PCB.
+          if (is_stopped && stoppcbs != LLDB_INVALID_ADDRESS && pcbsize > 0) {
             pcb_addr = stoppcbs + oncpu * pcbsize;
-          else
+          } else {
             pcb_addr = LLDB_INVALID_ADDRESS;
+          }
           thread_desc += llvm::formatv(" (on CPU {0})", oncpu);
         }
 
@@ -320,12 +378,32 @@ lldb::addr_t ProcessFreeBSDKernelCore::FindSymbol(const char *name) {
   return sym ? sym->GetLoadAddress(&GetTarget()) : LLDB_INVALID_ADDRESS;
 }
 
+void ProcessFreeBSDKernelCore::SetKernelDisplacement() {
+  kssize_t displacement = kvm_kerndisp(m_kvm);
+
+  if (displacement == 0)
+    return;
+
+  Target &target = GetTarget();
+  lldb::ModuleSP kernel_module_sp = target.GetExecutableModule();
+  if (!kernel_module_sp)
+    return;
+
+  bool changed = false;
+  kernel_module_sp->SetLoadAddress(target,
+                                   static_cast<lldb::addr_t>(displacement),
+                                   /*value_is_offset=*/true, changed);
+
+  if (changed) {
+    ModuleList loaded_module_list;
+    loaded_module_list.Append(kernel_module_sp);
+    target.ModulesDidLoad(loaded_module_list);
+  }
+}
+
 void ProcessFreeBSDKernelCore::PrintUnreadMessage() {
   Target &target = GetTarget();
   Debugger &debugger = target.GetDebugger();
-
-  if (!debugger.GetCommandInterpreter().IsInteractive())
-    return;
 
   Status error;
 

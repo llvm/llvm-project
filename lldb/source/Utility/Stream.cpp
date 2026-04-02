@@ -183,6 +183,12 @@ Stream &Stream::operator<<(const void *p) {
   return *this;
 }
 
+// Stream the result of a formatv expression to this stream.
+Stream &Stream::operator<<(const llvm::formatv_object_base &obj) {
+  obj.format(m_forwarder);
+  return *this;
+}
+
 // Get the current indentation level
 unsigned Stream::GetIndentLevel() const { return m_indent_level; }
 

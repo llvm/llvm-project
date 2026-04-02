@@ -80,6 +80,34 @@ func.func @copyin_outside_parallel(%arg0 : memref<i32>) {
 }
 
 //===----------------------------------------------------------------------===//
+// Nested data constructs inside compute construct (non-specialized function).
+// After inlining an acc routine that has its own data region into a parallel
+// loop body, the inlined acc.data/acc.copyin end up inside acc.parallel.
+// The outer acc.parallel must NOT be unwrapped even though the inner data
+// ops are stripped. Regression test for greedy driver worklist expansion.
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: func.func @nested_data_inside_parallel
+// CHECK:       acc.copyin
+// CHECK:       acc.parallel
+// CHECK-NOT:   acc.data
+// CHECK-NOT:   acc.copyin
+// CHECK:       acc.yield
+func.func @nested_data_inside_parallel(%arg0 : memref<i32>, %arg1 : memref<i32>) {
+  %c0 = arith.constant 0 : i32
+  %0 = acc.copyin varPtr(%arg0 : memref<i32>) -> memref<i32>
+  acc.parallel dataOperands(%0 : memref<i32>) {
+    %1 = acc.copyin varPtr(%arg1 : memref<i32>) -> memref<i32>
+    acc.data dataOperands(%1 : memref<i32>) {
+      memref.store %c0, %arg1[] : memref<i32>
+      acc.terminator
+    }
+    acc.yield
+  }
+  return
+}
+
+//===----------------------------------------------------------------------===//
 // Data exit ops in specialized routines
 //===----------------------------------------------------------------------===//
 

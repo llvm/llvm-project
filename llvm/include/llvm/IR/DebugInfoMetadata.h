@@ -2118,6 +2118,7 @@ public:
 
   DISourceLanguageName getSourceLanguage() const { return SourceLanguage; }
   bool isOptimized() const { return IsOptimized; }
+  bool isDebugInfoForProfiling() const { return DebugInfoForProfiling; }
   unsigned getRuntimeVersion() const { return RuntimeVersion; }
   DebugEmissionKind getEmissionKind() const {
     return (DebugEmissionKind)EmissionKind;
@@ -3660,6 +3661,10 @@ public:
   /// Append \p Ops with operations to apply the \p Offset.
   LLVM_ABI static void appendOffset(SmallVectorImpl<uint64_t> &Ops,
                                     int64_t Offset);
+
+  LLVM_ABI static bool
+  extractLeadingOffset(ArrayRef<uint64_t> Ops, int64_t &OffsetInBytes,
+                       SmallVectorImpl<uint64_t> &RemainingOps);
 
   /// If this is a constant offset, extract it. If there is no expression,
   /// return true with an offset of zero.

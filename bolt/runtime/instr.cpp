@@ -1671,7 +1671,7 @@ extern "C" void __attribute((force_align_arg_pointer)) __bolt_instr_setup() {
   DEBUG(reportNumber("replace mmap stop: ", CountersEnd, 16));
   assert(CountersEnd > CountersStart, "no counters");
 
-  const bool Shared = !__bolt_instr_use_pid;
+  const bool Shared = !__bolt_instr_use_pid | !!__bolt_instr_sleep_time;
   const uint64_t MapPrivateOrShared = Shared ? MAP_SHARED : MAP_PRIVATE;
 
   void *Ret =
@@ -1727,10 +1727,8 @@ extern "C" __attribute((naked)) void __bolt_instr_indirect_call()
   // clang-format off
   __asm__ __volatile__(
                       SAVE_ALL
-                      "addi sp, sp, 288\n"
-                      "ld x10, 0(sp)\n"
-                      "ld x11, 8(sp)\n"
-                      "addi sp, sp, -288\n"
+                      "ld x10, 288(sp)\n"
+                      "ld x11, 296(sp)\n"
                       "jal x1, instrumentIndirectCall\n"
                       RESTORE_ALL
                       "ret\n"
@@ -1763,10 +1761,8 @@ extern "C" __attribute((naked)) void __bolt_instr_indirect_tailcall()
 #elif defined(__riscv)
   // clang-format off
   __asm__ __volatile__(SAVE_ALL
-                      "addi sp, sp, 288\n"
-                      "ld x10, 0(sp)\n"
-                      "ld x11, 8(sp)\n"
-                      "addi sp, sp, -288\n"
+                      "ld x10, 288(sp)\n"
+                      "ld x11, 296(sp)\n"
                       "jal x1, instrumentIndirectCall\n"
                       RESTORE_ALL
                       "ret\n"
@@ -1806,8 +1802,7 @@ extern "C" __attribute((naked)) void __bolt_instr_start()
                       RESTORE_ALL
                       "setup_symbol:\n"
                       "auipc x5, %%pcrel_hi(__bolt_start_trampoline)\n"
-                      "addi x5, x5, %%pcrel_lo(setup_symbol)\n"
-                      "jr x5\n"
+                      "jalr x0, %%pcrel_lo(setup_symbol)(x5)\n"
                       :::);
   // clang-format on
 #else
@@ -1838,8 +1833,7 @@ extern "C" void __bolt_instr_fini() {
                       SAVE_ALL
                       "fini_symbol:\n"
                       "auipc x5, %%pcrel_hi(__bolt_fini_trampoline)\n"
-                      "addi x5, x5, %%pcrel_lo(fini_symbol)\n"
-                      "jalr x1, 0(x5)\n"
+                      "jalr x1, %%pcrel_lo(fini_symbol)(x5)\n"
                       RESTORE_ALL
                       :::);
   // clang-format on

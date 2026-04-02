@@ -2401,6 +2401,16 @@ CompilerType TypeSystemClang::GetPointerSizedIntType(bool is_signed) {
       getASTContext().getTypeSize(getASTContext().VoidPtrTy), is_signed);
 }
 
+CompilerType TypeSystemClang::GetPointerDiffType(bool is_signed) {
+  // Check if builtin types are initialized.
+  if (!getASTContext().VoidPtrTy)
+    return {};
+
+  if (is_signed)
+    return GetType(getASTContext().getPointerDiffType());
+  return GetType(getASTContext().getUnsignedPointerDiffType());
+}
+
 void TypeSystemClang::DumpDeclContextHiearchy(clang::DeclContext *decl_ctx) {
   if (decl_ctx) {
     DumpDeclContextHiearchy(decl_ctx->getParent());
@@ -2595,7 +2605,7 @@ TypeSystemClang::GetDeclContextForType(clang::QualType type) {
 /// by the specified \ref allow_completion). If we fail to return a *complete*
 /// type, returns nullptr.
 static const clang::RecordType *
-GetCompleteRecordType(clang::ASTContext *ast, clang::QualType qual_type) {
+GetCompleteRecordType(const clang::ASTContext *ast, clang::QualType qual_type) {
   assert(qual_type->isRecordType());
 
   const auto *tag_type = llvm::cast<clang::RecordType>(qual_type.getTypePtr());
@@ -2636,7 +2646,7 @@ GetCompleteRecordType(clang::ASTContext *ast, clang::QualType qual_type) {
 /// function will try to complete the type if necessary (and allowed
 /// by the specified \ref allow_completion). If we fail to return a *complete*
 /// type, returns nullptr.
-static const clang::EnumType *GetCompleteEnumType(clang::ASTContext *ast,
+static const clang::EnumType *GetCompleteEnumType(const clang::ASTContext *ast,
                                                   clang::QualType qual_type) {
   assert(qual_type->isEnumeralType());
   assert(ast);
@@ -2669,7 +2679,7 @@ static const clang::EnumType *GetCompleteEnumType(clang::ASTContext *ast,
 /// by the specified \ref allow_completion). If we fail to return a *complete*
 /// type, returns nullptr.
 static const clang::ObjCObjectType *
-GetCompleteObjCObjectType(clang::ASTContext *ast, QualType qual_type) {
+GetCompleteObjCObjectType(const clang::ASTContext *ast, QualType qual_type) {
   assert(qual_type->isObjCObjectType());
   assert(ast);
 
@@ -2700,7 +2710,7 @@ GetCompleteObjCObjectType(clang::ASTContext *ast, QualType qual_type) {
   return objc_class_type;
 }
 
-static bool GetCompleteQualType(clang::ASTContext *ast,
+static bool GetCompleteQualType(const clang::ASTContext *ast,
                                 clang::QualType qual_type) {
   qual_type = RemoveWrappingTypes(qual_type);
   const clang::Type::TypeClass type_class = qual_type->getTypeClass();
@@ -3157,6 +3167,15 @@ bool TypeSystemClang::IsMemberFunctionPointerType(
   };
 
   return IsTypeImpl(type, isMemberFunctionPointerType);
+}
+
+bool TypeSystemClang::IsMemberDataPointerType(
+    lldb::opaque_compiler_type_t type) {
+  auto isMemberDataPointerType = [](clang::QualType qual_type) {
+    return qual_type->isMemberDataPointerType();
+  };
+
+  return IsTypeImpl(type, isMemberDataPointerType);
 }
 
 bool TypeSystemClang::IsFunctionPointerType(lldb::opaque_compiler_type_t type) {
@@ -3622,6 +3641,13 @@ bool TypeSystemClang::IsVoidType(lldb::opaque_compiler_type_t type) {
   if (!type)
     return false;
   return GetCanonicalQualType(type)->isVoidType();
+}
+
+bool TypeSystemClang::HasPointerAuthQualifier(
+    lldb::opaque_compiler_type_t type) {
+  if (!type)
+    return false;
+  return GetCanonicalQualType(type).getPointerAuth().isPresent();
 }
 
 bool TypeSystemClang::CanPassInRegisters(const CompilerType &type) {

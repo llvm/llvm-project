@@ -12,10 +12,10 @@
 #include "clang/DependencyScanning/DependencyScanningFilesystem.h"
 #include "clang/DependencyScanning/DependencyScanningService.h"
 #include "clang/DependencyScanning/DependencyScanningWorker.h"
-#include "clang/Driver/Driver.h"
 #include "clang/Frontend/FrontendActions.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/Option/Option.h"
 #include "llvm/Support/AdvisoryLock.h"
 #include "llvm/Support/CrashRecoveryContext.h"
 #include "llvm/Support/VirtualFileSystem.h"
@@ -135,7 +135,7 @@ public:
   }
 
   /// Update which module that is being actively traversed.
-  void visitModuleFile(StringRef Filename,
+  void visitModuleFile(ModuleFileName Filename,
                        serialization::ModuleKind Kind) override {
     // If the CurrentFile is not
     // considered stable, update any of it's transitive dependents.
@@ -144,14 +144,13 @@ public:
         !PrebuiltEntryIt->second.isInStableDir())
       PrebuiltEntryIt->second.updateDependentsNotInStableDirs(
           PrebuiltModulesASTMap);
-    CurrentFile = Filename;
+    CurrentFile = Filename.str();
   }
 
   /// Check the header search options for a given module when considering
   /// if the module comes from stable directories.
   bool ReadHeaderSearchOptions(const HeaderSearchOptions &HSOpts,
-                               StringRef ModuleFilename,
-                               StringRef SpecificModuleCachePath,
+                               StringRef ModuleFilename, StringRef ContextHash,
                                bool Complain) override {
 
     auto PrebuiltMapEntry = PrebuiltModulesASTMap.try_emplace(CurrentFile);
@@ -207,7 +206,7 @@ static bool visitPrebuiltModule(StringRef PrebuiltModuleFilename,
                                   CI.getHeaderSearchOpts(), CI.getLangOpts(),
                                   Diags, StableDirs);
 
-  Listener.visitModuleFile(PrebuiltModuleFilename,
+  Listener.visitModuleFile(ModuleFileName::makeExplicit(PrebuiltModuleFilename),
                            serialization::MK_ExplicitModule);
   if (ASTReader::readASTFileControlBlock(
           PrebuiltModuleFilename, CI.getFileManager(), CI.getModuleCache(),
@@ -217,7 +216,13 @@ static bool visitPrebuiltModule(StringRef PrebuiltModuleFilename,
     return true;
 
   while (!Worklist.empty()) {
-    Listener.visitModuleFile(Worklist.back(), serialization::MK_ExplicitModule);
+    // FIXME: This is assuming the PCH only refers to explicitly-built modules,
+    // which technically is not guaranteed. To remove the assumption, we'd need
+    // to also rework how the module files are handled to the scan, specifically
+    // change the values of HeaderSearchOptions::PrebuiltModuleFiles from plain
+    // paths to ModuleFileName.
+    Listener.visitModuleFile(ModuleFileName::makeExplicit(Worklist.back()),
+                             serialization::MK_ExplicitModule);
     if (ASTReader::readASTFileControlBlock(
             Worklist.pop_back_val(), CI.getFileManager(), CI.getModuleCache(),
             CI.getPCHContainerReader(),
@@ -413,6 +418,8 @@ void dependencies::initializeScanCompilerInstance(
   ScanInstance.setBuildingModule(false);
   ScanInstance.createVirtualFileSystem(FS, DiagConsumer);
   ScanInstance.createDiagnostics(DiagConsumer, /*ShouldOwnClient=*/false);
+  if (Service.getOpts().Format == ScanningOutputFormat::P1689)
+    ScanInstance.getDiagnostics().setIgnoreAllWarnings(true);
   ScanInstance.createFileManager();
   ScanInstance.createSourceManager();
 
@@ -434,7 +441,8 @@ void dependencies::initializeScanCompilerInstance(
 
 std::shared_ptr<CompilerInvocation> dependencies::createScanCompilerInvocation(
     const CompilerInvocation &Invocation,
-    const DependencyScanningService &Service) {
+    const DependencyScanningService &Service,
+    DependencyActionController &Controller) {
   auto ScanInvocation = std::make_shared<CompilerInvocation>(Invocation);
 
   sanitizeDiagOpts(ScanInvocation->getDiagnosticOpts());
@@ -474,6 +482,8 @@ std::shared_ptr<CompilerInvocation> dependencies::createScanCompilerInvocation(
   // Ensure that the scanner does not create new dependency collectors,
   // and thus won't write out the extra '.d' files to disk.
   ScanInvocation->getDependencyOutputOpts() = {};
+
+  Controller.initializeScanInvocation(*ScanInvocation);
 
   return ScanInvocation;
 }
@@ -583,11 +593,13 @@ public:
 
 struct SingleModuleWithAsyncModuleCompiles : PreprocessOnlyAction {
   DependencyScanningService &Service;
+  DependencyActionController &Controller;
   AsyncModuleCompiles &Compiles;
 
   SingleModuleWithAsyncModuleCompiles(DependencyScanningService &Service,
+                                      DependencyActionController &Controller,
                                       AsyncModuleCompiles &Compiles)
-      : Service(Service), Compiles(Compiles) {}
+      : Service(Service), Controller(Controller), Compiles(Compiles) {}
 
   bool BeginSourceFileAction(CompilerInstance &CI) override;
 };
@@ -597,18 +609,20 @@ struct SingleModuleWithAsyncModuleCompiles : PreprocessOnlyAction {
 struct AsyncModuleCompile : PPCallbacks {
   CompilerInstance &CI;
   DependencyScanningService &Service;
+  DependencyActionController &Controller;
   AsyncModuleCompiles &Compiles;
 
   AsyncModuleCompile(CompilerInstance &CI, DependencyScanningService &Service,
+                     DependencyActionController &Controller,
                      AsyncModuleCompiles &Compiles)
-      : CI(CI), Service(Service), Compiles(Compiles) {}
+      : CI(CI), Service(Service), Controller(Controller), Compiles(Compiles) {}
 
   void moduleLoadSkipped(Module *M) override {
     M = M->getTopLevelModule();
 
     HeaderSearch &HS = CI.getPreprocessor().getHeaderSearchInfo();
     ModuleCache &ModCache = CI.getModuleCache();
-    std::string ModuleFileName = HS.getCachedModuleFileName(M);
+    ModuleFileName ModuleFileName = HS.getCachedModuleFileName(M);
 
     uint64_t Timestamp = ModCache.getModuleTimestamp(ModuleFileName);
     // Someone else already built/validated the PCM.
@@ -665,16 +679,20 @@ struct AsyncModuleCompile : PPCallbacks {
     auto ModCI2 = CI.cloneForModuleCompile(SourceLocation(), M, ModuleFileName,
                                            CloneConfig);
 
+    auto ModController = Controller.clone();
+
     // Note: This lock belongs to a module cache that might not outlive the
     // thread. This works, because the in-process lock only refers to an object
     // managed by the service, which does outlive the thread.
     Compiles.add([Lock = std::move(Lock), ModCI1 = std::move(ModCI1),
                   ModCI2 = std::move(ModCI2), DC = std::move(DC),
-                  Service = &Service, Compiles = &Compiles] {
+                  ModController = std::move(ModController), Service = &Service,
+                  Compiles = &Compiles] {
       llvm::CrashRecoveryContext CRC;
       (void)CRC.RunSafely([&] {
         // Quickly discovers and compiles modules for the real scan below.
-        SingleModuleWithAsyncModuleCompiles Action1(*Service, *Compiles);
+        SingleModuleWithAsyncModuleCompiles Action1(*Service, *ModController,
+                                                    *Compiles);
         (void)ModCI1->ExecuteAction(Action1);
         // The real scan below.
         ModCI2->getPreprocessorOpts().SingleModuleParseMode = false;
@@ -689,16 +707,18 @@ struct AsyncModuleCompile : PPCallbacks {
 /// modules asynchronously without blocking or importing them.
 struct SingleTUWithAsyncModuleCompiles : PreprocessOnlyAction {
   DependencyScanningService &Service;
+  DependencyActionController &Controller;
   AsyncModuleCompiles &Compiles;
 
   SingleTUWithAsyncModuleCompiles(DependencyScanningService &Service,
+                                  DependencyActionController &Controller,
                                   AsyncModuleCompiles &Compiles)
-      : Service(Service), Compiles(Compiles) {}
+      : Service(Service), Controller(Controller), Compiles(Compiles) {}
 
   bool BeginSourceFileAction(CompilerInstance &CI) override {
     CI.getInvocation().getPreprocessorOpts().SingleModuleParseMode = true;
-    CI.getPreprocessor().addPPCallbacks(
-        std::make_unique<AsyncModuleCompile>(CI, Service, Compiles));
+    CI.getPreprocessor().addPPCallbacks(std::make_unique<AsyncModuleCompile>(
+        CI, Service, Controller, Compiles));
     return true;
   }
 };
@@ -707,7 +727,7 @@ bool SingleModuleWithAsyncModuleCompiles::BeginSourceFileAction(
     CompilerInstance &CI) {
   CI.getInvocation().getPreprocessorOpts().SingleModuleParseMode = true;
   CI.getPreprocessor().addPPCallbacks(
-      std::make_unique<AsyncModuleCompile>(CI, Service, Compiles));
+      std::make_unique<AsyncModuleCompile>(CI, Service, Controller, Compiles));
   return true;
 }
 
@@ -723,12 +743,18 @@ bool DependencyScanningAction::runInvocation(
     canonicalizeDefines(OriginalInvocation->getPreprocessorOpts());
 
   if (Scanned) {
+    CompilerInstance &ScanInstance = *ScanInstanceStorage;
+
     // Scanning runs once for the first -cc1 invocation in a chain of driver
     // jobs. For any dependent jobs, reuse the scanning result and just
     // update the new invocation.
     // FIXME: to support multi-arch builds, each arch requires a separate scan
     if (MDC)
       MDC->applyDiscoveredDependencies(*OriginalInvocation);
+
+    if (!Controller.finalize(ScanInstance, *OriginalInvocation))
+      return false;
+
     Consumer.handleBuildCommand(
         {Executable, OriginalInvocation->getCC1CommandLine()});
     return true;
@@ -738,7 +764,7 @@ bool DependencyScanningAction::runInvocation(
 
   // Create a compiler instance to handle the actual work.
   auto ScanInvocation =
-      createScanCompilerInvocation(*OriginalInvocation, Service);
+      createScanCompilerInvocation(*OriginalInvocation, Service, Controller);
 
   // Quickly discovers and compiles modules for the real scan below.
   std::optional<AsyncModuleCompiles> AsyncCompiles;
@@ -765,7 +791,7 @@ bool DependencyScanningAction::runInvocation(
       ScanInstance.getLangOpts().CompilingPCH = true;
 
     AsyncCompiles.emplace();
-    SingleTUWithAsyncModuleCompiles Action(Service, *AsyncCompiles);
+    SingleTUWithAsyncModuleCompiles Action(Service, Controller, *AsyncCompiles);
     (void)ScanInstance.ExecuteAction(Action);
   }
 
@@ -793,12 +819,19 @@ bool DependencyScanningAction::runInvocation(
   if (ScanInstance.getDiagnostics().hasErrorOccurred())
     return false;
 
+  if (!Controller.initialize(ScanInstance, *OriginalInvocation))
+    return false;
+
   ReadPCHAndPreprocessAction Action;
   const bool Result = ScanInstance.ExecuteAction(Action);
 
   if (Result) {
     if (MDC)
       MDC->applyDiscoveredDependencies(*OriginalInvocation);
+
+    if (!Controller.finalize(ScanInstance, *OriginalInvocation))
+      return false;
+
     Consumer.handleBuildCommand(
         {Executable, OriginalInvocation->getCC1CommandLine()});
   }

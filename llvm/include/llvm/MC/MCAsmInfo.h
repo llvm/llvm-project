@@ -154,10 +154,10 @@ protected:
   // Do we need to create a local symbol for .size?
   bool NeedsLocalForSize = false;
 
-  /// This prefix is used for globals like constant pool entries that are
-  /// completely private to the .s file and should not have names in the .o
-  /// file.  Defaults to "L"
-  StringRef PrivateGlobalPrefix = "L";
+  /// For internal use by compiler and assembler, not meant to be visible
+  /// externally. They are usually not emitted to the symbol table in the
+  /// object file.
+  StringRef InternalSymbolPrefix = "L";
 
   /// This prefix is used for labels for basic blocks. Defaults to "L"
   StringRef PrivateLabelPrefix = "L";
@@ -544,7 +544,7 @@ public:
   bool usesSetToEquateSymbol() const { return UsesSetToEquateSymbol; }
   bool useAssignmentForEHBegin() const { return UseAssignmentForEHBegin; }
   bool needsLocalForSize() const { return NeedsLocalForSize; }
-  StringRef getPrivateGlobalPrefix() const { return PrivateGlobalPrefix; }
+  StringRef getInternalSymbolPrefix() const { return InternalSymbolPrefix; }
   StringRef getPrivateLabelPrefix() const { return PrivateLabelPrefix; }
 
   bool hasLinkerPrivateGlobalPrefix() const {
@@ -554,7 +554,7 @@ public:
   StringRef getLinkerPrivateGlobalPrefix() const {
     if (hasLinkerPrivateGlobalPrefix())
       return LinkerPrivateGlobalPrefix;
-    return getPrivateGlobalPrefix();
+    return getInternalSymbolPrefix();
   }
 
   const char *getInlineAsmStart() const { return InlineAsmStart; }

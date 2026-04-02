@@ -68,6 +68,36 @@ struct copyable {
   ~copyable();
 };
 
+namespace std {
+template<typename T> constexpr T &&move(T &val) { return static_cast<T&&>(val); }
+template<class T>
+struct type_identity { using type = T; };
+}
+struct ref_arg_kernel_name;
+
+template <typename KernelName, typename KernelType>
+[[clang::sycl_kernel_entry_point(KernelName)]]
+void ref_arg_kernel(const KernelType &ref) {
+  ref(42);
+}
+
+struct fwd_ref_arg_kernel_name;
+struct fwd_ref_arg_kernel_name_move;
+
+template <typename KernelName, typename KernelType>
+[[clang::sycl_kernel_entry_point(KernelName)]]
+void fwd_ref_arg_kernel(KernelType &&ref) {
+  ref(42);
+}
+
+struct rvalue_ref_arg_kernel_name;
+
+template <typename KernelName, typename KernelType>
+[[clang::sycl_kernel_entry_point(KernelName)]]
+void rvalue_ref_arg_kernel(typename std::type_identity<KernelType>::type &&ref) {
+  ref(42);
+}
+
 int main() {
   single_purpose_kernel obj;
   single_purpose_kernel_task(obj);
@@ -78,6 +108,11 @@ int main() {
   handler h;
   copyable c{42};
   h.kernel_entry_point<struct KN>([=] (int a, int b) { return c.i + a + b; }, 1, 2);
+  ref_arg_kernel<ref_arg_kernel_name>(lambda);
+  fwd_ref_arg_kernel<fwd_ref_arg_kernel_name>(lambda);
+  fwd_ref_arg_kernel<fwd_ref_arg_kernel_name_move>(std::move(lambda));
+  auto anotherlambda = [=](auto) { (void) capture; };
+  rvalue_ref_arg_kernel<rvalue_ref_arg_kernel_name, decltype(anotherlambda)>(std::move(anotherlambda));
 }
 
 // Verify that SYCL kernel caller functions are not emitted during host
@@ -87,6 +122,10 @@ int main() {
 // CHECK-HOST-NOT: define {{.*}} @_ZTSZ4mainEUlT_E_
 // CHECK-HOST-NOT: define {{.*}} @"_ZTS6\CE\B4\CF\84\CF\87"
 // CHECK-HOST-NOT: define {{.*}} @_ZTSZ4mainE2KN
+// CHECK-HOST-NOT: define {{.*}} @_ZTS19ref_arg_kernel_name
+// CHECK-HOST-NOT: define {{.*}} @_ZTS23fwd_ref_arg_kernel_name
+// CHECK-HOST-NOT: define {{.*}} @_ZTS28fwd_ref_arg_kernel_name_move
+// CHECK-HOST-NOT: define {{.*}} @_ZTS26rvalue_ref_arg_kernel_name
 
 // Verify that sycl_kernel_entry_point attributed functions are not emitted
 // during device compilation.
@@ -94,6 +133,9 @@ int main() {
 // CHECK-DEVICE-NOT: single_purpose_kernel_task
 // CHECK-DEVICE-NOT: kernel_single_task
 // CHECK-DEVICE-NOT: kernel_entry_point
+// CHECK-DEVICE-NOT: ref_arg_kernel
+// CHECK-DEVICE-NOT: fwd_ref_arg_kernel
+// CHECK-DEVICE-NOT: rvalue_ref_arg_kernel
 
 // Verify that kernel launch code is generated for sycl_kernel_entry_point
 // attributed functions during host compilation.
@@ -101,6 +143,19 @@ int main() {
 // CHECK-HOST-LINUX:      @.str = private unnamed_addr constant [33 x i8] c"_ZTS26single_purpose_kernel_name\00", align 1
 // CHECK-HOST-LINUX:      @.str.1 = private unnamed_addr constant [18 x i8] c"_ZTSZ4mainEUlT_E_\00", align 1
 // CHECK-HOST-LINUX:      @.str.2 = private unnamed_addr constant [12 x i8] c"_ZTS6\CE\B4\CF\84\CF\87\00", align 1
+// CHECK-HOST-LINUX:      @.str.3 = private unnamed_addr constant [15 x i8] c"_ZTSZ4mainE2KN\00", align 1
+// CHECK-HOST-LINUX:      @.str.4 = private unnamed_addr constant [26 x i8] c"_ZTS19ref_arg_kernel_name\00", align 1
+// CHECK-HOST-LINUX       @.str.5 = private unnamed_addr constant [30 x i8] c"_ZTS23fwd_ref_arg_kernel_name\00", align 1
+// CHECK-HOST-LINUX:      @.str.6 = private unnamed_addr constant [35 x i8] c"_ZTS28fwd_ref_arg_kernel_name_move\00", align 1
+// CHECK-HOST-LINUX:      @.str.7 = private unnamed_addr constant [33 x i8] c"_ZTS26rvalue_ref_arg_kernel_name\00", align 1
+// CHECK-HOST-WINDOWS: @"??_C@_0CB@KFIJOMLB@_ZTS26single_purpose_kernel_name@" = linkonce_odr dso_local unnamed_addr constant [33 x i8] c"_ZTS26single_purpose_kernel_name\00", comdat, align 1
+// CHECK-HOST-WINDOWS: @"??_C@_0BC@NHCDOLAA@_ZTSZ4mainEUlT_E_?$AA@" = linkonce_odr dso_local unnamed_addr constant [18 x i8] c"_ZTSZ4mainEUlT_E_\00", comdat, align 1
+// CHECK-HOST-WINDOWS: @"??_C@_0M@BCGAEMBE@_ZTS6?N?$LE?O?$IE?O?$IH?$AA@" = linkonce_odr dso_local unnamed_addr constant [12 x i8] c"_ZTS6\CE\B4\CF\84\CF\87\00", comdat, align 1
+// CHECK-HOST-WINDOWS: @"??_C@_0P@DLGHPODL@_ZTSZ4mainE2KN?$AA@" = linkonce_odr dso_local unnamed_addr constant [15 x i8] c"_ZTSZ4mainE2KN\00", comdat, align 1
+// CHECK-HOST-WINDOWS: @"??_C@_0BK@PPDJPOBM@_ZTS19ref_arg_kernel_name?$AA@" = linkonce_odr dso_local unnamed_addr constant [26 x i8] c"_ZTS19ref_arg_kernel_name\00", comdat, align 1
+// CHECK-HOST-WINDOWS: @"??_C@_0BO@KEIBIHKH@_ZTS23fwd_ref_arg_kernel_name?$AA@" = linkonce_odr dso_local unnamed_addr constant [30 x i8] c"_ZTS23fwd_ref_arg_kernel_name\00", comdat, align 1
+// CHECK-HOST-WINDOWS: @"??_C@_0CD@FDALJLMM@_ZTS28fwd_ref_arg_kernel_name_mo@" = linkonce_odr dso_local unnamed_addr constant [35 x i8] c"_ZTS28fwd_ref_arg_kernel_name_move\00", comdat, align 1
+// CHECK-HOST-WINDOWS: @"??_C@_0CB@HCPMABHM@_ZTS26rvalue_ref_arg_kernel_name@" = linkonce_odr dso_local unnamed_addr constant [33 x i8] c"_ZTS26rvalue_ref_arg_kernel_name\00", comdat, align 1
 //
 // CHECK-HOST-LINUX:      define dso_local void @_Z26single_purpose_kernel_task21single_purpose_kernel() #{{[0-9]+}} {
 // CHECK-HOST-LINUX-NEXT: entry:
@@ -149,6 +204,58 @@ int main() {
 // CHECK-HOST-LINUX-NEXT:   %1 = load i32, ptr %b.addr, align 4
 // CHECK-HOST-LINUX-NEXT:   call void @_ZN7handler18sycl_kernel_launchIZ4mainE2KNJZ4mainEUliiE_iiEEEvPKcDpT0_(ptr noundef nonnull align 1 dereferenceable(1) %this1, ptr noundef @.str.3, ptr noundef %agg.tmp, i32 noundef %0, i32 noundef %1)
 // CHECK-HOST-LINUX-NEXT:   call void @_ZZ4mainENUliiE_D1Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) %agg.tmp) #{{[0-9]+}}
+// CHECK-HOST-LINUX-NEXT:   ret void
+// CHECK-HOST-LINUX-NEXT: }
+//
+// CHECK-HOST-LINUX:      define internal void @_Z14ref_arg_kernelI19ref_arg_kernel_nameZ4mainEUlT_E_EvRKT0_(ptr noundef nonnull align 4 dereferenceable(4) %ref) #{{[0-9]+}} {
+// CHECK-HOST-LINUX-NEXT: entry:
+// CHECK-HOST-LINUX-NEXT:   %ref.addr = alloca ptr, align 8
+// CHECK-HOST-LINUX-NEXT:   %agg.tmp = alloca %class.anon, align 4
+// CHECK-HOST-LINUX-NEXT:   store ptr %ref, ptr %ref.addr, align 8
+// CHECK-HOST-LINUX-NEXT:   %0 = load ptr, ptr %ref.addr, align 8
+// CHECK-HOST-LINUX-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %agg.tmp, ptr align 4 %0, i64 4, i1 false)
+// CHECK-HOST-LINUX-NEXT:   %coerce.dive = getelementptr inbounds nuw %class.anon, ptr %agg.tmp, i32 0, i32 0
+// CHECK-HOST-LINUX-NEXT:   %1 = load i32, ptr %coerce.dive, align 4
+// CHECK-HOST-LINUX-NEXT:   call void @_Z18sycl_kernel_launchI19ref_arg_kernel_nameJZ4mainEUlT_E_EEvPKcDpT0_(ptr noundef @.str.4, i32 %1)
+// CHECK-HOST-LINUX-NEXT:   ret void
+// CHECK-HOST-LINUX-NEXT: }
+//
+// CHECK-HOST-LINUX:      define internal void @_Z18fwd_ref_arg_kernelI23fwd_ref_arg_kernel_nameRZ4mainEUlT_E_EvOT0_(ptr noundef nonnull align 4 dereferenceable(4) %ref) #{{[0-9]+}} {
+// CHECK-HOST-LINUX-NEXT: entry:
+// CHECK-HOST-LINUX-NEXT:   %ref.addr = alloca ptr, align 8
+// CHECK-HOST-LINUX-NEXT:   %agg.tmp = alloca %class.anon, align 4
+// CHECK-HOST-LINUX-NEXT:   store ptr %ref, ptr %ref.addr, align 8
+// CHECK-HOST-LINUX-NEXT:   %0 = load ptr, ptr %ref.addr, align 8
+// CHECK-HOST-LINUX-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %agg.tmp, ptr align 4 %0, i64 4, i1 false)
+// CHECK-HOST-LINUX-NEXT:   %coerce.dive = getelementptr inbounds nuw %class.anon, ptr %agg.tmp, i32 0, i32 0
+// CHECK-HOST-LINUX-NEXT:   %1 = load i32, ptr %coerce.dive, align 4
+// CHECK-HOST-LINUX-NEXT:   call void @_Z18sycl_kernel_launchI23fwd_ref_arg_kernel_nameJZ4mainEUlT_E_EEvPKcDpT0_(ptr noundef @.str.5, i32 %1)
+// CHECK-HOST-LINUX-NEXT:   ret void
+// CHECK-HOST-LINUX-NEXT: }
+//
+// CHECK-HOST-LINUX:      define internal void @_Z18fwd_ref_arg_kernelI28fwd_ref_arg_kernel_name_moveZ4mainEUlT_E_EvOT0_(ptr noundef nonnull align 4 dereferenceable(4) %ref) #{{[0-9]+}} {
+// CHECK-HOST-LINUX-NEXT: entry:
+// CHECK-HOST-LINUX-NEXT:   %ref.addr = alloca ptr, align 8
+// CHECK-HOST-LINUX-NEXT:   %agg.tmp = alloca %class.anon, align 4
+// CHECK-HOST-LINUX-NEXT:   store ptr %ref, ptr %ref.addr, align 8
+// CHECK-HOST-LINUX-NEXT:   %0 = load ptr, ptr %ref.addr, align 8
+// CHECK-HOST-LINUX-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %agg.tmp, ptr align 4 %0, i64 4, i1 false)
+// CHECK-HOST-LINUX-NEXT:   %coerce.dive = getelementptr inbounds nuw %class.anon, ptr %agg.tmp, i32 0, i32 0
+// CHECK-HOST-LINUX-NEXT:   %1 = load i32, ptr %coerce.dive, align 4
+// CHECK-HOST-LINUX-NEXT:   call void @_Z18sycl_kernel_launchI28fwd_ref_arg_kernel_name_moveJZ4mainEUlT_E_EEvPKcDpT0_(ptr noundef @.str.6, i32 %1)
+// CHECK-HOST-LINUX-NEXT:   ret void
+// CHECK-HOST-LINUX-NEXT: }
+//
+// CHECK-HOST-LINUX:      define internal void @_Z21rvalue_ref_arg_kernelI26rvalue_ref_arg_kernel_nameZ4mainEUlT_E0_EvONSt13type_identityIT0_E4typeE(ptr noundef nonnull align 4 dereferenceable(4) %ref) #{{[0-9]+}} {
+// CHECK-HOST-LINUX-NEXT: entry:
+// CHECK-HOST-LINUX-NEXT:   %ref.addr = alloca ptr, align 8
+// CHECK-HOST-LINUX-NEXT:   %agg.tmp = alloca %class.anon.2, align 4
+// CHECK-HOST-LINUX-NEXT:   store ptr %ref, ptr %ref.addr, align 8
+// CHECK-HOST-LINUX-NEXT:   %0 = load ptr, ptr %ref.addr, align 8
+// CHECK-HOST-LINUX-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %agg.tmp, ptr align 4 %0, i64 4, i1 false)
+// CHECK-HOST-LINUX-NEXT:   %coerce.dive = getelementptr inbounds nuw %class.anon.2, ptr %agg.tmp, i32 0, i32 0
+// CHECK-HOST-LINUX-NEXT:   %1 = load i32, ptr %coerce.dive, align 4
+// CHECK-HOST-LINUX-NEXT:   call void @_Z18sycl_kernel_launchI26rvalue_ref_arg_kernel_nameJZ4mainEUlT_E0_EEvPKcDpT0_(ptr noundef @.str.7, i32 %1)
 // CHECK-HOST-LINUX-NEXT:   ret void
 // CHECK-HOST-LINUX-NEXT: }
 
@@ -212,6 +319,58 @@ int main() {
 // CHECK-HOST-WINDOWS-NEXT:   %2 = load i32, ptr %coerce.dive4, align 4
 // CHECK-HOST-WINDOWS-NEXT:   call void @"??$sycl_kernel_launch@UKN@?1??main@@9@V<lambda_3>@?0??2@9@HH@handler@@AEAAXPEBDV<lambda_3>@?0??main@@9@HH@Z"(ptr noundef nonnull align 1 dereferenceable(1) %this2, ptr noundef @"??_C@_0P@DLGHPODL@_ZTSZ4mainE2KN?$AA@", i32 %2, i32 noundef %1, i32 noundef %0)
 // CHECK-HOST-WINDOWS-NEXT:   call void @"??1<lambda_3>@?0??main@@9@QEAA@XZ"(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) %k) #{{[0-9]+}}
+// CHECK-HOST-WINDOWS-NEXT:   ret void
+// CHECK-HOST-WINDOWS-NEXT: }
+//
+// CHECK-HOST-WINDOWS:      define internal void @"??$ref_arg_kernel@Uref_arg_kernel_name@@V<lambda_1>@?0??main@@9@@@YAXAEBV<lambda_1>@?0??main@@9@@Z"(ptr noundef nonnull align 4 dereferenceable(4) %ref) #{{[0-9]+}} {
+// CHECK-HOST-WINDOWS-NEXT: entry:
+// CHECK-HOST-WINDOWS-NEXT:   %ref.addr = alloca ptr, align 8
+// CHECK-HOST-WINDOWS-NEXT:   %agg.tmp = alloca %class.anon, align 4
+// CHECK-HOST-WINDOWS-NEXT:   store ptr %ref, ptr %ref.addr, align 8
+// CHECK-HOST-WINDOWS-NEXT:   %0 = load ptr, ptr %ref.addr, align 8
+// CHECK-HOST-WINDOWS-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %agg.tmp, ptr align 4 %0, i64 4, i1 false)
+// CHECK-HOST-WINDOWS-NEXT:   %coerce.dive = getelementptr inbounds nuw %class.anon, ptr %agg.tmp, i32 0, i32 0
+// CHECK-HOST-WINDOWS-NEXT:   %1 = load i32, ptr %coerce.dive, align 4
+// CHECK-HOST-WINDOWS-NEXT:   call void @"??$sycl_kernel_launch@Uref_arg_kernel_name@@V<lambda_1>@?0??main@@9@@@YAXPEBDV<lambda_1>@?0??main@@9@@Z"(ptr noundef @"??_C@_0BK@PPDJPOBM@_ZTS19ref_arg_kernel_name?$AA@", i32 %1)
+// CHECK-HOST-WINDOWS-NEXT:   ret void
+// CHECK-HOST-WINDOWS-NEXT: }
+//
+// CHECK-HOST-WINDOWS:      define internal void @"??$fwd_ref_arg_kernel@Ufwd_ref_arg_kernel_name@@AEAV<lambda_1>@?0??main@@9@@@YAXAEAV<lambda_1>@?0??main@@9@@Z"(ptr noundef nonnull align 4 dereferenceable(4) %ref) #{{[0-9]+}} {
+// CHECK-HOST-WINDOWS-NEXT: entry:
+// CHECK-HOST-WINDOWS-NEXT:   %ref.addr = alloca ptr, align 8
+// CHECK-HOST-WINDOWS-NEXT:   %agg.tmp = alloca %class.anon, align 4
+// CHECK-HOST-WINDOWS-NEXT:   store ptr %ref, ptr %ref.addr, align 8
+// CHECK-HOST-WINDOWS-NEXT:   %0 = load ptr, ptr %ref.addr, align 8
+// CHECK-HOST-WINDOWS-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %agg.tmp, ptr align 4 %0, i64 4, i1 false)
+// CHECK-HOST-WINDOWS-NEXT:   %coerce.dive = getelementptr inbounds nuw %class.anon, ptr %agg.tmp, i32 0, i32 0
+// CHECK-HOST-WINDOWS-NEXT:   %1 = load i32, ptr %coerce.dive, align 4
+// CHECK-HOST-WINDOWS-NEXT:   call void @"??$sycl_kernel_launch@Ufwd_ref_arg_kernel_name@@V<lambda_1>@?0??main@@9@@@YAXPEBDV<lambda_1>@?0??main@@9@@Z"(ptr noundef @"??_C@_0BO@KEIBIHKH@_ZTS23fwd_ref_arg_kernel_name?$AA@", i32 %1)
+// CHECK-HOST-WINDOWS-NEXT:   ret void
+// CHECK-HOST-WINDOWS-NEXT: }
+//
+// CHECK-HOST-WINDOWS:      define internal void @"??$fwd_ref_arg_kernel@Ufwd_ref_arg_kernel_name_move@@V<lambda_1>@?0??main@@9@@@YAX$$QEAV<lambda_1>@?0??main@@9@@Z"(ptr noundef nonnull align 4 dereferenceable(4) %ref) #{{[0-9]+}} {
+// CHECK-HOST-WINDOWS-NEXT: entry:
+// CHECK-HOST-WINDOWS-NEXT:   %ref.addr = alloca ptr, align 8
+// CHECK-HOST-WINDOWS-NEXT:   %agg.tmp = alloca %class.anon, align 4
+// CHECK-HOST-WINDOWS-NEXT:   store ptr %ref, ptr %ref.addr, align 8
+// CHECK-HOST-WINDOWS-NEXT:   %0 = load ptr, ptr %ref.addr, align 8
+// CHECK-HOST-WINDOWS-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %agg.tmp, ptr align 4 %0, i64 4, i1 false)
+// CHECK-HOST-WINDOWS-NEXT:   %coerce.dive = getelementptr inbounds nuw %class.anon, ptr %agg.tmp, i32 0, i32 0
+// CHECK-HOST-WINDOWS-NEXT:   %1 = load i32, ptr %coerce.dive, align 4
+// CHECK-HOST-WINDOWS-NEXT:   call void @"??$sycl_kernel_launch@Ufwd_ref_arg_kernel_name_move@@V<lambda_1>@?0??main@@9@@@YAXPEBDV<lambda_1>@?0??main@@9@@Z"(ptr noundef @"??_C@_0CD@FDALJLMM@_ZTS28fwd_ref_arg_kernel_name_mo@", i32 %1)
+// CHECK-HOST-WINDOWS-NEXT:   ret void
+// CHECK-HOST-WINDOWS-NEXT: }
+//
+// CHECK-HOST-WINDOWS:      define internal void @"??$rvalue_ref_arg_kernel@Urvalue_ref_arg_kernel_name@@V<lambda_4>@?0??main@@9@@@YAX$$QEAV<lambda_4>@?0??main@@9@@Z"(ptr noundef nonnull align 4 dereferenceable(4) %ref) #{{[0-9]+}} {
+// CHECK-HOST-WINDOWS-NEXT: entry:
+// CHECK-HOST-WINDOWS-NEXT:   %ref.addr = alloca ptr, align 8
+// CHECK-HOST-WINDOWS-NEXT:   %agg.tmp = alloca %class.anon.2, align 4
+// CHECK-HOST-WINDOWS-NEXT:   store ptr %ref, ptr %ref.addr, align 8
+// CHECK-HOST-WINDOWS-NEXT:   %0 = load ptr, ptr %ref.addr, align 8
+// CHECK-HOST-WINDOWS-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %agg.tmp, ptr align 4 %0, i64 4, i1 false)
+// CHECK-HOST-WINDOWS-NEXT:   %coerce.dive = getelementptr inbounds nuw %class.anon.2, ptr %agg.tmp, i32 0, i32 0
+// CHECK-HOST-WINDOWS-NEXT:   %1 = load i32, ptr %coerce.dive, align 4
+// CHECK-HOST-WINDOWS-NEXT:   call void @"??$sycl_kernel_launch@Urvalue_ref_arg_kernel_name@@V<lambda_4>@?0??main@@9@@@YAXPEBDV<lambda_4>@?0??main@@9@@Z"(ptr noundef @"??_C@_0CB@HCPMABHM@_ZTS26rvalue_ref_arg_kernel_name@", i32 %1)
 // CHECK-HOST-WINDOWS-NEXT:   ret void
 // CHECK-HOST-WINDOWS-NEXT: }
 
@@ -411,6 +570,138 @@ int main() {
 // CHECK-SPIRV-SAME:      (ptr addrspace(4) noundef align 4 dereferenceable_or_null(4) %k.ascast, i32 noundef %0, i32 noundef %1) #[[SPIR_ATTR1:[0-9]+]]
 // CHECK-SPIRV-NEXT:    ret void
 // CHECK-SPIRV-NEXT:  }
+
+// IR for the SYCL kernel caller function generated for ref_arg_kernel with
+// ref_arg_kernel_name as the SYCL kernel name type. The reference parameter is
+// lowered to a value parameter in the kernel entry point.
+//
+// CHECK-AMDGCN:      define dso_local amdgpu_kernel void @_ZTS19ref_arg_kernel_name
+// CHECK-AMDGCN-SAME:   (i32 %ref.coerce) #[[AMDGCN_ATTR0]] {
+// CHECK-AMDGCN-NEXT: entry:
+// CHECK-AMDGCN-NEXT:   %ref = alloca %class.anon, align 4, addrspace(5)
+// CHECK-AMDGCN-NEXT:   %ref1 = addrspacecast ptr addrspace(5) %ref to ptr
+// CHECK-AMDGCN-NEXT:   %coerce.dive = getelementptr inbounds nuw %class.anon, ptr %ref1, i32 0, i32 0
+// CHECK-AMDGCN-NEXT:   store i32 %ref.coerce, ptr %coerce.dive, align 4
+// CHECK-AMDGCN-NEXT:   call void @_ZZ4mainENKUlT_E_clIiEEDaS_
+// CHECK-AMDGCN-SAME:     (ptr noundef nonnull align 4 dereferenceable(4) %ref1, i32 noundef 42) #[[AMDGCN_ATTR1]]
+// CHECK-AMDGCN-NEXT:   ret void
+// CHECK-AMDGCN-NEXT: }
+//
+// CHECK-NVPTX:       define dso_local ptx_kernel void @_ZTS19ref_arg_kernel_name
+// CHECK-NVPTX-SAME:    (ptr noundef byval(%class.anon) align 4 %ref) #[[NVPTX_ATTR0]] {
+// CHECK-NVPTX-NEXT:  entry:
+// CHECK-NVPTX-NEXT:    call void @_ZZ4mainENKUlT_E_clIiEEDaS_
+// CHECK-NVPTX-SAME:      (ptr noundef nonnull align 4 dereferenceable(4) %ref, i32 noundef 42) #[[NVPTX_ATTR1]]
+// CHECK-NVPTX-NEXT:    ret void
+// CHECK-NVPTX-NEXT:  }
+//
+// CHECK-SPIR:        define {{[a-z_ ]*}}spir_kernel void @_ZTS19ref_arg_kernel_name
+// CHECK-SPIR-SAME:     (ptr noundef byval(%class.anon) align 4 %ref) #[[SPIR_ATTR0]] {
+// CHECK-SPIR-NEXT:   entry:
+// CHECK-SPIR-NEXT:     %ref.ascast = addrspacecast ptr %ref to ptr addrspace(4)
+// CHECK-SPIR-NEXT:     call spir_func void @_ZZ4mainENKUlT_E_clIiEEDaS_
+// CHECK-SPIR-SAME:       (ptr addrspace(4) noundef align 4 dereferenceable_or_null(4) %ref.ascast, i32 noundef 42) #[[SPIR_ATTR1]]
+// CHECK-SPIR-NEXT:     ret void
+// CHECK-SPIR-NEXT:   }
+
+// IR for the SYCL kernel caller function generated for fwd_ref_arg_kernel
+// with fwd_ref_arg_kernel_name as the SYCL kernel name type. The forwarding
+// reference parameter is lowered to a value parameter in the kernel entry point.
+//
+// CHECK-AMDGCN:      define dso_local amdgpu_kernel void @_ZTS23fwd_ref_arg_kernel_name
+// CHECK-AMDGCN-SAME:   (i32 %ref.coerce) #[[AMDGCN_ATTR0]] {
+// CHECK-AMDGCN-NEXT: entry:
+// CHECK-AMDGCN-NEXT:   %ref = alloca %class.anon, align 4, addrspace(5)
+// CHECK-AMDGCN-NEXT:   %ref1 = addrspacecast ptr addrspace(5) %ref to ptr
+// CHECK-AMDGCN-NEXT:   %coerce.dive = getelementptr inbounds nuw %class.anon, ptr %ref1, i32 0, i32 0
+// CHECK-AMDGCN-NEXT:   store i32 %ref.coerce, ptr %coerce.dive, align 4
+// CHECK-AMDGCN-NEXT:   call void @_ZZ4mainENKUlT_E_clIiEEDaS_
+// CHECK-AMDGCN-SAME:     (ptr noundef nonnull align 4 dereferenceable(4) %ref1, i32 noundef 42) #[[AMDGCN_ATTR1]]
+// CHECK-AMDGCN-NEXT:   ret void
+// CHECK-AMDGCN-NEXT: }
+//
+// CHECK-NVPTX:       define dso_local ptx_kernel void @_ZTS23fwd_ref_arg_kernel_name
+// CHECK-NVPTX-SAME:    (ptr noundef byval(%class.anon) align 4 %ref) #[[NVPTX_ATTR0]] {
+// CHECK-NVPTX-NEXT:  entry:
+// CHECK-NVPTX-NEXT:    call void @_ZZ4mainENKUlT_E_clIiEEDaS_
+// CHECK-NVPTX-SAME:      (ptr noundef nonnull align 4 dereferenceable(4) %ref, i32 noundef 42) #[[NVPTX_ATTR1]]
+// CHECK-NVPTX-NEXT:    ret void
+// CHECK-NVPTX-NEXT:  }
+//
+// CHECK-SPIR:        define {{[a-z_ ]*}}spir_kernel void @_ZTS23fwd_ref_arg_kernel_name
+// CHECK-SPIR-SAME:     (ptr noundef byval(%class.anon) align 4 %ref) #[[SPIR_ATTR0]] {
+// CHECK-SPIR-NEXT:   entry:
+// CHECK-SPIR-NEXT:     %ref.ascast = addrspacecast ptr %ref to ptr addrspace(4)
+// CHECK-SPIR-NEXT:     call spir_func void @_ZZ4mainENKUlT_E_clIiEEDaS_
+// CHECK-SPIR-SAME:       (ptr addrspace(4) noundef align 4 dereferenceable_or_null(4) %ref.ascast, i32 noundef 42) #[[SPIR_ATTR1]]
+// CHECK-SPIR-NEXT:     ret void
+// CHECK-SPIR-NEXT:   }
+
+// IR for the SYCL kernel caller function generated for fwd_ref_arg_kernel
+// with fwd_ref_arg_kernel_name_move as the SYCL kernel name type. The rvalue
+// reference parameter is lowered to a value parameter in the kernel entry point.
+//
+// CHECK-AMDGCN:      define dso_local amdgpu_kernel void @_ZTS28fwd_ref_arg_kernel_name_move
+// CHECK-AMDGCN-SAME:   (i32 %ref.coerce) #[[AMDGCN_ATTR0]] {
+// CHECK-AMDGCN-NEXT: entry:
+// CHECK-AMDGCN-NEXT:   %ref = alloca %class.anon, align 4, addrspace(5)
+// CHECK-AMDGCN-NEXT:   %ref1 = addrspacecast ptr addrspace(5) %ref to ptr
+// CHECK-AMDGCN-NEXT:   %coerce.dive = getelementptr inbounds nuw %class.anon, ptr %ref1, i32 0, i32 0
+// CHECK-AMDGCN-NEXT:   store i32 %ref.coerce, ptr %coerce.dive, align 4
+// CHECK-AMDGCN-NEXT:   call void @_ZZ4mainENKUlT_E_clIiEEDaS_
+// CHECK-AMDGCN-SAME:     (ptr noundef nonnull align 4 dereferenceable(4) %ref1, i32 noundef 42) #[[AMDGCN_ATTR1]]
+// CHECK-AMDGCN-NEXT:   ret void
+// CHECK-AMDGCN-NEXT: }
+//
+// CHECK-NVPTX:       define dso_local ptx_kernel void @_ZTS28fwd_ref_arg_kernel_name_move
+// CHECK-NVPTX-SAME:    (ptr noundef byval(%class.anon) align 4 %ref) #[[NVPTX_ATTR0]] {
+// CHECK-NVPTX-NEXT:  entry:
+// CHECK-NVPTX-NEXT:    call void @_ZZ4mainENKUlT_E_clIiEEDaS_
+// CHECK-NVPTX-SAME:      (ptr noundef nonnull align 4 dereferenceable(4) %ref, i32 noundef 42) #[[NVPTX_ATTR1]]
+// CHECK-NVPTX-NEXT:    ret void
+// CHECK-NVPTX-NEXT:  }
+//
+// CHECK-SPIR:        define {{[a-z_ ]*}}spir_kernel void @_ZTS28fwd_ref_arg_kernel_name_move
+// CHECK-SPIR-SAME:     (ptr noundef byval(%class.anon) align 4 %ref) #[[SPIR_ATTR0]] {
+// CHECK-SPIR-NEXT:   entry:
+// CHECK-SPIR-NEXT:     %ref.ascast = addrspacecast ptr %ref to ptr addrspace(4)
+// CHECK-SPIR-NEXT:     call spir_func void @_ZZ4mainENKUlT_E_clIiEEDaS_
+// CHECK-SPIR-SAME:       (ptr addrspace(4) noundef align 4 dereferenceable_or_null(4) %ref.ascast, i32 noundef 42) #[[SPIR_ATTR1]]
+// CHECK-SPIR-NEXT:     ret void
+// CHECK-SPIR-NEXT:   }
+
+// IR for the SYCL kernel caller function generated for rvalue_ref_arg_kernel
+// with rvalue_ref_arg_kernel_name as the SYCL kernel name type. The rvalue
+// reference parameter is lowered to a value parameter in the kernel entry point.
+//
+// CHECK-AMDGCN:      define dso_local amdgpu_kernel void @_ZTS26rvalue_ref_arg_kernel_name
+// CHECK-AMDGCN-SAME:   (i32 %ref.coerce) #[[AMDGCN_ATTR0]] {
+// CHECK-AMDGCN-NEXT: entry:
+// CHECK-AMDGCN-NEXT:   %ref = alloca %class.anon.2, align 4, addrspace(5)
+// CHECK-AMDGCN-NEXT:   %ref1 = addrspacecast ptr addrspace(5) %ref to ptr
+// CHECK-AMDGCN-NEXT:   %coerce.dive = getelementptr inbounds nuw %class.anon.2, ptr %ref1, i32 0, i32 0
+// CHECK-AMDGCN-NEXT:   store i32 %ref.coerce, ptr %coerce.dive, align 4
+// CHECK-AMDGCN-NEXT:   call void @_ZZ4mainENKUlT_E0_clIiEEDaS_
+// CHECK-AMDGCN-SAME:     (ptr noundef nonnull align 4 dereferenceable(4) %ref1, i32 noundef 42) #[[AMDGCN_ATTR1]]
+// CHECK-AMDGCN-NEXT:   ret void
+// CHECK-AMDGCN-NEXT: }
+//
+// CHECK-NVPTX:       define dso_local ptx_kernel void @_ZTS26rvalue_ref_arg_kernel_name
+// CHECK-NVPTX-SAME:    (ptr noundef byval(%class.anon.2) align 4 %ref) #[[NVPTX_ATTR0]] {
+// CHECK-NVPTX-NEXT:  entry:
+// CHECK-NVPTX-NEXT:    call void @_ZZ4mainENKUlT_E0_clIiEEDaS_
+// CHECK-NVPTX-SAME:      (ptr noundef nonnull align 4 dereferenceable(4) %ref, i32 noundef 42) #[[NVPTX_ATTR1]]
+// CHECK-NVPTX-NEXT:    ret void
+// CHECK-NVPTX-NEXT:  }
+//
+// CHECK-SPIR:        define {{[a-z_ ]*}}spir_kernel void @_ZTS26rvalue_ref_arg_kernel_name
+// CHECK-SPIR-SAME:     (ptr noundef byval(%class.anon.2) align 4 %ref) #[[SPIR_ATTR0]] {
+// CHECK-SPIR-NEXT:   entry:
+// CHECK-SPIR-NEXT:     %ref.ascast = addrspacecast ptr %ref to ptr addrspace(4)
+// CHECK-SPIR-NEXT:     call spir_func void @_ZZ4mainENKUlT_E0_clIiEEDaS_
+// CHECK-SPIR-SAME:       (ptr addrspace(4) noundef align 4 dereferenceable_or_null(4) %ref.ascast, i32 noundef 42) #[[SPIR_ATTR1]]
+// CHECK-SPIR-NEXT:     ret void
+// CHECK-SPIR-NEXT:   }
 
 // CHECK-AMDGCN: #[[AMDGCN_ATTR0]] = { convergent mustprogress noinline norecurse nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 // CHECK-AMDGCN: #[[AMDGCN_ATTR1]] = { convergent nounwind }

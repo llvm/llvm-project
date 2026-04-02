@@ -334,6 +334,10 @@ unsigned GCNHazardRecognizer::PreEmitNoops(MachineInstr *MI) {
   return std::max(W, NopPadding.getValue());
 }
 
+unsigned GCNHazardRecognizer::getHazardWaitStates(MachineInstr *MI) const {
+  return this->PreEmitNoopsCommon(MI);
+}
+
 unsigned GCNHazardRecognizer::PreEmitNoopsCommon(MachineInstr *MI) const {
   if (MI->isBundle())
     return 0;
@@ -2039,8 +2043,8 @@ bool GCNHazardRecognizer::fixWMMAHazards(MachineInstr *MI) {
 }
 
 static bool isCoexecutableVALUInst(const MachineInstr &MI) {
-  return SIInstrInfo::isVALU(MI) && !SIInstrInfo::isTRANS(MI) &&
-         !SIInstrInfo::isWMMA(MI) && !SIInstrInfo::isSWMMAC(MI); // What else?
+  return SIInstrInfo::isVALU(MI) && !SIInstrInfo::isWMMA(MI) &&
+         !SIInstrInfo::isSWMMAC(MI) && !SIInstrInfo::isLDSDMA(MI);
 }
 
 static bool IsWMMAHazardInstInCategory(const MachineInstr &MI,
@@ -3334,7 +3338,7 @@ int GCNHazardRecognizer::checkMAIVALUHazards(MachineInstr *MI) const {
   return WaitStatesNeeded;
 }
 
-bool GCNHazardRecognizer::ShouldPreferAnother(SUnit *SU) {
+bool GCNHazardRecognizer::ShouldPreferAnother(SUnit *SU) const {
   if (!SU->isInstr())
     return false;
 

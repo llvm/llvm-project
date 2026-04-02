@@ -74,33 +74,37 @@ static bool IsSimpleTypeSignedInteger(SimpleTypeKind kind) {
   }
 }
 
-static std::pair<size_t, bool> GetIntegralTypeInfo(TypeIndex ti,
-                                                   TpiStream &tpi) {
+static llvm::Expected<std::pair<size_t, bool>>
+GetIntegralTypeInfo(TypeIndex ti, TpiStream &tpi) {
   if (ti.isSimple()) {
     SimpleTypeKind stk = ti.getSimpleKind();
-    return {GetTypeSizeForSimpleKind(stk), IsSimpleTypeSignedInteger(stk)};
+    return std::make_pair(GetTypeSizeForSimpleKind(stk),
+                          IsSimpleTypeSignedInteger(stk));
   }
 
   CVType cvt = tpi.getType(ti);
   switch (cvt.kind()) {
   case LF_MODIFIER: {
     ModifierRecord mfr;
-    llvm::cantFail(TypeDeserializer::deserializeAs<ModifierRecord>(cvt, mfr));
+    if (auto err = TypeDeserializer::deserializeAs<ModifierRecord>(cvt, mfr))
+      return std::move(err);
     return GetIntegralTypeInfo(mfr.ModifiedType, tpi);
   }
   case LF_POINTER: {
     PointerRecord pr;
-    llvm::cantFail(TypeDeserializer::deserializeAs<PointerRecord>(cvt, pr));
-    return {pr.getSize(), false};
+    if (auto err = TypeDeserializer::deserializeAs<PointerRecord>(cvt, pr))
+      return std::move(err);
+    return std::make_pair(pr.getSize(), false);
   }
   case LF_ENUM: {
     EnumRecord er;
-    llvm::cantFail(TypeDeserializer::deserializeAs<EnumRecord>(cvt, er));
+    if (auto err = TypeDeserializer::deserializeAs<EnumRecord>(cvt, er))
+      return std::move(err);
     return GetIntegralTypeInfo(er.UnderlyingType, tpi);
   }
   default:
-    assert(false && "Type is not integral!");
-    return {0, false};
+    return llvm::make_error<llvm::StringError>("Type is not integral",
+                                               llvm::inconvertibleErrorCode());
   }
 }
 
@@ -153,6 +157,21 @@ static bool MakeRegisterBasedLocationExpressionInternal(
   return true;
 }
 
+/// *(reg + indir_offset) + offset
+static bool MakeRegisterBasedIndirectLocationExpressionInternal(
+    Stream &stream, llvm::codeview::RegisterId reg, RegisterKind &register_kind,
+    int32_t indir_offset, int32_t offset, lldb::ModuleSP module) {
+  if (!MakeRegisterBasedLocationExpressionInternal(stream, reg, register_kind,
+                                                   indir_offset, module))
+    return false;
+
+  stream.PutHex8(llvm::dwarf::DW_OP_deref);
+  stream.PutHex8(llvm::dwarf::DW_OP_plus_uconst);
+  stream.PutSLEB128(offset);
+
+  return true;
+}
+
 static DWARFExpression MakeRegisterBasedLocationExpressionInternal(
     llvm::codeview::RegisterId reg, std::optional<int32_t> relative_offset,
     lldb::ModuleSP module) {
@@ -171,6 +190,16 @@ DWARFExpression lldb_private::npdb::MakeEnregisteredLocationExpression(
 DWARFExpression lldb_private::npdb::MakeRegRelLocationExpression(
     llvm::codeview::RegisterId reg, int32_t offset, lldb::ModuleSP module) {
   return MakeRegisterBasedLocationExpressionInternal(reg, offset, module);
+}
+
+DWARFExpression lldb_private::npdb::MakeRegRelIndirLocationExpression(
+    llvm::codeview::RegisterId reg, int32_t offset, int32_t offset_in_udt,
+    lldb::ModuleSP module) {
+  return MakeLocationExpressionInternal(
+      module, [&](Stream &stream, RegisterKind &register_kind) -> bool {
+        return MakeRegisterBasedIndirectLocationExpressionInternal(
+            stream, reg, register_kind, offset, offset_in_udt, module);
+      });
 }
 
 static bool EmitVFrameEvaluationDWARFExpression(
@@ -223,15 +252,18 @@ DWARFExpression lldb_private::npdb::MakeGlobalLocationExpression(
       });
 }
 
-DWARFExpression lldb_private::npdb::MakeConstantLocationExpression(
-    TypeIndex underlying_ti, TpiStream &tpi, const llvm::APSInt &constant,
-    ModuleSP module) {
+llvm::Expected<DWARFExpression>
+lldb_private::npdb::MakeConstantLocationExpression(TypeIndex underlying_ti,
+                                                   TpiStream &tpi,
+                                                   const llvm::APSInt &constant,
+                                                   ModuleSP module) {
   const ArchSpec &architecture = module->GetArchitecture();
   uint32_t address_size = architecture.GetAddressByteSize();
 
-  size_t size = 0;
-  bool is_signed = false;
-  std::tie(size, is_signed) = GetIntegralTypeInfo(underlying_ti, tpi);
+  auto type_info = GetIntegralTypeInfo(underlying_ti, tpi);
+  if (!type_info)
+    return type_info.takeError();
+  auto [size, is_signed] = *type_info;
 
   union {
     llvm::support::little64_t I;

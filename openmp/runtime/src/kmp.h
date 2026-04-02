@@ -1072,6 +1072,7 @@ extern omp_memspace_handle_t const omp_large_cap_mem_space;
 extern omp_memspace_handle_t const omp_const_mem_space;
 extern omp_memspace_handle_t const omp_high_bw_mem_space;
 extern omp_memspace_handle_t const omp_low_lat_mem_space;
+extern omp_memspace_handle_t const omp_cgroup_mem_space;
 extern omp_memspace_handle_t const llvm_omp_target_host_mem_space;
 extern omp_memspace_handle_t const llvm_omp_target_shared_mem_space;
 extern omp_memspace_handle_t const llvm_omp_target_device_mem_space;
@@ -3901,7 +3902,8 @@ extern void __kmp_check_stack_overlap(kmp_info_t *thr);
 extern void __kmp_expand_host_name(char *buffer, size_t size);
 extern void __kmp_expand_file_name(char *result, size_t rlen, char *pattern);
 
-#if KMP_ARCH_X86 || KMP_ARCH_X86_64 || (KMP_OS_WINDOWS && (KMP_ARCH_AARCH64 || KMP_ARCH_ARM))
+#if KMP_ARCH_X86 || KMP_ARCH_X86_64 ||                                         \
+    (KMP_OS_WINDOWS && (KMP_ARCH_AARCH64 || KMP_ARCH_ARM || KMP_ARCH_ARM64EC))
 extern void
 __kmp_initialize_system_tick(void); /* Initialize timer tick value */
 #endif

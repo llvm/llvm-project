@@ -30,12 +30,12 @@
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendOptions.h"
 #include "clang/Frontend/MultiplexConsumer.h"
-#include "clang/Index/USRGeneration.h"
 #include "clang/InstallAPI/HeaderFile.h"
 #include "clang/Lex/MacroInfo.h"
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/PreprocessorOptions.h"
+#include "clang/UnifiedSymbolResolution/USRGeneration.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
@@ -60,7 +60,7 @@ std::optional<std::string> getRelativeIncludeName(const CompilerInstance &CI,
                                                   StringRef File,
                                                   bool *IsQuoted = nullptr) {
   assert(CI.hasFileManager() &&
-         "CompilerInstance does not have a FileNamager!");
+         "CompilerInstance does not have a FileManager!");
 
   using namespace llvm::sys;
   const auto &FS = CI.getVirtualFileSystem();
