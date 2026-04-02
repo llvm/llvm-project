@@ -31419,6 +31419,8 @@ bool AArch64TargetLowering::fallBackToDAGISel(const Instruction &Inst) const {
   // Checks to allow the use of SME instructions
   if (auto *Base = dyn_cast<CallBase>(&Inst)) {
     const Function *Caller = Base->getCaller();
+    // Per-call SME attribute checks via SMECallAttrs can be compile-time
+    // expensive, avoid for non-SME targets.
     if (Subtarget->hasSME() ||
         Caller->hasFnAttribute("aarch64_pstate_sm_compatible") ||
         Caller->hasFnAttribute("aarch64_za_state_agnostic")) {
