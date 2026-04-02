@@ -54,6 +54,7 @@ void StdAllocatorConstCheck::registerMatchers(MatchFinder *Finder) {
 
 void StdAllocatorConstCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *T = Result.Nodes.getNodeAs<TypeLoc>("type_loc");
+  assert(T);
   diag(T->getBeginLoc(),
        "container using std::allocator<const T> is a deprecated libc++ "
        "extension; remove const for compatibility with other standard "
