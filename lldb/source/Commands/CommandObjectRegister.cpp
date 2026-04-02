@@ -64,7 +64,7 @@ static size_t ComputeLongestRegisterName(RegisterContext *reg_ctx,
   return name_right_align_at;
 }
 
-// Here, [command] is basically a list of registers to be printed by DumpRegister() method.
+// // We expect that [command] only contains register names to be printed.
 static size_t ComputeLongestRegisterName(Args &command, RegisterContext *reg_ctx, bool use_primary_name) {
   size_t name_right_align_at = 0;
 
