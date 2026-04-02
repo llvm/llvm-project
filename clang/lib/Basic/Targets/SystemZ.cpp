@@ -217,5 +217,5 @@ void SystemZTargetInfo::getTargetDefines(const LangOptions &Opts,
 llvm::SmallVector<Builtin::InfosShard>
 SystemZTargetInfo::getTargetBuiltins() const {
   return {{&BuiltinStrings, BuiltinInfos},
-      {&BuiltinStrings, PrefixedBuiltinInfos, "__builtin_s390_"}  };
+          {&BuiltinStrings, PrefixedBuiltinInfos, "__builtin_s390_"}};
 }
