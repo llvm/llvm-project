@@ -406,7 +406,7 @@ static unsigned getMaxShiftAmount(const APInt &MaxValue, unsigned BitWidth) {
 
 KnownBits KnownBits::shl(const KnownBits &LHS, unsigned ShiftAmt, bool NUW,
                          bool NSW) {
-  KnownBits Known;
+  KnownBits Known(LHS.getBitWidth());
   bool ShiftedOutZero, ShiftedOutOne;
   Known.Zero = LHS.Zero.ushl_ov(ShiftAmt, ShiftedOutZero);
   Known.Zero.setLowBits(ShiftAmt);
