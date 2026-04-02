@@ -183,19 +183,21 @@ void AArch64PointerAuth::authenticateLR(
     }
     MBB.erase(TI);
   } else {
-    // When a tail call has a non-zero FPDiff (callee needs different stack
-    // arg space), the epilogue adjusts SP before reaching here. SP no
-    // longer equals the entry SP used by PACI[AB]SP. Compute the entry SP
-    // into X16 and use explicit AUTI[AB] instead of AUTI[AB]SP.
+    // When FPDiff != 0 (tail call with different stack arg space), SP has
+    // been adjusted and no longer matches the entry SP used as the signing
+    // modifier. We must reconstruct entry SP for authentication.
+    // The three signing modes (hasPAuthLR, NOP-space PAuthLR, plain pac-ret)
+    // each need different handling — see inline comments below.
     auto &AFL = *static_cast<const AArch64FrameLowering *>(
         MF.getSubtarget().getFrameLowering());
     int64_t FPDiff = AFL.getArgumentStackToRestore(MF, MBB);
 
     if (MFnI->branchProtectionPAuthLR() && Subtarget->hasPAuthLR()) {
+      // FEAT_PAuth_LR: use AUTIASPPCi or AUTIA171615 for FPDiff != 0.
       assert(PACSym && "No PAC instruction to refer to");
       emitPACCFI(MBB, MBBI, MachineInstr::FrameDestroy, EmitAsyncCFI);
       if (FPDiff != 0) {
-        // Use AUTIA171615/AUTIB171615: x17=LR, x16=entry_SP, x15=signing_PC.
+        // x17=LR, x16=entry_SP, x15=PACSym. Result in x17 → LR.
         BuildMI(MBB, MBBI, DL, TII->get(AArch64::ORRXrs), AArch64::X17)
             .addReg(AArch64::XZR)
             .addReg(AArch64::LR)
@@ -226,14 +228,32 @@ void AArch64PointerAuth::authenticateLR(
             .addSym(PACSym)
             .setMIFlag(MachineInstr::FrameDestroy);
       }
-    } else {
-      if (MFnI->branchProtectionPAuthLR()) {
-        emitPACSymOffsetIntoX16(*TII, MBB, MBBI, DL, PACSym);
-        BuildMI(MBB, MBBI, DL, TII->get(AArch64::PACM))
-            .setMIFlag(MachineInstr::FrameDestroy);
-        emitPACCFI(MBB, MBBI, MachineInstr::FrameDestroy, EmitAsyncCFI);
+    } else if (MFnI->branchProtectionPAuthLR()) {
+      // NOP-space PAuthLR compat: PACM + AUTIASP. AUTIASP reads SP
+      // implicitly, so when FPDiff != 0 we restore SP to entry value
+      // around the auth instruction.
+      assert(PACSym && "No PAC instruction to refer to");
+      emitPACSymOffsetIntoX16(*TII, MBB, MBBI, DL, PACSym);
+      BuildMI(MBB, MBBI, DL, TII->get(AArch64::PACM))
+          .setMIFlag(MachineInstr::FrameDestroy);
+      emitPACCFI(MBB, MBBI, MachineInstr::FrameDestroy, EmitAsyncCFI);
+      if (FPDiff != 0) {
+        emitFrameOffset(MBB, MBBI, DL, AArch64::SP, AArch64::SP,
+                        StackOffset::getFixed(-FPDiff), TII,
+                        MachineInstr::FrameDestroy);
       }
-      if (FPDiff != 0 && !MFnI->branchProtectionPAuthLR()) {
+      BuildMI(MBB, MBBI, DL,
+              TII->get(UseBKey ? AArch64::AUTIBSP : AArch64::AUTIASP))
+          .setMIFlag(MachineInstr::FrameDestroy);
+      if (FPDiff != 0) {
+        emitFrameOffset(MBB, MBBI, DL, AArch64::SP, AArch64::SP,
+                        StackOffset::getFixed(FPDiff), TII,
+                        MachineInstr::FrameDestroy);
+      }
+    } else {
+      // Plain pac-ret: compute entry SP into x16 when FPDiff != 0.
+      if (FPDiff != 0) {
+        // entry_SP = current_SP - FPDiff.
         emitFrameOffset(MBB, MBBI, DL, AArch64::X16, AArch64::SP,
                         StackOffset::getFixed(-FPDiff), TII,
                         MachineInstr::FrameDestroy);
@@ -247,8 +267,7 @@ void AArch64PointerAuth::authenticateLR(
                 TII->get(UseBKey ? AArch64::AUTIBSP : AArch64::AUTIASP))
             .setMIFlag(MachineInstr::FrameDestroy);
       }
-      if (!MFnI->branchProtectionPAuthLR())
-        emitPACCFI(MBB, MBBI, MachineInstr::FrameDestroy, EmitAsyncCFI);
+      emitPACCFI(MBB, MBBI, MachineInstr::FrameDestroy, EmitAsyncCFI);
     }
 
     if (NeedsWinCFI) {
