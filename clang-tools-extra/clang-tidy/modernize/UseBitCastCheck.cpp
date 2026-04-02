@@ -15,6 +15,7 @@
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Lexer.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/Twine.h"
 
 using namespace clang::ast_matchers;
 
@@ -230,17 +231,15 @@ void UseBitCastCheck::registerPPCallbacks(const SourceManager &SM,
 void UseBitCastCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       callExpr(callee(functionDecl(hasName("::memcpy"))),
-               isDiscardedValueContext(), unless(isInTemplateInstantiation()),
-               unless(hasAncestor(expr(matchers::hasUnevaluatedContext()))),
-               isBitCastMemcpyCandidate())
+               isDiscardedValueContext(), isBitCastMemcpyCandidate(),
+               unless(hasAncestor(expr(matchers::hasUnevaluatedContext()))))
           .bind("memcpy"),
       this);
 }
 
 void UseBitCastCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *MemcpyCall = Result.Nodes.getNodeAs<CallExpr>("memcpy");
-  if (!MemcpyCall)
-    return;
+  assert(MemcpyCall);
 
   const auto *DstExpr = extractMemcpyObjectExpr(MemcpyCall->getArg(0));
   const auto *SrcExpr = extractMemcpyObjectExpr(MemcpyCall->getArg(1));
@@ -262,22 +261,23 @@ void UseBitCastCheck::check(const MatchFinder::MatchResult &Result) {
   const PrintingPolicy Policy(LangOpts);
   const QualType DstType =
       DstExpr->getType().getNonReferenceType().getUnqualifiedType();
-  const std::string Assignment = std::string(DstText) + " = std::bit_cast<" +
-                                 DstType.getAsString(Policy) + ">(" +
-                                 std::string(SrcText) + ")";
-  std::string Replacement = Assignment;
-  switch (ReplacementForm) {
-  case MemcpyReplacementForm::StatementBody:
-    break;
-  case MemcpyReplacementForm::PreserveOuterVoidCast:
-    Replacement = "(" + Assignment + ")";
-    break;
-  case MemcpyReplacementForm::InjectVoidCast:
-    Replacement = "(void)(" + Assignment + ")";
-    break;
-  case MemcpyReplacementForm::None:
-    return;
-  }
+  const std::string DstTypeName = DstType.getAsString(Policy);
+  const std::string Replacement =
+      [&](const llvm::Twine &Assignment) -> std::string {
+    switch (ReplacementForm) {
+    case MemcpyReplacementForm::StatementBody:
+      return Assignment.str();
+    case MemcpyReplacementForm::PreserveOuterVoidCast:
+      return ("(" + Assignment + ")").str();
+    case MemcpyReplacementForm::InjectVoidCast:
+      return ("(void)(" + Assignment + ")").str();
+    case MemcpyReplacementForm::None:
+      return {};
+    }
+
+    return {};
+  }(llvm::Twine(DstText) + " = std::bit_cast<" + DstTypeName + ">(" + SrcText +
+                                         ")");
 
   const DiagnosticBuilder Diag =
       diag(MemcpyCall->getBeginLoc(),
