@@ -12,6 +12,9 @@
 
 #include "PluginManager.h"
 #include "OffloadPolicy.h"
+#include "OpenMP/OMPT/Callback.h"
+#include "OpenMP/OMPT/OmptCommonDefs.h"
+#include "OpenMP/OMPT/OmptTracing.h"
 #include "Shared/Debug.h"
 #include "Shared/Profile.h"
 #include "device.h"
@@ -47,12 +50,28 @@ void PluginManager::init() {
   } while (false);
 #include "Shared/Targets.def"
 
+#ifdef OMPT_SUPPORT
+  assert(TraceRecordManager == nullptr &&
+         "Expected trace record manager to be null");
+  TraceRecordManager = new OmptTracingBufferMgr();
+#endif
+
   ODBG(ODT_Init) << "RTLs loaded!";
 }
 
 void PluginManager::deinit() {
   TIMESCOPE();
   ODBG(ODT_Deinit) << "Unloading RTLs...";
+
+#ifdef OMPT_SUPPORT
+  // When offloading is disabled, the TRM is not initialized.
+  if (!OffloadPolicy::isOffloadDisabled()) {
+    assert(TraceRecordManager != nullptr &&
+           "Trace record manager should have been non-null");
+    delete TraceRecordManager;
+    TraceRecordManager = nullptr;
+  }
+#endif
 
   for (auto &Plugin : Plugins) {
     if (!Plugin->is_initialized())
@@ -322,6 +341,9 @@ int target(ident_t *Loc, DeviceTy &Device, void *HostPtr,
 
 void PluginManager::unregisterLib(__tgt_bin_desc *Desc) {
   ODBG(ODT_Deinit) << "Unloading target library!";
+
+  OMPT_IF_TRACING_ENABLED(
+      PM->getTraceRecordManager()->flushAndShutdownHelperThreads(););
 
   Desc = upgradeLegacyEntries(Desc);
 

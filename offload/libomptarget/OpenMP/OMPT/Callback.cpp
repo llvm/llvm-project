@@ -12,9 +12,13 @@
 
 #ifdef OMPT_SUPPORT
 
+#include <atomic>
+#include <cassert>
 #include <cstdlib>
 #include <cstring>
 #include <memory>
+#include <mutex>
+#include <thread>
 
 #include "Shared/Debug.h"
 
@@ -23,7 +27,9 @@
 #include "OpenMP/OMPT/Interface.h"
 
 #include "llvm/Support/DynamicLibrary.h"
+#include "llvm/Support/ErrorHandling.h"
 
+#pragma push_macro("DEBUG_PREFIX")
 #undef DEBUG_PREFIX
 #define DEBUG_PREFIX "OMPT"
 
@@ -441,6 +447,11 @@ void Interface::endTarget(int64_t DeviceId, void *Code) {
   endTargetRegion();
 }
 
+void Interface::announceTargetRegion(const char *RegionName) {
+  ODBG(ODT_Tool) << "in Interface::target_region_" << RegionName
+                 << " target_id=" << TargetData.value;
+}
+
 void Interface::beginTargetDataOperation() {
   ODBG(ODT_Tool) << "in ompt_target_region_begin (TargetRegionId = "
                  << TargetData.value << ")";
@@ -562,4 +573,5 @@ void llvm::omp::target::ompt::connectLibrary() {
   ODBG(ODT_Tool) << "Exiting connectLibrary";
 }
 
+#pragma pop_macro("DEBUG_PREFIX")
 #endif // OMPT_SUPPORT
