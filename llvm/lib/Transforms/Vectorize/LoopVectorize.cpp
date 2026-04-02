@@ -786,20 +786,6 @@ createLVAnalysis(const char *PassName, StringRef RemarkName, Loop *TheLoop,
 
 namespace llvm {
 
-/// Return a value for Step multiplied by VF.
-Value *createStepForVF(IRBuilderBase &B, Type *Ty, ElementCount VF,
-                       int64_t Step) {
-  assert(Ty->isIntegerTy() && "Expected an integer step");
-  ElementCount VFxStep = VF.multiplyCoefficientBy(Step);
-  assert(isPowerOf2_64(VF.getKnownMinValue()) && "must pass power-of-2 VF");
-  if (VF.isScalable() && isPowerOf2_64(Step)) {
-    return B.CreateShl(
-        B.CreateVScale(Ty),
-        ConstantInt::get(Ty, Log2_64(VFxStep.getKnownMinValue())), "", true);
-  }
-  return B.CreateElementCount(Ty, VFxStep);
-}
-
 /// Return the runtime value for VF.
 Value *getRuntimeVF(IRBuilderBase &B, Type *Ty, ElementCount VF) {
   return B.CreateElementCount(Ty, VF);
