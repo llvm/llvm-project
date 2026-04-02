@@ -25,3 +25,9 @@ struct C : A {
       // CHECK-NOTES: [[@LINE-4]]:5: note: move occurred here
     }
 };
+
+struct D { int d; };
+struct E : A, D {
+    E(E&& other) : A(std::move(other)) { other.d; }
+};
+

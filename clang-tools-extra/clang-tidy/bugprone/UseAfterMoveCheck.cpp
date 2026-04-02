@@ -28,8 +28,25 @@ using namespace clang::tidy::utils;
 
 namespace clang::tidy::bugprone {
 
-using ast_matchers::optionally;
 using matchers::hasUnevaluatedContext;
+
+namespace {
+AST_MATCHER_P(Expr, hasParentIgnoringParenImpCasts,
+              ast_matchers::internal::Matcher<Expr>, InnerMatcher) {
+  const Expr *E = &Node;
+  do {
+    const DynTypedNodeList Parents = Finder->getASTContext().getParents(*E);
+    if (Parents.size() != 1)
+      return false;
+    E = Parents[0].get<Expr>();
+    if (!E)
+      return false;
+  } while (isa<ImplicitCastExpr, ParenExpr>(E));
+
+  return InnerMatcher.matches(*E, Finder, Builder);
+}
+
+} // namespace
 
 namespace {
 
@@ -84,21 +101,6 @@ private:
   std::unique_ptr<StmtToBlockMap> BlockMap;
   llvm::SmallPtrSet<const CFGBlock *, 8> Visited;
 };
-
-AST_MATCHER_P(Expr, hasParentIgnoringParenImpCasts,
-              ast_matchers::internal::Matcher<Expr>, InnerMatcher) {
-  const Expr *E = &Node;
-  do {
-    const DynTypedNodeList Parents = Finder->getASTContext().getParents(*E);
-    if (Parents.size() != 1)
-      return false;
-    E = Parents[0].get<Expr>();
-    if (!E)
-      return false;
-  } while (isa<ImplicitCastExpr, ParenExpr>(E));
-
-  return InnerMatcher.matches(*E, Finder, Builder);
-}
 
 } // namespace
 
@@ -431,7 +433,8 @@ void UseAfterMoveFinder::getDeclRefs(
                     unless(inDecltypeOrTemplateArg()),
                     unless(hasParentIgnoringParenImpCasts(
                         memberExpr(hasDeclaration(cxxDestructorDecl())))),
-                    optionally(hasParent(memberExpr().bind("member-expr"))))
+                    optionally(hasParentIgnoringParenImpCasts(
+                        memberExpr().bind("member-expr"))))
             .bind("declref");
 
     AddDeclRefs(match(traverse(TK_AsIs, findAll(DeclRefMatcher)), *S->getStmt(),
@@ -551,26 +554,27 @@ void UseAfterMoveCheck::registerMatchers(MatchFinder *Finder) {
       cxxMemberCallExpr(callee(cxxMethodDecl(hasName("try_emplace"))));
   auto Arg = declRefExpr().bind("arg");
   auto IsMemberCallee = callee(functionDecl(unless(isStaticStorageClass())));
-  auto CallMoveMatcher =
-      callExpr(callee(functionDecl(getNameMatcher(InvalidationFunctions))
-                          .bind("move-decl")),
-               anyOf(cxxMemberCallExpr(IsMemberCallee, on(Arg)),
-                     callExpr(unless(cxxMemberCallExpr(IsMemberCallee)),
-                              hasArgument(0, Arg))),
-               unless(inDecltypeOrTemplateArg()),
-               unless(hasParent(TryEmplaceMatcher)), expr().bind("call-move"),
-               optionally(hasParent(implicitCastExpr().bind("optional-cast"))),
-               anyOf(hasAncestor(compoundStmt(
-                         hasParent(lambdaExpr().bind("containing-lambda")))),
-                     hasAncestor(functionDecl(anyOf(
-                         cxxConstructorDecl(
-                             hasAnyConstructorInitializer(withInitializer(
-                                 expr(anyOf(equalsBoundNode("call-move"),
-                                            hasDescendant(expr(
-                                                equalsBoundNode("call-move")))))
-                                     .bind("containing-ctor-init"))))
-                             .bind("containing-ctor"),
-                         functionDecl().bind("containing-func"))))));
+  auto CallMoveMatcher = callExpr(
+      callee(functionDecl(getNameMatcher(InvalidationFunctions))
+                 .bind("move-decl")),
+      anyOf(cxxMemberCallExpr(IsMemberCallee, on(Arg)),
+            callExpr(unless(cxxMemberCallExpr(IsMemberCallee)),
+                     hasArgument(0, Arg))),
+      unless(inDecltypeOrTemplateArg()), unless(hasParent(TryEmplaceMatcher)),
+      expr().bind("call-move"),
+      optionally(hasParent(implicitCastExpr(hasCastKind(CK_DerivedToBase))
+                               .bind("optional-cast"))),
+      anyOf(hasAncestor(compoundStmt(
+                hasParent(lambdaExpr().bind("containing-lambda")))),
+            hasAncestor(functionDecl(
+                anyOf(cxxConstructorDecl(
+                          hasAnyConstructorInitializer(withInitializer(
+                              expr(anyOf(equalsBoundNode("call-move"),
+                                         hasDescendant(expr(
+                                             equalsBoundNode("call-move")))))
+                                  .bind("containing-ctor-init"))))
+                          .bind("containing-ctor"),
+                      functionDecl().bind("containing-func"))))));
 
   Finder->addMatcher(
       traverse(
@@ -637,9 +641,8 @@ void UseAfterMoveCheck::check(const MatchFinder::MatchResult &Result) {
     CodeBlocks.push_back(ContainingFunc->getBody());
   }
 
-  const CXXRecordDecl *MovedAs = nullptr;
-  if (ParentCast && ParentCast->getCastKind() == CK_DerivedToBase)
-    MovedAs = ParentCast->getType()->getAsCXXRecordDecl();
+  const CXXRecordDecl *MovedAs =
+      ParentCast ? ParentCast->getType()->getAsCXXRecordDecl() : nullptr;
 
   for (Stmt *CodeBlock : CodeBlocks) {
     UseAfterMoveFinder Finder(Result.Context, InvalidationFunctions,
