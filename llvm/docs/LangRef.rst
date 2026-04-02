@@ -8852,7 +8852,7 @@ Example:
     !1 = !{ptr @b}
 
 '``inline_history``' Metadata
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 The ``inline_history`` metadata may be attached to a call instruction. It
 indicates that the call instruction has been inlined from the referenced
 functions. The call itself should not be inlined if it is a call to any of the
