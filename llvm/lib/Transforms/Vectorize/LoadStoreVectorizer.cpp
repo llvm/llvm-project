@@ -130,12 +130,12 @@ namespace {
 // (We could in theory remove element-size from the this tuple.  We'd just need
 // to fix up the vector packing/unpacking code.)
 using EqClassKey =
-    std::tuple<const Value *, // result of getUnderlyingObject()
-               unsigned,      // AddrSpace
-               unsigned,      // Load/Store element size bits
-               char,          // IsLoad; char b/c bool can't be a DenseMap key
-               unsigned,      // AtomicOrdering
-               unsigned       // SyncScopeID
+    std::tuple<const Value *,  // result of getUnderlyingObject()
+               unsigned,       // AddrSpace
+               unsigned,       // Load/Store element size bits
+               char,           // IsLoad; char b/c bool can't be a DenseMap key
+               AtomicOrdering, // AtomicOrdering
+               unsigned        // SyncScopeID
                >;
 
 [[maybe_unused]] llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
@@ -145,8 +145,8 @@ using EqClassKey =
   OS << (IsLoad ? "load" : "store") << " of " << *UnderlyingObject
      << " of element size " << ElementSize << " bits in addrspace "
      << AddrSpace;
-  if (Ordering != static_cast<unsigned>(AtomicOrdering::NotAtomic))
-    OS << " atomic " << toIRString(static_cast<AtomicOrdering>(Ordering));
+  if (Ordering != AtomicOrdering::NotAtomic)
+    OS << " atomic " << toIRString(Ordering);
   return OS;
 }
 
@@ -1638,7 +1638,7 @@ void Vectorizer::mergeEquivalenceClasses(EquivalenceClassMap &EQClasses) const {
       dbgs() << "  Reduced key: {" << std::get<0>(RedKeyToUO.first) << ", "
              << std::get<1>(RedKeyToUO.first) << ", "
              << static_cast<int>(std::get<2>(RedKeyToUO.first)) << ", "
-             << std::get<3>(RedKeyToUO.first) << ", "
+             << static_cast<unsigned>(std::get<3>(RedKeyToUO.first)) << ", "
              << std::get<4>(RedKeyToUO.first) << "} --> "
              << RedKeyToUO.second.size() << " underlying objects:\n";
       for (auto UObject : RedKeyToUO.second)
@@ -1784,7 +1784,8 @@ Vectorizer::collectEquivalenceClasses(BasicBlock::iterator Begin,
         (VecTy && TTI.getLoadVectorFactor(VF, TySize, TySize / 8, VecTy) == 0))
       continue;
 
-    unsigned Ordering = LI ? static_cast<unsigned>(LI->getOrdering()) : 0;
+    AtomicOrdering Ordering =
+        LI ? LI->getOrdering() : AtomicOrdering::NotAtomic;
     unsigned SSID = LI ? static_cast<unsigned>(LI->getSyncScopeID()) : 0;
     Ret[{GetUnderlyingObject(Ptr), AS,
          DL.getTypeSizeInBits(getLoadStoreType(&I)->getScalarType()),
