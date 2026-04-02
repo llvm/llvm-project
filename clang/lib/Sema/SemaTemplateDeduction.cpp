@@ -5224,16 +5224,6 @@ Sema::DeduceAutoType(TypeLoc Type, Expr *Init, QualType &Result,
     return TemplateDeductionResult::Success;
   }
 
-  // Make sure that we treat 'char[]' equaly as 'char*' in C23 mode.
-  auto *String = dyn_cast<StringLiteral>(Init);
-  if (getLangOpts().C23 && String && Type.getType()->isArrayType()) {
-    Diag(Type.getBeginLoc(), diag::ext_c23_auto_non_plain_identifier);
-    TypeLoc TL = TypeLoc(Init->getType(), Type.getOpaqueData());
-    Result = SubstituteDeducedTypeTransform(*this, DependentResult).Apply(TL);
-    assert(!Result.isNull() && "substituting DependentTy can't fail");
-    return TemplateDeductionResult::Success;
-  }
-
   // Emit a warning if 'auto*' is used in pedantic and in C23 mode.
   if (getLangOpts().C23 && Type.getType()->isPointerType()) {
     Diag(Type.getBeginLoc(), diag::ext_c23_auto_non_plain_identifier);
