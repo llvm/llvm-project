@@ -66,6 +66,10 @@ STATISTIC(NumModifiedInstr,
 
 namespace {
 
+// A costly instruction is replaced in this work by N efficient instructions
+// The maximum of N is currently 10 and it is for ST4 case.
+constexpr unsigned MaxNumRepl = 10;
+
 class AArch64SIMDInstrOptImpl {
 public:
   const AArch64InstrInfo *TII;
@@ -93,24 +97,19 @@ public:
   // Instruction represented by OrigOpc is replaced by instructions in ReplOpc.
   struct InstReplInfo {
     unsigned OrigOpc;
-    std::vector<unsigned> ReplOpc;
+    unsigned ReplOpc[MaxNumRepl];
+    unsigned NumRepl;
     const TargetRegisterClass *RC;
   };
 
 #define RuleST2(OpcOrg, OpcR0, OpcR1, OpcR2, RC)                               \
-  {OpcOrg, {OpcR0, OpcR1, OpcR2}, &RC}
+  {OpcOrg, {OpcR0, OpcR1, OpcR2}, 3, &RC}
 #define RuleST4(OpcOrg, OpcR0, OpcR1, OpcR2, OpcR3, OpcR4, OpcR5, OpcR6,       \
                 OpcR7, OpcR8, OpcR9, RC)                                       \
   {OpcOrg,                                                                     \
    {OpcR0, OpcR1, OpcR2, OpcR3, OpcR4, OpcR5, OpcR6, OpcR7, OpcR8, OpcR9},     \
+   10,                                                                         \
    &RC}
-
-  // The Instruction Replacement Table.
-  static const std::vector<InstReplInfo> IRT;
-
-  // A costly instruction is replaced in this work by N efficient instructions
-  // The maximum of N is currently 10 and it is for ST4 case.
-  static const unsigned MaxNumRepl = 10;
 
   AArch64SIMDInstrOptImpl(SIMDInstrTableMap &SIMDInstrTable,
                           InterlEarlyExitMap &InterlEarlyExit)
@@ -179,52 +178,52 @@ struct AArch64SIMDInstrOptLegacy : public MachineFunctionPass {
 
 char AArch64SIMDInstrOptLegacy::ID = 0;
 
-const std::vector<AArch64SIMDInstrOptImpl::InstReplInfo>
-    AArch64SIMDInstrOptImpl::IRT = {
-        // ST2 instructions
-        RuleST2(AArch64::ST2Twov2d, AArch64::ZIP1v2i64, AArch64::ZIP2v2i64,
-                AArch64::STPQi, AArch64::FPR128RegClass),
-        RuleST2(AArch64::ST2Twov4s, AArch64::ZIP1v4i32, AArch64::ZIP2v4i32,
-                AArch64::STPQi, AArch64::FPR128RegClass),
-        RuleST2(AArch64::ST2Twov2s, AArch64::ZIP1v2i32, AArch64::ZIP2v2i32,
-                AArch64::STPDi, AArch64::FPR64RegClass),
-        RuleST2(AArch64::ST2Twov8h, AArch64::ZIP1v8i16, AArch64::ZIP2v8i16,
-                AArch64::STPQi, AArch64::FPR128RegClass),
-        RuleST2(AArch64::ST2Twov4h, AArch64::ZIP1v4i16, AArch64::ZIP2v4i16,
-                AArch64::STPDi, AArch64::FPR64RegClass),
-        RuleST2(AArch64::ST2Twov16b, AArch64::ZIP1v16i8, AArch64::ZIP2v16i8,
-                AArch64::STPQi, AArch64::FPR128RegClass),
-        RuleST2(AArch64::ST2Twov8b, AArch64::ZIP1v8i8, AArch64::ZIP2v8i8,
-                AArch64::STPDi, AArch64::FPR64RegClass),
-        // ST4 instructions
-        RuleST4(AArch64::ST4Fourv2d, AArch64::ZIP1v2i64, AArch64::ZIP2v2i64,
-                AArch64::ZIP1v2i64, AArch64::ZIP2v2i64, AArch64::ZIP1v2i64,
-                AArch64::ZIP2v2i64, AArch64::ZIP1v2i64, AArch64::ZIP2v2i64,
-                AArch64::STPQi, AArch64::STPQi, AArch64::FPR128RegClass),
-        RuleST4(AArch64::ST4Fourv4s, AArch64::ZIP1v4i32, AArch64::ZIP2v4i32,
-                AArch64::ZIP1v4i32, AArch64::ZIP2v4i32, AArch64::ZIP1v4i32,
-                AArch64::ZIP2v4i32, AArch64::ZIP1v4i32, AArch64::ZIP2v4i32,
-                AArch64::STPQi, AArch64::STPQi, AArch64::FPR128RegClass),
-        RuleST4(AArch64::ST4Fourv2s, AArch64::ZIP1v2i32, AArch64::ZIP2v2i32,
-                AArch64::ZIP1v2i32, AArch64::ZIP2v2i32, AArch64::ZIP1v2i32,
-                AArch64::ZIP2v2i32, AArch64::ZIP1v2i32, AArch64::ZIP2v2i32,
-                AArch64::STPDi, AArch64::STPDi, AArch64::FPR64RegClass),
-        RuleST4(AArch64::ST4Fourv8h, AArch64::ZIP1v8i16, AArch64::ZIP2v8i16,
-                AArch64::ZIP1v8i16, AArch64::ZIP2v8i16, AArch64::ZIP1v8i16,
-                AArch64::ZIP2v8i16, AArch64::ZIP1v8i16, AArch64::ZIP2v8i16,
-                AArch64::STPQi, AArch64::STPQi, AArch64::FPR128RegClass),
-        RuleST4(AArch64::ST4Fourv4h, AArch64::ZIP1v4i16, AArch64::ZIP2v4i16,
-                AArch64::ZIP1v4i16, AArch64::ZIP2v4i16, AArch64::ZIP1v4i16,
-                AArch64::ZIP2v4i16, AArch64::ZIP1v4i16, AArch64::ZIP2v4i16,
-                AArch64::STPDi, AArch64::STPDi, AArch64::FPR64RegClass),
-        RuleST4(AArch64::ST4Fourv16b, AArch64::ZIP1v16i8, AArch64::ZIP2v16i8,
-                AArch64::ZIP1v16i8, AArch64::ZIP2v16i8, AArch64::ZIP1v16i8,
-                AArch64::ZIP2v16i8, AArch64::ZIP1v16i8, AArch64::ZIP2v16i8,
-                AArch64::STPQi, AArch64::STPQi, AArch64::FPR128RegClass),
-        RuleST4(AArch64::ST4Fourv8b, AArch64::ZIP1v8i8, AArch64::ZIP2v8i8,
-                AArch64::ZIP1v8i8, AArch64::ZIP2v8i8, AArch64::ZIP1v8i8,
-                AArch64::ZIP2v8i8, AArch64::ZIP1v8i8, AArch64::ZIP2v8i8,
-                AArch64::STPDi, AArch64::STPDi, AArch64::FPR64RegClass)};
+// The Instruction Replacement Table.
+constexpr AArch64SIMDInstrOptImpl::InstReplInfo IRT[] = {
+    // ST2 instructions
+    RuleST2(AArch64::ST2Twov2d, AArch64::ZIP1v2i64, AArch64::ZIP2v2i64,
+            AArch64::STPQi, AArch64::FPR128RegClass),
+    RuleST2(AArch64::ST2Twov4s, AArch64::ZIP1v4i32, AArch64::ZIP2v4i32,
+            AArch64::STPQi, AArch64::FPR128RegClass),
+    RuleST2(AArch64::ST2Twov2s, AArch64::ZIP1v2i32, AArch64::ZIP2v2i32,
+            AArch64::STPDi, AArch64::FPR64RegClass),
+    RuleST2(AArch64::ST2Twov8h, AArch64::ZIP1v8i16, AArch64::ZIP2v8i16,
+            AArch64::STPQi, AArch64::FPR128RegClass),
+    RuleST2(AArch64::ST2Twov4h, AArch64::ZIP1v4i16, AArch64::ZIP2v4i16,
+            AArch64::STPDi, AArch64::FPR64RegClass),
+    RuleST2(AArch64::ST2Twov16b, AArch64::ZIP1v16i8, AArch64::ZIP2v16i8,
+            AArch64::STPQi, AArch64::FPR128RegClass),
+    RuleST2(AArch64::ST2Twov8b, AArch64::ZIP1v8i8, AArch64::ZIP2v8i8,
+            AArch64::STPDi, AArch64::FPR64RegClass),
+    // ST4 instructions
+    RuleST4(AArch64::ST4Fourv2d, AArch64::ZIP1v2i64, AArch64::ZIP2v2i64,
+            AArch64::ZIP1v2i64, AArch64::ZIP2v2i64, AArch64::ZIP1v2i64,
+            AArch64::ZIP2v2i64, AArch64::ZIP1v2i64, AArch64::ZIP2v2i64,
+            AArch64::STPQi, AArch64::STPQi, AArch64::FPR128RegClass),
+    RuleST4(AArch64::ST4Fourv4s, AArch64::ZIP1v4i32, AArch64::ZIP2v4i32,
+            AArch64::ZIP1v4i32, AArch64::ZIP2v4i32, AArch64::ZIP1v4i32,
+            AArch64::ZIP2v4i32, AArch64::ZIP1v4i32, AArch64::ZIP2v4i32,
+            AArch64::STPQi, AArch64::STPQi, AArch64::FPR128RegClass),
+    RuleST4(AArch64::ST4Fourv2s, AArch64::ZIP1v2i32, AArch64::ZIP2v2i32,
+            AArch64::ZIP1v2i32, AArch64::ZIP2v2i32, AArch64::ZIP1v2i32,
+            AArch64::ZIP2v2i32, AArch64::ZIP1v2i32, AArch64::ZIP2v2i32,
+            AArch64::STPDi, AArch64::STPDi, AArch64::FPR64RegClass),
+    RuleST4(AArch64::ST4Fourv8h, AArch64::ZIP1v8i16, AArch64::ZIP2v8i16,
+            AArch64::ZIP1v8i16, AArch64::ZIP2v8i16, AArch64::ZIP1v8i16,
+            AArch64::ZIP2v8i16, AArch64::ZIP1v8i16, AArch64::ZIP2v8i16,
+            AArch64::STPQi, AArch64::STPQi, AArch64::FPR128RegClass),
+    RuleST4(AArch64::ST4Fourv4h, AArch64::ZIP1v4i16, AArch64::ZIP2v4i16,
+            AArch64::ZIP1v4i16, AArch64::ZIP2v4i16, AArch64::ZIP1v4i16,
+            AArch64::ZIP2v4i16, AArch64::ZIP1v4i16, AArch64::ZIP2v4i16,
+            AArch64::STPDi, AArch64::STPDi, AArch64::FPR64RegClass),
+    RuleST4(AArch64::ST4Fourv16b, AArch64::ZIP1v16i8, AArch64::ZIP2v16i8,
+            AArch64::ZIP1v16i8, AArch64::ZIP2v16i8, AArch64::ZIP1v16i8,
+            AArch64::ZIP2v16i8, AArch64::ZIP1v16i8, AArch64::ZIP2v16i8,
+            AArch64::STPQi, AArch64::STPQi, AArch64::FPR128RegClass),
+    RuleST4(AArch64::ST4Fourv8b, AArch64::ZIP1v8i8, AArch64::ZIP2v8i8,
+            AArch64::ZIP1v8i8, AArch64::ZIP2v8i8, AArch64::ZIP1v8i8,
+            AArch64::ZIP2v8i8, AArch64::ZIP1v8i8, AArch64::ZIP2v8i8,
+            AArch64::STPDi, AArch64::STPDi, AArch64::FPR64RegClass)};
 
 } // end anonymous namespace
 
@@ -316,10 +315,10 @@ bool AArch64SIMDInstrOptImpl::shouldExitEarly(MachineFunction *MF, Subpass SP) {
     if (It != InterlEarlyExit.end())
       return It->second;
 
-    for (auto &I : IRT) {
+    for (const auto &I : IRT) {
       OriginalMCID = &TII->get(I.OrigOpc);
-      for (auto &Repl : I.ReplOpc)
-        ReplInstrMCID.push_back(&TII->get(Repl));
+      for (unsigned J = 0; J < I.NumRepl; ++J)
+        ReplInstrMCID.push_back(&TII->get(I.ReplOpc[J]));
       if (shouldReplaceInst(MF, OriginalMCID, ReplInstrMCID)) {
         InterlEarlyExit[Subtarget] = false;
         return false;
@@ -537,16 +536,17 @@ bool AArch64SIMDInstrOptImpl::optimizeLdStInterleave(MachineInstr &MI) {
   // If current instruction matches any of the rewriting rules, then
   // gather information about parameters of the new instructions.
   bool Match = false;
-  for (auto &I : IRT) {
+  for (const auto &I : IRT) {
     if (MI.getOpcode() == I.OrigOpc) {
-      SeqReg  = MI.getOperand(0).getReg();
+      SeqReg = MI.getOperand(0).getReg();
       AddrReg = MI.getOperand(1).getReg();
       DefiningMI = MRI->getUniqueVRegDef(SeqReg);
       unsigned NumReg = determineSrcReg(MI);
       if (!processSeqRegInst(DefiningMI, StReg, StRegKill, NumReg))
         return false;
 
-      for (auto &Repl : I.ReplOpc) {
+      for (unsigned J = 0; J < I.NumRepl; ++J) {
+        unsigned Repl = I.ReplOpc[J];
         ReplInstrMCID.push_back(&TII->get(Repl));
         // Generate destination registers but only for non-store instruction.
         if (Repl != AArch64::STPQi && Repl != AArch64::STPDi)
