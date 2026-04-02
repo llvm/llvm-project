@@ -3,9 +3,9 @@
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
-;; Verify that builtin variable OpVariable is emitted in the entry block
-;; so its def dominates all uses, even when the same builtin is called
-;; in multiple non-entry blocks.
+;; Verify correct translation when the same builtin is called from multiple
+;; non-entry blocks. The fix is validated by -verify-machineinstrs that fails
+;; if the OpVariable's VReg definition does not dominate all its uses in MIR.
 
 ; CHECK-DAG: OpDecorate %[[#VarID:]] BuiltIn LocalInvocationId
 ; CHECK-DAG: %[[#VarID]] = OpVariable %[[#]] Input

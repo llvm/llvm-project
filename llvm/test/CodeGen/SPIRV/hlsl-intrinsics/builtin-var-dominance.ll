@@ -1,9 +1,9 @@
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv-vulkan-unknown %s -o - | FileCheck %s
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv-vulkan-unknown %s -o - -filetype=obj | spirv-val %}
 
-;; Verify that builtin variable OpVariable is emitted in the entry block
-;; on the shader (ISel) path, so its def dominates all uses when the
-;; same builtin is accessed in multiple non-entry blocks.
+;; Verify correct translation when the same builtin is called from multiple
+;; non-entry blocks. The fix is validated by -verify-machineinstrs that fails
+;; if the OpVariable's VReg definition does not dominate all its uses in MIR.
 
 ; CHECK-DAG: OpDecorate %[[#VarID:]] BuiltIn LocalInvocationId
 ; CHECK-DAG: %[[#VarID]] = OpVariable %[[#]] Input
