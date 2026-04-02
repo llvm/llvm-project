@@ -247,6 +247,10 @@ static Value genParametersIn(OpBuilder &builder, Location loc,
 /// Finalizes the outlined arguments. The output buffer is copied depending
 /// on the kernel token and then deallocated. All other buffers are simply
 /// deallocated. Then we wait for all operations to complete.
+///
+/// `copyBack` maps 1:1 to the `buffers` array. It tracks which buffers were
+/// mutated by the kernel and require a device-to-host copy. An empty
+/// `copyBack` array implies no buffers are "copied back".
 static void genParametersOut(OpBuilder &builder, Location loc, Value out,
                              Value kernelToken, SmallVectorImpl<Value> &scalars,
                              SmallVectorImpl<Value> &buffers,
@@ -254,9 +258,15 @@ static void genParametersOut(OpBuilder &builder, Location loc, Value out,
                              SmallVectorImpl<Value> &tokens,
                              ArrayRef<bool> copyBack) {
   unsigned base = scalars.size();
+
+  // `args` stores scalars followed by buffers. `base` is the index of the first
+  // buffer. `bufIdx` maps the current buffer to its exact 1:1 counterpart in
+  // the `copyBack` mask.
   for (unsigned i = base, e = args.size(); i < e; i++) {
     unsigned bufIdx = i - base;
     Value firstToken;
+
+    // Checks if the current buffer needs a device-to-host copy.
     if (copyBack[bufIdx]) {
       if (out && bufIdx == 0) {
         genHostUnregisterMemref(builder, loc, out);
@@ -1205,6 +1215,9 @@ struct ForallRewriter : public OpRewritePattern<scf::ParallelOp> {
     SmallVector<Value> constants;
     SmallVector<Value> scalars;
     SmallVector<Value> buffers;
+    // A boolean mask aligned 1:1 with the `buffers` array, tracking which
+    // of those buffers were mutated by the loop. If true, the corresponding
+    // buffer needs to be "copied back" using a device-to-host copy.
     SmallVector<bool> copyBack;
     for (Value val : invariants) {
       Type tp = val.getType();
@@ -1215,6 +1228,8 @@ struct ForallRewriter : public OpRewritePattern<scf::ParallelOp> {
       else if (isa<MemRefType>(tp)) {
         buffers.push_back(val);
 
+        // Determine if the buffer needs to be "copied back" from device
+        // to host by checking for `memref.store` and the write memory effect.
         bool isWrite = false;
         for (Operation *user : val.getUsers()) {
           if (isa<memref::StoreOp>(user)) {
