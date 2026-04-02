@@ -743,8 +743,8 @@ void AMDGPUAtomicOptimizerImpl::optimizeAtomic(Instruction &I,
     // Record I's original position as the entry block.
     PixelEntryBB = I.getParent();
 
-    Value *const Cond = B.CreateIntrinsic(Intrinsic::amdgcn_ps_live, {});
-    Instruction *const NonHelperTerminator =
+    Value *Cond = B.CreateIntrinsic(Intrinsic::amdgcn_ps_live, {});
+    Instruction *NonHelperTerminator =
         SplitBlockAndInsertIfThen(Cond, &I, false, nullptr, &DTU, nullptr);
 
     // Record I's new position as the exit block.
@@ -784,7 +784,7 @@ void AMDGPUAtomicOptimizerImpl::optimizeAtomic(Instruction &I,
       // Need a final PHI to reconverge to above the helper lane branch mask.
       B.SetInsertPoint(PixelExitBB, PixelExitBB->getFirstNonPHIIt());
 
-      PHINode *const PHI = B.CreatePHI(I.getType(), 2);
+      PHINode *PHI = B.CreatePHI(I.getType(), 2);
       PHI->addIncoming(PoisonValue::get(I.getType()), PixelEntryBB);
       PHI->addIncoming(Result, I.getParent());
       I.replaceAllUsesWith(PHI);
@@ -806,7 +806,7 @@ Value *AMDGPUAtomicOptimizerImpl::optimizeAtomicImpl(IRBuilder<> &B,
                                                      AtomicRMWInst::BinOp Op,
                                                      unsigned ValIdx,
                                                      bool ValDivergent) const {
-  Type *const Ty = I.getType();
+  Type *Ty = I.getType();
   Type *Int32Ty = B.getInt32Ty();
   bool isAtomicFloatingPointTy = Ty->isFloatingPointTy();
   [[maybe_unused]] const unsigned TyBitWidth = DL.getTypeSizeInBits(Ty);
@@ -817,8 +817,8 @@ Value *AMDGPUAtomicOptimizerImpl::optimizeAtomicImpl(IRBuilder<> &B,
 
   // We need to know how many lanes are active within the wavefront, and we do
   // this by doing a ballot of active lanes.
-  Type *const WaveTy = B.getIntNTy(ST.getWavefrontSize());
-  CallInst *const Ballot =
+  Type *WaveTy = B.getIntNTy(ST.getWavefrontSize());
+  CallInst *Ballot =
       B.CreateIntrinsic(Intrinsic::amdgcn_ballot, WaveTy, B.getTrue());
 
   // We need to know how many lanes are active within the wavefront that are
@@ -871,16 +871,16 @@ Value *AMDGPUAtomicOptimizerImpl::optimizeAtomicImpl(IRBuilder<> &B,
     case AtomicRMWInst::Sub: {
       // The new value we will be contributing to the atomic operation is the
       // old value times the number of active lanes.
-      Value *const Ctpop = B.CreateIntCast(
+      Value *Ctpop = B.CreateIntCast(
           B.CreateUnaryIntrinsic(Intrinsic::ctpop, Ballot), Ty, false);
       NewV = buildMul(B, V, Ctpop);
       break;
     }
     case AtomicRMWInst::FAdd:
     case AtomicRMWInst::FSub: {
-      Value *const Ctpop = B.CreateIntCast(
+      Value *Ctpop = B.CreateIntCast(
           B.CreateUnaryIntrinsic(Intrinsic::ctpop, Ballot), Int32Ty, false);
-      Value *const CtpopFP = B.CreateUIToFP(Ctpop, Ty);
+      Value *CtpopFP = B.CreateUIToFP(Ctpop, Ty);
       NewV = B.CreateFMul(V, CtpopFP);
       break;
     }
@@ -900,7 +900,7 @@ Value *AMDGPUAtomicOptimizerImpl::optimizeAtomicImpl(IRBuilder<> &B,
     case AtomicRMWInst::Xor:
       // The new value we will be contributing to the atomic operation is the
       // old value times the parity of the number of active lanes.
-      Value *const Ctpop = B.CreateIntCast(
+      Value *Ctpop = B.CreateIntCast(
           B.CreateUnaryIntrinsic(Intrinsic::ctpop, Ballot), Ty, false);
       NewV = buildMul(B, V, B.CreateAnd(Ctpop, 1));
       break;
@@ -910,17 +910,17 @@ Value *AMDGPUAtomicOptimizerImpl::optimizeAtomicImpl(IRBuilder<> &B,
   // We only want a single lane to enter our new control flow, and we do this
   // by checking if there are any active lanes below us. Only one lane will
   // have 0 active lanes below us, so that will be the only one to progress.
-  Value *const Cond = B.CreateICmpEQ(Mbcnt, B.getInt32(0));
+  Value *Cond = B.CreateICmpEQ(Mbcnt, B.getInt32(0));
 
   // Store I's original basic block before we split the block.
-  BasicBlock *const OriginalBB = I.getParent();
+  BasicBlock *OriginalBB = I.getParent();
 
   // We need to introduce some new control flow to force a single lane to be
   // active. We do this by splitting I's basic block at I, and introducing the
   // new block such that:
   // entry --> single_lane -\
   //       \------------------> exit
-  Instruction *const SingleLaneTerminator =
+  Instruction *SingleLaneTerminator =
       SplitBlockAndInsertIfThen(Cond, &I, false, nullptr, &DTU, nullptr);
 
   // At this point, we have split the I's block to allow one lane in wavefront
@@ -970,7 +970,7 @@ Value *AMDGPUAtomicOptimizerImpl::optimizeAtomicImpl(IRBuilder<> &B,
 
   // Clone the original atomic operation into single lane, replacing the
   // original value with our newly created one.
-  Instruction *const NewI = I.clone();
+  Instruction *NewI = I.clone();
   B.Insert(NewI);
   NewI->setOperand(ValIdx, NewV);
 
@@ -980,7 +980,7 @@ Value *AMDGPUAtomicOptimizerImpl::optimizeAtomicImpl(IRBuilder<> &B,
 
   if (NeedResult) {
     // Create a PHI node to get our new atomic result into the exit block.
-    PHINode *const PHI = B.CreatePHI(Ty, 2);
+    PHINode *PHI = B.CreatePHI(Ty, 2);
     PHI->addIncoming(PoisonValue::get(Ty), Predecessor);
     PHI->addIncoming(NewI, SingleLaneTerminator->getParent());
 
@@ -1088,26 +1088,26 @@ Value *AMDGPUAtomicOptimizerImpl::optimizeAtomicImpl(IRBuilder<> &B,
 Value *AMDGPUAtomicOptimizerImpl::optimizeAtomicWithDynamicThreshold(
     IRBuilder<> &B, Instruction &I, AtomicRMWInst::BinOp Op, unsigned ValIdx,
     unsigned Threshold) const {
-  Type *const Ty = I.getType();
+  Type *Ty = I.getType();
   const bool NeedResult = !I.use_empty();
 
   // Count active lanes and build the threshold condition.
-  Type *const WaveTy = B.getIntNTy(ST.getWavefrontSize());
-  CallInst *const Ballot =
+  Type *WaveTy = B.getIntNTy(ST.getWavefrontSize());
+  CallInst *Ballot =
       B.CreateIntrinsic(Intrinsic::amdgcn_ballot, WaveTy, B.getTrue());
-  Value *const Ctpop = B.CreateIntCast(
+  Value *Ctpop = B.CreateIntCast(
       B.CreateUnaryIntrinsic(Intrinsic::ctpop, Ballot), B.getInt32Ty(), false);
-  Value *const ThresholdCond = B.CreateICmpUGT(Ctpop, B.getInt32(Threshold));
+  Value *ThresholdCond = B.CreateICmpUGT(Ctpop, B.getInt32(Threshold));
 
   // Split at I into: EntryBB -> OptBB (then) / NoOptBB (else) -> TailBB.
   Instruction *ThenTerm = nullptr, *ElseTerm = nullptr;
   SplitBlockAndInsertIfThenElse(ThresholdCond, &I, &ThenTerm, &ElseTerm,
                                 nullptr, &DTU, nullptr);
-  BasicBlock *const NoOptBB = ElseTerm->getParent();
-  BasicBlock *const TailBB = I.getParent();
+  BasicBlock *NoOptBB = ElseTerm->getParent();
+  BasicBlock *TailBB = I.getParent();
 
   // NoOptBB: each lane independently issues its own atomic (unoptimized).
-  Instruction *const NoOptNewI = I.clone();
+  Instruction *NoOptNewI = I.clone();
   NoOptNewI->insertBefore(ElseTerm->getIterator());
 
   // Move I into OptBB so that optimizeAtomicImpl rewrites only the optimized
@@ -1127,7 +1127,7 @@ Value *AMDGPUAtomicOptimizerImpl::optimizeAtomicWithDynamicThreshold(
   // After optimizeAtomicImpl, I sits in the exit block of the optimized
   // sub-CFG.  Merge the optimized and no-opt results in TailBB.
   B.SetInsertPoint(TailBB, TailBB->getFirstNonPHIIt());
-  PHINode *const MergePHI = B.CreatePHI(Ty, 2);
+  PHINode *MergePHI = B.CreatePHI(Ty, 2);
   MergePHI->addIncoming(OptResult, I.getParent());
   MergePHI->addIncoming(NoOptNewI, NoOptBB);
   return MergePHI;
