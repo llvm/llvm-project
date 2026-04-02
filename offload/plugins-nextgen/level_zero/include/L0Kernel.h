@@ -83,7 +83,8 @@ public:
   Error launchImpl(GenericDeviceTy &GenericDevice, uint32_t NumThreads[3],
                    uint32_t NumBlocks[3], uint32_t DynBlockMemSize,
                    KernelLaunchArgsTy &LaunchArgs,
-                   AsyncInfoWrapperTy &AsyncInfoWrapper) const override;
+                   AsyncInfoWrapperTy &AsyncInfoWrapper,
+                   GenericProfilerTy *ProfilerPtr) const override;
   Error deinit() {
     CALL_ZE_RET_ERROR(zeKernelDestroy, zeKernel);
     return Plugin::success();
