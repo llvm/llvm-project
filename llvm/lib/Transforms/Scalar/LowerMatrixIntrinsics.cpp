@@ -1884,11 +1884,11 @@ public:
 
     // If the pointers are in different address spaces, we cannot compare them
     // at runtime. Conservatively copy the load operand to a new buffer.
+    IRBuilder<> AllocaBuilder(&Func.getEntryBlock().front());
     if (Load->getPointerAddressSpace() != Store->getPointerAddressSpace()) {
       auto *VT = cast<FixedVectorType>(Load->getType());
       auto *ArrayTy =
           ArrayType::get(VT->getElementType(), VT->getNumElements());
-      IRBuilder<> AllocaBuilder(&Func.getEntryBlock().front());
       AllocaInst *Alloca =
           AllocaBuilder.CreateAlloca(ArrayTy, Load->getPointerAddressSpace());
       IRBuilder<> Builder(MatMul);
@@ -1943,6 +1943,15 @@ public:
     // overlap.
     Check1->getTerminator()->eraseFromParent();
     Builder.SetInsertPoint(Check1, Check1->begin());
+
+    auto *VT = cast<FixedVectorType>(Load->getType());
+    // Use an array type for the alloca, to avoid potentially huge alignment
+    // requirements for large vector types.
+    auto *ArrayTy = ArrayType::get(VT->getElementType(), VT->getNumElements());
+    AllocaInst *Alloca =
+        AllocaBuilder.CreateAlloca(ArrayTy, Load->getPointerAddressSpace());
+    Builder.CreateLifetimeStart(Alloca);
+
     Value *LoadEnd = Builder.CreatePtrAdd(
         LoadBegin, ConstantInt::get(AddrTy, LoadLoc.Size.getValue()),
         "load.end",
@@ -1952,16 +1961,7 @@ public:
     setExplicitlyUnknownBranchWeightsIfProfiled(*BR2, DEBUG_TYPE);
 
     // Copy load operand to new alloca.
-    auto *VT = cast<FixedVectorType>(Load->getType());
-    // Use an array type for the alloca, to avoid potentially huge alignment
-    // requirements for large vector types.
-    auto *ArrayTy = ArrayType::get(VT->getElementType(), VT->getNumElements());
-    IRBuilder<> AllocaBuilder(&Func.getEntryBlock().front());
-    AllocaInst *Alloca =
-        AllocaBuilder.CreateAlloca(ArrayTy, Load->getPointerAddressSpace());
-
     Builder.SetInsertPoint(Copy, Copy->begin());
-    Builder.CreateLifetimeStart(Alloca);
     Builder.CreateMemCpy(Alloca, Alloca->getAlign(), Load->getPointerOperand(),
                          Load->getAlign(), LoadLoc.Size.getValue());
     Builder.SetInsertPoint(Fusion, Fusion->begin());

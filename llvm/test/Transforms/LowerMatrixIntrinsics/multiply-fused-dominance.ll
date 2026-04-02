@@ -14,11 +14,11 @@ define void @multiply_can_hoist_cast(ptr noalias %A, ptr %B, ptr %C) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult ptr [[B:%.*]], [[STORE_END]]
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[ALIAS_CONT:%.*]], label [[NO_ALIAS:%.*]]
 ; CHECK:       alias_cont:
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[TMP2]])
 ; CHECK-NEXT:    [[LOAD_END:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 32
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult ptr [[C]], [[LOAD_END]]
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[COPY:%.*]], label [[NO_ALIAS]]
 ; CHECK:       copy:
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[TMP2]])
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 8 dereferenceable(32) [[TMP2]], ptr noundef nonnull align 8 dereferenceable(32) [[B]], i64 32, i1 false)
 ; CHECK-NEXT:    br label [[NO_ALIAS]]
 ; CHECK:       no_alias:
@@ -86,11 +86,11 @@ define void @multiply_can_hoist_multiple_insts(ptr noalias %A, ptr %B, ptr %C) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult ptr [[B:%.*]], [[STORE_END]]
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[ALIAS_CONT:%.*]], label [[NO_ALIAS:%.*]]
 ; CHECK:       alias_cont:
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[TMP2]])
 ; CHECK-NEXT:    [[LOAD_END:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 32
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult ptr [[GEP]], [[LOAD_END]]
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[COPY:%.*]], label [[NO_ALIAS]]
 ; CHECK:       copy:
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[TMP2]])
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 8 dereferenceable(32) [[TMP2]], ptr noundef nonnull align 8 dereferenceable(32) [[B]], i64 32, i1 false)
 ; CHECK-NEXT:    br label [[NO_ALIAS]]
 ; CHECK:       no_alias:
@@ -160,11 +160,11 @@ define void @multiply_can_hoist_multiple_insts2(ptr noalias %A, ptr %B, ptr %C) 
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult ptr [[B:%.*]], [[STORE_END]]
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[ALIAS_CONT:%.*]], label [[NO_ALIAS:%.*]]
 ; CHECK:       alias_cont:
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[TMP2]])
 ; CHECK-NEXT:    [[LOAD_END:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 32
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult ptr [[GEP_1]], [[LOAD_END]]
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[COPY:%.*]], label [[NO_ALIAS]]
 ; CHECK:       copy:
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[TMP2]])
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 8 dereferenceable(32) [[TMP2]], ptr noundef nonnull align 8 dereferenceable(32) [[B]], i64 32, i1 false)
 ; CHECK-NEXT:    br label [[NO_ALIAS]]
 ; CHECK:       no_alias:

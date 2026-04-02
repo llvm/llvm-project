@@ -17,11 +17,11 @@ define void @multiply(ptr %A, ptr %B, ptr %C) {
 ; PTR64-NEXT:    [[TMP0:%.*]] = icmp ult ptr [[A:%.*]], [[STORE_END]]
 ; PTR64-NEXT:    br i1 [[TMP0]], label [[ALIAS_CONT:%.*]], label [[NO_ALIAS:%.*]]
 ; PTR64:       alias_cont:
+; PTR64-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[TMP2]])
 ; PTR64-NEXT:    [[LOAD_END:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 128
 ; PTR64-NEXT:    [[TMP1:%.*]] = icmp ult ptr [[C]], [[LOAD_END]]
 ; PTR64-NEXT:    br i1 [[TMP1]], label [[COPY:%.*]], label [[NO_ALIAS]]
 ; PTR64:       copy:
-; PTR64-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[TMP2]])
 ; PTR64-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 8 dereferenceable(128) [[TMP2]], ptr noundef nonnull align 8 dereferenceable(128) [[A]], i64 128, i1 false)
 ; PTR64-NEXT:    br label [[NO_ALIAS]]
 ; PTR64:       no_alias:
@@ -30,11 +30,11 @@ define void @multiply(ptr %A, ptr %B, ptr %C) {
 ; PTR64-NEXT:    [[TMP4:%.*]] = icmp ult ptr [[A]], [[STORE_END4]]
 ; PTR64-NEXT:    br i1 [[TMP4]], label [[ALIAS_CONT1:%.*]], label [[NO_ALIAS3:%.*]]
 ; PTR64:       alias_cont1:
+; PTR64-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[TMP6]])
 ; PTR64-NEXT:    [[LOAD_END5:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 128
 ; PTR64-NEXT:    [[TMP5:%.*]] = icmp ult ptr [[C]], [[LOAD_END5]]
 ; PTR64-NEXT:    br i1 [[TMP5]], label [[COPY2:%.*]], label [[NO_ALIAS3]]
 ; PTR64:       copy2:
-; PTR64-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[TMP6]])
 ; PTR64-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 8 dereferenceable(128) [[TMP6]], ptr noundef nonnull align 8 dereferenceable(128) [[A]], i64 128, i1 false)
 ; PTR64-NEXT:    br label [[NO_ALIAS3]]
 ; PTR64:       no_alias3:
@@ -190,11 +190,11 @@ define void @multiply(ptr %A, ptr %B, ptr %C) {
 ; PTR32-NEXT:    [[TMP0:%.*]] = icmp ult ptr [[A:%.*]], [[STORE_END]]
 ; PTR32-NEXT:    br i1 [[TMP0]], label [[ALIAS_CONT:%.*]], label [[NO_ALIAS:%.*]]
 ; PTR32:       alias_cont:
+; PTR32-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[TMP2]])
 ; PTR32-NEXT:    [[LOAD_END:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i32 128
 ; PTR32-NEXT:    [[TMP1:%.*]] = icmp ult ptr [[C]], [[LOAD_END]]
 ; PTR32-NEXT:    br i1 [[TMP1]], label [[COPY:%.*]], label [[NO_ALIAS]]
 ; PTR32:       copy:
-; PTR32-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[TMP2]])
 ; PTR32-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 8 dereferenceable(128) [[TMP2]], ptr noundef nonnull align 8 dereferenceable(128) [[A]], i64 128, i1 false)
 ; PTR32-NEXT:    br label [[NO_ALIAS]]
 ; PTR32:       no_alias:
@@ -203,11 +203,11 @@ define void @multiply(ptr %A, ptr %B, ptr %C) {
 ; PTR32-NEXT:    [[TMP4:%.*]] = icmp ult ptr [[A]], [[STORE_END4]]
 ; PTR32-NEXT:    br i1 [[TMP4]], label [[ALIAS_CONT1:%.*]], label [[NO_ALIAS3:%.*]]
 ; PTR32:       alias_cont1:
+; PTR32-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[TMP6]])
 ; PTR32-NEXT:    [[LOAD_END5:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i32 128
 ; PTR32-NEXT:    [[TMP5:%.*]] = icmp ult ptr [[C]], [[LOAD_END5]]
 ; PTR32-NEXT:    br i1 [[TMP5]], label [[COPY2:%.*]], label [[NO_ALIAS3]]
 ; PTR32:       copy2:
-; PTR32-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[TMP6]])
 ; PTR32-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 8 dereferenceable(128) [[TMP6]], ptr noundef nonnull align 8 dereferenceable(128) [[A]], i64 128, i1 false)
 ; PTR32-NEXT:    br label [[NO_ALIAS3]]
 ; PTR32:       no_alias3:

@@ -192,11 +192,11 @@ define void @multiply_first_load_same_addr_space(ptr addrspace(1) %A, ptr addrsp
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult ptr addrspace(1) [[A]], [[STORE_END]]
 ; CHECK-NEXT:    br i1 [[TMP0]], label %[[ALIAS_CONT:.*]], label %[[NO_ALIAS:.*]]
 ; CHECK:       [[ALIAS_CONT]]:
+; CHECK-NEXT:    call void @llvm.lifetime.start.p1(ptr addrspace(1) [[TMP2]])
 ; CHECK-NEXT:    [[LOAD_END:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(1) [[A]], i64 16
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult ptr addrspace(1) [[C]], [[LOAD_END]]
 ; CHECK-NEXT:    br i1 [[TMP1]], label %[[COPY:.*]], label %[[NO_ALIAS]]
 ; CHECK:       [[COPY]]:
-; CHECK-NEXT:    call void @llvm.lifetime.start.p1(ptr addrspace(1) [[TMP2]])
 ; CHECK-NEXT:    call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) align 4 [[TMP2]], ptr addrspace(1) align 8 [[A]], i64 16, i1 false)
 ; CHECK-NEXT:    br label %[[NO_ALIAS]]
 ; CHECK:       [[NO_ALIAS]]:
@@ -295,11 +295,11 @@ define void @multiply_second_load_same_addr_space(ptr addrspace(2) %A, ptr addrs
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult ptr addrspace(1) [[B]], [[STORE_END]]
 ; CHECK-NEXT:    br i1 [[TMP1]], label %[[ALIAS_CONT:.*]], label %[[NO_ALIAS:.*]]
 ; CHECK:       [[ALIAS_CONT]]:
+; CHECK-NEXT:    call void @llvm.lifetime.start.p1(ptr addrspace(1) [[TMP3]])
 ; CHECK-NEXT:    [[LOAD_END:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(1) [[B]], i64 16
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult ptr addrspace(1) [[C]], [[LOAD_END]]
 ; CHECK-NEXT:    br i1 [[TMP2]], label %[[COPY:.*]], label %[[NO_ALIAS]]
 ; CHECK:       [[COPY]]:
-; CHECK-NEXT:    call void @llvm.lifetime.start.p1(ptr addrspace(1) [[TMP3]])
 ; CHECK-NEXT:    call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) align 4 [[TMP3]], ptr addrspace(1) align 8 [[B]], i64 16, i1 false)
 ; CHECK-NEXT:    br label %[[NO_ALIAS]]
 ; CHECK:       [[NO_ALIAS]]:
