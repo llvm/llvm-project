@@ -404,8 +404,8 @@ static unsigned getMaxShiftAmount(const APInt &MaxValue, unsigned BitWidth) {
   return MaxValue.getLimitedValue(BitWidth - 1);
 }
 
-KnownBits KnownBits::shl(const KnownBits &LHS, unsigned ShiftAmt,
-                         bool NUW, bool NSW) {
+KnownBits KnownBits::shl(const KnownBits &LHS, unsigned ShiftAmt, bool NUW,
+                         bool NSW) {
   // TODO: This is simple fallback to generic RHS-based shl.
   // Add a specialized constant-shift implementation with identical semantics.
   KnownBits RHS = KnownBits::makeConstant(APInt(LHS.getBitWidth(), ShiftAmt));
