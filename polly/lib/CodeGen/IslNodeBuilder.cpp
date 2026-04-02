@@ -587,7 +587,7 @@ void IslNodeBuilder::createForParallel(__isl_take isl_ast_node *For) {
   ScalarEvolution *CallerSE = GenSE;
   ValueMapT CallerGlobals = ValueMap;
   IslExprBuilder::IDToValueTy IDToValueCopy = IDToValue;
-  MapVector<const Loop *, const SCEV *> OutsideLoopIterationsCopy =
+  MapVector<const Loop *, const SCEV *> CallerOutsideLoopIterations =
       OutsideLoopIterations;
 
   // Get the analyses for the subfunction. ParallelLoopGenerator already create
@@ -657,8 +657,9 @@ void IslNodeBuilder::createForParallel(__isl_take isl_ast_node *For) {
   // from the caller function.
   for (auto &[L, S] : OutsideLoopIterations) {
     if (auto *U = dyn_cast<SCEVUnknown>(S)) {
-      if (Value *NewVal = NewValues.lookup(U->getValue()))
-        OutsideLoopIterations[L] = GenSE->getUnknown(NewVal);
+      Value *NewVal = NewValues.lookup(U->getValue());
+      assert(NewVal && "must have a new value");
+      OutsideLoopIterations[L] = GenSE->getUnknown(NewVal);
     }
   }
 
@@ -694,7 +695,7 @@ void IslNodeBuilder::createForParallel(__isl_take isl_ast_node *For) {
   GenSE = CallerSE;
   IDToValue = std::move(IDToValueCopy);
   ValueMap = std::move(CallerGlobals);
-  OutsideLoopIterations = std::move(OutsideLoopIterationsCopy);
+  OutsideLoopIterations = std::move(CallerOutsideLoopIterations);
   ExprBuilder.switchGeneratedFunc(CallerFn, CallerDT, CallerLI, CallerSE);
   RegionGen.switchGeneratedFunc(CallerFn, CallerDT, CallerLI, CallerSE);
   BlockGen.switchGeneratedFunc(CallerFn, CallerDT, CallerLI, CallerSE);
