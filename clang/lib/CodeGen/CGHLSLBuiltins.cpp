@@ -475,6 +475,37 @@ static Value *emitHlslClamp(CodeGenFunction &CGF, const CallExpr *E,
   return Clamp;
 }
 
+static Value *emitGetDimensions(CodeGenFunction &CGF, const CallExpr *E,
+                                unsigned IntrinsicID, unsigned NumRetComps,
+                                bool HasLod) {
+  Value *Handle = CGF.EmitScalarExpr(E->getArg(0));
+
+  SmallVector<Value *> Args{Handle};
+  if (HasLod)
+    Args.push_back(CGF.EmitScalarExpr(E->getArg(1)));
+
+  Value *DimValue =
+      CGF.Builder.CreateIntrinsic(IntrinsicID, {Handle->getType()}, Args);
+
+  Value *LastStore = nullptr;
+  unsigned ArgIndex = HasLod ? 2 : 1;
+  for (unsigned i = 0; i < NumRetComps; ++i) {
+    LValue DimOut = CGF.EmitLValue(E->getArg(ArgIndex++));
+    Value *Elem = DimValue;
+    if (NumRetComps > 1)
+      Elem = CGF.Builder.CreateExtractElement(DimValue, i);
+
+    // Handle float casting if needed
+    QualType OutTy = E->getArg(ArgIndex - 1)->getType();
+    if (OutTy->isFloatingType())
+      Elem = CGF.Builder.CreateUIToFP(
+          Elem, llvm::Type::getFloatTy(CGF.getLLVMContext()));
+
+    LastStore = CGF.Builder.CreateStore(Elem, DimOut.getAddress());
+  }
+  return LastStore;
+}
+
 Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
                                             const CallExpr *E,
                                             ReturnValueSlot ReturnValue) {
@@ -883,73 +914,20 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
         ArrayRef<Value *>{IndexOp});
   }
   case Builtin::BI__builtin_hlsl_resource_getdimensions_x:
-  case Builtin::BI__builtin_hlsl_resource_getdimensions_xy:
-  case Builtin::BI__builtin_hlsl_resource_getdimensions_levels_xy:
   case Builtin::BI__builtin_hlsl_resource_getdimensions_x_float:
+    return emitGetDimensions(*this, E,
+                             CGM.getHLSLRuntime().getGetDimensionsXIntrinsic(),
+                             1, /*HasLod=*/false);
+  case Builtin::BI__builtin_hlsl_resource_getdimensions_xy:
   case Builtin::BI__builtin_hlsl_resource_getdimensions_xy_float:
-  case Builtin::BI__builtin_hlsl_resource_getdimensions_levels_xy_float: {
-    Value *Handle = EmitScalarExpr(E->getArg(0));
-    bool HasLod =
-        BuiltinID ==
-            Builtin::BI__builtin_hlsl_resource_getdimensions_levels_xy ||
-        BuiltinID ==
-            Builtin::BI__builtin_hlsl_resource_getdimensions_levels_xy_float;
-    unsigned IntrinsicID;
-    unsigned NumRetComps;
-
-    switch (BuiltinID) {
-    case Builtin::BI__builtin_hlsl_resource_getdimensions_x:
-    case Builtin::BI__builtin_hlsl_resource_getdimensions_x_float:
-      IntrinsicID = CGM.getHLSLRuntime().getGetDimensionsXIntrinsic();
-      NumRetComps = 1;
-      break;
-    case Builtin::BI__builtin_hlsl_resource_getdimensions_xy:
-    case Builtin::BI__builtin_hlsl_resource_getdimensions_xy_float:
-      IntrinsicID = CGM.getHLSLRuntime().getGetDimensionsXYIntrinsic();
-      NumRetComps = 2;
-      break;
-    case Builtin::BI__builtin_hlsl_resource_getdimensions_levels_xy:
-    case Builtin::BI__builtin_hlsl_resource_getdimensions_levels_xy_float:
-      IntrinsicID = CGM.getHLSLRuntime().getGetDimensionsLevelsXYIntrinsic();
-      NumRetComps = 3;
-      break;
-    default:
-      llvm_unreachable("Unknown GetDimensions builtin");
-    }
-
-    llvm::Type *RetTy = llvm::Type::getInt32Ty(getLLVMContext());
-    if (NumRetComps > 1) {
-      RetTy = llvm::FixedVectorType::get(RetTy, NumRetComps);
-    }
-
-    SmallVector<Value *> Args{Handle};
-    if (HasLod) {
-      Args.push_back(EmitScalarExpr(E->getArg(1)));
-    }
-
-    Value *DimValue =
-        Builder.CreateIntrinsic(IntrinsicID, {Handle->getType()}, Args);
-
-    Value *LastStore = nullptr;
-    unsigned ArgIndex = HasLod ? 2 : 1;
-    for (unsigned i = 0; i < NumRetComps; ++i) {
-      LValue DimOut = EmitLValue(E->getArg(ArgIndex++));
-      Value *Elem = DimValue;
-      if (NumRetComps > 1) {
-        Elem = Builder.CreateExtractElement(DimValue, i);
-      }
-
-      // Handle float casting if needed
-      QualType OutTy = E->getArg(ArgIndex - 1)->getType();
-      if (OutTy->isFloatingType()) {
-        Elem = Builder.CreateUIToFP(Elem,
-                                    llvm::Type::getFloatTy(getLLVMContext()));
-      }
-
-      LastStore = Builder.CreateStore(Elem, DimOut.getAddress());
-    }
-    return LastStore;
-  }
+    return emitGetDimensions(*this, E,
+                             CGM.getHLSLRuntime().getGetDimensionsXYIntrinsic(),
+                             2, /*HasLod=*/false);
+  case Builtin::BI__builtin_hlsl_resource_getdimensions_levels_xy:
+  case Builtin::BI__builtin_hlsl_resource_getdimensions_levels_xy_float:
+    return emitGetDimensions(
+        *this, E, CGM.getHLSLRuntime().getGetDimensionsLevelsXYIntrinsic(), 3,
+        /*HasLod=*/true);
   case Builtin::BI__builtin_hlsl_resource_getstride: {
     LValue Stride = EmitLValue(E->getArg(1));
     return emitBufferStride(this, E->getArg(0), Stride);
