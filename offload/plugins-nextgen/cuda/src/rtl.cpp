@@ -1331,6 +1331,9 @@ struct CUDADeviceTy : public GenericDeviceTy {
   /// Returns the clock frequency for the given NVPTX device.
   uint64_t getClockFrequency() const override { return 1000000000; }
 
+  /// Device timestamp stub for CUDA - full profiling is a future extension.
+  uint64_t getDeviceTimeStamp() override { return 0; }
+
 private:
   using CUDAStreamManagerTy = GenericDeviceResourceManagerTy<CUDAStreamRef>;
   using CUDAEventManagerTy = GenericDeviceResourceManagerTy<CUDAEventRef>;
