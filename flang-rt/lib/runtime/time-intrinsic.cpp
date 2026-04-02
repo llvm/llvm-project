@@ -426,7 +426,7 @@ int gettimeofday(timeval *tv, void *) {
 
   // Convert ftime to a real 64-bit integer
   std::uint64_t time{
-      ULARGE_INTEGER{{ftime.dwHighDateTime, ftime.dwHighDateTime}}.QuadPart};
+      ULARGE_INTEGER{{ftime.dwLowDateTime, ftime.dwHighDateTime}}.QuadPart};
   // Convert to Unix epoch time
   time -= epoch_offset;
 
