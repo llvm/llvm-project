@@ -2115,16 +2115,13 @@ bool DIExpression::extractIfOffset(int64_t &Offset) const {
 }
 
 bool DIExpression::extractLeadingOffset(
-    int64_t &OffsetInBytes, SmallVectorImpl<uint64_t> &RemainingOps) const {
+    ArrayRef<uint64_t> Ops, int64_t &OffsetInBytes,
+    SmallVectorImpl<uint64_t> &RemainingOps) {
   OffsetInBytes = 0;
   RemainingOps.clear();
 
-  auto SingleLocEltsOpt = getSingleLocationExpressionElements();
-  if (!SingleLocEltsOpt)
-    return false;
-
-  auto ExprOpEnd = expr_op_iterator(SingleLocEltsOpt->end());
-  auto ExprOpIt = expr_op_iterator(SingleLocEltsOpt->begin());
+  auto ExprOpEnd = expr_op_iterator(Ops.end());
+  auto ExprOpIt = expr_op_iterator(Ops.begin());
   while (ExprOpIt != ExprOpEnd) {
     uint64_t Op = ExprOpIt->getOp();
     if (Op == dwarf::DW_OP_deref || Op == dwarf::DW_OP_deref_size ||
@@ -2151,6 +2148,18 @@ bool DIExpression::extractLeadingOffset(
   }
   RemainingOps.append(ExprOpIt.getBase(), ExprOpEnd.getBase());
   return true;
+}
+
+bool DIExpression::extractLeadingOffset(
+    int64_t &OffsetInBytes, SmallVectorImpl<uint64_t> &RemainingOps) const {
+  auto SingleLocEltsOpt = getSingleLocationExpressionElements();
+  if (!SingleLocEltsOpt) {
+    OffsetInBytes = 0;
+    RemainingOps.clear();
+    return false;
+  }
+
+  return extractLeadingOffset(*SingleLocEltsOpt, OffsetInBytes, RemainingOps);
 }
 
 bool DIExpression::hasAllLocationOps(unsigned N) const {

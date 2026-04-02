@@ -288,7 +288,7 @@ Status ProcessDebugger::ReadMemory(lldb::addr_t vm_addr, void *buf, size_t size,
   error = Status(GetLastError(), eErrorTypeWin32);
   MemoryRegionInfo info;
   if (GetMemoryRegionInfo(vm_addr, info).Fail() ||
-      info.GetMapped() != MemoryRegionInfo::OptionalBool::eYes)
+      info.GetMapped() != eLazyBoolYes)
     return error;
   size = info.GetRange().GetRangeEnd() - vm_addr;
   LLDB_LOG(log, "retrying the read with size {0:x}", size);
@@ -421,10 +421,10 @@ Status ProcessDebugger::GetMemoryRegionInfo(lldb::addr_t vm_addr,
       // range from the vm_addr to LLDB_INVALID_ADDRESS
       info.GetRange().SetRangeBase(vm_addr);
       info.GetRange().SetRangeEnd(LLDB_INVALID_ADDRESS);
-      info.SetReadable(MemoryRegionInfo::eNo);
-      info.SetExecutable(MemoryRegionInfo::eNo);
-      info.SetWritable(MemoryRegionInfo::eNo);
-      info.SetMapped(MemoryRegionInfo::eNo);
+      info.SetReadable(eLazyBoolNo);
+      info.SetExecutable(eLazyBoolNo);
+      info.SetWritable(eLazyBoolNo);
+      info.SetMapped(eLazyBoolNo);
       return error;
     } else {
       error = Status(last_error, eErrorTypeWin32);
@@ -441,14 +441,13 @@ Status ProcessDebugger::GetMemoryRegionInfo(lldb::addr_t vm_addr,
     const bool readable = IsPageReadable(mem_info.Protect);
     const bool executable = IsPageExecutable(mem_info.Protect);
     const bool writable = IsPageWritable(mem_info.Protect);
-    info.SetReadable(readable ? MemoryRegionInfo::eYes : MemoryRegionInfo::eNo);
-    info.SetExecutable(executable ? MemoryRegionInfo::eYes
-                                  : MemoryRegionInfo::eNo);
-    info.SetWritable(writable ? MemoryRegionInfo::eYes : MemoryRegionInfo::eNo);
+    info.SetReadable(readable ? eLazyBoolYes : eLazyBoolNo);
+    info.SetExecutable(executable ? eLazyBoolYes : eLazyBoolNo);
+    info.SetWritable(writable ? eLazyBoolYes : eLazyBoolNo);
   } else {
-    info.SetReadable(MemoryRegionInfo::eNo);
-    info.SetExecutable(MemoryRegionInfo::eNo);
-    info.SetWritable(MemoryRegionInfo::eNo);
+    info.SetReadable(eLazyBoolNo);
+    info.SetExecutable(eLazyBoolNo);
+    info.SetWritable(eLazyBoolNo);
   }
 
   // AllocationBase is defined for MEM_COMMIT and MEM_RESERVE but not MEM_FREE.
@@ -457,7 +456,7 @@ Status ProcessDebugger::GetMemoryRegionInfo(lldb::addr_t vm_addr,
         reinterpret_cast<addr_t>(mem_info.BaseAddress));
     info.GetRange().SetRangeEnd(reinterpret_cast<addr_t>(mem_info.BaseAddress) +
                                 mem_info.RegionSize);
-    info.SetMapped(MemoryRegionInfo::eYes);
+    info.SetMapped(eLazyBoolYes);
   } else {
     // In the unmapped case we need to return the distance to the next block of
     // memory. VirtualQueryEx nearly does that except that it gives the
@@ -467,7 +466,7 @@ Status ProcessDebugger::GetMemoryRegionInfo(lldb::addr_t vm_addr,
     DWORD page_offset = vm_addr % data.dwPageSize;
     info.GetRange().SetRangeBase(vm_addr);
     info.GetRange().SetByteSize(mem_info.RegionSize - page_offset);
-    info.SetMapped(MemoryRegionInfo::eNo);
+    info.SetMapped(eLazyBoolNo);
   }
 
   LLDB_LOG_VERBOSE(log,
