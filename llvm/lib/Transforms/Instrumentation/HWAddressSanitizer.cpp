@@ -226,10 +226,6 @@ static cl::opt<bool> ClStaticLinking(
              "__start_hwasan_globals and __stop_hwasan_globals symbols"),
     cl::Hidden, cl::init(false));
 
-STATISTIC(NumTotalFuncs, "Number of total funcs");
-STATISTIC(NumInstrumentedFuncs, "Number of instrumented funcs");
-STATISTIC(NumNoProfileSummaryFuncs, "Number of funcs without PS");
-
 // Mode for selecting how to insert frame record info into the stack ring
 // buffer.
 enum RecordStackHistoryMode {
@@ -286,6 +282,10 @@ static cl::opt<bool> ClInlineFastPathChecks("hwasan-inline-fast-path-checks",
 static cl::opt<bool> ClUsePageAliases("hwasan-experimental-use-page-aliases",
                                       cl::desc("Use page aliasing in HWASan"),
                                       cl::Hidden, cl::init(false));
+
+STATISTIC(NumTotalFuncs, "Number of total funcs");
+STATISTIC(NumInstrumentedFuncs, "Number of instrumented funcs");
+STATISTIC(NumNoProfileSummaryFuncs, "Number of funcs without PS");
 
 namespace {
 

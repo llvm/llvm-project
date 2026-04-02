@@ -169,6 +169,10 @@ static void restoreIPandDebugLoc(llvm::IRBuilderBase &Builder,
     Builder.SetCurrentDebugLocation(BB->back().getStableDebugLoc());
 }
 
+static bool hasGridValue(const Triple &T) {
+  return T.isAMDGPU() || T.isNVPTX() || T.isSPIRV();
+}
+
 static const omp::GV &getGridValue(const Triple &T, Function *Kernel) {
   if (T.isAMDGPU()) {
     StringRef Features =
@@ -297,7 +301,7 @@ computeOpenMPScheduleType(ScheduleKind ClauseKind, bool HasChunks,
 /// * \p Source is a degenerate block (no terminator because the BB is
 ///             the current head of the IR construction).
 static void redirectTo(BasicBlock *Source, BasicBlock *Target, DebugLoc DL) {
-  if (Instruction *Term = Source->getTerminator()) {
+  if (Instruction *Term = Source->getTerminatorOrNull()) {
     auto *Br = cast<UncondBrInst>(Term);
     BasicBlock *Succ = Br->getSuccessor();
     Succ->removePredecessor(Source, /*KeepOneInputPHIs=*/true);
@@ -880,9 +884,8 @@ void OpenMPIRBuilder::finalize(Function *Fn) {
 
         if (I.isTerminator()) {
           // Absorb any debug value that terminator may have
-          if (OI.EntryBB->getTerminator())
-            OI.EntryBB->getTerminator()->adoptDbgRecords(
-                &ArtificialEntry, I.getIterator(), false);
+          if (Instruction *TI = OI.EntryBB->getTerminatorOrNull())
+            TI->adoptDbgRecords(&ArtificialEntry, I.getIterator(), false);
           continue;
         }
 
@@ -2190,7 +2193,6 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTaskloop(
     /* Create the casting for the Bounds Values that can be used when outlining
      * to replace the uses of the fakes with real values */
     BasicBlock *CodeReplBB = StaleCI->getParent();
-    IRBuilderBase::InsertPoint CurrentIp = Builder.saveIP();
     Builder.SetInsertPoint(CodeReplBB->getFirstInsertionPt());
     Value *CastedLBVal =
         Builder.CreateIntCast(LBVal, Builder.getInt64Ty(), true, "lb64");
@@ -2198,7 +2200,6 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTaskloop(
         Builder.CreateIntCast(UBVal, Builder.getInt64Ty(), true, "ub64");
     Value *CastedStepVal =
         Builder.CreateIntCast(StepVal, Builder.getInt64Ty(), true, "step64");
-    Builder.restoreIP(CurrentIp);
 
     Builder.SetInsertPoint(StaleCI);
 
@@ -4389,15 +4390,28 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createReductionsGPU(
 
   Value *RL = Builder.CreatePointerBitCastOrAddrSpaceCast(ReductionList, PtrTy);
 
+  // NOTE: ReductionDataSize is passed as the reduce_data_size
+  // argument to __kmpc_nvptx_{parallel,teams}_reduce_nowait_v2, but
+  // the runtime implementations do not currently use it.  The teams
+  // runtime reads ReductionDataSize from KernelEnvironmentTy instead
+  // (set separately via TargetKernelDefaultAttrs).  It is computed
+  // here conservatively as max(element sizes) * N rather than the
+  // exact sum, which over-calculates the size for mixed reduction
+  // types but is harmless given the argument is unused.
+  // TODO: Consider dropping this computation if the runtime API is
+  // ever revised to remove the unused parameter.
   unsigned MaxDataSize = 0;
   SmallVector<Type *> ReductionTypeArgs;
   for (auto En : enumerate(ReductionInfos)) {
-    auto Size = M.getDataLayout().getTypeStoreSize(En.value().ElementType);
-    if (Size > MaxDataSize)
-      MaxDataSize = Size;
+    // Use ByRefElementType for by-ref reductions so that MaxDataSize matches
+    // the actual data size stored in the global reduction buffer, consistent
+    // with the ReductionsBufferTy struct used for GEP offsets below.
     Type *RedTypeArg = (!IsByRef.empty() && IsByRef[En.index()])
                            ? En.value().ByRefElementType
                            : En.value().ElementType;
+    auto Size = M.getDataLayout().getTypeStoreSize(RedTypeArg);
+    if (Size > MaxDataSize)
+      MaxDataSize = Size;
     ReductionTypeArgs.emplace_back(RedTypeArg);
   }
   Value *ReductionDataSize =
@@ -4926,7 +4940,7 @@ Error OpenMPIRBuilder::emitScanBasedDirectiveDeclsIR(
     return AfterIP.takeError();
   Builder.restoreIP(*AfterIP);
   BasicBlock *InputBB = Builder.GetInsertBlock();
-  if (InputBB->getTerminator())
+  if (InputBB->hasTerminator())
     Builder.SetInsertPoint(Builder.GetInsertBlock()->getTerminator());
   AfterIP = createBarrier(Builder.saveIP(), llvm::omp::OMPD_barrier);
   if (!AfterIP)
@@ -4961,8 +4975,8 @@ Error OpenMPIRBuilder::emitScanBasedDirectiveFinalsIR(
   // called for variables which have destructors/finalizers.
   auto FiniCB = [&](InsertPointTy CodeGenIP) { return llvm::Error::success(); };
 
-  if (ScanRedInfo->OMPScanFinish->getTerminator())
-    Builder.SetInsertPoint(ScanRedInfo->OMPScanFinish->getTerminator());
+  if (Instruction *TI = ScanRedInfo->OMPScanFinish->getTerminatorOrNull())
+    Builder.SetInsertPoint(TI);
   else
     Builder.SetInsertPoint(ScanRedInfo->OMPScanFinish);
 
@@ -4974,7 +4988,7 @@ Error OpenMPIRBuilder::emitScanBasedDirectiveFinalsIR(
     return AfterIP.takeError();
   Builder.restoreIP(*AfterIP);
   BasicBlock *InputBB = Builder.GetInsertBlock();
-  if (InputBB->getTerminator())
+  if (InputBB->hasTerminator())
     Builder.SetInsertPoint(Builder.GetInsertBlock()->getTerminator());
   AfterIP = createBarrier(Builder.saveIP(), llvm::omp::OMPD_barrier);
   if (!AfterIP)
@@ -5603,7 +5617,7 @@ OpenMPIRBuilder::applyStaticChunkedWorkshareLoop(
   // FIXME: Don't run analyses on incomplete/invalid IR.
   SmallVector<Instruction *> UIs;
   for (BasicBlock &BB : *F)
-    if (!BB.getTerminator())
+    if (!BB.hasTerminator())
       UIs.push_back(new UnreachableInst(F->getContext(), &BB));
   FunctionAnalysisManager FAM;
   FAM.registerPass([]() { return DominatorTreeAnalysis(); });
@@ -6900,7 +6914,7 @@ void OpenMPIRBuilder::applySimd(CanonicalLoopInfo *CanonicalLoop,
   // FIXME: Don't run analyses on incomplete/invalid IR.
   SmallVector<Instruction *> UIs;
   for (BasicBlock &BB : *F)
-    if (!BB.getTerminator())
+    if (!BB.hasTerminator())
       UIs.push_back(new UnreachableInst(F->getContext(), &BB));
 
   // TODO: We should not rely on pass manager. Currently we use pass manager
@@ -7039,7 +7053,7 @@ static int32_t computeHeuristicUnrollFactor(CanonicalLoopInfo *CLI) {
   // FIXME: Don't run analyses on incomplete/invalid IR.
   SmallVector<Instruction *> UIs;
   for (BasicBlock &BB : *F)
-    if (!BB.getTerminator())
+    if (!BB.hasTerminator())
       UIs.push_back(new UnreachableInst(F->getContext(), &BB));
 
   FunctionAnalysisManager FAM;
@@ -7449,7 +7463,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::EmitOMPInlinedRegion(
   // Create inlined region's entry and body blocks, in preparation
   // for conditional creation
   BasicBlock *EntryBB = Builder.GetInsertBlock();
-  Instruction *SplitPos = EntryBB->getTerminator();
+  Instruction *SplitPos = EntryBB->getTerminatorOrNull();
   if (!isa_and_nonnull<UncondBrInst, CondBrInst>(SplitPos))
     SplitPos = new UnreachableInst(Builder.getContext(), EntryBB);
   BasicBlock *ExitBB = EntryBB->splitBasicBlock(SplitPos, "omp_region.end");
@@ -7579,7 +7593,7 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createCopyinClauseBlocks(
 
   // If entry block is terminated, split to preserve the branch to following
   // basic block (i.e. OMP.Entry.Next), otherwise, leave everything as is.
-  if (isa_and_nonnull<CondBrInst>(OMP_Entry->getTerminator())) {
+  if (isa_and_nonnull<CondBrInst>(OMP_Entry->getTerminatorOrNull())) {
     CopyEnd = OMP_Entry->splitBasicBlock(OMP_Entry->getTerminator(),
                                          "copyin.not.master.end");
     OMP_Entry->getTerminator()->eraseFromParent();
@@ -7775,9 +7789,15 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createTargetInit(
   // If MaxThreads not set, select the maximum between the default workgroup
   // size and the MinThreads value.
   int32_t MaxThreadsVal = Attrs.MaxThreads.front();
-  if (MaxThreadsVal < 0)
-    MaxThreadsVal = std::max(
-        int32_t(getGridValue(T, Kernel).GV_Default_WG_Size), Attrs.MinThreads);
+  if (MaxThreadsVal < 0) {
+    if (hasGridValue(T)) {
+      MaxThreadsVal =
+          std::max(int32_t(getGridValue(T, Kernel).GV_Default_WG_Size),
+                   Attrs.MinThreads);
+    } else {
+      MaxThreadsVal = Attrs.MinThreads;
+    }
+  }
 
   if (MaxThreadsVal > 0)
     writeThreadBoundsForKernel(T, *Kernel, Attrs.MinThreads, MaxThreadsVal);
@@ -10162,7 +10182,7 @@ Error OpenMPIRBuilder::emitOffloadingArrays(
 void OpenMPIRBuilder::emitBranch(BasicBlock *Target) {
   BasicBlock *CurBB = Builder.GetInsertBlock();
 
-  if (!CurBB || CurBB->getTerminator()) {
+  if (!CurBB || CurBB->hasTerminator()) {
     // If there is no insert point or the previous block is already
     // terminated, don't touch it.
   } else {
@@ -10517,7 +10537,7 @@ Expected<std::pair<Value *, Value *>> OpenMPIRBuilder::emitAtomicUpdate(
         OldVal->getAlign(), true /* UseLibcall */, AllocaIP, X);
     auto AtomicLoadRes = atomicInfo.EmitAtomicLoadLibcall(AO);
     BasicBlock *CurBB = Builder.GetInsertBlock();
-    Instruction *CurBBTI = CurBB->getTerminator();
+    Instruction *CurBBTI = CurBB->getTerminatorOrNull();
     CurBBTI = CurBBTI ? CurBBTI : Builder.CreateUnreachable();
     BasicBlock *ExitBB =
         CurBB->splitBasicBlock(CurBBTI, X->getName() + ".atomic.exit");
@@ -10566,7 +10586,7 @@ Expected<std::pair<Value *, Value *>> OpenMPIRBuilder::emitAtomicUpdate(
     // |     \---/
     // ExitBB
     BasicBlock *CurBB = Builder.GetInsertBlock();
-    Instruction *CurBBTI = CurBB->getTerminator();
+    Instruction *CurBBTI = CurBB->getTerminatorOrNull();
     CurBBTI = CurBBTI ? CurBBTI : Builder.CreateUnreachable();
     BasicBlock *ExitBB =
         CurBB->splitBasicBlock(CurBBTI, X->getName() + ".atomic.exit");
@@ -10725,7 +10745,7 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createAtomicCompare(
           //
           // where ContBB only contains the store of old value to 'v'.
           BasicBlock *CurBB = Builder.GetInsertBlock();
-          Instruction *CurBBTI = CurBB->getTerminator();
+          Instruction *CurBBTI = CurBB->getTerminatorOrNull();
           CurBBTI = CurBBTI ? CurBBTI : Builder.CreateUnreachable();
           BasicBlock *ExitBB = CurBB->splitBasicBlock(
               CurBBTI, X.Var->getName() + ".atomic.exit");
@@ -11601,7 +11621,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createIteratorLoop(
 
   InsertPointTy SplitIP = Builder.saveIP();
   if (SplitIP.getPoint() == CurBB->end())
-    if (Instruction *Terminator = CurBB->getTerminator())
+    if (Instruction *Terminator = CurBB->getTerminatorOrNull())
       SplitIP = InsertPointTy(CurBB, Terminator->getIterator());
 
   BasicBlock *ContBB =
@@ -11617,7 +11637,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createIteratorLoop(
   redirectTo(CurBB, CLI->getPreheader(), Builder.getCurrentDebugLocation());
 
   // Remove the unconditional branch inserted by createLoopSkeleton in the body
-  if (Instruction *T = CLI->getBody()->getTerminator())
+  if (Instruction *T = CLI->getBody()->getTerminatorOrNull())
     T->eraseFromParent();
 
   InsertPointTy BodyIP = CLI->getBodyIP();
@@ -11625,7 +11645,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createIteratorLoop(
     return Err;
 
   // Body must either fallthrough to the latch or branch directly to it.
-  if (Instruction *BodyTerminator = CLI->getBody()->getTerminator()) {
+  if (Instruction *BodyTerminator = CLI->getBody()->getTerminatorOrNull()) {
     auto *BodyBr = dyn_cast<UncondBrInst>(BodyTerminator);
     if (!BodyBr || BodyBr->getSuccessor() != CLI->getLatch()) {
       return make_error<StringError>(
@@ -11641,7 +11661,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createIteratorLoop(
 
   // Link After -> ContBB
   Builder.SetInsertPoint(CLI->getAfter(), CLI->getAfter()->begin());
-  if (!CLI->getAfter()->getTerminator())
+  if (!CLI->getAfter()->hasTerminator())
     Builder.CreateBr(ContBB);
 
   return InsertPointTy{ContBB, ContBB->begin()};

@@ -34,7 +34,7 @@ define half @v_max_pat_f16_oge(half nofpclass(nan) %a, half nofpclass(nan) %b) #
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_max_num_f16_e32 v0, v0, v1
+; GFX12-NEXT:    v_max_num_f16_e32 v0.l, v0.l, v1.l
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %cmp = fcmp oge half %a, %b
   %select = select nsz i1 %cmp, half %a, half %b
@@ -70,7 +70,7 @@ define half @v_min_pat_f16_olt(half nofpclass(nan) %a, half nofpclass(nan) %b) #
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_min_num_f16_e32 v0, v0, v1
+; GFX12-NEXT:    v_min_num_f16_e32 v0.l, v0.l, v1.l
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %cmp = fcmp olt half %a, %b
   %select = select nsz i1 %cmp, half %a, half %b
@@ -106,7 +106,7 @@ define half @v_max_pat_f16_uge(half nofpclass(nan) %a, half nofpclass(nan) %b) #
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_max_num_f16_e32 v0, v0, v1
+; GFX12-NEXT:    v_max_num_f16_e32 v0.l, v0.l, v1.l
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %cmp = fcmp uge half %a, %b
   %select = select nsz i1 %cmp, half %a, half %b
@@ -142,7 +142,7 @@ define half @v_min_pat_f16_ult(half nofpclass(nan) %a, half nofpclass(nan) %b) #
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_min_num_f16_e32 v0, v0, v1
+; GFX12-NEXT:    v_min_num_f16_e32 v0.l, v0.l, v1.l
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %cmp = fcmp ult half %a, %b
   %select = select nsz i1 %cmp, half %a, half %b

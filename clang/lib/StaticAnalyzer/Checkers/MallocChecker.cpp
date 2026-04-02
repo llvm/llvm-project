@@ -4224,3 +4224,5 @@ REGISTER_CHECKER(NewDeleteChecker)
 REGISTER_CHECKER(NewDeleteLeaksChecker)
 REGISTER_CHECKER(MismatchedDeallocatorChecker)
 REGISTER_CHECKER(TaintedAllocChecker)
+
+#undef REGISTER_CHECKER

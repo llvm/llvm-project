@@ -3140,9 +3140,12 @@ void MachineVerifier::checkLiveness(const MachineOperand *MO, unsigned MONum) {
       addRegWithSubRegs(regsDefined, Reg);
 
     // Verify SSA form.
-    if (MRI->isSSA() && Reg.isVirtual() &&
-        std::next(MRI->def_begin(Reg)) != MRI->def_end())
-      report("Multiple virtual register defs in SSA form", MO, MONum);
+    if (MRI->isSSA() && Reg.isVirtual()) {
+      if (!MRI->hasOneDef(Reg))
+        report("Multiple virtual register defs in SSA form", MO, MONum);
+      if (MO->getSubReg())
+        report("Subreg def in SSA form", MO, MONum);
+    }
 
     // Check LiveInts for a live segment, but only for virtual registers.
     if (LiveInts && !LiveInts->isNotInMIMap(*MI)) {

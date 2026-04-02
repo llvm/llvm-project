@@ -8,7 +8,7 @@ module asm "\09.ident\09\22GCC: (GNU) 4.6.3 LLVM: 3.2svn\22"
 
 @b = common global [32000 x float] zeroinitializer, align 16
 
-define i32 @set1ds(i32 %_n, ptr nocapture %arr, float %value, i32 %stride) nounwind uwtable {
+define i32 @set1ds(i32 %_n, ptr nocapture %arr, float %value, i32 %stride) {
 entry:
   %0 = icmp sgt i32 %_n, 0
   br i1 %0, label %"3.lr.ph", label %"5"
@@ -31,7 +31,7 @@ entry:
   ret i32 0
 }
 
-define i32 @init(ptr nocapture %name) unnamed_addr nounwind uwtable {
+define i32 @init(ptr nocapture %name) {
 entry:
   br label %"3"
 
