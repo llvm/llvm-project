@@ -90,7 +90,7 @@ define void @test_interleave_reduction(ptr %arg, ptr %arg1) {
 ; A320-NEXT:    [[NEXT_I32]] = getelementptr inbounds i32, ptr [[PHI_PTR_I32]], i64 1
 ; A320-NEXT:    [[NEXT_F64]] = getelementptr inbounds double, ptr [[PHI_PTR_F64]], i64 1
 ; A320-NEXT:    [[DONE:%.*]] = icmp eq ptr [[NEXT_I32]], [[TPM29]]
-; A320-NEXT:    br i1 [[DONE]], label %[[EXIT_INNER]], label %[[INNER]], !llvm.loop [[LOOP3:![0-9]+]]
+; A320-NEXT:    br i1 [[DONE]], label %[[EXIT_INNER]], label %[[INNER]], !llvm.loop [[LOOP4:![0-9]+]]
 ; A320:       [[EXIT_INNER]]:
 ; A320-NEXT:    [[TPM50_LCSSA:%.*]] = phi double [ [[TPM50]], %[[INNER]] ], [ [[BIN_RDX]], %[[MIDDLE_BLOCK]] ]
 ; A320-NEXT:    [[TPM35:%.*]] = getelementptr inbounds double, ptr [[TPM19]], i64 0
@@ -169,7 +169,7 @@ define double @sum_reduction(ptr nocapture readonly %a, i64 %n) {
 ; A320-NEXT:    [[TMP4]] = fadd fast <2 x double> [[VEC_PHI1]], [[WIDE_LOAD2]]
 ; A320-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[TMP1]], 4
 ; A320-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; A320-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; A320-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; A320:       [[MIDDLE_BLOCK]]:
 ; A320-NEXT:    [[BIN_RDX:%.*]] = fadd fast <2 x double> [[TMP4]], [[TMP2]]
 ; A320-NEXT:    [[TMP5:%.*]] = call fast double @llvm.vector.reduce.fadd.v2f64(double 0.000000e+00, <2 x double> [[BIN_RDX]])
@@ -187,7 +187,7 @@ define double @sum_reduction(ptr nocapture readonly %a, i64 %n) {
 ; A320-NEXT:    [[SUM_NEXT]] = fadd fast double [[SUM]], [[VAL]]
 ; A320-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; A320-NEXT:    [[COND:%.*]] = icmp ult i64 [[IV_NEXT]], [[N]]
-; A320-NEXT:    br i1 [[COND]], label %[[LOOP]], label %[[EXIT_LOOPEXIT]], !llvm.loop [[LOOP5:![0-9]+]]
+; A320-NEXT:    br i1 [[COND]], label %[[LOOP]], label %[[EXIT_LOOPEXIT]], !llvm.loop [[LOOP7:![0-9]+]]
 ; A320:       [[EXIT_LOOPEXIT]]:
 ; A320-NEXT:    [[SUM_NEXT_LCSSA:%.*]] = phi double [ [[SUM_NEXT]], %[[LOOP]] ], [ [[TMP5]], %[[MIDDLE_BLOCK]] ]
 ; A320-NEXT:    br label %[[EXIT]]
@@ -256,7 +256,7 @@ define double @dot_product(ptr nocapture readonly %a, ptr nocapture readonly %b,
 ; A320-NEXT:    [[TMP7]] = fadd fast <2 x double> [[VEC_PHI1]], [[TMP10]]
 ; A320-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[TMP1]], 4
 ; A320-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; A320-NEXT:    br i1 [[TMP14]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; A320-NEXT:    br i1 [[TMP14]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; A320:       [[MIDDLE_BLOCK]]:
 ; A320-NEXT:    [[BIN_RDX:%.*]] = fadd fast <2 x double> [[TMP7]], [[TMP6]]
 ; A320-NEXT:    [[TMP9:%.*]] = call fast double @llvm.vector.reduce.fadd.v2f64(double 0.000000e+00, <2 x double> [[BIN_RDX]])
@@ -277,7 +277,7 @@ define double @dot_product(ptr nocapture readonly %a, ptr nocapture readonly %b,
 ; A320-NEXT:    [[ACC_NEXT]] = fadd fast double [[ACC]], [[PROD]]
 ; A320-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; A320-NEXT:    [[COND:%.*]] = icmp ult i64 [[IV_NEXT]], [[N]]
-; A320-NEXT:    br i1 [[COND]], label %[[LOOP]], label %[[EXIT_LOOPEXIT]], !llvm.loop [[LOOP7:![0-9]+]]
+; A320-NEXT:    br i1 [[COND]], label %[[LOOP]], label %[[EXIT_LOOPEXIT]], !llvm.loop [[LOOP9:![0-9]+]]
 ; A320:       [[EXIT_LOOPEXIT]]:
 ; A320-NEXT:    [[ACC_NEXT_LCSSA:%.*]] = phi double [ [[ACC_NEXT]], %[[LOOP]] ], [ [[TMP9]], %[[MIDDLE_BLOCK]] ]
 ; A320-NEXT:    br label %[[EXIT]]
@@ -313,12 +313,14 @@ exit:
   ret double %res
 }
 ;.
-; A320: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
+; A320: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]], [[META3:![0-9]+]]}
 ; A320: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
-; A320: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
-; A320: [[LOOP3]] = distinct !{[[LOOP3]], [[META1]]}
-; A320: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META2]]}
-; A320: [[LOOP5]] = distinct !{[[LOOP5]], [[META2]], [[META1]]}
-; A320: [[LOOP6]] = distinct !{[[LOOP6]], [[META1]], [[META2]]}
-; A320: [[LOOP7]] = distinct !{[[LOOP7]], [[META2]], [[META1]]}
+; A320: [[META2]] = !{!"llvm.loop.vectorize.vector_body", i32 1}
+; A320: [[META3]] = !{!"llvm.loop.unroll.runtime.disable"}
+; A320: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META5:![0-9]+]]}
+; A320: [[META5]] = !{!"llvm.loop.vectorize.scalar_remainder", i32 1}
+; A320: [[LOOP6]] = distinct !{[[LOOP6]], [[META1]], [[META2]], [[META3]]}
+; A320: [[LOOP7]] = distinct !{[[LOOP7]], [[META3]], [[META1]], [[META5]]}
+; A320: [[LOOP8]] = distinct !{[[LOOP8]], [[META1]], [[META2]], [[META3]]}
+; A320: [[LOOP9]] = distinct !{[[LOOP9]], [[META3]], [[META1]], [[META5]]}
 ;.

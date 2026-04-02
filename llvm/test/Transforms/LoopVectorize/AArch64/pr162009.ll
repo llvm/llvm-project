@@ -44,7 +44,7 @@ define i128 @add_reduc_i32_i128_unsupported(ptr %a, ptr %b) "target-features"="+
 ; CHECK-NO-PARTIAL-REDUCTION-NEXT:    [[ADD]] = add i128 [[ACCUM]], [[MUL_ZEXT]]
 ; CHECK-NO-PARTIAL-REDUCTION-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
 ; CHECK-NO-PARTIAL-REDUCTION-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], 4025
-; CHECK-NO-PARTIAL-REDUCTION-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_EXIT:.*]], label %[[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK-NO-PARTIAL-REDUCTION-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_EXIT:.*]], label %[[FOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK-NO-PARTIAL-REDUCTION:       [[FOR_EXIT]]:
 ; CHECK-NO-PARTIAL-REDUCTION-NEXT:    [[ADD_LCSSA:%.*]] = phi i128 [ [[ADD]], %[[FOR_BODY]] ]
 ; CHECK-NO-PARTIAL-REDUCTION-NEXT:    ret i128 [[ADD_LCSSA]]
@@ -72,8 +72,10 @@ for.exit:
   ret i128 %add
 }
 ;.
-; CHECK-NO-PARTIAL-REDUCTION: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
+; CHECK-NO-PARTIAL-REDUCTION: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]], [[META3:![0-9]+]]}
 ; CHECK-NO-PARTIAL-REDUCTION: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK-NO-PARTIAL-REDUCTION: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
-; CHECK-NO-PARTIAL-REDUCTION: [[LOOP3]] = distinct !{[[LOOP3]], [[META2]], [[META1]]}
+; CHECK-NO-PARTIAL-REDUCTION: [[META2]] = !{!"llvm.loop.vectorize.vector_body", i32 1}
+; CHECK-NO-PARTIAL-REDUCTION: [[META3]] = !{!"llvm.loop.unroll.runtime.disable"}
+; CHECK-NO-PARTIAL-REDUCTION: [[LOOP4]] = distinct !{[[LOOP4]], [[META3]], [[META1]], [[META5:![0-9]+]]}
+; CHECK-NO-PARTIAL-REDUCTION: [[META5]] = !{!"llvm.loop.vectorize.scalar_remainder", i32 1}
 ;.

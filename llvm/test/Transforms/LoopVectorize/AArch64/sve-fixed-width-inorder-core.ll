@@ -62,7 +62,7 @@ define void @sve_add(ptr  %dst, ptr  %a, ptr  %b, i64 %n) {
 ; CHECK-CA510-NEXT:    store float [[ADD]], ptr [[ARRAYIDX4]], align 4
 ; CHECK-CA510-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-CA510-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[N]]
-; CHECK-CA510-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_COND_CLEANUP_LOOPEXIT]], label %[[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK-CA510-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_COND_CLEANUP_LOOPEXIT]], label %[[FOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK-CA510:       [[FOR_COND_CLEANUP_LOOPEXIT]]:
 ; CHECK-CA510-NEXT:    br label %[[FOR_COND_CLEANUP]]
 ; CHECK-CA510:       [[FOR_COND_CLEANUP]]:
@@ -126,7 +126,7 @@ define void @sve_add(ptr  %dst, ptr  %a, ptr  %b, i64 %n) {
 ; CHECK-CA520-NEXT:    store float [[ADD]], ptr [[ARRAYIDX4]], align 4
 ; CHECK-CA520-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-CA520-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[N]]
-; CHECK-CA520-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_COND_CLEANUP_LOOPEXIT]], label %[[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK-CA520-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_COND_CLEANUP_LOOPEXIT]], label %[[FOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK-CA520:       [[FOR_COND_CLEANUP_LOOPEXIT]]:
 ; CHECK-CA520-NEXT:    br label %[[FOR_COND_CLEANUP]]
 ; CHECK-CA520:       [[FOR_COND_CLEANUP]]:
@@ -190,7 +190,7 @@ define void @sve_add(ptr  %dst, ptr  %a, ptr  %b, i64 %n) {
 ; CHECK-CA320-NEXT:    store float [[ADD]], ptr [[ARRAYIDX4]], align 4
 ; CHECK-CA320-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-CA320-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[N]]
-; CHECK-CA320-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_COND_CLEANUP_LOOPEXIT]], label %[[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK-CA320-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_COND_CLEANUP_LOOPEXIT]], label %[[FOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK-CA320:       [[FOR_COND_CLEANUP_LOOPEXIT]]:
 ; CHECK-CA320-NEXT:    br label %[[FOR_COND_CLEANUP]]
 ; CHECK-CA320:       [[FOR_COND_CLEANUP]]:
@@ -215,18 +215,24 @@ for.cond.cleanup:
   ret void
 }
 ;.
-; CHECK-CA510: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
+; CHECK-CA510: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]], [[META3:![0-9]+]]}
 ; CHECK-CA510: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK-CA510: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
-; CHECK-CA510: [[LOOP3]] = distinct !{[[LOOP3]], [[META1]]}
+; CHECK-CA510: [[META2]] = !{!"llvm.loop.vectorize.vector_body", i32 1}
+; CHECK-CA510: [[META3]] = !{!"llvm.loop.unroll.runtime.disable"}
+; CHECK-CA510: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META5:![0-9]+]]}
+; CHECK-CA510: [[META5]] = !{!"llvm.loop.vectorize.scalar_remainder", i32 1}
 ;.
-; CHECK-CA520: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
+; CHECK-CA520: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]], [[META3:![0-9]+]]}
 ; CHECK-CA520: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK-CA520: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
-; CHECK-CA520: [[LOOP3]] = distinct !{[[LOOP3]], [[META1]]}
+; CHECK-CA520: [[META2]] = !{!"llvm.loop.vectorize.vector_body", i32 1}
+; CHECK-CA520: [[META3]] = !{!"llvm.loop.unroll.runtime.disable"}
+; CHECK-CA520: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META5:![0-9]+]]}
+; CHECK-CA520: [[META5]] = !{!"llvm.loop.vectorize.scalar_remainder", i32 1}
 ;.
-; CHECK-CA320: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
+; CHECK-CA320: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]], [[META3:![0-9]+]]}
 ; CHECK-CA320: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK-CA320: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
-; CHECK-CA320: [[LOOP3]] = distinct !{[[LOOP3]], [[META1]]}
+; CHECK-CA320: [[META2]] = !{!"llvm.loop.vectorize.vector_body", i32 1}
+; CHECK-CA320: [[META3]] = !{!"llvm.loop.unroll.runtime.disable"}
+; CHECK-CA320: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META5:![0-9]+]]}
+; CHECK-CA320: [[META5]] = !{!"llvm.loop.vectorize.scalar_remainder", i32 1}
 ;.

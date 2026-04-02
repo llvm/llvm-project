@@ -16,7 +16,7 @@ define void @acos_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @acos_f64
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 2 x double> @Sleef_acosdx_u10rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
+; CHECK:    [[TMP5:%.*]] = call <vscale x 2 x double> @Sleef_acosdx_u10rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
 ; CHECK:    [[CALL:%.*]] = tail call double @acos(double [[IN:%.*]]) #[[ATTR2:[0-9]+]]
 ;
   entry:
@@ -41,7 +41,7 @@ define void @acos_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @acos_f32
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 4 x float> @Sleef_acosfx_u10rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
+; CHECK:    [[TMP5:%.*]] = call <vscale x 4 x float> @Sleef_acosfx_u10rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
 ; CHECK:    [[CALL:%.*]] = tail call float @acosf(float [[IN:%.*]]) #[[ATTR3:[0-9]+]]
 ;
   entry:
@@ -69,7 +69,7 @@ define void @acosh_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @acosh_f64
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 2 x double> @Sleef_acoshdx_u10rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
+; CHECK:    [[TMP5:%.*]] = call <vscale x 2 x double> @Sleef_acoshdx_u10rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
 ; CHECK:    [[CALL:%.*]] = tail call double @acosh(double [[IN:%.*]]) #[[ATTR4:[0-9]+]]
 ;
   entry:
@@ -94,7 +94,7 @@ define void @acosh_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @acosh_f32
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 4 x float> @Sleef_acoshfx_u10rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
+; CHECK:    [[TMP5:%.*]] = call <vscale x 4 x float> @Sleef_acoshfx_u10rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
 ; CHECK:    [[CALL:%.*]] = tail call float @acoshf(float [[IN:%.*]]) #[[ATTR5:[0-9]+]]
 ;
   entry:
@@ -122,7 +122,7 @@ define void @asin_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @asin_f64
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 2 x double> @Sleef_asindx_u10rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
+; CHECK:    [[TMP5:%.*]] = call <vscale x 2 x double> @Sleef_asindx_u10rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
 ; CHECK:    [[CALL:%.*]] = tail call double @asin(double [[IN:%.*]]) #[[ATTR6:[0-9]+]]
 ;
   entry:
@@ -147,7 +147,7 @@ define void @asin_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @asin_f32
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 4 x float> @Sleef_asinfx_u10rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
+; CHECK:    [[TMP5:%.*]] = call <vscale x 4 x float> @Sleef_asinfx_u10rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
 ; CHECK:    [[CALL:%.*]] = tail call float @asinf(float [[IN:%.*]]) #[[ATTR7:[0-9]+]]
 ;
   entry:
@@ -175,7 +175,7 @@ define void @asinh_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @asinh_f64
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 2 x double> @Sleef_asinhdx_u10rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
+; CHECK:    [[TMP5:%.*]] = call <vscale x 2 x double> @Sleef_asinhdx_u10rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
 ; CHECK:    [[CALL:%.*]] = tail call double @asinh(double [[IN:%.*]]) #[[ATTR8:[0-9]+]]
 ;
   entry:
@@ -200,7 +200,7 @@ define void @asinh_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @asinh_f32
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 4 x float> @Sleef_asinhfx_u10rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
+; CHECK:    [[TMP5:%.*]] = call <vscale x 4 x float> @Sleef_asinhfx_u10rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
 ; CHECK:    [[CALL:%.*]] = tail call float @asinhf(float [[IN:%.*]]) #[[ATTR9:[0-9]+]]
 ;
   entry:
@@ -228,7 +228,7 @@ define void @atan_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @atan_f64
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 2 x double> @Sleef_atandx_u10rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
+; CHECK:    [[TMP5:%.*]] = call <vscale x 2 x double> @Sleef_atandx_u10rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
 ; CHECK:    [[CALL:%.*]] = tail call double @atan(double [[IN:%.*]]) #[[ATTR10:[0-9]+]]
 ;
   entry:
@@ -253,7 +253,7 @@ define void @atan_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @atan_f32
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 4 x float> @Sleef_atanfx_u10rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
+; CHECK:    [[TMP5:%.*]] = call <vscale x 4 x float> @Sleef_atanfx_u10rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
 ; CHECK:    [[CALL:%.*]] = tail call float @atanf(float [[IN:%.*]]) #[[ATTR11:[0-9]+]]
 ;
   entry:
@@ -281,7 +281,7 @@ define void @atan2_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @atan2_f64
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 2 x double> @Sleef_atan2dx_u10rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]], <vscale x 2 x double> [[WIDE_LOAD]])
+; CHECK:    [[TMP5:%.*]] = call <vscale x 2 x double> @Sleef_atan2dx_u10rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]], <vscale x 2 x double> [[WIDE_LOAD]])
 ; CHECK:    [[CALL:%.*]] = tail call double @atan2(double [[IN:%.*]], double [[IN]]) #[[ATTR12:[0-9]+]]
 ;
   entry:
@@ -306,7 +306,7 @@ define void @atan2_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @atan2_f32
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 4 x float> @Sleef_atan2fx_u10rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]], <vscale x 4 x float> [[WIDE_LOAD]])
+; CHECK:    [[TMP5:%.*]] = call <vscale x 4 x float> @Sleef_atan2fx_u10rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]], <vscale x 4 x float> [[WIDE_LOAD]])
 ; CHECK:    [[CALL:%.*]] = tail call float @atan2f(float [[IN:%.*]], float [[IN]]) #[[ATTR13:[0-9]+]]
 ;
   entry:
@@ -334,7 +334,7 @@ define void @atanh_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @atanh_f64
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 2 x double> @Sleef_atanhdx_u10rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
+; CHECK:    [[TMP5:%.*]] = call <vscale x 2 x double> @Sleef_atanhdx_u10rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
 ; CHECK:    [[CALL:%.*]] = tail call double @atanh(double [[IN:%.*]]) #[[ATTR14:[0-9]+]]
 ;
   entry:
@@ -359,7 +359,7 @@ define void @atanh_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @atanh_f32
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 4 x float> @Sleef_atanhfx_u10rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
+; CHECK:    [[TMP5:%.*]] = call <vscale x 4 x float> @Sleef_atanhfx_u10rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
 ; CHECK:    [[CALL:%.*]] = tail call float @atanhf(float [[IN:%.*]]) #[[ATTR15:[0-9]+]]
 ;
   entry:
@@ -387,7 +387,7 @@ define void @cbrt_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @cbrt_f64
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 2 x double> @Sleef_cbrtdx_u10rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
+; CHECK:    [[TMP5:%.*]] = call <vscale x 2 x double> @Sleef_cbrtdx_u10rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
 ; CHECK:    [[CALL:%.*]] = tail call double @cbrt(double [[IN:%.*]]) #[[ATTR16:[0-9]+]]
 ;
   entry:
@@ -412,7 +412,7 @@ define void @cbrt_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @cbrt_f32
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 4 x float> @Sleef_cbrtfx_u10rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
+; CHECK:    [[TMP5:%.*]] = call <vscale x 4 x float> @Sleef_cbrtfx_u10rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
 ; CHECK:    [[CALL:%.*]] = tail call float @cbrtf(float [[IN:%.*]]) #[[ATTR17:[0-9]+]]
 ;
   entry:
@@ -440,7 +440,7 @@ define void @copysign_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @copysign_f64
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 2 x double> @Sleef_copysigndx_rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]], <vscale x 2 x double> [[WIDE_LOAD]])
+; CHECK:    [[TMP5:%.*]] = call <vscale x 2 x double> @Sleef_copysigndx_rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]], <vscale x 2 x double> [[WIDE_LOAD]])
 ; CHECK:    [[CALL:%.*]] = tail call double @copysign(double [[IN:%.*]], double [[IN]]) #[[ATTR18:[0-9]+]]
 ;
   entry:
@@ -465,7 +465,7 @@ define void @copysign_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @copysign_f32
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 4 x float> @Sleef_copysignfx_rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]], <vscale x 4 x float> [[WIDE_LOAD]])
+; CHECK:    [[TMP5:%.*]] = call <vscale x 4 x float> @Sleef_copysignfx_rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]], <vscale x 4 x float> [[WIDE_LOAD]])
 ; CHECK:    [[CALL:%.*]] = tail call float @copysignf(float [[IN:%.*]], float [[IN]]) #[[ATTR19:[0-9]+]]
 ;
   entry:
@@ -493,7 +493,7 @@ define void @cos_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @cos_f64
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 2 x double> @Sleef_cosdx_u10rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
+; CHECK:    [[TMP5:%.*]] = call <vscale x 2 x double> @Sleef_cosdx_u10rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
 ; CHECK:    [[CALL:%.*]] = tail call double @cos(double [[IN:%.*]]) #[[ATTR20:[0-9]+]]
 ;
   entry:
@@ -518,7 +518,7 @@ define void @cos_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @cos_f32
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 4 x float> @Sleef_cosfx_u10rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
+; CHECK:    [[TMP5:%.*]] = call <vscale x 4 x float> @Sleef_cosfx_u10rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
 ; CHECK:    [[CALL:%.*]] = tail call float @cosf(float [[IN:%.*]]) #[[ATTR21:[0-9]+]]
 ;
   entry:
@@ -546,7 +546,7 @@ define void @cosh_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @cosh_f64
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 2 x double> @Sleef_coshdx_u10rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
+; CHECK:    [[TMP5:%.*]] = call <vscale x 2 x double> @Sleef_coshdx_u10rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
 ; CHECK:    [[CALL:%.*]] = tail call double @cosh(double [[IN:%.*]]) #[[ATTR22:[0-9]+]]
 ;
   entry:
@@ -571,7 +571,7 @@ define void @cosh_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @cosh_f32
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 4 x float> @Sleef_coshfx_u10rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
+; CHECK:    [[TMP5:%.*]] = call <vscale x 4 x float> @Sleef_coshfx_u10rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
 ; CHECK:    [[CALL:%.*]] = tail call float @coshf(float [[IN:%.*]]) #[[ATTR23:[0-9]+]]
 ;
   entry:
@@ -599,7 +599,7 @@ define void @cospi_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @cospi_f64
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 2 x double> @Sleef_cospidx_u05rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
+; CHECK:    [[TMP5:%.*]] = call <vscale x 2 x double> @Sleef_cospidx_u05rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
 ; CHECK:    [[CALL:%.*]] = tail call double @cospi(double [[IN:%.*]]) #[[ATTR24:[0-9]+]]
 ;
   entry:
@@ -624,7 +624,7 @@ define void @cospi_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @cospi_f32
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 4 x float> @Sleef_cospifx_u05rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
+; CHECK:    [[TMP5:%.*]] = call <vscale x 4 x float> @Sleef_cospifx_u05rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
 ; CHECK:    [[CALL:%.*]] = tail call float @cospif(float [[IN:%.*]]) #[[ATTR25:[0-9]+]]
 ;
   entry:
@@ -652,7 +652,7 @@ define void @erf_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @erf_f64
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 2 x double> @Sleef_erfdx_u10rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
+; CHECK:    [[TMP5:%.*]] = call <vscale x 2 x double> @Sleef_erfdx_u10rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
 ; CHECK:    [[CALL:%.*]] = tail call double @erf(double [[IN:%.*]]) #[[ATTR26:[0-9]+]]
 ;
   entry:
@@ -677,7 +677,7 @@ define void @erf_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @erf_f32
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 4 x float> @Sleef_erffx_u10rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
+; CHECK:    [[TMP5:%.*]] = call <vscale x 4 x float> @Sleef_erffx_u10rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
 ; CHECK:    [[CALL:%.*]] = tail call float @erff(float [[IN:%.*]]) #[[ATTR27:[0-9]+]]
 ;
   entry:
@@ -705,7 +705,7 @@ define void @erfc_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @erfc_f64
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 2 x double> @Sleef_erfcdx_u15rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
+; CHECK:    [[TMP5:%.*]] = call <vscale x 2 x double> @Sleef_erfcdx_u15rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
 ; CHECK:    [[CALL:%.*]] = tail call double @erfc(double [[IN:%.*]]) #[[ATTR28:[0-9]+]]
 ;
   entry:
@@ -730,7 +730,7 @@ define void @erfc_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @erfc_f32
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 4 x float> @Sleef_erfcfx_u15rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
+; CHECK:    [[TMP5:%.*]] = call <vscale x 4 x float> @Sleef_erfcfx_u15rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
 ; CHECK:    [[CALL:%.*]] = tail call float @erfcf(float [[IN:%.*]]) #[[ATTR29:[0-9]+]]
 ;
   entry:
@@ -758,7 +758,7 @@ define void @exp_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @exp_f64
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 2 x double> @Sleef_expdx_u10rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
+; CHECK:    [[TMP5:%.*]] = call <vscale x 2 x double> @Sleef_expdx_u10rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
 ; CHECK:    [[CALL:%.*]] = tail call double @exp(double [[IN:%.*]]) #[[ATTR30:[0-9]+]]
 ;
   entry:
@@ -783,7 +783,7 @@ define void @exp_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @exp_f32
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 4 x float> @Sleef_expfx_u10rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
+; CHECK:    [[TMP5:%.*]] = call <vscale x 4 x float> @Sleef_expfx_u10rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
 ; CHECK:    [[CALL:%.*]] = tail call float @expf(float [[IN:%.*]]) #[[ATTR31:[0-9]+]]
 ;
   entry:
@@ -811,7 +811,7 @@ define void @exp10_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @exp10_f64
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 2 x double> @Sleef_exp10dx_u10rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
+; CHECK:    [[TMP5:%.*]] = call <vscale x 2 x double> @Sleef_exp10dx_u10rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
 ; CHECK:    [[CALL:%.*]] = tail call double @exp10(double [[IN:%.*]]) #[[ATTR32:[0-9]+]]
 ;
   entry:
@@ -836,7 +836,7 @@ define void @exp10_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @exp10_f32
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 4 x float> @Sleef_exp10fx_u10rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
+; CHECK:    [[TMP5:%.*]] = call <vscale x 4 x float> @Sleef_exp10fx_u10rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
 ; CHECK:    [[CALL:%.*]] = tail call float @exp10f(float [[IN:%.*]]) #[[ATTR33:[0-9]+]]
 ;
   entry:
@@ -864,7 +864,7 @@ define void @exp2_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @exp2_f64
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 2 x double> @Sleef_exp2dx_u10rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
+; CHECK:    [[TMP5:%.*]] = call <vscale x 2 x double> @Sleef_exp2dx_u10rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
 ; CHECK:    [[CALL:%.*]] = tail call double @exp2(double [[IN:%.*]]) #[[ATTR34:[0-9]+]]
 ;
   entry:
@@ -889,7 +889,7 @@ define void @exp2_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @exp2_f32
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 4 x float> @Sleef_exp2fx_u10rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
+; CHECK:    [[TMP5:%.*]] = call <vscale x 4 x float> @Sleef_exp2fx_u10rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
 ; CHECK:    [[CALL:%.*]] = tail call float @exp2f(float [[IN:%.*]]) #[[ATTR35:[0-9]+]]
 ;
   entry:
@@ -917,7 +917,7 @@ define void @expm1_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @expm1_f64
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 2 x double> @Sleef_expm1dx_u10rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
+; CHECK:    [[TMP5:%.*]] = call <vscale x 2 x double> @Sleef_expm1dx_u10rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
 ; CHECK:    [[CALL:%.*]] = tail call double @expm1(double [[IN:%.*]]) #[[ATTR36:[0-9]+]]
 ;
   entry:
@@ -942,7 +942,7 @@ define void @expm1_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @expm1_f32
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 4 x float> @Sleef_expm1fx_u10rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
+; CHECK:    [[TMP5:%.*]] = call <vscale x 4 x float> @Sleef_expm1fx_u10rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
 ; CHECK:    [[CALL:%.*]] = tail call float @expm1f(float [[IN:%.*]]) #[[ATTR37:[0-9]+]]
 ;
   entry:
@@ -970,7 +970,7 @@ define void @fdim_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @fdim_f64
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 2 x double> @Sleef_fdimdx_rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]], <vscale x 2 x double> [[WIDE_LOAD]])
+; CHECK:    [[TMP5:%.*]] = call <vscale x 2 x double> @Sleef_fdimdx_rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]], <vscale x 2 x double> [[WIDE_LOAD]])
 ; CHECK:    [[CALL:%.*]] = tail call double @fdim(double [[IN:%.*]], double [[IN]]) #[[ATTR38:[0-9]+]]
 ;
   entry:
@@ -995,7 +995,7 @@ define void @fdim_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @fdim_f32
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 4 x float> @Sleef_fdimfx_rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]], <vscale x 4 x float> [[WIDE_LOAD]])
+; CHECK:    [[TMP5:%.*]] = call <vscale x 4 x float> @Sleef_fdimfx_rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]], <vscale x 4 x float> [[WIDE_LOAD]])
 ; CHECK:    [[CALL:%.*]] = tail call float @fdimf(float [[IN:%.*]], float [[IN]]) #[[ATTR39:[0-9]+]]
 ;
   entry:
@@ -1023,7 +1023,7 @@ define void @fma_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @fma_f64
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 2 x double> @Sleef_fmadx_rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]], <vscale x 2 x double> [[WIDE_LOAD]], <vscale x 2 x double> [[WIDE_LOAD]])
+; CHECK:    [[TMP5:%.*]] = call <vscale x 2 x double> @Sleef_fmadx_rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]], <vscale x 2 x double> [[WIDE_LOAD]], <vscale x 2 x double> [[WIDE_LOAD]])
 ; CHECK:    [[CALL:%.*]] = tail call double @fma(double [[IN:%.*]], double [[IN]], double [[IN]]) #[[ATTR40:[0-9]+]]
 ;
   entry:
@@ -1048,7 +1048,7 @@ define void @fma_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @fma_f32
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 4 x float> @Sleef_fmafx_rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]], <vscale x 4 x float> [[WIDE_LOAD]], <vscale x 4 x float> [[WIDE_LOAD]])
+; CHECK:    [[TMP5:%.*]] = call <vscale x 4 x float> @Sleef_fmafx_rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]], <vscale x 4 x float> [[WIDE_LOAD]], <vscale x 4 x float> [[WIDE_LOAD]])
 ; CHECK:    [[CALL:%.*]] = tail call float @fmaf(float [[IN:%.*]], float [[IN]], float [[IN]]) #[[ATTR41:[0-9]+]]
 ;
   entry:
@@ -1076,7 +1076,7 @@ define void @fmax_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @fmax_f64
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 2 x double> @Sleef_fmaxdx_rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]], <vscale x 2 x double> [[WIDE_LOAD]])
+; CHECK:    [[TMP5:%.*]] = call <vscale x 2 x double> @Sleef_fmaxdx_rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]], <vscale x 2 x double> [[WIDE_LOAD]])
 ; CHECK:    [[CALL:%.*]] = tail call double @fmax(double [[IN:%.*]], double [[IN]]) #[[ATTR42:[0-9]+]]
 ;
   entry:
@@ -1101,7 +1101,7 @@ define void @fmax_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @fmax_f32
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 4 x float> @Sleef_fmaxfx_rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]], <vscale x 4 x float> [[WIDE_LOAD]])
+; CHECK:    [[TMP5:%.*]] = call <vscale x 4 x float> @Sleef_fmaxfx_rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]], <vscale x 4 x float> [[WIDE_LOAD]])
 ; CHECK:    [[CALL:%.*]] = tail call float @fmaxf(float [[IN:%.*]], float [[IN]]) #[[ATTR43:[0-9]+]]
 ;
   entry:
@@ -1129,7 +1129,7 @@ define void @fmin_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @fmin_f64
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 2 x double> @Sleef_fmindx_u10rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]], <vscale x 2 x double> [[WIDE_LOAD]])
+; CHECK:    [[TMP5:%.*]] = call <vscale x 2 x double> @Sleef_fmindx_u10rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]], <vscale x 2 x double> [[WIDE_LOAD]])
 ; CHECK:    [[CALL:%.*]] = tail call double @fmin(double [[IN:%.*]], double [[IN]]) #[[ATTR44:[0-9]+]]
 ;
   entry:
@@ -1154,7 +1154,7 @@ define void @fmin_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @fmin_f32
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 4 x float> @Sleef_fminfx_u10rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]], <vscale x 4 x float> [[WIDE_LOAD]])
+; CHECK:    [[TMP5:%.*]] = call <vscale x 4 x float> @Sleef_fminfx_u10rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]], <vscale x 4 x float> [[WIDE_LOAD]])
 ; CHECK:    [[CALL:%.*]] = tail call float @fminf(float [[IN:%.*]], float [[IN]]) #[[ATTR45:[0-9]+]]
 ;
   entry:
@@ -1182,7 +1182,7 @@ define void @fmod_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @fmod_f64
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 2 x double> @Sleef_fmoddx_rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]], <vscale x 2 x double> [[WIDE_LOAD]])
+; CHECK:    [[TMP5:%.*]] = call <vscale x 2 x double> @Sleef_fmoddx_rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]], <vscale x 2 x double> [[WIDE_LOAD]])
 ; CHECK:    [[CALL:%.*]] = tail call double @fmod(double [[IN:%.*]], double [[IN]]) #[[ATTR46:[0-9]+]]
 ;
   entry:
@@ -1207,7 +1207,7 @@ define void @fmod_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @fmod_f32
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 4 x float> @Sleef_fmodfx_rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]], <vscale x 4 x float> [[WIDE_LOAD]])
+; CHECK:    [[TMP5:%.*]] = call <vscale x 4 x float> @Sleef_fmodfx_rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]], <vscale x 4 x float> [[WIDE_LOAD]])
 ; CHECK:    [[CALL:%.*]] = tail call float @fmodf(float [[IN:%.*]], float [[IN]]) #[[ATTR47:[0-9]+]]
 ;
   entry:
@@ -1235,7 +1235,7 @@ define void @hypot_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @hypot_f64
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 2 x double> @Sleef_hypotdx_u05rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]], <vscale x 2 x double> [[WIDE_LOAD]])
+; CHECK:    [[TMP5:%.*]] = call <vscale x 2 x double> @Sleef_hypotdx_u05rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]], <vscale x 2 x double> [[WIDE_LOAD]])
 ; CHECK:    [[CALL:%.*]] = tail call double @hypot(double [[IN:%.*]], double [[IN]]) #[[ATTR48:[0-9]+]]
 ;
   entry:
@@ -1260,7 +1260,7 @@ define void @hypot_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @hypot_f32
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 4 x float> @Sleef_hypotfx_u05rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]], <vscale x 4 x float> [[WIDE_LOAD]])
+; CHECK:    [[TMP5:%.*]] = call <vscale x 4 x float> @Sleef_hypotfx_u05rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]], <vscale x 4 x float> [[WIDE_LOAD]])
 ; CHECK:    [[CALL:%.*]] = tail call float @hypotf(float [[IN:%.*]], float [[IN]]) #[[ATTR49:[0-9]+]]
 ;
   entry:
@@ -1288,7 +1288,7 @@ define void @ilogb_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @ilogb_f64
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 2 x i32> @Sleef_ilogbdx_rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
+; CHECK:    [[TMP5:%.*]] = call <vscale x 2 x i32> @Sleef_ilogbdx_rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
 ; CHECK:    [[CALL:%.*]] = tail call i32 @ilogb(double [[IN:%.*]]) #[[ATTR50:[0-9]+]]
 ;
   entry:
@@ -1313,7 +1313,7 @@ define void @ilogb_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @ilogb_f32
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 4 x i32> @Sleef_ilogbfx_rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
+; CHECK:    [[TMP5:%.*]] = call <vscale x 4 x i32> @Sleef_ilogbfx_rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
 ; CHECK:    [[CALL:%.*]] = tail call i32 @ilogbf(float [[IN:%.*]]) #[[ATTR51:[0-9]+]]
 ;
   entry:
@@ -1341,7 +1341,7 @@ define void @ldexp_f64(ptr noalias %in1.ptr, ptr noalias %in2.ptr, ptr noalias %
 ;
 ; CHECK-LABEL: define void @ldexp_f64
 ; CHECK-SAME: (ptr noalias [[IN1_PTR:%.*]], ptr noalias [[IN2_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP11:%.*]] = call <vscale x 2 x double> @Sleef_ldexpdx_rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]], <vscale x 2 x i32> [[WIDE_LOAD1:%.*]])
+; CHECK:    [[TMP6:%.*]] = call <vscale x 2 x double> @Sleef_ldexpdx_rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]], <vscale x 2 x i32> [[WIDE_LOAD1:%.*]])
 ; CHECK:    [[CALL:%.*]] = tail call double @ldexp(double [[IN1:%.*]], i32 [[IN2:%.*]]) #[[ATTR52:[0-9]+]]
 ;
   entry:
@@ -1368,7 +1368,7 @@ define void @ldexp_f32(ptr noalias %in1.ptr, ptr noalias %in2.ptr, ptr noalias %
 ;
 ; CHECK-LABEL: define void @ldexp_f32
 ; CHECK-SAME: (ptr noalias [[IN1_PTR:%.*]], ptr noalias [[IN2_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP11:%.*]] = call <vscale x 4 x float> @Sleef_ldexpfx_rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]], <vscale x 4 x i32> [[WIDE_LOAD1:%.*]])
+; CHECK:    [[TMP6:%.*]] = call <vscale x 4 x float> @Sleef_ldexpfx_rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]], <vscale x 4 x i32> [[WIDE_LOAD1:%.*]])
 ; CHECK:    [[CALL:%.*]] = tail call float @ldexpf(float [[IN1:%.*]], i32 [[IN2:%.*]]) #[[ATTR53:[0-9]+]]
 ;
   entry:
@@ -1398,7 +1398,7 @@ define void @lgamma_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @lgamma_f64
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 2 x double> @Sleef_lgammadx_u10rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
+; CHECK:    [[TMP5:%.*]] = call <vscale x 2 x double> @Sleef_lgammadx_u10rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
 ; CHECK:    [[CALL:%.*]] = tail call double @lgamma(double [[IN:%.*]]) #[[ATTR54:[0-9]+]]
 ;
   entry:
@@ -1423,7 +1423,7 @@ define void @lgamma_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @lgamma_f32
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 4 x float> @Sleef_lgammafx_u10rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
+; CHECK:    [[TMP5:%.*]] = call <vscale x 4 x float> @Sleef_lgammafx_u10rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
 ; CHECK:    [[CALL:%.*]] = tail call float @lgammaf(float [[IN:%.*]]) #[[ATTR55:[0-9]+]]
 ;
   entry:
@@ -1451,7 +1451,7 @@ define void @log_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @log_f64
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 2 x double> @Sleef_logdx_u10rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
+; CHECK:    [[TMP5:%.*]] = call <vscale x 2 x double> @Sleef_logdx_u10rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
 ; CHECK:    [[CALL:%.*]] = tail call double @log(double [[IN:%.*]]) #[[ATTR56:[0-9]+]]
 ;
   entry:
@@ -1476,7 +1476,7 @@ define void @log_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @log_f32
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 4 x float> @Sleef_logfx_u10rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
+; CHECK:    [[TMP5:%.*]] = call <vscale x 4 x float> @Sleef_logfx_u10rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
 ; CHECK:    [[CALL:%.*]] = tail call float @logf(float [[IN:%.*]]) #[[ATTR57:[0-9]+]]
 ;
   entry:
@@ -1504,7 +1504,7 @@ define void @log10_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @log10_f64
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 2 x double> @Sleef_log10dx_u10rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
+; CHECK:    [[TMP5:%.*]] = call <vscale x 2 x double> @Sleef_log10dx_u10rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
 ; CHECK:    [[CALL:%.*]] = tail call double @log10(double [[IN:%.*]]) #[[ATTR58:[0-9]+]]
 ;
   entry:
@@ -1529,7 +1529,7 @@ define void @log10_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @log10_f32
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 4 x float> @Sleef_log10fx_u10rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
+; CHECK:    [[TMP5:%.*]] = call <vscale x 4 x float> @Sleef_log10fx_u10rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
 ; CHECK:    [[CALL:%.*]] = tail call float @log10f(float [[IN:%.*]]) #[[ATTR59:[0-9]+]]
 ;
   entry:
@@ -1557,7 +1557,7 @@ define void @log1p_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @log1p_f64
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 2 x double> @Sleef_log1pdx_u10rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
+; CHECK:    [[TMP5:%.*]] = call <vscale x 2 x double> @Sleef_log1pdx_u10rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
 ; CHECK:    [[CALL:%.*]] = tail call double @log1p(double [[IN:%.*]]) #[[ATTR60:[0-9]+]]
 ;
   entry:
@@ -1582,7 +1582,7 @@ define void @log1p_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @log1p_f32
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 4 x float> @Sleef_log1pfx_u10rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
+; CHECK:    [[TMP5:%.*]] = call <vscale x 4 x float> @Sleef_log1pfx_u10rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
 ; CHECK:    [[CALL:%.*]] = tail call float @log1pf(float [[IN:%.*]]) #[[ATTR61:[0-9]+]]
 ;
   entry:
@@ -1610,7 +1610,7 @@ define void @log2_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @log2_f64
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 2 x double> @Sleef_log2dx_u10rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
+; CHECK:    [[TMP5:%.*]] = call <vscale x 2 x double> @Sleef_log2dx_u10rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
 ; CHECK:    [[CALL:%.*]] = tail call double @log2(double [[IN:%.*]]) #[[ATTR62:[0-9]+]]
 ;
   entry:
@@ -1635,7 +1635,7 @@ define void @log2_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @log2_f32
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 4 x float> @Sleef_log2fx_u10rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
+; CHECK:    [[TMP5:%.*]] = call <vscale x 4 x float> @Sleef_log2fx_u10rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
 ; CHECK:    [[CALL:%.*]] = tail call float @log2f(float [[IN:%.*]]) #[[ATTR63:[0-9]+]]
 ;
   entry:
@@ -1716,7 +1716,7 @@ define void @nextafter_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @nextafter_f64
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 2 x double> @Sleef_nextafterdx_rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]], <vscale x 2 x double> [[WIDE_LOAD]])
+; CHECK:    [[TMP5:%.*]] = call <vscale x 2 x double> @Sleef_nextafterdx_rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]], <vscale x 2 x double> [[WIDE_LOAD]])
 ; CHECK:    [[CALL:%.*]] = tail call double @nextafter(double [[IN:%.*]], double [[IN]]) #[[ATTR66:[0-9]+]]
 ;
   entry:
@@ -1741,7 +1741,7 @@ define void @nextafter_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @nextafter_f32
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 4 x float> @Sleef_nextafterfx_rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]], <vscale x 4 x float> [[WIDE_LOAD]])
+; CHECK:    [[TMP5:%.*]] = call <vscale x 4 x float> @Sleef_nextafterfx_rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]], <vscale x 4 x float> [[WIDE_LOAD]])
 ; CHECK:    [[CALL:%.*]] = tail call float @nextafterf(float [[IN:%.*]], float [[IN]]) #[[ATTR67:[0-9]+]]
 ;
   entry:
@@ -1769,7 +1769,7 @@ define void @pow_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @pow_f64
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 2 x double> @Sleef_powdx_u10rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]], <vscale x 2 x double> [[WIDE_LOAD]])
+; CHECK:    [[TMP5:%.*]] = call <vscale x 2 x double> @Sleef_powdx_u10rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]], <vscale x 2 x double> [[WIDE_LOAD]])
 ; CHECK:    [[CALL:%.*]] = tail call double @pow(double [[IN:%.*]], double [[IN]]) #[[ATTR68:[0-9]+]]
 ;
   entry:
@@ -1794,7 +1794,7 @@ define void @pow_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @pow_f32
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 4 x float> @Sleef_powfx_u10rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]], <vscale x 4 x float> [[WIDE_LOAD]])
+; CHECK:    [[TMP5:%.*]] = call <vscale x 4 x float> @Sleef_powfx_u10rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]], <vscale x 4 x float> [[WIDE_LOAD]])
 ; CHECK:    [[CALL:%.*]] = tail call float @powf(float [[IN:%.*]], float [[IN]]) #[[ATTR69:[0-9]+]]
 ;
   entry:
@@ -1822,7 +1822,7 @@ define void @sin_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @sin_f64
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 2 x double> @Sleef_sindx_u10rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
+; CHECK:    [[TMP5:%.*]] = call <vscale x 2 x double> @Sleef_sindx_u10rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
 ; CHECK:    [[CALL:%.*]] = tail call double @sin(double [[IN:%.*]]) #[[ATTR70:[0-9]+]]
 ;
   entry:
@@ -1847,7 +1847,7 @@ define void @sin_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @sin_f32
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 4 x float> @Sleef_sinfx_u10rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
+; CHECK:    [[TMP5:%.*]] = call <vscale x 4 x float> @Sleef_sinfx_u10rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
 ; CHECK:    [[CALL:%.*]] = tail call float @sinf(float [[IN:%.*]]) #[[ATTR71:[0-9]+]]
 ;
   entry:
@@ -1976,7 +1976,7 @@ define void @sinh_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @sinh_f64
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 2 x double> @Sleef_sinhdx_u10rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
+; CHECK:    [[TMP5:%.*]] = call <vscale x 2 x double> @Sleef_sinhdx_u10rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
 ; CHECK:    [[CALL:%.*]] = tail call double @sinh(double [[IN:%.*]]) #[[ATTR76:[0-9]+]]
 ;
   entry:
@@ -2001,7 +2001,7 @@ define void @sinh_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @sinh_f32
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 4 x float> @Sleef_sinhfx_u10rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
+; CHECK:    [[TMP5:%.*]] = call <vscale x 4 x float> @Sleef_sinhfx_u10rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
 ; CHECK:    [[CALL:%.*]] = tail call float @sinhf(float [[IN:%.*]]) #[[ATTR77:[0-9]+]]
 ;
   entry:
@@ -2029,7 +2029,7 @@ define void @sinpi_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @sinpi_f64
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 2 x double> @Sleef_sinpidx_u05rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
+; CHECK:    [[TMP5:%.*]] = call <vscale x 2 x double> @Sleef_sinpidx_u05rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
 ; CHECK:    [[CALL:%.*]] = tail call double @sinpi(double [[IN:%.*]]) #[[ATTR78:[0-9]+]]
 ;
   entry:
@@ -2054,7 +2054,7 @@ define void @sinpi_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @sinpi_f32
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 4 x float> @Sleef_sinpifx_u05rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
+; CHECK:    [[TMP5:%.*]] = call <vscale x 4 x float> @Sleef_sinpifx_u05rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
 ; CHECK:    [[CALL:%.*]] = tail call float @sinpif(float [[IN:%.*]]) #[[ATTR79:[0-9]+]]
 ;
   entry:
@@ -2082,7 +2082,7 @@ define void @sqrt_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @sqrt_f64
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 2 x double> @Sleef_sqrtdx_u05rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
+; CHECK:    [[TMP5:%.*]] = call <vscale x 2 x double> @Sleef_sqrtdx_u05rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
 ; CHECK:    [[CALL:%.*]] = tail call double @sqrt(double [[IN:%.*]]) #[[ATTR80:[0-9]+]]
 ;
   entry:
@@ -2107,7 +2107,7 @@ define void @sqrt_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @sqrt_f32
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 4 x float> @Sleef_sqrtfx_u05rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
+; CHECK:    [[TMP5:%.*]] = call <vscale x 4 x float> @Sleef_sqrtfx_u05rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
 ; CHECK:    [[CALL:%.*]] = tail call float @sqrtf(float [[IN:%.*]]) #[[ATTR81:[0-9]+]]
 ;
   entry:
@@ -2135,7 +2135,7 @@ define void @tan_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @tan_f64
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 2 x double> @Sleef_tandx_u10rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
+; CHECK:    [[TMP5:%.*]] = call <vscale x 2 x double> @Sleef_tandx_u10rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
 ; CHECK:    [[CALL:%.*]] = tail call double @tan(double [[IN:%.*]]) #[[ATTR82:[0-9]+]]
 ;
   entry:
@@ -2160,7 +2160,7 @@ define void @tan_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @tan_f32
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 4 x float> @Sleef_tanfx_u10rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
+; CHECK:    [[TMP5:%.*]] = call <vscale x 4 x float> @Sleef_tanfx_u10rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
 ; CHECK:    [[CALL:%.*]] = tail call float @tanf(float [[IN:%.*]]) #[[ATTR83:[0-9]+]]
 ;
   entry:
@@ -2188,7 +2188,7 @@ define void @tanh_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @tanh_f64
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 2 x double> @Sleef_tanhdx_u10rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
+; CHECK:    [[TMP5:%.*]] = call <vscale x 2 x double> @Sleef_tanhdx_u10rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
 ; CHECK:    [[CALL:%.*]] = tail call double @tanh(double [[IN:%.*]]) #[[ATTR84:[0-9]+]]
 ;
   entry:
@@ -2213,7 +2213,7 @@ define void @tanh_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @tanh_f32
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 4 x float> @Sleef_tanhfx_u10rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
+; CHECK:    [[TMP5:%.*]] = call <vscale x 4 x float> @Sleef_tanhfx_u10rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
 ; CHECK:    [[CALL:%.*]] = tail call float @tanhf(float [[IN:%.*]]) #[[ATTR85:[0-9]+]]
 ;
   entry:
@@ -2241,7 +2241,7 @@ define void @tgamma_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @tgamma_f64
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 2 x double> @Sleef_tgammadx_u10rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
+; CHECK:    [[TMP5:%.*]] = call <vscale x 2 x double> @Sleef_tgammadx_u10rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
 ; CHECK:    [[CALL:%.*]] = tail call double @tgamma(double [[IN:%.*]]) #[[ATTR86:[0-9]+]]
 ;
   entry:
@@ -2266,7 +2266,7 @@ define void @tgamma_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @tgamma_f32
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 4 x float> @Sleef_tgammafx_u10rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
+; CHECK:    [[TMP5:%.*]] = call <vscale x 4 x float> @Sleef_tgammafx_u10rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
 ; CHECK:    [[CALL:%.*]] = tail call float @tgammaf(float [[IN:%.*]]) #[[ATTR87:[0-9]+]]
 ;
   entry:
@@ -2376,166 +2376,168 @@ define void @tgamma_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ; CHECK: attributes #[[ATTR86]] = { "vector-function-abi-variant"="_ZGVrNxv_tgamma(Sleef_tgammadx_u10rvvm2)" }
 ; CHECK: attributes #[[ATTR87]] = { "vector-function-abi-variant"="_ZGVrNxv_tgammaf(Sleef_tgammafx_u10rvvm2)" }
 ;.
-; CHECK: [[META0:![0-9]+]] = distinct !{[[META0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
+; CHECK: [[META0:![0-9]+]] = distinct !{[[META0]], [[META1:![0-9]+]], [[META2:![0-9]+]], [[META3:![0-9]+]]}
 ; CHECK: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
-; CHECK: [[META3:![0-9]+]] = distinct !{[[META3]], [[META2]], [[META1]]}
-; CHECK: [[META4:![0-9]+]] = distinct !{[[META4]], [[META1]], [[META2]]}
-; CHECK: [[META5:![0-9]+]] = distinct !{[[META5]], [[META2]], [[META1]]}
-; CHECK: [[META6:![0-9]+]] = distinct !{[[META6]], [[META1]], [[META2]]}
-; CHECK: [[META7:![0-9]+]] = distinct !{[[META7]], [[META2]], [[META1]]}
-; CHECK: [[META8:![0-9]+]] = distinct !{[[META8]], [[META1]], [[META2]]}
-; CHECK: [[META9:![0-9]+]] = distinct !{[[META9]], [[META2]], [[META1]]}
-; CHECK: [[META10:![0-9]+]] = distinct !{[[META10]], [[META1]], [[META2]]}
-; CHECK: [[META11:![0-9]+]] = distinct !{[[META11]], [[META2]], [[META1]]}
-; CHECK: [[META12:![0-9]+]] = distinct !{[[META12]], [[META1]], [[META2]]}
-; CHECK: [[META13:![0-9]+]] = distinct !{[[META13]], [[META2]], [[META1]]}
-; CHECK: [[META14:![0-9]+]] = distinct !{[[META14]], [[META1]], [[META2]]}
-; CHECK: [[META15:![0-9]+]] = distinct !{[[META15]], [[META2]], [[META1]]}
-; CHECK: [[META16:![0-9]+]] = distinct !{[[META16]], [[META1]], [[META2]]}
-; CHECK: [[META17:![0-9]+]] = distinct !{[[META17]], [[META2]], [[META1]]}
-; CHECK: [[META18:![0-9]+]] = distinct !{[[META18]], [[META1]], [[META2]]}
-; CHECK: [[META19:![0-9]+]] = distinct !{[[META19]], [[META2]], [[META1]]}
-; CHECK: [[META20:![0-9]+]] = distinct !{[[META20]], [[META1]], [[META2]]}
-; CHECK: [[META21:![0-9]+]] = distinct !{[[META21]], [[META2]], [[META1]]}
-; CHECK: [[META22:![0-9]+]] = distinct !{[[META22]], [[META1]], [[META2]]}
-; CHECK: [[META23:![0-9]+]] = distinct !{[[META23]], [[META2]], [[META1]]}
-; CHECK: [[META24:![0-9]+]] = distinct !{[[META24]], [[META1]], [[META2]]}
-; CHECK: [[META25:![0-9]+]] = distinct !{[[META25]], [[META2]], [[META1]]}
-; CHECK: [[META26:![0-9]+]] = distinct !{[[META26]], [[META1]], [[META2]]}
-; CHECK: [[META27:![0-9]+]] = distinct !{[[META27]], [[META2]], [[META1]]}
-; CHECK: [[META28:![0-9]+]] = distinct !{[[META28]], [[META1]], [[META2]]}
-; CHECK: [[META29:![0-9]+]] = distinct !{[[META29]], [[META2]], [[META1]]}
-; CHECK: [[META30:![0-9]+]] = distinct !{[[META30]], [[META1]], [[META2]]}
-; CHECK: [[META31:![0-9]+]] = distinct !{[[META31]], [[META2]], [[META1]]}
-; CHECK: [[META32:![0-9]+]] = distinct !{[[META32]], [[META1]], [[META2]]}
-; CHECK: [[META33:![0-9]+]] = distinct !{[[META33]], [[META2]], [[META1]]}
-; CHECK: [[META34:![0-9]+]] = distinct !{[[META34]], [[META1]], [[META2]]}
-; CHECK: [[META35:![0-9]+]] = distinct !{[[META35]], [[META2]], [[META1]]}
-; CHECK: [[META36:![0-9]+]] = distinct !{[[META36]], [[META1]], [[META2]]}
-; CHECK: [[META37:![0-9]+]] = distinct !{[[META37]], [[META2]], [[META1]]}
-; CHECK: [[META38:![0-9]+]] = distinct !{[[META38]], [[META1]], [[META2]]}
-; CHECK: [[META39:![0-9]+]] = distinct !{[[META39]], [[META2]], [[META1]]}
-; CHECK: [[META40:![0-9]+]] = distinct !{[[META40]], [[META1]], [[META2]]}
-; CHECK: [[META41:![0-9]+]] = distinct !{[[META41]], [[META2]], [[META1]]}
-; CHECK: [[META42:![0-9]+]] = distinct !{[[META42]], [[META1]], [[META2]]}
-; CHECK: [[META43:![0-9]+]] = distinct !{[[META43]], [[META2]], [[META1]]}
-; CHECK: [[META44:![0-9]+]] = distinct !{[[META44]], [[META1]], [[META2]]}
-; CHECK: [[META45:![0-9]+]] = distinct !{[[META45]], [[META2]], [[META1]]}
-; CHECK: [[META46:![0-9]+]] = distinct !{[[META46]], [[META1]], [[META2]]}
-; CHECK: [[META47:![0-9]+]] = distinct !{[[META47]], [[META2]], [[META1]]}
-; CHECK: [[META48:![0-9]+]] = distinct !{[[META48]], [[META1]], [[META2]]}
-; CHECK: [[META49:![0-9]+]] = distinct !{[[META49]], [[META2]], [[META1]]}
-; CHECK: [[META50:![0-9]+]] = distinct !{[[META50]], [[META1]], [[META2]]}
-; CHECK: [[META51:![0-9]+]] = distinct !{[[META51]], [[META2]], [[META1]]}
-; CHECK: [[META52:![0-9]+]] = distinct !{[[META52]], [[META1]], [[META2]]}
-; CHECK: [[META53:![0-9]+]] = distinct !{[[META53]], [[META2]], [[META1]]}
-; CHECK: [[META54:![0-9]+]] = distinct !{[[META54]], [[META1]], [[META2]]}
-; CHECK: [[META55:![0-9]+]] = distinct !{[[META55]], [[META2]], [[META1]]}
-; CHECK: [[META56:![0-9]+]] = distinct !{[[META56]], [[META1]], [[META2]]}
-; CHECK: [[META57:![0-9]+]] = distinct !{[[META57]], [[META2]], [[META1]]}
-; CHECK: [[META58:![0-9]+]] = distinct !{[[META58]], [[META1]], [[META2]]}
-; CHECK: [[META59:![0-9]+]] = distinct !{[[META59]], [[META2]], [[META1]]}
-; CHECK: [[META60:![0-9]+]] = distinct !{[[META60]], [[META1]], [[META2]]}
-; CHECK: [[META61:![0-9]+]] = distinct !{[[META61]], [[META2]], [[META1]]}
-; CHECK: [[META62:![0-9]+]] = distinct !{[[META62]], [[META1]], [[META2]]}
-; CHECK: [[META63:![0-9]+]] = distinct !{[[META63]], [[META2]], [[META1]]}
-; CHECK: [[META64:![0-9]+]] = distinct !{[[META64]], [[META1]], [[META2]]}
-; CHECK: [[META65:![0-9]+]] = distinct !{[[META65]], [[META2]], [[META1]]}
-; CHECK: [[META66:![0-9]+]] = distinct !{[[META66]], [[META1]], [[META2]]}
-; CHECK: [[META67:![0-9]+]] = distinct !{[[META67]], [[META2]], [[META1]]}
-; CHECK: [[META68:![0-9]+]] = distinct !{[[META68]], [[META1]], [[META2]]}
-; CHECK: [[META69:![0-9]+]] = distinct !{[[META69]], [[META2]], [[META1]]}
-; CHECK: [[META70:![0-9]+]] = distinct !{[[META70]], [[META1]], [[META2]]}
-; CHECK: [[META71:![0-9]+]] = distinct !{[[META71]], [[META2]], [[META1]]}
-; CHECK: [[META72:![0-9]+]] = distinct !{[[META72]], [[META1]], [[META2]]}
-; CHECK: [[META73:![0-9]+]] = distinct !{[[META73]], [[META2]], [[META1]]}
-; CHECK: [[META74:![0-9]+]] = distinct !{[[META74]], [[META1]], [[META2]]}
-; CHECK: [[META75:![0-9]+]] = distinct !{[[META75]], [[META2]], [[META1]]}
-; CHECK: [[META76:![0-9]+]] = distinct !{[[META76]], [[META1]], [[META2]]}
-; CHECK: [[META77:![0-9]+]] = distinct !{[[META77]], [[META2]], [[META1]]}
-; CHECK: [[META78:![0-9]+]] = distinct !{[[META78]], [[META1]], [[META2]]}
-; CHECK: [[META79:![0-9]+]] = distinct !{[[META79]], [[META2]], [[META1]]}
-; CHECK: [[META80:![0-9]+]] = distinct !{[[META80]], [[META1]], [[META2]]}
-; CHECK: [[META81:![0-9]+]] = distinct !{[[META81]], [[META2]], [[META1]]}
-; CHECK: [[META82:![0-9]+]] = distinct !{[[META82]], [[META1]], [[META2]]}
-; CHECK: [[META83:![0-9]+]] = distinct !{[[META83]], [[META2]], [[META1]]}
-; CHECK: [[META84:![0-9]+]] = distinct !{[[META84]], [[META1]], [[META2]]}
-; CHECK: [[META85:![0-9]+]] = distinct !{[[META85]], [[META2]], [[META1]]}
-; CHECK: [[META86:![0-9]+]] = distinct !{[[META86]], [[META1]], [[META2]]}
-; CHECK: [[META87:![0-9]+]] = distinct !{[[META87]], [[META2]], [[META1]]}
-; CHECK: [[META88:![0-9]+]] = distinct !{[[META88]], [[META1]], [[META2]]}
-; CHECK: [[META89:![0-9]+]] = distinct !{[[META89]], [[META2]], [[META1]]}
-; CHECK: [[META90:![0-9]+]] = distinct !{[[META90]], [[META1]], [[META2]]}
-; CHECK: [[META91:![0-9]+]] = distinct !{[[META91]], [[META2]], [[META1]]}
-; CHECK: [[META92:![0-9]+]] = distinct !{[[META92]], [[META1]], [[META2]]}
-; CHECK: [[META93:![0-9]+]] = distinct !{[[META93]], [[META2]], [[META1]]}
-; CHECK: [[META94:![0-9]+]] = distinct !{[[META94]], [[META1]], [[META2]]}
-; CHECK: [[META95:![0-9]+]] = distinct !{[[META95]], [[META2]], [[META1]]}
-; CHECK: [[META96:![0-9]+]] = distinct !{[[META96]], [[META1]], [[META2]]}
-; CHECK: [[META97:![0-9]+]] = distinct !{[[META97]], [[META2]], [[META1]]}
-; CHECK: [[META98:![0-9]+]] = distinct !{[[META98]], [[META1]], [[META2]]}
-; CHECK: [[META99:![0-9]+]] = distinct !{[[META99]], [[META2]], [[META1]]}
-; CHECK: [[META100:![0-9]+]] = distinct !{[[META100]], [[META1]], [[META2]]}
-; CHECK: [[META101:![0-9]+]] = distinct !{[[META101]], [[META2]], [[META1]]}
-; CHECK: [[META102:![0-9]+]] = distinct !{[[META102]], [[META1]], [[META2]]}
-; CHECK: [[META103:![0-9]+]] = distinct !{[[META103]], [[META2]], [[META1]]}
-; CHECK: [[META104:![0-9]+]] = distinct !{[[META104]], [[META1]], [[META2]]}
-; CHECK: [[META105:![0-9]+]] = distinct !{[[META105]], [[META2]], [[META1]]}
-; CHECK: [[META106:![0-9]+]] = distinct !{[[META106]], [[META1]], [[META2]]}
-; CHECK: [[META107:![0-9]+]] = distinct !{[[META107]], [[META2]], [[META1]]}
-; CHECK: [[META108:![0-9]+]] = distinct !{[[META108]], [[META1]], [[META2]]}
-; CHECK: [[META109:![0-9]+]] = distinct !{[[META109]], [[META2]], [[META1]]}
-; CHECK: [[META110:![0-9]+]] = distinct !{[[META110]], [[META1]], [[META2]]}
-; CHECK: [[META111:![0-9]+]] = distinct !{[[META111]], [[META2]], [[META1]]}
-; CHECK: [[META112:![0-9]+]] = distinct !{[[META112]], [[META1]], [[META2]]}
-; CHECK: [[META113:![0-9]+]] = distinct !{[[META113]], [[META2]], [[META1]]}
-; CHECK: [[META114:![0-9]+]] = distinct !{[[META114]], [[META1]], [[META2]]}
-; CHECK: [[META115:![0-9]+]] = distinct !{[[META115]], [[META2]], [[META1]]}
-; CHECK: [[META116:![0-9]+]] = distinct !{[[META116]], [[META1]], [[META2]]}
-; CHECK: [[META117:![0-9]+]] = distinct !{[[META117]], [[META2]], [[META1]]}
-; CHECK: [[META118:![0-9]+]] = distinct !{[[META118]], [[META1]], [[META2]]}
-; CHECK: [[META119:![0-9]+]] = distinct !{[[META119]], [[META2]], [[META1]]}
-; CHECK: [[META120:![0-9]+]] = distinct !{[[META120]], [[META1]], [[META2]]}
-; CHECK: [[META121:![0-9]+]] = distinct !{[[META121]], [[META2]], [[META1]]}
-; CHECK: [[META122:![0-9]+]] = distinct !{[[META122]], [[META1]], [[META2]]}
-; CHECK: [[META123:![0-9]+]] = distinct !{[[META123]], [[META2]], [[META1]]}
-; CHECK: [[META124:![0-9]+]] = distinct !{[[META124]], [[META1]], [[META2]]}
-; CHECK: [[META125:![0-9]+]] = distinct !{[[META125]], [[META2]], [[META1]]}
-; CHECK: [[META126:![0-9]+]] = distinct !{[[META126]], [[META1]], [[META2]]}
-; CHECK: [[META127:![0-9]+]] = distinct !{[[META127]], [[META2]], [[META1]]}
-; CHECK: [[META128:![0-9]+]] = distinct !{[[META128]], [[META1]], [[META2]]}
-; CHECK: [[META129:![0-9]+]] = distinct !{[[META129]], [[META2]], [[META1]]}
-; CHECK: [[META130:![0-9]+]] = distinct !{[[META130]], [[META1]], [[META2]]}
-; CHECK: [[META131:![0-9]+]] = distinct !{[[META131]], [[META2]], [[META1]]}
-; CHECK: [[META132:![0-9]+]] = distinct !{[[META132]], [[META1]], [[META2]]}
-; CHECK: [[META133:![0-9]+]] = distinct !{[[META133]], [[META2]], [[META1]]}
-; CHECK: [[META134:![0-9]+]] = distinct !{[[META134]], [[META1]], [[META2]]}
-; CHECK: [[META135:![0-9]+]] = distinct !{[[META135]], [[META2]], [[META1]]}
-; CHECK: [[META136:![0-9]+]] = distinct !{[[META136]], [[META1]], [[META2]]}
-; CHECK: [[META137:![0-9]+]] = distinct !{[[META137]], [[META2]], [[META1]]}
-; CHECK: [[META138:![0-9]+]] = distinct !{[[META138]], [[META1]], [[META2]]}
-; CHECK: [[META139:![0-9]+]] = distinct !{[[META139]], [[META2]], [[META1]]}
-; CHECK: [[META140:![0-9]+]] = distinct !{[[META140]], [[META1]], [[META2]]}
-; CHECK: [[META141:![0-9]+]] = distinct !{[[META141]], [[META2]], [[META1]]}
-; CHECK: [[META142:![0-9]+]] = distinct !{[[META142]], [[META1]], [[META2]]}
-; CHECK: [[META143:![0-9]+]] = distinct !{[[META143]], [[META2]], [[META1]]}
-; CHECK: [[META144:![0-9]+]] = distinct !{[[META144]], [[META1]], [[META2]]}
-; CHECK: [[META145:![0-9]+]] = distinct !{[[META145]], [[META2]], [[META1]]}
-; CHECK: [[META146:![0-9]+]] = distinct !{[[META146]], [[META1]], [[META2]]}
-; CHECK: [[META147:![0-9]+]] = distinct !{[[META147]], [[META2]], [[META1]]}
-; CHECK: [[META148:![0-9]+]] = distinct !{[[META148]], [[META1]], [[META2]]}
-; CHECK: [[META149:![0-9]+]] = distinct !{[[META149]], [[META2]], [[META1]]}
-; CHECK: [[META150:![0-9]+]] = distinct !{[[META150]], [[META1]], [[META2]]}
-; CHECK: [[META151:![0-9]+]] = distinct !{[[META151]], [[META2]], [[META1]]}
-; CHECK: [[META152:![0-9]+]] = distinct !{[[META152]], [[META1]], [[META2]]}
-; CHECK: [[META153:![0-9]+]] = distinct !{[[META153]], [[META2]], [[META1]]}
-; CHECK: [[META154:![0-9]+]] = distinct !{[[META154]], [[META1]], [[META2]]}
-; CHECK: [[META155:![0-9]+]] = distinct !{[[META155]], [[META2]], [[META1]]}
-; CHECK: [[META156:![0-9]+]] = distinct !{[[META156]], [[META1]], [[META2]]}
-; CHECK: [[META157:![0-9]+]] = distinct !{[[META157]], [[META2]], [[META1]]}
-; CHECK: [[META158:![0-9]+]] = distinct !{[[META158]], [[META1]], [[META2]]}
-; CHECK: [[META159:![0-9]+]] = distinct !{[[META159]], [[META2]], [[META1]]}
-; CHECK: [[META160:![0-9]+]] = distinct !{[[META160]], [[META1]], [[META2]]}
-; CHECK: [[META161:![0-9]+]] = distinct !{[[META161]], [[META2]], [[META1]]}
+; CHECK: [[META2]] = !{!"llvm.loop.vectorize.vector_body", i32 1}
+; CHECK: [[META3]] = !{!"llvm.loop.unroll.runtime.disable"}
+; CHECK: [[META4:![0-9]+]] = distinct !{[[META4]], [[META3]], [[META1]], [[META5:![0-9]+]]}
+; CHECK: [[META5]] = !{!"llvm.loop.vectorize.scalar_remainder", i32 1}
+; CHECK: [[META6:![0-9]+]] = distinct !{[[META6]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[META7:![0-9]+]] = distinct !{[[META7]], [[META3]], [[META1]], [[META5]]}
+; CHECK: [[META8:![0-9]+]] = distinct !{[[META8]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[META9:![0-9]+]] = distinct !{[[META9]], [[META3]], [[META1]], [[META5]]}
+; CHECK: [[META10:![0-9]+]] = distinct !{[[META10]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[META11:![0-9]+]] = distinct !{[[META11]], [[META3]], [[META1]], [[META5]]}
+; CHECK: [[META12:![0-9]+]] = distinct !{[[META12]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[META13:![0-9]+]] = distinct !{[[META13]], [[META3]], [[META1]], [[META5]]}
+; CHECK: [[META14:![0-9]+]] = distinct !{[[META14]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[META15:![0-9]+]] = distinct !{[[META15]], [[META3]], [[META1]], [[META5]]}
+; CHECK: [[META16:![0-9]+]] = distinct !{[[META16]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[META17:![0-9]+]] = distinct !{[[META17]], [[META3]], [[META1]], [[META5]]}
+; CHECK: [[META18:![0-9]+]] = distinct !{[[META18]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[META19:![0-9]+]] = distinct !{[[META19]], [[META3]], [[META1]], [[META5]]}
+; CHECK: [[META20:![0-9]+]] = distinct !{[[META20]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[META21:![0-9]+]] = distinct !{[[META21]], [[META3]], [[META1]], [[META5]]}
+; CHECK: [[META22:![0-9]+]] = distinct !{[[META22]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[META23:![0-9]+]] = distinct !{[[META23]], [[META3]], [[META1]], [[META5]]}
+; CHECK: [[META24:![0-9]+]] = distinct !{[[META24]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[META25:![0-9]+]] = distinct !{[[META25]], [[META3]], [[META1]], [[META5]]}
+; CHECK: [[META26:![0-9]+]] = distinct !{[[META26]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[META27:![0-9]+]] = distinct !{[[META27]], [[META3]], [[META1]], [[META5]]}
+; CHECK: [[META28:![0-9]+]] = distinct !{[[META28]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[META29:![0-9]+]] = distinct !{[[META29]], [[META3]], [[META1]], [[META5]]}
+; CHECK: [[META30:![0-9]+]] = distinct !{[[META30]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[META31:![0-9]+]] = distinct !{[[META31]], [[META3]], [[META1]], [[META5]]}
+; CHECK: [[META32:![0-9]+]] = distinct !{[[META32]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[META33:![0-9]+]] = distinct !{[[META33]], [[META3]], [[META1]], [[META5]]}
+; CHECK: [[META34:![0-9]+]] = distinct !{[[META34]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[META35:![0-9]+]] = distinct !{[[META35]], [[META3]], [[META1]], [[META5]]}
+; CHECK: [[META36:![0-9]+]] = distinct !{[[META36]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[META37:![0-9]+]] = distinct !{[[META37]], [[META3]], [[META1]], [[META5]]}
+; CHECK: [[META38:![0-9]+]] = distinct !{[[META38]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[META39:![0-9]+]] = distinct !{[[META39]], [[META3]], [[META1]], [[META5]]}
+; CHECK: [[META40:![0-9]+]] = distinct !{[[META40]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[META41:![0-9]+]] = distinct !{[[META41]], [[META3]], [[META1]], [[META5]]}
+; CHECK: [[META42:![0-9]+]] = distinct !{[[META42]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[META43:![0-9]+]] = distinct !{[[META43]], [[META3]], [[META1]], [[META5]]}
+; CHECK: [[META44:![0-9]+]] = distinct !{[[META44]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[META45:![0-9]+]] = distinct !{[[META45]], [[META3]], [[META1]], [[META5]]}
+; CHECK: [[META46:![0-9]+]] = distinct !{[[META46]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[META47:![0-9]+]] = distinct !{[[META47]], [[META3]], [[META1]], [[META5]]}
+; CHECK: [[META48:![0-9]+]] = distinct !{[[META48]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[META49:![0-9]+]] = distinct !{[[META49]], [[META3]], [[META1]], [[META5]]}
+; CHECK: [[META50:![0-9]+]] = distinct !{[[META50]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[META51:![0-9]+]] = distinct !{[[META51]], [[META3]], [[META1]], [[META5]]}
+; CHECK: [[META52:![0-9]+]] = distinct !{[[META52]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[META53:![0-9]+]] = distinct !{[[META53]], [[META3]], [[META1]], [[META5]]}
+; CHECK: [[META54:![0-9]+]] = distinct !{[[META54]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[META55:![0-9]+]] = distinct !{[[META55]], [[META3]], [[META1]], [[META5]]}
+; CHECK: [[META56:![0-9]+]] = distinct !{[[META56]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[META57:![0-9]+]] = distinct !{[[META57]], [[META3]], [[META1]], [[META5]]}
+; CHECK: [[META58:![0-9]+]] = distinct !{[[META58]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[META59:![0-9]+]] = distinct !{[[META59]], [[META3]], [[META1]], [[META5]]}
+; CHECK: [[META60:![0-9]+]] = distinct !{[[META60]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[META61:![0-9]+]] = distinct !{[[META61]], [[META3]], [[META1]], [[META5]]}
+; CHECK: [[META62:![0-9]+]] = distinct !{[[META62]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[META63:![0-9]+]] = distinct !{[[META63]], [[META3]], [[META1]], [[META5]]}
+; CHECK: [[META64:![0-9]+]] = distinct !{[[META64]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[META65:![0-9]+]] = distinct !{[[META65]], [[META3]], [[META1]], [[META5]]}
+; CHECK: [[META66:![0-9]+]] = distinct !{[[META66]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[META67:![0-9]+]] = distinct !{[[META67]], [[META3]], [[META1]], [[META5]]}
+; CHECK: [[META68:![0-9]+]] = distinct !{[[META68]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[META69:![0-9]+]] = distinct !{[[META69]], [[META3]], [[META1]], [[META5]]}
+; CHECK: [[META70:![0-9]+]] = distinct !{[[META70]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[META71:![0-9]+]] = distinct !{[[META71]], [[META3]], [[META1]], [[META5]]}
+; CHECK: [[META72:![0-9]+]] = distinct !{[[META72]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[META73:![0-9]+]] = distinct !{[[META73]], [[META3]], [[META1]], [[META5]]}
+; CHECK: [[META74:![0-9]+]] = distinct !{[[META74]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[META75:![0-9]+]] = distinct !{[[META75]], [[META3]], [[META1]], [[META5]]}
+; CHECK: [[META76:![0-9]+]] = distinct !{[[META76]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[META77:![0-9]+]] = distinct !{[[META77]], [[META3]], [[META1]], [[META5]]}
+; CHECK: [[META78:![0-9]+]] = distinct !{[[META78]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[META79:![0-9]+]] = distinct !{[[META79]], [[META3]], [[META1]], [[META5]]}
+; CHECK: [[META80:![0-9]+]] = distinct !{[[META80]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[META81:![0-9]+]] = distinct !{[[META81]], [[META3]], [[META1]], [[META5]]}
+; CHECK: [[META82:![0-9]+]] = distinct !{[[META82]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[META83:![0-9]+]] = distinct !{[[META83]], [[META3]], [[META1]], [[META5]]}
+; CHECK: [[META84:![0-9]+]] = distinct !{[[META84]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[META85:![0-9]+]] = distinct !{[[META85]], [[META3]], [[META1]], [[META5]]}
+; CHECK: [[META86:![0-9]+]] = distinct !{[[META86]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[META87:![0-9]+]] = distinct !{[[META87]], [[META3]], [[META1]], [[META5]]}
+; CHECK: [[META88:![0-9]+]] = distinct !{[[META88]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[META89:![0-9]+]] = distinct !{[[META89]], [[META3]], [[META1]], [[META5]]}
+; CHECK: [[META90:![0-9]+]] = distinct !{[[META90]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[META91:![0-9]+]] = distinct !{[[META91]], [[META3]], [[META1]], [[META5]]}
+; CHECK: [[META92:![0-9]+]] = distinct !{[[META92]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[META93:![0-9]+]] = distinct !{[[META93]], [[META3]], [[META1]], [[META5]]}
+; CHECK: [[META94:![0-9]+]] = distinct !{[[META94]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[META95:![0-9]+]] = distinct !{[[META95]], [[META3]], [[META1]], [[META5]]}
+; CHECK: [[META96:![0-9]+]] = distinct !{[[META96]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[META97:![0-9]+]] = distinct !{[[META97]], [[META3]], [[META1]], [[META5]]}
+; CHECK: [[META98:![0-9]+]] = distinct !{[[META98]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[META99:![0-9]+]] = distinct !{[[META99]], [[META3]], [[META1]], [[META5]]}
+; CHECK: [[META100:![0-9]+]] = distinct !{[[META100]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[META101:![0-9]+]] = distinct !{[[META101]], [[META3]], [[META1]], [[META5]]}
+; CHECK: [[META102:![0-9]+]] = distinct !{[[META102]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[META103:![0-9]+]] = distinct !{[[META103]], [[META3]], [[META1]], [[META5]]}
+; CHECK: [[META104:![0-9]+]] = distinct !{[[META104]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[META105:![0-9]+]] = distinct !{[[META105]], [[META3]], [[META1]], [[META5]]}
+; CHECK: [[META106:![0-9]+]] = distinct !{[[META106]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[META107:![0-9]+]] = distinct !{[[META107]], [[META3]], [[META1]], [[META5]]}
+; CHECK: [[META108:![0-9]+]] = distinct !{[[META108]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[META109:![0-9]+]] = distinct !{[[META109]], [[META3]], [[META1]], [[META5]]}
+; CHECK: [[META110:![0-9]+]] = distinct !{[[META110]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[META111:![0-9]+]] = distinct !{[[META111]], [[META3]], [[META1]], [[META5]]}
+; CHECK: [[META112:![0-9]+]] = distinct !{[[META112]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[META113:![0-9]+]] = distinct !{[[META113]], [[META3]], [[META1]], [[META5]]}
+; CHECK: [[META114:![0-9]+]] = distinct !{[[META114]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[META115:![0-9]+]] = distinct !{[[META115]], [[META3]], [[META1]], [[META5]]}
+; CHECK: [[META116:![0-9]+]] = distinct !{[[META116]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[META117:![0-9]+]] = distinct !{[[META117]], [[META3]], [[META1]], [[META5]]}
+; CHECK: [[META118:![0-9]+]] = distinct !{[[META118]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[META119:![0-9]+]] = distinct !{[[META119]], [[META3]], [[META1]], [[META5]]}
+; CHECK: [[META120:![0-9]+]] = distinct !{[[META120]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[META121:![0-9]+]] = distinct !{[[META121]], [[META3]], [[META1]], [[META5]]}
+; CHECK: [[META122:![0-9]+]] = distinct !{[[META122]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[META123:![0-9]+]] = distinct !{[[META123]], [[META3]], [[META1]], [[META5]]}
+; CHECK: [[META124:![0-9]+]] = distinct !{[[META124]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[META125:![0-9]+]] = distinct !{[[META125]], [[META3]], [[META1]], [[META5]]}
+; CHECK: [[META126:![0-9]+]] = distinct !{[[META126]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[META127:![0-9]+]] = distinct !{[[META127]], [[META3]], [[META1]], [[META5]]}
+; CHECK: [[META128:![0-9]+]] = distinct !{[[META128]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[META129:![0-9]+]] = distinct !{[[META129]], [[META3]], [[META1]], [[META5]]}
+; CHECK: [[META130:![0-9]+]] = distinct !{[[META130]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[META131:![0-9]+]] = distinct !{[[META131]], [[META3]], [[META1]], [[META5]]}
+; CHECK: [[META132:![0-9]+]] = distinct !{[[META132]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[META133:![0-9]+]] = distinct !{[[META133]], [[META3]], [[META1]], [[META5]]}
+; CHECK: [[META134:![0-9]+]] = distinct !{[[META134]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[META135:![0-9]+]] = distinct !{[[META135]], [[META3]], [[META1]], [[META5]]}
+; CHECK: [[META136:![0-9]+]] = distinct !{[[META136]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[META137:![0-9]+]] = distinct !{[[META137]], [[META3]], [[META1]], [[META5]]}
+; CHECK: [[META138:![0-9]+]] = distinct !{[[META138]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[META139:![0-9]+]] = distinct !{[[META139]], [[META3]], [[META1]], [[META5]]}
+; CHECK: [[META140:![0-9]+]] = distinct !{[[META140]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[META141:![0-9]+]] = distinct !{[[META141]], [[META3]], [[META1]], [[META5]]}
+; CHECK: [[META142:![0-9]+]] = distinct !{[[META142]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[META143:![0-9]+]] = distinct !{[[META143]], [[META3]], [[META1]], [[META5]]}
+; CHECK: [[META144:![0-9]+]] = distinct !{[[META144]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[META145:![0-9]+]] = distinct !{[[META145]], [[META3]], [[META1]], [[META5]]}
+; CHECK: [[META146:![0-9]+]] = distinct !{[[META146]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[META147:![0-9]+]] = distinct !{[[META147]], [[META3]], [[META1]], [[META5]]}
+; CHECK: [[META148:![0-9]+]] = distinct !{[[META148]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[META149:![0-9]+]] = distinct !{[[META149]], [[META3]], [[META1]], [[META5]]}
+; CHECK: [[META150:![0-9]+]] = distinct !{[[META150]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[META151:![0-9]+]] = distinct !{[[META151]], [[META3]], [[META1]], [[META5]]}
+; CHECK: [[META152:![0-9]+]] = distinct !{[[META152]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[META153:![0-9]+]] = distinct !{[[META153]], [[META3]], [[META1]], [[META5]]}
+; CHECK: [[META154:![0-9]+]] = distinct !{[[META154]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[META155:![0-9]+]] = distinct !{[[META155]], [[META3]], [[META1]], [[META5]]}
+; CHECK: [[META156:![0-9]+]] = distinct !{[[META156]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[META157:![0-9]+]] = distinct !{[[META157]], [[META3]], [[META1]], [[META5]]}
+; CHECK: [[META158:![0-9]+]] = distinct !{[[META158]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[META159:![0-9]+]] = distinct !{[[META159]], [[META3]], [[META1]], [[META5]]}
+; CHECK: [[META160:![0-9]+]] = distinct !{[[META160]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[META161:![0-9]+]] = distinct !{[[META161]], [[META3]], [[META1]], [[META5]]}
+; CHECK: [[META162:![0-9]+]] = distinct !{[[META162]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[META163:![0-9]+]] = distinct !{[[META163]], [[META3]], [[META1]], [[META5]]}
 ;.

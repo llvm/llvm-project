@@ -59,7 +59,7 @@ define double @fp128_fmuladd_reduction(ptr %start0, ptr %start1, ptr %end0, ptr 
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]]
 ; CHECK:       [[VEC_EPILOG_ITER_CHECK]]:
 ; CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_MOD_VF]], 2
-; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF3:![0-9]+]]
+; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF4:![0-9]+]]
 ; CHECK:       [[VEC_EPILOG_PH]]:
 ; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi double [ [[TMP21]], %[[VEC_EPILOG_ITER_CHECK]] ], [ [[X]], %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
@@ -84,21 +84,21 @@ define double @fp128_fmuladd_reduction(ptr %start0, ptr %start1, ptr %end0, ptr 
 ; CHECK-NEXT:    [[TMP33]] = call double @llvm.vector.reduce.fadd.v2f64(double [[VEC_PHI13]], <2 x double> [[TMP32]])
 ; CHECK-NEXT:    [[INDEX_NEXT19]] = add nuw i64 [[INDEX12]], 2
 ; CHECK-NEXT:    [[TMP34:%.*]] = icmp eq i64 [[INDEX_NEXT19]], [[N_VEC11]]
-; CHECK-NEXT:    br i1 [[TMP34]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP34]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[CMP_N20:%.*]] = icmp eq i64 [[N]], [[N_VEC11]]
 ; CHECK-NEXT:    br i1 [[CMP_N20]], label %[[EXIT]], label %[[VEC_EPILOG_SCALAR_PH]]
 ; CHECK:       [[VEC_EPILOG_SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi ptr [ [[TMP26]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[NEXT_GEP3]], %[[VEC_EPILOG_ITER_CHECK]] ], [ [[START0]], %[[ITER_CHECK]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL21:%.*]] = phi ptr [ [[NEXT_GEP7]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[NEXT_GEP6]], %[[VEC_EPILOG_ITER_CHECK]] ], [ [[START1]], %[[ITER_CHECK]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL22:%.*]] = phi i64 [ [[N_VEC11]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX23:%.*]] = phi double [ [[TMP33]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP21]], %[[VEC_EPILOG_ITER_CHECK]] ], [ [[X]], %[[ITER_CHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL22:%.*]] = phi ptr [ [[TMP26]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[NEXT_GEP3]], %[[VEC_EPILOG_ITER_CHECK]] ], [ [[START0]], %[[ITER_CHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL23:%.*]] = phi ptr [ [[NEXT_GEP7]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[NEXT_GEP6]], %[[VEC_EPILOG_ITER_CHECK]] ], [ [[START1]], %[[ITER_CHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL24:%.*]] = phi i64 [ [[N_VEC11]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX25:%.*]] = phi double [ [[TMP33]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP21]], %[[VEC_EPILOG_ITER_CHECK]] ], [ [[X]], %[[ITER_CHECK]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[PTR0:%.*]] = phi ptr [ [[PTR0_NEXT:%.*]], %[[LOOP]] ], [ [[BC_RESUME_VAL]], %[[VEC_EPILOG_SCALAR_PH]] ]
-; CHECK-NEXT:    [[PTR1:%.*]] = phi ptr [ [[PTR1_NEXT:%.*]], %[[LOOP]] ], [ [[BC_RESUME_VAL21]], %[[VEC_EPILOG_SCALAR_PH]] ]
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], %[[LOOP]] ], [ [[BC_RESUME_VAL22]], %[[VEC_EPILOG_SCALAR_PH]] ]
-; CHECK-NEXT:    [[RED:%.*]] = phi double [ [[RED_NEXT:%.*]], %[[LOOP]] ], [ [[BC_MERGE_RDX23]], %[[VEC_EPILOG_SCALAR_PH]] ]
+; CHECK-NEXT:    [[PTR0:%.*]] = phi ptr [ [[PTR0_NEXT:%.*]], %[[LOOP]] ], [ [[BC_RESUME_VAL22]], %[[VEC_EPILOG_SCALAR_PH]] ]
+; CHECK-NEXT:    [[PTR1:%.*]] = phi ptr [ [[PTR1_NEXT:%.*]], %[[LOOP]] ], [ [[BC_RESUME_VAL23]], %[[VEC_EPILOG_SCALAR_PH]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], %[[LOOP]] ], [ [[BC_RESUME_VAL24]], %[[VEC_EPILOG_SCALAR_PH]] ]
+; CHECK-NEXT:    [[RED:%.*]] = phi double [ [[RED_NEXT:%.*]], %[[LOOP]] ], [ [[BC_MERGE_RDX25]], %[[VEC_EPILOG_SCALAR_PH]] ]
 ; CHECK-NEXT:    [[PTR0_NEXT]] = getelementptr i8, ptr [[PTR0]], i64 16
 ; CHECK-NEXT:    [[PTR1_NEXT]] = getelementptr i8, ptr [[PTR1]], i64 8
 ; CHECK-NEXT:    [[LOAD0:%.*]] = load fp128, ptr [[PTR0]], align 16
@@ -107,7 +107,7 @@ define double @fp128_fmuladd_reduction(ptr %start0, ptr %start1, ptr %end0, ptr 
 ; CHECK-NEXT:    [[RED_NEXT]] = tail call double @llvm.fmuladd.f64(double [[TRUNC]], double [[LOAD1]], double [[RED]])
 ; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
 ; CHECK-NEXT:    [[CMP1_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[CMP1_NOT]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP5:![0-9]+]]
+; CHECK-NEXT:    br i1 [[CMP1_NOT]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    [[LCSSA:%.*]] = phi double [ [[RED_NEXT]], %[[LOOP]] ], [ [[TMP21]], %[[MIDDLE_BLOCK]] ], [ [[TMP33]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    ret double [[LCSSA]]
@@ -135,10 +135,12 @@ exit:
   ret double %lcssa
 }
 ;.
-; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
+; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]], [[META3:![0-9]+]]}
 ; CHECK: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
-; CHECK: [[PROF3]] = !{!"branch_weights", i32 2, i32 6}
-; CHECK: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META2]]}
-; CHECK: [[LOOP5]] = distinct !{[[LOOP5]], [[META2]], [[META1]]}
+; CHECK: [[META2]] = !{!"llvm.loop.vectorize.vector_body", i32 1}
+; CHECK: [[META3]] = !{!"llvm.loop.unroll.runtime.disable"}
+; CHECK: [[PROF4]] = !{!"branch_weights", i32 2, i32 6}
+; CHECK: [[LOOP5]] = distinct !{[[LOOP5]], [[META1]], [[META6:![0-9]+]], [[META2]], [[META3]]}
+; CHECK: [[META6]] = !{!"llvm.loop.vectorize.scalar_remainder", i32 1}
+; CHECK: [[LOOP7]] = distinct !{[[LOOP7]], [[META3]], [[META1]], [[META6]], [[META6]]}
 ;.

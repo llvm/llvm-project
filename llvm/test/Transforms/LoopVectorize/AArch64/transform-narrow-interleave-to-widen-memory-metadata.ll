@@ -23,8 +23,9 @@ define void @load_store_interleave_group_with_metadata(ptr noalias %data) {
 ; VF2-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
 ; VF2-NEXT:    br i1 [[TMP2]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; VF2:       [[MIDDLE_BLOCK]]:
-; VF2-NEXT:    br [[EXIT:label %.*]]
-; VF2:       [[SCALAR_PH:.*:]]
+; VF2-NEXT:    br label %[[EXIT:.*]]
+; VF2:       [[EXIT]]:
+; VF2-NEXT:    ret void
 ;
 entry:
   br label %loop
@@ -61,7 +62,8 @@ exit:
 ; VF4: [[META4]] = !{!"llvm.loop.isvectorized", i32 1}
 ; VF4: [[META5]] = !{!"llvm.loop.unroll.runtime.disable"}
 ;.
-; VF2: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
+; VF2: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]], [[META3:![0-9]+]]}
 ; VF2: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
-; VF2: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
+; VF2: [[META2]] = !{!"llvm.loop.vectorize.vector_body", i32 1}
+; VF2: [[META3]] = !{!"llvm.loop.unroll.runtime.disable"}
 ;.
