@@ -1232,8 +1232,8 @@ createClangModulePrecompileJob(Compilation &C, const Command &ImportingJob,
   PA->propagateOffloadInfo(&ImportingJob.getSource());
 
   const auto &TC = ImportingJob.getCreator().getToolChain();
-  const auto &TCArgs = C.getArgsForToolChain(
-      &TC, PA->getOffloadingArch(), PA->getOffloadingDeviceKind());
+  const auto &TCArgs = C.getArgsForToolChain(&TC, PA->getOffloadingArch(),
+                                             PA->getOffloadingDeviceKind());
 
   const auto &BuildArgs = MD.getBuildArguments();
   ArgStringList JobArgs;
