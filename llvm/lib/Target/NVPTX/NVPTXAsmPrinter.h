@@ -88,7 +88,7 @@ class LLVM_LIBRARY_VISIBILITY NVPTXAsmPrinter : public AsmPrinter {
     }
 
   private:
-    const unsigned size;   // size of the buffer in bytes
+    const unsigned Size;               // size of the buffer in bytes
     std::vector<unsigned char> buffer; // the buffer
     SmallVector<unsigned, 4> symbolPosInBuffer;
     SmallVector<const Value *, 4> Symbols;
@@ -105,11 +105,11 @@ class LLVM_LIBRARY_VISIBILITY NVPTXAsmPrinter : public AsmPrinter {
     const bool EmitGeneric;
 
   public:
-    AggBuffer(unsigned size, const NVPTXAsmPrinter &AP)
-        : size(size), buffer(size), curpos(0), AP(AP),
+    AggBuffer(unsigned Size, const NVPTXAsmPrinter &AP)
+        : Size(Size), buffer(Size), curpos(0), AP(AP),
           EmitGeneric(AP.EmitGeneric) {}
 
-    unsigned getSize() const { return size; }
+    unsigned getBufferSize() const { return Size; }
 
     // Copy Num bytes from Ptr.
     // if Bytes > Num, zero fill up to Bytes.
@@ -121,7 +121,7 @@ class LLVM_LIBRARY_VISIBILITY NVPTXAsmPrinter : public AsmPrinter {
     }
 
     void addByte(uint8_t Byte) {
-      assert(curpos < size);
+      assert(curpos < Size);
       buffer[curpos] = Byte;
       curpos++;
     }

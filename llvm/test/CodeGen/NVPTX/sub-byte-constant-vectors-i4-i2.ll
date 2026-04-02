@@ -14,3 +14,9 @@ target triple = "nvptx-nvidia-cuda"
 
 ; CHECK: .visible .global .align 1 .b8 test2[1] = {228};
 @test2 = local_unnamed_addr addrspace(1) constant <4 x i2> <i2 0, i2 1, i2 2, i2 3>, align 1
+
+; CHECK: .visible .global .align 1 .b8 test3[2] = {228, 4};
+@test3 = local_unnamed_addr addrspace(1) constant <6 x i2> <i2 0, i2 1, i2 2, i2 3, i2 0, i2 1>, align 1
+
+; CHECK: .visible .global .align 1 .b8 test4[1] = {1};
+@test4 = local_unnamed_addr addrspace(1) constant <1 x i4> <i4 1>, align 1

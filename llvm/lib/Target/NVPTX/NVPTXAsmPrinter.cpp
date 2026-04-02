@@ -1115,7 +1115,7 @@ void NVPTXAsmPrinter::AggBuffer::printBytes(raw_ostream &os) {
   // ptxas. This saves on both space requirements for the generated PTX and on
   // memory use by ptxas. (See:
   // https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#global-state-space)
-  unsigned int InitializerCount = size;
+  unsigned int InitializerCount = Size;
   // TODO: symbols make this harder, but it would still be good to trim trailing
   // 0s for aggs with symbols as well.
   if (numSymbols() == 0)
@@ -1153,11 +1153,11 @@ void NVPTXAsmPrinter::AggBuffer::printBytes(raw_ostream &os) {
 
 void NVPTXAsmPrinter::AggBuffer::printWords(raw_ostream &os) {
   unsigned int ptrSize = AP.MAI->getCodePointerSize();
-  symbolPosInBuffer.push_back(size);
+  symbolPosInBuffer.push_back(Size);
   unsigned int nSym = 0;
   unsigned int nextSymbolPos = symbolPosInBuffer[nSym];
   assert(nextSymbolPos % ptrSize == 0);
-  for (unsigned int pos = 0; pos < size; pos += ptrSize) {
+  for (unsigned int pos = 0; pos < Size; pos += ptrSize) {
     if (pos)
       os << ", ";
     if (pos == nextSymbolPos) {
@@ -1746,7 +1746,7 @@ void NVPTXAsmPrinter::bufferAggregateConstant(const Constant *CPV,
 void NVPTXAsmPrinter::bufferAggregateConstVec(const ConstantVector *CV,
                                               AggBuffer *aggBuffer) {
   unsigned NumElems = CV->getType()->getNumElements();
-  const unsigned BuffSize = aggBuffer->getSize();
+  const unsigned BuffSize = aggBuffer->getBufferSize();
 
   // Buffer one element at a time if we have allocated enough buffer space.
   if (BuffSize >= NumElems) {
@@ -1755,10 +1755,10 @@ void NVPTXAsmPrinter::bufferAggregateConstVec(const ConstantVector *CV,
     return;
   }
 
-  // We have more elements than allocated buffer space, this implies sub-byte
-  // datatype in the vector. Merge consecutive elements to form a full byte. We
-  // expect that 8 % sub-byte-elem-size should be 0 and current expected usage
-  // is for i4 (for e2m1-fp4 types).
+  // Sub-byte datatypes will have more elements than bytes allocated for the
+  // buffer. Merge consecutive elements to form a full byte. We expect that 8 %
+  // sub-byte-elem-size should be 0 and current expected usage is for i4 (for
+  // e2m1-fp4 types).
   Type *ElemTy = CV->getType()->getElementType();
   assert(ElemTy->isIntegerTy() && "Expected integer data type.");
   unsigned ElemTySize = ElemTy->getPrimitiveSizeInBits();
@@ -1767,23 +1767,12 @@ void NVPTXAsmPrinter::bufferAggregateConstVec(const ConstantVector *CV,
   // Number of elements to merge to form a full byte.
   unsigned ChunkSize = 8 / ElemTySize;
 
-  // Iterate through elements of vector one chunk at a time and buffer that
-  // chunk.
-  for (unsigned I = 0; I < NumElems; I += ChunkSize) {
-    // Collect elements in chunk to create sub-vector.
-    SmallVector<Constant *, 8> SubCVElems;
-    for (unsigned J = I; J < std::min(I + ChunkSize, NumElems); ++J)
-      SubCVElems.push_back(CV->getAggregateElement(J));
-
-    // For unevenly sized vectors add padding zeros.
-    unsigned PaddingZeroCount = ChunkSize - SubCVElems.size();
-    for (unsigned I = 0; I < PaddingZeroCount; ++I)
-      SubCVElems.push_back(ConstantInt::getNullValue(ElemTy));
-
+  // Helper lambda to constant-fold array of sub-byte constants to i8.
+  auto ConvertSubCVtoInt8 = [this](ArrayRef<Constant *> SubCVElems) {
     auto SubCV = ConstantVector::get(SubCVElems);
-    Type *Int8Ty = IntegerType::get(CV->getContext(), 8);
+    Type *Int8Ty = IntegerType::get(SubCV->getContext(), 8);
 
-    // Merge elements of the chunk using ConstantFolding and buffer it.
+    // Merge elements of the chunk using ConstantFolding.
     ConstantInt *MergedElem =
         dyn_cast_or_null<ConstantInt>(ConstantFoldConstant(
             ConstantExpr::getBitCast(const_cast<Constant *>(SubCV), Int8Ty),
@@ -1793,7 +1782,42 @@ void NVPTXAsmPrinter::bufferAggregateConstVec(const ConstantVector *CV,
       report_fatal_error(
           "Cannot lower vector global with unusual element type");
 
-    bufferLEByte(MergedElem, 0, aggBuffer);
+    return MergedElem;
+  };
+
+  // Iterate through elements of vector one chunk at a time and buffer that
+  // chunk.
+  unsigned TailPaddedChunkBegin = 0;
+  bool NeedTailPadding = false;
+  for (unsigned I = 0; I < NumElems; I += ChunkSize) {
+    // If we have less elements than chunk size, then break to pad the final
+    // chunk with zeroes.
+    if (NumElems - I < ChunkSize) {
+      TailPaddedChunkBegin = I;
+      NeedTailPadding = true;
+      break;
+    }
+
+    // Collect elements in chunk to create sub-vector.
+    SmallVector<Constant *, 8> SubCVElems;
+    for (unsigned J = I; J < ChunkSize; ++J)
+      SubCVElems.push_back(CV->getAggregateElement(J));
+
+    // Buffer merged element.
+    bufferLEByte(ConvertSubCVtoInt8(SubCVElems), 0, aggBuffer);
+  }
+
+  // For unevenly sized vectors add tail padding zeros.
+  if (NeedTailPadding) {
+    SmallVector<Constant *, 8> TailPaddedElems;
+    for (unsigned I = TailPaddedChunkBegin; I < NumElems; ++I)
+      TailPaddedElems.push_back(CV->getAggregateElement(I));
+
+    unsigned NumPaddingZeros = ChunkSize - (NumElems - TailPaddedChunkBegin);
+    TailPaddedElems.append(
+        SmallVector(NumPaddingZeros, ConstantInt::getNullValue(ElemTy)));
+
+    bufferLEByte(ConvertSubCVtoInt8(TailPaddedElems), 0, aggBuffer);
   }
 }
 
