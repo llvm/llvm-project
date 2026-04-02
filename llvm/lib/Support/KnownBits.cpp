@@ -404,31 +404,37 @@ static unsigned getMaxShiftAmount(const APInt &MaxValue, unsigned BitWidth) {
   return MaxValue.getLimitedValue(BitWidth - 1);
 }
 
-KnownBits KnownBits::shl(const KnownBits &LHS, unsigned ShiftAmt, bool NUW,
-                         bool NSW) {
-  bool ShiftedOutZero, ShiftedOutOne;
-  KnownBits Known(LHS.Zero.ushl_ov(ShiftAmt, ShiftedOutZero),
-                  LHS.One.ushl_ov(ShiftAmt, ShiftedOutOne));
-  Known.Zero.setLowBits(ShiftAmt);
-
-  // This part assumes a valid shift amount and does not check for
-  // cases that would result in poison.
-  if (NSW) {
-    if (NUW && ShiftAmt != 0)
-      // NUW means we can assume anything shifted out was a zero.
-      ShiftedOutZero = true;
-
-    if (ShiftedOutZero)
-      Known.makeNonNegative();
-    else if (ShiftedOutOne)
-      Known.makeNegative();
-  }
-  return Known;
+KnownBits KnownBits::shl(const KnownBits &LHS, unsigned ShiftAmt,
+                         bool NUW, bool NSW) {
+  // TODO: This is simple fallback to generic RHS-based shl.
+  // Add a specialized constant-shift implementation with identical semantics.
+  KnownBits RHS = KnownBits::makeConstant(APInt(LHS.getBitWidth(), ShiftAmt));
+  return shl(LHS, RHS, NUW, NSW);
 }
 
 KnownBits KnownBits::shl(const KnownBits &LHS, const KnownBits &RHS, bool NUW,
                          bool NSW, bool ShAmtNonZero) {
   unsigned BitWidth = LHS.getBitWidth();
+  auto ShiftByConst = [&](const KnownBits &LHS, unsigned ShiftAmt) {
+    KnownBits Known;
+    bool ShiftedOutZero, ShiftedOutOne;
+    Known.Zero = LHS.Zero.ushl_ov(ShiftAmt, ShiftedOutZero);
+    Known.Zero.setLowBits(ShiftAmt);
+    Known.One = LHS.One.ushl_ov(ShiftAmt, ShiftedOutOne);
+
+    // All cases returning poison have been handled by MaxShiftAmount already.
+    if (NSW) {
+      if (NUW && ShiftAmt != 0)
+        // NUW means we can assume anything shifted out was a zero.
+        ShiftedOutZero = true;
+
+      if (ShiftedOutZero)
+        Known.makeNonNegative();
+      else if (ShiftedOutOne)
+        Known.makeNegative();
+    }
+    return Known;
+  };
 
   // Fast path for a common case when LHS is completely unknown.
   KnownBits Known(BitWidth);
@@ -454,7 +460,7 @@ KnownBits KnownBits::shl(const KnownBits &LHS, const KnownBits &RHS, bool NUW,
         MaxShiftAmount,
         std::max(LHS.countMaxLeadingZeros(), LHS.countMaxLeadingOnes()) - 1);
 
-  // Fast path for common case where the shift amount is unknown.
+   // Fast path for common case where the shift amount is unknown.
   if (MinShiftAmount == 0 && MaxShiftAmount == BitWidth - 1 &&
       isPowerOf2_32(BitWidth)) {
     Known.Zero.setLowBits(LHS.countMinTrailingZeros());
@@ -479,7 +485,7 @@ KnownBits KnownBits::shl(const KnownBits &LHS, const KnownBits &RHS, bool NUW,
     if ((ShiftAmtZeroMask & ShiftAmt) != 0 ||
         (ShiftAmtOneMask | ShiftAmt) != ShiftAmt)
       continue;
-    Known = Known.intersectWith(shl(LHS, ShiftAmt, NUW, NSW));
+    Known = Known.intersectWith(ShiftByConst(LHS, ShiftAmt));
     if (Known.isUnknown())
       break;
   }
