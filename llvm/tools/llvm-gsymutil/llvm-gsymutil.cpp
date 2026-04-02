@@ -99,6 +99,7 @@ static std::vector<std::string> ArchFilters;
 static std::string OutputFilename;
 static std::string JsonSummaryFile;
 static bool Verify;
+static bool BenchmarkReader;
 static unsigned NumThreads;
 static uint64_t SegmentSize;
 static bool Quiet;
@@ -159,6 +160,7 @@ static void parseArgs(int argc, char **argv) {
     JsonSummaryFile = A->getValue();
 
   Verify = Args.hasArg(OPT_verify);
+  BenchmarkReader = Args.hasArg(OPT_benchmark_reader);
 
   if (const llvm::opt::Arg *A = Args.getLastArg(OPT_num_threads_EQ)) {
     StringRef S{A->getValue()};
@@ -750,6 +752,25 @@ static void doLookup(GsymReader &Gsym, uint64_t Addr, raw_ostream &OS) {
   }
 }
 
+static llvm::Error benchmarkReader(StringRef GSYMPath) {
+  auto Gsym = GsymReader::openFile(GSYMPath);
+  if (!Gsym)
+    return Gsym.takeError();
+  auto NumAddrs = (*Gsym)->getNumAddresses();
+  for (uint32_t I = 0; I < NumAddrs; ++I) {
+    auto Addr = (*Gsym)->getAddress(I);
+    if (!Addr)
+      return createStringError(std::errc::invalid_argument,
+                               "failed to extract address[%u]", I);
+    auto LR = (*Gsym)->lookup(*Addr);
+    if (!LR)
+      return LR.takeError();
+  }
+  outs() << "Benchmarked " << NumAddrs << " lookups in \"" << GSYMPath
+         << "\"\n";
+  return Error::success();
+}
+
 int llvm_gsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
   // Print a stack trace if we signal out.
   sys::PrintStackTraceOnErrorSignal(argv[0]);
@@ -761,6 +782,13 @@ int llvm_gsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
   parseArgs(argc, argv);
 
   raw_ostream &OS = outs();
+
+  if (BenchmarkReader) {
+    for (const auto &GSYMPath : InputFilenames)
+      if (auto Err = benchmarkReader(GSYMPath))
+        error("Benchmark failed: ", std::move(Err));
+    return EXIT_SUCCESS;
+  }
 
   OutputAggregator Aggregation(&OS);
   if (!ConvertFilename.empty()) {

@@ -55,3 +55,7 @@ defm output_version :
   Eq<"output-version",
      "Set the GSYM output version (v1, v2). Default: v1.">,
   Flags<[HelpHidden]>;
+def benchmark_reader :
+  FF<"benchmark-reader",
+     "Open a GSYM file and perform a lookup for every function start address to benchmark the reader performance">,
+  Flags<[HelpHidden]>;
