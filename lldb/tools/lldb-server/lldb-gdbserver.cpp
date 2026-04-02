@@ -46,6 +46,8 @@
 #include "Plugins/Process/NetBSD/NativeProcessNetBSD.h"
 #elif defined(_WIN32)
 #include "Plugins/Process/Windows/Common/NativeProcessWindows.h"
+#elif defined(_AIX)
+#include "Plugins/Process/AIX/NativeProcessAIX.h"
 #endif
 
 #ifndef LLGS_PROGRAM_NAME
@@ -71,6 +73,8 @@ typedef process_freebsd::NativeProcessFreeBSD::Manager NativeProcessManager;
 typedef process_netbsd::NativeProcessNetBSD::Manager NativeProcessManager;
 #elif defined(_WIN32)
 typedef NativeProcessWindows::Manager NativeProcessManager;
+#elif defined(_AIX)
+typedef process_aix::NativeProcessAIX::Manager NativeProcessManager;
 #else
 // Dummy implementation to make sure the code compiles
 class NativeProcessManager : public NativeProcessProtocol::Manager {
@@ -90,7 +94,7 @@ public:
   }
 };
 #endif
-}
+} // namespace
 
 #ifndef _WIN32
 // Watch for signals
@@ -134,9 +138,8 @@ llvm::Error handle_attach(GDBRemoteCommunicationServerLLGS &gdb_server,
   const long int pid = strtol(attach_target.c_str(), &end_p, 10);
 
   // We'll call it a match if the entire argument is consumed.
-  if (end_p &&
-      static_cast<size_t>(end_p - attach_target.c_str()) ==
-          attach_target.size())
+  if (end_p && static_cast<size_t>(end_p - attach_target.c_str()) ==
+                   attach_target.size())
     return handle_attach_to_pid(gdb_server, static_cast<lldb::pid_t>(pid));
   return handle_attach_to_process_name(gdb_server, attach_target);
 }
