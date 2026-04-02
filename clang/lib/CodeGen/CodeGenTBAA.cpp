@@ -330,8 +330,11 @@ llvm::MDNode *CodeGenTBAA::getTypeInfoHelper(const Type *Ty) {
     return getTypeInfo(cast<ArrayType>(Ty)->getElementType());
 
   // Accesses to matrix types are accesses to objects of their element types.
-  if (const auto *MTy = dyn_cast<ConstantMatrixType>(Ty))
+  if (const auto *MTy = dyn_cast<MatrixType>(Ty)) {
+    assert(isa<ConstantMatrixType>(Ty) &&
+           "only ConstantMatrixType should reach CodeGen");
     return getTypeInfo(MTy->getElementType());
+  }
 
   // Enum types are distinct types. In C++ they have "underlying types",
   // however they aren't related for TBAA.
