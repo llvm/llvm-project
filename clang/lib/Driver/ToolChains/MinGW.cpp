@@ -359,14 +359,17 @@ void tools::MinGW::Linker::ConstructJob(Compilation &C, const JobAction &JA,
         CmdArgs.push_back("-lshell32");
         CmdArgs.push_back("-luser32");
         CmdArgs.push_back("-lkernel32");
+        CmdArgs.push_back("-lntdll");
       }
 
       if (Args.hasArg(options::OPT_static)) {
         CmdArgs.push_back("--end-group");
       } else {
         AddLibGCC(Args, CmdArgs);
-        if (!HasWindowsApp)
+        if (!HasWindowsApp) {
           CmdArgs.push_back("-lkernel32");
+          CmdArgs.push_back("-lntdll");
+        }
       }
     }
 
