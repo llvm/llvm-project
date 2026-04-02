@@ -200,7 +200,8 @@ void GSIHashStreamBuilder::finalizeBuckets(
     uint32_t RecordZeroOffset, MutableArrayRef<BulkPublic> Records) {
   // Hash every name in parallel.
   parallelFor(0, Records.size(), [&](size_t I) {
-    Records[I].setBucketIdx(hashStringV1(Records[I].Name) % IPHR_HASH);
+    StringRef Name = StringRef(Records[I].Name, Records[I].NameLen);
+    Records[I].setBucketIdx(hashStringV1(Name) % IPHR_HASH);
   });
 
   // Count up the size of each bucket. Then, use an exclusive prefix sum to
