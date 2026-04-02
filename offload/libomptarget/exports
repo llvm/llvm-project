@@ -67,6 +67,14 @@ VERS1.0 {
     llvm_omp_target_unlock_mem;
     __tgt_set_info_flag;
     __tgt_print_device_info;
+    libomptarget_ompt_set_trace_ompt;
+    libomptarget_ompt_start_trace;
+    libomptarget_ompt_flush_trace;
+    libomptarget_ompt_stop_trace;
+    libomptarget_ompt_set_granted_teams;
+    libomptarget_ompt_set_timestamp;
+    libomptarget_ompt_advance_buffer_cursor;
+    libomptarget_ompt_get_record_type;
     omp_get_interop_ptr;
     omp_get_interop_str;
     omp_get_interop_int;

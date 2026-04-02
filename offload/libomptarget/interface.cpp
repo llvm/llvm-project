@@ -14,6 +14,7 @@
 #include "OpenMP/OMPT/Interface.h"
 #include "OffloadPolicy.h"
 #include "OpenMP/OMPT/Callback.h"
+#include "OpenMP/OMPT/OmptCommonDefs.h"
 #include "OpenMP/omp.h"
 #include "PluginManager.h"
 #include "omptarget.h"
@@ -153,19 +154,30 @@ targetData(ident_t *Loc, int64_t DeviceId, int32_t ArgNum, void **ArgsBase,
   AsyncInfoTy &AsyncInfo = TargetAsyncInfo;
 
   /// RAII to establish tool anchors before and after data begin / end / update
-  OMPT_IF_BUILT(assert((TargetDataFunction == targetDataBegin ||
-                        TargetDataFunction == targetDataEnd ||
-                        TargetDataFunction == targetDataUpdate) &&
-                       "Encountered unexpected TargetDataFunction during "
-                       "execution of targetData");
-                auto CallbackFunctions =
-                    (TargetDataFunction == targetDataBegin)
-                        ? RegionInterface.getCallbacks<ompt_target_enter_data>()
-                    : (TargetDataFunction == targetDataEnd)
-                        ? RegionInterface.getCallbacks<ompt_target_exit_data>()
-                        : RegionInterface.getCallbacks<ompt_target_update>();
-                InterfaceRAII TargetDataRAII(CallbackFunctions, DeviceId,
-                                             OMPT_GET_RETURN_ADDRESS);)
+  OMPT_IF_BUILT(
+      assert((TargetDataFunction == targetDataBegin ||
+              TargetDataFunction == targetDataEnd ||
+              TargetDataFunction == targetDataUpdate) &&
+             "Encountered unexpected TargetDataFunction during "
+             "execution of targetData");
+      auto CallbackFunctions =
+          (TargetDataFunction == targetDataBegin)
+              ? RegionInterface.getCallbacks<ompt_target_enter_data>()
+          : (TargetDataFunction == targetDataEnd)
+              ? RegionInterface.getCallbacks<ompt_target_exit_data>()
+              : RegionInterface.getCallbacks<ompt_target_update>();
+
+      auto TraceGenerators =
+          (TargetDataFunction == targetDataBegin)
+              ? RegionInterface.getTraceGenerators<ompt_target_enter_data>()
+          : (TargetDataFunction == targetDataEnd)
+              ? RegionInterface.getTraceGenerators<ompt_target_exit_data>()
+              : RegionInterface.getTraceGenerators<ompt_target_update>();
+
+      InterfaceRAII TargetDataRAII(CallbackFunctions, DeviceId,
+                                   /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);
+      InterfaceRAII TargetDataTraceRAII(TraceGenerators, DeviceId,
+                                        /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
 
   int Rc = OFFLOAD_SUCCESS;
 
@@ -433,6 +445,9 @@ static inline int targetKernel(ident_t *Loc, int64_t DeviceId, int32_t NumTeams,
   /// RAII to establish tool anchors before and after target region
   OMPT_IF_BUILT(InterfaceRAII TargetRAII(
                     RegionInterface.getCallbacks<ompt_target>(), DeviceId,
+                    /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);
+                InterfaceRAII TargetTraceRAII(
+                    RegionInterface.getTraceGenerators<ompt_target>(), DeviceId,
                     /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
 
   int Rc = OFFLOAD_SUCCESS;
@@ -542,6 +557,9 @@ EXTERN int __tgt_target_kernel_replay(
   /// RAII to establish tool anchors before and after target region
   OMPT_IF_BUILT(InterfaceRAII TargetRAII(
                     RegionInterface.getCallbacks<ompt_target>(), DeviceId,
+                    /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);
+                InterfaceRAII TargetTraceRAII(
+                    RegionInterface.getTraceGenerators<ompt_target>(), DeviceId,
                     /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
 
   AsyncInfoTy AsyncInfo(*DeviceOrErr);

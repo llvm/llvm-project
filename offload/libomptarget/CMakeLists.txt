@@ -17,6 +17,7 @@ add_library(omptarget SHARED
   OpenMP/Mapping.cpp
   OpenMP/InteropAPI.cpp
   OpenMP/OMPT/Callback.cpp
+  OpenMP/OMPT/OmptTracing.cpp
   OpenMP/OMPT/OmptTracingBuffer.cpp
 
   KernelLanguage/API.cpp
@@ -48,6 +49,9 @@ endforeach()
 
 target_compile_options(omptarget PRIVATE ${offload_compile_flags})
 target_link_options(omptarget PRIVATE ${offload_link_flags})
+if (OMPT_TARGET_DEFAULT AND LIBOMPTARGET_OMPT_SUPPORT)
+  target_link_libraries(omptarget PRIVATE PluginOmpt)
+endif()
 
 # libomptarget.so needs to be aware of where the plugins live as they
 # are now separated in the build directory.

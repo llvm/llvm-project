@@ -2347,8 +2347,12 @@ int target(ident_t *Loc, DeviceTy &Device, void *HostPtr,
     // No need to guard this with OMPT_IF_BUILT
     InterfaceRAII TargetSubmitRAII(
         RegionInterface.getCallbacks<ompt_callback_target_submit>(), NumTeams);
-#endif
 
+    TracerInterfaceRAII TargetTraceRAII(
+        RegionInterface.getTraceGenerators<ompt_callback_target_submit>(),
+        AsyncInfo, Device.RTL->getProfiler(), /*TracedDeviceId=*/DeviceId,
+        /*EventType=*/ompt_callback_target_submit, DeviceId, NumTeams);
+#endif
     Ret = Device.launchKernel(TgtEntryPtr, TgtArgs.data(), TgtOffsets.data(),
                               KernelArgs, nullptr, AsyncInfo);
   }

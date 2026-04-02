@@ -12,9 +12,13 @@
 
 #ifdef OMPT_SUPPORT
 
+#include <atomic>
+#include <cassert>
 #include <cstdlib>
 #include <cstring>
 #include <memory>
+#include <mutex>
+#include <thread>
 
 #include "Shared/Debug.h"
 
@@ -23,7 +27,9 @@
 #include "OpenMP/OMPT/Interface.h"
 
 #include "llvm/Support/DynamicLibrary.h"
+#include "llvm/Support/ErrorHandling.h"
 
+#pragma push_macro("DEBUG_PREFIX")
 #undef DEBUG_PREFIX
 #define DEBUG_PREFIX "OMPT"
 
@@ -56,6 +62,7 @@ ompt_get_callback_t llvm::omp::target::ompt::lookupCallbackByCode = nullptr;
 ompt_function_lookup_t llvm::omp::target::ompt::lookupCallbackByName = nullptr;
 ompt_get_target_task_data_t ompt_get_target_task_data_fn = nullptr;
 ompt_get_task_data_t ompt_get_task_data_fn = nullptr;
+ompt_set_frame_enter_t ompt_set_frame_enter_fn = nullptr;
 
 /// Unique correlation id
 static std::atomic<uint64_t> IdCounter(1);
@@ -441,6 +448,11 @@ void Interface::endTarget(int64_t DeviceId, void *Code) {
   endTargetRegion();
 }
 
+void Interface::announceTargetRegion(const char *RegionName) {
+  ODBG(ODT_Tool) << "in Interface::target_region_" << RegionName
+                 << " target_id=" << TargetData.value;
+}
+
 void Interface::beginTargetDataOperation() {
   ODBG(ODT_Tool) << "in ompt_target_region_begin (TargetRegionId = "
                  << TargetData.value << ")";
@@ -506,6 +518,7 @@ int llvm::omp::target::ompt::initializeLibrary(ompt_function_lookup_t lookup,
   bindOmptFunctionName(ompt_get_callback, lookupCallbackByCode);
   bindOmptFunctionName(ompt_get_task_data, ompt_get_task_data_fn);
   bindOmptFunctionName(ompt_get_target_task_data, ompt_get_target_task_data_fn);
+  bindOmptFunctionName(ompt_set_frame_enter, ompt_set_frame_enter_fn);
 #undef bindOmptFunctionName
 
   // Store pointer of 'ompt_libomp_target_fn_lookup' for use by libomptarget
@@ -516,6 +529,8 @@ int llvm::omp::target::ompt::initializeLibrary(ompt_function_lookup_t lookup,
   assert(ompt_get_task_data_fn && "ompt_get_task_data_fn should be non-null");
   assert(ompt_get_target_task_data_fn &&
          "ompt_get_target_task_data_fn should be non-null");
+  assert(ompt_set_frame_enter_fn &&
+         "ompt_set_frame_enter_fn should be non-null");
   assert(LibraryFinalizer == nullptr &&
          "LibraryFinalizer should not be initialized yet");
 
@@ -562,4 +577,5 @@ void llvm::omp::target::ompt::connectLibrary() {
   ODBG(ODT_Tool) << "Exiting connectLibrary";
 }
 
+#pragma pop_macro("DEBUG_PREFIX")
 #endif // OMPT_SUPPORT
