@@ -15,10 +15,9 @@
 
 // Test that HIP compiler unit ID global is emitted
 
-// CIR: cir.global external lang_address_space(offload_global) @__hip_cuid_{{.*}} = #cir.int<0> : !u8i
+// CIR: cir.global external target_address_space(1) @__hip_cuid_{{.*}} = #cir.int<0> : !u8i
 
-// TODO(CIR): Should emit addrspace(1) once LangAddressSpace lowering is supported.
-// LLVM: @__hip_cuid_{{.*}} = global i8 0
+// LLVM: @__hip_cuid_{{.*}} = addrspace(1) global i8 0
 // LLVM: @llvm.compiler.used = {{.*}}@__hip_cuid_
 
 // OGCG: @__hip_cuid_{{.*}} = addrspace(1) global i8 0
