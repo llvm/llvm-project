@@ -492,6 +492,12 @@ static SectionKind getELFKindForNamedSection(StringRef Name, SectionKind K) {
       Name.starts_with(".llvm.linkonce.tb."))
     return SectionKind::getThreadBSS();
 
+  // TODO: We could avoid a magic name by adding metadata similar to MD_exclude
+  // to the embedded object global, to choose SectionKind::Metadata earlier
+  // without checking the section name (in getKindForGlobal for example).
+  if (Name == ".debug_llvm_dyndbg")
+    return SectionKind::getMetadata();
+
   return K;
 }
 
