@@ -2806,7 +2806,8 @@ public:
     Inst.addOperand(MCOperand::createImm(CC));
   }
 
-  void reverseBranchCondition(MCInst &Inst, const MCSymbol *TBB,
+  void reverseBranchCondition(BinaryBasicBlock *Parent, MCInst &Inst,
+                              const MCSymbol *TBB,
                               MCContext *Ctx) const override {
     unsigned InvCC = getInvertedCondCode(getCondCode(Inst));
     assert(InvCC != X86::COND_INVALID && "invalid branch instruction");

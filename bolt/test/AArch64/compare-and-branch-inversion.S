@@ -1,7 +1,8 @@
 # This test checks that branch inversion works when reordering blocks which
 # contain short range conditional branches. Handles edge cases, like when
 # the immediate value is the upper or lower allowed value in which case the
-# transformation bails.
+# transformation bails. If liveness analysis proves that the condition flags
+# are dead we can replace the branch with cmp + b.cc
 
 # REQUIRES: system-linux, asserts
 
@@ -9,7 +10,7 @@
 # RUN: link_fdata --no-lbr %s %t %t.fdata
 # RUN: llvm-strip --strip-unneeded %t
 # RUN: llvm-bolt -v=1 %t -o %t.bolt --data %t.fdata --reorder-blocks=ext-tsp --compact-code-model \
-# RUN:   | FileCheck %s --check-prefix=BOLT-INFO
+# RUN:   --liveness-analysis | FileCheck %s --check-prefix=BOLT-INFO
 # RUN: llvm-objdump -d %t.bolt | FileCheck %s
 
 # CHECK: Disassembly of section .text:
@@ -80,29 +81,54 @@ register_swap:
 # CHECK-NEXT: [[ADDR2]]: {{.*}} mov x0, #0x1 // =1
 # CHECK-NEXT:            {{.*}} ret
 
-  .globl irreversible
-  .type irreversible, %function
-irreversible:
+  .globl immediate_overflow
+  .type immediate_overflow, %function
+immediate_overflow:
 .entry3:
-# FDATA: 1 irreversible #.entry3# 10
+# FDATA: 1 immediate_overflow #.entry3# 10
     cbgt x0, #63, .exit3
 .cold3:
-# FDATA: 1 irreversible #.cold3# 1
+# FDATA: 1 immediate_overflow #.cold3# 1
     mov x0, #1
     ret
 .exit3:
-# FDATA: 1 irreversible #.exit3# 10
+# FDATA: 1 immediate_overflow #.exit3# 10
+    mov x0, #2
+    ret
+
+# CHECK: <immediate_overflow>:
+# CHECK-NEXT:            {{.*}} cmp  x0, #0x3f
+# CHECK-NEXT:            {{.*}} b.le 0x[[ADDR3:[0-9a-f]+]] <{{.*}}>
+# CHECK-NEXT:            {{.*}} mov  x0, #0x2 // =2
+# CHECK-NEXT:            {{.*}} ret
+# CHECK-NEXT: [[ADDR3]]: {{.*}} mov x0, #0x1 // =1
+# CHECK-NEXT:            {{.*}} ret
+
+  .globl irreversible
+  .type irreversible, %function
+irreversible:
+.entry4:
+# FDATA: 1 irreversible #.entry4# 10
+    cmp x0, #63
+    cbgt x0, #63, .exit4
+.cold4:
+# FDATA: 1 irreversible #.cold4# 1
+    csel x0, x1, x2, le
+    ret
+.exit4:
+# FDATA: 1 irreversible #.exit4# 10
     mov x0, #2
     ret
 
 # BOLT-INFO: unable to swap successors in irreversible
 
 # CHECK: <irreversible>:
+# CHECK-NEXT:            {{.*}} cmp  x0, #0x3f
 # CHECK-NEXT:            {{.*}} cbgt x0, #0x3f, 0x[[ADDR3:[0-9a-f]+]] <{{.*}}>
 # CHECK-NEXT:            {{.*}} b               0x[[ADDR4:[0-9a-f]+]] <{{.*}}>
 # CHECK-NEXT: [[ADDR3]]: {{.*}} mov  x0, #0x2 // =2
 # CHECK-NEXT:            {{.*}} ret
-# CHECK-NEXT: [[ADDR4]]: {{.*}} mov x0, #0x1 // =1
+# CHECK-NEXT: [[ADDR4]]: {{.*}} csel x0, x1, x2, le
 # CHECK-NEXT:            {{.*}} ret
 
 ## Force relocation mode.
