@@ -991,16 +991,13 @@ public:
     FastMathFlags FMF = I.getFastMathFlags();
 
     visitBinOp(I, [&](const AnyValue &LHS, const AnyValue &RHS) -> AnyValue {
-      if (LHS.isPoison() || RHS.isPoison()) {
+      if (LHS.isPoison() || RHS.isPoison())
         return AnyValue::poison();
-      }
 
-      if (auto ValidateRes = handleFMFFlags(LHS, FMF); ValidateRes.isPoison()) {
+      if (auto ValidateRes = handleFMFFlags(LHS, FMF); ValidateRes.isPoison())
         return ValidateRes;
-      }
-      if (auto ValidateRes = handleFMFFlags(RHS, FMF); ValidateRes.isPoison()) {
+      if (auto ValidateRes = handleFMFFlags(RHS, FMF); ValidateRes.isPoison())
         return ValidateRes;
-      }
 
       APFloat FLHS = handleDenormal(LHS.asFloat(), DenormMode.Input);
       APFloat FRHS = handleDenormal(RHS.asFloat(), DenormMode.Input);
