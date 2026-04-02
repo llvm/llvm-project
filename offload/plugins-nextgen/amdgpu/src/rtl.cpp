@@ -212,11 +212,19 @@ static Error getTargetTripleAndFeatures(hsa_agent_t Agent,
     if (Status != HSA_STATUS_SUCCESS)
       return Status;
 
-    llvm::StringRef TripleTarget(ISAName.begin(), Length);
-    if (TripleTarget.consume_front("amdgcn-amd-amdhsa")) {
-      auto Target = TripleTarget.ltrim('-').rtrim('\0');
-      Targets.push_back(Target);
+    // The format returned here is a partially malformed triple, e.g.,
+    // "amdgcn-amd-amdhsa--gfx90a". The subtarget is in the position that is
+    // supposed to be the object format. Reconstitute the valid part of the
+    // triple for parsing, and take the appended subtarget name.
+    llvm::StringRef TripleLikeStr(ISAName.begin(), Length);
+    SmallVector<StringRef, 5> Components;
+    TripleLikeStr.split(Components, '-');
+    if (Components.size() == 5) {
+      llvm::Triple TripleTarget(Components[0], Components[1], Components[2]);
+      if (TripleTarget.isAMDGCN() && TripleTarget.getOS() == Triple::AMDHSA)
+        Targets.emplace_back(Components[4]);
     }
+
     return HSA_STATUS_SUCCESS;
   });
   return Err;
