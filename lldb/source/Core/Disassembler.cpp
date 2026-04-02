@@ -1364,11 +1364,23 @@ size_t Disassembler::AppendInstructions(Target &target, Address start,
       SymbolContext sc;
       module_sp->ResolveSymbolContextForAddress(start, eSymbolContextSymbol,
                                                 sc);
-      if (sc.symbol && sc.symbol->GetAddress() == start) {
-        if (uint32_t skip = sc.symbol->GetPrologueByteSize()) {
-          start.Slide(skip);
-          if (limit.kind == Limit::Bytes && limit.value > skip)
-            limit.value -= skip;
+      if (sc.symbol) {
+        if (uint32_t prologue_size = sc.symbol->GetPrologueByteSize()) {
+          const Address symbol_addr = sc.symbol->GetAddress();
+          const AddressRange prologue_range(symbol_addr, prologue_size);
+          if (prologue_range.Contains(start)) {
+            const addr_t prologue_offset = start.GetLoadAddress(&target) -
+                                           symbol_addr.GetLoadAddress(&target);
+            const addr_t skip = prologue_size - prologue_offset;
+
+            // Skip disassembling the prologue.
+            start.Slide(skip);
+
+            // If there is a limit in bytes, we need to update it so we don't
+            // disassemble past what would have been the end.
+            if (limit.kind == Limit::Bytes && limit.value > skip)
+              limit.value -= skip;
+          }
         }
       }
     }

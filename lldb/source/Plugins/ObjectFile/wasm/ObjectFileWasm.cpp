@@ -312,7 +312,8 @@ struct WasmFunction {
   /// function size, which some other tools consider part of the function.
   lldb::offset_t section_offset = LLDB_INVALID_OFFSET;
 
-  /// Function size.
+  /// Function size, which includes the function header, but not the size ULEB
+  /// that proceeds it.
   uint32_t size = 0;
 
   /// Offset from section_offset to the first instruction in the function, past
@@ -390,8 +391,7 @@ ParseFunctions(DataExtractor &data) {
 
   for (uint32_t i = 0; i < *function_count; ++i) {
     // llvm-objdump considers the ULEB with the function size to be part of the
-    // function. We can't do that here because that would break symbolic
-    // breakpoints, as that address is never executed.
+    // function. We can't do that here because that would not match the DWARF.
     llvm::Expected<uint32_t> function_size = GetULEB32(data, offset);
     if (!function_size)
       return function_size.takeError();
