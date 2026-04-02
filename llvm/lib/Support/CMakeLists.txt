@@ -335,6 +335,15 @@ add_llvm_component_library(LLVMSupport
   Demangle
   )
 
+if(WIN32)
+  set_source_files_properties(
+    # error: expected unqualified-id 672 |   while (const auto *IN = dyn_cast<RopePieceBTreeInterior>(N))
+    RewriteRope.cpp
+    # error: expected unqualified-id 511 |     for (unsigned i = 0, e = std::min(ThisWords, RHSWords); i != e; ++i)
+    ManagedStatic.cpp
+    PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
+endif()
+
 # Link ICU library if it is an external library.
 if(ICU_FOUND AND NOT HAVE_WINDOWS_ICU)
   target_link_libraries(LLVMSupport

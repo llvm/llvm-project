@@ -10,6 +10,9 @@
 #include "llvm/Support/InstructionCost.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/Debug.h"
 
+#undef DEBUG_TYPE
+#define DEBUG_TYPE "transaction-save"
+
 namespace llvm::sandboxir {
 
 bool TransactionSave::runOnRegion(Region &Rgn, const Analyses &A) {

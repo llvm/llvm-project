@@ -20,6 +20,17 @@ clang_tablegen(AttrDocTable.inc -gen-clang-attr-doc-table
   SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/../../include/clang/Basic/Attr.td
   TARGET ClangAttrDocTable)
 
+# CommentParser/CommentSema use "using namespace clang::comments" which
+# conflicts with clang::tok. MicrosoftMangle and ItaniumMangle define
+# functions with the same name that cause overload ambiguity.
+set_source_files_properties(
+  CommentParser.cpp
+  CommentSema.cpp
+  MicrosoftMangle.cpp
+  ItaniumMangle.cpp
+  PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON
+)
+
 add_clang_library(clangAST
   APValue.cpp
   ASTConcept.cpp

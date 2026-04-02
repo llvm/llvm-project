@@ -10,6 +10,10 @@ set(LLVM_TARGET_DEFINITIONS mlir/ToyCombine.td)
 mlir_tablegen(ToyCombine.inc -gen-rewriters)
 add_public_tablegen_target(ToyCh4CombineIncGen)
 
+# Most mlir/ files (Dialect.cpp, ShapeInferencePass.cpp, ToyCombine.cpp)
+# have ambiguous toy:: / mlir:: references in unity builds.
+set(CMAKE_UNITY_BUILD OFF)
+
 add_toy_chapter(toyc-ch4
   toyc.cpp
   parser/AST.cpp
@@ -26,6 +30,7 @@ add_toy_chapter(toyc-ch4
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/include/)
+
 target_link_libraries(toyc-ch4
   PRIVATE
     MLIRAnalysis

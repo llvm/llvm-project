@@ -3,6 +3,10 @@ set(LLVM_LINK_COMPONENTS
   Support
   )
 
+# AST_MATCHER macros generate identically-named classes in anonymous
+# namespaces across 146+ check files, making unity builds infeasible.
+set(CMAKE_UNITY_BUILD OFF)
+
 configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/clang-tidy-config.h.cmake
   ${CMAKE_CURRENT_BINARY_DIR}/clang-tidy-config.h)

@@ -142,6 +142,7 @@ llvm_regexec(const llvm_regex_t *preg, const char *string, size_t nmatch,
              llvm_regmatch_t pmatch[], int eflags)
 {
 	struct re_guts *g = preg->re_g;
+#undef GOODFLAGS
 #ifdef REDEBUG
 #	define	GOODFLAGS(f)	(f)
 #else

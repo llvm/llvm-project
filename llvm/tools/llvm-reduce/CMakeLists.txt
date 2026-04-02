@@ -20,6 +20,13 @@ set(LLVM_LINK_COMPONENTS
   TransformUtils
   )
 
+# ReduceOperandsSkip.cpp defines shouldReduceOperand which conflicts with
+# identically-named functions from other delta files in unity builds.
+set_source_files_properties(
+  deltas/ReduceOperandsSkip.cpp
+  PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON
+)
+
 add_llvm_tool(llvm-reduce
   DeltaManager.cpp
   ReducerWorkItem.cpp

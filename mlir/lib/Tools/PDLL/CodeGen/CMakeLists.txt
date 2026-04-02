@@ -8,3 +8,8 @@ add_mlir_library(MLIRPDLLCodeGen
   MLIRPDLDialect
   MLIRSupport
   )
+
+# Static PDLL code generation helpers and symbol registration conflicts.
+set_source_files_properties(
+  MLIRGen.cpp
+  PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)

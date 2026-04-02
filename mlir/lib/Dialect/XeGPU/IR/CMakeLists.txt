@@ -23,3 +23,11 @@ add_mlir_dialect_library(MLIRXeGPUDialect
   MLIRViewLikeInterface
   MLIRVectorDialect
 )
+
+# XeGPUOps.cpp transitively includes VersionTuple.h whose Minor/Subminor
+# members conflict with a function-like macro defined earlier in the unity TU.
+# set_source_files_properties doesn't propagate through llvm_add_library's
+# internal OBJECT library, so disable unity on the OBJECT target directly.
+if(TARGET obj.MLIRXeGPUDialect)
+  set_target_properties(obj.MLIRXeGPUDialect PROPERTIES UNITY_BUILD OFF)
+endif()

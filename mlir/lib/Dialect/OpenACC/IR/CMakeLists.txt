@@ -21,3 +21,8 @@ add_mlir_dialect_library(MLIROpenACCDialect
   MLIROpenACCMPCommon
   )
 
+
+# Static code generation and type conversion function conflicts.
+set_source_files_properties(
+  OpenACCCG.cpp
+  PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)

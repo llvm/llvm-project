@@ -41,6 +41,12 @@ llvm_add_library(MLIRTableGen STATIC
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/TableGen
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Support
 )
+
+# CodeGenHelpers.cpp has "using namespace llvm;" which makes DenseMapInfo
+# ambiguous in Constraint.cpp's DenseMapInfo<Constraint> implementations
+# when compiled together in a unity build.
+set_source_files_properties(Constraint.cpp
+  PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
 set_target_properties(MLIRTableGen PROPERTIES FOLDER "MLIR/Tablegenning")
 
 mlir_check_all_link_libraries(MLIRTableGen)

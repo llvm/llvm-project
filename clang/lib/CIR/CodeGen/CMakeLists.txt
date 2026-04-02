@@ -70,3 +70,22 @@ add_clang_library(clangCIR
   MLIRCIRInterfaces
   MLIRTargetLLVMIRImport
 )
+
+
+# CIRGenExprComplex.cpp references both cir::ComplexType/CastKind and
+# clang::ComplexType/CastKind which become ambiguous in unity builds.
+set_source_files_properties(CIRGenExprComplex.cpp
+  PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
+
+# CIRGenOpenACCRecipe.h has no include guards and defines classes; including it
+# from both CIRGenOpenACCClause.cpp and CIRGenOpenACCRecipe.cpp in the same
+# unity TU causes redefinition errors.
+set_source_files_properties(
+  CIRGenOpenACCClause.cpp
+  CIRGenOpenACCRecipe.cpp
+  PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
+
+# CIRGenTypes.cpp references cir::Type/RecordType which conflict with
+# clang::Type/RecordType from other files in the unity TU.
+set_source_files_properties(CIRGenTypes.cpp
+  PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)

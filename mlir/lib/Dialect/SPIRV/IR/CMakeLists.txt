@@ -51,3 +51,20 @@ add_mlir_dialect_library(MLIRSPIRVDialect
   MLIRTransforms
   MLIRUBDialect
 )
+
+set_source_files_properties(
+  ArmGraphOps.cpp
+  AtomicOps.cpp
+  CastOps.cpp
+  ControlFlowOps.cpp
+  CooperativeMatrixOps.cpp
+  DotProductOps.cpp
+  GroupOps.cpp
+  MemoryOps.cpp
+  SPIRVCanonicalization.cpp
+  SPIRVDialect.cpp
+  SPIRVGLCanonicalization.cpp
+  SPIRVOpDefinition.cpp
+  SPIRVOps.cpp
+  SPIRVParsingUtils.cpp
+  PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)

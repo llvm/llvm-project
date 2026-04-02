@@ -14,3 +14,8 @@ target_link_libraries(f18-parse-demo
   FortranSupport
   FortranParser
   )
+
+# stub-evaluate.cpp uses struct/class mismatches with other TU definitions
+# that trigger -Werror,-Wmismatched-tags in unity builds.
+set_source_files_properties(stub-evaluate.cpp
+  PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)

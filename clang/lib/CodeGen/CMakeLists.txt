@@ -55,6 +55,44 @@ if(MSVC AND NOT CMAKE_CXX_COMPILER_ID MATCHES Clang
   endif()
 endif()
 
+# Many CodeGen files use "using namespace llvm" which brings llvm::Type,
+# llvm::VectorType, etc. into scope, conflicting with clang:: equivalents
+# used by other files in the same unity TU.
+set_source_files_properties(
+  BackendUtil.cpp
+  CGAtomic.cpp
+  CGBuiltin.cpp
+  CGCoroutine.cpp
+  CGExpr.cpp
+  CGHLSLBuiltins.cpp
+  CGHLSLRuntime.cpp
+  CGLoopInfo.cpp
+  CGNonTrivialStruct.cpp
+  CGOpenMPRuntime.cpp
+  CGOpenMPRuntimeGPU.cpp
+  CGStmtOpenMP.cpp
+  CodeGenAction.cpp
+  CodeGenFunction.cpp
+  CodeGenModule.cpp
+  CodeGenPGO.cpp
+  CoverageMappingGen.cpp
+  LinkInModulesPass.cpp
+  QualTypeMapper.cpp
+  TargetBuiltins/AMDGPU.cpp
+  TargetBuiltins/ARM.cpp
+  TargetBuiltins/DirectX.cpp
+  TargetBuiltins/Hexagon.cpp
+  TargetBuiltins/NVPTX.cpp
+  TargetBuiltins/PPC.cpp
+  TargetBuiltins/RISCV.cpp
+  TargetBuiltins/SPIR.cpp
+  TargetBuiltins/SystemZ.cpp
+  TargetBuiltins/WebAssembly.cpp
+  TargetBuiltins/X86.cpp
+  Targets/AArch64.cpp
+  PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON
+)
+
 add_clang_library(clangCodeGen
   ABIInfo.cpp
   ABIInfoImpl.cpp

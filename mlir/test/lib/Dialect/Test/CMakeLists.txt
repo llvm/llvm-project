@@ -130,3 +130,16 @@ add_mlir_translation_library(MLIRTestToLLVMIRTranslation
   MLIRBuiltinToLLVMIRTranslation
   MLIRLLVMToLLVMIRTranslation
 )
+
+set_source_files_properties(
+  TestAttributes.cpp
+  TestDialect.cpp
+  TestDialectInterfaces.cpp
+  TestInterfaces.cpp
+  TestOpDefs.cpp
+  TestOps.cpp
+  TestOpsSyntax.cpp
+  TestPatterns.cpp
+  TestTraits.cpp
+  TestTypes.cpp
+  PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)

@@ -81,3 +81,37 @@ add_tablegen(llvm-tblgen LLVM
   DEPENDS
   intrinsics_gen # via llvm-min-tablegen
   )
+
+set_source_files_properties(
+  AsmWriterEmitter.cpp
+  CTagsEmitter.cpp
+  CallingConvEmitter.cpp
+  CodeEmitterGen.cpp
+  CompressInstEmitter.cpp
+  DAGISelEmitter.cpp
+  DXILEmitter.cpp
+  DisassemblerEmitter.cpp
+  ExegesisEmitter.cpp
+  FastISelEmitter.cpp
+  GlobalISelCombinerEmitter.cpp
+  GlobalISelEmitter.cpp
+  InstrDocsEmitter.cpp
+  MacroFusionPredicatorEmitter.cpp
+  OptionParserEmitter.cpp
+  OptionRSTEmitter.cpp
+  PseudoLoweringEmitter.cpp
+  RegisterBankEmitter.cpp
+  RegisterInfoEmitter.cpp
+  SearchableTableEmitter.cpp
+  SubtargetEmitter.cpp
+  X86FoldTablesEmitter.cpp
+  X86InstrMappingEmitter.cpp
+  X86MnemonicTables.cpp
+  PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
+
+# Static DFA state tables and code generation helper conflicts.
+set_source_files_properties(
+  DFAPacketizerEmitter.cpp
+  InstrInfoEmitter.cpp
+  SDNodeInfoEmitter.cpp
+  PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)

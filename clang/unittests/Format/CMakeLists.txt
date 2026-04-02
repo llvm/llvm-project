@@ -47,3 +47,6 @@ add_distinct_clang_unittest(FormatTests
   LLVM_COMPONENTS
   Support
   )
+
+set_source_files_properties(FormatTestJS.cpp
+  PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)  

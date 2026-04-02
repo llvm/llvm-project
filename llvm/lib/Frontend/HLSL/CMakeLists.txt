@@ -18,3 +18,10 @@ add_llvm_component_library(LLVMFrontendHLSL
   Core
   Support
   )
+
+# RootSignatureMetadata.cpp redefines 'OverloadedVisit' from
+# HLSLRootSignature.cpp in unity builds.
+set_source_files_properties(
+  HLSLRootSignature.cpp
+  RootSignatureMetadata.cpp
+  PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)

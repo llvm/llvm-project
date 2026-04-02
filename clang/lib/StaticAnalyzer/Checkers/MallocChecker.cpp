@@ -4211,6 +4211,7 @@ bool ento::shouldRegisterDynamicMemoryModeling(const CheckerManager &mgr) {
   return true;
 }
 
+#undef REGISTER_CHECKER
 #define REGISTER_CHECKER(NAME)                                                 \
   void ento::register##NAME(CheckerManager &Mgr) {                             \
     Mgr.getChecker<MallocChecker>()->NAME.enable(Mgr);                         \

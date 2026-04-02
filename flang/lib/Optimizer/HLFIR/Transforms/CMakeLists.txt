@@ -1,5 +1,15 @@
 get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
 
+# ConvertToFIR.cpp redefines AssignOpConversion and NoReassocOpConversion,
+# ScheduleOrderedAssignments.cpp redefines isForallIndex, and
+# SimplifyHLFIRIntrinsics.cpp redefines CmpCharOpConversion/IndexOpConversion.
+set_source_files_properties(
+  ConvertToFIR.cpp
+  ScheduleOrderedAssignments.cpp
+  SimplifyHLFIRIntrinsics.cpp
+  PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON
+)
+
 add_flang_library(HLFIRTransforms
   BufferizeHLFIR.cpp
   ConvertToFIR.cpp

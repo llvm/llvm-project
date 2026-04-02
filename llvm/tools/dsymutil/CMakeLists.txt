@@ -25,6 +25,14 @@ set(LLVM_LINK_COMPONENTS
   TargetParser
   )
 
+# CFBundle.cpp includes ObjC headers that conflict with MachO headers
+# from other files in unity builds.
+set_source_files_properties(
+  CFBundle.cpp
+  RelocationMap.cpp
+  PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON
+)
+
 add_llvm_tool(dsymutil
   dsymutil.cpp
   BinaryHolder.cpp

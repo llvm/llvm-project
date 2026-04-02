@@ -90,3 +90,8 @@ add_flang_library(FortranLower
   MLIRLLVMDialect
   MLIRSCFToControlFlow
 )
+
+# ConvertCall.cpp calls 'isInWhereMaskedExpression' which becomes ambiguous
+# with another overload brought in from other files in the unity TU.
+set_source_files_properties(ConvertCall.cpp
+  PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)

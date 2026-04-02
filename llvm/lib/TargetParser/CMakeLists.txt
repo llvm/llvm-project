@@ -44,3 +44,13 @@ add_llvm_component_library(LLVMTargetParser
   DEPENDS
   target_parser_gen
   )
+
+# Unity build conflicts:
+# - CSKYTargetParser.cpp: redefines 'stripNegationPrefix' from ARMTargetParser
+# - X86TargetParser.cpp: 'FeatureBitset' ambiguous due to namespace conflicts
+# - RISCVTargetParser.cpp: incomplete type 'CPUInfo[]' due to include ordering
+set_source_files_properties(
+  CSKYTargetParser.cpp
+  RISCVTargetParser.cpp
+  X86TargetParser.cpp
+  PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)

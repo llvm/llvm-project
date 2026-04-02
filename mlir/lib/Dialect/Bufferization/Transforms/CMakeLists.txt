@@ -42,3 +42,9 @@ add_mlir_dialect_library(MLIRBufferizationTransforms
   MLIRViewLikeInterface
   MLIRSupport
 )
+
+# Conflicting analysis pattern definitions.
+set_source_files_properties(
+  BufferViewFlowAnalysis.cpp
+  OwnershipBasedBufferDeallocation.cpp
+  PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)

@@ -13,6 +13,13 @@ clang_tablegen(OpenCLBuiltins.inc -gen-clang-opencl-builtins
   TARGET ClangOpenCLBuiltinsImpl
   )
 
+# Both files define struct PartialSpecMatchResult in anonymous namespaces
+# with different member types, causing redefinition errors in unity builds.
+set_source_files_properties(
+  SemaTemplateInstantiate.cpp
+  PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON
+)
+
 add_clang_library(clangSema
   AnalysisBasedWarnings.cpp
   CheckExprLifetime.cpp

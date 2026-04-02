@@ -61,6 +61,14 @@ endif()
 include_directories(BEFORE "${CMAKE_CURRENT_BINARY_DIR}/../clang-tidy")
 include_directories(BEFORE "${CMAKE_CURRENT_SOURCE_DIR}/../include-cleaner/include")
 
+# clangd::Token conflicts with clang::Token, and InsertionPoint.cpp has
+# type conflicts when combined with other files in unity builds.
+set_source_files_properties(
+  SourceCode.cpp
+  refactor/InsertionPoint.cpp
+  PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON
+)
+
 add_clang_library(clangDaemon STATIC
   AST.cpp
   ASTSignals.cpp

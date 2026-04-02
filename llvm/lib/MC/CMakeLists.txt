@@ -87,3 +87,13 @@ add_llvm_component_library(LLVMMC
 
 add_subdirectory(MCParser)
 add_subdirectory(MCDisassembler)
+
+# These object writer files each define 'isDwoSection' in anonymous namespaces,
+# which conflicts in unity builds. MCAsmInfoELF/Wasm both define 'printName'.
+set_source_files_properties(
+  ELFObjectWriter.cpp
+  MCAsmInfoELF.cpp
+  MCAsmInfoWasm.cpp
+  WasmObjectWriter.cpp
+  WinCOFFObjectWriter.cpp
+  PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)

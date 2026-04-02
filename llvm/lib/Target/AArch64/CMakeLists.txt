@@ -129,3 +129,26 @@ add_subdirectory(Disassembler)
 add_subdirectory(MCTargetDesc)
 add_subdirectory(TargetInfo)
 add_subdirectory(Utils)
+
+# Anonymous namespace classes and static function conflicts.
+set_source_files_properties(
+  AArch64AdvSIMDScalarPass.cpp
+  SVEIntrinsicOpts.cpp
+  PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
+
+# Large ISel lowering file with extensive static helper conflicts.
+set_source_files_properties(
+  AArch64ISelLowering.cpp
+  PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
+
+set_source_files_properties(
+  SMEABIPass.cpp
+  GISel/AArch64CallLowering.cpp
+  GISel/AArch64InstructionSelector.cpp
+  GISel/AArch64LegalizerInfo.cpp
+  GISel/AArch64O0PreLegalizerCombiner.cpp
+  GISel/AArch64PostLegalizerCombiner.cpp
+  GISel/AArch64PostLegalizerLowering.cpp
+  GISel/AArch64PreLegalizerCombiner.cpp
+  GISel/AArch64RegisterBankInfo.cpp
+  PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)

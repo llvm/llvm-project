@@ -13,6 +13,13 @@ set(LLVM_TARGET_DEFINITIONS Opts.td)
 tablegen(LLVM Opts.inc -gen-opt-parser-defs)
 add_public_tablegen_target(ReadobjOptsTableGen)
 
+# ELFDumper.cpp defines createError and checkHashTable that conflict with
+# identically-named functions from other dumper files in unity builds.
+set_source_files_properties(
+  ELFDumper.cpp
+  PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON
+)
+
 add_llvm_tool(llvm-readobj
   ARMWinEHPrinter.cpp
   COFFDumper.cpp

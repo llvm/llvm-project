@@ -186,6 +186,20 @@ target_link_libraries(ClangdTests
   clangdSupport
   )
 
+# These files define symbols that clash in unity builds:
+# - PreambleTests.cpp defines MATCHER_P(Diag, ...) which conflicts with
+#   clang::clangd::Diag when combined with RenameTests.cpp.
+# - HoverTests.cpp and IncludeCleanerTests.cpp both define guard().
+# - SymbolCollectorTests.cpp, SerializationTests.cpp, FileIndexTests.cpp,
+#   BackgroundIndexTests.cpp, and FindSymbolsTests.cpp all define
+#   MATCHER_P(qName, ...).
+set_source_files_properties(
+  PreambleTests.cpp
+  HoverTests.cpp
+  IncludeCleanerTests.cpp
+  SymbolCollectorTests.cpp
+  PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
+
 if (CLANGD_ENABLE_REMOTE)
   target_link_libraries(ClangdTests
     PRIVATE

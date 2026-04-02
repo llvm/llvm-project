@@ -17,3 +17,8 @@ add_mlir_library(MLIRLspServerLib
   MLIRLspServerSupportLib
   MLIRParser
   )
+
+# Static LSP protocol handler and request processing conflicts.
+set_source_files_properties(
+  MLIRServer.cpp
+  PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)

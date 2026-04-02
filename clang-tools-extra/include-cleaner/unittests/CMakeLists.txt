@@ -38,3 +38,7 @@ target_link_libraries(ClangIncludeCleanerTests
   LLVMTestingSupport
   )
 
+# AnalysisTest.cpp and FindHeadersTest.cpp both define guard().
+set_source_files_properties(FindHeadersTest.cpp
+  PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
+

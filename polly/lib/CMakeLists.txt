@@ -38,6 +38,26 @@ set(POLLY_COMPONENTS
     Vectorize
 )
 
+# ISLOStream.h has no include guard, so its inline operator<< definitions get
+# redefined when multiple .cpp files including it are in the same unity TU.
+# Several Analysis/ and CodeGen/ files also share STATISTIC variable names.
+set_source_files_properties(
+  Analysis/ScopDetection.cpp
+  Analysis/ScopInfo.cpp
+  Analysis/ScopBuilder.cpp
+  Analysis/PruneUnprofitable.cpp
+  CodeGen/IslAst.cpp
+  CodeGen/CodeGeneration.cpp
+  Transform/ScheduleOptimizer.cpp
+  Transform/FlattenSchedule.cpp
+  Transform/FlattenAlgo.cpp
+  Transform/ForwardOpTree.cpp
+  Transform/DeLICM.cpp
+  Transform/Simplify.cpp
+  Transform/MatmulOptimizer.cpp
+  PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON
+)
+
 # Use an object-library to add the same files to multiple libs without requiring
 # the sources them to be recompiled for each of them.
 add_llvm_pass_plugin(Polly

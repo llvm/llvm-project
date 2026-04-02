@@ -12,6 +12,7 @@ using namespace mlir;
 using namespace mlir::sparse_tensor;
 using namespace mlir::sparse_tensor::ir_detail;
 
+#undef FAILURE_IF_FAILED
 #define FAILURE_IF_FAILED(RES)                                                 \
   if (failed(RES)) {                                                           \
     return failure();                                                          \

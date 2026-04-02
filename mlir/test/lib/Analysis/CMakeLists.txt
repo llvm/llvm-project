@@ -37,3 +37,15 @@ target_include_directories(MLIRTestAnalysis
   ${CMAKE_CURRENT_SOURCE_DIR}/../Dialect/Test
   ${CMAKE_CURRENT_BINARY_DIR}/../Dialect/Test
   )
+
+# Static test infrastructure redefinitions across analysis test files.
+set_source_files_properties(
+  TestMemRefDependenceCheck.cpp
+  TestSlice.cpp
+  DataFlow/TestDeadCodeAnalysis.cpp
+  DataFlow/TestDenseBackwardDataFlowAnalysis.cpp
+  DataFlow/TestDenseForwardDataFlowAnalysis.cpp
+  DataFlow/TestLivenessAnalysis.cpp
+  DataFlow/TestSparseBackwardDataFlowAnalysis.cpp
+  DataFlow/TestStridedMetadataRangeAnalysis.cpp
+  PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)

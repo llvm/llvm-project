@@ -139,6 +139,11 @@ endif()
 # TableGen
 add_subdirectory(utils/TableGen)
 
+# Nearly every lldb source file uses "using namespace lldb" which pulls
+# lldb::pid_t and lldb::thread_t into scope, conflicting with POSIX/mach
+# system types when system headers are included in the same translation unit.
+set(CMAKE_UNITY_BUILD OFF)
+
 add_subdirectory(source)
 add_subdirectory(tools)
 add_subdirectory(docs)

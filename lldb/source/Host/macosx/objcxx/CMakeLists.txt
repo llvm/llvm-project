@@ -2,6 +2,10 @@
 remove_module_flags()
 include_directories(..)
 
+# ObjC++ (.mm) files cannot be unity-built because CMake generates .cxx
+# unity wrappers, causing them to be compiled as C++ instead of ObjC++.
+set(CMAKE_UNITY_BUILD OFF)
+
 add_lldb_library(lldbHostMacOSXObjCXX NO_PLUGIN_DEPENDENCIES
   Host.mm
   HostInfoMacOSX.mm

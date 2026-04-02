@@ -34,6 +34,10 @@ list(APPEND LIBLV_ADDITIONAL_HEADER_DIRS
   "${LLVM_MAIN_INCLUDE_DIR}/llvm/DebugInfo/LogicalView/Readers"
   )
 
+# Multiple Core/*.cpp files define identically-named static variables
+# (KindUndefined, etc.) causing redefinition errors in unity builds.
+set(CMAKE_UNITY_BUILD OFF)
+
 add_llvm_component_library(LLVMDebugInfoLogicalView
   ${LV_IMPL_SOURCES}
 

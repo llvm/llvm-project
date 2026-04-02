@@ -24,4 +24,9 @@ add_llvm_component_library(LLVMTextAPI
   TargetParser
 )
 
+# RecordsSlice.cpp has ambiguous 'Target' due to namespace conflicts in
+# unity builds.
+set_source_files_properties(RecordsSlice.cpp
+  PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
+
 add_subdirectory(BinaryReader)

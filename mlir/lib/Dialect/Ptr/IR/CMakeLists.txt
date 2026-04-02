@@ -37,3 +37,8 @@ add_mlir_dialect_library(
   MLIRViewLikeInterface
   MLIRPtrMemorySpaceInterfaces
 )
+
+# Static pointer type handling conflicts via 'using namespace mlir'.
+set_source_files_properties(
+  PtrTypes.cpp
+  PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)

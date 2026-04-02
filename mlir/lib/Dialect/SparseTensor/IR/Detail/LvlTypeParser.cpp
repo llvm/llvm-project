@@ -14,12 +14,14 @@ using namespace mlir::sparse_tensor;
 using namespace mlir::sparse_tensor::ir_detail;
 
 //===----------------------------------------------------------------------===//
+#undef FAILURE_IF_FAILED
 #define FAILURE_IF_FAILED(STMT)                                                \
   if (failed(STMT)) {                                                          \
     return failure();                                                          \
   }
 
 // NOTE: this macro assumes `AsmParser parser` and `SMLoc loc` are in scope.
+#undef ERROR_IF
 #define ERROR_IF(COND, MSG)                                                    \
   if (COND) {                                                                  \
     return parser.emitError(loc, MSG);                                         \

@@ -1,3 +1,14 @@
+# AnnotateConstant.cpp has 'impl' ambiguity from tablegen pass base classes.
+# LoopInvariantCodeMotion.cpp has fir::AliasAnalysis vs mlir::AliasAnalysis
+# ambiguity. CUFOpConversionLate.cpp redefines createConvertOp.
+set_source_files_properties(
+  AnnotateConstant.cpp
+  ConvertComplexPow.cpp
+  LoopInvariantCodeMotion.cpp
+  CUDA/CUFOpConversionLate.cpp
+  PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON
+)
+
 add_flang_library(FIRTransforms
   AbstractResult.cpp
   AddAliasTags.cpp

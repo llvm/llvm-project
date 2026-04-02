@@ -46,3 +46,13 @@ add_llvm_component_library(LLVMDebugInfoCodeView
   LINK_COMPONENTS
   Support
   )
+
+# These files define static functions/arrays with identical names (stabilize,
+# LeafTypeNames, getLeafTypeName) that conflict in unity builds.
+set_source_files_properties(
+  AppendingTypeTableBuilder.cpp
+  GlobalTypeTableBuilder.cpp
+  MergingTypeTableBuilder.cpp
+  TypeDumpVisitor.cpp
+  TypeRecordMapping.cpp
+  PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)

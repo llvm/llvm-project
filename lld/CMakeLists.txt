@@ -190,6 +190,10 @@ include_directories(BEFORE
 add_subdirectory(Common)
 add_subdirectory(tools/lld)
 
+# Multiple Arch/*.cpp files define static functions, enums, and types with
+# the same names, and "using namespace" brings conflicting symbols into scope.
+set(CMAKE_UNITY_BUILD OFF)
+
 if (LLVM_INCLUDE_TESTS)
   add_custom_target(LLDUnitTests)
   set_target_properties(LLDUnitTests PROPERTIES FOLDER "LLD/Tests")

@@ -41,6 +41,15 @@ source_group("Source Files\\DXContainer" REGULAR_EXPRESSION
   DXContainer/.*[.]cpp
 )
 
+# ELF, MachO, COFF, and wasm ObjCopy implementations define identically-named
+# types (Section, Object, SectionPred) in different namespaces that conflict
+# when combined via "using namespace" in unity builds.
+set_source_files_properties(
+  MachO/MachOObjcopy.cpp
+  MachO/MachOReader.cpp
+  PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON
+)
+
 add_llvm_component_library(LLVMObjCopy
   Archive.cpp
   DXContainer/DXContainerObjcopy.cpp

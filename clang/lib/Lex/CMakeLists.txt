@@ -5,6 +5,13 @@ set(LLVM_LINK_COMPONENTS
   TargetParser
   )
 
+# "using namespace clang::dependency_directives_scan" at file scope brings
+# dependency_directives_scan::Token into scope, conflicting with clang::Token.
+set_source_files_properties(
+  DependencyDirectivesScanner.cpp
+  PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON
+)
+
 add_clang_library(clangLex
   DependencyDirectivesScanner.cpp
   HeaderMap.cpp

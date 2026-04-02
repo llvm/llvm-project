@@ -19,3 +19,8 @@ llvm_add_library(TableGenLspServerLib
   MLIRLspServerSupportLib
   MLIRSupport
   )
+
+# Static TableGen LSP handler conflicts.
+set_source_files_properties(
+  TableGenServer.cpp
+  PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)

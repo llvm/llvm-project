@@ -59,3 +59,13 @@ target_include_directories(MLIRTestTransforms
   ${CMAKE_CURRENT_SOURCE_DIR}/../Dialect/Test
   ${CMAKE_CURRENT_BINARY_DIR}/../Dialect/Test
   )
+
+# Static transform test utility redefinitions.
+set_source_files_properties(
+  TestCommutativityUtils.cpp
+  TestDialectConversion.cpp
+  TestInlining.cpp
+  TestInliningCallback.cpp
+  TestMakeIsolatedFromAbove.cpp
+  TestTransformDialectExtension.cpp
+  PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)

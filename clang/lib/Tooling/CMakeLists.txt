@@ -12,6 +12,16 @@ add_subdirectory(ASTDiff)
 add_subdirectory(Syntax)
 add_subdirectory(Transformer)
 
+# CompilationDatabase.cpp and DependencyScanningTool.cpp reference
+# clang::driver which becomes ambiguous when combined with other files
+# in a unity build.
+set_source_files_properties(
+  CompilationDatabase.cpp
+  DependencyScanningTool.cpp
+  Tooling.cpp
+  PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON
+)
+
 add_clang_library(clangTooling
   AllTUsExecution.cpp
   ArgumentsAdjusters.cpp

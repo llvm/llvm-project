@@ -39,6 +39,16 @@ if (LLVM_COMPILER_IS_GCC_COMPATIBLE)
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=gnu99 -Wstrict-prototypes")
 endif ()
 
+# calc.c and disassemble.c both define handle_line, causing
+# redefinition errors in unity builds.
+set_source_files_properties(
+  calc.c
+  disassemble.c
+  diagnostic.c
+  module.c
+  PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON
+)
+
 add_llvm_tool(llvm-c-test
   attributes.c
   calc.c

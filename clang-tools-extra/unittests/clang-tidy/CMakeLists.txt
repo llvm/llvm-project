@@ -65,6 +65,17 @@ target_link_libraries(ClangTidyTests
   LLVMTestingSupport
   )
 
+# These files define symbols that clash in unity builds:
+# - ClangTidyOptionsTest.cpp and ClangTidyDiagnosticConsumerTest.cpp both
+#   define TestCheck
+# - UsingInserterTest.cpp and NamespaceAliaserTest.cpp both define runChecker
+set_source_files_properties(
+  ClangTidyDiagnosticConsumerTest.cpp
+  ClangTidyOptionsTest.cpp
+  NamespaceAliaserTest.cpp
+  UsingInserterTest.cpp
+  PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
+
 if(CLANG_TIDY_ENABLE_QUERY_BASED_CUSTOM_CHECKS)
   target_link_libraries(ClangTidyTests
     PRIVATE

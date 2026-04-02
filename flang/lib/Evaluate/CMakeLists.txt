@@ -87,3 +87,17 @@ add_flang_library(FortranEvaluate
   acc_gen
   omp_gen
 )
+
+# fold-implementation.h contains explicit instantiation definitions; merging
+# any two of these files in a unity TU produces duplicate instantiations.
+# formatting.cpp also has explicit instantiations that duplicate those.
+set_source_files_properties(
+  fold-character.cpp
+  fold-complex.cpp
+  fold-integer.cpp
+  fold-logical.cpp
+  fold-real.cpp
+  fold.cpp
+  intrinsics-library.cpp
+  formatting.cpp
+  PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)

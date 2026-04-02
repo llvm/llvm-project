@@ -51,3 +51,13 @@ add_llvm_target(XCoreCodeGen
 add_subdirectory(Disassembler)
 add_subdirectory(MCTargetDesc)
 add_subdirectory(TargetInfo)
+
+# Static instruction information and helper function conflicts.
+set_source_files_properties(
+  XCoreInstrInfo.cpp
+  PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
+
+# Static register information and allocation helper conflicts.
+set_source_files_properties(
+  XCoreRegisterInfo.cpp
+  PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)

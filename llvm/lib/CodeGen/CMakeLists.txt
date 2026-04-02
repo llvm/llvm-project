@@ -299,3 +299,29 @@ add_subdirectory(SelectionDAG)
 add_subdirectory(AsmPrinter)
 add_subdirectory(MIRParser)
 add_subdirectory(GlobalISel)
+
+# STATISTIC and static function redefinitions across register allocation
+# and scheduling files conflict in unity builds.
+set_source_files_properties(
+  LiveIntervalCalc.cpp
+  MLRegAllocPriorityAdvisor.cpp
+  MachineOutliner.cpp
+  PostRASchedulerList.cpp
+  RegAllocPriorityAdvisor.cpp
+  PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
+
+# Conflicting STATISTIC variables and static functions with other
+# register allocation files.
+set_source_files_properties(
+  MLRegAllocEvictAdvisor.cpp
+  PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
+
+# Conflicting static cl::opt variables with other CodeGen files.
+set_source_files_properties(
+  ModuloSchedule.cpp
+  PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
+
+# Anonymous namespace struct redefinitions conflict in unity builds.
+set_source_files_properties(
+  PatchableFunction.cpp
+  PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)

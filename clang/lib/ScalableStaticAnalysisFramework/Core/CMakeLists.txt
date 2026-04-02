@@ -33,3 +33,8 @@ add_clang_library(clangScalableStaticAnalysisFrameworkCore
 
   DEPENDS
   )
+
+# error: type alias redefinition with different types ('Registry<AnalysisBase>' vs 'Registry<SummaryDataBuilderBase>')
+set_source_files_properties(
+  WholeProgramAnalysis/AnalysisRegistry.cpp
+  PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)

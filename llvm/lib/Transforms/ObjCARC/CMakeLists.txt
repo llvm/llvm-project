@@ -24,3 +24,8 @@ add_llvm_component_library(LLVMObjCARCOpts
   TargetParser
   TransformUtils
   )
+
+# Static optimization functions conflict with other ObjCARC files.
+set_source_files_properties(
+  ObjCARCContract.cpp
+  PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)

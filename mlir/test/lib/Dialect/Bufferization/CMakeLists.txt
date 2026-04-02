@@ -19,3 +19,8 @@ target_include_directories(MLIRBufferizationTestPasses
   ${CMAKE_CURRENT_SOURCE_DIR}/../../Dialect/Test
   ${CMAKE_CURRENT_BINARY_DIR}/../../Dialect/Test
   )
+
+# Static test pattern implementation conflicts.
+set_source_files_properties(
+  TestTensorLikeAndBufferLike.cpp
+  PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)

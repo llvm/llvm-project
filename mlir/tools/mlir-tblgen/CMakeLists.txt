@@ -37,6 +37,29 @@ add_tablegen(mlir-tblgen MLIR
   CppGenUtilities.cpp
   )
 
+# Unity build conflicts:
+# - BytecodeDialectGen.cpp/DialectGen.cpp: both define static 'dialectGenCat'
+# - PassGen.cpp/PassCAPIGen.cpp: both define 'passGenCat', 'groupName',
+#   'passGroupRegistrationCode', 'fileHeader'
+# - SPIRVUtilsGen.cpp/TosaUtilsGen.cpp: both define 'Availability' class and
+#   related functions in anonymous namespaces
+# - LLVMIRIntrinsicGen.cpp, OpDocGen.cpp, OpPythonBindingGen.cpp, RewriterGen.cpp:
+#   'using namespace llvm;' from other files makes DenseMap, Type, StringSwitch,
+#   SetVector ambiguous with mlir::tblgen equivalents
+set_source_files_properties(
+  BytecodeDialectGen.cpp
+  DialectGen.cpp
+  LLVMIRIntrinsicGen.cpp
+  OpDocGen.cpp
+  OpFormatGen.cpp
+  OpPythonBindingGen.cpp
+  PassCAPIGen.cpp
+  PassGen.cpp
+  RewriterGen.cpp
+  SPIRVUtilsGen.cpp
+  TosaUtilsGen.cpp
+  PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
+
 target_link_libraries(mlir-tblgen
   PRIVATE
   MLIRTblgenLib)

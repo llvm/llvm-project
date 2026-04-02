@@ -24,6 +24,21 @@ add_llvm_library(LLVMTableGenBasic OBJECT EXCLUDE_FROM_ALL DISABLE_LLVM_LINK_LLV
   VTEmitter.cpp
 )
 
+# These emitter files each define a static TableGen::Emitter::Opt[Class]
+# variable named 'X' (and sometimes 'Y') at file scope for self-registration,
+# which conflicts in unity builds.
+set_source_files_properties(
+  ARMTargetDefEmitter.cpp
+  Attributes.cpp
+  DirectiveEmitter.cpp
+  IntrinsicEmitter.cpp
+  RISCVTargetDefEmitter.cpp
+  RuntimeLibcallsEmitter.cpp
+  TargetFeaturesEmitter.cpp
+  TargetLibraryInfoEmitter.cpp
+  VTEmitter.cpp
+  PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
+
 # Users may include its headers as "Basic/*.h"
 target_include_directories(LLVMTableGenBasic
   INTERFACE

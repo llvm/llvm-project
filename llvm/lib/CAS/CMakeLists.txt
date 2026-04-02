@@ -2,6 +2,10 @@ if (UNIX AND "${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
   set(additional_libs bsd)
 endif()
 
+# Multiple CAS implementations define ObjectHandle in different namespaces
+# that become ambiguous with "using namespace" in unity builds.
+set(CMAKE_UNITY_BUILD OFF)
+
 add_llvm_component_library(LLVMCAS
   ActionCache.cpp
   ActionCaches.cpp

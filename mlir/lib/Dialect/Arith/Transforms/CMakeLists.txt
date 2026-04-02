@@ -37,3 +37,8 @@ add_mlir_dialect_library(MLIRArithTransforms
   MLIRValueBoundsOpInterface
   MLIRVectorDialect
   )
+
+# Static interface implementations conflict via 'using namespace mlir'.
+set_source_files_properties(
+  BufferizableOpInterfaceImpl.cpp
+  PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)

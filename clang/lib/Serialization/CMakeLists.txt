@@ -6,6 +6,13 @@ set(LLVM_LINK_COMPONENTS
   TargetParser
   )
 
+# ASTWriter.cpp defines HeaderFileInfoTrait and LazySpecializationInfoLookupTrait
+# in an anonymous namespace, conflicting with identically-named classes from
+# ASTReaderInternals.h included by other files in this directory.
+set_source_files_properties(
+  ASTWriter.cpp
+  PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON
+)
 
 add_clang_library(clangSerialization
   ASTCommon.cpp

@@ -3,6 +3,9 @@ set(LLVM_LINK_COMPONENTS
   Support
   )
 
+# error: conflicting types for 'LLVMFuzzerTestOneInput'
+set(CMAKE_UNITY_BUILD OFF)
+
 # This fuzzer runs on oss-fuzz, so keep it around even if it looks unreferenced.
 add_llvm_fuzzer(clangd-fuzzer
   clangd-fuzzer.cpp

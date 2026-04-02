@@ -108,3 +108,20 @@ add_subdirectory(Disassembler)
 add_subdirectory(MCTargetDesc)
 add_subdirectory(TargetInfo)
 add_subdirectory(Utils)
+
+# Static CFG transformation functions conflict with other WebAssembly files.
+set_source_files_properties(
+  WebAssemblyFixIrreducibleControlFlow.cpp
+  PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
+
+# Generated combiner code with conflicting rule symbols.
+set_source_files_properties(
+  WebAssemblyPreLegalizerCombiner.cpp
+  WebAssemblyPostLegalizerCombiner.cpp
+  PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
+
+# Generated GISel combiner code with conflicting symbols.
+set_source_files_properties(
+  GISel/WebAssemblyPreLegalizerCombiner.cpp
+  GISel/WebAssemblyPostLegalizerCombiner.cpp
+  PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)

@@ -18,6 +18,10 @@ set(LLVM_TARGET_DEFINITIONS mlir/ToyCombine.td)
 mlir_tablegen(ToyCombine.inc -gen-rewriters)
 add_public_tablegen_target(ToyCh7CombineIncGen)
 
+# Multiple mlir/ files have ambiguous toy::/mlir:: references
+# (Location, OpAdaptor, toy namespace, etc.) in unity builds.
+set(CMAKE_UNITY_BUILD OFF)
+
 add_toy_chapter(toyc-ch7
   toyc.cpp
   parser/AST.cpp

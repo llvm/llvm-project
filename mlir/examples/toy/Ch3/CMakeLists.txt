@@ -24,6 +24,12 @@ add_toy_chapter(toyc-ch3
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/include/)
+
+# mlir/ToyCombine.cpp references toy:: names that become ambiguous when
+# combined with other mlir/ files in a unity translation unit.
+set_source_files_properties(mlir/ToyCombine.cpp
+  PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
+
 target_link_libraries(toyc-ch3
   PRIVATE
     MLIRAnalysis

@@ -40,3 +40,11 @@ add_llvm_component_library(LLVMObjectYAML
   DebugInfoCodeView
   MC
   )
+
+# Conflicting 'using namespace' declarations (llvm::codeview,
+# llvm::CodeViewYAML) cause ambiguity.
+set_source_files_properties(
+  CodeViewYAMLTypes.cpp
+  MinidumpEmitter.cpp
+  MinidumpYAML.cpp
+  PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)

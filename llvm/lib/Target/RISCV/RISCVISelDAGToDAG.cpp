@@ -28,6 +28,7 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "riscv-isel"
+#undef PASS_NAME
 #define PASS_NAME "RISC-V DAG->DAG Pattern Instruction Selection"
 
 static cl::opt<bool> UsePseudoMovImm(

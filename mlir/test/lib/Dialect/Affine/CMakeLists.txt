@@ -42,3 +42,22 @@ target_include_directories(MLIRAffineTransformsTestPasses
   ${CMAKE_CURRENT_BINARY_DIR}/../Test
   )
 
+
+# Static vectorization test utility conflicts.
+set_source_files_properties(
+  TestVectorizationUtils.cpp
+  PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
+
+# Static value bound analysis test infrastructure conflicts.
+set_source_files_properties(
+  TestReifyValueBounds.cpp
+  PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
+
+# Static analysis test harness redefinitions.
+set_source_files_properties(
+  TestAccessAnalysis.cpp
+  TestAffineLoopUnswitching.cpp
+  TestDecomposeAffineOps.cpp
+  TestLoopFusion.cpp
+  TestLoopPermutation.cpp
+  PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)

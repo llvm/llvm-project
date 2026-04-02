@@ -39,6 +39,15 @@ if (CLANG_BOLT AND NOT LLVM_BUILD_INSTRUMENTED)
   endif()
 endif()
 
+# cc1as_main.cpp and driver.cpp both define LLVMErrorHandler; cc1gen_reproducer
+# uses "driver" which is ambiguous with clang::driver in unity builds.
+set_source_files_properties(
+  cc1_main.cpp
+  cc1as_main.cpp
+  cc1gen_reproducer_main.cpp
+  PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON
+)
+
 add_clang_tool(clang
   driver.cpp
   cc1_main.cpp

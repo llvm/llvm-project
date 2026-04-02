@@ -50,3 +50,10 @@ add_flang_library(FIRCodeGen
   MLIRTargetLLVMIRExport
   MLIRVectorToLLVM
 )
+
+# FIROpPatterns.cpp and PreCGRewrite.cpp each redefine local helpers
+# (getTypeDescFieldId, DeclareOpConversion) that clash in unity builds.
+set_source_files_properties(
+  FIROpPatterns.cpp
+  PreCGRewrite.cpp
+  PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)

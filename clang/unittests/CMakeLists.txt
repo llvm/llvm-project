@@ -1,6 +1,8 @@
 add_custom_target(ClangUnitTests)
 set_target_properties(ClangUnitTests PROPERTIES FOLDER "Clang/Tests")
 
+set(CMAKE_UNITY_BUILD OFF)
+
 if(CLANG_BUILT_STANDALONE)
   # LLVMTesting* libraries are needed for some of the unittests.
   if (EXISTS ${LLVM_MAIN_SRC_DIR}/lib/Testing/Annotations
@@ -127,6 +129,68 @@ add_distinct_clang_unittest(AllClangUnitTests
   LLVM_COMPONENTS
   ${LLVM_COMPONENTS}
 )
+
+# Files that clash in unity builds of AllClangUnitTests due to shared headers
+# (ASTPrint.h, CheckerRegistration.h, CallbacksCommon.h, CFGBuildResult.h)
+# or duplicate symbols.
+set_source_files_properties(
+  Lex/LexerTest.cpp
+  Analysis/CFGBackEdgesTest.cpp
+  Analysis/CFGDominatorTree.cpp
+  Analysis/CFGTest.cpp
+  Analysis/IntervalPartitionTest.cpp
+  Analysis/UnsafeBufferUsageTest.cpp
+  Analysis/FlowSensitive/SingleVarConstantPropagationTest.cpp
+  AST/ASTDumperTest.cpp
+  AST/ASTExprTest.cpp
+  AST/ASTImporterGenericRedeclTest.cpp
+  AST/ASTImporterODRStrategiesTest.cpp
+  AST/AttrTest.cpp
+  AST/ConceptPrinterTest.cpp
+  AST/DataCollectionTest.cpp
+  AST/DeclPrinterTest.cpp
+  AST/NamedDeclPrinterTest.cpp
+  AST/QualTypeNamesTest.cpp
+  AST/SizelessTypesTest.cpp
+  AST/StmtPrinterTest.cpp
+  AST/TemplateNameTest.cpp
+  AST/TypePrinterTest.cpp
+  CodeGen/TBAAMetadataTest.cpp
+  Driver/ToolChainTest.cpp
+  Interpreter/InterpreterTest.cpp
+  Lex/NoTrivialPPDirectiveTracerTest.cpp
+  Lex/PPConditionalDirectiveRecordTest.cpp
+  Lex/PPDependencyDirectivesTest.cpp
+  Lex/PPMemoryAllocationsTest.cpp
+  Lex/PPCallbacksTest.cpp
+  Lex/ModuleDeclStateTest.cpp
+  Parse/ParseHLSLRootSignatureTest.cpp
+  ScalableStaticAnalysisFramework/Registries/MockSerializationFormat.cpp
+  StaticAnalyzer/BlockEntranceCallbackTest.cpp
+  StaticAnalyzer/BugReportInterestingnessTest.cpp
+  StaticAnalyzer/CallDescriptionTest.cpp
+  StaticAnalyzer/CallEventTest.cpp
+  StaticAnalyzer/ConflictingEvalCallsTest.cpp
+  StaticAnalyzer/ExprEngineVisitTest.cpp
+  StaticAnalyzer/FalsePositiveRefutationBRVisitorTest.cpp
+  StaticAnalyzer/MemRegionDescriptiveNameTest.cpp
+  StaticAnalyzer/NoStateChangeFuncVisitorTest.cpp
+  StaticAnalyzer/ObjcBug-124477.cpp
+  StaticAnalyzer/RegisterCustomCheckersTest.cpp
+  StaticAnalyzer/SValSimplifyerTest.cpp
+  StaticAnalyzer/SValTest.cpp
+  StaticAnalyzer/TestReturnValueUnderConstruction.cpp
+  StaticAnalyzer/UnsignedStatDemo.cpp
+  Tooling/DiagnosticsYamlTest.cpp
+  Tooling/RecursiveASTVisitorTests/CallbacksBinaryOperator.cpp
+  Tooling/RecursiveASTVisitorTests/CallbacksCallExpr.cpp
+  Tooling/RecursiveASTVisitorTests/CallbacksCompoundAssignOperator.cpp
+  Tooling/RecursiveASTVisitorTests/CallbacksLeaf.cpp
+  Tooling/RecursiveASTVisitorTests/CallbacksUnaryOperator.cpp
+  Tooling/SourceCodeBuildersTest.cpp
+  Tooling/SourceCodeTest.cpp
+  Tooling/StencilTest.cpp
+  PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
 
 # The Tooling library has some internal headers. Make those work. If we like
 # the merged clang unit test binary, we can update the include paths and make

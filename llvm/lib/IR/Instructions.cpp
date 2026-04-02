@@ -51,6 +51,9 @@
 #include <optional>
 #include <vector>
 
+#undef DEBUG_TYPE
+#define DEBUG_TYPE "instructions"
+
 using namespace llvm;
 
 static cl::opt<bool> DisableI2pP2iOpt(

@@ -100,3 +100,11 @@ add_llvm_component_library(LLVMScalarOpts
   Support
   TransformUtils
   )
+
+# STATISTIC variables and static analysis function redefinitions.
+set_source_files_properties(
+  BDCE.cpp
+  ConstraintElimination.cpp
+  GVNSink.cpp
+  LoopInterchange.cpp
+  PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)

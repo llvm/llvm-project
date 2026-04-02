@@ -1,3 +1,11 @@
+# Multiple files define identically-named struct Lattice and class AnalysisImpl
+# in anonymous namespaces, causing redefinition errors in unity builds.
+set_source_files_properties(
+  LoanPropagation.cpp
+  MovedLoans.cpp
+  PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON
+)
+
 add_clang_library(clangAnalysisLifetimeSafety
   Checker.cpp
   Facts.cpp

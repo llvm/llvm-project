@@ -10,6 +10,11 @@ set(LLVM_TARGET_DEFINITIONS mlir/ToyCombine.td)
 mlir_tablegen(ToyCombine.inc -gen-rewriters)
 add_public_tablegen_target(ToyCh5CombineIncGen)
 
+# Multiple mlir/ files (Dialect.cpp, LowerToAffineLoops.cpp,
+# ShapeInferencePass.cpp, ToyCombine.cpp) have ambiguous toy::/mlir::
+# references in unity builds.
+set(CMAKE_UNITY_BUILD OFF)
+
 add_toy_chapter(toyc-ch5
   toyc.cpp
   parser/AST.cpp

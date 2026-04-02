@@ -15,6 +15,9 @@
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/Debug.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/SandboxVectorizerPassBuilder.h"
 
+#undef DEBUG_TYPE
+#define DEBUG_TYPE "sandbox-vectorizer"
+
 using namespace llvm;
 
 static cl::opt<bool>

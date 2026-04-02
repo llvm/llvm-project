@@ -5,6 +5,10 @@ set(LLVM_LINK_COMPONENTS
   XRay
   )
 
+# Multiple xray-*.cpp files define cl::opt variables with the same names
+# (Unused, Demangle, NoDemangle) causing redefinition errors in unity builds.
+set(CMAKE_UNITY_BUILD OFF)
+
 add_llvm_tool(llvm-xray
   func-id-helper.cpp
   llvm-xray.cpp

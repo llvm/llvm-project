@@ -105,3 +105,9 @@ target_link_libraries(LLVMOrcJIT
   LLVMBitWriter
   LLVMPasses
   )
+
+# Static function and class definition conflicts in unity builds.
+set_source_files_properties(
+  ELFNixPlatform.cpp
+  RTDyldObjectLinkingLayer.cpp
+  PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)

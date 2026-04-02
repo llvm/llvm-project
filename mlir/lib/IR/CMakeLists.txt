@@ -75,3 +75,9 @@ add_mlir_library(MLIRIR
   LINK_LIBS PUBLIC
   MLIRSupport
   )
+
+# SymbolTable.cpp has ambiguous 'function_ref', 'SetVector', 'detail', 'impl'
+# due to 'using namespace llvm;' from other files in the unity batch.
+# Types.cpp has ambiguous 'Type' (mlir::Type vs llvm::Type).
+set_source_files_properties(SymbolTable.cpp TypeRange.cpp TypeUtilities.cpp Types.cpp
+  PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)

@@ -4,6 +4,13 @@ set(LLVM_LINK_COMPONENTS
   TargetParser
   )
 
+# ModuleAssistant.cpp defines a local Module class that conflicts with
+# clang::Module when combined in unity builds.
+set_source_files_properties(
+  ModuleAssistant.cpp
+  PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON
+)
+
 add_clang_tool(modularize
   Modularize.cpp
   ModuleAssistant.cpp

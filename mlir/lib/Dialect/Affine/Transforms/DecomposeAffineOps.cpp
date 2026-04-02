@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/Affine/LoopUtils.h"
 #include "mlir/Dialect/Affine/Transforms/Transforms.h"
 #include "mlir/IR/PatternMatch.h"
 #include "llvm/ADT/SmallVectorExtras.h"
@@ -23,21 +24,6 @@ using namespace mlir;
 using namespace mlir::affine;
 
 #define DEBUG_TYPE "decompose-affine-ops"
-
-/// Count the number of loops surrounding `operand` such that operand could be
-/// hoisted above.
-/// Stop counting at the first loop over which the operand cannot be hoisted.
-static int64_t numEnclosingInvariantLoops(OpOperand &operand) {
-  int64_t count = 0;
-  Operation *currentOp = operand.getOwner();
-  while (auto loopOp = currentOp->getParentOfType<LoopLikeOpInterface>()) {
-    if (!loopOp.isDefinedOutsideOfLoop(operand.get()))
-      break;
-    currentOp = loopOp;
-    count++;
-  }
-  return count;
-}
 
 void mlir::affine::reorderOperandsByHoistability(RewriterBase &rewriter,
                                                  AffineApplyOp op) {

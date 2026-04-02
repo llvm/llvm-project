@@ -10,6 +10,14 @@ set(LLVM_LINK_COMPONENTS
   TargetParser
   )
 
+# config.h uses a #include guard that errors on double-inclusion, which
+# breaks unity builds when multiple .cpp files include it.
+set_source_files_properties(
+  CompilerInstance.cpp
+  CompilerInvocation.cpp
+  PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON
+)
+
 add_clang_library(clangFrontend
   ASTConsumers.cpp
   ASTMerge.cpp

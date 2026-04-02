@@ -22,3 +22,8 @@ add_mlir_conversion_library(MLIRSCFToGPU
   MLIRSideEffectInterfaces
   MLIRTransforms
   )
+
+# Conversion patterns and static helpers conflict via 'using namespace mlir'.
+set_source_files_properties(
+  SCFToGPUPass.cpp
+  PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)

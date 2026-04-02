@@ -101,6 +101,21 @@ void populateXeGPUSgToWiDistributeTypeConversionAndLegality(
 void populateXeGPUUnrollPatterns(RewritePatternSet &patterns,
                                  const UnrollOptions &options);
 
+/// Given a vector type and its distributed vector type, return the list of
+/// dimensions that are distributed.
+inline SmallVector<int64_t> getDistributedDims(VectorType originalType,
+                                               VectorType distributedType) {
+  assert(originalType.getRank() == distributedType.getRank() &&
+         "sequential and distributed vector types must have the same rank");
+  SmallVector<int64_t> distributedDims;
+  for (int64_t i = 0; i < originalType.getRank(); ++i) {
+    if (distributedType.getDimSize(i) != originalType.getDimSize(i)) {
+      distributedDims.push_back(i);
+    }
+  }
+  return distributedDims;
+}
+
 } // namespace xegpu
 } // namespace mlir
 

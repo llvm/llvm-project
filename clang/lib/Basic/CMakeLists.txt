@@ -137,6 +137,28 @@ add_clang_library(clangBasic
   target_parser_gen
   )
 
+# Each Targets/*.cpp file defines static constexpr NumBuiltins, BuiltinInfos,
+# and BuiltinStrings which conflict in unity builds.
+set_source_files_properties(
+  Targets/AMDGPU.cpp
+  Targets/ARM.cpp
+  Targets/BPF.cpp
+  Targets/DirectX.cpp
+  Targets/Hexagon.cpp
+  Targets/LoongArch.cpp
+  Targets/Mips.cpp
+  Targets/NVPTX.cpp
+  Targets/PPC.cpp
+  Targets/RISCV.cpp
+  Targets/SPIR.cpp
+  Targets/SystemZ.cpp
+  Targets/VE.cpp
+  Targets/WebAssembly.cpp
+  Targets/X86.cpp
+  Targets/XCore.cpp
+  PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON
+)
+
 target_link_libraries(clangBasic
   PRIVATE
   ${LLVM_ATOMIC_LIB}

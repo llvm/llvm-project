@@ -112,3 +112,20 @@ add_subdirectory(Disassembler)
 add_subdirectory(MCTargetDesc)
 add_subdirectory(MCA)
 add_subdirectory(TargetInfo)
+
+# Static analysis functions conflict across RISCV passes.
+set_source_files_properties(
+  RISCVInsertWriteVXRM.cpp
+  PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
+
+# Generated combiner code with conflicting rule symbols.
+set_source_files_properties(
+  RISCVO0PreLegalizerCombiner.cpp
+  PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
+
+# Generated GISel combiner code with overlapping rule identifiers.
+set_source_files_properties(
+  GISel/RISCVO0PreLegalizerCombiner.cpp
+  GISel/RISCVPreLegalizerCombiner.cpp
+  GISel/RISCVPostLegalizerCombiner.cpp
+  PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)

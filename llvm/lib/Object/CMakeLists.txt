@@ -54,3 +54,12 @@ add_llvm_component_library(LLVMObject
   TargetParser
   TextAPI
   )
+
+# MachOUniversal.cpp/MachOObjectFile.cpp: ambiguous 'malformedError'
+# ModuleSymbolTable.cpp: 'Module' conflicts with llvm::minidump::Module
+set_source_files_properties(
+  MachOObjectFile.cpp
+  MachOUniversal.cpp
+  ModuleSymbolTable.cpp
+  OffloadBinary.cpp
+  PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)

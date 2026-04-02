@@ -28,3 +28,8 @@ target_include_directories(MLIRTestPass
   ${CMAKE_CURRENT_SOURCE_DIR}/../Dialect/Test
   ${CMAKE_CURRENT_BINARY_DIR}/../Dialect/Test
   )
+
+# Static pass management test code conflicts.
+set_source_files_properties(
+  TestPassManager.cpp
+  PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)

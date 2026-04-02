@@ -18,6 +18,7 @@
 #include "llvm/Support/Process.h"
 
 // Take an expression returning llvm::Error and forward the error if it exists.
+#undef RETURN_IF_ERROR
 #define RETURN_IF_ERROR(Expr)                                                  \
   if (auto Err = (Expr))                                                       \
     return std::move(Err);

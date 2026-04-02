@@ -1394,6 +1394,7 @@ void NullabilityChecker::printState(raw_ostream &Out, ProgramStateRef State,
 constexpr llvm::StringLiteral GroupName = "nullability";
 constexpr llvm::StringLiteral GroupOptName = "NoDiagnoseCallsToSystemHeaders";
 
+#undef REGISTER_CHECKER
 #define REGISTER_CHECKER(NAME, TRACKING_REQUIRED)                              \
   void ento::register##NAME##Checker(CheckerManager &Mgr) {                    \
     NullabilityChecker *Chk = Mgr.getChecker<NullabilityChecker>();            \

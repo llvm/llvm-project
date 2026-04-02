@@ -35,7 +35,9 @@ using ValueTuple = std::tuple<Value, Value, Value>;
 #define SUBI(lhs, rhs) (arith::SubIOp::create(b, l, (lhs), (rhs)).getResult())
 #define MULI(lhs, rhs) (arith::MulIOp::create(b, l, (lhs), (rhs)).getResult())
 #define MINUI(lhs, rhs) (arith::MinUIOp::create(b, l, (lhs), (rhs)).getResult())
+#undef REMUI
 #define REMUI(lhs, rhs) (arith::RemUIOp::create(b, l, (lhs), (rhs)).getResult())
+#undef DIVUI
 #define DIVUI(lhs, rhs) (arith::DivUIOp::create(b, l, (lhs), (rhs)).getResult())
 #define SELECT(c, lhs, rhs)                                                    \
   (arith::SelectOp::create(b, l, (c), (lhs), (rhs)).getResult())

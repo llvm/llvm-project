@@ -25,6 +25,13 @@ set(LLVM_TARGET_DEFINITIONS OtoolOpts.td)
 tablegen(LLVM OtoolOpts.inc -gen-opt-parser-defs)
 add_public_tablegen_target(OtoolOptsTableGen)
 
+# MachODump.cpp defines UnwindInfo that conflicts with other dump files'
+# types when combined in unity builds.
+set_source_files_properties(
+  MachODump.cpp
+  PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON
+)
+
 add_llvm_tool(llvm-objdump
   llvm-objdump.cpp
   SourcePrinter.cpp

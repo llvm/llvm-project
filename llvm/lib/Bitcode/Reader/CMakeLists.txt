@@ -17,3 +17,9 @@ add_llvm_component_library(LLVMBitReader
   Support
   TargetParser
   )
+
+# Both files define a static 'error' function that conflicts in unity builds.
+set_source_files_properties(
+  BitcodeReader.cpp
+  MetadataLoader.cpp
+  PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)

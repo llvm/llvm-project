@@ -22,6 +22,11 @@ if(LLVM_PTHREAD_LIB)
   list(APPEND system_libs ${LLVM_PTHREAD_LIB})
 endif()
 
+# Multiple ToolChains/*.cpp files define static functions with the same name
+# (e.g. checkRemarksOptions, getOSLibDir) and use "using namespace driver"
+# which conflicts across translation units in unity builds.
+set(CMAKE_UNITY_BUILD OFF)
+
 add_clang_library(clangDriver
   Action.cpp
   Compilation.cpp
