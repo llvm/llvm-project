@@ -33,6 +33,7 @@
 //   COMMON_INTERCEPTOR_STRERROR
 //===----------------------------------------------------------------------===//
 
+#include <dlfcn.h>
 #include <stdarg.h>
 
 #include "interception/interception.h"
@@ -6537,8 +6538,10 @@ INTERCEPTOR(void*, dlopen, const char *filename, int flag) {
   }
 
   void *res = COMMON_INTERCEPTOR_DLOPEN(filename, flag);
-  Symbolizer::GetOrInit()->InvalidateModuleList();
-  COMMON_INTERCEPTOR_LIBRARY_LOADED(filename, res);
+  if ((flag & RTLD_NOLOAD) == 0) {
+    Symbolizer::GetOrInit()->InvalidateModuleList();
+    COMMON_INTERCEPTOR_LIBRARY_LOADED(filename, res);
+  }
   return res;
 }
 
