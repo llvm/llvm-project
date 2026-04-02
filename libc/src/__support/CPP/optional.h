@@ -108,11 +108,13 @@ public:
 
   LIBC_INLINE constexpr void reset() { storage.reset(); }
 
-  LIBC_INLINE constexpr const T &value() const & {
+  LIBC_INLINE constexpr const T &value() const &LIBC_LIFETIME_BOUND {
     return storage.stored_value;
   }
 
-  LIBC_INLINE constexpr T &value() & { return storage.stored_value; }
+  LIBC_INLINE constexpr T &value() & LIBC_LIFETIME_BOUND {
+    return storage.stored_value;
+  }
 
   LIBC_INLINE constexpr explicit operator bool() const {
     return storage.in_use;
@@ -122,10 +124,12 @@ public:
     return &storage.stored_value;
   }
   LIBC_INLINE constexpr T *operator->() { return &storage.stored_value; }
-  LIBC_INLINE constexpr const T &operator*() const & {
+  LIBC_INLINE constexpr const T &operator*() const &LIBC_LIFETIME_BOUND {
     return storage.stored_value;
   }
-  LIBC_INLINE constexpr T &operator*() & { return storage.stored_value; }
+  LIBC_INLINE constexpr T &operator*() & LIBC_LIFETIME_BOUND {
+    return storage.stored_value;
+  }
 
   LIBC_INLINE constexpr T &&value() && { return move(storage.stored_value); }
   LIBC_INLINE constexpr T &&operator*() && {

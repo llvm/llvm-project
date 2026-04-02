@@ -48,7 +48,9 @@ public:
   // null terminator was not explicitly written, then the return value
   // will not include one. In order to produce a string_view to a null
   // terminated string, write ENDS explicitly.
-  string_view str() const { return string_view(data.data(), write_ptr); }
+  [[nodiscard]] LIBC_INLINE string_view str() const {
+    return string_view(data.data(), write_ptr);
+  }
 
   // Write the characters from |str| to the stream.
   StringStream &operator<<(string_view str) {
