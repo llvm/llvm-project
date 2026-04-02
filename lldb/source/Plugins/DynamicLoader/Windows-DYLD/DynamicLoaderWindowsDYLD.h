@@ -40,6 +40,27 @@ public:
   llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
 
 protected:
+  /// Returns the load address for the given executable module.
+  ///
+  /// The lookup proceeds in two stages:
+  ///
+  /// 1. **Cache lookup** – \c m_loaded_modules is scanned for an existing
+  ///    entry whose \c ModuleSP matches \p executable. Because the same
+  ///    \c ModuleSP can be inserted more than once under different base
+  ///    addresses (e.g. a DLL loaded into several processes, or a module
+  ///    that was unloaded and reloaded at a different address), the scan
+  ///    returns the *first* valid (non-LLDB_INVALID_ADDRESS) entry it
+  ///    finds.
+  ///
+  /// 2. **Process / platform query** – If no cached entry is found,
+  ///    \c Process::GetFileLoadAddress is called. On a remote target the
+  ///    remote platform is responsible for resolving the address. A
+  ///    successful result is inserted into \c m_loaded_modules so that
+  ///    subsequent calls hit the cache.
+  ///
+  /// \param executable  The module whose load address is requested.
+  /// \return            The load address, or \c LLDB_INVALID_ADDRESS if it
+  ///                    could not be determined.
   lldb::addr_t GetLoadAddress(lldb::ModuleSP executable);
 
   /// Maps load addresses to their corresponding modules.
