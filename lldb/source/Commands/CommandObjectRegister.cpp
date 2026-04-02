@@ -43,14 +43,14 @@ static uint32_t GetNameSize(const RegisterInfo * reg_info, bool use_primary_name
 }
 
 static uint32_t ComputeLongestRegisterName(RegisterContext *reg_ctx,
-                                    const RegisterSet *const reg_set,
+                                    const RegisterSet& reg_set,
                                     bool use_primary_name, bool primitive_only) {
-  const size_t num_registers = reg_set->num_registers;
+  const size_t num_registers = reg_set.num_registers;
   uint32_t name_right_align_at = 0;
 
   // Loop through all the registers to find the longest register name
   for (size_t reg_idx = 0; reg_idx < num_registers; ++reg_idx) {
-    const uint32_t reg = reg_set->registers[reg_idx];
+    const uint32_t reg = reg_set.registers[reg_idx];
     if (const RegisterInfo *reg_info = 
             reg_ctx->GetRegisterInfoAtIndex(reg)) {
       // Derived registers are skipped if primitive_only is true.
@@ -170,7 +170,7 @@ public:
       strm.IndentMore();
       const size_t num_registers = reg_set->num_registers;
       uint32_t name_right_align_at =
-          ComputeLongestRegisterName(reg_ctx, reg_set, !static_cast<bool>(m_command_options.alternate_name), primitive_only);
+          ComputeLongestRegisterName(reg_ctx, *reg_set, !static_cast<bool>(m_command_options.alternate_name), primitive_only);
       for (size_t reg_idx = 0; reg_idx < num_registers; ++reg_idx) {
         const uint32_t reg = reg_set->registers[reg_idx];
         const RegisterInfo *reg_info = reg_ctx->GetRegisterInfoAtIndex(reg);
