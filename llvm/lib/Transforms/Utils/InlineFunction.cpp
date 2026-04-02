@@ -3247,6 +3247,8 @@ void llvm::InlineFunctionImpl(CallBase &CB, InlineFunctionInfo &IFI,
     if (TrackInlineHistory ||
         InlinedFunctionInfo.OriginallyIndirectCalls.contains(ICB)) {
       // !inline_history is {Callee, CB.inline_history, ICB.inline_history}.
+      // Metadata nodes may be null if the referenced function was erased from
+      // the module.
       SmallVector<Metadata *, 4> History;
       History.push_back(ValueAsMetadata::get(CalledFunc));
       if (MDNode *CBHistory = CB.getMetadata(LLVMContext::MD_inline_history)) {
