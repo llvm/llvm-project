@@ -84,9 +84,10 @@ run your program.
   ``--cuda-gpu-arch=sm_35``.
 
   Note: You cannot pass ``compute_XX`` as an argument to ``--cuda-gpu-arch``;
-  only ``sm_XX`` is currently supported.  However, clang always includes PTX in
-  its binaries, so e.g. a binary compiled with ``--cuda-gpu-arch=sm_30`` would be
-  forwards-compatible with e.g. ``sm_35`` GPUs.
+  only ``sm_XX`` is currently supported.  Note that clang does not include PTX
+  in its binaries by default. Use ``--cuda-include-ptx=all`` to make clang
+  include PTX in its binaries. With this flag, a binary compiled with
+  ``--cuda-gpu-arch=sm_30`` would be forwards-compatible with e.g. ``sm_35``.
 
   You can pass ``--cuda-gpu-arch`` multiple times to compile for multiple archs.
 
