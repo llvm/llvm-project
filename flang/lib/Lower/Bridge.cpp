@@ -223,41 +223,17 @@ static mlir::FlatSymbolRefAttr gatherComponentInit(
   return mlir::FlatSymbolRefAttr::get(mlirContext, name);
 }
 
-/// Find a ModuleLikeUnit by module name in the PFT
-static const Fortran::lower::pft::ModuleLikeUnit *
-findModuleLikeUnit(const Fortran::lower::pft::Program &pft,
-                   const std::string &moduleName) {
-  for (const Fortran::lower::pft::Program::Units &u : pft.getUnits()) {
-    if (const auto *modUnit =
-            std::get_if<Fortran::lower::pft::ModuleLikeUnit>(&u)) {
-      const Fortran::semantics::Scope &modScope = modUnit->getScope();
-      if (const Fortran::semantics::Symbol *symbol = modScope.symbol()) {
-        if (symbol->name().ToString() == moduleName)
-          return modUnit;
-      }
-    }
-  }
-  return nullptr;
-}
-
-/// Emit fir.use_stmt operations for USE statements in the given function unit
-/// and transitive USE statements from modules used by the function
-static void
-emitUseStatementsFromFunit(Fortran::lower::AbstractConverter &converter,
-                           mlir::OpBuilder &builder, mlir::Location loc,
-                           const Fortran::lower::pft::FunctionLikeUnit &funit,
-                           const Fortran::lower::pft::Program *pft) {
+/// Emit a single fir.use_stmt from preserved frontend USE metadata.
+static void emitUseStmtOp(Fortran::lower::AbstractConverter &converter,
+                          mlir::OpBuilder &builder, mlir::Location loc,
+                          const Fortran::semantics::PreservedUseStmt &stmt,
+                          const Fortran::semantics::Scope &lookupScope) {
   mlir::MLIRContext *context = builder.getContext();
-  const Fortran::semantics::Scope &scope = funit.getScope();
+  mlir::StringAttr moduleNameAttr =
+      mlir::StringAttr::get(context, stmt.moduleName);
 
-  // Track which modules we've already emitted USE statements for to avoid
-  // duplicates in transitive cases
-  llvm::SmallSet<std::string, 4> emittedModules;
-
-  // Helper function to get mangled name for a symbol in a given scope
-  auto getMangledName =
-      [&](const std::string &localName,
-          const Fortran::semantics::Scope &lookupScope) -> std::string {
+  // Helper function to get mangled name for a symbol
+  auto getMangledName = [&](const std::string &localName) -> std::string {
     Fortran::parser::CharBlock charBlock{localName.data(), localName.size()};
     const auto *sym = lookupScope.FindSymbol(charBlock);
     if (!sym)
@@ -281,91 +257,77 @@ emitUseStatementsFromFunit(Fortran::lower::AbstractConverter &converter,
     return converter.mangleName(ultimateSym);
   };
 
-  // Helper function to emit a single USE statement with ONLY and renames.
-  // Uses the provided scope for symbol lookup
-  auto emitUseStmt = [&](const Fortran::semantics::PreservedUseStmt &stmt,
-                         const Fortran::semantics::Scope &lookupScope) {
-    mlir::StringAttr moduleNameAttr =
-        mlir::StringAttr::get(context, stmt.moduleName);
+  llvm::SmallVector<mlir::Attribute> onlySymbolAttrs;
+  llvm::SmallVector<mlir::Attribute> renameAttrs;
 
-    llvm::SmallVector<mlir::Attribute> onlySymbolAttrs;
-    llvm::SmallVector<mlir::Attribute> renameAttrs;
-
-    // Handle only
-    for (const auto &name : stmt.onlyNames) {
-      std::string mangledName = getMangledName(name, lookupScope);
-      if (!mangledName.empty())
-        onlySymbolAttrs.push_back(
-            mlir::FlatSymbolRefAttr::get(context, mangledName));
-    }
-
-    // Handle renames
-    for (const auto &local : stmt.renames) {
-      std::string mangledName = getMangledName(local, lookupScope);
-      if (!mangledName.empty()) {
-        auto localAttr = mlir::StringAttr::get(context, local);
-        auto symbolRef = mlir::FlatSymbolRefAttr::get(context, mangledName);
-        renameAttrs.push_back(
-            fir::UseRenameAttr::get(context, localAttr, symbolRef));
-      }
-    }
-
-    // Create optional array attributes
-    mlir::ArrayAttr onlySymbolsAttr =
-        onlySymbolAttrs.empty()
-            ? mlir::ArrayAttr()
-            : mlir::ArrayAttr::get(context, onlySymbolAttrs);
-    mlir::ArrayAttr renamesAttr =
-        renameAttrs.empty() ? mlir::ArrayAttr()
-                            : mlir::ArrayAttr::get(context, renameAttrs);
-
-    fir::UseStmtOp::create(builder, loc, moduleNameAttr, onlySymbolsAttr,
-                           renamesAttr);
-  };
-
-  // Recursive lambda to emit transitive USE statements
-  std::function<void(const std::string &)> emitTransitiveUses =
-      [&](const std::string &moduleName) {
-        if (!pft)
-          return;
-
-        if (const auto *modUnit = findModuleLikeUnit(*pft, moduleName)) {
-          // Get the module's scope for symbol lookup
-          const Fortran::semantics::Scope &modScope = modUnit->getScope();
-
-          // First pass: Emit all USE statements from this module
-          for (const auto &modUseStmt : modUnit->preservedUseStmts) {
-            if (!emittedModules.contains(modUseStmt.moduleName)) {
-              emitUseStmt(modUseStmt, modScope);
-              emittedModules.insert(modUseStmt.moduleName);
-            }
-          }
-
-          // Second pass: Emit transitive USE statements
-          for (const auto &modUseStmt : modUnit->preservedUseStmts) {
-            // If this USE statement has an ONLY clause, skip transitive
-            // emission
-            if (modUseStmt.onlyNames.empty())
-              emitTransitiveUses(modUseStmt.moduleName);
-          }
-        }
-      };
-
-  // First pass: Emit all direct USE statements from the function
-  for (const auto &preservedStmt : funit.preservedUseStmts) {
-    if (emittedModules.contains(preservedStmt.moduleName))
-      continue;
-
-    emitUseStmt(preservedStmt, scope);
-    emittedModules.insert(preservedStmt.moduleName);
+  for (const auto &name : stmt.onlyNames) {
+    std::string mangledName = getMangledName(name);
+    if (!mangledName.empty())
+      onlySymbolAttrs.push_back(
+          mlir::FlatSymbolRefAttr::get(context, mangledName));
   }
 
-  // Second pass: Emit transitive USE statements
-  for (const auto &preservedStmt : funit.preservedUseStmts) {
-    // If the USE statement has an ONLY clause, skip transitive emission
-    if (preservedStmt.onlyNames.empty())
-      emitTransitiveUses(preservedStmt.moduleName);
+  for (const auto &local : stmt.renames) {
+    std::string mangledName = getMangledName(local);
+    if (!mangledName.empty()) {
+      auto localAttr = mlir::StringAttr::get(context, local);
+      auto symbolRef = mlir::FlatSymbolRefAttr::get(context, mangledName);
+      renameAttrs.push_back(
+          fir::UseRenameAttr::get(context, localAttr, symbolRef));
+    }
   }
+
+  mlir::ArrayAttr onlySymbolsAttr =
+      onlySymbolAttrs.empty() ? mlir::ArrayAttr()
+                              : mlir::ArrayAttr::get(context, onlySymbolAttrs);
+  mlir::ArrayAttr renamesAttr =
+      renameAttrs.empty() ? mlir::ArrayAttr()
+                          : mlir::ArrayAttr::get(context, renameAttrs);
+
+  fir::UseStmtOp::create(builder, loc, moduleNameAttr, onlySymbolsAttr,
+                         renamesAttr);
+}
+
+/// Emit fir.module_debug_imports for USE statements in a module.
+static void
+emitModuleDebugImports(Fortran::lower::AbstractConverter &converter,
+                       mlir::OpBuilder &builder, mlir::Location loc,
+                       const Fortran::lower::pft::ModuleLikeUnit &mod) {
+  if (!converter.getLoweringOptions().getPreserveUseDebugInfo())
+    return;
+  if (mod.preservedUseStmts.empty())
+    return;
+
+  const Fortran::semantics::Scope &modScope = mod.getScope();
+  const Fortran::semantics::Symbol *modSym = modScope.symbol();
+  if (!modSym)
+    return;
+
+  mlir::ModuleOp mlirModule = converter.getModuleOp();
+  mlir::OpBuilder::InsertionGuard guard(builder);
+  builder.setInsertionPoint(mlirModule.getBody(), mlirModule.getBody()->end());
+
+  auto op = fir::ModuleDebugImportsOp::create(
+      builder, loc,
+      mlir::StringAttr::get(builder.getContext(), modSym->name().ToString()));
+  mlir::Region &region = op.getUses();
+  mlir::Block *block = new mlir::Block();
+  region.push_back(block);
+  builder.setInsertionPointToStart(block);
+  for (const auto &stmt : mod.preservedUseStmts)
+    emitUseStmtOp(converter, builder, loc, stmt, modScope);
+  fir::FirEndOp::create(builder, loc);
+}
+
+/// Emit `fir.use_stmt` operations for USE statements that appear in the given
+/// function unit.
+static void
+emitUseStatementsFromFunit(Fortran::lower::AbstractConverter &converter,
+                           mlir::OpBuilder &builder, mlir::Location loc,
+                           const Fortran::lower::pft::FunctionLikeUnit &funit) {
+  const Fortran::semantics::Scope &scope = funit.getScope();
+  for (const auto &preservedStmt : funit.preservedUseStmts)
+    emitUseStmtOp(converter, builder, loc, preservedStmt, scope);
 }
 
 /// Helper class to generate the runtime type info global data and the
@@ -554,7 +516,6 @@ public:
 
   /// Convert the PFT to FIR.
   void run(Fortran::lower::pft::Program &pft) {
-    currentPft = &pft;
     // Preliminary translation pass.
 
     // Lower common blocks, taking into account initialization and the largest
@@ -1400,9 +1361,6 @@ private:
   FirConverter() = delete;
   FirConverter(const FirConverter &) = delete;
   FirConverter &operator=(const FirConverter &) = delete;
-
-  /// Current PFT being processed (for finding modules with USE statements)
-  Fortran::lower::pft::Program *currentPft{nullptr};
 
   //===--------------------------------------------------------------------===//
   // Helper member functions
@@ -6614,8 +6572,7 @@ private:
     mapDummiesAndResults(funit, callee);
 
     // Emit USE statement operations for debug info generation
-    emitUseStatementsFromFunit(*this, *builder, toLocation(), funit,
-                               currentPft);
+    emitUseStatementsFromFunit(*this, *builder, toLocation(), funit);
 
     // Map host associated symbols from parent procedure if any.
     if (funit.parentHasHostAssoc())
@@ -6974,6 +6931,7 @@ private:
   /// declarative construct.
   void lowerModuleDeclScope(Fortran::lower::pft::ModuleLikeUnit &mod) {
     setCurrentPosition(mod.getStartingSourceLoc());
+    emitModuleDebugImports(*this, *builder, toLocation(), mod);
     auto &scopeVariableListMap =
         Fortran::lower::pft::getScopeVariableListMap(mod);
     for (const auto &var : Fortran::lower::pft::getScopeVariableList(

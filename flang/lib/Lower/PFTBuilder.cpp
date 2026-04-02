@@ -224,7 +224,7 @@ public:
       return;
 
     // For function-like units, only process USE statements in specification
-    // part For module-like units, process USE statements anywhere in the module
+    // part.
     if (currentFunctionUnit && specificationPartLevel == 0)
       return;
 
