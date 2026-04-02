@@ -191,21 +191,33 @@ void AArch64PointerAuth::authenticateLR(
     auto &AFL = *static_cast<const AArch64FrameLowering *>(
         MF.getSubtarget().getFrameLowering());
     int64_t FPDiff = AFL.getArgumentStackToRestore(MF, MBB);
+    unsigned AutOpc = UseBKey ? AArch64::AUTIBSP : AArch64::AUTIASP;
 
-    if (MFnI->branchProtectionPAuthLR() && Subtarget->hasPAuthLR()) {
-      // FEAT_PAuth_LR: use AUTIASPPCi or AUTIA171615 for FPDiff != 0.
-      assert(PACSym && "No PAC instruction to refer to");
-      emitPACCFI(MBB, MBBI, MachineInstr::FrameDestroy, EmitAsyncCFI);
-      if (FPDiff != 0) {
-        // x17=LR, x16=entry_SP, x15=PACSym. Result in x17 → LR.
-        BuildMI(MBB, MBBI, DL, TII->get(AArch64::ORRXrs), AArch64::X17)
-            .addReg(AArch64::XZR)
-            .addReg(AArch64::LR)
-            .addImm(0)
+    if (FPDiff != 0) {
+      // Use AUTI[AB]1716 variants: x17=LR, x16=entry_SP.
+      BuildMI(MBB, MBBI, DL, TII->get(AArch64::ORRXrs), AArch64::X17)
+          .addReg(AArch64::XZR)
+          .addReg(AArch64::LR)
+          .addImm(0)
+          .setMIFlag(MachineInstr::FrameDestroy);
+      emitFrameOffset(MBB, MBBI, DL, AArch64::X16, AArch64::SP,
+                      StackOffset::getFixed(-FPDiff), TII,
+                      MachineInstr::FrameDestroy);
+
+      if (!MFnI->branchProtectionPAuthLR()) {
+        // Plain pac-ret: AUTIA1716, no PACSym needed.
+        AutOpc = UseBKey ? AArch64::AUTIB1716 : AArch64::AUTIA1716;
+        BuildMI(MBB, MBBI, DL, TII->get(AutOpc))
             .setMIFlag(MachineInstr::FrameDestroy);
-        emitFrameOffset(MBB, MBBI, DL, AArch64::X16, AArch64::SP,
-                        StackOffset::getFixed(-FPDiff), TII,
-                        MachineInstr::FrameDestroy);
+        emitPACCFI(MBB, MBBI, MachineInstr::FrameDestroy, EmitAsyncCFI);
+      } else {
+        // PAuthLR: materialize PACSym into x15, then authenticate.
+        // With hasPAuthLR: use AUTIA171615 directly.
+        // Without: PACM + AUTIA1716 (PACM makes 1716 behave as 171615
+        // on PAuthLR hardware; on older hardware PACM is a NOP and x15
+        // is ignored).
+        assert(PACSym && "No PAC instruction to refer to");
+        emitPACCFI(MBB, MBBI, MachineInstr::FrameDestroy, EmitAsyncCFI);
         BuildMI(MBB, MBBI, DL, TII->get(AArch64::ADRP), AArch64::X15)
             .addSym(PACSym, AArch64II::MO_PAGE)
             .setMIFlag(MachineInstr::FrameDestroy);
@@ -214,88 +226,46 @@ void AArch64PointerAuth::authenticateLR(
             .addSym(PACSym, AArch64II::MO_PAGEOFF | AArch64II::MO_NC)
             .addImm(0)
             .setMIFlag(MachineInstr::FrameDestroy);
-        unsigned AutOpc = UseBKey ? AArch64::AUTIB171615 : AArch64::AUTIA171615;
-        BuildMI(MBB, MBBI, DL, TII->get(AutOpc))
-            .setMIFlag(MachineInstr::FrameDestroy);
-        BuildMI(MBB, MBBI, DL, TII->get(AArch64::ORRXrs), AArch64::LR)
-            .addReg(AArch64::XZR)
-            .addReg(AArch64::X17)
-            .addImm(0)
-            .setMIFlag(MachineInstr::FrameDestroy);
-      } else {
+
+        AutOpc = UseBKey ? AArch64::AUTIB171615 : AArch64::AUTIA171615;
+        if (Subtarget->hasPAuthLR()) {
+          BuildMI(MBB, MBBI, DL, TII->get(AutOpc))
+              .setMIFlag(MachineInstr::FrameDestroy);
+        } else {
+          BuildMI(MBB, MBBI, DL, TII->get(AArch64::PACM))
+              .setMIFlag(MachineInstr::FrameDestroy);
+          AutOpc = UseBKey ? AArch64::AUTIB1716 : AArch64::AUTIA1716;
+          BuildMI(MBB, MBBI, DL, TII->get(AutOpc))
+              .setMIFlag(MachineInstr::FrameDestroy);
+        }
+      }
+
+      BuildMI(MBB, MBBI, DL, TII->get(AArch64::ORRXrs), AArch64::LR)
+          .addReg(AArch64::XZR)
+          .addReg(AArch64::X17)
+          .addImm(0)
+          .setMIFlag(MachineInstr::FrameDestroy);
+    } else {
+      if (MFnI->branchProtectionPAuthLR() && Subtarget->hasPAuthLR()) {
+        assert(PACSym && "No PAC instruction to refer to");
+        emitPACCFI(MBB, MBBI, MachineInstr::FrameDestroy, EmitAsyncCFI);
         BuildMI(MBB, MBBI, DL,
                 TII->get(UseBKey ? AArch64::AUTIBSPPCi : AArch64::AUTIASPPCi))
             .addSym(PACSym)
             .setMIFlag(MachineInstr::FrameDestroy);
-      }
-    } else if (MFnI->branchProtectionPAuthLR()) {
-      // NOP-space PAuthLR compat. PACM makes AUTIA1716 behave as
-      // AUTIA171615 on PAuthLR hardware; on older hardware PACM is a
-      // NOP and x15 is ignored.
-      assert(PACSym && "No PAC instruction to refer to");
-      emitPACCFI(MBB, MBBI, MachineInstr::FrameDestroy, EmitAsyncCFI);
-      if (FPDiff != 0) {
-        // x17=LR, x16=entry_SP, x15=PACSym. PACM + AUTIA1716.
-        BuildMI(MBB, MBBI, DL, TII->get(AArch64::ORRXrs), AArch64::X17)
-            .addReg(AArch64::XZR)
-            .addReg(AArch64::LR)
-            .addImm(0)
-            .setMIFlag(MachineInstr::FrameDestroy);
-        emitFrameOffset(MBB, MBBI, DL, AArch64::X16, AArch64::SP,
-                        StackOffset::getFixed(-FPDiff), TII,
-                        MachineInstr::FrameDestroy);
-        BuildMI(MBB, MBBI, DL, TII->get(AArch64::ADRP), AArch64::X15)
-            .addSym(PACSym, AArch64II::MO_PAGE)
-            .setMIFlag(MachineInstr::FrameDestroy);
-        BuildMI(MBB, MBBI, DL, TII->get(AArch64::ADDXri), AArch64::X15)
-            .addReg(AArch64::X15)
-            .addSym(PACSym, AArch64II::MO_PAGEOFF | AArch64II::MO_NC)
-            .addImm(0)
-            .setMIFlag(MachineInstr::FrameDestroy);
-        BuildMI(MBB, MBBI, DL, TII->get(AArch64::PACM))
-            .setMIFlag(MachineInstr::FrameDestroy);
-        unsigned AutOpc = UseBKey ? AArch64::AUTIB1716 : AArch64::AUTIA1716;
-        BuildMI(MBB, MBBI, DL, TII->get(AutOpc))
-            .setMIFlag(MachineInstr::FrameDestroy);
-        BuildMI(MBB, MBBI, DL, TII->get(AArch64::ORRXrs), AArch64::LR)
-            .addReg(AArch64::XZR)
-            .addReg(AArch64::X17)
-            .addImm(0)
-            .setMIFlag(MachineInstr::FrameDestroy);
-      } else {
+      } else if (MFnI->branchProtectionPAuthLR()) {
+        assert(PACSym && "No PAC instruction to refer to");
         emitPACSymOffsetIntoX16(*TII, MBB, MBBI, DL, PACSym);
         BuildMI(MBB, MBBI, DL, TII->get(AArch64::PACM))
             .setMIFlag(MachineInstr::FrameDestroy);
-        BuildMI(MBB, MBBI, DL,
-                TII->get(UseBKey ? AArch64::AUTIBSP : AArch64::AUTIASP))
-            .setMIFlag(MachineInstr::FrameDestroy);
-      }
-    } else {
-      // Plain pac-ret: use AUTIA1716 when FPDiff != 0.
-      if (FPDiff != 0) {
-        // x17=LR, x16=entry_SP. No PACSym needed.
-        BuildMI(MBB, MBBI, DL, TII->get(AArch64::ORRXrs), AArch64::X17)
-            .addReg(AArch64::XZR)
-            .addReg(AArch64::LR)
-            .addImm(0)
-            .setMIFlag(MachineInstr::FrameDestroy);
-        emitFrameOffset(MBB, MBBI, DL, AArch64::X16, AArch64::SP,
-                        StackOffset::getFixed(-FPDiff), TII,
-                        MachineInstr::FrameDestroy);
-        unsigned AutOpc = UseBKey ? AArch64::AUTIB1716 : AArch64::AUTIA1716;
+        emitPACCFI(MBB, MBBI, MachineInstr::FrameDestroy, EmitAsyncCFI);
         BuildMI(MBB, MBBI, DL, TII->get(AutOpc))
             .setMIFlag(MachineInstr::FrameDestroy);
-        BuildMI(MBB, MBBI, DL, TII->get(AArch64::ORRXrs), AArch64::LR)
-            .addReg(AArch64::XZR)
-            .addReg(AArch64::X17)
-            .addImm(0)
-            .setMIFlag(MachineInstr::FrameDestroy);
       } else {
-        BuildMI(MBB, MBBI, DL,
-                TII->get(UseBKey ? AArch64::AUTIBSP : AArch64::AUTIASP))
+        BuildMI(MBB, MBBI, DL, TII->get(AutOpc))
             .setMIFlag(MachineInstr::FrameDestroy);
+        emitPACCFI(MBB, MBBI, MachineInstr::FrameDestroy, EmitAsyncCFI);
       }
-      emitPACCFI(MBB, MBBI, MachineInstr::FrameDestroy, EmitAsyncCFI);
     }
 
     if (NeedsWinCFI) {
