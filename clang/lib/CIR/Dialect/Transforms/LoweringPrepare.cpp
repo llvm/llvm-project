@@ -8,8 +8,8 @@
 
 #include "PassDetail.h"
 #include "mlir/IR/Attributes.h"
-#include "mlir/IR/IRMapping.h"
 #include "mlir/IR/BuiltinAttributeInterfaces.h"
+#include "mlir/IR/IRMapping.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Attrs.inc"
 #include "clang/AST/Mangle.h"
