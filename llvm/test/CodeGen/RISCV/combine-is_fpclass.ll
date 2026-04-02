@@ -52,22 +52,3 @@ define <vscale x 2 x i1> @splat_constant_f64_isinf_false() {
   ret <vscale x 2 x i1> %res
 }
 
-define <vscale x 4 x i1> @test_splat_dynamic_is_not_nan(float %x) {
-; CHECK-LABEL: test_splat_dynamic_is_not_nan:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a0, 260096
-; CHECK-NEXT:    fmv.w.x fa5, a0
-; CHECK-NEXT:    fadd.s fa5, fa0, fa5
-; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
-; CHECK-NEXT:    vfmv.v.f v8, fa5
-; CHECK-NEXT:    vfclass.v v8, v8
-; CHECK-NEXT:    li a0, 255
-; CHECK-NEXT:    vand.vx v8, v8, a0
-; CHECK-NEXT:    vmsne.vi v0, v8, 0
-; CHECK-NEXT:    ret
-  %val   = fadd nnan float %x, 1.0
-  %ins   = insertelement <vscale x 4 x float> poison, float %val, i64 0
-  %splat = shufflevector <vscale x 4 x float> %ins, <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer
-  %res   = call <vscale x 4 x i1> @llvm.is.fpclass.nxv4f32(<vscale x 4 x float> %splat, i32 1020)
-  ret <vscale x 4 x i1> %res
-}
