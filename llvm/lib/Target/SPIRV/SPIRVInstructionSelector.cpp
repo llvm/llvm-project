@@ -6114,16 +6114,11 @@ bool SPIRVInstructionSelector::loadVec3BuiltinInputID(
   MIRBuilder.getMRI()->setType(NewRegister, LLT::pointer(0, 64));
   GR.assignSPIRVTypeToVReg(PtrType, NewRegister, MIRBuilder.getMF());
 
-  // Emit the OpVariable into the entry block to ensure the def dominates
-  // all uses across all MBBs.
-  MachineBasicBlock &EntryBB = MIRBuilder.getMF().front();
-  MachineIRBuilder GVBuilder(MIRBuilder.getState());
-  if (&GVBuilder.getMBB() != &EntryBB)
-    GVBuilder.setInsertPt(EntryBB, EntryBB.getFirstTerminator());
-
+  // Build global variable with the necessary decorations for the input ID
+  // builtin variable.
   Register Variable = GR.buildGlobalVariable(
       NewRegister, PtrType, getLinkStringForBuiltIn(BuiltInValue), nullptr,
-      SPIRV::StorageClass::Input, nullptr, true, std::nullopt, GVBuilder,
+      SPIRV::StorageClass::Input, nullptr, true, std::nullopt, MIRBuilder,
       false);
 
   // Create new register for loading value.
@@ -6172,16 +6167,11 @@ bool SPIRVInstructionSelector::loadBuiltinInputID(
                    GR.getPointerSize()));
   GR.assignSPIRVTypeToVReg(PtrType, NewRegister, MIRBuilder.getMF());
 
-  // Emit the OpVariable into the entry block to ensure the def dominates
-  // all uses across all MBBs.
-  MachineBasicBlock &EntryBB = MIRBuilder.getMF().front();
-  MachineIRBuilder GVBuilder(MIRBuilder.getState());
-  if (&GVBuilder.getMBB() != &EntryBB)
-    GVBuilder.setInsertPt(EntryBB, EntryBB.getFirstTerminator());
-
+  // Build global variable with the necessary decorations for the input ID
+  // builtin variable.
   Register Variable = GR.buildGlobalVariable(
       NewRegister, PtrType, getLinkStringForBuiltIn(BuiltInValue), nullptr,
-      SPIRV::StorageClass::Input, nullptr, true, std::nullopt, GVBuilder,
+      SPIRV::StorageClass::Input, nullptr, true, std::nullopt, MIRBuilder,
       false);
 
   // Load uint value from the global variable.
