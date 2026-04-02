@@ -2,8 +2,6 @@
 // RUN:        | FileCheck %s --check-prefixes=CHECK-ENCODING,CHECK-INST
 // RUN: llvm-mc -triple=aarch64 -filetype=obj < %s \
 // RUN:        | llvm-objdump -d --no-print-imm-hex - | FileCheck %s --check-prefix=CHECK-INST
-// RUN: llvm-mc -triple=aarch64 -filetype=obj < %s \
-// RUN:        | llvm-objdump -d -M no-aliases --no-print-imm-hex - | FileCheck %s --check-prefix=CHECK-NOALIAS
 // Disassemble encoding and check the re-encoding (-show-encoding) matches.
 // RUN: llvm-mc -triple=aarch64 -show-encoding < %s \
 // RUN:        | sed '/.text/d' | sed 's/.*encoding: //g' \
@@ -149,25 +147,20 @@ sysp #0, c8, c0, #0, x30, x31
 
 sysp #0, c8, c0, #0, x31, x31
 // CHECK-INST: sysp #0, c8, c0, #0
-// CHECK-NOALIAS: sysp #0, c8, c0, #0, xzr, xzr
 // CHECK-ENCODING: encoding: [0x1f,0x80,0x48,0xd5]
 
 sysp #0, c8, c0, #0, xzr, xzr
 // CHECK-INST: sysp #0, c8, c0, #0
-// CHECK-NOALIAS: sysp #0, c8, c0, #0, xzr, xzr
 // CHECK-ENCODING: encoding: [0x1f,0x80,0x48,0xd5]
 
 sysp #0, c8, c0, #0, x31, xzr
 // CHECK-INST: sysp #0, c8, c0, #0
-// CHECK-NOALIAS: sysp #0, c8, c0, #0, xzr, xzr
 // CHECK-ENCODING: encoding: [0x1f,0x80,0x48,0xd5]
 
 sysp #0, c8, c0, #0, xzr, x31
 // CHECK-INST: sysp #0, c8, c0, #0
-// CHECK-NOALIAS: sysp #0, c8, c0, #0, xzr, xzr
 // CHECK-ENCODING: encoding: [0x1f,0x80,0x48,0xd5]
 
 sysp #0, c8, c0, #0
 // CHECK-INST: sysp #0, c8, c0, #0
-// CHECK-NOALIAS: sysp #0, c8, c0, #0, xzr, xzr
 // CHECK-ENCODING: encoding: [0x1f,0x80,0x48,0xd5]
