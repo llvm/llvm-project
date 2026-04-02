@@ -177,17 +177,21 @@ class Builtin {
 
 class AtomicBuiltin : Builtin;
 
-class LibBuiltin<string header, string languages = "ALL_LANGUAGES"> : Builtin {
+class LibBuiltinBase<string header> : Builtin {
   string Header = header;
-  string Languages = languages;
   bit AddBuiltinPrefixedAlias = 0;
   bit OnlyBuiltinPrefixedAliasIsConstexpr = 0;
+}
+
+class LibBuiltin<string header, string languages = "ALL_LANGUAGES"> : LibBuiltinBase<header> {
+  string Languages = languages;
 }
 
 class MSLibBuiltin<string header> : LibBuiltin<header, "ALL_MS_LANGUAGES">;
 class GNULibBuiltin<string header> : LibBuiltin<header, "ALL_GNU_LANGUAGES">;
 class ObjCLibBuiltin<string header> : LibBuiltin<header, "OBJC_LANG">;
 class CxxLibBuiltin<string header> : LibBuiltin<header, "CXX_LANG">;
+class C99LibBuiltin<string header> : LibBuiltin<header, "C99_LANG">;
 
 class LangBuiltin<string languages> : Builtin {
   string Languages = languages;
