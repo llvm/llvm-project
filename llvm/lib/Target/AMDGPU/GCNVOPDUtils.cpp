@@ -37,7 +37,7 @@ using namespace llvm;
 // Check if MI is a VOP3P instruction with operands that satisfy the constraints
 // for mapping it to a VOP2/VOPD opcode: no modifiers, no clamp, src1 and src2
 // are registers (src0 can be register or literal), and src2 is same as dst.
-static bool canMapVOP3PToVOPD(const MachineInstr &MI) {
+static bool canMapVOP3PToVOPD(const SIInstrInfo &TII, const MachineInstr &MI) {
   unsigned Opc = MI.getOpcode();
   if (Opc != AMDGPU::V_DOT2_F32_F16 && Opc != AMDGPU::V_DOT2_F32_BF16)
     return false;
@@ -49,7 +49,9 @@ static bool canMapVOP3PToVOPD(const MachineInstr &MI) {
   if (MI.getOperand(Src1ModsIdx).getImm() != SISrcMods::OP_SEL_1)
     return false;
   int16_t Src1Idx = getNamedOperandIdx(Opc, AMDGPU::OpName::src1);
-  if (!MI.getOperand(Src1Idx).isReg())
+  const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
+  if (!MI.getOperand(Src1Idx).isReg() ||
+      !TII.getRegisterInfo().isVGPR(MRI, MI.getOperand(Src1Idx).getReg()))
     return false;
   int16_t Src2ModsIdx = getNamedOperandIdx(Opc, AMDGPU::OpName::src2_modifiers);
   if (MI.getOperand(Src2ModsIdx).getImm() != SISrcMods::OP_SEL_1)
@@ -74,8 +76,8 @@ bool llvm::checkVOPDRegConstraints(const SIInstrInfo &TII,
 
   if (IsVOPD3 && !ST.hasVOPD3())
     return false;
-  if (!IsVOPD3 && ((TII.isVOP3(MIX) && !canMapVOP3PToVOPD(MIX)) ||
-                   (TII.isVOP3(MIY) && !canMapVOP3PToVOPD(MIY))))
+  if (!IsVOPD3 && ((TII.isVOP3(MIX) && !canMapVOP3PToVOPD(TII, MIX)) ||
+                   (TII.isVOP3(MIY) && !canMapVOP3PToVOPD(TII, MIY))))
     return false;
   if (TII.isDPP(MIX) || TII.isDPP(MIY))
     return false;

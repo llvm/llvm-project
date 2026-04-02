@@ -636,6 +636,210 @@ define float @v_fdot2_dual(<2 x half> %a, <2 x half> %b, float %c, <2 x half> %d
   ret float %r
 }
 
+define float @v_fdot2_dual_sgpr_src0_x(<2 x half> inreg %a, <2 x half> %b, float %c, <2 x half> %d, <2 x half> %e, float %f) {
+; GFX906-LABEL: v_fdot2_dual_sgpr_src0_x:
+; GFX906:  ; %bb.0:
+; GFX906:    v_dot2_f32_f16 v1, s16, v0, v1
+; GFX906:    v_dot2_f32_f16 v4, v2, v3, v4
+; GFX906:    v_add_f32_e32 v0, v1, v4
+;
+; GFX950-LABEL: v_fdot2_dual_sgpr_src0_x:
+; GFX950:  ; %bb.0:
+; GFX950:    v_dot2c_f32_f16_e32 v1, s0, v0
+; GFX950:    v_dot2c_f32_f16_e32 v4, v2, v3
+; GFX950:    v_add_f32_e32 v0, v1, v4
+;
+; GFX10-LABEL: v_fdot2_dual_sgpr_src0_x:
+; GFX10:  ; %bb.0:
+; GFX10:    v_dot2c_f32_f16 v1, s16, v0
+; GFX10:    v_dot2c_f32_f16 v4, v2, v3
+; GFX10:    v_add_f32_e32 v0, v1, v4
+;
+; GFX11PLUS-LABEL: v_fdot2_dual_sgpr_src0_x:
+; GFX11PLUS:  ; %bb.0:
+; GFX11PLUS:    v_dual_dot2acc_f32_f16 v1, s0, v0 :: v_dual_dot2acc_f32_f16 v4, v2, v3
+; GFX11PLUS:    v_add_f32_e32 v0, v1, v4
+  %r0 = call float @llvm.amdgcn.fdot2(<2 x half> %a, <2 x half> %b, float %c, i1 false)
+  %r1 = call float @llvm.amdgcn.fdot2(<2 x half> %d, <2 x half> %e, float %f, i1 false)
+  %r = fadd float %r0, %r1
+  ret float %r
+}
+
+define float @v_fdot2_dual_sgpr_src1_x(<2 x half> %a, <2 x half> inreg %b, float %c, <2 x half> %d, <2 x half> %e, float %f) {
+; GFX906-LABEL: v_fdot2_dual_sgpr_src1_x:
+; GFX906:  ; %bb.0:
+; GFX906:    v_dot2_f32_f16 v1, v0, s16, v1
+; GFX906:    v_dot2_f32_f16 v4, v2, v3, v4
+; GFX906:    v_add_f32_e32 v0, v1, v4
+;
+; GFX950-LABEL: v_fdot2_dual_sgpr_src1_x:
+; GFX950:  ; %bb.0:
+; GFX950:    v_dot2c_f32_f16_e32 v1, s0, v0
+; GFX950:    v_dot2c_f32_f16_e32 v4, v2, v3
+; GFX950:    v_add_f32_e32 v0, v1, v4
+;
+; GFX10-LABEL: v_fdot2_dual_sgpr_src1_x:
+; GFX10:  ; %bb.0:
+; GFX10:    v_dot2c_f32_f16 v1, s16, v0
+; GFX10:    v_dot2c_f32_f16 v4, v2, v3
+; GFX10:    v_add_f32_e32 v0, v1, v4
+;
+; GFX11-LABEL: v_fdot2_dual_sgpr_src1_x:
+; GFX11:  ; %bb.0:
+; GFX11:    v_dual_dot2acc_f32_f16 v1, s0, v0 :: v_dual_dot2acc_f32_f16 v4, v2, v3
+; GFX11:    v_add_f32_e32 v0, v1, v4
+;
+; GFX1170-GFX12-LABEL: v_fdot2_dual_sgpr_src1_x:
+; GFX1170-GFX12:  ; %bb.0:
+; GFX1170-GFX12:    v_dot2_f32_f16 v1, v0, s0, v1
+; GFX1170-GFX12:    v_dot2_f32_f16 v4, v2, v3, v4
+; GFX1170-GFX12:    v_add_f32_e32 v0, v1, v4
+  %r0 = call float @llvm.amdgcn.fdot2(<2 x half> %a, <2 x half> %b, float %c, i1 false)
+  %r1 = call float @llvm.amdgcn.fdot2(<2 x half> %d, <2 x half> %e, float %f, i1 false)
+  %r = fadd float %r0, %r1
+  ret float %r
+}
+
+define float @v_fdot2_dual_sgpr_src2_x(<2 x half> %a, <2 x half> %b, float inreg %c, <2 x half> %d, <2 x half> %e, float %f) {
+; GFX906-LABEL: v_fdot2_dual_sgpr_src2_x:
+; GFX906:  ; %bb.0:
+; GFX906:    v_dot2_f32_f16 v0, v0, v1, s16
+; GFX906:    v_dot2_f32_f16 v4, v2, v3, v4
+; GFX906:    v_add_f32_e32 v0, v0, v4
+;
+; GFX950-LABEL: v_fdot2_dual_sgpr_src2_x:
+; GFX950:  ; %bb.0:
+; GFX950:    v_mov_b32_e32 v5, s0
+; GFX950:    v_dot2c_f32_f16_e32 v5, v0, v1
+; GFX950:    v_dot2c_f32_f16_e32 v4, v2, v3
+; GFX950:    v_add_f32_e32 v0, v5, v4
+;
+; GFX10-LABEL: v_fdot2_dual_sgpr_src2_x:
+; GFX10:  ; %bb.0:
+; GFX10:    v_mov_b32_e32 v5, s16
+; GFX10:    v_dot2c_f32_f16 v4, v2, v3
+; GFX10:    v_dot2c_f32_f16 v5, v0, v1
+; GFX10:    v_add_f32_e32 v0, v5, v4
+;
+; GFX11-LABEL: v_fdot2_dual_sgpr_src2_x:
+; GFX11:  ; %bb.0:
+; GFX11:    v_dual_mov_b32 v5, s0 :: v_dual_dot2acc_f32_f16 v4, v2, v3
+; GFX11:    v_dot2acc_f32_f16 v5, v0, v1
+; GFX11:    v_add_f32_e32 v0, v5, v4
+;
+; GFX1170-GFX12-LABEL: v_fdot2_dual_sgpr_src2_x:
+; GFX1170-GFX12:  ; %bb.0:
+; GFX1170-GFX12:    v_dot2_f32_f16 v0, v0, v1, s0
+; GFX1170-GFX12:    v_dot2_f32_f16 v4, v2, v3, v4
+; GFX1170-GFX12:    v_add_f32_e32 v0, v0, v4
+  %r0 = call float @llvm.amdgcn.fdot2(<2 x half> %a, <2 x half> %b, float %c, i1 false)
+  %r1 = call float @llvm.amdgcn.fdot2(<2 x half> %d, <2 x half> %e, float %f, i1 false)
+  %r = fadd float %r0, %r1
+  ret float %r
+}
+
+define float @v_fdot2_dual_sgpr_src0_y(<2 x half> %a, <2 x half> %b, float %c, <2 x half> inreg %d, <2 x half> %e, <2 x half> %vopd_dst_pad, float %f) {
+; GFX906-LABEL: v_fdot2_dual_sgpr_src0_y:
+; GFX906:  ; %bb.0:
+; GFX906:    v_dot2_f32_f16 v2, v0, v1, v2
+; GFX906:    v_dot2_f32_f16 v5, s16, v3, v5
+; GFX906:    v_add_f32_e32 v0, v2, v5
+;
+; GFX950-LABEL: v_fdot2_dual_sgpr_src0_y:
+; GFX950:  ; %bb.0:
+; GFX950:    v_dot2c_f32_f16_e32 v2, v0, v1
+; GFX950:    v_dot2c_f32_f16_e32 v5, s0, v3
+; GFX950:    v_add_f32_e32 v0, v2, v5
+;
+; GFX10-LABEL: v_fdot2_dual_sgpr_src0_y:
+; GFX10:  ; %bb.0:
+; GFX10:    v_dot2c_f32_f16 v2, v0, v1
+; GFX10:    v_dot2c_f32_f16 v5, s16, v3
+; GFX10:    v_add_f32_e32 v0, v2, v5
+;
+; GFX11PLUS-LABEL: v_fdot2_dual_sgpr_src0_y:
+; GFX11PLUS:  ; %bb.0:
+; GFX11PLUS:    v_dual_dot2acc_f32_f16 v2, v0, v1 :: v_dual_dot2acc_f32_f16 v5, s0, v3
+; GFX11PLUS:    v_add_f32_e32 v0, v2, v5
+  %r0 = call float @llvm.amdgcn.fdot2(<2 x half> %a, <2 x half> %b, float %c, i1 false)
+  %r1 = call float @llvm.amdgcn.fdot2(<2 x half> %d, <2 x half> %e, float %f, i1 false)
+  %r = fadd float %r0, %r1
+  ret float %r
+}
+
+define float @v_fdot2_dual_sgpr_src1_y(<2 x half> %a, <2 x half> %b, float %c, <2 x half> %d, <2 x half> %vopd_dst_pad, <2 x half> inreg %e, float %f) {
+; GFX906-LABEL: v_fdot2_dual_sgpr_src1_y:
+; GFX906:  ; %bb.0:
+; GFX906:    v_dot2_f32_f16 v2, v0, v1, v2
+; GFX906:    v_dot2_f32_f16 v5, v3, s16, v5
+; GFX906:    v_add_f32_e32 v0, v2, v5
+;
+; GFX950-LABEL: v_fdot2_dual_sgpr_src1_y:
+; GFX950:  ; %bb.0:
+; GFX950:    v_dot2c_f32_f16_e32 v2, v0, v1
+; GFX950:    v_dot2c_f32_f16_e32 v5, s0, v3
+; GFX950:    v_add_f32_e32 v0, v2, v5
+;
+; GFX10-LABEL: v_fdot2_dual_sgpr_src1_y:
+; GFX10:  ; %bb.0:
+; GFX10:    v_dot2c_f32_f16 v2, v0, v1
+; GFX10:    v_dot2c_f32_f16 v5, s16, v3
+; GFX10:    v_add_f32_e32 v0, v2, v5
+;
+; GFX11-LABEL: v_fdot2_dual_sgpr_src1_y:
+; GFX11:  ; %bb.0:
+; GFX11:    v_dual_dot2acc_f32_f16 v2, v0, v1 :: v_dual_dot2acc_f32_f16 v5, s0, v3
+; GFX11:    v_add_f32_e32 v0, v2, v5
+;
+; GFX1170-GFX12-LABEL: v_fdot2_dual_sgpr_src1_y:
+; GFX1170-GFX12:  ; %bb.0:
+; GFX1170-GFX12:    v_dot2_f32_f16 v2, v0, v1, v2
+; GFX1170-GFX12:    v_dot2_f32_f16 v5, v3, s0, v5
+; GFX1170-GFX12:    v_add_f32_e32 v0, v2, v5
+  %r0 = call float @llvm.amdgcn.fdot2(<2 x half> %a, <2 x half> %b, float %c, i1 false)
+  %r1 = call float @llvm.amdgcn.fdot2(<2 x half> %d, <2 x half> %e, float %f, i1 false)
+  %r = fadd float %r0, %r1
+  ret float %r
+}
+
+define float @v_fdot2_dual_sgpr_src2_y(<2 x half> %a, <2 x half> %b, float %c, <2 x half> %d, <2 x half> %e, float inreg %f) {
+; GFX906-LABEL: v_fdot2_dual_sgpr_src2_y:
+; GFX906:  ; %bb.0:
+; GFX906:    v_dot2_f32_f16 v2, v0, v1, v2
+; GFX906:    v_dot2_f32_f16 v0, v3, v4, s16
+; GFX906:    v_add_f32_e32 v0, v2, v0
+;
+; GFX950-LABEL: v_fdot2_dual_sgpr_src2_y:
+; GFX950:  ; %bb.0:
+; GFX950:    v_dot2c_f32_f16_e32 v2, v0, v1
+; GFX950:    v_mov_b32_e32 v0, s0
+; GFX950:    v_dot2c_f32_f16_e32 v0, v3, v4
+; GFX950:    v_add_f32_e32 v0, v2, v0
+;
+; GFX10-LABEL: v_fdot2_dual_sgpr_src2_y:
+; GFX10:  ; %bb.0:
+; GFX10:    v_mov_b32_e32 v5, s16
+; GFX10:    v_dot2c_f32_f16 v2, v0, v1
+; GFX10:    v_dot2c_f32_f16 v5, v3, v4
+; GFX10:    v_add_f32_e32 v0, v2, v5
+;
+; GFX11-LABEL: v_fdot2_dual_sgpr_src2_y:
+; GFX11:  ; %bb.0:
+; GFX11:    v_dual_mov_b32 v5, s0 :: v_dual_dot2acc_f32_f16 v2, v0, v1
+; GFX11:    v_dot2acc_f32_f16 v5, v3, v4
+; GFX11:    v_add_f32_e32 v0, v2, v5
+;
+; GFX1170-GFX12-LABEL: v_fdot2_dual_sgpr_src2_y:
+; GFX1170-GFX12:  ; %bb.0:
+; GFX1170-GFX12:    v_dot2_f32_f16 v2, v0, v1, v2
+; GFX1170-GFX12:    v_dot2_f32_f16 v0, v3, v4, s0
+; GFX1170-GFX12:    v_add_f32_e32 v0, v2, v0
+  %r0 = call float @llvm.amdgcn.fdot2(<2 x half> %a, <2 x half> %b, float %c, i1 false)
+  %r1 = call float @llvm.amdgcn.fdot2(<2 x half> %d, <2 x half> %e, float %f, i1 false)
+  %r = fadd float %r0, %r1
+  ret float %r
+}
+
 define float @v_fdot2_neg_a_dual(<2 x half> %a, <2 x half> %b, float %c, <2 x half> %d, <2 x half> %e, float %f) {
 ; GFX906-LABEL: v_fdot2_neg_a_dual:
 ; GFX906:  ; %bb.0:
