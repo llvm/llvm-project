@@ -29,6 +29,7 @@ def CVrr : Operand<i32>,
 
 def cv_tuimm2 : TImmLeaf<XLenVT, [{return isUInt<2>(Imm);}]>;
 def cv_tuimm5 : TImmLeaf<XLenVT, [{return isUInt<5>(Imm);}]>;
+def cv_uimm5  : ImmLeaf<XLenVT, [{return isUInt<5>(Imm);}]>;
 def cv_uimm10 : ImmLeaf<XLenVT, [{return isUInt<10>(Imm);}]>;
 
 def CV_LO5: SDNodeXForm<imm, [{
@@ -871,3 +872,45 @@ let Predicates = [HasVendorXCVmac, IsRV32], AddedComplexity = 2 in {
   def : Pat<(i32 (sub GPR:$rd, (i32 (mul GPR:$rs1, GPR:$rs2)))),
             (CV_MSU GPR:$rd, GPR:$rs1, GPR:$rs2)>;
 }
+
+//===----------------------------------------------------------------------===//
+// XCValu Generic SelectionDAG patterns
+//===----------------------------------------------------------------------===//
+
+// ---- Immediate shift variants (RRI format) ----
+let Predicates = [HasVendorXCValu, IsRV32], AddedComplexity = 3 in {
+  // cv.addn rd, rs1, rs2, imm5  →  rd = (rs1 + rs2) >>> imm5 (arithmetic)
+  def : Pat<(i32 (sra (i32 (add GPR:$rs1, GPR:$rs2)), cv_uimm5:$imm)),
+            (CV_ADDN GPR:$rs1, GPR:$rs2, cv_uimm5:$imm)>;
+
+  // cv.addun rd, rs1, rs2, imm5  →  rd = (rs1 + rs2) >> imm5 (logical)
+  def : Pat<(i32 (srl (i32 (add GPR:$rs1, GPR:$rs2)), cv_uimm5:$imm)),
+            (CV_ADDUN GPR:$rs1, GPR:$rs2, cv_uimm5:$imm)>;
+
+  // cv.subn rd, rs1, rs2, imm5  →  rd = (rs1 - rs2) >>> imm5 (arithmetic)
+  def : Pat<(i32 (sra (i32 (sub GPR:$rs1, GPR:$rs2)), cv_uimm5:$imm)),
+            (CV_SUBN GPR:$rs1, GPR:$rs2, cv_uimm5:$imm)>;
+
+  // cv.subun rd, rs1, rs2, imm5  →  rd = (rs1 - rs2) >> imm5 (logical)
+  def : Pat<(i32 (srl (i32 (sub GPR:$rs1, GPR:$rs2)), cv_uimm5:$imm)),
+            (CV_SUBUN GPR:$rs1, GPR:$rs2, cv_uimm5:$imm)>;
+} // Predicates = [HasVendorXCValu, IsRV32]
+
+// ---- Register shift variants (NR format, tied rd) ----
+let Predicates = [HasVendorXCValu, IsRV32], AddedComplexity = 2 in {
+  // cv.addnr rd, rs1, rs2  →  rd = (rd + rs1) >> rs2 (arithmetic)
+  def : Pat<(i32 (sra (i32 (add GPR:$rd, GPR:$rs1)), GPR:$rs2)),
+            (CV_ADDNR GPR:$rd, GPR:$rs1, GPR:$rs2)>;
+
+  // cv.addunr rd, rs1, rs2  →  rd = (rd + rs1) >> rs2 (logical)
+  def : Pat<(i32 (srl (i32 (add GPR:$rd, GPR:$rs1)), GPR:$rs2)),
+            (CV_ADDUNR GPR:$rd, GPR:$rs1, GPR:$rs2)>;
+
+  // cv.subnr rd, rs1, rs2  →  rd = (rd - rs1) >> rs2 (arithmetic)
+  def : Pat<(i32 (sra (i32 (sub GPR:$rd, GPR:$rs1)), GPR:$rs2)),
+            (CV_SUBNR GPR:$rd, GPR:$rs1, GPR:$rs2)>;
+
+  // cv.subunr rd, rs1, rs2  →  rd = (rd - rs1) >> rs2 (logical)
+  def : Pat<(i32 (srl (i32 (sub GPR:$rd, GPR:$rs1)), GPR:$rs2)),
+            (CV_SUBUNR GPR:$rd, GPR:$rs1, GPR:$rs2)>;
+} // Predicates = [HasVendorXCValu, IsRV32]
