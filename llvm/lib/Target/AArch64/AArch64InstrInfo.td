@@ -2084,8 +2084,10 @@ def PAUTH_PROLOGUE : Pseudo<(outs), (ins), []>, Sched<[]> {
 // The RET terminator of the containing machine basic block may be replaced
 // with a combined RETA(A|B) instruction when rewriting this Pseudo.
 //
-// In the case where PAuthLR is requested but the subtarget lacks PAuthLR instructions,
-// this pseudo also implicitly defines X16. This is done in C++ code.
+// In the case where PAuthLR is requested but the subtarget lacks PAuthLR
+// instructions, this pseudo clobbers X16. Insert this instruction with the
+// AArch64InstrInfo::createPauthEpilogueInstr method that adds an implicit-def
+// operand as needed.
 def PAUTH_EPILOGUE : Pseudo<(outs), (ins), []>, Sched<[]>;
 }
 
