@@ -564,6 +564,12 @@ KnownBits KnownBits::ashr(const KnownBits &LHS, unsigned ShiftAmt,
 KnownBits KnownBits::ashr(const KnownBits &LHS, const KnownBits &RHS,
                           bool ShAmtNonZero, bool Exact) {
   unsigned BitWidth = LHS.getBitWidth();
+  auto ShiftByConst = [&](const KnownBits &LHS, unsigned ShiftAmt) {
+    KnownBits Known = LHS;
+    Known.Zero.ashrInPlace(ShiftAmt);
+    Known.One.ashrInPlace(ShiftAmt);
+    return Known;
+  };
 
   // Fast path for a common case when LHS is completely unknown.
   KnownBits Known(BitWidth);
@@ -603,7 +609,7 @@ KnownBits KnownBits::ashr(const KnownBits &LHS, const KnownBits &RHS,
     if ((ShiftAmtZeroMask & ShiftAmt) != 0 ||
         (ShiftAmtOneMask | ShiftAmt) != ShiftAmt)
       continue;
-    Known = Known.intersectWith(ashr(LHS, ShiftAmt));
+    Known = Known.intersectWith(ShiftByConst(LHS, ShiftAmt));
     if (Known.isUnknown())
       break;
   }
