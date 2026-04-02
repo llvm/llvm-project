@@ -61,9 +61,14 @@ void clang::maybePruneImpl(StringRef Path, time_t PruneInterval,
   std::error_code EC;
   auto TryPruneFile = [&](StringRef FilePath) {
     // We only care about module and global module index files.
+    StringRef Filename = llvm::sys::path::filename(FilePath);
     StringRef Extension = llvm::sys::path::extension(FilePath);
     if (Extension != ".pcm" && Extension != ".timestamp" &&
-        llvm::sys::path::filename(FilePath) != "modules.idx")
+        Filename != "modules.idx")
+      return;
+
+    // Don't prune the pruning timestamp file.
+    if (Filename == "modules.timestamp")
       return;
 
     // Look at this file. If we can't stat it, there's nothing interesting
@@ -79,7 +84,7 @@ void clang::maybePruneImpl(StringRef Path, time_t PruneInterval,
     // Remove the file.
     llvm::sys::fs::remove(FilePath);
 
-    // Remove the timestamp file.
+    // Remove the timestamp file created by implicit module builds.
     std::string TimpestampFilename = FilePath.str() + ".timestamp";
     llvm::sys::fs::remove(TimpestampFilename);
   };
@@ -88,9 +93,7 @@ void clang::maybePruneImpl(StringRef Path, time_t PruneInterval,
        Dir != DirEnd && !EC; Dir.increment(EC)) {
     // If we don't have a directory, try to prune it as a file in the root.
     if (!llvm::sys::fs::is_directory(Dir->path())) {
-      // Don't prune the timestamp file at the top level.
-      if (llvm::sys::path::filename(Dir->path()) != "modules.timestamp")
-        TryPruneFile(Dir->path());
+      TryPruneFile(Dir->path());
       continue;
     }
 
