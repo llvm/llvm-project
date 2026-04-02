@@ -59,7 +59,7 @@ define void @blend_uniform_iv(i1 %c) {
 ; CHECK-NEXT:    store <4 x i16> zeroinitializer, ptr [[TMP7]], align 2
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[TMP6]], 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], 32
-; CHECK-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
@@ -110,7 +110,7 @@ define void @blend_chain_iv(i1 %c) {
 ; CHECK-NEXT:    store i16 0, ptr [[TMP8]], align 2
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], 32
-; CHECK-NEXT:    br i1 [[TMP9]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP9]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
@@ -261,7 +261,7 @@ define void @blend_poison(ptr %p, i1 %c) {
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[VEC_IND]], splat (i64 4)
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[INDEX_NEXT]], 32
-; CHECK-NEXT:    br i1 [[TMP1]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP1]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
@@ -304,7 +304,7 @@ define void @blend_poison_first_argument(ptr %p, i1 %c) {
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[VEC_IND]], splat (i64 4)
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[INDEX_NEXT]], 32
-; CHECK-NEXT:    br i1 [[TMP1]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP1]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
@@ -345,7 +345,7 @@ define void @blend_all_poison(ptr %p, i1 %c) {
 ; CHECK-NEXT:    store <4 x i64> poison, ptr [[TMP0]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[INDEX_NEXT]], 32
-; CHECK-NEXT:    br i1 [[TMP1]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP1]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
@@ -374,12 +374,13 @@ exit:
 }
 
 ;.
-; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
+; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]], [[META3:![0-9]+]]}
 ; CHECK: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
-; CHECK: [[LOOP3]] = distinct !{[[LOOP3]], [[META1]], [[META2]]}
-; CHECK: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META2]]}
-; CHECK: [[LOOP5]] = distinct !{[[LOOP5]], [[META1]], [[META2]]}
-; CHECK: [[LOOP6]] = distinct !{[[LOOP6]], [[META1]], [[META2]]}
-; CHECK: [[LOOP7]] = distinct !{[[LOOP7]], [[META1]], [[META2]]}
+; CHECK: [[META2]] = !{!"llvm.loop.vectorize.vector_body", i32 1}
+; CHECK: [[META3]] = !{!"llvm.loop.unroll.runtime.disable"}
+; CHECK: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[LOOP5]] = distinct !{[[LOOP5]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[LOOP6]] = distinct !{[[LOOP6]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[LOOP7]] = distinct !{[[LOOP7]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[LOOP8]] = distinct !{[[LOOP8]], [[META1]], [[META2]], [[META3]]}
 ;.

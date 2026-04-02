@@ -48,7 +48,7 @@ define i64 @pr97452_scalable_vf1_for_live_out(ptr %src) {
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i64, ptr [[SRC]], i64 [[IV]]
 ; CHECK-NEXT:    [[L]] = load i64, ptr [[GEP]], align 8
 ; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV]], 22
-; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    [[RES:%.*]] = phi i64 [ [[FOR]], %[[LOOP]] ], [ [[TMP11]], %[[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    ret i64 [[RES]]
@@ -96,7 +96,7 @@ define void @pr97452_scalable_vf1_for_no_live_out(ptr %src, ptr noalias %dst) {
 ; CHECK-NEXT:    store <vscale x 1 x i64> [[TMP7]], ptr [[TMP8]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP9]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP9]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[TMP10:%.*]] = call i32 @llvm.vscale.i32()
 ; CHECK-NEXT:    [[TMP11:%.*]] = sub i32 [[TMP10]], 1
@@ -116,7 +116,7 @@ define void @pr97452_scalable_vf1_for_no_live_out(ptr %src, ptr noalias %dst) {
 ; CHECK-NEXT:    [[GEP_DST:%.*]] = getelementptr inbounds i64, ptr [[DST]], i64 [[IV]]
 ; CHECK-NEXT:    store i64 [[FOR]], ptr [[GEP_DST]], align 8
 ; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV]], 22
-; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP5:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -138,10 +138,12 @@ exit:
   ret void
 }
 ;.
-; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
+; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]], [[META3:![0-9]+]]}
 ; CHECK: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
-; CHECK: [[LOOP3]] = distinct !{[[LOOP3]], [[META2]], [[META1]]}
-; CHECK: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META2]]}
-; CHECK: [[LOOP5]] = distinct !{[[LOOP5]], [[META2]], [[META1]]}
+; CHECK: [[META2]] = !{!"llvm.loop.vectorize.vector_body", i32 1}
+; CHECK: [[META3]] = !{!"llvm.loop.unroll.runtime.disable"}
+; CHECK: [[LOOP4]] = distinct !{[[LOOP4]], [[META3]], [[META1]], [[META5:![0-9]+]]}
+; CHECK: [[META5]] = !{!"llvm.loop.vectorize.scalar_remainder", i32 1}
+; CHECK: [[LOOP6]] = distinct !{[[LOOP6]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[LOOP7]] = distinct !{[[LOOP7]], [[META3]], [[META1]], [[META5]]}
 ;.

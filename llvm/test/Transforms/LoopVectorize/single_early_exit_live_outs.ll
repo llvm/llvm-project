@@ -90,7 +90,7 @@ define i32 @same_exit_block_pre_inc_use1_iv64_endi32_step2() {
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT3]], 64
 ; CHECK-NEXT:    br i1 [[TMP7]], label [[VECTOR_EARLY_EXIT:%.*]], label [[VECTOR_BODY_INTERIM]]
 ; CHECK:       vector.body.interim:
-; CHECK-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[LOOP_END:%.*]]
 ; CHECK:       vector.early.exit:
@@ -153,7 +153,7 @@ define i32 @same_exit_block_pre_inc_use1_iv128_endi32_step2() {
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i128 [[INDEX_NEXT2]], 64
 ; CHECK-NEXT:    br i1 [[TMP5]], label [[VECTOR_EARLY_EXIT:%.*]], label [[VECTOR_BODY_INTERIM]]
 ; CHECK:       vector.body.interim:
-; CHECK-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[LOOP_END:%.*]]
 ; CHECK:       vector.early.exit:
@@ -218,7 +218,7 @@ define float @same_exit_block_pre_inc_use1_iv64_endf32() {
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT3]], 64
 ; CHECK-NEXT:    br i1 [[TMP7]], label [[VECTOR_EARLY_EXIT:%.*]], label [[VECTOR_BODY_INTERIM]]
 ; CHECK:       vector.body.interim:
-; CHECK-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[LOOP_END:%.*]]
 ; CHECK:       vector.early.exit:
@@ -285,7 +285,7 @@ define ptr @same_exit_block_pre_inc_use1_iv64_endptr() {
 ; CHECK-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[INDEX_NEXT7]], 64
 ; CHECK-NEXT:    br i1 [[TMP16]], label [[VECTOR_EARLY_EXIT:%.*]], label [[VECTOR_BODY_INTERIM]]
 ; CHECK:       vector.body.interim:
-; CHECK-NEXT:    br i1 [[TMP17]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP17]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[LOOP_END:%.*]]
 ; CHECK:       vector.early.exit:
@@ -347,7 +347,7 @@ define ptr @same_exit_block_pre_inc_use1_ivptr() {
 ; CHECK-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; CHECK-NEXT:    br i1 [[TMP12]], label [[VECTOR_EARLY_EXIT:%.*]], label [[VECTOR_BODY_INTERIM]]
 ; CHECK:       vector.body.interim:
-; CHECK-NEXT:    br i1 [[TMP13]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP13]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[LOOP_END:%.*]]
 ; CHECK:       vector.early.exit:
@@ -409,7 +409,7 @@ define i64 @same_exit_block_pre_inc1_use_inv_cond(i1 %cond) {
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT3]], 64
 ; CHECK-NEXT:    br i1 [[TMP8]], label [[VECTOR_EARLY_EXIT:%.*]], label [[VECTOR_BODY_INTERIM]]
 ; CHECK:       vector.body.interim:
-; CHECK-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[LOOP_END:%.*]]
 ; CHECK:       vector.early.exit:
@@ -473,7 +473,7 @@ define i64 @same_exit_block_pre_inc_use1_gep_two_indices() {
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT3]], 64
 ; CHECK-NEXT:    br i1 [[TMP7]], label [[VECTOR_EARLY_EXIT:%.*]], label [[VECTOR_BODY_INTERIM]]
 ; CHECK:       vector.body.interim:
-; CHECK-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[LOOP_END:%.*]]
 ; CHECK:       vector.early.exit:
@@ -536,7 +536,7 @@ define i64 @same_exit_block_pre_inc_use1_alloca_diff_type() {
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT3]], 64
 ; CHECK-NEXT:    br i1 [[TMP7]], label [[VECTOR_EARLY_EXIT:%.*]], label [[VECTOR_BODY_INTERIM]]
 ; CHECK:       vector.body.interim:
-; CHECK-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[LOOP_END:%.*]]
 ; CHECK:       vector.early.exit:
@@ -599,7 +599,7 @@ define i64 @same_exit_block_pre_inc_use2() {
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT3]], 64
 ; CHECK-NEXT:    br i1 [[TMP7]], label [[VECTOR_EARLY_EXIT:%.*]], label [[VECTOR_BODY_INTERIM]]
 ; CHECK:       vector.body.interim:
-; CHECK-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[LOOP_END:%.*]]
 ; CHECK:       vector.early.exit:
@@ -659,7 +659,7 @@ define i64 @same_exit_block_pre_inc_use3() {
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT3]], 64
 ; CHECK-NEXT:    br i1 [[TMP7]], label [[VECTOR_EARLY_EXIT:%.*]], label [[VECTOR_BODY_INTERIM]]
 ; CHECK:       vector.body.interim:
-; CHECK-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[LOOP_END:%.*]]
 ; CHECK:       vector.early.exit:
@@ -723,7 +723,7 @@ define i64 @same_exit_block_pre_inc_use4() {
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
 ; CHECK-NEXT:    br i1 [[TMP5]], label [[VECTOR_EARLY_EXIT:%.*]], label [[VECTOR_BODY_INTERIM]]
 ; CHECK:       vector.body.interim:
-; CHECK-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[LOOP_END:%.*]]
 ; CHECK:       vector.early.exit:
@@ -784,7 +784,7 @@ define i64 @same_exit_block_post_inc_use() {
 ; CHECK-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT3]], 64
 ; CHECK-NEXT:    br i1 [[TMP14]], label [[VECTOR_EARLY_EXIT:%.*]], label [[VECTOR_BODY_INTERIM]]
 ; CHECK:       vector.body.interim:
-; CHECK-NEXT:    br i1 [[TMP15]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP15]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP15:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[LOOP_END:%.*]]
 ; CHECK:       vector.early.exit:
@@ -843,7 +843,7 @@ define ptr @same_exit_block_post_inc_use1_ivptr() {
 ; CHECK-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; CHECK-NEXT:    br i1 [[TMP16]], label [[VECTOR_EARLY_EXIT:%.*]], label [[VECTOR_BODY_INTERIM]]
 ; CHECK:       vector.body.interim:
-; CHECK-NEXT:    br i1 [[TMP17]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP15:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP17]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[LOOP_END:%.*]]
 ; CHECK:       vector.early.exit:
@@ -903,7 +903,7 @@ define i64 @same_exit_block_post_inc_use2() {
 ; CHECK-NEXT:    [[TMP19:%.*]] = icmp eq i64 [[INDEX_NEXT3]], 64
 ; CHECK-NEXT:    br i1 [[TMP18]], label [[VECTOR_EARLY_EXIT:%.*]], label [[VECTOR_BODY_INTERIM]]
 ; CHECK:       vector.body.interim:
-; CHECK-NEXT:    br i1 [[TMP19]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP19]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP17:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[LOOP_END:%.*]]
 ; CHECK:       vector.early.exit:
@@ -967,7 +967,7 @@ define i64 @diff_exit_block_pre_inc_use1() {
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT3]], 64
 ; CHECK-NEXT:    br i1 [[TMP7]], label [[VECTOR_EARLY_EXIT:%.*]], label [[VECTOR_BODY_INTERIM]]
 ; CHECK:       vector.body.interim:
-; CHECK-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP17:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP18:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[LOOP_END:%.*]]
 ; CHECK:       vector.early.exit:
@@ -1035,7 +1035,7 @@ define i64 @diff_exit_block_pre_inc_use2() {
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT3]], 64
 ; CHECK-NEXT:    br i1 [[TMP7]], label [[VECTOR_EARLY_EXIT:%.*]], label [[VECTOR_BODY_INTERIM]]
 ; CHECK:       vector.body.interim:
-; CHECK-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP18:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP19:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[LOOP_END:%.*]]
 ; CHECK:       vector.early.exit:
@@ -1100,7 +1100,7 @@ define i64 @diff_exit_block_pre_inc_use3() {
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT4]], 64
 ; CHECK-NEXT:    br i1 [[TMP7]], label [[VECTOR_EARLY_EXIT:%.*]], label [[VECTOR_BODY_INTERIM]]
 ; CHECK:       vector.body.interim:
-; CHECK-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP19:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP20:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[LOOP_END:%.*]]
 ; CHECK:       vector.early.exit:
@@ -1166,7 +1166,7 @@ define i64 @diff_exit_block_post_inc_use1() {
 ; CHECK-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT3]], 64
 ; CHECK-NEXT:    br i1 [[TMP14]], label [[VECTOR_EARLY_EXIT:%.*]], label [[VECTOR_BODY_INTERIM]]
 ; CHECK:       vector.body.interim:
-; CHECK-NEXT:    br i1 [[TMP15]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP20:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP15]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP21:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[LOOP_END:%.*]]
 ; CHECK:       vector.early.exit:
@@ -1234,7 +1234,7 @@ define i64 @diff_exit_block_post_inc_use2() {
 ; CHECK-NEXT:    [[TMP19:%.*]] = icmp eq i64 [[INDEX_NEXT3]], 64
 ; CHECK-NEXT:    br i1 [[TMP18]], label [[VECTOR_EARLY_EXIT:%.*]], label [[VECTOR_BODY_INTERIM]]
 ; CHECK:       vector.body.interim:
-; CHECK-NEXT:    br i1 [[TMP19]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP21:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP19]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP22:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[LOOP_END:%.*]]
 ; CHECK:       vector.early.exit:
@@ -1304,7 +1304,7 @@ define i64 @diff_exit_block_post_inc_use3(i64 %start) {
 ; CHECK-NEXT:    [[TMP21:%.*]] = icmp eq i64 [[INDEX_NEXT4]], 64
 ; CHECK-NEXT:    br i1 [[TMP20]], label [[VECTOR_EARLY_EXIT:%.*]], label [[VECTOR_BODY_INTERIM]]
 ; CHECK:       vector.body.interim:
-; CHECK-NEXT:    br i1 [[TMP21]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP22:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP21]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP23:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[IND_ESCAPE:%.*]] = sub i64 [[TMP0]], 1
 ; CHECK-NEXT:    br label [[LOOP_END:%.*]]
@@ -1375,7 +1375,7 @@ define i64 @loop_contains_safe_call() {
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT2]], 64
 ; CHECK-NEXT:    br i1 [[TMP6]], label [[VECTOR_EARLY_EXIT:%.*]], label [[VECTOR_BODY_INTERIM]]
 ; CHECK:       vector.body.interim:
-; CHECK-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP23:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP24:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[LOOP_END:%.*]]
 ; CHECK:       vector.early.exit:
@@ -1436,7 +1436,7 @@ define i64 @loop_contains_safe_div() {
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT2]], 64
 ; CHECK-NEXT:    br i1 [[TMP6]], label [[VECTOR_EARLY_EXIT:%.*]], label [[VECTOR_BODY_INTERIM]]
 ; CHECK:       vector.body.interim:
-; CHECK-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP24:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP25:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[LOOP_END:%.*]]
 ; CHECK:       vector.early.exit:
@@ -1497,7 +1497,7 @@ define i64 @loop_contains_load_after_early_exit(ptr dereferenceable(1024) align(
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT3]], 64
 ; CHECK-NEXT:    br i1 [[TMP7]], label [[VECTOR_EARLY_EXIT:%.*]], label [[VECTOR_BODY_INTERIM]]
 ; CHECK:       vector.body.interim:
-; CHECK-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP25:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP26:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x i64> [[WIDE_LOAD2]], i64 3
 ; CHECK-NEXT:    br label [[LOOP_END:%.*]]
@@ -1563,7 +1563,7 @@ define i64 @same_exit_block_pre_inc_use1_reverse() {
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT4]], 1020
 ; CHECK-NEXT:    br i1 [[TMP9]], label [[VECTOR_EARLY_EXIT:%.*]], label [[VECTOR_BODY_INTERIM]]
 ; CHECK:       vector.body.interim:
-; CHECK-NEXT:    br i1 [[TMP10]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP26:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP10]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP27:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[SCALAR_PH:%.*]]
 ; CHECK:       vector.early.exit:
@@ -1584,7 +1584,7 @@ define i64 @same_exit_block_pre_inc_use1_reverse() {
 ; CHECK:       loop.inc:
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], -1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDEX_NEXT]], 0
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP_END]], label [[LOOP1]], !llvm.loop [[LOOP27:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP_END]], label [[LOOP1]], !llvm.loop [[LOOP28:![0-9]+]]
 ; CHECK:       loop.end:
 ; CHECK-NEXT:    [[RETVAL:%.*]] = phi i64 [ [[INDEX]], [[LOOP1]] ], [ 1024, [[LOOP_INC]] ], [ [[EARLY_EXIT_VALUE]], [[VECTOR_EARLY_EXIT]] ]
 ; CHECK-NEXT:    ret i64 [[RETVAL]]
@@ -1687,7 +1687,7 @@ define i64 @same_exit_block_pre_inc_use1_deref_ptrs(ptr dereferenceable(1024) %p
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT3]], 64
 ; CHECK-NEXT:    br i1 [[TMP7]], label [[VECTOR_EARLY_EXIT:%.*]], label [[VECTOR_BODY_INTERIM]]
 ; CHECK:       vector.body.interim:
-; CHECK-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP28:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP30:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[LOOP_END:%.*]]
 ; CHECK:       vector.early.exit:
@@ -1726,33 +1726,35 @@ declare <vscale x 4 x i32> @foo_vec(<vscale x 4 x i32>)
 
 attributes #0 = { "vector-function-abi-variant"="_ZGVsNxv_foo(foo_vec)" }
 ;.
-; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
+; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]], [[META3:![0-9]+]]}
 ; CHECK: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
-; CHECK: [[LOOP3]] = distinct !{[[LOOP3]], [[META1]], [[META2]]}
-; CHECK: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META2]]}
-; CHECK: [[LOOP5]] = distinct !{[[LOOP5]], [[META1]], [[META2]]}
-; CHECK: [[LOOP6]] = distinct !{[[LOOP6]], [[META1]], [[META2]]}
-; CHECK: [[LOOP7]] = distinct !{[[LOOP7]], [[META1]], [[META2]]}
-; CHECK: [[LOOP8]] = distinct !{[[LOOP8]], [[META1]], [[META2]]}
-; CHECK: [[LOOP9]] = distinct !{[[LOOP9]], [[META1]], [[META2]]}
-; CHECK: [[LOOP10]] = distinct !{[[LOOP10]], [[META1]], [[META2]]}
-; CHECK: [[LOOP11]] = distinct !{[[LOOP11]], [[META1]], [[META2]]}
-; CHECK: [[LOOP12]] = distinct !{[[LOOP12]], [[META1]], [[META2]]}
-; CHECK: [[LOOP13]] = distinct !{[[LOOP13]], [[META1]], [[META2]]}
-; CHECK: [[LOOP14]] = distinct !{[[LOOP14]], [[META1]], [[META2]]}
-; CHECK: [[LOOP15]] = distinct !{[[LOOP15]], [[META1]], [[META2]]}
-; CHECK: [[LOOP16]] = distinct !{[[LOOP16]], [[META1]], [[META2]]}
-; CHECK: [[LOOP17]] = distinct !{[[LOOP17]], [[META1]], [[META2]]}
-; CHECK: [[LOOP18]] = distinct !{[[LOOP18]], [[META1]], [[META2]]}
-; CHECK: [[LOOP19]] = distinct !{[[LOOP19]], [[META1]], [[META2]]}
-; CHECK: [[LOOP20]] = distinct !{[[LOOP20]], [[META1]], [[META2]]}
-; CHECK: [[LOOP21]] = distinct !{[[LOOP21]], [[META1]], [[META2]]}
-; CHECK: [[LOOP22]] = distinct !{[[LOOP22]], [[META1]], [[META2]]}
-; CHECK: [[LOOP23]] = distinct !{[[LOOP23]], [[META1]], [[META2]]}
-; CHECK: [[LOOP24]] = distinct !{[[LOOP24]], [[META1]], [[META2]]}
-; CHECK: [[LOOP25]] = distinct !{[[LOOP25]], [[META1]], [[META2]]}
-; CHECK: [[LOOP26]] = distinct !{[[LOOP26]], [[META1]], [[META2]]}
-; CHECK: [[LOOP27]] = distinct !{[[LOOP27]], [[META2]], [[META1]]}
-; CHECK: [[LOOP28]] = distinct !{[[LOOP28]], [[META1]], [[META2]]}
+; CHECK: [[META2]] = !{!"llvm.loop.vectorize.vector_body", i32 1}
+; CHECK: [[META3]] = !{!"llvm.loop.unroll.runtime.disable"}
+; CHECK: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[LOOP5]] = distinct !{[[LOOP5]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[LOOP6]] = distinct !{[[LOOP6]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[LOOP7]] = distinct !{[[LOOP7]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[LOOP8]] = distinct !{[[LOOP8]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[LOOP9]] = distinct !{[[LOOP9]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[LOOP10]] = distinct !{[[LOOP10]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[LOOP11]] = distinct !{[[LOOP11]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[LOOP12]] = distinct !{[[LOOP12]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[LOOP13]] = distinct !{[[LOOP13]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[LOOP14]] = distinct !{[[LOOP14]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[LOOP15]] = distinct !{[[LOOP15]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[LOOP16]] = distinct !{[[LOOP16]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[LOOP17]] = distinct !{[[LOOP17]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[LOOP18]] = distinct !{[[LOOP18]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[LOOP19]] = distinct !{[[LOOP19]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[LOOP20]] = distinct !{[[LOOP20]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[LOOP21]] = distinct !{[[LOOP21]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[LOOP22]] = distinct !{[[LOOP22]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[LOOP23]] = distinct !{[[LOOP23]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[LOOP24]] = distinct !{[[LOOP24]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[LOOP25]] = distinct !{[[LOOP25]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[LOOP26]] = distinct !{[[LOOP26]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[LOOP27]] = distinct !{[[LOOP27]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[LOOP28]] = distinct !{[[LOOP28]], [[META3]], [[META1]], [[META29:![0-9]+]]}
+; CHECK: [[META29]] = !{!"llvm.loop.vectorize.scalar_remainder", i32 1}
+; CHECK: [[LOOP30]] = distinct !{[[LOOP30]], [[META1]], [[META2]], [[META3]]}
 ;.

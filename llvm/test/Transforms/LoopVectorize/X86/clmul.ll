@@ -59,7 +59,7 @@ define void @clmul_loop(ptr %a, ptr %b, ptr %c, i64 %n){
 ; WITH-PCLMUL-NEXT:    store i64 [[R]], ptr [[PC]], align 8
 ; WITH-PCLMUL-NEXT:    [[I_NEXT]] = add i64 [[I]], 1
 ; WITH-PCLMUL-NEXT:    [[CMP:%.*]] = icmp eq i64 [[I_NEXT]], [[N]]
-; WITH-PCLMUL-NEXT:    br i1 [[CMP]], label %[[FOR_EXIT]], label %[[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
+; WITH-PCLMUL-NEXT:    br i1 [[CMP]], label %[[FOR_EXIT]], label %[[FOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; WITH-PCLMUL:       [[FOR_EXIT]]:
 ; WITH-PCLMUL-NEXT:    ret void
 ;
@@ -108,8 +108,10 @@ for.exit:
 
 }
 ;.
-; WITH-PCLMUL: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
+; WITH-PCLMUL: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]], [[META3:![0-9]+]]}
 ; WITH-PCLMUL: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
-; WITH-PCLMUL: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
-; WITH-PCLMUL: [[LOOP3]] = distinct !{[[LOOP3]], [[META1]]}
+; WITH-PCLMUL: [[META2]] = !{!"llvm.loop.vectorize.vector_body", i32 1}
+; WITH-PCLMUL: [[META3]] = !{!"llvm.loop.unroll.runtime.disable"}
+; WITH-PCLMUL: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META5:![0-9]+]]}
+; WITH-PCLMUL: [[META5]] = !{!"llvm.loop.vectorize.scalar_remainder", i32 1}
 ;.

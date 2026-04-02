@@ -65,7 +65,7 @@ define float @maximumnum_intrinsic_fast(ptr readonly %x) {
 ; CHECK-NEXT:    [[TMP4]] = call fast <2 x float> @llvm.maximumnum.v2f32(<2 x float> [[VEC_PHI1]], <2 x float> [[WIDE_LOAD2]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[IV]], 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[INDEX_NEXT]], 1024
-; CHECK-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[RDX_MINMAX:%.*]] = call fast <2 x float> @llvm.maximumnum.v2f32(<2 x float> [[TMP3]], <2 x float> [[TMP4]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = call fast float @llvm.vector.reduce.fmax.v2f32(<2 x float> [[RDX_MINMAX]])
@@ -109,7 +109,7 @@ define float @minimumnum_intrinsic(ptr readonly %x) {
 ; CHECK-NEXT:    [[TMP4]] = call <2 x float> @llvm.minimumnum.v2f32(<2 x float> [[VEC_PHI1]], <2 x float> [[WIDE_LOAD2]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[IV]], 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[INDEX_NEXT]], 1024
-; CHECK-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[RDX_MINMAX:%.*]] = call <2 x float> @llvm.minimumnum.v2f32(<2 x float> [[TMP3]], <2 x float> [[TMP4]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = call float @llvm.vector.reduce.fmin.v2f32(<2 x float> [[RDX_MINMAX]])
@@ -153,7 +153,7 @@ define float @minimumnum_intrinsic_fast(ptr readonly %x) {
 ; CHECK-NEXT:    [[TMP4]] = call fast <2 x float> @llvm.minimumnum.v2f32(<2 x float> [[VEC_PHI1]], <2 x float> [[WIDE_LOAD2]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[IV]], 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[INDEX_NEXT]], 1024
-; CHECK-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[RDX_MINMAX:%.*]] = call fast <2 x float> @llvm.minimumnum.v2f32(<2 x float> [[TMP3]], <2 x float> [[TMP4]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = call fast float @llvm.vector.reduce.fmin.v2f32(<2 x float> [[RDX_MINMAX]])
@@ -179,10 +179,11 @@ exit:
 }
 
 ;.
-; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
+; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]], [[META3:![0-9]+]]}
 ; CHECK: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
-; CHECK: [[LOOP3]] = distinct !{[[LOOP3]], [[META1]], [[META2]]}
-; CHECK: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META2]]}
-; CHECK: [[LOOP5]] = distinct !{[[LOOP5]], [[META1]], [[META2]]}
+; CHECK: [[META2]] = !{!"llvm.loop.vectorize.vector_body", i32 1}
+; CHECK: [[META3]] = !{!"llvm.loop.unroll.runtime.disable"}
+; CHECK: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[LOOP5]] = distinct !{[[LOOP5]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[LOOP6]] = distinct !{[[LOOP6]], [[META1]], [[META2]], [[META3]]}
 ;.

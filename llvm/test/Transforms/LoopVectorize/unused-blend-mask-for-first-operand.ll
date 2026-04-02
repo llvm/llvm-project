@@ -73,7 +73,7 @@ define void @test_not_first_lane_only_wide_compare(ptr %A, ptr noalias %B, i16 %
 ; CHECK-NEXT:    store <4 x i16> [[BROADCAST_SPLAT6]], ptr [[TMP1]], align 2
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i32 [[INDEX_NEXT]], 1000
-; CHECK-NEXT:    br i1 [[TMP14]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP14]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[LOOP_LATCH:%.*]]
 ; CHECK:       exit:
@@ -128,7 +128,7 @@ define void @test_not_first_lane_only_wide_compare_incoming_order_swapped(ptr %A
 ; CHECK-NEXT:    store <4 x i16> [[BROADCAST_SPLAT4]], ptr [[TMP1]], align 2
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP13:%.*]] = icmp eq i32 [[INDEX_NEXT]], 1000
-; CHECK-NEXT:    br i1 [[TMP13]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP13]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[LOOP_LATCH:%.*]]
 ; CHECK:       exit:
@@ -166,9 +166,10 @@ exit:
   ret void
 }
 ;.
-; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
+; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]], [[META3:![0-9]+]]}
 ; CHECK: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
-; CHECK: [[LOOP3]] = distinct !{[[LOOP3]], [[META1]], [[META2]]}
-; CHECK: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META2]]}
+; CHECK: [[META2]] = !{!"llvm.loop.vectorize.vector_body", i32 1}
+; CHECK: [[META3]] = !{!"llvm.loop.unroll.runtime.disable"}
+; CHECK: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[LOOP5]] = distinct !{[[LOOP5]], [[META1]], [[META2]], [[META3]]}
 ;.

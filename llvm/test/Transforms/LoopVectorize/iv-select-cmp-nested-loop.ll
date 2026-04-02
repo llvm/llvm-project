@@ -50,7 +50,7 @@ define i64 @select_iv_def_from_outer_loop(ptr %a, i64 %start, i64 %n) {
 ; CHECK-VF4IC1-NEXT:    [[SELECT]] = select i1 [[CMP]], i64 [[IV_OUTER]], i64 [[RDX_INNER]]
 ; CHECK-VF4IC1-NEXT:    [[IV_INNER_NEXT]] = add nuw nsw i64 [[IV_INNER]], 1
 ; CHECK-VF4IC1-NEXT:    [[EXITCOND_NOT_INNER:%.*]] = icmp eq i64 [[IV_INNER_NEXT]], [[N]]
-; CHECK-VF4IC1-NEXT:    br i1 [[EXITCOND_NOT_INNER]], label %[[OUTER_LOOP_EXIT]], label %[[INNER_LOOP]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK-VF4IC1-NEXT:    br i1 [[EXITCOND_NOT_INNER]], label %[[OUTER_LOOP_EXIT]], label %[[INNER_LOOP]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK-VF4IC1:       [[OUTER_LOOP_EXIT]]:
 ; CHECK-VF4IC1-NEXT:    [[SELECT_LCSSA]] = phi i64 [ [[SELECT]], %[[INNER_LOOP]] ], [ [[RDX_SELECT]], %[[MIDDLE_BLOCK]] ]
 ; CHECK-VF4IC1-NEXT:    [[IV_OUTER_NEXT]] = add nuw nsw i64 [[IV_OUTER]], 1
@@ -122,7 +122,7 @@ define i64 @select_iv_def_from_outer_loop(ptr %a, i64 %start, i64 %n) {
 ; CHECK-VF4IC4-NEXT:    [[SELECT]] = select i1 [[CMP]], i64 [[IV_OUTER]], i64 [[RDX_INNER]]
 ; CHECK-VF4IC4-NEXT:    [[IV_INNER_NEXT]] = add nuw nsw i64 [[IV_INNER]], 1
 ; CHECK-VF4IC4-NEXT:    [[EXITCOND_NOT_INNER:%.*]] = icmp eq i64 [[IV_INNER_NEXT]], [[N]]
-; CHECK-VF4IC4-NEXT:    br i1 [[EXITCOND_NOT_INNER]], label %[[OUTER_LOOP_EXIT]], label %[[INNER_LOOP]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK-VF4IC4-NEXT:    br i1 [[EXITCOND_NOT_INNER]], label %[[OUTER_LOOP_EXIT]], label %[[INNER_LOOP]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK-VF4IC4:       [[OUTER_LOOP_EXIT]]:
 ; CHECK-VF4IC4-NEXT:    [[SELECT_LCSSA]] = phi i64 [ [[SELECT]], %[[INNER_LOOP]] ], [ [[RDX_SELECT]], %[[MIDDLE_BLOCK]] ]
 ; CHECK-VF4IC4-NEXT:    [[IV_OUTER_NEXT]] = add nuw nsw i64 [[IV_OUTER]], 1
@@ -196,7 +196,7 @@ define i64 @select_iv_def_from_outer_loop(ptr %a, i64 %start, i64 %n) {
 ; CHECK-VF1IC4-NEXT:    [[SELECT]] = select i1 [[CMP]], i64 [[IV_OUTER]], i64 [[RDX_INNER]]
 ; CHECK-VF1IC4-NEXT:    [[IV_INNER_NEXT]] = add nuw nsw i64 [[IV_INNER]], 1
 ; CHECK-VF1IC4-NEXT:    [[EXITCOND_NOT_INNER:%.*]] = icmp eq i64 [[IV_INNER_NEXT]], [[N]]
-; CHECK-VF1IC4-NEXT:    br i1 [[EXITCOND_NOT_INNER]], label %[[OUTER_LOOP_EXIT]], label %[[INNER_LOOP]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK-VF1IC4-NEXT:    br i1 [[EXITCOND_NOT_INNER]], label %[[OUTER_LOOP_EXIT]], label %[[INNER_LOOP]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK-VF1IC4:       [[OUTER_LOOP_EXIT]]:
 ; CHECK-VF1IC4-NEXT:    [[SELECT_LCSSA]] = phi i64 [ [[SELECT]], %[[INNER_LOOP]] ], [ [[RDX_SELECT]], %[[MIDDLE_BLOCK]] ]
 ; CHECK-VF1IC4-NEXT:    [[IV_OUTER_NEXT]] = add nuw nsw i64 [[IV_OUTER]], 1
@@ -236,18 +236,24 @@ exit:
   ret i64 %select
 }
 ;.
-; CHECK-VF4IC1: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
+; CHECK-VF4IC1: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]], [[META3:![0-9]+]]}
 ; CHECK-VF4IC1: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK-VF4IC1: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
-; CHECK-VF4IC1: [[LOOP3]] = distinct !{[[LOOP3]], [[META2]], [[META1]]}
+; CHECK-VF4IC1: [[META2]] = !{!"llvm.loop.vectorize.vector_body", i32 1}
+; CHECK-VF4IC1: [[META3]] = !{!"llvm.loop.unroll.runtime.disable"}
+; CHECK-VF4IC1: [[LOOP4]] = distinct !{[[LOOP4]], [[META3]], [[META1]], [[META5:![0-9]+]]}
+; CHECK-VF4IC1: [[META5]] = !{!"llvm.loop.vectorize.scalar_remainder", i32 1}
 ;.
-; CHECK-VF4IC4: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
+; CHECK-VF4IC4: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]], [[META3:![0-9]+]]}
 ; CHECK-VF4IC4: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK-VF4IC4: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
-; CHECK-VF4IC4: [[LOOP3]] = distinct !{[[LOOP3]], [[META2]], [[META1]]}
+; CHECK-VF4IC4: [[META2]] = !{!"llvm.loop.vectorize.vector_body", i32 1}
+; CHECK-VF4IC4: [[META3]] = !{!"llvm.loop.unroll.runtime.disable"}
+; CHECK-VF4IC4: [[LOOP4]] = distinct !{[[LOOP4]], [[META3]], [[META1]], [[META5:![0-9]+]]}
+; CHECK-VF4IC4: [[META5]] = !{!"llvm.loop.vectorize.scalar_remainder", i32 1}
 ;.
-; CHECK-VF1IC4: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
+; CHECK-VF1IC4: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]], [[META3:![0-9]+]]}
 ; CHECK-VF1IC4: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK-VF1IC4: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
-; CHECK-VF1IC4: [[LOOP3]] = distinct !{[[LOOP3]], [[META1]]}
+; CHECK-VF1IC4: [[META2]] = !{!"llvm.loop.vectorize.vector_body", i32 1}
+; CHECK-VF1IC4: [[META3]] = !{!"llvm.loop.unroll.runtime.disable"}
+; CHECK-VF1IC4: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META5:![0-9]+]]}
+; CHECK-VF1IC4: [[META5]] = !{!"llvm.loop.vectorize.scalar_remainder", i32 1}
 ;.

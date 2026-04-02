@@ -55,7 +55,7 @@ define i16 @runtime_checks_needed(ptr %src, ptr %dst) {
 ; LIMIT1-NEXT:    store i16 [[L]], ptr [[GEP_DST]], align 1
 ; LIMIT1-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; LIMIT1-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], 1000
-; LIMIT1-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP8:![0-9]+]]
+; LIMIT1-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP9:![0-9]+]]
 ; LIMIT1:       [[EXIT]]:
 ; LIMIT1-NEXT:    [[L_LCSSA:%.*]] = phi i16 [ [[L]], %[[LOOP]] ], [ [[TMP0]], %[[MIDDLE_BLOCK]] ]
 ; LIMIT1-NEXT:    ret i16 [[L_LCSSA]]
@@ -91,8 +91,10 @@ exit:
 ; LIMIT1: [[META2]] = distinct !{[[META2]], !"LVerDomain"}
 ; LIMIT1: [[META3]] = !{[[META4:![0-9]+]]}
 ; LIMIT1: [[META4]] = distinct !{[[META4]], [[META2]]}
-; LIMIT1: [[LOOP5]] = distinct !{[[LOOP5]], [[META6:![0-9]+]], [[META7:![0-9]+]]}
+; LIMIT1: [[LOOP5]] = distinct !{[[LOOP5]], [[META6:![0-9]+]], [[META7:![0-9]+]], [[META8:![0-9]+]]}
 ; LIMIT1: [[META6]] = !{!"llvm.loop.isvectorized", i32 1}
-; LIMIT1: [[META7]] = !{!"llvm.loop.unroll.runtime.disable"}
-; LIMIT1: [[LOOP8]] = distinct !{[[LOOP8]], [[META6]]}
+; LIMIT1: [[META7]] = !{!"llvm.loop.vectorize.vector_body", i32 1}
+; LIMIT1: [[META8]] = !{!"llvm.loop.unroll.runtime.disable"}
+; LIMIT1: [[LOOP9]] = distinct !{[[LOOP9]], [[META6]], [[META10:![0-9]+]]}
+; LIMIT1: [[META10]] = !{!"llvm.loop.vectorize.scalar_remainder", i32 1}
 ;.

@@ -115,7 +115,7 @@ define void @test(ptr %p) {
 ; VEC-NEXT:    [[IDX]] = zext i16 [[INC]] to i64
 ; VEC-NEXT:    [[GEP:%.*]] = getelementptr i64, ptr [[P]], i64 [[IDX]]
 ; VEC-NEXT:    [[CMP:%.*]] = icmp ugt ptr [[GEP]], @h
-; VEC-NEXT:    br i1 [[CMP]], label [[EXIT]], label [[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
+; VEC-NEXT:    br i1 [[CMP]], label [[EXIT]], label [[FOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; VEC:       exit:
 ; VEC-NEXT:    ret void
 ;
@@ -139,8 +139,10 @@ exit:
   ret void
 }
 ;.
-; VEC: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
+; VEC: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]], [[META3:![0-9]+]]}
 ; VEC: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
-; VEC: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
-; VEC: [[LOOP3]] = distinct !{[[LOOP3]], [[META1]]}
+; VEC: [[META2]] = !{!"llvm.loop.vectorize.vector_body", i32 1}
+; VEC: [[META3]] = !{!"llvm.loop.unroll.runtime.disable"}
+; VEC: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META5:![0-9]+]]}
+; VEC: [[META5]] = !{!"llvm.loop.vectorize.scalar_remainder", i32 1}
 ;.

@@ -65,6 +65,19 @@ const char LLVMLoopVectorizeFollowupEpilogue[] =
     "llvm.loop.vectorize.followup_epilogue";
 /// @}
 
+/// Add a boolean metadata attribute to a loop's loop-ID node.
+static void addBooleanLoopAttribute(Loop *L, StringRef Name) {
+  LLVMContext &Context = L->getHeader()->getContext();
+  MDNode *AttrMD = MDNode::get(
+      Context,
+      {MDString::get(Context, Name),
+       ConstantAsMetadata::get(ConstantInt::get(Context, APInt(32, 1)))});
+  MDNode *LoopID = L->getLoopID();
+  MDNode *NewLoopID =
+      makePostTransformationMetadata(Context, LoopID, {}, {AttrMD});
+  L->setLoopID(NewLoopID);
+}
+
 extern cl::opt<unsigned> ForceTargetInstructionCost;
 
 extern cl::opt<unsigned> NumberOfStoresToPredicate;
@@ -1792,6 +1805,12 @@ void LoopVectorizationPlanner::updateLoopMetadataAndProfileInfo(
       Hints.setAlreadyVectorized();
     }
   }
+  // Tag the scalar remainder so downstream passes (e.g. the unroller and
+  // WarnMissedTransforms) can produce more informative remarks. This is set
+  // unconditionally (including during epilogue vectorization) so that the
+  // final scalar tail is always identifiable.
+  if (Plan.getScalarPreheader()->hasPredecessors())
+    addBooleanLoopAttribute(OrigLoop, "llvm.loop.vectorize.scalar_remainder");
 
   if (!VectorLoop)
     return;
@@ -1811,6 +1830,12 @@ void LoopVectorizationPlanner::updateLoopMetadataAndProfileInfo(
       Hints.setAlreadyVectorized();
     }
   }
+  // Tag the vector loop body so downstream passes can identify it. During
+  // epilogue vectorization the epilogue vector loop naturally inherits
+  // scalar_remainder from the pass-1 remainder and gets vector_body here,
+  // giving it both tags — which uniquely identifies it as an epilogue
+  // vectorized remainder.
+  addBooleanLoopAttribute(VectorLoop, "llvm.loop.vectorize.vector_body");
   TargetTransformInfo::UnrollingPreferences UP;
   TTI.getUnrollingPreferences(VectorLoop, *PSE.getSE(), UP, ORE);
   if (!UP.UnrollVectorizedLoop || VectorizingEpilogue)

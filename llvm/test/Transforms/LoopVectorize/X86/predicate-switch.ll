@@ -51,7 +51,7 @@ define void @switch_default_to_latch_common_dest(ptr %start, ptr %end) {
 ; COST:       [[LOOP_LATCH]]:
 ; COST-NEXT:    [[PTR_IV_NEXT]] = getelementptr inbounds i64, ptr [[PTR_IV]], i64 1
 ; COST-NEXT:    [[EC:%.*]] = icmp eq ptr [[PTR_IV_NEXT]], [[END]]
-; COST-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP_HEADER]], !llvm.loop [[LOOP3:![0-9]+]]
+; COST-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP_HEADER]], !llvm.loop [[LOOP4:![0-9]+]]
 ; COST:       [[EXIT]]:
 ; COST-NEXT:    ret void
 ;
@@ -109,7 +109,7 @@ define void @switch_default_to_latch_common_dest(ptr %start, ptr %end) {
 ; FORCED:       [[LOOP_LATCH]]:
 ; FORCED-NEXT:    [[PTR_IV_NEXT]] = getelementptr inbounds i64, ptr [[PTR_IV]], i64 1
 ; FORCED-NEXT:    [[EC:%.*]] = icmp eq ptr [[PTR_IV_NEXT]], [[END]]
-; FORCED-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP_HEADER]], !llvm.loop [[LOOP3:![0-9]+]]
+; FORCED-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP_HEADER]], !llvm.loop [[LOOP4:![0-9]+]]
 ; FORCED:       [[EXIT]]:
 ; FORCED-NEXT:    ret void
 ;
@@ -168,7 +168,7 @@ define void @switch_default_to_latch_common_dest_using_branches(ptr %start, ptr 
 ; COST-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> splat (i64 42), ptr align 1 [[NEXT_GEP]], <4 x i1> [[TMP11]])
 ; COST-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; COST-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; COST-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; COST-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; COST:       [[MIDDLE_BLOCK]]:
 ; COST-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP3]], [[N_VEC]]
 ; COST-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
@@ -189,7 +189,7 @@ define void @switch_default_to_latch_common_dest_using_branches(ptr %start, ptr 
 ; COST:       [[LOOP_LATCH]]:
 ; COST-NEXT:    [[PTR_IV_NEXT]] = getelementptr inbounds i64, ptr [[PTR_IV]], i64 1
 ; COST-NEXT:    [[EC:%.*]] = icmp eq ptr [[PTR_IV_NEXT]], [[END]]
-; COST-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP_HEADER]], !llvm.loop [[LOOP5:![0-9]+]]
+; COST-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP_HEADER]], !llvm.loop [[LOOP7:![0-9]+]]
 ; COST:       [[EXIT]]:
 ; COST-NEXT:    ret void
 ;
@@ -231,7 +231,7 @@ define void @switch_default_to_latch_common_dest_using_branches(ptr %start, ptr 
 ; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> splat (i64 42), ptr align 1 [[TMP8]], <4 x i1> [[TMP18]])
 ; FORCED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; FORCED-NEXT:    [[TMP19:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; FORCED-NEXT:    br i1 [[TMP19]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; FORCED-NEXT:    br i1 [[TMP19]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; FORCED:       [[MIDDLE_BLOCK]]:
 ; FORCED-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP3]], [[N_VEC]]
 ; FORCED-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
@@ -252,7 +252,7 @@ define void @switch_default_to_latch_common_dest_using_branches(ptr %start, ptr 
 ; FORCED:       [[LOOP_LATCH]]:
 ; FORCED-NEXT:    [[PTR_IV_NEXT]] = getelementptr inbounds i64, ptr [[PTR_IV]], i64 1
 ; FORCED-NEXT:    [[EC:%.*]] = icmp eq ptr [[PTR_IV_NEXT]], [[END]]
-; FORCED-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP_HEADER]], !llvm.loop [[LOOP5:![0-9]+]]
+; FORCED-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP_HEADER]], !llvm.loop [[LOOP7:![0-9]+]]
 ; FORCED:       [[EXIT]]:
 ; FORCED-NEXT:    ret void
 ;
@@ -362,7 +362,7 @@ define void @switch_all_dests_distinct(ptr %start, ptr %end) {
 ; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> splat (i64 2), ptr align 1 [[TMP8]], <4 x i1> [[TMP20]])
 ; FORCED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; FORCED-NEXT:    [[TMP21:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; FORCED-NEXT:    br i1 [[TMP21]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; FORCED-NEXT:    br i1 [[TMP21]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; FORCED:       [[MIDDLE_BLOCK]]:
 ; FORCED-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP3]], [[N_VEC]]
 ; FORCED-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
@@ -392,7 +392,7 @@ define void @switch_all_dests_distinct(ptr %start, ptr %end) {
 ; FORCED:       [[LOOP_LATCH]]:
 ; FORCED-NEXT:    [[PTR_IV_NEXT]] = getelementptr inbounds i64, ptr [[PTR_IV]], i64 1
 ; FORCED-NEXT:    [[EC:%.*]] = icmp eq ptr [[PTR_IV_NEXT]], [[END]]
-; FORCED-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP_HEADER]], !llvm.loop [[LOOP7:![0-9]+]]
+; FORCED-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP_HEADER]], !llvm.loop [[LOOP9:![0-9]+]]
 ; FORCED:       [[EXIT]]:
 ; FORCED-NEXT:    ret void
 ;
@@ -469,7 +469,7 @@ define void @switch_all_dests_distinct_variant_using_branches(ptr %start, ptr %e
 ; COST-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> splat (i64 42), ptr align 1 [[NEXT_GEP]], <4 x i1> [[TMP7]])
 ; COST-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; COST-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; COST-NEXT:    br i1 [[TMP15]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; COST-NEXT:    br i1 [[TMP15]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; COST:       [[MIDDLE_BLOCK]]:
 ; COST-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP3]], [[N_VEC]]
 ; COST-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
@@ -502,7 +502,7 @@ define void @switch_all_dests_distinct_variant_using_branches(ptr %start, ptr %e
 ; COST:       [[LOOP_LATCH]]:
 ; COST-NEXT:    [[PTR_IV_NEXT]] = getelementptr inbounds i64, ptr [[PTR_IV]], i64 1
 ; COST-NEXT:    [[EC:%.*]] = icmp eq ptr [[PTR_IV_NEXT]], [[END]]
-; COST-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP_HEADER]], !llvm.loop [[LOOP7:![0-9]+]]
+; COST-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP_HEADER]], !llvm.loop [[LOOP9:![0-9]+]]
 ; COST:       [[EXIT]]:
 ; COST-NEXT:    ret void
 ;
@@ -554,7 +554,7 @@ define void @switch_all_dests_distinct_variant_using_branches(ptr %start, ptr %e
 ; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> splat (i64 42), ptr align 1 [[TMP8]], <4 x i1> [[TMP10]])
 ; FORCED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; FORCED-NEXT:    [[TMP25:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; FORCED-NEXT:    br i1 [[TMP25]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
+; FORCED-NEXT:    br i1 [[TMP25]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; FORCED:       [[MIDDLE_BLOCK]]:
 ; FORCED-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP3]], [[N_VEC]]
 ; FORCED-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
@@ -587,7 +587,7 @@ define void @switch_all_dests_distinct_variant_using_branches(ptr %start, ptr %e
 ; FORCED:       [[LOOP_LATCH]]:
 ; FORCED-NEXT:    [[PTR_IV_NEXT]] = getelementptr inbounds i64, ptr [[PTR_IV]], i64 1
 ; FORCED-NEXT:    [[EC:%.*]] = icmp eq ptr [[PTR_IV_NEXT]], [[END]]
-; FORCED-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP_HEADER]], !llvm.loop [[LOOP9:![0-9]+]]
+; FORCED-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP_HEADER]], !llvm.loop [[LOOP11:![0-9]+]]
 ; FORCED:       [[EXIT]]:
 ; FORCED-NEXT:    ret void
 ;
@@ -718,7 +718,7 @@ define void @switch_multiple_common_dests(ptr %start, ptr %end) {
 ; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> splat (i64 2), ptr align 1 [[TMP8]], <4 x i1> [[TMP40]])
 ; FORCED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; FORCED-NEXT:    [[TMP41:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; FORCED-NEXT:    br i1 [[TMP41]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
+; FORCED-NEXT:    br i1 [[TMP41]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; FORCED:       [[MIDDLE_BLOCK]]:
 ; FORCED-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP3]], [[N_VEC]]
 ; FORCED-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
@@ -747,7 +747,7 @@ define void @switch_multiple_common_dests(ptr %start, ptr %end) {
 ; FORCED:       [[LOOP_LATCH]]:
 ; FORCED-NEXT:    [[PTR_IV_NEXT]] = getelementptr inbounds i64, ptr [[PTR_IV]], i64 1
 ; FORCED-NEXT:    [[EC:%.*]] = icmp eq ptr [[PTR_IV_NEXT]], [[END]]
-; FORCED-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP_HEADER]], !llvm.loop [[LOOP11:![0-9]+]]
+; FORCED-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP_HEADER]], !llvm.loop [[LOOP13:![0-9]+]]
 ; FORCED:       [[EXIT]]:
 ; FORCED-NEXT:    ret void
 ;
@@ -855,7 +855,7 @@ define void @switch4_default_common_dest_with_case(ptr %start, ptr %end) {
 ; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> splat (i64 2), ptr align 1 [[TMP8]], <4 x i1> [[TMP21]])
 ; FORCED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; FORCED-NEXT:    [[TMP19:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; FORCED-NEXT:    br i1 [[TMP19]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
+; FORCED-NEXT:    br i1 [[TMP19]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
 ; FORCED:       [[MIDDLE_BLOCK]]:
 ; FORCED-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP3]], [[N_VEC]]
 ; FORCED-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
@@ -882,7 +882,7 @@ define void @switch4_default_common_dest_with_case(ptr %start, ptr %end) {
 ; FORCED:       [[LOOP_LATCH]]:
 ; FORCED-NEXT:    [[PTR_IV_NEXT]] = getelementptr inbounds i64, ptr [[PTR_IV]], i64 1
 ; FORCED-NEXT:    [[EC:%.*]] = icmp eq ptr [[PTR_IV_NEXT]], [[END]]
-; FORCED-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP_HEADER]], !llvm.loop [[LOOP13:![0-9]+]]
+; FORCED-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP_HEADER]], !llvm.loop [[LOOP15:![0-9]+]]
 ; FORCED:       [[EXIT]]:
 ; FORCED-NEXT:    ret void
 ;
@@ -957,7 +957,7 @@ define void @switch_under_br_default_common_dest_with_case(ptr %start, ptr %end,
 ; COST-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> splat (i64 2), ptr align 1 [[NEXT_GEP]], <4 x i1> [[TMP14]])
 ; COST-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; COST-NEXT:    [[TMP16:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; COST-NEXT:    br i1 [[TMP16]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
+; COST-NEXT:    br i1 [[TMP16]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; COST:       [[MIDDLE_BLOCK]]:
 ; COST-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP3]], [[N_VEC]]
 ; COST-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
@@ -987,7 +987,7 @@ define void @switch_under_br_default_common_dest_with_case(ptr %start, ptr %end,
 ; COST:       [[LOOP_LATCH]]:
 ; COST-NEXT:    [[PTR_IV_NEXT]] = getelementptr inbounds i64, ptr [[PTR_IV]], i64 1
 ; COST-NEXT:    [[EC:%.*]] = icmp eq ptr [[PTR_IV_NEXT]], [[END]]
-; COST-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP_HEADER]], !llvm.loop [[LOOP9:![0-9]+]]
+; COST-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP_HEADER]], !llvm.loop [[LOOP11:![0-9]+]]
 ; COST:       [[EXIT]]:
 ; COST-NEXT:    ret void
 ;
@@ -1041,7 +1041,7 @@ define void @switch_under_br_default_common_dest_with_case(ptr %start, ptr %end,
 ; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> splat (i64 2), ptr align 1 [[TMP8]], <4 x i1> [[TMP24]])
 ; FORCED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; FORCED-NEXT:    [[TMP19:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; FORCED-NEXT:    br i1 [[TMP19]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
+; FORCED-NEXT:    br i1 [[TMP19]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
 ; FORCED:       [[MIDDLE_BLOCK]]:
 ; FORCED-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP3]], [[N_VEC]]
 ; FORCED-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
@@ -1071,7 +1071,7 @@ define void @switch_under_br_default_common_dest_with_case(ptr %start, ptr %end,
 ; FORCED:       [[LOOP_LATCH]]:
 ; FORCED-NEXT:    [[PTR_IV_NEXT]] = getelementptr inbounds i64, ptr [[PTR_IV]], i64 1
 ; FORCED-NEXT:    [[EC:%.*]] = icmp eq ptr [[PTR_IV_NEXT]], [[END]]
-; FORCED-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP_HEADER]], !llvm.loop [[LOOP15:![0-9]+]]
+; FORCED-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP_HEADER]], !llvm.loop [[LOOP17:![0-9]+]]
 ; FORCED:       [[EXIT]]:
 ; FORCED-NEXT:    ret void
 ;
@@ -1198,7 +1198,7 @@ define void @br_under_switch_default_common_dest_with_case(ptr %start, ptr %end,
 ; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> splat (i64 2), ptr align 1 [[TMP8]], <4 x i1> [[TMP37]])
 ; FORCED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; FORCED-NEXT:    [[TMP31:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; FORCED-NEXT:    br i1 [[TMP31]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
+; FORCED-NEXT:    br i1 [[TMP31]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP18:![0-9]+]]
 ; FORCED:       [[MIDDLE_BLOCK]]:
 ; FORCED-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP3]], [[N_VEC]]
 ; FORCED-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
@@ -1228,7 +1228,7 @@ define void @br_under_switch_default_common_dest_with_case(ptr %start, ptr %end,
 ; FORCED:       [[LOOP_LATCH]]:
 ; FORCED-NEXT:    [[PTR_IV_NEXT]] = getelementptr inbounds i64, ptr [[PTR_IV]], i64 1
 ; FORCED-NEXT:    [[EC:%.*]] = icmp eq ptr [[PTR_IV_NEXT]], [[END]]
-; FORCED-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP_HEADER]], !llvm.loop [[LOOP17:![0-9]+]]
+; FORCED-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP_HEADER]], !llvm.loop [[LOOP19:![0-9]+]]
 ; FORCED:       [[EXIT]]:
 ; FORCED-NEXT:    ret void
 ;
@@ -1360,7 +1360,7 @@ define void @large_number_of_cases(ptr %start, ptr %end) {
 ; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> splat (i64 42), ptr align 1 [[TMP8]], <4 x i1> [[TMP58]])
 ; FORCED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; FORCED-NEXT:    [[TMP59:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; FORCED-NEXT:    br i1 [[TMP59]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP18:![0-9]+]]
+; FORCED-NEXT:    br i1 [[TMP59]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP20:![0-9]+]]
 ; FORCED:       [[MIDDLE_BLOCK]]:
 ; FORCED-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP3]], [[N_VEC]]
 ; FORCED-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
@@ -1387,7 +1387,7 @@ define void @large_number_of_cases(ptr %start, ptr %end) {
 ; FORCED:       [[LOOP_LATCH]]:
 ; FORCED-NEXT:    [[PTR_IV_NEXT]] = getelementptr inbounds i64, ptr [[PTR_IV]], i64 1
 ; FORCED-NEXT:    [[EC:%.*]] = icmp eq ptr [[PTR_IV_NEXT]], [[END]]
-; FORCED-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP_HEADER]], !llvm.loop [[LOOP19:![0-9]+]]
+; FORCED-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP_HEADER]], !llvm.loop [[LOOP21:![0-9]+]]
 ; FORCED:       [[EXIT]]:
 ; FORCED-NEXT:    ret void
 ;
@@ -1423,35 +1423,39 @@ exit:
 }
 
 ;.
-; COST: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
+; COST: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]], [[META3:![0-9]+]]}
 ; COST: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
-; COST: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
-; COST: [[LOOP3]] = distinct !{[[LOOP3]], [[META2]], [[META1]]}
-; COST: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META2]]}
-; COST: [[LOOP5]] = distinct !{[[LOOP5]], [[META2]], [[META1]]}
-; COST: [[LOOP6]] = distinct !{[[LOOP6]], [[META1]], [[META2]]}
-; COST: [[LOOP7]] = distinct !{[[LOOP7]], [[META2]], [[META1]]}
-; COST: [[LOOP8]] = distinct !{[[LOOP8]], [[META1]], [[META2]]}
-; COST: [[LOOP9]] = distinct !{[[LOOP9]], [[META2]], [[META1]]}
+; COST: [[META2]] = !{!"llvm.loop.vectorize.vector_body", i32 1}
+; COST: [[META3]] = !{!"llvm.loop.unroll.runtime.disable"}
+; COST: [[LOOP4]] = distinct !{[[LOOP4]], [[META3]], [[META1]], [[META5:![0-9]+]]}
+; COST: [[META5]] = !{!"llvm.loop.vectorize.scalar_remainder", i32 1}
+; COST: [[LOOP6]] = distinct !{[[LOOP6]], [[META1]], [[META2]], [[META3]]}
+; COST: [[LOOP7]] = distinct !{[[LOOP7]], [[META3]], [[META1]], [[META5]]}
+; COST: [[LOOP8]] = distinct !{[[LOOP8]], [[META1]], [[META2]], [[META3]]}
+; COST: [[LOOP9]] = distinct !{[[LOOP9]], [[META3]], [[META1]], [[META5]]}
+; COST: [[LOOP10]] = distinct !{[[LOOP10]], [[META1]], [[META2]], [[META3]]}
+; COST: [[LOOP11]] = distinct !{[[LOOP11]], [[META3]], [[META1]], [[META5]]}
 ;.
-; FORCED: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
+; FORCED: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]], [[META3:![0-9]+]]}
 ; FORCED: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
-; FORCED: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
-; FORCED: [[LOOP3]] = distinct !{[[LOOP3]], [[META2]], [[META1]]}
-; FORCED: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META2]]}
-; FORCED: [[LOOP5]] = distinct !{[[LOOP5]], [[META2]], [[META1]]}
-; FORCED: [[LOOP6]] = distinct !{[[LOOP6]], [[META1]], [[META2]]}
-; FORCED: [[LOOP7]] = distinct !{[[LOOP7]], [[META2]], [[META1]]}
-; FORCED: [[LOOP8]] = distinct !{[[LOOP8]], [[META1]], [[META2]]}
-; FORCED: [[LOOP9]] = distinct !{[[LOOP9]], [[META2]], [[META1]]}
-; FORCED: [[LOOP10]] = distinct !{[[LOOP10]], [[META1]], [[META2]]}
-; FORCED: [[LOOP11]] = distinct !{[[LOOP11]], [[META2]], [[META1]]}
-; FORCED: [[LOOP12]] = distinct !{[[LOOP12]], [[META1]], [[META2]]}
-; FORCED: [[LOOP13]] = distinct !{[[LOOP13]], [[META2]], [[META1]]}
-; FORCED: [[LOOP14]] = distinct !{[[LOOP14]], [[META1]], [[META2]]}
-; FORCED: [[LOOP15]] = distinct !{[[LOOP15]], [[META2]], [[META1]]}
-; FORCED: [[LOOP16]] = distinct !{[[LOOP16]], [[META1]], [[META2]]}
-; FORCED: [[LOOP17]] = distinct !{[[LOOP17]], [[META2]], [[META1]]}
-; FORCED: [[LOOP18]] = distinct !{[[LOOP18]], [[META1]], [[META2]]}
-; FORCED: [[LOOP19]] = distinct !{[[LOOP19]], [[META2]], [[META1]]}
+; FORCED: [[META2]] = !{!"llvm.loop.vectorize.vector_body", i32 1}
+; FORCED: [[META3]] = !{!"llvm.loop.unroll.runtime.disable"}
+; FORCED: [[LOOP4]] = distinct !{[[LOOP4]], [[META3]], [[META1]], [[META5:![0-9]+]]}
+; FORCED: [[META5]] = !{!"llvm.loop.vectorize.scalar_remainder", i32 1}
+; FORCED: [[LOOP6]] = distinct !{[[LOOP6]], [[META1]], [[META2]], [[META3]]}
+; FORCED: [[LOOP7]] = distinct !{[[LOOP7]], [[META3]], [[META1]], [[META5]]}
+; FORCED: [[LOOP8]] = distinct !{[[LOOP8]], [[META1]], [[META2]], [[META3]]}
+; FORCED: [[LOOP9]] = distinct !{[[LOOP9]], [[META3]], [[META1]], [[META5]]}
+; FORCED: [[LOOP10]] = distinct !{[[LOOP10]], [[META1]], [[META2]], [[META3]]}
+; FORCED: [[LOOP11]] = distinct !{[[LOOP11]], [[META3]], [[META1]], [[META5]]}
+; FORCED: [[LOOP12]] = distinct !{[[LOOP12]], [[META1]], [[META2]], [[META3]]}
+; FORCED: [[LOOP13]] = distinct !{[[LOOP13]], [[META3]], [[META1]], [[META5]]}
+; FORCED: [[LOOP14]] = distinct !{[[LOOP14]], [[META1]], [[META2]], [[META3]]}
+; FORCED: [[LOOP15]] = distinct !{[[LOOP15]], [[META3]], [[META1]], [[META5]]}
+; FORCED: [[LOOP16]] = distinct !{[[LOOP16]], [[META1]], [[META2]], [[META3]]}
+; FORCED: [[LOOP17]] = distinct !{[[LOOP17]], [[META3]], [[META1]], [[META5]]}
+; FORCED: [[LOOP18]] = distinct !{[[LOOP18]], [[META1]], [[META2]], [[META3]]}
+; FORCED: [[LOOP19]] = distinct !{[[LOOP19]], [[META3]], [[META1]], [[META5]]}
+; FORCED: [[LOOP20]] = distinct !{[[LOOP20]], [[META1]], [[META2]], [[META3]]}
+; FORCED: [[LOOP21]] = distinct !{[[LOOP21]], [[META3]], [[META1]], [[META5]]}
 ;.

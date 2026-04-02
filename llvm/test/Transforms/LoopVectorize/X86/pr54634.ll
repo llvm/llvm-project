@@ -65,7 +65,7 @@ define ptr addrspace(10) @japi1_vect_42283(ptr nocapture readonly %0, i32 %1) #0
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[L44:.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]]
 ; CHECK:       [[VEC_EPILOG_ITER_CHECK]]:
 ; CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_MOD_VF]], 4
-; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF15:![0-9]+]]
+; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF16:![0-9]+]]
 ; CHECK:       [[VEC_EPILOG_PH]]:
 ; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; CHECK-NEXT:    [[N_MOD_VF4:%.*]] = urem i64 [[TMP8]], 4
@@ -88,22 +88,22 @@ define ptr addrspace(10) @japi1_vect_42283(ptr nocapture readonly %0, i32 %1) #0
 ; CHECK-NEXT:    [[INDEX_NEXT14]] = add nuw i64 [[INDEX7]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT9]] = add <4 x i64> [[VEC_IND8]], splat (i64 4)
 ; CHECK-NEXT:    [[TMP30:%.*]] = icmp eq i64 [[INDEX_NEXT14]], [[N_VEC5]]
-; CHECK-NEXT:    br i1 [[TMP30]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP30]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP17:![0-9]+]]
 ; CHECK:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[CMP_N15:%.*]] = icmp eq i64 [[TMP8]], [[N_VEC5]]
 ; CHECK-NEXT:    br i1 [[CMP_N15]], label %[[L44]], label %[[VEC_EPILOG_SCALAR_PH]]
 ; CHECK:       [[VEC_EPILOG_SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL17:%.*]] = phi i64 [ [[N_VEC5]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC5]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ]
 ; CHECK-NEXT:    br label %[[L26:.*]]
 ; CHECK:       [[L26]]:
-; CHECK-NEXT:    [[VALUE_PHI5:%.*]] = phi i64 [ [[BC_RESUME_VAL17]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[TMP27:%.*]], %[[L26]] ]
+; CHECK-NEXT:    [[VALUE_PHI5:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[TMP27:%.*]], %[[L26]] ]
 ; CHECK-NEXT:    [[DOTREPACK:%.*]] = getelementptr inbounds { ptr addrspace(10), i64 }, ptr addrspace(13) [[TMP7]], i64 [[VALUE_PHI5]], i32 0
 ; CHECK-NEXT:    store ptr addrspace(10) [[DOTUNPACK]], ptr addrspace(13) [[DOTREPACK]], align 8, !tbaa [[JTBAA_ARRAYBUF_TBAA10]]
 ; CHECK-NEXT:    [[DOTREPACK4:%.*]] = getelementptr inbounds { ptr addrspace(10), i64 }, ptr addrspace(13) [[TMP7]], i64 [[VALUE_PHI5]], i32 1
 ; CHECK-NEXT:    store i64 [[DOTUNPACK2]], ptr addrspace(13) [[DOTREPACK4]], align 8, !tbaa [[JTBAA_ARRAYBUF_TBAA10]]
 ; CHECK-NEXT:    [[TMP27]] = add i64 [[VALUE_PHI5]], 1
 ; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp eq i64 [[VALUE_PHI5]], [[TMP2]]
-; CHECK-NEXT:    br i1 [[DOTNOT]], label %[[L44]], label %[[L26]], !llvm.loop [[LOOP17:![0-9]+]]
+; CHECK-NEXT:    br i1 [[DOTNOT]], label %[[L44]], label %[[L26]], !llvm.loop [[LOOP19:![0-9]+]]
 ; CHECK:       [[L44]]:
 ; CHECK-NEXT:    ret ptr addrspace(10) null
 ;
@@ -159,10 +159,12 @@ L44:
 ; CHECK: [[META9]] = !{!"jtbaa_immut", [[META1]], i64 0}
 ; CHECK: [[JTBAA_ARRAYBUF_TBAA10]] = !{[[META11:![0-9]+]], [[META11]], i64 0}
 ; CHECK: [[META11]] = !{!"jtbaa_arraybuf", [[META2]], i64 0}
-; CHECK: [[LOOP12]] = distinct !{[[LOOP12]], [[META13:![0-9]+]], [[META14:![0-9]+]]}
+; CHECK: [[LOOP12]] = distinct !{[[LOOP12]], [[META13:![0-9]+]], [[META14:![0-9]+]], [[META15:![0-9]+]]}
 ; CHECK: [[META13]] = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK: [[META14]] = !{!"llvm.loop.unroll.runtime.disable"}
-; CHECK: [[PROF15]] = !{!"branch_weights", i32 4, i32 12}
-; CHECK: [[LOOP16]] = distinct !{[[LOOP16]], [[META13]], [[META14]]}
-; CHECK: [[LOOP17]] = distinct !{[[LOOP17]], [[META14]], [[META13]]}
+; CHECK: [[META14]] = !{!"llvm.loop.vectorize.vector_body", i32 1}
+; CHECK: [[META15]] = !{!"llvm.loop.unroll.runtime.disable"}
+; CHECK: [[PROF16]] = !{!"branch_weights", i32 4, i32 12}
+; CHECK: [[LOOP17]] = distinct !{[[LOOP17]], [[META13]], [[META18:![0-9]+]], [[META14]], [[META15]]}
+; CHECK: [[META18]] = !{!"llvm.loop.vectorize.scalar_remainder", i32 1}
+; CHECK: [[LOOP19]] = distinct !{[[LOOP19]], [[META15]], [[META13]], [[META18]], [[META18]]}
 ;.

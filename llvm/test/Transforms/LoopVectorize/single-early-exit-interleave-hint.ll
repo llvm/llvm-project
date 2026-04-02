@@ -76,7 +76,8 @@ e2:
 !0 = distinct !{!0, !1}
 !1 = !{!"llvm.loop.interleave.count", i32 4}
 ;.
-; VF4IC4: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
+; VF4IC4: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]], [[META3:![0-9]+]]}
 ; VF4IC4: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
-; VF4IC4: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
+; VF4IC4: [[META2]] = !{!"llvm.loop.vectorize.vector_body", i32 1}
+; VF4IC4: [[META3]] = !{!"llvm.loop.unroll.runtime.disable"}
 ;.

@@ -34,7 +34,7 @@ define i64 @test_foldable_live_in_via_scev() {
 ; CHECK-NEXT:    [[MUL]] = mul nsw i64 [[RED]], [[ADD]]
 ; CHECK-NEXT:    [[IV_NEXT]] = add nsw i32 [[IV]], 1
 ; CHECK-NEXT:    [[EC:%.*]] = icmp eq i32 [[IV_NEXT]], 100
-; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOP]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOP]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    [[RET:%.*]] = phi i64 [ [[MUL]], %[[LOOP]] ]
 ; CHECK-NEXT:    ret i64 [[RET]]
@@ -87,7 +87,7 @@ define i64 @second_lshr_operand_zero_via_scev() {
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[STEP_ADD]], splat (i64 2)
 ; CHECK-NEXT:    [[VEC_IND_NEXT3]] = add <2 x i32> [[STEP_ADD4]], splat (i32 2)
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
-; CHECK-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = or <2 x i64> [[TMP11]], [[TMP10]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = call i64 @llvm.vector.reduce.or.v2i64(<2 x i64> [[BIN_RDX]])
@@ -119,9 +119,11 @@ exit:
 }
 
 ;.
-; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
+; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]], [[META3:![0-9]+]]}
 ; CHECK: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
-; CHECK: [[LOOP3]] = distinct !{[[LOOP3]], [[META2]], [[META1]]}
-; CHECK: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META2]]}
+; CHECK: [[META2]] = !{!"llvm.loop.vectorize.vector_body", i32 1}
+; CHECK: [[META3]] = !{!"llvm.loop.unroll.runtime.disable"}
+; CHECK: [[LOOP4]] = distinct !{[[LOOP4]], [[META3]], [[META1]], [[META5:![0-9]+]]}
+; CHECK: [[META5]] = !{!"llvm.loop.vectorize.scalar_remainder", i32 1}
+; CHECK: [[LOOP6]] = distinct !{[[LOOP6]], [[META1]], [[META2]], [[META3]]}
 ;.
