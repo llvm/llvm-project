@@ -1,5 +1,5 @@
 set(LLVM_LINK_COMPONENTS
-  LLVMSupportHTTP
+  SupportHTTP
   )
 
 add_llvm_unittest(DebuginfodTests
