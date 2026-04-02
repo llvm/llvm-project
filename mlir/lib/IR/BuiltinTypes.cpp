@@ -95,6 +95,78 @@ ComplexType::convertFromAttribute(Attribute attr,
 }
 
 //===----------------------------------------------------------------------===//
+/// QuantileType
+//===----------------------------------------------------------------------===//
+
+Type QuantileType::getStorageType() const { return getImpl()->storageType; }
+
+Type QuantileType::getQuantileType() const { return getImpl()->quantileType; }
+
+ArrayRef<double> QuantileType::getQuantiles() const {
+  return getImpl()->getQuantiles();
+}
+
+LogicalResult QuantileType::verify(function_ref<InFlightDiagnostic()> emitError,
+                                   Type storageType, Type quantileType,
+                                   ArrayRef<double> quantiles) {
+  if (!storageType.isIntOrFloat())
+    return emitError() << "storage type must be an integer or float type";
+  if (!llvm::isa<FloatType>(quantileType))
+    return emitError() << "quantile type must be a float type";
+  if (quantiles.empty())
+    return emitError() << "quantile values must not be empty";
+  return success();
+}
+
+bool QuantileType::shouldDefaultToSigned() const {
+  if (auto intType = llvm::dyn_cast<IntegerType>(getStorageType()))
+    return !intType.isUnsigned();
+  // Float types default to signed.
+  return true;
+}
+
+unsigned QuantileType::getStorageWidth() const {
+  return getStorageType().getIntOrFloatBitWidth();
+}
+
+int64_t QuantileType::getDefaultMaximum(bool isSigned) const {
+  if (isSigned)
+    return (1LL << (getStorageWidth() - 1)) - 1;
+  return (1LL << getStorageWidth()) - 1;
+}
+
+int64_t QuantileType::getDefaultMinimum(bool isSigned) const {
+  if (isSigned)
+    return -(1LL << (getStorageWidth() - 1));
+  return 0;
+}
+
+std::string QuantileType::getStorageTypeName(bool isSigned) const {
+  std::string result = "quantile<";
+  llvm::raw_string_ostream os(result);
+  os << getStorageType() << ":" << getQuantileType() << ", {";
+  ArrayRef<double> quantiles = getQuantiles();
+  llvm::interleave(
+      llvm::seq<size_t>(0, quantiles.size()), os,
+      [&](size_t index) { os << quantiles[index]; }, ",");
+  os << "}>";
+  return result;
+}
+
+bool QuantileType::isPacked() const { return getStorageWidth() <= 4; }
+
+unsigned QuantileType::getLogicalBitWidth() const { return getStorageWidth(); }
+
+unsigned QuantileType::getElementsPerByte() const {
+  unsigned width = getStorageWidth();
+  return width > 0 ? 8 / width : 0;
+}
+
+std::optional<unsigned> QuantileType::getPreferredAlignmentBytes() const {
+  return std::nullopt;
+}
+
+//===----------------------------------------------------------------------===//
 // Integer Type
 //===----------------------------------------------------------------------===//
 
@@ -435,7 +507,7 @@ bool TensorType::isValidElementType(Type type) {
   // types. Dialects are expected to verify that tensor types have a valid
   // element type within that dialect.
   return llvm::isa<ComplexType, FloatType, IntegerType, OpaqueType, VectorType,
-                   IndexType>(type) ||
+                   IndexType, QuantileType>(type) ||
          !llvm::isa<BuiltinDialect>(type.getDialect());
 }
 

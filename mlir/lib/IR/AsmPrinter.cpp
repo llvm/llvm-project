@@ -2900,6 +2900,21 @@ void AsmPrinter::Impl::printTypeImpl(Type type) {
         printType(complexTy.getElementType());
         os << '>';
       })
+      .Case<QuantileType>([&](QuantileType quantileTy) {
+        os << "quantile<";
+        printType(quantileTy.getStorageType());
+        os << ':';
+        printType(quantileTy.getQuantileType());
+        os << ", {";
+        ArrayRef<double> quantiles = quantileTy.getQuantiles();
+        // interleaveComma(llvm::seq<size_t>(0, quantiles.size()),
+        //                 [&](size_t i) { os << quantiles[i]; });
+        llvm::interleave(
+            llvm::seq<size_t>(0, quantiles.size()), os,
+            [&](size_t index) { os << quantiles[index]; }, ",");
+        os << "}";
+        os << '>';
+      })
       .Case([&](TupleType tupleTy) {
         os << "tuple<";
         interleaveComma(tupleTy.getTypes(),

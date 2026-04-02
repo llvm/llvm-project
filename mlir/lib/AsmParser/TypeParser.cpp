@@ -51,6 +51,7 @@ OptionalParseResult Parser::parseOptionalType(Type &type) {
   case Token::kw_f8E8M0FNU:
   case Token::kw_bf16:
   case Token::kw_f16:
+  case Token::kw_quantile:
   case Token::kw_tf32:
   case Token::kw_f32:
   case Token::kw_f64:
@@ -283,6 +284,8 @@ Type Parser::parseNonFunctionType() {
     return parseTensorType();
   case Token::kw_complex:
     return parseComplexType();
+  case Token::kw_quantile:
+    return parseQuantileType();
   case Token::kw_tuple:
     return parseTupleType();
   case Token::kw_vector:
@@ -387,6 +390,58 @@ Type Parser::parseNonFunctionType() {
       return parseExtendedType();
     return codeCompleteType();
   }
+}
+
+/// Parse a quantile type.
+///
+///   quantile-type ::= `quantile` `<` type `:` type `,` `{` float-list `}` `>`
+///
+Type Parser::parseQuantileType() {
+  consumeToken(Token::kw_quantile);
+
+  if (parseToken(Token::less, "expected '<' in quantile type"))
+    return nullptr;
+
+  // Parse the storage type.
+  Type storageType = parseType();
+  if (!storageType)
+    return nullptr;
+
+  if (parseToken(Token::colon, "expected ':' in quantile type"))
+    return nullptr;
+
+  // Parse the quantile (expressed) type.
+  Type quantileType = parseType();
+  if (!quantileType)
+    return nullptr;
+
+  if (parseToken(Token::comma, "expected ',' in quantile type"))
+    return nullptr;
+
+  if (parseToken(Token::l_brace, "expected '{' in quantile type"))
+    return nullptr;
+
+  // Parse the quantile values as floating point literals.
+  SmallVector<double, 16> quantiles;
+  do {
+    bool isNegative = consumeIf(Token::minus);
+    Token curTok = getToken();
+    std::optional<APFloat> apResult;
+    if (failed(parseFloatFromLiteral(apResult, curTok, isNegative,
+                                     APFloat::IEEEdouble())))
+      return nullptr;
+    consumeToken();
+    quantiles.push_back(apResult->convertToDouble());
+  } while (consumeIf(Token::comma) &&
+           !getToken().is(Token::r_brace));
+
+  if (parseToken(Token::r_brace, "expected '}' in quantile type"))
+    return nullptr;
+
+  if (parseToken(Token::greater, "expected '>' in quantile type"))
+    return nullptr;
+
+  return QuantileType::get(storageType, quantileType, quantiles);
 }
 
 /// Parse a tensor type.

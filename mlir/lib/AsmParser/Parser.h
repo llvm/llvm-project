@@ -213,6 +213,9 @@ public:
   /// Parse a complex type.
   Type parseComplexType();
 
+  /// Parse a quantile type.
+  Type parseQuantileType();
+
   /// Parse an extended type.
   Type parseExtendedType();
 

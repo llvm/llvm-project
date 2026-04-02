@@ -1116,6 +1116,84 @@ def Builtin_Opaque : Builtin_Type<"Opaque", "opaque"> {
 }
 
 //===----------------------------------------------------------------------===//
+// QuantileType
+//===----------------------------------------------------------------------===//
+
+def Builtin_Quantile : Builtin_Type<"Quantile", "quantile",
+    [QuantStorageTypeInterface, MemRefElementTypeInterface]> {
+  let summary = "Quantile-based type with a lookup table of quantile values";
+  let description = [{
+    Syntax:
+
+    ```
+    quantile-type ::= `quantile` `<` type `:` type `,` `{` float-list `}` `>`
+    ```
+
+    A quantile type represents a quantile-based floating point encoding, where
+    discrete storage values map to floating-point values via a quantile lookup
+    table. The type has a storage type (how raw values are stored, e.g., `ui4`,
+    `si8`), a quantile type (the expressed floating-point precision, e.g.,
+    `f16`, `f32`), and an array of quantile values that define the mapping.
+
+    This type is used for weight compression schemes like NF4 (NormalFloat4)
+    and similar quantile-based formats.
+
+    #### Example:
+
+    ```mlir
+    quantile<ui4:f16, {-1.0,-0.696,0.0,0.079,1.0}>
+    ```
+  }];
+  let parameters = (ins
+    "Type":$storageType,
+    "Type":$quantileType,
+    ArrayRefParameter<"double">:$quantiles
+  );
+  let builders = [
+    TypeBuilderWithInferredContext<(ins
+      "Type":$storageType,
+      "Type":$quantileType,
+      "ArrayRef<double>":$quantiles), [{
+      return $_get(storageType.getContext(), storageType, quantileType,
+                   quantiles);
+    }]>
+  ];
+  let skipDefaultBuilders = 1;
+  let genStorageClass = 0;
+  let genVerifyDecl = 1;
+  let extraClassDeclaration = [{
+    /// QuantStorageTypeInterface method implementations.
+
+    /// Returns true if the storage type defaults to signed.
+    bool shouldDefaultToSigned() const;
+
+    /// Get the bit width of the storage type.
+    unsigned getStorageWidth() const;
+
+    /// Get default minimum value for the storage type.
+    int64_t getDefaultMinimum(bool isSigned) const;
+
+    /// Get default maximum value for the storage type.
+    int64_t getDefaultMaximum(bool isSigned) const;
+
+    /// Get the storage type as a string.
+    std::string getStorageTypeName(bool isSigned) const;
+
+    /// Check if the storage type uses packed representation.
+    bool isPacked() const;
+
+    /// Get the logical bit width per value.
+    unsigned getLogicalBitWidth() const;
+
+    /// Returns how many values of this type fit in one byte.
+    unsigned getElementsPerByte() const;
+
+    /// Get the preferred alignment in bytes.
+    std::optional<unsigned> getPreferredAlignmentBytes() const;
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // RankedTensorType
 //===----------------------------------------------------------------------===//
 

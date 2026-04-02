@@ -35,6 +35,7 @@ class TypeRange;
 namespace detail {
 struct FunctionTypeStorage;
 struct IntegerTypeStorage;
+struct QuantileTypeStorage;
 struct TupleTypeStorage;
 } // namespace detail
 
