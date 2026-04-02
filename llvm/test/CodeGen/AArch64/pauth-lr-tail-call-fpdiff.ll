@@ -39,12 +39,13 @@ define swifttailcc void @tail_call_fpdiff_a_key(ptr swiftasync %ctx) "branch-pro
 ; COMPAT-NEXT:    mov w7, #8 // =0x8
 ; COMPAT-NEXT:    and x29, x29, #0xefffffffffffffff
 ; COMPAT-NEXT:    add sp, sp, #32
-; COMPAT-NEXT:    adrp x16, .Ltmp0
-; COMPAT-NEXT:    add x16, x16, :lo12:.Ltmp0
+; COMPAT-NEXT:    mov x17, x30
+; COMPAT-NEXT:    add x16, sp, #16
+; COMPAT-NEXT:    adrp x15, .Ltmp0
+; COMPAT-NEXT:    add x15, x15, :lo12:.Ltmp0
 ; COMPAT-NEXT:    hint #39
-; COMPAT-NEXT:    add sp, sp, #16
-; COMPAT-NEXT:    hint #29
-; COMPAT-NEXT:    sub sp, sp, #16
+; COMPAT-NEXT:    hint #12
+; COMPAT-NEXT:    mov x30, x17
 ; COMPAT-NEXT:    b callee_stack_args
 ;
 ; V83A-LABEL: tail_call_fpdiff_a_key:
@@ -74,12 +75,13 @@ define swifttailcc void @tail_call_fpdiff_a_key(ptr swiftasync %ctx) "branch-pro
 ; V83A-NEXT:    mov w7, #8 // =0x8
 ; V83A-NEXT:    and x29, x29, #0xefffffffffffffff
 ; V83A-NEXT:    add sp, sp, #32
-; V83A-NEXT:    adrp x16, .Ltmp0
-; V83A-NEXT:    add x16, x16, :lo12:.Ltmp0
+; V83A-NEXT:    mov x17, x30
+; V83A-NEXT:    add x16, sp, #16
+; V83A-NEXT:    adrp x15, .Ltmp0
+; V83A-NEXT:    add x15, x15, :lo12:.Ltmp0
 ; V83A-NEXT:    hint #39
-; V83A-NEXT:    add sp, sp, #16
-; V83A-NEXT:    autiasp
-; V83A-NEXT:    sub sp, sp, #16
+; V83A-NEXT:    autia1716
+; V83A-NEXT:    mov x30, x17
 ; V83A-NEXT:    b callee_stack_args
 ;
 ; PAUTHLR-LABEL: tail_call_fpdiff_a_key:
@@ -149,12 +151,13 @@ define swifttailcc void @tail_call_fpdiff_b_key(ptr swiftasync %ctx) "branch-pro
 ; COMPAT-NEXT:    mov w7, #8 // =0x8
 ; COMPAT-NEXT:    and x29, x29, #0xefffffffffffffff
 ; COMPAT-NEXT:    add sp, sp, #32
-; COMPAT-NEXT:    adrp x16, .Ltmp1
-; COMPAT-NEXT:    add x16, x16, :lo12:.Ltmp1
+; COMPAT-NEXT:    mov x17, x30
+; COMPAT-NEXT:    add x16, sp, #16
+; COMPAT-NEXT:    adrp x15, .Ltmp1
+; COMPAT-NEXT:    add x15, x15, :lo12:.Ltmp1
 ; COMPAT-NEXT:    hint #39
-; COMPAT-NEXT:    add sp, sp, #16
-; COMPAT-NEXT:    hint #31
-; COMPAT-NEXT:    sub sp, sp, #16
+; COMPAT-NEXT:    hint #14
+; COMPAT-NEXT:    mov x30, x17
 ; COMPAT-NEXT:    b callee_stack_args
 ;
 ; V83A-LABEL: tail_call_fpdiff_b_key:
@@ -185,12 +188,13 @@ define swifttailcc void @tail_call_fpdiff_b_key(ptr swiftasync %ctx) "branch-pro
 ; V83A-NEXT:    mov w7, #8 // =0x8
 ; V83A-NEXT:    and x29, x29, #0xefffffffffffffff
 ; V83A-NEXT:    add sp, sp, #32
-; V83A-NEXT:    adrp x16, .Ltmp1
-; V83A-NEXT:    add x16, x16, :lo12:.Ltmp1
+; V83A-NEXT:    mov x17, x30
+; V83A-NEXT:    add x16, sp, #16
+; V83A-NEXT:    adrp x15, .Ltmp1
+; V83A-NEXT:    add x15, x15, :lo12:.Ltmp1
 ; V83A-NEXT:    hint #39
-; V83A-NEXT:    add sp, sp, #16
-; V83A-NEXT:    autibsp
-; V83A-NEXT:    sub sp, sp, #16
+; V83A-NEXT:    autib1716
+; V83A-NEXT:    mov x30, x17
 ; V83A-NEXT:    b callee_stack_args
 ;
 ; PAUTHLR-LABEL: tail_call_fpdiff_b_key:
