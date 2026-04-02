@@ -535,10 +535,8 @@ private:
   /// Returns true if any possible dependence is disproved.
   /// If there might be a dependence, returns false.
   /// Sets appropriate direction entry.
-  bool weakCrossingSIVtest(const SCEV *SrcCoeff, const SCEV *SrcConst,
-                           const SCEV *DstConst, const Loop *CurrentSrcLoop,
-                           const Loop *CurrentDstLoop, unsigned Level,
-                           FullDependence &Result) const;
+  bool weakCrossingSIVtest(const SCEVAddRecExpr *Src, const SCEVAddRecExpr *Dst,
+                           unsigned Level, FullDependence &Result) const;
 
   /// ExactSIVtest - Tests the SIV subscript pair
   /// (Src and Dst) for dependence.
@@ -585,10 +583,16 @@ private:
   /// Returns true if any possible dependence is disproved.
   /// Works in some cases that symbolicRDIVtest doesn't,
   /// and vice versa.
-  bool exactRDIVtest(const SCEV *SrcCoeff, const SCEV *DstCoeff,
-                     const SCEV *SrcConst, const SCEV *DstConst,
-                     const Loop *SrcLoop, const Loop *DstLoop,
+  bool exactRDIVtest(const SCEVAddRecExpr *Src, const SCEVAddRecExpr *Dst,
                      FullDependence &Result) const;
+
+  /// exactTestImpl - Core implementation shared by the Exact SIV test and the
+  /// Exact RDIV test. Returns true if any possible dependence is disproved. If
+  /// \p Level is provided, this function will also attempt to explore
+  /// directions and refine \p Result for the given level.
+  bool exactTestImpl(const SCEVAddRecExpr *Src, const SCEVAddRecExpr *Dst,
+                     FullDependence &Result,
+                     std::optional<unsigned> Level) const;
 
   /// gcdMIVtest - Tests an MIV subscript pair for dependence.
   /// Returns true if any possible dependence is disproved.

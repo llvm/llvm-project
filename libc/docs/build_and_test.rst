@@ -38,6 +38,12 @@ The libc can be built and tested in two different modes:
 
         $> ninja libc-integration-tests
 
+   #. Shared tests - You can run tests for shared, standalone components (like math primitives) without needing the full libc runtime by the command:
+
+      .. code-block:: sh
+
+        $> ninja libc-shared-tests
+
 Building with VSCode
 ====================
 

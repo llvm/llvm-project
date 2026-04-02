@@ -717,6 +717,26 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     return Builder.CreateIntrinsic(
         RetTy, CGM.getHLSLRuntime().getSampleCmpLevelZeroIntrinsic(), Args);
   }
+  case Builtin::BI__builtin_hlsl_resource_calculate_lod: {
+    Value *HandleOp = EmitScalarExpr(E->getArg(0));
+    Value *SamplerOp = EmitScalarExpr(E->getArg(1));
+    Value *CoordOp = EmitScalarExpr(E->getArg(2));
+
+    return Builder.CreateIntrinsic(
+        ConvertType(E->getType()),
+        CGM.getHLSLRuntime().getCalculateLodIntrinsic(),
+        {HandleOp, SamplerOp, CoordOp});
+  }
+  case Builtin::BI__builtin_hlsl_resource_calculate_lod_unclamped: {
+    Value *HandleOp = EmitScalarExpr(E->getArg(0));
+    Value *SamplerOp = EmitScalarExpr(E->getArg(1));
+    Value *CoordOp = EmitScalarExpr(E->getArg(2));
+
+    return Builder.CreateIntrinsic(
+        ConvertType(E->getType()),
+        CGM.getHLSLRuntime().getCalculateLodUnclampedIntrinsic(),
+        {HandleOp, SamplerOp, CoordOp});
+  }
   case Builtin::BI__builtin_hlsl_resource_gather: {
     Value *HandleOp = EmitScalarExpr(E->getArg(0));
     Value *SamplerOp = EmitScalarExpr(E->getArg(1));

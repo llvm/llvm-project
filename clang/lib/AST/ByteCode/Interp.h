@@ -36,9 +36,12 @@
 #include "llvm/ADT/ScopeExit.h"
 #include <type_traits>
 
-// preserve_none is supported on aarch64, but causes problems when asan is
-// enabled. See https://github.com/llvm/llvm-project/issues/177519.
+// preserve_none causes problems when asan is enabled on both AArch64 and other
+// platforms. Disable it until all the bugs are fixed here.
+//
+// See https://github.com/llvm/llvm-project/issues/177519 for AArch64.
 #if !defined(__aarch64__) && !defined(__i386__) &&                             \
+    !__has_feature(address_sanitizer) &&                                       \
     __has_cpp_attribute(clang::preserve_none)
 #define PRESERVE_NONE [[clang::preserve_none]]
 #else

@@ -249,7 +249,7 @@ Sections:
   ASSERT_TRUE(entry_point_addr.GetOffset() & 1);
   // Decrease the offsite by 1 to make it into a breakable address since this
   // is Thumb.
-  entry_point_addr.SetOffset(entry_point_addr.GetOffset() - 1);
+  entry_point_addr.Slide(-1);
   ASSERT_EQ(entry_point_addr.GetAddressClass(),
             AddressClass::eCodeAlternateISA);
 }
