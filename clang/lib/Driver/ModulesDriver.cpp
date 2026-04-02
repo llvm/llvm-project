@@ -1283,12 +1283,12 @@ installScanCommandLines(Compilation &C,
                         ArrayRef<InputDependencies> InputDepsForScannedJobs) {
   for (auto &&[Job, InputDeps] : llvm::zip_equal(
            llvm::make_pointee_range(ScannedJobs), InputDepsForScannedJobs)) {
-    auto BuildArgs = InputDeps.BuildArgs;
+    const auto &BuildArgs = InputDeps.BuildArgs;
     ArgStringList JobArgs;
     JobArgs.reserve(BuildArgs.size());
 
     const auto &SourceAction = Job.getSource();
-    auto &TC = Job.getCreator().getToolChain();
+    const auto &TC = Job.getCreator().getToolChain();
     auto &TCArgs =
         C.getArgsForToolChain(&TC, SourceAction.getOffloadingArch(),
                               SourceAction.getOffloadingDeviceKind());
