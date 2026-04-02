@@ -8866,6 +8866,7 @@ appear when the referenced function is erased from the module, e.g. an internal
 function that has had all calls to it inlined.
 
 .. code-block:: text
+
     call void @foo(), !inline_history !0
 
     !0 = !{ptr @bar, null, ptr @baz}
