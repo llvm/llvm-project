@@ -76,17 +76,20 @@ public:
   MachineRegisterInfo *MRI;
   TargetSchedModel SchedModel;
 
-  // The two maps below are used to cache decisions instead of recomputing:
+  using SIMDInstrTableMap = std::map<std::pair<unsigned, std::string>, bool>;
+
+  using InterlEarlyExitMap = std::unordered_map<std::string, bool>;
+
+  // The two maps below are used to cache decisions instead of recomputing. Note
+  // that we're only storing references, the data is scoped at the Pass level to
+  // enable the caching.
   //
   // This is used to cache instruction replacement decisions within function
   // units and across function units.
-  using SIMDInstrTableMap = std::map<std::pair<unsigned, std::string>, bool>;
+  SIMDInstrTableMap &SIMDInstrTable;
 
   // This is used to cache the decision of whether to leave the interleaved
   // store instructions replacement pass early or not for a particular target.
-  using InterlEarlyExitMap = std::unordered_map<std::string, bool>;
-
-  SIMDInstrTableMap &SIMDInstrTable;
   InterlEarlyExitMap &InterlEarlyExit;
 
   typedef enum {
