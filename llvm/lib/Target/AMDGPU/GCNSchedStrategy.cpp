@@ -1534,13 +1534,13 @@ bool PreRARematStage::initGCNSchedStage() {
     return false;
   }
   const ScoredRemat::FreqInfo FreqInfo(MF, DAG);
-  SmallVector<ScoredRemat, 8> Candidates;
-  Candidates.reserve(RematRegs.size());
+  SmallVector<ScoredRemat, 8> Candidates(RematRegs.size());
   SmallVector<unsigned> CandidateOrder, NewCandidateOrder;
-  for (RematReg &Remat : RematRegs) {
-    ScoredRemat &Candidate = Candidates.emplace_back(&Remat, FreqInfo, DAG);
+  for (auto [I, Remat] : enumerate(RematRegs)) {
+    ScoredRemat &Candidate = Candidates[I];
+    Candidate.init(&Remat, FreqInfo, DAG);
     if (Candidate.update(TargetRegions, RPTargets, FreqInfo, !TargetOcc))
-      CandidateOrder.push_back(Candidates.size() - 1);
+      CandidateOrder.push_back(I);
   }
 
   REMAT_DEBUG({
@@ -2951,19 +2951,21 @@ PreRARematStage::ScoredRemat::FreqInfo::FreqInfo(
   }
 }
 
-PreRARematStage::ScoredRemat::ScoredRemat(RematReg *Remat, const FreqInfo &Freq,
-                                          GCNScheduleDAGMILive &DAG)
-    : Remat(Remat), LiveIn(DAG.Regions.size()), LiveOut(DAG.Regions.size()),
-      Live(DAG.Regions.size()), UnpredictableRPSave(DAG.Regions.size()) {
-  Register DefReg = Remat->getReg();
+void PreRARematStage::ScoredRemat::init(RematReg *Remat, const FreqInfo &Freq,
+                                        GCNScheduleDAGMILive &DAG) {
+  this->Remat = Remat;
+  const unsigned NumRegions = DAG.Regions.size();
+  LiveIn.resize(NumRegions);
+  LiveOut.resize(NumRegions);
+  Live.resize(NumRegions);
+  UnpredictableRPSave.resize(NumRegions);
 
   // Mark regions in which the rematerializable register is live.
-  for (unsigned I = 0, E = DAG.Regions.size(); I != E; ++I) {
-    auto LiveInIt = DAG.LiveIns[I].find(DefReg);
-    if (LiveInIt != DAG.LiveIns[I].end())
+  Register DefReg = Remat->getReg();
+  for (unsigned I = 0, E = NumRegions; I != E; ++I) {
+    if (DAG.LiveIns[I].contains(DefReg))
       LiveIn.set(I);
-    const auto &LiveOuts = DAG.RegionLiveOuts.getLiveRegsForRegionIdx(I);
-    if (auto LiveOutIt = LiveOuts.find(DefReg); LiveOutIt != LiveOuts.end())
+    if (DAG.RegionLiveOuts.getLiveRegsForRegionIdx(I).contains(DefReg))
       LiveOut.set(I);
 
     // If the register is both unused and live-through in the region, the

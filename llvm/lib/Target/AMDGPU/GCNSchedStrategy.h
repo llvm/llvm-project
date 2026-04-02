@@ -596,10 +596,10 @@ private:
       static const uint64_t ScaleFactor = 1024;
     };
 
-    /// This only initializes state-independent characteristics of \p Remat, not
-    /// the actual score.
-    ScoredRemat(RematReg *Remat, const FreqInfo &Freq,
-                GCNScheduleDAGMILive &DAG);
+    /// Initializes the candidate with state-independent characteristics for a
+    /// particular \p Remat. This doesn't update the actual score (call \ref
+    /// update for this).
+    void init(RematReg *Remat, const FreqInfo &Freq, GCNScheduleDAGMILive &DAG);
 
     /// Rematerializes the candidate at its use and returns the new MI.
     MachineInstr *rematerialize(GCNScheduleDAGMILive &DAG) const;
