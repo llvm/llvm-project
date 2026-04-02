@@ -83,7 +83,6 @@ class FrameProviderPassThroughPrefixTestCase(TestBase):
                 f"Frame {i} should be '{expected}' after provider",
             )
 
-    @expectedFailureAll(oslist=["linux"], archs=["arm$"])
     def test_provider_receives_parent_frames(self):
         """
         Test that the provider's input_frames come from the parent

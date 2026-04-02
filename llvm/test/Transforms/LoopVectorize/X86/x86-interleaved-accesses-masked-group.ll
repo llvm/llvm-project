@@ -1399,8 +1399,7 @@ define void @masked_strided2(ptr noalias nocapture readonly %p, ptr noalias noca
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE44]]
 ; DISABLED_MASKED_STRIDED:       pred.store.continue44:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP132:%.*]] = sub <8 x i8> zeroinitializer, [[TMP99]]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP133:%.*]] = extractelement <8 x i1> [[TMP0]], i64 0
-; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP133]], label [[PRED_STORE_IF45:%.*]], label [[PRED_STORE_CONTINUE46:%.*]]
+; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP100]], label [[PRED_STORE_IF45:%.*]], label [[PRED_STORE_CONTINUE46:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.store.if45:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP134:%.*]] = extractelement <8 x i32> [[TMP50]], i64 0
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP135:%.*]] = getelementptr inbounds nuw i8, ptr [[Q]], i32 [[TMP134]]
@@ -1408,8 +1407,7 @@ define void @masked_strided2(ptr noalias nocapture readonly %p, ptr noalias noca
 ; DISABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP136]], ptr [[TMP135]], align 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE46]]
 ; DISABLED_MASKED_STRIDED:       pred.store.continue46:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP137:%.*]] = extractelement <8 x i1> [[TMP0]], i64 1
-; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP137]], label [[PRED_STORE_IF47:%.*]], label [[PRED_STORE_CONTINUE48:%.*]]
+; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP104]], label [[PRED_STORE_IF47:%.*]], label [[PRED_STORE_CONTINUE48:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.store.if47:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP138:%.*]] = extractelement <8 x i32> [[TMP50]], i64 1
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP139:%.*]] = getelementptr inbounds nuw i8, ptr [[Q]], i32 [[TMP138]]
@@ -1417,8 +1415,7 @@ define void @masked_strided2(ptr noalias nocapture readonly %p, ptr noalias noca
 ; DISABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP140]], ptr [[TMP139]], align 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE48]]
 ; DISABLED_MASKED_STRIDED:       pred.store.continue48:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP141:%.*]] = extractelement <8 x i1> [[TMP0]], i64 2
-; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP141]], label [[PRED_STORE_IF49:%.*]], label [[PRED_STORE_CONTINUE50:%.*]]
+; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP108]], label [[PRED_STORE_IF49:%.*]], label [[PRED_STORE_CONTINUE50:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.store.if49:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP142:%.*]] = extractelement <8 x i32> [[TMP50]], i64 2
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP143:%.*]] = getelementptr inbounds nuw i8, ptr [[Q]], i32 [[TMP142]]
@@ -1426,8 +1423,7 @@ define void @masked_strided2(ptr noalias nocapture readonly %p, ptr noalias noca
 ; DISABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP144]], ptr [[TMP143]], align 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE50]]
 ; DISABLED_MASKED_STRIDED:       pred.store.continue50:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP145:%.*]] = extractelement <8 x i1> [[TMP0]], i64 3
-; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP145]], label [[PRED_STORE_IF51:%.*]], label [[PRED_STORE_CONTINUE52:%.*]]
+; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP112]], label [[PRED_STORE_IF51:%.*]], label [[PRED_STORE_CONTINUE52:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.store.if51:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP146:%.*]] = extractelement <8 x i32> [[TMP50]], i64 3
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP147:%.*]] = getelementptr inbounds nuw i8, ptr [[Q]], i32 [[TMP146]]
@@ -1435,8 +1431,7 @@ define void @masked_strided2(ptr noalias nocapture readonly %p, ptr noalias noca
 ; DISABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP148]], ptr [[TMP147]], align 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE52]]
 ; DISABLED_MASKED_STRIDED:       pred.store.continue52:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP149:%.*]] = extractelement <8 x i1> [[TMP0]], i64 4
-; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP149]], label [[PRED_STORE_IF53:%.*]], label [[PRED_STORE_CONTINUE54:%.*]]
+; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP116]], label [[PRED_STORE_IF53:%.*]], label [[PRED_STORE_CONTINUE54:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.store.if53:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP150:%.*]] = extractelement <8 x i32> [[TMP50]], i64 4
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP151:%.*]] = getelementptr inbounds nuw i8, ptr [[Q]], i32 [[TMP150]]
@@ -1444,8 +1439,7 @@ define void @masked_strided2(ptr noalias nocapture readonly %p, ptr noalias noca
 ; DISABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP152]], ptr [[TMP151]], align 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE54]]
 ; DISABLED_MASKED_STRIDED:       pred.store.continue54:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP153:%.*]] = extractelement <8 x i1> [[TMP0]], i64 5
-; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP153]], label [[PRED_STORE_IF55:%.*]], label [[PRED_STORE_CONTINUE56:%.*]]
+; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP120]], label [[PRED_STORE_IF55:%.*]], label [[PRED_STORE_CONTINUE56:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.store.if55:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP154:%.*]] = extractelement <8 x i32> [[TMP50]], i64 5
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP155:%.*]] = getelementptr inbounds nuw i8, ptr [[Q]], i32 [[TMP154]]
@@ -1453,8 +1447,7 @@ define void @masked_strided2(ptr noalias nocapture readonly %p, ptr noalias noca
 ; DISABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP156]], ptr [[TMP155]], align 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE56]]
 ; DISABLED_MASKED_STRIDED:       pred.store.continue56:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP157:%.*]] = extractelement <8 x i1> [[TMP0]], i64 6
-; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP157]], label [[PRED_STORE_IF57:%.*]], label [[PRED_STORE_CONTINUE58:%.*]]
+; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP124]], label [[PRED_STORE_IF57:%.*]], label [[PRED_STORE_CONTINUE58:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.store.if57:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP158:%.*]] = extractelement <8 x i32> [[TMP50]], i64 6
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP159:%.*]] = getelementptr inbounds nuw i8, ptr [[Q]], i32 [[TMP158]]
@@ -1462,8 +1455,7 @@ define void @masked_strided2(ptr noalias nocapture readonly %p, ptr noalias noca
 ; DISABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP160]], ptr [[TMP159]], align 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE58]]
 ; DISABLED_MASKED_STRIDED:       pred.store.continue58:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP161:%.*]] = extractelement <8 x i1> [[TMP0]], i64 7
-; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP161]], label [[PRED_STORE_IF59:%.*]], label [[PRED_STORE_CONTINUE60]]
+; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP128]], label [[PRED_STORE_IF59:%.*]], label [[PRED_STORE_CONTINUE60]]
 ; DISABLED_MASKED_STRIDED:       pred.store.if59:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP162:%.*]] = extractelement <8 x i32> [[TMP50]], i64 7
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP163:%.*]] = getelementptr inbounds nuw i8, ptr [[Q]], i32 [[TMP162]]
@@ -1804,8 +1796,7 @@ define void @masked_strided2_reverse(ptr noalias nocapture readonly %p, ptr noal
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE44]]
 ; DISABLED_MASKED_STRIDED:       pred.store.continue44:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP132:%.*]] = sub <8 x i8> zeroinitializer, [[TMP99]]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP133:%.*]] = extractelement <8 x i1> [[TMP0]], i64 0
-; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP133]], label [[PRED_STORE_IF45:%.*]], label [[PRED_STORE_CONTINUE46:%.*]]
+; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP100]], label [[PRED_STORE_IF45:%.*]], label [[PRED_STORE_CONTINUE46:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.store.if45:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP134:%.*]] = extractelement <8 x i32> [[TMP50]], i64 0
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP135:%.*]] = getelementptr inbounds nuw i8, ptr [[Q]], i32 [[TMP134]]
@@ -1813,8 +1804,7 @@ define void @masked_strided2_reverse(ptr noalias nocapture readonly %p, ptr noal
 ; DISABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP136]], ptr [[TMP135]], align 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE46]]
 ; DISABLED_MASKED_STRIDED:       pred.store.continue46:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP137:%.*]] = extractelement <8 x i1> [[TMP0]], i64 1
-; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP137]], label [[PRED_STORE_IF47:%.*]], label [[PRED_STORE_CONTINUE48:%.*]]
+; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP104]], label [[PRED_STORE_IF47:%.*]], label [[PRED_STORE_CONTINUE48:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.store.if47:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP138:%.*]] = extractelement <8 x i32> [[TMP50]], i64 1
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP139:%.*]] = getelementptr inbounds nuw i8, ptr [[Q]], i32 [[TMP138]]
@@ -1822,8 +1812,7 @@ define void @masked_strided2_reverse(ptr noalias nocapture readonly %p, ptr noal
 ; DISABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP140]], ptr [[TMP139]], align 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE48]]
 ; DISABLED_MASKED_STRIDED:       pred.store.continue48:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP141:%.*]] = extractelement <8 x i1> [[TMP0]], i64 2
-; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP141]], label [[PRED_STORE_IF49:%.*]], label [[PRED_STORE_CONTINUE50:%.*]]
+; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP108]], label [[PRED_STORE_IF49:%.*]], label [[PRED_STORE_CONTINUE50:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.store.if49:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP142:%.*]] = extractelement <8 x i32> [[TMP50]], i64 2
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP143:%.*]] = getelementptr inbounds nuw i8, ptr [[Q]], i32 [[TMP142]]
@@ -1831,8 +1820,7 @@ define void @masked_strided2_reverse(ptr noalias nocapture readonly %p, ptr noal
 ; DISABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP144]], ptr [[TMP143]], align 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE50]]
 ; DISABLED_MASKED_STRIDED:       pred.store.continue50:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP145:%.*]] = extractelement <8 x i1> [[TMP0]], i64 3
-; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP145]], label [[PRED_STORE_IF51:%.*]], label [[PRED_STORE_CONTINUE52:%.*]]
+; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP112]], label [[PRED_STORE_IF51:%.*]], label [[PRED_STORE_CONTINUE52:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.store.if51:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP146:%.*]] = extractelement <8 x i32> [[TMP50]], i64 3
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP147:%.*]] = getelementptr inbounds nuw i8, ptr [[Q]], i32 [[TMP146]]
@@ -1840,8 +1828,7 @@ define void @masked_strided2_reverse(ptr noalias nocapture readonly %p, ptr noal
 ; DISABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP148]], ptr [[TMP147]], align 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE52]]
 ; DISABLED_MASKED_STRIDED:       pred.store.continue52:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP149:%.*]] = extractelement <8 x i1> [[TMP0]], i64 4
-; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP149]], label [[PRED_STORE_IF53:%.*]], label [[PRED_STORE_CONTINUE54:%.*]]
+; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP116]], label [[PRED_STORE_IF53:%.*]], label [[PRED_STORE_CONTINUE54:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.store.if53:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP150:%.*]] = extractelement <8 x i32> [[TMP50]], i64 4
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP151:%.*]] = getelementptr inbounds nuw i8, ptr [[Q]], i32 [[TMP150]]
@@ -1849,8 +1836,7 @@ define void @masked_strided2_reverse(ptr noalias nocapture readonly %p, ptr noal
 ; DISABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP152]], ptr [[TMP151]], align 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE54]]
 ; DISABLED_MASKED_STRIDED:       pred.store.continue54:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP153:%.*]] = extractelement <8 x i1> [[TMP0]], i64 5
-; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP153]], label [[PRED_STORE_IF55:%.*]], label [[PRED_STORE_CONTINUE56:%.*]]
+; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP120]], label [[PRED_STORE_IF55:%.*]], label [[PRED_STORE_CONTINUE56:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.store.if55:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP154:%.*]] = extractelement <8 x i32> [[TMP50]], i64 5
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP155:%.*]] = getelementptr inbounds nuw i8, ptr [[Q]], i32 [[TMP154]]
@@ -1858,8 +1844,7 @@ define void @masked_strided2_reverse(ptr noalias nocapture readonly %p, ptr noal
 ; DISABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP156]], ptr [[TMP155]], align 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE56]]
 ; DISABLED_MASKED_STRIDED:       pred.store.continue56:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP157:%.*]] = extractelement <8 x i1> [[TMP0]], i64 6
-; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP157]], label [[PRED_STORE_IF57:%.*]], label [[PRED_STORE_CONTINUE58:%.*]]
+; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP124]], label [[PRED_STORE_IF57:%.*]], label [[PRED_STORE_CONTINUE58:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.store.if57:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP158:%.*]] = extractelement <8 x i32> [[TMP50]], i64 6
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP159:%.*]] = getelementptr inbounds nuw i8, ptr [[Q]], i32 [[TMP158]]
@@ -1867,8 +1852,7 @@ define void @masked_strided2_reverse(ptr noalias nocapture readonly %p, ptr noal
 ; DISABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP160]], ptr [[TMP159]], align 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE58]]
 ; DISABLED_MASKED_STRIDED:       pred.store.continue58:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP161:%.*]] = extractelement <8 x i1> [[TMP0]], i64 7
-; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP161]], label [[PRED_STORE_IF59:%.*]], label [[PRED_STORE_CONTINUE60]]
+; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP128]], label [[PRED_STORE_IF59:%.*]], label [[PRED_STORE_CONTINUE60]]
 ; DISABLED_MASKED_STRIDED:       pred.store.if59:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP162:%.*]] = extractelement <8 x i32> [[TMP50]], i64 7
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP163:%.*]] = getelementptr inbounds nuw i8, ptr [[Q]], i32 [[TMP162]]
@@ -2129,8 +2113,7 @@ define void @masked_strided2_reverse(ptr noalias nocapture readonly %p, ptr noal
 ; ENABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE44]]
 ; ENABLED_MASKED_STRIDED:       pred.store.continue44:
 ; ENABLED_MASKED_STRIDED-NEXT:    [[TMP132:%.*]] = sub <8 x i8> zeroinitializer, [[TMP99]]
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP133:%.*]] = extractelement <8 x i1> [[TMP0]], i64 0
-; ENABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP133]], label [[PRED_STORE_IF45:%.*]], label [[PRED_STORE_CONTINUE46:%.*]]
+; ENABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP100]], label [[PRED_STORE_IF45:%.*]], label [[PRED_STORE_CONTINUE46:%.*]]
 ; ENABLED_MASKED_STRIDED:       pred.store.if45:
 ; ENABLED_MASKED_STRIDED-NEXT:    [[TMP134:%.*]] = extractelement <8 x i32> [[TMP50]], i64 0
 ; ENABLED_MASKED_STRIDED-NEXT:    [[TMP135:%.*]] = getelementptr inbounds nuw i8, ptr [[Q]], i32 [[TMP134]]
@@ -2138,8 +2121,7 @@ define void @masked_strided2_reverse(ptr noalias nocapture readonly %p, ptr noal
 ; ENABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP136]], ptr [[TMP135]], align 1
 ; ENABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE46]]
 ; ENABLED_MASKED_STRIDED:       pred.store.continue46:
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP137:%.*]] = extractelement <8 x i1> [[TMP0]], i64 1
-; ENABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP137]], label [[PRED_STORE_IF47:%.*]], label [[PRED_STORE_CONTINUE48:%.*]]
+; ENABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP104]], label [[PRED_STORE_IF47:%.*]], label [[PRED_STORE_CONTINUE48:%.*]]
 ; ENABLED_MASKED_STRIDED:       pred.store.if47:
 ; ENABLED_MASKED_STRIDED-NEXT:    [[TMP138:%.*]] = extractelement <8 x i32> [[TMP50]], i64 1
 ; ENABLED_MASKED_STRIDED-NEXT:    [[TMP139:%.*]] = getelementptr inbounds nuw i8, ptr [[Q]], i32 [[TMP138]]
@@ -2147,8 +2129,7 @@ define void @masked_strided2_reverse(ptr noalias nocapture readonly %p, ptr noal
 ; ENABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP140]], ptr [[TMP139]], align 1
 ; ENABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE48]]
 ; ENABLED_MASKED_STRIDED:       pred.store.continue48:
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP141:%.*]] = extractelement <8 x i1> [[TMP0]], i64 2
-; ENABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP141]], label [[PRED_STORE_IF49:%.*]], label [[PRED_STORE_CONTINUE50:%.*]]
+; ENABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP108]], label [[PRED_STORE_IF49:%.*]], label [[PRED_STORE_CONTINUE50:%.*]]
 ; ENABLED_MASKED_STRIDED:       pred.store.if49:
 ; ENABLED_MASKED_STRIDED-NEXT:    [[TMP142:%.*]] = extractelement <8 x i32> [[TMP50]], i64 2
 ; ENABLED_MASKED_STRIDED-NEXT:    [[TMP143:%.*]] = getelementptr inbounds nuw i8, ptr [[Q]], i32 [[TMP142]]
@@ -2156,8 +2137,7 @@ define void @masked_strided2_reverse(ptr noalias nocapture readonly %p, ptr noal
 ; ENABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP144]], ptr [[TMP143]], align 1
 ; ENABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE50]]
 ; ENABLED_MASKED_STRIDED:       pred.store.continue50:
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP145:%.*]] = extractelement <8 x i1> [[TMP0]], i64 3
-; ENABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP145]], label [[PRED_STORE_IF51:%.*]], label [[PRED_STORE_CONTINUE52:%.*]]
+; ENABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP112]], label [[PRED_STORE_IF51:%.*]], label [[PRED_STORE_CONTINUE52:%.*]]
 ; ENABLED_MASKED_STRIDED:       pred.store.if51:
 ; ENABLED_MASKED_STRIDED-NEXT:    [[TMP146:%.*]] = extractelement <8 x i32> [[TMP50]], i64 3
 ; ENABLED_MASKED_STRIDED-NEXT:    [[TMP147:%.*]] = getelementptr inbounds nuw i8, ptr [[Q]], i32 [[TMP146]]
@@ -2165,8 +2145,7 @@ define void @masked_strided2_reverse(ptr noalias nocapture readonly %p, ptr noal
 ; ENABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP148]], ptr [[TMP147]], align 1
 ; ENABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE52]]
 ; ENABLED_MASKED_STRIDED:       pred.store.continue52:
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP149:%.*]] = extractelement <8 x i1> [[TMP0]], i64 4
-; ENABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP149]], label [[PRED_STORE_IF53:%.*]], label [[PRED_STORE_CONTINUE54:%.*]]
+; ENABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP116]], label [[PRED_STORE_IF53:%.*]], label [[PRED_STORE_CONTINUE54:%.*]]
 ; ENABLED_MASKED_STRIDED:       pred.store.if53:
 ; ENABLED_MASKED_STRIDED-NEXT:    [[TMP150:%.*]] = extractelement <8 x i32> [[TMP50]], i64 4
 ; ENABLED_MASKED_STRIDED-NEXT:    [[TMP151:%.*]] = getelementptr inbounds nuw i8, ptr [[Q]], i32 [[TMP150]]
@@ -2174,8 +2153,7 @@ define void @masked_strided2_reverse(ptr noalias nocapture readonly %p, ptr noal
 ; ENABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP152]], ptr [[TMP151]], align 1
 ; ENABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE54]]
 ; ENABLED_MASKED_STRIDED:       pred.store.continue54:
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP153:%.*]] = extractelement <8 x i1> [[TMP0]], i64 5
-; ENABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP153]], label [[PRED_STORE_IF55:%.*]], label [[PRED_STORE_CONTINUE56:%.*]]
+; ENABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP120]], label [[PRED_STORE_IF55:%.*]], label [[PRED_STORE_CONTINUE56:%.*]]
 ; ENABLED_MASKED_STRIDED:       pred.store.if55:
 ; ENABLED_MASKED_STRIDED-NEXT:    [[TMP154:%.*]] = extractelement <8 x i32> [[TMP50]], i64 5
 ; ENABLED_MASKED_STRIDED-NEXT:    [[TMP155:%.*]] = getelementptr inbounds nuw i8, ptr [[Q]], i32 [[TMP154]]
@@ -2183,8 +2161,7 @@ define void @masked_strided2_reverse(ptr noalias nocapture readonly %p, ptr noal
 ; ENABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP156]], ptr [[TMP155]], align 1
 ; ENABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE56]]
 ; ENABLED_MASKED_STRIDED:       pred.store.continue56:
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP157:%.*]] = extractelement <8 x i1> [[TMP0]], i64 6
-; ENABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP157]], label [[PRED_STORE_IF57:%.*]], label [[PRED_STORE_CONTINUE58:%.*]]
+; ENABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP124]], label [[PRED_STORE_IF57:%.*]], label [[PRED_STORE_CONTINUE58:%.*]]
 ; ENABLED_MASKED_STRIDED:       pred.store.if57:
 ; ENABLED_MASKED_STRIDED-NEXT:    [[TMP158:%.*]] = extractelement <8 x i32> [[TMP50]], i64 6
 ; ENABLED_MASKED_STRIDED-NEXT:    [[TMP159:%.*]] = getelementptr inbounds nuw i8, ptr [[Q]], i32 [[TMP158]]
@@ -2192,8 +2169,7 @@ define void @masked_strided2_reverse(ptr noalias nocapture readonly %p, ptr noal
 ; ENABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP160]], ptr [[TMP159]], align 1
 ; ENABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE58]]
 ; ENABLED_MASKED_STRIDED:       pred.store.continue58:
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP161:%.*]] = extractelement <8 x i1> [[TMP0]], i64 7
-; ENABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP161]], label [[PRED_STORE_IF59:%.*]], label [[PRED_STORE_CONTINUE60]]
+; ENABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP128]], label [[PRED_STORE_IF59:%.*]], label [[PRED_STORE_CONTINUE60]]
 ; ENABLED_MASKED_STRIDED:       pred.store.if59:
 ; ENABLED_MASKED_STRIDED-NEXT:    [[TMP162:%.*]] = extractelement <8 x i32> [[TMP50]], i64 7
 ; ENABLED_MASKED_STRIDED-NEXT:    [[TMP163:%.*]] = getelementptr inbounds nuw i8, ptr [[Q]], i32 [[TMP162]]
@@ -2524,8 +2500,7 @@ define void @masked_strided2_unknown_tc(ptr noalias nocapture readonly %p, ptr n
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE46]]
 ; DISABLED_MASKED_STRIDED:       pred.store.continue46:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP134:%.*]] = sub <8 x i8> zeroinitializer, [[TMP101]]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP135:%.*]] = extractelement <8 x i1> [[TMP3]], i64 0
-; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP135]], label [[PRED_STORE_IF47:%.*]], label [[PRED_STORE_CONTINUE48:%.*]]
+; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP102]], label [[PRED_STORE_IF47:%.*]], label [[PRED_STORE_CONTINUE48:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.store.if47:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP136:%.*]] = extractelement <8 x i32> [[TMP52]], i64 0
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP137:%.*]] = getelementptr inbounds nuw i8, ptr [[Q]], i32 [[TMP136]]
@@ -2533,8 +2508,7 @@ define void @masked_strided2_unknown_tc(ptr noalias nocapture readonly %p, ptr n
 ; DISABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP138]], ptr [[TMP137]], align 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE48]]
 ; DISABLED_MASKED_STRIDED:       pred.store.continue48:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP139:%.*]] = extractelement <8 x i1> [[TMP3]], i64 1
-; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP139]], label [[PRED_STORE_IF49:%.*]], label [[PRED_STORE_CONTINUE50:%.*]]
+; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP106]], label [[PRED_STORE_IF49:%.*]], label [[PRED_STORE_CONTINUE50:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.store.if49:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP140:%.*]] = extractelement <8 x i32> [[TMP52]], i64 1
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP141:%.*]] = getelementptr inbounds nuw i8, ptr [[Q]], i32 [[TMP140]]
@@ -2542,8 +2516,7 @@ define void @masked_strided2_unknown_tc(ptr noalias nocapture readonly %p, ptr n
 ; DISABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP142]], ptr [[TMP141]], align 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE50]]
 ; DISABLED_MASKED_STRIDED:       pred.store.continue50:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP143:%.*]] = extractelement <8 x i1> [[TMP3]], i64 2
-; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP143]], label [[PRED_STORE_IF51:%.*]], label [[PRED_STORE_CONTINUE52:%.*]]
+; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP110]], label [[PRED_STORE_IF51:%.*]], label [[PRED_STORE_CONTINUE52:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.store.if51:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP144:%.*]] = extractelement <8 x i32> [[TMP52]], i64 2
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP145:%.*]] = getelementptr inbounds nuw i8, ptr [[Q]], i32 [[TMP144]]
@@ -2551,8 +2524,7 @@ define void @masked_strided2_unknown_tc(ptr noalias nocapture readonly %p, ptr n
 ; DISABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP146]], ptr [[TMP145]], align 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE52]]
 ; DISABLED_MASKED_STRIDED:       pred.store.continue52:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP147:%.*]] = extractelement <8 x i1> [[TMP3]], i64 3
-; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP147]], label [[PRED_STORE_IF53:%.*]], label [[PRED_STORE_CONTINUE54:%.*]]
+; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP114]], label [[PRED_STORE_IF53:%.*]], label [[PRED_STORE_CONTINUE54:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.store.if53:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP148:%.*]] = extractelement <8 x i32> [[TMP52]], i64 3
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP149:%.*]] = getelementptr inbounds nuw i8, ptr [[Q]], i32 [[TMP148]]
@@ -2560,8 +2532,7 @@ define void @masked_strided2_unknown_tc(ptr noalias nocapture readonly %p, ptr n
 ; DISABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP150]], ptr [[TMP149]], align 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE54]]
 ; DISABLED_MASKED_STRIDED:       pred.store.continue54:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP151:%.*]] = extractelement <8 x i1> [[TMP3]], i64 4
-; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP151]], label [[PRED_STORE_IF55:%.*]], label [[PRED_STORE_CONTINUE56:%.*]]
+; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP118]], label [[PRED_STORE_IF55:%.*]], label [[PRED_STORE_CONTINUE56:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.store.if55:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP152:%.*]] = extractelement <8 x i32> [[TMP52]], i64 4
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP153:%.*]] = getelementptr inbounds nuw i8, ptr [[Q]], i32 [[TMP152]]
@@ -2569,8 +2540,7 @@ define void @masked_strided2_unknown_tc(ptr noalias nocapture readonly %p, ptr n
 ; DISABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP154]], ptr [[TMP153]], align 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE56]]
 ; DISABLED_MASKED_STRIDED:       pred.store.continue56:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP155:%.*]] = extractelement <8 x i1> [[TMP3]], i64 5
-; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP155]], label [[PRED_STORE_IF57:%.*]], label [[PRED_STORE_CONTINUE58:%.*]]
+; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP122]], label [[PRED_STORE_IF57:%.*]], label [[PRED_STORE_CONTINUE58:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.store.if57:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP156:%.*]] = extractelement <8 x i32> [[TMP52]], i64 5
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP157:%.*]] = getelementptr inbounds nuw i8, ptr [[Q]], i32 [[TMP156]]
@@ -2578,8 +2548,7 @@ define void @masked_strided2_unknown_tc(ptr noalias nocapture readonly %p, ptr n
 ; DISABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP158]], ptr [[TMP157]], align 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE58]]
 ; DISABLED_MASKED_STRIDED:       pred.store.continue58:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP159:%.*]] = extractelement <8 x i1> [[TMP3]], i64 6
-; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP159]], label [[PRED_STORE_IF59:%.*]], label [[PRED_STORE_CONTINUE60:%.*]]
+; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP126]], label [[PRED_STORE_IF59:%.*]], label [[PRED_STORE_CONTINUE60:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.store.if59:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP160:%.*]] = extractelement <8 x i32> [[TMP52]], i64 6
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP161:%.*]] = getelementptr inbounds nuw i8, ptr [[Q]], i32 [[TMP160]]
@@ -2587,8 +2556,7 @@ define void @masked_strided2_unknown_tc(ptr noalias nocapture readonly %p, ptr n
 ; DISABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP162]], ptr [[TMP161]], align 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE60]]
 ; DISABLED_MASKED_STRIDED:       pred.store.continue60:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP163:%.*]] = extractelement <8 x i1> [[TMP3]], i64 7
-; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP163]], label [[PRED_STORE_IF61:%.*]], label [[PRED_STORE_CONTINUE62]]
+; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP130]], label [[PRED_STORE_IF61:%.*]], label [[PRED_STORE_CONTINUE62]]
 ; DISABLED_MASKED_STRIDED:       pred.store.if61:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP164:%.*]] = extractelement <8 x i32> [[TMP52]], i64 7
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP165:%.*]] = getelementptr inbounds nuw i8, ptr [[Q]], i32 [[TMP164]]
@@ -2958,8 +2926,7 @@ define void @unconditional_masked_strided2_unknown_tc(ptr noalias nocapture read
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE44]]
 ; DISABLED_MASKED_STRIDED:       pred.store.continue44:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP132:%.*]] = sub <8 x i8> zeroinitializer, [[TMP99]]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP133:%.*]] = extractelement <8 x i1> [[TMP0]], i64 0
-; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP133]], label [[PRED_STORE_IF45:%.*]], label [[PRED_STORE_CONTINUE46:%.*]]
+; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP100]], label [[PRED_STORE_IF45:%.*]], label [[PRED_STORE_CONTINUE46:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.store.if45:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP134:%.*]] = extractelement <8 x i32> [[TMP50]], i64 0
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP135:%.*]] = getelementptr inbounds nuw i8, ptr [[Q]], i32 [[TMP134]]
@@ -2967,8 +2934,7 @@ define void @unconditional_masked_strided2_unknown_tc(ptr noalias nocapture read
 ; DISABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP136]], ptr [[TMP135]], align 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE46]]
 ; DISABLED_MASKED_STRIDED:       pred.store.continue46:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP137:%.*]] = extractelement <8 x i1> [[TMP0]], i64 1
-; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP137]], label [[PRED_STORE_IF47:%.*]], label [[PRED_STORE_CONTINUE48:%.*]]
+; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP104]], label [[PRED_STORE_IF47:%.*]], label [[PRED_STORE_CONTINUE48:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.store.if47:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP138:%.*]] = extractelement <8 x i32> [[TMP50]], i64 1
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP139:%.*]] = getelementptr inbounds nuw i8, ptr [[Q]], i32 [[TMP138]]
@@ -2976,8 +2942,7 @@ define void @unconditional_masked_strided2_unknown_tc(ptr noalias nocapture read
 ; DISABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP140]], ptr [[TMP139]], align 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE48]]
 ; DISABLED_MASKED_STRIDED:       pred.store.continue48:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP141:%.*]] = extractelement <8 x i1> [[TMP0]], i64 2
-; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP141]], label [[PRED_STORE_IF49:%.*]], label [[PRED_STORE_CONTINUE50:%.*]]
+; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP108]], label [[PRED_STORE_IF49:%.*]], label [[PRED_STORE_CONTINUE50:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.store.if49:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP142:%.*]] = extractelement <8 x i32> [[TMP50]], i64 2
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP143:%.*]] = getelementptr inbounds nuw i8, ptr [[Q]], i32 [[TMP142]]
@@ -2985,8 +2950,7 @@ define void @unconditional_masked_strided2_unknown_tc(ptr noalias nocapture read
 ; DISABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP144]], ptr [[TMP143]], align 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE50]]
 ; DISABLED_MASKED_STRIDED:       pred.store.continue50:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP145:%.*]] = extractelement <8 x i1> [[TMP0]], i64 3
-; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP145]], label [[PRED_STORE_IF51:%.*]], label [[PRED_STORE_CONTINUE52:%.*]]
+; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP112]], label [[PRED_STORE_IF51:%.*]], label [[PRED_STORE_CONTINUE52:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.store.if51:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP146:%.*]] = extractelement <8 x i32> [[TMP50]], i64 3
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP147:%.*]] = getelementptr inbounds nuw i8, ptr [[Q]], i32 [[TMP146]]
@@ -2994,8 +2958,7 @@ define void @unconditional_masked_strided2_unknown_tc(ptr noalias nocapture read
 ; DISABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP148]], ptr [[TMP147]], align 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE52]]
 ; DISABLED_MASKED_STRIDED:       pred.store.continue52:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP149:%.*]] = extractelement <8 x i1> [[TMP0]], i64 4
-; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP149]], label [[PRED_STORE_IF53:%.*]], label [[PRED_STORE_CONTINUE54:%.*]]
+; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP116]], label [[PRED_STORE_IF53:%.*]], label [[PRED_STORE_CONTINUE54:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.store.if53:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP150:%.*]] = extractelement <8 x i32> [[TMP50]], i64 4
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP151:%.*]] = getelementptr inbounds nuw i8, ptr [[Q]], i32 [[TMP150]]
@@ -3003,8 +2966,7 @@ define void @unconditional_masked_strided2_unknown_tc(ptr noalias nocapture read
 ; DISABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP152]], ptr [[TMP151]], align 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE54]]
 ; DISABLED_MASKED_STRIDED:       pred.store.continue54:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP153:%.*]] = extractelement <8 x i1> [[TMP0]], i64 5
-; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP153]], label [[PRED_STORE_IF55:%.*]], label [[PRED_STORE_CONTINUE56:%.*]]
+; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP120]], label [[PRED_STORE_IF55:%.*]], label [[PRED_STORE_CONTINUE56:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.store.if55:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP154:%.*]] = extractelement <8 x i32> [[TMP50]], i64 5
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP155:%.*]] = getelementptr inbounds nuw i8, ptr [[Q]], i32 [[TMP154]]
@@ -3012,8 +2974,7 @@ define void @unconditional_masked_strided2_unknown_tc(ptr noalias nocapture read
 ; DISABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP156]], ptr [[TMP155]], align 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE56]]
 ; DISABLED_MASKED_STRIDED:       pred.store.continue56:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP157:%.*]] = extractelement <8 x i1> [[TMP0]], i64 6
-; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP157]], label [[PRED_STORE_IF57:%.*]], label [[PRED_STORE_CONTINUE58:%.*]]
+; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP124]], label [[PRED_STORE_IF57:%.*]], label [[PRED_STORE_CONTINUE58:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.store.if57:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP158:%.*]] = extractelement <8 x i32> [[TMP50]], i64 6
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP159:%.*]] = getelementptr inbounds nuw i8, ptr [[Q]], i32 [[TMP158]]
@@ -3021,8 +2982,7 @@ define void @unconditional_masked_strided2_unknown_tc(ptr noalias nocapture read
 ; DISABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP160]], ptr [[TMP159]], align 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE58]]
 ; DISABLED_MASKED_STRIDED:       pred.store.continue58:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP161:%.*]] = extractelement <8 x i1> [[TMP0]], i64 7
-; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP161]], label [[PRED_STORE_IF59:%.*]], label [[PRED_STORE_CONTINUE60]]
+; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP128]], label [[PRED_STORE_IF59:%.*]], label [[PRED_STORE_CONTINUE60]]
 ; DISABLED_MASKED_STRIDED:       pred.store.if59:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP162:%.*]] = extractelement <8 x i32> [[TMP50]], i64 7
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP163:%.*]] = getelementptr inbounds nuw i8, ptr [[Q]], i32 [[TMP162]]

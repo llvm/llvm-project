@@ -922,7 +922,12 @@ static void serializeContexts(Info *I, StringMap<OwnedPtr<Info>> &Infos) {
   auto ParentUSR = I->ParentUSR;
 
   while (true) {
-    auto &ParentInfo = Infos.at(llvm::toHex(ParentUSR));
+    // Infos may not have the ParentUSR, if its been filtered (public or path),
+    // so we can't use at() for the lookup, since it would abort.
+    auto Iter = Infos.find(llvm::toHex(ParentUSR));
+    if (Iter == Infos.end())
+      break;
+    auto &ParentInfo = Iter->second;
 
     if (ParentInfo && ParentInfo->USR == GlobalNamespaceID) {
       Context GlobalRef(ParentInfo->USR, "Global Namespace",

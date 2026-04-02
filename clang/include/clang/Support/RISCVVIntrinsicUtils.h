@@ -173,14 +173,15 @@ struct PrototypeDescriptor {
       BaseTypeModifier PT,
       VectorTypeModifier VTM = VectorTypeModifier::NoModifier,
       TypeModifier TM = TypeModifier::NoModifier)
-      : PT(static_cast<uint8_t>(PT)), VTM(static_cast<uint8_t>(VTM)),
-        TM(static_cast<uint8_t>(TM)) {}
-  constexpr PrototypeDescriptor(uint8_t PT, uint8_t VTM, uint8_t TM)
       : PT(PT), VTM(VTM), TM(TM) {}
+  constexpr PrototypeDescriptor(uint8_t PT, uint8_t VTM, uint8_t TM)
+      : PT(static_cast<BaseTypeModifier>(PT)),
+        VTM(static_cast<VectorTypeModifier>(VTM)),
+        TM(static_cast<TypeModifier>(TM)) {}
 
-  uint8_t PT = static_cast<uint8_t>(BaseTypeModifier::Invalid);
-  uint8_t VTM = static_cast<uint8_t>(VectorTypeModifier::NoModifier);
-  uint8_t TM = static_cast<uint8_t>(TypeModifier::NoModifier);
+  BaseTypeModifier PT = BaseTypeModifier::Invalid;
+  VectorTypeModifier VTM = VectorTypeModifier::NoModifier;
+  TypeModifier TM = TypeModifier::NoModifier;
 
   bool operator!=(const PrototypeDescriptor &PD) const {
     return !(*this == PD);
