@@ -51,19 +51,21 @@ add_offload_testsuite(check-libomptarget
   DEPENDS llvm-offload-device-info omptarget ${OMP_DEPEND} ${LIBOMPTARGET_TESTED_PLUGINS}
   ARGS ${LIBOMPTARGET_LIT_ARG_LIST})
 
-add_offload_testsuite(check-offload
-  "Running libomptarget tests"
-  ${LIBOMPTARGET_LIT_TESTSUITES}
-  EXCLUDE_FROM_CHECK_ALL
-  DEPENDS llvm-offload-device-info omptarget ${OMP_DEPEND} ${LIBOMPTARGET_TESTED_PLUGINS}
-  ARGS ${LIBOMPTARGET_LIT_ARG_LIST})
-
 # Add liboffload unit tests - the test binary will run on all available devices
 configure_lit_site_cfg(
   ${CMAKE_CURRENT_SOURCE_DIR}/unit/lit.site.cfg.in
   ${CMAKE_CURRENT_BINARY_DIR}/unit/lit.site.cfg
   MAIN_CONFIG
   ${CMAKE_CURRENT_SOURCE_DIR}/unit/lit.cfg.py)
+
+add_offload_testsuite(check-offload
+  "Running offload tests"
+  ${LIBOMPTARGET_LIT_TESTSUITES}
+  ${CMAKE_CURRENT_BINARY_DIR}/unit
+  EXCLUDE_FROM_CHECK_ALL
+  DEPENDS llvm-offload-device-info omptarget ${OMP_DEPEND} ${LIBOMPTARGET_TESTED_PLUGINS}
+          LLVMOffload OffloadUnitTests
+  ARGS ${LIBOMPTARGET_LIT_ARG_LIST})
 
 add_lit_testsuite(check-offload-unit "Running offload unittest suites"
   ${CMAKE_CURRENT_BINARY_DIR}/unit

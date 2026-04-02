@@ -2605,7 +2605,7 @@ TypeSystemClang::GetDeclContextForType(clang::QualType type) {
 /// by the specified \ref allow_completion). If we fail to return a *complete*
 /// type, returns nullptr.
 static const clang::RecordType *
-GetCompleteRecordType(clang::ASTContext *ast, clang::QualType qual_type) {
+GetCompleteRecordType(const clang::ASTContext *ast, clang::QualType qual_type) {
   assert(qual_type->isRecordType());
 
   const auto *tag_type = llvm::cast<clang::RecordType>(qual_type.getTypePtr());
@@ -2646,7 +2646,7 @@ GetCompleteRecordType(clang::ASTContext *ast, clang::QualType qual_type) {
 /// function will try to complete the type if necessary (and allowed
 /// by the specified \ref allow_completion). If we fail to return a *complete*
 /// type, returns nullptr.
-static const clang::EnumType *GetCompleteEnumType(clang::ASTContext *ast,
+static const clang::EnumType *GetCompleteEnumType(const clang::ASTContext *ast,
                                                   clang::QualType qual_type) {
   assert(qual_type->isEnumeralType());
   assert(ast);
@@ -2679,7 +2679,7 @@ static const clang::EnumType *GetCompleteEnumType(clang::ASTContext *ast,
 /// by the specified \ref allow_completion). If we fail to return a *complete*
 /// type, returns nullptr.
 static const clang::ObjCObjectType *
-GetCompleteObjCObjectType(clang::ASTContext *ast, QualType qual_type) {
+GetCompleteObjCObjectType(const clang::ASTContext *ast, QualType qual_type) {
   assert(qual_type->isObjCObjectType());
   assert(ast);
 
@@ -2710,7 +2710,7 @@ GetCompleteObjCObjectType(clang::ASTContext *ast, QualType qual_type) {
   return objc_class_type;
 }
 
-static bool GetCompleteQualType(clang::ASTContext *ast,
+static bool GetCompleteQualType(const clang::ASTContext *ast,
                                 clang::QualType qual_type) {
   qual_type = RemoveWrappingTypes(qual_type);
   const clang::Type::TypeClass type_class = qual_type->getTypeClass();
