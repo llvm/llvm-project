@@ -31417,12 +31417,15 @@ bool AArch64TargetLowering::fallBackToDAGISel(const Instruction &Inst) const {
   }
 
   // Checks to allow the use of SME instructions
-  if (auto *Base = dyn_cast<CallBase>(&Inst)) {
-    auto CallAttrs = SMECallAttrs(*Base, &getRuntimeLibcallsInfo());
-    if (CallAttrs.requiresSMChange() || CallAttrs.requiresLazySave() ||
-        CallAttrs.requiresPreservingZT0() ||
-        CallAttrs.requiresPreservingAllZAState())
-      return true;
+  // If the subtarget lacks SME/SME2 we can skip per-call SME attribute checks.
+  if (Subtarget->hasSME() || Subtarget->hasSME2()) {
+    if (auto *Base = dyn_cast<CallBase>(&Inst)) {
+      auto CallAttrs = SMECallAttrs(*Base, &getRuntimeLibcallsInfo());
+      if (CallAttrs.requiresSMChange() || CallAttrs.requiresLazySave() ||
+          CallAttrs.requiresPreservingZT0() ||
+          CallAttrs.requiresPreservingAllZAState())
+        return true;
+    }
   }
   return false;
 }
