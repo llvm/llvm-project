@@ -555,9 +555,7 @@ entry:
 define i32 @signbits_sitofp_fptosi_roundtrip(i32 %x) {
 ; CHECK-LABEL: @signbits_sitofp_fptosi_roundtrip(
 ; CHECK-NEXT:    [[M:%.*]] = ashr i32 [[X:%.*]], 7
-; CHECK-NEXT:    [[F:%.*]] = sitofp i32 [[M]] to float
-; CHECK-NEXT:    [[R:%.*]] = fptosi float [[F]] to i32
-; CHECK-NEXT:    ret i32 [[R]]
+; CHECK-NEXT:    ret i32 [[M]]
 ;
   %m = ashr i32 %x, 7
   %f = sitofp i32 %m to float
@@ -568,9 +566,7 @@ define i32 @signbits_sitofp_fptosi_roundtrip(i32 %x) {
 define <4 x i32> @signbits_sitofp_fptosi_roundtrip_vec(<4 x i32> %x) {
 ; CHECK-LABEL: @signbits_sitofp_fptosi_roundtrip_vec(
 ; CHECK-NEXT:    [[M:%.*]] = ashr <4 x i32> [[X:%.*]], splat (i32 7)
-; CHECK-NEXT:    [[F:%.*]] = sitofp <4 x i32> [[M]] to <4 x float>
-; CHECK-NEXT:    [[R:%.*]] = fptosi <4 x float> [[F]] to <4 x i32>
-; CHECK-NEXT:    ret <4 x i32> [[R]]
+; CHECK-NEXT:    ret <4 x i32> [[M]]
 ;
   %m = ashr <4 x i32> %x, splat (i32 7)
   %f = sitofp <4 x i32> %m to <4 x float>
