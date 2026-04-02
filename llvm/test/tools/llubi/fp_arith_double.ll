@@ -18,3 +18,16 @@ define void @main() {
 
   ret void
 }
+; CHECK: Entering function: main
+; CHECK-NEXT:   %add = fadd double 1.500000e+00, 2.500000e+00 => double 4.000000e+00
+; CHECK-NEXT:   %sub = fsub double 5.000000e+00, 1.000000e+00 => double 4.000000e+00
+; CHECK-NEXT:   %mul = fmul double 2.000000e+00, 3.000000e+00 => double 6.000000e+00
+; CHECK-NEXT:   %div = fdiv double 1.000000e+00, 2.000000e+00 => double 5.000000e-01
+; CHECK-NEXT:   %neg = fneg double -1.500000e+00 => double 1.500000e+00
+; CHECK-NEXT:   %vadd = fadd <2 x double> <double 1.000000e+00, double 2.000000e+00>, <double 3.000000e+00, double 4.000000e+00> => { double 4.000000e+00, double 6.000000e+00 }
+; CHECK-NEXT:   %p1 = fadd double 1.000000e+00, poison => poison
+; CHECK-NEXT:   %p2 = fneg double poison => poison
+; CHECK-NEXT:   %inf = fdiv double 1.000000e+00, 0.000000e+00 => double +Inf
+; CHECK-NEXT:   %nan = fdiv double 0.000000e+00, 0.000000e+00 => double 0xFFF8000000000000
+; CHECK-NEXT:   ret void
+; CHECK-NEXT: Exiting function: main
