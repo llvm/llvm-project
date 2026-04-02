@@ -23,6 +23,7 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/IR/IntrinsicsWebAssembly.h"
+#include "llvm/Support/ErrorHandling.h"
 
 #define DEBUG_TYPE "wasm-isel"
 
@@ -83,13 +84,64 @@ WebAssemblyInstructionSelector::WebAssemblyInstructionSelector(
 {
 }
 
+static const TargetRegisterClass &getRegClassForBank(const RegisterBank &RB) {
+  switch (RB.getID()) {
+  case WebAssembly::I32RegBankID:
+    return WebAssembly::I32RegClass;
+  case WebAssembly::I64RegBankID:
+    return WebAssembly::I64RegClass;
+  case WebAssembly::F32RegBankID:
+    return WebAssembly::F32RegClass;
+  case WebAssembly::F64RegBankID:
+    return WebAssembly::F64RegClass;
+  case WebAssembly::EXNREFRegBankID:
+    return WebAssembly::EXNREFRegClass;
+  case WebAssembly::EXTERNREFRegBankID:
+    return WebAssembly::EXTERNREFRegClass;
+  case WebAssembly::FUNCREFRegBankID:
+    return WebAssembly::FUNCREFRegClass;
+  case WebAssembly::V128RegBankID:
+    return WebAssembly::V128RegClass;
+  default:
+    reportFatalInternalError(
+        "Found unexpected RegisterBank in `getRegClassForBank`");
+  }
+}
+
 bool WebAssemblyInstructionSelector::select(MachineInstr &I) {
+  MachineBasicBlock &MBB = *I.getParent();
+  MachineFunction &MF = *MBB.getParent();
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+
   if (!I.isPreISelOpcode()) {
     return true;
   }
 
   if (selectImpl(I, *CoverageInfo))
     return true;
+
+  using namespace TargetOpcode;
+
+  switch (I.getOpcode()) {
+  case G_IMPLICIT_DEF: {
+    const Register DefReg = I.getOperand(0).getReg();
+    const RegClassOrRegBank &RegClassOrBank = MRI.getRegClassOrRegBank(DefReg);
+
+    const TargetRegisterClass *DefRC =
+        dyn_cast<const TargetRegisterClass *>(RegClassOrBank);
+
+    if (!DefRC) {
+      const RegisterBank &RB = *cast<const RegisterBank *>(RegClassOrBank);
+      DefRC = &getRegClassForBank(RB);
+    }
+
+    I.setDesc(TII.get(TargetOpcode::IMPLICIT_DEF));
+
+    return RBI.constrainGenericRegister(DefReg, *DefRC, MRI) != nullptr;
+  }
+  default:
+    break;
+  }
 
   return false;
 }

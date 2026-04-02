@@ -88,14 +88,51 @@ WebAssemblyRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
 
   using namespace TargetOpcode;
   switch (Opc) {
-  case G_ADD:
-  case G_AND:
-  case G_ASHR:
-  case G_SHL:
-    OperandsMapping = &Op0IntValueMapping;
-    break;
   case G_CONSTANT:
     OperandsMapping = getOperandsMapping({&Op0IntValueMapping, nullptr});
+    break;
+  case G_IMPLICIT_DEF:
+    OperandsMapping = &Op0IntValueMapping;
+    break;
+  case G_ADD:
+  case G_SUB:
+  case G_MUL:
+  case G_UDIV:
+  case G_SDIV:
+  case G_UREM:
+  case G_SREM:
+  case G_AND:
+  case G_OR:
+  case G_XOR:
+  case G_ASHR:
+  case G_LSHR:
+  case G_SHL:
+  case G_CTLZ:
+  case G_CTLZ_ZERO_UNDEF:
+  case G_CTTZ:
+  case G_CTTZ_ZERO_UNDEF:
+  case G_CTPOP:
+  case G_ROTL:
+  case G_ROTR:
+    OperandsMapping = &Op0IntValueMapping;
+    break;
+  case G_ZEXT:
+  case G_ANYEXT:
+  case G_SEXT:
+  case G_TRUNC: {
+    const LLT Op1Ty = MRI.getType(MI.getOperand(1).getReg());
+    unsigned Op1Size = Op1Ty.getSizeInBits();
+
+    auto &Op1IntValueMapping =
+        WebAssembly::ValueMappings[Op1Size == 64 ? WebAssembly::I64Idx
+                                                 : WebAssembly::I32Idx];
+    OperandsMapping =
+        getOperandsMapping({&Op0IntValueMapping, &Op1IntValueMapping});
+    break;
+  }
+  case G_SEXT_INREG:
+    OperandsMapping =
+        getOperandsMapping({&Op0IntValueMapping, &Op0IntValueMapping, nullptr});
     break;
   }
 
