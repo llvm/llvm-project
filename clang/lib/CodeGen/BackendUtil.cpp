@@ -90,6 +90,7 @@
 #include "llvm/Transforms/Scalar/GVN.h"
 #include "llvm/Transforms/Scalar/JumpThreading.h"
 #include "llvm/Transforms/Utils/Debugify.h"
+#include "llvm/Transforms/Utils/DynamicDebugging.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include <limits>
 #include <memory>
@@ -1469,6 +1470,90 @@ void clang::emitBackendOutput(CompilerInstance &CI, CodeGenOptions &CGOpts,
       EmptyModule->setTargetTriple(M->getTargetTriple());
       M = EmptyModule.get();
     }
+  }
+
+
+  bool EnableDynamicDebugging = CGOpts.DynamicDebugging;
+  // Disable dyndbg if the target isn't available as we're compiling to the
+  // inner module to object regardless of other options. (This may change).
+  if (EnableDynamicDebugging) {
+    std::string Error;
+    const llvm::Target *TheTarget =
+        TargetRegistry::lookupTarget(M->getTargetTriple(), Error);
+    if (!TheTarget) {
+      Diags.Report(diag::warn_dyndbg_unable_to_create_target) << Error;
+      EnableDynamicDebugging = false;
+    }
+  }
+
+  if (EnableDynamicDebugging) {
+    /// Helper for saving the module(s) at various dyndbg stages.
+    auto SaveModule = [&](StringRef Name, llvm::Module &M) {
+      if (CGOpts.SaveDynDbgTempsFilePrefix == "")
+        return;
+      std::error_code EC;
+      std::string Path =
+          Twine(CGOpts.SaveDynDbgTempsFilePrefix + "." + Name + ".ll").str();
+      raw_fd_ostream OS(Path, EC, sys::fs::OpenFlags::OF_None);
+      if (EC) {
+        // Copy -save-temps behaviour: this is a debugging option so we simply
+        // exit if there's an issue.
+        errs() << "failed to open " << Path << ": " << EC.message() << '\n';
+        errs().flush();
+        exit(1);
+      }
+      M.print(OS, nullptr);
+    };
+
+    // Compute a hash suffix for promoting static globals (once per TU).
+    std::string PromotionSuffix;
+    {
+      // LLVM's hash/hash_combine is not guaranteed to be stable.
+      MD5 Hash;
+      // Include args in the hash else preprocessor definitions used to alter
+      // the same source file compiled twice won't generate unique hashes.
+      Hash.update(CGOpts.CmdArgs);
+      for (auto *CU : M->debug_compile_units()) {
+        Hash.update(CU->getDirectory());
+        Hash.update(CU->getFilename());
+      }
+
+      MD5::MD5Result Result;
+      Hash.final(Result);
+      PromotionSuffix = ".dyndbg." + utohexstr(Result.low());
+    }
+
+    SaveModule("dyndbg.0.input", *M);
+    // Modify M as needed and create an "unoptimized" clone.
+    auto UnoptM = prepareForDynamicDebugging(M, PromotionSuffix);
+    SaveModule("dyndbg.1.inner", *UnoptM);
+
+    if (!CGOpts.DiscardDynamicDebuggingDebugModule) {
+      CodeGenOptions UnoptOpts = CGOpts;
+      UnoptOpts.OptimizationLevel = 0;
+      UnoptOpts.OptimizeSize = 0;
+      EmitAssemblyHelper AsmHelper(CI, UnoptOpts, UnoptM.get(), VFS);
+
+      // Create a buffer and ostream for the inner ELF.
+      SmallVector<char, 0> UnoptBuf;
+      std::unique_ptr<llvm::raw_pwrite_stream> UnoptOS =
+          std::make_unique<llvm::raw_svector_ostream>(UnoptBuf);
+
+      // Always run the full codegen pipeline (Backend_EmitObj). This causes
+      // assertion failures if there's no registered backend which is why we
+      // disable the feature if that's the case (see
+      // warn_dyndbg_unable_to_create_target above).
+      AsmHelper.emitAssembly(Backend_EmitObj, std::move(UnoptOS), BC);
+      assert(!UnoptBuf.empty() && "Expected emitAssembly to fill UnoptBuf");
+
+      // Inject the inner ELF into the outer module.
+      StringRef SR(UnoptBuf.data(), UnoptBuf.size());
+      std::unique_ptr<MemoryBuffer> Buf =
+          MemoryBuffer::getMemBuffer(SR, "", false);
+
+      llvm::embedBufferInModule(*M, *Buf, ".debug_llvm_dyndbg");
+    }
+    SaveModule("dyndbg.2.outer", *M);
   }
 
   EmitAssemblyHelper AsmHelper(CI, CGOpts, M, VFS);
