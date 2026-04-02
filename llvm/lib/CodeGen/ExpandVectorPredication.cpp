@@ -290,6 +290,13 @@ bool CachingVPExpander::expandPredicationToFPCall(
   case Intrinsic::minnum:
   case Intrinsic::maximum:
   case Intrinsic::minimum:
+  case Intrinsic::ceil:
+  case Intrinsic::floor:
+  case Intrinsic::round:
+  case Intrinsic::roundeven:
+  case Intrinsic::trunc:
+  case Intrinsic::rint:
+  case Intrinsic::nearbyint:
   case Intrinsic::lrint:
   case Intrinsic::llrint: {
     SmallVector<Value *, 2> Argument;
@@ -617,6 +624,13 @@ bool CachingVPExpander::expandPredication(VPIntrinsic &VPI) {
   case Intrinsic::vp_minnum:
   case Intrinsic::vp_maximum:
   case Intrinsic::vp_minimum:
+  case Intrinsic::vp_ceil:
+  case Intrinsic::vp_floor:
+  case Intrinsic::vp_round:
+  case Intrinsic::vp_roundeven:
+  case Intrinsic::vp_roundtozero:
+  case Intrinsic::vp_rint:
+  case Intrinsic::vp_nearbyint:
   case Intrinsic::vp_lrint:
   case Intrinsic::vp_llrint:
   case Intrinsic::vp_fma:
