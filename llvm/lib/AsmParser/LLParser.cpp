@@ -9100,9 +9100,9 @@ int LLParser::parseAtomicRMW(Instruction *&Inst, PerFunctionState &PFS) {
   const Align DefaultAlignment(
       PFS.getFunction().getDataLayout().getTypeStoreSize(
           Val->getType()));
-  AtomicRMWInst *RMWI = new AtomicRMWInst(
-      Operation, Ptr, Val, Alignment.value_or(DefaultAlignment), Ordering, SSID,
-      IsElementwise);
+  AtomicRMWInst *RMWI = new AtomicRMWInst(Operation, Ptr, Val,
+                                          Alignment.value_or(DefaultAlignment),
+                                          Ordering, SSID, IsElementwise);
   RMWI->setVolatile(IsVolatile);
   Inst = RMWI;
   return AteExtraComma ? InstExtraComma : InstNormal;

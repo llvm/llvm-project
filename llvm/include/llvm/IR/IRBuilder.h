@@ -1966,8 +1966,8 @@ public:
       Align = llvm::Align(DL.getTypeStoreSize(Val->getType()));
     }
 
-    return Insert(new AtomicRMWInst(Op, Ptr, Val, *Align, Ordering, SSID,
-                                    Elementwise));
+    return Insert(
+        new AtomicRMWInst(Op, Ptr, Val, *Align, Ordering, SSID, Elementwise));
   }
 
   CallInst *CreateStructuredGEP(Type *BaseType, Value *PtrBase,
