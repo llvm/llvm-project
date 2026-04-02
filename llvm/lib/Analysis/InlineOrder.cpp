@@ -200,8 +200,6 @@ private:
 };
 
 template <typename PriorityT> class PriorityInlineOrder : public InlineOrder {
-  using T = CallBase *;
-
   bool hasLowerPriority(const CallBase *L, const CallBase *R) const {
     const auto I1 = Priorities.find(L);
     const auto I2 = Priorities.find(R);
@@ -255,7 +253,7 @@ public:
     return Heap.pop_back_val();
   }
 
-  void erase_if(function_ref<bool(T)> Pred) override {
+  void erase_if(function_ref<bool(CallBase *)> Pred) override {
     llvm::erase_if(Heap, Pred);
     std::make_heap(Heap.begin(), Heap.end(), isLess);
   }
