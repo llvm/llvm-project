@@ -181,7 +181,8 @@ public:
   }
 
   Error setContext() override { return Plugin::success(); }
-  Error initImpl(GenericPluginTy &Plugin) override;
+  Error initImpl(GenericPluginTy &Plugin,
+                 GenericProfilerTy *ProfilerPtr) override;
   Error deinitImpl() override;
   ze_device_handle_t getZeDevice() const { return zeDevice; }
 

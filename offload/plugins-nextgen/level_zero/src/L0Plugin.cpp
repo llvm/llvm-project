@@ -305,11 +305,9 @@ Error LevelZeroPluginContextTy::initAllocators() {
   return Plugin::success();
 }
 
-Expected<void *> LevelZeroPluginContextTy::allocate(GenericDeviceTy &Device,
-                                                    int64_t Size,
-                                                    void * /*HostPtr*/,
-                                                    TargetAllocTy Kind,
-                                                    size_t Alignment) {
+Expected<void *> LevelZeroPluginContextTy::allocate(
+    GenericDeviceTy &Device, int64_t Size, void * /*HostPtr*/,
+    TargetAllocTy Kind, size_t Alignment, GenericProfilerTy * /*ProfilerPtr*/) {
   MemAllocatorTy *Allocator = nullptr;
   int32_t ResolvedKind = Kind;
   if (Kind == TARGET_ALLOC_HOST) {
@@ -334,8 +332,9 @@ Expected<void *> LevelZeroPluginContextTy::allocate(GenericDeviceTy &Device,
                           AllocOptionTy::ALLOC_OPT_NONE);
 }
 
-Error LevelZeroPluginContextTy::deallocate(GenericDeviceTy &Device, void *Ptr,
-                                           TargetAllocTy Kind) {
+Error LevelZeroPluginContextTy::deallocate(
+    GenericDeviceTy &Device, void *Ptr, TargetAllocTy Kind,
+    GenericProfilerTy * /*ProfilerPtr*/) {
   if (Kind == TARGET_ALLOC_HOST) {
     if (!HostAllocator)
       return Plugin::error(ErrorCode::NOT_FOUND,
