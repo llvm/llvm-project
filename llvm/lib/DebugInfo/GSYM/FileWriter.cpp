@@ -55,15 +55,13 @@ void FileWriter::writeUnsigned(uint64_t Value, size_t ByteSize) {
   assert((ByteSize == 8 || (Value & (uint64_t)-1 << (8 * ByteSize)) == 0) &&
          "potential data loss: higher bits are non-zero");
   // Swap and shift bytes if endianness doesn't match.
-  if (ByteOrder != llvm::endianness::native) {
-    // Say ByteSize is 3.
-    //                high                low
-    // Input bytes:   00 00 00 00 00 AA BB CC
-    // Swapped bytes: CC BB AA 00 00 00 00 00
-    // Shifted bytes: 00 00 00 00 00 CC BB AA
+  if (ByteOrder != llvm::endianness::native)
     Value = sys::getSwappedBytes(Value) >> (8 * (8 - ByteSize));
-  }
-  OS.write(reinterpret_cast<const char *>(&Value), ByteSize);
+  // Write from the least significant bytes of Value regardless of host
+  // endianness.
+  OS.write(reinterpret_cast<const char *>(&Value) +
+               (sys::IsLittleEndianHost ? 0 : 8 - ByteSize),
+           ByteSize);
 }
 
 void FileWriter::fixup32(uint32_t U, uint64_t Offset) {

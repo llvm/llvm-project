@@ -24,6 +24,7 @@
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/Support/Debug.h"
+#include <optional>
 
 #define DEBUG_TYPE "rematerializer"
 
@@ -77,18 +78,22 @@ RegisterIdx Rematerializer::rematerializeToRegion(RegisterIdx RootIdx,
                                                   DependencyReuseInfo &DRI) {
   MachineInstr *FirstMI =
       getReg(RootIdx).getRegionUseBounds(UseRegion, LIS).first;
-  RegisterIdx NewRegIdx = rematerializeToPos(RootIdx, FirstMI, DRI);
+  // If there are no users in the region, rematerialize the register at the very
+  // end of the region.
+  MachineBasicBlock::iterator InsertPos =
+      FirstMI ? FirstMI : Regions[UseRegion].second;
+  RegisterIdx NewRegIdx =
+      rematerializeToPos(RootIdx, UseRegion, InsertPos, DRI);
   transferRegionUsers(RootIdx, NewRegIdx, UseRegion);
   return NewRegIdx;
 }
 
 RegisterIdx
-Rematerializer::rematerializeToPos(RegisterIdx RootIdx,
+Rematerializer::rematerializeToPos(RegisterIdx RootIdx, unsigned UseRegion,
                                    MachineBasicBlock::iterator InsertPos,
                                    DependencyReuseInfo &DRI) {
   assert(!DRI.DependencyMap.contains(RootIdx));
-  LLVM_DEBUG(dbgs() << "Rematerializing " << printID(RootIdx) << " to "
-                    << printUser(&*InsertPos) << '\n');
+  LLVM_DEBUG(dbgs() << "Rematerializing " << printID(RootIdx) << '\n');
 
   // Traverse the root's dependency DAG depth-first to find the set of
   // registers we must rematerialize along with it and a legal order to
@@ -118,7 +123,8 @@ Rematerializer::rematerializeToPos(RegisterIdx RootIdx,
     SmallVector<Reg::Dependency, 2> Dependencies;
     for (const Reg::Dependency &Dep : getReg(RegIdx).Dependencies)
       Dependencies.emplace_back(Dep.MOIdx, DRI.DependencyMap.at(Dep.RegIdx));
-    LastNewIdx = rematerializeReg(RegIdx, InsertPos, std::move(Dependencies));
+    LastNewIdx =
+        rematerializeReg(RegIdx, UseRegion, InsertPos, std::move(Dependencies));
     DRI.DependencyMap.insert({RegIdx, LastNewIdx});
   }
 
@@ -206,9 +212,8 @@ void Rematerializer::reviveRegIfDead(RegisterIdx RootIdx) {
 }
 
 void Rematerializer::transferUser(RegisterIdx FromRegIdx, RegisterIdx ToRegIdx,
-                                  MachineInstr &UserMI) {
+                                  unsigned UserRegion, MachineInstr &UserMI) {
   transferUserImpl(FromRegIdx, ToRegIdx, UserMI);
-  unsigned UserRegion = MIRegion.at(&UserMI);
   Regs[FromRegIdx].eraseUser(&UserMI, UserRegion);
   Regs[ToRegIdx].addUser(&UserMI, UserRegion);
   deleteRegIfUnused(FromRegIdx);
@@ -233,9 +238,6 @@ void Rematerializer::transferRegionUsers(RegisterIdx FromRegIdx,
 void Rematerializer::transferUserImpl(RegisterIdx FromRegIdx,
                                       RegisterIdx ToRegIdx,
                                       MachineInstr &UserMI) {
-  assert(MIRegion.contains(&UserMI) && "unknown user");
-  assert(getReg(FromRegIdx).Uses.at(MIRegion.at(&UserMI)).contains(&UserMI) &&
-         "not a user");
   assert(FromRegIdx != ToRegIdx && "identical registers");
   assert(getOriginOrSelf(FromRegIdx) == getOriginOrSelf(ToRegIdx) &&
          "unrelated registers");
@@ -415,7 +417,6 @@ void Rematerializer::deleteReg(RegisterIdx RegIdx) {
     RegionBegin = std::next(MachineBasicBlock::iterator(DeleteReg.DefMI));
   LIS.RemoveMachineInstrFromMaps(*DeleteReg.DefMI);
   DeleteReg.DefMI->eraseFromParent();
-  MIRegion.erase(DeleteReg.DefMI);
   DeleteReg.DefMI = nullptr;
 }
 
@@ -447,7 +448,7 @@ bool Rematerializer::analyze(bool SupportRollback) {
   UnrematableOprds.clear();
   Origins.clear();
   Rematerializations.clear();
-  MIRegion.clear();
+  RegionMBB.clear();
   RegToIdx.clear();
   LISUpdates.clear();
   Revivable.clear();
@@ -455,7 +456,12 @@ bool Rematerializer::analyze(bool SupportRollback) {
   if (Regions.empty())
     return false;
 
+  /// Maps all MIs to their parent region. Region terminators are considered
+  /// part of the region they terminate.
+  DenseMap<MachineInstr *, unsigned> MIRegion;
+
   // Initialize MI to containing region mapping.
+  RegionMBB.reserve(Regions.size());
   for (unsigned I = 0, E = Regions.size(); I < E; ++I) {
     RegionBoundaries Region = Regions[I];
     assert(Region.first != Region.second && "empty cannot be region");
@@ -463,9 +469,11 @@ bool Rematerializer::analyze(bool SupportRollback) {
       assert(!MIRegion.contains(&*MI) && "regions should not intersect");
       MIRegion.insert({&*MI, I});
     }
+    MachineBasicBlock &MBB = *Region.first->getParent();
+    RegionMBB.push_back(&MBB);
 
     // A terminator instruction is considered part of the region it terminates.
-    if (Region.second != Region.first->getParent()->end()) {
+    if (Region.second != MBB.end()) {
       MachineInstr *RegionTerm = &*Region.second;
       assert(!MIRegion.contains(RegionTerm) && "regions should not intersect");
       MIRegion.insert({RegionTerm, I});
@@ -476,7 +484,7 @@ bool Rematerializer::analyze(bool SupportRollback) {
   BitVector SeenRegs(NumVirtRegs);
   for (unsigned I = 0, E = NumVirtRegs; I != E; ++I) {
     if (!SeenRegs[I])
-      addRegIfRematerializable(I, SeenRegs);
+      addRegIfRematerializable(I, MIRegion, SeenRegs);
   }
   assert(Regs.size() == UnrematableOprds.size());
 
@@ -487,8 +495,9 @@ bool Rematerializer::analyze(bool SupportRollback) {
   return !Regs.empty();
 }
 
-void Rematerializer::addRegIfRematerializable(unsigned VirtRegIdx,
-                                              BitVector &SeenRegs) {
+void Rematerializer::addRegIfRematerializable(
+    unsigned VirtRegIdx, const DenseMap<MachineInstr *, unsigned> &MIRegion,
+    BitVector &SeenRegs) {
   assert(!SeenRegs[VirtRegIdx] && "register already seen");
   Register DefReg = Register::index2VirtReg(VirtRegIdx);
   SeenRegs.set(VirtRegIdx);
@@ -532,7 +541,7 @@ void Rematerializer::addRegIfRematerializable(unsigned VirtRegIdx,
       continue;
     unsigned DepRegIdx = DepReg.virtRegIndex();
     if (!SeenRegs[DepRegIdx])
-      addRegIfRematerializable(DepRegIdx, SeenRegs);
+      addRegIfRematerializable(DepRegIdx, MIRegion, SeenRegs);
     if (auto DepIt = RegToIdx.find(DepReg); DepIt != RegToIdx.end())
       RematReg.Dependencies.push_back(Reg::Dependency(MOIdx, DepIt->second));
     else
@@ -577,9 +586,9 @@ RegisterIdx Rematerializer::getDefRegIdx(const MachineInstr &MI) const {
 }
 
 RegisterIdx Rematerializer::rematerializeReg(
-    RegisterIdx RegIdx, MachineBasicBlock::iterator InsertPos,
+    RegisterIdx RegIdx, unsigned UseRegion,
+    MachineBasicBlock::iterator InsertPos,
     SmallVectorImpl<Reg::Dependency> &&Dependencies) {
-  unsigned UseRegion = MIRegion.at(&*InsertPos);
   RegisterIdx NewRegIdx = Regs.size();
 
   Reg &NewReg = Regs.emplace_back();
@@ -591,15 +600,14 @@ RegisterIdx Rematerializer::rematerializeReg(
   // Track rematerialization link between registers. Origins are always
   // registers that existed originally, and rematerializations are always
   // attached to them.
-  RegisterIdx OriginIdx =
-      isRematerializedRegister(RegIdx) ? getOriginOf(RegIdx) : RegIdx;
+  const RegisterIdx OriginIdx = getOriginOrSelf(RegIdx);
   Origins.push_back(OriginIdx);
   Rematerializations[OriginIdx].insert(NewRegIdx);
 
   // Use the TII to rematerialize the defining instruction with a new defined
   // register.
   Register NewDefReg = MRI.cloneVirtualRegister(FromReg.getDefReg());
-  TII.reMaterialize(*InsertPos->getParent(), InsertPos, NewDefReg, 0,
+  TII.reMaterialize(*RegionMBB[UseRegion], InsertPos, NewDefReg, 0,
                     *FromReg.DefMI);
   NewReg.DefMI = &*std::prev(InsertPos);
   RegToIdx.insert({NewDefReg, NewRegIdx});
@@ -609,7 +617,6 @@ RegisterIdx Rematerializer::rematerializeReg(
   if (Bounds.first == std::next(MachineBasicBlock::iterator(NewReg.DefMI)))
     Bounds.first = NewReg.DefMI;
   LIS.InsertMachineInstrInMaps(*NewReg.DefMI);
-  MIRegion.emplace_or_assign(NewReg.DefMI, UseRegion);
   LISUpdates.insert(NewRegIdx);
 
   // Replace dependencies as needed in the rematerialized MI. All dependencies
@@ -679,9 +686,8 @@ void Rematerializer::Reg::addUsers(const RegionUsers &NewUsers,
 }
 
 void Rematerializer::Reg::eraseUser(MachineInstr *MI, unsigned Region) {
-  assert(Uses.contains(Region) && "no user in region");
-  assert(Uses.at(Region).contains(MI) && "user not in region");
-  RegionUsers &RUsers = Uses[Region];
+  RegionUsers &RUsers = Uses.at(Region);
+  assert(RUsers.contains(MI) && "user not in region");
   if (RUsers.size() == 1)
     Uses.erase(Region);
   else
@@ -773,24 +779,31 @@ Printable Rematerializer::printRematReg(RegisterIdx RegIdx,
 
 Printable Rematerializer::printRegUsers(RegisterIdx RegIdx) const {
   return Printable([&, RegIdx](raw_ostream &OS) {
-    for (const auto &[_, Users] : getReg(RegIdx).Uses) {
+    for (const auto &[UseRegion, Users] : getReg(RegIdx).Uses) {
       for (MachineInstr *MI : Users)
-        dbgs() << "  User " << printUser(MI) << '\n';
+        OS << "  User " << printUser(MI, UseRegion) << '\n';
     }
   });
 }
 
-Printable Rematerializer::printUser(const MachineInstr *MI) const {
-  return Printable([&, MI](raw_ostream &OS) {
+Printable Rematerializer::printUser(const MachineInstr *MI,
+                                    std::optional<unsigned> UseRegion) const {
+  return Printable([&, MI, UseRegion](raw_ostream &OS) {
     RegisterIdx RegIdx = getDefRegIdx(*MI);
-    if (RegIdx != NoReg)
+    if (RegIdx != NoReg) {
       OS << printID(RegIdx);
-    else
-      OS << "(-/-)[" << MIRegion.at(MI) << ']';
+    } else {
+      OS << "(-/-)[";
+      if (UseRegion)
+        OS << *UseRegion;
+      else
+        OS << '?';
+      OS << ']';
+    }
     OS << ' ';
     MI->print(OS, /*IsStandalone=*/true, /*SkipOpers=*/false,
               /*SkipDebugLoc=*/false, /*AddNewLine=*/false);
     OS << " @ ";
-    LIS.getInstructionIndex(*MI).print(dbgs());
+    LIS.getInstructionIndex(*MI).print(OS);
   });
 }

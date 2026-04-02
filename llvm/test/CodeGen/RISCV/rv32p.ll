@@ -1536,3 +1536,18 @@ entry:
   %1 = call i32 @llvm.smin.i32(i32 %0, i32 255)
   ret i32 %1
 }
+
+; Test that we select pack.
+define i32 @mm_usati_32_knownbits_i32(i32 %x, i32 %y) {
+; CHECK-LABEL: mm_usati_32_knownbits_i32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    usati a0, a0, 16
+; CHECK-NEXT:    pack a0, a0, a1
+; CHECK-NEXT:    ret
+entry:
+  %0 = call i32 @llvm.smax.i32(i32 %x, i32 0)
+  %1 = call i32 @llvm.smin.i32(i32 %0, i32 65535)
+  %2 = shl i32 %y, 16
+  %3 = or i32 %1, %2
+  ret i32 %3
+}
