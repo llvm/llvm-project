@@ -32702,6 +32702,8 @@ void X86TargetLowering::emitCmpArithAtomicRMWIntrinsic(
 
 TargetLowering::AtomicExpansionKind
 X86TargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
+  if (AI->isElementwise())
+    return AtomicExpansionKind::Elementwise;
   unsigned NativeWidth = Subtarget.is64Bit() ? 64 : 32;
   Type *MemType = AI->getType();
 

@@ -269,6 +269,8 @@ public:
                        // operations; used by X86.
     Expand,            // Generic expansion in terms of other atomic operations.
     CustomExpand,      // Custom target-specific expansion using TLI hooks.
+    Elementwise,       // Expand an elementwise atomicrmw by first trying to drop the elementwise modifier if
+                       // the target supports a corresponding whole-value atomicrmw lowering. Otherwise, scalarize to per-lane atomics.
 
     // Rewrite to a non-atomic form for use in a known non-preemptible
     // environment.
@@ -2476,31 +2478,22 @@ public:
   }
 
   /// Returns how the IR-level AtomicExpand pass should expand the given
-  /// AtomicRMW, if at all. Default is to never expand scalar atomics and expand
-  /// FP atomics via CmpXChg.
+  /// AtomicRMW, if at all. Default is to never expand scalar atomics, expand
+  /// FP atomics via CmpXChg, and always expand elementwise atomics.
   ///
-  /// Precondition: \p RMW is not elementwise. Elementwise atomicrmw
-  /// instructions are routed through \c shouldExpandAtomicRMWElementwiseInIR.
+  /// For elementwise atomicrmw, returning \c Elementwise tells AtomicExpand to
+  /// first try to conservatively drop the elementwise modifier and reuse an
+  /// existing whole-value atomicrmw lowering. If that is not possible, it
+  /// scalarizes into per-lane scalar atomicrmw instructions that are each fed
+  /// back through the normal atomic expansion pipeline. Targets that support
+  /// native vector atomic instructions should return \c None to preserve the
+  /// elementwise atomicrmw for the backend.
   virtual AtomicExpansionKind
   shouldExpandAtomicRMWInIR(const AtomicRMWInst *RMW) const {
+    if (RMW->isElementwise())
+      return AtomicExpansionKind::Elementwise;
     return RMW->isFloatingPointOperation() ?
       AtomicExpansionKind::CmpXChg : AtomicExpansionKind::None;
-  }
-
-  /// Returns whether the IR-level AtomicExpand pass should expand the given
-  /// elementwise AtomicRMW into per-lane scalar atomicrmw instructions.
-  ///
-  /// Returning \c true (the default) tells AtomicExpand to first try to
-  /// conservatively drop the elementwise modifier and reuse an existing
-  /// whole-value atomicrmw lowering. If that is not possible, it scalarizes
-  /// into per-lane scalar atomicrmw instructions that are each fed back
-  /// through the normal atomic expansion pipeline.
-  ///
-  /// Targets that support native vector atomic instructions should return
-  /// \c false to preserve the elementwise atomicrmw for the backend.
-  virtual bool
-  shouldExpandAtomicRMWElementwiseInIR(const AtomicRMWInst *RMW) const {
-    return true;
   }
 
   /// Returns how the given atomic atomicrmw should be cast by the IR-level

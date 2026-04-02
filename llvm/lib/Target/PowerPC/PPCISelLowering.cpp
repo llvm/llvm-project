@@ -20604,6 +20604,8 @@ bool PPCTargetLowering::shouldInlineQuadwordAtomics() const {
 
 TargetLowering::AtomicExpansionKind
 PPCTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
+  if (AI->isElementwise())
+    return AtomicExpansionKind::Elementwise;
   unsigned Size = AI->getType()->getPrimitiveSizeInBits();
   if (shouldInlineQuadwordAtomics() && Size == 128)
     return AtomicExpansionKind::MaskedIntrinsic;

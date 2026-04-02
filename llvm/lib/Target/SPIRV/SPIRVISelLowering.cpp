@@ -639,6 +639,8 @@ bool SPIRVTargetLowering::insertLogicalCopyOnResult(
 
 TargetLowering::AtomicExpansionKind
 SPIRVTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *RMW) const {
+  if (RMW->isElementwise())
+    return AtomicExpansionKind::Elementwise;
   switch (RMW->getOperation()) {
   case AtomicRMWInst::FAdd:
   case AtomicRMWInst::FSub:

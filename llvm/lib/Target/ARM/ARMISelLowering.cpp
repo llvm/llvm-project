@@ -21323,6 +21323,8 @@ ARMTargetLowering::shouldExpandAtomicLoadInIR(LoadInst *LI) const {
 // and up to 64 bits on the non-M profiles
 TargetLowering::AtomicExpansionKind
 ARMTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
+  if (AI->isElementwise())
+    return AtomicExpansionKind::Elementwise;
   if (AI->isFloatingPointOperation())
     return AtomicExpansionKind::CmpXChg;
 

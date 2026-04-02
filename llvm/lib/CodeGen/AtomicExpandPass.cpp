@@ -410,17 +410,18 @@ bool AtomicExpandImpl::processAtomicInstr(Instruction *I) {
     bool MadeChange = false;
 
     if (RMWI->isElementwise()) {
-      if (!TLI->shouldExpandAtomicRMWElementwiseInIR(RMWI))
+      auto ExpansionKind = TLI->shouldExpandAtomicRMWInIR(RMWI);
+      if (ExpansionKind == TargetLoweringBase::AtomicExpansionKind::None)
         return false;
-      if (canReuseWholeValueAtomicRMW(RMWI)) {
-        // Dropping the elementwise modifier strengthens the semantics, which is
-        // conservatively correct. Prefer the target's existing whole-value
-        // lowering over IR expansion.
-        RMWI->setElementwise(false);
-        MadeChange = true;
-      } else {
+      assert(ExpansionKind == TargetLoweringBase::AtomicExpansionKind::Elementwise && "shouldExpandAtomicRMWInIR should "
+       " return ExpansionKind::Elementwise or ExpansionKind::None on elementwise atomicrmw");
+      if (!canReuseWholeValueAtomicRMW(RMWI))
         return expandElementwiseAtomicRMW(RMWI);
-      }
+      // Dropping the elementwise modifier strengthens the semantics, which is
+      // conservatively correct. Prefer the target's existing whole-value
+      // lowering over IR expansion.
+      RMWI->setElementwise(false);
+      MadeChange = true;
     }
 
     if (TLI->shouldCastAtomicRMWIInIR(RMWI) ==
@@ -648,18 +649,15 @@ AtomicExpandImpl::convertAtomicXchgToIntegerType(AtomicRMWInst *RMWI) {
 bool AtomicExpandImpl::expandElementwiseAtomicRMW(AtomicRMWInst *AI) {
   auto *VecTy = cast<FixedVectorType>(AI->getType());
   Type *LaneTy = VecTy->getElementType();
-  LLVMContext &Ctx = AI->getContext();
   Value *Result = Constant::getNullValue(VecTy);
   const uint64_t LaneSize = DL->getTypeStoreSize(LaneTy).getFixedValue();
+  ReplacementIRBuilder Builder(AI, *DL);
 
   for (unsigned Lane = 0, NumLanes = VecTy->getNumElements(); Lane != NumLanes;
        ++Lane) {
-    ReplacementIRBuilder Builder(AI, *DL);
-    Value *Idx0 = ConstantInt::get(Type::getInt64Ty(Ctx), 0);
-    Value *Idx = ConstantInt::get(Type::getInt64Ty(Ctx), Lane);
-    Value *Indices[] = {Idx0, Idx};
+    Value *Idx = Builder.getInt64(Lane);
     Value *LanePtr = Builder.CreateInBoundsGEP(VecTy, AI->getPointerOperand(),
-                                               Indices, "lane.ptr");
+                                              {Builder.getInt64(0), Idx}, "lane.ptr");
     Value *LaneVal =
         Builder.CreateExtractElement(AI->getValOperand(), Idx, "lane.val");
     auto *LaneRMW = Builder.CreateAtomicRMW(
