@@ -5297,13 +5297,7 @@ bool PPCTargetLowering::IsEligibleForTailCallOptimization(
     const GlobalValue *CalleeGV, CallingConv::ID CalleeCC,
     CallingConv::ID CallerCC, bool isVarArg,
     const SmallVectorImpl<ISD::InputArg> &Ins) const {
-  bool TailCallOpt = getTargetMachine().Options.GuaranteedTailCallOpt;
-
-  // Enable SCO on AIX.
-  if (!TailCallOpt && !Subtarget.isAIXABI())
-    return false;
-
-  if (DisableSCO)
+  if (!getTargetMachine().Options.GuaranteedTailCallOpt)
     return false;
 
   // Variable argument functions are not supported.
