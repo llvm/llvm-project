@@ -2634,11 +2634,10 @@ CIRToLLVMGlobalOpLowering::matchAndRewriteRegionInitializedGlobal(
     cir::GlobalOp op, mlir::Attribute init,
     mlir::ConversionPatternRewriter &rewriter) const {
   // TODO: Generalize this handling when more types are needed here.
-  assert(
-      (isa<cir::ConstArrayAttr, cir::ConstRecordAttr, cir::ConstVectorAttr,
-           cir::ConstPtrAttr, cir::ConstComplexAttr, cir::GlobalViewAttr,
-           cir::TypeInfoAttr, cir::UndefAttr, cir::PoisonAttr, cir::VTableAttr,
-           cir::ZeroAttr>(init)));
+  assert((isa<cir::ConstArrayAttr, cir::ConstRecordAttr, cir::ConstVectorAttr,
+              cir::ConstPtrAttr, cir::ConstComplexAttr, cir::GlobalViewAttr,
+              cir::TypeInfoAttr, cir::UndefAttr, cir::PoisonAttr,
+              cir::VTableAttr, cir::ZeroAttr>(init)));
 
   // TODO(cir): once LLVM's dialect has proper equivalent attributes this
   // should be updated. For now, we use a custom op to initialize globals
