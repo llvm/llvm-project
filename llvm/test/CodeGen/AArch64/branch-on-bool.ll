@@ -143,13 +143,11 @@ if.else:
 define void @conjunction_ccmp(ptr %x_ptr, ptr %y_ptr, ptr %z_ptr) {
 ; CHECK-LABEL: conjunction_ccmp:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr w8, [x0]
-; CHECK-NEXT:    ldrh w9, [x1]
-; CHECK-NEXT:    cmp w8, #0
-; CHECK-NEXT:    ccmp w9, #10, #4, eq
-; CHECK-NEXT:    cset w8, eq
-; CHECK-NEXT:    cmp w8, #0
-; CHECK-NEXT:    ccmp w9, #14, #4, ne
+; CHECK-NEXT:    ldrh w8, [x1]
+; CHECK-NEXT:    ldr w9, [x0]
+; CHECK-NEXT:    cmp w8, #10
+; CHECK-NEXT:    ccmp w9, #0, #0, ne
+; CHECK-NEXT:    ccmp w8, #14, #4, ne
 ; CHECK-NEXT:    b.eq .LBB6_2
 ; CHECK-NEXT:  // %bb.1: // %if.then
 ; CHECK-NEXT:    str wzr, [x2]
