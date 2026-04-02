@@ -490,7 +490,7 @@ static Value *emitGetDimensions(CodeGenFunction &CGF, const CallExpr *E,
   Value *LastStore = nullptr;
   unsigned ArgIndex = HasLod ? 2 : 1;
   for (unsigned i = 0; i < NumRetComps; ++i) {
-    Expr *Arg = E->getArg(ArgIndex++);
+    const Expr *Arg = E->getArg(ArgIndex++);
     LValue DimOut = CGF.EmitLValue(Arg);
     Value *Elem = DimValue;
     if (NumRetComps > 1)
