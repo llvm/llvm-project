@@ -3368,12 +3368,9 @@ static void prepareTypeConverter(mlir::LLVMTypeConverter &converter,
     mlir::ptr::MemorySpaceAttrInterface addrSpaceAttr = type.getAddrSpace();
     unsigned numericAS = 0;
 
-    if (auto langAsAttr =
-            mlir::dyn_cast_if_present<cir::LangAddressSpaceAttr>(addrSpaceAttr))
-      llvm_unreachable("lowering LangAddressSpaceAttr NYI");
-    else if (auto targetAsAttr =
-                 mlir::dyn_cast_if_present<cir::TargetAddressSpaceAttr>(
-                     addrSpaceAttr))
+    if (auto targetAsAttr =
+            mlir::dyn_cast_if_present<cir::TargetAddressSpaceAttr>(
+                addrSpaceAttr))
       numericAS = targetAsAttr.getValue();
     return mlir::LLVM::LLVMPointerType::get(type.getContext(), numericAS);
   });
