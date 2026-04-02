@@ -20,14 +20,13 @@ define void @test_commutative(ptr %arr1, ptr %arr2, i32 %a0, i32 %a1, i32 %a2, i
 ; CHECK-NEXT:    [[TMP3:%.*]] = add nsw <2 x i32> [[TMP2]], [[TMP2]]
 ; CHECK-NEXT:    br label [[BB2:%.*]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <8 x i32> poison, i32 [[T0]], i32 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x i32> [[TMP3]], <2 x i32> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <8 x i32> [[TMP4]], <8 x i32> [[TMP5]], <8 x i32> <i32 0, i32 8, i32 9, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <8 x i32> [[TMP1]], <8 x i32> [[TMP5]], <8 x i32> <i32 0, i32 8, i32 9, i32 3, i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <8 x i32> <i32 poison, i32 0, i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>, i32 [[T0]], i32 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <8 x i32> [[TMP6]], i32 [[T3]], i32 3
 ; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <4 x i32> [[TMP0]], <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <8 x i32> [[TMP7]], <8 x i32> [[TMP8]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
-; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <8 x i32> [[TMP1]], <8 x i32> <i32 poison, i32 0, i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>, <8 x i32> <i32 0, i32 9, i32 10, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[TMP11:%.*]] = add nsw <8 x i32> [[TMP9]], [[TMP10]]
+; CHECK-NEXT:    [[TMP11:%.*]] = add nsw <8 x i32> [[TMP10]], [[TMP9]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = add nsw <8 x i32> [[TMP1]], [[TMP11]]
 ; CHECK-NEXT:    store <8 x i32> [[TMP12]], ptr [[ARR2]], align 4
 ; CHECK-NEXT:    ret void
@@ -136,24 +135,15 @@ entry:
 define void @test_add_udiv_reorder_add(ptr %arr1, ptr %arr2, i32 %a0, i32 %a1, i32 %a2, i32 %a3) {
 ; CHECK-LABEL: @test_add_udiv_reorder_add(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[GEP1_2:%.*]] = getelementptr i32, ptr [[ARR1:%.*]], i32 2
-; CHECK-NEXT:    [[GEP1_3:%.*]] = getelementptr i32, ptr [[ARR1]], i32 3
-; CHECK-NEXT:    [[V2:%.*]] = load i32, ptr [[GEP1_2]], align 4
-; CHECK-NEXT:    [[V3:%.*]] = load i32, ptr [[GEP1_3]], align 4
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> poison, i32 [[A0:%.*]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> [[TMP0]], i32 [[A1:%.*]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = add nsw <2 x i32> [[TMP1]], <i32 1146, i32 146>
-; CHECK-NEXT:    [[Y2:%.*]] = add nsw i32 [[A2:%.*]], 42
-; CHECK-NEXT:    [[Y3:%.*]] = add nsw i32 [[A3:%.*]], 0
-; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i32>, ptr [[ARR1]], align 4
-; CHECK-NEXT:    [[RES2:%.*]] = udiv i32 [[V2]], [[Y2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x i32> [[TMP2]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i32> [[TMP4]], i32 [[RES2]], i32 2
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x i32> [[TMP5]], i32 [[V3]], i32 3
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x i32> <i32 poison, i32 poison, i32 0, i32 poison>, i32 [[Y3]], i32 3
-; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <2 x i32> [[TMP3]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <4 x i32> [[TMP7]], <4 x i32> [[TMP8]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
-; CHECK-NEXT:    [[TMP10:%.*]] = add nsw <4 x i32> [[TMP6]], [[TMP9]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[ARR1:%.*]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> <i32 0, i32 0, i32 poison, i32 0>, i32 [[A2:%.*]], i32 2
+; CHECK-NEXT:    [[TMP2:%.*]] = add <4 x i32> [[TMP1]], <i32 1, i32 1, i32 42, i32 1>
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> <i32 poison, i32 poison, i32 0, i32 poison>, i32 [[A0:%.*]], i32 0
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i32> [[TMP3]], i32 [[A1:%.*]], i32 1
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x i32> [[TMP5]], i32 [[V3:%.*]], i32 3
+; CHECK-NEXT:    [[TMP8:%.*]] = add nsw <4 x i32> <i32 1146, i32 146, i32 0, i32 0>, [[TMP6]]
+; CHECK-NEXT:    [[TMP7:%.*]] = udiv <4 x i32> [[TMP0]], [[TMP2]]
+; CHECK-NEXT:    [[TMP10:%.*]] = add nsw <4 x i32> [[TMP8]], [[TMP7]]
 ; CHECK-NEXT:    store <4 x i32> [[TMP10]], ptr [[ARR2:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -186,21 +176,14 @@ entry:
 define void @test_add_udiv_commuted(ptr %arr1, ptr %arr2, i32 %a0, i32 %a1, i32 %a2, i32 %a3) {
 ; CHECK-LABEL: @test_add_udiv_commuted(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[GEP1_2:%.*]] = getelementptr i32, ptr [[ARR1:%.*]], i32 2
-; CHECK-NEXT:    [[GEP1_3:%.*]] = getelementptr i32, ptr [[ARR1]], i32 3
-; CHECK-NEXT:    [[V2:%.*]] = load i32, ptr [[GEP1_2]], align 4
-; CHECK-NEXT:    [[V3:%.*]] = load i32, ptr [[GEP1_3]], align 4
-; CHECK-NEXT:    [[Y2:%.*]] = add nsw i32 [[A2:%.*]], 42
-; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr [[ARR1]], align 4
-; CHECK-NEXT:    [[RES2:%.*]] = udiv i32 [[V2]], [[Y2]]
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> poison, i32 [[A0:%.*]], i32 0
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[ARR1:%.*]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i32> <i32 0, i32 0, i32 poison, i32 0>, i32 [[A2:%.*]], i32 2
+; CHECK-NEXT:    [[TMP6:%.*]] = add <4 x i32> [[TMP4]], <i32 1, i32 1, i32 42, i32 1>
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> <i32 poison, i32 poison, i32 0, i32 poison>, i32 [[A0:%.*]], i32 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> [[TMP1]], i32 [[A1:%.*]], i32 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> [[TMP2]], i32 [[A3:%.*]], i32 3
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i32> [[TMP3]], i32 [[RES2]], i32 2
-; CHECK-NEXT:    [[TMP5:%.*]] = add nsw <4 x i32> [[TMP4]], <i32 1146, i32 146, i32 0, i32 0>
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x i32> <i32 poison, i32 poison, i32 0, i32 poison>, i32 [[V3]], i32 3
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x i32> [[TMP0]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <4 x i32> [[TMP6]], <4 x i32> [[TMP7]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP5:%.*]] = add nsw <4 x i32> <i32 1146, i32 146, i32 0, i32 0>, [[TMP3]]
+; CHECK-NEXT:    [[TMP8:%.*]] = udiv <4 x i32> [[TMP0]], [[TMP6]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = add nsw <4 x i32> [[TMP5]], [[TMP8]]
 ; CHECK-NEXT:    store <4 x i32> [[TMP9]], ptr [[ARR2:%.*]], align 4
 ; CHECK-NEXT:    ret void
@@ -357,21 +340,14 @@ entry:
 define void @test_add_udiv_sub_commuted(ptr %arr1, ptr %arr2, i32 %a0, i32 %a1, i32 %a2, i32 %a3) {
 ; CHECK-LABEL: @test_add_udiv_sub_commuted(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[GEP1_2:%.*]] = getelementptr i32, ptr [[ARR1:%.*]], i32 2
-; CHECK-NEXT:    [[GEP1_3:%.*]] = getelementptr i32, ptr [[ARR1]], i32 3
-; CHECK-NEXT:    [[V2:%.*]] = load i32, ptr [[GEP1_2]], align 4
-; CHECK-NEXT:    [[V3:%.*]] = load i32, ptr [[GEP1_3]], align 4
-; CHECK-NEXT:    [[Y2:%.*]] = sub i32 [[A2:%.*]], 42
-; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr [[ARR1]], align 4
-; CHECK-NEXT:    [[RES2:%.*]] = udiv i32 [[V2]], [[Y2]]
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> poison, i32 [[A0:%.*]], i32 0
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[ARR1:%.*]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i32> <i32 1, i32 1, i32 poison, i32 1>, i32 [[A2:%.*]], i32 2
+; CHECK-NEXT:    [[TMP6:%.*]] = sub <4 x i32> [[TMP4]], <i32 0, i32 0, i32 42, i32 0>
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> <i32 poison, i32 poison, i32 0, i32 poison>, i32 [[A0:%.*]], i32 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> [[TMP1]], i32 [[A1:%.*]], i32 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> [[TMP2]], i32 [[A3:%.*]], i32 3
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i32> [[TMP3]], i32 [[RES2]], i32 2
-; CHECK-NEXT:    [[TMP5:%.*]] = add nsw <4 x i32> [[TMP4]], <i32 1146, i32 146, i32 0, i32 0>
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x i32> <i32 poison, i32 poison, i32 0, i32 poison>, i32 [[V3]], i32 3
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x i32> [[TMP0]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <4 x i32> [[TMP6]], <4 x i32> [[TMP7]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP5:%.*]] = add nsw <4 x i32> <i32 1146, i32 146, i32 0, i32 0>, [[TMP3]]
+; CHECK-NEXT:    [[TMP8:%.*]] = udiv <4 x i32> [[TMP0]], [[TMP6]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = add nsw <4 x i32> [[TMP5]], [[TMP8]]
 ; CHECK-NEXT:    store <4 x i32> [[TMP9]], ptr [[ARR2:%.*]], align 4
 ; CHECK-NEXT:    ret void
