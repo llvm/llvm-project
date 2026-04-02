@@ -30,9 +30,8 @@ struct SincosFusionPattern : OpRewritePattern<math::SinOp> {
     for (auto op : sinOp->getBlock()->getOps<math::CosOp>()) {
       if (op.getOperand() == operand && op.getFastmath() == sinFastMathFlags) {
         cosOp = op;
-        return WalkResult::interrupt();
+        break;
       }
-      return WalkResult::advance();
     }
 
     if (!cosOp)
