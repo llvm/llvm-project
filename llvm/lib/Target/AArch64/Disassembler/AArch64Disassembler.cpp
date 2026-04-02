@@ -1387,6 +1387,17 @@ DecodeXSeqPairsClassRegisterClass(MCInst &Inst, unsigned RegNo, uint64_t Addr,
       Inst, AArch64::XSeqPairsClassRegClassID, RegNo, Addr, Decoder);
 }
 
+static DecodeStatus
+DecodeSyspPairClassRegisterClass(MCInst &Inst, unsigned RegNo, uint64_t Addr,
+                                 const MCDisassembler *Decoder) {
+  if (RegNo == 31) {
+    Inst.addOperand(MCOperand::createReg(AArch64::XZR));
+    return Success;
+  }
+
+  return DecodeXSeqPairsClassRegisterClass(Inst, RegNo, Addr, Decoder);
+}
+
 static DecodeStatus DecodeSyspInstruction(MCInst &Inst, uint32_t insn,
                                           uint64_t Addr,
                                           const MCDisassembler *Decoder) {
@@ -1399,19 +1410,11 @@ static DecodeStatus DecodeSyspInstruction(MCInst &Inst, uint32_t insn,
   if (op1 > 6 || (CRn != 8 && CRn != 9) || CRm > 7)
     return Fail;
 
-  // the first register must be even-numbered, except for the XZR/XZR case.
-  if (Rt != 31 && (Rt & 0x1))
-    return Fail;
-
   Inst.addOperand(MCOperand::createImm(op1));
   Inst.addOperand(MCOperand::createImm(CRn));
   Inst.addOperand(MCOperand::createImm(CRm));
   Inst.addOperand(MCOperand::createImm(op2));
-  // SYSP just encodes Rt. Print Rt and Rt+1 as a pair.
-  DecodeSimpleRegisterClass<AArch64::GPR64RegClassID, 0, 32>(Inst, Rt, Addr,
-                                                             Decoder);
-
-  return Success;
+  return DecodeSyspPairClassRegisterClass(Inst, Rt, Addr, Decoder);
 }
 
 static DecodeStatus

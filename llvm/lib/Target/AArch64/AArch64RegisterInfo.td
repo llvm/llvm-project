@@ -813,6 +813,13 @@ def XSeqPairsClass   : RegisterClass<"AArch64", [untyped], 64,
                                      (add XSeqPairs)>{
   let Size = 128;
 }
+def SyspPairsClass   : RegisterClass<"AArch64", [untyped], 64,
+                                     (add XSeqPairs, XZR)>{
+  let Size = 128;
+  let isAllocatable = 0;
+  let GeneratePressureSet = 0;
+  let CopyCost = -1;
+}
 
 
 let RenderMethod = "addRegOperands", ParserMethod="tryParseGPRSeqPair" in {
@@ -839,7 +846,7 @@ def SyspPairOperandMatcherClass : AsmOperandClass {
   let ParserMethod = "tryParseSyspPair";
 }
 def SyspPairOperand :
-    RegisterOperand<GPR64, "printSyspPair"> {
+    RegisterOperand<SyspPairsClass, "printGPRSeqPairsClassOperand<64>"> {
   let ParserMatchClass = SyspPairOperandMatcherClass;
 }
 

@@ -51,7 +51,7 @@ public:
 
 protected:
   bool printSysAlias(const MCInst *MI, const MCSubtargetInfo &STI,
-                     raw_ostream &O);
+                     raw_ostream &O, bool PairOperand = false);
   bool printSyslAlias(const MCInst *MI, const MCSubtargetInfo &STI,
                       raw_ostream &O);
   bool printSyspAlias(const MCInst *MI, const MCSubtargetInfo &STI,
@@ -237,8 +237,6 @@ protected:
                       const MCSubtargetInfo &STI, raw_ostream &O);
   void printGPR64x8(const MCInst *MI, unsigned OpNum,
                     const MCSubtargetInfo &STI, raw_ostream &O);
-  void printSyspPair(const MCInst *MI, unsigned OpNum,
-                     const MCSubtargetInfo &STI, raw_ostream &O);
   template <int Width>
   void printZPRasFPR(const MCInst *MI, unsigned OpNum,
                      const MCSubtargetInfo &STI, raw_ostream &O);
