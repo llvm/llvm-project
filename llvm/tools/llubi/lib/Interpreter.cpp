@@ -1029,6 +1029,11 @@ public:
       if (Operand.isPoison())
         return AnyValue::poison();
 
+      APInt IOperand = Operand.asInteger();
+
+      if (isa<UIToFPInst>(I) && I.hasNonNeg() && IOperand.isNegative())
+        return AnyValue::poison();
+
       APFloat Res(DstSem);
 
       Res.convertFromAPInt(Operand.asInteger(), /*IsSigned=*/IsSigned,

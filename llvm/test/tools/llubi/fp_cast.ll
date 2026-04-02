@@ -8,11 +8,17 @@ define void @main() {
   %si2fp = sitofp i32 -2 to float
   %ui2fp = uitofp i32 255 to float
 
+  %ui2fp_nneg_pos = uitofp nneg i32 255 to float
+  %ui2fp_nneg_neg = uitofp nneg i32 -255 to float
+
   %fp2si = fptosi double -4.75 to i32
   %fp2ui = fptoui double 4.75 to i32
 
   %oob_ui = fptoui float -1.0 to i32
   %nan_si = fptosi float 0x7FF8000000000000 to i32
+
+  %oob_si_half = sitofp i32 -100000 to half
+  %oob_ui_half = uitofp i32 100000 to half
 
   ret void
 }
@@ -21,9 +27,13 @@ define void @main() {
 ; CHECK-NEXT:   %trunc = fptrunc double 3.500000e+00 to float => float 3.500000e+00
 ; CHECK-NEXT:   %si2fp = sitofp i32 -2 to float => float -2.000000e+00
 ; CHECK-NEXT:   %ui2fp = uitofp i32 255 to float => float 2.550000e+02
+; CHECK-NEXT:   %ui2fp_nneg_pos = uitofp nneg i32 255 to float => float 2.550000e+02
+; CHECK-NEXT:   %ui2fp_nneg_neg = uitofp nneg i32 -255 to float => poison
 ; CHECK-NEXT:   %fp2si = fptosi double -4.750000e+00 to i32 => i32 -4
 ; CHECK-NEXT:   %fp2ui = fptoui double 4.750000e+00 to i32 => i32 4
 ; CHECK-NEXT:   %oob_ui = fptoui float -1.000000e+00 to i32 => poison
 ; CHECK-NEXT:   %nan_si = fptosi float 0x7FF8000000000000 to i32 => poison
+; CHECK-NEXT:   %oob_si_half = sitofp i32 -100000 to half => half -Inf
+; CHECK-NEXT:   %oob_ui_half = uitofp i32 100000 to half => half +Inf
 ; CHECK-NEXT:   ret void
 ; CHECK-NEXT: Exiting function: main
