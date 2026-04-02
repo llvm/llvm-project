@@ -571,3 +571,7 @@ Expected<DeviceTy &> PluginManager::getDevice(uint32_t DeviceNo) {
                                        DeviceNo);
   return *DevicePtr;
 }
+
+OmptTracingBufferMgr *PluginManager::getTraceRecordManager() const {
+  return getProfiler()->getTraceRecordManager();
+}
