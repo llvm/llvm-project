@@ -352,8 +352,8 @@ mlir::Operation *CIRGenNVCUDARuntime::getKernelHandle(cir::FuncOp fn,
 void CIRGenNVCUDARuntime::internalizeDeviceSideVar(
     const VarDecl *d, cir::GlobalLinkageKind &linkage) {
   if (cgm.getLangOpts().GPURelocatableDeviceCode)
-    cgm.errorNYI(
-        "internalizeDeviceSideVar: GPU Relocatable Deviced Code (RDC)");
+    cgm.errorNYI(d->getSourceRange(),
+                 "internalizeDeviceSideVar: GPU Relocatable Device Code (RDC)");
 
   // __shared__ variables are odd. Shadows do get created, but
   // they are not registered with the CUDA runtime, so they
@@ -367,7 +367,8 @@ void CIRGenNVCUDARuntime::internalizeDeviceSideVar(
 
   if (d->getType()->isCUDADeviceBuiltinSurfaceType() ||
       d->getType()->isCUDADeviceBuiltinTextureType())
-    cgm.errorNYI("internalizeDeviceSideVar: CUDA Surface/Texture support");
+    cgm.errorNYI(d->getSourceRange(),
+                 "internalizeDeviceSideVar: CUDA Surface/Texture support");
 }
 
 std::string CIRGenNVCUDARuntime::getDeviceSideName(const NamedDecl *nd) {
