@@ -35,7 +35,7 @@ def XiangShanKunMingHuModel : SchedMachineModel {
 let SchedModel = XiangShanKunMingHuModel in {
 // Define each kind of processor resource and number available.
 /// Pipline
-let BufferSize = 12 in {
+let BufferSize = 24 in {
   // Integer
   def XSPipeALU0 : ProcResource<1>; // ALU, MUL, BKU
   def XSPipeALU1 : ProcResource<1>; // ALU, MUL, BKU
@@ -44,17 +44,20 @@ let BufferSize = 12 in {
 
   def XSPipeBJU0 : ProcResource<1>; // BRU, JMP
   def XSPipeBJU1 : ProcResource<1>; // BRU, JMP
-  def XSPipeBJU2 : ProcResource<1>; // BRU, JMP, I2F, I2V, CSR
-  def XSPipeDIV  : ProcResource<1>; // DIV
-
-  // Floating-point
-  def XSPipeFEX0 : ProcResource<1>; // FALU, FMA
-  def XSPipeFEX1 : ProcResource<1>; // FCVT
-  def XSPipeFEX2 : ProcResource<1>; // FALU, FMA
-  def XSPipeFEX3 : ProcResource<1>; // FDIV
+  def XSPipeBJU2 : ProcResource<1>; // BRU, JMP, I2F, I2V, VSet
+  def XSPipeBJU3 : ProcResource<1>; // CSR, Fence, DIV
 }
 
-let BufferSize = 24 in {
+let BufferSize = 18 in {
+  // Floating-point
+  def XSPipeFEX0 : ProcResource<1>; // FALU, FMA, FCVT, F2V
+  def XSPipeFEX1 : ProcResource<1>; // FDIV
+  def XSPipeFEX2 : ProcResource<1>; // FALU, FMA
+  def XSPipeFEX3 : ProcResource<1>; // FDIV
+  def XSPipeFEX4 : ProcResource<1>; // FALU, FMA
+}
+
+let BufferSize = 16 in {
   // Load and store
   def XSPipeLDU : ProcResource<3>; // LDU
 
@@ -66,10 +69,10 @@ def XSPipeGroupALU : ProcResGroup<[XSPipeALU0, XSPipeALU1, XSPipeALU2, XSPipeALU
 def XSPipeGroupMUL : ProcResGroup<[XSPipeALU0, XSPipeALU1]>;
 def XSPipeGroupBKU : ProcResGroup<[XSPipeALU0, XSPipeALU1]>;
 def XSPipeGroupBRU : ProcResGroup<[XSPipeBJU0, XSPipeBJU1, XSPipeBJU2]>;
-def XSPipeGroupJMP : ProcResGroup<[XSPipeBJU0, XSPipeBJU1, XSPipeBJU2]>;
 
-def XSPipeGroupFALU : ProcResGroup<[XSPipeFEX0, XSPipeFEX2]>;
-def XSPipeGroupFMA  : ProcResGroup<[XSPipeFEX0, XSPipeFEX2]>;
+def XSPipeGroupFALU : ProcResGroup<[XSPipeFEX0, XSPipeFEX2, XSPipeFEX4]>;
+def XSPipeGroupFMA  : ProcResGroup<[XSPipeFEX0, XSPipeFEX2, XSPipeFEX4]>;
+def XSPipeGroupFDIV : ProcResGroup<[XSPipeFEX1, XSPipeFEX3]>;
 
 def XSPipeGroupSTU : ProcResGroup<[XSPipeSTA, XSPipeSTD]>;
 
@@ -78,8 +81,8 @@ def XSPipeGroupSTU : ProcResGroup<[XSPipeSTA, XSPipeSTD]>;
 
 // Jump
 def : WriteRes<WriteJmp, [XSPipeGroupBRU]>;
-def : WriteRes<WriteJal, [XSPipeGroupJMP]>;
-def : WriteRes<WriteJalr, [XSPipeGroupJMP]>;
+def : WriteRes<WriteJal, [XSPipeGroupBRU]>;
+def : WriteRes<WriteJalr, [XSPipeGroupBRU]>;
 
 // Integer arithmetic and logic
 def : WriteRes<WriteIALU32, [XSPipeGroupALU]>;
@@ -99,10 +102,10 @@ let Latency = 2 in {
 // Worst case latency is used.
 // The latency of integer division ranges from 4 to 20.
 let Latency = 20, ReleaseAtCycles = [20] in {
-  def : WriteRes<WriteIDiv32, [XSPipeDIV]>;
-  def : WriteRes<WriteIDiv, [XSPipeDIV]>;
-  def : WriteRes<WriteIRem32, [XSPipeDIV]>;
-  def : WriteRes<WriteIRem, [XSPipeDIV]>;
+  def : WriteRes<WriteIDiv32, [XSPipeBJU3]>;
+  def : WriteRes<WriteIDiv, [XSPipeBJU3]>;
+  def : WriteRes<WriteIRem32, [XSPipeBJU3]>;
+  def : WriteRes<WriteIRem, [XSPipeBJU3]>;
 }
 
 // Memory
@@ -132,9 +135,12 @@ let Latency = 6 in {
   def : WriteRes<WriteAtomicLDD, [XSPipeLDU]>;
 }
 
-let Latency = 2 in {
+let Latency = 1 in {
   def : WriteRes<WriteFAdd32, [XSPipeGroupFALU]>;
   def : WriteRes<WriteFAdd64, [XSPipeGroupFALU]>;
+}
+
+let Latency = 2 in {
   def : WriteRes<WriteFCmp32, [XSPipeGroupFALU]>;
   def : WriteRes<WriteFCmp64, [XSPipeGroupFALU]>;
   def : WriteRes<WriteFMinMax32, [XSPipeGroupFALU]>;
@@ -145,7 +151,7 @@ let Latency = 2 in {
   def : WriteRes<WriteFSGNJ64, [XSPipeGroupFALU]>;
 }
 
-let Latency = 2 in {
+let Latency = 3 in {
   def : WriteRes<WriteFMul32, [XSPipeGroupFMA]>;
   def : WriteRes<WriteFMul64, [XSPipeGroupFMA]>;
   def : WriteRes<WriteFMA32, [XSPipeGroupFMA]>;
@@ -154,34 +160,34 @@ let Latency = 2 in {
 
 // FDIV
 let Latency = 10 in {
-  def : WriteRes<WriteFDiv32, [XSPipeFEX3]>;
-  def : WriteRes<WriteFSqrt32, [XSPipeFEX3]>;
+  def : WriteRes<WriteFDiv32, [XSPipeGroupFDIV]>;
+  def : WriteRes<WriteFSqrt32, [XSPipeGroupFDIV]>;
 }
 let Latency = 15 in {
-  def : WriteRes<WriteFDiv64, [XSPipeFEX3]>;
-  def : WriteRes<WriteFSqrt64, [XSPipeFEX3]>;
+  def : WriteRes<WriteFDiv64, [XSPipeGroupFDIV]>;
+  def : WriteRes<WriteFSqrt64, [XSPipeGroupFDIV]>;
 }
 
 // FCVT
-let Latency = 3 in {
-  def : WriteRes<WriteFCvtF32ToI32, [XSPipeFEX1]>;
-  def : WriteRes<WriteFCvtF32ToI64, [XSPipeFEX1]>;
-  def : WriteRes<WriteFCvtF64ToI32, [XSPipeFEX1]>;
-  def : WriteRes<WriteFCvtF64ToI64, [XSPipeFEX1]>;
-  def : WriteRes<WriteFCvtF64ToF32, [XSPipeFEX1]>;
-  def : WriteRes<WriteFCvtF32ToF64, [XSPipeFEX1]>;
-  def : WriteRes<WriteFMovF64ToI64, [XSPipeFEX1]>;
-  def : WriteRes<WriteFMovF32ToI32, [XSPipeFEX1]>;
+let Latency = 2 in {
+  def : WriteRes<WriteFCvtF32ToI32, [XSPipeFEX0]>;
+  def : WriteRes<WriteFCvtF32ToI64, [XSPipeFEX0]>;
+  def : WriteRes<WriteFCvtF64ToI32, [XSPipeFEX0]>;
+  def : WriteRes<WriteFCvtF64ToI64, [XSPipeFEX0]>;
+  def : WriteRes<WriteFCvtF64ToF32, [XSPipeFEX0]>;
+  def : WriteRes<WriteFCvtF32ToF64, [XSPipeFEX0]>;
+  def : WriteRes<WriteFMovF64ToI64, [XSPipeFEX0]>;
+  def : WriteRes<WriteFMovF32ToI32, [XSPipeFEX0]>;
 }
 
 // I2V
-let Latency = 1 in {
+let Latency = 0 in {
   def : WriteRes<WriteFMovI64ToF64, [XSPipeBJU2]>;
   def : WriteRes<WriteFMovI32ToF32, [XSPipeBJU2]>;
 }
 
 // I2F
-let Latency = 3 in {
+let Latency = 2 in {
   def : WriteRes<WriteFCvtI32ToF32, [XSPipeBJU2]>;
   def : WriteRes<WriteFCvtI64ToF32, [XSPipeBJU2]>;
   def : WriteRes<WriteFCvtI32ToF64, [XSPipeBJU2]>;
@@ -216,7 +222,7 @@ let Latency = 1 in {
   def : WriteRes<WriteZIP, [XSPipeGroupALU]>;
 }
 
-let Latency = 3 in {
+let Latency = 2 in {
   // Zbb
   def : WriteRes<WriteCLZ, [XSPipeGroupBKU]>;
   def : WriteRes<WriteCLZ32, [XSPipeGroupBKU]>;
@@ -233,7 +239,7 @@ let Latency = 3 in {
 }
 
 // Others
-def : WriteRes<WriteCSR, [XSPipeBJU2]>;
+def : WriteRes<WriteCSR, [XSPipeBJU3]>;
 def : WriteRes<WriteNop, []>;
 
 def : InstRW<[WriteIALU], (instrs COPY)>;
