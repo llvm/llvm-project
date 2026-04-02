@@ -116,8 +116,6 @@ protected:
       DeserializerFn Deserialize;
     };
 
-    using RegistryT = llvm::Registry<Entry>;
-
     template <class AnalysisResultT> struct Add {
       /// Extracts the typed serializer signature from \c SerializerFn.
       /// Given \c function_ref<R(const AnalysisResult &, Args...)>, produces
@@ -144,7 +142,7 @@ protected:
         Registered = true;
         SA::Saved = TypedSerialize;
         static auto *SerializeWrap = &SA::wrap;
-        static SerializerFn SavedSerialize(SerializeWrap);
+        static SerializerFn SavedSerialize = SerializeWrap;
         static DeserializerFn SavedDeserialize = Deserialize;
 
         struct ConcreteEntry : Entry {
@@ -153,13 +151,14 @@ protected:
 
         static std::string NameStr =
             AnalysisResultT::analysisName().str().str();
-        static typename RegistryT::template Add<ConcreteEntry> Reg(NameStr, "");
+        static typename llvm::Registry<Entry>::template Add<ConcreteEntry> Reg(
+            NameStr, "");
       }
     };
 
     static llvm::Expected<std::pair<SerializerFn, DeserializerFn>>
-    lookup(const AnalysisName &Name) {
-      for (const auto &E : RegistryT::entries()) {
+    instantiate(const AnalysisName &Name) {
+      for (const auto &E : llvm::Registry<Entry>::entries()) {
         if (E.getName() == Name.str()) {
           auto Entry = E.instantiate();
           return std::make_pair(Entry->Serialize, Entry->Deserialize);

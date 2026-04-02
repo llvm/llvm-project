@@ -55,9 +55,8 @@ json::Object serializeTagsEntitySummary(const EntitySummary &ES,
                                         JSONFormat::EntityIdToJSONFn) {
   const auto &S = static_cast<const TagsEntitySummary &>(ES);
   json::Array TagsArray;
-  for (const auto &Tag : S.Tags) {
-    TagsArray.push_back(Tag);
-  }
+  TagsArray.reserve(S.Tags.size());
+  llvm::append_range(TagsArray, S.Tags);
   return json::Object{{"tags", std::move(TagsArray)}};
 }
 
@@ -201,9 +200,8 @@ struct TagsAnalysisResult final : AnalysisResult {
 json::Object serializeTagsAnalysisResult(const TagsAnalysisResult &R,
                                          JSONFormat::EntityIdToJSONFn) {
   json::Array TagsArray;
-  for (const auto &Tag : R.Tags) {
-    TagsArray.push_back(Tag);
-  }
+  TagsArray.reserve(R.Tags.size());
+  llvm::append_range(TagsArray, R.Tags);
   return json::Object{{"tags", std::move(TagsArray)}};
 }
 

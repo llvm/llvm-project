@@ -1,4 +1,4 @@
-if(LLVM_ENABLE_PLUGINS)
+if(CLANG_PLUGIN_SUPPORT AND LLVM_ENABLE_PLUGINS)
   # Plugins must never bring LLVM or Clang libraries in statically.
   # clang-ssaf-analyzer already loads clangScalableStaticAnalysisFrameworkCore
   # and LLVM into the process; a second static copy would produce duplicate

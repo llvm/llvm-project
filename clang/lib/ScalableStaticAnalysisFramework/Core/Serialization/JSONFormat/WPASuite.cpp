@@ -28,7 +28,7 @@ JSONFormat::analysisResultMapEntryFromJSON(const Object &Entry) const {
 
   AnalysisName Name = analysisNameFromJSON(*OptName);
 
-  auto ExpectedFns = AnalysisResultRegistry::lookup(Name);
+  auto ExpectedFns = AnalysisResultRegistry::instantiate(Name);
   if (!ExpectedFns) {
     return ExpectedFns.takeError();
   }
@@ -41,8 +41,8 @@ JSONFormat::analysisResultMapEntryFromJSON(const Object &Entry) const {
         .build();
   }
 
-  auto ExpectedResult =
-      ExpectedFns->second(*ResultObj, &entityIdFromJSONObject);
+  auto Deserialize = ExpectedFns->second;
+  auto ExpectedResult = Deserialize(*ResultObj, &entityIdFromJSONObject);
   if (!ExpectedResult) {
     return ExpectedResult.takeError();
   }
@@ -53,14 +53,16 @@ JSONFormat::analysisResultMapEntryFromJSON(const Object &Entry) const {
 llvm::Expected<Object> JSONFormat::analysisResultMapEntryToJSON(
     const AnalysisName &Name,
     const std::unique_ptr<AnalysisResult> &Result) const {
-  auto ExpectedFns = AnalysisResultRegistry::lookup(Name);
+  auto ExpectedFns = AnalysisResultRegistry::instantiate(Name);
   if (!ExpectedFns) {
     return ExpectedFns.takeError();
   }
 
+  auto Serialize = ExpectedFns->first;
+
   Object Entry;
   Entry["analysis_name"] = analysisNameToJSON(Name);
-  Entry["result"] = ExpectedFns->first(*Result, &entityIdToJSONObject);
+  Entry["result"] = Serialize(*Result, &entityIdToJSONObject);
   return Entry;
 }
 
@@ -71,8 +73,11 @@ llvm::Expected<Object> JSONFormat::analysisResultMapEntryToJSON(
 llvm::Expected<std::map<AnalysisName, std::unique_ptr<AnalysisResult>>>
 JSONFormat::analysisResultMapFromJSON(const Array &ResultsArray) const {
   std::map<AnalysisName, std::unique_ptr<AnalysisResult>> Results;
-  for (size_t I = 0; I < ResultsArray.size(); ++I) {
-    const Object *Entry = ResultsArray[I].getAsObject();
+
+  auto AsObject = [](const Value &V) { return V.getAsObject(); };
+  auto ObjectsRange = llvm::map_range(ResultsArray, AsObject);
+
+  for (auto [I, Entry] : enumerate(ObjectsRange)) {
     if (!Entry) {
       return ErrorBuilder::create(std::errc::invalid_argument,
                                   ErrorMessages::FailedToReadObjectAtIndex,
