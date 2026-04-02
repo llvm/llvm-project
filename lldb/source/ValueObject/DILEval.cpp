@@ -609,6 +609,8 @@ Interpreter::EvaluateScalarOp(BinaryOpKind kind, lldb::ValueObjectSP lhs,
     return value_object(l + r);
   case BinaryOpKind::Sub:
     return value_object(l - r);
+  default:
+    break;
   }
   return llvm::make_error<DILDiagnosticError>(
       m_expr, "invalid arithmetic operation", location);
@@ -730,6 +732,60 @@ llvm::Expected<lldb::ValueObjectSP> Interpreter::EvaluateBinarySubtraction(
 }
 
 llvm::Expected<lldb::ValueObjectSP>
+Interpreter::EvaluateAssignment(lldb::ValueObjectSP lhs,
+                                lldb::ValueObjectSP rhs, uint32_t location) {
+
+  Status status;
+  lhs->SetValueFromInteger(rhs, status, m_allow_var_updates);
+  if (status.Success())
+    return lhs;
+
+  std::string errMsg = std::string(status.AsCString());
+  return llvm::make_error<DILDiagnosticError>(m_expr, std::move(errMsg),
+                                              location);
+}
+
+llvm::Expected<lldb::ValueObjectSP> Interpreter::EvaluateBinaryAddAssign(
+    lldb::ValueObjectSP lhs, lldb::ValueObjectSP rhs, uint32_t location) {
+  lldb::ValueObjectSP ret;
+
+  auto ret_or_err = EvaluateBinaryAddition(lhs, rhs, location);
+  if (!ret_or_err)
+    return ret_or_err;
+
+  ret = *ret_or_err;
+
+  Status status;
+  lhs->SetValueFromInteger(ret, status, m_allow_var_updates);
+  if (status.Success())
+    return lhs;
+
+  std::string errMsg = std::string(status.AsCString());
+  return llvm::make_error<DILDiagnosticError>(m_expr, std::move(errMsg),
+                                              location);
+}
+
+llvm::Expected<lldb::ValueObjectSP> Interpreter::EvaluateBinarySubAssign(
+    lldb::ValueObjectSP lhs, lldb::ValueObjectSP rhs, uint32_t location) {
+  lldb::ValueObjectSP ret;
+
+  auto ret_or_err = EvaluateBinarySubtraction(lhs, rhs, location);
+  if (!ret_or_err)
+    return ret_or_err;
+
+  ret = *ret_or_err;
+
+  Status status;
+  lhs->SetValueFromInteger(ret, status, m_allow_var_updates);
+  if (status.Success())
+    return lhs;
+
+  std::string errMsg = std::string(status.AsCString());
+  return llvm::make_error<DILDiagnosticError>(m_expr, std::move(errMsg),
+                                              location);
+}
+
+llvm::Expected<lldb::ValueObjectSP>
 Interpreter::Visit(const BinaryOpNode &node) {
   auto lhs_or_err = EvaluateAndDereference(node.GetLHS());
   if (!lhs_or_err)
@@ -753,8 +809,14 @@ Interpreter::Visit(const BinaryOpNode &node) {
   switch (node.GetKind()) {
   case BinaryOpKind::Add:
     return EvaluateBinaryAddition(lhs, rhs, node.GetLocation());
+  case BinaryOpKind::AddAssign:
+    return EvaluateBinaryAddAssign(lhs, rhs, node.GetLocation());
+  case BinaryOpKind::Assign:
+    return EvaluateAssignment(lhs, rhs, node.GetLocation());
   case BinaryOpKind::Sub:
     return EvaluateBinarySubtraction(lhs, rhs, node.GetLocation());
+  case BinaryOpKind::SubAssign:
+    return EvaluateBinarySubAssign(lhs, rhs, node.GetLocation());
   }
 
   return llvm::make_error<DILDiagnosticError>(

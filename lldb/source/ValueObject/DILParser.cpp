@@ -89,7 +89,6 @@ CompilerType ResolveTypeByName(const std::string &name,
 llvm::Expected<ASTNodeUP> DILParser::Parse(llvm::StringRef dil_input_expr,
                                            DILLexer lexer,
                                            std::shared_ptr<StackFrame> frame_sp,
-
                                            lldb::DynamicValueType use_dynamic,
                                            uint32_t options) {
   const bool check_ptr_vs_member =
@@ -103,7 +102,6 @@ llvm::Expected<ASTNodeUP> DILParser::Parse(llvm::StringRef dil_input_expr,
   DILParser parser(dil_input_expr, lexer, frame_sp, use_dynamic,
                    !no_synth_child, !no_fragile_ivar, check_ptr_vs_member,
                    error);
-
   ASTNodeUP node_up = parser.Run();
   assert(node_up && "ASTNodeUP must not contain a nullptr");
 
@@ -134,9 +132,37 @@ ASTNodeUP DILParser::Run() {
 // Parse an expression.
 //
 //  expression:
-//    cast_expression
+//    assignment_expression
 //
-ASTNodeUP DILParser::ParseExpression() { return ParseAdditiveExpression(); }
+ASTNodeUP DILParser::ParseExpression() { return ParseAssignmentExpression(); }
+
+// Parse an assignment_expression
+//
+//  assignment_expression
+//    additive_expression
+//    additive_expression assignment_operator assignment_expression
+//
+//  assignment_operator:
+//    "="
+//    "+="
+//    "-="
+//
+ASTNodeUP DILParser::ParseAssignmentExpression() {
+  auto lhs = ParseAdditiveExpression();
+  assert(lhs && "ASTNodeUP must not contain a nullptr");
+
+  // Check if it's an assignment expression.
+  if (CurToken().IsOneOf({Token::equal, Token::plusequal, Token::minusequal})) {
+    // That's an assignment!
+    Token token = CurToken();
+    m_dil_lexer.Advance();
+    auto rhs = ParseAssignmentExpression();
+    lhs = std::make_unique<BinaryOpNode>(
+        token.GetLocation(), GetBinaryOpKindFromToken(token.GetKind()),
+        std::move(lhs), std::move(rhs));
+  }
+  return lhs;
+}
 
 // Parse an additive_expression.
 //

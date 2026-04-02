@@ -1,0 +1,31 @@
+"""
+Test DIL basic assignment.
+"""
+
+import lldb
+from lldbsuite.test.lldbtest import *
+from lldbsuite.test.decorators import *
+from lldbsuite.test import lldbutil
+
+
+class TestFrameVarDILAssignment(TestBase):
+    NO_DEBUG_INFO_TESTCASE = True
+
+    def test_assignment(self):
+        self.build()
+        (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
+            self, "Set a breakpoint here", lldb.SBFileSpec("main.cpp")
+        )
+
+        self.runCmd("settings set target.experimental.use-DIL true")
+
+        self.expect("frame variable 'i += 1'", substrs=["2"])
+        self.expect("frame variable 'i += 2'", substrs=["4"])
+        self.expect("frame variable 'i += -4'", substrs=["0"])
+        self.expect("frame variable 'i += eOne'", substrs=["0"])
+        self.expect("frame variable 'i += eTwo'", substrs=["1"])
+
+        self.expect("frame variable 'f += 1'", substrs=["2.5"])
+        self.expect("frame variable 'f += -2.0f'", substrs=["0.5"])
+        self.expect("frame variable 'f += 2.5f'", substrs=["3"])
+        self.expect("frame variable 'f += eTwo'", substrs=["4"])

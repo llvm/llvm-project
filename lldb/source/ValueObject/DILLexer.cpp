@@ -28,6 +28,8 @@ llvm::StringRef Token::GetTokenName(Kind kind) {
     return "colon";
   case Kind::coloncolon:
     return "coloncolon";
+  case Kind::equal:
+    return "equal";
   case Kind::eof:
     return "eof";
   case Kind::float_constant:
@@ -46,10 +48,14 @@ llvm::StringRef Token::GetTokenName(Kind kind) {
     return "l_square";
   case Kind::minus:
     return "minus";
+  case Kind::minusequal:
+    return "minusequal";
   case Kind::period:
     return "period";
   case Kind::plus:
     return "plus";
+  case Kind::plusequal:
+    return "plusequal";
   case Kind::r_paren:
     return "r_paren";
   case Kind::r_square:
@@ -180,11 +186,18 @@ llvm::Expected<Token> DILLexer::Lex(llvm::StringRef expr,
     return Token(kind, word.str(), position);
   }
 
+  // IMPORTANT: If two or more tokens share the same prefix, the tokens need to
+  // be ordered longest-to-shortest in the list below. E.g. '::' must come
+  // before ':', and '+=' must come before '+'.
   constexpr std::pair<Token::Kind, const char *> operators[] = {
-      {Token::amp, "&"},     {Token::arrow, "->"},   {Token::coloncolon, "::"},
-      {Token::colon, ":"},   {Token::l_paren, "("},  {Token::l_square, "["},
-      {Token::minus, "-"},   {Token::period, "."},   {Token::plus, "+"},
-      {Token::r_paren, ")"}, {Token::r_square, "]"}, {Token::star, "*"},
+      {Token::amp, "&"},         {Token::arrow, "->"},
+      {Token::coloncolon, "::"}, {Token::colon, ":"},
+      {Token::equal, "="},       {Token::l_paren, "("},
+      {Token::l_square, "["},    {Token::minusequal, "-="},
+      {Token::minus, "-"},       {Token::period, "."},
+      {Token::plusequal, "+="},  {Token::plus, "+"},
+      {Token::r_paren, ")"},     {Token::r_square, "]"},
+      {Token::star, "*"},
   };
   for (auto [kind, str] : operators) {
     if (remainder.consume_front(str))

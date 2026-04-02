@@ -1223,16 +1223,26 @@ void ValueObject::SetValueFromInteger(const llvm::APInt &value, Status &error,
     return;
   }
 
+  // Make sure we're not trying to assign to a constant.
+  if (GetIsConstant()) {
+    error =
+        Status::FromErrorString("current value is not assignable (a constant)");
+    return;
+  }
+
   // Verify the proposed new value is the right size.
   lldb::TargetSP target = GetTargetSP();
   uint64_t byte_size = 0;
-  if (auto temp =
-          llvm::expectedToOptional(GetCompilerType().GetByteSize(target.get())))
-    byte_size = temp.value();
-  if (value.getBitWidth() != byte_size * CHAR_BIT) {
-    error = Status::FromErrorString(
-        "illegal argument: new value should be of the same size");
-    return;
+  // Exclude size check when assigning an integer 1 or 0 to a boolean.
+  if (!val_type.IsBoolean() || (!value.isOne() && !value.isZero())) {
+    if (auto temp = llvm::expectedToOptional(
+            GetCompilerType().GetByteSize(target.get())))
+      byte_size = temp.value();
+    if (value.getBitWidth() != byte_size * CHAR_BIT) {
+      error = Status::FromErrorString(
+          "illegal argument: new value should be of the same size");
+      return;
+    }
   }
 
   lldb::DataExtractorSP data_sp = std::make_shared<DataExtractor>(

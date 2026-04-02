@@ -88,6 +88,7 @@ private:
   llvm::Expected<CompilerType> ArithmeticConversion(lldb::ValueObjectSP &lhs,
                                                     lldb::ValueObjectSP &rhs,
                                                     uint32_t location);
+
   /// Add or subtract the offset to the pointer according to the pointee type
   /// byte size.
   /// \returns A new `ValueObject` with a new pointer value.
@@ -95,6 +96,7 @@ private:
                                                     lldb::ValueObjectSP offset,
                                                     BinaryOpKind operation,
                                                     uint32_t location);
+
   llvm::Expected<lldb::ValueObjectSP> EvaluateScalarOp(BinaryOpKind kind,
                                                        lldb::ValueObjectSP lhs,
                                                        lldb::ValueObjectSP rhs,
@@ -103,9 +105,23 @@ private:
   llvm::Expected<lldb::ValueObjectSP>
   EvaluateBinaryAddition(lldb::ValueObjectSP lhs, lldb::ValueObjectSP rhs,
                          uint32_t location);
+
   llvm::Expected<lldb::ValueObjectSP>
   EvaluateBinarySubtraction(lldb::ValueObjectSP lhs, lldb::ValueObjectSP rhs,
                             uint32_t location);
+
+  llvm::Expected<lldb::ValueObjectSP>
+  EvaluateAssignment(lldb::ValueObjectSP lhs, lldb::ValueObjectSP rhs,
+                     uint32_t location);
+
+  llvm::Expected<lldb::ValueObjectSP>
+  EvaluateBinaryAddAssign(lldb::ValueObjectSP lhs, lldb::ValueObjectSP rhs,
+                          uint32_t location);
+
+  llvm::Expected<lldb::ValueObjectSP>
+  EvaluateBinarySubAssign(lldb::ValueObjectSP lhs, lldb::ValueObjectSP rhs,
+                          uint32_t location);
+
   llvm::Expected<CompilerType>
   PickIntegerType(lldb::TypeSystemSP type_system,
                   std::shared_ptr<ExecutionContextScope> ctx,
@@ -136,8 +152,7 @@ private:
   bool m_use_synthetic;
   bool m_fragile_ivar;
   bool m_check_ptr_vs_member;
-  // TODO: Remove 'maybe_unused' when next PR, using this, gets submitted.
-  [[maybe_unused]] bool m_allow_var_updates;
+  bool m_allow_var_updates;
 };
 
 } // namespace lldb_private::dil
