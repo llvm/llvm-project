@@ -1485,12 +1485,8 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
         {A, Plan->getConstantInt(APC->getBitWidth(), APC->exactLogBase2())},
         *cast<VPRecipeWithIRFlags>(Def), Def->getDebugLoc()));
 
-  // Don't convert udiv to lshr inside a replicate region, as VPInstructions are
-  // not allowed in them.
-  const VPRegionBlock *ParentRegion = Def->getParent()->getParent();
-  bool IsInReplicateRegion = ParentRegion && ParentRegion->isReplicator();
-  if (CanCreateNewRecipe && !IsInReplicateRegion &&
-      match(Def, m_UDiv(m_VPValue(A), m_APInt(APC))) && APC->isPowerOf2())
+  if (CanCreateNewRecipe && match(Def, m_UDiv(m_VPValue(A), m_APInt(APC))) &&
+      APC->isPowerOf2())
     return Def->replaceAllUsesWith(Builder.createNaryOp(
         Instruction::LShr,
         {A, Plan->getConstantInt(APC->getBitWidth(), APC->exactLogBase2())},
