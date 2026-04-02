@@ -1615,22 +1615,15 @@ public:
                       getAsRecipe()->op_begin() + getNumIncoming());
   }
 
-  using const_incoming_blocks_range = iterator_range<mapped_iterator<
-      detail::index_iterator, std::function<const VPBasicBlock *(size_t)>>>;
-
   /// Returns an iterator range over the incoming blocks.
-  const_incoming_blocks_range incoming_blocks() const {
-    std::function<const VPBasicBlock *(size_t)> GetBlock = [this](size_t Idx) {
-      return getIncomingBlock(Idx);
-    };
-    return map_range(index_range(0, getNumIncoming()), GetBlock);
+  auto incoming_blocks() const {
+    return map_range(index_range(0, getNumIncoming()),
+                     bind_front(&VPPhiAccessors::getIncomingBlock, this));
   }
 
   /// Returns an iterator range over pairs of incoming values and corresponding
   /// incoming blocks.
-  detail::zippy<llvm::detail::zip_first, VPUser::const_operand_range,
-                const_incoming_blocks_range>
-  incoming_values_and_blocks() const {
+  auto incoming_values_and_blocks() const {
     return zip_equal(incoming_values(), incoming_blocks());
   }
 
