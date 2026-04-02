@@ -28,9 +28,13 @@
 // RUN:   | sed 's:\\\\\?:/:g' \
 // RUN:   | FileCheck %s -DPREFIX=%/t
 
-// CHECK: "-cc1" {{.*}} "[[PREFIX]]/Inputs/usr/lib/x86_64-linux-gnu/../share/libc++/v1/std.cppm"
-// CHECK-SAME: "-Wno-reserved-module-identifier"
-// CHECK-SAME: "-internal-isystem" "[[PREFIX]]/Inputs/usr/lib/x86_64-linux-gnu/../share/libc++/v1/"
+// CHECK: "-cc1" {{.*}} "-Wno-reserved-module-identifier" {{.*}} "[[PREFIX]]/Inputs/usr/lib/x86_64-linux-gnu/../share/libc++/v1/std.cppm" {{.*}} "-internal-isystem" "[[PREFIX]]/Inputs/usr/lib/x86_64-linux-gnu/../share/libc++/v1/"
+
+// The adjustments should only be made for inputs from the Standard Library module manifest:
+// Check that the -cc1 command line does not contain those adjustments!
+// CHECK: "-cc1" {{.*}}main
+// CHECK-NOT: "-Wno-reserved-module-identifier"
+// CHECK-NOT: "-internal-isystem" "[[PREFIX]]/Inputs/usr/lib/x86_64-linux-gnu/../share/libc++/v1/"
 
 //--- main.cpp
 import std;
