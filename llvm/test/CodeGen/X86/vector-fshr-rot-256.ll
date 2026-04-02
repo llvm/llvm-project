@@ -467,18 +467,18 @@ define <32 x i8> @var_funnnel_v32i8(<32 x i8> %x, <32 x i8> %amt) nounwind {
 ;
 ; AVX512F-LABEL: var_funnnel_v32i8:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vpsrlw $4, %ymm0, %ymm2
-; AVX512F-NEXT:    vpsllw $4, %ymm0, %ymm3
+; AVX512F-NEXT:    vpsllw $4, %ymm0, %ymm2
+; AVX512F-NEXT:    vpsrlw $4, %ymm0, %ymm3
 ; AVX512F-NEXT:    vpternlogd {{.*#+}} zmm3 = zmm3 ^ (m32bcst & (zmm3 ^ zmm2))
 ; AVX512F-NEXT:    vpsllw $5, %ymm1, %ymm1
 ; AVX512F-NEXT:    vpblendvb %ymm1, %ymm3, %ymm0, %ymm0
-; AVX512F-NEXT:    vpsrlw $2, %ymm0, %ymm2
-; AVX512F-NEXT:    vpsllw $6, %ymm0, %ymm3
+; AVX512F-NEXT:    vpsllw $6, %ymm0, %ymm2
+; AVX512F-NEXT:    vpsrlw $2, %ymm0, %ymm3
 ; AVX512F-NEXT:    vpternlogd {{.*#+}} zmm3 = zmm3 ^ (m32bcst & (zmm3 ^ zmm2))
 ; AVX512F-NEXT:    vpaddb %ymm1, %ymm1, %ymm1
 ; AVX512F-NEXT:    vpblendvb %ymm1, %ymm3, %ymm0, %ymm0
-; AVX512F-NEXT:    vpsrlw $1, %ymm0, %ymm2
-; AVX512F-NEXT:    vpsllw $7, %ymm0, %ymm3
+; AVX512F-NEXT:    vpsllw $7, %ymm0, %ymm2
+; AVX512F-NEXT:    vpsrlw $1, %ymm0, %ymm3
 ; AVX512F-NEXT:    vpternlogd {{.*#+}} zmm3 = zmm3 ^ (m32bcst & (zmm3 ^ zmm2))
 ; AVX512F-NEXT:    vpaddb %ymm1, %ymm1, %ymm1
 ; AVX512F-NEXT:    vpblendvb %ymm1, %ymm3, %ymm0, %ymm0
@@ -486,18 +486,18 @@ define <32 x i8> @var_funnnel_v32i8(<32 x i8> %x, <32 x i8> %amt) nounwind {
 ;
 ; AVX512VL-LABEL: var_funnnel_v32i8:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vpsrlw $4, %ymm0, %ymm2
-; AVX512VL-NEXT:    vpsllw $4, %ymm0, %ymm3
+; AVX512VL-NEXT:    vpsllw $4, %ymm0, %ymm2
+; AVX512VL-NEXT:    vpsrlw $4, %ymm0, %ymm3
 ; AVX512VL-NEXT:    vpternlogd {{.*#+}} ymm3 = ymm3 ^ (m32bcst & (ymm3 ^ ymm2))
 ; AVX512VL-NEXT:    vpsllw $5, %ymm1, %ymm1
 ; AVX512VL-NEXT:    vpblendvb %ymm1, %ymm3, %ymm0, %ymm0
-; AVX512VL-NEXT:    vpsrlw $2, %ymm0, %ymm2
-; AVX512VL-NEXT:    vpsllw $6, %ymm0, %ymm3
+; AVX512VL-NEXT:    vpsllw $6, %ymm0, %ymm2
+; AVX512VL-NEXT:    vpsrlw $2, %ymm0, %ymm3
 ; AVX512VL-NEXT:    vpternlogd {{.*#+}} ymm3 = ymm3 ^ (m32bcst & (ymm3 ^ ymm2))
 ; AVX512VL-NEXT:    vpaddb %ymm1, %ymm1, %ymm1
 ; AVX512VL-NEXT:    vpblendvb %ymm1, %ymm3, %ymm0, %ymm0
-; AVX512VL-NEXT:    vpsrlw $1, %ymm0, %ymm2
-; AVX512VL-NEXT:    vpsllw $7, %ymm0, %ymm3
+; AVX512VL-NEXT:    vpsllw $7, %ymm0, %ymm2
+; AVX512VL-NEXT:    vpsrlw $1, %ymm0, %ymm3
 ; AVX512VL-NEXT:    vpternlogd {{.*#+}} ymm3 = ymm3 ^ (m32bcst & (ymm3 ^ ymm2))
 ; AVX512VL-NEXT:    vpaddb %ymm1, %ymm1, %ymm1
 ; AVX512VL-NEXT:    vpblendvb %ymm1, %ymm3, %ymm0, %ymm0
