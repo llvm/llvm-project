@@ -2278,9 +2278,15 @@ cir::IfOp CIRGenFunction::emitIfOnBoolExpr(
 
   // Emit the code with the fully general case.
   mlir::Value condV = emitOpOnBoolExpr(loc, cond);
-  return cir::IfOp::create(builder, loc, condV, elseLoc.has_value(),
-                           /*thenBuilder=*/thenBuilder,
-                           /*elseBuilder=*/elseBuilder);
+  cir::IfOp ifOp = cir::IfOp::create(builder, loc, condV, elseLoc.has_value(),
+                                     /*thenBuilder=*/thenBuilder,
+                                     /*elseBuilder=*/elseBuilder);
+  terminateStructuredRegionBody(ifOp.getThenRegion(), thenLoc);
+  assert((elseLoc.has_value() || ifOp.getElseRegion().empty()) &&
+         "else region created with no else location");
+  if (elseLoc.has_value())
+    terminateStructuredRegionBody(ifOp.getElseRegion(), *elseLoc);
+  return ifOp;
 }
 
 /// TODO(cir): see EmitBranchOnBoolExpr for extra ideas).

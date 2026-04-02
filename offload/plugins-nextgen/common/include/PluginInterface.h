@@ -994,6 +994,11 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   Error syncEvent(void *EventPtr);
   virtual Error syncEventImpl(void *EventPtr) = 0;
 
+  /// Get the elapsed time in milliseconds between two events.
+  Expected<float> getEventElapsedTime(void *StartEventPtr, void *EndEventPtr);
+  virtual Expected<float> getEventElapsedTimeImpl(void *StartEventPtr,
+                                                  void *EndEventPtr) = 0;
+
   /// Obtain information about the device.
   Expected<InfoTreeNode> obtainInfo();
   virtual Expected<InfoTreeNode> obtainInfoImpl() = 0;
@@ -1551,6 +1556,10 @@ public:
 
   /// Synchronize execution until an event is done.
   int32_t sync_event(int32_t DeviceId, void *EventPtr);
+
+  /// Get the elapsed time in milliseconds between two events.
+  int32_t get_event_elapsed_time(int32_t DeviceId, void *StartEventPtr,
+                                 void *EndEventPtr, float *ElapsedTime);
 
   /// Remove the event from the plugin.
   int32_t destroy_event(int32_t DeviceId, void *EventPtr);

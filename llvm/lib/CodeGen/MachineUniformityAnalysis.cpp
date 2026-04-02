@@ -48,22 +48,36 @@ bool llvm::GenericUniformityAnalysisImpl<MachineSSAContext>::markDefsDivergent(
 
 template <>
 void llvm::GenericUniformityAnalysisImpl<MachineSSAContext>::initialize() {
+  // Pre-populate UniformValues with all register defs. Physical register defs
+  // are included because they are never analyzed for divergence (initialize
+  // and markDefsDivergent skip them), so they must be in UniformValues to
+  // avoid being falsely reported as divergent.
+  for (const MachineBasicBlock &BB : F) {
+    for (const MachineInstr &MI : BB.instrs()) {
+      for (const MachineOperand &Op : MI.all_defs()) {
+        Register Reg = Op.getReg();
+        if (Reg)
+          UniformValues.insert(Reg);
+      }
+    }
+  }
+
   const auto &InstrInfo = *F.getSubtarget().getInstrInfo();
 
   for (const MachineBasicBlock &block : F) {
     for (const MachineInstr &instr : block) {
-      auto uniformity = InstrInfo.getInstructionUniformity(instr);
+      auto uniformity = InstrInfo.getValueUniformity(instr);
 
       switch (uniformity) {
-      case InstructionUniformity::AlwaysUniform:
+      case ValueUniformity::AlwaysUniform:
         addUniformOverride(instr);
         break;
-      case InstructionUniformity::NeverUniform:
+      case ValueUniformity::NeverUniform:
         markDivergent(instr);
         break;
-      case InstructionUniformity::Custom:
+      case ValueUniformity::Custom:
         break;
-      case InstructionUniformity::Default:
+      case ValueUniformity::Default:
         break;
       }
     }
