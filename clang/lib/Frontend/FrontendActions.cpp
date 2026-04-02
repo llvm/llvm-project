@@ -188,7 +188,8 @@ bool GeneratePCHAction::BeginSourceFileAction(CompilerInstance &CI) {
 std::vector<std::unique_ptr<ASTConsumer>>
 GenerateModuleAction::CreateMultiplexConsumer(CompilerInstance &CI,
                                               StringRef InFile) {
-  std::unique_ptr<raw_pwrite_stream> OS = CreateOutputFile(CI, InFile);
+  if (!OS)
+    OS = CreateOutputFile(CI, InFile);
   if (!OS)
     return {};
 
@@ -251,9 +252,9 @@ GenerateModuleFromModuleMapAction::CreateOutputFile(CompilerInstance &CI,
       ModuleMapFile = InFile;
 
     HeaderSearch &HS = CI.getPreprocessor().getHeaderSearchInfo();
-    CI.getFrontendOpts().OutputFile =
-        HS.getCachedModuleFileName(CI.getLangOpts().CurrentModule,
-                                   ModuleMapFile);
+    ModuleFileName FileName = HS.getCachedModuleFileName(
+        CI.getLangOpts().CurrentModule, ModuleMapFile);
+    CI.getFrontendOpts().OutputFile = FileName.str();
   }
 
   // Because this is exposed via libclang we must disable RemoveFileOnSignal.
@@ -367,11 +368,9 @@ void VerifyPCHAction::ExecuteAction() {
       /*AllowConfigurationMismatch*/ true,
       /*ValidateSystemInputs*/ true, /*ForceValidateUserInputs*/ true));
 
-  Reader->ReadAST(getCurrentFile(),
-                  Preamble ? serialization::MK_Preamble
-                           : serialization::MK_PCH,
-                  SourceLocation(),
-                  ASTReader::ARR_ConfigurationMismatch);
+  Reader->ReadAST(ModuleFileName::makeExplicit(getCurrentFile()),
+                  Preamble ? serialization::MK_Preamble : serialization::MK_PCH,
+                  SourceLocation(), ASTReader::ARR_ConfigurationMismatch);
 }
 
 namespace {

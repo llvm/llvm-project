@@ -19,7 +19,6 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/IR/BasicBlock.h"
-#include "llvm/IR/CycleInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Printable.h"
@@ -27,6 +26,7 @@
 
 namespace llvm {
 class CondBrInst;
+class CycleInfo;
 class LandingPadInst;
 class Loop;
 class PHINode;
@@ -630,7 +630,8 @@ LLVM_ABI CondBrInst *GetIfCondition(BasicBlock *BB, BasicBlock *&IfTrue,
 LLVM_ABI bool SplitIndirectBrCriticalEdges(Function &F,
                                            bool IgnoreBlocksWithoutPHI,
                                            BranchProbabilityInfo *BPI = nullptr,
-                                           BlockFrequencyInfo *BFI = nullptr);
+                                           BlockFrequencyInfo *BFI = nullptr,
+                                           DomTreeUpdater *DTU = nullptr);
 
 // Utility function for inverting branch condition and for swapping its
 // successors

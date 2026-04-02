@@ -36,14 +36,12 @@ public:
     Log *log(GetLog(
         LLDBLog::Expressions)); // FIXME - a more appropriate log channel?
 
-    if (log) {
-      LLDB_LOGF(log,
-                "AppleObjCExternalASTSource::FindExternalVisibleDeclsByName"
-                " on (ASTContext*)%p Looking for %s in (%sDecl*)%p",
-                static_cast<void *>(&decl_ctx->getParentASTContext()),
-                name.getAsString().c_str(), decl_ctx->getDeclKindName(),
-                static_cast<const void *>(decl_ctx));
-    }
+    LLDB_LOGF(log,
+              "AppleObjCExternalASTSource::FindExternalVisibleDeclsByName"
+              " on (ASTContext*)%p Looking for %s in (%sDecl*)%p",
+              static_cast<void *>(&decl_ctx->getParentASTContext()),
+              name.getAsString().c_str(), decl_ctx->getDeclKindName(),
+              static_cast<const void *>(decl_ctx));
 
     do {
       const clang::ObjCInterfaceDecl *interface_decl =
@@ -89,24 +87,20 @@ public:
     Log *log(GetLog(
         LLDBLog::Expressions)); // FIXME - a more appropriate log channel?
 
-    if (log) {
-      LLDB_LOGF(log,
-                "AppleObjCExternalASTSource::CompleteType on "
-                "(ASTContext*)%p Completing (ObjCInterfaceDecl*)%p named %s",
-                static_cast<void *>(&interface_decl->getASTContext()),
-                static_cast<void *>(interface_decl),
-                interface_decl->getName().str().c_str());
+    LLDB_LOGF(log,
+              "AppleObjCExternalASTSource::CompleteType on "
+              "(ASTContext*)%p Completing (ObjCInterfaceDecl*)%p named %s",
+              static_cast<void *>(&interface_decl->getASTContext()),
+              static_cast<void *>(interface_decl),
+              interface_decl->getName().str().c_str());
 
-      LLDB_LOGF(log, "  AOEAS::CT Before:");
-      LLDB_LOG(log, "    [CT] {0}", ClangUtil::DumpDecl(interface_decl));
-    }
+    LLDB_LOGF(log, "  AOEAS::CT Before:");
+    LLDB_LOG(log, "    [CT] {0}", ClangUtil::DumpDecl(interface_decl));
 
     m_decl_vendor.FinishDecl(interface_decl);
 
-    if (log) {
-      LLDB_LOGF(log, "  [CT] After:");
-      LLDB_LOG(log, "    [CT] {0}", ClangUtil::DumpDecl(interface_decl));
-    }
+    LLDB_LOGF(log, "  [CT] After:");
+    LLDB_LOG(log, "    [CT] {0}", ClangUtil::DumpDecl(interface_decl));
   }
 
   bool layoutRecordType(
@@ -512,13 +506,10 @@ bool AppleObjCDeclVendor::FinishDecl(clang::ObjCInterfaceDecl *interface_decl) {
                             class_method_func, ivar_func))
     return false;
 
-  if (log) {
-    LLDB_LOGF(
-        log,
-        "[AppleObjCDeclVendor::FinishDecl] Finished Objective-C interface");
+  LLDB_LOGF(log,
+            "[AppleObjCDeclVendor::FinishDecl] Finished Objective-C interface");
 
-    LLDB_LOG(log, "  [AOTV::FD] {0}", ClangUtil::DumpDecl(interface_decl));
-  }
+  LLDB_LOG(log, "  [AOTV::FD] {0}", ClangUtil::DumpDecl(interface_decl));
 
   return true;
 }

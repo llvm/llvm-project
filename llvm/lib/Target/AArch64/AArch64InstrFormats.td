@@ -1876,7 +1876,7 @@ class STSHHI
     : SimpleSystemI<0, (ins phint_op:$policy), "stshh", "\t$policy", []>,
       Sched<[WriteHint]> {
   bits<3> policy;
-  let Inst{20-12} = 0b000011001;
+  let Inst{20-12} = 0b000110010;
   let Inst{11-8} = 0b0110;
   let Inst{7-5} = policy;
 }
@@ -2116,16 +2116,21 @@ def SysCRAsmOperand : AsmOperandClass {
   let ParserMethod = "tryParseSysCROperand";
 }
 
-def sys_cr_op : Operand<i32> {
+def sys_cr_op : Operand<i32>, TImmLeaf<i32, [{
+  return ((uint32_t)Imm) < 16;
+}]> {
   let PrintMethod = "printSysCROperand";
   let ParserMatchClass = SysCRAsmOperand;
   let OperandType = "OPERAND_IMMEDIATE";
 }
 
-class SystemXtI<bit L, string asm>
-  : RtSystemI<L, (outs),
-       (ins imm0_7:$op1, sys_cr_op:$Cn, sys_cr_op:$Cm, imm0_7:$op2, GPR64:$Rt),
-       asm, "\t$op1, $Cn, $Cm, $op2, $Rt"> {
+class SystemXtI<string asm>
+  : RtSystemI<0, (outs),
+       (ins imm32_0_7:$op1, sys_cr_op:$Cn, sys_cr_op:$Cm, imm32_0_7:$op2,
+            GPR64:$Rt),
+       asm, "\t$op1, $Cn, $Cm, $op2, $Rt",
+       [(int_aarch64_sys timm32_0_7:$op1, sys_cr_op:$Cn, sys_cr_op:$Cm,
+                          timm32_0_7:$op2, GPR64:$Rt)]> {
   bits<3> op1;
   bits<4> Cn;
   bits<4> Cm;
@@ -2135,6 +2140,10 @@ class SystemXtI<bit L, string asm>
   let Inst{15-12} = Cn;
   let Inst{11-8}  = Cm;
   let Inst{7-5}   = op2;
+
+  let mayLoad = 1;
+  let mayStore = 1;
+  let hasSideEffects = 1;
 }
 
 class SystemLXtI<bit L, string asm>
@@ -2206,6 +2215,7 @@ class RCPCLoad<bits<2> sz, string asm, RegisterClass RC>
   bits<5> Rt;
   let Inst{31-30} = sz;
   let Inst{29-10} = 0b11100010111111110000;
+  let Unpredictable{20-16} = 0b11111;
   let Inst{9-5} = Rn;
   let Inst{4-0} = Rt;
 }
@@ -5206,6 +5216,8 @@ class StoreExclusive<bits<2> sz, bit o2, bit L, bit o1, bit o0,
   bits<5> Rt;
   bits<5> Rn;
   let Inst{20-16} = Ws;
+  let Inst{14-10} = 0b11111;
+  let Unpredictable{14-10} = 0b11111;
   let Inst{9-5} = Rn;
   let Inst{4-0} = Rt;
 
@@ -12846,6 +12858,7 @@ class MOPSGoMemorySetTagging<bits<2> opcode, bit op1, bit op2, bit op3, string a
                        "\t[$Rd]!, $Rn!", 1, opcode, op1, op2, op3, asm> {
   // No `Rm` operand, as all bits must be set to 1
   let Inst{20-16} = 0b11111;
+  let Unpredictable{20-16} = 0b11111;
   let DecoderMethod = "DecodeSETMemGoOpInstruction";
 }
 
@@ -13629,6 +13642,7 @@ class TCHANGEImmInst<string asm, bit isB> : I<
   let Inst{18}    = isB;
   let Inst{17}    = nb;
   let Inst{16-12} = 0b00000;
+  let Unpredictable{16-12} = 0b11111;
   let Inst{11-5}  = imm;
   let Inst{4-0}   = Xd;
 }
@@ -13642,6 +13656,7 @@ class TENTERInst<string asm> : I<
   let Inst{31-18} = 0b11010100111000;
   let Inst{17}    = nb;
   let Inst{16-12} = 0b00000;
+  let Unpredictable{16-12} = 0b11111;
   let Inst{11-5}  = imm;
   let Inst{4-0}   = 0b00000;
 }

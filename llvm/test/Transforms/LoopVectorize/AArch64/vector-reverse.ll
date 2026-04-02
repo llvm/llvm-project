@@ -136,11 +136,11 @@ define i32 @reverse_store_with_partial_reduction(ptr noalias %dst, ptr noalias %
 ; CHECK-SAME: ptr noalias [[DST:%.*]], ptr noalias [[SRC:%.*]], i64 [[N:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:  [[ITER_CHECK:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[N]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP1]], 5
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]
 ; CHECK:       [[VECTOR_MAIN_LOOP_ITER_CHECK]]:
-; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP1]], 5
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK1:%.*]] = icmp ult i64 [[TMP0]], [[TMP2]]
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK1]], label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
@@ -168,9 +168,9 @@ define i32 @reverse_store_with_partial_reduction(ptr noalias %dst, ptr noalias %
 ; CHECK-NEXT:    [[PARTIAL_REDUCE7]] = call <vscale x 4 x i32> @llvm.vector.partial.reduce.add.nxv4i32.nxv8i32(<vscale x 4 x i32> [[VEC_PHI4]], <vscale x 8 x i32> [[TMP8]])
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i16, ptr [[DST]], i64 [[TMP6]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = sub nuw nsw i64 [[TMP4]], 1
-; CHECK-NEXT:    [[TMP20:%.*]] = mul i64 [[TMP10]], -1
+; CHECK-NEXT:    [[TMP20:%.*]] = sub i64 0, [[TMP10]]
 ; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr i16, ptr [[TMP9]], i64 [[TMP20]]
-; CHECK-NEXT:    [[TMP14:%.*]] = mul i64 -1, [[TMP4]]
+; CHECK-NEXT:    [[TMP14:%.*]] = sub i64 0, [[TMP4]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = add i64 [[TMP20]], [[TMP14]]
 ; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr i16, ptr [[TMP9]], i64 [[TMP13]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = mul i64 -2, [[TMP4]]

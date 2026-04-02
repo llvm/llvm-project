@@ -1717,9 +1717,10 @@ struct FormatStyle {
   /// \version 18
   bool BreakAdjacentStringLiterals;
 
-  /// Different ways to break after attributes.
+  /// Different ways to break after the last attribute of a group before a
+  /// declaration or control statement.
   enum AttributeBreakingStyle : int8_t {
-    /// Always break after attributes.
+    /// Always break after the last attribute of the group.
     /// \code
     ///   [[maybe_unused]]
     ///   const int i;
@@ -1748,7 +1749,7 @@ struct FormatStyle {
     ///   }
     /// \endcode
     ABS_Always,
-    /// Leave the line breaking after attributes as is.
+    /// Leave the line breaking after the last attribute of the group as is.
     /// \code
     ///   [[maybe_unused]] const int i;
     ///   [[gnu::const]] [[maybe_unused]]
@@ -1773,7 +1774,21 @@ struct FormatStyle {
     ///   }
     /// \endcode
     ABS_Leave,
-    /// Never break after attributes.
+    /// Same as ``Leave`` except that it applies to all attributes of the group.
+    /// \code
+    ///   [[deprecated("Don't use this version")]]
+    ///   [[nodiscard]]
+    ///   bool foo() {
+    ///     return true;
+    ///   }
+    ///
+    ///   [[deprecated("Don't use this version")]]
+    ///   [[nodiscard]] bool bar() {
+    ///     return true;
+    ///   }
+    /// \endcode
+    ABS_LeaveAll,
+    /// Never break after the last attribute of the group.
     /// \code
     ///   [[maybe_unused]] const int i;
     ///   [[gnu::const]] [[maybe_unused]] int j;
@@ -4185,6 +4200,10 @@ struct FormatStyle {
   /// one line. If it matches a comment that is the only token of a line,
   /// clang-format skips the comment and the next line. Otherwise, clang-format
   /// skips lines containing a matched token.
+  /// \note
+  ///  This option does not apply to ``IntegerLiteralSeparator`` and
+  ///  ``NumericLiteralCase``.
+  /// \endnote
   /// \code
   ///    // OneLineFormatOffRegex: ^(// NOLINT|logger$)
   ///    // results in the output below:
@@ -5101,6 +5120,14 @@ struct FormatStyle {
   /// \endcode
   /// \version 7
   bool SpaceBeforeCtorInitializerColon;
+
+  /// If ``false``, spaces will be removed before enum underlying type colon.
+  /// \code
+  ///    true:                                  false:
+  ///    enum E : int {}                        enum E: int {}
+  /// \endcode
+  /// \version 23
+  bool SpaceBeforeEnumUnderlyingTypeColon;
 
   /// If ``false``, spaces will be removed before inheritance colon.
   /// \code

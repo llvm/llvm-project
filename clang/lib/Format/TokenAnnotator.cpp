@@ -28,10 +28,10 @@ static bool mustBreakAfterAttributes(const FormatToken &Tok,
   switch (Style.BreakAfterAttributes) {
   case FormatStyle::ABS_Always:
     return true;
-  case FormatStyle::ABS_Leave:
-    return Tok.NewlinesBefore > 0;
-  default:
+  case FormatStyle::ABS_Never:
     return false;
+  default: // ABS_Leave and ABS_LeaveAll
+    return Tok.NewlinesBefore > 0;
   }
 }
 
@@ -186,7 +186,8 @@ private:
       next();
 
     for (bool SeenTernaryOperator = false, MaybeAngles = true; CurrentToken;) {
-      const bool InExpr = Contexts[Contexts.size() - 2].IsExpression;
+      const auto &ParentContext = Contexts[Contexts.size() - 2];
+      const bool InExpr = ParentContext.IsExpression;
       if (CurrentToken->is(tok::greater)) {
         const auto *Next = CurrentToken->Next;
         if (CurrentToken->isNot(TT_TemplateCloser)) {
@@ -208,6 +209,10 @@ private:
           }
           if (!MaybeAngles)
             return false;
+          if (ParentContext.InStaticAssertFirstArgument && Next &&
+              Next->isOneOf(tok::minus, tok::identifier)) {
+            return false;
+          }
         }
         Left->MatchingParen = CurrentToken;
         CurrentToken->MatchingParen = Left;
@@ -2753,7 +2758,7 @@ private:
     if (BeforeRParen == LParen || !AfterRParen)
       return false;
 
-    if (LParen->is(TT_OverloadedOperatorLParen))
+    if (LParen->isOneOf(TT_OverloadedOperatorLParen, TT_FunctionTypeLParen))
       return false;
 
     auto *LeftOfParens = LParen->getPreviousNonComment();
@@ -4121,6 +4126,7 @@ void TokenAnnotator::calculateFormattingInformation(AnnotatedLine &Line) const {
     }
 
     if (!LineIsFunctionDeclaration) {
+      Line.ReturnTypeWrapped = false;
       // Annotate */&/&& in `operator` function calls as binary operators.
       for (const auto *Tok = FirstNonComment; Tok; Tok = Tok->Next) {
         if (Tok->isNot(tok::kw_operator))
@@ -4990,6 +4996,17 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
                spaceRequiredBeforeParens(Right);
       }
     }
+    auto CompoundLiteral = [](const FormatToken &Tok) {
+      if (Tok.isNot(tok::l_paren))
+        return false;
+      const auto *RParen = Tok.MatchingParen;
+      if (!RParen)
+        return false;
+      const auto *Next = RParen->Next;
+      return Next && Next->is(tok::l_brace) && Next->is(BK_BracedInit);
+    };
+    if (Left.is(tok::kw_sizeof) && CompoundLiteral(Right))
+      return true;
     // Handle builtins like identifiers.
     if (Line.Type != LT_PreprocessorDirective &&
         (Left.Tok.getIdentifierInfo() || Left.is(tok::r_paren))) {
@@ -5534,6 +5551,10 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
     return Style.SpaceBeforeCtorInitializerColon;
   if (Right.is(TT_InheritanceColon) && !Style.SpaceBeforeInheritanceColon)
     return false;
+  if (Right.is(TT_EnumUnderlyingTypeColon) &&
+      !Style.SpaceBeforeEnumUnderlyingTypeColon) {
+    return false;
+  }
   if (Right.is(TT_RangeBasedForLoopColon) &&
       !Style.SpaceBeforeRangeBasedForLoopColon) {
     return false;
@@ -5629,10 +5650,9 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
     return false;
   }
   if (Right.is(tok::coloncolon) && Left.is(tok::identifier)) {
-    // Generally don't remove existing spaces between an identifier and "::".
-    // The identifier might actually be a macro name such as ALWAYS_INLINE. If
-    // this turns out to be too lenient, add analysis of the identifier itself.
-    return Right.hasWhitespaceBefore();
+    // Preserve the space in constructs such as ALWAYS_INLINE ::std::string.
+    return Left.isPossibleMacro(/*AllowFollowingColonColon=*/true) &&
+           Right.hasWhitespaceBefore();
   }
   if (Right.is(tok::coloncolon) &&
       Left.isNoneOf(tok::l_brace, tok::comment, tok::l_paren)) {
@@ -5706,7 +5726,7 @@ static bool isAllmanLambdaBrace(const FormatToken &Tok) {
          Tok.isNoneOf(TT_ObjCBlockLBrace, TT_DictLiteral);
 }
 
-bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
+bool TokenAnnotator::mustBreakBefore(AnnotatedLine &Line,
                                      const FormatToken &Right) const {
   if (Right.NewlinesBefore > 1 && Style.MaxEmptyLinesToKeep > 0 &&
       (!Style.RemoveEmptyLinesInUnwrappedLines || &Right == Line.First)) {
@@ -6028,7 +6048,8 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
 
     if (Style.BraceWrapping.AfterEnum) {
       if (Line.startsWith(tok::kw_enum) ||
-          Line.startsWith(tok::kw_typedef, tok::kw_enum)) {
+          Line.startsWith(tok::kw_typedef, tok::kw_enum) ||
+          Line.startsWith(tok::kw_export, tok::kw_enum)) {
         return true;
       }
       // Ensure BraceWrapping for `public enum A {`.
@@ -6181,6 +6202,12 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
     // put on a new line anyways.
     if (Left.isOneOf(tok::r_brace, tok::greater, tok::r_square))
       return true;
+  }
+
+  if (Style.BreakAfterAttributes == FormatStyle::ABS_LeaveAll &&
+      Left.is(TT_AttributeRSquare) && Right.NewlinesBefore > 0) {
+    Line.ReturnTypeWrapped = true;
+    return true;
   }
 
   return false;

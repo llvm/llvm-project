@@ -308,7 +308,7 @@ for.body:
   br i1 %cmp, label %for.body, label %for.cond.cleanup, !llvm.loop !5
 }
 
-define dso_local void @half(ptr noalias nocapture %A, ptr noalias nocapture readonly %B, ptr noalias nocapture readonly %C) #0 {
+define void @half(ptr noalias nocapture %A, ptr noalias nocapture readonly %B, ptr noalias nocapture readonly %C) #0 {
 ; CHECK-LABEL:    half(
 ; PREFER-FOLDING: vector.body:
 ; PREFER-FOLDING: call <8 x half> @llvm.masked.load.v8f16.p0

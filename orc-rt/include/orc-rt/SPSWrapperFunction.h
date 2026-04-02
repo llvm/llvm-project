@@ -18,7 +18,12 @@
 #include "orc-rt/SimplePackedSerialization.h"
 #include "orc-rt/WrapperFunction.h"
 
-#define ORC_RT_SPS_INTERFACE ORC_RT_INTERFACE
+#define ORC_RT_SPS_WRAPPER(Name, SPSSig, Handle)                               \
+  static void Name(orc_rt_SessionRef S, uint64_t CallId,                       \
+                   orc_rt_WrapperFunctionReturn Return,                        \
+                   orc_rt_WrapperFunctionBuffer ArgBytes) {                    \
+    SPSWrapperFunction<SPSSig>::handle(S, CallId, Return, ArgBytes, Handle);   \
+  }
 
 namespace orc_rt {
 namespace detail {

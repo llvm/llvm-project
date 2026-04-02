@@ -53,6 +53,7 @@
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/ScopeInfo.h"
+#include "clang/Sema/SemaAMDGPU.h"
 #include "clang/Sema/SemaARM.h"
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaFixItUtils.h"
@@ -2366,14 +2367,14 @@ Sema::ActOnStringLiteral(ArrayRef<Token> StringToks, Scope *UDLScope) {
     TemplateArgumentLocInfo TypeArgInfo(Context.getTrivialTypeSourceInfo(CharTy));
     ExplicitArgs.addArgument(TemplateArgumentLoc(TypeArg, TypeArgInfo));
 
+    SourceLocation Loc = StringTokLocs.back();
     for (unsigned I = 0, N = Lit->getLength(); I != N; ++I) {
       Value = Lit->getCodeUnit(I);
       TemplateArgument Arg(Context, Value, CharTy);
-      TemplateArgumentLocInfo ArgInfo;
+      TemplateArgumentLocInfo ArgInfo(Context, Loc.getLocWithOffset(I));
       ExplicitArgs.addArgument(TemplateArgumentLoc(Arg, ArgInfo));
     }
-    return BuildLiteralOperatorCall(R, OpNameInfo, {}, StringTokLocs.back(),
-                                    &ExplicitArgs);
+    return BuildLiteralOperatorCall(R, OpNameInfo, {}, Loc, &ExplicitArgs);
   }
   case LOLR_Raw:
   case LOLR_ErrorNoDiagnostic:
@@ -3915,7 +3916,7 @@ ExprResult Sema::ActOnNumericConstant(const Token &Tok, Scope *UDLScope) {
       for (unsigned I = 0, N = Literal.getUDSuffixOffset(); I != N; ++I) {
         Value = TokSpelling[I];
         TemplateArgument Arg(Context, Value, Context.CharTy);
-        TemplateArgumentLocInfo ArgInfo;
+        TemplateArgumentLocInfo ArgInfo(Context, TokLoc.getLocWithOffset(I));
         ExplicitArgs.addArgument(TemplateArgumentLoc(Arg, ArgInfo));
       }
       return BuildLiteralOperatorCall(R, OpNameInfo, {}, TokLoc, &ExplicitArgs);
@@ -5040,8 +5041,11 @@ ExprResult Sema::ActOnArraySubscriptExpr(Scope *S, Expr *base,
   //
   // Helper to check for comma expressions, which are not allowed as indices for
   // matrix subscript expressions.
-  auto CheckAndReportCommaError = [this, base, rbLoc](Expr *E) {
-    if (isa<BinaryOperator>(E) && cast<BinaryOperator>(E)->isCommaOp()) {
+  //
+  // In C++23, we get multiple arguments instead of a comma expression.
+  auto CheckAndReportCommaError = [&](Expr *E) {
+    if (ArgExprs.size() > 1 ||
+        (isa<BinaryOperator>(E) && cast<BinaryOperator>(E)->isCommaOp())) {
       Diag(E->getExprLoc(), diag::err_matrix_subscript_comma)
           << SourceRange(base->getBeginLoc(), rbLoc);
       return true;
@@ -5061,7 +5065,6 @@ ExprResult Sema::ActOnArraySubscriptExpr(Scope *S, Expr *base,
   // MatrixSubscriptExpr.
   auto *matSubscriptE = dyn_cast<MatrixSubscriptExpr>(base);
   if (matSubscriptE) {
-    assert(ArgExprs.size() == 1);
     if (CheckAndReportCommaError(ArgExprs.front()))
       return ExprError();
 
@@ -5098,7 +5101,6 @@ ExprResult Sema::ActOnArraySubscriptExpr(Scope *S, Expr *base,
 
   // If the base is a matrix type, try to create a new MatrixSubscriptExpr.
   if (base->getType()->isMatrixType()) {
-    assert(ArgExprs.size() == 1);
     if (CheckAndReportCommaError(ArgExprs.front()))
       return ExprError();
 
@@ -5147,7 +5149,12 @@ ExprResult Sema::ActOnArraySubscriptExpr(Scope *S, Expr *base,
   // indices. In this case, i=p->x[a][b] will be turned into i=p->GetX(a, b),
   // and p->x[a][b] = i will be turned into p->PutX(a, b, i);
   if (IsMSPropertySubscript) {
-    assert(ArgExprs.size() == 1);
+    if (ArgExprs.size() > 1) {
+      Diag(base->getExprLoc(),
+           diag::err_ms_property_subscript_expects_single_arg);
+      return ExprError();
+    }
+
     // Build MS property subscript expression if base is MS property reference
     // or MS property subscript.
     return new (Context)
@@ -5163,6 +5170,18 @@ ExprResult Sema::ActOnArraySubscriptExpr(Scope *S, Expr *base,
   //
   // ObjC pointers have their own subscripting logic that is not tied
   // to overload resolution and so should not take this path.
+  //
+  // Issue a better diagnostic if we tried to pass multiple arguments to
+  // a builtin subscript operator rather than diagnosing this as a generic
+  // overload resolution failure.
+  if (ArgExprs.size() != 1 && !base->getType()->isDependentType() &&
+      !base->getType()->isRecordType() &&
+      !base->getType()->isObjCObjectPointerType()) {
+    Diag(base->getExprLoc(), diag::err_ovl_builtin_subscript_expects_single_arg)
+        << base->getType() << base->getSourceRange();
+    return ExprError();
+  }
+
   if (getLangOpts().CPlusPlus && !base->getType()->isObjCObjectPointerType() &&
       ((base->getType()->isRecordType() ||
         (ArgExprs.size() != 1 || isa<PackExpansionExpr>(ArgExprs[0]) ||
@@ -6761,6 +6780,22 @@ ExprResult Sema::BuildCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
   if (Result.isInvalid()) return ExprError();
   Fn = Result.get();
 
+  // The __builtin_amdgcn_is_invocable builtin is special, and will be resolved
+  // later, when we check boolean conditions, for now we merely forward it
+  // without any additional checking.
+  if (Fn->getType() == Context.BuiltinFnTy && ArgExprs.size() == 1 &&
+      ArgExprs[0]->getType() == Context.BuiltinFnTy) {
+    const auto *FD = cast<FunctionDecl>(Fn->getReferencedDeclOfCallee());
+
+    if (FD->getName() == "__builtin_amdgcn_is_invocable") {
+      QualType FnPtrTy = Context.getPointerType(FD->getType());
+      Expr *R = ImpCastExprToType(Fn, FnPtrTy, CK_BuiltinFnToFnPtr).get();
+      return CallExpr::Create(
+          Context, R, ArgExprs, Context.AMDGPUFeaturePredicateTy,
+          ExprValueKind::VK_PRValue, RParenLoc, FPOptionsOverride());
+    }
+  }
+
   if (CheckArgsForPlaceholders(ArgExprs))
     return ExprError();
 
@@ -6879,6 +6914,15 @@ ExprResult Sema::BuildCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
 
     FunctionDecl *FDecl = dyn_cast<FunctionDecl>(NDecl);
     if (FDecl && FDecl->getBuiltinID()) {
+      const llvm::Triple &Triple = Context.getTargetInfo().getTriple();
+      if (Triple.isSPIRV() && Triple.getVendor() == llvm::Triple::AMD) {
+        if (Context.BuiltinInfo.isTSBuiltin(FDecl->getBuiltinID()) &&
+            !Context.BuiltinInfo.isAuxBuiltinID(FDecl->getBuiltinID())) {
+          AMDGPU().AddPotentiallyUnguardedBuiltinUser(cast<FunctionDecl>(
+              getFunctionLevelDeclContext(/*AllowLambda=*/true)));
+        }
+      }
+
       // Rewrite the function decl for this builtin by replacing parameters
       // with no explicit address space with the address space of the arguments
       // in ArgExprs.
@@ -13887,6 +13931,11 @@ inline QualType Sema::CheckLogicalOperands(ExprResult &LHS, ExprResult &RHS,
     if (RHS.isInvalid())
       return QualType();
 
+    if (LHS.get()->getType() == Context.AMDGPUFeaturePredicateTy)
+      LHS = AMDGPU().ExpandAMDGPUPredicateBuiltIn(LHS.get());
+    if (RHS.get()->getType() == Context.AMDGPUFeaturePredicateTy)
+      RHS = AMDGPU().ExpandAMDGPUPredicateBuiltIn(RHS.get());
+
     if (!LHS.get()->getType()->isScalarType() ||
         !RHS.get()->getType()->isScalarType())
       return InvalidOperands(Loc, LHS, RHS);
@@ -13945,10 +13994,10 @@ static NonConstCaptureKind isReferenceToNonConstCapture(Sema &S, Expr *E) {
   if (!DRE) return NCCK_None;
   if (!DRE->refersToEnclosingVariableOrCapture()) return NCCK_None;
 
-  ValueDecl *Value = dyn_cast<ValueDecl>(DRE->getDecl());
+  ValueDecl *Value = DRE->getDecl();
 
   // The declaration must be a value which is not declared 'const'.
-  if (!Value || Value->getType().isConstQualified())
+  if (Value->getType().isConstQualified())
     return NCCK_None;
 
   BindingDecl *Binding = dyn_cast<BindingDecl>(Value);
@@ -16296,6 +16345,10 @@ ExprResult Sema::CreateBuiltinUnaryOp(SourceLocation OpLoc,
 
         // Vector logical not returns the signed variant of the operand type.
         resultType = GetSignedVectorType(resultType);
+        break;
+      } else if (resultType == Context.AMDGPUFeaturePredicateTy) {
+        resultType = Context.getLogicalOperationType();
+        Input = AMDGPU().ExpandAMDGPUPredicateBuiltIn(InputExpr);
         break;
       } else {
         return ExprError(Diag(OpLoc, diag::err_typecheck_unary_expr)
@@ -20477,8 +20530,15 @@ static void DoMarkVarDeclReferenced(
   bool UsableInConstantExpr =
       Var->mightBeUsableInConstantExpressions(SemaRef.Context);
 
-  if (Var->isLocalVarDeclOrParm() && !Var->hasExternalStorage()) {
-    RefsMinusAssignments.insert({Var, 0}).first->getSecond()++;
+  // Only track variables with internal linkage or local scope.
+  // Use canonical decl so in-class declarations and out-of-class definitions
+  // of static data members in anonymous namespaces are tracked as a single
+  // entry.
+  const VarDecl *CanonVar = Var->getCanonicalDecl();
+  if ((CanonVar->isLocalVarDeclOrParm() ||
+       CanonVar->isInternalLinkageFileVar()) &&
+      !CanonVar->hasExternalStorage()) {
+    RefsMinusAssignments.insert({CanonVar, 0}).first->getSecond()++;
   }
 
   // C++20 [expr.const]p12:
@@ -21151,6 +21211,9 @@ ExprResult Sema::CheckBooleanCondition(SourceLocation Loc, Expr *E,
   E = result.get();
 
   if (!E->isTypeDependent()) {
+    if (E->getType() == Context.AMDGPUFeaturePredicateTy)
+      return AMDGPU().ExpandAMDGPUPredicateBuiltIn(E);
+
     if (getLangOpts().CPlusPlus)
       return CheckCXXBooleanCondition(E, IsConstexpr); // C++ 6.4p4
 

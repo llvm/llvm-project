@@ -1083,28 +1083,12 @@ define <16 x i32> @combine_vcompressd_as_vmov(<16 x i32> %x) {
   ret <16 x i32> %res
 }
 
-; FIXME: compress of repeated splat args
+; compress of repeated splat args
 define <16 x i32> @combine_vcompressd_splat(i16 %m) {
-; X86-LABEL: combine_vcompressd_splat:
-; X86:       # %bb.0:
-; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1
-; X86-NEXT:    vpternlogd {{.*#+}} zmm0 = -1
-; X86-NEXT:    vpcompressd %zmm0, %zmm0 {%k1}
-; X86-NEXT:    retl
-;
-; X64-AVX512F-LABEL: combine_vcompressd_splat:
-; X64-AVX512F:       # %bb.0:
-; X64-AVX512F-NEXT:    kmovw %edi, %k1
-; X64-AVX512F-NEXT:    vpternlogd {{.*#+}} zmm0 = -1
-; X64-AVX512F-NEXT:    vpcompressd %zmm0, %zmm0 {%k1}
-; X64-AVX512F-NEXT:    retq
-;
-; X64-AVX512BW-LABEL: combine_vcompressd_splat:
-; X64-AVX512BW:       # %bb.0:
-; X64-AVX512BW-NEXT:    kmovd %edi, %k1
-; X64-AVX512BW-NEXT:    vpternlogd {{.*#+}} zmm0 = -1
-; X64-AVX512BW-NEXT:    vpcompressd %zmm0, %zmm0 {%k1}
-; X64-AVX512BW-NEXT:    retq
+; CHECK-LABEL: combine_vcompressd_splat:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpternlogd {{.*#+}} zmm0 = -1
+; CHECK-NEXT:    ret{{[l|q]}}
   %msk = bitcast i16 %m to <16 x i1>
   %res = call <16 x i32> @llvm.x86.avx512.mask.compress.v16i32(<16 x i32> splat (i32 -1), <16 x i32> splat (i32 -1), <16 x i1> %msk)
   ret <16 x i32> %res

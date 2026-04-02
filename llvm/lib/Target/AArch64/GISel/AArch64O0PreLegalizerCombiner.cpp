@@ -48,8 +48,8 @@ protected:
 
 public:
   AArch64O0PreLegalizerCombinerImpl(
-      MachineFunction &MF, CombinerInfo &CInfo, const TargetPassConfig *TPC,
-      GISelValueTracking &VT, GISelCSEInfo *CSEInfo,
+      MachineFunction &MF, CombinerInfo &CInfo, GISelValueTracking &VT,
+      GISelCSEInfo *CSEInfo,
       const AArch64O0PreLegalizerCombinerImplRuleConfig &RuleConfig,
       const AArch64Subtarget &STI, const LibcallLoweringInfo &Libcalls);
 
@@ -70,11 +70,11 @@ private:
 #undef GET_GICOMBINER_IMPL
 
 AArch64O0PreLegalizerCombinerImpl::AArch64O0PreLegalizerCombinerImpl(
-    MachineFunction &MF, CombinerInfo &CInfo, const TargetPassConfig *TPC,
-    GISelValueTracking &VT, GISelCSEInfo *CSEInfo,
+    MachineFunction &MF, CombinerInfo &CInfo, GISelValueTracking &VT,
+    GISelCSEInfo *CSEInfo,
     const AArch64O0PreLegalizerCombinerImplRuleConfig &RuleConfig,
     const AArch64Subtarget &STI, const LibcallLoweringInfo &Libcalls)
-    : Combiner(MF, CInfo, TPC, &VT, CSEInfo),
+    : Combiner(MF, CInfo, &VT, CSEInfo),
       Helper(Observer, B, /*IsPreLegalize*/ true, &VT), RuleConfig(RuleConfig),
       STI(STI), Libcalls(Libcalls),
 #define GET_GICOMBINER_CONSTRUCTOR_INITS
@@ -134,7 +134,6 @@ private:
 } // end anonymous namespace
 
 void AArch64O0PreLegalizerCombiner::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.addRequired<TargetPassConfig>();
   AU.setPreservesCFG();
   getSelectionDAGFallbackAnalysisUsage(AU);
   AU.addRequired<GISelValueTrackingAnalysisLegacy>();
@@ -152,7 +151,6 @@ AArch64O0PreLegalizerCombiner::AArch64O0PreLegalizerCombiner()
 bool AArch64O0PreLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
   if (MF.getProperties().hasFailedISel())
     return false;
-  auto &TPC = getAnalysis<TargetPassConfig>();
 
   const Function &F = MF.getFunction();
   GISelValueTracking *VT =
@@ -170,7 +168,7 @@ bool AArch64O0PreLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
   // at the cost of possibly missing optimizations. See PR#94291 for details.
   CInfo.MaxIterations = 1;
 
-  AArch64O0PreLegalizerCombinerImpl Impl(MF, CInfo, &TPC, *VT,
+  AArch64O0PreLegalizerCombinerImpl Impl(MF, CInfo, *VT,
                                          /*CSEInfo*/ nullptr, RuleConfig, ST,
                                          Libcalls);
   return Impl.combineMachineInstrs();
@@ -180,7 +178,6 @@ char AArch64O0PreLegalizerCombiner::ID = 0;
 INITIALIZE_PASS_BEGIN(AArch64O0PreLegalizerCombiner, DEBUG_TYPE,
                       "Combine AArch64 machine instrs before legalization",
                       false, false)
-INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
 INITIALIZE_PASS_DEPENDENCY(GISelValueTrackingAnalysisLegacy)
 INITIALIZE_PASS_DEPENDENCY(GISelCSEAnalysisWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LibcallLoweringInfoWrapper)
