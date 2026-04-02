@@ -884,7 +884,8 @@ bool TargetInfo::validateHardRegisterAsmConstraint(
   while (*Name && *Name != '}')
     Name++;
 
-  // Missing '}', or containing other non-hard register constraints, return false.
+  // Missing '}', or containing other non-hard register constraints, return
+  // false.
   if (!*Name || (*(Name + 1) && *(Name + 1) != '{'))
     return false;
 

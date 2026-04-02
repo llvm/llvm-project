@@ -508,7 +508,7 @@ AsmStmt::AddVariableConstraints(ASTContext &C, StringRef Constraint,
   std::string Reg = "";
   bool ApplyRegisterVariableConstraint =
       ShouldApplyRegisterVariableConstraint(AsmExpr, &Reg);
-  
+
   // Diagnose the scenario where we apply both the register variable constraint
   // and a hard register variable constraint as an unsupported error.
   // Why? Because we could have a situation where the register passed in through
