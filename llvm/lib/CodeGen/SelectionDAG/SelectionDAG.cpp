@@ -4821,9 +4821,9 @@ bool SelectionDAG::isKnownToBeAPowerOfTwo(SDValue Val,
   case ISD::SMAX:
   case ISD::UMIN:
   case ISD::UMAX:
-    return isKnownToBeAPowerOfTwo(Val.getOperand(1), /*OrZero=*/false,
+    return isKnownToBeAPowerOfTwo(Val.getOperand(1), DemandedElts, OrZero,
                                   Depth + 1) &&
-           isKnownToBeAPowerOfTwo(Val.getOperand(0), /*OrZero=*/false,
+           isKnownToBeAPowerOfTwo(Val.getOperand(0), DemandedElts, OrZero,
                                   Depth + 1);
 
   case ISD::SELECT:
@@ -6092,6 +6092,12 @@ KnownFPClass SelectionDAG::computeKnownFPClass(SDValue Op,
 
     KnownBits Bits = computeKnownBits(Op, DemandedElts, Depth + 1);
     Known = KnownFPClass::bitcast(VT.getFltSemantics(), Bits);
+    break;
+  }
+  case ISD::FABS: {
+    Known = computeKnownFPClass(Op.getOperand(0), DemandedElts,
+                                InterestedClasses, Depth + 1);
+    Known.fabs();
     break;
   }
   default:

@@ -68,17 +68,22 @@ LLVM_ABI extern bool VerifySCEV;
 
 class SCEV;
 
-struct SCEVUse : PointerIntPair<const SCEV *, 2> {
-  SCEVUse() : PointerIntPair() { setFromOpaqueValue(nullptr); }
-  SCEVUse(const SCEV *S) : PointerIntPair() {
-    setFromOpaqueValue(reinterpret_cast<void *>(const_cast<SCEV *>(S)));
-  }
-  SCEVUse(const SCEV *S, unsigned Flags) : PointerIntPair(S, Flags) {}
+template <typename SCEVPtrT = const SCEV *>
+struct SCEVUseT : PointerIntPair<SCEVPtrT, 2> {
+  using Base = PointerIntPair<SCEVPtrT, 2>;
 
-  operator const SCEV *() const { return getPointer(); }
-  const SCEV *operator->() const { return getPointer(); }
+  SCEVUseT() : Base() { Base::setFromOpaqueValue(nullptr); }
+  SCEVUseT(SCEVPtrT S) : SCEVUseT(S, 0) {}
+  SCEVUseT(SCEVPtrT S, unsigned Flags) : Base(S, Flags) {}
+  template <typename OtherPtrT, typename = std::enable_if_t<
+                                    std::is_convertible_v<OtherPtrT, SCEVPtrT>>>
+  SCEVUseT(const SCEVUseT<OtherPtrT> &Other)
+      : Base(Other.getPointer(), Other.getInt()) {}
 
-  void *getRawPointer() const { return getOpaqueValue(); }
+  operator SCEVPtrT() const { return Base::getPointer(); }
+  SCEVPtrT operator->() const { return Base::getPointer(); }
+
+  void *getRawPointer() const { return Base::getOpaqueValue(); }
 
   /// Returns true of the SCEVUse is canonical, i.e. no SCEVUse flags set in any
   /// operands.
@@ -87,9 +92,9 @@ struct SCEVUse : PointerIntPair<const SCEV *, 2> {
   /// Return the canonical SCEV for this SCEVUse.
   const SCEV *getCanonical() const;
 
-  unsigned getFlags() const { return getInt(); }
+  unsigned getFlags() const { return Base::getInt(); }
 
-  bool operator==(const SCEVUse &RHS) const {
+  bool operator==(const SCEVUseT &RHS) const {
     return getRawPointer() == RHS.getRawPointer();
   }
 
@@ -102,6 +107,11 @@ struct SCEVUse : PointerIntPair<const SCEV *, 2> {
   /// This method is used for debugging.
   void dump() const;
 };
+
+/// Deduction guide for various SCEV subclass pointers.
+template <typename SCEVPtrT> SCEVUseT(SCEVPtrT) -> SCEVUseT<SCEVPtrT>;
+
+using SCEVUse = SCEVUseT<const SCEV *>;
 
 /// Provide PointerLikeTypeTraits for SCEVUse, so it can be used with
 /// SmallPtrSet, among others.
@@ -144,6 +154,31 @@ template <> struct simplify_type<SCEVUse> {
     return Val.getPointer();
   }
 };
+
+/// Provide CastInfo for SCEVUseT so that cast<SCEVUseT<const To *>>(use)
+/// returns SCEVUseT<const To *> with flags preserved.
+template <typename ToSCEVPtrT>
+struct CastInfo<SCEVUseT<ToSCEVPtrT>, SCEVUse,
+                std::enable_if_t<!is_simple_type<SCEVUse>::value>> {
+  using To = std::remove_cv_t<std::remove_pointer_t<ToSCEVPtrT>>;
+  using CastReturnType = SCEVUseT<ToSCEVPtrT>;
+
+  static bool isPossible(const SCEVUse &U) { return isa<To>(U.getPointer()); }
+  static CastReturnType doCast(const SCEVUse &U) {
+    return {cast<To>(U.getPointer()), U.getFlags()};
+  }
+  static CastReturnType castFailed() { return CastReturnType(nullptr); }
+  static CastReturnType doCastIfPossible(const SCEVUse &U) {
+    if (!isPossible(U))
+      return castFailed();
+    return doCast(U);
+  }
+};
+
+template <typename ToSCEVPtrT>
+struct CastInfo<SCEVUseT<ToSCEVPtrT>, const SCEVUse,
+                std::enable_if_t<!is_simple_type<const SCEVUse>::value>>
+    : CastInfo<SCEVUseT<ToSCEVPtrT>, SCEVUse> {};
 
 /// This class represents an analyzed expression in the program.  These are
 /// opaque objects that the client is not allowed to do much with directly.
@@ -2655,9 +2690,27 @@ template <> struct DenseMapInfo<ScalarEvolution::FoldID> {
   }
 };
 
-inline const SCEV *SCEVUse::getCanonical() const {
-  return getPointer()->getCanonical();
+template <> inline const SCEV *SCEVUseT<const SCEV *>::getCanonical() const {
+  return Base::getPointer()->getCanonical();
 }
+
+template <typename SCEVPtrT>
+void SCEVUseT<SCEVPtrT>::print(raw_ostream &OS) const {
+  Base::getPointer()->print(OS);
+  SCEV::NoWrapFlags Flags = static_cast<SCEV::NoWrapFlags>(Base::getInt());
+  if (Flags & SCEV::FlagNUW)
+    OS << "(u nuw)";
+  if (Flags & SCEV::FlagNSW)
+    OS << "(u nsw)";
+}
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+template <typename SCEVPtrT>
+LLVM_DUMP_METHOD void SCEVUseT<SCEVPtrT>::dump() const {
+  print(dbgs());
+  dbgs() << '\n';
+}
+#endif
 
 } // end namespace llvm
 
