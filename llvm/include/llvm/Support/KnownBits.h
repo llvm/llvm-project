@@ -460,10 +460,18 @@ public:
                                 bool NUW = false, bool NSW = false,
                                 bool ShAmtNonZero = false);
 
+  /// Compute known bits for lshr(LHS, ShiftAmt).
+  /// This is shift by constant variant of lshr(LHS, RHS).
+  LLVM_ABI static KnownBits lshr(const KnownBits &LHS, unsigned ShiftAmt);
+
   /// Compute known bits for lshr(LHS, RHS).
   /// NOTE: RHS (shift amount) bitwidth doesn't need to be the same as LHS.
   LLVM_ABI static KnownBits lshr(const KnownBits &LHS, const KnownBits &RHS,
                                  bool ShAmtNonZero = false, bool Exact = false);
+
+  /// Compute known bits for ashr(LHS, ShiftAmt).
+  /// This is shift by constant variant of ashr(LHS, RHS).
+  LLVM_ABI static KnownBits ashr(const KnownBits &LHS, unsigned ShiftAmt);
 
   /// Compute known bits for ashr(LHS, RHS).
   /// NOTE: RHS (shift amount) bitwidth doesn't need to be the same as LHS.

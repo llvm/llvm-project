@@ -488,16 +488,17 @@ KnownBits KnownBits::shl(const KnownBits &LHS, const KnownBits &RHS, bool NUW,
   return Known;
 }
 
+KnownBits KnownBits::lshr(const KnownBits &LHS, unsigned ShiftAmt) {
+  KnownBits Known = LHS;
+  Known >>= ShiftAmt;
+  // High bits are known zero.
+  Known.Zero.setHighBits(ShiftAmt);
+  return Known;
+}
+
 KnownBits KnownBits::lshr(const KnownBits &LHS, const KnownBits &RHS,
                           bool ShAmtNonZero, bool Exact) {
   unsigned BitWidth = LHS.getBitWidth();
-  auto ShiftByConst = [&](const KnownBits &LHS, unsigned ShiftAmt) {
-    KnownBits Known = LHS;
-    Known >>= ShiftAmt;
-    // High bits are known zero.
-    Known.Zero.setHighBits(ShiftAmt);
-    return Known;
-  };
 
   // Fast path for a common case when LHS is completely unknown.
   KnownBits Known(BitWidth);
@@ -533,7 +534,7 @@ KnownBits KnownBits::lshr(const KnownBits &LHS, const KnownBits &RHS,
     if ((ShiftAmtZeroMask & ShiftAmt) != 0 ||
         (ShiftAmtOneMask | ShiftAmt) != ShiftAmt)
       continue;
-    Known = Known.intersectWith(ShiftByConst(LHS, ShiftAmt));
+    Known = Known.intersectWith(lshr(LHS, ShiftAmt));
     if (Known.isUnknown())
       break;
   }
@@ -544,15 +545,16 @@ KnownBits KnownBits::lshr(const KnownBits &LHS, const KnownBits &RHS,
   return Known;
 }
 
+KnownBits KnownBits::ashr(const KnownBits &LHS, unsigned ShiftAmt) {
+  KnownBits Known = LHS;
+  Known.Zero.ashrInPlace(ShiftAmt);
+  Known.One.ashrInPlace(ShiftAmt);
+  return Known;
+}
+
 KnownBits KnownBits::ashr(const KnownBits &LHS, const KnownBits &RHS,
                           bool ShAmtNonZero, bool Exact) {
   unsigned BitWidth = LHS.getBitWidth();
-  auto ShiftByConst = [&](const KnownBits &LHS, unsigned ShiftAmt) {
-    KnownBits Known = LHS;
-    Known.Zero.ashrInPlace(ShiftAmt);
-    Known.One.ashrInPlace(ShiftAmt);
-    return Known;
-  };
 
   // Fast path for a common case when LHS is completely unknown.
   KnownBits Known(BitWidth);
@@ -592,7 +594,7 @@ KnownBits KnownBits::ashr(const KnownBits &LHS, const KnownBits &RHS,
     if ((ShiftAmtZeroMask & ShiftAmt) != 0 ||
         (ShiftAmtOneMask | ShiftAmt) != ShiftAmt)
       continue;
-    Known = Known.intersectWith(ShiftByConst(LHS, ShiftAmt));
+    Known = Known.intersectWith(ashr(LHS, ShiftAmt));
     if (Known.isUnknown())
       break;
   }
@@ -1210,11 +1212,7 @@ KnownBits KnownBits::udiv(const KnownBits &LHS, const KnownBits &RHS,
   }
 
   if (RHS.isConstant() && RHS.getConstant().isPowerOf2()) {
-    unsigned Shift = RHS.getConstant().logBase2();
-    Known = LHS;
-    Known >>= Shift;
-    Known.Zero.setHighBits(Shift);
-    return Known;
+    return lshr(LHS, RHS.getConstant().logBase2());
   }
 
   // We can figure out the minimum number of upper zero bits by doing
