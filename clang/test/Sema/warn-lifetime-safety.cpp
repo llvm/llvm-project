@@ -2415,7 +2415,7 @@ void owner_outlives_lifetimebound_source() {
 } // namespace track_origins_for_lifetimebound_record_type
 
 namespace gslpointer_construction_from_lifetimebound {
-
+// https://github.com/llvm/llvm-project/issues/175898
 struct Bar {};
 template <typename T> struct [[gsl::Pointer]] Pointer {
   Pointer();
