@@ -109,6 +109,7 @@ private:
 
   std::string Base;
   std::string GccLibDir;
+  std::string GccParentLibPath;
   clang::driver::toolchains::Generic_GCC::GCCVersion GccVer;
   std::string Ver;
   std::string SubdirName;
