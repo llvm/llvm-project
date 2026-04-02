@@ -706,6 +706,20 @@ void AMDGPUAtomicOptimizerImpl::optimizeAtomic(Instruction &I,
                                                unsigned ValIdx,
                                                bool ValDivergent,
                                                bool IsLDS) const {
+  // Read the per-function threshold attribute early so we can bail out
+  // before any CFG modifications when the threshold disables optimization.
+  unsigned Threshold = 0;
+  int AttrVal = I.getFunction()->getFnAttributeAsParsedInteger(
+      "amdgpu-atomic-optimizer-dpp-lds-threshold", 0);
+  if (AttrVal > 0)
+    Threshold = static_cast<unsigned>(AttrVal);
+
+  // If the threshold is >= wavefront size, DPP is never profitable — skip
+  // the atomic optimization entirely for this instruction.
+  if (IsLDS && ValDivergent && ScanImpl == ScanOptions::DPP &&
+      !AtomicRMWInst::isFPOperation(Op) && Threshold >= ST.getWavefrontSize())
+    return;
+
   // Start building just before the instruction.
   IRBuilder<> B(&I);
 
@@ -738,21 +752,9 @@ void AMDGPUAtomicOptimizerImpl::optimizeAtomic(Instruction &I,
     B.SetInsertPoint(&I);
   }
 
-  // Decide which implementation path to use.
-  // For DPP strategy with integer, divergent-value LDS atomics, when a
-  // threshold is set, use dynamic branching based on active lane count.
-  // The command-line option takes priority; otherwise fall back to a
-  // per-function attribute.
-  unsigned Threshold = 0;
-  int AttrVal = I.getFunction()->getFnAttributeAsParsedInteger(
-      "amdgpu-atomic-optimizer-dpp-lds-threshold", 0);
-  if (AttrVal > 0)
-    Threshold = static_cast<unsigned>(AttrVal);
-
   Value *Result = nullptr;
   if (IsLDS && ValDivergent && ScanImpl == ScanOptions::DPP &&
-      !AtomicRMWInst::isFPOperation(Op) && Threshold > 0 &&
-      Threshold < ST.getWavefrontSize()) {
+      !AtomicRMWInst::isFPOperation(Op) && Threshold > 0) {
     Result = optimizeAtomicWithDynamicThreshold(B, I, Op, ValIdx, Threshold);
   } else {
     Result = optimizeAtomicImpl(B, I, Op, ValIdx, ValDivergent);
