@@ -787,8 +787,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Instruction *I,
       if (SimplifyDemandedBits(I, 0, DemandedMaskIn, Known, Q, Depth + 1))
         return I;
 
-      Known = KnownBits::shl(Known,
-                             KnownBits::makeConstant(APInt(BitWidth, ShiftAmt)),
+      Known = KnownBits::shl(Known, ShiftAmt,
                              /* NUW */ IOp->hasNoUnsignedWrap(),
                              /* NSW */ IOp->hasNoSignedWrap());
     } else {
@@ -931,9 +930,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Instruction *I,
         return InsertNewInstWith(LShr, I->getIterator());
       }
 
-      Known = KnownBits::ashr(
-          Known, KnownBits::makeConstant(APInt(BitWidth, ShiftAmt)),
-          ShiftAmt != 0, I->isExact());
+      Known = KnownBits::ashr(Known, ShiftAmt, ShiftAmt != 0, I->isExact());
     } else {
       llvm::computeKnownBits(I, Known, Q, Depth);
     }
