@@ -275,11 +275,22 @@ public:
           SemaHelper->reportUseAfterReturn(IssueExpr,
                                            RetEscape->getReturnExpr(),
                                            MovedExpr, AliasExprs, ExpiryLoc);
-        } else if (const auto *FieldEscape = dyn_cast<FieldEscapeFact>(OEF))
+        } else if (const auto *FieldEscape = dyn_cast<FieldEscapeFact>(OEF)) {
           // Dangling field.
-          SemaHelper->reportDanglingField(
-              IssueExpr, FieldEscape->getFieldDecl(), MovedExpr, ExpiryLoc);
-        else if (const auto *GlobalEscape = dyn_cast<GlobalEscapeFact>(OEF)) {
+          const auto BlockID = FactMgr.getBlockID(Warning.ExpiryExpr).value();
+          const CFGBlock *StartBlock = nullptr;
+          for (auto *const CFGBlock : *ADC.getCFG()) {
+            if (CFGBlock->getBlockID() == BlockID) {
+              StartBlock = CFGBlock;
+              break;
+            }
+          }
+          const auto AliasExprs =
+              getAliasList(Context, FieldEscape, LID, StartBlock, IssueExpr);
+          SemaHelper->reportDanglingField(IssueExpr,
+                                          FieldEscape->getFieldDecl(),
+                                          MovedExpr, AliasExprs, ExpiryLoc);
+        } else if (const auto *GlobalEscape = dyn_cast<GlobalEscapeFact>(OEF)) {
           // Global escape.
           const auto BlockID = FactMgr.getBlockID(Warning.ExpiryExpr).value();
           const CFGBlock *StartBlock = nullptr;

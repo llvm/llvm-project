@@ -66,6 +66,10 @@ inline void reportAssignment(Sema &S, const Expr *IssueExpr,
                          LDExpr->getExprLoc());
   } else if (const ValueDecl *LVDecl = llvm::dyn_cast<const ValueDecl *>(LHS)) {
     reportAssignmentImpl(S, IssueExpr, LVDecl, RHS, LVDecl->getLocation());
+  } else if (const MemberExpr *LVDecl =
+                 llvm::dyn_cast<const MemberExpr *>(LHS)) {
+    reportAssignmentImpl(S, IssueExpr, LVDecl->getMemberDecl(), RHS,
+                         LVDecl->getExprLoc());
   }
 }
 
@@ -115,10 +119,11 @@ public:
         << ReturnExpr->getSourceRange();
   }
 
-  void reportDanglingField(const Expr *IssueExpr,
-                           const FieldDecl *DanglingField,
-                           const Expr *MovedExpr,
-                           SourceLocation ExpiryLoc) override {
+  void reportDanglingField(
+      const Expr *IssueExpr, const FieldDecl *DanglingField,
+      const Expr *MovedExpr,
+      const std::optional<llvm::SmallVector<AssignmentPair>> AliasList,
+      SourceLocation ExpiryLoc) override {
     S.Diag(IssueExpr->getExprLoc(),
            MovedExpr ? diag::warn_lifetime_safety_dangling_field_moved
                      : diag::warn_lifetime_safety_dangling_field)
@@ -126,6 +131,11 @@ public:
     if (MovedExpr)
       S.Diag(MovedExpr->getExprLoc(), diag::note_lifetime_safety_moved_here)
           << MovedExpr->getSourceRange();
+
+    if (AliasList.has_value())
+      for (const auto &AliasStmt : llvm::reverse(AliasList.value()))
+        reportAssignment(S, IssueExpr, AliasStmt.first, AliasStmt.second);
+
     S.Diag(DanglingField->getLocation(),
            diag::note_lifetime_safety_dangling_field_here)
         << DanglingField->getEndLoc();

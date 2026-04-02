@@ -13,6 +13,7 @@
 
 #include "clang/Analysis/Analyses/LifetimeSafety/AssignmentQuery.h"
 #include "clang/AST/Decl.h"
+#include "clang/AST/ParentMap.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/LoanPropagation.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/Origins.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
@@ -54,6 +55,25 @@ std::optional<const Expr *> GetPureSrcExpr(const Expr *TargetExpr) {
   return std::nullopt;
 }
 
+/// Specifically handles assignments involving a FieldDecl.
+///
+/// Since we currently only store the FieldDecl without its corresponding
+/// LHS expression, this function attempts to recover or resolve the LHS
+/// context by analyzing the RHS.
+const MemberExpr *getFieldFromAssignmentExpr(const Expr *RHS,
+                                             const ParentMap &CurrParentMap) {
+
+  const Stmt *CurrStmt = CurrParentMap.getParent(RHS);
+  if (!CurrStmt)
+    return nullptr;
+  if (const auto *BinaryOp = llvm::dyn_cast<BinaryOperator>(CurrStmt))
+    return llvm::dyn_cast<MemberExpr>(BinaryOp->getLHS());
+  if (const auto *CXXOp = llvm::dyn_cast<CXXOperatorCallExpr>(CurrStmt);
+      CXXOp && CXXOp->getOperator() == OO_Equal && CXXOp->getNumArgs() == 2)
+    return llvm::dyn_cast<MemberExpr>(CXXOp->getArg(0));
+  return nullptr;
+}
+
 AliasAssignmentSearchResult getAliasListCore(
     const AssignmentQueryContext &Context, const CFGBlock *Block,
     const LoanID EndLoanID, OriginID *TargetOID,
@@ -84,8 +104,17 @@ AliasAssignmentSearchResult getAliasListCore(
           if (!DestDecl.has_value()) {
             if (const ValueDecl *DVecl = TargetOrigin.getDecl();
                 DVecl && !DVecl->getLocation().isInvalid()) {
-              CurrOrigin = *TargetOID;
-              DestDecl = DVecl;
+              if (llvm::isa<FieldDecl>(DVecl)) {
+                const auto *CurrExpr = Context.FactMgr.getOriginMgr()
+                                           .getOrigin(OFF->getSrcOriginID())
+                                           .getExpr();
+                if (CurrExpr)
+                  DestDecl = getFieldFromAssignmentExpr(
+                      CurrExpr, Context.ADC.getParentMap());
+              } else {
+                CurrOrigin = *TargetOID;
+                DestDecl = DVecl;
+              }
             }
           } else {
             auto SExpr = GetPureSrcExpr(TargetOrigin.getExpr());
@@ -297,6 +326,9 @@ getAliasList(const AssignmentQueryContext &Context, const Fact *CausingFact,
   } else if (const auto *RetEscapeF =
                  llvm::dyn_cast<ReturnEscapeFact>(CausingFact)) {
     TargetOIDList.push_back(RetEscapeF->getEscapedOriginID());
+  } else if (const auto *FieldEscapeF =
+                 llvm::dyn_cast<FieldEscapeFact>(CausingFact)) {
+    TargetOIDList.push_back(FieldEscapeF->getEscapedOriginID());
   } else if (const auto *GlobalEscapeF =
                  llvm::dyn_cast<GlobalEscapeFact>(CausingFact)) {
     TargetOIDList.push_back(GlobalEscapeF->getEscapedOriginID());

@@ -72,10 +72,10 @@ public:
       const std::optional<llvm::SmallVector<AssignmentPair>> AliasList,
       SourceLocation ExpiryLoc) {}
 
-  virtual void reportDanglingField(const Expr *IssueExpr,
-                                   const FieldDecl *Field,
-                                   const Expr *MovedExpr,
-                                   SourceLocation ExpiryLoc) {}
+  virtual void reportDanglingField(
+      const Expr *IssueExpr, const FieldDecl *Field, const Expr *MovedExpr,
+      const std::optional<llvm::SmallVector<AssignmentPair>> AliasList,
+      SourceLocation ExpiryLoc) {}
 
   virtual void reportDanglingGlobal(
       const Expr *IssueExpr, const VarDecl *DanglingGlobal,
