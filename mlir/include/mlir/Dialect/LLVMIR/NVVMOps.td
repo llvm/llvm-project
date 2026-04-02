@@ -2193,11 +2193,10 @@ def NVVM_ConvertBF16x2ToF8x2Op : NVVM_Op<"convert.bf16x2.to.f8x2"> {
     a vector of two i8 types.
     If `dst` is returned as an i16 type, the converted values are packed such 
     that the value converted from the first element of `a` is stored in the 
-    lower 8 bits of `dst` with 2 MSB bits padded with zeros and the value 
-    converted from the second element of `a` is stored in the upper 8 bits of 
-    `dst` with 2 MSB bits padded with zeros.
+    lower 8 bits of `dst` and the value converted from the second element of 
+    `a` is stored in the upper 8 bits of `dst`.
     If `dst` is returned as a vector type, each converted value is stored as an 
-    i8 element in the vector with 2 MSB bits padded with zeros.
+    i8 element in the vector.
     The `rnd` and `sat` attributes specify the rounding and saturation modes 
     respectively.
 

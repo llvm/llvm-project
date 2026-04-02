@@ -10,7 +10,7 @@ llvm.func @convert_bf16x2_to_f8x2_invalid_type(%src : vector<2xbf16>) {
 
 // -----
 
-llvm.func @convert_f16x2_to_f8x2_invalid_rounding_1(%src : vector<2xbf16>) {
+llvm.func @convert_bf16x2_to_f8x2_invalid_rounding_1(%src : vector<2xbf16>) {
   // expected-error @below {{Only RN rounding mode is supported for conversions from bf16x2 to 'f8E4M3FN' and 'f8E5M2' types}}
   %res = nvvm.convert.bf16x2.to.f8x2 %src {rnd = #nvvm.fp_rnd_mode<rm>} : vector<2xbf16> -> vector<2xi8> (f8E4M3FN)
   llvm.return
