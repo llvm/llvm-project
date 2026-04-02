@@ -2361,10 +2361,9 @@ public:
     llvm_unreachable("impossible call instruction");
   }
 
-  /// Return the uniformity behavior of the given instruction.
-  virtual InstructionUniformity
-  getInstructionUniformity(const MachineInstr &MI) const {
-    return InstructionUniformity::Default;
+  /// Return the uniformity behavior of the given value.
+  virtual ValueUniformity getValueUniformity(const MachineInstr &MI) const {
+    return ValueUniformity::Default;
   }
 
   /// Returns true if the given \p MI defines a TargetIndex operand that can be

@@ -443,6 +443,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.asin
     libc.src.math.asinf
     libc.src.math.asinhf
+    libc.src.math.asinpi
     libc.src.math.asinpif
     libc.src.math.atan2
     libc.src.math.atan2f
@@ -873,6 +874,7 @@ endif()
 list(APPEND TARGET_LIBM_ENTRYPOINTS
   # bfloat16 entrypoints
   libc.src.math.atanbf16
+  libc.src.math.asinbf16
   libc.src.math.bf16add
   libc.src.math.bf16addf
   libc.src.math.bf16addl
@@ -1143,6 +1145,12 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.search.lfind
     libc.src.search.lsearch
     libc.src.search.remque
+    libc.src.search.tdelete
+    libc.src.search.tdestroy
+    libc.src.search.tfind
+    libc.src.search.tsearch
+    libc.src.search.twalk
+    libc.src.search.twalk_r
 
     # threads.h entrypoints
     libc.src.threads.call_once

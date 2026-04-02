@@ -2842,7 +2842,9 @@ def CIR_GlobalOp : CIR_Op<"global", [
                        UnitAttr:$dso_local,
                        OptionalAttr<CIR_StaticLocalGuardAttr>:$static_local_guard,
                        OptionalAttr<I64Attr>:$alignment,
-                       OptionalAttr<ASTVarDeclInterface>:$ast);
+                       OptionalAttr<ASTVarDeclInterface>:$ast,
+                       OptionalAttr<StrAttr>:$section
+                       );
 
   let regions = (region MaxSizedRegion<1>:$ctorRegion,
                         MaxSizedRegion<1>:$dtorRegion);
@@ -2900,6 +2902,10 @@ def CIR_GlobalOp : CIR_Op<"global", [
 
     void setupRegionInitializedLLVMGlobalOp(
         cir::GlobalOp op, mlir::ConversionPatternRewriter &rewriter) const;
+
+    llvm::SmallVector<mlir::NamedAttribute> lowerGlobalAttributes(
+        cir::GlobalOp op,
+        mlir::ConversionPatternRewriter &rewriter) const;
 
     mutable mlir::LLVM::ComdatOp comdatOp = nullptr;
     mlir::SymbolRefAttr getComdatAttr(cir::GlobalOp &op,
@@ -7032,6 +7038,46 @@ def CIR_EhInitiateOp : CIR_Op<"eh.initiate"> {
   let results = (outs CIR_EhTokenType:$eh_token);
   let assemblyFormat = [{
     (`cleanup` $cleanup^)? `:` type($eh_token) attr-dict
+  }];
+
+  let hasLLVMLowering = false;
+}
+
+//===----------------------------------------------------------------------===//
+// Flattened EH Operations: EhTerminateOp
+//===----------------------------------------------------------------------===//
+
+def CIR_EhTerminateOp : CIR_Op<"eh.terminate", [
+  Terminator
+]> {
+  let summary = "Terminate due to exception thrown during cleanup";
+  let description = [{
+    `cir.eh.terminate` terminates program execution when an exception is thrown
+    while executing cleanup code during exception unwinding. The C++ standard
+    requires that `std::terminate()` be called in this scenario.
+
+    This operation takes an `!cir.eh_token` from a `cir.eh.initiate` operation
+    and acts as a terminator. It is produced during CFG flattening when throwing
+    calls are found in EH cleanup regions.
+
+    During EH ABI lowering, this is replaced with target-specific termination
+    code. For the Itanium ABI, the `cir.eh.initiate` is lowered to
+    `cir.eh.inflight_exception` (producing an exception pointer), and the
+    `cir.eh.terminate` becomes a call to `__clang_call_terminate` with that
+    pointer, followed by an unreachable operation.
+
+    Example:
+
+    ```mlir
+    ^terminate_unwind:
+      %eh_token = cir.eh.initiate : !cir.eh_token
+      cir.eh.terminate %eh_token : !cir.eh_token
+    ```
+  }];
+
+  let arguments = (ins CIR_EhTokenType:$eh_token);
+  let assemblyFormat = [{
+    $eh_token `:` type($eh_token) attr-dict
   }];
 
   let hasLLVMLowering = false;
