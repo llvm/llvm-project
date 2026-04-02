@@ -265,4 +265,22 @@ gpu.module @test_kernel {
   }
 }
 
+// -----
+// CHECK-LABEL: func.func @test_vector_multi_reduction_add
+// CHECK-SAME: (%[[ARG0:.*]]: vector<4x8xf32>, %[[ARG1:.*]]: vector<8xf32>) -> vector<8xf32>
+// CHECK: %[[FLAT:.*]] = vector.shape_cast %[[ARG0]] : vector<4x8xf32> to vector<32xf32>
+// CHECK: %[[S0:.*]] = vector.shuffle %[[FLAT]], %[[FLAT]] [0, 1, 2, 3, 4, 5, 6, 7]
+// CHECK: %[[R0:.*]] = arith.addf %[[S0]], %[[ARG1]] : vector<8xf32>
+// CHECK: %[[S1:.*]] = vector.shuffle %[[FLAT]], %[[FLAT]] [8, 9, 10, 11, 12, 13, 14, 15]
+// CHECK: %[[R1:.*]] = arith.addf %[[S1]], %[[R0]] : vector<8xf32>
+// CHECK: %[[S2:.*]] = vector.shuffle %[[FLAT]], %[[FLAT]] [16, 17, 18, 19, 20, 21, 22, 23]
+// CHECK: %[[R2:.*]] = arith.addf %[[S2]], %[[R1]] : vector<8xf32>
+// CHECK: %[[S3:.*]] = vector.shuffle %[[FLAT]], %[[FLAT]] [24, 25, 26, 27, 28, 29, 30, 31]
+// CHECK: %[[R3:.*]] = arith.addf %[[S3]], %[[R2]] : vector<8xf32>
+// CHECK: return %[[R3]] : vector<8xf32>
+func.func @test_vector_multi_reduction_add(%arg0: vector<4x8xf32>, %arg1: vector<8xf32>) -> vector<8xf32> {
+  %0 = vector.multi_reduction <add>, %arg0, %arg1 [0] : vector<4x8xf32> to vector<8xf32>
+  return %0 : vector<8xf32>
+}
+
 
