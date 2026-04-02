@@ -460,7 +460,7 @@ KnownBits KnownBits::shl(const KnownBits &LHS, const KnownBits &RHS, bool NUW,
         MaxShiftAmount,
         std::max(LHS.countMaxLeadingZeros(), LHS.countMaxLeadingOnes()) - 1);
 
-   // Fast path for common case where the shift amount is unknown.
+  // Fast path for common case where the shift amount is unknown.
   if (MinShiftAmount == 0 && MaxShiftAmount == BitWidth - 1 &&
       isPowerOf2_32(BitWidth)) {
     Known.Zero.setLowBits(LHS.countMinTrailingZeros());
