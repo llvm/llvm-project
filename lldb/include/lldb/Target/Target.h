@@ -1975,6 +1975,8 @@ protected:
 
   bool m_did_display_scratch_fallback_warning = false;
 
+  lldb::RegisterTypeBuilderSP m_register_type_builder_sp;
+
   static void ImageSearchPathsChanged(const PathMappingList &path_list,
                                       void *baton);
 
