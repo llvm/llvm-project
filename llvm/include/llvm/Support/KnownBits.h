@@ -368,7 +368,7 @@ public:
       // Shift amount bitwidth is independent of src bitwidth (and we're
       // just shifting by one so don't have any bounds issues).
       assert(LHS == RHS && "Expected matching knownbits");
-      return KnownBits::shl(LHS, 1, NUW, NSW);
+      return KnownBits::shl(LHS, 1, NUW, NSW, /*ShAmtNonZero=*/true);
     }
     return computeForAddSub(/*Add=*/true, NSW, NUW, LHS, RHS);
   }
