@@ -10,6 +10,7 @@
 
 #include "../utils/BracesAroundStatement.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/Basic/CharInfo.h"
 #include "clang/Lex/Lexer.h"
 
 using namespace clang::ast_matchers;
@@ -34,12 +35,12 @@ static const Stmt *ignoreAttributedStmt(const Stmt *S) {
 static std::optional<CharSourceRange>
 getHeaderRange(const IfStmt *If, const SourceManager &SM,
                const LangOptions &LangOpts) {
-  if (If->getIfLoc().isMacroID() || If->getRParenLoc().isMacroID())
+  if (If->getLParenLoc().isMacroID() || If->getRParenLoc().isMacroID())
     return std::nullopt;
 
   const CharSourceRange HeaderRange = Lexer::makeFileCharRange(
-      CharSourceRange::getTokenRange(If->getIfLoc(), If->getRParenLoc()), SM,
-      LangOpts);
+      CharSourceRange::getTokenRange(If->getLParenLoc(), If->getRParenLoc()),
+      SM, LangOpts);
   if (HeaderRange.isInvalid())
     return std::nullopt;
   return HeaderRange;
@@ -60,6 +61,14 @@ getBraceFix(const Stmt *S, const LangOptions &LangOpts, const SourceManager &SM,
 
   return BraceFix{true, Hints};
 }
+
+static bool needsLeadingSpaceBeforeConsteval(SourceLocation LParenLoc,
+                                             const SourceManager &SM) {
+  bool Invalid = false;
+  const char *LParen = SM.getCharacterData(LParenLoc, &Invalid);
+  return Invalid || !isWhitespace(LParen[-1]);
+}
+
 void UseIfConstevalCheck::registerMatchers(MatchFinder *Finder) {
   const auto IsConstantEvaluatedCall =
       callExpr(callee(functionDecl(hasName("is_constant_evaluated"),
@@ -88,16 +97,15 @@ void UseIfConstevalCheck::check(const MatchFinder::MatchResult &Result) {
   assert(If && Call && "expected to match an if statement and its call");
 
   const bool IsNegated = Result.Nodes.getNodeAs<UnaryOperator>("negation");
-  const char *Replacement = IsNegated ? "if !consteval" : "if consteval";
+  const llvm::StringRef ConstevalClause =
+      IsNegated ? "!consteval" : "consteval";
   const SourceLocation DiagLoc =
       Result.SourceManager->getExpansionLoc(Call->getExprLoc());
 
-  auto Diag =
-      diag(
-          DiagLoc,
-          "use '%0' instead of checking 'std::is_constant_evaluated()' in this "
-          "'if' statement")
-      << Replacement;
+  auto Diag = diag(DiagLoc, "use 'if %0' instead of checking "
+                            "'std::is_constant_evaluated()' in this "
+                            "'if' statement")
+              << ConstevalClause;
 
   if (If->hasInitStorage() || If->hasVarStorage())
     return;
@@ -120,9 +128,16 @@ void UseIfConstevalCheck::check(const MatchFinder::MatchResult &Result) {
                                *Result.SourceManager, If->getElseLoc());
   }
 
-  std::string HeaderReplacement(Replacement);
-  if (ThenBraceFix->NeedsBraces)
-    HeaderReplacement += " {";
+  const bool NeedsLeadingSpace = needsLeadingSpaceBeforeConsteval(
+      If->getLParenLoc(), *Result.SourceManager);
+  const std::string HeaderReplacement = [&] {
+    std::string Replacement = ConstevalClause.str();
+    if (NeedsLeadingSpace)
+      Replacement.insert(0, 1, ' ');
+    if (ThenBraceFix->NeedsBraces)
+      Replacement += " {";
+    return Replacement;
+  }();
   Diag << FixItHint::CreateReplacement(*HeaderRange, HeaderReplacement);
 
   if (ThenBraceFix->NeedsBraces)

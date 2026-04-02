@@ -16,6 +16,7 @@ namespace alias = std;
 
 #define ICE_CALL() std::is_constant_evaluated()
 #define IF_ICE_HEADER if (std::is_constant_evaluated())
+#define IF_ONLY if
 #define RETURN_ONE() return 1;
 #define RETURN_THREE() return 3;
 
@@ -40,6 +41,15 @@ int direct_global() {
   }
   return 2;
   // CHECK-MESSAGES: :[[@LINE-4]]:7: warning: use 'if consteval' instead of checking 'std::is_constant_evaluated()' in this 'if' statement [modernize-use-if-consteval]
+  // CHECK-FIXES: if consteval {
+}
+
+int compact_spacing() {
+  if(std::is_constant_evaluated()) {
+    return 1;
+  }
+  return 2;
+  // CHECK-MESSAGES: :[[@LINE-4]]:6: warning: use 'if consteval' instead of checking 'std::is_constant_evaluated()' in this 'if' statement [modernize-use-if-consteval]
   // CHECK-FIXES: if consteval {
 }
 
@@ -180,6 +190,15 @@ int macro_header_unsafe() {
   return 0;
   // CHECK-MESSAGES: :[[@LINE-4]]:3: warning: use 'if consteval' instead of checking 'std::is_constant_evaluated()' in this 'if' statement [modernize-use-if-consteval]
   // CHECK-FIXES: IF_ICE_HEADER {
+}
+
+int macro_if_token_unsafe() {
+  IF_ONLY (std::is_constant_evaluated()) {
+    return 1;
+  }
+  return 0;
+  // CHECK-MESSAGES: :[[@LINE-4]]:12: warning: use 'if consteval' instead of checking 'std::is_constant_evaluated()' in this 'if' statement [modernize-use-if-consteval]
+  // CHECK-FIXES: IF_ONLY consteval {
 }
 
 int macro_body_unsafe() {
