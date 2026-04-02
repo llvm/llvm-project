@@ -675,8 +675,7 @@ int clangTidyMain(int argc, const char **argv) {
 
   if (ExplainConfig) {
     // FIXME: Show other ClangTidyOptions' fields, like ExtraArg.
-    llvm::ErrorOr<
-        std::vector<ClangTidyOptionsProvider::OptionsSource>>
+    llvm::ErrorOr<std::vector<ClangTidyOptionsProvider::OptionsSource>>
         RawOptions = OptionsProvider->getRawOptions(FilePath);
 
     if (!RawOptions)
@@ -718,8 +717,8 @@ int clangTidyMain(int argc, const char **argv) {
   }
 
   if (VerifyConfig) {
-    const llvm::ErrorOr<std::vector<ClangTidyOptionsProvider::OptionsSource>> RawOptions =
-        OptionsProvider->getRawOptions(FileName);
+    const llvm::ErrorOr<std::vector<ClangTidyOptionsProvider::OptionsSource>>
+        RawOptions = OptionsProvider->getRawOptions(FileName);
     if (!RawOptions)
       return 1;
     const ChecksAndOptions Valid = getAllChecksAndOptions(

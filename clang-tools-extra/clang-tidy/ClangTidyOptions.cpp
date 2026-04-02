@@ -324,7 +324,8 @@ ClangTidyOptions ClangTidyOptions::merge(const ClangTidyOptions &Other,
   return Result;
 }
 
-ErrorOr<ClangTidyOptions> ClangTidyOptionsProvider::getOptions(StringRef FileName) {
+llvm::ErrorOr<ClangTidyOptions>
+ClangTidyOptionsProvider::getOptions(StringRef FileName) {
   ClangTidyOptions Result;
   unsigned Priority = 0;
   llvm::ErrorOr<std::vector<OptionsSource>> Options = getRawOptions(FileName);
@@ -335,7 +336,7 @@ ErrorOr<ClangTidyOptions> ClangTidyOptionsProvider::getOptions(StringRef FileNam
   return Result;
 }
 
-ErrorOr<std::vector<OptionsSource>>
+llvm::ErrorOr<std::vector<OptionsSource>>
 DefaultOptionsProvider::getRawOptions(StringRef FileName) {
   std::vector<OptionsSource> Result;
   Result.emplace_back(DefaultOptions, OptionsSourceTypeDefaultBinary);
@@ -351,9 +352,9 @@ ConfigOptionsProvider::ConfigOptionsProvider(
                               std::move(OverrideOptions), std::move(FS)),
       ConfigOptions(std::move(ConfigOptions)) {}
 
-ErrorOr<std::vector<OptionsSource>>
+llvm::ErrorOr<std::vector<OptionsSource>>
 ConfigOptionsProvider::getRawOptions(StringRef FileName) {
-  std::vector<OptionsSource> RawOptions =
+  llvm::ErrorOr<std::vector<OptionsSource>> RawOptions =
       DefaultOptionsProvider::getRawOptions(FileName);
   if (!RawOptions)
     return RawOptions;
