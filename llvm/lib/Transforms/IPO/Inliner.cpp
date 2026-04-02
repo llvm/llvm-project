@@ -353,8 +353,9 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
       // calls where it may actually prevent inlining, which is inlining through
       // an SCC. This can happen if the callee is in a non-trivial SCC/RefSCC,
       // or if an inlined call site was an indirect call, which can be
-      // devirtualized to call any target. The indirect call case is handled
-      // within InlineFunction.
+      // devirtualized to call any target by RAUWing the indirectly called
+      // function with a direct function pointer referenced by the caller. The
+      // indirect call case is handled within InlineFunction.
       bool TrackInlineHistory =
           CalleeSCC->size() != 1 || CalleeSCC->getOuterRefSCC().size() != 1;
 
