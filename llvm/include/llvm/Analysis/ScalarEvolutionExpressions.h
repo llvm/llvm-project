@@ -234,7 +234,8 @@ public:
   ArrayRef<SCEVUse> operands() const { return ArrayRef(Operands, NumOperands); }
 
   NoWrapFlags getNoWrapFlags(NoWrapFlags Mask = NoWrapMask) const {
-    return (NoWrapFlags)(SubclassData & Mask);
+    return static_cast<NoWrapFlags>(static_cast<unsigned>(SubclassData) &
+                                    static_cast<unsigned>(Mask));
   }
 
   bool hasNoUnsignedWrap() const {
@@ -274,7 +275,9 @@ public:
   }
 
   /// Set flags for a non-recurrence without clearing previously set flags.
-  void setNoWrapFlags(NoWrapFlags Flags) { SubclassData |= Flags; }
+  void setNoWrapFlags(NoWrapFlags Flags) {
+    SubclassData |= static_cast<unsigned short>(Flags);
+  }
 };
 
 /// This node represents an addition of some number of SCEVs.
@@ -402,9 +405,9 @@ public:
   /// For AddRec, either NUW or NSW implies NW. Keep track of this fact here
   /// to make it easier to propagate flags.
   void setNoWrapFlags(NoWrapFlags Flags) {
-    if (Flags & (FlagNUW | FlagNSW))
+    if (any(Flags & (FlagNUW | FlagNSW)))
       Flags = ScalarEvolution::setFlags(Flags, FlagNW);
-    SubclassData |= Flags;
+    SubclassData |= static_cast<unsigned short>(Flags);
   }
 
   /// Return the value of this chain of recurrences at the specified
@@ -453,7 +456,7 @@ protected:
       : SCEVCommutativeExpr(ID, T, O, N) {
     assert(isMinMaxType(T));
     // Min and max never overflow
-    setNoWrapFlags((NoWrapFlags)(FlagNUW | FlagNSW));
+    setNoWrapFlags(FlagNUW | FlagNSW);
   }
 
 public:
@@ -539,7 +542,9 @@ class SCEVSequentialMinMaxExpr : public SCEVNAryExpr {
   }
 
   /// Set flags for a non-recurrence without clearing previously set flags.
-  void setNoWrapFlags(NoWrapFlags Flags) { SubclassData |= Flags; }
+  void setNoWrapFlags(NoWrapFlags Flags) {
+    SubclassData |= static_cast<unsigned short>(Flags);
+  }
 
 protected:
   /// Note: Constructing subclasses via this constructor is allowed
@@ -548,7 +553,7 @@ protected:
       : SCEVNAryExpr(ID, T, O, N) {
     assert(isSequentialMinMaxType(T));
     // Min and max never overflow
-    setNoWrapFlags((NoWrapFlags)(FlagNUW | FlagNSW));
+    setNoWrapFlags(FlagNUW | FlagNSW);
   }
 
 public:
@@ -1047,17 +1052,19 @@ private:
 };
 
 template <typename SCEVPtrT>
-inline SCEVWrap::NoWrapFlags
-SCEVUseT<SCEVPtrT>::getNoWrapFlags(SCEVWrap::NoWrapFlags Mask) const {
-  unsigned Flags = SCEV::FlagAnyWrap;
+inline SCEVNoWrapFlags
+SCEVUseT<SCEVPtrT>::getNoWrapFlags(SCEVNoWrapFlags Mask) const {
+  unsigned Flags = static_cast<unsigned>(SCEV::FlagAnyWrap);
   if (auto *NAry = dyn_cast<SCEVNAryExpr>(Base::getPointer()))
-    Flags = NAry->getNoWrapFlags();
+    Flags = static_cast<unsigned>(NAry->getNoWrapFlags());
   // Use-flags only encode NUW/NSW in 2 bits; shift to align with NoWrapFlags.
   unsigned UseFlags = Base::getInt() << 1;
   // NUW or NSW implies NW.
-  if (UseFlags & (SCEVWrap::FlagNUW | SCEVWrap::FlagNSW))
-    UseFlags |= SCEVWrap::FlagNW;
-  return SCEVWrap::NoWrapFlags((Flags | UseFlags) & Mask);
+  if (UseFlags & static_cast<unsigned>(SCEVNoWrapFlags::FlagNUW |
+                                       SCEVNoWrapFlags::FlagNSW))
+    UseFlags |= static_cast<unsigned>(SCEVNoWrapFlags::FlagNW);
+  return static_cast<SCEVNoWrapFlags>((Flags | UseFlags) &
+                                      static_cast<unsigned>(Mask));
 }
 
 } // end namespace llvm

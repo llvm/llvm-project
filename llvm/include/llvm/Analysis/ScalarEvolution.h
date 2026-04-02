@@ -22,6 +22,7 @@
 
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/FoldingSet.h"
@@ -102,15 +103,14 @@ LLVM_ABI extern bool VerifySCEV;
 /// can trap) can be defined per these rules in regions where it would trap
 /// at runtime.  A SCEV being defined does not require the existence of any
 /// instruction within the defined scope.
-namespace SCEVWrap {
-enum NoWrapFlags {
+enum class SCEVNoWrapFlags {
   FlagAnyWrap = 0,    // No guarantee.
   FlagNW = (1 << 0),  // No self-wrap.
   FlagNUW = (1 << 1), // No unsigned wrap.
   FlagNSW = (1 << 2), // No signed wrap.
-  NoWrapMask = (1 << 3) - 1
+  NoWrapMask = (1 << 3) - 1,
+  LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/NoWrapMask)
 };
-} // namespace SCEVWrap
 
 class SCEV;
 
@@ -121,7 +121,8 @@ struct SCEVUseT : PointerIntPair<SCEVPtrT, 2> {
   SCEVUseT() : Base() { Base::setFromOpaqueValue(nullptr); }
   SCEVUseT(SCEVPtrT S) : Base(S, 0) {}
   /// Construct with NoWrapFlags; only NUW/NSW are encoded, NW is dropped.
-  SCEVUseT(SCEVPtrT S, SCEVWrap::NoWrapFlags Flags) : Base(S, Flags >> 1) {}
+  SCEVUseT(SCEVPtrT S, SCEVNoWrapFlags Flags)
+      : Base(S, static_cast<unsigned>(Flags) >> 1) {}
   template <typename OtherPtrT, typename = std::enable_if_t<
                                     std::is_convertible_v<OtherPtrT, SCEVPtrT>>>
   SCEVUseT(const SCEVUseT<OtherPtrT> &Other)
@@ -141,16 +142,17 @@ struct SCEVUseT : PointerIntPair<SCEVPtrT, 2> {
 
   /// Return the no-wrap flags for this SCEVUse, which is the union of the
   /// use-specific flags and the underlying SCEV's flags, masked by \p Mask.
-  inline SCEVWrap::NoWrapFlags
-  getNoWrapFlags(SCEVWrap::NoWrapFlags Mask = SCEVWrap::NoWrapMask) const;
+  SCEVNoWrapFlags
+  getNoWrapFlags(SCEVNoWrapFlags Mask = SCEVNoWrapFlags::NoWrapMask) const;
 
   /// Return only the use-specific no-wrap flags (NUW/NSW) without the
   /// underlying SCEV's flags.
-  SCEVWrap::NoWrapFlags getUseNoWrapFlags() const {
-    unsigned UseFlags = Base::getInt() << 1;
-    if (UseFlags & (SCEVWrap::FlagNUW | SCEVWrap::FlagNSW))
-      UseFlags |= SCEVWrap::FlagNW;
-    return SCEVWrap::NoWrapFlags(UseFlags);
+  SCEVNoWrapFlags getUseNoWrapFlags() const {
+    SCEVNoWrapFlags UseFlags =
+        static_cast<SCEVNoWrapFlags>(Base::getInt() << 1);
+    if (any(UseFlags & (SCEVNoWrapFlags::FlagNUW | SCEVNoWrapFlags::FlagNSW)))
+      UseFlags |= SCEVNoWrapFlags::FlagNW;
+    return UseFlags;
   }
 
   bool operator==(const SCEVUseT &RHS) const {
@@ -270,13 +272,12 @@ protected:
   const SCEV *CanonicalSCEV = nullptr;
 
 public:
-  /// Expose SCEVWrap::NoWrapFlags as SCEV::NoWrapFlags.
-  using NoWrapFlags = SCEVWrap::NoWrapFlags;
-  static constexpr auto FlagAnyWrap = SCEVWrap::FlagAnyWrap;
-  static constexpr auto FlagNW = SCEVWrap::FlagNW;
-  static constexpr auto FlagNUW = SCEVWrap::FlagNUW;
-  static constexpr auto FlagNSW = SCEVWrap::FlagNSW;
-  static constexpr auto NoWrapMask = SCEVWrap::NoWrapMask;
+  using NoWrapFlags = SCEVNoWrapFlags;
+  static constexpr auto FlagAnyWrap = SCEVNoWrapFlags::FlagAnyWrap;
+  static constexpr auto FlagNW = SCEVNoWrapFlags::FlagNW;
+  static constexpr auto FlagNUW = SCEVNoWrapFlags::FlagNUW;
+  static constexpr auto FlagNSW = SCEVNoWrapFlags::FlagNSW;
+  static constexpr auto NoWrapMask = SCEVNoWrapFlags::NoWrapMask;
 
   explicit SCEV(const FoldingSetNodeIDRef ID, SCEVTypes SCEVTy,
                 unsigned short ExpressionSize)
@@ -636,16 +637,16 @@ public:
   /// Convenient NoWrapFlags manipulation that hides enum casts and is
   /// visible in the ScalarEvolution name space.
   [[nodiscard]] static SCEV::NoWrapFlags maskFlags(SCEV::NoWrapFlags Flags,
-                                                   int Mask) {
-    return (SCEV::NoWrapFlags)(Flags & Mask);
+                                                   SCEV::NoWrapFlags Mask) {
+    return Flags & Mask;
   }
   [[nodiscard]] static SCEV::NoWrapFlags setFlags(SCEV::NoWrapFlags Flags,
                                                   SCEV::NoWrapFlags OnFlags) {
-    return (SCEV::NoWrapFlags)(Flags | OnFlags);
+    return Flags | OnFlags;
   }
   [[nodiscard]] static SCEV::NoWrapFlags
   clearFlags(SCEV::NoWrapFlags Flags, SCEV::NoWrapFlags OffFlags) {
-    return (SCEV::NoWrapFlags)(Flags & ~OffFlags);
+    return Flags & ~OffFlags;
   }
   [[nodiscard]] static bool hasFlags(SCEV::NoWrapFlags Flags,
                                      SCEV::NoWrapFlags TestFlags) {
@@ -2725,10 +2726,10 @@ template <> inline const SCEV *SCEVUseT<const SCEV *>::getCanonical() const {
 template <typename SCEVPtrT>
 void SCEVUseT<SCEVPtrT>::print(raw_ostream &OS) const {
   Base::getPointer()->print(OS);
-  SCEV::NoWrapFlags Flags = static_cast<SCEV::NoWrapFlags>(Base::getInt());
-  if (Flags & SCEV::FlagNUW)
+  SCEV::NoWrapFlags Flags = getUseNoWrapFlags();
+  if (any(Flags & SCEV::FlagNUW))
     OS << "(u nuw)";
-  if (Flags & SCEV::FlagNSW)
+  if (any(Flags & SCEV::FlagNSW))
     OS << "(u nsw)";
 }
 

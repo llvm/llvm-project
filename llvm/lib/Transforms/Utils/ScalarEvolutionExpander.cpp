@@ -302,9 +302,9 @@ Value *SCEVExpander::InsertBinop(Instruction::BinaryOps Opcode,
       auto canGenerateIncompatiblePoison = [&Flags](Instruction *I) {
         // Ensure that no-wrap flags match.
         if (isa<OverflowingBinaryOperator>(I)) {
-          if (I->hasNoSignedWrap() != (Flags & SCEV::FlagNSW))
+          if (I->hasNoSignedWrap() != any(Flags & SCEV::FlagNSW))
             return true;
-          if (I->hasNoUnsignedWrap() != (Flags & SCEV::FlagNUW))
+          if (I->hasNoUnsignedWrap() != any(Flags & SCEV::FlagNUW))
             return true;
         }
         // Conservatively, do not use any instruction which has any of exact
@@ -341,9 +341,9 @@ Value *SCEVExpander::InsertBinop(Instruction::BinaryOps Opcode,
   // InstSimplifyFolder.
   Instruction *BO = Builder.Insert(BinaryOperator::Create(Opcode, LHS, RHS));
   BO->setDebugLoc(Loc);
-  if (Flags & SCEV::FlagNUW)
+  if (any(Flags & SCEV::FlagNUW))
     BO->setHasNoUnsignedWrap();
-  if (Flags & SCEV::FlagNSW)
+  if (any(Flags & SCEV::FlagNSW))
     BO->setHasNoSignedWrap();
 
   return BO;
@@ -382,8 +382,9 @@ Value *SCEVExpander::expandAddToGEP(const SCEV *Offset, Value *V,
          SE.DT.dominates(cast<Instruction>(V), &*Builder.GetInsertPoint()));
 
   Value *Idx = expand(Offset);
-  GEPNoWrapFlags NW = (Flags & SCEV::FlagNUW) ? GEPNoWrapFlags::noUnsignedWrap()
-                                              : GEPNoWrapFlags::none();
+  GEPNoWrapFlags NW = any(Flags & SCEV::FlagNUW)
+                          ? GEPNoWrapFlags::noUnsignedWrap()
+                          : GEPNoWrapFlags::none();
 
   // Fold a GEP with constant operands.
   if (Constant *CLHS = dyn_cast<Constant>(V))
