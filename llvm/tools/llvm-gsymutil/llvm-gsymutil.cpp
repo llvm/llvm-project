@@ -24,6 +24,7 @@
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/PrettyStackTrace.h"
+#include "llvm/Support/Process.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/TargetSelect.h"
@@ -100,6 +101,7 @@ static std::string OutputFilename;
 static std::string JsonSummaryFile;
 static bool Verify;
 static bool BenchmarkReader;
+static bool WaitForDebugger;
 static unsigned NumThreads;
 static uint64_t SegmentSize;
 static bool Quiet;
@@ -161,6 +163,7 @@ static void parseArgs(int argc, char **argv) {
 
   Verify = Args.hasArg(OPT_verify);
   BenchmarkReader = Args.hasArg(OPT_benchmark_reader);
+  WaitForDebugger = Args.hasArg(OPT_wait_for_debugger);
 
   if (const llvm::opt::Arg *A = Args.getLastArg(OPT_num_threads_EQ)) {
     StringRef S{A->getValue()};
@@ -780,6 +783,14 @@ int llvm_gsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
   llvm::InitializeAllTargets();
 
   parseArgs(argc, argv);
+
+  if (WaitForDebugger) {
+    volatile bool Attached = false;
+    llvm::errs() << "Waiting for debugger to attach (pid "
+                 << llvm::sys::Process::getProcessId() << ")...\n";
+    while (!Attached)
+      ;
+  }
 
   raw_ostream &OS = outs();
 

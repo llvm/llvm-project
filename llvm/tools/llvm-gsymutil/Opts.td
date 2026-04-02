@@ -59,3 +59,7 @@ def benchmark_reader :
   FF<"benchmark-reader",
      "Open a GSYM file and perform a lookup for every function start address to benchmark the reader performance">,
   Flags<[HelpHidden]>;
+def wait_for_debugger :
+  FF<"wait-for-debugger",
+     "Pause execution in an infinite loop, waiting for a debugger to attach">,
+  Flags<[HelpHidden]>;
