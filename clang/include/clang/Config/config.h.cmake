@@ -11,6 +11,9 @@
 /* Default to -fPIE and -pie on Linux. */
 #cmakedefine01 CLANG_DEFAULT_PIE_ON_LINUX
 
+/* Default -frtlib-add-rpath for HIP/SYCL offload libs in Linux::addOffloadRTLibs only. */
+#cmakedefine01 CLANG_DEFAULT_FRTLIB_ADD_RPATH
+
 /* Default linker to use. */
 #define CLANG_DEFAULT_LINKER "${CLANG_DEFAULT_LINKER}"
 

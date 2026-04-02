@@ -870,7 +870,8 @@ void Linux::addOffloadRTLibs(unsigned ActiveKinds, const ArgList &Args,
 
   for (auto [Path, Library] : Libraries) {
     if (Args.hasFlag(options::OPT_frtlib_add_rpath,
-                     options::OPT_fno_rtlib_add_rpath, false)) {
+                     options::OPT_fno_rtlib_add_rpath,
+                     (bool)CLANG_DEFAULT_FRTLIB_ADD_RPATH)) {
       SmallString<0> p = Path;
       llvm::sys::path::remove_dots(p, true);
       CmdArgs.append({"-rpath", Args.MakeArgString(p)});
