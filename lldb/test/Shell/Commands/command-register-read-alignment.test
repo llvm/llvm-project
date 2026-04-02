@@ -3,14 +3,14 @@
 # RUN: %clang_host -g -O0 %S/Inputs/main.c -o %t.out
 # RUN: %lldb -b -o "breakpoint set --name main" \
 # RUN:        -o run \
-# RUN:        -o "register read rip rax r10d" \
+# RUN:        -o "register read rip r10d rflags" \
 # RUN:        -o "register read" \
 # RUN:        %t.out | FileCheck --strict-whitespace %s
 
-# CHECK: (lldb) register read rip rax r10d
-# CHECK-NEXT: {{^   rip = }}
-# CHECK-NEXT: {{^   rax = }}
-# CHECK-NEXT: {{^  r10d = }}
+# CHECK: (lldb) register read rip r10d rflags
+# CHECK-NEXT: {{^     rip = }}
+# CHECK-NEXT: {{^    r10d = }}
+# CHECK-NEXT: {{^  rflags = }}
 
 # CHECK: (lldb) register read
 # CHECK: General Purpose Registers:
