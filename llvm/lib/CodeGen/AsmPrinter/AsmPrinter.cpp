@@ -1741,7 +1741,6 @@ void AsmPrinter::emitStackUsage(const MachineFunction &MF) {
   if (OutputFilename.empty())
     return;
 
-
   if (StackUsageStream == nullptr) {
     std::error_code EC;
     StackUsageStream =
