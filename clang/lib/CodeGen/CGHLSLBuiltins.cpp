@@ -490,14 +490,14 @@ static Value *emitGetDimensions(CodeGenFunction &CGF, const CallExpr *E,
   Value *LastStore = nullptr;
   unsigned ArgIndex = HasLod ? 2 : 1;
   for (unsigned i = 0; i < NumRetComps; ++i) {
-    LValue DimOut = CGF.EmitLValue(E->getArg(ArgIndex++));
+    Expr *Arg = E->getArg(ArgIndex++);
+    LValue DimOut = CGF.EmitLValue(Arg);
     Value *Elem = DimValue;
     if (NumRetComps > 1)
       Elem = CGF.Builder.CreateExtractElement(DimValue, i);
 
     // Handle float casting if needed
-    QualType OutTy = E->getArg(ArgIndex - 1)->getType();
-    if (OutTy->isFloatingType())
+    if (Arg->getType()->isFloatingType())
       Elem = CGF.Builder.CreateUIToFP(
           Elem, llvm::Type::getFloatTy(CGF.getLLVMContext()));
 
