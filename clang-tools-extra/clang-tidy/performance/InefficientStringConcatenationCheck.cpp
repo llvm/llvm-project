@@ -41,25 +41,6 @@ void InefficientStringConcatenationCheck::registerMatchers(
           hasDescendant(BasicStringPlusOperator))
           .bind("plusOperator");
 
-  /*  const auto AssignOperator =
-   cxxOperatorCallExpr(
-       hasOverloadedOperatorName("="),
-
-       hasArgument(0, ignoringParenImpCasts(
-           declRefExpr(BasicStringType,
-                       hasDeclaration(decl().bind("lhsStrT")))
-               .bind("lhsStr"))),
-
-       hasArgument(1, ignoringParenImpCasts(
-           expr(
-               hasDescendant(declRefExpr(
-                   hasDeclaration(decl(equalsBoundNode("lhsStrT")))
-               )),
-               hasDescendant(BasicStringPlusOperator)
-           ).bind("rhsExpr")
-       ))
-   ).bind("assign"); */
-
   const auto AssignOperator =
       cxxOperatorCallExpr(
           hasOverloadedOperatorName("="),
@@ -101,7 +82,7 @@ static const Expr *strip(const Expr *E) {
   return E;
 }
 
-static void collectOperands(const Expr *E, std::vector<const Expr *> &Ops) {
+static void collectOperands(const Expr *E, SmallVector<const Expr *> &Ops) {
   E = strip(E);
   E = E->IgnoreParenImpCasts();
 
@@ -138,33 +119,6 @@ void InefficientStringConcatenationCheck::check(
   const auto *Assign = Result.Nodes.getNodeAs<CXXOperatorCallExpr>("assign");
   const auto *RhsExpr = Result.Nodes.getNodeAs<Expr>("rhsExpr");
 
-  /* if (Assign) {
-    llvm::errs() << "Assign: " <<
-  Assign->getSourceRange().printToString(*Result.SourceManager) << "\n";
-     Assign->printPretty(llvm::outs(), nullptr,
-  PrintingPolicy(Result.Context->getLangOpts())); llvm::outs() << "\n";
-  }
-  if (RhsExpr) {
-    llvm::errs() << "RhsExpr: " <<
-  RhsExpr->getSourceRange().printToString(*Result.SourceManager) << "\n";
-    RhsExpr->printPretty(llvm::outs(), nullptr,
-  PrintingPolicy(Result.Context->getLangOpts())); llvm::outs() << "\n";
-     //RhsExpr->dump();
-  }
-  if (LhsStr) {
-    llvm::errs() << "LhsStr: " <<
-  LhsStr->getSourceRange().printToString(*Result.SourceManager) << "\n";
-  } */
-
-  /* std::vector<const Expr *> Operands;
-  collectOperands(RhsExpr, Operands); */
-  /*  llvm::errs() << "Operands in RhsExpr:\n";
-   for (const auto *Op : Operands) {
-
-     Op->printPretty(llvm::outs(), nullptr,
-   PrintingPolicy(Result.Context->getLangOpts())); llvm::outs() << "\n";
-   } */
-
   const char *DiagMsg =
       "string concatenation results in allocation of unnecessary temporary "
       "strings; consider using 'operator+=' or 'string::append()' instead";
@@ -173,17 +127,17 @@ void InefficientStringConcatenationCheck::check(
     const auto &SM = *Result.SourceManager;
     const auto &LO = Result.Context->getLangOpts();
 
-    std::vector<const Expr *> Operands;
+    SmallVector<const Expr *> Operands;
     collectOperands(RhsExpr, Operands);
 
-    int32_t LhsPosition = -1;
-    for (int32_t i = 0; i < Operands.size(); ++i)
+    size_t LhsPosition = -1;
+    for (size_t i = 0; i < Operands.size(); ++i)
       if (isSameLhs(Operands[i], LhsStr)) {
         LhsPosition = i;
         break;
       }
-    // skip this pattern: a => b + c + d
-    if (LhsPosition == -1)
+    // skip if the LHS string is not the leftmost operand.
+    if (LhsPosition != 0)
       return;
 
     auto ReplacementText =
@@ -192,7 +146,7 @@ void InefficientStringConcatenationCheck::check(
             .str();
 
     if (Operands.size() > 2) {
-      for (int32_t i = 0; i < Operands.size(); ++i) {
+      for (size_t i = 0; i < Operands.size(); ++i) {
         if (i == LhsPosition)
           continue;
         auto OpText = Lexer::getSourceText(
