@@ -1939,7 +1939,9 @@ TryCastResult TryStaticImplicitCast(Sema &Self, ExprResult &SrcExpr,
   // There is no other way that works.
   // On the other hand, if we're checking a C-style cast, we've still got
   // the reinterpret_cast way.
-  // If an HLSLInitListFlattening failed then there is no fallback.
+  // If an HLSLInitListFlattening failed then there is no fallback; this
+  // check helps prevent double errors being produced and transformInitList
+  // being run a 2nd time during diagnoses.
   bool CStyle = (CCK == CheckedConversionKind::CStyleCast ||
                  CCK == CheckedConversionKind::FunctionalCast);
   if (InitSeq.Failed() && (CStyle || !DestType->isReferenceType()) &&

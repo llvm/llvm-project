@@ -759,6 +759,8 @@ public:
            needsImplicitDefaultConstructor();
   }
 
+  // Used by HLSL to determine if implicit constructors and operators should
+  // be allowed for structs. This is required for HLSL's resource classes.
   /// Determines whether this class has any user provided special members.
   bool hasUserProvidedSpecialMembers() const {
     return data().UserDeclaredSpecialMembers &

@@ -3507,7 +3507,7 @@ Sema::ActOnCXXMemberDeclarator(Scope *S, AccessSpecifier AS, Declarator &D,
     }
   }
 
-  // HLSL prohibits constructors and destructors.
+  // HLSL prohibits user defined constructors and destructors.
   if (getLangOpts().HLSL) {
     switch (Name.getNameKind()) {
     case DeclarationName::CXXConstructorName:
