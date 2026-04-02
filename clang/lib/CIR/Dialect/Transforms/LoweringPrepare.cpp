@@ -11,7 +11,6 @@
 #include "mlir/IR/BuiltinAttributeInterfaces.h"
 #include "mlir/IR/IRMapping.h"
 #include "clang/AST/ASTContext.h"
-#include "clang/AST/Attrs.inc"
 #include "clang/AST/Mangle.h"
 #include "clang/Basic/Module.h"
 #include "clang/Basic/Specifiers.h"
