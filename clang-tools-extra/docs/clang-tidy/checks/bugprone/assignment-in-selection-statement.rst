@@ -22,7 +22,7 @@ This check corresponds to the CERT rule
 Examples
 ========
 
-The checker emits a warning in the following cases at the indicated locations:
+The check emits a warning in the following cases at the indicated locations:
 
 .. code-block:: c++
 
