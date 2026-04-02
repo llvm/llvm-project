@@ -35,21 +35,25 @@
 
 // CIR-PRE: cir.global external  lang_address_space(offload_global) @i = #cir.int<0> : !s32i
 // CIR-POST: cir.global external  target_address_space(1) @i = #cir.int<0> : !s32i
+// LLVM-DEVICE-DAG: @i = addrspace(1) {{.*}}global i32 0, align 4
 // OGCG-DAG: @i = addrspace(1) externally_initialized global i32 0, align 4
 __device__ int i;
 
 // CIR-PRE: cir.global constant external  lang_address_space(offload_constant) @j = #cir.int<0> : !s32i
 // CIR-POST: cir.global constant external  target_address_space(4) @j = #cir.int<0> : !s32i
+// LLVM-DEVICE-DAG: @j = addrspace(4) {{.*}}constant i32 0, align 4
 // OGCG-DAG: @j = addrspace(4) externally_initialized constant i32 0, align 4
 __constant__ int j;
 
 // CIR-PRE: cir.global external  lang_address_space(offload_local) @k = #cir.poison : !s32i
 // CIR-POST: cir.global external  target_address_space(3) @k = #cir.poison : !s32i
+// LLVM-DEVICE-DAG: @k = addrspace(3) global i32 {{undef|poison}}, align 4
 // OGCG-DAG: @k = addrspace(3) global i32 undef, align 4
 __shared__ int k;
 
 // CIR-PRE: cir.global external  lang_address_space(offload_local) @b = #cir.poison : !cir.float
 // CIR-POST: cir.global external  target_address_space(3) @b = #cir.poison : !cir.float
+// LLVM-DEVICE-DAG: @b = addrspace(3) global float {{undef|poison}}, align 4
 // OGCG-DAG: @b = addrspace(3) global float undef, align 4
 __shared__ float b;
 
