@@ -68,7 +68,8 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
   const DataLayout &DL;
   std::list<Frame> CallStack;
   AnyValue None;
-  APFloat::roundingMode CurrentRoundingMode;
+  RoundingMode CurrentRoundingMode;
+  fp::ExceptionBehavior CurrentExceptionBehavior;
 
   const AnyValue &getValue(Value *V) {
     if (auto *C = dyn_cast<Constant>(V))
@@ -121,8 +122,8 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
       return AnyValue::poison();
     // Non-deterministically flip the sign of the input.
     if (FMF.noSignedZeros() && APVal.isZero()) {
-      return AnyValue(
-          APFloat::getZero(APVal.getSemantics(), Ctx.getRandomBool()));
+      return AnyValue(APFloat::getZero(
+          APVal.getSemantics(), APVal.isNegative() ^ Ctx.getRandomBool()));
     }
     return Val;
   }
@@ -419,7 +420,8 @@ public:
   InstExecutor(Context &C, EventHandler &H, Function &F,
                ArrayRef<AnyValue> Args, AnyValue &RetVal)
       : ExecutorBase(C, H), DL(Ctx.getDataLayout()),
-        CurrentRoundingMode(APFloat::rmNearestTiesToEven) {
+        CurrentRoundingMode(APFloat::rmNearestTiesToEven),
+        CurrentExceptionBehavior(fp::ebIgnore) {
     CallStack.emplace_back(F, /*CallSite=*/nullptr, /*LastFrame=*/nullptr, Args,
                            RetVal, Ctx.getTLIImpl());
   }
@@ -769,6 +771,12 @@ public:
   }
 
   void visitFAdd(BinaryOperator &I) {
+    if (!isDefaultFPEnvironment(CurrentExceptionBehavior,
+                                CurrentRoundingMode)) {
+      Status = false;
+      reportImmediateUB("Non-constrained floating-point operation assumes "
+                        "default floating-point environment");
+    }
     visitFPBinOp(I, [](const APFloat &LHS, const APFloat &RHS) -> APFloat {
       APFloat Res = LHS;
       Res.add(RHS, APFloat::rmNearestTiesToEven);
@@ -777,6 +785,12 @@ public:
   }
 
   void visitFSub(BinaryOperator &I) {
+    if (!isDefaultFPEnvironment(CurrentExceptionBehavior,
+                                CurrentRoundingMode)) {
+      Status = false;
+      reportImmediateUB("Non-constrained floating-point operation assumes "
+                        "default floating-point environment");
+    }
     visitFPBinOp(I, [](const APFloat &LHS, const APFloat &RHS) -> APFloat {
       APFloat Res = LHS;
       Res.subtract(RHS, APFloat::rmNearestTiesToEven);
@@ -785,6 +799,12 @@ public:
   }
 
   void visitFMul(BinaryOperator &I) {
+    if (!isDefaultFPEnvironment(CurrentExceptionBehavior,
+                                CurrentRoundingMode)) {
+      Status = false;
+      reportImmediateUB("Non-constrained floating-point operation assumes "
+                        "default floating-point environment");
+    }
     visitFPBinOp(I, [](const APFloat &LHS, const APFloat &RHS) -> APFloat {
       APFloat Res = LHS;
       Res.multiply(RHS, APFloat::rmNearestTiesToEven);
@@ -793,6 +813,12 @@ public:
   }
 
   void visitFDiv(BinaryOperator &I) {
+    if (!isDefaultFPEnvironment(CurrentExceptionBehavior,
+                                CurrentRoundingMode)) {
+      Status = false;
+      reportImmediateUB("Non-constrained floating-point operation assumes "
+                        "default floating-point environment");
+    }
     visitFPBinOp(I, [](const APFloat &LHS, const APFloat &RHS) -> APFloat {
       APFloat Res = LHS;
       Res.divide(RHS, APFloat::rmNearestTiesToEven);
@@ -801,6 +827,12 @@ public:
   }
 
   void visitFRem(BinaryOperator &I) {
+    if (!isDefaultFPEnvironment(CurrentExceptionBehavior,
+                                CurrentRoundingMode)) {
+      Status = false;
+      reportImmediateUB("Non-constrained floating-point operation assumes "
+                        "default floating-point environment");
+    }
     visitFPBinOp(I, [](const APFloat &LHS, const APFloat &RHS) -> APFloat {
       APFloat Res = LHS;
       Res.mod(RHS);
@@ -809,6 +841,12 @@ public:
   }
 
   void visitFNeg(UnaryOperator &I) {
+    if (!isDefaultFPEnvironment(CurrentExceptionBehavior,
+                                CurrentRoundingMode)) {
+      Status = false;
+      reportImmediateUB("Non-constrained floating-point operation assumes "
+                        "default floating-point environment");
+    }
     visitFPUnOp(I, [](const APFloat &Operand) -> APFloat { return -Operand; });
   }
 
@@ -844,6 +882,13 @@ public:
   void visitFPTruncInst(FPTruncInst &FPTrunc) { visitFPConvInst(FPTrunc); }
 
   void visitFPConvInst(Instruction &I) {
+    if (!isDefaultFPEnvironment(CurrentExceptionBehavior,
+                                CurrentRoundingMode)) {
+      Status = false;
+      reportImmediateUB("Non-constrained floating-point operation assumes "
+                        "default floating-point environment");
+    }
+
     const fltSemantics &DstSem =
         I.getType()->getScalarType()->getFltSemantics();
 
@@ -852,7 +897,10 @@ public:
         return AnyValue::poison();
 
       FastMathFlags FMF = cast<FPMathOperator>(I).getFastMathFlags();
-      APFloat FOperand = Operand.asFloat();
+      DenormalMode DenormMode = getCurrentDenormalMode(I);
+
+      APFloat FOperand = handleDenormal(Operand.asFloat(), DenormMode.Input);
+
       if (auto ValidateRes = handleFMFFlags(FOperand, FMF);
           ValidateRes.isPoison())
         return ValidateRes;
@@ -863,6 +911,8 @@ public:
       if (auto ValidateRes = handleFMFFlags(FOperand, FMF);
           ValidateRes.isPoison())
         return ValidateRes;
+
+      FOperand = handleDenormal(std::move(FOperand), DenormMode.Output, true);
 
       return AnyValue(FOperand);
     });

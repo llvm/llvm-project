@@ -105,7 +105,8 @@ cl::opt<ubi::NaNPropagationBehavior> NaNPropagationBehavior(
         clEnumVal(ubi::NaNPropagationBehavior::TargetSpecificNaN,
                   "The quiet bit is set and the payload is picked from a"
                   "target-specific set of “extra” possible NaN payloads."
-                  "Implemented by filling payload with random values")));
+                  "Implemented by filling payload with random values")),
+    cl::init(ubi::NaNPropagationBehavior::NonDeterministic));
 
 class VerboseEventHandler : public ubi::EventHandler {
 public:
