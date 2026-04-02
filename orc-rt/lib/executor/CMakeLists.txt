@@ -1,13 +1,18 @@
 set(files
   AllocAction.cpp
+  BootstrapInfo.cpp
+  SimpleSymbolTable.cpp
   Error.cpp
+  ExecutorProcessInfo.cpp
   QueueingTaskDispatcher.cpp
-  ResourceManager.cpp
   RTTI.cpp
+  Service.cpp
   Session.cpp
   SimpleNativeMemoryMap.cpp
   TaskDispatcher.cpp
   ThreadPoolTaskDispatcher.cpp
+  sps-ci/AllSPSCI.cpp
+  sps-ci/SimpleNativeMemoryMapSPSCI.cpp
   )
 
 add_library(orc-rt-executor STATIC ${files})

@@ -102,6 +102,7 @@ write_cmake_config("config") {
     "HAVE_PTHREAD_GET_NAME_NP=",
     "HAVE_PTHREAD_SET_NAME_NP=",
     "HAVE_VALGRIND_VALGRIND_H=",
+    "HAVE_WINDOWS_ICU=",
     "HAVE__ALLOCA=",
     "HAVE___ALLOCA=",
     "HAVE___ASHLDI3=",

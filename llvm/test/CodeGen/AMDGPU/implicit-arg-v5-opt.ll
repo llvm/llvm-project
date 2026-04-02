@@ -291,6 +291,179 @@ define amdgpu_kernel void @get_remainder_x_existing_range(ptr addrspace(1) %out)
   ret void
 }
 
+define i16 @get_grid_dims_i16() #2 {
+; GCN-LABEL: @get_grid_dims_i16(
+; GCN-NEXT:    [[IMPLICITARG_PTR:%.*]] = tail call dereferenceable(256) ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
+; GCN-NEXT:    [[GEP_GRID_DIMS:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[IMPLICITARG_PTR]], i64 64
+; GCN-NEXT:    [[GRID_DIMS:%.*]] = load i16, ptr addrspace(4) [[GEP_GRID_DIMS]], align 4, !range [[RNG5:![0-9]+]]
+; GCN-NEXT:    ret i16 [[GRID_DIMS]]
+;
+  %implicitarg.ptr = tail call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
+  %gep.grid.dims = getelementptr inbounds i8, ptr addrspace(4) %implicitarg.ptr, i64 64
+  %grid.dims = load i16, ptr addrspace(4) %gep.grid.dims, align 2
+  ret i16 %grid.dims
+}
+
+; Ignore wrong type
+define half @get_grid_dims_f16() #2 {
+; GCN-half: @get_grid_dims_i16(
+; GCN-LABEL: @get_grid_dims_f16(
+; GCN-NEXT:    [[IMPLICITARG_PTR:%.*]] = tail call dereferenceable(256) ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
+; GCN-NEXT:    [[GEP_GRID_DIMS:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[IMPLICITARG_PTR]], i64 64
+; GCN-NEXT:    [[GRID_DIMS:%.*]] = load half, ptr addrspace(4) [[GEP_GRID_DIMS]], align 4
+; GCN-NEXT:    ret half [[GRID_DIMS]]
+;
+  %implicitarg.ptr = tail call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
+  %gep.grid.dims = getelementptr inbounds i8, ptr addrspace(4) %implicitarg.ptr, i64 64
+  %grid.dims = load half, ptr addrspace(4) %gep.grid.dims, align 2
+  ret half %grid.dims
+}
+
+; Undersized, OK
+define i8 @get_grid_dims_i8() #2 {
+; GCN-LABEL: @get_grid_dims_i8(
+; GCN-NEXT:    [[IMPLICITARG_PTR:%.*]] = tail call dereferenceable(256) ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
+; GCN-NEXT:    [[GEP_GRID_DIMS:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[IMPLICITARG_PTR]], i64 64
+; GCN-NEXT:    [[GRID_DIMS:%.*]] = load i8, ptr addrspace(4) [[GEP_GRID_DIMS]], align 4, !range [[RNG6:![0-9]+]]
+; GCN-NEXT:    ret i8 [[GRID_DIMS]]
+;
+  %implicitarg.ptr = tail call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
+  %gep.grid.dims = getelementptr inbounds i8, ptr addrspace(4) %implicitarg.ptr, i64 64
+  %grid.dims = load i8, ptr addrspace(4) %gep.grid.dims, align 2
+  ret i8 %grid.dims
+}
+
+define i1 @get_grid_dims_i1() #2 {
+; GCN-LABEL: @get_grid_dims_i1(
+; GCN-NEXT:    [[IMPLICITARG_PTR:%.*]] = tail call dereferenceable(256) ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
+; GCN-NEXT:    [[GEP_GRID_DIMS:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[IMPLICITARG_PTR]], i64 64
+; GCN-NEXT:    [[GRID_DIMS:%.*]] = load i1, ptr addrspace(4) [[GEP_GRID_DIMS]], align 4
+; GCN-NEXT:    ret i1 [[GRID_DIMS]]
+;
+  %implicitarg.ptr = tail call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
+  %gep.grid.dims = getelementptr inbounds i8, ptr addrspace(4) %implicitarg.ptr, i64 64
+  %grid.dims = load i1, ptr addrspace(4) %gep.grid.dims, align 1
+  ret i1 %grid.dims
+}
+
+; Undersized, theoretically ok but would require special case
+; construction of the wrapped range.
+define i2 @get_grid_dims_i2() #2 {
+; GCN-LABEL: @get_grid_dims_i2(
+; GCN-NEXT:    [[IMPLICITARG_PTR:%.*]] = tail call dereferenceable(256) ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
+; GCN-NEXT:    [[GEP_GRID_DIMS:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[IMPLICITARG_PTR]], i64 64
+; GCN-NEXT:    [[GRID_DIMS:%.*]] = load i2, ptr addrspace(4) [[GEP_GRID_DIMS]], align 4
+; GCN-NEXT:    ret i2 [[GRID_DIMS]]
+;
+  %implicitarg.ptr = tail call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
+  %gep.grid.dims = getelementptr inbounds i8, ptr addrspace(4) %implicitarg.ptr, i64 64
+  %grid.dims = load i2, ptr addrspace(4) %gep.grid.dims, align 1
+  ret i2 %grid.dims
+}
+
+define i3 @get_grid_dims_i3() #2 {
+; GCN-LABEL: @get_grid_dims_i3(
+; GCN-NEXT:    [[IMPLICITARG_PTR:%.*]] = tail call dereferenceable(256) ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
+; GCN-NEXT:    [[GEP_GRID_DIMS:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[IMPLICITARG_PTR]], i64 64
+; GCN-NEXT:    [[GRID_DIMS:%.*]] = load i3, ptr addrspace(4) [[GEP_GRID_DIMS]], align 4, !range [[RNG7:![0-9]+]]
+; GCN-NEXT:    ret i3 [[GRID_DIMS]]
+;
+  %implicitarg.ptr = tail call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
+  %gep.grid.dims = getelementptr inbounds i8, ptr addrspace(4) %implicitarg.ptr, i64 64
+  %grid.dims = load i3, ptr addrspace(4) %gep.grid.dims, align 1
+  ret i3 %grid.dims
+}
+
+; Oversized, ignore
+define i32 @get_grid_dims_i32() #2 {
+; GCN-LABEL: @get_grid_dims_i32(
+; GCN-NEXT:    [[IMPLICITARG_PTR:%.*]] = tail call dereferenceable(256) ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
+; GCN-NEXT:    [[GEP_GRID_DIMS:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[IMPLICITARG_PTR]], i64 64
+; GCN-NEXT:    [[GRID_DIMS:%.*]] = load i32, ptr addrspace(4) [[GEP_GRID_DIMS]], align 4
+; GCN-NEXT:    ret i32 [[GRID_DIMS]]
+;
+  %implicitarg.ptr = tail call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
+  %gep.grid.dims = getelementptr inbounds i8, ptr addrspace(4) %implicitarg.ptr, i64 64
+  %grid.dims = load i32, ptr addrspace(4) %gep.grid.dims, align 2
+  ret i32 %grid.dims
+}
+
+define i16 @get_grid_dims_reqd_work_group_size_1d() #2 !reqd_work_group_size !2 {
+; GCN-LABEL: @get_grid_dims_reqd_work_group_size_1d(
+; GCN-NEXT:    ret i16 1
+;
+  %implicitarg.ptr = tail call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
+  %gep.grid.dims = getelementptr inbounds i8, ptr addrspace(4) %implicitarg.ptr, i64 64
+  %grid.dims = load i16, ptr addrspace(4) %gep.grid.dims, align 2
+  ret i16 %grid.dims
+}
+
+define i16 @get_grid_dims_reqd_work_group_size_2d() #2 !reqd_work_group_size !3 {
+; GCN-LABEL: @get_grid_dims_reqd_work_group_size_2d(
+; GCN-NEXT:    ret i16 2
+;
+  %implicitarg.ptr = tail call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
+  %gep.grid.dims = getelementptr inbounds i8, ptr addrspace(4) %implicitarg.ptr, i64 64
+  %grid.dims = load i16, ptr addrspace(4) %gep.grid.dims, align 2
+  ret i16 %grid.dims
+}
+
+define i16 @get_grid_dims_reqd_work_group_size_2d_weird() #2 !reqd_work_group_size !5 {
+; GCN-LABEL: @get_grid_dims_reqd_work_group_size_2d_weird(
+; GCN-NEXT:    ret i16 2
+;
+  %implicitarg.ptr = tail call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
+  %gep.grid.dims = getelementptr inbounds i8, ptr addrspace(4) %implicitarg.ptr, i64 64
+  %grid.dims = load i16, ptr addrspace(4) %gep.grid.dims, align 2
+  ret i16 %grid.dims
+}
+
+define i16 @get_grid_dims_reqd_work_group_size_3d() #2 !reqd_work_group_size !0 {
+; GCN-LABEL: @get_grid_dims_reqd_work_group_size_3d(
+; GCN-NEXT:    ret i16 3
+;
+  %implicitarg.ptr = tail call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
+  %gep.grid.dims = getelementptr inbounds i8, ptr addrspace(4) %implicitarg.ptr, i64 64
+  %grid.dims = load i16, ptr addrspace(4) %gep.grid.dims, align 2
+  ret i16 %grid.dims
+}
+
+define i16 @get_grid_dims_reqd_work_group_size_3d_weird() #2 !reqd_work_group_size !4 {
+; GCN-LABEL: @get_grid_dims_reqd_work_group_size_3d_weird(
+; GCN-NEXT:    ret i16 3
+;
+  %implicitarg.ptr = tail call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
+  %gep.grid.dims = getelementptr inbounds i8, ptr addrspace(4) %implicitarg.ptr, i64 64
+  %grid.dims = load i16, ptr addrspace(4) %gep.grid.dims, align 2
+  ret i16 %grid.dims
+}
+
+define i1 @get_grid_dims_i1_reqd_work_group_size() #2 !reqd_work_group_size !3 {
+; GCN-LABEL: @get_grid_dims_i1_reqd_work_group_size(
+; GCN-NEXT:    [[IMPLICITARG_PTR:%.*]] = tail call dereferenceable(256) ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
+; GCN-NEXT:    [[GEP_GRID_DIMS:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[IMPLICITARG_PTR]], i64 64
+; GCN-NEXT:    [[GRID_DIMS:%.*]] = load i1, ptr addrspace(4) [[GEP_GRID_DIMS]], align 4
+; GCN-NEXT:    ret i1 [[GRID_DIMS]]
+;
+  %implicitarg.ptr = tail call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
+  %gep.grid.dims = getelementptr inbounds i8, ptr addrspace(4) %implicitarg.ptr, i64 64
+  %grid.dims = load i1, ptr addrspace(4) %gep.grid.dims, align 1
+  ret i1 %grid.dims
+}
+
+define i16 @get_grid_dims_existing_range() #2 {
+; GCN-LABEL: @get_grid_dims_existing_range(
+; GCN-NEXT:    [[IMPLICITARG_PTR:%.*]] = tail call dereferenceable(256) ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
+; GCN-NEXT:    [[GEP_GRID_DIMS:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[IMPLICITARG_PTR]], i64 64
+; GCN-NEXT:    [[GRID_DIMS:%.*]] = load i16, ptr addrspace(4) [[GEP_GRID_DIMS]], align 4, !range [[RNG12:![0-9]+]]
+; GCN-NEXT:    ret i16 [[GRID_DIMS]]
+;
+  %implicitarg.ptr = tail call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
+  %gep.grid.dims = getelementptr inbounds i8, ptr addrspace(4) %implicitarg.ptr, i64 64
+  %grid.dims = load i16, ptr addrspace(4) %gep.grid.dims, align 2, !range !{i16 1, i16 2}
+  ret i16 %grid.dims
+}
+
 declare ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr() #1
 declare i32 @llvm.amdgcn.workgroup.id.x() #1
 declare i32 @llvm.amdgcn.workgroup.id.y() #1
@@ -303,8 +476,18 @@ attributes #1 = { nounwind readnone speculatable }
 attributes #2 = { nounwind }
 !0 = !{i32 8, i32 16, i32 2}
 !1 = !{i32 1, !"amdhsa_code_object_version", i32 500}
+
+!2 = !{i32 64, i32 1, i32 1}
+!3 = !{i32 32, i32 4, i32 1}
+!4 = !{i32 32, i32 1, i32 2}
+!5 = !{i32 1, i32 32, i32 1}
+
 ;.
 ; GCN: [[RNG1]] = !{i16 0, i16 1024}
 ; GCN: [[RNG2]] = !{i16 1, i16 1025}
 ; GCN: [[RNG4]] = !{i16 0, i16 10}
+; GCN: [[RNG5]] = !{i16 1, i16 4}
+; GCN: [[RNG6]] = !{i8 1, i8 4}
+; GCN: [[RNG7]] = !{i3 1, i3 -4}
+; GCN: [[RNG12]] = !{i16 1, i16 2}
 ;.

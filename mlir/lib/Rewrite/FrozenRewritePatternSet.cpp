@@ -18,6 +18,7 @@ using namespace mlir;
 #if MLIR_ENABLE_PDL_IN_PATTERNMATCH
 #include "mlir/Conversion/PDLToPDLInterp/PDLToPDLInterp.h"
 #include "mlir/Dialect/PDL/IR/PDLOps.h"
+#include "mlir/Dialect/PDLInterp/IR/PDLInterp.h"
 
 static LogicalResult
 convertPDLToPDLInterp(ModuleOp pdlModule,
@@ -133,6 +134,15 @@ FrozenRewritePatternSet::FrozenRewritePatternSet(
   if (failed(convertPDLToPDLInterp(pdlModule, configMap)))
     llvm::report_fatal_error(
         "failed to lower PDL pattern module to the PDL Interpreter");
+
+  // Verify that the PDL module was actually lowered to the interpreter
+  // dialect. If the lowering pass was skipped (e.g., by a debug counter
+  // via --mlir-debug-counter), the matcher function will not be present and
+  // we skip bytecode construction. PDL patterns will not be applied in this
+  // case.
+  if (!pdlModule.lookupSymbol(
+          pdl_interp::PDLInterpDialect::getMatcherFunctionName()))
+    return;
 
   // Generate the pdl bytecode.
   impl->pdlByteCode = std::make_unique<detail::PDLByteCode>(

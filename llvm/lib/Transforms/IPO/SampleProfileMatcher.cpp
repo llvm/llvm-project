@@ -58,6 +58,11 @@ extern cl::opt<bool> SalvageUnusedProfile;
 extern cl::opt<bool> PersistProfileStaleness;
 extern cl::opt<bool> ReportProfileStaleness;
 
+static cl::opt<unsigned> SalvageUnusedProfileMaxFunctions(
+    "salvage-unused-profile-max-functions", cl::Hidden, cl::init(UINT_MAX),
+    cl::desc("The maximum number of functions in a module, above which salvage "
+             "unused profile will be skipped."));
+
 static cl::opt<unsigned> SalvageStaleProfileMaxCallsites(
     "salvage-stale-profile-max-callsites", cl::Hidden, cl::init(UINT_MAX),
     cl::desc("The maximum number of callsites in a function, above which stale "
@@ -178,7 +183,12 @@ bool SampleProfileMatcher::functionHasProfile(const FunctionId &IRFuncName,
 }
 
 bool SampleProfileMatcher::isProfileUnused(const FunctionId &ProfileFuncName) {
-  return SymbolMap->find(ProfileFuncName) == SymbolMap->end();
+  // In post-link, the profiled function may have been optimized away from the
+  // module. Check if the function name exists in the pseudo_probe descriptors.
+  return (SymbolMap->find(ProfileFuncName) == SymbolMap->end()) &&
+         (LTOPhase == ThinOrFullLTOPhase::ThinLTOPreLink ||
+          !ProfileFuncName.isStringRef() ||
+          (ProbeManager->getDesc(ProfileFuncName.stringRef()) == nullptr));
 }
 
 bool SampleProfileMatcher::functionMatchesProfile(
@@ -985,7 +995,12 @@ void SampleProfileMatcher::UpdateWithSalvagedProfiles() {
     // We need to remove the old entry to avoid duplicating the function
     // processing.
     SymbolMap->erase(FuncName);
-    SymbolMap->emplace(I.second, I.first);
+    [[maybe_unused]] auto Ret = SymbolMap->emplace(I.second, I.first);
+    LLVM_DEBUG({
+      if (!Ret.second)
+        dbgs() << "Profile Function " << I.second
+               << " has already been matched to another IR function.\n";
+    });
   }
 
   // With extbinary profile format, initial profile loading only reads profile
@@ -999,6 +1014,11 @@ void SampleProfileMatcher::UpdateWithSalvagedProfiles() {
 void SampleProfileMatcher::runOnModule() {
   ProfileConverter::flattenProfile(Reader.getProfiles(), FlattenedProfiles,
                                    FunctionSamples::ProfileIsCS);
+  // Disable SalvageUnusedProfile if the module has an extremely large number of
+  // functions to limit compile time.
+  SalvageUnusedProfile =
+      SalvageUnusedProfile && M.size() < SalvageUnusedProfileMaxFunctions;
+
   if (SalvageUnusedProfile) {
     findFunctionsWithoutProfile();
     matchFunctionsWithoutProfileByBasename();

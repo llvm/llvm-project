@@ -499,14 +499,71 @@ cir.func no_inline dso_local @test_catch_with_cleanup_no_ctor() personality(@__g
 // CHECK:         cir.call @__cxa_begin_catch(%[[CA_EXN]])
 // CHECK:         cir.call @__cxa_end_catch()
 
+// Test: cir.eh.terminate is lowered to call __clang_call_terminate + unreachable.
+// This represents the case where an exception is thrown during cleanup code
+// (e.g., a destructor that throws while another exception is being unwound).
+cir.func @test_eh_terminate() {
+  %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c", init] {alignment = 4 : i64}
+  cir.call @ctor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+  cir.try_call @doSomething(%0) ^bb1, ^bb2 : (!cir.ptr<!rec_SomeClass>) -> ()
+^bb1:
+  cir.br ^bb6
+^bb2:
+  %1 = cir.eh.initiate cleanup : !cir.eh_token
+  cir.br ^bb3(%1 : !cir.eh_token)
+^bb3(%eh_token : !cir.eh_token):
+  %2 = cir.begin_cleanup %eh_token : !cir.eh_token -> !cir.cleanup_token
+  cir.try_call @throwing_dtor(%0) ^bb4, ^bb5 : (!cir.ptr<!rec_SomeClass>) -> ()
+^bb4:
+  cir.end_cleanup %2 : !cir.cleanup_token
+  cir.resume %eh_token : !cir.eh_token
+^bb5:
+  %3 = cir.eh.initiate : !cir.eh_token
+  cir.eh.terminate %3 : !cir.eh_token
+^bb6:
+  cir.return
+}
+
+// CHECK-LABEL: cir.func @test_eh_terminate()
+// CHECK-SAME: personality(@__gxx_personality_v0)
+// CHECK:         cir.try_call @doSomething(%{{.*}}) ^[[NORMAL:bb[0-9]+]], ^[[UNWIND:bb[0-9]+]]
+// CHECK:       ^[[NORMAL]]:
+// CHECK:         cir.br ^[[RETURN:bb[0-9]+]]
+//
+// Unwind from doSomething: initiate → inflight.
+// CHECK:       ^[[UNWIND]]:
+// CHECK:         %[[EXN:.*]], %[[TID:.*]] = cir.eh.inflight_exception cleanup
+// CHECK:         cir.br ^[[CLEANUP:bb[0-9]+]](%[[EXN]], %[[TID]] : !cir.ptr<!void>, !u32i)
+//
+// Cleanup block: begin_cleanup removed, try_call to throwing_dtor.
+// CHECK:       ^[[CLEANUP]](%[[C_EXN:.*]]: !cir.ptr<!void>, %[[C_TID:.*]]: !u32i):
+// CHECK:         cir.try_call @throwing_dtor(%{{.*}}) ^[[DTOR_OK:bb[0-9]+]], ^[[TERMINATE:bb[0-9]+]]
+//
+// Normal path from dtor: end_cleanup removed, resume → resume.flat.
+// CHECK:       ^[[DTOR_OK]]:
+// CHECK:         cir.resume.flat %[[C_EXN]], %[[C_TID]]
+//
+// Terminate block: initiate → inflight, then call __clang_call_terminate + unreachable.
+// CHECK:       ^[[TERMINATE]]:
+// CHECK:         %[[T_EXN:.*]], %{{.*}} = cir.eh.inflight_exception
+// CHECK:         cir.call @__clang_call_terminate(%[[T_EXN]]) nothrow {noreturn}
+// CHECK:         cir.unreachable
+
 // Verify that runtime function declarations are added.
 // CHECK: cir.func private @__gxx_personality_v0(...)
 // CHECK: cir.func private @__cxa_begin_catch(!cir.ptr<!void>)
 // CHECK: cir.func private @__cxa_end_catch()
 
+// Verify the __clang_call_terminate function is defined with proper body.
+// CHECK: cir.func linkonce_odr hidden @__clang_call_terminate(%[[ARG:.*]]: !cir.ptr<!void>) attributes {noreturn}
+// CHECK:   cir.call @__cxa_begin_catch(%[[ARG]]) nothrow
+// CHECK:   cir.call @_ZSt9terminatev() nothrow {noreturn}
+// CHECK:   cir.unreachable
+
 cir.func private @mayThrow()
 cir.func private @ctor(!cir.ptr<!rec_SomeClass>)
 cir.func private @dtor(!cir.ptr<!rec_SomeClass>) attributes {nothrow}
+cir.func private @throwing_dtor(!cir.ptr<!rec_SomeClass>)
 cir.func private @doSomething(!cir.ptr<!rec_SomeClass>)
 cir.global "private" constant external @_ZTISt9exception : !cir.ptr<!u8i>
 cir.global "private" constant external @_ZTIi : !cir.ptr<!u8i>

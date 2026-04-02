@@ -1,9 +1,9 @@
-// Test ssaf-format --list output without any loaded plugins.
+// Test clang-ssaf-format --list output without any loaded plugins.
 
-// RUN: ssaf-format --list \
+// RUN: clang-ssaf-format --list \
 // RUN:   | FileCheck %s
 
 // CHECK: Registered serialization formats:
 // CHECK-EMPTY:
-// CHECK-NEXT:   1. JSON  JSON serialization format
+// CHECK-NEXT:   1. json - JSON serialization format
 // CHECK-NEXT:      Analyses: (none)

@@ -40,11 +40,30 @@ TEST(ScudoReportDeathTest, Generic) {
   EXPECT_DEATH(
       scudo::reportMisalignedPointer(scudo::AllocatorAction::Deallocating, P),
       "Scudo ERROR.*deallocating.*42424242");
+  EXPECT_DEATH(
+      scudo::reportDeallocTypeMismatch(scudo::AllocatorAction::Reallocating, P,
+                                       scudo::Chunk::Origin::New,
+                                       scudo::Chunk::Origin::Memalign),
+      "Scudo ERROR.*reallocating.*42424242.*\\(new vs aligned malloc\\)");
   EXPECT_DEATH(scudo::reportDeallocTypeMismatch(
-                   scudo::AllocatorAction::Reallocating, P, 0, 1),
-               "Scudo ERROR.*reallocating.*42424242");
+                   scudo::AllocatorAction::Deallocating, P,
+                   scudo::Chunk::Origin::Memalign, scudo::Chunk::Origin::New),
+               "Scudo ERROR.*deallocating.*\\(aligned malloc vs new\\)");
+  EXPECT_DEATH(scudo::reportDeallocTypeMismatch(
+                   scudo::AllocatorAction::Deallocating, P,
+                   scudo::Chunk::Origin::Malloc | scudo::Chunk::Origin::Size,
+                   scudo::Chunk::Origin::NewArray | scudo::Chunk::Origin::Size |
+                       scudo::Chunk::Origin::Align),
+               "Scudo ERROR.*deallocating.*\\(sized malloc vs sized aligned "
+               "new\\[\\]\\)");
   EXPECT_DEATH(scudo::reportDeleteSizeMismatch(P, 123, 456),
-               "Scudo ERROR.*42424242.*123.*456");
+               "Scudo ERROR.*42424242.*\\(123 vs 456\\)");
+  EXPECT_DEATH(scudo::reportDeleteSizeMismatch(P, 123, 456, 789),
+               "Scudo ERROR.*42424242.*\\(123 vs 456 or 789\\)");
+  EXPECT_DEATH(
+      scudo::reportDeleteAlignmentMismatch(reinterpret_cast<void *>(0x80),
+                                           0x100),
+      "Scudo ERROR.*invalid aligned delete.*\\(7 bit align vs 8 bit align\\)");
 }
 
 TEST(ScudoReportDeathTest, CSpecific) {

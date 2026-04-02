@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -fopenacc -emit-cir -fclangir %s -o - | FileCheck %s
 
 void acc_data(int cond) {
-  // CHECK: cir.func{{.*}} @acc_data(%[[ARG:.*]]: !s32i{{.*}}) {
+  // CHECK: cir.func{{.*}} @acc_data(%[[ARG:.*]]: !s32i{{.*}}) {{.*}}{
   // CHECK-NEXT: %[[COND:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["cond", init]
 
   int *ptr;
@@ -18,7 +18,7 @@ void acc_data(int cond) {
   // CHECK-NEXT: cir.const
   // CHECK-NEXT: cir.store
   // CHECK-NEXT: cir.load
-  // CHECK-NEXT: cir.unary
+  // CHECK-NEXT: cir.inc
   // CHECK-NEXT: cir.store
   // CHECK-NEXT: acc.terminator
   // CHECK-NEXT: } attributes {defaultAttr = #acc<defaultvalue none>}
@@ -33,7 +33,7 @@ void acc_data(int cond) {
   // CHECK-NEXT: cir.const
   // CHECK-NEXT: cir.store
   // CHECK-NEXT: cir.load
-  // CHECK-NEXT: cir.unary
+  // CHECK-NEXT: cir.inc
   // CHECK-NEXT: cir.store
   // CHECK-NEXT: acc.terminator
   // CHECK-NEXT: } attributes {defaultAttr = #acc<defaultvalue present>}

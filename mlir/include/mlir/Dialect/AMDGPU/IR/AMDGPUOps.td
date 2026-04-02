@@ -1295,6 +1295,52 @@ def AMDGPU_GatherToLDSOp :
   let hasCanonicalizer = 1;
 }
 
+def AMDGPU_GlobalLoadAsyncToLDSOp :
+    AMDGPU_Op<"global_load_async_to_lds", [AttrSizedOperandSegments]>,
+    Arguments<(ins
+                   Arg<AnyMemRef, "global memory to load from", [MemRead]>:$src,
+                   Variadic<Index>:$srcIndices,
+                   Arg<AnyMemRef, "LDS memory to write to", [MemWrite]>:$dst,
+                   Variadic<Index>:$dstIndices,
+                   TypeAttr:$transferType
+                   )>,
+    Results<(outs)> {
+  let summary = "MLIR wrapper for async global load to lds instructions";
+  let description = [{
+    AMDGPU wrapper for `global.load.async.to.lds` instructions, which performs
+    asynchronous load of data from global memory into LDS while bypassing VGPRs.
+
+    * `$src`: global memory memref to read from (global addrspace only, no fat buffer).
+    * `$srcIndices`: indices into `$src` for this thread's global read location.
+    * `$dst`: LDS memref to write to (workgroup addrspace).
+    * `$dstIndices`: indices into `$dst` for this thread's LDS write location.
+    * `$transferType`: type of data to be transferred. Must be 8, 32, 64 or 128 bit scalar
+     or vector type.
+
+    Note: only supported on gfx1250 and later.
+
+    Examples:
+    ```mlir
+      amdgpu.global_load_async_to_lds %src[%i, %j], %dst[%k, %l]
+        : f32, memref<128x64xf32, #gpu.address_space<global>>,
+          memref<64x64xf32, #gpu.address_space<workgroup>>
+
+      amdgpu.global_load_async_to_lds %src[%i, %j], %dst[%k, %l]
+        : vector<4xf32>, memref<128x64xf32, #gpu.address_space<global>>,
+          memref<64x64xf32, #gpu.address_space<workgroup>>
+
+      amdgpu.global_load_async_to_lds %src[%i], %dst[%j]
+        : i8, memref<512xi8, #gpu.address_space<global>>,
+          memref<256xi8, #gpu.address_space<workgroup>>
+    ```
+  }];
+  let assemblyFormat = [{
+    $src `[` $srcIndices `]` `,` $dst `[` $dstIndices `]`
+    attr-dict `:` $transferType `,` type($src) `,` type($dst)
+  }];
+  let hasVerifier = 1;
+}
+
 def AMDGPU_TransposeLoadOp :
     AMDGPU_Op<"transpose_load", [SameVariadicOperandSize]>,
     Arguments<(ins Arg<AnyMemRef, "buffer to transpose load from", [MemRead]>:$src, Variadic<Index>:$srcIndices)>,
@@ -1950,6 +1996,39 @@ def AMDGPU_DsBarrierStatePhaseParity :
   let assemblyFormat = [{
     $state attr-dict `:` type($state) `->` type($res)
   }];
+}
+
+def AMDGPU_GlobalPrefetchOp :
+    AMDGPU_Op<"global_prefetch", [MemoryEffects<[MemWrite, MemRead]>]>,
+    Arguments<(ins AnyMemRef:$src,
+               Variadic<I64>:$indices,
+               AMDGPU_TemporalHintAttr:$temporalHint,
+               AMDGPU_CacheScopeAttr:$cacheScope,
+               UnitAttr:$speculative)>,
+    Results<(outs)> {
+
+  let summary = "Prefetch data to caches.";
+  let description = [{
+    Prefetches a cache line to high-level caches using the aligned address of
+    the source `memref` and an offset provided by the indices of the element
+    containing the cache line. This provides temporal hints (e.g., regular
+    or high-priority). Note that out-of-bounds access is allowed in
+    speculative mode. The provided memref must be in the global address space
+    (`#gpu.address_space<global>` or 1).
+
+    This operation was introduced in gfx1250.
+
+    Example:
+    ```mlir
+    amdgpu.global_prefetch %src[%i, %j] RT SE speculative : memref<64x64xf16, #gpu.address_space<global>>
+    ```
+  }];
+
+  let assemblyFormat = [{
+    $src `[` $indices `]` $temporalHint $cacheScope (`speculative` $speculative^)? attr-dict `:` qualified(type($src))
+  }];
+
+  let hasVerifier = 1;
 }
 
 #endif // MLIR_DIALECT_AMDGPU_IR_AMDGPUOPS_TD

@@ -128,6 +128,33 @@ static const char *stringifyAction(AllocatorAction Action) {
   return "<invalid action>";
 }
 
+static const char *stringifyOrigin(u8 Origin) {
+  switch (Chunk::originBaseType(Origin)) {
+  case Chunk::Origin::Malloc:
+    return "malloc";
+  case Chunk::Origin::New:
+    return "new";
+  case Chunk::Origin::NewArray:
+    return "new[]";
+  case Chunk::Origin::Memalign:
+    return "memalign";
+  default:
+    return "<invalid origin>";
+  }
+}
+
+static const char *stringifyOriginFlags(u8 Origin) {
+  bool Sized = Chunk::originSized(Origin);
+  bool Aligned = Chunk::originAligned(Origin);
+  if (Sized && Aligned)
+    return "sized aligned ";
+  else if (Sized)
+    return "sized ";
+  else if (Aligned)
+    return "aligned ";
+  return "";
+}
+
 // The chunk is not in a state congruent with the operation we want to perform.
 // This is usually the case with a double-free, a realloc of a freed pointer.
 void NORETURN reportInvalidChunkState(AllocatorAction Action, const void *Ptr) {
@@ -145,20 +172,35 @@ void NORETURN reportMisalignedPointer(AllocatorAction Action, const void *Ptr) {
 // The deallocation function used is at odds with the one used to allocate the
 // chunk (eg: new[]/delete or malloc/delete, and so on).
 void NORETURN reportDeallocTypeMismatch(AllocatorAction Action, const void *Ptr,
-                                        u8 TypeA, u8 TypeB) {
+                                        u8 AllocOrigin, u8 DeallocOrigin) {
   ScopedErrorReport Report;
-  Report.append("allocation type mismatch when %s address %p (%d vs %d)\n",
-                stringifyAction(Action), Ptr, TypeA, TypeB);
+  Report.append("allocation type mismatch when %s address %p (%s%s vs %s%s)\n",
+                stringifyAction(Action), Ptr, stringifyOriginFlags(AllocOrigin),
+                stringifyOrigin(AllocOrigin),
+                stringifyOriginFlags(DeallocOrigin),
+                stringifyOrigin(DeallocOrigin));
 }
 
 // The size specified to the delete operator does not match the one that was
 // passed to new when allocating the chunk.
 void NORETURN reportDeleteSizeMismatch(const void *Ptr, uptr Size,
-                                       uptr ExpectedSize) {
+                                       uptr ExpectedSize,
+                                       uptr ExpectedUsableSize) {
   ScopedErrorReport Report;
-  Report.append(
-      "invalid sized delete when deallocating address %p (%zu vs %zu)\n", Ptr,
-      Size, ExpectedSize);
+  Report.append("invalid sized delete when deallocating address %p (%zu vs %zu",
+                Ptr, Size, ExpectedSize);
+  if (ExpectedUsableSize != 0)
+    Report.append(" or %zu", ExpectedUsableSize);
+  Report.append(")\n");
+}
+
+void NORETURN reportDeleteAlignmentMismatch(const void *Ptr, uptr Alignment) {
+  ScopedErrorReport Report;
+  Report.append("invalid aligned delete when deallocating address %p (%zu bit "
+                "align vs %zu bit align)\n",
+                Ptr,
+                getLeastSignificantSetBitIndex(reinterpret_cast<uptr>(Ptr)),
+                getLeastSignificantSetBitIndex(Alignment));
 }
 
 void NORETURN reportAlignmentNotPowerOfTwo(uptr Alignment) {
