@@ -147,7 +147,10 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
   ~GenELF64DeviceTy() {}
 
   /// Initialize the device, which is a no-op
-  Error initImpl(GenericPluginTy &Plugin) override { return Plugin::success(); }
+  Error initImpl(GenericPluginTy &Plugin,
+                 GenericProfilerTy *ProfilerPtr) override {
+    return Plugin::success();
+  }
 
   /// Unload the binary image
   ///
@@ -492,10 +495,10 @@ struct GenELF64PluginContextTy final : public PluginContextTy {
   }
 
   Expected<void *> allocate(GenericDeviceTy &Device, int64_t Size,
-                            void *HostPtr, TargetAllocTy Kind,
-                            size_t Alignment) override {
-    auto PtrOrErr =
-        PluginContextTy::allocate(Device, Size, HostPtr, Kind, Alignment);
+                            void *HostPtr, TargetAllocTy Kind, size_t Alignment,
+                            GenericProfilerTy *ProfilerPtr) override {
+    auto PtrOrErr = PluginContextTy::allocate(Device, Size, HostPtr, Kind,
+                                              Alignment, ProfilerPtr);
     if (!PtrOrErr)
       return PtrOrErr.takeError();
     void *Ptr = *PtrOrErr;
@@ -504,13 +507,13 @@ struct GenELF64PluginContextTy final : public PluginContextTy {
     return Ptr;
   }
 
-  Error deallocate(GenericDeviceTy &Device, void *Ptr,
-                   TargetAllocTy Kind) override {
+  Error deallocate(GenericDeviceTy &Device, void *Ptr, TargetAllocTy Kind,
+                   GenericProfilerTy *ProfilerPtr) override {
     {
       std::lock_guard<std::mutex> Lock(AllocsMutex);
       Allocs.erase(Ptr);
     }
-    return PluginContextTy::deallocate(Device, Ptr, Kind);
+    return PluginContextTy::deallocate(Device, Ptr, Kind, ProfilerPtr);
   }
 
   Expected<PluginAllocInfoTy> getAllocInfo(const void *Ptr) override {
