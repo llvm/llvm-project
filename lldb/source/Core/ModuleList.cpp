@@ -1088,11 +1088,10 @@ ModuleList::GetSharedModule(const ModuleSpec &module_spec, ModuleSP &module_sp,
             old_modules->push_back(module_sp);
 
           Log *log = GetLog(LLDBLog::Modules);
-          if (log != nullptr)
-            LLDB_LOGF(
-                log, "%p '%s' module changed: removing from global module list",
-                static_cast<void *>(module_sp.get()),
-                module_sp->GetFileSpec().GetFilename().GetCString());
+          LLDB_LOGF(log,
+                    "%p '%s' module changed: removing from global module list",
+                    static_cast<void *>(module_sp.get()),
+                    module_sp->GetFileSpec().GetFilename().GetCString());
 
           shared_module_list.Remove(module_sp);
           module_sp.reset();
@@ -1335,7 +1334,6 @@ bool ModuleList::RemoveSharedModuleIfOrphaned(const ModuleWP module_wp) {
 
 bool ModuleList::LoadScriptingResourcesInTarget(Target *target,
                                                 std::list<Status> &errors,
-                                                Stream &feedback_stream,
                                                 bool continue_on_error) {
   if (!target)
     return false;
@@ -1349,8 +1347,7 @@ bool ModuleList::LoadScriptingResourcesInTarget(Target *target,
   for (auto module : tmp_module_list.ModulesNoLocking()) {
     if (module) {
       Status error;
-      if (!module->LoadScriptingResourceInTarget(target, error,
-                                                 feedback_stream)) {
+      if (!module->LoadScriptingResourceInTarget(target, error)) {
         if (error.Fail() && error.AsCString()) {
           error = Status::FromErrorStringWithFormat(
               "unable to load scripting data for "

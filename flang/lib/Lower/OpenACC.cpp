@@ -789,11 +789,11 @@ genDataOperandOperations(const Fortran::parser::AccObjectList &objectList,
     // For private/firstprivate, attach (and optionally record) the recipe.
     if constexpr (std::is_same_v<Op, mlir::acc::PrivateOp>) {
       mlir::SymbolRefAttr recipeAttr = fir::acc::createOrGetPrivateRecipe(
-          builder, operandLocation, baseAddr.getType(), bounds);
+          builder, operandLocation, baseAddr, bounds);
       op.setRecipeAttr(recipeAttr);
     } else if constexpr (std::is_same_v<Op, mlir::acc::FirstprivateOp>) {
       mlir::SymbolRefAttr recipeAttr = fir::acc::createOrGetFirstprivateRecipe(
-          builder, operandLocation, baseAddr.getType(), bounds);
+          builder, operandLocation, baseAddr, bounds);
       op.setRecipeAttr(recipeAttr);
     }
   }
@@ -1061,15 +1061,31 @@ genDataExitOperations(fir::FirOpBuilder &builder,
 /// Return the corresponding enum value for the mlir::acc::ReductionOperator
 /// from the parser representation.
 static mlir::acc::ReductionOperator
-getReductionOperator(const Fortran::parser::ReductionOperator &op) {
+getReductionOperator(const Fortran::parser::ReductionOperator &op,
+                     mlir::Type reductionTy,
+                     const Fortran::lower::AbstractConverter &converter) {
+  Fortran::common::FPMaxminBehavior maxminMode =
+      converter.getLoweringOptions().getFPMaxminBehavior();
   switch (op.v) {
   case Fortran::parser::ReductionOperator::Operator::Plus:
     return mlir::acc::ReductionOperator::AccAdd;
   case Fortran::parser::ReductionOperator::Operator::Multiply:
     return mlir::acc::ReductionOperator::AccMul;
   case Fortran::parser::ReductionOperator::Operator::Max:
+    if (fir::isa_real(reductionTy)) {
+      if (maxminMode == Fortran::common::FPMaxminBehavior::Extremum)
+        return mlir::acc::ReductionOperator::AccMaximumf;
+      else if (maxminMode == Fortran::common::FPMaxminBehavior::ExtremeNum)
+        return mlir::acc::ReductionOperator::AccMaxnumf;
+    }
     return mlir::acc::ReductionOperator::AccMax;
   case Fortran::parser::ReductionOperator::Operator::Min:
+    if (fir::isa_real(reductionTy)) {
+      if (maxminMode == Fortran::common::FPMaxminBehavior::Extremum)
+        return mlir::acc::ReductionOperator::AccMinimumf;
+      else if (maxminMode == Fortran::common::FPMaxminBehavior::ExtremeNum)
+        return mlir::acc::ReductionOperator::AccMinnumf;
+    }
     return mlir::acc::ReductionOperator::AccMin;
   case Fortran::parser::ReductionOperator::Operator::Iand:
     return mlir::acc::ReductionOperator::AccIand;
@@ -1115,7 +1131,6 @@ genReductions(const Fortran::parser::AccObjectListWithReduction &objectList,
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   const auto &objects = std::get<Fortran::parser::AccObjectList>(objectList.t);
   const auto &op = std::get<Fortran::parser::ReductionOperator>(objectList.t);
-  mlir::acc::ReductionOperator mlirOp = getReductionOperator(op);
   Fortran::evaluate::ExpressionAnalyzer ea{semanticsContext};
   for (const auto &accObject : objects.v) {
     llvm::SmallVector<mlir::Value> bounds;
@@ -1144,6 +1159,9 @@ genReductions(const Fortran::parser::AccObjectListWithReduction &objectList,
     if (!isSupportedReductionType(reductionTy))
       TODO(operandLocation, "reduction with unsupported type");
 
+    mlir::acc::ReductionOperator mlirOp =
+        getReductionOperator(op, reductionTy, converter);
+
     if (designator) {
       Fortran::semantics::SomeExpr someExpr = *designator;
       if (Fortran::lower::detail::getRef<Fortran::evaluate::Component>(
@@ -1158,13 +1176,12 @@ genReductions(const Fortran::parser::AccObjectListWithReduction &objectList,
         /*structured=*/true, /*implicit=*/false,
         mlir::acc::DataClause::acc_reduction, info.addr.getType(), async,
         asyncDeviceTypes, asyncOnlyDeviceTypes, /*unwrapBoxAddr=*/true);
-    mlir::Type ty = op.getAccVar().getType();
     mlir::Attribute fastMathAttr;
     if (builder.getFastMathFlags() != mlir::arith::FastMathFlags::none)
       fastMathAttr = mlir::arith::FastMathFlagsAttr::get(
           builder.getContext(), builder.getFastMathFlags());
     mlir::SymbolRefAttr recipe = fir::acc::createOrGetReductionRecipe(
-        builder, operandLocation, ty, mlirOp, bounds, fastMathAttr);
+        builder, operandLocation, info.addr, mlirOp, bounds, fastMathAttr);
     op.setRecipeAttr(recipe);
     reductionOperands.push_back(op.getAccVar());
     // Track the symbol and its corresponding mlir::Value if requested so that
@@ -1409,8 +1426,8 @@ static void privatizeIv(
 
   if (privateOp == nullptr) {
     llvm::SmallVector<mlir::Value> noBounds;
-    mlir::SymbolRefAttr recipe = fir::acc::createOrGetPrivateRecipe(
-        builder, loc, ivValue.getType(), noBounds);
+    mlir::SymbolRefAttr recipe =
+        fir::acc::createOrGetPrivateRecipe(builder, loc, ivValue, noBounds);
 
     std::stringstream asFortran;
     asFortran << Fortran::lower::mangle::demangleName(toStringRef(sym.name()));
@@ -2750,7 +2767,8 @@ static void genACCDataOp(Fortran::lower::AbstractConverter &converter,
   addOperands(operands, operandSegments, waitOperands);
   addOperands(operands, operandSegments, dataClauseOperands);
 
-  if (dataClauseOperands.empty() && !hasDefaultNone && !hasDefaultPresent)
+  if (dataClauseOperands.empty() && !hasDefaultNone && !hasDefaultPresent &&
+      !eval.lowerAsUnstructured())
     return;
 
   auto dataOp = createRegionOp<mlir::acc::DataOp, mlir::acc::TerminatorOp>(
@@ -2814,52 +2832,77 @@ genACCHostDataOp(Fortran::lower::AbstractConverter &converter,
 
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
 
+  // When CUDA Fortran is enabled, extra symbols are created in the host_data
+  // scope for use_device objects. Bind them to the outer scope's symbols before
+  // processing any clauses, since the if clause may reference these symbols.
+  if (semanticsContext.IsEnabled(Fortran::common::LanguageFeature::CUDA)) {
+    for (const Fortran::parser::AccClause &clause : accClauseList.v) {
+      if (const auto *useDevice =
+              std::get_if<Fortran::parser::AccClause::UseDevice>(&clause.u)) {
+        const Fortran::parser::AccObjectList &objectList{useDevice->v};
+        for (const auto &accObject : objectList.v) {
+          const Fortran::semantics::Symbol *newSym = nullptr;
+          if (const auto *designator =
+                  std::get_if<Fortran::parser::Designator>(&accObject.u)) {
+            if (const auto *name =
+                    Fortran::parser::GetDesignatorNameIfDataRef(*designator)) {
+              newSym = name->symbol;
+            } else if (const auto *arrayElement = Fortran::parser::Unwrap<
+                           Fortran::parser::ArrayElement>(*designator)) {
+              const Fortran::parser::Name &name =
+                  Fortran::parser::GetLastName(arrayElement->Base());
+              newSym = name.symbol;
+            } else if (const auto *component = Fortran::parser::Unwrap<
+                           Fortran::parser::StructureComponent>(*designator)) {
+              const Fortran::parser::DataRef &base{component->Base()};
+              if (const auto *name =
+                      std::get_if<Fortran::parser::Name>(&base.u)) {
+                newSym = name->symbol;
+              }
+            }
+          } else if (const auto *name =
+                         std::get_if<Fortran::parser::Name>(&accObject.u)) {
+            newSym = name->symbol;
+          }
+          if (newSym) {
+            const Fortran::semantics::Symbol *origSym =
+                localSymbols.lookupSymbolByName(newSym->name().ToString());
+            if (origSym)
+              localSymbols.copySymbolBinding(*origSym, *newSym);
+          }
+        }
+      }
+    }
+  }
+
   AccDataMap dataMap;
   for (const Fortran::parser::AccClause &clause : accClauseList.v) {
     mlir::Location clauseLocation = converter.genLocation(clause.source);
     if (const auto *ifClause =
             std::get_if<Fortran::parser::AccClause::If>(&clause.u)) {
       genIfClause(converter, clauseLocation, ifClause, ifCond, stmtCtx);
+    } else if (std::get_if<Fortran::parser::AccClause::IfPresent>(&clause.u)) {
+      addIfPresentAttr = true;
     } else if (const auto *useDevice =
                    std::get_if<Fortran::parser::AccClause::UseDevice>(
                        &clause.u)) {
-      // When CUDA Fortran is enabled, extra symbols are used in the host_data
-      // region. Look for them and bind their values with the symbols in the
-      // outer scope.
-      if (semanticsContext.IsEnabled(Fortran::common::LanguageFeature::CUDA)) {
-        const Fortran::parser::AccObjectList &objectList{useDevice->v};
-        for (const auto &accObject : objectList.v) {
-          Fortran::semantics::Symbol &symbol =
-              getSymbolFromAccObject(accObject);
-          const Fortran::semantics::Symbol *baseSym =
-              localSymbols.lookupSymbolByName(symbol.name().ToString());
-          localSymbols.copySymbolBinding(*baseSym, symbol);
-        }
-      }
       genDataOperandOperations<mlir::acc::UseDeviceOp>(
           useDevice->v, converter, semanticsContext, stmtCtx, dataOperands,
           mlir::acc::DataClause::acc_use_device,
           /*structured=*/true, /*implicit=*/false, /*async=*/{},
           /*asyncDeviceTypes=*/{}, /*asyncOnlyDeviceTypes=*/{},
           /*setDeclareAttr=*/false, &dataMap);
-    } else if (std::get_if<Fortran::parser::AccClause::IfPresent>(&clause.u)) {
-      addIfPresentAttr = true;
     }
   }
 
   if (ifCond) {
     if (auto cst =
-            mlir::dyn_cast<mlir::arith::ConstantOp>(ifCond.getDefiningOp()))
+            mlir::dyn_cast<mlir::arith::ConstantOp>(ifCond.getDefiningOp())) {
       if (auto boolAttr = mlir::dyn_cast<mlir::BoolAttr>(cst.getValue())) {
-        if (boolAttr.getValue()) {
-          // get rid of the if condition if it is always true.
+        if (boolAttr.getValue()) // get rid of the if condition when true.
           ifCond = mlir::Value();
-        } else {
-          // Do not generate the acc.host_data op if the if condition is always
-          // false.
-          return;
-        }
       }
+    }
   }
 
   // Prepare the operand segment size attribute and the operands value range.
@@ -4089,7 +4132,8 @@ void createOpenACCRoutineConstruct(
                                 workerDeviceTypes, vectorDeviceTypes) &&
           routineOp.getNohost() == hasNohost)
         return;
-      mlir::emitError(loc, "Routine already specified with different clauses");
+      fir::emitFatalError(loc,
+                          "Routine already specified with different clauses");
     }
   }
   std::stringstream routineOpName;
@@ -4389,9 +4433,10 @@ void Fortran::lower::attachDeclarePostAllocAction(
   fctName << converter.mangleName(sym) << declarePostAllocSuffix.str();
   mlir::Operation *op = &builder.getInsertionBlock()->back();
 
-  if (auto resOp = mlir::dyn_cast<fir::ResultOp>(*op)) {
-    assert(resOp.getOperands().size() == 0 &&
-           "expect only fir.result op with no operand");
+  if (op && op->hasTrait<mlir::OpTrait::IsTerminator>()) {
+    if (op->getNumOperands() != 0)
+      fir::emitFatalError(op->getLoc(),
+                          "expect only terminator op with no operand");
     op = op->getPrevNode();
   }
   assert(op && "expect operation to attach the post allocation action");
@@ -4462,9 +4507,10 @@ void Fortran::lower::attachDeclarePostDeallocAction(
   std::stringstream fctName;
   fctName << converter.mangleName(sym) << declarePostDeallocSuffix.str();
   mlir::Operation *op = &builder.getInsertionBlock()->back();
-  if (auto resOp = mlir::dyn_cast<fir::ResultOp>(*op)) {
-    assert(resOp.getOperands().size() == 0 &&
-           "expect only fir.result op with no operand");
+  if (op && op->hasTrait<mlir::OpTrait::IsTerminator>()) {
+    if (op->getNumOperands() != 0)
+      fir::emitFatalError(op->getLoc(),
+                          "expect only terminator op with no operand");
     op = op->getPrevNode();
   }
   assert(op && "expect operation to attach the post deallocation action");
@@ -4518,6 +4564,35 @@ void Fortran::lower::genEarlyReturnInOpenACCLoop(fir::FirOpBuilder &builder,
   mlir::Value yieldValue =
       builder.createIntegerConstant(loc, builder.getI1Type(), 1);
   mlir::acc::YieldOp::create(builder, loc, yieldValue);
+}
+
+bool Fortran::lower::genOpenACCRegionExitBranch(fir::FirOpBuilder &builder,
+                                                mlir::Location loc,
+                                                mlir::Block *targetBlock) {
+  mlir::Block *currentBlock = builder.getBlock();
+  if (!currentBlock || !targetBlock)
+    return false;
+  mlir::Region *curRegion = currentBlock->getParent();
+  mlir::Region *targetRegion = targetBlock->getParent();
+  if (curRegion == targetRegion)
+    return false;
+
+  // Check all regions between the current region and the target for ACC ops.
+  for (mlir::Region *r = curRegion; r && r != targetRegion;
+       r = r->getParentRegion()) {
+    mlir::Operation *op = r->getParentOp();
+    if (op &&
+        mlir::isa<ACC_COMPUTE_CONSTRUCT_OPS, ACC_DATA_CONSTRUCT_STRUCTURED_OPS,
+                  mlir::acc::LoopOp>(op)) {
+      if (targetRegion == r->getParentRegion()) {
+        genOpenACCTerminator(builder, op, loc);
+        return true;
+      }
+      TODO(loc, "GOTO exiting OpenACC region");
+    }
+  }
+
+  return false;
 }
 
 uint64_t Fortran::lower::getLoopCountForCollapseAndTile(

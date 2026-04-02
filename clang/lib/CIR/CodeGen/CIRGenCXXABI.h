@@ -127,6 +127,11 @@ public:
   virtual void emitRethrow(CIRGenFunction &cgf, bool isNoReturn) = 0;
   virtual void emitThrow(CIRGenFunction &cgf, const CXXThrowExpr *e) = 0;
 
+  /// Determine whether it's possible to emit a vtable for \p RD, even
+  /// though we do not know that the vtable has been marked as used by semantic
+  /// analysis.
+  virtual bool canSpeculativelyEmitVTable(const CXXRecordDecl *RD) const = 0;
+
   virtual void emitBadCastCall(CIRGenFunction &cgf, mlir::Location loc) = 0;
 
   virtual void emitBeginCatch(CIRGenFunction &cgf,
@@ -169,6 +174,10 @@ public:
   getAddrOfCXXCatchHandlerType(mlir::Location loc, QualType ty,
                                QualType catchHandlerType) = 0;
   virtual CatchTypeInfo getCatchAllTypeInfo();
+  virtual bool shouldTypeidBeNullChecked(QualType srcTy) = 0;
+  virtual mlir::Value emitTypeid(CIRGenFunction &cgf, QualType srcTy,
+                                 Address thisPtr, mlir::Type typeInfoPtrTy) = 0;
+  virtual void emitBadTypeidCall(CIRGenFunction &cgf, mlir::Location loc) = 0;
 
   /// Get the implicit (second) parameter that comes after the "this" pointer,
   /// or nullptr if there is isn't one.
@@ -371,6 +380,10 @@ public:
                                         mlir::Value numElements,
                                         const CXXNewExpr *e,
                                         QualType elementType) = 0;
+
+  /// Return true if the given member pointer can be zero-initialized
+  /// (in the C++ sense).
+  virtual bool isZeroInitializable(const MemberPointerType *mpt) = 0;
 
 protected:
   /// Returns the extra size required in order to store the array

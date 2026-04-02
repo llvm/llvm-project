@@ -247,7 +247,7 @@ cir.func @test_nrvo() -> !rec_NonTrivial {
     cir.yield
   } cleanup all {
     %4 = cir.load align(1) %1 : !cir.ptr<!cir.bool>, !cir.bool
-    %5 = cir.unary(not, %4) : !cir.bool, !cir.bool
+    %5 = cir.not %4 : !cir.bool
     cir.if %5 {
       cir.call @_ZN10NonTrivialD1Ev(%0) nothrow : (!cir.ptr<!rec_NonTrivial>) -> ()
     }
@@ -277,7 +277,7 @@ cir.func @test_nrvo() -> !rec_NonTrivial {
 // Normal cleanup: inlined cleanup region with flattened cir.if.
 // CHECK:       ^[[NORMAL_CLEANUP]]:
 // CHECK:         %[[N_FLAG:.*]] = cir.load align(1) %[[NRVO]] : !cir.ptr<!cir.bool>, !cir.bool
-// CHECK:         %[[N_NOT:.*]] = cir.unary(not, %[[N_FLAG]]) : !cir.bool, !cir.bool
+// CHECK:         %[[N_NOT:.*]] = cir.not %[[N_FLAG]] : !cir.bool
 // CHECK:         cir.brcond %[[N_NOT]] ^[[N_IF_TRUE:bb[0-9]+]], ^[[N_MERGE:bb[0-9]+]]
 //
 // CHECK:       ^[[N_IF_TRUE]]:
@@ -299,7 +299,7 @@ cir.func @test_nrvo() -> !rec_NonTrivial {
 // CHECK:       ^[[EH_CLEANUP]](%[[ET:.*]]: !cir.eh_token):
 // CHECK:         %[[CT:.*]] = cir.begin_cleanup %[[ET]] : !cir.eh_token -> !cir.cleanup_token
 // CHECK:         %[[EH_FLAG:.*]] = cir.load align(1) %[[NRVO]] : !cir.ptr<!cir.bool>, !cir.bool
-// CHECK:         %[[EH_NOT:.*]] = cir.unary(not, %[[EH_FLAG]]) : !cir.bool, !cir.bool
+// CHECK:         %[[EH_NOT:.*]] = cir.not %[[EH_FLAG]] : !cir.bool
 // CHECK:         cir.brcond %[[EH_NOT]] ^[[EH_IF_TRUE:bb[0-9]+]], ^[[EH_MERGE:bb[0-9]+]]
 //
 // EH cleanup if-true: call destructor.

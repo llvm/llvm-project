@@ -232,10 +232,10 @@ UnsignedOrNone Program::createGlobal(const ValueDecl *VD, const Expr *Init) {
   return *Idx;
 }
 
-UnsignedOrNone Program::createGlobal(const Expr *E) {
+UnsignedOrNone Program::createGlobal(const Expr *E, QualType ExprType) {
   if (auto Idx = getGlobal(E))
     return Idx;
-  if (auto Idx = createGlobal(E, E->getType(), /*IsStatic=*/true,
+  if (auto Idx = createGlobal(E, ExprType, /*IsStatic=*/true,
                               /*IsExtern=*/false, /*IsWeak=*/false)) {
     GlobalIndices[E] = *Idx;
     return *Idx;
@@ -384,7 +384,7 @@ Record *Program::getOrCreateRecord(const RecordDecl *RD) {
           (Desc->isPrimitiveArray() && Desc->getPrimType() == PT_Ptr) ||
           (Desc->ElemRecord && Desc->ElemRecord->hasPtrField());
     } else {
-      return nullptr;
+      Desc = allocateDescriptor(FD);
     }
     Fields.emplace_back(FD, Desc, BaseSize);
     BaseSize += align(Desc->getAllocSize());
@@ -402,7 +402,6 @@ Descriptor *Program::createDescriptor(const DeclTy &D, const Type *Ty,
                                       bool IsConst, bool IsTemporary,
                                       bool IsMutable, bool IsVolatile,
                                       const Expr *Init) {
-
   // Classes and structures.
   if (const auto *RD = Ty->getAsRecordDecl()) {
     if (const auto *Record = getOrCreateRecord(RD))
@@ -481,6 +480,16 @@ Descriptor *Program::createDescriptor(const DeclTy &D, const Type *Ty,
 
     return allocateDescriptor(D, *ElemTy, MDSize, VT->getNumElements(), IsConst,
                               IsTemporary, IsMutable);
+  }
+
+  // Same with constant matrix types.
+  if (const auto *MT = Ty->getAs<ConstantMatrixType>()) {
+    OptPrimType ElemTy = Ctx.classify(MT->getElementType());
+    if (!ElemTy)
+      return nullptr;
+
+    return allocateDescriptor(D, *ElemTy, MDSize, MT->getNumElementsFlattened(),
+                              IsConst, IsTemporary, IsMutable);
   }
 
   return nullptr;

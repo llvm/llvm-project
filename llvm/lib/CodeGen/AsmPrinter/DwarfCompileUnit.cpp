@@ -33,7 +33,6 @@
 #include "llvm/MC/MCSymbolWasm.h"
 #include "llvm/MC/MachineLocation.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/NVPTXAddrSpace.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
@@ -74,26 +73,6 @@ static dwarf::Tag GetCompileUnitType(UnitKind Kind, DwarfDebug *DW) {
     return dwarf::DW_TAG_skeleton_unit;
 
   return dwarf::DW_TAG_compile_unit;
-}
-
-/// Translate NVVM IR address space code to DWARF correspondent value
-static unsigned translateToNVVMDWARFAddrSpace(unsigned AddrSpace) {
-  switch (AddrSpace) {
-  case NVPTXAS::ADDRESS_SPACE_GENERIC:
-    return NVPTXAS::DWARF_ADDR_generic_space;
-  case NVPTXAS::ADDRESS_SPACE_GLOBAL:
-    return NVPTXAS::DWARF_ADDR_global_space;
-  case NVPTXAS::ADDRESS_SPACE_SHARED:
-    return NVPTXAS::DWARF_ADDR_shared_space;
-  case NVPTXAS::ADDRESS_SPACE_CONST:
-    return NVPTXAS::DWARF_ADDR_const_space;
-  case NVPTXAS::ADDRESS_SPACE_LOCAL:
-    return NVPTXAS::DWARF_ADDR_local_space;
-  default:
-    llvm_unreachable(
-        "Cannot translate unknown address space to DWARF address space");
-    return AddrSpace;
-  }
 }
 
 DwarfCompileUnit::DwarfCompileUnit(unsigned UID, const DICompileUnit *Node,
@@ -245,8 +224,9 @@ void DwarfCompileUnit::addLocationAttribute(
     DIE *VariableDIE, const DIGlobalVariable *GV, ArrayRef<GlobalExpr> GlobalExprs) {
   bool addToAccelTable = false;
   DIELoc *Loc = nullptr;
-  std::optional<unsigned> NVPTXAddressSpace;
+  std::optional<unsigned> TargetAddrSpace;
   std::unique_ptr<DIEDwarfExpression> DwarfExpr;
+  const GlobalVariable *LastGlobal = nullptr;
   for (const auto &GE : GlobalExprs) {
     const GlobalVariable *Global = GE.Var;
     const DIExpression *Expr = GE.Expr;
@@ -285,18 +265,7 @@ void DwarfCompileUnit::addLocationAttribute(
     }
 
     if (Expr) {
-      // cuda-gdb special requirement. See NVPTXAS::DWARF_AddressSpace
-      // Decode DW_OP_constu <DWARF Address Space> DW_OP_swap DW_OP_xderef
-      // sequence to specify corresponding address space.
-      if (Asm->TM.getTargetTriple().isNVPTX() && DD->tuneForGDB()) {
-        unsigned LocalNVPTXAddressSpace;
-        const DIExpression *NewExpr =
-            DIExpression::extractAddressClass(Expr, LocalNVPTXAddressSpace);
-        if (NewExpr != Expr) {
-          Expr = NewExpr;
-          NVPTXAddressSpace = LocalNVPTXAddressSpace;
-        }
-      }
+      Expr = DD->adjustExpressionForTarget(Expr, TargetAddrSpace);
       DwarfExpr->addFragmentOffset(Expr);
     }
 
@@ -381,10 +350,7 @@ void DwarfCompileUnit::addLocationAttribute(
         DD->addArangeLabel(SymbolCU(this, Sym));
         addOpAddress(*Loc, Sym);
       }
-      if (Asm->TM.getTargetTriple().isNVPTX() && DD->tuneForGDB() &&
-          !NVPTXAddressSpace)
-        NVPTXAddressSpace =
-            translateToNVVMDWARFAddrSpace(Global->getType()->getAddressSpace());
+      LastGlobal = Global;
     }
     // Global variables attached to symbols are memory locations.
     // It would be better if this were unconditional, but malformed input that
@@ -394,11 +360,9 @@ void DwarfCompileUnit::addLocationAttribute(
       DwarfExpr->setMemoryLocationKind();
     DwarfExpr->addExpression(Expr);
   }
-  if (Asm->TM.getTargetTriple().isNVPTX() && DD->tuneForGDB()) {
-    // cuda-gdb special requirement. See NVPTXAS::DWARF_AddressSpace
-    addUInt(*VariableDIE, dwarf::DW_AT_address_class, dwarf::DW_FORM_data1,
-            NVPTXAddressSpace.value_or(NVPTXAS::DWARF_ADDR_global_space));
-  }
+  DD->addTargetVariableAttributes(*this, *VariableDIE, TargetAddrSpace,
+                                  DwarfDebug::VariableLocationKind::Global,
+                                  LastGlobal);
   if (Loc)
     addBlock(*VariableDIE, dwarf::DW_AT_location, DwarfExpr->finalize());
 
@@ -812,16 +776,130 @@ DIE *DwarfCompileUnit::constructVariableDIE(DbgVariable &DV, bool Abstract) {
   return VariableDie;
 }
 
+static const DIType *resolveTypeQualifiers(const DIType *Ty) {
+  while (const auto *DT = dyn_cast_or_null<DIDerivedType>(Ty)) {
+    switch (DT->getTag()) {
+    case dwarf::DW_TAG_typedef:
+    case dwarf::DW_TAG_const_type:
+    case dwarf::DW_TAG_volatile_type:
+    case dwarf::DW_TAG_restrict_type:
+    case dwarf::DW_TAG_atomic_type:
+      Ty = DT->getBaseType();
+      continue;
+    default:
+      return Ty;
+    }
+  }
+  return Ty;
+}
+
+bool DwarfCompileUnit::emitImplicitPointerLocation(const Loc::Single &Single,
+                                                   const DbgVariable &DV,
+                                                   DIE &VariableDie) {
+  const DIExpression *Expr = Single.getExpr();
+  if (!Expr)
+    return false;
+
+  // Only handle the simple case where DW_OP_LLVM_implicit_pointer is the
+  // sole operation (or followed only by DW_OP_LLVM_fragment).
+  //
+  // Multi-level implicit pointers (e.g., int **pp where both levels are
+  // optimized away) would require stacking multiple implicit_pointer ops
+  // in one expression and unwinding them into a chain of artificial DIEs.
+  // This is left for future work.
+  //
+  // Location list support (Loc::Multi) is not yet handled.
+  auto ExprOps = Expr->expr_ops();
+  auto FirstOp = ExprOps.begin();
+  if (FirstOp == ExprOps.end() ||
+      FirstOp->getOp() != dwarf::DW_OP_LLVM_implicit_pointer)
+    return false;
+
+  if (DD->getDwarfVersion() < 4)
+    return false;
+
+  const DbgValueLoc &DVal = Single.getValueLoc();
+  if (DVal.isVariadic())
+    return false;
+
+  assert(!DVal.getLocEntries().empty() &&
+         "Non-variadic value must have one entry");
+  const DbgValueLocEntry &Entry = DVal.getLocEntries()[0];
+
+  // Resolve the variable's type, stripping qualifiers and typedefs,
+  // to find the pointer or reference type underneath.
+  // The verifier rejects cyclic type references, so this loop terminates.
+  const DIDerivedType *PtrTy =
+      dyn_cast_or_null<DIDerivedType>(resolveTypeQualifiers(DV.getType()));
+  if (!PtrTy)
+    return false;
+
+  if (PtrTy->getTag() != dwarf::DW_TAG_pointer_type &&
+      PtrTy->getTag() != dwarf::DW_TAG_reference_type &&
+      PtrTy->getTag() != dwarf::DW_TAG_rvalue_reference_type)
+    return false;
+
+  const DIType *PointeeTy = PtrTy->getBaseType();
+
+  // Try to reuse an existing artificial DIE for constant integer values.
+  // This avoids duplicate DIEs when multiple pointer variables reference
+  // the same constant (e.g., after ArgumentPromotion promotes the same
+  // struct member for two different pointer parameters).
+  DIE *ArtificialDIEPtr = nullptr;
+  if (Entry.isInt() && PointeeTy) {
+    auto It = ImplicitPointerDIEs.find({PointeeTy, Entry.getInt()});
+    if (It != ImplicitPointerDIEs.end())
+      ArtificialDIEPtr = It->second;
+  }
+
+  if (!ArtificialDIEPtr) {
+    DIE &ProcDIE = createAndAddDIE(dwarf::DW_TAG_dwarf_procedure, getUnitDie());
+
+    if (Entry.isLocation()) {
+      addAddress(ProcDIE, dwarf::DW_AT_location, Entry.getLoc());
+    } else if (Entry.isInt()) {
+      if (PointeeTy)
+        addConstantValue(ProcDIE, Entry.getInt(), PointeeTy);
+    } else if (Entry.isConstantFP()) {
+      addConstantFPValue(ProcDIE, Entry.getConstantFP());
+    } else {
+      return false;
+    }
+
+    ArtificialDIEPtr = &ProcDIE;
+
+    // Cache constant entries for de-duplication.
+    if (Entry.isInt() && PointeeTy)
+      ImplicitPointerDIEs.insert(
+          {{PointeeTy, Entry.getInt()}, ArtificialDIEPtr});
+  }
+
+  auto *Loc = new (DIEValueAllocator) DIELoc;
+
+  const unsigned ImplicitPtrOp = DD->getDwarfVersion() >= 5
+                                     ? dwarf::DW_OP_implicit_pointer
+                                     : dwarf::DW_OP_GNU_implicit_pointer;
+  addUInt(*Loc, dwarf::DW_FORM_data1, ImplicitPtrOp);
+
+  Loc->addValue(DIEValueAllocator, static_cast<dwarf::Attribute>(0),
+                dwarf::DW_FORM_ref_addr, DIEEntry(*ArtificialDIEPtr));
+
+  addSInt(*Loc, dwarf::DW_FORM_sdata, 0);
+
+  addBlock(VariableDie, dwarf::DW_AT_location, Loc);
+  return true;
+}
+
 void DwarfCompileUnit::applyConcreteDbgVariableAttributes(
     const Loc::Single &Single, const DbgVariable &DV, DIE &VariableDie) {
+  // Handle DW_OP_LLVM_implicit_pointer before normal location emission.
+  if (emitImplicitPointerLocation(Single, DV, VariableDie))
+    return;
+
   const DbgValueLoc *DVal = &Single.getValueLoc();
-  if (Asm->TM.getTargetTriple().isNVPTX() && DD->tuneForGDB() &&
-      !Single.getExpr()) {
-    // cuda-gdb special requirement. See NVPTXAS::DWARF_AddressSpace
-    // Lack of expression means it is a register.
-    addUInt(VariableDie, dwarf::DW_AT_address_class, dwarf::DW_FORM_data1,
-            NVPTXAS::DWARF_ADDR_reg_space);
-  }
+  if (!Single.getExpr())
+    DD->addTargetVariableAttributes(*this, VariableDie, std::nullopt,
+                                    DwarfDebug::VariableLocationKind::Register);
   if (!DVal->isVariadic()) {
     const DbgValueLocEntry *Entry = DVal->getLocEntries().begin();
     if (Entry->isLocation()) {
@@ -931,7 +1009,7 @@ void DwarfCompileUnit::applyConcreteDbgVariableAttributes(
 void DwarfCompileUnit::applyConcreteDbgVariableAttributes(const Loc::MMI &MMI,
                                                           const DbgVariable &DV,
                                                           DIE &VariableDie) {
-  std::optional<unsigned> NVPTXAddressSpace;
+  std::optional<unsigned> TargetAddrSpace;
   DIELoc *Loc = new (DIEValueAllocator) DIELoc;
   DIEDwarfExpression DwarfExpr(*Asm, *this, *Loc);
   for (const auto &Fragment : MMI.getFrameIndexExprs()) {
@@ -946,18 +1024,7 @@ void DwarfCompileUnit::applyConcreteDbgVariableAttributes(const Loc::MMI &MMI,
     SmallVector<uint64_t, 8> Ops;
     TRI->getOffsetOpcodes(Offset, Ops);
 
-    // cuda-gdb special requirement. See NVPTXAS::DWARF_AddressSpace.
-    // Decode DW_OP_constu <DWARF Address Space> DW_OP_swap
-    // DW_OP_xderef sequence to specify address space.
-    if (Asm->TM.getTargetTriple().isNVPTX() && DD->tuneForGDB()) {
-      unsigned LocalNVPTXAddressSpace;
-      const DIExpression *NewExpr =
-          DIExpression::extractAddressClass(Expr, LocalNVPTXAddressSpace);
-      if (NewExpr != Expr) {
-        Expr = NewExpr;
-        NVPTXAddressSpace = LocalNVPTXAddressSpace;
-      }
-    }
+    Expr = DD->adjustExpressionForTarget(Expr, TargetAddrSpace);
     if (Expr)
       Ops.append(Expr->elements_begin(), Expr->elements_end());
     DIExpressionCursor Cursor(Ops);
@@ -969,11 +1036,8 @@ void DwarfCompileUnit::applyConcreteDbgVariableAttributes(const Loc::MMI &MMI,
           *Asm->MF->getSubtarget().getRegisterInfo(), Cursor, FrameReg);
     DwarfExpr.addExpression(std::move(Cursor));
   }
-  if (Asm->TM.getTargetTriple().isNVPTX() && DD->tuneForGDB()) {
-    // cuda-gdb special requirement. See NVPTXAS::DWARF_AddressSpace.
-    addUInt(VariableDie, dwarf::DW_AT_address_class, dwarf::DW_FORM_data1,
-            NVPTXAddressSpace.value_or(NVPTXAS::DWARF_ADDR_local_space));
-  }
+  DD->addTargetVariableAttributes(*this, VariableDie, TargetAddrSpace,
+                                  DwarfDebug::VariableLocationKind::FrameIndex);
   addBlock(VariableDie, dwarf::DW_AT_location, DwarfExpr.finalize());
   if (DwarfExpr.TagOffset)
     addUInt(VariableDie, dwarf::DW_AT_LLVM_tag_offset, dwarf::DW_FORM_data1,
@@ -1141,7 +1205,11 @@ DIE &DwarfCompileUnit::constructSubprogramScopeDIE(const DISubprogram *Sub,
   }
 
   // If this is a variadic function, add an unspecified parameter.
-  DITypeArray FnArgs = Sub->getType()->getTypeArray();
+  auto *SPTy = Sub->getType();
+  if (!SPTy)
+    return ScopeDIE;
+
+  DITypeArray FnArgs = SPTy->getTypeArray();
 
   // If we have a single element of null, it is a function that returns void.
   // If we have more than one elements and the last one is null, it is a
@@ -1585,6 +1653,9 @@ void DwarfCompileUnit::emitHeader(bool UseOffsets) {
 }
 
 bool DwarfCompileUnit::hasDwarfPubSections() const {
+  if (!DD->shouldEmitDwarfPubSections())
+    return false;
+
   switch (CUNode->getNameTableKind()) {
   case DICompileUnit::DebugNameTableKind::None:
     return false;

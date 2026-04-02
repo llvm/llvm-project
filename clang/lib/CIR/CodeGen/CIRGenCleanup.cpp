@@ -95,7 +95,6 @@ void *EHScopeStack::pushCleanup(CleanupKind kind, size_t size) {
   bool isLifetimeMarker = kind & LifetimeMarker;
   bool skipCleanupScope = false;
 
-  assert(!cir::MissingFeatures::innermostEHScope());
   cir::CleanupKind cleanupKind = cir::CleanupKind::All;
   if (isEHCleanup && cgf->getLangOpts().Exceptions) {
     cleanupKind =
@@ -193,9 +192,79 @@ bool EHScopeStack::requiresCatchOrCleanup() const {
   return false;
 }
 
+/// The given cleanup block is being deactivated. Configure a cleanup variable
+/// if necessary.
+static void setupCleanupBlockDeactivation(CIRGenFunction &cgf,
+                                          EHScopeStack::stable_iterator c,
+                                          mlir::Operation *dominatingIP) {
+  EHCleanupScope &scope = cast<EHCleanupScope>(*cgf.ehStack.find(c));
+
+  assert((scope.isNormalCleanup() || scope.isEHCleanup()) &&
+         "cleanup block is neither normal nor EH?");
+
+  if (scope.isNormalCleanup())
+    scope.setTestFlagInNormalCleanup();
+
+  if (scope.isEHCleanup())
+    scope.setTestFlagInEHCleanup();
+
+  CIRGenBuilderTy &builder = cgf.getBuilder();
+
+  // If the cleanup block doesn't exist yet, create it and set its initial
+  // value to `true`. If we are inside a conditional branch, the value must be
+  // initialized before the conditional branch begins.
+  Address var = scope.getActiveFlag();
+  if (!var.isValid()) {
+    mlir::Location loc = builder.getUnknownLoc();
+
+    var = cgf.createTempAllocaWithoutCast(builder.getBoolTy(), CharUnits::One(),
+                                          loc, "cleanup.isactive");
+    scope.setActiveFlag(var);
+
+    assert(dominatingIP && "no existing variable and no dominating IP!");
+
+    if (cgf.isInConditionalBranch()) {
+      mlir::Value val = builder.getBool(true, loc);
+      cgf.setBeforeOutermostConditional(val, var);
+    } else {
+      mlir::OpBuilder::InsertionGuard guard(builder);
+      builder.setInsertionPoint(dominatingIP);
+      builder.createFlagStore(loc, true, var.getPointer());
+    }
+  }
+
+  // The code above sets the `isActive` flag to `true` as its initial state
+  // at the point where the variable is created. The code below sets it to
+  // `false` at the point where the cleanup is deactivated.
+  mlir::Location loc = builder.getUnknownLoc();
+  builder.createFlagStore(loc, false, var.getPointer());
+}
+
+/// Deactive a cleanup that was created in an active state.
+void CIRGenFunction::deactivateCleanupBlock(EHScopeStack::stable_iterator c,
+                                            mlir::Operation *dominatingIP) {
+  assert(c != ehStack.stable_end() && "deactivating bottom of stack?");
+  EHCleanupScope &scope = cast<EHCleanupScope>(*ehStack.find(c));
+  assert(scope.isActive() && "double deactivation");
+
+  // If it's the top of the stack, just pop it, but do so only if it belongs
+  // to the current RunCleanupsScope.
+  if (c == ehStack.stable_begin() &&
+      currentCleanupStackDepth.strictlyEncloses(c)) {
+    popCleanupBlock();
+    return;
+  }
+
+  // Otherwise, follow the general case.
+  setupCleanupBlockDeactivation(*this, c, dominatingIP);
+
+  scope.setActive(false);
+}
+
 static void emitCleanup(CIRGenFunction &cgf, cir::CleanupScopeOp cleanupScope,
                         EHScopeStack::Cleanup *cleanup,
-                        EHScopeStack::Cleanup::Flags flags) {
+                        EHScopeStack::Cleanup::Flags flags,
+                        Address activeFlag) {
   CIRGenBuilderTy &builder = cgf.getBuilder();
   mlir::Block &block = cleanupScope.getCleanupRegion().back();
 
@@ -204,9 +273,23 @@ static void emitCleanup(CIRGenFunction &cgf, cir::CleanupScopeOp cleanupScope,
 
   // Ask the cleanup to emit itself.
   assert(cgf.haveInsertPoint() && "expected insertion point");
-  assert(!cir::MissingFeatures::ehCleanupActiveFlag());
-  cleanup->emit(cgf, flags);
-  assert(cgf.haveInsertPoint() && "cleanup ended with no insertion point?");
+
+  if (activeFlag.isValid()) {
+    mlir::Location loc = cleanupScope.getLoc();
+    mlir::Value isActive = builder.createFlagLoad(loc, activeFlag.getPointer());
+    cir::IfOp::create(builder, loc, isActive,
+                      /*withElseRegion=*/false,
+                      /*thenBuilder=*/
+                      [&](mlir::OpBuilder &, mlir::Location) {
+                        cleanup->emit(cgf, flags);
+                        assert(cgf.haveInsertPoint() &&
+                               "cleanup ended with no insertion point?");
+                        builder.createYield(loc);
+                      });
+  } else {
+    cleanup->emit(cgf, flags);
+    assert(cgf.haveInsertPoint() && "cleanup ended with no insertion point?");
+  }
 
   mlir::Block &cleanupRegionLastBlock = cleanupScope.getCleanupRegion().back();
   if (cleanupRegionLastBlock.empty() ||
@@ -239,16 +322,28 @@ void CIRGenFunction::popCleanupBlock() {
 
   // Remember activation information.
   bool isActive = scope.isActive();
+  Address normalActiveFlag = scope.shouldTestFlagInNormalCleanup()
+                                 ? scope.getActiveFlag()
+                                 : Address::invalid();
+  Address ehActiveFlag = scope.shouldTestFlagInEHCleanup()
+                             ? scope.getActiveFlag()
+                             : Address::invalid();
 
   // - whether there's a fallthrough
   mlir::Block *fallthroughSource = builder.getInsertionBlock();
   bool hasFallthrough = fallthroughSource != nullptr && isActive;
 
   bool requiresNormalCleanup = scope.isNormalCleanup() && hasFallthrough;
+  bool requiresEHCleanup = scope.isEHCleanup() && hasFallthrough;
+
+  // Even if we don't need the normal cleanup, we still need to emit the
+  // cleanup code if there's an active flag, since the EH path may still
+  // need to conditionally execute it.
+  bool hasActiveFlag = normalActiveFlag.isValid() || ehActiveFlag.isValid();
 
   // If we don't need the cleanup at all, we're done.
   assert(!cir::MissingFeatures::ehCleanupScopeRequiresEHCleanup());
-  if (!requiresNormalCleanup) {
+  if (!requiresNormalCleanup && !requiresEHCleanup && !hasActiveFlag) {
     ehStack.popCleanup();
     return;
   }
@@ -283,13 +378,24 @@ void CIRGenFunction::popCleanupBlock() {
   if (scope.isEHCleanup())
     cleanupFlags.setIsEHCleanupKind();
 
+  // Determine the active flag for the cleanup handler.
+  Address cleanupActiveFlag = normalActiveFlag.isValid() ? normalActiveFlag
+                              : ehActiveFlag.isValid()   ? ehActiveFlag
+                                                         : Address::invalid();
+
   // If we have a fallthrough and no other need for the cleanup,
   // emit it directly.
   if (hasFallthrough) {
     assert(!cir::MissingFeatures::ehCleanupScopeRequiresEHCleanup());
     ehStack.popCleanup();
     scope.markEmitted();
-    emitCleanup(*this, cleanupScope, cleanup, cleanupFlags);
+    emitCleanup(*this, cleanupScope, cleanup, cleanupFlags, cleanupActiveFlag);
+  } else if (!requiresNormalCleanup && !requiresEHCleanup) {
+    // The cleanup is inactive but has an active flag. We still need to emit
+    // the cleanup handler guarded by the flag, since the EH path may need it.
+    ehStack.popCleanup();
+    scope.markEmitted();
+    emitCleanup(*this, cleanupScope, cleanup, cleanupFlags, cleanupActiveFlag);
   } else {
     // Otherwise, the best approach is to thread everything through
     // the cleanup block and then try to clean up after ourselves.
@@ -345,7 +451,7 @@ void CIRGenFunction::popCleanupBlock() {
     scope.markEmitted();
     ehStack.popCleanup();
     assert(ehStack.hasNormalCleanups() == hasEnclosingCleanups);
-    emitCleanup(*this, cleanupScope, cleanup, cleanupFlags);
+    emitCleanup(*this, cleanupScope, cleanup, cleanupFlags, cleanupActiveFlag);
 
     // Append the prepared cleanup prologue from above.
     assert(!cir::MissingFeatures::cleanupAppendInsts());

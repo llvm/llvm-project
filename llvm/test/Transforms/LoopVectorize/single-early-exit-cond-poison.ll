@@ -26,6 +26,8 @@ define noundef i32 @f(i32 noundef %g) {
 ; VF4IC2-NEXT:    [[TMP7:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP6]])
 ; VF4IC2-NEXT:    br i1 [[TMP7]], label %[[VECTOR_EARLY_EXIT:.*]], label %[[MIDDLE_BLOCK:.*]]
 ; VF4IC2:       [[MIDDLE_BLOCK]]:
+; VF4IC2-NEXT:    br label %[[MIDDLE_BLOCK1:.*]]
+; VF4IC2:       [[MIDDLE_BLOCK1]]:
 ; VF4IC2-NEXT:    [[TMP8:%.*]] = extractelement <4 x i32> [[TMP3]], i32 3
 ; VF4IC2-NEXT:    br label %[[RETURN:.*]]
 ; VF4IC2:       [[VECTOR_EARLY_EXIT]]:
@@ -38,7 +40,7 @@ define noundef i32 @f(i32 noundef %g) {
 ; VF4IC2-NEXT:    [[TMP15:%.*]] = trunc i64 [[TMP14]] to i32
 ; VF4IC2-NEXT:    br label %[[RETURN]]
 ; VF4IC2:       [[RETURN]]:
-; VF4IC2-NEXT:    [[RES:%.*]] = phi i32 [ [[TMP8]], %[[MIDDLE_BLOCK]] ], [ [[TMP15]], %[[VECTOR_EARLY_EXIT]] ]
+; VF4IC2-NEXT:    [[RES:%.*]] = phi i32 [ [[TMP8]], %[[MIDDLE_BLOCK1]] ], [ [[TMP15]], %[[VECTOR_EARLY_EXIT]] ]
 ; VF4IC2-NEXT:    ret i32 [[RES]]
 ;
 ; VF8IC1-LABEL: define noundef i32 @f(
@@ -56,6 +58,8 @@ define noundef i32 @f(i32 noundef %g) {
 ; VF8IC1-NEXT:    [[TMP3:%.*]] = call i1 @llvm.vector.reduce.or.v8i1(<8 x i1> [[TMP8]])
 ; VF8IC1-NEXT:    br i1 [[TMP3]], label %[[VECTOR_EARLY_EXIT:.*]], label %[[MIDDLE_BLOCK:.*]]
 ; VF8IC1:       [[MIDDLE_BLOCK]]:
+; VF8IC1-NEXT:    br label %[[MIDDLE_BLOCK1:.*]]
+; VF8IC1:       [[MIDDLE_BLOCK1]]:
 ; VF8IC1-NEXT:    [[TMP4:%.*]] = extractelement <8 x i32> [[TMP1]], i32 7
 ; VF8IC1-NEXT:    br label %[[RETURN:.*]]
 ; VF8IC1:       [[VECTOR_EARLY_EXIT]]:
@@ -63,7 +67,7 @@ define noundef i32 @f(i32 noundef %g) {
 ; VF8IC1-NEXT:    [[TMP6:%.*]] = trunc i64 [[TMP5]] to i32
 ; VF8IC1-NEXT:    br label %[[RETURN]]
 ; VF8IC1:       [[RETURN]]:
-; VF8IC1-NEXT:    [[RES:%.*]] = phi i32 [ [[TMP4]], %[[MIDDLE_BLOCK]] ], [ [[TMP6]], %[[VECTOR_EARLY_EXIT]] ]
+; VF8IC1-NEXT:    [[RES:%.*]] = phi i32 [ [[TMP4]], %[[MIDDLE_BLOCK1]] ], [ [[TMP6]], %[[VECTOR_EARLY_EXIT]] ]
 ; VF8IC1-NEXT:    ret i32 [[RES]]
 ;
 entry:

@@ -21,13 +21,13 @@ bool eq(int Foo::*x, int Foo::*y) {
 // CIR-BEFORE-LABEL: @_Z2eqM3FooiS0_
 //      CIR-BEFORE:   %[[#x:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!cir.data_member<!s32i in !rec_Foo>>, !cir.data_member<!s32i in !rec_Foo>
 // CIR-BEFORE-NEXT:   %[[#y:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!cir.data_member<!s32i in !rec_Foo>>, !cir.data_member<!s32i in !rec_Foo>
-// CIR-BEFORE-NEXT:   %{{.+}} = cir.cmp(eq, %[[#x]], %[[#y]]) : !cir.data_member<!s32i in !rec_Foo>, !cir.bool
+// CIR-BEFORE-NEXT:   %{{.+}} = cir.cmp eq %[[#x]], %[[#y]] : !cir.data_member<!s32i in !rec_Foo>
 //      CIR-BEFORE: }
 
 // CIR-AFTER-LABEL: @_Z2eqM3FooiS0_
 // CIR-AFTER:   %[[#x:]] = cir.load{{.*}} %{{.*}} : !cir.ptr<!s64i>, !s64i
 // CIR-AFTER:   %[[#y:]] = cir.load{{.*}} %{{.*}} : !cir.ptr<!s64i>, !s64i
-// CIR-AFTER:   %{{.*}} = cir.cmp(eq, %[[#x]], %[[#y]]) : !s64i, !cir.bool
+// CIR-AFTER:   %{{.*}} = cir.cmp eq %[[#x]], %[[#y]] : !s64i
 
 // LLVM-LABEL: @_Z2eqM3FooiS0_
 //      LLVM:   %[[#x:]] = load i64, ptr %{{.+}}, align 8
@@ -48,13 +48,13 @@ bool ne(int Foo::*x, int Foo::*y) {
 // CIR-BEFORE-LABEL: @_Z2neM3FooiS0_
 //      CIR-BEFORE:   %[[#x:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!cir.data_member<!s32i in !rec_Foo>>, !cir.data_member<!s32i in !rec_Foo>
 // CIR-BEFORE-NEXT:   %[[#y:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!cir.data_member<!s32i in !rec_Foo>>, !cir.data_member<!s32i in !rec_Foo>
-// CIR-BEFORE-NEXT:   %{{.+}} = cir.cmp(ne, %[[#x]], %[[#y]]) : !cir.data_member<!s32i in !rec_Foo>, !cir.bool
+// CIR-BEFORE-NEXT:   %{{.+}} = cir.cmp ne %[[#x]], %[[#y]] : !cir.data_member<!s32i in !rec_Foo>
 //      CIR-BEFORE: }
 
 // CIR-AFTER-LABEL: @_Z2neM3FooiS0_
 // CIR-AFTER:   %[[#x:]] = cir.load{{.*}} %{{.*}} : !cir.ptr<!s64i>, !s64i
 // CIR-AFTER:   %[[#y:]] = cir.load{{.*}} %{{.*}} : !cir.ptr<!s64i>, !s64i
-// CIR-AFTER:   %{{.*}} = cir.cmp(ne, %[[#x]], %[[#y]]) : !s64i, !cir.bool
+// CIR-AFTER:   %{{.*}} = cir.cmp ne %[[#x]], %[[#y]] : !s64i
 
 // LLVM-LABEL: @_Z2neM3FooiS0_
 //      LLVM:   %[[#x:]] = load i64, ptr %{{.+}}, align 8

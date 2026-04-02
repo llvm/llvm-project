@@ -344,6 +344,25 @@ gpu.module @shuffles {
 
 // -----
 
+// Check `gpu.shuffle` conversion with no explicit subgroup size.
+
+// CHECK: llvm.func spir_funccc @_Z17sub_group_shuffleij(i32, i32) -> i32 attributes {convergent, no_unwind, will_return}
+// CHECK-LABEL: llvm.func @gpu_shuffles(
+// CHECK-SAME: %[[ARG0:.*]]: i32, %[[ARG1:.*]]: i32
+// CHECK: %[[C16:.*]] = arith.constant 16 : i32
+// CHECK: %[[SHUF:.*]] = llvm.call spir_funccc @_Z17sub_group_shuffleij(%[[ARG0]], %[[ARG1]]) {convergent, no_unwind, will_return} : (i32, i32) -> i32
+// CHECK: %[[TRUE:.*]] = llvm.mlir.constant(true) : i1
+// CHECK: llvm.return
+gpu.module @shuffles_without_intel_reqd_sub_group_size_attribute {
+  llvm.func @gpu_shuffles(%val: i32, %id: i32) {
+    %width = arith.constant 16 : i32
+    %shuffleResult, %valid = gpu.shuffle idx %val, %id, %width : i32
+    llvm.return
+  }
+}
+
+// -----
+
 // Cannot convert due to shuffle width and target subgroup size mismatch
 
 gpu.module @shuffles_mismatch {

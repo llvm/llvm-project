@@ -1227,14 +1227,12 @@ Instruction *InstCombinerImpl::SliceUpIllegalIntegerPHI(PHINode &FirstPhi) {
           continue;
         }
 
-        if (PHINode *InPHI = dyn_cast<PHINode>(PN)) {
-          // If the incoming value was a PHI, and if it was one of the PHIs we
-          // already rewrote it, just use the lowered value.
-          if (Value *Res = ExtractedVals[LoweredPHIRecord(InPHI, Offset, Ty)]) {
-            PredVal = Res;
-            EltPHI->addIncoming(PredVal, Pred);
-            continue;
-          }
+        // If the incoming value was a PHI, and if it was one of the PHIs we
+        // already rewrote it, just use the lowered value.
+        if (Value *Res = ExtractedVals[LoweredPHIRecord(PN, Offset, Ty)]) {
+          PredVal = Res;
+          EltPHI->addIncoming(PredVal, Pred);
+          continue;
         }
 
         // Otherwise, do an extract in the predecessor.
@@ -1312,10 +1310,7 @@ static Value *simplifyUsingControlFlow(InstCombiner &Self, PHINode &PN,
     SuccForValue[C] = Succ;
     ++SuccCount[Succ];
   };
-  if (auto *BI = dyn_cast<BranchInst>(IDom->getTerminator())) {
-    if (BI->isUnconditional())
-      return nullptr;
-
+  if (auto *BI = dyn_cast<CondBrInst>(IDom->getTerminator())) {
     Cond = BI->getCondition();
     AddSucc(ConstantInt::getTrue(Context), BI->getSuccessor(0));
     AddSucc(ConstantInt::getFalse(Context), BI->getSuccessor(1));

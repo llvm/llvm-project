@@ -13,6 +13,8 @@ from ObjCDataFormatterTestCase import ObjCDataFormatterTestCase
 
 
 class ObjCDataFormatterNSException(ObjCDataFormatterTestCase):
+    SHARED_BUILD_TESTCASE = False
+
     def test_nsexception_with_run_command(self):
         """Test formatters for NSException."""
         self.appkit_tester_impl(self.nsexception_data_formatter_commands, True)

@@ -284,7 +284,7 @@ FuncOp FuncOp::clone() {
 // ReturnOp
 //===----------------------------------------------------------------------===//
 
-LogicalResult FuncOp::verify() {
+LogicalResult FuncOp::verifyRegions() {
   // External declarations have no body to check.
   if (isDeclaration())
     return success();
