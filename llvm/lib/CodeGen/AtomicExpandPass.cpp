@@ -413,8 +413,11 @@ bool AtomicExpandImpl::processAtomicInstr(Instruction *I) {
       auto ExpansionKind = TLI->shouldExpandAtomicRMWInIR(RMWI);
       if (ExpansionKind == TargetLoweringBase::AtomicExpansionKind::None)
         return false;
-      assert(ExpansionKind == TargetLoweringBase::AtomicExpansionKind::Elementwise && "shouldExpandAtomicRMWInIR should "
-       " return ExpansionKind::Elementwise or ExpansionKind::None on elementwise atomicrmw");
+      assert(ExpansionKind ==
+                 TargetLoweringBase::AtomicExpansionKind::Elementwise &&
+             "shouldExpandAtomicRMWInIR should "
+             " return ExpansionKind::Elementwise or ExpansionKind::None on "
+             "elementwise atomicrmw");
       if (!canReuseWholeValueAtomicRMW(RMWI))
         return expandElementwiseAtomicRMW(RMWI);
       // Dropping the elementwise modifier strengthens the semantics, which is
@@ -656,8 +659,8 @@ bool AtomicExpandImpl::expandElementwiseAtomicRMW(AtomicRMWInst *AI) {
   for (unsigned Lane = 0, NumLanes = VecTy->getNumElements(); Lane != NumLanes;
        ++Lane) {
     Value *Idx = Builder.getInt64(Lane);
-    Value *LanePtr = Builder.CreateInBoundsGEP(VecTy, AI->getPointerOperand(),
-                                              {Builder.getInt64(0), Idx}, "lane.ptr");
+    Value *LanePtr = Builder.CreateInBoundsGEP(
+        VecTy, AI->getPointerOperand(), {Builder.getInt64(0), Idx}, "lane.ptr");
     Value *LaneVal =
         Builder.CreateExtractElement(AI->getValOperand(), Idx, "lane.val");
     auto *LaneRMW = Builder.CreateAtomicRMW(

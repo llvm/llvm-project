@@ -269,8 +269,10 @@ public:
                        // operations; used by X86.
     Expand,            // Generic expansion in terms of other atomic operations.
     CustomExpand,      // Custom target-specific expansion using TLI hooks.
-    Elementwise,       // Expand an elementwise atomicrmw by first trying to drop the elementwise modifier if
-                       // the target supports a corresponding whole-value atomicrmw lowering. Otherwise, scalarize to per-lane atomics.
+    Elementwise, // Expand an elementwise atomicrmw by first trying to drop the
+                 // elementwise modifier if the target supports a corresponding
+                 // whole-value atomicrmw lowering. Otherwise, scalarize to
+                 // per-lane atomics.
 
     // Rewrite to a non-atomic form for use in a known non-preemptible
     // environment.
