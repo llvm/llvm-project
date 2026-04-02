@@ -124,4 +124,18 @@ void ExecutorBase::store(const AnyValue &Ptr, Align Alignment,
                           /*IsStore=*/true))
     Ctx.store(*MO, *Offset, Val, ValTy);
 }
+
+void ExecutorBase::requestProgramExit(ProgramExitInfo::ProgramExitKind Kind,
+uint64_t ExitCode)  {
+  if (Kind == ProgramExitInfo::ProgramExitKind::Invalid)
+    llvm_unreachable("Invalid program exit kind");
+  Status = false;
+  ExitInfo.Kind = Kind;
+  ExitInfo.ExitCode = ExitCode;
+  Handler.onProgramExit(ExitInfo);
+}
+
+bool ExecutorBase::getExecutionStatus() const { return Status; }
+
+ProgramExitInfo ExecutorBase::getExitInfo() const { return ExitInfo; }
 } // namespace llvm::ubi

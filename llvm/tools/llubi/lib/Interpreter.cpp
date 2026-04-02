@@ -12,6 +12,7 @@
 
 #include "Context.h"
 #include "ExecutorBase.h"
+#include "Library.h"
 #include "Value.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/InlineAsm.h"
@@ -76,8 +77,9 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
   }
 
   void setResult(Instruction &I, AnyValue V) {
-    if (Status)
-      Status &= Handler.onInstructionExecuted(I, V);
+    if (getExecutionStatus())
+      if (!Handler.onInstructionExecuted(I, V))
+        requestProgramExit(ProgramExitInfo::ProgramExitKind::Failed);
     CurrentFrame->ValueMap.insert_or_assign(&I, std::move(V));
   }
 
@@ -142,7 +144,7 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
 
   void jumpTo(Instruction &Terminator, BasicBlock *DestBB) {
     if (!Handler.onBBJump(Terminator, *DestBB)) {
-      Status = false;
+      requestProgramExit(ProgramExitInfo::ProgramExitKind::Failed);
       return;
     }
     BasicBlock *From = CurrentFrame->BB;
@@ -266,23 +268,26 @@ public:
     if (auto *RV = RI.getReturnValue())
       CurrentFrame->RetVal = getValue(RV);
     CurrentFrame->State = FrameState::Exit;
-    Status &= Handler.onInstructionExecuted(RI, None);
+    if (getExecutionStatus())
+      if (!Handler.onInstructionExecuted(RI, None))
+        requestProgramExit(ProgramExitInfo::ProgramExitKind::Failed);
   }
 
-  void visitUncondBrInst(UncondBrInst &BI) { jumpTo(BI, BI.getSuccessor()); }
-
-  void visitCondBrInst(CondBrInst &BI) {
-    switch (getValue(BI.getCondition()).asBoolean()) {
-    case BooleanKind::True:
-      jumpTo(BI, BI.getSuccessor(0));
-      return;
-    case BooleanKind::False:
-      jumpTo(BI, BI.getSuccessor(1));
-      return;
-    case BooleanKind::Poison:
-      reportImmediateUB("Branch on poison condition.");
-      return;
+  void visitBranchInst(BranchInst &BI) {
+    if (BI.isConditional()) {
+      switch (getValue(BI.getCondition()).asBoolean()) {
+      case BooleanKind::True:
+        jumpTo(BI, BI.getSuccessor(0));
+        return;
+      case BooleanKind::False:
+        jumpTo(BI, BI.getSuccessor(1));
+        return;
+      case BooleanKind::Poison:
+        reportImmediateUB("Branch on poison condition.");
+        return;
+      }
     }
+    jumpTo(BI, BI.getSuccessor(0));
   }
 
   void visitSwitchInst(SwitchInst &SI) {
@@ -311,7 +316,7 @@ public:
     }
 
     Handler.onUnrecognizedInstruction(CI);
-    Status = false;
+    requestProgramExit(ProgramExitInfo::ProgramExitKind::Failed);
   }
 
   void visitIndirectBrInst(IndirectBrInst &IBI) {
@@ -379,7 +384,7 @@ public:
     }
     default:
       Handler.onUnrecognizedInstruction(CB);
-      Status = false;
+      requestProgramExit(ProgramExitInfo::ProgramExitKind::Failed);
       return AnyValue();
     }
   }
@@ -390,12 +395,26 @@ public:
     if (CB.isNoBuiltin() ||
         !CurrentFrame->TLI.getLibFunc(*ResolvedCallee, LF)) {
       Handler.onUnrecognizedInstruction(CB);
-      Status = false;
+      requestProgramExit(ProgramExitInfo::ProgramExitKind::Failed);
       return AnyValue();
     }
 
+    Library Lib(Ctx, Handler, DL, static_cast<ExecutorBase &>(*this));
+
+    SmallVector<AnyValue, 8> Args;
+    for (const auto &Arg : CB.args()) {
+      Args.push_back(getValue(Arg));
+    }
+
+    if (auto LibCallRes =
+            Lib.executeLibcall(LF, CB.getName(), CB.getType(), Args))
+      return *LibCallRes;
+
+    if (ExitInfo)
+      return AnyValue();
+
     Handler.onUnrecognizedInstruction(CB);
-    Status = false;
+    requestProgramExit(ProgramExitInfo::ProgramExitKind::Failed);
     return AnyValue();
   }
 
@@ -420,7 +439,7 @@ public:
 
       if (isa<InlineAsm>(CalledOperand)) {
         Handler.onUnrecognizedInstruction(CB);
-        Status = false;
+        requestProgramExit(ProgramExitInfo::ProgramExitKind::Failed);
         return;
       }
 
@@ -873,13 +892,14 @@ public:
     // TODO: track volatile stores
     // TODO: handle metadata
     store(Ptr, SI.getAlign(), Val, SI.getValueOperand()->getType());
-    if (Status)
-      Status &= Handler.onInstructionExecuted(SI, AnyValue());
+    if (getExecutionStatus())
+      if (!Handler.onInstructionExecuted(SI, AnyValue()))
+        requestProgramExit(ProgramExitInfo::ProgramExitKind::Failed);
   }
 
   void visitInstruction(Instruction &I) {
     Handler.onUnrecognizedInstruction(I);
-    Status = false;
+    requestProgramExit(ProgramExitInfo::ProgramExitKind::Failed);
   }
 
   void visitExtractValueInst(ExtractValueInst &EVI) {
@@ -969,7 +989,7 @@ public:
   bool runMainLoop() {
     uint32_t MaxSteps = Ctx.getMaxSteps();
     uint32_t Steps = 0;
-    while (Status && !CallStack.empty()) {
+    while (getExecutionStatus() && !CallStack.empty()) {
       Frame &Top = CallStack.back();
       CurrentFrame = &Top;
       if (Top.State == FrameState::Entry) {
@@ -982,7 +1002,7 @@ public:
 
       Top.State = FrameState::Running;
       // Interpreter loop inside a function
-      while (Status) {
+      while (getExecutionStatus()) {
         assert(Top.State == FrameState::Running &&
                "Expected to be in running state.");
         if (MaxSteps != 0 && Steps >= MaxSteps) {
@@ -993,7 +1013,7 @@ public:
 
         Instruction &I = *Top.PC;
         visit(&I);
-        if (!Status)
+        if (!getExecutionStatus())
           break;
 
         // A function call or return has occurred.
@@ -1007,7 +1027,7 @@ public:
           ++Top.PC;
       }
 
-      if (!Status)
+      if (!getExecutionStatus())
         break;
 
       if (Top.State == FrameState::Exit) {
@@ -1023,14 +1043,17 @@ public:
                "Expected to enter a callee.");
       }
     }
-    return Status;
+    return getExecutionStatus();
   }
 };
 
 bool Context::runFunction(Function &F, ArrayRef<AnyValue> Args,
-                          AnyValue &RetVal, EventHandler &Handler) {
+                          AnyValue &RetVal, EventHandler &Handler,
+                          ProgramExitInfo &ExitInfo) {
   InstExecutor Executor(*this, Handler, F, Args, RetVal);
-  return Executor.runMainLoop();
+  bool Result = Executor.runMainLoop();
+  ExitInfo = Executor.getExitInfo();
+  return Result;
 }
 
 } // namespace llvm::ubi

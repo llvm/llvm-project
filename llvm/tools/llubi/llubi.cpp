@@ -131,6 +131,26 @@ public:
     return true;
   }
 
+  bool onProgramExit(const ubi::ProgramExitInfo &Info) override {
+    switch (Info.Kind) {
+    case ubi::ProgramExitInfo::ProgramExitKind::Returned:
+      return true;
+    case ubi::ProgramExitInfo::ProgramExitKind::Failed:
+      return true;
+    case ubi::ProgramExitInfo::ProgramExitKind::Exited:
+      errs() << "Program exited with code " << Info.ExitCode << '\n';
+      return true;
+    case ubi::ProgramExitInfo::ProgramExitKind::Aborted:
+      errs() << "Program aborted.\n";
+      return true;
+    case ubi::ProgramExitInfo::ProgramExitKind::Terminated:
+      errs() << "Program terminated.\n";
+      return true;
+    default:
+      llvm_unreachable("Unknown ProgramExitKind");
+    }
+  }
+
   void onUnrecognizedInstruction(Instruction &I) override {
     errs() << "Unrecognized instruction: " << I << '\n';
   }
@@ -240,11 +260,23 @@ int main(int argc, char **argv) {
   ubi::EventHandler NoopHandler;
   VerboseEventHandler VerboseHandler;
   ubi::AnyValue RetVal;
+  ubi::ProgramExitInfo ExitInfo;
   if (!Ctx.runFunction(*EntryFn, Args, RetVal,
-                       Verbose ? VerboseHandler : NoopHandler)) {
-    WithColor::error() << "Execution of function '" << EntryFunc
-                       << "' failed.\n";
-    return 1;
+                       Verbose ? VerboseHandler : NoopHandler, ExitInfo)) {
+    if (!ExitInfo.isExitedByLibcall()) {
+      WithColor::error() << "Execution of function '" << EntryFunc
+                         << "' failed.\n";
+      return 1;
+    }
+    switch (ExitInfo.Kind) {
+    case ubi::ProgramExitInfo::ProgramExitKind::Exited:
+      return static_cast<int>(ExitInfo.ExitCode & 0xFF);
+    case ubi::ProgramExitInfo::ProgramExitKind::Aborted:
+    case ubi::ProgramExitInfo::ProgramExitKind::Terminated:
+      return 1;
+    default:
+      llvm_unreachable("Unexpected returned kind for ProgramExited status");
+    }
   }
 
   // If the function returns an integer, return that as the exit code.

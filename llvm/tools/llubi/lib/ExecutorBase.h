@@ -71,10 +71,14 @@ class ExecutorBase {
 protected:
   Context &Ctx;
   EventHandler &Handler;
+  Frame *CurrentFrame = nullptr;
+  ProgramExitInfo ExitInfo;
+
+private:
   // Used to indicate whether the interpreter should continue execution.
   bool Status;
-  Frame *CurrentFrame = nullptr;
 
+protected:
   ExecutorBase(Context &C, EventHandler &H)
       : Ctx(C), Handler(H), Status(true) {}
   ~ExecutorBase() = default;
@@ -93,6 +97,12 @@ public:
   AnyValue load(const AnyValue &Ptr, Align Alignment, Type *ValTy);
   void store(const AnyValue &Ptr, Align Alignment, const AnyValue &Val,
              Type *ValTy);
+
+  void requestProgramExit(ProgramExitInfo::ProgramExitKind Kind,
+                          uint64_t ExitCode = 0);
+
+  bool getExecutionStatus() const;
+  ProgramExitInfo getExitInfo() const;
 };
 
 } // namespace llvm::ubi

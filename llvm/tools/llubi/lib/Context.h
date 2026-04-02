@@ -47,6 +47,34 @@ enum class UndefValueBehavior {
   Zero,             // All uses of the undef value yield zero.
 };
 
+struct ProgramExitInfo {
+  enum class ProgramExitKind {
+    Invalid,
+    // Program exited via a normal return
+    Returned,
+    // Program exited with an interpreter error (UB/Unsupported
+    // instruction/etc.)
+    Failed,
+    // Program exited via a call to exit()
+    Exited,
+    // Program exited via a call to abort()
+    Aborted,
+    // Program exited via a call to terminate()
+    Terminated,
+  };
+
+  ProgramExitKind Kind = ProgramExitKind::Invalid;
+  uint64_t ExitCode = 0;
+
+  explicit operator bool() const { return Kind != ProgramExitKind::Invalid; }
+
+  bool isExitedByLibcall() const {
+    return Kind == ProgramExitKind::Exited ||
+           Kind == ProgramExitKind::Aborted ||
+           Kind == ProgramExitKind::Terminated;
+  }
+};
+
 class MemoryObject : public RefCountedBase<MemoryObject> {
   uint64_t Address;
   uint64_t Size;
@@ -110,6 +138,7 @@ public:
   virtual bool onFunctionExit(Function &F, const AnyValue &RetVal) {
     return true;
   }
+  virtual bool onProgramExit(const ProgramExitInfo &ExitInfo) { return true; }
   virtual bool onPrint(StringRef Msg) {
     outs() << Msg;
     return true;
@@ -257,11 +286,13 @@ public:
   /// initialization).
   bool initGlobalValues();
   /// Execute the function \p F with arguments \p Args, and store the return
-  /// value in \p RetVal if the function is not void.
-  /// Returns true if the function executed successfully. False indicates an
-  /// error occurred during execution.
+  /// value in \p RetVal if the function is not void. The exit information is
+  /// store in \p ExitInfo.
+  /// Returns true if the function executed successfully without calls to
+  /// exit()/abort()/terminate(). False indicates an error occurred during
+  /// execution.
   bool runFunction(Function &F, ArrayRef<AnyValue> Args, AnyValue &RetVal,
-                   EventHandler &Handler);
+                   EventHandler &Handler, ProgramExitInfo &ExitInfo);
 };
 
 } // namespace llvm::ubi
