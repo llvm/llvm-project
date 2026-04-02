@@ -6069,11 +6069,9 @@ static void transformToPartialReduction(const VPPartialReductionChain &Chain,
     VPBuilder Builder(WidenRecipe);
     Type *ElemTy = TypeInfo.inferScalarType(BinOp);
     auto *Zero = Plan.getZero(ElemTy);
-    VPIRFlags Flags = WidenRecipe->getUnderlyingInstr()
-                          ? VPIRFlags(*WidenRecipe->getUnderlyingInstr())
-                          : VPIRFlags();
-    auto *NegRecipe = new VPWidenRecipe(Instruction::Sub, {Zero, BinOp}, Flags,
-                                        VPIRMetadata(), DebugLoc::getUnknown());
+    auto *NegRecipe =
+        new VPWidenRecipe(Instruction::Sub, {Zero, BinOp}, *WidenRecipe,
+                          VPIRMetadata(), DebugLoc::getUnknown());
     Builder.insert(NegRecipe);
     BinOp = NegRecipe;
   }
