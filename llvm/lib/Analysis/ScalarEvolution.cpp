@@ -258,20 +258,82 @@ static cl::opt<bool> UseContextForNoWrapFlagInference(
 //                           SCEV class definitions
 //===----------------------------------------------------------------------===//
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-LLVM_DUMP_METHOD void SCEVUse::dump() const {
-  print(dbgs());
-  dbgs() << '\n';
-}
-#endif
+void SCEV::computeAndSetCanonical(ScalarEvolution &SE) {
+  // Leaf nodes are always their own canonical.
+  switch (getSCEVType()) {
+  case scConstant:
+  case scVScale:
+  case scUnknown:
+    CanonicalSCEV = this;
+    return;
+  default:
+    break;
+  }
 
-void SCEVUse::print(raw_ostream &OS) const {
-  getPointer()->print(OS);
-  SCEV::NoWrapFlags Flags = static_cast<SCEV::NoWrapFlags>(getInt());
-  if (Flags & SCEV::FlagNUW)
-    OS << "(u nuw)";
-  if (Flags & SCEV::FlagNSW)
-    OS << "(u nsw)";
+  // For all other expressions, check whether any immediate operand has a
+  // different canonical. Since operands are always created before their parent,
+  // their canonical pointers are already set — no recursion needed.
+  bool Changed = false;
+  SmallVector<SCEVUse, 4> CanonOps;
+  for (SCEVUse Op : operands()) {
+    CanonOps.push_back(Op->getCanonical());
+    Changed |= CanonOps.back() != Op.getPointer();
+  }
+
+  if (!Changed) {
+    CanonicalSCEV = this;
+    return;
+  }
+
+  auto *NAry = dyn_cast<SCEVNAryExpr>(this);
+  SCEV::NoWrapFlags Flags = NAry ? NAry->getNoWrapFlags() : SCEV::FlagAnyWrap;
+  switch (getSCEVType()) {
+  case scPtrToAddr:
+    CanonicalSCEV = SE.getPtrToAddrExpr(CanonOps[0]);
+    return;
+  case scPtrToInt:
+    CanonicalSCEV = SE.getPtrToIntExpr(CanonOps[0], getType());
+    return;
+  case scTruncate:
+    CanonicalSCEV = SE.getTruncateExpr(CanonOps[0], getType());
+    return;
+  case scZeroExtend:
+    CanonicalSCEV = SE.getZeroExtendExpr(CanonOps[0], getType());
+    return;
+  case scSignExtend:
+    CanonicalSCEV = SE.getSignExtendExpr(CanonOps[0], getType());
+    return;
+  case scUDivExpr:
+    CanonicalSCEV = SE.getUDivExpr(CanonOps[0], CanonOps[1]);
+    return;
+  case scAddExpr:
+    CanonicalSCEV = SE.getAddExpr(CanonOps, Flags);
+    return;
+  case scMulExpr:
+    CanonicalSCEV = SE.getMulExpr(CanonOps, Flags);
+    return;
+  case scAddRecExpr:
+    CanonicalSCEV = SE.getAddRecExpr(
+        CanonOps, cast<SCEVAddRecExpr>(this)->getLoop(), Flags);
+    return;
+  case scSMaxExpr:
+    CanonicalSCEV = SE.getSMaxExpr(CanonOps);
+    return;
+  case scUMaxExpr:
+    CanonicalSCEV = SE.getUMaxExpr(CanonOps);
+    return;
+  case scSMinExpr:
+    CanonicalSCEV = SE.getSMinExpr(CanonOps);
+    return;
+  case scUMinExpr:
+    CanonicalSCEV = SE.getUMinExpr(CanonOps);
+    return;
+  case scSequentialUMinExpr:
+    CanonicalSCEV = SE.getUMinExpr(CanonOps, /*Sequential=*/true);
+    return;
+  default:
+    llvm_unreachable("Unknown SCEV type");
+  }
 }
 
 //===----------------------------------------------------------------------===//
@@ -495,6 +557,7 @@ const SCEV *ScalarEvolution::getConstant(ConstantInt *V) {
   if (const SCEV *S = UniqueSCEVs.FindNodeOrInsertPos(ID, IP)) return S;
   SCEV *S = new (SCEVAllocator) SCEVConstant(ID.Intern(SCEVAllocator), V);
   UniqueSCEVs.InsertNode(S, IP);
+  S->computeAndSetCanonical(*this);
   return S;
 }
 
@@ -520,6 +583,7 @@ const SCEV *ScalarEvolution::getVScale(Type *Ty) {
     return S;
   SCEV *S = new (SCEVAllocator) SCEVVScale(ID.Intern(SCEVAllocator), Ty);
   UniqueSCEVs.InsertNode(S, IP);
+  S->computeAndSetCanonical(*this);
   return S;
 }
 
@@ -1133,6 +1197,7 @@ const SCEV *ScalarEvolution::getLosslessPtrToIntExpr(const SCEV *Op) {
         SCEV *S = new (SCEVAllocator)
             SCEVPtrToIntExpr(ID.Intern(SCEVAllocator), U, IntPtrTy);
         UniqueSCEVs.InsertNode(S, IP);
+        S->computeAndSetCanonical(*this);
         registerUser(S, U);
         return static_cast<const SCEV *>(S);
       });
@@ -1166,6 +1231,7 @@ const SCEV *ScalarEvolution::getPtrToAddrExpr(const SCEV *Op) {
         SCEV *S = new (SCEVAllocator)
             SCEVPtrToAddrExpr(ID.Intern(SCEVAllocator), U, Ty);
         UniqueSCEVs.InsertNode(S, IP);
+        S->computeAndSetCanonical(*this);
         registerUser(S, U);
         return static_cast<const SCEV *>(S);
       });
@@ -1222,6 +1288,7 @@ const SCEV *ScalarEvolution::getTruncateExpr(const SCEV *Op, Type *Ty,
     SCEV *S =
         new (SCEVAllocator) SCEVTruncateExpr(ID.Intern(SCEVAllocator), Op, Ty);
     UniqueSCEVs.InsertNode(S, IP);
+    S->computeAndSetCanonical(*this);
     registerUser(S, Op);
     return S;
   }
@@ -1275,6 +1342,7 @@ const SCEV *ScalarEvolution::getTruncateExpr(const SCEV *Op, Type *Ty,
   SCEV *S = new (SCEVAllocator) SCEVTruncateExpr(ID.Intern(SCEVAllocator),
                                                  Op, Ty);
   UniqueSCEVs.InsertNode(S, IP);
+  S->computeAndSetCanonical(*this);
   registerUser(S, Op);
   return S;
 }
@@ -1645,6 +1713,7 @@ const SCEV *ScalarEvolution::getZeroExtendExprImpl(const SCEV *Op, Type *Ty,
     SCEV *S = new (SCEVAllocator) SCEVZeroExtendExpr(ID.Intern(SCEVAllocator),
                                                      Op, Ty);
     UniqueSCEVs.InsertNode(S, IP);
+    S->computeAndSetCanonical(*this);
     registerUser(S, Op);
     return S;
   }
@@ -1929,6 +1998,7 @@ const SCEV *ScalarEvolution::getZeroExtendExprImpl(const SCEV *Op, Type *Ty,
   SCEV *S = new (SCEVAllocator) SCEVZeroExtendExpr(ID.Intern(SCEVAllocator),
                                                    Op, Ty);
   UniqueSCEVs.InsertNode(S, IP);
+  S->computeAndSetCanonical(*this);
   registerUser(S, Op);
   return S;
 }
@@ -1985,6 +2055,7 @@ const SCEV *ScalarEvolution::getSignExtendExprImpl(const SCEV *Op, Type *Ty,
     SCEV *S = new (SCEVAllocator) SCEVSignExtendExpr(ID.Intern(SCEVAllocator),
                                                      Op, Ty);
     UniqueSCEVs.InsertNode(S, IP);
+    S->computeAndSetCanonical(*this);
     registerUser(S, Op);
     return S;
   }
@@ -2191,6 +2262,7 @@ const SCEV *ScalarEvolution::getSignExtendExprImpl(const SCEV *Op, Type *Ty,
   SCEV *S = new (SCEVAllocator) SCEVSignExtendExpr(ID.Intern(SCEVAllocator),
                                                    Op, Ty);
   UniqueSCEVs.InsertNode(S, IP);
+  S->computeAndSetCanonical(*this);
   registerUser(S, Op);
   return S;
 }
@@ -3035,6 +3107,7 @@ const SCEV *ScalarEvolution::getOrCreateAddExpr(ArrayRef<SCEVUse> Ops,
     S = new (SCEVAllocator)
         SCEVAddExpr(ID.Intern(SCEVAllocator), O, Ops.size());
     UniqueSCEVs.InsertNode(S, IP);
+    S->computeAndSetCanonical(*this);
     registerUser(S, Ops);
   }
   S->setNoWrapFlags(Flags);
@@ -3058,6 +3131,7 @@ const SCEV *ScalarEvolution::getOrCreateAddRecExpr(ArrayRef<SCEVUse> Ops,
     S = new (SCEVAllocator)
         SCEVAddRecExpr(ID.Intern(SCEVAllocator), O, Ops.size(), L);
     UniqueSCEVs.InsertNode(S, IP);
+    S->computeAndSetCanonical(*this);
     LoopUsers[L].push_back(S);
     registerUser(S, Ops);
   }
@@ -3080,6 +3154,7 @@ const SCEV *ScalarEvolution::getOrCreateMulExpr(ArrayRef<SCEVUse> Ops,
     S = new (SCEVAllocator) SCEVMulExpr(ID.Intern(SCEVAllocator),
                                         O, Ops.size());
     UniqueSCEVs.InsertNode(S, IP);
+    S->computeAndSetCanonical(*this);
     registerUser(S, Ops);
   }
   S->setNoWrapFlags(Flags);
@@ -3647,6 +3722,7 @@ const SCEV *ScalarEvolution::getUDivExpr(SCEVUse LHS, SCEVUse RHS) {
   SCEV *S = new (SCEVAllocator) SCEVUDivExpr(ID.Intern(SCEVAllocator),
                                              LHS, RHS);
   UniqueSCEVs.InsertNode(S, IP);
+  S->computeAndSetCanonical(*this);
   registerUser(S, ArrayRef<SCEVUse>({LHS, RHS}));
   return S;
 }
@@ -4047,6 +4123,7 @@ const SCEV *ScalarEvolution::getMinMaxExpr(SCEVTypes Kind,
       SCEVMinMaxExpr(ID.Intern(SCEVAllocator), Kind, O, Ops.size());
 
   UniqueSCEVs.InsertNode(S, IP);
+  S->computeAndSetCanonical(*this);
   registerUser(S, Ops);
   return S;
 }
@@ -4437,6 +4514,7 @@ ScalarEvolution::getSequentialMinMaxExpr(SCEVTypes Kind,
       SCEVSequentialMinMaxExpr(ID.Intern(SCEVAllocator), Kind, O, Ops.size());
 
   UniqueSCEVs.InsertNode(S, IP);
+  S->computeAndSetCanonical(*this);
   registerUser(S, Ops);
   return S;
 }
@@ -4527,6 +4605,7 @@ const SCEV *ScalarEvolution::getUnknown(Value *V) {
                                             FirstUnknown);
   FirstUnknown = cast<SCEVUnknown>(S);
   UniqueSCEVs.InsertNode(S, IP);
+  S->computeAndSetCanonical(*this);
   return S;
 }
 

@@ -132,8 +132,8 @@ public:
     return false;
   }
 
-  virtual InstructionUniformity getInstructionUniformity(const Value *V) const {
-    return InstructionUniformity::Default;
+  virtual ValueUniformity getValueUniformity(const Value *V) const {
+    return ValueUniformity::Default;
   }
 
   virtual bool isValidAddrSpaceCast(unsigned FromAS, unsigned ToAS) const {
