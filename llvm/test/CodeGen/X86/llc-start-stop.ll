@@ -18,7 +18,7 @@
 ; RUN: llc < %s -debug-pass=Structure -start-after=loop-reduce -o /dev/null 2>&1 | FileCheck %s -check-prefix=START-AFTER
 ; START-AFTER: -gc-lowering
 ; START-AFTER: FunctionPass Manager
-; START-AFTER-NEXT: Lower Garbage Collection Instructions
+; START-AFTER: Lower Garbage Collection Instructions
 
 ; RUN: llc < %s -debug-pass=Structure -start-before=loop-reduce -o /dev/null 2>&1 | FileCheck %s -check-prefix=START-BEFORE
 ; START-BEFORE: -machine-branch-prob -regalloc-evict -regalloc-priority -domtree
