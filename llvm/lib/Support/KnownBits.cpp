@@ -404,29 +404,31 @@ static unsigned getMaxShiftAmount(const APInt &MaxValue, unsigned BitWidth) {
   return MaxValue.getLimitedValue(BitWidth - 1);
 }
 
+KnownBits KnownBits::shl(const KnownBits &LHS, unsigned ShiftAmt, bool NUW,
+                         bool NSW) {
+  KnownBits Known;
+  bool ShiftedOutZero, ShiftedOutOne;
+  Known.Zero = LHS.Zero.ushl_ov(ShiftAmt, ShiftedOutZero);
+  Known.Zero.setLowBits(ShiftAmt);
+  Known.One = LHS.One.ushl_ov(ShiftAmt, ShiftedOutOne);
+
+  // All cases returning poison have been handled by MaxShiftAmount already.
+  if (NSW) {
+    if (NUW && ShiftAmt != 0)
+      // NUW means we can assume anything shifted out was a zero.
+      ShiftedOutZero = true;
+
+    if (ShiftedOutZero)
+      Known.makeNonNegative();
+    else if (ShiftedOutOne)
+      Known.makeNegative();
+  }
+  return Known;
+}
+
 KnownBits KnownBits::shl(const KnownBits &LHS, const KnownBits &RHS, bool NUW,
                          bool NSW, bool ShAmtNonZero) {
   unsigned BitWidth = LHS.getBitWidth();
-  auto ShiftByConst = [&](const KnownBits &LHS, unsigned ShiftAmt) {
-    KnownBits Known;
-    bool ShiftedOutZero, ShiftedOutOne;
-    Known.Zero = LHS.Zero.ushl_ov(ShiftAmt, ShiftedOutZero);
-    Known.Zero.setLowBits(ShiftAmt);
-    Known.One = LHS.One.ushl_ov(ShiftAmt, ShiftedOutOne);
-
-    // All cases returning poison have been handled by MaxShiftAmount already.
-    if (NSW) {
-      if (NUW && ShiftAmt != 0)
-        // NUW means we can assume anything shifted out was a zero.
-        ShiftedOutZero = true;
-
-      if (ShiftedOutZero)
-        Known.makeNonNegative();
-      else if (ShiftedOutOne)
-        Known.makeNegative();
-    }
-    return Known;
-  };
 
   // Fast path for a common case when LHS is completely unknown.
   KnownBits Known(BitWidth);
@@ -477,7 +479,7 @@ KnownBits KnownBits::shl(const KnownBits &LHS, const KnownBits &RHS, bool NUW,
     if ((ShiftAmtZeroMask & ShiftAmt) != 0 ||
         (ShiftAmtOneMask | ShiftAmt) != ShiftAmt)
       continue;
-    Known = Known.intersectWith(ShiftByConst(LHS, ShiftAmt));
+    Known = Known.intersectWith(shl(LHS, ShiftAmt, NUW, NSW));
     if (Known.isUnknown())
       break;
   }

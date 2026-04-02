@@ -454,6 +454,11 @@ public:
   /// Compute known bits for abds(LHS, RHS).
   LLVM_ABI static KnownBits abds(KnownBits LHS, KnownBits RHS);
 
+  /// Compute known bits for shl(LHS, ShiftAmt).
+  /// This is shift by constant variant of shl(LHS, RHS).
+  LLVM_ABI static KnownBits shl(const KnownBits &LHS, unsigned ShiftAmt,
+                                bool NUW = false, bool NSW = false);
+
   /// Compute known bits for shl(LHS, RHS).
   /// NOTE: RHS (shift amount) bitwidth doesn't need to be the same as LHS.
   LLVM_ABI static KnownBits shl(const KnownBits &LHS, const KnownBits &RHS,
