@@ -4156,7 +4156,7 @@ template <>
 struct CastInfo<VPPhiAccessors, VPRecipeBase *>
     : DefaultDoCastIfPossible<VPPhiAccessors *, VPRecipeBase *,
                               CastInfo<VPPhiAccessors, VPRecipeBase *>> {
-  // Used by isa.
+  /// Used by isa.
   static inline bool isPossible(VPRecipeBase *R) {
     // TODO: include VPPredInstPHIRecipe too, once it implements VPPhiAccessors.
     return isa<VPPhi, VPIRPhi, VPWidenPHIRecipe, VPHeaderPHIRecipe>(R);
