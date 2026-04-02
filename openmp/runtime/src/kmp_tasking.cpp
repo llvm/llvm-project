@@ -1505,6 +1505,18 @@ kmp_int32
 __kmpc_omp_reg_task_with_affinity(ident_t *loc_ref, kmp_int32 gtid,
                                   kmp_task_t *new_task, kmp_int32 naffins,
                                   kmp_task_affinity_info_t *affin_list) {
+  if (naffins > 0)
+    KMP_DEBUG_ASSERT(affin_list != NULL);
+
+  for (kmp_int32 i = 0; i < naffins; ++i) {
+    KA_TRACE(30, ("__kmpc_omp_reg_task_with_affinity: T#%d aff[%d] "
+                  "base_addr=0x%llx len=%zu flags={%d,%d,%d}\n",
+                  gtid, i, (unsigned long long)affin_list[i].base_addr,
+                  affin_list[i].len, (int)affin_list[i].flags.flag1,
+                  (int)affin_list[i].flags.flag2,
+                  (int)affin_list[i].flags.reserved));
+  }
+
   return 0;
 }
 

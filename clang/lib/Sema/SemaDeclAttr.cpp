@@ -14,6 +14,7 @@
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTMutationListener.h"
+#include "clang/AST/Availability.h"
 #include "clang/AST/CXXInheritance.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
@@ -55,6 +56,7 @@
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaOpenCL.h"
 #include "clang/Sema/SemaOpenMP.h"
+#include "clang/Sema/SemaPPC.h"
 #include "clang/Sema/SemaRISCV.h"
 #include "clang/Sema/SemaSYCL.h"
 #include "clang/Sema/SemaSwift.h"
@@ -459,36 +461,33 @@ static void handlePtGuardedVarAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 }
 
 static bool checkGuardedByAttrCommon(Sema &S, Decl *D, const ParsedAttr &AL,
-                                     Expr *&Arg) {
-  SmallVector<Expr *, 1> Args;
-  // check that all arguments are lockable objects
-  checkAttrArgsAreCapabilityObjs(S, D, AL, Args);
-  unsigned Size = Args.size();
-  if (Size != 1)
+                                     SmallVectorImpl<Expr *> &Args) {
+  if (!AL.checkAtLeastNumArgs(S, 1))
     return false;
 
-  Arg = Args[0];
-
-  return true;
+  checkAttrArgsAreCapabilityObjs(S, D, AL, Args);
+  return !Args.empty();
 }
 
 static void handleGuardedByAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
-  Expr *Arg = nullptr;
-  if (!checkGuardedByAttrCommon(S, D, AL, Arg))
+  SmallVector<Expr *, 1> Args;
+  if (!checkGuardedByAttrCommon(S, D, AL, Args))
     return;
 
-  D->addAttr(::new (S.Context) GuardedByAttr(S.Context, AL, Arg));
+  D->addAttr(::new (S.Context)
+                 GuardedByAttr(S.Context, AL, Args.data(), Args.size()));
 }
 
 static void handlePtGuardedByAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
-  Expr *Arg = nullptr;
-  if (!checkGuardedByAttrCommon(S, D, AL, Arg))
+  SmallVector<Expr *, 1> Args;
+  if (!checkGuardedByAttrCommon(S, D, AL, Args))
     return;
 
   if (!threadSafetyCheckIsPointer(S, D, AL))
     return;
 
-  D->addAttr(::new (S.Context) PtGuardedByAttr(S.Context, AL, Arg));
+  D->addAttr(::new (S.Context)
+                 PtGuardedByAttr(S.Context, AL, Args.data(), Args.size()));
 }
 
 static bool checkAcquireOrderAttrCommon(Sema &S, Decl *D, const ParsedAttr &AL,
@@ -708,20 +707,9 @@ static void handleExcludeFromExplicitInstantiationAttr(Sema &S, Decl *D,
   }
 
   if (auto *DA = getDLLAttr(D); DA && !DA->isInherited()) {
-    if (auto *RD = dyn_cast<CXXRecordDecl>(D->getDeclContext())) {
-      if (RD->isTemplated()) {
-        S.Diag(DA->getLoc(),
-               diag::warn_dllattr_ignored_exclusion_takes_precedence)
-            << DA << AL;
-        D->dropAttrs<DLLExportAttr, DLLImportAttr>();
-      } else {
-        S.Diag(AL.getLoc(), diag::warn_attribute_ignored_in_non_template) << AL;
-        return;
-      }
-    } else {
-      S.Diag(AL.getLoc(), diag::warn_attribute_ignored_on_non_member) << AL;
-      return;
-    }
+    S.Diag(DA->getLoc(), diag::warn_dllattr_ignored_exclusion_takes_precedence)
+        << DA << AL;
+    D->dropAttrs<DLLExportAttr, DLLImportAttr>();
   }
 
   D->addAttr(::new (S.Context)
@@ -2371,7 +2359,8 @@ AvailabilityAttr *Sema::mergeAvailabilityAttr(
     bool Implicit, VersionTuple Introduced, VersionTuple Deprecated,
     VersionTuple Obsoleted, bool IsUnavailable, StringRef Message,
     bool IsStrict, StringRef Replacement, AvailabilityMergeKind AMK,
-    int Priority, const IdentifierInfo *Environment) {
+    int Priority, const IdentifierInfo *Environment,
+    VersionTuple OrigAnyAppleOSVersion) {
   VersionTuple MergedIntroduced = Introduced;
   VersionTuple MergedDeprecated = Deprecated;
   VersionTuple MergedObsoleted = Obsoleted;
@@ -2530,7 +2519,8 @@ AvailabilityAttr *Sema::mergeAvailabilityAttr(
       !OverrideOrImpl) {
     auto *Avail = ::new (Context) AvailabilityAttr(
         Context, CI, Platform, Introduced, Deprecated, Obsoleted, IsUnavailable,
-        Message, IsStrict, Replacement, Priority, Environment);
+        Message, IsStrict, Replacement, Priority, Environment,
+        OrigAnyAppleOSVersion);
     Avail->setImplicit(Implicit);
     return Avail;
   }
@@ -2714,6 +2704,63 @@ static void handleAvailabilityAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
              diag::err_availability_unexpected_parameter)
           << "environment" << /* C/C++ */ 1;
     }
+  }
+
+  // Handle anyAppleOS specially: create implicit platform-specific attributes
+  // instead of the original anyAppleOS attribute.
+  if (II->getName() == "anyappleos") {
+    // Validate anyAppleOS versions; reject versions older than 26.0.
+    auto ValidateVersion = [&](const llvm::VersionTuple &Version,
+                               SourceLocation Loc) -> bool {
+      if (AvailabilitySpec::validateAnyAppleOSVersion(Version))
+        return true;
+      S.Diag(Loc, diag::err_availability_invalid_anyappleos_version)
+          << Version.getAsString();
+      return false;
+    };
+
+    // Validate the versions; bail out if any are invalid.
+    bool Valid = ValidateVersion(Introduced.Version, Introduced.KeywordLoc);
+    Valid &= ValidateVersion(Deprecated.Version, Deprecated.KeywordLoc);
+    Valid &= ValidateVersion(Obsoleted.Version, Obsoleted.KeywordLoc);
+    if (!Valid)
+      return;
+
+    llvm::Triple T = S.Context.getTargetInfo().getTriple();
+
+    // Only create implicit attributes for Darwin OSes.
+    if (!T.isOSDarwin())
+      return;
+
+    StringRef PlatformName;
+
+    // Determine the platform name based on the target triple.
+    if (T.isMacOSX())
+      PlatformName = "macos";
+    else if (T.getOS() == llvm::Triple::IOS && T.isMacCatalystEnvironment())
+      PlatformName = "maccatalyst";
+    else // For iOS, tvOS, watchOS, visionOS, bridgeOS, etc.
+      PlatformName = llvm::Triple::getOSTypeName(T.getOS());
+
+    IdentifierInfo *NewII = &S.Context.Idents.get(PlatformName);
+
+    // Use the special low-priority value for pragma push anyAppleOS.
+    int ExpandedPriority =
+        (PriorityModifier == Sema::AP_PragmaClangAttribute)
+            ? Sema::AP_PragmaClangAttribute_InferredFromAnyAppleOS
+            : Sema::AP_InferredFromAnyAppleOS;
+
+    AvailabilityAttr *NewAttr = S.mergeAvailabilityAttr(
+        ND, AL, NewII, /*Implicit=*/true, Introduced.Version,
+        Deprecated.Version, Obsoleted.Version, IsUnavailable, Str, IsStrict,
+        Replacement, AvailabilityMergeKind::None, ExpandedPriority,
+        IIEnvironment, Introduced.Version);
+    if (NewAttr)
+      D->addAttr(NewAttr);
+
+    // Don't add the original anyAppleOS attribute - only the implicit
+    // platform-specific attributes.
+    return;
   }
 
   AvailabilityAttr *NewAttr = S.mergeAvailabilityAttr(
@@ -3640,6 +3687,10 @@ static void handleTargetClonesAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
       return;
   } else if (S.Context.getTargetInfo().getTriple().isX86()) {
     if (S.X86().checkTargetClonesAttr(Params, Locations, NewParams,
+                                      AL.getLoc()))
+      return;
+  } else if (S.Context.getTargetInfo().getTriple().isOSAIX()) {
+    if (S.PPC().checkTargetClonesAttr(Params, Locations, NewParams,
                                       AL.getLoc()))
       return;
   }
@@ -5130,6 +5181,18 @@ OptimizeNoneAttr *Sema::mergeOptimizeNoneAttr(Decl *D,
 }
 
 static void handleAlwaysInlineAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  AlwaysInlineAttr AIA(S.Context, AL);
+  if (!S.getLangOpts().MicrosoftExt &&
+      (AIA.isMSVCForceInline() || AIA.isMSVCForceInlineCalls())) {
+    S.Diag(AL.getLoc(), diag::warn_attribute_ignored) << AL;
+    return;
+  }
+  if (AIA.isMSVCForceInlineCalls()) {
+    S.Diag(AL.getLoc(), diag::warn_stmt_attribute_ignored_in_function)
+        << "[[msvc::forceinline]]";
+    return;
+  }
+
   if (AlwaysInlineAttr *Inline =
           S.mergeAlwaysInlineAttr(D, AL, AL.getAttrName()))
     D->addAttr(Inline);
@@ -5853,7 +5916,7 @@ Sema::CreateLaunchBoundsAttr(const AttributeCommonInfo &CI, Expr *MaxThreads,
   if (MaxBlocks) {
     // '.maxclusterrank' ptx directive requires .target sm_90 or higher.
     auto SM = getOffloadArch(Context.getTargetInfo());
-    if (SM == OffloadArch::UNKNOWN || SM < OffloadArch::SM_90) {
+    if (SM == OffloadArch::Unknown || SM < OffloadArch::SM_90) {
       Diag(MaxBlocks->getBeginLoc(), diag::warn_cuda_maxclusterrank_sm_90)
           << OffloadArchToString(SM) << CI << MaxBlocks->getSourceRange();
       // Ignore it by setting MaxBlocks to null;
@@ -6489,19 +6552,10 @@ static void handleDLLAttr(Sema &S, Decl *D, const ParsedAttr &A) {
   }
 
   if (auto *EA = D->getAttr<ExcludeFromExplicitInstantiationAttr>()) {
-    if (auto *RD = dyn_cast<CXXRecordDecl>(D->getDeclContext())) {
-      if (RD->isTemplated()) {
-        S.Diag(A.getRange().getBegin(),
-               diag::warn_dllattr_ignored_exclusion_takes_precedence)
-            << A << EA;
-        return;
-      }
-      S.Diag(EA->getLoc(), diag::warn_attribute_ignored_in_non_template) << EA;
-      D->dropAttr<ExcludeFromExplicitInstantiationAttr>();
-    } else {
-      S.Diag(EA->getLoc(), diag::warn_attribute_ignored_on_non_member) << EA;
-      D->dropAttr<ExcludeFromExplicitInstantiationAttr>();
-    }
+    S.Diag(A.getRange().getBegin(),
+           diag::warn_dllattr_ignored_exclusion_takes_precedence)
+        << A << EA;
+    return;
   }
 
   Attr *NewAttr = A.getKind() == ParsedAttr::AT_DLLExport
@@ -7970,6 +8024,9 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     break;
   case ParsedAttr::AT_HLSLVkExtBuiltinInput:
     S.HLSL().handleVkExtBuiltinInputAttr(D, AL);
+    break;
+  case ParsedAttr::AT_HLSLVkExtBuiltinOutput:
+    S.HLSL().handleVkExtBuiltinOutputAttr(D, AL);
     break;
   case ParsedAttr::AT_HLSLVkPushConstant:
     S.HLSL().handleVkPushConstantAttr(D, AL);

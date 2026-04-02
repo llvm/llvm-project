@@ -542,7 +542,7 @@ static bool canReorderAddSextToGEP(const GetElementPtrInst *GEP,
   } else {
     // (2^(N-1) + C) * stride
     Threshold = (APInt::getSignedMinValue(N).zext(128) +
-                 CI->getValue().zextOrTrunc(128)) *
+                 CI->getValue().sextOrTrunc(128)) *
                 APInt(128, Stride);
   }
 

@@ -259,6 +259,8 @@ static BuiltinTypeDeclBuilder setupTextureType(CXXRecordDecl *Decl, Sema &S,
   return BuiltinTypeDeclBuilder(S, Decl)
       .addTextureHandle(RC, IsROV, Dim)
       .addTextureLoadMethods(Dim)
+      .addArraySubscriptOperators(Dim)
+      .addMipsMember(Dim)
       .addDefaultHandleConstructor()
       .addCopyConstructor()
       .addCopyAssignmentOperator()
@@ -269,6 +271,7 @@ static BuiltinTypeDeclBuilder setupTextureType(CXXRecordDecl *Decl, Sema &S,
       .addSampleLevelMethods(Dim)
       .addSampleCmpMethods(Dim)
       .addSampleCmpLevelZeroMethods(Dim)
+      .addCalculateLodMethods(Dim)
       .addGatherMethods(Dim)
       .addGatherCmpMethods(Dim);
 }

@@ -531,7 +531,14 @@ void DependencyGraph::notifySetUse(const Use &U, Value *NewSrc) {
   //  ---|---   ---|---   -
   //  U.User     U.User
   auto *UserI = dyn_cast_or_null<Instruction>(U.getUser());
-  if (UserI == nullptr || !getNode(UserI))
+  if (UserI == nullptr)
+    return;
+  auto *UserN = getNode(UserI);
+  if (UserN == nullptr)
+    return;
+  // If UserN is marked as scheduled then we should not update CrrSrcN' or
+  // NewSrcN's unscheduled successors.
+  if (UserN->scheduled())
     return;
   // Update the UnscheduledSuccs counter for both the current source and
   // NewSrc if needed.

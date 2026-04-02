@@ -689,14 +689,8 @@ void VPBasicBlock::print(raw_ostream &O, const Twine &Indent,
 }
 #endif
 
-static std::pair<VPBlockBase *, VPBlockBase *> cloneFrom(VPBlockBase *Entry);
-
-// Clone the CFG for all nodes reachable from \p Entry, this includes cloning
-// the blocks and their recipes. Operands of cloned recipes will NOT be updated.
-// Remapping of operands must be done separately. Returns a pair with the new
-// entry and exiting blocks of the cloned region. If \p Entry isn't part of a
-// region, return nullptr for the exiting block.
-static std::pair<VPBlockBase *, VPBlockBase *> cloneFrom(VPBlockBase *Entry) {
+std::pair<VPBlockBase *, VPBlockBase *>
+VPBlockUtils::cloneFrom(VPBlockBase *Entry) {
   DenseMap<VPBlockBase *, VPBlockBase *> Old2NewVPBlocks;
   VPBlockBase *Exiting = nullptr;
   bool InRegion = Entry->getParent();
@@ -747,7 +741,7 @@ static std::pair<VPBlockBase *, VPBlockBase *> cloneFrom(VPBlockBase *Entry) {
 }
 
 VPRegionBlock *VPRegionBlock::clone() {
-  const auto &[NewEntry, NewExiting] = cloneFrom(getEntry());
+  const auto &[NewEntry, NewExiting] = VPBlockUtils::cloneFrom(getEntry());
   VPlan &Plan = *getPlan();
   VPRegionBlock *NewRegion =
       isReplicator()
@@ -964,6 +958,32 @@ void VPlan::execute(VPTransformState *State) {
   // successor blocks including the middle, exit and scalar preheader blocks.
   for (VPBlockBase *Block : RPOT)
     Block->execute(State);
+
+  if (hasEarlyExit()) {
+    // Fix up LoopInfo for extra dispatch blocks when vectorizing loops with
+    // early exits. For dispatch blocks, we need to find the smallest common
+    // loop of all successors. Note: we only need to update loop info for blocks
+    // after the middle block, but there is no easy way to get those at this
+    // point.
+    for (VPBlockBase *VPB : reverse(RPOT)) {
+      auto *VPBB = dyn_cast<VPBasicBlock>(VPB);
+      if (!VPBB || isa<VPIRBasicBlock>(VPBB))
+        continue;
+      BasicBlock *BB = State->CFG.VPBB2IRBB[VPBB];
+      Loop *L = State->LI->getLoopFor(BB);
+      if (!L || any_of(successors(BB),
+                       [L](BasicBlock *Succ) { return L->contains(Succ); }))
+        continue;
+      // Find the innermost loop containing all successors.
+      Loop *Target = State->LI->getLoopFor(*succ_begin(BB));
+      for (BasicBlock *Succ : drop_begin(successors(BB)))
+        Target = State->LI->getSmallestCommonLoop(Target,
+                                                  State->LI->getLoopFor(Succ));
+      State->LI->removeBlock(BB);
+      if (Target)
+        Target->addBasicBlockToLoop(BB, *State->LI);
+    }
+  }
 
   // If the original loop is unreachable, delete it and all its blocks.
   if (!ScalarPhVPBB->hasPredecessors()) {
@@ -1186,7 +1206,7 @@ static void remapOperands(VPBlockBase *Entry, VPBlockBase *NewEntry,
 VPlan *VPlan::duplicate() {
   unsigned NumBlocksBeforeCloning = CreatedBlocks.size();
   // Clone blocks.
-  const auto &[NewEntry, __] = cloneFrom(Entry);
+  const auto &[NewEntry, __] = VPBlockUtils::cloneFrom(Entry);
 
   BasicBlock *ScalarHeaderIRBB = getScalarHeader()->getIRBasicBlock();
   VPIRBasicBlock *NewScalarHeader = nullptr;

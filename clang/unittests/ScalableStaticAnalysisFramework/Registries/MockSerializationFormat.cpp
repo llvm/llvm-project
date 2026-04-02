@@ -160,6 +160,8 @@ llvm::Error MockSerializationFormat::writeTUSummary(const TUSummary &Summary,
   return llvm::Error::success();
 }
 
+// NOLINTNEXTLINE(misc-use-internal-linkage)
+volatile int SSAFMockSerializationFormatAnchorSource = 0;
 static SerializationFormatRegistry::Add<MockSerializationFormat>
     RegisterFormat("MockSerializationFormat",
                    "A serialization format for testing");

@@ -1325,10 +1325,6 @@ public:
           mlir::Value res = cgf.evaluateExprAsBool(e->getRHS());
           lexScope.forceCleanup({&res});
           cir::YieldOp::create(b, loc, res);
-          if (res.getParentBlock() != builder.getInsertionBlock())
-            cgf.cgm.errorNYI(
-                e->getSourceRange(),
-                "ScalarExprEmitter: VisitBinLAnd ternary with cleanup");
         },
         /*falseBuilder*/
         [&](mlir::OpBuilder &b, mlir::Location loc) {
@@ -1382,10 +1378,6 @@ public:
           mlir::Value res = cgf.evaluateExprAsBool(e->getRHS());
           lexScope.forceCleanup({&res});
           cir::YieldOp::create(b, loc, res);
-          if (res.getParentBlock() != builder.getInsertionBlock())
-            cgf.cgm.errorNYI(
-                e->getSourceRange(),
-                "ScalarExprEmitter: VisitBinLOr ternary with cleanup");
         });
 
     return maybePromoteBoolResult(resOp.getResult(), resTy);
@@ -1993,7 +1985,7 @@ mlir::Value ScalarExprEmitter::emitSub(const BinOpInfo &ops) {
 mlir::Value ScalarExprEmitter::emitShl(const BinOpInfo &ops) {
   // TODO: This misses out on the sanitizer check below.
   if (ops.isFixedPointOp()) {
-    assert(cir::MissingFeatures::fixedPointType());
+    assert(!cir::MissingFeatures::fixedPointType());
     cgf.cgm.errorNYI("fixed point");
     return {};
   }
@@ -2025,7 +2017,7 @@ mlir::Value ScalarExprEmitter::emitShl(const BinOpInfo &ops) {
 mlir::Value ScalarExprEmitter::emitShr(const BinOpInfo &ops) {
   // TODO: This misses out on the sanitizer check below.
   if (ops.isFixedPointOp()) {
-    assert(cir::MissingFeatures::fixedPointType());
+    assert(!cir::MissingFeatures::fixedPointType());
     cgf.cgm.errorNYI("fixed point");
     return {};
   }
@@ -2232,13 +2224,9 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *ce) {
     assert(!cir::MissingFeatures::cxxABI());
 
     const MemberPointerType *mpt = ce->getType()->getAs<MemberPointerType>();
-    if (mpt->isMemberFunctionPointerType()) {
-      auto ty = mlir::cast<cir::MethodType>(cgf.convertType(destTy));
-      return builder.getNullMethodPtr(ty, cgf.getLoc(subExpr->getExprLoc()));
-    }
-
-    auto ty = mlir::cast<cir::DataMemberType>(cgf.convertType(destTy));
-    return builder.getNullDataMemberPtr(ty, cgf.getLoc(subExpr->getExprLoc()));
+    mlir::Location loc = cgf.getLoc(subExpr->getExprLoc());
+    return cgf.getBuilder().getConstant(
+        loc, cgf.cgm.emitNullMemberAttr(destTy, mpt));
   }
 
   case CK_ReinterpretMemberPointer: {

@@ -18,6 +18,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from inspect import Parameter, Signature
 from types import UnionType
+from enum import Enum
 from . import irdl
 from ._ods_common import _cext, segmented_accessor
 from .irdl import Variadicity
@@ -34,6 +35,9 @@ __all__ = [
     "Region",
     "Type",
     "Attribute",
+    "result",
+    "operand",
+    "attribute",
 ]
 
 Operand = ir.Value
@@ -42,6 +46,9 @@ Region = ir.Region
 
 
 def construct_instance(origin, args):
+    if not issubclass(origin, ir.Type | ir.Attribute):
+        raise TypeError(f"unsupported type in constraints: {origin}")
+
     # `origin.get` is to construct an instance of MLIR type or attribute.
     return origin.get(
         *(
@@ -81,49 +88,120 @@ class ConstraintLoweringContext:
             return irdl.any()
         elif isinstance(type_, TypeVar):
             return self.lower(type_)
+        elif origin and issubclass(origin, Type | Attribute):
+            return irdl.parametric(
+                base_type=[origin._dialect_name, origin._name],
+                args=[self.lower(arg) for arg in get_args(type_)],
+            )
         elif origin and issubclass(origin, ir.Type):
-            if issubclass(origin, Type):
-                return irdl.parametric(
-                    base_type=[origin._dialect_name, origin._name],
-                    args=[self.lower(arg) for arg in get_args(type_)],
-                )
             t = construct_instance(origin, get_args(type_))
             return irdl.is_(ir.TypeAttr.get(t))
         elif origin and issubclass(origin, ir.Attribute):
-            if issubclass(origin, Attribute):
-                return irdl.parametric(
-                    base_type=[origin._dialect_name, origin._name],
-                    args=[self.lower(arg) for arg in get_args(type_)],
-                )
             attr = construct_instance(origin, get_args(type_))
             return irdl.is_(attr)
+        elif issubclass(type_, Type | Attribute):
+            return irdl.base(base_ref=[type_._dialect_name, type_._name])
         elif issubclass(type_, ir.Type):
-            if issubclass(type_, Type):
-                return irdl.base(base_ref=[type_._dialect_name, type_._name])
             return irdl.base(base_name=f"!{type_.type_name}")
         elif issubclass(type_, ir.Attribute):
-            if issubclass(type_, Attribute):
-                return irdl.base(base_ref=[type_._dialect_name, type_._name])
             return irdl.base(base_name=f"#{type_.attr_name}")
 
         raise TypeError(f"unsupported type in constraints: {type_}")
 
 
-def infer_type(type_) -> Optional[Callable[[], ir.Type]]:
+@dataclass
+class FieldSpecifier:
+    type_: Any = None
+    infer_type: bool = False
+    default_is_none: bool = False
+    default_factory: Optional[Callable[[], Any]] = None
+    kw_only: bool = False
+
+    @property
+    def param_kind(self):
+        if self.default_is_none or self.default_factory or self.infer_type:
+            return ParameterKind.KEYWORD_ONLY_WITH_DEFAULT
+        if self.kw_only:
+            return ParameterKind.KEYWORD_ONLY_WITHOUT_DEFAULT
+        return ParameterKind.POSITIONAL_OR_KEYWORD
+
+
+def result(
+    *,
+    infer_type: bool = False,
+    default_factory: Optional[Callable[[], Any]] = None,
+    kw_only: bool = False,
+) -> Result:
+    """
+    A field specifier for `Result` definitions.
+    """
+    if infer_type and default_factory:
+        raise ValueError(
+            "a result field cannot have both infer_type and default_factory"
+        )
+
+    return FieldSpecifier(
+        type_=Result,
+        infer_type=infer_type,
+        default_factory=default_factory,
+        kw_only=kw_only,
+    )
+
+
+def operand(
+    *,
+    kw_only: bool = False,
+) -> Operand:
+    """
+    A field specifier for `Operand` definitions.
+    """
+
+    return FieldSpecifier(
+        type_=Operand,
+        kw_only=kw_only,
+    )
+
+
+def attribute(
+    *,
+    default_factory: Optional[Callable[[], Any]] = None,
+    kw_only: bool = False,
+) -> ir.Attribute:
+    """
+    A field specifier for attribute definitions.
+    """
+
+    return FieldSpecifier(
+        type_=Attribute,
+        default_factory=default_factory,
+        kw_only=kw_only,
+    )
+
+
+def infer_type_impl(type_) -> Callable[[], ir.Type]:
     """
     A function to infer ir.Type from type annotation.
-    Returns a callable that returns the inferred ir.Type,
-    or None if the type cannot be inferred.
+    Returns a callable that returns the inferred ir.Type.
     We use callables so that MLIR contexts are not required
     while calling this function.
     """
 
     origin = get_origin(type_)
-    if origin and issubclass(origin, ir.Type):
-        return lambda: construct_instance(origin, get_args(type_))
+    if origin and issubclass(origin, ir.Type | ir.Attribute):
+        args = [
+            infer_type_impl(arg) if get_origin(arg) else lambda: arg
+            for arg in get_args(type_)
+        ]
+        return lambda: origin.get(*[arg() for arg in args])
     elif isinstance(type_, TypeVar):
-        return infer_type(type_.__bound__)
-    return None
+        return infer_type_impl(type_.__bound__)
+    raise TypeError(f"unsupported type for inferring: {type_}")
+
+
+class ParameterKind(Enum):
+    POSITIONAL_OR_KEYWORD = 1
+    KEYWORD_ONLY_WITHOUT_DEFAULT = 2
+    KEYWORD_ONLY_WITH_DEFAULT = 3
 
 
 @dataclass
@@ -134,9 +212,12 @@ class FieldDef:
 
     name: str
     variadicity: Variadicity
+    constraint: Any
+
+    param_kind: ParameterKind = ParameterKind.POSITIONAL_OR_KEYWORD
 
     @staticmethod
-    def from_type_hint(name, type_) -> "FieldDef":
+    def from_type_hint(name, type_, specifier) -> "FieldDef":
         variadicity = Variadicity.single
         if inner := match_optional(type_):
             variadicity = Variadicity.optional
@@ -147,33 +228,112 @@ class FieldDef:
 
         origin = get_origin(type_)
         if origin is ir.OpResult:
-            return ResultDef(name, variadicity, get_args(type_)[0])
+            if specifier.type_ and specifier.type_ is not Result:
+                raise TypeError(
+                    f"only `result` field specifier can be used for result fields"
+                )
+            constraint = get_args(type_)[0]
+            return ResultDef(
+                name,
+                variadicity,
+                constraint,
+                param_kind=specifier.param_kind,
+                default_factory=specifier.default_factory,
+                default_is_none=specifier.default_is_none,
+                infer_type=(
+                    infer_type_impl(constraint) if specifier.infer_type else None
+                ),
+            )
         elif origin is ir.Value:
-            return OperandDef(name, variadicity, get_args(type_)[0])
-        elif issubclass(origin or type_, ir.Attribute):
-            return AttributeDef(name, variadicity, type_)
+            if specifier.type_ and specifier.type_ is not Operand:
+                raise TypeError(
+                    f"only `operand` field specifier can be used for operand fields"
+                )
+            return OperandDef(
+                name,
+                variadicity,
+                get_args(type_)[0],
+                param_kind=specifier.param_kind,
+                default_is_none=specifier.default_is_none,
+            )
         elif type_ is ir.Region:
-            return RegionDef(name, variadicity)
-        raise TypeError(f"unsupported type in operation definition: {type_}")
+            if specifier.type_ and specifier.type_ is not Region:
+                raise TypeError(
+                    f"this field specifier can not be used for region fields"
+                )
+            return RegionDef(name, variadicity, Any)
+
+        if specifier.type_ and specifier.type_ is not Attribute:
+            raise TypeError(
+                f"only `attribute` field specifier can be used for attribute fields"
+            )
+        return AttributeDef(
+            name,
+            variadicity,
+            type_,
+            param_kind=specifier.param_kind,
+            default_factory=specifier.default_factory,
+        )
 
 
 @dataclass
 class OperandDef(FieldDef):
-    constraint: Any
+    default_is_none: bool = False
+
+    def __post_init__(self):
+        if self.variadicity != Variadicity.optional and self.default_is_none:
+            raise ValueError(f"only optional operand can be set to None")
 
 
 @dataclass
 class ResultDef(FieldDef):
-    constraint: Any
+    infer_type: Callable[[], ir.Type] | None = None
+    default_factory: Optional[Callable[[], Any]] = None
+    default_is_none: bool = False
+
+    def __post_init__(self):
+        if self.variadicity != Variadicity.optional and self.default_is_none:
+            raise ValueError(f"only optional result can be set to None")
+
+        if self.infer_type and self.variadicity != Variadicity.single:
+            raise ValueError(
+                f"type of variadic or optional result '{self.name}' cannot be inferred"
+            )
+
+    def process_type(self, type_):
+        if type_:
+            return type_
+
+        if self.infer_type:
+            return self.infer_type()
+
+        if self.default_factory:
+            return self.default_factory()
+
+        return None
 
 
 @dataclass
 class AttributeDef(FieldDef):
-    constraint: Any
+    default_factory: Optional[Callable[[], Any]] = None
 
     def __post_init__(self):
         if self.variadicity != Variadicity.single:
             raise ValueError("optional attribute is not currently supported")
+        if (
+            self.param_kind == ParameterKind.KEYWORD_ONLY_WITH_DEFAULT
+            and not self.default_factory
+        ):
+            raise ValueError(f"only optional attribute can be set to None")
+
+    def process_attr(self, attr):
+        if attr:
+            return attr
+
+        if self.default_factory:
+            return self.default_factory()
+
+        return None
 
 
 @dataclass
@@ -267,7 +427,19 @@ class Operation(ir.OpView):
             if hasattr(base, "_fields"):
                 fields.extend(base._fields)
         for key, value in cls.__annotations__.items():
-            field = FieldDef.from_type_hint(key, value)
+            # if the class variable is not defined, we treat it as a default specifier;
+            # if it is assigned with `None`, we treat it as a specifier with `default_is_none=True`.
+            # e.g. x : int         # default specifier
+            #      y : int = None  # specifier with default_is_none=True
+            specifier = cls.__dict__.get(key, FieldSpecifier()) or FieldSpecifier(
+                default_is_none=True
+            )
+            # treat all other values as invalid
+            if not isinstance(specifier, FieldSpecifier):
+                raise TypeError(
+                    f"the field specifier of field '{key}' is not supported"
+                )
+            field = FieldDef.from_type_hint(key, value, specifier)
             fields.append(field)
 
         cls._fields = fields
@@ -336,27 +508,22 @@ class Operation(ir.OpView):
         return None
 
     @staticmethod
-    def _generate_init_signature(
-        fields: List[FieldDef], can_infer_types: bool
-    ) -> Signature:
-        result_args = (
-            [] if can_infer_types else [i for i in fields if isinstance(i, ResultDef)]
-        )
-        # results are placed at the beginning of the parameter list,
-        # but operands and attributes can appear in any relative order.
-        args = result_args + [
-            i for i in fields if not isinstance(i, ResultDef | RegionDef)
-        ]
-        positional_args = [
-            i.name for i in args if i.variadicity != Variadicity.optional
-        ]
-        optional_args = [i.name for i in args if i.variadicity == Variadicity.optional]
+    def _generate_init_signature(fields: List[FieldDef]) -> Signature:
+        args = [i for i in fields if not isinstance(i, RegionDef)]
 
         params = [Parameter("self", Parameter.POSITIONAL_ONLY)]
-        for i in positional_args:
-            params.append(Parameter(i, Parameter.POSITIONAL_OR_KEYWORD))
-        for i in optional_args:
-            params.append(Parameter(i, Parameter.KEYWORD_ONLY, default=None))
+
+        for i in args:
+            match i.param_kind:
+                case ParameterKind.POSITIONAL_OR_KEYWORD:
+                    params.append(Parameter(i.name, Parameter.POSITIONAL_OR_KEYWORD))
+                case ParameterKind.KEYWORD_ONLY_WITH_DEFAULT:
+                    params.append(
+                        Parameter(i.name, Parameter.KEYWORD_ONLY, default=None)
+                    )
+                case ParameterKind.KEYWORD_ONLY_WITHOUT_DEFAULT:
+                    params.append(Parameter(i.name, Parameter.KEYWORD_ONLY))
+
         params.append(Parameter("loc", Parameter.KEYWORD_ONLY, default=None))
         params.append(Parameter("ip", Parameter.KEYWORD_ONLY, default=None))
 
@@ -365,15 +532,8 @@ class Operation(ir.OpView):
     @classmethod
     def _generate_init_method(cls, fields: List[FieldDef]) -> None:
         operands, attrs, results, regions = partition_fields(fields)
-        inferred_types = [infer_type(i.constraint) for i in results]
 
-        # we infer result types only when all result types can be inferred
-        # and all results are single (not optional or variadic)
-        can_infer_types = all(inferred_types) and all(
-            i.variadicity == Variadicity.single for i in results
-        )
-
-        init_sig = cls._generate_init_signature(fields, can_infer_types)
+        init_sig = cls._generate_init_signature(fields)
 
         def __init__(*args, **kwargs):
             bound = init_sig.bind(*args, **kwargs)
@@ -381,15 +541,9 @@ class Operation(ir.OpView):
             args = bound.arguments
 
             _operands = [args[operand.name] for operand in operands]
-            _results = (
-                [t() for t in inferred_types]
-                if can_infer_types
-                else [args[result.name] for result in results]
-            )
+            _results = [result.process_type(args[result.name]) for result in results]
             _attributes = dict(
-                (attr.name, args[attr.name])
-                for attr in attrs
-                if args[attr.name] is not None
+                (attr.name, attr.process_attr(args[attr.name])) for attr in attrs
             )
             _regions = len(regions) or None
             _ods_successors = None

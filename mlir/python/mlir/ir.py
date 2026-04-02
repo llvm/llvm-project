@@ -9,6 +9,7 @@ from contextlib import contextmanager
 
 from ._mlir_libs._mlir.ir import *
 from ._mlir_libs._mlir.ir import _GlobalDebug
+from ._mlir_libs._mlir.ir import _OperationBase
 from ._mlir_libs._mlir import (
     register_type_caster,
     register_value_caster,
@@ -95,9 +96,9 @@ def loc_tracebacks(*, max_depth: int | None = None) -> Generator[None, None, Non
 
 
 # Convenience decorator for registering user-friendly Attribute builders.
-def register_attribute_builder(kind, replace=False):
+def register_attribute_builder(kind, replace=False, allow_existing=False):
     def decorator_builder(func):
-        AttrBuilder.insert(kind, func, replace=replace)
+        AttrBuilder.insert(kind, func, replace=replace, allow_existing=allow_existing)
         return func
 
     return decorator_builder

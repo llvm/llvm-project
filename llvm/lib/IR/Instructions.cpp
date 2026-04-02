@@ -1189,11 +1189,13 @@ UnreachableInst::UnreachableInst(LLVMContext &Context,
 //                        UncondBrInst Implementation
 //===----------------------------------------------------------------------===//
 
-UncondBrInst::UncondBrInst(BasicBlock *IfTrue, InsertPosition InsertBefore)
-    : BranchInst(Type::getVoidTy(IfTrue->getContext()), Instruction::UncondBr,
+// Suppress deprecation warnings from BranchInst.
+LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
+
+UncondBrInst::UncondBrInst(BasicBlock *Target, InsertPosition InsertBefore)
+    : BranchInst(Type::getVoidTy(Target->getContext()), Instruction::UncondBr,
                  AllocMarker, InsertBefore) {
-  assert(IfTrue && "Branch destination may not be null!");
-  Op<-1>() = IfTrue;
+  Op<-1>() = Target;
 }
 
 UncondBrInst::UncondBrInst(const UncondBrInst &BI)
@@ -1242,6 +1244,9 @@ void CondBrInst::swapSuccessors() {
   // expectations.
   swapProfMetadata();
 }
+
+// Suppress deprecation warnings from BranchInst.
+LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
 
 //===----------------------------------------------------------------------===//
 //                        AllocaInst Implementation
@@ -1493,6 +1498,10 @@ StringRef AtomicRMWInst::getOperationName(BinOp Op) {
     return "fmaximum";
   case AtomicRMWInst::FMinimum:
     return "fminimum";
+  case AtomicRMWInst::FMaximumNum:
+    return "fmaximumnum";
+  case AtomicRMWInst::FMinimumNum:
+    return "fminimumnum";
   case AtomicRMWInst::UIncWrap:
     return "uinc_wrap";
   case AtomicRMWInst::UDecWrap:
@@ -3819,22 +3828,6 @@ CmpInst::Predicate CmpInst::getFlippedStrictnessPredicate(Predicate pred) {
     return getStrictPredicate(pred);
 
   llvm_unreachable("Unknown predicate!");
-}
-
-bool CmpInst::isUnsigned(Predicate predicate) {
-  switch (predicate) {
-    default: return false;
-    case ICmpInst::ICMP_ULT: case ICmpInst::ICMP_ULE: case ICmpInst::ICMP_UGT:
-    case ICmpInst::ICMP_UGE: return true;
-  }
-}
-
-bool CmpInst::isSigned(Predicate predicate) {
-  switch (predicate) {
-    default: return false;
-    case ICmpInst::ICMP_SLT: case ICmpInst::ICMP_SLE: case ICmpInst::ICMP_SGT:
-    case ICmpInst::ICMP_SGE: return true;
-  }
 }
 
 bool ICmpInst::compare(const APInt &LHS, const APInt &RHS,

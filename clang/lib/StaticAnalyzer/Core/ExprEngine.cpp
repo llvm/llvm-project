@@ -1131,7 +1131,7 @@ void ExprEngine::ProcessStmt(const Stmt *currStmt, ExplodedNode *Pred) {
     removeDead(Pred, CleanedStates, currStmt,
                                     Pred->getLocationContext());
   } else
-    CleanedStates.Add(Pred);
+    CleanedStates.insert(Pred);
 
   // Visit the statement.
   ExplodedNodeSet Dst;
@@ -1190,7 +1190,7 @@ void ExprEngine::ProcessInitializer(const CFGInitializer CFGInit,
       // But we still need to stop tracking the object under construction.
       State = finishObjectConstruction(State, BMI, LC);
       PostStore PS(Init, LC, /*Loc*/ nullptr, /*tag*/ nullptr);
-      Tmp.Add(Engine.makeNode(PS, State, Pred));
+      Tmp.insert(Engine.makeNode(PS, State, Pred));
     } else {
       const ValueDecl *Field;
       if (BMI->isIndirectMemberInitializer()) {
@@ -1245,7 +1245,7 @@ void ExprEngine::ProcessInitializer(const CFGInitializer CFGInit,
 
   ExplodedNodeSet Dst;
   for (ExplodedNode *Pred : Tmp)
-    Dst.Add(Engine.makeNode(PP, Pred->getState(), Pred));
+    Dst.insert(Engine.makeNode(PP, Pred->getState(), Pred));
   // Enqueue the new nodes onto the work list.
   Engine.enqueueStmtNodes(Dst, getCurrBlock(), currStmtIdx);
 }
@@ -1328,7 +1328,7 @@ void ExprEngine::ProcessNewAllocator(const CXXNewExpr *NE,
     const LocationContext *LCtx = Pred->getLocationContext();
     PostImplicitCall PP(NE->getOperatorNew(), NE->getBeginLoc(), LCtx,
                         getCFGElementRef());
-    Dst.Add(Engine.makeNode(PP, Pred->getState(), Pred));
+    Dst.insert(Engine.makeNode(PP, Pred->getState(), Pred));
   }
   Engine.enqueueStmtNodes(Dst, getCurrBlock(), currStmtIdx);
 }
@@ -2562,7 +2562,7 @@ void ExprEngine::processCFGBlockEntrance(const BlockEdge &L,
   // other constraints) then consider completely unrolling it.
   if(AMgr.options.ShouldUnrollLoops) {
     unsigned maxBlockVisitOnPath = AMgr.options.maxBlockVisitOnPath;
-    const Stmt *Term = Builder.getContext().getBlock()->getTerminatorStmt();
+    const Stmt *Term = getCurrBlock()->getTerminatorStmt();
     if (Term) {
       ProgramStateRef NewState = updateLoopStack(Term, AMgr.getASTContext(),
                                                  Pred, maxBlockVisitOnPath);
@@ -2580,10 +2580,10 @@ void ExprEngine::processCFGBlockEntrance(const BlockEdge &L,
 
   // If this block is terminated by a loop and it has already been visited the
   // maximum number of times, widen the loop.
-  unsigned int BlockCount = Builder.getContext().blockCount();
+  unsigned int BlockCount = getNumVisitedCurrent();
   if (BlockCount == AMgr.options.maxBlockVisitOnPath - 1 &&
       AMgr.options.ShouldWidenLoops) {
-    const Stmt *Term = Builder.getContext().getBlock()->getTerminatorStmt();
+    const Stmt *Term = getCurrBlock()->getTerminatorStmt();
     if (!isa_and_nonnull<ForStmt, WhileStmt, DoStmt, CXXForRangeStmt>(Term))
       return;
 
@@ -2596,9 +2596,8 @@ void ExprEngine::processCFGBlockEntrance(const BlockEdge &L,
     // would be stale.  Ideally, we should pass on the terminator of the CFG
     // block, but the terminator cannot be referred as a CFG element.
     // Here we just pass the the first CFG element in the block.
-    ProgramStateRef WidenedState =
-        getWidenedLoopState(Pred->getState(), LCtx, BlockCount,
-                            *Builder.getContext().getBlock()->ref_begin());
+    ProgramStateRef WidenedState = getWidenedLoopState(
+        Pred->getState(), LCtx, BlockCount, *getCurrBlock()->ref_begin());
     Builder.generateNode(BE, WidenedState, Pred);
     return;
   }
@@ -2974,35 +2973,35 @@ void ExprEngine::processStaticInitializer(const DeclStmt *DS,
 
 /// processIndirectGoto - Called by CoreEngine.  Used to generate successor
 ///  nodes by processing the 'effects' of a computed goto jump.
-void ExprEngine::processIndirectGoto(IndirectGotoNodeBuilder &Builder,
+void ExprEngine::processIndirectGoto(ExplodedNodeSet &Dst, const Expr *Tgt,
+                                     const CFGBlock *Dispatch,
                                      ExplodedNode *Pred) {
   ProgramStateRef State = Pred->getState();
-  SVal V = State->getSVal(Builder.getTarget(), Builder.getLocationContext());
+  SVal V = State->getSVal(Tgt, getCurrLocationContext());
 
-  // Case 1: We know the computed label.
-  if (std::optional<loc::GotoLabel> LV = V.getAs<loc::GotoLabel>()) {
-    const LabelDecl *L = LV->getLabel();
-
-    for (const CFGBlock *Succ : Builder) {
-      if (cast<LabelStmt>(Succ->getLabel())->getDecl() == L) {
-        Builder.generateNode(Succ, State, Pred);
-        return;
-      }
-    }
-
-    llvm_unreachable("No block with label.");
-  }
-
-  // Case 2: The label is NULL (or some other constant), or Undefined.
-  if (isa<UndefinedVal, loc::ConcreteInt>(V)) {
-    // FIXME: Emit warnings when the jump target is undefined or numerical.
+  // We cannot dispatch anywhere if the label is undefined, NULL or some other
+  // concrete number.
+  // FIXME: Emit a warning in this situation.
+  if (isa<UndefinedVal, loc::ConcreteInt>(V))
     return;
-  }
 
-  // Case 3: We have no clue about the label.  Dispatch to all targets.
-  // FIXME: Implement dispatch for symbolic pointers.
-  for (const CFGBlock *Succ : Builder)
-    Builder.generateNode(Succ, State, Pred);
+  // If 'V' is the address of a concrete goto label (on this execution path),
+  // then only transition along the edge to that label.
+  // FIXME: Implement dispatch for symbolic pointers, utilizing information
+  // that they are equal or not equal to pointers to a certain goto label.
+  const LabelDecl *L = nullptr;
+  if (auto LV = V.getAs<loc::GotoLabel>())
+    L = LV->getLabel();
+
+  // Dispatch to the label 'L' or to all labels if 'L' is null.
+  for (const CFGBlock *Succ : Dispatch->succs()) {
+    if (!L || cast<LabelStmt>(Succ->getLabel())->getDecl() == L) {
+      // FIXME: If 'V' was a symbolic value, then record that on this execution
+      // path it is equal to the address of the label leading to 'Succ'.
+      BlockEdge BE(getCurrBlock(), Succ, Pred->getLocationContext());
+      Dst.insert(Engine.makeNode(BE, State, Pred));
+    }
+  }
 }
 
 void ExprEngine::processBeginOfFunction(ExplodedNode *Pred,

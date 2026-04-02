@@ -219,6 +219,7 @@ TEST(ConfigParseTest, ParsesConfigurationBools) {
   CHECK_PARSE_BOOL(SpaceBeforeCaseColon);
   CHECK_PARSE_BOOL(SpaceBeforeCpp11BracedList);
   CHECK_PARSE_BOOL(SpaceBeforeCtorInitializerColon);
+  CHECK_PARSE_BOOL(SpaceBeforeEnumUnderlyingTypeColon);
   CHECK_PARSE_BOOL(SpaceBeforeInheritanceColon);
   CHECK_PARSE_BOOL(SpaceBeforeJsonColon);
   CHECK_PARSE_BOOL(SpaceBeforeRangeBasedForLoopColon);
@@ -337,8 +338,7 @@ TEST(ConfigParseTest, ParsesConfiguration) {
 #define CHECK_ALIGN_CONSECUTIVE(FIELD)                                         \
   do {                                                                         \
     Style.FIELD.Enabled = true;                                                \
-    CHECK_PARSE(#FIELD ": None", FIELD,                                        \
-                FormatStyle::AlignConsecutiveStyle({}));                       \
+    CHECK_PARSE(#FIELD ": None", FIELD, FormatStyle::AlignConsecutiveStyle{}); \
     CHECK_PARSE(                                                               \
         #FIELD ": Consecutive", FIELD,                                         \
         FormatStyle::AlignConsecutiveStyle(                                    \
@@ -369,7 +369,7 @@ TEST(ConfigParseTest, ParsesConfiguration) {
              /*AlignFunctionPointers=*/false, /*PadOperators=*/true}));        \
     /* For backwards compability, false / true should still parse */           \
     CHECK_PARSE(#FIELD ": false", FIELD,                                       \
-                FormatStyle::AlignConsecutiveStyle({}));                       \
+                FormatStyle::AlignConsecutiveStyle{});                         \
     CHECK_PARSE(                                                               \
         #FIELD ": true", FIELD,                                                \
         FormatStyle::AlignConsecutiveStyle(                                    \
@@ -1043,13 +1043,6 @@ TEST(ConfigParseTest, ParsesConfiguration) {
               StatementAttributeLikeMacros,
               std::vector<std::string>({"emit", "Q_EMIT"}));
 
-  Style.Macros.clear();
-  CHECK_PARSE("{Macros: [foo]}", Macros, std::vector<std::string>({"foo"}));
-  std::vector<std::string> GoogleMacros;
-  GoogleMacros.push_back("ASSIGN_OR_RETURN(a, b)=a = (b)");
-  GoogleMacros.push_back("ASSIGN_OR_RETURN(a, b, c)=a = (b); if (x) return c");
-  CHECK_PARSE("BasedOnStyle: Google", Macros, GoogleMacros);
-
   Style.StatementMacros.clear();
   CHECK_PARSE("StatementMacros: [QUNUSED]", StatementMacros,
               std::vector<std::string>{"QUNUSED"});
@@ -1057,6 +1050,7 @@ TEST(ConfigParseTest, ParsesConfiguration) {
               std::vector<std::string>({"QUNUSED", "QT_REQUIRE_VERSION"}));
 
   CHECK_PARSE_LIST(JavaImportGroups);
+  CHECK_PARSE_LIST(Macros);
   CHECK_PARSE_LIST(MacrosSkippedByRemoveParentheses);
   CHECK_PARSE_LIST(NamespaceMacros);
   CHECK_PARSE_LIST(ObjCPropertyAttributeOrder);
@@ -1100,7 +1094,7 @@ TEST(ConfigParseTest, ParsesConfiguration) {
       FormatStyle::SortIncludesOptions(
           {/*Enabled=*/true, /*IgnoreCase=*/false, /*IgnoreExtension=*/false}));
   CHECK_PARSE("SortIncludes: false", SortIncludes,
-              FormatStyle::SortIncludesOptions({}));
+              FormatStyle::SortIncludesOptions{});
   CHECK_PARSE(
       "SortIncludes: CaseInsensitive", SortIncludes,
       FormatStyle::SortIncludesOptions(
@@ -1110,7 +1104,7 @@ TEST(ConfigParseTest, ParsesConfiguration) {
       FormatStyle::SortIncludesOptions(
           {/*Enabled=*/true, /*IgnoreCase=*/false, /*IgnoreExtension=*/false}));
   CHECK_PARSE("SortIncludes: Never", SortIncludes,
-              FormatStyle::SortIncludesOptions({}));
+              FormatStyle::SortIncludesOptions{});
 
   Style.RawStringFormats.clear();
   std::vector<FormatStyle::RawStringFormat> ExpectedRawStringFormats = {
@@ -1202,6 +1196,8 @@ TEST(ConfigParseTest, ParsesConfiguration) {
               FormatStyle::ABS_Always);
   CHECK_PARSE("BreakAfterAttributes: Leave", BreakAfterAttributes,
               FormatStyle::ABS_Leave);
+  CHECK_PARSE("BreakAfterAttributes: LeaveAll", BreakAfterAttributes,
+              FormatStyle::ABS_LeaveAll);
   CHECK_PARSE("BreakAfterAttributes: Never", BreakAfterAttributes,
               FormatStyle::ABS_Never);
 

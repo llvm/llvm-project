@@ -974,6 +974,46 @@ static void PropagateCallSiteMetadata(CallBase &CB, Function::iterator FStart,
   }
 }
 
+/// Track inlining chain via inlined.from metadata for dontcall diagnostics.
+static void PropagateInlinedFromMetadata(CallBase &CB, StringRef CalledFuncName,
+                                         StringRef CallerFuncName,
+                                         Function::iterator FStart,
+                                         Function::iterator FEnd) {
+  LLVMContext &Ctx = CB.getContext();
+  uint64_t InlineSiteLoc = 0;
+  if (auto *MD = CB.getMetadata("srcloc"))
+    if (auto *CI = mdconst::dyn_extract<ConstantInt>(MD->getOperand(0)))
+      InlineSiteLoc = CI->getZExtValue();
+
+  auto *I64Ty = Type::getInt64Ty(Ctx);
+  auto MakeMDInt = [&](uint64_t V) {
+    return ConstantAsMetadata::get(ConstantInt::get(I64Ty, V));
+  };
+
+  for (BasicBlock &BB : make_range(FStart, FEnd)) {
+    for (Instruction &I : BB) {
+      auto *CI = dyn_cast<CallInst>(&I);
+      if (!CI || !CI->getMetadata("srcloc"))
+        continue;
+      auto *Callee = CI->getCalledFunction();
+      if (!Callee || (!Callee->hasFnAttribute("dontcall-error") &&
+                      !Callee->hasFnAttribute("dontcall-warn")))
+        continue;
+
+      SmallVector<Metadata *, 8> Ops;
+      if (MDNode *Existing = CI->getMetadata("inlined.from"))
+        append_range(Ops, Existing->operands());
+      else {
+        Ops.push_back(MDString::get(Ctx, CalledFuncName));
+        Ops.push_back(MakeMDInt(0));
+      }
+      Ops.push_back(MDString::get(Ctx, CallerFuncName));
+      Ops.push_back(MakeMDInt(InlineSiteLoc));
+      CI->setMetadata("inlined.from", MDNode::get(Ctx, Ops));
+    }
+  }
+}
+
 /// Bundle operands of the inlined function must be added to inlined call sites.
 static void PropagateOperandBundles(Function::iterator InlinedBB,
                                     Instruction *CallSiteEHPad) {
@@ -1550,9 +1590,9 @@ static AttrBuilder IdentifyValidPoisonGeneratingAttributes(CallBase &CB) {
 
 static void AddReturnAttributes(CallBase &CB, ValueToValueMapTy &VMap,
                                 ClonedCodeInfo &InlinedFunctionInfo) {
-  AttrBuilder ValidUB = IdentifyValidUBGeneratingAttributes(CB);
-  AttrBuilder ValidPG = IdentifyValidPoisonGeneratingAttributes(CB);
-  if (!ValidUB.hasAttributes() && !ValidPG.hasAttributes())
+  AttrBuilder CallSiteValidUB = IdentifyValidUBGeneratingAttributes(CB);
+  AttrBuilder CallSiteValidPG = IdentifyValidPoisonGeneratingAttributes(CB);
+  if (!CallSiteValidUB.hasAttributes() && !CallSiteValidPG.hasAttributes())
     return;
   auto *CalledFunction = CB.getCalledFunction();
   auto &Context = CalledFunction->getContext();
@@ -1600,6 +1640,8 @@ static void AddReturnAttributes(CallBase &CB, ValueToValueMapTy &VMap,
     // with a differing value, the AttributeList's merge API honours the already
     // existing attribute value (i.e. attributes such as dereferenceable,
     // dereferenceable_or_null etc). See AttrBuilder::merge for more details.
+    AttrBuilder ValidUB = IdentifyValidUBGeneratingAttributes(CB);
+    AttrBuilder ValidPG = IdentifyValidPoisonGeneratingAttributes(CB);
     AttributeList AL = NewRetVal->getAttributes();
     if (ValidUB.getDereferenceableBytes() < AL.getRetDereferenceableBytes())
       ValidUB.removeAttribute(Attribute::Dereferenceable);
@@ -2849,6 +2891,10 @@ void llvm::InlineFunctionImpl(CallBase &CB, InlineFunctionInfo &IFI,
       }
     }
 
+    // Propagate inlined.from metadata for dontcall diagnostics.
+    PropagateInlinedFromMetadata(CB, CalledFunc->getName(), Caller->getName(),
+                                 FirstNewBlock, Caller->end());
+
     // Register any cloned assumptions.
     if (IFI.GetAssumptionCache)
       for (BasicBlock &NewBlock :
@@ -3441,4 +3487,17 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
   }
 
   return Result;
+}
+
+bool llvm::inlineHistoryIncludes(
+    Function *F, int InlineHistoryID,
+    ArrayRef<std::pair<Function *, int>> InlineHistory) {
+  while (InlineHistoryID != -1) {
+    assert(unsigned(InlineHistoryID) < InlineHistory.size() &&
+           "Invalid inline history ID");
+    if (InlineHistory[InlineHistoryID].first == F)
+      return true;
+    InlineHistoryID = InlineHistory[InlineHistoryID].second;
+  }
+  return false;
 }

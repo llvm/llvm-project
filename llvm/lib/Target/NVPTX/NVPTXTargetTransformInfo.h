@@ -57,7 +57,8 @@ public:
   bool
   canHaveNonUndefGlobalInitializerInAddressSpace(unsigned AS) const override {
     return AS != AddressSpace::ADDRESS_SPACE_SHARED &&
-           AS != AddressSpace::ADDRESS_SPACE_LOCAL && AS != ADDRESS_SPACE_PARAM;
+           AS != AddressSpace::ADDRESS_SPACE_LOCAL &&
+           AS != AddressSpace::ADDRESS_SPACE_ENTRY_PARAM;
   }
 
   std::optional<Instruction *>
@@ -221,7 +222,7 @@ public:
     return false;
   }
 
-  InstructionUniformity getInstructionUniformity(const Value *V) const override;
+  ValueUniformity getValueUniformity(const Value *V) const override;
 };
 
 } // end namespace llvm

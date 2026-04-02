@@ -83,8 +83,22 @@ void SPIRV::constructLLVMLinkCommand(Compilation &C, const Tool &T,
 
   ArgStringList LlvmLinkArgs;
 
-  for (auto Input : Inputs)
-    LlvmLinkArgs.push_back(Input.getFilename());
+  for (auto Input : Inputs) {
+    if (Input.isFilename()) {
+      LlvmLinkArgs.push_back(Input.getFilename());
+    } else {
+      // Warn that any linker arguments will be dropped.
+      assert(Input.isInputArg() && "Unexpected linker input");
+      const llvm::opt::Arg &LinkerOpt = Input.getInputArg();
+      std::string LinkerOptStr = LinkerOpt.getAsString(Args);
+      const llvm::opt::Arg *EmitLLVM = Args.getLastArg(options::OPT_emit_llvm);
+      assert(EmitLLVM && "Unexpected linker input");
+      std::string EmitLLVMStr = EmitLLVM ? EmitLLVM->getAsString(Args) : "";
+      llvm::Triple Triple(T.getToolChain().getTriple());
+      C.getDriver().Diag(clang::diag::warn_drv_input_file_unused)
+          << Triple.getTriple() << LinkerOptStr << false << EmitLLVMStr;
+    }
+  }
 
   tools::constructLLVMLinkCommand(C, T, JA, Inputs, LlvmLinkArgs, Output, Args);
 }

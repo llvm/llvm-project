@@ -485,7 +485,7 @@ PlatformDarwinKernel::GetKernelsAndKextsInDirectoryHelper(
 
   Log *log = GetLog(LLDBLog::Platform);
 
-  LLDB_LOGV(log, "PlatformDarwinKernel examining '{0}'", file_spec);
+  LLDB_LOG_VERBOSE(log, "PlatformDarwinKernel examining '{0}'", file_spec);
 
   PlatformDarwinKernel *thisp = (PlatformDarwinKernel *)baton;
 
@@ -564,8 +564,8 @@ PlatformDarwinKernel::GetKernelsAndKextsInDirectoryHelper(
   // Don't recurse into dSYM/kext/bundle directories
   if (recurse && file_spec_extension != g_dsym_suffix &&
       file_spec_extension != g_kext_suffix) {
-    LLDB_LOGV(log, "PlatformDarwinKernel descending into directory '{0}'",
-              file_spec);
+    LLDB_LOG_VERBOSE(
+        log, "PlatformDarwinKernel descending into directory '{0}'", file_spec);
     return FileSystem::eEnumerateDirectoryResultEnter;
   } else {
     return FileSystem::eEnumerateDirectoryResultNext;

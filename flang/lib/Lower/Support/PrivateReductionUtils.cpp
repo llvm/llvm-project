@@ -22,16 +22,21 @@
 #include "flang/Optimizer/Builder/HLFIRTools.h"
 #include "flang/Optimizer/Builder/Runtime/Derived.h"
 #include "flang/Optimizer/Builder/Todo.h"
-#include "flang/Optimizer/Dialect/CUF/CUFOps.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/HLFIR/HLFIRDialect.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/Support/FatalError.h"
 #include "flang/Semantics/symbol.h"
-#include "flang/Semantics/tools.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/Location.h"
+#include "llvm/Support/CommandLine.h"
+
+static llvm::cl::opt<bool> enableGPUHeapAlloc(
+    "enable-gpu-heap-alloc",
+    llvm::cl::desc(
+        "Allow the use of heap allocation for dynamically sized arrays on GPU"),
+    llvm::cl::init(false));
 
 static bool hasFinalization(const Fortran::semantics::Symbol &sym) {
   if (sym.has<Fortran::semantics::ObjectEntityDetails>())
@@ -42,11 +47,11 @@ static bool hasFinalization(const Fortran::semantics::Symbol &sym) {
   return false;
 }
 
-static void createCleanupRegion(
-    Fortran::lower::AbstractConverter &converter, mlir::Location loc,
-    mlir::Type argType, mlir::Region &cleanupRegion,
-    const Fortran::semantics::Symbol *sym, bool isDoConcurrent,
-    std::optional<cuf::DataAttributeAttr> cudaDataAttr = std::nullopt) {
+static void createCleanupRegion(Fortran::lower::AbstractConverter &converter,
+                                mlir::Location loc, mlir::Type argType,
+                                mlir::Region &cleanupRegion,
+                                const Fortran::semantics::Symbol *sym,
+                                bool isDoConcurrent) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   assert(cleanupRegion.empty());
   mlir::Block *block = builder.createBlock(&cleanupRegion, cleanupRegion.end(),
@@ -105,16 +110,21 @@ static void createCleanupRegion(
         fir::IfOp::create(builder, loc, isAllocated, /*withElseRegion=*/false);
     builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
 
-    if (cudaDataAttr) {
-      cuf::FreeOp::create(builder, loc, addr, *cudaDataAttr);
-    } else {
-      mlir::Value cast = builder.createConvert(
-          loc, fir::HeapType::get(fir::dyn_cast_ptrEleTy(addr.getType())),
-          addr);
-      fir::FreeMemOp::create(builder, loc, cast);
-    }
+    mlir::Value cast = builder.createConvert(
+        loc, fir::HeapType::get(fir::dyn_cast_ptrEleTy(addr.getType())), addr);
+    fir::FreeMemOp::create(builder, loc, cast);
 
     builder.setInsertionPointAfter(ifOp);
+    // Free the managed descriptor if this is a CUDA device allocatable.
+    if (sym) {
+      unsigned idx = Fortran::lower::getAllocatorIdx(sym->GetUltimate());
+      if (idx != kDefaultAllocator) {
+        cuf::DataAttributeAttr dataAttr =
+            Fortran::lower::translateSymbolCUFDataAttribute(
+                builder.getContext(), sym->GetUltimate());
+        cuf::FreeOp::create(builder, loc, block->getArgument(0), dataAttr);
+      }
+    }
     if (isDoConcurrent)
       fir::YieldOp::create(builder, loc);
     else
@@ -391,7 +401,7 @@ private:
     return loadedMoldArg;
   }
 
-  bool shouldAllocateTempOnStack() const;
+  bool shouldAllocateTempOnStack(fir::BaseBoxType boxTy) const;
 };
 
 } // namespace
@@ -436,9 +446,13 @@ fir::IfOp PopulateInitAndCleanupRegionsHelper::handleNullAllocatable() {
   // right rank. This returns an empty value if the types don't match.
   mlir::Value shape = generateZeroShapeForRank(builder, loc, moldArg);
 
-  mlir::Value nullBox =
-      fir::EmboxOp::create(builder, loc, valType, addr, shape,
-                           /*slice=*/mlir::Value{}, lenParams);
+  auto nullBox = fir::EmboxOp::create(builder, loc, valType, addr, shape,
+                                      /*slice=*/mlir::Value{}, lenParams);
+  if (sym) {
+    unsigned idx = Fortran::lower::getAllocatorIdx(sym->GetUltimate());
+    if (idx != kDefaultAllocator)
+      nullBox.setAllocatorIdx(idx);
+  }
   fir::StoreOp::create(builder, loc, nullBox, allocatedPrivVarArg);
   return ifOp;
 }
@@ -454,7 +468,7 @@ void PopulateInitAndCleanupRegionsHelper::initAndCleanupBoxedScalar(
     builder.setInsertionPointToStart(&ifUnallocated.getElseRegion().front());
   }
 
-  bool shouldAllocateOnStack = shouldAllocateTempOnStack();
+  bool shouldAllocateOnStack = shouldAllocateTempOnStack(boxTy);
   mlir::Value valAlloc =
       (shouldAllocateOnStack)
           ? builder.createTemporary(loc, innerTy, /*name=*/{},
@@ -485,12 +499,22 @@ void PopulateInitAndCleanupRegionsHelper::initAndCleanupBoxedScalar(
   createYield(allocatedPrivVarArg);
 }
 
-bool PopulateInitAndCleanupRegionsHelper::shouldAllocateTempOnStack() const {
-  // On the GPU, always allocate on the stack since heap allocatins are very
-  // expensive.
+bool PopulateInitAndCleanupRegionsHelper::shouldAllocateTempOnStack(
+    fir::BaseBoxType boxTy) const {
   auto offloadMod =
       llvm::dyn_cast<mlir::omp::OffloadModuleInterface>(*builder.getModule());
-  return offloadMod && offloadMod.getIsGPU();
+  // On the GPU, always allocate on the stack unless the user explicitly
+  // specifies otherwise since heap allocatins are very expensive.
+  bool isGPU = offloadMod && offloadMod.getIsGPU();
+  if (isGPU && enableGPUHeapAlloc) {
+    // Check if it is adjustable array
+    if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(boxTy.getEleTy())) {
+      if (seqTy.hasUnknownShape() || seqTy.hasDynamicExtents()) {
+        return false;
+      }
+    }
+  }
+  return isGPU;
 }
 
 void PopulateInitAndCleanupRegionsHelper::initAndCleanupBoxedArray(
@@ -535,33 +559,8 @@ void PopulateInitAndCleanupRegionsHelper::initAndCleanupBoxedArray(
   // Allocating on the heap in case the whole reduction/privatization is nested
   // inside of a loop
   auto temp = [&]() {
-    if (shouldAllocateTempOnStack())
+    if (shouldAllocateTempOnStack(boxTy))
       return createStackTempFromMold(loc, builder, source);
-
-    // For CUDA device arrays that require special allocation (device,
-    // managed, unified, etc.), use cuf.alloc instead of fir.allocmem so
-    // that the private copy lives in device memory.
-    if (sym && Fortran::semantics::NeedCUDAAlloc(sym->GetUltimate())) {
-      cuf::DataAttributeAttr dataAttr =
-          Fortran::lower::translateSymbolCUFDataAttribute(builder.getContext(),
-                                                          sym->GetUltimate());
-      mlir::Type sequenceType =
-          hlfir::getFortranElementOrSequenceType(source.getType());
-      mlir::Value shape = hlfir::genShape(loc, builder, source);
-      auto extents = hlfir::getIndexExtents(loc, builder, shape);
-      mlir::Value alloc = Fortran::lower::genCUFAlloc(
-          builder, loc, sequenceType, /*uniqName=*/"", /*bindcName=*/".tmp",
-          dataAttr, lenParams, extents);
-      auto declareOp = hlfir::DeclareOp::create(
-          builder, loc, alloc, ".tmp", shape, lenParams,
-          /*dummy_scope=*/nullptr, /*storage=*/nullptr, /*storage_offset=*/0,
-          fir::FortranVariableFlagsAttr{}, dataAttr);
-      hlfir::Entity temp{declareOp.getBase()};
-      mlir::OpBuilder::InsertionGuard guard(builder);
-      createCleanupRegion(converter, loc, argType, cleanupRegion, sym,
-                          isDoConcurrent, dataAttr);
-      return temp;
-    }
 
     auto [temp, needsDealloc] = createTempFromMold(loc, builder, source);
     // if needsDealloc, add cleanup region. Always
@@ -675,6 +674,24 @@ void PopulateInitAndCleanupRegionsHelper::populateByRefInitAndCleanupRegions() {
 
   if (auto boxTy = mlir::dyn_cast_or_null<fir::BaseBoxType>(valTy)) {
     builder.setInsertionPointToEnd(initBlock);
+
+    // For CUDA device allocatables, allocate the descriptor in managed
+    // memory so that CUF kernels can access it from the GPU.
+    if (sym && mlir::isa<fir::HeapType>(boxTy.getEleTy())) {
+      unsigned idx = Fortran::lower::getAllocatorIdx(sym->GetUltimate());
+      if (idx != kDefaultAllocator) {
+        cuf::DataAttributeAttr dataAttr =
+            Fortran::lower::translateSymbolCUFDataAttribute(
+                builder.getContext(), sym->GetUltimate());
+        allocatedPrivVarArg =
+            cuf::AllocOp::create(builder, loc, valTy,
+                                 /*uniq_name=*/llvm::StringRef{},
+                                 /*bindc_name=*/llvm::StringRef{}, dataAttr,
+                                 /*typeparams=*/mlir::ValueRange{},
+                                 /*shape=*/mlir::ValueRange{})
+                .getResult();
+      }
+    }
 
     // TODO: don't do this unless it is needed
     getLengthParameters(builder, loc, getLoadedMoldArg(), lenParams);

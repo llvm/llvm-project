@@ -51,10 +51,14 @@ public:
   void VisitCXXBindTemporaryExpr(const CXXBindTemporaryExpr *BTE);
   void VisitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *MTE);
   void VisitLambdaExpr(const LambdaExpr *LE);
+  void VisitArraySubscriptExpr(const ArraySubscriptExpr *ASE);
 
 private:
   OriginList *getOriginsList(const ValueDecl &D);
   OriginList *getOriginsList(const Expr &E);
+
+  bool hasOrigins(QualType QT) const;
+  bool hasOrigins(const Expr *E) const;
 
   void flow(OriginList *Dst, OriginList *Src, bool Kill);
 

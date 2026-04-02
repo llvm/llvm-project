@@ -53,6 +53,23 @@
 // CHECK-NEXT: DeclRefExpr {{.*}} 'vector<int, 2>' lvalue ParmVar {{.*}} 'Offset' 'vector<int, 2>'
 // CHECK-NEXT: AlwaysInlineAttr
 
+// CHECK: CXXMethodDecl {{.*}} operator[] 'const hlsl_device element_type &(vector<unsigned int, 2>) const' inline
+// CHECK-NEXT: ParmVarDecl {{.*}} Index 'vector<unsigned int, 2>'
+// CHECK-NEXT: CompoundStmt
+// CHECK-NEXT: ReturnStmt
+// CHECK-NEXT: UnaryOperator {{.*}} 'hlsl_device element_type' lvalue prefix '*' cannot overflow
+// CHECK-NEXT: CStyleCastExpr {{.*}} 'hlsl_device element_type *' <Dependent>
+// CHECK-NEXT: CallExpr {{.*}} '<dependent type>'
+// CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_getpointer' 'void (...) noexcept'
+// CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
+// CHECK-SAME{LITERAL}: [[hlsl::resource_class(SRV)]]
+// CHECK-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
+// CHECK-SAME{LITERAL}: [[hlsl::resource_dimension(2D)]]
+// CHECK-SAME: ' lvalue .__handle
+// CHECK-NEXT: CXXThisExpr {{.*}} 'const hlsl::Texture2D<element_type>' lvalue implicit this
+// CHECK-NEXT: DeclRefExpr {{.*}} 'vector<unsigned int, 2>' lvalue ParmVar {{.*}} 'Index' 'vector<unsigned int, 2>'
+// CHECK-NEXT: AlwaysInlineAttr
+
 // CHECK: CXXMethodDecl {{.*}} Sample 'element_type (hlsl::SamplerState, vector<float, 2>)'
 // CHECK-NEXT: ParmVarDecl {{.*}} Sampler 'hlsl::SamplerState'
 // CHECK-NEXT: ParmVarDecl {{.*}} Location 'vector<float, 2>'
@@ -449,6 +466,48 @@
 // CHECK-NEXT: DeclRefExpr {{.*}} 'vector<int, 2>' lvalue ParmVar {{.*}} 'Offset' 'vector<int, 2>'
 // CHECK-NEXT: AlwaysInlineAttr
 
+// CHECK: CXXMethodDecl {{.*}} CalculateLevelOfDetail 'float (hlsl::SamplerState, vector<float, 2>)'
+// CHECK-NEXT: ParmVarDecl {{.*}} Sampler 'hlsl::SamplerState'
+// CHECK-NEXT: ParmVarDecl {{.*}} Location 'vector<float, 2>'
+// CHECK-NEXT: CompoundStmt
+// CHECK-NEXT: ReturnStmt
+// CHECK-NEXT: CStyleCastExpr {{.*}} 'float' <Dependent>
+// CHECK-NEXT: CallExpr {{.*}} '<dependent type>'
+// CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_calculate_lod' 'void (...) noexcept'
+// CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
+// CHECK-SAME{LITERAL}: [[hlsl::resource_class(SRV)]]
+// CHECK-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
+// CHECK-SAME{LITERAL}: [[hlsl::resource_dimension(2D)]]
+// CHECK-SAME: ' lvalue .__handle
+// CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::Texture2D<element_type>' lvalue implicit this
+// CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
+// CHECK-SAME{LITERAL}: [[hlsl::resource_class(Sampler)]]
+// CHECK-SAME: ' lvalue .__handle
+// CHECK-NEXT: DeclRefExpr {{.*}} 'hlsl::SamplerState' lvalue ParmVar {{.*}} 'Sampler' 'hlsl::SamplerState'
+// CHECK-NEXT: DeclRefExpr {{.*}} 'vector<float, 2>' lvalue ParmVar {{.*}} 'Location' 'vector<float, 2>'
+// CHECK-NEXT: AlwaysInlineAttr
+
+// CHECK: CXXMethodDecl {{.*}} CalculateLevelOfDetailUnclamped 'float (hlsl::SamplerState, vector<float, 2>)'
+// CHECK-NEXT: ParmVarDecl {{.*}} Sampler 'hlsl::SamplerState'
+// CHECK-NEXT: ParmVarDecl {{.*}} Location 'vector<float, 2>'
+// CHECK-NEXT: CompoundStmt
+// CHECK-NEXT: ReturnStmt
+// CHECK-NEXT: CStyleCastExpr {{.*}} 'float' <Dependent>
+// CHECK-NEXT: CallExpr {{.*}} '<dependent type>'
+// CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_calculate_lod_unclamped' 'void (...) noexcept'
+// CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
+// CHECK-SAME{LITERAL}: [[hlsl::resource_class(SRV)]]
+// CHECK-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
+// CHECK-SAME{LITERAL}: [[hlsl::resource_dimension(2D)]]
+// CHECK-SAME: ' lvalue .__handle
+// CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::Texture2D<element_type>' lvalue implicit this
+// CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
+// CHECK-SAME{LITERAL}: [[hlsl::resource_class(Sampler)]]
+// CHECK-SAME: ' lvalue .__handle
+// CHECK-NEXT: DeclRefExpr {{.*}} 'hlsl::SamplerState' lvalue ParmVar {{.*}} 'Sampler' 'hlsl::SamplerState'
+// CHECK-NEXT: DeclRefExpr {{.*}} 'vector<float, 2>' lvalue ParmVar {{.*}} 'Location' 'vector<float, 2>'
+// CHECK-NEXT: AlwaysInlineAttr
+
 // CHECK: CXXMethodDecl {{.*}} Gather 'vector<element_type, 4> (hlsl::SamplerState, vector<float, 2>)' inline
 // CHECK-NEXT: ParmVarDecl {{.*}} Sampler 'hlsl::SamplerState'
 // CHECK-NEXT: ParmVarDecl {{.*}} Location 'vector<float, 2>'
@@ -752,5 +811,7 @@ void main(float2 loc, float cmp) {
   t.SampleCmp(scs, loc, cmp, int2(1, 2), 1.0f);
   t.SampleCmpLevelZero(scs, loc, cmp);
   t.SampleCmpLevelZero(scs, loc, cmp, int2(1, 2));
+  t.CalculateLevelOfDetail(s, loc);
+  t.CalculateLevelOfDetailUnclamped(s, loc);
   t.Gather(s, loc);
 }

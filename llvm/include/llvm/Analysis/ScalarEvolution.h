@@ -68,21 +68,33 @@ LLVM_ABI extern bool VerifySCEV;
 
 class SCEV;
 
-struct SCEVUse : PointerIntPair<const SCEV *, 2> {
-  SCEVUse() : PointerIntPair() { setFromOpaqueValue(nullptr); }
-  SCEVUse(const SCEV *S) : PointerIntPair() {
-    setFromOpaqueValue(reinterpret_cast<void *>(const_cast<SCEV *>(S)));
-  }
-  SCEVUse(const SCEV *S, unsigned Flags) : PointerIntPair(S, Flags) {}
+template <typename SCEVPtrT = const SCEV *>
+struct SCEVUseT : PointerIntPair<SCEVPtrT, 2> {
+  using Base = PointerIntPair<SCEVPtrT, 2>;
 
-  operator const SCEV *() const { return getPointer(); }
-  const SCEV *operator->() const { return getPointer(); }
+  SCEVUseT() : Base() { Base::setFromOpaqueValue(nullptr); }
+  SCEVUseT(SCEVPtrT S) : SCEVUseT(S, 0) {}
+  SCEVUseT(SCEVPtrT S, unsigned Flags) : Base(S, Flags) {}
+  template <typename OtherPtrT, typename = std::enable_if_t<
+                                    std::is_convertible_v<OtherPtrT, SCEVPtrT>>>
+  SCEVUseT(const SCEVUseT<OtherPtrT> &Other)
+      : Base(Other.getPointer(), Other.getInt()) {}
 
-  void *getRawPointer() const { return getOpaqueValue(); }
+  operator SCEVPtrT() const { return Base::getPointer(); }
+  SCEVPtrT operator->() const { return Base::getPointer(); }
 
-  unsigned getFlags() const { return getInt(); }
+  void *getRawPointer() const { return Base::getOpaqueValue(); }
 
-  bool operator==(const SCEVUse &RHS) const {
+  /// Returns true of the SCEVUse is canonical, i.e. no SCEVUse flags set in any
+  /// operands.
+  bool isCanonical() const { return getCanonical() == getRawPointer(); }
+
+  /// Return the canonical SCEV for this SCEVUse.
+  const SCEV *getCanonical() const;
+
+  unsigned getFlags() const { return Base::getInt(); }
+
+  bool operator==(const SCEVUseT &RHS) const {
     return getRawPointer() == RHS.getRawPointer();
   }
 
@@ -95,6 +107,11 @@ struct SCEVUse : PointerIntPair<const SCEV *, 2> {
   /// This method is used for debugging.
   void dump() const;
 };
+
+/// Deduction guide for various SCEV subclass pointers.
+template <typename SCEVPtrT> SCEVUseT(SCEVPtrT) -> SCEVUseT<SCEVPtrT>;
+
+using SCEVUse = SCEVUseT<const SCEV *>;
 
 /// Provide PointerLikeTypeTraits for SCEVUse, so it can be used with
 /// SmallPtrSet, among others.
@@ -138,6 +155,31 @@ template <> struct simplify_type<SCEVUse> {
   }
 };
 
+/// Provide CastInfo for SCEVUseT so that cast<SCEVUseT<const To *>>(use)
+/// returns SCEVUseT<const To *> with flags preserved.
+template <typename ToSCEVPtrT>
+struct CastInfo<SCEVUseT<ToSCEVPtrT>, SCEVUse,
+                std::enable_if_t<!is_simple_type<SCEVUse>::value>> {
+  using To = std::remove_cv_t<std::remove_pointer_t<ToSCEVPtrT>>;
+  using CastReturnType = SCEVUseT<ToSCEVPtrT>;
+
+  static bool isPossible(const SCEVUse &U) { return isa<To>(U.getPointer()); }
+  static CastReturnType doCast(const SCEVUse &U) {
+    return {cast<To>(U.getPointer()), U.getFlags()};
+  }
+  static CastReturnType castFailed() { return CastReturnType(nullptr); }
+  static CastReturnType doCastIfPossible(const SCEVUse &U) {
+    if (!isPossible(U))
+      return castFailed();
+    return doCast(U);
+  }
+};
+
+template <typename ToSCEVPtrT>
+struct CastInfo<SCEVUseT<ToSCEVPtrT>, const SCEVUse,
+                std::enable_if_t<!is_simple_type<const SCEVUse>::value>>
+    : CastInfo<SCEVUseT<ToSCEVPtrT>, SCEVUse> {};
+
 /// This class represents an analyzed expression in the program.  These are
 /// opaque objects that the client is not allowed to do much with directly.
 ///
@@ -158,6 +200,10 @@ protected:
   /// This field is initialized to zero and may be used in subclasses to store
   /// miscellaneous information.
   unsigned short SubclassData = 0;
+
+  /// Pointer to the canonical version of the SCEV, i.e. one where all operands
+  /// have no SCEVUse flags.
+  const SCEV *CanonicalSCEV = nullptr;
 
 public:
   /// NoWrapFlags are bitfield indices into SubclassData.
@@ -249,6 +295,16 @@ public:
 
   /// This method is used for debugging.
   LLVM_ABI void dump() const;
+
+  /// Compute and set the canonical SCEV, by constructing a SCEV with the same
+  /// operands, but all SCEVUse flags dropped.
+  LLVM_ABI void computeAndSetCanonical(ScalarEvolution &SE);
+
+  /// Return the canonical SCEV.
+  LLVM_ABI const SCEV *getCanonical() const {
+    assert(CanonicalSCEV && "canonical SCEV not yet computed");
+    return CanonicalSCEV;
+  }
 };
 
 // Specialize FoldingSetTrait for SCEV to avoid needing to compute
@@ -268,6 +324,11 @@ template <> struct FoldingSetTrait<SCEV> : DefaultFoldingSetTrait<SCEV> {
 
 inline raw_ostream &operator<<(raw_ostream &OS, const SCEV &S) {
   S.print(OS);
+  return OS;
+}
+
+inline raw_ostream &operator<<(raw_ostream &OS, SCEVUse U) {
+  U.print(OS);
   return OS;
 }
 
@@ -1200,13 +1261,12 @@ public:
   ///    so we can assert on that.
   /// e. Return true if isLoopEntryGuardedByCond(Pred, E(LHS), E(RHS)) &&
   ///                   isLoopBackedgeGuardedByCond(Pred, B(LHS), B(RHS))
-  LLVM_ABI bool isKnownViaInduction(CmpPredicate Pred, const SCEV *LHS,
-                                    const SCEV *RHS);
+  LLVM_ABI bool isKnownViaInduction(CmpPredicate Pred, SCEVUse LHS,
+                                    SCEVUse RHS);
 
   /// Test if the given expression is known to satisfy the condition described
   /// by Pred, LHS, and RHS.
-  LLVM_ABI bool isKnownPredicate(CmpPredicate Pred, const SCEV *LHS,
-                                 const SCEV *RHS);
+  LLVM_ABI bool isKnownPredicate(CmpPredicate Pred, SCEVUse LHS, SCEVUse RHS);
 
   /// Check whether the condition described by Pred, LHS, and RHS is true or
   /// false. If we know it, return the evaluation of this condition. If neither
@@ -1255,6 +1315,7 @@ public:
     /// one from a SCEVCouldNotCompute.  No other types of SCEVs are allowed
     /// as arguments and asserts enforce that internally.
     /*implicit*/ LLVM_ABI ExitLimit(const SCEV *E);
+    /*implicit*/ ExitLimit(SCEVUse E) : ExitLimit((const SCEV *)E) {}
 
     LLVM_ABI
     ExitLimit(const SCEV *E, const SCEV *ConstantMaxNotTaken,
@@ -1348,8 +1409,8 @@ public:
   /// iff any changes were made. If the operands are provably equal or
   /// unequal, LHS and RHS are set to the same value and Pred is set to either
   /// ICMP_EQ or ICMP_NE.
-  LLVM_ABI bool SimplifyICmpOperands(CmpPredicate &Pred, const SCEV *&LHS,
-                                     const SCEV *&RHS, unsigned Depth = 0);
+  LLVM_ABI bool SimplifyICmpOperands(CmpPredicate &Pred, SCEVUse &LHS,
+                                     SCEVUse &RHS, unsigned Depth = 0);
 
   /// Return the "disposition" of the given SCEV with respect to the given
   /// loop.
@@ -2029,8 +2090,7 @@ private:
   /// return more precise results in some cases and is preferred when caller
   /// has a materialized ICmp.
   ExitLimit computeExitLimitFromICmp(const Loop *L, CmpPredicate Pred,
-                                     const SCEV *LHS, const SCEV *RHS,
-                                     bool IsSubExpr,
+                                     SCEVUse LHS, SCEVUse RHS, bool IsSubExpr,
                                      bool AllowPredicates = false);
 
   /// Compute the number of times the backedge of the specified loop will
@@ -2110,11 +2170,9 @@ private:
   /// whenever the given FoundCondValue value evaluates to true in given
   /// Context. If Context is nullptr, then the found predicate is true
   /// everywhere. LHS and FoundLHS must have same type width.
-  LLVM_ABI bool isImpliedCondBalancedTypes(CmpPredicate Pred, const SCEV *LHS,
-                                           const SCEV *RHS,
-                                           CmpPredicate FoundPred,
-                                           const SCEV *FoundLHS,
-                                           const SCEV *FoundRHS,
+  LLVM_ABI bool isImpliedCondBalancedTypes(CmpPredicate Pred, SCEVUse LHS,
+                                           SCEVUse RHS, CmpPredicate FoundPred,
+                                           SCEVUse FoundLHS, SCEVUse FoundRHS,
                                            const Instruction *CtxI);
 
   /// Test whether the condition described by Pred, LHS, and RHS is true
@@ -2145,8 +2203,8 @@ private:
 
   /// Test whether the condition described by Pred, LHS, and RHS is true.
   /// Use only simple non-recursive types of checks, such as range analysis etc.
-  bool isKnownViaNonRecursiveReasoning(CmpPredicate Pred, const SCEV *LHS,
-                                       const SCEV *RHS);
+  bool isKnownViaNonRecursiveReasoning(CmpPredicate Pred, SCEVUse LHS,
+                                       SCEVUse RHS);
 
   /// Test whether the condition described by Pred, LHS, and RHS is true
   /// whenever the condition described by Pred, FoundLHS, and FoundRHS is
@@ -2219,24 +2277,24 @@ private:
 
   /// Test if the given expression is known to satisfy the condition described
   /// by Pred and the known constant ranges of LHS and RHS.
-  bool isKnownPredicateViaConstantRanges(CmpPredicate Pred, const SCEV *LHS,
-                                         const SCEV *RHS);
+  bool isKnownPredicateViaConstantRanges(CmpPredicate Pred, SCEVUse LHS,
+                                         SCEVUse RHS);
 
   /// Try to prove the condition described by "LHS Pred RHS" by ruling out
   /// integer overflow.
   ///
   /// For instance, this will return true for "A s< (A + C)<nsw>" if C is
   /// positive.
-  bool isKnownPredicateViaNoOverflow(CmpPredicate Pred, const SCEV *LHS,
-                                     const SCEV *RHS);
+  bool isKnownPredicateViaNoOverflow(CmpPredicate Pred, SCEVUse LHS,
+                                     SCEVUse RHS);
 
   /// Try to split Pred LHS RHS into logical conjunctions (and's) and try to
   /// prove them individually.
-  bool isKnownPredicateViaSplitting(CmpPredicate Pred, const SCEV *LHS,
-                                    const SCEV *RHS);
+  bool isKnownPredicateViaSplitting(CmpPredicate Pred, SCEVUse LHS,
+                                    SCEVUse RHS);
 
   /// Try to match the Expr as "(L + R)<Flags>".
-  bool splitBinaryAdd(const SCEV *Expr, const SCEV *&L, const SCEV *&R,
+  bool splitBinaryAdd(SCEVUse Expr, SCEVUse &L, SCEVUse &R,
                       SCEV::NoWrapFlags &Flags);
 
   /// Forget predicated/non-predicated backedge taken counts for the given loop.
@@ -2631,6 +2689,28 @@ template <> struct DenseMapInfo<ScalarEvolution::FoldID> {
     return LHS == RHS;
   }
 };
+
+template <> inline const SCEV *SCEVUseT<const SCEV *>::getCanonical() const {
+  return Base::getPointer()->getCanonical();
+}
+
+template <typename SCEVPtrT>
+void SCEVUseT<SCEVPtrT>::print(raw_ostream &OS) const {
+  Base::getPointer()->print(OS);
+  SCEV::NoWrapFlags Flags = static_cast<SCEV::NoWrapFlags>(Base::getInt());
+  if (Flags & SCEV::FlagNUW)
+    OS << "(u nuw)";
+  if (Flags & SCEV::FlagNSW)
+    OS << "(u nsw)";
+}
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+template <typename SCEVPtrT>
+LLVM_DUMP_METHOD void SCEVUseT<SCEVPtrT>::dump() const {
+  print(dbgs());
+  dbgs() << '\n';
+}
+#endif
 
 } // end namespace llvm
 

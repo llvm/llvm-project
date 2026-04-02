@@ -182,11 +182,10 @@ APValue Pointer::toAPValue(const ASTContext &ASTCtx) const {
                    /*IsOnePastEnd=*/false, /*IsNullPtr=*/false);
   if (isFunctionPointer()) {
     const FunctionPointer &FP = asFunctionPointer();
-    if (const FunctionDecl *FD = FP.getFunction()->getDecl())
+    if (const FunctionDecl *FD = FP.Func->getDecl())
       return APValue(FD, CharUnits::fromQuantity(Offset), {},
                      /*OnePastTheEnd=*/false, /*IsNull=*/false);
-    return APValue(FP.getFunction()->getExpr(), CharUnits::fromQuantity(Offset),
-                   {},
+    return APValue(FP.Func->getExpr(), CharUnits::fromQuantity(Offset), {},
                    /*OnePastTheEnd=*/false, /*IsNull=*/false);
   }
 
@@ -352,8 +351,7 @@ void Pointer::print(llvm::raw_ostream &OS) const {
     OS << "}";
     break;
   case Storage::Fn:
-    OS << "(Fn) { " << asFunctionPointer().getFunction() << " + " << Offset
-       << " }";
+    OS << "(Fn) { " << Fn.Func << " + " << Offset << " }";
     break;
   case Storage::Typeid:
     OS << "(Typeid) { " << (const void *)asTypeidPointer().TypePtr << ", "
@@ -376,7 +374,7 @@ size_t Pointer::computeOffsetForComparison(const ASTContext &ASTCtx) const {
     // See below.
     break;
   case Storage::Fn:
-    return Fn.getIntegerRepresentation() + Offset;
+    return getIntegerRepresentation();
   case Storage::Typeid:
     return reinterpret_cast<uintptr_t>(asTypeidPointer().TypePtr) + Offset;
   }
@@ -437,9 +435,6 @@ std::string Pointer::toDiagnosticString(const ASTContext &Ctx) const {
 
   if (isIntegralPointer())
     return (Twine("&(") + Twine(asIntPointer().Value + Offset) + ")").str();
-
-  if (isFunctionPointer())
-    return asFunctionPointer().toDiagnosticString(Ctx);
 
   return toAPValue(Ctx).getAsString(Ctx, getType());
 }

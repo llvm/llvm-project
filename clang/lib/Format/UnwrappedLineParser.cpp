@@ -527,6 +527,8 @@ void UnwrappedLineParser::calculateBraceTypes(bool ExpectClassBody) {
           // `) { }` can only occur in function or method declarations in JS.
           Tok->setBlockKind(BK_Block);
         }
+      } else if (Style.isJava() && PrevTok && PrevTok->is(tok::arrow)) {
+        Tok->setBlockKind(BK_Block);
       } else {
         Tok->setBlockKind(BK_Unknown);
       }
@@ -1147,12 +1149,6 @@ void UnwrappedLineParser::parsePPElse() {
 void UnwrappedLineParser::parsePPEndIf() {
   conditionalCompilationEnd();
   parsePPUnknown();
-  // If the #endif of a potential include guard is the last thing in the file,
-  // then we found an include guard.
-  if (IncludeGuard == IG_Defined && PPBranchLevel == -1 && Tokens->isEOF() &&
-      getIncludeGuardState(Style.IndentPPDirectives) == IG_Inited) {
-    IncludeGuard = IG_Found;
-  }
 }
 
 void UnwrappedLineParser::parsePPDefine() {
@@ -3842,6 +3838,8 @@ bool UnwrappedLineParser::parseEnum() {
          FormatTok->isOneOf(tok::colon, tok::coloncolon, tok::less,
                             tok::greater, tok::comma, tok::question,
                             tok::l_square)) {
+    if (FormatTok->is(tok::colon))
+      FormatTok->setFinalizedType(TT_EnumUnderlyingTypeColon);
     if (Style.isVerilog()) {
       FormatTok->setFinalizedType(TT_VerilogDimensionedTypeName);
       nextToken();
@@ -3879,26 +3877,40 @@ bool UnwrappedLineParser::parseEnum() {
     return true;
   }
 
+  const bool ManageWhitesmithsBraces =
+      Style.BreakBeforeBraces == FormatStyle::BS_Whitesmiths;
+
   if (!Style.AllowShortEnumsOnASingleLine &&
       ShouldBreakBeforeBrace(Style, InitialToken,
                              Tokens->peekNextToken()->is(tok::r_brace))) {
     addUnwrappedLine();
+
+    // If we're in Whitesmiths mode, indent the brace if we're not indenting
+    // the whole block.
+    if (ManageWhitesmithsBraces)
+      ++Line->Level;
   }
   // Parse enum body.
   nextToken();
   if (!Style.AllowShortEnumsOnASingleLine) {
     addUnwrappedLine();
-    Line->Level += 1;
+    if (!ManageWhitesmithsBraces)
+      ++Line->Level;
   }
+  const auto OpeningLineIndex = CurrentLines->empty()
+                                    ? UnwrappedLine::kInvalidIndex
+                                    : CurrentLines->size() - 1;
   bool HasError = !parseBracedList(/*IsAngleBracket=*/false, /*IsEnum=*/true);
-  if (!Style.AllowShortEnumsOnASingleLine)
-    Line->Level -= 1;
+  if (!Style.AllowShortEnumsOnASingleLine && !ManageWhitesmithsBraces)
+    --Line->Level;
   if (HasError) {
     if (FormatTok->is(tok::semi))
       nextToken();
     addUnwrappedLine();
   }
   setPreviousRBraceType(TT_EnumRBrace);
+  if (ManageWhitesmithsBraces)
+    Line->MatchingOpeningBlockLineIndex = OpeningLineIndex;
   return true;
 
   // There is no addUnwrappedLine() here so that we fall through to parsing a
@@ -4952,10 +4964,20 @@ void UnwrappedLineParser::readToken(int LevelDifference) {
       assert(Line->Level >= Line->UnbracedBodyLevel);
       Line->Level -= Line->UnbracedBodyLevel;
       flushComments(isOnNewLine(*FormatTok));
+      const bool IsEndIf = Tokens->peekNextToken()->is(tok::pp_endif);
       parsePPDirective();
       PreviousWasComment = FormatTok->is(tok::comment);
       FirstNonCommentOnLine = IsFirstNonCommentOnLine(
           FirstNonCommentOnLine, *FormatTok, PreviousWasComment);
+      // If the #endif of a potential include guard is the last thing in the
+      // file, then we found an include guard.
+      if (IsEndIf && IncludeGuard == IG_Defined && PPBranchLevel == -1 &&
+          getIncludeGuardState(Style.IndentPPDirectives) == IG_Inited &&
+          (eof() ||
+           (PreviousWasComment &&
+            Tokens->peekNextToken(/*SkipComment=*/true)->is(tok::eof)))) {
+        IncludeGuard = IG_Found;
+      }
     }
 
     if (!PPStack.empty() && (PPStack.back().Kind == PP_Unreachable) &&

@@ -527,7 +527,7 @@ void JSONGenerator::serializeInfo(const TemplateInfo &Template, Object &Obj) {
       bool VerticalDisplay =
           Template.Specialization->Params.size() > getMaxParamWrapLimit();
       serializeArray(Template.Specialization->Params, TemplateSpecializationObj,
-                     "Parameters", SerializeTemplateParam, "End",
+                     "Parameters", SerializeTemplateParam, "SpecParamEnd",
                      [VerticalDisplay](Object &JsonObj) {
                        JsonObj["VerticalDisplay"] = VerticalDisplay;
                      });
@@ -922,7 +922,12 @@ static void serializeContexts(Info *I, StringMap<OwnedPtr<Info>> &Infos) {
   auto ParentUSR = I->ParentUSR;
 
   while (true) {
-    auto &ParentInfo = Infos.at(llvm::toHex(ParentUSR));
+    // Infos may not have the ParentUSR, if its been filtered (public or path),
+    // so we can't use at() for the lookup, since it would abort.
+    auto Iter = Infos.find(llvm::toHex(ParentUSR));
+    if (Iter == Infos.end())
+      break;
+    auto &ParentInfo = Iter->second;
 
     if (ParentInfo && ParentInfo->USR == GlobalNamespaceID) {
       Context GlobalRef(ParentInfo->USR, "Global Namespace",
