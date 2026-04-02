@@ -12,9 +12,9 @@ define amdgpu_ps half @fmed3_s16_uniform(half inreg %a, half inreg %b, half inre
 ;
 ; GFX12-LABEL: fmed3_s16_uniform:
 ; GFX12:       ; %bb.0:
-; GFX12-NEXT:    v_mov_b32_e32 v0, s2
+; GFX12-NEXT:    v_mov_b16_e32 v0.l, s2
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-NEXT:    v_med3_num_f16 v0, s0, s1, v0
+; GFX12-NEXT:    v_med3_num_f16 v0.l, s0, s1, v0.l
 ; GFX12-NEXT:    ; return to shader part epilog
   %result = call half @llvm.amdgcn.fmed3.f16(half %a, half %b, half %c)
   ret half %result
@@ -31,9 +31,9 @@ define amdgpu_ps half @fmed3_s16_uniform_salu_use(half inreg %a, half inreg %b, 
 ;
 ; GFX12-LABEL: fmed3_s16_uniform_salu_use:
 ; GFX12:       ; %bb.0:
-; GFX12-NEXT:    v_mov_b32_e32 v0, s2
+; GFX12-NEXT:    v_mov_b16_e32 v0.l, s2
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX12-NEXT:    v_med3_num_f16 v0, s0, s1, v0
+; GFX12-NEXT:    v_med3_num_f16 v0.l, s0, s1, v0.l
 ; GFX12-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX12-NEXT:    s_add_f16 s0, s0, s3
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
@@ -53,7 +53,7 @@ define amdgpu_ps half @fmed3_s16_div(half %a, half %b, half %c) {
 ;
 ; GFX12-LABEL: fmed3_s16_div:
 ; GFX12:       ; %bb.0:
-; GFX12-NEXT:    v_med3_num_f16 v0, v0, v1, v2
+; GFX12-NEXT:    v_med3_num_f16 v0.l, v0.l, v1.l, v2.l
 ; GFX12-NEXT:    ; return to shader part epilog
   %result = call half @llvm.amdgcn.fmed3.f16(half %a, half %b, half %c)
   ret half %result
