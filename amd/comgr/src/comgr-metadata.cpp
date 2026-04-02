@@ -71,16 +71,18 @@ getELFObjectFileBase(DataObject *DataP) {
 //
 // If merge is possible the function merges Kernel records
 // to @p To and returns @c true.
+// @p DestDoc is the document into which merged nodes are deep copied.
 bool mergeNoteRecords(llvm::msgpack::DocNode &From, llvm::msgpack::DocNode &To,
                       const StringRef VersionStrKey,
                       const StringRef PrintfStrKey,
-                      const StringRef KernelStrKey) {
+                      const StringRef KernelStrKey,
+                      llvm::msgpack::Document &DestDoc) {
   if (!From.isMap()) {
     return false;
   }
 
   if (To.isEmpty()) {
-    To = From;
+    To = DestDoc.copyNode(From);
     return true;
   }
 
@@ -91,7 +93,7 @@ bool mergeNoteRecords(llvm::msgpack::DocNode &From, llvm::msgpack::DocNode &To,
       if (From.getMap()[PrintfStrKey] != To.getMap()[PrintfStrKey])
         return false;
     } else {
-      To.getMap()[PrintfStrKey] = From.getMap()[PrintfStrKey];
+      To.getMap()[PrintfStrKey] = DestDoc.copyNode(From.getMap()[PrintfStrKey]);
     }
   }
 
@@ -132,7 +134,7 @@ bool mergeNoteRecords(llvm::msgpack::DocNode &From, llvm::msgpack::DocNode &To,
 
   auto &ToKernelRecords = ToKernelArray->second.getArray();
   for (auto Kernel : FromKernelArray->second.getArray()) {
-    ToKernelRecords.push_back(Kernel);
+    ToKernelRecords.push_back(DestDoc.copyNode(Kernel));
   }
 
   return true;
@@ -169,16 +171,17 @@ bool processNote(const Elf_Note<ELFT> &Note, DataMeta *MetaP,
     MetaP->MetaDoc->EmitIntegerBooleans = true;
     MetaP->MetaDoc->RawDocumentList.push_back(std::string(DescString));
 
-    /* TODO add support for merge using readFromBlob merge function */
-    auto &Document = MetaP->MetaDoc->Document;
-
-    Document.clear();
-    if (!Document.readFromBlob(MetaP->MetaDoc->RawDocumentList.back(), false)) {
+    // Use a temporary document for parsing to avoid invalidating Root.
+    // DocNode contains pointers to memory owned by its Document, so reusing
+    // the same Document for parsing would invalidate nodes accumulated in Root.
+    llvm::msgpack::Document TempDoc;
+    if (!TempDoc.readFromBlob(MetaP->MetaDoc->RawDocumentList.back(), false)) {
       return false;
     }
 
-    return mergeNoteRecords(Document.getRoot(), Root, "amdhsa.version",
-                            "amdhsa.printf", "amdhsa.kernels");
+    return mergeNoteRecords(TempDoc.getRoot(), Root, "amdhsa.version",
+                            "amdhsa.printf", "amdhsa.kernels",
+                            MetaP->MetaDoc->Document);
   }
   return false;
 }
