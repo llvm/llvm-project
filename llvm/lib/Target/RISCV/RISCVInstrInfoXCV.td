@@ -857,3 +857,17 @@ let Predicates = [HasVendorXCVmac, IsRV32] in {
   def : PatCoreVMacGprGprGprUimm5<"macsRN", "MACSRN">;
   def : PatCoreVMacGprGprGprUimm5<"machhsRN", "MACHHSRN">;
 }
+
+//===----------------------------------------------------------------------===//
+// XCVmac Generic SelectionDAG patterns
+//===----------------------------------------------------------------------===//
+
+let Predicates = [HasVendorXCVmac, IsRV32], AddedComplexity = 2 in {
+  // acc + (a * b) → cv.mac
+  def : Pat<(i32 (add GPR:$rd, (i32 (mul GPR:$rs1, GPR:$rs2)))),
+            (CV_MAC GPR:$rd, GPR:$rs1, GPR:$rs2)>;
+
+  // acc - (a * b) → cv.msu
+  def : Pat<(i32 (sub GPR:$rd, (i32 (mul GPR:$rs1, GPR:$rs2)))),
+            (CV_MSU GPR:$rd, GPR:$rs1, GPR:$rs2)>;
+}
