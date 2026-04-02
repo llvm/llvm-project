@@ -273,7 +273,7 @@ implementing, you just override the interfaces you can improve.
 -----------------------------------
 
 Every alias analysis pass chains to another alias analysis implementation (for
-example, the user can specify "``-basic-aa -ds-aa -licm``" to get the maximum
+example, the user can specify "``-aa-pipeline=basic-aa,ds-aa -passes=licm``" to get the maximum
 benefit from both alias analyses).  The alias analysis class automatically
 takes care of most of this for methods that you don't override.  For methods
 that you do override, in code paths that return a conservative MayAlias or
@@ -636,7 +636,7 @@ implementations.  You can use them with commands like:
 
 .. code-block:: bash
 
-  % opt -ds-aa -aa-eval foo.bc -disable-output -stats
+  % opt -aa-pipeline=basic-aa -passes=aa-eval foo.bc -disable-output -stats
 
 The ``-print-alias-sets`` pass
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -647,7 +647,7 @@ you're using the ``AliasSetTracker`` class.  To use it, use something like:
 
 .. code-block:: bash
 
-  % opt -ds-aa -print-alias-sets -disable-output
+  % opt -aa-pipeline=basic-aa -passes=print-alias-sets -disable-output
 
 The ``-aa-eval`` pass
 ^^^^^^^^^^^^^^^^^^^^^
