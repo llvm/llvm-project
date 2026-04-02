@@ -128,6 +128,122 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
     return Val;
   }
 
+  enum class NaNPayloadCastMode {
+    None,
+    FPExt,
+    FPTrunc,
+  };
+
+  static unsigned getNaNPayloadBitWidth(const fltSemantics &Sem) {
+    unsigned Precision = APFloat::semanticsPrecision(Sem);
+    return Precision > 2 ? Precision - 2 : 0;
+  }
+
+  NaNPropagationBehavior resolveNaNPropagationBehavior() {
+    NaNPropagationBehavior Choice = Ctx.getNaNPropagationBehavior();
+    if (Choice == NaNPropagationBehavior::NonDeterministic) {
+      uint64_t NonDetChoice = Ctx.getRandomUInt64() % 4 + 1;
+      Choice = static_cast<NaNPropagationBehavior>(NonDetChoice);
+    }
+    return Choice;
+  }
+
+  const APFloat &pickNaNSource(ArrayRef<const APFloat *> Inputs,
+                               const APFloat &Fallback) {
+    for (const APFloat *Input : Inputs) {
+      if (Input && Input->isNaN())
+        return *Input;
+    }
+    return Fallback;
+  }
+
+  APInt getNaNPayload(const APFloat &NaNVal) {
+    unsigned PayloadBits = getNaNPayloadBitWidth(NaNVal.getSemantics());
+    if (!PayloadBits)
+      return APInt(1, 0);
+    return NaNVal.bitcastToAPInt().extractBits(PayloadBits, 0);
+  }
+
+  APInt castNaNPayload(const APInt &SrcPayload, unsigned SrcPayloadBits,
+                       unsigned DstPayloadBits, NaNPayloadCastMode CastMode) {
+    if (!DstPayloadBits)
+      return APInt(1, 0);
+
+    APInt CanonicalSrc = SrcPayload.zextOrTrunc(SrcPayloadBits);
+    if (CastMode == NaNPayloadCastMode::FPExt &&
+        SrcPayloadBits < DstPayloadBits)
+      return CanonicalSrc.zext(DstPayloadBits)
+          .shl(DstPayloadBits - SrcPayloadBits);
+    if (CastMode == NaNPayloadCastMode::FPTrunc &&
+        SrcPayloadBits > DstPayloadBits)
+      return CanonicalSrc.lshr(SrcPayloadBits - DstPayloadBits)
+          .trunc(DstPayloadBits);
+    return CanonicalSrc.zextOrTrunc(DstPayloadBits);
+  }
+
+  APFloat buildNaN(const fltSemantics &Sem, bool IsNegative, bool IsSignaling,
+                   const APInt &Payload) {
+    unsigned SignificandBits = APFloat::semanticsPrecision(Sem) - 1;
+    APInt Fill = APInt::getZero(SignificandBits);
+    unsigned PayloadBits = getNaNPayloadBitWidth(Sem);
+    if (PayloadBits)
+      Fill.insertBits(Payload.zextOrTrunc(PayloadBits), 0);
+
+    if (IsSignaling)
+      return APFloat::getSNaN(Sem, IsNegative, &Fill);
+    return APFloat::getQNaN(Sem, IsNegative, &Fill);
+  }
+
+  APFloat propagateInputNaN(const APFloat &InputNaN, const fltSemantics &DstSem,
+                            bool QuietingMode, bool FlipSign,
+                            NaNPayloadCastMode CastMode) {
+    unsigned SrcPayloadBits = getNaNPayloadBitWidth(InputNaN.getSemantics());
+    unsigned DstPayloadBits = getNaNPayloadBitWidth(DstSem);
+    APInt MappedPayload = castNaNPayload(
+        getNaNPayload(InputNaN), SrcPayloadBits, DstPayloadBits, CastMode);
+
+    bool IsSignaling = InputNaN.isSignaling();
+    bool OutputIsSignaling = !QuietingMode && IsSignaling;
+    if (OutputIsSignaling &&
+        (DstPayloadBits == 0 ||
+         (CastMode == NaNPayloadCastMode::FPTrunc && MappedPayload.isZero())))
+      OutputIsSignaling = false;
+
+    bool IsNegative = InputNaN.isNegative();
+    if (FlipSign)
+      IsNegative = !IsNegative;
+    return buildNaN(DstSem, IsNegative, OutputIsSignaling, MappedPayload);
+  }
+
+  APFloat
+  applyNaNPropagation(const APFloat &Result, ArrayRef<const APFloat *> Inputs,
+                      NaNPayloadCastMode CastMode = NaNPayloadCastMode::None) {
+    if (!Result.isNaN())
+      return Result;
+
+    NaNPropagationBehavior Choice = resolveNaNPropagationBehavior();
+    const bool SignChoice = Ctx.getRandomBool();
+    switch (Choice) {
+    case NaNPropagationBehavior::PreferredNaN:
+      return APFloat::getQNaN(Result.getSemantics(), SignChoice);
+    case NaNPropagationBehavior::QuietingNaN:
+      return propagateInputNaN(pickNaNSource(Inputs, Result),
+                               Result.getSemantics(), /*QuietingMode=*/true,
+                               SignChoice, CastMode);
+    case NaNPropagationBehavior::UnchangedNaN:
+      return propagateInputNaN(pickNaNSource(Inputs, Result),
+                               Result.getSemantics(), /*QuietingMode=*/false,
+                               SignChoice, CastMode);
+    case NaNPropagationBehavior::TargetSpecificNaN: {
+      APInt Payload(64, Ctx.getRandomUInt64());
+      return APFloat::getQNaN(Result.getSemantics(), SignChoice, &Payload);
+    }
+    case NaNPropagationBehavior::NonDeterministic:
+      llvm_unreachable("NonDeterministic should be resolved earlier.");
+    }
+    llvm_unreachable("Unhandled NaN propagation behavior.");
+  }
+
   AnyValue computeUnOp(Type *Ty, const AnyValue &Operand,
                        function_ref<AnyValue(const AnyValue &)> ScalarFn) {
     if (Ty->isVectorTy()) {
@@ -234,59 +350,7 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
         return FResult;
 
       APFloat Result = FResult.asFloat();
-      // NaN payload propagation
-      if (Result.isNaN()) {
-        NaNPropagationBehavior Choice = Ctx.getNaNPropagationBehavior();
-        if (Choice == NaNPropagationBehavior::NonDeterministic) {
-          uint64_t NonDetChoice = Ctx.getRandomUInt64() % 4 + 1;
-          Choice = static_cast<NaNPropagationBehavior>(NonDetChoice);
-        }
-        const bool Sign = Ctx.getRandomBool();
-        if (Choice == NaNPropagationBehavior::PreferredNaN) {
-          // Preferred NaN: the quiet bit is set and the payload is all-zero
-          return APFloat::getQNaN(Result.getSemantics(), Sign);
-        }
-        if (Choice == NaNPropagationBehavior::QuietingNaN) {
-          // Quieting NaN propagation: the quiet bit is set and the payload is
-          // copied from any input operand that is a NaN. We implement this by
-          // directly set the quiet bit of the input NaN, and
-          // non-deterministically flip its sign bit
-          auto QuietNaN = [&](APFloat &Input) {
-            APFloat Quieted = Input.makeQuiet();
-            if (Sign)
-              Quieted.changeSign();
-            return Quieted;
-          };
-          if (FLHS.isNaN())
-            return QuietNaN(FLHS);
-          if (FRHS.isNaN())
-            return QuietNaN(FRHS);
-          return QuietNaN(Result);
-        }
-        if (Choice == NaNPropagationBehavior::UnchangedNaN) {
-          // Unchanged NaN propagation: the quiet bit and payload are copied
-          // from any input operand that is a NaN
-          auto FlipSign = [&](APFloat &Input) {
-            if (Sign)
-              Input.changeSign();
-            return Input;
-          };
-          if (FLHS.isNaN())
-            return FlipSign(FLHS);
-          if (FRHS.isNaN())
-            return FlipSign(FRHS);
-          return FlipSign(Result);
-        }
-        if (Choice == NaNPropagationBehavior::TargetSpecificNaN) {
-          // Target-specific NaN: the quiet bit is set and the payload is picked
-          // from a target-specific set of "extra" possible NaN payloads. We
-          // approximate this by filling the payload with random values.
-          APInt Payload(64, Ctx.getRandomUInt64());
-          return APFloat::getQNaN(Result.getSemantics(), Sign, &Payload);
-        }
-      }
-
-      return Result;
+      return applyNaNPropagation(Result, {&FLHS, &FRHS});
     });
   }
 
@@ -900,6 +964,7 @@ public:
       DenormalMode DenormMode = getCurrentDenormalMode(I);
 
       APFloat FOperand = handleDenormal(Operand.asFloat(), DenormMode.Input);
+      APFloat SourceNaN = FOperand;
 
       if (auto ValidateRes = handleFMFFlags(FOperand, FMF);
           ValidateRes.isPoison())
@@ -914,7 +979,10 @@ public:
 
       FOperand = handleDenormal(std::move(FOperand), DenormMode.Output, true);
 
-      return AnyValue(FOperand);
+      NaNPayloadCastMode CastMode = isa<FPExtInst>(I)
+                                        ? NaNPayloadCastMode::FPExt
+                                        : NaNPayloadCastMode::FPTrunc;
+      return AnyValue(applyNaNPropagation(FOperand, {&SourceNaN}, CastMode));
     });
   }
 
