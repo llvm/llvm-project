@@ -29,7 +29,6 @@
 #include "llvm/CodeGen/DetectDeadLanes.h"
 #include "llvm/CodeGen/DwarfEHPrepare.h"
 #include "llvm/CodeGen/ExpandIRInsts.h"
-#include "llvm/CodeGen/ExpandMemCmp.h"
 #include "llvm/CodeGen/ExpandPostRAPseudos.h"
 #include "llvm/CodeGen/ExpandReductions.h"
 #include "llvm/CodeGen/FEntryInserter.h"
@@ -734,16 +733,6 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addIRPasses(
     addFunctionPass(createFunctionToLoopPassAdaptor(std::move(LPM),
                                                     /*UseMemorySSA=*/false),
                     PMW);
-  }
-
-  if (getOptLevel() != CodeGenOptLevel::None) {
-    // The MergeICmpsPass tries to create memcmp calls by grouping sequences of
-    // loads and compares. ExpandMemCmpPass then tries to expand those calls
-    // into optimally-sized loads and compares. The transforms are enabled by a
-    // target lowering hook.
-    if (!Opt.DisableMergeICmps)
-      addFunctionPass(MergeICmpsPass(), PMW);
-    addFunctionPass(ExpandMemCmpPass(), PMW);
   }
 
   // Run GC lowering passes for builtin collectors
