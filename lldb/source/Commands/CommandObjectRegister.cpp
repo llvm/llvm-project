@@ -70,7 +70,7 @@ static size_t ComputeLongestRegisterName(Args &command, RegisterContext *reg_ctx
 
   // Loop through all the arguments to find the longest register name
   for (auto &entry : command) {
-    auto arg_str = entry.ref();
+    llvm::StringRef arg_str = entry.ref();
     arg_str.consume_front("$");
 
     if (const RegisterInfo *reg_info =
