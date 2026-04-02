@@ -181,7 +181,7 @@ protected:
   }
 
   // Here, command is basically a list of registers to be printed by DumpRegister() method
-  uint32_t ComputeMatchingAlignment(Args &command, RegisterContext *reg_ctx, bool primitive_only) {
+  uint32_t ComputeMatchingAlignment(Args &command, RegisterContext *reg_ctx) {
     bool use_primary_name =
         !static_cast<bool>(m_command_options.alternate_name);
     uint32_t name_right_align_at = 0;
@@ -194,9 +194,6 @@ protected:
     
       if (const RegisterInfo *reg_info =
               reg_ctx->GetRegisterInfoByName(arg_str)) {
-        // Derived registers are skipped if primitive_only is true.
-        if (primitive_only && reg_info->value_regs)
-          continue;
 
         name_right_align_at = std::max(name_right_align_at, GetNameSize(reg_info, use_primary_name));
       }
@@ -253,8 +250,8 @@ protected:
         result.AppendError("the --set <set> option can't be used when "
                            "registers names are supplied as arguments\n");
       } else {
-        int alignment = ComputeMatchingAlignment(command, reg_ctx, !m_command_options.dump_all_sets.GetCurrentValue());
-        alignment += 2; // Extra ident to be consistent with register sets dumping
+        int alignment = ComputeMatchingAlignment(command, reg_ctx);
+        strm.IndentMore(); // Extra ident to be consistent with register sets dumping
         for (auto &entry : command) {
           // in most LLDB commands we accept $rbx as the name for register RBX
           // - and here we would reject it and non-existant. we should be more
@@ -278,6 +275,7 @@ protected:
                                          arg_str.str().c_str());
           }
         }
+        strm.IndentLess();
       }
     }
     if (result.GetStatus() != eReturnStatusFailed)

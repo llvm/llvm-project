@@ -3,10 +3,10 @@
 # RUN: %clang_host -g -O0 %S/Inputs/main.c -o %t.out
 # RUN: %lldb -b -o "breakpoint set --name main" \
 # RUN:        -o run \
-# RUN:        -o "register read pc ymm7 ymm12 fs_base" \
+# RUN:        -o "register read rip rax r10d" \
 # RUN:        %t.out | FileCheck --strict-whitespace %s
 
-# CHECK: (lldb) register read pc rax r10d
-# CHECK: {{^    pc = }}
+# CHECK: (lldb) register read rip rax r10d
+# CHECK: {{^   rip = }}
 # CHECK: {{^   rax = }}
 # CHECK: {{^  r10d = }}
