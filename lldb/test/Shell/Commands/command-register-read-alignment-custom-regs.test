@@ -6,8 +6,7 @@
 # RUN:        -o "register read pc ymm7 ymm12 fs_base" \
 # RUN:        %t.out | FileCheck --strict-whitespace %s
 
-# CHECK: (lldb) register read pc ymm7 ymm12 fs_base
-# CHECK: {{^      rip = }}
-# CHECK: {{^     ymm7 = }}
-# CHECK: {{^    ymm12 = }}
-# CHECK: {{^  fs_base = }}
+# CHECK: (lldb) register read pc rax r10d
+# CHECK: {{^    pc = }}
+# CHECK: {{^   rax = }}
+# CHECK: {{^  r10d = }}
