@@ -3889,7 +3889,7 @@ LValue CodeGenFunction::EmitPredefinedLValue(const PredefinedExpr *E) {
 /// followed by an array of i8 containing the type name with extra information
 /// for BitInt. TypeKind is TK_Integer(0) for an integer, TK_Float(1) for a
 /// floating point value, TK_BitInt(2) for BitInt, TK_FixedPoint(3) for a
-// fixed point value, and TK_Unknown(0xFFFF) for anything else.
+/// fixed point value, and TK_Unknown(0xFFFF) for anything else.
 llvm::Constant *CodeGenFunction::EmitCheckTypeDescriptor(QualType T) {
   // Only emit each type's descriptor once.
   if (llvm::Constant *C = CGM.getTypeDescriptorFromMap(T))
