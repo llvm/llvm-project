@@ -36,6 +36,52 @@ using namespace lldb_private;
 #define LLDB_OPTIONS_register_read
 #include "CommandOptions.inc"
 
+static uint32_t GetNameSize(const RegisterInfo * reg_info, bool use_primary_name) {
+    const char *raw = use_primary_name ? reg_info->name : reg_info->alt_name;
+    std::string str = raw ? std::string(raw) : std::string();
+    return static_cast<uint32_t>(str.size());
+}
+
+static uint32_t ComputeLongestRegisterName(RegisterContext *reg_ctx,
+                                    const RegisterSet *const reg_set,
+                                    bool use_primary_name, bool primitive_only) {
+  const size_t num_registers = reg_set->num_registers;
+  uint32_t name_right_align_at = 0;
+
+  // Loop through all the registers to find the longest register name
+  for (size_t reg_idx = 0; reg_idx < num_registers; ++reg_idx) {
+    const uint32_t reg = reg_set->registers[reg_idx];
+    if (const RegisterInfo *reg_info = 
+            reg_ctx->GetRegisterInfoAtIndex(reg)) {
+      // Derived registers are skipped if primitive_only is true.
+      if (primitive_only && reg_info->value_regs)
+        continue;
+
+      name_right_align_at = std::max(name_right_align_at, GetNameSize(reg_info, use_primary_name));
+    }
+  }
+
+  return name_right_align_at;
+}
+
+// Here, [command] is basically a list of registers to be printed by DumpRegister() method
+static uint32_t ComputeLongestRegisterName(Args &command, RegisterContext *reg_ctx, bool use_primary_name) {
+  uint32_t name_right_align_at = 0;
+
+  // Loop through all the arguments to find the longest register name
+  for (auto &entry : command) {
+    auto arg_str = entry.ref();
+    arg_str.consume_front("$");
+
+    if (const RegisterInfo *reg_info =
+            reg_ctx->GetRegisterInfoByName(arg_str)) {
+      name_right_align_at = std::max(name_right_align_at, GetNameSize(reg_info, use_primary_name));
+    }
+  }
+
+  return name_right_align_at;
+}
+
 class CommandObjectRegisterRead : public CommandObjectParsed {
 public:
   CommandObjectRegisterRead(CommandInterpreter &interpreter)
@@ -124,7 +170,7 @@ public:
       strm.IndentMore();
       const size_t num_registers = reg_set->num_registers;
       uint32_t name_right_align_at =
-          ComputeLongestRegisterName(reg_ctx, reg_set, primitive_only);
+          ComputeLongestRegisterName(reg_ctx, reg_set, !static_cast<bool>(m_command_options.alternate_name), primitive_only);
       for (size_t reg_idx = 0; reg_idx < num_registers; ++reg_idx) {
         const uint32_t reg = reg_set->registers[reg_idx];
         const RegisterInfo *reg_info = reg_ctx->GetRegisterInfoAtIndex(reg);
@@ -149,59 +195,6 @@ public:
   }
 
 protected:
-  uint32_t GetNameSize(const RegisterInfo * reg_info, bool use_primary_name) {
-      const char *raw = use_primary_name ? reg_info->name : reg_info->alt_name;
-      std::string str = raw ? std::string(raw) : std::string();
-      return static_cast<uint32_t>(str.size());
-  }
-
-  uint32_t ComputeLongestRegisterName(RegisterContext *reg_ctx,
-                                    const RegisterSet *const reg_set,
-                                    bool primitive_only) {
-    bool use_primary_name =
-        !static_cast<bool>(m_command_options.alternate_name);
-    const size_t num_registers = reg_set->num_registers;
-    uint32_t name_right_align_at = 0;
-
-    // Loop through all the registers to find the longest register name for the
-    // matching alignment
-    for (size_t reg_idx = 0; reg_idx < num_registers; ++reg_idx) {
-      const uint32_t reg = reg_set->registers[reg_idx];
-      if (const RegisterInfo *reg_info = 
-              reg_ctx->GetRegisterInfoAtIndex(reg)) {
-        // Derived registers are skipped if primitive_only is true.
-        if (primitive_only && reg_info->value_regs)
-          continue;
-
-        name_right_align_at = std::max(name_right_align_at, GetNameSize(reg_info, use_primary_name));
-      }
-    }
-
-    return name_right_align_at;
-  }
-
-  // Here, command is basically a list of registers to be printed by DumpRegister() method
-  uint32_t ComputeLongestRegisterName(Args &command, RegisterContext *reg_ctx) {
-    bool use_primary_name =
-        !static_cast<bool>(m_command_options.alternate_name);
-    uint32_t name_right_align_at = 0;
-
-    // Loop through all the arguments to find the longest register name for the
-    // matching alignment
-    for (auto &entry : command) {
-      auto arg_str = entry.ref();
-      arg_str.consume_front("$");
-    
-      if (const RegisterInfo *reg_info =
-              reg_ctx->GetRegisterInfoByName(arg_str)) {
-
-        name_right_align_at = std::max(name_right_align_at, GetNameSize(reg_info, use_primary_name));
-      }
-    }
-
-    return name_right_align_at;
-  }
-
   void DoExecute(Args &command, CommandReturnObject &result) override {
     Stream &strm = result.GetOutputStream();
     RegisterContext *reg_ctx = m_exe_ctx.GetRegisterContext();
@@ -250,7 +243,7 @@ protected:
         result.AppendError("the --set <set> option can't be used when "
                            "registers names are supplied as arguments\n");
       } else {
-        int alignment = ComputeLongestRegisterName(command, reg_ctx);
+        int alignment = ComputeLongestRegisterName(command, reg_ctx, !static_cast<bool>(m_command_options.alternate_name));
         strm.IndentMore(); // Extra ident to be consistent with register sets dumping
         for (auto &entry : command) {
           // in most LLDB commands we accept $rbx as the name for register RBX
