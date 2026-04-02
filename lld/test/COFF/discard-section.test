@@ -8,15 +8,15 @@
 # PRESERVE: Name: .llvmbc
 # PRESERVE: Name: .llvmcmd
 
-## /discard discards sections by name.
-# RUN: lld-link /entry:main /subsystem:console /discard:.llvmbc /discard:.llvmcmd /out:%t-stripped.exe %t.obj
+## /discard-section discards sections by name.
+# RUN: lld-link /entry:main /subsystem:console /discard-section:.llvmbc /discard-section:.llvmcmd /out:%t-stripped.exe %t.obj
 # RUN: llvm-readobj -S %t-stripped.exe | FileCheck --check-prefix=NOBC %s
 
 # NOBC:     Name: .rdata
 # NOBC-NOT: Name: .llvmbc
 # NOBC-NOT: Name: .llvmcmd
 
-# RUN: lld-link /entry:main /subsystem:console /discard:.rdata /out:%t-nordata.exe %t.obj
+# RUN: lld-link /entry:main /subsystem:console /discard-section:.rdata /out:%t-nordata.exe %t.obj
 # RUN: llvm-readobj -S %t-nordata.exe | FileCheck --check-prefix=NORDATA %s
 
 # NORDATA-NOT: Name: .rdata

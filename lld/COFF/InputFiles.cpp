@@ -403,7 +403,7 @@ SectionChunk *ObjFile::readSection(uint32_t sectionNumber,
     return nullptr;
   }
 
-  if (symtab.ctx.config.discard.contains(name))
+  if (symtab.ctx.config.discardSection.contains(name))
     return nullptr;
 
   // Object files may have DWARF debug info or MS CodeView debug info
