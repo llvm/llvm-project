@@ -53,7 +53,8 @@ llvm::object::decodeBBAddrMapPayload(AddressExtractor &Extractor,
   Error ULEBSizeErr = Error::success();
   Error MetadataDecodeErr = Error::success();
 
-  uint8_t Version = 0;
+  // Use int for Version to avoid Twine treating uint8_t as char.
+  int Version = 0;
   uint16_t Feature = 0;
   BBAddrMap::Features FeatEnable{};
   while (!ULEBSizeErr && !MetadataDecodeErr && Cur &&
@@ -63,7 +64,7 @@ llvm::object::decodeBBAddrMapPayload(AddressExtractor &Extractor,
       break;
     if (Version < 2 || Version > 5)
       return createError("unsupported BB address map version: " +
-                         Twine(static_cast<int>(Version)));
+                         Twine(Version));
     Feature = Version < 5 ? Data.getU8(Cur) : Data.getU16(Cur);
     if (!Cur)
       break;
@@ -74,18 +75,15 @@ llvm::object::decodeBBAddrMapPayload(AddressExtractor &Extractor,
     if (FeatEnable.CallsiteEndOffsets && Version < 3)
       return createError("version should be >= 3 for BB address map when "
                          "callsite offsets feature is enabled: version = " +
-                         Twine(static_cast<int>(Version)) +
-                         " feature = " + Twine(static_cast<int>(Feature)));
+                         Twine(Version) + " feature = " + Twine(Feature));
     if (FeatEnable.BBHash && Version < 4)
       return createError("version should be >= 4 for BB address map when "
                          "basic block hash feature is enabled: version = " +
-                         Twine(static_cast<int>(Version)) +
-                         " feature = " + Twine(static_cast<int>(Feature)));
+                         Twine(Version) + " feature = " + Twine(Feature));
     if (FeatEnable.PostLinkCfg && Version < 5)
       return createError("version should be >= 5 for BB address map when "
                          "post link cfg feature is enabled: version = " +
-                         Twine(static_cast<int>(Version)) +
-                         " feature = " + Twine(static_cast<int>(Feature)));
+                         Twine(Version) + " feature = " + Twine(Feature));
     uint32_t NumBlocksInBBRange = 0;
     uint32_t NumBBRanges = 1;
     uint64_t RangeBaseAddress = 0;
