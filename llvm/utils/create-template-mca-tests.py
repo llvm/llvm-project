@@ -2,6 +2,7 @@
 
 from pathlib import Path
 from os import path
+from argparse import ArgumentParser
 
 desc = """
 A simple script to create new llvm-mca tests from a set of input files. For each .s files under <input files folder>,
@@ -46,8 +47,6 @@ def entry(args):
 
 
 if __name__ == "__main__":
-    from argparse import ArgumentParser
-
     parser = ArgumentParser(description=desc)
     parser.add_argument(
         "input_dir",
