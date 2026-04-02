@@ -930,7 +930,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Instruction *I,
         return InsertNewInstWith(LShr, I->getIterator());
       }
 
-      Known = KnownBits::ashr(Known, ShiftAmt, ShiftAmt != 0, I->isExact());
+      Known = KnownBits::ashr(Known, ShiftAmt);
     } else {
       llvm::computeKnownBits(I, Known, Q, Depth);
     }
