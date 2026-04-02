@@ -406,13 +406,13 @@ static unsigned getMaxShiftAmount(const APInt &MaxValue, unsigned BitWidth) {
 
 KnownBits KnownBits::shl(const KnownBits &LHS, unsigned ShiftAmt, bool NUW,
                          bool NSW) {
-  KnownBits Known(LHS.getBitWidth());
   bool ShiftedOutZero, ShiftedOutOne;
-  Known.Zero = LHS.Zero.ushl_ov(ShiftAmt, ShiftedOutZero);
+  KnownBits Known(LHS.Zero.ushl_ov(ShiftAmt, ShiftedOutZero),
+                  LHS.One.ushl_ov(ShiftAmt, ShiftedOutOne));
   Known.Zero.setLowBits(ShiftAmt);
-  Known.One = LHS.One.ushl_ov(ShiftAmt, ShiftedOutOne);
 
-  // All cases returning poison have been handled by MaxShiftAmount already.
+  // This part assumes a valid shift amount and does not check for
+  // cases that would result in poison.
   if (NSW) {
     if (NUW && ShiftAmt != 0)
       // NUW means we can assume anything shifted out was a zero.
