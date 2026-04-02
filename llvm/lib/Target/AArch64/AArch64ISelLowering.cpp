@@ -5301,7 +5301,8 @@ SDValue AArch64TargetLowering::LowerVectorXRINT(SDValue Op,
   unsigned FPBits = CastVT.getScalarSizeInBits();
 
   // Convert fixed-length vectors to scalable and re-emit the same opcode.
-  if (useSVEForFixedLengthVectorVT(Op.getValueType(),
+  if (Subtarget->hasSVE2p2() &&
+      useSVEForFixedLengthVectorVT(Op.getValueType(),
                                    !Subtarget->isNeonAvailable())) {
     EVT ContainerSrcVT =
         getContainerForFixedLengthVector(DAG, Src.getValueType());
