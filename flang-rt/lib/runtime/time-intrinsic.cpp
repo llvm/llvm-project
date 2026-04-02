@@ -393,7 +393,7 @@ GetGmtOffset(const TM &tm, fallback_implementation) {
   std::int32_t bias{tzi.Bias};
   bias += (tzid == TIME_ZONE_ID_DAYLIGHT ? tzi.DaylightBias : tzi.StandardBias);
 
-  // Bias is minutes behind GMT, and we need minuetes ahead.
+  // Bias is minutes behind GMT, and we need minutes ahead.
   return -bias;
 #else
   return negHuge;
@@ -418,7 +418,7 @@ struct timeval {
 
 // gettimeofday half-implementation for win32; ignore the timezone as we don't
 // use it anyway
-int gettimeofday(timeval *tv, void *) {
+static int gettimeofday(timeval *tv, void *) {
   constexpr std::uint64_t epoch_offset{116444736000000000ull};
 
   FILETIME ftime;
@@ -438,8 +438,11 @@ int gettimeofday(timeval *tv, void *) {
 
 // localtime_s on Windows does the same thing as localtime_r but swaps the
 // arguments
-struct tm *localtime_r(const time_t *timer, struct tm *buf) {
-  _localtime64_s(buf, timer);
+static struct tm *localtime_r(const time_t *timer, struct tm *buf) {
+  errno_t ec{_localtime64_s(buf, timer)};
+  if (ec != 0) {
+    return nullptr;
+  }
   return buf;
 }
 
