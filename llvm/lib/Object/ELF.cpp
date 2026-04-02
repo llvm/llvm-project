@@ -783,7 +783,6 @@ public:
       return AddressOrErr.takeError();
     if (!IsRelocatable)
       return *AddressOrErr;
-    assert(*AddressOrErr == 0);
     auto FOTIterator = FunctionOffsetTranslations.find(Offset);
     if (FOTIterator == FunctionOffsetTranslations.end())
       return createError("failed to get relocation data for offset: " +
