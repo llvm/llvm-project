@@ -29,6 +29,7 @@
 #include "Shared/Requirements.h"
 #include "Shared/Utils.h"
 
+#include "GenericProfiler.h"
 #include "GlobalHandler.h"
 #include "JIT.h"
 #include "MemoryManager.h"
@@ -56,6 +57,12 @@
 #include "llvm/TargetParser/Triple.h"
 
 using namespace llvm::offload::debug;
+
+/// Factory function for creating a profiler. The default (weak) implementation
+/// returns a no-op GenericProfilerTy. When OMPT is enabled, a strong override
+/// returns an OmptProfilerTy instance.
+std::unique_ptr<llvm::omp::target::plugin::GenericProfilerTy>
+getProfilerToAttach();
 
 namespace llvm {
 namespace omp {
@@ -1120,6 +1127,11 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   uint32_t getDebugKind() const { return OMPX_DebugKind; }
   virtual uint64_t getClockFrequency() const { return CLOCKS_PER_SEC; }
 
+  /// Get a device-specific timestamp in nanoseconds, used by the profiler
+  /// for timing device operations. Subclasses should override this to provide
+  /// hardware-accurate timestamps (e.g., via HSA system info).
+  virtual uint64_t getDeviceTimeStamp() { return 0; }
+
   /// Get target compute unit kind (e.g., sm_80, or gfx908).
   virtual std::string getComputeUnitKind() const { return "unknown"; }
 
@@ -1376,16 +1388,6 @@ protected:
   /// This is used to run the RPC server during task synchronization.
   RPCServerTy *RPCServer;
 
-#ifdef OMPT_SUPPORT
-  /// OMPT callback functions
-#define defineOmptCallback(Name, Type, Code) Name##_t Name##_fn = nullptr;
-  FOREACH_OMPT_DEVICE_EVENT(defineOmptCallback)
-#undef defineOmptCallback
-
-  /// Internal representation for OMPT device (initialize & finalize)
-  std::atomic<bool> OmptInitialized;
-#endif
-
   /// The total per-block native shared memory that a kernel may use.
   size_t MaxBlockSharedMemSize = 0;
 };
@@ -1397,7 +1399,8 @@ struct GenericPluginTy {
 
   /// Construct a plugin instance.
   GenericPluginTy(Triple::ArchType TA)
-      : GlobalHandler(nullptr), JIT(TA), RPCServer(nullptr) {}
+      : GlobalHandler(nullptr), JIT(TA), RPCServer(nullptr),
+        Profiler(getProfilerToAttach()) {}
 
   virtual ~GenericPluginTy() {}
 
@@ -1488,7 +1491,12 @@ struct GenericPluginTy {
   /// Tear down any target-specific doorbell resources.
   virtual Error deinitRPCDoorbell() { return Plugin::success(); }
 
-  /// Get a reference to the record and replay interface for the plugin.
+  /// Get a pointer to the profiler attached to this plugin.
+  GenericProfilerTy *getProfiler() {
+    assert(Profiler && "Profiler not initialized");
+    return Profiler.get();
+  }
+
   /// Initialize a device within the plugin.
   Error initDevice(int32_t DeviceId);
 
@@ -1760,6 +1768,9 @@ private:
 
   /// The interface between the plugin and the GPU for host services.
   RPCServerTy *RPCServer;
+
+  /// The profiler backend attached to this plugin (e.g., OMPT).
+  std::unique_ptr<GenericProfilerTy> Profiler;
 };
 
 /// Auxiliary interface class for GenericDeviceResourceManagerTy. This class
