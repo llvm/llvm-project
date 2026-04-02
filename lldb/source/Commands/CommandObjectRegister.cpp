@@ -36,21 +36,21 @@ using namespace lldb_private;
 #define LLDB_OPTIONS_register_read
 #include "CommandOptions.inc"
 
-static uint32_t GetNameSize(const RegisterInfo * reg_info, bool use_primary_name) {
+static size_t GetNameSize(const RegisterInfo * reg_info, bool use_primary_name) {
     const char *raw = use_primary_name ? reg_info->name : reg_info->alt_name;
     std::string str = raw ? std::string(raw) : std::string();
-    return static_cast<uint32_t>(str.size());
+    return static_cast<size_t>(str.size());
 }
 
-static uint32_t ComputeLongestRegisterName(RegisterContext *reg_ctx,
+static size_t ComputeLongestRegisterName(RegisterContext *reg_ctx,
                                     const RegisterSet& reg_set,
                                     bool use_primary_name, bool primitive_only) {
   const size_t num_registers = reg_set.num_registers;
-  uint32_t name_right_align_at = 0;
+  size_t name_right_align_at = 0;
 
   // Loop through all the registers to find the longest register name
   for (size_t reg_idx = 0; reg_idx < num_registers; ++reg_idx) {
-    const uint32_t reg = reg_set.registers[reg_idx];
+    const size_t reg = reg_set.registers[reg_idx];
     if (const RegisterInfo *reg_info = 
             reg_ctx->GetRegisterInfoAtIndex(reg)) {
       // Derived registers are skipped if primitive_only is true.
@@ -65,8 +65,8 @@ static uint32_t ComputeLongestRegisterName(RegisterContext *reg_ctx,
 }
 
 // Here, [command] is basically a list of registers to be printed by DumpRegister() method
-static uint32_t ComputeLongestRegisterName(Args &command, RegisterContext *reg_ctx, bool use_primary_name) {
-  uint32_t name_right_align_at = 0;
+static size_t ComputeLongestRegisterName(Args &command, RegisterContext *reg_ctx, bool use_primary_name) {
+  size_t name_right_align_at = 0;
 
   // Loop through all the arguments to find the longest register name
   for (auto &entry : command) {
@@ -121,7 +121,7 @@ public:
 
   bool DumpRegister(const ExecutionContext &exe_ctx, Stream &strm,
                     RegisterContext &reg_ctx, const RegisterInfo &reg_info,
-                    bool print_flags, uint32_t name_right_align_at = 0) {
+                    bool print_flags, size_t name_right_align_at = 0) {
     RegisterValue reg_value;
     if (!reg_ctx.ReadRegister(&reg_info, reg_value))
       return false;
@@ -169,7 +169,7 @@ public:
       strm.Printf("%s:\n", (reg_set->name ? reg_set->name : "unknown"));
       strm.IndentMore();
       const size_t num_registers = reg_set->num_registers;
-      uint32_t name_right_align_at =
+      size_t name_right_align_at =
           ComputeLongestRegisterName(reg_ctx, *reg_set, !static_cast<bool>(m_command_options.alternate_name), primitive_only);
       for (size_t reg_idx = 0; reg_idx < num_registers; ++reg_idx) {
         const uint32_t reg = reg_set->registers[reg_idx];
