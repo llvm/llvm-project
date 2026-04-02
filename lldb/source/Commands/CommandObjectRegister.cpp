@@ -121,7 +121,7 @@ public:
 
   bool DumpRegister(const ExecutionContext &exe_ctx, Stream &strm,
                     RegisterContext &reg_ctx, const RegisterInfo &reg_info,
-                    bool print_flags, size_t name_right_align_at = 0) {
+                    bool print_flags, size_t reg_name_right_align_at = 0) {
     RegisterValue reg_value;
     if (!reg_ctx.ReadRegister(&reg_info, reg_value))
       return false;
@@ -132,7 +132,7 @@ public:
     bool prefix_with_name = !prefix_with_altname;
     DumpRegisterValue(reg_value, strm, reg_info, prefix_with_name,
                       prefix_with_altname, m_format_options.GetFormat(),
-                      name_right_align_at, exe_ctx.GetBestExecutionContextScope(),
+                      reg_name_right_align_at, exe_ctx.GetBestExecutionContextScope(),
                       print_flags, exe_ctx.GetTargetSP());
     if ((reg_info.encoding == eEncodingUint) ||
         (reg_info.encoding == eEncodingSint)) {
@@ -169,7 +169,7 @@ public:
       strm.Printf("%s:\n", (reg_set->name ? reg_set->name : "unknown"));
       strm.IndentMore();
       const size_t num_registers = reg_set->num_registers;
-      size_t name_right_align_at =
+      size_t reg_name_right_align_at =
           ComputeLongestRegisterName(reg_ctx, *reg_set, !static_cast<bool>(m_command_options.alternate_name), primitive_only);
       for (size_t reg_idx = 0; reg_idx < num_registers; ++reg_idx) {
         const uint32_t reg = reg_set->registers[reg_idx];
@@ -179,7 +179,7 @@ public:
           continue;
 
         if (reg_info && DumpRegister(exe_ctx, strm, *reg_ctx, *reg_info,
-                                     /*print_flags=*/false, name_right_align_at))
+                                     /*print_flags=*/false, reg_name_right_align_at))
           ++available_count;
         else
           ++unavailable_count;
