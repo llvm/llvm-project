@@ -994,7 +994,6 @@ bool OpenACCMappableModel<Ty>::generateCopy(
   // When optional: only copy when source is present (fir.is_present). When
   // absent, destination is already null from init. When non-optional, copy
   // directly without the conditional.
-  std::optional<fir::IfOp> optIfOp;
   if (auto fortranVarInfo =
           mlir::dyn_cast_if_present<fir::OpenACCFortranVariableInfoAttr>(
               varInfo)) {
