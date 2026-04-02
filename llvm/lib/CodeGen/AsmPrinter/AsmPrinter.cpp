@@ -3583,7 +3583,7 @@ bool AsmPrinter::emitSpecialLLVMGlobal(const GlobalVariable *GV) {
       int Kind = cast<ConstantInt>(C->getOperand(2))->getZExtValue();
 
       if (Src->hasDLLImportStorageClass()) {
-        // For now, we assume dllimport functionss aren't directly called.
+        // For now, we assume dllimport functions aren't directly called.
         // (We might change this later to match MSVC.)
         OutStreamer->emitCOFFSymbolIndex(
             OutContext.getOrCreateSymbol("__imp_" + Src->getName()));
