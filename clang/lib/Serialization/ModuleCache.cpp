@@ -85,8 +85,8 @@ void clang::maybePruneImpl(StringRef Path, time_t PruneInterval,
     llvm::sys::fs::remove(FilePath);
 
     // Remove the timestamp file created by implicit module builds.
-    std::string TimpestampFilename = FilePath.str() + ".timestamp";
-    llvm::sys::fs::remove(TimpestampFilename);
+    std::string TimestampFilename = FilePath.str() + ".timestamp";
+    llvm::sys::fs::remove(TimestampFilename);
   };
 
   for (llvm::sys::fs::directory_iterator Dir(Path, EC), DirEnd;
