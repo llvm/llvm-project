@@ -349,6 +349,11 @@ public:
     Inherited::VisitStaticAssertDecl(D);
   }
 
+  void VisitConstevalBlockDecl(const ConstevalBlockDecl *D) {
+    AddStmt(D->getCallExpr());
+    Inherited::VisitConstevalBlockDecl(D);
+  }
+
   void VisitFieldDecl(const FieldDecl *D) {
     const bool IsBitfield = D->isBitField();
     Hash.AddBoolean(IsBitfield);
@@ -559,6 +564,7 @@ bool ODRHash::isSubDeclToBeProcessed(const Decl *D, const DeclContext *Parent) {
     case Decl::Friend:
     case Decl::FunctionTemplate:
     case Decl::StaticAssert:
+    case Decl::ConstevalBlock:
     case Decl::TypeAlias:
     case Decl::Typedef:
     case Decl::Var:

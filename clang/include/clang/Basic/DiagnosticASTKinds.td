@@ -700,13 +700,13 @@ def err_module_odr_violation_mismatch_decl : Error<
   "%q0 has different definitions in different modules; first difference is "
   "%select{definition in module '%2'|defined here}1 found "
   "%select{end of class|public access specifier|private access specifier|"
-  "protected access specifier|static assert|field|method|type alias|typedef|"
+  "protected access specifier|static assert|consteval block|field|method|type alias|typedef|"
   "data member|friend declaration|function template|method|instance variable|"
   "property}3">;
 def note_module_odr_violation_mismatch_decl : Note<
   "but in %select{'%1'|definition here}0 found "
   "%select{end of class|public access specifier|private access specifier|"
-  "protected access specifier|static assert|field|method|type alias|typedef|"
+  "protected access specifier|static assert|consteval block|field|method|type alias|typedef|"
   "data member|friend declaration|function template|method|instance variable|"
   "property}2">;
 
@@ -717,6 +717,7 @@ def err_module_odr_violation_record : Error<
   "static assert with condition|"
   "static assert with message|"
   "static assert with %select{|no }4message|"
+  "consteval block|"
   "%select{method %5|constructor|destructor}4|"
   "%select{method %5|constructor|destructor}4 "
     "is %select{not deleted|deleted}6|"
@@ -768,6 +769,7 @@ def note_module_odr_violation_record : Note<"but in '%0' found "
   "static assert with different condition|"
   "static assert with different message|"
   "static assert with %select{|no }2message|"
+  "consteval block with different body|"
   "%select{method %3|constructor|destructor}2|"
   "%select{method %3|constructor|destructor}2 "
     "is %select{not deleted|deleted}4|"
@@ -1003,12 +1005,12 @@ def note_module_odr_violation_objc_property : Note<
 def err_module_odr_violation_mismatch_decl_unknown : Error<
   "%q0 %select{with definition in module '%2'|defined here}1 has different "
   "definitions in different modules; first difference is this "
-  "%select{||||static assert|field|method|type alias|typedef|data member|"
+  "%select{||||static assert|consteval block|field|method|type alias|typedef|data member|"
   "friend declaration|function template|method|instance variable|"
   "property|unexpected decl}3">;
 def note_module_odr_violation_mismatch_decl_unknown : Note<
   "but in %select{'%1'|definition here}0 found "
-  "%select{||||different static assert|different field|different method|"
+  "%select{||||different static assert|different consteval block|different field|different method|"
   "different type alias|different typedef|different data member|"
   "different friend declaration|different function template|different method|"
   "different instance variable|different property|another unexpected decl}2">;

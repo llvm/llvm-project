@@ -1917,6 +1917,15 @@ Parser::DeclGroupPtrTy Parser::ParseDeclaration(DeclaratorContext Context,
     ProhibitAttributes(DeclSpecAttrs);
     SingleDecl = ParseStaticAssertDeclaration(DeclEnd);
     break;
+  case tok::kw_consteval:
+    if (NextToken().is(tok::l_brace)) {
+      ProhibitAttributes(DeclAttrs);
+      ProhibitAttributes(DeclSpecAttrs);
+      SingleDecl = ParseConstevalBlockDeclaration(DeclEnd);
+      break;
+    }
+    return ParseSimpleDeclaration(Context, DeclEnd, DeclAttrs, DeclSpecAttrs,
+                                  true, nullptr, DeclSpecStart);
   default:
     return ParseSimpleDeclaration(Context, DeclEnd, DeclAttrs, DeclSpecAttrs,
                                   true, nullptr, DeclSpecStart);
@@ -4237,6 +4246,9 @@ void Parser::ParseDeclarationSpecifiers(
                                       PrevSpec, DiagID);
       break;
     case tok::kw_consteval:
+      if (NextToken().is(tok::l_brace))
+        goto DoneWithDeclSpec;
+
       isInvalid = DS.SetConstexprSpec(ConstexprSpecKind::Consteval, Loc,
                                       PrevSpec, DiagID);
       break;
@@ -4897,6 +4909,13 @@ void Parser::ParseStructUnionBody(SourceLocation RecordLoc,
     if (Tok.isOneOf(tok::kw__Static_assert, tok::kw_static_assert)) {
       SourceLocation DeclEnd;
       ParseStaticAssertDeclaration(DeclEnd);
+      continue;
+    }
+
+    // Parse consteval block.
+    if (Tok.is(tok::kw_consteval) && NextToken().is(tok::l_brace)) {
+      SourceLocation DeclEnd;
+      ParseConstevalBlockDeclaration(DeclEnd);
       continue;
     }
 
@@ -5910,13 +5929,16 @@ bool Parser::isDeclarationSpecifier(
   case tok::annot_pack_indexing_type:
   case tok::kw_constexpr:
 
-    // C++20 consteval and constinit.
-  case tok::kw_consteval:
+    // C++20 constinit.
   case tok::kw_constinit:
 
     // C11 _Atomic
   case tok::kw__Atomic:
     return true;
+
+    // Do not treat consteval as a specifier if it starts a consteval block.
+  case tok::kw_consteval:
+    return NextToken().isNot(tok::l_brace);
 
   case tok::kw_alignas:
     // alignas is a type-specifier-qualifier in C23, which is a kind of

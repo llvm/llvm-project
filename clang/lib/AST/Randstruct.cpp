@@ -180,7 +180,7 @@ bool randomizeStructureLayout(const ASTContext &Context, RecordDecl *RD,
     ++TotalNumFields;
     if (auto *FD = dyn_cast<FieldDecl>(D))
       RandomizedFields.push_back(FD);
-    else if (isa<StaticAssertDecl>(D) || isa<IndirectFieldDecl>(D))
+    else if (isa<StaticAssertDecl, ConstevalBlockDecl, IndirectFieldDecl>(D))
       PostRandomizedFields.push_back(D);
     else
       FinalOrdering.push_back(D);

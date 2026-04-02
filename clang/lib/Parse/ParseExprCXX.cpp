@@ -1138,11 +1138,13 @@ static void tryConsumeLambdaSpecifierToken(Parser &P,
 }
 
 static void addStaticToLambdaDeclSpecifier(Parser &P, SourceLocation StaticLoc,
-                                           DeclSpec &DS) {
+                                           DeclSpec &DS,
+                                           bool ForConstevalBlock = false) {
   if (StaticLoc.isValid()) {
-    P.Diag(StaticLoc, !P.getLangOpts().CPlusPlus23
-                          ? diag::err_static_lambda
-                          : diag::warn_cxx20_compat_static_lambda);
+    if (!ForConstevalBlock)
+      P.Diag(StaticLoc, !P.getLangOpts().CPlusPlus23
+                            ? diag::err_static_lambda
+                            : diag::warn_cxx20_compat_static_lambda);
     const char *PrevSpec = nullptr;
     unsigned DiagID = 0;
     DS.SetStorageClassSpec(P.getActions(), DeclSpec::SCS_static, StaticLoc,
@@ -1171,9 +1173,11 @@ addConstexprToLambdaDeclSpecifier(Parser &P, SourceLocation ConstexprLoc,
 
 static void addConstevalToLambdaDeclSpecifier(Parser &P,
                                               SourceLocation ConstevalLoc,
-                                              DeclSpec &DS) {
+                                              DeclSpec &DS,
+                                              bool ForConstevalBlock = false) {
   if (ConstevalLoc.isValid()) {
-    P.Diag(ConstevalLoc, diag::warn_cxx20_compat_consteval);
+    if (!ForConstevalBlock)
+      P.Diag(ConstevalLoc, diag::warn_cxx20_compat_consteval);
     const char *PrevSpec = nullptr;
     unsigned DiagID = 0;
     DS.SetConstexprSpec(ConstexprSpecKind::Consteval, ConstevalLoc, PrevSpec,
@@ -1202,7 +1206,8 @@ static void DiagnoseStaticSpecifierRestrictions(Parser &P,
 }
 
 ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
-                     LambdaIntroducer &Intro) {
+    LambdaIntroducer &Intro, SourceLocation ConstevalBlockStart) {
+  assert(!ConstevalBlockStart.isValid() || Tok.is(tok::l_brace));
   SourceLocation LambdaBeginLoc = Intro.Range.getBegin();
   if (getLangOpts().HLSL)
     Diag(LambdaBeginLoc, diag::ext_hlsl_lambda) << /*HLSL*/ 1;
@@ -1227,7 +1232,8 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
   Actions.PushLambdaScope();
   SourceLocation DeclLoc = Tok.getLocation();
 
-  Actions.ActOnLambdaExpressionAfterIntroducer(Intro, getCurScope());
+  Actions.ActOnLambdaExpressionAfterIntroducer(
+      Intro, ConstevalBlockStart.isValid(), getCurScope());
 
   ParsedAttributes Attributes(AttrFactory);
   if (getLangOpts().CUDA) {
@@ -1365,7 +1371,12 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
         << FixItHint::CreateInsertion(Tok.getLocation(), "() ");
   }
 
-  if (HasParentheses || HasSpecifiers) {
+  if (ConstevalBlockStart.isValid()) {
+    addStaticToLambdaDeclSpecifier(*this, ConstevalBlockStart, DS,
+                                   /*ForConstevalBlock=*/true);
+    addConstevalToLambdaDeclSpecifier(*this, ConstevalBlockStart, DS,
+                                      /*ForConstevalBlock=*/true);
+  } else if (HasParentheses || HasSpecifiers) {
     // GNU-style attributes must be parsed before the mutable specifier to
     // be compatible with GCC. MSVC-style attributes must be parsed before
     // the mutable specifier to be compatible with MSVC.
@@ -1391,7 +1402,7 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
   if (!HasParentheses)
     Actions.ActOnLambdaClosureQualifiers(Intro, MutableLoc);
 
-  if (HasSpecifiers || HasParentheses) {
+  if (HasSpecifiers || HasParentheses || ConstevalBlockStart.isValid()) {
     // Parse exception-specification[opt].
     ExceptionSpecificationType ESpecType = EST_None;
     SourceRange ESpecRange;
@@ -1434,6 +1445,9 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
       TrailingReturnTypeLoc = Range.getBegin();
       if (Range.getEnd().isValid())
         DeclEndLoc = Range.getEnd();
+    } else if (ConstevalBlockStart.isValid()) {
+      TrailingReturnType = ParsedType::make(Actions.Context.VoidTy);
+      TrailingReturnTypeLoc = ConstevalBlockStart;
     }
 
     SourceLocation NoLoc;

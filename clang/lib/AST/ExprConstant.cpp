@@ -151,6 +151,7 @@ namespace {
   static bool isForManglingOnly(ConstantExprKind Kind) {
     switch (Kind) {
     case ConstantExprKind::Normal:
+    case ConstantExprKind::ConstevalBlock:
     case ConstantExprKind::ClassTemplateArgument:
     case ConstantExprKind::ImmediateInvocation:
       // Note that non-type template arguments of class type are emitted as
@@ -166,6 +167,7 @@ namespace {
   static bool isTemplateArgument(ConstantExprKind Kind) {
     switch (Kind) {
     case ConstantExprKind::Normal:
+    case ConstantExprKind::ConstevalBlock:
     case ConstantExprKind::ImmediateInvocation:
       return false;
 

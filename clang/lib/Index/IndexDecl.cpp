@@ -773,6 +773,13 @@ public:
                        D->getLexicalDeclContext());
     return true;
   }
+
+  bool VisitConstevalBlockDecl(const ConstevalBlockDecl *D) {
+    IndexCtx.indexBody(D->getCallExpr(),
+                       dyn_cast<NamedDecl>(D->getDeclContext()),
+                       D->getLexicalDeclContext());
+    return true;
+  }
 };
 
 } // anonymous namespace

@@ -3715,6 +3715,9 @@ StmtResult Sema::ActOnCapScopeReturnStmt(SourceLocation ReturnLoc,
     // Delay processing for now.  TODO: there are lots of dependent
     // types we can conclusively prove aren't void.
   } else if (FnRetType->isVoidType()) {
+    // FIXME: This currently causes '[] () -> void { return {1}; };' to compile,
+    // which is almost surely not something we want. Blocks suffer from the same
+    // issue. See https://github.com/llvm/llvm-project/issues/188661.
     if (RetValExp && !isa<InitListExpr>(RetValExp) &&
         !(getLangOpts().CPlusPlus &&
           (RetValExp->isTypeDependent() ||
@@ -3722,8 +3725,13 @@ StmtResult Sema::ActOnCapScopeReturnStmt(SourceLocation ReturnLoc,
       if (!getLangOpts().CPlusPlus &&
           RetValExp->getType()->isVoidType())
         Diag(ReturnLoc, diag::ext_return_has_void_expr) << "literal" << 2;
-      else {
-        Diag(ReturnLoc, diag::err_return_block_has_expr);
+      else if (CurLambda && CurLambda->Lambda->isLambdaForConstevalBlock()) {
+        Diag(ReturnLoc, diag::err_return_block_has_expr)
+            << /*IsConstevalBlock=*/true;
+        RetValExp = nullptr;
+      } else {
+        Diag(ReturnLoc, diag::err_return_block_has_expr)
+            << /*IsConstevalBlock=*/false;
         RetValExp = nullptr;
       }
     }

@@ -78,6 +78,7 @@ namespace {
     void VisitTopLevelStmtDecl(TopLevelStmtDecl *D);
     void VisitImportDecl(ImportDecl *D);
     void VisitStaticAssertDecl(StaticAssertDecl *D);
+    void VisitConstevalBlockDecl(ConstevalBlockDecl *D);
     void VisitNamespaceDecl(NamespaceDecl *D);
     void VisitUsingDirectiveDecl(UsingDirectiveDecl *D);
     void VisitNamespaceAliasDecl(NamespaceAliasDecl *D);
@@ -538,7 +539,7 @@ void DeclPrinter::VisitDeclContext(DeclContext *DC, bool Indent) {
         Terminator = ";";
     } else if (isa<NamespaceDecl, LinkageSpecDecl, ObjCImplementationDecl,
                    ObjCInterfaceDecl, ObjCProtocolDecl, ObjCCategoryImplDecl,
-                   ObjCCategoryDecl, HLSLBufferDecl>(*D))
+                   ObjCCategoryDecl, HLSLBufferDecl, ConstevalBlockDecl>(*D))
       Terminator = nullptr;
     else if (isa<EnumConstantDecl>(*D)) {
       DeclContext::decl_iterator Next = D;
@@ -1058,6 +1059,12 @@ void DeclPrinter::VisitStaticAssertDecl(StaticAssertDecl *D) {
     E->printPretty(Out, nullptr, Policy, Indentation, "\n", &Context);
   }
   Out << ")";
+}
+
+void DeclPrinter::VisitConstevalBlockDecl(ConstevalBlockDecl *D) {
+  Out << "consteval";
+  D->getLambda()->getBody()->printPrettyControlled(Out, nullptr, Policy,
+                                                   Indentation, "\n", &Context);
 }
 
 //----------------------------------------------------------------------------

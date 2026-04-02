@@ -137,6 +137,11 @@ void State::addCallStack(unsigned Limit) {
       continue;
     }
 
+    // Don't print 'in call to operator()()' for consteval blocks.
+    if (const auto *MD = dyn_cast<CXXMethodDecl>(F->getCallee());
+        MD && MD->getParent()->isLambdaForConstevalBlock())
+      continue;
+
     // Use a different note for an inheriting constructor, because from the
     // user's perspective it's not really a function at all.
     if (const auto *CD =

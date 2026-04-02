@@ -1332,6 +1332,11 @@ bool Sema::CheckCXXThisCapture(SourceLocation Loc, const bool Explicit,
         break;
       }
       LambdaScopeInfo *LSI = dyn_cast<LambdaScopeInfo>(CSI);
+      if (LSI && LSI->Lambda->isLambdaForConstevalBlock()) {
+        if (BuildAndDiagnose)
+          Diag(Loc, diag::err_consteval_block_this_invalid);
+        return true;
+      }
       if (LSI && isGenericLambdaCallOperatorSpecialization(LSI->CallOperator)) {
         // This context can't implicitly capture 'this'; fail out.
         if (BuildAndDiagnose) {
