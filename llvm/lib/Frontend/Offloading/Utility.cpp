@@ -101,11 +101,9 @@ getOffloadEntryBoundarySymbols(const Triple &T, StringRef SectionName) {
   return {("__start_" + SectionName).str(), ("__stop_" + SectionName).str()};
 }
 
-GlobalVariable *
-offloading::emitOffloadingEntry(Module &M, object::OffloadKind Kind,
-                                Constant *Addr, StringRef Name, uint64_t Size,
-                                uint32_t Flags, uint64_t Data,
-                                Constant *AuxAddr) {
+GlobalVariable *offloading::emitOffloadingEntry(
+    Module &M, object::OffloadKind Kind, Constant *Addr, StringRef Name,
+    uint64_t Size, uint32_t Flags, uint64_t Data, Constant *AuxAddr) {
   const llvm::Triple &Triple = M.getTargetTriple();
   StringRef SectionName = getOffloadEntrySection(M);
 
