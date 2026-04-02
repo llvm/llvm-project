@@ -48,7 +48,7 @@ static size_t ComputeLongestRegisterName(RegisterContext *reg_ctx,
   const size_t num_registers = reg_set.num_registers;
   size_t name_right_align_at = 0;
 
-  // Loop through all the registers to find the longest register name
+  // Loop through all the registers to find the longest register name.
   for (size_t reg_idx = 0; reg_idx < num_registers; ++reg_idx) {
     const size_t reg = reg_set.registers[reg_idx];
     if (const RegisterInfo *reg_info = 
@@ -64,11 +64,11 @@ static size_t ComputeLongestRegisterName(RegisterContext *reg_ctx,
   return name_right_align_at;
 }
 
-// Here, [command] is basically a list of registers to be printed by DumpRegister() method
+// Here, [command] is basically a list of registers to be printed by DumpRegister() method.
 static size_t ComputeLongestRegisterName(Args &command, RegisterContext *reg_ctx, bool use_primary_name) {
   size_t name_right_align_at = 0;
 
-  // Loop through all the arguments to find the longest register name
+  // Loop through all the arguments to find the longest register name.
   for (auto &entry : command) {
     llvm::StringRef arg_str = entry.ref();
     arg_str.consume_front("$");
@@ -244,7 +244,7 @@ protected:
                            "registers names are supplied as arguments\n");
       } else {
         int alignment = ComputeLongestRegisterName(command, reg_ctx, !static_cast<bool>(m_command_options.alternate_name));
-        strm.IndentMore(); // Extra ident to be consistent with register sets dumping
+        strm.IndentMore(); // Extra ident to be consistent with register sets dumping.
         for (auto &entry : command) {
           // in most LLDB commands we accept $rbx as the name for register RBX
           // - and here we would reject it and non-existant. we should be more
