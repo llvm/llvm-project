@@ -1712,9 +1712,8 @@ static void computeColdness() {
   for (InputSection *isec : inputSections) {
     if (!isCodeSection(isec))
       continue;
-    isec->isCold = llvm::any_of(isec->symbols, [](Defined *sym) {
-      return sym->isCold();
-    });
+    isec->isCold =
+        llvm::any_of(isec->symbols, [](Defined *sym) { return sym->isCold(); });
   }
 }
 
