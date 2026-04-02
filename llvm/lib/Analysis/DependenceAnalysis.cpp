@@ -2098,9 +2098,9 @@ static const SCEV *analyzeCoefficientsForGCD(const SCEV *Coefficients,
                                              ScalarEvolution *SE) {
   while (const SCEVAddRecExpr *AddRec =
              dyn_cast<SCEVAddRecExpr>(Coefficients)) {
-    const SCEV *Coeff = AddRec->getStepRecurrence(*SE);
     if (!AddRec->hasNoSignedWrap())
       return nullptr;
+    const SCEV *Coeff = AddRec->getStepRecurrence(*SE);
     // If the coefficient is the product of a constant and other stuff,
     // we can use the constant in the GCD computation.
     std::optional<APInt> ConstCoeff = getConstantCoefficient(Coeff);
