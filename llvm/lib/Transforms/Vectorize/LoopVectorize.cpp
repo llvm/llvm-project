@@ -7985,10 +7985,11 @@ void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
       getDebugLocFromInstOrOperands(Legal->getPrimaryInduction()), PSE, &LVer);
 
   // Create recipes for header phis.
-  VPlanTransforms::createHeaderPhiRecipes(
-      *VPlan0, PSE, *OrigLoop, Legal->getInductionVars(),
-      Legal->getReductionVars(), Legal->getFixedOrderRecurrences(),
-      CM.getInLoopReductions(), Hints.allowReordering());
+  if (!VPlanTransforms::createHeaderPhiRecipes(
+          *VPlan0, PSE, *OrigLoop, Legal->getInductionVars(),
+          Legal->getReductionVars(), Legal->getFixedOrderRecurrences(),
+          CM.getInLoopReductions(), Hints.allowReordering()))
+    return;
 
   VPlanTransforms::simplifyRecipes(*VPlan0);
   // If we're vectorizing a loop with an uncountable exit, make sure that the
@@ -8205,7 +8206,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
 
   // TODO: We can't call runPass on these transforms yet, due to verifier
   // failures.
-  VPlanTransforms::addExitUsersForFirstOrderRecurrences(*Plan, Range);
+  VPlanTransforms::adjustFirstOrderRecurrenceMiddleUsers(*Plan, Range);
 
   // ---------------------------------------------------------------------------
   // Transform initial VPlan: Apply previously taken decisions, in order, to
@@ -8268,12 +8269,6 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
   RUN_VPLAN_PASS(VPlanTransforms::dropPoisonGeneratingRecipes, *Plan,
                  BlockNeedsPredication);
 
-  // Sink users of fixed-order recurrence past the recipe defining the previous
-  // value and introduce FirstOrderRecurrenceSplice VPInstructions.
-  if (!RUN_VPLAN_PASS(VPlanTransforms::adjustFixedOrderRecurrences, *Plan,
-                      Builder))
-    return nullptr;
-
   if (useActiveLaneMask(Style)) {
     // TODO: Move checks to VPlanTransforms::addActiveLaneMask once
     // TailFoldingStyle is visible there.
@@ -8297,11 +8292,12 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VFRange &Range) {
       OrigLoop, *LI, Legal->getWidestInductionType(),
       getDebugLocFromInstOrOperands(Legal->getPrimaryInduction()), PSE);
 
-  VPlanTransforms::createHeaderPhiRecipes(
-      *Plan, PSE, *OrigLoop, Legal->getInductionVars(),
-      MapVector<PHINode *, RecurrenceDescriptor>(),
-      SmallPtrSet<const PHINode *, 1>(), SmallPtrSet<PHINode *, 1>(),
-      /*AllowReordering=*/false);
+  if (!VPlanTransforms::createHeaderPhiRecipes(
+          *Plan, PSE, *OrigLoop, Legal->getInductionVars(),
+          MapVector<PHINode *, RecurrenceDescriptor>(),
+          SmallPtrSet<const PHINode *, 1>(), SmallPtrSet<PHINode *, 1>(),
+          /*AllowReordering=*/false))
+    return nullptr;
   [[maybe_unused]] bool CanHandleExits = VPlanTransforms::handleEarlyExits(
       *Plan, UncountableExitStyle::NoUncountableExit, OrigLoop, PSE, *DT,
       Legal->getAssumptionCache());
