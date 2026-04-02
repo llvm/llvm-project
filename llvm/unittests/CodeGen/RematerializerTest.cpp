@@ -678,8 +678,9 @@ body:             |
   EXPECT_TRUE(getMF().verify());
 }
 
-/// Checks that rollback re-creates MIs at correct positions when the order of register deletions
-/// forces the re-creation logic to iterate through multiple deleted registers' respective insert position to find a valid one.
+/// Checks that rollback re-creates MIs at correct positions when the order of
+/// register deletions forces the re-creation logic to iterate through multiple
+/// deleted registers' respective insert position to find a valid one.
 TEST_F(RematerializerTest, RollbackInvalidInsertPos) {
   StringRef MIR = R"(
 name:            RollbackInvalidInsertPos
