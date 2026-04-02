@@ -1926,6 +1926,10 @@ void populateLinalgNamedToElementwisePatterns(RewritePatternSet &patterns);
 /// `linalg.transform` into elementwise op map.
 void populateLinalgFoldIntoElementwisePatterns(RewritePatternSet &patterns);
 
+/// Populates `patterns` that convert linalg category ops to equivalent
+/// named ops where possible.
+void populateLinalgCategoryToNamedPatterns(RewritePatternSet &patterns);
+
 /// Linalg decompose convolutions patterns
 
 /// Populates patterns to decompose high-D convolution ops into low-D ones.
