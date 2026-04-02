@@ -2074,7 +2074,7 @@ multiclass sve_int_pred_log_v2<bits<4> opc, string asm, SDPatternOperator op,
 class sve_int_log_imm<bits<2> opc, string asm>
 : I<(outs ZPR64:$Zdn), (ins ZPR64:$_Zdn, logical_imm64:$imms13),
   asm, "\t$Zdn, $_Zdn, $imms13",
-  "", []>, Sched<[]> {
+  "", []>, SVEPseudo2Instr<NAME, 1>, Sched<[]> {
   bits<5> Zdn;
   bits<13> imms13;
   let Inst{31-24} = 0b00000101;
@@ -2085,7 +2085,7 @@ class sve_int_log_imm<bits<2> opc, string asm>
 
   let Constraints = "$Zdn = $_Zdn";
   let DecoderMethod = "DecodeSVELogicalImmInstruction";
-  let DestructiveInstType = DestructiveOther;
+  let DestructiveInstType = DestructiveBinaryImmUnpred;
   let ElementSize = ElementSizeNone;
   let hasSideEffects = 0;
 }
@@ -2093,10 +2093,12 @@ class sve_int_log_imm<bits<2> opc, string asm>
 multiclass sve_int_log_imm<bits<2> opc, string asm, string alias, SDPatternOperator op> {
   def NAME : sve_int_log_imm<opc, asm>;
 
-  def : SVE_1_Op_Imm_Log_Pat<nxv16i8, op, ZPR8,  i32, SVELogicalImm8Pat,  !cast<Instruction>(NAME)>;
-  def : SVE_1_Op_Imm_Log_Pat<nxv8i16, op, ZPR16, i32, SVELogicalImm16Pat, !cast<Instruction>(NAME)>;
-  def : SVE_1_Op_Imm_Log_Pat<nxv4i32, op, ZPR32, i32, SVELogicalImm32Pat, !cast<Instruction>(NAME)>;
-  def : SVE_1_Op_Imm_Log_Pat<nxv2i64, op, ZPR64, i64, SVELogicalImm64Pat, !cast<Instruction>(NAME)>;
+  def _PSEUDO : UnpredTwoOpImmPseudo<NAME, ZPR64, logical_imm64>;
+
+  def : SVE_1_Op_Imm_Log_Pat<nxv16i8, op, ZPR8,  i32, SVELogicalImm8Pat,  !cast<Pseudo>(NAME # _PSEUDO)>;
+  def : SVE_1_Op_Imm_Log_Pat<nxv8i16, op, ZPR16, i32, SVELogicalImm16Pat, !cast<Pseudo>(NAME # _PSEUDO)>;
+  def : SVE_1_Op_Imm_Log_Pat<nxv4i32, op, ZPR32, i32, SVELogicalImm32Pat, !cast<Pseudo>(NAME # _PSEUDO)>;
+  def : SVE_1_Op_Imm_Log_Pat<nxv2i64, op, ZPR64, i64, SVELogicalImm64Pat, !cast<Pseudo>(NAME # _PSEUDO)>;
 
   def : InstAlias<asm # "\t$Zdn, $Zdn, $imm",
                   (!cast<Instruction>(NAME) ZPR8:$Zdn, sve_logical_imm8:$imm), 4>;
@@ -2116,10 +2118,10 @@ multiclass sve_int_log_imm<bits<2> opc, string asm, string alias, SDPatternOpera
 }
 
 multiclass sve_int_log_imm_bic<SDPatternOperator op> {
-  def : SVE_1_Op_Imm_Log_Pat<nxv16i8, op, ZPR8,  i32, SVELogicalImm8NotPat,  !cast<Instruction>("AND_ZI")>;
-  def : SVE_1_Op_Imm_Log_Pat<nxv8i16, op, ZPR16, i32, SVELogicalImm16NotPat, !cast<Instruction>("AND_ZI")>;
-  def : SVE_1_Op_Imm_Log_Pat<nxv4i32, op, ZPR32, i32, SVELogicalImm32NotPat, !cast<Instruction>("AND_ZI")>;
-  def : SVE_1_Op_Imm_Log_Pat<nxv2i64, op, ZPR64, i64, SVELogicalImm64NotPat, !cast<Instruction>("AND_ZI")>;
+  def : SVE_1_Op_Imm_Log_Pat<nxv16i8, op, ZPR8,  i32, SVELogicalImm8NotPat,  !cast<Pseudo>("AND_ZI_PSEUDO")>;
+  def : SVE_1_Op_Imm_Log_Pat<nxv8i16, op, ZPR16, i32, SVELogicalImm16NotPat, !cast<Pseudo>("AND_ZI_PSEUDO")>;
+  def : SVE_1_Op_Imm_Log_Pat<nxv4i32, op, ZPR32, i32, SVELogicalImm32NotPat, !cast<Pseudo>("AND_ZI_PSEUDO")>;
+  def : SVE_1_Op_Imm_Log_Pat<nxv2i64, op, ZPR64, i64, SVELogicalImm64NotPat, !cast<Pseudo>("AND_ZI_PSEUDO")>;
 }
 
 class sve_int_dup_mask_imm<string asm>
@@ -5354,7 +5356,7 @@ class sve_int_arith_imm<bits<2> sz8_64, bits<6> opc, string asm,
 : I<(outs zprty:$Zdn), (ins zprty:$_Zdn, immtype:$imm),
   asm, "\t$Zdn, $_Zdn, $imm",
   "",
-  []>, Sched<[]> {
+  []>, SVEPseudo2Instr<NAME, 1>, Sched<[]> {
   bits<5> Zdn;
   bits<8> imm;
   let Inst{31-24} = 0b00100101;
@@ -5365,7 +5367,7 @@ class sve_int_arith_imm<bits<2> sz8_64, bits<6> opc, string asm,
   let Inst{4-0} = Zdn;
 
   let Constraints = "$Zdn = $_Zdn";
-  let DestructiveInstType = DestructiveOther;
+  let DestructiveInstType = DestructiveBinaryImmUnpred;
   let ElementSize = ElementSizeNone;
   let hasSideEffects = 0;
 }
@@ -5376,10 +5378,15 @@ multiclass sve_int_arith_imm1<bits<2> opc, string asm, SDPatternOperator op> {
   def _S : sve_int_arith_imm<0b10, { 0b1010, opc }, asm, ZPR32, simm8_32b>;
   def _D : sve_int_arith_imm<0b11, { 0b1010, opc }, asm, ZPR64, simm8_32b>;
 
-  def : SVE_1_Op_Imm_Arith_Any_Predicate<nxv16i8, nxv16i1, op, ZPR8, i32, SVEArithSImmPat32, !cast<Instruction>(NAME # _B)>;
-  def : SVE_1_Op_Imm_Arith_Any_Predicate<nxv8i16, nxv8i1,  op, ZPR16, i32, SVEArithSImmPat32, !cast<Instruction>(NAME # _H)>;
-  def : SVE_1_Op_Imm_Arith_Any_Predicate<nxv4i32, nxv4i1,  op, ZPR32, i32, SVEArithSImmPat32, !cast<Instruction>(NAME # _S)>;
-  def : SVE_1_Op_Imm_Arith_Any_Predicate<nxv2i64, nxv2i1,  op, ZPR64, i64, SVEArithSImmPat64, !cast<Instruction>(NAME # _D)>;
+  def _B_PSEUDO : UnpredTwoOpImmPseudo<NAME # _B, ZPR8, simm8_32b>;
+  def _H_PSEUDO : UnpredTwoOpImmPseudo<NAME # _H, ZPR16, simm8_32b>;
+  def _S_PSEUDO : UnpredTwoOpImmPseudo<NAME # _S, ZPR32, simm8_32b>;
+  def _D_PSEUDO : UnpredTwoOpImmPseudo<NAME # _D, ZPR64, simm8_32b>;
+
+  def : SVE_1_Op_Imm_Arith_Any_Predicate<nxv16i8, nxv16i1, op, ZPR8, i32, SVEArithSImmPat32, !cast<Pseudo>(NAME # _B_PSEUDO)>;
+  def : SVE_1_Op_Imm_Arith_Any_Predicate<nxv8i16, nxv8i1,  op, ZPR16, i32, SVEArithSImmPat32, !cast<Pseudo>(NAME # _H_PSEUDO)>;
+  def : SVE_1_Op_Imm_Arith_Any_Predicate<nxv4i32, nxv4i1,  op, ZPR32, i32, SVEArithSImmPat32, !cast<Pseudo>(NAME # _S_PSEUDO)>;
+  def : SVE_1_Op_Imm_Arith_Any_Predicate<nxv2i64, nxv2i1,  op, ZPR64, i64, SVEArithSImmPat64, !cast<Pseudo>(NAME # _D_PSEUDO)>;
 }
 
 multiclass sve_int_arith_imm1_unsigned<bits<2> opc, string asm, SDPatternOperator op> {
@@ -5388,10 +5395,15 @@ multiclass sve_int_arith_imm1_unsigned<bits<2> opc, string asm, SDPatternOperato
   def _S : sve_int_arith_imm<0b10, { 0b1010, opc }, asm, ZPR32, imm0_255>;
   def _D : sve_int_arith_imm<0b11, { 0b1010, opc }, asm, ZPR64, imm0_255>;
 
-  def : SVE_1_Op_Imm_Arith_Any_Predicate<nxv16i8, nxv16i1, op, ZPR8, i32, SVEArithUImm8Pat, !cast<Instruction>(NAME # _B)>;
-  def : SVE_1_Op_Imm_Arith_Any_Predicate<nxv8i16, nxv8i1, op, ZPR16, i32, SVEArithUImm16Pat, !cast<Instruction>(NAME # _H)>;
-  def : SVE_1_Op_Imm_Arith_Any_Predicate<nxv4i32, nxv4i1, op, ZPR32, i32, SVEArithUImm32Pat, !cast<Instruction>(NAME # _S)>;
-  def : SVE_1_Op_Imm_Arith_Any_Predicate<nxv2i64, nxv2i1, op, ZPR64, i64, SVEArithUImm64Pat, !cast<Instruction>(NAME # _D)>;
+  def _B_PSEUDO : UnpredTwoOpImmPseudo<NAME # _B, ZPR8, imm0_255>;
+  def _H_PSEUDO : UnpredTwoOpImmPseudo<NAME # _H, ZPR16, imm0_255>;
+  def _S_PSEUDO : UnpredTwoOpImmPseudo<NAME # _S, ZPR32, imm0_255>;
+  def _D_PSEUDO : UnpredTwoOpImmPseudo<NAME # _D, ZPR64, imm0_255>;
+
+  def : SVE_1_Op_Imm_Arith_Any_Predicate<nxv16i8, nxv16i1, op, ZPR8, i32, SVEArithUImm8Pat, !cast<Pseudo>(NAME # _B_PSEUDO)>;
+  def : SVE_1_Op_Imm_Arith_Any_Predicate<nxv8i16, nxv8i1, op, ZPR16, i32, SVEArithUImm16Pat, !cast<Pseudo>(NAME # _H_PSEUDO)>;
+  def : SVE_1_Op_Imm_Arith_Any_Predicate<nxv4i32, nxv4i1, op, ZPR32, i32, SVEArithUImm32Pat, !cast<Pseudo>(NAME # _S_PSEUDO)>;
+  def : SVE_1_Op_Imm_Arith_Any_Predicate<nxv2i64, nxv2i1, op, ZPR64, i64, SVEArithUImm64Pat, !cast<Pseudo>(NAME # _D_PSEUDO)>;
 }
 
 multiclass sve_int_arith_imm2<string asm, SDPatternOperator op> {
@@ -5400,10 +5412,15 @@ multiclass sve_int_arith_imm2<string asm, SDPatternOperator op> {
   def _S : sve_int_arith_imm<0b10, 0b110000, asm, ZPR32, simm8_32b>;
   def _D : sve_int_arith_imm<0b11, 0b110000, asm, ZPR64, simm8_32b>;
 
-  def : SVE_1_Op_Imm_Arith_Any_Predicate<nxv16i8, nxv16i1, op, ZPR8, i32, SVEArithSImmPat32, !cast<Instruction>(NAME # _B)>;
-  def : SVE_1_Op_Imm_Arith_Any_Predicate<nxv8i16, nxv8i1, op, ZPR16, i32, SVEArithSImmPat32, !cast<Instruction>(NAME # _H)>;
-  def : SVE_1_Op_Imm_Arith_Any_Predicate<nxv4i32, nxv4i1, op, ZPR32, i32, SVEArithSImmPat32, !cast<Instruction>(NAME # _S)>;
-  def : SVE_1_Op_Imm_Arith_Any_Predicate<nxv2i64, nxv2i1, op, ZPR64, i64, SVEArithSImmPat64, !cast<Instruction>(NAME # _D)>;
+  def _B_PSEUDO : UnpredTwoOpImmPseudo<NAME # _B, ZPR8,  simm8_32b>;
+  def _H_PSEUDO : UnpredTwoOpImmPseudo<NAME # _H, ZPR16, simm8_32b>;
+  def _S_PSEUDO : UnpredTwoOpImmPseudo<NAME # _S, ZPR32, simm8_32b>;
+  def _D_PSEUDO : UnpredTwoOpImmPseudo<NAME # _D, ZPR64, simm8_32b>;
+
+  def : SVE_1_Op_Imm_Arith_Any_Predicate<nxv16i8, nxv16i1, op, ZPR8, i32, SVEArithSImmPat32, !cast<Instruction>(NAME # _B_PSEUDO)>;
+  def : SVE_1_Op_Imm_Arith_Any_Predicate<nxv8i16, nxv8i1, op, ZPR16, i32, SVEArithSImmPat32, !cast<Instruction>(NAME # _H_PSEUDO)>;
+  def : SVE_1_Op_Imm_Arith_Any_Predicate<nxv4i32, nxv4i1, op, ZPR32, i32, SVEArithSImmPat32, !cast<Instruction>(NAME # _S_PSEUDO)>;
+  def : SVE_1_Op_Imm_Arith_Any_Predicate<nxv2i64, nxv2i1, op, ZPR64, i64, SVEArithSImmPat64, !cast<Instruction>(NAME # _D_PSEUDO)>;
 }
 
 //===----------------------------------------------------------------------===//
