@@ -48,21 +48,22 @@ void RedundantCastingCheck::registerMatchers(MatchFinder *Finder) {
             callee(expr(ignoringImpCasts(
                 declRefExpr(
                     to(namedDecl(hasAnyName(FunctionNames), IsInLLVMNamespace)),
-                    hasAnyTemplateArgumentLoc(anything()))
+                    templateArgumentLocCountIs(1))
                     .bind("callee")))));
   auto AnyCalleeNameInUninstantiatedTemplate =
       allOf(unless(isMacroID()), unless(cxxMemberCallExpr()),
             callee(expr(ignoringImpCasts(
-                unresolvedLookupExpr(hasAnyUnresolvedName(FunctionNames))
+                unresolvedLookupExpr(hasAnyUnresolvedName(FunctionNames),
+                                     templateArgumentLocCountIs(1))
                     .bind("callee")))));
-  Finder->addMatcher(
-      callExpr(AnyCalleeName, optionally(hasParent(
+  Finder->addMatcher(callExpr(AnyCalleeName, argumentCountIs(1),
+                              optionally(hasParent(
                                   callExpr(AnyCalleeName).bind("parent_cast"))))
-          .bind("call"),
-      this);
+                         .bind("call"),
+                     this);
   Finder->addMatcher(
       callExpr(
-          AnyCalleeNameInUninstantiatedTemplate,
+          AnyCalleeNameInUninstantiatedTemplate, argumentCountIs(1),
           optionally(hasAncestor(
               namespaceDecl(hasName("llvm"), hasParent(translationUnitDecl()))
                   .bind("llvm_ns"))))
@@ -91,8 +92,6 @@ static bool isLLVMNamespace(NestedNameSpecifier NNS) {
 void RedundantCastingCheck::check(const MatchFinder::MatchResult &Result) {
   const auto &Nodes = Result.Nodes;
   const auto *Call = Nodes.getNodeAs<CallExpr>("call");
-  if (Call->getNumArgs() != 1)
-    return;
 
   CanQualType RetTy;
   std::string FuncName;
@@ -103,8 +102,6 @@ void RedundantCastingCheck::check(const MatchFinder::MatchResult &Result) {
     FuncName = F->getName();
   } else if (const auto *UnresolvedCallee =
                  Nodes.getNodeAs<UnresolvedLookupExpr>("callee")) {
-    if (UnresolvedCallee->getNumTemplateArgs() != 1)
-      return;
     const bool IsExplicitlyLLVM =
         isLLVMNamespace(UnresolvedCallee->getQualifier());
     const auto *CallerNS = Nodes.getNodeAs<NamedDecl>("llvm_ns");
