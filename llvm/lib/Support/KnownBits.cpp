@@ -1213,9 +1213,8 @@ KnownBits KnownBits::udiv(const KnownBits &LHS, const KnownBits &RHS,
     return Known;
   }
 
-  if (RHS.isConstant() && RHS.getConstant().isPowerOf2()) {
+  if (RHS.isConstant() && RHS.getConstant().isPowerOf2())
     return lshr(LHS, RHS.getConstant().logBase2());
-  }
 
   // We can figure out the minimum number of upper zero bits by doing
   // MaxNumerator / MinDenominator. If the Numerator gets smaller or Denominator
