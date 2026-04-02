@@ -890,10 +890,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         ISD::VP_SELECT,      ISD::VP_SINT_TO_FP,  ISD::VP_UINT_TO_FP,
         ISD::VP_SETCC,       ISD::VP_FP_ROUND,    ISD::VP_FP_EXTEND,
         ISD::VP_SQRT,        ISD::VP_FMINNUM,     ISD::VP_FMAXNUM,
-        ISD::VP_FCEIL,       ISD::VP_FFLOOR,      ISD::VP_FROUND,
-        ISD::VP_FROUNDEVEN,  ISD::VP_FCOPYSIGN,   ISD::VP_FROUNDTOZERO,
-        ISD::VP_FRINT,       ISD::VP_FNEARBYINT,  ISD::VP_IS_FPCLASS,
-        ISD::VP_REDUCE_FMINIMUM, ISD::VP_REDUCE_FMAXIMUM};
+        ISD::VP_FCOPYSIGN,   ISD::VP_IS_FPCLASS,  ISD::VP_REDUCE_FMINIMUM,
+        ISD::VP_REDUCE_FMAXIMUM};
 
     static const unsigned IntegerVecReduceOps[] = {
         ISD::VECREDUCE_ADD,  ISD::VECREDUCE_AND,  ISD::VECREDUCE_OR,
@@ -1224,13 +1222,6 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         ISD::VP_SQRT,
         ISD::VP_FMINNUM,
         ISD::VP_FMAXNUM,
-        ISD::VP_FCEIL,
-        ISD::VP_FFLOOR,
-        ISD::VP_FROUND,
-        ISD::VP_FROUNDEVEN,
-        ISD::VP_FROUNDTOZERO,
-        ISD::VP_FRINT,
-        ISD::VP_FNEARBYINT,
         ISD::VP_SETCC,
         ISD::VP_REDUCE_FMINIMUM,
         ISD::VP_REDUCE_FMAXIMUM};
@@ -3596,19 +3587,15 @@ static RISCVFPRndMode::RoundingMode matchRoundingOp(unsigned Opc) {
   switch (Opc) {
   case ISD::FROUNDEVEN:
   case ISD::STRICT_FROUNDEVEN:
-  case ISD::VP_FROUNDEVEN:
     return RISCVFPRndMode::RNE;
   case ISD::FTRUNC:
   case ISD::STRICT_FTRUNC:
-  case ISD::VP_FROUNDTOZERO:
     return RISCVFPRndMode::RTZ;
   case ISD::FFLOOR:
   case ISD::STRICT_FFLOOR:
-  case ISD::VP_FFLOOR:
     return RISCVFPRndMode::RDN;
   case ISD::FCEIL:
   case ISD::STRICT_FCEIL:
-  case ISD::VP_FCEIL:
     return RISCVFPRndMode::RUP;
   case ISD::FROUND:
   case ISD::LROUND:
@@ -3616,7 +3603,6 @@ static RISCVFPRndMode::RoundingMode matchRoundingOp(unsigned Opc) {
   case ISD::STRICT_FROUND:
   case ISD::STRICT_LROUND:
   case ISD::STRICT_LLROUND:
-  case ISD::VP_FROUND:
     return RISCVFPRndMode::RMM;
   case ISD::FRINT:
   case ISD::LRINT:
@@ -3624,15 +3610,13 @@ static RISCVFPRndMode::RoundingMode matchRoundingOp(unsigned Opc) {
   case ISD::STRICT_FRINT:
   case ISD::STRICT_LRINT:
   case ISD::STRICT_LLRINT:
-  case ISD::VP_FRINT:
     return RISCVFPRndMode::DYN;
   }
 
   return RISCVFPRndMode::Invalid;
 }
 
-// Expand vector FTRUNC, FCEIL, FFLOOR, FROUND, VP_FCEIL, VP_FFLOOR, VP_FROUND
-// VP_FROUNDEVEN, VP_FROUNDTOZERO, VP_FRINT and VP_FNEARBYINT by converting to
+// Expand vector FTRUNC, FCEIL, FFLOOR and FROUND by converting to
 // the integer domain and back. Taking care to avoid converting values that are
 // nan or already correct.
 static SDValue
@@ -3654,16 +3638,7 @@ lowerVectorFTRUNC_FCEIL_FFLOOR_FROUND(SDValue Op, SelectionDAG &DAG,
     Src = convertToScalableVector(ContainerVT, Src, DAG, Subtarget);
   }
 
-  SDValue Mask, VL;
-  if (Op->isVPOpcode()) {
-    Mask = Op.getOperand(1);
-    if (VT.isFixedLengthVector())
-      Mask = convertToScalableVector(getMaskTypeFor(ContainerVT), Mask, DAG,
-                                     Subtarget);
-    VL = Op.getOperand(2);
-  } else {
-    std::tie(Mask, VL) = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget);
-  }
+  auto [Mask, VL] = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget);
 
   // We do the conversion on the absolute value and fix the sign at the end.
   SDValue Abs = DAG.getNode(RISCVISD::FABS_VL, DL, ContainerVT, Src, Mask, VL);
@@ -3697,16 +3672,10 @@ lowerVectorFTRUNC_FCEIL_FFLOOR_FROUND(SDValue Op, SelectionDAG &DAG,
   default:
     llvm_unreachable("Unexpected opcode");
   case ISD::FRINT:
-  case ISD::VP_FRINT:
   case ISD::FCEIL:
-  case ISD::VP_FCEIL:
   case ISD::FFLOOR:
-  case ISD::VP_FFLOOR:
   case ISD::FROUND:
-  case ISD::FROUNDEVEN:
-  case ISD::VP_FROUND:
-  case ISD::VP_FROUNDEVEN:
-  case ISD::VP_FROUNDTOZERO: {
+  case ISD::FROUNDEVEN: {
     RISCVFPRndMode::RoundingMode FRM = matchRoundingOp(Op.getOpcode());
     assert(FRM != RISCVFPRndMode::Invalid);
     Truncated = DAG.getNode(RISCVISD::VFCVT_RM_X_F_VL, DL, IntVT, Src, Mask,
@@ -3718,7 +3687,6 @@ lowerVectorFTRUNC_FCEIL_FFLOOR_FROUND(SDValue Op, SelectionDAG &DAG,
                             Mask, VL);
     break;
   case ISD::FNEARBYINT:
-  case ISD::VP_FNEARBYINT:
     Truncated = DAG.getNode(RISCVISD::VFROUND_NOEXCEPT_VL, DL, ContainerVT, Src,
                             Mask, VL);
     break;
@@ -9152,16 +9120,6 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     return lowerVPStridedLoad(Op, DAG);
   case ISD::EXPERIMENTAL_VP_STRIDED_STORE:
     return lowerVPStridedStore(Op, DAG);
-  case ISD::VP_FCEIL:
-  case ISD::VP_FFLOOR:
-  case ISD::VP_FRINT:
-  case ISD::VP_FNEARBYINT:
-  case ISD::VP_FROUND:
-  case ISD::VP_FROUNDEVEN:
-  case ISD::VP_FROUNDTOZERO:
-    if (isPromotedOpNeedingSplit(Op, Subtarget))
-      return SplitVPOp(Op, DAG);
-    return lowerVectorFTRUNC_FCEIL_FFLOOR_FROUND(Op, DAG, Subtarget);
   case ISD::EXPERIMENTAL_VP_SPLICE:
     return lowerVPSpliceExperimental(Op, DAG);
   case ISD::EXPERIMENTAL_VP_REVERSE:
@@ -23301,6 +23259,11 @@ void RISCVTargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
     Known.One = computeGREVOrGORC(Known.One.getZExtValue(), 7, IsGORC);
     break;
   }
+  case RISCVISD::USATI: {
+    unsigned Width = Op.getConstantOperandVal(1);
+    Known.Zero.setBitsFrom(Width);
+    break;
+  }
   case RISCVISD::READ_VLENB: {
     // We can use the minimum and maximum VLEN values to bound VLENB.  We
     // know VLEN must be a power of two.
@@ -23402,6 +23365,10 @@ unsigned RISCVTargetLowering::ComputeNumSignBitsForTargetNode(
   case RISCVISD::STRICT_FCVT_WU_RV64:
     // TODO: As the result is sign-extended, this is conservatively correct.
     return 33;
+  case RISCVISD::SATI: {
+    unsigned Width = Op.getConstantOperandVal(1);
+    return Op.getScalarValueSizeInBits() - Width;
+  }
   case RISCVISD::VMV_X_S: {
     // The number of sign bits of the scalar result is computed by obtaining the
     // element type of the input vector operand, subtracting its width from the

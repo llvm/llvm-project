@@ -643,6 +643,8 @@ bool SILowerSGPRSpills::run(MachineFunction &MF) {
     }
 
     updateDbgValueInsts(DbgValInsts, SpillFIs);
+    for (MachineBasicBlock &MBB : MF)
+      clearDebugInfoForSpillFIs(MFI, MBB, SpillFIs);
 
     // All those frame indices which are dead by now should be removed from the
     // function frame. Otherwise, there is a side effect such as re-mapping of

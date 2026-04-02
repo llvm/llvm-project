@@ -2045,9 +2045,9 @@ static bool optimizeVectorInductionWidthForTCAndVFUF(VPlan &Plan,
     // comparison with the backedge-taken-count.
     VPUser *SingleUser = WideIV->getSingleUser();
     if (!SingleUser ||
-        !match(SingleUser, m_ICmp(m_Specific(WideIV),
-                                  m_Broadcast(m_Specific(
-                                      Plan.getOrCreateBackedgeTakenCount())))))
+        !match(SingleUser,
+               m_ICmp(m_Specific(WideIV),
+                      m_Broadcast(m_Specific(Plan.getBackedgeTakenCount())))))
       continue;
 
     // Update IV operands and comparison bound to use new narrower type.
@@ -4694,8 +4694,8 @@ void VPlanTransforms::materializeBroadcasts(VPlan &Plan) {
 #endif
 
   SmallVector<VPValue *> VPValues;
-  if (Plan.getOrCreateBackedgeTakenCount()->getNumUsers() > 0)
-    VPValues.push_back(Plan.getOrCreateBackedgeTakenCount());
+  if (VPValue *BTC = Plan.getBackedgeTakenCount())
+    VPValues.push_back(BTC);
   append_range(VPValues, Plan.getLiveIns());
   for (VPRecipeBase &R : *Plan.getEntry())
     append_range(VPValues, R.definedValues());
