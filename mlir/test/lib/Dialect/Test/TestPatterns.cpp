@@ -744,10 +744,13 @@ static void invokeCreateWithInferredReturnType(Operation *op) {
     for (int j = 0; j < e; ++j) {
       std::array<Value, 2> values = {{fop.getArgument(i), fop.getArgument(j)}};
       SmallVector<Type, 2> inferredReturnTypes;
+      // Only pass properties if the op's properties type matches OpTy's.
+      PropertyRef properties = op->getPropertiesStorage();
+      if (properties.getTypeID() != TypeID::get<typename OpTy::Properties>())
+        properties = PropertyRef();
       if (succeeded(OpTy::inferReturnTypes(
               context, std::nullopt, values, op->getDiscardableAttrDictionary(),
-              op->getPropertiesStorage(), op->getRegions(),
-              inferredReturnTypes))) {
+              properties, op->getRegions(), inferredReturnTypes))) {
         OperationState state(location, OpTy::getOperationName());
         // TODO: Expand to regions.
         OpTy::build(b, state, values, op->getAttrs());

@@ -1,4 +1,4 @@
-; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
 
 ; CHECK: OpDecorate %[[#SpecConst:]] SpecId 0
 ; CHECK: %[[#SpecConst]] = OpSpecConstant %[[#]] 70
