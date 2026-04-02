@@ -52,7 +52,7 @@ enum class BinaryOpKind {
 /// Translates DIL tokens to BinaryOpKind.
 BinaryOpKind GetBinaryOpKindFromToken(Token::Kind token_kind);
 
-//// The type casts allowed by DIL.
+/// The type casts allowed by DIL.
 enum class CastKind {
   eArithmetic,  ///< Casting to a scalar.
   eEnumeration, ///< Casting from a scalar to an enumeration type

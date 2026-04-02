@@ -5,7 +5,6 @@ Test DIL basic assignment.
 import lldb
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test.decorators import *
-#from lldbsuite.test import lldbutil
 from lldbsuite.test import *
 
 
@@ -22,12 +21,12 @@ class TestFrameVarDILAssignment(TestBase):
 
         Is32Bit = False
         if self.target().GetAddressByteSize() == 4:
-          Is32Bit = True
+            Is32Bit = True
 
         self.expect(
             "frame variable '1 = 1'",
             error=True,
-            substrs=["current value is not assignable (a constant)"]
+            substrs=["current value is not assignable (a constant)"],
         )
 
         # Assigning to an int var
@@ -63,7 +62,7 @@ class TestFrameVarDILAssignment(TestBase):
         self.expect(
             "frame variable 'i = eOne'",
             error=True,
-            substrs=["illegal argument: new value should be of the same size"]
+            substrs=["illegal argument: new value should be of the same size"],
         )
 
         self.expect("frame variable 'eOne = 1'", substrs=["eOne = TWO"])
@@ -72,17 +71,25 @@ class TestFrameVarDILAssignment(TestBase):
         self.expect(
             "frame variable 'p = 1'",
             error=True,
-            substrs=["illegal argument: new value should be of the same size"]
+            substrs=["illegal argument: new value should be of the same size"],
         )
 
         if Is32Bit:
-          self.expect("frame variable 'p = (int*)12'", substrs=["p = 0x0000000c"])
-          self.expect_var_path("p", value="0x0000000c")
-          self.expect("frame variable 'p = 0'", substrs=["p = 0x00000000"])
+            self.expect(
+                "frame variable 'p = (int*)12'", substrs=["p = 0x0000000c"]
+            )
+            self.expect_var_path("p", value="0x0000000c")
+            self.expect(
+                "frame variable 'p = 0'", substrs=["p = 0x00000000"]
+            )
         else:
-          self.expect("frame variable 'p = (int*)12'", substrs=["p = 0x000000000000000c"])
-          self.expect_var_path("p", value="0x000000000000000c")
-          self.expect("frame variable 'p = (int *)0'", substrs=["p = 0x0000000000000000"])
+            self.expect(
+                "frame variable 'p = (int*)12'", substrs=["p = 0x000000000000000c"]
+            )
+            self.expect_var_path("p", value="0x000000000000000c")
+            self.expect(
+                "frame variable 'p = (int *)0'", substrs=["p = 0x0000000000000000"]
+            )
 
         self.expect(
             "frame variable 'p = farr'",
@@ -91,20 +98,20 @@ class TestFrameVarDILAssignment(TestBase):
         )
 
         # Assigning to a bool
-        self.expect_var_path("b", value = "false")
+        self.expect_var_path("b", value="false")
         self.expect("frame variable 'b = true'", substrs=["b = true"])
-        self.expect_var_path("b", value = "true")
-        self.expect_var_path("(int)b", value = "")
+        self.expect_var_path("b", value="true")
+        self.expect_var_path("(int)b", value="")
         self.expect("frame variable 'b = (bool)0'", substrs=["b = false"])
-        self.expect_var_path("b", value = "false")
+        self.expect_var_path("b", value="false")
 
 
         # Assigning to an array
         self.expect("frame variable 'farr'", substrs=["([0] = 1, [1] = 2)"])
         self.expect("frame variable 'farr[1] = f'", substrs=["farr[1] = f = 3.5"])
-        self.expect_var_path("farr[1]", value = "3.5")
-        self.expect("frame variable 'farr'", substrs = ["([0] = 1, [1] = 3.5)"])
-        self.expect("frame variable 'arr'", substrs = ["([0] = 1, [1] = 2)"])
+        self.expect_var_path("farr[1]", value="3.5")
+        self.expect("frame variable 'farr'", substrs=["([0] = 1, [1] = 3.5)"])
+        self.expect("frame variable 'arr'", substrs=["([0] = 1, [1] = 2)"])
         self.expect("frame variable 'arr[0] = 37'", substrs=["arr[0] = 37"])
         self.expect("frame variable 'arr[1] = j'", substrs=["arr[1] = j = -4"])
-        self.expect("frame variable 'arr'", substrs = ["([0] = 37, [1] = -4)"])
+        self.expect("frame variable 'arr'", substrs=["([0] = 37, [1] = -4)"])
