@@ -2849,21 +2849,20 @@ def CIR_GlobalOp : CIR_Op<"global", [
   let regions = (region MaxSizedRegion<1>:$ctorRegion,
                         MaxSizedRegion<1>:$dtorRegion);
 
-  let assemblyFormat = [{
-    ($sym_visibility^)?
-    (`` $global_visibility^)?
-    (`constant` $constant^)?
-    $linkage
-    (`comdat` $comdat^)?
-    ($tls_model^)?
-    (`dso_local` $dso_local^)?
-    (`static_local_guard` `` $static_local_guard^)?
-    (` ` custom<GlobalAddressSpaceValue>($addr_space)^ )?
-    $sym_name
-    custom<GlobalOpTypeAndInitialValue>($sym_type, $initial_value,
-                                        $ctorRegion, $dtorRegion)
-    attr-dict
-  }];
+ let assemblyFormat = [{
+  (` ` $global_visibility^)?
+  (`constant` $constant^)?
+  $linkage
+  (`comdat` $comdat^)?
+  ($tls_model^)?
+  (`dso_local` $dso_local^)?
+  (`static_local_guard` `` $static_local_guard^)?
+  (` ` custom<GlobalAddressSpaceValue>($addr_space)^ )?
+  $sym_name
+  custom<GlobalOpTypeAndInitialValue>($sym_type, $initial_value,
+                                      $ctorRegion, $dtorRegion)
+  attr-dict
+}];
 
   let extraClassDeclaration = [{
     bool isDeclaration() {
