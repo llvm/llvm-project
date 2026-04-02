@@ -1,5 +1,5 @@
-#include <cstdio>
 #include "subdir/foo.h"
+#include <cstdio>
 
 int main() {
   int sum = add(3, 4);
