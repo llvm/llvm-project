@@ -1849,8 +1849,6 @@ bool WebAssemblyCFGStackify::fixCallUnwindMismatches(MachineFunction &MF) {
           !WebAssembly::mayThrow(MI))
         continue;
       SeenThrowableInstInBB = true;
-      LLVM_DEBUG(dbgs() << "- fixCallUnwindMismatches considering: " << MI
-                        << "  in MBB = " << MBB.getName() << "\n");
 
       // If the EH pad on the stack top is where this instruction should unwind
       // next, we're good.
