@@ -1228,9 +1228,6 @@ bool DependenceInfo::strongSIVtest(const SCEVAddRecExpr *Src,
   if (!isDependenceTestEnabled(DependenceTestType::StrongSIV))
     return false;
 
-  if (!Src->hasNoSignedWrap() || !Dst->hasNoSignedWrap())
-    return false;
-
   const SCEV *Coeff = Src->getStepRecurrence(*SE);
   assert(Coeff == Dst->getStepRecurrence(*SE) &&
          "Expecting same coefficient in Strong SIV test");
@@ -1370,9 +1367,6 @@ bool DependenceInfo::weakCrossingSIVtest(const SCEVAddRecExpr *Src,
   if (!isDependenceTestEnabled(DependenceTestType::WeakCrossingSIV))
     return false;
 
-  if (!Src->hasNoSignedWrap() || !Dst->hasNoSignedWrap())
-    return false;
-
   const SCEV *Coeff = Src->getStepRecurrence(*SE);
   const SCEV *SrcConst = Src->getStart();
   const SCEV *DstConst = Dst->getStart();
@@ -1387,7 +1381,10 @@ bool DependenceInfo::weakCrossingSIVtest(const SCEVAddRecExpr *Src,
   ++WeakCrossingSIVapplications;
   assert(0 < Level && Level <= CommonLevels && "Level out of range");
   Level--;
-  const SCEV *Delta = SE->getMinusSCEV(DstConst, SrcConst);
+  const SCEV *Delta = minusSCEVNoSignedOverflow(DstConst, SrcConst, *SE);
+  if (!Delta)
+    return false;
+
   LLVM_DEBUG(dbgs() << "\t    Delta = " << *Delta << "\n");
   const SCEVConstant *ConstCoeff = dyn_cast<SCEVConstant>(Coeff);
   if (!ConstCoeff)
@@ -1472,6 +1469,9 @@ bool DependenceInfo::weakCrossingSIVtest(const SCEVAddRecExpr *Src,
 // algorithm doesn't overflow.
 static bool findGCD(unsigned Bits, const APInt &AM, const APInt &BM,
                     const APInt &Delta, APInt &G, APInt &X, APInt &Y) {
+  LLVM_DEBUG(dbgs() << "\t    AM = " << AM << "\n");
+  LLVM_DEBUG(dbgs() << "\t    BM = " << BM << "\n");
+  LLVM_DEBUG(dbgs() << "\t    Delta = " << Delta << "\n");
   APInt A0(Bits, 1, true), A1(Bits, 0, true);
   APInt B0(Bits, 0, true), B1(Bits, 1, true);
   APInt G0 = AM.abs();
@@ -1621,16 +1621,13 @@ bool DependenceInfo::exactSIVtest(const SCEVAddRecExpr *Src,
   const SCEV *DstCoeff = Dst->getStepRecurrence(*SE);
   const SCEV *DstConst = Dst->getStart();
   LLVM_DEBUG(dbgs() << "\tExact SIV test\n");
-  LLVM_DEBUG(dbgs() << "\t    SrcCoeff = " << *SrcCoeff << " = AM\n");
-  LLVM_DEBUG(dbgs() << "\t    DstCoeff = " << *DstCoeff << " = BM\n");
+  LLVM_DEBUG(dbgs() << "\t    SrcCoeff = " << *SrcCoeff << "\n");
+  LLVM_DEBUG(dbgs() << "\t    DstCoeff = " << *DstCoeff << "\n");
   LLVM_DEBUG(dbgs() << "\t    SrcConst = " << *SrcConst << "\n");
   LLVM_DEBUG(dbgs() << "\t    DstConst = " << *DstConst << "\n");
   ++ExactSIVapplications;
   assert(0 < Level && Level <= CommonLevels && "Level out of range");
   Level--;
-
-  if (!Src->hasNoSignedWrap() || !Dst->hasNoSignedWrap())
-    return false;
 
   const SCEV *Delta = minusSCEVNoSignedOverflow(DstConst, SrcConst, *SE);
   if (!Delta)
@@ -1773,9 +1770,6 @@ bool DependenceInfo::weakZeroSIVtestImpl(const SCEVAddRecExpr *AR,
                                          FullDependence &Result) const {
   const SCEV *ARCoeff = AR->getStepRecurrence(*SE);
   const SCEV *ARConst = AR->getStart();
-
-  if (!AR->hasNoSignedWrap())
-    return false;
 
   if (Const == ARConst && SE->isKnownNonZero(ARCoeff)) {
     if (Level < CommonLevels) {
@@ -1937,20 +1931,29 @@ bool DependenceInfo::weakZeroDstSIVtest(const SCEVAddRecExpr *Src,
 // and a and b are constants.
 // Returns true if any possible dependence is disproved.
 // Works in some cases that symbolicRDIVtest doesn't, and vice versa.
-bool DependenceInfo::exactRDIVtest(const SCEV *SrcCoeff, const SCEV *DstCoeff,
-                                   const SCEV *SrcConst, const SCEV *DstConst,
-                                   const Loop *SrcLoop, const Loop *DstLoop,
+bool DependenceInfo::exactRDIVtest(const SCEVAddRecExpr *Src,
+                                   const SCEVAddRecExpr *Dst,
                                    FullDependence &Result) const {
   if (!isDependenceTestEnabled(DependenceTestType::ExactRDIV))
     return false;
 
+  const SCEV *SrcCoeff = Src->getStepRecurrence(*SE);
+  const SCEV *SrcConst = Src->getStart();
+  const SCEV *DstCoeff = Dst->getStepRecurrence(*SE);
+  const SCEV *DstConst = Dst->getStart();
   LLVM_DEBUG(dbgs() << "\tExact RDIV test\n");
-  LLVM_DEBUG(dbgs() << "\t    SrcCoeff = " << *SrcCoeff << " = AM\n");
-  LLVM_DEBUG(dbgs() << "\t    DstCoeff = " << *DstCoeff << " = BM\n");
+  LLVM_DEBUG(dbgs() << "\t    SrcCoeff = " << *SrcCoeff << "\n");
+  LLVM_DEBUG(dbgs() << "\t    DstCoeff = " << *DstCoeff << "\n");
   LLVM_DEBUG(dbgs() << "\t    SrcConst = " << *SrcConst << "\n");
   LLVM_DEBUG(dbgs() << "\t    DstConst = " << *DstConst << "\n");
   ++ExactRDIVapplications;
-  const SCEV *Delta = SE->getMinusSCEV(DstConst, SrcConst);
+
+  if (!Src->hasNoSignedWrap() || !Dst->hasNoSignedWrap())
+    return false;
+
+  const SCEV *Delta = minusSCEVNoSignedOverflow(DstConst, SrcConst, *SE);
+  if (!Delta)
+    return false;
   LLVM_DEBUG(dbgs() << "\t    Delta = " << *Delta << "\n");
   const SCEVConstant *ConstDelta = dyn_cast<SCEVConstant>(Delta);
   const SCEVConstant *ConstSrcCoeff = dyn_cast<SCEVConstant>(SrcCoeff);
@@ -1974,12 +1977,12 @@ bool DependenceInfo::exactRDIVtest(const SCEV *SrcCoeff, const SCEV *DstCoeff,
 
   // since SCEV construction seems to normalize, LM = 0
   std::optional<APInt> SrcUM =
-      collectNonNegativeConstantUpperBound(SrcLoop, Delta->getType());
+      collectNonNegativeConstantUpperBound(Src->getLoop(), Delta->getType());
   if (SrcUM)
     LLVM_DEBUG(dbgs() << "\t    SrcUM = " << *SrcUM << "\n");
 
   std::optional<APInt> DstUM =
-      collectNonNegativeConstantUpperBound(DstLoop, Delta->getType());
+      collectNonNegativeConstantUpperBound(Dst->getLoop(), Delta->getType());
   if (DstUM)
     LLVM_DEBUG(dbgs() << "\t    DstUM = " << *DstUM << "\n");
 
@@ -2052,7 +2055,9 @@ bool DependenceInfo::testSIV(const SCEV *Src, const SCEV *Dst, unsigned &Level,
   LLVM_DEBUG(dbgs() << "    dst = " << *Dst << "\n");
   const SCEVAddRecExpr *SrcAddRec = dyn_cast<SCEVAddRecExpr>(Src);
   const SCEVAddRecExpr *DstAddRec = dyn_cast<SCEVAddRecExpr>(Dst);
-  if (SrcAddRec && DstAddRec) {
+  bool SrcAnalyzable = SrcAddRec != nullptr && SrcAddRec->hasNoSignedWrap();
+  bool DstAnalyzable = DstAddRec != nullptr && DstAddRec->hasNoSignedWrap();
+  if (SrcAnalyzable && DstAnalyzable) {
     const SCEV *SrcCoeff = SrcAddRec->getStepRecurrence(*SE);
     const SCEV *DstCoeff = DstAddRec->getStepRecurrence(*SE);
     const Loop *CurSrcLoop = SrcAddRec->getLoop();
@@ -2069,17 +2074,18 @@ bool DependenceInfo::testSIV(const SCEV *Src, const SCEV *Dst, unsigned &Level,
       disproven = weakCrossingSIVtest(SrcAddRec, DstAddRec, Level, Result);
     return disproven || exactSIVtest(SrcAddRec, DstAddRec, Level, Result);
   }
-  if (SrcAddRec) {
+  if (SrcAnalyzable && DstAddRec == nullptr) {
     const Loop *CurSrcLoop = SrcAddRec->getLoop();
     Level = mapSrcLoop(CurSrcLoop);
     return weakZeroDstSIVtest(SrcAddRec, Dst, Level, Result);
   }
-  if (DstAddRec) {
+  if (DstAnalyzable && SrcAddRec == nullptr) {
     const Loop *CurDstLoop = DstAddRec->getLoop();
     Level = mapDstLoop(CurDstLoop);
     return weakZeroSrcSIVtest(Src, DstAddRec, Level, Result);
   }
-  llvm_unreachable("SIV test expected at least one AddRec");
+  assert(SrcAddRec != nullptr ||
+         DstAddRec != nullptr && "SIV test expected at least one AddRec");
   return false;
 }
 
@@ -2095,25 +2101,12 @@ bool DependenceInfo::testSIV(const SCEV *Src, const SCEV *Dst, unsigned &Level,
 // Return true if dependence disproved.
 bool DependenceInfo::testRDIV(const SCEV *Src, const SCEV *Dst,
                               FullDependence &Result) const {
-  const SCEV *SrcConst, *DstConst;
-  const SCEV *SrcCoeff, *DstCoeff;
-  const Loop *SrcLoop, *DstLoop;
-
   LLVM_DEBUG(dbgs() << "    src = " << *Src << "\n");
   LLVM_DEBUG(dbgs() << "    dst = " << *Dst << "\n");
   const SCEVAddRecExpr *SrcAddRec = dyn_cast<SCEVAddRecExpr>(Src);
   const SCEVAddRecExpr *DstAddRec = dyn_cast<SCEVAddRecExpr>(Dst);
-  if (SrcAddRec && DstAddRec) {
-    SrcConst = SrcAddRec->getStart();
-    SrcCoeff = SrcAddRec->getStepRecurrence(*SE);
-    SrcLoop = SrcAddRec->getLoop();
-    DstConst = DstAddRec->getStart();
-    DstCoeff = DstAddRec->getStepRecurrence(*SE);
-    DstLoop = DstAddRec->getLoop();
-  } else
-    llvm_unreachable("RDIV expected at least one AddRec");
-  return exactRDIVtest(SrcCoeff, DstCoeff, SrcConst, DstConst, SrcLoop, DstLoop,
-                       Result) ||
+  assert(SrcAddRec && DstAddRec && "Unexpected non-addrec input");
+  return exactRDIVtest(SrcAddRec, DstAddRec, Result) ||
          gcdMIVtest(Src, Dst, Result);
 }
 
@@ -2181,6 +2174,25 @@ bool DependenceInfo::accumulateCoefficientsGCD(const SCEV *Expr,
   return accumulateCoefficientsGCD(Start, CurLoop, CurLoopCoeff, RunningGCD);
 }
 
+/// Compute \p RunningGCD and return the start value of the innermost
+/// \p SCEVAddRecExpr. In order to calculate the return value we do not
+/// return immediately if it is proved that \p RunningGCD = 1.
+const SCEV *analyzeCoefficientsForGCD(const SCEV *Coefficients,
+                                      APInt &RunningGCD, ScalarEvolution *SE) {
+  while (const SCEVAddRecExpr *AddRec =
+             dyn_cast<SCEVAddRecExpr>(Coefficients)) {
+    const SCEV *Coeff = AddRec->getStepRecurrence(*SE);
+    // If the coefficient is the product of a constant and other stuff,
+    // we can use the constant in the GCD computation.
+    std::optional<APInt> ConstCoeff = getConstantCoefficient(Coeff);
+    if (!ConstCoeff)
+      return nullptr;
+    RunningGCD = APIntOps::GreatestCommonDivisor(RunningGCD, ConstCoeff->abs());
+    Coefficients = AddRec->getStart();
+  }
+  return Coefficients;
+}
+
 //===----------------------------------------------------------------------===//
 // gcdMIVtest -
 // Tests an MIV subscript pair for dependence.
@@ -2208,43 +2220,14 @@ bool DependenceInfo::gcdMIVtest(const SCEV *Src, const SCEV *Dst,
   unsigned BitWidth = SE->getTypeSizeInBits(Src->getType());
   APInt RunningGCD = APInt::getZero(BitWidth);
 
-  // Examine Src coefficients.
-  // Compute running GCD and record source constant.
-  // Because we're looking for the constant at the end of the chain,
-  // we can't quit the loop just because the GCD == 1.
-  const SCEV *Coefficients = Src;
-  while (const SCEVAddRecExpr *AddRec =
-             dyn_cast<SCEVAddRecExpr>(Coefficients)) {
-    const SCEV *Coeff = AddRec->getStepRecurrence(*SE);
-    // If the coefficient is the product of a constant and other stuff,
-    // we can use the constant in the GCD computation.
-    std::optional<APInt> ConstCoeff = getConstantCoefficient(Coeff);
-    if (!ConstCoeff)
-      return false;
-    RunningGCD = APIntOps::GreatestCommonDivisor(RunningGCD, ConstCoeff->abs());
-    Coefficients = AddRec->getStart();
-  }
-  const SCEV *SrcConst = Coefficients;
+  // Examine Src and dst coefficients.
+  const SCEV *SrcConst = analyzeCoefficientsForGCD(Src, RunningGCD, SE);
+  if (!SrcConst)
+    return false;
+  const SCEV *DstConst = analyzeCoefficientsForGCD(Dst, RunningGCD, SE);
+  if (!DstConst)
+    return false;
 
-  // Examine Dst coefficients.
-  // Compute running GCD and record destination constant.
-  // Because we're looking for the constant at the end of the chain,
-  // we can't quit the loop just because the GCD == 1.
-  Coefficients = Dst;
-  while (const SCEVAddRecExpr *AddRec =
-             dyn_cast<SCEVAddRecExpr>(Coefficients)) {
-    const SCEV *Coeff = AddRec->getStepRecurrence(*SE);
-    // If the coefficient is the product of a constant and other stuff,
-    // we can use the constant in the GCD computation.
-    std::optional<APInt> ConstCoeff = getConstantCoefficient(Coeff);
-    if (!ConstCoeff)
-      return false;
-    RunningGCD = APIntOps::GreatestCommonDivisor(RunningGCD, ConstCoeff->abs());
-    Coefficients = AddRec->getStart();
-  }
-  const SCEV *DstConst = Coefficients;
-
-  APInt ExtraGCD = APInt::getZero(BitWidth);
   const SCEV *Delta = minusSCEVNoSignedOverflow(DstConst, SrcConst, *SE);
   if (!Delta)
     return false;
@@ -2271,19 +2254,14 @@ bool DependenceInfo::gcdMIVtest(const SCEV *Src, const SCEV *Dst,
   // which is infeasible, so we can disallow the = direction for the i level.
   // Setting j = j' doesn't help matters, so we end up with a direction vector
   // of [<>, *]
-  //
-  // Given A[5*i + 10*j*M + 9*M*N] and A[15*i + 20*j*M - 21*N*M + 5],
-  // we need to remember that the constant part is 5 and the RunningGCD should
-  // be initialized to ExtraGCD = 30.
-  LLVM_DEBUG(dbgs() << "    ExtraGCD = " << ExtraGCD << '\n');
 
   bool Improved = false;
-  Coefficients = Src;
+  const SCEV *Coefficients = Src;
   while (const SCEVAddRecExpr *AddRec =
              dyn_cast<SCEVAddRecExpr>(Coefficients)) {
     Coefficients = AddRec->getStart();
     const Loop *CurLoop = AddRec->getLoop();
-    RunningGCD = ExtraGCD;
+    RunningGCD = 0;
     const SCEV *SrcCoeff = AddRec->getStepRecurrence(*SE);
     const SCEV *DstCoeff = SE->getMinusSCEV(SrcCoeff, SrcCoeff);
 
@@ -2291,7 +2269,9 @@ bool DependenceInfo::gcdMIVtest(const SCEV *Src, const SCEV *Dst,
         !accumulateCoefficientsGCD(Dst, CurLoop, DstCoeff, RunningGCD))
       return false;
 
-    Delta = SE->getMinusSCEV(SrcCoeff, DstCoeff);
+    Delta = minusSCEVNoSignedOverflow(DstCoeff, SrcCoeff, *SE);
+    if (!Delta)
+      continue;
     // If the coefficient is the product of a constant and other stuff,
     // we can use the constant in the GCD computation.
     std::optional<APInt> ConstCoeff = getConstantCoefficient(Delta);

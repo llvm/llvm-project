@@ -179,13 +179,9 @@ void MarkLive<ELFT, TrackWhyLive>::resolveReloc(InputSectionBase &sec,
     return;
   }
 
-  if (auto *ss = dyn_cast<SharedSymbol>(sym)) {
-    if (!ss->isWeak()) {
-      cast<SharedFile>(ss->file)->isNeeded = true;
-      if (TrackWhyLive)
-        whyLive.try_emplace(sym, reason);
-    }
-  }
+  if (auto *ss = dyn_cast<SharedSymbol>(sym))
+    if (!ss->isWeak() && TrackWhyLive)
+      whyLive.try_emplace(sym, reason);
 
   for (InputSectionBase *sec : cNamedSections.lookup(sym->getName()))
     enqueue(sec, /*offset=*/0, /*sym=*/nullptr, reason);
@@ -546,6 +542,14 @@ template <class ELFT> void elf::markLive(Ctx &ctx) {
   // there now.
   if (ctx.partitions.size() != 1)
     MarkLive<ELFT, false>(ctx, 1).moveToMain();
+
+  // Determine which DSOs are needed. A DSO is needed if a non-weak SharedSymbol
+  // is used from a live section.
+  parallelForEach(ctx.symtab->getSymbols(), [](Symbol *sym) {
+    if (auto *ss = dyn_cast<SharedSymbol>(sym))
+      if (ss->used && !ss->isWeak())
+        cast<SharedFile>(ss->file)->isNeeded = true;
+  });
 
   // Report garbage-collected sections.
   if (ctx.arg.printGcSections.empty())

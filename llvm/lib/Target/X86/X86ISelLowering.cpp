@@ -315,8 +315,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::FP_TO_UINT_SAT, VT, Custom);
       setOperationAction(ISD::FP_TO_SINT_SAT, VT, Custom);
     }
-    setOperationAction(ISD::FCANONICALIZE, MVT::f32, Custom);
-    setOperationAction(ISD::FCANONICALIZE, MVT::f64, Custom);
     if (Subtarget.is64Bit()) {
       setOperationAction(ISD::FP_TO_UINT_SAT, MVT::i64, Custom);
       setOperationAction(ISD::FP_TO_SINT_SAT, MVT::i64, Custom);
@@ -346,8 +344,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   if (!Subtarget.hasSSE2()) {
     setOperationAction(ISD::BITCAST        , MVT::f32  , Expand);
     setOperationAction(ISD::BITCAST        , MVT::i32  , Expand);
-    setOperationAction(ISD::FCANONICALIZE, MVT::f32, Custom);
-    setOperationAction(ISD::FCANONICALIZE, MVT::f64, Custom);
     if (Subtarget.is64Bit()) {
       setOperationAction(ISD::BITCAST      , MVT::f64  , Expand);
       // Without SSE, i64->f64 goes through memory.
@@ -716,7 +712,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::STRICT_FROUNDEVEN, MVT::f16, Promote);
     setOperationAction(ISD::STRICT_FTRUNC, MVT::f16, Promote);
     setOperationAction(ISD::STRICT_FP_ROUND, MVT::f16, Custom);
-    setOperationAction(ISD::FCANONICALIZE, MVT::f16, Custom);
     setOperationAction(ISD::STRICT_FP_EXTEND, MVT::f32, Custom);
     setOperationAction(ISD::STRICT_FP_EXTEND, MVT::f64, Custom);
 
@@ -879,7 +874,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::STRICT_FMUL     , MVT::f80, Legal);
     setOperationAction(ISD::STRICT_FDIV     , MVT::f80, Legal);
     setOperationAction(ISD::STRICT_FSQRT    , MVT::f80, Legal);
-    setOperationAction(ISD::FCANONICALIZE   , MVT::f80, Custom);
+    setOperationAction(ISD::FCANONICALIZE, MVT::f80, Expand);
     if (isTypeLegal(MVT::f16)) {
       setOperationAction(ISD::FP_EXTEND, MVT::f80, Custom);
       setOperationAction(ISD::STRICT_FP_EXTEND, MVT::f80, Custom);
@@ -942,7 +937,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     if (isTypeLegal(MVT::f80)) {
       setOperationAction(ISD::FP_ROUND, MVT::f80, Custom);
       setOperationAction(ISD::STRICT_FP_ROUND, MVT::f80, Custom);
-      setOperationAction(ISD::FCANONICALIZE, MVT::f80, Custom);
+      setOperationAction(ISD::FCANONICALIZE, MVT::f80, Expand);
     }
 
     setOperationAction(ISD::SETCC, MVT::f128, Custom);
@@ -1078,11 +1073,11 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::VSELECT,            MVT::v4f32, Custom);
     setOperationAction(ISD::EXTRACT_VECTOR_ELT, MVT::v4f32, Custom);
     setOperationAction(ISD::SELECT,             MVT::v4f32, Custom);
-    setOperationAction(ISD::FCANONICALIZE, MVT::v4f32, Custom);
+    setOperationAction(ISD::FCANONICALIZE, MVT::v4f32, Expand);
 
     setOperationAction(ISD::LOAD,               MVT::v2f32, Custom);
     setOperationAction(ISD::STORE,              MVT::v2f32, Custom);
-    setOperationAction(ISD::FCANONICALIZE, MVT::v2f32, Custom);
+    setOperationAction(ISD::FCANONICALIZE, MVT::v2f32, Expand);
 
     setOperationAction(ISD::STRICT_FADD,        MVT::v4f32, Legal);
     setOperationAction(ISD::STRICT_FSUB,        MVT::v4f32, Legal);
@@ -1137,7 +1132,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::UMULO,              MVT::v2i32, Custom);
 
     setOperationAction(ISD::FNEG,               MVT::v2f64, Custom);
-    setOperationAction(ISD::FCANONICALIZE, MVT::v2f64, Custom);
+    setOperationAction(ISD::FCANONICALIZE, MVT::v2f64, Expand);
     setOperationAction(ISD::FABS,               MVT::v2f64, Custom);
     setOperationAction(ISD::FCOPYSIGN,          MVT::v2f64, Custom);
 
@@ -1496,7 +1491,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::FMINIMUM,          VT, Custom);
       setOperationAction(ISD::FMAXIMUMNUM,       VT, Custom);
       setOperationAction(ISD::FMINIMUMNUM,       VT, Custom);
-      setOperationAction(ISD::FCANONICALIZE, VT, Custom);
+      setOperationAction(ISD::FCANONICALIZE, VT, Expand);
     }
 
     setOperationAction(ISD::LRINT, MVT::v8f32, Custom);
@@ -1783,9 +1778,9 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::FP_TO_UINT,                MVT::v2i1,  Custom);
     setOperationAction(ISD::STRICT_FP_TO_SINT,         MVT::v2i1,  Custom);
     setOperationAction(ISD::STRICT_FP_TO_UINT,         MVT::v2i1,  Custom);
-    setOperationAction(ISD::FCANONICALIZE, MVT::v8f16, Custom);
-    setOperationAction(ISD::FCANONICALIZE, MVT::v16f16, Custom);
-    setOperationAction(ISD::FCANONICALIZE, MVT::v32f16, Custom);
+    setOperationAction(ISD::FCANONICALIZE, MVT::v8f16, Expand);
+    setOperationAction(ISD::FCANONICALIZE, MVT::v16f16, Expand);
+    setOperationAction(ISD::FCANONICALIZE, MVT::v32f16, Expand);
 
     // There is no byte sized k-register load or store without AVX512DQ.
     if (!Subtarget.hasDQI()) {
@@ -1867,7 +1862,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::FMA,   VT, Legal);
       setOperationAction(ISD::STRICT_FMA, VT, Legal);
       setOperationAction(ISD::FCOPYSIGN, VT, Custom);
-      setOperationAction(ISD::FCANONICALIZE, VT, Custom);
+      setOperationAction(ISD::FCANONICALIZE, VT, Expand);
     }
     setOperationAction(ISD::LRINT, MVT::v16f32,
                        Subtarget.hasDQI() ? Legal : Custom);
@@ -32182,14 +32177,16 @@ static SDValue LowerRotate(SDValue Op, const X86Subtarget &Subtarget,
       return DAG.getSelect(DL, SelVT, C, V0, V1);
     };
 
-    // ISD::ROTR is currently only profitable on AVX512 targets with VPTERNLOG.
-    if (!IsROTL && !useVPTERNLOG(Subtarget, VT)) {
+    // ISD::ROTR is currently only profitable on GFNI/AVX512+VPTERNLOG targets.
+    if (!IsROTL && !useVPTERNLOG(Subtarget, VT) && !Subtarget.hasGFNI()) {
       Amt = DAG.getNode(ISD::SUB, DL, VT, Z, Amt);
       IsROTL = true;
     }
 
-    unsigned ShiftLHS = IsROTL ? ISD::SHL : ISD::SRL;
-    unsigned ShiftRHS = IsROTL ? ISD::SRL : ISD::SHL;
+    auto BuildRotate = [&](SDValue R, unsigned RotAmt) {
+      return DAG.getNode(IsROTL ? ISD::ROTL : ISD::ROTR, DL, VT, R,
+                         DAG.getConstant(RotAmt, DL, VT));
+    };
 
     // Turn 'a' into a mask suitable for VSELECT: a = a << 5;
     // We can safely do this using i16 shifts as we're only interested in
@@ -32199,32 +32196,19 @@ static SDValue LowerRotate(SDValue Op, const X86Subtarget &Subtarget,
     Amt = DAG.getBitcast(VT, Amt);
 
     // r = VSELECT(r, rot(r, 4), a);
-    SDValue M;
-    M = DAG.getNode(
-        ISD::OR, DL, VT,
-        DAG.getNode(ShiftLHS, DL, VT, R, DAG.getConstant(4, DL, VT)),
-        DAG.getNode(ShiftRHS, DL, VT, R, DAG.getConstant(4, DL, VT)));
-    R = SignBitSelect(VT, Amt, M, R);
+    R = SignBitSelect(VT, Amt, BuildRotate(R, 4), R);
 
     // a += a
     Amt = DAG.getNode(ISD::ADD, DL, VT, Amt, Amt);
 
     // r = VSELECT(r, rot(r, 2), a);
-    M = DAG.getNode(
-        ISD::OR, DL, VT,
-        DAG.getNode(ShiftLHS, DL, VT, R, DAG.getConstant(2, DL, VT)),
-        DAG.getNode(ShiftRHS, DL, VT, R, DAG.getConstant(6, DL, VT)));
-    R = SignBitSelect(VT, Amt, M, R);
+    R = SignBitSelect(VT, Amt, BuildRotate(R, 2), R);
 
     // a += a
     Amt = DAG.getNode(ISD::ADD, DL, VT, Amt, Amt);
 
     // return VSELECT(r, rot(r, 1), a);
-    M = DAG.getNode(
-        ISD::OR, DL, VT,
-        DAG.getNode(ShiftLHS, DL, VT, R, DAG.getConstant(1, DL, VT)),
-        DAG.getNode(ShiftRHS, DL, VT, R, DAG.getConstant(7, DL, VT)));
-    return SignBitSelect(VT, Amt, M, R);
+    return SignBitSelect(VT, Amt, BuildRotate(R, 1), R);
   }
 
   bool IsSplatAmt = DAG.isSplatValue(Amt);
@@ -34066,24 +34050,6 @@ static SDValue LowerPREFETCH(SDValue Op, const X86Subtarget &Subtarget,
   return Op;
 }
 
-static SDValue LowerFCanonicalize(SDValue Op, SelectionDAG &DAG) {
-  SDNode *N = Op.getNode();
-  SDValue Operand = N->getOperand(0);
-  EVT VT = Operand.getValueType();
-  SDLoc dl(N);
-
-  SDValue One = DAG.getConstantFP(1.0, dl, VT);
-
-  // TODO: Fix Crash for bf16 when generating strict_fmul as it
-  // leads to a error : SoftPromoteHalfResult #0: t11: bf16,ch = strict_fmul t0,
-  // ConstantFP:bf16<APFloat(16256)>, t5 LLVM ERROR: Do not know how to soft
-  // promote this operator's result!
-  SDValue Chain = DAG.getEntryNode();
-  SDValue StrictFmul = DAG.getNode(ISD::STRICT_FMUL, dl, {VT, MVT::Other},
-                                   {Chain, Operand, One});
-  return StrictFmul;
-}
-
 static StringRef getInstrStrFromOpNo(const SmallVectorImpl<StringRef> &AsmStrs,
                                      unsigned OpNo) {
   const APInt Operand(32, OpNo);
@@ -34225,7 +34191,6 @@ SDValue X86TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::SRL_PARTS:          return LowerShiftParts(Op, DAG);
   case ISD::FSHL:
   case ISD::FSHR:               return LowerFunnelShift(Op, Subtarget, DAG);
-  case ISD::FCANONICALIZE:      return LowerFCanonicalize(Op, DAG);
   case ISD::STRICT_SINT_TO_FP:
   case ISD::SINT_TO_FP:         return LowerSINT_TO_FP(Op, DAG);
   case ISD::STRICT_UINT_TO_FP:
