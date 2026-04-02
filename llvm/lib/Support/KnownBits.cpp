@@ -553,11 +553,12 @@ KnownBits KnownBits::lshr(const KnownBits &LHS, const KnownBits &RHS,
   return Known;
 }
 
-KnownBits KnownBits::ashr(const KnownBits &LHS, unsigned ShiftAmt) {
-  KnownBits Known = LHS;
-  Known.Zero.ashrInPlace(ShiftAmt);
-  Known.One.ashrInPlace(ShiftAmt);
-  return Known;
+KnownBits KnownBits::ashr(const KnownBits &LHS, unsigned ShiftAmt,
+                          bool ShAmtNonZero, bool Exact) {
+  // TODO: This is simple fallback to generic RHS-based ashr.
+  // Add a specialized constant-shift implementation with identical semantics.
+  KnownBits RHS = KnownBits::makeConstant(APInt(LHS.getBitWidth(), ShiftAmt));
+  return ashr(LHS, RHS, ShAmtNonZero, Exact);
 }
 
 KnownBits KnownBits::ashr(const KnownBits &LHS, const KnownBits &RHS,
