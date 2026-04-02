@@ -1209,6 +1209,9 @@ Status NativeRegisterContextLinux_arm64::WriteAllRegisterValues(
         // exiting streaming mode.
         error = WriteRegisterSet(&ioVec, sve_fpsimd_data.size(), NT_ARM_SVE);
 
+        // Consume FP register set.
+        src += GetFPRSize();
+
         if (error.Success()) {
           // Wrote FPU, and SVE overlaps FPU.
           m_fpu_is_valid = false;
@@ -1217,11 +1220,9 @@ Status NativeRegisterContextLinux_arm64::WriteAllRegisterValues(
 
           m_sve_state = SVEState::Unknown;
           ConfigureRegisterContext();
-
-          // Consume FP register set.
-          src += GetFPRSize();
         }
-        // Else it failed, and we have no other way to restore the data.
+        // Else we failed to restore these registers, but we will try to restore
+        // the others.
       } else {
         error = RestoreRegisters(
             GetFPRBuffer(), &src, GetFPRSize(), m_fpu_is_valid,

@@ -530,9 +530,7 @@ class SVESIMDRegistersTestCase(TestBase):
         # mode was added in 6.19. Without it we simply cannot restore FP state.
         # So remove any test going that restores to non-streaming mode
         # from streaming mode.
-        if not (
-            platform.GetOSMajorVersion() >= 6 and platform.GetOSMinorVersion() >= 19
-        ):
+        if (platform.GetOSMajorVersion(), platform.GetOSMinorVersion()) < (6, 19):
             expr_tests = list(filter(lambda p: p[1][0] == Mode.SIMD, expr_tests))
 
         if self.TraceOn():
