@@ -1567,7 +1567,7 @@ Value *SCEVExpander::expandCodeFor(SCEVUse SH, Type *Ty) {
 }
 
 Value *SCEVExpander::FindValueInExprValueMap(
-    const SCEV *S, const Instruction *InsertPt,
+    SCEVUse S, const Instruction *InsertPt,
     SmallVectorImpl<Instruction *> &DropPoisonGeneratingInsts) {
   // If the expansion is not in CanonicalMode, and the SCEV contains any
   // sub scAddRecExpr type SCEV, it is required to expand the SCEV literally.

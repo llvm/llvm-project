@@ -474,7 +474,7 @@ private:
   /// DropPoisonGeneratingInsts is populated with instructions for which
   /// poison-generating flags must be dropped if the value is reused.
   Value *FindValueInExprValueMap(
-      const SCEV *S, const Instruction *InsertPt,
+      SCEVUse S, const Instruction *InsertPt,
       SmallVectorImpl<Instruction *> &DropPoisonGeneratingInsts);
 
   LLVM_ABI Value *expand(SCEVUse S);

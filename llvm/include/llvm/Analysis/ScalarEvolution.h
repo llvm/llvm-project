@@ -113,9 +113,6 @@ template <typename SCEVPtrT> SCEVUseT(SCEVPtrT) -> SCEVUseT<SCEVPtrT>;
 
 using SCEVUse = SCEVUseT<const SCEV *>;
 
-template <> void SCEVUseT<const SCEV *>::print(raw_ostream &OS) const;
-template <> void SCEVUseT<const SCEV *>::dump() const;
-
 /// Provide PointerLikeTypeTraits for SCEVUse, so it can be used with
 /// SmallPtrSet, among others.
 template <> struct PointerLikeTypeTraits<SCEVUse> {
@@ -157,6 +154,31 @@ template <> struct simplify_type<SCEVUse> {
     return Val.getPointer();
   }
 };
+
+/// Provide CastInfo for SCEVUseT so that cast<SCEVUseT<const To *>>(use)
+/// returns SCEVUseT<const To *> with flags preserved.
+template <typename ToSCEVPtrT>
+struct CastInfo<SCEVUseT<ToSCEVPtrT>, SCEVUse,
+                std::enable_if_t<!is_simple_type<SCEVUse>::value>> {
+  using To = std::remove_cv_t<std::remove_pointer_t<ToSCEVPtrT>>;
+  using CastReturnType = SCEVUseT<ToSCEVPtrT>;
+
+  static bool isPossible(const SCEVUse &U) { return isa<To>(U.getPointer()); }
+  static CastReturnType doCast(const SCEVUse &U) {
+    return {cast<To>(U.getPointer()), U.getFlags()};
+  }
+  static CastReturnType castFailed() { return CastReturnType(nullptr); }
+  static CastReturnType doCastIfPossible(const SCEVUse &U) {
+    if (!isPossible(U))
+      return castFailed();
+    return doCast(U);
+  }
+};
+
+template <typename ToSCEVPtrT>
+struct CastInfo<SCEVUseT<ToSCEVPtrT>, const SCEVUse,
+                std::enable_if_t<!is_simple_type<const SCEVUse>::value>>
+    : CastInfo<SCEVUseT<ToSCEVPtrT>, SCEVUse> {};
 
 /// This class represents an analyzed expression in the program.  These are
 /// opaque objects that the client is not allowed to do much with directly.
@@ -2671,6 +2693,24 @@ template <> struct DenseMapInfo<ScalarEvolution::FoldID> {
 template <> inline const SCEV *SCEVUseT<const SCEV *>::getCanonical() const {
   return Base::getPointer()->getCanonical();
 }
+
+template <typename SCEVPtrT>
+void SCEVUseT<SCEVPtrT>::print(raw_ostream &OS) const {
+  Base::getPointer()->print(OS);
+  SCEV::NoWrapFlags Flags = static_cast<SCEV::NoWrapFlags>(Base::getInt());
+  if (Flags & SCEV::FlagNUW)
+    OS << "(u nuw)";
+  if (Flags & SCEV::FlagNSW)
+    OS << "(u nsw)";
+}
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+template <typename SCEVPtrT>
+LLVM_DUMP_METHOD void SCEVUseT<SCEVPtrT>::dump() const {
+  print(dbgs());
+  dbgs() << '\n';
+}
+#endif
 
 } // end namespace llvm
 

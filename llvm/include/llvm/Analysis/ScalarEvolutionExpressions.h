@@ -677,50 +677,57 @@ template <typename SC, typename RetVal = void> struct SCEVUseVisitor {
   RetVal visit(SCEVUse S) {
     switch (S->getSCEVType()) {
     case scConstant:
-      return ((SC *)this)->visitConstant(SCEVUseT(cast<const SCEVConstant>(S)));
+      return ((SC *)this)
+          ->visitConstant(cast<SCEVUseT<const SCEVConstant *>>(S));
     case scVScale:
-      return ((SC *)this)->visitVScale(SCEVUseT(cast<const SCEVVScale>(S)));
+      return ((SC *)this)->visitVScale(cast<SCEVUseT<const SCEVVScale *>>(S));
     case scPtrToAddr:
       return ((SC *)this)
-          ->visitPtrToAddrExpr(SCEVUseT(cast<const SCEVPtrToAddrExpr>(S)));
+          ->visitPtrToAddrExpr(cast<SCEVUseT<const SCEVPtrToAddrExpr *>>(S));
     case scPtrToInt:
       return ((SC *)this)
-          ->visitPtrToIntExpr(SCEVUseT(cast<const SCEVPtrToIntExpr>(S)));
+          ->visitPtrToIntExpr(cast<SCEVUseT<const SCEVPtrToIntExpr *>>(S));
     case scTruncate:
       return ((SC *)this)
-          ->visitTruncateExpr(SCEVUseT(cast<const SCEVTruncateExpr>(S)));
+          ->visitTruncateExpr(cast<SCEVUseT<const SCEVTruncateExpr *>>(S));
     case scZeroExtend:
       return ((SC *)this)
-          ->visitZeroExtendExpr(SCEVUseT(cast<const SCEVZeroExtendExpr>(S)));
+          ->visitZeroExtendExpr(cast<SCEVUseT<const SCEVZeroExtendExpr *>>(S));
     case scSignExtend:
       return ((SC *)this)
-          ->visitSignExtendExpr(SCEVUseT(cast<const SCEVSignExtendExpr>(S)));
+          ->visitSignExtendExpr(cast<SCEVUseT<const SCEVSignExtendExpr *>>(S));
     case scAddExpr:
-      return ((SC *)this)->visitAddExpr(SCEVUseT(cast<const SCEVAddExpr>(S)));
+      return ((SC *)this)->visitAddExpr(cast<SCEVUseT<const SCEVAddExpr *>>(S));
     case scMulExpr:
-      return ((SC *)this)->visitMulExpr(SCEVUseT(cast<const SCEVMulExpr>(S)));
+      return ((SC *)this)->visitMulExpr(cast<SCEVUseT<const SCEVMulExpr *>>(S));
     case scUDivExpr:
-      return ((SC *)this)->visitUDivExpr(SCEVUseT(cast<const SCEVUDivExpr>(S)));
+      return ((SC *)this)
+          ->visitUDivExpr(cast<SCEVUseT<const SCEVUDivExpr *>>(S));
     case scAddRecExpr:
       return ((SC *)this)
-          ->visitAddRecExpr(SCEVUseT(cast<const SCEVAddRecExpr>(S)));
+          ->visitAddRecExpr(cast<SCEVUseT<const SCEVAddRecExpr *>>(S));
     case scSMaxExpr:
-      return ((SC *)this)->visitSMaxExpr(SCEVUseT(cast<const SCEVSMaxExpr>(S)));
+      return ((SC *)this)
+          ->visitSMaxExpr(cast<SCEVUseT<const SCEVSMaxExpr *>>(S));
     case scUMaxExpr:
-      return ((SC *)this)->visitUMaxExpr(SCEVUseT(cast<const SCEVUMaxExpr>(S)));
+      return ((SC *)this)
+          ->visitUMaxExpr(cast<SCEVUseT<const SCEVUMaxExpr *>>(S));
     case scSMinExpr:
-      return ((SC *)this)->visitSMinExpr(SCEVUseT(cast<const SCEVSMinExpr>(S)));
+      return ((SC *)this)
+          ->visitSMinExpr(cast<SCEVUseT<const SCEVSMinExpr *>>(S));
     case scUMinExpr:
-      return ((SC *)this)->visitUMinExpr(SCEVUseT(cast<const SCEVUMinExpr>(S)));
+      return ((SC *)this)
+          ->visitUMinExpr(cast<SCEVUseT<const SCEVUMinExpr *>>(S));
     case scSequentialUMinExpr:
       return ((SC *)this)
           ->visitSequentialUMinExpr(
-              SCEVUseT(cast<const SCEVSequentialUMinExpr>(S)));
+              cast<SCEVUseT<const SCEVSequentialUMinExpr *>>(S));
     case scUnknown:
-      return ((SC *)this)->visitUnknown(SCEVUseT(cast<const SCEVUnknown>(S)));
+      return ((SC *)this)->visitUnknown(cast<SCEVUseT<const SCEVUnknown *>>(S));
     case scCouldNotCompute:
       return ((SC *)this)
-          ->visitCouldNotCompute(SCEVUseT(cast<const SCEVCouldNotCompute>(S)));
+          ->visitCouldNotCompute(
+              cast<SCEVUseT<const SCEVCouldNotCompute *>>(S));
     }
     llvm_unreachable("Unknown SCEV kind!");
   }
