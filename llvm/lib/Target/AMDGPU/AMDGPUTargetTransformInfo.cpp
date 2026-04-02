@@ -392,6 +392,17 @@ unsigned GCNTTIImpl::getLoadStoreVecRegBitWidth(unsigned AddrSpace) const {
   return 128;
 }
 
+bool GCNTTIImpl::isLegalToVectorizeLoad(LoadInst *LI) const {
+  // Simple (non-atomic, non-volatile) loads are always legal.
+  if (LI->isSimple())
+    return true;
+  // Allow unordered and monotonic atomic loads to be vectorized. These
+  // orderings impose no cross address synchronization constraints, so merging
+  // adjacent accesses into a wider load is safe. The hardware guarantees
+  // atomicity for naturally aligned loads up to 128 bits.
+  return !LI->isVolatile() && !isStrongerThanMonotonic(LI->getOrdering());
+}
+
 bool GCNTTIImpl::isLegalToVectorizeMemChain(unsigned ChainSizeInBytes,
                                             Align Alignment,
                                             unsigned AddrSpace) const {

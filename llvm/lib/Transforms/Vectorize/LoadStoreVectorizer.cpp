@@ -130,17 +130,24 @@ namespace {
 // (We could in theory remove element-size from the this tuple.  We'd just need
 // to fix up the vector packing/unpacking code.)
 using EqClassKey =
-    std::tuple<const Value * /* result of getUnderlyingObject() */,
-               unsigned /* AddrSpace */,
-               unsigned /* Load/Store element size bits */,
-               char /* IsLoad; char b/c bool can't be a DenseMap key */
+    std::tuple<const Value *, // result of getUnderlyingObject()
+               unsigned,      // AddrSpace
+               unsigned,      // Load/Store element size bits
+               char,          // IsLoad; char b/c bool can't be a DenseMap key
+               unsigned,      // AtomicOrdering
+               unsigned       // SyncScopeID
                >;
+
 [[maybe_unused]] llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
                                                const EqClassKey &K) {
-  const auto &[UnderlyingObject, AddrSpace, ElementSize, IsLoad] = K;
-  return OS << (IsLoad ? "load" : "store") << " of " << *UnderlyingObject
-            << " of element size " << ElementSize << " bits in addrspace "
-            << AddrSpace;
+  const auto &[UnderlyingObject, AddrSpace, ElementSize, IsLoad, Ordering,
+               SSID] = K;
+  OS << (IsLoad ? "load" : "store") << " of " << *UnderlyingObject
+     << " of element size " << ElementSize << " bits in addrspace "
+     << AddrSpace;
+  if (Ordering != static_cast<unsigned>(AtomicOrdering::NotAtomic))
+    OS << " atomic " << toIRString(static_cast<AtomicOrdering>(Ordering));
+  return OS;
 }
 
 // A Chain is a set of instructions such that:
@@ -1159,6 +1166,12 @@ bool Vectorizer::vectorizeChain(Chain &C) {
       // i.e. the root of the vector.
       VecInst = Builder.CreateAlignedLoad(
           VecTy, getLoadStorePointerOperand(C[0].Inst), Alignment);
+      // Preserve atomic ordering and syncscope on the merged load.
+      auto *OrigLI = cast<LoadInst>(C[0].Inst);
+      if (OrigLI->isAtomic()) {
+        cast<LoadInst>(VecInst)->setOrdering(OrigLI->getOrdering());
+        cast<LoadInst>(VecInst)->setSyncScopeID(OrigLI->getSyncScopeID());
+      }
     }
 
     for (const ChainElem &E : C) {
@@ -1581,12 +1594,14 @@ void Vectorizer::mergeEquivalenceClasses(EquivalenceClassMap &EQClasses) const {
 
   // The reduced key has all elements of the ECClassKey except the underlying
   // object. Check that EqClassKey has 4 elements and define the reduced key.
-  static_assert(std::tuple_size_v<EqClassKey> == 4,
+  static_assert(std::tuple_size_v<EqClassKey> == 6,
                 "EqClassKey has changed - EqClassReducedKey needs changes too");
   using EqClassReducedKey =
       std::tuple<std::tuple_element_t<1, EqClassKey> /* AddrSpace */,
                  std::tuple_element_t<2, EqClassKey> /* Element size */,
-                 std::tuple_element_t<3, EqClassKey> /* IsLoad; */>;
+                 std::tuple_element_t<3, EqClassKey> /* IsLoad */,
+                 std::tuple_element_t<4, EqClassKey> /* AtomicOrdering */,
+                 std::tuple_element_t<5, EqClassKey> /* SyncScopeID */>;
   using ECReducedKeyToUnderlyingObjectMap =
       MapVector<EqClassReducedKey,
                 SmallPtrSet<std::tuple_element_t<0, EqClassKey>, 4>>;
@@ -1599,7 +1614,8 @@ void Vectorizer::mergeEquivalenceClasses(EquivalenceClassMap &EQClasses) const {
   for (const auto &EC : EQClasses) {
     const auto &Key = EC.first;
     EqClassReducedKey RedKey{std::get<1>(Key), std::get<2>(Key),
-                             std::get<3>(Key)};
+                             std::get<3>(Key), std::get<4>(Key),
+                             std::get<5>(Key)};
     auto &UOMap = RedKeyToUOMap[RedKey];
     UOMap.insert(std::get<0>(Key));
     if (UOMap.size() > 1)
@@ -1621,7 +1637,9 @@ void Vectorizer::mergeEquivalenceClasses(EquivalenceClassMap &EQClasses) const {
     for (const auto &RedKeyToUO : RedKeyToUOMap) {
       dbgs() << "  Reduced key: {" << std::get<0>(RedKeyToUO.first) << ", "
              << std::get<1>(RedKeyToUO.first) << ", "
-             << static_cast<int>(std::get<2>(RedKeyToUO.first)) << "} --> "
+             << static_cast<int>(std::get<2>(RedKeyToUO.first)) << ", "
+             << std::get<3>(RedKeyToUO.first) << ", "
+             << std::get<4>(RedKeyToUO.first) << "} --> "
              << RedKeyToUO.second.size() << " underlying objects:\n";
       for (auto UObject : RedKeyToUO.second)
         dbgs() << "    " << *UObject << '\n';
@@ -1661,10 +1679,15 @@ void Vectorizer::mergeEquivalenceClasses(EquivalenceClassMap &EQClasses) const {
       if (UObject == UltimateTarget)
         continue;
 
-      EqClassKey KeyFrom{UObject, std::get<0>(RedKey), std::get<1>(RedKey),
-                         std::get<2>(RedKey)};
-      EqClassKey KeyTo{UltimateTarget, std::get<0>(RedKey), std::get<1>(RedKey),
-                       std::get<2>(RedKey)};
+      EqClassKey KeyFrom{UObject,
+                         std::get<0>(RedKey),
+                         std::get<1>(RedKey),
+                         std::get<2>(RedKey),
+                         std::get<3>(RedKey),
+                         std::get<4>(RedKey)};
+      EqClassKey KeyTo{UltimateTarget,      std::get<0>(RedKey),
+                       std::get<1>(RedKey), std::get<2>(RedKey),
+                       std::get<3>(RedKey), std::get<4>(RedKey)};
       // The entry for KeyFrom is guarantted to exist, unlike KeyTo. Thus,
       // request the reference to the instructions vector for KeyTo first.
       const auto &VecTo = EQClasses[KeyTo];
@@ -1714,7 +1737,13 @@ Vectorizer::collectEquivalenceClasses(BasicBlock::iterator Begin,
     if (!LI && !SI)
       continue;
 
-    if ((LI && !LI->isSimple()) || (SI && !SI->isSimple()))
+    if ((LI && LI->isVolatile()) || (SI && !SI->isSimple()))
+      continue;
+
+    // Skip atomic accesses with ordering stronger than monotonic. Unordered
+    // and monotonic atomic loads can be safely vectorized as they impose no
+    // cross address ordering constraints.
+    if (LI && isStrongerThanMonotonic(LI->getOrdering()))
       continue;
 
     if ((LI && !TTI.isLegalToVectorizeLoad(LI)) ||
@@ -1755,9 +1784,11 @@ Vectorizer::collectEquivalenceClasses(BasicBlock::iterator Begin,
         (VecTy && TTI.getLoadVectorFactor(VF, TySize, TySize / 8, VecTy) == 0))
       continue;
 
+    unsigned Ordering = LI ? static_cast<unsigned>(LI->getOrdering()) : 0;
+    unsigned SSID = LI ? static_cast<unsigned>(LI->getSyncScopeID()) : 0;
     Ret[{GetUnderlyingObject(Ptr), AS,
          DL.getTypeSizeInBits(getLoadStoreType(&I)->getScalarType()),
-         /*IsLoad=*/LI != nullptr}]
+         /*IsLoad=*/LI != nullptr, Ordering, SSID}]
         .emplace_back(&I);
   }
 

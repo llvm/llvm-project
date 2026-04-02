@@ -141,6 +141,7 @@ public:
                                 VectorType *VecTy) const override;
   unsigned getLoadStoreVecRegBitWidth(unsigned AddrSpace) const override;
 
+  bool isLegalToVectorizeLoad(LoadInst *LI) const override;
   bool isLegalToVectorizeMemChain(unsigned ChainSizeInBytes, Align Alignment,
                                   unsigned AddrSpace) const;
   bool isLegalToVectorizeLoadChain(unsigned ChainSizeInBytes, Align Alignment,

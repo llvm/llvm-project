@@ -1113,7 +1113,9 @@ public:
     return 128;
   }
 
-  virtual bool isLegalToVectorizeLoad(LoadInst *LI) const { return true; }
+  virtual bool isLegalToVectorizeLoad(LoadInst *LI) const {
+    return LI->isSimple();
+  }
 
   virtual bool isLegalToVectorizeStore(StoreInst *SI) const { return true; }
 
