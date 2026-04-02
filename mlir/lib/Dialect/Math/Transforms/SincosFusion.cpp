@@ -27,12 +27,11 @@ struct SincosFusionPattern : OpRewritePattern<math::SinOp> {
     mlir::arith::FastMathFlags sinFastMathFlags = sinOp.getFastmath();
 
     math::CosOp cosOp = nullptr;
-    for (auto op : sinOp->getBlock()->getOps<math::CosOp>()) {
+    for (auto op : sinOp->getBlock()->getOps<math::CosOp>())
       if (op.getOperand() == operand && op.getFastmath() == sinFastMathFlags) {
         cosOp = op;
         break;
       }
-    }
 
     if (!cosOp)
       return failure();
