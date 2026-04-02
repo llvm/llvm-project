@@ -513,6 +513,59 @@ func.func @cse_multiple_regions(%c: i1, %t: tensor<5xf32>) -> (tensor<5xf32>, te
 
 // -----
 
+func.func @cse_multiple_regions(%c: i1, %t: i32) -> (i32, i32) {
+  %init = "test.producer"() : () -> i32
+  %r1 = scf.if %c -> (i32) {
+    %r11 = scf.if %c -> (i32) {
+      %0 = arith.addi %init, %init : i32
+      %1 = arith.muli  %0, %0 : i32
+      scf.yield %1 : i32
+    } else {
+      %0 = arith.addi %init, %init : i32
+      %1 = arith.muli  %0, %0 : i32
+      scf.yield %1 : i32
+    }
+    scf.yield %r11 : i32
+  } else {
+    scf.yield %t : i32
+  }
+  %r2 = scf.if %c -> (i32) {
+    %r11 = scf.if %c -> (i32) {
+      %0 = arith.addi %init, %init : i32
+      %1 = arith.muli  %0, %0 : i32
+      scf.yield %1 : i32
+    } else {
+      %0 = arith.addi %init, %init : i32
+      %1 = arith.muli  %0, %0 : i32
+      scf.yield %1 : i32
+    }
+    scf.yield %r11 : i32
+  } else {
+    scf.yield %t : i32
+  }
+  return %r1, %r2 : i32, i32
+}
+// CHECK-LABEL: func @cse_multiple_regions
+//  CHECK-SAME:   %[[ARG0:.*]]: i1,
+//  CHECK-SAME:   %[[ARG1:.*]]: i32
+//       CHECK:   %[[VAL_0:.*]] = "test.producer"() : () -> i32
+//       CHECK:   %[[ADDI_0:.*]] = arith.addi %[[VAL_0]], %[[VAL_0]] : i32
+//       CHECK:   %[[MULI_0:.*]] = arith.muli %[[ADDI_0]], %[[ADDI_0]] : i32
+//       CHECK:   %[[IF_0:.*]] = scf.if %[[ARG0]] -> (i32) {
+//       CHECK:     scf.yield %[[MULI_0]] : i32
+//       CHECK:   } else {
+//       CHECK:     scf.yield %[[MULI_0]] : i32
+//       CHECK:   }
+//       CHECK:   %[[IF_1:.*]] = scf.if %[[ARG0]] -> (i32) {
+//       CHECK:     cf.yield %[[IF_0]] : i32
+//       CHECK:   } else {
+//       CHECK:     scf.yield %[[ARG1]] : i32
+//       CHECK:   }
+//       CHECK:   return %[[IF_1]], %[[IF_1]] : i32, i32
+//       CHECK:   }
+
+// -----
+
 // CHECK-LABEL: @cse_recursive_effects_success
 func.func @cse_recursive_effects_success() -> (i32, i32, i32) {
   // CHECK-NEXT: %[[READ_VALUE:.*]] = "test.op_with_memread"() : () -> i32
