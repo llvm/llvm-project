@@ -1097,27 +1097,60 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
           } else if (auto coordOp = mlir::dyn_cast<fir::CoordinateOp>(defOp)) {
             // fir.coordinate_of encodes field accesses as integer indices
             // into the record type's field list (the field_indices attr).
-            // To recover the field name, look up the first static field
-            // index in the base operand's RecordType.  Dynamic indices
+            // A single coordinate_of may access multiple nested fields,
+            // e.g. fir.coordinate_of %obj, inner, a has field_indices
+            // [inner_idx, a_idx].  Walk the type hierarchy to recover
+            // the field name for each static index.  Dynamic indices
             // (kDynamicIndex) correspond to array subscripts, not named
-            // components, so they are skipped.
+            // components, so they only advance the type through the
+            // array dimension.
             std::optional<llvm::ArrayRef<int32_t>> fieldIndices =
                 coordOp.getFieldIndices();
-            if (fieldIndices && !fieldIndices->empty() &&
-                (*fieldIndices)[0] != fir::CoordinateOp::kDynamicIndex) {
-              mlir::Type baseTy =
-                  fir::getFortranElementType(coordOp.getRef().getType());
-              if (auto recTy = mlir::dyn_cast<fir::RecordType>(baseTy)) {
-                auto typeList = recTy.getTypeList();
-                int32_t fieldIdx = (*fieldIndices)[0];
-                if (fieldIdx >= 0 &&
-                    static_cast<size_t>(fieldIdx) < typeList.size()) {
-                  Source::PathStep step;
-                  step.kind = Source::PathStep::Kind::Component;
-                  step.component = mlir::StringAttr::get(
-                      defOp->getContext(), typeList[fieldIdx].first);
-                  pathSteps.push_back(step);
+            if (fieldIndices) {
+              mlir::Type currentTy =
+                  fir::dyn_cast_ptrOrBoxEleTy(coordOp.getRef().getType());
+              llvm::SmallVector<mlir::StringAttr, 4> componentNames;
+              unsigned dimension = 0;
+              for (int32_t idx : *fieldIndices) {
+                if (idx == fir::CoordinateOp::kDynamicIndex) {
+                  if (dimension == 0) {
+                    if (auto seqTy =
+                            mlir::dyn_cast<fir::SequenceType>(currentTy))
+                      dimension = seqTy.getDimension();
+                  }
+                  if (dimension) {
+                    if (--dimension == 0)
+                      currentTy = mlir::cast<fir::SequenceType>(currentTy)
+                                      .getElementType();
+                  }
+                  continue;
                 }
+                auto recTy = mlir::dyn_cast<fir::RecordType>(currentTy);
+                if (!recTy) {
+                  // Unexpected type structure; discard any partially
+                  // collected names so the access path stays conservative
+                  // rather than recording a misleading partial path.
+                  componentNames.clear();
+                  break;
+                }
+                auto typeList = recTy.getTypeList();
+                if (idx < 0 || static_cast<size_t>(idx) >= typeList.size()) {
+                  // Out-of-bounds field index; same conservative treatment.
+                  componentNames.clear();
+                  break;
+                }
+                componentNames.push_back(mlir::StringAttr::get(
+                    defOp->getContext(), typeList[idx].first));
+                currentTy = typeList[idx].second;
+              }
+              // pathSteps is in leaf-to-root order (reversed at the end),
+              // so push innermost component first.
+              for (auto it = componentNames.rbegin();
+                   it != componentNames.rend(); ++it) {
+                Source::PathStep step;
+                step.kind = Source::PathStep::Kind::Component;
+                step.component = *it;
+                pathSteps.push_back(step);
               }
             }
           }
