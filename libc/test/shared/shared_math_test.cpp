@@ -293,7 +293,7 @@ TEST(LlvmLibcSharedMathTest, AllLongDouble) {
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<long double>;
   EXPECT_FP_EQ(0.0L, LIBC_NAMESPACE::shared::dfmal(0.0L, 0.0L, 0.0L));
   EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::shared::fsqrtl(0.0L));
-  EXPECT_FP_EQ(0.0, LIBC_NAMESPACE::shared::dsqrtl(0.0));
+  EXPECT_FP_EQ(0.0, LIBC_NAMESPACE::shared::dsqrtl(0.0L));
   EXPECT_EQ(0, LIBC_NAMESPACE::shared::ilogbl(1.0L));
   EXPECT_EQ(0L, LIBC_NAMESPACE::shared::llogbl(1.0L));
   EXPECT_FP_EQ(0.0L, LIBC_NAMESPACE::shared::logbl(1.0L));
@@ -492,6 +492,7 @@ TEST(LlvmLibcSharedMathTest, AllBFloat16) {
   EXPECT_FP_EQ(bfloat16(0.0), LIBC_NAMESPACE::shared::nextafterbf16(
                                   bfloat16(0.0), bfloat16(0.0)));
   EXPECT_FP_EQ(bfloat16(1.0), LIBC_NAMESPACE::shared::sqrtbf16(bfloat16(1.0)));
+
 #ifndef LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
   EXPECT_FP_EQ(bfloat16(0.0),
                LIBC_NAMESPACE::shared::nexttowardbf16(bfloat16(0.0), 0.0L));
