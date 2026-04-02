@@ -725,11 +725,6 @@ bool llvm::willNotFreeOrSyncBetween(const Instruction *Assume,
             !CB->hasFnAttr(Attribute::NoFree))
           return false;
       }
-
-      // Non volatile memset/memcpy/memmoves are nosync
-      if (auto *MI = dyn_cast<MemIntrinsic>(&I))
-        if (MI->isVolatile())
-          return false;
     }
     return true;
   };
