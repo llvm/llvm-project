@@ -36,7 +36,9 @@
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIRegisterInfo.h"
 #include "llvm/CodeGen/LiveIntervals.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/InitializePasses.h"
 
 using namespace llvm;
@@ -57,6 +59,7 @@ private:
 public:
   GCNPreRAOptimizationsImpl(LiveIntervals *LS) : LIS(LS) {}
   bool run(MachineFunction &MF);
+  bool eliminateSaveRestore(MachineBasicBlock &);
 };
 
 class GCNPreRAOptimizationsLegacy : public MachineFunctionPass {
@@ -238,6 +241,182 @@ GCNPreRAOptimizationsPass::run(MachineFunction &MF,
   return PreservedAnalyses::all();
 }
 
+// Eliminate save-modify-restore patterns:
+// v_mov tmp, orig         ; save
+// <op>  orig, tmp, ...    ; modify (overwrites orig, reads tmp)
+// ...                     ; uses of orig
+// v_mov orig, tmp         ; restore
+//
+// Transform to:
+// <op>  tmp, orig, ...    ; write to tmp instead
+// ...                     ; replace uses of orig with tmp
+// ; save and restore movs are dead
+bool GCNPreRAOptimizationsImpl::eliminateSaveRestore(MachineBasicBlock &MBB) {
+  if (MBB.empty())
+    return false;
+
+  bool Changed = true;
+  using InstrIt = MachineBasicBlock::iterator;
+  auto IsVMov = [] (InstrIt I) {
+      return I->getOpcode() == AMDGPU::V_MOV_B32_e32 || I->getOpcode() == AMDGPU::V_MOV_B32_e64;
+  };
+
+  auto FindModifyInstr = [&] (InstrIt Start, InstrIt End, Register Orig, Register Tmp) {
+      InstrIt Next = Start;
+      while (Next != End) {
+          // Mask is changed in the current block and bail out for now.
+          if (Next->modifiesRegister(AMDGPU::EXEC, TRI)) {
+              return End;
+          }
+
+          // def/use are tied which make swap complex, skip for now.
+          for (size_t Idx = 0; Idx < Next->getNumDefs(); Idx++)
+              if (Next->isRegTiedToUseOperand(Idx)) return End;
+
+          for (size_t Idx = Next->getNumDefs(); Idx < Next->getNumOperands(); Idx++)
+              if (Next->isRegTiedToDefOperand(Idx)) return End;
+
+          // If the value of Tmp is changed, bail out.
+          if (Next->modifiesRegister(Tmp, TRI)) return End;
+
+          if (Next->definesRegister(Orig, TRI)) {
+              // If the instru changes Orig and reads Tmp, then it is found.
+              if (Next->readsVirtualRegister(Tmp) && !Next->killsRegister(Tmp, TRI)) break;
+              // Or else the Orig is changed, bail out.
+              return End;
+          }
+
+          ++Next;
+      }
+
+      return Next;
+  };
+
+  auto FindRestoreInstr = [&] (InstrIt Start, InstrIt End, Register Orig, Register Tmp, llvm::SmallVector<InstrIt, 4> &Candidates) {
+      InstrIt Next = Start;
+      while (Next != End) {
+          // Mask is changed in the current block and bail out for now.
+          if (Next->modifiesRegister(AMDGPU::EXEC, TRI)) {
+              return End;
+          }
+
+          // The instructions in candidates ONLY read Orig, NOT write Orig.
+          // If so, there is an instr which writes to Orig before the v_mov orig, tmp
+          // there will be no v_mov orig, tmp in the future because the MIR is pre-RA SSA form.
+          if (Next->killsRegister(Orig, TRI)) {
+              if (IsVMov(Next) &&
+                  Next->getOperand(0).getReg() == Orig &&
+                  Next->getOperand(1).isReg() && Next->getOperand(1).getReg() == Tmp) {
+                  break;
+              }
+
+              return End;
+          }
+
+          if (Next->killsRegister(Tmp, TRI)) {
+              // Tmp should not be changed so the restore op v_mov orig, tmp is valid.
+              return End;
+          }
+
+          if (Next->readsVirtualRegister(Orig)) Candidates.push_back(Next);
+
+          ++Next;
+      }
+
+      return Next;
+  };
+
+  bool Updated = true;
+  while (Updated) {
+    Updated = false;
+    InstrIt I = MBB.begin();
+    InstrIt E = MBB.end();
+    while (I != E) {
+        // find the start V_MOV tmp, orig
+        if (!IsVMov(I) || !I->getOperand(1).isReg()) {
+            ++I;
+            continue;
+        }
+
+        Register Orig = I->getOperand(1).getReg();
+        Register Tmp = I->getOperand(0).getReg();
+
+        // Skip if the operands are physical reigsters.
+        if (!Tmp.isVirtual() || !Orig.isVirtual()) {
+            ++I;
+            continue;
+        }
+
+        InstrIt Start = I;
+        InstrIt ModifyInst = FindModifyInstr(std::next(Start), E, Orig, Tmp);
+        if (ModifyInst == E) {
+            // There is no instrution which write to orig and read tmp for V_MOV tmp, orig.
+            // Try again from the next V_MOV.
+            I = std::next(Start);
+            continue;
+        }
+
+        // Find the restore op and collect all instructions read-only Orig and no-write to Tmp between it and the NewCopy
+        llvm::SmallVector<InstrIt, 4> Candidates;
+        InstrIt RestoreInstr = FindRestoreInstr(std::next(ModifyInst), E, Orig, Tmp, Candidates);
+        if (RestoreInstr == E) {
+            // there is no restore op V_MOV orig, tmp
+            // try again from the next V_MOV.
+            I = std::next(Start);
+            continue;
+        }
+
+        // swap the operand for orig and tmp
+        for (unsigned Idx = 0; Idx < ModifyInst->getNumOperands(); ++Idx) {
+            MachineOperand &MO = ModifyInst->getOperand(Idx);
+            if (!MO.isReg()) continue;
+            if (MO.isDef() && MO.getReg() == Orig) MO.setReg(Tmp);
+            if (MO.isUse() && MO.getReg() == Tmp) MO.setReg(Orig);
+        }
+
+        // replace Operand for reg Orig with reg Tmp in every instruction in Candidates
+        for (auto &Candidate : Candidates) {
+            MachineInstr *MI = &*Candidate;
+            for (MachineOperand &MO : MI->operands()) {
+                if (MO.isReg() && MO.isUse() && MO.getReg() == Orig) {
+                    MO.setReg(Tmp);
+                }
+            }
+        }
+
+        // mark instrution Start and RestoreInstr as dead
+        I = std::next(RestoreInstr);
+        Start->eraseFromParent();
+        RestoreInstr->eraseFromParent();
+        Changed = true;
+
+        // update the liverange or other register info in the current block.
+        LIS->RemoveMachineInstrFromMaps(*Start);
+        LIS->RemoveMachineInstrFromMaps(*RestoreInstr);
+
+        Start->eraseFromParent();
+        RestoreInstr->eraseFromParent();
+
+        MRI->clearKillFlags(Orig);
+        MRI->clearKillFlags(Tmp);
+
+        if (LIS->hasInterval(Orig)) {
+            LIS->removeInterval(Orig);
+            LIS->createAndComputeVirtRegInterval(Orig);
+        }
+
+        if (LIS->hasInterval(Tmp)) {
+            LIS->removeInterval(Tmp);
+            LIS->createAndComputeVirtRegInterval(Tmp);
+        }
+
+        Updated = true;
+      }
+  }
+
+  return Changed;
+}
+
 bool GCNPreRAOptimizationsImpl::run(MachineFunction &MF) {
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   TII = ST.getInstrInfo();
@@ -258,34 +437,40 @@ bool GCNPreRAOptimizationsImpl::run(MachineFunction &MF) {
     Changed |= processReg(Reg);
   }
 
-  if (!ST.useRealTrue16Insts())
-    return Changed;
-
-  // Add RA hints to improve True16 COPY elimination.
-  for (const MachineBasicBlock &MBB : MF) {
-    for (const MachineInstr &MI : MBB) {
-      if (MI.getOpcode() != AMDGPU::COPY)
-        continue;
-      Register Dst = MI.getOperand(0).getReg();
-      Register Src = MI.getOperand(1).getReg();
-      const TargetRegisterClass *DstRC = TRI->getRegClassForReg(*MRI, Dst);
-      bool IsDst16Bit = AMDGPU::VGPR_16RegClass.hasSubClassEq(DstRC);
-      if (Dst.isVirtual() && IsDst16Bit && Src.isPhysical() &&
-          TRI->getRegClassForReg(*MRI, Src) == &AMDGPU::VGPR_32RegClass)
-        MRI->setRegAllocationHint(Dst, 0, TRI->getSubReg(Src, AMDGPU::lo16));
-      if (Src.isVirtual() &&
-          MRI->getRegClass(Src) == &AMDGPU::VGPR_16RegClass &&
-          Dst.isPhysical() && DstRC == &AMDGPU::VGPR_32RegClass)
-        MRI->setRegAllocationHint(Src, 0, TRI->getSubReg(Dst, AMDGPU::lo16));
-      if (!Dst.isVirtual() || !Src.isVirtual())
-        continue;
-      if (MRI->getRegClass(Dst) == &AMDGPU::VGPR_32RegClass &&
-          MRI->getRegClass(Src) == &AMDGPU::VGPR_16RegClass) {
-        MRI->setRegAllocationHint(Dst, AMDGPURI::Size32, Src);
-        MRI->setRegAllocationHint(Src, AMDGPURI::Size16, Dst);
+  if (ST.useRealTrue16Insts()) {
+      // Add RA hints to improve True16 COPY elimination.
+      for (const MachineBasicBlock &MBB : MF) {
+          for (const MachineInstr &MI : MBB) {
+              if (MI.getOpcode() != AMDGPU::COPY)
+                  continue;
+              Register Dst = MI.getOperand(0).getReg();
+              Register Src = MI.getOperand(1).getReg();
+              const TargetRegisterClass *DstRC = TRI->getRegClassForReg(*MRI, Dst);
+              bool IsDst16Bit = AMDGPU::VGPR_16RegClass.hasSubClassEq(DstRC);
+              if (Dst.isVirtual() && IsDst16Bit && Src.isPhysical() &&
+                  TRI->getRegClassForReg(*MRI, Src) == &AMDGPU::VGPR_32RegClass)
+                  MRI->setRegAllocationHint(Dst, 0, TRI->getSubReg(Src, AMDGPU::lo16));
+              if (Src.isVirtual() &&
+                  MRI->getRegClass(Src) == &AMDGPU::VGPR_16RegClass &&
+                  Dst.isPhysical() && DstRC == &AMDGPU::VGPR_32RegClass)
+                  MRI->setRegAllocationHint(Src, 0, TRI->getSubReg(Dst, AMDGPU::lo16));
+              if (!Dst.isVirtual() || !Src.isVirtual())
+                  continue;
+              if (MRI->getRegClass(Dst) == &AMDGPU::VGPR_32RegClass &&
+                  MRI->getRegClass(Src) == &AMDGPU::VGPR_16RegClass) {
+                  MRI->setRegAllocationHint(Dst, AMDGPURI::Size32, Src);
+                  MRI->setRegAllocationHint(Src, AMDGPURI::Size16, Dst);
+              }
+              if (IsDst16Bit && MRI->getRegClass(Src) == &AMDGPU::VGPR_32RegClass)
+                  MRI->setRegAllocationHint(Dst, AMDGPURI::Size16, Src);
+          }
       }
-      if (IsDst16Bit && MRI->getRegClass(Src) == &AMDGPU::VGPR_32RegClass)
-        MRI->setRegAllocationHint(Dst, AMDGPURI::Size16, Src);
+
+  }
+
+  if (ST.hasGFX950Insts()) {
+    for (MachineBasicBlock &MBB : MF) {
+      Changed |= eliminateSaveRestore(MBB);
     }
   }
 
