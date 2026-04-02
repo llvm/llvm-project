@@ -191,7 +191,6 @@ void AArch64PointerAuth::authenticateLR(
     auto &AFL = *static_cast<const AArch64FrameLowering *>(
         MF.getSubtarget().getFrameLowering());
     int64_t FPDiff = AFL.getArgumentStackToRestore(MF, MBB);
-    unsigned AutOpc = UseBKey ? AArch64::AUTIBSP : AArch64::AUTIASP;
 
     if (FPDiff != 0) {
       // Use AUTI[AB]1716 variants: x17=LR, x16=entry_SP.
@@ -206,7 +205,7 @@ void AArch64PointerAuth::authenticateLR(
 
       if (!MFnI->branchProtectionPAuthLR()) {
         // Plain pac-ret: AUTIA1716, no PACSym needed.
-        AutOpc = UseBKey ? AArch64::AUTIB1716 : AArch64::AUTIA1716;
+        unsigned AutOpc = UseBKey ? AArch64::AUTIB1716 : AArch64::AUTIA1716;
         BuildMI(MBB, MBBI, DL, TII->get(AutOpc))
             .setMIFlag(MachineInstr::FrameDestroy);
         emitPACCFI(MBB, MBBI, MachineInstr::FrameDestroy, EmitAsyncCFI);
@@ -227,14 +226,15 @@ void AArch64PointerAuth::authenticateLR(
             .addImm(0)
             .setMIFlag(MachineInstr::FrameDestroy);
 
-        AutOpc = UseBKey ? AArch64::AUTIB171615 : AArch64::AUTIA171615;
         if (Subtarget->hasPAuthLR()) {
+          unsigned AutOpc =
+              UseBKey ? AArch64::AUTIB171615 : AArch64::AUTIA171615;
           BuildMI(MBB, MBBI, DL, TII->get(AutOpc))
               .setMIFlag(MachineInstr::FrameDestroy);
         } else {
           BuildMI(MBB, MBBI, DL, TII->get(AArch64::PACM))
               .setMIFlag(MachineInstr::FrameDestroy);
-          AutOpc = UseBKey ? AArch64::AUTIB1716 : AArch64::AUTIA1716;
+          unsigned AutOpc = UseBKey ? AArch64::AUTIB1716 : AArch64::AUTIA1716;
           BuildMI(MBB, MBBI, DL, TII->get(AutOpc))
               .setMIFlag(MachineInstr::FrameDestroy);
         }
@@ -259,9 +259,11 @@ void AArch64PointerAuth::authenticateLR(
         BuildMI(MBB, MBBI, DL, TII->get(AArch64::PACM))
             .setMIFlag(MachineInstr::FrameDestroy);
         emitPACCFI(MBB, MBBI, MachineInstr::FrameDestroy, EmitAsyncCFI);
+        unsigned AutOpc = UseBKey ? AArch64::AUTIBSP : AArch64::AUTIASP;
         BuildMI(MBB, MBBI, DL, TII->get(AutOpc))
             .setMIFlag(MachineInstr::FrameDestroy);
       } else {
+        unsigned AutOpc = UseBKey ? AArch64::AUTIBSP : AArch64::AUTIASP;
         BuildMI(MBB, MBBI, DL, TII->get(AutOpc))
             .setMIFlag(MachineInstr::FrameDestroy);
         emitPACCFI(MBB, MBBI, MachineInstr::FrameDestroy, EmitAsyncCFI);
