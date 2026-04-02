@@ -26,6 +26,8 @@
 #include "omp-tools.h"
 #endif
 
+#include "GenericProfiler.h"
+
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include "llvm/Support/Error.h"
@@ -47,7 +49,9 @@ using namespace llvm::offload::debug;
 AsyncInfoWrapperTy::AsyncInfoWrapperTy(GenericDeviceTy &Device,
                                        __tgt_async_info *AsyncInfoPtr)
     : Device(Device),
-      AsyncInfoPtr(AsyncInfoPtr ? AsyncInfoPtr : &LocalAsyncInfo) {}
+      AsyncInfoPtr(AsyncInfoPtr ? AsyncInfoPtr : &LocalAsyncInfo) {
+  LocalAsyncInfo.ProfilerData = nullptr;
+}
 
 Error AsyncInfoWrapperTy::synchronize() {
   assert(AsyncInfoPtr && "AsyncInfoWrapperTy already finalized");
@@ -168,9 +172,15 @@ GenericKernelTy::getKernelLaunchEnvironment(
        DPxPTR(&LocalKLE), DPxPTR(*AllocOrErr),
        sizeof(KernelLaunchEnvironmentTy));
 
+  // Temporarily suppress ProfilerData so the KLE upload is not traced as
+  // a user data operation.
+  __tgt_async_info *AI = AsyncInfoWrapper;
+  void *SavedProfilerData = AI->ProfilerData;
+  AI->ProfilerData = nullptr;
   auto Err = GenericDevice.dataSubmit(*AllocOrErr, &LocalKLE,
                                       sizeof(KernelLaunchEnvironmentTy),
                                       AsyncInfoWrapper);
+  AI->ProfilerData = SavedProfilerData;
   if (Err)
     return Err;
   return static_cast<KernelLaunchEnvironmentTy *>(*AllocOrErr);
@@ -330,6 +340,9 @@ Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice, void **ArgPtrs,
       return RRHandleOrErr.takeError();
     RRHandle = *RRHandleOrErr;
   }
+
+  GenericDevice.Plugin.getProfiler()->handlePreKernelLaunch(
+      &GenericDevice, EffectiveNumBlocks, AsyncInfoWrapper);
 
   if (auto Err = launchImpl(GenericDevice, EffectiveNumThreads,
                             EffectiveNumBlocks, DynBlockMemConf.NativeSize,
@@ -567,6 +580,8 @@ Error GenericDeviceTy::init(GenericPluginTy &Plugin) {
   }
 #endif
 
+  Plugin.getProfiler()->handleInit(this, &Plugin);
+
   // Read and reinitialize the envars that depend on the device initialization.
   // Notice these two envars may change the stack size and heap size of the
   // device, so they need the device properly initialized.
@@ -668,6 +683,8 @@ Error GenericDeviceTy::deinit(GenericPluginTy &Plugin) {
   }
 #endif
 
+  Plugin.getProfiler()->handleDeinit(this, &Plugin);
+
   return deinitImpl();
 }
 Expected<DeviceImageTy *> GenericDeviceTy::loadBinary(GenericPluginTy &Plugin,
@@ -724,6 +741,8 @@ Expected<DeviceImageTy *> GenericDeviceTy::loadBinary(GenericPluginTy &Plugin,
         /*DeviceAddr=*/nullptr, /* FIXME: ModuleId */ 0);
   }
 #endif
+
+  Plugin.getProfiler()->handleLoadBinary(this, &Plugin, InputTgtImage);
 
   // Call any global constructors present on the device.
   if (auto Err = callGlobalConstructors(Plugin, *Image))
@@ -1006,6 +1025,9 @@ Error GenericDeviceTy::getDeviceMemorySize(uint64_t &DSize) {
 Expected<void *> GenericDeviceTy::dataAlloc(int64_t Size, void *HostPtr,
                                             TargetAllocTy Kind,
                                             size_t Alignment) {
+  auto ProfTimer =
+      Plugin.getProfiler()->getScopedDataAllocTimer(this, HostPtr, Size);
+
   void *Alloc = nullptr;
 
   // TODO Check alignment.
@@ -1073,6 +1095,8 @@ Expected<void *> GenericDeviceTy::dataAlloc(int64_t Size, void *HostPtr,
 }
 
 Error GenericDeviceTy::dataDelete(void *TgtPtr, TargetAllocTy Kind) {
+  auto ProfTimer = Plugin.getProfiler()->getScopedDataDeleteTimer(this, TgtPtr);
+
   // Free is a noop when recording or replaying.
   if (RecordReplay && RecordReplay->isRecordingOrReplaying())
     return RecordReplay->deallocate(TgtPtr);

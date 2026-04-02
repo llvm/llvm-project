@@ -85,6 +85,11 @@ struct __tgt_async_info {
   /// ensure it is a valid location while the transfer to the device is
   /// happening.
   KernelLaunchEnvironmentTy KernelLaunchEnvironment;
+
+  /// Opaque handle for profiler-specific data (e.g., OMPT trace record info).
+  /// Owned by the profiler; the runtime threads this pointer through the plugin
+  /// layer to associate async operations with trace records.
+  void *ProfilerData = nullptr;
 };
 
 /// This struct contains all of the arguments to a target kernel region launch.
