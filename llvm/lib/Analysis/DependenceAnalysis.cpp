@@ -2000,7 +2000,7 @@ bool DependenceInfo::testSIV(const SCEV *Src, const SCEV *Dst, unsigned &Level,
     Level = mapDstLoop(CurDstLoop);
     return weakZeroSrcSIVtest(Src, DstAddRec, Level, Result);
   }
-  assert((SrcAddRec != nullptr || DstAddRec != nullptr ) &&
+  assert((SrcAddRec != nullptr || DstAddRec != nullptr) &&
          "SIV test expected at least one AddRec");
   return false;
 }
