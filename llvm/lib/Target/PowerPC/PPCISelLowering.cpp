@@ -20691,12 +20691,14 @@ SDValue PPCTargetLowering::DAGCombineBitcast(SDNode *N,
     return SDValue();
   SDValue Src = Op0.getOperand(0);
   EVT ResVT = N->getValueType(0);
+  EVT TruncResVT = Op0.getValueType();
   EVT SrcVT = Src.getValueType();
   SDLoc dl(N);
   SelectionDAG &DAG = DCI.DAG;
   bool IsLittleEndian = Subtarget.isLittleEndian();
 
-  SDValue VBPerm = GenerateVBPERM(DAG, dl, Src, SrcVT, ResVT, IsLittleEndian);
+  SDValue VBPerm =
+      GenerateVBPERM(DAG, dl, Src, SrcVT, TruncResVT, IsLittleEndian);
   if (!VBPerm)
     return SDValue();
   SDValue ForExtract = DAG.getBitcast(MVT::v4i32, VBPerm);
@@ -20709,9 +20711,9 @@ SDValue PPCTargetLowering::DAGCombineBitcast(SDNode *N,
 SDValue PPCTargetLowering::GenerateVBPERM(SelectionDAG &DAG, SDLoc dl,
                                           SDValue Src, EVT SrcVT, EVT ResVT,
                                           bool IsLE) const {
-  bool IsV16i8 = (ResVT == MVT::i16 && SrcVT == MVT::v16i8);
-  bool IsV8i16 = (ResVT == MVT::i8 && SrcVT == MVT::v8i16);
-  bool IsV8i8 = (ResVT == MVT::i8 && SrcVT == MVT::v8i8);
+  bool IsV16i8 = (ResVT == MVT::v16i1 && SrcVT == MVT::v16i8);
+  bool IsV8i16 = (ResVT == MVT::v8i1 && SrcVT == MVT::v8i16);
+  bool IsV8i8 = (ResVT == MVT::v8i1 && SrcVT == MVT::v8i8);
 
   if (!IsV16i8 && !IsV8i16 && !IsV8i8)
     return SDValue();
