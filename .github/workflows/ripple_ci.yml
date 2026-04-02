@@ -94,15 +94,18 @@ jobs:
       - name: Build Ripple Compiler
         run: cmake --build build
 
+      - name: Install Ripple Compiler
+        run: cmake --install build --prefix ${{ github.workspace }}/install
+
       - name: Configure compiler-rt
         run: |
           cmake -G Ninja -S compiler-rt -B build-compiler-rt \
-            -DLLVM_CMAKE_DIR=${{ github.workspace }}/build \
+            -DLLVM_CMAKE_DIR=${{ github.workspace }}/install \
             -DCMAKE_SYSTEM_NAME=Linux \
             -DCMAKE_BUILD_TYPE=Release \
             -DLLVM_ENABLE_ASSERTIONS=ON \
-            -DCMAKE_C_COMPILER=${{ github.workspace }}/build/bin/clang \
-            -DCMAKE_CXX_COMPILER=${{ github.workspace }}/build/bin/clang++ \
+            -DCMAKE_C_COMPILER=${{ github.workspace }}/install/bin/clang \
+            -DCMAKE_CXX_COMPILER=${{ github.workspace }}/install/bin/clang++ \
             -DCOMPILER_RT_OS_DIR= \
             -DCOMPILER_RT_BUILD_BUILTINS=OFF \
             -DCOMPILER_RT_BUILD_RIPPLE=ON \
@@ -126,7 +129,7 @@ jobs:
         run: cmake --build build-compiler-rt
 
       - name: Install Ripple compiler-rt
-        run: cmake --install build-compiler-rt --prefix $(${{ github.workspace }}/build/bin/clang --print-resource-dir)
+        run: cmake --install build-compiler-rt --prefix $(${{ github.workspace }}/install/bin/clang --print-resource-dir)
 
       - name: Clang Ripple Lit Tests
         run: cmake --build build --target check-clang-ripple
