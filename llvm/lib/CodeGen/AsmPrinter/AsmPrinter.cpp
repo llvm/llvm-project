@@ -3583,7 +3583,7 @@ bool AsmPrinter::emitSpecialLLVMGlobal(const GlobalVariable *GV) {
       int Kind = cast<ConstantInt>(C->getOperand(2))->getZExtValue();
 
       if (Src->hasDLLImportStorageClass()) {
-        // For now, we assume dllimport functions aren't directly called.
+        // For now, we assume dllimport functionss aren't directly called.
         // (We might change this later to match MSVC.)
         OutStreamer->emitCOFFSymbolIndex(
             OutContext.getOrCreateSymbol("__imp_" + Src->getName()));
@@ -3664,8 +3664,8 @@ void AsmPrinter::preprocessXXStructorList(const DataLayout &DL,
             "associated data of XXStructor list is not yet supported on AIX");
       }
 
-      S.ComdatKey =
-          dyn_cast<GlobalValue>(CS->getOperand(2)->stripPointerCasts());
+      Value *Stripped = CS->getOperand(2)->stripPointerCasts();
+      S.ComdatKey = dyn_cast_or_null<GlobalValue>(Stripped);
     }
   }
 
