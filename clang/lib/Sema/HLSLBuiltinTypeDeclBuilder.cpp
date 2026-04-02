@@ -1885,6 +1885,85 @@ BuiltinTypeDeclBuilder::addSampleCmpLevelZeroMethods(ResourceDimension Dim) {
       .finalize();
 }
 
+BuiltinTypeDeclBuilder &
+BuiltinTypeDeclBuilder::addGetDimensionsMethods(ResourceDimension Dim) {
+  assert(!Record->isCompleteDefinition() && "record is already complete");
+  using PH = BuiltinTypeMethodBuilder::PlaceHolder;
+  ASTContext &AST = SemaRef.getASTContext();
+  QualType UIntTy = AST.UnsignedIntTy;
+
+  assert(Dim != ResourceDimension::Unknown);
+
+  QualType FloatTy = AST.FloatTy;
+  // Add overloads for uint and float.
+  QualType Params[] = {UIntTy, FloatTy};
+
+  for (QualType OutTy : Params) {
+    if (Dim == ResourceDimension::Dim2D) {
+      StringRef XYName = "__builtin_hlsl_resource_getdimensions_xy";
+      StringRef LevelsXYName =
+          "__builtin_hlsl_resource_getdimensions_levels_xy";
+
+      if (OutTy == FloatTy) {
+        XYName = "__builtin_hlsl_resource_getdimensions_xy_float";
+        LevelsXYName = "__builtin_hlsl_resource_getdimensions_levels_xy_float";
+      }
+
+      // void GetDimensions(out [uint|float] width, out [uint|float] height)
+      BuiltinTypeMethodBuilder(*this, "GetDimensions", AST.VoidTy)
+          .addParam("width", OutTy, HLSLParamModifierAttr::Keyword_out)
+          .addParam("height", OutTy, HLSLParamModifierAttr::Keyword_out)
+          .callBuiltin(XYName, QualType(), PH::Handle, PH::_0, PH::_1)
+          .finalize();
+
+      // void GetDimensions(uint mipLevel, out [uint|float] width, out
+      // [uint|float] height, out [uint|float] numberOfLevels)
+      BuiltinTypeMethodBuilder(*this, "GetDimensions", AST.VoidTy)
+          .addParam("mipLevel", UIntTy)
+          .addParam("width", OutTy, HLSLParamModifierAttr::Keyword_out)
+          .addParam("height", OutTy, HLSLParamModifierAttr::Keyword_out)
+          .addParam("numberOfLevels", OutTy, HLSLParamModifierAttr::Keyword_out)
+          .callBuiltin(LevelsXYName, QualType(), PH::Handle, PH::_0, PH::_1,
+                       PH::_2, PH::_3)
+          .finalize();
+    }
+  }
+
+  return *this;
+}
+
+BuiltinTypeDeclBuilder &
+BuiltinTypeDeclBuilder::addCalculateLodMethods(ResourceDimension Dim) {
+  assert(!Record->isCompleteDefinition() && "record is already complete");
+  ASTContext &AST = Record->getASTContext();
+  QualType ReturnType = AST.FloatTy;
+  QualType SamplerStateType =
+      lookupBuiltinType(SemaRef, "SamplerState", Record->getDeclContext());
+  uint32_t VecSize = getResourceDimensions(Dim);
+  QualType FloatTy = AST.FloatTy;
+  QualType LocationTy = AST.getExtVectorType(FloatTy, VecSize);
+  using PH = BuiltinTypeMethodBuilder::PlaceHolder;
+
+  // float CalculateLevelOfDetail(SamplerState s, float2 location)
+  BuiltinTypeMethodBuilder(*this, "CalculateLevelOfDetail", ReturnType)
+      .addParam("Sampler", SamplerStateType)
+      .addParam("Location", LocationTy)
+      .accessHandleFieldOnResource(PH::_0)
+      .callBuiltin("__builtin_hlsl_resource_calculate_lod", ReturnType,
+                   PH::Handle, PH::LastStmt, PH::_1)
+      .finalize();
+
+  // float CalculateLevelOfDetailUnclamped(SamplerState s, float2 location)
+  return BuiltinTypeMethodBuilder(*this, "CalculateLevelOfDetailUnclamped",
+                                  ReturnType)
+      .addParam("Sampler", SamplerStateType)
+      .addParam("Location", LocationTy)
+      .accessHandleFieldOnResource(PH::_0)
+      .callBuiltin("__builtin_hlsl_resource_calculate_lod_unclamped",
+                   ReturnType, PH::Handle, PH::LastStmt, PH::_1)
+      .finalize();
+}
+
 QualType BuiltinTypeDeclBuilder::getGatherReturnType() {
   ASTContext &AST = SemaRef.getASTContext();
   QualType T = getHandleElementType();
