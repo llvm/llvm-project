@@ -126,7 +126,7 @@ void MarkLive<ELFT, TrackWhyLive>::resolveReloc(InputSectionBase &sec,
   } else {
     sym = &sec.file->getRelocTargetSym(rel);
   }
-  sym->used = true;
+  sym->setFlags(USED);
 
   LiveReason reason;
   if (TrackWhyLive) {
@@ -181,13 +181,9 @@ void MarkLive<ELFT, TrackWhyLive>::resolveReloc(InputSectionBase &sec,
     return;
   }
 
-  if (auto *ss = dyn_cast<SharedSymbol>(sym)) {
-    if (!ss->isWeak()) {
-      cast<SharedFile>(ss->file)->isNeeded = true;
-      if (TrackWhyLive)
-        whyLive.try_emplace(sym, reason);
-    }
-  }
+  if (auto *ss = dyn_cast<SharedSymbol>(sym))
+    if (!ss->isWeak() && TrackWhyLive)
+      whyLive.try_emplace(sym, reason);
 
   for (InputSectionBase *sec : cNamedSections.lookup(sym->getName()))
     enqueue(sec, /*offset=*/0, /*sym=*/nullptr, reason);
@@ -506,8 +502,8 @@ static void processSectionEdges(
     Fn fn) {
   auto resolveEdge = [&](const auto &rel) {
     Symbol &sym = sec.file->getRelocTargetSym(rel);
-    if (!sym.used)
-      sym.used = true;
+    if (!sym.hasFlag(USED))
+      sym.setFlags(USED);
     if (auto *d = dyn_cast<Defined>(&sym)) {
       if (auto *relSec = dyn_cast_or_null<InputSectionBase>(d->section)) {
         uint64_t offset = d->value;
@@ -517,15 +513,17 @@ static void processSectionEdges(
               ms && offset >= ms->content().size())
             return;
         }
-        if (auto *ms = dyn_cast<MergeInputSection>(relSec))
-          ms->getSectionPiece(offset).live = true;
+        if (auto *ms = dyn_cast<MergeInputSection>(relSec)) {
+          auto &piece = ms->getSectionPiece(offset);
+          auto *word =
+              reinterpret_cast<std::atomic<uint32_t> *>(&piece.inputOff + 1);
+          constexpr uint32_t liveBit = sys::IsBigEndianHost ? (1U << 31) : 1U;
+          word->fetch_or(liveBit, std::memory_order_relaxed);
+        }
         fn(relSec, offset);
       }
       return;
     }
-    if (auto *ss = dyn_cast<SharedSymbol>(&sym))
-      if (!ss->isWeak())
-        cast<SharedFile>(ss->file)->isNeeded = true;
     for (InputSectionBase *csec : cNamedSections.lookup(sym.getName()))
       fn(csec, 0);
   };
@@ -642,6 +640,14 @@ template <class ELFT> void elf::markLive(Ctx &ctx) {
   // there now.
   if (ctx.partitions.size() != 1)
     MarkLive<ELFT, false>(ctx, 1).moveToMain();
+
+  // Determine which DSOs are needed. A DSO is needed if a non-weak SharedSymbol
+  // is used from a live section.
+  parallelForEach(ctx.symtab->getSymbols(), [](Symbol *sym) {
+    if (auto *ss = dyn_cast<SharedSymbol>(sym))
+      if (ss->hasFlag(USED) && !ss->isWeak())
+        cast<SharedFile>(ss->file)->isNeeded = true;
+  });
 
   // Report garbage-collected sections.
   if (ctx.arg.printGcSections.empty())

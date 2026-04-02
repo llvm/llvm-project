@@ -99,7 +99,7 @@ void initializeAArch64LoadStoreOptLegacyPass(PassRegistry &);
 void initializeAArch64LowerHomogeneousPrologEpilogPass(PassRegistry &);
 void initializeAArch64MIPeepholeOptLegacyPass(PassRegistry &);
 void initializeAArch64O0PreLegalizerCombinerPass(PassRegistry &);
-void initializeAArch64PostCoalescerPass(PassRegistry &);
+void initializeAArch64PostCoalescerLegacyPass(PassRegistry &);
 void initializeAArch64PostLegalizerCombinerPass(PassRegistry &);
 void initializeAArch64PostLegalizerLoweringPass(PassRegistry &);
 void initializeAArch64PostSelectOptimizePass(PassRegistry &);
@@ -190,6 +190,13 @@ public:
 };
 
 class AArch64PointerAuthPass : public PassInfoMixin<AArch64PointerAuthPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+class AArch64PostCoalescerPass
+    : public PassInfoMixin<AArch64PostCoalescerPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
