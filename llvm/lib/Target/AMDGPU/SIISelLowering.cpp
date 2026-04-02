@@ -17421,12 +17421,18 @@ static ISD::CondCode tryReduceF64CompareToHiHalf(const ISD::CondCode CC,
                                                  const SDValue LHS,
                                                  const SDValue RHS,
                                                  const SelectionDAG &DAG) {
-  assert(LHS.getValueType() == MVT::f64 && "Incorrect operand type!");
+  EVT VT = LHS.getValueType();
+  assert(VT == MVT::f64 && "Incorrect operand type!");
 
-  const KnownFPClass LHSFPClass = DAG.computeKnownFPClass(LHS, fcAllFlags);
-  const KnownFPClass RHSFPClass = DAG.computeKnownFPClass(RHS, fcAllFlags);
-  const KnownBits LHSKnownLo32 = DAG.computeKnownBits(LHS).trunc(32);
-  const KnownBits RHSKnownLo32 = DAG.computeKnownBits(RHS).trunc(32);
+  const KnownBits LHSBits = DAG.computeKnownBits(LHS);
+  const KnownBits RHSBits = DAG.computeKnownBits(RHS);
+  const KnownFPClass LHSFPClass =
+      KnownFPClass::bitcast(VT.getFltSemantics(), LHSBits);
+  const KnownFPClass RHSFPClass =
+      KnownFPClass::bitcast(VT.getFltSemantics(), RHSBits);
+
+  const KnownBits LHSKnownLo32 = LHSBits.trunc(32);
+  const KnownBits RHSKnownLo32 = RHSBits.trunc(32);
 
   const bool LHSMaybeNaN = !LHSFPClass.isKnownNeverNaN();
   const bool RHSMaybeNaN = !RHSFPClass.isKnownNeverNaN();
