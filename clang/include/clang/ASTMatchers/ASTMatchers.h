@@ -7059,7 +7059,8 @@ AST_POLYMORPHIC_MATCHER_P(
     hasAnyTemplateArgumentLoc,
     AST_POLYMORPHIC_SUPPORTED_TYPES(ClassTemplateSpecializationDecl,
                                     VarTemplateSpecializationDecl, FunctionDecl,
-                                    DeclRefExpr, TemplateSpecializationTypeLoc, OverloadExpr),
+                                    DeclRefExpr, TemplateSpecializationTypeLoc,
+                                    OverloadExpr),
     internal::Matcher<TemplateArgumentLoc>, InnerMatcher) {
   auto Args = internal::getTemplateArgsWritten(Node);
   return matchesFirstInRange(InnerMatcher, Args.begin(), Args.end(), Finder,
@@ -7085,7 +7086,8 @@ AST_POLYMORPHIC_MATCHER_P2(
     hasTemplateArgumentLoc,
     AST_POLYMORPHIC_SUPPORTED_TYPES(ClassTemplateSpecializationDecl,
                                     VarTemplateSpecializationDecl, FunctionDecl,
-                                    DeclRefExpr, TemplateSpecializationTypeLoc, OverloadExpr),
+                                    DeclRefExpr, TemplateSpecializationTypeLoc,
+                                    OverloadExpr),
     unsigned, Index, internal::Matcher<TemplateArgumentLoc>, InnerMatcher) {
   auto Args = internal::getTemplateArgsWritten(Node);
   return Index < Args.size() &&
@@ -7108,7 +7110,8 @@ AST_POLYMORPHIC_MATCHER_P(
     templateArgumentLocCountIs,
     AST_POLYMORPHIC_SUPPORTED_TYPES(ClassTemplateSpecializationDecl,
                                     VarTemplateSpecializationDecl, FunctionDecl,
-                                    DeclRefExpr, TemplateSpecializationTypeLoc, OverloadExpr),
+                                    DeclRefExpr, TemplateSpecializationTypeLoc,
+                                    OverloadExpr),
     unsigned, MatchCount) {
   unsigned Count = internal::getNumTemplateArgsWritten(Node);
   return Count == MatchCount;

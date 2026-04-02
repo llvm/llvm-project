@@ -2005,15 +2005,13 @@ getNumTemplateArgsWritten(const VarTemplateSpecializationDecl &D) {
   return 0;
 }
 
-inline unsigned
-getNumTemplateArgsWritten(const FunctionDecl &FD) {
+inline unsigned getNumTemplateArgsWritten(const FunctionDecl &FD) {
   if (const auto *Args = FD.getTemplateSpecializationArgsAsWritten())
     return Args->getNumTemplateArgs();
   return 0;
 }
 
-inline unsigned
-getNumTemplateArgsWritten(const DeclRefExpr &DRE) {
+inline unsigned getNumTemplateArgsWritten(const DeclRefExpr &DRE) {
   return DRE.getNumTemplateArgs();
 }
 
@@ -2024,8 +2022,7 @@ getNumTemplateArgsWritten(const TemplateSpecializationTypeLoc &T) {
   return 0;
 }
 
-inline unsigned
-getNumTemplateArgsWritten(const OverloadExpr &OE) {
+inline unsigned getNumTemplateArgsWritten(const OverloadExpr &OE) {
   return OE.getNumTemplateArgs();
 }
 
