@@ -1753,6 +1753,11 @@ Error GenericDeviceTy::syncEvent(void *EventPtr) {
   return syncEventImpl(EventPtr);
 }
 
+Expected<float> GenericDeviceTy::getEventElapsedTime(void *StartEventPtr,
+                                                     void *EndEventPtr) {
+  return getEventElapsedTimeImpl(StartEventPtr, EndEventPtr);
+}
+
 bool GenericDeviceTy::useAutoZeroCopy() { return useAutoZeroCopyImpl(); }
 
 Error GenericDeviceTy::zeroCopySanityChecksAndDiag(bool isUnifiedSharedMemory,
@@ -2525,6 +2530,23 @@ int32_t GenericPluginTy::sync_event(int32_t DeviceId, void *EventPtr) {
   }();
   T.res(R);
   return R;
+}
+
+int32_t GenericPluginTy::get_event_elapsed_time(int32_t DeviceId,
+                                                void *StartEventPtr,
+                                                void *EndEventPtr,
+                                                float *ElapsedTime) {
+  auto ElapsedTimeOrErr =
+      getDevice(DeviceId).getEventElapsedTime(StartEventPtr, EndEventPtr);
+  if (!ElapsedTimeOrErr) {
+    REPORT() << "Failure to get elapsed time between events " << StartEventPtr
+             << " and " << EndEventPtr << ": "
+             << toString(ElapsedTimeOrErr.takeError());
+    return OFFLOAD_FAIL;
+  }
+
+  *ElapsedTime = *ElapsedTimeOrErr;
+  return OFFLOAD_SUCCESS;
 }
 
 int32_t GenericPluginTy::destroy_event(int32_t DeviceId, void *EventPtr) {

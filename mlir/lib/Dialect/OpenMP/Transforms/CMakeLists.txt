@@ -14,8 +14,8 @@ add_mlir_dialect_library(MLIROpenMPTransforms
   MLIROpenMPTypeInterfacesIncGen
 
   LINK_LIBS PUBLIC
+  MLIRFunctionInterfaces
   MLIRIR
-  MLIRFuncDialect
   MLIRLLVMDialect
   MLIROpenACCMPCommon
   MLIROpenMPDialect
