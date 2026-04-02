@@ -699,10 +699,6 @@ void CIRGenModule::setNonAliasAttributes(GlobalDecl gd, mlir::Operation *op) {
   }
 
   assert(!cir::MissingFeatures::opGlobalPragmaClangSection());
-  if (auto globalOp = mlir::dyn_cast<cir::GlobalOp>(op)) {
-    if (d->hasAttr<RetainAttr>())
-      addUsedGlobal(globalOp);
-  }
   assert(!cir::MissingFeatures::opFuncCPUAndFeaturesAttributes());
 
   getTargetCIRGenInfo().setTargetAttributes(gd.getDecl(), op, *this);
@@ -1160,7 +1156,7 @@ static void emitUsed(CIRGenModule &cgm, StringRef name,
                                                   /*isConstant=*/false);
   gv.setLinkage(cir::GlobalLinkageKind::AppendingLinkage);
   gv.setInitialValueAttr(initAttr);
-  // TODO(CIR): Set section to "llvm.metadata" once GlobalOp supports sections.
+  gv.setSectionAttr(builder.getStringAttr("llvm.metadata"));
 }
 
 void CIRGenModule::emitLLVMUsed() {
