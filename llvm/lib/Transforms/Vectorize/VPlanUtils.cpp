@@ -475,13 +475,13 @@ std::optional<VPValue *>
 vputils::getRecipesForUncountableExit(SmallVectorImpl<VPInstruction *> &Recipes,
                                       SmallVectorImpl<VPInstruction *> &GEPs,
                                       VPBasicBlock *LatchVPBB) {
-  /// Given a plain CFG VPlan loop with countable latch exiting block
-  /// \p LatchVPBB, we're looking to match the recipes contributing to the
-  /// uncountable exit condition comparison (here, vp<%4>) back to either
-  /// live-ins or the address nodes for the load used as part of the uncountable
-  /// exit comparison so that we can either move them within the loop, or copy
-  /// them to the preheader depending on the chosen method for dealing with
-  /// stores in uncountable exit loops.
+  // Given a plain CFG VPlan loop with countable latch exiting block
+  // \p LatchVPBB, we're looking to match the recipes contributing to the
+  // uncountable exit condition comparison (here, vp<%4>) back to either
+  // live-ins or the address nodes for the load used as part of the uncountable
+  // exit comparison so that we can either move them within the loop, or copy
+  // them to the preheader depending on the chosen method for dealing with
+  // stores in uncountable exit loops.
   //
   // Currently, the address of the load is restricted to a GEP with 2 operands
   // and a live-in base address. This constraint may be relaxed later.

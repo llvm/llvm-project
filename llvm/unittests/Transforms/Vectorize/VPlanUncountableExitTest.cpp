@@ -43,8 +43,7 @@ static void combineExitConditions(VPlan &Plan) {
       }
     }
   }
-  if (!EarlyExitingVPBB)
-    return;
+  assert(EarlyExitingVPBB && "must have an early exit");
 
   // Wrap the early exit condition in a MaskedCond.
   VPValue *Cond;
@@ -147,7 +146,6 @@ TEST_F(VPUncountableExitTest, NoUncountableExit) {
   Function *F = M.getFunction("f");
   BasicBlock *LoopHeader = F->getEntryBlock().getSingleSuccessor();
   auto Plan = buildVPlan0(LoopHeader);
-  combineExitConditions(*Plan);
 
   SmallVector<VPInstruction *> Recipes;
   SmallVector<VPInstruction *> GEPs;
