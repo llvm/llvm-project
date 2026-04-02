@@ -270,6 +270,18 @@ TEST_F(VPDominatorTreeTest, DominanceRegionsTest) {
     checkDomChildren(VPDT, R2BB3, {});
     checkDomChildren(VPDT, R1BB3, {VPBB2});
     checkDomChildren(VPDT, VPBB2, {Plan.getScalarHeader()});
+
+    EXPECT_FALSE(VPDT.properlyDominates(R1BB1, R1BB1));
+    EXPECT_FALSE(VPDT.properlyDominates(R2, R1BB3));
+    EXPECT_FALSE(VPDT.properlyDominates(R2, R1BB2));
+    EXPECT_TRUE(VPDT.properlyDominates(R1BB1, R2));
+    EXPECT_TRUE(VPDT.properlyDominates(R1BB1, R1BB2));
+    EXPECT_TRUE(VPDT.properlyDominates(R1BB1, R1BB3));
+    EXPECT_TRUE(VPDT.properlyDominates(R2, R2BB1));
+    EXPECT_TRUE(VPDT.properlyDominates(R2, R2BB2));
+    EXPECT_TRUE(VPDT.properlyDominates(R2, R2BB3));
+    EXPECT_TRUE(VPDT.properlyDominates(R2BB1, R2BB2));
+    EXPECT_TRUE(VPDT.properlyDominates(R2BB1, R2BB3));
   }
 }
 
