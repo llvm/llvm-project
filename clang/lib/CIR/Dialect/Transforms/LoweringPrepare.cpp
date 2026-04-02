@@ -1822,6 +1822,7 @@ void LoweringPreparePass::buildCUDAModuleCtor() {
   CIRBaseBuilderTy builder(getContext());
   builder.setInsertionPointToStart(mlirModule.getBody());
 
+  Type voidTy = builder.getVoidTy();
   PointerType voidPtrTy = builder.getVoidPtrTy();
   PointerType voidPtrPtrTy = builder.getPointerTo(voidPtrTy);
   IntType intTy = builder.getSIntNTy(32);
