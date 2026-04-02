@@ -23,6 +23,7 @@
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 
 using namespace llvm;
 
@@ -40,7 +41,7 @@ using namespace llvm;
 // z/OS
 static cl::opt<bool> GNUAsOnzOSCL("emit-gnuas-syntax-on-zos",
                                   cl::desc("Emit GNU Assembly Syntax on z/OS."),
-                                  cl::init(true));
+                                  cl::init(false));
 
 const unsigned SystemZMC::GR32Regs[16] = {
     SystemZ::R0L,  SystemZ::R1L,  SystemZ::R2L,  SystemZ::R3L,
@@ -202,7 +203,7 @@ static MCInstPrinter *createSystemZMCInstPrinter(const Triple &T,
 static MCTargetStreamer *createAsmTargetStreamer(MCStreamer &S,
                                                  formatted_raw_ostream &OS,
                                                  MCInstPrinter *InstPrint) {
-  if (S.getContext().getTargetTriple().isOSzOS())
+  if (S.getContext().getTargetTriple().isOSzOS() && !GNUAsOnzOSCL)
     return new SystemZTargetHLASMStreamer(S, OS);
   else
     return new SystemZTargetGNUStreamer(S, OS);
@@ -239,7 +240,8 @@ static MCInstrAnalysis *createSystemZMCInstrAnalysis(const MCInstrInfo *Info) {
   return new MCInstrAnalysis(Info);
 }
 
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSystemZTargetMC() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeSystemZTargetMC() {
   // Register the MCAsmInfo.
   TargetRegistry::RegisterMCAsmInfo(getTheSystemZTarget(),
                                     createSystemZMCAsmInfo);

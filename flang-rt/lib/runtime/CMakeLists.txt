@@ -33,6 +33,7 @@ set(supported_sources
   edit-input.cpp
   edit-output.cpp
   environment.cpp
+  exceptions.cpp
   external-unit.cpp
   extrema.cpp
   file.cpp
@@ -56,7 +57,9 @@ set(supported_sources
   product.cpp
   pseudo-unit.cpp
   ragged.cpp
+  reduction.cpp
   stat.cpp
+  stl-overrides.cpp
   stop.cpp
   sum.cpp
   support.cpp
@@ -67,6 +70,7 @@ set(supported_sources
   type-info.cpp
   unit.cpp
   utf.cpp
+  work-queue.cpp
 )
 
 # List of source not used for GPU offloading.
@@ -85,8 +89,12 @@ set(host_sources
   stop.cpp
   temporary-stack.cpp
   time-intrinsic.cpp
+  trampoline.cpp
   unit-map.cpp
 )
+if (TARGET llvm-libc-common-utilities)
+  list(APPEND host_sources io-api-server.cpp)
+endif()
 
 # Sources that can be compiled directly for the GPU.
 set(gpu_sources
@@ -103,14 +111,15 @@ set(gpu_sources
   copy.cpp
   derived-api.cpp
   derived.cpp
+  descriptor.cpp
   dot-product.cpp
   edit-output.cpp
   extrema.cpp
+  environment.cpp
   findloc.cpp
   format.cpp
   inquiry.cpp
   internal-unit.cpp
-  io-error.cpp
   iostat.cpp
   matmul-transpose.cpp
   matmul.cpp
@@ -122,6 +131,7 @@ set(gpu_sources
   product.cpp
   ragged.cpp
   stat.cpp
+  stop.cpp
   sum.cpp
   support.cpp
   terminator.cpp
@@ -130,10 +140,12 @@ set(gpu_sources
   type-code.cpp
   type-info.cpp
   utf.cpp
+  work-queue.cpp
   complex-powi.cpp
   reduce.cpp
   reduction.cpp
   temporary-stack.cpp
+  io-api-gpu.cpp
 )
 
 file(GLOB_RECURSE public_headers
@@ -148,32 +160,38 @@ file(GLOB_RECURSE private_headers
 
 
 # Import changes from flang_rt.quadmath
-get_target_property(f128_sources
-  FortranFloat128MathILib INTERFACE_SOURCES
-  )
-if (f128_sources)
-  # The interface may define special macros for Float128Math files,
-  # so we need to propagate them.
-  get_target_property(f128_defs
-    FortranFloat128MathILib INTERFACE_COMPILE_DEFINITIONS
+set(f128_sources "")
+if (TARGET FortranFloat128MathILib)
+  get_target_property(f128_sources
+    FortranFloat128MathILib INTERFACE_SOURCES
     )
-  set_property(SOURCE ${f128_sources}
-    APPEND PROPERTY COMPILE_DEFINITIONS
-    ${f128_defs}
-    )
-  get_target_property(f128_include_dirs
-    FortranFloat128MathILib INTERFACE_INCLUDE_DIRECTORIES
-    )
-  set_property(SOURCE ${f128_sources}
-    APPEND PROPERTY INCLUDE_DIRECTORIES
-    ${f128_include_dirs}
-    )
-else ()
-  set(f128_sources "")
+  if (f128_sources)
+    # The interface may define special macros for Float128Math files,
+    # so we need to propagate them.
+    get_target_property(f128_defs
+      FortranFloat128MathILib INTERFACE_COMPILE_DEFINITIONS
+      )
+    set_property(SOURCE ${f128_sources}
+      APPEND PROPERTY COMPILE_DEFINITIONS
+      ${f128_defs}
+      )
+    get_target_property(f128_include_dirs
+      FortranFloat128MathILib INTERFACE_INCLUDE_DIRECTORIES
+      )
+    set_property(SOURCE ${f128_sources}
+      APPEND PROPERTY INCLUDE_DIRECTORIES
+      ${f128_include_dirs}
+      )
+  else ()
+    # Change `f128_sources-NOTFOUND` to "no additional sources"
+    set(f128_sources "")
+  endif ()
 endif ()
 
-if ("${LLVM_RUNTIMES_TARGET}" MATCHES "^amdgcn|^nvptx")
+if ("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^amdgcn|^nvptx")
   set(sources ${gpu_sources})
+elseif(FLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT STREQUAL "CUDA")
+  set(sources ${supported_sources})
 else ()
   set(sources ${supported_sources} ${host_sources} ${f128_sources})
 endif ()
@@ -188,11 +206,12 @@ if (NOT WIN32)
   )
 
   enable_cuda_compilation(flang_rt.runtime "${supported_sources}")
-  enable_omp_offload_compilation(flang_rt.runtime "${supported_sources}")
 
   # Select a default runtime, which is used for unit and regression tests.
-  get_target_property(default_target flang_rt.runtime.default ALIASED_TARGET)
-  add_library(flang_rt.runtime.unittest ALIAS "${default_target}")
+  if (TARGET flang_rt.runtime.default)
+    get_target_property(default_target flang_rt.runtime.default ALIASED_TARGET)
+    add_library(flang_rt.runtime.unittest ALIAS "${default_target}")
+  endif ()
 else()
   # Target for building all versions of the runtime
   add_custom_target(flang_rt.runtime)
@@ -222,7 +241,6 @@ else()
       )
 
     enable_cuda_compilation(${name} "${supported_sources}")
-    enable_omp_offload_compilation(${name} "${supported_sources}")
     add_dependencies(flang_rt.runtime ${name})
   endfunction ()
 
@@ -248,19 +266,33 @@ else()
   add_win_flangrt_runtime(STATIC dynamic     MultiThreadedDLL      INSTALL_WITH_TOOLCHAIN)
   add_win_flangrt_runtime(STATIC dynamic_dbg MultiThreadedDebugDLL INSTALL_WITH_TOOLCHAIN)
 
-  # Unittests link against LLVMSupport which is using CMake's default runtime
-  # library selection, which is either MultiThreadedDLL or MultiThreadedDebugDLL
-  # depending on the configuration. They have to match or linking will fail.
+  # Unittests link against LLVMSupport. If CMAKE_MSVC_RUNTIME_LIBRARY is set,
+  # that will have been used for LLVMSupport so it must also be used here.
+  # Otherwise this will use CMake's default runtime library selection, which
+  # is either MultiThreadedDLL or MultiThreadedDebugDLL depending on the configuration.
+  # They have to match or linking will fail.
   if (GENERATOR_IS_MULTI_CONFIG)
     # We cannot select an ALIAS library because it may be different
     # per configuration. Fallback to CMake's default.
     add_win_flangrt_runtime(STATIC unittest "" EXCLUDE_FROM_ALL)
   else ()
-    string(TOLOWER ${CMAKE_BUILD_TYPE} build_type)
-    if (build_type STREQUAL "debug")
-      add_library(flang_rt.runtime.unittest ALIAS flang_rt.runtime.dynamic_dbg)
-    else ()
-      add_library(flang_rt.runtime.unittest ALIAS flang_rt.runtime.dynamic)
-    endif ()
+    # Check if CMAKE_MSVC_RUNTIME_LIBRARY was set.
+    if (CMAKE_MSVC_RUNTIME_LIBRARY STREQUAL "MultiThreaded")
+        add_library(flang_rt.runtime.unittest ALIAS flang_rt.runtime.static)
+    elseif (CMAKE_MSVC_RUNTIME_LIBRARY STREQUAL "MultiThreadedDLL")
+        add_library(flang_rt.runtime.unittest ALIAS flang_rt.runtime.dynamic)
+    elseif (CMAKE_MSVC_RUNTIME_LIBRARY STREQUAL "MultiThreadedDebug")
+        add_library(flang_rt.runtime.unittest ALIAS flang_rt.runtime.static_dbg)
+    elseif (CMAKE_MSVC_RUNTIME_LIBRARY STREQUAL "MultiThreadedDebugDLL")
+        add_library(flang_rt.runtime.unittest ALIAS flang_rt.runtime.dynamic_dbg)
+    else()
+      # Default based on the build type.
+      string(TOLOWER ${CMAKE_BUILD_TYPE} build_type)
+      if (build_type STREQUAL "debug")
+          add_library(flang_rt.runtime.unittest ALIAS flang_rt.runtime.dynamic_dbg)
+      else ()
+          add_library(flang_rt.runtime.unittest ALIAS flang_rt.runtime.dynamic)
+      endif ()
+    endif()
   endif ()
 endif()

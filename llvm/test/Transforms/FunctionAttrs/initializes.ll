@@ -443,7 +443,7 @@ define void @memset_neg(ptr %p) {
 }
 
 define void @memset_volatile(ptr %p) {
-; CHECK: Function Attrs: mustprogress nofree norecurse nounwind willreturn memory(argmem: write)
+; CHECK: Function Attrs: mustprogress nofree norecurse nounwind willreturn memory(argmem: write, inaccessiblemem: readwrite)
 ; CHECK-LABEL: define void @memset_volatile(
 ; CHECK-SAME: ptr writeonly [[P:%.*]]) #[[ATTR5:[0-9]+]] {
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[P]], i8 2, i64 9, i1 true)
@@ -478,7 +478,7 @@ define void @memcpy(ptr %p, ptr %p2) {
 }
 
 define void @memcpy_volatile(ptr %p, ptr %p2) {
-; CHECK: Function Attrs: mustprogress nofree norecurse nounwind willreturn memory(argmem: readwrite)
+; CHECK: Function Attrs: mustprogress nofree norecurse nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite)
 ; CHECK-LABEL: define void @memcpy_volatile(
 ; CHECK-SAME: ptr writeonly [[P:%.*]], ptr readonly [[P2:%.*]]) #[[ATTR6:[0-9]+]] {
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[P]], ptr [[P2]], i64 9, i1 true)
@@ -541,7 +541,7 @@ define void @memmove(ptr %p, ptr %p2) {
 }
 
 define void @memmove_volatile(ptr %p, ptr %p2) {
-; CHECK: Function Attrs: mustprogress nofree norecurse nounwind willreturn memory(argmem: readwrite)
+; CHECK: Function Attrs: mustprogress nofree norecurse nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite)
 ; CHECK-LABEL: define void @memmove_volatile(
 ; CHECK-SAME: ptr writeonly [[P:%.*]], ptr readonly [[P2:%.*]]) #[[ATTR6]] {
 ; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr [[P]], ptr [[P2]], i64 9, i1 true)
@@ -647,5 +647,19 @@ define void @range_overflows_signed_64_bit_int(ptr %arg) {
 ;
   %getelementptr = getelementptr i8, ptr %arg, i64 9223372036854775804
   store i32 0, ptr %getelementptr
+  ret void
+}
+
+; We should bail if the memset range overflows a signed 64-bit int.
+define void @memset_large_offset_nonzero_size(ptr %dst) {
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write)
+; CHECK-LABEL: define void @memset_large_offset_nonzero_size(
+; CHECK-SAME: ptr writeonly captures(none) [[DST:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[OFFSET:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 9223372036854775805
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[OFFSET]], i8 0, i64 3, i1 false)
+; CHECK-NEXT:    ret void
+;
+  %offset = getelementptr inbounds i8, ptr %dst, i64 9223372036854775805
+  call void @llvm.memset.p0.i64(ptr %offset, i8 0, i64 3, i1 false)
   ret void
 }

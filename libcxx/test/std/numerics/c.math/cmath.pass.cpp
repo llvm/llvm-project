@@ -6,10 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// This test fails because Clang no longer enables -fdelayed-template-parsing
-// by default on Windows with C++20 (#69431).
-// XFAIL: msvc && (clang-18 || clang-19 || clang-20 || clang-21)
-
 // <cmath>
 
 #include <cmath>
@@ -1214,7 +1210,7 @@ void test_hypot()
     assert(std::hypot(1,4,8) == 9);
 
     // Check for undue over-/underflows of intermediate results.
-    // See discussion at https://github.com/llvm/llvm-project/issues/92782.
+    // See discussion at https://llvm.org/PR92782.
     types::for_each(types::floating_point_types(), TestHypot3());
 #endif
 }

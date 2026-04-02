@@ -299,7 +299,7 @@ bool AMDGPURewriteOutArguments::runOnFunction(Function &F) {
   if (Replacements.empty())
     return false;
 
-  LLVMContext &Ctx = F.getParent()->getContext();
+  LLVMContext &Ctx = F.getContext();
   StructType *NewRetTy = StructType::create(Ctx, ReturnTypes, F.getName());
 
   FunctionType *NewFuncTy = FunctionType::get(NewRetTy,
@@ -324,8 +324,6 @@ bool AMDGPURewriteOutArguments::runOnFunction(Function &F) {
   RetAttrs.addAttribute(Attribute::NoAlias);
   NewFunc->removeRetAttrs(RetAttrs);
   // TODO: How to preserve metadata?
-
-  NewFunc->setIsNewDbgInfoFormat(F.IsNewDbgInfoFormat);
 
   // Move the body of the function into the new rewritten function, and replace
   // this function with a stub.

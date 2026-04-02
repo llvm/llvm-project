@@ -58,6 +58,7 @@ void fun() {
 // CHECK-NEXT: %inc4 = add i64 %7, 1, !dbg [[G11R2:!.*]]
 // CHECK-NEXT: store i64 %inc4, ptr @i{{.*}}, !dbg [[G11R1:!.*]]
     g = ++h, ++i;
+// CHECK: ret{{.*}}, !dbg [[RET:!.*]]
 }
 
 // CHECK: [[G1R1]] = !DILocation({{.*}}, atomGroup: 1, atomRank: 1)
@@ -83,3 +84,4 @@ void fun() {
 // CHECK: [[load_i_loc]] = !DILocation(line: [[#]], column: [[#]], scope: ![[#]])
 // CHECK: [[G11R2]] = !DILocation({{.*}}, atomGroup: 11, atomRank: 2)
 // CHECK: [[G11R1]] = !DILocation({{.*}}, atomGroup: 11, atomRank: 1)
+// CHECK: [[RET]] = !DILocation({{.*}}, atomGroup: 12, atomRank: 1)

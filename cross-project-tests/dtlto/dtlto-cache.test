@@ -1,0 +1,89 @@
+REQUIRES: x86-registered-target, ld.lld
+
+# Show that the ThinLTO cache works with DTLTO.
+
+RUN: rm -rf %t && split-file %s %t && cd %t
+
+# Compile source files into bitcode files.
+RUN: %clang -O2 --target=x86_64-linux-gnu -flto=thin -c foo.c main.c
+
+# Execute the linker and check that the cache is populated.
+RUN: %clang -O2 --target=x86_64-linux-gnu -Werror -flto=thin -fuse-ld=lld -nostdlib -e main \
+RUN:   main.o foo.o -o populate1.elf \
+RUN:   -Wl,--thinlto-distributor=%python \
+RUN:   -Wl,--thinlto-distributor-arg=%llvm_src_root/utils/dtlto/local.py \
+RUN:   -Wl,--thinlto-remote-compiler=%clang \
+RUN:   -Wl,--thinlto-cache-dir=cache.dir \
+RUN:   -Wl,--save-temps
+
+# Check that there are two backend compilation jobs occurred.
+RUN: grep -wo args populate1.*.dist-file.json | wc -l | grep -qx "\s*3"
+RUN: ls cache.dir/llvmcache.timestamp
+RUN: ls cache.dir | count 3
+
+# Execute the linker again and check that a fully populated cache is used correctly, 
+# i.e., no additional cache entries are created for cache hits.
+RUN: %clang -O2 --target=x86_64-linux-gnu -Werror -flto=thin -fuse-ld=lld -nostdlib -e main \
+RUN:   main.o foo.o -o populate2.elf \
+RUN:   -Wl,--thinlto-distributor=%python \
+RUN:   -Wl,--thinlto-distributor-arg=%llvm_src_root/utils/dtlto/local.py \
+RUN:   -Wl,--thinlto-remote-compiler=%clang \
+RUN:   -Wl,--thinlto-cache-dir=cache.dir \
+RUN:   -Wl,--save-temps
+
+# Check that there are no backend compilation jobs occurred.
+RUN: grep -wo args populate2.*.dist-file.json | wc -l | grep -qx "\s*1"
+RUN: ls cache.dir | count 3
+
+RUN: %clang -O0 --target=x86_64-linux-gnu -flto=thin -c foo.c -o foo.O0.o
+RUN: %clang -O0 --target=x86_64-linux-gnu -flto=thin -c main.c -o main.O0.o
+
+# Execute the linker again and check that the cache is populated correctly when there 
+# are no cache hits but there are existing cache entries.
+# As a side effect, this also verifies that the optimization level is considered when 
+# evaluating the cache entry key.
+
+RUN: %clang -O2 --target=x86_64-linux-gnu -Werror -flto=thin -fuse-ld=lld -nostdlib -e main \
+RUN:   main.O0.o foo.O0.o -o populate3.elf \
+RUN:   -Wl,--thinlto-distributor=%python \
+RUN:   -Wl,--thinlto-distributor-arg=%llvm_src_root/utils/dtlto/local.py \
+RUN:   -Wl,--thinlto-remote-compiler=%clang \
+RUN:   -Wl,--thinlto-cache-dir=cache.dir \
+RUN:   -Wl,--save-temps
+
+# Check that there are two new backend compilation jobs occurred.
+RUN: grep -wo args populate3.*.dist-file.json | wc -l | grep -qx "\s*3"
+RUN: ls cache.dir | count 5
+
+RUN: %clang -O2 --target=x86_64-linux-gnu -flto=thin -c main-partial.c 
+
+# Execute the linker and check that everything works correctly with the partially populated cache;
+# One more cache entry should be generated after this run.
+
+RUN: %clang -O2 --target=x86_64-linux-gnu -Werror -flto=thin -fuse-ld=lld -nostdlib -e main \
+RUN:   main-partial.o foo.o -o main-partial.elf \
+RUN:   -Wl,--thinlto-distributor=%python \
+RUN:   -Wl,--thinlto-distributor-arg=%llvm_src_root/utils/dtlto/local.py \
+RUN:   -Wl,--thinlto-remote-compiler=%clang \
+RUN:   -Wl,--thinlto-cache-dir=cache.dir \
+RUN:   -Wl,--save-temps
+
+# Check that there is one new backend compilation jobs occurred.
+RUN: grep -wo args main-partial.*.dist-file.json | wc -l | grep -qx "\s*2"
+RUN: ls cache.dir | count 6
+
+#--- foo.c
+volatile int foo_int;
+__attribute__((retain)) int foo(int x) { return x + foo_int; }
+
+#--- main.c
+extern int foo(int x);
+__attribute__((retain)) int main(int argc, char** argv) {
+  return foo(argc);
+}
+
+#--- main-partial.c
+extern int foo(int x);
+__attribute__((retain)) int main(int argc, char** argv) {
+  return foo(argc+1);
+}

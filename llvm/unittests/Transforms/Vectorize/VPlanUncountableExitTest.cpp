@@ -1,0 +1,107 @@
+//===- llvm/unittests/Transforms/Vectorize/VPlanUncountableExitTest.cpp ---===//
+//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#include "../lib/Transforms/Vectorize/VPlan.h"
+#include "../lib/Transforms/Vectorize/VPlanUtils.h"
+#include "VPlanTestBase.h"
+#include "llvm/ADT/SmallVector.h"
+#include "gtest/gtest.h"
+
+namespace llvm {
+
+namespace {
+class VPUncountableExitTest : public VPlanTestIRBase {};
+
+TEST_F(VPUncountableExitTest, FindUncountableExitRecipes) {
+  const char *ModuleString =
+      "target datalayout = "
+      "\"e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-"
+      "f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:"
+      "32:64-S128\"\n"
+      "define void @f(ptr dereferenceable(40) align 2 %array, "
+      "ptr dereferenceable(40) align 2 %pred) {\n"
+      "entry:\n"
+      "  br label %for.body\n"
+      "for.body:\n"
+      "  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.inc ]\n"
+      "  %st.addr = getelementptr inbounds i16, ptr %array, i64 %iv\n"
+      "  %data = load i16, ptr %st.addr, align 2\n"
+      "  %inc = add nsw i16 %data, 1\n"
+      // TODO: Uncomment store once more support is added for uncountable exits
+      //       in loops with stores.
+      // "  store i16 %inc, ptr %st.addr, align 2\n"
+      "  %uncountable.addr = getelementptr inbounds nuw i16, ptr %pred, i64 "
+      "%iv\n"
+      "  %uncountable.val = load i16, ptr %uncountable.addr, align 2\n"
+      "  %uncountable.cond = icmp sgt i16 %uncountable.val, 500\n"
+      "  br i1 %uncountable.cond, label %exit, label %for.inc\n"
+      "for.inc:\n"
+      "  %iv.next = add nuw nsw i64 %iv, 1\n"
+      "  %countable.cond = icmp eq i64 %iv.next, 20\n"
+      " br i1 %countable.cond, label %exit, label %for.body\n"
+      "exit:\n"
+      "  ret void\n"
+      "}\n";
+
+  Module &M = parseModule(ModuleString);
+
+  Function *F = M.getFunction("f");
+  BasicBlock *LoopHeader = F->getEntryBlock().getSingleSuccessor();
+  auto Plan = buildVPlan(LoopHeader, UncountableExitStyle::ReadOnly);
+  VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(*Plan, *TLI);
+  VPlanTransforms::optimize(*Plan);
+
+  SmallVector<VPRecipeBase *> Recipes;
+  SmallVector<VPRecipeBase *> GEPs;
+
+  std::optional<VPValue *> UncountableCondition =
+      vputils::getRecipesForUncountableExit(*Plan, Recipes, GEPs);
+  ASSERT_TRUE(UncountableCondition.has_value());
+  ASSERT_EQ(GEPs.size(), 1ull);
+  ASSERT_EQ(Recipes.size(), 3ull);
+}
+
+TEST_F(VPUncountableExitTest, NoUncountableExit) {
+  const char *ModuleString =
+      "define void @f(ptr %array, ptr %pred) {\n"
+      "entry:\n"
+      "  br label %for.body\n"
+      "for.body:\n"
+      "  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]\n"
+      "  %st.addr = getelementptr inbounds i16, ptr %array, i64 %iv\n"
+      "  %data = load i16, ptr %st.addr, align 2\n"
+      "  %inc = add nsw i16 %data, 1\n"
+      "  store i16 %inc, ptr %st.addr, align 2\n"
+      "  %iv.next = add nuw nsw i64 %iv, 1\n"
+      "  %countable.cond = icmp eq i64 %iv.next, 20\n"
+      " br i1 %countable.cond, label %exit, label %for.body\n"
+      "exit:\n"
+      "  ret void\n"
+      "}\n";
+
+  Module &M = parseModule(ModuleString);
+
+  Function *F = M.getFunction("f");
+  BasicBlock *LoopHeader = F->getEntryBlock().getSingleSuccessor();
+  auto Plan = buildVPlan(LoopHeader);
+  VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(*Plan, *TLI);
+  VPlanTransforms::optimize(*Plan);
+
+  SmallVector<VPRecipeBase *> Recipes;
+  SmallVector<VPRecipeBase *> GEPs;
+
+  std::optional<VPValue *> UncountableCondition =
+      vputils::getRecipesForUncountableExit(*Plan, Recipes, GEPs);
+  ASSERT_FALSE(UncountableCondition.has_value());
+  ASSERT_EQ(GEPs.size(), 0ull);
+  ASSERT_EQ(Recipes.size(), 0ull);
+}
+
+} // namespace
+} // namespace llvm

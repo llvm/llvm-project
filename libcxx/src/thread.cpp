@@ -33,7 +33,6 @@
 #endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
-_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 thread::~thread() {
   if (!__libcpp_thread_isnull(&__t_))
@@ -75,9 +74,7 @@ unsigned thread::hardware_concurrency() noexcept {
     return 0;
   return static_cast<unsigned>(result);
 #elif defined(_LIBCPP_WIN32API)
-  SYSTEM_INFO info;
-  GetSystemInfo(&info);
-  return info.dwNumberOfProcessors;
+  return static_cast<unsigned>(GetActiveProcessorCount(ALL_PROCESSOR_GROUPS));
 #else // defined(CTL_HW) && defined(HW_NCPU)
   // TODO: grovel through /proc or check cpuid on x86 and similar
   // instructions on other architectures.
@@ -173,5 +170,4 @@ void __thread_struct::notify_all_at_thread_exit(condition_variable* cv, mutex* m
 
 void __thread_struct::__make_ready_at_thread_exit(__assoc_sub_state* __s) { __p_->__make_ready_at_thread_exit(__s); }
 
-_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD

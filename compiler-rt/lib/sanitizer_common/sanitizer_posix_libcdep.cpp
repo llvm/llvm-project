@@ -47,6 +47,8 @@ typedef void (*sa_sigaction_t)(int, siginfo_t *, void *);
 
 namespace __sanitizer {
 
+[[maybe_unused]] static atomic_uint8_t signal_handler_is_from_sanitizer[64];
+
 u32 GetUid() {
   return getuid();
 }
@@ -210,6 +212,20 @@ void UnsetAlternateSignalStack() {
   UnmapOrDie(oldstack.ss_sp, oldstack.ss_size);
 }
 
+bool IsSignalHandlerFromSanitizer(int signum) {
+  return atomic_load(&signal_handler_is_from_sanitizer[signum],
+                     memory_order_relaxed);
+}
+
+bool SetSignalHandlerFromSanitizer(int signum, bool new_state) {
+  if (signum < 0 || static_cast<unsigned>(signum) >=
+                        ARRAY_SIZE(signal_handler_is_from_sanitizer))
+    return false;
+
+  return atomic_exchange(&signal_handler_is_from_sanitizer[signum], new_state,
+                         memory_order_relaxed);
+}
+
 static void MaybeInstallSigaction(int signum,
                                   SignalHandlerType handler) {
   if (GetHandleSignalMode(signum) == kHandleSignalNo) return;
@@ -223,6 +239,9 @@ static void MaybeInstallSigaction(int signum,
   if (common_flags()->use_sigaltstack) sigact.sa_flags |= SA_ONSTACK;
   CHECK_EQ(0, internal_sigaction(signum, &sigact, nullptr));
   VReport(1, "Installed the sigaction for signal %d\n", signum);
+
+  if (common_flags()->cloak_sanitizer_signal_handlers)
+    SetSignalHandlerFromSanitizer(signum, true);
 }
 
 void InstallDeadlySignalHandlers(SignalHandlerType handler) {

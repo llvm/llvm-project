@@ -1,3 +1,9 @@
+if(NOT TARGET libc.src.__support.OSUtil.osutil)
+  message(STATUS "libc.src.__support.OSUtil.osutil is not avaiable. "
+                 "Skip unistd targets.")
+  return()
+endif()
+
 if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
   add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
 endif()
@@ -25,6 +31,13 @@ add_entrypoint_object(
   ALIAS
   DEPENDS
     .${LIBC_TARGET_OS}.chdir
+)
+
+add_entrypoint_object(
+  chown
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.chown
 )
 
 add_entrypoint_object(
@@ -56,10 +69,24 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  faccessat
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.faccessat
+)
+
+add_entrypoint_object(
   fchdir
   ALIAS
   DEPENDS
     .${LIBC_TARGET_OS}.fchdir
+)
+
+add_entrypoint_object(
+  fchown
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.fchown
 )
 
 add_entrypoint_object(
@@ -112,6 +139,20 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  gethostname
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.gethostname
+)
+
+add_entrypoint_object(
+  getpagesize
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.getpagesize
+)
+
+add_entrypoint_object(
   getpid
   ALIAS
   DEPENDS
@@ -144,6 +185,13 @@ add_entrypoint_object(
   ALIAS
   DEPENDS
     .${LIBC_TARGET_OS}.getuid
+)
+
+add_entrypoint_object(
+  getgid
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.getgid
 )
 
 add_entrypoint_object(
@@ -320,8 +368,8 @@ add_entrypoint_object(
     libc.src.__support.CPP.optional
     libc.src.__support.CPP.string_view
     libc.src.__support.File.file
-    libc.src.__support.File.platform_stderr
     libc.src.stdio.fprintf
+    libc.src.stdio.stderr
 )
 
 add_entrypoint_object(

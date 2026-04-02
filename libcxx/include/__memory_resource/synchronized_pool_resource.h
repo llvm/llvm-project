@@ -24,7 +24,6 @@
 #if _LIBCPP_STD_VER >= 17
 
 _LIBCPP_BEGIN_NAMESPACE_STD
-_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 namespace pmr {
 
@@ -57,9 +56,11 @@ public:
     __unsync_.release();
   }
 
-  _LIBCPP_HIDE_FROM_ABI memory_resource* upstream_resource() const { return __unsync_.upstream_resource(); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI memory_resource* upstream_resource() const {
+    return __unsync_.upstream_resource();
+  }
 
-  _LIBCPP_HIDE_FROM_ABI pool_options options() const { return __unsync_.options(); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI pool_options options() const { return __unsync_.options(); }
 
 protected:
   _LIBCPP_HIDE_FROM_ABI_VIRTUAL void* do_allocate(size_t __bytes, size_t __align) override {
@@ -87,7 +88,6 @@ private:
 
 } // namespace pmr
 
-_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_STD_VER >= 17

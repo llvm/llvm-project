@@ -15,12 +15,19 @@
 #define LLVM_TARGET_CGPASSBUILDEROPTION_H
 
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Target/TargetOptions.h"
 #include <optional>
 
 namespace llvm {
 
-enum class RunOutliner { TargetDefault, AlwaysOutline, NeverOutline };
+enum class RunOutliner {
+  TargetDefault,
+  AlwaysOutline,
+  OptimisticPGO,
+  ConservativePGO,
+  NeverOutline
+};
 enum class RegAllocType { Unset, Default, Basic, Fast, Greedy, PBQP };
 
 class RegAllocTypeParser : public cl::parser<RegAllocType> {
@@ -51,9 +58,11 @@ struct CGPassBuilderOption {
   bool EnableMachineFunctionSplitter = false;
   bool EnableSinkAndFold = false;
   bool EnableTailMerge = true;
+  /// Enable LoopTermFold immediately after LSR.
+  bool EnableLoopTermFold = false;
   bool MISchedPostRA = false;
   bool EarlyLiveIntervals = false;
-  bool GCEmptyBlocks = false;
+  bool EnableGCEmptyBlocks = false;
 
   bool DisableLSR = false;
   bool DisableCGP = false;
@@ -67,6 +76,7 @@ struct CGPassBuilderOption {
   bool DisableCFIFixup = false;
   bool PrintAfterISel = false;
   bool PrintISelInput = false;
+  bool PrintRegUsage = false;
   bool RequiresCodeGenSCCOrder = false;
 
   RunOutliner EnableMachineOutliner = RunOutliner::TargetDefault;
@@ -82,7 +92,7 @@ struct CGPassBuilderOption {
   std::optional<bool> DebugifyCheckAndStripAll;
 };
 
-CGPassBuilderOption getCGPassBuilderOption();
+LLVM_ABI CGPassBuilderOption getCGPassBuilderOption();
 
 } // namespace llvm
 

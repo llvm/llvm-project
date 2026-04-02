@@ -22,7 +22,6 @@
 #if _LIBCPP_STD_VER >= 17
 
 _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
-_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 class _LIBCPP_EXPORTED_FROM_ABI path::iterator {
 public:
@@ -53,7 +52,7 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI iterator& operator=(const iterator&) = default;
 
-  _LIBCPP_HIDE_FROM_ABI reference operator*() const { return __stashed_elem_; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI reference operator*() const { return __stashed_elem_; }
 
   _LIBCPP_HIDE_FROM_ABI pointer operator->() const { return &__stashed_elem_; }
 
@@ -96,17 +95,14 @@ private:
   _ParserState __state_;
 };
 
-_LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY
 inline _LIBCPP_HIDE_FROM_ABI bool operator==(const path::iterator& __lhs, const path::iterator& __rhs) {
   return __lhs.__path_ptr_ == __rhs.__path_ptr_ && __lhs.__entry_.data() == __rhs.__entry_.data();
 }
 
-_LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY
 inline _LIBCPP_HIDE_FROM_ABI bool operator!=(const path::iterator& __lhs, const path::iterator& __rhs) {
   return !(__lhs == __rhs);
 }
 
-_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_FILESYSTEM
 
 #endif // _LIBCPP_STD_VER >= 17

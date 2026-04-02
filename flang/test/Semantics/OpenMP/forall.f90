@@ -18,8 +18,8 @@
 
   !$omp parallel
     !DEF: /MainProgram1/OtherConstruct1/Forall1/i (Implicit) ObjectEntity INTEGER(4)
-    !DEF: /MainProgram1/OtherConstruct1/a HostAssoc INTEGER(4)
-    !DEF: /MainProgram1/OtherConstruct1/b HostAssoc INTEGER(4)
+    !DEF: /MainProgram1/OtherConstruct1/a (OmpShared) HostAssoc INTEGER(4)
+    !DEF: /MainProgram1/OtherConstruct1/b (OmpShared) HostAssoc INTEGER(4)
     forall(i = 1:5) a(i) = b(i) * 2
   !$omp end parallel
 

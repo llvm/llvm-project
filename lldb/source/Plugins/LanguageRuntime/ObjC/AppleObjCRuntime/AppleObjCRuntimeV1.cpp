@@ -55,7 +55,7 @@ bool AppleObjCRuntimeV1::GetDynamicTypeAndAddress(
     auto class_descriptor(GetClassDescriptor(in_value));
     if (class_descriptor && class_descriptor->IsValid() &&
         class_descriptor->GetClassName()) {
-      const addr_t object_ptr = in_value.GetPointerValue();
+      const addr_t object_ptr = in_value.GetPointerValue().address;
       address.SetRawAddress(object_ptr);
       class_type_or_name.SetName(class_descriptor->GetClassName());
     }
@@ -102,7 +102,7 @@ AppleObjCRuntimeV1::CreateExceptionResolver(const BreakpointSP &bkpt,
     resolver_sp = std::make_shared<BreakpointResolverName>(
         bkpt, std::get<1>(GetExceptionThrowLocation()).AsCString(),
         eFunctionNameTypeBase, eLanguageTypeUnknown, Breakpoint::Exact, 0,
-        eLazyBoolNo);
+        /*offset_is_insn_count = */ false, eLazyBoolNo);
   // FIXME: don't do catch yet.
   return resolver_sp;
 }
@@ -380,12 +380,12 @@ void AppleObjCRuntimeV1::UpdateISAToDescriptorMapIfNeeded() {
                     ClassDescriptorSP descriptor_sp(
                         new ClassDescriptorV1(isa, process_sp));
 
-                    if (log && log->GetVerbose())
-                      LLDB_LOGF(log,
-                                "AppleObjCRuntimeV1 added (ObjCISA)0x%" PRIx64
-                                " from _objc_debug_class_hash to "
-                                "isa->descriptor cache",
-                                isa);
+                    LLDB_LOGF_VERBOSE(
+                        log,
+                        "AppleObjCRuntimeV1 added (ObjCISA)0x%" PRIx64
+                        " from _objc_debug_class_hash to "
+                        "isa->descriptor cache",
+                        isa);
 
                     AddClass(isa, descriptor_sp);
                   }
@@ -403,13 +403,12 @@ void AppleObjCRuntimeV1::UpdateISAToDescriptorMapIfNeeded() {
                       ClassDescriptorSP descriptor_sp(
                           new ClassDescriptorV1(isa, process_sp));
 
-                      if (log && log->GetVerbose())
-                        LLDB_LOGF(
-                            log,
-                            "AppleObjCRuntimeV1 added (ObjCISA)0x%" PRIx64
-                            " from _objc_debug_class_hash to isa->descriptor "
-                            "cache",
-                            isa);
+                      LLDB_LOGF_VERBOSE(
+                          log,
+                          "AppleObjCRuntimeV1 added (ObjCISA)0x%" PRIx64
+                          " from _objc_debug_class_hash to isa->descriptor "
+                          "cache",
+                          isa);
 
                       AddClass(isa, descriptor_sp);
                     }

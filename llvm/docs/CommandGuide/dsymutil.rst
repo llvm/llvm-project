@@ -23,6 +23,12 @@ OPTIONS
  Specify the desired type of accelerator table. Valid options are 'Apple',
  'Dwarf', 'Default' and 'None'.
 
+.. option:: --allow <path>
+
+ Only process debug map objects listed in the YAML file at <path>. Only filters
+ N_OSO entries. If `--oso-prepend-path` is specified, the path prefix applies,
+ i.e. paths in the file should exact match that of N_OSO entries.
+
 .. option:: --arch <arch>
 
  Link DWARF debug information only for specified CPU architecture types.
@@ -39,6 +45,12 @@ OPTIONS
  slightly differently. The most common build variants are 'debug' and
  'profile'. Setting the DYLD_IMAGE_SUFFIX environment variable will
  cause dyld to load the specified variant at runtime.
+
+.. option:: --disallow <path>
+
+ Exclude debug map objects listed in the YAML file at <path>. Only filters
+ N_OSO entries. If `--oso-prepend-path` is specified, the path prefix applies,
+ i.e. paths in the file should exact match that of N_OSO entries.
 
 .. option:: --dump-debug-map
 
@@ -70,18 +82,18 @@ OPTIONS
 
  Print this help output.
 
+.. option:: --include-swiftmodules-from-interface
+
+ Whether or not to copy binary swiftmodules built from textual .swiftinterface
+ files into the dSYM bundle. These typically come only from the SDK (since
+ textual interfaces require library evolution) and thus are a waste of space to
+ copy into the bundle. Turn this on if the swiftmodules are different from
+ those in the SDK.
+
 .. option:: --keep-function-for-static
 
  Make a static variable keep the enclosing function even if it would have been
  omitted otherwise.
-
-.. option:: --minimize, -z
-
- When used when creating a dSYM file, this option will suppress the emission of
- the .debug_inlines, .debug_pubnames, and .debug_pubtypes sections since
- dsymutil currently has better equivalents: .apple_names and .apple_types. When
- used in conjunction with ``--update`` option, this option will cause redundant
- accelerator tables to be removed.
 
 .. option:: --no-object-timestamp
 

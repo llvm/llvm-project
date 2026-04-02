@@ -54,7 +54,7 @@ void TemplUses(T t, U u) {
   // CHECK-NEXT: ParmVarDecl{{.*}} referenced u 'U'
   // CHECK-NEXT: CompoundStmt
 
-#pragma acc data copyout(t) pcopyout(zero: NTTP, u) present_or_copyout(alwaysin: u[0:t])
+#pragma acc data copyout(t) pcopyout(zero: NTTP, u) present_or_copyout(alwaysout: u[0:t])
   ;
   // CHECK-NEXT: OpenACCDataConstruct{{.*}} data
   // CHECK-NEXT: copyout clause
@@ -62,7 +62,7 @@ void TemplUses(T t, U u) {
   // CHECK-NEXT: pcopyout clause modifiers: zero
   // CHECK-NEXT: DeclRefExpr{{.*}}'auto' lvalue NonTypeTemplateParm{{.*}} 'NTTP' 'auto &'
   // CHECK-NEXT: DeclRefExpr{{.*}}'U' lvalue ParmVar{{.*}} 'u' 'U'
-  // CHECK-NEXT: present_or_copyout clause modifiers: alwaysin
+  // CHECK-NEXT: present_or_copyout clause modifiers: alwaysout
   // CHECK-NEXT: ArraySectionExpr
   // CHECK-NEXT: DeclRefExpr{{.*}}'U' lvalue ParmVar{{.*}} 'u' 'U'
   // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 0
@@ -103,7 +103,7 @@ void TemplUses(T t, U u) {
   // CHECK-NEXT: NonTypeTemplateParmDecl{{.*}} referenced 'auto &' depth 0 index 0 NTTP
   // CHECK-NEXT: DeclRefExpr{{.*}}'const unsigned int' lvalue Var{{.*}} 'CEVar' 'const unsigned int'
   // CHECK-NEXT: DeclRefExpr{{.*}}'int *' lvalue ParmVar{{.*}} 'u' 'int *'
-  // CHECK-NEXT: present_or_copyout clause modifiers: alwaysin
+  // CHECK-NEXT: present_or_copyout clause modifiers: alwaysout
   // CHECK-NEXT: ArraySectionExpr
   // CHECK-NEXT: ImplicitCastExpr{{.*}} 'int *' <LValueToRValue>
   // CHECK-NEXT: DeclRefExpr{{.*}}'int *' lvalue ParmVar{{.*}} 'u' 'int *'

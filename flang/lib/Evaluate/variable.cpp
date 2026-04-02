@@ -89,6 +89,14 @@ std::optional<Expr<SomeType>> CoarrayRef::team() const {
   }
 }
 
+std::optional<Expr<SomeType>> CoarrayRef::notify() const {
+  if (notify_) {
+    return notify_.value().value();
+  } else {
+    return std::nullopt;
+  }
+}
+
 CoarrayRef &CoarrayRef::set_stat(Expr<SomeInteger> &&v) {
   CHECK(IsVariable(v));
   stat_.emplace(std::move(v));
@@ -97,6 +105,11 @@ CoarrayRef &CoarrayRef::set_stat(Expr<SomeInteger> &&v) {
 
 CoarrayRef &CoarrayRef::set_team(Expr<SomeType> &&v) {
   team_.emplace(std::move(v));
+  return *this;
+}
+
+CoarrayRef &CoarrayRef::set_notify(Expr<SomeType> &&v) {
+  notify_.emplace(std::move(v));
   return *this;
 }
 
@@ -212,21 +225,17 @@ std::optional<Expr<SomeCharacter>> Substring::Fold(FoldingContext &context) {
   }
   if (!result) { // error cases
     if (*lbi < 1) {
-      if (context.languageFeatures().ShouldWarn(common::UsageWarning::Bounds)) {
-        context.messages().Say(common::UsageWarning::Bounds,
-            "Lower bound (%jd) on substring is less than one"_warn_en_US,
-            static_cast<std::intmax_t>(*lbi));
-      }
+      context.Warn(common::UsageWarning::Bounds,
+          "Lower bound (%jd) on substring is less than one"_warn_en_US,
+          static_cast<std::intmax_t>(*lbi));
       *lbi = 1;
       lower_ = AsExpr(Constant<SubscriptInteger>{1});
     }
     if (length && *ubi > *length) {
-      if (context.languageFeatures().ShouldWarn(common::UsageWarning::Bounds)) {
-        context.messages().Say(common::UsageWarning::Bounds,
-            "Upper bound (%jd) on substring is greater than character length (%jd)"_warn_en_US,
-            static_cast<std::intmax_t>(*ubi),
-            static_cast<std::intmax_t>(*length));
-      }
+      context.Warn(common::UsageWarning::Bounds,
+          "Upper bound (%jd) on substring is greater than character length (%jd)"_warn_en_US,
+          static_cast<std::intmax_t>(*ubi),
+          static_cast<std::intmax_t>(*length));
       *ubi = *length;
       upper_ = AsExpr(Constant<SubscriptInteger>{*ubi});
     }

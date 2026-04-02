@@ -269,48 +269,13 @@ Decl *SemaObjC::ActOnProperty(Scope *S, SourceLocation AtLoc,
   return Res;
 }
 
-static ObjCPropertyAttribute::Kind
-makePropertyAttributesAsWritten(unsigned Attributes) {
-  unsigned attributesAsWritten = 0;
-  if (Attributes & ObjCPropertyAttribute::kind_readonly)
-    attributesAsWritten |= ObjCPropertyAttribute::kind_readonly;
-  if (Attributes & ObjCPropertyAttribute::kind_readwrite)
-    attributesAsWritten |= ObjCPropertyAttribute::kind_readwrite;
-  if (Attributes & ObjCPropertyAttribute::kind_getter)
-    attributesAsWritten |= ObjCPropertyAttribute::kind_getter;
-  if (Attributes & ObjCPropertyAttribute::kind_setter)
-    attributesAsWritten |= ObjCPropertyAttribute::kind_setter;
-  if (Attributes & ObjCPropertyAttribute::kind_assign)
-    attributesAsWritten |= ObjCPropertyAttribute::kind_assign;
-  if (Attributes & ObjCPropertyAttribute::kind_retain)
-    attributesAsWritten |= ObjCPropertyAttribute::kind_retain;
-  if (Attributes & ObjCPropertyAttribute::kind_strong)
-    attributesAsWritten |= ObjCPropertyAttribute::kind_strong;
-  if (Attributes & ObjCPropertyAttribute::kind_weak)
-    attributesAsWritten |= ObjCPropertyAttribute::kind_weak;
-  if (Attributes & ObjCPropertyAttribute::kind_copy)
-    attributesAsWritten |= ObjCPropertyAttribute::kind_copy;
-  if (Attributes & ObjCPropertyAttribute::kind_unsafe_unretained)
-    attributesAsWritten |= ObjCPropertyAttribute::kind_unsafe_unretained;
-  if (Attributes & ObjCPropertyAttribute::kind_nonatomic)
-    attributesAsWritten |= ObjCPropertyAttribute::kind_nonatomic;
-  if (Attributes & ObjCPropertyAttribute::kind_atomic)
-    attributesAsWritten |= ObjCPropertyAttribute::kind_atomic;
-  if (Attributes & ObjCPropertyAttribute::kind_class)
-    attributesAsWritten |= ObjCPropertyAttribute::kind_class;
-  if (Attributes & ObjCPropertyAttribute::kind_direct)
-    attributesAsWritten |= ObjCPropertyAttribute::kind_direct;
-
-  return (ObjCPropertyAttribute::Kind)attributesAsWritten;
-}
-
 static bool LocPropertyAttribute( ASTContext &Context, const char *attrName,
                                  SourceLocation LParenLoc, SourceLocation &Loc) {
   if (LParenLoc.isMacroID())
     return false;
 
   SourceManager &SM = Context.getSourceManager();
-  std::pair<FileID, unsigned> locInfo = SM.getDecomposedLoc(LParenLoc);
+  FileIDAndOffset locInfo = SM.getDecomposedLoc(LParenLoc);
   // Try to load the file buffer.
   bool invalidTemp = false;
   StringRef file = SM.getBufferData(locInfo.first, &invalidTemp);
@@ -629,7 +594,7 @@ ObjCPropertyDecl *SemaObjC::CreatePropertyDecl(
   PDecl->setGetterName(GetterSel, GetterNameLoc);
   PDecl->setSetterName(SetterSel, SetterNameLoc);
   PDecl->setPropertyAttributesAsWritten(
-                          makePropertyAttributesAsWritten(AttributesAsWritten));
+      static_cast<ObjCPropertyAttribute::Kind>(AttributesAsWritten));
 
   SemaRef.ProcessDeclAttributes(S, PDecl, FD.D);
 
@@ -1041,7 +1006,7 @@ RedeclarePropertyAccessor(ASTContext &Context, ObjCImplementationDecl *Impl,
       Decl->getSelector(), Decl->getReturnType(),
       Decl->getReturnTypeSourceInfo(), Impl, Decl->isInstanceMethod(),
       Decl->isVariadic(), Decl->isPropertyAccessor(),
-      /* isSynthesized*/ true, Decl->isImplicit(), Decl->isDefined(),
+      /*isSynthesizedAccessorStub=*/true, Decl->isImplicit(), Decl->isDefined(),
       Decl->getImplementationControl(), Decl->hasRelatedResultType());
   ImplDecl->getMethodFamily();
   if (Decl->hasAttrs())
@@ -1298,6 +1263,15 @@ Decl *SemaObjC::ActOnPropertyImplDecl(
         }
       }
 
+      if (Context.getLangOpts().PointerAuthObjcInterfaceSel &&
+          !PropertyIvarType.getPointerAuth()) {
+        if (Context.isObjCSelType(QualType(PropertyIvarType.getTypePtr(), 0))) {
+          if (auto PAQ = Context.getObjCMemberSelTypePtrAuth())
+            PropertyIvarType =
+                Context.getPointerAuthType(PropertyIvarType, PAQ);
+        }
+      }
+
       Ivar = ObjCIvarDecl::Create(Context, ClassImpDecl,
                                   PropertyIvarLoc,PropertyIvarLoc, PropertyIvar,
                                   PropertyIvarType, /*TInfo=*/nullptr,
@@ -1311,8 +1285,8 @@ Decl *SemaObjC::ActOnPropertyImplDecl(
         CompleteTypeErr = true;
       }
       if (!CompleteTypeErr) {
-        const RecordType *RecordTy = PropertyIvarType->getAs<RecordType>();
-        if (RecordTy && RecordTy->getDecl()->hasFlexibleArrayMember()) {
+        if (const auto *RD = PropertyIvarType->getAsRecordDecl();
+            RD && RD->hasFlexibleArrayMember()) {
           Diag(PropertyIvarLoc, diag::err_synthesize_variable_sized_ivar)
             << PropertyIvarType;
           CompleteTypeErr = true; // suppress later diagnostics about the ivar

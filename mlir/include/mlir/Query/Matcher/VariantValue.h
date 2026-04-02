@@ -26,7 +26,12 @@ enum class ArgKind { Boolean, Matcher, Signed, String };
 // A variant matcher object to abstract simple and complex matchers into a
 // single object type.
 class VariantMatcher {
-  class MatcherOps;
+  class MatcherOps {
+  public:
+    std::optional<DynMatcher>
+    constructVariadicOperator(DynMatcher::VariadicOperator varOp,
+                              ArrayRef<VariantMatcher> innerMatchers) const;
+  };
 
   // Payload interface to be specialized by each matcher type. It follows a
   // similar interface as VariantMatcher itself.
@@ -43,6 +48,9 @@ public:
 
   // Clones the provided matcher.
   static VariantMatcher SingleMatcher(DynMatcher matcher);
+  static VariantMatcher
+  VariadicOperatorMatcher(DynMatcher::VariadicOperator varOp,
+                          ArrayRef<VariantMatcher> args);
 
   // Makes the matcher the "null" matcher.
   void reset();
@@ -61,6 +69,7 @@ private:
       : value(std::move(value)) {}
 
   class SinglePayload;
+  class VariadicOpPayload;
 
   std::shared_ptr<const Payload> value;
 };

@@ -13,6 +13,7 @@
 #include <iterator>
 
 #include <concepts>
+#include <cstddef>
 #include <functional>
 
 #include "test_iterators.h"
@@ -61,4 +62,4 @@ constexpr bool projectable = requires {
 
 static_assert(!projectable<int, void (*)(int)>); // int isn't indirectly_readable
 static_assert(!projectable<S, void (*)(int)>);   // S isn't weakly_incrementable
-static_assert(!projectable<int*, void(int)>);    // void(int) doesn't satisfy indirectly_regular_unary_invcable
+static_assert(!projectable<int*, void(int)>);    // void(int) doesn't satisfy indirectly_regular_unary_invocable

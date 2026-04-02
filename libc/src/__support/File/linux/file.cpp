@@ -15,12 +15,13 @@
 #include "src/__support/File/linux/lseekImpl.h"
 #include "src/__support/OSUtil/fcntl.h"
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
+#include "src/__support/alloc-checker.h"
+#include "src/__support/libc_errno.h" // For error macros
 #include "src/__support/macros/config.h"
-#include "src/errno/libc_errno.h" // For error macros
 
 #include "hdr/fcntl_macros.h" // For mode_t and other flags to the open syscall
-#include <sys/stat.h>    // For S_IS*, S_IF*, and S_IR* flags.
-#include <sys/syscall.h> // For syscall numbers
+#include <sys/stat.h>         // For S_IS*, S_IF*, and S_IR* flags.
+#include <sys/syscall.h>      // For syscall numbers
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -53,6 +54,7 @@ ErrorOr<off_t> linux_file_seek(File *f, off_t offset, int whence) {
 }
 
 int linux_file_close(File *f) {
+  File::remove_file(f);
   auto *lf = reinterpret_cast<LinuxFile *>(f);
   int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_close, lf->get_fd());
   if (ret < 0) {
@@ -118,6 +120,7 @@ ErrorOr<File *> openfile(const char *path, const char *mode) {
       LinuxFile(fd, buffer, File::DEFAULT_BUFFER_SIZE, _IOFBF, true, modeflags);
   if (!ac)
     return Error(ENOMEM);
+  File::add_file(file);
   return file;
 }
 
@@ -128,10 +131,11 @@ ErrorOr<LinuxFile *> create_file_from_fd(int fd, const char *mode) {
     return Error(EINVAL);
   }
 
-  int fd_flags = internal::fcntl(fd, F_GETFL);
-  if (fd_flags == -1) {
+  auto result = internal::fcntl(fd, F_GETFL);
+  if (!result.has_value()) {
     return Error(EBADF);
   }
+  int fd_flags = result.value();
 
   using OpenMode = File::OpenMode;
   if (((fd_flags & O_ACCMODE) == O_RDONLY &&
@@ -145,8 +149,9 @@ ErrorOr<LinuxFile *> create_file_from_fd(int fd, const char *mode) {
   if ((modeflags & static_cast<ModeFlags>(OpenMode::APPEND)) &&
       !(fd_flags & O_APPEND)) {
     do_seek = true;
-    if (internal::fcntl(fd, F_SETFL,
-                        reinterpret_cast<void *>(fd_flags | O_APPEND)) == -1) {
+    if (!internal::fcntl(fd, F_SETFL,
+                         reinterpret_cast<void *>(fd_flags | O_APPEND))
+             .has_value()) {
       return Error(EBADF);
     }
   }
@@ -165,10 +170,12 @@ ErrorOr<LinuxFile *> create_file_from_fd(int fd, const char *mode) {
   if (!ac) {
     return Error(ENOMEM);
   }
+  File::add_file(file);
   if (do_seek) {
     auto result = file->seek(0, SEEK_END);
     if (!result.has_value()) {
-      free(file);
+      File::remove_file(file);
+      delete file;
       return Error(result.error());
     }
   }

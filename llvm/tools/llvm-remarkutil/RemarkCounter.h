@@ -14,6 +14,7 @@
 #include "RemarkUtilHelpers.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/Support/Regex.h"
+#include <map>
 
 namespace llvm {
 namespace remarks {
@@ -43,66 +44,6 @@ inline std::string groupByToStr(GroupBy GroupBy) {
   case GroupBy::PER_SOURCE:
     return "Source";
   }
-}
-
-/// Filter object which can be either a string or a regex to match with the
-/// remark properties.
-struct FilterMatcher {
-  Regex FilterRE;
-  std::string FilterStr;
-  bool IsRegex;
-  FilterMatcher(std::string Filter, bool IsRegex) : IsRegex(IsRegex) {
-    if (IsRegex)
-      FilterRE = Regex(Filter);
-    else
-      FilterStr = Filter;
-  }
-
-  bool match(StringRef StringToMatch) const {
-    if (IsRegex)
-      return FilterRE.match(StringToMatch);
-    return FilterStr == StringToMatch.trim().str();
-  }
-};
-
-/// Filter out remarks based on remark properties based on name, pass name,
-/// argument and type.
-struct Filters {
-  std::optional<FilterMatcher> RemarkNameFilter;
-  std::optional<FilterMatcher> PassNameFilter;
-  std::optional<FilterMatcher> ArgFilter;
-  std::optional<Type> RemarkTypeFilter;
-  /// Returns a filter object if all the arguments provided are valid regex
-  /// types otherwise return an error.
-  static Expected<Filters>
-  createRemarkFilter(std::optional<FilterMatcher> RemarkNameFilter,
-                     std::optional<FilterMatcher> PassNameFilter,
-                     std::optional<FilterMatcher> ArgFilter,
-                     std::optional<Type> RemarkTypeFilter) {
-    Filters Filter;
-    Filter.RemarkNameFilter = std::move(RemarkNameFilter);
-    Filter.PassNameFilter = std::move(PassNameFilter);
-    Filter.ArgFilter = std::move(ArgFilter);
-    Filter.RemarkTypeFilter = std::move(RemarkTypeFilter);
-    if (auto E = Filter.regexArgumentsValid())
-      return std::move(E);
-    return std::move(Filter);
-  }
-  /// Returns true if \p Remark satisfies all the provided filters.
-  bool filterRemark(const Remark &Remark);
-
-private:
-  /// Check if arguments can be parsed as valid regex types.
-  Error regexArgumentsValid();
-};
-
-/// Convert Regex string error to an error object.
-inline Error checkRegex(const Regex &Regex) {
-  std::string Error;
-  if (!Regex.isValid(Error))
-    return createStringError(make_error_code(std::errc::invalid_argument),
-                             Twine("Regex: ", Error));
-  return Error::success();
 }
 
 /// Abstract counter class used to define the general required methods for
@@ -160,12 +101,6 @@ struct ArgumentCounter : Counter {
                         StringRef Buffer, Filters &Filter) {
     ArgumentCounter AC;
     AC.Group = Group;
-    for (auto &Arg : Arguments) {
-      if (Arg.IsRegex) {
-        if (auto E = checkRegex(Arg.FilterRE))
-          return std::move(E);
-      }
-    }
     if (auto E = AC.getAllMatchingArgumentsInRemark(Buffer, Arguments, Filter))
       return std::move(E);
     return AC;

@@ -37,7 +37,7 @@ class TestObjcPoHint(TestBase):
             self, "Set breakpoint here", lldb.SBFileSpec("main.m")
         )
         self.runCmd("setting set show-dont-use-po-hint false")
-        # Make sure the hint is printed the first time
+        # Make sure the hint is not printed
         self.expect(
             "dwim-print -O -- foo",
             substrs=["note: object description"],

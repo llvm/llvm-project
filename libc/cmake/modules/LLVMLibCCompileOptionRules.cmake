@@ -10,10 +10,35 @@ if(NOT DEFINED LLVM_LIBC_COMPILER_IS_GCC_COMPATIBLE)
   endif()
 endif()
 
+function(libc_add_definition output_var def)
+  if(MSVC)
+    list(APPEND ${output_var} "/D${def}")
+  else()
+    list(APPEND ${output_var} "-D${def}")
+  endif()
+
+  set(${output_var} ${${output_var}} PARENT_SCOPE)
+endfunction()
+
+function(libc_set_definition output_var)
+  set(defs "")
+  if(MSVC)
+    foreach(def IN LISTS ARGN)
+      list(APPEND defs "/D${def}")
+    endforeach()
+  else()
+    foreach(def IN LISTS ARGN)
+      list(APPEND defs "-D${def}")
+    endforeach()
+  endif()
+
+  set(${output_var} "${defs}" PARENT_SCOPE)
+endfunction()
+
 function(_get_compile_options_from_flags output_var)
   set(compile_options "")
 
-  if(LIBC_TARGET_ARCHITECTURE_IS_RISCV64 OR(LIBC_CPU_FEATURES MATCHES "FMA"))
+  if(LIBC_CPU_FEATURES MATCHES "FMA")
     check_flag(ADD_FMA_FLAG ${FMA_OPT_FLAG} ${ARGN})
   endif()
   check_flag(ADD_ROUND_OPT_FLAG ${ROUND_OPT_FLAG} ${ARGN})
@@ -25,15 +50,6 @@ function(_get_compile_options_from_flags output_var)
       if(LIBC_TARGET_ARCHITECTURE_IS_X86_64)
         list(APPEND compile_options "-mavx2")
         list(APPEND compile_options "-mfma")
-      elseif(LIBC_TARGET_ARCHITECTURE_IS_RISCV64)
-        list(APPEND compile_options "-D__LIBC_RISCV_USE_FMA")
-      endif()
-      # For clang, we will build the math functions with `-fno-math-errno` so that
-      # __builtin_fma* will generate the fused-mutliply-add instructions.  We
-      # don't put the control flag to the public config yet, and see if it makes
-      # sense to just enable this flag by default.
-      if(LIBC_ADD_FNO_MATH_ERRNO)
-        list(APPEND compile_options "-fno-math-errno")
       endif()
     endif()
     if(ADD_ROUND_OPT_FLAG)
@@ -54,9 +70,6 @@ function(_get_compile_options_from_flags output_var)
         list(APPEND compile_options "-D__LIBC_USE_BUILTIN_ROUNDEVEN")
       endif()
     endif()
-    if(ADD_EXPLICIT_SIMD_OPT_FLAG)
-      list(APPEND compile_options "-D__LIBC_EXPLICIT_SIMD_OPT")
-    endif()
     if(ADD_MISC_MATH_BASIC_OPS_OPT_FLAG)
       list(APPEND compile_options "-D__LIBC_MISC_MATH_BASIC_OPS_OPT")
       if(LIBC_COMPILER_HAS_BUILTIN_FMAX_FMIN)
@@ -75,9 +88,10 @@ function(_get_compile_options_from_flags output_var)
     if(ADD_FMA_FLAG)
       list(APPEND compile_options "/arch:AVX2")
     endif()
-    if(ADD_EXPLICIT_SIMD_OPT_FLAG)
-      list(APPEND compile_options "/D__LIBC_EXPLICIT_SIMD_OPT")
-    endif()
+  endif()
+
+  if(ADD_EXPLICIT_SIMD_OPT_FLAG)
+    libc_add_definition(compile_options "__LIBC_EXPLICIT_SIMD_OPT")
   endif()
 
   set(${output_var} ${compile_options} PARENT_SCOPE)
@@ -86,34 +100,120 @@ endfunction(_get_compile_options_from_flags)
 function(_get_compile_options_from_config output_var)
   set(config_options "")
 
+  if(LIBC_CONF_STRTOFLOAT_DISABLE_EISEL_LEMIRE)
+    libc_add_definition(config_options "LIBC_COPT_STRTOFLOAT_DISABLE_EISEL_LEMIRE")
+  endif()
+
+  if(LIBC_CONF_STRTOFLOAT_DISABLE_SIMPLE_DECIMAL_CONVERSION)
+    libc_add_definition(config_options "LIBC_COPT_STRTOFLOAT_DISABLE_SIMPLE_DECIMAL_CONVERSION")
+  endif()
+
+  if(LIBC_CONF_STRTOFLOAT_DISABLE_CLINGER_FAST_PATH)
+    libc_add_definition(config_options "LIBC_COPT_STRTOFLOAT_DISABLE_CLINGER_FAST_PATH")
+  endif()
+
   if(LIBC_CONF_QSORT_IMPL)
-    list(APPEND config_options "-DLIBC_QSORT_IMPL=${LIBC_CONF_QSORT_IMPL}")
+    libc_add_definition(config_options "LIBC_QSORT_IMPL=${LIBC_CONF_QSORT_IMPL}")
+  endif()
+
+  libc_add_definition(config_options "LIBC_COPT_STRING_LENGTH_IMPL=${LIBC_CONF_STRING_LENGTH_IMPL}")
+  libc_add_definition(config_options "LIBC_COPT_FIND_FIRST_CHARACTER_IMPL=${LIBC_CONF_FIND_FIRST_CHARACTER_IMPL}")
+
+  if(LIBC_CONF_MEMSET_X86_USE_SOFTWARE_PREFETCHING)
+    libc_add_definition(config_options "LIBC_COPT_MEMSET_X86_USE_SOFTWARE_PREFETCHING")
+  endif()
+
+  if(LIBC_CONF_COPT_MEMCPY_X86_USE_NTA_STORES)
+    libc_add_definition(config_options "LIBC_COPT_MEMCPY_X86_USE_NTA_STORES")
   endif()
 
   if(LIBC_TYPES_TIME_T_IS_32_BIT AND LLVM_LIBC_FULL_BUILD)
-    list(APPEND config_options "-DLIBC_TYPES_TIME_T_IS_32_BIT")
+    libc_add_definition(config_options "LIBC_TYPES_TIME_T_IS_32_BIT")
   endif()
 
   if(LIBC_ADD_NULL_CHECKS)
-    list(APPEND config_options "-DLIBC_ADD_NULL_CHECKS")
+    libc_add_definition(config_options "LIBC_ADD_NULL_CHECKS")
   endif()
 
   if(NOT "${LIBC_CONF_FREXP_INF_NAN_EXPONENT}" STREQUAL "")
-    list(APPEND config_options "-DLIBC_FREXP_INF_NAN_EXPONENT=${LIBC_CONF_FREXP_INF_NAN_EXPONENT}")
+    libc_add_definition(config_options "LIBC_FREXP_INF_NAN_EXPONENT=${LIBC_CONF_FREXP_INF_NAN_EXPONENT}")
   endif()
 
   if(LIBC_CONF_MATH_OPTIMIZATIONS)
-    list(APPEND config_options "-DLIBC_MATH=${LIBC_CONF_MATH_OPTIMIZATIONS}")
+    libc_add_definition(config_options "LIBC_MATH=${LIBC_CONF_MATH_OPTIMIZATIONS}")
+    if(LIBC_CONF_MATH_OPTIMIZATIONS MATCHES "LIBC_MATH_NO_ERRNO")
+      list(APPEND config_options "-fno-math-errno")
+    endif()
+  endif()
+
+  if(LIBC_CONF_ERRNO_MODE)
+    libc_add_definition(config_options "LIBC_ERRNO_MODE=${LIBC_CONF_ERRNO_MODE}")
+  endif()
+
+  if(LIBC_CONF_THREAD_MODE)
+    libc_add_definition(config_options "LIBC_THREAD_MODE=${LIBC_CONF_THREAD_MODE}")
+  endif()
+
+  if(LIBC_CONF_TRAP_ON_RAISE_FP_EXCEPT)
+    libc_add_definition(config_options "LIBC_TRAP_ON_RAISE_FP_EXCEPT")
+  endif()
+
+  if(LIBC_CONF_WCTYPE_MODE)
+    libc_add_definition(config_options "LIBC_CONF_WCTYPE_MODE=${LIBC_CONF_WCTYPE_MODE}")
+  endif()
+
+  if(LIBC_CONF_RAW_MUTEX_DEFAULT_SPIN_COUNT)
+    libc_add_definition(config_options "LIBC_COPT_RAW_MUTEX_DEFAULT_SPIN_COUNT=${LIBC_CONF_RAW_MUTEX_DEFAULT_SPIN_COUNT}")
+  endif()
+
+  if(LIBC_CONF_MATH_USE_SYSTEM_FENV)
+    libc_add_definition(config_options "LIBC_MATH_USE_SYSTEM_FENV")
+  endif()
+
+  if(LIBC_CONF_CTYPE_SMALLER_ASCII)
+    libc_add_definition(config_options "LIBC_COPT_CTYPE_SMALLER_ASCII")
+  endif()
+
+  if(LIBC_CONF_PRINTF_DISABLE_WIDE)
+    libc_add_definition(config_options "LIBC_COPT_PRINTF_DISABLE_WIDE")
+  endif()
+
+  if(LIBC_COPT_PRINTF_DISABLE_BITINT)
+    libc_add_definition(config_options "LIBC_COPT_PRINTF_DISABLE_BITINT")
+  endif()
+
+  if(LIBC_COPT_USE_C_ASSERT)
+    list(APPEND config_options "-DLIBC_COPT_USE_C_ASSERT")
   endif()
 
   set(${output_var} ${config_options} PARENT_SCOPE)
 endfunction(_get_compile_options_from_config)
 
+function(_get_compile_options_from_arch output_var)
+  # Set options that are not found in src/__support/macros/properties/architectures.h
+  # and src/__support/macros/properties/os.h
+  # TODO: we probably want to unify these at some point for consistency
+  set(config_options "")
+
+  if (LIBC_TARGET_OS_IS_BAREMETAL)
+    libc_add_definition(config_options "LIBC_TARGET_OS_IS_BAREMETAL")
+  endif()
+  if (LIBC_TARGET_OS_IS_GPU)
+    libc_add_definition(config_options "LIBC_TARGET_OS_IS_GPU")
+  endif()
+  if (LIBC_TARGET_OS_IS_UEFI)
+    libc_add_definition(config_options "LIBC_TARGET_OS_IS_UEFI")
+  endif()
+
+  set(${output_var} ${config_options} PARENT_SCOPE)
+endfunction(_get_compile_options_from_arch)
+
 function(_get_common_compile_options output_var flags)
   _get_compile_options_from_flags(compile_flags ${flags})
   _get_compile_options_from_config(config_flags)
+  _get_compile_options_from_arch(arch_flags)
 
-  set(compile_options ${LIBC_COMPILE_OPTIONS_DEFAULT} ${compile_flags} ${config_flags})
+  set(compile_options ${LIBC_COMPILE_OPTIONS_DEFAULT} ${compile_flags} ${config_flags} ${arch_flags})
 
   if(LLVM_LIBC_COMPILER_IS_GCC_COMPATIBLE)
     list(APPEND compile_options "-fpie")
@@ -168,7 +268,7 @@ function(_get_common_compile_options output_var flags)
         list(APPEND compile_options "-mno-omit-leaf-frame-pointer")
       endif()
     endif()
-    if (LIBC_CONF_ENABLE_STACK_PROTECTOR)
+    if (LIBC_CONF_ENABLE_STRONG_STACK_PROTECTOR)
       list(APPEND compile_options "-fstack-protector-strong")
     endif()
     list(APPEND compile_options "-Wall")

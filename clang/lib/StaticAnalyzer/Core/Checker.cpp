@@ -21,11 +21,3 @@ StringRef CheckerBase::getDebugTag() const { return getName(); }
 
 void CheckerBackend::printState(raw_ostream &Out, ProgramStateRef State,
                                 const char *NL, const char *Sep) const {}
-
-CheckerProgramPointTag::CheckerProgramPointTag(StringRef CheckerName,
-                                               StringRef Msg)
-  : SimpleProgramPointTag(CheckerName, Msg) {}
-
-CheckerProgramPointTag::CheckerProgramPointTag(const CheckerBase *Checker,
-                                               StringRef Msg)
-    : SimpleProgramPointTag(Checker->getDebugTag(), Msg) {}

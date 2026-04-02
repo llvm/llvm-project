@@ -11,15 +11,15 @@
 ; RUN: not --crash llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx90a -filetype=null %t/bf8-byte1-err.ll 2>&1 | FileCheck -check-prefix=ERR-BF8-BYTE1-ERR %s
 
 
-; RUN: not --crash llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx908 -filetype=null %t/fp8-byte0-err.ll 2>&1 | FileCheck -check-prefix=ERR-FP8-BYTE0-ERR-GISEL %s
-; RUN: not --crash llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx908 -filetype=null %t/fp8-byte1-err.ll 2>&1 | FileCheck -check-prefix=ERR-FP8-BYTE1-ERR-GISEL %s
-; RUN: not --crash llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx908 -filetype=null %t/bf8-byte0-err.ll 2>&1 | FileCheck -check-prefix=ERR-BF8-BYTE0-ERR-GISEL %s
-; RUN: not --crash llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx908 -filetype=null %t/bf8-byte1-err.ll 2>&1 | FileCheck -check-prefix=ERR-BF8-BYTE1-ERR-GISEL %s
+; RUN: not llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx908 -filetype=null %t/fp8-byte0-err.ll 2>&1 | FileCheck -check-prefix=ERR-FP8-BYTE0-ERR-GISEL %s
+; RUN: not llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx908 -filetype=null %t/fp8-byte1-err.ll 2>&1 | FileCheck -check-prefix=ERR-FP8-BYTE1-ERR-GISEL %s
+; RUN: not llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx908 -filetype=null %t/bf8-byte0-err.ll 2>&1 | FileCheck -check-prefix=ERR-BF8-BYTE0-ERR-GISEL %s
+; RUN: not llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx908 -filetype=null %t/bf8-byte1-err.ll 2>&1 | FileCheck -check-prefix=ERR-BF8-BYTE1-ERR-GISEL %s
 
-; RUN: not --crash llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx90a -filetype=null %t/fp8-byte0-err.ll 2>&1 | FileCheck -check-prefix=ERR-FP8-BYTE0-ERR-GISEL %s
-; RUN: not --crash llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx90a -filetype=null %t/fp8-byte1-err.ll 2>&1 | FileCheck -check-prefix=ERR-FP8-BYTE1-ERR-GISEL %s
-; RUN: not --crash llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx90a -filetype=null %t/bf8-byte0-err.ll 2>&1 | FileCheck -check-prefix=ERR-BF8-BYTE0-ERR-GISEL %s
-; RUN: not --crash llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx90a -filetype=null %t/bf8-byte1-err.ll 2>&1 | FileCheck -check-prefix=ERR-BF8-BYTE1-ERR-GISEL %s
+; RUN: not llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx90a -filetype=null %t/fp8-byte0-err.ll 2>&1 | FileCheck -check-prefix=ERR-FP8-BYTE0-ERR-GISEL %s
+; RUN: not llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx90a -filetype=null %t/fp8-byte1-err.ll 2>&1 | FileCheck -check-prefix=ERR-FP8-BYTE1-ERR-GISEL %s
+; RUN: not llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx90a -filetype=null %t/bf8-byte0-err.ll 2>&1 | FileCheck -check-prefix=ERR-BF8-BYTE0-ERR-GISEL %s
+; RUN: not llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx90a -filetype=null %t/bf8-byte1-err.ll 2>&1 | FileCheck -check-prefix=ERR-BF8-BYTE1-ERR-GISEL %s
 
 
 

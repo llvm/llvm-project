@@ -67,6 +67,7 @@
 ; CHECK-O1-NEXT: Running analysis: TargetLibraryAnalysis
 ; CHECK-O-NEXT: Running pass: GlobalSplitPass
 ; CHECK-O-NEXT: Running pass: WholeProgramDevirtPass
+; CHECK-O-NEXT: Running pass: NoRecurseLTOInferencePass
 ; CHECK-O23SZ-NEXT: Running pass: CoroEarlyPass
 ; CHECK-O1-NEXT: Running pass: LowerTypeTestsPass
 ; CHECK-O23SZ-NEXT: Running pass: GlobalOptPass
@@ -116,6 +117,7 @@
 ; CHECK-O23SZ-NEXT: Running pass: MemCpyOptPass on foo
 ; CHECK-O23SZ-NEXT: Running analysis: PostDominatorTreeAnalysis on foo
 ; CHECK-O23SZ-NEXT: Running pass: DSEPass on foo
+; CHECK-O23SZ-NEXT: Running analysis: CycleAnalysis
 ; CHECK-O23SZ-NEXT: Running pass: MoveAutoInitPass on foo
 ; CHECK-O23SZ-NEXT: Running pass: MergedLoadStoreMotionPass on foo
 ; CHECK-EP-VECTORIZER-START-NEXT: Running pass: NoOpFunctionPass on foo
@@ -128,6 +130,7 @@
 ; CHECK-O23SZ-NEXT: Running analysis: LoopAccessAnalysis on foo
 ; CHECK-O23SZ-NEXT: Running pass: LoopVectorizePass on foo
 ; CHECK-O23SZ-NEXT: Running analysis: DemandedBitsAnalysis on foo
+; CHECK-O23SZ-NEXT: Running pass: DropUnnecessaryAssumesPass on foo
 ; CHECK-O23SZ-NEXT: Running pass: InferAlignmentPass on foo
 ; CHECK-O23SZ-NEXT: Running pass: LoopUnrollPass on foo
 ; CHECK-O23SZ-NEXT: WarnMissedTransformationsPass on foo
@@ -161,6 +164,7 @@
 ; CHECK-O23SZ-NEXT: Running pass: CGProfilePass
 ; CHECK-O1-NEXT: Running pass: CoroConditionalWrapper
 ; CHECK-O23SZ-NEXT: Running pass: CoroCleanupPass
+; CHECK-O-NEXT: Running pass: AllocTokenPass
 ; CHECK-EP-NEXT: Running pass: NoOpModulePass
 ; CHECK-O-NEXT: Running pass: AnnotationRemarksPass on foo
 ; CHECK-O-NEXT: Running pass: PrintModulePass

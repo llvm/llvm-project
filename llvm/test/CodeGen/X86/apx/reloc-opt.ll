@@ -13,11 +13,9 @@
 
 
 ; CHECK-LABEL: test_regclass_not_updated_by_regalloc_1
-; APXREL: movq    (%rip), %r16
-; APXREL-NEXT: R_X86_64_CODE_4_GOTPCRELX gvar-0x4
-; NOAPXREL-NOT: R_X86_64_CODE_4_GOTPCRELX gvar-0x4
-; NOAPXREL: movq    (%rip), %rdi
-; NOAPXREL-NEXT: R_X86_64_REX_GOTPCRELX gvar-0x4
+; CHECK-NOT: R_X86_64_CODE_4_GOTPCRELX gvar-0x4
+; CHECK: movq    (%rip), %rdi
+; CHECK-NEXT: R_X86_64_REX_GOTPCRELX gvar-0x4
 
 @gvar = external global [20000 x i8]
 
@@ -66,10 +64,10 @@ declare void @llvm.memset.p0.i64(ptr writeonly captures(none), i8, i64, i1 immar
 
 ; TODO: update after R_X86_64_CODE_6_GOTPCRELX is supported.
 ; CHECK-LABEL: test_regclass_not_updated_by_regalloc_2
-; APXREL: {nf} addq (%rip), %r16, %rcx
+; APXREL: {nf} addq (%rip), %r11, %rcx
 ; APXREL-NEXT: R_X86_64_GOTPCREL gvar2-0x4
 ; NOAPXREL-NOT: R_X86_64_CODE_4_GOTPCRELX gvar2-0x4
-; NOAPXREL: addq    (%rip), %rbx
+; NOAPXREL: addq    (%rip), %r11
 ; NOAPXREL-NEXT: R_X86_64_REX_GOTPCRELX gvar2-0x4
 
 @gvar2 = external constant [8 x [8 x i32]]

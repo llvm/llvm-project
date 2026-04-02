@@ -283,7 +283,11 @@ public:
   JSONGenerator::ObjectSP
   GetAllLoadedLibrariesInfos(nub_process_t pid,
                              bool fetch_report_load_commands);
-  JSONGenerator::ObjectSP GetSharedCacheInfo(nub_process_t pid);
+  bool GetDebugserverSharedCacheInfo(uuid_t &uuid,
+                                     std::string &shared_cache_path);
+  bool GetInferiorSharedCacheFilepathAndSize(std::string &inferior_sc_path,
+                                             uint64_t &size);
+  JSONGenerator::ObjectSP GetInferiorSharedCacheInfo(nub_process_t pid);
 
   nub_size_t GetNumThreads() const;
   nub_thread_t GetThreadAtIndex(nub_size_t thread_idx) const;
@@ -474,6 +478,15 @@ private:
 
   void *(*m_dyld_process_info_create)(task_t task, uint64_t timestamp,
                                       kern_return_t *kernelError);
+  void *(*m_dyld_process_create_for_task)(task_read_t task, kern_return_t *kr);
+  void *(*m_dyld_process_snapshot_create_for_process)(void *process,
+                                                      kern_return_t *kr);
+  void *(*m_dyld_process_snapshot_get_shared_cache)(void *snapshot);
+  void (*m_dyld_shared_cache_for_each_file)(
+      void *cache, void (^block)(const char *file_path));
+  uint64_t (*m_dyld_shared_cache_get_mapped_size)(void *cache);
+  void (*m_dyld_process_snapshot_dispose)(void *snapshot);
+  void (*m_dyld_process_dispose)(void *process);
   void (*m_dyld_process_info_for_each_image)(
       void *info, void (^callback)(uint64_t machHeaderAddress,
                                    const uuid_t uuid, const char *path));
@@ -481,6 +494,7 @@ private:
   void (*m_dyld_process_info_get_cache)(void *info, void *cacheInfo);
   uint32_t (*m_dyld_process_info_get_platform)(void *info);
   void (*m_dyld_process_info_get_state)(void *info, void *stateInfo);
+  const char *(*m_dyld_shared_cache_file_path)();
 };
 
 #endif // LLDB_TOOLS_DEBUGSERVER_SOURCE_MACOSX_MACHPROCESS_H

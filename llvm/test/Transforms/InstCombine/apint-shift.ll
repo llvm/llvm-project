@@ -562,11 +562,10 @@ define i40 @test26(i40 %A) {
 
 ; OSS-Fuzz #9880
 ; https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=9880
-define i177 @ossfuzz_9880(i177 %X) {
+define i177 @ossfuzz_9880(i177 %X, ptr %A) {
 ; CHECK-LABEL: @ossfuzz_9880(
 ; CHECK-NEXT:    ret i177 0
 ;
-  %A = alloca i177
   %L1 = load i177, ptr %A
   %B = or i177 0, -1
   %B5 = udiv i177 %L1, %B

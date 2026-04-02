@@ -20,10 +20,12 @@
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIMachineFunctionInfo.h"
+#include "SISpillUtils.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
+#include "llvm/InitializePasses.h"
 
 using namespace llvm;
 
@@ -116,27 +118,26 @@ static void insertCSRSaves(MachineBasicBlock &SaveBlock,
   MachineFunction &MF = *SaveBlock.getParent();
   const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
   const TargetFrameLowering *TFI = MF.getSubtarget().getFrameLowering();
-  const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   const SIRegisterInfo *RI = ST.getRegisterInfo();
 
   MachineBasicBlock::iterator I = SaveBlock.begin();
-  if (!TFI->spillCalleeSavedRegisters(SaveBlock, I, CSI, TRI)) {
+  if (!TFI->spillCalleeSavedRegisters(SaveBlock, I, CSI, RI)) {
     for (const CalleeSavedInfo &CS : CSI) {
       // Insert the spill to the stack frame.
       MCRegister Reg = CS.getReg();
 
       MachineInstrSpan MIS(I, &SaveBlock);
-      const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(
+      const TargetRegisterClass *RC = RI->getMinimalPhysRegClass(
           Reg, Reg == RI->getReturnAddressReg(MF) ? MVT::i64 : MVT::i32);
 
       // If this value was already livein, we probably have a direct use of the
       // incoming register value, so don't kill at the spill point. This happens
       // since we pass some special inputs (workgroup IDs) in the callee saved
       // range.
-      const bool IsLiveIn = isLiveIntoMBB(Reg, SaveBlock, TRI);
+      const bool IsLiveIn = isLiveIntoMBB(Reg, SaveBlock, RI);
       TII.storeRegToStackSlot(SaveBlock, I, Reg, !IsLiveIn, CS.getFrameIdx(),
-                              RC, TRI, Register());
+                              RC, Register());
 
       if (Indexes) {
         assert(std::distance(MIS.begin(), I) == 1);
@@ -209,10 +210,15 @@ void SILowerSGPRSpills::calculateSaveRestoreBlocks(MachineFunction &MF) {
   // So set the save points for those.
 
   // Use the points found by shrink-wrapping, if any.
-  if (MFI.getSavePoint()) {
-    SaveBlocks.push_back(MFI.getSavePoint());
-    assert(MFI.getRestorePoint() && "Both restore and save must be set");
-    MachineBasicBlock *RestoreBlock = MFI.getRestorePoint();
+  if (!MFI.getSavePoints().empty()) {
+    assert(MFI.getSavePoints().size() == 1 &&
+           "Multiple save points not yet supported!");
+    const auto &SavePoint = *MFI.getSavePoints().begin();
+    SaveBlocks.push_back(SavePoint.first);
+    assert(MFI.getRestorePoints().size() == 1 &&
+           "Multiple restore points not yet supported!");
+    const auto &RestorePoint = *MFI.getRestorePoints().begin();
+    MachineBasicBlock *RestoreBlock = RestorePoint.first;
     // If RestoreBlock does not have any successor and is not a return block
     // then the end point is unreachable and we do not need to insert any
     // epilogue.
@@ -297,7 +303,7 @@ bool SILowerSGPRSpills::spillCalleeSavedRegs(
 void SILowerSGPRSpills::updateLaneVGPRDomInstr(
     int FI, MachineBasicBlock *MBB, MachineBasicBlock::iterator InsertPt,
     DenseMap<Register, MachineBasicBlock::iterator> &LaneVGPRDomInstr) {
-  // For the Def of a virtual LaneVPGR to dominate all its uses, we should
+  // For the Def of a virtual LaneVGPR to dominate all its uses, we should
   // insert an IMPLICIT_DEF before the dominating spill. Switching to a
   // depth first order doesn't really help since the machine function can be in
   // the unstructured control flow post-SSA. For each virtual register, hence
@@ -351,6 +357,7 @@ void SILowerSGPRSpills::determineRegsForWWMAllocation(MachineFunction &MF,
   MachineRegisterInfo &MRI = MF.getRegInfo();
   BitVector ReservedRegs = TRI->getReservedRegs(MF);
   BitVector NonWwmAllocMask(TRI->getNumRegs());
+  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
 
   // FIXME: MaxNumVGPRsForWwmAllocation might need to be adjusted in the future
   // to have a balanced allocation between WWM values and per-thread vector
@@ -359,7 +366,7 @@ void SILowerSGPRSpills::determineRegsForWWMAllocation(MachineFunction &MF,
   NumRegs =
       std::min(static_cast<unsigned>(MFI->getSGPRSpillVGPRs().size()), NumRegs);
 
-  auto [MaxNumVGPRs, MaxNumAGPRs] = TRI->getMaxNumVectorRegs(MF);
+  auto [MaxNumVGPRs, MaxNumAGPRs] = ST.getMaxNumVectorRegs(MF.getFunction());
   // Try to use the highest available registers for now. Later after
   // vgpr-regalloc, they can be shifted to the lowest range.
   unsigned I = 0;
@@ -376,7 +383,7 @@ void SILowerSGPRSpills::determineRegsForWWMAllocation(MachineFunction &MF,
     // Reserve an arbitrary register and report the error.
     TRI->markSuperRegs(RegMask, AMDGPU::VGPR0);
     MF.getFunction().getContext().emitError(
-        "can't find enough VGPRs for wwm-regalloc");
+        "cannot find enough VGPRs for wwm-regalloc");
   }
 }
 
@@ -518,24 +525,8 @@ bool SILowerSGPRSpills::run(MachineFunction &MF) {
       FuncInfo->updateNonWWMRegMask(NonWwmRegMask);
     }
 
-    for (MachineBasicBlock &MBB : MF) {
-      // FIXME: The dead frame indices are replaced with a null register from
-      // the debug value instructions. We should instead, update it with the
-      // correct register value. But not sure the register value alone is
-      // adequate to lower the DIExpression. It should be worked out later.
-      for (MachineInstr &MI : MBB) {
-        if (MI.isDebugValue()) {
-          uint32_t StackOperandIdx = MI.isDebugValueList() ? 2 : 0;
-          if (MI.getOperand(StackOperandIdx).isFI() &&
-              !MFI.isFixedObjectIndex(
-                  MI.getOperand(StackOperandIdx).getIndex()) &&
-              SpillFIs[MI.getOperand(StackOperandIdx).getIndex()]) {
-            MI.getOperand(StackOperandIdx)
-                .ChangeToRegister(Register(), false /*isDef*/);
-          }
-        }
-      }
-    }
+    for (MachineBasicBlock &MBB : MF)
+      clearDebugInfoForSpillFIs(MFI, MBB, SpillFIs);
 
     // All those frame indices which are dead by now should be removed from the
     // function frame. Otherwise, there is a side effect such as re-mapping of

@@ -16,7 +16,6 @@
 #include <cwchar>  // wide char manipulation
 
 _LIBCPP_BEGIN_NAMESPACE_STD
-_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 namespace __locale {
 
 //
@@ -145,7 +144,7 @@ int __snprintf(char* ret, size_t n, __locale_t loc, const char* format, ...) {
 // Like sprintf, but when return value >= 0 it returns
 // a pointer to a malloc'd string in *sptr.
 // If return >= 0, use free to delete *sptr.
-int __libcpp_vasprintf(char** sptr, const char* __restrict format, va_list ap) {
+static int __libcpp_vasprintf(char** sptr, const char* __restrict format, va_list ap) {
   *sptr = nullptr;
   // Query the count required.
   va_list ap_copy;
@@ -183,5 +182,4 @@ int __asprintf(char** ret, __locale_t loc, const char* format, ...) {
 }
 
 } // namespace __locale
-_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD

@@ -56,10 +56,10 @@ module m2
 contains
   subroutine foo
     !$omp declare target
-    !WARNING: The entity with PARAMETER attribute is used in a DECLARE TARGET directive
-    !WARNING: The entity with PARAMETER attribute is used in a DECLARE TARGET directive
+    !WARNING: The entity with PARAMETER attribute is used in a DECLARE TARGET directive [-Wopen-mp-usage]
+    !WARNING: The entity with PARAMETER attribute is used in a DECLARE TARGET directive [-Wopen-mp-usage]
     !$omp declare target (foo, N, M)
-    !WARNING: The usage of TO clause on DECLARE TARGET directive has been deprecated. Use ENTER clause instead.
+    !WARNING: The usage of TO clause on DECLARE TARGET directive has been deprecated. Use ENTER clause instead. [-Wopen-mp-usage]
     !ERROR: A variable that appears in a DECLARE TARGET directive must be declared in the scope of a module or have the SAVE attribute, either explicitly or implicitly
     !ERROR: A variable that appears in a DECLARE TARGET directive must be declared in the scope of a module or have the SAVE attribute, either explicitly or implicitly
     !ERROR: A variable that appears in a DECLARE TARGET directive must be declared in the scope of a module or have the SAVE attribute, either explicitly or implicitly
@@ -68,7 +68,7 @@ contains
     !ERROR: A variable that appears in a DECLARE TARGET directive must be declared in the scope of a module or have the SAVE attribute, either explicitly or implicitly
     !ERROR: A variable that appears in a DECLARE TARGET directive must be declared in the scope of a module or have the SAVE attribute, either explicitly or implicitly
     !$omp declare target enter(Q, S) link(R)
-    !WARNING: The usage of TO clause on DECLARE TARGET directive has been deprecated. Use ENTER clause instead.
+    !WARNING: The usage of TO clause on DECLARE TARGET directive has been deprecated. Use ENTER clause instead. [-Wopen-mp-usage]
     !ERROR: A variable that appears in a DECLARE TARGET directive must be declared in the scope of a module or have the SAVE attribute, either explicitly or implicitly
     !ERROR: MAP clause is not allowed on the DECLARE TARGET directive
     !$omp declare target to(Q) map(from:Q)

@@ -243,7 +243,7 @@ labels of just ``v1`` and ``v2``.
   This signature is the same when origin tracking is disabled - in this case
   the dfsan_origin passed in it will always be 0.
 
-  The callback will be called when a tained value reach stack/registers
+  The callback will be called when a tainted value reaches stack/registers
   in the context of a function. Tainted values can reach a function:
   * via the arguments of the function
   * via the return value of a call that occurs in the function

@@ -3,7 +3,7 @@
 
 !CHICK-SAME:    %arg0: [[TYPE:!fir.ref<!fir.boxproc<() -> i32>>>]],
 
-!CHECK-LABEL: func.func private @_copy_boxproc_i32_args(
+!CHECK-LABEL: func.func private @_copy_ref_boxproc_i32_args(
 !CHECK-SAME:        %arg0: [[TYPE:!fir.ref<!fir.boxproc<\(\) -> i32>>]],
 !CHECK-SAME:        %arg1: [[TYPE]])
 !CHECK:         %[[DST:.*]]:2 = hlfir.declare %arg0 {{.*}} : ([[TYPE]]) -> ([[TYPE]], [[TYPE]])
@@ -14,7 +14,7 @@
 
 !CHECK-LABEL: func @_QPtest_proc_ptr
 !CHECK:         omp.parallel
-!CHECK:           omp.single copyprivate(%{{.*}}#0 -> @_copy_boxproc_i32_args : !fir.ref<!fir.boxproc<() -> i32>>)
+!CHECK:           omp.single copyprivate(%{{.*}}#0 -> @_copy_ref_boxproc_i32_args : !fir.ref<!fir.boxproc<() -> i32>>)
 subroutine test_proc_ptr()
   interface
      function sub1() bind(c) result(ret)

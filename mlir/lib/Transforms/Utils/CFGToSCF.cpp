@@ -115,14 +115,12 @@
 
 #include "mlir/Transforms/CFGToSCF.h"
 
-#include "mlir/IR/RegionGraphTraits.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SCCIterator.h"
 #include "llvm/ADT/SetVector.h"
-#include "llvm/ADT/SmallPtrSet.h"
 
 using namespace mlir;
 
@@ -427,8 +425,7 @@ public:
   /// region with an instance of `returnLikeOp`s kind.
   void combineExit(Operation *returnLikeOp,
                    function_ref<Value(unsigned)> getSwitchValue) {
-    auto [iter, inserted] =
-        returnLikeToCombinedExit.insert({returnLikeOp, nullptr});
+    auto [iter, inserted] = returnLikeToCombinedExit.try_emplace(returnLikeOp);
     if (!inserted && iter->first == returnLikeOp)
       return;
 
@@ -710,7 +707,7 @@ transformToReduceLoop(Block *loopHeader, Block *exitBlock,
     llvm::SmallDenseMap<Block *, bool> dominanceCache;
     // Returns true if `loopBlock` dominates `block`.
     auto loopBlockDominates = [&](Block *block) {
-      auto [iter, inserted] = dominanceCache.insert({block, false});
+      auto [iter, inserted] = dominanceCache.try_emplace(block);
       if (!inserted)
         return iter->second;
       iter->second = dominanceInfo.dominates(loopBlock, block);
@@ -1159,8 +1156,20 @@ static FailureOr<SmallVector<Block *>> transformToStructuredCFBranches(
     FailureOr<Operation *> result = interface.createStructuredBranchRegionOp(
         opBuilder, regionEntry->getTerminator(),
         continuation->getArgumentTypes(), conditionalRegions);
-    if (failed(result))
+    if (failed(result)) {
+      // Blocks were moved from the parent region into conditionalRegions before
+      // calling createStructuredBranchRegionOp. On failure, move them back to
+      // avoid use-after-free crashes: the moved blocks may still be referenced
+      // as successors by blocks remaining in the parent region, so destroying
+      // conditionalRegions with live uses would trigger an assertion.
+      // This patching does not undo the change, it barely makes it so that the
+      // pass can gracefully fail instead of crashing.
+      Region *parentRegion = regionEntry->getParent();
+      for (Region &conditionalRegion : conditionalRegions)
+        parentRegion->getBlocks().splice(parentRegion->getBlocks().end(),
+                                         conditionalRegion.getBlocks());
       return failure();
+    }
     structuredCondOp = *result;
     regionEntry->getTerminator()->erase();
   }
@@ -1226,7 +1235,8 @@ static ReturnLikeExitCombiner createSingleExitBlocksForReturnLike(
 
 /// Checks all preconditions of the transformation prior to any transformations.
 /// Returns failure if any precondition is violated.
-static LogicalResult checkTransformationPreconditions(Region &region) {
+static LogicalResult
+checkTransformationPreconditions(Region &region, CFGToSCFInterface &interface) {
   for (Block &block : region.getBlocks())
     if (block.hasNoPredecessors() && !block.isEntryBlock())
       return block.front().emitOpError(
@@ -1270,7 +1280,21 @@ static LogicalResult checkTransformationPreconditions(Region &region) {
     }
     return WalkResult::advance();
   });
-  return failure(result.wasInterrupted());
+  if (result.wasInterrupted())
+    return failure();
+
+  // Verify all multi-successor terminators are convertible before touching IR.
+  for (Block &block : region.getBlocks()) {
+    if (block.getNumSuccessors() <= 1)
+      continue;
+    Operation *terminator = block.getTerminator();
+    if (!interface.canConvertMultiSuccessorBranchOp(terminator)) {
+      terminator->emitOpError(
+          "cannot convert unknown control flow op to structured control flow");
+      return failure();
+    }
+  }
+  return success();
 }
 
 FailureOr<bool> mlir::transformCFGToSCF(Region &region,
@@ -1279,12 +1303,12 @@ FailureOr<bool> mlir::transformCFGToSCF(Region &region,
   if (region.empty() || region.hasOneBlock())
     return false;
 
-  if (failed(checkTransformationPreconditions(region)))
+  if (failed(checkTransformationPreconditions(region, interface)))
     return failure();
 
   DenseMap<Type, Value> typedUndefCache;
   auto getUndefValue = [&](Type type) {
-    auto [iter, inserted] = typedUndefCache.insert({type, nullptr});
+    auto [iter, inserted] = typedUndefCache.try_emplace(type);
     if (!inserted)
       return iter->second;
 

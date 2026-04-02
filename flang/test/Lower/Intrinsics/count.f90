@@ -11,7 +11,7 @@ subroutine count_test1(rslt, mask)
     rslt = count(mask)
   ! CHECK:  %[[a5:.*]] = fir.call @_FortranACount(%[[a2]], %{{.*}}, %{{.*}}, %[[a4]]) {{.*}}: (!fir.box<none>, !fir.ref<i8>, i32, i32) -> i64
   end subroutine
-  
+
   ! CHECK-LABEL: test_count2
   ! CHECK-SAME: %[[arg0:.*]]: !fir.box<!fir.array<?xi32>>{{.*}}, %[[arg1:.*]]: !fir.box<!fir.array<?x?x!fir.logical<4>>>{{.*}})
   subroutine test_count2(rslt, mask)
@@ -29,7 +29,7 @@ subroutine count_test1(rslt, mask)
   ! CHECK:  %[[a12:.*]] = fir.box_addr %[[a10]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
   ! CHECK:  fir.freemem %[[a12]]
   end subroutine
-  
+
   ! CHECK-LABEL: test_count3
   ! CHECK-SAME: %[[arg0:.*]]: !fir.ref<i32>{{.*}}, %[[arg1:.*]]: !fir.box<!fir.array<?x!fir.logical<4>>>{{.*}})
   subroutine test_count3(rslt, mask)

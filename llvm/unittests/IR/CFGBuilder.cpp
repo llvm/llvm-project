@@ -43,7 +43,7 @@ static void ConnectBlocks(BasicBlock *From, BasicBlock *To) {
 
   if (isa<UnreachableInst>(From->getTerminator()))
     From->getTerminator()->eraseFromParent();
-  if (!From->getTerminator()) {
+  if (!From->hasTerminator()) {
     IRBuilder<> IRB(From);
     IRB.CreateSwitch(ConstantInt::get(IntTy, 0), To);
     return;

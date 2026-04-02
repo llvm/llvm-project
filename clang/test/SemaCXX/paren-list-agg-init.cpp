@@ -403,3 +403,25 @@ void test() {
     S<int>{}.f(); // beforecxx20-note {{requested here}}
 }
 }
+
+namespace GH72880_regression {
+struct E {
+    int i = 42;
+};
+struct G {
+  E e;
+};
+template <typename>
+struct Test {
+  void f() {
+    constexpr E e;
+    //FIXME: We should only warn one
+    constexpr G g(e); // beforecxx20-warning 2{{C++20 extension}}
+    static_assert(g.e.i == 42);
+  }
+};
+void test() {
+    Test<int>{}.f(); // beforecxx20-note {{requested here}}
+}
+
+}

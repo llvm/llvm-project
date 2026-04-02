@@ -27,7 +27,7 @@ for.end:                                          ; preds = %for.body
 }
 
 ;PR14701
-define void @start_model_rare(i1 %arg) nounwind uwtable ssp {
+define void @start_model_rare(i1 %arg) {
 entry:
   br i1 false, label %return, label %if.end
 
@@ -56,7 +56,7 @@ if.then46:                                        ; preds = %for.body40
   br label %for.inc50
 
 for.inc50:                                        ; preds = %if.then46, %for.body40
-  %k.1 = phi i32 [ undef, %for.body40 ], [ %inc47, %if.then46 ]
+  %k.1 = phi i32 [ 0, %for.body40 ], [ %inc47, %if.then46 ]
   %step.1 = phi i32 [ %step.0121, %for.body40 ], [ %inc47, %if.then46 ]
   %indvars.iv.next124 = add i64 %indvars.iv123, 1
   %lftr.wideiv = trunc i64 %indvars.iv.next124 to i32

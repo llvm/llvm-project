@@ -1,4 +1,4 @@
-# RUN: llvm-mc -triple aarch64 -mattr=+pops -disassemble < %s | FileCheck %s
+# RUN: llvm-mc -triple aarch64 -mattr=+pops,+mte -disassemble < %s | FileCheck %s
 
 #------------------------------------------------------------------------------
 # ARMV9.6-A RAS Extensions

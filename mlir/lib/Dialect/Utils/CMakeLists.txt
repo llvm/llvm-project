@@ -3,9 +3,11 @@ add_mlir_library(MLIRDialectUtils
   ReshapeOpsUtils.cpp
   StructuredOpsUtils.cpp
   StaticValueUtils.cpp
+  VerificationUtils.cpp
 
   DEPENDS
   MLIRDialectUtilsIncGen
+  MLIRArithDialect
 
   LINK_LIBS PUBLIC
   MLIRIR

@@ -79,6 +79,7 @@ add_subdirectory(Basic)
 add_subdirectory(Lex)
 add_subdirectory(Parse)
 add_subdirectory(Driver)
+add_subdirectory(DependencyScanning)
 if(CLANG_ENABLE_STATIC_ANALYZER)
   add_subdirectory(Analysis)
   add_subdirectory(StaticAnalyzer)
@@ -90,6 +91,7 @@ add_subdirectory(Tooling)
 add_subdirectory(Format)
 add_subdirectory(Frontend)
 add_subdirectory(Rewrite)
+add_subdirectory(ScalableStaticAnalysisFramework)
 add_subdirectory(Sema)
 add_subdirectory(CodeGen)
 if(HAVE_CLANG_REPL_SUPPORT)
@@ -117,6 +119,7 @@ get_property(LINK_LIBS GLOBAL PROPERTY CLANG_UNITTEST_LINK_LIBS)
 get_property(LLVM_COMPONENTS GLOBAL PROPERTY CLANG_UNITTEST_LLVM_COMPONENTS)
 add_distinct_clang_unittest(AllClangUnitTests
   ${SRCS}
+  AllClangUnitTests.cpp
   CLANG_LIBS
   ${CLANG_LIBS}
   LINK_LIBS

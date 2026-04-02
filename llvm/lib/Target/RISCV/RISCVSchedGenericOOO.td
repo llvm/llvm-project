@@ -497,5 +497,5 @@ defm : UnsupportedSchedV;
 defm : UnsupportedSchedZfaWithQ;
 defm : UnsupportedSchedZvk;
 defm : UnsupportedSchedSFB;
-defm : UnsupportedSchedXsfvcp;
+defm : UnsupportedSchedXsf;
 }

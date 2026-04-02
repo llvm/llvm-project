@@ -10,32 +10,67 @@
 //
 //===----------------------------------------------------------------------===//
 
-def : Enum {
-  let name = "ol_device_type_t";
+def ol_device_type_t : Enum {
   let desc = "Supported device types.";
   let etors =[
     Etor<"DEFAULT", "The default device type as preferred by the runtime">,
     Etor<"ALL", "Devices of all types">,
     Etor<"GPU", "GPU device type">,
     Etor<"CPU", "CPU device type">,
+    Etor<"Host", "Host device type">,
   ];
 }
 
-def : Enum {
-  let name = "ol_device_info_t";
+def ol_device_info_t : Enum {
   let desc = "Supported device info.";
   let is_typed = 1;
-  let etors =[
+  list<TaggedEtor> basic_etors =[
     TaggedEtor<"TYPE", "ol_device_type_t", "type of the device">,
     TaggedEtor<"PLATFORM", "ol_platform_handle_t", "the platform associated with the device">,
     TaggedEtor<"NAME", "char[]", "Device name">,
+    TaggedEtor<"PRODUCT_NAME", "char[]", "Device user-facing marketing name">,
+    TaggedEtor<"UID", "char[]", "Device UID">,
     TaggedEtor<"VENDOR", "char[]", "Device vendor">,
-    TaggedEtor<"DRIVER_VERSION", "char[]", "Driver version">
+    TaggedEtor<"DRIVER_VERSION", "char[]", "Driver version">,
+    TaggedEtor<"MAX_WORK_GROUP_SIZE", "uint32_t", "Maximum total work group size in work items">,
+    TaggedEtor<"MAX_WORK_GROUP_SIZE_PER_DIMENSION", "ol_dimensions_t", "Maximum work group size in each dimension">,
+    TaggedEtor<"MAX_WORK_SIZE", "uint32_t", "Maximum total work items">,
+    TaggedEtor<"MAX_WORK_SIZE_PER_DIMENSION", "ol_dimensions_t", "Maximum work items in each dimension">,
+    TaggedEtor<"VENDOR_ID", "uint32_t", "A unique vendor device identifier assigned by PCI-SIG">,
+    TaggedEtor<"NUM_COMPUTE_UNITS", "uint32_t", "The number of parallel compute units available to the device">,
+    TaggedEtor<"MAX_CLOCK_FREQUENCY", "uint32_t", "The maximum configured clock frequency of this device in MHz">,
+    TaggedEtor<"MEMORY_CLOCK_RATE", "uint32_t", "Memory clock frequency in MHz">,
+    TaggedEtor<"ADDRESS_BITS", "uint32_t", "Number of bits used to represent an address in device memory">,
+    TaggedEtor<"MAX_MEM_ALLOC_SIZE", "uint64_t", "The maximum size of memory object allocation in bytes">,
+    TaggedEtor<"GLOBAL_MEM_SIZE", "uint64_t", "The size of global device memory in bytes">,
+    TaggedEtor<"WORK_GROUP_LOCAL_MEM_SIZE", "uint64_t", "The maximum size of local shared memory per work group in bytes">,
+  ];
+  list<TaggedEtor> fp_configs = !foreach(type, ["Single", "Double", "Half"], TaggedEtor<type # "_FP_CONFIG", "ol_device_fp_capability_flags_t", type # " precision floating point capability">);
+  list<TaggedEtor> native_vec_widths = !foreach(type, ["char","short","int","long","float","double","half"], TaggedEtor<"NATIVE_VECTOR_WIDTH_" # type, "uint32_t", "Native vector width for " # type>);
+  let etors = !listconcat(basic_etors, fp_configs, native_vec_widths);
+}
+
+def ol_device_fp_capability_flag_t : Enum {
+  let desc = "Device floating-point capability flags";
+  let is_bit_field = 1;
+  let etors =[
+    Etor<"CORRECTLY_ROUNDED_DIVIDE_SQRT", "Support correctly rounded divide and sqrt">,
+    Etor<"ROUND_TO_NEAREST", "Support round to nearest">,
+    Etor<"ROUND_TO_ZERO", "Support round to zero">,
+    Etor<"ROUND_TO_INF", "Support round to infinity">,
+    Etor<"INF_NAN", "Support INF to NAN">,
+    Etor<"DENORM", "Support denorm">,
+    Etor<"FMA", "Support fused multiply-add">,
+    Etor<"SOFT_FLOAT", "Basic floating point operations implemented in software">,
   ];
 }
 
-def : FptrTypedef {
-  let name = "ol_device_iterate_cb_t";
+def ol_device_fp_capability_flags_t : Typedef {
+  let desc = "Device floating-point capability flags";
+  let value = "uint32_t";
+}
+
+def ol_device_iterate_cb_t : FptrTypedef {
   let desc = "User-provided function to be used with `olIterateDevices`";
   let params = [
     Param<"ol_device_handle_t", "Device", "the device handle of the current iteration", PARAM_IN>,
@@ -44,8 +79,7 @@ def : FptrTypedef {
   let return = "bool";
 }
 
-def : Function {
-  let name = "olIterateDevices";
+def olIterateDevices : Function {
   let desc = "Iterates over all available devices, calling the callback for each device.";
   let details = [
     "If the user-provided callback returns `false`, the iteration is stopped."
@@ -59,8 +93,7 @@ def : Function {
   ];
 }
 
-def : Function {
-  let name = "olGetDeviceInfo";
+def olGetDeviceInfo : Function {
   let desc = "Queries the given property of the device.";
   let details = [];
   let params = [
@@ -83,8 +116,7 @@ def : Function {
   ];
 }
 
-def : Function {
-  let name = "olGetDeviceInfoSize";
+def olGetDeviceInfoSize : Function {
   let desc = "Returns the storage size of the given device query.";
   let details = [];
   let params = [

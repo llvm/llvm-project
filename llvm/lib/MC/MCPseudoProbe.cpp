@@ -13,7 +13,6 @@
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
-#include "llvm/MC/MCFragment.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCObjectStreamer.h"
 #include "llvm/MC/MCSymbol.h"
@@ -25,7 +24,6 @@
 #include <algorithm>
 #include <cassert>
 #include <limits>
-#include <memory>
 #include <sstream>
 #include <vector>
 
@@ -41,9 +39,8 @@ int MCPseudoProbeTable::DdgPrintIndent = 0;
 static const MCExpr *buildSymbolDiff(MCObjectStreamer *MCOS, const MCSymbol *A,
                                      const MCSymbol *B) {
   MCContext &Context = MCOS->getContext();
-  MCSymbolRefExpr::VariantKind Variant = MCSymbolRefExpr::VK_None;
-  const MCExpr *ARef = MCSymbolRefExpr::create(A, Variant, Context);
-  const MCExpr *BRef = MCSymbolRefExpr::create(B, Variant, Context);
+  const MCExpr *ARef = MCSymbolRefExpr::create(A, Context);
+  const MCExpr *BRef = MCSymbolRefExpr::create(B, Context);
   const MCExpr *AddrDelta =
       MCBinaryExpr::create(MCBinaryExpr::Sub, ARef, BRef, Context);
   return AddrDelta;
@@ -83,8 +80,9 @@ void MCPseudoProbe::emit(MCObjectStreamer *MCOS,
     if (AddrDelta->evaluateAsAbsolute(Delta, MCOS->getAssemblerPtr())) {
       MCOS->emitSLEB128IntValue(Delta);
     } else {
-      MCOS->insert(MCOS->getContext().allocFragment<MCPseudoProbeAddrFragment>(
-          AddrDelta));
+      auto *F = MCOS->getCurrentFragment();
+      F->makeLEB(true, AddrDelta);
+      MCOS->newFragment();
     }
   } else {
     // Emit the GUID of the split function that the sentinel probe represents.

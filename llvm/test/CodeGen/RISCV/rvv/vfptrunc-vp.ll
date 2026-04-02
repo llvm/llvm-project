@@ -4,8 +4,6 @@
 ; RUN: llc -mtriple=riscv32 -mattr=+d,+zvfhmin,+v,+m,+zvfbfmin -verify-machineinstrs < %s | FileCheck %s
 ; RUN: llc -mtriple=riscv64 -mattr=+d,+zvfhmin,+v,+m,+zvfbfmin -verify-machineinstrs < %s | FileCheck %s
 
-declare <vscale x 2 x half> @llvm.vp.fptrunc.nxv2f16.nxv2f32(<vscale x 2 x float>, <vscale x 2 x i1>, i32)
-
 define <vscale x 2 x half> @vfptrunc_nxv2f16_nxv2f32(<vscale x 2 x float> %a, <vscale x 2 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: vfptrunc_nxv2f16_nxv2f32:
 ; CHECK:       # %bb.0:
@@ -27,8 +25,6 @@ define <vscale x 2 x half> @vfptrunc_nxv2f16_nxv2f32_unmasked(<vscale x 2 x floa
   %v = call <vscale x 2 x half> @llvm.vp.fptrunc.nxv2f16.nxv2f32(<vscale x 2 x float> %a, <vscale x 2 x i1> splat (i1 true), i32 %vl)
   ret <vscale x 2 x half> %v
 }
-
-declare <vscale x 2 x half> @llvm.vp.fptrunc.nxv2f16.nxv2f64(<vscale x 2 x double>, <vscale x 2 x i1>, i32)
 
 define <vscale x 2 x half> @vfptrunc_nxv2f16_nxv2f64(<vscale x 2 x double> %a, <vscale x 2 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: vfptrunc_nxv2f16_nxv2f64:
@@ -54,8 +50,6 @@ define <vscale x 2 x half> @vfptrunc_nxv2f16_nxv2f64_unmasked(<vscale x 2 x doub
   ret <vscale x 2 x half> %v
 }
 
-declare <vscale x 2 x float> @llvm.vp.fptrunc.nxv2f64.nxv2f32(<vscale x 2 x double>, <vscale x 2 x i1>, i32)
-
 define <vscale x 2 x float> @vfptrunc_nxv2f32_nxv2f64(<vscale x 2 x double> %a, <vscale x 2 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: vfptrunc_nxv2f32_nxv2f64:
 ; CHECK:       # %bb.0:
@@ -78,8 +72,6 @@ define <vscale x 2 x float> @vfptrunc_nxv2f32_nxv2f64_unmasked(<vscale x 2 x dou
   ret <vscale x 2 x float> %v
 }
 
-declare <vscale x 7 x float> @llvm.vp.fptrunc.nxv7f64.nxv7f32(<vscale x 7 x double>, <vscale x 7 x i1>, i32)
-
 define <vscale x 7 x float> @vfptrunc_nxv7f32_nxv7f64(<vscale x 7 x double> %a, <vscale x 7 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: vfptrunc_nxv7f32_nxv7f64:
 ; CHECK:       # %bb.0:
@@ -90,8 +82,6 @@ define <vscale x 7 x float> @vfptrunc_nxv7f32_nxv7f64(<vscale x 7 x double> %a, 
   %v = call <vscale x 7 x float> @llvm.vp.fptrunc.nxv7f64.nxv7f32(<vscale x 7 x double> %a, <vscale x 7 x i1> %m, i32 %vl)
   ret <vscale x 7 x float> %v
 }
-
-declare <vscale x 16 x float> @llvm.vp.fptrunc.nxv16f64.nxv16f32(<vscale x 16 x double>, <vscale x 16 x i1>, i32)
 
 define <vscale x 16 x float> @vfptrunc_nxv16f32_nxv16f64(<vscale x 16 x double> %a, <vscale x 16 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: vfptrunc_nxv16f32_nxv16f64:
@@ -120,8 +110,6 @@ define <vscale x 16 x float> @vfptrunc_nxv16f32_nxv16f64(<vscale x 16 x double> 
   ret <vscale x 16 x float> %v
 }
 
-declare <vscale x 32 x float> @llvm.vp.fptrunc.nxv32f64.nxv32f32(<vscale x 32 x double>, <vscale x 32 x i1>, i32)
-
 define <vscale x 32 x float> @vfptrunc_nxv32f32_nxv32f64(<vscale x 32 x double> %a, <vscale x 32 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: vfptrunc_nxv32f32_nxv32f64:
 ; CHECK:       # %bb.0:
@@ -131,7 +119,7 @@ define <vscale x 32 x float> @vfptrunc_nxv32f32_nxv32f64(<vscale x 32 x double> 
 ; CHECK-NEXT:    slli a1, a1, 4
 ; CHECK-NEXT:    sub sp, sp, a1
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x10, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 16 * vlenb
-; CHECK-NEXT:    vsetvli a1, zero, e8, mf2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v7, v0
 ; CHECK-NEXT:    addi a1, sp, 16
 ; CHECK-NEXT:    vs8r.v v16, (a1) # vscale x 64-byte Folded Spill
@@ -155,10 +143,13 @@ define <vscale x 32 x float> @vfptrunc_nxv32f32_nxv32f64(<vscale x 32 x double> 
 ; CHECK-NEXT:    addi a7, a7, -1
 ; CHECK-NEXT:    and a4, a7, a4
 ; CHECK-NEXT:    srli a7, a1, 2
-; CHECK-NEXT:    vl8re64.v v8, (a6)
-; CHECK-NEXT:    vslidedown.vx v24, v0, a7
+; CHECK-NEXT:    vsetvli zero, a4, e64, m8, ta, ma
+; CHECK-NEXT:    vle64.v v8, (a6)
 ; CHECK-NEXT:    vsetvli a6, zero, e8, mf4, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v6, v0, a5
+; CHECK-NEXT:    vsetvli a6, zero, e8, mf2, ta, ma
+; CHECK-NEXT:    vslidedown.vx v24, v0, a7
+; CHECK-NEXT:    vsetvli a6, zero, e8, mf4, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v0, v24, a5
 ; CHECK-NEXT:    bltu a0, a1, .LBB8_2
 ; CHECK-NEXT:  # %bb.1:
@@ -206,8 +197,6 @@ define <vscale x 32 x float> @vfptrunc_nxv32f32_nxv32f64(<vscale x 32 x double> 
   ret <vscale x 32 x float> %v
 }
 
-declare <vscale x 2 x bfloat> @llvm.vp.fptrunc.nxv2bf16.nxv2f32(<vscale x 2 x float>, <vscale x 2 x i1>, i32)
-
 define <vscale x 2 x bfloat> @vfptrunc_nxv2bf16_nxv2f32(<vscale x 2 x float> %a, <vscale x 2 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: vfptrunc_nxv2bf16_nxv2f32:
 ; CHECK:       # %bb.0:
@@ -229,8 +218,6 @@ define <vscale x 2 x bfloat> @vfptrunc_nxv2bf16_nxv2f32_unmasked(<vscale x 2 x f
   %v = call <vscale x 2 x bfloat> @llvm.vp.fptrunc.nxv2bf16.nxv2f32(<vscale x 2 x float> %a, <vscale x 2 x i1> splat (i1 true), i32 %vl)
   ret <vscale x 2 x bfloat> %v
 }
-
-declare <vscale x 2 x bfloat> @llvm.vp.fptrunc.nxv2bf16.nxv2f64(<vscale x 2 x double>, <vscale x 2 x i1>, i32)
 
 define <vscale x 2 x bfloat> @vfptrunc_nxv2bf16_nxv2f64(<vscale x 2 x double> %a, <vscale x 2 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: vfptrunc_nxv2bf16_nxv2f64:

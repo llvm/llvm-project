@@ -1,4 +1,4 @@
-//===--- ReplaceRandomShuffleCheck.cpp - clang-tidy------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -78,7 +78,7 @@ void ReplaceRandomShuffleCheck::check(const MatchFinder::MatchResult &Result) {
   }();
 
   std::string NewName = "shuffle";
-  StringRef ContainerText = Lexer::getSourceText(
+  const StringRef ContainerText = Lexer::getSourceText(
       CharSourceRange::getTokenRange(MatchedDecl->getSourceRange()),
       *Result.SourceManager, getLangOpts());
   if (ContainerText.starts_with("std::"))

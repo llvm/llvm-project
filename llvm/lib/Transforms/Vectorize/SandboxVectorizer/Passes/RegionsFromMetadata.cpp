@@ -13,17 +13,18 @@
 
 namespace llvm::sandboxir {
 
-RegionsFromMetadata::RegionsFromMetadata(StringRef Pipeline)
+RegionsFromMetadata::RegionsFromMetadata(StringRef Pipeline, StringRef AuxArg)
     : FunctionPass("regions-from-metadata"),
       RPM("rpm", Pipeline, SandboxVectorizerPassBuilder::createRegionPass) {}
 
 bool RegionsFromMetadata::runOnFunction(Function &F, const Analyses &A) {
   SmallVector<std::unique_ptr<sandboxir::Region>> Regions =
       sandboxir::Region::createRegionsFromMD(F, A.getTTI());
+  bool Change = false;
   for (auto &R : Regions) {
-    RPM.runOnRegion(*R, A);
+    Change |= RPM.runOnRegion(*R, A);
   }
-  return false;
+  return Change;
 }
 
 } // namespace llvm::sandboxir

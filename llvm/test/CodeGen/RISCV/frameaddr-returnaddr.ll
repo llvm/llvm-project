@@ -5,8 +5,6 @@
 ; RUN:   | FileCheck -check-prefix=RV64I %s
 
 declare void @notdead(ptr)
-declare ptr @llvm.frameaddress(i32)
-declare ptr @llvm.returnaddress(i32)
 
 define ptr @test_frameaddress_0() nounwind {
 ; RV32I-LABEL: test_frameaddress_0:

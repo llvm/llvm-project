@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -Wno-hlsl-implicit-binding -fsyntax-only -verify -triple dxil-unknown-shadermodel6.3-library %s
+// RUN: %clang_cc1 -fsyntax-only -verify -triple dxil-unknown-shadermodel6.3-library %s
 
 // Note: As HLSL resource type are sizeless type, we don't exhaustively
 // test for cases covered by sizeless-1.c and similar tests.

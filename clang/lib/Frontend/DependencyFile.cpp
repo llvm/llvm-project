@@ -10,10 +10,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Frontend/DependencyOutputOptions.h"
-#include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/Frontend/Utils.h"
 #include "clang/Lex/DirectoryLookup.h"
 #include "clang/Lex/ModuleMap.h"
@@ -73,6 +73,17 @@ struct DepCollectorPPCallbacks : public PPCallbacks {
                                     /*IsSystem*/ false,
                                     /*IsModuleFile*/ false,
                                     /*IsMissing*/ false);
+  }
+
+  bool EmbedFileNotFound(StringRef FileName) override {
+    DepCollector.maybeAddDependency(
+        llvm::sys::path::remove_leading_dotslash(FileName),
+        /*FromModule=*/false,
+        /*IsSystem=*/false,
+        /*IsModuleFile=*/false,
+        /*IsMissing=*/true);
+    // Return true to silence the file not found diagnostic.
+    return true;
   }
 
   void InclusionDirective(SourceLocation HashLoc, const Token &IncludeTok,
@@ -143,7 +154,7 @@ struct DepCollectorASTListener : public ASTReaderListener {
   bool needsSystemInputFileVisitation() override {
     return DepCollector.needSystemDependencies();
   }
-  void visitModuleFile(StringRef Filename,
+  void visitModuleFile(ModuleFileName Filename,
                        serialization::ModuleKind Kind) override {
     DepCollector.maybeAddDependency(Filename, /*FromModule*/ true,
                                     /*IsSystem*/ false, /*IsModuleFile*/ true,

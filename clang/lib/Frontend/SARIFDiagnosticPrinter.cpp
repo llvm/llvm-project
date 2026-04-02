@@ -13,15 +13,12 @@
 #include "clang/Frontend/SARIFDiagnosticPrinter.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/Sarif.h"
-#include "clang/Basic/SourceManager.h"
 #include "clang/Frontend/DiagnosticRenderer.h"
 #include "clang/Frontend/SARIFDiagnostic.h"
 #include "clang/Lex/Lexer.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 
 namespace clang {
 
@@ -43,7 +40,7 @@ void SARIFDiagnosticPrinter::EndSourceFile() {
   assert(SARIFDiag && "SARIFDiagnostic has not been set.");
   Writer->endRun();
   llvm::json::Value Value(Writer->createDocument());
-  OS << "\n" << Value << "\n\n";
+  OS << llvm::formatv("\n{0:2}\n\n", Value);
   OS.flush();
   SARIFDiag.reset();
 }

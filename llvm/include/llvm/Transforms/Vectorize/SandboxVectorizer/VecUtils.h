@@ -16,8 +16,28 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/SandboxIR/Type.h"
 #include "llvm/SandboxIR/Utils.h"
+#include "llvm/Support/Compiler.h"
+#include <iterator>
 
-namespace llvm::sandboxir {
+namespace llvm {
+/// Traits for DenseMap.
+template <> struct DenseMapInfo<SmallVector<sandboxir::Value *>> {
+  static inline SmallVector<sandboxir::Value *> getEmptyKey() {
+    return SmallVector<sandboxir::Value *>({(sandboxir::Value *)-1});
+  }
+  static inline SmallVector<sandboxir::Value *> getTombstoneKey() {
+    return SmallVector<sandboxir::Value *>({(sandboxir::Value *)-2});
+  }
+  static unsigned getHashValue(const SmallVector<sandboxir::Value *> &Vec) {
+    return hash_combine_range(Vec);
+  }
+  static bool isEqual(const SmallVector<sandboxir::Value *> &Vec1,
+                      const SmallVector<sandboxir::Value *> &Vec2) {
+    return Vec1 == Vec2;
+  }
+};
+
+namespace sandboxir {
 
 class VecUtils {
 public:
@@ -48,8 +68,8 @@ public:
     return *Diff == ElmBytes;
   }
 
-  template <typename LoadOrStoreT>
-  static bool areConsecutive(ArrayRef<Value *> &Bndl, ScalarEvolution &SE,
+  template <typename LoadOrStoreT, typename ValT>
+  static bool areConsecutive(ArrayRef<ValT *> Bndl, ScalarEvolution &SE,
                              const DataLayout &DL) {
     static_assert(std::is_same<LoadOrStoreT, LoadInst>::value ||
                       std::is_same<LoadOrStoreT, StoreInst>::value,
@@ -99,6 +119,28 @@ public:
       NumElts = VecTy->getNumElements() * NumElts;
     }
     return FixedVectorType::get(ElemTy, NumElts);
+  }
+  /// \Returns the combined vector type for \p Bndl, even when the element types
+  /// differ. For example: i8,i8,i16 will return <4 x i8>. \Returns null if
+  /// types are of mixed float/integer types.
+  static Type *getCombinedVectorTypeFor(ArrayRef<Instruction *> Bndl,
+                                        const DataLayout &DL) {
+    assert(!Bndl.empty() && "Expected non-empty Bndl!");
+    unsigned TotalBits = 0;
+    unsigned MinElmBits = std::numeric_limits<unsigned>::max();
+    Type *MinElmTy = nullptr;
+    for (auto [Idx, V] : enumerate(Bndl)) {
+      Type *ElmTy = getElementType(Utils::getExpectedType(V));
+
+      unsigned ElmBits = Utils::getNumBits(ElmTy, DL);
+      TotalBits += ElmBits * VecUtils::getNumLanes(V);
+      if (ElmBits < MinElmBits) {
+        MinElmBits = ElmBits;
+        MinElmTy = ElmTy;
+      }
+    }
+    unsigned NumElms = TotalBits / MinElmBits;
+    return FixedVectorType::get(MinElmTy, NumElms);
   }
   /// \Returns the instruction in \p Instrs that is lowest in the BB. Expects
   /// that all instructions are in the same BB.
@@ -177,7 +219,170 @@ public:
     return ScalarTy;
   }
   /// \Returns the first integer power of 2 that is <= Num.
-  static unsigned getFloorPowerOf2(unsigned Num);
+  LLVM_ABI static unsigned getFloorPowerOf2(unsigned Num);
+
+  /// Helper struct for `matchPack()`. Describes the instructions and operands
+  /// of a pack pattern.
+  struct PackPattern {
+    /// The insertelement instructions that form the pack pattern in bottom-up
+    /// order, i.e., the first instruction in `Instrs` is the bottom-most
+    /// InsertElement instruction of the pack pattern.
+    /// For example in this simple pack pattern:
+    ///  %Pack0 = insertelement <2 x i8> poison, i8 %v0, i64 0
+    ///  %Pack1 = insertelement <2 x i8> %Pack0, i8 %v1, i64 1
+    /// this is [ %Pack1, %Pack0 ].
+    SmallVector<Instruction *> Instrs;
+    /// The "external" operands of the pack pattern, i.e., the values that get
+    /// packed into a vector, skipping the ones in `Instrs`. The operands are in
+    /// bottom-up order, starting from the operands of the bottom-most insert.
+    /// So in our example this would be [ %v1, %v0 ].
+    SmallVector<Value *> Operands;
+  };
+
+  /// If \p I is the last instruction of a pack pattern (i.e., an InsertElement
+  /// into a vector), then this function returns the instructions in the pack
+  /// and the operands in the pack, else returns nullopt.
+  /// Here is an example of a matched pattern:
+  ///  %PackA0 = insertelement <2 x i8> poison, i8 %v0, i64 0
+  ///  %PackA1 = insertelement <2 x i8> %PackA0, i8 %v1, i64 1
+  /// TODO: this currently detects only simple canonicalized patterns.
+  static std::optional<PackPattern> matchPack(Instruction *I) {
+    // TODO: Support vector pack patterns.
+    // TODO: Support out-of-order inserts.
+
+    // Early return if `I` is not an Insert.
+    if (!isa<InsertElementInst>(I))
+      return std::nullopt;
+    auto *BB0 = I->getParent();
+    // The pack contains as many instrs as the lanes of the bottom-most Insert
+    unsigned ExpectedNumInserts = VecUtils::getNumLanes(I);
+    assert(ExpectedNumInserts >= 2 && "Expected at least 2 inserts!");
+    PackPattern Pack;
+    Pack.Operands.resize(ExpectedNumInserts);
+    // Collect the inserts by walking up the use-def chain.
+    Instruction *InsertI = I;
+    for (auto ExpectedLane : reverse(seq<unsigned>(ExpectedNumInserts))) {
+      if (InsertI == nullptr)
+        return std::nullopt;
+      if (InsertI->getParent() != BB0)
+        return std::nullopt;
+      // Check the lane.
+      auto *LaneC = dyn_cast<ConstantInt>(InsertI->getOperand(2));
+      if (LaneC == nullptr || LaneC->getSExtValue() != ExpectedLane)
+        return std::nullopt;
+      Pack.Instrs.push_back(InsertI);
+      Pack.Operands[ExpectedLane] = InsertI->getOperand(1);
+
+      Value *Op = InsertI->getOperand(0);
+      if (ExpectedLane == 0) {
+        // Check the topmost insert. The operand should be a Poison.
+        if (!isa<PoisonValue>(Op))
+          return std::nullopt;
+      } else {
+        InsertI = dyn_cast<InsertElementInst>(Op);
+      }
+    }
+    return Pack;
+  }
+
+  /// Emits the necessary instruction sequence to extract element of type \p
+  /// ExtrTy at \p Lane from \p FromVec. Emits instructions before \p WhereIt.
+  /// Returns the extracted value.
+  /// Note: This handles both vectors and scalars. In the vector case it
+  /// extracts an N-wide element (with N dictated by \p ExtrTy).
+  static Value *unpack(Value *FromVec, Type *ExtrTy, unsigned Lane,
+                       BasicBlock::iterator WhereIt) {
+    assert(isa<FixedVectorType>(FromVec->getType()) && "Expected vector!");
+    auto &Ctx = FromVec->getContext();
+    if (!ExtrTy->isVectorTy()) {
+      // For scalar elements we emit a single ExtractElementInst.
+      assert(Lane <
+                 cast<FixedVectorType>(FromVec->getType())->getNumElements() &&
+             "Out of bounds!");
+      assert(ExtrTy ==
+                 cast<FixedVectorType>(FromVec->getType())->getElementType() &&
+             "Expected same element type!");
+      Constant *ExtractLaneC =
+          ConstantInt::getSigned(Type::getInt32Ty(Ctx), Lane);
+      // Note: This may be folded into a Constant if FromVec is a Constant.
+      return ExtractElementInst::create(FromVec, ExtractLaneC, WhereIt, Ctx,
+                                        "Unpack");
+    }
+    // For vector elements we emit a shuffle.
+    // For example, extracting lanes 2 and 3 of a <4 x i32> vector %vec:
+    //  shufflevector <4 x i32> %vec, <4 x i32> poison, <2 x i32> <i32 2, i32 3>
+    auto *VecTy = cast<FixedVectorType>(FromVec->getType());
+    auto *ExtrVecTy = cast<FixedVectorType>(ExtrTy);
+    assert(ExtrVecTy->getElementType() == VecTy->getElementType() &&
+           "Expected same element type!");
+    SmallVector<int, 4> Mask;
+    for (unsigned Idx = 0, E = ExtrVecTy->getNumElements(); Idx != E; ++Idx) {
+      int MaskLane = Lane + Idx;
+      assert((unsigned)MaskLane <
+                 cast<FixedVectorType>(FromVec->getType())->getNumElements() &&
+             "Out of bounds!");
+      Mask.push_back(MaskLane);
+    }
+    return ShuffleVectorInst::create(FromVec, PoisonValue::get(VecTy), Mask,
+                                     WhereIt, Ctx, "Unpack");
+  }
+
+  /// Iterate over all lanes and Value pairs.
+  // For example, given a range: {i32 %v0, <2 x i32> %v1, i32 %v2} we get:
+  //  Lane Elm
+  //   0   %v0
+  //   1   %v1
+  //   3   %v2
+  template <typename RangeIteratorT> class LaneValueEnumerator {
+    /// Points to current element.
+    RangeIteratorT It;
+    RangeIteratorT ItE;
+    /// Accumulator of lanes.
+    unsigned Lane;
+
+  public:
+    // Note that We can start counting from a non-zero BeginLane, though the
+    // user must make sure it corresponds to the correct lane matching Begin.
+    LaneValueEnumerator(RangeIteratorT Begin, RangeIteratorT End,
+                        unsigned BeginLane)
+        : It(Begin), ItE(End), Lane(BeginLane) {}
+    using iterator_catecotry = std::input_iterator_tag;
+    // NOTE: dereference returns by value instead of by reference.
+    using value_type = std::pair<unsigned, Value *>;
+    using difference_type = std::ptrdiff_t;
+    using pointer = std::pair<unsigned, Value *> *;
+    using reference = std::pair<unsigned, Value *> &;
+    LaneValueEnumerator operator++() {
+      assert(It != ItE && "Already at end!");
+      auto *Ty = Utils::getExpectedType(*It);
+      if (auto *VecTy = dyn_cast<FixedVectorType>(Ty)) {
+        Lane += VecTy->getNumElements();
+      } else {
+        assert(!isa<VectorType>(Ty) && "Expected scalar type!");
+        Lane += 1;
+      }
+      ++It;
+      return *this;
+    }
+    value_type operator*() const { return {Lane, *It}; }
+    bool operator==(const LaneValueEnumerator &Other) const {
+      return It == Other.It;
+    }
+    bool operator!=(const LaneValueEnumerator &Other) const {
+      return !(*this == Other);
+    }
+  };
+
+  /// Helper for creating LaneValueEnumerator ranges. Can be used in for loops
+  /// like: `for (auto [Lane, V] : enumerateLanes(Range))`
+  template <typename ValueContainerT>
+  static auto enumerateLanes(const ValueContainerT &Range) {
+    auto Begin = LaneValueEnumerator<decltype(Range.begin())>(Range.begin(),
+                                                              Range.end(), 0);
+    auto End = LaneValueEnumerator<decltype(Range.begin())>(Range.end(),
+                                                            Range.end(), 0);
+    return make_range(Begin, End);
+  }
 
 #ifndef NDEBUG
   /// Helper dump function for debugging.
@@ -186,6 +391,8 @@ public:
 #endif // NDEBUG
 };
 
-} // namespace llvm::sandboxir
+} // namespace sandboxir
+
+} // namespace llvm
 
 #endif // LLVM_TRANSFORMS_VECTORIZE_SANDBOXVECTORIZER_VECUTILS_H

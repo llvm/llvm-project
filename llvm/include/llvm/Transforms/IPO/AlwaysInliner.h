@@ -15,6 +15,7 @@
 #define LLVM_TRANSFORMS_IPO_ALWAYSINLINER_H
 
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -36,14 +37,13 @@ public:
   AlwaysInlinerPass(bool InsertLifetime = true)
       : InsertLifetime(InsertLifetime) {}
 
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &);
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &);
   static bool isRequired() { return true; }
 };
 
 /// Create a legacy pass manager instance of a pass to inline and remove
 /// functions marked as "always_inline".
-Pass *createAlwaysInlinerLegacyPass(bool InsertLifetime = true);
-
+LLVM_ABI Pass *createAlwaysInlinerLegacyPass(bool InsertLifetime = true);
 }
 
 #endif // LLVM_TRANSFORMS_IPO_ALWAYSINLINER_H

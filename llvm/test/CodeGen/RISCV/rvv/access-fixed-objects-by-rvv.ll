@@ -22,12 +22,6 @@ define <vscale x 1 x i64> @access_fixed_object(ptr %val) {
   ret <vscale x 1 x i64> %v
 }
 
-declare <vscale x 1 x i64> @llvm.riscv.vadd.nxv1i64.nxv1i64(
-  <vscale x 1 x i64>,
-  <vscale x 1 x i64>,
-  <vscale x 1 x i64>,
-  i64);
-
 define <vscale x 1 x i64> @access_fixed_and_vector_objects(ptr %val) {
 ; RV64IV-LABEL: access_fixed_and_vector_objects:
 ; RV64IV:       # %bb.0:
@@ -36,13 +30,13 @@ define <vscale x 1 x i64> @access_fixed_and_vector_objects(ptr %val) {
 ; RV64IV-NEXT:    csrr a0, vlenb
 ; RV64IV-NEXT:    sub sp, sp, a0
 ; RV64IV-NEXT:    .cfi_escape 0x0f, 0x0e, 0x72, 0x00, 0x11, 0x90, 0x04, 0x22, 0x11, 0x01, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 528 + 1 * vlenb
-; RV64IV-NEXT:    addi a0, sp, 8
-; RV64IV-NEXT:    vl1re64.v v8, (a0)
-; RV64IV-NEXT:    addi a0, sp, 528
-; RV64IV-NEXT:    vl1re64.v v9, (a0)
 ; RV64IV-NEXT:    ld a0, 520(sp)
+; RV64IV-NEXT:    addi a1, sp, 8
+; RV64IV-NEXT:    addi a2, sp, 528
 ; RV64IV-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
-; RV64IV-NEXT:    vadd.vv v8, v8, v9
+; RV64IV-NEXT:    vle64.v v8, (a2)
+; RV64IV-NEXT:    vle64.v v9, (a1)
+; RV64IV-NEXT:    vadd.vv v8, v9, v8
 ; RV64IV-NEXT:    csrr a0, vlenb
 ; RV64IV-NEXT:    add sp, sp, a0
 ; RV64IV-NEXT:    .cfi_def_cfa sp, 528
@@ -57,7 +51,7 @@ define <vscale x 1 x i64> @access_fixed_and_vector_objects(ptr %val) {
   %len = load i64, ptr %local
 
   %a = call <vscale x 1 x i64> @llvm.riscv.vadd.nxv1i64.nxv1i64(
-    <vscale x 1 x i64> undef,
+    <vscale x 1 x i64> poison,
     <vscale x 1 x i64> %v1,
     <vscale x 1 x i64> %v2,
     i64 %len)
@@ -82,13 +76,14 @@ define <vscale x 1 x i64> @probe_fixed_and_vector_objects(ptr %val, <vscale x 1 
 ; RV64IV-NEXT:    .cfi_def_cfa_register sp
 ; RV64IV-NEXT:    sub sp, sp, t1
 ; RV64IV-NEXT:    .cfi_escape 0x0f, 0x0e, 0x72, 0x00, 0x11, 0x90, 0x04, 0x22, 0x11, 0x01, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 528 + 1 * vlenb
-; RV64IV-NEXT:    addi a0, sp, 8
-; RV64IV-NEXT:    vl1re64.v v9, (a0)
-; RV64IV-NEXT:    addi a0, sp, 528
-; RV64IV-NEXT:    vl1re64.v v10, (a0)
 ; RV64IV-NEXT:    ld a0, 520(sp)
-; RV64IV-NEXT:    vsetvli zero, a0, e64, m1, tu, ma
-; RV64IV-NEXT:    vadd.vv v8, v9, v10
+; RV64IV-NEXT:    addi a1, sp, 8
+; RV64IV-NEXT:    addi a2, sp, 528
+; RV64IV-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
+; RV64IV-NEXT:    vle64.v v9, (a2)
+; RV64IV-NEXT:    vle64.v v10, (a1)
+; RV64IV-NEXT:    vsetvli zero, zero, e64, m1, tu, ma
+; RV64IV-NEXT:    vadd.vv v8, v10, v9
 ; RV64IV-NEXT:    csrr a0, vlenb
 ; RV64IV-NEXT:    add sp, sp, a0
 ; RV64IV-NEXT:    .cfi_def_cfa sp, 528

@@ -14,7 +14,7 @@ class A {
 
   void no_use() {
     // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: method 'no_use' can be made static
-    // CHECK-FIXES: {{^}}  static void no_use() {
+    // CHECK-FIXES: static void no_use() {
     int i = 1;
   }
 
@@ -30,25 +30,25 @@ class A {
 
   int call_static_member() {
     // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: method 'call_static_member' can be made static
-    // CHECK-FIXES: {{^}}  static int call_static_member() {
+    // CHECK-FIXES: static int call_static_member() {
     already_static();
     return 0;
   }
 
   int read_static() {
     // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: method 'read_static' can be made static
-    // CHECK-FIXES: {{^}}  static int read_static() {
+    // CHECK-FIXES: static int read_static() {
     return static_field;
   }
   void write_static() {
     // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: method 'write_static' can be made static
-    // CHECK-FIXES: {{^}}  static void write_static() {
+    // CHECK-FIXES: static void write_static() {
     static_field = 1;
   }
 
   void static_nested() {
     // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: method 'static_nested' can be made static
-    // CHECK-FIXES: {{^}}  static void static_nested() {
+    // CHECK-FIXES: static void static_nested() {
     struct Nested {
       int Foo;
       int getFoo() { return Foo; }
@@ -70,29 +70,29 @@ class A {
 
   int already_const_convert_to_static() const {
     // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: method 'already_const_convert_to_static' can be made static
-    // CHECK-FIXES: {{^}}  static int already_const_convert_to_static() {
+    // CHECK-FIXES: static int already_const_convert_to_static() {
     return static_field;
   }
 
   static int out_of_line_already_static();
 
   void out_of_line_call_static();
-  // CHECK-FIXES: {{^}}  static void out_of_line_call_static();
+  // CHECK-FIXES: static void out_of_line_call_static();
   int out_of_line_const_to_static() const;
-  // CHECK-FIXES: {{^}}  static int out_of_line_const_to_static() ;
+  // CHECK-FIXES: static int out_of_line_const_to_static() ;
 };
 
 int A::out_of_line_already_static() { return 0; }
 
 void A::out_of_line_call_static() {
   // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: method 'out_of_line_call_static' can be made static
-  // CHECK-FIXES: {{^}}void A::out_of_line_call_static() {
+  // CHECK-FIXES: void A::out_of_line_call_static() {
   already_static();
 }
 
 int A::out_of_line_const_to_static() const {
   // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: method 'out_of_line_const_to_static' can be made static
-  // CHECK-FIXES: {{^}}int A::out_of_line_const_to_static() {
+  // CHECK-FIXES: int A::out_of_line_const_to_static() {
   return 0;
 }
 
@@ -159,7 +159,7 @@ void instantiate() {
 struct Trailing {
   auto g() const -> int {
     // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: method 'g' can be made static
-    // CHECK-FIXES: {{^}}  static auto g() -> int {
+    // CHECK-FIXES: static auto g() -> int {
     return 0;
   }
 

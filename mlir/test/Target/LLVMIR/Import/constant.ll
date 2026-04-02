@@ -1,4 +1,5 @@
 ; RUN: mlir-translate -import-llvm -split-input-file %s | FileCheck %s
+; RUN: mlir-translate -import-llvm -split-input-file --use-constant-int-for-fixed-length-splat --use-constant-fp-for-fixed-length-splat %s | FileCheck %s
 
 ; CHECK-LABEL: @int_constants
 define void @int_constants(i16 %arg0, i32 %arg1, i1 %arg2) {
@@ -198,13 +199,8 @@ define i32 @function_address_after_def() {
 %nested_agg_type = type {%simple_agg_type, ptr}
 @nested_agg = global %nested_agg_type { %simple_agg_type{i32 1, i8 2, i16 3, i32 4}, ptr null }
 
-; CHECK-DAG:  %[[NULL:.+]] = llvm.mlir.zero : !llvm.ptr
-; CHECK-DAG:  %[[ROOT:.+]] = llvm.mlir.undef : vector<2x!llvm.ptr>
-; CHECK-DAG:  %[[P0:.+]] = llvm.mlir.constant(0 : i32) : i32
-; CHECK-DAG:  %[[CHAIN0:.+]] = llvm.insertelement %[[NULL]], %[[ROOT]][%[[P0]] : i32] : vector<2x!llvm.ptr>
-; CHECK-DAG:  %[[P1:.+]] = llvm.mlir.constant(1 : i32) : i32
-; CHECK-DAG:  %[[CHAIN1:.+]] = llvm.insertelement %[[NULL]], %[[CHAIN0]][%[[P1]] : i32] : vector<2x!llvm.ptr>
-; CHECK-DAG:  llvm.return %[[CHAIN1]] : vector<2x!llvm.ptr>
+; CHECK-DAG:  %[[VEC:.+]] = llvm.mlir.zero : vector<2x!llvm.ptr>
+; CHECK-DAG:  llvm.return %[[VEC]] : vector<2x!llvm.ptr>
 @vector_agg = global <2 x ptr> <ptr null, ptr null>
 
 ; // -----
@@ -274,3 +270,50 @@ define void @call_alias_func() {
 
 ; CHECK-LABEL: @call_alias_func()
 ; CHECK: llvm.dso_local_equivalent @alias_func : !llvm.ptr
+
+; // -----
+
+; Test that zeroinitializer for zero-element array is correctly handled
+
+@global_zero_array = global [0 x ptr] zeroinitializer
+
+; CHECK: llvm.mlir.global external @global_zero_array() {addr_space = 0 : i32} : !llvm.array<0 x ptr> {
+; CHECK:   %[[ZERO:.+]] = llvm.mlir.zero : !llvm.array<0 x ptr>
+; CHECK:   llvm.return %[[ZERO]] : !llvm.array<0 x ptr>
+
+; CHECK-LABEL: @load_zero_array
+define [0 x ptr] @load_zero_array() {
+  ; CHECK: %[[ADDR:.+]] = llvm.mlir.addressof @global_zero_array : !llvm.ptr
+  ; CHECK: %[[VAL:.+]] = llvm.load %[[ADDR]] {{.*}}: !llvm.ptr -> !llvm.array<0 x ptr>
+  ; CHECK: llvm.return %[[VAL]] : !llvm.array<0 x ptr>
+  %val = load [0 x ptr], ptr @global_zero_array
+  ret [0 x ptr] %val
+}
+
+; // -----
+
+; Test that zeroinitializer for zero-element structs is correctly handled
+
+@global_zero_struct = global {} zeroinitializer
+
+; CHECK: llvm.mlir.global external @global_zero_struct() {addr_space = 0 : i32} : !llvm.struct<()> {
+; CHECK:   %[[ZERO:.+]] = llvm.mlir.zero : !llvm.struct<()>
+; CHECK:   llvm.return %[[ZERO]] : !llvm.struct<()>
+
+; // -----
+
+; Test that zeroinitializer for arrays with elements still works correctly.
+; Note that arrays with primitive types that can be represented as dense
+; attributes may use the attribute form directly.
+
+@global_array_with_elements = global [3 x i32] zeroinitializer
+
+; CHECK: llvm.mlir.global external @global_array_with_elements({{.*}}) {addr_space = 0 : i32} : !llvm.array<3 x i32>
+
+; Test that vector splats work correctly.
+
+@vector_splat_int = global <2 x i64> splat (i64 7)
+@vector_splat_float = global <2 x float> splat (float 7.0)
+
+; CHECK: llvm.mlir.global external @vector_splat_int(dense<7> : vector<2xi64>) {addr_space = 0 : i32} : vector<2xi64>
+; CHECK: llvm.mlir.global external @vector_splat_float(dense<7.000000e+00> : vector<2xf32>) {addr_space = 0 : i32} : vector<2xf32>

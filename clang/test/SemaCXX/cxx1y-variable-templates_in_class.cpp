@@ -302,17 +302,17 @@ namespace in_class_template {
     };
 
     template<typename T> void f() {
-      typename T::template A<int> a; // expected-error {{template name refers to non-type template 'S::template A'}}
+      typename T::template A<int> a; // expected-error {{template name refers to non-type template 'in_class_template::bad_reference::S::template A'}}
     }
     template<typename T> void g() {
-      T::template A<int>::B = 0; // expected-error {{template name refers to non-type template 'S::template A'}}
+      T::template A<int>::B = 0; // expected-error {{template name refers to non-type template 'in_class_template::bad_reference::S::template A'}}
     }
     template<typename T> void h() {
-      class T::template A<int> c; // expected-error {{template name refers to non-type template 'S::template A'}}
+      class T::template A<int> c; // expected-error {{template name refers to non-type template 'in_class_template::bad_reference::S::template A'}}
     }
 
     template<typename T>
-    struct X : T::template A<int> {}; // expected-error {{template name refers to non-type template 'S::template A'}}
+    struct X : T::template A<int> {}; // expected-error {{template name refers to non-type template 'in_class_template::bad_reference::S::template A'}}
 
     template void f<S>(); // expected-note {{in instantiation of}}
     template void g<S>(); // expected-note {{in instantiation of}}
@@ -393,7 +393,7 @@ namespace dependent_static_var_template {
   int &r = A::template n; // expected-error {{use of variable template 'A::template n' requires template arguments}} expected-error {{a template argument list is expected after a name prefixed by the template keyword}}
 
   template<typename T>
-  int &f() { return T::template n; } // expected-error {{use of variable template 'A::template n' requires template arguments}} expected-error {{a template argument list is expected after a name prefixed by the template keyword}}
+  int &f() { return T::template n; } // expected-error {{use of variable template 'dependent_static_var_template::A::template n' requires template arguments}} expected-error {{a template argument list is expected after a name prefixed by the template keyword}}
   int &s = f<A>(); // expected-note {{instantiation of}}
 
   namespace B {

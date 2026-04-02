@@ -9,7 +9,6 @@
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Tensor/Transforms/Transforms.h"
 #include "mlir/IR/PatternMatch.h"
-#include "llvm/Support/Debug.h"
 
 using namespace mlir;
 using namespace mlir::tensor;
@@ -41,10 +40,14 @@ struct FoldEmptyTensorWithReshapeOp : public OpRewritePattern<ReshapeOp> {
         !llvm::hasSingleElement(resultShapes))
       return failure();
 
+    Attribute encoding;
+    if (auto tensorTy = dyn_cast<RankedTensorType>(reshapeOp.getResultType()))
+      encoding = tensorTy.getEncoding();
+
     // Create new tensor.empty op.
-    // TODO: Do not drop tensor type encoding.
-    Value emptyTensor = rewriter.create<EmptyOp>(
-        loc, resultShapes[0], reshapeOp.getResultType().getElementType());
+    Value emptyTensor =
+        EmptyOp::create(rewriter, loc, resultShapes[0],
+                        reshapeOp.getResultType().getElementType(), encoding);
     if (emptyTensor.getType() != reshapeOp.getResultType()) {
       rewriter.replaceOpWithNewOp<tensor::CastOp>(
           reshapeOp, reshapeOp.getResultType(), emptyTensor);

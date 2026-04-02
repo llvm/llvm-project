@@ -295,7 +295,7 @@ void LoopBase<BlockT, LoopT>::addBasicBlockToLoop(
   LoopT *L = static_cast<LoopT *>(this);
 
   // Add the loop mapping to the LoopInfo object...
-  LIB.BBMap[NewBB] = L;
+  LIB.changeLoopFor(NewBB, L);
 
   // Add the basic block to this loop and all parent loops...
   while (L) {
@@ -355,7 +355,7 @@ void LoopBase<BlockT, LoopT>::verifyLoop() const {
     if (BB == getHeader()) {
       assert(!OutsideLoopPreds.empty() && "Loop is unreachable!");
     } else if (!OutsideLoopPreds.empty()) {
-      // A non-header loop shouldn't be reachable from outside the loop,
+      // A non-header loop block shouldn't be reachable from outside the loop,
       // though it is permitted if the predecessor is not itself actually
       // reachable.
       BlockT *EntryBB = &BB->getParent()->front();
@@ -459,7 +459,7 @@ template <class BlockT, class LoopT>
 static void discoverAndMapSubloop(LoopT *L, ArrayRef<BlockT *> Backedges,
                                   LoopInfoBase<BlockT, LoopT> *LI,
                                   const DomTreeBase<BlockT> &DomTree) {
-  typedef GraphTraits<Inverse<BlockT *>> InvBlockTraits;
+  using InvBlockTraits = GraphTraits<Inverse<BlockT *>>;
 
   unsigned NumBlocks = 0;
   unsigned NumSubloops = 0;
@@ -513,8 +513,8 @@ static void discoverAndMapSubloop(LoopT *L, ArrayRef<BlockT *> Backedges,
 
 /// Populate all loop data in a stable order during a single forward DFS.
 template <class BlockT, class LoopT> class PopulateLoopsDFS {
-  typedef GraphTraits<BlockT *> BlockTraits;
-  typedef typename BlockTraits::ChildIteratorType SuccIterTy;
+  using BlockTraits = GraphTraits<BlockT *>;
+  using SuccIterTy = typename BlockTraits::ChildIteratorType;
 
   LoopInfoBase<BlockT, LoopT> *LI;
 
@@ -578,6 +578,12 @@ template <class BlockT, class LoopT>
 void LoopInfoBase<BlockT, LoopT>::analyze(const DomTreeBase<BlockT> &DomTree) {
   // Postorder traversal of the dominator tree.
   const DomTreeNodeBase<BlockT> *DomRoot = DomTree.getRootNode();
+  if constexpr (GraphHasNodeNumbers<const BlockT *>) {
+    ParentPtr = DomRoot->getBlock()->getParent();
+    BlockNumberEpoch = GraphTraits<ParentT>::getNumberEpoch(ParentPtr);
+    unsigned Max = GraphTraits<ParentT>::getMaxNumber(ParentPtr);
+    BBMap.resize(Max);
+  }
   for (auto DomNode : post_order(DomRoot)) {
 
     BlockT *Header = DomNode->getBlock();
@@ -643,6 +649,36 @@ LoopInfoBase<BlockT, LoopT>::getLoopsInReverseSiblingPreorder() const {
   }
 
   return PreOrderLoops;
+}
+
+template <class BlockT, class LoopT>
+LoopT *LoopInfoBase<BlockT, LoopT>::getSmallestCommonLoop(LoopT *A,
+                                                          LoopT *B) const {
+  if (!A || !B)
+    return nullptr;
+
+  // If lops A and B have different depth replace them with parent loop
+  // until they have the same depth.
+  while (A->getLoopDepth() > B->getLoopDepth())
+    A = A->getParentLoop();
+  while (B->getLoopDepth() > A->getLoopDepth())
+    B = B->getParentLoop();
+
+  // Loops A and B are at same depth but may be disjoint, replace them with
+  // parent loops until we find loop that contains both or we run out of
+  // parent loops.
+  while (A != B) {
+    A = A->getParentLoop();
+    B = B->getParentLoop();
+  }
+
+  return A;
+}
+
+template <class BlockT, class LoopT>
+LoopT *LoopInfoBase<BlockT, LoopT>::getSmallestCommonLoop(BlockT *A,
+                                                          BlockT *B) const {
+  return getSmallestCommonLoop(getLoopFor(A), getLoopFor(B));
 }
 
 // Debugging
@@ -726,14 +762,33 @@ void LoopInfoBase<BlockT, LoopT>::verify(
 
 // Verify that blocks are mapped to valid loops.
 #ifndef NDEBUG
-  for (auto &Entry : BBMap) {
-    const BlockT *BB = Entry.first;
-    LoopT *L = Entry.second;
-    assert(Loops.count(L) && "orphaned loop");
-    assert(L->contains(BB) && "orphaned block");
-    for (LoopT *ChildLoop : *L)
-      assert(!ChildLoop->contains(BB) &&
-             "BBMap should point to the innermost loop containing BB");
+  if constexpr (GraphHasNodeNumbers<const BlockT *>) {
+    for (auto It : enumerate(BBMap)) {
+      LoopT *L = It.value();
+      unsigned Number = It.index();
+      if (!L)
+        continue;
+      assert(Loops.count(L) && "orphaned loop");
+      // We have no way to map block numbers back to blocks, so find it.
+      auto BBIt = find_if(L->Blocks, [&Number](BlockT *BB) {
+        return GraphTraits<BlockT *>::getNumber(BB) == Number;
+      });
+      BlockT *BB = BBIt != L->Blocks.end() ? *BBIt : nullptr;
+      assert(BB && "orphaned block");
+      for (LoopT *ChildLoop : *L)
+        assert(!ChildLoop->contains(BB) &&
+               "BBMap should point to the innermost loop containing BB");
+    }
+  } else {
+    for (auto &Entry : BBMap) {
+      const BlockT *BB = Entry.first;
+      LoopT *L = Entry.second;
+      assert(Loops.count(L) && "orphaned loop");
+      assert(L->contains(BB) && "orphaned block");
+      for (LoopT *ChildLoop : *L)
+        assert(!ChildLoop->contains(BB) &&
+               "BBMap should point to the innermost loop containing BB");
+    }
   }
 
   // Recompute LoopInfo to verify loops structure.

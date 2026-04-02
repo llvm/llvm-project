@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/Driver/CreateInvocationFromArgs.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/FrontendActions.h"
@@ -101,7 +102,7 @@ export using ::E;
 
   PreambleCallbacks Callbacks;
   llvm::ErrorOr<PrecompiledPreamble> BuiltPreamble = PrecompiledPreamble::Build(
-      *Invocation, Buffer.get(), Bounds, *Diags, VFS,
+      *Invocation, Buffer.get(), Bounds, Diags, VFS,
       std::make_shared<PCHContainerOperations>(),
       /*StoreInMemory=*/false, /*StoragePath=*/TestDir, Callbacks);
 
@@ -112,13 +113,9 @@ export using ::E;
   BuiltPreamble->OverridePreamble(*Invocation, VFS, Buffer.get());
 
   auto Clang = std::make_unique<CompilerInstance>(std::move(Invocation));
-  Clang->setDiagnostics(Diags.get());
-
-  if (auto VFSWithRemapping = createVFSFromCompilerInvocation(
-          Clang->getInvocation(), Clang->getDiagnostics(), VFS))
-    VFS = VFSWithRemapping;
-
-  Clang->createFileManager(VFS);
+  Clang->setDiagnostics(Diags);
+  Clang->createVirtualFileSystem(VFS);
+  Clang->createFileManager();
   EXPECT_TRUE(Clang->createTarget());
 
   Buffer.release();

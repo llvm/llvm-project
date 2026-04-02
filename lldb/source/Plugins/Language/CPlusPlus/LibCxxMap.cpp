@@ -197,10 +197,9 @@ public:
 
   lldb::ChildCacheState Update() override;
 
-  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override;
-
 private:
-  llvm::Expected<uint32_t> CalculateNumChildrenForOldCompressedPairLayout();
+  llvm::Expected<uint32_t>
+  CalculateNumChildrenForOldCompressedPairLayout(ValueObject &pair);
 
   /// Returns the ValueObject for the __tree_node type that
   /// holds the key/value pair of the node at index \ref idx.
@@ -254,16 +253,8 @@ lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::
 
 llvm::Expected<uint32_t>
 lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::
-    CalculateNumChildrenForOldCompressedPairLayout() {
-  ValueObjectSP node_sp(m_tree->GetChildMemberWithName("__pair3_"));
-  if (!node_sp)
-    return 0;
-
-  if (!isOldCompressedPairLayout(*node_sp))
-    return llvm::createStringError("Unexpected std::map layout: expected "
-                                   "old __compressed_pair layout.");
-
-  node_sp = GetFirstValueOfLibCXXCompressedPair(*node_sp);
+    CalculateNumChildrenForOldCompressedPairLayout(ValueObject &pair) {
+  auto node_sp = GetFirstValueOfLibCXXCompressedPair(pair);
 
   if (!node_sp)
     return 0;
@@ -281,12 +272,16 @@ llvm::Expected<uint32_t> lldb_private::formatters::
   if (m_tree == nullptr)
     return 0;
 
-  if (auto node_sp = m_tree->GetChildMemberWithName("__size_")) {
-    m_count = node_sp->GetValueAsUnsigned(0);
-    return m_count;
-  }
+  auto [size_sp, is_compressed_pair] =
+      GetValueOrOldCompressedPair(*m_tree, "__size_", "__pair3_");
+  if (!size_sp)
+    return llvm::createStringError("Unexpected std::map layout");
 
-  return CalculateNumChildrenForOldCompressedPairLayout();
+  if (is_compressed_pair)
+    return CalculateNumChildrenForOldCompressedPairLayout(*size_sp);
+
+  m_count = size_sp->GetValueAsUnsigned(0);
+  return m_count;
 }
 
 ValueObjectSP
@@ -391,16 +386,6 @@ lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::Update() {
       m_tree->GetCompilerType().GetDirectNestedTypeWithName("__node_pointer");
 
   return lldb::ChildCacheState::eRefetch;
-}
-
-llvm::Expected<size_t> lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::
-    GetIndexOfChildWithName(ConstString name) {
-  auto optional_idx = formatters::ExtractIndexFromString(name.GetCString());
-  if (!optional_idx) {
-    return llvm::createStringError("Type has no child named '%s'",
-                                   name.AsCString());
-  }
-  return *optional_idx;
 }
 
 SyntheticChildrenFrontEnd *

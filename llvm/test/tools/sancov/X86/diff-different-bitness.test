@@ -1,0 +1,6 @@
+REQUIRES: x86-registered-target && host-byteorder-little-endian
+RUN: rm -f %t.out.sancov
+RUN: sancov -diff --output=%t.out.sancov %p/Inputs/dummy-32bits.0.sancov %p/Inputs/test-linux_x86_64.0.sancov 2>&1 | FileCheck %s 
+
+CHECK: Input files have different bitness
+CHECK: 64-bit addresses will be truncated to 32 bits. This may result in data loss.

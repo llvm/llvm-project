@@ -104,3 +104,56 @@ exit:
 }
 
 declare void @clobber()
+
+
+declare void @clobber.i32(i32)
+
+define void @test_guards_across_loops(i32 %N) {
+; CHECK-LABEL: 'test_guards_across_loops'
+; CHECK-NEXT:  Classifying expressions for: @test_guards_across_loops
+; CHECK-NEXT:    %iv.1 = phi i32 [ 0, %entry ], [ %iv.1.next, %loop.1 ]
+; CHECK-NEXT:    --> {0,+,1}<%loop.1> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop.1: Computable }
+; CHECK-NEXT:    %iv.1.next = add i32 %iv.1, 1
+; CHECK-NEXT:    --> {1,+,1}<%loop.1> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop.1: Computable }
+; CHECK-NEXT:    %iv.2 = phi i32 [ 0, %loop.1 ], [ %iv.2.next, %loop.2 ]
+; CHECK-NEXT:    --> {0,+,1}<nuw><%loop.2> U: full-set S: full-set Exits: (1 + %N) LoopDispositions: { %loop.2: Computable }
+; CHECK-NEXT:    %iv.2.next = add i32 %iv.2, 1
+; CHECK-NEXT:    --> {1,+,1}<nw><%loop.2> U: full-set S: full-set Exits: (2 + %N) LoopDispositions: { %loop.2: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @test_guards_across_loops
+; CHECK-NEXT:  Loop %loop.2: backedge-taken count is (1 + (zext i32 %N to i64))<nuw><nsw>
+; CHECK-NEXT:  Loop %loop.2: constant max backedge-taken count is i64 4294967296
+; CHECK-NEXT:  Loop %loop.2: symbolic max backedge-taken count is (1 + (zext i32 %N to i64))<nuw><nsw>
+; CHECK-NEXT:  Loop %loop.2: Trip multiple is 1
+; CHECK-NEXT:  Loop %loop.1: Unpredictable backedge-taken count.
+; CHECK-NEXT:  Loop %loop.1: Unpredictable constant max backedge-taken count.
+; CHECK-NEXT:  Loop %loop.1: Unpredictable symbolic max backedge-taken count.
+; CHECK-NEXT:  Loop %loop.1: Predicated backedge-taken count is (1 + (zext i32 %N to i64))<nuw><nsw>
+; CHECK-NEXT:   Predicates:
+; CHECK-NEXT:      {0,+,1}<%loop.1> Added Flags: <nusw>
+; CHECK-NEXT:  Loop %loop.1: Predicated constant max backedge-taken count is i64 4294967296
+; CHECK-NEXT:   Predicates:
+; CHECK-NEXT:      {0,+,1}<%loop.1> Added Flags: <nusw>
+; CHECK-NEXT:  Loop %loop.1: Predicated symbolic max backedge-taken count is (1 + (zext i32 %N to i64))<nuw><nsw>
+; CHECK-NEXT:   Predicates:
+; CHECK-NEXT:      {0,+,1}<%loop.1> Added Flags: <nusw>
+;
+entry:
+  br label %loop.1
+
+loop.1:
+  %iv.1 = phi i32 [ 0, %entry ], [ %iv.1.next, %loop.1 ]
+  call void @clobber.i32(i32 %iv.1)
+  %ec.1 = icmp ugt i32 %iv.1, %N
+  %iv.1.next = add i32 %iv.1, 1
+  br i1 %ec.1, label %loop.2, label %loop.1
+
+loop.2:
+  %iv.2 = phi i32  [ 0, %loop.1 ], [ %iv.2.next, %loop.2 ]
+  call void @clobber.i32(i32 %iv.2)
+  %ec.2 = icmp ugt i32 %iv.2, %N
+  %iv.2.next = add i32 %iv.2, 1
+  br i1 %ec.2, label %exit, label %loop.2
+
+exit:
+  ret void
+}

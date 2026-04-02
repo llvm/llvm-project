@@ -180,11 +180,11 @@ public:
   llvm::Expected<const VarDecl *> importDefinition(const VarDecl *VD,
                                                    ASTUnit *Unit);
 
-  /// Get a name to identify a named decl.
-  static std::optional<std::string> getLookupName(const NamedDecl *ND);
+  /// Get a name to identify a decl.
+  static std::optional<std::string> getLookupName(const Decl *D);
 
   /// Emit diagnostics for the user for potential configuration errors.
-  void emitCrossTUDiagnostics(const IndexError &IE);
+  void emitCrossTUDiagnostics(const IndexError &IE, SourceLocation Loc);
 
   /// Returns the MacroExpansionContext for the imported TU to which the given
   /// source-location corresponds.

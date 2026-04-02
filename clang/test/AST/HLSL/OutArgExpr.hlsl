@@ -1,7 +1,7 @@
 // RUN: rm -f %t.pch
-// RUN: %clang_cc1 -Wno-hlsl-implicit-binding -triple dxil-pc-shadermodel6.0-compute -emit-pch -finclude-default-header -o %t.pch %s
-// RUN: %clang_cc1 -Wno-hlsl-implicit-binding -triple dxil-pc-shadermodel6.0-compute -finclude-default-header -include-pch %t.pch %s -ast-dump | FileCheck --check-prefix=AST %s
-// RUN: %clang_cc1 -Wno-hlsl-implicit-binding -triple dxil-pc-shadermodel6.0-compute -finclude-default-header -include-pch %t.pch %s -ast-print | FileCheck %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute -emit-pch -finclude-default-header -o %t.pch %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute -finclude-default-header -include-pch %t.pch %s -ast-dump | FileCheck --check-prefix=AST %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute -finclude-default-header -include-pch %t.pch %s -ast-print | FileCheck %s
 
 
 #ifndef TEST_HLSL

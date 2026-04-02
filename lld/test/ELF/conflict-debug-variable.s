@@ -20,12 +20,12 @@
 # INPUT-NEXT:    DW_AT_location  (DW_OP_addr 0x0)
 
 ## Check we use information from .debug_info in messages.
-# CHECK:      duplicate symbol: bar
+# CHECK:      error: duplicate symbol: bar
 # CHECK-NEXT: >>> defined at 1.c:2
 # CHECK-NEXT: >>>            {{.*}}:(bar)
 # CHECK-NEXT: >>> defined at 1.c:2
 # CHECK-NEXT: >>>            {{.*}}:(.data+0x0)
-# CHECK:      duplicate symbol: foo
+# CHECK:      error: duplicate symbol: foo
 # CHECK-NEXT: >>> defined at 1.c:1
 # CHECK-NEXT: >>>            {{.*}}:(foo)
 # CHECK-NEXT: >>> defined at 1.c:1

@@ -12,8 +12,8 @@
 
 define i32 @bar(i32 %a) {
   %p = alloca i32
-  store i32 %a, i32* %p
-  %b = load i32, i32* %p
+  store i32 %a, ptr %p
+  %b = load i32, ptr %p
   ret i32 %b
 }
 
@@ -29,8 +29,8 @@ define i32 @bar(i32 %a) {
 
 define i32 @foo(i32 %a) {
   %p = alloca i32
-  store volatile i32 %a, i32* %p
-  %b = load volatile i32, i32* %p
+  store volatile i32 %a, ptr %p
+  %b = load volatile i32, ptr %p
   ret i32 %b
 }
 
@@ -46,8 +46,8 @@ define i32 @foo(i32 %a) {
 
 ;; Test load and store in global address space.
 define i32 @goo(i32 %a, ptr addrspace(1) %p) {
-  store i32 %a, i32 addrspace(1)* %p
-  %b = load i32, i32 addrspace(1)* %p
+  store i32 %a, ptr addrspace(1) %p
+  %b = load i32, ptr addrspace(1) %p
   ret i32 %b
 }
 

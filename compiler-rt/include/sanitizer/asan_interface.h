@@ -102,7 +102,7 @@ int SANITIZER_CDECL __asan_address_is_poisoned(void const volatile *addr);
 /// address of the first such byte. Otherwise returns 0.
 ///
 /// \param beg Start of memory region.
-/// \param size Start of memory region.
+/// \param size Size of memory region.
 /// \returns Address of first poisoned byte.
 void *SANITIZER_CDECL __asan_region_is_poisoned(void *beg, size_t size);
 
@@ -332,6 +332,14 @@ void SANITIZER_CDECL __asan_handle_no_return(void);
 /// Update allocation stack trace for the given allocation to the current stack
 /// trace. Returns 1 if successful, 0 if not.
 int SANITIZER_CDECL __asan_update_allocation_context(void *addr);
+
+/// Suppresses fake stack for the current thread.
+/// Temporarily disables use-after-return detection for current thread.
+void SANITIZER_CDECL __asan_suppress_fake_stack(void);
+
+/// Unsupresses fake stack for the current thread.
+/// Should be paired with a previous __asan_suppress_fake_stack() call.
+void SANITIZER_CDECL __asan_unsuppress_fake_stack(void);
 
 #ifdef __cplusplus
 } // extern "C"

@@ -13,12 +13,14 @@
 #include <__algorithm/equal.h>
 #include <__algorithm/fill_n.h>
 #include <__algorithm/for_each_n.h>
+#include <__algorithm/is_sorted.h>
 #include <__config>
 #include <__functional/identity.h>
 #include <__functional/not_fn.h>
 #include <__functional/operations.h>
 #include <__iterator/concepts.h>
 #include <__iterator/iterator_traits.h>
+#include <__iterator/next.h>
 #include <__pstl/backend_fwd.h>
 #include <__pstl/dispatch.h>
 #include <__utility/empty.h>
@@ -80,6 +82,7 @@ namespace __pstl {
 // - count
 // - equal(3 legs)
 // - equal
+// - is_sorted
 // - reduce
 //
 // transform and transform_binary family
@@ -102,7 +105,7 @@ struct __find<__default_backend_tag, _ExecutionPolicy> {
   operator()(_Policy&& __policy, _ForwardIterator __first, _ForwardIterator __last, const _Tp& __value) const noexcept {
     using _FindIf = __dispatch<__find_if, __current_configuration, _ExecutionPolicy>;
     return _FindIf()(
-        __policy, std::move(__first), std::move(__last), [&](__iter_reference<_ForwardIterator> __element) {
+        __policy, std::move(__first), std::move(__last), [&](__iterator_reference<_ForwardIterator> __element) {
           return __element == __value;
         });
   }
@@ -137,7 +140,7 @@ struct __all_of<__default_backend_tag, _ExecutionPolicy> {
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<bool>
   operator()(_Policy&& __policy, _ForwardIterator __first, _ForwardIterator __last, _Pred&& __pred) const noexcept {
     using _AnyOf = __dispatch<__any_of, __current_configuration, _ExecutionPolicy>;
-    auto __res   = _AnyOf()(__policy, __first, __last, [&](__iter_reference<_ForwardIterator> __value) {
+    auto __res   = _AnyOf()(__policy, __first, __last, [&](__iterator_reference<_ForwardIterator> __value) {
       return !__pred(__value);
     });
     if (!__res)
@@ -204,7 +207,7 @@ struct __fill<__default_backend_tag, _ExecutionPolicy> {
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<__empty>
   operator()(_Policy&& __policy, _ForwardIterator __first, _ForwardIterator __last, _Tp const& __value) const noexcept {
     using _ForEach = __dispatch<__for_each, __current_configuration, _ExecutionPolicy>;
-    using _Ref     = __iter_reference<_ForwardIterator>;
+    using _Ref     = __iterator_reference<_ForwardIterator>;
     return _ForEach()(__policy, std::move(__first), std::move(__last), [&](_Ref __element) { __element = __value; });
   }
 };
@@ -233,7 +236,7 @@ struct __replace<__default_backend_tag, _ExecutionPolicy> {
   operator()(_Policy&& __policy, _ForwardIterator __first, _ForwardIterator __last, _Tp const& __old, _Tp const& __new)
       const noexcept {
     using _ReplaceIf = __dispatch<__replace_if, __current_configuration, _ExecutionPolicy>;
-    using _Ref       = __iter_reference<_ForwardIterator>;
+    using _Ref       = __iterator_reference<_ForwardIterator>;
     return _ReplaceIf()(
         __policy, std::move(__first), std::move(__last), [&](_Ref __element) { return __element == __old; }, __new);
   }
@@ -246,7 +249,7 @@ struct __replace_if<__default_backend_tag, _ExecutionPolicy> {
       _Policy&& __policy, _ForwardIterator __first, _ForwardIterator __last, _Pred&& __pred, _Tp const& __new_value)
       const noexcept {
     using _ForEach = __dispatch<__for_each, __current_configuration, _ExecutionPolicy>;
-    using _Ref     = __iter_reference<_ForwardIterator>;
+    using _Ref     = __iterator_reference<_ForwardIterator>;
     return _ForEach()(__policy, std::move(__first), std::move(__last), [&](_Ref __element) {
       if (__pred(__element))
         __element = __new_value;
@@ -260,7 +263,7 @@ struct __generate<__default_backend_tag, _ExecutionPolicy> {
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<__empty>
   operator()(_Policy&& __policy, _ForwardIterator __first, _ForwardIterator __last, _Generator&& __gen) const noexcept {
     using _ForEach = __dispatch<__for_each, __current_configuration, _ExecutionPolicy>;
-    using _Ref     = __iter_reference<_ForwardIterator>;
+    using _Ref     = __iterator_reference<_ForwardIterator>;
     return _ForEach()(__policy, std::move(__first), std::move(__last), [&](_Ref __element) { __element = __gen(); });
   }
 };
@@ -271,7 +274,7 @@ struct __generate_n<__default_backend_tag, _ExecutionPolicy> {
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<__empty>
   operator()(_Policy&& __policy, _ForwardIterator __first, _Size __n, _Generator&& __gen) const noexcept {
     using _ForEachN = __dispatch<__for_each_n, __current_configuration, _ExecutionPolicy>;
-    using _Ref      = __iter_reference<_ForwardIterator>;
+    using _Ref      = __iterator_reference<_ForwardIterator>;
     return _ForEachN()(__policy, std::move(__first), __n, [&](_Ref __element) { __element = __gen(); });
   }
 };
@@ -295,11 +298,11 @@ struct __sort<__default_backend_tag, _ExecutionPolicy> {
 template <class _ExecutionPolicy>
 struct __count_if<__default_backend_tag, _ExecutionPolicy> {
   template <class _Policy, class _ForwardIterator, class _Predicate>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<__iter_diff_t<_ForwardIterator>> operator()(
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<__iterator_difference_type<_ForwardIterator>> operator()(
       _Policy&& __policy, _ForwardIterator __first, _ForwardIterator __last, _Predicate&& __pred) const noexcept {
     using _TransformReduce = __dispatch<__transform_reduce, __current_configuration, _ExecutionPolicy>;
-    using _DiffT           = __iter_diff_t<_ForwardIterator>;
-    using _Ref             = __iter_reference<_ForwardIterator>;
+    using _DiffT           = __iterator_difference_type<_ForwardIterator>;
+    using _Ref             = __iterator_reference<_ForwardIterator>;
     return _TransformReduce()(
         __policy, std::move(__first), std::move(__last), _DiffT{}, std::plus{}, [&](_Ref __element) -> _DiffT {
           return __pred(__element) ? _DiffT(1) : _DiffT(0);
@@ -310,10 +313,10 @@ struct __count_if<__default_backend_tag, _ExecutionPolicy> {
 template <class _ExecutionPolicy>
 struct __count<__default_backend_tag, _ExecutionPolicy> {
   template <class _Policy, class _ForwardIterator, class _Tp>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<__iter_diff_t<_ForwardIterator>>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<__iterator_difference_type<_ForwardIterator>>
   operator()(_Policy&& __policy, _ForwardIterator __first, _ForwardIterator __last, _Tp const& __value) const noexcept {
     using _CountIf = __dispatch<__count_if, __current_configuration, _ExecutionPolicy>;
-    using _Ref     = __iter_reference<_ForwardIterator>;
+    using _Ref     = __iterator_reference<_ForwardIterator>;
     return _CountIf()(__policy, std::move(__first), std::move(__last), [&](_Ref __element) -> bool {
       return __element == __value;
     });
@@ -388,6 +391,35 @@ struct __reduce<__default_backend_tag, _ExecutionPolicy> {
   }
 };
 
+template <class _ExecutionPolicy>
+struct __is_sorted<__default_backend_tag, _ExecutionPolicy> {
+  template <class _Policy, class _ForwardIterator, class _Comp>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<bool>
+  operator()(_Policy&& __policy, _ForwardIterator __first, _ForwardIterator __last, _Comp&& __comp) const noexcept {
+    if constexpr (__has_bidirectional_iterator_category<_ForwardIterator>::value) {
+      if (__first == __last)
+        return true; // Empty, sorted by definition
+      _ForwardIterator __first2 = std::next(__first);
+      if (__first2 == __last)
+        return true; // Only one element, sorted by definition
+      --__last;      // Make two iterator ranges: [__first, __first + n - 1) and [__first + 1, __first + n)
+      using _TransformReduce = __dispatch<__transform_reduce_binary, __current_configuration, _ExecutionPolicy>;
+      using _Ref             = __iterator_reference<_ForwardIterator>;
+      return _TransformReduce()(
+          __policy,
+          std::move(__first),
+          std::move(__last),
+          std::move(__first2),
+          true,
+          std::logical_and{},
+          [&](_Ref __left, _Ref __right) -> bool { return !__comp(__right, __left); });
+    } else {
+      // Currently anything outside bidirectional iterators has to be processed serially
+      return std::is_sorted(std::move(__first), std::move(__last), std::forward<_Comp>(__comp));
+    }
+  }
+};
+
 //////////////////////////////////////////////////////////////
 // transform family
 //////////////////////////////////////////////////////////////
@@ -402,7 +434,7 @@ struct __replace_copy_if<__default_backend_tag, _ExecutionPolicy> {
              _Pred&& __pred,
              _Tp const& __new_value) const noexcept {
     using _Transform = __dispatch<__transform, __current_configuration, _ExecutionPolicy>;
-    using _Ref       = __iter_reference<_ForwardIterator>;
+    using _Ref       = __iterator_reference<_ForwardIterator>;
     auto __res =
         _Transform()(__policy, std::move(__first), std::move(__last), std::move(__out_it), [&](_Ref __element) {
           return __pred(__element) ? __new_value : __element;
@@ -424,7 +456,7 @@ struct __replace_copy<__default_backend_tag, _ExecutionPolicy> {
              _Tp const& __old_value,
              _Tp const& __new_value) const noexcept {
     using _ReplaceCopyIf = __dispatch<__replace_copy_if, __current_configuration, _ExecutionPolicy>;
-    using _Ref           = __iter_reference<_ForwardIterator>;
+    using _Ref           = __iterator_reference<_ForwardIterator>;
     return _ReplaceCopyIf()(
         __policy,
         std::move(__first),

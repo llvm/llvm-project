@@ -8,6 +8,14 @@
 #ifndef MLIR_CONVERSION_MEMREFTOEMITC_MEMREFTOEMITC_H
 #define MLIR_CONVERSION_MEMREFTOEMITC_MEMREFTOEMITC_H
 
+constexpr const char *alignedAllocFunctionName = "aligned_alloc";
+constexpr const char *mallocFunctionName = "malloc";
+constexpr const char *memcpyFunctionName = "memcpy";
+constexpr const char *cppStandardLibraryHeader = "cstdlib";
+constexpr const char *cStandardLibraryHeader = "stdlib.h";
+constexpr const char *cppStringLibraryHeader = "cstring";
+constexpr const char *cStringLibraryHeader = "string.h";
+
 namespace mlir {
 class DialectRegistry;
 class RewritePatternSet;

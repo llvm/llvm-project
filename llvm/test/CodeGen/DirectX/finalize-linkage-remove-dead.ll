@@ -7,23 +7,23 @@ target triple = "dxilv1.5-pc-shadermodel6.5-compute"
 ; linkage and are not called from anywhere. This should be any function that
 ; is not an entry point.
 
-; Has no specified inlining/linking behavior and is uncalled, this should be removed.
+; Is hidden and is uncalled, this should be removed.
 ; CHECK-NOT: define {{.*}}doNothingUncalled
-define void @"?doNothingUncalled@@YAXXZ"() #1 {
+define hidden void @"?doNothingUncalled@@YAXXZ"() #1 {
 entry:
   ret void
 }
 
-; Alwaysinline and uncalled, this should be removed.
+; Alwaysinline, hidden and uncalled, this should be removed.
 ; CHECK-NOT: define {{.*}}doAlwaysInlineUncalled
-define void @"?doAlwaysInlineUncalled@@YAXXZ"() #0 {
+define hidden void @"?doAlwaysInlineUncalled@@YAXXZ"() #0 {
 entry:
   ret void
 }
 
-; Noinline and uncalled, this should be removed.
+; Noinline, hidden and uncalled, this should be removed.
 ; CHECK-NOT: define {{.*}}doNoinlineUncalled
-define void @"?doNoinlineUncalled@@YAXXZ"() #3 {
+define hidden void @"?doNoinlineUncalled@@YAXXZ"() #3 {
 entry:
   ret void
 }
@@ -49,44 +49,44 @@ entry:
   ret void
 }
 
-; Marked external and uncalled, this should become internal and be removed.
+; Marked external, hidden, and uncalled, this should become internal and be removed.
 ; CHECK-NOT: define {{.*}}doExternalUncalled
-define external void @"?doExternalUncalled@@YAXXZ"() #1 {
+define external hidden void @"?doExternalUncalled@@YAXXZ"() #1 {
 entry:
   ret void
 }
 
-; Alwaysinline, external and uncalled, this should become internal and be removed.
+; Alwaysinline, external, hidden, and uncalled, this should become internal and be removed.
 ; CHECK-NOT: define {{.*}}doAlwaysInlineExternalUncalled
-define external void @"?doAlwaysInlineExternalUncalled@@YAXXZ"() #0 {
+define external hidden void @"?doAlwaysInlineExternalUncalled@@YAXXZ"() #0 {
 entry:
   ret void
 }
 
-; Noinline, external and uncalled, this should become internal and be removed.
+; Noinline, external, hidden, and uncalled, this should become internal and be removed.
 ; CHECK-NOT: define {{.*}}doNoinlineExternalUncalled
-define external void @"?doNoinlineExternalUncalled@@YAXXZ"() #3 {
+define external hidden void @"?doNoinlineExternalUncalled@@YAXXZ"() #3 {
 entry:
   ret void
 }
 
 ; No inlining attribute and called, this should stay.
 ; CHECK: define {{.*}}doNothingCalled
-define void @"?doNothingCalled@@YAXXZ"() #1 {
+define hidden void @"?doNothingCalled@@YAXXZ"() #1 {
 entry:
   ret void
 }
 
-; Alwaysinline and called, this should stay.
+; Alwaysinline, hidden, and called, this should stay.
 ; CHECK: define {{.*}}doAlwaysInlineCalled
-define void @"?doAlwaysInlineCalled@@YAXXZ"() #0 {
+define hidden void @"?doAlwaysInlineCalled@@YAXXZ"() #0 {
 entry:
   ret void
 }
 
-; Noinline and called, this should stay.
+; Noinline, hidden, and called, this should stay.
 ; CHECK: define {{.*}}doNoinlineCalled
-define void @"?doNoinlineCalled@@YAXXZ"() #3 {
+define hidden void @"?doNoinlineCalled@@YAXXZ"() #3 {
 entry:
   ret void
 }
@@ -112,23 +112,23 @@ entry:
   ret void
 }
 
-; Marked external and called, this should become internal and stay.
+; Marked external, hidden, and called, this should become internal and stay.
 ; CHECK: define {{.*}}doExternalCalled
-define external void @"?doExternalCalled@@YAXXZ"() #1 {
+define external hidden void @"?doExternalCalled@@YAXXZ"() #1 {
 entry:
   ret void
 }
 
-; Always inlined, external and called, this should become internal and stay.
+; Always inlined, external, hidden, and called, this should become internal and stay.
 ; CHECK: define {{.*}}doAlwaysInlineExternalCalled
-define external void @"?doAlwaysInlineExternalCalled@@YAXXZ"() #0 {
+define external hidden void @"?doAlwaysInlineExternalCalled@@YAXXZ"() #0 {
 entry:
   ret void
 }
 
-; Noinline, external and called, this should become internal and stay.
+; Noinline, external, hidden, and called, this should become internal and stay.
 ; CHECK: define {{.*}}doNoinlineExternalCalled
-define external void @"?doNoinlineExternalCalled@@YAXXZ"() #3 {
+define external hidden void @"?doNoinlineExternalCalled@@YAXXZ"() #3 {
 entry:
   ret void
 }

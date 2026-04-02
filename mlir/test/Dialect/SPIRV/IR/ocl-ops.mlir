@@ -19,7 +19,7 @@ func.func @expvec(%arg0 : vector<3xf16>) -> () {
 // -----
 
 func.func @exp(%arg0 : i32) -> () {
-  // expected-error @+1 {{op operand #0 must be 16/32/64-bit float or vector of 16/32/64-bit float values}}
+  // expected-error @+1 {{op operand #0 must be 16/32/64-bit float or fixed-length vector of 16/32/64-bit float values}}
   %2 = spirv.CL.exp %arg0 : i32
   return
 }
@@ -27,7 +27,7 @@ func.func @exp(%arg0 : i32) -> () {
 // -----
 
 func.func @exp(%arg0 : vector<5xf32>) -> () {
-  // expected-error @+1 {{op operand #0 must be 16/32/64-bit float or vector of 16/32/64-bit float values of length 2/3/4}}
+  // expected-error @+1 {{op operand #0 must be 16/32/64-bit float or fixed-length vector of 16/32/64-bit float values of length 2/3/4}}
   %2 = spirv.CL.exp %arg0 : vector<5xf32>
   return
 }
@@ -75,7 +75,7 @@ func.func @fabsf64(%arg0 : f64) -> () {
 // -----
 
 func.func @fabs(%arg0 : i32) -> () {
-  // expected-error @+1 {{op operand #0 must be 16/32/64-bit float or vector of 16/32/64-bit float values}}
+  // expected-error @+1 {{op operand #0 must be 16/32/64-bit float or fixed-length vector of 16/32/64-bit float values}}
   %2 = spirv.CL.fabs %arg0 : i32
   return
 }
@@ -83,7 +83,7 @@ func.func @fabs(%arg0 : i32) -> () {
 // -----
 
 func.func @fabs(%arg0 : vector<5xf32>) -> () {
-  // expected-error @+1 {{op operand #0 must be 16/32/64-bit float or vector of 16/32/64-bit float values of length 2/3/4}}
+  // expected-error @+1 {{op operand #0 must be 16/32/64-bit float or fixed-length vector of 16/32/64-bit float values of length 2/3/4}}
   %2 = spirv.CL.fabs %arg0 : vector<5xf32>
   return
 }
@@ -137,7 +137,7 @@ func.func @sabsi8(%arg0 : i8) -> () {
 // -----
 
 func.func @sabs(%arg0 : f32) -> () {
-  // expected-error @+1 {{op operand #0 must be 8/16/32/64-bit integer or vector of 8/16/32/64-bit integer values}}
+  // expected-error @+1 {{op operand #0 must be 8/16/32/64-bit integer or fixed-length vector of 8/16/32/64-bit integer values}}
   %2 = spirv.CL.s_abs %arg0 : f32
   return
 }
@@ -145,7 +145,7 @@ func.func @sabs(%arg0 : f32) -> () {
 // -----
 
 func.func @sabs(%arg0 : vector<5xi32>) -> () {
-  // expected-error @+1 {{op operand #0 must be 8/16/32/64-bit integer or vector of 8/16/32/64-bit integer values of length 2/3/4}}
+  // expected-error @+1 {{op operand #0 must be 8/16/32/64-bit integer or fixed-length vector of 8/16/32/64-bit integer values of length 2/3/4}}
   %2 = spirv.CL.s_abs %arg0 : vector<5xi32>
   return
 }

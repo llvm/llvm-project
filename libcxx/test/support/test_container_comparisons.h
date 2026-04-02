@@ -88,7 +88,6 @@ constexpr bool test_sequence_container_spaceship() {
                                               std::weak_ordering>();
 
   // Thanks to SFINAE, the following is not a compiler error but returns `false`
-  struct NonComparable {};
   static_assert(!std::three_way_comparable<Container<NonComparable>>);
 
   return true;
@@ -163,7 +162,6 @@ constexpr void test_sequence_container_adaptor_spaceship_with_type() {
 template <template <typename...> typename ContainerAdaptor, template <typename...> typename Container>
 constexpr bool test_sequence_container_adaptor_spaceship() {
   // Thanks to SFINAE, the following is not a compiler error but returns `false`
-  struct NonComparable {};
   static_assert(!std::three_way_comparable<ContainerAdaptor<NonComparable>>);
 
   // The container should fulfill `std::three_way_comparable`
@@ -301,7 +299,6 @@ constexpr void test_ordered_map_container_spaceship_with_type(Compare comp) {
 template <template <typename...> typename Container>
 constexpr bool test_ordered_map_container_spaceship() {
   // Thanks to SFINAE, the following is not a compiler error but returns `false`
-  struct NonComparable {};
   static_assert(!std::three_way_comparable<Container<int, NonComparable>>);
 
   // The container should fulfill `std::three_way_comparable`
@@ -444,7 +441,6 @@ constexpr void test_ordered_set_spaceship_with_type(Compare comp) {
 template <template <typename...> typename Container>
 constexpr bool test_ordered_set_container_spaceship() {
   // Thanks to SFINAE, the following is not a compiler error but returns `false`
-  struct NonComparable {};
   static_assert(!std::three_way_comparable<Container<NonComparable>>);
 
   // The container should fulfill `std::three_way_comparable`

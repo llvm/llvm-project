@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=wasm32-unknown-unknown -wasm-use-legacy-eh -exception-model=wasm -mattr=+exception-handling -run-pass wasm-cfg-stackify %s -o - | FileCheck %s
+# RUN: llc -mtriple=wasm32-unknown-unknown -wasm-use-legacy-eh -wasm-enable-eh -exception-model=wasm -mattr=+exception-handling -run-pass wasm-cfg-stackify %s -o - | FileCheck %s
 
 --- |
   target triple = "wasm32-unknown-unknown"

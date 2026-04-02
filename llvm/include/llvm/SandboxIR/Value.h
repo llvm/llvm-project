@@ -12,6 +12,7 @@
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Value.h"
 #include "llvm/SandboxIR/Use.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm::sandboxir {
 
@@ -32,6 +33,9 @@ class IntrinsicInst;
 class Operator;
 class OverflowingBinaryOperator;
 class FPMathOperator;
+class Region;
+class UncondBrInst;
+class CondBrInst;
 
 /// Iterator for the `Use` edges of a Value's users.
 /// \Returns a `Use` when dereferenced.
@@ -50,7 +54,7 @@ public:
 
   UserUseIterator() = default;
   value_type operator*() const { return Use; }
-  UserUseIterator &operator++();
+  LLVM_ABI UserUseIterator &operator++();
   bool operator==(const UserUseIterator &Other) const {
     return Use == Other.Use;
   }
@@ -115,7 +119,8 @@ protected:
   friend class ShuffleVectorInst;     // For getting `Val`.
   friend class ExtractValueInst;      // For getting `Val`.
   friend class InsertValueInst;       // For getting `Val`.
-  friend class BranchInst;            // For getting `Val`.
+  friend class UncondBrInst;          // For getting `Val`.
+  friend class CondBrInst;            // For getting `Val`.
   friend class LoadInst;              // For getting `Val`.
   friend class StoreInst;             // For getting `Val`.
   friend class ReturnInst;            // For getting `Val`.
@@ -179,7 +184,7 @@ protected:
   void clearValue() { Val = nullptr; }
   template <typename ItTy, typename SBTy> friend class LLVMOpUserItToSBTy;
 
-  Value(ClassID SubclassID, llvm::Value *Val, Context &Ctx);
+  LLVM_ABI Value(ClassID SubclassID, llvm::Value *Val, Context &Ctx);
   /// Disable copies.
   Value(const Value &) = delete;
   Value &operator=(const Value &) = delete;
@@ -191,7 +196,7 @@ public:
   using use_iterator = UserUseIterator;
   using const_use_iterator = UserUseIterator;
 
-  use_iterator use_begin();
+  LLVM_ABI use_iterator use_begin();
   const_use_iterator use_begin() const {
     return const_cast<Value *>(this)->use_begin();
   }
@@ -215,7 +220,7 @@ public:
   using user_iterator = mapped_iterator<sandboxir::UserUseIterator, UseToUser>;
   using const_user_iterator = user_iterator;
 
-  user_iterator user_begin();
+  LLVM_ABI user_iterator user_begin();
   user_iterator user_end() {
     return user_iterator(Use(nullptr, nullptr, Ctx), UseToUser());
   }
@@ -234,7 +239,7 @@ public:
   }
   /// \Returns the number of user edges (not necessarily to unique users).
   /// WARNING: This is a linear-time operation.
-  unsigned getNumUses() const;
+  LLVM_ABI unsigned getNumUses() const;
   /// Return true if this value has N uses or more.
   /// This is logically equivalent to getNumUses() >= N.
   /// WARNING: This can be expensive, as it is linear to the number of users.
@@ -256,13 +261,14 @@ public:
     return Cnt == Num;
   }
 
-  Type *getType() const;
+  LLVM_ABI Type *getType() const;
 
   Context &getContext() const { return Ctx; }
 
-  void replaceUsesWithIf(Value *OtherV,
-                         llvm::function_ref<bool(const Use &)> ShouldReplace);
-  void replaceAllUsesWith(Value *Other);
+  LLVM_ABI void
+  replaceUsesWithIf(Value *OtherV,
+                    llvm::function_ref<bool(const Use &)> ShouldReplace);
+  LLVM_ABI void replaceAllUsesWith(Value *Other);
 
   /// \Returns the LLVM IR name of the bottom-most LLVM value.
   StringRef getName() const { return Val->getName(); }

@@ -1,19 +1,20 @@
 # REQUIRES: x86
 
-# RUN: yaml2obj --docnum=1 -DMAIN_SIZE=8 %s -o %T/command-disassemble-process.exe
-# RUN: yaml2obj --docnum=1 -DMAIN_SIZE=8000 %s -o %T/command-disassemble-process.big.exe
+# RUN: mkdir -p %t.dir
+# RUN: yaml2obj --docnum=1 -DMAIN_SIZE=8 %s -o %t.dir/command-disassemble-process.exe
+# RUN: yaml2obj --docnum=1 -DMAIN_SIZE=8000 %s -o %t.dir/command-disassemble-process.big.exe
 # RUN: yaml2obj --docnum=2 %s -o %t
 
-# RUN: %lldb -c %t %T/command-disassemble-process.exe \
+# RUN: %lldb -c %t %t.dir/command-disassemble-process.exe \
 # RUN:   -o "settings set interpreter.stop-command-source-on-error false" \
 # RUN:   -s %S/Inputs/command-disassemble-process.lldbinit -o exit \
 # RUN:   | FileCheck %s
 
-# RUN: %lldb -c %t %T/command-disassemble-process.big.exe \
+# RUN: %lldb -c %t %t.dir/command-disassemble-process.big.exe \
 # RUN:   -o "settings set stop-disassembly-max-size 8000" \
 # RUN:   -o disassemble -o exit 2>&1 | FileCheck %s --check-prefix=BIG
 
-# RUN: %lldb -c %t %T/command-disassemble-process.exe \
+# RUN: %lldb -c %t %t.dir/command-disassemble-process.exe \
 # RUN:   -o "settings set interpreter.stop-command-source-on-error false" \
 # RUN:   -o "disassemble --address 0xdead" -o exit 2>&1 \
 # RUN:   | FileCheck %s --check-prefix=INVALID

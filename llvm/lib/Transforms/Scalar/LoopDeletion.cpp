@@ -467,8 +467,7 @@ static LoopDeletionResult deleteLoopIfDead(Loop *L, DominatorTree &DT,
     SE.forgetLoop(L);
     // Set incoming value to poison for phi nodes in the exit block.
     for (PHINode &P : ExitBlock->phis()) {
-      std::fill(P.incoming_values().begin(), P.incoming_values().end(),
-                PoisonValue::get(P.getType()));
+      llvm::fill(P.incoming_values(), PoisonValue::get(P.getType()));
     }
     ORE.emit([&]() {
       return OptimizationRemark(DEBUG_TYPE, "NeverExecutes", L->getStartLoc(),

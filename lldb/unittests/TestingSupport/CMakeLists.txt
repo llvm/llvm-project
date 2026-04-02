@@ -3,13 +3,12 @@ add_lldb_library(lldbUtilityHelpers
   MockTildeExpressionResolver.cpp
   TestUtilities.cpp
 
-  LINK_LIBS
-    lldbUtility
-    llvm_gtest
-
   LINK_COMPONENTS
     Support
     ObjectYAML
+  LINK_LIBS
+    lldbUtility
+    llvm_gtest
   )
 
 add_subdirectory(Host)

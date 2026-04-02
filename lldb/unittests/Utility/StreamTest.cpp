@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Utility/StreamString.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "gtest/gtest.h"
 
 using namespace lldb_private;
@@ -416,6 +417,14 @@ TEST_F(StreamTest, ShiftOperatorStrings) {
   EXPECT_EQ("cstring\nllvm::StringRef\n", TakeValue());
 }
 
+TEST_F(StreamTest, ShiftOperatorFormatv) {
+  s << llvm::formatv("x{0}y", 42);
+  EXPECT_EQ("x42y", TakeValue());
+
+  s << llvm::formatv("{0} {1}", "hello", "world") << '!';
+  EXPECT_EQ("hello world!", TakeValue());
+}
+
 TEST_F(StreamTest, ShiftOperatorPtr) {
   // This test is a bit tricky because pretty much everything related to
   // pointer printing seems to lead to UB or IB. So let's make the most basic
@@ -504,7 +513,7 @@ TEST_F(StreamTest, PutRawBytesToMixedEndian) {
 #endif
 }
 
-TEST_F(StreamTest, PutRawBytesZeroLenght) {
+TEST_F(StreamTest, PutRawBytesZeroLength) {
   uint32_t value = 0x12345678;
 
   s.PutRawBytes(static_cast<void *>(&value), 0, hostByteOrder,
@@ -516,7 +525,7 @@ TEST_F(StreamTest, PutRawBytesZeroLenght) {
   EXPECT_EQ(0U, s.GetWrittenBytes());
 }
 
-TEST_F(StreamTest, PutBytesAsRawHex8ZeroLenght) {
+TEST_F(StreamTest, PutBytesAsRawHex8ZeroLength) {
   uint32_t value = 0x12345678;
 
   s.PutBytesAsRawHex8(static_cast<void *>(&value), 0, hostByteOrder,

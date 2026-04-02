@@ -9,18 +9,18 @@ define void @basic(i1 %cond, ptr %b, ptr %p, ptr %q) {
 ; LOADSTORE-LABEL: @basic(
 ; LOADSTORE-NEXT:  entry:
 ; LOADSTORE-NEXT:    [[TMP0:%.*]] = bitcast i1 [[COND:%.*]] to <1 x i1>
-; LOADSTORE-NEXT:    [[TMP1:%.*]] = call <1 x i16> @llvm.masked.load.v1i16.p0(ptr [[P:%.*]], i32 2, <1 x i1> [[TMP0]], <1 x i16> poison)
+; LOADSTORE-NEXT:    [[TMP1:%.*]] = call <1 x i16> @llvm.masked.load.v1i16.p0(ptr align 2 [[P:%.*]], <1 x i1> [[TMP0]], <1 x i16> poison)
 ; LOADSTORE-NEXT:    [[TMP2:%.*]] = bitcast <1 x i16> [[TMP1]] to i16
-; LOADSTORE-NEXT:    [[TMP3:%.*]] = call <1 x i32> @llvm.masked.load.v1i32.p0(ptr [[Q:%.*]], i32 4, <1 x i1> [[TMP0]], <1 x i32> poison)
+; LOADSTORE-NEXT:    [[TMP3:%.*]] = call <1 x i32> @llvm.masked.load.v1i32.p0(ptr align 4 [[Q:%.*]], <1 x i1> [[TMP0]], <1 x i32> poison)
 ; LOADSTORE-NEXT:    [[TMP4:%.*]] = bitcast <1 x i32> [[TMP3]] to i32
-; LOADSTORE-NEXT:    [[TMP5:%.*]] = call <1 x i64> @llvm.masked.load.v1i64.p0(ptr [[B:%.*]], i32 8, <1 x i1> [[TMP0]], <1 x i64> poison)
+; LOADSTORE-NEXT:    [[TMP5:%.*]] = call <1 x i64> @llvm.masked.load.v1i64.p0(ptr align 8 [[B:%.*]], <1 x i1> [[TMP0]], <1 x i64> poison)
 ; LOADSTORE-NEXT:    [[TMP6:%.*]] = bitcast <1 x i64> [[TMP5]] to i64
 ; LOADSTORE-NEXT:    [[TMP7:%.*]] = bitcast i16 [[TMP2]] to <1 x i16>
-; LOADSTORE-NEXT:    call void @llvm.masked.store.v1i16.p0(<1 x i16> [[TMP7]], ptr [[B]], i32 2, <1 x i1> [[TMP0]])
+; LOADSTORE-NEXT:    call void @llvm.masked.store.v1i16.p0(<1 x i16> [[TMP7]], ptr align 2 [[B]], <1 x i1> [[TMP0]])
 ; LOADSTORE-NEXT:    [[TMP8:%.*]] = bitcast i32 [[TMP4]] to <1 x i32>
-; LOADSTORE-NEXT:    call void @llvm.masked.store.v1i32.p0(<1 x i32> [[TMP8]], ptr [[P]], i32 4, <1 x i1> [[TMP0]])
+; LOADSTORE-NEXT:    call void @llvm.masked.store.v1i32.p0(<1 x i32> [[TMP8]], ptr align 4 [[P]], <1 x i1> [[TMP0]])
 ; LOADSTORE-NEXT:    [[TMP9:%.*]] = bitcast i64 [[TMP6]] to <1 x i64>
-; LOADSTORE-NEXT:    call void @llvm.masked.store.v1i64.p0(<1 x i64> [[TMP9]], ptr [[Q]], i32 8, <1 x i1> [[TMP0]])
+; LOADSTORE-NEXT:    call void @llvm.masked.store.v1i64.p0(<1 x i64> [[TMP9]], ptr align 8 [[Q]], <1 x i1> [[TMP0]])
 ; LOADSTORE-NEXT:    ret void
 ;
 ; NONE-LABEL: @basic(
@@ -63,10 +63,10 @@ define void @succ1to0(ptr %p, ptr %q, i32 %a) {
 ; LOADSTORE-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[A:%.*]], 0
 ; LOADSTORE-NEXT:    [[TMP0:%.*]] = xor i1 [[TOBOOL]], true
 ; LOADSTORE-NEXT:    [[TMP1:%.*]] = bitcast i1 [[TMP0]] to <1 x i1>
-; LOADSTORE-NEXT:    [[TMP2:%.*]] = call <1 x i32> @llvm.masked.load.v1i32.p0(ptr [[Q:%.*]], i32 4, <1 x i1> [[TMP1]], <1 x i32> poison)
+; LOADSTORE-NEXT:    [[TMP2:%.*]] = call <1 x i32> @llvm.masked.load.v1i32.p0(ptr align 4 [[Q:%.*]], <1 x i1> [[TMP1]], <1 x i32> poison)
 ; LOADSTORE-NEXT:    [[TMP3:%.*]] = bitcast <1 x i32> [[TMP2]] to i32
 ; LOADSTORE-NEXT:    [[TMP4:%.*]] = bitcast i32 [[TMP3]] to <1 x i32>
-; LOADSTORE-NEXT:    call void @llvm.masked.store.v1i32.p0(<1 x i32> [[TMP4]], ptr [[P:%.*]], i32 4, <1 x i1> [[TMP1]])
+; LOADSTORE-NEXT:    call void @llvm.masked.store.v1i32.p0(<1 x i32> [[TMP4]], ptr align 4 [[P:%.*]], <1 x i1> [[TMP1]])
 ; LOADSTORE-NEXT:    ret void
 ;
 ; NONE-LABEL: @succ1to0(
@@ -100,7 +100,7 @@ define i32 @succ1to0_phi(ptr %p)  {
 ; LOADSTORE-NEXT:    [[COND:%.*]] = icmp eq ptr [[P:%.*]], null
 ; LOADSTORE-NEXT:    [[TMP0:%.*]] = xor i1 [[COND]], true
 ; LOADSTORE-NEXT:    [[TMP1:%.*]] = bitcast i1 [[TMP0]] to <1 x i1>
-; LOADSTORE-NEXT:    [[TMP2:%.*]] = call <1 x i32> @llvm.masked.load.v1i32.p0(ptr [[P]], i32 4, <1 x i1> [[TMP1]], <1 x i32> zeroinitializer)
+; LOADSTORE-NEXT:    [[TMP2:%.*]] = call <1 x i32> @llvm.masked.load.v1i32.p0(ptr align 4 [[P]], <1 x i1> [[TMP1]], <1 x i32> zeroinitializer)
 ; LOADSTORE-NEXT:    [[TMP3:%.*]] = bitcast <1 x i32> [[TMP2]] to i32
 ; LOADSTORE-NEXT:    ret i32 [[TMP3]]
 ;
@@ -120,7 +120,7 @@ define i32 @succ1to0_phi(ptr %p)  {
 ; LOADONLY-NEXT:    [[COND:%.*]] = icmp eq ptr [[P:%.*]], null
 ; LOADONLY-NEXT:    [[TMP0:%.*]] = xor i1 [[COND]], true
 ; LOADONLY-NEXT:    [[TMP1:%.*]] = bitcast i1 [[TMP0]] to <1 x i1>
-; LOADONLY-NEXT:    [[TMP2:%.*]] = call <1 x i32> @llvm.masked.load.v1i32.p0(ptr [[P]], i32 4, <1 x i1> [[TMP1]], <1 x i32> zeroinitializer)
+; LOADONLY-NEXT:    [[TMP2:%.*]] = call <1 x i32> @llvm.masked.load.v1i32.p0(ptr align 4 [[P]], <1 x i1> [[TMP1]], <1 x i32> zeroinitializer)
 ; LOADONLY-NEXT:    [[TMP3:%.*]] = bitcast <1 x i32> [[TMP2]] to i32
 ; LOADONLY-NEXT:    ret i32 [[TMP3]]
 ;
@@ -154,10 +154,10 @@ define void @succ0to1(i32 %a, ptr %b, ptr %p, ptr %q) {
 ; LOADSTORE-NEXT:  entry:
 ; LOADSTORE-NEXT:    [[COND:%.*]] = icmp eq i32 [[A:%.*]], 0
 ; LOADSTORE-NEXT:    [[TMP0:%.*]] = bitcast i1 [[COND]] to <1 x i1>
-; LOADSTORE-NEXT:    [[TMP1:%.*]] = call <1 x i32> @llvm.masked.load.v1i32.p0(ptr [[B:%.*]], i32 4, <1 x i1> [[TMP0]], <1 x i32> poison)
+; LOADSTORE-NEXT:    [[TMP1:%.*]] = call <1 x i32> @llvm.masked.load.v1i32.p0(ptr align 4 [[B:%.*]], <1 x i1> [[TMP0]], <1 x i32> poison)
 ; LOADSTORE-NEXT:    [[TMP2:%.*]] = bitcast <1 x i32> [[TMP1]] to i32
 ; LOADSTORE-NEXT:    [[TMP3:%.*]] = bitcast i32 [[TMP2]] to <1 x i32>
-; LOADSTORE-NEXT:    call void @llvm.masked.store.v1i32.p0(<1 x i32> [[TMP3]], ptr [[P:%.*]], i32 4, <1 x i1> [[TMP0]])
+; LOADSTORE-NEXT:    call void @llvm.masked.store.v1i32.p0(<1 x i32> [[TMP3]], ptr align 4 [[P:%.*]], <1 x i1> [[TMP0]])
 ; LOADSTORE-NEXT:    store i32 1, ptr [[Q:%.*]], align 4
 ; LOADSTORE-NEXT:    ret void
 ;
@@ -196,8 +196,8 @@ define i64 @load_after_store(i32 %a, ptr %b, ptr %p) {
 ; LOADSTORE-NEXT:  entry:
 ; LOADSTORE-NEXT:    [[COND:%.*]] = icmp eq i32 [[A:%.*]], 0
 ; LOADSTORE-NEXT:    [[TMP0:%.*]] = bitcast i1 [[COND]] to <1 x i1>
-; LOADSTORE-NEXT:    call void @llvm.masked.store.v1i32.p0(<1 x i32> splat (i32 1), ptr [[B:%.*]], i32 4, <1 x i1> [[TMP0]])
-; LOADSTORE-NEXT:    [[TMP1:%.*]] = call <1 x i16> @llvm.masked.load.v1i16.p0(ptr [[P:%.*]], i32 2, <1 x i1> [[TMP0]], <1 x i16> poison)
+; LOADSTORE-NEXT:    call void @llvm.masked.store.v1i32.p0(<1 x i32> splat (i32 1), ptr align 4 [[B:%.*]], <1 x i1> [[TMP0]])
+; LOADSTORE-NEXT:    [[TMP1:%.*]] = call <1 x i16> @llvm.masked.load.v1i16.p0(ptr align 2 [[P:%.*]], <1 x i1> [[TMP0]], <1 x i16> poison)
 ; LOADSTORE-NEXT:    [[TMP2:%.*]] = bitcast <1 x i16> [[TMP1]] to i16
 ; LOADSTORE-NEXT:    [[ZEXT:%.*]] = zext i16 [[TMP2]] to i64
 ; LOADSTORE-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[COND]], i64 [[ZEXT]], i64 0
@@ -238,7 +238,7 @@ define void @load_skip_speculatable_memory_read(i32 %a, ptr %p, ptr %q) {
 ; LOADSTORE-NEXT:    [[READ:%.*]] = call i32 @read_memory_only()
 ; LOADSTORE-NEXT:    [[TMP0:%.*]] = bitcast i1 [[COND]] to <1 x i1>
 ; LOADSTORE-NEXT:    [[TMP1:%.*]] = bitcast i32 [[READ]] to <1 x i32>
-; LOADSTORE-NEXT:    call void @llvm.masked.store.v1i32.p0(<1 x i32> [[TMP1]], ptr [[P:%.*]], i32 4, <1 x i1> [[TMP0]])
+; LOADSTORE-NEXT:    call void @llvm.masked.store.v1i32.p0(<1 x i32> [[TMP1]], ptr align 4 [[P:%.*]], <1 x i1> [[TMP0]])
 ; LOADSTORE-NEXT:    store i32 1, ptr [[Q:%.*]], align 4
 ; LOADSTORE-NEXT:    ret void
 ;
@@ -248,7 +248,7 @@ define void @load_skip_speculatable_memory_read(i32 %a, ptr %p, ptr %q) {
 ; STOREONLY-NEXT:    [[READ:%.*]] = call i32 @read_memory_only()
 ; STOREONLY-NEXT:    [[TMP0:%.*]] = bitcast i1 [[COND]] to <1 x i1>
 ; STOREONLY-NEXT:    [[TMP1:%.*]] = bitcast i32 [[READ]] to <1 x i32>
-; STOREONLY-NEXT:    call void @llvm.masked.store.v1i32.p0(<1 x i32> [[TMP1]], ptr [[P:%.*]], i32 4, <1 x i1> [[TMP0]])
+; STOREONLY-NEXT:    call void @llvm.masked.store.v1i32.p0(<1 x i32> [[TMP1]], ptr align 4 [[P:%.*]], <1 x i1> [[TMP0]])
 ; STOREONLY-NEXT:    store i32 1, ptr [[Q:%.*]], align 4
 ; STOREONLY-NEXT:    ret void
 ;
@@ -301,7 +301,7 @@ define i32 @load_from_gep(ptr %p)  {
 ; LOADSTORE-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 16
 ; LOADSTORE-NEXT:    [[TMP0:%.*]] = xor i1 [[COND]], true
 ; LOADSTORE-NEXT:    [[TMP1:%.*]] = bitcast i1 [[TMP0]] to <1 x i1>
-; LOADSTORE-NEXT:    [[TMP2:%.*]] = call <1 x i32> @llvm.masked.load.v1i32.p0(ptr [[ARRAYIDX]], i32 4, <1 x i1> [[TMP1]], <1 x i32> zeroinitializer)
+; LOADSTORE-NEXT:    [[TMP2:%.*]] = call <1 x i32> @llvm.masked.load.v1i32.p0(ptr align 4 [[ARRAYIDX]], <1 x i1> [[TMP1]], <1 x i32> zeroinitializer)
 ; LOADSTORE-NEXT:    [[TMP3:%.*]] = bitcast <1 x i32> [[TMP2]] to i32
 ; LOADSTORE-NEXT:    ret i32 [[TMP3]]
 ;
@@ -323,7 +323,7 @@ define i32 @load_from_gep(ptr %p)  {
 ; LOADONLY-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 16
 ; LOADONLY-NEXT:    [[TMP0:%.*]] = xor i1 [[COND]], true
 ; LOADONLY-NEXT:    [[TMP1:%.*]] = bitcast i1 [[TMP0]] to <1 x i1>
-; LOADONLY-NEXT:    [[TMP2:%.*]] = call <1 x i32> @llvm.masked.load.v1i32.p0(ptr [[ARRAYIDX]], i32 4, <1 x i1> [[TMP1]], <1 x i32> zeroinitializer)
+; LOADONLY-NEXT:    [[TMP2:%.*]] = call <1 x i32> @llvm.masked.load.v1i32.p0(ptr align 4 [[ARRAYIDX]], <1 x i1> [[TMP1]], <1 x i32> zeroinitializer)
 ; LOADONLY-NEXT:    [[TMP3:%.*]] = bitcast <1 x i32> [[TMP2]] to i32
 ; LOADONLY-NEXT:    ret i32 [[TMP3]]
 ;
@@ -358,14 +358,14 @@ define void @nondebug_metadata(i1 %cond, ptr %p, ptr %q) {
 ; LOADSTORE-LABEL: @nondebug_metadata(
 ; LOADSTORE-NEXT:  entry:
 ; LOADSTORE-NEXT:    [[TMP0:%.*]] = bitcast i1 [[COND:%.*]] to <1 x i1>
-; LOADSTORE-NEXT:    [[TMP1:%.*]] = call range(i16 0, 10) <1 x i16> @llvm.masked.load.v1i16.p0(ptr [[P:%.*]], i32 2, <1 x i1> [[TMP0]], <1 x i16> poison)
+; LOADSTORE-NEXT:    [[TMP1:%.*]] = call range(i16 0, 10) <1 x i16> @llvm.masked.load.v1i16.p0(ptr align 2 [[P:%.*]], <1 x i1> [[TMP0]], <1 x i16> poison)
 ; LOADSTORE-NEXT:    [[TMP2:%.*]] = bitcast <1 x i16> [[TMP1]] to i16
-; LOADSTORE-NEXT:    [[TMP3:%.*]] = call <1 x i32> @llvm.masked.load.v1i32.p0(ptr [[Q:%.*]], i32 4, <1 x i1> [[TMP0]], <1 x i32> poison), !annotation [[META5:![0-9]+]]
+; LOADSTORE-NEXT:    [[TMP3:%.*]] = call <1 x i32> @llvm.masked.load.v1i32.p0(ptr align 4 [[Q:%.*]], <1 x i1> [[TMP0]], <1 x i32> poison), !annotation [[META5:![0-9]+]]
 ; LOADSTORE-NEXT:    [[TMP4:%.*]] = bitcast <1 x i32> [[TMP3]] to i32
 ; LOADSTORE-NEXT:    [[TMP5:%.*]] = bitcast i16 [[TMP2]] to <1 x i16>
-; LOADSTORE-NEXT:    call void @llvm.masked.store.v1i16.p0(<1 x i16> [[TMP5]], ptr [[Q]], i32 4, <1 x i1> [[TMP0]]), !annotation [[META5]]
+; LOADSTORE-NEXT:    call void @llvm.masked.store.v1i16.p0(<1 x i16> [[TMP5]], ptr align 4 [[Q]], <1 x i1> [[TMP0]]), !annotation [[META5]]
 ; LOADSTORE-NEXT:    [[TMP6:%.*]] = bitcast i32 [[TMP4]] to <1 x i32>
-; LOADSTORE-NEXT:    call void @llvm.masked.store.v1i32.p0(<1 x i32> [[TMP6]], ptr [[P]], i32 2, <1 x i1> [[TMP0]])
+; LOADSTORE-NEXT:    call void @llvm.masked.store.v1i32.p0(<1 x i32> [[TMP6]], ptr align 2 [[P]], <1 x i1> [[TMP0]])
 ; LOADSTORE-NEXT:    ret void
 ;
 ; NONE-LABEL: @nondebug_metadata(
@@ -398,14 +398,14 @@ define i16 @debug_metadata_diassign(i1 %cond, i16 %a, ptr %p) {
 ; LOADSTORE-LABEL: @debug_metadata_diassign(
 ; LOADSTORE-NEXT:  bb0:
 ; LOADSTORE-NEXT:    [[TMP0:%.*]] = bitcast i1 [[COND:%.*]] to <1 x i1>
-; LOADSTORE-NEXT:    call void @llvm.masked.store.v1i16.p0(<1 x i16> splat (i16 7), ptr [[P:%.*]], i32 4, <1 x i1> [[TMP0]])
+; LOADSTORE-NEXT:    call void @llvm.masked.store.v1i16.p0(<1 x i16> splat (i16 7), ptr align 4 [[P:%.*]], <1 x i1> [[TMP0]])
 ; LOADSTORE-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[COND]], i16 3, i16 2
 ; LOADSTORE-NEXT:    ret i16 [[SPEC_SELECT]]
 ;
 ; STOREONLY-LABEL: @debug_metadata_diassign(
 ; STOREONLY-NEXT:  bb0:
 ; STOREONLY-NEXT:    [[TMP0:%.*]] = bitcast i1 [[COND:%.*]] to <1 x i1>
-; STOREONLY-NEXT:    call void @llvm.masked.store.v1i16.p0(<1 x i16> splat (i16 7), ptr [[P:%.*]], i32 4, <1 x i1> [[TMP0]])
+; STOREONLY-NEXT:    call void @llvm.masked.store.v1i16.p0(<1 x i16> splat (i16 7), ptr align 4 [[P:%.*]], <1 x i1> [[TMP0]])
 ; STOREONLY-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[COND]], i16 3, i16 2
 ; STOREONLY-NEXT:    ret i16 [[SPEC_SELECT]]
 ;
@@ -451,7 +451,7 @@ define i32 @hoist_cond_stores(i1 %cond, ptr %p) {
 ; LOADSTORE-NEXT:    store i1 false, ptr [[P:%.*]], align 2
 ; LOADSTORE-NEXT:    [[TMP0:%.*]] = bitcast i1 [[COND:%.*]] to <1 x i1>
 ; LOADSTORE-NEXT:    [[SPEC_STORE_SELECT:%.*]] = select i1 [[COND]], i1 false, i1 false
-; LOADSTORE-NEXT:    call void @llvm.masked.store.v1i32.p0(<1 x i32> zeroinitializer, ptr [[P]], i32 8, <1 x i1> [[TMP0]])
+; LOADSTORE-NEXT:    call void @llvm.masked.store.v1i32.p0(<1 x i32> zeroinitializer, ptr align 8 [[P]], <1 x i1> [[TMP0]])
 ; LOADSTORE-NEXT:    store i1 [[SPEC_STORE_SELECT]], ptr [[P]], align 2
 ; LOADSTORE-NEXT:    ret i32 0
 ;
@@ -460,7 +460,7 @@ define i32 @hoist_cond_stores(i1 %cond, ptr %p) {
 ; STOREONLY-NEXT:    store i1 false, ptr [[P:%.*]], align 2
 ; STOREONLY-NEXT:    [[TMP0:%.*]] = bitcast i1 [[COND:%.*]] to <1 x i1>
 ; STOREONLY-NEXT:    [[SPEC_STORE_SELECT:%.*]] = select i1 [[COND]], i1 false, i1 false
-; STOREONLY-NEXT:    call void @llvm.masked.store.v1i32.p0(<1 x i32> zeroinitializer, ptr [[P]], i32 8, <1 x i1> [[TMP0]])
+; STOREONLY-NEXT:    call void @llvm.masked.store.v1i32.p0(<1 x i32> zeroinitializer, ptr align 8 [[P]], <1 x i1> [[TMP0]])
 ; STOREONLY-NEXT:    store i1 [[SPEC_STORE_SELECT]], ptr [[P]], align 2
 ; STOREONLY-NEXT:    ret i32 0
 ;
@@ -507,10 +507,10 @@ define i32 @single_predecessor(ptr %p, ptr %q, i32 %a) {
 ; LOADSTORE-NEXT:    [[TMP0:%.*]] = xor i1 [[TOBOOL]], true
 ; LOADSTORE-NEXT:    [[TMP1:%.*]] = bitcast i1 [[TMP0]] to <1 x i1>
 ; LOADSTORE-NEXT:    [[TMP2:%.*]] = bitcast i1 [[TOBOOL]] to <1 x i1>
-; LOADSTORE-NEXT:    call void @llvm.masked.store.v1i32.p0(<1 x i32> splat (i32 1), ptr [[Q:%.*]], i32 4, <1 x i1> [[TMP2]])
-; LOADSTORE-NEXT:    [[TMP3:%.*]] = call <1 x i32> @llvm.masked.load.v1i32.p0(ptr [[Q]], i32 4, <1 x i1> [[TMP1]], <1 x i32> poison)
+; LOADSTORE-NEXT:    call void @llvm.masked.store.v1i32.p0(<1 x i32> splat (i32 1), ptr align 4 [[Q:%.*]], <1 x i1> [[TMP2]])
+; LOADSTORE-NEXT:    [[TMP3:%.*]] = call <1 x i32> @llvm.masked.load.v1i32.p0(ptr align 4 [[Q]], <1 x i1> [[TMP1]], <1 x i32> poison)
 ; LOADSTORE-NEXT:    [[TMP4:%.*]] = bitcast <1 x i32> [[TMP3]] to i32
-; LOADSTORE-NEXT:    call void @llvm.masked.store.v1i32.p0(<1 x i32> [[TMP3]], ptr [[P:%.*]], i32 4, <1 x i1> [[TMP1]])
+; LOADSTORE-NEXT:    call void @llvm.masked.store.v1i32.p0(<1 x i32> [[TMP3]], ptr align 4 [[P:%.*]], <1 x i1> [[TMP1]])
 ; LOADSTORE-NEXT:    [[DOT:%.*]] = select i1 [[TOBOOL]], i32 2, i32 3
 ; LOADSTORE-NEXT:    ret i32 [[DOT]]
 ;
@@ -548,23 +548,23 @@ define void @threshold_6(i1 %cond, ptr %p1, ptr %p2, ptr %p3, ptr %p4, ptr %p5, 
 ; LOADSTORE-LABEL: @threshold_6(
 ; LOADSTORE-NEXT:  entry:
 ; LOADSTORE-NEXT:    [[TMP0:%.*]] = bitcast i1 [[COND:%.*]] to <1 x i1>
-; LOADSTORE-NEXT:    call void @llvm.masked.store.v1i32.p0(<1 x i32> splat (i32 1), ptr [[P1:%.*]], i32 4, <1 x i1> [[TMP0]])
-; LOADSTORE-NEXT:    call void @llvm.masked.store.v1i32.p0(<1 x i32> splat (i32 2), ptr [[P2:%.*]], i32 4, <1 x i1> [[TMP0]])
-; LOADSTORE-NEXT:    call void @llvm.masked.store.v1i32.p0(<1 x i32> splat (i32 3), ptr [[P3:%.*]], i32 4, <1 x i1> [[TMP0]])
-; LOADSTORE-NEXT:    call void @llvm.masked.store.v1i32.p0(<1 x i32> splat (i32 4), ptr [[P4:%.*]], i32 4, <1 x i1> [[TMP0]])
-; LOADSTORE-NEXT:    call void @llvm.masked.store.v1i32.p0(<1 x i32> splat (i32 5), ptr [[P5:%.*]], i32 4, <1 x i1> [[TMP0]])
-; LOADSTORE-NEXT:    call void @llvm.masked.store.v1i32.p0(<1 x i32> splat (i32 6), ptr [[P6:%.*]], i32 4, <1 x i1> [[TMP0]])
+; LOADSTORE-NEXT:    call void @llvm.masked.store.v1i32.p0(<1 x i32> splat (i32 1), ptr align 4 [[P1:%.*]], <1 x i1> [[TMP0]])
+; LOADSTORE-NEXT:    call void @llvm.masked.store.v1i32.p0(<1 x i32> splat (i32 2), ptr align 4 [[P2:%.*]], <1 x i1> [[TMP0]])
+; LOADSTORE-NEXT:    call void @llvm.masked.store.v1i32.p0(<1 x i32> splat (i32 3), ptr align 4 [[P3:%.*]], <1 x i1> [[TMP0]])
+; LOADSTORE-NEXT:    call void @llvm.masked.store.v1i32.p0(<1 x i32> splat (i32 4), ptr align 4 [[P4:%.*]], <1 x i1> [[TMP0]])
+; LOADSTORE-NEXT:    call void @llvm.masked.store.v1i32.p0(<1 x i32> splat (i32 5), ptr align 4 [[P5:%.*]], <1 x i1> [[TMP0]])
+; LOADSTORE-NEXT:    call void @llvm.masked.store.v1i32.p0(<1 x i32> splat (i32 6), ptr align 4 [[P6:%.*]], <1 x i1> [[TMP0]])
 ; LOADSTORE-NEXT:    ret void
 ;
 ; STOREONLY-LABEL: @threshold_6(
 ; STOREONLY-NEXT:  entry:
 ; STOREONLY-NEXT:    [[TMP0:%.*]] = bitcast i1 [[COND:%.*]] to <1 x i1>
-; STOREONLY-NEXT:    call void @llvm.masked.store.v1i32.p0(<1 x i32> splat (i32 1), ptr [[P1:%.*]], i32 4, <1 x i1> [[TMP0]])
-; STOREONLY-NEXT:    call void @llvm.masked.store.v1i32.p0(<1 x i32> splat (i32 2), ptr [[P2:%.*]], i32 4, <1 x i1> [[TMP0]])
-; STOREONLY-NEXT:    call void @llvm.masked.store.v1i32.p0(<1 x i32> splat (i32 3), ptr [[P3:%.*]], i32 4, <1 x i1> [[TMP0]])
-; STOREONLY-NEXT:    call void @llvm.masked.store.v1i32.p0(<1 x i32> splat (i32 4), ptr [[P4:%.*]], i32 4, <1 x i1> [[TMP0]])
-; STOREONLY-NEXT:    call void @llvm.masked.store.v1i32.p0(<1 x i32> splat (i32 5), ptr [[P5:%.*]], i32 4, <1 x i1> [[TMP0]])
-; STOREONLY-NEXT:    call void @llvm.masked.store.v1i32.p0(<1 x i32> splat (i32 6), ptr [[P6:%.*]], i32 4, <1 x i1> [[TMP0]])
+; STOREONLY-NEXT:    call void @llvm.masked.store.v1i32.p0(<1 x i32> splat (i32 1), ptr align 4 [[P1:%.*]], <1 x i1> [[TMP0]])
+; STOREONLY-NEXT:    call void @llvm.masked.store.v1i32.p0(<1 x i32> splat (i32 2), ptr align 4 [[P2:%.*]], <1 x i1> [[TMP0]])
+; STOREONLY-NEXT:    call void @llvm.masked.store.v1i32.p0(<1 x i32> splat (i32 3), ptr align 4 [[P3:%.*]], <1 x i1> [[TMP0]])
+; STOREONLY-NEXT:    call void @llvm.masked.store.v1i32.p0(<1 x i32> splat (i32 4), ptr align 4 [[P4:%.*]], <1 x i1> [[TMP0]])
+; STOREONLY-NEXT:    call void @llvm.masked.store.v1i32.p0(<1 x i32> splat (i32 5), ptr align 4 [[P5:%.*]], <1 x i1> [[TMP0]])
+; STOREONLY-NEXT:    call void @llvm.masked.store.v1i32.p0(<1 x i32> splat (i32 6), ptr align 4 [[P6:%.*]], <1 x i1> [[TMP0]])
 ; STOREONLY-NEXT:    ret void
 ;
 ; LOADONLY-LABEL: @threshold_6(
@@ -987,7 +987,7 @@ define i32 @succ_phi_has_3input(i1 %cond1, ptr %p, i1 %cond2) {
 ; LOADSTORE-NEXT:    br i1 [[COND1:%.*]], label [[BB3:%.*]], label [[BB1:%.*]]
 ; LOADSTORE:       bb1:
 ; LOADSTORE-NEXT:    [[TMP0:%.*]] = bitcast i1 [[COND2:%.*]] to <1 x i1>
-; LOADSTORE-NEXT:    [[TMP1:%.*]] = call <1 x i64> @llvm.masked.load.v1i64.p0(ptr [[P:%.*]], i32 8, <1 x i1> [[TMP0]], <1 x i64> zeroinitializer)
+; LOADSTORE-NEXT:    [[TMP1:%.*]] = call <1 x i64> @llvm.masked.load.v1i64.p0(ptr align 8 [[P:%.*]], <1 x i1> [[TMP0]], <1 x i64> zeroinitializer)
 ; LOADSTORE-NEXT:    [[TMP2:%.*]] = bitcast <1 x i64> [[TMP1]] to i64
 ; LOADSTORE-NEXT:    br label [[BB3]]
 ; LOADSTORE:       bb3:
@@ -1013,7 +1013,7 @@ define i32 @succ_phi_has_3input(i1 %cond1, ptr %p, i1 %cond2) {
 ; LOADONLY-NEXT:    br i1 [[COND1:%.*]], label [[BB3:%.*]], label [[BB1:%.*]]
 ; LOADONLY:       bb1:
 ; LOADONLY-NEXT:    [[TMP0:%.*]] = bitcast i1 [[COND2:%.*]] to <1 x i1>
-; LOADONLY-NEXT:    [[TMP1:%.*]] = call <1 x i64> @llvm.masked.load.v1i64.p0(ptr [[P:%.*]], i32 8, <1 x i1> [[TMP0]], <1 x i64> zeroinitializer)
+; LOADONLY-NEXT:    [[TMP1:%.*]] = call <1 x i64> @llvm.masked.load.v1i64.p0(ptr align 8 [[P:%.*]], <1 x i1> [[TMP0]], <1 x i64> zeroinitializer)
 ; LOADONLY-NEXT:    [[TMP2:%.*]] = bitcast <1 x i64> [[TMP1]] to i64
 ; LOADONLY-NEXT:    br label [[BB3]]
 ; LOADONLY:       bb3:
@@ -1056,10 +1056,10 @@ define i32 @succ1to0_phi2(ptr %p, ptr %p2) {
 ; LOADSTORE-NEXT:    [[COND:%.*]] = icmp eq ptr [[P:%.*]], null
 ; LOADSTORE-NEXT:    [[TMP0:%.*]] = xor i1 [[COND]], true
 ; LOADSTORE-NEXT:    [[TMP1:%.*]] = bitcast i1 [[TMP0]] to <1 x i1>
-; LOADSTORE-NEXT:    [[TMP2:%.*]] = call <1 x i32> @llvm.masked.load.v1i32.p0(ptr [[P]], i32 4, <1 x i1> [[TMP1]], <1 x i32> zeroinitializer)
+; LOADSTORE-NEXT:    [[TMP2:%.*]] = call <1 x i32> @llvm.masked.load.v1i32.p0(ptr align 4 [[P]], <1 x i1> [[TMP1]], <1 x i32> zeroinitializer)
 ; LOADSTORE-NEXT:    [[TMP3:%.*]] = bitcast <1 x i32> [[TMP2]] to i32
 ; LOADSTORE-NEXT:    [[TMP4:%.*]] = bitcast i32 [[TMP3]] to <1 x i32>
-; LOADSTORE-NEXT:    call void @llvm.masked.store.v1i32.p0(<1 x i32> [[TMP4]], ptr [[P2:%.*]], i32 4, <1 x i1> [[TMP1]])
+; LOADSTORE-NEXT:    call void @llvm.masked.store.v1i32.p0(<1 x i32> [[TMP4]], ptr align 4 [[P2:%.*]], <1 x i1> [[TMP1]])
 ; LOADSTORE-NEXT:    ret i32 [[TMP3]]
 ;
 ; NONE-LABEL: @succ1to0_phi2(
@@ -1095,10 +1095,10 @@ define i32 @succ1to0_phi3(ptr %p, ptr %p2, i32 %x) {
 ; LOADSTORE-NEXT:    [[TMP0:%.*]] = xor i1 [[COND]], true
 ; LOADSTORE-NEXT:    [[TMP1:%.*]] = bitcast i1 [[TMP0]] to <1 x i1>
 ; LOADSTORE-NEXT:    [[TMP2:%.*]] = bitcast i32 [[X:%.*]] to <1 x i32>
-; LOADSTORE-NEXT:    [[TMP3:%.*]] = call <1 x i32> @llvm.masked.load.v1i32.p0(ptr [[P]], i32 4, <1 x i1> [[TMP1]], <1 x i32> zeroinitializer)
+; LOADSTORE-NEXT:    [[TMP3:%.*]] = call <1 x i32> @llvm.masked.load.v1i32.p0(ptr align 4 [[P]], <1 x i1> [[TMP1]], <1 x i32> zeroinitializer)
 ; LOADSTORE-NEXT:    [[TMP4:%.*]] = bitcast <1 x i32> [[TMP3]] to i32
 ; LOADSTORE-NEXT:    [[TMP5:%.*]] = bitcast i32 [[TMP4]] to <1 x i32>
-; LOADSTORE-NEXT:    call void @llvm.masked.store.v1i32.p0(<1 x i32> [[TMP5]], ptr [[P2:%.*]], i32 4, <1 x i1> [[TMP1]])
+; LOADSTORE-NEXT:    call void @llvm.masked.store.v1i32.p0(<1 x i32> [[TMP5]], ptr align 4 [[P2:%.*]], <1 x i1> [[TMP1]])
 ; LOADSTORE-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[COND]], i32 [[X]], i32 [[TMP4]]
 ; LOADSTORE-NEXT:    [[RES:%.*]] = add i32 [[TMP4]], [[SPEC_SELECT]]
 ; LOADSTORE-NEXT:    ret i32 [[RES]]
@@ -1177,10 +1177,10 @@ define void @hoist_store_without_cstore(ptr %0, ptr %1, i1 %cmp) {
 ; LOADSTORE-NEXT:  entry:
 ; LOADSTORE-NEXT:    store i32 0, ptr [[TMP1:%.*]], align 8
 ; LOADSTORE-NEXT:    [[TMP2:%.*]] = bitcast i1 [[CMP:%.*]] to <1 x i1>
-; LOADSTORE-NEXT:    [[TMP3:%.*]] = call <1 x i32> @llvm.masked.load.v1i32.p0(ptr [[TMP0:%.*]], i32 4, <1 x i1> [[TMP2]], <1 x i32> poison)
+; LOADSTORE-NEXT:    [[TMP3:%.*]] = call <1 x i32> @llvm.masked.load.v1i32.p0(ptr align 4 [[TMP0:%.*]], <1 x i1> [[TMP2]], <1 x i32> poison)
 ; LOADSTORE-NEXT:    [[TMP4:%.*]] = bitcast <1 x i32> [[TMP3]] to i32
 ; LOADSTORE-NEXT:    [[TMP5:%.*]] = bitcast i32 [[TMP4]] to <1 x i32>
-; LOADSTORE-NEXT:    call void @llvm.masked.store.v1i32.p0(<1 x i32> [[TMP5]], ptr [[TMP1]], i32 8, <1 x i1> [[TMP2]])
+; LOADSTORE-NEXT:    call void @llvm.masked.store.v1i32.p0(<1 x i32> [[TMP5]], ptr align 8 [[TMP1]], <1 x i1> [[TMP2]])
 ; LOADSTORE-NEXT:    ret void
 ;
 ; STOREONLY-LABEL: @hoist_store_without_cstore(
@@ -1198,7 +1198,7 @@ define void @hoist_store_without_cstore(ptr %0, ptr %1, i1 %cmp) {
 ; LOADONLY-NEXT:  entry:
 ; LOADONLY-NEXT:    store i32 0, ptr [[TMP1:%.*]], align 8
 ; LOADONLY-NEXT:    [[TMP2:%.*]] = bitcast i1 [[CMP:%.*]] to <1 x i1>
-; LOADONLY-NEXT:    [[TMP3:%.*]] = call <1 x i32> @llvm.masked.load.v1i32.p0(ptr [[TMP0:%.*]], i32 4, <1 x i1> [[TMP2]], <1 x i32> poison)
+; LOADONLY-NEXT:    [[TMP3:%.*]] = call <1 x i32> @llvm.masked.load.v1i32.p0(ptr align 4 [[TMP0:%.*]], <1 x i1> [[TMP2]], <1 x i32> poison)
 ; LOADONLY-NEXT:    [[TMP4:%.*]] = bitcast <1 x i32> [[TMP3]] to i32
 ; LOADONLY-NEXT:    [[SPEC_STORE_SELECT:%.*]] = select i1 [[CMP]], i32 [[TMP4]], i32 0
 ; LOADONLY-NEXT:    store i32 [[SPEC_STORE_SELECT]], ptr [[TMP1]], align 8

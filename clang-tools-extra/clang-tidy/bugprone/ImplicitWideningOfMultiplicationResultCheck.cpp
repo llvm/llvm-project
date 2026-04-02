@@ -1,4 +1,4 @@
-//===--- ImplicitWideningOfMultiplicationResultCheck.cpp - clang-tidy -----===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -71,18 +71,18 @@ ImplicitWideningOfMultiplicationResultCheck::includeStddefHeader(
 
 void ImplicitWideningOfMultiplicationResultCheck::handleImplicitCastExpr(
     const ImplicitCastExpr *ICE) {
-  ASTContext *Context = Result->Context;
+  const ASTContext *Context = Result->Context;
 
   const Expr *E = ICE->getSubExpr()->IgnoreParens();
-  QualType Ty = ICE->getType();
-  QualType ETy = E->getType();
+  const QualType Ty = ICE->getType();
+  const QualType ETy = E->getType();
 
   assert(!ETy->isDependentType() && !Ty->isDependentType() &&
          "Don't expect to ever get here in template Context.");
 
   // This must be a widening cast. Else we do not care.
-  unsigned SrcWidth = Context->getIntWidth(ETy);
-  unsigned TgtWidth = Context->getIntWidth(Ty);
+  const unsigned SrcWidth = Context->getIntWidth(ETy);
+  const unsigned TgtWidth = Context->getIntWidth(Ty);
   if (TgtWidth <= SrcWidth)
     return;
 
@@ -92,7 +92,7 @@ void ImplicitWideningOfMultiplicationResultCheck::handleImplicitCastExpr(
       !ETy->isUnsignedIntegerType()) {
     if (const auto ConstExprResult = E->getIntegerConstantExpr(*Context)) {
       const auto TypeSize = Context->getTypeSize(ETy);
-      llvm::APSInt WidenedResult = ConstExprResult->extOrTrunc(TypeSize);
+      const llvm::APSInt WidenedResult = ConstExprResult->extOrTrunc(TypeSize);
       if (WidenedResult <= llvm::APSInt::getMaxValue(TypeSize, false) &&
           WidenedResult >= llvm::APSInt::getMinValue(TypeSize, false))
         return;
@@ -131,9 +131,9 @@ void ImplicitWideningOfMultiplicationResultCheck::handleImplicitCastExpr(
   QualType WideExprTy;
   // Get Ty of the same signedness as ExprTy, because we only want to suggest
   // to widen the computation, but not change it's signedness domain.
-  if (Ty->isSignedIntegerType() == ETy->isSignedIntegerType())
+  if (Ty->isSignedIntegerType() == ETy->isSignedIntegerType()) {
     WideExprTy = Ty;
-  else if (Ty->isSignedIntegerType()) {
+  } else if (Ty->isSignedIntegerType()) {
     assert(ETy->isUnsignedIntegerType() &&
            "Expected source type to be signed.");
     WideExprTy = Context->getCorrespondingUnsignedType(Ty);
@@ -168,7 +168,7 @@ void ImplicitWideningOfMultiplicationResultCheck::handleImplicitCastExpr(
 
 void ImplicitWideningOfMultiplicationResultCheck::handlePointerOffsetting(
     const Expr *E) {
-  ASTContext *Context = Result->Context;
+  const ASTContext *Context = Result->Context;
 
   // We are looking for a pointer offset operation,
   // with one hand being a pointer, and another one being an offset.
@@ -179,8 +179,9 @@ void ImplicitWideningOfMultiplicationResultCheck::handlePointerOffsetting(
   } else if (const auto *ASE = dyn_cast<ArraySubscriptExpr>(E)) {
     PointerExpr = ASE->getLHS();
     IndexExpr = ASE->getRHS();
-  } else
+  } else {
     return;
+  }
 
   if (IndexExpr->getType()->isPointerType())
     std::swap(PointerExpr, IndexExpr);
@@ -191,19 +192,20 @@ void ImplicitWideningOfMultiplicationResultCheck::handlePointerOffsetting(
 
   IndexExpr = IndexExpr->IgnoreParens();
 
-  QualType IndexExprType = IndexExpr->getType();
+  const QualType IndexExprType = IndexExpr->getType();
 
   // If the index expression's type is not known (i.e. we are in a template),
   // we can't do anything here.
   if (IndexExprType->isDependentType())
     return;
 
-  QualType SSizeTy = Context->getPointerDiffType();
-  QualType USizeTy = Context->getSizeType();
-  QualType SizeTy = IndexExprType->isSignedIntegerType() ? SSizeTy : USizeTy;
+  const QualType SSizeTy = Context->getPointerDiffType();
+  const QualType USizeTy = Context->getSizeType();
+  const QualType SizeTy =
+      IndexExprType->isSignedIntegerType() ? SSizeTy : USizeTy;
   // FIXME: is there a way to actually get the QualType for size_t/ptrdiff_t?
   // Note that SizeTy.getAsString() will be unsigned long/..., NOT size_t!
-  StringRef TyAsString =
+  const StringRef TyAsString =
       IndexExprType->isSignedIntegerType() ? "ptrdiff_t" : "size_t";
 
   // So, is size_t actually wider than the result of the multiplication?

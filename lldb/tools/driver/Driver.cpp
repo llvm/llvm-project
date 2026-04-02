@@ -22,13 +22,20 @@
 #include "lldb/Host/MainLoop.h"
 #include "lldb/Host/MainLoopBase.h"
 #include "lldb/Utility/Status.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/ConvertUTF.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
+
+#ifdef _WIN32
+#include "lldb/Host/windows/PythonPathSetup/PythonPathSetup.h"
+#endif
 
 #include <algorithm>
 #include <atomic>
@@ -280,6 +287,12 @@ SBError Driver::ProcessArgs(const opt::InputArgList &args, bool &exiting) {
   }
 
   if (args.hasArg(OPT_wait_for)) {
+    if (!args.hasArg(OPT_attach_name)) {
+      error.SetErrorStringWithFormat(
+          "--wait-for requires a name (--attach-name)");
+      return error;
+    }
+
     m_option_data.m_wait_for = true;
   }
 
@@ -387,7 +400,8 @@ SBError Driver::ProcessArgs(const opt::InputArgList &args, bool &exiting) {
   }
 
   if (m_option_data.m_print_python_path) {
-    SBFileSpec python_file_spec = SBHostOS::GetLLDBPythonPath();
+    SBFileSpec python_file_spec =
+        SBHostOS::GetScriptPath(lldb::eScriptLanguagePython);
     if (python_file_spec.IsValid()) {
       char python_path[PATH_MAX];
       size_t num_chars = python_file_spec.GetPath(python_path, PATH_MAX);
@@ -537,7 +551,7 @@ int Driver::MainLoop() {
   // Check if we have any data in the commands stream, and if so, save it to a
   // temp file
   // so we can then run the command interpreter using the file contents.
-  bool go_interactive = true;
+  bool go_interactive = !m_option_data.m_batch;
   if ((commands_stream.GetData() != nullptr) &&
       (commands_stream.GetSize() != 0u)) {
     SBError error = m_debugger.SetInputString(commands_stream.GetData());
@@ -575,6 +589,7 @@ int Driver::MainLoop() {
     if (m_option_data.m_batch &&
         results.GetResult() == lldb::eCommandInterpreterResultInferiorCrash &&
         !m_option_data.m_after_crash_commands.empty()) {
+      go_interactive = true;
       SBStream crash_commands_stream;
       WriteCommandsForSourcing(eCommandPlacementAfterCrash,
                                crash_commands_stream);
@@ -722,6 +737,13 @@ int main(int argc, char const *argv[]) {
                         "~/Library/Logs/DiagnosticReports/.\n");
 #endif
 
+#ifdef _WIN32
+  auto python_path_or_err = SetupPythonRuntimeLibrary();
+  if (!python_path_or_err)
+    llvm::WithColor::error()
+        << llvm::toString(python_path_or_err.takeError()) << '\n';
+#endif
+
   // Parse arguments.
   LLDBOptTable T;
   unsigned MissingArgIndex;
@@ -844,9 +866,10 @@ int main(int argc, char const *argv[]) {
   }
 
 #if !defined(_WIN32)
-  signal_loop.AddPendingCallback(
-      [](MainLoopBase &loop) { loop.RequestTermination(); });
-  signal_thread.join();
+  // Try to interrupt the signal thread.  If that succeeds, wait for it to exit.
+  if (signal_loop.AddPendingCallback(
+          [](MainLoopBase &loop) { loop.RequestTermination(); }))
+    signal_thread.join();
 #endif
 
   return exit_code;

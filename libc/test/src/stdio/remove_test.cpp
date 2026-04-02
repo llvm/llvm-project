@@ -11,20 +11,21 @@
 #include "src/sys/stat/mkdirat.h"
 #include "src/unistd/access.h"
 #include "src/unistd/close.h"
+#include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
-#include "src/errno/libc_errno.h"
 #include <unistd.h>
 
-TEST(LlvmLibcRemoveTest, CreateAndRemoveFile) {
+using LlvmLibcRemoveTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
+
+TEST_F(LlvmLibcRemoveTest, CreateAndRemoveFile) {
   // The test strategy is to create a file and remove it, and also verify that
   // it was removed.
-  LIBC_NAMESPACE::libc_errno = 0;
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
 
-  constexpr const char *FILENAME = "remove.test.file";
+  constexpr const char *FILENAME = APPEND_LIBC_TEST("remove.test.file");
   auto TEST_FILE = libc_make_test_file_path(FILENAME);
   int fd = LIBC_NAMESPACE::open(TEST_FILE, O_WRONLY | O_CREAT, S_IRWXU);
   ASSERT_ERRNO_SUCCESS();
@@ -36,13 +37,12 @@ TEST(LlvmLibcRemoveTest, CreateAndRemoveFile) {
   ASSERT_THAT(LIBC_NAMESPACE::access(TEST_FILE, F_OK), Fails(ENOENT));
 }
 
-TEST(LlvmLibcRemoveTest, CreateAndRemoveDir) {
+TEST_F(LlvmLibcRemoveTest, CreateAndRemoveDir) {
   // The test strategy is to create a dir and remove it, and also verify that
   // it was removed.
-  LIBC_NAMESPACE::libc_errno = 0;
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
-  constexpr const char *FILENAME = "remove.test.dir";
+  constexpr const char *FILENAME = APPEND_LIBC_TEST("remove.test.dir");
   auto TEST_DIR = libc_make_test_file_path(FILENAME);
   ASSERT_THAT(LIBC_NAMESPACE::mkdirat(AT_FDCWD, TEST_DIR, S_IRWXU),
               Succeeds(0));

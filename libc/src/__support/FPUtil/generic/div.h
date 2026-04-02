@@ -11,6 +11,7 @@
 
 #include "hdr/errno_macros.h"
 #include "hdr/fenv_macros.h"
+#include "src/__support/CPP/algorithm.h"
 #include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/BasicOperations.h"
@@ -25,17 +26,18 @@ namespace LIBC_NAMESPACE_DECL {
 namespace fputil::generic {
 
 template <typename OutType, typename InType>
-LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<OutType> &&
-                                 cpp::is_floating_point_v<InType> &&
-                                 sizeof(OutType) <= sizeof(InType),
-                             OutType>
+LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_floating_point_v<OutType> &&
+                                           cpp::is_floating_point_v<InType> &&
+                                           sizeof(OutType) <= sizeof(InType),
+                                       OutType>
 div(InType x, InType y) {
   using OutFPBits = FPBits<OutType>;
   using OutStorageType = typename OutFPBits::StorageType;
   using InFPBits = FPBits<InType>;
   using InStorageType = typename InFPBits::StorageType;
-  using DyadicFloat =
-      DyadicFloat<cpp::bit_ceil(static_cast<size_t>(InFPBits::SIG_LEN + 1))>;
+  using DyadicFloat = DyadicFloat<cpp::max(
+      static_cast<size_t>(16),
+      cpp::bit_ceil(static_cast<size_t>(InFPBits::SIG_LEN + 1)))>;
 
   InFPBits x_bits(x);
   InFPBits y_bits(y);
@@ -78,7 +80,7 @@ div(InType x, InType y) {
     }
 
     if (y_bits.is_inf())
-      return OutFPBits::inf(result_sign).get_val();
+      return OutFPBits::zero(result_sign).get_val();
 
     if (y_bits.is_zero()) {
       if (x_bits.is_zero()) {

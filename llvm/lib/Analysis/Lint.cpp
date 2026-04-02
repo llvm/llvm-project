@@ -374,13 +374,6 @@ void Lint::visitCallBase(CallBase &I) {
       visitMemoryReference(I, MemoryLocation::getForArgument(&I, 0, TLI),
                            std::nullopt, nullptr, MemRef::Read | MemRef::Write);
       break;
-    case Intrinsic::get_active_lane_mask:
-      if (auto *TripCount = dyn_cast<ConstantInt>(I.getArgOperand(1)))
-        Check(!TripCount->isZero(),
-              "get_active_lane_mask: operand #2 "
-              "must be greater than 0",
-              &I);
-      break;
     }
 }
 
@@ -458,9 +451,9 @@ void Lint::visitMemoryReference(Instruction &I, const MemoryLocation &Loc,
     MaybeAlign BaseAlign;
 
     if (AllocaInst *AI = dyn_cast<AllocaInst>(Base)) {
-      Type *ATy = AI->getAllocatedType();
-      if (!AI->isArrayAllocation() && ATy->isSized() && !ATy->isScalableTy())
-        BaseSize = DL->getTypeAllocSize(ATy).getFixedValue();
+      std::optional<TypeSize> ATy = AI->getAllocationSize(*DL);
+      if (ATy && !ATy->isScalable())
+        BaseSize = ATy->getFixedValue();
       BaseAlign = AI->getAlign();
     } else if (GlobalVariable *GV = dyn_cast<GlobalVariable>(Base)) {
       // If the global may be defined differently in another compilation unit
@@ -551,8 +544,7 @@ static bool isZero(Value *V, const DataLayout &DL, DominatorTree *DT,
 
   VectorType *VecTy = dyn_cast<VectorType>(V->getType());
   if (!VecTy) {
-    KnownBits Known =
-        computeKnownBits(V, DL, 0, AC, dyn_cast<Instruction>(V), DT);
+    KnownBits Known = computeKnownBits(V, DL, AC, dyn_cast<Instruction>(V), DT);
     return Known.isZero();
   }
 
@@ -561,7 +553,7 @@ static bool isZero(Value *V, const DataLayout &DL, DominatorTree *DT,
   if (!C)
     return false;
 
-  if (C->isZeroValue())
+  if (C->isNullValue())
     return true;
 
   // For a vector, KnownZero will only be true if all values are zero, so check

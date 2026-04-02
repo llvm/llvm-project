@@ -478,13 +478,14 @@ func.func @_QMmPtest.fir(%arg0: !fir.ref<!fir.box<!fir.ptr<i32>>> {fir.bindc_nam
 // CHECK-DAG: argp.fir#0 <-> arg%p.fir#0: MayAlias
 // CHECK-DAG: argp.fir#0 <-> arg%i.fir#0: NoAlias
 //
-// TODO: Shouldn't these be NoAlias?  However, argp.tgt is currently handled as
-// Indirect.
+// TODO: Shouldn't these all be NoAlias?
+// However, argp.tgt is currently handled as Indirect, and we only
+// can disambiguate descriptor and data addresses.
 // CHECK-DAG: argp.tgt#0 <-> arg#0: MayAlias
-// CHECK-DAG: argp.tgt#0 <-> arg%p#0: MayAlias
+// CHECK-DAG: argp.tgt#0 <-> arg%p#0: NoAlias
 // CHECK-DAG: argp.tgt#0 <-> arg%i#0: MayAlias
 // CHECK-DAG: argp.tgt.fir#0 <-> arg.fir#0: MayAlias
-// CHECK-DAG: argp.tgt.fir#0 <-> arg%p.fir#0: MayAlias
+// CHECK-DAG: argp.tgt.fir#0 <-> arg%p.fir#0: NoAlias
 // CHECK-DAG: argp.tgt.fir#0 <-> arg%i.fir#0: MayAlias
 //
 // CHECK-DAG: arga#0 <-> arg#0: NoAlias
@@ -501,13 +502,14 @@ func.func @_QMmPtest.fir(%arg0: !fir.ref<!fir.box<!fir.ptr<i32>>> {fir.bindc_nam
 // CHECK-DAG: argp.fir#0 <-> glob%p.fir#0: MayAlias
 // CHECK-DAG: argp.fir#0 <-> glob%i.fir#0: NoAlias
 //
-// TODO: Shouldn't these be NoAlias?  However, argp.tgt is currently handled as
-// Indirect.
+// TODO: Shouldn't these all be NoAlias?
+// However, argp.tgt is currently handled as Indirect, and we only
+// can disambiguate descriptor and data addresses.
 // CHECK-DAG: argp.tgt#0 <-> glob#0: MayAlias
-// CHECK-DAG: argp.tgt#0 <-> glob%p#0: MayAlias
+// CHECK-DAG: argp.tgt#0 <-> glob%p#0: NoAlias
 // CHECK-DAG: argp.tgt#0 <-> glob%i#0: MayAlias
 // CHECK-DAG: argp.tgt.fir#0 <-> glob.fir#0: MayAlias
-// CHECK-DAG: argp.tgt.fir#0 <-> glob%p.fir#0: MayAlias
+// CHECK-DAG: argp.tgt.fir#0 <-> glob%p.fir#0: NoAlias
 // CHECK-DAG: argp.tgt.fir#0 <-> glob%i.fir#0: MayAlias
 //
 // CHECK-DAG: arga#0 <-> glob#0: NoAlias
@@ -524,13 +526,14 @@ func.func @_QMmPtest.fir(%arg0: !fir.ref<!fir.box<!fir.ptr<i32>>> {fir.bindc_nam
 // CHECK-DAG: argp.fir#0 <-> loc%p.fir#0: NoAlias
 // CHECK-DAG: argp.fir#0 <-> loc%i.fir#0: NoAlias
 //
-// TODO: Shouldn't these be NoAlias?  However, argp.tgt is currently handled as
-// Indirect.
+// TODO: Shouldn't these all be NoAlias?
+// However, argp.tgt is currently handled as Indirect, and we only
+// can disambiguate descriptor and data addresses.
 // CHECK-DAG: argp.tgt#0 <-> loc#0: MayAlias
-// CHECK-DAG: argp.tgt#0 <-> loc%p#0: MayAlias
+// CHECK-DAG: argp.tgt#0 <-> loc%p#0: NoAlias
 // CHECK-DAG: argp.tgt#0 <-> loc%i#0: MayAlias
 // CHECK-DAG: argp.tgt.fir#0 <-> loc.fir#0: MayAlias
-// CHECK-DAG: argp.tgt.fir#0 <-> loc%p.fir#0: MayAlias
+// CHECK-DAG: argp.tgt.fir#0 <-> loc%p.fir#0: NoAlias
 // CHECK-DAG: argp.tgt.fir#0 <-> loc%i.fir#0: MayAlias
 //
 // CHECK-DAG: arga#0 <-> loc#0: NoAlias
@@ -629,10 +632,6 @@ func.func private @_QMmFparentPtest.fir(%arg0: !fir.ref<!fir.type<_QMmTt{p:!fir.
 //   end subroutine
 // end module
 
-// TODO: All glob0 vs. glob1 cases can be NoAlias.  However, AliasAnalysis
-// currently indiscriminately treats all targets that are data (addresses of
-// glob[01] and glob[01]%r but not glob[01]%p and glob[01]%a) as aliasing.
-
 // Check composite vs. composite.
 //
 // CHECK-DAG: arg0#0 <-> arg1#0: MayAlias
@@ -641,8 +640,8 @@ func.func private @_QMmFparentPtest.fir(%arg0: !fir.ref<!fir.type<_QMmTt{p:!fir.
 // CHECK-DAG: arg0#0 <-> glob0#0: MayAlias
 // CHECK-DAG: arg0.fir#0 <-> glob0.fir#0: MayAlias
 //
-// CHECK-DAG: glob0#0 <-> glob1#0: MayAlias
-// CHECK-DAG: glob0.fir#0 <-> glob1.fir#0: MayAlias
+// CHECK-DAG: glob0#0 <-> glob1#0: NoAlias
+// CHECK-DAG: glob0.fir#0 <-> glob1.fir#0: NoAlias
 
 // Check component vs. composite.
 //
@@ -662,10 +661,10 @@ func.func private @_QMmFparentPtest.fir(%arg0: !fir.ref<!fir.type<_QMmTt{p:!fir.
 //
 // CHECK-DAG: glob0%p#0 <-> glob1#0: NoAlias
 // CHECK-DAG: glob0%a#0 <-> glob1#0: NoAlias
-// CHECK-DAG: glob0%r#0 <-> glob1#0: MayAlias
+// CHECK-DAG: glob0%r#0 <-> glob1#0: NoAlias
 // CHECK-DAG: glob0%p.fir#0 <-> glob1.fir#0: NoAlias
 // CHECK-DAG: glob0%a.fir#0 <-> glob1.fir#0: NoAlias
-// CHECK-DAG: glob0%r.fir#0 <-> glob1.fir#0: MayAlias
+// CHECK-DAG: glob0%r.fir#0 <-> glob1.fir#0: NoAlias
 
 // Check composite vs. component.
 //
@@ -685,10 +684,10 @@ func.func private @_QMmFparentPtest.fir(%arg0: !fir.ref<!fir.type<_QMmTt{p:!fir.
 //
 // CHECK-DAG: glob0#0 <-> glob1%p#0: NoAlias
 // CHECK-DAG: glob0#0 <-> glob1%a#0: NoAlias
-// CHECK-DAG: glob0#0 <-> glob1%r#0: MayAlias
+// CHECK-DAG: glob0#0 <-> glob1%r#0: NoAlias
 // CHECK-DAG: glob0.fir#0 <-> glob1%p.fir#0: NoAlias
 // CHECK-DAG: glob0.fir#0 <-> glob1%a.fir#0: NoAlias
-// CHECK-DAG: glob0.fir#0 <-> glob1%r.fir#0: MayAlias
+// CHECK-DAG: glob0.fir#0 <-> glob1%r.fir#0: NoAlias
 
 // Check component vs. component.
 //
@@ -705,7 +704,7 @@ func.func private @_QMmFparentPtest.fir(%arg0: !fir.ref<!fir.type<_QMmTt{p:!fir.
 //
 // CHECK-DAG: glob0%p.fir#0 <-> glob1%p.fir#0: NoAlias
 // CHECK-DAG: glob0%a.fir#0 <-> glob1%a.fir#0: NoAlias
-// CHECK-DAG: glob0%r.fir#0 <-> glob1%r.fir#0: MayAlias
+// CHECK-DAG: glob0%r.fir#0 <-> glob1%r.fir#0: NoAlias
 
 func.func @_QMmPtest(%arg0: !fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,r:f32}>> {fir.bindc_name = "arg0", fir.target}, %arg1: !fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,r:f32}>> {fir.bindc_name = "arg1", fir.target}) {
   %0 = fir.dummy_scope : !fir.dscope

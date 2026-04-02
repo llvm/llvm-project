@@ -9,7 +9,7 @@
 // <forward_list>
 
 // void unique();      // C++17 and before
-// size_type unique(); // C++20 and after
+// size_type unique(); // C++20 and after; constexpr since C++26
 
 #include <forward_list>
 #include <iterator>
@@ -19,7 +19,7 @@
 #include "min_allocator.h"
 
 template <class L>
-void do_unique(L& l, typename L::size_type expected) {
+TEST_CONSTEXPR_CXX26 void do_unique(L& l, typename L::size_type expected) {
   typename L::size_type old_size = std::distance(l.begin(), l.end());
 #if TEST_STD_VER > 17
   ASSERT_SAME_TYPE(decltype(l.unique()), typename L::size_type);
@@ -31,7 +31,7 @@ void do_unique(L& l, typename L::size_type expected) {
   assert(old_size - std::distance(l.begin(), l.end()) == expected);
 }
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
   {
     typedef int T;
     typedef std::forward_list<T> C;
@@ -129,6 +129,15 @@ int main(int, char**) {
     do_unique(c1, 2);
     assert(c1 == c2);
   }
+#endif
+
+  return true;
+}
+
+int main(int, char**) {
+  assert(test());
+#if TEST_STD_VER >= 26
+  static_assert(test());
 #endif
 
   return 0;

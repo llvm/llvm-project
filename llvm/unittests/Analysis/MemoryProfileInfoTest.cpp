@@ -14,6 +14,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/SourceMgr.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -23,11 +24,9 @@
 using namespace llvm;
 using namespace llvm::memprof;
 
-extern cl::opt<float> MemProfLifetimeAccessDensityColdThreshold;
-extern cl::opt<unsigned> MemProfAveLifetimeColdThreshold;
-extern cl::opt<unsigned> MemProfMinAveLifetimeAccessDensityHotThreshold;
-extern cl::opt<bool> MemProfUseHotHints;
-extern cl::opt<bool> MemProfKeepAllNotColdContexts;
+namespace llvm {
+LLVM_ABI extern cl::opt<bool> MemProfKeepAllNotColdContexts;
+} // end namespace llvm
 
 namespace {
 
@@ -61,70 +60,6 @@ protected:
     return nullptr;
   }
 };
-
-// Test getAllocType helper.
-// Basic checks on the allocation type for values just above and below
-// the thresholds.
-TEST_F(MemoryProfileInfoTest, GetAllocType) {
-  const uint64_t AllocCount = 2;
-  // To be cold we require that
-  // ((float)TotalLifetimeAccessDensity) / AllocCount / 100 <
-  //    MemProfLifetimeAccessDensityColdThreshold
-  // so compute the ColdTotalLifetimeAccessDensityThreshold at the threshold.
-  const uint64_t ColdTotalLifetimeAccessDensityThreshold =
-      (uint64_t)(MemProfLifetimeAccessDensityColdThreshold * AllocCount * 100);
-  // To be cold we require that
-  // ((float)TotalLifetime) / AllocCount >=
-  //    MemProfAveLifetimeColdThreshold * 1000
-  // so compute the TotalLifetime right at the threshold.
-  const uint64_t ColdTotalLifetimeThreshold =
-      MemProfAveLifetimeColdThreshold * AllocCount * 1000;
-  // To be hot we require that
-  // ((float)TotalLifetimeAccessDensity) / AllocCount / 100 >
-  //    MemProfMinAveLifetimeAccessDensityHotThreshold
-  // so compute the HotTotalLifetimeAccessDensityThreshold  at the threshold.
-  const uint64_t HotTotalLifetimeAccessDensityThreshold =
-      (uint64_t)(MemProfMinAveLifetimeAccessDensityHotThreshold * AllocCount *
-                 100);
-
-  // Make sure the option for detecting hot allocations is set.
-  bool OrigMemProfUseHotHints = MemProfUseHotHints;
-  MemProfUseHotHints = true;
-
-  // Test Hot
-  // More accesses per byte per sec than hot threshold is hot.
-  EXPECT_EQ(getAllocType(HotTotalLifetimeAccessDensityThreshold + 1, AllocCount,
-                         ColdTotalLifetimeThreshold + 1),
-            AllocationType::Hot);
-
-  // Restore original option value.
-  MemProfUseHotHints = OrigMemProfUseHotHints;
-
-  // Without MemProfUseHotHints (default) we should treat simply as NotCold.
-  EXPECT_EQ(getAllocType(HotTotalLifetimeAccessDensityThreshold + 1, AllocCount,
-                         ColdTotalLifetimeThreshold + 1),
-            AllocationType::NotCold);
-
-  // Test Cold
-  // Long lived with less accesses per byte per sec than cold threshold is cold.
-  EXPECT_EQ(getAllocType(ColdTotalLifetimeAccessDensityThreshold - 1, AllocCount,
-                         ColdTotalLifetimeThreshold + 1),
-            AllocationType::Cold);
-  
-  // Test NotCold
-  // Long lived with more accesses per byte per sec than cold threshold is not cold.
-  EXPECT_EQ(getAllocType(ColdTotalLifetimeAccessDensityThreshold + 1, AllocCount,
-                         ColdTotalLifetimeThreshold + 1),
-            AllocationType::NotCold);  
-  // Short lived with more accesses per byte per sec than cold threshold is not cold.
-  EXPECT_EQ(getAllocType(ColdTotalLifetimeAccessDensityThreshold + 1, AllocCount,
-                         ColdTotalLifetimeThreshold - 1),
-            AllocationType::NotCold);
-  // Short lived with less accesses per byte per sec than cold threshold is not cold.
-  EXPECT_EQ(getAllocType(ColdTotalLifetimeAccessDensityThreshold - 1, AllocCount,
-                         ColdTotalLifetimeThreshold - 1),
-            AllocationType::NotCold);
-}
 
 // Test the hasSingleAllocType helper.
 TEST_F(MemoryProfileInfoTest, SingleAllocType) {
@@ -162,19 +97,15 @@ TEST_F(MemoryProfileInfoTest, Attribute) {
                                              R"IR(
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-linux-gnu"
-define i32* @test() {
+define ptr @test() {
 entry:
-  %call1 = call noalias dereferenceable_or_null(40) i8* @malloc(i64 noundef 40)
-  %0 = bitcast i8* %call1 to i32*
-  %call2 = call noalias dereferenceable_or_null(40) i8* @malloc(i64 noundef 40)
-  %1 = bitcast i8* %call2 to i32*
-  %call3 = call noalias dereferenceable_or_null(40) i8* @malloc(i64 noundef 40)
-  %2 = bitcast i8* %call3 to i32*  
-  %call4 = call noalias dereferenceable_or_null(40) i8* @malloc(i64 noundef 40)
-  %3 = bitcast i8* %call4 to i32*
-  ret i32* %1
+  %call1 = call noalias dereferenceable_or_null(40) ptr @malloc(i64 noundef 40)
+  %call2 = call noalias dereferenceable_or_null(40) ptr @malloc(i64 noundef 40)
+  %call3 = call noalias dereferenceable_or_null(40) ptr @malloc(i64 noundef 40)
+  %call4 = call noalias dereferenceable_or_null(40) ptr @malloc(i64 noundef 40)
+  ret ptr %call2
 }
-declare dso_local noalias noundef i8* @malloc(i64 noundef)
+declare dso_local noalias noundef ptr @malloc(i64 noundef)
 )IR");
 
   Function *Func = M->getFunction("test");
@@ -277,13 +208,12 @@ TEST_F(MemoryProfileInfoTest, ColdAndNotColdMIB) {
                                              R"IR(
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-linux-gnu"
-define i32* @test() {
+define ptr @test() {
 entry:
-  %call = call noalias dereferenceable_or_null(40) i8* @malloc(i64 noundef 40)
-  %0 = bitcast i8* %call to i32*
-  ret i32* %0
+  %call = call noalias dereferenceable_or_null(40) ptr @malloc(i64 noundef 40)
+  ret ptr %call
 }
-declare dso_local noalias noundef i8* @malloc(i64 noundef)
+declare dso_local noalias noundef ptr @malloc(i64 noundef)
 )IR");
 
   Function *Func = M->getFunction("test");
@@ -295,7 +225,8 @@ declare dso_local noalias noundef i8* @malloc(i64 noundef)
   CallBase *Call = findCall(*Func, "call");
   Trie.buildAndAttachMIBMetadata(Call);
 
-  EXPECT_FALSE(Call->hasFnAttr("memprof"));
+  EXPECT_TRUE(Call->hasFnAttr("memprof"));
+  EXPECT_EQ(Call->getFnAttr("memprof").getValueAsString(), "ambiguous");
   EXPECT_TRUE(Call->hasMetadata(LLVMContext::MD_memprof));
   MDNode *MemProfMD = Call->getMetadata(LLVMContext::MD_memprof);
   ASSERT_EQ(MemProfMD->getNumOperands(), 2u);
@@ -326,13 +257,12 @@ TEST_F(MemoryProfileInfoTest, ColdAndHotMIB) {
                                              R"IR(
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-linux-gnu"
-define i32* @test() {
+define ptr @test() {
 entry:
-  %call = call noalias dereferenceable_or_null(40) i8* @malloc(i64 noundef 40)
-  %0 = bitcast i8* %call to i32*
-  ret i32* %0
+  %call = call noalias dereferenceable_or_null(40) ptr @malloc(i64 noundef 40)
+  ret ptr %call
 }
-declare dso_local noalias noundef i8* @malloc(i64 noundef)
+declare dso_local noalias noundef ptr @malloc(i64 noundef)
 )IR");
 
   Function *Func = M->getFunction("test");
@@ -344,7 +274,8 @@ declare dso_local noalias noundef i8* @malloc(i64 noundef)
   CallBase *Call = findCall(*Func, "call");
   Trie.buildAndAttachMIBMetadata(Call);
 
-  EXPECT_FALSE(Call->hasFnAttr("memprof"));
+  EXPECT_TRUE(Call->hasFnAttr("memprof"));
+  EXPECT_EQ(Call->getFnAttr("memprof").getValueAsString(), "ambiguous");
   EXPECT_TRUE(Call->hasMetadata(LLVMContext::MD_memprof));
   MDNode *MemProfMD = Call->getMetadata(LLVMContext::MD_memprof);
   ASSERT_EQ(MemProfMD->getNumOperands(), 2u);
@@ -377,13 +308,12 @@ TEST_F(MemoryProfileInfoTest, ColdAndNotColdAndHotMIB) {
                                              R"IR(
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-linux-gnu"
-define i32* @test() {
+define ptr @test() {
 entry:
-  %call = call noalias dereferenceable_or_null(40) i8* @malloc(i64 noundef 40)
-  %0 = bitcast i8* %call to i32*
-  ret i32* %0
+  %call = call noalias dereferenceable_or_null(40) ptr @malloc(i64 noundef 40)
+  ret ptr %call
 }
-declare dso_local noalias noundef i8* @malloc(i64 noundef)
+declare dso_local noalias noundef ptr @malloc(i64 noundef)
 )IR");
 
   Function *Func = M->getFunction("test");
@@ -398,7 +328,8 @@ declare dso_local noalias noundef i8* @malloc(i64 noundef)
   CallBase *Call = findCall(*Func, "call");
   Trie.buildAndAttachMIBMetadata(Call);
 
-  EXPECT_FALSE(Call->hasFnAttr("memprof"));
+  EXPECT_TRUE(Call->hasFnAttr("memprof"));
+  EXPECT_EQ(Call->getFnAttr("memprof").getValueAsString(), "ambiguous");
   EXPECT_TRUE(Call->hasMetadata(LLVMContext::MD_memprof));
   MDNode *MemProfMD = Call->getMetadata(LLVMContext::MD_memprof);
   ASSERT_EQ(MemProfMD->getNumOperands(), 2u);
@@ -429,13 +360,12 @@ TEST_F(MemoryProfileInfoTest, TrimmedMIBContext) {
                                              R"IR(
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-linux-gnu"
-define i32* @test() {
+define ptr @test() {
 entry:
-  %call = call noalias dereferenceable_or_null(40) i8* @malloc(i64 noundef 40)
-  %0 = bitcast i8* %call to i32*
-  ret i32* %0
+  %call = call noalias dereferenceable_or_null(40) ptr @malloc(i64 noundef 40)
+  ret ptr %call
 }
-declare dso_local noalias noundef i8* @malloc(i64 noundef)
+declare dso_local noalias noundef ptr @malloc(i64 noundef)
 )IR");
 
   Function *Func = M->getFunction("test");
@@ -457,7 +387,8 @@ declare dso_local noalias noundef i8* @malloc(i64 noundef)
   CallBase *Call = findCall(*Func, "call");
   Trie.buildAndAttachMIBMetadata(Call);
 
-  EXPECT_FALSE(Call->hasFnAttr("memprof"));
+  EXPECT_TRUE(Call->hasFnAttr("memprof"));
+  EXPECT_EQ(Call->getFnAttr("memprof").getValueAsString(), "ambiguous");
   EXPECT_TRUE(Call->hasMetadata(LLVMContext::MD_memprof));
   MDNode *MemProfMD = Call->getMetadata(LLVMContext::MD_memprof);
   ASSERT_EQ(MemProfMD->getNumOperands(), 2u);
@@ -484,13 +415,12 @@ TEST_F(MemoryProfileInfoTest, PruneUnneededNotColdContexts) {
                                              R"IR(
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-linux-gnu"
-define i32* @test() {
+define ptr @test() {
 entry:
-  %call = call noalias dereferenceable_or_null(40) i8* @malloc(i64 noundef 40)
-  %0 = bitcast i8* %call to i32*
-  ret i32* %0
+  %call = call noalias dereferenceable_or_null(40) ptr @malloc(i64 noundef 40)
+  ret ptr %call
 }
-declare dso_local noalias noundef i8* @malloc(i64 noundef)
+declare dso_local noalias noundef ptr @malloc(i64 noundef)
 )IR");
 
   Function *Func = M->getFunction("test");
@@ -528,7 +458,8 @@ declare dso_local noalias noundef i8* @malloc(i64 noundef)
   ASSERT_NE(Call, nullptr);
   Trie.buildAndAttachMIBMetadata(Call);
 
-  EXPECT_FALSE(Call->hasFnAttr("memprof"));
+  EXPECT_TRUE(Call->hasFnAttr("memprof"));
+  EXPECT_EQ(Call->getFnAttr("memprof").getValueAsString(), "ambiguous");
   EXPECT_TRUE(Call->hasMetadata(LLVMContext::MD_memprof));
   MDNode *MemProfMD = Call->getMetadata(LLVMContext::MD_memprof);
   EXPECT_THAT(MemProfMD, MemprofMetadataEquals(ExpectedVals));
@@ -543,13 +474,12 @@ TEST_F(MemoryProfileInfoTest, KeepUnneededNotColdContexts) {
                                              R"IR(
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-linux-gnu"
-define i32* @test() {
+define ptr @test() {
 entry:
-  %call = call noalias dereferenceable_or_null(40) i8* @malloc(i64 noundef 40)
-  %0 = bitcast i8* %call to i32*
-  ret i32* %0
+  %call = call noalias dereferenceable_or_null(40) ptr @malloc(i64 noundef 40)
+  ret ptr %call
 }
-declare dso_local noalias noundef i8* @malloc(i64 noundef)
+declare dso_local noalias noundef ptr @malloc(i64 noundef)
 )IR");
 
   Function *Func = M->getFunction("test");
@@ -601,7 +531,8 @@ declare dso_local noalias noundef i8* @malloc(i64 noundef)
   // Restore original option value.
   MemProfKeepAllNotColdContexts = OrigMemProfKeepAllNotColdContexts;
 
-  EXPECT_FALSE(Call->hasFnAttr("memprof"));
+  EXPECT_TRUE(Call->hasFnAttr("memprof"));
+  EXPECT_EQ(Call->getFnAttr("memprof").getValueAsString(), "ambiguous");
   EXPECT_TRUE(Call->hasMetadata(LLVMContext::MD_memprof));
   MDNode *MemProfMD = Call->getMetadata(LLVMContext::MD_memprof);
   EXPECT_THAT(MemProfMD, MemprofMetadataEquals(ExpectedVals));
@@ -616,17 +547,14 @@ TEST_F(MemoryProfileInfoTest, SimplifyMIBToAttribute) {
                                              R"IR(
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-linux-gnu"
-define i32* @test() {
+define ptr @test() {
 entry:
-  %call1 = call noalias dereferenceable_or_null(40) i8* @malloc(i64 noundef 40), !memprof !0
-  %0 = bitcast i8* %call1 to i32*
-  %call2 = call noalias dereferenceable_or_null(40) i8* @malloc(i64 noundef 40), !memprof !3
-  %1 = bitcast i8* %call2 to i32*
-  %call3 = call noalias dereferenceable_or_null(40) i8* @malloc(i64 noundef 40), !memprof !6
-  %2 = bitcast i8* %call3 to i32*
-  ret i32* %1
+  %call1 = call noalias dereferenceable_or_null(40) ptr @malloc(i64 noundef 40), !memprof !0
+  %call2 = call noalias dereferenceable_or_null(40) ptr @malloc(i64 noundef 40), !memprof !3
+  %call3 = call noalias dereferenceable_or_null(40) ptr @malloc(i64 noundef 40), !memprof !6
+  ret ptr %call2
 }
-declare dso_local noalias noundef i8* @malloc(i64 noundef)
+declare dso_local noalias noundef ptr @malloc(i64 noundef)
 !0 = !{!1}
 !1 = !{!2, !"cold"}
 !2 = !{i64 1, i64 2, i64 3}
@@ -687,17 +615,16 @@ TEST_F(MemoryProfileInfoTest, ReTrimMIBContext) {
                                              R"IR(
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-linux-gnu"
-define i32* @test() {
+define ptr @test() {
 entry:
-  %call = call noalias dereferenceable_or_null(40) i8* @malloc(i64 noundef 40), !memprof !0
-  %0 = bitcast i8* %call to i32*
-  ret i32* %0
+  %call = call noalias dereferenceable_or_null(40) ptr @malloc(i64 noundef 40), !memprof !0
+  ret ptr %call
 }
-declare dso_local noalias noundef i8* @malloc(i64 noundef)
+declare dso_local noalias noundef ptr @malloc(i64 noundef)
 !0 = !{!1, !3, !5, !7, !9, !11}
 !1 = !{!2, !"cold"}
 !2 = !{i64 1, i64 2, i64 3}
-!3 = !{!4, !"cold"}
+!3 = !{!4, !"cold", !13}
 !4 = !{i64 1, i64 2, i64 4}
 !5 = !{!6, !"notcold"}
 !6 = !{i64 1, i64 5, i64 6}
@@ -706,7 +633,8 @@ declare dso_local noalias noundef i8* @malloc(i64 noundef)
 !9 = !{!10, !"hot"}
 !10 = !{i64 1, i64 8, i64 9}
 !11 = !{!12, !"hot"}
-!12 = !{i64 1, i64 8, i64 10}  
+!12 = !{i64 1, i64 8, i64 10}
+!13 = !{i64 123, i64 456}
 )IR");
 
   Function *Func = M->getFunction("test");
@@ -729,7 +657,8 @@ declare dso_local noalias noundef i8* @malloc(i64 noundef)
   // The hot allocations will be converted to NotCold and pruned as they
   // are unnecessary to determine how to clone the cold allocation.
 
-  EXPECT_FALSE(Call->hasFnAttr("memprof"));
+  EXPECT_TRUE(Call->hasFnAttr("memprof"));
+  EXPECT_EQ(Call->getFnAttr("memprof").getValueAsString(), "ambiguous");
   EXPECT_TRUE(Call->hasMetadata(LLVMContext::MD_memprof));
   MemProfMD = Call->getMetadata(LLVMContext::MD_memprof);
   ASSERT_EQ(MemProfMD->getNumOperands(), 2u);
@@ -741,10 +670,25 @@ declare dso_local noalias noundef i8* @malloc(i64 noundef)
     auto *StackId = mdconst::dyn_extract<ConstantInt>(StackMD->getOperand(0));
     EXPECT_EQ(StackId->getZExtValue(), 1u);
     StackId = mdconst::dyn_extract<ConstantInt>(StackMD->getOperand(1));
-    if (StackId->getZExtValue() == 2u)
+    if (StackId->getZExtValue() == 2u) {
       EXPECT_EQ(getMIBAllocType(MIB), AllocationType::Cold);
-    else if (StackId->getZExtValue() == 5u)
+      // We should propagate the single context size info from the second cold
+      // context above onto the new merged/trimmed context.
+      ASSERT_EQ(MIB->getNumOperands(), 3u);
+      MDNode *ContextSizePair = dyn_cast<MDNode>(MIB->getOperand(2));
+      assert(ContextSizePair->getNumOperands() == 2);
+      EXPECT_EQ(
+          mdconst::dyn_extract<ConstantInt>(ContextSizePair->getOperand(0))
+              ->getZExtValue(),
+          123u);
+      EXPECT_EQ(
+          mdconst::dyn_extract<ConstantInt>(ContextSizePair->getOperand(1))
+              ->getZExtValue(),
+          456u);
+    } else if (StackId->getZExtValue() == 5u) {
       EXPECT_EQ(getMIBAllocType(MIB), AllocationType::NotCold);
+      ASSERT_EQ(MIB->getNumOperands(), 2u);
+    }
   }
 }
 
@@ -767,7 +711,7 @@ declare noundef nonnull ptr @_Znam(i64 noundef)
 !5 = !{i64 1, i64 2, i64 3, i64 5}
 !6 = !{i64 1}
 !7 = !{!8, !"hot"}
-!8 = !{i64 1, i64 2, i64 3, i64 6}  
+!8 = !{i64 1, i64 2, i64 3, i64 6}
 )IR");
 
   Function *Func = M->getFunction("test");

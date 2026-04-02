@@ -22,6 +22,8 @@ class BPFTargetMachine;
 class InstructionSelector;
 class PassRegistry;
 
+#define BPF_TRAP "__bpf_trap"
+
 ModulePass *createBPFCheckAndAdjustIR();
 
 FunctionPass *createBPFISelDag(BPFTargetMachine &TM);

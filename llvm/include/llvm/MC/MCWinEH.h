@@ -10,6 +10,7 @@
 #define LLVM_MC_MCWINEH_H
 
 #include "llvm/ADT/MapVector.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/SMLoc.h"
 #include <vector>
 
@@ -58,7 +59,7 @@ struct FrameInfo {
   uint8_t Version = DefaultVersion;
 
   int LastFrameInst = -1;
-  const FrameInfo *ChainedParent = nullptr;
+  FrameInfo *ChainedParent = nullptr;
   std::vector<Instruction> Instructions;
   struct Epilog {
     std::vector<Instruction> Instructions;
@@ -89,9 +90,9 @@ struct FrameInfo {
   FrameInfo(const MCSymbol *Function, const MCSymbol *BeginFuncEHLabel)
       : Begin(BeginFuncEHLabel), Function(Function) {}
   FrameInfo(const MCSymbol *Function, const MCSymbol *BeginFuncEHLabel,
-            const FrameInfo *ChainedParent)
+            FrameInfo *ChainedParent)
       : Begin(BeginFuncEHLabel), Function(Function),
-        ChainedParent(ChainedParent) {}
+        Version(ChainedParent->Version), ChainedParent(ChainedParent) {}
 
   bool empty() const {
     if (!Instructions.empty())
@@ -103,7 +104,7 @@ struct FrameInfo {
   }
 };
 
-class UnwindEmitter {
+class LLVM_ABI UnwindEmitter {
 public:
   virtual ~UnwindEmitter();
 
@@ -112,7 +113,7 @@ public:
   virtual void EmitUnwindInfo(MCStreamer &Streamer, FrameInfo *FI,
                               bool HandlerData) const = 0;
 };
-}
-}
+} // namespace WinEH
+} // namespace llvm
 
 #endif

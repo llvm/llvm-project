@@ -17,8 +17,6 @@
 
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/TypeSwitch.h"
-#include "llvm/Support/Debug.h"
-#include "llvm/Support/MathExtras.h"
 
 using namespace mlir;
 
@@ -426,6 +424,12 @@ StringAttr DataLayoutSpecAttr::getFunctionPointerAlignmentIdentifier(
       DLTIDialect::kDataLayoutFunctionPointerAlignmentKey);
 }
 
+StringAttr
+DataLayoutSpecAttr::getLegalIntWidthsIdentifier(MLIRContext *context) const {
+  return Builder(context).getStringAttr(
+      DLTIDialect::kDataLayoutLegalIntWidthsKey);
+}
+
 /// Parses an attribute with syntax:
 ///   dl-spec-attr ::= `#dlti.` `dl_spec` `<` entry-list `>`
 ///   entry-list ::= | entry | entry `,` entry-list
@@ -602,11 +606,6 @@ FailureOr<Attribute> dlti::query(Operation *op, ArrayRef<StringRef> keys,
   return dlti::query(op, entryKeys, emitError);
 }
 
-constexpr const StringLiteral mlir::DLTIDialect::kDataLayoutAttrName;
-constexpr const StringLiteral mlir::DLTIDialect::kDataLayoutEndiannessKey;
-constexpr const StringLiteral mlir::DLTIDialect::kDataLayoutEndiannessBig;
-constexpr const StringLiteral mlir::DLTIDialect::kDataLayoutEndiannessLittle;
-
 namespace {
 class TargetDataLayoutInterface : public DataLayoutDialectInterface {
 public:
@@ -632,6 +631,7 @@ public:
         entryName == DLTIDialect::kDataLayoutGlobalMemorySpaceKey ||
         entryName == DLTIDialect::kDataLayoutStackAlignmentKey ||
         entryName == DLTIDialect::kDataLayoutFunctionPointerAlignmentKey ||
+        entryName == DLTIDialect::kDataLayoutLegalIntWidthsKey ||
         entryName == DLTIDialect::kDataLayoutManglingModeKey)
       return success();
     return emitError(loc) << "unknown data layout entry name: " << entryName;

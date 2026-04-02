@@ -535,16 +535,13 @@ else:
   ret i1 %cmp1
 }
 
-; TODO: X != Y implies X | Y != 0
 define i1 @or_nonzero_from_nonequal(i8 %x, i8 %y) {
 ; CHECK-LABEL: @or_nonzero_from_nonequal(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq i8 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    br i1 [[COND]], label [[IF_ELSE:%.*]], label [[IF_THEN:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[OR:%.*]] = or i8 [[X]], [[Y]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[OR]], 0
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ; CHECK:       if.else:
 ; CHECK-NEXT:    ret i1 false
 ;

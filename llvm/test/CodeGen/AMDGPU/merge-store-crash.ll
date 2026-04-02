@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn -mcpu=verde -verify-machineinstrs < %s | FileCheck %s
-; RUN: llc -mtriple=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -mtriple=amdgcn -mcpu=verde < %s | FileCheck %s
+; RUN: llc -mtriple=amdgcn -mcpu=tonga < %s | FileCheck %s
 
 ; This is used to crash in LiveIntervalAnalysis via SILoadStoreOptimizer
 ; while fixing up the merge of two ds_write instructions.
@@ -15,7 +15,7 @@ define amdgpu_vs void @main(i32 inreg %arg) {
 main_body:
   %tmp = load float, ptr addrspace(3) poison, align 4
   %tmp1 = load float, ptr addrspace(3) poison, align 4
-  store float %tmp, ptr addrspace(3) null, align 4
+  store float %tmp, ptr addrspace(3) zeroinitializer, align 4
   %tmp2 = bitcast float %tmp to i32
   %tmp3 = add nuw nsw i32 0, 1
   %tmp4 = zext i32 %tmp3 to i64

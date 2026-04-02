@@ -15,7 +15,9 @@
 //===----------------------------------------------------------------------===//
 
 def NeoverseN1Model : SchedMachineModel {
-  let IssueWidth            =   8; // Maximum micro-ops dispatch rate.
+  let IssueWidth            =   3; // This value comes from the decode bandwidth
+                                   // and empirical measurements showed that this
+                                   // value is better.
   let MicroOpBufferSize     = 128; // NOTE: Copied from Cortex-A76.
   let LoadLatency           =   4; // Optimistic load latency.
   let MispredictPenalty     =  11; // Cycles cost of branch mispredicted.
@@ -259,6 +261,47 @@ def N1Write_9c_6L_6V : SchedWriteRes<[N1UnitL, N1UnitL, N1UnitL,
                                       N1UnitV, N1UnitV, N1UnitV,
                                       N1UnitV, N1UnitV, N1UnitV]>;
 
+//===----------------------------------------------------------------------===//
+// Define forwarded types
+
+def N1Wr_IM32 : SchedWriteRes<[N1UnitM]> { let Latency = 2; }
+def N1Wr_IM64 : SchedWriteRes<[N1UnitM]> { let Latency = 4;
+                                           let ReleaseAtCycles = [3]; }
+def N1Rd_IMA  : SchedReadAdvance<1, [N1Wr_IM32, N1Wr_IM64]>;
+
+def N1Wr_MH   : SchedWriteRes<[N1UnitM]> { let Latency = 5;
+                                           let ReleaseAtCycles = [4]; }
+def N1Rd_MH : SchedReadAdvance<2, [N1Wr_MH]>;
+
+def N1Wr_FMA : SchedWriteRes<[N1UnitV]> { let Latency = 4; }
+def N1Rd_FMA : SchedReadAdvance<2, [WriteFMul, N1Wr_FMA]>;
+
+def N1Wr_VA : SchedWriteRes<[N1UnitV1]> { let Latency = 4; }
+def N1Rd_VA : SchedReadAdvance<3, [N1Wr_VA]>;
+
+def N1Wr_VMA  : SchedWriteRes<[N1UnitV0]> { let Latency = 4; }
+def N1Wr_VMAQ : SchedWriteRes<[N1UnitV0, N1UnitV0]> { let Latency = 5;
+                                                      let NumMicroOps = 2; }
+def N1Rd_VMA  : SchedReadAdvance<3, [N1Wr_VMA, N1Wr_VMAQ]>;
+
+def N1Wr_VMAL : SchedWriteRes<[N1UnitV0]> { let Latency = 4; }
+def N1Rd_VMAL : SchedReadAdvance<3, [N1Wr_VMAL]>;
+
+def N1Wr_VPA : SchedWriteRes<[N1UnitV1]> { let Latency = 4; }
+def N1Rd_VPA : SchedReadAdvance<3, [N1Wr_VPA]>;
+
+def N1Wr_VSA : SchedWriteRes<[N1UnitV1]> { let Latency = 4; }
+def N1Rd_VSA : SchedReadAdvance<3, [N1Wr_VSA]>;
+
+def N1Wr_VFM  : SchedWriteRes<[N1UnitV]> { let Latency = 3; }
+def N1Wr_VFMA : SchedWriteRes<[N1UnitV]> { let Latency = 4; }
+def N1Rd_VFMA : SchedReadAdvance<2, [N1Wr_VFM, N1Wr_VFMA]>;
+
+def N1Wr_VFMAL : SchedWriteRes<[N1UnitV]> { let Latency = 5; }
+def N1Rd_VFMAL : SchedReadAdvance<3, [N1Wr_VFMAL]>;
+
+def N1Wr_CRC : SchedWriteRes<[N1UnitM]> { let Latency = 2; }
+def N1Rd_CRC : SchedReadAdvance<1, [N1Wr_CRC]>;
 
 // Miscellaneous Instructions
 // -----------------------------------------------------------------------------
@@ -283,9 +326,6 @@ def : SchedAlias<WriteBrReg, N1Write_1c_1B>;
 // Branch and link, immed
 // Branch and link, register
 def : InstRW<[N1Write_1c_1B_1I], (instrs BL, BLR)>;
-
-// Compare and branch
-def : InstRW<[N1Write_1c_1B], (instregex "^[CT]BN?Z[XW]$")>;
 
 
 // Arithmetic and Logical Instructions
@@ -328,13 +368,21 @@ def : InstRW<[N1Write_2c_1M], (instregex "^(AND|BIC)S[WX]rs$")>;
 def : SchedAlias<WriteID32, N1Write_12c5_1M>;
 def : SchedAlias<WriteID64, N1Write_20c5_1M>;
 
-// Multiply accumulate
-// Multiply accumulate, long
+// Multiply accumulate, W-form
+// Multiply accumulate, X-form
+// Multiply accumulate long
 def : SchedAlias<WriteIM32, N1Write_2c_1M>;
 def : SchedAlias<WriteIM64, N1Write_4c3_1M>;
 
+def : InstRW<[N1Wr_IM32, ReadIM, ReadIM, N1Rd_IMA],
+             (instregex "^M(ADD|SUB)Wrrr$")>;
+def : InstRW<[N1Wr_IM64, ReadIM, ReadIM, N1Rd_IMA],
+             (instregex "^M(ADD|SUB)Xrrr$")>;
+def : InstRW<[N1Wr_IM32, ReadIM, ReadIM, N1Rd_IMA],
+             (instregex "^(S|U)M(ADD|SUB)Lrrr$")>;
+
 // Multiply high
-def : InstRW<[N1Write_5c3_1M, ReadIM, ReadIM], (instrs SMULHrr, UMULHrr)>;
+def : InstRW<[N1Wr_MH, ReadIM, ReadIM, N1Rd_MH], (instrs SMULHrr, UMULHrr)>;
 
 
 // Miscellaneous data-processing instructions
@@ -432,7 +480,7 @@ def : InstRW<[N1Write_17c7_1V0], (instrs FSQRTDr)>;
 def : SchedAlias<WriteFMul, N1Write_3c_1V>;
 
 // FP multiply accumulate
-def : InstRW<[N1Write_4c_1V], (instregex "^FN?M(ADD|SUB)[HSD]rrr$")>;
+def : InstRW<[N1Wr_FMA, ReadDefault, ReadDefault, N1Rd_FMA], (instregex "^FN?M(ADD|SUB)[HSD]rrr$")>;
 
 // FP round to integral
 def : InstRW<[N1Write_3c_1V0], (instregex "^FRINT[AIMNPXZ][HSD]r$",
@@ -589,7 +637,7 @@ def : SchedAlias<WriteVq, N1Write_2c_1V>;
 
 // ASIMD absolute diff accum
 // ASIMD absolute diff accum long
-def : InstRW<[N1Write_4c_1V1], (instregex "^[SU]ABAL?v")>;
+def : InstRW<[N1Wr_VA, N1Rd_VA], (instregex "^[SU]ABAL?v")>;
 
 // ASIMD arith, reduce, 4H/4S
 def : InstRW<[N1Write_3c_1V1], (instregex "^(ADDV|[SU]ADDLV)v4(i16|i32)v$")>;
@@ -610,26 +658,33 @@ def : InstRW<[N1Write_5c_1V1_1V], (instregex "^[SU](MAX|MIN)Vv8(i8|i16)v$")>;
 def : InstRW<[N1Write_6c_2V1], (instregex "[SU](MAX|MIN)Vv16i8v$")>;
 
 // ASIMD multiply, D-form
-// ASIMD multiply accumulate, D-form
-// ASIMD multiply accumulate high, D-form
-// ASIMD multiply accumulate saturating long
-// ASIMD multiply long
-// ASIMD multiply accumulate long
 def : InstRW<[N1Write_4c_1V0], (instregex "^MUL(v[14]i16|v[12]i32)$",
-                                          "^ML[AS](v[14]i16|v[12]i32)$",
-                                          "^SQ(R)?DMULH(v[14]i16|v[12]i32)$",
-                                          "^SQRDML[AS]H(v[14]i16|v[12]i32)$",
-                                          "^SQDML[AS]Lv",
-                                          "^([SU]|SQD)MULLv",
-                                          "^[SU]ML[AS]Lv")>;
+                                          "^SQ(R)?DMULH(v[14]i16|v[12]i32)$")>;
+
+// ASIMD multiply long
+def : InstRW<[N1Write_4c_1V0], (instregex "^([SU]|SQD)MULLv")>;
+
+// ASIMD multiply accumulate, D-form
+def : InstRW<[N1Wr_VMA, N1Rd_VMA], (instregex "^ML[AS](v[14]i16|v[12]i32)$")>;
+
+// ASIMD multiply accumulate high, D-form
+def : InstRW<[N1Write_4c_1V0], (instregex "^SQRDML[AS]H(v[14]i16|v[12]i32)$")>;
+
+// ASIMD multiply accumulate long
+def : InstRW<[N1Wr_VMAL, N1Rd_VMAL], (instregex "^[SU]ML[AS]Lv")>;
+
+// ASIMD multiply accumulate saturating long
+def : InstRW<[N1Write_4c_1V0], (instregex "^SQDML[AS]Lv")>;
 
 // ASIMD multiply, Q-form
-// ASIMD multiply accumulate, Q-form
-// ASIMD multiply accumulate high, Q-form
 def : InstRW<[N1Write_5c_2V0], (instregex "^MUL(v8i16|v4i32)$",
-                                          "^ML[AS](v8i16|v4i32)$",
-                                          "^SQ(R)?DMULH(v8i16|v4i32)$",
-                                          "^SQRDML[AS]H(v8i16|v4i32)$")>;
+                                          "^SQ(R)?DMULH(v8i16|v4i32)$")>;
+
+// ASIMD multiply accumulate, Q-form
+def : InstRW<[N1Wr_VMAQ, N1Rd_VMA], (instregex "^ML[AS](v8i16|v4i32)$")>;
+
+// ASIMD multiply accumulate high, Q-form
+def : InstRW<[N1Write_5c_2V0], (instregex "^SQRDML[AS]H(v8i16|v4i32)$")>;
 
 // ASIMD multiply/multiply long (8x8) polynomial, D-form
 def : InstRW<[N1Write_3c_1V0], (instrs PMULv8i8, PMULLv8i8)>;
@@ -638,10 +693,10 @@ def : InstRW<[N1Write_3c_1V0], (instrs PMULv8i8, PMULLv8i8)>;
 def : InstRW<[N1Write_4c_2V0], (instrs PMULv16i8, PMULLv16i8)>;
 
 // ASIMD pairwise add and accumulate long
-def : InstRW<[N1Write_4c_1V1], (instregex "^[SU]ADALPv")>;
+def : InstRW<[N1Wr_VPA, N1Rd_VPA], (instregex "^[SU]ADALPv")>;
 
 // ASIMD shift accumulate
-def : InstRW<[N1Write_4c_1V1], (instregex "^[SU]R?SRAv")>;
+def : InstRW<[N1Wr_VSA, N1Rd_VSA], (instregex "^[SU]R?SRAv")>;
 
 // ASIMD shift by immed, basic
 // ASIMD shift by immed and insert, basic
@@ -723,13 +778,13 @@ def : InstRW<[N1Write_5c_1V], (instregex "^F(MAX|MIN)(NM)?Vv4(i16|i32)v$")>;
 def : InstRW<[N1Write_8c_3V], (instregex "^F(MAX|MIN)(NM)?Vv8i16v$")>;
 
 // ASIMD FP multiply
-def : InstRW<[N1Write_3c_1V], (instregex "^FMULX?v")>;
+def : InstRW<[N1Wr_VFM], (instregex "^FMULX?v")>;
 
 // ASIMD FP multiply accumulate
-def : InstRW<[N1Write_4c_1V], (instregex "^FML[AS]v")>;
+def : InstRW<[N1Wr_VFMA, N1Rd_VFMA], (instregex "^FML[AS]v")>;
 
 // ASIMD FP multiply accumulate long
-def : InstRW<[N1Write_5c_1V], (instregex "^FML[AS]L2?v")>;
+def : InstRW<[N1Wr_VFMAL, N1Rd_VFMAL], (instregex "^FML[AS]L2?v")>;
 
 // ASIMD FP round, D-form F32 and Q-form F64
 def : InstRW<[N1Write_3c_1V0], (instregex "^FRINT[AIMNPXZ]v2f(32|64)$")>;
@@ -1054,7 +1109,7 @@ def : InstRW<[N1Write_4c_1V0], (instregex "^SHA1[CMP]rrr$",
 // -----------------------------------------------------------------------------
 
 // CRC checksum ops
-def : InstRW<[N1Write_2c_1M], (instregex "^CRC32C?[BHWX]rr$")>;
+def : InstRW<[N1Wr_CRC, N1Rd_CRC], (instregex "^CRC32C?[BHWX]rr$")>;
 
 
 }

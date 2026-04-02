@@ -34,7 +34,7 @@
 #
 # CHECK: << Total TLI yes SDK no:  18
 # CHECK: >> Total TLI no  SDK yes: 0
-# CHECK: == Total TLI yes SDK yes: 271
+# CHECK: == Total TLI yes SDK yes: 277
 #
 # WRONG_DETAIL: << TLI yes SDK no : '_ZdaPv' aka operator delete[](void*)
 # WRONG_DETAIL: >> TLI no  SDK yes: '_ZdaPvj' aka operator delete[](void*, unsigned int)
@@ -48,16 +48,16 @@
 # WRONG_DETAIL: << TLI yes SDK no : 'fminimum_numl'
 # WRONG_SUMMARY: << Total TLI yes SDK no:  19{{$}}
 # WRONG_SUMMARY: >> Total TLI no  SDK yes: 1{{$}}
-# WRONG_SUMMARY: == Total TLI yes SDK yes: 270
+# WRONG_SUMMARY: == Total TLI yes SDK yes: 276
 #
 ## The -COUNT suffix doesn't care if there are too many matches, so check
 ## the exact count first; the two directives should add up to that.
 ## Yes, this means additions to TLI will fail this test, but the argument
 ## to -COUNT can't be an expression.
-# AVAIL: TLI knows 523 symbols, 289 available
-# AVAIL-COUNT-289: {{^}} available
+# AVAIL: TLI knows 530 symbols, 295 available
+# AVAIL-COUNT-295: {{^}} available
 # AVAIL-NOT:       {{^}} available
-# UNAVAIL-COUNT-234: not available
+# UNAVAIL-COUNT-235: not available
 # UNAVAIL-NOT:       not available
 
 ## This is a large file so it's worth telling lit to stop here.
@@ -775,6 +775,30 @@ DynamicSymbols:
     Section:         .text
     Binding:         STB_GLOBAL
   - Name:            nearbyintl
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+  - Name:            nextafter
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+  - Name:            nextafterf
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+  - Name:            nextafterl
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+  - Name:            nexttoward
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+  - Name:            nexttowardf
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+  - Name:            nexttowardl
     Type:            STT_FUNC
     Section:         .text
     Binding:         STB_GLOBAL

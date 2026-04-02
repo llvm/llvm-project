@@ -14,7 +14,7 @@ void test_diamond(int i, float f, double d, char c) {
   right(&d);
   bottom(&c);
   bottom(&d);
-  // expected-warning@-1{{incompatible pointer types passing 'double *' to parameter of type 'char *'}}
+  // expected-error@-1{{incompatible pointer types passing 'double *' to parameter of type 'char *'}}
   // expected-note@Inputs/diamond_bottom.h:4{{passing argument to parameter 'x' here}}
 
   // Names in multiple places in the diamond.

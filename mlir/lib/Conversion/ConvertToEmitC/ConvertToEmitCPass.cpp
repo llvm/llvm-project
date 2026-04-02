@@ -9,8 +9,6 @@
 #include "mlir/Conversion/ConvertToEmitC/ConvertToEmitCPass.h"
 
 #include "mlir/Conversion/ConvertToEmitC/ToEmitCInterface.h"
-#include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
-#include "mlir/Conversion/LLVMCommon/TypeConverter.h"
 #include "mlir/Dialect/EmitC/IR/EmitC.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "InputFiles.h"
+#include "RelocScan.h"
 #include "Symbols.h"
 #include "SyntheticSections.h"
 #include "Target.h"
@@ -23,6 +24,7 @@ template <class ELFT> class MIPS final : public TargetInfo {
 public:
   MIPS(Ctx &);
   uint32_t calcEFlags() const override;
+  void initTargetSpecificSections() override;
   RelExpr getRelExpr(RelType type, const Symbol &s,
                      const uint8_t *loc) const override;
   int64_t getImplicitAddend(const uint8_t *buf, RelType type) const override;
@@ -31,6 +33,9 @@ public:
   void writePltHeader(uint8_t *buf) const override;
   void writePlt(uint8_t *buf, const Symbol &sym,
                 uint64_t pltEntryAddr) const override;
+  template <class RelTy>
+  void scanSectionImpl(InputSectionBase &, Relocs<RelTy>);
+  void scanSection(InputSectionBase &) override;
   bool needsThunk(RelExpr expr, RelType type, const InputFile *file,
                   uint64_t branchAddr, const Symbol &s,
                   int64_t a) const override;
@@ -38,7 +43,56 @@ public:
                 uint64_t val) const override;
   bool usesOnlyLowPageBits(RelType type) const override;
 };
+
+// This is a MIPS specific section to hold a space within the data segment
+// of executable file which is pointed to by the DT_MIPS_RLD_MAP entry.
+// See "Dynamic section" in Chapter 5 in the following document:
+// ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf
+struct RldMapSection : SyntheticSection {
+  RldMapSection(Ctx &ctx)
+      : SyntheticSection(ctx, ".rld_map", SHT_PROGBITS, SHF_ALLOC | SHF_WRITE,
+                         ctx.arg.wordsize) {}
+  size_t getSize() const override { return ctx.arg.wordsize; }
+  void writeTo(uint8_t *buf) override {}
+};
+
+template <class ELFT> struct AbiFlagsSection : SyntheticSection {
+  using Elf_Mips_ABIFlags = llvm::object::Elf_Mips_ABIFlags<ELFT>;
+  AbiFlagsSection(Ctx &ctx);
+  bool isNeeded() const override { return needed; }
+  size_t getSize() const override { return sizeof(Elf_Mips_ABIFlags); }
+  void writeTo(uint8_t *buf) override { memcpy(buf, &flags, sizeof(flags)); }
+  Elf_Mips_ABIFlags flags = {};
+  bool needed = false;
+};
+
+template <class ELFT> struct OptionsSection : SyntheticSection {
+  using Elf_Mips_Options = llvm::object::Elf_Mips_Options<ELFT>;
+  using Elf_Mips_RegInfo = llvm::object::Elf_Mips_RegInfo<ELFT>;
+  OptionsSection(Ctx &ctx);
+  bool isNeeded() const override { return needed; }
+  size_t getSize() const override {
+    return sizeof(Elf_Mips_Options) + sizeof(Elf_Mips_RegInfo);
+  }
+  void writeTo(uint8_t *buf) override;
+  Elf_Mips_RegInfo reginfo = {};
+  bool needed = false;
+};
+
+template <class ELFT> struct ReginfoSection : SyntheticSection {
+  using Elf_Mips_RegInfo = llvm::object::Elf_Mips_RegInfo<ELFT>;
+  ReginfoSection(Ctx &ctx);
+  bool isNeeded() const override { return needed; }
+  size_t getSize() const override { return sizeof(Elf_Mips_RegInfo); }
+  void writeTo(uint8_t *buf) override;
+  Elf_Mips_RegInfo reginfo = {};
+  bool needed = false;
+};
 } // namespace
+
+uint64_t elf::getMipsPageAddr(uint64_t addr) {
+  return (addr + 0x8000) & ~0xffff;
+}
 
 template <class ELFT> MIPS<ELFT>::MIPS(Ctx &ctx) : TargetInfo(ctx) {
   gotPltHeaderEntriesNum = 2;
@@ -69,6 +123,19 @@ template <class ELFT> MIPS<ELFT>::MIPS(Ctx &ctx) : TargetInfo(ctx) {
 
 template <class ELFT> uint32_t MIPS<ELFT>::calcEFlags() const {
   return calcMipsEFlags<ELFT>(ctx);
+}
+
+template <class ELFT> void MIPS<ELFT>::initTargetSpecificSections() {
+  if (!ctx.arg.shared && ctx.hasDynsym) {
+    ctx.in.mipsRldMap = std::make_unique<RldMapSection>(ctx);
+    ctx.inputSections.push_back(ctx.in.mipsRldMap.get());
+  }
+  ctx.in.mipsAbiFlags = std::make_unique<AbiFlagsSection<ELFT>>(ctx);
+  ctx.inputSections.push_back(ctx.in.mipsAbiFlags.get());
+  ctx.in.mipsOptions = std::make_unique<OptionsSection<ELFT>>(ctx);
+  ctx.inputSections.push_back(ctx.in.mipsOptions.get());
+  ctx.in.mipsReginfo = std::make_unique<ReginfoSection<ELFT>>(ctx);
+  ctx.inputSections.push_back(ctx.in.mipsReginfo.get());
 }
 
 template <class ELFT>
@@ -566,6 +633,122 @@ static uint64_t fixupCrossModeJump(Ctx &ctx, uint8_t *loc, RelType type,
   return val;
 }
 
+template <class RelTy>
+static RelType getMipsN32RelType(Ctx &ctx, RelTy *&rel, RelTy *end) {
+  uint32_t type = 0;
+  uint64_t offset = rel->r_offset;
+  int n = 0;
+  while (rel != end && rel->r_offset == offset)
+    type |= (rel++)->getType(ctx.arg.isMips64EL) << (8 * n++);
+  return type;
+}
+
+static RelType getMipsPairType(RelType type, bool isLocal) {
+  switch (type) {
+  case R_MIPS_HI16:
+    return R_MIPS_LO16;
+  case R_MIPS_GOT16:
+    // In case of global symbol, the R_MIPS_GOT16 relocation does not
+    // have a pair. Each global symbol has a unique entry in the GOT
+    // and a corresponding instruction with help of the R_MIPS_GOT16
+    // relocation loads an address of the symbol. In case of local
+    // symbol, the R_MIPS_GOT16 relocation creates a GOT entry to hold
+    // the high 16 bits of the symbol's value. A paired R_MIPS_LO16
+    // relocations handle low 16 bits of the address. That allows
+    // to allocate only one GOT entry for every 64 KiB of local data.
+    return isLocal ? R_MIPS_LO16 : R_MIPS_NONE;
+  case R_MICROMIPS_GOT16:
+    return isLocal ? R_MICROMIPS_LO16 : R_MIPS_NONE;
+  case R_MIPS_PCHI16:
+    return R_MIPS_PCLO16;
+  case R_MICROMIPS_HI16:
+    return R_MICROMIPS_LO16;
+  default:
+    return R_MIPS_NONE;
+  }
+}
+
+template <class ELFT>
+template <class RelTy>
+void MIPS<ELFT>::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
+  RelocScan rs(ctx, &sec);
+  sec.relocations.reserve(rels.size());
+  RelType type;
+  for (auto it = rels.begin(); it != rels.end();) {
+    const RelTy &rel = *it;
+    uint64_t offset = rel.r_offset;
+    if constexpr (ELFT::Is64Bits) {
+      type = it->getType(ctx.arg.isMips64EL);
+      ++it;
+    } else {
+      if (ctx.arg.mipsN32Abi) {
+        type = getMipsN32RelType(ctx, it, rels.end());
+      } else {
+        type = it->getType(ctx.arg.isMips64EL);
+        ++it;
+      }
+    }
+
+    uint32_t symIdx = rel.getSymbol(ctx.arg.isMips64EL);
+    Symbol &sym = sec.getFile<ELFT>()->getSymbol(symIdx);
+    RelExpr expr = getRelExpr(type, sym, sec.content().data() + rel.r_offset);
+    if (expr == R_NONE)
+      continue;
+    if (sym.isUndefined() && symIdx != 0 &&
+        rs.maybeReportUndefined(cast<Undefined>(sym), offset))
+      continue;
+
+    auto addend = rs.getAddend<ELFT>(rel, type);
+    if (expr == RE_MIPS_GOTREL && sym.isLocal()) {
+      addend += sec.getFile<ELFT>()->mipsGp0;
+    } else if (!RelTy::HasAddend) {
+      // MIPS has an odd notion of "paired" relocations to calculate addends.
+      // For example, if a relocation is of R_MIPS_HI16, there must be a
+      // R_MIPS_LO16 relocation after that, and an addend is calculated using
+      // the two relocations.
+      RelType pairTy = getMipsPairType(type, sym.isLocal());
+      if (pairTy != R_MIPS_NONE) {
+        const uint8_t *buf = sec.content().data();
+        // To make things worse, paired relocations might not be contiguous in
+        // the relocation table, so we need to do linear search. *sigh*
+        bool found = false;
+        for (auto *ri = &rel; ri != rels.end(); ++ri) {
+          if (ri->getType(ctx.arg.isMips64EL) == pairTy &&
+              ri->getSymbol(ctx.arg.isMips64EL) == symIdx) {
+            addend += getImplicitAddend(buf + ri->r_offset, pairTy);
+            found = true;
+            break;
+          }
+        }
+
+        if (!found)
+          Warn(ctx) << "can't find matching " << pairTy << " relocation for "
+                    << type;
+      }
+    }
+
+    if (expr == RE_MIPS_TLSLD) {
+      ctx.in.mipsGot->addTlsIndex(*sec.file);
+      sec.addReloc({expr, type, offset, addend, &sym});
+    } else if (expr == RE_MIPS_TLSGD) {
+      ctx.in.mipsGot->addDynTlsEntry(*sec.file, sym);
+      sec.addReloc({expr, type, offset, addend, &sym});
+    } else {
+      if (expr == R_TPREL && rs.checkTlsLe(offset, sym, type))
+        continue;
+      rs.process(expr, type, offset, sym, addend);
+    }
+  }
+}
+
+template <class ELFT> void MIPS<ELFT>::scanSection(InputSectionBase &sec) {
+  auto relocs = sec.template relsOrRelas<ELFT>();
+  if (relocs.areRelocsRel())
+    scanSectionImpl(sec, relocs.rels);
+  else
+    scanSectionImpl(sec, relocs.relas);
+}
+
 template <class ELFT>
 void MIPS<ELFT>::relocate(uint8_t *loc, const Relocation &rel,
                           uint64_t val) const {
@@ -589,6 +772,7 @@ void MIPS<ELFT>::relocate(uint8_t *loc, const Relocation &rel,
 
   switch (type) {
   case R_MIPS_32:
+  case R_MIPS_REL32:
   case R_MIPS_GPREL32:
   case R_MIPS_TLS_DTPREL32:
   case R_MIPS_TLS_TPREL32:
@@ -597,6 +781,7 @@ void MIPS<ELFT>::relocate(uint8_t *loc, const Relocation &rel,
   case R_MIPS_64:
   case R_MIPS_TLS_DTPREL64:
   case R_MIPS_TLS_TPREL64:
+  case (R_MIPS_64 << 8) | R_MIPS_REL32:
     write64(ctx, loc, val);
     break;
   case R_MIPS_26:
@@ -778,6 +963,130 @@ template <class ELFT> bool elf::isMipsPIC(const Defined *sym) {
     return false;
 
   return cast<ObjFile<ELFT>>(file)->getObj().getHeader().e_flags & EF_MIPS_PIC;
+}
+
+template <class ELFT>
+AbiFlagsSection<ELFT>::AbiFlagsSection(Ctx &ctx)
+    : SyntheticSection(ctx, ".MIPS.abiflags", SHT_MIPS_ABIFLAGS, SHF_ALLOC, 8) {
+  this->entsize = sizeof(Elf_Mips_ABIFlags);
+
+  for (InputSectionBase *sec : ctx.inputSections) {
+    if (sec->type != SHT_MIPS_ABIFLAGS)
+      continue;
+    sec->markDead();
+    needed = true;
+
+    const size_t size = sec->content().size();
+    // Older version of BFD (such as the default FreeBSD linker) concatenate
+    // .MIPS.abiflags instead of merging. To allow for this case (or potential
+    // zero padding) we ignore everything after the first Elf_Mips_ABIFlags
+    if (size < sizeof(Elf_Mips_ABIFlags)) {
+      Err(ctx) << sec->file << ": invalid size of .MIPS.abiflags section: got "
+               << size << " instead of " << sizeof(Elf_Mips_ABIFlags);
+      return;
+    }
+    auto *s =
+        reinterpret_cast<const Elf_Mips_ABIFlags *>(sec->content().data());
+    if (s->version != 0) {
+      Err(ctx) << sec->file << ": unexpected .MIPS.abiflags version "
+               << s->version;
+      return;
+    }
+
+    // LLD checks ISA compatibility in calcMipsEFlags(). Here we just
+    // select the highest number of ISA/Rev/Ext.
+    flags.isa_level = std::max(flags.isa_level, s->isa_level);
+    flags.isa_rev = std::max(flags.isa_rev, s->isa_rev);
+    flags.isa_ext = std::max(flags.isa_ext, s->isa_ext);
+    flags.gpr_size = std::max(flags.gpr_size, s->gpr_size);
+    flags.cpr1_size = std::max(flags.cpr1_size, s->cpr1_size);
+    flags.cpr2_size = std::max(flags.cpr2_size, s->cpr2_size);
+    flags.ases |= s->ases;
+    flags.flags1 |= s->flags1;
+    flags.flags2 |= s->flags2;
+    flags.fp_abi =
+        elf::getMipsFpAbiFlag(ctx, sec->file, flags.fp_abi, s->fp_abi);
+  }
+}
+
+template <class ELFT>
+OptionsSection<ELFT>::OptionsSection(Ctx &ctx)
+    : SyntheticSection(ctx, ".MIPS.options", SHT_MIPS_OPTIONS, SHF_ALLOC, 8) {
+  this->entsize = sizeof(Elf_Mips_Options) + sizeof(Elf_Mips_RegInfo);
+
+  // N64 ABI only.
+  if (!ELFT::Is64Bits)
+    return;
+
+  for (InputSectionBase *sec : ctx.inputSections) {
+    if (sec->type != SHT_MIPS_OPTIONS)
+      continue;
+    sec->markDead();
+    needed = true;
+
+    ArrayRef<uint8_t> d = sec->content();
+    while (!d.empty()) {
+      if (d.size() < sizeof(Elf_Mips_Options)) {
+        Err(ctx) << sec->file << ": invalid size of .MIPS.options section";
+        break;
+      }
+
+      auto *opt = reinterpret_cast<const Elf_Mips_Options *>(d.data());
+      if (opt->kind == ODK_REGINFO) {
+        reginfo.ri_gprmask |= opt->getRegInfo().ri_gprmask;
+        sec->getFile<ELFT>()->mipsGp0 = opt->getRegInfo().ri_gp_value;
+        break;
+      }
+
+      if (!opt->size) {
+        Err(ctx) << sec->file << ": zero option descriptor size";
+        break;
+      }
+      d = d.slice(opt->size);
+    }
+  }
+}
+
+template <class ELFT> void OptionsSection<ELFT>::writeTo(uint8_t *buf) {
+  auto *options = reinterpret_cast<Elf_Mips_Options *>(buf);
+  options->kind = ODK_REGINFO;
+  options->size = getSize();
+
+  if (!ctx.arg.relocatable)
+    reginfo.ri_gp_value = ctx.in.mipsGot->getGp();
+  memcpy(buf + sizeof(Elf_Mips_Options), &reginfo, sizeof(reginfo));
+}
+
+template <class ELFT>
+ReginfoSection<ELFT>::ReginfoSection(Ctx &ctx)
+    : SyntheticSection(ctx, ".reginfo", SHT_MIPS_REGINFO, SHF_ALLOC, 4) {
+  this->entsize = sizeof(Elf_Mips_RegInfo);
+
+  // Section should be alive for O32 and N32 ABIs only.
+  if (ELFT::Is64Bits)
+    return;
+
+  for (InputSectionBase *sec : ctx.inputSections) {
+    if (sec->type != SHT_MIPS_REGINFO)
+      continue;
+    sec->markDead();
+    needed = true;
+
+    if (sec->content().size() != sizeof(Elf_Mips_RegInfo)) {
+      Err(ctx) << sec->file << ": invalid size of .reginfo section";
+      return;
+    }
+
+    auto *r = reinterpret_cast<const Elf_Mips_RegInfo *>(sec->content().data());
+    reginfo.ri_gprmask |= r->ri_gprmask;
+    sec->getFile<ELFT>()->mipsGp0 = r->ri_gp_value;
+  }
+}
+
+template <class ELFT> void ReginfoSection<ELFT>::writeTo(uint8_t *buf) {
+  if (!ctx.arg.relocatable)
+    reginfo.ri_gp_value = ctx.in.mipsGot->getGp();
+  memcpy(buf, &reginfo, sizeof(reginfo));
 }
 
 void elf::setMipsTargetInfo(Ctx &ctx) {

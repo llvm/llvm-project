@@ -13,12 +13,17 @@
 #define LLVM_TRANSFORMS_INSTRUMENTATION_SANITIZERBINARYMETADATA_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Transforms/Utils/Instrumentation.h"
 
 namespace llvm {
+namespace vfs {
+class FileSystem;
+} // namespace vfs
 
 struct SanitizerBinaryMetadataOptions {
   bool Covered = false;
@@ -50,14 +55,16 @@ inline constexpr char kSanitizerBinaryMetadataAtomicsSection[] =
 class SanitizerBinaryMetadataPass
     : public PassInfoMixin<SanitizerBinaryMetadataPass> {
 public:
-  explicit SanitizerBinaryMetadataPass(
+  LLVM_ABI explicit SanitizerBinaryMetadataPass(
       SanitizerBinaryMetadataOptions Opts = {},
+      IntrusiveRefCntPtr<vfs::FileSystem> VFS = nullptr,
       ArrayRef<std::string> IgnorelistFiles = {});
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
   static bool isRequired() { return true; }
 
 private:
   const SanitizerBinaryMetadataOptions Options;
+  IntrusiveRefCntPtr<vfs::FileSystem> VFS;
   const ArrayRef<std::string> IgnorelistFiles;
 };
 

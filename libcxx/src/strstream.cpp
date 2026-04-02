@@ -18,7 +18,6 @@ _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
-_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 strstreambuf::strstreambuf(streamsize __alsize)
     : __strmode_(__dynamic), __alsize_(__alsize), __palloc_(nullptr), __pfree_(nullptr) {}
@@ -254,7 +253,6 @@ ostrstream::~ostrstream() {}
 
 strstream::~strstream() {}
 
-_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS

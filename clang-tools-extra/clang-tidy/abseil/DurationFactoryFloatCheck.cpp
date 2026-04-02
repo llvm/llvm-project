@@ -1,4 +1,4 @@
-//===--- DurationFactoryFloatCheck.cpp - clang-tidy -----------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -20,15 +20,15 @@ namespace clang::tidy::abseil {
 // Returns `true` if `Range` is inside a macro definition.
 static bool insideMacroDefinition(const MatchFinder::MatchResult &Result,
                                   SourceRange Range) {
-  return !clang::Lexer::makeFileCharRange(
-              clang::CharSourceRange::getCharRange(Range),
-              *Result.SourceManager, Result.Context->getLangOpts())
+  return !Lexer::makeFileCharRange(CharSourceRange::getCharRange(Range),
+                                   *Result.SourceManager,
+                                   Result.Context->getLangOpts())
               .isValid();
 }
 
 void DurationFactoryFloatCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
-      callExpr(callee(functionDecl(DurationFactoryFunction())),
+      callExpr(callee(functionDecl(durationFactoryFunction())),
                hasArgument(0, anyOf(cxxStaticCastExpr(hasDestinationType(
                                         realFloatingPointType())),
                                     cStyleCastExpr(hasDestinationType(

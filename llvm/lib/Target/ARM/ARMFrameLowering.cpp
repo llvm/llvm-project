@@ -623,6 +623,7 @@ static MachineBasicBlock::iterator insertSEH(MachineBasicBlock::iterator MBBI,
     break;
 
   case ARM::tBX_RET:
+  case ARM::t2BXAUT_RET:
   case ARM::TCRETURNri:
   case ARM::TCRETURNrinotr12:
     MIB = BuildMI(MF, DL, TII.get(ARM::SEH_Nop_Ret))
@@ -1138,6 +1139,12 @@ void ARMFrameLowering::emitPrologue(MachineFunction &MF,
           .add(predOps(ARMCC::AL));
     }
 
+    const ARMTargetLowering *TLI = STI.getTargetLowering();
+    RTLIB::LibcallImpl ChkStkLibcall = TLI->getLibcallImpl(RTLIB::STACK_PROBE);
+    if (ChkStkLibcall == RTLIB::Unsupported)
+      reportFatalUsageError("no available implementation of __chkstk");
+    const char *ChkStk = TLI->getLibcallImplName(ChkStkLibcall).data();
+
     switch (TM.getCodeModel()) {
     case CodeModel::Tiny:
       llvm_unreachable("Tiny code model not available on ARM.");
@@ -1146,14 +1153,14 @@ void ARMFrameLowering::emitPrologue(MachineFunction &MF,
     case CodeModel::Kernel:
       BuildMI(MBB, MBBI, dl, TII.get(ARM::tBL))
           .add(predOps(ARMCC::AL))
-          .addExternalSymbol("__chkstk")
+          .addExternalSymbol(ChkStk)
           .addReg(ARM::R4, RegState::Implicit)
           .setMIFlags(MachineInstr::FrameSetup);
       break;
     case CodeModel::Large:
       BuildMI(MBB, MBBI, dl, TII.get(ARM::t2MOVi32imm), ARM::R12)
-        .addExternalSymbol("__chkstk")
-        .setMIFlags(MachineInstr::FrameSetup);
+          .addExternalSymbol(ChkStk)
+          .setMIFlags(MachineInstr::FrameSetup);
 
       BuildMI(MBB, MBBI, dl, TII.get(ARM::tBLXr))
           .add(predOps(ARMCC::AL))
@@ -1545,8 +1552,17 @@ void ARMFrameLowering::emitEpilogue(MachineFunction &MF,
     // function, the validation instruction is emitted during expansion of the
     // tBXNS_RET, since the validation must use the value of SP at function
     // entry, before saving, resp. after restoring, FPCXTNS.
-    if (AFI->shouldSignReturnAddress() && !AFI->isCmseNSEntryFunction())
-      BuildMI(MBB, MBBI, DebugLoc(), STI.getInstrInfo()->get(ARM::t2AUT));
+    if (AFI->shouldSignReturnAddress() && !AFI->isCmseNSEntryFunction()) {
+      bool CanUseBXAut =
+          STI.isThumb() && STI.hasV8_1MMainlineOps() && STI.hasPACBTI();
+      auto TMBBI = MBB.getFirstTerminator();
+      bool IsBXReturn =
+          TMBBI != MBB.end() && TMBBI->getOpcode() == ARM::tBX_RET;
+      if (IsBXReturn && CanUseBXAut)
+        TMBBI->setDesc(STI.getInstrInfo()->get(ARM::t2BXAUT_RET));
+      else
+        BuildMI(MBB, MBBI, DebugLoc(), STI.getInstrInfo()->get(ARM::t2AUT));
+    }
   }
 
   if (MF.hasWinCFI()) {
@@ -1701,8 +1717,8 @@ void ARMFrameLowering::emitPushInst(MachineBasicBlock &MBB,
                                     .addReg(ARM::SP)
                                     .setMIFlags(MachineInstr::FrameSetup)
                                     .add(predOps(ARMCC::AL));
-      for (unsigned i = 0, e = Regs.size(); i < e; ++i)
-        MIB.addReg(Regs[i].first, getKillRegState(Regs[i].second));
+      for (const auto &[Reg, Kill] : Regs)
+        MIB.addReg(Reg, getKillRegState(Kill));
     } else if (Regs.size() == 1) {
       BuildMI(MBB, MI, DL, TII.get(StrOpc), ARM::SP)
           .addReg(Regs[0].first, getKillRegState(Regs[0].second))
@@ -1747,9 +1763,7 @@ void ARMFrameLowering::emitPopInst(MachineBasicBlock &MBB,
          RetOpcode == ARM::TCRETURNrinotr12);
     isInterrupt =
         RetOpcode == ARM::SUBS_PC_LR || RetOpcode == ARM::t2SUBS_PC_LR;
-    isTrap =
-        RetOpcode == ARM::TRAP || RetOpcode == ARM::TRAPNaCl ||
-        RetOpcode == ARM::tTRAP;
+    isTrap = RetOpcode == ARM::TRAP || RetOpcode == ARM::tTRAP;
     isCmseEntry = (RetOpcode == ARM::tBXNS || RetOpcode == ARM::tBXNS_RET);
   }
 
@@ -2331,6 +2345,8 @@ static unsigned EstimateFunctionSizeInBytes(const MachineFunction &MF,
     for (auto &Table: MF.getJumpTableInfo()->getJumpTables())
       FnSize += Table.MBBs.size() * 4;
   FnSize += MF.getConstantPool()->getConstants().size() * 4;
+  LLVM_DEBUG(dbgs() << "Estimated function size for " << MF.getName() << " = "
+                    << FnSize << " bytes\n");
   return FnSize;
 }
 
@@ -2344,7 +2360,6 @@ static unsigned estimateRSStackSizeLimit(MachineFunction &MF,
   const ARMFunctionInfo *AFI = MF.getInfo<ARMFunctionInfo>();
   const ARMBaseInstrInfo &TII =
       *static_cast<const ARMBaseInstrInfo *>(MF.getSubtarget().getInstrInfo());
-  const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
   unsigned Limit = (1 << 12) - 1;
   for (auto &MBB : MF) {
     for (auto &MI : MBB) {
@@ -2366,7 +2381,7 @@ static unsigned estimateRSStackSizeLimit(MachineFunction &MF,
           break;
 
         const MCInstrDesc &MCID = MI.getDesc();
-        const TargetRegisterClass *RegClass = TII.getRegClass(MCID, i, TRI, MF);
+        const TargetRegisterClass *RegClass = TII.getRegClass(MCID, i);
         if (RegClass && !RegClass->contains(ARM::SP))
           HasNonSPFrameIndex = true;
 
@@ -2468,7 +2483,7 @@ checkNumAlignedDPRCS2Regs(MachineFunction &MF, BitVector &SavedRegs) {
 
 bool ARMFrameLowering::enableShrinkWrapping(const MachineFunction &MF) const {
   // For CMSE entry functions, we want to save the FPCXT_NS immediately
-  // upon function entry (resp. restore it immmediately before return)
+  // upon function entry (resp. restore it immediately before return)
   if (STI.hasV8_1MMainlineOps() &&
       MF.getInfo<ARMFunctionInfo>()->isCmseNSEntryFunction())
     return false;
@@ -2539,7 +2554,7 @@ void ARMFrameLowering::determineCalleeSaves(MachineFunction &MF,
   MachineRegisterInfo &MRI = MF.getRegInfo();
   const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
   (void)TRI;  // Silence unused warning in non-assert builds.
-  Register FramePtr = RegInfo->getFrameRegister(MF);
+  Register FramePtr = STI.getFramePointerReg();
   ARMSubtarget::PushPopSplitVariation PushPopSplit =
       STI.getPushPopSplitVariation(MF);
 
@@ -2786,7 +2801,11 @@ void ARMFrameLowering::determineCalleeSaves(MachineFunction &MF,
       !CanEliminateFrame || RegInfo->cannotEliminateFrame(MF)) {
     AFI->setHasStackFrame(true);
 
-    if (HasFP) {
+    // Save the FP if:
+    // 1. We currently need it (HasFP), OR
+    // 2. We might need it later due to stack realignment from aligned DPRCS2
+    //    saves (which will make hasFP() become true in emitPrologue).
+    if (HasFP || (isFPReserved(MF) && AFI->getNumAlignedDPRCS2Regs() > 0)) {
       SavedRegs.set(FramePtr);
       // If the frame pointer is required by the ABI, also spill LR so that we
       // emit a complete frame record.

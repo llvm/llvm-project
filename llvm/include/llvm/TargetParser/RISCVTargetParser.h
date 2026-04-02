@@ -15,6 +15,8 @@
 #define LLVM_TARGETPARSER_RISCVTARGETPARSER_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -28,6 +30,13 @@ struct CPUModel {
   uint32_t MVendorID;
   uint64_t MArchID;
   uint64_t MImpID;
+
+  bool isValid() const { return MVendorID != 0 && MArchID != 0 && MImpID != 0; }
+
+  bool operator==(const CPUModel &Other) const {
+    return MVendorID == Other.MVendorID && MArchID == Other.MArchID &&
+           MImpID == Other.MImpID;
+  }
 };
 
 struct CPUInfo {
@@ -39,22 +48,50 @@ struct CPUInfo {
   bool is64Bit() const { return DefaultMarch.starts_with("rv64"); }
 };
 
+/// Fatal errors encountered during parsing.
+struct ParserError : public ErrorInfo<ParserError, StringError> {
+  using ErrorInfo<ParserError, StringError>::ErrorInfo;
+  explicit ParserError(const Twine &S)
+      : ErrorInfo(S, inconvertibleErrorCode()) {}
+  static char ID;
+};
+
+/// Warnings encountered during parsing.
+struct ParserWarning : public ErrorInfo<ParserWarning, StringError> {
+  using ErrorInfo<ParserWarning, StringError>::ErrorInfo;
+  explicit ParserWarning(const Twine &S)
+      : ErrorInfo(S, inconvertibleErrorCode()) {}
+  static char ID;
+};
+
 // We use 64 bits as the known part in the scalable vector types.
 static constexpr unsigned RVVBitsPerBlock = 64;
 static constexpr unsigned RVVBytesPerBlock = RVVBitsPerBlock / 8;
 
-void getFeaturesForCPU(StringRef CPU,
-                       SmallVectorImpl<std::string> &EnabledFeatures,
-                       bool NeedPlus = false);
-bool parseCPU(StringRef CPU, bool IsRV64);
-bool parseTuneCPU(StringRef CPU, bool IsRV64);
-StringRef getMArchFromMcpu(StringRef CPU);
-void fillValidCPUArchList(SmallVectorImpl<StringRef> &Values, bool IsRV64);
-void fillValidTuneCPUArchList(SmallVectorImpl<StringRef> &Values, bool IsRV64);
-bool hasFastScalarUnalignedAccess(StringRef CPU);
-bool hasFastVectorUnalignedAccess(StringRef CPU);
-bool hasValidCPUModel(StringRef CPU);
-CPUModel getCPUModel(StringRef CPU);
+LLVM_ABI void getFeaturesForCPU(StringRef CPU,
+                                SmallVectorImpl<std::string> &EnabledFeatures,
+                                bool NeedPlus = false);
+LLVM_ABI void getAllTuneFeatures(SmallVectorImpl<StringRef> &TuneFeatures);
+LLVM_ABI void
+getCPUConfigurableTuneFeatures(StringRef CPU,
+                               SmallVectorImpl<StringRef> &Directives);
+/// Parse the tune feature string with the respective processor. If \p ProcName
+/// is empty, directives are not filtered by processor.
+LLVM_ABI Error
+parseTuneFeatureString(StringRef ProcName, StringRef TFString,
+                       SmallVectorImpl<std::string> &TuneFeatures);
+LLVM_ABI bool parseCPU(StringRef CPU, bool IsRV64);
+LLVM_ABI bool parseTuneCPU(StringRef CPU, bool IsRV64);
+LLVM_ABI StringRef getMArchFromMcpu(StringRef CPU);
+LLVM_ABI void fillValidCPUArchList(SmallVectorImpl<StringRef> &Values,
+                                   bool IsRV64);
+LLVM_ABI void fillValidTuneCPUArchList(SmallVectorImpl<StringRef> &Values,
+                                       bool IsRV64);
+LLVM_ABI bool hasFastScalarUnalignedAccess(StringRef CPU);
+LLVM_ABI bool hasFastVectorUnalignedAccess(StringRef CPU);
+LLVM_ABI bool hasValidCPUModel(StringRef CPU);
+LLVM_ABI CPUModel getCPUModel(StringRef CPU);
+LLVM_ABI StringRef getCPUNameFromCPUModel(const CPUModel &Model);
 
 } // namespace RISCV
 
@@ -86,10 +123,10 @@ inline static bool isValidLMUL(unsigned LMUL, bool Fractional) {
   return isPowerOf2_32(LMUL) && LMUL <= 8 && (!Fractional || LMUL != 1);
 }
 
-unsigned encodeVTYPE(VLMUL VLMUL, unsigned SEW, bool TailAgnostic,
-                     bool MaskAgnostic);
+LLVM_ABI unsigned encodeVTYPE(VLMUL VLMUL, unsigned SEW, bool TailAgnostic,
+                              bool MaskAgnostic, bool AltFmt = false);
 
-unsigned encodeXSfmmVType(unsigned SEW, unsigned Widen, bool AltFmt);
+LLVM_ABI unsigned encodeXSfmmVType(unsigned SEW, unsigned Widen, bool AltFmt);
 
 inline static VLMUL getVLMUL(unsigned VType) {
   unsigned VLMul = VType & 0x7;
@@ -97,7 +134,7 @@ inline static VLMUL getVLMUL(unsigned VType) {
 }
 
 // Decode VLMUL into 1,2,4,8 and fractional indicator.
-std::pair<unsigned, bool> decodeVLMUL(VLMUL VLMul);
+LLVM_ABI std::pair<unsigned, bool> decodeVLMUL(VLMUL VLMul);
 
 inline static VLMUL encodeLMUL(unsigned LMUL, bool Fractional) {
   assert(isValidLMUL(LMUL, Fractional) && "Unsupported LMUL");
@@ -148,11 +185,13 @@ inline static bool isMaskAgnostic(unsigned VType) { return VType & 0x80; }
 
 inline static bool isAltFmt(unsigned VType) { return VType & 0x100; }
 
-void printVType(unsigned VType, raw_ostream &OS);
+LLVM_ABI void printVType(unsigned VType, raw_ostream &OS);
 
-unsigned getSEWLMULRatio(unsigned SEW, VLMUL VLMul);
+LLVM_ABI void printXSfmmVType(unsigned VType, raw_ostream &OS);
 
-std::optional<VLMUL> getSameRatioLMUL(unsigned SEW, VLMUL VLMUL, unsigned EEW);
+LLVM_ABI unsigned getSEWLMULRatio(unsigned SEW, VLMUL VLMul);
+
+LLVM_ABI std::optional<VLMUL> getSameRatioLMUL(unsigned Ratio, unsigned EEW);
 } // namespace RISCVVType
 
 } // namespace llvm

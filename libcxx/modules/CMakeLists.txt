@@ -259,10 +259,8 @@ if (LIBCXX_INSTALL_MODULES)
 
   if (NOT CMAKE_CONFIGURATION_TYPES)
     add_custom_target(install-cxx-modules
-                      DEPENDS cxx-modules
-                      COMMAND "${CMAKE_COMMAND}"
-                              -DCMAKE_INSTALL_COMPONENT=cxx-modules
-                              -P "${CMAKE_BINARY_DIR}/cmake_install.cmake")
+      DEPENDS cxx-modules
+      COMMAND "${CMAKE_COMMAND}" --install "${CMAKE_BINARY_DIR}" --component cxx-modules)
     # Stripping is a no-op for modules
     add_custom_target(install-cxx-modules-stripped DEPENDS install-cxx-modules)
   endif()

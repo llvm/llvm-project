@@ -16,14 +16,14 @@
 #include <type_traits>
 #include <utility>
 
+#include "test_comparisons.h"
 #include "test_macros.h"
-#include "../../types.h"
 
 #if TEST_STD_VER >= 26
 // https://wg21.link/P3379R0
-static_assert(CanCompare<std::expected<int, int>, int>);
-static_assert(CanCompare<std::expected<int, int>, EqualityComparable>);
-static_assert(!CanCompare<std::expected<int, int>, NonComparable>);
+static_assert(HasOperatorEqual<std::expected<int, int>, int>);
+static_assert(HasOperatorEqual<std::expected<int, int>, EqualityComparable>);
+static_assert(!HasOperatorEqual<std::expected<int, int>, NonComparable>);
 #endif
 
 constexpr bool test() {

@@ -494,7 +494,7 @@ inline StreamTy &printOpenACCClauseKind(StreamTy &Out, OpenACCClauseKind K) {
 
   case OpenACCClauseKind::Shortloop:
     llvm_unreachable("Shortloop shouldn't be generated in clang");
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case OpenACCClauseKind::Invalid:
     return Out << "<invalid>";
   }
@@ -634,15 +634,19 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &Out,
 }
 
 // Represents the 'modifier' of a 'modifier-list', as applied to copy, copyin,
-// copyout, and create. Implemented as a 'bitmask'
+// copyout, and create. Implemented as a 'bitmask'.
+// Note: This attempts to synchronize with mlir::acc::DataClauseModifier,
+// however has to store `Always` separately(whereas MLIR has it as AlwaysIn &
+// AlwaysOut). However, we keep them in sync so that we can cast between them.
 enum class OpenACCModifierKind : uint8_t {
   Invalid = 0,
-  Always = 1 << 0,
-  AlwaysIn = 1 << 1,
-  AlwaysOut = 1 << 2,
-  Readonly = 1 << 3,
-  Zero = 1 << 4,
-  LLVM_MARK_AS_BITMASK_ENUM(Zero)
+  Zero = 1 << 0,
+  Readonly = 1 << 1,
+  AlwaysIn = 1 << 2,
+  AlwaysOut = 1 << 3,
+  Capture = 1 << 4,
+  Always = 1 << 5,
+  LLVM_MARK_AS_BITMASK_ENUM(Always)
 };
 
 inline bool isOpenACCModifierBitSet(OpenACCModifierKind List,
@@ -688,6 +692,13 @@ inline StreamTy &printOpenACCModifierKind(StreamTy &Out,
     if (!First)
       Out << ", ";
     Out << "zero";
+    First = false;
+  }
+
+  if (isOpenACCModifierBitSet(Mods, OpenACCModifierKind::Capture)) {
+    if (!First)
+      Out << ", ";
+    Out << "capture";
     First = false;
   }
   return Out;

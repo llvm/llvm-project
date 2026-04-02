@@ -15,6 +15,7 @@
 
 #include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/ExecutionEngine/Orc/Shared/MemoryFlags.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Process.h"
 
 #include <mutex>
@@ -23,7 +24,7 @@ namespace llvm {
 namespace orc {
 
 /// Manages mapping, content transfer and protections for JIT memory
-class MemoryMapper {
+class LLVM_ABI MemoryMapper {
 public:
   /// Represents a single allocation containing multiple segments and
   /// initialization and deinitialization actions
@@ -50,7 +51,11 @@ public:
   virtual void reserve(size_t NumBytes, OnReservedFunction OnReserved) = 0;
 
   /// Provides working memory
-  virtual char *prepare(ExecutorAddr Addr, size_t ContentSize) = 0;
+  /// The LinkGraph parameter is included to allow implementations to allocate
+  /// working memory from the LinkGraph's allocator, in which case it will be
+  /// deallocated when the LinkGraph is destroyed.
+  virtual char *prepare(jitlink::LinkGraph &G, ExecutorAddr Addr,
+                        size_t ContentSize) = 0;
 
   using OnInitializedFunction = unique_function<void(Expected<ExecutorAddr>)>;
 
@@ -79,7 +84,7 @@ public:
   virtual ~MemoryMapper();
 };
 
-class InProcessMemoryMapper : public MemoryMapper {
+class LLVM_ABI InProcessMemoryMapper : public MemoryMapper {
 public:
   InProcessMemoryMapper(size_t PageSize);
 
@@ -91,7 +96,8 @@ public:
 
   void initialize(AllocInfo &AI, OnInitializedFunction OnInitialized) override;
 
-  char *prepare(ExecutorAddr Addr, size_t ContentSize) override;
+  char *prepare(jitlink::LinkGraph &G, ExecutorAddr Addr,
+                size_t ContentSize) override;
 
   void deinitialize(ArrayRef<ExecutorAddr> Allocations,
                     OnDeinitializedFunction OnDeInitialized) override;
@@ -121,7 +127,7 @@ private:
   size_t PageSize;
 };
 
-class SharedMemoryMapper final : public MemoryMapper {
+class LLVM_ABI SharedMemoryMapper final : public MemoryMapper {
 public:
   struct SymbolAddrs {
     ExecutorAddr Instance;
@@ -141,7 +147,8 @@ public:
 
   void reserve(size_t NumBytes, OnReservedFunction OnReserved) override;
 
-  char *prepare(ExecutorAddr Addr, size_t ContentSize) override;
+  char *prepare(jitlink::LinkGraph &G, ExecutorAddr Addr,
+                size_t ContentSize) override;
 
   void initialize(AllocInfo &AI, OnInitializedFunction OnInitialized) override;
 

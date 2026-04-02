@@ -26,11 +26,11 @@ add_extra_unittest(ClangDocTests
   ClangDocTest.cpp
   GeneratorTest.cpp
   HTMLGeneratorTest.cpp
-  HTMLMustacheGeneratorTest.cpp
   MDGeneratorTest.cpp
   MergeTest.cpp
   SerializeTest.cpp
   YAMLGeneratorTest.cpp
+  JSONGeneratorTest.cpp
   )
 
 clang_target_link_libraries(ClangDocTests

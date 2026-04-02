@@ -6,8 +6,7 @@ add_mlir_doc(TransformInterfaces TransformOpInterfaces Dialects/ -gen-op-interfa
 set(LLVM_TARGET_DEFINITIONS TransformInterfaces.td)
 mlir_tablegen(TransformTypeInterfaces.h.inc -gen-type-interface-decls)
 mlir_tablegen(TransformTypeInterfaces.cpp.inc -gen-type-interface-defs)
-add_public_tablegen_target(MLIRTransformDialectTypeInterfacesIncGen)
-add_dependencies(mlir-headers MLIRTransformDialectTypeInterfacesIncGen)
+add_mlir_dialect_tablegen_target(MLIRTransformDialectTypeInterfacesIncGen)
 add_mlir_doc(TransformInterfaces TransformTypeInterfaces Dialects/ -gen-type-interface-docs)
 
 add_mlir_interface(MatchInterfaces)

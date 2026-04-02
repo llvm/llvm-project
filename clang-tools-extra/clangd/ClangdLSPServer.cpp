@@ -81,7 +81,7 @@ CodeAction toCodeAction(const ClangdServer::CodeActionResult::Rename &R,
                         const URIForFile &File) {
   CodeAction CA;
   CA.title = R.FixMessage;
-  CA.kind = std::string(CodeAction::REFACTOR_KIND);
+  CA.kind = std::string(CodeAction::QUICKFIX_KIND);
   CA.command.emplace();
   CA.command->title = R.FixMessage;
   CA.command->command = std::string(ApplyRenameCommand);
@@ -433,7 +433,7 @@ private:
     // When the request ends, we can clean up the entry we just added.
     // The cookie lets us check that it hasn't been overwritten due to ID
     // reuse.
-    return Task.first.derive(llvm::make_scope_exit([this, StrID, Cookie] {
+    return Task.first.derive(llvm::scope_exit([this, StrID, Cookie] {
       std::lock_guard<std::mutex> Lock(RequestCancelersMutex);
       auto It = RequestCancelers.find(StrID);
       if (It != RequestCancelers.end() && It->second.second == Cookie)
@@ -456,7 +456,6 @@ private:
 
   ClangdLSPServer &Server;
 };
-constexpr int ClangdLSPServer::MessageHandler::MaxReplayCallbacks;
 
 // call(), notify(), and reply() wrap the Transport, adding logging and locking.
 void ClangdLSPServer::callMethod(StringRef Method, llvm::json::Value Params,
@@ -494,9 +493,9 @@ static std::vector<llvm::StringRef> semanticTokenModifiers() {
 void ClangdLSPServer::onInitialize(const InitializeParams &Params,
                                    Callback<llvm::json::Value> Reply) {
   // Determine character encoding first as it affects constructed ClangdServer.
-  if (Params.capabilities.offsetEncoding && !Opts.Encoding) {
+  if (Params.capabilities.PositionEncodings && !Opts.Encoding) {
     Opts.Encoding = OffsetEncoding::UTF16; // fallback
-    for (OffsetEncoding Supported : *Params.capabilities.offsetEncoding)
+    for (OffsetEncoding Supported : *Params.capabilities.PositionEncodings)
       if (Supported != OffsetEncoding::UnsupportedEncoding) {
         Opts.Encoding = Supported;
         break;
@@ -555,6 +554,8 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
     if (const auto &Dir = Params.initializationOptions.compilationDatabasePath)
       CDBOpts.CompileCommandsDir = Dir;
     CDBOpts.ContextProvider = Opts.ContextProvider;
+    if (Opts.StrongWorkspaceMode)
+      CDBOpts.applyFallbackWorkingDirectory(Opts.WorkspaceRoot);
     BaseCDB =
         std::make_unique<DirectoryBasedGlobalCompilationDatabase>(CDBOpts);
   }
@@ -686,6 +687,9 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
   ServerCaps["executeCommandProvider"] =
       llvm::json::Object{{"commands", Commands}};
 
+  if (Opts.Encoding)
+    ServerCaps["positionEncoding"] = *Opts.Encoding;
+
   llvm::json::Object Result{
       {{"serverInfo",
         llvm::json::Object{
@@ -693,6 +697,9 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
             {"version", llvm::formatv("{0} {1} {2}", versionString(),
                                       featureString(), platformString())}}},
        {"capabilities", std::move(ServerCaps)}}};
+
+  // TODO: offsetEncoding capability is a deprecated clangd extension and should
+  // be deleted.
   if (Opts.Encoding)
     Result["offsetEncoding"] = *Opts.Encoding;
   Reply(std::move(Result));
@@ -1273,11 +1280,9 @@ void ClangdLSPServer::onHover(const TextDocumentPositionParams &Params,
                       R.contents.kind = HoverContentFormat;
                       R.range = (*H)->SymRange;
                       switch (HoverContentFormat) {
-                      case MarkupKind::PlainText:
-                        R.contents.value = (*H)->present().asPlainText();
-                        return Reply(std::move(R));
                       case MarkupKind::Markdown:
-                        R.contents.value = (*H)->present().asMarkdown();
+                      case MarkupKind::PlainText:
+                        R.contents.value = (*H)->present(HoverContentFormat);
                         return Reply(std::move(R));
                       };
                       llvm_unreachable("unhandled MarkupKind");
@@ -1828,7 +1833,7 @@ void ClangdLSPServer::onDiagnosticsReady(PathRef File, llvm::StringRef Version,
   // Cache DiagRefMap
   {
     std::lock_guard<std::mutex> Lock(DiagRefMutex);
-    DiagRefMap[File] = LocalDiagMap;
+    DiagRefMap[File] = std::move(LocalDiagMap);
   }
 
   // Send a notification to the LSP client.

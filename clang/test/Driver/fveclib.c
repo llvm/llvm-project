@@ -1,6 +1,7 @@
 // RUN: %clang -### -c -fveclib=none %s 2>&1 | FileCheck --check-prefix=CHECK-NOLIB %s
 // RUN: %clang -### -c -fveclib=Accelerate %s 2>&1 | FileCheck --check-prefix=CHECK-ACCELERATE %s
 // RUN: %clang -### -c --target=x86_64-unknown-linux-gnu -fveclib=libmvec %s 2>&1 | FileCheck --check-prefix=CHECK-libmvec %s
+// RUN: %clang -### -c --target=aarch64-linux-gnu -fveclib=libmvec %s 2>&1 | FileCheck --check-prefix=CHECK-LIBMVEC-AARCH64 %s
 // RUN: %clang -### -c --target=x86_64-unknown-linux-gnu -fveclib=AMDLIBM %s 2>&1 | FileCheck --check-prefix=CHECK-AMDLIBM %s
 // RUN: %clang -### -c -fveclib=MASSV %s 2>&1 | FileCheck --check-prefix=CHECK-MASSV %s
 // RUN: %clang -### -c -fveclib=Darwin_libsystem_m %s 2>&1 | FileCheck --check-prefix=CHECK-DARWIN_LIBSYSTEM_M %s
@@ -12,6 +13,7 @@
 // CHECK-NOLIB: "-fveclib=none"
 // CHECK-ACCELERATE: "-fveclib=Accelerate"
 // CHECK-libmvec: "-fveclib=libmvec"
+// CHECK-LIBMVEC-AARCH64: "-fveclib=libmvec"
 // CHECK-AMDLIBM: "-fveclib=AMDLIBM"
 // CHECK-MASSV: "-fveclib=MASSV"
 // CHECK-DARWIN_LIBSYSTEM_M: "-fveclib=Darwin_libsystem_m"
@@ -23,7 +25,6 @@
 
 // RUN: not %clang --target=x86 -c -fveclib=SLEEF %s 2>&1 | FileCheck --check-prefix=CHECK-ERROR %s
 // RUN: not %clang --target=x86 -c -fveclib=ArmPL %s 2>&1 | FileCheck --check-prefix=CHECK-ERROR %s
-// RUN: not %clang --target=aarch64 -c -fveclib=libmvec %s 2>&1 | FileCheck --check-prefix=CHECK-ERROR %s
 // RUN: not %clang --target=aarch64 -c -fveclib=SVML %s 2>&1 | FileCheck --check-prefix=CHECK-ERROR %s
 // RUN: not %clang --target=aarch64 -c -fveclib=AMDLIBM %s 2>&1 | FileCheck --check-prefix=CHECK-ERROR %s
 // CHECK-ERROR: unsupported option {{.*}} for target
@@ -42,6 +43,9 @@
 
 // RUN: %clang -### --target=x86_64-unknown-linux-gnu -fveclib=libmvec -flto %s 2>&1 | FileCheck --check-prefix=CHECK-LTO-LIBMVEC %s
 // CHECK-LTO-LIBMVEC: "-plugin-opt=-vector-library=LIBMVEC"
+
+// RUN: %clang -### --target=aarch64-linux-gnu -fveclib=libmvec -flto %s 2>&1 | FileCheck --check-prefix=CHECK-LTO-LIBMVEC-AARCH64 %s
+// CHECK-LTO-LIBMVEC-AARCH64: "-plugin-opt=-vector-library=LIBMVEC"
 
 // RUN: %clang -### --target=x86_64-unknown-linux-gnu -fveclib=AMDLIBM -flto %s 2>&1 | FileCheck --check-prefix=CHECK-LTO-AMDLIBM %s
 // CHECK-LTO-AMDLIBM: "-plugin-opt=-vector-library=AMDLIBM"
@@ -67,6 +71,10 @@
 // RUN: %clang -### --target=x86_64-unknown-linux-gnu -fveclib=libmvec %s 2>&1 | FileCheck --check-prefix=CHECK-ERRNO-LIBMVEC %s
 // CHECK-ERRNO-LIBMVEC: "-fveclib=libmvec"
 // CHECK-ERRNO-LIBMVEC-SAME: "-fmath-errno"
+
+// RUN: %clang -### --target=aarch64-linux-gnu -fveclib=libmvec %s 2>&1 | FileCheck --check-prefix=CHECK-ERRNO-LIBMVEC-AARCH64 %s
+// CHECK-ERRNO-LIBMVEC-AARCH64: "-fveclib=libmvec"
+// CHECK-ERRNO-LIBMVEC-AARCH64-SAME: "-fmath-errno"
 
 // RUN: %clang -### --target=x86_64-unknown-linux-gnu -fveclib=AMDLIBM %s 2>&1 | FileCheck --check-prefix=CHECK-ERRNO-AMDLIBM %s
 // CHECK-ERRNO-AMDLIBM: "-fveclib=AMDLIBM"

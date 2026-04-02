@@ -27,10 +27,10 @@
 
 target datalayout = "e-m:w-i64:64-f80:128-n8:16:32:64-S128"
 
-@"?x@@3HA" = external dso_local local_unnamed_addr global i32, align 4
-@"?y@@3HA" = external dso_local local_unnamed_addr global i32, align 4
+@"?x@@3HA" = external global i32, align 4
+@"?y@@3HA" = external global i32, align 4
 
-define dso_local void @"?a@@YAXXZ"() local_unnamed_addr #0 !dbg !8 {
+define void @"?a@@YAXXZ"() #0 !dbg !8 {
 entry:
   %0 = load i32, ptr @"?x@@3HA", align 4, !dbg !23, !tbaa !24
   %1 = zext i32 %0 to i64, !dbg !28
@@ -48,7 +48,7 @@ for.cond.cleanup.loopexit:
   br label %for.cond.cleanup, !dbg !33
 
 for.cond.cleanup:
-  %2 = phi i32 [ %.pre, %for.cond.cleanup.loopexit ], [ undef, %entry ], !dbg !33
+  %2 = phi i32 [ %.pre, %for.cond.cleanup.loopexit ], [ 0, %entry ], !dbg !33
   %sub = add nsw i32 %0, -5, !dbg !33
   %idxprom3 = sext i32 %sub to i64, !dbg !33
   %arrayidx4 = getelementptr inbounds i32, ptr %vla, i64 %idxprom3, !dbg !33

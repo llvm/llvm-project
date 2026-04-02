@@ -4,6 +4,9 @@ add_header_library(
   config
   HDRS
     config.h
+  DEPENDS
+    libc.src.__support.macros.properties.architectures
+    libc.src.__support.macros.properties.compiler
 )
 
 add_header_library(
@@ -35,5 +38,4 @@ add_header_library(
   DEPENDS
     .config
     .optimization
-    .sanitizer
 )

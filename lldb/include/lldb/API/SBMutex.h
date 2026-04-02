@@ -31,6 +31,10 @@ public:
   /// Releases ownership of this lock.
   void unlock() const;
 
+  /// Tries to lock the mutex. Returns immediately. On successful lock
+  /// acquisition returns true, otherwise returns false.
+  bool try_lock() const;
+
 private:
   // Private constructor used by SBTarget to create the Target API mutex.
   // Requires a friend declaration.

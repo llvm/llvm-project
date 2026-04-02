@@ -57,18 +57,23 @@ public:
   // Add a pending callback that will be executed once after all the pending
   // events are processed. The callback will be executed even if termination
   // was requested.
-  void AddPendingCallback(const Callback &callback) {
-    AddCallback(callback, std::chrono::steady_clock::time_point());
+  // Returns false if an interrupt was needed to get the loop to act on the new
+  // callback, but the interrupt failed, true otherwise.  Mostly used when the
+  // pending callback is a RequestTermination, since if the interrupt fails for
+  // that callback, waiting for the MainLoop thread to terminate could stall.
+  bool AddPendingCallback(const Callback &callback) {
+    return AddCallback(callback, std::chrono::steady_clock::time_point());
   }
 
   // Add a callback that will be executed after a certain amount of time has
-  // passed.
-  void AddCallback(const Callback &callback, std::chrono::nanoseconds delay) {
-    AddCallback(callback, std::chrono::steady_clock::now() + delay);
+  // passed.  See AddPendingCallback comment for the return value.
+  bool AddCallback(const Callback &callback, std::chrono::nanoseconds delay) {
+    return AddCallback(callback, std::chrono::steady_clock::now() + delay);
   }
 
   // Add a callback that will be executed after a given point in time.
-  void AddCallback(const Callback &callback, TimePoint point);
+  // See AddPendingCallback comment for the return value.
+  bool AddCallback(const Callback &callback, TimePoint point);
 
   // Waits for registered events and invoke the proper callbacks. Returns when
   // all callbacks deregister themselves or when someone requests termination.
@@ -85,8 +90,9 @@ protected:
 
   virtual void UnregisterReadObject(IOObject::WaitableHandle handle) = 0;
 
-  // Interrupt the loop that is currently waiting for events.
-  virtual void Interrupt() = 0;
+  /// Interrupt the loop that is currently waiting for events.  Return true if
+  /// the interrupt succeeded, false if it failed.
+  virtual bool Interrupt() = 0;
 
   void ProcessCallbacks();
 

@@ -27,12 +27,15 @@ body:
 cleanup:
   %mem = call ptr @llvm.coro.free(token %id, ptr %hdl)
   %need.dyn.free = icmp ne ptr %mem, null
-  br i1 %need.dyn.free, label %dyn.free, label %suspend
+  br i1 %need.dyn.free, label %dyn.free, label %after.free
 dyn.free:
   call void @free(ptr %mem)
+  br label %after.free
+after.free:
+  call void @llvm.coro.dead(ptr %hdl)
   br label %suspend
 suspend:
-  call i1 @llvm.coro.end(ptr %hdl, i1 false, token none)
+  call void @llvm.coro.end(ptr %hdl, i1 false, token none)
   ret void
 }
 
@@ -81,7 +84,7 @@ cleanup:
   call void @free(ptr %mem)
   br label %suspend
 suspend:
-  call i1 @llvm.coro.end(ptr %hdl, i1 false, token none)
+  call void @llvm.coro.end(ptr %hdl, i1 false, token none)
   ret void
 }
 
@@ -129,7 +132,7 @@ cleanup:
   call void @free(ptr %mem)
   br label %suspend
 suspend:
-  call i1 @llvm.coro.end(ptr %hdl, i1 false, token none)
+  call void @llvm.coro.end(ptr %hdl, i1 false, token none)
   ret void
 lpad:
   %lpval = landingpad { ptr, i32 }
@@ -190,7 +193,7 @@ cleanup:
   call void @free(ptr %mem)
   br label %suspend
 suspend:
-  call i1 @llvm.coro.end(ptr %hdl, i1 false, token none)
+  call void @llvm.coro.end(ptr %hdl, i1 false, token none)
   ret void
 }
 
@@ -244,7 +247,7 @@ cleanup:
   call void @free(ptr %mem)
   br label %suspend
 suspend:
-  call i1 @llvm.coro.end(ptr %hdl, i1 false, token none)
+  call void @llvm.coro.end(ptr %hdl, i1 false, token none)
   ret void
 }
 
@@ -291,7 +294,7 @@ cleanup:
   call void @free(ptr %mem)
   br label %suspend
 suspend:
-  call i1 @llvm.coro.end(ptr %hdl, i1 false, token none)
+  call void @llvm.coro.end(ptr %hdl, i1 false, token none)
   ret void
 lpad:
   %lpval = landingpad { ptr, i32 }
@@ -343,7 +346,7 @@ cleanup:
   call void @free(ptr %mem)
   br label %suspend
 suspend:
-  call i1 @llvm.coro.end(ptr %hdl, i1 false, token none)
+  call void @llvm.coro.end(ptr %hdl, i1 false, token none)
   ret void
 }
 
@@ -388,7 +391,7 @@ cleanup:
   call void @free(ptr %mem)
   br label %suspend
 suspend:
-  call i1 @llvm.coro.end(ptr %hdl, i1 false, token none)
+  call void @llvm.coro.end(ptr %hdl, i1 false, token none)
   ret void
 lpad:
   %lpval = landingpad { ptr, i32 }
@@ -410,7 +413,7 @@ declare ptr @llvm.coro.begin(token, ptr)
 declare token @llvm.coro.save(ptr %hdl)
 declare i8 @llvm.coro.suspend(token, i1)
 declare ptr @llvm.coro.free(token, ptr)
-declare i1 @llvm.coro.end(ptr, i1, token)
+declare void @llvm.coro.end(ptr, i1, token)
 
 declare ptr @llvm.coro.subfn.addr(ptr, i8)
 

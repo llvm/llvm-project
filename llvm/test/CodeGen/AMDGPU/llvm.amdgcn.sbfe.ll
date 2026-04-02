@@ -1,5 +1,5 @@
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn < %s | FileCheck -check-prefix=GCN %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global < %s | FileCheck -check-prefix=GCN %s
 
 ; GCN-LABEL: {{^}}bfe_i32_arg_arg_arg:
 ; GCN: v_bfe_i32
@@ -547,6 +547,46 @@ define amdgpu_kernel void @sext_in_reg_i2_bfe_offset_1(ptr addrspace(1) %out, pt
   %shr = ashr i32 %shl, 30
   %bfe = call i32 @llvm.amdgcn.sbfe.i32(i32 %shr, i32 1, i32 2)
   store i32 %bfe, ptr addrspace(1) %out, align 4
+  ret void
+}
+
+; Test that width values >= 32 are correctly masked with & 0x1f
+; This is a regression test for issue #182677 where missing mask caused
+; unsigned underflow in ComputeNumSignBitsForTargetNode
+
+; GCN-LABEL: {{^}}bfe_i32_width_33:
+; GCN-NOT: {{[^@]}}bfe
+; GCN: v_mov_b32_e32 [[VREG:v[0-9]+]], 0
+; GCN: buffer_store_dword [[VREG]],
+; GCN: s_endpgm
+define amdgpu_kernel void @bfe_i32_width_33(ptr addrspace(1) %out) #0 {
+  ; Width 33 & 0x1f = 1, extracts 1 bit from position 0 of value 0
+  %bfe_i32 = call i32 @llvm.amdgcn.sbfe.i32(i32 0, i32 0, i32 33)
+  store i32 %bfe_i32, ptr addrspace(1) %out, align 4
+  ret void
+}
+
+; GCN-LABEL: {{^}}bfe_i32_width_64:
+; GCN-NOT: {{[^@]}}bfe
+; GCN: v_mov_b32_e32 [[VREG:v[0-9]+]], 0
+; GCN: buffer_store_dword [[VREG]],
+; GCN: s_endpgm
+define amdgpu_kernel void @bfe_i32_width_64(ptr addrspace(1) %out) #0 {
+  ; Width 64 & 0x1f = 0, should return 0 (width 0 extracts nothing)
+  %bfe_i32 = call i32 @llvm.amdgcn.sbfe.i32(i32 255, i32 0, i32 64)
+  store i32 %bfe_i32, ptr addrspace(1) %out, align 4
+  ret void
+}
+
+; GCN-LABEL: {{^}}bfe_i32_width_32:
+; GCN-NOT: {{[^@]}}bfe
+; GCN: v_mov_b32_e32 [[VREG:v[0-9]+]], 0
+; GCN: buffer_store_dword [[VREG]],
+; GCN: s_endpgm
+define amdgpu_kernel void @bfe_i32_width_32(ptr addrspace(1) %out) #0 {
+  ; Width 32 & 0x1f = 0, should return 0
+  %bfe_i32 = call i32 @llvm.amdgcn.sbfe.i32(i32 123, i32 0, i32 32)
+  store i32 %bfe_i32, ptr addrspace(1) %out, align 4
   ret void
 }
 

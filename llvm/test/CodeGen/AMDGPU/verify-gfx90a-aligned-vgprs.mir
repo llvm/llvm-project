@@ -1,5 +1,5 @@
-# RUN: not --crash llc -mtriple=amdgcn -mcpu=gfx90a -run-pass=machineverifier -o /dev/null %s 2>&1 | FileCheck %s
-# RUN: not --crash llc -mtriple=amdgcn -mcpu=gfx90a --passes='machine-function(verify)' -o /dev/null %s 2>&1 | FileCheck %s
+# RUN: not --crash llc -mtriple=amdgcn -mcpu=gfx90a -run-pass=machineverifier -filetype=null %s 2>&1 | FileCheck %s
+# RUN: not --crash llc -mtriple=amdgcn -mcpu=gfx90a --passes='machine-function(verify)' -filetype=null %s 2>&1 | FileCheck %s
 
 # Implicit uses are OK.
 ---

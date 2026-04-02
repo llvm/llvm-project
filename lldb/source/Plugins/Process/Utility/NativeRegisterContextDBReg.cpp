@@ -44,15 +44,16 @@ uint32_t NativeRegisterContextDBReg::SetHardwareBreakpoint(lldb::addr_t addr,
     return LLDB_INVALID_INDEX32;
   }
 
-  uint32_t control_value = 0, bp_index = 0;
-
   if (!ValidateBreakpoint(size, addr))
     return LLDB_INVALID_INDEX32;
 
-  control_value = MakeBreakControlValue(size);
+  uint32_t control_value = MakeBreakControlValue(size);
+  auto details = AdjustBreakpoint({size, addr});
+  size = details.size;
+  addr = details.addr;
 
   // Iterate over stored breakpoints and find a free bp_index
-  bp_index = LLDB_INVALID_INDEX32;
+  uint32_t bp_index = LLDB_INVALID_INDEX32;
   for (uint32_t i = 0; i < m_max_hbp_supported; i++) {
     if (!BreakpointIsEnabled(i))
       bp_index = i; // Mark last free slot
@@ -222,7 +223,7 @@ uint32_t NativeRegisterContextDBReg::SetHardwareWatchpoint(
   addr = adjusted->addr;
 
   // Check if we are setting watchpoint other than read/write/access Also
-  // update watchpoint flag to match AArch64/LoongArch write-read bit
+  // update watchpoint flag to match ARM/AArch64/LoongArch write-read bit
   // configuration.
   switch (watch_flags) {
   case lldb::eWatchpointKindWrite:

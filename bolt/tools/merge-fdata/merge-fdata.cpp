@@ -120,14 +120,14 @@ void mergeProfileHeaders(BinaryProfileHeader &MergedHeader,
   if (!MergedHeader.Id.empty() && (MergedHeader.Id != Header.Id))
     errs() << "WARNING: build-ids in merged profiles do not match\n";
 
-  // Cannot merge samples profile with LBR profile.
+  // Cannot merge samples profile with brstack profile.
   if (!MergedHeader.Flags)
     MergedHeader.Flags = Header.Flags;
 
   constexpr auto Mask = llvm::bolt::BinaryFunction::PF_BRANCH |
                         llvm::bolt::BinaryFunction::PF_BASIC;
   if ((MergedHeader.Flags & Mask) != (Header.Flags & Mask)) {
-    errs() << "ERROR: cannot merge LBR profile with non-LBR profile\n";
+    errs() << "ERROR: cannot merge brstack profile with non-brstack profile\n";
     exit(1);
   }
   MergedHeader.Flags = MergedHeader.Flags | Header.Flags;
@@ -278,7 +278,10 @@ void mergeLegacyProfiles(const SmallVectorImpl<std::string> &Filenames) {
     }
     CounterTy operator+(const CounterTy &O) { return *this += O; }
   };
-  typedef StringMap<CounterTy> ProfileTy;
+  struct ProfileTy {
+    StringMap<CounterTy> Branch;
+    StringMap<CounterTy> Memory;
+  };
 
   auto ParseProfile = [&](const std::string &Filename, auto &Profiles) {
     const llvm::thread::id tid = llvm::this_thread::get_id();
@@ -315,20 +318,46 @@ void mergeLegacyProfiles(const SmallVectorImpl<std::string> &Filenames) {
 
     do {
       StringRef Line(FdataLine);
+      Line = Line.rtrim();
+      if (Line.empty())
+        continue;
       CounterTy Count;
+      unsigned Type = 0;
+      if (Line.split(' ').first.getAsInteger(10, Type))
+        report_error(Filename, "Malformed / corrupted entry type");
+      bool IsBranchEntry = Type < 3;
+
+      // Validate the number of fields in the line. Count only unescaped spaces
+      // as field separators, since function names may contain escaped spaces,
+      // like "foo\ bar".
+      size_t NumFields = 1;
+      for (size_t I = 0; I < Line.size(); ++I) {
+        if (Line[I] == '\\')
+          ++I;
+        else if (Line[I] == ' ')
+          ++NumFields;
+      }
+      size_t ExpectedFields =
+          IsBranchEntry ? (NoLBRCollection.value_or(false) ? 4 : 8) : 7;
+      if (NumFields != ExpectedFields) {
+        errs() << "WARNING: " << Filename << ": ignoring malformed entry with "
+               << NumFields << " fields (expected " << ExpectedFields << ")\n";
+        continue;
+      }
+
       auto [Signature, ExecCount] = Line.rsplit(' ');
       if (ExecCount.getAsInteger(10, Count.Exec))
         report_error(Filename, "Malformed / corrupted execution count");
       // Only LBR profile has misprediction field
-      if (!NoLBRCollection.value_or(false)) {
+      if (!NoLBRCollection.value_or(false) && IsBranchEntry) {
         auto [SignatureLBR, MispredCount] = Signature.rsplit(' ');
         Signature = SignatureLBR;
         if (MispredCount.getAsInteger(10, Count.Mispred))
           report_error(Filename, "Malformed / corrupted misprediction count");
       }
 
-      Count += Profile->lookup(Signature);
-      Profile->insert_or_assign(Signature, Count);
+      auto &ProfileMap = IsBranchEntry ? Profile->Branch : Profile->Memory;
+      ProfileMap[Signature] += Count;
     } while (std::getline(FdataFile, FdataLine));
   };
 
@@ -344,22 +373,25 @@ void mergeLegacyProfiles(const SmallVectorImpl<std::string> &Filenames) {
   Pool.wait();
 
   ProfileTy MergedProfile;
-  for (const auto &[Thread, Profile] : ParsedProfiles)
-    for (const auto &[Key, Value] : Profile) {
-      CounterTy Count = MergedProfile.lookup(Key) + Value;
-      MergedProfile.insert_or_assign(Key, Count);
-    }
+  for (const auto &[Thread, Profile] : ParsedProfiles) {
+    for (const auto &[Key, Value] : Profile.Branch)
+      MergedProfile.Branch[Key] += Value;
+    for (const auto &[Key, Value] : Profile.Memory)
+      MergedProfile.Memory[Key] += Value;
+  }
 
   if (BoltedCollection.value_or(false))
     output() << "boltedcollection\n";
   if (NoLBRCollection.value_or(false))
     output() << "no_lbr\n";
-  for (const auto &[Key, Value] : MergedProfile) {
+  for (const auto &[Key, Value] : MergedProfile.Branch) {
     output() << Key << " ";
     if (!NoLBRCollection.value_or(false))
       output() << Value.Mispred << " ";
     output() << Value.Exec << "\n";
   }
+  for (const auto &[Key, Value] : MergedProfile.Memory)
+    output() << Key << ' ' << Value.Exec << '\n';
 
   errs() << "Profile from " << Filenames.size() << " files merged.\n";
 }

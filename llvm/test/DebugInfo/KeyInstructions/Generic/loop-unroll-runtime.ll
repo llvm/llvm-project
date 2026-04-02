@@ -5,7 +5,7 @@
 ;; Check atoms are remapped for runtime unrolling.
 
 ; CHECK: for.body.epil:
-; CHECK-NEXT: store i64 %indvars.iv.unr, ptr %p, align 4, !dbg [[G2R1:!.*]]
+; CHECK-NEXT: store i64 %indvars.iv.epil.init, ptr %p, align 4, !dbg [[G2R1:!.*]]
 
 ; CHECK: for.body.epil.1:
 ; CHECK-NEXT: store i64 %indvars.iv.next.epil, ptr %p, align 4, !dbg [[G3R1:!.*]]
@@ -25,6 +25,7 @@
 ; CHECK-NEXT: store i64 %indvars.iv.next.2, ptr %p, align 4, !dbg [[G7R1:!.*]]
 ; CHECK-NEXT: %indvars.iv.next.3 = add nuw nsw i64 %indvars.iv, 4
 
+; CHECK: distinct !DISubprogram(name: "unroll", {{.*}}keyInstructions: true)
 ; CHECK: [[G2R1]] = !DILocation({{.*}}, atomGroup: 2, atomRank: 1)
 ; CHECK: [[G3R1]] = !DILocation({{.*}}, atomGroup: 3, atomRank: 1)
 ; CHECK: [[G4R1]] = !DILocation({{.*}}, atomGroup: 4, atomRank: 1)
@@ -63,7 +64,7 @@ for.body:                                         ; preds = %for.body, %for.body
 !2 = !{i32 17}
 !3 = !{i32 0}
 !4 = !{i32 2, !"Debug Info Version", i32 3}
-!5 = distinct !DISubprogram(name: "unroll", linkageName: "unroll", scope: null, file: !1, line: 1, type: !6, scopeLine: 1, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0)
+!5 = distinct !DISubprogram(name: "unroll", linkageName: "unroll", scope: null, file: !1, line: 1, type: !6, scopeLine: 1, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, keyInstructions: true)
 !6 = !DISubroutineType(types: !7)
 !7 = !{}
 !8 = !DILocation(line: 1, column: 1, scope: !5, atomGroup: 1, atomRank: 1)

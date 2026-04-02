@@ -14,7 +14,7 @@ define x86_fp80 @test() {
 ; CHECK-NEXT:    br label [[FOR_BODY3_I_3:%.*]]
 ; CHECK:       for.body3.i.3:
 ; CHECK-NEXT:    [[N_ADDR_112_I_3:%.*]] = phi i64 [ [[DEC_I_3:%.*]], [[FOR_BODY3_I_3]] ], [ 24, [[FOO_EXIT:%.*]] ]
-; CHECK-NEXT:    [[X_ADDR_111_I_3:%.*]] = phi x86_fp80 [ [[MUL_I_3:%.*]], [[FOR_BODY3_I_3]] ], [ undef, [[FOO_EXIT]] ]
+; CHECK-NEXT:    [[X_ADDR_111_I_3:%.*]] = phi x86_fp80 [ [[MUL_I_3:%.*]], [[FOR_BODY3_I_3]] ], [ 0xK00000000000000000000, [[FOO_EXIT]] ]
 ; CHECK-NEXT:    [[MUL_I_3]] = fmul x86_fp80 [[X_ADDR_111_I_3]], 0xK40008000000000000000
 ; CHECK-NEXT:    [[DEC_I_3]] = add nsw i64 [[N_ADDR_112_I_3]], -1
 ; CHECK-NEXT:    [[CMP2_I_3:%.*]] = icmp sgt i64 [[N_ADDR_112_I_3]], 1
@@ -28,7 +28,7 @@ foo.exit:
 
 for.body3.i.3:                                    ; preds = %for.body3.i.3, %foo.exit
   %n.addr.112.i.3 = phi i64 [ %dec.i.3, %for.body3.i.3 ], [ 24, %foo.exit ]
-  %x.addr.111.i.3 = phi x86_fp80 [ %mul.i.3, %for.body3.i.3 ], [ undef, %foo.exit ]
+  %x.addr.111.i.3 = phi x86_fp80 [ %mul.i.3, %for.body3.i.3 ], [ zeroinitializer, %foo.exit ]
   %mul.i.3 = fmul x86_fp80 %x.addr.111.i.3, 0xK40008000000000000000
   %dec.i.3 = add nsw i64 %n.addr.112.i.3, -1
   %cmp2.i.3 = icmp sgt i64 %n.addr.112.i.3, 1

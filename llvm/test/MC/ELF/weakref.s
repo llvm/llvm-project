@@ -113,6 +113,6 @@ alias:
 .weakref cycle1, cycle0
 call cycle0
 # ERR2: <unknown>:0: error: cyclic dependency detected for symbol 'cycle0'
-# ERR2: [[#@LINE-2]]:1: error: expected relocatable expression
+# ERR2: [[#@LINE-2]]:6: error: expected relocatable expression
 
 .endif

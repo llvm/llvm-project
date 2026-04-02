@@ -57,7 +57,7 @@ for.end:                                          ; preds = %for.body
 define dso_local void @test2(i32 noundef zeroext %n, ptr noundef %A, ptr noalias noundef %B) #0 {
 ; CHECK-LABEL: 'test2'
 ; CHECK-NEXT:  Src: store i32 %conv5, ptr %arrayidx, align 4 --> Dst: store i32 %conv5, ptr %arrayidx, align 4
-; CHECK-NEXT:    da analyze - consistent output [S 0]!
+; CHECK-NEXT:    da analyze - output [S 0]!
 ; CHECK-NEXT:  Src: store i32 %conv5, ptr %arrayidx, align 4 --> Dst: store float 1.230000e+02, ptr %arrayidx7, align 4
 ; CHECK-NEXT:    da analyze - none!
 ; CHECK-NEXT:  Src: store i32 %conv5, ptr %arrayidx, align 4 --> Dst: store float %conv13, ptr %arrayidx17, align 4
