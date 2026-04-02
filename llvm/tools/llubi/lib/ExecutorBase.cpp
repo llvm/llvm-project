@@ -126,7 +126,7 @@ void ExecutorBase::store(const AnyValue &Ptr, Align Alignment,
 }
 
 void ExecutorBase::requestProgramExit(ProgramExitInfo::ProgramExitKind Kind,
-uint64_t ExitCode)  {
+                                      uint64_t ExitCode) {
   if (Kind == ProgramExitInfo::ProgramExitKind::Invalid)
     llvm_unreachable("Invalid program exit kind");
   Status = false;
