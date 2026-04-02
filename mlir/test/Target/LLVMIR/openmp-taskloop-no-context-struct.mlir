@@ -78,7 +78,7 @@ llvm.func @_QPtest() {
 // CHECK:         br label %[[VAL_38:.*]]
 // CHECK:       omp_loop.preheader:                               ; preds = %[[VAL_37]]
 // CHECK:         %[[VAL_39:.*]] = sub i64 %[[VAL_27]], %[[VAL_25]]
-// CHECK:         %[[VAL_40:.*]] = sdiv i64 %[[VAL_39]], 1
+// CHECK:         %[[VAL_40:.*]] = sdiv i64 %[[VAL_39]], %[[VAL_29]]
 // CHECK:         %[[VAL_41:.*]] = add i64 %[[VAL_40]], 1
 // CHECK:         %[[VAL_42:.*]] = trunc i64 %[[VAL_41]] to i32
 // CHECK:         %[[VAL_43:.*]] = trunc i64 %[[VAL_25]] to i32
