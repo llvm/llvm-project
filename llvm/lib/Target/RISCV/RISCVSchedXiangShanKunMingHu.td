@@ -13,13 +13,8 @@
 // and the Beijing Institute of Open Source Chip (BOSC), 
 // with a focus on achieving higher performance.
 // Source: https://github.com/OpenXiangShan/XiangShan
-// Documentation: https://github.com/OpenXiangShan/XiangShan-doc
-
-//===----------------------------------------------------------------------===//
-// KunMingHu core supports "RV64IMAFDCV_zba_zbb_zbc_zbs_zbkb_zbkc_zbkx_zknd_zkne_zknh
-// _zksed_zksh_svinval_zicbom_zicboz_zicsr_zifencei"
-// then floating-point SEW can only be 64 and 32, not 16 and 8.
-//===----------------------------------------------------------------------===//
+// Documentation: https://docs.xiangshan.cc/projects/design/en/latest/
+// User Guide: https://docs.xiangshan.cc/projects/user-guide/en/latest/
 
 def XiangShanKunMingHuModel : SchedMachineModel {
   let IssueWidth = 6;   // 6-way decode and dispatch
