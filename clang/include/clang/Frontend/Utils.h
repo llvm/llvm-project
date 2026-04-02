@@ -118,6 +118,9 @@ protected:
   void outputDependencyFile(llvm::raw_ostream &OS);
 
 private:
+  void outputDependencyFilename(llvm::raw_ostream &OS,
+                                StringRef Filename) const;
+
   void outputDependencyFile(DiagnosticsEngine &Diags);
 
   std::string OutputFile;
@@ -128,6 +131,7 @@ private:
   bool SeenMissingHeader;
   bool IncludeModuleFiles;
   DependencyOutputFormat OutputFormat;
+  bool MSCompatible;
   unsigned InputFileIndex;
 };
 
