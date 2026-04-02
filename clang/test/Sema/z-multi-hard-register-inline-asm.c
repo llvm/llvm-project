@@ -27,4 +27,8 @@ void f1() {
   __asm("lgr %0,%1\n"
         : "={r1r3}{r4}"(a) // expected-error {{invalid output constraint '={r1r3}{r4}' in asm}}
         : "{r2}"(b));
+  
+  __asm("lgr %0,%1\n"
+        : "={r1}{r4}r"(a) // expected-error {{invalid output constraint '={r1}{r4}r' in asm}}
+        : "{r2}"(b));
 }

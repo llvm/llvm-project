@@ -2865,7 +2865,6 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
     OutExpr = OutExpr->IgnoreParenNoopCasts(getContext());
 
     SmallVector<std::string> GCCRegs;
-    llvm::dbgs() << "TONY getting output constraints\n";
     OutputConstraint = S.AddVariableConstraints(
         getContext(), OutputConstraint, *OutExpr, getTarget(),
         Info.earlyClobber(),
@@ -2875,7 +2874,6 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
         &GCCRegs);
     // Give an error on multiple outputs to same physreg.
     if (!GCCRegs.empty()) {
-      llvm::dbgs() << "TONY GCCRegs empty\n";
       for (auto R : GCCRegs) {
         if (!PhysRegOutputs.insert(R).second)
           CGM.Error(S.getAsmLoc(), "multiple outputs to hard register: " + R);
