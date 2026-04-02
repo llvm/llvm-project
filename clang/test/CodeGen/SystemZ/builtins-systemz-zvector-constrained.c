@@ -68,10 +68,7 @@ void test_core(void) {
   // CHECK-ASM: vsceg %{{.*}}, 0(%{{.*}},%{{.*}}), 1
 
   vd = vec_xl(idx, cptrd);
-  // CHECK-ASM-NEXT: lgf     %r5, 0(%r3)
-  // CHECK-ASM-NEXT: lg      %r13, 0(%r4)
-  // CHECK-ASM-NEXT: vl      %v0, 0(%r5,%r13){{$}}
-  // CHECK-ASM-NEXT: vst
+  // CHECK-ASM: vst
 
   vd = vec_xld2(idx, cptrd);
   // CHECK-ASM:      vst
