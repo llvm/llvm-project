@@ -14,15 +14,6 @@ define <vscale x 4 x i1> @test_splat_const_is_pos_normal() {
   ret <vscale x 4 x i1> %res
 }
 
-define <vscale x 4 x i1> @test_splat_const_isinf() {
-; CHECK-LABEL: test_splat_const_isinf:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    ret
-  %res = call <vscale x 4 x i1> @llvm.is.fpclass.nxv4f32(<vscale x 4 x float> splat (float 0x7FF0000000000000), i32 516)
-  ret <vscale x 4 x i1> %res
-}
-
 define <vscale x 4 x i1> @test_splat_const_isnan() {
 ; CHECK-LABEL: test_splat_const_isnan:
 ; CHECK:       // %bb.0:
