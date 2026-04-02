@@ -52,7 +52,9 @@ define void @simple_memcpy(ptr noalias %dst, ptr noalias %src, i64 %n)  {
 ; CHECK-PREDICATE-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-PREDICATE:       [[VECTOR_BODY]]:
 ; CHECK-PREDICATE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE2:.*]] ]
-; CHECK-PREDICATE-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[PRED_STORE_CONTINUE2]] ]
+; CHECK-PREDICATE-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <2 x i64> poison, i64 [[INDEX]], i64 0
+; CHECK-PREDICATE-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <2 x i64> [[BROADCAST_SPLATINSERT1]], <2 x i64> poison, <2 x i32> zeroinitializer
+; CHECK-PREDICATE-NEXT:    [[VEC_IND:%.*]] = add <2 x i64> [[BROADCAST_SPLAT2]], <i64 0, i64 1>
 ; CHECK-PREDICATE-NEXT:    [[TMP0:%.*]] = icmp ule <2 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; CHECK-PREDICATE-NEXT:    [[TMP1:%.*]] = extractelement <2 x i1> [[TMP0]], i32 0
 ; CHECK-PREDICATE-NEXT:    br i1 [[TMP1]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
@@ -74,7 +76,6 @@ define void @simple_memcpy(ptr noalias %dst, ptr noalias %src, i64 %n)  {
 ; CHECK-PREDICATE-NEXT:    br label %[[PRED_STORE_CONTINUE2]]
 ; CHECK-PREDICATE:       [[PRED_STORE_CONTINUE2]]:
 ; CHECK-PREDICATE-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 2
-; CHECK-PREDICATE-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[VEC_IND]], splat (i64 2)
 ; CHECK-PREDICATE-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-PREDICATE-NEXT:    br i1 [[TMP11]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK-PREDICATE:       [[MIDDLE_BLOCK]]:

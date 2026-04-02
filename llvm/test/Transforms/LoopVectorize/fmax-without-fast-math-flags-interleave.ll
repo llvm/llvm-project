@@ -224,10 +224,12 @@ define float @fmaxnum_tailfold(ptr %src, i64 %n) #0 {
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_LOAD_CONTINUE15:.*]] ]
-; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[PRED_LOAD_CONTINUE15]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x float> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP51:%.*]], %[[PRED_LOAD_CONTINUE15]] ]
 ; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi <4 x float> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP52:%.*]], %[[PRED_LOAD_CONTINUE15]] ]
-; CHECK-NEXT:    [[STEP_ADD:%.*]] = add nuw <4 x i64> [[VEC_IND]], splat (i64 4)
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT2:%.*]] = insertelement <4 x i64> poison, i64 [[INDEX]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT3:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT2]], <4 x i64> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[VEC_IND:%.*]] = add <4 x i64> [[BROADCAST_SPLAT3]], <i64 0, i64 1, i64 2, i64 3>
+; CHECK-NEXT:    [[STEP_ADD:%.*]] = add <4 x i64> [[BROADCAST_SPLAT3]], <i64 4, i64 5, i64 6, i64 7>
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule <4 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ule <4 x i64> [[STEP_ADD]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x i1> [[TMP1]], i32 0
@@ -318,7 +320,6 @@ define float @fmaxnum_tailfold(ptr %src, i64 %n) #0 {
 ; CHECK-NEXT:    [[TMP57:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP56]])
 ; CHECK-NEXT:    [[TMP58:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    [[TMP59:%.*]] = or i1 [[TMP57]], [[TMP58]]
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[STEP_ADD]], splat (i64 4)
 ; CHECK-NEXT:    br i1 [[TMP59]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[TMP53:%.*]] = select <4 x i1> [[TMP1]], <4 x float> [[TMP51]], <4 x float> [[VEC_PHI]]

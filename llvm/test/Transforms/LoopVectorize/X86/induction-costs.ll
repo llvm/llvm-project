@@ -578,8 +578,10 @@ define void @wide_iv_trunc(ptr %dst, i64 %N) {
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE6:%.*]] ]
-; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[PRED_STORE_CONTINUE6]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[INDEX]] to i32
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <4 x i64> poison, i64 [[INDEX]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT1]], <4 x i64> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[VEC_IND:%.*]] = add <4 x i64> [[BROADCAST_SPLAT2]], <i64 0, i64 1, i64 2, i64 3>
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ule <4 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x i1> [[TMP2]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
@@ -589,27 +591,26 @@ define void @wide_iv_trunc(ptr %dst, i64 %N) {
 ; CHECK:       pred.store.continue:
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x i1> [[TMP2]], i32 1
 ; CHECK-NEXT:    br i1 [[TMP5]], label [[PRED_STORE_IF1:%.*]], label [[PRED_STORE_CONTINUE2:%.*]]
-; CHECK:       pred.store.if1:
+; CHECK:       pred.store.if3:
 ; CHECK-NEXT:    [[TMP6:%.*]] = add i32 [[TMP1]], 1
 ; CHECK-NEXT:    store i32 [[TMP6]], ptr [[DST]], align 4
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE2]]
-; CHECK:       pred.store.continue2:
+; CHECK:       pred.store.continue4:
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x i1> [[TMP2]], i32 2
 ; CHECK-NEXT:    br i1 [[TMP7]], label [[PRED_STORE_IF3:%.*]], label [[PRED_STORE_CONTINUE4:%.*]]
-; CHECK:       pred.store.if3:
+; CHECK:       pred.store.if5:
 ; CHECK-NEXT:    [[TMP8:%.*]] = add i32 [[TMP1]], 2
 ; CHECK-NEXT:    store i32 [[TMP8]], ptr [[DST]], align 4
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE4]]
-; CHECK:       pred.store.continue4:
+; CHECK:       pred.store.continue6:
 ; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x i1> [[TMP2]], i32 3
 ; CHECK-NEXT:    br i1 [[TMP9]], label [[PRED_STORE_IF5:%.*]], label [[PRED_STORE_CONTINUE6]]
-; CHECK:       pred.store.if5:
+; CHECK:       pred.store.if7:
 ; CHECK-NEXT:    [[TMP10:%.*]] = add i32 [[TMP1]], 3
 ; CHECK-NEXT:    store i32 [[TMP10]], ptr [[DST]], align 4
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE6]]
-; CHECK:       pred.store.continue6:
+; CHECK:       pred.store.continue8:
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP27:![0-9]+]]
 ; CHECK:       middle.block:

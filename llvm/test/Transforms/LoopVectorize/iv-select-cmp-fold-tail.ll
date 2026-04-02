@@ -17,10 +17,12 @@ define i32 @find_last_trunc_iv(ptr %src, i64 %n) {
 ; CHECK-NEXT:    br label %[[VECTOR_BODY1:.*]]
 ; CHECK:       [[VECTOR_BODY1]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_BODY]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_LOAD_CONTINUE7:.*]] ]
-; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_BODY]] ], [ [[VEC_IND_NEXT:%.*]], %[[PRED_LOAD_CONTINUE7]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, %[[VECTOR_BODY]] ], [ [[TMP32:%.*]], %[[PRED_LOAD_CONTINUE7]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = phi <4 x i1> [ zeroinitializer, %[[VECTOR_BODY]] ], [ [[TMP31:%.*]], %[[PRED_LOAD_CONTINUE7]] ]
 ; CHECK-NEXT:    [[VEC_IND1:%.*]] = phi <4 x i32> [ <i32 0, i32 1, i32 2, i32 3>, %[[VECTOR_BODY]] ], [ [[VEC_IND_NEXT8:%.*]], %[[PRED_LOAD_CONTINUE7]] ]
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <4 x i64> poison, i64 [[INDEX]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT1]], <4 x i64> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[VEC_IND:%.*]] = add <4 x i64> [[BROADCAST_SPLAT2]], <i64 0, i64 1, i64 2, i64 3>
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ule <4 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x i1> [[TMP2]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP3]], label %[[PRED_LOAD_IF:.*]], label %[[PRED_LOAD_CONTINUE:.*]]
@@ -69,7 +71,6 @@ define i32 @find_last_trunc_iv(ptr %src, i64 %n) {
 ; CHECK-NEXT:    [[TMP31]] = select i1 [[TMP30]], <4 x i1> [[TMP28]], <4 x i1> [[TMP1]]
 ; CHECK-NEXT:    [[TMP32]] = select i1 [[TMP30]], <4 x i32> [[VEC_IND1]], <4 x i32> [[VEC_PHI]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 4
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
 ; CHECK-NEXT:    [[VEC_IND_NEXT8]] = add <4 x i32> [[VEC_IND1]], splat (i32 4)
 ; CHECK-NEXT:    [[TMP34:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP34]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY1]], !llvm.loop [[LOOP0:![0-9]+]]

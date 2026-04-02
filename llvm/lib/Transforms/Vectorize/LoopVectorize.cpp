@@ -7925,6 +7925,7 @@ void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
       CM.getInLoopReductions(), Hints.allowReordering());
 
   VPlanTransforms::simplifyRecipes(*VPlan0);
+  VPlanTransforms::removeDeadRecipes(*VPlan0);
   // If we're vectorizing a loop with an uncountable exit, make sure that the
   // recipes are safe to handle.
   // TODO: Remove this once we can properly check the VPlan itself for both
@@ -8181,6 +8182,10 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
     RUN_VPLAN_PASS(VPlanTransforms::convertToAbstractRecipes, *Plan, CostCtx,
                    Range);
   }
+
+  // Ensure scalar VF plans only contain VF=1, as required by hasScalarVFOnly.
+  if (Range.Start.isScalar())
+    Range.End = Range.Start * 2;
 
   for (ElementCount VF : Range)
     Plan->addVF(VF);

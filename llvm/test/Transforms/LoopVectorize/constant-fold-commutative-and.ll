@@ -17,8 +17,10 @@ define void @constant_fold_commutative_and(ptr %ptr.n, ptr noalias %p, i1 %cond)
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE5:.*]] ]
-; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <2 x i8> [ <i8 0, i8 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[PRED_STORE_CONTINUE5]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule <2 x i8> [[VEC_IND]], splat (i8 16)
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT2:%.*]] = insertelement <2 x i64> poison, i64 [[INDEX]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT3:%.*]] = shufflevector <2 x i64> [[BROADCAST_SPLATINSERT2]], <2 x i64> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[VEC_IV:%.*]] = add <2 x i64> [[BROADCAST_SPLAT3]], <i64 0, i64 1>
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule <2 x i64> [[VEC_IV]], splat (i64 16)
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr [[PTR_N]], align 4
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <2 x i64> poison, i64 [[TMP2]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <2 x i64> [[BROADCAST_SPLATINSERT1]], <2 x i64> poison, <2 x i32> zeroinitializer
@@ -45,7 +47,6 @@ define void @constant_fold_commutative_and(ptr %ptr.n, ptr noalias %p, i1 %cond)
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE5]]
 ; CHECK:       [[PRED_STORE_CONTINUE5]]:
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <2 x i8> [[VEC_IND]], splat (i8 2)
 ; CHECK-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT]], 18
 ; CHECK-NEXT:    br i1 [[TMP15]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:

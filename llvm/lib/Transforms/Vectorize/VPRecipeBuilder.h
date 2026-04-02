@@ -106,6 +106,9 @@ public:
     return Ingredient2Recipe[I];
   }
 
+  /// Return true if a recipe was created for the given ingredient.
+  bool hasRecipe(Instruction *I) const { return Ingredient2Recipe.contains(I); }
+
   /// Build a VPReplicationRecipe for \p VPI. If it is predicated, add the mask
   /// as last operand. Range.End may be decreased to ensure same recipe behavior
   /// from \p Range.Start to \p Range.End.

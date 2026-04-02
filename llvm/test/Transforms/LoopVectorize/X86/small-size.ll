@@ -80,7 +80,9 @@ define void @example2(i32 %n, i32 %x) optsize {
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE6:%.*]] ]
-; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[PRED_STORE_CONTINUE6]] ]
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <4 x i64> poison, i64 [[INDEX]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT1]], <4 x i64> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[VEC_IND:%.*]] = or disjoint <4 x i64> [[BROADCAST_SPLAT2]], <i64 0, i64 1, i64 2, i64 3>
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ule <4 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x i1> [[TMP3]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP4]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
@@ -91,30 +93,29 @@ define void @example2(i32 %n, i32 %x) optsize {
 ; CHECK:       pred.store.continue:
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i1> [[TMP3]], i64 1
 ; CHECK-NEXT:    br i1 [[TMP6]], label [[PRED_STORE_IF1:%.*]], label [[PRED_STORE_CONTINUE2:%.*]]
-; CHECK:       pred.store.if1:
+; CHECK:       pred.store.if3:
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr [4 x i8], ptr @b, i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[TMP7]], i64 4
 ; CHECK-NEXT:    store i32 [[X]], ptr [[TMP8]], align 4
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE2]]
-; CHECK:       pred.store.continue2:
+; CHECK:       pred.store.continue4:
 ; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x i1> [[TMP3]], i64 2
 ; CHECK-NEXT:    br i1 [[TMP9]], label [[PRED_STORE_IF3:%.*]], label [[PRED_STORE_CONTINUE4:%.*]]
-; CHECK:       pred.store.if3:
+; CHECK:       pred.store.if5:
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr [4 x i8], ptr @b, i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[TMP10]], i64 8
 ; CHECK-NEXT:    store i32 [[X]], ptr [[TMP11]], align 4
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE4]]
-; CHECK:       pred.store.continue4:
+; CHECK:       pred.store.continue6:
 ; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <4 x i1> [[TMP3]], i64 3
 ; CHECK-NEXT:    br i1 [[TMP12]], label [[PRED_STORE_IF5:%.*]], label [[PRED_STORE_CONTINUE6]]
-; CHECK:       pred.store.if5:
+; CHECK:       pred.store.if7:
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr [4 x i8], ptr @b, i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr i8, ptr [[TMP13]], i64 12
 ; CHECK-NEXT:    store i32 [[X]], ptr [[TMP14]], align 4
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE6]]
-; CHECK:       pred.store.continue6:
+; CHECK:       pred.store.continue8:
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
 ; CHECK-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP15]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       middle.block:
@@ -128,7 +129,7 @@ define void @example2(i32 %n, i32 %x) optsize {
 ; CHECK-NEXT:    br i1 [[TMP16]], label [[DOT_CRIT_EDGE:%.*]], label [[DOTLR_PH_PREHEADER:%.*]]
 ; CHECK:       .lr.ph.preheader:
 ; CHECK-NEXT:    br label [[VECTOR_PH8:%.*]]
-; CHECK:       vector.ph7:
+; CHECK:       vector.ph9:
 ; CHECK-NEXT:    [[TMP17:%.*]] = zext i32 [[N]] to i64
 ; CHECK-NEXT:    [[N_RND_UP10:%.*]] = add nuw nsw i64 [[TMP17]], 3
 ; CHECK-NEXT:    [[N_VEC12:%.*]] = and i64 [[N_RND_UP10]], 8589934588
@@ -136,7 +137,7 @@ define void @example2(i32 %n, i32 %x) optsize {
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT19:%.*]] = insertelement <4 x i64> poison, i64 [[TRIP_COUNT_MINUS_114]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT20:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT19]], <4 x i64> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY13:%.*]]
-; CHECK:       vector.body14:
+; CHECK:       vector.body16:
 ; CHECK-NEXT:    [[INDEX16:%.*]] = phi i64 [ 0, [[VECTOR_PH8]] ], [ [[INDEX_NEXT29:%.*]], [[PRED_STORE_CONTINUE26:%.*]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 [[I_0_LCSSA]], [[INDEX16]]
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT17:%.*]] = insertelement <4 x i64> poison, i64 [[INDEX16]], i64 0
@@ -145,7 +146,7 @@ define void @example2(i32 %n, i32 %x) optsize {
 ; CHECK-NEXT:    [[TMP18:%.*]] = icmp ule <4 x i64> [[VEC_IV]], [[BROADCAST_SPLAT20]]
 ; CHECK-NEXT:    [[TMP19:%.*]] = extractelement <4 x i1> [[TMP18]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP19]], label [[PRED_STORE_IF19:%.*]], label [[PRED_STORE_CONTINUE20:%.*]]
-; CHECK:       pred.store.if18:
+; CHECK:       pred.store.if21:
 ; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds [4 x i8], ptr @b, i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[TMP21:%.*]] = load i32, ptr [[TMP20]], align 4
 ; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr inbounds [4 x i8], ptr @c, i64 [[OFFSET_IDX]]
@@ -154,10 +155,10 @@ define void @example2(i32 %n, i32 %x) optsize {
 ; CHECK-NEXT:    [[TMP25:%.*]] = and i32 [[TMP23]], [[TMP21]]
 ; CHECK-NEXT:    store i32 [[TMP25]], ptr [[TMP24]], align 4
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE20]]
-; CHECK:       pred.store.continue19:
+; CHECK:       pred.store.continue22:
 ; CHECK-NEXT:    [[TMP26:%.*]] = extractelement <4 x i1> [[TMP18]], i64 1
 ; CHECK-NEXT:    br i1 [[TMP26]], label [[PRED_STORE_IF21:%.*]], label [[PRED_STORE_CONTINUE22:%.*]]
-; CHECK:       pred.store.if20:
+; CHECK:       pred.store.if23:
 ; CHECK-NEXT:    [[TMP27:%.*]] = add i64 [[OFFSET_IDX]], 1
 ; CHECK-NEXT:    [[TMP28:%.*]] = getelementptr inbounds [4 x i8], ptr @b, i64 [[TMP27]]
 ; CHECK-NEXT:    [[TMP29:%.*]] = load i32, ptr [[TMP28]], align 4
@@ -167,10 +168,10 @@ define void @example2(i32 %n, i32 %x) optsize {
 ; CHECK-NEXT:    [[TMP33:%.*]] = and i32 [[TMP31]], [[TMP29]]
 ; CHECK-NEXT:    store i32 [[TMP33]], ptr [[TMP32]], align 4
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE22]]
-; CHECK:       pred.store.continue21:
+; CHECK:       pred.store.continue24:
 ; CHECK-NEXT:    [[TMP34:%.*]] = extractelement <4 x i1> [[TMP18]], i64 2
 ; CHECK-NEXT:    br i1 [[TMP34]], label [[PRED_STORE_IF23:%.*]], label [[PRED_STORE_CONTINUE24:%.*]]
-; CHECK:       pred.store.if22:
+; CHECK:       pred.store.if25:
 ; CHECK-NEXT:    [[TMP35:%.*]] = add i64 [[OFFSET_IDX]], 2
 ; CHECK-NEXT:    [[TMP36:%.*]] = getelementptr inbounds [4 x i8], ptr @b, i64 [[TMP35]]
 ; CHECK-NEXT:    [[TMP37:%.*]] = load i32, ptr [[TMP36]], align 4
@@ -180,10 +181,10 @@ define void @example2(i32 %n, i32 %x) optsize {
 ; CHECK-NEXT:    [[TMP41:%.*]] = and i32 [[TMP39]], [[TMP37]]
 ; CHECK-NEXT:    store i32 [[TMP41]], ptr [[TMP40]], align 4
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE24]]
-; CHECK:       pred.store.continue23:
+; CHECK:       pred.store.continue26:
 ; CHECK-NEXT:    [[TMP42:%.*]] = extractelement <4 x i1> [[TMP18]], i64 3
-; CHECK-NEXT:    br i1 [[TMP42]], label [[PRED_STORE_IF24:%.*]], label [[PRED_STORE_CONTINUE26]]
-; CHECK:       pred.store.if24:
+; CHECK-NEXT:    br i1 [[TMP42]], label [[PRED_STORE_IF25:%.*]], label [[PRED_STORE_CONTINUE26]]
+; CHECK:       pred.store.if27:
 ; CHECK-NEXT:    [[TMP43:%.*]] = add i64 [[OFFSET_IDX]], 3
 ; CHECK-NEXT:    [[TMP44:%.*]] = getelementptr inbounds [4 x i8], ptr @b, i64 [[TMP43]]
 ; CHECK-NEXT:    [[TMP45:%.*]] = load i32, ptr [[TMP44]], align 4
@@ -193,11 +194,11 @@ define void @example2(i32 %n, i32 %x) optsize {
 ; CHECK-NEXT:    [[TMP49:%.*]] = and i32 [[TMP47]], [[TMP45]]
 ; CHECK-NEXT:    store i32 [[TMP49]], ptr [[TMP48]], align 4
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE26]]
-; CHECK:       pred.store.continue25:
+; CHECK:       pred.store.continue28:
 ; CHECK-NEXT:    [[INDEX_NEXT29]] = add nuw i64 [[INDEX16]], 4
 ; CHECK-NEXT:    [[TMP50:%.*]] = icmp eq i64 [[INDEX_NEXT29]], [[N_VEC12]]
-; CHECK-NEXT:    br i1 [[TMP50]], label [[MIDDLE_BLOCK27:%.*]], label [[VECTOR_BODY13]], !llvm.loop [[LOOP4:![0-9]+]]
-; CHECK:       middle.block27:
+; CHECK-NEXT:    br i1 [[TMP50]], label [[MIDDLE_BLOCK30:%.*]], label [[VECTOR_BODY13]], !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK:       middle.block30:
 ; CHECK-NEXT:    br label [[DOTLR_PH1:%.*]]
 ; CHECK:       ._crit_edge.loopexit:
 ; CHECK-NEXT:    br label [[DOT_CRIT_EDGE]]
@@ -529,7 +530,6 @@ define i64 @example23d(ptr noalias nocapture %src, ptr noalias nocapture %dst) o
 ; CHECK-NEXT:    br label [[TMP1:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE14:%.*]] ]
-; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i16> [ <i16 0, i16 1, i16 2, i16 3>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[PRED_STORE_CONTINUE14]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[SRC:%.*]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[NEXT_GEP1:%.*]] = getelementptr i8, ptr [[TMP9]], i64 2
@@ -544,7 +544,10 @@ define i64 @example23d(ptr noalias nocapture %src, ptr noalias nocapture %dst) o
 ; CHECK-NEXT:    [[NEXT_GEP7:%.*]] = getelementptr i8, ptr [[TMP32]], i64 8
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[DST]], i64 [[OFFSET_IDX4]]
 ; CHECK-NEXT:    [[NEXT_GEP8:%.*]] = getelementptr i8, ptr [[TMP6]], i64 12
-; CHECK-NEXT:    [[TMP33:%.*]] = icmp ult <4 x i16> [[VEC_IND]], splat (i16 257)
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[INDEX]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[VEC_IV:%.*]] = or disjoint <4 x i64> [[BROADCAST_SPLAT]], <i64 0, i64 1, i64 2, i64 3>
+; CHECK-NEXT:    [[TMP33:%.*]] = icmp ult <4 x i64> [[VEC_IV]], splat (i64 257)
 ; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <4 x i1> [[TMP33]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP8]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; CHECK:       pred.store.if:
@@ -584,7 +587,6 @@ define i64 @example23d(ptr noalias nocapture %src, ptr noalias nocapture %dst) o
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE14]]
 ; CHECK:       pred.store.continue14:
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i16> [[VEC_IND]], splat (i16 4)
 ; CHECK-NEXT:    [[TMP24:%.*]] = icmp eq i64 [[INDEX_NEXT]], 260
 ; CHECK-NEXT:    br i1 [[TMP24]], label [[MIDDLE_BLOCK:%.*]], label [[TMP1]], !llvm.loop [[LOOP8:![0-9]+]]
 ; CHECK:       middle.block:

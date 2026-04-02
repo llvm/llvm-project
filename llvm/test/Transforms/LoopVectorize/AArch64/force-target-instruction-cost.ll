@@ -599,9 +599,11 @@ define void @forced_scalar_instr(ptr %gep.dst) {
 ; COMMON-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; COMMON:       [[VECTOR_BODY]]:
 ; COMMON-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE6:.*]] ]
-; COMMON-NEXT:    [[VEC_IND:%.*]] = phi <4 x i8> [ <i8 0, i8 1, i8 2, i8 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[PRED_STORE_CONTINUE6]] ]
 ; COMMON-NEXT:    [[TMP0:%.*]] = trunc i64 [[INDEX]] to i32
-; COMMON-NEXT:    [[TMP1:%.*]] = icmp ule <4 x i8> [[VEC_IND]], splat (i8 4)
+; COMMON-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[INDEX]], i64 0
+; COMMON-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
+; COMMON-NEXT:    [[VEC_IV:%.*]] = add <4 x i64> [[BROADCAST_SPLAT]], <i64 0, i64 1, i64 2, i64 3>
+; COMMON-NEXT:    [[TMP1:%.*]] = icmp ule <4 x i64> [[VEC_IV]], splat (i64 4)
 ; COMMON-NEXT:    [[TMP2:%.*]] = extractelement <4 x i1> [[TMP1]], i32 0
 ; COMMON-NEXT:    br i1 [[TMP2]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; COMMON:       [[PRED_STORE_IF]]:
@@ -641,7 +643,6 @@ define void @forced_scalar_instr(ptr %gep.dst) {
 ; COMMON-NEXT:    br label %[[PRED_STORE_CONTINUE6]]
 ; COMMON:       [[PRED_STORE_CONTINUE6]]:
 ; COMMON-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; COMMON-NEXT:    [[VEC_IND_NEXT]] = add <4 x i8> [[VEC_IND]], splat (i8 4)
 ; COMMON-NEXT:    [[TMP22:%.*]] = icmp eq i64 [[INDEX_NEXT]], 8
 ; COMMON-NEXT:    br i1 [[TMP22]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP19:![0-9]+]]
 ; COMMON:       [[MIDDLE_BLOCK]]:

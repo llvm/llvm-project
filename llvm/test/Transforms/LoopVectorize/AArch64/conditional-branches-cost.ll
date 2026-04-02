@@ -291,8 +291,10 @@ define void @latch_branch_cost(ptr %dst) {
 ; PRED-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; PRED:       [[VECTOR_BODY]]:
 ; PRED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE14:.*]] ]
-; PRED-NEXT:    [[VEC_IND:%.*]] = phi <8 x i8> [ <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[PRED_STORE_CONTINUE14]] ]
-; PRED-NEXT:    [[TMP0:%.*]] = icmp ule <8 x i8> [[VEC_IND]], splat (i8 99)
+; PRED-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i64> poison, i64 [[INDEX]], i64 0
+; PRED-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x i64> [[BROADCAST_SPLATINSERT]], <8 x i64> poison, <8 x i32> zeroinitializer
+; PRED-NEXT:    [[VEC_IV:%.*]] = add <8 x i64> [[BROADCAST_SPLAT]], <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7>
+; PRED-NEXT:    [[TMP0:%.*]] = icmp ule <8 x i64> [[VEC_IV]], splat (i64 99)
 ; PRED-NEXT:    [[TMP1:%.*]] = extractelement <8 x i1> [[TMP0]], i32 0
 ; PRED-NEXT:    br i1 [[TMP1]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; PRED:       [[PRED_STORE_IF]]:
@@ -357,7 +359,6 @@ define void @latch_branch_cost(ptr %dst) {
 ; PRED-NEXT:    br label %[[PRED_STORE_CONTINUE14]]
 ; PRED:       [[PRED_STORE_CONTINUE14]]:
 ; PRED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
-; PRED-NEXT:    [[VEC_IND_NEXT]] = add <8 x i8> [[VEC_IND]], splat (i8 8)
 ; PRED-NEXT:    [[TMP25:%.*]] = icmp eq i64 [[INDEX_NEXT]], 104
 ; PRED-NEXT:    br i1 [[TMP25]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; PRED:       [[MIDDLE_BLOCK]]:
