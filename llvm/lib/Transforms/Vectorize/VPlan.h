@@ -4161,6 +4161,7 @@ struct CastInfo<VPPhiAccessors, VPRecipeBase *>
     // TODO: include VPPredInstPHIRecipe too, once it implements VPPhiAccessors.
     return isa<VPPhi, VPIRPhi, VPWidenPHIRecipe, VPHeaderPHIRecipe>(R);
   }
+
   /// Used by cast.
   static inline VPPhiAccessors *doCast(VPRecipeBase *R) {
     switch (R->getVPRecipeID()) {
@@ -4174,6 +4175,7 @@ struct CastInfo<VPPhiAccessors, VPRecipeBase *>
       return cast<VPHeaderPHIRecipe>(R);
     }
   }
+
   /// Used by inherited doCastIfPossible to dyn_cast.
   static inline VPPhiAccessors *castFailed() { return nullptr; }
 };
