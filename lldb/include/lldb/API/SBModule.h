@@ -104,6 +104,8 @@ public:
 
   const uint8_t *GetUUIDBytes() const;
 
+  size_t GetUUIDLength() const;
+
   const char *GetUUIDString() const;
 
   bool operator==(const lldb::SBModule &rhs) const;

@@ -239,6 +239,9 @@ Changes to the LLVM tools
 Changes to LLDB
 ---------------
 
+* `SBModule::GetUUIDBytes` and `SBModuleSpec::GetUUIDBytes` now return `bytes` in python and `string` in lua.
+* You can now pass `bytes` or `bytesarray` to `SBModuleSpec::SetUUIDBytes` in python and `string` in lua.
+
 ### Deprecated APIs
 
 * ``SBTarget::GetDataByteSize()``, ``SBTarget::GetCodeByteSize()``, and ``SBSection::GetTargetByteSize()``

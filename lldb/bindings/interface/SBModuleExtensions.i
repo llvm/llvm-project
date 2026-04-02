@@ -236,4 +236,10 @@ STRING_EXTENSION_OUTSIDE(SBModule)
 
     %}
 #endif
+
+    UUIDSpan GetUUIDBytes() {
+        return UUIDSpan{ $self->GetUUIDBytes(), $self->GetUUIDLength() };
+    }
 }
+// ignore the original implementation.
+%ignore lldb::SBModule::GetUUIDBytes;

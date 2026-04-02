@@ -39,12 +39,7 @@ class LocateModuleCallbackTestCase(TestBase):
     def check_module_spec(self, module_spec: lldb.SBModuleSpec):
         self.assertEqual(
             MODULE_UUID.replace("-", ""),
-            ctypes.string_at(
-                int(module_spec.GetUUIDBytes()),
-                module_spec.GetUUIDLength(),
-            )
-            .hex()
-            .upper(),
+            module_spec.GetUUIDBytes().hex().upper(),
         )
 
         self.assertEqual(MODULE_TRIPLE, module_spec.GetTriple())
@@ -60,6 +55,8 @@ class LocateModuleCallbackTestCase(TestBase):
             MODULE_UUID,
             module.GetUUIDString(),
         )
+        uuid_bytes = module.GetUUIDBytes()
+        self.assertEqual(MODULE_UUID.replace("-", ""), uuid_bytes.hex().upper())
 
         self.assertEqual(MODULE_RESOLVED_TRIPLE, module.GetTriple())
 
