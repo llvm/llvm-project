@@ -30,6 +30,8 @@ public:
 private:
   MCSymbol *CurrentFnPPA1Sym;     // PPA1 Symbol.
   MCSymbol *CurrentFnEPMarkerSym; // Entry Point Marker.
+  MCSymbol *EndOfPrologSym;       // Symbol marking the end of the prolog.
+  MCSymbol *StackUpdateSym;       // Symbol marking the stack updating instr.
   MCSymbol *PPA2Sym;
 
   SystemZTargetStreamer *getTargetStreamer() {

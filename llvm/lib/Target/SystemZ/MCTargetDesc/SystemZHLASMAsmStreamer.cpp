@@ -23,6 +23,11 @@ void SystemZHLASMAsmStreamer::visitUsedSymbol(const MCSymbol &Sym) {
   Assembler->registerSymbol(Sym);
 }
 
+void SystemZHLASMAsmStreamer::emitRawComment(const Twine &T, bool TabPrefix) {
+  OS << MAI->getCommentString() << T;
+  EmitEOL();
+}
+
 void SystemZHLASMAsmStreamer::EmitEOL() {
   // Comments are emitted on a new line before the instruction.
   if (IsVerboseAsm)
