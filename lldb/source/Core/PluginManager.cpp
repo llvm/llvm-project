@@ -2492,14 +2492,14 @@ bool PluginManager::SetInstrumentationRuntimePluginEnabled(llvm::StringRef name,
   if (!GetInstrumentationRuntimeInstances().SetInstanceEnabled(name, enable))
     return false;
 
-  // Notify all registered processes to enable/disable the plugin.
+  // Find the `InstrumentationRuntimeType` from the plugin name
   auto type_cb = GetInstrumentationRuntimeInstances().GetTypeCallbackForName(
       name, /*enabled_only=*/false);
   if (!type_cb)
     return false;
   auto instrumentation_ty = type_cb();
 
-  // Notify all active processes to enable/disable the plugin.
+  // Notify all alive processes to enable/disable the plugin
   bool success = true;
   for (size_t di = 0; di < Debugger::GetNumDebuggers(); ++di) {
     DebuggerSP debugger_sp = Debugger::GetDebuggerAtIndex(di);
