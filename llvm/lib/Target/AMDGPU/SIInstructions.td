@@ -2044,9 +2044,17 @@ let SubtargetPredicate = UseRealTrue16Insts in
 def : ClampPat<V_MAX_F16_t16_e64, f16>;
 let SubtargetPredicate = UseFakeTrue16Insts in
 def : ClampPat<V_MAX_F16_fake16_e64, f16>;
-// FIXME-TRUE16: Pseudo expansion of this won't work with True16.
 let True16Predicate = UseFakeTrue16Insts in
 def : ClampPat<V_MAX_BF16_PSEUDO_e64, bf16>;
+let True16Predicate = UseRealTrue16Insts,
+    SubtargetPredicate = HasBF16PackedInsts in
+  def : GCNPat<(bf16 (AMDGPUclamp (VOP3Mods bf16:$src0, i32:$src0_modifiers))),
+  (EXTRACT_SUBREG
+    (V_PK_MAX_NUM_BF16
+      $src0_modifiers, (REG_SEQUENCE VGPR_32, $src0, lo16, (bf16 (IMPLICIT_DEF)), hi16),
+      $src0_modifiers, (REG_SEQUENCE VGPR_32, $src0, lo16, (bf16 (IMPLICIT_DEF)), hi16),
+      DSTCLAMP.ENABLE), lo16)
+  >;
 
 let SubtargetPredicate = HasVOP3PInsts in {
 def : GCNPat <
