@@ -120,6 +120,125 @@ define i1 @usubo_eq_constant1_op1_i32(i32 %x, ptr %p) nounwind {
   ret i1 %ov
 }
 
+; Borrow chain: or(icmp ult X, Y, and(icmp eq X, Y, carry_in)) -> cmp + sbcs.
+; See https://github.com/llvm/llvm-project/issues/106118.
+
+define i1 @subcarry_ult_2x64(i64 %x0, i64 %x1, i64 %y0, i64 %y1) nounwind {
+; CHECK-LABEL: subcarry_ult_2x64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmp x0, x2
+; CHECK-NEXT:    cset w8, lo
+; CHECK-NEXT:    cmp x1, x3
+; CHECK-NEXT:    csel w8, wzr, w8, ne
+; CHECK-NEXT:    csinc w0, w8, wzr, hs
+; CHECK-NEXT:    ret
+  %b0 = icmp ult i64 %x0, %y0
+  %b1 = icmp ult i64 %x1, %y1
+  %e1 = icmp eq i64 %x1, %y1
+  %bp = and i1 %b0, %e1
+  %br = or i1 %b1, %bp
+  ret i1 %br
+}
+
+; Commuted eq operands: icmp eq Y, X instead of icmp eq X, Y.
+define i1 @subcarry_ult_2x64_commuted_eq(i64 %x0, i64 %x1, i64 %y0, i64 %y1) nounwind {
+; CHECK-LABEL: subcarry_ult_2x64_commuted_eq:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmp x0, x2
+; CHECK-NEXT:    ccmp x3, x1, #0, lo
+; CHECK-NEXT:    ccmp x1, x3, #0, ne
+; CHECK-NEXT:    cset w0, lo
+; CHECK-NEXT:    ret
+  %b0 = icmp ult i64 %x0, %y0
+  %b1 = icmp ult i64 %x1, %y1
+  %e1 = icmp eq i64 %y1, %x1
+  %bp = and i1 %b0, %e1
+  %br = or i1 %b1, %bp
+  ret i1 %br
+}
+
+define i1 @subcarry_ult_3x64(i64 %x0, i64 %x1, i64 %x2, i64 %y0, i64 %y1, i64 %y2) nounwind {
+; CHECK-LABEL: subcarry_ult_3x64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmp x0, x3
+; CHECK-NEXT:    cset w8, lo
+; CHECK-NEXT:    cmp x1, x4
+; CHECK-NEXT:    csel w8, wzr, w8, ne
+; CHECK-NEXT:    csinc w8, w8, wzr, hs
+; CHECK-NEXT:    cmp x2, x5
+; CHECK-NEXT:    csel w8, wzr, w8, ne
+; CHECK-NEXT:    csinc w0, w8, wzr, hs
+; CHECK-NEXT:    ret
+  %b0 = icmp ult i64 %x0, %y0
+  %b1 = icmp ult i64 %x1, %y1
+  %e1 = icmp eq i64 %x1, %y1
+  %bp1 = and i1 %b0, %e1
+  %br1 = or i1 %b1, %bp1
+  %b2 = icmp ult i64 %x2, %y2
+  %e2 = icmp eq i64 %x2, %y2
+  %bp2 = and i1 %br1, %e2
+  %br2 = or i1 %b2, %bp2
+  ret i1 %br2
+}
+
+; Unsigned less than of two 2x128 integers combined into a borrow chain.
+define i1 @subcarry_ult_2x128(i128 %x0, i128 %x1, i128 %y0, i128 %y1) nounwind {
+; CHECK-LABEL: subcarry_ult_2x128:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmp x2, x6
+; CHECK-NEXT:    cset w8, eq
+; CHECK-NEXT:    cmp x3, x7
+; CHECK-NEXT:    csel w8, wzr, w8, ne
+; CHECK-NEXT:    cmp x0, x4
+; CHECK-NEXT:    sbcs xzr, x1, x5
+; CHECK-NEXT:    csel w8, wzr, w8, hs
+; CHECK-NEXT:    cmp x2, x6
+; CHECK-NEXT:    sbcs xzr, x3, x7
+; CHECK-NEXT:    csinc w0, w8, wzr, hs
+; CHECK-NEXT:    ret
+  %b0 = icmp ult i128 %x0, %y0
+  %b1 = icmp ult i128 %x1, %y1
+  %e1 = icmp eq i128 %x1, %y1
+  %bp = and i1 %b0, %e1
+  %br = or i1 %b1, %bp
+  ret i1 %br
+}
+
+; Negative test: icmp eq compares different operands than icmp ult.
+define i1 @no_subcarry_different_ops(i64 %x0, i64 %x1, i64 %y0, i64 %y1) nounwind {
+; CHECK-LABEL: no_subcarry_different_ops:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmp x0, x2
+; CHECK-NEXT:    ccmp x1, x0, #0, lo
+; CHECK-NEXT:    ccmp x1, x3, #0, ne
+; CHECK-NEXT:    cset w0, lo
+; CHECK-NEXT:    ret
+  %b0 = icmp ult i64 %x0, %y0
+  %b1 = icmp ult i64 %x1, %y1
+  %e1 = icmp eq i64 %x1, %x0
+  %bp = and i1 %b0, %e1
+  %br = or i1 %b1, %bp
+  ret i1 %br
+}
+
+; Negative test: icmp slt instead of icmp ult.
+define i1 @no_subcarry_signed(i64 %x0, i64 %x1, i64 %y0, i64 %y1) nounwind {
+; CHECK-LABEL: no_subcarry_signed:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmp x0, x2
+; CHECK-NEXT:    cset w8, lo
+; CHECK-NEXT:    cmp x1, x3
+; CHECK-NEXT:    csel w8, wzr, w8, ne
+; CHECK-NEXT:    csinc w0, w8, wzr, ge
+; CHECK-NEXT:    ret
+  %b0 = icmp ult i64 %x0, %y0
+  %b1 = icmp slt i64 %x1, %y1
+  %e1 = icmp eq i64 %x1, %y1
+  %bp = and i1 %b0, %e1
+  %br = or i1 %b1, %bp
+  ret i1 %br
+}
+
 ; Verify insertion point for multi-BB.
 
 declare void @call(i1)
@@ -127,12 +246,12 @@ declare void @call(i1)
 define i1 @usubo_ult_sub_dominates_i64(i64 %x, i64 %y, ptr %p, i1 %cond) nounwind {
 ; CHECK-LABEL: usubo_ult_sub_dominates_i64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    tbz w3, #0, .LBB7_2
+; CHECK-NEXT:    tbz w3, #0, .LBB13_2
 ; CHECK-NEXT:  // %bb.1: // %t
 ; CHECK-NEXT:    subs x8, x0, x1
 ; CHECK-NEXT:    cset w3, lo
 ; CHECK-NEXT:    str x8, [x2]
-; CHECK-NEXT:  .LBB7_2: // %common.ret
+; CHECK-NEXT:  .LBB13_2: // %common.ret
 ; CHECK-NEXT:    and w0, w3, #0x1
 ; CHECK-NEXT:    ret
 entry:
@@ -158,7 +277,7 @@ define i1 @usubo_ult_cmp_dominates_i64(i64 %x, i64 %y, ptr %p, i1 %cond) nounwin
 ; CHECK-NEXT:    stp x20, x19, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    mov w19, w3
 ; CHECK-NEXT:    stp x22, x21, [sp, #16] // 16-byte Folded Spill
-; CHECK-NEXT:    tbz w3, #0, .LBB8_3
+; CHECK-NEXT:    tbz w3, #0, .LBB14_3
 ; CHECK-NEXT:  // %bb.1: // %t
 ; CHECK-NEXT:    cmp x0, x1
 ; CHECK-NEXT:    mov x22, x0
@@ -168,11 +287,11 @@ define i1 @usubo_ult_cmp_dominates_i64(i64 %x, i64 %y, ptr %p, i1 %cond) nounwin
 ; CHECK-NEXT:    mov w0, w21
 ; CHECK-NEXT:    bl call
 ; CHECK-NEXT:    subs x8, x22, x23
-; CHECK-NEXT:    b.hs .LBB8_3
+; CHECK-NEXT:    b.hs .LBB14_3
 ; CHECK-NEXT:  // %bb.2: // %end
 ; CHECK-NEXT:    mov w19, w21
 ; CHECK-NEXT:    str x8, [x20]
-; CHECK-NEXT:  .LBB8_3: // %common.ret
+; CHECK-NEXT:  .LBB14_3: // %common.ret
 ; CHECK-NEXT:    and w0, w19, #0x1
 ; CHECK-NEXT:    ldp x20, x19, [sp, #32] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp x22, x21, [sp, #16] // 16-byte Folded Reload
