@@ -57,7 +57,6 @@ class TestFrameVarDILAssignment(TestBase):
         self.expect("frame variable 'f = 3.5f'", substrs=["f = 3.5"])
         self.expect_var_path("f", value="3.5")
 
-
         # Assigning to an enum
         self.expect(
             "frame variable 'i = eOne'",
@@ -75,13 +74,9 @@ class TestFrameVarDILAssignment(TestBase):
         )
 
         if Is32Bit:
-            self.expect(
-                "frame variable 'p = (int*)12'", substrs=["p = 0x0000000c"]
-            )
+            self.expect("frame variable 'p = (int*)12'", substrs=["p = 0x0000000c"])
             self.expect_var_path("p", value="0x0000000c")
-            self.expect(
-                "frame variable 'p = 0'", substrs=["p = 0x00000000"]
-            )
+            self.expect("frame variable 'p = 0'", substrs=["p = 0x00000000"])
         else:
             self.expect(
                 "frame variable 'p = (int*)12'", substrs=["p = 0x000000000000000c"]
@@ -94,7 +89,7 @@ class TestFrameVarDILAssignment(TestBase):
         self.expect(
             "frame variable 'p = farr'",
             error=True,
-            substrs=["illegal argument: new value should be of the same size"]
+            substrs=["illegal argument: new value should be of the same size"],
         )
 
         # Assigning to a bool
@@ -104,7 +99,6 @@ class TestFrameVarDILAssignment(TestBase):
         self.expect_var_path("(int)b", value="")
         self.expect("frame variable 'b = (bool)0'", substrs=["b = false"])
         self.expect_var_path("b", value="false")
-
 
         # Assigning to an array
         self.expect("frame variable 'farr'", substrs=["([0] = 1, [1] = 2)"])
