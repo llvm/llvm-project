@@ -24,6 +24,7 @@
 #include "llvm/Analysis/InlineCost.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/DebugLoc.h"
+#include "llvm/IR/FMF.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
@@ -87,6 +88,8 @@ struct ClonedCodeInfo {
   /// may be dangling, it is only intended to be used via isSimplified(), to
   /// check whether the main VMap mapping involves simplification or not.
   DenseMap<const Value *, const Value *> OrigVMap;
+
+  FastMathFlags FMFs;
 
   ClonedCodeInfo() = default;
 
