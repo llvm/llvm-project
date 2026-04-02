@@ -11,7 +11,8 @@
 // CHECK000-NOT:  {{.*}}basic_linux_libcxx_tree{{/|\\\\}}usr{{/|\\\\}}lib{{/|\\\\}}crti.o
 // CHECK000:      "-dynamic-linker={{/|\\\\}}lib{{/|\\\\}}ld-musl-hexagon.so.1"
 // CHECK000:      "{{.*}}basic_linux_libcxx_tree{{/|\\\\}}usr{{/|\\\\}}lib{{/|\\\\}}crt1.o"
-// CHECK000:      "-lc" "-lclang_rt.builtins-hexagon"
+// CHECK000:      "-lc" "-lclang_rt.builtins"
+// CHECK000:      "-L{{.*}}/lib/clang/{{[^"]*}}/lib/hexagon-unknown-linux-musl"
 // -----------------------------------------------------------------------------
 // Passing --musl --shared
 // -----------------------------------------------------------------------------
@@ -21,7 +22,8 @@
 // RUN:   --sysroot=%S/Inputs/basic_linux_libcxx_tree -shared %s 2>&1 | FileCheck -check-prefix=CHECK001 %s
 // CHECK001-NOT:    -dynamic-linker={{/|\\\\}}lib{{/|\\\\}}ld-musl-hexagon.so.1
 // CHECK001:        "{{.*}}basic_linux_libcxx_tree{{/|\\\\}}usr{{/|\\\\}}lib{{/|\\\\}}crti.o"
-// CHECK001:        "-lc" "-lclang_rt.builtins-hexagon"
+// CHECK001:        "-lc" "-lclang_rt.builtins"
+// CHECK001:        "-L{{.*}}/lib/clang/{{[^"]*}}/lib/hexagon-unknown-linux-musl"
 // CHECK001-NOT:    {{.*}}basic_linux_libcxx_tree{{/|\\\\}}usr{{/|\\\\}}lib{{/|\\\\}}crt1.o
 // -----------------------------------------------------------------------------
 // Passing --musl -nostdlib
@@ -34,7 +36,8 @@
 // CHECK002-NOT:   {{.*}}basic_linux_libcxx_tree{{/|\\\\}}usr{{/|\\\\}}lib{{/|\\\\}}crti.o
 // CHECK002-NOT:   {{.*}}basic_linux_libcxx_tree{{/|\\\\}}usr{{/|\\\\}}lib{{/|\\\\}}crt1.o
 // CHECK002-NOT:   "-lc"
-// CHECK002-NOT:   "-lclang_rt.builtins-hexagon"
+// CHECK002-NOT:   "-lclang_rt.builtins"
+// CHECK002-NOT:   "-L{{.*}}/lib/clang/{{[^"]*}}/lib/hexagon-unknown-linux-musl"
 // -----------------------------------------------------------------------------
 // Passing --musl -nostartfiles
 // -----------------------------------------------------------------------------
@@ -45,7 +48,8 @@
 // CHECK003:       "-dynamic-linker={{/|\\\\}}lib{{/|\\\\}}ld-musl-hexagon.so.1"
 // CHECK003-NOT:   {{.*}}basic_linux_libcxx_tree{{/|\\\\}}usr{{/|\\\\}}lib{{/|\\\\}}Scrt1.o
 // CHECK003-NOT:   {{.*}}basic_linux_libcxx_tree{{/|\\\\}}usr{{/|\\\\}}lib{{/|\\\\}}crt1.o
-// CHECK003:       "-lc" "-lclang_rt.builtins-hexagon"
+// CHECK003:       "-lc" "-lclang_rt.builtins"
+// CHECK003:       "-L{{.*}}/lib/clang/{{[^"]*}}/lib/hexagon-unknown-linux-musl"
 // -----------------------------------------------------------------------------
 // Passing --musl -nodefaultlibs
 // -----------------------------------------------------------------------------
@@ -56,7 +60,8 @@
 // CHECK004:       "-dynamic-linker={{/|\\\\}}lib{{/|\\\\}}ld-musl-hexagon.so.1"
 // CHECK004:       "{{.*}}basic_linux_libcxx_tree{{/|\\\\}}usr{{/|\\\\}}lib{{/|\\\\}}crt1.o"
 // CHECK004-NOT:   "-lc"
-// CHECK004-NOT:   "-lclang_rt.builtins-hexagon"
+// CHECK004-NOT:   "-lclang_rt.builtins"
+// CHECK004-NOT:   "-L{{.*}}/lib/clang/{{[^"]*}}/lib/hexagon-unknown-linux-musl"
 // -----------------------------------------------------------------------------
 // Passing --musl -nolibc
 // -----------------------------------------------------------------------------
