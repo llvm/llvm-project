@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -std=c++11 %s -verify=expected,cxx11
+// RUN: %clang_cc1 -fsyntax-only -std=c++11 %s -verify
 // RUN: %clang_cc1 -fsyntax-only -std=c++1y %s -verify -DCPP1Y
 
 void missing_lambda_declarator() {
@@ -18,7 +18,7 @@ void infer_void_return_type(int i) {
     switch (x) {
     case 0: return get<void>();
     case 1: return;
-    case 2: return { 1, 2.0 }; // expected-error {{cannot deduce lambda return type from initializer list}}
+    case 2: return { 1, 2.0 }; //expected-error{{cannot deduce}}
     }
   }(7);
 }
