@@ -61,7 +61,7 @@ public:
   Watchpoint(Target &target, lldb::addr_t addr, uint32_t size,
              const CompilerType *type, bool hardware = true);
 
-  ~Watchpoint() override;
+  ~Watchpoint();
 
   bool IsEnabled() const;
 
@@ -70,9 +70,9 @@ public:
   // be used instead.
   void SetEnabled(bool enabled, bool notify = true);
 
-  bool IsHardware() const override;
+  bool IsHardware() const;
 
-  bool ShouldStop(StoppointCallbackContext *context) override;
+  bool ShouldStop(StoppointCallbackContext *context);
 
   bool WatchpointRead() const;
   bool WatchpointWrite() const;
@@ -125,7 +125,7 @@ public:
       lldb::user_id_t break_id, lldb::user_id_t break_loc_id);
 
   void GetDescription(Stream *s, lldb::DescriptionLevel level);
-  void Dump(Stream *s) const override;
+  void Dump(Stream *s) const;
   bool DumpSnapshots(Stream *s, const char *prefix = nullptr) const;
   void DumpWithLevel(Stream *s, lldb::DescriptionLevel description_level) const;
   Target &GetTarget() { return m_target; }

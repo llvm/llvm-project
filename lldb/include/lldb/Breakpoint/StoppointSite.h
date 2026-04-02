@@ -22,11 +22,9 @@ public:
   StoppointSite(lldb::break_id_t bid, lldb::addr_t m_addr,
                 uint32_t byte_size, bool hardware);
 
-  virtual ~StoppointSite() = default;
+  lldb::addr_t GetLoadAddress() const { return m_addr; }
 
-  virtual lldb::addr_t GetLoadAddress() const { return m_addr; }
-
-  virtual void SetLoadAddress(lldb::addr_t addr) { m_addr = addr; }
+  void SetLoadAddress(lldb::addr_t addr) { m_addr = addr; }
 
   uint32_t GetByteSize() const { return m_byte_size; }
 
@@ -35,17 +33,6 @@ public:
   void ResetHitCount() { m_hit_counter.Reset(); }
 
   bool HardwareRequired() const { return m_is_hardware_required; }
-
-  virtual bool IsHardware() const = 0;
-
-  virtual bool ShouldStop(StoppointCallbackContext *context) { return false; };
-
-  virtual bool ShouldStop(StoppointCallbackContext *context,
-                          BreakpointLocationCollection &stopping_bp_locs) {
-    return false;
-  };
-
-  virtual void Dump(Stream* stream) const = 0;
 
   lldb::break_id_t GetID() const { return m_id; }
 
@@ -67,6 +54,8 @@ protected:
 
   /// Number of times this breakpoint/watchpoint has been hit.
   StoppointHitCounter m_hit_counter;
+
+  ~StoppointSite() = default;
 
 private:
   StoppointSite(const StoppointSite &) = delete;

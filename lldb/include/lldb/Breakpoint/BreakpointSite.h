@@ -48,7 +48,7 @@ public:
   typedef lldb::break_id_t SiteID;
   typedef lldb::break_id_t ConstituentID;
 
-  ~BreakpointSite() override;
+  ~BreakpointSite();
 
   // This section manages the breakpoint traps
 
@@ -100,10 +100,10 @@ public:
   /// \return
   ///    \b true if we should stop, \b false otherwise.
   bool ShouldStop(StoppointCallbackContext *context,
-                  BreakpointLocationCollection &stopping_bp_loc) override;
+                  BreakpointLocationCollection &stopping_bp_loc);
 
   /// Standard Dump method
-  void Dump(Stream *s) const override;
+  void Dump(Stream *s) const;
 
   /// The "Constituents" are the breakpoint locations that share this breakpoint
   /// site. The method adds the \a constituent to this breakpoint site's
@@ -198,7 +198,7 @@ public:
   ///     \b false otherwise.
   bool IsInternal() const;
 
-  bool IsHardware() const override {
+  bool IsHardware() const {
     lldbassert(BreakpointSite::Type::eHardware == GetType() ||
                !HardwareRequired());
     return BreakpointSite::Type::eHardware == GetType();
