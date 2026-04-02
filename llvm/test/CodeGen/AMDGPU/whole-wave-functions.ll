@@ -1585,8 +1585,8 @@ define amdgpu_gfx_whole_wave <2 x half> @call_gfx_from_whole_wave(i1 %active, <2
 ; DAGISEL-NEXT:    v_mov_b32_e32 v2, v0
 ; DAGISEL-NEXT:    v_swap_b32 v0, v1
 ; DAGISEL-NEXT:    s_mov_b32 s1, gfx_callee@abs32@hi
-; DAGISEL-NEXT:    s_mov_b32 s0, gfx_callee@abs32@lo
 ; DAGISEL-NEXT:    v_writelane_b32 v40, s4, 0
+; DAGISEL-NEXT:    s_mov_b32 s0, gfx_callee@abs32@lo
 ; DAGISEL-NEXT:    s_addk_co_i32 s32, 0x250
 ; DAGISEL-NEXT:    v_writelane_b32 v40, s30, 1
 ; DAGISEL-NEXT:    v_writelane_b32 v40, s31, 2
@@ -1921,8 +1921,8 @@ define amdgpu_gfx_whole_wave <2 x half> @call_gfx_from_whole_wave(i1 %active, <2
 ; GISEL-NEXT:    v_mov_b32_e32 v2, v0
 ; GISEL-NEXT:    v_swap_b32 v0, v1
 ; GISEL-NEXT:    s_mov_b32 s0, gfx_callee@abs32@lo
-; GISEL-NEXT:    s_mov_b32 s1, gfx_callee@abs32@hi
 ; GISEL-NEXT:    v_writelane_b32 v40, s4, 0
+; GISEL-NEXT:    s_mov_b32 s1, gfx_callee@abs32@hi
 ; GISEL-NEXT:    s_addk_co_i32 s32, 0x250
 ; GISEL-NEXT:    v_writelane_b32 v40, s30, 1
 ; GISEL-NEXT:    v_writelane_b32 v40, s31, 2
@@ -2257,8 +2257,8 @@ define amdgpu_gfx_whole_wave <2 x half> @call_gfx_from_whole_wave(i1 %active, <2
 ; DAGISEL64-NEXT:    v_mov_b32_e32 v2, v0
 ; DAGISEL64-NEXT:    v_swap_b32 v0, v1
 ; DAGISEL64-NEXT:    s_mov_b32 s1, gfx_callee@abs32@hi
-; DAGISEL64-NEXT:    s_mov_b32 s0, gfx_callee@abs32@lo
 ; DAGISEL64-NEXT:    v_writelane_b32 v40, s4, 0
+; DAGISEL64-NEXT:    s_mov_b32 s0, gfx_callee@abs32@lo
 ; DAGISEL64-NEXT:    s_addk_co_i32 s32, 0x250
 ; DAGISEL64-NEXT:    v_writelane_b32 v40, s5, 1
 ; DAGISEL64-NEXT:    v_writelane_b32 v40, s30, 2
@@ -2595,8 +2595,8 @@ define amdgpu_gfx_whole_wave <2 x half> @call_gfx_from_whole_wave(i1 %active, <2
 ; GISEL64-NEXT:    v_mov_b32_e32 v2, v0
 ; GISEL64-NEXT:    v_swap_b32 v0, v1
 ; GISEL64-NEXT:    s_mov_b32 s0, gfx_callee@abs32@lo
-; GISEL64-NEXT:    s_mov_b32 s1, gfx_callee@abs32@hi
 ; GISEL64-NEXT:    v_writelane_b32 v40, s4, 0
+; GISEL64-NEXT:    s_mov_b32 s1, gfx_callee@abs32@hi
 ; GISEL64-NEXT:    s_addk_co_i32 s32, 0x250
 ; GISEL64-NEXT:    v_writelane_b32 v40, s5, 1
 ; GISEL64-NEXT:    v_writelane_b32 v40, s30, 2
@@ -3713,8 +3713,8 @@ define amdgpu_gfx_whole_wave <2 x half> @call_gfx_from_whole_wave(i1 %active, <2
 ; GFX1250-DAGISEL-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX1250-DAGISEL-NEXT:    v_swap_b32 v0, v1
 ; GFX1250-DAGISEL-NEXT:    s_mov_b64 s[0:1], gfx_callee@abs64
-; GFX1250-DAGISEL-NEXT:    s_addk_co_i32 s32, 0xe50
 ; GFX1250-DAGISEL-NEXT:    v_writelane_b32 v40, s4, 0
+; GFX1250-DAGISEL-NEXT:    s_addk_co_i32 s32, 0xe50
 ; GFX1250-DAGISEL-NEXT:    v_writelane_b32 v40, s30, 1
 ; GFX1250-DAGISEL-NEXT:    v_writelane_b32 v40, s31, 2
 ; GFX1250-DAGISEL-NEXT:    s_swap_pc_i64 s[30:31], s[0:1]
