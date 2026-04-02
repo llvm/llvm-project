@@ -102,7 +102,7 @@ public:
   getAddressIndex(const uint64_t Addr) const override;
 
   // GlobalData accessors
-  std::optional<uint64_t> getAddressInfoOffset(size_t Index) const override;
+  uint64_t getAddressInfoOffset(size_t Index) const override;
 
   using GsymReader::dump;
   LLVM_ABI void dump(raw_ostream &OS) override;

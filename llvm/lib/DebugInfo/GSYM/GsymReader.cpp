@@ -157,11 +157,7 @@ GsymReader::getFunctionInfoDataAtIndex(uint64_t AddrIdx,
   if (AddrIdx >= getNumAddresses())
     return createStringError(std::errc::invalid_argument,
                              "invalid address index %" PRIu64, AddrIdx);
-  std::optional<uint64_t> OptAddrInfoOffset = getAddressInfoOffset(AddrIdx);
-  if (!OptAddrInfoOffset)
-    return createStringError(std::errc::invalid_argument,
-                             "invalid address index %" PRIu64, AddrIdx);
-  const uint64_t AddrInfoOffset = *OptAddrInfoOffset;
+  const uint64_t AddrInfoOffset = getAddressInfoOffset(AddrIdx);
   assert((Endian == endianness::big || Endian == endianness::little) &&
          "Endian must be either big or little");
   StringRef Bytes = MemBuffer->getBuffer().substr(AddrInfoOffset);

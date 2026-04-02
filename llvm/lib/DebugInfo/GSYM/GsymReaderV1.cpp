@@ -220,10 +220,8 @@ Expected<uint64_t> GsymReaderV1::getAddressIndex(const uint64_t Addr) const {
                            "address 0x%" PRIx64 " is not in GSYM", Addr);
 }
 
-std::optional<uint64_t> GsymReaderV1::getAddressInfoOffset(size_t Index) const {
-  if (Index < AddrInfoOffsets.size())
-    return AddrInfoOffsets[Index];
-  return std::nullopt;
+uint64_t GsymReaderV1::getAddressInfoOffset(size_t Index) const {
+  return AddrInfoOffsets[Index];
 }
 
 void GsymReaderV1::dump(raw_ostream &OS) {

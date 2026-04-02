@@ -281,11 +281,8 @@ std::optional<FileEntry> GsymReaderV2::getFile(uint32_t Index) const {
   return FE;
 }
 
-std::optional<uint64_t> GsymReaderV2::getAddressInfoOffset(size_t Index) const {
+uint64_t GsymReaderV2::getAddressInfoOffset(size_t Index) const {
   uint64_t Offset = Index * getAddressInfoOffsetByteSize();
-  if (!AddrInfoOffsetsData.isValidOffsetForDataOfSize(
-          Offset, getAddressInfoOffsetByteSize()))
-    return std::nullopt;
   uint64_t RelOff =
       AddrInfoOffsetsData.getUnsigned(&Offset, getAddressInfoOffsetByteSize());
   return RelOff +
@@ -309,8 +306,7 @@ void GsymReaderV2::dump(raw_ostream &OS) {
   OS << "INDEX  Offset\n";
   OS << "====== ==========\n";
   for (uint32_t I = 0; I < getNumAddresses(); ++I) {
-    auto Off = getAddressInfoOffset(I);
-    OS << format("[%4u] ", I) << HEX32(Off.value_or(0)) << "\n";
+    OS << format("[%4u] ", I) << HEX32(getAddressInfoOffset(I)) << "\n";
   }
   OS << "\nFiles:\n";
   OS << "INDEX  DIRECTORY  BASENAME   PATH\n";
@@ -329,8 +325,7 @@ void GsymReaderV2::dump(raw_ostream &OS) {
   OS << "\n" << StrTab << "\n";
 
   for (uint32_t I = 0; I < getNumAddresses(); ++I) {
-    auto Off = getAddressInfoOffset(I);
-    OS << "FunctionInfo @ " << HEX32(Off.value_or(0)) << ": ";
+    OS << "FunctionInfo @ " << HEX32(getAddressInfoOffset(I)) << ": ";
     if (auto FI = getFunctionInfoAtIndex(I))
       dump(OS, *FI);
     else
