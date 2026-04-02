@@ -84,7 +84,7 @@ void AArch64InstPrinter::printInst(const MCInst *MI, uint64_t Address,
       return;
     }
 
-  if (Opcode == AArch64::SYSLxt)
+  if (Opcode == AArch64::SYSLxt || Opcode == AArch64::SYSLxt_GCS)
     if (printSyslAlias(MI, STI, O)) {
       printAnnotation(O, Annot);
       return;
@@ -1176,14 +1176,17 @@ bool AArch64InstPrinter::printSyslAlias(const MCInst *MI,
                                         raw_ostream &O) {
 #ifndef NDEBUG
   unsigned Opcode = MI->getOpcode();
-  assert(Opcode == AArch64::SYSLxt && "Invalid opcode for SYSL alias!");
+  assert((Opcode == AArch64::SYSLxt || Opcode == AArch64::SYSLxt_GCS) &&
+         "Invalid opcode for SYSL alias!");
 #endif
 
+  unsigned OpOffset = Opcode == AArch64::SYSLxt_GCS ? 1 : 0;
+
   StringRef Reg = getRegisterName(MI->getOperand(0).getReg());
-  const MCOperand &Op1 = MI->getOperand(1);
-  const MCOperand &Cn = MI->getOperand(2);
-  const MCOperand &Cm = MI->getOperand(3);
-  const MCOperand &Op2 = MI->getOperand(4);
+  const MCOperand &Op1 = MI->getOperand(OpOffset + 1);
+  const MCOperand &Cn = MI->getOperand(OpOffset + 2);
+  const MCOperand &Cm = MI->getOperand(OpOffset + 3);
+  const MCOperand &Op2 = MI->getOperand(OpOffset + 4);
 
   unsigned Op1Val = Op1.getImm();
   unsigned CnVal = Cn.getImm();

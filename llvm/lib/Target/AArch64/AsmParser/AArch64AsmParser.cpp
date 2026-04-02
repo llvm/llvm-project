@@ -4076,7 +4076,8 @@ bool AArch64AsmParser::parseSysAlias(StringRef Name, SMLoc NameLoc,
     return false;
   }
 
-  if (Mnemonic == "gcspushx" || Mnemonic == "gcspopcx" || Mnemonic == "gcspopx") {
+  if (Mnemonic == "gcspushx" || Mnemonic == "gcspopcx" ||
+      Mnemonic == "gcspopx") {
     if (!(getSTI().hasFeature(AArch64::FeatureAll) ||
           getSTI().hasFeature(AArch64::FeatureGCS)))
       return Error(NameLoc, "instruction requires: gcs");

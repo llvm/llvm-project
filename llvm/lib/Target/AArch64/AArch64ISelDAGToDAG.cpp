@@ -5077,10 +5077,18 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
       SDValue Chain = Node->getOperand(0);
       SDValue Val = Node->getOperand(2);
       SDValue Zero = CurDAG->getCopyFromReg(Chain, DL, AArch64::XZR, MVT::i64);
+      SDValue Op1 = CurDAG->getTargetConstant(3, DL, MVT::i32);
+      SDValue Cn = CurDAG->getTargetConstant(7, DL, MVT::i32);
+      SDValue Cm = CurDAG->getTargetConstant(7, DL, MVT::i32);
+      SDValue SS1Op2 = CurDAG->getTargetConstant(2, DL, MVT::i32);
+      SDValue SS2Op2 = CurDAG->getTargetConstant(3, DL, MVT::i32);
+      SDValue SS1Ops[] = {Op1, Cn, Cm, SS1Op2, Val, Chain};
       SDNode *SS1 =
-          CurDAG->getMachineNode(AArch64::GCSSS1, DL, MVT::Other, Val, Chain);
-      SDNode *SS2 = CurDAG->getMachineNode(AArch64::GCSSS2, DL, MVT::i64,
-                                           MVT::Other, Zero, SDValue(SS1, 0));
+          CurDAG->getMachineNode(AArch64::SYSxt, DL, MVT::Other, SS1Ops);
+      SDValue SS2Ops[] = {Zero, Op1, Cn, Cm, SS2Op2, SDValue(SS1, 0)};
+      SDNode *SS2 = CurDAG->getMachineNode(
+          AArch64::SYSLxt_GCS, DL, CurDAG->getVTList(MVT::i64, MVT::Other),
+          SS2Ops);
       ReplaceNode(Node, SS2);
       return;
     }

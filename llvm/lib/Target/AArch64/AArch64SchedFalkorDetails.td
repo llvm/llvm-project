@@ -1243,7 +1243,7 @@ def : InstRW<[WriteSequence<[FalkorWr_1LD_3cyc, FalkorWr_1XYZ_1cyc]>],
 // -----------------------------------------------------------------------------
 def : InstRW<[FalkorWr_1LD_0cyc],     (instrs CLREX, DMB, DSB)>;
 def : InstRW<[FalkorWr_1none_0cyc],   (instrs BRK, DCPS1, DCPS2, DCPS3, HINT, HLT, HVC, ISB, SMC, SVC)>;
-def : InstRW<[FalkorWr_1ST_0cyc],     (instrs SYSxt, SYSLxt)>;
+def : InstRW<[FalkorWr_1ST_0cyc],     (instrs SYSxt, SYSLxt, SYSLxt_GCS)>;
 def : InstRW<[FalkorWr_1Z_0cyc],      (instrs MSRpstateImm1, MSRpstateImm4)>;
 
 def : InstRW<[FalkorWr_1LD_3cyc, FalkorReadIncLd],
