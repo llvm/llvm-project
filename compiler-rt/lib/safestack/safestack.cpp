@@ -62,6 +62,26 @@ __attribute__((visibility(
     "default"))) __thread void *__safestack_unsafe_stack_ptr = nullptr;
 }
 
+// These symbols may have no definition within the component being linked,
+// either because the archive library is not passed to the link editor or
+// because the shared object does not include them in its dynamic linking
+// symbol table. Give them an STB_WEAK binding so that, if left unresolved,
+// they have a zero value.
+#if SANITIZER_GLIBC
+extern "C"
+    __attribute__((weak)) int __pthread_create_2_1(pthread_t*,
+                                                   const pthread_attr_t*,
+                                                   void* (*)(void*), void*);
+#elif SANITIZER_LINUX
+extern "C" __attribute__((weak)) int __pthread_create(pthread_t*,
+                                                      const pthread_attr_t*,
+                                                      void* (*)(void*), void*);
+#elif SANITIZER_FREEBSD
+extern "C"
+    __attribute__((weak)) int _pthread_create(pthread_t*, const pthread_attr_t*,
+                                              void* (*)(void*), void*);
+#endif
+
 namespace {
 
 // TODO: The runtime library does not currently protect the safe stack beyond
@@ -288,6 +308,24 @@ void EnsureInterceptorsInitialized() {
   // Initialize pthread interceptors for thread allocation
   INTERCEPT_FUNCTION(pthread_create);
 
+#if SANITIZER_GLIBC
+  // REAL(pthread_create) is null after INTERCEPT_FUNCTION(pthread_create) in
+  // statically linked executable files. Fall back to the weak symbol we
+  // declare.
+  //
+  // diet libc and uClibc-ng are not supported because interception requires a
+  // distinct symbol to call after replacing pthread_create; neither provides
+  // such a symbol.
+  if (!REAL(pthread_create))
+    REAL(pthread_create) = __pthread_create_2_1;
+#elif SANITIZER_LINUX
+  if (!REAL(pthread_create))
+    REAL(pthread_create) = __pthread_create;
+#elif SANITIZER_FREEBSD
+  if (!REAL(pthread_create))
+    REAL(pthread_create) = _pthread_create;
+#endif
+
   interceptors_inited = true;
 }
 
@@ -320,8 +358,15 @@ void __safestack_init() {
 // On other platforms we use the constructor attribute to arrange to run our
 // initialization early.
 extern "C" {
+#  if !SANITIZER_MUSL
 __attribute__((section(".preinit_array"),
                used)) void (*__safestack_preinit)(void) = __safestack_init;
+#  else
+// musl does not execute .preinit_array functions.
+__attribute__((constructor(0))) void __safestack_init_fallback() {
+  __safestack_init();
+}
+#  endif
 }
 #endif
 
