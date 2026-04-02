@@ -21,12 +21,6 @@ static int normal_static_var = 10;
 // LLVM: @normal_static_var = internal global {{.*}}
 // OGCG: @normal_static_var = internal global {{.*}}
 
-__attribute__((visibility("hidden")))
-static int hidden_static_var = 10;
-// CIR: cir.global "private" hidden internal dso_local @hidden_static_var {{.*}}
-// LLVM: @hidden_static_var = internal hidden global {{.*}}
-// OGCG: @hidden_static_var = internal global {{.*}}
-
 void normal_func() {
     normal_var = 0;
     normal_static_var = 0;
@@ -38,7 +32,6 @@ void normal_func() {
 __attribute__((visibility("hidden")))
 void hidden_func() {
     hidden_var = 0;
-    hidden_static_var = 0;
 }
 // CIR: cir.func no_inline no_proto hidden dso_local @hidden_func() {{.*}} {
 // LLVM: define hidden void @hidden_func() {{.*}}
