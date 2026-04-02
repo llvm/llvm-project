@@ -88,7 +88,9 @@ void clang::maybePruneImpl(StringRef Path, time_t PruneInterval,
        Dir != DirEnd && !EC; Dir.increment(EC)) {
     // If we don't have a directory, try to prune it as a file in the root.
     if (!llvm::sys::fs::is_directory(Dir->path())) {
-      TryPruneFile(Dir->path());
+      // Don't prune the timestamp file at the top level.
+      if (llvm::sys::path::filename(Dir->path()) != "modules.timestamp")
+        TryPruneFile(Dir->path());
       continue;
     }
 
