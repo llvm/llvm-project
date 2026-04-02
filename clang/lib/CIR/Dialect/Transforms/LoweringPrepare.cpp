@@ -13,6 +13,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Mangle.h"
 #include "clang/Basic/Module.h"
+#include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Specifiers.h"
 #include "clang/Basic/TargetCXXABI.h"
 #include "clang/Basic/TargetInfo.h"
@@ -27,8 +28,8 @@
 #include "clang/CIR/MissingFeatures.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/TypeSwitch.h"
-#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/VirtualFileSystem.h"
 
 #include <memory>
 
@@ -1796,8 +1797,10 @@ void LoweringPreparePass::buildCUDAModuleCtor() {
           .getName()
           .getValue();
 
+  llvm::vfs::FileSystem &vfs =
+      astCtx->getSourceManager().getFileManager().getVirtualFileSystem();
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> gpuBinaryOrErr =
-      llvm::MemoryBuffer::getFile(cudaGPUBinaryName);
+      vfs.getBufferForFile(cudaGPUBinaryName);
   if (std::error_code ec = gpuBinaryOrErr.getError()) {
     mlirModule->emitError("cannot open GPU binary file: " + cudaGPUBinaryName +
                           ": " + ec.message());
