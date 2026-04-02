@@ -108,7 +108,7 @@ constexpr bool test() {
   {
     types::for_each(types::integer_types{}, []<typename IntegerLikeT>() {
       types::for_each(types::integer_types{}, []<typename BoundT>() {
-        static_assert(HasSize<std::ranges::iota_view<IntegerLikeT, BoundT>>);
+        // libc++ does not have integer-class types
         static_assert(!HasSize<std::ranges::iota_view<IntegerLikeT, bool>>);
       });
     });
