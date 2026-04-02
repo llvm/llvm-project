@@ -224,6 +224,14 @@ const HeaderV2 &GsymReaderV2::getHeader() const {
   return *Hdr;
 }
 
+std::optional<uint64_t> GsymReaderV2::getAddress(size_t Index) const {
+  std::optional<uint64_t> AddressOffset =
+      getUnsigned(AddrOffsets, getAddressOffsetByteSize(), Index);
+  if (!AddressOffset)
+    return std::nullopt;
+  return *AddressOffset + getBaseAddress();
+}
+
 Expected<uint64_t> GsymReaderV2::getAddressIndex(const uint64_t Addr) const {
   const uint64_t BaseAddress = getBaseAddress();
   if (Addr < BaseAddress)

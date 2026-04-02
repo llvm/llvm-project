@@ -177,6 +177,20 @@ const Header &GsymReaderV1::getHeader() const {
   return *Hdr;
 }
 
+std::optional<uint64_t> GsymReaderV1::getAddress(size_t Index) const {
+  switch (Hdr->AddrOffSize) {
+  case 1:
+    return addressForIndex<uint8_t>(Index);
+  case 2:
+    return addressForIndex<uint16_t>(Index);
+  case 4:
+    return addressForIndex<uint32_t>(Index);
+  case 8:
+    return addressForIndex<uint64_t>(Index);
+  }
+  return std::nullopt;
+}
+
 Expected<uint64_t> GsymReaderV1::getAddressIndex(const uint64_t Addr) const {
   if (Addr >= Hdr->BaseAddress) {
     const uint64_t AddrOffset = Addr - Hdr->BaseAddress;

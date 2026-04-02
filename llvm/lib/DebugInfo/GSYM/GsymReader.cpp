@@ -108,14 +108,6 @@ GsymReader::copyBuffer(StringRef Bytes) {
   }
 }
 
-std::optional<uint64_t> GsymReader::getAddress(size_t Index) const {
-  std::optional<uint64_t> AddressOffset =
-      getUnsigned(AddrOffsets, getAddressOffsetByteSize(), Index);
-  if (!AddressOffset)
-    return std::nullopt;
-  return *AddressOffset + getBaseAddress();
-}
-
 llvm::Expected<DataExtractor>
 GsymReader::getFunctionInfoDataForAddress(uint64_t Addr,
                                           uint64_t &FuncStartAddr) const {

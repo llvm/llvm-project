@@ -33,6 +33,17 @@ class GsymReaderV1 : public GsymReader {
   };
   std::unique_ptr<SwappedData> Swap;
 
+  /// Get the address for a given index using direct typed array access.
+  /// This is the fast path for V1 — reinterpret_cast to a typed array and
+  /// index directly, avoiding DataExtractor construction per call.
+  template <class T>
+  std::optional<uint64_t> addressForIndex(size_t Index) const {
+    ArrayRef<T> AIO = getAddrOffsets<T>();
+    if (Index < AIO.size())
+      return static_cast<uint64_t>(AIO[Index]) + Hdr->BaseAddress;
+    return std::nullopt;
+  }
+
   /// Get the address offset index for a given address offset using typed
   /// array binary search (power-of-two sizes only).
   template <class T>
@@ -78,6 +89,8 @@ public:
   }
   uint64_t getAddressInfoOffsetByteSize() const override { return 4; }
   uint64_t getStringOffsetByteSize() const override { return 4; }
+
+  LLVM_ABI std::optional<uint64_t> getAddress(size_t Index) const override;
 
   std::optional<FileEntry> getFile(uint32_t Index) const override {
     if (Index < Files.size())

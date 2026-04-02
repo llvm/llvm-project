@@ -148,6 +148,8 @@ public:
     return getHeader().StrpSize;
   }
 
+  LLVM_ABI std::optional<uint64_t> getAddress(size_t Index) const override;
+
   LLVM_ABI Expected<uint64_t>
   getAddressIndex(const uint64_t Addr) const override;
 

@@ -269,7 +269,7 @@ public:
   /// \param Index A index into the address table.
   /// \returns A resolved virtual address for adddress in the address table
   /// or std::nullopt if Index is out of bounds.
-  LLVM_ABI std::optional<uint64_t> getAddress(size_t Index) const;
+  virtual std::optional<uint64_t> getAddress(size_t Index) const = 0;
 
   /// Get an unsigned integer of any byte size 1-8 from a byte array.
   ///
