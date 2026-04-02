@@ -5465,7 +5465,7 @@ static Value *simplifyExtractValueInst(Value *Agg, ArrayRef<unsigned> Idxs,
         return IVI->getInsertedValueOperand();
       break;
     }
-    
+
     // Based on the verifier, self-referential insertvalues are apparently
     // fine in unreachable blocks and they will cause this loop to run
     // infinitely. I am just adding a check to break out if it is the case.
