@@ -3440,7 +3440,6 @@ protected:
   LanguageRuntimeCollection m_language_runtimes;
   std::recursive_mutex m_language_runtimes_mutex;
   InstrumentationRuntimeCollection m_instrumentation_runtimes;
-  bool m_registered_for_instrumentation_runtime_enabled_changed = false;
   std::unique_ptr<NextEventAction> m_next_event_action_up;
   std::vector<PreResumeCallbackAndBaton> m_pre_resume_actions;
   bool m_currently_handling_do_on_removals;

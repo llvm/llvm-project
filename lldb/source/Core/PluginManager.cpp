@@ -14,6 +14,7 @@
 #include "lldb/Interpreter/OptionValueProperties.h"
 #include "lldb/Symbol/SaveCoreOptions.h"
 #include "lldb/Target/Process.h"
+#include "lldb/Target/Target.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StringList.h"
@@ -1914,33 +1915,6 @@ PluginManager::GetInstrumentationRuntimeCallbacks() {
   return result;
 }
 
-static std::mutex &GetInstrumentationRuntimeProcessesMutex() {
-  static std::mutex g_mutex;
-  return g_mutex;
-}
-
-static llvm::SmallVector<lldb::ProcessWP> &
-GetInstrumentationRuntimeProcesses() {
-  static llvm::SmallVector<lldb::ProcessWP> g_processes;
-  return g_processes;
-}
-
-void PluginManager::RegisterProcessForInstrumentationRuntimeNotifications(
-    lldb::ProcessSP process) {
-  std::lock_guard<std::mutex> guard(GetInstrumentationRuntimeProcessesMutex());
-  GetInstrumentationRuntimeProcesses().push_back(process);
-}
-
-void PluginManager::UnregisterProcessFromInstrumentationRuntimeNotifications(
-    lldb::ProcessSP process) {
-  std::lock_guard<std::mutex> guard(GetInstrumentationRuntimeProcessesMutex());
-  auto &processes = GetInstrumentationRuntimeProcesses();
-  llvm::erase_if(processes, [process](const lldb::ProcessWP &wp) {
-    auto sp = wp.lock();
-    return !sp || sp == process;
-  });
-}
-
 #pragma mark TypeSystem
 
 struct TypeSystemInstance : public PluginInstance<TypeSystemCreateInstance> {
@@ -2524,19 +2498,21 @@ bool PluginManager::SetInstrumentationRuntimePluginEnabled(llvm::StringRef name,
   if (!type_cb)
     return false;
   auto instrumentation_ty = type_cb();
-  std::lock_guard<std::mutex> guard(GetInstrumentationRuntimeProcessesMutex());
-  auto &processes = GetInstrumentationRuntimeProcesses();
-  bool success = true;
-  for (auto &process_wp : processes) {
-    ProcessSP process_sp = process_wp.lock();
-    if (!process_sp)
-      continue; // FIXME: Should we try to erase this from the list?
 
-    // If the process is dead don't try to enable the plugin because there's
-    // nothing useful it can do and it might crash when enabled on a dead
-    // process.
-    // FIXME: Should we try to erase from the list if the process is dead?
-    if (process_sp->IsAlive()) {
+  // Notify all active processes to enable/disable the plugin.
+  bool success = true;
+  for (size_t di = 0; di < Debugger::GetNumDebuggers(); ++di) {
+    DebuggerSP debugger_sp = Debugger::GetDebuggerAtIndex(di);
+    if (!debugger_sp)
+      continue;
+    TargetList &target_list = debugger_sp->GetTargetList();
+    for (size_t ti = 0; ti < target_list.GetNumTargets(); ++ti) {
+      TargetSP target_sp = target_list.GetTargetAtIndex(ti);
+      if (!target_sp)
+        continue;
+      ProcessSP process_sp = target_sp->GetProcessSP();
+      if (!process_sp || !process_sp->IsAlive())
+        continue;
       success &= process_sp->SetInstrumentationRuntimeEnabled(
           instrumentation_ty, enable);
     }

@@ -573,11 +573,6 @@ void Process::Finalize(bool destructing) {
     std::lock_guard<std::recursive_mutex> guard(m_language_runtimes_mutex);
     m_language_runtimes.clear();
   }
-  if (m_registered_for_instrumentation_runtime_enabled_changed) {
-    PluginManager::UnregisterProcessFromInstrumentationRuntimeNotifications(
-        shared_from_this());
-    m_registered_for_instrumentation_runtime_enabled_changed = false;
-  }
   m_instrumentation_runtimes.clear();
   m_next_event_action_up.reset();
   // Clear the last natural stop ID since it has a strong reference to this
@@ -6185,15 +6180,6 @@ void Process::ModulesDidLoad(ModuleList &module_list) {
                                          m_instrumentation_runtimes);
   for (auto &runtime : m_instrumentation_runtimes)
     runtime.second->ModulesDidLoad(module_list);
-
-  // Register with PluginManager so we get notified when instrumentation
-  // runtime plugins are enabled/disabled.
-  if (!m_registered_for_instrumentation_runtime_enabled_changed &&
-      !m_instrumentation_runtimes.empty()) {
-    PluginManager::RegisterProcessForInstrumentationRuntimeNotifications(
-        shared_from_this());
-    m_registered_for_instrumentation_runtime_enabled_changed = true;
-  }
 
   // Give the language runtimes a chance to be created before informing them of
   // the modified modules.
