@@ -14351,6 +14351,22 @@ void BoUpSLP::transformNodes() {
       if (E.State != TreeEntry::Vectorize ||
           !E.getOperations().isAddSubLikeOp())
         break;
+      const TreeEntry *LHS = getOperandEntry(&E, 0);
+      const TreeEntry *RHS = getOperandEntry(&E, 1);
+      auto IsOneUseVectorFMulOperand = [](const TreeEntry *TE) {
+        return TE->State == TreeEntry::Vectorize &&
+               TE->ReorderIndices.empty() && TE->ReuseShuffleIndices.empty() &&
+               TE->getOpcode() == Instruction::FMul && !TE->isAltShuffle() &&
+               all_of(TE->Scalars, [&](Value *V) {
+                 return (TE->hasCopyableElements() &&
+                         TE->isCopyableElement(V)) ||
+                        V->hasOneUse();
+               });
+      };
+      if (!IsOneUseVectorFMulOperand(LHS) &&
+          (E.getOpcode() == Instruction::FSub ||
+           !IsOneUseVectorFMulOperand(RHS)))
+        break;
       if (!canConvertToFMA(E.Scalars, E.getOperations(), *DT, *DL, *TTI, *TLI)
                .isValid())
         break;
@@ -16880,7 +16896,7 @@ bool BoUpSLP::isTreeTinyAndNotFullyVectorizable(bool ForReduction) const {
   // No need to vectorize inserts of gathered values.
   if (VectorizableTree.size() == 2 &&
       isa<InsertElementInst>(VectorizableTree[0]->Scalars[0]) &&
-      VectorizableTree[1]->isGather() &&
+      LoadEntriesToVectorize.empty() && VectorizableTree[1]->isGather() &&
       (VectorizableTree[1]->getVectorFactor() <= 2 ||
        !(isSplat(VectorizableTree[1]->Scalars) ||
          allConstant(VectorizableTree[1]->Scalars))))
@@ -18082,11 +18098,11 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
     LLVM_DEBUG(dbgs() << "Scale " << Scale << " For entry " << TE.Idx << "\n");
     return C * Scale;
   };
-  Instruction *ReductionRoot = nullptr;
+  Instruction *ReductionRoot = RdxRoot;
   if (UserIgnoreList) {
     // Scale reduction cost to the factor of the loop nest trip count.
     ReductionCost = ScaleCost(ReductionCost, *VectorizableTree.front().get(),
-                              /*Scalar=*/nullptr, RdxRoot);
+                              /*Scalar=*/nullptr, ReductionRoot);
   }
 
   // Add the cost for reduction.

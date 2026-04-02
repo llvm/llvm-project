@@ -352,7 +352,6 @@ define i1 @pow2_umin(i32 %x, i32 %y) {
 define i32 @pow2_umin_vec(<4 x i32> %x, <4 x i32> %y, i32 %z, ptr %p) {
 ; CHECK-LABEL: pow2_umin_vec:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    pslld $23, %xmm0
 ; CHECK-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    cvttps2dq %xmm0, %xmm0
@@ -371,10 +370,9 @@ define i32 @pow2_umin_vec(<4 x i32> %x, <4 x i32> %y, i32 %z, ptr %p) {
 ; CHECK-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; CHECK-NEXT:    por %xmm2, %xmm1
 ; CHECK-NEXT:    movdqa %xmm1, (%rsi)
-; CHECK-NEXT:    movd %xmm1, %ecx
-; CHECK-NEXT:    xorl %edx, %edx
-; CHECK-NEXT:    divl %ecx
-; CHECK-NEXT:    movl %edx, %eax
+; CHECK-NEXT:    movd %xmm1, %eax
+; CHECK-NEXT:    decl %eax
+; CHECK-NEXT:    andl %edi, %eax
 ; CHECK-NEXT:    retq
   %yy = shl <4 x i32> <i32 1, i32 -1, i32 -1, i32 -1>, %x
   %d = call <4 x i32> @llvm.umin.v4i32(<4 x i32> %yy, <4 x i32> splat (i32 256))
@@ -452,7 +450,6 @@ define i1 @pow2_umax(i32 %x, i32 %y, i32 %z) {
 define i32 @pow2_umax_vec(<4 x i32> %x, <4 x i32> %y, i32 %z, ptr %p) {
 ; CHECK-LABEL: pow2_umax_vec:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    pshuflw {{.*#+}} xmm1 = xmm0[2,3,3,3,4,5,6,7]
 ; CHECK-NEXT:    movdqa {{.*#+}} xmm2 = [4096,4294967295,4294967295,4294967295]
 ; CHECK-NEXT:    movdqa %xmm2, %xmm3
@@ -476,10 +473,9 @@ define i32 @pow2_umax_vec(<4 x i32> %x, <4 x i32> %y, i32 %z, ptr %p) {
 ; CHECK-NEXT:    andnps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    orps %xmm4, %xmm0
 ; CHECK-NEXT:    movaps %xmm0, (%rsi)
-; CHECK-NEXT:    movd %xmm0, %ecx
-; CHECK-NEXT:    xorl %edx, %edx
-; CHECK-NEXT:    divl %ecx
-; CHECK-NEXT:    movl %edx, %eax
+; CHECK-NEXT:    movd %xmm0, %eax
+; CHECK-NEXT:    decl %eax
+; CHECK-NEXT:    andl %edi, %eax
 ; CHECK-NEXT:    retq
   %yy = lshr <4 x i32> <i32 4096, i32 -1, i32 -1, i32 -1>, %x
   %d = call <4 x i32> @llvm.umax.v4i32(<4 x i32> %yy, <4 x i32> splat (i32 256))
@@ -560,7 +556,6 @@ define i1 @pow2_smin(i32 %x, i32 %y) {
 define i32 @pow2_smin_vec(<4 x i32> %x, <4 x i32> %y, i32 %z, ptr %p) {
 ; CHECK-LABEL: pow2_smin_vec:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    pslld $23, %xmm0
 ; CHECK-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    cvttps2dq %xmm0, %xmm0
@@ -578,10 +573,9 @@ define i32 @pow2_smin_vec(<4 x i32> %x, <4 x i32> %y, i32 %z, ptr %p) {
 ; CHECK-NEXT:    pandn %xmm1, %xmm2
 ; CHECK-NEXT:    por %xmm0, %xmm2
 ; CHECK-NEXT:    movdqa %xmm2, (%rsi)
-; CHECK-NEXT:    movd %xmm2, %ecx
-; CHECK-NEXT:    xorl %edx, %edx
-; CHECK-NEXT:    divl %ecx
-; CHECK-NEXT:    movl %edx, %eax
+; CHECK-NEXT:    movd %xmm2, %eax
+; CHECK-NEXT:    decl %eax
+; CHECK-NEXT:    andl %edi, %eax
 ; CHECK-NEXT:    retq
   %yy = shl <4 x i32> <i32 1, i32 -1, i32 -1, i32 -1>, %x
   %d = call <4 x i32> @llvm.smin.v4i32(<4 x i32> %yy, <4 x i32> splat (i32 256))
@@ -659,7 +653,6 @@ define i1 @pow2_smax(i32 %x, i32 %y, i32 %z) {
 define i32 @pow2_smax_vec(<4 x i32> %x, <4 x i32> %y, i32 %z, ptr %p) {
 ; CHECK-LABEL: pow2_smax_vec:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    pshuflw {{.*#+}} xmm1 = xmm0[2,3,3,3,4,5,6,7]
 ; CHECK-NEXT:    movdqa {{.*#+}} xmm2 = [4096,4294967295,4294967295,4294967295]
 ; CHECK-NEXT:    movdqa %xmm2, %xmm3
@@ -683,10 +676,9 @@ define i32 @pow2_smax_vec(<4 x i32> %x, <4 x i32> %y, i32 %z, ptr %p) {
 ; CHECK-NEXT:    pandn %xmm0, %xmm1
 ; CHECK-NEXT:    por %xmm4, %xmm1
 ; CHECK-NEXT:    movdqa %xmm1, (%rsi)
-; CHECK-NEXT:    movd %xmm1, %ecx
-; CHECK-NEXT:    xorl %edx, %edx
-; CHECK-NEXT:    divl %ecx
-; CHECK-NEXT:    movl %edx, %eax
+; CHECK-NEXT:    movd %xmm1, %eax
+; CHECK-NEXT:    decl %eax
+; CHECK-NEXT:    andl %edi, %eax
 ; CHECK-NEXT:    retq
   %yy = lshr <4 x i32> <i32 4096, i32 -1, i32 -1, i32 -1>, %x
   %d = call <4 x i32> @llvm.smax.v4i32(<4 x i32> %yy, <4 x i32> splat (i32 256))
