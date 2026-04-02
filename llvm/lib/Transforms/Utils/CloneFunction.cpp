@@ -475,8 +475,8 @@ PruningFunctionCloner::cloneInstruction(BasicBlock::const_iterator II) {
       for (unsigned I = 0, E = Descriptor.size(); I != E; ++I) {
         Intrinsic::IITDescriptor Operand = Descriptor[I];
         switch (Operand.Kind) {
-        case Intrinsic::IITDescriptor::Argument:
-          if (Operand.getArgumentKind() !=
+        case Intrinsic::IITDescriptor::Overloaded:
+          if (Operand.getOverloadKind() !=
               Intrinsic::IITDescriptor::AK_MatchType) {
             if (I == 0)
               TParams.push_back(OldInst.getType());
@@ -484,7 +484,7 @@ PruningFunctionCloner::cloneInstruction(BasicBlock::const_iterator II) {
               TParams.push_back(OldInst.getOperand(I - 1)->getType());
           }
           break;
-        case Intrinsic::IITDescriptor::SameVecWidthArgument:
+        case Intrinsic::IITDescriptor::SameVecWidth:
           ++I;
           break;
         default:

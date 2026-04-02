@@ -30844,15 +30844,20 @@ static SDValue LowerShiftByScalarImmediate(SDValue Op, SelectionDAG &DAG,
     unsigned NumElts = VT.getVectorNumElements();
     MVT ShiftVT = MVT::getVectorVT(MVT::i16, NumElts / 2);
 
-    // Simple i8 add case
-    if (Op.getOpcode() == ISD::SHL && ShiftAmt == 1) {
+    // Simple i8 add case for shl by 1 or 2 (if PSLLW requires masking).
+    if (Op.getOpcode() == ISD::SHL &&
+        (ShiftAmt == 1 ||
+         (ShiftAmt == 2 && !DAG.MaskedValueIsZero(R, APInt(8, 0xC0)) &&
+          (!Op->hasOneUse() || Op->user_begin()->getOpcode() != ISD::AND)))) {
       // R may be undef at run-time, but (shl R, 1) must be an even number (LSB
       // must be 0). (add undef, undef) however can be any value. To make this
       // safe, we must freeze R to ensure that register allocation uses the same
       // register for an undefined value. This ensures that the result will
       // still be even and preserves the original semantics.
       R = DAG.getFreeze(R);
-      return DAG.getNode(ISD::ADD, dl, VT, R, R);
+      for (unsigned I = 0; I != ShiftAmt; ++I)
+        R = DAG.getNode(ISD::ADD, dl, VT, R, R);
+      return R;
     }
 
     // ashr(R, 7)  === cmp_slt(R, 0)
@@ -32177,14 +32182,16 @@ static SDValue LowerRotate(SDValue Op, const X86Subtarget &Subtarget,
       return DAG.getSelect(DL, SelVT, C, V0, V1);
     };
 
-    // ISD::ROTR is currently only profitable on AVX512 targets with VPTERNLOG.
-    if (!IsROTL && !useVPTERNLOG(Subtarget, VT)) {
+    // ISD::ROTR is currently only profitable on GFNI/AVX512+VPTERNLOG targets.
+    if (!IsROTL && !useVPTERNLOG(Subtarget, VT) && !Subtarget.hasGFNI()) {
       Amt = DAG.getNode(ISD::SUB, DL, VT, Z, Amt);
       IsROTL = true;
     }
 
-    unsigned ShiftLHS = IsROTL ? ISD::SHL : ISD::SRL;
-    unsigned ShiftRHS = IsROTL ? ISD::SRL : ISD::SHL;
+    auto BuildRotate = [&](SDValue R, unsigned RotAmt) {
+      return DAG.getNode(IsROTL ? ISD::ROTL : ISD::ROTR, DL, VT, R,
+                         DAG.getConstant(RotAmt, DL, VT));
+    };
 
     // Turn 'a' into a mask suitable for VSELECT: a = a << 5;
     // We can safely do this using i16 shifts as we're only interested in
@@ -32194,32 +32201,19 @@ static SDValue LowerRotate(SDValue Op, const X86Subtarget &Subtarget,
     Amt = DAG.getBitcast(VT, Amt);
 
     // r = VSELECT(r, rot(r, 4), a);
-    SDValue M;
-    M = DAG.getNode(
-        ISD::OR, DL, VT,
-        DAG.getNode(ShiftLHS, DL, VT, R, DAG.getConstant(4, DL, VT)),
-        DAG.getNode(ShiftRHS, DL, VT, R, DAG.getConstant(4, DL, VT)));
-    R = SignBitSelect(VT, Amt, M, R);
+    R = SignBitSelect(VT, Amt, BuildRotate(R, 4), R);
 
     // a += a
     Amt = DAG.getNode(ISD::ADD, DL, VT, Amt, Amt);
 
     // r = VSELECT(r, rot(r, 2), a);
-    M = DAG.getNode(
-        ISD::OR, DL, VT,
-        DAG.getNode(ShiftLHS, DL, VT, R, DAG.getConstant(2, DL, VT)),
-        DAG.getNode(ShiftRHS, DL, VT, R, DAG.getConstant(6, DL, VT)));
-    R = SignBitSelect(VT, Amt, M, R);
+    R = SignBitSelect(VT, Amt, BuildRotate(R, 2), R);
 
     // a += a
     Amt = DAG.getNode(ISD::ADD, DL, VT, Amt, Amt);
 
     // return VSELECT(r, rot(r, 1), a);
-    M = DAG.getNode(
-        ISD::OR, DL, VT,
-        DAG.getNode(ShiftLHS, DL, VT, R, DAG.getConstant(1, DL, VT)),
-        DAG.getNode(ShiftRHS, DL, VT, R, DAG.getConstant(7, DL, VT)));
-    return SignBitSelect(VT, Amt, M, R);
+    return SignBitSelect(VT, Amt, BuildRotate(R, 1), R);
   }
 
   bool IsSplatAmt = DAG.isSplatValue(Amt);

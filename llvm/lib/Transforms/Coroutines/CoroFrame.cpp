@@ -1244,6 +1244,9 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
 
     for (Instruction *I : UsersToUpdate)
       I->replaceUsesOfWith(Alloca, G);
+
+    if (Alloca->user_empty())
+      Alloca->eraseFromParent();
   }
   Builder.SetInsertPoint(&*Shape.getInsertPtAfterFramePtr());
   for (const auto &A : FrameData.Allocas) {

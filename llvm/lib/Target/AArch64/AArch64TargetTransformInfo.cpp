@@ -6056,34 +6056,14 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
       return Cost * 2;
   }
 
-  // Returns cost of expanding the partial reduction in ISel.
-  auto GetExpandCost = [&]() -> InstructionCost {
-    Type *ExtVectorType =
-        VectorType::get(AccumVectorType->getElementType(), VF);
-    auto ExtendCostA = getCastInstrCost(
-        TTI::getOpcodeForPartialReductionExtendKind(OpAExtend), ExtVectorType,
-        InputVectorType, TTI::CastContextHint::None, CostKind);
-    auto RedOpCost =
-        Ratio * getArithmeticInstrCost(Opcode, AccumVectorType, CostKind);
-    if (!BinOp)
-      return ExtendCostA + RedOpCost;
+  InstructionCost ExpandCost = BaseT::getPartialReductionCost(
+      Opcode, InputTypeA, InputTypeB, AccumType, VF, OpAExtend, OpBExtend,
+      BinOp, CostKind, FMF);
 
-    auto ExtendCostB = getCastInstrCost(
-        TTI::getOpcodeForPartialReductionExtendKind(OpBExtend), ExtVectorType,
-        InputVectorType, TTI::CastContextHint::None, CostKind);
-    return ExtendCostA + ExtendCostB + RedOpCost +
-           getArithmeticInstrCost(*BinOp, ExtVectorType, CostKind);
-  };
-
-  if (IsSub) {
-    // Slightly lower the cost of a sub reduction so that it can be considered
-    // as candidate for 'cdot' operations. This is a somewhat arbitrary number,
-    // because we don't yet model these operations directly.
-    return (8 * GetExpandCost()) / 10;
-  }
-
-  // By default, assume the operation is expanded.
-  return GetExpandCost();
+  // Slightly lower the cost of a sub reduction so that it can be considered
+  // as candidate for 'cdot' operations. This is a somewhat arbitrary number,
+  // because we don't yet model these operations directly.
+  return ExpandCost.isValid() && IsSub ? ((8 * ExpandCost) / 10) : ExpandCost;
 }
 
 InstructionCost

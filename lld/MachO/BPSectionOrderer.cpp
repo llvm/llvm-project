@@ -34,6 +34,13 @@ struct BPOrdererMachO : lld::BPOrderer<BPOrdererMachO> {
   static bool isCodeSection(const Section &sec) {
     return macho::isCodeSection(&sec);
   }
+  static std::string getSectionName(const Section &sec) {
+    return (sec.getSegName() + sec.getName()).str();
+  }
+  // TODO: Use N_COLD_FUNC to separate cold code into a different subgroup.
+  static std::string getCompressionSubgroupKey(const Section &sec) {
+    return "";
+  }
   static ArrayRef<Defined *> getSymbols(const Section &sec) {
     return sec.symbols;
   }
@@ -107,7 +114,8 @@ private:
 } // namespace
 
 DenseMap<const InputSection *, int> lld::macho::runBalancedPartitioning(
-    StringRef profilePath, bool forFunctionCompression, bool forDataCompression,
+    StringRef profilePath, ArrayRef<BPCompressionSortSpec> compressionSortSpecs,
+    bool forFunctionCompression, bool forDataCompression,
     bool compressionSortStartupFunctions, bool verbose) {
   // Collect candidate sections and associated symbols.
   SmallVector<InputSection *> sections;
@@ -140,8 +148,8 @@ DenseMap<const InputSection *, int> lld::macho::runBalancedPartitioning(
     }
   }
 
-  return BPOrdererMachO().computeOrder(profilePath, forFunctionCompression,
-                                       forDataCompression,
-                                       compressionSortStartupFunctions, verbose,
-                                       sections, rootSymbolToSectionIdxs);
+  return BPOrdererMachO().computeOrder(
+      profilePath, compressionSortSpecs, forFunctionCompression,
+      forDataCompression, compressionSortStartupFunctions, verbose, sections,
+      rootSymbolToSectionIdxs);
 }

@@ -5121,6 +5121,14 @@ struct FormatStyle {
   /// \version 7
   bool SpaceBeforeCtorInitializerColon;
 
+  /// If ``false``, spaces will be removed before enum underlying type colon.
+  /// \code
+  ///    true:                                  false:
+  ///    enum E : int {}                        enum E: int {}
+  /// \endcode
+  /// \version 23
+  bool SpaceBeforeEnumUnderlyingTypeColon;
+
   /// If ``false``, spaces will be removed before inheritance colon.
   /// \code
   ///    true:                                  false:

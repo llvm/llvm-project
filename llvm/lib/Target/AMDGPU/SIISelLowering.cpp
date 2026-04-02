@@ -7012,14 +7012,6 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     MI.getOperand(0).setReg(OriginalExec);
     return BB;
   }
-  case AMDGPU::V_DOT2_F32_F16:
-  case AMDGPU::V_DOT2_F32_BF16: {
-    // Hint RA to assign dst and src2 the same physical register.
-    // For targets without VOP2, but with VOPD, variant of the instruction this
-    // is one of the conditions to attempt converting VOP3P to VOPD.
-    MRI.setSimpleHint(MI.getOperand(0).getReg(), MI.getOperand(6).getReg());
-    return BB;
-  }
   default:
     if (TII->isImage(MI) || TII->isMUBUF(MI)) {
       if (!MI.mayStore())

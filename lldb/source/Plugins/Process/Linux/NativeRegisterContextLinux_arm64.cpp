@@ -1179,9 +1179,9 @@ Status NativeRegisterContextLinux_arm64::WriteAllRegisterValues(
             (data_size + sve::vq_bytes - 1) / sve::vq_bytes * sve::vq_bytes;
         std::vector<uint8_t> sve_fpsimd_data(data_size);
 
-        user_sve_header *header =
-            reinterpret_cast<user_sve_header *>(sve_fpsimd_data.data());
-        std::memset(header, 0, sizeof(user_sve_header));
+        sve::user_sve_header *header =
+            reinterpret_cast<sve::user_sve_header *>(sve_fpsimd_data.data());
+        std::memset(header, 0, sizeof(sve::user_sve_header));
         header->size = sve_fpsimd_data.size();
         // VL = 0 tells the process to exit streaming mode.
         header->vl = 0;

@@ -4345,10 +4345,26 @@ TEST_F(TokenAnnotatorTest, UserDefinedLiteral) {
   EXPECT_EQ(Tokens[3]->TokenText, "2_$");
 }
 
-TEST_F(TokenAnnotatorTest, EnumColonInTypedef) {
-  auto Tokens = annotate("typedef enum : int {} foo;");
+TEST_F(TokenAnnotatorTest, EnumColon) {
+  auto Tokens = annotate("enum A : int {};");
+  ASSERT_EQ(Tokens.size(), 8u) << Tokens;
+  EXPECT_TOKEN(Tokens[2], tok::colon, TT_EnumUnderlyingTypeColon);
+
+  Tokens = annotate("enum class B : int {};");
   ASSERT_EQ(Tokens.size(), 9u) << Tokens;
-  EXPECT_TOKEN(Tokens[2], tok::colon, TT_Unknown); // Not TT_InheritanceColon.
+  EXPECT_TOKEN(Tokens[3], tok::colon, TT_EnumUnderlyingTypeColon);
+
+  Tokens = annotate("enum : int { E1 };");
+  ASSERT_EQ(Tokens.size(), 8u) << Tokens;
+  EXPECT_TOKEN(Tokens[1], tok::colon, TT_EnumUnderlyingTypeColon);
+
+  Tokens = annotate("typedef enum : int {} foo;");
+  ASSERT_EQ(Tokens.size(), 9u) << Tokens;
+  EXPECT_TOKEN(Tokens[2], tok::colon, TT_EnumUnderlyingTypeColon);
+
+  Tokens = annotate("typedef enum A : int {} foo;");
+  ASSERT_EQ(Tokens.size(), 10u) << Tokens;
+  EXPECT_TOKEN(Tokens[3], tok::colon, TT_EnumUnderlyingTypeColon);
 }
 
 TEST_F(TokenAnnotatorTest, BitFieldColon) {

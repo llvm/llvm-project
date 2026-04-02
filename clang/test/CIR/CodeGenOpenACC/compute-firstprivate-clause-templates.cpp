@@ -7,10 +7,12 @@ struct CopyConstruct {
 
 struct NonDefaultCtor {
   NonDefaultCtor();
+  int x;
 };
 
 struct HasDtor {
   ~HasDtor();
+  int x;
 };
 
 

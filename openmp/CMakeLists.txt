@@ -35,6 +35,7 @@ endif ()
 set(OPENMP_ENABLE_WERROR ${LLVM_ENABLE_WERROR})
 
 # When building in tree we install the runtime according to the LLVM settings.
+# TODO: Use common runtimes infrastructure for output and install paths
 if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
   set(OPENMP_TARGET_SUBDIR "${LLVM_DEFAULT_TARGET_TRIPLE}")
   if(OPENMP_LIBDIR_SUBDIR)

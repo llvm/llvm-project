@@ -50,7 +50,7 @@ typedef unsigned long long uint64_t;
 // CHECK-LABEL: define dso_local i64 @test___make_mantissa_base8(
 // CHECK-SAME: ptr noundef readonly captures(none) [[P:%.*]]) local_unnamed_addr #[[ATTR2:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*]]:
-// CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[P]], align 1, !tbaa [[CHAR_TBAA8:![0-9]+]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[P]], align 1, !tbaa [[CHAR_TBAA7:![0-9]+]]
 // CHECK-NEXT:    [[CMP_NOT_I1:%.*]] = icmp eq i8 [[TMP0]], 0
 // CHECK-NEXT:    br i1 [[CMP_NOT_I1]], label %[[_ZL21__MAKE_MANTISSA_BASE8PKC_EXIT:.*]], label %[[WHILE_BODY_I:.*]]
 // CHECK:       [[WHILE_BODY_I]]:
@@ -66,9 +66,9 @@ typedef unsigned long long uint64_t;
 // CHECK-NEXT:    [[ADD_I:%.*]] = add i64 [[MUL_I]], -48
 // CHECK-NEXT:    [[SUB_I]] = add i64 [[ADD_I]], [[CONV5_I]]
 // CHECK-NEXT:    [[INCDEC_PTR_I]] = getelementptr inbounds nuw i8, ptr [[__TAGP_ADDR_0_I2]], i64 1
-// CHECK-NEXT:    [[TMP3]] = load i8, ptr [[INCDEC_PTR_I]], align 1, !tbaa [[CHAR_TBAA8]]
+// CHECK-NEXT:    [[TMP3]] = load i8, ptr [[INCDEC_PTR_I]], align 1, !tbaa [[CHAR_TBAA7]]
 // CHECK-NEXT:    [[CMP_NOT_I:%.*]] = icmp eq i8 [[TMP3]], 0
-// CHECK-NEXT:    br i1 [[CMP_NOT_I]], label %[[_ZL21__MAKE_MANTISSA_BASE8PKC_EXIT]], label %[[WHILE_BODY_I]], !llvm.loop [[LOOP9:![0-9]+]]
+// CHECK-NEXT:    br i1 [[CMP_NOT_I]], label %[[_ZL21__MAKE_MANTISSA_BASE8PKC_EXIT]], label %[[WHILE_BODY_I]], !llvm.loop [[LOOP8:![0-9]+]]
 // CHECK:       [[_ZL21__MAKE_MANTISSA_BASE8PKC_EXIT]]:
 // CHECK-NEXT:    [[RETVAL_2_I:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ 0, %[[WHILE_BODY_I]] ], [ [[SUB_I]], %[[IF_THEN_I]] ]
 // CHECK-NEXT:    ret i64 [[RETVAL_2_I]]
@@ -80,7 +80,7 @@ typedef unsigned long long uint64_t;
 // AMDGCNSPIRV:       [[WHILE_COND_I]]:
 // AMDGCNSPIRV-NEXT:    [[__TAGP_ADDR_0_I:%.*]] = phi ptr addrspace(4) [ [[P]], %[[ENTRY]] ], [ [[__TAGP_ADDR_1_I:%.*]], %[[WHILE_BODY_I:.*]] ]
 // AMDGCNSPIRV-NEXT:    [[__R_0_I:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[__R_1_I:%.*]], %[[WHILE_BODY_I]] ]
-// AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = load i8, ptr addrspace(4) [[__TAGP_ADDR_0_I]], align 1, !tbaa [[CHAR_TBAA9:![0-9]+]]
+// AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = load i8, ptr addrspace(4) [[__TAGP_ADDR_0_I]], align 1, !tbaa [[CHAR_TBAA8:![0-9]+]]
 // AMDGCNSPIRV-NEXT:    [[CMP_NOT_I:%.*]] = icmp eq i8 [[TMP0]], 0
 // AMDGCNSPIRV-NEXT:    br i1 [[CMP_NOT_I]], label %[[_ZL21__MAKE_MANTISSA_BASE8PKC_EXIT:.*]], label %[[WHILE_BODY_I]]
 // AMDGCNSPIRV:       [[WHILE_BODY_I]]:
@@ -93,7 +93,7 @@ typedef unsigned long long uint64_t;
 // AMDGCNSPIRV-NEXT:    [[__TAGP_ADDR_1_I_IDX:%.*]] = zext i1 [[OR_COND_I]] to i64
 // AMDGCNSPIRV-NEXT:    [[__TAGP_ADDR_1_I]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[__TAGP_ADDR_0_I]], i64 [[__TAGP_ADDR_1_I_IDX]]
 // AMDGCNSPIRV-NEXT:    [[__R_1_I]] = select i1 [[OR_COND_I]], i64 [[SUB_I]], i64 [[__R_0_I]]
-// AMDGCNSPIRV-NEXT:    br i1 [[OR_COND_I]], label %[[WHILE_COND_I]], label %[[_ZL21__MAKE_MANTISSA_BASE8PKC_EXIT]], !llvm.loop [[LOOP10:![0-9]+]]
+// AMDGCNSPIRV-NEXT:    br i1 [[OR_COND_I]], label %[[WHILE_COND_I]], label %[[_ZL21__MAKE_MANTISSA_BASE8PKC_EXIT]], !llvm.loop [[LOOP9:![0-9]+]]
 // AMDGCNSPIRV:       [[_ZL21__MAKE_MANTISSA_BASE8PKC_EXIT]]:
 // AMDGCNSPIRV-NEXT:    [[RETVAL_2_I:%.*]] = phi i64 [ 0, %[[WHILE_BODY_I]] ], [ [[__R_0_I]], %[[WHILE_COND_I]] ]
 // AMDGCNSPIRV-NEXT:    ret i64 [[RETVAL_2_I]]
@@ -105,7 +105,7 @@ extern "C" __device__ uint64_t test___make_mantissa_base8(const char *p) {
 // CHECK-LABEL: define dso_local i64 @test___make_mantissa_base10(
 // CHECK-SAME: ptr noundef readonly captures(none) [[P:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // CHECK-NEXT:  [[ENTRY:.*]]:
-// CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[P]], align 1, !tbaa [[CHAR_TBAA8]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[P]], align 1, !tbaa [[CHAR_TBAA7]]
 // CHECK-NEXT:    [[CMP_NOT_I1:%.*]] = icmp eq i8 [[TMP0]], 0
 // CHECK-NEXT:    br i1 [[CMP_NOT_I1]], label %[[_ZL22__MAKE_MANTISSA_BASE10PKC_EXIT:.*]], label %[[WHILE_BODY_I:.*]]
 // CHECK:       [[WHILE_BODY_I]]:
@@ -121,9 +121,9 @@ extern "C" __device__ uint64_t test___make_mantissa_base8(const char *p) {
 // CHECK-NEXT:    [[ADD_I:%.*]] = add i64 [[MUL_I]], -48
 // CHECK-NEXT:    [[SUB_I]] = add i64 [[ADD_I]], [[CONV5_I]]
 // CHECK-NEXT:    [[INCDEC_PTR_I]] = getelementptr inbounds nuw i8, ptr [[__TAGP_ADDR_0_I2]], i64 1
-// CHECK-NEXT:    [[TMP3]] = load i8, ptr [[INCDEC_PTR_I]], align 1, !tbaa [[CHAR_TBAA8]]
+// CHECK-NEXT:    [[TMP3]] = load i8, ptr [[INCDEC_PTR_I]], align 1, !tbaa [[CHAR_TBAA7]]
 // CHECK-NEXT:    [[CMP_NOT_I:%.*]] = icmp eq i8 [[TMP3]], 0
-// CHECK-NEXT:    br i1 [[CMP_NOT_I]], label %[[_ZL22__MAKE_MANTISSA_BASE10PKC_EXIT]], label %[[WHILE_BODY_I]], !llvm.loop [[LOOP12:![0-9]+]]
+// CHECK-NEXT:    br i1 [[CMP_NOT_I]], label %[[_ZL22__MAKE_MANTISSA_BASE10PKC_EXIT]], label %[[WHILE_BODY_I]], !llvm.loop [[LOOP11:![0-9]+]]
 // CHECK:       [[_ZL22__MAKE_MANTISSA_BASE10PKC_EXIT]]:
 // CHECK-NEXT:    [[RETVAL_2_I:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ 0, %[[WHILE_BODY_I]] ], [ [[SUB_I]], %[[IF_THEN_I]] ]
 // CHECK-NEXT:    ret i64 [[RETVAL_2_I]]
@@ -135,7 +135,7 @@ extern "C" __device__ uint64_t test___make_mantissa_base8(const char *p) {
 // AMDGCNSPIRV:       [[WHILE_COND_I]]:
 // AMDGCNSPIRV-NEXT:    [[__TAGP_ADDR_0_I:%.*]] = phi ptr addrspace(4) [ [[P]], %[[ENTRY]] ], [ [[__TAGP_ADDR_1_I:%.*]], %[[WHILE_BODY_I:.*]] ]
 // AMDGCNSPIRV-NEXT:    [[__R_0_I:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[__R_1_I:%.*]], %[[WHILE_BODY_I]] ]
-// AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = load i8, ptr addrspace(4) [[__TAGP_ADDR_0_I]], align 1, !tbaa [[CHAR_TBAA9]]
+// AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = load i8, ptr addrspace(4) [[__TAGP_ADDR_0_I]], align 1, !tbaa [[CHAR_TBAA8]]
 // AMDGCNSPIRV-NEXT:    [[CMP_NOT_I:%.*]] = icmp eq i8 [[TMP0]], 0
 // AMDGCNSPIRV-NEXT:    br i1 [[CMP_NOT_I]], label %[[_ZL22__MAKE_MANTISSA_BASE10PKC_EXIT:.*]], label %[[WHILE_BODY_I]]
 // AMDGCNSPIRV:       [[WHILE_BODY_I]]:
@@ -148,7 +148,7 @@ extern "C" __device__ uint64_t test___make_mantissa_base8(const char *p) {
 // AMDGCNSPIRV-NEXT:    [[__TAGP_ADDR_1_I_IDX:%.*]] = zext i1 [[OR_COND_I]] to i64
 // AMDGCNSPIRV-NEXT:    [[__TAGP_ADDR_1_I]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[__TAGP_ADDR_0_I]], i64 [[__TAGP_ADDR_1_I_IDX]]
 // AMDGCNSPIRV-NEXT:    [[__R_1_I]] = select i1 [[OR_COND_I]], i64 [[SUB_I]], i64 [[__R_0_I]]
-// AMDGCNSPIRV-NEXT:    br i1 [[OR_COND_I]], label %[[WHILE_COND_I]], label %[[_ZL22__MAKE_MANTISSA_BASE10PKC_EXIT]], !llvm.loop [[LOOP13:![0-9]+]]
+// AMDGCNSPIRV-NEXT:    br i1 [[OR_COND_I]], label %[[WHILE_COND_I]], label %[[_ZL22__MAKE_MANTISSA_BASE10PKC_EXIT]], !llvm.loop [[LOOP12:![0-9]+]]
 // AMDGCNSPIRV:       [[_ZL22__MAKE_MANTISSA_BASE10PKC_EXIT]]:
 // AMDGCNSPIRV-NEXT:    [[RETVAL_2_I:%.*]] = phi i64 [ 0, %[[WHILE_BODY_I]] ], [ [[__R_0_I]], %[[WHILE_COND_I]] ]
 // AMDGCNSPIRV-NEXT:    ret i64 [[RETVAL_2_I]]
@@ -160,7 +160,7 @@ extern "C" __device__ uint64_t test___make_mantissa_base10(const char *p) {
 // CHECK-LABEL: define dso_local i64 @test___make_mantissa_base16(
 // CHECK-SAME: ptr noundef readonly captures(none) [[P:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // CHECK-NEXT:  [[ENTRY:.*]]:
-// CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[P]], align 1, !tbaa [[CHAR_TBAA8]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[P]], align 1, !tbaa [[CHAR_TBAA7]]
 // CHECK-NEXT:    [[CMP_NOT_I1:%.*]] = icmp eq i8 [[TMP0]], 0
 // CHECK-NEXT:    br i1 [[CMP_NOT_I1]], label %[[_ZL22__MAKE_MANTISSA_BASE16PKC_EXIT:.*]], label %[[WHILE_BODY_I:.*]]
 // CHECK:       [[WHILE_BODY_I]]:
@@ -185,9 +185,9 @@ extern "C" __device__ uint64_t test___make_mantissa_base10(const char *p) {
 // CHECK-NEXT:    [[ADD26_I:%.*]] = add i64 [[MUL24_I]], [[DOTSINK]]
 // CHECK-NEXT:    [[ADD28_I]] = add i64 [[ADD26_I]], [[CONV25_I]]
 // CHECK-NEXT:    [[INCDEC_PTR_I]] = getelementptr inbounds nuw i8, ptr [[__TAGP_ADDR_0_I2]], i64 1
-// CHECK-NEXT:    [[TMP5]] = load i8, ptr [[INCDEC_PTR_I]], align 1, !tbaa [[CHAR_TBAA8]]
+// CHECK-NEXT:    [[TMP5]] = load i8, ptr [[INCDEC_PTR_I]], align 1, !tbaa [[CHAR_TBAA7]]
 // CHECK-NEXT:    [[CMP_NOT_I:%.*]] = icmp eq i8 [[TMP5]], 0
-// CHECK-NEXT:    br i1 [[CMP_NOT_I]], label %[[_ZL22__MAKE_MANTISSA_BASE16PKC_EXIT]], label %[[WHILE_BODY_I]], !llvm.loop [[LOOP13:![0-9]+]]
+// CHECK-NEXT:    br i1 [[CMP_NOT_I]], label %[[_ZL22__MAKE_MANTISSA_BASE16PKC_EXIT]], label %[[WHILE_BODY_I]], !llvm.loop [[LOOP12:![0-9]+]]
 // CHECK:       [[_ZL22__MAKE_MANTISSA_BASE16PKC_EXIT]]:
 // CHECK-NEXT:    [[RETVAL_2_I:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ 0, %[[IF_ELSE17_I]] ], [ [[ADD28_I]], %[[IF_END31_I]] ]
 // CHECK-NEXT:    ret i64 [[RETVAL_2_I]]
@@ -195,7 +195,7 @@ extern "C" __device__ uint64_t test___make_mantissa_base10(const char *p) {
 // AMDGCNSPIRV-LABEL: define spir_func i64 @test___make_mantissa_base16(
 // AMDGCNSPIRV-SAME: ptr addrspace(4) noundef readonly captures(none) [[P:%.*]]) local_unnamed_addr addrspace(4) #[[ATTR2]] {
 // AMDGCNSPIRV-NEXT:  [[ENTRY:.*]]:
-// AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = load i8, ptr addrspace(4) [[P]], align 1, !tbaa [[CHAR_TBAA9]]
+// AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = load i8, ptr addrspace(4) [[P]], align 1, !tbaa [[CHAR_TBAA8]]
 // AMDGCNSPIRV-NEXT:    [[CMP_NOT_I1:%.*]] = icmp eq i8 [[TMP0]], 0
 // AMDGCNSPIRV-NEXT:    br i1 [[CMP_NOT_I1]], label %[[_ZL22__MAKE_MANTISSA_BASE16PKC_EXIT:.*]], label %[[WHILE_BODY_I:.*]]
 // AMDGCNSPIRV:       [[WHILE_BODY_I]]:
@@ -220,9 +220,9 @@ extern "C" __device__ uint64_t test___make_mantissa_base10(const char *p) {
 // AMDGCNSPIRV-NEXT:    [[ADD26_I:%.*]] = add i64 [[MUL24_I]], [[DOTSINK]]
 // AMDGCNSPIRV-NEXT:    [[ADD28_I]] = add i64 [[ADD26_I]], [[CONV25_I]]
 // AMDGCNSPIRV-NEXT:    [[INCDEC_PTR_I]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[__TAGP_ADDR_0_I2]], i64 1
-// AMDGCNSPIRV-NEXT:    [[TMP5]] = load i8, ptr addrspace(4) [[INCDEC_PTR_I]], align 1, !tbaa [[CHAR_TBAA9]]
+// AMDGCNSPIRV-NEXT:    [[TMP5]] = load i8, ptr addrspace(4) [[INCDEC_PTR_I]], align 1, !tbaa [[CHAR_TBAA8]]
 // AMDGCNSPIRV-NEXT:    [[CMP_NOT_I:%.*]] = icmp eq i8 [[TMP5]], 0
-// AMDGCNSPIRV-NEXT:    br i1 [[CMP_NOT_I]], label %[[_ZL22__MAKE_MANTISSA_BASE16PKC_EXIT]], label %[[WHILE_BODY_I]], !llvm.loop [[LOOP14:![0-9]+]]
+// AMDGCNSPIRV-NEXT:    br i1 [[CMP_NOT_I]], label %[[_ZL22__MAKE_MANTISSA_BASE16PKC_EXIT]], label %[[WHILE_BODY_I]], !llvm.loop [[LOOP13:![0-9]+]]
 // AMDGCNSPIRV:       [[_ZL22__MAKE_MANTISSA_BASE16PKC_EXIT]]:
 // AMDGCNSPIRV-NEXT:    [[RETVAL_2_I:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ 0, %[[IF_ELSE17_I]] ], [ [[ADD28_I]], %[[IF_END31_I]] ]
 // AMDGCNSPIRV-NEXT:    ret i64 [[RETVAL_2_I]]
@@ -234,16 +234,16 @@ extern "C" __device__ uint64_t test___make_mantissa_base16(const char *p) {
 // CHECK-LABEL: define dso_local i64 @test___make_mantissa(
 // CHECK-SAME: ptr noundef readonly captures(none) [[P:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[P]], align 1, !tbaa [[CHAR_TBAA8]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[P]], align 1, !tbaa [[CHAR_TBAA7]]
 // CHECK-NEXT:    [[CMP_I:%.*]] = icmp eq i8 [[TMP0]], 48
 // CHECK-NEXT:    br i1 [[CMP_I]], label %[[IF_THEN_I:.*]], label %[[WHILE_COND_I14_I_PREHEADER:.*]]
 // CHECK:       [[WHILE_COND_I14_I_PREHEADER]]:
-// CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr [[P]], align 1, !tbaa [[CHAR_TBAA8]]
+// CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr [[P]], align 1, !tbaa [[CHAR_TBAA7]]
 // CHECK-NEXT:    [[CMP_NOT_I17_I5:%.*]] = icmp eq i8 [[TMP1]], 0
 // CHECK-NEXT:    br i1 [[CMP_NOT_I17_I5]], label %[[_ZL15__MAKE_MANTISSAPKC_EXIT:.*]], label %[[WHILE_BODY_I18_I:.*]]
 // CHECK:       [[IF_THEN_I]]:
 // CHECK-NEXT:    [[INCDEC_PTR_I:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 1
-// CHECK-NEXT:    [[TMP2:%.*]] = load i8, ptr [[INCDEC_PTR_I]], align 1, !tbaa [[CHAR_TBAA8]]
+// CHECK-NEXT:    [[TMP2:%.*]] = load i8, ptr [[INCDEC_PTR_I]], align 1, !tbaa [[CHAR_TBAA7]]
 // CHECK-NEXT:    [[CMP_NOT_I_I14:%.*]] = icmp eq i8 [[TMP2]], 0
 // CHECK-NEXT:    switch i8 [[TMP2]], label %[[WHILE_COND_I_I_PREHEADER:.*]] [
 // CHECK-NEXT:      i8 120, label %[[IF_THEN5_I:.*]]
@@ -275,9 +275,9 @@ extern "C" __device__ uint64_t test___make_mantissa_base16(const char *p) {
 // CHECK-NEXT:    [[ADD26_I_I:%.*]] = add i64 [[MUL24_I_I]], [[DOTSINK]]
 // CHECK-NEXT:    [[ADD28_I_I]] = add i64 [[ADD26_I_I]], [[CONV25_I_I]]
 // CHECK-NEXT:    [[INCDEC_PTR_I34_I]] = getelementptr inbounds nuw i8, ptr [[__TAGP_ADDR_0_I28_I10]], i64 1
-// CHECK-NEXT:    [[TMP7]] = load i8, ptr [[INCDEC_PTR_I34_I]], align 1, !tbaa [[CHAR_TBAA8]]
+// CHECK-NEXT:    [[TMP7]] = load i8, ptr [[INCDEC_PTR_I34_I]], align 1, !tbaa [[CHAR_TBAA7]]
 // CHECK-NEXT:    [[CMP_NOT_I30_I:%.*]] = icmp eq i8 [[TMP7]], 0
-// CHECK-NEXT:    br i1 [[CMP_NOT_I30_I]], label %[[_ZL15__MAKE_MANTISSAPKC_EXIT]], label %[[WHILE_BODY_I31_I]], !llvm.loop [[LOOP13]]
+// CHECK-NEXT:    br i1 [[CMP_NOT_I30_I]], label %[[_ZL15__MAKE_MANTISSAPKC_EXIT]], label %[[WHILE_BODY_I31_I]], !llvm.loop [[LOOP12]]
 // CHECK:       [[WHILE_BODY_I_I]]:
 // CHECK-NEXT:    [[TMP8:%.*]] = phi i8 [ [[TMP10:%.*]], %[[IF_THEN_I_I:.*]] ], [ [[TMP2]], %[[WHILE_COND_I_I_PREHEADER]] ]
 // CHECK-NEXT:    [[__R_0_I_I16:%.*]] = phi i64 [ [[SUB_I_I:%.*]], %[[IF_THEN_I_I]] ], [ 0, %[[WHILE_COND_I_I_PREHEADER]] ]
@@ -291,9 +291,9 @@ extern "C" __device__ uint64_t test___make_mantissa_base16(const char *p) {
 // CHECK-NEXT:    [[ADD_I_I:%.*]] = add i64 [[MUL_I_I]], -48
 // CHECK-NEXT:    [[SUB_I_I]] = add i64 [[ADD_I_I]], [[CONV5_I_I]]
 // CHECK-NEXT:    [[INCDEC_PTR_I_I]] = getelementptr inbounds nuw i8, ptr [[__TAGP_ADDR_0_I_I15]], i64 1
-// CHECK-NEXT:    [[TMP10]] = load i8, ptr [[INCDEC_PTR_I_I]], align 1, !tbaa [[CHAR_TBAA8]]
+// CHECK-NEXT:    [[TMP10]] = load i8, ptr [[INCDEC_PTR_I_I]], align 1, !tbaa [[CHAR_TBAA7]]
 // CHECK-NEXT:    [[CMP_NOT_I_I:%.*]] = icmp eq i8 [[TMP10]], 0
-// CHECK-NEXT:    br i1 [[CMP_NOT_I_I]], label %[[_ZL15__MAKE_MANTISSAPKC_EXIT]], label %[[WHILE_BODY_I_I]], !llvm.loop [[LOOP9]]
+// CHECK-NEXT:    br i1 [[CMP_NOT_I_I]], label %[[_ZL15__MAKE_MANTISSAPKC_EXIT]], label %[[WHILE_BODY_I_I]], !llvm.loop [[LOOP8]]
 // CHECK:       [[WHILE_BODY_I18_I]]:
 // CHECK-NEXT:    [[TMP11:%.*]] = phi i8 [ [[TMP13:%.*]], %[[IF_THEN_I21_I:.*]] ], [ [[TMP1]], %[[WHILE_COND_I14_I_PREHEADER]] ]
 // CHECK-NEXT:    [[__R_0_I16_I7:%.*]] = phi i64 [ [[SUB_I25_I:%.*]], %[[IF_THEN_I21_I]] ], [ 0, %[[WHILE_COND_I14_I_PREHEADER]] ]
@@ -307,9 +307,9 @@ extern "C" __device__ uint64_t test___make_mantissa_base16(const char *p) {
 // CHECK-NEXT:    [[ADD_I24_I:%.*]] = add i64 [[MUL_I22_I]], -48
 // CHECK-NEXT:    [[SUB_I25_I]] = add i64 [[ADD_I24_I]], [[CONV5_I23_I]]
 // CHECK-NEXT:    [[INCDEC_PTR_I26_I]] = getelementptr inbounds nuw i8, ptr [[__TAGP_ADDR_0_I15_I6]], i64 1
-// CHECK-NEXT:    [[TMP13]] = load i8, ptr [[INCDEC_PTR_I26_I]], align 1, !tbaa [[CHAR_TBAA8]]
+// CHECK-NEXT:    [[TMP13]] = load i8, ptr [[INCDEC_PTR_I26_I]], align 1, !tbaa [[CHAR_TBAA7]]
 // CHECK-NEXT:    [[CMP_NOT_I17_I:%.*]] = icmp eq i8 [[TMP13]], 0
-// CHECK-NEXT:    br i1 [[CMP_NOT_I17_I]], label %[[_ZL15__MAKE_MANTISSAPKC_EXIT]], label %[[WHILE_BODY_I18_I]], !llvm.loop [[LOOP12]]
+// CHECK-NEXT:    br i1 [[CMP_NOT_I17_I]], label %[[_ZL15__MAKE_MANTISSAPKC_EXIT]], label %[[WHILE_BODY_I18_I]], !llvm.loop [[LOOP11]]
 // CHECK:       [[_ZL15__MAKE_MANTISSAPKC_EXIT]]:
 // CHECK-NEXT:    [[RETVAL_0_I:%.*]] = phi i64 [ 0, %[[IF_THEN5_I]] ], [ 0, %[[WHILE_COND_I14_I_PREHEADER]] ], [ 0, %[[WHILE_COND_I_I_PREHEADER]] ], [ [[SUB_I_I]], %[[IF_THEN_I_I]] ], [ [[ADD28_I_I]], %[[IF_END31_I_I]] ], [ 0, %[[WHILE_BODY_I_I]] ], [ 0, %[[IF_ELSE17_I_I]] ], [ [[SUB_I25_I]], %[[IF_THEN_I21_I]] ], [ 0, %[[WHILE_BODY_I18_I]] ]
 // CHECK-NEXT:    ret i64 [[RETVAL_0_I]]
@@ -317,18 +317,18 @@ extern "C" __device__ uint64_t test___make_mantissa_base16(const char *p) {
 // AMDGCNSPIRV-LABEL: define spir_func i64 @test___make_mantissa(
 // AMDGCNSPIRV-SAME: ptr addrspace(4) noundef readonly captures(none) [[P:%.*]]) local_unnamed_addr addrspace(4) #[[ATTR2]] {
 // AMDGCNSPIRV-NEXT:  [[ENTRY:.*]]:
-// AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = load i8, ptr addrspace(4) [[P]], align 1, !tbaa [[CHAR_TBAA9]]
+// AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = load i8, ptr addrspace(4) [[P]], align 1, !tbaa [[CHAR_TBAA8]]
 // AMDGCNSPIRV-NEXT:    [[CMP_I:%.*]] = icmp eq i8 [[TMP0]], 48
 // AMDGCNSPIRV-NEXT:    br i1 [[CMP_I]], label %[[IF_THEN_I:.*]], label %[[WHILE_COND_I14_I:.*]]
 // AMDGCNSPIRV:       [[IF_THEN_I]]:
 // AMDGCNSPIRV-NEXT:    [[INCDEC_PTR_I:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[P]], i64 1
-// AMDGCNSPIRV-NEXT:    [[TMP1:%.*]] = load i8, ptr addrspace(4) [[INCDEC_PTR_I]], align 1, !tbaa [[CHAR_TBAA9]]
+// AMDGCNSPIRV-NEXT:    [[TMP1:%.*]] = load i8, ptr addrspace(4) [[INCDEC_PTR_I]], align 1, !tbaa [[CHAR_TBAA8]]
 // AMDGCNSPIRV-NEXT:    switch i8 [[TMP1]], label %[[WHILE_COND_I_I:.*]] [
 // AMDGCNSPIRV-NEXT:      i8 120, label %[[IF_THEN5_I:.*]]
 // AMDGCNSPIRV-NEXT:      i8 88, label %[[IF_THEN5_I]]
 // AMDGCNSPIRV-NEXT:    ]
 // AMDGCNSPIRV:       [[IF_THEN5_I]]:
-// AMDGCNSPIRV-NEXT:    [[TMP2:%.*]] = load i8, ptr addrspace(4) [[INCDEC_PTR_I]], align 1, !tbaa [[CHAR_TBAA9]]
+// AMDGCNSPIRV-NEXT:    [[TMP2:%.*]] = load i8, ptr addrspace(4) [[INCDEC_PTR_I]], align 1, !tbaa [[CHAR_TBAA8]]
 // AMDGCNSPIRV-NEXT:    [[CMP_NOT_I31_I5:%.*]] = icmp eq i8 [[TMP2]], 0
 // AMDGCNSPIRV-NEXT:    br i1 [[CMP_NOT_I31_I5]], label %[[_ZL15__MAKE_MANTISSAPKC_EXIT:.*]], label %[[WHILE_BODY_I32_I:.*]]
 // AMDGCNSPIRV:       [[WHILE_BODY_I32_I]]:
@@ -353,13 +353,13 @@ extern "C" __device__ uint64_t test___make_mantissa_base16(const char *p) {
 // AMDGCNSPIRV-NEXT:    [[ADD26_I_I:%.*]] = add i64 [[MUL24_I_I]], [[DOTSINK]]
 // AMDGCNSPIRV-NEXT:    [[ADD28_I_I]] = add i64 [[ADD26_I_I]], [[CONV25_I_I]]
 // AMDGCNSPIRV-NEXT:    [[INCDEC_PTR_I36_I]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[__TAGP_ADDR_0_I29_I6]], i64 1
-// AMDGCNSPIRV-NEXT:    [[TMP7]] = load i8, ptr addrspace(4) [[INCDEC_PTR_I36_I]], align 1, !tbaa [[CHAR_TBAA9]]
+// AMDGCNSPIRV-NEXT:    [[TMP7]] = load i8, ptr addrspace(4) [[INCDEC_PTR_I36_I]], align 1, !tbaa [[CHAR_TBAA8]]
 // AMDGCNSPIRV-NEXT:    [[CMP_NOT_I31_I:%.*]] = icmp eq i8 [[TMP7]], 0
-// AMDGCNSPIRV-NEXT:    br i1 [[CMP_NOT_I31_I]], label %[[_ZL15__MAKE_MANTISSAPKC_EXIT]], label %[[WHILE_BODY_I32_I]], !llvm.loop [[LOOP14]]
+// AMDGCNSPIRV-NEXT:    br i1 [[CMP_NOT_I31_I]], label %[[_ZL15__MAKE_MANTISSAPKC_EXIT]], label %[[WHILE_BODY_I32_I]], !llvm.loop [[LOOP13]]
 // AMDGCNSPIRV:       [[WHILE_COND_I_I]]:
 // AMDGCNSPIRV-NEXT:    [[__TAGP_ADDR_0_I_I:%.*]] = phi ptr addrspace(4) [ [[__TAGP_ADDR_1_I_I:%.*]], %[[WHILE_BODY_I_I:.*]] ], [ [[INCDEC_PTR_I]], %[[IF_THEN_I]] ]
 // AMDGCNSPIRV-NEXT:    [[__R_0_I_I:%.*]] = phi i64 [ [[__R_1_I_I:%.*]], %[[WHILE_BODY_I_I]] ], [ 0, %[[IF_THEN_I]] ]
-// AMDGCNSPIRV-NEXT:    [[TMP8:%.*]] = load i8, ptr addrspace(4) [[__TAGP_ADDR_0_I_I]], align 1, !tbaa [[CHAR_TBAA9]]
+// AMDGCNSPIRV-NEXT:    [[TMP8:%.*]] = load i8, ptr addrspace(4) [[__TAGP_ADDR_0_I_I]], align 1, !tbaa [[CHAR_TBAA8]]
 // AMDGCNSPIRV-NEXT:    [[CMP_NOT_I_I:%.*]] = icmp eq i8 [[TMP8]], 0
 // AMDGCNSPIRV-NEXT:    br i1 [[CMP_NOT_I_I]], label %[[_ZL15__MAKE_MANTISSAPKC_EXIT]], label %[[WHILE_BODY_I_I]]
 // AMDGCNSPIRV:       [[WHILE_BODY_I_I]]:
@@ -372,11 +372,11 @@ extern "C" __device__ uint64_t test___make_mantissa_base16(const char *p) {
 // AMDGCNSPIRV-NEXT:    [[__TAGP_ADDR_1_I_I_IDX:%.*]] = zext i1 [[OR_COND_I_I]] to i64
 // AMDGCNSPIRV-NEXT:    [[__TAGP_ADDR_1_I_I]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[__TAGP_ADDR_0_I_I]], i64 [[__TAGP_ADDR_1_I_I_IDX]]
 // AMDGCNSPIRV-NEXT:    [[__R_1_I_I]] = select i1 [[OR_COND_I_I]], i64 [[SUB_I_I]], i64 [[__R_0_I_I]]
-// AMDGCNSPIRV-NEXT:    br i1 [[OR_COND_I_I]], label %[[WHILE_COND_I_I]], label %[[_ZL15__MAKE_MANTISSAPKC_EXIT]], !llvm.loop [[LOOP10]]
+// AMDGCNSPIRV-NEXT:    br i1 [[OR_COND_I_I]], label %[[WHILE_COND_I_I]], label %[[_ZL15__MAKE_MANTISSAPKC_EXIT]], !llvm.loop [[LOOP9]]
 // AMDGCNSPIRV:       [[WHILE_COND_I14_I]]:
 // AMDGCNSPIRV-NEXT:    [[__TAGP_ADDR_0_I15_I:%.*]] = phi ptr addrspace(4) [ [[__TAGP_ADDR_1_I25_I:%.*]], %[[WHILE_BODY_I18_I:.*]] ], [ [[P]], %[[ENTRY]] ]
 // AMDGCNSPIRV-NEXT:    [[__R_0_I16_I:%.*]] = phi i64 [ [[__R_1_I26_I:%.*]], %[[WHILE_BODY_I18_I]] ], [ 0, %[[ENTRY]] ]
-// AMDGCNSPIRV-NEXT:    [[TMP10:%.*]] = load i8, ptr addrspace(4) [[__TAGP_ADDR_0_I15_I]], align 1, !tbaa [[CHAR_TBAA9]]
+// AMDGCNSPIRV-NEXT:    [[TMP10:%.*]] = load i8, ptr addrspace(4) [[__TAGP_ADDR_0_I15_I]], align 1, !tbaa [[CHAR_TBAA8]]
 // AMDGCNSPIRV-NEXT:    [[CMP_NOT_I17_I:%.*]] = icmp eq i8 [[TMP10]], 0
 // AMDGCNSPIRV-NEXT:    br i1 [[CMP_NOT_I17_I]], label %[[_ZL15__MAKE_MANTISSAPKC_EXIT]], label %[[WHILE_BODY_I18_I]]
 // AMDGCNSPIRV:       [[WHILE_BODY_I18_I]]:
@@ -389,7 +389,7 @@ extern "C" __device__ uint64_t test___make_mantissa_base16(const char *p) {
 // AMDGCNSPIRV-NEXT:    [[__TAGP_ADDR_1_I25_I_IDX:%.*]] = zext i1 [[OR_COND_I19_I]] to i64
 // AMDGCNSPIRV-NEXT:    [[__TAGP_ADDR_1_I25_I]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[__TAGP_ADDR_0_I15_I]], i64 [[__TAGP_ADDR_1_I25_I_IDX]]
 // AMDGCNSPIRV-NEXT:    [[__R_1_I26_I]] = select i1 [[OR_COND_I19_I]], i64 [[SUB_I23_I]], i64 [[__R_0_I16_I]]
-// AMDGCNSPIRV-NEXT:    br i1 [[OR_COND_I19_I]], label %[[WHILE_COND_I14_I]], label %[[_ZL15__MAKE_MANTISSAPKC_EXIT]], !llvm.loop [[LOOP13]]
+// AMDGCNSPIRV-NEXT:    br i1 [[OR_COND_I19_I]], label %[[WHILE_COND_I14_I]], label %[[_ZL15__MAKE_MANTISSAPKC_EXIT]], !llvm.loop [[LOOP12]]
 // AMDGCNSPIRV:       [[_ZL15__MAKE_MANTISSAPKC_EXIT]]:
 // AMDGCNSPIRV-NEXT:    [[RETVAL_0_I:%.*]] = phi i64 [ 0, %[[IF_THEN5_I]] ], [ [[ADD28_I_I]], %[[IF_END31_I_I]] ], [ [[__R_0_I_I]], %[[WHILE_COND_I_I]] ], [ 0, %[[WHILE_BODY_I_I]] ], [ 0, %[[IF_ELSE17_I_I]] ], [ 0, %[[WHILE_BODY_I18_I]] ], [ [[__R_0_I16_I]], %[[WHILE_COND_I14_I]] ]
 // AMDGCNSPIRV-NEXT:    ret i64 [[RETVAL_0_I]]
@@ -1638,34 +1638,34 @@ extern "C" __device__ float test_exp10f(float x) {
 }
 
 // DEFAULT-LABEL: define dso_local noundef double @test_exp10(
-// DEFAULT-SAME: double noundef [[X:%.*]]) local_unnamed_addr #[[ATTR5]] {
+// DEFAULT-SAME: double noundef [[X:%.*]]) local_unnamed_addr #[[ATTR3]] {
 // DEFAULT-NEXT:  [[ENTRY:.*:]]
-// DEFAULT-NEXT:    [[CALL_I:%.*]] = tail call contract noundef double @__ocml_exp10_f64(double noundef [[X]]) #[[ATTR14]]
-// DEFAULT-NEXT:    ret double [[CALL_I]]
+// DEFAULT-NEXT:    [[TMP0:%.*]] = tail call contract noundef double @llvm.exp10.f64(double [[X]])
+// DEFAULT-NEXT:    ret double [[TMP0]]
 //
 // FINITEONLY-LABEL: define dso_local noundef nofpclass(nan inf) double @test_exp10(
-// FINITEONLY-SAME: double noundef nofpclass(nan inf) [[X:%.*]]) local_unnamed_addr #[[ATTR5]] {
+// FINITEONLY-SAME: double noundef nofpclass(nan inf) [[X:%.*]]) local_unnamed_addr #[[ATTR3]] {
 // FINITEONLY-NEXT:  [[ENTRY:.*:]]
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract noundef nofpclass(nan inf) double @__ocml_exp10_f64(double noundef nofpclass(nan inf) [[X]]) #[[ATTR14]]
-// FINITEONLY-NEXT:    ret double [[CALL_I]]
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef nofpclass(nan inf) double @llvm.exp10.f64(double nofpclass(nan inf) [[X]])
+// FINITEONLY-NEXT:    ret double [[TMP0]]
 //
 // APPROX-LABEL: define dso_local noundef double @test_exp10(
-// APPROX-SAME: double noundef [[X:%.*]]) local_unnamed_addr #[[ATTR5]] {
+// APPROX-SAME: double noundef [[X:%.*]]) local_unnamed_addr #[[ATTR3]] {
 // APPROX-NEXT:  [[ENTRY:.*:]]
-// APPROX-NEXT:    [[CALL_I:%.*]] = tail call contract noundef double @__ocml_exp10_f64(double noundef [[X]]) #[[ATTR14]]
-// APPROX-NEXT:    ret double [[CALL_I]]
+// APPROX-NEXT:    [[TMP0:%.*]] = tail call contract noundef double @llvm.exp10.f64(double [[X]])
+// APPROX-NEXT:    ret double [[TMP0]]
 //
 // NCRDIV-LABEL: define dso_local noundef double @test_exp10(
-// NCRDIV-SAME: double noundef [[X:%.*]]) local_unnamed_addr #[[ATTR5]] {
+// NCRDIV-SAME: double noundef [[X:%.*]]) local_unnamed_addr #[[ATTR3]] {
 // NCRDIV-NEXT:  [[ENTRY:.*:]]
-// NCRDIV-NEXT:    [[CALL_I:%.*]] = tail call contract noundef double @__ocml_exp10_f64(double noundef [[X]]) #[[ATTR14]]
-// NCRDIV-NEXT:    ret double [[CALL_I]]
+// NCRDIV-NEXT:    [[TMP0:%.*]] = tail call contract noundef double @llvm.exp10.f64(double [[X]])
+// NCRDIV-NEXT:    ret double [[TMP0]]
 //
 // AMDGCNSPIRV-LABEL: define spir_func noundef double @test_exp10(
-// AMDGCNSPIRV-SAME: double noundef [[X:%.*]]) local_unnamed_addr addrspace(4) #[[ATTR5]] {
+// AMDGCNSPIRV-SAME: double noundef [[X:%.*]]) local_unnamed_addr addrspace(4) #[[ATTR3]] {
 // AMDGCNSPIRV-NEXT:  [[ENTRY:.*:]]
-// AMDGCNSPIRV-NEXT:    [[CALL_I:%.*]] = tail call contract spir_func noundef addrspace(4) double @__ocml_exp10_f64(double noundef [[X]]) #[[ATTR14]]
-// AMDGCNSPIRV-NEXT:    ret double [[CALL_I]]
+// AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = tail call contract noundef addrspace(4) double @llvm.exp10.f64(double [[X]])
+// AMDGCNSPIRV-NEXT:    ret double [[TMP0]]
 //
 extern "C" __device__ double test_exp10(double x) {
   return exp10(x);
@@ -1706,34 +1706,34 @@ extern "C" __device__ float test_exp2f(float x) {
 }
 
 // DEFAULT-LABEL: define dso_local noundef double @test_exp2(
-// DEFAULT-SAME: double noundef [[X:%.*]]) local_unnamed_addr #[[ATTR5]] {
+// DEFAULT-SAME: double noundef [[X:%.*]]) local_unnamed_addr #[[ATTR3]] {
 // DEFAULT-NEXT:  [[ENTRY:.*:]]
-// DEFAULT-NEXT:    [[CALL_I:%.*]] = tail call contract noundef double @__ocml_exp2_f64(double noundef [[X]]) #[[ATTR14]]
-// DEFAULT-NEXT:    ret double [[CALL_I]]
+// DEFAULT-NEXT:    [[TMP0:%.*]] = tail call contract noundef double @llvm.exp2.f64(double [[X]])
+// DEFAULT-NEXT:    ret double [[TMP0]]
 //
 // FINITEONLY-LABEL: define dso_local noundef nofpclass(nan inf) double @test_exp2(
-// FINITEONLY-SAME: double noundef nofpclass(nan inf) [[X:%.*]]) local_unnamed_addr #[[ATTR5]] {
+// FINITEONLY-SAME: double noundef nofpclass(nan inf) [[X:%.*]]) local_unnamed_addr #[[ATTR3]] {
 // FINITEONLY-NEXT:  [[ENTRY:.*:]]
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract noundef nofpclass(nan inf) double @__ocml_exp2_f64(double noundef nofpclass(nan inf) [[X]]) #[[ATTR14]]
-// FINITEONLY-NEXT:    ret double [[CALL_I]]
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef nofpclass(nan inf) double @llvm.exp2.f64(double nofpclass(nan inf) [[X]])
+// FINITEONLY-NEXT:    ret double [[TMP0]]
 //
 // APPROX-LABEL: define dso_local noundef double @test_exp2(
-// APPROX-SAME: double noundef [[X:%.*]]) local_unnamed_addr #[[ATTR5]] {
+// APPROX-SAME: double noundef [[X:%.*]]) local_unnamed_addr #[[ATTR3]] {
 // APPROX-NEXT:  [[ENTRY:.*:]]
-// APPROX-NEXT:    [[CALL_I:%.*]] = tail call contract noundef double @__ocml_exp2_f64(double noundef [[X]]) #[[ATTR14]]
-// APPROX-NEXT:    ret double [[CALL_I]]
+// APPROX-NEXT:    [[TMP0:%.*]] = tail call contract noundef double @llvm.exp2.f64(double [[X]])
+// APPROX-NEXT:    ret double [[TMP0]]
 //
 // NCRDIV-LABEL: define dso_local noundef double @test_exp2(
-// NCRDIV-SAME: double noundef [[X:%.*]]) local_unnamed_addr #[[ATTR5]] {
+// NCRDIV-SAME: double noundef [[X:%.*]]) local_unnamed_addr #[[ATTR3]] {
 // NCRDIV-NEXT:  [[ENTRY:.*:]]
-// NCRDIV-NEXT:    [[CALL_I:%.*]] = tail call contract noundef double @__ocml_exp2_f64(double noundef [[X]]) #[[ATTR14]]
-// NCRDIV-NEXT:    ret double [[CALL_I]]
+// NCRDIV-NEXT:    [[TMP0:%.*]] = tail call contract noundef double @llvm.exp2.f64(double [[X]])
+// NCRDIV-NEXT:    ret double [[TMP0]]
 //
 // AMDGCNSPIRV-LABEL: define spir_func noundef double @test_exp2(
-// AMDGCNSPIRV-SAME: double noundef [[X:%.*]]) local_unnamed_addr addrspace(4) #[[ATTR5]] {
+// AMDGCNSPIRV-SAME: double noundef [[X:%.*]]) local_unnamed_addr addrspace(4) #[[ATTR3]] {
 // AMDGCNSPIRV-NEXT:  [[ENTRY:.*:]]
-// AMDGCNSPIRV-NEXT:    [[CALL_I:%.*]] = tail call contract spir_func noundef addrspace(4) double @__ocml_exp2_f64(double noundef [[X]]) #[[ATTR14]]
-// AMDGCNSPIRV-NEXT:    ret double [[CALL_I]]
+// AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = tail call contract noundef addrspace(4) double @llvm.exp2.f64(double [[X]])
+// AMDGCNSPIRV-NEXT:    ret double [[TMP0]]
 //
 extern "C" __device__ double test_exp2(double x) {
   return exp2(x);
@@ -1774,34 +1774,34 @@ extern "C" __device__ float test_expf(float x) {
 }
 
 // DEFAULT-LABEL: define dso_local noundef double @test_exp(
-// DEFAULT-SAME: double noundef [[X:%.*]]) local_unnamed_addr #[[ATTR5]] {
+// DEFAULT-SAME: double noundef [[X:%.*]]) local_unnamed_addr #[[ATTR3]] {
 // DEFAULT-NEXT:  [[ENTRY:.*:]]
-// DEFAULT-NEXT:    [[CALL_I:%.*]] = tail call contract noundef double @__ocml_exp_f64(double noundef [[X]]) #[[ATTR14]]
-// DEFAULT-NEXT:    ret double [[CALL_I]]
+// DEFAULT-NEXT:    [[TMP0:%.*]] = tail call contract noundef double @llvm.exp.f64(double [[X]])
+// DEFAULT-NEXT:    ret double [[TMP0]]
 //
 // FINITEONLY-LABEL: define dso_local noundef nofpclass(nan inf) double @test_exp(
-// FINITEONLY-SAME: double noundef nofpclass(nan inf) [[X:%.*]]) local_unnamed_addr #[[ATTR5]] {
+// FINITEONLY-SAME: double noundef nofpclass(nan inf) [[X:%.*]]) local_unnamed_addr #[[ATTR3]] {
 // FINITEONLY-NEXT:  [[ENTRY:.*:]]
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract noundef nofpclass(nan inf) double @__ocml_exp_f64(double noundef nofpclass(nan inf) [[X]]) #[[ATTR14]]
-// FINITEONLY-NEXT:    ret double [[CALL_I]]
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef nofpclass(nan inf) double @llvm.exp.f64(double nofpclass(nan inf) [[X]])
+// FINITEONLY-NEXT:    ret double [[TMP0]]
 //
 // APPROX-LABEL: define dso_local noundef double @test_exp(
-// APPROX-SAME: double noundef [[X:%.*]]) local_unnamed_addr #[[ATTR5]] {
+// APPROX-SAME: double noundef [[X:%.*]]) local_unnamed_addr #[[ATTR3]] {
 // APPROX-NEXT:  [[ENTRY:.*:]]
-// APPROX-NEXT:    [[CALL_I:%.*]] = tail call contract noundef double @__ocml_exp_f64(double noundef [[X]]) #[[ATTR14]]
-// APPROX-NEXT:    ret double [[CALL_I]]
+// APPROX-NEXT:    [[TMP0:%.*]] = tail call contract noundef double @llvm.exp.f64(double [[X]])
+// APPROX-NEXT:    ret double [[TMP0]]
 //
 // NCRDIV-LABEL: define dso_local noundef double @test_exp(
-// NCRDIV-SAME: double noundef [[X:%.*]]) local_unnamed_addr #[[ATTR5]] {
+// NCRDIV-SAME: double noundef [[X:%.*]]) local_unnamed_addr #[[ATTR3]] {
 // NCRDIV-NEXT:  [[ENTRY:.*:]]
-// NCRDIV-NEXT:    [[CALL_I:%.*]] = tail call contract noundef double @__ocml_exp_f64(double noundef [[X]]) #[[ATTR14]]
-// NCRDIV-NEXT:    ret double [[CALL_I]]
+// NCRDIV-NEXT:    [[TMP0:%.*]] = tail call contract noundef double @llvm.exp.f64(double [[X]])
+// NCRDIV-NEXT:    ret double [[TMP0]]
 //
 // AMDGCNSPIRV-LABEL: define spir_func noundef double @test_exp(
-// AMDGCNSPIRV-SAME: double noundef [[X:%.*]]) local_unnamed_addr addrspace(4) #[[ATTR5]] {
+// AMDGCNSPIRV-SAME: double noundef [[X:%.*]]) local_unnamed_addr addrspace(4) #[[ATTR3]] {
 // AMDGCNSPIRV-NEXT:  [[ENTRY:.*:]]
-// AMDGCNSPIRV-NEXT:    [[CALL_I:%.*]] = tail call contract spir_func noundef addrspace(4) double @__ocml_exp_f64(double noundef [[X]]) #[[ATTR14]]
-// AMDGCNSPIRV-NEXT:    ret double [[CALL_I]]
+// AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = tail call contract noundef addrspace(4) double @llvm.exp.f64(double [[X]])
+// AMDGCNSPIRV-NEXT:    ret double [[TMP0]]
 //
 extern "C" __device__ double test_exp(double x) {
   return exp(x);
@@ -2032,7 +2032,7 @@ extern "C" __device__ double test_fdim(double x, double y) {
 // NCRDIV-LABEL: define dso_local noundef float @test_fdividef(
 // NCRDIV-SAME: float noundef [[X:%.*]], float noundef [[Y:%.*]]) local_unnamed_addr #[[ATTR3]] {
 // NCRDIV-NEXT:  [[ENTRY:.*:]]
-// NCRDIV-NEXT:    [[DIV_I:%.*]] = fdiv contract float [[X]], [[Y]], !fpmath [[META14:![0-9]+]]
+// NCRDIV-NEXT:    [[DIV_I:%.*]] = fdiv contract float [[X]], [[Y]], !fpmath [[META13:![0-9]+]]
 // NCRDIV-NEXT:    ret float [[DIV_I]]
 //
 // AMDGCNSPIRV-LABEL: define spir_func noundef float @test_fdividef(
@@ -2424,7 +2424,7 @@ extern "C" __device__ double test_fmod(double x, double y) {
 // DEFAULT-NEXT:  [[ENTRY:.*:]]
 // DEFAULT-NEXT:    [[TMP0:%.*]] = tail call { float, i32 } @llvm.frexp.f32.i32(float [[X]])
 // DEFAULT-NEXT:    [[TMP1:%.*]] = extractvalue { float, i32 } [[TMP0]], 1
-// DEFAULT-NEXT:    store i32 [[TMP1]], ptr [[Y]], align 4, !tbaa [[INT_TBAA4:![0-9]+]]
+// DEFAULT-NEXT:    store i32 [[TMP1]], ptr [[Y]], align 4, !tbaa [[INT_TBAA3:![0-9]+]]
 // DEFAULT-NEXT:    [[TMP2:%.*]] = extractvalue { float, i32 } [[TMP0]], 0
 // DEFAULT-NEXT:    ret float [[TMP2]]
 //
@@ -2433,7 +2433,7 @@ extern "C" __device__ double test_fmod(double x, double y) {
 // FINITEONLY-NEXT:  [[ENTRY:.*:]]
 // FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call { float, i32 } @llvm.frexp.f32.i32(float nofpclass(nan inf) [[X]])
 // FINITEONLY-NEXT:    [[TMP1:%.*]] = extractvalue { float, i32 } [[TMP0]], 1
-// FINITEONLY-NEXT:    store i32 [[TMP1]], ptr [[Y]], align 4, !tbaa [[INT_TBAA4:![0-9]+]]
+// FINITEONLY-NEXT:    store i32 [[TMP1]], ptr [[Y]], align 4, !tbaa [[INT_TBAA3:![0-9]+]]
 // FINITEONLY-NEXT:    [[TMP2:%.*]] = extractvalue { float, i32 } [[TMP0]], 0
 // FINITEONLY-NEXT:    ret float [[TMP2]]
 //
@@ -2442,7 +2442,7 @@ extern "C" __device__ double test_fmod(double x, double y) {
 // APPROX-NEXT:  [[ENTRY:.*:]]
 // APPROX-NEXT:    [[TMP0:%.*]] = tail call { float, i32 } @llvm.frexp.f32.i32(float [[X]])
 // APPROX-NEXT:    [[TMP1:%.*]] = extractvalue { float, i32 } [[TMP0]], 1
-// APPROX-NEXT:    store i32 [[TMP1]], ptr [[Y]], align 4, !tbaa [[INT_TBAA4:![0-9]+]]
+// APPROX-NEXT:    store i32 [[TMP1]], ptr [[Y]], align 4, !tbaa [[INT_TBAA3:![0-9]+]]
 // APPROX-NEXT:    [[TMP2:%.*]] = extractvalue { float, i32 } [[TMP0]], 0
 // APPROX-NEXT:    ret float [[TMP2]]
 //
@@ -2451,7 +2451,7 @@ extern "C" __device__ double test_fmod(double x, double y) {
 // NCRDIV-NEXT:  [[ENTRY:.*:]]
 // NCRDIV-NEXT:    [[TMP0:%.*]] = tail call { float, i32 } @llvm.frexp.f32.i32(float [[X]])
 // NCRDIV-NEXT:    [[TMP1:%.*]] = extractvalue { float, i32 } [[TMP0]], 1
-// NCRDIV-NEXT:    store i32 [[TMP1]], ptr [[Y]], align 4, !tbaa [[INT_TBAA4:![0-9]+]]
+// NCRDIV-NEXT:    store i32 [[TMP1]], ptr [[Y]], align 4, !tbaa [[INT_TBAA3:![0-9]+]]
 // NCRDIV-NEXT:    [[TMP2:%.*]] = extractvalue { float, i32 } [[TMP0]], 0
 // NCRDIV-NEXT:    ret float [[TMP2]]
 //
@@ -2460,7 +2460,7 @@ extern "C" __device__ double test_fmod(double x, double y) {
 // AMDGCNSPIRV-NEXT:  [[ENTRY:.*:]]
 // AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = tail call addrspace(4) { float, i32 } @llvm.frexp.f32.i32(float [[X]])
 // AMDGCNSPIRV-NEXT:    [[TMP1:%.*]] = extractvalue { float, i32 } [[TMP0]], 1
-// AMDGCNSPIRV-NEXT:    store i32 [[TMP1]], ptr addrspace(4) [[Y]], align 4, !tbaa [[INT_TBAA5:![0-9]+]]
+// AMDGCNSPIRV-NEXT:    store i32 [[TMP1]], ptr addrspace(4) [[Y]], align 4, !tbaa [[INT_TBAA4:![0-9]+]]
 // AMDGCNSPIRV-NEXT:    [[TMP2:%.*]] = extractvalue { float, i32 } [[TMP0]], 0
 // AMDGCNSPIRV-NEXT:    ret float [[TMP2]]
 //
@@ -2473,7 +2473,7 @@ extern "C" __device__ float test_frexpf(float x, int* y) {
 // DEFAULT-NEXT:  [[ENTRY:.*:]]
 // DEFAULT-NEXT:    [[TMP0:%.*]] = tail call { double, i32 } @llvm.frexp.f64.i32(double [[X]])
 // DEFAULT-NEXT:    [[TMP1:%.*]] = extractvalue { double, i32 } [[TMP0]], 1
-// DEFAULT-NEXT:    store i32 [[TMP1]], ptr [[Y]], align 4, !tbaa [[INT_TBAA4]]
+// DEFAULT-NEXT:    store i32 [[TMP1]], ptr [[Y]], align 4, !tbaa [[INT_TBAA3]]
 // DEFAULT-NEXT:    [[TMP2:%.*]] = extractvalue { double, i32 } [[TMP0]], 0
 // DEFAULT-NEXT:    ret double [[TMP2]]
 //
@@ -2482,7 +2482,7 @@ extern "C" __device__ float test_frexpf(float x, int* y) {
 // FINITEONLY-NEXT:  [[ENTRY:.*:]]
 // FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call { double, i32 } @llvm.frexp.f64.i32(double nofpclass(nan inf) [[X]])
 // FINITEONLY-NEXT:    [[TMP1:%.*]] = extractvalue { double, i32 } [[TMP0]], 1
-// FINITEONLY-NEXT:    store i32 [[TMP1]], ptr [[Y]], align 4, !tbaa [[INT_TBAA4]]
+// FINITEONLY-NEXT:    store i32 [[TMP1]], ptr [[Y]], align 4, !tbaa [[INT_TBAA3]]
 // FINITEONLY-NEXT:    [[TMP2:%.*]] = extractvalue { double, i32 } [[TMP0]], 0
 // FINITEONLY-NEXT:    ret double [[TMP2]]
 //
@@ -2491,7 +2491,7 @@ extern "C" __device__ float test_frexpf(float x, int* y) {
 // APPROX-NEXT:  [[ENTRY:.*:]]
 // APPROX-NEXT:    [[TMP0:%.*]] = tail call { double, i32 } @llvm.frexp.f64.i32(double [[X]])
 // APPROX-NEXT:    [[TMP1:%.*]] = extractvalue { double, i32 } [[TMP0]], 1
-// APPROX-NEXT:    store i32 [[TMP1]], ptr [[Y]], align 4, !tbaa [[INT_TBAA4]]
+// APPROX-NEXT:    store i32 [[TMP1]], ptr [[Y]], align 4, !tbaa [[INT_TBAA3]]
 // APPROX-NEXT:    [[TMP2:%.*]] = extractvalue { double, i32 } [[TMP0]], 0
 // APPROX-NEXT:    ret double [[TMP2]]
 //
@@ -2500,7 +2500,7 @@ extern "C" __device__ float test_frexpf(float x, int* y) {
 // NCRDIV-NEXT:  [[ENTRY:.*:]]
 // NCRDIV-NEXT:    [[TMP0:%.*]] = tail call { double, i32 } @llvm.frexp.f64.i32(double [[X]])
 // NCRDIV-NEXT:    [[TMP1:%.*]] = extractvalue { double, i32 } [[TMP0]], 1
-// NCRDIV-NEXT:    store i32 [[TMP1]], ptr [[Y]], align 4, !tbaa [[INT_TBAA4]]
+// NCRDIV-NEXT:    store i32 [[TMP1]], ptr [[Y]], align 4, !tbaa [[INT_TBAA3]]
 // NCRDIV-NEXT:    [[TMP2:%.*]] = extractvalue { double, i32 } [[TMP0]], 0
 // NCRDIV-NEXT:    ret double [[TMP2]]
 //
@@ -2509,7 +2509,7 @@ extern "C" __device__ float test_frexpf(float x, int* y) {
 // AMDGCNSPIRV-NEXT:  [[ENTRY:.*:]]
 // AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = tail call addrspace(4) { double, i32 } @llvm.frexp.f64.i32(double [[X]])
 // AMDGCNSPIRV-NEXT:    [[TMP1:%.*]] = extractvalue { double, i32 } [[TMP0]], 1
-// AMDGCNSPIRV-NEXT:    store i32 [[TMP1]], ptr addrspace(4) [[Y]], align 4, !tbaa [[INT_TBAA5]]
+// AMDGCNSPIRV-NEXT:    store i32 [[TMP1]], ptr addrspace(4) [[Y]], align 4, !tbaa [[INT_TBAA4]]
 // AMDGCNSPIRV-NEXT:    [[TMP2:%.*]] = extractvalue { double, i32 } [[TMP0]], 0
 // AMDGCNSPIRV-NEXT:    ret double [[TMP2]]
 //
@@ -3056,7 +3056,7 @@ extern "C" __device__ double test_j1(double x) {
 // DEFAULT-NEXT:    [[SUB_I]] = fsub contract float [[MUL8_I]], [[__X0_0_I2]]
 // DEFAULT-NEXT:    [[INC_I]] = add nuw nsw i32 [[__I_0_I4]], 1
 // DEFAULT-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i32 [[INC_I]], [[X]]
-// DEFAULT-NEXT:    br i1 [[EXITCOND_NOT]], label %[[_ZL3JNFIF_EXIT]], label %[[FOR_BODY_I]], !llvm.loop [[LOOP14:![0-9]+]]
+// DEFAULT-NEXT:    br i1 [[EXITCOND_NOT]], label %[[_ZL3JNFIF_EXIT]], label %[[FOR_BODY_I]], !llvm.loop [[LOOP13:![0-9]+]]
 // DEFAULT:       [[_ZL3JNFIF_EXIT]]:
 // DEFAULT-NEXT:    [[RETVAL_0_I:%.*]] = phi float [ [[CALL_I20_I]], %[[IF_THEN_I]] ], [ [[CALL_I22_I]], %[[IF_THEN2_I]] ], [ [[CALL_I21_I]], %[[IF_END4_I]] ], [ [[SUB_I]], %[[FOR_BODY_I]] ]
 // DEFAULT-NEXT:    ret float [[RETVAL_0_I]]
@@ -3090,7 +3090,7 @@ extern "C" __device__ double test_j1(double x) {
 // FINITEONLY-NEXT:    [[SUB_I]] = fsub nnan ninf contract float [[MUL8_I]], [[__X0_0_I2]]
 // FINITEONLY-NEXT:    [[INC_I]] = add nuw nsw i32 [[__I_0_I4]], 1
 // FINITEONLY-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i32 [[INC_I]], [[X]]
-// FINITEONLY-NEXT:    br i1 [[EXITCOND_NOT]], label %[[_ZL3JNFIF_EXIT]], label %[[FOR_BODY_I]], !llvm.loop [[LOOP14:![0-9]+]]
+// FINITEONLY-NEXT:    br i1 [[EXITCOND_NOT]], label %[[_ZL3JNFIF_EXIT]], label %[[FOR_BODY_I]], !llvm.loop [[LOOP13:![0-9]+]]
 // FINITEONLY:       [[_ZL3JNFIF_EXIT]]:
 // FINITEONLY-NEXT:    [[RETVAL_0_I:%.*]] = phi float [ [[CALL_I20_I]], %[[IF_THEN_I]] ], [ [[CALL_I22_I]], %[[IF_THEN2_I]] ], [ [[CALL_I21_I]], %[[IF_END4_I]] ], [ [[SUB_I]], %[[FOR_BODY_I]] ]
 // FINITEONLY-NEXT:    ret float [[RETVAL_0_I]]
@@ -3124,7 +3124,7 @@ extern "C" __device__ double test_j1(double x) {
 // APPROX-NEXT:    [[SUB_I]] = fsub contract float [[MUL8_I]], [[__X0_0_I2]]
 // APPROX-NEXT:    [[INC_I]] = add nuw nsw i32 [[__I_0_I4]], 1
 // APPROX-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i32 [[INC_I]], [[X]]
-// APPROX-NEXT:    br i1 [[EXITCOND_NOT]], label %[[_ZL3JNFIF_EXIT]], label %[[FOR_BODY_I]], !llvm.loop [[LOOP14:![0-9]+]]
+// APPROX-NEXT:    br i1 [[EXITCOND_NOT]], label %[[_ZL3JNFIF_EXIT]], label %[[FOR_BODY_I]], !llvm.loop [[LOOP13:![0-9]+]]
 // APPROX:       [[_ZL3JNFIF_EXIT]]:
 // APPROX-NEXT:    [[RETVAL_0_I:%.*]] = phi float [ [[CALL_I20_I]], %[[IF_THEN_I]] ], [ [[CALL_I22_I]], %[[IF_THEN2_I]] ], [ [[CALL_I21_I]], %[[IF_END4_I]] ], [ [[SUB_I]], %[[FOR_BODY_I]] ]
 // APPROX-NEXT:    ret float [[RETVAL_0_I]]
@@ -3153,12 +3153,12 @@ extern "C" __device__ double test_j1(double x) {
 // NCRDIV-NEXT:    [[__X0_0_I2:%.*]] = phi float [ [[__X1_0_I3]], %[[FOR_BODY_I]] ], [ [[CALL_I_I]], %[[IF_END4_I]] ]
 // NCRDIV-NEXT:    [[MUL_I:%.*]] = shl nuw nsw i32 [[__I_0_I4]], 1
 // NCRDIV-NEXT:    [[CONV_I:%.*]] = uitofp nneg i32 [[MUL_I]] to float
-// NCRDIV-NEXT:    [[DIV_I:%.*]] = fdiv contract float [[CONV_I]], [[Y]], !fpmath [[META14]]
+// NCRDIV-NEXT:    [[DIV_I:%.*]] = fdiv contract float [[CONV_I]], [[Y]], !fpmath [[META13]]
 // NCRDIV-NEXT:    [[MUL8_I:%.*]] = fmul contract float [[__X1_0_I3]], [[DIV_I]]
 // NCRDIV-NEXT:    [[SUB_I]] = fsub contract float [[MUL8_I]], [[__X0_0_I2]]
 // NCRDIV-NEXT:    [[INC_I]] = add nuw nsw i32 [[__I_0_I4]], 1
 // NCRDIV-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i32 [[INC_I]], [[X]]
-// NCRDIV-NEXT:    br i1 [[EXITCOND_NOT]], label %[[_ZL3JNFIF_EXIT]], label %[[FOR_BODY_I]], !llvm.loop [[LOOP15:![0-9]+]]
+// NCRDIV-NEXT:    br i1 [[EXITCOND_NOT]], label %[[_ZL3JNFIF_EXIT]], label %[[FOR_BODY_I]], !llvm.loop [[LOOP14:![0-9]+]]
 // NCRDIV:       [[_ZL3JNFIF_EXIT]]:
 // NCRDIV-NEXT:    [[RETVAL_0_I:%.*]] = phi float [ [[CALL_I20_I]], %[[IF_THEN_I]] ], [ [[CALL_I22_I]], %[[IF_THEN2_I]] ], [ [[CALL_I21_I]], %[[IF_END4_I]] ], [ [[SUB_I]], %[[FOR_BODY_I]] ]
 // NCRDIV-NEXT:    ret float [[RETVAL_0_I]]
@@ -3192,7 +3192,7 @@ extern "C" __device__ double test_j1(double x) {
 // AMDGCNSPIRV-NEXT:    [[SUB_I]] = fsub contract float [[MUL8_I]], [[__X0_0_I2]]
 // AMDGCNSPIRV-NEXT:    [[INC_I]] = add nuw nsw i32 [[__I_0_I4]], 1
 // AMDGCNSPIRV-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i32 [[INC_I]], [[X]]
-// AMDGCNSPIRV-NEXT:    br i1 [[EXITCOND_NOT]], label %[[_ZL3JNFIF_EXIT]], label %[[FOR_BODY_I]], !llvm.loop [[LOOP15:![0-9]+]]
+// AMDGCNSPIRV-NEXT:    br i1 [[EXITCOND_NOT]], label %[[_ZL3JNFIF_EXIT]], label %[[FOR_BODY_I]], !llvm.loop [[LOOP14:![0-9]+]]
 // AMDGCNSPIRV:       [[_ZL3JNFIF_EXIT]]:
 // AMDGCNSPIRV-NEXT:    [[RETVAL_0_I:%.*]] = phi float [ [[CALL_I20_I]], %[[IF_THEN_I]] ], [ [[CALL_I22_I]], %[[IF_THEN2_I]] ], [ [[CALL_I21_I]], %[[IF_END4_I]] ], [ [[SUB_I]], %[[FOR_BODY_I]] ]
 // AMDGCNSPIRV-NEXT:    ret float [[RETVAL_0_I]]
@@ -3230,7 +3230,7 @@ extern "C" __device__ float test_jnf(int x, float y) {
 // DEFAULT-NEXT:    [[SUB_I]] = fsub contract double [[MUL8_I]], [[__X0_0_I2]]
 // DEFAULT-NEXT:    [[INC_I]] = add nuw nsw i32 [[__I_0_I4]], 1
 // DEFAULT-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i32 [[INC_I]], [[X]]
-// DEFAULT-NEXT:    br i1 [[EXITCOND_NOT]], label %[[_ZL2JNID_EXIT]], label %[[FOR_BODY_I]], !llvm.loop [[LOOP15:![0-9]+]]
+// DEFAULT-NEXT:    br i1 [[EXITCOND_NOT]], label %[[_ZL2JNID_EXIT]], label %[[FOR_BODY_I]], !llvm.loop [[LOOP14:![0-9]+]]
 // DEFAULT:       [[_ZL2JNID_EXIT]]:
 // DEFAULT-NEXT:    [[RETVAL_0_I:%.*]] = phi double [ [[CALL_I20_I]], %[[IF_THEN_I]] ], [ [[CALL_I22_I]], %[[IF_THEN2_I]] ], [ [[CALL_I21_I]], %[[IF_END4_I]] ], [ [[SUB_I]], %[[FOR_BODY_I]] ]
 // DEFAULT-NEXT:    ret double [[RETVAL_0_I]]
@@ -3264,7 +3264,7 @@ extern "C" __device__ float test_jnf(int x, float y) {
 // FINITEONLY-NEXT:    [[SUB_I]] = fsub nnan ninf contract double [[MUL8_I]], [[__X0_0_I2]]
 // FINITEONLY-NEXT:    [[INC_I]] = add nuw nsw i32 [[__I_0_I4]], 1
 // FINITEONLY-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i32 [[INC_I]], [[X]]
-// FINITEONLY-NEXT:    br i1 [[EXITCOND_NOT]], label %[[_ZL2JNID_EXIT]], label %[[FOR_BODY_I]], !llvm.loop [[LOOP15:![0-9]+]]
+// FINITEONLY-NEXT:    br i1 [[EXITCOND_NOT]], label %[[_ZL2JNID_EXIT]], label %[[FOR_BODY_I]], !llvm.loop [[LOOP14:![0-9]+]]
 // FINITEONLY:       [[_ZL2JNID_EXIT]]:
 // FINITEONLY-NEXT:    [[RETVAL_0_I:%.*]] = phi double [ [[CALL_I20_I]], %[[IF_THEN_I]] ], [ [[CALL_I22_I]], %[[IF_THEN2_I]] ], [ [[CALL_I21_I]], %[[IF_END4_I]] ], [ [[SUB_I]], %[[FOR_BODY_I]] ]
 // FINITEONLY-NEXT:    ret double [[RETVAL_0_I]]
@@ -3298,7 +3298,7 @@ extern "C" __device__ float test_jnf(int x, float y) {
 // APPROX-NEXT:    [[SUB_I]] = fsub contract double [[MUL8_I]], [[__X0_0_I2]]
 // APPROX-NEXT:    [[INC_I]] = add nuw nsw i32 [[__I_0_I4]], 1
 // APPROX-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i32 [[INC_I]], [[X]]
-// APPROX-NEXT:    br i1 [[EXITCOND_NOT]], label %[[_ZL2JNID_EXIT]], label %[[FOR_BODY_I]], !llvm.loop [[LOOP15:![0-9]+]]
+// APPROX-NEXT:    br i1 [[EXITCOND_NOT]], label %[[_ZL2JNID_EXIT]], label %[[FOR_BODY_I]], !llvm.loop [[LOOP14:![0-9]+]]
 // APPROX:       [[_ZL2JNID_EXIT]]:
 // APPROX-NEXT:    [[RETVAL_0_I:%.*]] = phi double [ [[CALL_I20_I]], %[[IF_THEN_I]] ], [ [[CALL_I22_I]], %[[IF_THEN2_I]] ], [ [[CALL_I21_I]], %[[IF_END4_I]] ], [ [[SUB_I]], %[[FOR_BODY_I]] ]
 // APPROX-NEXT:    ret double [[RETVAL_0_I]]
@@ -3332,7 +3332,7 @@ extern "C" __device__ float test_jnf(int x, float y) {
 // NCRDIV-NEXT:    [[SUB_I]] = fsub contract double [[MUL8_I]], [[__X0_0_I2]]
 // NCRDIV-NEXT:    [[INC_I]] = add nuw nsw i32 [[__I_0_I4]], 1
 // NCRDIV-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i32 [[INC_I]], [[X]]
-// NCRDIV-NEXT:    br i1 [[EXITCOND_NOT]], label %[[_ZL2JNID_EXIT]], label %[[FOR_BODY_I]], !llvm.loop [[LOOP16:![0-9]+]]
+// NCRDIV-NEXT:    br i1 [[EXITCOND_NOT]], label %[[_ZL2JNID_EXIT]], label %[[FOR_BODY_I]], !llvm.loop [[LOOP15:![0-9]+]]
 // NCRDIV:       [[_ZL2JNID_EXIT]]:
 // NCRDIV-NEXT:    [[RETVAL_0_I:%.*]] = phi double [ [[CALL_I20_I]], %[[IF_THEN_I]] ], [ [[CALL_I22_I]], %[[IF_THEN2_I]] ], [ [[CALL_I21_I]], %[[IF_END4_I]] ], [ [[SUB_I]], %[[FOR_BODY_I]] ]
 // NCRDIV-NEXT:    ret double [[RETVAL_0_I]]
@@ -3366,7 +3366,7 @@ extern "C" __device__ float test_jnf(int x, float y) {
 // AMDGCNSPIRV-NEXT:    [[SUB_I]] = fsub contract double [[MUL8_I]], [[__X0_0_I2]]
 // AMDGCNSPIRV-NEXT:    [[INC_I]] = add nuw nsw i32 [[__I_0_I4]], 1
 // AMDGCNSPIRV-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i32 [[INC_I]], [[X]]
-// AMDGCNSPIRV-NEXT:    br i1 [[EXITCOND_NOT]], label %[[_ZL2JNID_EXIT]], label %[[FOR_BODY_I]], !llvm.loop [[LOOP16:![0-9]+]]
+// AMDGCNSPIRV-NEXT:    br i1 [[EXITCOND_NOT]], label %[[_ZL2JNID_EXIT]], label %[[FOR_BODY_I]], !llvm.loop [[LOOP15:![0-9]+]]
 // AMDGCNSPIRV:       [[_ZL2JNID_EXIT]]:
 // AMDGCNSPIRV-NEXT:    [[RETVAL_0_I:%.*]] = phi double [ [[CALL_I20_I]], %[[IF_THEN_I]] ], [ [[CALL_I22_I]], %[[IF_THEN2_I]] ], [ [[CALL_I21_I]], %[[IF_END4_I]] ], [ [[SUB_I]], %[[FOR_BODY_I]] ]
 // AMDGCNSPIRV-NEXT:    ret double [[RETVAL_0_I]]
@@ -4205,8 +4205,8 @@ extern "C" __device__ long int test_lround(double x) {
 // DEFAULT-NEXT:    [[__TMP_I:%.*]] = alloca float, align 4, addrspace(5)
 // DEFAULT-NEXT:    call void @llvm.lifetime.start.p5(ptr addrspace(5) [[__TMP_I]]) #[[ATTR16:[0-9]+]]
 // DEFAULT-NEXT:    [[CALL_I:%.*]] = call contract noundef float @__ocml_modf_f32(float noundef [[X]], ptr addrspace(5) noundef [[__TMP_I]]) #[[ATTR15]]
-// DEFAULT-NEXT:    [[TMP0:%.*]] = load float, ptr addrspace(5) [[__TMP_I]], align 4, !tbaa [[FLOAT_TBAA16:![0-9]+]]
-// DEFAULT-NEXT:    store float [[TMP0]], ptr [[Y]], align 4, !tbaa [[FLOAT_TBAA16]]
+// DEFAULT-NEXT:    [[TMP0:%.*]] = load float, ptr addrspace(5) [[__TMP_I]], align 4, !tbaa [[FLOAT_TBAA15:![0-9]+]]
+// DEFAULT-NEXT:    store float [[TMP0]], ptr [[Y]], align 4, !tbaa [[FLOAT_TBAA15]]
 // DEFAULT-NEXT:    call void @llvm.lifetime.end.p5(ptr addrspace(5) [[__TMP_I]]) #[[ATTR16]]
 // DEFAULT-NEXT:    ret float [[CALL_I]]
 //
@@ -4216,8 +4216,8 @@ extern "C" __device__ long int test_lround(double x) {
 // FINITEONLY-NEXT:    [[__TMP_I:%.*]] = alloca float, align 4, addrspace(5)
 // FINITEONLY-NEXT:    call void @llvm.lifetime.start.p5(ptr addrspace(5) [[__TMP_I]]) #[[ATTR16:[0-9]+]]
 // FINITEONLY-NEXT:    [[CALL_I:%.*]] = call nnan ninf contract noundef nofpclass(nan inf) float @__ocml_modf_f32(float noundef nofpclass(nan inf) [[X]], ptr addrspace(5) noundef [[__TMP_I]]) #[[ATTR15]]
-// FINITEONLY-NEXT:    [[TMP0:%.*]] = load float, ptr addrspace(5) [[__TMP_I]], align 4, !tbaa [[FLOAT_TBAA16:![0-9]+]]
-// FINITEONLY-NEXT:    store float [[TMP0]], ptr [[Y]], align 4, !tbaa [[FLOAT_TBAA16]]
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = load float, ptr addrspace(5) [[__TMP_I]], align 4, !tbaa [[FLOAT_TBAA15:![0-9]+]]
+// FINITEONLY-NEXT:    store float [[TMP0]], ptr [[Y]], align 4, !tbaa [[FLOAT_TBAA15]]
 // FINITEONLY-NEXT:    call void @llvm.lifetime.end.p5(ptr addrspace(5) [[__TMP_I]]) #[[ATTR16]]
 // FINITEONLY-NEXT:    ret float [[CALL_I]]
 //
@@ -4227,8 +4227,8 @@ extern "C" __device__ long int test_lround(double x) {
 // APPROX-NEXT:    [[__TMP_I:%.*]] = alloca float, align 4, addrspace(5)
 // APPROX-NEXT:    call void @llvm.lifetime.start.p5(ptr addrspace(5) [[__TMP_I]]) #[[ATTR16:[0-9]+]]
 // APPROX-NEXT:    [[CALL_I:%.*]] = call contract noundef float @__ocml_modf_f32(float noundef [[X]], ptr addrspace(5) noundef [[__TMP_I]]) #[[ATTR15]]
-// APPROX-NEXT:    [[TMP0:%.*]] = load float, ptr addrspace(5) [[__TMP_I]], align 4, !tbaa [[FLOAT_TBAA16:![0-9]+]]
-// APPROX-NEXT:    store float [[TMP0]], ptr [[Y]], align 4, !tbaa [[FLOAT_TBAA16]]
+// APPROX-NEXT:    [[TMP0:%.*]] = load float, ptr addrspace(5) [[__TMP_I]], align 4, !tbaa [[FLOAT_TBAA15:![0-9]+]]
+// APPROX-NEXT:    store float [[TMP0]], ptr [[Y]], align 4, !tbaa [[FLOAT_TBAA15]]
 // APPROX-NEXT:    call void @llvm.lifetime.end.p5(ptr addrspace(5) [[__TMP_I]]) #[[ATTR16]]
 // APPROX-NEXT:    ret float [[CALL_I]]
 //
@@ -4238,8 +4238,8 @@ extern "C" __device__ long int test_lround(double x) {
 // NCRDIV-NEXT:    [[__TMP_I:%.*]] = alloca float, align 4, addrspace(5)
 // NCRDIV-NEXT:    call void @llvm.lifetime.start.p5(ptr addrspace(5) [[__TMP_I]]) #[[ATTR16:[0-9]+]]
 // NCRDIV-NEXT:    [[CALL_I:%.*]] = call contract noundef float @__ocml_modf_f32(float noundef [[X]], ptr addrspace(5) noundef [[__TMP_I]]) #[[ATTR15]]
-// NCRDIV-NEXT:    [[TMP0:%.*]] = load float, ptr addrspace(5) [[__TMP_I]], align 4, !tbaa [[FLOAT_TBAA17:![0-9]+]]
-// NCRDIV-NEXT:    store float [[TMP0]], ptr [[Y]], align 4, !tbaa [[FLOAT_TBAA17]]
+// NCRDIV-NEXT:    [[TMP0:%.*]] = load float, ptr addrspace(5) [[__TMP_I]], align 4, !tbaa [[FLOAT_TBAA16:![0-9]+]]
+// NCRDIV-NEXT:    store float [[TMP0]], ptr [[Y]], align 4, !tbaa [[FLOAT_TBAA16]]
 // NCRDIV-NEXT:    call void @llvm.lifetime.end.p5(ptr addrspace(5) [[__TMP_I]]) #[[ATTR16]]
 // NCRDIV-NEXT:    ret float [[CALL_I]]
 //
@@ -4250,8 +4250,8 @@ extern "C" __device__ long int test_lround(double x) {
 // AMDGCNSPIRV-NEXT:    [[__TMP_ASCAST_I:%.*]] = addrspacecast ptr [[__TMP_I]] to ptr addrspace(4)
 // AMDGCNSPIRV-NEXT:    call addrspace(4) void @llvm.lifetime.start.p0(ptr nonnull [[__TMP_I]]) #[[ATTR16:[0-9]+]]
 // AMDGCNSPIRV-NEXT:    [[CALL_I:%.*]] = call contract spir_func noundef addrspace(4) float @__ocml_modf_f32(float noundef [[X]], ptr noundef nonnull [[__TMP_I]]) #[[ATTR15]]
-// AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = load float, ptr addrspace(4) [[__TMP_ASCAST_I]], align 4, !tbaa [[FLOAT_TBAA17:![0-9]+]]
-// AMDGCNSPIRV-NEXT:    store float [[TMP0]], ptr addrspace(4) [[Y]], align 4, !tbaa [[FLOAT_TBAA17]]
+// AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = load float, ptr addrspace(4) [[__TMP_ASCAST_I]], align 4, !tbaa [[FLOAT_TBAA16:![0-9]+]]
+// AMDGCNSPIRV-NEXT:    store float [[TMP0]], ptr addrspace(4) [[Y]], align 4, !tbaa [[FLOAT_TBAA16]]
 // AMDGCNSPIRV-NEXT:    call addrspace(4) void @llvm.lifetime.end.p0(ptr nonnull [[__TMP_I]]) #[[ATTR16]]
 // AMDGCNSPIRV-NEXT:    ret float [[CALL_I]]
 //
@@ -4265,8 +4265,8 @@ extern "C" __device__ float test_modff(float x, float* y) {
 // DEFAULT-NEXT:    [[__TMP_I:%.*]] = alloca double, align 8, addrspace(5)
 // DEFAULT-NEXT:    call void @llvm.lifetime.start.p5(ptr addrspace(5) [[__TMP_I]]) #[[ATTR16]]
 // DEFAULT-NEXT:    [[CALL_I:%.*]] = call contract noundef double @__ocml_modf_f64(double noundef [[X]], ptr addrspace(5) noundef [[__TMP_I]]) #[[ATTR15]]
-// DEFAULT-NEXT:    [[TMP0:%.*]] = load double, ptr addrspace(5) [[__TMP_I]], align 8, !tbaa [[DOUBLE_TBAA18:![0-9]+]]
-// DEFAULT-NEXT:    store double [[TMP0]], ptr [[Y]], align 8, !tbaa [[DOUBLE_TBAA18]]
+// DEFAULT-NEXT:    [[TMP0:%.*]] = load double, ptr addrspace(5) [[__TMP_I]], align 8, !tbaa [[DOUBLE_TBAA17:![0-9]+]]
+// DEFAULT-NEXT:    store double [[TMP0]], ptr [[Y]], align 8, !tbaa [[DOUBLE_TBAA17]]
 // DEFAULT-NEXT:    call void @llvm.lifetime.end.p5(ptr addrspace(5) [[__TMP_I]]) #[[ATTR16]]
 // DEFAULT-NEXT:    ret double [[CALL_I]]
 //
@@ -4276,8 +4276,8 @@ extern "C" __device__ float test_modff(float x, float* y) {
 // FINITEONLY-NEXT:    [[__TMP_I:%.*]] = alloca double, align 8, addrspace(5)
 // FINITEONLY-NEXT:    call void @llvm.lifetime.start.p5(ptr addrspace(5) [[__TMP_I]]) #[[ATTR16]]
 // FINITEONLY-NEXT:    [[CALL_I:%.*]] = call nnan ninf contract noundef nofpclass(nan inf) double @__ocml_modf_f64(double noundef nofpclass(nan inf) [[X]], ptr addrspace(5) noundef [[__TMP_I]]) #[[ATTR15]]
-// FINITEONLY-NEXT:    [[TMP0:%.*]] = load double, ptr addrspace(5) [[__TMP_I]], align 8, !tbaa [[DOUBLE_TBAA18:![0-9]+]]
-// FINITEONLY-NEXT:    store double [[TMP0]], ptr [[Y]], align 8, !tbaa [[DOUBLE_TBAA18]]
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = load double, ptr addrspace(5) [[__TMP_I]], align 8, !tbaa [[DOUBLE_TBAA17:![0-9]+]]
+// FINITEONLY-NEXT:    store double [[TMP0]], ptr [[Y]], align 8, !tbaa [[DOUBLE_TBAA17]]
 // FINITEONLY-NEXT:    call void @llvm.lifetime.end.p5(ptr addrspace(5) [[__TMP_I]]) #[[ATTR16]]
 // FINITEONLY-NEXT:    ret double [[CALL_I]]
 //
@@ -4287,8 +4287,8 @@ extern "C" __device__ float test_modff(float x, float* y) {
 // APPROX-NEXT:    [[__TMP_I:%.*]] = alloca double, align 8, addrspace(5)
 // APPROX-NEXT:    call void @llvm.lifetime.start.p5(ptr addrspace(5) [[__TMP_I]]) #[[ATTR16]]
 // APPROX-NEXT:    [[CALL_I:%.*]] = call contract noundef double @__ocml_modf_f64(double noundef [[X]], ptr addrspace(5) noundef [[__TMP_I]]) #[[ATTR15]]
-// APPROX-NEXT:    [[TMP0:%.*]] = load double, ptr addrspace(5) [[__TMP_I]], align 8, !tbaa [[DOUBLE_TBAA18:![0-9]+]]
-// APPROX-NEXT:    store double [[TMP0]], ptr [[Y]], align 8, !tbaa [[DOUBLE_TBAA18]]
+// APPROX-NEXT:    [[TMP0:%.*]] = load double, ptr addrspace(5) [[__TMP_I]], align 8, !tbaa [[DOUBLE_TBAA17:![0-9]+]]
+// APPROX-NEXT:    store double [[TMP0]], ptr [[Y]], align 8, !tbaa [[DOUBLE_TBAA17]]
 // APPROX-NEXT:    call void @llvm.lifetime.end.p5(ptr addrspace(5) [[__TMP_I]]) #[[ATTR16]]
 // APPROX-NEXT:    ret double [[CALL_I]]
 //
@@ -4298,8 +4298,8 @@ extern "C" __device__ float test_modff(float x, float* y) {
 // NCRDIV-NEXT:    [[__TMP_I:%.*]] = alloca double, align 8, addrspace(5)
 // NCRDIV-NEXT:    call void @llvm.lifetime.start.p5(ptr addrspace(5) [[__TMP_I]]) #[[ATTR16]]
 // NCRDIV-NEXT:    [[CALL_I:%.*]] = call contract noundef double @__ocml_modf_f64(double noundef [[X]], ptr addrspace(5) noundef [[__TMP_I]]) #[[ATTR15]]
-// NCRDIV-NEXT:    [[TMP0:%.*]] = load double, ptr addrspace(5) [[__TMP_I]], align 8, !tbaa [[DOUBLE_TBAA19:![0-9]+]]
-// NCRDIV-NEXT:    store double [[TMP0]], ptr [[Y]], align 8, !tbaa [[DOUBLE_TBAA19]]
+// NCRDIV-NEXT:    [[TMP0:%.*]] = load double, ptr addrspace(5) [[__TMP_I]], align 8, !tbaa [[DOUBLE_TBAA18:![0-9]+]]
+// NCRDIV-NEXT:    store double [[TMP0]], ptr [[Y]], align 8, !tbaa [[DOUBLE_TBAA18]]
 // NCRDIV-NEXT:    call void @llvm.lifetime.end.p5(ptr addrspace(5) [[__TMP_I]]) #[[ATTR16]]
 // NCRDIV-NEXT:    ret double [[CALL_I]]
 //
@@ -4310,8 +4310,8 @@ extern "C" __device__ float test_modff(float x, float* y) {
 // AMDGCNSPIRV-NEXT:    [[__TMP_ASCAST_I:%.*]] = addrspacecast ptr [[__TMP_I]] to ptr addrspace(4)
 // AMDGCNSPIRV-NEXT:    call addrspace(4) void @llvm.lifetime.start.p0(ptr nonnull [[__TMP_I]]) #[[ATTR16]]
 // AMDGCNSPIRV-NEXT:    [[CALL_I:%.*]] = call contract spir_func noundef addrspace(4) double @__ocml_modf_f64(double noundef [[X]], ptr noundef nonnull [[__TMP_I]]) #[[ATTR15]]
-// AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = load double, ptr addrspace(4) [[__TMP_ASCAST_I]], align 8, !tbaa [[DOUBLE_TBAA19:![0-9]+]]
-// AMDGCNSPIRV-NEXT:    store double [[TMP0]], ptr addrspace(4) [[Y]], align 8, !tbaa [[DOUBLE_TBAA19]]
+// AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = load double, ptr addrspace(4) [[__TMP_ASCAST_I]], align 8, !tbaa [[DOUBLE_TBAA18:![0-9]+]]
+// AMDGCNSPIRV-NEXT:    store double [[TMP0]], ptr addrspace(4) [[Y]], align 8, !tbaa [[DOUBLE_TBAA18]]
 // AMDGCNSPIRV-NEXT:    call addrspace(4) void @llvm.lifetime.end.p0(ptr nonnull [[__TMP_I]]) #[[ATTR16]]
 // AMDGCNSPIRV-NEXT:    ret double [[CALL_I]]
 //
@@ -4322,16 +4322,16 @@ extern "C" __device__ double test_modf(double x, double* y) {
 // DEFAULT-LABEL: define dso_local float @test_nanf(
 // DEFAULT-SAME: ptr noundef readonly captures(none) [[TAG:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // DEFAULT-NEXT:  [[ENTRY:.*:]]
-// DEFAULT-NEXT:    [[TMP0:%.*]] = load i8, ptr [[TAG]], align 1, !tbaa [[CHAR_TBAA8]]
+// DEFAULT-NEXT:    [[TMP0:%.*]] = load i8, ptr [[TAG]], align 1, !tbaa [[CHAR_TBAA7]]
 // DEFAULT-NEXT:    [[CMP_I_I:%.*]] = icmp eq i8 [[TMP0]], 48
 // DEFAULT-NEXT:    br i1 [[CMP_I_I]], label %[[IF_THEN_I_I:.*]], label %[[WHILE_COND_I14_I_I_PREHEADER:.*]]
 // DEFAULT:       [[WHILE_COND_I14_I_I_PREHEADER]]:
-// DEFAULT-NEXT:    [[TMP1:%.*]] = load i8, ptr [[TAG]], align 1, !tbaa [[CHAR_TBAA8]]
+// DEFAULT-NEXT:    [[TMP1:%.*]] = load i8, ptr [[TAG]], align 1, !tbaa [[CHAR_TBAA7]]
 // DEFAULT-NEXT:    [[CMP_NOT_I17_I_I5:%.*]] = icmp eq i8 [[TMP1]], 0
 // DEFAULT-NEXT:    br i1 [[CMP_NOT_I17_I_I5]], label %[[_ZL4NANFPKC_EXIT:.*]], label %[[WHILE_BODY_I18_I_I:.*]]
 // DEFAULT:       [[IF_THEN_I_I]]:
 // DEFAULT-NEXT:    [[INCDEC_PTR_I_I:%.*]] = getelementptr inbounds nuw i8, ptr [[TAG]], i64 1
-// DEFAULT-NEXT:    [[TMP2:%.*]] = load i8, ptr [[INCDEC_PTR_I_I]], align 1, !tbaa [[CHAR_TBAA8]]
+// DEFAULT-NEXT:    [[TMP2:%.*]] = load i8, ptr [[INCDEC_PTR_I_I]], align 1, !tbaa [[CHAR_TBAA7]]
 // DEFAULT-NEXT:    [[CMP_NOT_I_I_I14:%.*]] = icmp eq i8 [[TMP2]], 0
 // DEFAULT-NEXT:    switch i8 [[TMP2]], label %[[WHILE_COND_I_I_I_PREHEADER:.*]] [
 // DEFAULT-NEXT:      i8 120, label %[[IF_THEN5_I_I:.*]]
@@ -4363,9 +4363,9 @@ extern "C" __device__ double test_modf(double x, double* y) {
 // DEFAULT-NEXT:    [[ADD26_I_I_I:%.*]] = add i64 [[MUL24_I_I_I]], [[DOTSINK]]
 // DEFAULT-NEXT:    [[ADD28_I_I_I]] = add i64 [[ADD26_I_I_I]], [[CONV25_I_I_I]]
 // DEFAULT-NEXT:    [[INCDEC_PTR_I34_I_I]] = getelementptr inbounds nuw i8, ptr [[__TAGP_ADDR_0_I28_I_I10]], i64 1
-// DEFAULT-NEXT:    [[TMP7]] = load i8, ptr [[INCDEC_PTR_I34_I_I]], align 1, !tbaa [[CHAR_TBAA8]]
+// DEFAULT-NEXT:    [[TMP7]] = load i8, ptr [[INCDEC_PTR_I34_I_I]], align 1, !tbaa [[CHAR_TBAA7]]
 // DEFAULT-NEXT:    [[CMP_NOT_I30_I_I:%.*]] = icmp eq i8 [[TMP7]], 0
-// DEFAULT-NEXT:    br i1 [[CMP_NOT_I30_I_I]], label %[[_ZL4NANFPKC_EXIT]], label %[[WHILE_BODY_I31_I_I]], !llvm.loop [[LOOP13]]
+// DEFAULT-NEXT:    br i1 [[CMP_NOT_I30_I_I]], label %[[_ZL4NANFPKC_EXIT]], label %[[WHILE_BODY_I31_I_I]], !llvm.loop [[LOOP12]]
 // DEFAULT:       [[WHILE_BODY_I_I_I]]:
 // DEFAULT-NEXT:    [[TMP8:%.*]] = phi i8 [ [[TMP10:%.*]], %[[IF_THEN_I_I_I:.*]] ], [ [[TMP2]], %[[WHILE_COND_I_I_I_PREHEADER]] ]
 // DEFAULT-NEXT:    [[__R_0_I_I_I16:%.*]] = phi i64 [ [[SUB_I_I_I:%.*]], %[[IF_THEN_I_I_I]] ], [ 0, %[[WHILE_COND_I_I_I_PREHEADER]] ]
@@ -4379,9 +4379,9 @@ extern "C" __device__ double test_modf(double x, double* y) {
 // DEFAULT-NEXT:    [[ADD_I_I_I:%.*]] = add i64 [[MUL_I_I_I]], -48
 // DEFAULT-NEXT:    [[SUB_I_I_I]] = add i64 [[ADD_I_I_I]], [[CONV5_I_I_I]]
 // DEFAULT-NEXT:    [[INCDEC_PTR_I_I_I]] = getelementptr inbounds nuw i8, ptr [[__TAGP_ADDR_0_I_I_I15]], i64 1
-// DEFAULT-NEXT:    [[TMP10]] = load i8, ptr [[INCDEC_PTR_I_I_I]], align 1, !tbaa [[CHAR_TBAA8]]
+// DEFAULT-NEXT:    [[TMP10]] = load i8, ptr [[INCDEC_PTR_I_I_I]], align 1, !tbaa [[CHAR_TBAA7]]
 // DEFAULT-NEXT:    [[CMP_NOT_I_I_I:%.*]] = icmp eq i8 [[TMP10]], 0
-// DEFAULT-NEXT:    br i1 [[CMP_NOT_I_I_I]], label %[[_ZL4NANFPKC_EXIT]], label %[[WHILE_BODY_I_I_I]], !llvm.loop [[LOOP9]]
+// DEFAULT-NEXT:    br i1 [[CMP_NOT_I_I_I]], label %[[_ZL4NANFPKC_EXIT]], label %[[WHILE_BODY_I_I_I]], !llvm.loop [[LOOP8]]
 // DEFAULT:       [[WHILE_BODY_I18_I_I]]:
 // DEFAULT-NEXT:    [[TMP11:%.*]] = phi i8 [ [[TMP13:%.*]], %[[IF_THEN_I21_I_I:.*]] ], [ [[TMP1]], %[[WHILE_COND_I14_I_I_PREHEADER]] ]
 // DEFAULT-NEXT:    [[__R_0_I16_I_I7:%.*]] = phi i64 [ [[SUB_I25_I_I:%.*]], %[[IF_THEN_I21_I_I]] ], [ 0, %[[WHILE_COND_I14_I_I_PREHEADER]] ]
@@ -4395,9 +4395,9 @@ extern "C" __device__ double test_modf(double x, double* y) {
 // DEFAULT-NEXT:    [[ADD_I24_I_I:%.*]] = add i64 [[MUL_I22_I_I]], -48
 // DEFAULT-NEXT:    [[SUB_I25_I_I]] = add i64 [[ADD_I24_I_I]], [[CONV5_I23_I_I]]
 // DEFAULT-NEXT:    [[INCDEC_PTR_I26_I_I]] = getelementptr inbounds nuw i8, ptr [[__TAGP_ADDR_0_I15_I_I6]], i64 1
-// DEFAULT-NEXT:    [[TMP13]] = load i8, ptr [[INCDEC_PTR_I26_I_I]], align 1, !tbaa [[CHAR_TBAA8]]
+// DEFAULT-NEXT:    [[TMP13]] = load i8, ptr [[INCDEC_PTR_I26_I_I]], align 1, !tbaa [[CHAR_TBAA7]]
 // DEFAULT-NEXT:    [[CMP_NOT_I17_I_I:%.*]] = icmp eq i8 [[TMP13]], 0
-// DEFAULT-NEXT:    br i1 [[CMP_NOT_I17_I_I]], label %[[_ZL4NANFPKC_EXIT]], label %[[WHILE_BODY_I18_I_I]], !llvm.loop [[LOOP12]]
+// DEFAULT-NEXT:    br i1 [[CMP_NOT_I17_I_I]], label %[[_ZL4NANFPKC_EXIT]], label %[[WHILE_BODY_I18_I_I]], !llvm.loop [[LOOP11]]
 // DEFAULT:       [[_ZL4NANFPKC_EXIT]]:
 // DEFAULT-NEXT:    [[RETVAL_0_I_I:%.*]] = phi i64 [ 0, %[[IF_THEN5_I_I]] ], [ 0, %[[WHILE_COND_I14_I_I_PREHEADER]] ], [ 0, %[[WHILE_COND_I_I_I_PREHEADER]] ], [ [[SUB_I_I_I]], %[[IF_THEN_I_I_I]] ], [ [[ADD28_I_I_I]], %[[IF_END31_I_I_I]] ], [ 0, %[[WHILE_BODY_I_I_I]] ], [ 0, %[[IF_ELSE17_I_I_I]] ], [ [[SUB_I25_I_I]], %[[IF_THEN_I21_I_I]] ], [ 0, %[[WHILE_BODY_I18_I_I]] ]
 // DEFAULT-NEXT:    [[CONV_I:%.*]] = trunc i64 [[RETVAL_0_I_I]] to i32
@@ -4414,16 +4414,16 @@ extern "C" __device__ double test_modf(double x, double* y) {
 // APPROX-LABEL: define dso_local float @test_nanf(
 // APPROX-SAME: ptr noundef readonly captures(none) [[TAG:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // APPROX-NEXT:  [[ENTRY:.*:]]
-// APPROX-NEXT:    [[TMP0:%.*]] = load i8, ptr [[TAG]], align 1, !tbaa [[CHAR_TBAA8]]
+// APPROX-NEXT:    [[TMP0:%.*]] = load i8, ptr [[TAG]], align 1, !tbaa [[CHAR_TBAA7]]
 // APPROX-NEXT:    [[CMP_I_I:%.*]] = icmp eq i8 [[TMP0]], 48
 // APPROX-NEXT:    br i1 [[CMP_I_I]], label %[[IF_THEN_I_I:.*]], label %[[WHILE_COND_I14_I_I_PREHEADER:.*]]
 // APPROX:       [[WHILE_COND_I14_I_I_PREHEADER]]:
-// APPROX-NEXT:    [[TMP1:%.*]] = load i8, ptr [[TAG]], align 1, !tbaa [[CHAR_TBAA8]]
+// APPROX-NEXT:    [[TMP1:%.*]] = load i8, ptr [[TAG]], align 1, !tbaa [[CHAR_TBAA7]]
 // APPROX-NEXT:    [[CMP_NOT_I17_I_I5:%.*]] = icmp eq i8 [[TMP1]], 0
 // APPROX-NEXT:    br i1 [[CMP_NOT_I17_I_I5]], label %[[_ZL4NANFPKC_EXIT:.*]], label %[[WHILE_BODY_I18_I_I:.*]]
 // APPROX:       [[IF_THEN_I_I]]:
 // APPROX-NEXT:    [[INCDEC_PTR_I_I:%.*]] = getelementptr inbounds nuw i8, ptr [[TAG]], i64 1
-// APPROX-NEXT:    [[TMP2:%.*]] = load i8, ptr [[INCDEC_PTR_I_I]], align 1, !tbaa [[CHAR_TBAA8]]
+// APPROX-NEXT:    [[TMP2:%.*]] = load i8, ptr [[INCDEC_PTR_I_I]], align 1, !tbaa [[CHAR_TBAA7]]
 // APPROX-NEXT:    [[CMP_NOT_I_I_I14:%.*]] = icmp eq i8 [[TMP2]], 0
 // APPROX-NEXT:    switch i8 [[TMP2]], label %[[WHILE_COND_I_I_I_PREHEADER:.*]] [
 // APPROX-NEXT:      i8 120, label %[[IF_THEN5_I_I:.*]]
@@ -4455,9 +4455,9 @@ extern "C" __device__ double test_modf(double x, double* y) {
 // APPROX-NEXT:    [[ADD26_I_I_I:%.*]] = add i64 [[MUL24_I_I_I]], [[DOTSINK]]
 // APPROX-NEXT:    [[ADD28_I_I_I]] = add i64 [[ADD26_I_I_I]], [[CONV25_I_I_I]]
 // APPROX-NEXT:    [[INCDEC_PTR_I34_I_I]] = getelementptr inbounds nuw i8, ptr [[__TAGP_ADDR_0_I28_I_I10]], i64 1
-// APPROX-NEXT:    [[TMP7]] = load i8, ptr [[INCDEC_PTR_I34_I_I]], align 1, !tbaa [[CHAR_TBAA8]]
+// APPROX-NEXT:    [[TMP7]] = load i8, ptr [[INCDEC_PTR_I34_I_I]], align 1, !tbaa [[CHAR_TBAA7]]
 // APPROX-NEXT:    [[CMP_NOT_I30_I_I:%.*]] = icmp eq i8 [[TMP7]], 0
-// APPROX-NEXT:    br i1 [[CMP_NOT_I30_I_I]], label %[[_ZL4NANFPKC_EXIT]], label %[[WHILE_BODY_I31_I_I]], !llvm.loop [[LOOP13]]
+// APPROX-NEXT:    br i1 [[CMP_NOT_I30_I_I]], label %[[_ZL4NANFPKC_EXIT]], label %[[WHILE_BODY_I31_I_I]], !llvm.loop [[LOOP12]]
 // APPROX:       [[WHILE_BODY_I_I_I]]:
 // APPROX-NEXT:    [[TMP8:%.*]] = phi i8 [ [[TMP10:%.*]], %[[IF_THEN_I_I_I:.*]] ], [ [[TMP2]], %[[WHILE_COND_I_I_I_PREHEADER]] ]
 // APPROX-NEXT:    [[__R_0_I_I_I16:%.*]] = phi i64 [ [[SUB_I_I_I:%.*]], %[[IF_THEN_I_I_I]] ], [ 0, %[[WHILE_COND_I_I_I_PREHEADER]] ]
@@ -4471,9 +4471,9 @@ extern "C" __device__ double test_modf(double x, double* y) {
 // APPROX-NEXT:    [[ADD_I_I_I:%.*]] = add i64 [[MUL_I_I_I]], -48
 // APPROX-NEXT:    [[SUB_I_I_I]] = add i64 [[ADD_I_I_I]], [[CONV5_I_I_I]]
 // APPROX-NEXT:    [[INCDEC_PTR_I_I_I]] = getelementptr inbounds nuw i8, ptr [[__TAGP_ADDR_0_I_I_I15]], i64 1
-// APPROX-NEXT:    [[TMP10]] = load i8, ptr [[INCDEC_PTR_I_I_I]], align 1, !tbaa [[CHAR_TBAA8]]
+// APPROX-NEXT:    [[TMP10]] = load i8, ptr [[INCDEC_PTR_I_I_I]], align 1, !tbaa [[CHAR_TBAA7]]
 // APPROX-NEXT:    [[CMP_NOT_I_I_I:%.*]] = icmp eq i8 [[TMP10]], 0
-// APPROX-NEXT:    br i1 [[CMP_NOT_I_I_I]], label %[[_ZL4NANFPKC_EXIT]], label %[[WHILE_BODY_I_I_I]], !llvm.loop [[LOOP9]]
+// APPROX-NEXT:    br i1 [[CMP_NOT_I_I_I]], label %[[_ZL4NANFPKC_EXIT]], label %[[WHILE_BODY_I_I_I]], !llvm.loop [[LOOP8]]
 // APPROX:       [[WHILE_BODY_I18_I_I]]:
 // APPROX-NEXT:    [[TMP11:%.*]] = phi i8 [ [[TMP13:%.*]], %[[IF_THEN_I21_I_I:.*]] ], [ [[TMP1]], %[[WHILE_COND_I14_I_I_PREHEADER]] ]
 // APPROX-NEXT:    [[__R_0_I16_I_I7:%.*]] = phi i64 [ [[SUB_I25_I_I:%.*]], %[[IF_THEN_I21_I_I]] ], [ 0, %[[WHILE_COND_I14_I_I_PREHEADER]] ]
@@ -4487,9 +4487,9 @@ extern "C" __device__ double test_modf(double x, double* y) {
 // APPROX-NEXT:    [[ADD_I24_I_I:%.*]] = add i64 [[MUL_I22_I_I]], -48
 // APPROX-NEXT:    [[SUB_I25_I_I]] = add i64 [[ADD_I24_I_I]], [[CONV5_I23_I_I]]
 // APPROX-NEXT:    [[INCDEC_PTR_I26_I_I]] = getelementptr inbounds nuw i8, ptr [[__TAGP_ADDR_0_I15_I_I6]], i64 1
-// APPROX-NEXT:    [[TMP13]] = load i8, ptr [[INCDEC_PTR_I26_I_I]], align 1, !tbaa [[CHAR_TBAA8]]
+// APPROX-NEXT:    [[TMP13]] = load i8, ptr [[INCDEC_PTR_I26_I_I]], align 1, !tbaa [[CHAR_TBAA7]]
 // APPROX-NEXT:    [[CMP_NOT_I17_I_I:%.*]] = icmp eq i8 [[TMP13]], 0
-// APPROX-NEXT:    br i1 [[CMP_NOT_I17_I_I]], label %[[_ZL4NANFPKC_EXIT]], label %[[WHILE_BODY_I18_I_I]], !llvm.loop [[LOOP12]]
+// APPROX-NEXT:    br i1 [[CMP_NOT_I17_I_I]], label %[[_ZL4NANFPKC_EXIT]], label %[[WHILE_BODY_I18_I_I]], !llvm.loop [[LOOP11]]
 // APPROX:       [[_ZL4NANFPKC_EXIT]]:
 // APPROX-NEXT:    [[RETVAL_0_I_I:%.*]] = phi i64 [ 0, %[[IF_THEN5_I_I]] ], [ 0, %[[WHILE_COND_I14_I_I_PREHEADER]] ], [ 0, %[[WHILE_COND_I_I_I_PREHEADER]] ], [ [[SUB_I_I_I]], %[[IF_THEN_I_I_I]] ], [ [[ADD28_I_I_I]], %[[IF_END31_I_I_I]] ], [ 0, %[[WHILE_BODY_I_I_I]] ], [ 0, %[[IF_ELSE17_I_I_I]] ], [ [[SUB_I25_I_I]], %[[IF_THEN_I21_I_I]] ], [ 0, %[[WHILE_BODY_I18_I_I]] ]
 // APPROX-NEXT:    [[CONV_I:%.*]] = trunc i64 [[RETVAL_0_I_I]] to i32
@@ -4501,16 +4501,16 @@ extern "C" __device__ double test_modf(double x, double* y) {
 // NCRDIV-LABEL: define dso_local float @test_nanf(
 // NCRDIV-SAME: ptr noundef readonly captures(none) [[TAG:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // NCRDIV-NEXT:  [[ENTRY:.*:]]
-// NCRDIV-NEXT:    [[TMP0:%.*]] = load i8, ptr [[TAG]], align 1, !tbaa [[CHAR_TBAA8]]
+// NCRDIV-NEXT:    [[TMP0:%.*]] = load i8, ptr [[TAG]], align 1, !tbaa [[CHAR_TBAA7]]
 // NCRDIV-NEXT:    [[CMP_I_I:%.*]] = icmp eq i8 [[TMP0]], 48
 // NCRDIV-NEXT:    br i1 [[CMP_I_I]], label %[[IF_THEN_I_I:.*]], label %[[WHILE_COND_I14_I_I_PREHEADER:.*]]
 // NCRDIV:       [[WHILE_COND_I14_I_I_PREHEADER]]:
-// NCRDIV-NEXT:    [[TMP1:%.*]] = load i8, ptr [[TAG]], align 1, !tbaa [[CHAR_TBAA8]]
+// NCRDIV-NEXT:    [[TMP1:%.*]] = load i8, ptr [[TAG]], align 1, !tbaa [[CHAR_TBAA7]]
 // NCRDIV-NEXT:    [[CMP_NOT_I17_I_I5:%.*]] = icmp eq i8 [[TMP1]], 0
 // NCRDIV-NEXT:    br i1 [[CMP_NOT_I17_I_I5]], label %[[_ZL4NANFPKC_EXIT:.*]], label %[[WHILE_BODY_I18_I_I:.*]]
 // NCRDIV:       [[IF_THEN_I_I]]:
 // NCRDIV-NEXT:    [[INCDEC_PTR_I_I:%.*]] = getelementptr inbounds nuw i8, ptr [[TAG]], i64 1
-// NCRDIV-NEXT:    [[TMP2:%.*]] = load i8, ptr [[INCDEC_PTR_I_I]], align 1, !tbaa [[CHAR_TBAA8]]
+// NCRDIV-NEXT:    [[TMP2:%.*]] = load i8, ptr [[INCDEC_PTR_I_I]], align 1, !tbaa [[CHAR_TBAA7]]
 // NCRDIV-NEXT:    [[CMP_NOT_I_I_I14:%.*]] = icmp eq i8 [[TMP2]], 0
 // NCRDIV-NEXT:    switch i8 [[TMP2]], label %[[WHILE_COND_I_I_I_PREHEADER:.*]] [
 // NCRDIV-NEXT:      i8 120, label %[[IF_THEN5_I_I:.*]]
@@ -4542,9 +4542,9 @@ extern "C" __device__ double test_modf(double x, double* y) {
 // NCRDIV-NEXT:    [[ADD26_I_I_I:%.*]] = add i64 [[MUL24_I_I_I]], [[DOTSINK]]
 // NCRDIV-NEXT:    [[ADD28_I_I_I]] = add i64 [[ADD26_I_I_I]], [[CONV25_I_I_I]]
 // NCRDIV-NEXT:    [[INCDEC_PTR_I34_I_I]] = getelementptr inbounds nuw i8, ptr [[__TAGP_ADDR_0_I28_I_I10]], i64 1
-// NCRDIV-NEXT:    [[TMP7]] = load i8, ptr [[INCDEC_PTR_I34_I_I]], align 1, !tbaa [[CHAR_TBAA8]]
+// NCRDIV-NEXT:    [[TMP7]] = load i8, ptr [[INCDEC_PTR_I34_I_I]], align 1, !tbaa [[CHAR_TBAA7]]
 // NCRDIV-NEXT:    [[CMP_NOT_I30_I_I:%.*]] = icmp eq i8 [[TMP7]], 0
-// NCRDIV-NEXT:    br i1 [[CMP_NOT_I30_I_I]], label %[[_ZL4NANFPKC_EXIT]], label %[[WHILE_BODY_I31_I_I]], !llvm.loop [[LOOP13]]
+// NCRDIV-NEXT:    br i1 [[CMP_NOT_I30_I_I]], label %[[_ZL4NANFPKC_EXIT]], label %[[WHILE_BODY_I31_I_I]], !llvm.loop [[LOOP12]]
 // NCRDIV:       [[WHILE_BODY_I_I_I]]:
 // NCRDIV-NEXT:    [[TMP8:%.*]] = phi i8 [ [[TMP10:%.*]], %[[IF_THEN_I_I_I:.*]] ], [ [[TMP2]], %[[WHILE_COND_I_I_I_PREHEADER]] ]
 // NCRDIV-NEXT:    [[__R_0_I_I_I16:%.*]] = phi i64 [ [[SUB_I_I_I:%.*]], %[[IF_THEN_I_I_I]] ], [ 0, %[[WHILE_COND_I_I_I_PREHEADER]] ]
@@ -4558,9 +4558,9 @@ extern "C" __device__ double test_modf(double x, double* y) {
 // NCRDIV-NEXT:    [[ADD_I_I_I:%.*]] = add i64 [[MUL_I_I_I]], -48
 // NCRDIV-NEXT:    [[SUB_I_I_I]] = add i64 [[ADD_I_I_I]], [[CONV5_I_I_I]]
 // NCRDIV-NEXT:    [[INCDEC_PTR_I_I_I]] = getelementptr inbounds nuw i8, ptr [[__TAGP_ADDR_0_I_I_I15]], i64 1
-// NCRDIV-NEXT:    [[TMP10]] = load i8, ptr [[INCDEC_PTR_I_I_I]], align 1, !tbaa [[CHAR_TBAA8]]
+// NCRDIV-NEXT:    [[TMP10]] = load i8, ptr [[INCDEC_PTR_I_I_I]], align 1, !tbaa [[CHAR_TBAA7]]
 // NCRDIV-NEXT:    [[CMP_NOT_I_I_I:%.*]] = icmp eq i8 [[TMP10]], 0
-// NCRDIV-NEXT:    br i1 [[CMP_NOT_I_I_I]], label %[[_ZL4NANFPKC_EXIT]], label %[[WHILE_BODY_I_I_I]], !llvm.loop [[LOOP9]]
+// NCRDIV-NEXT:    br i1 [[CMP_NOT_I_I_I]], label %[[_ZL4NANFPKC_EXIT]], label %[[WHILE_BODY_I_I_I]], !llvm.loop [[LOOP8]]
 // NCRDIV:       [[WHILE_BODY_I18_I_I]]:
 // NCRDIV-NEXT:    [[TMP11:%.*]] = phi i8 [ [[TMP13:%.*]], %[[IF_THEN_I21_I_I:.*]] ], [ [[TMP1]], %[[WHILE_COND_I14_I_I_PREHEADER]] ]
 // NCRDIV-NEXT:    [[__R_0_I16_I_I7:%.*]] = phi i64 [ [[SUB_I25_I_I:%.*]], %[[IF_THEN_I21_I_I]] ], [ 0, %[[WHILE_COND_I14_I_I_PREHEADER]] ]
@@ -4574,9 +4574,9 @@ extern "C" __device__ double test_modf(double x, double* y) {
 // NCRDIV-NEXT:    [[ADD_I24_I_I:%.*]] = add i64 [[MUL_I22_I_I]], -48
 // NCRDIV-NEXT:    [[SUB_I25_I_I]] = add i64 [[ADD_I24_I_I]], [[CONV5_I23_I_I]]
 // NCRDIV-NEXT:    [[INCDEC_PTR_I26_I_I]] = getelementptr inbounds nuw i8, ptr [[__TAGP_ADDR_0_I15_I_I6]], i64 1
-// NCRDIV-NEXT:    [[TMP13]] = load i8, ptr [[INCDEC_PTR_I26_I_I]], align 1, !tbaa [[CHAR_TBAA8]]
+// NCRDIV-NEXT:    [[TMP13]] = load i8, ptr [[INCDEC_PTR_I26_I_I]], align 1, !tbaa [[CHAR_TBAA7]]
 // NCRDIV-NEXT:    [[CMP_NOT_I17_I_I:%.*]] = icmp eq i8 [[TMP13]], 0
-// NCRDIV-NEXT:    br i1 [[CMP_NOT_I17_I_I]], label %[[_ZL4NANFPKC_EXIT]], label %[[WHILE_BODY_I18_I_I]], !llvm.loop [[LOOP12]]
+// NCRDIV-NEXT:    br i1 [[CMP_NOT_I17_I_I]], label %[[_ZL4NANFPKC_EXIT]], label %[[WHILE_BODY_I18_I_I]], !llvm.loop [[LOOP11]]
 // NCRDIV:       [[_ZL4NANFPKC_EXIT]]:
 // NCRDIV-NEXT:    [[RETVAL_0_I_I:%.*]] = phi i64 [ 0, %[[IF_THEN5_I_I]] ], [ 0, %[[WHILE_COND_I14_I_I_PREHEADER]] ], [ 0, %[[WHILE_COND_I_I_I_PREHEADER]] ], [ [[SUB_I_I_I]], %[[IF_THEN_I_I_I]] ], [ [[ADD28_I_I_I]], %[[IF_END31_I_I_I]] ], [ 0, %[[WHILE_BODY_I_I_I]] ], [ 0, %[[IF_ELSE17_I_I_I]] ], [ [[SUB_I25_I_I]], %[[IF_THEN_I21_I_I]] ], [ 0, %[[WHILE_BODY_I18_I_I]] ]
 // NCRDIV-NEXT:    [[CONV_I:%.*]] = trunc i64 [[RETVAL_0_I_I]] to i32
@@ -4588,18 +4588,18 @@ extern "C" __device__ double test_modf(double x, double* y) {
 // AMDGCNSPIRV-LABEL: define spir_func float @test_nanf(
 // AMDGCNSPIRV-SAME: ptr addrspace(4) noundef readonly captures(none) [[TAG:%.*]]) local_unnamed_addr addrspace(4) #[[ATTR2]] {
 // AMDGCNSPIRV-NEXT:  [[ENTRY:.*]]:
-// AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = load i8, ptr addrspace(4) [[TAG]], align 1, !tbaa [[CHAR_TBAA9]]
+// AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = load i8, ptr addrspace(4) [[TAG]], align 1, !tbaa [[CHAR_TBAA8]]
 // AMDGCNSPIRV-NEXT:    [[CMP_I_I:%.*]] = icmp eq i8 [[TMP0]], 48
 // AMDGCNSPIRV-NEXT:    br i1 [[CMP_I_I]], label %[[IF_THEN_I_I:.*]], label %[[WHILE_COND_I14_I_I:.*]]
 // AMDGCNSPIRV:       [[IF_THEN_I_I]]:
 // AMDGCNSPIRV-NEXT:    [[INCDEC_PTR_I_I:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[TAG]], i64 1
-// AMDGCNSPIRV-NEXT:    [[TMP1:%.*]] = load i8, ptr addrspace(4) [[INCDEC_PTR_I_I]], align 1, !tbaa [[CHAR_TBAA9]]
+// AMDGCNSPIRV-NEXT:    [[TMP1:%.*]] = load i8, ptr addrspace(4) [[INCDEC_PTR_I_I]], align 1, !tbaa [[CHAR_TBAA8]]
 // AMDGCNSPIRV-NEXT:    switch i8 [[TMP1]], label %[[WHILE_COND_I_I_I:.*]] [
 // AMDGCNSPIRV-NEXT:      i8 120, label %[[IF_THEN5_I_I:.*]]
 // AMDGCNSPIRV-NEXT:      i8 88, label %[[IF_THEN5_I_I]]
 // AMDGCNSPIRV-NEXT:    ]
 // AMDGCNSPIRV:       [[IF_THEN5_I_I]]:
-// AMDGCNSPIRV-NEXT:    [[TMP2:%.*]] = load i8, ptr addrspace(4) [[INCDEC_PTR_I_I]], align 1, !tbaa [[CHAR_TBAA9]]
+// AMDGCNSPIRV-NEXT:    [[TMP2:%.*]] = load i8, ptr addrspace(4) [[INCDEC_PTR_I_I]], align 1, !tbaa [[CHAR_TBAA8]]
 // AMDGCNSPIRV-NEXT:    [[CMP_NOT_I31_I_I5:%.*]] = icmp eq i8 [[TMP2]], 0
 // AMDGCNSPIRV-NEXT:    br i1 [[CMP_NOT_I31_I_I5]], label %[[_ZL4NANFPKC_EXIT:.*]], label %[[WHILE_BODY_I32_I_I:.*]]
 // AMDGCNSPIRV:       [[WHILE_BODY_I32_I_I]]:
@@ -4624,13 +4624,13 @@ extern "C" __device__ double test_modf(double x, double* y) {
 // AMDGCNSPIRV-NEXT:    [[ADD26_I_I_I:%.*]] = add i64 [[MUL24_I_I_I]], [[DOTSINK]]
 // AMDGCNSPIRV-NEXT:    [[ADD28_I_I_I]] = add i64 [[ADD26_I_I_I]], [[CONV25_I_I_I]]
 // AMDGCNSPIRV-NEXT:    [[INCDEC_PTR_I36_I_I]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[__TAGP_ADDR_0_I29_I_I6]], i64 1
-// AMDGCNSPIRV-NEXT:    [[TMP7]] = load i8, ptr addrspace(4) [[INCDEC_PTR_I36_I_I]], align 1, !tbaa [[CHAR_TBAA9]]
+// AMDGCNSPIRV-NEXT:    [[TMP7]] = load i8, ptr addrspace(4) [[INCDEC_PTR_I36_I_I]], align 1, !tbaa [[CHAR_TBAA8]]
 // AMDGCNSPIRV-NEXT:    [[CMP_NOT_I31_I_I:%.*]] = icmp eq i8 [[TMP7]], 0
-// AMDGCNSPIRV-NEXT:    br i1 [[CMP_NOT_I31_I_I]], label %[[_ZL4NANFPKC_EXIT]], label %[[WHILE_BODY_I32_I_I]], !llvm.loop [[LOOP14]]
+// AMDGCNSPIRV-NEXT:    br i1 [[CMP_NOT_I31_I_I]], label %[[_ZL4NANFPKC_EXIT]], label %[[WHILE_BODY_I32_I_I]], !llvm.loop [[LOOP13]]
 // AMDGCNSPIRV:       [[WHILE_COND_I_I_I]]:
 // AMDGCNSPIRV-NEXT:    [[__TAGP_ADDR_0_I_I_I:%.*]] = phi ptr addrspace(4) [ [[__TAGP_ADDR_1_I_I_I:%.*]], %[[WHILE_BODY_I_I_I:.*]] ], [ [[INCDEC_PTR_I_I]], %[[IF_THEN_I_I]] ]
 // AMDGCNSPIRV-NEXT:    [[__R_0_I_I_I:%.*]] = phi i64 [ [[__R_1_I_I_I:%.*]], %[[WHILE_BODY_I_I_I]] ], [ 0, %[[IF_THEN_I_I]] ]
-// AMDGCNSPIRV-NEXT:    [[TMP8:%.*]] = load i8, ptr addrspace(4) [[__TAGP_ADDR_0_I_I_I]], align 1, !tbaa [[CHAR_TBAA9]]
+// AMDGCNSPIRV-NEXT:    [[TMP8:%.*]] = load i8, ptr addrspace(4) [[__TAGP_ADDR_0_I_I_I]], align 1, !tbaa [[CHAR_TBAA8]]
 // AMDGCNSPIRV-NEXT:    [[CMP_NOT_I_I_I:%.*]] = icmp eq i8 [[TMP8]], 0
 // AMDGCNSPIRV-NEXT:    br i1 [[CMP_NOT_I_I_I]], label %[[_ZL4NANFPKC_EXIT]], label %[[WHILE_BODY_I_I_I]]
 // AMDGCNSPIRV:       [[WHILE_BODY_I_I_I]]:
@@ -4643,11 +4643,11 @@ extern "C" __device__ double test_modf(double x, double* y) {
 // AMDGCNSPIRV-NEXT:    [[__TAGP_ADDR_1_I_I_I_IDX:%.*]] = zext i1 [[OR_COND_I_I_I]] to i64
 // AMDGCNSPIRV-NEXT:    [[__TAGP_ADDR_1_I_I_I]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[__TAGP_ADDR_0_I_I_I]], i64 [[__TAGP_ADDR_1_I_I_I_IDX]]
 // AMDGCNSPIRV-NEXT:    [[__R_1_I_I_I]] = select i1 [[OR_COND_I_I_I]], i64 [[SUB_I_I_I]], i64 [[__R_0_I_I_I]]
-// AMDGCNSPIRV-NEXT:    br i1 [[OR_COND_I_I_I]], label %[[WHILE_COND_I_I_I]], label %[[_ZL4NANFPKC_EXIT]], !llvm.loop [[LOOP10]]
+// AMDGCNSPIRV-NEXT:    br i1 [[OR_COND_I_I_I]], label %[[WHILE_COND_I_I_I]], label %[[_ZL4NANFPKC_EXIT]], !llvm.loop [[LOOP9]]
 // AMDGCNSPIRV:       [[WHILE_COND_I14_I_I]]:
 // AMDGCNSPIRV-NEXT:    [[__TAGP_ADDR_0_I15_I_I:%.*]] = phi ptr addrspace(4) [ [[__TAGP_ADDR_1_I25_I_I:%.*]], %[[WHILE_BODY_I18_I_I:.*]] ], [ [[TAG]], %[[ENTRY]] ]
 // AMDGCNSPIRV-NEXT:    [[__R_0_I16_I_I:%.*]] = phi i64 [ [[__R_1_I26_I_I:%.*]], %[[WHILE_BODY_I18_I_I]] ], [ 0, %[[ENTRY]] ]
-// AMDGCNSPIRV-NEXT:    [[TMP10:%.*]] = load i8, ptr addrspace(4) [[__TAGP_ADDR_0_I15_I_I]], align 1, !tbaa [[CHAR_TBAA9]]
+// AMDGCNSPIRV-NEXT:    [[TMP10:%.*]] = load i8, ptr addrspace(4) [[__TAGP_ADDR_0_I15_I_I]], align 1, !tbaa [[CHAR_TBAA8]]
 // AMDGCNSPIRV-NEXT:    [[CMP_NOT_I17_I_I:%.*]] = icmp eq i8 [[TMP10]], 0
 // AMDGCNSPIRV-NEXT:    br i1 [[CMP_NOT_I17_I_I]], label %[[_ZL4NANFPKC_EXIT]], label %[[WHILE_BODY_I18_I_I]]
 // AMDGCNSPIRV:       [[WHILE_BODY_I18_I_I]]:
@@ -4660,7 +4660,7 @@ extern "C" __device__ double test_modf(double x, double* y) {
 // AMDGCNSPIRV-NEXT:    [[__TAGP_ADDR_1_I25_I_I_IDX:%.*]] = zext i1 [[OR_COND_I19_I_I]] to i64
 // AMDGCNSPIRV-NEXT:    [[__TAGP_ADDR_1_I25_I_I]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[__TAGP_ADDR_0_I15_I_I]], i64 [[__TAGP_ADDR_1_I25_I_I_IDX]]
 // AMDGCNSPIRV-NEXT:    [[__R_1_I26_I_I]] = select i1 [[OR_COND_I19_I_I]], i64 [[SUB_I23_I_I]], i64 [[__R_0_I16_I_I]]
-// AMDGCNSPIRV-NEXT:    br i1 [[OR_COND_I19_I_I]], label %[[WHILE_COND_I14_I_I]], label %[[_ZL4NANFPKC_EXIT]], !llvm.loop [[LOOP13]]
+// AMDGCNSPIRV-NEXT:    br i1 [[OR_COND_I19_I_I]], label %[[WHILE_COND_I14_I_I]], label %[[_ZL4NANFPKC_EXIT]], !llvm.loop [[LOOP12]]
 // AMDGCNSPIRV:       [[_ZL4NANFPKC_EXIT]]:
 // AMDGCNSPIRV-NEXT:    [[RETVAL_0_I_I:%.*]] = phi i64 [ 0, %[[IF_THEN5_I_I]] ], [ [[ADD28_I_I_I]], %[[IF_END31_I_I_I]] ], [ [[__R_0_I_I_I]], %[[WHILE_COND_I_I_I]] ], [ 0, %[[WHILE_BODY_I_I_I]] ], [ 0, %[[IF_ELSE17_I_I_I]] ], [ 0, %[[WHILE_BODY_I18_I_I]] ], [ [[__R_0_I16_I_I]], %[[WHILE_COND_I14_I_I]] ]
 // AMDGCNSPIRV-NEXT:    [[CONV_I:%.*]] = trunc i64 [[RETVAL_0_I_I]] to i32
@@ -4676,16 +4676,16 @@ extern "C" __device__ float test_nanf(const char *tag) {
 // DEFAULT-LABEL: define dso_local double @test_nan(
 // DEFAULT-SAME: ptr noundef readonly captures(none) [[TAG:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // DEFAULT-NEXT:  [[ENTRY:.*:]]
-// DEFAULT-NEXT:    [[TMP0:%.*]] = load i8, ptr [[TAG]], align 1, !tbaa [[CHAR_TBAA8]]
+// DEFAULT-NEXT:    [[TMP0:%.*]] = load i8, ptr [[TAG]], align 1, !tbaa [[CHAR_TBAA7]]
 // DEFAULT-NEXT:    [[CMP_I_I:%.*]] = icmp eq i8 [[TMP0]], 48
 // DEFAULT-NEXT:    br i1 [[CMP_I_I]], label %[[IF_THEN_I_I:.*]], label %[[WHILE_COND_I14_I_I_PREHEADER:.*]]
 // DEFAULT:       [[WHILE_COND_I14_I_I_PREHEADER]]:
-// DEFAULT-NEXT:    [[TMP1:%.*]] = load i8, ptr [[TAG]], align 1, !tbaa [[CHAR_TBAA8]]
+// DEFAULT-NEXT:    [[TMP1:%.*]] = load i8, ptr [[TAG]], align 1, !tbaa [[CHAR_TBAA7]]
 // DEFAULT-NEXT:    [[CMP_NOT_I17_I_I5:%.*]] = icmp eq i8 [[TMP1]], 0
 // DEFAULT-NEXT:    br i1 [[CMP_NOT_I17_I_I5]], label %[[_ZL3NANPKC_EXIT:.*]], label %[[WHILE_BODY_I18_I_I:.*]]
 // DEFAULT:       [[IF_THEN_I_I]]:
 // DEFAULT-NEXT:    [[INCDEC_PTR_I_I:%.*]] = getelementptr inbounds nuw i8, ptr [[TAG]], i64 1
-// DEFAULT-NEXT:    [[TMP2:%.*]] = load i8, ptr [[INCDEC_PTR_I_I]], align 1, !tbaa [[CHAR_TBAA8]]
+// DEFAULT-NEXT:    [[TMP2:%.*]] = load i8, ptr [[INCDEC_PTR_I_I]], align 1, !tbaa [[CHAR_TBAA7]]
 // DEFAULT-NEXT:    [[CMP_NOT_I_I_I14:%.*]] = icmp eq i8 [[TMP2]], 0
 // DEFAULT-NEXT:    switch i8 [[TMP2]], label %[[WHILE_COND_I_I_I_PREHEADER:.*]] [
 // DEFAULT-NEXT:      i8 120, label %[[IF_THEN5_I_I:.*]]
@@ -4717,9 +4717,9 @@ extern "C" __device__ float test_nanf(const char *tag) {
 // DEFAULT-NEXT:    [[ADD26_I_I_I:%.*]] = add i64 [[MUL24_I_I_I]], [[DOTSINK]]
 // DEFAULT-NEXT:    [[ADD28_I_I_I]] = add i64 [[ADD26_I_I_I]], [[CONV25_I_I_I]]
 // DEFAULT-NEXT:    [[INCDEC_PTR_I34_I_I]] = getelementptr inbounds nuw i8, ptr [[__TAGP_ADDR_0_I28_I_I10]], i64 1
-// DEFAULT-NEXT:    [[TMP7]] = load i8, ptr [[INCDEC_PTR_I34_I_I]], align 1, !tbaa [[CHAR_TBAA8]]
+// DEFAULT-NEXT:    [[TMP7]] = load i8, ptr [[INCDEC_PTR_I34_I_I]], align 1, !tbaa [[CHAR_TBAA7]]
 // DEFAULT-NEXT:    [[CMP_NOT_I30_I_I:%.*]] = icmp eq i8 [[TMP7]], 0
-// DEFAULT-NEXT:    br i1 [[CMP_NOT_I30_I_I]], label %[[_ZL3NANPKC_EXIT]], label %[[WHILE_BODY_I31_I_I]], !llvm.loop [[LOOP13]]
+// DEFAULT-NEXT:    br i1 [[CMP_NOT_I30_I_I]], label %[[_ZL3NANPKC_EXIT]], label %[[WHILE_BODY_I31_I_I]], !llvm.loop [[LOOP12]]
 // DEFAULT:       [[WHILE_BODY_I_I_I]]:
 // DEFAULT-NEXT:    [[TMP8:%.*]] = phi i8 [ [[TMP10:%.*]], %[[IF_THEN_I_I_I:.*]] ], [ [[TMP2]], %[[WHILE_COND_I_I_I_PREHEADER]] ]
 // DEFAULT-NEXT:    [[__R_0_I_I_I16:%.*]] = phi i64 [ [[SUB_I_I_I:%.*]], %[[IF_THEN_I_I_I]] ], [ 0, %[[WHILE_COND_I_I_I_PREHEADER]] ]
@@ -4733,9 +4733,9 @@ extern "C" __device__ float test_nanf(const char *tag) {
 // DEFAULT-NEXT:    [[ADD_I_I_I:%.*]] = add i64 [[MUL_I_I_I]], -48
 // DEFAULT-NEXT:    [[SUB_I_I_I]] = add i64 [[ADD_I_I_I]], [[CONV5_I_I_I]]
 // DEFAULT-NEXT:    [[INCDEC_PTR_I_I_I]] = getelementptr inbounds nuw i8, ptr [[__TAGP_ADDR_0_I_I_I15]], i64 1
-// DEFAULT-NEXT:    [[TMP10]] = load i8, ptr [[INCDEC_PTR_I_I_I]], align 1, !tbaa [[CHAR_TBAA8]]
+// DEFAULT-NEXT:    [[TMP10]] = load i8, ptr [[INCDEC_PTR_I_I_I]], align 1, !tbaa [[CHAR_TBAA7]]
 // DEFAULT-NEXT:    [[CMP_NOT_I_I_I:%.*]] = icmp eq i8 [[TMP10]], 0
-// DEFAULT-NEXT:    br i1 [[CMP_NOT_I_I_I]], label %[[_ZL3NANPKC_EXIT]], label %[[WHILE_BODY_I_I_I]], !llvm.loop [[LOOP9]]
+// DEFAULT-NEXT:    br i1 [[CMP_NOT_I_I_I]], label %[[_ZL3NANPKC_EXIT]], label %[[WHILE_BODY_I_I_I]], !llvm.loop [[LOOP8]]
 // DEFAULT:       [[WHILE_BODY_I18_I_I]]:
 // DEFAULT-NEXT:    [[TMP11:%.*]] = phi i8 [ [[TMP13:%.*]], %[[IF_THEN_I21_I_I:.*]] ], [ [[TMP1]], %[[WHILE_COND_I14_I_I_PREHEADER]] ]
 // DEFAULT-NEXT:    [[__R_0_I16_I_I7:%.*]] = phi i64 [ [[SUB_I25_I_I:%.*]], %[[IF_THEN_I21_I_I]] ], [ 0, %[[WHILE_COND_I14_I_I_PREHEADER]] ]
@@ -4749,9 +4749,9 @@ extern "C" __device__ float test_nanf(const char *tag) {
 // DEFAULT-NEXT:    [[ADD_I24_I_I:%.*]] = add i64 [[MUL_I22_I_I]], -48
 // DEFAULT-NEXT:    [[SUB_I25_I_I]] = add i64 [[ADD_I24_I_I]], [[CONV5_I23_I_I]]
 // DEFAULT-NEXT:    [[INCDEC_PTR_I26_I_I]] = getelementptr inbounds nuw i8, ptr [[__TAGP_ADDR_0_I15_I_I6]], i64 1
-// DEFAULT-NEXT:    [[TMP13]] = load i8, ptr [[INCDEC_PTR_I26_I_I]], align 1, !tbaa [[CHAR_TBAA8]]
+// DEFAULT-NEXT:    [[TMP13]] = load i8, ptr [[INCDEC_PTR_I26_I_I]], align 1, !tbaa [[CHAR_TBAA7]]
 // DEFAULT-NEXT:    [[CMP_NOT_I17_I_I:%.*]] = icmp eq i8 [[TMP13]], 0
-// DEFAULT-NEXT:    br i1 [[CMP_NOT_I17_I_I]], label %[[_ZL3NANPKC_EXIT]], label %[[WHILE_BODY_I18_I_I]], !llvm.loop [[LOOP12]]
+// DEFAULT-NEXT:    br i1 [[CMP_NOT_I17_I_I]], label %[[_ZL3NANPKC_EXIT]], label %[[WHILE_BODY_I18_I_I]], !llvm.loop [[LOOP11]]
 // DEFAULT:       [[_ZL3NANPKC_EXIT]]:
 // DEFAULT-NEXT:    [[RETVAL_0_I_I:%.*]] = phi i64 [ 0, %[[IF_THEN5_I_I]] ], [ 0, %[[WHILE_COND_I14_I_I_PREHEADER]] ], [ 0, %[[WHILE_COND_I_I_I_PREHEADER]] ], [ [[SUB_I_I_I]], %[[IF_THEN_I_I_I]] ], [ [[ADD28_I_I_I]], %[[IF_END31_I_I_I]] ], [ 0, %[[WHILE_BODY_I_I_I]] ], [ 0, %[[IF_ELSE17_I_I_I]] ], [ [[SUB_I25_I_I]], %[[IF_THEN_I21_I_I]] ], [ 0, %[[WHILE_BODY_I18_I_I]] ]
 // DEFAULT-NEXT:    [[BF_VALUE_I:%.*]] = and i64 [[RETVAL_0_I_I]], 2251799813685247
@@ -4767,16 +4767,16 @@ extern "C" __device__ float test_nanf(const char *tag) {
 // APPROX-LABEL: define dso_local double @test_nan(
 // APPROX-SAME: ptr noundef readonly captures(none) [[TAG:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // APPROX-NEXT:  [[ENTRY:.*:]]
-// APPROX-NEXT:    [[TMP0:%.*]] = load i8, ptr [[TAG]], align 1, !tbaa [[CHAR_TBAA8]]
+// APPROX-NEXT:    [[TMP0:%.*]] = load i8, ptr [[TAG]], align 1, !tbaa [[CHAR_TBAA7]]
 // APPROX-NEXT:    [[CMP_I_I:%.*]] = icmp eq i8 [[TMP0]], 48
 // APPROX-NEXT:    br i1 [[CMP_I_I]], label %[[IF_THEN_I_I:.*]], label %[[WHILE_COND_I14_I_I_PREHEADER:.*]]
 // APPROX:       [[WHILE_COND_I14_I_I_PREHEADER]]:
-// APPROX-NEXT:    [[TMP1:%.*]] = load i8, ptr [[TAG]], align 1, !tbaa [[CHAR_TBAA8]]
+// APPROX-NEXT:    [[TMP1:%.*]] = load i8, ptr [[TAG]], align 1, !tbaa [[CHAR_TBAA7]]
 // APPROX-NEXT:    [[CMP_NOT_I17_I_I5:%.*]] = icmp eq i8 [[TMP1]], 0
 // APPROX-NEXT:    br i1 [[CMP_NOT_I17_I_I5]], label %[[_ZL3NANPKC_EXIT:.*]], label %[[WHILE_BODY_I18_I_I:.*]]
 // APPROX:       [[IF_THEN_I_I]]:
 // APPROX-NEXT:    [[INCDEC_PTR_I_I:%.*]] = getelementptr inbounds nuw i8, ptr [[TAG]], i64 1
-// APPROX-NEXT:    [[TMP2:%.*]] = load i8, ptr [[INCDEC_PTR_I_I]], align 1, !tbaa [[CHAR_TBAA8]]
+// APPROX-NEXT:    [[TMP2:%.*]] = load i8, ptr [[INCDEC_PTR_I_I]], align 1, !tbaa [[CHAR_TBAA7]]
 // APPROX-NEXT:    [[CMP_NOT_I_I_I14:%.*]] = icmp eq i8 [[TMP2]], 0
 // APPROX-NEXT:    switch i8 [[TMP2]], label %[[WHILE_COND_I_I_I_PREHEADER:.*]] [
 // APPROX-NEXT:      i8 120, label %[[IF_THEN5_I_I:.*]]
@@ -4808,9 +4808,9 @@ extern "C" __device__ float test_nanf(const char *tag) {
 // APPROX-NEXT:    [[ADD26_I_I_I:%.*]] = add i64 [[MUL24_I_I_I]], [[DOTSINK]]
 // APPROX-NEXT:    [[ADD28_I_I_I]] = add i64 [[ADD26_I_I_I]], [[CONV25_I_I_I]]
 // APPROX-NEXT:    [[INCDEC_PTR_I34_I_I]] = getelementptr inbounds nuw i8, ptr [[__TAGP_ADDR_0_I28_I_I10]], i64 1
-// APPROX-NEXT:    [[TMP7]] = load i8, ptr [[INCDEC_PTR_I34_I_I]], align 1, !tbaa [[CHAR_TBAA8]]
+// APPROX-NEXT:    [[TMP7]] = load i8, ptr [[INCDEC_PTR_I34_I_I]], align 1, !tbaa [[CHAR_TBAA7]]
 // APPROX-NEXT:    [[CMP_NOT_I30_I_I:%.*]] = icmp eq i8 [[TMP7]], 0
-// APPROX-NEXT:    br i1 [[CMP_NOT_I30_I_I]], label %[[_ZL3NANPKC_EXIT]], label %[[WHILE_BODY_I31_I_I]], !llvm.loop [[LOOP13]]
+// APPROX-NEXT:    br i1 [[CMP_NOT_I30_I_I]], label %[[_ZL3NANPKC_EXIT]], label %[[WHILE_BODY_I31_I_I]], !llvm.loop [[LOOP12]]
 // APPROX:       [[WHILE_BODY_I_I_I]]:
 // APPROX-NEXT:    [[TMP8:%.*]] = phi i8 [ [[TMP10:%.*]], %[[IF_THEN_I_I_I:.*]] ], [ [[TMP2]], %[[WHILE_COND_I_I_I_PREHEADER]] ]
 // APPROX-NEXT:    [[__R_0_I_I_I16:%.*]] = phi i64 [ [[SUB_I_I_I:%.*]], %[[IF_THEN_I_I_I]] ], [ 0, %[[WHILE_COND_I_I_I_PREHEADER]] ]
@@ -4824,9 +4824,9 @@ extern "C" __device__ float test_nanf(const char *tag) {
 // APPROX-NEXT:    [[ADD_I_I_I:%.*]] = add i64 [[MUL_I_I_I]], -48
 // APPROX-NEXT:    [[SUB_I_I_I]] = add i64 [[ADD_I_I_I]], [[CONV5_I_I_I]]
 // APPROX-NEXT:    [[INCDEC_PTR_I_I_I]] = getelementptr inbounds nuw i8, ptr [[__TAGP_ADDR_0_I_I_I15]], i64 1
-// APPROX-NEXT:    [[TMP10]] = load i8, ptr [[INCDEC_PTR_I_I_I]], align 1, !tbaa [[CHAR_TBAA8]]
+// APPROX-NEXT:    [[TMP10]] = load i8, ptr [[INCDEC_PTR_I_I_I]], align 1, !tbaa [[CHAR_TBAA7]]
 // APPROX-NEXT:    [[CMP_NOT_I_I_I:%.*]] = icmp eq i8 [[TMP10]], 0
-// APPROX-NEXT:    br i1 [[CMP_NOT_I_I_I]], label %[[_ZL3NANPKC_EXIT]], label %[[WHILE_BODY_I_I_I]], !llvm.loop [[LOOP9]]
+// APPROX-NEXT:    br i1 [[CMP_NOT_I_I_I]], label %[[_ZL3NANPKC_EXIT]], label %[[WHILE_BODY_I_I_I]], !llvm.loop [[LOOP8]]
 // APPROX:       [[WHILE_BODY_I18_I_I]]:
 // APPROX-NEXT:    [[TMP11:%.*]] = phi i8 [ [[TMP13:%.*]], %[[IF_THEN_I21_I_I:.*]] ], [ [[TMP1]], %[[WHILE_COND_I14_I_I_PREHEADER]] ]
 // APPROX-NEXT:    [[__R_0_I16_I_I7:%.*]] = phi i64 [ [[SUB_I25_I_I:%.*]], %[[IF_THEN_I21_I_I]] ], [ 0, %[[WHILE_COND_I14_I_I_PREHEADER]] ]
@@ -4840,9 +4840,9 @@ extern "C" __device__ float test_nanf(const char *tag) {
 // APPROX-NEXT:    [[ADD_I24_I_I:%.*]] = add i64 [[MUL_I22_I_I]], -48
 // APPROX-NEXT:    [[SUB_I25_I_I]] = add i64 [[ADD_I24_I_I]], [[CONV5_I23_I_I]]
 // APPROX-NEXT:    [[INCDEC_PTR_I26_I_I]] = getelementptr inbounds nuw i8, ptr [[__TAGP_ADDR_0_I15_I_I6]], i64 1
-// APPROX-NEXT:    [[TMP13]] = load i8, ptr [[INCDEC_PTR_I26_I_I]], align 1, !tbaa [[CHAR_TBAA8]]
+// APPROX-NEXT:    [[TMP13]] = load i8, ptr [[INCDEC_PTR_I26_I_I]], align 1, !tbaa [[CHAR_TBAA7]]
 // APPROX-NEXT:    [[CMP_NOT_I17_I_I:%.*]] = icmp eq i8 [[TMP13]], 0
-// APPROX-NEXT:    br i1 [[CMP_NOT_I17_I_I]], label %[[_ZL3NANPKC_EXIT]], label %[[WHILE_BODY_I18_I_I]], !llvm.loop [[LOOP12]]
+// APPROX-NEXT:    br i1 [[CMP_NOT_I17_I_I]], label %[[_ZL3NANPKC_EXIT]], label %[[WHILE_BODY_I18_I_I]], !llvm.loop [[LOOP11]]
 // APPROX:       [[_ZL3NANPKC_EXIT]]:
 // APPROX-NEXT:    [[RETVAL_0_I_I:%.*]] = phi i64 [ 0, %[[IF_THEN5_I_I]] ], [ 0, %[[WHILE_COND_I14_I_I_PREHEADER]] ], [ 0, %[[WHILE_COND_I_I_I_PREHEADER]] ], [ [[SUB_I_I_I]], %[[IF_THEN_I_I_I]] ], [ [[ADD28_I_I_I]], %[[IF_END31_I_I_I]] ], [ 0, %[[WHILE_BODY_I_I_I]] ], [ 0, %[[IF_ELSE17_I_I_I]] ], [ [[SUB_I25_I_I]], %[[IF_THEN_I21_I_I]] ], [ 0, %[[WHILE_BODY_I18_I_I]] ]
 // APPROX-NEXT:    [[BF_VALUE_I:%.*]] = and i64 [[RETVAL_0_I_I]], 2251799813685247
@@ -4853,16 +4853,16 @@ extern "C" __device__ float test_nanf(const char *tag) {
 // NCRDIV-LABEL: define dso_local double @test_nan(
 // NCRDIV-SAME: ptr noundef readonly captures(none) [[TAG:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // NCRDIV-NEXT:  [[ENTRY:.*:]]
-// NCRDIV-NEXT:    [[TMP0:%.*]] = load i8, ptr [[TAG]], align 1, !tbaa [[CHAR_TBAA8]]
+// NCRDIV-NEXT:    [[TMP0:%.*]] = load i8, ptr [[TAG]], align 1, !tbaa [[CHAR_TBAA7]]
 // NCRDIV-NEXT:    [[CMP_I_I:%.*]] = icmp eq i8 [[TMP0]], 48
 // NCRDIV-NEXT:    br i1 [[CMP_I_I]], label %[[IF_THEN_I_I:.*]], label %[[WHILE_COND_I14_I_I_PREHEADER:.*]]
 // NCRDIV:       [[WHILE_COND_I14_I_I_PREHEADER]]:
-// NCRDIV-NEXT:    [[TMP1:%.*]] = load i8, ptr [[TAG]], align 1, !tbaa [[CHAR_TBAA8]]
+// NCRDIV-NEXT:    [[TMP1:%.*]] = load i8, ptr [[TAG]], align 1, !tbaa [[CHAR_TBAA7]]
 // NCRDIV-NEXT:    [[CMP_NOT_I17_I_I5:%.*]] = icmp eq i8 [[TMP1]], 0
 // NCRDIV-NEXT:    br i1 [[CMP_NOT_I17_I_I5]], label %[[_ZL3NANPKC_EXIT:.*]], label %[[WHILE_BODY_I18_I_I:.*]]
 // NCRDIV:       [[IF_THEN_I_I]]:
 // NCRDIV-NEXT:    [[INCDEC_PTR_I_I:%.*]] = getelementptr inbounds nuw i8, ptr [[TAG]], i64 1
-// NCRDIV-NEXT:    [[TMP2:%.*]] = load i8, ptr [[INCDEC_PTR_I_I]], align 1, !tbaa [[CHAR_TBAA8]]
+// NCRDIV-NEXT:    [[TMP2:%.*]] = load i8, ptr [[INCDEC_PTR_I_I]], align 1, !tbaa [[CHAR_TBAA7]]
 // NCRDIV-NEXT:    [[CMP_NOT_I_I_I14:%.*]] = icmp eq i8 [[TMP2]], 0
 // NCRDIV-NEXT:    switch i8 [[TMP2]], label %[[WHILE_COND_I_I_I_PREHEADER:.*]] [
 // NCRDIV-NEXT:      i8 120, label %[[IF_THEN5_I_I:.*]]
@@ -4894,9 +4894,9 @@ extern "C" __device__ float test_nanf(const char *tag) {
 // NCRDIV-NEXT:    [[ADD26_I_I_I:%.*]] = add i64 [[MUL24_I_I_I]], [[DOTSINK]]
 // NCRDIV-NEXT:    [[ADD28_I_I_I]] = add i64 [[ADD26_I_I_I]], [[CONV25_I_I_I]]
 // NCRDIV-NEXT:    [[INCDEC_PTR_I34_I_I]] = getelementptr inbounds nuw i8, ptr [[__TAGP_ADDR_0_I28_I_I10]], i64 1
-// NCRDIV-NEXT:    [[TMP7]] = load i8, ptr [[INCDEC_PTR_I34_I_I]], align 1, !tbaa [[CHAR_TBAA8]]
+// NCRDIV-NEXT:    [[TMP7]] = load i8, ptr [[INCDEC_PTR_I34_I_I]], align 1, !tbaa [[CHAR_TBAA7]]
 // NCRDIV-NEXT:    [[CMP_NOT_I30_I_I:%.*]] = icmp eq i8 [[TMP7]], 0
-// NCRDIV-NEXT:    br i1 [[CMP_NOT_I30_I_I]], label %[[_ZL3NANPKC_EXIT]], label %[[WHILE_BODY_I31_I_I]], !llvm.loop [[LOOP13]]
+// NCRDIV-NEXT:    br i1 [[CMP_NOT_I30_I_I]], label %[[_ZL3NANPKC_EXIT]], label %[[WHILE_BODY_I31_I_I]], !llvm.loop [[LOOP12]]
 // NCRDIV:       [[WHILE_BODY_I_I_I]]:
 // NCRDIV-NEXT:    [[TMP8:%.*]] = phi i8 [ [[TMP10:%.*]], %[[IF_THEN_I_I_I:.*]] ], [ [[TMP2]], %[[WHILE_COND_I_I_I_PREHEADER]] ]
 // NCRDIV-NEXT:    [[__R_0_I_I_I16:%.*]] = phi i64 [ [[SUB_I_I_I:%.*]], %[[IF_THEN_I_I_I]] ], [ 0, %[[WHILE_COND_I_I_I_PREHEADER]] ]
@@ -4910,9 +4910,9 @@ extern "C" __device__ float test_nanf(const char *tag) {
 // NCRDIV-NEXT:    [[ADD_I_I_I:%.*]] = add i64 [[MUL_I_I_I]], -48
 // NCRDIV-NEXT:    [[SUB_I_I_I]] = add i64 [[ADD_I_I_I]], [[CONV5_I_I_I]]
 // NCRDIV-NEXT:    [[INCDEC_PTR_I_I_I]] = getelementptr inbounds nuw i8, ptr [[__TAGP_ADDR_0_I_I_I15]], i64 1
-// NCRDIV-NEXT:    [[TMP10]] = load i8, ptr [[INCDEC_PTR_I_I_I]], align 1, !tbaa [[CHAR_TBAA8]]
+// NCRDIV-NEXT:    [[TMP10]] = load i8, ptr [[INCDEC_PTR_I_I_I]], align 1, !tbaa [[CHAR_TBAA7]]
 // NCRDIV-NEXT:    [[CMP_NOT_I_I_I:%.*]] = icmp eq i8 [[TMP10]], 0
-// NCRDIV-NEXT:    br i1 [[CMP_NOT_I_I_I]], label %[[_ZL3NANPKC_EXIT]], label %[[WHILE_BODY_I_I_I]], !llvm.loop [[LOOP9]]
+// NCRDIV-NEXT:    br i1 [[CMP_NOT_I_I_I]], label %[[_ZL3NANPKC_EXIT]], label %[[WHILE_BODY_I_I_I]], !llvm.loop [[LOOP8]]
 // NCRDIV:       [[WHILE_BODY_I18_I_I]]:
 // NCRDIV-NEXT:    [[TMP11:%.*]] = phi i8 [ [[TMP13:%.*]], %[[IF_THEN_I21_I_I:.*]] ], [ [[TMP1]], %[[WHILE_COND_I14_I_I_PREHEADER]] ]
 // NCRDIV-NEXT:    [[__R_0_I16_I_I7:%.*]] = phi i64 [ [[SUB_I25_I_I:%.*]], %[[IF_THEN_I21_I_I]] ], [ 0, %[[WHILE_COND_I14_I_I_PREHEADER]] ]
@@ -4926,9 +4926,9 @@ extern "C" __device__ float test_nanf(const char *tag) {
 // NCRDIV-NEXT:    [[ADD_I24_I_I:%.*]] = add i64 [[MUL_I22_I_I]], -48
 // NCRDIV-NEXT:    [[SUB_I25_I_I]] = add i64 [[ADD_I24_I_I]], [[CONV5_I23_I_I]]
 // NCRDIV-NEXT:    [[INCDEC_PTR_I26_I_I]] = getelementptr inbounds nuw i8, ptr [[__TAGP_ADDR_0_I15_I_I6]], i64 1
-// NCRDIV-NEXT:    [[TMP13]] = load i8, ptr [[INCDEC_PTR_I26_I_I]], align 1, !tbaa [[CHAR_TBAA8]]
+// NCRDIV-NEXT:    [[TMP13]] = load i8, ptr [[INCDEC_PTR_I26_I_I]], align 1, !tbaa [[CHAR_TBAA7]]
 // NCRDIV-NEXT:    [[CMP_NOT_I17_I_I:%.*]] = icmp eq i8 [[TMP13]], 0
-// NCRDIV-NEXT:    br i1 [[CMP_NOT_I17_I_I]], label %[[_ZL3NANPKC_EXIT]], label %[[WHILE_BODY_I18_I_I]], !llvm.loop [[LOOP12]]
+// NCRDIV-NEXT:    br i1 [[CMP_NOT_I17_I_I]], label %[[_ZL3NANPKC_EXIT]], label %[[WHILE_BODY_I18_I_I]], !llvm.loop [[LOOP11]]
 // NCRDIV:       [[_ZL3NANPKC_EXIT]]:
 // NCRDIV-NEXT:    [[RETVAL_0_I_I:%.*]] = phi i64 [ 0, %[[IF_THEN5_I_I]] ], [ 0, %[[WHILE_COND_I14_I_I_PREHEADER]] ], [ 0, %[[WHILE_COND_I_I_I_PREHEADER]] ], [ [[SUB_I_I_I]], %[[IF_THEN_I_I_I]] ], [ [[ADD28_I_I_I]], %[[IF_END31_I_I_I]] ], [ 0, %[[WHILE_BODY_I_I_I]] ], [ 0, %[[IF_ELSE17_I_I_I]] ], [ [[SUB_I25_I_I]], %[[IF_THEN_I21_I_I]] ], [ 0, %[[WHILE_BODY_I18_I_I]] ]
 // NCRDIV-NEXT:    [[BF_VALUE_I:%.*]] = and i64 [[RETVAL_0_I_I]], 2251799813685247
@@ -4939,18 +4939,18 @@ extern "C" __device__ float test_nanf(const char *tag) {
 // AMDGCNSPIRV-LABEL: define spir_func double @test_nan(
 // AMDGCNSPIRV-SAME: ptr addrspace(4) noundef readonly captures(none) [[TAG:%.*]]) local_unnamed_addr addrspace(4) #[[ATTR2]] {
 // AMDGCNSPIRV-NEXT:  [[ENTRY:.*]]:
-// AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = load i8, ptr addrspace(4) [[TAG]], align 1, !tbaa [[CHAR_TBAA9]]
+// AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = load i8, ptr addrspace(4) [[TAG]], align 1, !tbaa [[CHAR_TBAA8]]
 // AMDGCNSPIRV-NEXT:    [[CMP_I_I:%.*]] = icmp eq i8 [[TMP0]], 48
 // AMDGCNSPIRV-NEXT:    br i1 [[CMP_I_I]], label %[[IF_THEN_I_I:.*]], label %[[WHILE_COND_I14_I_I:.*]]
 // AMDGCNSPIRV:       [[IF_THEN_I_I]]:
 // AMDGCNSPIRV-NEXT:    [[INCDEC_PTR_I_I:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[TAG]], i64 1
-// AMDGCNSPIRV-NEXT:    [[TMP1:%.*]] = load i8, ptr addrspace(4) [[INCDEC_PTR_I_I]], align 1, !tbaa [[CHAR_TBAA9]]
+// AMDGCNSPIRV-NEXT:    [[TMP1:%.*]] = load i8, ptr addrspace(4) [[INCDEC_PTR_I_I]], align 1, !tbaa [[CHAR_TBAA8]]
 // AMDGCNSPIRV-NEXT:    switch i8 [[TMP1]], label %[[WHILE_COND_I_I_I:.*]] [
 // AMDGCNSPIRV-NEXT:      i8 120, label %[[IF_THEN5_I_I:.*]]
 // AMDGCNSPIRV-NEXT:      i8 88, label %[[IF_THEN5_I_I]]
 // AMDGCNSPIRV-NEXT:    ]
 // AMDGCNSPIRV:       [[IF_THEN5_I_I]]:
-// AMDGCNSPIRV-NEXT:    [[TMP2:%.*]] = load i8, ptr addrspace(4) [[INCDEC_PTR_I_I]], align 1, !tbaa [[CHAR_TBAA9]]
+// AMDGCNSPIRV-NEXT:    [[TMP2:%.*]] = load i8, ptr addrspace(4) [[INCDEC_PTR_I_I]], align 1, !tbaa [[CHAR_TBAA8]]
 // AMDGCNSPIRV-NEXT:    [[CMP_NOT_I31_I_I5:%.*]] = icmp eq i8 [[TMP2]], 0
 // AMDGCNSPIRV-NEXT:    br i1 [[CMP_NOT_I31_I_I5]], label %[[_ZL3NANPKC_EXIT:.*]], label %[[WHILE_BODY_I32_I_I:.*]]
 // AMDGCNSPIRV:       [[WHILE_BODY_I32_I_I]]:
@@ -4975,13 +4975,13 @@ extern "C" __device__ float test_nanf(const char *tag) {
 // AMDGCNSPIRV-NEXT:    [[ADD26_I_I_I:%.*]] = add i64 [[MUL24_I_I_I]], [[DOTSINK]]
 // AMDGCNSPIRV-NEXT:    [[ADD28_I_I_I]] = add i64 [[ADD26_I_I_I]], [[CONV25_I_I_I]]
 // AMDGCNSPIRV-NEXT:    [[INCDEC_PTR_I36_I_I]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[__TAGP_ADDR_0_I29_I_I6]], i64 1
-// AMDGCNSPIRV-NEXT:    [[TMP7]] = load i8, ptr addrspace(4) [[INCDEC_PTR_I36_I_I]], align 1, !tbaa [[CHAR_TBAA9]]
+// AMDGCNSPIRV-NEXT:    [[TMP7]] = load i8, ptr addrspace(4) [[INCDEC_PTR_I36_I_I]], align 1, !tbaa [[CHAR_TBAA8]]
 // AMDGCNSPIRV-NEXT:    [[CMP_NOT_I31_I_I:%.*]] = icmp eq i8 [[TMP7]], 0
-// AMDGCNSPIRV-NEXT:    br i1 [[CMP_NOT_I31_I_I]], label %[[_ZL3NANPKC_EXIT]], label %[[WHILE_BODY_I32_I_I]], !llvm.loop [[LOOP14]]
+// AMDGCNSPIRV-NEXT:    br i1 [[CMP_NOT_I31_I_I]], label %[[_ZL3NANPKC_EXIT]], label %[[WHILE_BODY_I32_I_I]], !llvm.loop [[LOOP13]]
 // AMDGCNSPIRV:       [[WHILE_COND_I_I_I]]:
 // AMDGCNSPIRV-NEXT:    [[__TAGP_ADDR_0_I_I_I:%.*]] = phi ptr addrspace(4) [ [[__TAGP_ADDR_1_I_I_I:%.*]], %[[WHILE_BODY_I_I_I:.*]] ], [ [[INCDEC_PTR_I_I]], %[[IF_THEN_I_I]] ]
 // AMDGCNSPIRV-NEXT:    [[__R_0_I_I_I:%.*]] = phi i64 [ [[__R_1_I_I_I:%.*]], %[[WHILE_BODY_I_I_I]] ], [ 0, %[[IF_THEN_I_I]] ]
-// AMDGCNSPIRV-NEXT:    [[TMP8:%.*]] = load i8, ptr addrspace(4) [[__TAGP_ADDR_0_I_I_I]], align 1, !tbaa [[CHAR_TBAA9]]
+// AMDGCNSPIRV-NEXT:    [[TMP8:%.*]] = load i8, ptr addrspace(4) [[__TAGP_ADDR_0_I_I_I]], align 1, !tbaa [[CHAR_TBAA8]]
 // AMDGCNSPIRV-NEXT:    [[CMP_NOT_I_I_I:%.*]] = icmp eq i8 [[TMP8]], 0
 // AMDGCNSPIRV-NEXT:    br i1 [[CMP_NOT_I_I_I]], label %[[_ZL3NANPKC_EXIT]], label %[[WHILE_BODY_I_I_I]]
 // AMDGCNSPIRV:       [[WHILE_BODY_I_I_I]]:
@@ -4994,11 +4994,11 @@ extern "C" __device__ float test_nanf(const char *tag) {
 // AMDGCNSPIRV-NEXT:    [[__TAGP_ADDR_1_I_I_I_IDX:%.*]] = zext i1 [[OR_COND_I_I_I]] to i64
 // AMDGCNSPIRV-NEXT:    [[__TAGP_ADDR_1_I_I_I]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[__TAGP_ADDR_0_I_I_I]], i64 [[__TAGP_ADDR_1_I_I_I_IDX]]
 // AMDGCNSPIRV-NEXT:    [[__R_1_I_I_I]] = select i1 [[OR_COND_I_I_I]], i64 [[SUB_I_I_I]], i64 [[__R_0_I_I_I]]
-// AMDGCNSPIRV-NEXT:    br i1 [[OR_COND_I_I_I]], label %[[WHILE_COND_I_I_I]], label %[[_ZL3NANPKC_EXIT]], !llvm.loop [[LOOP10]]
+// AMDGCNSPIRV-NEXT:    br i1 [[OR_COND_I_I_I]], label %[[WHILE_COND_I_I_I]], label %[[_ZL3NANPKC_EXIT]], !llvm.loop [[LOOP9]]
 // AMDGCNSPIRV:       [[WHILE_COND_I14_I_I]]:
 // AMDGCNSPIRV-NEXT:    [[__TAGP_ADDR_0_I15_I_I:%.*]] = phi ptr addrspace(4) [ [[__TAGP_ADDR_1_I25_I_I:%.*]], %[[WHILE_BODY_I18_I_I:.*]] ], [ [[TAG]], %[[ENTRY]] ]
 // AMDGCNSPIRV-NEXT:    [[__R_0_I16_I_I:%.*]] = phi i64 [ [[__R_1_I26_I_I:%.*]], %[[WHILE_BODY_I18_I_I]] ], [ 0, %[[ENTRY]] ]
-// AMDGCNSPIRV-NEXT:    [[TMP10:%.*]] = load i8, ptr addrspace(4) [[__TAGP_ADDR_0_I15_I_I]], align 1, !tbaa [[CHAR_TBAA9]]
+// AMDGCNSPIRV-NEXT:    [[TMP10:%.*]] = load i8, ptr addrspace(4) [[__TAGP_ADDR_0_I15_I_I]], align 1, !tbaa [[CHAR_TBAA8]]
 // AMDGCNSPIRV-NEXT:    [[CMP_NOT_I17_I_I:%.*]] = icmp eq i8 [[TMP10]], 0
 // AMDGCNSPIRV-NEXT:    br i1 [[CMP_NOT_I17_I_I]], label %[[_ZL3NANPKC_EXIT]], label %[[WHILE_BODY_I18_I_I]]
 // AMDGCNSPIRV:       [[WHILE_BODY_I18_I_I]]:
@@ -5011,7 +5011,7 @@ extern "C" __device__ float test_nanf(const char *tag) {
 // AMDGCNSPIRV-NEXT:    [[__TAGP_ADDR_1_I25_I_I_IDX:%.*]] = zext i1 [[OR_COND_I19_I_I]] to i64
 // AMDGCNSPIRV-NEXT:    [[__TAGP_ADDR_1_I25_I_I]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[__TAGP_ADDR_0_I15_I_I]], i64 [[__TAGP_ADDR_1_I25_I_I_IDX]]
 // AMDGCNSPIRV-NEXT:    [[__R_1_I26_I_I]] = select i1 [[OR_COND_I19_I_I]], i64 [[SUB_I23_I_I]], i64 [[__R_0_I16_I_I]]
-// AMDGCNSPIRV-NEXT:    br i1 [[OR_COND_I19_I_I]], label %[[WHILE_COND_I14_I_I]], label %[[_ZL3NANPKC_EXIT]], !llvm.loop [[LOOP13]]
+// AMDGCNSPIRV-NEXT:    br i1 [[OR_COND_I19_I_I]], label %[[WHILE_COND_I14_I_I]], label %[[_ZL3NANPKC_EXIT]], !llvm.loop [[LOOP12]]
 // AMDGCNSPIRV:       [[_ZL3NANPKC_EXIT]]:
 // AMDGCNSPIRV-NEXT:    [[RETVAL_0_I_I:%.*]] = phi i64 [ 0, %[[IF_THEN5_I_I]] ], [ [[ADD28_I_I_I]], %[[IF_END31_I_I_I]] ], [ [[__R_0_I_I_I]], %[[WHILE_COND_I_I_I]] ], [ 0, %[[WHILE_BODY_I_I_I]] ], [ 0, %[[IF_ELSE17_I_I_I]] ], [ 0, %[[WHILE_BODY_I18_I_I]] ], [ [[__R_0_I16_I_I]], %[[WHILE_COND_I14_I_I]] ]
 // AMDGCNSPIRV-NEXT:    [[BF_VALUE_I:%.*]] = and i64 [[RETVAL_0_I_I]], 2251799813685247
@@ -5557,12 +5557,12 @@ extern "C" __device__ double test_normcdfinv(double x) {
 // DEFAULT-NEXT:    [[__A_ADDR_0_I3:%.*]] = phi ptr [ [[INCDEC_PTR_I:%.*]], %[[WHILE_BODY_I]] ], [ [[Y]], %[[ENTRY]] ]
 // DEFAULT-NEXT:    [[__DIM_ADDR_0_I2:%.*]] = phi i32 [ [[DEC_I:%.*]], %[[WHILE_BODY_I]] ], [ [[X]], %[[ENTRY]] ]
 // DEFAULT-NEXT:    [[DEC_I]] = add nsw i32 [[__DIM_ADDR_0_I2]], -1
-// DEFAULT-NEXT:    [[TMP0:%.*]] = load float, ptr [[__A_ADDR_0_I3]], align 4, !tbaa [[FLOAT_TBAA16]]
+// DEFAULT-NEXT:    [[TMP0:%.*]] = load float, ptr [[__A_ADDR_0_I3]], align 4, !tbaa [[FLOAT_TBAA15]]
 // DEFAULT-NEXT:    [[MUL_I:%.*]] = fmul contract float [[TMP0]], [[TMP0]]
 // DEFAULT-NEXT:    [[ADD_I]] = fadd contract float [[__R_0_I4]], [[MUL_I]]
 // DEFAULT-NEXT:    [[INCDEC_PTR_I]] = getelementptr inbounds nuw i8, ptr [[__A_ADDR_0_I3]], i64 4
 // DEFAULT-NEXT:    [[TOBOOL_NOT_I:%.*]] = icmp eq i32 [[DEC_I]], 0
-// DEFAULT-NEXT:    br i1 [[TOBOOL_NOT_I]], label %[[_ZL5NORMFIPKF_EXIT_LOOPEXIT:.*]], label %[[WHILE_BODY_I]], !llvm.loop [[LOOP20:![0-9]+]]
+// DEFAULT-NEXT:    br i1 [[TOBOOL_NOT_I]], label %[[_ZL5NORMFIPKF_EXIT_LOOPEXIT:.*]], label %[[WHILE_BODY_I]], !llvm.loop [[LOOP19:![0-9]+]]
 // DEFAULT:       [[_ZL5NORMFIPKF_EXIT_LOOPEXIT]]:
 // DEFAULT-NEXT:    [[TMP1:%.*]] = tail call contract float @llvm.sqrt.f32(float [[ADD_I]])
 // DEFAULT-NEXT:    br label %[[_ZL5NORMFIPKF_EXIT]]
@@ -5580,12 +5580,12 @@ extern "C" __device__ double test_normcdfinv(double x) {
 // FINITEONLY-NEXT:    [[__A_ADDR_0_I3:%.*]] = phi ptr [ [[INCDEC_PTR_I:%.*]], %[[WHILE_BODY_I]] ], [ [[Y]], %[[ENTRY]] ]
 // FINITEONLY-NEXT:    [[__DIM_ADDR_0_I2:%.*]] = phi i32 [ [[DEC_I:%.*]], %[[WHILE_BODY_I]] ], [ [[X]], %[[ENTRY]] ]
 // FINITEONLY-NEXT:    [[DEC_I]] = add nsw i32 [[__DIM_ADDR_0_I2]], -1
-// FINITEONLY-NEXT:    [[TMP0:%.*]] = load float, ptr [[__A_ADDR_0_I3]], align 4, !tbaa [[FLOAT_TBAA16]]
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = load float, ptr [[__A_ADDR_0_I3]], align 4, !tbaa [[FLOAT_TBAA15]]
 // FINITEONLY-NEXT:    [[MUL_I:%.*]] = fmul nnan ninf contract float [[TMP0]], [[TMP0]]
 // FINITEONLY-NEXT:    [[ADD_I]] = fadd nnan ninf contract float [[__R_0_I4]], [[MUL_I]]
 // FINITEONLY-NEXT:    [[INCDEC_PTR_I]] = getelementptr inbounds nuw i8, ptr [[__A_ADDR_0_I3]], i64 4
 // FINITEONLY-NEXT:    [[TOBOOL_NOT_I:%.*]] = icmp eq i32 [[DEC_I]], 0
-// FINITEONLY-NEXT:    br i1 [[TOBOOL_NOT_I]], label %[[_ZL5NORMFIPKF_EXIT_LOOPEXIT:.*]], label %[[WHILE_BODY_I]], !llvm.loop [[LOOP20:![0-9]+]]
+// FINITEONLY-NEXT:    br i1 [[TOBOOL_NOT_I]], label %[[_ZL5NORMFIPKF_EXIT_LOOPEXIT:.*]], label %[[WHILE_BODY_I]], !llvm.loop [[LOOP19:![0-9]+]]
 // FINITEONLY:       [[_ZL5NORMFIPKF_EXIT_LOOPEXIT]]:
 // FINITEONLY-NEXT:    [[TMP1:%.*]] = tail call nnan ninf contract nofpclass(nan inf) float @llvm.sqrt.f32(float [[ADD_I]])
 // FINITEONLY-NEXT:    br label %[[_ZL5NORMFIPKF_EXIT]]
@@ -5603,12 +5603,12 @@ extern "C" __device__ double test_normcdfinv(double x) {
 // APPROX-NEXT:    [[__A_ADDR_0_I3:%.*]] = phi ptr [ [[INCDEC_PTR_I:%.*]], %[[WHILE_BODY_I]] ], [ [[Y]], %[[ENTRY]] ]
 // APPROX-NEXT:    [[__DIM_ADDR_0_I2:%.*]] = phi i32 [ [[DEC_I:%.*]], %[[WHILE_BODY_I]] ], [ [[X]], %[[ENTRY]] ]
 // APPROX-NEXT:    [[DEC_I]] = add nsw i32 [[__DIM_ADDR_0_I2]], -1
-// APPROX-NEXT:    [[TMP0:%.*]] = load float, ptr [[__A_ADDR_0_I3]], align 4, !tbaa [[FLOAT_TBAA16]]
+// APPROX-NEXT:    [[TMP0:%.*]] = load float, ptr [[__A_ADDR_0_I3]], align 4, !tbaa [[FLOAT_TBAA15]]
 // APPROX-NEXT:    [[MUL_I:%.*]] = fmul contract float [[TMP0]], [[TMP0]]
 // APPROX-NEXT:    [[ADD_I]] = fadd contract float [[__R_0_I4]], [[MUL_I]]
 // APPROX-NEXT:    [[INCDEC_PTR_I]] = getelementptr inbounds nuw i8, ptr [[__A_ADDR_0_I3]], i64 4
 // APPROX-NEXT:    [[TOBOOL_NOT_I:%.*]] = icmp eq i32 [[DEC_I]], 0
-// APPROX-NEXT:    br i1 [[TOBOOL_NOT_I]], label %[[_ZL5NORMFIPKF_EXIT_LOOPEXIT:.*]], label %[[WHILE_BODY_I]], !llvm.loop [[LOOP20:![0-9]+]]
+// APPROX-NEXT:    br i1 [[TOBOOL_NOT_I]], label %[[_ZL5NORMFIPKF_EXIT_LOOPEXIT:.*]], label %[[WHILE_BODY_I]], !llvm.loop [[LOOP19:![0-9]+]]
 // APPROX:       [[_ZL5NORMFIPKF_EXIT_LOOPEXIT]]:
 // APPROX-NEXT:    [[TMP1:%.*]] = tail call contract float @llvm.sqrt.f32(float [[ADD_I]])
 // APPROX-NEXT:    br label %[[_ZL5NORMFIPKF_EXIT]]
@@ -5626,14 +5626,14 @@ extern "C" __device__ double test_normcdfinv(double x) {
 // NCRDIV-NEXT:    [[__A_ADDR_0_I3:%.*]] = phi ptr [ [[INCDEC_PTR_I:%.*]], %[[WHILE_BODY_I]] ], [ [[Y]], %[[ENTRY]] ]
 // NCRDIV-NEXT:    [[__DIM_ADDR_0_I2:%.*]] = phi i32 [ [[DEC_I:%.*]], %[[WHILE_BODY_I]] ], [ [[X]], %[[ENTRY]] ]
 // NCRDIV-NEXT:    [[DEC_I]] = add nsw i32 [[__DIM_ADDR_0_I2]], -1
-// NCRDIV-NEXT:    [[TMP0:%.*]] = load float, ptr [[__A_ADDR_0_I3]], align 4, !tbaa [[FLOAT_TBAA17]]
+// NCRDIV-NEXT:    [[TMP0:%.*]] = load float, ptr [[__A_ADDR_0_I3]], align 4, !tbaa [[FLOAT_TBAA16]]
 // NCRDIV-NEXT:    [[MUL_I:%.*]] = fmul contract float [[TMP0]], [[TMP0]]
 // NCRDIV-NEXT:    [[ADD_I]] = fadd contract float [[__R_0_I4]], [[MUL_I]]
 // NCRDIV-NEXT:    [[INCDEC_PTR_I]] = getelementptr inbounds nuw i8, ptr [[__A_ADDR_0_I3]], i64 4
 // NCRDIV-NEXT:    [[TOBOOL_NOT_I:%.*]] = icmp eq i32 [[DEC_I]], 0
-// NCRDIV-NEXT:    br i1 [[TOBOOL_NOT_I]], label %[[_ZL5NORMFIPKF_EXIT_LOOPEXIT:.*]], label %[[WHILE_BODY_I]], !llvm.loop [[LOOP21:![0-9]+]]
+// NCRDIV-NEXT:    br i1 [[TOBOOL_NOT_I]], label %[[_ZL5NORMFIPKF_EXIT_LOOPEXIT:.*]], label %[[WHILE_BODY_I]], !llvm.loop [[LOOP20:![0-9]+]]
 // NCRDIV:       [[_ZL5NORMFIPKF_EXIT_LOOPEXIT]]:
-// NCRDIV-NEXT:    [[TMP1:%.*]] = tail call contract float @llvm.sqrt.f32(float [[ADD_I]]), !fpmath [[META22:![0-9]+]]
+// NCRDIV-NEXT:    [[TMP1:%.*]] = tail call contract float @llvm.sqrt.f32(float [[ADD_I]]), !fpmath [[META21:![0-9]+]]
 // NCRDIV-NEXT:    br label %[[_ZL5NORMFIPKF_EXIT]]
 // NCRDIV:       [[_ZL5NORMFIPKF_EXIT]]:
 // NCRDIV-NEXT:    [[__R_0_I_LCSSA:%.*]] = phi float [ 0.000000e+00, %[[ENTRY]] ], [ [[TMP1]], %[[_ZL5NORMFIPKF_EXIT_LOOPEXIT]] ]
@@ -5649,12 +5649,12 @@ extern "C" __device__ double test_normcdfinv(double x) {
 // AMDGCNSPIRV-NEXT:    [[__A_ADDR_0_I3:%.*]] = phi ptr addrspace(4) [ [[INCDEC_PTR_I:%.*]], %[[WHILE_BODY_I]] ], [ [[Y]], %[[ENTRY]] ]
 // AMDGCNSPIRV-NEXT:    [[__DIM_ADDR_0_I2:%.*]] = phi i32 [ [[DEC_I:%.*]], %[[WHILE_BODY_I]] ], [ [[X]], %[[ENTRY]] ]
 // AMDGCNSPIRV-NEXT:    [[DEC_I]] = add nsw i32 [[__DIM_ADDR_0_I2]], -1
-// AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = load float, ptr addrspace(4) [[__A_ADDR_0_I3]], align 4, !tbaa [[FLOAT_TBAA17]]
+// AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = load float, ptr addrspace(4) [[__A_ADDR_0_I3]], align 4, !tbaa [[FLOAT_TBAA16]]
 // AMDGCNSPIRV-NEXT:    [[MUL_I:%.*]] = fmul contract float [[TMP0]], [[TMP0]]
 // AMDGCNSPIRV-NEXT:    [[ADD_I]] = fadd contract float [[__R_0_I4]], [[MUL_I]]
 // AMDGCNSPIRV-NEXT:    [[INCDEC_PTR_I]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[__A_ADDR_0_I3]], i64 4
 // AMDGCNSPIRV-NEXT:    [[TOBOOL_NOT_I:%.*]] = icmp eq i32 [[DEC_I]], 0
-// AMDGCNSPIRV-NEXT:    br i1 [[TOBOOL_NOT_I]], label %[[_ZL5NORMFIPKF_EXIT_LOOPEXIT:.*]], label %[[WHILE_BODY_I]], !llvm.loop [[LOOP21:![0-9]+]]
+// AMDGCNSPIRV-NEXT:    br i1 [[TOBOOL_NOT_I]], label %[[_ZL5NORMFIPKF_EXIT_LOOPEXIT:.*]], label %[[WHILE_BODY_I]], !llvm.loop [[LOOP20:![0-9]+]]
 // AMDGCNSPIRV:       [[_ZL5NORMFIPKF_EXIT_LOOPEXIT]]:
 // AMDGCNSPIRV-NEXT:    [[TMP1:%.*]] = tail call contract addrspace(4) float @llvm.sqrt.f32(float [[ADD_I]])
 // AMDGCNSPIRV-NEXT:    br label %[[_ZL5NORMFIPKF_EXIT]]
@@ -5676,12 +5676,12 @@ extern "C" __device__ float test_normf(int x, const float *y) {
 // DEFAULT-NEXT:    [[__A_ADDR_0_I3:%.*]] = phi ptr [ [[INCDEC_PTR_I:%.*]], %[[WHILE_BODY_I]] ], [ [[Y]], %[[ENTRY]] ]
 // DEFAULT-NEXT:    [[__DIM_ADDR_0_I2:%.*]] = phi i32 [ [[DEC_I:%.*]], %[[WHILE_BODY_I]] ], [ [[X]], %[[ENTRY]] ]
 // DEFAULT-NEXT:    [[DEC_I]] = add nsw i32 [[__DIM_ADDR_0_I2]], -1
-// DEFAULT-NEXT:    [[TMP0:%.*]] = load double, ptr [[__A_ADDR_0_I3]], align 8, !tbaa [[DOUBLE_TBAA18]]
+// DEFAULT-NEXT:    [[TMP0:%.*]] = load double, ptr [[__A_ADDR_0_I3]], align 8, !tbaa [[DOUBLE_TBAA17]]
 // DEFAULT-NEXT:    [[MUL_I:%.*]] = fmul contract double [[TMP0]], [[TMP0]]
 // DEFAULT-NEXT:    [[ADD_I]] = fadd contract double [[__R_0_I4]], [[MUL_I]]
 // DEFAULT-NEXT:    [[INCDEC_PTR_I]] = getelementptr inbounds nuw i8, ptr [[__A_ADDR_0_I3]], i64 8
 // DEFAULT-NEXT:    [[TOBOOL_NOT_I:%.*]] = icmp eq i32 [[DEC_I]], 0
-// DEFAULT-NEXT:    br i1 [[TOBOOL_NOT_I]], label %[[_ZL4NORMIPKD_EXIT_LOOPEXIT:.*]], label %[[WHILE_BODY_I]], !llvm.loop [[LOOP21:![0-9]+]]
+// DEFAULT-NEXT:    br i1 [[TOBOOL_NOT_I]], label %[[_ZL4NORMIPKD_EXIT_LOOPEXIT:.*]], label %[[WHILE_BODY_I]], !llvm.loop [[LOOP20:![0-9]+]]
 // DEFAULT:       [[_ZL4NORMIPKD_EXIT_LOOPEXIT]]:
 // DEFAULT-NEXT:    [[TMP1:%.*]] = tail call contract double @llvm.sqrt.f64(double [[ADD_I]])
 // DEFAULT-NEXT:    br label %[[_ZL4NORMIPKD_EXIT]]
@@ -5699,12 +5699,12 @@ extern "C" __device__ float test_normf(int x, const float *y) {
 // FINITEONLY-NEXT:    [[__A_ADDR_0_I3:%.*]] = phi ptr [ [[INCDEC_PTR_I:%.*]], %[[WHILE_BODY_I]] ], [ [[Y]], %[[ENTRY]] ]
 // FINITEONLY-NEXT:    [[__DIM_ADDR_0_I2:%.*]] = phi i32 [ [[DEC_I:%.*]], %[[WHILE_BODY_I]] ], [ [[X]], %[[ENTRY]] ]
 // FINITEONLY-NEXT:    [[DEC_I]] = add nsw i32 [[__DIM_ADDR_0_I2]], -1
-// FINITEONLY-NEXT:    [[TMP0:%.*]] = load double, ptr [[__A_ADDR_0_I3]], align 8, !tbaa [[DOUBLE_TBAA18]]
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = load double, ptr [[__A_ADDR_0_I3]], align 8, !tbaa [[DOUBLE_TBAA17]]
 // FINITEONLY-NEXT:    [[MUL_I:%.*]] = fmul nnan ninf contract double [[TMP0]], [[TMP0]]
 // FINITEONLY-NEXT:    [[ADD_I]] = fadd nnan ninf contract double [[__R_0_I4]], [[MUL_I]]
 // FINITEONLY-NEXT:    [[INCDEC_PTR_I]] = getelementptr inbounds nuw i8, ptr [[__A_ADDR_0_I3]], i64 8
 // FINITEONLY-NEXT:    [[TOBOOL_NOT_I:%.*]] = icmp eq i32 [[DEC_I]], 0
-// FINITEONLY-NEXT:    br i1 [[TOBOOL_NOT_I]], label %[[_ZL4NORMIPKD_EXIT_LOOPEXIT:.*]], label %[[WHILE_BODY_I]], !llvm.loop [[LOOP21:![0-9]+]]
+// FINITEONLY-NEXT:    br i1 [[TOBOOL_NOT_I]], label %[[_ZL4NORMIPKD_EXIT_LOOPEXIT:.*]], label %[[WHILE_BODY_I]], !llvm.loop [[LOOP20:![0-9]+]]
 // FINITEONLY:       [[_ZL4NORMIPKD_EXIT_LOOPEXIT]]:
 // FINITEONLY-NEXT:    [[TMP1:%.*]] = tail call nnan ninf contract nofpclass(nan inf) double @llvm.sqrt.f64(double [[ADD_I]])
 // FINITEONLY-NEXT:    br label %[[_ZL4NORMIPKD_EXIT]]
@@ -5722,12 +5722,12 @@ extern "C" __device__ float test_normf(int x, const float *y) {
 // APPROX-NEXT:    [[__A_ADDR_0_I3:%.*]] = phi ptr [ [[INCDEC_PTR_I:%.*]], %[[WHILE_BODY_I]] ], [ [[Y]], %[[ENTRY]] ]
 // APPROX-NEXT:    [[__DIM_ADDR_0_I2:%.*]] = phi i32 [ [[DEC_I:%.*]], %[[WHILE_BODY_I]] ], [ [[X]], %[[ENTRY]] ]
 // APPROX-NEXT:    [[DEC_I]] = add nsw i32 [[__DIM_ADDR_0_I2]], -1
-// APPROX-NEXT:    [[TMP0:%.*]] = load double, ptr [[__A_ADDR_0_I3]], align 8, !tbaa [[DOUBLE_TBAA18]]
+// APPROX-NEXT:    [[TMP0:%.*]] = load double, ptr [[__A_ADDR_0_I3]], align 8, !tbaa [[DOUBLE_TBAA17]]
 // APPROX-NEXT:    [[MUL_I:%.*]] = fmul contract double [[TMP0]], [[TMP0]]
 // APPROX-NEXT:    [[ADD_I]] = fadd contract double [[__R_0_I4]], [[MUL_I]]
 // APPROX-NEXT:    [[INCDEC_PTR_I]] = getelementptr inbounds nuw i8, ptr [[__A_ADDR_0_I3]], i64 8
 // APPROX-NEXT:    [[TOBOOL_NOT_I:%.*]] = icmp eq i32 [[DEC_I]], 0
-// APPROX-NEXT:    br i1 [[TOBOOL_NOT_I]], label %[[_ZL4NORMIPKD_EXIT_LOOPEXIT:.*]], label %[[WHILE_BODY_I]], !llvm.loop [[LOOP21:![0-9]+]]
+// APPROX-NEXT:    br i1 [[TOBOOL_NOT_I]], label %[[_ZL4NORMIPKD_EXIT_LOOPEXIT:.*]], label %[[WHILE_BODY_I]], !llvm.loop [[LOOP20:![0-9]+]]
 // APPROX:       [[_ZL4NORMIPKD_EXIT_LOOPEXIT]]:
 // APPROX-NEXT:    [[TMP1:%.*]] = tail call contract double @llvm.sqrt.f64(double [[ADD_I]])
 // APPROX-NEXT:    br label %[[_ZL4NORMIPKD_EXIT]]
@@ -5745,12 +5745,12 @@ extern "C" __device__ float test_normf(int x, const float *y) {
 // NCRDIV-NEXT:    [[__A_ADDR_0_I3:%.*]] = phi ptr [ [[INCDEC_PTR_I:%.*]], %[[WHILE_BODY_I]] ], [ [[Y]], %[[ENTRY]] ]
 // NCRDIV-NEXT:    [[__DIM_ADDR_0_I2:%.*]] = phi i32 [ [[DEC_I:%.*]], %[[WHILE_BODY_I]] ], [ [[X]], %[[ENTRY]] ]
 // NCRDIV-NEXT:    [[DEC_I]] = add nsw i32 [[__DIM_ADDR_0_I2]], -1
-// NCRDIV-NEXT:    [[TMP0:%.*]] = load double, ptr [[__A_ADDR_0_I3]], align 8, !tbaa [[DOUBLE_TBAA19]]
+// NCRDIV-NEXT:    [[TMP0:%.*]] = load double, ptr [[__A_ADDR_0_I3]], align 8, !tbaa [[DOUBLE_TBAA18]]
 // NCRDIV-NEXT:    [[MUL_I:%.*]] = fmul contract double [[TMP0]], [[TMP0]]
 // NCRDIV-NEXT:    [[ADD_I]] = fadd contract double [[__R_0_I4]], [[MUL_I]]
 // NCRDIV-NEXT:    [[INCDEC_PTR_I]] = getelementptr inbounds nuw i8, ptr [[__A_ADDR_0_I3]], i64 8
 // NCRDIV-NEXT:    [[TOBOOL_NOT_I:%.*]] = icmp eq i32 [[DEC_I]], 0
-// NCRDIV-NEXT:    br i1 [[TOBOOL_NOT_I]], label %[[_ZL4NORMIPKD_EXIT_LOOPEXIT:.*]], label %[[WHILE_BODY_I]], !llvm.loop [[LOOP23:![0-9]+]]
+// NCRDIV-NEXT:    br i1 [[TOBOOL_NOT_I]], label %[[_ZL4NORMIPKD_EXIT_LOOPEXIT:.*]], label %[[WHILE_BODY_I]], !llvm.loop [[LOOP22:![0-9]+]]
 // NCRDIV:       [[_ZL4NORMIPKD_EXIT_LOOPEXIT]]:
 // NCRDIV-NEXT:    [[TMP1:%.*]] = tail call contract double @llvm.sqrt.f64(double [[ADD_I]])
 // NCRDIV-NEXT:    br label %[[_ZL4NORMIPKD_EXIT]]
@@ -5768,12 +5768,12 @@ extern "C" __device__ float test_normf(int x, const float *y) {
 // AMDGCNSPIRV-NEXT:    [[__A_ADDR_0_I3:%.*]] = phi ptr addrspace(4) [ [[INCDEC_PTR_I:%.*]], %[[WHILE_BODY_I]] ], [ [[Y]], %[[ENTRY]] ]
 // AMDGCNSPIRV-NEXT:    [[__DIM_ADDR_0_I2:%.*]] = phi i32 [ [[DEC_I:%.*]], %[[WHILE_BODY_I]] ], [ [[X]], %[[ENTRY]] ]
 // AMDGCNSPIRV-NEXT:    [[DEC_I]] = add nsw i32 [[__DIM_ADDR_0_I2]], -1
-// AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = load double, ptr addrspace(4) [[__A_ADDR_0_I3]], align 8, !tbaa [[DOUBLE_TBAA19]]
+// AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = load double, ptr addrspace(4) [[__A_ADDR_0_I3]], align 8, !tbaa [[DOUBLE_TBAA18]]
 // AMDGCNSPIRV-NEXT:    [[MUL_I:%.*]] = fmul contract double [[TMP0]], [[TMP0]]
 // AMDGCNSPIRV-NEXT:    [[ADD_I]] = fadd contract double [[__R_0_I4]], [[MUL_I]]
 // AMDGCNSPIRV-NEXT:    [[INCDEC_PTR_I]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[__A_ADDR_0_I3]], i64 8
 // AMDGCNSPIRV-NEXT:    [[TOBOOL_NOT_I:%.*]] = icmp eq i32 [[DEC_I]], 0
-// AMDGCNSPIRV-NEXT:    br i1 [[TOBOOL_NOT_I]], label %[[_ZL4NORMIPKD_EXIT_LOOPEXIT:.*]], label %[[WHILE_BODY_I]], !llvm.loop [[LOOP22:![0-9]+]]
+// AMDGCNSPIRV-NEXT:    br i1 [[TOBOOL_NOT_I]], label %[[_ZL4NORMIPKD_EXIT_LOOPEXIT:.*]], label %[[WHILE_BODY_I]], !llvm.loop [[LOOP21:![0-9]+]]
 // AMDGCNSPIRV:       [[_ZL4NORMIPKD_EXIT_LOOPEXIT]]:
 // AMDGCNSPIRV-NEXT:    [[TMP1:%.*]] = tail call contract addrspace(4) double @llvm.sqrt.f64(double [[ADD_I]])
 // AMDGCNSPIRV-NEXT:    br label %[[_ZL4NORMIPKD_EXIT]]
@@ -6063,8 +6063,8 @@ extern "C" __device__ double test_remainder(double x, double y) {
 // DEFAULT-NEXT:    [[__TMP_I:%.*]] = alloca i32, align 4, addrspace(5)
 // DEFAULT-NEXT:    call void @llvm.lifetime.start.p5(ptr addrspace(5) [[__TMP_I]]) #[[ATTR16]]
 // DEFAULT-NEXT:    [[CALL_I:%.*]] = call contract noundef float @__ocml_remquo_f32(float noundef [[X]], float noundef [[Y]], ptr addrspace(5) noundef [[__TMP_I]]) #[[ATTR15]]
-// DEFAULT-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(5) [[__TMP_I]], align 4, !tbaa [[INT_TBAA4]]
-// DEFAULT-NEXT:    store i32 [[TMP0]], ptr [[Z]], align 4, !tbaa [[INT_TBAA4]]
+// DEFAULT-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(5) [[__TMP_I]], align 4, !tbaa [[INT_TBAA3]]
+// DEFAULT-NEXT:    store i32 [[TMP0]], ptr [[Z]], align 4, !tbaa [[INT_TBAA3]]
 // DEFAULT-NEXT:    call void @llvm.lifetime.end.p5(ptr addrspace(5) [[__TMP_I]]) #[[ATTR16]]
 // DEFAULT-NEXT:    ret float [[CALL_I]]
 //
@@ -6074,8 +6074,8 @@ extern "C" __device__ double test_remainder(double x, double y) {
 // FINITEONLY-NEXT:    [[__TMP_I:%.*]] = alloca i32, align 4, addrspace(5)
 // FINITEONLY-NEXT:    call void @llvm.lifetime.start.p5(ptr addrspace(5) [[__TMP_I]]) #[[ATTR16]]
 // FINITEONLY-NEXT:    [[CALL_I:%.*]] = call nnan ninf contract noundef nofpclass(nan inf) float @__ocml_remquo_f32(float noundef nofpclass(nan inf) [[X]], float noundef nofpclass(nan inf) [[Y]], ptr addrspace(5) noundef [[__TMP_I]]) #[[ATTR15]]
-// FINITEONLY-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(5) [[__TMP_I]], align 4, !tbaa [[INT_TBAA4]]
-// FINITEONLY-NEXT:    store i32 [[TMP0]], ptr [[Z]], align 4, !tbaa [[INT_TBAA4]]
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(5) [[__TMP_I]], align 4, !tbaa [[INT_TBAA3]]
+// FINITEONLY-NEXT:    store i32 [[TMP0]], ptr [[Z]], align 4, !tbaa [[INT_TBAA3]]
 // FINITEONLY-NEXT:    call void @llvm.lifetime.end.p5(ptr addrspace(5) [[__TMP_I]]) #[[ATTR16]]
 // FINITEONLY-NEXT:    ret float [[CALL_I]]
 //
@@ -6085,8 +6085,8 @@ extern "C" __device__ double test_remainder(double x, double y) {
 // APPROX-NEXT:    [[__TMP_I:%.*]] = alloca i32, align 4, addrspace(5)
 // APPROX-NEXT:    call void @llvm.lifetime.start.p5(ptr addrspace(5) [[__TMP_I]]) #[[ATTR16]]
 // APPROX-NEXT:    [[CALL_I:%.*]] = call contract noundef float @__ocml_remquo_f32(float noundef [[X]], float noundef [[Y]], ptr addrspace(5) noundef [[__TMP_I]]) #[[ATTR15]]
-// APPROX-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(5) [[__TMP_I]], align 4, !tbaa [[INT_TBAA4]]
-// APPROX-NEXT:    store i32 [[TMP0]], ptr [[Z]], align 4, !tbaa [[INT_TBAA4]]
+// APPROX-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(5) [[__TMP_I]], align 4, !tbaa [[INT_TBAA3]]
+// APPROX-NEXT:    store i32 [[TMP0]], ptr [[Z]], align 4, !tbaa [[INT_TBAA3]]
 // APPROX-NEXT:    call void @llvm.lifetime.end.p5(ptr addrspace(5) [[__TMP_I]]) #[[ATTR16]]
 // APPROX-NEXT:    ret float [[CALL_I]]
 //
@@ -6096,8 +6096,8 @@ extern "C" __device__ double test_remainder(double x, double y) {
 // NCRDIV-NEXT:    [[__TMP_I:%.*]] = alloca i32, align 4, addrspace(5)
 // NCRDIV-NEXT:    call void @llvm.lifetime.start.p5(ptr addrspace(5) [[__TMP_I]]) #[[ATTR16]]
 // NCRDIV-NEXT:    [[CALL_I:%.*]] = call contract noundef float @__ocml_remquo_f32(float noundef [[X]], float noundef [[Y]], ptr addrspace(5) noundef [[__TMP_I]]) #[[ATTR15]]
-// NCRDIV-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(5) [[__TMP_I]], align 4, !tbaa [[INT_TBAA4]]
-// NCRDIV-NEXT:    store i32 [[TMP0]], ptr [[Z]], align 4, !tbaa [[INT_TBAA4]]
+// NCRDIV-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(5) [[__TMP_I]], align 4, !tbaa [[INT_TBAA3]]
+// NCRDIV-NEXT:    store i32 [[TMP0]], ptr [[Z]], align 4, !tbaa [[INT_TBAA3]]
 // NCRDIV-NEXT:    call void @llvm.lifetime.end.p5(ptr addrspace(5) [[__TMP_I]]) #[[ATTR16]]
 // NCRDIV-NEXT:    ret float [[CALL_I]]
 //
@@ -6108,8 +6108,8 @@ extern "C" __device__ double test_remainder(double x, double y) {
 // AMDGCNSPIRV-NEXT:    [[__TMP_ASCAST_I:%.*]] = addrspacecast ptr [[__TMP_I]] to ptr addrspace(4)
 // AMDGCNSPIRV-NEXT:    call addrspace(4) void @llvm.lifetime.start.p0(ptr nonnull [[__TMP_I]]) #[[ATTR16]]
 // AMDGCNSPIRV-NEXT:    [[CALL_I:%.*]] = call contract spir_func noundef addrspace(4) float @__ocml_remquo_f32(float noundef [[X]], float noundef [[Y]], ptr noundef nonnull [[__TMP_I]]) #[[ATTR15]]
-// AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(4) [[__TMP_ASCAST_I]], align 4, !tbaa [[INT_TBAA5]]
-// AMDGCNSPIRV-NEXT:    store i32 [[TMP0]], ptr addrspace(4) [[Z]], align 4, !tbaa [[INT_TBAA5]]
+// AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(4) [[__TMP_ASCAST_I]], align 4, !tbaa [[INT_TBAA4]]
+// AMDGCNSPIRV-NEXT:    store i32 [[TMP0]], ptr addrspace(4) [[Z]], align 4, !tbaa [[INT_TBAA4]]
 // AMDGCNSPIRV-NEXT:    call addrspace(4) void @llvm.lifetime.end.p0(ptr nonnull [[__TMP_I]]) #[[ATTR16]]
 // AMDGCNSPIRV-NEXT:    ret float [[CALL_I]]
 //
@@ -6123,8 +6123,8 @@ extern "C" __device__ float test_remquof(float x, float y, int* z) {
 // DEFAULT-NEXT:    [[__TMP_I:%.*]] = alloca i32, align 4, addrspace(5)
 // DEFAULT-NEXT:    call void @llvm.lifetime.start.p5(ptr addrspace(5) [[__TMP_I]]) #[[ATTR16]]
 // DEFAULT-NEXT:    [[CALL_I:%.*]] = call contract noundef double @__ocml_remquo_f64(double noundef [[X]], double noundef [[Y]], ptr addrspace(5) noundef [[__TMP_I]]) #[[ATTR15]]
-// DEFAULT-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(5) [[__TMP_I]], align 4, !tbaa [[INT_TBAA4]]
-// DEFAULT-NEXT:    store i32 [[TMP0]], ptr [[Z]], align 4, !tbaa [[INT_TBAA4]]
+// DEFAULT-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(5) [[__TMP_I]], align 4, !tbaa [[INT_TBAA3]]
+// DEFAULT-NEXT:    store i32 [[TMP0]], ptr [[Z]], align 4, !tbaa [[INT_TBAA3]]
 // DEFAULT-NEXT:    call void @llvm.lifetime.end.p5(ptr addrspace(5) [[__TMP_I]]) #[[ATTR16]]
 // DEFAULT-NEXT:    ret double [[CALL_I]]
 //
@@ -6134,8 +6134,8 @@ extern "C" __device__ float test_remquof(float x, float y, int* z) {
 // FINITEONLY-NEXT:    [[__TMP_I:%.*]] = alloca i32, align 4, addrspace(5)
 // FINITEONLY-NEXT:    call void @llvm.lifetime.start.p5(ptr addrspace(5) [[__TMP_I]]) #[[ATTR16]]
 // FINITEONLY-NEXT:    [[CALL_I:%.*]] = call nnan ninf contract noundef nofpclass(nan inf) double @__ocml_remquo_f64(double noundef nofpclass(nan inf) [[X]], double noundef nofpclass(nan inf) [[Y]], ptr addrspace(5) noundef [[__TMP_I]]) #[[ATTR15]]
-// FINITEONLY-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(5) [[__TMP_I]], align 4, !tbaa [[INT_TBAA4]]
-// FINITEONLY-NEXT:    store i32 [[TMP0]], ptr [[Z]], align 4, !tbaa [[INT_TBAA4]]
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(5) [[__TMP_I]], align 4, !tbaa [[INT_TBAA3]]
+// FINITEONLY-NEXT:    store i32 [[TMP0]], ptr [[Z]], align 4, !tbaa [[INT_TBAA3]]
 // FINITEONLY-NEXT:    call void @llvm.lifetime.end.p5(ptr addrspace(5) [[__TMP_I]]) #[[ATTR16]]
 // FINITEONLY-NEXT:    ret double [[CALL_I]]
 //
@@ -6145,8 +6145,8 @@ extern "C" __device__ float test_remquof(float x, float y, int* z) {
 // APPROX-NEXT:    [[__TMP_I:%.*]] = alloca i32, align 4, addrspace(5)
 // APPROX-NEXT:    call void @llvm.lifetime.start.p5(ptr addrspace(5) [[__TMP_I]]) #[[ATTR16]]
 // APPROX-NEXT:    [[CALL_I:%.*]] = call contract noundef double @__ocml_remquo_f64(double noundef [[X]], double noundef [[Y]], ptr addrspace(5) noundef [[__TMP_I]]) #[[ATTR15]]
-// APPROX-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(5) [[__TMP_I]], align 4, !tbaa [[INT_TBAA4]]
-// APPROX-NEXT:    store i32 [[TMP0]], ptr [[Z]], align 4, !tbaa [[INT_TBAA4]]
+// APPROX-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(5) [[__TMP_I]], align 4, !tbaa [[INT_TBAA3]]
+// APPROX-NEXT:    store i32 [[TMP0]], ptr [[Z]], align 4, !tbaa [[INT_TBAA3]]
 // APPROX-NEXT:    call void @llvm.lifetime.end.p5(ptr addrspace(5) [[__TMP_I]]) #[[ATTR16]]
 // APPROX-NEXT:    ret double [[CALL_I]]
 //
@@ -6156,8 +6156,8 @@ extern "C" __device__ float test_remquof(float x, float y, int* z) {
 // NCRDIV-NEXT:    [[__TMP_I:%.*]] = alloca i32, align 4, addrspace(5)
 // NCRDIV-NEXT:    call void @llvm.lifetime.start.p5(ptr addrspace(5) [[__TMP_I]]) #[[ATTR16]]
 // NCRDIV-NEXT:    [[CALL_I:%.*]] = call contract noundef double @__ocml_remquo_f64(double noundef [[X]], double noundef [[Y]], ptr addrspace(5) noundef [[__TMP_I]]) #[[ATTR15]]
-// NCRDIV-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(5) [[__TMP_I]], align 4, !tbaa [[INT_TBAA4]]
-// NCRDIV-NEXT:    store i32 [[TMP0]], ptr [[Z]], align 4, !tbaa [[INT_TBAA4]]
+// NCRDIV-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(5) [[__TMP_I]], align 4, !tbaa [[INT_TBAA3]]
+// NCRDIV-NEXT:    store i32 [[TMP0]], ptr [[Z]], align 4, !tbaa [[INT_TBAA3]]
 // NCRDIV-NEXT:    call void @llvm.lifetime.end.p5(ptr addrspace(5) [[__TMP_I]]) #[[ATTR16]]
 // NCRDIV-NEXT:    ret double [[CALL_I]]
 //
@@ -6168,8 +6168,8 @@ extern "C" __device__ float test_remquof(float x, float y, int* z) {
 // AMDGCNSPIRV-NEXT:    [[__TMP_ASCAST_I:%.*]] = addrspacecast ptr [[__TMP_I]] to ptr addrspace(4)
 // AMDGCNSPIRV-NEXT:    call addrspace(4) void @llvm.lifetime.start.p0(ptr nonnull [[__TMP_I]]) #[[ATTR16]]
 // AMDGCNSPIRV-NEXT:    [[CALL_I:%.*]] = call contract spir_func noundef addrspace(4) double @__ocml_remquo_f64(double noundef [[X]], double noundef [[Y]], ptr noundef nonnull [[__TMP_I]]) #[[ATTR15]]
-// AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(4) [[__TMP_ASCAST_I]], align 4, !tbaa [[INT_TBAA5]]
-// AMDGCNSPIRV-NEXT:    store i32 [[TMP0]], ptr addrspace(4) [[Z]], align 4, !tbaa [[INT_TBAA5]]
+// AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(4) [[__TMP_ASCAST_I]], align 4, !tbaa [[INT_TBAA4]]
+// AMDGCNSPIRV-NEXT:    store i32 [[TMP0]], ptr addrspace(4) [[Z]], align 4, !tbaa [[INT_TBAA4]]
 // AMDGCNSPIRV-NEXT:    call addrspace(4) void @llvm.lifetime.end.p0(ptr nonnull [[__TMP_I]]) #[[ATTR16]]
 // AMDGCNSPIRV-NEXT:    ret double [[CALL_I]]
 //
@@ -6323,12 +6323,12 @@ extern "C" __device__ double test_rint(double x) {
 // DEFAULT-NEXT:    [[__A_ADDR_0_I3:%.*]] = phi ptr [ [[INCDEC_PTR_I:%.*]], %[[WHILE_BODY_I]] ], [ [[Y]], %[[ENTRY]] ]
 // DEFAULT-NEXT:    [[__DIM_ADDR_0_I2:%.*]] = phi i32 [ [[DEC_I:%.*]], %[[WHILE_BODY_I]] ], [ [[X]], %[[ENTRY]] ]
 // DEFAULT-NEXT:    [[DEC_I]] = add nsw i32 [[__DIM_ADDR_0_I2]], -1
-// DEFAULT-NEXT:    [[TMP0:%.*]] = load float, ptr [[__A_ADDR_0_I3]], align 4, !tbaa [[FLOAT_TBAA16]]
+// DEFAULT-NEXT:    [[TMP0:%.*]] = load float, ptr [[__A_ADDR_0_I3]], align 4, !tbaa [[FLOAT_TBAA15]]
 // DEFAULT-NEXT:    [[MUL_I:%.*]] = fmul contract float [[TMP0]], [[TMP0]]
 // DEFAULT-NEXT:    [[ADD_I]] = fadd contract float [[__R_0_I4]], [[MUL_I]]
 // DEFAULT-NEXT:    [[INCDEC_PTR_I]] = getelementptr inbounds nuw i8, ptr [[__A_ADDR_0_I3]], i64 4
 // DEFAULT-NEXT:    [[TOBOOL_NOT_I:%.*]] = icmp eq i32 [[DEC_I]], 0
-// DEFAULT-NEXT:    br i1 [[TOBOOL_NOT_I]], label %[[_ZL6RNORMFIPKF_EXIT]], label %[[WHILE_BODY_I]], !llvm.loop [[LOOP22:![0-9]+]]
+// DEFAULT-NEXT:    br i1 [[TOBOOL_NOT_I]], label %[[_ZL6RNORMFIPKF_EXIT]], label %[[WHILE_BODY_I]], !llvm.loop [[LOOP21:![0-9]+]]
 // DEFAULT:       [[_ZL6RNORMFIPKF_EXIT]]:
 // DEFAULT-NEXT:    [[__R_0_I_LCSSA:%.*]] = phi float [ 0.000000e+00, %[[ENTRY]] ], [ [[ADD_I]], %[[WHILE_BODY_I]] ]
 // DEFAULT-NEXT:    [[CALL_I:%.*]] = tail call contract noundef float @__ocml_rsqrt_f32(float noundef [[__R_0_I_LCSSA]]) #[[ATTR14]]
@@ -6344,12 +6344,12 @@ extern "C" __device__ double test_rint(double x) {
 // FINITEONLY-NEXT:    [[__A_ADDR_0_I3:%.*]] = phi ptr [ [[INCDEC_PTR_I:%.*]], %[[WHILE_BODY_I]] ], [ [[Y]], %[[ENTRY]] ]
 // FINITEONLY-NEXT:    [[__DIM_ADDR_0_I2:%.*]] = phi i32 [ [[DEC_I:%.*]], %[[WHILE_BODY_I]] ], [ [[X]], %[[ENTRY]] ]
 // FINITEONLY-NEXT:    [[DEC_I]] = add nsw i32 [[__DIM_ADDR_0_I2]], -1
-// FINITEONLY-NEXT:    [[TMP0:%.*]] = load float, ptr [[__A_ADDR_0_I3]], align 4, !tbaa [[FLOAT_TBAA16]]
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = load float, ptr [[__A_ADDR_0_I3]], align 4, !tbaa [[FLOAT_TBAA15]]
 // FINITEONLY-NEXT:    [[MUL_I:%.*]] = fmul nnan ninf contract float [[TMP0]], [[TMP0]]
 // FINITEONLY-NEXT:    [[ADD_I]] = fadd nnan ninf contract float [[__R_0_I4]], [[MUL_I]]
 // FINITEONLY-NEXT:    [[INCDEC_PTR_I]] = getelementptr inbounds nuw i8, ptr [[__A_ADDR_0_I3]], i64 4
 // FINITEONLY-NEXT:    [[TOBOOL_NOT_I:%.*]] = icmp eq i32 [[DEC_I]], 0
-// FINITEONLY-NEXT:    br i1 [[TOBOOL_NOT_I]], label %[[_ZL6RNORMFIPKF_EXIT]], label %[[WHILE_BODY_I]], !llvm.loop [[LOOP22:![0-9]+]]
+// FINITEONLY-NEXT:    br i1 [[TOBOOL_NOT_I]], label %[[_ZL6RNORMFIPKF_EXIT]], label %[[WHILE_BODY_I]], !llvm.loop [[LOOP21:![0-9]+]]
 // FINITEONLY:       [[_ZL6RNORMFIPKF_EXIT]]:
 // FINITEONLY-NEXT:    [[__R_0_I_LCSSA:%.*]] = phi float [ 0.000000e+00, %[[ENTRY]] ], [ [[ADD_I]], %[[WHILE_BODY_I]] ]
 // FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract noundef nofpclass(nan inf) float @__ocml_rsqrt_f32(float noundef nofpclass(nan inf) [[__R_0_I_LCSSA]]) #[[ATTR14]]
@@ -6365,12 +6365,12 @@ extern "C" __device__ double test_rint(double x) {
 // APPROX-NEXT:    [[__A_ADDR_0_I3:%.*]] = phi ptr [ [[INCDEC_PTR_I:%.*]], %[[WHILE_BODY_I]] ], [ [[Y]], %[[ENTRY]] ]
 // APPROX-NEXT:    [[__DIM_ADDR_0_I2:%.*]] = phi i32 [ [[DEC_I:%.*]], %[[WHILE_BODY_I]] ], [ [[X]], %[[ENTRY]] ]
 // APPROX-NEXT:    [[DEC_I]] = add nsw i32 [[__DIM_ADDR_0_I2]], -1
-// APPROX-NEXT:    [[TMP0:%.*]] = load float, ptr [[__A_ADDR_0_I3]], align 4, !tbaa [[FLOAT_TBAA16]]
+// APPROX-NEXT:    [[TMP0:%.*]] = load float, ptr [[__A_ADDR_0_I3]], align 4, !tbaa [[FLOAT_TBAA15]]
 // APPROX-NEXT:    [[MUL_I:%.*]] = fmul contract float [[TMP0]], [[TMP0]]
 // APPROX-NEXT:    [[ADD_I]] = fadd contract float [[__R_0_I4]], [[MUL_I]]
 // APPROX-NEXT:    [[INCDEC_PTR_I]] = getelementptr inbounds nuw i8, ptr [[__A_ADDR_0_I3]], i64 4
 // APPROX-NEXT:    [[TOBOOL_NOT_I:%.*]] = icmp eq i32 [[DEC_I]], 0
-// APPROX-NEXT:    br i1 [[TOBOOL_NOT_I]], label %[[_ZL6RNORMFIPKF_EXIT]], label %[[WHILE_BODY_I]], !llvm.loop [[LOOP22:![0-9]+]]
+// APPROX-NEXT:    br i1 [[TOBOOL_NOT_I]], label %[[_ZL6RNORMFIPKF_EXIT]], label %[[WHILE_BODY_I]], !llvm.loop [[LOOP21:![0-9]+]]
 // APPROX:       [[_ZL6RNORMFIPKF_EXIT]]:
 // APPROX-NEXT:    [[__R_0_I_LCSSA:%.*]] = phi float [ 0.000000e+00, %[[ENTRY]] ], [ [[ADD_I]], %[[WHILE_BODY_I]] ]
 // APPROX-NEXT:    [[CALL_I:%.*]] = tail call contract noundef float @__ocml_rsqrt_f32(float noundef [[__R_0_I_LCSSA]]) #[[ATTR14]]
@@ -6386,12 +6386,12 @@ extern "C" __device__ double test_rint(double x) {
 // NCRDIV-NEXT:    [[__A_ADDR_0_I3:%.*]] = phi ptr [ [[INCDEC_PTR_I:%.*]], %[[WHILE_BODY_I]] ], [ [[Y]], %[[ENTRY]] ]
 // NCRDIV-NEXT:    [[__DIM_ADDR_0_I2:%.*]] = phi i32 [ [[DEC_I:%.*]], %[[WHILE_BODY_I]] ], [ [[X]], %[[ENTRY]] ]
 // NCRDIV-NEXT:    [[DEC_I]] = add nsw i32 [[__DIM_ADDR_0_I2]], -1
-// NCRDIV-NEXT:    [[TMP0:%.*]] = load float, ptr [[__A_ADDR_0_I3]], align 4, !tbaa [[FLOAT_TBAA17]]
+// NCRDIV-NEXT:    [[TMP0:%.*]] = load float, ptr [[__A_ADDR_0_I3]], align 4, !tbaa [[FLOAT_TBAA16]]
 // NCRDIV-NEXT:    [[MUL_I:%.*]] = fmul contract float [[TMP0]], [[TMP0]]
 // NCRDIV-NEXT:    [[ADD_I]] = fadd contract float [[__R_0_I4]], [[MUL_I]]
 // NCRDIV-NEXT:    [[INCDEC_PTR_I]] = getelementptr inbounds nuw i8, ptr [[__A_ADDR_0_I3]], i64 4
 // NCRDIV-NEXT:    [[TOBOOL_NOT_I:%.*]] = icmp eq i32 [[DEC_I]], 0
-// NCRDIV-NEXT:    br i1 [[TOBOOL_NOT_I]], label %[[_ZL6RNORMFIPKF_EXIT]], label %[[WHILE_BODY_I]], !llvm.loop [[LOOP24:![0-9]+]]
+// NCRDIV-NEXT:    br i1 [[TOBOOL_NOT_I]], label %[[_ZL6RNORMFIPKF_EXIT]], label %[[WHILE_BODY_I]], !llvm.loop [[LOOP23:![0-9]+]]
 // NCRDIV:       [[_ZL6RNORMFIPKF_EXIT]]:
 // NCRDIV-NEXT:    [[__R_0_I_LCSSA:%.*]] = phi float [ 0.000000e+00, %[[ENTRY]] ], [ [[ADD_I]], %[[WHILE_BODY_I]] ]
 // NCRDIV-NEXT:    [[CALL_I:%.*]] = tail call contract noundef float @__ocml_rsqrt_f32(float noundef [[__R_0_I_LCSSA]]) #[[ATTR14]]
@@ -6407,12 +6407,12 @@ extern "C" __device__ double test_rint(double x) {
 // AMDGCNSPIRV-NEXT:    [[__A_ADDR_0_I3:%.*]] = phi ptr addrspace(4) [ [[INCDEC_PTR_I:%.*]], %[[WHILE_BODY_I]] ], [ [[Y]], %[[ENTRY]] ]
 // AMDGCNSPIRV-NEXT:    [[__DIM_ADDR_0_I2:%.*]] = phi i32 [ [[DEC_I:%.*]], %[[WHILE_BODY_I]] ], [ [[X]], %[[ENTRY]] ]
 // AMDGCNSPIRV-NEXT:    [[DEC_I]] = add nsw i32 [[__DIM_ADDR_0_I2]], -1
-// AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = load float, ptr addrspace(4) [[__A_ADDR_0_I3]], align 4, !tbaa [[FLOAT_TBAA17]]
+// AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = load float, ptr addrspace(4) [[__A_ADDR_0_I3]], align 4, !tbaa [[FLOAT_TBAA16]]
 // AMDGCNSPIRV-NEXT:    [[MUL_I:%.*]] = fmul contract float [[TMP0]], [[TMP0]]
 // AMDGCNSPIRV-NEXT:    [[ADD_I]] = fadd contract float [[__R_0_I4]], [[MUL_I]]
 // AMDGCNSPIRV-NEXT:    [[INCDEC_PTR_I]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[__A_ADDR_0_I3]], i64 4
 // AMDGCNSPIRV-NEXT:    [[TOBOOL_NOT_I:%.*]] = icmp eq i32 [[DEC_I]], 0
-// AMDGCNSPIRV-NEXT:    br i1 [[TOBOOL_NOT_I]], label %[[_ZL6RNORMFIPKF_EXIT]], label %[[WHILE_BODY_I]], !llvm.loop [[LOOP23:![0-9]+]]
+// AMDGCNSPIRV-NEXT:    br i1 [[TOBOOL_NOT_I]], label %[[_ZL6RNORMFIPKF_EXIT]], label %[[WHILE_BODY_I]], !llvm.loop [[LOOP22:![0-9]+]]
 // AMDGCNSPIRV:       [[_ZL6RNORMFIPKF_EXIT]]:
 // AMDGCNSPIRV-NEXT:    [[__R_0_I_LCSSA:%.*]] = phi float [ 0.000000e+00, %[[ENTRY]] ], [ [[ADD_I]], %[[WHILE_BODY_I]] ]
 // AMDGCNSPIRV-NEXT:    [[CALL_I:%.*]] = tail call contract spir_func noundef addrspace(4) float @__ocml_rsqrt_f32(float noundef [[__R_0_I_LCSSA]]) #[[ATTR14]]
@@ -6432,12 +6432,12 @@ extern "C" __device__ float test_rnormf(int x, const float* y) {
 // DEFAULT-NEXT:    [[__A_ADDR_0_I3:%.*]] = phi ptr [ [[INCDEC_PTR_I:%.*]], %[[WHILE_BODY_I]] ], [ [[Y]], %[[ENTRY]] ]
 // DEFAULT-NEXT:    [[__DIM_ADDR_0_I2:%.*]] = phi i32 [ [[DEC_I:%.*]], %[[WHILE_BODY_I]] ], [ [[X]], %[[ENTRY]] ]
 // DEFAULT-NEXT:    [[DEC_I]] = add nsw i32 [[__DIM_ADDR_0_I2]], -1
-// DEFAULT-NEXT:    [[TMP0:%.*]] = load double, ptr [[__A_ADDR_0_I3]], align 8, !tbaa [[DOUBLE_TBAA18]]
+// DEFAULT-NEXT:    [[TMP0:%.*]] = load double, ptr [[__A_ADDR_0_I3]], align 8, !tbaa [[DOUBLE_TBAA17]]
 // DEFAULT-NEXT:    [[MUL_I:%.*]] = fmul contract double [[TMP0]], [[TMP0]]
 // DEFAULT-NEXT:    [[ADD_I]] = fadd contract double [[__R_0_I4]], [[MUL_I]]
 // DEFAULT-NEXT:    [[INCDEC_PTR_I]] = getelementptr inbounds nuw i8, ptr [[__A_ADDR_0_I3]], i64 8
 // DEFAULT-NEXT:    [[TOBOOL_NOT_I:%.*]] = icmp eq i32 [[DEC_I]], 0
-// DEFAULT-NEXT:    br i1 [[TOBOOL_NOT_I]], label %[[_ZL5RNORMIPKD_EXIT]], label %[[WHILE_BODY_I]], !llvm.loop [[LOOP23:![0-9]+]]
+// DEFAULT-NEXT:    br i1 [[TOBOOL_NOT_I]], label %[[_ZL5RNORMIPKD_EXIT]], label %[[WHILE_BODY_I]], !llvm.loop [[LOOP22:![0-9]+]]
 // DEFAULT:       [[_ZL5RNORMIPKD_EXIT]]:
 // DEFAULT-NEXT:    [[__R_0_I_LCSSA:%.*]] = phi double [ 0.000000e+00, %[[ENTRY]] ], [ [[ADD_I]], %[[WHILE_BODY_I]] ]
 // DEFAULT-NEXT:    [[CALL_I:%.*]] = tail call contract noundef double @__ocml_rsqrt_f64(double noundef [[__R_0_I_LCSSA]]) #[[ATTR14]]
@@ -6453,12 +6453,12 @@ extern "C" __device__ float test_rnormf(int x, const float* y) {
 // FINITEONLY-NEXT:    [[__A_ADDR_0_I3:%.*]] = phi ptr [ [[INCDEC_PTR_I:%.*]], %[[WHILE_BODY_I]] ], [ [[Y]], %[[ENTRY]] ]
 // FINITEONLY-NEXT:    [[__DIM_ADDR_0_I2:%.*]] = phi i32 [ [[DEC_I:%.*]], %[[WHILE_BODY_I]] ], [ [[X]], %[[ENTRY]] ]
 // FINITEONLY-NEXT:    [[DEC_I]] = add nsw i32 [[__DIM_ADDR_0_I2]], -1
-// FINITEONLY-NEXT:    [[TMP0:%.*]] = load double, ptr [[__A_ADDR_0_I3]], align 8, !tbaa [[DOUBLE_TBAA18]]
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = load double, ptr [[__A_ADDR_0_I3]], align 8, !tbaa [[DOUBLE_TBAA17]]
 // FINITEONLY-NEXT:    [[MUL_I:%.*]] = fmul nnan ninf contract double [[TMP0]], [[TMP0]]
 // FINITEONLY-NEXT:    [[ADD_I]] = fadd nnan ninf contract double [[__R_0_I4]], [[MUL_I]]
 // FINITEONLY-NEXT:    [[INCDEC_PTR_I]] = getelementptr inbounds nuw i8, ptr [[__A_ADDR_0_I3]], i64 8
 // FINITEONLY-NEXT:    [[TOBOOL_NOT_I:%.*]] = icmp eq i32 [[DEC_I]], 0
-// FINITEONLY-NEXT:    br i1 [[TOBOOL_NOT_I]], label %[[_ZL5RNORMIPKD_EXIT]], label %[[WHILE_BODY_I]], !llvm.loop [[LOOP23:![0-9]+]]
+// FINITEONLY-NEXT:    br i1 [[TOBOOL_NOT_I]], label %[[_ZL5RNORMIPKD_EXIT]], label %[[WHILE_BODY_I]], !llvm.loop [[LOOP22:![0-9]+]]
 // FINITEONLY:       [[_ZL5RNORMIPKD_EXIT]]:
 // FINITEONLY-NEXT:    [[__R_0_I_LCSSA:%.*]] = phi double [ 0.000000e+00, %[[ENTRY]] ], [ [[ADD_I]], %[[WHILE_BODY_I]] ]
 // FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract noundef nofpclass(nan inf) double @__ocml_rsqrt_f64(double noundef nofpclass(nan inf) [[__R_0_I_LCSSA]]) #[[ATTR14]]
@@ -6474,12 +6474,12 @@ extern "C" __device__ float test_rnormf(int x, const float* y) {
 // APPROX-NEXT:    [[__A_ADDR_0_I3:%.*]] = phi ptr [ [[INCDEC_PTR_I:%.*]], %[[WHILE_BODY_I]] ], [ [[Y]], %[[ENTRY]] ]
 // APPROX-NEXT:    [[__DIM_ADDR_0_I2:%.*]] = phi i32 [ [[DEC_I:%.*]], %[[WHILE_BODY_I]] ], [ [[X]], %[[ENTRY]] ]
 // APPROX-NEXT:    [[DEC_I]] = add nsw i32 [[__DIM_ADDR_0_I2]], -1
-// APPROX-NEXT:    [[TMP0:%.*]] = load double, ptr [[__A_ADDR_0_I3]], align 8, !tbaa [[DOUBLE_TBAA18]]
+// APPROX-NEXT:    [[TMP0:%.*]] = load double, ptr [[__A_ADDR_0_I3]], align 8, !tbaa [[DOUBLE_TBAA17]]
 // APPROX-NEXT:    [[MUL_I:%.*]] = fmul contract double [[TMP0]], [[TMP0]]
 // APPROX-NEXT:    [[ADD_I]] = fadd contract double [[__R_0_I4]], [[MUL_I]]
 // APPROX-NEXT:    [[INCDEC_PTR_I]] = getelementptr inbounds nuw i8, ptr [[__A_ADDR_0_I3]], i64 8
 // APPROX-NEXT:    [[TOBOOL_NOT_I:%.*]] = icmp eq i32 [[DEC_I]], 0
-// APPROX-NEXT:    br i1 [[TOBOOL_NOT_I]], label %[[_ZL5RNORMIPKD_EXIT]], label %[[WHILE_BODY_I]], !llvm.loop [[LOOP23:![0-9]+]]
+// APPROX-NEXT:    br i1 [[TOBOOL_NOT_I]], label %[[_ZL5RNORMIPKD_EXIT]], label %[[WHILE_BODY_I]], !llvm.loop [[LOOP22:![0-9]+]]
 // APPROX:       [[_ZL5RNORMIPKD_EXIT]]:
 // APPROX-NEXT:    [[__R_0_I_LCSSA:%.*]] = phi double [ 0.000000e+00, %[[ENTRY]] ], [ [[ADD_I]], %[[WHILE_BODY_I]] ]
 // APPROX-NEXT:    [[CALL_I:%.*]] = tail call contract noundef double @__ocml_rsqrt_f64(double noundef [[__R_0_I_LCSSA]]) #[[ATTR14]]
@@ -6495,12 +6495,12 @@ extern "C" __device__ float test_rnormf(int x, const float* y) {
 // NCRDIV-NEXT:    [[__A_ADDR_0_I3:%.*]] = phi ptr [ [[INCDEC_PTR_I:%.*]], %[[WHILE_BODY_I]] ], [ [[Y]], %[[ENTRY]] ]
 // NCRDIV-NEXT:    [[__DIM_ADDR_0_I2:%.*]] = phi i32 [ [[DEC_I:%.*]], %[[WHILE_BODY_I]] ], [ [[X]], %[[ENTRY]] ]
 // NCRDIV-NEXT:    [[DEC_I]] = add nsw i32 [[__DIM_ADDR_0_I2]], -1
-// NCRDIV-NEXT:    [[TMP0:%.*]] = load double, ptr [[__A_ADDR_0_I3]], align 8, !tbaa [[DOUBLE_TBAA19]]
+// NCRDIV-NEXT:    [[TMP0:%.*]] = load double, ptr [[__A_ADDR_0_I3]], align 8, !tbaa [[DOUBLE_TBAA18]]
 // NCRDIV-NEXT:    [[MUL_I:%.*]] = fmul contract double [[TMP0]], [[TMP0]]
 // NCRDIV-NEXT:    [[ADD_I]] = fadd contract double [[__R_0_I4]], [[MUL_I]]
 // NCRDIV-NEXT:    [[INCDEC_PTR_I]] = getelementptr inbounds nuw i8, ptr [[__A_ADDR_0_I3]], i64 8
 // NCRDIV-NEXT:    [[TOBOOL_NOT_I:%.*]] = icmp eq i32 [[DEC_I]], 0
-// NCRDIV-NEXT:    br i1 [[TOBOOL_NOT_I]], label %[[_ZL5RNORMIPKD_EXIT]], label %[[WHILE_BODY_I]], !llvm.loop [[LOOP25:![0-9]+]]
+// NCRDIV-NEXT:    br i1 [[TOBOOL_NOT_I]], label %[[_ZL5RNORMIPKD_EXIT]], label %[[WHILE_BODY_I]], !llvm.loop [[LOOP24:![0-9]+]]
 // NCRDIV:       [[_ZL5RNORMIPKD_EXIT]]:
 // NCRDIV-NEXT:    [[__R_0_I_LCSSA:%.*]] = phi double [ 0.000000e+00, %[[ENTRY]] ], [ [[ADD_I]], %[[WHILE_BODY_I]] ]
 // NCRDIV-NEXT:    [[CALL_I:%.*]] = tail call contract noundef double @__ocml_rsqrt_f64(double noundef [[__R_0_I_LCSSA]]) #[[ATTR14]]
@@ -6516,12 +6516,12 @@ extern "C" __device__ float test_rnormf(int x, const float* y) {
 // AMDGCNSPIRV-NEXT:    [[__A_ADDR_0_I3:%.*]] = phi ptr addrspace(4) [ [[INCDEC_PTR_I:%.*]], %[[WHILE_BODY_I]] ], [ [[Y]], %[[ENTRY]] ]
 // AMDGCNSPIRV-NEXT:    [[__DIM_ADDR_0_I2:%.*]] = phi i32 [ [[DEC_I:%.*]], %[[WHILE_BODY_I]] ], [ [[X]], %[[ENTRY]] ]
 // AMDGCNSPIRV-NEXT:    [[DEC_I]] = add nsw i32 [[__DIM_ADDR_0_I2]], -1
-// AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = load double, ptr addrspace(4) [[__A_ADDR_0_I3]], align 8, !tbaa [[DOUBLE_TBAA19]]
+// AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = load double, ptr addrspace(4) [[__A_ADDR_0_I3]], align 8, !tbaa [[DOUBLE_TBAA18]]
 // AMDGCNSPIRV-NEXT:    [[MUL_I:%.*]] = fmul contract double [[TMP0]], [[TMP0]]
 // AMDGCNSPIRV-NEXT:    [[ADD_I]] = fadd contract double [[__R_0_I4]], [[MUL_I]]
 // AMDGCNSPIRV-NEXT:    [[INCDEC_PTR_I]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[__A_ADDR_0_I3]], i64 8
 // AMDGCNSPIRV-NEXT:    [[TOBOOL_NOT_I:%.*]] = icmp eq i32 [[DEC_I]], 0
-// AMDGCNSPIRV-NEXT:    br i1 [[TOBOOL_NOT_I]], label %[[_ZL5RNORMIPKD_EXIT]], label %[[WHILE_BODY_I]], !llvm.loop [[LOOP24:![0-9]+]]
+// AMDGCNSPIRV-NEXT:    br i1 [[TOBOOL_NOT_I]], label %[[_ZL5RNORMIPKD_EXIT]], label %[[WHILE_BODY_I]], !llvm.loop [[LOOP23:![0-9]+]]
 // AMDGCNSPIRV:       [[_ZL5RNORMIPKD_EXIT]]:
 // AMDGCNSPIRV-NEXT:    [[__R_0_I_LCSSA:%.*]] = phi double [ 0.000000e+00, %[[ENTRY]] ], [ [[ADD_I]], %[[WHILE_BODY_I]] ]
 // AMDGCNSPIRV-NEXT:    [[CALL_I:%.*]] = tail call contract spir_func noundef addrspace(4) double @__ocml_rsqrt_f64(double noundef [[__R_0_I_LCSSA]]) #[[ATTR14]]
@@ -7048,9 +7048,9 @@ extern "C" __device__ BOOL_TYPE test___signbit(double x) {
 // DEFAULT-NEXT:    [[__TMP_I:%.*]] = alloca float, align 4, addrspace(5)
 // DEFAULT-NEXT:    call void @llvm.lifetime.start.p5(ptr addrspace(5) [[__TMP_I]]) #[[ATTR16]]
 // DEFAULT-NEXT:    [[CALL_I:%.*]] = call contract float @__ocml_sincos_f32(float noundef [[X]], ptr addrspace(5) noundef [[__TMP_I]]) #[[ATTR15]]
-// DEFAULT-NEXT:    store float [[CALL_I]], ptr [[Y]], align 4, !tbaa [[FLOAT_TBAA16]]
-// DEFAULT-NEXT:    [[TMP0:%.*]] = load float, ptr addrspace(5) [[__TMP_I]], align 4, !tbaa [[FLOAT_TBAA16]]
-// DEFAULT-NEXT:    store float [[TMP0]], ptr [[Z]], align 4, !tbaa [[FLOAT_TBAA16]]
+// DEFAULT-NEXT:    store float [[CALL_I]], ptr [[Y]], align 4, !tbaa [[FLOAT_TBAA15]]
+// DEFAULT-NEXT:    [[TMP0:%.*]] = load float, ptr addrspace(5) [[__TMP_I]], align 4, !tbaa [[FLOAT_TBAA15]]
+// DEFAULT-NEXT:    store float [[TMP0]], ptr [[Z]], align 4, !tbaa [[FLOAT_TBAA15]]
 // DEFAULT-NEXT:    call void @llvm.lifetime.end.p5(ptr addrspace(5) [[__TMP_I]]) #[[ATTR16]]
 // DEFAULT-NEXT:    ret void
 //
@@ -7060,9 +7060,9 @@ extern "C" __device__ BOOL_TYPE test___signbit(double x) {
 // FINITEONLY-NEXT:    [[__TMP_I:%.*]] = alloca float, align 4, addrspace(5)
 // FINITEONLY-NEXT:    call void @llvm.lifetime.start.p5(ptr addrspace(5) [[__TMP_I]]) #[[ATTR16]]
 // FINITEONLY-NEXT:    [[CALL_I:%.*]] = call nnan ninf contract nofpclass(nan inf) float @__ocml_sincos_f32(float noundef nofpclass(nan inf) [[X]], ptr addrspace(5) noundef [[__TMP_I]]) #[[ATTR15]]
-// FINITEONLY-NEXT:    store float [[CALL_I]], ptr [[Y]], align 4, !tbaa [[FLOAT_TBAA16]]
-// FINITEONLY-NEXT:    [[TMP0:%.*]] = load float, ptr addrspace(5) [[__TMP_I]], align 4, !tbaa [[FLOAT_TBAA16]]
-// FINITEONLY-NEXT:    store float [[TMP0]], ptr [[Z]], align 4, !tbaa [[FLOAT_TBAA16]]
+// FINITEONLY-NEXT:    store float [[CALL_I]], ptr [[Y]], align 4, !tbaa [[FLOAT_TBAA15]]
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = load float, ptr addrspace(5) [[__TMP_I]], align 4, !tbaa [[FLOAT_TBAA15]]
+// FINITEONLY-NEXT:    store float [[TMP0]], ptr [[Z]], align 4, !tbaa [[FLOAT_TBAA15]]
 // FINITEONLY-NEXT:    call void @llvm.lifetime.end.p5(ptr addrspace(5) [[__TMP_I]]) #[[ATTR16]]
 // FINITEONLY-NEXT:    ret void
 //
@@ -7072,9 +7072,9 @@ extern "C" __device__ BOOL_TYPE test___signbit(double x) {
 // APPROX-NEXT:    [[__TMP_I:%.*]] = alloca float, align 4, addrspace(5)
 // APPROX-NEXT:    call void @llvm.lifetime.start.p5(ptr addrspace(5) [[__TMP_I]]) #[[ATTR16]]
 // APPROX-NEXT:    [[CALL_I:%.*]] = call contract float @__ocml_sincos_f32(float noundef [[X]], ptr addrspace(5) noundef [[__TMP_I]]) #[[ATTR15]]
-// APPROX-NEXT:    store float [[CALL_I]], ptr [[Y]], align 4, !tbaa [[FLOAT_TBAA16]]
-// APPROX-NEXT:    [[TMP0:%.*]] = load float, ptr addrspace(5) [[__TMP_I]], align 4, !tbaa [[FLOAT_TBAA16]]
-// APPROX-NEXT:    store float [[TMP0]], ptr [[Z]], align 4, !tbaa [[FLOAT_TBAA16]]
+// APPROX-NEXT:    store float [[CALL_I]], ptr [[Y]], align 4, !tbaa [[FLOAT_TBAA15]]
+// APPROX-NEXT:    [[TMP0:%.*]] = load float, ptr addrspace(5) [[__TMP_I]], align 4, !tbaa [[FLOAT_TBAA15]]
+// APPROX-NEXT:    store float [[TMP0]], ptr [[Z]], align 4, !tbaa [[FLOAT_TBAA15]]
 // APPROX-NEXT:    call void @llvm.lifetime.end.p5(ptr addrspace(5) [[__TMP_I]]) #[[ATTR16]]
 // APPROX-NEXT:    ret void
 //
@@ -7084,9 +7084,9 @@ extern "C" __device__ BOOL_TYPE test___signbit(double x) {
 // NCRDIV-NEXT:    [[__TMP_I:%.*]] = alloca float, align 4, addrspace(5)
 // NCRDIV-NEXT:    call void @llvm.lifetime.start.p5(ptr addrspace(5) [[__TMP_I]]) #[[ATTR16]]
 // NCRDIV-NEXT:    [[CALL_I:%.*]] = call contract float @__ocml_sincos_f32(float noundef [[X]], ptr addrspace(5) noundef [[__TMP_I]]) #[[ATTR15]]
-// NCRDIV-NEXT:    store float [[CALL_I]], ptr [[Y]], align 4, !tbaa [[FLOAT_TBAA17]]
-// NCRDIV-NEXT:    [[TMP0:%.*]] = load float, ptr addrspace(5) [[__TMP_I]], align 4, !tbaa [[FLOAT_TBAA17]]
-// NCRDIV-NEXT:    store float [[TMP0]], ptr [[Z]], align 4, !tbaa [[FLOAT_TBAA17]]
+// NCRDIV-NEXT:    store float [[CALL_I]], ptr [[Y]], align 4, !tbaa [[FLOAT_TBAA16]]
+// NCRDIV-NEXT:    [[TMP0:%.*]] = load float, ptr addrspace(5) [[__TMP_I]], align 4, !tbaa [[FLOAT_TBAA16]]
+// NCRDIV-NEXT:    store float [[TMP0]], ptr [[Z]], align 4, !tbaa [[FLOAT_TBAA16]]
 // NCRDIV-NEXT:    call void @llvm.lifetime.end.p5(ptr addrspace(5) [[__TMP_I]]) #[[ATTR16]]
 // NCRDIV-NEXT:    ret void
 //
@@ -7097,9 +7097,9 @@ extern "C" __device__ BOOL_TYPE test___signbit(double x) {
 // AMDGCNSPIRV-NEXT:    [[__TMP_ASCAST_I:%.*]] = addrspacecast ptr [[__TMP_I]] to ptr addrspace(4)
 // AMDGCNSPIRV-NEXT:    call addrspace(4) void @llvm.lifetime.start.p0(ptr nonnull [[__TMP_I]]) #[[ATTR16]]
 // AMDGCNSPIRV-NEXT:    [[CALL_I:%.*]] = call contract spir_func addrspace(4) float @__ocml_sincos_f32(float noundef [[X]], ptr noundef nonnull [[__TMP_I]]) #[[ATTR15]]
-// AMDGCNSPIRV-NEXT:    store float [[CALL_I]], ptr addrspace(4) [[Y]], align 4, !tbaa [[FLOAT_TBAA17]]
-// AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = load float, ptr addrspace(4) [[__TMP_ASCAST_I]], align 4, !tbaa [[FLOAT_TBAA17]]
-// AMDGCNSPIRV-NEXT:    store float [[TMP0]], ptr addrspace(4) [[Z]], align 4, !tbaa [[FLOAT_TBAA17]]
+// AMDGCNSPIRV-NEXT:    store float [[CALL_I]], ptr addrspace(4) [[Y]], align 4, !tbaa [[FLOAT_TBAA16]]
+// AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = load float, ptr addrspace(4) [[__TMP_ASCAST_I]], align 4, !tbaa [[FLOAT_TBAA16]]
+// AMDGCNSPIRV-NEXT:    store float [[TMP0]], ptr addrspace(4) [[Z]], align 4, !tbaa [[FLOAT_TBAA16]]
 // AMDGCNSPIRV-NEXT:    call addrspace(4) void @llvm.lifetime.end.p0(ptr nonnull [[__TMP_I]]) #[[ATTR16]]
 // AMDGCNSPIRV-NEXT:    ret void
 //
@@ -7113,9 +7113,9 @@ extern "C" __device__ void test_sincosf(float x, float *y, float *z) {
 // DEFAULT-NEXT:    [[__TMP_I:%.*]] = alloca double, align 8, addrspace(5)
 // DEFAULT-NEXT:    call void @llvm.lifetime.start.p5(ptr addrspace(5) [[__TMP_I]]) #[[ATTR16]]
 // DEFAULT-NEXT:    [[CALL_I:%.*]] = call contract double @__ocml_sincos_f64(double noundef [[X]], ptr addrspace(5) noundef [[__TMP_I]]) #[[ATTR15]]
-// DEFAULT-NEXT:    store double [[CALL_I]], ptr [[Y]], align 8, !tbaa [[DOUBLE_TBAA18]]
-// DEFAULT-NEXT:    [[TMP0:%.*]] = load double, ptr addrspace(5) [[__TMP_I]], align 8, !tbaa [[DOUBLE_TBAA18]]
-// DEFAULT-NEXT:    store double [[TMP0]], ptr [[Z]], align 8, !tbaa [[DOUBLE_TBAA18]]
+// DEFAULT-NEXT:    store double [[CALL_I]], ptr [[Y]], align 8, !tbaa [[DOUBLE_TBAA17]]
+// DEFAULT-NEXT:    [[TMP0:%.*]] = load double, ptr addrspace(5) [[__TMP_I]], align 8, !tbaa [[DOUBLE_TBAA17]]
+// DEFAULT-NEXT:    store double [[TMP0]], ptr [[Z]], align 8, !tbaa [[DOUBLE_TBAA17]]
 // DEFAULT-NEXT:    call void @llvm.lifetime.end.p5(ptr addrspace(5) [[__TMP_I]]) #[[ATTR16]]
 // DEFAULT-NEXT:    ret void
 //
@@ -7125,9 +7125,9 @@ extern "C" __device__ void test_sincosf(float x, float *y, float *z) {
 // FINITEONLY-NEXT:    [[__TMP_I:%.*]] = alloca double, align 8, addrspace(5)
 // FINITEONLY-NEXT:    call void @llvm.lifetime.start.p5(ptr addrspace(5) [[__TMP_I]]) #[[ATTR16]]
 // FINITEONLY-NEXT:    [[CALL_I:%.*]] = call nnan ninf contract nofpclass(nan inf) double @__ocml_sincos_f64(double noundef nofpclass(nan inf) [[X]], ptr addrspace(5) noundef [[__TMP_I]]) #[[ATTR15]]
-// FINITEONLY-NEXT:    store double [[CALL_I]], ptr [[Y]], align 8, !tbaa [[DOUBLE_TBAA18]]
-// FINITEONLY-NEXT:    [[TMP0:%.*]] = load double, ptr addrspace(5) [[__TMP_I]], align 8, !tbaa [[DOUBLE_TBAA18]]
-// FINITEONLY-NEXT:    store double [[TMP0]], ptr [[Z]], align 8, !tbaa [[DOUBLE_TBAA18]]
+// FINITEONLY-NEXT:    store double [[CALL_I]], ptr [[Y]], align 8, !tbaa [[DOUBLE_TBAA17]]
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = load double, ptr addrspace(5) [[__TMP_I]], align 8, !tbaa [[DOUBLE_TBAA17]]
+// FINITEONLY-NEXT:    store double [[TMP0]], ptr [[Z]], align 8, !tbaa [[DOUBLE_TBAA17]]
 // FINITEONLY-NEXT:    call void @llvm.lifetime.end.p5(ptr addrspace(5) [[__TMP_I]]) #[[ATTR16]]
 // FINITEONLY-NEXT:    ret void
 //
@@ -7137,9 +7137,9 @@ extern "C" __device__ void test_sincosf(float x, float *y, float *z) {
 // APPROX-NEXT:    [[__TMP_I:%.*]] = alloca double, align 8, addrspace(5)
 // APPROX-NEXT:    call void @llvm.lifetime.start.p5(ptr addrspace(5) [[__TMP_I]]) #[[ATTR16]]
 // APPROX-NEXT:    [[CALL_I:%.*]] = call contract double @__ocml_sincos_f64(double noundef [[X]], ptr addrspace(5) noundef [[__TMP_I]]) #[[ATTR15]]
-// APPROX-NEXT:    store double [[CALL_I]], ptr [[Y]], align 8, !tbaa [[DOUBLE_TBAA18]]
-// APPROX-NEXT:    [[TMP0:%.*]] = load double, ptr addrspace(5) [[__TMP_I]], align 8, !tbaa [[DOUBLE_TBAA18]]
-// APPROX-NEXT:    store double [[TMP0]], ptr [[Z]], align 8, !tbaa [[DOUBLE_TBAA18]]
+// APPROX-NEXT:    store double [[CALL_I]], ptr [[Y]], align 8, !tbaa [[DOUBLE_TBAA17]]
+// APPROX-NEXT:    [[TMP0:%.*]] = load double, ptr addrspace(5) [[__TMP_I]], align 8, !tbaa [[DOUBLE_TBAA17]]
+// APPROX-NEXT:    store double [[TMP0]], ptr [[Z]], align 8, !tbaa [[DOUBLE_TBAA17]]
 // APPROX-NEXT:    call void @llvm.lifetime.end.p5(ptr addrspace(5) [[__TMP_I]]) #[[ATTR16]]
 // APPROX-NEXT:    ret void
 //
@@ -7149,9 +7149,9 @@ extern "C" __device__ void test_sincosf(float x, float *y, float *z) {
 // NCRDIV-NEXT:    [[__TMP_I:%.*]] = alloca double, align 8, addrspace(5)
 // NCRDIV-NEXT:    call void @llvm.lifetime.start.p5(ptr addrspace(5) [[__TMP_I]]) #[[ATTR16]]
 // NCRDIV-NEXT:    [[CALL_I:%.*]] = call contract double @__ocml_sincos_f64(double noundef [[X]], ptr addrspace(5) noundef [[__TMP_I]]) #[[ATTR15]]
-// NCRDIV-NEXT:    store double [[CALL_I]], ptr [[Y]], align 8, !tbaa [[DOUBLE_TBAA19]]
-// NCRDIV-NEXT:    [[TMP0:%.*]] = load double, ptr addrspace(5) [[__TMP_I]], align 8, !tbaa [[DOUBLE_TBAA19]]
-// NCRDIV-NEXT:    store double [[TMP0]], ptr [[Z]], align 8, !tbaa [[DOUBLE_TBAA19]]
+// NCRDIV-NEXT:    store double [[CALL_I]], ptr [[Y]], align 8, !tbaa [[DOUBLE_TBAA18]]
+// NCRDIV-NEXT:    [[TMP0:%.*]] = load double, ptr addrspace(5) [[__TMP_I]], align 8, !tbaa [[DOUBLE_TBAA18]]
+// NCRDIV-NEXT:    store double [[TMP0]], ptr [[Z]], align 8, !tbaa [[DOUBLE_TBAA18]]
 // NCRDIV-NEXT:    call void @llvm.lifetime.end.p5(ptr addrspace(5) [[__TMP_I]]) #[[ATTR16]]
 // NCRDIV-NEXT:    ret void
 //
@@ -7162,9 +7162,9 @@ extern "C" __device__ void test_sincosf(float x, float *y, float *z) {
 // AMDGCNSPIRV-NEXT:    [[__TMP_ASCAST_I:%.*]] = addrspacecast ptr [[__TMP_I]] to ptr addrspace(4)
 // AMDGCNSPIRV-NEXT:    call addrspace(4) void @llvm.lifetime.start.p0(ptr nonnull [[__TMP_I]]) #[[ATTR16]]
 // AMDGCNSPIRV-NEXT:    [[CALL_I:%.*]] = call contract spir_func addrspace(4) double @__ocml_sincos_f64(double noundef [[X]], ptr noundef nonnull [[__TMP_I]]) #[[ATTR15]]
-// AMDGCNSPIRV-NEXT:    store double [[CALL_I]], ptr addrspace(4) [[Y]], align 8, !tbaa [[DOUBLE_TBAA19]]
-// AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = load double, ptr addrspace(4) [[__TMP_ASCAST_I]], align 8, !tbaa [[DOUBLE_TBAA19]]
-// AMDGCNSPIRV-NEXT:    store double [[TMP0]], ptr addrspace(4) [[Z]], align 8, !tbaa [[DOUBLE_TBAA19]]
+// AMDGCNSPIRV-NEXT:    store double [[CALL_I]], ptr addrspace(4) [[Y]], align 8, !tbaa [[DOUBLE_TBAA18]]
+// AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = load double, ptr addrspace(4) [[__TMP_ASCAST_I]], align 8, !tbaa [[DOUBLE_TBAA18]]
+// AMDGCNSPIRV-NEXT:    store double [[TMP0]], ptr addrspace(4) [[Z]], align 8, !tbaa [[DOUBLE_TBAA18]]
 // AMDGCNSPIRV-NEXT:    call addrspace(4) void @llvm.lifetime.end.p0(ptr nonnull [[__TMP_I]]) #[[ATTR16]]
 // AMDGCNSPIRV-NEXT:    ret void
 //
@@ -7178,9 +7178,9 @@ extern "C" __device__ void test_sincos(double x, double *y, double *z) {
 // DEFAULT-NEXT:    [[__TMP_I:%.*]] = alloca float, align 4, addrspace(5)
 // DEFAULT-NEXT:    call void @llvm.lifetime.start.p5(ptr addrspace(5) [[__TMP_I]]) #[[ATTR16]]
 // DEFAULT-NEXT:    [[CALL_I:%.*]] = call contract float @__ocml_sincospi_f32(float noundef [[X]], ptr addrspace(5) noundef [[__TMP_I]]) #[[ATTR15]]
-// DEFAULT-NEXT:    store float [[CALL_I]], ptr [[Y]], align 4, !tbaa [[FLOAT_TBAA16]]
-// DEFAULT-NEXT:    [[TMP0:%.*]] = load float, ptr addrspace(5) [[__TMP_I]], align 4, !tbaa [[FLOAT_TBAA16]]
-// DEFAULT-NEXT:    store float [[TMP0]], ptr [[Z]], align 4, !tbaa [[FLOAT_TBAA16]]
+// DEFAULT-NEXT:    store float [[CALL_I]], ptr [[Y]], align 4, !tbaa [[FLOAT_TBAA15]]
+// DEFAULT-NEXT:    [[TMP0:%.*]] = load float, ptr addrspace(5) [[__TMP_I]], align 4, !tbaa [[FLOAT_TBAA15]]
+// DEFAULT-NEXT:    store float [[TMP0]], ptr [[Z]], align 4, !tbaa [[FLOAT_TBAA15]]
 // DEFAULT-NEXT:    call void @llvm.lifetime.end.p5(ptr addrspace(5) [[__TMP_I]]) #[[ATTR16]]
 // DEFAULT-NEXT:    ret void
 //
@@ -7190,9 +7190,9 @@ extern "C" __device__ void test_sincos(double x, double *y, double *z) {
 // FINITEONLY-NEXT:    [[__TMP_I:%.*]] = alloca float, align 4, addrspace(5)
 // FINITEONLY-NEXT:    call void @llvm.lifetime.start.p5(ptr addrspace(5) [[__TMP_I]]) #[[ATTR16]]
 // FINITEONLY-NEXT:    [[CALL_I:%.*]] = call nnan ninf contract nofpclass(nan inf) float @__ocml_sincospi_f32(float noundef nofpclass(nan inf) [[X]], ptr addrspace(5) noundef [[__TMP_I]]) #[[ATTR15]]
-// FINITEONLY-NEXT:    store float [[CALL_I]], ptr [[Y]], align 4, !tbaa [[FLOAT_TBAA16]]
-// FINITEONLY-NEXT:    [[TMP0:%.*]] = load float, ptr addrspace(5) [[__TMP_I]], align 4, !tbaa [[FLOAT_TBAA16]]
-// FINITEONLY-NEXT:    store float [[TMP0]], ptr [[Z]], align 4, !tbaa [[FLOAT_TBAA16]]
+// FINITEONLY-NEXT:    store float [[CALL_I]], ptr [[Y]], align 4, !tbaa [[FLOAT_TBAA15]]
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = load float, ptr addrspace(5) [[__TMP_I]], align 4, !tbaa [[FLOAT_TBAA15]]
+// FINITEONLY-NEXT:    store float [[TMP0]], ptr [[Z]], align 4, !tbaa [[FLOAT_TBAA15]]
 // FINITEONLY-NEXT:    call void @llvm.lifetime.end.p5(ptr addrspace(5) [[__TMP_I]]) #[[ATTR16]]
 // FINITEONLY-NEXT:    ret void
 //
@@ -7202,9 +7202,9 @@ extern "C" __device__ void test_sincos(double x, double *y, double *z) {
 // APPROX-NEXT:    [[__TMP_I:%.*]] = alloca float, align 4, addrspace(5)
 // APPROX-NEXT:    call void @llvm.lifetime.start.p5(ptr addrspace(5) [[__TMP_I]]) #[[ATTR16]]
 // APPROX-NEXT:    [[CALL_I:%.*]] = call contract float @__ocml_sincospi_f32(float noundef [[X]], ptr addrspace(5) noundef [[__TMP_I]]) #[[ATTR15]]
-// APPROX-NEXT:    store float [[CALL_I]], ptr [[Y]], align 4, !tbaa [[FLOAT_TBAA16]]
-// APPROX-NEXT:    [[TMP0:%.*]] = load float, ptr addrspace(5) [[__TMP_I]], align 4, !tbaa [[FLOAT_TBAA16]]
-// APPROX-NEXT:    store float [[TMP0]], ptr [[Z]], align 4, !tbaa [[FLOAT_TBAA16]]
+// APPROX-NEXT:    store float [[CALL_I]], ptr [[Y]], align 4, !tbaa [[FLOAT_TBAA15]]
+// APPROX-NEXT:    [[TMP0:%.*]] = load float, ptr addrspace(5) [[__TMP_I]], align 4, !tbaa [[FLOAT_TBAA15]]
+// APPROX-NEXT:    store float [[TMP0]], ptr [[Z]], align 4, !tbaa [[FLOAT_TBAA15]]
 // APPROX-NEXT:    call void @llvm.lifetime.end.p5(ptr addrspace(5) [[__TMP_I]]) #[[ATTR16]]
 // APPROX-NEXT:    ret void
 //
@@ -7214,9 +7214,9 @@ extern "C" __device__ void test_sincos(double x, double *y, double *z) {
 // NCRDIV-NEXT:    [[__TMP_I:%.*]] = alloca float, align 4, addrspace(5)
 // NCRDIV-NEXT:    call void @llvm.lifetime.start.p5(ptr addrspace(5) [[__TMP_I]]) #[[ATTR16]]
 // NCRDIV-NEXT:    [[CALL_I:%.*]] = call contract float @__ocml_sincospi_f32(float noundef [[X]], ptr addrspace(5) noundef [[__TMP_I]]) #[[ATTR15]]
-// NCRDIV-NEXT:    store float [[CALL_I]], ptr [[Y]], align 4, !tbaa [[FLOAT_TBAA17]]
-// NCRDIV-NEXT:    [[TMP0:%.*]] = load float, ptr addrspace(5) [[__TMP_I]], align 4, !tbaa [[FLOAT_TBAA17]]
-// NCRDIV-NEXT:    store float [[TMP0]], ptr [[Z]], align 4, !tbaa [[FLOAT_TBAA17]]
+// NCRDIV-NEXT:    store float [[CALL_I]], ptr [[Y]], align 4, !tbaa [[FLOAT_TBAA16]]
+// NCRDIV-NEXT:    [[TMP0:%.*]] = load float, ptr addrspace(5) [[__TMP_I]], align 4, !tbaa [[FLOAT_TBAA16]]
+// NCRDIV-NEXT:    store float [[TMP0]], ptr [[Z]], align 4, !tbaa [[FLOAT_TBAA16]]
 // NCRDIV-NEXT:    call void @llvm.lifetime.end.p5(ptr addrspace(5) [[__TMP_I]]) #[[ATTR16]]
 // NCRDIV-NEXT:    ret void
 //
@@ -7227,9 +7227,9 @@ extern "C" __device__ void test_sincos(double x, double *y, double *z) {
 // AMDGCNSPIRV-NEXT:    [[__TMP_ASCAST_I:%.*]] = addrspacecast ptr [[__TMP_I]] to ptr addrspace(4)
 // AMDGCNSPIRV-NEXT:    call addrspace(4) void @llvm.lifetime.start.p0(ptr nonnull [[__TMP_I]]) #[[ATTR16]]
 // AMDGCNSPIRV-NEXT:    [[CALL_I:%.*]] = call contract spir_func addrspace(4) float @__ocml_sincospi_f32(float noundef [[X]], ptr noundef nonnull [[__TMP_I]]) #[[ATTR15]]
-// AMDGCNSPIRV-NEXT:    store float [[CALL_I]], ptr addrspace(4) [[Y]], align 4, !tbaa [[FLOAT_TBAA17]]
-// AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = load float, ptr addrspace(4) [[__TMP_ASCAST_I]], align 4, !tbaa [[FLOAT_TBAA17]]
-// AMDGCNSPIRV-NEXT:    store float [[TMP0]], ptr addrspace(4) [[Z]], align 4, !tbaa [[FLOAT_TBAA17]]
+// AMDGCNSPIRV-NEXT:    store float [[CALL_I]], ptr addrspace(4) [[Y]], align 4, !tbaa [[FLOAT_TBAA16]]
+// AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = load float, ptr addrspace(4) [[__TMP_ASCAST_I]], align 4, !tbaa [[FLOAT_TBAA16]]
+// AMDGCNSPIRV-NEXT:    store float [[TMP0]], ptr addrspace(4) [[Z]], align 4, !tbaa [[FLOAT_TBAA16]]
 // AMDGCNSPIRV-NEXT:    call addrspace(4) void @llvm.lifetime.end.p0(ptr nonnull [[__TMP_I]]) #[[ATTR16]]
 // AMDGCNSPIRV-NEXT:    ret void
 //
@@ -7243,9 +7243,9 @@ extern "C" __device__ void test_sincospif(float x, float *y, float *z) {
 // DEFAULT-NEXT:    [[__TMP_I:%.*]] = alloca double, align 8, addrspace(5)
 // DEFAULT-NEXT:    call void @llvm.lifetime.start.p5(ptr addrspace(5) [[__TMP_I]]) #[[ATTR16]]
 // DEFAULT-NEXT:    [[CALL_I:%.*]] = call contract double @__ocml_sincospi_f64(double noundef [[X]], ptr addrspace(5) noundef [[__TMP_I]]) #[[ATTR15]]
-// DEFAULT-NEXT:    store double [[CALL_I]], ptr [[Y]], align 8, !tbaa [[DOUBLE_TBAA18]]
-// DEFAULT-NEXT:    [[TMP0:%.*]] = load double, ptr addrspace(5) [[__TMP_I]], align 8, !tbaa [[DOUBLE_TBAA18]]
-// DEFAULT-NEXT:    store double [[TMP0]], ptr [[Z]], align 8, !tbaa [[DOUBLE_TBAA18]]
+// DEFAULT-NEXT:    store double [[CALL_I]], ptr [[Y]], align 8, !tbaa [[DOUBLE_TBAA17]]
+// DEFAULT-NEXT:    [[TMP0:%.*]] = load double, ptr addrspace(5) [[__TMP_I]], align 8, !tbaa [[DOUBLE_TBAA17]]
+// DEFAULT-NEXT:    store double [[TMP0]], ptr [[Z]], align 8, !tbaa [[DOUBLE_TBAA17]]
 // DEFAULT-NEXT:    call void @llvm.lifetime.end.p5(ptr addrspace(5) [[__TMP_I]]) #[[ATTR16]]
 // DEFAULT-NEXT:    ret void
 //
@@ -7255,9 +7255,9 @@ extern "C" __device__ void test_sincospif(float x, float *y, float *z) {
 // FINITEONLY-NEXT:    [[__TMP_I:%.*]] = alloca double, align 8, addrspace(5)
 // FINITEONLY-NEXT:    call void @llvm.lifetime.start.p5(ptr addrspace(5) [[__TMP_I]]) #[[ATTR16]]
 // FINITEONLY-NEXT:    [[CALL_I:%.*]] = call nnan ninf contract nofpclass(nan inf) double @__ocml_sincospi_f64(double noundef nofpclass(nan inf) [[X]], ptr addrspace(5) noundef [[__TMP_I]]) #[[ATTR15]]
-// FINITEONLY-NEXT:    store double [[CALL_I]], ptr [[Y]], align 8, !tbaa [[DOUBLE_TBAA18]]
-// FINITEONLY-NEXT:    [[TMP0:%.*]] = load double, ptr addrspace(5) [[__TMP_I]], align 8, !tbaa [[DOUBLE_TBAA18]]
-// FINITEONLY-NEXT:    store double [[TMP0]], ptr [[Z]], align 8, !tbaa [[DOUBLE_TBAA18]]
+// FINITEONLY-NEXT:    store double [[CALL_I]], ptr [[Y]], align 8, !tbaa [[DOUBLE_TBAA17]]
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = load double, ptr addrspace(5) [[__TMP_I]], align 8, !tbaa [[DOUBLE_TBAA17]]
+// FINITEONLY-NEXT:    store double [[TMP0]], ptr [[Z]], align 8, !tbaa [[DOUBLE_TBAA17]]
 // FINITEONLY-NEXT:    call void @llvm.lifetime.end.p5(ptr addrspace(5) [[__TMP_I]]) #[[ATTR16]]
 // FINITEONLY-NEXT:    ret void
 //
@@ -7267,9 +7267,9 @@ extern "C" __device__ void test_sincospif(float x, float *y, float *z) {
 // APPROX-NEXT:    [[__TMP_I:%.*]] = alloca double, align 8, addrspace(5)
 // APPROX-NEXT:    call void @llvm.lifetime.start.p5(ptr addrspace(5) [[__TMP_I]]) #[[ATTR16]]
 // APPROX-NEXT:    [[CALL_I:%.*]] = call contract double @__ocml_sincospi_f64(double noundef [[X]], ptr addrspace(5) noundef [[__TMP_I]]) #[[ATTR15]]
-// APPROX-NEXT:    store double [[CALL_I]], ptr [[Y]], align 8, !tbaa [[DOUBLE_TBAA18]]
-// APPROX-NEXT:    [[TMP0:%.*]] = load double, ptr addrspace(5) [[__TMP_I]], align 8, !tbaa [[DOUBLE_TBAA18]]
-// APPROX-NEXT:    store double [[TMP0]], ptr [[Z]], align 8, !tbaa [[DOUBLE_TBAA18]]
+// APPROX-NEXT:    store double [[CALL_I]], ptr [[Y]], align 8, !tbaa [[DOUBLE_TBAA17]]
+// APPROX-NEXT:    [[TMP0:%.*]] = load double, ptr addrspace(5) [[__TMP_I]], align 8, !tbaa [[DOUBLE_TBAA17]]
+// APPROX-NEXT:    store double [[TMP0]], ptr [[Z]], align 8, !tbaa [[DOUBLE_TBAA17]]
 // APPROX-NEXT:    call void @llvm.lifetime.end.p5(ptr addrspace(5) [[__TMP_I]]) #[[ATTR16]]
 // APPROX-NEXT:    ret void
 //
@@ -7279,9 +7279,9 @@ extern "C" __device__ void test_sincospif(float x, float *y, float *z) {
 // NCRDIV-NEXT:    [[__TMP_I:%.*]] = alloca double, align 8, addrspace(5)
 // NCRDIV-NEXT:    call void @llvm.lifetime.start.p5(ptr addrspace(5) [[__TMP_I]]) #[[ATTR16]]
 // NCRDIV-NEXT:    [[CALL_I:%.*]] = call contract double @__ocml_sincospi_f64(double noundef [[X]], ptr addrspace(5) noundef [[__TMP_I]]) #[[ATTR15]]
-// NCRDIV-NEXT:    store double [[CALL_I]], ptr [[Y]], align 8, !tbaa [[DOUBLE_TBAA19]]
-// NCRDIV-NEXT:    [[TMP0:%.*]] = load double, ptr addrspace(5) [[__TMP_I]], align 8, !tbaa [[DOUBLE_TBAA19]]
-// NCRDIV-NEXT:    store double [[TMP0]], ptr [[Z]], align 8, !tbaa [[DOUBLE_TBAA19]]
+// NCRDIV-NEXT:    store double [[CALL_I]], ptr [[Y]], align 8, !tbaa [[DOUBLE_TBAA18]]
+// NCRDIV-NEXT:    [[TMP0:%.*]] = load double, ptr addrspace(5) [[__TMP_I]], align 8, !tbaa [[DOUBLE_TBAA18]]
+// NCRDIV-NEXT:    store double [[TMP0]], ptr [[Z]], align 8, !tbaa [[DOUBLE_TBAA18]]
 // NCRDIV-NEXT:    call void @llvm.lifetime.end.p5(ptr addrspace(5) [[__TMP_I]]) #[[ATTR16]]
 // NCRDIV-NEXT:    ret void
 //
@@ -7292,9 +7292,9 @@ extern "C" __device__ void test_sincospif(float x, float *y, float *z) {
 // AMDGCNSPIRV-NEXT:    [[__TMP_ASCAST_I:%.*]] = addrspacecast ptr [[__TMP_I]] to ptr addrspace(4)
 // AMDGCNSPIRV-NEXT:    call addrspace(4) void @llvm.lifetime.start.p0(ptr nonnull [[__TMP_I]]) #[[ATTR16]]
 // AMDGCNSPIRV-NEXT:    [[CALL_I:%.*]] = call contract spir_func addrspace(4) double @__ocml_sincospi_f64(double noundef [[X]], ptr noundef nonnull [[__TMP_I]]) #[[ATTR15]]
-// AMDGCNSPIRV-NEXT:    store double [[CALL_I]], ptr addrspace(4) [[Y]], align 8, !tbaa [[DOUBLE_TBAA19]]
-// AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = load double, ptr addrspace(4) [[__TMP_ASCAST_I]], align 8, !tbaa [[DOUBLE_TBAA19]]
-// AMDGCNSPIRV-NEXT:    store double [[TMP0]], ptr addrspace(4) [[Z]], align 8, !tbaa [[DOUBLE_TBAA19]]
+// AMDGCNSPIRV-NEXT:    store double [[CALL_I]], ptr addrspace(4) [[Y]], align 8, !tbaa [[DOUBLE_TBAA18]]
+// AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = load double, ptr addrspace(4) [[__TMP_ASCAST_I]], align 8, !tbaa [[DOUBLE_TBAA18]]
+// AMDGCNSPIRV-NEXT:    store double [[TMP0]], ptr addrspace(4) [[Z]], align 8, !tbaa [[DOUBLE_TBAA18]]
 // AMDGCNSPIRV-NEXT:    call addrspace(4) void @llvm.lifetime.end.p0(ptr nonnull [[__TMP_I]]) #[[ATTR16]]
 // AMDGCNSPIRV-NEXT:    ret void
 //
@@ -7459,7 +7459,7 @@ extern "C" __device__ double test_sinpi(double x) {
 // NCRDIV-LABEL: define dso_local noundef float @test_sqrtf(
 // NCRDIV-SAME: float noundef [[X:%.*]]) local_unnamed_addr #[[ATTR3]] {
 // NCRDIV-NEXT:  [[ENTRY:.*:]]
-// NCRDIV-NEXT:    [[TMP0:%.*]] = tail call contract noundef float @llvm.sqrt.f32(float [[X]]), !fpmath [[META22]]
+// NCRDIV-NEXT:    [[TMP0:%.*]] = tail call contract noundef float @llvm.sqrt.f32(float [[X]]), !fpmath [[META21]]
 // NCRDIV-NEXT:    ret float [[TMP0]]
 //
 // AMDGCNSPIRV-LABEL: define spir_func noundef float @test_sqrtf(
@@ -7943,7 +7943,7 @@ extern "C" __device__ double test_y1(double x) {
 // DEFAULT-NEXT:    [[SUB_I]] = fsub contract float [[MUL8_I]], [[__X0_0_I2]]
 // DEFAULT-NEXT:    [[INC_I]] = add nuw nsw i32 [[__I_0_I4]], 1
 // DEFAULT-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i32 [[INC_I]], [[X]]
-// DEFAULT-NEXT:    br i1 [[EXITCOND_NOT]], label %[[_ZL3YNFIF_EXIT]], label %[[FOR_BODY_I]], !llvm.loop [[LOOP24:![0-9]+]]
+// DEFAULT-NEXT:    br i1 [[EXITCOND_NOT]], label %[[_ZL3YNFIF_EXIT]], label %[[FOR_BODY_I]], !llvm.loop [[LOOP23:![0-9]+]]
 // DEFAULT:       [[_ZL3YNFIF_EXIT]]:
 // DEFAULT-NEXT:    [[RETVAL_0_I:%.*]] = phi float [ [[CALL_I20_I]], %[[IF_THEN_I]] ], [ [[CALL_I22_I]], %[[IF_THEN2_I]] ], [ [[CALL_I21_I]], %[[IF_END4_I]] ], [ [[SUB_I]], %[[FOR_BODY_I]] ]
 // DEFAULT-NEXT:    ret float [[RETVAL_0_I]]
@@ -7977,7 +7977,7 @@ extern "C" __device__ double test_y1(double x) {
 // FINITEONLY-NEXT:    [[SUB_I]] = fsub nnan ninf contract float [[MUL8_I]], [[__X0_0_I2]]
 // FINITEONLY-NEXT:    [[INC_I]] = add nuw nsw i32 [[__I_0_I4]], 1
 // FINITEONLY-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i32 [[INC_I]], [[X]]
-// FINITEONLY-NEXT:    br i1 [[EXITCOND_NOT]], label %[[_ZL3YNFIF_EXIT]], label %[[FOR_BODY_I]], !llvm.loop [[LOOP24:![0-9]+]]
+// FINITEONLY-NEXT:    br i1 [[EXITCOND_NOT]], label %[[_ZL3YNFIF_EXIT]], label %[[FOR_BODY_I]], !llvm.loop [[LOOP23:![0-9]+]]
 // FINITEONLY:       [[_ZL3YNFIF_EXIT]]:
 // FINITEONLY-NEXT:    [[RETVAL_0_I:%.*]] = phi float [ [[CALL_I20_I]], %[[IF_THEN_I]] ], [ [[CALL_I22_I]], %[[IF_THEN2_I]] ], [ [[CALL_I21_I]], %[[IF_END4_I]] ], [ [[SUB_I]], %[[FOR_BODY_I]] ]
 // FINITEONLY-NEXT:    ret float [[RETVAL_0_I]]
@@ -8011,7 +8011,7 @@ extern "C" __device__ double test_y1(double x) {
 // APPROX-NEXT:    [[SUB_I]] = fsub contract float [[MUL8_I]], [[__X0_0_I2]]
 // APPROX-NEXT:    [[INC_I]] = add nuw nsw i32 [[__I_0_I4]], 1
 // APPROX-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i32 [[INC_I]], [[X]]
-// APPROX-NEXT:    br i1 [[EXITCOND_NOT]], label %[[_ZL3YNFIF_EXIT]], label %[[FOR_BODY_I]], !llvm.loop [[LOOP24:![0-9]+]]
+// APPROX-NEXT:    br i1 [[EXITCOND_NOT]], label %[[_ZL3YNFIF_EXIT]], label %[[FOR_BODY_I]], !llvm.loop [[LOOP23:![0-9]+]]
 // APPROX:       [[_ZL3YNFIF_EXIT]]:
 // APPROX-NEXT:    [[RETVAL_0_I:%.*]] = phi float [ [[CALL_I20_I]], %[[IF_THEN_I]] ], [ [[CALL_I22_I]], %[[IF_THEN2_I]] ], [ [[CALL_I21_I]], %[[IF_END4_I]] ], [ [[SUB_I]], %[[FOR_BODY_I]] ]
 // APPROX-NEXT:    ret float [[RETVAL_0_I]]
@@ -8040,12 +8040,12 @@ extern "C" __device__ double test_y1(double x) {
 // NCRDIV-NEXT:    [[__X0_0_I2:%.*]] = phi float [ [[__X1_0_I3]], %[[FOR_BODY_I]] ], [ [[CALL_I_I]], %[[IF_END4_I]] ]
 // NCRDIV-NEXT:    [[MUL_I:%.*]] = shl nuw nsw i32 [[__I_0_I4]], 1
 // NCRDIV-NEXT:    [[CONV_I:%.*]] = uitofp nneg i32 [[MUL_I]] to float
-// NCRDIV-NEXT:    [[DIV_I:%.*]] = fdiv contract float [[CONV_I]], [[Y]], !fpmath [[META14]]
+// NCRDIV-NEXT:    [[DIV_I:%.*]] = fdiv contract float [[CONV_I]], [[Y]], !fpmath [[META13]]
 // NCRDIV-NEXT:    [[MUL8_I:%.*]] = fmul contract float [[__X1_0_I3]], [[DIV_I]]
 // NCRDIV-NEXT:    [[SUB_I]] = fsub contract float [[MUL8_I]], [[__X0_0_I2]]
 // NCRDIV-NEXT:    [[INC_I]] = add nuw nsw i32 [[__I_0_I4]], 1
 // NCRDIV-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i32 [[INC_I]], [[X]]
-// NCRDIV-NEXT:    br i1 [[EXITCOND_NOT]], label %[[_ZL3YNFIF_EXIT]], label %[[FOR_BODY_I]], !llvm.loop [[LOOP26:![0-9]+]]
+// NCRDIV-NEXT:    br i1 [[EXITCOND_NOT]], label %[[_ZL3YNFIF_EXIT]], label %[[FOR_BODY_I]], !llvm.loop [[LOOP25:![0-9]+]]
 // NCRDIV:       [[_ZL3YNFIF_EXIT]]:
 // NCRDIV-NEXT:    [[RETVAL_0_I:%.*]] = phi float [ [[CALL_I20_I]], %[[IF_THEN_I]] ], [ [[CALL_I22_I]], %[[IF_THEN2_I]] ], [ [[CALL_I21_I]], %[[IF_END4_I]] ], [ [[SUB_I]], %[[FOR_BODY_I]] ]
 // NCRDIV-NEXT:    ret float [[RETVAL_0_I]]
@@ -8079,7 +8079,7 @@ extern "C" __device__ double test_y1(double x) {
 // AMDGCNSPIRV-NEXT:    [[SUB_I]] = fsub contract float [[MUL8_I]], [[__X0_0_I2]]
 // AMDGCNSPIRV-NEXT:    [[INC_I]] = add nuw nsw i32 [[__I_0_I4]], 1
 // AMDGCNSPIRV-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i32 [[INC_I]], [[X]]
-// AMDGCNSPIRV-NEXT:    br i1 [[EXITCOND_NOT]], label %[[_ZL3YNFIF_EXIT]], label %[[FOR_BODY_I]], !llvm.loop [[LOOP25:![0-9]+]]
+// AMDGCNSPIRV-NEXT:    br i1 [[EXITCOND_NOT]], label %[[_ZL3YNFIF_EXIT]], label %[[FOR_BODY_I]], !llvm.loop [[LOOP24:![0-9]+]]
 // AMDGCNSPIRV:       [[_ZL3YNFIF_EXIT]]:
 // AMDGCNSPIRV-NEXT:    [[RETVAL_0_I:%.*]] = phi float [ [[CALL_I20_I]], %[[IF_THEN_I]] ], [ [[CALL_I22_I]], %[[IF_THEN2_I]] ], [ [[CALL_I21_I]], %[[IF_END4_I]] ], [ [[SUB_I]], %[[FOR_BODY_I]] ]
 // AMDGCNSPIRV-NEXT:    ret float [[RETVAL_0_I]]
@@ -8117,7 +8117,7 @@ extern "C" __device__ float test_ynf(int x, float y) {
 // DEFAULT-NEXT:    [[SUB_I]] = fsub contract double [[MUL8_I]], [[__X0_0_I2]]
 // DEFAULT-NEXT:    [[INC_I]] = add nuw nsw i32 [[__I_0_I4]], 1
 // DEFAULT-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i32 [[INC_I]], [[X]]
-// DEFAULT-NEXT:    br i1 [[EXITCOND_NOT]], label %[[_ZL2YNID_EXIT]], label %[[FOR_BODY_I]], !llvm.loop [[LOOP25:![0-9]+]]
+// DEFAULT-NEXT:    br i1 [[EXITCOND_NOT]], label %[[_ZL2YNID_EXIT]], label %[[FOR_BODY_I]], !llvm.loop [[LOOP24:![0-9]+]]
 // DEFAULT:       [[_ZL2YNID_EXIT]]:
 // DEFAULT-NEXT:    [[RETVAL_0_I:%.*]] = phi double [ [[CALL_I20_I]], %[[IF_THEN_I]] ], [ [[CALL_I22_I]], %[[IF_THEN2_I]] ], [ [[CALL_I21_I]], %[[IF_END4_I]] ], [ [[SUB_I]], %[[FOR_BODY_I]] ]
 // DEFAULT-NEXT:    ret double [[RETVAL_0_I]]
@@ -8151,7 +8151,7 @@ extern "C" __device__ float test_ynf(int x, float y) {
 // FINITEONLY-NEXT:    [[SUB_I]] = fsub nnan ninf contract double [[MUL8_I]], [[__X0_0_I2]]
 // FINITEONLY-NEXT:    [[INC_I]] = add nuw nsw i32 [[__I_0_I4]], 1
 // FINITEONLY-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i32 [[INC_I]], [[X]]
-// FINITEONLY-NEXT:    br i1 [[EXITCOND_NOT]], label %[[_ZL2YNID_EXIT]], label %[[FOR_BODY_I]], !llvm.loop [[LOOP25:![0-9]+]]
+// FINITEONLY-NEXT:    br i1 [[EXITCOND_NOT]], label %[[_ZL2YNID_EXIT]], label %[[FOR_BODY_I]], !llvm.loop [[LOOP24:![0-9]+]]
 // FINITEONLY:       [[_ZL2YNID_EXIT]]:
 // FINITEONLY-NEXT:    [[RETVAL_0_I:%.*]] = phi double [ [[CALL_I20_I]], %[[IF_THEN_I]] ], [ [[CALL_I22_I]], %[[IF_THEN2_I]] ], [ [[CALL_I21_I]], %[[IF_END4_I]] ], [ [[SUB_I]], %[[FOR_BODY_I]] ]
 // FINITEONLY-NEXT:    ret double [[RETVAL_0_I]]
@@ -8185,7 +8185,7 @@ extern "C" __device__ float test_ynf(int x, float y) {
 // APPROX-NEXT:    [[SUB_I]] = fsub contract double [[MUL8_I]], [[__X0_0_I2]]
 // APPROX-NEXT:    [[INC_I]] = add nuw nsw i32 [[__I_0_I4]], 1
 // APPROX-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i32 [[INC_I]], [[X]]
-// APPROX-NEXT:    br i1 [[EXITCOND_NOT]], label %[[_ZL2YNID_EXIT]], label %[[FOR_BODY_I]], !llvm.loop [[LOOP25:![0-9]+]]
+// APPROX-NEXT:    br i1 [[EXITCOND_NOT]], label %[[_ZL2YNID_EXIT]], label %[[FOR_BODY_I]], !llvm.loop [[LOOP24:![0-9]+]]
 // APPROX:       [[_ZL2YNID_EXIT]]:
 // APPROX-NEXT:    [[RETVAL_0_I:%.*]] = phi double [ [[CALL_I20_I]], %[[IF_THEN_I]] ], [ [[CALL_I22_I]], %[[IF_THEN2_I]] ], [ [[CALL_I21_I]], %[[IF_END4_I]] ], [ [[SUB_I]], %[[FOR_BODY_I]] ]
 // APPROX-NEXT:    ret double [[RETVAL_0_I]]
@@ -8219,7 +8219,7 @@ extern "C" __device__ float test_ynf(int x, float y) {
 // NCRDIV-NEXT:    [[SUB_I]] = fsub contract double [[MUL8_I]], [[__X0_0_I2]]
 // NCRDIV-NEXT:    [[INC_I]] = add nuw nsw i32 [[__I_0_I4]], 1
 // NCRDIV-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i32 [[INC_I]], [[X]]
-// NCRDIV-NEXT:    br i1 [[EXITCOND_NOT]], label %[[_ZL2YNID_EXIT]], label %[[FOR_BODY_I]], !llvm.loop [[LOOP27:![0-9]+]]
+// NCRDIV-NEXT:    br i1 [[EXITCOND_NOT]], label %[[_ZL2YNID_EXIT]], label %[[FOR_BODY_I]], !llvm.loop [[LOOP26:![0-9]+]]
 // NCRDIV:       [[_ZL2YNID_EXIT]]:
 // NCRDIV-NEXT:    [[RETVAL_0_I:%.*]] = phi double [ [[CALL_I20_I]], %[[IF_THEN_I]] ], [ [[CALL_I22_I]], %[[IF_THEN2_I]] ], [ [[CALL_I21_I]], %[[IF_END4_I]] ], [ [[SUB_I]], %[[FOR_BODY_I]] ]
 // NCRDIV-NEXT:    ret double [[RETVAL_0_I]]
@@ -8253,7 +8253,7 @@ extern "C" __device__ float test_ynf(int x, float y) {
 // AMDGCNSPIRV-NEXT:    [[SUB_I]] = fsub contract double [[MUL8_I]], [[__X0_0_I2]]
 // AMDGCNSPIRV-NEXT:    [[INC_I]] = add nuw nsw i32 [[__I_0_I4]], 1
 // AMDGCNSPIRV-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i32 [[INC_I]], [[X]]
-// AMDGCNSPIRV-NEXT:    br i1 [[EXITCOND_NOT]], label %[[_ZL2YNID_EXIT]], label %[[FOR_BODY_I]], !llvm.loop [[LOOP26:![0-9]+]]
+// AMDGCNSPIRV-NEXT:    br i1 [[EXITCOND_NOT]], label %[[_ZL2YNID_EXIT]], label %[[FOR_BODY_I]], !llvm.loop [[LOOP25:![0-9]+]]
 // AMDGCNSPIRV:       [[_ZL2YNID_EXIT]]:
 // AMDGCNSPIRV-NEXT:    [[RETVAL_0_I:%.*]] = phi double [ [[CALL_I20_I]], %[[IF_THEN_I]] ], [ [[CALL_I22_I]], %[[IF_THEN2_I]] ], [ [[CALL_I21_I]], %[[IF_END4_I]] ], [ [[SUB_I]], %[[FOR_BODY_I]] ]
 // AMDGCNSPIRV-NEXT:    ret double [[RETVAL_0_I]]
@@ -8429,7 +8429,7 @@ extern "C" __device__ float test___fadd_rn(float x, float y) {
 // NCRDIV-LABEL: define dso_local noundef float @test___fdividef(
 // NCRDIV-SAME: float noundef [[X:%.*]], float noundef [[Y:%.*]]) local_unnamed_addr #[[ATTR3]] {
 // NCRDIV-NEXT:  [[ENTRY:.*:]]
-// NCRDIV-NEXT:    [[DIV_I:%.*]] = fdiv contract float [[X]], [[Y]], !fpmath [[META14]]
+// NCRDIV-NEXT:    [[DIV_I:%.*]] = fdiv contract float [[X]], [[Y]], !fpmath [[META13]]
 // NCRDIV-NEXT:    ret float [[DIV_I]]
 //
 // AMDGCNSPIRV-LABEL: define spir_func noundef float @test___fdividef(
@@ -8531,7 +8531,7 @@ extern "C" __device__ float test___fmul_rn(float x, float y) {
 // NCRDIV-LABEL: define dso_local noundef float @test___frcp_rn(
 // NCRDIV-SAME: float noundef [[X:%.*]]) local_unnamed_addr #[[ATTR3]] {
 // NCRDIV-NEXT:  [[ENTRY:.*:]]
-// NCRDIV-NEXT:    [[DIV_I:%.*]] = fdiv contract float 1.000000e+00, [[X]], !fpmath [[META14]]
+// NCRDIV-NEXT:    [[DIV_I:%.*]] = fdiv contract float 1.000000e+00, [[X]], !fpmath [[META13]]
 // NCRDIV-NEXT:    ret float [[DIV_I]]
 //
 // AMDGCNSPIRV-LABEL: define spir_func noundef float @test___frcp_rn(
@@ -8835,45 +8835,45 @@ extern "C" __device__ float test___saturatef(float x) {
 // DEFAULT-SAME: float noundef [[X:%.*]], ptr noundef writeonly captures(none) initializes((0, 4)) [[Y:%.*]], ptr noundef writeonly captures(none) initializes((0, 4)) [[Z:%.*]]) local_unnamed_addr #[[ATTR6]] {
 // DEFAULT-NEXT:  [[ENTRY:.*:]]
 // DEFAULT-NEXT:    [[CALL_I:%.*]] = tail call contract float @__ocml_native_sin_f32(float noundef [[X]]) #[[ATTR15]]
-// DEFAULT-NEXT:    store float [[CALL_I]], ptr [[Y]], align 4, !tbaa [[FLOAT_TBAA16]]
+// DEFAULT-NEXT:    store float [[CALL_I]], ptr [[Y]], align 4, !tbaa [[FLOAT_TBAA15]]
 // DEFAULT-NEXT:    [[CALL1_I:%.*]] = tail call contract float @__ocml_native_cos_f32(float noundef [[X]]) #[[ATTR15]]
-// DEFAULT-NEXT:    store float [[CALL1_I]], ptr [[Z]], align 4, !tbaa [[FLOAT_TBAA16]]
+// DEFAULT-NEXT:    store float [[CALL1_I]], ptr [[Z]], align 4, !tbaa [[FLOAT_TBAA15]]
 // DEFAULT-NEXT:    ret void
 //
 // FINITEONLY-LABEL: define dso_local void @test___sincosf(
 // FINITEONLY-SAME: float noundef nofpclass(nan inf) [[X:%.*]], ptr noundef writeonly captures(none) initializes((0, 4)) [[Y:%.*]], ptr noundef writeonly captures(none) initializes((0, 4)) [[Z:%.*]]) local_unnamed_addr #[[ATTR6]] {
 // FINITEONLY-NEXT:  [[ENTRY:.*:]]
 // FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) float @__ocml_native_sin_f32(float noundef nofpclass(nan inf) [[X]]) #[[ATTR15]]
-// FINITEONLY-NEXT:    store float [[CALL_I]], ptr [[Y]], align 4, !tbaa [[FLOAT_TBAA16]]
+// FINITEONLY-NEXT:    store float [[CALL_I]], ptr [[Y]], align 4, !tbaa [[FLOAT_TBAA15]]
 // FINITEONLY-NEXT:    [[CALL1_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) float @__ocml_native_cos_f32(float noundef nofpclass(nan inf) [[X]]) #[[ATTR15]]
-// FINITEONLY-NEXT:    store float [[CALL1_I]], ptr [[Z]], align 4, !tbaa [[FLOAT_TBAA16]]
+// FINITEONLY-NEXT:    store float [[CALL1_I]], ptr [[Z]], align 4, !tbaa [[FLOAT_TBAA15]]
 // FINITEONLY-NEXT:    ret void
 //
 // APPROX-LABEL: define dso_local void @test___sincosf(
 // APPROX-SAME: float noundef [[X:%.*]], ptr noundef writeonly captures(none) initializes((0, 4)) [[Y:%.*]], ptr noundef writeonly captures(none) initializes((0, 4)) [[Z:%.*]]) local_unnamed_addr #[[ATTR6]] {
 // APPROX-NEXT:  [[ENTRY:.*:]]
 // APPROX-NEXT:    [[CALL_I:%.*]] = tail call contract float @__ocml_native_sin_f32(float noundef [[X]]) #[[ATTR15]]
-// APPROX-NEXT:    store float [[CALL_I]], ptr [[Y]], align 4, !tbaa [[FLOAT_TBAA16]]
+// APPROX-NEXT:    store float [[CALL_I]], ptr [[Y]], align 4, !tbaa [[FLOAT_TBAA15]]
 // APPROX-NEXT:    [[CALL1_I:%.*]] = tail call contract float @__ocml_native_cos_f32(float noundef [[X]]) #[[ATTR15]]
-// APPROX-NEXT:    store float [[CALL1_I]], ptr [[Z]], align 4, !tbaa [[FLOAT_TBAA16]]
+// APPROX-NEXT:    store float [[CALL1_I]], ptr [[Z]], align 4, !tbaa [[FLOAT_TBAA15]]
 // APPROX-NEXT:    ret void
 //
 // NCRDIV-LABEL: define dso_local void @test___sincosf(
 // NCRDIV-SAME: float noundef [[X:%.*]], ptr noundef writeonly captures(none) initializes((0, 4)) [[Y:%.*]], ptr noundef writeonly captures(none) initializes((0, 4)) [[Z:%.*]]) local_unnamed_addr #[[ATTR6]] {
 // NCRDIV-NEXT:  [[ENTRY:.*:]]
 // NCRDIV-NEXT:    [[CALL_I:%.*]] = tail call contract float @__ocml_native_sin_f32(float noundef [[X]]) #[[ATTR15]]
-// NCRDIV-NEXT:    store float [[CALL_I]], ptr [[Y]], align 4, !tbaa [[FLOAT_TBAA17]]
+// NCRDIV-NEXT:    store float [[CALL_I]], ptr [[Y]], align 4, !tbaa [[FLOAT_TBAA16]]
 // NCRDIV-NEXT:    [[CALL1_I:%.*]] = tail call contract float @__ocml_native_cos_f32(float noundef [[X]]) #[[ATTR15]]
-// NCRDIV-NEXT:    store float [[CALL1_I]], ptr [[Z]], align 4, !tbaa [[FLOAT_TBAA17]]
+// NCRDIV-NEXT:    store float [[CALL1_I]], ptr [[Z]], align 4, !tbaa [[FLOAT_TBAA16]]
 // NCRDIV-NEXT:    ret void
 //
 // AMDGCNSPIRV-LABEL: define spir_func void @test___sincosf(
 // AMDGCNSPIRV-SAME: float noundef [[X:%.*]], ptr addrspace(4) noundef writeonly captures(none) initializes((0, 4)) [[Y:%.*]], ptr addrspace(4) noundef writeonly captures(none) initializes((0, 4)) [[Z:%.*]]) local_unnamed_addr addrspace(4) #[[ATTR6]] {
 // AMDGCNSPIRV-NEXT:  [[ENTRY:.*:]]
 // AMDGCNSPIRV-NEXT:    [[CALL_I:%.*]] = tail call contract spir_func addrspace(4) float @__ocml_native_sin_f32(float noundef [[X]]) #[[ATTR15]]
-// AMDGCNSPIRV-NEXT:    store float [[CALL_I]], ptr addrspace(4) [[Y]], align 4, !tbaa [[FLOAT_TBAA17]]
+// AMDGCNSPIRV-NEXT:    store float [[CALL_I]], ptr addrspace(4) [[Y]], align 4, !tbaa [[FLOAT_TBAA16]]
 // AMDGCNSPIRV-NEXT:    [[CALL1_I:%.*]] = tail call contract spir_func addrspace(4) float @__ocml_native_cos_f32(float noundef [[X]]) #[[ATTR15]]
-// AMDGCNSPIRV-NEXT:    store float [[CALL1_I]], ptr addrspace(4) [[Z]], align 4, !tbaa [[FLOAT_TBAA17]]
+// AMDGCNSPIRV-NEXT:    store float [[CALL1_I]], ptr addrspace(4) [[Z]], align 4, !tbaa [[FLOAT_TBAA16]]
 // AMDGCNSPIRV-NEXT:    ret void
 //
 extern "C" __device__ void test___sincosf(float x, float *y, float *z) {
@@ -9334,120 +9334,120 @@ extern "C" __device__ int test_int_max(int x, int y) {
   return max(x, y);
 }
 //.
-// DEFAULT: [[INT_TBAA4]] = !{[[META5:![0-9]+]], [[META5]], i64 0}
-// DEFAULT: [[META5]] = !{!"int", [[META6:![0-9]+]], i64 0}
-// DEFAULT: [[META6]] = !{!"omnipotent char", [[META7:![0-9]+]], i64 0}
-// DEFAULT: [[META7]] = !{!"Simple C++ TBAA"}
-// DEFAULT: [[CHAR_TBAA8]] = !{[[META6]], [[META6]], i64 0}
-// DEFAULT: [[LOOP9]] = distinct !{[[LOOP9]], [[META10:![0-9]+]], [[META11:![0-9]+]]}
-// DEFAULT: [[META10]] = !{!"llvm.loop.mustprogress"}
-// DEFAULT: [[META11]] = !{!"llvm.loop.unroll.disable"}
-// DEFAULT: [[LOOP12]] = distinct !{[[LOOP12]], [[META10]], [[META11]]}
-// DEFAULT: [[LOOP13]] = distinct !{[[LOOP13]], [[META10]], [[META11]]}
-// DEFAULT: [[LOOP14]] = distinct !{[[LOOP14]], [[META10]], [[META11]]}
-// DEFAULT: [[LOOP15]] = distinct !{[[LOOP15]], [[META10]], [[META11]]}
-// DEFAULT: [[FLOAT_TBAA16]] = !{[[META17:![0-9]+]], [[META17]], i64 0}
-// DEFAULT: [[META17]] = !{!"float", [[META6]], i64 0}
-// DEFAULT: [[DOUBLE_TBAA18]] = !{[[META19:![0-9]+]], [[META19]], i64 0}
-// DEFAULT: [[META19]] = !{!"double", [[META6]], i64 0}
-// DEFAULT: [[LOOP20]] = distinct !{[[LOOP20]], [[META10]], [[META11]]}
-// DEFAULT: [[LOOP21]] = distinct !{[[LOOP21]], [[META10]], [[META11]]}
-// DEFAULT: [[LOOP22]] = distinct !{[[LOOP22]], [[META10]], [[META11]]}
-// DEFAULT: [[LOOP23]] = distinct !{[[LOOP23]], [[META10]], [[META11]]}
-// DEFAULT: [[LOOP24]] = distinct !{[[LOOP24]], [[META10]], [[META11]]}
-// DEFAULT: [[LOOP25]] = distinct !{[[LOOP25]], [[META10]], [[META11]]}
+// DEFAULT: [[INT_TBAA3]] = !{[[META4:![0-9]+]], [[META4]], i64 0}
+// DEFAULT: [[META4]] = !{!"int", [[META5:![0-9]+]], i64 0}
+// DEFAULT: [[META5]] = !{!"omnipotent char", [[META6:![0-9]+]], i64 0}
+// DEFAULT: [[META6]] = !{!"Simple C++ TBAA"}
+// DEFAULT: [[CHAR_TBAA7]] = !{[[META5]], [[META5]], i64 0}
+// DEFAULT: [[LOOP8]] = distinct !{[[LOOP8]], [[META9:![0-9]+]], [[META10:![0-9]+]]}
+// DEFAULT: [[META9]] = !{!"llvm.loop.mustprogress"}
+// DEFAULT: [[META10]] = !{!"llvm.loop.unroll.disable"}
+// DEFAULT: [[LOOP11]] = distinct !{[[LOOP11]], [[META9]], [[META10]]}
+// DEFAULT: [[LOOP12]] = distinct !{[[LOOP12]], [[META9]], [[META10]]}
+// DEFAULT: [[LOOP13]] = distinct !{[[LOOP13]], [[META9]], [[META10]]}
+// DEFAULT: [[LOOP14]] = distinct !{[[LOOP14]], [[META9]], [[META10]]}
+// DEFAULT: [[FLOAT_TBAA15]] = !{[[META16:![0-9]+]], [[META16]], i64 0}
+// DEFAULT: [[META16]] = !{!"float", [[META5]], i64 0}
+// DEFAULT: [[DOUBLE_TBAA17]] = !{[[META18:![0-9]+]], [[META18]], i64 0}
+// DEFAULT: [[META18]] = !{!"double", [[META5]], i64 0}
+// DEFAULT: [[LOOP19]] = distinct !{[[LOOP19]], [[META9]], [[META10]]}
+// DEFAULT: [[LOOP20]] = distinct !{[[LOOP20]], [[META9]], [[META10]]}
+// DEFAULT: [[LOOP21]] = distinct !{[[LOOP21]], [[META9]], [[META10]]}
+// DEFAULT: [[LOOP22]] = distinct !{[[LOOP22]], [[META9]], [[META10]]}
+// DEFAULT: [[LOOP23]] = distinct !{[[LOOP23]], [[META9]], [[META10]]}
+// DEFAULT: [[LOOP24]] = distinct !{[[LOOP24]], [[META9]], [[META10]]}
 //.
-// FINITEONLY: [[INT_TBAA4]] = !{[[META5:![0-9]+]], [[META5]], i64 0}
-// FINITEONLY: [[META5]] = !{!"int", [[META6:![0-9]+]], i64 0}
-// FINITEONLY: [[META6]] = !{!"omnipotent char", [[META7:![0-9]+]], i64 0}
-// FINITEONLY: [[META7]] = !{!"Simple C++ TBAA"}
-// FINITEONLY: [[CHAR_TBAA8]] = !{[[META6]], [[META6]], i64 0}
-// FINITEONLY: [[LOOP9]] = distinct !{[[LOOP9]], [[META10:![0-9]+]], [[META11:![0-9]+]]}
-// FINITEONLY: [[META10]] = !{!"llvm.loop.mustprogress"}
-// FINITEONLY: [[META11]] = !{!"llvm.loop.unroll.disable"}
-// FINITEONLY: [[LOOP12]] = distinct !{[[LOOP12]], [[META10]], [[META11]]}
-// FINITEONLY: [[LOOP13]] = distinct !{[[LOOP13]], [[META10]], [[META11]]}
-// FINITEONLY: [[LOOP14]] = distinct !{[[LOOP14]], [[META10]], [[META11]]}
-// FINITEONLY: [[LOOP15]] = distinct !{[[LOOP15]], [[META10]], [[META11]]}
-// FINITEONLY: [[FLOAT_TBAA16]] = !{[[META17:![0-9]+]], [[META17]], i64 0}
-// FINITEONLY: [[META17]] = !{!"float", [[META6]], i64 0}
-// FINITEONLY: [[DOUBLE_TBAA18]] = !{[[META19:![0-9]+]], [[META19]], i64 0}
-// FINITEONLY: [[META19]] = !{!"double", [[META6]], i64 0}
-// FINITEONLY: [[LOOP20]] = distinct !{[[LOOP20]], [[META10]], [[META11]]}
-// FINITEONLY: [[LOOP21]] = distinct !{[[LOOP21]], [[META10]], [[META11]]}
-// FINITEONLY: [[LOOP22]] = distinct !{[[LOOP22]], [[META10]], [[META11]]}
-// FINITEONLY: [[LOOP23]] = distinct !{[[LOOP23]], [[META10]], [[META11]]}
-// FINITEONLY: [[LOOP24]] = distinct !{[[LOOP24]], [[META10]], [[META11]]}
-// FINITEONLY: [[LOOP25]] = distinct !{[[LOOP25]], [[META10]], [[META11]]}
+// FINITEONLY: [[INT_TBAA3]] = !{[[META4:![0-9]+]], [[META4]], i64 0}
+// FINITEONLY: [[META4]] = !{!"int", [[META5:![0-9]+]], i64 0}
+// FINITEONLY: [[META5]] = !{!"omnipotent char", [[META6:![0-9]+]], i64 0}
+// FINITEONLY: [[META6]] = !{!"Simple C++ TBAA"}
+// FINITEONLY: [[CHAR_TBAA7]] = !{[[META5]], [[META5]], i64 0}
+// FINITEONLY: [[LOOP8]] = distinct !{[[LOOP8]], [[META9:![0-9]+]], [[META10:![0-9]+]]}
+// FINITEONLY: [[META9]] = !{!"llvm.loop.mustprogress"}
+// FINITEONLY: [[META10]] = !{!"llvm.loop.unroll.disable"}
+// FINITEONLY: [[LOOP11]] = distinct !{[[LOOP11]], [[META9]], [[META10]]}
+// FINITEONLY: [[LOOP12]] = distinct !{[[LOOP12]], [[META9]], [[META10]]}
+// FINITEONLY: [[LOOP13]] = distinct !{[[LOOP13]], [[META9]], [[META10]]}
+// FINITEONLY: [[LOOP14]] = distinct !{[[LOOP14]], [[META9]], [[META10]]}
+// FINITEONLY: [[FLOAT_TBAA15]] = !{[[META16:![0-9]+]], [[META16]], i64 0}
+// FINITEONLY: [[META16]] = !{!"float", [[META5]], i64 0}
+// FINITEONLY: [[DOUBLE_TBAA17]] = !{[[META18:![0-9]+]], [[META18]], i64 0}
+// FINITEONLY: [[META18]] = !{!"double", [[META5]], i64 0}
+// FINITEONLY: [[LOOP19]] = distinct !{[[LOOP19]], [[META9]], [[META10]]}
+// FINITEONLY: [[LOOP20]] = distinct !{[[LOOP20]], [[META9]], [[META10]]}
+// FINITEONLY: [[LOOP21]] = distinct !{[[LOOP21]], [[META9]], [[META10]]}
+// FINITEONLY: [[LOOP22]] = distinct !{[[LOOP22]], [[META9]], [[META10]]}
+// FINITEONLY: [[LOOP23]] = distinct !{[[LOOP23]], [[META9]], [[META10]]}
+// FINITEONLY: [[LOOP24]] = distinct !{[[LOOP24]], [[META9]], [[META10]]}
 //.
-// APPROX: [[INT_TBAA4]] = !{[[META5:![0-9]+]], [[META5]], i64 0}
-// APPROX: [[META5]] = !{!"int", [[META6:![0-9]+]], i64 0}
-// APPROX: [[META6]] = !{!"omnipotent char", [[META7:![0-9]+]], i64 0}
-// APPROX: [[META7]] = !{!"Simple C++ TBAA"}
-// APPROX: [[CHAR_TBAA8]] = !{[[META6]], [[META6]], i64 0}
-// APPROX: [[LOOP9]] = distinct !{[[LOOP9]], [[META10:![0-9]+]], [[META11:![0-9]+]]}
-// APPROX: [[META10]] = !{!"llvm.loop.mustprogress"}
-// APPROX: [[META11]] = !{!"llvm.loop.unroll.disable"}
-// APPROX: [[LOOP12]] = distinct !{[[LOOP12]], [[META10]], [[META11]]}
-// APPROX: [[LOOP13]] = distinct !{[[LOOP13]], [[META10]], [[META11]]}
-// APPROX: [[LOOP14]] = distinct !{[[LOOP14]], [[META10]], [[META11]]}
-// APPROX: [[LOOP15]] = distinct !{[[LOOP15]], [[META10]], [[META11]]}
-// APPROX: [[FLOAT_TBAA16]] = !{[[META17:![0-9]+]], [[META17]], i64 0}
-// APPROX: [[META17]] = !{!"float", [[META6]], i64 0}
-// APPROX: [[DOUBLE_TBAA18]] = !{[[META19:![0-9]+]], [[META19]], i64 0}
-// APPROX: [[META19]] = !{!"double", [[META6]], i64 0}
-// APPROX: [[LOOP20]] = distinct !{[[LOOP20]], [[META10]], [[META11]]}
-// APPROX: [[LOOP21]] = distinct !{[[LOOP21]], [[META10]], [[META11]]}
-// APPROX: [[LOOP22]] = distinct !{[[LOOP22]], [[META10]], [[META11]]}
-// APPROX: [[LOOP23]] = distinct !{[[LOOP23]], [[META10]], [[META11]]}
-// APPROX: [[LOOP24]] = distinct !{[[LOOP24]], [[META10]], [[META11]]}
-// APPROX: [[LOOP25]] = distinct !{[[LOOP25]], [[META10]], [[META11]]}
+// APPROX: [[INT_TBAA3]] = !{[[META4:![0-9]+]], [[META4]], i64 0}
+// APPROX: [[META4]] = !{!"int", [[META5:![0-9]+]], i64 0}
+// APPROX: [[META5]] = !{!"omnipotent char", [[META6:![0-9]+]], i64 0}
+// APPROX: [[META6]] = !{!"Simple C++ TBAA"}
+// APPROX: [[CHAR_TBAA7]] = !{[[META5]], [[META5]], i64 0}
+// APPROX: [[LOOP8]] = distinct !{[[LOOP8]], [[META9:![0-9]+]], [[META10:![0-9]+]]}
+// APPROX: [[META9]] = !{!"llvm.loop.mustprogress"}
+// APPROX: [[META10]] = !{!"llvm.loop.unroll.disable"}
+// APPROX: [[LOOP11]] = distinct !{[[LOOP11]], [[META9]], [[META10]]}
+// APPROX: [[LOOP12]] = distinct !{[[LOOP12]], [[META9]], [[META10]]}
+// APPROX: [[LOOP13]] = distinct !{[[LOOP13]], [[META9]], [[META10]]}
+// APPROX: [[LOOP14]] = distinct !{[[LOOP14]], [[META9]], [[META10]]}
+// APPROX: [[FLOAT_TBAA15]] = !{[[META16:![0-9]+]], [[META16]], i64 0}
+// APPROX: [[META16]] = !{!"float", [[META5]], i64 0}
+// APPROX: [[DOUBLE_TBAA17]] = !{[[META18:![0-9]+]], [[META18]], i64 0}
+// APPROX: [[META18]] = !{!"double", [[META5]], i64 0}
+// APPROX: [[LOOP19]] = distinct !{[[LOOP19]], [[META9]], [[META10]]}
+// APPROX: [[LOOP20]] = distinct !{[[LOOP20]], [[META9]], [[META10]]}
+// APPROX: [[LOOP21]] = distinct !{[[LOOP21]], [[META9]], [[META10]]}
+// APPROX: [[LOOP22]] = distinct !{[[LOOP22]], [[META9]], [[META10]]}
+// APPROX: [[LOOP23]] = distinct !{[[LOOP23]], [[META9]], [[META10]]}
+// APPROX: [[LOOP24]] = distinct !{[[LOOP24]], [[META9]], [[META10]]}
 //.
-// NCRDIV: [[INT_TBAA4]] = !{[[META5:![0-9]+]], [[META5]], i64 0}
-// NCRDIV: [[META5]] = !{!"int", [[META6:![0-9]+]], i64 0}
-// NCRDIV: [[META6]] = !{!"omnipotent char", [[META7:![0-9]+]], i64 0}
-// NCRDIV: [[META7]] = !{!"Simple C++ TBAA"}
-// NCRDIV: [[CHAR_TBAA8]] = !{[[META6]], [[META6]], i64 0}
-// NCRDIV: [[LOOP9]] = distinct !{[[LOOP9]], [[META10:![0-9]+]], [[META11:![0-9]+]]}
-// NCRDIV: [[META10]] = !{!"llvm.loop.mustprogress"}
-// NCRDIV: [[META11]] = !{!"llvm.loop.unroll.disable"}
-// NCRDIV: [[LOOP12]] = distinct !{[[LOOP12]], [[META10]], [[META11]]}
-// NCRDIV: [[LOOP13]] = distinct !{[[LOOP13]], [[META10]], [[META11]]}
-// NCRDIV: [[META14]] = !{float 2.500000e+00}
-// NCRDIV: [[LOOP15]] = distinct !{[[LOOP15]], [[META10]], [[META11]]}
-// NCRDIV: [[LOOP16]] = distinct !{[[LOOP16]], [[META10]], [[META11]]}
-// NCRDIV: [[FLOAT_TBAA17]] = !{[[META18:![0-9]+]], [[META18]], i64 0}
-// NCRDIV: [[META18]] = !{!"float", [[META6]], i64 0}
-// NCRDIV: [[DOUBLE_TBAA19]] = !{[[META20:![0-9]+]], [[META20]], i64 0}
-// NCRDIV: [[META20]] = !{!"double", [[META6]], i64 0}
-// NCRDIV: [[LOOP21]] = distinct !{[[LOOP21]], [[META10]], [[META11]]}
-// NCRDIV: [[META22]] = !{float 3.000000e+00}
-// NCRDIV: [[LOOP23]] = distinct !{[[LOOP23]], [[META10]], [[META11]]}
-// NCRDIV: [[LOOP24]] = distinct !{[[LOOP24]], [[META10]], [[META11]]}
-// NCRDIV: [[LOOP25]] = distinct !{[[LOOP25]], [[META10]], [[META11]]}
-// NCRDIV: [[LOOP26]] = distinct !{[[LOOP26]], [[META10]], [[META11]]}
-// NCRDIV: [[LOOP27]] = distinct !{[[LOOP27]], [[META10]], [[META11]]}
+// NCRDIV: [[INT_TBAA3]] = !{[[META4:![0-9]+]], [[META4]], i64 0}
+// NCRDIV: [[META4]] = !{!"int", [[META5:![0-9]+]], i64 0}
+// NCRDIV: [[META5]] = !{!"omnipotent char", [[META6:![0-9]+]], i64 0}
+// NCRDIV: [[META6]] = !{!"Simple C++ TBAA"}
+// NCRDIV: [[CHAR_TBAA7]] = !{[[META5]], [[META5]], i64 0}
+// NCRDIV: [[LOOP8]] = distinct !{[[LOOP8]], [[META9:![0-9]+]], [[META10:![0-9]+]]}
+// NCRDIV: [[META9]] = !{!"llvm.loop.mustprogress"}
+// NCRDIV: [[META10]] = !{!"llvm.loop.unroll.disable"}
+// NCRDIV: [[LOOP11]] = distinct !{[[LOOP11]], [[META9]], [[META10]]}
+// NCRDIV: [[LOOP12]] = distinct !{[[LOOP12]], [[META9]], [[META10]]}
+// NCRDIV: [[META13]] = !{float 2.500000e+00}
+// NCRDIV: [[LOOP14]] = distinct !{[[LOOP14]], [[META9]], [[META10]]}
+// NCRDIV: [[LOOP15]] = distinct !{[[LOOP15]], [[META9]], [[META10]]}
+// NCRDIV: [[FLOAT_TBAA16]] = !{[[META17:![0-9]+]], [[META17]], i64 0}
+// NCRDIV: [[META17]] = !{!"float", [[META5]], i64 0}
+// NCRDIV: [[DOUBLE_TBAA18]] = !{[[META19:![0-9]+]], [[META19]], i64 0}
+// NCRDIV: [[META19]] = !{!"double", [[META5]], i64 0}
+// NCRDIV: [[LOOP20]] = distinct !{[[LOOP20]], [[META9]], [[META10]]}
+// NCRDIV: [[META21]] = !{float 3.000000e+00}
+// NCRDIV: [[LOOP22]] = distinct !{[[LOOP22]], [[META9]], [[META10]]}
+// NCRDIV: [[LOOP23]] = distinct !{[[LOOP23]], [[META9]], [[META10]]}
+// NCRDIV: [[LOOP24]] = distinct !{[[LOOP24]], [[META9]], [[META10]]}
+// NCRDIV: [[LOOP25]] = distinct !{[[LOOP25]], [[META9]], [[META10]]}
+// NCRDIV: [[LOOP26]] = distinct !{[[LOOP26]], [[META9]], [[META10]]}
 //.
-// AMDGCNSPIRV: [[INT_TBAA5]] = !{[[META6:![0-9]+]], [[META6]], i64 0}
-// AMDGCNSPIRV: [[META6]] = !{!"int", [[META7:![0-9]+]], i64 0}
-// AMDGCNSPIRV: [[META7]] = !{!"omnipotent char", [[META8:![0-9]+]], i64 0}
-// AMDGCNSPIRV: [[META8]] = !{!"Simple C++ TBAA"}
-// AMDGCNSPIRV: [[CHAR_TBAA9]] = !{[[META7]], [[META7]], i64 0}
-// AMDGCNSPIRV: [[LOOP10]] = distinct !{[[LOOP10]], [[META11:![0-9]+]], [[META12:![0-9]+]]}
-// AMDGCNSPIRV: [[META11]] = !{!"llvm.loop.mustprogress"}
-// AMDGCNSPIRV: [[META12]] = !{!"llvm.loop.unroll.disable"}
-// AMDGCNSPIRV: [[LOOP13]] = distinct !{[[LOOP13]], [[META11]], [[META12]]}
-// AMDGCNSPIRV: [[LOOP14]] = distinct !{[[LOOP14]], [[META11]], [[META12]]}
-// AMDGCNSPIRV: [[LOOP15]] = distinct !{[[LOOP15]], [[META11]], [[META12]]}
-// AMDGCNSPIRV: [[LOOP16]] = distinct !{[[LOOP16]], [[META11]], [[META12]]}
-// AMDGCNSPIRV: [[FLOAT_TBAA17]] = !{[[META18:![0-9]+]], [[META18]], i64 0}
-// AMDGCNSPIRV: [[META18]] = !{!"float", [[META7]], i64 0}
-// AMDGCNSPIRV: [[DOUBLE_TBAA19]] = !{[[META20:![0-9]+]], [[META20]], i64 0}
-// AMDGCNSPIRV: [[META20]] = !{!"double", [[META7]], i64 0}
-// AMDGCNSPIRV: [[LOOP21]] = distinct !{[[LOOP21]], [[META11]], [[META12]]}
-// AMDGCNSPIRV: [[LOOP22]] = distinct !{[[LOOP22]], [[META11]], [[META12]]}
-// AMDGCNSPIRV: [[LOOP23]] = distinct !{[[LOOP23]], [[META11]], [[META12]]}
-// AMDGCNSPIRV: [[LOOP24]] = distinct !{[[LOOP24]], [[META11]], [[META12]]}
-// AMDGCNSPIRV: [[LOOP25]] = distinct !{[[LOOP25]], [[META11]], [[META12]]}
-// AMDGCNSPIRV: [[LOOP26]] = distinct !{[[LOOP26]], [[META11]], [[META12]]}
+// AMDGCNSPIRV: [[INT_TBAA4]] = !{[[META5:![0-9]+]], [[META5]], i64 0}
+// AMDGCNSPIRV: [[META5]] = !{!"int", [[META6:![0-9]+]], i64 0}
+// AMDGCNSPIRV: [[META6]] = !{!"omnipotent char", [[META7:![0-9]+]], i64 0}
+// AMDGCNSPIRV: [[META7]] = !{!"Simple C++ TBAA"}
+// AMDGCNSPIRV: [[CHAR_TBAA8]] = !{[[META6]], [[META6]], i64 0}
+// AMDGCNSPIRV: [[LOOP9]] = distinct !{[[LOOP9]], [[META10:![0-9]+]], [[META11:![0-9]+]]}
+// AMDGCNSPIRV: [[META10]] = !{!"llvm.loop.mustprogress"}
+// AMDGCNSPIRV: [[META11]] = !{!"llvm.loop.unroll.disable"}
+// AMDGCNSPIRV: [[LOOP12]] = distinct !{[[LOOP12]], [[META10]], [[META11]]}
+// AMDGCNSPIRV: [[LOOP13]] = distinct !{[[LOOP13]], [[META10]], [[META11]]}
+// AMDGCNSPIRV: [[LOOP14]] = distinct !{[[LOOP14]], [[META10]], [[META11]]}
+// AMDGCNSPIRV: [[LOOP15]] = distinct !{[[LOOP15]], [[META10]], [[META11]]}
+// AMDGCNSPIRV: [[FLOAT_TBAA16]] = !{[[META17:![0-9]+]], [[META17]], i64 0}
+// AMDGCNSPIRV: [[META17]] = !{!"float", [[META6]], i64 0}
+// AMDGCNSPIRV: [[DOUBLE_TBAA18]] = !{[[META19:![0-9]+]], [[META19]], i64 0}
+// AMDGCNSPIRV: [[META19]] = !{!"double", [[META6]], i64 0}
+// AMDGCNSPIRV: [[LOOP20]] = distinct !{[[LOOP20]], [[META10]], [[META11]]}
+// AMDGCNSPIRV: [[LOOP21]] = distinct !{[[LOOP21]], [[META10]], [[META11]]}
+// AMDGCNSPIRV: [[LOOP22]] = distinct !{[[LOOP22]], [[META10]], [[META11]]}
+// AMDGCNSPIRV: [[LOOP23]] = distinct !{[[LOOP23]], [[META10]], [[META11]]}
+// AMDGCNSPIRV: [[LOOP24]] = distinct !{[[LOOP24]], [[META10]], [[META11]]}
+// AMDGCNSPIRV: [[LOOP25]] = distinct !{[[LOOP25]], [[META10]], [[META11]]}
 //.

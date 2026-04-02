@@ -81,6 +81,7 @@
 ; SPIRV-O0-NEXT:      Analyze Machine Code For Garbage Collection
 ; SPIRV-O0-NEXT:      Insert fentry calls
 ; SPIRV-O0-NEXT:      Insert XRay ops
+; SPIRV-O0-NEXT:      SPIRV NonSemantic.Shader.DebugInfo.100 emitter
 ; SPIRV-O0-NEXT:      Machine Sanitizer Binary Metadata
 ; SPIRV-O0-NEXT:      Lazy Machine Block Frequency Analysis
 ; SPIRV-O0-NEXT:      Machine Optimization Remark Emitter
@@ -101,8 +102,8 @@
 ; SPIRV-Opt-NEXT:Library Function Lowering Analysis
 ; SPIRV-Opt-NEXT:Type-Based Alias Analysis
 ; SPIRV-Opt-NEXT:Scoped NoAlias Alias Analysis
-; SPIRV-Opt-NEXT:Profile summary info
 ; SPIRV-Opt-NEXT:Create Garbage Collector Module Metadata
+; SPIRV-Opt-NEXT:Profile summary info
 ; SPIRV-Opt-NEXT:Machine Branch Probability Analysis
 ; SPIRV-Opt-NEXT:  ModulePass Manager
 ; SPIRV-Opt-NEXT:    FunctionPass Manager
@@ -123,13 +124,6 @@
 ; SPIRV-Opt-NEXT:        Canonicalize Freeze Instructions in Loops
 ; SPIRV-Opt-NEXT:        Induction Variable Users
 ; SPIRV-Opt-NEXT:        Loop Strength Reduction
-; SPIRV-Opt-NEXT:      Basic Alias Analysis (stateless AA impl)
-; SPIRV-Opt-NEXT:      Function Alias Analysis Results
-; SPIRV-Opt-NEXT:      Merge contiguous icmps into a memcmp
-; SPIRV-Opt-NEXT:      Natural Loop Information
-; SPIRV-Opt-NEXT:      Lazy Branch Probability Analysis
-; SPIRV-Opt-NEXT:      Lazy Block Frequency Analysis
-; SPIRV-Opt-NEXT:      Expand memcmp() to load/stores
 ; SPIRV-Opt-NEXT:      Lower Garbage Collection Instructions
 ; SPIRV-Opt-NEXT:      Shadow Stack GC Lowering
 ; SPIRV-Opt-NEXT:      Remove unreachable blocks from the CFG
@@ -225,6 +219,7 @@
 ; SPIRV-Opt-NEXT:      Analyze Machine Code For Garbage Collection
 ; SPIRV-Opt-NEXT:      Insert fentry calls
 ; SPIRV-Opt-NEXT:      Insert XRay ops
+; SPIRV-Opt-NEXT:      SPIRV NonSemantic.Shader.DebugInfo.100 emitter
 ; SPIRV-Opt-NEXT:      Machine Sanitizer Binary Metadata
 ; SPIRV-Opt-NEXT:      Lazy Machine Block Frequency Analysis
 ; SPIRV-Opt-NEXT:      Machine Optimization Remark Emitter

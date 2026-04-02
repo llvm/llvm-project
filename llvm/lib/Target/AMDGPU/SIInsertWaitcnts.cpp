@@ -804,15 +804,15 @@ public:
   }
 
   bool hasPendingFlat() const {
-    return ((LastFlat[DS_CNT] > ScoreLBs[DS_CNT] &&
-             LastFlat[DS_CNT] <= ScoreUBs[DS_CNT]) ||
-            (LastFlat[LOAD_CNT] > ScoreLBs[LOAD_CNT] &&
-             LastFlat[LOAD_CNT] <= ScoreUBs[LOAD_CNT]));
+    return ((LastFlatDsCnt > ScoreLBs[DS_CNT] &&
+             LastFlatDsCnt <= ScoreUBs[DS_CNT]) ||
+            (LastFlatLoadCnt > ScoreLBs[LOAD_CNT] &&
+             LastFlatLoadCnt <= ScoreUBs[LOAD_CNT]));
   }
 
   void setPendingFlat() {
-    LastFlat[LOAD_CNT] = ScoreUBs[LOAD_CNT];
-    LastFlat[DS_CNT] = ScoreUBs[DS_CNT];
+    LastFlatLoadCnt = ScoreUBs[LOAD_CNT];
+    LastFlatDsCnt = ScoreUBs[DS_CNT];
   }
 
   bool hasPendingGDS() const {
@@ -942,7 +942,8 @@ private:
   unsigned ScoreUBs[NUM_INST_CNTS] = {0};
   WaitEventSet PendingEvents;
   // Remember the last flat memory operation.
-  unsigned LastFlat[NUM_INST_CNTS] = {0};
+  unsigned LastFlatDsCnt = 0;
+  unsigned LastFlatLoadCnt = 0;
   // Remember the last GDS operation.
   unsigned LastGDS = 0;
 
@@ -3073,10 +3074,13 @@ bool WaitcntBrackets::merge(const WaitcntBrackets &Other) {
 
     ScoreUBs[T] = NewUB;
 
-    StrictDom |= mergeScore(M, LastFlat[T], Other.LastFlat[T]);
+    if (T == LOAD_CNT)
+      StrictDom |= mergeScore(M, LastFlatLoadCnt, Other.LastFlatLoadCnt);
 
-    if (T == DS_CNT)
+    if (T == DS_CNT) {
+      StrictDom |= mergeScore(M, LastFlatDsCnt, Other.LastFlatDsCnt);
       StrictDom |= mergeScore(M, LastGDS, Other.LastGDS);
+    }
 
     if (T == KM_CNT) {
       StrictDom |= mergeScore(M, SCCScore, Other.SCCScore);

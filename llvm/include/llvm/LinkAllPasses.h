@@ -127,8 +127,6 @@ struct ForcePassLinking {
     (void)llvm::createEarlyCSEPass();
     (void)llvm::createGVNPass();
     (void)llvm::createPostDomTree();
-    (void)llvm::createMergeICmpsLegacyPass();
-    (void)llvm::createExpandMemCmpLegacyPass();
     std::string buf;
     llvm::raw_string_ostream os(buf);
     (void)llvm::createPrintModulePass(os);

@@ -21,6 +21,8 @@
       ret void
   }
 
+  define void @setwmi_no_pair_move_insn_back() { ret void }
+
 ...
 ---
 name:            lwmi
@@ -70,8 +72,8 @@ body:             |
     ; CHECK: liveins: $x10
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: $x28 = LW $x10, 0 :: (load (s32))
-    ; CHECK-NEXT: $x30 = LW $x10, 4 :: (load (s32))
     ; CHECK-NEXT: $x29 = LW $x10, 8 :: (load (s32))
+    ; CHECK-NEXT: $x30 = LW $x10, 4 :: (load (s32))
     ; CHECK-NEXT: $x31 = LW $x10, 12 :: (load (s32))
     ; CHECK-NEXT: PseudoRET
     $x28 = LW $x10, 0 :: (load (s32), align 4)
@@ -184,5 +186,22 @@ body:             |
     SW $x0, $x10, 4 :: (store (s32) into %ir.b, align 4)
     SW $x0, $x10, 8 :: (store (s32) into %ir.c, align 4)
     SW $x0, $x10, 12 :: (store (s32) into %ir.d, align 4)
+    PseudoRET
+...
+---
+name:            setwmi_no_pair_move_insn_back
+body:             |
+  bb.0:
+    liveins: $x1, $x2
+    ; CHECK-LABEL: name: setwmi_no_pair_move_insn_back
+    ; CHECK: liveins: $x1, $x2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: SW killed $x1, $x2, 12 :: (store (s32))
+    ; CHECK-NEXT: QC_SETWMI $x0, $x2, 3, 0 :: (store (s32))
+    ; CHECK-NEXT: PseudoRET
+    SW killed $x1, $x2, 12 :: (store (s32), align 4)
+    SW $x0, $x2, 0 :: (store (s32), align 4)
+    SW $x0, $x2, 4 :: (store (s32), align 4)
+    SW $x0, $x2, 8 :: (store (s32), align 4)
     PseudoRET
 ...

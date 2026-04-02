@@ -3236,12 +3236,10 @@ static void fixupVFUsersForEVL(VPlan &Plan, VPValue &EVL) {
   });
 
   assert(all_of(Plan.getVFxUF().users(),
-                [&LoopRegion, &Plan](VPUser *U) {
-                  return match(U,
-                               m_c_Add(m_Specific(LoopRegion->getCanonicalIV()),
-                                       m_Specific(&Plan.getVFxUF()))) ||
-                         isa<VPWidenPointerInductionRecipe>(U);
-                }) &&
+                match_fn(m_CombineOr(
+                    m_c_Add(m_Specific(LoopRegion->getCanonicalIV()),
+                            m_Specific(&Plan.getVFxUF())),
+                    m_Isa<VPWidenPointerInductionRecipe>()))) &&
          "Only users of VFxUF should be VPWidenPointerInductionRecipe and the "
          "increment of the canonical induction.");
   Plan.getVFxUF().replaceUsesWithIf(&EVL, [](VPUser &U, unsigned Idx) {
@@ -4432,9 +4430,8 @@ tryToMatchAndCreateExtendedReduction(VPReductionRecipe *Red, VPCostContext &Ctx,
 
   VPValue *A;
   // Match reduce(ext)).
-  if (isa<VPWidenCastRecipe>(VecOp) &&
-      (match(VecOp, m_ZExtOrSExt(m_VPValue(A))) ||
-       match(VecOp, m_FPExt(m_VPValue(A)))) &&
+  if (match(VecOp, m_Isa<VPWidenCastRecipe>(m_CombineOr(
+                       m_ZExtOrSExt(m_VPValue(A)), m_FPExt(m_VPValue(A))))) &&
       IsExtendedRedValidAndClampRange(
           RecurrenceDescriptor::getOpcode(Red->getRecurrenceKind()),
           cast<VPWidenCastRecipe>(VecOp)->getOpcode(),

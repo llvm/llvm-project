@@ -2878,10 +2878,16 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
         CalleeInfo.getCalleeDecl().getDecl());
     // Do not annotate vector deleting destructors with dead_on_return as the
     // this pointer in that case points to an array which we cannot
-    // statically know the size of.
+    // statically know the size of. Also do not mark deleting destructors
+    // dead_on_return as then we might delete stores inside of a user-defined
+    // operator delete implementation if it gets inlined, which would be
+    // incorrect as the object's lifetime has already ended and the operator
+    // delete implementation is allowed to manipulate the underlying storage.
     if (DD &&
         CalleeInfo.getCalleeDecl().getDtorType() !=
             CXXDtorType::Dtor_VectorDeleting &&
+        CalleeInfo.getCalleeDecl().getDtorType() !=
+            CXXDtorType::Dtor_Deleting &&
         CodeGenOpts.StrictLifetimes) {
       const CXXRecordDecl *ClassDecl =
           dyn_cast<CXXRecordDecl>(DD->getDeclContext());

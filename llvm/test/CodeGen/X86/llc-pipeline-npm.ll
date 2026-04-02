@@ -88,8 +88,6 @@
 ; O2-NEXT: verify
 ; O2-NEXT: loop(canon-freeze
 ; O2-NEXT: loop-reduce)
-; O2-NEXT: mergeicmps
-; O2-NEXT: expand-memcmp
 ; O2-NEXT: gc-lowering)
 ; O2-NEXT: shadow-stack-gc-lowering
 ; O2-NEXT: function(unreachableblockelim
@@ -276,8 +274,6 @@
 ; O3-WINDOWS-NEXT: verify
 ; O3-WINDOWS-NEXT: loop(canon-freeze
 ; O3-WINDOWS-NEXT: loop-reduce)
-; O3-WINDOWS-NEXT: mergeicmps
-; O3-WINDOWS-NEXT: expand-memcmp
 ; O3-WINDOWS-NEXT: gc-lowering)
 ; O3-WINDOWS-NEXT: shadow-stack-gc-lowering
 ; O3-WINDOWS-NEXT: function(unreachableblockelim

@@ -2770,6 +2770,40 @@ bool CXXMethodDecl::isMoveAssignmentOperator() const {
   return Context.hasSameUnqualifiedType(ClassType, ParamType);
 }
 
+bool CXXMethodDecl::isCopyOrMoveConstructor() const {
+  if (const auto *Ctor = dyn_cast<CXXConstructorDecl>(this))
+    return Ctor->isCopyOrMoveConstructor();
+  return false;
+}
+
+bool CXXMethodDecl::isCopyOrMoveConstructorOrAssignment() const {
+  return isCopyOrMoveConstructor() || isCopyAssignmentOperator() ||
+         isMoveAssignmentOperator();
+}
+
+bool CXXMethodDecl::isMemcpyEquivalentSpecialMember(
+    const ASTContext &Ctx) const {
+  if (!isCopyOrMoveConstructorOrAssignment())
+    return false;
+
+  // Non-trivially-copyable fields with pointer field protection need to be
+  // copied one by one.
+  const CXXRecordDecl *Parent = getParent();
+  if (!Ctx.arePFPFieldsTriviallyCopyable(Parent) &&
+      Ctx.hasPFPFields(Ctx.getCanonicalTagType(Parent)))
+    return false;
+
+  // We can emit a memcpy for a trivial copy or move constructor/assignment.
+  if (isTrivial() && !Parent->mayInsertExtraPadding())
+    return true;
+
+  // We *must* emit a memcpy for a defaulted union copy or move op.
+  if (Parent->isUnion() && isDefaulted())
+    return true;
+
+  return false;
+}
+
 void CXXMethodDecl::addOverriddenMethod(const CXXMethodDecl *MD) {
   assert(MD->isCanonicalDecl() && "Method is not canonical!");
   assert(MD->isVirtual() && "Method is not virtual!");

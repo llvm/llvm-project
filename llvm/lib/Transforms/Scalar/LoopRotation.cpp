@@ -38,6 +38,15 @@ static cl::opt<bool> PrepareForLTOOption(
     cl::desc("Run loop-rotation in the prepare-for-lto stage. This option "
              "should be used for testing only."));
 
+// Experimentally allow loop header duplication. This should allow for better
+// optimization at Oz, since loop-idiom recognition can then recognize things
+// like memcpy. If this ends up being useful for many targets, we should drop
+// this flag and make a code generation option that can be controlled
+// independent of the opt level and exposed through the frontend.
+static cl::opt<bool> EnableLoopHeaderDuplicationAtMinSize(
+    "enable-loop-header-duplication-at-minsize", cl::init(false), cl::Hidden,
+    cl::desc("Enable loop header duplication even for minsize"));
+
 LoopRotatePass::LoopRotatePass(bool EnableHeaderDuplication, bool PrepareForLTO,
                                bool CheckExitCount)
     : EnableHeaderDuplication(EnableHeaderDuplication),
@@ -68,11 +77,12 @@ PreservedAnalyses LoopRotatePass::run(Loop &L, LoopAnalysisManager &AM,
   // Vectorization requires loop-rotation. Use default threshold for loops the
   // user explicitly marked for vectorization, even when header duplication is
   // disabled.
-  int Threshold =
-      (EnableHeaderDuplication && !L.getHeader()->getParent()->hasMinSize()) ||
-              hasVectorizeTransformation(&L) == TM_ForcedByUser
-          ? DefaultRotationThreshold
-          : 0;
+  int Threshold = EnableHeaderDuplication &&
+                          (!L.getHeader()->getParent()->hasMinSize() ||
+                           EnableLoopHeaderDuplicationAtMinSize ||
+                           hasVectorizeTransformation(&L) == TM_ForcedByUser)
+                      ? DefaultRotationThreshold
+                      : 0;
   const DataLayout &DL = L.getHeader()->getDataLayout();
   const SimplifyQuery SQ = getBestSimplifyQuery(AR, DL);
 

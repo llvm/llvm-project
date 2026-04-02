@@ -91,6 +91,8 @@ public:
   ///         otherwise.
   Value *createRTC(isl_ast_expr *Condition);
 
+  void generateBeginScopTrace();
+
   void create(__isl_take isl_ast_node *Node);
 
   /// Allocate memory for all new arrays created by Polly.

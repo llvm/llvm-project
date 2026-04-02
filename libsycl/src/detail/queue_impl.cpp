@@ -6,8 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <detail/device_impl.hpp>
 #include <detail/queue_impl.hpp>
+
+#include <detail/device_impl.hpp>
 
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 

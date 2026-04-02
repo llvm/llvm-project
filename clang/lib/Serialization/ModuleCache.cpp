@@ -10,6 +10,7 @@
 
 #include "clang/Serialization/InMemoryModuleCache.h"
 #include "clang/Serialization/ModuleFile.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/IOSandbox.h"
 #include "llvm/Support/LockFileManager.h"
@@ -101,6 +102,58 @@ void clang::maybePruneImpl(StringRef Path, time_t PruneInterval,
   }
 }
 
+std::error_code clang::writeImpl(StringRef Path, llvm::MemoryBufferRef Buffer) {
+  StringRef Extension = llvm::sys::path::extension(Path);
+  SmallString<128> ModelPath = StringRef(Path).drop_back(Extension.size());
+  ModelPath += "-%%%%%%%%";
+  ModelPath += Extension;
+  ModelPath += ".tmp";
+
+  std::error_code EC;
+  int FD;
+  SmallString<128> TmpPath;
+  if ((EC = llvm::sys::fs::createUniqueFile(ModelPath, FD, TmpPath))) {
+    if (EC != std::errc::no_such_file_or_directory)
+      return EC;
+
+    StringRef Dir = llvm::sys::path::parent_path(Path);
+    if (std::error_code InnerEC = llvm::sys::fs::create_directories(Dir))
+      return InnerEC;
+
+    if ((EC = llvm::sys::fs::createUniqueFile(ModelPath, FD, TmpPath)))
+      return EC;
+  }
+
+  {
+    llvm::raw_fd_ostream OS(FD, /*shouldClose=*/true);
+    OS << Buffer.getBuffer();
+  }
+
+  if ((EC = llvm::sys::fs::rename(TmpPath, Path)))
+    return EC;
+
+  return {};
+}
+
+Expected<std::unique_ptr<llvm::MemoryBuffer>>
+clang::readImpl(StringRef FileName, off_t &Size, time_t &ModTime) {
+  Expected<llvm::sys::fs::file_t> FD =
+      llvm::sys::fs::openNativeFileForRead(FileName);
+  if (!FD)
+    return FD.takeError();
+  llvm::sys::fs::file_status Status;
+  if (std::error_code EC = llvm::sys::fs::status(*FD, Status))
+    return llvm::errorCodeToError(EC);
+  llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> Buf =
+      llvm::MemoryBuffer::getOpenFile(*FD, FileName, Status.getSize(),
+                                      /*RequiresNullTerminator=*/false);
+  if (!Buf)
+    return llvm::errorCodeToError(Buf.getError());
+  Size = Status.getSize();
+  ModTime = llvm::sys::toTimeT(Status.getLastModificationTime());
+  return std::move(*Buf);
+}
+
 namespace {
 class CrossProcessModuleCache : public ModuleCache {
   InMemoryModuleCache InMemory;
@@ -160,6 +213,21 @@ public:
   InMemoryModuleCache &getInMemoryModuleCache() override { return InMemory; }
   const InMemoryModuleCache &getInMemoryModuleCache() const override {
     return InMemory;
+  }
+
+  std::error_code write(StringRef Path, llvm::MemoryBufferRef Buffer) override {
+    // This is a compiler-internal input/output, let's bypass the sandbox.
+    auto BypassSandbox = llvm::sys::sandbox::scopedDisable();
+
+    return writeImpl(Path, Buffer);
+  }
+
+  Expected<std::unique_ptr<llvm::MemoryBuffer>>
+  read(StringRef FileName, off_t &Size, time_t &ModTime) override {
+    // This is a compiler-internal input/output, let's bypass the sandbox.
+    auto BypassSandbox = llvm::sys::sandbox::scopedDisable();
+
+    return readImpl(FileName, Size, ModTime);
   }
 };
 } // namespace

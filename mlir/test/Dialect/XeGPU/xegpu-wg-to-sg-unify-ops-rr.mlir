@@ -165,4 +165,30 @@ gpu.module @test_distribution {
     gpu.return
   }
 
+  // CHECK-LABEL: splat_constant
+  gpu.func @splat_constant() {
+    // CHECK-COUNT-2: %[[CST:.*]] = arith.constant dense<0> : vector<4xindex>
+    %cst_2 = arith.constant {layout_result_0 = #xegpu.slice<#xegpu.layout<sg_layout = [16, 1], sg_data = [16, 4], order = [0, 1]>, dims = [0]>}  dense<0> : vector<8xindex>
+    gpu.return
+  }
+
+  // CHECK-LABEL: gpu.func @step_broadcast
+  gpu.func @step_broadcast() {
+    // CHECK: %[[SGID:.*]] = gpu.subgroup_id : index
+    // CHECK-DAG: %[[C16:.*]] = arith.constant 16 : index
+    // CHECK: %[[REM:.*]] = arith.remui %[[SGID]], %[[C16]] : index
+    // CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
+    // CHECK-DAG: %[[C4:.*]] = arith.constant 4 : index
+    // CHECK: %[[STEP:.*]] = vector.step : vector<4xindex>
+    // CHECK: %[[BCST0:.*]] = vector.broadcast %[[C0:.*]] : index to vector<4xindex>
+    // CHECK: %[[ADD0:.*]] = arith.addi %[[STEP]], %[[BCST0]] : vector<4xindex>
+    // CHECK: %[[BCST4:.*]] = vector.broadcast %[[C4:.*]] : index to vector<4xindex>
+    // CHECK: %[[ADD4:.*]] = arith.addi %[[STEP]], %[[BCST4]] : vector<4xindex>
+    // CHECK: %[[RES0:.*]] = vector.broadcast %[[ADD0]] : vector<4xindex> to vector<16x4xindex>
+    // CHECK: %[[RES1:.*]] = vector.broadcast %[[ADD4]] : vector<4xindex> to vector<16x4xindex>
+    %2 = vector.step {layout_result_0 = #xegpu.slice<#xegpu.layout<sg_layout = [16, 1], sg_data = [16, 4]>, dims = [0]>} : vector<8xindex>
+    %bcast = vector.broadcast %2 {layout_result_0 = #xegpu.layout<sg_layout = [16, 1], sg_data = [16, 4]>} : vector<8xindex> to vector<256x8xindex>
+    gpu.return
+  }
+
 }

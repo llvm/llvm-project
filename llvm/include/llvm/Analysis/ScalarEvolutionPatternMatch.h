@@ -23,7 +23,8 @@ template <typename Pattern> bool match(const SCEV *S, const Pattern &P) {
   return P.match(S);
 }
 
-template <typename Pattern> bool match(const SCEVUse U, const Pattern &P) {
+template <typename SCEVPtrT, typename Pattern>
+bool match(const SCEVUseT<SCEVPtrT> U, const Pattern &P) {
   return P.match(U.getPointer());
 }
 
@@ -87,10 +88,10 @@ template <typename Class> struct bind_ty {
   }
 };
 
-template <> struct bind_ty<SCEVUse> {
-  SCEVUse &VR;
+template <typename SCEVPtrT> struct bind_ty<SCEVUseT<SCEVPtrT>> {
+  SCEVUseT<SCEVPtrT> &VR;
 
-  bind_ty(SCEVUse &V) : VR(V) {}
+  bind_ty(SCEVUseT<SCEVPtrT> &V) : VR(V) {}
 
   template <typename ITy> bool match(ITy *V) const {
     VR = V;
@@ -100,7 +101,11 @@ template <> struct bind_ty<SCEVUse> {
 
 /// Match a SCEV, capturing it if we match.
 inline bind_ty<const SCEV> m_SCEV(const SCEV *&V) { return V; }
-inline bind_ty<SCEVUse> m_SCEV(SCEVUse &V) { return V; }
+
+template <typename SCEVPtrT>
+inline bind_ty<SCEVUseT<SCEVPtrT>> m_SCEV(SCEVUseT<SCEVPtrT> &V) {
+  return V;
+}
 inline bind_ty<const SCEVConstant> m_SCEVConstant(const SCEVConstant *&V) {
   return V;
 }

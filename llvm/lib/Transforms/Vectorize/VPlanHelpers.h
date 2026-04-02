@@ -46,10 +46,6 @@ class Value;
 /// vectors it is an expression determined at runtime.
 Value *getRuntimeVF(IRBuilderBase &B, Type *Ty, ElementCount VF);
 
-/// Return a value for Step multiplied by VF.
-Value *createStepForVF(IRBuilderBase &B, Type *Ty, ElementCount VF,
-                       int64_t Step);
-
 /// Compute the transformed value of Index at offset StartValue using step
 /// StepValue.
 /// For integer induction, returns StartValue + Index * StepValue.

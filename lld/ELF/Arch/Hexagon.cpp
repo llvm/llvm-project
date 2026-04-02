@@ -709,9 +709,8 @@ void Hexagon::finalizeRelocScan() {
                                                 "__tls_get_addr", STB_GLOBAL,
                                                 STV_DEFAULT, STT_FUNC});
           tga->isUsedInRegularObj = true;
-          tga->used = true;
           tga->isPreemptible = true;
-          tga->setFlags(NEEDS_PLT);
+          tga->setFlags(NEEDS_PLT | USED);
         }
         rel.sym = tga;
       }

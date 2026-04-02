@@ -47,20 +47,12 @@ entry:
 define void @mixed_use_v4(ptr %src0, ptr %src1, ptr %dst, ptr %extra) {
 ; CHECK-LABEL: @mixed_use_v4(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[GEP_S0_2:%.*]] = getelementptr inbounds float, ptr [[SRC0:%.*]], i64 2
-; CHECK-NEXT:    [[GEP_S1_2:%.*]] = getelementptr inbounds float, ptr [[SRC1:%.*]], i64 2
-; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x float>, ptr [[SRC0]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x float>, ptr [[SRC1]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = fmul fast <2 x float> [[TMP0]], [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = fadd fast <2 x float> [[TMP2]], splat (float 1.000000e+00)
-; CHECK-NEXT:    [[GEP_D_2:%.*]] = getelementptr inbounds float, ptr [[DST:%.*]], i64 2
-; CHECK-NEXT:    [[TMP8:%.*]] = load <2 x float>, ptr [[GEP_S0_2]], align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = load <2 x float>, ptr [[GEP_S1_2]], align 4
-; CHECK-NEXT:    [[TMP6:%.*]] = fmul fast <2 x float> [[TMP8]], [[TMP5]]
-; CHECK-NEXT:    [[TMP7:%.*]] = fadd fast <2 x float> [[TMP6]], splat (float 1.000000e+00)
-; CHECK-NEXT:    store <2 x float> [[TMP3]], ptr [[DST]], align 4
-; CHECK-NEXT:    store <2 x float> [[TMP7]], ptr [[GEP_D_2]], align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x float> [[TMP2]], i32 0
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[SRC0:%.*]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[SRC1:%.*]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = fmul fast <4 x float> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = fadd fast <4 x float> [[TMP2]], splat (float 1.000000e+00)
+; CHECK-NEXT:    store <4 x float> [[TMP3]], ptr [[DST:%.*]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x float> [[TMP2]], i32 0
 ; CHECK-NEXT:    store float [[TMP4]], ptr [[EXTRA:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;

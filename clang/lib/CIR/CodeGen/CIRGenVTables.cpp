@@ -146,8 +146,7 @@ mlir::Attribute CIRGenVTables::getVTableComponent(
 
   switch (component.getKind()) {
   case VTableComponent::CK_UnusedFunctionPointer:
-    cgm.errorNYI("getVTableComponent: UnusedFunctionPointer");
-    return mlir::Attribute();
+    return builder.getConstNullPtrAttr(builder.getUInt8PtrTy());
 
   case VTableComponent::CK_VCallOffset:
     return builder.getConstPtrAttr(builder.getUInt8PtrTy(),

@@ -37,6 +37,7 @@ option(LIBSYCL_ENABLE_PEDANTIC "Compile with pedantic enabled." OFF)
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
+# TODO: Use common runtimes infrastructure for output and install paths
 if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
   set(LIBSYCL_TARGET_SUBDIR ${LLVM_DEFAULT_TARGET_TRIPLE})
   if(LIBSYCL_LIBDIR_SUBDIR)

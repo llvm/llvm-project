@@ -58,6 +58,7 @@
 namespace llvm {
 
 class MCOperand;
+class NVPTXTargetStreamer;
 
 class LLVM_LIBRARY_VISIBILITY NVPTXAsmPrinter : public AsmPrinter {
 
@@ -153,6 +154,8 @@ public:
 private:
   const Function *F;
 
+  NVPTXTargetStreamer *getTargetStreamer() const;
+
   void emitStartOfAsmFile(Module &M) override;
   void emitBasicBlockStart(const MachineBasicBlock &MBB) override;
   void emitFunctionEntryLabel() override;
@@ -172,7 +175,7 @@ private:
                           bool processDemoted, const NVPTXSubtarget &STI);
   void emitGlobals(const Module &M);
   void emitGlobalAlias(const Module &M, const GlobalAlias &GA) override;
-  void emitHeader(Module &M, raw_ostream &O, const NVPTXSubtarget &STI);
+  void emitHeader(Module &M, const NVPTXSubtarget &STI);
   void emitKernelFunctionDirectives(const Function &F, raw_ostream &O) const;
   void emitVirtualRegister(unsigned int vr, raw_ostream &);
   void emitFunctionParamList(const Function *, raw_ostream &O);

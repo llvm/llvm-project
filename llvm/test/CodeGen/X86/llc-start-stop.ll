@@ -1,6 +1,3 @@
-; NVPTX customizes the list of passes so the test cannot find what it expects
-; XFAIL: target=nvptx{{.*}}
-
 ; Note: -verify-machineinstrs is used in order to make this test compatible with EXPENSIVE_CHECKS.
 ; RUN: llc < %s -debug-pass=Structure -stop-after=loop-reduce -verify-machineinstrs -o /dev/null 2>&1 \
 ; RUN:   | FileCheck %s -check-prefix=STOP-AFTER
@@ -19,15 +16,15 @@
 ; STOP-BEFORE-NOT: Loop Strength Reduction
 
 ; RUN: llc < %s -debug-pass=Structure -start-after=loop-reduce -o /dev/null 2>&1 | FileCheck %s -check-prefix=START-AFTER
-; START-AFTER: -aa -mergeicmps
+; START-AFTER: -gc-lowering
 ; START-AFTER: FunctionPass Manager
-; START-AFTER-NEXT: Dominator Tree Construction
+; START-AFTER-NEXT: Lower Garbage Collection Instructions
 
 ; RUN: llc < %s -debug-pass=Structure -start-before=loop-reduce -o /dev/null 2>&1 | FileCheck %s -check-prefix=START-BEFORE
 ; START-BEFORE: -machine-branch-prob -regalloc-evict -regalloc-priority -domtree
 ; START-BEFORE: FunctionPass Manager
 ; START-BEFORE: Loop Strength Reduction
-; START-BEFORE-NEXT: {{Loop Terminator Folding|Basic Alias Analysis \(stateless AA impl\)}}
+; START-BEFORE-NEXT: Lower Garbage Collection Instructions
 
 ; RUN: not llc < %s -start-before=nonexistent -o /dev/null 2>&1 | FileCheck %s -check-prefix=NONEXISTENT-START-BEFORE
 ; RUN: not llc < %s -stop-before=nonexistent -o /dev/null 2>&1 | FileCheck %s -check-prefix=NONEXISTENT-STOP-BEFORE
@@ -42,3 +39,5 @@
 ; RUN: not llc < %s -stop-before=loop-reduce -stop-after=loop-reduce -o /dev/null 2>&1 | FileCheck %s -check-prefix=DOUBLE-STOP
 ; DOUBLE-START: start-before and start-after specified!
 ; DOUBLE-STOP: stop-before and stop-after specified!
+
+target triple = "x86_64-unknown-linux-gnu"

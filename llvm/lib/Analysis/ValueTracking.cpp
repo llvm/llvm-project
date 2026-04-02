@@ -4976,7 +4976,8 @@ static constexpr KnownFPClass::MinMaxKind getMinMaxKind(Intrinsic::ID IID) {
 /// magnitude smaller than 1. i.e., fabs(X) <= 1.0
 static bool isAbsoluteValueLessEqualOne(const Value *V) {
   // TODO: Handle frexp and x - floor(x)?
-  return match(V, m_Intrinsic<Intrinsic::amdgcn_trig_preop>(m_Value()));
+  return match(V, m_Intrinsic<Intrinsic::amdgcn_trig_preop>(m_Value())) ||
+         match(V, m_Intrinsic<Intrinsic::amdgcn_fract>(m_Value()));
 }
 
 void computeKnownFPClass(const Value *V, const APInt &DemandedElts,

@@ -614,13 +614,22 @@ public:
 
     void *BlockBegin = getBlockBegin(OldTaggedPtr, &Header);
     uptr BlockEnd;
-    uptr OldSize = getUsableSize(OldTaggedPtr, &Header);
+    bool ExactSize = AllocatorConfig::getExactUsableSize() ||
+                     useMemoryTagging<AllocatorConfig>(Options);
     const uptr ClassId = Header.ClassId;
+    uptr OldSize;
     if (LIKELY(ClassId)) {
       BlockEnd = reinterpret_cast<uptr>(BlockBegin) +
                  SizeClassMap::getSizeByClassId(ClassId);
+      if (ExactSize)
+        OldSize = Header.SizeOrUnusedBytes;
+      else
+        OldSize = BlockEnd - reinterpret_cast<uptr>(OldTaggedPtr);
     } else {
       BlockEnd = SecondaryT::getBlockEnd(BlockBegin);
+      OldSize = BlockEnd - reinterpret_cast<uptr>(OldTaggedPtr);
+      if (ExactSize)
+        OldSize -= Header.SizeOrUnusedBytes;
     }
     // If the new chunk still fits in the previously allocated block (with a
     // reasonable delta), we just keep the old block, and update the chunk

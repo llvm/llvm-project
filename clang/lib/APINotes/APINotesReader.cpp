@@ -330,6 +330,29 @@ public:
   }
 };
 
+/// Read serialized BoundsSafetyInfo.
+void ReadBoundsSafetyInfo(const uint8_t *&Data, BoundsSafetyInfo &Info) {
+  uint8_t Payload = endian::readNext<uint8_t, llvm::endianness::little>(Data);
+
+  if (Payload & 0x01) {
+    uint8_t Level = (Payload >> 1) & 0x7;
+    Info.setLevelAudited(Level);
+  }
+  Payload >>= 4;
+
+  if (Payload & 0x01) {
+    uint8_t Kind = (Payload >> 1) & 0x7;
+    assert(Kind <=
+           static_cast<uint8_t>(BoundsSafetyInfo::BoundsSafetyKind::EndedBy));
+    Info.setKindAudited(static_cast<BoundsSafetyInfo::BoundsSafetyKind>(Kind));
+  }
+
+  uint16_t ExternalBoundsLen =
+      endian::readNext<uint16_t, llvm::endianness::little>(Data);
+  Info.ExternalBounds = std::string(Data, Data + ExternalBoundsLen);
+  Data += ExternalBoundsLen;
+}
+
 /// Read serialized ParamInfo.
 void ReadParamInfo(const uint8_t *&Data, ParamInfo &Info) {
   ReadVariableInfo(Data, Info);
@@ -346,7 +369,8 @@ void ReadParamInfo(const uint8_t *&Data, ParamInfo &Info) {
   if (Payload & 0x01)
     Info.setNoEscape(Payload & 0x02);
   Payload >>= 2;
-  assert(Payload == 0 && "Bad API notes");
+  if (Payload & 0x01)
+    ReadBoundsSafetyInfo(Data, Info.BoundsSafety.emplace());
 }
 
 /// Read serialized FunctionInfo.

@@ -108,6 +108,7 @@ public:
   BuiltinTypeDeclBuilder &addSampleLevelMethods(ResourceDimension Dim);
   BuiltinTypeDeclBuilder &addSampleCmpMethods(ResourceDimension Dim);
   BuiltinTypeDeclBuilder &addSampleCmpLevelZeroMethods(ResourceDimension Dim);
+  BuiltinTypeDeclBuilder &addCalculateLodMethods(ResourceDimension Dim);
   BuiltinTypeDeclBuilder &addGatherMethods(ResourceDimension Dim);
   BuiltinTypeDeclBuilder &addGatherCmpMethods(ResourceDimension Dim);
   BuiltinTypeDeclBuilder &addIncrementCounterMethod();
@@ -125,6 +126,7 @@ public:
   BuiltinTypeDeclBuilder &addConsumeMethod();
 
   BuiltinTypeDeclBuilder &addGetDimensionsMethodForBuffer();
+  BuiltinTypeDeclBuilder &addGetDimensionsMethods(ResourceDimension Dim);
   BuiltinTypeDeclBuilder &addMipsMember(ResourceDimension Dim);
 
 private:

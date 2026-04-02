@@ -283,7 +283,7 @@ define amdgpu_ps <2 x i32> @s_rsq_f64_fabs(double inreg %x) {
 ; SI-SDAG-IR-LABEL: s_rsq_f64_fabs:
 ; SI-SDAG-IR:       ; %bb.0:
 ; SI-SDAG-IR-NEXT:    v_rsq_f64_e64 v[0:1], |s[0:1]|
-; SI-SDAG-IR-NEXT:    v_mov_b32_e32 v2, 0x260
+; SI-SDAG-IR-NEXT:    v_mov_b32_e32 v2, 0x240
 ; SI-SDAG-IR-NEXT:    s_and_b32 s2, s1, 0x7fffffff
 ; SI-SDAG-IR-NEXT:    v_cmp_class_f64_e64 vcc, |s[0:1]|, v2
 ; SI-SDAG-IR-NEXT:    v_mov_b32_e32 v3, s2
@@ -325,7 +325,7 @@ define amdgpu_ps <2 x i32> @s_rsq_f64_fabs(double inreg %x) {
 ; VI-SDAG-IR-LABEL: s_rsq_f64_fabs:
 ; VI-SDAG-IR:       ; %bb.0:
 ; VI-SDAG-IR-NEXT:    v_rsq_f64_e64 v[0:1], |s[0:1]|
-; VI-SDAG-IR-NEXT:    v_mov_b32_e32 v2, 0x260
+; VI-SDAG-IR-NEXT:    v_mov_b32_e32 v2, 0x240
 ; VI-SDAG-IR-NEXT:    v_cmp_class_f64_e64 vcc, |s[0:1]|, v2
 ; VI-SDAG-IR-NEXT:    s_and_b32 s2, s1, 0x7fffffff
 ; VI-SDAG-IR-NEXT:    v_mov_b32_e32 v3, s2
@@ -1311,7 +1311,7 @@ define double @v_rsq_f64_fabs(double %x) {
 ; SI-SDAG-IR:       ; %bb.0:
 ; SI-SDAG-IR-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-SDAG-IR-NEXT:    v_rsq_f64_e64 v[2:3], |v[0:1]|
-; SI-SDAG-IR-NEXT:    v_mov_b32_e32 v5, 0x260
+; SI-SDAG-IR-NEXT:    v_mov_b32_e32 v5, 0x240
 ; SI-SDAG-IR-NEXT:    v_cmp_class_f64_e64 vcc, |v[0:1]|, v5
 ; SI-SDAG-IR-NEXT:    v_and_b32_e32 v4, 0x7fffffff, v1
 ; SI-SDAG-IR-NEXT:    v_cndmask_b32_e32 v1, v4, v3, vcc
@@ -1347,7 +1347,7 @@ define double @v_rsq_f64_fabs(double %x) {
 ; VI-SDAG-IR:       ; %bb.0:
 ; VI-SDAG-IR-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-SDAG-IR-NEXT:    v_rsq_f64_e64 v[2:3], |v[0:1]|
-; VI-SDAG-IR-NEXT:    v_mov_b32_e32 v4, 0x260
+; VI-SDAG-IR-NEXT:    v_mov_b32_e32 v4, 0x240
 ; VI-SDAG-IR-NEXT:    v_cmp_class_f64_e64 vcc, |v[0:1]|, v4
 ; VI-SDAG-IR-NEXT:    v_and_b32_e32 v5, 0x7fffffff, v1
 ; VI-SDAG-IR-NEXT:    s_mov_b32 s4, 0

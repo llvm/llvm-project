@@ -523,7 +523,7 @@ public:
 
 }
 
-Value *SCEVExpander::visitAddExpr(const SCEVAddExpr *S) {
+Value *SCEVExpander::visitAddExpr(SCEVUseT<const SCEVAddExpr *> S) {
   // Recognize the canonical representation of an unsimplifed urem.
   const SCEV *URemLHS = nullptr;
   const SCEV *URemRHS = nullptr;
@@ -595,7 +595,7 @@ Value *SCEVExpander::visitAddExpr(const SCEVAddExpr *S) {
   return Sum;
 }
 
-Value *SCEVExpander::visitMulExpr(const SCEVMulExpr *S) {
+Value *SCEVExpander::visitMulExpr(SCEVUseT<const SCEVMulExpr *> S) {
   Type *Ty = S->getType();
 
   // Collect all the mul operands in a loop, along with their associated loops.
@@ -687,7 +687,7 @@ Value *SCEVExpander::visitMulExpr(const SCEVMulExpr *S) {
   return Prod;
 }
 
-Value *SCEVExpander::visitUDivExpr(const SCEVUDivExpr *S) {
+Value *SCEVExpander::visitUDivExpr(SCEVUseT<const SCEVUDivExpr *> S) {
   Value *LHS = expand(S->getLHS());
   if (const SCEVConstant *SC = dyn_cast<SCEVConstant>(S->getRHS())) {
     const APInt &RHS = SC->getAPInt();
@@ -1156,7 +1156,8 @@ SCEVExpander::getAddRecExprPHILiterally(const SCEVAddRecExpr *Normalized,
   return PN;
 }
 
-Value *SCEVExpander::expandAddRecExprLiterally(const SCEVAddRecExpr *S) {
+Value *
+SCEVExpander::expandAddRecExprLiterally(SCEVUseT<const SCEVAddRecExpr *> S) {
   const Loop *L = S->getLoop();
 
   // Determine a normalized form of this expression, which is the expression
@@ -1246,7 +1247,7 @@ Value *SCEVExpander::expandAddRecExprLiterally(const SCEVAddRecExpr *S) {
   return Result;
 }
 
-Value *SCEVExpander::tryToReuseLCSSAPhi(const SCEVAddRecExpr *S) {
+Value *SCEVExpander::tryToReuseLCSSAPhi(SCEVUseT<const SCEVAddRecExpr *> S) {
   Type *STy = S->getType();
   const Loop *L = S->getLoop();
   BasicBlock *EB = L->getExitBlock();
@@ -1308,7 +1309,7 @@ Value *SCEVExpander::tryToReuseLCSSAPhi(const SCEVAddRecExpr *S) {
   return nullptr;
 }
 
-Value *SCEVExpander::visitAddRecExpr(const SCEVAddRecExpr *S) {
+Value *SCEVExpander::visitAddRecExpr(SCEVUseT<const SCEVAddRecExpr *> S) {
   // In canonical mode we compute the addrec as an expression of a canonical IV
   // using evaluateAtIteration and expand the resulting SCEV expression. This
   // way we avoid introducing new IVs to carry on the computation of the addrec
@@ -1448,7 +1449,7 @@ Value *SCEVExpander::visitAddRecExpr(const SCEVAddRecExpr *S) {
   return expand(T);
 }
 
-Value *SCEVExpander::visitPtrToAddrExpr(const SCEVPtrToAddrExpr *S) {
+Value *SCEVExpander::visitPtrToAddrExpr(SCEVUseT<const SCEVPtrToAddrExpr *> S) {
   Value *V = expand(S->getOperand());
   Type *Ty = S->getType();
 
@@ -1468,29 +1469,31 @@ Value *SCEVExpander::visitPtrToAddrExpr(const SCEVPtrToAddrExpr *S) {
                            GetOptimalInsertionPointForCastOf(V));
 }
 
-Value *SCEVExpander::visitPtrToIntExpr(const SCEVPtrToIntExpr *S) {
+Value *SCEVExpander::visitPtrToIntExpr(SCEVUseT<const SCEVPtrToIntExpr *> S) {
   Value *V = expand(S->getOperand());
   return ReuseOrCreateCast(V, S->getType(), CastInst::PtrToInt,
                            GetOptimalInsertionPointForCastOf(V));
 }
 
-Value *SCEVExpander::visitTruncateExpr(const SCEVTruncateExpr *S) {
+Value *SCEVExpander::visitTruncateExpr(SCEVUseT<const SCEVTruncateExpr *> S) {
   Value *V = expand(S->getOperand());
   return Builder.CreateTrunc(V, S->getType());
 }
 
-Value *SCEVExpander::visitZeroExtendExpr(const SCEVZeroExtendExpr *S) {
+Value *
+SCEVExpander::visitZeroExtendExpr(SCEVUseT<const SCEVZeroExtendExpr *> S) {
   Value *V = expand(S->getOperand());
   return Builder.CreateZExt(V, S->getType(), "",
                             SE.isKnownNonNegative(S->getOperand()));
 }
 
-Value *SCEVExpander::visitSignExtendExpr(const SCEVSignExtendExpr *S) {
+Value *
+SCEVExpander::visitSignExtendExpr(SCEVUseT<const SCEVSignExtendExpr *> S) {
   Value *V = expand(S->getOperand());
   return Builder.CreateSExt(V, S->getType());
 }
 
-Value *SCEVExpander::expandMinMaxExpr(const SCEVNAryExpr *S,
+Value *SCEVExpander::expandMinMaxExpr(SCEVUseT<const SCEVNAryExpr *> S,
                                       Intrinsic::ID IntrinID, Twine Name,
                                       bool IsSequential) {
   bool PrevSafeMode = SafeUDivMode;
@@ -1519,38 +1522,39 @@ Value *SCEVExpander::expandMinMaxExpr(const SCEVNAryExpr *S,
   return LHS;
 }
 
-Value *SCEVExpander::visitSMaxExpr(const SCEVSMaxExpr *S) {
+Value *SCEVExpander::visitSMaxExpr(SCEVUseT<const SCEVSMaxExpr *> S) {
   return expandMinMaxExpr(S, Intrinsic::smax, "smax");
 }
 
-Value *SCEVExpander::visitUMaxExpr(const SCEVUMaxExpr *S) {
+Value *SCEVExpander::visitUMaxExpr(SCEVUseT<const SCEVUMaxExpr *> S) {
   return expandMinMaxExpr(S, Intrinsic::umax, "umax");
 }
 
-Value *SCEVExpander::visitSMinExpr(const SCEVSMinExpr *S) {
+Value *SCEVExpander::visitSMinExpr(SCEVUseT<const SCEVSMinExpr *> S) {
   return expandMinMaxExpr(S, Intrinsic::smin, "smin");
 }
 
-Value *SCEVExpander::visitUMinExpr(const SCEVUMinExpr *S) {
+Value *SCEVExpander::visitUMinExpr(SCEVUseT<const SCEVUMinExpr *> S) {
   return expandMinMaxExpr(S, Intrinsic::umin, "umin");
 }
 
-Value *SCEVExpander::visitSequentialUMinExpr(const SCEVSequentialUMinExpr *S) {
-  return expandMinMaxExpr(S, Intrinsic::umin, "umin", /*IsSequential*/true);
+Value *SCEVExpander::visitSequentialUMinExpr(
+    SCEVUseT<const SCEVSequentialUMinExpr *> S) {
+  return expandMinMaxExpr(S, Intrinsic::umin, "umin",
+                          /*IsSequential*/ true);
 }
 
-Value *SCEVExpander::visitVScale(const SCEVVScale *S) {
+Value *SCEVExpander::visitVScale(SCEVUseT<const SCEVVScale *> S) {
   return Builder.CreateVScale(S->getType());
 }
 
-Value *SCEVExpander::expandCodeFor(const SCEV *SH, Type *Ty,
+Value *SCEVExpander::expandCodeFor(SCEVUse SH, Type *Ty,
                                    BasicBlock::iterator IP) {
   setInsertPoint(IP);
-  Value *V = expandCodeFor(SH, Ty);
-  return V;
+  return expandCodeFor(SH, Ty);
 }
 
-Value *SCEVExpander::expandCodeFor(const SCEV *SH, Type *Ty) {
+Value *SCEVExpander::expandCodeFor(SCEVUse SH, Type *Ty) {
   // Expand the code for this SCEV.
   Value *V = expand(SH);
 
@@ -1563,7 +1567,7 @@ Value *SCEVExpander::expandCodeFor(const SCEV *SH, Type *Ty) {
 }
 
 Value *SCEVExpander::FindValueInExprValueMap(
-    const SCEV *S, const Instruction *InsertPt,
+    SCEVUse S, const Instruction *InsertPt,
     SmallVectorImpl<Instruction *> &DropPoisonGeneratingInsts) {
   // If the expansion is not in CanonicalMode, and the SCEV contains any
   // sub scAddRecExpr type SCEV, it is required to expand the SCEV literally.
@@ -1602,7 +1606,7 @@ Value *SCEVExpander::FindValueInExprValueMap(
 // literally, to prevent LSR's transformed SCEV from being reverted. Otherwise,
 // the expansion will try to reuse Value from ExprValueMap, and only when it
 // fails, expand the SCEV literally.
-Value *SCEVExpander::expand(const SCEV *S) {
+Value *SCEVExpander::expand(SCEVUse S) {
   // Compute an insertion point for this SCEV object. Hoist the instructions
   // as far out in the loop nest as possible.
   BasicBlock::iterator InsertPt = Builder.GetInsertPoint();

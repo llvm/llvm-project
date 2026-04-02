@@ -586,6 +586,14 @@ private:
   bool exactRDIVtest(const SCEVAddRecExpr *Src, const SCEVAddRecExpr *Dst,
                      FullDependence &Result) const;
 
+  /// exactTestImpl - Core implementation shared by the Exact SIV test and the
+  /// Exact RDIV test. Returns true if any possible dependence is disproved. If
+  /// \p Level is provided, this function will also attempt to explore
+  /// directions and refine \p Result for the given level.
+  bool exactTestImpl(const SCEVAddRecExpr *Src, const SCEVAddRecExpr *Dst,
+                     FullDependence &Result,
+                     std::optional<unsigned> Level) const;
+
   /// gcdMIVtest - Tests an MIV subscript pair for dependence.
   /// Returns true if any possible dependence is disproved.
   /// Can sometimes disprove the equal direction for 1 or more loops.

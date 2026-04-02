@@ -170,11 +170,7 @@ if(ENABLE_SHARED)
       # implicitly be exported from libclang.
       target_compile_definitions(libclang PRIVATE CLANG_BUILD_STATIC)
   elseif(APPLE)
-    set(LIBCLANG_LINK_FLAGS " -Wl,-compatibility_version -Wl,1")
-    set(LIBCLANG_LINK_FLAGS "${LIBCLANG_LINK_FLAGS} -Wl,-current_version -Wl,${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}.${LLVM_VERSION_PATCH}")
-
-    set_property(TARGET libclang APPEND_STRING PROPERTY
-                 LINK_FLAGS ${LIBCLANG_LINK_FLAGS})
+    llvm_set_macho_current_version(libclang ${LLVM_VERSION_MAJOR})
   else()
     set_target_properties(libclang
       PROPERTIES

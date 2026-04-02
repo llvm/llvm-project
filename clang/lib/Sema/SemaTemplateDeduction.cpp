@@ -5224,26 +5224,17 @@ Sema::DeduceAutoType(TypeLoc Type, Expr *Init, QualType &Result,
     return TemplateDeductionResult::Success;
   }
 
-  // Make sure that we treat 'char[]' equaly as 'char*' in C23 mode.
-  auto *String = dyn_cast<StringLiteral>(Init);
-  if (getLangOpts().C23 && String && Type.getType()->isArrayType()) {
-    Diag(Type.getBeginLoc(), diag::ext_c23_auto_non_plain_identifier);
-    TypeLoc TL = TypeLoc(Init->getType(), Type.getOpaqueData());
-    Result = SubstituteDeducedTypeTransform(*this, DependentResult).Apply(TL);
-    assert(!Result.isNull() && "substituting DependentTy can't fail");
-    return TemplateDeductionResult::Success;
+  auto *InitList = dyn_cast<InitListExpr>(Init);
+  bool IsArrayType = Type.getType()->isArrayType();
+  if (!getLangOpts().CPlusPlus && (InitList || IsArrayType)) {
+    Diag(Init->getBeginLoc(), diag::err_auto_init_list_from_c)
+        << (int)AT->getKeyword() << IsArrayType;
+    return TemplateDeductionResult::AlreadyDiagnosed;
   }
 
   // Emit a warning if 'auto*' is used in pedantic and in C23 mode.
   if (getLangOpts().C23 && Type.getType()->isPointerType()) {
     Diag(Type.getBeginLoc(), diag::ext_c23_auto_non_plain_identifier);
-  }
-
-  auto *InitList = dyn_cast<InitListExpr>(Init);
-  if (!getLangOpts().CPlusPlus && InitList) {
-    Diag(Init->getBeginLoc(), diag::err_auto_init_list_from_c)
-        << (int)AT->getKeyword() << getLangOpts().C23;
-    return TemplateDeductionResult::AlreadyDiagnosed;
   }
 
   // Deduce type of TemplParam in Func(Init)

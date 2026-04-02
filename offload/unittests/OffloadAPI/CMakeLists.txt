@@ -13,6 +13,7 @@ add_offload_unittest("event"
     event/olCreateEvent.cpp
     event/olDestroyEvent.cpp
     event/olSyncEvent.cpp
+    event/olGetEventElapsedTime.cpp
     event/olGetEventInfo.cpp
     event/olGetEventInfoSize.cpp)
 

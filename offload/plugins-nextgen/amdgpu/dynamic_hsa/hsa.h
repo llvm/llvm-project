@@ -99,6 +99,8 @@ typedef enum {
 typedef enum {
   HSA_SYSTEM_INFO_VERSION_MAJOR = 0,
   HSA_SYSTEM_INFO_VERSION_MINOR = 1,
+  HSA_SYSTEM_INFO_TIMESTAMP = 2,
+  HSA_SYSTEM_INFO_TIMESTAMP_FREQUENCY = 3,
 } hsa_system_info_t;
 
 typedef enum {

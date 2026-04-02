@@ -78,6 +78,7 @@ namespace format {
   TYPE(ElseRBrace)                                                             \
   TYPE(EnumLBrace)                                                             \
   TYPE(EnumRBrace)                                                             \
+  TYPE(EnumUnderlyingTypeColon)                                                \
   TYPE(FatArrow)                                                               \
   TYPE(ForEachMacro)                                                           \
   TYPE(FunctionAnnotationRParen)                                               \

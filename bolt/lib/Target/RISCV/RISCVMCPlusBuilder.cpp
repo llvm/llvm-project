@@ -553,15 +553,12 @@ public:
                .addReg(RegCnt);
   }
 
-  InstructionListType createRegCmpJE(MCPhysReg RegNo, MCPhysReg RegTmp,
-                                     const MCSymbol *Target,
+  InstructionListType createRegCmpJE(MCPhysReg RegNo, const MCSymbol *Target,
                                      MCContext *Ctx) const {
     InstructionListType Insts;
-    Insts.emplace_back(
-        MCInstBuilder(RISCV::SUB).addReg(RegTmp).addReg(RegNo).addReg(RegNo));
     Insts.emplace_back(MCInstBuilder(RISCV::BEQ)
                            .addReg(RegNo)
-                           .addReg(RegTmp)
+                           .addReg(RISCV::X0)
                            .addExpr(MCSymbolRefExpr::create(Target, *Ctx)));
     return Insts;
   }
@@ -713,7 +710,7 @@ public:
     Insts.emplace_back();
     loadReg(Insts.back(), RISCV::X10, RISCV::X10, 0);
     InstructionListType cmpJmp =
-        createRegCmpJE(RISCV::X10, RISCV::X11, IndCallHandler, Ctx);
+        createRegCmpJE(RISCV::X10, IndCallHandler, Ctx);
     Insts.insert(Insts.end(), cmpJmp.begin(), cmpJmp.end());
     Insts.emplace_back();
     createStackPointerIncrement(Insts.back(), 16);

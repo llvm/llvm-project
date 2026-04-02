@@ -2032,24 +2032,29 @@ llvm::Constant *ConstantEmitter::emitForMemory(CodeGenModule &CGM,
   }
 
   if (destType->isBitIntType()) {
-    ConstantAggregateBuilder Builder(CGM);
-    llvm::Type *LoadStoreTy = CGM.getTypes().convertTypeForLoadStore(destType);
-    // ptrtoint/inttoptr should not involve _BitInt in constant expressions, so
-    // casting to ConstantInt is safe here.
-    auto *CI = cast<llvm::ConstantInt>(C);
-    llvm::Constant *Res = llvm::ConstantFoldCastOperand(
-        destType->isSignedIntegerOrEnumerationType() ? llvm::Instruction::SExt
-                                                     : llvm::Instruction::ZExt,
-        CI, LoadStoreTy, CGM.getDataLayout());
-    if (CGM.getTypes().typeRequiresSplitIntoByteArray(destType, C->getType())) {
-      // Long _BitInt has array of bytes as in-memory type.
-      // So, split constant into individual bytes.
-      llvm::Type *DesiredTy = CGM.getTypes().ConvertTypeForMem(destType);
-      llvm::APInt Value = cast<llvm::ConstantInt>(Res)->getValue();
-      Builder.addBits(Value, /*OffsetInBits=*/0, /*AllowOverwrite=*/false);
-      return Builder.build(DesiredTy, /*AllowOversized*/ false);
+    llvm::Type *MemTy = CGM.getTypes().ConvertTypeForMem(destType);
+    if (C->getType() != MemTy) {
+      ConstantAggregateBuilder Builder(CGM);
+      llvm::Type *LoadStoreTy =
+          CGM.getTypes().convertTypeForLoadStore(destType);
+      // ptrtoint/inttoptr should not involve _BitInt in constant expressions,
+      // so casting to ConstantInt is safe here.
+      auto *CI = cast<llvm::ConstantInt>(C);
+      llvm::Constant *Res = llvm::ConstantFoldCastOperand(
+          destType->isSignedIntegerOrEnumerationType()
+              ? llvm::Instruction::SExt
+              : llvm::Instruction::ZExt,
+          CI, LoadStoreTy, CGM.getDataLayout());
+      if (CGM.getTypes().typeRequiresSplitIntoByteArray(destType,
+                                                        C->getType())) {
+        // Long _BitInt has array of bytes as in-memory type.
+        // So, split constant into individual bytes.
+        llvm::APInt Value = cast<llvm::ConstantInt>(Res)->getValue();
+        Builder.addBits(Value, /*OffsetInBits=*/0, /*AllowOverwrite=*/false);
+        return Builder.build(MemTy, /*AllowOversized*/ false);
+      }
+      return Res;
     }
-    return Res;
   }
 
   return C;
