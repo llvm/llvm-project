@@ -17,6 +17,7 @@ add_library(omptarget SHARED
   OpenMP/Mapping.cpp
   OpenMP/InteropAPI.cpp
   OpenMP/OMPT/Callback.cpp
+  OpenMP/OMPT/OmptTracingBuffer.cpp
 
   KernelLanguage/API.cpp
 )
