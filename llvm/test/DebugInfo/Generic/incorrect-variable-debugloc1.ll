@@ -5,7 +5,7 @@
 ; RUN: %llc_dwarf -O2  -dwarf-version 3 -filetype=obj < %s | llvm-dwarfdump - | FileCheck %s  --check-prefix=DWARF23
 ; RUN: %llc_dwarf -O2  -dwarf-version 4 -filetype=obj < %s | llvm-dwarfdump - | FileCheck %s  --check-prefix=DWARF4
 
-; For dwarf-version=2 tests on 32-bit targets, see incorrect-variable-debugloc1-32bit.ll
+; For dwarf-version=2 tests, see incorrect-variable-debugloc1-dwarf2.ll
 
 ; This is a test for PR21176.
 ; DW_OP_const <const> doesn't describe a constant value, but a value at a constant address.

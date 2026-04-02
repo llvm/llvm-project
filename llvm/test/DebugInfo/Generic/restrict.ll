@@ -1,6 +1,6 @@
 ; RUN: %llc_dwarf -dwarf-version=3 -O0 -filetype=obj < %s | llvm-dwarfdump -debug-info - | FileCheck --check-prefix=CHECK --check-prefix=V3 %s
 
-; For dwarf-version=2 tests on 32-bit targets, see restrict-32bit.ll
+; For dwarf-version=2 tests, see restrict-dwarf2.ll
 
 ; CHECK: DW_AT_name ("dst")
 ; V2: DW_AT_type ([[PTR:0x........]]
