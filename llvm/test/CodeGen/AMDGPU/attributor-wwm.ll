@@ -47,7 +47,7 @@ define i32 @test_calls_wwm(i32 %input) {
 }
 
 define amdgpu_kernel void @test_nested(i32 %input, ptr addrspace(1) %out) {
-; CHECK-LABEL: define amdgpu_kernel void @test_no_propagate(
+; CHECK-LABEL: define amdgpu_kernel void @test_nested(
 ; CHECK-SAME: i32 [[INPUT:%.*]], ptr addrspace(1) [[OUT:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[RES:%.*]] = call i32 @test_calls_wwm(i32 [[INPUT]])
 ; CHECK-NEXT:    store i32 [[RES]], ptr addrspace(1) [[OUT]], align 4
