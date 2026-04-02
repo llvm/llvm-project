@@ -3676,6 +3676,7 @@ StmtResult Sema::ActOnCapScopeReturnStmt(SourceLocation ReturnLoc,
         // though we represent it as one). We still deduce 'void'.
         Diag(ReturnLoc, diag::err_lambda_return_init_list)
           << RetValExp->getSourceRange();
+          RetValExp = nullptr; 
       }
 
       FnRetType = Context.VoidTy;

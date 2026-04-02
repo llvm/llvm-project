@@ -18,8 +18,7 @@ void infer_void_return_type(int i) {
     switch (x) {
     case 0: return get<void>();
     case 1: return;
-    case 2: return { 1, 2.0 }; // expected-error {{cannot deduce lambda return type from initializer list}} \
-                                   // cxx11-error {{void lambda should not return a value}}
+    case 2: return { 1, 2.0 }; // expected-error {{cannot deduce lambda return type from initializer list}}
     }
   }(7);
 }
