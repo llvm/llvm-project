@@ -2282,7 +2282,8 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
   ~AMDGPUDeviceTy() {}
 
   /// Initialize the device, its resources and get its properties.
-  Error initImpl(GenericPluginTy &Plugin) override {
+  Error initImpl(GenericPluginTy &Plugin,
+                 GenericProfilerTy *ProfilerPtr) override {
     // First setup all the memory pools.
     if (auto Err = initMemoryPools())
       return Err;

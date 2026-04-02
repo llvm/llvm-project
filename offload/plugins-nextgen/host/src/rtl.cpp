@@ -145,7 +145,10 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
   ~GenELF64DeviceTy() {}
 
   /// Initialize the device, which is a no-op
-  Error initImpl(GenericPluginTy &Plugin) override { return Plugin::success(); }
+  Error initImpl(GenericPluginTy &Plugin,
+                 GenericProfilerTy *ProfilerPtr) override {
+    return Plugin::success();
+  }
 
   /// Unload the binary image
   ///

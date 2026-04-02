@@ -29,6 +29,7 @@
 #include "Shared/Requirements.h"
 #include "Shared/Utils.h"
 
+#include "GenericProfiler.h"
 #include "GlobalHandler.h"
 #include "JIT.h"
 #include "MemoryManager.h"
@@ -489,7 +490,8 @@ struct GenericKernelTy {
   /// of it reserved for the kernel launch environment (dyn_ptr); the caller
   /// owns the storage it points into.
   Error launch(GenericDeviceTy &GenericDevice, KernelLaunchArgsTy &LaunchArgs,
-               AsyncInfoWrapperTy &AsyncInfoWrapper) const;
+               AsyncInfoWrapperTy &AsyncInfoWrapper,
+               GenericProfilerTy *ProfilerPtr = nullptr) const;
   virtual Error launchImpl(GenericDeviceTy &GenericDevice,
                            uint32_t NumThreads[3], uint32_t NumBlocks[3],
                            uint32_t DynBlockMemSize,
@@ -976,20 +978,23 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
 
   /// Initialize the device. After this call, the device should be already
   /// working and ready to accept queries or modifications.
-  Error init(GenericPluginTy &Plugin);
-  virtual Error initImpl(GenericPluginTy &Plugin) = 0;
+  Error init(GenericPluginTy &Plugin, GenericProfilerTy *ProfilerPtr = nullptr);
+  virtual Error initImpl(GenericPluginTy &Plugin,
+                         GenericProfilerTy *ProfilerPtr) = 0;
 
   /// Deinitialize the device and free all its resources. After this call, the
   /// device is no longer considered ready, so no queries or modifications are
   /// allowed.
-  Error deinit(GenericPluginTy &Plugin);
+  Error deinit(GenericPluginTy &Plugin,
+               GenericProfilerTy *ProfilerPtr = nullptr);
   virtual Error deinitImpl() = 0;
 
   /// Load the binary image into the device and return the target table. When
   /// \p Context is null the plugin's driver-scoped default context is used.
-  Expected<DeviceImageTy *> loadBinary(GenericPluginTy &Plugin,
-                                       StringRef TgtImage,
-                                       PluginContextTy *Context);
+  Expected<DeviceImageTy *>
+  loadBinary(GenericPluginTy &Plugin, StringRef TgtImage,
+             PluginContextTy *Context,
+             GenericProfilerTy *ProfilerPtr = nullptr);
   virtual Expected<DeviceImageTy *>
   loadBinaryImpl(std::unique_ptr<MemoryBuffer> &&TgtImage, int32_t ImageId,
                  PluginContextTy *Context) = 0;
@@ -1049,10 +1054,12 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
 
   /// Allocate data on the device or involving the device.
   Expected<void *> dataAlloc(int64_t Size, void *HostPtr, TargetAllocTy Kind,
-                             size_t Alignment);
+                             size_t Alignment,
+                             GenericProfilerTy *ProfilerPtr = nullptr);
 
   /// Deallocate data from the device or involving the device.
-  Error dataDelete(void *TgtPtr, TargetAllocTy Kind);
+  Error dataDelete(void *TgtPtr, TargetAllocTy Kind,
+                   GenericProfilerTy *ProfilerPtr = nullptr);
 
   /// Pin or register host memory to optimize transfers and return the device
   /// accessible pointer that devices should use for memory transfers involving
@@ -1156,7 +1163,8 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
 
   /// Run the kernel associated with \p EntryPtr
   Error launchKernel(void *EntryPtr, KernelLaunchArgsTy &LaunchArgs,
-                     __tgt_async_info *AsyncInfo);
+                     __tgt_async_info *AsyncInfo,
+                     GenericProfilerTy *ProfilerPtr = nullptr);
 
   /// Enqueue a host call to AsyncInfo
   Error enqueueHostCall(void (*Callback)(void *), void *UserData,
@@ -1234,6 +1242,11 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   }
   uint32_t getDebugKind() const { return OMPX_DebugKind; }
   virtual uint64_t getClockFrequency() const { return CLOCKS_PER_SEC; }
+
+  /// Get a device-specific timestamp in nanoseconds, used by the profiler
+  /// for timing device operations. Subclasses should override this to provide
+  /// hardware-accurate timestamps (e.g., via HSA system info).
+  virtual uint64_t getDeviceTimeStamp() { return 0; }
 
   /// Get target compute unit kind (e.g., sm_80, or gfx908).
   virtual std::string getComputeUnitKind() const { return "unknown"; }
@@ -1543,7 +1556,7 @@ struct GenericPluginTy {
   virtual Expected<int32_t> initImpl() = 0;
 
   /// Deinitialize the plugin and release the resources.
-  Error deinit();
+  Error deinit(GenericProfilerTy *ProfilerPtr = nullptr);
   virtual Error deinitImpl() = 0;
 
   /// Create a new device for the underlying plugin.
@@ -1623,12 +1636,12 @@ struct GenericPluginTy {
   /// Tear down any target-specific doorbell resources.
   virtual Error deinitRPCDoorbell() { return Plugin::success(); }
 
-  /// Get a reference to the record and replay interface for the plugin.
   /// Initialize a device within the plugin.
-  Error initDevice(int32_t DeviceId);
+  Error initDevice(int32_t DeviceId, GenericProfilerTy *ProfilerPtr = nullptr);
 
   /// Deinitialize a device within the plugin and release its resources.
-  Error deinitDevice(int32_t DeviceId);
+  Error deinitDevice(int32_t DeviceId,
+                     GenericProfilerTy *ProfilerPtr = nullptr);
 
   /// Indicate whether data can be exchanged directly between two devices under
   /// this same plugin. If this function returns true, it's safe to call the
@@ -1710,7 +1723,8 @@ public:
   int32_t is_device_initialized(int32_t DeviceId) const;
 
   /// Initialize the device inside of the plugin.
-  int32_t init_device(int32_t DeviceId);
+  int32_t init_device(int32_t DeviceId,
+                      GenericProfilerTy *ProfilerPtr = nullptr);
 
   /// Return the number of devices this plugin can support.
   int32_t number_of_devices();
@@ -1727,13 +1741,16 @@ public:
 
   /// Loads the associated binary into the plugin and returns a handle to it.
   int32_t load_binary(int32_t DeviceId, __tgt_device_image *TgtImage,
-                      __tgt_device_binary *Binary);
+                      __tgt_device_binary *Binary,
+                      GenericProfilerTy *ProfilerPtr = nullptr);
 
   /// Allocates memory that is accessively to the given device.
-  void *data_alloc(int32_t DeviceId, int64_t Size, void *HostPtr, int32_t Kind);
+  void *data_alloc(int32_t DeviceId, int64_t Size, void *HostPtr, int32_t Kind,
+                   GenericProfilerTy *ProfilerPtr = nullptr);
 
   /// Deallocates memory on the given device.
-  int32_t data_delete(int32_t DeviceId, void *TgtPtr, int32_t Kind);
+  int32_t data_delete(int32_t DeviceId, void *TgtPtr, int32_t Kind,
+                      GenericProfilerTy *ProfilerPtr = nullptr);
 
   /// Locks / pins host memory using the plugin runtime.
   int32_t data_lock(int32_t DeviceId, void *Ptr, int64_t Size,
@@ -1780,7 +1797,8 @@ public:
   /// Begin executing a kernel on the given device.
   int32_t launch_kernel(int32_t DeviceId, void *TgtEntryPtr,
                         KernelLaunchArgsTy &LaunchArgs,
-                        __tgt_async_info *AsyncInfoPtr);
+                        __tgt_async_info *AsyncInfoPtr,
+                        GenericProfilerTy *ProfilerPtr = nullptr);
 
   /// Synchronize an asyncrhonous queue with the plugin runtime.
   int32_t synchronize(int32_t DeviceId, __tgt_async_info *AsyncInfoPtr);
