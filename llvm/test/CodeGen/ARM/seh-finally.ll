@@ -48,11 +48,18 @@ entry:
           to label %invoke.cont unwind label %ehcleanup
 
 invoke.cont:                                      ; preds = %entry
+; CHECK: movs r0, #0
+; CHECK: mov r1, r6
+; CHECK: bl "?fin$0@0@simple_seh@@"
   %1 = call ptr @llvm.localaddress()
   call arm_aapcs_vfpcc void @"?fin$0@0@simple_seh@@"(i8 noundef zeroext 0, ptr noundef %1)
   ret void
 
 ehcleanup:                                        ; preds = %entry
+; CHECK-LABEL: "?dtor$2@?0?simple_seh@4HA":
+; CHECK: movs r0, #1
+; CHECK: mov r1, r6
+; CHECK: bl "?fin$0@0@simple_seh@@"
   %2 = cleanuppad within none []
   %3 = call ptr @llvm.localaddress()
   call arm_aapcs_vfpcc void @"?fin$0@0@simple_seh@@"(i8 noundef zeroext 1, ptr noundef %3) [ "funclet"(token %2) ]
@@ -84,9 +91,6 @@ entry:
 ; CHECK: $Mstack_realign$frame_escape_0 = 0
 ; CHECK: ldr r0, [sp]
 ; CHECK: bl foo
-; CHECK: movs r0, #0
-; CHECK: mov r1, r6
-; CHECK: bl "?fin$0@0@stack_realign@@"
 
   %o = alloca %struct.S, align 32
   call void (...) @llvm.localescape(ptr %o)
@@ -96,11 +100,18 @@ entry:
           to label %invoke.cont unwind label %ehcleanup
 
 invoke.cont:                                      ; preds = %entry
+; CHECK: movs r0, #0
+; CHECK: mov r1, r6
+; CHECK: bl "?fin$0@0@stack_realign@@"
   %1 = call ptr @llvm.localaddress()
   call arm_aapcs_vfpcc void @"?fin$0@0@stack_realign@@"(i8 noundef zeroext 0, ptr noundef %1)
   ret void
 
 ehcleanup:                                        ; preds = %entry
+; CHECK-LABEL: "?dtor$2@?0?stack_realign@4HA":
+; CHECK: movs r0, #1
+; CHECK: mov r1, r6
+; CHECK: bl "?fin$0@0@stack_realign@@"
   %2 = cleanuppad within none []
   %3 = call ptr @llvm.localaddress()
   call arm_aapcs_vfpcc void @"?fin$0@0@stack_realign@@"(i8 noundef zeroext 1, ptr noundef %3) [ "funclet"(token %2) ]
@@ -145,6 +156,9 @@ entry:
           to label %invoke.cont unwind label %ehcleanup
 
 invoke.cont:                                      ; preds = %entry
+; CHECK: movs r0, #0
+; CHECK: mov r1, r6
+; CHECK: bl "?fin$0@0@vla_present@@"
   %3 = call ptr @llvm.localaddress()
   call arm_aapcs_vfpcc void @"?fin$0@0@vla_present@@"(i8 noundef zeroext 0, ptr noundef %3)
   %4 = load ptr, ptr %saved_stack, align 4
@@ -152,6 +166,10 @@ invoke.cont:                                      ; preds = %entry
   ret void
 
 ehcleanup:                                        ; preds = %entry
+; CHECK-LABEL: "?dtor$2@?0?vla_present@4HA":
+; CHECK: movs r0, #1
+; CHECK: mov r1, r6
+; CHECK: bl "?fin$0@0@vla_present@@"
   %5 = cleanuppad within none []
   %6 = call ptr @llvm.localaddress()
   call arm_aapcs_vfpcc void @"?fin$0@0@vla_present@@"(i8 noundef zeroext 1, ptr noundef %6) [ "funclet"(token %5) ]
@@ -191,12 +209,19 @@ entry:
           to label %invoke.cont unwind label %ehcleanup
 
 invoke.cont:                                      ; preds = %entry
+; CHECK: movs r0, #0
+; CHECK: mov r1, r6
+; CHECK: bl "?fin$0@0@vla_and_realign@@"
   %2 = call ptr @llvm.localaddress()
   call arm_aapcs_vfpcc void @"?fin$0@0@vla_and_realign@@"(i8 noundef zeroext 0, ptr noundef %2)
   call void @llvm.stackrestore.p0(ptr %0)
   ret void
 
 ehcleanup:                                        ; preds = %entry
+; CHECK-LABEL: "?dtor$2@?0?vla_and_realign@4HA":
+; CHECK: movs r0, #1
+; CHECK: mov r1, r6
+; CHECK: bl "?fin$0@0@vla_and_realign@@"
   %3 = cleanuppad within none []
   %4 = call ptr @llvm.localaddress()
   call arm_aapcs_vfpcc void @"?fin$0@0@vla_and_realign@@"(i8 noundef zeroext 1, ptr noundef %4) [ "funclet"(token %3) ]
