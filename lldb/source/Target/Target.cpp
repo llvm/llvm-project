@@ -44,6 +44,7 @@
 #include "lldb/Interpreter/Property.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/ObjectFile.h"
+#include "Plugins/ObjectFile/Mach-O/ObjectFileMachO.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Target/ABI.h"
 #include "lldb/Target/ExecutionContext.h"
@@ -1542,6 +1543,12 @@ Module *Target::GetExecutableModulePointer() {
   return GetExecutableModule().get();
 }
 
+static bool IsSystemBinary(const ModuleSP &module_sp) {
+  if (auto *objfile = module_sp->GetObjectFile())
+    return objfile->IsSystem();
+  return false;
+}
+
 static void LoadScriptingResourceForModule(const ModuleSP &module_sp,
                                            Target *target) {
   Status error;
@@ -1861,7 +1868,8 @@ void Target::ModulesDidLoad(ModuleList &module_list) {
       ModuleSP module_sp(module_list.GetModuleAtIndex(idx));
       LoadScriptingResourceForModule(module_sp, this);
       LoadTypeSummariesForModule(module_sp);
-      LoadFormattersForModule(module_sp);
+      if (GetLoadFormattersFromUserBinaries() || IsSystemBinary(module_sp))
+        LoadFormattersForModule(module_sp);
     }
     m_breakpoint_list.UpdateBreakpoints(module_list, true, false);
     m_internal_breakpoint_list.UpdateBreakpoints(module_list, true, false);
@@ -5276,6 +5284,12 @@ bool TargetProperties::GetDebugUtilityExpression() const {
 void TargetProperties::SetDebugUtilityExpression(bool debug) {
   const uint32_t idx = ePropertyDebugUtilityExpression;
   SetPropertyAtIndex(idx, debug);
+}
+
+bool TargetProperties::GetLoadFormattersFromUserBinaries() const {
+  const uint32_t idx = ePropertyLoadFormattersFromUserBinaries;
+  return GetPropertyAtIndexAs<bool>(
+      idx, g_target_properties[idx].default_uint_value != 0);
 }
 
 // Target::TargetEventData

@@ -176,6 +176,9 @@ let Definition = "target", Path = "target" in {
   def UseFastStepping: Property<"use-fast-stepping", "Boolean">,
     DefaultTrue,
     Desc<"Use a fast stepping algorithm based on running from branch to branch rather than instruction single-stepping.">;
+  def LoadFormattersFromUserBinaries: Property<"load-formatters-from-user-binaries", "Boolean">,
+    DefaultTrue,
+    Desc<"Load formatter bytecode embedded in user (non-system) binaries.">;
   def LoadScriptFromSymbolFile: Property<"load-script-from-symbol-file", "Enum">,
     DefaultEnumValue<"eLoadScriptFromSymFileWarn">,
     EnumValues<"OptionEnumValues(g_load_script_from_sym_file_values)">,
