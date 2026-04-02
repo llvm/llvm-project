@@ -143,3 +143,25 @@ jobs:
 
       - name: Ripple LLVM Lit Tests
         run: cmake --build build --target check-llvm-transforms-ripple
+
+      - name: Clone Ripple Test Suite
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          repository: Ripple-Programming/ripple-test-suite
+          path: ripple-test-suite
+
+      - name: Configure Ripple Test Suite
+        run: |
+          cmake -G Ninja -S ripple-test-suite -B build-ripple-test-suite \
+            -DCMAKE_SYSTEM_NAME=HexagonStandalone \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_CXX_COMPILER=$(pwd)/install/bin/clang++ \
+            -DCMAKE_CXX_FLAGS="-mv81 -std=c++11 -stdlib=libstdc++" \
+            -DCMAKE_SYSROOT="$HEXAGON_SDK/tools/HEXAGON_Tools/19.0.04/Tools/target/hexagon" \
+            -DCMAKE_CROSSCOMPILING_EMULATOR="$HEXAGON_SDK/tools/HEXAGON_Tools/19.0.04/Tools/bin/hexagon-sim;--simulated_returnval;--"
+
+      - name: Build Ripple Test Suite
+        run: cmake --build build-ripple-test-suite
+
+      - name: Run Ripple Test Suite
+        run: cmake --build build-ripple-test-suite -- check
