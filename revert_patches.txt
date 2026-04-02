@@ -14,9 +14,9 @@ breaks rocgdb UT
 mlir tests breaking
 [IR] Require well-formed IR for BasicBlock::getTerminator (#189416)
 ---
-LTO LLD merge issue
-8b21fe60b43f [LTO][LLD] Prevent invalid LTO libfunc transforms (#164916)
----
 needs SPIRV/COMGR
 18e695890306 [SPIRV][AMDGPU][clang][CodeGen][opt] Add late-resolved 
+---
+inf loop on check-mlir
+[SLP] Do not skip tiny trees with gathered loads to vectorize
 ---
