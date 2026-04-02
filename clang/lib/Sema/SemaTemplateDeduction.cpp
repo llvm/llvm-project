@@ -5249,16 +5249,14 @@ Sema::DeduceAutoType(TypeLoc Type, Expr *Init, QualType &Result,
   // Deduce type of TemplParam in Func(Init)
   SmallVector<DeducedTemplateArgument, 1> Deduced;
   Deduced.resize(1);
+
   SmallVector<OriginalCallArg, 4> OriginalCallArgs;
 
   bool CanTryFastPath =
       !InitList &&
       !Init->getType()->isSpecificBuiltinType(BuiltinType::Overload) &&
       !getLangOpts().ObjC && !getLangOpts().OpenCL;
-
-#ifndef NDEBUG
   bool FastPathUsed = false;
-#endif
 
   QualType DeducedType;
   // If this is a 'decltype(auto)' specifier, do the decltype dance.
@@ -5286,7 +5284,7 @@ Sema::DeduceAutoType(TypeLoc Type, Expr *Init, QualType &Result,
         Context.hasSameType(
             DeclaredTy->getPointeeType().getLocalUnqualifiedType(),
             Context.getAutoDeductType()) &&
-        !DeclaredTy->getPointeeType().getQualifiers().hasCVRQualifiers();
+        !DeclaredTy->getPointeeType().getLocalQualifiers().hasCVRQualifiers();
 
     QualType ProcessedInitTy = Init->getType().getNonReferenceType();
     if (ProcessedInitTy->isArrayType() || ProcessedInitTy->isFunctionType())
@@ -5298,9 +5296,7 @@ Sema::DeduceAutoType(TypeLoc Type, Expr *Init, QualType &Result,
 
     if (IsPlainOrTopLevelCvAuto) {
       DeducedType = ProcessedInitTy;
-#ifndef NDEBUG
       FastPathUsed = true;
-#endif
     } else if (CanUsePointerFastPath) {
       DeducedType = ProcessedInitTy->getPointeeType();
       // Normalize qualifiers on array pointee types so the fast path builds the
@@ -5308,16 +5304,14 @@ Sema::DeduceAutoType(TypeLoc Type, Expr *Init, QualType &Result,
       Qualifiers DeducedQuals;
       DeducedType = Context.getUnqualifiedArrayType(DeducedType, DeducedQuals);
       DeducedType = Context.getQualifiedType(DeducedType, DeducedQuals);
-#ifndef NDEBUG
       FastPathUsed = true;
-#endif
     }
   }
 
   // Auto deduction with template
-  // When assertions are enabled, check that the fast path deduces the same
-  // canonical type as the slow path.
-#ifndef NDEBUG
+  // When expensive checks are enabled, run slow path and check that it
+  // deduces the same type as the fast path.
+#ifdef EXPENSIVE_CHECKS
   if (DeducedType.isNull() || FastPathUsed) {
     QualType FastPathDeducedType = DeducedType;
 #else
@@ -5391,20 +5385,8 @@ Sema::DeduceAutoType(TypeLoc Type, Expr *Init, QualType &Result,
       return TemplateDeductionResult::Incomplete;
     DeducedType = Deduced[0].getAsType();
 
-#ifndef NDEBUG
+#ifdef EXPENSIVE_CHECKS
     if (FastPathUsed) {
-      // Ignore differences due only to QualType sugar.
-      if (FastPathDeducedType != DeducedType) {
-        llvm::errs() << "Deducing: ";
-        Type.dump();
-        Init->dump();
-        llvm::errs() << "Fast-path deduced type: ";
-        FastPathDeducedType.dump();
-
-        llvm::errs() << "Slow-path deduced type: ";
-        DeducedType.dump();
-      }
-
       assert(FastPathDeducedType == DeducedType &&
              "fast path auto deduction produced a different deduced type than "
              "the template-deduction path");

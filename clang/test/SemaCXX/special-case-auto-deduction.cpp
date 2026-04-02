@@ -92,6 +92,7 @@ using Animal = int;
 Animal animal = 0;
 auto t1 = animal;
 static_assert(__is_same(decltype(t1), Animal));
+int *iap = t1; // expected-error {{cannot initialize a variable of type 'int *' with an lvalue of type 'Animal' (aka 'int')}}
 
 using AnimalPtr = int *;
 AnimalPtr ap = nullptr;
@@ -265,6 +266,7 @@ static_assert(__is_same(decltype(cpc), const int * const));
 
 
 // cvr test
+
 const int *qp1 = nullptr;
 auto *__restrict qx1 = qp1;
 static_assert(__is_same(decltype(qx1), const int *__restrict));

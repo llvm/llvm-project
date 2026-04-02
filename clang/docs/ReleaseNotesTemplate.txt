@@ -112,6 +112,9 @@ Improvements to Clang's time-trace
 Improvements to Coverage Mapping
 --------------------------------
 
+Improvements to Clang's compile-time performance
+------------------------------------------------
+
 Bug Fixes in This Version
 -------------------------
 

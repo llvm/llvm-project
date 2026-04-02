@@ -182,9 +182,6 @@ Non-comprehensive list of changes in this release
   ``__builtin_elementwise_min``.
 
 - Added header ``endian.h`` which contains byte order helpers specified in POSIX
-
-- Improved the performance of ``auto`` deduction by adding a fast path
-  for simple cases, including ``auto``, ``const auto``, and ``auto*``. (#GH186274)
   
 - Added #pragma loop licm(disable) for llvm.loop.licm.disable metadata
 
@@ -363,6 +360,11 @@ Improvements to Coverage Mapping
 - "Single byte coverage" now supports branch coverage and can be used
   together with ``-fcoverage-mcdc``.
 
+Improvements to Clang's compile-time performance
+------------------------------------------------
+- Improved the performance of ``auto`` deduction by adding a fast path
+  for simple cases, including ``auto``, ``const auto``, and ``auto*``. (#GH186274)
+  
 Bug Fixes in This Version
 -------------------------
 
