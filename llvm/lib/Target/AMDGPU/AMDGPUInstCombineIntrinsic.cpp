@@ -143,6 +143,9 @@ static std::optional<Instruction *> modifyIntrinsicCall(
   NewCall->copyMetadata(OldIntr);
   if (isa<FPMathOperator>(NewCall))
     NewCall->copyFastMathFlags(&OldIntr);
+  // Copy attributes
+  AttributeList OldAttrList = OldIntr.getAttributes();
+  NewCall->setAttributes(OldAttrList);
 
   // Erase and replace uses
   if (!InstToReplace.getType()->isVoidTy())
@@ -2082,6 +2085,22 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
       return IC.replaceInstUsesWith(II, ConstantInt::getFalse(II.getType()));
     break;
   }
+  case Intrinsic::amdgcn_waterfall_begin: {
+    Value *Index = II.getArgOperand(1);
+    // If there is a previous waterfall begin with the same index, we can remove
+    // this one.
+    IntrinsicInst *PrevII;
+    for (Value *Token = II.getArgOperand(0);
+         (PrevII = dyn_cast<IntrinsicInst>(Token)) &&
+         PrevII->getIntrinsicID() == Intrinsic::amdgcn_waterfall_begin;
+         Token = PrevII->getArgOperand(0)) {
+      if (Index == PrevII->getArgOperand(1)) {
+        IC.replaceInstUsesWith(II, II.getArgOperand(0));
+        return IC.eraseInstFromFunction(II);
+      }
+    }
+    break;
+  }
   case Intrinsic::amdgcn_make_buffer_rsrc: {
     Value *Src = II.getArgOperand(0);
     if (isa<PoisonValue>(Src))
@@ -2379,6 +2398,8 @@ static Value *simplifyAMDGCNMemoryIntrinsicDemanded(InstCombiner &IC,
       IC.Builder.CreateIntrinsic(II.getIntrinsicID(), OverloadTys, Args);
   NewCall->takeName(&II);
   NewCall->copyMetadata(II);
+  AttributeList OldAttrList = II.getAttributes();
+  NewCall->setAttributes(OldAttrList);
 
   if (IsLoad) {
     if (NewNumElts == 1) {
@@ -2492,6 +2513,11 @@ std::optional<Value *> GCNTTIImpl::simplifyDemandedVectorEltsIntrinsic(
   case Intrinsic::amdgcn_struct_tbuffer_load:
   case Intrinsic::amdgcn_struct_ptr_tbuffer_load:
     return simplifyAMDGCNMemoryIntrinsicDemanded(IC, II, DemandedElts);
+  case Intrinsic::amdgcn_waterfall_end:
+    // Propagate demanded elements through to the value being returned by the
+    // waterfall loop.
+    SimplifyAndSetOp(&II, 1, DemandedElts, UndefElts);
+    break;
   default: {
     if (getAMDGPUImageDMaskIntrinsic(II.getIntrinsicID())) {
       return simplifyAMDGCNMemoryIntrinsicDemanded(IC, II, DemandedElts, 0);

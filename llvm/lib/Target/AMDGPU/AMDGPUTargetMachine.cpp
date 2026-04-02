@@ -53,6 +53,7 @@
 #include "SIFixVGPRCopies.h"
 #include "SIFoldOperands.h"
 #include "SIFormMemoryClauses.h"
+#include "SIInsertWaterfall.h"
 #include "SILoadStoreOptimizer.h"
 #include "SILowerControlFlow.h"
 #include "SILowerSGPRSpills.h"
@@ -675,6 +676,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeSIFixSGPRCopiesLegacyPass(*PR);
   initializeSIFixVGPRCopiesLegacyPass(*PR);
   initializeSIFoldOperandsLegacyPass(*PR);
+  initializeSIInsertWaterfallPass(*PR);
   initializeSIPeepholeSDWALegacyPass(*PR);
   initializeSIShrinkInstructionsLegacyPass(*PR);
   initializeSIOptimizeExecMaskingPreRALegacyPass(*PR);
@@ -1736,6 +1738,7 @@ void GCNPassConfig::addFastRegAlloc() {
 }
 
 void GCNPassConfig::addPreRegAlloc() {
+  addPass(createSIInsertWaterfallPass());
   if (getOptLevel() != CodeGenOptLevel::None)
     addPass(&AMDGPUPrepareAGPRAllocLegacyID);
 }
@@ -2550,6 +2553,7 @@ Error AMDGPUCodeGenPassBuilder::addOptimizedRegAlloc(
 }
 
 void AMDGPUCodeGenPassBuilder::addPreRegAlloc(PassManagerWrapper &PMW) const {
+  addMachineFunctionPass(SIInsertWaterfallPass(), PMW);
   if (getOptLevel() != CodeGenOptLevel::None)
     addMachineFunctionPass(AMDGPUPrepareAGPRAllocPass(), PMW);
 }

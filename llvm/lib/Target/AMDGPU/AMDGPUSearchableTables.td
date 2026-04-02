@@ -337,6 +337,7 @@ def : SourceOfDivergence<int_amdgcn_permlane16_swap>;
 def : SourceOfDivergence<int_amdgcn_permlane32_swap>;
 def : SourceOfDivergence<int_amdgcn_set_inactive>;
 def : SourceOfDivergence<int_amdgcn_set_inactive_chain_arg>;
+def : SourceOfDivergence<int_amdgcn_waterfall_end>;
 
 foreach intr = AMDGPUMFMAIntrinsics908 in
 def : SourceOfDivergence<intr>;
@@ -402,6 +403,9 @@ def : AlwaysUniform<int_amdgcn_icmp>;
 def : AlwaysUniform<int_amdgcn_fcmp>;
 def : AlwaysUniform<int_amdgcn_ballot>;
 def : AlwaysUniform<int_amdgcn_if_break>;
+def : AlwaysUniform<int_amdgcn_waterfall_readfirstlane>;
+def : AlwaysUniform<int_amdgcn_waterfall_begin>;
+def : AlwaysUniform<int_amdgcn_waterfall_last_use>;
 def : AlwaysUniform<int_amdgcn_cluster_workgroup_id_x>;
 def : AlwaysUniform<int_amdgcn_cluster_workgroup_id_y>;
 def : AlwaysUniform<int_amdgcn_cluster_workgroup_id_z>;

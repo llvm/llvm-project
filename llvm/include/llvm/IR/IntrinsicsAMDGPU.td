@@ -2720,6 +2720,73 @@ def int_amdgcn_cs_chain:
             ],
             [IntrConvergent, IntrNoReturn, ImmArg<ArgIndex<4>>]>;
 
+// Waterfall intrinsics are used to mark a region as requiring waterfall loops to
+// activate and deactivate lanes in a loop (and sometimes transform VGPR values
+// into SGPR values).
+// Best case (uniform index in VGPR) the loop will execute once, worst case (all
+// values in the index are different) the loop will execute wave-size times.
+// The waterfall.begin intrinsic returns a new token that must be threaded through the
+// corresponding waterfall.readfirstlane and waterfall.end or
+// waterfall.last_use intrinsics, forming a waterfall group of intrinsics that together
+// define a waterfall region.
+// All intrinsics in a waterfall group must reside within the same basic block.
+// Where the intrinsic specifies "llvm_any_ty", the intrinsic will accept any of
+// the following types:
+// i16, v2i16, v4i16, i32, v2i32, v4i32, v8i32, f16, v2f16, v4f16, f32, v2f32,
+// v4f32, v8f32
+// TODO: extend the support to allow spanning multiple blocks
+def int_amdgcn_waterfall_begin :
+    Intrinsic<[llvm_i32_ty],  // Returns sgpr token
+              [llvm_i32_ty,   // Previous begin token / null if first
+               llvm_any_ty],  // VGPR index for waterfall
+              [IntrConvergent]>;
+
+// Often the index from begin will be used as the readfirstlane value from
+// waterfall code - however, this isn't always the case. The readfirstlane style
+// intrinsic is required to be used, but often is a no-op if the index is the
+// used directly.
+def int_amdgcn_waterfall_readfirstlane :
+    Intrinsic<[llvm_any_ty],     // Returns any value
+              [llvm_i32_ty,      // Token from final begin
+               llvm_any_ty],     // VGPR value to be used in readfirstlane
+              [IntrConvergent]>;
+
+// Effectively a no-op, but this intrinsic is used to indicate the end of the
+// region for waterfall by tagging a value as the end of the section.
+// Waterfall will happen for all values dependent on the begin until the end
+// intrinsic is reached,
+def int_amdgcn_waterfall_end :
+    Intrinsic<[llvm_any_ty],      // Returns any value
+              [llvm_i32_ty,       // Token from final begin
+               LLVMMatchType<0>], // Same as return value
+              [IntrConvergent]>;
+
+// Effectively a no-op, no code results directly from this intrinsic. This is
+// used to indicate that the use of the defined value constitutes the end of the
+// waterfall propagation. This is roughly equivalent to the end intrinsic, but
+// can be used to tag values that are used in non-defining operations such as a
+// store.
+def int_amdgcn_waterfall_last_use :
+    Intrinsic<[llvm_any_ty],      // Returns any value
+              [llvm_i32_ty,       // Token from begin
+               LLVMMatchType<0>], // Same as return value
+              [IntrConvergent]>;
+
+// Special variant where the last-use uses a VGPR that needs to be uniform.
+def int_amdgcn_waterfall_last_use_vgpr :
+    Intrinsic<[llvm_any_ty],      // Returns any value
+              [llvm_i32_ty,       // Token from begin
+               LLVMMatchType<0>], // Same as return value
+              []>;
+
+// Special waterfall loop end intrinsic to be used with last_use
+// This is inserted late, before codegen, mainly to mark the loop end
+// for special handling such as scc clobbers.
+def int_amdgcn_waterfall_loop_end :
+    Intrinsic<[],
+              [llvm_i32_ty],      // Token from begin
+              [IntrConvergent]>;
+
 // Run a function with all the lanes enabled. Only direct calls are allowed. The
 // first argument is the callee, which must have the `amdgpu_gfx_whole_wave`
 // calling convention and must not be variadic. The remaining arguments to the

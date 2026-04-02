@@ -1918,6 +1918,58 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    This intrinsic has 1 operand:
 
                                                    * Local pointer to the LDS barrier data.
+  llvm.amdgcn.waterfall.begin                      Marks the beginning of a waterfall region of code.
+
+                                                   The compiler generates a waterfall loop around the region.
+                                                   A waterfall loop handles the case where an operation that requires
+                                                   a uniform operand (e.g., held in an SGPR) is applied to a divergent operand
+                                                   (held in a VGPR, with values varying per lane).
+                                                   Each iteration of the waterfall loop activates a subset of lanes that
+                                                   share the same value of the VGPR (the value in the first active lane).
+                                                   The operation is then executed using that value as the uniform operand.
+                                                   If the VGPR is already uniform, the waterfall loop executes only once.
+                                                   The worst case for a waterfall loop is one iteration per lane (all lanes
+                                                   have different values of the VGPR), but it is not common in practice.
+
+                                                   The intrinsic takes a previous token
+                                                   (``i32``; use a null/zero value if this is the first ``waterfall.begin`` in
+                                                   a waterfall group) and a VGPR.
+
+                                                   The intrinsic returns a new token that must be threaded through the
+                                                   corresponding ``waterfall.readfirstlane`` and ``waterfall.end`` or
+                                                   ``waterfall.last_use`` intrinsics, forming a waterfall group of intrinsics
+                                                   that together define a waterfall region.
+
+                                                   All intrinsics in a waterfall group must reside in the same basic block.
+
+                                                   Multiple ``waterfall.begin`` intrinsics can be chained by
+                                                   passing the token of the preceding ``waterfall.begin`` as the first argument.
+                                                   This allows a front-end to create one waterfall loop for
+                                                   multiple non-uniform values.
+                                                   Later compiler passes may remove values determined as uniform.
+                                                   The final token is used for other waterfall intrinsics in the same group.
+
+  llvm.amdgcn.waterfall.readfirstlane              Reads the first active lane's value of the VGPR and returns it as
+                                                   an SGPR for use within a waterfall region.
+
+                                                   Takes the ``i32`` token from the final ``waterfall.begin`` in the waterfall
+                                                   group and the VGPR. Returns the uniform (SGPR) result.
+
+                                                   If the VGPR is determined to be uniform at compile time, this intrinsic
+                                                   is optimized away (the input VGPR value is used directly).
+
+  llvm.amdgcn.waterfall.end                        Marks the end of a waterfall region.
+                                                   Takes the ``i32`` token from the final ``waterfall.begin``
+
+  llvm.amdgcn.waterfall.last_use                   Variant of ``waterfall.end`` for values whose last use is in a
+                                                   non-defining operation such as a store. Marks that the use of the value
+                                                   constitutes the end of the waterfall region.
+
+  llvm.amdgcn.waterfall.last_use_vgpr              Variant of ``waterfall.last_use`` for values that remain in a VGPR.
+
+  llvm.amdgcn.waterfall.loop_end                   Inserted later by the compiler to be used with ```waterfall.last_use*``
+                                                   to mark the loop-end point for special
+                                                   handling such as SCC clobber tracking.
 
   ==============================================   ==========================================================
 
