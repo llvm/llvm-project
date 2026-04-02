@@ -30847,7 +30847,8 @@ static SDValue LowerShiftByScalarImmediate(SDValue Op, SelectionDAG &DAG,
     // Simple i8 add case for shl by 1 or 2 (if PSLLW requires masking).
     if (Op.getOpcode() == ISD::SHL &&
         (ShiftAmt == 1 ||
-         (ShiftAmt == 2 && !DAG.MaskedValueIsZero(R, APInt(8, 0xC0))))) {
+         (ShiftAmt == 2 && !DAG.MaskedValueIsZero(R, APInt(8, 0xC0)) &&
+          (!Op->hasOneUse() || Op->user_begin()->getOpcode() != ISD::AND)))) {
       // R may be undef at run-time, but (shl R, 1) must be an even number (LSB
       // must be 0). (add undef, undef) however can be any value. To make this
       // safe, we must freeze R to ensure that register allocation uses the same
