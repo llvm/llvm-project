@@ -155,7 +155,7 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
   }
 
   void visitFPUnOp(Instruction &I,
-                   function_ref<AnyValue(const APFloat &)> ScalarFn) {
+                   function_ref<APFloat(const APFloat &)> ScalarFn) {
     FastMathFlags FMF = cast<FPMathOperator>(I).getFastMathFlags();
 
     visitUnOp(I, [&](const AnyValue &Operand) -> AnyValue {
@@ -166,7 +166,7 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
       // operation is fneg. And fneg is specified as a bitwise operation which
       // only flips the sign bit of the input.
 
-      APFloat Result = ScalarFn(Operand.asFloat()).asFloat();
+      APFloat Result = ScalarFn(Operand.asFloat());
 
       return handleFMFFlags(Result, FMF);
     });
@@ -206,10 +206,9 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
 
   void visitFPBinOp(
       Instruction &I,
-      function_ref<AnyValue(const APFloat &, const APFloat &)> ScalarFn) {
+      function_ref<APFloat(const APFloat &, const APFloat &)> ScalarFn) {
     FastMathFlags FMF = cast<FPMathOperator>(I).getFastMathFlags();
-    DenormalMode DenormMode = CurrentFrame->Func.getDenormalMode(
-        I.getType()->getScalarType()->getFltSemantics());
+    DenormalMode DenormMode = getCurrentDenormalMode(I);
 
     visitBinOp(I, [&](const AnyValue &LHS, const AnyValue &RHS) -> AnyValue {
       if (LHS.isPoison() || RHS.isPoison())
@@ -224,7 +223,7 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
       APFloat FLHS = handleDenormal(LHS.asFloat(), DenormMode.Input);
       APFloat FRHS = handleDenormal(RHS.asFloat(), DenormMode.Input);
 
-      APFloat RawResult = ScalarFn(FLHS, FRHS).asFloat();
+      APFloat RawResult = ScalarFn(FLHS, FRHS);
 
       // Flush output denormals and handle fast-math flags.
       AnyValue FResult = handleFMFFlags(
@@ -281,7 +280,7 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
           // Target-specific NaN: the quiet bit is set and the payload is picked
           // from a target-specific set of "extra" possible NaN payloads. We
           // approximate this by filling the payload with random values.
-          auto Payload = APInt(64, Ctx.getRandomUInt64());
+          APInt Payload(64, Ctx.getRandomUInt64());
           return APFloat::getQNaN(Result.getSemantics(), Sign, &Payload);
         }
       }
@@ -409,6 +408,11 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
       return IdxInt.trunc(IndexBitWidth);
     }
     return IdxInt.sext(IndexBitWidth);
+  }
+
+  DenormalMode getCurrentDenormalMode(Instruction &I) {
+    return CurrentFrame->Func.getDenormalMode(
+        I.getType()->getScalarType()->getFltSemantics());
   }
 
 public:
@@ -765,7 +769,7 @@ public:
   }
 
   void visitFAdd(BinaryOperator &I) {
-    visitFPBinOp(I, [](const APFloat &LHS, const APFloat &RHS) -> AnyValue {
+    visitFPBinOp(I, [](const APFloat &LHS, const APFloat &RHS) -> APFloat {
       APFloat Res = LHS;
       Res.add(RHS, APFloat::rmNearestTiesToEven);
       return Res;
@@ -773,7 +777,7 @@ public:
   }
 
   void visitFSub(BinaryOperator &I) {
-    visitFPBinOp(I, [](const APFloat &LHS, const APFloat &RHS) -> AnyValue {
+    visitFPBinOp(I, [](const APFloat &LHS, const APFloat &RHS) -> APFloat {
       APFloat Res = LHS;
       Res.subtract(RHS, APFloat::rmNearestTiesToEven);
       return Res;
@@ -781,7 +785,7 @@ public:
   }
 
   void visitFMul(BinaryOperator &I) {
-    visitFPBinOp(I, [](const APFloat &LHS, const APFloat &RHS) -> AnyValue {
+    visitFPBinOp(I, [](const APFloat &LHS, const APFloat &RHS) -> APFloat {
       APFloat Res = LHS;
       Res.multiply(RHS, APFloat::rmNearestTiesToEven);
       return Res;
@@ -789,7 +793,7 @@ public:
   }
 
   void visitFDiv(BinaryOperator &I) {
-    visitFPBinOp(I, [](const APFloat &LHS, const APFloat &RHS) -> AnyValue {
+    visitFPBinOp(I, [](const APFloat &LHS, const APFloat &RHS) -> APFloat {
       APFloat Res = LHS;
       Res.divide(RHS, APFloat::rmNearestTiesToEven);
       return Res;
@@ -797,7 +801,7 @@ public:
   }
 
   void visitFRem(BinaryOperator &I) {
-    visitFPBinOp(I, [](const APFloat &LHS, const APFloat &RHS) -> AnyValue {
+    visitFPBinOp(I, [](const APFloat &LHS, const APFloat &RHS) -> APFloat {
       APFloat Res = LHS;
       Res.mod(RHS);
       return Res;
@@ -805,7 +809,7 @@ public:
   }
 
   void visitFNeg(UnaryOperator &I) {
-    visitFPUnOp(I, [](const APFloat &Operand) -> AnyValue { return -Operand; });
+    visitFPUnOp(I, [](const APFloat &Operand) -> APFloat { return -Operand; });
   }
 
   void visitTruncInst(TruncInst &Trunc) {
@@ -847,10 +851,20 @@ public:
       if (Operand.isPoison())
         return AnyValue::poison();
 
-      APFloat Res = Operand.asFloat();
+      FastMathFlags FMF = cast<FPMathOperator>(I).getFastMathFlags();
+      APFloat FOperand = Operand.asFloat();
+      if (auto ValidateRes = handleFMFFlags(FOperand, FMF);
+          ValidateRes.isPoison())
+        return ValidateRes;
+
       bool LosesInfo;
-      Res.convert(DstSem, CurrentRoundingMode, &LosesInfo);
-      return AnyValue(Res);
+      FOperand.convert(DstSem, CurrentRoundingMode, &LosesInfo);
+
+      if (auto ValidateRes = handleFMFFlags(FOperand, FMF);
+          ValidateRes.isPoison())
+        return ValidateRes;
+
+      return AnyValue(FOperand);
     });
   }
 
@@ -973,8 +987,7 @@ public:
   }
 
   void visitFCmpInst(FCmpInst &I) {
-    DenormalMode DenormMode = CurrentFrame->Func.getDenormalMode(
-        I.getOperand(0)->getType()->getScalarType()->getFltSemantics());
+    DenormalMode DenormMode = getCurrentDenormalMode(I);
     FastMathFlags FMF = I.getFastMathFlags();
 
     visitBinOp(I, [&](const AnyValue &LHS, const AnyValue &RHS) -> AnyValue {
