@@ -54,7 +54,7 @@ public:
   bool ParseVendorDWARFOpcode(uint8_t op, const DataExtractor &opcodes,
                               lldb::offset_t &offset, RegisterContext *reg_ctx,
                               lldb::RegisterKind reg_kind,
-                              std::vector<Value> &stack) const override;
+                              DWARFExpression::Stack &stack) const override;
 
   void FindGlobalVariables(ConstString name,
                            const CompilerDeclContext &parent_decl_ctx,

@@ -46,12 +46,10 @@ SymbolFileWasm::GetVendorDWARFOpcodeSize(const DataExtractor &data,
   return offset - data_offset;
 }
 
-bool SymbolFileWasm::ParseVendorDWARFOpcode(uint8_t op,
-                                            const DataExtractor &opcodes,
-                                            lldb::offset_t &offset,
-                                            RegisterContext *reg_ctx,
-                                            lldb::RegisterKind reg_kind,
-                                            std::vector<Value> &stack) const {
+bool SymbolFileWasm::ParseVendorDWARFOpcode(
+    uint8_t op, const DataExtractor &opcodes, lldb::offset_t &offset,
+    RegisterContext *reg_ctx, lldb::RegisterKind reg_kind,
+    DWARFExpression::Stack &stack) const {
   if (op != llvm::dwarf::DW_OP_WASM_location)
     return false;
 
