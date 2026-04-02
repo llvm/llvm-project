@@ -313,3 +313,9 @@
 
 // RUN: %clang_cl /c /Fodir/ /clang:-fembed-bitcode -### -- %s 2>&1 | FileCheck -check-prefix=FoNAMEBC %s
 // FoNAMEBC:  "-o" "dir/cl-outputs.bc"
+
+// RUN: %clang_cl /c /clang:-emit-llvm -### -- %s 2>&1 | FileCheck -check-prefix=FoNAMEBC2 %s
+// FoNAMEBC2:  "-o" "cl-outputs.bc"
+
+// RUN: %clang_cl /c /Fodir/ /clang:-emit-llvm -### -- %s 2>&1 | FileCheck -check-prefix=FoNAMEBC3 %s
+// FoNAMEBC3:  "-o" "dir/cl-outputs.bc"
