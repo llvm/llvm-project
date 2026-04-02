@@ -1967,7 +1967,7 @@ public:
     }
 
     return Insert(new AtomicRMWInst(Op, Ptr, Val, *Align, Ordering, SSID,
-                                    nullptr, Elementwise));
+                                    Elementwise));
   }
 
   CallInst *CreateStructuredGEP(Type *BaseType, Value *PtrBase,

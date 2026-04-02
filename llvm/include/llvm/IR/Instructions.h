@@ -809,9 +809,8 @@ private:
 public:
   LLVM_ABI AtomicRMWInst(BinOp Operation, Value *Ptr, Value *Val,
                          Align Alignment, AtomicOrdering Ordering,
-                         SyncScope::ID SSID,
-                         InsertPosition InsertBefore = nullptr,
-                         bool Elementwise = false);
+                         SyncScope::ID SSID, bool Elementwise = false,
+                         InsertPosition InsertBefore = nullptr);
 
   // allocate space for exactly two operands
   void *operator new(size_t S) { return User::operator new(S, AllocMarker); }

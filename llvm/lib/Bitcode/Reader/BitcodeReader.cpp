@@ -6677,7 +6677,7 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
             Align(TheModule->getDataLayout().getTypeStoreSize(Val->getType()));
 
       I = new AtomicRMWInst(Operation, Ptr, Val, *Alignment, Ordering, SSID,
-                            nullptr, IsElementwise);
+                            IsElementwise);
       ResTypeID = ValTypeID;
       cast<AtomicRMWInst>(I)->setVolatile(IsVol);
 

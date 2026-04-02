@@ -373,7 +373,7 @@ TEST(VerifierTest, AtomicRMW) {
   Constant *CV = ConstantVector::getSplat(ElementCount::getScalable(2), CF);
   new AtomicRMWInst(AtomicRMWInst::FAdd, Ptr, CV, Align(8),
                     AtomicOrdering::SequentiallyConsistent, SyncScope::System,
-                    Entry);
+                    /*Elementwise=*/false, Entry);
   ReturnInst::Create(C, Entry);
 
   std::string Error;
@@ -397,8 +397,8 @@ TEST(VerifierTest, AtomicRMWElementwiseScalar) {
   Constant *CI = ConstantInt::get(I32Ty, 0);
 
   new AtomicRMWInst(AtomicRMWInst::Add, Ptr, CI, Align(4),
-                    AtomicOrdering::Monotonic, SyncScope::System, Entry,
-                    /*Elementwise=*/true);
+                    AtomicOrdering::Monotonic, SyncScope::System,
+                    /*Elementwise=*/true, Entry);
   ReturnInst::Create(C, Entry);
 
   std::string Error;
@@ -422,8 +422,8 @@ TEST(VerifierTest, AtomicRMWElementwiseIntOpOnFPVector) {
                                           ConstantFP::getZero(FPTy));
 
   new AtomicRMWInst(AtomicRMWInst::Add, Ptr, CV, Align(16),
-                    AtomicOrdering::Monotonic, SyncScope::System, Entry,
-                    /*Elementwise=*/true);
+                    AtomicOrdering::Monotonic, SyncScope::System,
+                    /*Elementwise=*/true, Entry);
   ReturnInst::Create(C, Entry);
 
   std::string Error;
@@ -447,8 +447,8 @@ TEST(VerifierTest, AtomicRMWElementwiseFPOpOnIntVector) {
                                           ConstantInt::get(I32Ty, 0));
 
   new AtomicRMWInst(AtomicRMWInst::FAdd, Ptr, CV, Align(16),
-                    AtomicOrdering::Monotonic, SyncScope::System, Entry,
-                    /*Elementwise=*/true);
+                    AtomicOrdering::Monotonic, SyncScope::System,
+                    /*Elementwise=*/true, Entry);
   ReturnInst::Create(C, Entry);
 
   std::string Error;
