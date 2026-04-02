@@ -38,22 +38,6 @@
 using namespace llvm;
 using namespace llvm::AMDGPU;
 
-// When only a few lanes are active, the DPP scan overhead can outweigh the
-// benefit of reducing LDS atomic contention. This threshold lets the compiler
-// emit a dynamic branch so that small-active-lane cases fall back to
-// unoptimized per-lane atomics while large-active-lane cases still benefit from
-// DPP.
-//
-// Only integer LDS atomics are affected because floating-point path is
-// untested. The default is 0 (always use DPP) because unconditionally enabling
-// the threshold can regress DPP-friendly workloads by ~4%.
-static cl::opt<unsigned> AMDGPUAtomicOptimizerDPPLdsThreshold(
-    "amdgpu-atomic-optimizer-dpp-lds-threshold",
-    cl::desc("Use DPP scan for integer LDS atomics only when active lanes > "
-             "this value; floating-point LDS atomics are not affected "
-             "(0 = always use DPP, >= wavefront size = never use DPP)"),
-    cl::init(0), cl::Hidden);
-
 namespace {
 
 struct ReplacementInfo {
@@ -760,14 +744,10 @@ void AMDGPUAtomicOptimizerImpl::optimizeAtomic(Instruction &I,
   // The command-line option takes priority; otherwise fall back to a
   // per-function attribute.
   unsigned Threshold = 0;
-  if (AMDGPUAtomicOptimizerDPPLdsThreshold.getNumOccurrences() > 0) {
-    Threshold = AMDGPUAtomicOptimizerDPPLdsThreshold;
-  } else {
-    int AttrVal = I.getFunction()->getFnAttributeAsParsedInteger(
-        "amdgpu-atomic-optimizer-dpp-lds-threshold", 0);
-    if (AttrVal > 0)
-      Threshold = static_cast<unsigned>(AttrVal);
-  }
+  int AttrVal = I.getFunction()->getFnAttributeAsParsedInteger(
+      "amdgpu-atomic-optimizer-dpp-lds-threshold", 0);
+  if (AttrVal > 0)
+    Threshold = static_cast<unsigned>(AttrVal);
 
   Value *Result = nullptr;
   if (IsLDS && ValDivergent && ScanImpl == ScanOptions::DPP &&
