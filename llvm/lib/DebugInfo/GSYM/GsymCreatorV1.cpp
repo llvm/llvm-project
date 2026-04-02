@@ -75,6 +75,7 @@ llvm::Error GsymCreatorV1::encode(FileWriter &O) const {
   for (size_t i = 0, n = Funcs.size(); i < n; ++i)
     O.writeU32(0);
 
+  O.alignTo(4);
   if (auto Err = encodeFileTable(O))
     return Err;
 
