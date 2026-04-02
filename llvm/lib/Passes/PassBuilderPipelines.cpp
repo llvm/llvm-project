@@ -925,7 +925,7 @@ void PassBuilder::addPGOInstrPassesForO0(ModulePassManager &MPM,
 }
 
 static InlineParams getInlineParamsFromOptLevel(OptimizationLevel Level) {
-  return getInlineParams(Level.getSpeedupLevel(), Level.getSizeLevel());
+  return getInlineParamsFromOptLevel(Level.getSpeedupLevel());
 }
 
 ModuleInlinerWrapperPass
@@ -933,7 +933,7 @@ PassBuilder::buildInlinerPipeline(OptimizationLevel Level,
                                   ThinOrFullLTOPhase Phase) {
   InlineParams IP;
   if (PTO.InlinerThreshold == -1)
-    IP = getInlineParamsFromOptLevel(Level);
+    IP = ::getInlineParamsFromOptLevel(Level);
   else
     IP = getInlineParams(PTO.InlinerThreshold);
   // For PreLinkThinLTO + SamplePGO or PreLinkFullLTO + SamplePGO,
@@ -1034,7 +1034,7 @@ PassBuilder::buildModuleInlinerPipeline(OptimizationLevel Level,
                                         ThinOrFullLTOPhase Phase) {
   ModulePassManager MPM;
 
-  InlineParams IP = getInlineParamsFromOptLevel(Level);
+  InlineParams IP = ::getInlineParamsFromOptLevel(Level);
   // For PreLinkThinLTO + SamplePGO or PreLinkFullLTO + SamplePGO,
   // set hot-caller threshold to 0 to disable hot
   // callsite inline (as much as possible [1]) because it makes
@@ -1691,12 +1691,12 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
     // devirtualization depends on the passes optimizing/eliminating vtable GVs
     // and those passes are only effective after inlining.
     if (EnableModuleInliner) {
-      MPM.addPass(ModuleInlinerPass(getInlineParamsFromOptLevel(Level),
+      MPM.addPass(ModuleInlinerPass(::getInlineParamsFromOptLevel(Level),
                                     UseInlineAdvisor,
                                     ThinOrFullLTOPhase::None));
     } else {
       MPM.addPass(ModuleInlinerWrapperPass(
-          getInlineParamsFromOptLevel(Level),
+          ::getInlineParamsFromOptLevel(Level),
           /* MandatoryFirst */ true,
           InlineContext{ThinOrFullLTOPhase::None, InlinePass::CGSCCInliner}));
     }
@@ -2110,12 +2110,12 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
   // invoke or a call.
   // Run the inliner now.
   if (EnableModuleInliner) {
-    MPM.addPass(ModuleInlinerPass(getInlineParamsFromOptLevel(Level),
+    MPM.addPass(ModuleInlinerPass(::getInlineParamsFromOptLevel(Level),
                                   UseInlineAdvisor,
                                   ThinOrFullLTOPhase::FullLTOPostLink));
   } else {
     MPM.addPass(ModuleInlinerWrapperPass(
-        getInlineParamsFromOptLevel(Level),
+        ::getInlineParamsFromOptLevel(Level),
         /* MandatoryFirst */ true,
         InlineContext{ThinOrFullLTOPhase::FullLTOPostLink,
                       InlinePass::CGSCCInliner}));

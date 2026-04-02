@@ -3427,22 +3427,10 @@ InlineParams llvm::getInlineParams() {
   return getInlineParams(DefaultThreshold);
 }
 
-// Compute the default threshold for inlining based on the opt level and the
-// size opt level.
-static int computeThresholdFromOptLevels(unsigned OptLevel,
-                                         unsigned SizeOptLevel) {
-  if (OptLevel > 2)
-    return InlineConstants::OptAggressiveThreshold;
-  if (SizeOptLevel == 1) // -Os
-    return InlineConstants::OptSizeThreshold;
-  if (SizeOptLevel == 2) // -Oz
-    return InlineConstants::OptMinSizeThreshold;
-  return DefaultThreshold;
-}
-
-InlineParams llvm::getInlineParams(unsigned OptLevel, unsigned SizeOptLevel) {
+InlineParams llvm::getInlineParamsFromOptLevel(unsigned OptLevel) {
   auto Params =
-      getInlineParams(computeThresholdFromOptLevels(OptLevel, SizeOptLevel));
+      getInlineParams(OptLevel > 2 ? InlineConstants::OptAggressiveThreshold
+                                   : DefaultThreshold);
   // At O3, use the value of -locally-hot-callsite-threshold option to populate
   // Params.LocallyHotCallSiteThreshold. Below O3, this flag has effect only
   // when it is specified explicitly.
