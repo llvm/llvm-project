@@ -120,11 +120,9 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
       return AnyValue::poison();
     if (FMF.noInfs() && APVal.isInfinity())
       return AnyValue::poison();
-    // Non-deterministically flip the sign of the input.
-    if (FMF.noSignedZeros() && APVal.isZero()) {
+    if (FMF.noSignedZeros() && APVal.isZero())
       return AnyValue(APFloat::getZero(
           APVal.getSemantics(), APVal.isNegative() ^ Ctx.getRandomBool()));
-    }
     return Val;
   }
 
