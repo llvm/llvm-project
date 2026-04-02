@@ -40,7 +40,8 @@ using namespace clang::interp;
 // We disable it on MSVC generally since it doesn't seem to be able
 // to handle the way we use tailcalls.
 // PPC can't tail-call external calls, which is a problem for InterpNext.
-#if defined(_MSC_VER) || defined(__powerpc__) || !defined(MUSTTAIL)
+#if defined(_MSC_VER) || defined(__powerpc__) || !defined(MUSTTAIL) ||         \
+    defined(__i386__) || defined(__sparc__)
 #undef MUSTTAIL
 #define MUSTTAIL
 #define USE_TAILCALLS 0
@@ -881,9 +882,9 @@ bool CheckStore(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
 }
 
 static bool CheckInvoke(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
-  if (!CheckLive(S, OpPC, Ptr, AK_MemberCall))
-    return false;
-  if (!Ptr.isDummy()) {
+  if (!Ptr.isDummy() && !isConstexprUnknown(Ptr)) {
+    if (!CheckLive(S, OpPC, Ptr, AK_MemberCall))
+      return false;
     if (!CheckExtern(S, OpPC, Ptr))
       return false;
     if (!CheckRange(S, OpPC, Ptr, AK_MemberCall))

@@ -254,7 +254,6 @@ struct MissingFeatures {
   static bool devirtualizeDestructor() { return false; }
   static bool devirtualizeMemberFunction() { return false; }
   static bool dtorCleanups() { return false; }
-  static bool ehCleanupActiveFlag() { return false; }
   static bool ehCleanupScope() { return false; }
   static bool ehCleanupScopeRequiresEHCleanup() { return false; }
   static bool ehScopeFilter() { return false; }
