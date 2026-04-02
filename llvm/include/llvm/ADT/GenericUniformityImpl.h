@@ -1293,30 +1293,22 @@ GenericUniformityInfo<ContextT>::getFunction() const {
 /// as uniform, which is conservatively correct for non-divergent targets.
 template <typename ContextT>
 bool GenericUniformityInfo<ContextT>::isDivergent(ConstValueRefT V) const {
-  if (!DA)
-    return false;
-  return DA->isDivergent(V);
+  return DA && DA->isDivergent(V);
 }
 
 template <typename ContextT>
 bool GenericUniformityInfo<ContextT>::isDivergent(const InstructionT *I) const {
-  if (!DA)
-    return false;
-  return DA->isDivergent(*I);
+  return DA && DA->isDivergent(*I);
 }
 
 template <typename ContextT>
 bool GenericUniformityInfo<ContextT>::isDivergentUse(const UseT &U) const {
-  if (!DA)
-    return false;
-  return DA->isDivergentUse(U);
+  return DA && DA->isDivergentUse(U);
 }
 
 template <typename ContextT>
 bool GenericUniformityInfo<ContextT>::hasDivergentTerminator(const BlockT &B) {
-  if (!DA)
-    return false;
-  return DA->hasDivergentTerminator(B);
+  return DA && DA->hasDivergentTerminator(B);
 }
 
 /// \brief T helper function for printing.
