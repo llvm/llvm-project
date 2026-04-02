@@ -124,7 +124,7 @@ public:
       strm.IndentMore();
       const size_t num_registers = reg_set->num_registers;
       uint32_t name_right_align_at =
-          ComputeMatchingAlignment(reg_ctx, reg_set, primitive_only);
+          ComputeLongestRegisterName(reg_ctx, reg_set, primitive_only);
       for (size_t reg_idx = 0; reg_idx < num_registers; ++reg_idx) {
         const uint32_t reg = reg_set->registers[reg_idx];
         const RegisterInfo *reg_info = reg_ctx->GetRegisterInfoAtIndex(reg);
@@ -155,7 +155,7 @@ protected:
       return static_cast<uint32_t>(str.size());
   }
 
-  uint32_t ComputeMatchingAlignment(RegisterContext *reg_ctx,
+  uint32_t ComputeLongestRegisterName(RegisterContext *reg_ctx,
                                     const RegisterSet *const reg_set,
                                     bool primitive_only) {
     bool use_primary_name =
@@ -181,7 +181,7 @@ protected:
   }
 
   // Here, command is basically a list of registers to be printed by DumpRegister() method
-  uint32_t ComputeMatchingAlignment(Args &command, RegisterContext *reg_ctx) {
+  uint32_t ComputeLongestRegisterName(Args &command, RegisterContext *reg_ctx) {
     bool use_primary_name =
         !static_cast<bool>(m_command_options.alternate_name);
     uint32_t name_right_align_at = 0;
@@ -250,7 +250,7 @@ protected:
         result.AppendError("the --set <set> option can't be used when "
                            "registers names are supplied as arguments\n");
       } else {
-        int alignment = ComputeMatchingAlignment(command, reg_ctx);
+        int alignment = ComputeLongestRegisterName(command, reg_ctx);
         strm.IndentMore(); // Extra ident to be consistent with register sets dumping
         for (auto &entry : command) {
           // in most LLDB commands we accept $rbx as the name for register RBX
