@@ -1821,6 +1821,13 @@ void LoweringPreparePass::buildCUDAModuleCtor() {
 
   // --- Create fatbin globals ---
 
+  // The section names are different for MAC OS X.
+  llvm::StringRef fatbinConstName =
+      astCtx->getLangOpts().HIP ? ".hip_fatbin" : ".nv_fatbin";
+
+  llvm::StringRef fatbinSectionName =
+      astCtx->getLangOpts().HIP ? ".hipFatBinSegment" : ".nvFatBinSegment";
+
   // Create the fatbin string constant with GPU binary contents.
   auto fatbinType =
       ArrayType::get(&getContext(), charTy, gpuBinary->getBuffer().size());
@@ -1831,7 +1838,7 @@ void LoweringPreparePass::buildCUDAModuleCtor() {
   fatbinStr.setAlignment(8);
   fatbinStr.setInitialValueAttr(cir::ConstArrayAttr::get(
       fatbinType, builder.getStringAttr(gpuBinary->getBuffer())));
-  assert(!cir::MissingFeatures::opGlobalSection());
+  fatbinStr.setSection(fatbinConstName);
   fatbinStr.setPrivate();
 
   // Create the fatbin wrapper struct:
@@ -1844,6 +1851,7 @@ void LoweringPreparePass::buildCUDAModuleCtor() {
   GlobalOp fatbinWrapper = GlobalOp::create(
       builder, loc, fatbinWrapperName, fatbinWrapperType,
       /*isConstant=*/true, {}, GlobalLinkageKind::PrivateLinkage);
+  fatbinWrapper.setSection(fatbinSectionName);
 
   constexpr unsigned cudaFatMagic = 0x466243b1;
   constexpr unsigned hipFatMagic = 0x48495046;

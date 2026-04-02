@@ -21,16 +21,15 @@ __global__ void kernelfunc(int i, int j, int k) {}
 
 void hostfunc(void) { kernelfunc<<<1, 1>>>(1, 1, 1); }
 
-// Check the fatbin string constant with GPU binary contents.
-// CIR: cir.global "private" constant cir_private @__cuda_fatbin_str = #cir.const_array<"GPU binary would be here."> : !cir.array<!u8i x 25> {alignment = 8 : i64}
+// CIR: cir.global "private" constant cir_private @__cuda_fatbin_str = #cir.const_array<"GPU binary would be here."> : !cir.array<!u8i x 25> {alignment = 8 : i64, section = ".nv_fatbin"}
 
-// Check the fatbin wrapper struct: { magic, version, ptr to fatbin, null }.
+// Check the fatbin wrapper struct: { magic, version, ptr to fatbin, null }, with section.
 // CIR: cir.global constant cir_private @__cuda_fatbin_wrapper = #cir.const_record<{
 // CIR-SAME: #cir.int<1180844977> : !s32i,
 // CIR-SAME: #cir.int<1> : !s32i,
 // CIR-SAME: #cir.global_view<@__cuda_fatbin_str> : !cir.ptr<!void>,
 // CIR-SAME: #cir.ptr<null> : !cir.ptr<!void>
-// CIR-SAME: }>
+// CIR-SAME: }> : !rec_anon_struct {section = ".nvFatBinSegment"}
 
 // Check the GPU binary handle global.
 // CIR: cir.global "private" internal @__cuda_gpubin_handle = #cir.ptr<null> : !cir.ptr<!cir.ptr<!void>>
