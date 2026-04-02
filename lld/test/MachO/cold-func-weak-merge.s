@@ -27,7 +27,7 @@
 .globl _weakfn
 .weak_definition _weakfn
 .p2align 2
-.desc _weakfn, 0x400
+.desc _weakfn, 0x400 ; = N_COLD_FUNC
 _weakfn:
   add x0, x1, x2
   ret
