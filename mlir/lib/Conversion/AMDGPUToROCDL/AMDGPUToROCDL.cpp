@@ -3962,7 +3962,7 @@ struct GlobalPrefetchOpLowering
       return op->emitOpError("is only supported on gfx1250+");
 
     const bool isSpeculative = op.getSpeculative();
-    const int32_t immArgValue = GlobalPrefetchOp::getLLVMEncoding(
+    const int32_t immArgValue = getGlobalPrefetchLLVMEncoding(
         op.getTemporalHint(), op.getCacheScope(), isSpeculative);
     IntegerAttr immArgAttr = rewriter.getI32IntegerAttr(immArgValue);
 

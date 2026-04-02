@@ -1306,23 +1306,6 @@ LogicalResult DsBarrierArriveOp::verify() {
 // GlobalPrefetchOp
 //===----------------------------------------------------------------------===//
 
-int32_t GlobalPrefetchOp::getLLVMEncoding(amdgpu::LoadTemporalHint hint,
-                                          amdgpu::Scope scope,
-                                          bool isSpeculative) {
-  int32_t immArg = static_cast<int32_t>(hint);
-
-  // Note that only RT and HT can operate in both speculative and
-  // non-speculative modes. The other variants (NT_RT, RT_NT, NT_HT, etc.)
-  // operate only in the speculative mode and, therefore, do not require
-  // toggling the least significant bit for mode changes
-  // Temporal hint is encoded in lower bits - i.e. [2:0]
-  if (llvm::is_contained({LoadTemporalHint::RT, LoadTemporalHint::HT}, hint))
-    immArg = isSpeculative ? immArg : immArg | 1;
-
-  // Prefetch scope level is encoded in upper bits - i.e., [4:3]
-  return static_cast<int32_t>(scope) << 3 | immArg;
-}
-
 LogicalResult GlobalPrefetchOp::verify() {
   auto src = cast<MemRefType>(getSrc().getType());
 
@@ -1339,7 +1322,13 @@ LogicalResult GlobalPrefetchOp::verify() {
         "the number of indices must match the source shape size");
 
   const LoadTemporalHint temporalHint = getTemporalHint();
+  const Scope scope = getCacheScope();
   const bool isSpeculative = getSpeculative();
+
+  // See GFX1250 SPG for a detail explanation
+  if (isSpeculative && scope == Scope::WGP)
+    return this->emitOpError(
+        "does not support speculative prefetch in WGP scope");
 
   // Note that temporal hints are shared between load, store,
   // prefetch, etc. instructions. However, some instructions
