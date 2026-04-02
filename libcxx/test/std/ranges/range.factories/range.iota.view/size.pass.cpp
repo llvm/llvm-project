@@ -109,6 +109,7 @@ constexpr bool test() {
     types::for_each(types::integer_types{}, []<typename IntegerLikeT>() {
       types::for_each(types::integer_types{}, []<typename BoundT>() {
         static_assert(HasSize<std::ranges::iota_view<IntegerLikeT, BoundT>>);
+        static_assert(!HasSize<std::ranges::iota_view<IntegerLikeT, bool>>);
       });
     });
   }
