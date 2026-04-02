@@ -38,6 +38,7 @@ include(GetClangResourceDir)
 get_clang_resource_dir(LIBOMP_HEADERS_INSTALL_PATH SUBDIR include)
 
 # When building in tree we install the runtime according to the LLVM settings.
+# TODO: Use common runtimes infrastructure for output and install paths
 if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
   set(OFFLOAD_TARGET_SUBDIR "${LLVM_DEFAULT_TARGET_TRIPLE}")
   if(OFFLOAD_LIBDIR_SUBDIR)
@@ -109,6 +110,7 @@ endif()
 
 # Set the path of all resulting libraries to a unified location so that it can
 # be used for testing.
+# TODO: Use common runtimes infrastructure for output and install paths
 set(LIBOMPTARGET_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${LIBOMPTARGET_LIBRARY_DIR})
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${LIBOMPTARGET_LIBRARY_DIR})
@@ -352,6 +354,7 @@ if(LIBOMP_OMP_TOOLS_INCLUDE_DIR)
   include_directories(${LIBOMP_OMP_TOOLS_INCLUDE_DIR})
 endif()
 
+# TODO: Use RUNTIMES_OUTPUT_RESOURCE_LIB_DIR instead
 set(LIBOMPTARGET_LLVM_LIBRARY_DIR "${LLVM_LIBRARY_DIR}" CACHE STRING
   "Path to folder containing llvm library libomptarget.so")
 set(LIBOMPTARGET_LLVM_LIBRARY_INTDIR "${LIBOMPTARGET_INTDIR}" CACHE STRING

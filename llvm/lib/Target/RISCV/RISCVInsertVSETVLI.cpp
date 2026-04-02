@@ -314,7 +314,8 @@ static VSETVLIInfo adjustIncoming(const VSETVLIInfo &PrevInfo,
 // legal for MI, but may not be the state requested by MI.
 void RISCVInsertVSETVLI::transferBefore(VSETVLIInfo &Info,
                                         const MachineInstr &MI) const {
-  if (RISCV::isVectorCopy(ST->getRegisterInfo(), MI) &&
+  if (EnsureWholeVectorRegisterMoveValidVTYPE &&
+      RISCV::isVectorCopy(ST->getRegisterInfo(), MI) &&
       (Info.isUnknown() || !Info.isValid() || Info.hasSEWLMULRatioOnly())) {
     // Use an arbitrary but valid AVL and VTYPE so vill will be cleared. It may
     // be coalesced into another vsetvli since we won't demand any fields.

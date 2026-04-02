@@ -148,7 +148,10 @@ def : FF<"no-call-graph-profile-sort">, Alias<call_graph_profile_sort>, AliasArg
 defm irpgo_profile: EEq<"irpgo-profile",
   "Read a temporary profile file for use with --bp-startup-sort=">;
 def bp_compression_sort: JJ<"bp-compression-sort=">, MetaVarName<"[none,function,data,both]">,
-  HelpText<"Improve Lempel-Ziv compression by grouping similar sections together, resulting in a smaller compressed app size">;
+  HelpText<"Improve Lempel-Ziv compression by grouping similar sections together. Deprecated. Please use --bp-compression-sort-section">;
+def bp_compression_sort_section: JJ<"bp-compression-sort-section=">,
+  MetaVarName<"<glob>[=<layout_priority>[=<match_priority>]]">,
+  HelpText<"Reorder input sections whose name matches <glob> to improve Lempel-Ziv compression, while letting users split sections into groups, run BP independently per group, and exclude unsuitable sections. layout_priority controls group placement order (default 0). match_priority resolves conflicts when multiple globs match (default: last match wins). May be specified multiple times">;
 def bp_startup_sort: JJ<"bp-startup-sort=">, MetaVarName<"[none,function]">,
   HelpText<"Utilize a temporal profile file to reduce page faults during program startup">;
 

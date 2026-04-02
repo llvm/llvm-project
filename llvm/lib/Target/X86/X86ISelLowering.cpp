@@ -32177,14 +32177,16 @@ static SDValue LowerRotate(SDValue Op, const X86Subtarget &Subtarget,
       return DAG.getSelect(DL, SelVT, C, V0, V1);
     };
 
-    // ISD::ROTR is currently only profitable on AVX512 targets with VPTERNLOG.
-    if (!IsROTL && !useVPTERNLOG(Subtarget, VT)) {
+    // ISD::ROTR is currently only profitable on GFNI/AVX512+VPTERNLOG targets.
+    if (!IsROTL && !useVPTERNLOG(Subtarget, VT) && !Subtarget.hasGFNI()) {
       Amt = DAG.getNode(ISD::SUB, DL, VT, Z, Amt);
       IsROTL = true;
     }
 
-    unsigned ShiftLHS = IsROTL ? ISD::SHL : ISD::SRL;
-    unsigned ShiftRHS = IsROTL ? ISD::SRL : ISD::SHL;
+    auto BuildRotate = [&](SDValue R, unsigned RotAmt) {
+      return DAG.getNode(IsROTL ? ISD::ROTL : ISD::ROTR, DL, VT, R,
+                         DAG.getConstant(RotAmt, DL, VT));
+    };
 
     // Turn 'a' into a mask suitable for VSELECT: a = a << 5;
     // We can safely do this using i16 shifts as we're only interested in
@@ -32194,32 +32196,19 @@ static SDValue LowerRotate(SDValue Op, const X86Subtarget &Subtarget,
     Amt = DAG.getBitcast(VT, Amt);
 
     // r = VSELECT(r, rot(r, 4), a);
-    SDValue M;
-    M = DAG.getNode(
-        ISD::OR, DL, VT,
-        DAG.getNode(ShiftLHS, DL, VT, R, DAG.getConstant(4, DL, VT)),
-        DAG.getNode(ShiftRHS, DL, VT, R, DAG.getConstant(4, DL, VT)));
-    R = SignBitSelect(VT, Amt, M, R);
+    R = SignBitSelect(VT, Amt, BuildRotate(R, 4), R);
 
     // a += a
     Amt = DAG.getNode(ISD::ADD, DL, VT, Amt, Amt);
 
     // r = VSELECT(r, rot(r, 2), a);
-    M = DAG.getNode(
-        ISD::OR, DL, VT,
-        DAG.getNode(ShiftLHS, DL, VT, R, DAG.getConstant(2, DL, VT)),
-        DAG.getNode(ShiftRHS, DL, VT, R, DAG.getConstant(6, DL, VT)));
-    R = SignBitSelect(VT, Amt, M, R);
+    R = SignBitSelect(VT, Amt, BuildRotate(R, 2), R);
 
     // a += a
     Amt = DAG.getNode(ISD::ADD, DL, VT, Amt, Amt);
 
     // return VSELECT(r, rot(r, 1), a);
-    M = DAG.getNode(
-        ISD::OR, DL, VT,
-        DAG.getNode(ShiftLHS, DL, VT, R, DAG.getConstant(1, DL, VT)),
-        DAG.getNode(ShiftRHS, DL, VT, R, DAG.getConstant(7, DL, VT)));
-    return SignBitSelect(VT, Amt, M, R);
+    return SignBitSelect(VT, Amt, BuildRotate(R, 1), R);
   }
 
   bool IsSplatAmt = DAG.isSplatValue(Amt);
