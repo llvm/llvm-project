@@ -28,7 +28,7 @@ PCHGenerator::PCHGenerator(
     const CodeGenOptions &CodeGenOpts,
     ArrayRef<std::shared_ptr<ModuleFileExtension>> Extensions,
     bool AllowASTWithErrors, bool IncludeTimestamps,
-    bool BuildingImplicitModule,bool GeneratingReducedBMI)
+    bool BuildingImplicitModule, bool GeneratingReducedBMI)
     : PP(PP), Subject(&PP), OutputFile(OutputFile), isysroot(isysroot.str()),
       Buffer(std::move(Buffer)), Stream(this->Buffer->Data),
       Writer(Stream, this->Buffer->Data, ModCache, CodeGenOpts, Extensions,
