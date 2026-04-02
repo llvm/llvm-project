@@ -140,7 +140,7 @@ public:
     SmallVector<Dependency, 2> Dependencies;
 
     /// Returns the rematerializable register from its defining instruction.
-    inline Register getDefReg() const {
+    Register getDefReg() const {
       assert(DefMI && "defining instruction was deleted");
       assert(DefMI->getOperand(0).isDef() && "not a register def");
       return DefMI->getOperand(0).getReg();
@@ -219,57 +219,57 @@ public:
   /// Adds a new listener to the rematerializer.
   void addListener(Listener *Listen) {
     assert(Listen && "null listener");
-    assert(!Listeners.contains(Listen) && "duplicate listener");
-    Listeners.insert(Listen);
+    if (!Listeners.insert(Listen).second)
+      llvm_unreachable("duplicate listener");
   }
 
   /// Removes a listener from the rematerializer.
   void removeListener(Listener *Listen) {
-    assert(Listeners.contains(Listen) && "unknown listener");
-    Listeners.erase(Listen);
+    if (!Listeners.erase(Listen))
+      llvm_unreachable("unknown listener");
   }
 
   /// Removes all listeners from the rematerializer.
   void clearListeners() { Listeners.clear(); }
 
-  inline const Reg &getReg(RegisterIdx RegIdx) const {
+  const Reg &getReg(RegisterIdx RegIdx) const {
     assert(RegIdx < Regs.size() && "out of bounds");
     return Regs[RegIdx];
   };
-  inline ArrayRef<Reg> getRegs() const { return Regs; };
-  inline unsigned getNumRegs() const { return Regs.size(); };
+  ArrayRef<Reg> getRegs() const { return Regs; };
+  unsigned getNumRegs() const { return Regs.size(); };
 
-  inline const RegionBoundaries &getRegion(RegisterIdx RegionIdx) const {
+  const RegionBoundaries &getRegion(RegisterIdx RegionIdx) const {
     assert(RegionIdx < Regions.size() && "out of bounds");
     return Regions[RegionIdx];
   }
-  inline unsigned getNumRegions() const { return Regions.size(); }
+  unsigned getNumRegions() const { return Regions.size(); }
 
   /// Whether register \p RegIdx is an original register.
-  inline bool isOriginalRegister(RegisterIdx RegIdx) const {
+  bool isOriginalRegister(RegisterIdx RegIdx) const {
     return !isRematerializedRegister(RegIdx);
   }
   /// Whether register \p RegIdx is a rematerialization of some original
   /// register.
-  inline bool isRematerializedRegister(RegisterIdx RegIdx) const {
+  bool isRematerializedRegister(RegisterIdx RegIdx) const {
     assert(RegIdx < Regs.size() && "out of bounds");
     return RegIdx >= UnrematableOprds.size();
   }
   /// Returns the origin index of rematerializable register \p RegIdx.
-  inline RegisterIdx getOriginOf(RegisterIdx RematRegIdx) const {
+  RegisterIdx getOriginOf(RegisterIdx RematRegIdx) const {
     assert(isRematerializedRegister(RematRegIdx) && "not a rematerialization");
     return Origins[RematRegIdx - UnrematableOprds.size()];
   }
   /// If \p RegIdx is a rematerialization, returns its origin's index. If it is
   /// an original register's index, returns the same index.
-  inline RegisterIdx getOriginOrSelf(RegisterIdx RegIdx) const {
+  RegisterIdx getOriginOrSelf(RegisterIdx RegIdx) const {
     if (isRematerializedRegister(RegIdx))
       return getOriginOf(RegIdx);
     return RegIdx;
   }
   /// Returns operand indices corresponding to unrematerializable operands for
   /// any register \p RegIdx.
-  inline ArrayRef<unsigned> getUnrematableOprds(RegisterIdx RegIdx) const {
+  ArrayRef<unsigned> getUnrematableOprds(RegisterIdx RegIdx) const {
     return UnrematableOprds[getOriginOrSelf(RegIdx)];
   }
 
@@ -355,9 +355,9 @@ public:
                                  MachineBasicBlock::iterator InsertPos,
                                  DependencyReuseInfo &DRI);
 
-  /// Rematerializes register \p RegIdx at \p InsertPos in \p UseRegion, adding
-  /// the new rematerializable register to the backing vector \ref Regs and
-  /// returning its index inside the vector. Sets the new register's
+  /// Rematerializes register \p RegIdx before \p InsertPos in \p UseRegion,
+  /// adding the new rematerializable register to the backing vector \ref Regs
+  /// and returning its index inside the vector. Sets the new register's
   /// rematerializable dependencies to \p Dependencies (these are assumed to
   /// already exist in the MIR) and its unrematerializable dependencies to the
   /// same as \p RegIdx. The new register initially has no user. Since the
@@ -368,10 +368,11 @@ public:
                                MachineBasicBlock::iterator InsertPos,
                                SmallVectorImpl<Reg::Dependency> &&Dependencies);
 
-  /// Re-creates a previously deleted register \p RegIdx at \p InsertPos in \p
-  /// DefRegion. \p DefReg must be the original virtual register that \p RegIdx
-  /// used to define. Sets the new register's rematerializable dependencies to
-  /// \p Dependencies (these are assumed to already exist in the MIR).
+  /// Re-creates a previously deleted register \p RegIdx before \p InsertPos in
+  /// \p DefRegion. \p DefReg must be the original virtual register that \p
+  /// RegIdx used to define. Sets the new register's rematerializable
+  /// dependencies to \p Dependencies (these are assumed to already exist in the
+  /// MIR).
   void recreateReg(RegisterIdx RegIdx, unsigned DefRegion,
                    MachineBasicBlock::iterator InsertPos, Register DefReg,
                    SmallVectorImpl<Reg::Dependency> &&Dependencies);
@@ -529,7 +530,7 @@ private:
     /// Position to re-insert the defining MI before in case of rollback.
     MachineBasicBlock::iterator InsertPos;
     /// If \ref InsertPos points to an MI defining a rematerializable register,
-    /// stores its index. Otherwise \ref Rematerializer::NoReg.
+    /// stores its index. Otherwise equals \ref Rematerializer::NoReg.
     RegisterIdx NextRegIdx;
 
     RollbackInfo(const Rematerializer &Remater, RegisterIdx RegIdx);

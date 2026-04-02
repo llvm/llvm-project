@@ -677,3 +677,74 @@ body:             |
 
   EXPECT_TRUE(getMF().verify());
 }
+
+/// Checks that rollback re-creates MIs at correct positions when the order of register deletions
+/// forces the re-creation logic to iterate through multiple deleted registers' respective insert position to find a valid one.
+TEST_F(RematerializerTest, RollbackInvalidInsertPos) {
+  StringRef MIR = R"(
+name:            RollbackInvalidInsertPos
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+body:             |
+  bb.0:
+    %0:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 0, implicit $exec, implicit $mode
+    %1:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 1, implicit $exec, implicit $mode
+    %2:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 2, implicit $exec, implicit $mode
+    %3:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 3, implicit $exec, implicit $mode
+
+  bb.1:
+    S_NOP 0, implicit %0, implicit %1, implicit %2, implicit %3
+    S_ENDPGM 0
+)";
+  ASSERT_TRUE(parseMIRAndInit(MIR, "RollbackInvalidInsertPos"));
+  Rematerializer &Remater = getRematerializer();
+  Rematerializer::DependencyReuseInfo DRI;
+  Rollbacker Rollback;
+  Remater.addListener(&Rollback);
+
+  // MBB/Region indices.
+  const unsigned MBB0 = 0, MBB1 = 1;
+  SmallVector<unsigned, 4> RegionSizes{4, 1};
+  ASSERT_REGION_SIZES(RegionSizes);
+
+  // Indices of rematerializable registers.
+  const RegisterIdx Cst0 = 0, Cst1 = 1, Cst2 = 2, Cst3 = 3;
+
+  // Rematerialize %0 to MBB1, deleting the original register
+  Remater.rematerializeToRegion(Cst0, MBB1, DRI);
+  RegionSizes[MBB0] -= 1;
+  RegionSizes[MBB1] += 1;
+  ASSERT_REGION_SIZES(RegionSizes);
+
+  // Rematerialize %1 to MBB1, deleting the original register
+  Remater.rematerializeToRegion(Cst1, MBB1, DRI.clear());
+  RegionSizes[MBB0] -= 1;
+  RegionSizes[MBB1] += 1;
+  ASSERT_REGION_SIZES(RegionSizes);
+
+  // Rematerialize %2 to MBB1, deleting the original register
+  Remater.rematerializeToRegion(Cst2, MBB1, DRI.clear());
+  RegionSizes[MBB0] -= 1;
+  RegionSizes[MBB1] += 1;
+  ASSERT_REGION_SIZES(RegionSizes);
+
+  // Now rollback and check for correct instruction order in the original
+  // defining region. The asserts on region sizes ensure that all original
+  // registers were indeed deleted and will be re-created in the original
+  // region.
+  Rollback.rollback(Remater);
+  RegionSizes[MBB0] += 3;
+  RegionSizes[MBB1] -= 3;
+  ASSERT_REGION_SIZES(RegionSizes);
+
+  MachineInstr &DefCst0 = *Remater.getReg(Cst0).DefMI;
+  MachineInstr &DefCst1 = *Remater.getReg(Cst1).DefMI;
+  MachineInstr &DefCst2 = *Remater.getReg(Cst2).DefMI;
+  MachineInstr &DefCst3 = *Remater.getReg(Cst3).DefMI;
+  EXPECT_EQ(std::next(DefCst0.getIterator()), DefCst1.getIterator());
+  EXPECT_EQ(std::next(DefCst1.getIterator()), DefCst2.getIterator());
+  EXPECT_EQ(std::next(DefCst2.getIterator()), DefCst3.getIterator());
+
+  EXPECT_TRUE(getMF().verify());
+}
