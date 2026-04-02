@@ -219,15 +219,6 @@ static cl::opt<bool> EnableLoopFlatten("enable-loop-flatten", cl::init(false),
                                        cl::Hidden,
                                        cl::desc("Enable the LoopFlatten Pass"));
 
-// Experimentally allow loop header duplication. This should allow for better
-// optimization at Oz, since loop-idiom recognition can then recognize things
-// like memcpy. If this ends up being useful for many targets, we should drop
-// this flag and make a code generation option that can be controlled
-// independent of the opt level and exposed through the frontend.
-static cl::opt<bool> EnableLoopHeaderDuplication(
-    "enable-loop-header-duplication", cl::init(false), cl::Hidden,
-    cl::desc("Enable loop header duplication at any optimization level"));
-
 static cl::opt<bool>
     EnableDFAJumpThreading("enable-dfa-jump-thread",
                            cl::desc("Enable DFA jump threading"),
@@ -688,10 +679,8 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
   LPM1.addPass(LICMPass(PTO.LicmMssaOptCap, PTO.LicmMssaNoAccForPromotionCap,
                         /*AllowSpeculation=*/false));
 
-  // Disable header duplication in loop rotation at -Oz.
-  LPM1.addPass(LoopRotatePass(EnableLoopHeaderDuplication ||
-                                  Level != OptimizationLevel::Oz,
-                              isLTOPreLink(Phase)));
+  LPM1.addPass(
+      LoopRotatePass(/*EnableHeaderDuplication=*/true, isLTOPreLink(Phase)));
   // TODO: Investigate promotion cap for O1.
   LPM1.addPass(LICMPass(PTO.LicmMssaOptCap, PTO.LicmMssaNoAccForPromotionCap,
                         /*AllowSpeculation=*/true));
@@ -855,10 +844,8 @@ void PassBuilder::addPostPGOLoopRotation(ModulePassManager &MPM,
   if (EnablePostPGOLoopRotation) {
     // Disable header duplication in loop rotation at -Oz.
     MPM.addPass(createModuleToFunctionPassAdaptor(
-        createFunctionToLoopPassAdaptor(
-            LoopRotatePass(EnableLoopHeaderDuplication ||
-                           Level != OptimizationLevel::Oz),
-            /*UseMemorySSA=*/false),
+        createFunctionToLoopPassAdaptor(LoopRotatePass(),
+                                        /*UseMemorySSA=*/false),
         PTO.EagerlyInvalidateAnalyses));
   }
 }
@@ -1571,9 +1558,8 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
   LoopPassManager LPM;
   // First rotate loops that may have been un-rotated by prior passes.
   // Disable header duplication at -Oz.
-  LPM.addPass(LoopRotatePass(EnableLoopHeaderDuplication ||
-                                 Level != OptimizationLevel::Oz,
-                             LTOPreLink, /*CheckExitCount=*/true));
+  LPM.addPass(LoopRotatePass(/*EnableLoopHeaderDuplication=*/true, LTOPreLink,
+                             /*CheckExitCount=*/true));
   // Some loops may have become dead by now. Try to delete them.
   // FIXME: see discussion in https://reviews.llvm.org/D112851,
   //        this may need to be revisited once we run GVN before loop deletion
