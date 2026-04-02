@@ -162,7 +162,8 @@ RequestFileFromSymStoreServerHTTP(llvm::StringRef base_url, llvm::StringRef key,
       llvm::formatv("{0}/{1}/{2}/{1}", base_url, pdb_name, key);
 
   if (!llvm::HTTPClient::isAvailable()) {
-    Debugger::ReportWarning("HTTP client is not available for SymStore download");
+    Debugger::ReportWarning(
+        "HTTP client is not available for SymStore download");
     return {};
   }
 
