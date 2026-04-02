@@ -450,6 +450,8 @@ let CategoryName = "Inline Assembly Issue" in {
     "empty symbolic operand name in inline assembly string">;
   def err_asm_invalid_operand_number : Error<
     "invalid operand number in inline asm string">;
+  def err_asm_hard_reg_variable_duplicate : Error<
+    "hard register operand already defined as register variable">;
 }
 
 // vtable related.

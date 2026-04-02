@@ -3327,10 +3327,11 @@ public:
   /// Look at AsmExpr and if it is a variable declared as using a particular
   /// register add that as a constraint that will be used in this asm stmt.
   std::string
-  addVariableConstraints(StringRef Constraint, const Expr &AsmExpr,
-                         const TargetInfo &Target, bool EarlyClobber,
+  AddVariableConstraints(ASTContext &C, StringRef Constraint,
+                         const Expr &AsmExpr, const TargetInfo &Target,
+                         bool EarlyClobber,
                          UnsupportedConstraintCallbackTy UnsupportedCB,
-                         std::string *GCCReg = nullptr) const;
+                         SmallVector<std::string> *GCCRegs = nullptr) const;
 
   //===--- Output operands ---===//
 

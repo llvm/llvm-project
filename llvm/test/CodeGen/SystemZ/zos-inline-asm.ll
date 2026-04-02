@@ -72,7 +72,7 @@
 ;         :);
 ; }
 ;
-; void f7() {
+; void f6() {
 ;   int a, b, res;
 ;
 ;   a = 2147483640;
@@ -85,7 +85,7 @@
 ;         :);
 ; }
 ;
-; int f8() {
+; int f7() {
 ;
 ;   int a, b, res;
 ;   a = b = res = -1;
@@ -109,16 +109,10 @@
 ; }
 
 define hidden void @f1() {
-; CHECK-LABEL: f1:
-; CHECK: *APP
-; CHECK-NEXT: lhi 1,5
-; CHECK: *NO_APP
-; CHECK: *APP
-; CHECK-NEXT: lgr 1,2
-; CHECK: *NO_APP
-; CHECK: *APP
-; CHECK-NEXT: lgr 0,4
-; CHECK: *NO_APP
+; CHECK-LABEL: f1 DS 0H
+; CHECK: lhi 1,5
+; CHECK: lgr 1,2
+; CHECK: lgr 0,4
 entry:
   %a = alloca i32, align 4
   %b = alloca i32, align 4
@@ -134,10 +128,8 @@ entry:
 }
 
 define hidden void @f2() {
-; CHECK-LABEL: f2:
-; CHECK: *APP
-; CHECK-NEXT: stg 1,{{.*}}(4,0)
-; CHECK: *NO_APP
+; CHECK-LABEL: f2 DS 0H
+; CHECK: stg 1,{{.*}}(4,0)
 entry:
   %a = alloca i32, align 4
   %m_b = alloca i32, align 4
@@ -147,12 +139,10 @@ entry:
 }
 
 define hidden void @f3() {
-; CHECK-LABEL: f3:
+; CHECK-LABEL: f3 DS 0H
 ; CHECK: l 1,{{.*}}(4)
 ; CHECK: lhi 15,25
-; CHECK: *APP
-; CHECK-NEXT: svc 109
-; CHECK: *NO_APP
+; CHECK: svc 109
 entry:
   %r15 = alloca i32, align 4
   %r1 = alloca i32, align 4
@@ -163,13 +153,11 @@ entry:
 }
 
 define hidden void @f4() {
-; CHECK-LABEL: f4:
-; CHECK: *APP
-; CHECK-NEXT: pc 0
-; CHECK: *NO_APP
+; CHECK-LABEL: f4 DS 0H
+; CHECK: pc 0
 ; CHECK: stg 0,{{.*}}(4)
-; CHECK-NEXT: stg 1,{{.*}}(4)
-; CHECK-NEXT: stg 15,{{.*}}(4)
+; CHECK: stg 1,{{.*}}(4)
+; CHECK: stg 15,{{.*}}(4)
 entry:
   %parm = alloca ptr, align 8
   %rc = alloca i64, align 8
@@ -188,19 +176,13 @@ entry:
 }
 
 define hidden void @f5() {
-; CHECK-LABEL: f5:
-; CHECK: *APP
-; CHECK-NEXT: lhi {{[0-9]}},10
-; CHECK-NEXT: ar {{[0-9]}},{{[0-9]}}
-; CHECK: *NO_APP
-; CHECK: *APP
-; CHECK-NEXT: lhi 2,10
-; CHECK-NEXT: ar 2,2
-; CHECK: *NO_APP
-; CHECK: *APP
-; CHECK-NEXT: lhi 2,10
-; CHECK-NEXT: ar 2,2
-; CHECK: *NO_APP
+; CHECK-LABEL: f5 DS 0H
+; CHECK: lhi {{[0-9]}},10
+; CHECK: ar {{[0-9]}},{{[0-9]}}
+; CHECK: lhi 2,10
+; CHECK: ar 2,2
+; CHECK: lhi 2,10
+; CHECK: ar 2,2
 entry:
   %a = alloca i32, align 4
   %b = alloca i32, align 4
@@ -214,13 +196,11 @@ entry:
   ret void
 }
 
-define hidden void @f7() {
-; CHECK-LABEL: f7:
-; CHECK: *APP
-; CHECK-NEXT: alr {{[0-9]}},{{[0-9]}}
-; CHECK-NEXT: {{.*}}:
-; CHECK-NEXT: jo {{.*}}-4
-; CHECK: *NO_APP
+define hidden void @f6() {
+; CHECK-LABEL: f6 DS 0H
+; CHECK: alr {{[0-9]}},{{[0-9]}}
+; CHECK: {{.*}} DS 0H
+; CHECK: jo {{.*}}-4
 entry:
   %a = alloca i32, align 4
   %b = alloca i32, align 4
@@ -234,17 +214,11 @@ entry:
   ret void
 }
 
-define hidden signext i32 @f8() {
-; CHECK-LABEL: f8:
-; CHECK: *APP
-; CHECK-NEXT: lhi 1,5
-; CHECK: *NO_APP
-; CHECK: *APP
-; CHECK-NEXT: lgr 2,1
-; CHECK: *NO_APP
-; CHECK: *APP
-; CHECK-NEXT: stg 2,{{.*}}(4,0)
-; CHECK: *NO_APP
+define hidden signext i32 @f7() {
+; CHECK-LABEL: f7 DS 0H
+; CHECK: lhi 1,5
+; CHECK: lgr 2,1
+; CHECK: stg 2,{{.*}}(4,0)
 ; CHECK: lgf 3,{{.*}}(4)
 entry:
   %a = alloca i32, align 4

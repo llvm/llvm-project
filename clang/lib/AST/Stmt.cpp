@@ -455,25 +455,75 @@ AttributedStmt *AttributedStmt::CreateEmpty(const ASTContext &C,
   return new (Mem) AttributedStmt(EmptyShell(), NumAttrs);
 }
 
-std::string
-AsmStmt::addVariableConstraints(StringRef Constraint, const Expr &AsmExpr,
-                                const TargetInfo &Target, bool EarlyClobber,
-                                UnsupportedConstraintCallbackTy UnsupportedCB,
-                                std::string *GCCReg) const {
+/// Is it valid to apply a register constraint for a variable marked with
+/// the "register asm" construct?
+/// Optionally, if it is determined that we can, we set "Register" to the
+/// regiser name.
+static bool
+ShouldApplyRegisterVariableConstraint(const Expr &AsmExpr,
+                                      std::string *Register = nullptr) {
+
   const DeclRefExpr *AsmDeclRef = dyn_cast<DeclRefExpr>(&AsmExpr);
   if (!AsmDeclRef)
-    return Constraint.str();
+    return false;
   const ValueDecl &Value = *AsmDeclRef->getDecl();
   const VarDecl *Variable = dyn_cast<VarDecl>(&Value);
   if (!Variable)
-    return Constraint.str();
+    return false;
   if (Variable->getStorageClass() != SC_Register)
-    return Constraint.str();
+    return false;
   AsmLabelAttr *Attr = Variable->getAttr<AsmLabelAttr>();
   if (!Attr)
+    return false;
+
+  if (Register != nullptr)
+    // Set the register to return from Attr.
+    *Register = Attr->getLabel().str();
+  return true;
+}
+
+/// AddVariableConstraints:
+/// Look at AsmExpr and if it is a variable declared as using a particular
+/// register add that as a constraint that will be used in this asm stmt.
+/// Whether it can be used or not is dependent on querying
+/// ShouldApplyRegisterVariableConstraint() Also check whether the "hard
+/// register" inline asm constraint (i.e. "{reg-name}") is specified. If so, add
+/// that as a constraint that will be used in this asm stmt.
+std::string
+AsmStmt::AddVariableConstraints(ASTContext &C, StringRef Constraint,
+                                const Expr &AsmExpr, const TargetInfo &Target,
+                                const bool EarlyClobber,
+                                UnsupportedConstraintCallbackTy UnsupportedCB,
+                                SmallVector<std::string> *GCCRegs) const {
+
+  StringRef::iterator I = Constraint.begin(), E = Constraint.end();
+  // Do we have the "hard register" inline asm constraint.
+  StringRef::iterator HardRegStart = std::find(I, E, '{');
+  StringRef::iterator HardRegEnd = std::find(I, E, '}');
+  // Do we have at least one hard register.
+  bool ApplyHardRegisterConstraint =
+      HardRegStart != E && HardRegEnd != E && HardRegEnd > HardRegStart;
+
+  // Do we have "register asm" on a variable.
+  std::string Reg = "";
+  bool ApplyRegisterVariableConstraint =
+      ShouldApplyRegisterVariableConstraint(AsmExpr, &Reg);
+  
+  // Diagnose the scenario where we apply both the register variable constraint
+  // and a hard register variable constraint as an unsupported error.
+  // Why? Because we could have a situation where the register passed in through
+  // {...} and the register passed in through the "register asm" construct could
+  // be different, and in this case, there's no way for the compiler to know
+  // which one to emit.
+  if (ApplyHardRegisterConstraint && ApplyRegisterVariableConstraint) {
+    C.getDiagnostics().Report(AsmExpr.getExprLoc(),
+                              diag::err_asm_hard_reg_variable_duplicate);
     return Constraint.str();
-  StringRef Register = Attr->getLabel();
-  assert(Target.isValidGCCRegisterName(Register));
+  }
+
+  if (!ApplyHardRegisterConstraint && !ApplyRegisterVariableConstraint)
+    return Constraint.str();
+
   // We're using validateOutputConstraint here because we only care if
   // this is a register constraint.
   TargetInfo::ConstraintInfo Info(Constraint, "");
@@ -481,11 +531,49 @@ AsmStmt::addVariableConstraints(StringRef Constraint, const Expr &AsmExpr,
     UnsupportedCB(this, "__asm__");
     return Constraint.str();
   }
-  // Canonicalize the register here before returning it.
-  Register = Target.getNormalizedGCCRegisterName(Register);
-  if (GCCReg != nullptr)
-    *GCCReg = Register.str();
-  return (EarlyClobber ? "&{" : "{") + Register.str() + "}";
+
+  if (ApplyRegisterVariableConstraint) {
+    StringRef Register(Reg);
+    assert(Target.isValidGCCRegisterName(Register));
+    // Canonicalize the register here before returning it.
+    Register = Target.getNormalizedGCCRegisterName(Register);
+    if (GCCRegs)
+      GCCRegs->push_back(Register.str());
+    return (EarlyClobber ? "&{" : "{") + Register.str() + "}";
+  }
+
+  std::string NC;
+  while (I != E) {
+    if (*I == '{') {
+      HardRegEnd = std::find(I + 1, E, '}');
+      // No error checking because we already validated this constraint
+      StringRef Register(I + 1, HardRegEnd - I - 1);
+      // If we don't have a valid register name, simply return the constraint.
+      // For example: There are some targets like X86 that use a constraint such
+      // as "@cca", which is validated and then converted into {@cca}. Now this
+      // isn't necessarily a "GCC Register", but in terms of emission, it is
+      // valid since it lowered appropriately in the X86 backend. For the {..}
+      // constraint, we shouldn't be too strict and error out if the register
+      // itself isn't a valid "GCC register".
+      if (!Target.isValidGCCRegisterName(Register))
+        return Constraint.str();
+
+      // Canonicalize the register here before returning it.
+      Register = Target.getNormalizedGCCRegisterName(Register);
+      // Do not need to worry about early clobber since the symbol should be
+      // copied from the original constraint string
+      NC += "{" + Register.str() + "}";
+
+      if (GCCRegs)
+        GCCRegs->push_back(Register.str());
+
+      I = HardRegEnd + 1;
+    } else {
+      NC += *I;
+      ++I;
+    }
+  }
+  return NC;
 }
 
 std::string AsmStmt::generateAsmString(const ASTContext &C) const {

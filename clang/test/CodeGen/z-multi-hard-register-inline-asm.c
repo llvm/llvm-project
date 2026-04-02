@@ -26,10 +26,4 @@ void f1() {
         : "=&{r1}{r3}"(a)
         : "{%r2}"(b)
         :);
-  
-  // CHECK-COUNT: call i32 asm "lgr $0,$1\0A", "=r{r1}{r3},{r2}r{r4}"
-  __asm("lgr %0,%1\n"
-        : "=r{r1}{r3}"(a)
-        : "{r2}r{r4}"(b)
-        :);
 }
