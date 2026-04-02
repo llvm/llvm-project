@@ -1047,6 +1047,9 @@ bool FunctionSpecializer::isCandidateFunction(Function *F) {
   if (F->hasOptSize())
     return false;
 
+  if (F->hasFnAttribute("no-func-spec"))
+    return false;
+
   // Do not specialize the cloned function again.
   if (Specializations.contains(F))
     return false;
