@@ -20,8 +20,7 @@ using namespace llvm;
 using namespace gsym;
 
 GsymReaderV2::GsymReaderV2(std::unique_ptr<MemoryBuffer> Buffer)
-    : GsymReader(std::move(Buffer)),
-      AddrInfoOffsetsData(StringRef(), true, 8),
+    : GsymReader(std::move(Buffer)), AddrInfoOffsetsData(StringRef(), true, 8),
       FileData(StringRef(), true, 8) {}
 
 GsymReaderV2::GsymReaderV2(GsymReaderV2 &&RHS) = default;
@@ -185,8 +184,7 @@ llvm::Error GsymReaderV2::parse() {
       return Data.takeError();
     // The above getStringRef() already returns the correct data range.
     // DataExtractor will ensure that accesses are within the range.
-    AddrInfoOffsetsData =
-        DataExtractor(*Data, IsLittleEndian, 8);
+    AddrInfoOffsetsData = DataExtractor(*Data, IsLittleEndian, 8);
   }
 
   // String table
@@ -214,7 +212,8 @@ llvm::Error GsymReaderV2::parse() {
       return createStringError(std::errc::invalid_argument,
                                "FileTable section too small for %u files",
                                NumFiles);
-    FileData = DataExtractor(Data->substr(Offset, EntriesSize), IsLittleEndian, 8);
+    FileData =
+        DataExtractor(Data->substr(Offset, EntriesSize), IsLittleEndian, 8);
     FileData.setStringOffsetSize(Hdr->StrpSize);
   }
   return Error::success();
@@ -225,8 +224,7 @@ const HeaderV2 &GsymReaderV2::getHeader() const {
   return *Hdr;
 }
 
-Expected<uint64_t>
-GsymReaderV2::getAddressIndex(const uint64_t Addr) const {
+Expected<uint64_t> GsymReaderV2::getAddressIndex(const uint64_t Addr) const {
   const uint64_t BaseAddress = getBaseAddress();
   if (Addr < BaseAddress)
     return createStringError(std::errc::invalid_argument,
@@ -311,12 +309,12 @@ void GsymReaderV2::dump(raw_ostream &OS) {
   OS << "====== ========== ========== ==============================\n";
   // Since we don't store the total number of files in the file table, loop
   // until we get a null entry which means the index is out of range.
-  for (uint32_t I = 0; ; ++I) {
+  for (uint32_t I = 0;; ++I) {
     auto FE = getFile(I);
     if (!FE)
       break;
-    OS << format("[%4u] ", I) << HEX32(FE->Dir) << ' '
-       << HEX32(FE->Base) << ' ';
+    OS << format("[%4u] ", I) << HEX32(FE->Dir) << ' ' << HEX32(FE->Base)
+       << ' ';
     dump(OS, FE);
     OS << "\n";
   }

@@ -24,12 +24,12 @@ void GlobalData::encode(FileWriter &O) const {
 llvm::Expected<StringRef>
 GlobalData::getStringRef(DataExtractor &GsymData) const {
   if (!GsymData.isValidOffsetForDataOfSize(FileOffset, FileSize))
-    return createStringError(
-        std::errc::invalid_argument,
-        "GlobalData section type %u data not available "
-        "(offset=%" PRIu64 ", size=%" PRIu64 ", bufsize=%" PRIu64 ")",
-        static_cast<uint32_t>(Type), FileOffset, FileSize,
-        static_cast<uint64_t>(GsymData.getData().size()));
+    return createStringError(std::errc::invalid_argument,
+                             "GlobalData section type %u data not available "
+                             "(offset=%" PRIu64 ", size=%" PRIu64
+                             ", bufsize=%" PRIu64 ")",
+                             static_cast<uint32_t>(Type), FileOffset, FileSize,
+                             static_cast<uint64_t>(GsymData.getData().size()));
   return GsymData.getData().substr(FileOffset, FileSize);
 }
 

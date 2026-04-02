@@ -85,7 +85,8 @@ public:
     return std::nullopt;
   }
 
-  LLVM_ABI Expected<uint64_t> getAddressIndex(const uint64_t Addr) const override;
+  LLVM_ABI Expected<uint64_t>
+  getAddressIndex(const uint64_t Addr) const override;
 
   // GlobalData accessors
   std::optional<uint64_t> getAddressInfoOffset(size_t Index) const override;

@@ -177,8 +177,7 @@ const Header &GsymReaderV1::getHeader() const {
   return *Hdr;
 }
 
-Expected<uint64_t>
-GsymReaderV1::getAddressIndex(const uint64_t Addr) const {
+Expected<uint64_t> GsymReaderV1::getAddressIndex(const uint64_t Addr) const {
   if (Addr >= Hdr->BaseAddress) {
     const uint64_t AddrOffset = Addr - Hdr->BaseAddress;
     std::optional<uint64_t> AddrOffsetIndex;
@@ -266,12 +265,12 @@ void GsymReaderV1::dump(raw_ostream &OS) {
   OS << "\nFiles:\n";
   OS << "INDEX  DIRECTORY  BASENAME   PATH\n";
   OS << "====== ========== ========== ==============================\n";
-  for (uint32_t I = 0; ; ++I) {
+  for (uint32_t I = 0;; ++I) {
     auto FE = getFile(I);
     if (!FE)
       break;
-    OS << format("[%4u] ", I) << HEX32(FE->Dir) << ' '
-       << HEX32(FE->Base) << ' ';
+    OS << format("[%4u] ", I) << HEX32(FE->Dir) << ' ' << HEX32(FE->Base)
+       << ' ';
     dump(OS, FE);
     OS << "\n";
   }
