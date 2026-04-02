@@ -169,7 +169,7 @@ void ExprEngine::removeDeadOnEndOfFunction(ExplodedNode *Pred,
   const CFGBlock *Blk = nullptr;
   std::tie(LastSt, Blk) = getLastStmt(Pred);
   if (!Blk || !LastSt) {
-    Dst.Add(Pred);
+    Dst.insert(Pred);
     return;
   }
 
@@ -369,7 +369,7 @@ void ExprEngine::processCallExit(ExplodedNode *CEBNode) {
         /*DiagnosticStmt=*/CalleeCtx->getAnalysisDeclContext()->getBody(),
         ProgramPoint::PostStmtPurgeDeadSymbolsKind);
   } else {
-    CleanedNodes.Add(CEBNode);
+    CleanedNodes.insert(CEBNode);
   }
 
   // The second half of this process happens in the caller context. This is an

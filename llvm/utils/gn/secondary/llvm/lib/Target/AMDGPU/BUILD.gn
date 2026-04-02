@@ -140,6 +140,7 @@ static_library("LLVMAMDGPUCodeGen") {
     "AMDGPUAttributor.cpp",
     "AMDGPUBarrierLatency.cpp",
     "AMDGPUCallLowering.cpp",
+    "AMDGPUCoExecSchedStrategy.cpp",
     "AMDGPUCodeGenPrepare.cpp",
     "AMDGPUCombinerHelper.cpp",
     "AMDGPUCtorDtorLowering.cpp",

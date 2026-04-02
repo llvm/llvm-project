@@ -5396,9 +5396,6 @@ void RewriteInstance::updateELFSymbolTable(
              "Local label inside ICF-folded function");
 
       if (Function && Function->isEmitted()) {
-        assert(Function->getLayout().isHotColdSplit() &&
-               "Adding symbols based on cold fragment when there are more than "
-               "2 fragments");
         const uint64_t OutputAddress =
             Function->translateInputToOutputAddress(Symbol.st_value);
 

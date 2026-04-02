@@ -582,7 +582,7 @@ Target::CreateAddressInModuleBreakpoint(lldb::addr_t file_addr, bool internal,
       std::make_shared<SearchFilterForUnconstrainedSearches>(
           shared_from_this());
   BreakpointResolverSP resolver_sp =
-      std::make_shared<BreakpointResolverAddress>(nullptr, file_addr,
+      std::make_shared<BreakpointResolverAddress>(nullptr, Address(file_addr),
                                                   file_spec);
   return CreateBreakpoint(filter_sp, resolver_sp, internal, request_hardware,
                           false);
@@ -2637,9 +2637,10 @@ Target::GetScratchTypeSystemForLanguage(lldb::LanguageType language,
 CompilerType Target::GetRegisterType(const std::string &name,
                                      const lldb_private::RegisterFlags &flags,
                                      uint32_t byte_size) {
-  RegisterTypeBuilderSP provider = PluginManager::GetRegisterTypeBuilder(*this);
-  assert(provider);
-  return provider->GetRegisterType(name, flags, byte_size);
+  if (!m_register_type_builder_sp)
+    m_register_type_builder_sp = PluginManager::GetRegisterTypeBuilder(*this);
+  assert(m_register_type_builder_sp);
+  return m_register_type_builder_sp->GetRegisterType(name, flags, byte_size);
 }
 
 std::vector<lldb::TypeSystemSP>
@@ -2896,9 +2897,19 @@ ExpressionResults Target::EvaluateExpression(
     result_valobj_sp = persistent_var_sp->GetValueObject();
     execution_results = eExpressionCompleted;
   } else {
+    // If this expression is being evaluated from inside a frame provider,
+    // force single-thread execution. Resuming all threads while a provider
+    // is mid-construction could cause unwanted process state changes.
+    EvaluateExpressionOptions effective_options = options;
+    if (ThreadSP thread_sp = exe_ctx.GetThreadSP()) {
+      if (thread_sp->IsAnyProviderActive()) {
+        effective_options.SetStopOthers(true);
+        effective_options.SetTryAllThreads(false);
+      }
+    }
     llvm::StringRef prefix = GetExpressionPrefixContents();
     execution_results =
-        UserExpression::Evaluate(exe_ctx, options, expr, prefix,
+        UserExpression::Evaluate(exe_ctx, effective_options, expr, prefix,
                                  result_valobj_sp, fixed_expression, ctx_obj);
   }
 
@@ -3854,8 +3865,19 @@ void Target::FinalizeFileActions(ProcessLaunchInfo &info) {
       }
 
       if (default_to_use_pty) {
-        llvm::Error Err = info.SetUpPtyRedirection();
-        LLDB_LOG_ERROR(log, std::move(Err), "SetUpPtyRedirection failed: {0}");
+#ifdef _WIN32
+        if (info.GetFlags().Test(eLaunchFlagUsePipes)) {
+          llvm::Error Err = info.SetUpPipeRedirection();
+          LLDB_LOG_ERROR(log, std::move(Err),
+                         "SetUpPipeRedirection failed: {0}");
+        } else {
+#endif
+          llvm::Error Err = info.SetUpPtyRedirection();
+          LLDB_LOG_ERROR(log, std::move(Err),
+                         "SetUpPtyRedirection failed: {0}");
+#ifdef _WIN32
+        }
+#endif
       }
     }
   }

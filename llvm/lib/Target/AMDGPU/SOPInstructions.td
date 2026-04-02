@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-def GPRIdxMode : CustomOperand<i32>;
+def GPRIdxMode : CustomOperand;
 
 class SOP_Pseudo<string opName, dag outs, dag ins, string asmOps,
                   list<dag> pattern=[]> :
@@ -293,7 +293,7 @@ def S_FLBIT_I32_B64 : SOP1_32_64 <"s_flbit_i32_b64",
   [(set i32:$sdst, (UniformUnaryFrag<AMDGPUffbh_u32> i64:$src0))]
 >;
 def S_FLBIT_I32 : SOP1_32 <"s_flbit_i32",
-  [(set i32:$sdst, (UniformUnaryFrag<AMDGPUffbh_i32> i32:$src0))]
+  [(set i32:$sdst, (UniformUnaryFrag<int_amdgcn_sffbh> i32:$src0))]
 >;
 def S_FLBIT_I32_I64 : SOP1_32_64 <"s_flbit_i32_i64">;
 def S_SEXT_I32_I8 : SOP1_32 <"s_sext_i32_i8",
@@ -488,6 +488,17 @@ let SubtargetPredicate = HasSALUFloatInsts, AddedComplexity = 9 in {
                  (S_CVT_F16_F32 (S_CVT_F32_I32 $src0))>;
     def : GCNPat<(f16 (UniformUnaryFrag<uint_to_fp> i32:$src0)),
                  (S_CVT_F16_F32 (S_CVT_F32_U32 $src0))>;
+
+    // f32 -> i32 saturated conversions
+    def : GCNPat<(i32 (UniformBinFrag<fp_to_sint_sat> f32:$src0, i32)),
+                 (S_CVT_I32_F32 (f32 $src0))>;
+    def : GCNPat<(i32 (UniformBinFrag<fp_to_uint_sat> f32:$src0, i32)),
+                 (S_CVT_U32_F32 (f32 $src0))>;
+
+    def : GCNPat<(i32 (UniformUnaryFrag<fp_to_sint_sat_gi> f32:$src0)),
+                 (S_CVT_I32_F32 (f32 $src0))>;
+    def : GCNPat<(i32 (UniformUnaryFrag<fp_to_uint_sat_gi> f32:$src0)),
+                 (S_CVT_U32_F32 (f32 $src0))>;
 }
 
 let hasSideEffects = 1 in {

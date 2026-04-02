@@ -17,9 +17,7 @@ class TestBreakInLoadedDylib(TestBase):
         self.main_spec = lldb.SBFileSpec("main.cpp")
         self.b_spec = lldb.SBFileSpec("b.cpp")
         self.lib_shortname = "lib_b"
-        self.lib_fullname = (
-            ctx.shlib_prefix + self.lib_shortname + "." + ctx.shlib_extension
-        )
+        self.lib_fullname = ctx.getFullLibName(self.lib_shortname)
         self.lib_spec = lldb.SBFileSpec(self.lib_fullname)
 
     def test_break_in_dlopen_dylib_using_lldbutils(self):

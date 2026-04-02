@@ -201,7 +201,9 @@ void ConvertOpenMPToLLVMPass::runOnOperation() {
 namespace {
 /// Implement the interface to convert OpenMP to LLVM.
 struct OpenMPToLLVMDialectInterface : public ConvertToLLVMPatternInterface {
-  using ConvertToLLVMPatternInterface::ConvertToLLVMPatternInterface;
+  OpenMPToLLVMDialectInterface(Dialect *dialect)
+      : ConvertToLLVMPatternInterface(dialect) {}
+
   void loadDependentDialects(MLIRContext *context) const final {
     context->loadDialect<LLVM::LLVMDialect>();
   }

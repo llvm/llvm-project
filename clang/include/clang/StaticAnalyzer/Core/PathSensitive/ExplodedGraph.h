@@ -440,22 +440,22 @@ private:
   void collectNode(ExplodedNode *node);
 };
 
+/// ExplodedNodeSet is a set of `ExplodedNode *` elements with the invariant
+/// that its elements cannot be nullpointers or sink nodes. Insertion of null
+/// or sink nodes is silently ignored (which is comfortable in many use cases).
+/// Note that `ExplodedNode *` is implicitly convertible to an
+/// `ExplodedNodeSet` containing 0 or 1 elements (where null pointers and sink
+/// nodes converted to the empty set).
+/// This type has set semantics (repeated insertions are ignored), but the
+/// iteration order is always the order of (first) insertion.
 class ExplodedNodeSet {
   using ImplTy = llvm::SmallSetVector<ExplodedNode *, 4>;
   ImplTy Impl;
 
 public:
-  ExplodedNodeSet(ExplodedNode *N) {
-    assert(N && !N->isSink());
-    Impl.insert(N);
-  }
+  ExplodedNodeSet(ExplodedNode *N) { insert(N); }
 
   ExplodedNodeSet() = default;
-
-  void Add(ExplodedNode *N) {
-    if (N && !N->isSink())
-      Impl.insert(N);
-  }
 
   using iterator = ImplTy::iterator;
   using const_iterator = ImplTy::const_iterator;
@@ -466,8 +466,14 @@ public:
 
   void clear() { Impl.clear(); }
 
+  void insert(ExplodedNode *N) {
+    if (N && !N->isSink())
+      Impl.insert(N);
+  }
+
   void insert(const ExplodedNodeSet &S) {
-    assert(&S != this);
+    if (&S == this)
+      return;
     if (empty())
       Impl = S.Impl;
     else

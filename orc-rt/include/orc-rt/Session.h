@@ -191,6 +191,20 @@ public:
     return addService(std::make_unique<ServiceT>(std::forward<ArgTs>(Args)...));
   }
 
+  /// Try to create an instance of ServiceT by forwarding the given arguments
+  /// to ServiceT::Create method, which must return an
+  /// Expected<std::unique_ptr<ServiceT>>.
+  ///
+  /// On success, adds the service and returns a reference to it.
+  /// On failure returns the Error produced by ServiceT::Create.
+  template <typename ServiceT, typename... ArgTs>
+  Expected<ServiceT &> tryCreateService(ArgTs &&...Args) {
+    auto Srv = ServiceT::Create(std::forward<ArgTs>(Args)...);
+    if (!Srv)
+      return Srv.takeError();
+    return addService(std::move(*Srv));
+  }
+
   /// Initiate connection with controller, using the given BootstrapInfo.
   ///
   /// Upon first call, assuming that the Session has not already been detached
