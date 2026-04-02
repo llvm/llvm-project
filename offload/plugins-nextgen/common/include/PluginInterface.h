@@ -1778,7 +1778,8 @@ public:
 
   /// Copy data to the given device asynchronously.
   int32_t data_submit_async(int32_t DeviceId, void *TgtPtr, void *HstPtr,
-                            int64_t Size, __tgt_async_info *AsyncInfoPtr);
+                            int64_t Size, __tgt_async_info *AsyncInfoPtr,
+                            GenericProfilerTy *ProfilerPtr = nullptr);
 
   /// Copy data from the given device.
   int32_t data_retrieve(int32_t DeviceId, void *HstPtr, void *TgtPtr,
@@ -1786,7 +1787,8 @@ public:
 
   /// Copy data from the given device asynchronously.
   int32_t data_retrieve_async(int32_t DeviceId, void *HstPtr, void *TgtPtr,
-                              int64_t Size, __tgt_async_info *AsyncInfoPtr);
+                              int64_t Size, __tgt_async_info *AsyncInfoPtr,
+                              GenericProfilerTy *ProfilerPtr = nullptr);
 
   /// Exchange memory addresses between two devices.
   int32_t data_exchange(int32_t SrcDeviceId, void *SrcPtr, int32_t DstDeviceId,
@@ -1795,7 +1797,8 @@ public:
   /// Exchange memory addresses between two devices asynchronously.
   int32_t data_exchange_async(int32_t SrcDeviceId, void *SrcPtr,
                               int DstDeviceId, void *DstPtr, int64_t Size,
-                              __tgt_async_info *AsyncInfo);
+                              __tgt_async_info *AsyncInfo,
+                              GenericProfilerTy *ProfilerPtr = nullptr);
 
   /// Places a fence between previous data movements and following data
   /// movements if necessary on the device

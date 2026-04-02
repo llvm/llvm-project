@@ -13,6 +13,7 @@ add_library(omptarget SHARED
   OpenMP/API.cpp
   OpenMP/InteropAPI.cpp
   OpenMP/OMPT/Callback.cpp
+  OpenMP/OMPT/OmptTracing.cpp
   OpenMP/OMPT/OmptTracingBuffer.cpp
 
   ../libompaccsupport/device.cpp
@@ -49,6 +50,11 @@ endforeach()
 
 target_compile_options(omptarget PRIVATE ${offload_compile_flags})
 target_link_options(omptarget PRIVATE ${offload_link_flags})
+if(LLVM_HAVE_LINK_VERSION_SCRIPT AND OMPT_TARGET_DEFAULT AND LIBOMPTARGET_OMPT_SUPPORT)
+  # The libomptarget_ompt_* entry points only exist when device tracing is
+  # built, so they are versioned from a separate script.
+  target_link_libraries(omptarget PRIVATE "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/exports.ompt")
+endif()
 
 # libomptarget.so needs to be aware of where the plugins live as they
 # are now separated in the build directory.

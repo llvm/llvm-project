@@ -1705,8 +1705,10 @@ int32_t GenericPluginTy::data_submit(int32_t DeviceId, void *TgtPtr,
 
 int32_t GenericPluginTy::data_submit_async(int32_t DeviceId, void *TgtPtr,
                                            void *HstPtr, int64_t Size,
-                                           __tgt_async_info *AsyncInfoPtr) {
-  auto Err = getDevice(DeviceId).dataSubmit(TgtPtr, HstPtr, Size, AsyncInfoPtr);
+                                           __tgt_async_info *AsyncInfoPtr,
+                                           GenericProfilerTy *ProfilerPtr) {
+  auto Err = getDevice(DeviceId).dataSubmit(TgtPtr, HstPtr, Size, AsyncInfoPtr,
+                                            ProfilerPtr);
   if (Err) {
     REPORT() << "Failure to copy data from host to device. Pointers: host "
              << "= " << HstPtr << ", device = " << TgtPtr << ", size = " << Size
@@ -1725,9 +1727,10 @@ int32_t GenericPluginTy::data_retrieve(int32_t DeviceId, void *HstPtr,
 
 int32_t GenericPluginTy::data_retrieve_async(int32_t DeviceId, void *HstPtr,
                                              void *TgtPtr, int64_t Size,
-                                             __tgt_async_info *AsyncInfoPtr) {
-  auto Err =
-      getDevice(DeviceId).dataRetrieve(HstPtr, TgtPtr, Size, AsyncInfoPtr);
+                                             __tgt_async_info *AsyncInfoPtr,
+                                             GenericProfilerTy *ProfilerPtr) {
+  auto Err = getDevice(DeviceId).dataRetrieve(HstPtr, TgtPtr, Size,
+                                              AsyncInfoPtr, ProfilerPtr);
   if (Err) {
     REPORT() << "Failure to copy data from device to host. Pointers: host "
              << "= " << HstPtr << ", device = " << TgtPtr << ", size = " << Size
@@ -1748,10 +1751,12 @@ int32_t GenericPluginTy::data_exchange(int32_t SrcDeviceId, void *SrcPtr,
 int32_t GenericPluginTy::data_exchange_async(int32_t SrcDeviceId, void *SrcPtr,
                                              int DstDeviceId, void *DstPtr,
                                              int64_t Size,
-                                             __tgt_async_info *AsyncInfo) {
+                                             __tgt_async_info *AsyncInfo,
+                                             GenericProfilerTy *ProfilerPtr) {
   GenericDeviceTy &SrcDevice = getDevice(SrcDeviceId);
   GenericDeviceTy &DstDevice = getDevice(DstDeviceId);
-  auto Err = SrcDevice.dataExchange(SrcPtr, DstDevice, DstPtr, Size, AsyncInfo);
+  auto Err = SrcDevice.dataExchange(SrcPtr, DstDevice, DstPtr, Size, AsyncInfo,
+                                    ProfilerPtr);
   if (Err) {
     REPORT() << "Failure to copy data from device (" << SrcDeviceId
              << ") to device (" << DstDeviceId
