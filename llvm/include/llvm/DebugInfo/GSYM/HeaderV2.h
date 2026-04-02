@@ -70,11 +70,10 @@ struct HeaderV2 {
   /// offset zero and 4 respectively to ensure clients figure out if they can
   /// parse the format.
   uint16_t Version;
-  /// Padding for alignment of BaseAddress to 8 bytes. Must be zero. Without
-  /// this padding, one of the size fields (AddrOffSize, AddrInfoOffSize,
-  /// StrpSize) would need to be placed here, separating it from the other size
-  /// fields.
-  uint16_t Padding;
+  /// The size in bytes of each address offset in the address offsets table.
+  uint8_t AddrOffSize;
+  /// String table encoding. Allows for future encoding for string table.
+  StringTableEncoding StrTableEncoding;
   /// The 64 bit base address that all address offsets in the address offsets
   /// table are relative to. Storing a full 64 bit address allows our address
   /// offsets table to be smaller on disk.
@@ -82,15 +81,6 @@ struct HeaderV2 {
   /// The number of addresses stored in the address offsets table and the
   /// address info offsets table.
   uint32_t NumAddresses;
-  /// The size in bytes of each address offset in the address offsets table.
-  uint8_t AddrOffSize;
-  /// The size in bytes of each entry in the address info offsets table.
-  uint8_t AddrInfoOffSize;
-  /// The size in bytes of each string table reference (strp) in FunctionInfo
-  /// and other data structures within GlobalData.
-  uint8_t StrpSize;
-  /// String table encoding. Allows for future encoding for string table.
-  StringTableEncoding StrTableEncoding;
   /// The GlobalData array immediately follows the header at offset
   /// sizeof(HeaderV2). Each GlobalData entry describes a section in the GSYM
   /// file (e.g. AddrOffsets, FunctionInfo, UUID, StringTable). The array is
