@@ -879,7 +879,7 @@ static std::optional<unsigned> shouldFullUnroll(
 
   // When computing the unrolled size, note that BEInsns are not replicated
   // like the rest of the loop body.
-  uint64_t UnrolledSize = UCE.getUnrolledLoopSize(UP);
+  uint64_t UnrolledSize = UCE.getUnrolledLoopSize(UP, FullUnrollTripCount);
   if (UnrolledSize < UP.Threshold) {
     LLVM_DEBUG(dbgs().indent(2) << "Unrolling: size " << UnrolledSize
                                 << " < threshold " << UP.Threshold << ".\n");
@@ -1054,9 +1054,8 @@ void llvm::computeUnrollCount(Loop *L, const TargetTransformInfo &TTI,
   // 3rd priority is exact full unrolling.  This will eliminate all copies
   // of some exit test.
   LLVM_DEBUG(dbgs().indent(1) << "Trying full unroll...\n");
-  UP.Count = 0;
+  assert(UP.Count == 0);
   if (TripCount) {
-    UP.Count = TripCount;
     if (auto UnrollFactor = shouldFullUnroll(L, TTI, DT, SE, EphValues,
                                              TripCount, UCE, UP)) {
       UP.Count = *UnrollFactor;
@@ -1079,7 +1078,6 @@ void llvm::computeUnrollCount(Loop *L, const TargetTransformInfo &TTI,
   LLVM_DEBUG(dbgs().indent(1) << "Trying upper-bound unroll...\n");
   if (!TripCount && MaxTripCount && (UP.UpperBound || MaxOrZero) &&
       MaxTripCount <= UP.MaxUpperBound) {
-    UP.Count = MaxTripCount;
     if (auto UnrollFactor = shouldFullUnroll(L, TTI, DT, SE, EphValues,
                                              MaxTripCount, UCE, UP)) {
       UP.Count = *UnrollFactor;
@@ -1152,16 +1150,14 @@ void llvm::computeUnrollCount(Loop *L, const TargetTransformInfo &TTI,
   if (PInfo.PragmaRuntimeUnrollDisable) {
     LLVM_DEBUG(dbgs().indent(2)
                << "Not runtime unrolling: disabled by pragma.\n");
-    UP.Count = 0;
     return;
   }
 
   // Don't unroll a small upper bound loop unless user or TTI asked to do so.
-  if (MaxTripCount && !UP.Force && MaxTripCount < UP.MaxUpperBound) {
-    LLVM_DEBUG(dbgs().indent(2)
-               << "Not runtime unrolling: max trip count " << MaxTripCount
-               << " is small (< " << UP.MaxUpperBound << ") and not forced.\n");
-    UP.Count = 0;
+  if (MaxTripCount && !UP.Force && MaxTripCount <= UP.MaxUpperBound) {
+    LLVM_DEBUG(dbgs().indent(2) << "Not runtime unrolling: max trip count "
+                                << MaxTripCount << " is small (<= "
+                                << UP.MaxUpperBound << ") and not forced.\n");
     return;
   }
 
@@ -1174,17 +1170,18 @@ void llvm::computeUnrollCount(Loop *L, const TargetTransformInfo &TTI,
         UP.AllowExpensiveTripCount = true;
     }
   }
+
   UP.Runtime |= PInfo.PragmaEnableUnroll || PInfo.PragmaCount > 0 ||
                 PInfo.UserUnrollCount;
   if (!UP.Runtime) {
     LLVM_DEBUG(dbgs().indent(2)
                << "Will not try to unroll loop with runtime trip count "
                << "because -unroll-runtime not given\n");
-    UP.Count = 0;
     return;
   }
-  if (UP.Count == 0)
-    UP.Count = UP.DefaultUnrollRuntimeCount;
+
+  assert(UP.Count == 0);
+  UP.Count = UP.DefaultUnrollRuntimeCount;
 
   // Reduce unroll count to be the largest power-of-two factor of
   // the original count which satisfies the threshold limit.

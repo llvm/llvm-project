@@ -7226,11 +7226,13 @@ bool X86TTIImpl::isVectorShiftByScalarCheap(Type *Ty) const {
 }
 
 unsigned X86TTIImpl::getStoreMinimumVF(unsigned VF, Type *ScalarMemTy,
-                                       Type *ScalarValTy) const {
+                                       Type *ScalarValTy, Align Alignment,
+                                       unsigned AddrSpace) const {
   if (ST->hasF16C() && ScalarMemTy->isHalfTy()) {
     return 4;
   }
-  return BaseT::getStoreMinimumVF(VF, ScalarMemTy, ScalarValTy);
+  return BaseT::getStoreMinimumVF(VF, ScalarMemTy, ScalarValTy, Alignment,
+                                  AddrSpace);
 }
 
 bool X86TTIImpl::isProfitableToSinkOperands(Instruction *I,

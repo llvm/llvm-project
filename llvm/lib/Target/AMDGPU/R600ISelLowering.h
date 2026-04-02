@@ -54,13 +54,14 @@ public:
       MachineMemOperand::Flags Flags = MachineMemOperand::MONone,
       unsigned *IsFast = nullptr) const override;
 
-  bool canCombineTruncStore(EVT ValVT, EVT MemVT,
+  bool canCombineTruncStore(EVT ValVT, EVT MemVT, Align Alignment,
+                            unsigned AddrSpace,
                             bool LegalOperations) const override {
     // R600 has "custom" lowering for truncating stores despite not supporting
     // those instructions. If we allow that custom lowering in the DAG combiner
     // then all truncates are merged into truncating stores, giving worse code
     // generation. This hook prevents the DAG combiner performing that combine.
-    return isTruncStoreLegal(ValVT, MemVT);
+    return isTruncStoreLegal(ValVT, MemVT, Alignment, AddrSpace);
   }
 
 private:
