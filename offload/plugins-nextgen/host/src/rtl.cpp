@@ -360,6 +360,10 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
     return true;
   }
   Error syncEventImpl(void *EventPtr) override { return Plugin::success(); }
+  Expected<float> getEventElapsedTimeImpl(void *StartEventPtr,
+                                          void *EndEventPtr) override {
+    return 0.0f;
+  }
 
   /// Print information about the device.
   Expected<InfoTreeNode> obtainInfoImpl() override {

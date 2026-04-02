@@ -37,4 +37,9 @@ extern volatile int CallGraphExtractorAnchorSource;
 [[maybe_unused]] static int CallGraphExtractorAnchorDestination =
     CallGraphExtractorAnchorSource;
 
+// This anchor is used to force the linker to link the CallGraph JSON format.
+extern volatile int CallGraphJSONFormatAnchorSource;
+[[maybe_unused]] static int CallGraphJSONFormatAnchorDestination =
+    CallGraphJSONFormatAnchorSource;
+
 #endif // LLVM_CLANG_SCALABLESTATICANALYSISFRAMEWORK_SSAFBUILTINFORCELINKER_H

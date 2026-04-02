@@ -3277,6 +3277,11 @@ def warn_function_attribute_ignored_in_stmt : Warning<
   "use '%0' on statements">,
   InGroup<IgnoredAttributes>;
 
+def warn_stmt_attribute_ignored_in_function : Warning<
+  "attribute is ignored on this function as it only applies to statements; "
+  "use '%0' for functions">,
+  InGroup<IgnoredAttributes>;
+
 def err_musttail_needs_trivial_args : Error<
   "tail call requires that the return value, all parameters, and any "
   "temporaries created by the expression are trivially destructible">;
