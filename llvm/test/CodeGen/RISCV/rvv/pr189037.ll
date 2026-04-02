@@ -5,8 +5,8 @@
 define void @test(ptr %out, <1 x i16> %v) {
 ; CHECK-LABEL: test:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
-; CHECK-NEXT:    vse16.v v8, (a0)
+; CHECK-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
+; CHECK-NEXT:    vse8.v v8, (a0)
 ; CHECK-NEXT:    ret
   %coerce.val.ii.i = extractelement <1 x i16> %v, i64 0
   store i16 %coerce.val.ii.i, ptr %out, align 1
