@@ -20697,6 +20697,8 @@ SDValue PPCTargetLowering::DAGCombineBitcast(SDNode *N,
   SelectionDAG &DAG = DCI.DAG;
   bool IsLittleEndian = Subtarget.isLittleEndian();
 
+  if (ResVT != MVT::i16 && ResVT != MVT::i8)
+    return SDValue();
   SDValue VBPerm =
       GenerateVBPERM(DAG, dl, Src, SrcVT, TruncResVT, IsLittleEndian);
   if (!VBPerm)
