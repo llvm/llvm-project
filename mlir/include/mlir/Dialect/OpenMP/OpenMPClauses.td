@@ -316,20 +316,26 @@ class OpenMP_DependClauseSkip<
     bit description = false, bit extraClassDeclaration = false
   > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
                     extraClassDeclaration> {
-  let arguments = (ins
-    OptionalAttr<TaskDependArrayAttr>:$depend_kinds,
-    Variadic<OpenMP_PointerLikeType>:$depend_vars
-  );
+  let arguments = (ins OptionalAttr<TaskDependArrayAttr>:$depend_kinds,
+      Variadic<OpenMP_PointerLikeType>:$depend_vars,
+      OptionalAttr<TaskDependArrayAttr>:$depend_iterated_kinds,
+      Variadic<OpenMP_IteratedType>:$depend_iterated);
 
   let optAssemblyFormat = [{
     `depend` `(`
-      custom<DependVarList>($depend_vars, type($depend_vars), $depend_kinds) `)`
+      custom<DependVarList>($depend_vars, type($depend_vars), $depend_kinds,
+                            $depend_iterated, type($depend_iterated),
+                            $depend_iterated_kinds) `)`
   }];
 
   let description = [{
     The `depend_kinds` and `depend_vars` arguments are variadic lists of values
     that specify the dependencies of this particular task in relation to other
     tasks.
+
+    The `depend_iterated_kinds` and `depend_iterated` arguments are variadic
+    lists of iterator-produced handles (from `omp.iterator`) that specify
+    dependencies expanded at runtime via an iterator modifier.
   }];
 }
 

@@ -40,6 +40,9 @@
 ; SPIRV-O0-NEXT:    FunctionPass Manager
 ; SPIRV-O0-NEXT:      Lower invoke and unwind, for unwindless code generators
 ; SPIRV-O0-NEXT:      Remove unreachable blocks from the CFG
+; SPIRV-O0-NEXT:      Dominator Tree Construction
+; SPIRV-O0-NEXT:      Natural Loop Information
+; SPIRV-O0-NEXT:      Canonicalize natural loops
 ; SPIRV-O0-NEXT:      SPIRV strip convergent intrinsics
 ; SPIRV-O0-NEXT:    SPIRV Legalize Implicit Binding
 ; SPIRV-O0-NEXT:    SPIRV Legalize Zero-Size Arrays
@@ -78,6 +81,7 @@
 ; SPIRV-O0-NEXT:      Analyze Machine Code For Garbage Collection
 ; SPIRV-O0-NEXT:      Insert fentry calls
 ; SPIRV-O0-NEXT:      Insert XRay ops
+; SPIRV-O0-NEXT:      SPIRV NonSemantic.Shader.DebugInfo.100 emitter
 ; SPIRV-O0-NEXT:      Machine Sanitizer Binary Metadata
 ; SPIRV-O0-NEXT:      Lazy Machine Block Frequency Analysis
 ; SPIRV-O0-NEXT:      Machine Optimization Remark Emitter
@@ -158,6 +162,9 @@
 ; SPIRV-Opt-NEXT:      CodeGen Prepare
 ; SPIRV-Opt-NEXT:      Lower invoke and unwind, for unwindless code generators
 ; SPIRV-Opt-NEXT:      Remove unreachable blocks from the CFG
+; SPIRV-Opt-NEXT:      Dominator Tree Construction
+; SPIRV-Opt-NEXT:      Natural Loop Information
+; SPIRV-Opt-NEXT:      Canonicalize natural loops
 ; SPIRV-Opt-NEXT:      SPIRV strip convergent intrinsics
 ; SPIRV-Opt-NEXT:    SPIRV Legalize Implicit Binding
 ; SPIRV-Opt-NEXT:    SPIRV Legalize Zero-Size Arrays
@@ -219,6 +226,7 @@
 ; SPIRV-Opt-NEXT:      Analyze Machine Code For Garbage Collection
 ; SPIRV-Opt-NEXT:      Insert fentry calls
 ; SPIRV-Opt-NEXT:      Insert XRay ops
+; SPIRV-Opt-NEXT:      SPIRV NonSemantic.Shader.DebugInfo.100 emitter
 ; SPIRV-Opt-NEXT:      Machine Sanitizer Binary Metadata
 ; SPIRV-Opt-NEXT:      Lazy Machine Block Frequency Analysis
 ; SPIRV-Opt-NEXT:      Machine Optimization Remark Emitter
