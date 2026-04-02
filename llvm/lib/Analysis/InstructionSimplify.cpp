@@ -5467,7 +5467,7 @@ static Value *simplifyExtractValueInst(Value *Agg, ArrayRef<unsigned> Idxs,
     }
     
     // Based on the verifier, self-referential insertvalues are apparently
-    // fine in unreachable blocks and they will cause this loop to run in
+    // fine in unreachable blocks and they will cause this loop to run
     // infinitely. I am just adding a check to break out if it is the case.
     auto *newIVI = dyn_cast<InsertValueInst>(IVI->getAggregateOperand());
     if (IVI == newIVI)
