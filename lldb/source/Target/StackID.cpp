@@ -26,7 +26,7 @@ bool StackID::IsCFAOnStack(Process &process) const {
     if (m_cfa != LLDB_INVALID_ADDRESS) {
       MemoryRegionInfo mem_info;
       if (process.GetMemoryRegionInfo(m_cfa, mem_info).Success())
-        if (mem_info.IsStackMemory() == MemoryRegionInfo::eNo)
+        if (mem_info.IsStackMemory() == eLazyBoolNo)
           m_cfa_on_stack = eLazyBoolNo;
     }
   }

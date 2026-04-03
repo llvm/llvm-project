@@ -184,7 +184,7 @@ void CommandObjectDWIMPrint::DoExecute(StringRef command,
     if (is_integer) {
       MemoryRegionInfo mem_info;
       m_exe_ctx.GetProcessRef().GetMemoryRegionInfo(addr, mem_info);
-      bool is_readable = mem_info.GetReadable() == MemoryRegionInfo::eYes;
+      bool is_readable = mem_info.GetReadable() == eLazyBoolYes;
       if (is_readable) {
         modified_expr_storage =
             llvm::formatv("unsafeBitCast({0}, to: AnyObject.self)", expr).str();
