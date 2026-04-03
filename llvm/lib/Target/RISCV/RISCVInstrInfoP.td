@@ -1796,14 +1796,12 @@ let Predicates = [HasStdExtP] in {
   // Basic 8-bit arithmetic patterns
   def : PatGprGpr<add, PADD_B, XLenVecI8VT>;
   def : PatGprGpr<sub, PSUB_B, XLenVecI8VT>;
-  def : Pat<(XLenVecI8VT (add GPR:$rs1, (splat_vector (XLenVT GPR:$rs2)))),
-            (PADD_BS GPR:$rs1, GPR:$rs2)>;
+  def : PatGprSplatGpr<add, PADD_BS, XLenVecI8VT>;
 
   // Basic 16-bit arithmetic patterns
   def : PatGprGpr<add, PADD_H, XLenVecI16VT>;
   def : PatGprGpr<sub, PSUB_H, XLenVecI16VT>;
-  def : Pat<(XLenVecI16VT (add GPR:$rs1, (splat_vector (XLenVT GPR:$rs2)))),
-            (PADD_HS GPR:$rs1, GPR:$rs2)>;
+  def : PatGprSplatGpr<add, PADD_HS, XLenVecI16VT>;
 
   // 8-bit bitwise operation patterns
   def : PatGprGpr<and, AND, XLenVecI8VT>;
@@ -2018,8 +2016,7 @@ let Predicates = [HasStdExtP, IsRV64] in {
   // Basic 32-bit arithmetic patterns
   def : PatGprGpr<add, PADD_W, v2i32>;
   def : PatGprGpr<sub, PSUB_W, v2i32>;
-  def : Pat<(v2i32 (add GPR:$rs1, (splat_vector (XLenVT GPR:$rs2)))),
-            (PADD_WS GPR:$rs1, GPR:$rs2)>;
+  def : PatGprSplatGpr<add, PADD_WS, v2i32>;
 
   // 32-bit bitwise operation patterns
   def : PatGprGpr<and, AND, v2i32>;
