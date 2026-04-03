@@ -555,7 +555,7 @@ static void applyBoundsSafety(Sema &S, ValueDecl *D,
     }
     S.ParseBoundsAttributeArgFromStringCallback(
         Info.ExternalBounds, "<API Notes>", ScopeDecl, D->getLocation(),
-        {Kind, *Info.getLevel(), D});
+        {Kind, Info.getLevel().value_or(0), D});
   }
 }
 /* TO_UPSTREAM(BoundsSafety) OFF */

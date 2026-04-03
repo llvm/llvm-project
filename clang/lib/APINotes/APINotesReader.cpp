@@ -330,7 +330,6 @@ public:
   }
 };
 
-/* TO_UPSTREAM(BoundsSafety) ON */
 /// Read serialized BoundsSafetyInfo.
 void ReadBoundsSafetyInfo(const uint8_t *&Data, BoundsSafetyInfo &Info) {
   uint8_t Payload = endian::readNext<uint8_t, llvm::endianness::little>(Data);
@@ -343,9 +342,9 @@ void ReadBoundsSafetyInfo(const uint8_t *&Data, BoundsSafetyInfo &Info) {
 
   if (Payload & 0x01) {
     uint8_t Kind = (Payload >> 1) & 0x7;
-    assert(Kind >= (uint8_t)BoundsSafetyInfo::BoundsSafetyKind::CountedBy);
-    assert(Kind <= (uint8_t)BoundsSafetyInfo::BoundsSafetyKind::EndedBy);
-    Info.setKindAudited((BoundsSafetyInfo::BoundsSafetyKind)Kind);
+    assert(Kind <=
+           static_cast<uint8_t>(BoundsSafetyInfo::BoundsSafetyKind::EndedBy));
+    Info.setKindAudited(static_cast<BoundsSafetyInfo::BoundsSafetyKind>(Kind));
   }
 
   uint16_t ExternalBoundsLen =
@@ -353,7 +352,6 @@ void ReadBoundsSafetyInfo(const uint8_t *&Data, BoundsSafetyInfo &Info) {
   Info.ExternalBounds = std::string(Data, Data + ExternalBoundsLen);
   Data += ExternalBoundsLen;
 }
-/* TO_UPSTREAM(BoundsSafety) OFF */
 
 /// Read serialized ParamInfo.
 void ReadParamInfo(const uint8_t *&Data, ParamInfo &Info) {
@@ -371,13 +369,8 @@ void ReadParamInfo(const uint8_t *&Data, ParamInfo &Info) {
   if (Payload & 0x01)
     Info.setNoEscape(Payload & 0x02);
   Payload >>= 2;
-  /* TO_UPSTREAM(BoundsSafety) ON */
-  if (Payload & 0x01) {
-    BoundsSafetyInfo BSI;
-    ReadBoundsSafetyInfo(Data, BSI);
-    Info.BoundsSafety = BSI;
-  }
-  /* TO_UPSTREAM(BoundsSafety) OFF */
+  if (Payload & 0x01)
+    ReadBoundsSafetyInfo(Data, Info.BoundsSafety.emplace());
 }
 
 /// Read serialized FunctionInfo.
