@@ -271,7 +271,7 @@ getNonTriviallyVectorizableIntrinsicCallOperand(Value *V) {
   }
 
   return Operands;
-}  
+}
 
 /// Predicate for the element types that the SLP vectorizer supports.
 ///
@@ -12276,8 +12276,9 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
           }
         }
         if (NewLoopNest.size() > CurrentLoopNest.size())
-          CurrentLoopNest.append(std::next(NewLoopNest.begin(), CurrentLoopNest.size()),
-                          NewLoopNest.end());
+          CurrentLoopNest.append(
+              std::next(NewLoopNest.begin(), CurrentLoopNest.size()),
+              NewLoopNest.end());
       }
     }
   }
@@ -18475,10 +18476,9 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
           assert(SLPReVec && "Only supported by REVEC.");
           SrcTy = getWidenedType(SrcTy, VecTy->getNumElements());
         }
-        InstructionCost CastCost =
-            TTI->getCastInstrCost(Opcode, DstTy, SrcTy,
-                                  TTI::CastContextHint::None,
-                                  TTI::TCK_RecipThroughput);
+        InstructionCost CastCost = TTI->getCastInstrCost(
+            Opcode, DstTy, SrcTy, TTI::CastContextHint::None,
+            TTI::TCK_RecipThroughput);
         CastCost = ScaleCost(CastCost, Root, /*Scalar=*/nullptr, ReductionRoot);
         Cost += CastCost;
       }
@@ -18647,9 +18647,8 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
         default:
           break;
         }
-        InstructionCost CastCost =
-            TTI->getCastInstrCost(Opcode, DstVecTy, SrcVecTy, CCH,
-                                  TTI::TCK_RecipThroughput);
+        InstructionCost CastCost = TTI->getCastInstrCost(
+            Opcode, DstVecTy, SrcVecTy, CCH, TTI::TCK_RecipThroughput);
         CastCost = ScaleCost(CastCost, *VectorizableTree.front().get(),
                              /*Scalar=*/nullptr, ReductionRoot);
         Cost += CastCost;
