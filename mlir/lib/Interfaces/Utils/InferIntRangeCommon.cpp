@@ -854,12 +854,14 @@ mlir::intrange::inferAffineExpr(AffineExpr expr,
       umax = lhsMax;
     }
     // Special case: sweeping out a contiguous range with constant divisor.
-    // Only applies when dividend is non-negative to ensure result range is
-    // contiguous.
+    // Only applies when dividend is non-negative and the range does not
+    // cross a modulus boundary (same quotient), ensuring contiguity.
     else if (rhsMin == rhsMax && lhsMin.isNonNegative() &&
-             (lhsMax - lhsMin).ult(rhsMax)) {
-      // For non-negative dividends, Euclidean mod is same as unsigned
-      // remainder.
+             (lhsMax - lhsMin).ult(rhsMax) &&
+             lhsMin.udiv(rhsMax) == lhsMax.udiv(rhsMax)) {
+      // For non-negative dividends within the same modular period,
+      // Euclidean mod is same as unsigned remainder and the result is
+      // contiguous.
       umin = lhsMin.urem(rhsMax);
       umax = lhsMax.urem(rhsMax);
       // Result should be contiguous since we're not wrapping around.

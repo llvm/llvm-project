@@ -1,0 +1,22 @@
+## Check DIL error diagnostics output.
+# XFAIL: target-windows
+# RUN: %clang_host -g -O0 %S/Inputs/main.c -o %t
+# RUN: %lldb %t -o "command source -e 0 %s" -o exit 2>&1 | FileCheck %s --strict-whitespace
+settings set target.experimental.use-DIL true
+b main
+run
+
+## Check console diagnostincs pointing to an error in user input.
+frame var a+b
+# CHECK:      {{^                   (\^|˄)}}
+# CHECK-NEXT: {{^                   (╰─ )?}}error: use of undeclared identifier 'b'
+
+## Check diagnostics when called from API.
+script lldb.frame.GetValueForVariablePath("++foo")
+# CHECK: error: <user expression>:1:3: use of undeclared identifier 'foo'
+# CHECK-NEXT: {{^    }}1 | ++foo
+# CHECK-NEXT: {{^    }}  |   ^~~
+
+## Check that a result that fails to retrieve data is displaying an error.
+frame var *((int*)0)
+# CHECK: (int) *((int*)0) = <parent is NULL>

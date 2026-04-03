@@ -36,13 +36,27 @@ DILDiagnosticError::DILDiagnosticError(llvm::StringRef expr,
   DiagnosticDetail::SourceLocation sloc = {
       FileSpec{}, /*line=*/1, static_cast<uint16_t>(loc + 1),
       err_len,    false,      /*in_user_input=*/true};
-  std::string rendered_msg =
-      llvm::formatv("<user expression 0>:1:{0}: {1}\n   1 | {2}\n     | ^",
-                    loc + 1, message, expr);
+  // If the error is not handled by `RenderDiagnosticDetails`, this creates an
+  // error message that can be displayed instead.
+  // Example:
+  // (lldb) script lldb.frame.GetValueForVariablePath("1 + foo")
+  // error: <user expression>:1:5: use of undeclared identifier 'foo'
+  //   1 | 1 + foo
+  //     |     ^~~
+  auto msg = llvm::formatv("<user expression>:1:{0}: {1}\n    1 | {2}\n      |",
+                           loc + 1, message, expr);
+  std::string rendered_str;
+  llvm::raw_string_ostream rendered_os(rendered_str);
+  rendered_os << msg.str();
+  rendered_os << llvm::indent(loc + 1) << "^";
+  if (err_len > 1) {
+    // Underline the rest of the erroneous token after the cursor '^'.
+    rendered_os << std::string(err_len - 1, '~');
+  }
   m_detail.source_location = sloc;
   m_detail.severity = lldb::eSeverityError;
   m_detail.message = message;
-  m_detail.rendered = std::move(rendered_msg);
+  m_detail.rendered = std::move(rendered_str);
 }
 
 llvm::Expected<lldb::TypeSystemSP>

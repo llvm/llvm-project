@@ -480,7 +480,8 @@ private:
 public:
   /// \p The function that is concerned by this stack size diagnostic.
   /// \p The computed stack size.
-  DiagnosticInfoResourceLimit(const Function &Fn, const Twine &ResourceName,
+  DiagnosticInfoResourceLimit(const Function &Fn,
+                              const Twine &ResourceName LLVM_LIFETIME_BOUND,
                               uint64_t ResourceSize, uint64_t ResourceLimit,
                               DiagnosticSeverity Severity = DS_Warning,
                               DiagnosticKind Kind = DK_ResourceLimit);
