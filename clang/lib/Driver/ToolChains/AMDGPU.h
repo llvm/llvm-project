@@ -112,6 +112,8 @@ public:
   virtual Expected<SmallVector<std::string>>
   getSystemGPUArchs(const llvm::opt::ArgList &Args) const override;
 
+  void checkAndAddAMDGPUSanLibPaths(const llvm::opt::ArgList &Args);
+
 protected:
   /// Check and diagnose invalid target ID specified by -mcpu.
   virtual void checkTargetID(const llvm::opt::ArgList &DriverArgs) const;

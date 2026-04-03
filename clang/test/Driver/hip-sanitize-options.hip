@@ -58,19 +58,19 @@
 // implicitly turns on LLVMs SanitizerCoverage, which the driver then forwards
 // to the device cc1. SanitizerCoverage is not supported on amdgcn.)
 
-// RUN: %clang -### --target=x86_64-unknown-linux-gnu --offload-arch=gfx900:xnack+ \
+// RUN: not %clang -### --target=x86_64-unknown-linux-gnu --offload-arch=gfx900:xnack+ \
 // RUN:   -fsanitize=address,fuzzer --rocm-path=%S/Inputs/rocm %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=INVALIDCOMBINATION,INVALIDCOMBINATION1 %s
-// RUN: %clang -### --target=x86_64-unknown-linux-gnu --offload-arch=gfx900:xnack+ \
+// RUN: not %clang -### --target=x86_64-unknown-linux-gnu --offload-arch=gfx900:xnack+ \
 // RUN:   -fsanitize=fuzzer,address --rocm-path=%S/Inputs/rocm %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=INVALIDCOMBINATION,INVALIDCOMBINATION2 %s
 
 // Do the same for multiple -fsanitize arguments and multi-arch scenarios.
 
-// RUN:   %clang -### --target=x86_64-unknown-linux-gnu --offload-arch=gfx900:xnack+ --offload-arch=gfx908:xnack- \
+// RUN:   not %clang -### --target=x86_64-unknown-linux-gnu --offload-arch=gfx900:xnack+ --offload-arch=gfx908:xnack- \
 // RUN:   -fsanitize=address,fuzzer -fsanitize=leak --rocm-path=%S/Inputs/rocm %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=MULT1,XNACK2 %s
-// RUN:   %clang -### --target=x86_64-unknown-linux-gnu --offload-arch=gfx900:xnack+,gfx908:xnack- \
+// RUN:   not %clang -### --target=x86_64-unknown-linux-gnu --offload-arch=gfx900:xnack+,gfx908:xnack- \
 // RUN:   -fsanitize=fuzzer,address -fsanitize=leak --rocm-path=%S/Inputs/rocm %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=MULT2,XNACK2 %s
 
