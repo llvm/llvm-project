@@ -2,6 +2,9 @@
 ; RUN: llc -mtriple=aarch64              < %s | FileCheck --check-prefixes=CHECK,COMPAT %s
 ; RUN: llc -mtriple=aarch64 -mattr=v8.3a < %s | FileCheck --check-prefixes=CHECK,V83A %s
 ; RUN: llc -mtriple=aarch64 -mattr=v9a -mattr=pauth-lr < %s | FileCheck --check-prefixes=PAUTHLR %s
+; RUN: sed 's/"branch-protection-pauth-lr" //g' %s \
+; RUN:   | llc -mtriple=aarch64 -mattr=v9a \
+; RUN:   | FileCheck --check-prefixes=NOPAUTHLR %s
 ;
 ; Test tail calls with return address signing across all three modes
 ; (COMPAT, V83A, PAUTHLR) and both FPDiff==0 and FPDiff!=0 cases,
@@ -11,7 +14,7 @@ declare swifttailcc void @callee_stack_args(ptr swiftasync %ctx, i64, i64, i64, 
 declare swifttailcc void @callee_no_stack_args(ptr swiftasync %ctx)
 
 ; FPDiff != 0, A-key: callee has stack args that this function doesn't.
-define swifttailcc void @tail_call_fpdiff_a_key(ptr swiftasync %ctx) "branch-protection-pauth-lr" "sign-return-address"="all" "frame-pointer"="all" {
+define swifttailcc void @tail_call_fpdiff_a_key(ptr swiftasync %ctx) "branch-protection-pauth-lr" "sign-return-address"="all" "frame-pointer"="all" uwtable(async) {
 ; COMPAT-LABEL: tail_call_fpdiff_a_key:
 ; COMPAT:       // %bb.0:
 ; COMPAT-NEXT:    hint #39
@@ -20,6 +23,7 @@ define swifttailcc void @tail_call_fpdiff_a_key(ptr swiftasync %ctx) "branch-pro
 ; COMPAT-NEXT:    hint #25
 ; COMPAT-NEXT:    orr x29, x29, #0x1000000000000000
 ; COMPAT-NEXT:    sub sp, sp, #48
+; COMPAT-NEXT:    .cfi_def_cfa_offset 48
 ; COMPAT-NEXT:    stp x29, x30, [sp, #16] // 16-byte Folded Spill
 ; COMPAT-NEXT:    str x22, [sp, #8]
 ; COMPAT-NEXT:    add x29, sp, #16
@@ -32,19 +36,24 @@ define swifttailcc void @tail_call_fpdiff_a_key(ptr swiftasync %ctx) "branch-pro
 ; COMPAT-NEXT:    str x8, [x29, #16]
 ; COMPAT-NEXT:    mov w2, #3 // =0x3
 ; COMPAT-NEXT:    mov w3, #4 // =0x4
-; COMPAT-NEXT:    ldp x29, x30, [sp, #16] // 16-byte Folded Reload
 ; COMPAT-NEXT:    mov w4, #5 // =0x5
 ; COMPAT-NEXT:    mov w5, #6 // =0x6
 ; COMPAT-NEXT:    mov w6, #7 // =0x7
 ; COMPAT-NEXT:    mov w7, #8 // =0x8
+; COMPAT-NEXT:    .cfi_def_cfa wsp, 48
+; COMPAT-NEXT:    ldp x29, x30, [sp, #16] // 16-byte Folded Reload
 ; COMPAT-NEXT:    and x29, x29, #0xefffffffffffffff
 ; COMPAT-NEXT:    add sp, sp, #32
+; COMPAT-NEXT:    .cfi_def_cfa_offset 16
+; COMPAT-NEXT:    .cfi_restore w30
+; COMPAT-NEXT:    .cfi_restore w29
 ; COMPAT-NEXT:    mov x17, x30
 ; COMPAT-NEXT:    add x16, sp, #16
 ; COMPAT-NEXT:    adrp x15, .Ltmp0
 ; COMPAT-NEXT:    add x15, x15, :lo12:.Ltmp0
 ; COMPAT-NEXT:    hint #39
 ; COMPAT-NEXT:    hint #12
+; COMPAT-NEXT:    .cfi_negate_ra_state_with_pc
 ; COMPAT-NEXT:    mov x30, x17
 ; COMPAT-NEXT:    b callee_stack_args
 ;
@@ -56,6 +65,7 @@ define swifttailcc void @tail_call_fpdiff_a_key(ptr swiftasync %ctx) "branch-pro
 ; V83A-NEXT:    paciasp
 ; V83A-NEXT:    orr x29, x29, #0x1000000000000000
 ; V83A-NEXT:    sub sp, sp, #48
+; V83A-NEXT:    .cfi_def_cfa_offset 48
 ; V83A-NEXT:    stp x29, x30, [sp, #16] // 16-byte Folded Spill
 ; V83A-NEXT:    str x22, [sp, #8]
 ; V83A-NEXT:    add x29, sp, #16
@@ -68,19 +78,24 @@ define swifttailcc void @tail_call_fpdiff_a_key(ptr swiftasync %ctx) "branch-pro
 ; V83A-NEXT:    str x8, [x29, #16]
 ; V83A-NEXT:    mov w2, #3 // =0x3
 ; V83A-NEXT:    mov w3, #4 // =0x4
-; V83A-NEXT:    ldp x29, x30, [sp, #16] // 16-byte Folded Reload
 ; V83A-NEXT:    mov w4, #5 // =0x5
 ; V83A-NEXT:    mov w5, #6 // =0x6
 ; V83A-NEXT:    mov w6, #7 // =0x7
 ; V83A-NEXT:    mov w7, #8 // =0x8
+; V83A-NEXT:    .cfi_def_cfa wsp, 48
+; V83A-NEXT:    ldp x29, x30, [sp, #16] // 16-byte Folded Reload
 ; V83A-NEXT:    and x29, x29, #0xefffffffffffffff
 ; V83A-NEXT:    add sp, sp, #32
+; V83A-NEXT:    .cfi_def_cfa_offset 16
+; V83A-NEXT:    .cfi_restore w30
+; V83A-NEXT:    .cfi_restore w29
 ; V83A-NEXT:    mov x17, x30
 ; V83A-NEXT:    add x16, sp, #16
 ; V83A-NEXT:    adrp x15, .Ltmp0
 ; V83A-NEXT:    add x15, x15, :lo12:.Ltmp0
 ; V83A-NEXT:    hint #39
 ; V83A-NEXT:    autia1716
+; V83A-NEXT:    .cfi_negate_ra_state_with_pc
 ; V83A-NEXT:    mov x30, x17
 ; V83A-NEXT:    b callee_stack_args
 ;
@@ -91,6 +106,7 @@ define swifttailcc void @tail_call_fpdiff_a_key(ptr swiftasync %ctx) "branch-pro
 ; PAUTHLR-NEXT:    paciasppc
 ; PAUTHLR-NEXT:    orr x29, x29, #0x1000000000000000
 ; PAUTHLR-NEXT:    sub sp, sp, #48
+; PAUTHLR-NEXT:    .cfi_def_cfa_offset 48
 ; PAUTHLR-NEXT:    stp x29, x30, [sp, #16] // 16-byte Folded Spill
 ; PAUTHLR-NEXT:    str x22, [sp, #8]
 ; PAUTHLR-NEXT:    add x29, sp, #16
@@ -103,26 +119,68 @@ define swifttailcc void @tail_call_fpdiff_a_key(ptr swiftasync %ctx) "branch-pro
 ; PAUTHLR-NEXT:    str x8, [x29, #16]
 ; PAUTHLR-NEXT:    mov w2, #3 // =0x3
 ; PAUTHLR-NEXT:    mov w3, #4 // =0x4
-; PAUTHLR-NEXT:    ldp x29, x30, [sp, #16] // 16-byte Folded Reload
 ; PAUTHLR-NEXT:    mov w4, #5 // =0x5
 ; PAUTHLR-NEXT:    mov w5, #6 // =0x6
 ; PAUTHLR-NEXT:    mov w6, #7 // =0x7
 ; PAUTHLR-NEXT:    mov w7, #8 // =0x8
+; PAUTHLR-NEXT:    .cfi_def_cfa wsp, 48
+; PAUTHLR-NEXT:    ldp x29, x30, [sp, #16] // 16-byte Folded Reload
 ; PAUTHLR-NEXT:    and x29, x29, #0xefffffffffffffff
 ; PAUTHLR-NEXT:    add sp, sp, #32
+; PAUTHLR-NEXT:    .cfi_def_cfa_offset 16
+; PAUTHLR-NEXT:    .cfi_restore w30
+; PAUTHLR-NEXT:    .cfi_restore w29
 ; PAUTHLR-NEXT:    mov x17, x30
 ; PAUTHLR-NEXT:    add x16, sp, #16
 ; PAUTHLR-NEXT:    adrp x15, .Ltmp0
 ; PAUTHLR-NEXT:    add x15, x15, :lo12:.Ltmp0
+; PAUTHLR-NEXT:    .cfi_negate_ra_state_with_pc
 ; PAUTHLR-NEXT:    autia171615
 ; PAUTHLR-NEXT:    mov x30, x17
 ; PAUTHLR-NEXT:    b callee_stack_args
+;
+; NOPAUTHLR-LABEL: tail_call_fpdiff_a_key:
+; NOPAUTHLR:       // %bb.0:
+; NOPAUTHLR-NEXT:    paciasp
+; NOPAUTHLR-NEXT:    .cfi_negate_ra_state
+; NOPAUTHLR-NEXT:    orr x29, x29, #0x1000000000000000
+; NOPAUTHLR-NEXT:    sub sp, sp, #48
+; NOPAUTHLR-NEXT:    .cfi_def_cfa_offset 48
+; NOPAUTHLR-NEXT:    stp x29, x30, [sp, #16] // 16-byte Folded Spill
+; NOPAUTHLR-NEXT:    str x22, [sp, #8]
+; NOPAUTHLR-NEXT:    add x29, sp, #16
+; NOPAUTHLR-NEXT:    .cfi_def_cfa w29, 32
+; NOPAUTHLR-NEXT:    .cfi_offset w30, -24
+; NOPAUTHLR-NEXT:    .cfi_offset w29, -32
+; NOPAUTHLR-NEXT:    mov w8, #9 // =0x9
+; NOPAUTHLR-NEXT:    mov w0, #1 // =0x1
+; NOPAUTHLR-NEXT:    mov w1, #2 // =0x2
+; NOPAUTHLR-NEXT:    str x8, [x29, #16]
+; NOPAUTHLR-NEXT:    mov w2, #3 // =0x3
+; NOPAUTHLR-NEXT:    mov w3, #4 // =0x4
+; NOPAUTHLR-NEXT:    mov w4, #5 // =0x5
+; NOPAUTHLR-NEXT:    mov w5, #6 // =0x6
+; NOPAUTHLR-NEXT:    mov w6, #7 // =0x7
+; NOPAUTHLR-NEXT:    mov w7, #8 // =0x8
+; NOPAUTHLR-NEXT:    .cfi_def_cfa wsp, 48
+; NOPAUTHLR-NEXT:    ldp x29, x30, [sp, #16] // 16-byte Folded Reload
+; NOPAUTHLR-NEXT:    and x29, x29, #0xefffffffffffffff
+; NOPAUTHLR-NEXT:    add sp, sp, #32
+; NOPAUTHLR-NEXT:    .cfi_def_cfa_offset 16
+; NOPAUTHLR-NEXT:    .cfi_restore w30
+; NOPAUTHLR-NEXT:    .cfi_restore w29
+; NOPAUTHLR-NEXT:    mov x17, x30
+; NOPAUTHLR-NEXT:    add x16, sp, #16
+; NOPAUTHLR-NEXT:    autia1716
+; NOPAUTHLR-NEXT:    .cfi_negate_ra_state
+; NOPAUTHLR-NEXT:    mov x30, x17
+; NOPAUTHLR-NEXT:    b callee_stack_args
   musttail call swifttailcc void @callee_stack_args(ptr swiftasync %ctx, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7, i64 8, i64 9)
   ret void
 }
 
 ; FPDiff != 0, B-key: callee has stack args that this function doesn't.
-define swifttailcc void @tail_call_fpdiff_b_key(ptr swiftasync %ctx) "branch-protection-pauth-lr" "sign-return-address"="all" "sign-return-address-key"="b_key" "frame-pointer"="all" {
+define swifttailcc void @tail_call_fpdiff_b_key(ptr swiftasync %ctx) "branch-protection-pauth-lr" "sign-return-address"="all" "sign-return-address-key"="b_key" "frame-pointer"="all" uwtable(async) {
 ; COMPAT-LABEL: tail_call_fpdiff_b_key:
 ; COMPAT:       // %bb.0:
 ; COMPAT-NEXT:    .cfi_b_key_frame
@@ -132,6 +190,7 @@ define swifttailcc void @tail_call_fpdiff_b_key(ptr swiftasync %ctx) "branch-pro
 ; COMPAT-NEXT:    hint #27
 ; COMPAT-NEXT:    orr x29, x29, #0x1000000000000000
 ; COMPAT-NEXT:    sub sp, sp, #48
+; COMPAT-NEXT:    .cfi_def_cfa_offset 48
 ; COMPAT-NEXT:    stp x29, x30, [sp, #16] // 16-byte Folded Spill
 ; COMPAT-NEXT:    str x22, [sp, #8]
 ; COMPAT-NEXT:    add x29, sp, #16
@@ -144,19 +203,24 @@ define swifttailcc void @tail_call_fpdiff_b_key(ptr swiftasync %ctx) "branch-pro
 ; COMPAT-NEXT:    str x8, [x29, #16]
 ; COMPAT-NEXT:    mov w2, #3 // =0x3
 ; COMPAT-NEXT:    mov w3, #4 // =0x4
-; COMPAT-NEXT:    ldp x29, x30, [sp, #16] // 16-byte Folded Reload
 ; COMPAT-NEXT:    mov w4, #5 // =0x5
 ; COMPAT-NEXT:    mov w5, #6 // =0x6
 ; COMPAT-NEXT:    mov w6, #7 // =0x7
 ; COMPAT-NEXT:    mov w7, #8 // =0x8
+; COMPAT-NEXT:    .cfi_def_cfa wsp, 48
+; COMPAT-NEXT:    ldp x29, x30, [sp, #16] // 16-byte Folded Reload
 ; COMPAT-NEXT:    and x29, x29, #0xefffffffffffffff
 ; COMPAT-NEXT:    add sp, sp, #32
+; COMPAT-NEXT:    .cfi_def_cfa_offset 16
+; COMPAT-NEXT:    .cfi_restore w30
+; COMPAT-NEXT:    .cfi_restore w29
 ; COMPAT-NEXT:    mov x17, x30
 ; COMPAT-NEXT:    add x16, sp, #16
 ; COMPAT-NEXT:    adrp x15, .Ltmp1
 ; COMPAT-NEXT:    add x15, x15, :lo12:.Ltmp1
 ; COMPAT-NEXT:    hint #39
 ; COMPAT-NEXT:    hint #14
+; COMPAT-NEXT:    .cfi_negate_ra_state_with_pc
 ; COMPAT-NEXT:    mov x30, x17
 ; COMPAT-NEXT:    b callee_stack_args
 ;
@@ -169,6 +233,7 @@ define swifttailcc void @tail_call_fpdiff_b_key(ptr swiftasync %ctx) "branch-pro
 ; V83A-NEXT:    pacibsp
 ; V83A-NEXT:    orr x29, x29, #0x1000000000000000
 ; V83A-NEXT:    sub sp, sp, #48
+; V83A-NEXT:    .cfi_def_cfa_offset 48
 ; V83A-NEXT:    stp x29, x30, [sp, #16] // 16-byte Folded Spill
 ; V83A-NEXT:    str x22, [sp, #8]
 ; V83A-NEXT:    add x29, sp, #16
@@ -181,19 +246,24 @@ define swifttailcc void @tail_call_fpdiff_b_key(ptr swiftasync %ctx) "branch-pro
 ; V83A-NEXT:    str x8, [x29, #16]
 ; V83A-NEXT:    mov w2, #3 // =0x3
 ; V83A-NEXT:    mov w3, #4 // =0x4
-; V83A-NEXT:    ldp x29, x30, [sp, #16] // 16-byte Folded Reload
 ; V83A-NEXT:    mov w4, #5 // =0x5
 ; V83A-NEXT:    mov w5, #6 // =0x6
 ; V83A-NEXT:    mov w6, #7 // =0x7
 ; V83A-NEXT:    mov w7, #8 // =0x8
+; V83A-NEXT:    .cfi_def_cfa wsp, 48
+; V83A-NEXT:    ldp x29, x30, [sp, #16] // 16-byte Folded Reload
 ; V83A-NEXT:    and x29, x29, #0xefffffffffffffff
 ; V83A-NEXT:    add sp, sp, #32
+; V83A-NEXT:    .cfi_def_cfa_offset 16
+; V83A-NEXT:    .cfi_restore w30
+; V83A-NEXT:    .cfi_restore w29
 ; V83A-NEXT:    mov x17, x30
 ; V83A-NEXT:    add x16, sp, #16
 ; V83A-NEXT:    adrp x15, .Ltmp1
 ; V83A-NEXT:    add x15, x15, :lo12:.Ltmp1
 ; V83A-NEXT:    hint #39
 ; V83A-NEXT:    autib1716
+; V83A-NEXT:    .cfi_negate_ra_state_with_pc
 ; V83A-NEXT:    mov x30, x17
 ; V83A-NEXT:    b callee_stack_args
 ;
@@ -205,6 +275,7 @@ define swifttailcc void @tail_call_fpdiff_b_key(ptr swiftasync %ctx) "branch-pro
 ; PAUTHLR-NEXT:    pacibsppc
 ; PAUTHLR-NEXT:    orr x29, x29, #0x1000000000000000
 ; PAUTHLR-NEXT:    sub sp, sp, #48
+; PAUTHLR-NEXT:    .cfi_def_cfa_offset 48
 ; PAUTHLR-NEXT:    stp x29, x30, [sp, #16] // 16-byte Folded Spill
 ; PAUTHLR-NEXT:    str x22, [sp, #8]
 ; PAUTHLR-NEXT:    add x29, sp, #16
@@ -217,26 +288,69 @@ define swifttailcc void @tail_call_fpdiff_b_key(ptr swiftasync %ctx) "branch-pro
 ; PAUTHLR-NEXT:    str x8, [x29, #16]
 ; PAUTHLR-NEXT:    mov w2, #3 // =0x3
 ; PAUTHLR-NEXT:    mov w3, #4 // =0x4
-; PAUTHLR-NEXT:    ldp x29, x30, [sp, #16] // 16-byte Folded Reload
 ; PAUTHLR-NEXT:    mov w4, #5 // =0x5
 ; PAUTHLR-NEXT:    mov w5, #6 // =0x6
 ; PAUTHLR-NEXT:    mov w6, #7 // =0x7
 ; PAUTHLR-NEXT:    mov w7, #8 // =0x8
+; PAUTHLR-NEXT:    .cfi_def_cfa wsp, 48
+; PAUTHLR-NEXT:    ldp x29, x30, [sp, #16] // 16-byte Folded Reload
 ; PAUTHLR-NEXT:    and x29, x29, #0xefffffffffffffff
 ; PAUTHLR-NEXT:    add sp, sp, #32
+; PAUTHLR-NEXT:    .cfi_def_cfa_offset 16
+; PAUTHLR-NEXT:    .cfi_restore w30
+; PAUTHLR-NEXT:    .cfi_restore w29
 ; PAUTHLR-NEXT:    mov x17, x30
 ; PAUTHLR-NEXT:    add x16, sp, #16
 ; PAUTHLR-NEXT:    adrp x15, .Ltmp1
 ; PAUTHLR-NEXT:    add x15, x15, :lo12:.Ltmp1
+; PAUTHLR-NEXT:    .cfi_negate_ra_state_with_pc
 ; PAUTHLR-NEXT:    autib171615
 ; PAUTHLR-NEXT:    mov x30, x17
 ; PAUTHLR-NEXT:    b callee_stack_args
+;
+; NOPAUTHLR-LABEL: tail_call_fpdiff_b_key:
+; NOPAUTHLR:       // %bb.0:
+; NOPAUTHLR-NEXT:    .cfi_b_key_frame
+; NOPAUTHLR-NEXT:    pacibsp
+; NOPAUTHLR-NEXT:    .cfi_negate_ra_state
+; NOPAUTHLR-NEXT:    orr x29, x29, #0x1000000000000000
+; NOPAUTHLR-NEXT:    sub sp, sp, #48
+; NOPAUTHLR-NEXT:    .cfi_def_cfa_offset 48
+; NOPAUTHLR-NEXT:    stp x29, x30, [sp, #16] // 16-byte Folded Spill
+; NOPAUTHLR-NEXT:    str x22, [sp, #8]
+; NOPAUTHLR-NEXT:    add x29, sp, #16
+; NOPAUTHLR-NEXT:    .cfi_def_cfa w29, 32
+; NOPAUTHLR-NEXT:    .cfi_offset w30, -24
+; NOPAUTHLR-NEXT:    .cfi_offset w29, -32
+; NOPAUTHLR-NEXT:    mov w8, #9 // =0x9
+; NOPAUTHLR-NEXT:    mov w0, #1 // =0x1
+; NOPAUTHLR-NEXT:    mov w1, #2 // =0x2
+; NOPAUTHLR-NEXT:    str x8, [x29, #16]
+; NOPAUTHLR-NEXT:    mov w2, #3 // =0x3
+; NOPAUTHLR-NEXT:    mov w3, #4 // =0x4
+; NOPAUTHLR-NEXT:    mov w4, #5 // =0x5
+; NOPAUTHLR-NEXT:    mov w5, #6 // =0x6
+; NOPAUTHLR-NEXT:    mov w6, #7 // =0x7
+; NOPAUTHLR-NEXT:    mov w7, #8 // =0x8
+; NOPAUTHLR-NEXT:    .cfi_def_cfa wsp, 48
+; NOPAUTHLR-NEXT:    ldp x29, x30, [sp, #16] // 16-byte Folded Reload
+; NOPAUTHLR-NEXT:    and x29, x29, #0xefffffffffffffff
+; NOPAUTHLR-NEXT:    add sp, sp, #32
+; NOPAUTHLR-NEXT:    .cfi_def_cfa_offset 16
+; NOPAUTHLR-NEXT:    .cfi_restore w30
+; NOPAUTHLR-NEXT:    .cfi_restore w29
+; NOPAUTHLR-NEXT:    mov x17, x30
+; NOPAUTHLR-NEXT:    add x16, sp, #16
+; NOPAUTHLR-NEXT:    autib1716
+; NOPAUTHLR-NEXT:    .cfi_negate_ra_state
+; NOPAUTHLR-NEXT:    mov x30, x17
+; NOPAUTHLR-NEXT:    b callee_stack_args
   musttail call swifttailcc void @callee_stack_args(ptr swiftasync %ctx, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7, i64 8, i64 9)
   ret void
 }
 
 ; FPDiff == 0, A-key: callee has same calling convention, no extra stack args.
-define swifttailcc void @tail_call_no_fpdiff_a_key(ptr swiftasync %ctx) "branch-protection-pauth-lr" "sign-return-address"="all" "frame-pointer"="all" {
+define swifttailcc void @tail_call_no_fpdiff_a_key(ptr swiftasync %ctx) "branch-protection-pauth-lr" "sign-return-address"="all" "frame-pointer"="all" uwtable(async) {
 ; COMPAT-LABEL: tail_call_no_fpdiff_a_key:
 ; COMPAT:       // %bb.0:
 ; COMPAT-NEXT:    hint #39
@@ -245,19 +359,25 @@ define swifttailcc void @tail_call_no_fpdiff_a_key(ptr swiftasync %ctx) "branch-
 ; COMPAT-NEXT:    hint #25
 ; COMPAT-NEXT:    orr x29, x29, #0x1000000000000000
 ; COMPAT-NEXT:    sub sp, sp, #32
+; COMPAT-NEXT:    .cfi_def_cfa_offset 32
 ; COMPAT-NEXT:    stp x29, x30, [sp, #16] // 16-byte Folded Spill
 ; COMPAT-NEXT:    str x22, [sp, #8]
 ; COMPAT-NEXT:    add x29, sp, #16
 ; COMPAT-NEXT:    .cfi_def_cfa w29, 16
 ; COMPAT-NEXT:    .cfi_offset w30, -8
 ; COMPAT-NEXT:    .cfi_offset w29, -16
+; COMPAT-NEXT:    .cfi_def_cfa wsp, 32
 ; COMPAT-NEXT:    ldp x29, x30, [sp, #16] // 16-byte Folded Reload
 ; COMPAT-NEXT:    and x29, x29, #0xefffffffffffffff
 ; COMPAT-NEXT:    add sp, sp, #32
+; COMPAT-NEXT:    .cfi_def_cfa_offset 0
+; COMPAT-NEXT:    .cfi_restore w30
+; COMPAT-NEXT:    .cfi_restore w29
 ; COMPAT-NEXT:    adrp x16, .Ltmp2
 ; COMPAT-NEXT:    add x16, x16, :lo12:.Ltmp2
 ; COMPAT-NEXT:    hint #39
 ; COMPAT-NEXT:    hint #29
+; COMPAT-NEXT:    .cfi_negate_ra_state_with_pc
 ; COMPAT-NEXT:    b callee_no_stack_args
 ;
 ; V83A-LABEL: tail_call_no_fpdiff_a_key:
@@ -268,19 +388,25 @@ define swifttailcc void @tail_call_no_fpdiff_a_key(ptr swiftasync %ctx) "branch-
 ; V83A-NEXT:    paciasp
 ; V83A-NEXT:    orr x29, x29, #0x1000000000000000
 ; V83A-NEXT:    sub sp, sp, #32
+; V83A-NEXT:    .cfi_def_cfa_offset 32
 ; V83A-NEXT:    stp x29, x30, [sp, #16] // 16-byte Folded Spill
 ; V83A-NEXT:    str x22, [sp, #8]
 ; V83A-NEXT:    add x29, sp, #16
 ; V83A-NEXT:    .cfi_def_cfa w29, 16
 ; V83A-NEXT:    .cfi_offset w30, -8
 ; V83A-NEXT:    .cfi_offset w29, -16
+; V83A-NEXT:    .cfi_def_cfa wsp, 32
 ; V83A-NEXT:    ldp x29, x30, [sp, #16] // 16-byte Folded Reload
 ; V83A-NEXT:    and x29, x29, #0xefffffffffffffff
 ; V83A-NEXT:    add sp, sp, #32
+; V83A-NEXT:    .cfi_def_cfa_offset 0
+; V83A-NEXT:    .cfi_restore w30
+; V83A-NEXT:    .cfi_restore w29
 ; V83A-NEXT:    adrp x16, .Ltmp2
 ; V83A-NEXT:    add x16, x16, :lo12:.Ltmp2
 ; V83A-NEXT:    hint #39
 ; V83A-NEXT:    autiasp
+; V83A-NEXT:    .cfi_negate_ra_state_with_pc
 ; V83A-NEXT:    b callee_no_stack_args
 ;
 ; PAUTHLR-LABEL: tail_call_no_fpdiff_a_key:
@@ -290,23 +416,53 @@ define swifttailcc void @tail_call_no_fpdiff_a_key(ptr swiftasync %ctx) "branch-
 ; PAUTHLR-NEXT:    paciasppc
 ; PAUTHLR-NEXT:    orr x29, x29, #0x1000000000000000
 ; PAUTHLR-NEXT:    sub sp, sp, #32
+; PAUTHLR-NEXT:    .cfi_def_cfa_offset 32
 ; PAUTHLR-NEXT:    stp x29, x30, [sp, #16] // 16-byte Folded Spill
 ; PAUTHLR-NEXT:    str x22, [sp, #8]
 ; PAUTHLR-NEXT:    add x29, sp, #16
 ; PAUTHLR-NEXT:    .cfi_def_cfa w29, 16
 ; PAUTHLR-NEXT:    .cfi_offset w30, -8
 ; PAUTHLR-NEXT:    .cfi_offset w29, -16
+; PAUTHLR-NEXT:    .cfi_def_cfa wsp, 32
 ; PAUTHLR-NEXT:    ldp x29, x30, [sp, #16] // 16-byte Folded Reload
 ; PAUTHLR-NEXT:    and x29, x29, #0xefffffffffffffff
 ; PAUTHLR-NEXT:    add sp, sp, #32
+; PAUTHLR-NEXT:    .cfi_def_cfa_offset 0
+; PAUTHLR-NEXT:    .cfi_restore w30
+; PAUTHLR-NEXT:    .cfi_restore w29
+; PAUTHLR-NEXT:    .cfi_negate_ra_state_with_pc
 ; PAUTHLR-NEXT:    autiasppc .Ltmp2
 ; PAUTHLR-NEXT:    b callee_no_stack_args
+;
+; NOPAUTHLR-LABEL: tail_call_no_fpdiff_a_key:
+; NOPAUTHLR:       // %bb.0:
+; NOPAUTHLR-NEXT:    paciasp
+; NOPAUTHLR-NEXT:    .cfi_negate_ra_state
+; NOPAUTHLR-NEXT:    orr x29, x29, #0x1000000000000000
+; NOPAUTHLR-NEXT:    sub sp, sp, #32
+; NOPAUTHLR-NEXT:    .cfi_def_cfa_offset 32
+; NOPAUTHLR-NEXT:    stp x29, x30, [sp, #16] // 16-byte Folded Spill
+; NOPAUTHLR-NEXT:    str x22, [sp, #8]
+; NOPAUTHLR-NEXT:    add x29, sp, #16
+; NOPAUTHLR-NEXT:    .cfi_def_cfa w29, 16
+; NOPAUTHLR-NEXT:    .cfi_offset w30, -8
+; NOPAUTHLR-NEXT:    .cfi_offset w29, -16
+; NOPAUTHLR-NEXT:    .cfi_def_cfa wsp, 32
+; NOPAUTHLR-NEXT:    ldp x29, x30, [sp, #16] // 16-byte Folded Reload
+; NOPAUTHLR-NEXT:    and x29, x29, #0xefffffffffffffff
+; NOPAUTHLR-NEXT:    add sp, sp, #32
+; NOPAUTHLR-NEXT:    .cfi_def_cfa_offset 0
+; NOPAUTHLR-NEXT:    .cfi_restore w30
+; NOPAUTHLR-NEXT:    .cfi_restore w29
+; NOPAUTHLR-NEXT:    autiasp
+; NOPAUTHLR-NEXT:    .cfi_negate_ra_state
+; NOPAUTHLR-NEXT:    b callee_no_stack_args
   musttail call swifttailcc void @callee_no_stack_args(ptr swiftasync %ctx)
   ret void
 }
 
 ; FPDiff == 0, B-key: callee has same calling convention, no extra stack args.
-define swifttailcc void @tail_call_no_fpdiff_b_key(ptr swiftasync %ctx) "branch-protection-pauth-lr" "sign-return-address"="all" "sign-return-address-key"="b_key" "frame-pointer"="all" {
+define swifttailcc void @tail_call_no_fpdiff_b_key(ptr swiftasync %ctx) "branch-protection-pauth-lr" "sign-return-address"="all" "sign-return-address-key"="b_key" "frame-pointer"="all" uwtable(async) {
 ; COMPAT-LABEL: tail_call_no_fpdiff_b_key:
 ; COMPAT:       // %bb.0:
 ; COMPAT-NEXT:    .cfi_b_key_frame
@@ -316,19 +472,25 @@ define swifttailcc void @tail_call_no_fpdiff_b_key(ptr swiftasync %ctx) "branch-
 ; COMPAT-NEXT:    hint #27
 ; COMPAT-NEXT:    orr x29, x29, #0x1000000000000000
 ; COMPAT-NEXT:    sub sp, sp, #32
+; COMPAT-NEXT:    .cfi_def_cfa_offset 32
 ; COMPAT-NEXT:    stp x29, x30, [sp, #16] // 16-byte Folded Spill
 ; COMPAT-NEXT:    str x22, [sp, #8]
 ; COMPAT-NEXT:    add x29, sp, #16
 ; COMPAT-NEXT:    .cfi_def_cfa w29, 16
 ; COMPAT-NEXT:    .cfi_offset w30, -8
 ; COMPAT-NEXT:    .cfi_offset w29, -16
+; COMPAT-NEXT:    .cfi_def_cfa wsp, 32
 ; COMPAT-NEXT:    ldp x29, x30, [sp, #16] // 16-byte Folded Reload
 ; COMPAT-NEXT:    and x29, x29, #0xefffffffffffffff
 ; COMPAT-NEXT:    add sp, sp, #32
+; COMPAT-NEXT:    .cfi_def_cfa_offset 0
+; COMPAT-NEXT:    .cfi_restore w30
+; COMPAT-NEXT:    .cfi_restore w29
 ; COMPAT-NEXT:    adrp x16, .Ltmp3
 ; COMPAT-NEXT:    add x16, x16, :lo12:.Ltmp3
 ; COMPAT-NEXT:    hint #39
 ; COMPAT-NEXT:    hint #31
+; COMPAT-NEXT:    .cfi_negate_ra_state_with_pc
 ; COMPAT-NEXT:    b callee_no_stack_args
 ;
 ; V83A-LABEL: tail_call_no_fpdiff_b_key:
@@ -340,19 +502,25 @@ define swifttailcc void @tail_call_no_fpdiff_b_key(ptr swiftasync %ctx) "branch-
 ; V83A-NEXT:    pacibsp
 ; V83A-NEXT:    orr x29, x29, #0x1000000000000000
 ; V83A-NEXT:    sub sp, sp, #32
+; V83A-NEXT:    .cfi_def_cfa_offset 32
 ; V83A-NEXT:    stp x29, x30, [sp, #16] // 16-byte Folded Spill
 ; V83A-NEXT:    str x22, [sp, #8]
 ; V83A-NEXT:    add x29, sp, #16
 ; V83A-NEXT:    .cfi_def_cfa w29, 16
 ; V83A-NEXT:    .cfi_offset w30, -8
 ; V83A-NEXT:    .cfi_offset w29, -16
+; V83A-NEXT:    .cfi_def_cfa wsp, 32
 ; V83A-NEXT:    ldp x29, x30, [sp, #16] // 16-byte Folded Reload
 ; V83A-NEXT:    and x29, x29, #0xefffffffffffffff
 ; V83A-NEXT:    add sp, sp, #32
+; V83A-NEXT:    .cfi_def_cfa_offset 0
+; V83A-NEXT:    .cfi_restore w30
+; V83A-NEXT:    .cfi_restore w29
 ; V83A-NEXT:    adrp x16, .Ltmp3
 ; V83A-NEXT:    add x16, x16, :lo12:.Ltmp3
 ; V83A-NEXT:    hint #39
 ; V83A-NEXT:    autibsp
+; V83A-NEXT:    .cfi_negate_ra_state_with_pc
 ; V83A-NEXT:    b callee_no_stack_args
 ;
 ; PAUTHLR-LABEL: tail_call_no_fpdiff_b_key:
@@ -363,17 +531,48 @@ define swifttailcc void @tail_call_no_fpdiff_b_key(ptr swiftasync %ctx) "branch-
 ; PAUTHLR-NEXT:    pacibsppc
 ; PAUTHLR-NEXT:    orr x29, x29, #0x1000000000000000
 ; PAUTHLR-NEXT:    sub sp, sp, #32
+; PAUTHLR-NEXT:    .cfi_def_cfa_offset 32
 ; PAUTHLR-NEXT:    stp x29, x30, [sp, #16] // 16-byte Folded Spill
 ; PAUTHLR-NEXT:    str x22, [sp, #8]
 ; PAUTHLR-NEXT:    add x29, sp, #16
 ; PAUTHLR-NEXT:    .cfi_def_cfa w29, 16
 ; PAUTHLR-NEXT:    .cfi_offset w30, -8
 ; PAUTHLR-NEXT:    .cfi_offset w29, -16
+; PAUTHLR-NEXT:    .cfi_def_cfa wsp, 32
 ; PAUTHLR-NEXT:    ldp x29, x30, [sp, #16] // 16-byte Folded Reload
 ; PAUTHLR-NEXT:    and x29, x29, #0xefffffffffffffff
 ; PAUTHLR-NEXT:    add sp, sp, #32
+; PAUTHLR-NEXT:    .cfi_def_cfa_offset 0
+; PAUTHLR-NEXT:    .cfi_restore w30
+; PAUTHLR-NEXT:    .cfi_restore w29
+; PAUTHLR-NEXT:    .cfi_negate_ra_state_with_pc
 ; PAUTHLR-NEXT:    autibsppc .Ltmp3
 ; PAUTHLR-NEXT:    b callee_no_stack_args
+;
+; NOPAUTHLR-LABEL: tail_call_no_fpdiff_b_key:
+; NOPAUTHLR:       // %bb.0:
+; NOPAUTHLR-NEXT:    .cfi_b_key_frame
+; NOPAUTHLR-NEXT:    pacibsp
+; NOPAUTHLR-NEXT:    .cfi_negate_ra_state
+; NOPAUTHLR-NEXT:    orr x29, x29, #0x1000000000000000
+; NOPAUTHLR-NEXT:    sub sp, sp, #32
+; NOPAUTHLR-NEXT:    .cfi_def_cfa_offset 32
+; NOPAUTHLR-NEXT:    stp x29, x30, [sp, #16] // 16-byte Folded Spill
+; NOPAUTHLR-NEXT:    str x22, [sp, #8]
+; NOPAUTHLR-NEXT:    add x29, sp, #16
+; NOPAUTHLR-NEXT:    .cfi_def_cfa w29, 16
+; NOPAUTHLR-NEXT:    .cfi_offset w30, -8
+; NOPAUTHLR-NEXT:    .cfi_offset w29, -16
+; NOPAUTHLR-NEXT:    .cfi_def_cfa wsp, 32
+; NOPAUTHLR-NEXT:    ldp x29, x30, [sp, #16] // 16-byte Folded Reload
+; NOPAUTHLR-NEXT:    and x29, x29, #0xefffffffffffffff
+; NOPAUTHLR-NEXT:    add sp, sp, #32
+; NOPAUTHLR-NEXT:    .cfi_def_cfa_offset 0
+; NOPAUTHLR-NEXT:    .cfi_restore w30
+; NOPAUTHLR-NEXT:    .cfi_restore w29
+; NOPAUTHLR-NEXT:    autibsp
+; NOPAUTHLR-NEXT:    .cfi_negate_ra_state
+; NOPAUTHLR-NEXT:    b callee_no_stack_args
   musttail call swifttailcc void @callee_no_stack_args(ptr swiftasync %ctx)
   ret void
 }
