@@ -527,15 +527,7 @@ ClangDocContext::ClangDocContext(tooling::ExecutionContext *ECtx,
 }
 
 void ScopeChildren::sort() {
-  std::vector<Reference *> V;
-  while (!Namespaces.empty()) {
-    V.push_back(&Namespaces.front());
-    Namespaces.pop_front();
-  }
-  llvm::sort(V, [](const Reference *A, const Reference *B) { return *A < *B; });
-  for (auto *R : V)
-    Namespaces.push_back(*R);
-
+  Namespaces.sort();
   llvm::sort(Records);
   llvm::sort(Functions);
   llvm::sort(Enums);
