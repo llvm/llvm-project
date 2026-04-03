@@ -105,6 +105,7 @@ constexpr bool test() {
   }
 
   // LWG3610: `iota_view::size` sometimes rejects integer-class types
+  // libc++ does not have integer-class types, so the resolution only impacts uses with `bool`.
   {
     types::for_each(types::integer_types{}, []<typename IntegerLikeT>() {
       types::for_each(types::integer_types{}, []<typename BoundT>() {
