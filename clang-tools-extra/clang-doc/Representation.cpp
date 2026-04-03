@@ -98,11 +98,10 @@ static llvm::Expected<Info *> reduce(SmallVectorImpl<Info *> &Values) {
   if (Values.empty() || !Values[0])
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "no value to reduce");
-  OwnedPtr<Info> Merged = allocatePtr<T>(Values[0]->USR);
-  T *Tmp = static_cast<T *>(getPtr(Merged));
+  T *Merged = allocateTransient<T>(Values[0]->USR);
   for (auto &I : Values)
-    Tmp->merge(std::move(*static_cast<T *>(getPtr(I))));
-  return std::move(Merged);
+    Merged->merge(std::move(*static_cast<T *>(I)));
+  return Merged;
 }
 
 template <typename T>
@@ -165,7 +164,7 @@ void mergeUnkeyed<CommentInfo>(DocList<CommentInfo> &Target,
     CommentInfo *Ptr = Source.front().Ptr;
     Source.pop_front();
 
-    if (!llvm::any_of(Target,
+    if (llvm::none_of(Target,
                       [Ptr](const auto &E) { return *E.Ptr == *Ptr; })) {
       Target.push_back(
           *allocateListNodePersistent<CommentInfo>(*Ptr, PersistentArena));
