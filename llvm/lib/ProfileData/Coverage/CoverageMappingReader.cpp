@@ -670,7 +670,13 @@ public:
                                             const char *CovBufEnd) override {
     using namespace support;
 
-    if (CovBuf + sizeof(CovMapHeader) > CovBufEnd)
+    // In versions before Version8, the Covmap header only has 4 uint32_t
+    // fields.
+    uint32_t HeaderSize = (Version >= CovMapVersion::Version8)
+                              ? sizeof(CovMapHeader)
+                              : 4 * sizeof(uint32_t);
+
+    if (CovBuf + HeaderSize > CovBufEnd)
       return make_error<CoverageMapError>(
           coveragemap_error::malformed,
           "coverage mapping header section is larger than buffer size");
@@ -679,7 +685,8 @@ public:
     uint32_t FilenamesSize = CovHeader->getFilenamesSize<Endian>();
     uint32_t CoverageSize = CovHeader->getCoverageSize<Endian>();
     assert((CovMapVersion)CovHeader->getVersion<Endian>() == Version);
-    CovBuf = reinterpret_cast<const char *>(CovHeader + 1);
+
+    CovBuf = reinterpret_cast<const char *>(CovHeader) + HeaderSize;
 
     // Skip past the function records, saving the start and end for later.
     // This is a no-op in Version4 (function records are read after all headers
@@ -830,6 +837,7 @@ Expected<std::unique_ptr<CovMapFuncRecordReader>> CovMapFuncRecordReader::get(
   case CovMapVersion::Version5:
   case CovMapVersion::Version6:
   case CovMapVersion::Version7:
+  case CovMapVersion::Version8:
     // Decompress the name data.
     if (Error E = P.create(P.getNameData()))
       return std::move(E);
@@ -851,6 +859,9 @@ Expected<std::unique_ptr<CovMapFuncRecordReader>> CovMapFuncRecordReader::get(
     else if (Version == CovMapVersion::Version7)
       return std::make_unique<VersionedCovMapFuncRecordReader<
           CovMapVersion::Version7, IntPtrT, Endian>>(P, R, D, F);
+    else if (Version == CovMapVersion::Version8)
+      return std::make_unique<VersionedCovMapFuncRecordReader<
+          CovMapVersion::Version8, IntPtrT, Endian>>(P, R, D, F);
   }
   llvm_unreachable("Unsupported version");
 }
@@ -859,7 +870,8 @@ template <typename T, llvm::endianness Endian>
 static Error readCoverageMappingData(
     InstrProfSymtab &ProfileNames, StringRef CovMap, StringRef FuncRecords,
     std::vector<BinaryCoverageReader::ProfileMappingRecord> &Records,
-    StringRef CompilationDir, std::vector<std::string> &Filenames) {
+    StringRef CompilationDir, std::vector<std::string> &Filenames,
+    CoverageCapabilities &AvailableCapabilities) {
   using namespace coverage;
 
   // Read the records in the coverage data section.
@@ -871,6 +883,14 @@ static Error readCoverageMappingData(
   Expected<std::unique_ptr<CovMapFuncRecordReader>> ReaderExpected =
       CovMapFuncRecordReader::get<T, Endian>(Version, ProfileNames, Records,
                                              CompilationDir, Filenames);
+
+  // Assume coverage files before Version8 have all coverage capabilities, as
+  // the field didn't exist before.
+  if (Version < CovMapVersion::Version8)
+    AvailableCapabilities = CoverageCapabilities::all();
+  else
+    AvailableCapabilities = CoverageCapabilities(CovHeader->getCovInstrLevels<Endian>());
+
   if (Error E = ReaderExpected.takeError())
     return E;
   auto Reader = std::move(ReaderExpected.get());
@@ -915,22 +935,22 @@ BinaryCoverageReader::createCoverageReaderFromBuffer(
   if (BytesInAddress == 4 && Endian == llvm::endianness::little) {
     if (Error E = readCoverageMappingData<uint32_t, llvm::endianness::little>(
             ProfileNames, Coverage, FuncRecordsRef, Reader->MappingRecords,
-            CompilationDir, Reader->Filenames))
+            CompilationDir, Reader->Filenames, Reader->AvailableCapabilities))
       return std::move(E);
   } else if (BytesInAddress == 4 && Endian == llvm::endianness::big) {
     if (Error E = readCoverageMappingData<uint32_t, llvm::endianness::big>(
             ProfileNames, Coverage, FuncRecordsRef, Reader->MappingRecords,
-            CompilationDir, Reader->Filenames))
+            CompilationDir, Reader->Filenames, Reader->AvailableCapabilities))
       return std::move(E);
   } else if (BytesInAddress == 8 && Endian == llvm::endianness::little) {
     if (Error E = readCoverageMappingData<uint64_t, llvm::endianness::little>(
             ProfileNames, Coverage, FuncRecordsRef, Reader->MappingRecords,
-            CompilationDir, Reader->Filenames))
+            CompilationDir, Reader->Filenames, Reader->AvailableCapabilities))
       return std::move(E);
   } else if (BytesInAddress == 8 && Endian == llvm::endianness::big) {
     if (Error E = readCoverageMappingData<uint64_t, llvm::endianness::big>(
             ProfileNames, Coverage, FuncRecordsRef, Reader->MappingRecords,
-            CompilationDir, Reader->Filenames))
+            CompilationDir, Reader->Filenames, Reader->AvailableCapabilities))
       return std::move(E);
   } else
     return make_error<CoverageMapError>(
@@ -1003,14 +1023,27 @@ loadTestingFormat(StringRef Data, StringRef CompilationDir) {
     return make_error<CoverageMapError>(coveragemap_error::malformed,
                                         "insufficient padding");
   Data = Data.substr(Pad);
-  if (Data.size() < sizeof(CovMapHeader))
+
+  // In Version8, CovMapHeader passed from 4 to 5 uint32 fields,
+  // So we only check the first 4 fields to get the version.
+  if (Data.size() < 4 * sizeof(uint32_t))
     return make_error<CoverageMapError>(
         coveragemap_error::malformed,
         "coverage mapping header section is larger than data size");
+
   auto const *CovHeader = reinterpret_cast<const CovMapHeader *>(
       Data.substr(0, sizeof(CovMapHeader)).data());
   auto Version =
       CovMapVersion(CovHeader->getVersion<llvm::endianness::little>());
+
+  uint16_t CovHeaderSize = (Version >= CovMapVersion::Version8)
+                               ? sizeof(CovMapHeader)
+                               : 4 * sizeof(uint32_t);
+
+  if (Data.size() < CovHeaderSize)
+    return make_error<CoverageMapError>(
+        coveragemap_error::malformed,
+        "coverage mapping header section is larger than data size");
 
   // In Version1, the size of CoverageMapping is calculated.
   if (TestingVersion == uint64_t(TestingFormatVersion::Version1)) {
@@ -1019,7 +1052,7 @@ loadTestingFormat(StringRef Data, StringRef CompilationDir) {
     } else {
       auto FilenamesSize =
           CovHeader->getFilenamesSize<llvm::endianness::little>();
-      CoverageMappingSize = sizeof(CovMapHeader) + FilenamesSize;
+      CoverageMappingSize = CovHeaderSize + FilenamesSize;
     }
   }
 
