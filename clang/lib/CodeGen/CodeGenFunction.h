@@ -3930,7 +3930,6 @@ public:
   void EmitOMPStripeDirective(const OMPStripeDirective &S);
   void EmitOMPUnrollDirective(const OMPUnrollDirective &S);
   void EmitOMPReverseDirective(const OMPReverseDirective &S);
-  void EmitOMPSplitDirective(const OMPSplitDirective &S);
   void EmitOMPInterchangeDirective(const OMPInterchangeDirective &S);
   void EmitOMPFuseDirective(const OMPFuseDirective &S);
   void EmitOMPForDirective(const OMPForDirective &S);
