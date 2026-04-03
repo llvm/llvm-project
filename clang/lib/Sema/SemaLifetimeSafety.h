@@ -221,9 +221,10 @@ public:
           << EscapeField->getSourceRange();
   }
 
-  void suggestLifetimeboundToImplicitThis(SuggestionScope Scope,
-                                          const CXXMethodDecl *MD,
-                                          const Expr *EscapeExpr) override {
+  void suggestLifetimeboundToImplicitThis(
+      SuggestionScope Scope, const CXXMethodDecl *MD,
+      const std::optional<llvm::SmallVector<AssignmentPair>> AliasList,
+      const Expr *EscapeExpr) override {
     unsigned DiagID = (Scope == SuggestionScope::CrossTU)
                           ? diag::warn_lifetime_safety_cross_tu_this_suggestion
                           : diag::warn_lifetime_safety_intra_tu_this_suggestion;
@@ -249,6 +250,11 @@ public:
         << MD->getNameInfo().getSourceRange()
         << FixItHint::CreateInsertion(InsertionPoint,
                                       " [[clang::lifetimebound]]");
+
+    if (AliasList.has_value())
+      for (const auto &AliasStmt : llvm::reverse(AliasList.value()))
+        reportAssignment(S, MD, AliasStmt.first, AliasStmt.second);
+
     S.Diag(EscapeExpr->getBeginLoc(),
            diag::note_lifetime_safety_suggestion_returned_here)
         << EscapeExpr->getSourceRange();

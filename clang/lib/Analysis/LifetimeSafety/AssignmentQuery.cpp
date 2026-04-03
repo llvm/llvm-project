@@ -246,9 +246,11 @@ llvm::SmallString<32> FormatLoanEntityForSema(LoanEntity IssueEntity) {
     return {"the temporary"};
   }
   if (const auto *IssueParmDecl =
-          llvm::dyn_cast<const ParmVarDecl *>(IssueEntity)) {
+          llvm::dyn_cast<const ParmVarDecl *>(IssueEntity))
     return FormatValueDeclForSema(IssueParmDecl);
-  }
+  if (const auto *IssueCXXMD =
+          llvm::dyn_cast<const CXXMethodDecl *>(IssueEntity))
+    return FormatValueDeclForSema(IssueCXXMD);
 
   return {"the temporary"};
 }

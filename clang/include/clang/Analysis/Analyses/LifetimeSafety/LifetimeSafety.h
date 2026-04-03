@@ -112,9 +112,10 @@ public:
                                        const VarDecl *EscapeGlobal) {}
 
   // Suggests lifetime bound annotations for implicit this.
-  virtual void suggestLifetimeboundToImplicitThis(SuggestionScope Scope,
-                                                  const CXXMethodDecl *MD,
-                                                  const Expr *EscapeExpr) {}
+  virtual void suggestLifetimeboundToImplicitThis(
+      SuggestionScope Scope, const CXXMethodDecl *MD,
+      const std::optional<llvm::SmallVector<AssignmentPair>> AliasList,
+      const Expr *EscapeExpr) {}
 
   // Adds inferred lifetime bound attribute for implicit this to its
   // TypeSourceInfo.

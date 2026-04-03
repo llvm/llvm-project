@@ -27,7 +27,8 @@ namespace clang::lifetimes {
 using OriginDestExpr =
     llvm::PointerUnion<const DeclRefExpr *, const ValueDecl *,
                        const MemberExpr *>;
-using LoanEntity = llvm::PointerUnion<const Expr *, const ParmVarDecl *>;
+using LoanEntity = llvm::PointerUnion<const Expr *, const ParmVarDecl *,
+                                      const CXXMethodDecl *>;
 
 using AssignmentPair = std::pair<OriginDestExpr, const Expr *>;
 
