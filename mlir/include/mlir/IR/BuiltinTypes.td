@@ -1126,7 +1126,7 @@ def Builtin_Quantile : Builtin_Type<"Quantile", "quantile",
     Syntax:
 
     ```
-    quantile-type ::= `quantile` `<` type `:` type `,` `{` float-list `}` `>`
+    quantile-type ::= `quantile` `<` type ( `<` int `,` int `>` )? `:` type `,` `{` float-list `}` `>`
     ```
 
     A quantile type represents a quantile-based floating point encoding, where
@@ -1135,6 +1135,10 @@ def Builtin_Quantile : Builtin_Type<"Quantile", "quantile",
     `si8`), a quantile type (the expressed floating-point precision, e.g.,
     `f16`, `f32`), and an array of quantile values that define the mapping.
 
+    Optionally, explicit minimum and maximum storage values can be specified
+    after the storage type as `<min,max>`, overriding the defaults derived from
+    the storage type width.
+
     This type is used for weight compression schemes like NF4 (NormalFloat4)
     and similar quantile-based formats.
 
@@ -1142,20 +1146,25 @@ def Builtin_Quantile : Builtin_Type<"Quantile", "quantile",
 
     ```mlir
     quantile<ui4:f16, {-1.0,-0.696,0.0,0.079,1.0}>
+    quantile<ui4:f16, {-1.0,-0.696,0.0,0.079,1.0}><-8,7>
     ```
   }];
   let parameters = (ins
     "Type":$storageType,
     "Type":$quantileType,
-    ArrayRefParameter<"double">:$quantiles
+    ArrayRefParameter<"double", "quantile values">:$quantiles,
+    OptionalParameter<"std::optional<int64_t>", "explicit storage minimum">:$storageMin,
+    OptionalParameter<"std::optional<int64_t>", "explicit storage maximum">:$storageMax
   );
   let builders = [
     TypeBuilderWithInferredContext<(ins
       "Type":$storageType,
       "Type":$quantileType,
-      "ArrayRef<double>":$quantiles), [{
+      "ArrayRef<double>":$quantiles,
+      CArg<"std::optional<int64_t>", "std::nullopt">:$storageMin,
+      CArg<"std::optional<int64_t>", "std::nullopt">:$storageMax), [{
       return $_get(storageType.getContext(), storageType, quantileType,
-                   quantiles);
+                   quantiles, storageMin, storageMax);
     }]>
   ];
   let skipDefaultBuilders = 1;
@@ -1192,6 +1201,7 @@ def Builtin_Quantile : Builtin_Type<"Quantile", "quantile",
     std::optional<unsigned> getPreferredAlignmentBytes() const;
   }];
 }
+
 
 //===----------------------------------------------------------------------===//
 // RankedTensorType

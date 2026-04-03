@@ -46,6 +46,14 @@ func.func private @nf4_16_values(quantile<ui4:f16, {
   0.33791524171829224,0.44070982933044434,0.5626170039176941,
   0.7229568362236023,1.0}>) -> ()
 
+// Verify explicit storage min/max range (unsigned storage, narrowed range).
+// CHECK: func private @quantile_with_range(quantile<ui4:f16, {-1.000000e+00,0.000000e+00,1.000000e+00}><0:7>)
+func.func private @quantile_with_range(quantile<ui4:f16, {-1.0,0.0,1.0}><0:7>) -> ()
+
+// Verify explicit range is preserved through round-trip.
+// CHECK: func private @quantile_signed_range(quantile<si8:f32, {-1.000000e+00,0.000000e+00,1.000000e+00}><-100:100>)
+func.func private @quantile_signed_range(quantile<si8:f32, {-1.0,0.0,1.0}><-100:100>) -> ()
+
 // Verify negative-only quantile list.
 // CHECK: func private @quantile_negatives(quantile<si4:f32, {-1.000000e+00,-5.000000e-01,-2.500000e-01}>)
 func.func private @quantile_negatives(quantile<si4:f32, {-1.0,-0.5,-0.25}>) -> ()

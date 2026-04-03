@@ -106,15 +106,28 @@ ArrayRef<double> QuantileType::getQuantiles() const {
   return getImpl()->getQuantiles();
 }
 
+std::optional<int64_t> QuantileType::getStorageMin() const {
+  return getImpl()->getStorageMin();
+}
+
+std::optional<int64_t> QuantileType::getStorageMax() const {
+  return getImpl()->getStorageMax();
+}
+
 LogicalResult QuantileType::verify(function_ref<InFlightDiagnostic()> emitError,
                                    Type storageType, Type quantileType,
-                                   ArrayRef<double> quantiles) {
+                                   ArrayRef<double> quantiles,
+                                   std::optional<int64_t> storageMin,
+                                   std::optional<int64_t> storageMax) {
   if (!storageType.isIntOrFloat())
     return emitError() << "storage type must be an integer or float type";
   if (!llvm::isa<FloatType>(quantileType))
     return emitError() << "quantile type must be a float type";
   if (quantiles.empty())
     return emitError() << "quantile values must not be empty";
+  if (storageMin.has_value() != storageMax.has_value())
+    return emitError()
+           << "storage min and max must both be specified or both omitted";
   return success();
 }
 
@@ -130,12 +143,16 @@ unsigned QuantileType::getStorageWidth() const {
 }
 
 int64_t QuantileType::getDefaultMaximum(bool isSigned) const {
+  if (auto explicitMax = getStorageMax())
+    return *explicitMax;
   if (isSigned)
     return (1LL << (getStorageWidth() - 1)) - 1;
   return (1LL << getStorageWidth()) - 1;
 }
 
 int64_t QuantileType::getDefaultMinimum(bool isSigned) const {
+  if (auto explicitMin = getStorageMin())
+    return *explicitMin;
   if (isSigned)
     return -(1LL << (getStorageWidth() - 1));
   return 0;
@@ -150,6 +167,9 @@ std::string QuantileType::getStorageTypeName(bool isSigned) const {
       llvm::seq<size_t>(0, quantiles.size()), os,
       [&](size_t index) { os << quantiles[index]; }, ",");
   os << "}>";
+  if (auto minVal = getStorageMin())
+    if (auto maxVal = getStorageMax())
+      os << '<' << *minVal << ':' << *maxVal << '>';
   return result;
 }
 

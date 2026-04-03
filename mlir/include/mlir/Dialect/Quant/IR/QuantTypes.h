@@ -255,7 +255,7 @@ public:
 ///   Per-layer, optional parameters omitted:
 ///     !quant<uniform[StorageType]{Scale}>
 ///
-///   StorageType: 'i'|'u' NumBits
+///   StorageType: 'i'|'u' NumBits, 'f4', 'hf8', 'bf8', 'quantile'
 ///   ExpressedType: 'f16', 'f32', 'bf16', 'f64'
 ///   Scale: A legal double value
 ///   ZeroPoint: An integer value
@@ -313,7 +313,7 @@ public:
 ///   Per-axis, optional parameters omitted:
 ///     !quant<uniform[StorageType]{Scale}>
 ///
-///   StorageType: 'i'|'u' NumBits
+///   StorageType: 'i'|'u' NumBits, 'f4', 'hf8', 'bf8', 'quantile'
 ///   ExpressedType: 'f16', 'f32', 'bf16', 'f64'
 ///   QuantizedDim: An integer value
 ///   QuantParams: (Scale ':' ZeroPoint)+
@@ -398,7 +398,7 @@ public:
 ///   ScaleZeroList  ::= ScaleZero (',' ScaleZero)*
 ///   ScaleZero ::= Scale (':' ZeroPoint)?
 ///
-///   StorageType: 'i'|'u' NumBits
+///   StorageType: 'i'|'u' NumBits, 'f4', 'hf8', 'bf8', 'quantile'
 ///   ExpressedType: 'f16', 'f32', 'bf16', 'f64'
 ///   AxisSpec: An integer value
 ///   BlockSizeSpec: An integer value

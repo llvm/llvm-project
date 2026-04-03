@@ -19,6 +19,7 @@
 #include "mlir/IR/TensorEncoding.h"
 #include "mlir/IR/Types.h"
 #include "mlir/Support/LLVM.h"
+#include "llvm/ADT/STLExtras.h"
 #include <cassert>
 #include <cstdint>
 #include <limits>
@@ -441,7 +442,58 @@ Type Parser::parseQuantileType() {
   if (parseToken(Token::greater, "expected '>' in quantile type"))
     return nullptr;
 
-  return QuantileType::get(storageType, quantileType, quantiles);
+  // Optionally parse explicit storage range: `<min:max>`.
+  std::optional<int64_t> storageMin, storageMax;
+  if (consumeIf(Token::less)) {
+    int64_t minVal, maxVal;
+
+    // Parse minimum value (with optional sign).
+    bool minNegative = consumeIf(Token::minus);
+    if (!getToken().is(Token::integer))
+      return (emitWrongTokenError(
+                  "expected integer minimum in quantile storage range"),
+              nullptr);
+    SMLoc minLoc = getToken().getLoc();
+    if (getToken().getSpelling().getAsInteger(10, minVal))
+      return nullptr;
+    consumeToken(Token::integer);
+    minVal = minNegative ? -minVal : minVal;
+
+    if (parseToken(Token::colon, "expected ':' in quantile storage range"))
+      return nullptr;
+
+    // Parse maximum value (with optional sign).
+    bool maxNegative = consumeIf(Token::minus);
+    if (!getToken().is(Token::integer))
+      return (emitWrongTokenError(
+                  "expected integer maximum in quantile storage range"),
+              nullptr);
+    SMLoc maxLoc = getToken().getLoc();
+    if (getToken().getSpelling().getAsInteger(10, maxVal))
+      return nullptr;
+    consumeToken(Token::integer);
+    maxVal = maxNegative ? -maxVal : maxVal;
+
+    if (parseToken(Token::greater, "expected '>' after quantile storage range"))
+      return nullptr;
+
+    // Validate against the underlying storage type's inherent limits.
+    if (auto qsIface = llvm::dyn_cast<QuantStorageTypeInterface>(storageType)) {
+      bool isSigned = qsIface.shouldDefaultToSigned();
+      if (minVal < qsIface.getDefaultMinimum(isSigned))
+        return (emitError(minLoc, "illegal storage type minimum: ") << minVal,
+                nullptr);
+      if (maxVal > qsIface.getDefaultMaximum(isSigned))
+        return (emitError(maxLoc, "illegal storage type maximum: ") << maxVal,
+                nullptr);
+    }
+
+    storageMin = minVal;
+    storageMax = maxVal;
+  }
+
+  return QuantileType::get(storageType, quantileType, quantiles, storageMin,
+                           storageMax);
 }
 
 /// Parse a tensor type.

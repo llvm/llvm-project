@@ -37,3 +37,9 @@ func.func private @missing_rbrace() -> quantile<ui4:f16, {1.0>
 // Test missing '>' closing the quantile type.
 // expected-error @+1 {{expected '>' in quantile type}}
 func.func private @missing_gt() -> quantile<ui4:f16, {1.0}
+
+// -----
+
+// Test missing '>' closing the storage range.
+// expected-error @below {{expected '>' after quantile storage range}}
+func.func private @missing_range_gt() -> quantile<ui4:f16, {1.0}><-8:7

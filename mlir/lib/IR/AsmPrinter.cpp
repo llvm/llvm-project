@@ -2907,13 +2907,14 @@ void AsmPrinter::Impl::printTypeImpl(Type type) {
         printType(quantileTy.getQuantileType());
         os << ", {";
         ArrayRef<double> quantiles = quantileTy.getQuantiles();
-        // interleaveComma(llvm::seq<size_t>(0, quantiles.size()),
-        //                 [&](size_t i) { os << quantiles[i]; });
         llvm::interleave(
             llvm::seq<size_t>(0, quantiles.size()), os,
             [&](size_t index) { os << quantiles[index]; }, ",");
         os << "}";
         os << '>';
+        if (auto minVal = quantileTy.getStorageMin())
+          if (auto maxVal = quantileTy.getStorageMax())
+            os << '<' << *minVal << ':' << *maxVal << '>';
       })
       .Case([&](TupleType tupleTy) {
         os << "tuple<";

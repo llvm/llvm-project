@@ -264,3 +264,15 @@
 // Illegal storage min/max: min < defaultMin
 // expected-error@+1 {{illegal storage type minimum: -10}}
 !qalias = !quant.uniform<f4E2M1FN<-10:6>:f32, 0.99872:127>
+
+// -----
+
+// Illegal storage min/max: max > defaultMax
+// expected-error@+1 {{illegal storage type maximum: 10}}
+!qalias = !quant.uniform<quantile<f4E2M1FN:f16, {-1.0,1.0}><-6:100>:f32, 0.99872:127>
+
+// -----
+
+// Illegal storage min/max: min < defaultMin
+// expected-error@+1 {{illegal storage type minimum: -10}}
+!qalias = !quant.uniform<quantile<f4E2M1FN:f16, {-1.0,1.0}><-100:6>:f32, 0.99872:127>

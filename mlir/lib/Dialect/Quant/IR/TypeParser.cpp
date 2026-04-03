@@ -320,7 +320,8 @@ parseQuantParamListUntilRBrace(DialectAsmParser &parser, Type expressedType,
 ///                        block-size-info `,` scale-zero-tensor `>`
 ///   storage-spec ::= storage-type (`<` storage-range `>`)?
 ///   storage-range ::= integer-literal `:` integer-literal
-///   storage-type ::= (`i` | `u`) integer-literal
+///   storage-type ::= (`i` | `u`) integer-literal | `f8E5M2` | `f8E4M3FN`
+//                   | `f4E2M1FN` | 'quantile'
 ///   expressed-type-spec ::= `:` `f` integer-literal
 ///   axis-spec ::= `:` integer-literal
 ///   scale-zero ::= scale (`:` zero-point)?
