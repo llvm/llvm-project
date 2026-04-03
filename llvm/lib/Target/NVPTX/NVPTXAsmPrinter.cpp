@@ -1777,7 +1777,7 @@ void NVPTXAsmPrinter::bufferAggregateConstVec(const ConstantVector *CV,
                                             unsigned NumPaddingZeros = 0) {
     // Collect elements to create sub-vector.
     SmallVector<Constant *, 8> SubCVElems;
-    for (unsigned I = Start; I < End; ++I)
+    for (unsigned I : llvm::seq(Start, End))
       SubCVElems.push_back(CV->getAggregateElement(I));
 
     // Optionally pad with zeros.
@@ -1802,7 +1802,7 @@ void NVPTXAsmPrinter::bufferAggregateConstVec(const ConstantVector *CV,
 
   // Iterate through elements of vector one chunk at a time and buffer that
   // chunk.
-  for (unsigned I = 0; I < NumCompleteBytes; ++I)
+  for (unsigned I : llvm::seq(NumCompleteBytes))
     bufferLEByte(ConvertSubCVtoInt8(CV, I, I + NumElemsPerByte), 0, aggBuffer);
 
   // For unevenly sized vectors add tail padding zeros.
