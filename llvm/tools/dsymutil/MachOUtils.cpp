@@ -270,9 +270,10 @@ getSection(const object::MachOObjectFile &Obj,
 // When the eh_frame section is transferred, its offset and size are set resp.
 // to \a EHFrameOffset and \a EHFrameSize.
 //
-// When the __PSEUDO_PROBE segment is transferred, its sections' offsets are
-// updated using \a PseudoProbeOffset and \a PseudoProbeSize for __probes, and
-// \a PseudoProbeDescsOffset and \a PseudoProbeDescsSize for __probe_descs
+// When the __PSEUDO_PROBE segment is transferred, its offset and size are set
+// resp. to \a PseudoProbeOffset and \a PseudoProbeSize, and its sections'
+// offsets are updated using \a PseudoProbeProbesOffset for __probes and
+// \a PseudoProbeDescsOffset for __probe_descs.
 template <typename SegmentTy>
 static void transferSegmentAndSections(
     const object::MachOObjectFile::LoadCommandInfo &LCI, SegmentTy Segment,
@@ -597,7 +598,7 @@ bool generateDsymCompanion(
   uint64_t EHFrameStart = StringStart + NewStringsSize;
   EHFrameStart = alignTo(EHFrameStart, 0x1000);
 
-  // Place pseudo probe data after the EH frame
+  // Place pseudo probe data after the EH frame.
   uint64_t PseudoProbeStart = PseudoProbeSize > 0
                                   ? alignTo(EHFrameStart + EHFrameSize, 0x1000)
                                   : EHFrameStart + EHFrameSize;
