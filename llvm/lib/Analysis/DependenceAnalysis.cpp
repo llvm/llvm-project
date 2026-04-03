@@ -1616,145 +1616,16 @@ bool DependenceInfo::exactSIVtest(const SCEVAddRecExpr *Src,
   if (!isDependenceTestEnabled(DependenceTestType::ExactSIV))
     return false;
 
-  const SCEV *SrcCoeff = Src->getStepRecurrence(*SE);
-  const SCEV *SrcConst = Src->getStart();
-  const SCEV *DstCoeff = Dst->getStepRecurrence(*SE);
-  const SCEV *DstConst = Dst->getStart();
   LLVM_DEBUG(dbgs() << "\tExact SIV test\n");
-  LLVM_DEBUG(dbgs() << "\t    SrcCoeff = " << *SrcCoeff << "\n");
-  LLVM_DEBUG(dbgs() << "\t    DstCoeff = " << *DstCoeff << "\n");
-  LLVM_DEBUG(dbgs() << "\t    SrcConst = " << *SrcConst << "\n");
-  LLVM_DEBUG(dbgs() << "\t    DstConst = " << *DstConst << "\n");
   ++ExactSIVapplications;
   assert(0 < Level && Level <= CommonLevels && "Level out of range");
   Level--;
-
-  const SCEV *Delta = minusSCEVNoSignedOverflow(DstConst, SrcConst, *SE);
-  if (!Delta)
-    return false;
-  LLVM_DEBUG(dbgs() << "\t    Delta = " << *Delta << "\n");
-  const SCEVConstant *ConstDelta = dyn_cast<SCEVConstant>(Delta);
-  const SCEVConstant *ConstSrcCoeff = dyn_cast<SCEVConstant>(SrcCoeff);
-  const SCEVConstant *ConstDstCoeff = dyn_cast<SCEVConstant>(DstCoeff);
-  if (!ConstDelta || !ConstSrcCoeff || !ConstDstCoeff)
-    return false;
-
-  // find gcd
-  APInt G, X, Y;
-  APInt AM = ConstSrcCoeff->getAPInt();
-  APInt BM = ConstDstCoeff->getAPInt();
-  APInt CM = ConstDelta->getAPInt();
-  unsigned Bits = AM.getBitWidth();
-  if (findGCD(Bits, AM, BM, CM, G, X, Y)) {
-    // gcd doesn't divide Delta, no dependence
+  bool Res = exactTestImpl(Src, Dst, Result, Level);
+  if (Res) {
+    ++ExactSIVsuccesses;
     ++ExactSIVindependence;
-    ++ExactSIVsuccesses;
-    return true;
   }
-
-  LLVM_DEBUG(dbgs() << "\t    X = " << X << ", Y = " << Y << "\n");
-
-  // since SCEV construction normalizes, LM = 0
-  std::optional<APInt> UM =
-      collectNonNegativeConstantUpperBound(Src->getLoop(), Delta->getType());
-  if (UM)
-    LLVM_DEBUG(dbgs() << "\t    UM = " << *UM << "\n");
-
-  APInt TU(APInt::getSignedMaxValue(Bits));
-  APInt TL(APInt::getSignedMinValue(Bits));
-  APInt TC = CM.sdiv(G);
-  APInt TX = X * TC;
-  APInt TY = Y * TC;
-  LLVM_DEBUG(dbgs() << "\t    TC = " << TC << "\n");
-  LLVM_DEBUG(dbgs() << "\t    TX = " << TX << "\n");
-  LLVM_DEBUG(dbgs() << "\t    TY = " << TY << "\n");
-
-  APInt TB = BM.sdiv(G);
-  APInt TA = AM.sdiv(G);
-
-  // At this point, we have the following equations:
-  //
-  //   TA*i0 - TB*i1 = TC
-  //
-  // Also, we know that the all pairs of (i0, i1) can be expressed as:
-  //
-  //   (TX + k*TB, TY + k*TA)
-  //
-  // where k is an arbitrary integer.
-  auto [TL0, TU0] = inferDomainOfAffine(TB, TX, UM);
-  auto [TL1, TU1] = inferDomainOfAffine(TA, TY, UM);
-
-  auto GetMaxOrMin = [](const OverflowSafeSignedAPInt &V0,
-                        const OverflowSafeSignedAPInt &V1,
-                        bool IsMin) -> std::optional<APInt> {
-    if (V0 && V1)
-      return IsMin ? APIntOps::smin(*V0, *V1) : APIntOps::smax(*V0, *V1);
-    if (V0)
-      return *V0;
-    if (V1)
-      return *V1;
-    return std::nullopt;
-  };
-
-  LLVM_DEBUG(dbgs() << "\t    TA = " << TA << "\n");
-  LLVM_DEBUG(dbgs() << "\t    TB = " << TB << "\n");
-
-  std::optional<APInt> OptTL = GetMaxOrMin(TL0, TL1, false);
-  std::optional<APInt> OptTU = GetMaxOrMin(TU0, TU1, true);
-  if (!OptTL || !OptTU)
-    return false;
-
-  TL = std::move(*OptTL);
-  TU = std::move(*OptTU);
-  LLVM_DEBUG(dbgs() << "\t    TL = " << TL << "\n");
-  LLVM_DEBUG(dbgs() << "\t    TU = " << TU << "\n");
-
-  if (TL.sgt(TU)) {
-    ++ExactSIVindependence;
-    ++ExactSIVsuccesses;
-    return true;
-  }
-
-  // explore directions
-  unsigned NewDirection = Dependence::DVEntry::NONE;
-  OverflowSafeSignedAPInt LowerDistance, UpperDistance;
-  OverflowSafeSignedAPInt OTY(TY), OTX(TX), OTA(TA), OTB(TB), OTL(TL), OTU(TU);
-  // NOTE: It's unclear whether these calculations can overflow. At the moment,
-  // we conservatively assume they can.
-  if (TA.sgt(TB)) {
-    LowerDistance = (OTY - OTX) + (OTA - OTB) * OTL;
-    UpperDistance = (OTY - OTX) + (OTA - OTB) * OTU;
-  } else {
-    LowerDistance = (OTY - OTX) + (OTA - OTB) * OTU;
-    UpperDistance = (OTY - OTX) + (OTA - OTB) * OTL;
-  }
-
-  if (!LowerDistance || !UpperDistance)
-    return false;
-
-  LLVM_DEBUG(dbgs() << "\t    LowerDistance = " << *LowerDistance << "\n");
-  LLVM_DEBUG(dbgs() << "\t    UpperDistance = " << *UpperDistance << "\n");
-
-  if (LowerDistance->sle(0) && UpperDistance->sge(0)) {
-    NewDirection |= Dependence::DVEntry::EQ;
-    ++ExactSIVsuccesses;
-  }
-  if (LowerDistance->slt(0)) {
-    NewDirection |= Dependence::DVEntry::GT;
-    ++ExactSIVsuccesses;
-  }
-  if (UpperDistance->sgt(0)) {
-    NewDirection |= Dependence::DVEntry::LT;
-    ++ExactSIVsuccesses;
-  }
-
-  // finished
-  Result.DV[Level].Direction &= NewDirection;
-  if (Result.DV[Level].Direction == Dependence::DVEntry::NONE)
-    ++ExactSIVindependence;
-  LLVM_DEBUG(dbgs() << "\t    Result = ");
-  LLVM_DEBUG(Result.dump(dbgs()));
-  return Result.DV[Level].Direction == Dependence::DVEntry::NONE;
+  return Res;
 }
 
 // Return true if the divisor evenly divides the dividend.
@@ -1937,16 +1808,26 @@ bool DependenceInfo::exactRDIVtest(const SCEVAddRecExpr *Src,
   if (!isDependenceTestEnabled(DependenceTestType::ExactRDIV))
     return false;
 
+  LLVM_DEBUG(dbgs() << "\tExact RDIV test\n");
+  ++ExactRDIVapplications;
+  bool Res = exactTestImpl(Src, Dst, Result, std::nullopt);
+  if (Res)
+    ++ExactRDIVindependence;
+  return Res;
+}
+
+bool DependenceInfo::exactTestImpl(const SCEVAddRecExpr *Src,
+                                   const SCEVAddRecExpr *Dst,
+                                   FullDependence &Result,
+                                   std::optional<unsigned> Level) const {
   const SCEV *SrcCoeff = Src->getStepRecurrence(*SE);
   const SCEV *SrcConst = Src->getStart();
   const SCEV *DstCoeff = Dst->getStepRecurrence(*SE);
   const SCEV *DstConst = Dst->getStart();
-  LLVM_DEBUG(dbgs() << "\tExact RDIV test\n");
   LLVM_DEBUG(dbgs() << "\t    SrcCoeff = " << *SrcCoeff << "\n");
   LLVM_DEBUG(dbgs() << "\t    DstCoeff = " << *DstCoeff << "\n");
   LLVM_DEBUG(dbgs() << "\t    SrcConst = " << *SrcConst << "\n");
   LLVM_DEBUG(dbgs() << "\t    DstConst = " << *DstConst << "\n");
-  ++ExactRDIVapplications;
 
   if (!Src->hasNoSignedWrap() || !Dst->hasNoSignedWrap())
     return false;
@@ -1969,7 +1850,6 @@ bool DependenceInfo::exactRDIVtest(const SCEVAddRecExpr *Src,
   unsigned Bits = AM.getBitWidth();
   if (findGCD(Bits, AM, BM, CM, G, X, Y)) {
     // gcd doesn't divide Delta, no dependence
-    ++ExactRDIVindependence;
     return true;
   }
 
@@ -2036,8 +1916,44 @@ bool DependenceInfo::exactRDIVtest(const SCEVAddRecExpr *Src,
   LLVM_DEBUG(dbgs() << "\t    TU = " << TU << "\n");
 
   if (TL.sgt(TU))
-    ++ExactRDIVindependence;
-  return TL.sgt(TU);
+    return true;
+
+  if (!Level)
+    return false;
+  assert(SrcUM == DstUM && "Expecting same upper bound for Src and Dst");
+
+  // explore directions
+  unsigned NewDirection = Dependence::DVEntry::NONE;
+  OverflowSafeSignedAPInt LowerDistance, UpperDistance;
+  OverflowSafeSignedAPInt OTY(TY), OTX(TX), OTA(TA), OTB(TB), OTL(TL), OTU(TU);
+  // NOTE: It's unclear whether these calculations can overflow. At the moment,
+  // we conservatively assume they can.
+  if (TA.sgt(TB)) {
+    LowerDistance = (OTY - OTX) + (OTA - OTB) * OTL;
+    UpperDistance = (OTY - OTX) + (OTA - OTB) * OTU;
+  } else {
+    LowerDistance = (OTY - OTX) + (OTA - OTB) * OTU;
+    UpperDistance = (OTY - OTX) + (OTA - OTB) * OTL;
+  }
+
+  if (!LowerDistance || !UpperDistance)
+    return false;
+
+  LLVM_DEBUG(dbgs() << "\t    LowerDistance = " << *LowerDistance << "\n");
+  LLVM_DEBUG(dbgs() << "\t    UpperDistance = " << *UpperDistance << "\n");
+
+  if (LowerDistance->sle(0) && UpperDistance->sge(0))
+    NewDirection |= Dependence::DVEntry::EQ;
+  if (LowerDistance->slt(0))
+    NewDirection |= Dependence::DVEntry::GT;
+  if (UpperDistance->sgt(0))
+    NewDirection |= Dependence::DVEntry::LT;
+
+  // finished
+  Result.DV[*Level].Direction &= NewDirection;
+  LLVM_DEBUG(dbgs() << "\t    Result = ");
+  LLVM_DEBUG(Result.dump(dbgs()));
+  return Result.DV[*Level].Direction == Dependence::DVEntry::NONE;
 }
 
 // testSIV -
