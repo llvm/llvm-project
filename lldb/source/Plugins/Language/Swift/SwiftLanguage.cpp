@@ -759,6 +759,34 @@ LoadFoundationValueTypesFormatters(lldb::TypeCategoryImplSP swift_category_sp) {
           .SetNonCacheable(false));
 }
 
+static void
+LoadSystemValueTypesFormatters(lldb::TypeCategoryImplSP swift_category_sp) {
+  if (!swift_category_sp)
+    return;
+
+  TypeSummaryImpl::Flags summary_flags;
+  summary_flags.SetCascades(true)
+      .SetDontShowChildren(true) // overridden at runtime by DoesPrintChildren
+      .SetSkipPointers(true)
+      .SetSkipReferences(false)
+      .SetHideItemNames(false)
+      .SetShowMembersOneLiner(false);
+
+  TypeSummaryImplSP filepath_summary_sp(
+      new lldb_private::formatters::swift::FilePathSummaryProvider(
+          summary_flags));
+  lldb_private::formatters::AddSummary(
+      swift_category_sp, filepath_summary_sp,
+      ConstString("^System(Package)?\\.FilePath$"), true);
+
+  lldb_private::formatters::AddCXXSummary(
+      swift_category_sp,
+      lldb_private::formatters::swift::SystemString_SummaryProvider,
+      "SystemString summary provider",
+      ConstString("^System(Package)?\\.SystemString$"),
+      summary_flags, true);
+}
+
 lldb::TypeCategoryImplSP SwiftLanguage::GetFormatters() {
   static std::once_flag g_initialize;
   static TypeCategoryImplSP g_category;
@@ -769,6 +797,7 @@ lldb::TypeCategoryImplSP SwiftLanguage::GetFormatters() {
     if (g_category) {
       LoadSwiftFormatters(g_category);
       LoadFoundationValueTypesFormatters(g_category);
+      LoadSystemValueTypesFormatters(g_category);
     }
   });
   return g_category;
