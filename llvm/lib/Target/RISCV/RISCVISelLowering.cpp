@@ -5163,14 +5163,13 @@ static SDValue getSingleShuffleSrc(MVT VT, SDValue V1, SDValue V2) {
   return SDValue();
 }
 
-bool RISCVTargetLowering::isLegalVTForZvzip(MVT VT) const {
+static bool isLegalVTForZvzip(MVT VT, const RISCVSubtarget &Subtarget,
+                              const TargetLowering &TLI) {
   MVT ContainerVT = VT;
   if (VT.isFixedLengthVector())
-    ContainerVT = getContainerForFixedLengthVector(VT);
+    ContainerVT = getContainerForFixedLengthVector(TLI, VT, Subtarget);
   // Determine LMUL of the container vector.
-  if (llvm::RISCVTargetLowering::getLMUL(ContainerVT) == RISCVVType::LMUL_8)
-    return false;
-  return true;
+  return RISCVTargetLowering::getLMUL(ContainerVT) != RISCVVType::LMUL_8;
 }
 
 /// Is this shuffle interleaving contiguous elements from one vector into the
@@ -5179,15 +5178,15 @@ bool RISCVTargetLowering::isLegalVTForZvzip(MVT VT) const {
 /// even element. \p OddSrc will contain the element that should be in the first
 /// odd element. These can be the first element in a source or the element half
 /// way through the source.
-bool RISCVTargetLowering::isInterleaveShuffle(
-    ArrayRef<int> Mask, MVT VT, int &EvenSrc, int &OddSrc,
-    const RISCVSubtarget &Subtarget) const {
+static bool isInterleaveShuffle(ArrayRef<int> Mask, MVT VT, int &EvenSrc,
+                                int &OddSrc, const RISCVSubtarget &Subtarget,
+                                const TargetLowering &TLI) {
   // We need to be able to widen elements to the next larger integer type or
-  // use the zip2a instruction at e64.
+  // use the zip2a/vzip instruction at e64.
   if (VT.getScalarSizeInBits() >= Subtarget.getELen()) {
     if (!Subtarget.hasVendorXRivosVizip() && !Subtarget.hasStdExtZvzip())
       return false;
-    if (Subtarget.hasStdExtZvzip() && !isLegalVTForZvzip(VT))
+    if (Subtarget.hasStdExtZvzip() && !isLegalVTForZvzip(VT, Subtarget, TLI))
       return false;
   }
 
@@ -5721,12 +5720,16 @@ static SDValue lowerZvzipVUNZIP(unsigned Opc, SDValue Op, const SDLoc &DL,
   MVT ContainerVT = IntVT;
   if (VT.isFixedLengthVector()) {
     ContainerVT = getContainerForFixedLengthVector(DAG, IntVT, Subtarget);
+    // For E64 with LMUL <= 1, we can't represent a smaller fractional LMUL for
+    // the result (LMUL <= 1/2 is not valid for E64). We must widen the input
+    // container to at least LMUL=2 so the result can be LMUL=1.
+    if (ContainerVT.getVectorElementType() == MVT::i64 &&
+        RISCVTargetLowering::getLMUL(ContainerVT) == RISCVVType::LMUL_1) {
+      ContainerVT = MVT::getScalableVectorVT(MVT::i64, 2);
+    }
     Op = convertToScalableVector(ContainerVT, Op, DAG, Subtarget);
   }
-  // We can't handle E64 with LMUL <= 1.
-  if (ContainerVT.getVectorElementType() == MVT::i64 &&
-      RISCVTargetLowering::getLMUL(ContainerVT) == RISCVVType::LMUL_1)
-    return SDValue();
+
   MVT ResVT = ContainerVT.getHalfNumVectorElementsVT();
   MVT HalfVT = VT.getHalfNumVectorElementsVT();
   MVT HalfIntVT = IntVT.getHalfNumVectorElementsVT();
@@ -6241,8 +6244,8 @@ static SDValue tryWidenMaskForShuffle(SDValue Op, SelectionDAG &DAG) {
   return DAG.getBitcast(VT, DAG.getVectorShuffle(NewVT, DL, V0, V1, NewMask));
 }
 
-SDValue RISCVTargetLowering::lowerVECTOR_SHUFFLE(
-    SDValue Op, SelectionDAG &DAG, const RISCVSubtarget &Subtarget) const {
+SDValue RISCVTargetLowering::lowerVECTOR_SHUFFLE(SDValue Op,
+                                                  SelectionDAG &DAG) const {
   SDValue V1 = Op.getOperand(0);
   SDValue V2 = Op.getOperand(1);
   SDLoc DL(Op);
@@ -6269,7 +6272,7 @@ SDValue RISCVTargetLowering::lowerVECTOR_SHUFFLE(
                         ISD::SETNE);
   }
 
-  MVT ContainerVT = ::getContainerForFixedLengthVector(DAG, VT, Subtarget);
+  MVT ContainerVT = getContainerForFixedLengthVector(VT);
 
   // Store the return value in a single variable instead of structured bindings
   // so that we can pass it to GetSlide below, which cannot capture structured
@@ -6437,24 +6440,26 @@ SDValue RISCVTargetLowering::lowerVECTOR_SHUFFLE(
   if ((Subtarget.hasVendorXRivosVizip() || Subtarget.hasStdExtZvzip()) &&
       ShuffleVectorInst::isDeInterleaveMaskOfFactor(Mask, 2, Index) &&
       1 < count_if(Mask, [](int Idx) { return Idx != -1; })) {
-    if (Subtarget.hasStdExtZvzip() && isLegalVTForZvzip(VT)) {
+    if (Subtarget.hasStdExtZvzip() && isLegalVTForZvzip(VT, Subtarget, *this)) {
       unsigned Opc = Index == 0 ? RISCVISD::VUNZIPE_VL : RISCVISD::VUNZIPO_VL;
       EVT NewVT = VT.getDoubleNumVectorElementsVT();
-      SDValue Op;
-      if (V2.isUndef()) {
-        Op = DAG.getNode(ISD::CONCAT_VECTORS, DL, NewVT, V1, V2);
-      }
-      if (auto VLEN = Subtarget.getRealVLen();
-          VLEN && VT.getSizeInBits().getKnownMinValue() % *VLEN == 0)
-        if (SDValue V = lowerZvzipVUNZIP(
-                Opc, DAG.getNode(ISD::CONCAT_VECTORS, DL, NewVT, V1, V2), DL,
-                DAG, Subtarget))
-          return V;
-      if (SDValue Src = foldConcatVector(V1, V2))
-        Op = DAG.getExtractSubvector(DL, NewVT, Src, 0);
-      if (Op) {
-        if (SDValue Res = lowerZvzipVUNZIP(Opc, Op, DL, DAG, Subtarget))
-          return DAG.getExtractSubvector(DL, VT, Res, 0);
+      if (isTypeLegal(NewVT)) {
+        SDValue Op;
+        if (V2.isUndef()) {
+          Op = DAG.getNode(ISD::CONCAT_VECTORS, DL, NewVT, V1, V2);
+        }
+        if (auto VLEN = Subtarget.getRealVLen();
+            VLEN && VT.getSizeInBits().getKnownMinValue() % *VLEN == 0)
+          if (SDValue V = lowerZvzipVUNZIP(
+                  Opc, DAG.getNode(ISD::CONCAT_VECTORS, DL, NewVT, V1, V2), DL,
+                  DAG, Subtarget))
+            return V;
+        if (SDValue Src = foldConcatVector(V1, V2))
+          Op = DAG.getExtractSubvector(DL, NewVT, Src, 0);
+        if (Op) {
+          if (SDValue Res = lowerZvzipVUNZIP(Opc, Op, DL, DAG, Subtarget))
+            return DAG.getExtractSubvector(DL, VT, Res, 0);
+        }
       }
 
       // Deinterleave each source and concatenate them, or concat first, then
@@ -6468,54 +6473,49 @@ SDValue RISCVTargetLowering::lowerVECTOR_SHUFFLE(
         if (Lo && Hi)
           return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, Lo, Hi);
       }
-      goto fallback;
-    }
-
-    if (!Subtarget.hasVendorXRivosVizip())
-      goto fallback;
-
-    unsigned Opc =
-        Index == 0 ? RISCVISD::RI_VUNZIP2A_VL : RISCVISD::RI_VUNZIP2B_VL;
-    if (V2.isUndef())
-      return lowerVZIP(Opc, V1, V2, DL, DAG, Subtarget);
-    if (auto VLEN = Subtarget.getRealVLen();
-        VLEN && VT.getSizeInBits().getKnownMinValue() % *VLEN == 0)
-      return lowerVZIP(Opc, V1, V2, DL, DAG, Subtarget);
-    if (SDValue Src = foldConcatVector(V1, V2)) {
-      EVT NewVT = VT.getDoubleNumVectorElementsVT();
-      Src = DAG.getExtractSubvector(DL, NewVT, Src, 0);
-      SDValue Res =
-          lowerVZIP(Opc, Src, DAG.getUNDEF(NewVT), DL, DAG, Subtarget);
-      return DAG.getExtractSubvector(DL, VT, Res, 0);
-    }
-    // Deinterleave each source and concatenate them, or concat first, then
-    // deinterleave.
-    if (1 < count_if(Mask,
-                     [&Mask](int Idx) { return Idx < (int)Mask.size(); }) &&
-        1 < count_if(Mask,
-                     [&Mask](int Idx) { return Idx >= (int)Mask.size(); })) {
-
-      const unsigned EltSize = VT.getScalarSizeInBits();
-      const unsigned MinVLMAX = Subtarget.getRealMinVLen() / EltSize;
-      if (NumElts < MinVLMAX) {
-        MVT ConcatVT = VT.getDoubleNumVectorElementsVT();
-        SDValue Concat = DAG.getNode(ISD::CONCAT_VECTORS, DL, ConcatVT, V1, V2);
+    } else if (Subtarget.hasVendorXRivosVizip()) {
+      unsigned Opc =
+          Index == 0 ? RISCVISD::RI_VUNZIP2A_VL : RISCVISD::RI_VUNZIP2B_VL;
+      if (V2.isUndef())
+        return lowerVZIP(Opc, V1, V2, DL, DAG, Subtarget);
+      if (auto VLEN = Subtarget.getRealVLen();
+          VLEN && VT.getSizeInBits().getKnownMinValue() % *VLEN == 0)
+        return lowerVZIP(Opc, V1, V2, DL, DAG, Subtarget);
+      if (SDValue Src = foldConcatVector(V1, V2)) {
+        EVT NewVT = VT.getDoubleNumVectorElementsVT();
+        Src = DAG.getExtractSubvector(DL, NewVT, Src, 0);
         SDValue Res =
-            lowerVZIP(Opc, Concat, DAG.getUNDEF(ConcatVT), DL, DAG, Subtarget);
+            lowerVZIP(Opc, Src, DAG.getUNDEF(NewVT), DL, DAG, Subtarget);
         return DAG.getExtractSubvector(DL, VT, Res, 0);
       }
+      // Deinterleave each source and concatenate them, or concat first, then
+      // deinterleave.
+      if (1 < count_if(Mask,
+                       [&Mask](int Idx) { return Idx < (int)Mask.size(); }) &&
+          1 < count_if(Mask,
+                       [&Mask](int Idx) { return Idx >= (int)Mask.size(); })) {
 
-      SDValue Lo = lowerVZIP(Opc, V1, DAG.getUNDEF(VT), DL, DAG, Subtarget);
-      SDValue Hi = lowerVZIP(Opc, V2, DAG.getUNDEF(VT), DL, DAG, Subtarget);
+        const unsigned EltSize = VT.getScalarSizeInBits();
+        const unsigned MinVLMAX = Subtarget.getRealMinVLen() / EltSize;
+        if (NumElts < MinVLMAX) {
+          MVT ConcatVT = VT.getDoubleNumVectorElementsVT();
+          SDValue Concat = DAG.getNode(ISD::CONCAT_VECTORS, DL, ConcatVT, V1, V2);
+          SDValue Res =
+              lowerVZIP(Opc, Concat, DAG.getUNDEF(ConcatVT), DL, DAG, Subtarget);
+          return DAG.getExtractSubvector(DL, VT, Res, 0);
+        }
 
-      MVT SubVT = VT.getHalfNumVectorElementsVT();
-      return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT,
-                         DAG.getExtractSubvector(DL, SubVT, Lo, 0),
-                         DAG.getExtractSubvector(DL, SubVT, Hi, 0));
+        SDValue Lo = lowerVZIP(Opc, V1, DAG.getUNDEF(VT), DL, DAG, Subtarget);
+        SDValue Hi = lowerVZIP(Opc, V2, DAG.getUNDEF(VT), DL, DAG, Subtarget);
+
+        MVT SubVT = VT.getHalfNumVectorElementsVT();
+        return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT,
+                           DAG.getExtractSubvector(DL, SubVT, Lo, 0),
+                           DAG.getExtractSubvector(DL, SubVT, Hi, 0));
+      }
     }
   }
 
-fallback:
   if (SDValue V =
           lowerVECTOR_SHUFFLEAsVSlideup(DL, VT, V1, V2, Mask, Subtarget, DAG))
     return V;
@@ -6523,7 +6523,7 @@ fallback:
   // Detect an interleave shuffle and lower to
   // (vmaccu.vx (vwaddu.vx lohalf(V1), lohalf(V2)), lohalf(V2), (2^eltbits - 1))
   int EvenSrc, OddSrc;
-  if (isInterleaveShuffle(Mask, VT, EvenSrc, OddSrc, Subtarget) &&
+  if (isInterleaveShuffle(Mask, VT, EvenSrc, OddSrc, Subtarget, *this) &&
       !(NumElts == 2 &&
         ShuffleVectorInst::isSingleSourceMask(Mask, Mask.size()))) {
     // Extract the halves of the vectors.
@@ -6555,8 +6555,8 @@ fallback:
     }
 
     // Prefer vzip2a or vzip if available.
-    // TODO: Extend to matching zip2b or vzip if EvenSrc and OddSrc allow.
-    if (Subtarget.hasStdExtZvzip() && isLegalVTForZvzip(VT)) {
+    // TODO: Extend to matching ri.vzip2b or vzip if EvenSrc and OddSrc allow.
+    if (Subtarget.hasStdExtZvzip() && isLegalVTForZvzip(VT, Subtarget, *this)) {
       EvenV = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VT, DAG.getUNDEF(VT),
                           EvenV, DAG.getVectorIdxConstant(0, DL));
       OddV = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VT, DAG.getUNDEF(VT), OddV,
@@ -6961,7 +6961,7 @@ bool RISCVTargetLowering::isShuffleMaskLegal(ArrayRef<int> M, EVT VT) const {
   return ShuffleVectorInst::isReverseMask(M, NumElts) ||
          (::isMaskedSlidePair(M, SrcInfo) &&
           isElementRotate(SrcInfo, NumElts)) ||
-         isInterleaveShuffle(M, SVT, Dummy1, Dummy2, Subtarget);
+         isInterleaveShuffle(M, SVT, Dummy1, Dummy2, Subtarget, *this);
 }
 
 // Lower CTLZ_ZERO_UNDEF or CTTZ_ZERO_UNDEF by converting to FP and extracting
@@ -8574,7 +8574,7 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     return SDValue();
   }
   case ISD::VECTOR_SHUFFLE:
-    return lowerVECTOR_SHUFFLE(Op, DAG, Subtarget);
+    return lowerVECTOR_SHUFFLE(Op, DAG);
   case ISD::CONCAT_VECTORS: {
     // Split CONCAT_VECTORS into a series of INSERT_SUBVECTOR nodes. This is
     // better than going through the stack, as the default expansion does.
@@ -12989,7 +12989,7 @@ SDValue RISCVTargetLowering::lowerVECTOR_DEINTERLEAVE(SDValue Op,
 
   if (Subtarget.hasStdExtZvzip() && Factor == 2) {
     MVT VT = Op->getSimpleValueType(0);
-    if (isLegalVTForZvzip(VT)) {
+    if (isLegalVTForZvzip(VT, Subtarget, *this)) {
       SDValue V1 = Op->getOperand(0);
       SDValue V2 = Op->getOperand(1);
       // Freeze the sources so we can increase their use count.
@@ -13270,7 +13270,7 @@ SDValue RISCVTargetLowering::lowerVECTOR_INTERLEAVE(SDValue Op,
   if (Subtarget.hasStdExtZvzip() && !Op.getOperand(0).isUndef() &&
       !Op.getOperand(1).isUndef()) {
     MVT VT = Op->getSimpleValueType(0);
-    if (isLegalVTForZvzip(VT)) {
+    if (isLegalVTForZvzip(VT, Subtarget, *this)) {
       // Freeze the sources so we can increase their use count.
       SDValue V1 = DAG.getFreeze(Op->getOperand(0));
       SDValue V2 = DAG.getFreeze(Op->getOperand(1));
