@@ -923,7 +923,7 @@ void Target::ApplyNameToBreakpoints(BreakpointName &bp_name) {
 void Target::GetBreakpointNames(std::vector<std::string> &names) {
   names.clear();
   for (const auto& bp_name_entry : m_breakpoint_names) {
-    names.push_back(bp_name_entry.first.AsCString());
+    names.push_back(bp_name_entry.first.GetString());
   }
   llvm::sort(names);
 }
@@ -4370,6 +4370,12 @@ static constexpr OptionEnumValueElement g_load_script_from_sym_file_values[] = {
         eLoadScriptFromSymFileWarn,
         "warn",
         "Warn about debug scripts inside symbol files but do not load them.",
+    },
+    {
+        eLoadScriptFromSymFileTrusted,
+        "trusted",
+        "Load debug scripts inside trusted symbol files, and warn about "
+        "scripts from untrusted symbol files.",
     },
 };
 

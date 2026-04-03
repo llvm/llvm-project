@@ -1735,9 +1735,13 @@ void CIRGenModule::replaceUsesOfNonProtoTypeWithRealFunction(
       // Replace type
       getGlobalOp.getAddr().setType(
           cir::PointerType::get(newFn.getFunctionType()));
+    } else if (mlir::isa<cir::GlobalOp>(use.getUser())) {
+      // Function addresses in global initializers use GlobalViewAttrs typed to
+      // the initializer context (e.g. struct field type), not the FuncOp type,
+      // so no update is required when the no-proto FuncOp is replaced.
     } else {
-      errorNYI(use.getUser()->getLoc(),
-               "replaceUsesOfNonProtoTypeWithRealFunction: unexpected use");
+      llvm_unreachable(
+          "replaceUsesOfNonProtoTypeWithRealFunction: unexpected use type");
     }
   }
 }
