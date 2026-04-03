@@ -1346,7 +1346,7 @@ MCObjectFileInfo::getPseudoProbeDescSection(StringRef FuncName,
 
   // Create a separate comdat group for each function's descriptor in order
   // for the linker to deduplicate. The duplication, must be from different
-  // tranlation unit, can come from:
+  // translation unit, can come from:
   //  1. Inline functions defined in header files;
   //  2. ThinLTO imported functions;
   //  3. Weak-linkage definitions.

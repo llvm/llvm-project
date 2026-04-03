@@ -435,11 +435,15 @@ bool MCPseudoProbeDecoder::buildGUID2FuncDescMap(const uint8_t *Start,
 
   // Detect duplicate GUIDs with different hashes across TUs.
   uint32_t MismatchCount = 0;
+  uint64_t LastMismatchGUID = 0;
   for (size_t I = 1; I < GUID2FuncDescMap.size(); ++I) {
     const auto &Prev = GUID2FuncDescMap[I - 1];
     const auto &Curr = GUID2FuncDescMap[I];
     if (Prev.FuncGUID == Curr.FuncGUID && Prev.FuncHash != Curr.FuncHash) {
-      ++MismatchCount;
+      if (LastMismatchGUID != Curr.FuncGUID) {
+        ++MismatchCount;
+        LastMismatchGUID = Curr.FuncGUID;
+      }
       if (VerboseWarnings)
         WithColor::warning() << "pseudo probe descriptor for " << Prev.FuncName
                              << " has mismatching hash across TUs: "
