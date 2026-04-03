@@ -18,25 +18,14 @@
 // Operand and SDNode transformation definitions.
 //===----------------------------------------------------------------------===//
 
-def simm10 : RISCVSImmOp<10>, ImmLeaf<XLenVT, "return isInt<10>(Imm);">;
-
-def SImm8UnsignedAsmOperand : SImmAsmOperand<8, "Unsigned"> {
-  let RenderMethod = "addSImm8UnsignedOperands";
+def SImm8PLI_BAsmOperand : SImmAsmOperand<8, "PLI_B"> {
+  let RenderMethod = "addSExtImmOperands<8>";
 }
-
-// (rdlo, rdhi) PPAIRE_DB (rs1plo, rs1phi, rs2plo, rs2phi)
-def SDT_RISCVPPairE_DB : SDTypeProfile<2, 4, [SDTCisVT<0, v4i8>,
-                                              SDTCisSameAs<0, 1>,
-                                              SDTCisSameAs<0, 2>,
-                                              SDTCisSameAs<0, 3>,
-                                              SDTCisSameAs<0, 4>,
-                                              SDTCisSameAs<0, 5>]>;
-def riscv_ppaire_db : RVSDNode<"PPAIRE_DB", SDT_RISCVPPairE_DB>;
 
 // A 8-bit signed immediate allowing range [-128, 255]
 // but represented as [-128, 127].
-def simm8_unsigned : RISCVOp {
-  let ParserMatchClass = SImm8UnsignedAsmOperand;
+def simm8_pli_b : RISCVOp {
+  let ParserMatchClass = SImm8PLI_BAsmOperand;
   let EncoderMethod = "getImmOpValue";
   let DecoderMethod = "decodeSImmOperand<8>";
   let OperandType = "OPERAND_SIMM8";
@@ -48,14 +37,14 @@ def simm8_unsigned : RISCVOp {
   }];
 }
 
-def SImm10UnsignedAsmOperand : SImmAsmOperand<10, "Unsigned"> {
-  let RenderMethod = "addSImm10UnsignedOperands";
+def SImm10PLUIAsmOperand : SImmAsmOperand<10, "PLUI"> {
+  let RenderMethod = "addSExtImmOperands<10>";
 }
 
 // A 10-bit signed immediate allowing range [-512, 1023]
 // but represented as [-512, 511].
-def simm10_unsigned : RISCVOp {
-  let ParserMatchClass = SImm10UnsignedAsmOperand;
+def simm10_plui : RISCVOp {
+  let ParserMatchClass = SImm10PLUIAsmOperand;
   let EncoderMethod = "getImmOpValue";
   let DecoderMethod = "decodeSImmOperand<10>";
   let OperandType = "OPERAND_SIMM10";
@@ -68,11 +57,11 @@ def simm10_unsigned : RISCVOp {
 }
 
 def SImm10PLI_HAsmOperand : SImmAsmOperand<10, "PLI_H"> {
-  let RenderMethod = "addSImm10UnsignedOperands";
+  let RenderMethod = "addSExtImmOperands<10>";
 }
 
 def SImm10PLI_WAsmOperand : SImmAsmOperand<10, "PLI_W"> {
-  let RenderMethod = "addSImm10UnsignedOperands";
+  let RenderMethod = "addSExtImmOperands<10>";
 }
 
 // A 10-bit signed immediate to be splatted to 16 bit elements allowing range
@@ -161,7 +150,7 @@ class PLI_i<bits<7> funct7, string opcodestr, DAGOperand imm>
 
 // Base for plui.h/w.
 class PLUI_i<bits<7> funct7, string opcodestr>
-    : RVPLoadImm_i<funct7, (ins simm10_unsigned:$imm10), opcodestr,
+    : RVPLoadImm_i<funct7, (ins simm10_plui:$imm10), opcodestr,
                    "$rd, $imm10"> {
   bits<10> imm10;
 
@@ -587,7 +576,7 @@ def PLI_H : PLI_i<0b1011000, "pli.h", simm10_pli_h>;
 let Predicates = [HasStdExtP, IsRV64] in
 def PLI_W : PLI_i<0b1011001, "pli.w", simm10_pli_w>;
 let Predicates = [HasStdExtP] in {
-  def PLI_B : RVPLoadImm_i<0b1011010, (ins simm8_unsigned:$imm8), "pli.b",
+  def PLI_B : RVPLoadImm_i<0b1011010, (ins simm8_pli_b:$imm8), "pli.b",
                            "$rd, $imm8"> {
     bits<8> imm8;
 
@@ -1298,7 +1287,7 @@ let Predicates = [HasStdExtP, IsRV32] in {
     let Inst{15}    = imm10{9};
   }
 
-  def PLI_DB : RVPPairLoadImm_i<0b0011010, (ins simm8_unsigned:$imm8), "pli.db",
+  def PLI_DB : RVPPairLoadImm_i<0b0011010, (ins simm8_pli_b:$imm8), "pli.db",
                                 "$rd, $imm8"> {
     bits<8> imm8;
 
@@ -1307,7 +1296,7 @@ let Predicates = [HasStdExtP, IsRV32] in {
     let Inst{15}    = 0b0;
   }
 
-  def PLUI_DH : RVPPairLoadImm_i<0b0111000, (ins simm10_unsigned:$imm10),
+  def PLUI_DH : RVPPairLoadImm_i<0b0111000, (ins simm10_plui:$imm10),
                                  "plui.dh", "$rd, $imm10"> {
     bits<10> imm10;
 
@@ -1756,6 +1745,15 @@ def SDT_RISCVMERGE : SDTypeProfile<1, 3, [SDTCisInt<0>,
                                           SDTCisSameAs<0, 2>,
                                           SDTCisSameAs<0, 3>]>;
 def riscv_merge : RVSDNode<"MERGE", SDT_RISCVMERGE>;
+
+// (rdlo, rdhi) PPAIRE_DB (rs1plo, rs1phi, rs2plo, rs2phi)
+def SDT_RISCVPPairE_DB : SDTypeProfile<2, 4, [SDTCisVT<0, v4i8>,
+                                              SDTCisSameAs<0, 1>,
+                                              SDTCisSameAs<0, 2>,
+                                              SDTCisSameAs<0, 3>,
+                                              SDTCisSameAs<0, 4>,
+                                              SDTCisSameAs<0, 5>]>;
+def riscv_ppaire_db : RVSDNode<"PPAIRE_DB", SDT_RISCVPPairE_DB>;
 
 let Predicates = [HasStdExtP] in {
 
