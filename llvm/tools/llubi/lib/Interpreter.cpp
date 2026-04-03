@@ -69,6 +69,7 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
   const DataLayout &DL;
   std::list<Frame> CallStack;
   AnyValue None;
+  Library Lib;
 
   const AnyValue &getValue(Value *V) {
     if (auto *C = dyn_cast<Constant>(V))
@@ -259,7 +260,8 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
 public:
   InstExecutor(Context &C, EventHandler &H, Function &F,
                ArrayRef<AnyValue> Args, AnyValue &RetVal)
-      : ExecutorBase(C, H), DL(Ctx.getDataLayout()) {
+      : ExecutorBase(C, H), DL(Ctx.getDataLayout()),
+        Lib(Ctx, Handler, DL, static_cast<ExecutorBase &>(*this)) {
     CallStack.emplace_back(F, /*CallSite=*/nullptr, /*LastFrame=*/nullptr, Args,
                            RetVal, Ctx.getTLIImpl());
   }
@@ -397,8 +399,6 @@ public:
       requestProgramExit(ProgramExitInfo::ProgramExitKind::Failed);
       return AnyValue();
     }
-
-    Library Lib(Ctx, Handler, DL, static_cast<ExecutorBase &>(*this));
 
     SmallVector<AnyValue, 8> Args;
     for (const auto &Arg : CB.args()) {

@@ -16,7 +16,7 @@
 
 namespace llvm::ubi {
 
-static uint64_t getMaxAlignT(const DataLayout &DL) {
+static uint64_t getMaxAlign(const DataLayout &DL) {
   return DL.getPointerABIAlignment(0).value() >= 8 ? 16 : 8;
 }
 
@@ -41,9 +41,8 @@ std::optional<std::string> Library::readStringFromMemory(const Pointer &Ptr) {
     auto ValidOffset = Executor.verifyMemAccess(
         *MO, APInt(DL.getPointerSizeInBits(0), Address + Offset), 1, Align(1),
         false);
-    if (!ValidOffset) {
+    if (!ValidOffset)
       return std::nullopt;
-    }
 
     Byte B = (*MO)[*ValidOffset];
     if (B.ConcreteMask != 0xFF) {
@@ -52,9 +51,8 @@ std::optional<std::string> Library::readStringFromMemory(const Pointer &Ptr) {
       return std::nullopt;
     }
 
-    if (B.Value == 0) {
+    if (B.Value == 0)
       break;
-    }
 
     Result.push_back(static_cast<char>(B.Value));
     ++Offset;
@@ -72,7 +70,7 @@ AnyValue Library::executeMalloc(StringRef Name, Type *Type,
   }
 
   const uint64_t AllocSize = SizeVal.asInteger().getZExtValue();
-  const uint64_t MaxAlign = getMaxAlignT(DL);
+  const uint64_t MaxAlign = getMaxAlign(DL);
 
   const auto Obj =
       Ctx.allocate(AllocSize, MaxAlign, Name, 0, MemInitKind::Uninitialized);
@@ -102,19 +100,16 @@ AnyValue Library::executeCalloc(StringRef Name, Type *Type,
 
   bool Overflow;
   const uint64_t AllocSize = SaturatingMultiply(Count, Size, &Overflow);
-  if (Overflow) {
+  if (Overflow)
     return AnyValue::getNullValue(Ctx, Type);
-  }
 
-  const uint64_t MaxAlign = getMaxAlignT(DL);
+  const uint64_t MaxAlign = getMaxAlign(DL);
 
-  // TODO: Figure out how to name the allocation
   const auto Obj =
       Ctx.allocate(AllocSize, MaxAlign, Name, 0, MemInitKind::Zeroed);
 
-  if (!Obj) {
+  if (!Obj)
     return AnyValue::getNullValue(Ctx, Type);
-  }
 
   return Ctx.deriveFromMemoryObject(Obj);
 }
@@ -128,10 +123,9 @@ AnyValue Library::executeFree(StringRef Name, Type *Type,
   }
 
   auto &Ptr = PtrVal.asPointer();
-  if (Ptr.address().isZero()) {
-    // no-op when free is called with a null pointer.
+  // no-op when free is called with a null pointer.
+  if (Ptr.address().isZero())
     return AnyValue();
-  }
 
   if (!Ctx.free(Ptr.address().getZExtValue())) {
     Executor.reportImmediateUB(
@@ -151,9 +145,8 @@ AnyValue Library::executePuts(StringRef Name, Type *Type,
   }
 
   const auto StrOpt = readStringFromMemory(PtrVal.asPointer());
-  if (!StrOpt) {
+  if (!StrOpt)
     return AnyValue::poison();
-  }
 
   Handler.onPrint(*StrOpt + "\n");
   return AnyValue(APInt(32, 1));
@@ -169,44 +162,41 @@ AnyValue Library::executePrintf(StringRef Name, Type *Type,
   }
 
   const auto FormatStrOpt = readStringFromMemory(FormatPtrVal.asPointer());
-  if (!FormatStrOpt) {
+  if (!FormatStrOpt)
     return AnyValue::poison();
-  }
 
-  const std::string FormatStr = *FormatStrOpt;
+  const std::string &FormatStr = *FormatStrOpt;
   std::string Output;
   unsigned ArgIndex = 1; // Start from 1 since 0 is the format string.
 
-  for (size_t i = 0; i < FormatStr.size();) {
-    if (FormatStr[i] != '%') {
-      Output.push_back(FormatStr[i++]);
+  for (unsigned I = 0; I < FormatStr.size(); ) {
+    if (FormatStr[I] != '%') {
+      Output.push_back(FormatStr[I++]);
       continue;
     }
 
-    const size_t Start = i++;
-    if (i < FormatStr.size() && FormatStr[i] == '%') {
+    const size_t Start = I++;
+    if (I < FormatStr.size() && FormatStr[I] == '%') {
       Output.push_back('%');
-      ++i;
+      ++I;
       continue;
     }
 
-    while (i < FormatStr.size() && strchr("-= #0123456789", FormatStr[i])) {
-      ++i;
-    }
+    while (I < FormatStr.size() && strchr("-= #0123456789", FormatStr[I]))
+      ++I;
 
-    while (i < FormatStr.size() && strchr("hljzt", FormatStr[i])) {
-      ++i;
-    }
+    while (I < FormatStr.size() && strchr("hljzt", FormatStr[I]))
+      ++I;
 
-    if (i >= FormatStr.size()) {
+    if (I >= FormatStr.size()) {
       Executor.reportImmediateUB(
           "Invalid format string in printf: missing conversion "
           "specifier.");
       return AnyValue::poison();
     }
 
-    char Specifier = FormatStr[i++];
-    std::string CleanChunk = FormatStr.substr(Start, i - Start - 1);
+    char Specifier = FormatStr[I++];
+    std::string CleanChunk = FormatStr.substr(Start, I - Start - 1);
     CleanChunk.erase(std::remove_if(CleanChunk.begin(), CleanChunk.end(),
                                     [](char c) { return strchr("hljzt", c); }),
                      CleanChunk.end());
