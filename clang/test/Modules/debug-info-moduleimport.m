@@ -2,7 +2,7 @@
 // RUN: rm -rf %t
 // RUN: %clang_cc1 -debug-info-kind=limited -fmodules \
 // RUN:     -DGREETING="Hello World" -UNDEBUG \
-// RUN:     -fimplicit-module-maps -fmodules-cache-path=%t %s \
+// RUN:     -fimplicit-module-maps -fmodules-cache-path=%t/cache %s \
 // RUN:     -I %S/Inputs -isysroot /tmp/.. -I %t -emit-llvm -o - \
 // RUN:     | FileCheck %s --check-prefix=NOIMPORT
 
@@ -12,7 +12,7 @@
 // RUN: rm -rf %t
 // RUN: %clang_cc1 -debug-info-kind=limited -fmodules \
 // RUN:    -DGREETING="Hello World" -UNDEBUG \
-// RUN:    -fimplicit-module-maps -fmodules-cache-path=%t %s \
+// RUN:    -fimplicit-module-maps -fmodules-cache-path=%t/cache %s \
 // RUN:    -I %S/Inputs -isysroot /tmp/.. -I %t -emit-llvm \
 // RUN:    -debugger-tuning=lldb -o - | FileCheck %s
 
@@ -28,13 +28,13 @@
 // CHECK: ![[F]] = !DIFile(filename: {{.*}}debug-info-moduleimport.m
 
 // RUN: %clang_cc1 -debug-info-kind=limited -fmodules -fimplicit-module-maps \
-// RUN:   -fmodules-cache-path=%t %s -I %S/Inputs -isysroot /tmp/.. -I %t \
+// RUN:   -fmodules-cache-path=%t/cache %s -I %S/Inputs -isysroot /tmp/.. -I %t \
 // RUN:   -emit-llvm -o - | FileCheck %s --check-prefix=NO-SKEL-CHECK
 // NO-SKEL-CHECK: distinct !DICompileUnit
 // NO-SKEL-CHECK-NOT: distinct !DICompileUnit
 
 // RUN: %clang_cc1 -debug-info-kind=limited -fmodules -fimplicit-module-maps \
-// RUN:   -fmodules-cache-path=%t -fdebug-prefix-map=%t=/MODULE-CACHE \
+// RUN:   -fmodules-cache-path=%t/cache -fdebug-prefix-map=%t/cache=/MODULE-CACHE \
 // RUN:   -fdebug-prefix-map=%S=/SRCDIR \
 // RUN:   -fmodule-format=obj -dwarf-ext-refs \
 // RUN:   %s -I %S/Inputs -isysroot /tmp/.. -I %t -emit-llvm -o - \

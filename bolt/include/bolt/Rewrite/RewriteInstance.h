@@ -187,9 +187,6 @@ private:
   /// performing final relaxation.
   void emitAndLink();
 
-  /// Link additional runtime code to support instrumentation.
-  void linkRuntime();
-
   /// Process metadata in sections before functions are discovered.
   void processSectionMetadata();
 
@@ -408,6 +405,9 @@ public:
 
   /// Return true if the section holds debug information.
   static bool isDebugSection(StringRef SectionName);
+
+  /// Return true if a debug section is compressed (by SHF_COMPRESSED flag).
+  static bool isCompressedDebugSection(const object::SectionRef &Section);
 
   /// Adds Debug section to overwrite.
   static void addToDebugSectionsToOverwrite(const char *Section) {

@@ -9,6 +9,7 @@ import platform
 import re
 
 
+@skipIfMTE  # MTE security transition shims restrict socket operations.
 class TestAppleSimulatorOSType(gdbremote_testcase.GdbRemoteTestCaseBase):
     SHARED_BUILD_TESTCASE = False
 

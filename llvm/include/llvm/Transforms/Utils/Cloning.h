@@ -17,6 +17,7 @@
 #ifndef LLVM_TRANSFORMS_UTILS_CLONING_H
 #define LLVM_TRANSFORMS_UTILS_CLONING_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/AssumptionCache.h"
@@ -268,15 +269,9 @@ public:
   /// the caller.
   SmallVector<AllocaInst *, 4> StaticAllocas;
 
-  /// InlineFunction fills this in with callsites that were inlined from the
-  /// callee. This is only filled in if CG is non-null.
-  SmallVector<WeakTrackingVH, 8> InlinedCalls;
-
   /// All of the new call sites inlined into the caller.
   ///
-  /// 'InlineFunction' fills this in by scanning the inlined instructions, and
-  /// only if CG is null. If CG is non-null, instead the value handle
-  /// `InlinedCalls` above is used.
+  /// 'InlineFunction' fills this in by scanning the inlined instructions.
   SmallVector<CallBase *, 8> InlinedCallSites;
 
   Value *ConvergenceControlToken = nullptr;
@@ -288,7 +283,6 @@ public:
 
   void reset() {
     StaticAllocas.clear();
-    InlinedCalls.clear();
     InlinedCallSites.clear();
     ConvergenceControlToken = nullptr;
     CallSiteEHPad = nullptr;
@@ -439,6 +433,14 @@ LLVM_ABI void cloneAndAdaptNoAliasScopes(ArrayRef<MDNode *> NoAliasDeclScopes,
 LLVM_ABI void cloneAndAdaptNoAliasScopes(ArrayRef<MDNode *> NoAliasDeclScopes,
                                          Instruction *IStart, Instruction *IEnd,
                                          LLVMContext &Context, StringRef Ext);
+/// Check if Function F appears in the inline history chain.
+/// InlineHistory is a vector of (Function, ParentHistoryID) pairs.
+/// Returns true if F was already inlined in the chain leading to
+/// InlineHistoryID.
+LLVM_ABI bool
+inlineHistoryIncludes(Function *F, int InlineHistoryID,
+                      ArrayRef<std::pair<Function *, int>> InlineHistory);
+
 } // end namespace llvm
 
 #endif // LLVM_TRANSFORMS_UTILS_CLONING_H

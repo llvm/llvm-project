@@ -258,6 +258,9 @@ static BuiltinTypeDeclBuilder setupTextureType(CXXRecordDecl *Decl, Sema &S,
                                                ResourceDimension Dim) {
   return BuiltinTypeDeclBuilder(S, Decl)
       .addTextureHandle(RC, IsROV, Dim)
+      .addTextureLoadMethods(Dim)
+      .addArraySubscriptOperators(Dim)
+      .addMipsMember(Dim)
       .addDefaultHandleConstructor()
       .addCopyConstructor()
       .addCopyAssignmentOperator()
@@ -268,6 +271,8 @@ static BuiltinTypeDeclBuilder setupTextureType(CXXRecordDecl *Decl, Sema &S,
       .addSampleLevelMethods(Dim)
       .addSampleCmpMethods(Dim)
       .addSampleCmpLevelZeroMethods(Dim)
+      .addCalculateLodMethods(Dim)
+      .addGetDimensionsMethods(Dim)
       .addGatherMethods(Dim)
       .addGatherCmpMethods(Dim);
 }
@@ -460,6 +465,7 @@ static ConceptDecl *constructBufferConceptDecl(Sema &S, NamespaceDecl *NSD,
 }
 
 void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
+  ASTContext &AST = SemaPtr->getASTContext();
   CXXRecordDecl *Decl;
   ConceptDecl *TypedBufferConcept = constructBufferConceptDecl(
       *SemaPtr, HLSLNamespace, /*isTypedBuffer*/ true);
@@ -612,8 +618,10 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
     setupSamplerType(Decl, *SemaPtr).completeDefinition();
   });
 
+  QualType Float4Ty = AST.getExtVectorType(AST.FloatTy, 4);
   Decl = BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "Texture2D")
-             .addSimpleTemplateParams({"element_type"}, TypedBufferConcept)
+             .addSimpleTemplateParams({"element_type"}, {Float4Ty},
+                                      TypedBufferConcept)
              .finalizeForwardDeclaration();
 
   onCompletion(Decl, [this](CXXRecordDecl *Decl) {

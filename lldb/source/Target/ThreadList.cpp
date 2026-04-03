@@ -476,11 +476,10 @@ void ThreadList::RefreshStateAfterStop() {
 
   m_process.UpdateThreadListIfNeeded();
 
-  Log *log = GetLog(LLDBLog::Step);
-  if (log && log->GetVerbose())
-    LLDB_LOGF(log,
-              "Turning off notification of new threads while single stepping "
-              "a thread.");
+  LLDB_LOGF_VERBOSE(
+      GetLog(LLDBLog::Step),
+      "Turning off notification of new threads while single stepping "
+      "a thread.");
 
   collection::iterator pos, end = m_threads.end();
   for (pos = m_threads.begin(); pos != end; ++pos)
@@ -692,16 +691,14 @@ bool ThreadList::WillResume(RunDirection &direction) {
   }
 
   if (thread_to_run != nullptr) {
-    Log *log = GetLog(LLDBLog::Step);
-    if (log && log->GetVerbose())
-      LLDB_LOGF(log, "Turning on notification of new threads while single "
-                     "stepping a thread.");
+    LLDB_LOGF_VERBOSE(GetLog(LLDBLog::Step),
+                      "Turning on notification of new threads while single "
+                      "stepping a thread.");
     m_process.StartNoticingNewThreads();
   } else {
-    Log *log = GetLog(LLDBLog::Step);
-    if (log && log->GetVerbose())
-      LLDB_LOGF(log, "Turning off notification of new threads while single "
-                     "stepping a thread.");
+    LLDB_LOGF_VERBOSE(GetLog(LLDBLog::Step),
+                      "Turning off notification of new threads while single "
+                      "stepping a thread.");
     m_process.StopNoticingNewThreads();
   }
 

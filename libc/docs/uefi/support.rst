@@ -6,12 +6,14 @@ Supported Functions
 
 .. include:: ../check.rst
 
-.. contents:: Table of Contents
-  :depth: 4
-  :local:
-
 The follow functions and headers are supported at least partially in
 UEFI. Some functions are implemented fully for UEFI.
+
+.. note::
+   LLVM-libc support for UEFI is currently in the early bring-up phase. The
+   tables below are placeholders; for the current source of truth on
+   implemented functions, please refer to ``libc/config/uefi/entrypoints.txt``
+   in the source tree.
 
 ctype.h
 -------

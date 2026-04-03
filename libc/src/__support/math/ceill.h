@@ -15,6 +15,7 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
+// TODO(issue#185232): Mark as constexpr once the refactor is done.
 LIBC_INLINE long double ceill(long double x) { return fputil::ceil(x); }
 
 } // namespace math

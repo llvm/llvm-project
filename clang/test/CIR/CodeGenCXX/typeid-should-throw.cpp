@@ -16,7 +16,7 @@ struct B : A {};
 void f1(A *x) { typeid(false, *x); }
 // CIR-LABEL: cir.func{{.*}}@_Z2f1P1A
 // CIR: %[[NULL:.*]] = cir.const #cir.ptr<null>
-// CIR-NEXT: %[[CMP:.*]] = cir.cmp(eq, %{{.*}}, %[[NULL]])
+// CIR-NEXT: %[[CMP:.*]] = cir.cmp eq %{{.*}}, %[[NULL]]
 // CIR-NEXT: cir.if %[[CMP]]
 // CIR-NEXT: cir.call @__cxa_bad_typeid() {noreturn} : () -> ()
 // CIR-NEXT: cir.unreachable
@@ -27,7 +27,7 @@ void f1(A *x) { typeid(false, *x); }
 void f2(bool b, A *x, A *y) { typeid(b ? *x : *y); }
 // CIR-LABEL: cir.func{{.*}}@_Z2f2bP1AS0_
 // CIR: %[[NULL:.*]] = cir.const #cir.ptr<null>
-// CIR-NEXT: %[[CMP:.*]] = cir.cmp(eq, %{{.*}}, %[[NULL]])
+// CIR-NEXT: %[[CMP:.*]] = cir.cmp eq %{{.*}}, %[[NULL]]
 // CIR-NEXT: cir.if %[[CMP]]
 // CIR-NEXT: cir.call @__cxa_bad_typeid() {noreturn} : () -> ()
 // CIR-NEXT: cir.unreachable
@@ -38,7 +38,7 @@ void f2(bool b, A *x, A *y) { typeid(b ? *x : *y); }
 void f3(bool b, A *x, A &y) { typeid(b ? *x : y); }
 // CIR-LABEL: cir.func{{.*}}@_Z2f3bP1ARS_
 // CIR: %[[NULL:.*]] = cir.const #cir.ptr<null>
-// CIR-NEXT: %[[CMP:.*]] = cir.cmp(eq, %{{.*}}, %[[NULL]])
+// CIR-NEXT: %[[CMP:.*]] = cir.cmp eq %{{.*}}, %[[NULL]]
 // CIR-NEXT: cir.if %[[CMP]]
 // CIR-NEXT: cir.call @__cxa_bad_typeid() {noreturn} : () -> ()
 // CIR-NEXT: cir.unreachable
@@ -49,7 +49,7 @@ void f3(bool b, A *x, A &y) { typeid(b ? *x : y); }
 void f4(bool b, A &x, A *y) { typeid(b ? x : *y); }
 // CIR-LABEL: cir.func{{.*}}@_Z2f4bR1APS_
 // CIR: %[[NULL:.*]] = cir.const #cir.ptr<null>
-// CIR-NEXT: %[[CMP:.*]] = cir.cmp(eq, %{{.*}}, %[[NULL]])
+// CIR-NEXT: %[[CMP:.*]] = cir.cmp eq %{{.*}}, %[[NULL]]
 // CIR-NEXT: cir.if %[[CMP]]
 // CIR-NEXT: cir.call @__cxa_bad_typeid() {noreturn} : () -> ()
 // CIR-NEXT: cir.unreachable
@@ -60,7 +60,7 @@ void f4(bool b, A &x, A *y) { typeid(b ? x : *y); }
 void f5(volatile A *x) { typeid(*x); }
 // CIR-LABEL: cir.func{{.*}}@_Z2f5PV1A
 // CIR: %[[NULL:.*]] = cir.const #cir.ptr<null>
-// CIR-NEXT: %[[CMP:.*]] = cir.cmp(eq, %{{.*}}, %[[NULL]])
+// CIR-NEXT: %[[CMP:.*]] = cir.cmp eq %{{.*}}, %[[NULL]]
 // CIR-NEXT: cir.if %[[CMP]]
 // CIR-NEXT: cir.call @__cxa_bad_typeid() {noreturn} : () -> ()
 // CIR-NEXT: cir.unreachable
@@ -71,7 +71,7 @@ void f5(volatile A *x) { typeid(*x); }
 void f6(A *x) { typeid((B &)*(B *)x); }
 // CIR-LABEL: cir.func{{.*}}@_Z2f6P1A
 // CIR: %[[NULL:.*]] = cir.const #cir.ptr<null>
-// CIR-NEXT: %[[CMP:.*]] = cir.cmp(eq, %{{.*}}, %[[NULL]])
+// CIR-NEXT: %[[CMP:.*]] = cir.cmp eq %{{.*}}, %[[NULL]]
 // CIR-NEXT: cir.if %[[CMP]]
 // CIR-NEXT: cir.call @__cxa_bad_typeid() {noreturn} : () -> ()
 // CIR-NEXT: cir.unreachable
@@ -82,7 +82,7 @@ void f6(A *x) { typeid((B &)*(B *)x); }
 void f7(A *x) { typeid((*x)); }
 // CIR-LABEL: cir.func{{.*}}@_Z2f7P1A
 // CIR: %[[NULL:.*]] = cir.const #cir.ptr<null>
-// CIR-NEXT: %[[CMP:.*]] = cir.cmp(eq, %{{.*}}, %[[NULL]])
+// CIR-NEXT: %[[CMP:.*]] = cir.cmp eq %{{.*}}, %[[NULL]]
 // CIR-NEXT: cir.if %[[CMP]]
 // CIR-NEXT: cir.call @__cxa_bad_typeid() {noreturn} : () -> ()
 // CIR-NEXT: cir.unreachable
@@ -93,7 +93,7 @@ void f7(A *x) { typeid((*x)); }
 void f8(A *x) { typeid(x[0]); }
 // CIR-LABEL: cir.func{{.*}}@_Z2f8P1A
 // CIR: %[[NULL:.*]] = cir.const #cir.ptr<null>
-// CIR-NEXT: %[[CMP:.*]] = cir.cmp(eq, %{{.*}}, %[[NULL]])
+// CIR-NEXT: %[[CMP:.*]] = cir.cmp eq %{{.*}}, %[[NULL]]
 // CIR-NEXT: cir.if %[[CMP]]
 // CIR-NEXT: cir.call @__cxa_bad_typeid() {noreturn} : () -> ()
 // CIR-NEXT: cir.unreachable
@@ -104,7 +104,7 @@ void f8(A *x) { typeid(x[0]); }
 void f9(A *x) { typeid(0[x]); }
 // CIR-LABEL: cir.func{{.*}}@_Z2f9P1A
 // CIR: %[[NULL:.*]] = cir.const #cir.ptr<null>
-// CIR-NEXT: %[[CMP:.*]] = cir.cmp(eq, %{{.*}}, %[[NULL]])
+// CIR-NEXT: %[[CMP:.*]] = cir.cmp eq %{{.*}}, %[[NULL]]
 // CIR-NEXT: cir.if %[[CMP]]
 // CIR-NEXT: cir.call @__cxa_bad_typeid() {noreturn} : () -> ()
 // CIR-NEXT: cir.unreachable
@@ -115,7 +115,7 @@ void f9(A *x) { typeid(0[x]); }
 void f10(A *x, A *y) { typeid(*y ?: *x); }
 // CIR-LABEL: cir.func{{.*}}@_Z3f10P1AS0_
 // CIR: %[[NULL:.*]] = cir.const #cir.ptr<null>
-// CIR-NEXT: %[[CMP:.*]] = cir.cmp(eq, %{{.*}}, %[[NULL]])
+// CIR-NEXT: %[[CMP:.*]] = cir.cmp eq %{{.*}}, %[[NULL]]
 // CIR-NEXT: cir.if %[[CMP]]
 // CIR-NEXT: cir.call @__cxa_bad_typeid() {noreturn} : () -> ()
 // CIR-NEXT: cir.unreachable
@@ -126,7 +126,7 @@ void f10(A *x, A *y) { typeid(*y ?: *x); }
 void f11(A *x, A &y) { typeid(*x ?: y); }
 // CIR-LABEL: cir.func{{.*}}@_Z3f11P1ARS_
 // CIR: %[[NULL:.*]] = cir.const #cir.ptr<null>
-// CIR-NEXT: %[[CMP:.*]] = cir.cmp(eq, %{{.*}}, %[[NULL]])
+// CIR-NEXT: %[[CMP:.*]] = cir.cmp eq %{{.*}}, %[[NULL]]
 // CIR-NEXT: cir.if %[[CMP]]
 // CIR-NEXT: cir.call @__cxa_bad_typeid() {noreturn} : () -> ()
 // CIR-NEXT: cir.unreachable
@@ -137,7 +137,7 @@ void f11(A *x, A &y) { typeid(*x ?: y); }
 void f12(A &x, A *y) { typeid(x ?: *y); }
 // CIR-LABEL: cir.func{{.*}}@_Z3f12R1APS_
 // CIR: %[[NULL:.*]] = cir.const #cir.ptr<null>
-// CIR-NEXT: %[[CMP:.*]] = cir.cmp(eq, %{{.*}}, %[[NULL]])
+// CIR-NEXT: %[[CMP:.*]] = cir.cmp eq %{{.*}}, %[[NULL]]
 // CIR-NEXT: cir.if %[[CMP]]
 // CIR-NEXT: cir.call @__cxa_bad_typeid() {noreturn} : () -> ()
 // CIR-NEXT: cir.unreachable
@@ -164,7 +164,7 @@ void f15(A *x) { typeid((A &&)*(A *)nullptr); }
 // consistant with classic codegen.
 // CIR: %[[NULL:.*]] = cir.const #cir.ptr<null>
 // CIR-NEXT: %[[NULL2:.*]] = cir.const #cir.ptr<null>
-// CIR-NEXT: %[[CMP:.*]] = cir.cmp(eq, %[[NULL]], %[[NULL2]])
+// CIR-NEXT: %[[CMP:.*]] = cir.cmp eq %[[NULL]], %[[NULL2]]
 // CIR-NEXT: cir.if %[[CMP]]
 // CIR-NEXT: cir.call @__cxa_bad_typeid() {noreturn} : () -> ()
 // CIR-NEXT: cir.unreachable

@@ -1203,6 +1203,9 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   auto &FPToISat = getActionDefinitionsBuilder({G_FPTOSI_SAT, G_FPTOUI_SAT})
     .legalFor({{S32, S32}, {S32, S64}})
     .narrowScalarFor({{S64, S16}}, changeTo(0, S32));
+  if (ST.has16BitInsts())
+    FPToISat.legalFor({{S16, S16}});
+
   FPToISat.minScalar(1, S32);
   FPToISat.minScalar(0, S32)
        .widenScalarToNextPow2(0, 32)
@@ -1383,6 +1386,12 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       .scalarize(0)
       .widenScalarToNextPow2(0, 32)
       .widenScalarToNextPow2(1, 32);
+
+  getActionDefinitionsBuilder(G_CTLS)
+      .customFor({{S32, S32}})
+      .scalarize(0)
+      .clampScalar(0, S32, S32)
+      .clampScalar(1, S32, S32);
 
   // S64 is only legal on SALU, and needs to be broken into 32-bit elements in
   // RegBankSelect.
@@ -1944,39 +1953,34 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   for (unsigned Op : {G_EXTRACT, G_INSERT}) {
     unsigned BigTyIdx = Op == G_EXTRACT ? 1 : 0;
     unsigned LitTyIdx = Op == G_EXTRACT ? 0 : 1;
-
-    // FIXME: Doesn't handle extract of illegal sizes.
     getActionDefinitionsBuilder(Op)
-      .lowerIf(all(typeIs(LitTyIdx, S16), sizeIs(BigTyIdx, 32)))
-      .lowerIf([=](const LegalityQuery &Query) {
-          // Sub-vector(or single element) insert and extract.
-          // TODO: verify immediate offset here since lower only works with
-          // whole elements.
-          const LLT BigTy = Query.Types[BigTyIdx];
-          return BigTy.isVector();
-        })
-      // FIXME: Multiples of 16 should not be legal.
-      .legalIf([=](const LegalityQuery &Query) {
+        .widenScalarIf(
+            [=](const LegalityQuery &Query) {
+              const LLT BigTy = Query.Types[BigTyIdx];
+              return (BigTy.getScalarSizeInBits() < 16);
+            },
+            LegalizeMutations::widenScalarOrEltToNextPow2(BigTyIdx, 16))
+        .widenScalarIf(
+            [=](const LegalityQuery &Query) {
+              const LLT LitTy = Query.Types[LitTyIdx];
+              return (LitTy.getScalarSizeInBits() < 16);
+            },
+            LegalizeMutations::widenScalarOrEltToNextPow2(LitTyIdx, 16))
+        .moreElementsIf(isSmallOddVector(BigTyIdx), oneMoreElement(BigTyIdx))
+        .widenScalarToNextPow2(BigTyIdx, 32)
+        .customIf([=](const LegalityQuery &Query) {
+          // Generic lower operates on the full-width value, producing
+          // shift+trunc/mask sequences. For simple cases where extract/insert
+          // values are 32-bit aligned, we can instead unmerge/merge and work on
+          // the 32-bit components. However, we can't check the offset here so
+          // custom lower function will have to call generic lowering if offset
+          // is not 32-bit aligned.
           const LLT BigTy = Query.Types[BigTyIdx];
           const LLT LitTy = Query.Types[LitTyIdx];
-          return (BigTy.getSizeInBits() % 32 == 0) &&
-                 (LitTy.getSizeInBits() % 16 == 0);
+          return !BigTy.isVector() && BigTy.getSizeInBits() % 32 == 0 &&
+                 LitTy.getSizeInBits() % 32 == 0;
         })
-      .widenScalarIf(
-        [=](const LegalityQuery &Query) {
-          const LLT BigTy = Query.Types[BigTyIdx];
-          return (BigTy.getScalarSizeInBits() < 16);
-        },
-        LegalizeMutations::widenScalarOrEltToNextPow2(BigTyIdx, 16))
-      .widenScalarIf(
-        [=](const LegalityQuery &Query) {
-          const LLT LitTy = Query.Types[LitTyIdx];
-          return (LitTy.getScalarSizeInBits() < 16);
-        },
-        LegalizeMutations::widenScalarOrEltToNextPow2(LitTyIdx, 16))
-      .moreElementsIf(isSmallOddVector(BigTyIdx), oneMoreElement(BigTyIdx))
-      .widenScalarToNextPow2(BigTyIdx, 32);
-
+        .lower();
   }
 
   auto &BuildVector =
@@ -2253,6 +2257,10 @@ bool AMDGPULegalizerInfo::legalizeCustom(
   case TargetOpcode::G_FMINIMUMNUM:
   case TargetOpcode::G_FMAXIMUMNUM:
     return legalizeMinNumMaxNum(Helper, MI);
+  case TargetOpcode::G_EXTRACT:
+    return legalizeExtract(Helper, MI);
+  case TargetOpcode::G_INSERT:
+    return legalizeInsert(Helper, MI);
   case TargetOpcode::G_EXTRACT_VECTOR_ELT:
     return legalizeExtractVectorElt(MI, MRI, B);
   case TargetOpcode::G_INSERT_VECTOR_ELT:
@@ -2308,6 +2316,8 @@ bool AMDGPULegalizerInfo::legalizeCustom(
   case TargetOpcode::G_CTLZ:
   case TargetOpcode::G_CTTZ:
     return legalizeCTLZ_CTTZ(MI, MRI, B);
+  case TargetOpcode::G_CTLS:
+    return legalizeCTLS(MI, MRI, B);
   case TargetOpcode::G_CTLZ_ZERO_UNDEF:
     return legalizeCTLZ_ZERO_UNDEF(MI, MRI, B);
   case TargetOpcode::G_STACKSAVE:
@@ -2425,7 +2435,7 @@ static bool isKnownNonNull(Register Val, MachineRegisterInfo &MRI,
     return true;
   case AMDGPU::G_CONSTANT: {
     const ConstantInt *CI = Def->getOperand(1).getCImm();
-    return CI->getSExtValue() != TM.getNullPointerValue(AddrSpace);
+    return CI->getSExtValue() != AMDGPU::getNullPointerValue(AddrSpace);
   }
   default:
     return false;
@@ -2497,7 +2507,7 @@ bool AMDGPULegalizerInfo::legalizeAddrSpaceCast(
       return true;
     }
 
-    unsigned NullVal = TM.getNullPointerValue(DestAS);
+    unsigned NullVal = AMDGPU::getNullPointerValue(DestAS);
 
     auto SegmentNull = B.buildConstant(DstTy, NullVal);
     auto FlatNull = B.buildConstant(SrcTy, 0);
@@ -2571,8 +2581,9 @@ bool AMDGPULegalizerInfo::legalizeAddrSpaceCast(
 
     Register BuildPtr = castLocalOrPrivateToFlat(DstTy);
 
-    auto SegmentNull = B.buildConstant(SrcTy, TM.getNullPointerValue(SrcAS));
-    auto FlatNull = B.buildConstant(DstTy, TM.getNullPointerValue(DestAS));
+    auto SegmentNull =
+        B.buildConstant(SrcTy, AMDGPU::getNullPointerValue(SrcAS));
+    auto FlatNull = B.buildConstant(DstTy, AMDGPU::getNullPointerValue(DestAS));
 
     auto CmpRes = B.buildICmp(CmpInst::ICMP_NE, LLT::scalar(1), Src,
                               SegmentNull.getReg(0));
@@ -2886,6 +2897,91 @@ bool AMDGPULegalizerInfo::legalizeMinNumMaxNum(LegalizerHelper &Helper,
     return true;
 
   return Helper.lowerFMinNumMaxNum(MI) == LegalizerHelper::Legalized;
+}
+
+bool AMDGPULegalizerInfo::legalizeExtract(LegalizerHelper &Helper,
+                                          MachineInstr &MI) const {
+  MachineIRBuilder &B = Helper.MIRBuilder;
+  MachineRegisterInfo &MRI = *B.getMRI();
+  Register DstReg = MI.getOperand(0).getReg();
+  Register SrcReg = MI.getOperand(1).getReg();
+  uint64_t Offset = MI.getOperand(2).getImm();
+
+  // Fall back to generic lowering for offset 0 (trivial trunc) and
+  // non-32-bit-aligned cases which require shift+trunc sequences
+  // that generic code handles correctly.
+  if (Offset == 0 || Offset % 32 != 0)
+    return Helper.lowerExtract(MI) == LegalizerHelper::Legalized;
+
+  const LLT DstTy = MRI.getType(DstReg);
+  unsigned StartIdx = Offset / 32;
+  unsigned DstCount = DstTy.getSizeInBits() / 32;
+  auto Unmerge = B.buildUnmerge(LLT::scalar(32), SrcReg);
+
+  if (DstCount == 1) {
+    if (DstTy.isPointer())
+      B.buildIntToPtr(DstReg, Unmerge.getReg(StartIdx));
+    else
+      MRI.replaceRegWith(DstReg, Unmerge.getReg(StartIdx));
+  } else {
+    SmallVector<Register, 8> MergeVec;
+    for (unsigned I = 0; I < DstCount; ++I)
+      MergeVec.push_back(Unmerge.getReg(StartIdx + I));
+    B.buildMergeLikeInstr(DstReg, MergeVec);
+  }
+
+  MI.eraseFromParent();
+  return true;
+}
+
+bool AMDGPULegalizerInfo::legalizeInsert(LegalizerHelper &Helper,
+                                         MachineInstr &MI) const {
+  MachineIRBuilder &B = Helper.MIRBuilder;
+  MachineRegisterInfo &MRI = *B.getMRI();
+  Register DstReg = MI.getOperand(0).getReg();
+  Register SrcReg = MI.getOperand(1).getReg();
+  Register InsertSrc = MI.getOperand(2).getReg();
+  uint64_t Offset = MI.getOperand(3).getImm();
+
+  unsigned DstSize = MRI.getType(DstReg).getSizeInBits();
+  const LLT InsertTy = MRI.getType(InsertSrc);
+  unsigned InsertSize = InsertTy.getSizeInBits();
+
+  // Fall back to generic lowering for non-32-bit-aligned cases which
+  // require shift+mask sequences that generic code handles correctly.
+  if (Offset % 32 != 0 || DstSize % 32 != 0 || InsertSize % 32 != 0)
+    return Helper.lowerInsert(MI) == LegalizerHelper::Legalized;
+
+  const LLT S32 = LLT::scalar(32);
+  unsigned DstCount = DstSize / 32;
+  unsigned InsertCount = InsertSize / 32;
+  unsigned StartIdx = Offset / 32;
+
+  auto SrcUnmerge = B.buildUnmerge(S32, SrcReg);
+
+  SmallVector<Register, 8> MergeVec;
+  for (unsigned I = 0; I < StartIdx; ++I)
+    MergeVec.push_back(SrcUnmerge.getReg(I));
+
+  if (InsertCount == 1) {
+    // Merge-like instructions require same source types. Convert pointer
+    // to scalar when inserting a pointer value into a scalar.
+    if (InsertTy.isPointer())
+      InsertSrc = B.buildPtrToInt(S32, InsertSrc).getReg(0);
+    MergeVec.push_back(InsertSrc);
+  } else {
+    auto InsertUnmerge = B.buildUnmerge(S32, InsertSrc);
+    for (unsigned I = 0; I < InsertCount; ++I)
+      MergeVec.push_back(InsertUnmerge.getReg(I));
+  }
+
+  for (unsigned I = StartIdx + InsertCount; I < DstCount; ++I)
+    MergeVec.push_back(SrcUnmerge.getReg(I));
+
+  B.buildMergeLikeInstr(DstReg, MergeVec);
+
+  MI.eraseFromParent();
+  return true;
 }
 
 bool AMDGPULegalizerInfo::legalizeExtractVectorElt(
@@ -4594,6 +4690,23 @@ bool AMDGPULegalizerInfo::legalizeCTLZ_ZERO_UNDEF(MachineInstr &MI,
   return true;
 }
 
+bool AMDGPULegalizerInfo::legalizeCTLS(MachineInstr &MI,
+                                       MachineRegisterInfo &MRI,
+                                       MachineIRBuilder &B) const {
+  Register Dst = MI.getOperand(0).getReg();
+  Register Src = MI.getOperand(1).getReg();
+  LLT SrcTy = MRI.getType(Src);
+  const LLT S32 = LLT::scalar(32);
+  assert(SrcTy == S32 && "legalizeCTLS only supports s32");
+  unsigned BitWidth = SrcTy.getSizeInBits();
+
+  auto Sffbh = B.buildIntrinsic(Intrinsic::amdgcn_sffbh, {S32}).addUse(Src);
+  auto Clamped = B.buildUMin(S32, Sffbh, B.buildConstant(S32, BitWidth));
+  B.buildSub(Dst, Clamped, B.buildConstant(S32, 1));
+  MI.eraseFromParent();
+  return true;
+}
+
 // Check that this is a G_XOR x, -1
 static bool isNot(const MachineRegisterInfo &MRI, const MachineInstr &MI) {
   if (MI.getOpcode() != TargetOpcode::G_XOR)
@@ -5856,18 +5969,21 @@ bool AMDGPULegalizerInfo::legalizeFSQRTF64(MachineInstr &MI,
   Register X = MI.getOperand(1).getReg();
   unsigned Flags = MI.getFlags();
 
-  auto ScaleConstant = B.buildFConstant(F64, 0x1.0p-767);
+  Register SqrtX = X;
+  Register Scaling, ZeroInt;
+  if (!MI.getFlag(MachineInstr::FmAfn)) {
+    auto ScaleConstant = B.buildFConstant(F64, 0x1.0p-767);
 
-  auto ZeroInt = B.buildConstant(S32, 0);
-  auto Scaling = B.buildFCmp(FCmpInst::FCMP_OLT, S1, X, ScaleConstant);
+    ZeroInt = B.buildConstant(S32, 0).getReg(0);
+    Scaling = B.buildFCmp(FCmpInst::FCMP_OLT, S1, X, ScaleConstant).getReg(0);
 
-  // Scale up input if it is too small.
-  auto ScaleUpFactor = B.buildConstant(S32, 256);
-  auto ScaleUp = B.buildSelect(S32, Scaling, ScaleUpFactor, ZeroInt);
-  auto SqrtX = B.buildFLdexp(F64, X, ScaleUp, Flags);
+    // Scale up input if it is too small.
+    auto ScaleUpFactor = B.buildConstant(S32, 256);
+    auto ScaleUp = B.buildSelect(S32, Scaling, ScaleUpFactor, ZeroInt);
+    SqrtX = B.buildFLdexp(F64, X, ScaleUp, Flags).getReg(0);
+  }
 
-  auto SqrtY =
-      B.buildIntrinsic(Intrinsic::amdgcn_rsq, {F64}).addReg(SqrtX.getReg(0));
+  auto SqrtY = B.buildIntrinsic(Intrinsic::amdgcn_rsq, {F64}).addReg(SqrtX);
 
   auto Half = B.buildFConstant(F64, 0.5);
   auto SqrtH0 = B.buildFMul(F64, SqrtY, Half);
@@ -5884,21 +6000,27 @@ bool AMDGPULegalizerInfo::legalizeFSQRTF64(MachineInstr &MI,
 
   auto SqrtS2 = B.buildFMA(F64, SqrtD0, SqrtH1, SqrtS1);
 
-  auto NegSqrtS2 = B.buildFNeg(F64, SqrtS2);
-  auto SqrtD1 = B.buildFMA(F64, NegSqrtS2, SqrtS2, SqrtX);
+  Register SqrtRet = SqrtS2.getReg(0);
+  if (!MI.getFlag(MachineInstr::FmAfn)) {
+    auto NegSqrtS2 = B.buildFNeg(F64, SqrtS2);
+    auto SqrtD1 = B.buildFMA(F64, NegSqrtS2, SqrtS2, SqrtX);
+    auto SqrtD2 = B.buildFMA(F64, SqrtD1, SqrtH1, SqrtS2);
 
-  auto SqrtRet = B.buildFMA(F64, SqrtD1, SqrtH1, SqrtS2);
+    // Scale down the result.
+    auto ScaleDownFactor = B.buildConstant(S32, -128);
+    auto ScaleDown = B.buildSelect(S32, Scaling, ScaleDownFactor, ZeroInt);
+    SqrtRet = B.buildFLdexp(F64, SqrtD2, ScaleDown, Flags).getReg(0);
+  }
 
-  // Scale down the result.
-  auto ScaleDownFactor = B.buildConstant(S32, -128);
-  auto ScaleDown = B.buildSelect(S32, Scaling, ScaleDownFactor, ZeroInt);
-  SqrtRet = B.buildFLdexp(F64, SqrtRet, ScaleDown, Flags);
-
-  // TODO: Switch to fcmp oeq 0 for finite only. Can't fully remove this check
-  // with finite only or nsz because rsq(+/-0) = +/-inf
+  Register IsZeroOrInf;
+  if (MI.getFlag(MachineInstr::FmNoInfs)) {
+    auto ZeroFP = B.buildFConstant(F64, 0.0);
+    IsZeroOrInf = B.buildFCmp(FCmpInst::FCMP_OEQ, S1, SqrtX, ZeroFP).getReg(0);
+  } else {
+    IsZeroOrInf = B.buildIsFPClass(S1, SqrtX, fcZero | fcPosInf).getReg(0);
+  }
 
   // TODO: Check for DAZ and expand to subnormals
-  auto IsZeroOrInf = B.buildIsFPClass(LLT::scalar(1), SqrtX, fcZero | fcPosInf);
 
   // If x is +INF, +0, or -0, use its original value
   B.buildSelect(Dst, IsZeroOrInf, SqrtX, SqrtRet, Flags);
@@ -6215,7 +6337,7 @@ bool AMDGPULegalizerInfo::getLDSKernelId(Register DstReg,
                                          MachineIRBuilder &B) const {
   Function &F = B.getMF().getFunction();
   std::optional<uint32_t> KnownSize =
-      AMDGPUMachineFunction::getLDSKernelIdMetadata(F);
+      AMDGPUMachineFunctionInfo::getLDSKernelIdMetadata(F);
   if (KnownSize.has_value())
     B.buildConstant(DstReg, *KnownSize);
   return false;
