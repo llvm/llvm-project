@@ -94,6 +94,10 @@ static const Loan *createLoan(FactManager &FactMgr,
   return FactMgr.getLoanMgr().createLoan(Path, MTE);
 }
 
+static bool producesConditionalResult(const Expr *E) {
+  return isa<CXXThrowExpr>(E->IgnoreParenImpCasts());
+}
+
 void FactsGenerator::run() {
   llvm::TimeTraceScope TimeProfile("FactGenerator");
   const CFG &Cfg = *AC.getCFG();
@@ -404,8 +408,18 @@ void FactsGenerator::VisitConditionalOperator(const ConditionalOperator *CO) {
   if (hasOrigins(CO)) {
     // Merge origins from both branches of the conditional operator.
     // We kill to clear the initial state and merge both origins into it.
-    killAndFlowOrigin(*CO, *CO->getTrueExpr());
-    flowOrigin(*CO, *CO->getFalseExpr());
+    const Expr *TrueExpr = CO->getTrueExpr();
+    const Expr *FalseExpr = CO->getFalseExpr();
+    bool Initialized = false;
+    for (const Expr *Branch : {TrueExpr, FalseExpr}) {
+      if (producesConditionalResult(Branch))
+        continue;
+      if (!Initialized) {
+        killAndFlowOrigin(*CO, *Branch);
+        Initialized = true;
+      } else
+        flowOrigin(*CO, *Branch);
+    }
   }
 }
 
