@@ -101,7 +101,7 @@ JSONFormat::analysisResultMapFromJSON(const Array &ResultsArray) const {
           .build();
     }
   }
-  return Results;
+  return std::move(Results);
 }
 
 llvm::Expected<Array> JSONFormat::analysisResultMapToJSON(
@@ -184,7 +184,7 @@ llvm::Expected<WPASuite> JSONFormat::readWPASuite(llvm::StringRef Path) {
     getData(Suite) = std::move(*ExpectedResultsMap);
   }
 
-  return Suite;
+  return std::move(Suite);
 }
 
 llvm::Error JSONFormat::writeWPASuite(const WPASuite &Suite,
