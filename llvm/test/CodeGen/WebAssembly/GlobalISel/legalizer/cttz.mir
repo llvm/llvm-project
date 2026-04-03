@@ -15,8 +15,8 @@ body: |
     ; CHECK-NEXT: [[ARGUMENT_i32_:%[0-9]+]]:i32(s32) = ARGUMENT_i32 0, implicit $arguments
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 256
     ; CHECK-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[ARGUMENT_i32_]], [[C]]
-    ; CHECK-NEXT: [[CTTZ_ZERO_UNDEF:%[0-9]+]]:_(s32) = G_CTTZ_ZERO_UNDEF [[OR]](s32)
-    ; CHECK-NEXT: RETURN [[CTTZ_ZERO_UNDEF]](s32), implicit-def $arguments
+    ; CHECK-NEXT: [[CTTZ:%[0-9]+]]:_(s32) = G_CTTZ [[OR]](s32)
+    ; CHECK-NEXT: RETURN [[CTTZ]](s32), implicit-def $arguments
     %1:i32(s32) = ARGUMENT_i32 0, implicit $arguments
     %0:_(s8) = G_TRUNC %1(s32)
     %2:_(s8) = G_CTTZ %0
@@ -38,8 +38,8 @@ body: |
     ; CHECK-NEXT: [[ARGUMENT_i32_:%[0-9]+]]:i32(s32) = ARGUMENT_i32 0, implicit $arguments
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 65536
     ; CHECK-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[ARGUMENT_i32_]], [[C]]
-    ; CHECK-NEXT: [[CTTZ_ZERO_UNDEF:%[0-9]+]]:_(s32) = G_CTTZ_ZERO_UNDEF [[OR]](s32)
-    ; CHECK-NEXT: RETURN [[CTTZ_ZERO_UNDEF]](s32), implicit-def $arguments
+    ; CHECK-NEXT: [[CTTZ:%[0-9]+]]:_(s32) = G_CTTZ [[OR]](s32)
+    ; CHECK-NEXT: RETURN [[CTTZ]](s32), implicit-def $arguments
     %1:i32(s32) = ARGUMENT_i32 0, implicit $arguments
     %0:_(s16) = G_TRUNC %1(s32)
     %2:_(s16) = G_CTTZ %0

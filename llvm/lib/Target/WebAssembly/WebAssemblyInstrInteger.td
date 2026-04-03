@@ -82,17 +82,9 @@ defm LE_U : ComparisonInt<SETULE, "le_u", 0x4d, 0x58>;
 defm GE_S : ComparisonInt<SETGE,  "ge_s", 0x4e, 0x59>;
 defm GE_U : ComparisonInt<SETUGE, "ge_u", 0x4f, 0x5a>;
 
-
 defm CLZ : UnaryInt<ctlz, "clz ", 0x67, 0x79>;
-def : Pat<(ctlz_zero_undef I32:$src), (CLZ_I32 I32:$src)>;
-def : Pat<(ctlz_zero_undef I64:$src), (CLZ_I64 I64:$src)>;
-
 defm CTZ : UnaryInt<cttz, "ctz ", 0x68, 0x7a>;
-def : Pat<(cttz_zero_undef I32:$src), (CTZ_I32 I32:$src)>;
-def : Pat<(cttz_zero_undef I64:$src), (CTZ_I64 I64:$src)>;
-
 defm POPCNT : UnaryInt<ctpop, "popcnt", 0x69, 0x7b>;
-
 
 defm EQZ_I32 : I<(outs I32:$dst), (ins I32:$src), (outs), (ins),
                  [(set I32:$dst, (setcc I32:$src, 0, SETEQ))],

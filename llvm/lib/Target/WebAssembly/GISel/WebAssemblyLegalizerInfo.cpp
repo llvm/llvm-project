@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "WebAssemblyLegalizerInfo.h"
+#include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
 #include "WebAssemblySubtarget.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerHelper.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
@@ -40,12 +41,13 @@ WebAssemblyLegalizerInfo::WebAssemblyLegalizerInfo(
       .clampScalar(0, s32, s64)
       .scalarSameSizeAs(1, 0);
 
-  getActionDefinitionsBuilder(
-      {G_CTLZ, G_CTLZ_ZERO_UNDEF, G_CTTZ, G_CTTZ_ZERO_UNDEF, G_CTPOP})
+  getActionDefinitionsBuilder({G_CTLZ, G_CTTZ, G_CTPOP})
       .legalFor({{s32, s32}, {s64, s64}})
       .widenScalarToNextPow2(1)
       .clampScalar(1, s32, s64)
       .scalarSameSizeAs(0, 1);
+
+  getActionDefinitionsBuilder({G_CTLZ_ZERO_UNDEF, G_CTTZ_ZERO_UNDEF}).lower();
 
   getActionDefinitionsBuilder({G_ROTL, G_ROTR})
       .legalFor({{s32, s32}, {s64, s64}})

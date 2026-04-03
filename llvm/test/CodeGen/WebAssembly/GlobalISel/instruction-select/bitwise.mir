@@ -313,47 +313,6 @@ body:             |
 ...
 
 ---
-name:            ctlz_zundef_i32
-alignment:       1
-legalized:       true
-regBankSelected: true
-tracksRegLiveness: true
-body:             |
-  bb.1.entry:
-    liveins: $arguments
-
-    ; CHECK-LABEL: name: ctlz_zundef_i32
-    ; CHECK: liveins: $arguments
-    ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[ARGUMENT_i32_:%[0-9]+]]:i32 = ARGUMENT_i32 0, implicit $arguments
-    ; CHECK-NEXT: [[CLZ_I32_:%[0-9]+]]:i32 = CLZ_I32 [[ARGUMENT_i32_]], implicit-def dead $arguments
-    ; CHECK-NEXT: RETURN [[CLZ_I32_]], implicit-def $arguments
-    %0:i32(s32) = ARGUMENT_i32 0, implicit $arguments
-    %1:i32regbank(s32) = G_CTLZ_ZERO_UNDEF %0
-    RETURN %1(s32), implicit-def $arguments
-...
----
-name:            ctlz_zundef_i64
-alignment:       1
-legalized:       true
-regBankSelected: true
-tracksRegLiveness: true
-body:             |
-  bb.1.entry:
-    liveins: $arguments
-
-    ; CHECK-LABEL: name: ctlz_zundef_i64
-    ; CHECK: liveins: $arguments
-    ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[ARGUMENT_i64_:%[0-9]+]]:i64 = ARGUMENT_i64 0, implicit $arguments
-    ; CHECK-NEXT: [[CLZ_I64_:%[0-9]+]]:i64 = CLZ_I64 [[ARGUMENT_i64_]], implicit-def dead $arguments
-    ; CHECK-NEXT: RETURN [[CLZ_I64_]], implicit-def $arguments
-    %0:i64(s64) = ARGUMENT_i64 0, implicit $arguments
-    %1:i64regbank(s64) = G_CTLZ_ZERO_UNDEF %0
-    RETURN %1(s64), implicit-def $arguments
-...
-
----
 name:            cttz_i32
 alignment:       1
 legalized:       true
@@ -391,47 +350,6 @@ body:             |
     ; CHECK-NEXT: RETURN [[CTZ_I64_]], implicit-def $arguments
     %0:i64(s64) = ARGUMENT_i64 0, implicit $arguments
     %1:i64regbank(s64) = G_CTTZ %0
-    RETURN %1(s64), implicit-def $arguments
-...
-
----
-name:            cttz_zundef_i32
-alignment:       1
-legalized:       true
-regBankSelected: true
-tracksRegLiveness: true
-body:             |
-  bb.1.entry:
-    liveins: $arguments
-
-    ; CHECK-LABEL: name: cttz_zundef_i32
-    ; CHECK: liveins: $arguments
-    ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[ARGUMENT_i32_:%[0-9]+]]:i32 = ARGUMENT_i32 0, implicit $arguments
-    ; CHECK-NEXT: [[CTZ_I32_:%[0-9]+]]:i32 = CTZ_I32 [[ARGUMENT_i32_]], implicit-def dead $arguments
-    ; CHECK-NEXT: RETURN [[CTZ_I32_]], implicit-def $arguments
-    %0:i32(s32) = ARGUMENT_i32 0, implicit $arguments
-    %1:i32regbank(s32) = G_CTTZ_ZERO_UNDEF %0
-    RETURN %1(s32), implicit-def $arguments
-...
----
-name:            cttz_zundef_i64
-alignment:       1
-legalized:       true
-regBankSelected: true
-tracksRegLiveness: true
-body:             |
-  bb.1.entry:
-    liveins: $arguments
-
-    ; CHECK-LABEL: name: cttz_zundef_i64
-    ; CHECK: liveins: $arguments
-    ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[ARGUMENT_i64_:%[0-9]+]]:i64 = ARGUMENT_i64 0, implicit $arguments
-    ; CHECK-NEXT: [[CTZ_I64_:%[0-9]+]]:i64 = CTZ_I64 [[ARGUMENT_i64_]], implicit-def dead $arguments
-    ; CHECK-NEXT: RETURN [[CTZ_I64_]], implicit-def $arguments
-    %0:i64(s64) = ARGUMENT_i64 0, implicit $arguments
-    %1:i64regbank(s64) = G_CTTZ_ZERO_UNDEF %0
     RETURN %1(s64), implicit-def $arguments
 ...
 
