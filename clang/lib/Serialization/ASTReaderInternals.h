@@ -61,7 +61,7 @@ public:
       // Just use a linear scan unless we have more than a few IDs.
       if (Found.empty() && !Data.empty()) {
         if (Data.size() <= 4) {
-          for (auto I : Found)
+          for (auto I : Data)
             if (I == ID)
               return;
           Data.push_back(ID);
@@ -183,7 +183,7 @@ public:
       // Just use a linear scan unless we have more than a few IDs.
       if (Found.empty() && !Data.empty()) {
         if (Data.size() <= 4) {
-          for (auto I : Found)
+          for (auto I : Data)
             if (I == Info)
               return;
           Data.push_back(Info);

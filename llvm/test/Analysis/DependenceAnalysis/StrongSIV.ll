@@ -114,17 +114,17 @@ for.end:                                          ; preds = %for.end.loopexit, %
 define void @strong2(ptr %A, ptr %B, i64 %n) nounwind uwtable ssp {
 ; CHECK-LABEL: 'strong2'
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: store i32 %conv, ptr %arrayidx, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - output [*]!
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: %0 = load i32, ptr %arrayidx1, align 4
-; CHECK-NEXT:    da analyze - flow [2]!
+; CHECK-NEXT:    da analyze - flow [*|<]!
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: store i32 %0, ptr %B.addr.02, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx1, align 4 --> Dst: %0 = load i32, ptr %arrayidx1, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - input [*]!
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx1, align 4 --> Dst: store i32 %0, ptr %B.addr.02, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: store i32 %0, ptr %B.addr.02, align 4 --> Dst: store i32 %0, ptr %B.addr.02, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - output [*]!
 ;
 entry:
   %cmp1 = icmp eq i64 %n, 0
@@ -385,7 +385,7 @@ for.end:                                          ; preds = %for.body
 define void @strong8(ptr %A, ptr %B, i64 %n) nounwind uwtable ssp {
 ; CHECK-LABEL: 'strong8'
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: store i32 %conv, ptr %arrayidx, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - output [*]!
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: %0 = load i32, ptr %arrayidx1, align 4
 ; CHECK-NEXT:    da analyze - flow [*|<]!
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: store i32 %0, ptr %B.addr.01, align 4
@@ -427,17 +427,17 @@ for.end:                                          ; preds = %for.body
 define void @strong9(ptr %A, ptr %B, i64 %n) nounwind uwtable ssp {
 ; CHECK-LABEL: 'strong9'
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: store i32 %conv, ptr %arrayidx, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - output [*]!
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: %0 = load i32, ptr %arrayidx2, align 4
 ; CHECK-NEXT:    da analyze - flow [*|<]!
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: store i32 %0, ptr %B.addr.02, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx2, align 4 --> Dst: %0 = load i32, ptr %arrayidx2, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - input [*]!
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx2, align 4 --> Dst: store i32 %0, ptr %B.addr.02, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: store i32 %0, ptr %B.addr.02, align 4 --> Dst: store i32 %0, ptr %B.addr.02, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - output [*]!
 ;
 entry:
   %cmp1 = icmp eq i64 %n, 0
@@ -478,19 +478,13 @@ for.end:                                          ; preds = %for.end.loopexit, %
 define void @strong10(ptr %A, ptr %B, i64 %n) nounwind uwtable ssp {
 ; CHECK-LABEL: 'strong10'
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: store i32 %conv, ptr %arrayidx, align 4
-; CHECK-NEXT:    da analyze - output [0]!
-; CHECK-NEXT:    Runtime Assumptions:
-; CHECK-NEXT:    Compare predicate: (4 * %n) ne) 0
+; CHECK-NEXT:    da analyze - output [*]!
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: %0 = load i32, ptr %arrayidx3, align 4
-; CHECK-NEXT:    da analyze - flow [0|<]!
-; CHECK-NEXT:    Runtime Assumptions:
-; CHECK-NEXT:    Compare predicate: (4 * %n) ne) 0
+; CHECK-NEXT:    da analyze - flow [*|<]!
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: store i32 %0, ptr %B.addr.01, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx3, align 4 --> Dst: %0 = load i32, ptr %arrayidx3, align 4
-; CHECK-NEXT:    da analyze - input [0]!
-; CHECK-NEXT:    Runtime Assumptions:
-; CHECK-NEXT:    Compare predicate: (4 * %n) ne) 0
+; CHECK-NEXT:    da analyze - input [*]!
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx3, align 4 --> Dst: store i32 %0, ptr %B.addr.01, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: store i32 %0, ptr %B.addr.01, align 4 --> Dst: store i32 %0, ptr %B.addr.01, align 4
@@ -528,13 +522,9 @@ for.end:                                          ; preds = %for.body
 ;;        A[i] = 0;
 
 define void @strong11(ptr %A) nounwind uwtable ssp {
-; CHECK-ALL-LABEL: 'strong11'
-; CHECK-ALL-NEXT:  Src: store i32 0, ptr %arrayidx, align 4 --> Dst: store i32 0, ptr %arrayidx, align 4
-; CHECK-ALL-NEXT:    da analyze - none!
-;
-; CHECK-STRONG-SIV-LABEL: 'strong11'
-; CHECK-STRONG-SIV-NEXT:  Src: store i32 0, ptr %arrayidx, align 4 --> Dst: store i32 0, ptr %arrayidx, align 4
-; CHECK-STRONG-SIV-NEXT:    da analyze - output [0 S]!
+; CHECK-LABEL: 'strong11'
+; CHECK-NEXT:  Src: store i32 0, ptr %arrayidx, align 4 --> Dst: store i32 0, ptr %arrayidx, align 4
+; CHECK-NEXT:    da analyze - output [* S]!
 ;
 entry:
   br label %for.cond1.preheader
@@ -560,3 +550,6 @@ for.cond.cleanup3:                                ; preds = %for.body4.us, %for.
   %exitcond19.not = icmp eq i64 %inc8, 9223372036854775806
   br i1 %exitcond19.not, label %for.cond.cleanup, label %for.cond1.preheader
 }
+;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; CHECK-ALL: {{.*}}
+; CHECK-STRONG-SIV: {{.*}}

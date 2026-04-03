@@ -15,12 +15,14 @@
 #include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaHLSL.h"
+#include "clang/Sema/TemplateDeduction.h"
 #include "llvm/ADT/SmallVector.h"
 
 using namespace clang;
@@ -256,6 +258,9 @@ static BuiltinTypeDeclBuilder setupTextureType(CXXRecordDecl *Decl, Sema &S,
                                                ResourceDimension Dim) {
   return BuiltinTypeDeclBuilder(S, Decl)
       .addTextureHandle(RC, IsROV, Dim)
+      .addTextureLoadMethods(Dim)
+      .addArraySubscriptOperators(Dim)
+      .addMipsMember(Dim)
       .addDefaultHandleConstructor()
       .addCopyConstructor()
       .addCopyAssignmentOperator()
@@ -265,7 +270,74 @@ static BuiltinTypeDeclBuilder setupTextureType(CXXRecordDecl *Decl, Sema &S,
       .addSampleGradMethods(Dim)
       .addSampleLevelMethods(Dim)
       .addSampleCmpMethods(Dim)
-      .addSampleCmpLevelZeroMethods(Dim);
+      .addSampleCmpLevelZeroMethods(Dim)
+      .addCalculateLodMethods(Dim)
+      .addGetDimensionsMethods(Dim)
+      .addGatherMethods(Dim)
+      .addGatherCmpMethods(Dim);
+}
+
+// Add a partial specialization for a template. The `TextureTemplate` is
+// `Texture<element_type>`, and it will be specialized for vectors:
+// `Texture<vector<element_type, element_count>>`.
+static ClassTemplatePartialSpecializationDecl *
+addVectorTexturePartialSpecialization(Sema &S, NamespaceDecl *HLSLNamespace,
+                                      ClassTemplateDecl *TextureTemplate) {
+  ASTContext &AST = S.getASTContext();
+
+  // Create the template parameters: element_type and element_count.
+  auto *ElementType = TemplateTypeParmDecl::Create(
+      AST, HLSLNamespace, SourceLocation(), SourceLocation(), 0, 0,
+      &AST.Idents.get("element_type"), false, false);
+  auto *ElementCount = NonTypeTemplateParmDecl::Create(
+      AST, HLSLNamespace, SourceLocation(), SourceLocation(), 0, 1,
+      &AST.Idents.get("element_count"), AST.IntTy, false,
+      AST.getTrivialTypeSourceInfo(AST.IntTy));
+
+  auto *TemplateParams = TemplateParameterList::Create(
+      AST, SourceLocation(), SourceLocation(), {ElementType, ElementCount},
+      SourceLocation(), nullptr);
+
+  // Create the dependent vector type: vector<element_type, element_count>.
+  QualType VectorType = AST.getDependentSizedExtVectorType(
+      AST.getTemplateTypeParmType(0, 0, false, ElementType),
+      DeclRefExpr::Create(
+          AST, NestedNameSpecifierLoc(), SourceLocation(), ElementCount, false,
+          DeclarationNameInfo(ElementCount->getDeclName(), SourceLocation()),
+          AST.IntTy, VK_LValue),
+      SourceLocation());
+
+  // Create the partial specialization declaration.
+  QualType CanonInjectedTST =
+      AST.getCanonicalType(AST.getTemplateSpecializationType(
+          ElaboratedTypeKeyword::Class, TemplateName(TextureTemplate),
+          {TemplateArgument(VectorType)}, {}));
+
+  auto *PartialSpec = ClassTemplatePartialSpecializationDecl::Create(
+      AST, TagDecl::TagKind::Class, HLSLNamespace, SourceLocation(),
+      SourceLocation(), TemplateParams, TextureTemplate,
+      {TemplateArgument(VectorType)},
+      CanQualType::CreateUnsafe(CanonInjectedTST), nullptr);
+
+  // Set the template arguments as written.
+  TemplateArgument Arg(VectorType);
+  TemplateArgumentLoc ArgLoc =
+      S.getTrivialTemplateArgumentLoc(Arg, QualType(), SourceLocation());
+  TemplateArgumentListInfo ArgsInfo =
+      TemplateArgumentListInfo(SourceLocation(), SourceLocation());
+  ArgsInfo.addArgument(ArgLoc);
+  PartialSpec->setTemplateArgsAsWritten(
+      ASTTemplateArgumentListInfo::Create(AST, ArgsInfo));
+
+  PartialSpec->setImplicit(true);
+  PartialSpec->setLexicalDeclContext(HLSLNamespace);
+  PartialSpec->setHasExternalLexicalStorage();
+
+  // Add the partial specialization to the namespace and the class template.
+  HLSLNamespace->addDecl(PartialSpec);
+  TextureTemplate->AddPartialSpecialization(PartialSpec, nullptr);
+
+  return PartialSpec;
 }
 
 // This function is responsible for constructing the constraint expression for
@@ -393,6 +465,7 @@ static ConceptDecl *constructBufferConceptDecl(Sema &S, NamespaceDecl *NSD,
 }
 
 void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
+  ASTContext &AST = SemaPtr->getASTContext();
   CXXRecordDecl *Decl;
   ConceptDecl *TypedBufferConcept = constructBufferConceptDecl(
       *SemaPtr, HLSLNamespace, /*isTypedBuffer*/ true);
@@ -545,10 +618,21 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
     setupSamplerType(Decl, *SemaPtr).completeDefinition();
   });
 
+  QualType Float4Ty = AST.getExtVectorType(AST.FloatTy, 4);
   Decl = BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "Texture2D")
-             .addSimpleTemplateParams({"element_type"}, TypedBufferConcept)
+             .addSimpleTemplateParams({"element_type"}, {Float4Ty},
+                                      TypedBufferConcept)
              .finalizeForwardDeclaration();
+
   onCompletion(Decl, [this](CXXRecordDecl *Decl) {
+    setupTextureType(Decl, *SemaPtr, ResourceClass::SRV, /*IsROV=*/false,
+                     ResourceDimension::Dim2D)
+        .completeDefinition();
+  });
+
+  auto *PartialSpec = addVectorTexturePartialSpecialization(
+      *SemaPtr, HLSLNamespace, Decl->getDescribedClassTemplate());
+  onCompletion(PartialSpec, [this](CXXRecordDecl *Decl) {
     setupTextureType(Decl, *SemaPtr, ResourceClass::SRV, /*IsROV=*/false,
                      ResourceDimension::Dim2D)
         .completeDefinition();
@@ -568,8 +652,27 @@ void HLSLExternalSemaSource::CompleteType(TagDecl *Tag) {
 
   // If this is a specialization, we need to get the underlying templated
   // declaration and complete that.
-  if (auto TDecl = dyn_cast<ClassTemplateSpecializationDecl>(Record))
-    Record = TDecl->getSpecializedTemplate()->getTemplatedDecl();
+  if (auto TDecl = dyn_cast<ClassTemplateSpecializationDecl>(Record)) {
+    if (!isa<ClassTemplatePartialSpecializationDecl>(TDecl)) {
+      ClassTemplateDecl *Template = TDecl->getSpecializedTemplate();
+      llvm::SmallVector<ClassTemplatePartialSpecializationDecl *, 4> Partials;
+      Template->getPartialSpecializations(Partials);
+      ClassTemplatePartialSpecializationDecl *MatchedPartial = nullptr;
+      for (auto *Partial : Partials) {
+        sema::TemplateDeductionInfo Info(TDecl->getLocation());
+        if (SemaPtr->DeduceTemplateArguments(Partial, TDecl->getTemplateArgs(),
+                                             Info) ==
+            TemplateDeductionResult::Success) {
+          MatchedPartial = Partial;
+          break;
+        }
+      }
+      if (MatchedPartial)
+        Record = MatchedPartial;
+      else
+        Record = Template->getTemplatedDecl();
+    }
+  }
   Record = Record->getCanonicalDecl();
   auto It = Completions.find(Record);
   if (It == Completions.end())

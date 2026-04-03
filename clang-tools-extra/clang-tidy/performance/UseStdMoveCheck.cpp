@@ -15,6 +15,7 @@
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Analysis/Analyses/CFGReachabilityAnalysis.h"
 #include "clang/Lex/Lexer.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 
 using namespace clang::ast_matchers;
@@ -22,8 +23,16 @@ using namespace clang::ast_matchers;
 namespace clang::tidy::performance {
 
 namespace {
-AST_MATCHER(CXXRecordDecl, hasNonTrivialMoveAssignment) {
-  return Node.hasNonTrivialMoveAssignment();
+AST_MATCHER(CXXRecordDecl, hasAccessibleNonTrivialMoveAssignment) {
+  const CXXRecordDecl *ND = Node.getDefinition();
+  if (!ND)
+    return false;
+  if (!ND->hasNonTrivialMoveAssignment())
+    return false;
+  for (const CXXMethodDecl *CM : ND->methods())
+    if (CM->isMoveAssignmentOperator())
+      return !CM->isDeleted() && CM->getAccess() == AS_public;
+  llvm_unreachable("Move Assignment Operator Not Found");
 }
 
 AST_MATCHER(QualType, isLValueReferenceType) {
@@ -53,7 +62,8 @@ void UseStdMoveCheck::registerMatchers(MatchFinder *Finder) {
   auto AssignOperatorExpr =
       cxxOperatorCallExpr(
           isCopyAssignmentOperator(),
-          hasArgument(0, hasType(cxxRecordDecl(hasNonTrivialMoveAssignment()))),
+          hasArgument(0, hasType(cxxRecordDecl(
+                             hasAccessibleNonTrivialMoveAssignment()))),
           hasArgument(
               1, declRefExpr(
                      to(varDecl(
@@ -93,14 +103,42 @@ void UseStdMoveCheck::check(const MatchFinder::MatchResult &Result) {
   if (!TheCFG)
     return;
 
-  // Walk the CFG bottom-up, starting with the exit node.
-  // TODO: traverse the whole CFG instead of only considering terminator
-  // nodes.
+  // The algorithm to look for a convertible move-assign operator is the
+  // following: each node starts in the `Ready` state, with a number of
+  // `RemainingSuccessors` equal to its number of successors.
+  //
+  // Starting from the exit node, we walk the CFG backward. Whenever
+  // we meet a new block, we check if it either:
+  // 1. touches the `AssignValue`, in which case we stop the search, and mark
+  //    each predecessor as not `Ready`. No predecessor walk.
+  // 2. contains a convertible copy-assign operator, in which case we generate a
+  //    fix, and mark each predecessor as not Ready. No predecessor walk.
+  // 3. does not interact with `AssignValue`, in which case we decrement the
+  //    `RemainingSuccessors` of each predecessor. And if it happens to turn to
+  //    0 while still being `Ready`, we add it to the `WorkList`.
+
+  struct BlockState {
+    bool Ready;
+    unsigned RemainingSuccessors;
+  };
+  llvm::DenseMap<const CFGBlock *, BlockState> CFGState;
+  for (const auto *B : *TheCFG)
+    CFGState.try_emplace(B, BlockState{true, B->succ_size()});
+
   const CFGBlock &TheExit = TheCFG->getExit();
-  for (auto &Pred : TheExit.preds()) {
-    if (!Pred.isReachable())
+  std::vector<const CFGBlock *> WorkList = {&TheExit};
+
+  while (!WorkList.empty()) {
+    const CFGBlock *B = WorkList.back();
+    WorkList.pop_back();
+    const BlockState &BS = CFGState.find(B)->second;
+    if (!BS.Ready)
       continue;
-    for (const CFGElement &Elt : llvm::reverse(*Pred)) {
+
+    assert(BS.RemainingSuccessors == 0 &&
+           "All successors have been processed.");
+    bool ReferencesAssignedValue = false;
+    for (const CFGElement &Elt : llvm::reverse(*B)) {
       if (Elt.getKind() != CFGElement::Kind::Statement)
         continue;
 
@@ -112,13 +150,36 @@ void UseStdMoveCheck::check(const MatchFinder::MatchResult &Result) {
             << FixItHint::CreateReplacement(
                    AssignValue->getLocation(),
                    ("std::move(" + AssignValueName + ")").str());
+        ReferencesAssignedValue = true;
         break;
       }
-      // The reference is being referenced after the assignment, bail out.
+
+      // The reference is being referenced after the assignment.
       if (!allDeclRefExprs(*cast<VarDecl>(AssignValue->getDecl()), *EltStmt,
                            *Result.Context)
-               .empty())
+               .empty()) {
+        ReferencesAssignedValue = true;
         break;
+      }
+    }
+    if (ReferencesAssignedValue) {
+      // Cancel all predecessors.
+      for (const auto &S : B->preds()) {
+        if (!S.isReachable())
+          continue;
+        CFGState.find(&*S)->second.Ready = false;
+      }
+    } else {
+      // Or process the ready ones.
+      for (const auto &S : B->preds()) {
+        if (!S.isReachable())
+          continue;
+        auto &W = CFGState.find(&*S)->second;
+        if (W.Ready) {
+          if (--W.RemainingSuccessors == 0)
+            WorkList.push_back(&*S);
+        }
+      }
     }
   }
 }

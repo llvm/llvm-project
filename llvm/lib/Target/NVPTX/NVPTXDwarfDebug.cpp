@@ -13,14 +13,17 @@
 
 #include "NVPTXDwarfDebug.h"
 #include "NVPTXSubtarget.h"
+#include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/GlobalVariable.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/NVPTXAddrSpace.h"
 #include "llvm/Target/TargetMachine.h"
 
 using namespace llvm;
@@ -33,7 +36,17 @@ static cl::opt<bool> LineInfoWithInlinedAt(
     cl::desc("Emit line with inlined_at enhancement for NVPTX"), cl::init(true),
     cl::Hidden);
 
-NVPTXDwarfDebug::NVPTXDwarfDebug(AsmPrinter *A) : DwarfDebug(A) {}
+NVPTXDwarfDebug::NVPTXDwarfDebug(AsmPrinter *A) : DwarfDebug(A) {
+  // PTX emits debug strings inline (no .debug_str section), does not support
+  // .debug_ranges, and uses sections as references (no temp symbols inside
+  // DWARF sections).  DWARF v2 is the default for NVPTX and does not support
+  // accelerator tables.
+  setUseInlineStrings(true);
+  setUseRangesSection(false);
+  setUseSectionsAsReferences(true);
+  Asm->OutStreamer->getContext().setDwarfVersion(2);
+  setTheAccelTableKind(AccelTableKind::None);
+}
 
 /// NVPTX-specific source line recording with inlined_at support.
 ///
@@ -172,6 +185,90 @@ void NVPTXDwarfDebug::recordTargetSourceLine(const DebugLoc &DL,
 
 /// NVPTX-specific debug info initialization.
 void NVPTXDwarfDebug::initializeTargetDebugInfo(const MachineFunction &MF) {
-  // Clear the set of emitted inlined_at locations for each new function.
   EmittedInlinedAtLocs.clear();
+}
+
+// PTX does not support subtracting labels from the code section in the
+// debug_loc section.  To work around this, the NVPTX backend needs the
+// compile unit to have no low_pc in order to have a zero base_address
+// when handling debug_loc in cuda-gdb.
+bool NVPTXDwarfDebug::shouldAttachCompileUnitRanges() const {
+  return !tuneForGDB();
+}
+
+// Same label-subtraction limitation as above: cuda-gdb doesn't handle
+// setting a per-variable base to zero, so we emit labels with no base
+// while having no compile unit low_pc.
+bool NVPTXDwarfDebug::shouldResetBaseAddress(const MCSection &Section) const {
+  return tuneForGDB();
+}
+
+static unsigned translateToNVVMDWARFAddrSpace(unsigned AddrSpace) {
+  switch (AddrSpace) {
+  case NVPTXAS::ADDRESS_SPACE_GENERIC:
+    return NVPTXAS::DWARF_ADDR_generic_space;
+  case NVPTXAS::ADDRESS_SPACE_GLOBAL:
+    return NVPTXAS::DWARF_ADDR_global_space;
+  case NVPTXAS::ADDRESS_SPACE_SHARED:
+    return NVPTXAS::DWARF_ADDR_shared_space;
+  case NVPTXAS::ADDRESS_SPACE_CONST:
+    return NVPTXAS::DWARF_ADDR_const_space;
+  case NVPTXAS::ADDRESS_SPACE_LOCAL:
+    return NVPTXAS::DWARF_ADDR_local_space;
+  default:
+    llvm_unreachable(
+        "Cannot translate unknown address space to DWARF address space");
+    return AddrSpace;
+  }
+}
+
+// cuda-gdb requires DW_AT_address_class on variable DIEs.  The address space
+// is encoded in the DIExpression as a DW_OP_constu <DWARF Address Space>
+// DW_OP_swap DW_OP_xderef sequence.  We strip that sequence from the
+// expression and return the address space so the caller can emit
+// DW_AT_address_class separately.
+const DIExpression *NVPTXDwarfDebug::adjustExpressionForTarget(
+    const DIExpression *Expr, std::optional<unsigned> &TargetAddrSpace) const {
+  if (!tuneForGDB())
+    return Expr;
+  unsigned LocalAddrSpace;
+  const DIExpression *NewExpr =
+      DIExpression::extractAddressClass(Expr, LocalAddrSpace);
+  if (NewExpr != Expr) {
+    TargetAddrSpace = LocalAddrSpace;
+    return NewExpr;
+  }
+  return Expr;
+}
+
+// Emit DW_AT_address_class for cuda-gdb.  See NVPTXAS::DWARF_AddressSpace.
+//
+// The address class depends on the variable's storage kind:
+//   Global:     from the expression (if encoded) or the IR address space
+//   Register:   DWARF_ADDR_reg_space (no expression means register location)
+//   FrameIndex: from the expression (if encoded) or DWARF_ADDR_local_space
+void NVPTXDwarfDebug::addTargetVariableAttributes(
+    DwarfCompileUnit &CU, DIE &Die, std::optional<unsigned> TargetAddrSpace,
+    VariableLocationKind VarLocKind, const GlobalVariable *GV) const {
+  if (!tuneForGDB())
+    return;
+
+  unsigned DefaultAddrSpace = NVPTXAS::DWARF_ADDR_global_space;
+  switch (VarLocKind) {
+  case VariableLocationKind::Global:
+    if (!TargetAddrSpace && GV)
+      TargetAddrSpace =
+          translateToNVVMDWARFAddrSpace(GV->getType()->getAddressSpace());
+    DefaultAddrSpace = NVPTXAS::DWARF_ADDR_global_space;
+    break;
+  case VariableLocationKind::Register:
+    DefaultAddrSpace = NVPTXAS::DWARF_ADDR_reg_space;
+    break;
+  case VariableLocationKind::FrameIndex:
+    DefaultAddrSpace = NVPTXAS::DWARF_ADDR_local_space;
+    break;
+  }
+
+  CU.addUInt(Die, dwarf::DW_AT_address_class, dwarf::DW_FORM_data1,
+             TargetAddrSpace.value_or(DefaultAddrSpace));
 }

@@ -26,6 +26,7 @@
 #include "lldb/Target/Unwind.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/ConvertUTF.h"
 
@@ -78,6 +79,16 @@ bool SyntheticStackFrameList::FetchFramesUpTo(
           m_thread.GetProcess()->GetTarget().GetDebugger().InterruptRequested())
         return true;
 
+      // Ensure the provider sees its parent StackFrameList, not the
+      // synthetic list being constructed. In a chain A->B->C, provider C
+      // must consult B's output - using its own list would be nonsensical.
+      // This also applies when the provider runs commands or expressions:
+      // any path that fetches a StackFrameList should transparently get the
+      // parent list. As a side benefit, this avoids circular re-entrancy and
+      // deadlocks on the private state thread.
+      m_thread.PushProviderFrameList(m_input_frames);
+      auto clear_active_frames =
+          llvm::scope_exit([&]() { m_thread.PopProviderFrameList(); });
       auto frame_or_err = m_provider->GetFrameAtIndex(idx);
 
       if (!frame_or_err) {
@@ -118,11 +129,9 @@ uint32_t StackFrameList::GetCurrentInlinedDepth() {
     if (cur_pc != m_current_inlined_pc) {
       m_current_inlined_pc = LLDB_INVALID_ADDRESS;
       m_current_inlined_depth = UINT32_MAX;
-      Log *log = GetLog(LLDBLog::Step);
-      if (log && log->GetVerbose())
-        LLDB_LOGF(
-            log,
-            "GetCurrentInlinedDepth: invalidating current inlined depth.\n");
+      LLDB_LOGF_VERBOSE(
+          GetLog(LLDBLog::Step),
+          "GetCurrentInlinedDepth: invalidating current inlined depth.\n");
     }
     return m_current_inlined_depth;
   } else {
@@ -147,19 +156,16 @@ void StackFrameList::ResetCurrentInlinedDepth() {
     m_current_inlined_depth = *inline_depth;
     m_current_inlined_pc = m_thread.GetRegisterContext()->GetPC();
 
-    if (log && log->GetVerbose())
-      LLDB_LOGF(log,
-                "ResetCurrentInlinedDepth: setting inlined "
-                "depth: %d 0x%" PRIx64 ".\n",
-                m_current_inlined_depth, m_current_inlined_pc);
+    LLDB_LOGF_VERBOSE(log,
+                      "ResetCurrentInlinedDepth: setting inlined "
+                      "depth: %d 0x%" PRIx64 ".\n",
+                      m_current_inlined_depth, m_current_inlined_pc);
   } else {
     std::lock_guard<std::mutex> guard(m_inlined_depth_mutex);
     m_current_inlined_pc = LLDB_INVALID_ADDRESS;
     m_current_inlined_depth = UINT32_MAX;
-    if (log && log->GetVerbose())
-      LLDB_LOGF(
-          log,
-          "ResetCurrentInlinedDepth: Invalidating current inlined depth.\n");
+    LLDB_LOGF_VERBOSE(
+        log, "ResetCurrentInlinedDepth: Invalidating current inlined depth.\n");
   }
 }
 
@@ -210,30 +216,33 @@ static void FindInterveningFrames(Function &begin, Function &end,
                                   ExecutionContext &exe_ctx, Target &target,
                                   addr_t return_pc, CallSequence &path,
                                   ModuleList &images, Log *log) {
-  LLDB_LOG(log, "Finding frames between {0} and {1}, retn-pc={2:x}",
-           begin.GetDisplayName(), end.GetDisplayName(), return_pc);
+  LLDB_LOG_VERBOSE(log, "Finding frames between {0} and {1}, retn-pc={2:x}",
+                   begin.GetDisplayName(), end.GetDisplayName(), return_pc);
 
   // Find a non-tail calling edge with the correct return PC.
   if (log)
     for (const auto &edge : begin.GetCallEdges())
-      LLDB_LOG(log, "FindInterveningFrames: found call with retn-PC = {0:x}",
-               edge->GetReturnPCAddress(begin, target));
+      LLDB_LOG_VERBOSE(log,
+                       "FindInterveningFrames: found call with retn-PC = {0:x}",
+                       edge->GetReturnPCAddress(begin, target));
   CallEdge *first_edge = begin.GetCallEdgeForReturnAddress(return_pc, target);
   if (!first_edge) {
-    LLDB_LOG(log, "No call edge outgoing from {0} with retn-PC == {1:x}",
-             begin.GetDisplayName(), return_pc);
+    LLDB_LOG_VERBOSE(log,
+                     "No call edge outgoing from {0} with retn-PC == {1:x}",
+                     begin.GetDisplayName(), return_pc);
     return;
   }
 
   // The first callee may not be resolved, or there may be nothing to fill in.
   Function *first_callee = first_edge->GetCallee(images, exe_ctx);
   if (!first_callee) {
-    LLDB_LOG(log, "Could not resolve callee");
+    LLDB_LOG_VERBOSE(log, "Could not resolve callee");
     return;
   }
   if (first_callee == &end) {
-    LLDB_LOG(log, "Not searching further, first callee is {0} (retn-PC: {1:x})",
-             end.GetDisplayName(), return_pc);
+    LLDB_LOG_VERBOSE(
+        log, "Not searching further, first callee is {0} (retn-PC: {1:x})",
+        end.GetDisplayName(), return_pc);
     return;
   }
 

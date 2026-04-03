@@ -620,6 +620,7 @@ static bool isSimpleAPValue(const APValue &Value) {
   case APValue::Vector:
   case APValue::Array:
   case APValue::Struct:
+  case APValue::Matrix:
     return false;
   case APValue::Union:
     return isSimpleAPValue(Value.getUnionValue());
@@ -810,6 +811,19 @@ void TextNodeDumper::Visit(const APValue &Value, QualType Ty) {
         },
         Value.getStructNumFields(), "field", "fields");
 
+    return;
+  }
+  case APValue::Matrix: {
+    unsigned NumRows = Value.getMatrixNumRows();
+    unsigned NumCols = Value.getMatrixNumColumns();
+    OS << "Matrix " << NumRows << "x" << NumCols;
+
+    dumpAPValueChildren(
+        Value, Ty,
+        [](const APValue &Value, unsigned Index) -> const APValue & {
+          return Value.getMatrixElt(Index);
+        },
+        Value.getMatrixNumElements(), "element", "elements");
     return;
   }
   case APValue::Union: {
@@ -2213,17 +2227,33 @@ void TextNodeDumper::VisitSubstTemplateTypeParmPackType(
   VisitTemplateTypeParmDecl(T->getReplacedParameter());
 }
 
-void TextNodeDumper::VisitAutoType(const AutoType *T) {
-  if (T->isDecltypeAuto())
-    OS << " decltype(auto)";
-  if (!T->isDeduced())
+void TextNodeDumper::VisitDeducedType(const DeducedType *T) {
+  switch (T->getDeducedKind()) {
+  case DeducedKind::Undeduced:
     OS << " undeduced";
+    break;
+  case DeducedKind::Deduced:
+    break;
+  case DeducedKind::DeducedAsDependent:
+    OS << " deduced-as-dependent";
+    break;
+  case DeducedKind::DeducedAsPack:
+    OS << " deduced-as-pack";
+    break;
+  }
+}
+
+void TextNodeDumper::VisitAutoType(const AutoType *T) {
+  VisitDeducedType(T);
+  // Not necessary to dump the keyword since it's spelled plainly in the printed
+  // type anyway.
   if (T->isConstrained())
     dumpDeclRef(T->getTypeConstraintConcept());
 }
 
 void TextNodeDumper::VisitDeducedTemplateSpecializationType(
     const DeducedTemplateSpecializationType *T) {
+  VisitDeducedType(T);
   dumpTemplateName(T->getTemplateName(), "name");
 }
 

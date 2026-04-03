@@ -13,8 +13,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_TARGET_SPIRV_SPIRVTYPEMANAGER_H
-#define LLVM_LIB_TARGET_SPIRV_SPIRVTYPEMANAGER_H
+#ifndef LLVM_LIB_TARGET_SPIRV_SPIRVGLOBALREGISTRY_H
+#define LLVM_LIB_TARGET_SPIRV_SPIRVGLOBALREGISTRY_H
 
 #include "MCTargetDesc/SPIRVBaseInfo.h"
 #include "SPIRVIRMapping.h"
@@ -369,7 +369,7 @@ public:
 
   // Return true if the type is an aggregate type.
   bool isAggregateType(SPIRVTypeInst Type) const {
-    return Type && (Type->getOpcode() == SPIRV::OpTypeStruct &&
+    return Type && (Type->getOpcode() == SPIRV::OpTypeStruct ||
                     Type->getOpcode() == SPIRV::OpTypeArray);
   }
 
@@ -691,4 +691,4 @@ public:
   void updateAssignType(CallInst *AssignCI, Value *Arg, Value *OfType);
 };
 } // end namespace llvm
-#endif // LLLVM_LIB_TARGET_SPIRV_SPIRVTYPEMANAGER_H
+#endif // LLVM_LIB_TARGET_SPIRV_SPIRVGLOBALREGISTRY_H

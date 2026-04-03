@@ -51,33 +51,32 @@ define <32 x i16> @var_shift_v32i16(<32 x i16> %a, <32 x i16> %b) nounwind {
 define <64 x i8> @var_shift_v64i8(<64 x i8> %a, <64 x i8> %b) nounwind {
 ; AVX512DQ-LABEL: var_shift_v64i8:
 ; AVX512DQ:       # %bb.0:
-; AVX512DQ-NEXT:    vextracti64x4 $1, %zmm0, %ymm2
-; AVX512DQ-NEXT:    vpsllw $4, %ymm2, %ymm3
-; AVX512DQ-NEXT:    vpbroadcastb {{.*#+}} ymm4 = [240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240]
-; AVX512DQ-NEXT:    vpand %ymm4, %ymm3, %ymm3
+; AVX512DQ-NEXT:    vpbroadcastb {{.*#+}} ymm2 = [240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240]
+; AVX512DQ-NEXT:    vextracti64x4 $1, %zmm0, %ymm3
+; AVX512DQ-NEXT:    vpsllw $4, %ymm3, %ymm4
+; AVX512DQ-NEXT:    vpand %ymm2, %ymm4, %ymm4
 ; AVX512DQ-NEXT:    vextracti64x4 $1, %zmm1, %ymm5
 ; AVX512DQ-NEXT:    vpsllw $5, %ymm5, %ymm5
-; AVX512DQ-NEXT:    vpblendvb %ymm5, %ymm3, %ymm2, %ymm2
-; AVX512DQ-NEXT:    vpsllw $2, %ymm2, %ymm3
-; AVX512DQ-NEXT:    vpbroadcastb {{.*#+}} ymm6 = [252,252,252,252,252,252,252,252,252,252,252,252,252,252,252,252,252,252,252,252,252,252,252,252,252,252,252,252,252,252,252,252]
-; AVX512DQ-NEXT:    vpand %ymm6, %ymm3, %ymm3
+; AVX512DQ-NEXT:    vpblendvb %ymm5, %ymm4, %ymm3, %ymm3
+; AVX512DQ-NEXT:    vpaddb %ymm3, %ymm3, %ymm4
+; AVX512DQ-NEXT:    vpaddb %ymm4, %ymm4, %ymm4
 ; AVX512DQ-NEXT:    vpaddb %ymm5, %ymm5, %ymm5
-; AVX512DQ-NEXT:    vpblendvb %ymm5, %ymm3, %ymm2, %ymm2
-; AVX512DQ-NEXT:    vpaddb %ymm2, %ymm2, %ymm3
+; AVX512DQ-NEXT:    vpblendvb %ymm5, %ymm4, %ymm3, %ymm3
+; AVX512DQ-NEXT:    vpaddb %ymm3, %ymm3, %ymm4
 ; AVX512DQ-NEXT:    vpaddb %ymm5, %ymm5, %ymm5
-; AVX512DQ-NEXT:    vpblendvb %ymm5, %ymm3, %ymm2, %ymm2
-; AVX512DQ-NEXT:    vpsllw $4, %ymm0, %ymm3
-; AVX512DQ-NEXT:    vpand %ymm4, %ymm3, %ymm3
+; AVX512DQ-NEXT:    vpblendvb %ymm5, %ymm4, %ymm3, %ymm3
+; AVX512DQ-NEXT:    vpsllw $4, %ymm0, %ymm4
+; AVX512DQ-NEXT:    vpand %ymm2, %ymm4, %ymm2
 ; AVX512DQ-NEXT:    vpsllw $5, %ymm1, %ymm1
-; AVX512DQ-NEXT:    vpblendvb %ymm1, %ymm3, %ymm0, %ymm0
-; AVX512DQ-NEXT:    vpsllw $2, %ymm0, %ymm3
-; AVX512DQ-NEXT:    vpand %ymm6, %ymm3, %ymm3
+; AVX512DQ-NEXT:    vpblendvb %ymm1, %ymm2, %ymm0, %ymm0
+; AVX512DQ-NEXT:    vpaddb %ymm0, %ymm0, %ymm2
+; AVX512DQ-NEXT:    vpaddb %ymm2, %ymm2, %ymm2
 ; AVX512DQ-NEXT:    vpaddb %ymm1, %ymm1, %ymm1
-; AVX512DQ-NEXT:    vpblendvb %ymm1, %ymm3, %ymm0, %ymm0
-; AVX512DQ-NEXT:    vpaddb %ymm0, %ymm0, %ymm3
+; AVX512DQ-NEXT:    vpblendvb %ymm1, %ymm2, %ymm0, %ymm0
+; AVX512DQ-NEXT:    vpaddb %ymm0, %ymm0, %ymm2
 ; AVX512DQ-NEXT:    vpaddb %ymm1, %ymm1, %ymm1
-; AVX512DQ-NEXT:    vpblendvb %ymm1, %ymm3, %ymm0, %ymm0
-; AVX512DQ-NEXT:    vinserti64x4 $1, %ymm2, %zmm0, %zmm0
+; AVX512DQ-NEXT:    vpblendvb %ymm1, %ymm2, %ymm0, %ymm0
+; AVX512DQ-NEXT:    vinserti64x4 $1, %ymm3, %zmm0, %zmm0
 ; AVX512DQ-NEXT:    retq
 ;
 ; AVX512BW-LABEL: var_shift_v64i8:

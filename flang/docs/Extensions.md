@@ -159,11 +159,6 @@ end
   to be constant will generate a compilation error. `ieee_support_standard`
   depends in part on `ieee_support_halting`, so this also applies to
   `ieee_support_standard` calls.
-* F'2023 constraint C7108 prohibits the use of a structure constructor
-  that could also be interpreted as a generic function reference.
-  No other Fortran compiler enforces C7108 (to our knowledge);
-  they all resolve the ambiguity by interpreting the call as a function
-  reference.  We do the same, with a portability warning.
 * An override for an inaccessible procedure binding works only within
   the same module; other apparent overrides of inaccessible bindings
   are actually new bindings of the same name.
@@ -483,7 +478,25 @@ end
   are to the same value.  Distinct initializations remain errors.
 * A pointer component that has no default initialization or explicit value
   in a structure constructor is defaulted to `NULL()`.
+* Multiple specifications of a prefix-spec on the same procedure are allowed,
+  with a warning.  C1552 (F2023) specifies that at most one of each shall be
+  present.
 * An assumed-rank entity is an acceptable `NAMELIST` group item.
+* A named constant (`PARAMETER`) may appear as a `namelist-group-object` in a
+  `NAMELIST` statement.  The Fortran standard requires namelist group objects
+  to be variables, but this usage is accepted by Flang as an extension.
+  When `-pedantic` is enabled, Flang emits a warning for this case.
+  For example:
+```
+program p
+  implicit none
+  integer, parameter :: k = 3
+  namelist /g/ k
+end program
+```
+* When the argument to intrinsic `ALLOCATED(p)` is actually a pointer
+  rather than an allocatable, it is interpreted as `ASSOCIATED(p)` with a
+  stern warning.
 
 ### Extensions supported when enabled by options
 

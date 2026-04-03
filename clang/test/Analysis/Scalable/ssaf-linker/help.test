@@ -1,0 +1,21 @@
+// Test clang-ssaf-linker help option
+
+// RUN: clang-ssaf-linker --help-list-hidden \
+// RUN:           | FileCheck %s --match-full-lines
+
+// CHECK:      OVERVIEW: SSAF Linker
+// CHECK-EMPTY:
+// CHECK-NEXT: USAGE: clang-ssaf-linker{{(\.exe)?}} [options] <input files>
+// CHECK-EMPTY:
+// CHECK-NEXT: OPTIONS:
+// CHECK-NEXT:   -h                  - Alias for --help
+// CHECK-NEXT:   --help              - Display available options (--help-hidden for more)
+// CHECK-NEXT:   --help-hidden       - Display all available options
+// CHECK-NEXT:   --help-list         - Display list of available options (--help-list-hidden for more)
+// CHECK-NEXT:   --help-list-hidden  - Display list of all available options
+// CHECK-NEXT:   -o <path>           - Output summary path
+// CHECK-NEXT:   --print-all-options - Print all option values after command line parsing
+// CHECK-NEXT:   --print-options     - Print non-default options after command line parsing
+// CHECK-NEXT:   --time              - Enable timing
+// CHECK-NEXT:   --verbose           - Enable verbose output
+// CHECK-NEXT:   --version           - Display the version of this program

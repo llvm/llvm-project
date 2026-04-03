@@ -1,0 +1,49 @@
+name: SYCL Tests
+
+permissions:
+  contents: read
+
+on:
+  pull_request:
+    paths:
+      - 'libsycl/**'
+      - '.github/workflows/sycl-tests.yml'
+
+concurrency:
+  # Skip intermediate builds: always.
+  # Cancel intermediate builds: only if it is a pull request build.
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
+
+jobs:
+  check_sycl:
+    if: github.repository_owner == 'llvm'
+    name: Test SYCL
+    runs-on: ubuntu-24.04
+    container:
+      image: ghcr.io/llvm/ci-ubuntu-24.04:latest
+    steps:
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          persist-credentials: false
+      - name: Setup ccache
+        uses: hendrikmuhs/ccache-action@5ebbd400eff9e74630f759d94ddd7b6c26299639 # v1.2.20
+        with:
+          max-size: 2G
+          key: sycl-ubuntu-24.04
+          variant: sccache
+      - name: Build and Test
+        run: |
+          cmake -GNinja \
+            -S llvm \
+            -B build \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DLLVM_ENABLE_ASSERTIONS=ON \
+            -DCMAKE_C_COMPILER_LAUNCHER=sccache \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=sccache \
+            -DLLVM_ENABLE_PROJECTS=clang \
+            -DLLVM_ENABLE_RUNTIMES="offload;openmp;libsycl" \
+            -DLLVM_TARGETS_TO_BUILD="host;SPIRV" \
+            -DLLVM_INCLUDE_SPIRV_TOOLS_TESTS=ON
+
+          ninja -C build check-sycl

@@ -163,3 +163,22 @@ struct S2 { int i; };
 struct S3 : S1, S2 {};
 
 } // namespace N
+
+namespace M {
+
+class basic_ios { int state; };
+class ostream : virtual public basic_ios { int more_state; };
+class OStringStream final : public ostream {};
+
+struct A { int x; };
+struct B : A {};
+// CHECK-MESSAGES: [[@LINE+1]]:1: warning: inheriting multiple classes that aren't pure virtual is discouraged [misc-multiple-inheritance]
+struct C : A, B {};
+
+struct VA { virtual void f(); };
+struct VB : VA { virtual void g(); };
+struct VI : virtual VA { virtual void h() = 0; };
+// CHECK-MESSAGES: [[@LINE+1]]:1: warning: inheriting multiple classes that aren't pure virtual is discouraged [misc-multiple-inheritance]
+struct VD : VI, VB {};
+
+} // namespace M

@@ -2107,8 +2107,6 @@ static void getTrivialDefaultFunctionAttributes(
 
     // TODO: Are these all needed?
     // unsafe/inf/nan/nsz are handled by instruction-level FastMathFlags.
-    if (LangOpts.NoHonorNaNs)
-      FuncAttrs.addAttribute("no-nans-fp-math", "true");
     if (CodeGenOpts.SoftFloat)
       FuncAttrs.addAttribute("use-soft-float", "true");
     FuncAttrs.addAttribute("stack-protector-buffer-size",
@@ -2611,28 +2609,12 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
                                  NumElemsParam);
     }
 
-    if (DeviceKernelAttr::isOpenCLSpelling(
-            TargetDecl->getAttr<DeviceKernelAttr>()) &&
-        CallingConv != CallingConv::CC_C &&
-        CallingConv != CallingConv::CC_SpirFunction) {
-      // Check CallingConv to avoid adding uniform-work-group-size attribute to
-      // OpenCL Kernel Stub
-      if (getLangOpts().OpenCLVersion <= 120) {
-        // OpenCL v1.2 Work groups are always uniform
-        FuncAttrs.addAttribute("uniform-work-group-size");
-      } else {
-        // OpenCL v2.0 Work groups may be whether uniform or not.
-        // '-cl-uniform-work-group-size' compile option gets a hint
-        // to the compiler that the global work-size be a multiple of
-        // the work-group size specified to clEnqueueNDRangeKernel
-        // (i.e. work groups are uniform).
-        if (getLangOpts().OffloadUniformBlock)
-          FuncAttrs.addAttribute("uniform-work-group-size");
-      }
-    }
-
-    if (TargetDecl->hasAttr<CUDAGlobalAttr>() &&
-        getLangOpts().OffloadUniformBlock)
+    // OpenCL v2.0 Work groups may be whether uniform or not.
+    // '-cl-uniform-work-group-size' compile option gets a hint
+    // to the compiler that the global work-size be a multiple of
+    // the work-group size specified to clEnqueueNDRangeKernel
+    // (i.e. work groups are uniform).
+    if (getLangOpts().OffloadUniformBlock)
       FuncAttrs.addAttribute("uniform-work-group-size");
 
     if (TargetDecl->hasAttr<ArmLocallyStreamingAttr>())
@@ -2896,19 +2878,22 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
         CalleeInfo.getCalleeDecl().getDecl());
     // Do not annotate vector deleting destructors with dead_on_return as the
     // this pointer in that case points to an array which we cannot
-    // statically know the size of.
+    // statically know the size of. Also do not mark deleting destructors
+    // dead_on_return as then we might delete stores inside of a user-defined
+    // operator delete implementation if it gets inlined, which would be
+    // incorrect as the object's lifetime has already ended and the operator
+    // delete implementation is allowed to manipulate the underlying storage.
     if (DD &&
         CalleeInfo.getCalleeDecl().getDtorType() !=
             CXXDtorType::Dtor_VectorDeleting &&
+        CalleeInfo.getCalleeDecl().getDtorType() !=
+            CXXDtorType::Dtor_Deleting &&
         CodeGenOpts.StrictLifetimes) {
       const CXXRecordDecl *ClassDecl =
           dyn_cast<CXXRecordDecl>(DD->getDeclContext());
-      // TODO(boomanaiden154): We are being intentionally conservative here
-      // as we gain experience with this optimization. We should remove the
-      // condition for non-virtual bases after more testing. We cannot add
-      // dead_on_return if we have virtual base classes because they will
-      // generally still be live after the base object destructor.
-      if (ClassDecl->getNumBases() == 0 && ClassDecl->getNumVBases() == 0)
+      // We cannot add dead_on_return if we have virtual base classes because
+      // they will generally still be live after the base object destructor.
+      if (ClassDecl->getNumVBases() == 0)
         Attrs.addDeadOnReturnAttr(llvm::DeadOnReturnInfo(
             Context.getASTRecordLayout(ClassDecl).getDataSize().getQuantity()));
     }
@@ -6177,13 +6162,24 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
   if (getDebugInfo() && TargetDecl && TargetDecl->hasAttr<MSAllocatorAttr>())
     getDebugInfo()->addHeapAllocSiteMetadata(CI, RetTy->getPointeeType(), Loc);
 
-  // Add metadata if calling an __attribute__((error(""))) or warning fn.
-  if (TargetDecl && TargetDecl->hasAttr<ErrorAttr>()) {
-    llvm::ConstantInt *Line =
-        llvm::ConstantInt::get(Int64Ty, Loc.getRawEncoding());
-    llvm::ConstantAsMetadata *MD = llvm::ConstantAsMetadata::get(Line);
-    llvm::MDTuple *MDT = llvm::MDNode::get(getLLVMContext(), {MD});
-    CI->setMetadata("srcloc", MDT);
+  // Add srcloc metadata for [[gnu::error/warning]] diagnostics. When
+  // ShowInliningChain is enabled, also track inline/static calls for the
+  // heuristic fallback when debug info is not available. This heuristic is
+  // conservative and best-effort since static or inline-annotated functions
+  // are still not guaranteed to be inlined.
+  if (TargetDecl) {
+    bool NeedSrcLoc = TargetDecl->hasAttr<ErrorAttr>();
+    if (!NeedSrcLoc && CGM.getCodeGenOpts().ShowInliningChain) {
+      if (const auto *FD = dyn_cast<FunctionDecl>(TargetDecl))
+        NeedSrcLoc = FD->isInlined() || FD->hasAttr<AlwaysInlineAttr>() ||
+                     FD->getStorageClass() == SC_Static ||
+                     FD->isInAnonymousNamespace();
+    }
+    if (NeedSrcLoc) {
+      auto *Line = llvm::ConstantInt::get(Int64Ty, Loc.getRawEncoding());
+      auto *MD = llvm::ConstantAsMetadata::get(Line);
+      CI->setMetadata("srcloc", llvm::MDNode::get(getLLVMContext(), {MD}));
+    }
   }
 
   // 4. Finish the call.
