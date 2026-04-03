@@ -1228,9 +1228,6 @@ bool DependenceInfo::strongSIVtest(const SCEVAddRecExpr *Src,
   if (!isDependenceTestEnabled(DependenceTestType::StrongSIV))
     return false;
 
-  if (!Src->hasNoSignedWrap() || !Dst->hasNoSignedWrap())
-    return false;
-
   const SCEV *Coeff = Src->getStepRecurrence(*SE);
   assert(Coeff == Dst->getStepRecurrence(*SE) &&
          "Expecting same coefficient in Strong SIV test");
@@ -1370,9 +1367,6 @@ bool DependenceInfo::weakCrossingSIVtest(const SCEVAddRecExpr *Src,
   if (!isDependenceTestEnabled(DependenceTestType::WeakCrossingSIV))
     return false;
 
-  if (!Src->hasNoSignedWrap() || !Dst->hasNoSignedWrap())
-    return false;
-
   const SCEV *Coeff = Src->getStepRecurrence(*SE);
   const SCEV *SrcConst = Src->getStart();
   const SCEV *DstConst = Dst->getStart();
@@ -1387,7 +1381,10 @@ bool DependenceInfo::weakCrossingSIVtest(const SCEVAddRecExpr *Src,
   ++WeakCrossingSIVapplications;
   assert(0 < Level && Level <= CommonLevels && "Level out of range");
   Level--;
-  const SCEV *Delta = SE->getMinusSCEV(DstConst, SrcConst);
+  const SCEV *Delta = minusSCEVNoSignedOverflow(DstConst, SrcConst, *SE);
+  if (!Delta)
+    return false;
+
   LLVM_DEBUG(dbgs() << "\t    Delta = " << *Delta << "\n");
   const SCEVConstant *ConstCoeff = dyn_cast<SCEVConstant>(Coeff);
   if (!ConstCoeff)
@@ -1404,17 +1401,6 @@ bool DependenceInfo::weakCrossingSIVtest(const SCEVAddRecExpr *Src,
   const SCEVConstant *ConstDelta = dyn_cast<SCEVConstant>(Delta);
   if (!ConstDelta)
     return false;
-
-  // We're certain that ConstCoeff > 0; therefore,
-  // if Delta < 0, then no dependence.
-  LLVM_DEBUG(dbgs() << "\t    Delta = " << *Delta << "\n");
-  LLVM_DEBUG(dbgs() << "\t    ConstCoeff = " << *ConstCoeff << "\n");
-  if (SE->isKnownNegative(Delta)) {
-    // No dependence, Delta < 0
-    ++WeakCrossingSIVindependence;
-    ++WeakCrossingSIVsuccesses;
-    return true;
-  }
 
   ConstantRange SrcRange = SE->getSignedRange(Src);
   ConstantRange DstRange = SE->getSignedRange(Dst);
@@ -1472,6 +1458,9 @@ bool DependenceInfo::weakCrossingSIVtest(const SCEVAddRecExpr *Src,
 // algorithm doesn't overflow.
 static bool findGCD(unsigned Bits, const APInt &AM, const APInt &BM,
                     const APInt &Delta, APInt &G, APInt &X, APInt &Y) {
+  LLVM_DEBUG(dbgs() << "\t    AM = " << AM << "\n");
+  LLVM_DEBUG(dbgs() << "\t    BM = " << BM << "\n");
+  LLVM_DEBUG(dbgs() << "\t    Delta = " << Delta << "\n");
   APInt A0(Bits, 1, true), A1(Bits, 0, true);
   APInt B0(Bits, 0, true), B1(Bits, 1, true);
   APInt G0 = AM.abs();
@@ -1616,148 +1605,16 @@ bool DependenceInfo::exactSIVtest(const SCEVAddRecExpr *Src,
   if (!isDependenceTestEnabled(DependenceTestType::ExactSIV))
     return false;
 
-  const SCEV *SrcCoeff = Src->getStepRecurrence(*SE);
-  const SCEV *SrcConst = Src->getStart();
-  const SCEV *DstCoeff = Dst->getStepRecurrence(*SE);
-  const SCEV *DstConst = Dst->getStart();
   LLVM_DEBUG(dbgs() << "\tExact SIV test\n");
-  LLVM_DEBUG(dbgs() << "\t    SrcCoeff = " << *SrcCoeff << " = AM\n");
-  LLVM_DEBUG(dbgs() << "\t    DstCoeff = " << *DstCoeff << " = BM\n");
-  LLVM_DEBUG(dbgs() << "\t    SrcConst = " << *SrcConst << "\n");
-  LLVM_DEBUG(dbgs() << "\t    DstConst = " << *DstConst << "\n");
   ++ExactSIVapplications;
   assert(0 < Level && Level <= CommonLevels && "Level out of range");
   Level--;
-
-  if (!Src->hasNoSignedWrap() || !Dst->hasNoSignedWrap())
-    return false;
-
-  const SCEV *Delta = minusSCEVNoSignedOverflow(DstConst, SrcConst, *SE);
-  if (!Delta)
-    return false;
-  LLVM_DEBUG(dbgs() << "\t    Delta = " << *Delta << "\n");
-  const SCEVConstant *ConstDelta = dyn_cast<SCEVConstant>(Delta);
-  const SCEVConstant *ConstSrcCoeff = dyn_cast<SCEVConstant>(SrcCoeff);
-  const SCEVConstant *ConstDstCoeff = dyn_cast<SCEVConstant>(DstCoeff);
-  if (!ConstDelta || !ConstSrcCoeff || !ConstDstCoeff)
-    return false;
-
-  // find gcd
-  APInt G, X, Y;
-  APInt AM = ConstSrcCoeff->getAPInt();
-  APInt BM = ConstDstCoeff->getAPInt();
-  APInt CM = ConstDelta->getAPInt();
-  unsigned Bits = AM.getBitWidth();
-  if (findGCD(Bits, AM, BM, CM, G, X, Y)) {
-    // gcd doesn't divide Delta, no dependence
+  bool Res = exactTestImpl(Src, Dst, Result, Level);
+  if (Res) {
+    ++ExactSIVsuccesses;
     ++ExactSIVindependence;
-    ++ExactSIVsuccesses;
-    return true;
   }
-
-  LLVM_DEBUG(dbgs() << "\t    X = " << X << ", Y = " << Y << "\n");
-
-  // since SCEV construction normalizes, LM = 0
-  std::optional<APInt> UM =
-      collectNonNegativeConstantUpperBound(Src->getLoop(), Delta->getType());
-  if (UM)
-    LLVM_DEBUG(dbgs() << "\t    UM = " << *UM << "\n");
-
-  APInt TU(APInt::getSignedMaxValue(Bits));
-  APInt TL(APInt::getSignedMinValue(Bits));
-  APInt TC = CM.sdiv(G);
-  APInt TX = X * TC;
-  APInt TY = Y * TC;
-  LLVM_DEBUG(dbgs() << "\t    TC = " << TC << "\n");
-  LLVM_DEBUG(dbgs() << "\t    TX = " << TX << "\n");
-  LLVM_DEBUG(dbgs() << "\t    TY = " << TY << "\n");
-
-  APInt TB = BM.sdiv(G);
-  APInt TA = AM.sdiv(G);
-
-  // At this point, we have the following equations:
-  //
-  //   TA*i0 - TB*i1 = TC
-  //
-  // Also, we know that the all pairs of (i0, i1) can be expressed as:
-  //
-  //   (TX + k*TB, TY + k*TA)
-  //
-  // where k is an arbitrary integer.
-  auto [TL0, TU0] = inferDomainOfAffine(TB, TX, UM);
-  auto [TL1, TU1] = inferDomainOfAffine(TA, TY, UM);
-
-  auto GetMaxOrMin = [](const OverflowSafeSignedAPInt &V0,
-                        const OverflowSafeSignedAPInt &V1,
-                        bool IsMin) -> std::optional<APInt> {
-    if (V0 && V1)
-      return IsMin ? APIntOps::smin(*V0, *V1) : APIntOps::smax(*V0, *V1);
-    if (V0)
-      return *V0;
-    if (V1)
-      return *V1;
-    return std::nullopt;
-  };
-
-  LLVM_DEBUG(dbgs() << "\t    TA = " << TA << "\n");
-  LLVM_DEBUG(dbgs() << "\t    TB = " << TB << "\n");
-
-  std::optional<APInt> OptTL = GetMaxOrMin(TL0, TL1, false);
-  std::optional<APInt> OptTU = GetMaxOrMin(TU0, TU1, true);
-  if (!OptTL || !OptTU)
-    return false;
-
-  TL = std::move(*OptTL);
-  TU = std::move(*OptTU);
-  LLVM_DEBUG(dbgs() << "\t    TL = " << TL << "\n");
-  LLVM_DEBUG(dbgs() << "\t    TU = " << TU << "\n");
-
-  if (TL.sgt(TU)) {
-    ++ExactSIVindependence;
-    ++ExactSIVsuccesses;
-    return true;
-  }
-
-  // explore directions
-  unsigned NewDirection = Dependence::DVEntry::NONE;
-  OverflowSafeSignedAPInt LowerDistance, UpperDistance;
-  OverflowSafeSignedAPInt OTY(TY), OTX(TX), OTA(TA), OTB(TB), OTL(TL), OTU(TU);
-  // NOTE: It's unclear whether these calculations can overflow. At the moment,
-  // we conservatively assume they can.
-  if (TA.sgt(TB)) {
-    LowerDistance = (OTY - OTX) + (OTA - OTB) * OTL;
-    UpperDistance = (OTY - OTX) + (OTA - OTB) * OTU;
-  } else {
-    LowerDistance = (OTY - OTX) + (OTA - OTB) * OTU;
-    UpperDistance = (OTY - OTX) + (OTA - OTB) * OTL;
-  }
-
-  if (!LowerDistance || !UpperDistance)
-    return false;
-
-  LLVM_DEBUG(dbgs() << "\t    LowerDistance = " << *LowerDistance << "\n");
-  LLVM_DEBUG(dbgs() << "\t    UpperDistance = " << *UpperDistance << "\n");
-
-  if (LowerDistance->sle(0) && UpperDistance->sge(0)) {
-    NewDirection |= Dependence::DVEntry::EQ;
-    ++ExactSIVsuccesses;
-  }
-  if (LowerDistance->slt(0)) {
-    NewDirection |= Dependence::DVEntry::GT;
-    ++ExactSIVsuccesses;
-  }
-  if (UpperDistance->sgt(0)) {
-    NewDirection |= Dependence::DVEntry::LT;
-    ++ExactSIVsuccesses;
-  }
-
-  // finished
-  Result.DV[Level].Direction &= NewDirection;
-  if (Result.DV[Level].Direction == Dependence::DVEntry::NONE)
-    ++ExactSIVindependence;
-  LLVM_DEBUG(dbgs() << "\t    Result = ");
-  LLVM_DEBUG(Result.dump(dbgs()));
-  return Result.DV[Level].Direction == Dependence::DVEntry::NONE;
+  return Res;
 }
 
 // Return true if the divisor evenly divides the dividend.
@@ -1773,9 +1630,6 @@ bool DependenceInfo::weakZeroSIVtestImpl(const SCEVAddRecExpr *AR,
                                          FullDependence &Result) const {
   const SCEV *ARCoeff = AR->getStepRecurrence(*SE);
   const SCEV *ARConst = AR->getStart();
-
-  if (!AR->hasNoSignedWrap())
-    return false;
 
   if (Const == ARConst && SE->isKnownNonZero(ARCoeff)) {
     if (Level < CommonLevels) {
@@ -1943,16 +1797,26 @@ bool DependenceInfo::exactRDIVtest(const SCEVAddRecExpr *Src,
   if (!isDependenceTestEnabled(DependenceTestType::ExactRDIV))
     return false;
 
+  LLVM_DEBUG(dbgs() << "\tExact RDIV test\n");
+  ++ExactRDIVapplications;
+  bool Res = exactTestImpl(Src, Dst, Result, std::nullopt);
+  if (Res)
+    ++ExactRDIVindependence;
+  return Res;
+}
+
+bool DependenceInfo::exactTestImpl(const SCEVAddRecExpr *Src,
+                                   const SCEVAddRecExpr *Dst,
+                                   FullDependence &Result,
+                                   std::optional<unsigned> Level) const {
   const SCEV *SrcCoeff = Src->getStepRecurrence(*SE);
   const SCEV *SrcConst = Src->getStart();
   const SCEV *DstCoeff = Dst->getStepRecurrence(*SE);
   const SCEV *DstConst = Dst->getStart();
-  LLVM_DEBUG(dbgs() << "\tExact RDIV test\n");
-  LLVM_DEBUG(dbgs() << "\t    SrcCoeff = " << *SrcCoeff << " = AM\n");
-  LLVM_DEBUG(dbgs() << "\t    DstCoeff = " << *DstCoeff << " = BM\n");
+  LLVM_DEBUG(dbgs() << "\t    SrcCoeff = " << *SrcCoeff << "\n");
+  LLVM_DEBUG(dbgs() << "\t    DstCoeff = " << *DstCoeff << "\n");
   LLVM_DEBUG(dbgs() << "\t    SrcConst = " << *SrcConst << "\n");
   LLVM_DEBUG(dbgs() << "\t    DstConst = " << *DstConst << "\n");
-  ++ExactRDIVapplications;
 
   if (!Src->hasNoSignedWrap() || !Dst->hasNoSignedWrap())
     return false;
@@ -1975,7 +1839,6 @@ bool DependenceInfo::exactRDIVtest(const SCEVAddRecExpr *Src,
   unsigned Bits = AM.getBitWidth();
   if (findGCD(Bits, AM, BM, CM, G, X, Y)) {
     // gcd doesn't divide Delta, no dependence
-    ++ExactRDIVindependence;
     return true;
   }
 
@@ -2042,8 +1905,44 @@ bool DependenceInfo::exactRDIVtest(const SCEVAddRecExpr *Src,
   LLVM_DEBUG(dbgs() << "\t    TU = " << TU << "\n");
 
   if (TL.sgt(TU))
-    ++ExactRDIVindependence;
-  return TL.sgt(TU);
+    return true;
+
+  if (!Level)
+    return false;
+  assert(SrcUM == DstUM && "Expecting same upper bound for Src and Dst");
+
+  // explore directions
+  unsigned NewDirection = Dependence::DVEntry::NONE;
+  OverflowSafeSignedAPInt LowerDistance, UpperDistance;
+  OverflowSafeSignedAPInt OTY(TY), OTX(TX), OTA(TA), OTB(TB), OTL(TL), OTU(TU);
+  // NOTE: It's unclear whether these calculations can overflow. At the moment,
+  // we conservatively assume they can.
+  if (TA.sgt(TB)) {
+    LowerDistance = (OTY - OTX) + (OTA - OTB) * OTL;
+    UpperDistance = (OTY - OTX) + (OTA - OTB) * OTU;
+  } else {
+    LowerDistance = (OTY - OTX) + (OTA - OTB) * OTU;
+    UpperDistance = (OTY - OTX) + (OTA - OTB) * OTL;
+  }
+
+  if (!LowerDistance || !UpperDistance)
+    return false;
+
+  LLVM_DEBUG(dbgs() << "\t    LowerDistance = " << *LowerDistance << "\n");
+  LLVM_DEBUG(dbgs() << "\t    UpperDistance = " << *UpperDistance << "\n");
+
+  if (LowerDistance->sle(0) && UpperDistance->sge(0))
+    NewDirection |= Dependence::DVEntry::EQ;
+  if (LowerDistance->slt(0))
+    NewDirection |= Dependence::DVEntry::GT;
+  if (UpperDistance->sgt(0))
+    NewDirection |= Dependence::DVEntry::LT;
+
+  // finished
+  Result.DV[*Level].Direction &= NewDirection;
+  LLVM_DEBUG(dbgs() << "\t    Result = ");
+  LLVM_DEBUG(Result.dump(dbgs()));
+  return Result.DV[*Level].Direction == Dependence::DVEntry::NONE;
 }
 
 // testSIV -
@@ -2061,7 +1960,9 @@ bool DependenceInfo::testSIV(const SCEV *Src, const SCEV *Dst, unsigned &Level,
   LLVM_DEBUG(dbgs() << "    dst = " << *Dst << "\n");
   const SCEVAddRecExpr *SrcAddRec = dyn_cast<SCEVAddRecExpr>(Src);
   const SCEVAddRecExpr *DstAddRec = dyn_cast<SCEVAddRecExpr>(Dst);
-  if (SrcAddRec && DstAddRec) {
+  bool SrcAnalyzable = SrcAddRec != nullptr && SrcAddRec->hasNoSignedWrap();
+  bool DstAnalyzable = DstAddRec != nullptr && DstAddRec->hasNoSignedWrap();
+  if (SrcAnalyzable && DstAnalyzable) {
     const SCEV *SrcCoeff = SrcAddRec->getStepRecurrence(*SE);
     const SCEV *DstCoeff = DstAddRec->getStepRecurrence(*SE);
     const Loop *CurSrcLoop = SrcAddRec->getLoop();
@@ -2078,17 +1979,18 @@ bool DependenceInfo::testSIV(const SCEV *Src, const SCEV *Dst, unsigned &Level,
       disproven = weakCrossingSIVtest(SrcAddRec, DstAddRec, Level, Result);
     return disproven || exactSIVtest(SrcAddRec, DstAddRec, Level, Result);
   }
-  if (SrcAddRec) {
+  if (SrcAnalyzable && DstAddRec == nullptr) {
     const Loop *CurSrcLoop = SrcAddRec->getLoop();
     Level = mapSrcLoop(CurSrcLoop);
     return weakZeroDstSIVtest(SrcAddRec, Dst, Level, Result);
   }
-  if (DstAddRec) {
+  if (DstAnalyzable && SrcAddRec == nullptr) {
     const Loop *CurDstLoop = DstAddRec->getLoop();
     Level = mapDstLoop(CurDstLoop);
     return weakZeroSrcSIVtest(Src, DstAddRec, Level, Result);
   }
-  llvm_unreachable("SIV test expected at least one AddRec");
+  assert((SrcAddRec != nullptr || DstAddRec != nullptr) &&
+         "SIV test expected at least one AddRec");
   return false;
 }
 
@@ -2177,6 +2079,26 @@ bool DependenceInfo::accumulateCoefficientsGCD(const SCEV *Expr,
   return accumulateCoefficientsGCD(Start, CurLoop, CurLoopCoeff, RunningGCD);
 }
 
+/// Compute \p RunningGCD and return the start value of the innermost
+/// \p SCEVAddRecExpr. In order to calculate the return value we do not
+/// return immediately if it is proved that \p RunningGCD = 1.
+static const SCEV *analyzeCoefficientsForGCD(const SCEV *Coefficients,
+                                             APInt &RunningGCD,
+                                             ScalarEvolution *SE) {
+  while (const SCEVAddRecExpr *AddRec =
+             dyn_cast<SCEVAddRecExpr>(Coefficients)) {
+    const SCEV *Coeff = AddRec->getStepRecurrence(*SE);
+    // If the coefficient is the product of a constant and other stuff,
+    // we can use the constant in the GCD computation.
+    std::optional<APInt> ConstCoeff = getConstantCoefficient(Coeff);
+    if (!ConstCoeff)
+      return nullptr;
+    RunningGCD = APIntOps::GreatestCommonDivisor(RunningGCD, ConstCoeff->abs());
+    Coefficients = AddRec->getStart();
+  }
+  return Coefficients;
+}
+
 //===----------------------------------------------------------------------===//
 // gcdMIVtest -
 // Tests an MIV subscript pair for dependence.
@@ -2204,41 +2126,13 @@ bool DependenceInfo::gcdMIVtest(const SCEV *Src, const SCEV *Dst,
   unsigned BitWidth = SE->getTypeSizeInBits(Src->getType());
   APInt RunningGCD = APInt::getZero(BitWidth);
 
-  // Examine Src coefficients.
-  // Compute running GCD and record source constant.
-  // Because we're looking for the constant at the end of the chain,
-  // we can't quit the loop just because the GCD == 1.
-  const SCEV *Coefficients = Src;
-  while (const SCEVAddRecExpr *AddRec =
-             dyn_cast<SCEVAddRecExpr>(Coefficients)) {
-    const SCEV *Coeff = AddRec->getStepRecurrence(*SE);
-    // If the coefficient is the product of a constant and other stuff,
-    // we can use the constant in the GCD computation.
-    std::optional<APInt> ConstCoeff = getConstantCoefficient(Coeff);
-    if (!ConstCoeff)
-      return false;
-    RunningGCD = APIntOps::GreatestCommonDivisor(RunningGCD, ConstCoeff->abs());
-    Coefficients = AddRec->getStart();
-  }
-  const SCEV *SrcConst = Coefficients;
-
-  // Examine Dst coefficients.
-  // Compute running GCD and record destination constant.
-  // Because we're looking for the constant at the end of the chain,
-  // we can't quit the loop just because the GCD == 1.
-  Coefficients = Dst;
-  while (const SCEVAddRecExpr *AddRec =
-             dyn_cast<SCEVAddRecExpr>(Coefficients)) {
-    const SCEV *Coeff = AddRec->getStepRecurrence(*SE);
-    // If the coefficient is the product of a constant and other stuff,
-    // we can use the constant in the GCD computation.
-    std::optional<APInt> ConstCoeff = getConstantCoefficient(Coeff);
-    if (!ConstCoeff)
-      return false;
-    RunningGCD = APIntOps::GreatestCommonDivisor(RunningGCD, ConstCoeff->abs());
-    Coefficients = AddRec->getStart();
-  }
-  const SCEV *DstConst = Coefficients;
+  // Examine Src and dst coefficients.
+  const SCEV *SrcConst = analyzeCoefficientsForGCD(Src, RunningGCD, SE);
+  if (!SrcConst)
+    return false;
+  const SCEV *DstConst = analyzeCoefficientsForGCD(Dst, RunningGCD, SE);
+  if (!DstConst)
+    return false;
 
   const SCEV *Delta = minusSCEVNoSignedOverflow(DstConst, SrcConst, *SE);
   if (!Delta)
@@ -2268,7 +2162,7 @@ bool DependenceInfo::gcdMIVtest(const SCEV *Src, const SCEV *Dst,
   // of [<>, *]
 
   bool Improved = false;
-  Coefficients = Src;
+  const SCEV *Coefficients = Src;
   while (const SCEVAddRecExpr *AddRec =
              dyn_cast<SCEVAddRecExpr>(Coefficients)) {
     Coefficients = AddRec->getStart();

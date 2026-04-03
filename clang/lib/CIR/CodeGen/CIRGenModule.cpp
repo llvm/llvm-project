@@ -675,10 +675,17 @@ void CIRGenModule::setCommonAttributes(GlobalDecl gd, mlir::Operation *gv) {
 void CIRGenModule::setNonAliasAttributes(GlobalDecl gd, mlir::Operation *op) {
   setCommonAttributes(gd, op);
 
+  const Decl *d = gd.getDecl();
+  if (d) {
+    if (auto gvi = mlir::dyn_cast<cir::CIRGlobalValueInterface>(op)) {
+      if (const auto *sa = d->getAttr<SectionAttr>())
+        gvi.setSection(builder.getStringAttr(sa->getName()));
+    }
+  }
+
+  assert(!cir::MissingFeatures::opGlobalPragmaClangSection());
   assert(!cir::MissingFeatures::opGlobalUsedOrCompilerUsed());
-  assert(!cir::MissingFeatures::opGlobalSection());
   assert(!cir::MissingFeatures::opFuncCPUAndFeaturesAttributes());
-  assert(!cir::MissingFeatures::opFuncSection());
 
   getTargetCIRGenInfo().setTargetAttributes(gd.getDecl(), op, *this);
 }
@@ -901,6 +908,7 @@ cir::GlobalOp
 CIRGenModule::getOrCreateCIRGlobal(StringRef mangledName, mlir::Type ty,
                                    LangAS langAS, const VarDecl *d,
                                    ForDefinition_t isForDefinition) {
+
   // Lookup the entry, lazily creating it if necessary.
   cir::GlobalOp entry;
   if (mlir::Operation *v = getGlobalValue(mangledName)) {
@@ -911,13 +919,14 @@ CIRGenModule::getOrCreateCIRGlobal(StringRef mangledName, mlir::Type ty,
   }
 
   if (entry) {
+    mlir::ptr::MemorySpaceAttrInterface entryCIRAS = entry.getAddrSpaceAttr();
     assert(!cir::MissingFeatures::opGlobalWeakRef());
 
     assert(!cir::MissingFeatures::setDLLStorageClass());
     assert(!cir::MissingFeatures::openMP());
 
     if (entry.getSymType() == ty &&
-        (cir::isMatchingAddressSpace(entry.getAddrSpaceAttr(), langAS)))
+        cir::isMatchingAddressSpace(entryCIRAS, langAS))
       return entry;
 
     // If there are two attempts to define the same mangled name, issue an
@@ -1002,7 +1011,11 @@ CIRGenModule::getOrCreateCIRGlobal(StringRef mangledName, mlir::Type ty,
       errorNYI(d->getSourceRange(),
                "getOrCreateCIRGlobal: MS static data member inline definition");
 
-    assert(!cir::MissingFeatures::opGlobalSection());
+    // Emit section information for extern variables.
+    if (d->hasExternalStorage()) {
+      if (const SectionAttr *sa = d->getAttr<SectionAttr>())
+        gv.setSectionAttr(builder.getStringAttr(sa->getName()));
+    }
     gv.setGlobalVisibilityAttr(getGlobalVisibilityAttrFromDecl(d));
 
     // Handle XCore specific ABI requirements.
@@ -1254,7 +1267,12 @@ void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *vd,
                   vd->getType().isConstantStorage(astContext,
                                                   /*ExcludeCtor=*/true,
                                                   /*ExcludeDtor=*/true)));
-  assert(!cir::MissingFeatures::opGlobalSection());
+  // If it is in a read-only section, mark it 'constant'.
+  if (const SectionAttr *sa = vd->getAttr<SectionAttr>()) {
+    const ASTContext::SectionInfo &si = astContext.SectionInfos[sa->getName()];
+    if ((si.SectionFlags & ASTContext::PSF_Write) == 0)
+      gv.setConstant(true);
+  }
 
   // Set CIR linkage and DLL storage class.
   gv.setLinkage(linkage);
@@ -1717,9 +1735,13 @@ void CIRGenModule::replaceUsesOfNonProtoTypeWithRealFunction(
       // Replace type
       getGlobalOp.getAddr().setType(
           cir::PointerType::get(newFn.getFunctionType()));
+    } else if (mlir::isa<cir::GlobalOp>(use.getUser())) {
+      // Function addresses in global initializers use GlobalViewAttrs typed to
+      // the initializer context (e.g. struct field type), not the FuncOp type,
+      // so no update is required when the no-proto FuncOp is replaced.
     } else {
-      errorNYI(use.getUser()->getLoc(),
-               "replaceUsesOfNonProtoTypeWithRealFunction: unexpected use");
+      llvm_unreachable(
+          "replaceUsesOfNonProtoTypeWithRealFunction: unexpected use type");
     }
   }
 }
@@ -1952,6 +1974,9 @@ void CIRGenModule::emitTopLevelDecl(Decl *decl) {
       emitGlobal(fd);
     break;
   }
+  case Decl::Export:
+    emitDeclContext(cast<ExportDecl>(decl));
+    break;
 
   case Decl::Var:
   case Decl::Decomposition:
