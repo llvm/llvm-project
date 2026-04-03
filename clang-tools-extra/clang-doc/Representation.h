@@ -49,6 +49,8 @@ private:
 
 ConcurrentStringPool &getGlobalStringPool();
 
+extern thread_local llvm::BumpPtrAllocator TransientArena;
+
 inline StringRef internString(const Twine &T) {
   if (T.isTriviallyEmpty())
     return StringRef();
@@ -65,6 +67,16 @@ inline StringRef internString(const Twine &T) {
   if (S.empty())
     return StringRef();
   return getGlobalStringPool().intern(S);
+}
+
+template <typename T>
+inline llvm::ArrayRef<T> allocateArray(llvm::ArrayRef<T> V,
+                                       llvm::BumpPtrAllocator &Alloc) {
+  if (V.empty())
+    return llvm::ArrayRef<T>();
+  T *Allocated = (T *)Alloc.Allocate<T>(V.size());
+  std::uninitialized_move(V.begin(), V.end(), Allocated);
+  return llvm::ArrayRef<T>(Allocated, V.size());
 }
 
 // An abstraction for owned pointers. Initially mapped to OwnedPtr,
@@ -167,11 +179,10 @@ struct CommentInfo {
   StringRef ParamName;       // Parameter name (for (T)ParamCommand).
   StringRef CloseName;       // Closing tag name (for VerbatimBlock).
   StringRef Text;            // Text of the comment.
-  llvm::SmallVector<StringRef, 4>
-      AttrKeys; // List of attribute keys (for HTML).
-  llvm::SmallVector<StringRef, 4>
+  llvm::ArrayRef<StringRef> AttrKeys; // List of attribute keys (for HTML).
+  llvm::ArrayRef<StringRef>
       AttrValues; // List of attribute values for each key (for HTML).
-  llvm::SmallVector<StringRef, 4>
+  llvm::ArrayRef<StringRef>
       Args; // List of arguments to commands (for InlineCommand).
   CommentKind Kind = CommentKind::
       CK_Unknown; // Kind of comment (FullComment, ParagraphComment,
