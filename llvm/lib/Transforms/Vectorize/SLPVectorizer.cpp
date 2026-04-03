@@ -261,7 +261,7 @@ getNonTriviallyVectorizableIntrinsicCallOperand(Value *V) {
     return {};
 
   // Skip memory intrinsics (e.g., masked.load, masked.gather etc.)
-  if (CI->mayReadOrWriteMemory())
+  if (!SLPReVec && CI->getType()->isVectorTy())
     return {};
 
   for (Value *ArgOp : CI->args()) {
@@ -12276,9 +12276,8 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
           }
         }
         if (NewLoopNest.size() > CurrentLoopNest.size())
-          CurrentLoopNest.append(
-              std::next(NewLoopNest.begin(), CurrentLoopNest.size()),
-              NewLoopNest.end());
+          CurrentLoopNest.append(std::next(NewLoopNest.begin(), CurrentLoopNest.size()),
+                          NewLoopNest.end());
       }
     }
   }
@@ -18476,9 +18475,10 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
           assert(SLPReVec && "Only supported by REVEC.");
           SrcTy = getWidenedType(SrcTy, VecTy->getNumElements());
         }
-        InstructionCost CastCost = TTI->getCastInstrCost(
-            Opcode, DstTy, SrcTy, TTI::CastContextHint::None,
-            TTI::TCK_RecipThroughput);
+        InstructionCost CastCost =
+            TTI->getCastInstrCost(Opcode, DstTy, SrcTy,
+                                  TTI::CastContextHint::None,
+                                  TTI::TCK_RecipThroughput);
         CastCost = ScaleCost(CastCost, Root, /*Scalar=*/nullptr, ReductionRoot);
         Cost += CastCost;
       }
@@ -18647,8 +18647,9 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
         default:
           break;
         }
-        InstructionCost CastCost = TTI->getCastInstrCost(
-            Opcode, DstVecTy, SrcVecTy, CCH, TTI::TCK_RecipThroughput);
+        InstructionCost CastCost =
+            TTI->getCastInstrCost(Opcode, DstVecTy, SrcVecTy, CCH,
+                                  TTI::TCK_RecipThroughput);
         CastCost = ScaleCost(CastCost, *VectorizableTree.front().get(),
                              /*Scalar=*/nullptr, ReductionRoot);
         Cost += CastCost;
@@ -29506,30 +29507,27 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
       PostProcessCmps.insert(cast<CmpInst>(&*It));
   }
 
-  SmallMapVector<Intrinsic::ID, SmallSetVector<Value *, 4>, 4> IntrinsicSeedOps;
+  // Collect operands of non-trivially vectorizable intrinsic calls (e.g.,
+  // llvm.amdgcn.exp2) and group by intrinsic ID, so their operands can be
+  // vectorized independently.
+  // FIXME: Extend for all non-vectorized functions.
+  SmallMapVector<std::pair<Intrinsic::ID, unsigned>, SmallVector<Value *, 4>, 4>
+      OpcodeGroups;
+
   for (Instruction &I : *BB) {
     if (R.isDeleted(&I))
       continue;
-    // Collect operands of non-trivially vectorizable intrinsic calls (e.g.,
-    // llvm.amdgcn.exp2) and group by intrinsic ID, so their operands can be
-    // vectorized independently.
-    // FIXME: Extend for all non-vectorized functions.
     SmallVector<Value *, 4> Ops =
         getNonTriviallyVectorizableIntrinsicCallOperand(&I);
-    if (!Ops.empty())
-      IntrinsicSeedOps[cast<CallInst>(&I)->getIntrinsicID()].insert_range(Ops);
-  }
-  // Try to vectorize per intrinsic call ID.
-  for (auto &[ID, Ops] : IntrinsicSeedOps) {
-    // Sub-group by opcode so we do not get bailed early
-    SmallMapVector<unsigned, SmallVector<Value *, 4>, 4> OpcodeGroups;
-    for (Value *Op : Ops) {
-      if (auto *I = dyn_cast<Instruction>(Op))
-        OpcodeGroups[I->getOpcode()].push_back(Op);
+    if (!Ops.empty()) {
+      Intrinsic::ID ID = cast<CallInst>(&I)->getIntrinsicID();
+      for (Value *Op : Ops)
+        if (auto *OpI = dyn_cast<Instruction>(Op))
+          OpcodeGroups[{ID, OpI->getOpcode()}].push_back(Op);
     }
-    for (auto &[Opc, Group] : OpcodeGroups)
-      Changed |= tryToVectorizeList(Group, R);
   }
+  for (auto &[_, OpGroup] : OpcodeGroups)
+    Changed |= tryToVectorizeList(OpGroup, R);
 
   return Changed;
 }
