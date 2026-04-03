@@ -1,0 +1,19 @@
+# When archive members have different data layouts, llvm-link should still
+# warn about the genuine mismatch.  This verifies the fix does not suppress
+# legitimate warnings.
+
+# RUN: llvm-as %S/Inputs/archive-dl-a.ll -o %t.a1.bc
+# RUN: llvm-as %S/Inputs/archive-dl-b.ll -o %t.a2.bc
+# RUN: llvm-ar cr %t.mismatch.a %t.a1.bc %t.a2.bc
+# RUN: llvm-link %t.mismatch.a -S -o %t.out.ll 2>%t.err
+# RUN: FileCheck --check-prefix=WARN %s < %t.err
+# RUN: FileCheck --check-prefix=OUTPUT %s < %t.out.ll
+
+# The second member has a different layout, so it must warn.
+# WARN: warning: Linking two modules of different data layouts
+
+# The first archive member's layout should win.
+# OUTPUT: target datalayout = "e-m:e-p:64:64-i64:64-n8:16:32:64"
+# OUTPUT: target triple = "spirv64-unknown-unknown"
+# OUTPUT: define void @archive_dl_a()
+# OUTPUT: define void @archive_dl_b()

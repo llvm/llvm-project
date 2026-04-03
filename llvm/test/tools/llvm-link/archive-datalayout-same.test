@@ -1,0 +1,17 @@
+# When all archive members share the same data layout, llvm-link should
+# produce no warnings.  Before the fix, the empty result module's layout
+# mismatched every member, causing spurious warnings.
+
+# RUN: llvm-as %S/Inputs/archive-dl-a.ll -o %t.a1.bc
+# RUN: llvm-as %S/Inputs/archive-dl-a2.ll -o %t.a2.bc
+# RUN: llvm-ar cr %t.same.a %t.a1.bc %t.a2.bc
+# RUN: llvm-link %t.same.a -S -o %t.out.ll 2>%t.err
+# RUN: FileCheck --allow-empty --check-prefix=NO-WARN %s < %t.err
+# RUN: FileCheck --check-prefix=OUTPUT %s < %t.out.ll
+
+# NO-WARN-NOT: warning
+
+# OUTPUT: target datalayout = "e-m:e-p:64:64-i64:64-n8:16:32:64"
+# OUTPUT: target triple = "spirv64-unknown-unknown"
+# OUTPUT: define void @archive_dl_a()
+# OUTPUT: define void @archive_dl_a2()
