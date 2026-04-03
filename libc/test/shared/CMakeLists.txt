@@ -288,7 +288,7 @@ add_fp_unittest(
     libc.src.__support.str_to_integer
 )
 
-if(NOT MSVC)
+if(NOT MSVC AND NOT LLVM_LIBC_FULL_BUILD)
 add_fp_unittest(
   shared_rpc_test
   SUITE

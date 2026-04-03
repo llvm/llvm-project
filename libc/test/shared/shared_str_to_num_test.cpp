@@ -35,7 +35,7 @@ TEST(LlvmLibcSharedStrToNumTest, FloatTests) {
     input.exponent = -2;
     auto result = shared::binary_exp_to_float<double>(
         input, false, shared::RoundDirection::Nearest);
-    EXPECT_EQ(result.num.mantissa, 0x4000000000000UL);
+    EXPECT_EQ(result.num.mantissa, uint64_t(0x4000000000000));
     EXPECT_EQ(result.num.exponent, 1023);
     EXPECT_EQ(result.error, 0);
   }
@@ -47,7 +47,7 @@ TEST(LlvmLibcSharedStrToNumTest, FloatTests) {
     const char *str = "1.25";
     auto result = shared::decimal_exp_to_float<double>(
         input, false, shared::RoundDirection::Nearest, str);
-    EXPECT_EQ(result.num.mantissa, 0x14000000000000UL);
+    EXPECT_EQ(result.num.mantissa, uint64_t(0x14000000000000));
     EXPECT_EQ(result.num.exponent, 1023);
     EXPECT_EQ(result.error, 0);
   }
