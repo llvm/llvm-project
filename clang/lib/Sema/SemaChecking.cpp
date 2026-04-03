@@ -2373,7 +2373,7 @@ static bool BuiltinStdCBuiltin(Sema &S, CallExpr *TheCall,
   QualType ArgTy = Arg->getType();
   if (!ArgTy->isUnsignedIntegerType())
     return S.Diag(Arg->getBeginLoc(), diag::err_builtin_stdc_invalid_arg_type)
-           << 1 << ArgTy;
+           << 1 /*1st argument*/ << ArgTy;
 
   TheCall->setType(ReturnType.isNull() ? ArgTy : ReturnType);
   return false;
