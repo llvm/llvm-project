@@ -24,7 +24,7 @@ namespace abort_utils {
   // Try to raise SIGABRT.
   // If this fails, or if a handler returns, keep going with the hard-abort
   // sequence below.
-  LIBC_NAMESPACE::linux_syscalls::raise(SIGABRT);
+  linux_syscalls::raise(SIGABRT);
 
   // We get back from abort, potentially from a abort handler.
   // We recover the handler to default and raise it again. Since this is the
@@ -38,14 +38,14 @@ namespace abort_utils {
   // There is no recovery path from sigaction failure while aborting.
   unchecked_sigaction(SIGABRT, &sa, nullptr);
   // If this still returns, fall through to the final termination path.
-  LIBC_NAMESPACE::linux_syscalls::raise(SIGABRT);
+  linux_syscalls::raise(SIGABRT);
 
   // Now unblock the signal. The pending abort signal is now unblocked and
   // should be delivered to its default handler.
   // If this fails, there is still no meaningful recovery path while aborting.
   unblock_signal(SIGABRT);
 
-  LIBC_NAMESPACE::internal::exit(127);
+  internal::exit(127);
 }
 } // namespace abort_utils
 
