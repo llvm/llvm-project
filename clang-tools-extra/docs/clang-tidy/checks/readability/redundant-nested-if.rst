@@ -3,8 +3,8 @@
 readability-redundant-nested-if
 ===============================
 
-Finds nested ``if`` statements that can be merged by combining their conditions
-with ``&&``.
+Finds nested ``if`` statements that can be merged by combining their
+conditions with ``&&``.
 
 Example:
 
@@ -48,7 +48,7 @@ The check also supports outer declaration conditions in C++17 and later:
 
 .. code-block:: c++
 
-  if (bool x = ready()) {
+  if (bool X = ready()) {
     if (can_run()) {
       work();
     }
@@ -58,7 +58,7 @@ becomes
 
 .. code-block:: c++
 
-  if (bool x = ready(); x && (can_run())) {
+  if (bool X = ready(); X && (can_run())) {
     work();
   }
 
@@ -73,14 +73,14 @@ The check only transforms chains where:
 
 - In C++17 and later, the outermost ``if`` may use a condition variable if it
   can be rewritten to an init-statement form, for example
-  ``if (auto v = f())`` to ``if (auto v = f(); v && ...)``.
+  ``if (auto V = f())`` to ``if (auto V = f(); V && ...)``.
 
 - When the outermost statement is already in ``if (init; cond)`` form, the
   check keeps ``init`` unchanged and merges only into ``cond``.
 
 - By default, merged conditions avoid user-defined ``bool`` conversions to
-  preserve short-circuit semantics. This can be changed with
-  :option:`UserDefinedBoolConversionMode`.
+  preserve built-in ``&&`` semantics. This can be changed with
+  :option:`AllowUserDefinedBoolConversion`.
 
 - Only the outermost ``if`` may have an init-statement.
 
@@ -91,11 +91,11 @@ The check only transforms chains where:
 
 - No merged ``if`` statement has statement attributes.
 
-- All rewritten ranges are free of macro/preprocessor-sensitive edits.
+- All rewritten ranges are free of macro- and preprocessor-sensitive edits.
 
 - Fix-its are suppressed when comments in removed nested headers cannot be
-  preserved safely. Comments inside conditions are preserved, while
-  other comments between the ``ifs`` disable fix-its.
+  preserved safely. Comments inside conditions are preserved, while other
+  comments between the ``if`` statements disable fix-its.
 
 For ``if constexpr``, nested merged conditions must be
 non-instantiation-dependent to avoid template semantic changes. The outermost
@@ -105,24 +105,20 @@ constant ``true``.
 Options
 -------
 
-.. option:: UserDefinedBoolConversionMode
+.. option:: AllowUserDefinedBoolConversion
 
-   Controls how chains with an outer condition that relies on user-defined
-   ``bool`` conversion are handled.
+   When set to `true`, the check also merges chains whose conditions rely on
+   user-defined conversion to ``bool``.
 
-   - `None`
-     No diagnostic is emitted for those chains.
-   - `WarnOnly`
-     Emit diagnostics, but do not provide fix-its.
-   - `WarnAndFix`
-     Emit diagnostics and provide fix-its.
+   The fix-it inserts ``static_cast<bool>(...)`` where needed so the merged
+   condition still uses built-in ``&&`` semantics.
 
-   Default is `None`.
+   Default is `false`.
 
 .. option:: WarnOnDependentConstexprIf
 
    When set to `true`, the check also emits diagnostics for remaining unsafe
-   ``if constexpr`` chains (for example, with instantiation-dependent nested
-   conditions), but does not provide a fix-it for them.
+   ``if constexpr`` chains, for example with instantiation-dependent nested
+   conditions, but does not provide a fix-it for them.
 
    Default is `false`.

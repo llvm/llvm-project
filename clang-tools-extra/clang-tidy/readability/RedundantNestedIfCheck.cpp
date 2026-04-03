@@ -11,45 +11,36 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Stmt.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/Basic/Diagnostic.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/Tooling/FixIt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include <cassert>
 #include <optional>
 #include <string>
 #include <vector>
 
 using namespace clang::ast_matchers;
 
-namespace clang::tidy {
-template <>
-struct OptionEnumMapping<
-    readability::RedundantNestedIfCheck::UserDefinedBoolConversionMode> {
-  static llvm::ArrayRef<std::pair<
-      readability::RedundantNestedIfCheck::UserDefinedBoolConversionMode,
-      StringRef>>
-  getEnumMapping() {
-    using Mode =
-        readability::RedundantNestedIfCheck::UserDefinedBoolConversionMode;
-    static constexpr std::pair<Mode, StringRef> Mapping[] = {
-        {Mode::None, "None"},
-        {Mode::WarnOnly, "WarnOnly"},
-        {Mode::WarnAndFix, "WarnAndFix"},
-    };
-    return {Mapping};
-  }
-};
-} // namespace clang::tidy
-
 namespace clang::tidy::readability {
 
 static constexpr llvm::StringLiteral WarnOnDependentConstexprIfStr =
     "WarnOnDependentConstexprIf";
-static constexpr llvm::StringLiteral UserDefinedBoolConversionModeStr =
-    "UserDefinedBoolConversionMode";
+static constexpr llvm::StringLiteral AllowUserDefinedBoolConversionStr =
+    "AllowUserDefinedBoolConversion";
+static constexpr llvm::StringLiteral MergeableIfDiag =
+    "nested if statements can be merged";
+static constexpr llvm::StringLiteral DependentConstexprDiag =
+    "nested instantiation-dependent if constexpr statements can be merged";
+static constexpr llvm::StringLiteral NestedIfNote =
+    "nested if statement to merge is here";
 
 namespace {
+
+using IfChain = llvm::SmallVector<const IfStmt *>;
+
 enum class ChainHandling {
   None,
   WarnOnly,
@@ -67,156 +58,109 @@ struct CombinedConditionBuildResult {
   CombinedConditionBuildStatus Status = CombinedConditionBuildStatus::Failure;
   std::string Text;
 };
+
 } // namespace
 
 // Conjoining conditions with `&&` can change behavior when a condition relies
-// on user-defined bool conversion. Keep the check conservative and reject such
-// conditions for automatic merging.
-static bool containsUserDefinedBoolConversion(const Expr *ExprNode) {
-  if (!ExprNode)
-    return false;
+// on contextual user-defined conversion to `bool`.
+static bool containsUserDefinedBoolConversion(const Expr *Expression) {
+  assert(Expression);
 
-  if (const auto *Cast = dyn_cast<ImplicitCastExpr>(ExprNode);
+  if (const auto *Cast = dyn_cast<ImplicitCastExpr>(Expression);
       Cast && Cast->getCastKind() == CK_UserDefinedConversion)
     return true;
 
-  return llvm::any_of(ExprNode->children(), [](const Stmt *Child) {
+  return llvm::any_of(Expression->children(), [](const Stmt *Child) {
     const auto *ChildExpr = dyn_cast_or_null<Expr>(Child);
     return ChildExpr && containsUserDefinedBoolConversion(ChildExpr);
   });
 }
 
-static bool isConditionExpressionSafeToConjoin(
-    const Expr *Cond, RedundantNestedIfCheck::UserDefinedBoolConversionMode
-                          UserBoolConversionMode) {
-  if (!Cond || Cond->isTypeDependent())
+static bool conditionNeedsBoolCast(const Expr *Condition) {
+  assert(Condition);
+
+  if (!containsUserDefinedBoolConversion(Condition))
     return false;
-  const bool HasUserDefinedBoolConversion =
-      containsUserDefinedBoolConversion(Cond);
-  if (UserBoolConversionMode !=
-          RedundantNestedIfCheck::UserDefinedBoolConversionMode::WarnAndFix &&
-      HasUserDefinedBoolConversion) {
+
+  const Expr *const Unwrapped =
+      Condition->IgnoreImplicitAsWritten()->IgnoreParens();
+  if (!Unwrapped)
+    return true;
+
+  const QualType ConditionType = Unwrapped->getType();
+  return ConditionType.isNull() || !ConditionType->isScalarType();
+}
+
+static bool
+isConditionExpressionMergeable(const Expr *Condition,
+                               bool AllowUserDefinedBoolConversion) {
+  assert(Condition);
+
+  if (Condition->isTypeDependent())
     return false;
-  }
-  const Expr *Unwrapped = Cond->IgnoreParenImpCasts();
+
+  if (containsUserDefinedBoolConversion(Condition))
+    return AllowUserDefinedBoolConversion;
+
+  const Expr *const Unwrapped = Condition->IgnoreParenImpCasts();
   if (!Unwrapped)
     return false;
-  const QualType CondType = Unwrapped->getType();
-  if (CondType.isNull())
-    return false;
-  if (CondType->isScalarType())
-    return true;
-  return UserBoolConversionMode ==
-         RedundantNestedIfCheck::UserDefinedBoolConversionMode::WarnAndFix;
+
+  const QualType ConditionType = Unwrapped->getType();
+  return !ConditionType.isNull() && ConditionType->isScalarType();
 }
 
 static std::optional<CharSourceRange>
-getConditionPayloadRange(const IfStmt *If, const SourceManager &SM,
-                         const LangOptions &LangOpts) {
-  if (!If)
-    return std::nullopt;
-  const SourceLocation PayloadBegin =
+getIfConditionRange(const IfStmt *If, const SourceManager &SM,
+                    const LangOptions &LangOpts) {
+  assert(If);
+
+  const SourceLocation ConditionBegin =
       Lexer::getLocForEndOfToken(If->getLParenLoc(), 0, SM, LangOpts);
-  if (PayloadBegin.isInvalid() || If->getRParenLoc().isInvalid())
+  if (ConditionBegin.isInvalid() || If->getRParenLoc().isInvalid())
     return std::nullopt;
 
-  const CharSourceRange PayloadRange =
-      CharSourceRange::getCharRange(PayloadBegin, If->getRParenLoc());
+  const CharSourceRange ConditionRange =
+      CharSourceRange::getCharRange(ConditionBegin, If->getRParenLoc());
   const CharSourceRange FileRange =
-      Lexer::makeFileCharRange(PayloadRange, SM, LangOpts);
+      Lexer::makeFileCharRange(ConditionRange, SM, LangOpts);
   if (FileRange.isInvalid())
     return std::nullopt;
+
   return FileRange;
 }
 
 static std::optional<std::string>
-getConditionPayloadText(const IfStmt *If, const SourceManager &SM,
-                        const LangOptions &LangOpts) {
-  const std::optional<CharSourceRange> PayloadRange =
-      getConditionPayloadRange(If, SM, LangOpts);
-  if (!PayloadRange)
+getIfConditionText(const IfStmt *If, const SourceManager &SM,
+                   const LangOptions &LangOpts) {
+  const std::optional<CharSourceRange> ConditionRange =
+      getIfConditionRange(If, SM, LangOpts);
+  if (!ConditionRange)
     return std::nullopt;
 
   bool Invalid = false;
-  const StringRef PayloadText =
-      Lexer::getSourceText(*PayloadRange, SM, LangOpts, &Invalid);
-  if (Invalid || PayloadText.empty())
-    return std::nullopt;
-  return PayloadText.str();
+  const StringRef ConditionText =
+      Lexer::getSourceText(*ConditionRange, SM, LangOpts, &Invalid);
+  return Invalid || ConditionText.empty()
+             ? std::nullopt
+             : std::optional<std::string>(ConditionText.str());
 }
 
-static std::vector<utils::lexer::CommentToken>
-getCommentTokensInRange(CharSourceRange Range, const SourceManager &SM,
-                        const LangOptions &LangOpts) {
-  std::vector<utils::lexer::CommentToken> Comments;
-  if (Range.isInvalid())
-    return Comments;
-
-  const CharSourceRange FileRange =
-      Lexer::makeFileCharRange(Range, SM, LangOpts);
-  if (FileRange.isInvalid())
-    return Comments;
-
-  const std::pair<FileID, unsigned> BeginLoc =
-      SM.getDecomposedLoc(FileRange.getBegin());
-  const std::pair<FileID, unsigned> EndLoc =
-      SM.getDecomposedLoc(FileRange.getEnd());
-  if (BeginLoc.first != EndLoc.first)
-    return Comments;
-
-  bool Invalid = false;
-  const StringRef Buffer = SM.getBufferData(BeginLoc.first, &Invalid);
-  if (Invalid)
-    return Comments;
-
-  const char *LexStart = Buffer.data() + BeginLoc.second;
-  Lexer TheLexer(SM.getLocForStartOfFile(BeginLoc.first), LangOpts,
-                 Buffer.begin(), LexStart, Buffer.end());
-  TheLexer.SetCommentRetentionState(true);
-
-  while (true) {
-    Token Tok;
-    if (TheLexer.LexFromRawLexer(Tok))
-      break;
-    if (Tok.is(tok::eof) || Tok.getLocation() == FileRange.getEnd() ||
-        SM.isBeforeInTranslationUnit(FileRange.getEnd(), Tok.getLocation())) {
-      break;
-    }
-
-    if (!Tok.is(tok::comment))
-      continue;
-
-    const std::pair<FileID, unsigned> CommentLoc =
-        SM.getDecomposedLoc(Tok.getLocation());
-    if (CommentLoc.first != BeginLoc.first)
-      continue;
-
-    Comments.push_back(utils::lexer::CommentToken{
-        Tok.getLocation(),
-        StringRef(Buffer.begin() + CommentLoc.second, Tok.getLength()),
-    });
-  }
-
-  return Comments;
-}
-
-static bool locationInCharRange(SourceLocation Loc, CharSourceRange Range,
-                                const SourceManager &SM) {
-  if (Loc.isInvalid() || Range.isInvalid())
-    return false;
-  return !SM.isBeforeInTranslationUnit(Loc, Range.getBegin()) &&
+static bool isLocationInCharRange(SourceLocation Loc, CharSourceRange Range,
+                                  const SourceManager &SM) {
+  return Loc.isValid() && Range.isValid() &&
+         !SM.isBeforeInTranslationUnit(Loc, Range.getBegin()) &&
          SM.isBeforeInTranslationUnit(Loc, Range.getEnd());
 }
 
-// Validate comments in the nested-if header we remove. Comments are fix-safe
-// only if they are all inside the condition payload, which is preserved
-// verbatim. Any other nested-header comment placement keeps the diagnostic but
-// suppresses fix-its.
+// Keep fix-its only when comments in removed nested headers stay inside the
+// preserved condition text. Other comment placements keep the diagnostic but
+// suppress the rewrite.
 static bool hasOnlyPayloadCommentsInNestedHeader(const IfStmt *Nested,
                                                  const SourceManager &SM,
                                                  const LangOptions &LangOpts) {
-  if (!Nested || !Nested->getThen())
-    return false;
+  assert(Nested);
+  assert(Nested->getThen());
 
   const CharSourceRange HeaderRange = CharSourceRange::getCharRange(
       Nested->getBeginLoc(), Nested->getThen()->getBeginLoc());
@@ -226,44 +170,38 @@ static bool hasOnlyPayloadCommentsInNestedHeader(const IfStmt *Nested,
     return false;
 
   const std::optional<CharSourceRange> PayloadRange =
-      getConditionPayloadRange(Nested, SM, LangOpts);
+      getIfConditionRange(Nested, SM, LangOpts);
   if (!PayloadRange)
     return false;
 
   const std::vector<utils::lexer::CommentToken> Comments =
-      getCommentTokensInRange(HeaderFileRange, SM, LangOpts);
+      utils::lexer::getCommentsInRange(HeaderFileRange, SM, LangOpts);
   return llvm::all_of(Comments, [&](const utils::lexer::CommentToken &Comment) {
-    return locationInCharRange(Comment.Loc, *PayloadRange, SM);
+    return isLocationInCharRange(Comment.Loc, *PayloadRange, SM);
   });
 }
 
-// Only an outer condition variable can be rewritten safely by moving it into
-// an init-statement and using the declared variable as the first conjunct.
-static bool canRewriteOuterConditionVariable(
-    const IfStmt *If, const LangOptions &LangOpts,
-    RedundantNestedIfCheck::UserDefinedBoolConversionMode
-        UserBoolConversionMode) {
-  if (!If || !If->hasVarStorage() || If->hasInitStorage())
+// Only an outer condition variable can be rewritten safely by moving the
+// declaration into an init-statement and conjoining the condition variable.
+static bool
+canRewriteOuterConditionVariable(const IfStmt *If,
+                                 bool AllowUserDefinedBoolConversion) {
+  assert(If);
+  assert(If->hasVarStorage());
+
+  if (If->hasInitStorage())
     return false;
-  // `if (init; cond)` syntax is available in C++17 and later only.
-  if (!LangOpts.CPlusPlus17)
+
+  const auto *const ConditionVariable = If->getConditionVariable();
+  const auto *const ConditionVariableDeclStmt =
+      If->getConditionVariableDeclStmt();
+  if (!ConditionVariable || !ConditionVariableDeclStmt ||
+      !ConditionVariableDeclStmt->isSingleDecl() ||
+      ConditionVariable->getName().empty())
     return false;
-  const auto *CondVar = If->getConditionVariable();
-  const auto *CondVarDeclStmt = If->getConditionVariableDeclStmt();
-  if (!CondVar || !CondVarDeclStmt || !CondVarDeclStmt->isSingleDecl() ||
-      CondVar->getName().empty()) {
-    return false;
-  }
-  const QualType VarType = CondVar->getType();
-  if (VarType.isNull())
-    return false;
-  if (UserBoolConversionMode !=
-          RedundantNestedIfCheck::UserDefinedBoolConversionMode::WarnAndFix &&
-      !VarType->isScalarType()) {
-    return false;
-  }
-  return isConditionExpressionSafeToConjoin(If->getCond(),
-                                            UserBoolConversionMode);
+
+  return If->getCond() && isConditionExpressionMergeable(
+                              If->getCond(), AllowUserDefinedBoolConversion);
 }
 
 // Accept either `if (...) if (...)` or `if (...) { if (...) }` where the
@@ -273,169 +211,92 @@ static const IfStmt *getOnlyNestedIf(const Stmt *Then) {
     return nullptr;
   if (const auto *NestedIf = dyn_cast<IfStmt>(Then))
     return NestedIf;
-  const auto *Compound = dyn_cast<CompoundStmt>(Then);
+
+  const auto *const Compound = dyn_cast<CompoundStmt>(Then);
   if (!Compound || Compound->size() != 1)
     return nullptr;
+
   return dyn_cast<IfStmt>(Compound->body_front());
 }
 
-static bool
-isMergeCandidate(const IfStmt *If, bool AllowInitStorage, bool RequireConstexpr,
-                 bool AllowConditionVariable, const LangOptions &LangOpts,
-                 RedundantNestedIfCheck::UserDefinedBoolConversionMode
-                     UserBoolConversionMode) {
-  if (!If || !If->getThen())
-    return false;
-  if (If->isConsteval() || If->getElse())
-    return false;
-  if (!AllowInitStorage && If->hasInitStorage())
-    return false;
-  if (If->isConstexpr() != RequireConstexpr)
-    return false;
-  if (If->hasVarStorage())
-    return AllowConditionVariable && canRewriteOuterConditionVariable(
-                                         If, LangOpts, UserBoolConversionMode);
+static bool hasMergeableStructure(const IfStmt *If, bool AllowInitStorage,
+                                  bool RequireConstexpr) {
+  assert(If);
 
-  return If->getCond() && isConditionExpressionSafeToConjoin(
-                              If->getCond(), UserBoolConversionMode);
+  return If->getThen() && !If->isConsteval() && !If->getElse() &&
+         (AllowInitStorage || !If->hasInitStorage()) &&
+         If->isConstexpr() == RequireConstexpr;
 }
 
-static bool isMergeShapeCandidate(const IfStmt *If, bool AllowInitStorage,
-                                  bool RequireConstexpr,
-                                  bool AllowConditionVariable,
-                                  const LangOptions &LangOpts) {
-  if (!If || !If->getThen())
+static bool isMergeCandidate(const IfStmt *If, bool AllowInitStorage,
+                             bool RequireConstexpr, bool AllowConditionVariable,
+                             bool AllowUserDefinedBoolConversion,
+                             const LangOptions &LangOpts) {
+  assert(If);
+
+  if (!hasMergeableStructure(If, AllowInitStorage, RequireConstexpr))
     return false;
-  if (If->isConsteval() || If->getElse())
-    return false;
-  if (!AllowInitStorage && If->hasInitStorage())
-    return false;
-  if (If->isConstexpr() != RequireConstexpr)
-    return false;
+
   if (If->hasVarStorage())
-    return AllowConditionVariable && LangOpts.CPlusPlus17;
-  return If->getCond() != nullptr;
+    return AllowConditionVariable && LangOpts.CPlusPlus17 &&
+           canRewriteOuterConditionVariable(If, AllowUserDefinedBoolConversion);
+
+  return If->getCond() && isConditionExpressionMergeable(
+                              If->getCond(), AllowUserDefinedBoolConversion);
 }
 
-// Statement attributes are attached outside of the `if` token range; removing
-// nested `if` tokens can make attribute placement invalid, so skip them.
+// Statement attributes wrap the `if` in an `AttributedStmt`, so removing nested
+// `if` tokens can invalidate attribute placement.
 static bool isAttributedIf(const IfStmt *If, ASTContext &Context) {
-  if (!If)
-    return false;
+  assert(If);
+
   const DynTypedNodeList Parents = Context.getParents(*If);
   return !Parents.empty() && Parents[0].get<AttributedStmt>() != nullptr;
 }
 
-// Build the maximal top-down chain of mergeable nested if statements.
-static llvm::SmallVector<const IfStmt *>
-getMergeChain(const IfStmt *Root, ASTContext &Context,
-              RedundantNestedIfCheck::UserDefinedBoolConversionMode
-                  UserBoolConversionMode) {
-  llvm::SmallVector<const IfStmt *> Chain;
-  if (!Root)
-    return Chain;
+static IfChain getMergeChain(const IfStmt *Root, ASTContext &Context,
+                             bool AllowUserDefinedBoolConversion) {
+  assert(Root);
 
+  IfChain Chain;
   const LangOptions &LangOpts = Context.getLangOpts();
-  const bool IsConstexpr = Root->isConstexpr();
-  if (!isMergeCandidate(Root, /*AllowInitStorage=*/true, IsConstexpr,
-                        /*AllowConditionVariable=*/true, LangOpts,
-                        UserBoolConversionMode) ||
+  const bool RequireConstexpr = Root->isConstexpr();
+  if (!isMergeCandidate(Root, /*AllowInitStorage=*/true,
+                        /*RequireConstexpr=*/RequireConstexpr,
+                        /*AllowConditionVariable=*/true,
+                        AllowUserDefinedBoolConversion, LangOpts) ||
       isAttributedIf(Root, Context)) {
     return Chain;
   }
 
   Chain.push_back(Root);
   const IfStmt *Current = Root;
-  while (const IfStmt *Nested = getOnlyNestedIf(Current->getThen())) {
-    if (!isMergeCandidate(Nested, /*AllowInitStorage=*/false, IsConstexpr,
-                          /*AllowConditionVariable=*/false, LangOpts,
-                          UserBoolConversionMode) ||
+  while (const IfStmt *const Nested = getOnlyNestedIf(Current->getThen())) {
+    if (!isMergeCandidate(Nested, /*AllowInitStorage=*/false,
+                          /*RequireConstexpr=*/RequireConstexpr,
+                          /*AllowConditionVariable=*/false,
+                          AllowUserDefinedBoolConversion, LangOpts) ||
         isAttributedIf(Nested, Context)) {
       break;
     }
-    Chain.push_back(Nested);
-    Current = Nested;
-  }
-  return Chain;
-}
 
-// Warn-only mode for chains blocked specifically by user-defined bool
-// conversion in the outer condition.
-static llvm::SmallVector<const IfStmt *>
-getUserDefinedBoolWarnChain(const IfStmt *Root, ASTContext &Context) {
-  llvm::SmallVector<const IfStmt *> Chain;
-  if (!Root)
-    return Chain;
-
-  const LangOptions &LangOpts = Context.getLangOpts();
-  const bool IsConstexpr = Root->isConstexpr();
-  if (!isMergeShapeCandidate(Root, /*AllowInitStorage=*/true, IsConstexpr,
-                             /*AllowConditionVariable=*/true, LangOpts) ||
-      isAttributedIf(Root, Context) ||
-      !containsUserDefinedBoolConversion(Root->getCond())) {
-    return Chain;
-  }
-
-  Chain.push_back(Root);
-  const IfStmt *Current = Root;
-  while (const IfStmt *Nested = getOnlyNestedIf(Current->getThen())) {
-    if (!isMergeCandidate(
-            Nested, /*AllowInitStorage=*/false, IsConstexpr,
-            /*AllowConditionVariable=*/false, LangOpts,
-            RedundantNestedIfCheck::UserDefinedBoolConversionMode::None) ||
-        isAttributedIf(Nested, Context)) {
-      break;
-    }
     Chain.push_back(Nested);
     Current = Nested;
   }
 
-  if (Chain.size() < 2)
-    Chain.clear();
   return Chain;
 }
 
-// Locate the parent `if` that owns this node in its then-branch. This lets us
-// suppress duplicate diagnostics when the parent chain is already handled.
-static const IfStmt *getParentThenIf(const IfStmt *If, ASTContext &Context) {
-  if (!If)
-    return nullptr;
-
-  const DynTypedNodeList Parents = Context.getParents(*If);
-  if (Parents.empty())
-    return nullptr;
-
-  if (const auto *ParentIf = Parents[0].get<IfStmt>()) {
-    if (ParentIf->getThen() == If)
-      return ParentIf;
-    return nullptr;
-  }
-
-  const auto *ParentCompound = Parents[0].get<CompoundStmt>();
-  if (!ParentCompound || ParentCompound->size() != 1 ||
-      ParentCompound->body_front() != If) {
-    return nullptr;
-  }
-
-  const DynTypedNodeList GrandParents = Context.getParents(*ParentCompound);
-  if (GrandParents.empty())
-    return nullptr;
-
-  const auto *ParentIf = GrandParents[0].get<IfStmt>();
-  if (!ParentIf || ParentIf->getThen() != ParentCompound)
-    return nullptr;
-  return ParentIf;
-}
-
-static bool isConstantBooleanCondition(const Expr *Cond, const ASTContext &Ctx,
+static bool isConstantBooleanCondition(const Expr *Condition,
+                                       const ASTContext &Context,
                                        bool RequiredValue) {
-  if (!Cond || Cond->isValueDependent() || Cond->isInstantiationDependent())
+  if (!Condition || Condition->isValueDependent() ||
+      Condition->isInstantiationDependent())
     return false;
 
-  bool Evaluated = false;
-  if (!Cond->EvaluateAsBooleanCondition(Evaluated, Ctx))
-    return false;
-  return Evaluated == RequiredValue;
+  bool EvaluatedValue = false;
+  return Condition->EvaluateAsBooleanCondition(EvaluatedValue, Context) &&
+         EvaluatedValue == RequiredValue;
 }
 
 static bool
@@ -448,51 +309,46 @@ isConstexprChainSemanticallySafe(llvm::ArrayRef<const IfStmt *> Chain,
       Chain.front()->getCond()->isInstantiationDependent();
 
   // Allow outer instantiation-dependence only when every nested condition is a
-  // non-dependent constant true expression. This preserves constexpr discard
-  // behavior for template branches.
-  for (std::size_t Index = 1; Index < Chain.size(); ++Index) {
-    const Expr *NestedCond = Chain[Index]->getCond();
-    if (NestedCond->isInstantiationDependent())
+  // non-dependent constant `true` expression. This preserves discarded-branch
+  // behavior for template-dependent `if constexpr`.
+  return llvm::all_of(llvm::drop_begin(Chain), [&](const IfStmt *Nested) {
+    const Expr *const NestedCondition = Nested->getCond();
+    if (NestedCondition->isInstantiationDependent())
       return false;
-    if (OuterIsDependent &&
-        !isConstantBooleanCondition(NestedCond, Context,
-                                    /*RequiredValue=*/true)) {
-      return false;
-    }
-  }
-  return true;
+    return !OuterIsDependent ||
+           isConstantBooleanCondition(NestedCondition, Context,
+                                      /*RequiredValue=*/true);
+  });
 }
 
 // A range is unsafe for text edits if it crosses macro expansions or
 // preprocessor directives.
+template <typename RangeT>
+static bool isUnsafeRange(RangeT Range, CharSourceRange FileRange,
+                          bool ContainsExpansionsOrDirectives) {
+  return Range.isInvalid() || Range.getBegin().isMacroID() ||
+         Range.getEnd().isMacroID() || FileRange.isInvalid() ||
+         ContainsExpansionsOrDirectives;
+}
+
 static bool isUnsafeTokenRange(SourceRange Range, const SourceManager &SM,
                                const LangOptions &LangOpts) {
-  if (!Range.isValid())
-    return true;
-  if (Range.getBegin().isMacroID() || Range.getEnd().isMacroID())
-    return true;
-  if (Lexer::makeFileCharRange(CharSourceRange::getTokenRange(Range), SM,
-                               LangOpts)
-          .isInvalid()) {
-    return true;
-  }
-  return utils::lexer::rangeContainsExpansionsOrDirectives(Range, SM, LangOpts);
+  return isUnsafeRange(
+      Range,
+      Lexer::makeFileCharRange(CharSourceRange::getTokenRange(Range), SM,
+                               LangOpts),
+      utils::lexer::rangeContainsExpansionsOrDirectives(Range, SM, LangOpts));
 }
 
 static bool isUnsafeCharRange(CharSourceRange Range, const SourceManager &SM,
                               const LangOptions &LangOpts) {
-  if (Range.isInvalid())
-    return true;
-  if (Range.getBegin().isMacroID() || Range.getEnd().isMacroID())
-    return true;
-  if (Lexer::makeFileCharRange(Range, SM, LangOpts).isInvalid())
-    return true;
-  return utils::lexer::rangeContainsExpansionsOrDirectives(Range.getAsRange(),
-                                                           SM, LangOpts);
+  return isUnsafeRange(Range, Lexer::makeFileCharRange(Range, SM, LangOpts),
+                       utils::lexer::rangeContainsExpansionsOrDirectives(
+                           Range.getAsRange(), SM, LangOpts));
 }
 
 // Validate every range that contributes to the final edit set before offering
-// fix-its. If any range is unsafe, keep diagnostics but do not rewrite.
+// fix-its. If any range is unsafe, keep looking for a diagnosable child chain.
 static bool isFixitSafeForChain(llvm::ArrayRef<const IfStmt *> Chain,
                                 const SourceManager &SM,
                                 const LangOptions &LangOpts) {
@@ -500,133 +356,148 @@ static bool isFixitSafeForChain(llvm::ArrayRef<const IfStmt *> Chain,
     return false;
 
   const IfStmt *const Root = Chain.front();
-  if (Root->hasInitStorage() && !Root->hasVarStorage()) {
-    if (isUnsafeTokenRange(Chain.front()->getCond()->getSourceRange(), SM,
+  const std::optional<CharSourceRange> RootConditionRange =
+      Root->hasInitStorage() && !Root->hasVarStorage()
+          ? std::optional<CharSourceRange>(CharSourceRange::getTokenRange(
+                Root->getCond()->getSourceRange()))
+          : getIfConditionRange(Root, SM, LangOpts);
+  if (!RootConditionRange ||
+      isUnsafeCharRange(*RootConditionRange, SM, LangOpts))
+    return false;
+  if (!Root->hasVarStorage() &&
+      isUnsafeTokenRange(Root->getCond()->getSourceRange(), SM, LangOpts))
+    return false;
+
+  if (Root->hasVarStorage()) {
+    const auto *const ConditionVariableDeclStmt =
+        Root->getConditionVariableDeclStmt();
+    if (!ConditionVariableDeclStmt ||
+        isUnsafeTokenRange(ConditionVariableDeclStmt->getSourceRange(), SM,
                            LangOpts)) {
       return false;
     }
+  }
+
+  const llvm::ArrayRef<const IfStmt *> ChainRef(Chain);
+  return llvm::all_of(
+      llvm::zip(ChainRef.drop_back(), ChainRef.drop_front()),
+      [&](const auto &ParentAndChild) {
+        const auto &[Parent, Child] = ParentAndChild;
+        if (isUnsafeTokenRange(Child->getCond()->getSourceRange(), SM,
+                               LangOpts))
+          return false;
+
+        const CharSourceRange ChildHeaderRange = CharSourceRange::getCharRange(
+            Child->getBeginLoc(), Child->getThen()->getBeginLoc());
+        if (isUnsafeCharRange(ChildHeaderRange, SM, LangOpts))
+          return false;
+
+        const auto *const Wrapper = dyn_cast<CompoundStmt>(Parent->getThen());
+        return !Wrapper ||
+               (!isUnsafeTokenRange(
+                    SourceRange(Wrapper->getLBracLoc(), Wrapper->getLBracLoc()),
+                    SM, LangOpts) &&
+                !isUnsafeTokenRange(
+                    SourceRange(Wrapper->getRBracLoc(), Wrapper->getRBracLoc()),
+                    SM, LangOpts));
+      });
+}
+
+static std::string wrapConditionText(StringRef ConditionText,
+                                     bool NeedBoolCast) {
+  if (!NeedBoolCast)
+    return ConditionText.str();
+
+  std::string Result("static_cast<bool>(");
+  Result += ConditionText;
+  Result += ")";
+  return Result;
+}
+
+static std::optional<std::string> getConjunctText(const IfStmt *If,
+                                                  const ASTContext &Context,
+                                                  bool UseConditionExprText) {
+  assert(If);
+
+  const SourceManager &SM = Context.getSourceManager();
+  const LangOptions &LangOpts = Context.getLangOpts();
+
+  std::optional<std::string> ConditionText;
+  if (UseConditionExprText) {
+    const StringRef ConditionExprText =
+        tooling::fixit::getText(*If->getCond(), Context);
+    if (ConditionExprText.empty())
+      return std::nullopt;
+    ConditionText = ConditionExprText.str();
   } else {
-    const std::optional<CharSourceRange> RootConditionRange =
-        getConditionPayloadRange(Root, SM, LangOpts);
-    if (!RootConditionRange ||
-        isUnsafeCharRange(*RootConditionRange, SM, LangOpts)) {
-      return false;
-    }
+    ConditionText = getIfConditionText(If, SM, LangOpts);
+    if (!ConditionText)
+      return std::nullopt;
   }
 
-  if (Root->hasVarStorage()) {
-    const auto *CondVarDeclStmt = Root->getConditionVariableDeclStmt();
-    if (!CondVarDeclStmt ||
-        isUnsafeTokenRange(CondVarDeclStmt->getSourceRange(), SM, LangOpts)) {
-      return false;
-    }
-  } else if (!Root->hasInitStorage() &&
-             isUnsafeTokenRange(Root->getCond()->getSourceRange(), SM,
-                                LangOpts)) {
-    return false;
-  }
-
-  for (std::size_t Index = 1; Index < Chain.size(); ++Index) {
-    const IfStmt *const Nested = Chain[Index];
-    if (isUnsafeTokenRange(Nested->getCond()->getSourceRange(), SM, LangOpts))
-      return false;
-
-    const CharSourceRange NestedHeaderRange = CharSourceRange::getCharRange(
-        Nested->getBeginLoc(), Nested->getThen()->getBeginLoc());
-    if (isUnsafeCharRange(NestedHeaderRange, SM, LangOpts))
-      return false;
-
-    const auto *Wrapper = dyn_cast<CompoundStmt>(Chain[Index - 1]->getThen());
-    if (!Wrapper)
-      continue;
-
-    if (isUnsafeTokenRange(Wrapper->getSourceRange(), SM, LangOpts) ||
-        isUnsafeTokenRange(
-            SourceRange(Wrapper->getLBracLoc(), Wrapper->getLBracLoc()), SM,
-            LangOpts) ||
-        isUnsafeTokenRange(
-            SourceRange(Wrapper->getRBracLoc(), Wrapper->getRBracLoc()), SM,
-            LangOpts)) {
-      return false;
-    }
-  }
-
-  return true;
+  return wrapConditionText(*ConditionText,
+                           conditionNeedsBoolCast(If->getCond()));
 }
 
 static CombinedConditionBuildResult
 buildCombinedCondition(llvm::ArrayRef<const IfStmt *> Chain,
                        const ASTContext &Context) {
-  CombinedConditionBuildResult Result;
   if (Chain.empty())
-    return Result;
+    return {};
 
   const SourceManager &SM = Context.getSourceManager();
   const LangOptions &LangOpts = Context.getLangOpts();
-  std::string Combined;
+  std::string CombinedCondition;
 
-  for (std::size_t Index = 0; Index < Chain.size(); ++Index) {
-    const IfStmt *If = Chain[Index];
-    if (Index == 0 && If->hasVarStorage()) {
-      const auto *CondVar = If->getConditionVariable();
-      if (!CondVar)
-        return Result;
+  for (const auto &[Index, If] : llvm::enumerate(Chain)) {
+    const bool IsRoot = Index == 0;
+    if (!IsRoot && !hasOnlyPayloadCommentsInNestedHeader(If, SM, LangOpts)) {
+      return {CombinedConditionBuildStatus::UnsupportedCommentPlacement, {}};
+    }
 
-      // Preserve comments and spelling in declaration conditions by using the
-      // full payload text between parentheses instead of the AST declaration
-      // source range.
-      const std::optional<std::string> CondPayloadText =
-          getConditionPayloadText(If, SM, LangOpts);
-      if (!CondPayloadText)
-        return Result;
-      Combined += *CondPayloadText;
-      Combined += "; ";
-      const llvm::StringRef CondVarName = CondVar->getName();
-      Combined.append(CondVarName.begin(), CondVarName.end());
+    if (IsRoot && If->hasVarStorage()) {
+      const auto *const ConditionVariable = If->getConditionVariable();
+      if (!ConditionVariable)
+        return {};
+
+      const std::optional<std::string> ConditionText =
+          getIfConditionText(If, SM, LangOpts);
+      if (!ConditionText)
+        return {};
+
+      CombinedCondition = *ConditionText;
+      CombinedCondition += "; ";
+      CombinedCondition += wrapConditionText(
+          ConditionVariable->getName(), conditionNeedsBoolCast(If->getCond()));
       continue;
     }
 
-    std::optional<std::string> CondText;
-    if (Index == 0 && If->hasInitStorage()) {
-      const llvm::StringRef CondExprText =
-          tooling::fixit::getText(*If->getCond(), Context);
-      if (CondExprText.empty())
-        return Result;
-      CondText = CondExprText.str();
-    } else {
-      CondText = getConditionPayloadText(If, SM, LangOpts);
-      if (!CondText)
-        return Result;
-    }
+    const std::optional<std::string> ConjunctText =
+        getConjunctText(If, Context,
+                        /*UseConditionExprText=*/IsRoot &&
+                            If->hasInitStorage() && !If->hasVarStorage());
+    if (!ConjunctText)
+      return {};
 
-    // Nested headers are removed by the fix-it. Keep only comments that are
-    // semantically local to the removed header and can be preserved safely.
-    if (Index > 0 && !hasOnlyPayloadCommentsInNestedHeader(If, SM, LangOpts)) {
-      Result.Status = CombinedConditionBuildStatus::UnsupportedCommentPlacement;
-      return Result;
-    }
-
-    if (!Combined.empty())
-      Combined += " && ";
-    // Parenthesize each condition to preserve precedence in the rewritten
-    // condition regardless of original operator binding.
-    Combined += "(";
-    Combined += *CondText;
-    Combined += ")";
+    if (!CombinedCondition.empty())
+      CombinedCondition += " && ";
+    CombinedCondition += '(';
+    CombinedCondition += *ConjunctText;
+    CombinedCondition += ')';
   }
-  Result.Status = CombinedConditionBuildStatus::Success;
-  Result.Text = std::move(Combined);
-  return Result;
+
+  return {CombinedConditionBuildStatus::Success, std::move(CombinedCondition)};
 }
 
 static std::optional<CharSourceRange>
 getConditionReplacementRange(const IfStmt *If, const SourceManager &SM,
                              const LangOptions &LangOpts) {
-  if (!If)
-    return std::nullopt;
-  if (If->hasInitStorage() && !If->hasVarStorage())
-    return CharSourceRange::getTokenRange(If->getCond()->getSourceRange());
-  return getConditionPayloadRange(If, SM, LangOpts);
+  assert(If);
+
+  return If->hasInitStorage() && !If->hasVarStorage()
+             ? std::optional<CharSourceRange>(CharSourceRange::getTokenRange(
+                   If->getCond()->getSourceRange()))
+             : getIfConditionRange(If, SM, LangOpts);
 }
 
 static ChainHandling
@@ -634,12 +505,9 @@ getChainHandling(llvm::ArrayRef<const IfStmt *> Chain,
                  const ASTContext &Context, const SourceManager &SM,
                  const LangOptions &LangOpts, bool WarnOnDependentConstexprIf,
                  std::optional<std::string> *CombinedCondition) {
-  // One place for all gating logic: chain shape, edit safety, constexpr
-  // semantic safety, and final condition synthesis.
-  if (Chain.size() < 2)
+  if (Chain.size() < 2 || !isFixitSafeForChain(Chain, SM, LangOpts))
     return ChainHandling::None;
-  if (!isFixitSafeForChain(Chain, SM, LangOpts))
-    return ChainHandling::None;
+
   if (!isConstexprChainSemanticallySafe(Chain, Context)) {
     return WarnOnDependentConstexprIf
                ? ChainHandling::WarnOnlyDependentConstexpr
@@ -653,132 +521,122 @@ getChainHandling(llvm::ArrayRef<const IfStmt *> Chain,
     return ChainHandling::WarnOnly;
   if (Combined.Status != CombinedConditionBuildStatus::Success)
     return ChainHandling::None;
+
   if (CombinedCondition)
     *CombinedCondition = Combined.Text;
   return ChainHandling::WarnAndFix;
 }
 
-static bool
-parentWillHandleThisIf(const IfStmt *If, ASTContext &Context,
-                       const SourceManager &SM, const LangOptions &LangOpts,
-                       bool WarnOnDependentConstexprIf,
-                       RedundantNestedIfCheck::UserDefinedBoolConversionMode
-                           UserBoolConversionMode) {
-  const IfStmt *const ParentIf = getParentThenIf(If, Context);
-  if (!ParentIf)
-    return false;
-
-  const auto ParentChain =
-      getMergeChain(ParentIf, Context, UserBoolConversionMode);
-  if (ParentChain.size() < 2 || ParentChain[1] != If)
-    return false;
-
-  return getChainHandling(ParentChain, Context, SM, LangOpts,
-                          WarnOnDependentConstexprIf,
-                          /*CombinedCondition=*/nullptr) != ChainHandling::None;
+static void emitNestedIfNotes(RedundantNestedIfCheck &Check,
+                              llvm::ArrayRef<const IfStmt *> Chain) {
+  for (const IfStmt *Nested : llvm::drop_begin(Chain))
+    Check.diag(Nested->getIfLoc(), NestedIfNote, DiagnosticIDs::Note);
 }
 
-static bool
-parentWillHandleUserDefinedBoolWarning(const IfStmt *If, ASTContext &Context,
-                                       const SourceManager &SM,
-                                       const LangOptions &LangOpts) {
-  const IfStmt *const ParentIf = getParentThenIf(If, Context);
-  if (!ParentIf)
-    return false;
+static void diagnoseChain(RedundantNestedIfCheck &Check, const IfStmt *If,
+                          ASTContext &Context, bool WarnOnDependentConstexprIf,
+                          bool AllowUserDefinedBoolConversion);
 
-  const auto ParentChain = getUserDefinedBoolWarnChain(ParentIf, Context);
-  if (ParentChain.size() < 2 || ParentChain[1] != If)
-    return false;
-  return isFixitSafeForChain(ParentChain, SM, LangOpts);
+static void diagnoseChildChain(RedundantNestedIfCheck &Check,
+                               const Stmt *Branch, ASTContext &Context,
+                               bool WarnOnDependentConstexprIf,
+                               bool AllowUserDefinedBoolConversion) {
+  if (const IfStmt *const Nested = getOnlyNestedIf(Branch))
+    diagnoseChain(Check, Nested, Context, WarnOnDependentConstexprIf,
+                  AllowUserDefinedBoolConversion);
+}
+
+// Match only syntactic chain roots. If a root cannot be diagnosed because it is
+// unsafe to rewrite, descend into excluded single-child nested `if` statements
+// in both branches and try again there.
+static void diagnoseChain(RedundantNestedIfCheck &Check, const IfStmt *If,
+                          ASTContext &Context, bool WarnOnDependentConstexprIf,
+                          bool AllowUserDefinedBoolConversion) {
+  assert(If);
+
+  const SourceManager &SM = Context.getSourceManager();
+  const LangOptions &LangOpts = Context.getLangOpts();
+  const IfChain Chain =
+      getMergeChain(If, Context, AllowUserDefinedBoolConversion);
+
+  std::optional<std::string> CombinedCondition;
+  const ChainHandling Handling =
+      getChainHandling(Chain, Context, SM, LangOpts, WarnOnDependentConstexprIf,
+                       &CombinedCondition);
+  if (Handling == ChainHandling::None) {
+    diagnoseChildChain(Check, If->getThen(), Context,
+                       WarnOnDependentConstexprIf,
+                       AllowUserDefinedBoolConversion);
+    diagnoseChildChain(Check, If->getElse(), Context,
+                       WarnOnDependentConstexprIf,
+                       AllowUserDefinedBoolConversion);
+    return;
+  }
+
+  if (Handling == ChainHandling::WarnOnlyDependentConstexpr) {
+    Check.diag(If->getIfLoc(), DependentConstexprDiag);
+    emitNestedIfNotes(Check, Chain);
+    return;
+  }
+
+  {
+    const DiagnosticBuilder Diag = Check.diag(If->getIfLoc(), MergeableIfDiag);
+    if (Handling == ChainHandling::WarnAndFix) {
+      const std::optional<CharSourceRange> ConditionRange =
+          getConditionReplacementRange(If, SM, LangOpts);
+      if (!ConditionRange || !CombinedCondition)
+        return;
+
+      Diag << FixItHint::CreateReplacement(*ConditionRange, *CombinedCondition);
+      const llvm::ArrayRef<const IfStmt *> ChainRef(Chain);
+      for (const auto &[Parent, Child] :
+           llvm::zip(ChainRef.drop_back(), ChainRef.drop_front())) {
+        Diag << FixItHint::CreateRemoval(CharSourceRange::getCharRange(
+            Child->getBeginLoc(), Child->getThen()->getBeginLoc()));
+
+        const auto *const Wrapper = dyn_cast<CompoundStmt>(Parent->getThen());
+        if (!Wrapper)
+          continue;
+
+        Diag << FixItHint::CreateRemoval(Wrapper->getLBracLoc())
+             << FixItHint::CreateRemoval(Wrapper->getRBracLoc());
+      }
+    }
+  }
+
+  emitNestedIfNotes(Check, Chain);
 }
 
 RedundantNestedIfCheck::RedundantNestedIfCheck(StringRef Name,
                                                ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context), WarnOnDependentConstexprIf(Options.get(
                                          WarnOnDependentConstexprIfStr, false)),
-      UserBoolConversionMode(Options.get(UserDefinedBoolConversionModeStr,
-                                         UserDefinedBoolConversionMode::None)) {
-}
+      AllowUserDefinedBoolConversion(
+          Options.get(AllowUserDefinedBoolConversionStr, false)) {}
 
 void RedundantNestedIfCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, WarnOnDependentConstexprIfStr,
                 WarnOnDependentConstexprIf);
-  Options.store(Opts, UserDefinedBoolConversionModeStr, UserBoolConversionMode);
+  Options.store(Opts, AllowUserDefinedBoolConversionStr,
+                AllowUserDefinedBoolConversion);
 }
 
 void RedundantNestedIfCheck::registerMatchers(MatchFinder *Finder) {
-  Finder->addMatcher(ifStmt().bind("if"), this);
+  Finder->addMatcher(
+      ifStmt(unless(anyOf(hasParent(ifStmt()),
+                          hasParent(compoundStmt(statementCountIs(1),
+                                                 hasParent(ifStmt()))))))
+          .bind("if"),
+      this);
 }
 
 void RedundantNestedIfCheck::check(const MatchFinder::MatchResult &Result) {
-  const auto *If = Result.Nodes.getNodeAs<IfStmt>("if");
-  if (!If)
-    return;
+  const auto *const If = Result.Nodes.getNodeAs<IfStmt>("if");
+  assert(If);
 
   ASTContext &Context = *Result.Context;
-  const SourceManager &SM = *Result.SourceManager;
-  const LangOptions &LangOpts = Context.getLangOpts();
-
-  const auto Chain = getMergeChain(If, Context, UserBoolConversionMode);
-  if (Chain.size() < 2) {
-    if (UserBoolConversionMode != UserDefinedBoolConversionMode::WarnOnly)
-      return;
-
-    if (parentWillHandleUserDefinedBoolWarning(If, Context, SM, LangOpts))
-      return;
-
-    const auto WarnChain = getUserDefinedBoolWarnChain(If, Context);
-    if (WarnChain.size() < 2 || !isFixitSafeForChain(WarnChain, SM, LangOpts))
-      return;
-
-    diag(If->getIfLoc(), "nested if statements can be merged");
-    return;
-  }
-  if (parentWillHandleThisIf(If, Context, SM, LangOpts,
-                             WarnOnDependentConstexprIf,
-                             UserBoolConversionMode)) {
-    return;
-  }
-
-  std::optional<std::string> CombinedCondition;
-  const ChainHandling Handling =
-      getChainHandling(Chain, Context, SM, LangOpts, WarnOnDependentConstexprIf,
-                       &CombinedCondition);
-  if (Handling == ChainHandling::None)
-    return;
-
-  if (Handling == ChainHandling::WarnOnlyDependentConstexpr) {
-    // Keep this as diagnostic-only: the option explicitly asks for awareness
-    // in templates even when rewrite safety cannot be guaranteed.
-    diag(If->getIfLoc(),
-         "nested instantiation-dependent if constexpr statements can be "
-         "merged");
-    return;
-  }
-
-  if (Handling == ChainHandling::WarnOnly) {
-    diag(If->getIfLoc(), "nested if statements can be merged");
-    return;
-  }
-
-  auto Diag = diag(If->getIfLoc(), "nested if statements can be merged");
-  const std::optional<CharSourceRange> CondRange =
-      getConditionReplacementRange(If, SM, LangOpts);
-  if (!CondRange || !CombinedCondition)
-    return;
-  Diag << FixItHint::CreateReplacement(*CondRange, *CombinedCondition);
-
-  for (std::size_t Index = 1; Index < Chain.size(); ++Index) {
-    const IfStmt *const Nested = Chain[Index];
-    Diag << FixItHint::CreateRemoval(CharSourceRange::getCharRange(
-        Nested->getBeginLoc(), Nested->getThen()->getBeginLoc()));
-
-    if (const auto *Wrapper =
-            dyn_cast<CompoundStmt>(Chain[Index - 1]->getThen())) {
-      Diag << FixItHint::CreateRemoval(Wrapper->getLBracLoc())
-           << FixItHint::CreateRemoval(Wrapper->getRBracLoc());
-    }
-  }
+  diagnoseChain(*this, If, Context, WarnOnDependentConstexprIf,
+                AllowUserDefinedBoolConversion);
 }
 
 } // namespace clang::tidy::readability

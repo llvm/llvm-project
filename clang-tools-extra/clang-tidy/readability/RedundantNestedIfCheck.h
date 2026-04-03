@@ -17,12 +17,6 @@ namespace clang::tidy::readability {
 /// concatenating conditions with ``&&``.
 class RedundantNestedIfCheck : public ClangTidyCheck {
 public:
-  enum class UserDefinedBoolConversionMode {
-    None,
-    WarnOnly,
-    WarnAndFix,
-  };
-
   RedundantNestedIfCheck(StringRef Name, ClangTidyContext *Context);
 
   void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
@@ -31,7 +25,7 @@ public:
 
 private:
   const bool WarnOnDependentConstexprIf;
-  const UserDefinedBoolConversionMode UserBoolConversionMode;
+  const bool AllowUserDefinedBoolConversion;
 };
 
 } // namespace clang::tidy::readability
