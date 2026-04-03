@@ -203,6 +203,18 @@ class ProcResGroup<list<ProcResource> resources> : ProcResourceKind {
   int BufferSize = -1;
 }
 
+// Define resource groups where the buffer size is the sum of individual 
+// resource buffer sizes. This is useful for modeling a distributed reservation
+// station (RS) micro-architecture, where each execution unit has its own RS,
+// and the group's total capacity is the sum of all individual unit capacities.
+class ProcResGroupBufferSum<list<ProcResource> resources>
+    : ProcResGroup<resources> {
+  assert !eq(!foldl(0, Resources, acc, unit,
+                    !add(acc, !lt(unit.BufferSize, 1))), 0),
+         "All resources in a ProcResGroupBufferSum must have BufferSize >= 1";
+  let BufferSize = !foldl(0, Resources, acc, unit, !add(acc, unit.BufferSize));
+}
+
 // A target architecture may define SchedReadWrite types and associate
 // them with instruction operands.
 class SchedReadWrite;
