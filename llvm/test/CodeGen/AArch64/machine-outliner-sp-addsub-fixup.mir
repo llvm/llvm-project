@@ -1,0 +1,551 @@
+# RUN: llc -mtriple=aarch64--- -run-pass=prologepilog -run-pass=machine-outliner \
+# RUN:   -verify-machineinstrs %s -o - | FileCheck %s
+
+# Check that the outliner fixes up SP-derived add/sub immediates inside an
+# outlined sequence that contains a call and therefore saves LR on the stack.
+# The add/sub immediates must be adjusted by +16.
+#
+# Also check that unencodable cases prevent the call from being included in the
+# outlined sequence.
+
+--- |
+  ; @callee is a leaf function so the outliner treat BL @callee as a legal
+  ; instruction. This would be addressed by relaxed stack access check.
+  define void @callee() #1 { ret void }
+  define void @add_fixup0() #0 { ret void }
+  define void @add_fixup1() #0 { ret void }
+  define void @add_fixup2() #0 { ret void }
+  define void @add_fixup3() #0 { ret void }
+  define void @sub_to_add0() #0 { ret void }
+  define void @sub_to_add1() #0 { ret void }
+  define void @sub_to_add2() #0 { ret void }
+  define void @sub_to_add3() #0 { ret void }
+  define void @sub_fixup0() #0 { ret void }
+  define void @sub_fixup1() #0 { ret void }
+  define void @sub_fixup2() #0 { ret void }
+  define void @sub_fixup3() #0 { ret void }
+  define void @shifted_sub0() #0 { ret void }
+  define void @shifted_sub1() #0 { ret void }
+  define void @shifted_sub2() #0 { ret void }
+  define void @shifted_sub3() #0 { ret void }
+  define void @shifted_add0() #0 { ret void }
+  define void @shifted_add1() #0 { ret void }
+  define void @shifted_add2() #0 { ret void }
+  define void @shifted_add3() #0 { ret void }
+  define void @overflow0() #0 { ret void }
+  define void @overflow1() #0 { ret void }
+  define void @overflow2() #0 { ret void }
+  define void @overflow3() #0 { ret void }
+  attributes #0 = { minsize noinline noredzone "frame-pointer"="all" }
+  attributes #1 = { minsize noinline noredzone "frame-pointer"="none" }
+...
+---
+
+name:            callee
+tracksRegLiveness: true
+body:             |
+  bb.0:
+  liveins: $lr
+    RET undef $lr
+
+...
+---
+
+name:            add_fixup0
+tracksRegLiveness: true
+body:             |
+  bb.0:
+  liveins: $lr
+    $lr = ORRXri $xzr, 1
+  bb.1:
+    ; CHECK-LABEL: name:            add_fixup0
+    ; CHECK: BL @[[ADD_FUNC:OUTLINED_FUNCTION_[0-9]+]]
+    ; CHECK-NOT: BL @callee
+    BL @callee, implicit-def dead $lr, implicit $sp
+    $x15 = ADDXri $sp, 48, 0
+    $x15 = ADDXri $sp, 48, 0
+  bb.2:
+    RET undef $lr
+
+...
+---
+
+name:            add_fixup1
+tracksRegLiveness: true
+body:             |
+  bb.0:
+  liveins: $lr
+    $lr = ORRXri $xzr, 1
+  bb.1:
+    ; CHECK-LABEL: name:            add_fixup1
+    ; CHECK: BL @[[ADD_FUNC]]
+    ; CHECK-NOT: BL @callee
+    BL @callee, implicit-def dead $lr, implicit $sp
+    $x15 = ADDXri $sp, 48, 0
+    $x15 = ADDXri $sp, 48, 0
+  bb.2:
+    RET undef $lr
+
+...
+---
+
+name:            add_fixup2
+tracksRegLiveness: true
+body:             |
+  bb.0:
+  liveins: $lr
+    $lr = ORRXri $xzr, 1
+  bb.1:
+    ; CHECK-LABEL: name:            add_fixup2
+    ; CHECK: BL @[[ADD_FUNC]]
+    ; CHECK-NOT: BL @callee
+    BL @callee, implicit-def dead $lr, implicit $sp
+    $x15 = ADDXri $sp, 48, 0
+    $x15 = ADDXri $sp, 48, 0
+  bb.2:
+    RET undef $lr
+
+...
+---
+
+name:            add_fixup3
+tracksRegLiveness: true
+body:             |
+  bb.0:
+  liveins: $lr
+    $lr = ORRXri $xzr, 1
+  bb.1:
+    ; CHECK-LABEL: name:            add_fixup3
+    ; CHECK: BL @[[ADD_FUNC]]
+    ; CHECK-NOT: BL @callee
+    BL @callee, implicit-def dead $lr, implicit $sp
+    $x15 = ADDXri $sp, 48, 0
+    $x15 = ADDXri $sp, 48, 0
+  bb.2:
+    RET undef $lr
+
+...
+---
+
+name:            sub_to_add0
+tracksRegLiveness: true
+body:             |
+  bb.0:
+  liveins: $lr
+    $lr = ORRXri $xzr, 1
+  bb.1:
+    ; CHECK-LABEL: name:            sub_to_add0
+    ; CHECK: BL @[[SUB_TO_ADD_FUNC:OUTLINED_FUNCTION_[0-9]+]]
+    ; CHECK-NOT: BL @callee
+    BL @callee, implicit-def dead $lr, implicit $sp
+    $x15 = SUBXri $sp, 8, 0
+    $x15 = SUBXri $sp, 8, 0
+  bb.2:
+    RET undef $lr
+
+...
+---
+
+name:            sub_to_add1
+tracksRegLiveness: true
+body:             |
+  bb.0:
+  liveins: $lr
+    $lr = ORRXri $xzr, 1
+  bb.1:
+    ; CHECK-LABEL: name:            sub_to_add1
+    ; CHECK: BL @[[SUB_TO_ADD_FUNC]]
+    ; CHECK-NOT: BL @callee
+    BL @callee, implicit-def dead $lr, implicit $sp
+    $x15 = SUBXri $sp, 8, 0
+    $x15 = SUBXri $sp, 8, 0
+  bb.2:
+    RET undef $lr
+
+...
+---
+
+name:            sub_to_add2
+tracksRegLiveness: true
+body:             |
+  bb.0:
+  liveins: $lr
+    $lr = ORRXri $xzr, 1
+  bb.1:
+    ; CHECK-LABEL: name:            sub_to_add2
+    ; CHECK: BL @[[SUB_TO_ADD_FUNC]]
+    ; CHECK-NOT: BL @callee
+    BL @callee, implicit-def dead $lr, implicit $sp
+    $x15 = SUBXri $sp, 8, 0
+    $x15 = SUBXri $sp, 8, 0
+  bb.2:
+    RET undef $lr
+
+...
+---
+
+name:            sub_to_add3
+tracksRegLiveness: true
+body:             |
+  bb.0:
+  liveins: $lr
+    $lr = ORRXri $xzr, 1
+  bb.1:
+    ; CHECK-LABEL: name:            sub_to_add3
+    ; CHECK: BL @[[SUB_TO_ADD_FUNC]]
+    ; CHECK-NOT: BL @callee
+    BL @callee, implicit-def dead $lr, implicit $sp
+    $x15 = SUBXri $sp, 8, 0
+    $x15 = SUBXri $sp, 8, 0
+  bb.2:
+    RET undef $lr
+
+...
+---
+
+name:            sub_fixup0
+tracksRegLiveness: true
+body:             |
+  bb.0:
+  liveins: $lr
+    $lr = ORRXri $xzr, 1
+  bb.1:
+    ; CHECK-LABEL: name:            sub_fixup0
+    ; CHECK: BL @[[SUB_FUNC:OUTLINED_FUNCTION_[0-9]+]]
+    ; CHECK-NOT: BL @callee
+    BL @callee, implicit-def dead $lr, implicit $sp
+    $x15 = SUBXri $sp, 48, 0
+    $x15 = SUBXri $sp, 48, 0
+  bb.2:
+    RET undef $lr
+
+...
+---
+
+name:            sub_fixup1
+tracksRegLiveness: true
+body:             |
+  bb.0:
+  liveins: $lr
+    $lr = ORRXri $xzr, 1
+  bb.1:
+    ; CHECK-LABEL: name:            sub_fixup1
+    ; CHECK: BL @[[SUB_FUNC]]
+    ; CHECK-NOT: BL @callee
+    BL @callee, implicit-def dead $lr, implicit $sp
+    $x15 = SUBXri $sp, 48, 0
+    $x15 = SUBXri $sp, 48, 0
+  bb.2:
+    RET undef $lr
+
+...
+---
+
+name:            sub_fixup2
+tracksRegLiveness: true
+body:             |
+  bb.0:
+  liveins: $lr
+    $lr = ORRXri $xzr, 1
+  bb.1:
+    ; CHECK-LABEL: name:            sub_fixup2
+    ; CHECK: BL @[[SUB_FUNC]]
+    ; CHECK-NOT: BL @callee
+    BL @callee, implicit-def dead $lr, implicit $sp
+    $x15 = SUBXri $sp, 48, 0
+    $x15 = SUBXri $sp, 48, 0
+  bb.2:
+    RET undef $lr
+
+...
+---
+
+name:            sub_fixup3
+tracksRegLiveness: true
+body:             |
+  bb.0:
+  liveins: $lr
+    $lr = ORRXri $xzr, 1
+  bb.1:
+    ; CHECK-LABEL: name:            sub_fixup3
+    ; CHECK: BL @[[SUB_FUNC]]
+    ; CHECK-NOT: BL @callee
+    BL @callee, implicit-def dead $lr, implicit $sp
+    $x15 = SUBXri $sp, 48, 0
+    $x15 = SUBXri $sp, 48, 0
+  bb.2:
+    RET undef $lr
+
+...
+---
+
+name:            shifted_sub0
+tracksRegLiveness: true
+body:             |
+  bb.0:
+  liveins: $lr
+    $lr = ORRXri $xzr, 1
+  bb.1:
+    ; CHECK-LABEL: name:            shifted_sub0
+    ; CHECK: BL @[[SHIFTED_SUB_FUNC:OUTLINED_FUNCTION_[0-9]+]]
+    ; CHECK-NOT: BL @callee
+    BL @callee, implicit-def dead $lr, implicit $sp
+    $x15 = SUBXri $sp, 1, 12
+    $x15 = SUBXri $sp, 1, 12
+  bb.2:
+    RET undef $lr
+
+...
+---
+
+name:            shifted_sub1
+tracksRegLiveness: true
+body:             |
+  bb.0:
+  liveins: $lr
+    $lr = ORRXri $xzr, 1
+  bb.1:
+    ; CHECK-LABEL: name:            shifted_sub1
+    ; CHECK: BL @[[SHIFTED_SUB_FUNC]]
+    ; CHECK-NOT: BL @callee
+    BL @callee, implicit-def dead $lr, implicit $sp
+    $x15 = SUBXri $sp, 1, 12
+    $x15 = SUBXri $sp, 1, 12
+  bb.2:
+    RET undef $lr
+
+...
+---
+
+name:            shifted_sub2
+tracksRegLiveness: true
+body:             |
+  bb.0:
+  liveins: $lr
+    $lr = ORRXri $xzr, 1
+  bb.1:
+    ; CHECK-LABEL: name:            shifted_sub2
+    ; CHECK: BL @[[SHIFTED_SUB_FUNC]]
+    ; CHECK-NOT: BL @callee
+    BL @callee, implicit-def dead $lr, implicit $sp
+    $x15 = SUBXri $sp, 1, 12
+    $x15 = SUBXri $sp, 1, 12
+  bb.2:
+    RET undef $lr
+
+...
+---
+
+name:            shifted_sub3
+tracksRegLiveness: true
+body:             |
+  bb.0:
+  liveins: $lr
+    $lr = ORRXri $xzr, 1
+  bb.1:
+    ; CHECK-LABEL: name:            shifted_sub3
+    ; CHECK: BL @[[SHIFTED_SUB_FUNC]]
+    ; CHECK-NOT: BL @callee
+    BL @callee, implicit-def dead $lr, implicit $sp
+    $x15 = SUBXri $sp, 1, 12
+    $x15 = SUBXri $sp, 1, 12
+  bb.2:
+    RET undef $lr
+
+...
+---
+
+name:            shifted_add0
+tracksRegLiveness: true
+body:             |
+  bb.0:
+  liveins: $lr
+    $lr = ORRXri $xzr, 1
+  bb.1:
+    ; CHECK-LABEL: name:            shifted_add0
+    ; CHECK: BL @callee
+    ; CHECK-NEXT: BL @[[SHIFTED_ADD_FUNC:OUTLINED_FUNCTION_[0-9]+]]
+    BL @callee, implicit-def dead $lr, implicit $sp
+    $x15 = ADDXri $sp, 1, 12
+    $x15 = ADDXri $sp, 1, 12
+  bb.2:
+    RET undef $lr
+
+...
+---
+
+name:            shifted_add1
+tracksRegLiveness: true
+body:             |
+  bb.0:
+  liveins: $lr
+    $lr = ORRXri $xzr, 1
+  bb.1:
+    ; CHECK-LABEL: name:            shifted_add1
+    ; CHECK: BL @callee
+    ; CHECK-NEXT: BL @[[SHIFTED_ADD_FUNC]]
+    BL @callee, implicit-def dead $lr, implicit $sp
+    $x15 = ADDXri $sp, 1, 12
+    $x15 = ADDXri $sp, 1, 12
+  bb.2:
+    RET undef $lr
+
+...
+---
+
+name:            shifted_add2
+tracksRegLiveness: true
+body:             |
+  bb.0:
+  liveins: $lr
+    $lr = ORRXri $xzr, 1
+  bb.1:
+    ; CHECK-LABEL: name:            shifted_add2
+    ; CHECK: BL @callee
+    ; CHECK-NEXT: BL @[[SHIFTED_ADD_FUNC]]
+    BL @callee, implicit-def dead $lr, implicit $sp
+    $x15 = ADDXri $sp, 1, 12
+    $x15 = ADDXri $sp, 1, 12
+  bb.2:
+    RET undef $lr
+
+...
+---
+
+name:            shifted_add3
+tracksRegLiveness: true
+body:             |
+  bb.0:
+  liveins: $lr
+    $lr = ORRXri $xzr, 1
+  bb.1:
+    ; CHECK-LABEL: name:            shifted_add3
+    ; CHECK: BL @callee
+    ; CHECK-NEXT: BL @[[SHIFTED_ADD_FUNC]]
+    BL @callee, implicit-def dead $lr, implicit $sp
+    $x15 = ADDXri $sp, 1, 12
+    $x15 = ADDXri $sp, 1, 12
+  bb.2:
+    RET undef $lr
+
+...
+---
+
+name:            overflow0
+tracksRegLiveness: true
+body:             |
+  bb.0:
+  liveins: $lr
+    $lr = ORRXri $xzr, 1
+  bb.1:
+    ; CHECK-LABEL: name:            overflow0
+    ; CHECK: BL @callee
+    ; CHECK-NEXT: BL @[[OVERFLOW_FUNC:OUTLINED_FUNCTION_[0-9]+]]
+    BL @callee, implicit-def dead $lr, implicit $sp
+    $x15 = ADDXri $sp, 4095, 0
+    $x15 = ADDXri $sp, 4095, 0
+  bb.2:
+    RET undef $lr
+
+...
+---
+
+name:            overflow1
+tracksRegLiveness: true
+body:             |
+  bb.0:
+  liveins: $lr
+    $lr = ORRXri $xzr, 1
+  bb.1:
+    ; CHECK-LABEL: name:            overflow1
+    ; CHECK: BL @callee
+    ; CHECK-NEXT: BL @[[OVERFLOW_FUNC]]
+    BL @callee, implicit-def dead $lr, implicit $sp
+    $x15 = ADDXri $sp, 4095, 0
+    $x15 = ADDXri $sp, 4095, 0
+  bb.2:
+    RET undef $lr
+
+...
+---
+
+name:            overflow2
+tracksRegLiveness: true
+body:             |
+  bb.0:
+  liveins: $lr
+    $lr = ORRXri $xzr, 1
+  bb.1:
+    ; CHECK-LABEL: name:            overflow2
+    ; CHECK: BL @callee
+    ; CHECK-NEXT: BL @[[OVERFLOW_FUNC]]
+    BL @callee, implicit-def dead $lr, implicit $sp
+    $x15 = ADDXri $sp, 4095, 0
+    $x15 = ADDXri $sp, 4095, 0
+  bb.2:
+    RET undef $lr
+
+...
+---
+
+name:            overflow3
+tracksRegLiveness: true
+body:             |
+  bb.0:
+  liveins: $lr
+    $lr = ORRXri $xzr, 1
+  bb.1:
+    ; CHECK-LABEL: name:            overflow3
+    ; CHECK: BL @callee
+    ; CHECK-NEXT: BL @[[OVERFLOW_FUNC]]
+    BL @callee, implicit-def dead $lr, implicit $sp
+    $x15 = ADDXri $sp, 4095, 0
+    $x15 = ADDXri $sp, 4095, 0
+  bb.2:
+    RET undef $lr
+
+...
+
+# CHECK:       name:            [[ADD_FUNC]]
+# CHECK:       early-clobber $sp = STRXpre $lr, $sp, -16
+# CHECK-NEXT:  BL @callee
+# CHECK-NEXT:  $x15 = ADDXri $sp, 64, 0
+# CHECK-NEXT:  $x15 = ADDXri $sp, 64, 0
+# CHECK-NEXT:  early-clobber $sp, $lr = LDRXpost $sp, 16
+# CHECK-NEXT:  RET $lr
+
+# CHECK:       name:            [[SUB_FUNC]]
+# CHECK:       early-clobber $sp = STRXpre $lr, $sp, -16
+# CHECK-NEXT:  BL @callee
+# CHECK-NEXT:  $x15 = SUBXri $sp, 32, 0
+# CHECK-NEXT:  $x15 = SUBXri $sp, 32, 0
+# CHECK-NEXT:  early-clobber $sp, $lr = LDRXpost $sp, 16
+# CHECK-NEXT:  RET $lr
+
+# CHECK:       name:            [[SHIFTED_SUB_FUNC]]
+# CHECK:       early-clobber $sp = STRXpre $lr, $sp, -16
+# CHECK-NEXT:  BL @callee
+# CHECK-NEXT:  $x15 = SUBXri $sp, 4080, 0
+# CHECK-NEXT:  $x15 = SUBXri $sp, 4080, 0
+# CHECK-NEXT:  early-clobber $sp, $lr = LDRXpost $sp, 16
+# CHECK-NEXT:  RET $lr
+
+# CHECK:       name:            [[SUB_TO_ADD_FUNC]]
+# CHECK:       early-clobber $sp = STRXpre $lr, $sp, -16
+# CHECK-NEXT:  BL @callee
+# CHECK-NEXT:  $x15 = ADDXri $sp, 8, 0
+# CHECK-NEXT:  $x15 = ADDXri $sp, 8, 0
+# CHECK-NEXT:  early-clobber $sp, $lr = LDRXpost $sp, 16
+# CHECK-NEXT:  RET $lr
+
+# CHECK:       name:            [[SHIFTED_ADD_FUNC]]
+# CHECK-NOT:   STRXpre
+# CHECK:       $x15 = ADDXri $sp, 1, 12
+# CHECK-NEXT:  $x15 = ADDXri $sp, 1, 12
+# CHECK-NEXT:  RET $lr
+
+# CHECK:       name:            [[OVERFLOW_FUNC]]
+# CHECK-NOT:   STRXpre
+# CHECK:       $x15 = ADDXri $sp, 4095, 0
+# CHECK-NEXT:  $x15 = ADDXri $sp, 4095, 0
+# CHECK-NEXT:  RET $lr
