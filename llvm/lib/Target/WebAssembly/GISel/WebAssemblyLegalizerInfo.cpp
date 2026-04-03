@@ -65,8 +65,8 @@ WebAssemblyLegalizerInfo::WebAssemblyLegalizerInfo(
       .clampScalar(1, s64, s64);
 
   getActionDefinitionsBuilder(G_SEXT_INREG)
-      .clampScalar(0, s32, s64)
       .customFor(ST.hasSignExt(), {s32, s64})
+      .clampScalar(0, s32, s64)
       .lower();
 
   getLegacyLegalizerInfo().computeTables();
