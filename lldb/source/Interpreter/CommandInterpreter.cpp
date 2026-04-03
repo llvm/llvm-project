@@ -3174,7 +3174,7 @@ void CommandInterpreter::OutputHelpText(Stream &strm, llvm::StringRef word_text,
   uint32_t chars_left = max_columns;
 
   auto nextWordLength = [](llvm::StringRef S) {
-    size_t pos = S.find(' ');
+    size_t pos = S.find_first_of(" \n");
     return pos == llvm::StringRef::npos ? S.size() : pos;
   };
 
