@@ -7786,15 +7786,10 @@ VPRecipeBuilder::tryToOptimizeInductionTruncate(VPInstruction *VPI,
 
   // Determine whether \p K is a truncation based on an induction variable that
   // can be optimized.
-  auto IsOptimizableIVTruncate =
-      [&](Instruction *K) -> std::function<bool(ElementCount)> {
-    return [=](ElementCount VF) -> bool {
-      return CM.isOptimizableIVTruncate(K, VF);
-    };
-  };
-
   if (!LoopVectorizationPlanner::getDecisionAndClampRange(
-          IsOptimizableIVTruncate(I), Range))
+          bind_front(&LoopVectorizationCostModel::isOptimizableIVTruncate, CM,
+                     I),
+          Range))
     return nullptr;
 
   auto *WidenIV = cast<VPWidenIntOrFpInductionRecipe>(
