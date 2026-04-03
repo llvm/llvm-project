@@ -410,10 +410,12 @@ bool vputils::isUniformAcrossVFsAndUFs(VPValue *V) {
     return all_of(R->operands(), isUniformAcrossVFsAndUFs);
   }
 
-  if (VPRegionBlock *EnclosingRegion = VPBB->getEnclosingLoopRegion()) {
-    // Canonical IV is uniform.
-    if (V == EnclosingRegion->getCanonicalIV())
-      return true;
+  if (VPBB) {
+    if (VPRegionBlock *EnclosingRegion = VPBB->getEnclosingLoopRegion()) {
+      // Canonical IV is uniform.
+      if (V == EnclosingRegion->getCanonicalIV())
+        return true;
+    }
   }
 
   return TypeSwitch<const VPRecipeBase *, bool>(R)
