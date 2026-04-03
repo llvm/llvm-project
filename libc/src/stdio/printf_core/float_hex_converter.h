@@ -28,14 +28,21 @@ namespace printf_core {
 template <WriteMode write_mode>
 LIBC_INLINE int convert_float_hex_exp(Writer<write_mode> *writer,
                                       const FormatSection &to_conv) {
+#ifdef LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
+  using LDBits = fputil::FPBits<double>;
+  using StorageType = LDBits::StorageType;
+#else
   using LDBits = fputil::FPBits<long double>;
   using StorageType = LDBits::StorageType;
+#endif // LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
 
   bool is_negative;
   int exponent;
   StorageType mantissa;
   bool is_inf_or_nan;
   uint32_t fraction_bits;
+
+#ifndef LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
   if (to_conv.length_modifier == LengthModifier::L) {
     fraction_bits = LDBits::FRACTION_LEN;
     LDBits::StorageType float_raw = to_conv.conv_val_raw;
@@ -44,7 +51,9 @@ LIBC_INLINE int convert_float_hex_exp(Writer<write_mode> *writer,
     exponent = float_bits.get_explicit_exponent();
     mantissa = float_bits.get_explicit_mantissa();
     is_inf_or_nan = float_bits.is_inf_or_nan();
-  } else {
+  } else
+#endif // !LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
+  {
     using LBits = fputil::FPBits<double>;
     fraction_bits = LBits::FRACTION_LEN;
     LBits::StorageType float_raw =
@@ -83,8 +92,13 @@ LIBC_INLINE int convert_float_hex_exp(Writer<write_mode> *writer,
   // Since the number is in bits, we divide by 4, and then add one to account
   // for the extra implicit bit. We use the larger of the two possible values
   // since the size must be constant.
+#ifdef LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
   constexpr size_t MANT_BUFF_LEN =
       (LDBits::FRACTION_LEN / BITS_IN_HEX_DIGIT) + 1;
+#else
+  constexpr size_t MANT_BUFF_LEN =
+      (LDBits::FRACTION_LEN / BITS_IN_HEX_DIGIT) + 1;
+#endif // LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
   char mant_buffer[MANT_BUFF_LEN];
 
   size_t mant_len = (fraction_bits / BITS_IN_HEX_DIGIT) + 1;
