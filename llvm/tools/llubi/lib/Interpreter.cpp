@@ -390,7 +390,8 @@ public:
     }
   }
 
-  AnyValue callLibFunc(CallBase &CB, Function *ResolvedCallee) {
+  AnyValue callLibFunc(CallBase &CB, Function *ResolvedCallee,
+                       ArrayRef<AnyValue> CalleeArgs) {
     LibFunc LF;
     // Respect nobuiltin attributes on call site.
     if (CB.isNoBuiltin() ||
@@ -400,13 +401,8 @@ public:
       return AnyValue();
     }
 
-    SmallVector<AnyValue, 8> Args;
-    for (const auto &Arg : CB.args()) {
-      Args.push_back(getValue(Arg));
-    }
-
     if (auto LibCallRes =
-            Lib.executeLibcall(LF, CB.getName(), CB.getType(), Args))
+            Lib.executeLibcall(LF, CB.getName(), CB.getType(), CalleeArgs))
       return *LibCallRes;
 
     if (ExitInfo)
@@ -469,7 +465,7 @@ public:
       returnFromCallee();
       return;
     } else if (Callee->isDeclaration()) {
-      CurrentFrame->CalleeRetVal = callLibFunc(CB, Callee);
+      CurrentFrame->CalleeRetVal = callLibFunc(CB, Callee, CalleeArgs);
       returnFromCallee();
       return;
     } else {

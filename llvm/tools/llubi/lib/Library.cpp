@@ -64,10 +64,6 @@ std::optional<std::string> Library::readStringFromMemory(const Pointer &Ptr) {
 AnyValue Library::executeMalloc(StringRef Name, Type *Type,
                                 ArrayRef<AnyValue> Args) {
   const auto &SizeVal = Args[0];
-  if (SizeVal.isPoison()) {
-    Executor.reportImmediateUB("malloc() called with a poison size.");
-    return AnyValue::poison();
-  }
 
   const uint64_t AllocSize = SizeVal.asInteger().getZExtValue();
   const uint64_t MaxAlign = getMaxAlign(DL);
@@ -85,15 +81,6 @@ AnyValue Library::executeCalloc(StringRef Name, Type *Type,
                                 ArrayRef<AnyValue> Args) {
   const auto &CountVal = Args[0];
   const auto &SizeVal = Args[1];
-
-  if (CountVal.isPoison()) {
-    Executor.reportImmediateUB("calloc() called with a poison count.");
-    return AnyValue::poison();
-  }
-  if (SizeVal.isPoison()) {
-    Executor.reportImmediateUB("calloc() called with a poison size.");
-    return AnyValue::poison();
-  }
 
   const uint64_t Count = CountVal.asInteger().getZExtValue();
   const uint64_t Size = SizeVal.asInteger().getZExtValue();
@@ -114,13 +101,10 @@ AnyValue Library::executeCalloc(StringRef Name, Type *Type,
   return Ctx.deriveFromMemoryObject(Obj);
 }
 
-AnyValue Library::executeFree(StringRef Name, Type *Type,
+AnyValue Library::executeFree([[maybe_unused]] StringRef Name,
+                              [[maybe_unused]] Type *Type,
                               ArrayRef<AnyValue> Args) {
   const auto &PtrVal = Args[0];
-  if (PtrVal.isPoison()) {
-    Executor.reportImmediateUB("free() called with a poison pointer.");
-    return AnyValue::poison();
-  }
 
   auto &Ptr = PtrVal.asPointer();
   // no-op when free is called with a null pointer.
@@ -136,13 +120,10 @@ AnyValue Library::executeFree(StringRef Name, Type *Type,
   return AnyValue();
 }
 
-AnyValue Library::executePuts(StringRef Name, Type *Type,
+AnyValue Library::executePuts([[maybe_unused]] StringRef Name,
+                              [[maybe_unused]] Type *Type,
                               ArrayRef<AnyValue> Args) {
   const auto &PtrVal = Args[0];
-  if (PtrVal.isPoison()) {
-    Executor.reportImmediateUB("puts called with a poison pointer.");
-    return AnyValue::poison();
-  }
 
   const auto StrOpt = readStringFromMemory(PtrVal.asPointer());
   if (!StrOpt)
@@ -152,14 +133,10 @@ AnyValue Library::executePuts(StringRef Name, Type *Type,
   return AnyValue(APInt(32, 1));
 }
 
-AnyValue Library::executePrintf(StringRef Name, Type *Type,
+AnyValue Library::executePrintf([[maybe_unused]] StringRef Name,
+                                [[maybe_unused]] Type *Type,
                                 ArrayRef<AnyValue> Args) {
   const auto &FormatPtrVal = Args[0];
-  if (FormatPtrVal.isPoison()) {
-    Executor.reportImmediateUB(
-        "printf called with a poison format string pointer.");
-    return AnyValue::poison();
-  }
 
   const auto FormatStrOpt = readStringFromMemory(FormatPtrVal.asPointer());
   if (!FormatStrOpt)
@@ -169,7 +146,7 @@ AnyValue Library::executePrintf(StringRef Name, Type *Type,
   std::string Output;
   unsigned ArgIndex = 1; // Start from 1 since 0 is the format string.
 
-  for (unsigned I = 0; I < FormatStr.size(); ) {
+  for (unsigned I = 0; I < FormatStr.size();) {
     if (FormatStr[I] != '%') {
       Output.push_back(FormatStr[I++]);
       continue;
@@ -182,10 +159,11 @@ AnyValue Library::executePrintf(StringRef Name, Type *Type,
       continue;
     }
 
-    while (I < FormatStr.size() && strchr("-= #0123456789", FormatStr[I]))
+    while (I < FormatStr.size() &&
+           StringRef("-= #0123456789").contains(FormatStr[I]))
       ++I;
 
-    while (I < FormatStr.size() && strchr("hljzt", FormatStr[I]))
+    while (I < FormatStr.size() && StringRef("hljzt").contains(FormatStr[I]))
       ++I;
 
     if (I >= FormatStr.size()) {
@@ -197,9 +175,10 @@ AnyValue Library::executePrintf(StringRef Name, Type *Type,
 
     char Specifier = FormatStr[I++];
     std::string CleanChunk = FormatStr.substr(Start, I - Start - 1);
-    CleanChunk.erase(std::remove_if(CleanChunk.begin(), CleanChunk.end(),
-                                    [](char c) { return strchr("hljzt", c); }),
-                     CleanChunk.end());
+    CleanChunk.erase(
+        std::remove_if(CleanChunk.begin(), CleanChunk.end(),
+                       [](char c) { return StringRef("hljzt").contains(c); }),
+        CleanChunk.end());
 
     if (ArgIndex >= Args.size()) {
       Executor.reportImmediateUB(
@@ -273,28 +252,26 @@ AnyValue Library::executePrintf(StringRef Name, Type *Type,
   return AnyValue(APInt(32, Output.size()));
 }
 
-AnyValue Library::executeExit(StringRef Name, Type *Type,
+AnyValue Library::executeExit([[maybe_unused]] StringRef Name,
+                              [[maybe_unused]] Type *Type,
                               ArrayRef<AnyValue> Args) {
   const auto &RetCodeVal = Args[0];
-
-  if (RetCodeVal.isPoison()) {
-    Executor.reportImmediateUB("exit() called with a poison exit code.");
-    return AnyValue::poison();
-  }
 
   Executor.requestProgramExit(ProgramExitInfo::ProgramExitKind::Exited,
                               RetCodeVal.asInteger().getZExtValue());
   return AnyValue();
 }
 
-AnyValue Library::executeAbort(StringRef Name, Type *Type,
-                               ArrayRef<AnyValue> Args) {
+AnyValue Library::executeAbort([[maybe_unused]] StringRef Name,
+                               [[maybe_unused]] Type *Type,
+                               [[maybe_unused]] ArrayRef<AnyValue> Args) {
   Executor.requestProgramExit(ProgramExitInfo::ProgramExitKind::Aborted);
   return AnyValue();
 }
 
-AnyValue Library::executeTerminate(StringRef Name, Type *Type,
-                                   ArrayRef<AnyValue> Args) {
+AnyValue Library::executeTerminate([[maybe_unused]] StringRef Name,
+                                   [[maybe_unused]] Type *Type,
+                                   [[maybe_unused]] ArrayRef<AnyValue> Args) {
   Executor.requestProgramExit(ProgramExitInfo::ProgramExitKind::Terminated);
   return AnyValue();
 }
@@ -302,6 +279,13 @@ AnyValue Library::executeTerminate(StringRef Name, Type *Type,
 std::optional<AnyValue> Library::executeLibcall(LibFunc LF, StringRef Name,
                                                 Type *Type,
                                                 ArrayRef<AnyValue> Args) {
+  for (const AnyValue &Arg : Args) {
+    if (Arg.isPoison()) {
+      Executor.reportImmediateUB("Poison argument passed to a library call.");
+      return AnyValue::poison();
+    }
+  }
+
   switch (LF) {
   case LibFunc_malloc:
   case LibFunc_Znwm:
