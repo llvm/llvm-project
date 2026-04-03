@@ -1359,6 +1359,18 @@ class X86_64ABIInfo : public ABIInfo {
     return true;
   }
 
+  bool properlyIgnoreEmptyCXXFieldsAndBases() const {
+    // properly ignore empty CXX Fields and Bases in ABI classification
+    // algorithm CLang <= 22.0 did not do this, and PlayStation does not do
+    // this.
+    if (getContext().getLangOpts().getClangABICompat() <=
+            LangOptions::ClangABI::Ver22 ||
+        getTarget().getTriple().isPS())
+      return false;
+
+    return true;
+  }
+
   X86AVXABILevel AVXLevel;
   // Some ABIs (e.g. X32 ABI and Native Client OS) use 32 bit pointers on
   // 64-bit hardware.
@@ -2072,7 +2084,8 @@ void X86_64ABIInfo::classify(QualType Ty, uint64_t OffsetBase, Class &Lo,
         assert(!I.isVirtual() && !I.getType()->isDependentType() &&
                "Unexpected base class!");
         const auto *Base = I.getType()->castAsCXXRecordDecl();
-        bool IsEmptyBase = isEmptyRecord(getContext(), I.getType(), true);
+        bool IsEmptyBase = isEmptyRecord(getContext(), I.getType(), true) &&
+                           properlyIgnoreEmptyCXXFieldsAndBases();
         // Classify this field.
         //
         // AMD64-ABI 3.2.3p2: Rule 3. If the size of the aggregate exceeds a
@@ -2123,8 +2136,9 @@ void X86_64ABIInfo::classify(QualType Ty, uint64_t OffsetBase, Class &Lo,
       //
       // FIXME: Extended the Lo and Hi logic properly to work for size wider
       // than 128.
-      bool IsEmptyField = isEmptyField(getContext(), *i, true);
-      if (Size > 128 && (!IsEmptyField || getTarget().getTriple().isPS()) &&
+      bool IsEmptyField = isEmptyField(getContext(), *i, true) &&
+                          properlyIgnoreEmptyCXXFieldsAndBases();
+      if (Size > 128 && !IsEmptyField &&
           ((!IsUnion && Size != getContext().getTypeSize(i->getType())) ||
            Size > getNativeVectorSizeForAVXABI(AVXLevel))) {
         Lo = Memory;
