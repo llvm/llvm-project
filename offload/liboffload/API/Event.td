@@ -13,7 +13,8 @@
 def olCreateEvent : Function {
     let desc = "Enqueue an event to `Queue` and return it.";
     let details = [
-      "This event can be used with `olSyncEvent` and `olWaitEvents` and will be complete once all enqueued work prior to the `olCreateEvent` call is complete.",
+      "This event can be used with `olSyncEvent`, `olWaitEvents`, and `olGetEventElapsedTime`.",
+      "It will be complete once all enqueued work prior to the `olCreateEvent` call is complete.",
     ];
     let params = [
         Param<"ol_queue_handle_t", "Queue", "queue to create the event for", PARAM_IN>,
@@ -36,6 +37,20 @@ def olSyncEvent : Function {
     let details = [];
     let params = [
         Param<"ol_event_handle_t", "Event", "handle of the event", PARAM_IN>
+    ];
+    let returns = [];
+}
+
+def olGetEventElapsedTime : Function {
+    let desc = "Get the elapsed time in milliseconds between two events.";
+    let details = [
+        "The elapsed time is returned in milliseconds.",
+        "The queues associated with `StartEvent` and `EndEvent` must belong to the same device."
+    ];
+    let params = [
+        Param<"ol_event_handle_t", "StartEvent", "handle of the start event", PARAM_IN>,
+        Param<"ol_event_handle_t", "EndEvent", "handle of the end event", PARAM_IN>,
+        Param<"float*", "ElapsedTime", "output pointer for the elapsed time in milliseconds", PARAM_OUT>
     ];
     let returns = [];
 }

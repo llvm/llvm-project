@@ -837,11 +837,11 @@ static OwningVec<Index> preprocessCDCtxIndex(Index CDCtxIndex) {
   Processed.reserve(CDCtxIndex.Children.size());
   for (const auto *Idx : CDCtxIndex.getSortedChildren()) {
     Index NewIdx = *Idx;
-    auto NewPath = NewIdx.getRelativeFilePath("");
+    SmallString<128> NewPath(NewIdx.getRelativeFilePath(""));
     sys::path::native(NewPath, sys::path::Style::posix);
     sys::path::append(NewPath, sys::path::Style::posix,
                       NewIdx.getFileBaseName() + ".md");
-    NewIdx.Path = NewPath;
+    NewIdx.Path = internString(NewPath);
     Processed.push_back(NewIdx);
   }
 
@@ -922,7 +922,12 @@ static void serializeContexts(Info *I, StringMap<OwnedPtr<Info>> &Infos) {
   auto ParentUSR = I->ParentUSR;
 
   while (true) {
-    auto &ParentInfo = Infos.at(llvm::toHex(ParentUSR));
+    // Infos may not have the ParentUSR, if its been filtered (public or path),
+    // so we can't use at() for the lookup, since it would abort.
+    auto Iter = Infos.find(llvm::toHex(ParentUSR));
+    if (Iter == Infos.end())
+      break;
+    auto &ParentInfo = Iter->second;
 
     if (ParentInfo && ParentInfo->USR == GlobalNamespaceID) {
       Context GlobalRef(ParentInfo->USR, "Global Namespace",
@@ -963,7 +968,7 @@ Error JSONGenerator::generateDocumentation(
     if (FileToInfos.contains(Path))
       continue;
     FileToInfos[Path].push_back(Info);
-    Info->DocumentationFileName = FileName;
+    Info->DocumentationFileName = internString(FileName);
   }
 
   if (CDCtx.Format == OutputFormatTy::md_mustache) {

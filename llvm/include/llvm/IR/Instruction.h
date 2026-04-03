@@ -439,7 +439,7 @@ public:
   //===--------------------------------------------------------------------===//
 
   /// Return true if this instruction has any metadata attached to it.
-  bool hasMetadata() const { return DbgLoc || Value::hasMetadata(); }
+  bool hasMetadata() const { return DbgLoc || MetadataIndex != 0; }
 
   // Return true if this instruction contains loop metadata other than
   // a debug location
@@ -447,7 +447,7 @@ public:
 
   /// Return true if this instruction has metadata attached to it other than a
   /// debug location.
-  bool hasMetadataOtherThanDebugLoc() const { return Value::hasMetadata(); }
+  bool hasMetadataOtherThanDebugLoc() const { return MetadataIndex != 0; }
 
   /// Return true if this instruction has the given type of metadata attached.
   bool hasMetadata(unsigned KindID) const {
@@ -465,7 +465,8 @@ public:
     // Handle 'dbg' as a special case since it is not stored in the hash table.
     if (KindID == LLVMContext::MD_dbg)
       return DbgLoc.getAsMDNode();
-    return Value::getMetadata(KindID);
+    return hasMetadataOtherThanDebugLoc() ? Value::getMetadataImpl(KindID)
+                                          : nullptr;
   }
 
   /// Get the metadata of given kind attached to this Instruction.
