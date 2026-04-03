@@ -4,20 +4,22 @@
 // expected-no-diagnostics
 
 RWByteAddressBuffer gBuf0 : register(u0);
+RWByteAddressBuffer gBuf1 : register(u1);
 
-RWByteAddressBuffer gOut  : register(u3);
-
-void Pass_LoopVar()
+uint Pass_Shadow(uint idx)
 {
-    for(RWByteAddressBuffer buf = gBuf0; false == false; )
+    RWByteAddressBuffer buf = gBuf0;
     {
-        buf.Store(0, 0);
-        break; 
+        RWByteAddressBuffer buf = gBuf1;
+        buf.Store(idx * 4, 19);
+
+        return 19;
     }
 }
 
 [numthreads(8,8,1)]
 void main(uint3 tid : SV_DispatchThreadID)
-{    
-    Pass_LoopVar();    
+{
+    uint idx = tid.x + tid.y * 8;
+    Pass_Shadow(idx);
 }

@@ -5,19 +5,23 @@
 
 RWByteAddressBuffer gBuf0 : register(u0);
 
-RWByteAddressBuffer gOut  : register(u3);
-
-void Pass_LoopVar()
+struct PassStruct
 {
-    for(RWByteAddressBuffer buf = gBuf0; false == false; )
-    {
-        buf.Store(0, 0);
-        break; 
-    }
+    RWByteAddressBuffer buf;
+};
+
+uint Pass_Struct(uint idx)
+{
+    PassStruct s;
+    s.buf = gBuf0;
+    s.buf.Store(idx * 4, 16);
+
+    return 16;
 }
 
 [numthreads(8,8,1)]
 void main(uint3 tid : SV_DispatchThreadID)
-{    
-    Pass_LoopVar();    
+{
+    uint idx = tid.x + tid.y * 8;
+    Pass_Struct(idx);
 }

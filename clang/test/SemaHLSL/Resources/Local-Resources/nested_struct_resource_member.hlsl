@@ -3,22 +3,23 @@
 
 // expected-no-diagnostics
 
-RWByteAddressBuffer gBuf0 : register(u0);
 RWByteAddressBuffer gBuf1 : register(u1);
 
-RWByteAddressBuffer gOut  : register(u3);
+struct NestedInner { RWByteAddressBuffer buf; };
+struct NestedOuter { NestedInner inner; };
 
-uint Pass_ExpressionInit(uint idx)
+uint Pass_NestedStruct(uint idx)
 {
-    RWByteAddressBuffer buf = (true ? gBuf0 : gBuf1);
-    buf.Store(idx * 4, 3);
+    NestedOuter s;
+    s.inner.buf = gBuf1;
+    s.inner.buf.Store(idx * 4, 28);
 
-    return 3;
+    return 28;
 }
 
 [numthreads(8,8,1)]
 void main(uint3 tid : SV_DispatchThreadID)
-{    
+{
     uint idx = tid.x + tid.y * 8;
-    Pass_ExpressionInit(idx);    
+    Pass_NestedStruct(idx);
 }
