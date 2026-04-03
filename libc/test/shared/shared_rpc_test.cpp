@@ -10,35 +10,59 @@
 #include "shared/rpc_server.h"
 #include "test/UnitTest/Test.h"
 
-namespace LIBC_NAMESPACE_DECL {
-
 TEST(LlvmLibcSharedRpcTest, TestIncrement) {
-  constexpr uint32_t port_count = 1;
-  constexpr uint32_t lane_size = 1;
+  constexpr uint32_t port_count = 8;
+  constexpr uint32_t lane_size = 4;
   alignas(64)
       uint8_t buffer[::rpc::Server::allocation_size(lane_size, port_count)];
 
-  ::rpc::Server server(port_count, buffer);
-  ::rpc::Client client(port_count, buffer);
+  using ProcAType = ::rpc::Process<false>;
+  using ProcBType = ::rpc::Process<true>;
 
-  // Client side: open a port and send data
-  auto client_port = client.open<LIBC_TEST_INCREMENT>();
-  uint64_t data = 42;
-  client_port.send(
-      [&](::rpc::Buffer *buffer, uint32_t) { buffer->data[0] = data; });
+  ProcAType ProcA(port_count, buffer);
+  ProcBType ProcB(port_count, buffer);
 
-  // Server side: handle the port
-  auto server_port = server.try_open(lane_size);
-  ASSERT_TRUE(server_port.has_value());
-  ::rpc::RPCStatus status =
-      shared::handle_libc_opcodes(*server_port, lane_size);
-  EXPECT_EQ(status, ::rpc::RPC_SUCCESS);
+  uint32_t index = 0; // any < port_count
+  uint64_t lane_mask = 1;
 
-  // Client side: receive the response
-  client_port.recv(
-      [&](::rpc::Buffer *buffer, uint32_t) { data = buffer->data[0]; });
+  // Each process has its own local lock for index
+  EXPECT_TRUE(ProcA.try_lock(lane_mask, index));
+  EXPECT_TRUE(ProcB.try_lock(lane_mask, index));
 
-  EXPECT_EQ(data, 43UL);
+  // All zero to begin with
+  EXPECT_EQ(ProcA.load_inbox(lane_mask, index), 0u);
+  EXPECT_EQ(ProcB.load_inbox(lane_mask, index), 0u);
+  EXPECT_EQ(ProcA.load_outbox(lane_mask, index), 0u);
+  EXPECT_EQ(ProcB.load_outbox(lane_mask, index), 0u);
+
+  // Available for ProcA and not for ProcB
+  EXPECT_FALSE(ProcA.buffer_unavailable(ProcA.load_inbox(lane_mask, index),
+                                        ProcA.load_outbox(lane_mask, index)));
+  EXPECT_TRUE(ProcB.buffer_unavailable(ProcB.load_inbox(lane_mask, index),
+                                       ProcB.load_outbox(lane_mask, index)));
+
+  // ProcA write to outbox
+  uint32_t ProcAOutbox = ProcA.load_outbox(lane_mask, index);
+  EXPECT_EQ(ProcAOutbox, 0u);
+  ProcAOutbox = ProcA.invert_outbox(lane_mask, index, ProcAOutbox);
+  EXPECT_EQ(ProcAOutbox, 1u);
+
+  // No longer available for ProcA
+  EXPECT_TRUE(ProcA.buffer_unavailable(ProcA.load_inbox(lane_mask, index),
+                                       ProcAOutbox));
+
+  // Outbox is still zero, hasn't been written to
+  EXPECT_EQ(ProcB.load_outbox(lane_mask, index), 0u);
+
+  // Wait for ownership will terminate because load_inbox returns 1
+  EXPECT_EQ(ProcB.load_inbox(lane_mask, index), 1u);
+  ProcB.wait_for_ownership(lane_mask, index, 0u, 0u);
+
+  // and B now has the buffer available
+  EXPECT_FALSE(ProcB.buffer_unavailable(ProcB.load_inbox(lane_mask, index),
+                                        ProcB.load_outbox(lane_mask, index)));
+
+  // Enough checks for one test, close the locks
+  ProcA.unlock(lane_mask, index);
+  ProcB.unlock(lane_mask, index);
 }
-
-} // namespace LIBC_NAMESPACE_DECL

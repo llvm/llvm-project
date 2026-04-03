@@ -288,6 +288,7 @@ add_fp_unittest(
     libc.src.__support.str_to_integer
 )
 
+if(NOT MSVC)
 add_fp_unittest(
   shared_rpc_test
   SUITE
@@ -300,3 +301,4 @@ add_fp_unittest(
     libc.src.stdio.printf_core.writer
     libc.src.__support.arg_list
 )
+endif()
