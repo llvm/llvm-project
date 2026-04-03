@@ -527,6 +527,9 @@ extern "C" ze_module_handle_t mgpuModuleLoadJIT(void *data, int optLevel,
   // support JIT paths that expect null-terminated strings. However, for SPIR-V
   // binary format, the null terminator is not expected. So we need to subtract
   // the null terminator when loading SPIR-V binary.
+  assert((assemblySize == 0 ||
+          reinterpret_cast<char *>(data)[assemblySize - 1] == 0) &&
+         "Expected null terminator at the end of the assembly string.");
   auto actualAssemblySize = assemblySize - 1;
   return catchAll([&]() {
     return loadModule(data, actualAssemblySize, ZE_MODULE_FORMAT_IL_SPIRV);
