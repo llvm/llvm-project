@@ -3,7 +3,7 @@
 ! RUN: bbc -fopenacc -emit-hlfir %s -o - | FileCheck %s
 ! RUN: bbc -fopenacc -emit-hlfir %s -o - -openacc-use-reduction-combine | FileCheck -check-prefix=ACC_COMBINE %s
 
-! CHECK-LABEL:   acc.reduction.recipe @reduction_lor_ref_box_heap_l32 : !fir.ref<!fir.box<!fir.heap<!fir.logical<4>>>> reduction_operator <lor> init {
+! CHECK-LABEL:   acc.reduction.recipe @reduction_lor_optional_ref_box_heap_l32 : !fir.ref<!fir.box<!fir.heap<!fir.logical<4>>>> reduction_operator <lor> init {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.logical<4>>>>):
 ! CHECK:           %[[CONSTANT_0:.*]] = arith.constant false
 ! CHECK:           %[[LOAD_0:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.box<!fir.heap<!fir.logical<4>>>>
@@ -38,7 +38,7 @@
 ! CHECK:           acc.terminator
 ! CHECK:         }
 
-! CHECK-LABEL:   acc.reduction.recipe @reduction_max_box_UxUxf32 : !fir.box<!fir.array<?x?xf32>> reduction_operator <max> init {
+! CHECK-LABEL:   acc.reduction.recipe @reduction_max_optional_box_UxUxf32 : !fir.box<!fir.array<?x?xf32>> reduction_operator <max> init {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.box<!fir.array<?x?xf32>>):
 ! CHECK:           %[[CONSTANT_0:.*]] = arith.constant -3.40282347E+38 : f32
 ! CHECK:           %[[CONSTANT_1:.*]] = arith.constant 0 : index
@@ -125,7 +125,7 @@
 ! CHECK:           acc.terminator
 ! CHECK:         }
 
-! CHECK-LABEL:   acc.reduction.recipe @reduction_max_ref_box_ptr_Uxf32 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>> reduction_operator <max> init {
+! CHECK-LABEL:   acc.reduction.recipe @reduction_max_optional_ref_box_ptr_Uxf32 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>> reduction_operator <max> init {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>):
 ! CHECK:           %[[CONSTANT_0:.*]] = arith.constant -3.40282347E+38 : f32
 ! CHECK:           %[[LOAD_0:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
@@ -194,7 +194,7 @@
 ! CHECK:           acc.terminator
 ! CHECK:         }
 
-! CHECK-LABEL:   acc.reduction.recipe @reduction_max_ref_box_heap_Uxf32 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> reduction_operator <max> init {
+! CHECK-LABEL:   acc.reduction.recipe @reduction_max_optional_ref_box_heap_Uxf32 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> reduction_operator <max> init {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>):
 ! CHECK:           %[[CONSTANT_0:.*]] = arith.constant -3.40282347E+38 : f32
 ! CHECK:           %[[LOAD_0:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
@@ -262,7 +262,7 @@
 ! CHECK:           acc.terminator
 ! CHECK:         }
 
-! CHECK-LABEL:   acc.reduction.recipe @reduction_add_section_lb1.ub3_box_Uxi32 : !fir.box<!fir.array<?xi32>> reduction_operator <add> init {
+! CHECK-LABEL:   acc.reduction.recipe @reduction_add_optional_section_lb1.ub3_box_Uxi32 : !fir.box<!fir.array<?xi32>> reduction_operator <add> init {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.box<!fir.array<?xi32>>):
 ! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca !fir.array<3xi32> {bindc_name = "acc.reduction.init"}
 ! CHECK:           %[[CONSTANT_0:.*]] = arith.constant 0 : i32
@@ -331,7 +331,7 @@
 ! CHECK:           acc.yield %[[VAL_0]] : !fir.box<!fir.array<?xi32>>
 ! CHECK:         }
 
-! CHECK-LABEL:   acc.reduction.recipe @reduction_max_box_Uxf32 : !fir.box<!fir.array<?xf32>> reduction_operator <max> init {
+! CHECK-LABEL:   acc.reduction.recipe @reduction_max_optional_box_Uxf32 : !fir.box<!fir.array<?xf32>> reduction_operator <max> init {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.box<!fir.array<?xf32>>):
 ! CHECK:           %[[CONSTANT_0:.*]] = arith.constant -3.40282347E+38 : f32
 ! CHECK:           %[[CONSTANT_1:.*]] = arith.constant 0 : index
@@ -394,7 +394,7 @@
 ! CHECK:           acc.terminator
 ! CHECK:         }
 
-! CHECK-LABEL:   acc.reduction.recipe @reduction_add_box_Uxi32 : !fir.box<!fir.array<?xi32>> reduction_operator <add> init {
+! CHECK-LABEL:   acc.reduction.recipe @reduction_add_optional_box_Uxi32 : !fir.box<!fir.array<?xi32>> reduction_operator <add> init {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.box<!fir.array<?xi32>>):
 ! CHECK:           %[[CONSTANT_0:.*]] = arith.constant 0 : i32
 ! CHECK:           %[[CONSTANT_1:.*]] = arith.constant 0 : index
@@ -456,7 +456,7 @@
 ! CHECK:           acc.terminator
 ! CHECK:         }
 
-! CHECK-LABEL:   acc.reduction.recipe @reduction_add_section_lb0.ub9xlb0.ub19_ref_10x20xi32 : !fir.ref<!fir.array<10x20xi32>> reduction_operator <add> init {
+! CHECK-LABEL:   acc.reduction.recipe @reduction_add_optional_section_lb0.ub9xlb0.ub19_ref_10x20xi32 : !fir.ref<!fir.array<10x20xi32>> reduction_operator <add> init {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.array<10x20xi32>>):
 ! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca !fir.array<10x20xi32> {bindc_name = "acc.reduction.init"}
 ! CHECK:           %[[CONSTANT_0:.*]] = arith.constant 0 : i32
@@ -535,7 +535,7 @@
 ! CHECK:           acc.yield %[[VAL_0]] : !fir.ref<!fir.array<10x20xi32>>
 ! CHECK:         }
 
-! CHECK-LABEL:   acc.reduction.recipe @reduction_add_section_lb10.ub19_ref_100xi32 : !fir.ref<!fir.array<100xi32>> reduction_operator <add> init {
+! CHECK-LABEL:   acc.reduction.recipe @reduction_add_optional_section_lb10.ub19_ref_100xi32 : !fir.ref<!fir.array<100xi32>> reduction_operator <add> init {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.array<100xi32>>):
 ! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca !fir.array<10xi32> {bindc_name = "acc.reduction.init"}
 ! CHECK:           %[[CONSTANT_0:.*]] = arith.constant 0 : i32
@@ -594,7 +594,7 @@
 ! CHECK:           acc.yield %[[VAL_0]] : !fir.ref<!fir.array<100xi32>>
 ! CHECK:         }
 
-! CHECK-LABEL:   acc.reduction.recipe @reduction_add_ref_box_ptr_i32 : !fir.ref<!fir.box<!fir.ptr<i32>>> reduction_operator <add> init {
+! CHECK-LABEL:   acc.reduction.recipe @reduction_add_optional_ref_box_ptr_i32 : !fir.ref<!fir.box<!fir.ptr<i32>>> reduction_operator <add> init {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.ptr<i32>>>):
 ! CHECK:           %[[CONSTANT_0:.*]] = arith.constant 0 : i32
 ! CHECK:           %[[LOAD_0:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.box<!fir.ptr<i32>>>
@@ -627,7 +627,7 @@
 ! CHECK:           acc.terminator
 ! CHECK:         }
 
-! CHECK-LABEL:   acc.reduction.recipe @reduction_add_ref_box_heap_i32 : !fir.ref<!fir.box<!fir.heap<i32>>> reduction_operator <add> init {
+! CHECK-LABEL:   acc.reduction.recipe @reduction_add_optional_ref_box_heap_i32 : !fir.ref<!fir.box<!fir.heap<i32>>> reduction_operator <add> init {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.heap<i32>>>):
 ! CHECK:           %[[CONSTANT_0:.*]] = arith.constant 0 : i32
 ! CHECK:           %[[LOAD_0:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.box<!fir.heap<i32>>>
@@ -659,7 +659,7 @@
 ! CHECK:           acc.terminator
 ! CHECK:         }
 
-! CHECK-LABEL:   acc.reduction.recipe @reduction_mul_ref_z32 : !fir.ref<complex<f32>> reduction_operator <mul> init {
+! CHECK-LABEL:   acc.reduction.recipe @reduction_mul_optional_ref_z32 : !fir.ref<complex<f32>> reduction_operator <mul> init {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<complex<f32>>):
 ! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca complex<f32> {bindc_name = "acc.reduction.init"}
 ! CHECK:           %[[CONSTANT_0:.*]] = arith.constant 1.000000e+00 : f32
@@ -679,7 +679,7 @@
 ! CHECK:           acc.yield %[[VAL_0]] : !fir.ref<complex<f32>>
 ! CHECK:         }
 
-! CHECK-LABEL:   acc.reduction.recipe @reduction_add_ref_z32 : !fir.ref<complex<f32>> reduction_operator <add> init {
+! CHECK-LABEL:   acc.reduction.recipe @reduction_add_optional_ref_z32 : !fir.ref<complex<f32>> reduction_operator <add> init {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<complex<f32>>):
 ! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca complex<f32> {bindc_name = "acc.reduction.init"}
 ! CHECK:           %[[CONSTANT_0:.*]] = arith.constant 0.000000e+00 : f32
@@ -699,7 +699,7 @@
 ! CHECK:           acc.yield %[[VAL_0]] : !fir.ref<complex<f32>>
 ! CHECK:         }
 
-! CHECK-LABEL:   acc.reduction.recipe @reduction_neqv_ref_l32 : !fir.ref<!fir.logical<4>> reduction_operator <neqv> init {
+! CHECK-LABEL:   acc.reduction.recipe @reduction_neqv_optional_ref_l32 : !fir.ref<!fir.logical<4>> reduction_operator <neqv> init {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.logical<4>>):
 ! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca !fir.logical<4> {bindc_name = "acc.reduction.init"}
 ! CHECK:           %[[CONSTANT_0:.*]] = arith.constant false
@@ -718,7 +718,7 @@
 ! CHECK:           acc.yield %[[VAL_0]] : !fir.ref<!fir.logical<4>>
 ! CHECK:         }
 
-! CHECK-LABEL:   acc.reduction.recipe @reduction_eqv_ref_l32 : !fir.ref<!fir.logical<4>> reduction_operator <eqv> init {
+! CHECK-LABEL:   acc.reduction.recipe @reduction_eqv_optional_ref_l32 : !fir.ref<!fir.logical<4>> reduction_operator <eqv> init {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.logical<4>>):
 ! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca !fir.logical<4> {bindc_name = "acc.reduction.init"}
 ! CHECK:           %[[CONSTANT_0:.*]] = arith.constant true
@@ -737,7 +737,7 @@
 ! CHECK:           acc.yield %[[VAL_0]] : !fir.ref<!fir.logical<4>>
 ! CHECK:         }
 
-! CHECK-LABEL:   acc.reduction.recipe @reduction_lor_ref_l32 : !fir.ref<!fir.logical<4>> reduction_operator <lor> init {
+! CHECK-LABEL:   acc.reduction.recipe @reduction_lor_optional_ref_l32 : !fir.ref<!fir.logical<4>> reduction_operator <lor> init {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.logical<4>>):
 ! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca !fir.logical<4> {bindc_name = "acc.reduction.init"}
 ! CHECK:           %[[CONSTANT_0:.*]] = arith.constant false
@@ -756,7 +756,7 @@
 ! CHECK:           acc.yield %[[VAL_0]] : !fir.ref<!fir.logical<4>>
 ! CHECK:         }
 
-! CHECK-LABEL:   acc.reduction.recipe @reduction_land_ref_l32 : !fir.ref<!fir.logical<4>> reduction_operator <land> init {
+! CHECK-LABEL:   acc.reduction.recipe @reduction_land_optional_ref_l32 : !fir.ref<!fir.logical<4>> reduction_operator <land> init {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.logical<4>>):
 ! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca !fir.logical<4> {bindc_name = "acc.reduction.init"}
 ! CHECK:           %[[CONSTANT_0:.*]] = arith.constant true
@@ -775,7 +775,7 @@
 ! CHECK:           acc.yield %[[VAL_0]] : !fir.ref<!fir.logical<4>>
 ! CHECK:         }
 
-! CHECK-LABEL:   acc.reduction.recipe @reduction_xor_ref_i32 : !fir.ref<i32> reduction_operator <xor> init {
+! CHECK-LABEL:   acc.reduction.recipe @reduction_xor_optional_ref_i32 : !fir.ref<i32> reduction_operator <xor> init {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<i32>):
 ! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca i32 {bindc_name = "acc.reduction.init"}
 ! CHECK:           %[[CONSTANT_0:.*]] = arith.constant 0 : i32
@@ -791,7 +791,7 @@
 ! CHECK:           acc.yield %[[VAL_0]] : !fir.ref<i32>
 ! CHECK:         }
 
-! CHECK-LABEL:   acc.reduction.recipe @reduction_ior_ref_i32 : !fir.ref<i32> reduction_operator <ior> init {
+! CHECK-LABEL:   acc.reduction.recipe @reduction_ior_optional_ref_i32 : !fir.ref<i32> reduction_operator <ior> init {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<i32>):
 ! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca i32 {bindc_name = "acc.reduction.init"}
 ! CHECK:           %[[CONSTANT_0:.*]] = arith.constant 0 : i32
@@ -807,7 +807,7 @@
 ! CHECK:           acc.yield %[[VAL_0]] : !fir.ref<i32>
 ! CHECK:         }
 
-! CHECK-LABEL:   acc.reduction.recipe @reduction_iand_ref_i32 : !fir.ref<i32> reduction_operator <iand> init {
+! CHECK-LABEL:   acc.reduction.recipe @reduction_iand_optional_ref_i32 : !fir.ref<i32> reduction_operator <iand> init {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<i32>):
 ! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca i32 {bindc_name = "acc.reduction.init"}
 ! CHECK:           %[[CONSTANT_0:.*]] = arith.constant -1 : i32
@@ -823,7 +823,7 @@
 ! CHECK:           acc.yield %[[VAL_0]] : !fir.ref<i32>
 ! CHECK:         }
 
-! CHECK-LABEL:   acc.reduction.recipe @reduction_max_ref_100xf32 : !fir.ref<!fir.array<100xf32>> reduction_operator <max> init {
+! CHECK-LABEL:   acc.reduction.recipe @reduction_max_optional_ref_100xf32 : !fir.ref<!fir.array<100xf32>> reduction_operator <max> init {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.array<100xf32>>):
 ! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca !fir.array<100xf32> {bindc_name = "acc.reduction.init"}
 ! CHECK:           %[[CONSTANT_0:.*]] = arith.constant -3.40282347E+38 : f32
@@ -858,7 +858,7 @@
 ! CHECK:           acc.yield %[[VAL_0]] : !fir.ref<!fir.array<100xf32>>
 ! CHECK:         }
 
-! CHECK-LABEL:   acc.reduction.recipe @reduction_max_ref_f32 : !fir.ref<f32> reduction_operator <max> init {
+! CHECK-LABEL:   acc.reduction.recipe @reduction_max_optional_ref_f32 : !fir.ref<f32> reduction_operator <max> init {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<f32>):
 ! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca f32 {bindc_name = "acc.reduction.init"}
 ! CHECK:           %[[CONSTANT_0:.*]] = arith.constant -3.40282347E+38 : f32
@@ -875,7 +875,7 @@
 ! CHECK:           acc.yield %[[VAL_0]] : !fir.ref<f32>
 ! CHECK:         }
 
-! CHECK-LABEL:   acc.reduction.recipe @reduction_max_ref_100x10xi32 : !fir.ref<!fir.array<100x10xi32>> reduction_operator <max> init {
+! CHECK-LABEL:   acc.reduction.recipe @reduction_max_optional_ref_100x10xi32 : !fir.ref<!fir.array<100x10xi32>> reduction_operator <max> init {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.array<100x10xi32>>):
 ! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca !fir.array<100x10xi32> {bindc_name = "acc.reduction.init"}
 ! CHECK:           %[[CONSTANT_0:.*]] = arith.constant -2147483648 : i32
@@ -917,7 +917,7 @@
 ! CHECK:           acc.yield %[[VAL_0]] : !fir.ref<!fir.array<100x10xi32>>
 ! CHECK:         }
 
-! CHECK-LABEL:   acc.reduction.recipe @reduction_max_ref_i32 : !fir.ref<i32> reduction_operator <max> init {
+! CHECK-LABEL:   acc.reduction.recipe @reduction_max_optional_ref_i32 : !fir.ref<i32> reduction_operator <max> init {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<i32>):
 ! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca i32 {bindc_name = "acc.reduction.init"}
 ! CHECK:           %[[CONSTANT_0:.*]] = arith.constant -2147483648 : i32
@@ -933,7 +933,7 @@
 ! CHECK:           acc.yield %[[VAL_0]] : !fir.ref<i32>
 ! CHECK:         }
 
-! CHECK-LABEL:   acc.reduction.recipe @reduction_min_ref_100x10xf32 : !fir.ref<!fir.array<100x10xf32>> reduction_operator <min> init {
+! CHECK-LABEL:   acc.reduction.recipe @reduction_min_optional_ref_100x10xf32 : !fir.ref<!fir.array<100x10xf32>> reduction_operator <min> init {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.array<100x10xf32>>):
 ! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca !fir.array<100x10xf32> {bindc_name = "acc.reduction.init"}
 ! CHECK:           %[[CONSTANT_0:.*]] = arith.constant 3.40282347E+38 : f32
@@ -976,7 +976,7 @@
 ! CHECK:           acc.yield %[[VAL_0]] : !fir.ref<!fir.array<100x10xf32>>
 ! CHECK:         }
 
-! CHECK-LABEL:   acc.reduction.recipe @reduction_min_ref_f32 : !fir.ref<f32> reduction_operator <min> init {
+! CHECK-LABEL:   acc.reduction.recipe @reduction_min_optional_ref_f32 : !fir.ref<f32> reduction_operator <min> init {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<f32>):
 ! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca f32 {bindc_name = "acc.reduction.init"}
 ! CHECK:           %[[CONSTANT_0:.*]] = arith.constant 3.40282347E+38 : f32
@@ -993,7 +993,7 @@
 ! CHECK:           acc.yield %[[VAL_0]] : !fir.ref<f32>
 ! CHECK:         }
 
-! CHECK-LABEL:   acc.reduction.recipe @reduction_min_ref_100xi32 : !fir.ref<!fir.array<100xi32>> reduction_operator <min> init {
+! CHECK-LABEL:   acc.reduction.recipe @reduction_min_optional_ref_100xi32 : !fir.ref<!fir.array<100xi32>> reduction_operator <min> init {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.array<100xi32>>):
 ! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca !fir.array<100xi32> {bindc_name = "acc.reduction.init"}
 ! CHECK:           %[[CONSTANT_0:.*]] = arith.constant 2147483647 : i32
@@ -1027,7 +1027,7 @@
 ! CHECK:           acc.yield %[[VAL_0]] : !fir.ref<!fir.array<100xi32>>
 ! CHECK:         }
 
-! CHECK-LABEL:   acc.reduction.recipe @reduction_min_ref_i32 : !fir.ref<i32> reduction_operator <min> init {
+! CHECK-LABEL:   acc.reduction.recipe @reduction_min_optional_ref_i32 : !fir.ref<i32> reduction_operator <min> init {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<i32>):
 ! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca i32 {bindc_name = "acc.reduction.init"}
 ! CHECK:           %[[CONSTANT_0:.*]] = arith.constant 2147483647 : i32
@@ -1043,7 +1043,7 @@
 ! CHECK:           acc.yield %[[VAL_0]] : !fir.ref<i32>
 ! CHECK:         }
 
-! CHECK-LABEL:   acc.reduction.recipe @reduction_mul_ref_100xf32 : !fir.ref<!fir.array<100xf32>> reduction_operator <mul> init {
+! CHECK-LABEL:   acc.reduction.recipe @reduction_mul_optional_ref_100xf32 : !fir.ref<!fir.array<100xf32>> reduction_operator <mul> init {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.array<100xf32>>):
 ! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca !fir.array<100xf32> {bindc_name = "acc.reduction.init"}
 ! CHECK:           %[[CONSTANT_0:.*]] = arith.constant 1.000000e+00 : f32
@@ -1077,7 +1077,7 @@
 ! CHECK:           acc.yield %[[VAL_0]] : !fir.ref<!fir.array<100xf32>>
 ! CHECK:         }
 
-! CHECK-LABEL:   acc.reduction.recipe @reduction_mul_ref_f32 : !fir.ref<f32> reduction_operator <mul> init {
+! CHECK-LABEL:   acc.reduction.recipe @reduction_mul_optional_ref_f32 : !fir.ref<f32> reduction_operator <mul> init {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<f32>):
 ! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca f32 {bindc_name = "acc.reduction.init"}
 ! CHECK:           %[[CONSTANT_0:.*]] = arith.constant 1.000000e+00 : f32
@@ -1093,7 +1093,7 @@
 ! CHECK:           acc.yield %[[VAL_0]] : !fir.ref<f32>
 ! CHECK:         }
 
-! CHECK-LABEL:   acc.reduction.recipe @reduction_mul_ref_100xi32 : !fir.ref<!fir.array<100xi32>> reduction_operator <mul> init {
+! CHECK-LABEL:   acc.reduction.recipe @reduction_mul_optional_ref_100xi32 : !fir.ref<!fir.array<100xi32>> reduction_operator <mul> init {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.array<100xi32>>):
 ! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca !fir.array<100xi32> {bindc_name = "acc.reduction.init"}
 ! CHECK:           %[[CONSTANT_0:.*]] = arith.constant 1 : i32
@@ -1127,7 +1127,7 @@
 ! CHECK:           acc.yield %[[VAL_0]] : !fir.ref<!fir.array<100xi32>>
 ! CHECK:         }
 
-! CHECK-LABEL:   acc.reduction.recipe @reduction_mul_ref_i32 : !fir.ref<i32> reduction_operator <mul> init {
+! CHECK-LABEL:   acc.reduction.recipe @reduction_mul_optional_ref_i32 : !fir.ref<i32> reduction_operator <mul> init {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<i32>):
 ! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca i32 {bindc_name = "acc.reduction.init"}
 ! CHECK:           %[[CONSTANT_0:.*]] = arith.constant 1 : i32
@@ -1143,7 +1143,7 @@
 ! CHECK:           acc.yield %[[VAL_0]] : !fir.ref<i32>
 ! CHECK:         }
 
-! CHECK-LABEL:   acc.reduction.recipe @reduction_add_ref_100xf32 : !fir.ref<!fir.array<100xf32>> reduction_operator <add> init {
+! CHECK-LABEL:   acc.reduction.recipe @reduction_add_optional_ref_100xf32 : !fir.ref<!fir.array<100xf32>> reduction_operator <add> init {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.array<100xf32>>):
 ! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca !fir.array<100xf32> {bindc_name = "acc.reduction.init"}
 ! CHECK:           %[[CONSTANT_0:.*]] = arith.constant 0.000000e+00 : f32
@@ -1177,7 +1177,7 @@
 ! CHECK:           acc.yield %[[VAL_0]] : !fir.ref<!fir.array<100xf32>>
 ! CHECK:         }
 
-! CHECK-LABEL:   acc.reduction.recipe @reduction_add_ref_f32 : !fir.ref<f32> reduction_operator <add> init {
+! CHECK-LABEL:   acc.reduction.recipe @reduction_add_optional_ref_f32 : !fir.ref<f32> reduction_operator <add> init {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<f32>):
 ! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca f32 {bindc_name = "acc.reduction.init"}
 ! CHECK:           %[[CONSTANT_0:.*]] = arith.constant 0.000000e+00 : f32
@@ -1193,7 +1193,7 @@
 ! CHECK:           acc.yield %[[VAL_0]] : !fir.ref<f32>
 ! CHECK:         }
 
-! CHECK-LABEL:   acc.reduction.recipe @reduction_add_ref_100x10x2xi32 : !fir.ref<!fir.array<100x10x2xi32>> reduction_operator <add> init {
+! CHECK-LABEL:   acc.reduction.recipe @reduction_add_optional_ref_100x10x2xi32 : !fir.ref<!fir.array<100x10x2xi32>> reduction_operator <add> init {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.array<100x10x2xi32>>):
 ! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca !fir.array<100x10x2xi32> {bindc_name = "acc.reduction.init"}
 ! CHECK:           %[[CONSTANT_0:.*]] = arith.constant 0 : i32
@@ -1243,7 +1243,7 @@
 ! CHECK:           acc.yield %[[VAL_0]] : !fir.ref<!fir.array<100x10x2xi32>>
 ! CHECK:         }
 
-! CHECK-LABEL:   acc.reduction.recipe @reduction_add_ref_100x10xi32 : !fir.ref<!fir.array<100x10xi32>> reduction_operator <add> init {
+! CHECK-LABEL:   acc.reduction.recipe @reduction_add_optional_ref_100x10xi32 : !fir.ref<!fir.array<100x10xi32>> reduction_operator <add> init {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.array<100x10xi32>>):
 ! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca !fir.array<100x10xi32> {bindc_name = "acc.reduction.init"}
 ! CHECK:           %[[CONSTANT_0:.*]] = arith.constant 0 : i32
@@ -1285,7 +1285,7 @@
 ! CHECK:           acc.yield %[[VAL_0]] : !fir.ref<!fir.array<100x10xi32>>
 ! CHECK:         }
 
-! CHECK-LABEL:   acc.reduction.recipe @reduction_add_ref_100xi32 : !fir.ref<!fir.array<100xi32>> reduction_operator <add> init {
+! CHECK-LABEL:   acc.reduction.recipe @reduction_add_optional_ref_100xi32 : !fir.ref<!fir.array<100xi32>> reduction_operator <add> init {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.array<100xi32>>):
 ! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca !fir.array<100xi32> {bindc_name = "acc.reduction.init"}
 ! CHECK:           %[[CONSTANT_0:.*]] = arith.constant 0 : i32
@@ -1325,7 +1325,7 @@
 ! CHECK:           acc.yield %[[ALLOCA_0]] : !fir.ref<i32>
 ! CHECK:         }
 
-! CHECK-LABEL:   acc.reduction.recipe @reduction_add_ref_i32 : !fir.ref<i32> reduction_operator <add> init {
+! CHECK-LABEL:   acc.reduction.recipe @reduction_add_optional_ref_i32 : !fir.ref<i32> reduction_operator <add> init {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<i32>):
 ! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca i32 {bindc_name = "acc.reduction.init"}
 ! CHECK:           %[[CONSTANT_0:.*]] = arith.constant 0 : i32
@@ -1354,7 +1354,7 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPacc_reduction_add_int(
 ! CHECK-SAME:  %{{.*}}: !fir.ref<!fir.array<100xi32>> {fir.bindc_name = "a"}, %[[B:.*]]: !fir.ref<i32> {fir.bindc_name = "b"})
 ! CHECK:       %[[DECLB:.*]]:2 = hlfir.declare %[[B]]
-! CHECK:       %[[RED_B:.*]] = acc.reduction varPtr(%[[DECLB]]#0 : !fir.ref<i32>) recipe(@reduction_add_ref_i32) -> !fir.ref<i32> {name = "b"}
+! CHECK:       %[[RED_B:.*]] = acc.reduction varPtr(%[[DECLB]]#0 : !fir.ref<i32>) recipe(@reduction_add_optional_ref_i32) -> !fir.ref<i32> {name = "b"}
 ! CHECK:       acc.loop {{.*}} reduction(%[[RED_B]] : !fir.ref<i32>)
 
 subroutine acc_reduction_add_int_array_1d(a, b)
@@ -1370,7 +1370,7 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPacc_reduction_add_int_array_1d(
 ! CHECK-SAME:  %{{.*}}: !fir.ref<!fir.array<100xi32>> {fir.bindc_name = "a"}, %[[B:.*]]: !fir.ref<!fir.array<100xi32>> {fir.bindc_name = "b"})
 ! CHECK:       %[[DECLB:.*]]:2 = hlfir.declare %[[B]]
-! CHECK:       %[[RED_B:.*]] = acc.reduction varPtr(%[[DECLB]]#0 : !fir.ref<!fir.array<100xi32>>) recipe(@reduction_add_ref_100xi32) -> !fir.ref<!fir.array<100xi32>> {name = "b"}
+! CHECK:       %[[RED_B:.*]] = acc.reduction varPtr(%[[DECLB]]#0 : !fir.ref<!fir.array<100xi32>>) recipe(@reduction_add_optional_ref_100xi32) -> !fir.ref<!fir.array<100xi32>> {name = "b"}
 ! CHECK:       acc.loop {{.*}} reduction(%[[RED_B]] : !fir.ref<!fir.array<100xi32>>)
 
 subroutine acc_reduction_add_int_array_2d(a, b)
@@ -1388,7 +1388,7 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPacc_reduction_add_int_array_2d(
 ! CHECK-SAME:  %[[ARG0:.*]]: !fir.ref<!fir.array<100x10xi32>> {fir.bindc_name = "a"}, %[[ARG1:.*]]: !fir.ref<!fir.array<100x10xi32>> {fir.bindc_name = "b"}) {
 ! CHECK:       %[[DECLARG1:.*]]:2 = hlfir.declare %[[ARG1]]
-! CHECK:       %[[RED_ARG1:.*]] = acc.reduction varPtr(%[[DECLARG1]]#0 : !fir.ref<!fir.array<100x10xi32>>) recipe(@reduction_add_ref_100x10xi32) -> !fir.ref<!fir.array<100x10xi32>> {name = "b"}
+! CHECK:       %[[RED_ARG1:.*]] = acc.reduction varPtr(%[[DECLARG1]]#0 : !fir.ref<!fir.array<100x10xi32>>) recipe(@reduction_add_optional_ref_100x10xi32) -> !fir.ref<!fir.array<100x10xi32>> {name = "b"}
 ! CHECK:       acc.loop {{.*}} reduction(%[[RED_ARG1]] : !fir.ref<!fir.array<100x10xi32>>)
 ! CHECK: } attributes {collapse = [2]{{.*}}
 
@@ -1409,7 +1409,7 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPacc_reduction_add_int_array_3d(
 ! CHECK-SAME: %{{.*}}: !fir.ref<!fir.array<100x10x2xi32>> {fir.bindc_name = "a"}, %[[ARG1:.*]]: !fir.ref<!fir.array<100x10x2xi32>> {fir.bindc_name = "b"})
 ! CHECK: %[[DECLARG1:.*]]:2 = hlfir.declare %[[ARG1]]
-! CHECK: %[[RED_ARG1:.*]] = acc.reduction varPtr(%[[DECLARG1]]#0 : !fir.ref<!fir.array<100x10x2xi32>>) recipe(@reduction_add_ref_100x10x2xi32) -> !fir.ref<!fir.array<100x10x2xi32>> {name = "b"}
+! CHECK: %[[RED_ARG1:.*]] = acc.reduction varPtr(%[[DECLARG1]]#0 : !fir.ref<!fir.array<100x10x2xi32>>) recipe(@reduction_add_optional_ref_100x10x2xi32) -> !fir.ref<!fir.array<100x10x2xi32>> {name = "b"}
 ! CHECK: acc.loop {{.*}} reduction(%[[RED_ARG1]] : !fir.ref<!fir.array<100x10x2xi32>>)
 ! CHECK: } attributes {collapse = [3]{{.*}}
 
@@ -1426,7 +1426,7 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPacc_reduction_add_float(
 ! CHECK-SAME:  %{{.*}}: !fir.ref<!fir.array<100xf32>> {fir.bindc_name = "a"}, %[[B:.*]]: !fir.ref<f32> {fir.bindc_name = "b"})
 ! CHECK:       %[[DECLB:.*]]:2 = hlfir.declare %[[B]]
-! CHECK:       %[[RED_B:.*]] = acc.reduction varPtr(%[[DECLB]]#0 : !fir.ref<f32>) recipe(@reduction_add_ref_f32) -> !fir.ref<f32> {name = "b"}
+! CHECK:       %[[RED_B:.*]] = acc.reduction varPtr(%[[DECLB]]#0 : !fir.ref<f32>) recipe(@reduction_add_optional_ref_f32) -> !fir.ref<f32> {name = "b"}
 ! CHECK:       acc.loop {{.*}} reduction(%[[RED_B]] : !fir.ref<f32>)
 
 subroutine acc_reduction_add_float_array_1d(a, b)
@@ -1442,7 +1442,7 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPacc_reduction_add_float_array_1d(
 ! CHECK-SAME:  %{{.*}}: !fir.ref<!fir.array<100xf32>> {fir.bindc_name = "a"}, %[[B:.*]]: !fir.ref<!fir.array<100xf32>> {fir.bindc_name = "b"})
 ! CHECK: %[[DECLB:.*]]:2 = hlfir.declare %[[B]]
-! CHECK: %[[RED_B:.*]] = acc.reduction varPtr(%[[DECLB]]#0 : !fir.ref<!fir.array<100xf32>>) recipe(@reduction_add_ref_100xf32) -> !fir.ref<!fir.array<100xf32>> {name = "b"}
+! CHECK: %[[RED_B:.*]] = acc.reduction varPtr(%[[DECLB]]#0 : !fir.ref<!fir.array<100xf32>>) recipe(@reduction_add_optional_ref_100xf32) -> !fir.ref<!fir.array<100xf32>> {name = "b"}
 ! CHECK:       acc.loop {{.*}} reduction(%[[RED_B]] : !fir.ref<!fir.array<100xf32>>)
 
 subroutine acc_reduction_mul_int(a, b)
@@ -1458,7 +1458,7 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPacc_reduction_mul_int(
 ! CHECK-SAME:  %{{.*}}: !fir.ref<!fir.array<100xi32>> {fir.bindc_name = "a"}, %[[B:.*]]: !fir.ref<i32> {fir.bindc_name = "b"})
 ! CHECK:       %[[DECLB:.*]]:2 = hlfir.declare %[[B]]
-! CHECK:       %[[RED_B:.*]] = acc.reduction varPtr(%[[DECLB]]#0 : !fir.ref<i32>) recipe(@reduction_mul_ref_i32) -> !fir.ref<i32> {name = "b"}
+! CHECK:       %[[RED_B:.*]] = acc.reduction varPtr(%[[DECLB]]#0 : !fir.ref<i32>) recipe(@reduction_mul_optional_ref_i32) -> !fir.ref<i32> {name = "b"}
 ! CHECK:       acc.loop {{.*}} reduction(%[[RED_B]] : !fir.ref<i32>)
 
 subroutine acc_reduction_mul_int_array_1d(a, b)
@@ -1474,7 +1474,7 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPacc_reduction_mul_int_array_1d(
 ! CHECK-SAME:  %{{.*}}: !fir.ref<!fir.array<100xi32>> {fir.bindc_name = "a"}, %[[B:.*]]: !fir.ref<!fir.array<100xi32>> {fir.bindc_name = "b"})
 ! CHECK:       %[[DECLB:.*]]:2 = hlfir.declare %[[B]]
-! CHECK:       %[[RED_B:.*]] = acc.reduction varPtr(%[[DECLB]]#0 : !fir.ref<!fir.array<100xi32>>) recipe(@reduction_mul_ref_100xi32) -> !fir.ref<!fir.array<100xi32>> {name = "b"}
+! CHECK:       %[[RED_B:.*]] = acc.reduction varPtr(%[[DECLB]]#0 : !fir.ref<!fir.array<100xi32>>) recipe(@reduction_mul_optional_ref_100xi32) -> !fir.ref<!fir.array<100xi32>> {name = "b"}
 ! CHECK:       acc.loop {{.*}} reduction(%[[RED_B]] : !fir.ref<!fir.array<100xi32>>)
 
 subroutine acc_reduction_mul_float(a, b)
@@ -1490,7 +1490,7 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPacc_reduction_mul_float(
 ! CHECK-SAME:  %{{.*}}: !fir.ref<!fir.array<100xf32>> {fir.bindc_name = "a"}, %[[B:.*]]: !fir.ref<f32> {fir.bindc_name = "b"})
 ! CHECK:       %[[DECLB:.*]]:2 = hlfir.declare %[[B]]
-! CHECK:       %[[RED_B:.*]] = acc.reduction varPtr(%[[DECLB]]#0 : !fir.ref<f32>) recipe(@reduction_mul_ref_f32) -> !fir.ref<f32> {name = "b"}
+! CHECK:       %[[RED_B:.*]] = acc.reduction varPtr(%[[DECLB]]#0 : !fir.ref<f32>) recipe(@reduction_mul_optional_ref_f32) -> !fir.ref<f32> {name = "b"}
 ! CHECK:       acc.loop {{.*}} reduction(%[[RED_B]] : !fir.ref<f32>)
 
 subroutine acc_reduction_mul_float_array_1d(a, b)
@@ -1506,7 +1506,7 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPacc_reduction_mul_float_array_1d(
 ! CHECK-SAME:  %{{.*}}: !fir.ref<!fir.array<100xf32>> {fir.bindc_name = "a"}, %[[B:.*]]: !fir.ref<!fir.array<100xf32>> {fir.bindc_name = "b"})
 ! CHECK:       %[[DECLB:.*]]:2 = hlfir.declare %[[B]]
-! CHECK:       %[[RED_B:.*]] = acc.reduction varPtr(%[[DECLB]]#0 : !fir.ref<!fir.array<100xf32>>) recipe(@reduction_mul_ref_100xf32) -> !fir.ref<!fir.array<100xf32>> {name = "b"}
+! CHECK:       %[[RED_B:.*]] = acc.reduction varPtr(%[[DECLB]]#0 : !fir.ref<!fir.array<100xf32>>) recipe(@reduction_mul_optional_ref_100xf32) -> !fir.ref<!fir.array<100xf32>> {name = "b"}
 ! CHECK:       acc.loop {{.*}} reduction(%[[RED_B]] : !fir.ref<!fir.array<100xf32>>)
 
 subroutine acc_reduction_min_int(a, b)
@@ -1522,7 +1522,7 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPacc_reduction_min_int(
 ! CHECK-SAME:  %{{.*}}: !fir.ref<!fir.array<100xi32>> {fir.bindc_name = "a"}, %[[B:.*]]: !fir.ref<i32> {fir.bindc_name = "b"})
 ! CHECK:       %[[DECLB:.*]]:2 = hlfir.declare %[[B]]
-! CHECK:       %[[RED_B:.*]] = acc.reduction varPtr(%[[DECLB]]#0 : !fir.ref<i32>) recipe(@reduction_min_ref_i32) -> !fir.ref<i32> {name = "b"}
+! CHECK:       %[[RED_B:.*]] = acc.reduction varPtr(%[[DECLB]]#0 : !fir.ref<i32>) recipe(@reduction_min_optional_ref_i32) -> !fir.ref<i32> {name = "b"}
 ! CHECK:       acc.loop {{.*}} reduction(%[[RED_B]] : !fir.ref<i32>)
 
 subroutine acc_reduction_min_int_array_1d(a, b)
@@ -1538,7 +1538,7 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPacc_reduction_min_int_array_1d(
 ! CHECK-SAME: %{{.*}}: !fir.ref<!fir.array<100xi32>> {fir.bindc_name = "a"}, %[[ARG1:.*]]: !fir.ref<!fir.array<100xi32>> {fir.bindc_name = "b"})
 ! CHECK: %[[DECLARG1:.*]]:2 = hlfir.declare %[[ARG1]]
-! CHECK: %[[RED_ARG1:.*]] = acc.reduction varPtr(%[[DECLARG1]]#0 : !fir.ref<!fir.array<100xi32>>) recipe(@reduction_min_ref_100xi32) -> !fir.ref<!fir.array<100xi32>> {name = "b"}
+! CHECK: %[[RED_ARG1:.*]] = acc.reduction varPtr(%[[DECLARG1]]#0 : !fir.ref<!fir.array<100xi32>>) recipe(@reduction_min_optional_ref_100xi32) -> !fir.ref<!fir.array<100xi32>> {name = "b"}
 ! CHECK: acc.loop {{.*}} reduction(%[[RED_ARG1]] : !fir.ref<!fir.array<100xi32>>)
 
 subroutine acc_reduction_min_float(a, b)
@@ -1554,7 +1554,7 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPacc_reduction_min_float(
 ! CHECK-SAME:  %{{.*}}: !fir.ref<!fir.array<100xf32>> {fir.bindc_name = "a"}, %[[B:.*]]: !fir.ref<f32> {fir.bindc_name = "b"})
 ! CHECK:       %[[DECLB:.*]]:2 = hlfir.declare %[[B]]
-! CHECK:       %[[RED_B:.*]] = acc.reduction varPtr(%[[DECLB]]#0 : !fir.ref<f32>) recipe(@reduction_min_ref_f32) -> !fir.ref<f32> {name = "b"}
+! CHECK:       %[[RED_B:.*]] = acc.reduction varPtr(%[[DECLB]]#0 : !fir.ref<f32>) recipe(@reduction_min_optional_ref_f32) -> !fir.ref<f32> {name = "b"}
 ! CHECK:       acc.loop {{.*}} reduction(%[[RED_B]] : !fir.ref<f32>)
 
 subroutine acc_reduction_min_float_array2d(a, b)
@@ -1572,7 +1572,7 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPacc_reduction_min_float_array2d(
 ! CHECK-SAME: %{{.*}}: !fir.ref<!fir.array<100x10xf32>> {fir.bindc_name = "a"}, %[[ARG1:.*]]: !fir.ref<!fir.array<100x10xf32>> {fir.bindc_name = "b"})
 ! CHECK: %[[DECLARG1:.*]]:2 = hlfir.declare %[[ARG1]]
-! CHECK: %[[RED_ARG1:.*]] = acc.reduction varPtr(%[[DECLARG1]]#0 : !fir.ref<!fir.array<100x10xf32>>) recipe(@reduction_min_ref_100x10xf32) -> !fir.ref<!fir.array<100x10xf32>> {name = "b"}
+! CHECK: %[[RED_ARG1:.*]] = acc.reduction varPtr(%[[DECLARG1]]#0 : !fir.ref<!fir.array<100x10xf32>>) recipe(@reduction_min_optional_ref_100x10xf32) -> !fir.ref<!fir.array<100x10xf32>> {name = "b"}
 ! CHECK: acc.loop {{.*}} reduction(%[[RED_ARG1]] : !fir.ref<!fir.array<100x10xf32>>)
 ! CHECK: attributes {collapse = [2]{{.*}}
 
@@ -1589,7 +1589,7 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPacc_reduction_max_int(
 ! CHECK-SAME:  %{{.*}}: !fir.ref<!fir.array<100xi32>> {fir.bindc_name = "a"}, %[[B:.*]]: !fir.ref<i32> {fir.bindc_name = "b"})
 ! CHECK:       %[[DECLB:.*]]:2 = hlfir.declare %[[B]]
-! CHECK:       %[[RED_B:.*]] = acc.reduction varPtr(%[[DECLB]]#0 : !fir.ref<i32>) recipe(@reduction_max_ref_i32) -> !fir.ref<i32> {name = "b"}
+! CHECK:       %[[RED_B:.*]] = acc.reduction varPtr(%[[DECLB]]#0 : !fir.ref<i32>) recipe(@reduction_max_optional_ref_i32) -> !fir.ref<i32> {name = "b"}
 ! CHECK:       acc.loop {{.*}} reduction(%[[RED_B]] : !fir.ref<i32>)
 
 subroutine acc_reduction_max_int_array2d(a, b)
@@ -1607,7 +1607,7 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPacc_reduction_max_int_array2d(
 ! CHECK-SAME: %{{.*}}: !fir.ref<!fir.array<100x10xi32>> {fir.bindc_name = "a"}, %[[ARG1:.*]]: !fir.ref<!fir.array<100x10xi32>> {fir.bindc_name = "b"})
 ! CHECK: %[[DECLARG1:.*]]:2 = hlfir.declare %[[ARG1]]
-! CHECK: %[[RED_ARG1:.*]] = acc.reduction varPtr(%[[DECLARG1]]#0 : !fir.ref<!fir.array<100x10xi32>>) recipe(@reduction_max_ref_100x10xi32) -> !fir.ref<!fir.array<100x10xi32>> {name = "b"}
+! CHECK: %[[RED_ARG1:.*]] = acc.reduction varPtr(%[[DECLARG1]]#0 : !fir.ref<!fir.array<100x10xi32>>) recipe(@reduction_max_optional_ref_100x10xi32) -> !fir.ref<!fir.array<100x10xi32>> {name = "b"}
 ! CHECK: acc.loop {{.*}} reduction(%[[RED_ARG1]] : !fir.ref<!fir.array<100x10xi32>>)
 
 subroutine acc_reduction_max_float(a, b)
@@ -1623,7 +1623,7 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPacc_reduction_max_float(
 ! CHECK-SAME:  %{{.*}}: !fir.ref<!fir.array<100xf32>> {fir.bindc_name = "a"}, %[[B:.*]]: !fir.ref<f32> {fir.bindc_name = "b"})
 ! CHECK:       %[[DECLB:.*]]:2 = hlfir.declare %[[B]]
-! CHECK:       %[[RED_B:.*]] = acc.reduction varPtr(%[[DECLB]]#0 : !fir.ref<f32>) recipe(@reduction_max_ref_f32) -> !fir.ref<f32> {name = "b"}
+! CHECK:       %[[RED_B:.*]] = acc.reduction varPtr(%[[DECLB]]#0 : !fir.ref<f32>) recipe(@reduction_max_optional_ref_f32) -> !fir.ref<f32> {name = "b"}
 ! CHECK:       acc.loop {{.*}} reduction(%[[RED_B]] : !fir.ref<f32>)
 
 subroutine acc_reduction_max_float_array1d(a, b)
@@ -1639,7 +1639,7 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPacc_reduction_max_float_array1d(
 ! CHECK-SAME:  %{{.*}}: !fir.ref<!fir.array<100xf32>> {fir.bindc_name = "a"}, %[[ARG1:.*]]: !fir.ref<!fir.array<100xf32>> {fir.bindc_name = "b"})
 ! CHECK:       %[[DECLARG1:.*]]:2 = hlfir.declare %[[ARG1]]
-! CHECK:       %[[RED_ARG1:.*]] = acc.reduction varPtr(%[[DECLARG1]]#0 : !fir.ref<!fir.array<100xf32>>) recipe(@reduction_max_ref_100xf32) -> !fir.ref<!fir.array<100xf32>> {name = "b"}
+! CHECK:       %[[RED_ARG1:.*]] = acc.reduction varPtr(%[[DECLARG1]]#0 : !fir.ref<!fir.array<100xf32>>) recipe(@reduction_max_optional_ref_100xf32) -> !fir.ref<!fir.array<100xf32>> {name = "b"}
 ! CHECK:       acc.loop {{.*}} reduction(%[[RED_ARG1]] : !fir.ref<!fir.array<100xf32>>)
 
 subroutine acc_reduction_iand()
@@ -1649,7 +1649,7 @@ subroutine acc_reduction_iand()
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPacc_reduction_iand()
-! CHECK: %[[RED:.*]] = acc.reduction varPtr(%{{.*}} : !fir.ref<i32>) recipe(@reduction_iand_ref_i32) -> !fir.ref<i32> {name = "i"}
+! CHECK: %[[RED:.*]] = acc.reduction varPtr(%{{.*}} : !fir.ref<i32>) recipe(@reduction_iand_optional_ref_i32) -> !fir.ref<i32> {name = "i"}
 ! CHECK: acc.parallel   reduction(%[[RED]] : !fir.ref<i32>)
 
 subroutine acc_reduction_ior()
@@ -1659,7 +1659,7 @@ subroutine acc_reduction_ior()
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPacc_reduction_ior()
-! CHECK: %[[RED:.*]] = acc.reduction varPtr(%{{.*}} : !fir.ref<i32>) recipe(@reduction_ior_ref_i32) -> !fir.ref<i32> {name = "i"}
+! CHECK: %[[RED:.*]] = acc.reduction varPtr(%{{.*}} : !fir.ref<i32>) recipe(@reduction_ior_optional_ref_i32) -> !fir.ref<i32> {name = "i"}
 ! CHECK: acc.parallel reduction(%[[RED]] : !fir.ref<i32>)
 
 subroutine acc_reduction_ieor()
@@ -1669,7 +1669,7 @@ subroutine acc_reduction_ieor()
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPacc_reduction_ieor()
-! CHECK: %[[RED:.*]] = acc.reduction varPtr(%{{.*}} : !fir.ref<i32>) recipe(@reduction_xor_ref_i32) -> !fir.ref<i32> {name = "i"}
+! CHECK: %[[RED:.*]] = acc.reduction varPtr(%{{.*}} : !fir.ref<i32>) recipe(@reduction_xor_optional_ref_i32) -> !fir.ref<i32> {name = "i"}
 ! CHECK: acc.parallel reduction(%[[RED]] : !fir.ref<i32>)
 
 subroutine acc_reduction_and()
@@ -1681,7 +1681,7 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPacc_reduction_and()
 ! CHECK: %[[L:.*]] = fir.alloca !fir.logical<4> {bindc_name = "l", uniq_name = "_QFacc_reduction_andEl"}
 ! CHECK: %[[DECLL:.*]]:2 = hlfir.declare %[[L]]
-! CHECK: %[[RED:.*]] = acc.reduction varPtr(%[[DECLL]]#0 : !fir.ref<!fir.logical<4>>) recipe(@reduction_land_ref_l32) -> !fir.ref<!fir.logical<4>> {name = "l"}
+! CHECK: %[[RED:.*]] = acc.reduction varPtr(%[[DECLL]]#0 : !fir.ref<!fir.logical<4>>) recipe(@reduction_land_optional_ref_l32) -> !fir.ref<!fir.logical<4>> {name = "l"}
 ! CHECK: acc.parallel reduction(%[[RED]] : !fir.ref<!fir.logical<4>>)
 
 subroutine acc_reduction_or()
@@ -1691,7 +1691,7 @@ subroutine acc_reduction_or()
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPacc_reduction_or()
-! CHECK: %[[RED:.*]] = acc.reduction varPtr(%{{.*}} : !fir.ref<!fir.logical<4>>) recipe(@reduction_lor_ref_l32) -> !fir.ref<!fir.logical<4>> {name = "l"}
+! CHECK: %[[RED:.*]] = acc.reduction varPtr(%{{.*}} : !fir.ref<!fir.logical<4>>) recipe(@reduction_lor_optional_ref_l32) -> !fir.ref<!fir.logical<4>> {name = "l"}
 ! CHECK: acc.parallel reduction(%[[RED]] : !fir.ref<!fir.logical<4>>)
 
 subroutine acc_reduction_eqv()
@@ -1701,7 +1701,7 @@ subroutine acc_reduction_eqv()
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPacc_reduction_eqv()
-! CHECK: %[[RED:.*]] = acc.reduction varPtr(%{{.*}} : !fir.ref<!fir.logical<4>>) recipe(@reduction_eqv_ref_l32) -> !fir.ref<!fir.logical<4>> {name = "l"}
+! CHECK: %[[RED:.*]] = acc.reduction varPtr(%{{.*}} : !fir.ref<!fir.logical<4>>) recipe(@reduction_eqv_optional_ref_l32) -> !fir.ref<!fir.logical<4>> {name = "l"}
 ! CHECK: acc.parallel reduction(%[[RED]] : !fir.ref<!fir.logical<4>>)
 
 subroutine acc_reduction_neqv()
@@ -1711,7 +1711,7 @@ subroutine acc_reduction_neqv()
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPacc_reduction_neqv()
-! CHECK: %[[RED:.*]] = acc.reduction varPtr(%{{.*}} : !fir.ref<!fir.logical<4>>) recipe(@reduction_neqv_ref_l32) -> !fir.ref<!fir.logical<4>> {name = "l"}
+! CHECK: %[[RED:.*]] = acc.reduction varPtr(%{{.*}} : !fir.ref<!fir.logical<4>>) recipe(@reduction_neqv_optional_ref_l32) -> !fir.ref<!fir.logical<4>> {name = "l"}
 ! CHECK: acc.parallel reduction(%[[RED]] : !fir.ref<!fir.logical<4>>)
 
 subroutine acc_reduction_add_cmplx()
@@ -1721,7 +1721,7 @@ subroutine acc_reduction_add_cmplx()
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPacc_reduction_add_cmplx()
-! CHECK: %[[RED:.*]] = acc.reduction varPtr(%{{.*}} : !fir.ref<complex<f32>>) recipe(@reduction_add_ref_z32) -> !fir.ref<complex<f32>> {name = "c"}
+! CHECK: %[[RED:.*]] = acc.reduction varPtr(%{{.*}} : !fir.ref<complex<f32>>) recipe(@reduction_add_optional_ref_z32) -> !fir.ref<complex<f32>> {name = "c"}
 ! CHECK: acc.parallel reduction(%[[RED]] : !fir.ref<complex<f32>>)
 
 subroutine acc_reduction_mul_cmplx()
@@ -1731,7 +1731,7 @@ subroutine acc_reduction_mul_cmplx()
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPacc_reduction_mul_cmplx()
-! CHECK: %[[RED:.*]] = acc.reduction varPtr(%{{.*}} : !fir.ref<complex<f32>>) recipe(@reduction_mul_ref_z32) -> !fir.ref<complex<f32>> {name = "c"}
+! CHECK: %[[RED:.*]] = acc.reduction varPtr(%{{.*}} : !fir.ref<complex<f32>>) recipe(@reduction_mul_optional_ref_z32) -> !fir.ref<complex<f32>> {name = "c"}
 ! CHECK: acc.parallel reduction(%[[RED]] : !fir.ref<complex<f32>>)
 
 subroutine acc_reduction_add_alloc()
@@ -1744,7 +1744,7 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPacc_reduction_add_alloc()
 ! CHECK: %[[ALLOCA:.*]] = fir.alloca !fir.box<!fir.heap<i32>> {bindc_name = "i", uniq_name = "_QFacc_reduction_add_allocEi"}
 ! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[ALLOCA]]
-! CHECK: %[[RED:.*]] = acc.reduction varPtr(%[[DECL]]#0 : !fir.ref<!fir.box<!fir.heap<i32>>>) recipe(@reduction_add_ref_box_heap_i32) -> !fir.ref<!fir.box<!fir.heap<i32>>> {name = "i"}
+! CHECK: %[[RED:.*]] = acc.reduction varPtr(%[[DECL]]#0 : !fir.ref<!fir.box<!fir.heap<i32>>>) recipe(@reduction_add_optional_ref_box_heap_i32) -> !fir.ref<!fir.box<!fir.heap<i32>>> {name = "i"}
 ! CHECK: acc.parallel reduction(%[[RED]] : !fir.ref<!fir.box<!fir.heap<i32>>>)
 
 subroutine acc_reduction_add_pointer(i)
@@ -1756,7 +1756,7 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPacc_reduction_add_pointer(
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<!fir.box<!fir.ptr<i32>>> {fir.bindc_name = "i"})
 ! CHECK: %[[DECLARG0:.*]]:2 = hlfir.declare %[[ARG0]]
-! CHECK: %[[RED:.*]] = acc.reduction varPtr(%[[DECLARG0]]#0 : !fir.ref<!fir.box<!fir.ptr<i32>>>) recipe(@reduction_add_ref_box_ptr_i32) -> !fir.ref<!fir.box<!fir.ptr<i32>>> {name = "i"}
+! CHECK: %[[RED:.*]] = acc.reduction varPtr(%[[DECLARG0]]#0 : !fir.ref<!fir.box<!fir.ptr<i32>>>) recipe(@reduction_add_optional_ref_box_ptr_i32) -> !fir.ref<!fir.box<!fir.ptr<i32>>> {name = "i"}
 ! CHECK: acc.parallel reduction(%[[RED]] : !fir.ref<!fir.box<!fir.ptr<i32>>>)
 
 subroutine acc_reduction_add_static_slice(a)
@@ -1773,7 +1773,7 @@ end subroutine
 ! CHECK: %[[LB:.*]] = arith.constant 10 : index
 ! CHECK: %[[UB:.*]] = arith.constant 19 : index
 ! CHECK: %[[BOUND:.*]] = acc.bounds lowerbound(%[[LB]] : index) upperbound(%[[UB]] : index) extent(%[[C100]] : index) stride(%[[C1]] : index) startIdx(%[[C1]] : index)
-! CHECK: %[[RED:.*]] = acc.reduction varPtr(%[[DECLARG0]]#0 : !fir.ref<!fir.array<100xi32>>) bounds(%[[BOUND]]) recipe(@reduction_add_section_lb10.ub19_ref_100xi32) -> !fir.ref<!fir.array<100xi32>> {name = "a(11:20)"}
+! CHECK: %[[RED:.*]] = acc.reduction varPtr(%[[DECLARG0]]#0 : !fir.ref<!fir.array<100xi32>>) bounds(%[[BOUND]]) recipe(@reduction_add_optional_section_lb10.ub19_ref_100xi32) -> !fir.ref<!fir.array<100xi32>> {name = "a(11:20)"}
 ! CHECK: acc.parallel reduction(%[[RED]] : !fir.ref<!fir.array<100xi32>>)
 
 subroutine acc_reduction_add_static_slice_2d(a)
@@ -1795,7 +1795,7 @@ end subroutine
 ! CHECK: %[[UB19:.*]] = arith.constant 19 : index
 ! CHECK: %[[BOUND1:.*]] = acc.bounds lowerbound(%[[LB]] : index) upperbound(%[[UB19]] : index) extent(%[[C20]] : index)
 ! stride(%[[STRIDE1]] : index) startIdx(%[[C1]] : index)
-! CHECK: %[[RED:.*]] = acc.reduction varPtr(%[[DECLARG0]]#0 : !fir.ref<!fir.array<10x20xi32>>) bounds(%[[BOUND0]], %[[BOUND1]]) recipe(@reduction_add_section_lb0.ub9xlb0.ub19_ref_10x20xi32) ->
+! CHECK: %[[RED:.*]] = acc.reduction varPtr(%[[DECLARG0]]#0 : !fir.ref<!fir.array<10x20xi32>>) bounds(%[[BOUND0]], %[[BOUND1]]) recipe(@reduction_add_optional_section_lb0.ub9xlb0.ub19_ref_10x20xi32) ->
 ! !fir.ref<!fir.array<10x20xi32>> {name = "a(:10,:20)"}
 ! CHECK: acc.parallel reduction(%[[RED]] : !fir.ref<!fir.array<10x20xi32>>)
 
@@ -1808,7 +1808,7 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPacc_reduction_add_dynamic_extent_add(
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "a"})
 ! CHECK: %[[DECLARG0:.*]]:2 = hlfir.declare %[[ARG0]]
-! CHECK: %[[RED:.*]] = acc.reduction var(%{{.*}} : !fir.box<!fir.array<?xi32>>) recipe(@reduction_add_box_Uxi32) -> !fir.box<!fir.array<?xi32>> {name = "a"}
+! CHECK: %[[RED:.*]] = acc.reduction var(%{{.*}} : !fir.box<!fir.array<?xi32>>) recipe(@reduction_add_optional_box_Uxi32) -> !fir.box<!fir.array<?xi32>> {name = "a"}
 ! CHECK: acc.parallel reduction(%[[RED:.*]] : !fir.box<!fir.array<?xi32>>)
 
 subroutine acc_reduction_add_assumed_shape_max(a)
@@ -1820,7 +1820,7 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPacc_reduction_add_assumed_shape_max(
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "a"})
 ! CHECK: %[[DECLARG0:.*]]:2 = hlfir.declare %[[ARG0]]
-! CHECK: %[[RED:.*]] = acc.reduction var(%{{.*}} : !fir.box<!fir.array<?xf32>>) recipe(@reduction_max_box_Uxf32) -> !fir.box<!fir.array<?xf32>> {name = "a"}
+! CHECK: %[[RED:.*]] = acc.reduction var(%{{.*}} : !fir.box<!fir.array<?xf32>>) recipe(@reduction_max_optional_box_Uxf32) -> !fir.box<!fir.array<?xf32>> {name = "a"}
 ! CHECK: acc.parallel reduction(%[[RED]] : !fir.box<!fir.array<?xf32>>) {
 
 subroutine acc_reduction_add_dynamic_extent_add_with_section(a)
@@ -1833,7 +1833,7 @@ end subroutine
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "a"})
 ! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFacc_reduction_add_dynamic_extent_add_with_sectionEa"} : (!fir.box<!fir.array<?xi32>>, !fir.dscope) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
 ! CHECK: %[[BOUND:.*]] = acc.bounds lowerbound(%c1{{.*}} : index) upperbound(%c3{{.*}} : index) extent(%{{.*}}#1 : index) stride(%{{.*}}#2 : index) startIdx(%{{.*}} : index) {strideInBytes = true}
-! CHECK: %[[RED:.*]] = acc.reduction var(%[[DECL]]#0 : !fir.box<!fir.array<?xi32>>) bounds(%[[BOUND]]) recipe(@reduction_add_section_lb1.ub3_box_Uxi32) -> !fir.box<!fir.array<?xi32>> {name = "a(2:4)"}
+! CHECK: %[[RED:.*]] = acc.reduction var(%[[DECL]]#0 : !fir.box<!fir.array<?xi32>>) bounds(%[[BOUND]]) recipe(@reduction_add_optional_section_lb1.ub3_box_Uxi32) -> !fir.box<!fir.array<?xi32>> {name = "a(2:4)"}
 ! CHECK: acc.parallel reduction(%[[RED]] : !fir.box<!fir.array<?xi32>>)
 
 subroutine acc_reduction_add_allocatable(a)
@@ -1845,7 +1845,7 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPacc_reduction_add_allocatable(
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {fir.bindc_name = "a"})
 ! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFacc_reduction_add_allocatableEa"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>)
-! CHECK: %[[RED:.*]] = acc.reduction varPtr(%[[DECL]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) recipe(@reduction_max_ref_box_heap_Uxf32) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {name = "a"}
+! CHECK: %[[RED:.*]] = acc.reduction varPtr(%[[DECL]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) recipe(@reduction_max_optional_ref_box_heap_Uxf32) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {name = "a"}
 ! CHECK: acc.parallel reduction(%[[RED]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>)
 
 subroutine acc_reduction_add_pointer_array(a)
@@ -1857,7 +1857,7 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPacc_reduction_add_pointer_array(
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>> {fir.bindc_name = "a"})
 ! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFacc_reduction_add_pointer_arrayEa"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>)
-! CHECK: %[[RED:.*]] = acc.reduction varPtr(%[[DECL]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>) recipe(@reduction_max_ref_box_ptr_Uxf32) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>> {name = "a"}
+! CHECK: %[[RED:.*]] = acc.reduction varPtr(%[[DECL]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>) recipe(@reduction_max_optional_ref_box_ptr_Uxf32) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>> {name = "a"}
 ! CHECK: acc.parallel reduction(%[[RED]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>)
 
 subroutine acc_reduction_max_dynamic_extent_max(a, n)
@@ -1870,7 +1870,7 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPacc_reduction_max_dynamic_extent_max(
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<!fir.array<?x?xf32>> {fir.bindc_name = "a"}, %{{.*}}: !fir.ref<i32> {fir.bindc_name = "n"})
 ! CHECK: %[[DECL_A:.*]]:2 = hlfir.declare %[[ARG0]](%{{.*}}) dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFacc_reduction_max_dynamic_extent_maxEa"} : (!fir.ref<!fir.array<?x?xf32>>, !fir.shape<2>, !fir.dscope) -> (!fir.box<!fir.array<?x?xf32>>, !fir.ref<!fir.array<?x?xf32>>)
-! CHECK: %[[RED:.*]] = acc.reduction var(%[[DECL_A]]#0 : !fir.box<!fir.array<?x?xf32>>) recipe(@reduction_max_box_UxUxf32) -> !fir.box<!fir.array<?x?xf32>> {name = "a"}
+! CHECK: %[[RED:.*]] = acc.reduction var(%[[DECL_A]]#0 : !fir.box<!fir.array<?x?xf32>>) recipe(@reduction_max_optional_box_UxUxf32) -> !fir.box<!fir.array<?x?xf32>> {name = "a"}
 ! CHECK: acc.parallel reduction(%[[RED]] : !fir.box<!fir.array<?x?xf32>>)
 
 subroutine acc_reduction_logical_allocatable(l)
@@ -1879,19 +1879,19 @@ subroutine acc_reduction_logical_allocatable(l)
   !$acc end parallel
 end subroutine
 ! CHECK-LABEL:   func.func @_QPacc_reduction_logical_allocatable(
-! CHECK:           %[[REDUCTION_0:.*]] = acc.reduction varPtr(%{{.*}} : !fir.ref<!fir.box<!fir.heap<!fir.logical<4>>>>) recipe(@reduction_lor_ref_box_heap_l32) -> !fir.ref<!fir.box<!fir.heap<!fir.logical<4>>>> {name = "l"}
+! CHECK:           %[[REDUCTION_0:.*]] = acc.reduction varPtr(%{{.*}} : !fir.ref<!fir.box<!fir.heap<!fir.logical<4>>>>) recipe(@reduction_lor_optional_ref_box_heap_l32) -> !fir.ref<!fir.box<!fir.heap<!fir.logical<4>>>> {name = "l"}
 ! CHECK:           acc.parallel reduction(%[[REDUCTION_0]] : !fir.ref<!fir.box<!fir.heap<!fir.logical<4>>>>)
 
-! ACC_COMBINE-LABEL:   acc.reduction.recipe @reduction_lor_ref_box_heap_l32 : !fir.ref<!fir.box<!fir.heap<!fir.logical<4>>>> reduction_operator <lor> init {
+! ACC_COMBINE-LABEL:   acc.reduction.recipe @reduction_lor_optional_ref_box_heap_l32 : !fir.ref<!fir.box<!fir.heap<!fir.logical<4>>>> reduction_operator <lor> init {
 ! ACC_COMBINE-NOT:     acc.reduction_combine
-! ACC_COMBINE-LABEL:   acc.reduction.recipe @reduction_max_box_UxUxf32 : !fir.box<!fir.array<?x?xf32>> reduction_operator <max> init {
+! ACC_COMBINE-LABEL:   acc.reduction.recipe @reduction_max_optional_box_UxUxf32 : !fir.box<!fir.array<?x?xf32>> reduction_operator <max> init {
 ! ACC_COMBINE-NOT:     acc.reduction_combine
-! ACC_COMBINE-LABEL:   acc.reduction.recipe @reduction_max_ref_box_ptr_Uxf32 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>> reduction_operator <max> init {
+! ACC_COMBINE-LABEL:   acc.reduction.recipe @reduction_max_optional_ref_box_ptr_Uxf32 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>> reduction_operator <max> init {
 ! ACC_COMBINE-NOT:     acc.reduction_combine
-! ACC_COMBINE-LABEL:   acc.reduction.recipe @reduction_max_ref_box_heap_Uxf32 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> reduction_operator <max> init {
+! ACC_COMBINE-LABEL:   acc.reduction.recipe @reduction_max_optional_ref_box_heap_Uxf32 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> reduction_operator <max> init {
 ! ACC_COMBINE-NOT:     acc.reduction_combine
 
-! ACC_COMBINE-LABEL:   acc.reduction.recipe @reduction_add_section_lb1.ub3_box_Uxi32 : !fir.box<!fir.array<?xi32>> reduction_operator <add> init {
+! ACC_COMBINE-LABEL:   acc.reduction.recipe @reduction_add_optional_section_lb1.ub3_box_Uxi32 : !fir.box<!fir.array<?xi32>> reduction_operator <add> init {
 ! ACC_COMBINE-LABEL:   } combiner {
 ! ACC_COMBINE:         ^bb0(%[[VAL_0:.*]]: !fir.box<!fir.array<?xi32>>, %[[VAL_1:.*]]: !fir.box<!fir.array<?xi32>>):
 ! ACC_COMBINE:           %[[CONSTANT_0:.*]] = arith.constant 1 : index
@@ -1922,70 +1922,70 @@ end subroutine
 ! ACC_COMBINE:         }
 
 
-! ACC_COMBINE-LABEL:   acc.reduction.recipe @reduction_max_box_Uxf32 : !fir.box<!fir.array<?xf32>> reduction_operator <max> init {
+! ACC_COMBINE-LABEL:   acc.reduction.recipe @reduction_max_optional_box_Uxf32 : !fir.box<!fir.array<?xf32>> reduction_operator <max> init {
 ! ACC_COMBINE-NOT:     acc.reduction_combine
-! ACC_COMBINE-LABEL:   acc.reduction.recipe @reduction_add_box_Uxi32 : !fir.box<!fir.array<?xi32>> reduction_operator <add> init {
+! ACC_COMBINE-LABEL:   acc.reduction.recipe @reduction_add_optional_box_Uxi32 : !fir.box<!fir.array<?xi32>> reduction_operator <add> init {
 ! ACC_COMBINE:             acc.reduction_combine %{{.*}} into %{{.*}} <add> : !fir.ref<i32>
-! ACC_COMBINE-LABEL:   acc.reduction.recipe @reduction_add_section_lb0.ub9xlb0.ub19_ref_10x20xi32 : !fir.ref<!fir.array<10x20xi32>> reduction_operator <add> init {
+! ACC_COMBINE-LABEL:   acc.reduction.recipe @reduction_add_optional_section_lb0.ub9xlb0.ub19_ref_10x20xi32 : !fir.ref<!fir.array<10x20xi32>> reduction_operator <add> init {
 ! ACC_COMBINE:               acc.reduction_combine %{{.*}} into %{{.*}} <add> : !fir.ref<i32>
-! ACC_COMBINE-LABEL:   acc.reduction.recipe @reduction_add_section_lb10.ub19_ref_100xi32 : !fir.ref<!fir.array<100xi32>> reduction_operator <add> init {
+! ACC_COMBINE-LABEL:   acc.reduction.recipe @reduction_add_optional_section_lb10.ub19_ref_100xi32 : !fir.ref<!fir.array<100xi32>> reduction_operator <add> init {
 ! ACC_COMBINE:             acc.reduction_combine %{{.*}} into %{{.*}} <add> : !fir.ref<i32>
-! ACC_COMBINE-LABEL:   acc.reduction.recipe @reduction_add_ref_box_ptr_i32 : !fir.ref<!fir.box<!fir.ptr<i32>>> reduction_operator <add> init {
+! ACC_COMBINE-LABEL:   acc.reduction.recipe @reduction_add_optional_ref_box_ptr_i32 : !fir.ref<!fir.box<!fir.ptr<i32>>> reduction_operator <add> init {
 ! ACC_COMBINE:           acc.reduction_combine %{{.*}} into %{{.*}} <add> : !fir.ptr<i32>
-! ACC_COMBINE-LABEL:   acc.reduction.recipe @reduction_add_ref_box_heap_i32 : !fir.ref<!fir.box<!fir.heap<i32>>> reduction_operator <add> init {
+! ACC_COMBINE-LABEL:   acc.reduction.recipe @reduction_add_optional_ref_box_heap_i32 : !fir.ref<!fir.box<!fir.heap<i32>>> reduction_operator <add> init {
 ! ACC_COMBINE:           acc.reduction_combine %{{.*}} into %{{.*}} <add> : !fir.heap<i32>
-! ACC_COMBINE-LABEL:   acc.reduction.recipe @reduction_mul_ref_z32 : !fir.ref<complex<f32>> reduction_operator <mul> init {
+! ACC_COMBINE-LABEL:   acc.reduction.recipe @reduction_mul_optional_ref_z32 : !fir.ref<complex<f32>> reduction_operator <mul> init {
 ! ACC_COMBINE:           acc.reduction_combine %{{.*}} into %{{.*}} <mul> : !fir.ref<complex<f32>>
-! ACC_COMBINE-LABEL:   acc.reduction.recipe @reduction_add_ref_z32 : !fir.ref<complex<f32>> reduction_operator <add> init {
+! ACC_COMBINE-LABEL:   acc.reduction.recipe @reduction_add_optional_ref_z32 : !fir.ref<complex<f32>> reduction_operator <add> init {
 ! ACC_COMBINE:           acc.reduction_combine %{{.*}} into %{{.*}} <add> : !fir.ref<complex<f32>>
-! ACC_COMBINE-LABEL:   acc.reduction.recipe @reduction_neqv_ref_l32 : !fir.ref<!fir.logical<4>> reduction_operator <neqv> init {
+! ACC_COMBINE-LABEL:   acc.reduction.recipe @reduction_neqv_optional_ref_l32 : !fir.ref<!fir.logical<4>> reduction_operator <neqv> init {
 ! ACC_COMBINE-NOT:     acc.reduction_combine
-! ACC_COMBINE-LABEL:   acc.reduction.recipe @reduction_eqv_ref_l32 : !fir.ref<!fir.logical<4>> reduction_operator <eqv> init {
+! ACC_COMBINE-LABEL:   acc.reduction.recipe @reduction_eqv_optional_ref_l32 : !fir.ref<!fir.logical<4>> reduction_operator <eqv> init {
 ! ACC_COMBINE-NOT:     acc.reduction_combine
-! ACC_COMBINE-LABEL:   acc.reduction.recipe @reduction_lor_ref_l32 : !fir.ref<!fir.logical<4>> reduction_operator <lor> init {
+! ACC_COMBINE-LABEL:   acc.reduction.recipe @reduction_lor_optional_ref_l32 : !fir.ref<!fir.logical<4>> reduction_operator <lor> init {
 ! ACC_COMBINE-NOT:     acc.reduction_combine
-! ACC_COMBINE-LABEL:   acc.reduction.recipe @reduction_land_ref_l32 : !fir.ref<!fir.logical<4>> reduction_operator <land> init {
+! ACC_COMBINE-LABEL:   acc.reduction.recipe @reduction_land_optional_ref_l32 : !fir.ref<!fir.logical<4>> reduction_operator <land> init {
 ! ACC_COMBINE-NOT:     acc.reduction_combine
-! ACC_COMBINE-LABEL:   acc.reduction.recipe @reduction_xor_ref_i32 : !fir.ref<i32> reduction_operator <xor> init {
+! ACC_COMBINE-LABEL:   acc.reduction.recipe @reduction_xor_optional_ref_i32 : !fir.ref<i32> reduction_operator <xor> init {
 ! ACC_COMBINE:           acc.reduction_combine %{{.*}} into %{{.*}} <xor> : !fir.ref<i32>
-! ACC_COMBINE-LABEL:   acc.reduction.recipe @reduction_ior_ref_i32 : !fir.ref<i32> reduction_operator <ior> init {
+! ACC_COMBINE-LABEL:   acc.reduction.recipe @reduction_ior_optional_ref_i32 : !fir.ref<i32> reduction_operator <ior> init {
 ! ACC_COMBINE:           acc.reduction_combine %{{.*}} into %{{.*}} <ior> : !fir.ref<i32>
-! ACC_COMBINE-LABEL:   acc.reduction.recipe @reduction_iand_ref_i32 : !fir.ref<i32> reduction_operator <iand> init {
+! ACC_COMBINE-LABEL:   acc.reduction.recipe @reduction_iand_optional_ref_i32 : !fir.ref<i32> reduction_operator <iand> init {
 ! ACC_COMBINE:           acc.reduction_combine %{{.*}} into %{{.*}} <iand> : !fir.ref<i32>
-! ACC_COMBINE-LABEL:   acc.reduction.recipe @reduction_max_ref_100xf32 : !fir.ref<!fir.array<100xf32>> reduction_operator <max> init {
+! ACC_COMBINE-LABEL:   acc.reduction.recipe @reduction_max_optional_ref_100xf32 : !fir.ref<!fir.array<100xf32>> reduction_operator <max> init {
 ! ACC_COMBINE-NOT:     acc.reduction_combine
-! ACC_COMBINE-LABEL:   acc.reduction.recipe @reduction_max_ref_f32 : !fir.ref<f32> reduction_operator <max> init {
+! ACC_COMBINE-LABEL:   acc.reduction.recipe @reduction_max_optional_ref_f32 : !fir.ref<f32> reduction_operator <max> init {
 ! ACC_COMBINE-NOT:     acc.reduction_combine
-! ACC_COMBINE-LABEL:   acc.reduction.recipe @reduction_max_ref_100x10xi32 : !fir.ref<!fir.array<100x10xi32>> reduction_operator <max> init {
+! ACC_COMBINE-LABEL:   acc.reduction.recipe @reduction_max_optional_ref_100x10xi32 : !fir.ref<!fir.array<100x10xi32>> reduction_operator <max> init {
 ! ACC_COMBINE-NOT:     acc.reduction_combine
-! ACC_COMBINE-LABEL:   acc.reduction.recipe @reduction_max_ref_i32 : !fir.ref<i32> reduction_operator <max> init {
+! ACC_COMBINE-LABEL:   acc.reduction.recipe @reduction_max_optional_ref_i32 : !fir.ref<i32> reduction_operator <max> init {
 ! ACC_COMBINE-NOT:     acc.reduction_combine
-! ACC_COMBINE-LABEL:   acc.reduction.recipe @reduction_min_ref_100x10xf32 : !fir.ref<!fir.array<100x10xf32>> reduction_operator <min> init {
+! ACC_COMBINE-LABEL:   acc.reduction.recipe @reduction_min_optional_ref_100x10xf32 : !fir.ref<!fir.array<100x10xf32>> reduction_operator <min> init {
 ! ACC_COMBINE-NOT:     acc.reduction_combine
-! ACC_COMBINE-LABEL:   acc.reduction.recipe @reduction_min_ref_f32 : !fir.ref<f32> reduction_operator <min> init {
+! ACC_COMBINE-LABEL:   acc.reduction.recipe @reduction_min_optional_ref_f32 : !fir.ref<f32> reduction_operator <min> init {
 ! ACC_COMBINE-NOT:     acc.reduction_combine
-! ACC_COMBINE-LABEL:   acc.reduction.recipe @reduction_min_ref_100xi32 : !fir.ref<!fir.array<100xi32>> reduction_operator <min> init {
+! ACC_COMBINE-LABEL:   acc.reduction.recipe @reduction_min_optional_ref_100xi32 : !fir.ref<!fir.array<100xi32>> reduction_operator <min> init {
 ! ACC_COMBINE-NOT:     acc.reduction_combine
-! ACC_COMBINE-LABEL:   acc.reduction.recipe @reduction_min_ref_i32 : !fir.ref<i32> reduction_operator <min> init {
+! ACC_COMBINE-LABEL:   acc.reduction.recipe @reduction_min_optional_ref_i32 : !fir.ref<i32> reduction_operator <min> init {
 ! ACC_COMBINE-NOT:     acc.reduction_combine
-! ACC_COMBINE-LABEL:   acc.reduction.recipe @reduction_mul_ref_100xf32 : !fir.ref<!fir.array<100xf32>> reduction_operator <mul> init {
+! ACC_COMBINE-LABEL:   acc.reduction.recipe @reduction_mul_optional_ref_100xf32 : !fir.ref<!fir.array<100xf32>> reduction_operator <mul> init {
 ! ACC_COMBINE-NOT:     acc.reduction_combine
 ! ACC_COMBINE:             acc.reduction_combine %{{.*}} into %{{.*}} <mul> : !fir.ref<f32>
-! ACC_COMBINE-LABEL:   acc.reduction.recipe @reduction_mul_ref_f32 : !fir.ref<f32> reduction_operator <mul> init {
+! ACC_COMBINE-LABEL:   acc.reduction.recipe @reduction_mul_optional_ref_f32 : !fir.ref<f32> reduction_operator <mul> init {
 ! ACC_COMBINE:           acc.reduction_combine %{{.*}} into %{{.*}} <mul> : !fir.ref<f32>
-! ACC_COMBINE-LABEL:   acc.reduction.recipe @reduction_mul_ref_100xi32 : !fir.ref<!fir.array<100xi32>> reduction_operator <mul> init {
+! ACC_COMBINE-LABEL:   acc.reduction.recipe @reduction_mul_optional_ref_100xi32 : !fir.ref<!fir.array<100xi32>> reduction_operator <mul> init {
 ! ACC_COMBINE:             acc.reduction_combine %{{.*}} into %{{.*}} <mul> : !fir.ref<i32>
-! ACC_COMBINE-LABEL:   acc.reduction.recipe @reduction_mul_ref_i32 : !fir.ref<i32> reduction_operator <mul> init {
+! ACC_COMBINE-LABEL:   acc.reduction.recipe @reduction_mul_optional_ref_i32 : !fir.ref<i32> reduction_operator <mul> init {
 ! ACC_COMBINE:           acc.reduction_combine %{{.*}} into %{{.*}} <mul> : !fir.ref<i32>
-! ACC_COMBINE-LABEL:   acc.reduction.recipe @reduction_add_ref_100xf32 : !fir.ref<!fir.array<100xf32>> reduction_operator <add> init {
+! ACC_COMBINE-LABEL:   acc.reduction.recipe @reduction_add_optional_ref_100xf32 : !fir.ref<!fir.array<100xf32>> reduction_operator <add> init {
 ! ACC_COMBINE:             acc.reduction_combine %{{.*}} into %{{.*}} <add> : !fir.ref<f32>
-! ACC_COMBINE-LABEL:   acc.reduction.recipe @reduction_add_ref_f32 : !fir.ref<f32> reduction_operator <add> init {
+! ACC_COMBINE-LABEL:   acc.reduction.recipe @reduction_add_optional_ref_f32 : !fir.ref<f32> reduction_operator <add> init {
 ! ACC_COMBINE:           acc.reduction_combine %{{.*}} into %{{.*}} <add> : !fir.ref<f32>
-! ACC_COMBINE-LABEL:   acc.reduction.recipe @reduction_add_ref_100x10x2xi32 : !fir.ref<!fir.array<100x10x2xi32>> reduction_operator <add> init {
+! ACC_COMBINE-LABEL:   acc.reduction.recipe @reduction_add_optional_ref_100x10x2xi32 : !fir.ref<!fir.array<100x10x2xi32>> reduction_operator <add> init {
 ! ACC_COMBINE:                 acc.reduction_combine %{{.*}} into %{{.*}} <add> : !fir.ref<i32>
-! ACC_COMBINE-LABEL:   acc.reduction.recipe @reduction_add_ref_100x10xi32 : !fir.ref<!fir.array<100x10xi32>> reduction_operator <add> init {
+! ACC_COMBINE-LABEL:   acc.reduction.recipe @reduction_add_optional_ref_100x10xi32 : !fir.ref<!fir.array<100x10xi32>> reduction_operator <add> init {
 ! ACC_COMBINE:               acc.reduction_combine %{{.*}} into %{{.*}} <add> : !fir.ref<i32>
-! ACC_COMBINE-LABEL:   acc.reduction.recipe @reduction_add_ref_100xi32 : !fir.ref<!fir.array<100xi32>> reduction_operator <add> init {
+! ACC_COMBINE-LABEL:   acc.reduction.recipe @reduction_add_optional_ref_100xi32 : !fir.ref<!fir.array<100xi32>> reduction_operator <add> init {
 ! ACC_COMBINE:             acc.reduction_combine %{{.*}} into %{{.*}} <add> : !fir.ref<i32>
-! ACC_COMBINE-LABEL:   acc.reduction.recipe @reduction_add_ref_i32 : !fir.ref<i32> reduction_operator <add> init {
+! ACC_COMBINE-LABEL:   acc.reduction.recipe @reduction_add_optional_ref_i32 : !fir.ref<i32> reduction_operator <add> init {
 ! ACC_COMBINE:           acc.reduction_combine %{{.*}} into %{{.*}} <add> : !fir.ref<i32>
