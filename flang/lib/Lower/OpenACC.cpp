@@ -1565,8 +1565,8 @@ static void processDoConcurrentLocalitySpecs(
     llvm::SmallVector<mlir::Value> &privateOperands,
     llvm::SmallVector<mlir::Value> &firstprivateOperands,
     llvm::SmallVector<mlir::Value> &reductionOperands, AccDataMap &dataMap,
-    llvm::SmallVector<std::pair<Fortran::semantics::SymbolRef,
-                                Fortran::semantics::SymbolRef>>
+    llvm::SmallVector<
+        std::pair<Fortran::semantics::SymbolRef, Fortran::semantics::SymbolRef>>
         &localSymPairs) {
   for (const Fortran::parser::LocalitySpec &locSpec : localityList) {
     if (const auto *reduceSpec =
@@ -1632,9 +1632,8 @@ static void processDoConcurrentLocalitySpecs(
             fir::acc::createOrGetPrivateRecipe(builder, loc, symAddr, bounds);
         op.setRecipeAttr(recipe);
         privateOperands.push_back(op.getAccVar());
-        dataMap.emplaceSymbol(
-            op.getAccVar(),
-            Fortran::semantics::SymbolRef(ultimateSym));
+        dataMap.emplaceSymbol(op.getAccVar(),
+                              Fortran::semantics::SymbolRef(ultimateSym));
         if (name.symbol->HasLocalLocality())
           localSymPairs.emplace_back(
               Fortran::semantics::SymbolRef(*name.symbol),
@@ -1662,9 +1661,8 @@ static void processDoConcurrentLocalitySpecs(
             builder, loc, symAddr, bounds);
         op.setRecipeAttr(recipe);
         firstprivateOperands.push_back(op.getAccVar());
-        dataMap.emplaceSymbol(
-            op.getAccVar(),
-            Fortran::semantics::SymbolRef(ultimateSym));
+        dataMap.emplaceSymbol(op.getAccVar(),
+                              Fortran::semantics::SymbolRef(ultimateSym));
         if (name.symbol->HasLocalLocality())
           localSymPairs.emplace_back(
               Fortran::semantics::SymbolRef(*name.symbol),
@@ -1694,8 +1692,8 @@ static void processDoLoopBounds(
     llvm::SmallVector<mlir::Location> &locs, uint64_t loopsToProcess,
     llvm::SmallVector<mlir::Value> &reductionOperands,
     llvm::SmallVector<mlir::Value> &firstprivateOperands, AccDataMap &dataMap,
-    llvm::SmallVector<std::pair<Fortran::semantics::SymbolRef,
-                                Fortran::semantics::SymbolRef>>
+    llvm::SmallVector<
+        std::pair<Fortran::semantics::SymbolRef, Fortran::semantics::SymbolRef>>
         &localSymPairs) {
   assert(loopsToProcess > 0 && "expect at least one loop");
   locs.push_back(currentLocation); // Location of the directive
@@ -1712,11 +1710,9 @@ static void processDoLoopBounds(
     const auto &localityList =
         std::get<std::list<Fortran::parser::LocalitySpec>>(concurrent.t);
     if (!localityList.empty())
-      processDoConcurrentLocalitySpecs(converter, currentLocation, builder,
-                                       localityList, privateOperands,
-                                       firstprivateOperands,
-                                       reductionOperands, dataMap,
-                                       localSymPairs);
+      processDoConcurrentLocalitySpecs(
+          converter, currentLocation, builder, localityList, privateOperands,
+          firstprivateOperands, reductionOperands, dataMap, localSymPairs);
 
     const auto &concurrentHeader =
         std::get<Fortran::parser::ConcurrentHeader>(concurrent.t);
@@ -1965,20 +1961,19 @@ buildACCLoopOp(Fortran::lower::AbstractConverter &converter,
   llvm::SmallVector<mlir::Location> locs;
   llvm::SmallVector<mlir::Value> lowerbounds, upperbounds, steps;
   llvm::SmallVector<mlir::Value> firstprivateOperands;
-  llvm::SmallVector<std::pair<Fortran::semantics::SymbolRef,
-                              Fortran::semantics::SymbolRef>>
+  llvm::SmallVector<
+      std::pair<Fortran::semantics::SymbolRef, Fortran::semantics::SymbolRef>>
       localSymPairs;
 
   // Look at the do/do concurrent loops to extract bounds information unless
   // this loop is lowered in an unstructured fashion, in which case bounds are
   // not represented on acc.loop and explicit control flow is used inside body.
   if (!eval.lowerAsUnstructured()) {
-    processDoLoopBounds(converter, currentLocation, stmtCtx, builder,
-                        outerDoConstruct, eval, lowerbounds, upperbounds, steps,
-                        privateOperands, ivPrivate, ivTypes, ivLocs,
-                        inclusiveBounds, locs, loopsToProcess,
-                        reductionOperands, firstprivateOperands, dataMap,
-                        localSymPairs);
+    processDoLoopBounds(
+        converter, currentLocation, stmtCtx, builder, outerDoConstruct, eval,
+        lowerbounds, upperbounds, steps, privateOperands, ivPrivate, ivTypes,
+        ivLocs, inclusiveBounds, locs, loopsToProcess, reductionOperands,
+        firstprivateOperands, dataMap, localSymPairs);
   } else {
     // When the loop contains early exits, privatize induction variables, but do
     // not create acc.loop bounds. The control flow of the loop will be
