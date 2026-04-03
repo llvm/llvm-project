@@ -53,20 +53,20 @@ void checkError(std::string ExpectedMsg, Error Err) {
 TEST(GSYMTest, TestFileEntry) {
   // Make sure default constructed GSYM FileEntry has zeroes in the
   // directory and basename string table indexes.
-  FileEntry empty1;
-  FileEntry empty2;
+  FileEntry<uint32_t> empty1;
+  FileEntry<uint32_t> empty2;
   EXPECT_EQ(empty1.Dir, 0u);
   EXPECT_EQ(empty1.Base, 0u);
   // Verify equality operator works
-  FileEntry a1(10, 30);
-  FileEntry a2(10, 30);
-  FileEntry b(10, 40);
+  FileEntry<uint32_t> a1(10, 30);
+  FileEntry<uint32_t> a2(10, 30);
+  FileEntry<uint32_t> b(10, 40);
   EXPECT_EQ(empty1, empty2);
   EXPECT_EQ(a1, a2);
   EXPECT_NE(a1, b);
   EXPECT_NE(a1, empty1);
   // Test we can use llvm::gsym::FileEntry in llvm::DenseMap.
-  DenseMap<FileEntry, uint32_t> EntryToIndex;
+  DenseMap<FileEntry<uint32_t>, uint32_t> EntryToIndex;
   constexpr uint32_t Index1 = 1;
   constexpr uint32_t Index2 = 1;
   auto R = EntryToIndex.insert(std::make_pair(a1, Index1));
@@ -1198,30 +1198,30 @@ TEST(GSYMTest, TestGsymCreatorV18ByteAddrOffsets) {
   TestGsymCreatorAddrOffsetsImpl<GsymCreatorV1>(8, 8, 4, 4);
 }
 
-// V2 tests (optimal AddrOffSize: 1-8)
+// V2 tests (optimal AddrOffSize: 1-8, fixed AddrInfoOffSize=8, StrOffSize=8)
 TEST(GSYMTest, TestGsymCreatorV21ByteAddrOffsets) {
-  TestGsymCreatorAddrOffsetsImpl<GsymCreatorV2>(1, 1, 1, 1);
+  TestGsymCreatorAddrOffsetsImpl<GsymCreatorV2>(1, 1, 8, 8);
 }
 TEST(GSYMTest, TestGsymCreatorV22ByteAddrOffsets) {
-  TestGsymCreatorAddrOffsetsImpl<GsymCreatorV2>(2, 2, 1, 1);
+  TestGsymCreatorAddrOffsetsImpl<GsymCreatorV2>(2, 2, 8, 8);
 }
 TEST(GSYMTest, TestGsymCreatorV23ByteAddrOffsets) {
-  TestGsymCreatorAddrOffsetsImpl<GsymCreatorV2>(3, 3, 1, 1);
+  TestGsymCreatorAddrOffsetsImpl<GsymCreatorV2>(3, 3, 8, 8);
 }
 TEST(GSYMTest, TestGsymCreatorV24ByteAddrOffsets) {
-  TestGsymCreatorAddrOffsetsImpl<GsymCreatorV2>(4, 4, 1, 1);
+  TestGsymCreatorAddrOffsetsImpl<GsymCreatorV2>(4, 4, 8, 8);
 }
 TEST(GSYMTest, TestGsymCreatorV25ByteAddrOffsets) {
-  TestGsymCreatorAddrOffsetsImpl<GsymCreatorV2>(5, 5, 1, 1);
+  TestGsymCreatorAddrOffsetsImpl<GsymCreatorV2>(5, 5, 8, 8);
 }
 TEST(GSYMTest, TestGsymCreatorV26ByteAddrOffsets) {
-  TestGsymCreatorAddrOffsetsImpl<GsymCreatorV2>(6, 6, 1, 1);
+  TestGsymCreatorAddrOffsetsImpl<GsymCreatorV2>(6, 6, 8, 8);
 }
 TEST(GSYMTest, TestGsymCreatorV27ByteAddrOffsets) {
-  TestGsymCreatorAddrOffsetsImpl<GsymCreatorV2>(7, 7, 1, 1);
+  TestGsymCreatorAddrOffsetsImpl<GsymCreatorV2>(7, 7, 8, 8);
 }
 TEST(GSYMTest, TestGsymCreatorV28ByteAddrOffsets) {
-  TestGsymCreatorAddrOffsetsImpl<GsymCreatorV2>(8, 8, 1, 1);
+  TestGsymCreatorAddrOffsetsImpl<GsymCreatorV2>(8, 8, 8, 8);
 }
 
 static void VerifyFunctionInfo(const GsymReader &GR, uint64_t Addr,
@@ -2565,7 +2565,7 @@ TEST(GSYMTest, TestGsymCreatorV1MultipleSymbolsWithNoSize) {
   TestGsymCreatorMultipleSymbolsWithNoSizeImpl<GsymCreatorV1>(1, 4, 4);
 }
 TEST(GSYMTest, TestGsymCreatorV2MultipleSymbolsWithNoSize) {
-  TestGsymCreatorMultipleSymbolsWithNoSizeImpl<GsymCreatorV2>(1, 1, 1);
+  TestGsymCreatorMultipleSymbolsWithNoSizeImpl<GsymCreatorV2>(1, 8, 8);
 }
 
 // Helper function to quickly create a FunctionInfo in a GsymCreatorV1 for

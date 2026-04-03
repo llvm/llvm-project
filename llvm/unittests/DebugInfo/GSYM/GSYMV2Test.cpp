@@ -134,18 +134,13 @@ static void TestV2HeaderAndGlobalData(llvm::endianness ByteOrder,
   const HeaderV2 &Hdr = *HdrOrErr;
   EXPECT_EQ(Hdr.Magic, GSYM_MAGIC);
   EXPECT_EQ(Hdr.Version, HeaderV2::getVersion());
-  EXPECT_EQ(Hdr.Padding, 0u);
   EXPECT_EQ(Hdr.BaseAddress, BaseAddr);
   EXPECT_EQ(Hdr.NumAddresses, ExpectedNumAddresses);
   EXPECT_EQ(Hdr.AddrOffSize, ExpectedAddrOffSize);
-  EXPECT_LE(Hdr.AddrInfoOffSize, 8u);
-  EXPECT_GE(Hdr.AddrInfoOffSize, 1u);
-  EXPECT_LE(Hdr.StrpSize, 8u);
-  EXPECT_GE(Hdr.StrpSize, 1u);
   EXPECT_EQ(Hdr.StrTableEncoding, StringTableEncoding::Default);
 
   // Decode GlobalData entries starting at offset 24 (after fixed header).
-  uint64_t Offset = 24;
+  uint64_t Offset = HeaderV2::getEncodedSize();
   bool FoundAddrOffsets = false;
   bool FoundAddrInfoOffsets = false;
   bool FoundStringTable = false;
@@ -171,7 +166,7 @@ static void TestV2HeaderAndGlobalData(llvm::endianness ByteOrder,
       break;
     case GlobalInfoType::AddrInfoOffsets:
       EXPECT_EQ(GD.FileSize,
-                ExpectedNumAddresses * (uint64_t)Hdr.AddrInfoOffSize);
+                ExpectedNumAddresses * (uint64_t)HeaderV2::getAddressInfoOffsetByteSize());
       EXPECT_GT(GD.FileOffset, 0u);
       FoundAddrInfoOffsets = true;
       break;
@@ -209,7 +204,7 @@ static void TestV2HeaderAndGlobalData(llvm::endianness ByteOrder,
   EXPECT_EQ(FoundUUID, HasUUID);
 
   // Verify that all section data fits within the encoded buffer.
-  Offset = 24;
+  Offset = HeaderV2::getEncodedSize();
   while (Offset < Data.size()) {
     GlobalData GD = decodeGlobalDataEntry(Data, Offset, ByteOrder);
     if (GD.Type == GlobalInfoType::EndOfList)
@@ -280,134 +275,6 @@ TEST(GSYMV2Test, TestCreatorV2AddrOffSize5Byte) {
 
 /// StrpSize tests
 
-/// Test that a given StrpSize produces a correct round-trip. Creates a string
-/// table large enough to require the specified StrpSize by inserting a string
-/// of (1 << ((StrpSize-1) * 8)) bytes, followed by a one-character string
-/// whose offset exceeds what (StrpSize-1) bytes can hold.
-static void TestV2StrpSize(uint8_t ExpectedStrpSize,
-                           llvm::endianness ByteOrder) {
-  GsymCreatorV2 GC;
-  // Insert a large string to push the string table past the threshold.
-  // The string table starts with a '\0' byte, so the first string is at
-  // offset 1. We want the second string's offset to require ExpectedStrpSize
-  // bytes, so the first string needs to be at least (1 << ((ExpSize-1)*8))-1
-  // bytes long (including its null terminator).
-  const size_t FirstStrLen = 1ULL << ((ExpectedStrpSize - 1) * 8);
-  std::string LargeStr(FirstStrLen, 'x');
-  GC.insertString(LargeStr);
-  const uint32_t FuncName = GC.insertString("f");
-  GC.addFunctionInfo(FunctionInfo(0x1000, 0x10, FuncName));
-  OutputAggregator Null(nullptr);
-  ASSERT_FALSE(GC.finalize(Null));
-
-  auto Result = encodeV2(GC, ByteOrder);
-  ASSERT_THAT_EXPECTED(Result, Succeeded());
-  StringRef Data = *Result;
-
-  auto HdrOrErr = decodeHeaderV2(Data, ByteOrder);
-  ASSERT_THAT_EXPECTED(HdrOrErr, Succeeded());
-  EXPECT_EQ(HdrOrErr->StrpSize, ExpectedStrpSize);
-
-  // Verify round-trip: decode and look up the function.
-  auto GR = GsymReaderV2::copyBuffer(Data);
-  ASSERT_THAT_EXPECTED(GR, Succeeded());
-  EXPECT_EQ(GR->getNumAddresses(), 1u);
-
-  auto FI = GR->getFunctionInfo(0x1000);
-  ASSERT_THAT_EXPECTED(FI, Succeeded());
-  EXPECT_EQ(GR->getString(FI->Name), "f");
-}
-
-// Only test StrpSize 1-3. Larger sizes would require string tables of
-// 16MB+ (size 4), 4GB+ (size 5), etc., which is unnecessary for unit tests.
-TEST(GSYMV2Test, TestCreatorV2StrpSize1) {
-  TestV2StrpSize(1, llvm::endianness::little);
-  TestV2StrpSize(1, llvm::endianness::big);
-}
-TEST(GSYMV2Test, TestCreatorV2StrpSize2) {
-  TestV2StrpSize(2, llvm::endianness::little);
-  TestV2StrpSize(2, llvm::endianness::big);
-}
-TEST(GSYMV2Test, TestCreatorV2StrpSize3) {
-  TestV2StrpSize(3, llvm::endianness::little);
-  TestV2StrpSize(3, llvm::endianness::big);
-}
-
-/// AddrInfoOffSize tests
-
-/// Test that a given AddrInfoOffSize produces a correct round-trip. Creates
-/// enough functions so that the FunctionInfo section size requires the
-/// specified AddrInfoOffSize. Each function gets a unique name and a line
-/// table entry to increase its encoded size.
-static void TestV2AddrInfoOffSize(uint8_t ExpectedSize,
-                                  llvm::endianness ByteOrder) {
-  GsymCreatorV2 GC;
-  // We need FISectionSize >= (1 << ((ExpectedSize-1) * 8)).
-  // Each FunctionInfo is roughly 20-30 bytes with a line table entry.
-  // For size 1: any small number of functions works.
-  // For size 2: need FI section > 255 bytes → ~20 functions.
-  // For size 3: need FI section > 65535 bytes → ~5000 functions.
-  size_t NumFuncs;
-  if (ExpectedSize == 1)
-    NumFuncs = 2;
-  else if (ExpectedSize == 2)
-    NumFuncs = 20;
-  else
-    NumFuncs = 5000;
-
-  const uint64_t BaseAddr = 0x1000;
-  const uint32_t FileIdx = GC.insertFile("/tmp/test.c");
-  for (size_t I = 0; I < NumFuncs; ++I) {
-    std::string Name = "func_" + std::to_string(I);
-    uint32_t NameOff = GC.insertString(Name);
-    FunctionInfo FI(BaseAddr + I * 0x10, 0x10, NameOff);
-    FI.OptLineTable = LineTable();
-    FI.OptLineTable->push(LineEntry(BaseAddr + I * 0x10, FileIdx, I + 1));
-    GC.addFunctionInfo(std::move(FI));
-  }
-
-  OutputAggregator Null(nullptr);
-  ASSERT_FALSE(GC.finalize(Null));
-
-  auto Result = encodeV2(GC, ByteOrder);
-  ASSERT_THAT_EXPECTED(Result, Succeeded());
-  StringRef Data = *Result;
-
-  auto HdrOrErr = decodeHeaderV2(Data, ByteOrder);
-  ASSERT_THAT_EXPECTED(HdrOrErr, Succeeded());
-  EXPECT_EQ(HdrOrErr->AddrInfoOffSize, ExpectedSize);
-
-  // Verify round-trip: decode and look up a few functions.
-  auto GR = GsymReaderV2::copyBuffer(Data);
-  ASSERT_THAT_EXPECTED(GR, Succeeded());
-  EXPECT_EQ(GR->getNumAddresses(), NumFuncs);
-
-  // Check first and last functions.
-  auto FI0 = GR->getFunctionInfo(BaseAddr);
-  ASSERT_THAT_EXPECTED(FI0, Succeeded());
-  EXPECT_EQ(GR->getString(FI0->Name), "func_0");
-
-  auto FILast = GR->getFunctionInfo(BaseAddr + (NumFuncs - 1) * 0x10);
-  ASSERT_THAT_EXPECTED(FILast, Succeeded());
-  EXPECT_EQ(GR->getString(FILast->Name),
-            "func_" + std::to_string(NumFuncs - 1));
-}
-
-// Only test AddrInfoOffSize 1-3. Larger sizes would require FunctionInfo
-// sections of 16MB+ (size 4), which is unnecessary for unit tests.
-TEST(GSYMV2Test, TestCreatorV2AddrInfoOffSize1) {
-  TestV2AddrInfoOffSize(1, llvm::endianness::little);
-  TestV2AddrInfoOffSize(1, llvm::endianness::big);
-}
-TEST(GSYMV2Test, TestCreatorV2AddrInfoOffSize2) {
-  TestV2AddrInfoOffSize(2, llvm::endianness::little);
-  TestV2AddrInfoOffSize(2, llvm::endianness::big);
-}
-TEST(GSYMV2Test, TestCreatorV2AddrInfoOffSize3) {
-  TestV2AddrInfoOffSize(3, llvm::endianness::little);
-  TestV2AddrInfoOffSize(3, llvm::endianness::big);
-}
-
 /// AddrInfoOffsets verification
 
 TEST(GSYMV2Test, TestCreatorV2AddrInfoOffsetsPointToFunctionInfo) {
@@ -428,14 +295,10 @@ TEST(GSYMV2Test, TestCreatorV2AddrInfoOffsetsPointToFunctionInfo) {
   ASSERT_THAT_EXPECTED(Result, Succeeded());
   StringRef Data = *Result;
 
-  // Decode header to get AddrInfoOffSize.
-  auto HdrOrErr = decodeHeaderV2(Data, llvm::endianness::little);
-  ASSERT_THAT_EXPECTED(HdrOrErr, Succeeded());
-  const HeaderV2 &Hdr = *HdrOrErr;
-  uint8_t AddrInfoOffSize = Hdr.AddrInfoOffSize;
+  constexpr uint8_t AddrInfoOffSize = HeaderV2::getAddressInfoOffsetByteSize();
 
   // Find the AddrInfoOffsets and FunctionInfo sections from GlobalData.
-  uint64_t Offset = 24;
+  uint64_t Offset = HeaderV2::getEncodedSize();
   uint64_t AIOffsetsOffset = 0;
   uint64_t FISize = 0;
   while (Offset < Data.size()) {
@@ -491,7 +354,7 @@ TEST(GSYMV2Test, TestCreatorV2UUIDSection) {
   StringRef Data = *Result;
 
   // Find UUID section.
-  uint64_t Offset = 24;
+  uint64_t Offset = HeaderV2::getEncodedSize();
   uint64_t UUIDOffset = 0, UUIDSize = 0;
   while (Offset < Data.size()) {
     GlobalData GD =
@@ -539,7 +402,7 @@ TEST(GSYMV2Test, TestCreatorV2SectionAlignment) {
   EXPECT_EQ(Hdr.AddrOffSize, 5u);
 
   // Decode GlobalData entries and verify alignment for each section.
-  uint64_t Offset = 24;
+  uint64_t Offset = HeaderV2::getEncodedSize();
   while (Offset < Data.size()) {
     GlobalData GD =
         decodeGlobalDataEntry(Data, Offset, llvm::endianness::little);
@@ -554,8 +417,9 @@ TEST(GSYMV2Test, TestCreatorV2SectionAlignment) {
           << "AddrOffsets not aligned to " << (unsigned)Hdr.AddrOffSize;
       break;
     case GlobalInfoType::AddrInfoOffsets:
-      EXPECT_EQ(GD.FileOffset % Hdr.AddrInfoOffSize, 0u)
-          << "AddrInfoOffsets not aligned to " << (unsigned)Hdr.AddrInfoOffSize;
+      EXPECT_EQ(GD.FileOffset % HeaderV2::getAddressInfoOffsetByteSize(), 0u)
+          << "AddrInfoOffsets not aligned to "
+          << (unsigned)HeaderV2::getAddressInfoOffsetByteSize();
       break;
     case GlobalInfoType::FileTable:
       EXPECT_EQ(GD.FileOffset % 4, 0u) << "FileTable not 4-byte aligned";
@@ -589,14 +453,15 @@ static SmallString<512> buildMinimalV2Binary(uint64_t BaseAddr,
   raw_svector_ostream OS(Str);
   FileWriter FW(OS, llvm::endianness::native);
 
-  // We'll build: header (24) + GlobalData entries (6 entries * 20 = 120) +
+  // We'll build: header (20) + GlobalData entries (6 entries * 20 = 120) +
   // sections. Total GlobalData entries: AddrOffsets, AddrInfoOffsets,
   // StringTable, FileTable, FunctionInfo, EndOfList = 6.
-  constexpr uint64_t HeaderSize = 24;
+  constexpr uint64_t HeaderSize = HeaderV2::getEncodedSize();
   constexpr uint64_t NumGlobalEntries = 6;
   constexpr uint64_t GlobalDataSize = NumGlobalEntries * 20;
   constexpr uint8_t AddrOffSize = 1;
-  constexpr uint8_t AddrInfoOffSize = 4;
+  constexpr uint8_t AddrInfoOffSize = HeaderV2::getAddressInfoOffsetByteSize();
+  constexpr uint8_t StrpSize = HeaderV2::getStringOffsetByteSize();
   constexpr uint32_t NumAddresses = 1;
 
   // Layout sections sequentially after header + GlobalData.
@@ -607,16 +472,16 @@ static SmallString<512> buildMinimalV2Binary(uint64_t BaseAddr,
   const uint64_t AddrOffsetsSize = NumAddresses * AddrOffSize;
   CurOffset += AddrOffsetsSize;
 
-  // Pad to 4-byte alignment for AddrInfoOffsets.
-  CurOffset = llvm::alignTo(CurOffset, 4);
+  // Pad to alignment for AddrInfoOffsets.
+  CurOffset = llvm::alignTo(CurOffset, AddrInfoOffSize);
   const uint64_t AddrInfoOffsetsOff = CurOffset;
   const uint64_t AddrInfoOffsetsSize = NumAddresses * AddrInfoOffSize;
   CurOffset += AddrInfoOffsetsSize;
 
-  // FileTable: 4 bytes (NumFiles=1) + 1 FileEntry (8 bytes) = 12.
+  // FileTable: 4 bytes (NumFiles=1) + 1 FileEntry (2 * StrpSize bytes).
   CurOffset = llvm::alignTo(CurOffset, 4);
   const uint64_t FileTableOff = CurOffset;
-  const uint64_t FileTableSize = 4 + 8; // 1 file entry (dir=0, base=0).
+  const uint64_t FileTableSize = 4 + 2 * StrpSize; // 1 file entry.
   CurOffset += FileTableSize;
 
   // StringTable: "\0main\0" = 6 bytes.
@@ -638,6 +503,7 @@ static SmallString<512> buildMinimalV2Binary(uint64_t BaseAddr,
   {
     raw_svector_ostream FIOS(FIBuf);
     FileWriter FIFW(FIOS, llvm::endianness::native);
+    FIFW.setStringOffsetSize(HeaderV2::getStringOffsetByteSize());
     FunctionInfo FI(BaseAddr, FuncSize,
                     /*Name=*/1); // "main" at strtab offset 1
     auto OffOrErr = FI.encode(FIFW);
@@ -649,13 +515,10 @@ static SmallString<512> buildMinimalV2Binary(uint64_t BaseAddr,
   // Write header.
   FW.writeU32(GSYM_MAGIC);             // Magic
   FW.writeU16(HeaderV2::getVersion()); // Version
-  FW.writeU16(0);                      // Padding
+  FW.writeU8(AddrOffSize);             // AddrOffSize
+  FW.writeU8(0);                       // StrTableEncoding
   FW.writeU64(BaseAddr);               // BaseAddress
   FW.writeU32(NumAddresses);           // NumAddresses
-  FW.writeU8(AddrOffSize);             // AddrOffSize
-  FW.writeU8(AddrInfoOffSize);         // AddrInfoOffSize
-  FW.writeU8(4);                       // StrpSize
-  FW.writeU8(0);                       // StrTableEncoding
 
   // GlobalData entries.
   auto writeGD = [&](GlobalInfoType Type, uint64_t Off, uint64_t Size) {
@@ -676,16 +539,16 @@ static SmallString<512> buildMinimalV2Binary(uint64_t BaseAddr,
   FW.writeU8(0); // Offset from BaseAddr = 0 for first function.
 
   // Pad to AddrInfoOffsets. Values are relative to FunctionInfo section.
-  FW.alignTo(4);
+  FW.alignTo(AddrInfoOffSize);
   assert(FW.tell() == AddrInfoOffsetsOff);
-  FW.writeU32(0); // RelOff = 0 (first and only FunctionInfo).
+  FW.writeU64(0); // RelOff = 0 (first and only FunctionInfo).
 
   // FileTable.
   FW.alignTo(4);
   assert(FW.tell() == FileTableOff);
   FW.writeU32(1); // NumFiles = 1
-  FW.writeU32(0); // File[0].Dir = 0
-  FW.writeU32(0); // File[0].Base = 0
+  FW.writeU64(0); // File[0].Dir = 0
+  FW.writeU64(0); // File[0].Base = 0
 
   // StringTable.
   assert(FW.tell() == StringTableOff);
@@ -713,7 +576,6 @@ TEST(GSYMV2Test, TestReaderV2ParseHandCrafted) {
   EXPECT_EQ(Hdr.BaseAddress, 0x1000u);
   EXPECT_EQ(Hdr.NumAddresses, 1u);
   EXPECT_EQ(Hdr.AddrOffSize, 1u);
-  EXPECT_EQ(Hdr.AddrInfoOffSize, 4u);
   EXPECT_EQ(GR->getNumAddresses(), 1u);
 
   // Verify address lookup.
@@ -800,7 +662,7 @@ TEST(GSYMV2Test, TestReaderV2TruncatedFileTable) {
   // We need to find the FileTable entry and modify its FileSize.
   DataExtractor DE(StringRef(Bytes.data(), Bytes.size()),
                    llvm::endianness::native == llvm::endianness::little, 8);
-  uint64_t Offset = 24;
+  uint64_t Offset = HeaderV2::getEncodedSize();
   while (Offset < Bytes.size()) {
     uint64_t EntryOffset = Offset;
     uint32_t Type = DE.getU32(&Offset);

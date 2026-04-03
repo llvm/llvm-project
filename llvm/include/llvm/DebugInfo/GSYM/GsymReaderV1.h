@@ -23,13 +23,13 @@ class GsymReaderV1 : public GsymReader {
   llvm::Error parse();
 
   const Header *Hdr = nullptr;
-  ArrayRef<FileEntry> Files;
+  ArrayRef<FileEntry<uint32_t>> Files;
   ArrayRef<uint32_t> AddrInfoOffsets;
   struct SwappedData {
     Header Hdr;
     std::vector<uint8_t> AddrOffsets;
     std::vector<uint32_t> AddrInfoOffsets;
-    std::vector<FileEntry> Files;
+    std::vector<FileEntry<uint32_t>> Files;
   };
   std::unique_ptr<SwappedData> Swap;
 
@@ -92,9 +92,9 @@ public:
 
   LLVM_ABI std::optional<uint64_t> getAddress(size_t Index) const override;
 
-  std::optional<FileEntry> getFile(uint32_t Index) const override {
+  std::optional<FileEntry<uint64_t>> getFile(uint32_t Index) const override {
     if (Index < Files.size())
-      return Files[Index];
+      return FileEntry<uint64_t>(Files[Index].Dir, Files[Index].Base);
     return std::nullopt;
   }
 

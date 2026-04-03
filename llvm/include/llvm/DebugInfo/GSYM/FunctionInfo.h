@@ -12,6 +12,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/DebugInfo/GSYM/CallSiteInfo.h"
 #include "llvm/DebugInfo/GSYM/ExtractRanges.h"
+#include "llvm/DebugInfo/GSYM/GsymTypes.h"
 #include "llvm/DebugInfo/GSYM/InlineInfo.h"
 #include "llvm/DebugInfo/GSYM/LineTable.h"
 #include "llvm/DebugInfo/GSYM/LookupResult.h"
@@ -93,7 +94,7 @@ class GsymReader;
 /// Where "N" is the number of tuples.
 struct FunctionInfo {
   AddressRange Range;
-  uint32_t Name; ///< String table offset in the string table.
+  gsym_strp_t Name; ///< String table offset in the string table.
   std::optional<LineTable> OptLineTable;
   std::optional<InlineInfo> Inline;
   std::optional<MergedFunctionsInfo> MergedFunctions;

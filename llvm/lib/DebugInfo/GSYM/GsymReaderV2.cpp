@@ -80,7 +80,7 @@ parseGlobalDataEntries(DataExtractor &DE, uint64_t &Offset, uint64_t BufSize,
 llvm::Error GsymReaderV2::parse() {
   const StringRef Buf = MemBuffer->getBuffer();
   const uint64_t BufSize = Buf.size();
-  if (BufSize < sizeof(HeaderV2))
+  if (BufSize < HeaderV2::getEncodedSize())
     return createStringError(std::errc::invalid_argument,
                              "not enough data for a GSYM V2 header");
   const auto HostByteOrder = llvm::endianness::native;
@@ -125,7 +125,7 @@ llvm::Error GsymReaderV2::parse() {
     return Err;
 
   // Parse GlobalData entries to find section locations.
-  uint64_t Offset = sizeof(HeaderV2);
+  uint64_t Offset = HeaderV2::getEncodedSize();
   if (auto Err =
           parseGlobalDataEntries(DE, Offset, BufSize, GlobalDataSections))
     return Err;
@@ -153,7 +153,7 @@ llvm::Error GsymReaderV2::parse() {
                              "AddrOffsets section size mismatch");
 
   if (AddrInfoOffsetsGD.FileSize !=
-      static_cast<uint64_t>(Hdr->NumAddresses) * Hdr->AddrInfoOffSize)
+      static_cast<uint64_t>(Hdr->NumAddresses) * HeaderV2::getAddressInfoOffsetByteSize())
     return createStringError(std::errc::invalid_argument,
                              "AddrInfoOffsets section size mismatch");
 
@@ -207,14 +207,14 @@ llvm::Error GsymReaderV2::parse() {
     DataExtractor FileTableDE(*Data, IsLittleEndian, 8);
     uint64_t Offset = 0;
     uint32_t NumFiles = FileTableDE.getU32(&Offset);
-    uint64_t EntriesSize = static_cast<uint64_t>(NumFiles) * 2 * Hdr->StrpSize;
+    uint64_t EntriesSize = static_cast<uint64_t>(NumFiles) * 2 * HeaderV2::getStringOffsetByteSize();
     if (Data->size() < 4 + EntriesSize)
       return createStringError(std::errc::invalid_argument,
                                "FileTable section too small for %u files",
                                NumFiles);
     FileData =
         DataExtractor(Data->substr(Offset, EntriesSize), IsLittleEndian, 8);
-    FileData.setStringOffsetSize(Hdr->StrpSize);
+    FileData.setStringOffsetSize(HeaderV2::getStringOffsetByteSize());
   }
   return Error::success();
 }
@@ -268,14 +268,14 @@ Expected<uint64_t> GsymReaderV2::getAddressIndex(const uint64_t Addr) const {
   return Iter.getIndex();
 }
 
-std::optional<FileEntry> GsymReaderV2::getFile(uint32_t Index) const {
+std::optional<FileEntry<uint64_t>> GsymReaderV2::getFile(uint32_t Index) const {
   uint64_t Offset = Index * 2 * FileData.getStringOffsetSize();
   // If the offsset is beyond the end of the file table, the given index is out
   // of range.
   if (!FileData.isValidOffsetForDataOfSize(Offset,
                                            2 * FileData.getStringOffsetSize()))
     return std::nullopt;
-  FileEntry FE;
+  FileEntry<uint64_t> FE;
   FE.Dir = FileData.getStringOffset(&Offset);
   FE.Base = FileData.getStringOffset(&Offset);
   return FE;

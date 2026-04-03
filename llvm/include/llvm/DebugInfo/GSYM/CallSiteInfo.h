@@ -12,6 +12,7 @@
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
+#include "llvm/DebugInfo/GSYM/GsymTypes.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Error.h"
@@ -46,7 +47,7 @@ struct CallSiteInfo {
   uint64_t ReturnOffset = 0;
 
   /// Offsets into the string table for function names regex patterns.
-  std::vector<uint32_t> MatchRegex;
+  std::vector<gsym_strp_t> MatchRegex;
 
   /// Bitwise OR of CallSiteInfo::Flags values
   uint8_t Flags = CallSiteInfo::Flags::None;

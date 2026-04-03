@@ -33,9 +33,7 @@ std::unique_ptr<GsymCreator> GsymCreatorV2::createNew(bool Quiet) const {
 }
 
 uint8_t GsymCreatorV2::getStringOffsetSize() const {
-  // In theory, we should use the last string's offset to do this calculation.
-  // The string table size is easy to get and is a good approximation.
-  return bytesRequiredForUnsigned(StrTab.getSize());
+  return HeaderV2::getStringOffsetByteSize();
 }
 
 uint8_t GsymCreatorV2::getAddressOffsetSize() const {
@@ -49,16 +47,16 @@ uint8_t GsymCreatorV2::getAddressOffsetSize() const {
 }
 
 uint64_t GsymCreatorV2::calculateHeaderAndTableSize() const {
-  const uint64_t HeaderSize = sizeof(HeaderV2);
+  const uint64_t HeaderSize = HeaderV2::getEncodedSize();
   const size_t NumFuncs = Funcs.size();
   const uint32_t NumEntries = 5 + (UUID.empty() ? 0 : 1) + 1;
   uint64_t Size = HeaderSize + NumEntries * 20;
   Size = llvm::alignTo(Size, getAddressOffsetSize());
   Size += NumFuncs * getAddressOffsetSize();
+  Size = llvm::alignTo(Size, HeaderV2::getAddressInfoOffsetByteSize());
+  Size += NumFuncs * HeaderV2::getAddressInfoOffsetByteSize();
   Size = llvm::alignTo(Size, 4);
-  Size += NumFuncs * 4;
-  Size = llvm::alignTo(Size, 4);
-  Size += 4 + Files.size() * 2 * getStringOffsetSize();
+  Size += 4 + Files.size() * 2 * HeaderV2::getStringOffsetByteSize();
   Size += StrTab.getSize();
   Size += UUID.size();
   return Size;
@@ -88,14 +86,14 @@ llvm::Error GsymCreatorV2::encode(FileWriter &O) const {
   const uint64_t FISectionSize = FIBuf.size();
   const uint64_t StringTableSize = StrTab.getSize();
 
-  const uint8_t StrpSize = getStringOffsetSize();
+  const uint8_t StrpSize = 8;
 
   const bool HasUUID = !UUID.empty();
   const uint32_t NumGlobalDataEntries = 5 + (HasUUID ? 1 : 0) + 1;
   const uint64_t GlobalDataArraySize =
       static_cast<uint64_t>(NumGlobalDataEntries) * 20;
 
-  const uint64_t HeaderSize = sizeof(HeaderV2);
+  const uint64_t HeaderSize = HeaderV2::getEncodedSize();
   uint64_t CurOffset = HeaderSize + GlobalDataArraySize;
 
   // UUID section (first, no alignment requirement).
@@ -110,9 +108,7 @@ llvm::Error GsymCreatorV2::encode(FileWriter &O) const {
   const uint64_t AddrOffsetsSize = Funcs.size() * AddrOffSize;
   CurOffset += AddrOffsetsSize;
 
-  // Determine AddrInfoOffSize based on FunctionInfo section size, since
-  // AddrInfoOffsets stores offsets relative to the FunctionInfo section start.
-  uint8_t AddrInfoOffSize = bytesRequiredForUnsigned(FISectionSize);
+  const uint8_t AddrInfoOffSize = 8;
 
   // AddrInfoOffsets section.
   CurOffset = llvm::alignTo(CurOffset, AddrInfoOffSize);
@@ -139,12 +135,9 @@ llvm::Error GsymCreatorV2::encode(FileWriter &O) const {
   HeaderV2 Hdr;
   Hdr.Magic = GSYM_MAGIC;
   Hdr.Version = HeaderV2::getVersion();
-  Hdr.Padding = 0;
   Hdr.BaseAddress = *BaseAddr;
   Hdr.NumAddresses = static_cast<uint32_t>(Funcs.size());
   Hdr.AddrOffSize = AddrOffSize;
-  Hdr.AddrInfoOffSize = AddrInfoOffSize;
-  Hdr.StrpSize = StrpSize;
   Hdr.StrTableEncoding = StringTableEncoding::Default;
   if (auto Err = Hdr.encode(O))
     return Err;

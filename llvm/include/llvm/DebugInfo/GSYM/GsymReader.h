@@ -169,7 +169,7 @@ public:
   /// \param Index An index into the file table.
   /// \returns An optional FileInfo that will be valid if the file index is
   /// valid, or std::nullopt if the file index is out of bounds,
-  virtual std::optional<FileEntry> getFile(uint32_t Index) const = 0;
+  virtual std::optional<FileEntry<uint64_t>> getFile(uint32_t Index) const = 0;
 
   /// Dump the entire Gsym data contained in this object.
   ///
@@ -260,7 +260,7 @@ public:
   /// \param  OS The output stream to dump to.
   ///
   /// \param FE The object to dump.
-  LLVM_ABI void dump(raw_ostream &OS, std::optional<FileEntry> FE);
+  LLVM_ABI void dump(raw_ostream &OS, std::optional<FileEntry<uint64_t>> FE);
 
   /// Gets an address from the address table.
   ///

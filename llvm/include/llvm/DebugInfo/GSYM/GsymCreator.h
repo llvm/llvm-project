@@ -143,10 +143,10 @@ protected:
   std::vector<FunctionInfo> Funcs;
   StringTableBuilder StrTab;
   StringSet<> StringStorage;
-  DenseMap<llvm::gsym::FileEntry, uint32_t> FileEntryToIndex;
+  DenseMap<llvm::gsym::FileEntry<uint64_t>, uint32_t> FileEntryToIndex;
   // Needed for mapping string offsets back to the string stored in \a StrTab.
   DenseMap<uint64_t, CachedHashStringRef> StringOffsetMap;
-  std::vector<llvm::gsym::FileEntry> Files;
+  std::vector<llvm::gsym::FileEntry<uint64_t>> Files;
   std::vector<uint8_t> UUID;
   std::optional<AddressRanges> ValidTextRanges;
   std::optional<uint64_t> BaseAddress;
@@ -275,7 +275,7 @@ protected:
   ///
   /// \param FE A file entry object that contains valid string table offsets
   /// from this object already.
-  uint32_t insertFileEntry(FileEntry FE);
+  uint32_t insertFileEntry(FileEntry<uint64_t> FE);
 
   /// Fixup any string and file references by updating any file indexes and
   /// strings offsets in the InlineInfo parameter.

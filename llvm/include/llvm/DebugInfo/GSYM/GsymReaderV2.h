@@ -141,19 +141,15 @@ public:
   uint64_t getAddressOffsetByteSize() const override {
     return getHeader().AddrOffSize;
   }
-  uint64_t getAddressInfoOffsetByteSize() const override {
-    return getHeader().AddrInfoOffSize;
-  }
-  uint64_t getStringOffsetByteSize() const override {
-    return getHeader().StrpSize;
-  }
+  uint64_t getAddressInfoOffsetByteSize() const override { return 8; }
+  uint64_t getStringOffsetByteSize() const override { return 8; }
 
   LLVM_ABI std::optional<uint64_t> getAddress(size_t Index) const override;
 
   LLVM_ABI Expected<uint64_t>
   getAddressIndex(const uint64_t Addr) const override;
 
-  std::optional<FileEntry> getFile(uint32_t Index) const override;
+  std::optional<FileEntry<uint64_t>> getFile(uint32_t Index) const override;
 
   // GlobalData accessors
   uint64_t getAddressInfoOffset(size_t Index) const override;

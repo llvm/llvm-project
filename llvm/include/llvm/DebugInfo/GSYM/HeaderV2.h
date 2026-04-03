@@ -90,6 +90,16 @@ struct HeaderV2 {
   /// Return the version of this header.
   static constexpr uint32_t getVersion() { return 2; }
 
+  /// Return the on-disk encoded size of the header in bytes.
+  /// Note: this may differ from sizeof(HeaderV2) due to struct padding.
+  static constexpr uint64_t getEncodedSize() { return 20; }
+
+  /// Return the size in bytes of string table offsets.
+  static constexpr uint8_t getStringOffsetByteSize() { return 8; }
+
+  /// Return the size in bytes of address info offsets.
+  static constexpr uint8_t getAddressInfoOffsetByteSize() { return 8; }
+
   /// Check if a header is valid and return an error if anything is wrong.
   ///
   /// This function can be used prior to encoding a header to ensure it is

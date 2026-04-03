@@ -129,7 +129,7 @@ static bool lookup(const GsymReader &GR, DataExtractor &Data, uint64_t &Offset,
       Done = lookup(GR, Data, Offset, ChildBaseAddr, Addr, SrcLocs, Err);
   }
 
-  std::optional<FileEntry> CallFile = GR.getFile(Inline.CallFile);
+  std::optional<FileEntry<uint64_t>> CallFile = GR.getFile(Inline.CallFile);
   if (!CallFile) {
     Err = createStringError(std::errc::invalid_argument,
                             "failed to extract file[%" PRIu32 "]",

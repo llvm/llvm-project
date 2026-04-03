@@ -156,11 +156,11 @@ llvm::Error GsymReaderV1::parse() {
     const uint32_t NumFiles = Data.getU32(&Offset);
     if (NumFiles > 0) {
       Swap->Files.resize(NumFiles);
-      if (Data.getU32(&Offset, &Swap->Files[0].Dir, NumFiles * 2))
-        Files = ArrayRef<FileEntry>(Swap->Files);
-      else
-        return createStringError(std::errc::invalid_argument,
-                                 "failed to read file table");
+      for (uint32_t I = 0; I < NumFiles; ++I) {
+        Swap->Files[I].Dir = Data.getU32(&Offset);
+        Swap->Files[I].Base = Data.getU32(&Offset);
+      }
+      Files = ArrayRef<FileEntry<uint32_t>>(Swap->Files);
     }
 
     StrTab.Data =

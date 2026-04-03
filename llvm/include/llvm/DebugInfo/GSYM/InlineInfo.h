@@ -10,6 +10,7 @@
 #define LLVM_DEBUGINFO_GSYM_INLINEINFO_H
 
 #include "llvm/DebugInfo/GSYM/ExtractRanges.h"
+#include "llvm/DebugInfo/GSYM/GsymTypes.h"
 #include "llvm/DebugInfo/GSYM/LineEntry.h"
 #include "llvm/DebugInfo/GSYM/LookupResult.h"
 #include "llvm/Support/Compiler.h"
@@ -60,7 +61,7 @@ class GsymReader;
 ///
 struct InlineInfo {
 
-  uint32_t Name = 0;     ///< String table offset in the string table.
+  gsym_strp_t Name = 0;     ///< String table offset in the string table.
   uint32_t CallFile = 0; ///< 1 based file index in the file table.
   uint32_t CallLine = 0; ///< Source line number.
   AddressRanges Ranges;

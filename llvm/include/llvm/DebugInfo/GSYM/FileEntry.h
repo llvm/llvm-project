@@ -21,16 +21,17 @@ namespace gsym {
 /// directory and basename into two different strings in the string
 /// table. This allows paths to shared commont directory and filename
 /// strings and saves space.
+template <typename GSYM_STRP_T>
 struct FileEntry {
 
   /// Offsets in the string table.
   /// @{
-  uint32_t Dir = 0;
-  uint32_t Base = 0;
+  GSYM_STRP_T Dir = 0;
+  GSYM_STRP_T Base = 0;
   /// @}
 
   FileEntry() = default;
-  FileEntry(uint32_t D, uint32_t B) : Dir(D), Base(B) {}
+  FileEntry(GSYM_STRP_T D, GSYM_STRP_T B) : Dir(D), Base(B) {}
 
   // Implement operator== so that FileEntry can be used as key in
   // unordered containers.
@@ -44,20 +45,21 @@ struct FileEntry {
 
 } // namespace gsym
 
-template <> struct DenseMapInfo<gsym::FileEntry> {
-  static inline gsym::FileEntry getEmptyKey() {
-    uint32_t key = DenseMapInfo<uint32_t>::getEmptyKey();
-    return gsym::FileEntry(key, key);
+template <typename GSYM_STRP_T> struct DenseMapInfo<gsym::FileEntry<GSYM_STRP_T>> {
+  static inline gsym::FileEntry<GSYM_STRP_T> getEmptyKey() {
+    GSYM_STRP_T key = DenseMapInfo<GSYM_STRP_T>::getEmptyKey();
+    return gsym::FileEntry<GSYM_STRP_T>(key, key);
   }
-  static inline gsym::FileEntry getTombstoneKey() {
-    uint32_t key = DenseMapInfo<uint32_t>::getTombstoneKey();
-    return gsym::FileEntry(key, key);
+  static inline gsym::FileEntry<GSYM_STRP_T> getTombstoneKey() {
+    GSYM_STRP_T key = DenseMapInfo<GSYM_STRP_T>::getTombstoneKey();
+    return gsym::FileEntry<GSYM_STRP_T>(key, key);
   }
-  static unsigned getHashValue(const gsym::FileEntry &Val) {
-    return llvm::hash_combine(DenseMapInfo<uint32_t>::getHashValue(Val.Dir),
-                              DenseMapInfo<uint32_t>::getHashValue(Val.Base));
+  static unsigned getHashValue(const gsym::FileEntry<GSYM_STRP_T> &Val) {
+    return llvm::hash_combine(DenseMapInfo<GSYM_STRP_T>::getHashValue(Val.Dir),
+                              DenseMapInfo<GSYM_STRP_T>::getHashValue(Val.Base));
   }
-  static bool isEqual(const gsym::FileEntry &LHS, const gsym::FileEntry &RHS) {
+  static bool isEqual(const gsym::FileEntry<GSYM_STRP_T> &LHS,
+                      const gsym::FileEntry<GSYM_STRP_T> &RHS) {
     return LHS == RHS;
   }
 };

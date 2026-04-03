@@ -339,7 +339,7 @@ void GsymReader::dump(raw_ostream &OS, const InlineInfo &II, uint32_t Indent) {
     dump(OS, ChildII, Indent + 2);
 }
 
-void GsymReader::dump(raw_ostream &OS, std::optional<FileEntry> FE) {
+void GsymReader::dump(raw_ostream &OS, std::optional<FileEntry<uint64_t>> FE) {
   if (FE) {
     // IF we have the file from index 0, then don't print anything
     if (FE->Dir == 0 && FE->Base == 0)
