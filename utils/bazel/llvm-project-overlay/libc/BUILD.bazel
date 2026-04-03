@@ -6443,7 +6443,6 @@ libc_support_library(
         ":__support_macros_attributes",
         ":__support_macros_config",
         ":__support_macros_optimization",
-        ":__support_math_exp",
     ],
 )
 

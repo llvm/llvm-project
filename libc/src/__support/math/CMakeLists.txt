@@ -2978,7 +2978,6 @@ add_header_library(
     libc.src.__support.macros.attributes
     libc.src.__support.macros.config
     libc.src.__support.macros.optimization
-    libc.src.__support.math.exp
 )
 
 add_header_library(
