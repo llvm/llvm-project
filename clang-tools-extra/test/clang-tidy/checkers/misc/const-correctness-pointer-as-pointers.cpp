@@ -10,6 +10,8 @@
 // RUN: }}' \
 // RUN: -- -fno-delayed-template-parsing
 
+#include <vector>
+
 void pointee_to_const() {
   int a[] = {1, 2};
   int *p_local0 = &a[0];
@@ -122,4 +124,57 @@ void pointer_in_emplacement_new() {
   int* ptr = nullptr;
   // CHECK-NOT: warning
   new(ptr) int {123};
+}
+
+void takesConstPointerRef(int *const &);
+void takesConstPointerRRef(int *const &&);
+using IntPtrAlias = int *;
+typedef int *IntPtrTypedef;
+void takesAliasConstPointerRef(IntPtrAlias const &);
+void takesTypedefConstPointerRef(IntPtrTypedef const &);
+
+void ignore_const_pointer_reference_sinks() {
+  int value = 0;
+
+  int *p_local0 = &value;
+  // CHECK-MESSAGES-NOT: warning: pointee of variable 'p_local0'
+  // CHECK-FIXES: int *p_local0 = &value;
+  takesConstPointerRef(p_local0);
+
+  int *p_local1 = &value;
+  // CHECK-MESSAGES-NOT: warning: pointee of variable 'p_local1'
+  // CHECK-FIXES: int *p_local1 = &value;
+  int *const &ref = p_local1;
+  (void)ref;
+
+  IntPtrAlias p_local2 = &value;
+  // CHECK-MESSAGES-NOT: warning: pointee of variable 'p_local2'
+  // CHECK-FIXES: IntPtrAlias p_local2 = &value;
+  takesAliasConstPointerRef(p_local2);
+
+  int *p_local3 = &value;
+  // CHECK-MESSAGES-NOT: warning: pointee of variable 'p_local3'
+  // CHECK-FIXES: int *p_local3 = &value;
+  takesConstPointerRRef(static_cast<int *const &&>(p_local3));
+
+  IntPtrTypedef p_local4 = &value;
+  // CHECK-MESSAGES-NOT: warning: pointee of variable 'p_local4'
+  // CHECK-FIXES: IntPtrTypedef p_local4 = &value;
+  takesTypedefConstPointerRef(p_local4);
+
+  int *p_local5 = &value;
+  // CHECK-MESSAGES-NOT: warning: pointee of variable 'p_local5'
+  // CHECK-FIXES: int *p_local5 = &value;
+  int *volatile &volatile_ref = p_local5;
+  (void)volatile_ref;
+}
+
+void ignore_range_for_pointer_reference_sink() {
+  int value = 0;
+  std::vector<int *> const source = {&value};
+  std::vector<int *> sink;
+  // CHECK-FIXES: for (int *element : source)
+  for (int *element : source)
+    // CHECK-MESSAGES-NOT: warning: pointee of variable 'element'
+    sink.push_back(element);
 }
