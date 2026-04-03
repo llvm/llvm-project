@@ -35,14 +35,14 @@ LIBC_INLINE int convert_inf_nan(Writer<write_mode> *writer,
   // the appropriate case based on the case of the conversion.
   bool is_negative;
   StorageType mantissa;
-#ifdef LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
+#ifndef LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
   if (to_conv.length_modifier == LengthModifier::L) {
     fputil::FPBits<long double>::StorageType float_raw = to_conv.conv_val_raw;
     fputil::FPBits<long double> float_bits(float_raw);
     is_negative = float_bits.is_neg();
     mantissa = float_bits.get_mantissa();
   } else
-#endif // LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
+#endif // !LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
   {
     fputil::FPBits<double>::StorageType float_raw =
         static_cast<fputil::FPBits<double>::StorageType>(to_conv.conv_val_raw);

@@ -63,7 +63,7 @@ enum class ConversionType { E, F, G };
 using StorageType = UInt128;
 #else
 using StorageType = fputil::FPBits<long double>::StorageType;
-#endif
+#endif // LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
 
 constexpr unsigned MAX_DIGITS = 39;
 constexpr size_t DF_BITS = 320;

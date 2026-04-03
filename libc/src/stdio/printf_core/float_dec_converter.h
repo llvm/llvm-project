@@ -247,7 +247,7 @@ template <WriteMode write_mode> class FloatWriter {
   // -exponent will never overflow because all long double types we support
   // have at most 15 bits of mantissa and the C standard defines an int as
   // being at least 16 bits.
-#ifdef LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
+#ifndef LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
   static_assert(fputil::FPBits<long double>::EXP_LEN < (sizeof(int) * 8));
 #endif // LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
 

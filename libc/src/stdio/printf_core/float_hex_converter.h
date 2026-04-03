@@ -92,13 +92,8 @@ LIBC_INLINE int convert_float_hex_exp(Writer<write_mode> *writer,
   // Since the number is in bits, we divide by 4, and then add one to account
   // for the extra implicit bit. We use the larger of the two possible values
   // since the size must be constant.
-#ifdef LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
   constexpr size_t MANT_BUFF_LEN =
       (LDBits::FRACTION_LEN / BITS_IN_HEX_DIGIT) + 1;
-#else
-  constexpr size_t MANT_BUFF_LEN =
-      (LDBits::FRACTION_LEN / BITS_IN_HEX_DIGIT) + 1;
-#endif // LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
   char mant_buffer[MANT_BUFF_LEN];
 
   size_t mant_len = (fraction_bits / BITS_IN_HEX_DIGIT) + 1;
