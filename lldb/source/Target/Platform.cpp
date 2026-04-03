@@ -157,6 +157,8 @@ Status Platform::GetFileWithUUID(const FileSpec &platform_file,
   return Status();
 }
 
+bool Platform::IsSymbolFileTrusted(Module &module) { return false; }
+
 llvm::SmallDenseMap<FileSpec, LoadScriptFromSymFile>
 Platform::LocateExecutableScriptingResourcesFromSafePaths(
     Stream &feedback_stream, FileSpec module_spec, const Target &target) {
