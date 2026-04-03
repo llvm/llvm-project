@@ -539,15 +539,44 @@ static unsigned getNumVectorRegs(Type *Ty) {
   return ((WideBits % 128U) ? ((WideBits / 128U) + 1) : (WideBits / 128U));
 }
 
+static bool isArithmeticFoldableRMW(const Instruction *I) {
+  if (!I || !isa<BinaryOperator>(I) || !I->hasOneUse())
+    return false;
+
+  Value *Op0 = I->getOperand(0), *Op1 = I->getOperand(1);
+  if (!isa<ConstantInt>(Op0) && !isa<ConstantInt>(Op1))
+    return false;
+
+  Value *V = nullptr;
+  unsigned Opcode = I->getOpcode();
+  if (Opcode == Instruction::And || Opcode == Instruction::Or ||
+      Opcode == Instruction::Xor || Opcode == Instruction::Add)
+    V = isa<ConstantInt>(Op0) ? Op1 : (isa<ConstantInt>(Op1) ? Op0 : nullptr);
+  else if (Opcode == Instruction::Sub && isa<ConstantInt>(Op1))
+    V = Op0;
+  if (!V)
+    return false;
+
+  auto *LI = dyn_cast_or_null<LoadInst>(V);
+  auto *SI = dyn_cast<StoreInst>(*I->users().begin());
+
+  return LI && SI && !LI->isVolatile() && !SI->isVolatile() &&
+         LI->hasOneUse() && LI->getPointerOperand() == SI->getPointerOperand();
+}
+
 InstructionCost SystemZTTIImpl::getArithmeticInstrCost(
     unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
     TTI::OperandValueInfo Op1Info, TTI::OperandValueInfo Op2Info,
     ArrayRef<const Value *> Args, const Instruction *CxtI) const {
 
   // TODO: Handle more cost kinds.
-  if (CostKind != TTI::TCK_RecipThroughput)
+  if (CostKind != TTI::TCK_RecipThroughput) {
+    if (CxtI && Ty && !Ty->isVectorTy() && isArithmeticFoldableRMW(CxtI))
+      return TTI::TCC_Free;
+
     return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info,
                                          Op2Info, Args, CxtI);
+  }
 
   // TODO: return a good value for BB-VECTORIZER that includes the
   // immediate loads, which we do not want to count for the loop
@@ -1298,6 +1327,35 @@ static bool isBswapIntrinsicCall(const Value *V) {
   return false;
 }
 
+static bool isStoreFoldableRMW(const Instruction *I) {
+  auto *SI = dyn_cast_or_null<StoreInst>(I);
+  if (!SI || SI->isVolatile())
+    return false;
+
+  auto *BI = dyn_cast<BinaryOperator>(SI->getValueOperand());
+  if (!BI || !BI->hasOneUse())
+    return false;
+
+  Value *Op0 = BI->getOperand(0), *Op1 = BI->getOperand(1);
+  if (!isa<ConstantInt>(Op0) && !isa<ConstantInt>(Op1))
+    return false;
+
+  unsigned Opcode = BI->getOpcode();
+  Value *V = nullptr;
+  if (Opcode == Instruction::And || Opcode == Instruction::Or ||
+      Opcode == Instruction::Xor || Opcode == Instruction::Add)
+    V = isa<ConstantInt>(Op0) ? Op1 : (isa<ConstantInt>(Op1) ? Op0 : nullptr);
+  else if (Opcode == Instruction::Sub && isa<ConstantInt>(Op1))
+    V = Op0;
+
+  if (!V)
+    return false;
+
+  auto *LI = dyn_cast_or_null<LoadInst>(V);
+  return LI && !LI->isVolatile() &&
+         LI->getPointerOperand() == SI->getPointerOperand();
+}
+
 InstructionCost SystemZTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
                                                 Align Alignment,
                                                 unsigned AddressSpace,
@@ -1307,8 +1365,16 @@ InstructionCost SystemZTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
   assert(!Src->isVoidTy() && "Invalid type");
 
   // TODO: Handle other cost kinds.
-  if (CostKind != TTI::TCK_RecipThroughput)
+  if (CostKind != TTI::TCK_RecipThroughput) {
+    // TCK_RecipThroughput causes regressions in the SLP Vectorizer test
+    // non-power-2-subvector-extract.ll. It seems profit analysis does not
+    // favor vectorization by making scalar cost cheaper.
+    if (I && Opcode == Instruction::Store && !Src->isVectorTy()) {
+      if (isStoreFoldableRMW(I))
+        return TTI::TCC_Free;
+    }
     return 1;
+  }
 
   if (!Src->isVectorTy() && Opcode == Instruction::Load && I != nullptr) {
     // Store the load or its truncated or extended value in FoldedValue.
