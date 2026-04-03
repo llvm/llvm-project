@@ -2011,7 +2011,7 @@ std::shared_ptr<ObjectFileELF> ObjectFileELF::GetGnuDebugDataObjectFile() {
   if (err) {
     GetModule()->ReportWarning(
         "An error occurred while decompression the section {0}: {1}",
-        section->GetName().AsCString(), llvm::toString(std::move(err)).c_str());
+        section->GetName(), llvm::toString(std::move(err)).c_str());
     return nullptr;
   }
 
@@ -2788,7 +2788,7 @@ unsigned ObjectFileELF::ApplyRelocations(
   for (unsigned i = 0; i < num_relocations; ++i) {
     if (!rel.Parse(rel_data, &offset)) {
       GetModule()->ReportError(".rel{0}[{1:d}] failed to parse relocation",
-                               rel_section->GetName().AsCString(), i);
+                               rel_section->GetName(), i);
       break;
     }
     Symbol *symbol = nullptr;
@@ -2803,8 +2803,7 @@ unsigned ObjectFileELF::ApplyRelocations(
         case R_ARM_REL32:
           GetModule()->ReportError("unsupported AArch32 relocation:"
                                    " .rel{0}[{1}], type {2}",
-                                   rel_section->GetName().AsCString(), i,
-                                   reloc_type(rel));
+                                   rel_section->GetName(), i, reloc_type(rel));
           break;
         default:
           assert(false && "unexpected relocation type");
@@ -2833,16 +2832,15 @@ unsigned ObjectFileELF::ApplyRelocations(
             *dst = value;
           } else {
             GetModule()->ReportError(".rel{0}[{1}] unknown symbol id: {2:d}",
-                                    rel_section->GetName().AsCString(), i,
-                                    reloc_symbol(rel));
+                                     rel_section->GetName(), i,
+                                     reloc_symbol(rel));
           }
           break;
         case R_386_NONE:
         case R_386_PC32:
           GetModule()->ReportError("unsupported i386 relocation:"
                                    " .rel{0}[{1}], type {2}",
-                                   rel_section->GetName().AsCString(), i,
-                                   reloc_type(rel));
+                                   rel_section->GetName(), i, reloc_type(rel));
           break;
         default:
           assert(false && "unexpected relocation type");

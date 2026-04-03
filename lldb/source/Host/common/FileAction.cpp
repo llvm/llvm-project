@@ -26,7 +26,7 @@ void FileAction::Clear() {
 }
 
 llvm::StringRef FileAction::GetPath() const {
-  return m_file_spec.GetPathAsConstString().AsCString();
+  return m_file_spec.GetPathAsConstString().GetStringRef();
 }
 
 const FileSpec &FileAction::GetFileSpec() const { return m_file_spec; }
