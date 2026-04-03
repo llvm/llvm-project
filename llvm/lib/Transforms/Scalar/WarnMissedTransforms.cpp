@@ -29,21 +29,21 @@ static void warnAboutLeftoverTransformations(Loop *L,
         getBooleanLoopAttribute(L, "llvm.loop.vectorize.vector_body");
     bool IsScalarRemainder =
         getBooleanLoopAttribute(L, "llvm.loop.vectorize.scalar_remainder");
-    const char *LoopKind = (IsVectorBody && IsScalarRemainder)
-                               ? "epilogue vectorized remainder loop"
-                           : IsScalarRemainder
-                               ? "scalar remainder loop after vectorization"
-                           : IsVectorBody ? "vectorized loop"
-                                          : "loop";
-    std::string Msg =
-        std::string(LoopKind) +
-        " not unrolled: the optimizer was unable to perform the "
-        "requested transformation; the transformation might be disabled "
-        "or specified as part of an unsupported transformation ordering";
-    ORE->emit(DiagnosticInfoOptimizationFailure(
-                  DEBUG_TYPE, "FailedRequestedUnrolling", L->getStartLoc(),
-                  L->getHeader())
-              << Msg);
+    std::string LoopKind = "";
+    if (IsVectorBody)
+      LoopKind += "vectorized ";
+    if (IsScalarRemainder)
+      LoopKind += "remainder ";
+
+    ORE->emit(
+        DiagnosticInfoOptimizationFailure(DEBUG_TYPE,
+                                          "FailedRequestedUnrolling",
+                                          L->getStartLoc(), L->getHeader())
+        << LoopKind +
+               "loop not unrolled: the optimizer was unable to perform the "
+               "requested transformation; the transformation might be disabled "
+               "or specified as part of an unsupported transformation "
+               "ordering");
   }
 
   if (hasUnrollAndJamTransformation(L) == TM_ForcedByUser) {

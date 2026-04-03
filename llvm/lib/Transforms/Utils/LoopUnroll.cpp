@@ -837,15 +837,16 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
       getBooleanLoopAttribute(L, "llvm.loop.vectorize.scalar_remainder");
 
   // Four-way classification:
-  //   vector_body && scalar_remainder → epilogue vectorized remainder
+  //   vector_body && scalar_remainder →  vectorized remainder loop
   //   !vector_body && scalar_remainder → scalar remainder after vectorization
   //   vector_body && !scalar_remainder → main vectorized loop
   //   neither                          → plain loop
-  const char *LoopKind =
-      (IsVectorBody && IsScalarRemainder) ? "epilogue vectorized remainder loop"
-      : IsScalarRemainder ? "scalar remainder loop after vectorization"
-      : IsVectorBody      ? "vectorized loop"
-                          : "loop";
+  std::string LoopKind = "";
+  if (IsVectorBody)
+    LoopKind += "vectorized ";
+  if (IsScalarRemainder)
+    LoopKind += "remainder ";
+  LoopKind += "loop";
 
   // Report the unrolling decision.
   if (CompletelyUnroll) {
