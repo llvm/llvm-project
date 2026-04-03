@@ -78,6 +78,7 @@ namespace format {
   TYPE(ElseRBrace)                                                             \
   TYPE(EnumLBrace)                                                             \
   TYPE(EnumRBrace)                                                             \
+  TYPE(EnumUnderlyingTypeColon)                                                \
   TYPE(FatArrow)                                                               \
   TYPE(ForEachMacro)                                                           \
   TYPE(FunctionAnnotationRParen)                                               \
@@ -873,6 +874,33 @@ public:
     while (Tok && Tok->is(tok::comment))
       Tok = Tok->Next;
     return Tok;
+  }
+
+  /// Returns \c true if this token likely names an object-like macro.
+  ///
+  /// If \p AllowFollowingColonColon is \c true, a following \c :: does not
+  /// disqualify the token from being considered macro-like.
+  bool isPossibleMacro(bool AllowFollowingColonColon = false) const {
+    if (isNot(tok::identifier))
+      return false;
+
+    assert(!TokenText.empty());
+
+    // T, K, U, V likely could be template arguments.
+    if (TokenText.size() == 1)
+      return false;
+
+    // It's unlikely that qualified names are object-like macros.
+    const auto *Prev = getPreviousNonComment();
+    if (Prev && Prev->is(tok::coloncolon))
+      return false;
+    if (!AllowFollowingColonColon) {
+      const auto *Next = getNextNonComment();
+      if (Next && Next->is(tok::coloncolon))
+        return false;
+    }
+
+    return TokenText == TokenText.upper();
   }
 
   /// Returns \c true if this token ends a block indented initializer list.

@@ -123,6 +123,11 @@ bool ArchitectureAArch64::ReconfigureRegisterInfo(DynamicRegisterInfo &reg_info,
   if (!vg_reg_value && !svg_reg_value)
     return false;
 
+  if (!vg_reg_value) {
+    // This must be an SME only system, so VG == SVG.
+    vg_reg_value = svg_reg_value;
+  }
+
   auto regs = reg_info.registers<DynamicRegisterInfo::reg_collection_range>();
   if (vg_reg_value)
     UpdateARM64SVERegistersInfos(regs, *vg_reg_value);

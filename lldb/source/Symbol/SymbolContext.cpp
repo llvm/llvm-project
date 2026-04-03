@@ -1113,7 +1113,7 @@ bool SymbolContextSpecifier::AddressMatches(lldb::addr_t addr) {
   if (m_type & eAddressRangeSpecified) {
 
   } else {
-    Address match_address(addr, nullptr);
+    Address match_address(addr);
     SymbolContext sc;
     m_target_sp->GetImages().ResolveSymbolContextForAddress(
         match_address, eSymbolContextEverything, sc);

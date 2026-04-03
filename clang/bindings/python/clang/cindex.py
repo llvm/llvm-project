@@ -1453,6 +1453,9 @@ class CursorKind(BaseEnumeration):
     # OpenMP fuse directive.
     OMP_FUSE_DIRECTIVE = 311
 
+    # OpenMP split directive.
+    OMP_SPLIT_DIRECTIVE = 312
+
     # OpenACC Compute Construct.
     OPEN_ACC_COMPUTE_DIRECTIVE = 320
 
@@ -4650,7 +4653,7 @@ class Config:
 
         return library
 
-    def get_version(self):
+    def get_clang_version(self) -> str:
         """
         Returns the libclang version string used by the bindings
         """
