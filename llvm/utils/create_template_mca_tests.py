@@ -11,7 +11,7 @@ said .s file.
 
 Example Usage:
 ```
-create_mca_tests.py --triple riscv64 --cpu generic-rv64 test/tools/llvm-mca/RISCV/Inputs test/tools/llvm-mca/RISCV/Generic
+create_template_mca_tests.py --triple riscv64 --cpu generic-rv64 test/tools/llvm-mca/RISCV/Inputs test/tools/llvm-mca/RISCV/Generic
 ```
 
 This command will create files like `test/tools/llvm-mca/RISCV/Generic/mul-div.test` whose RUN line takes
