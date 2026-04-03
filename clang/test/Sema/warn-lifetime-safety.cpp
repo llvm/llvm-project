@@ -2420,7 +2420,7 @@ struct Bar {};
 template <typename T> struct [[gsl::Pointer]] Pointer {
   Pointer();
   Pointer(const T &bar [[clang::lifetimebound]]);
-  Pointer(const Pointer<T> &p [[clang::lifetimebound]]);
+  Pointer(const Pointer<T> &p);
   const T &operator*() const [[clang::lifetimebound]];
 };
 
