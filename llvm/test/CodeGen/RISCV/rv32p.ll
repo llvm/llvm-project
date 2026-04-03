@@ -1391,3 +1391,163 @@ entry:
   store i32 %val, ptr %res
   ret i1 %obit
 }
+
+define i32 @mm_sati_8_i32(i32 %x) {
+; CHECK-LABEL: mm_sati_8_i32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    sati a0, a0, 8
+; CHECK-NEXT:    ret
+entry:
+  %0 = call i32 @llvm.smin.i32(i32 %x, i32 127)
+  %1 = call i32 @llvm.smax.i32(i32 %0, i32 -128)
+  ret i32 %1
+}
+
+define i32 @mm_sati_16_i32(i32 %x) {
+; CHECK-LABEL: mm_sati_16_i32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    sati a0, a0, 16
+; CHECK-NEXT:    ret
+entry:
+  %0 = call i32 @llvm.smax.i32(i32 %x, i32 -32768)
+  %1 = call i32 @llvm.smin.i32(i32 %0, i32 32767)
+  ret i32 %1
+}
+
+define i32 @mm_sati_24_i32(i32 %x) {
+; CHECK-LABEL: mm_sati_24_i32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    sati a0, a0, 24
+; CHECK-NEXT:    ret
+entry:
+  %0 = call i32 @llvm.smin.i32(i32 %x, i32 8388607)
+  %1 = call i32 @llvm.smax.i32(i32 %0, i32 -8388608)
+  ret i32 %1
+}
+
+define i32 @mm_sati_32_i32(i32 %x) {
+; CHECK-LABEL: mm_sati_32_i32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    ret
+entry:
+  %0 = call i32 @llvm.smax.i32(i32 %x, i32 -2147483648)
+  %1 = call i32 @llvm.smin.i32(i32 %0, i32 2147483647)
+  ret i32 %1
+}
+
+define i32 @mm_sati_1_i32(i32 %x) {
+; CHECK-LABEL: mm_sati_1_i32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    sati a0, a0, 1
+; CHECK-NEXT:    ret
+entry:
+  %0 = call i32 @llvm.smin.i32(i32 %x, i32 0)
+  %1 = call i32 @llvm.smax.i32(i32 %0, i32 -1)
+  ret i32 %1
+}
+
+define i32 @mm_sati_minallones_i32(i32 %x) {
+; CHECK-LABEL: mm_sati_minallones_i32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    li a0, 0
+; CHECK-NEXT:    ret
+entry:
+  %0 = call i32 @llvm.smin.i32(i32 %x, i32 -1)
+  %1 = call i32 @llvm.smax.i32(i32 %0, i32 0)
+  ret i32 %1
+}
+
+define i32 @mm_sati_minallones2_i32(i32 %x) {
+; CHECK-LABEL: mm_sati_minallones2_i32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    li a0, -1
+; CHECK-NEXT:    ret
+entry:
+  %0 = call i32 @llvm.smax.i32(i32 %x, i32 0)
+  %1 = call i32 @llvm.smin.i32(i32 %0, i32 -1)
+  ret i32 %1
+}
+
+define i32 @mm_usati_8_i32(i32 %x) {
+; CHECK-LABEL: mm_usati_8_i32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    usati a0, a0, 8
+; CHECK-NEXT:    ret
+entry:
+  %0 = call i32 @llvm.smin.i32(i32 %x, i32 255)
+  %1 = call i32 @llvm.smax.i32(i32 %0, i32 0)
+  ret i32 %1
+}
+
+define i32 @mm_usati_16_i32(i32 %x) {
+; CHECK-LABEL: mm_usati_16_i32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    usati a0, a0, 16
+; CHECK-NEXT:    ret
+entry:
+  %0 = call i32 @llvm.smax.i32(i32 %x, i32 0)
+  %1 = call i32 @llvm.smin.i32(i32 %0, i32 65535)
+  ret i32 %1
+}
+
+define i32 @mm_usati_1_i32(i32 %x) {
+; CHECK-LABEL: mm_usati_1_i32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    usati a0, a0, 1
+; CHECK-NEXT:    ret
+entry:
+  %0 = call i32 @llvm.smax.i32(i32 %x, i32 0)
+  %1 = call i32 @llvm.smin.i32(i32 %0, i32 1)
+  ret i32 %1
+}
+
+define i32 @mm_usati_31_i32(i32 %x) {
+; CHECK-LABEL: mm_usati_31_i32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    max a0, a0, zero
+; CHECK-NEXT:    ret
+entry:
+  %0 = call i32 @llvm.smin.i32(i32 %x, i32 2147483647)
+  %1 = call i32 @llvm.smax.i32(i32 %0, i32 0)
+  ret i32 %1
+}
+
+define i32 @mm_usati_32_i32(i32 %x) {
+; CHECK-LABEL: mm_usati_32_i32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    li a0, -1
+; CHECK-NEXT:    ret
+entry:
+  %0 = call i32 @llvm.smax.i32(i32 %x, i32 0)
+  %1 = call i32 @llvm.smin.i32(i32 %0, i32 4294967295)
+  ret i32 %1
+}
+
+; Negative test where the inner operation does not have a constant operand.
+define i32 @mm_usati_nonconstantinnner_i32(i32 %x, i32 %y) {
+; CHECK-LABEL: mm_usati_nonconstantinnner_i32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    max a0, a0, a1
+; CHECK-NEXT:    li a1, 255
+; CHECK-NEXT:    min a0, a0, a1
+; CHECK-NEXT:    ret
+entry:
+  %0 = call i32 @llvm.smax.i32(i32 %x, i32 %y)
+  %1 = call i32 @llvm.smin.i32(i32 %0, i32 255)
+  ret i32 %1
+}
+
+; Test that we select pack.
+define i32 @mm_usati_32_knownbits_i32(i32 %x, i32 %y) {
+; CHECK-LABEL: mm_usati_32_knownbits_i32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    usati a0, a0, 16
+; CHECK-NEXT:    pack a0, a0, a1
+; CHECK-NEXT:    ret
+entry:
+  %0 = call i32 @llvm.smax.i32(i32 %x, i32 0)
+  %1 = call i32 @llvm.smin.i32(i32 %0, i32 65535)
+  %2 = shl i32 %y, 16
+  %3 = or i32 %1, %2
+  ret i32 %3
+}
