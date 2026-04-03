@@ -21,7 +21,9 @@
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
+#include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
@@ -83,6 +85,8 @@ private:
                          bool IsHiBits, const MachineOperand &SrcMO);
 
   bool eliminateSaveRestore(MachineBasicBlock &MBB);
+  bool optimizeBufferLoadM0(MachineBasicBlock &MBB);
+  bool optimizeNops(MachineBasicBlock &MBB);
 
 public:
   bool run(MachineFunction &MF, MachineLoopInfo *MLI);
@@ -883,6 +887,87 @@ bool SIPreEmitPeephole::eliminateSaveRestore(MachineBasicBlock &MBB) {
   return Changed;
 }
 
+static bool IsVecBufferLoad (const SIInstrInfo *TII, const MachineInstr &MI) {
+    return MI.mayLoad() && (TII->isMTBUF(MI) || TII->isMTBUF(MI));
+};
+
+// pattern 1: s_mov_b32 m0 --> s_nop 0 --> buffer_load --> mfma
+// pattern 2: s_mov_b32 m0 --> buffer_load --> mfma
+// swap buffer_load and mfma, the remove s_nop 0
+bool SIPreEmitPeephole::optimizeBufferLoadM0(MachineBasicBlock &MBB) {
+    if (MBB.empty())
+        return false;
+
+    bool Changed = false;
+    using InstrIt = MachineBasicBlock::iterator;
+    for (InstrIt I = MBB.begin(), E = MBB.end(); I != E; ++I) {
+        if (!TII->isMFMA(I->getOpcode())) continue;
+
+        if (I == MBB.begin()) continue;
+        InstrIt Prev = std::prev(I);
+
+        if (!IsVecBufferLoad(TII, *Prev))
+            continue;
+        InstrIt BufferLoad = Prev;
+
+        if (Prev == MBB.begin()) continue;
+        Prev = std::prev(Prev);
+
+        InstrIt Nop = Prev->getOpcode() == AMDGPU::S_NOP ? Prev : E;
+
+        if (Prev == MBB.begin()) continue;
+        Prev = std::prev(Prev);
+        if (Prev->getOpcode() != AMDGPU::S_MOV_B32)
+            continue;
+
+        Changed = true;
+        MBB.splice(std::next(I), &MBB, BufferLoad);
+        if (Nop != E)
+            Nop->eraseFromParent();
+    }
+
+    return Changed;
+}
+
+// Note: no hazard check here and blindly follow the rules in optimize_nops@amdgcnas.py
+bool SIPreEmitPeephole::optimizeNops(MachineBasicBlock &MBB) {
+    if (MBB.empty())
+        return false;
+
+    bool Changed = false;
+    using InstrIt = MachineBasicBlock::iterator;
+    for (InstrIt I = MBB.begin(), E = MBB.end(); I != E;) {
+        if (I->getOpcode() != AMDGPU::S_NOP) {
+            ++I;
+            continue;
+        }
+
+        InstrIt Next = std::next(I);
+        // nop is the first or last of MBB, then nop is useless.
+        if (I == MBB.begin() || Next == MBB.end()) {
+            Changed = true;
+            I = I->eraseFromParent();
+            continue;
+        }
+
+        // nop is followed by non buffer_load, then nop is useless.
+        if (!IsVecBufferLoad(TII, *Next)) {
+            I = I->eraseFromParent();
+            Changed = true;
+            continue;
+        }
+
+        InstrIt Prev = std::prev(I);
+        if (!Prev->definesRegister(AMDGPU::M0, TRI)) {
+            Changed = true;
+            I = I->eraseFromParent();
+            continue;
+        }
+    }
+
+    return Changed;
+}
+
 MachineInstrBuilder SIPreEmitPeephole::createUnpackedMI(MachineInstr &I,
                                                         uint32_t UnpackedOpcode,
                                                         bool IsHiBits) {
@@ -1027,6 +1112,14 @@ bool SIPreEmitPeephole::run(MachineFunction &MF, MachineLoopInfo *LoopInfo) {
   if (ST.hasGFX950Insts()) {
     for (MachineBasicBlock &MBB: MF) {
       Changed |= eliminateSaveRestore(MBB);
+    }
+
+    for (MachineBasicBlock &MBB: MF) {
+        Changed |= optimizeNops(MBB);
+    }
+
+    for (MachineBasicBlock &MBB: MF) {
+        Changed |= optimizeBufferLoadM0(MBB);
     }
   }
 
