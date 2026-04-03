@@ -1,5 +1,5 @@
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/FileSystem.h"
