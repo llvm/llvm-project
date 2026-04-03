@@ -66,7 +66,7 @@ CIRGenFunction::emitAutoVarAlloca(const VarDecl &d,
         (d.isConstexpr() ||
          ((ty.isPODType(getContext()) ||
            getContext().getBaseElementType(ty)->isObjCObjectPointerType()) &&
-          d.getInit()->isConstantInitializer(getContext(), false)))) {
+          d.getInit()->isConstantInitializer(getContext())))) {
 
       // If the variable's a const type, and it's neither an NRVO
       // candidate nor a __block variable and has no mutable members,
