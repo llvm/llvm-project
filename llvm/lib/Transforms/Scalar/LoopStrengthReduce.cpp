@@ -3291,6 +3291,10 @@ void LSRInstance::CollectChains() {
       if (isa<PHINode>(I) || !IU.isIVUserOrOperand(&I))
         continue;
 
+      // Skip ephemeral values, as they don't produce real code.
+      if (IU.isEphemeral(&I))
+        continue;
+
       // Ignore users that are part of a SCEV expression. This way we only
       // consider leaf IV Users. This effectively rediscovers a portion of
       // IVUsers analysis but in program order this time.

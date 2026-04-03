@@ -14,12 +14,12 @@
 
 namespace orc_rt::sps_ci {
 
-Error addAll(ControllerInterface &CI) {
-  using AdderFn = Error (*)(ControllerInterface &);
+Error addAll(SimpleSymbolTable &ST) {
+  using AdderFn = Error (*)(SimpleSymbolTable &);
   AdderFn Adders[] = {addSimpleNativeMemoryMap};
 
   for (auto *Adder : Adders)
-    if (auto Err = Adder(CI))
+    if (auto Err = Adder(ST))
       return Err;
 
   return Error::success();

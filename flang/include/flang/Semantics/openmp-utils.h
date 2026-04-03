@@ -84,6 +84,7 @@ bool IsExtendedListItem(const Symbol &sym);
 bool IsVariableListItem(const Symbol &sym);
 bool IsTypeParamInquiry(const Symbol &sym);
 bool IsStructureComponent(const Symbol &sym);
+bool IsPrivatizable(const Symbol &sym);
 bool IsVarOrFunctionRef(const MaybeExpr &expr);
 
 bool IsWholeAssumedSizeArray(const parser::OmpObject &object);
@@ -104,7 +105,7 @@ std::optional<bool> GetLogicalValue(const SomeExpr &expr);
 std::optional<bool> IsContiguous(
     SemanticsContext &semaCtx, const parser::OmpObject &object);
 
-std::vector<SomeExpr> GetAllDesignators(const SomeExpr &expr);
+std::vector<SomeExpr> GetTopLevelDesignators(const SomeExpr &expr);
 const SomeExpr *HasStorageOverlap(
     const SomeExpr &base, llvm::ArrayRef<SomeExpr> exprs);
 bool IsAssignment(const parser::ActionStmt *x);
@@ -114,20 +115,45 @@ MaybeExpr MakeEvaluateExpr(const parser::OmpStylizedInstance &inp);
 
 /// A representation of a "because" message.
 struct Reason {
+  Reason() = default;
+  Reason(Reason &&) = default;
+  Reason(const Reason &);
+  Reason &operator=(Reason &&) = default;
+  Reason &operator=(const Reason &);
+
   parser::Messages msgs;
 
   template <typename... Ts> Reason &Say(Ts &&...args) {
     msgs.Say(std::forward<Ts>(args)...);
     return *this;
-  };
-  operator bool() const { return !msgs.empty(); }
+  }
   parser::Message &AttachTo(parser::Message &msg);
+  Reason &Append(const Reason &other) {
+    CopyFrom(other);
+    return *this;
+  }
+  operator bool() const { return !msgs.empty(); }
+
+private:
+  void CopyFrom(const Reason &other);
 };
 
-std::pair<std::optional<int64_t>, Reason> GetArgumentValueWithReason(
+// A property with an explanation of its value. Both, the property and the
+// reason are optional (the reason can have no messages in it).
+template <typename T> struct WithReason {
+  std::optional<T> value;
+  Reason reason;
+
+  WithReason() = default;
+  WithReason(std::optional<T> v, const Reason &r = Reason())
+      : value(v), reason(r) {}
+  operator bool() const { return value.has_value(); }
+};
+
+WithReason<int64_t> GetArgumentValueWithReason(
     const parser::OmpDirectiveSpecification &spec, llvm::omp::Clause clauseId,
     unsigned version);
-std::pair<std::optional<int64_t>, Reason> GetNumArgumentsWithReason(
+WithReason<int64_t> GetNumArgumentsWithReason(
     const parser::OmpDirectiveSpecification &spec, llvm::omp::Clause clauseId,
     unsigned version);
 
@@ -135,20 +161,21 @@ bool IsLoopTransforming(llvm::omp::Directive dir);
 bool IsFullUnroll(const parser::OpenMPLoopConstruct &x);
 
 // Return the depth of the affected nests:
-//   {affected-depth, must-be-perfect-nest, reason}.
-std::tuple<std::optional<int64_t>, bool, Reason> GetAffectedNestDepthWithReason(
-    const parser::OpenMPLoopConstruct &x, unsigned version);
+//   {affected-depth, reason, must-be-perfect-nest}.
+std::pair<WithReason<int64_t>, bool> GetAffectedNestDepthWithReason(
+    const parser::OmpDirectiveSpecification &spec, unsigned version);
 // Return the range of the affected nests in the sequence:
 //   {first, count, reason}.
 // If the range is "the whole sequence", the return value will be {1, -1, ...}.
-std::tuple<std::optional<int64_t>, std::optional<int64_t>, Reason>
-GetAffectedLoopRangeWithReason(
-    const parser::OpenMPLoopConstruct &x, unsigned version);
+WithReason<std::pair<int64_t, int64_t>> GetAffectedLoopRangeWithReason(
+    const parser::OmpDirectiveSpecification &spec, unsigned version);
 
 // Count the required loop count from range. If count == -1, return -1,
 // indicating all loops in the sequence.
 std::optional<int64_t> GetRequiredCount(
     std::optional<int64_t> first, std::optional<int64_t> count);
+std::optional<int64_t> GetRequiredCount(
+    std::optional<std::pair<int64_t, int64_t>> range);
 
 struct LoopSequence {
   LoopSequence(const parser::ExecutionPartConstruct &root, unsigned version,
@@ -165,16 +192,19 @@ struct LoopSequence {
   struct Depth {
     // If this sequence is a nest, the depth of the Canonical Loop Nest rooted
     // at this sequence. Otherwise unspecified.
-    std::optional<int64_t> semantic;
+    WithReason<int64_t> semantic;
     // If this sequence is a nest, the depth of the perfect Canonical Loop Nest
     // rooted at this sequence. Otherwise unspecified.
-    std::optional<int64_t> perfect;
+    WithReason<int64_t> perfect;
   };
 
-  bool isNest() const { return length_ && *length_ == 1; }
-  std::optional<int64_t> length() const { return length_; }
-  Depth depth() const { return depth_; }
+  bool isNest() const { return length_.value == 1; }
+  const WithReason<int64_t> &length() const { return length_; }
+  const Depth &depth() const { return depth_; }
   const std::vector<LoopSequence> &children() const { return children_; }
+
+  WithReason<bool> isWellFormedSequence() const;
+  WithReason<bool> isWellFormedNest() const;
 
 private:
   using Construct = ExecutionPartIterator::Construct;
@@ -197,23 +227,25 @@ private:
   /// Precalculate length and depth.
   void precalculate();
 
-  std::optional<int64_t> calculateLength() const;
-  std::optional<int64_t> getNestedLength() const;
+  WithReason<int64_t> calculateLength() const;
+  WithReason<int64_t> getNestedLength() const;
   Depth calculateDepths() const;
   Depth getNestedDepths() const;
 
-  /// True if the sequence contains any code (besides transformable loops)
-  /// that is not a valid intervening code.
-  bool hasInvalidIC_{false};
-  /// True if the sequence contains any code (besides transformable loops)
-  /// that is not a valid transparent code.
-  bool hasOpaqueIC_{false};
+  /// The construct that is not a loop or a loop-transforming construct,
+  /// that is also not a valid intervening code. Unset if no such code is
+  /// present.
+  const parser::ExecutionPartConstruct *invalidIC_{nullptr};
+  /// The construct that is not a loop or a loop-transforming construct,
+  /// whose presence would prevent perfect nesting of loops (i.e. code that
+  /// is not "transparent" to a perfect nest).
+  const parser::ExecutionPartConstruct *opaqueIC_{nullptr};
 
   /// Precalculated length of the sequence. Note that this is different from
   /// the number of children because a child may result in a sequence, for
   /// example a fuse with a reduced loop range. The length of that sequence
   /// adds to the length of the owning LoopSequence.
-  std::optional<int64_t> length_;
+  WithReason<int64_t> length_;
   /// Precalculated depths. Only meaningful if the sequence is a nest.
   Depth depth_;
 

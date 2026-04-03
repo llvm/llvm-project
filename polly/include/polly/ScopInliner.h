@@ -9,14 +9,23 @@
 #ifndef POLLY_POLLYINLINER_H
 #define POLLY_POLLYINLINER_H
 
+#include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/Analysis/CGSCCPassManager.h"
 #include "llvm/Analysis/LazyCallGraph.h"
 #include "llvm/IR/PassManager.h"
 
+namespace llvm {
+namespace vfs {
+class FileSystem;
+}
+} // namespace llvm
+
 namespace polly {
 class ScopInlinerPass : public llvm::PassInfoMixin<ScopInlinerPass> {
+  llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS;
+
 public:
-  ScopInlinerPass();
+  explicit ScopInlinerPass(llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS);
 
   llvm::PreservedAnalyses run(llvm::LazyCallGraph::SCC &C,
                               llvm::CGSCCAnalysisManager &AM,

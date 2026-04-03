@@ -1,5 +1,13 @@
 add_header(off64_t HDR off64_t.h)
 add_header(size_t HDR size_t.h)
+add_header(
+  rsize_t
+  HDR
+    rsize_t.h
+  DEPENDS
+    .size_t
+    libc.include.llvm-libc-macros.annex_k_macros
+)
 add_header(ssize_t HDR ssize_t.h)
 add_header(__atfork_callback_t HDR __atfork_callback_t.h)
 add_header(__search_compare_t HDR __search_compare_t.h)
@@ -29,6 +37,15 @@ add_header(double_t HDR double_t.h)
 add_header(DIR HDR DIR.h)
 add_header(dev_t HDR dev_t.h)
 add_header(div_t HDR div_t.h)
+add_header(errno_t HDR errno_t.h DEPENDS libc.include.llvm-libc-macros.annex_k_macros)
+add_header(
+  constraint_handler_t
+  HDR
+    constraint_handler_t.h
+  DEPENDS
+    .errno_t
+    libc.include.llvm-libc-macros.annex_k_macros
+)
 add_header(ldiv_t HDR ldiv_t.h)
 add_header(lldiv_t HDR lldiv_t.h)
 add_header(FILE HDR FILE.h)
@@ -53,6 +70,7 @@ add_header(off_t HDR off_t.h)
 add_header(once_flag HDR once_flag.h DEPENDS .__futex_word)
 add_header(posix_spawn_file_actions_t HDR posix_spawn_file_actions_t.h)
 add_header(posix_spawnattr_t HDR posix_spawnattr_t.h)
+add_header(posix_tnode HDR posix_tnode.h)
 add_header(pthread_attr_t HDR pthread_attr_t.h DEPENDS .size_t)
 add_header(pthread_condattr_t HDR pthread_condattr_t.h DEPENDS .clockid_t)
 add_header(pthread_key_t HDR pthread_key_t.h)
@@ -92,6 +110,15 @@ add_header(
 add_header(struct_pollfd HDR struct_pollfd.h)
 add_header(struct_rlimit HDR struct_rlimit.h DEPENDS .rlim_t)
 add_header(struct_sched_param HDR struct_sched_param.h)
+add_header(struct_sembuf HDR struct_sembuf.h)
+add_header(struct_seminfo HDR struct_seminfo.h)
+add_header(
+  struct_semid_ds
+  HDR struct_semid_ds.h
+  DEPENDS
+    .struct_ipc_perm
+    .time_t
+)
 add_header(struct_timeval HDR struct_timeval.h DEPENDS .suseconds_t .time_t)
 add_header(struct_itimerval HDR struct_itimerval.h DEPENDS .struct_timeval)
 add_header(struct_rusage HDR struct_rusage.h DEPENDS .struct_timeval)
@@ -563,3 +590,18 @@ add_header(EFI_SYSTEM_TABLE
     .EFI_TABLE_HEADER
     .char16_t
 )
+add_header(__action_closure_fn_t 
+  HDR 
+    __action_closure_fn_t.h 
+  DEPENDS 
+    .posix_tnode 
+    .VISIT
+)
+add_header(__action_fn_t 
+  HDR 
+    __action_fn_t.h 
+  DEPENDS 
+    .posix_tnode 
+    .VISIT
+)
+add_header(__free_fn_t HDR __free_fn_t.h)

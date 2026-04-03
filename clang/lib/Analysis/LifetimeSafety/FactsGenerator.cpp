@@ -20,6 +20,7 @@
 #include "clang/Analysis/Analyses/LifetimeSafety/Origins.h"
 #include "clang/Analysis/Analyses/PostOrderCFGView.h"
 #include "clang/Analysis/CFG.h"
+#include "clang/Basic/OperatorKinds.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Casting.h"
@@ -34,6 +35,14 @@ OriginList *FactsGenerator::getOriginsList(const ValueDecl &D) {
 }
 OriginList *FactsGenerator::getOriginsList(const Expr &E) {
   return FactMgr.getOriginMgr().getOrCreateList(&E);
+}
+
+bool FactsGenerator::hasOrigins(QualType QT) const {
+  return FactMgr.getOriginMgr().hasOrigins(QT);
+}
+
+bool FactsGenerator::hasOrigins(const Expr *E) const {
+  return FactMgr.getOriginMgr().hasOrigins(E);
 }
 
 /// Propagates origin information from Src to Dst through all levels of
@@ -69,23 +78,20 @@ void FactsGenerator::flow(OriginList *Dst, OriginList *Src, bool Kill) {
 /// This function should be called whenever a DeclRefExpr represents a borrow.
 /// \param DRE The declaration reference expression that initiates the borrow.
 /// \return The new Loan on success, nullptr otherwise.
-static const PathLoan *createLoan(FactManager &FactMgr,
-                                  const DeclRefExpr *DRE) {
-  if (const auto *VD = dyn_cast<ValueDecl>(DRE->getDecl())) {
-    AccessPath Path(VD);
-    // The loan is created at the location of the DeclRefExpr.
-    return FactMgr.getLoanMgr().createLoan<PathLoan>(Path, DRE);
-  }
-  return nullptr;
+static const Loan *createLoan(FactManager &FactMgr, const DeclRefExpr *DRE) {
+  const ValueDecl *VD = DRE->getDecl();
+  AccessPath Path(VD);
+  // The loan is created at the location of the DeclRefExpr.
+  return FactMgr.getLoanMgr().createLoan(Path, DRE);
 }
 
 /// Creates a loan for the storage location of a temporary object.
 /// \param MTE The MaterializeTemporaryExpr that represents the temporary
 /// binding. \return The new Loan.
-static const PathLoan *createLoan(FactManager &FactMgr,
-                                  const MaterializeTemporaryExpr *MTE) {
+static const Loan *createLoan(FactManager &FactMgr,
+                              const MaterializeTemporaryExpr *MTE) {
   AccessPath Path(MTE);
-  return FactMgr.getLoanMgr().createLoan<PathLoan>(Path, MTE);
+  return FactMgr.getLoanMgr().createLoan(Path, MTE);
 }
 
 void FactsGenerator::run() {
@@ -182,14 +188,13 @@ void FactsGenerator::VisitCXXConstructExpr(const CXXConstructExpr *CCE) {
     handleGSLPointerConstruction(CCE);
     return;
   }
-  // Implicit copy/move constructors of lambda closures lack
-  // [[clang::lifetimebound]], so `handleFunctionCall` cannot propagate origins.
-  // Handle them directly to keep the origin chain intact (e.g., `return
-  // lambda;` copies the closure).
-  if (const auto *RD = CCE->getType()->getAsCXXRecordDecl();
-      RD && RD->isLambda() &&
-      CCE->getConstructor()->isCopyOrMoveConstructor() &&
-      CCE->getNumArgs() == 1) {
+  // For defaulted (implicit or `= default`) copy/move constructors, propagate
+  // origins directly. User-defined copy/move constructors have opaque semantics
+  // and fall through to `handleFunctionCall`, where [[clang::lifetimebound]] is
+  // needed to propagate origins.
+  if (CCE->getConstructor()->isCopyOrMoveConstructor() &&
+      CCE->getConstructor()->isDefaulted() && CCE->getNumArgs() == 1 &&
+      hasOrigins(CCE->getType())) {
     const Expr *Arg = CCE->getArg(0);
     if (OriginList *ArgList = getRValueOrigins(Arg, getOriginsList(*Arg))) {
       flow(getOriginsList(*CCE), ArgList, /*Kill=*/true);
@@ -296,9 +301,13 @@ void FactsGenerator::VisitImplicitCastExpr(const ImplicitCastExpr *ICE) {
     if (Dest && Src && Dest->getLength() == Src->getLength())
       flow(Dest, Src, /*Kill=*/true);
     return;
+  case CK_ArrayToPointerDecay:
+    assert(Src && "Array expression should have origins as it is GL value");
+    CurrentBlockFacts.push_back(FactMgr.createFact<OriginFlowFact>(
+        Dest->getOuterOriginID(), Src->getOuterOriginID(), /*Kill=*/true));
+    return;
   case CK_FunctionToPointerDecay:
   case CK_BuiltinFnToFnPtr:
-  case CK_ArrayToPointerDecay:
     // Ignore function-to-pointer decays.
     return;
   default:
@@ -394,10 +403,28 @@ void FactsGenerator::VisitCXXOperatorCallExpr(const CXXOperatorCallExpr *OCE) {
   // and are handled separately.
   if (OCE->getOperator() == OO_Equal && OCE->getNumArgs() == 2 &&
       hasOrigins(OCE->getArg(0)->getType())) {
-    handleAssignment(OCE->getArg(0), OCE->getArg(1));
-    return;
+    // Pointer-like types: assignment inherently propagates origins.
+    QualType LHSTy = OCE->getArg(0)->getType();
+    if (LHSTy->isPointerOrReferenceType() || isGslPointerType(LHSTy)) {
+      handleAssignment(OCE->getArg(0), OCE->getArg(1));
+      return;
+    }
+    // Other tracked types: only defaulted operator= propagates origins.
+    // User-defined operator= has opaque semantics, so don't handle them now.
+    if (const auto *MD =
+            dyn_cast_or_null<CXXMethodDecl>(OCE->getDirectCallee());
+        MD && MD->isDefaulted()) {
+      handleAssignment(OCE->getArg(0), OCE->getArg(1));
+      return;
+    }
   }
-  VisitCallExpr(OCE);
+
+  ArrayRef Args = {OCE->getArgs(), OCE->getNumArgs()};
+  // For `static operator()`, the first argument is the object argument,
+  // remove it from the argument list to avoid off-by-one errors.
+  if (OCE->getOperator() == OO_Call && OCE->getDirectCallee()->isStatic())
+    Args = Args.slice(1);
+  handleFunctionCall(OCE, OCE->getDirectCallee(), Args);
 }
 
 void FactsGenerator::VisitCXXFunctionalCastExpr(
@@ -470,6 +497,16 @@ void FactsGenerator::VisitLambdaExpr(const LambdaExpr *LE) {
   }
 }
 
+void FactsGenerator::VisitArraySubscriptExpr(const ArraySubscriptExpr *ASE) {
+  assert(ASE->isGLValue() && "Array subscript should be a GL value");
+  OriginList *Dst = getOriginsList(*ASE);
+  assert(Dst && "Array subscript should have origins as it is a GL value");
+  OriginList *Src = getOriginsList(*ASE->getBase());
+  assert(Src && "Base of array subscript should have origins");
+  CurrentBlockFacts.push_back(FactMgr.createFact<OriginFlowFact>(
+      Dst->getOuterOriginID(), Src->getOuterOriginID(), /*Kill=*/true));
+}
+
 bool FactsGenerator::escapesViaReturn(OriginID OID) const {
   return llvm::any_of(EscapesInCurrentBlock, [OID](const Fact *F) {
     if (const auto *EF = F->getAs<ReturnEscapeFact>())
@@ -492,38 +529,16 @@ void FactsGenerator::handleLifetimeEnds(const CFGLifetimeEnds &LifetimeEnds) {
     if (!escapesViaReturn(OID))
       ExpiredOID = OID;
   }
-  // Iterate through all loans to see if any expire.
-  for (const auto *Loan : FactMgr.getLoanMgr().getLoans()) {
-    if (const auto *BL = dyn_cast<PathLoan>(Loan)) {
-      // Check if the loan is for a stack variable and if that variable
-      // is the one being destructed.
-      const AccessPath AP = BL->getAccessPath();
-      const ValueDecl *Path = AP.getAsValueDecl();
-      if (Path == LifetimeEndsVD)
-        CurrentBlockFacts.push_back(FactMgr.createFact<ExpireFact>(
-            BL->getID(), LifetimeEnds.getTriggerStmt()->getEndLoc(),
-            ExpiredOID));
-    }
-  }
+  CurrentBlockFacts.push_back(FactMgr.createFact<ExpireFact>(
+      AccessPath(LifetimeEndsVD), LifetimeEnds.getTriggerStmt()->getEndLoc(),
+      ExpiredOID));
 }
 
 void FactsGenerator::handleFullExprCleanup(
     const CFGFullExprCleanup &FullExprCleanup) {
-  // Iterate through all loans to see if any expire.
-  for (const auto *Loan : FactMgr.getLoanMgr().getLoans()) {
-    if (const auto *PL = dyn_cast<PathLoan>(Loan)) {
-      // Check if the loan is for a temporary materialization and if that
-      // storage location is the one being destructed.
-      const AccessPath &AP = PL->getAccessPath();
-      const MaterializeTemporaryExpr *Path = AP.getAsMaterializeTemporaryExpr();
-      if (!Path)
-        continue;
-      if (llvm::is_contained(FullExprCleanup.getExpiringMTEs(), Path)) {
-        CurrentBlockFacts.push_back(
-            FactMgr.createFact<ExpireFact>(PL->getID(), Path->getEndLoc()));
-      }
-    }
-  }
+  for (const auto *MTE : FullExprCleanup.getExpiringMTEs())
+    CurrentBlockFacts.push_back(
+        FactMgr.createFact<ExpireFact>(AccessPath(MTE), MTE->getEndLoc()));
 }
 
 void FactsGenerator::handleExitBlock() {
@@ -648,7 +663,7 @@ void FactsGenerator::handleFunctionCall(const Expr *Call,
   auto IsArgLifetimeBound = [FD](unsigned I) -> bool {
     const ParmVarDecl *PVD = nullptr;
     if (const auto *Method = dyn_cast<CXXMethodDecl>(FD);
-        Method && Method->isInstance()) {
+        Method && Method->isInstance() && !isa<CXXConstructorDecl>(FD)) {
       if (I == 0)
         // For the 'this' argument, the attribute is on the method itself.
         return implicitObjectParamIsLifetimeBound(Method) ||
@@ -690,9 +705,12 @@ void FactsGenerator::handleFunctionCall(const Expr *Call,
         ArgList = getRValueOrigins(Args[I], ArgList);
       }
       if (isGslOwnerType(Args[I]->getType())) {
-        // GSL construction creates a view that borrows from arguments.
-        // This implies flowing origins through the list structure.
-        flow(CallList, ArgList, KillSrc);
+        // The constructed gsl::Pointer borrows from the Owner's storage, not
+        // from what the Owner itself borrows, so only the outermost origin is
+        // needed.
+        CurrentBlockFacts.push_back(FactMgr.createFact<OriginFlowFact>(
+            CallList->getOuterOriginID(), ArgList->getOuterOriginID(),
+            KillSrc));
         KillSrc = false;
       }
     } else if (shouldTrackPointerImplicitObjectArg(I)) {
@@ -770,8 +788,9 @@ llvm::SmallVector<Fact *> FactsGenerator::issuePlaceholderLoans() {
   llvm::SmallVector<Fact *> PlaceholderLoanFacts;
   if (auto ThisOrigins = FactMgr.getOriginMgr().getThisOrigins()) {
     OriginList *List = *ThisOrigins;
-    const PlaceholderLoan *L = FactMgr.getLoanMgr().createLoan<PlaceholderLoan>(
-        cast<CXXMethodDecl>(FD));
+    const Loan *L = FactMgr.getLoanMgr().createLoan(
+        AccessPath::Placeholder(cast<CXXMethodDecl>(FD)),
+        /*IssuingExpr=*/nullptr);
     PlaceholderLoanFacts.push_back(
         FactMgr.createFact<IssueFact>(L->getID(), List->getOuterOriginID()));
   }
@@ -779,8 +798,8 @@ llvm::SmallVector<Fact *> FactsGenerator::issuePlaceholderLoans() {
     OriginList *List = getOriginsList(*PVD);
     if (!List)
       continue;
-    const PlaceholderLoan *L =
-        FactMgr.getLoanMgr().createLoan<PlaceholderLoan>(PVD);
+    const Loan *L = FactMgr.getLoanMgr().createLoan(
+        AccessPath::Placeholder(PVD), /*IssuingExpr=*/nullptr);
     PlaceholderLoanFacts.push_back(
         FactMgr.createFact<IssueFact>(L->getID(), List->getOuterOriginID()));
   }

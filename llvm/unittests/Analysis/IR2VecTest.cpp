@@ -604,8 +604,6 @@ TEST(IR2VecVocabularyTest, NumericIDMapInvalidInputs) {
   // Test invalid type IDs
   EXPECT_DEATH(Vocabulary::getIndex(static_cast<Type::TypeID>(MaxTypeIDs)),
                "Invalid type ID");
-  EXPECT_DEATH(Vocabulary::getIndex(static_cast<Type::TypeID>(MaxTypeIDs + 10)),
-               "Invalid type ID");
 }
 #endif // NDEBUG
 #endif // GTEST_HAS_DEATH_TEST

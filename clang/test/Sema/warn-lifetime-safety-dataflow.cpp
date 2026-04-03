@@ -25,8 +25,8 @@ MyObj* return_local_addr() {
 // CHECK:   OriginFlow:
 // CHECK-NEXT:       Dest: [[O_RET_VAL:[0-9]+]] (Expr: ImplicitCastExpr, Type : MyObj *)
 // CHECK-NEXT:       Src:  [[O_P]] (Decl: p, Type : MyObj *)
-// CHECK:   Expire ([[L_X]] (Path: x))
-// CHECK:   Expire ({{[0-9]+}} (Path: p), Origin: [[O_P]] (Decl: p, Type : MyObj *))
+// CHECK:   Expire (x)
+// CHECK:   Expire (p, Origin: [[O_P]] (Decl: p, Type : MyObj *))
 // CHECK:   OriginEscapes ([[O_RET_VAL]] (Expr: ImplicitCastExpr, Type : MyObj *), via Return)
 }
 
@@ -43,7 +43,7 @@ void loan_expires_cpp() {
 // CHECK:   OriginFlow:
 // CHECK-NEXT:       Dest: {{[0-9]+}} (Decl: pObj, Type : MyObj *)
 // CHECK-NEXT:       Src:  [[O_ADDR_OBJ]] (Expr: UnaryOperator, Type : MyObj *)
-// CHECK:   Expire ([[L_OBJ]] (Path: obj))
+// CHECK:   Expire (obj)
 }
 
 
@@ -59,7 +59,7 @@ void loan_expires_trivial() {
 // CHECK:   OriginFlow:
 // CHECK-NEXT:       Dest: {{[0-9]+}} (Decl: pTrivialObj, Type : int *)
 // CHECK-NEXT:       Src:  [[O_ADDR_TRIVIAL_OBJ]] (Expr: UnaryOperator, Type : int *)
-// CHECK:   Expire ([[L_TRIVIAL_OBJ]] (Path: trivial_obj))
+// CHECK:   Expire (trivial_obj)
 // CHECK-NEXT: End of Block
 }
 
@@ -86,8 +86,8 @@ void overwrite_origin() {
 // CHECK:   OriginFlow:
 // CHECK-NEXT:       Dest: [[O_P]] (Decl: p, Type : MyObj *)
 // CHECK-NEXT:       Src:  [[O_ADDR_S2]] (Expr: UnaryOperator, Type : MyObj *)
-// CHECK:   Expire ([[L_S2]] (Path: s2))
-// CHECK:   Expire ([[L_S1]] (Path: s1))
+// CHECK:   Expire (s2)
+// CHECK:   Expire (s1)
 }
 
 // CHECK-LABEL: Function: reassign_to_null
@@ -108,7 +108,7 @@ void reassign_to_null() {
 // CHECK:   OriginFlow:
 // CHECK-NEXT:       Dest: [[O_P]] (Decl: p, Type : MyObj *)
 // CHECK-NEXT:       Src:  {{[0-9]+}} (Expr: ImplicitCastExpr, Type : MyObj *)
-// CHECK:   Expire ([[L_S1]] (Path: s1))
+// CHECK:   Expire (s1)
 }
 // FIXME: Have a better representation for nullptr than just an empty origin. 
 //        It should be a separate loan and origin kind.
@@ -205,8 +205,8 @@ void test_use_lifetimebound_call() {
 // CHECK:   OriginFlow:
 // CHECK-NEXT:       Dest: {{[0-9]+}} (Decl: r, Type : MyObj *)
 // CHECK-NEXT:       Src:  [[O_CALL_EXPR]] (Expr: CallExpr, Type : MyObj *)
-// CHECK:   Expire ([[L_Y]] (Path: y))
-// CHECK:   Expire ([[L_X]] (Path: x))
+// CHECK:   Expire (y)
+// CHECK:   Expire (x)
 }
 
 // CHECK-LABEL: Function: test_reference_variable
@@ -235,5 +235,5 @@ void test_reference_variable() {
 // CHECK:   OriginFlow:
 // CHECK-NEXT:       Dest: {{[0-9]+}} (Decl: p, Type : const MyObj *)
 // CHECK-NEXT:       Src:  {{[0-9]+}} (Expr: UnaryOperator, Type : const MyObj *)
-// CHECK:   Expire ([[L_X]] (Path: x))
+// CHECK:   Expire (x)
 }

@@ -394,8 +394,7 @@ bool ScopBuilder::buildConditionSets(
     BasicBlock *BB, SwitchInst *SI, Loop *L, __isl_keep isl_set *Domain,
     DenseMap<BasicBlock *, isl::set> &InvalidDomainMap,
     SmallVectorImpl<__isl_give isl_set *> &ConditionSets) {
-  Value *Condition = getConditionFromTerminator(SI);
-  assert(Condition && "No condition for switch");
+  Value *Condition = SI->getCondition();
 
   isl_pw_aff *LHS, *RHS;
   LHS = getPwAff(BB, InvalidDomainMap, SE.getSCEVAtScope(Condition, L));
@@ -572,16 +571,12 @@ bool ScopBuilder::buildConditionSets(
     return buildConditionSets(BB, SI, L, Domain, InvalidDomainMap,
                               ConditionSets);
 
-  assert(isa<BranchInst>(TI) && "Terminator was neither branch nor switch.");
-
-  if (TI->getNumSuccessors() == 1) {
+  if (isa<UncondBrInst>(TI)) {
     ConditionSets.push_back(isl_set_copy(Domain));
     return true;
   }
 
-  Value *Condition = getConditionFromTerminator(TI);
-  assert(Condition && "No condition for Terminator");
-
+  Value *Condition = cast<CondBrInst>(TI)->getCondition();
   return buildConditionSets(BB, Condition, TI, L, Domain, InvalidDomainMap,
                             ConditionSets);
 }
@@ -755,12 +750,9 @@ bool ScopBuilder::addLoopBoundsToHeaderDomain(
     isl::set BackedgeCondition;
 
     Instruction *TI = LatchBB->getTerminator();
-    BranchInst *BI = dyn_cast<BranchInst>(TI);
-    assert(BI && "Only branch instructions allowed in loop latches");
-
-    if (BI->isUnconditional())
+    if (isa<UncondBrInst>(TI))
       BackedgeCondition = LatchBBDom;
-    else {
+    else if (auto *BI = dyn_cast<CondBrInst>(TI)) {
       SmallVector<isl_set *, 8> ConditionSets;
       int idx = BI->getSuccessor(0) != HeaderBB;
       if (!buildConditionSets(LatchBB, TI, L, LatchBBDom.get(),
@@ -771,7 +763,8 @@ bool ScopBuilder::addLoopBoundsToHeaderDomain(
       isl_set_free(ConditionSets[1 - idx]);
 
       BackedgeCondition = isl::manage(ConditionSets[idx]);
-    }
+    } else
+      llvm_unreachable("Only branch instructions allowed in loop latches");
 
     int LatchLoopDepth = scop->getRelativeLoopDepth(LI.getLoopFor(LatchBB));
     assert(LatchLoopDepth >= LoopDepth);
@@ -1395,6 +1388,7 @@ void ScopBuilder::addUserAssumptions(
       NewParams.insert(Param);
     }
 
+    size_t NumAssumptions = RecordedAssumptions.size();
     SmallVector<isl_set *, 2> ConditionSets;
     auto *TI = InScop ? CI->getParent()->getTerminator() : nullptr;
     BasicBlock *BB = InScop ? CI->getParent() : R.getEntry();
@@ -1434,9 +1428,19 @@ void ScopBuilder::addUserAssumptions(
     ORE.emit(OptimizationRemarkAnalysis(DEBUG_TYPE, "UserAssumption", CI)
              << "Use user assumption: "
              << stringFromIslObj(AssumptionCtx, "null"));
-    isl::set newContext =
-        scop->getContext().intersect(isl::manage(AssumptionCtx));
-    scop->setContext(newContext);
+
+    // scop->setContext is used to gist AssumedContext and InvalidContext. Both
+    // add RTCs, so using setContext would remove the RTC that would ensure the
+    // correctness of AssumptionCtx. Using DefinedBehaviorContext which does not
+    // gist the other contexts.
+    // TODO: Use recordAssumption() for adding context/assumptions
+    if (NumAssumptions == RecordedAssumptions.size()) {
+      isl::set newContext =
+          scop->getContext().intersect(isl::manage(AssumptionCtx));
+      scop->setContext(newContext);
+    } else {
+      scop->intersectDefinedBehavior(isl::manage(AssumptionCtx), AS_ASSUMPTION);
+    }
   }
 }
 

@@ -3,6 +3,7 @@ executable("clang-ssaf-format") {
   deps = [
     "//clang/lib/Basic",
     "//clang/lib/ScalableStaticAnalysisFramework/Core",
+    "//clang/lib/ScalableStaticAnalysisFramework/Tool",
     "//llvm/lib/Option",
     "//llvm/lib/Support",
   ]
