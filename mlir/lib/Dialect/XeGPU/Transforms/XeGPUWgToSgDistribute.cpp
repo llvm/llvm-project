@@ -1255,7 +1255,6 @@ struct WgToSgMultiDimReductionOp
     bool isScalarResult = !dstVecType;
 
     auto originalSrcShape = srcType.getShape();
-    int srcVecRank = originalSrcShape.size();
     Type elemTy = srcType.getElementType();
 
     xegpu::DistributeLayoutAttr layout =
