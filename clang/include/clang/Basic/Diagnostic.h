@@ -1375,6 +1375,12 @@ inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
 }
 
 inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
+                                             std::string_view S) {
+  DB.AddString(S);
+  return DB;
+}
+
+inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
                                              const std::string &S) {
   DB.AddString(S);
   return DB;
