@@ -412,9 +412,6 @@ KnownBits KnownBits::shl(const KnownBits &LHS, unsigned ShiftAmt, bool NUW,
   unsigned BitWidth = LHS.getBitWidth();
   KnownBits Known(BitWidth);
 
-  if (ShiftAmt >= BitWidth)
-    return Known;
-
   if (LHS.isUnknown()) {
     Known.Zero.setLowBits(ShiftAmt);
     if (NUW && NSW)
@@ -430,7 +427,7 @@ KnownBits KnownBits::shl(const KnownBits &LHS, unsigned ShiftAmt, bool NUW,
     return Known;
   }
   Known.Zero = LHS.Zero.ushl_ov(ShiftAmt, ShiftedOutZero);
-  Known.Zero.setLowBits(ShiftAmt);
+  Known.Zero.setLowBits(std::min(ShiftAmt, BitWidth));
 
   if (NSW) {
     if (NUW)
