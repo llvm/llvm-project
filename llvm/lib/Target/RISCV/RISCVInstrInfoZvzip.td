@@ -30,8 +30,7 @@ let Predicates = [HasStdExtZvzip], Constraints = "@earlyclobber $vd" in {
   }
 } // Predicates = [HasStdExtZvzip]
 
-// Returns a vector. Operand 0 and 1 are vectors, operand 2 is a passthru,
-// operand 3 is a mask, operand 4 is VL.
+// (vd (op vs2, vs1, passthru, mask, vl))
 def SDT_RISCVZip_VL : SDTypeProfile<1, 5, [SDTCisVec<0>, SDTCisVec<1>,
                                            SDTCisInt<0>, SDTCisInt<1>,
                                            SDTCisSubVecOfVec<1, 0>,
@@ -41,8 +40,7 @@ def SDT_RISCVZip_VL : SDTypeProfile<1, 5, [SDTCisVec<0>, SDTCisVec<1>,
                                            SDTCisSameNumEltsAs<1, 4>,
                                            SDTCisVT<5, XLenVT>]>;
 
-// Returns a vector. Operand 0 is a vector, operand 1 is a passthru,
-// operand 2 is a mask, operand 3 is VL.
+// (vd (op vs2, passthru, mask, vl))
 def SDT_RISCVUnzip_VL : SDTypeProfile<1, 4, [SDTCisVec<0>, SDTCisVec<1>,
                                              SDTCisInt<0>, SDTCisInt<1>,
                                              SDTCisSubVecOfVec<0, 1>,
