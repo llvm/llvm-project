@@ -20,7 +20,7 @@ using namespace llvm;
 using namespace gsym;
 
 GsymReaderV2::GsymReaderV2(std::unique_ptr<MemoryBuffer> Buffer)
-    : GsymReader(std::move(Buffer)), FileData(StringRef(), true, 8) {}
+    : GsymReader(std::move(Buffer)) {}
 
 GsymReaderV2::GsymReaderV2(GsymReaderV2 &&RHS) = default;
 GsymReaderV2::~GsymReaderV2() = default;
@@ -182,25 +182,14 @@ llvm::Error GsymReaderV2::parse() {
   }
 
   // File table
-  //
-  // Validate and cache file table metadata for on-demand decoding via
-  // getFile(). The file table has variable-width Dir/Base fields (StrpSize),
-  // so entries are decoded on access rather than pre-parsed.
   {
     Expected<StringRef> Data = FileTableGD.getStringRef(DE);
     if (!Data)
       return Data.takeError();
     DataExtractor FileTableDE(*Data, IsLittleEndian, 8);
-    uint64_t Offset = 0;
-    uint32_t NumFiles = FileTableDE.getU32(&Offset);
-    uint64_t EntriesSize = static_cast<uint64_t>(NumFiles) * 2 * HeaderV2::getStringOffsetByteSize();
-    if (Data->size() < 4 + EntriesSize)
-      return createStringError(std::errc::invalid_argument,
-                               "FileTable section too small for %u files",
-                               NumFiles);
-    FileData =
-        DataExtractor(Data->substr(Offset, EntriesSize), IsLittleEndian, 8);
-    FileData.setStringOffsetSize(HeaderV2::getStringOffsetByteSize());
+    uint64_t FTOffset = 0;
+    if (auto Err = parseFileTable(FileTableDE, FTOffset))
+      return Err;
   }
   return Error::success();
 }
@@ -208,19 +197,6 @@ llvm::Error GsymReaderV2::parse() {
 const HeaderV2 &GsymReaderV2::getHeader() const {
   assert(Hdr);
   return *Hdr;
-}
-
-std::optional<FileEntry<uint64_t>> GsymReaderV2::getFile(uint32_t Index) const {
-  uint64_t Offset = Index * 2 * FileData.getStringOffsetSize();
-  // If the offsset is beyond the end of the file table, the given index is out
-  // of range.
-  if (!FileData.isValidOffsetForDataOfSize(Offset,
-                                           2 * FileData.getStringOffsetSize()))
-    return std::nullopt;
-  FileEntry<uint64_t> FE;
-  FE.Dir = FileData.getStringOffset(&Offset);
-  FE.Base = FileData.getStringOffset(&Offset);
-  return FE;
 }
 
 uint64_t GsymReaderV2::getAddressInfoOffset(size_t Index) const {

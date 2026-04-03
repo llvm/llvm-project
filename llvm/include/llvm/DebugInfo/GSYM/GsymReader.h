@@ -51,6 +51,7 @@ protected:
   ArrayRef<uint8_t> AddrOffsets;
   std::vector<uint8_t> SwappedAddrOffsets;
   DataExtractor AddrInfoOffsetsData;
+  DataExtractor FileEntryData;
   StringTable StrTab;
 
   GsymReader(std::unique_ptr<MemoryBuffer> Buffer);
@@ -171,7 +172,7 @@ public:
   /// \param Index An index into the file table.
   /// \returns An optional FileInfo that will be valid if the file index is
   /// valid, or std::nullopt if the file index is out of bounds,
-  virtual std::optional<FileEntry<uint64_t>> getFile(uint32_t Index) const = 0;
+  std::optional<FileEntry> getFile(uint32_t Index) const;
 
   /// Dump the entire Gsym data contained in this object.
   ///
@@ -262,7 +263,7 @@ public:
   /// \param  OS The output stream to dump to.
   ///
   /// \param FE The object to dump.
-  LLVM_ABI void dump(raw_ostream &OS, std::optional<FileEntry<uint64_t>> FE);
+  LLVM_ABI void dump(raw_ostream &OS, std::optional<FileEntry> FE);
 
   /// Gets an address from the address table.
   ///
@@ -377,6 +378,18 @@ protected:
   /// \param Swap True if byte swapping is needed.
   /// \returns Error on failure.
   llvm::Error parseAddrOffsets(DataExtractor &DE, uint64_t &Offset, bool Swap);
+
+  /// Parse a file table from a DataExtractor into FileEntryData.
+  ///
+  /// Reads the NumFiles count, validates the data size, and initializes
+  /// FileEntryData to point at the file entries. The string offset size
+  /// is determined by getStringOffsetByteSize().
+  ///
+  /// \param DE DataExtractor over the buffer containing the file table.
+  /// \param Offset The byte offset into DE where the file table starts
+  ///   (at the NumFiles uint32_t). Advanced past the file table on success.
+  /// \returns Error on failure.
+  llvm::Error parseFileTable(DataExtractor &DE, uint64_t &Offset);
 
   /// Given an address, find the correct function info data and function
   /// address.

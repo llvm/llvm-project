@@ -34,7 +34,7 @@ uint64_t GsymCreatorV2::calculateHeaderAndTableSize() const {
   Size = llvm::alignTo(Size, HeaderV2::getAddressInfoOffsetByteSize());
   Size += NumFuncs * HeaderV2::getAddressInfoOffsetByteSize();
   Size = llvm::alignTo(Size, 4);
-  Size += 4 + Files.size() * 2 * HeaderV2::getStringOffsetByteSize();
+  Size += 4 + Files.size() * FileEntry::getEncodedSize(getStringOffsetSize());
   Size += StrTab.getSize();
   Size += UUID.size();
   return Size;
@@ -96,7 +96,8 @@ llvm::Error GsymCreatorV2::encode(FileWriter &O) const {
   // FileTable section.
   CurOffset = llvm::alignTo(CurOffset, 4);
   const uint64_t FileTableOffset = CurOffset;
-  const uint64_t FileTableSize = 4 + Files.size() * 2 * StrpSize;
+  const uint64_t FileTableSize =
+      4 + Files.size() * FileEntry::getEncodedSize(StrpSize);
   CurOffset += FileTableSize;
 
   // StringTable section.

@@ -91,13 +91,13 @@ llvm::Error GsymReaderV1::parse() {
   if (Error Err = Hdr->checkForError())
     return Err;
 
-  // Parse AddrOffsets (shared by swap and non-swap paths).
+  // Parse AddrOffsets.
   DataExtractor Data(MemBuffer->getBuffer(), DataIsLittleEndian, 4);
   uint64_t Offset = alignTo(sizeof(Header), Hdr->AddrOffSize);
   if (auto Err = parseAddrOffsets(Data, Offset, Swap != nullptr))
     return Err;
 
-  // Parse AddrInfoOffsets (shared by swap and non-swap paths).
+  // Parse AddrInfoOffsets.
   {
     const bool IsLittleEndian = (Endian == llvm::endianness::little);
     Offset = alignTo(Offset, 4);
@@ -110,36 +110,22 @@ llvm::Error GsymReaderV1::parse() {
     Offset += AISize;
   }
 
-  if (!Swap) {
-    // Use BinaryStreamReader for the remaining sections (sequential layout).
-    FileData.setOffset(Offset);
-
-    uint32_t NumFiles = 0;
-    if (FileData.readInteger(NumFiles) || FileData.readArray(Files, NumFiles))
-      return createStringError(std::errc::invalid_argument,
-                               "failed to read file table");
-
-    FileData.setOffset(Hdr->StrtabOffset);
-    if (FileData.readFixedString(StrTab.Data, Hdr->StrtabSize))
-      return createStringError(std::errc::invalid_argument,
-                               "failed to read string table");
-  } else {
-    const uint32_t NumFiles = Data.getU32(&Offset);
-    if (NumFiles > 0) {
-      Swap->Files.resize(NumFiles);
-      for (uint32_t I = 0; I < NumFiles; ++I) {
-        Swap->Files[I].Dir = Data.getU32(&Offset);
-        Swap->Files[I].Base = Data.getU32(&Offset);
-      }
-      Files = ArrayRef<FileEntry<uint32_t>>(Swap->Files);
-    }
-
-    StrTab.Data =
-        MemBuffer->getBuffer().substr(Hdr->StrtabOffset, Hdr->StrtabSize);
-    if (StrTab.Data.empty())
-      return createStringError(std::errc::invalid_argument,
-                               "failed to read string table");
+  // Parse FileTable.
+  {
+    DataExtractor FTData(MemBuffer->getBuffer().substr(Offset),
+                         Endian == llvm::endianness::little, 4);
+    uint64_t FTOffset = 0;
+    if (auto Err = parseFileTable(FTData, FTOffset))
+      return Err;
+    Offset += FTOffset;
   }
+
+  // Parse StrTab.
+  StrTab.Data =
+      MemBuffer->getBuffer().substr(Hdr->StrtabOffset, Hdr->StrtabSize);
+  if (StrTab.Data.empty())
+    return createStringError(std::errc::invalid_argument,
+                             "failed to read string table");
   return Error::success();
 }
 

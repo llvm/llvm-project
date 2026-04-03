@@ -339,7 +339,7 @@ FunctionInfo::lookup(DataExtractor &Data, const GsymReader &GR,
     return LR;
   }
 
-  std::optional<FileEntry<uint64_t>> LineEntryFile = GR.getFile(LineEntry->File);
+  std::optional<FileEntry> LineEntryFile = GR.getFile(LineEntry->File);
   if (!LineEntryFile)
     return createStringError(std::errc::invalid_argument,
                               "failed to extract file[%" PRIu32 "]",

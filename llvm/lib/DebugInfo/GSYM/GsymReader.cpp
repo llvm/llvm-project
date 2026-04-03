@@ -26,7 +26,8 @@ using namespace gsym;
 
 GsymReader::GsymReader(std::unique_ptr<MemoryBuffer> Buffer)
     : MemBuffer(std::move(Buffer)), Endian(llvm::endianness::native),
-      AddrInfoOffsetsData(StringRef(), true, 0) {}
+      AddrInfoOffsetsData(StringRef(), true, 0),
+      FileEntryData(StringRef(), true, 0) {}
 
 GsymReader::GsymReader(GsymReader &&RHS) = default;
 
@@ -201,9 +202,37 @@ Expected<uint64_t> GsymReader::getAddressIndex(const uint64_t Addr) const {
                            "address 0x%" PRIx64 " is not in GSYM", Addr);
 }
 
+llvm::Error GsymReader::parseFileTable(DataExtractor &DE, uint64_t &Offset) {
+  const uint8_t StrpSize = getStringOffsetByteSize();
+  uint32_t NumFiles = DE.getU32(&Offset);
+  uint64_t EntriesSize = static_cast<uint64_t>(NumFiles) * 2 * StrpSize;
+  StringRef Data = DE.getData();
+  if (Data.size() < Offset + EntriesSize)
+    return createStringError(std::errc::invalid_argument,
+                             "FileTable section too small for %u files",
+                             NumFiles);
+  const bool IsLittleEndian = DE.isLittleEndian();
+  FileEntryData = DataExtractor(Data.substr(Offset, EntriesSize),
+                                IsLittleEndian, DE.getAddressSize());
+  FileEntryData.setStringOffsetSize(StrpSize);
+  Offset += EntriesSize;
+  return Error::success();
+}
+
 uint64_t GsymReader::getAddressInfoOffset(size_t Index) const {
   uint64_t Offset = Index * getAddressInfoOffsetByteSize();
   return AddrInfoOffsetsData.getUnsigned(&Offset, getAddressInfoOffsetByteSize());
+}
+
+std::optional<FileEntry> GsymReader::getFile(uint32_t Index) const {
+  uint64_t EntrySize = 2 * FileEntryData.getStringOffsetSize();
+  uint64_t Offset = Index * EntrySize;
+  if (!FileEntryData.isValidOffsetForDataOfSize(Offset, EntrySize))
+    return std::nullopt;
+  FileEntry FE;
+  FE.Dir = FileEntryData.getStringOffset(&Offset);
+  FE.Base = FileEntryData.getStringOffset(&Offset);
+  return FE;
 }
 
 llvm::Expected<DataExtractor>
@@ -437,7 +466,7 @@ void GsymReader::dump(raw_ostream &OS, const InlineInfo &II, uint32_t Indent) {
     dump(OS, ChildII, Indent + 2);
 }
 
-void GsymReader::dump(raw_ostream &OS, std::optional<FileEntry<uint64_t>> FE) {
+void GsymReader::dump(raw_ostream &OS, std::optional<FileEntry> FE) {
   if (FE) {
     // IF we have the file from index 0, then don't print anything
     if (FE->Dir == 0 && FE->Base == 0)

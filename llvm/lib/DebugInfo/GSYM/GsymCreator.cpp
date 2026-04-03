@@ -36,10 +36,10 @@ uint32_t GsymCreator::insertFile(StringRef Path, llvm::sys::path::Style Style) {
   // requirements.
   const uint32_t Dir = insertString(directory);
   const uint32_t Base = insertString(filename);
-  return insertFileEntry(FileEntry<uint64_t>(Dir, Base));
+  return insertFileEntry(FileEntry(Dir, Base));
 }
 
-uint32_t GsymCreator::insertFileEntry(FileEntry<uint64_t> FE) {
+uint32_t GsymCreator::insertFileEntry(FileEntry FE) {
   std::lock_guard<std::mutex> Guard(Mutex);
   const auto NextIndex = Files.size();
   // Find FE in hash map and insert if not present.
@@ -55,14 +55,14 @@ uint32_t GsymCreator::copyFile(const GsymCreator &SrcGC, uint32_t FileIdx) {
   // and filename.
   if (FileIdx == 0)
     return 0;
-  const FileEntry<uint64_t> SrcFE = SrcGC.Files[FileIdx];
+  const FileEntry SrcFE = SrcGC.Files[FileIdx];
   // Copy the strings for the file and then add the newly converted file entry.
   uint32_t Dir =
       SrcFE.Dir == 0
           ? 0
           : StrTab.add(SrcGC.StringOffsetMap.find(SrcFE.Dir)->second);
   uint32_t Base = StrTab.add(SrcGC.StringOffsetMap.find(SrcFE.Base)->second);
-  FileEntry<uint64_t> DstFE(Dir, Base);
+  FileEntry DstFE(Dir, Base);
   return insertFileEntry(DstFE);
 }
 

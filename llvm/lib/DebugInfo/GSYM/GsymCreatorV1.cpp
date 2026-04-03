@@ -23,7 +23,7 @@ uint64_t GsymCreatorV1::calculateHeaderAndTableSize() const {
   const size_t NumFuncs = Funcs.size();
   Size += NumFuncs * getAddressOffsetSize();
   Size += NumFuncs * sizeof(uint32_t);
-  Size += Files.size() * sizeof(FileEntry<uint32_t>);
+  Size += Files.size() * FileEntry::getEncodedSize(getStringOffsetSize());
   Size += StrTab.getSize();
   return Size;
 }

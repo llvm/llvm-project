@@ -28,9 +28,6 @@ class GsymReaderV2 : public GsymReader {
   const HeaderV2 *Hdr = nullptr;
   /// Parsed GlobalData section descriptors, keyed by type.
   std::map<GlobalInfoType, GlobalData> GlobalDataSections;
-  /// DataExtractor for on-demand file table decoding. Contains exactly the
-  /// file entry data (does not include the NumFiles uint32_t).
-  DataExtractor FileData;
   struct SwappedData {
     HeaderV2 Hdr;
   };
@@ -56,8 +53,6 @@ public:
   }
   uint64_t getAddressInfoOffsetByteSize() const override { return 8; }
   uint64_t getStringOffsetByteSize() const override { return 8; }
-
-  std::optional<FileEntry<uint64_t>> getFile(uint32_t Index) const override;
 
   // GlobalData accessors
   uint64_t getAddressInfoOffset(size_t Index) const override;

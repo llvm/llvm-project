@@ -53,20 +53,20 @@ void checkError(std::string ExpectedMsg, Error Err) {
 TEST(GSYMTest, TestFileEntry) {
   // Make sure default constructed GSYM FileEntry has zeroes in the
   // directory and basename string table indexes.
-  FileEntry<uint32_t> empty1;
-  FileEntry<uint32_t> empty2;
+  FileEntry empty1;
+  FileEntry empty2;
   EXPECT_EQ(empty1.Dir, 0u);
   EXPECT_EQ(empty1.Base, 0u);
   // Verify equality operator works
-  FileEntry<uint32_t> a1(10, 30);
-  FileEntry<uint32_t> a2(10, 30);
-  FileEntry<uint32_t> b(10, 40);
+  FileEntry a1(10, 30);
+  FileEntry a2(10, 30);
+  FileEntry b(10, 40);
   EXPECT_EQ(empty1, empty2);
   EXPECT_EQ(a1, a2);
   EXPECT_NE(a1, b);
   EXPECT_NE(a1, empty1);
   // Test we can use llvm::gsym::FileEntry in llvm::DenseMap.
-  DenseMap<FileEntry<uint32_t>, uint32_t> EntryToIndex;
+  DenseMap<FileEntry, uint32_t> EntryToIndex;
   constexpr uint32_t Index1 = 1;
   constexpr uint32_t Index2 = 1;
   auto R = EntryToIndex.insert(std::make_pair(a1, Index1));
