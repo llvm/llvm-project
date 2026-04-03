@@ -186,7 +186,7 @@ cir.func @test_try_catch_with_cleanup() {
 // CHECK:         cir.br ^[[TRY_EXIT:bb[0-9]+]]
 //
 // CHECK:       ^[[INNER_UNWIND]]:
-// CHECK:         %[[INNER_EH:.*]] = cir.eh.initiate cleanup : !cir.eh_token
+// CHECK:         %[[INNER_EH:.*]] = cir.eh.initiate : !cir.eh_token
 // CHECK:         cir.br ^[[EH_CLEANUP:bb[0-9]+]](%[[INNER_EH]] : !cir.eh_token)
 //
 // CHECK:       ^[[EH_CLEANUP]](%[[EH_CT:.*]]: !cir.eh_token):
