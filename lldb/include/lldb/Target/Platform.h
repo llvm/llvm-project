@@ -271,13 +271,30 @@ public:
   virtual Status GetFileWithUUID(const FileSpec &platform_file,
                                  const UUID *uuid_ptr, FileSpec &local_file);
 
-  // Locate the scripting resource given a module specification.
-  //
-  // Locating the file should happen only on the local computer or using the
-  // current computers global settings.
-  virtual FileSpecList
+  /// Locate the scripting resource given a module specification.
+  ///
+  /// Returns a map from a located script's \c FileSpec to the
+  /// \c LoadScriptFromSymFile with which LLDB should load it.
+  llvm::SmallDenseMap<FileSpec, LoadScriptFromSymFile>
   LocateExecutableScriptingResources(Target *target, Module &module,
                                      Stream &feedback_stream);
+
+  /// Locate the platform-specific scripting resource given a module
+  /// specification.
+  virtual llvm::SmallDenseMap<FileSpec, LoadScriptFromSymFile>
+  LocateExecutableScriptingResourcesForPlatform(Target *target, Module &module,
+                                                Stream &feedback_stream);
+
+  /// Helper function for \c LocateExecutableScriptingResources
+  /// which gathers FileSpecs for executable scripts from
+  /// pre-configured "safe" auto-load paths.
+  ///
+  /// E.g., for Python it will look for a script at:
+  ///   \c <safe-path>/<module-name>/<module-name>.py
+  static llvm::SmallDenseMap<FileSpec, LoadScriptFromSymFile>
+  LocateExecutableScriptingResourcesFromSafePaths(Stream &feedback_stream,
+                                                  FileSpec module_spec,
+                                                  const Target &target);
 
   /// \param[in] module_spec
   ///     The ModuleSpec of a binary to find.

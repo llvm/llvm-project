@@ -154,6 +154,8 @@ bool AMDGPUAtomicOptimizerImpl::run() {
   // Scan option None disables the Pass
   if (ScanImpl == ScanOptions::None)
     return false;
+  if (ST.isSingleLaneExecution(F))
+    return false;
 
   visit(F);
   if (ToReplace.empty())

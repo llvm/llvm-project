@@ -429,6 +429,14 @@ static bool isSignExtendingOpW(const MachineInstr &MI, unsigned OpNo) {
     unsigned Lsb = MI.getOperand(3).getImm();
     return Msb >= Lsb && (Msb - Lsb + 1) < 32;
   }
+  case RISCV::SATI_RV64:
+    // Saturates to signed range [-2^(imm-1), 2^(imm-1)-1].
+    // If imm <= 32, result fits in 32-bit signed range, thus sign-extended.
+    return MI.getOperand(2).getImm() <= 32;
+  case RISCV::USATI_RV64:
+    // Saturates to unsigned range [0, 2^imm-1].
+    // If imm < 32, result has bit 31 clear, thus sign-extended.
+    return MI.getOperand(2).getImm() < 32;
   }
 
   return false;

@@ -140,6 +140,7 @@ set(LIBUNWIND_INSTALL_RUNTIME_DIR "${CMAKE_INSTALL_BINDIR}" CACHE STRING
 set(LIBUNWIND_SHARED_OUTPUT_NAME "unwind" CACHE STRING "Output name for the shared libunwind runtime library.")
 set(LIBUNWIND_STATIC_OUTPUT_NAME "unwind" CACHE STRING "Output name for the static libunwind runtime library.")
 
+# TODO: Use common runtimes infrastructure for output and install paths
 if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
   set(LIBUNWIND_TARGET_SUBDIR ${LLVM_DEFAULT_TARGET_TRIPLE})
   if(LIBUNWIND_LIBDIR_SUBDIR)
@@ -334,6 +335,16 @@ endif()
 
 if (RUNTIMES_EXECUTE_ONLY_CODE)
   add_compile_definitions(_LIBUNWIND_EXECUTE_ONLY_CODE)
+endif()
+
+check_symbol_exists(getauxval "sys/auxv.h" HAVE_GETAUXVAL)
+if (HAVE_GETAUXVAL)
+  add_definitions(-D_LIBUNWIND_HAVE_GETAUXVAL)
+endif()
+
+check_symbol_exists(elf_aux_info "sys/auxv.h" HAVE_ELF_AUX_INFO)
+if (HAVE_ELF_AUX_INFO)
+  add_definitions(-D_LIBUNWIND_HAVE_ELF_AUX_INFO)
 endif()
 
 add_custom_target(unwind-test-depends

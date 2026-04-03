@@ -3632,9 +3632,10 @@ protected:
       UnwindTable &uw_table = sc.module_sp->GetUnwindTable();
       FuncUnwindersSP func_unwinders_sp =
           m_options.m_cached
-              ? uw_table.GetFuncUnwindersContainingAddress(start_addr, sc)
-              : uw_table.GetUncachedFuncUnwindersContainingAddress(start_addr,
-                                                                   sc);
+              ? uw_table.GetFuncUnwindersContainingAddress(Address(start_addr),
+                                                           sc)
+              : uw_table.GetUncachedFuncUnwindersContainingAddress(
+                    Address(start_addr), sc);
       if (!func_unwinders_sp)
         continue;
 
@@ -4303,9 +4304,10 @@ protected:
     ModuleList matching_modules;
 
     // First extract all module specs from the symbol file
-    lldb_private::ModuleSpecList symfile_module_specs;
-    if (ObjectFile::GetModuleSpecifications(module_spec.GetSymbolFileSpec(),
-                                            0, 0, symfile_module_specs)) {
+    lldb_private::ModuleSpecList symfile_module_specs =
+        ObjectFile::GetModuleSpecifications(module_spec.GetSymbolFileSpec(), 0,
+                                            0);
+    if (symfile_module_specs.GetSize() > 0) {
       // Now extract the module spec that matches the target architecture
       ModuleSpec target_arch_module_spec;
       ModuleSpec symfile_module_spec;
@@ -4398,16 +4400,10 @@ protected:
 
           // Make sure we load any scripting resources that may be embedded
           // in the debug info files in case the platform supports that.
-          Status error;
-          module_sp->LoadScriptingResourceInTarget(target, error);
-          if (error.Fail() && error.AsCString())
-            result.AppendWarningWithFormat(
-                "unable to load scripting data for module %s - error "
-                "reported was %s",
-                module_sp->GetFileSpec()
-                    .GetFileNameStrippingExtension()
-                    .GetCString(),
-                error.AsCString());
+          std::list<Status> errors;
+          module_list.LoadScriptingResourcesInTarget(target, errors);
+          for (const auto &err : errors)
+            result.AppendWarning(err.AsCString());
 
           flush = true;
           result.SetStatus(eReturnStatusSuccessFinishResult);

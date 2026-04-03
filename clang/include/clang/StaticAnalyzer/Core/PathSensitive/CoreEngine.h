@@ -51,7 +51,6 @@ class CoreEngine {
   friend class ExprEngine;
   friend class NodeBuilder;
   friend class NodeBuilderContext;
-  friend class SwitchNodeBuilder;
 
 public:
   using BlocksExhausted =
@@ -259,7 +258,7 @@ public:
   NodeBuilder(ExplodedNode *SrcNode, ExplodedNodeSet &DstSet,
               const NodeBuilderContext &Ctx)
       : NodeBuilder(DstSet, Ctx) {
-    Frontier.Add(SrcNode);
+    Frontier.insert(SrcNode);
   }
 
   NodeBuilder(const ExplodedNodeSet &SrcSet, ExplodedNodeSet &DstSet,
@@ -314,7 +313,7 @@ public:
 
   void takeNodes(ExplodedNode *N) { Frontier.erase(N); }
   void addNodes(const ExplodedNodeSet &S) { Frontier.insert(S); }
-  void addNodes(ExplodedNode *N) { Frontier.Add(N); }
+  void addNodes(ExplodedNode *N) { Frontier.insert(N); }
 };
 
 /// BranchNodeBuilder is responsible for constructing the nodes
@@ -330,23 +329,6 @@ public:
 
   ExplodedNode *generateNode(ProgramStateRef State, bool branch,
                              ExplodedNode *Pred);
-};
-
-class SwitchNodeBuilder : public NodeBuilder {
-public:
-  SwitchNodeBuilder(ExplodedNodeSet &DstSet, const NodeBuilderContext &Ctx)
-      : NodeBuilder(DstSet, Ctx) {}
-
-  using iterator = CFGBlock::const_succ_reverse_iterator;
-
-  iterator begin() { return C.getBlock()->succ_rbegin() + 1; }
-  iterator end() { return C.getBlock()->succ_rend(); }
-
-  ExplodedNode *generateCaseStmtNode(const CFGBlock *Block,
-                                     ProgramStateRef State, ExplodedNode *Pred);
-
-  ExplodedNode *generateDefaultCaseNode(ProgramStateRef State,
-                                        ExplodedNode *Pred);
 };
 
 } // namespace ento
