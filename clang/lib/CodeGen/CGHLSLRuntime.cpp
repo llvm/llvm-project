@@ -54,7 +54,6 @@ using namespace clang::hlsl;
 using namespace llvm;
 
 using llvm::hlsl::CBufferRowSizeInBytes;
-using EmbeddedResourceNameBuilder = clang::hlsl::EmbeddedResourceNameBuilder;
 
 namespace {
 
@@ -105,14 +104,14 @@ void addRootSignatureMD(llvm::dxbc::RootSignatureVersion RootSigVer,
 // this function will find the VarDecl of "myStructArray" and use the
 // EmbeddedResourceNameBuilder to build the resource name
 // "myStructArray.0.memberA".
-static const VarDecl *getStructResourceParentDeclAndBuildName(
+static const VarDecl *findStructResourceParentDeclAndBuildName(
     const MemberExpr *ME, EmbeddedResourceNameBuilder &NameBuilder) {
 
   SmallVector<const Expr *> WorkList;
   const VarDecl *VD = nullptr;
   const Expr *E = ME;
 
-  while (!VD) {
+  for (;;) {
     if (const auto *DRE = dyn_cast<DeclRefExpr>(E)) {
       assert(isa<VarDecl>(DRE->getDecl()) &&
              "member expr base is not a var decl");
@@ -128,6 +127,10 @@ static const VarDecl *getStructResourceParentDeclAndBuildName(
       E = ICE->getSubExpr();
     else if (const auto *ASE = dyn_cast<ArraySubscriptExpr>(E))
       E = ASE->getBase();
+    else if (const auto *TE = dyn_cast<CXXThisExpr>(E))
+      // Resource member access on "this" pointer not yet implemented
+      // (llvm/llvm-project#190299)
+      return nullptr;
     else
       llvm_unreachable("unexpected expr type in resource member access");
   }
@@ -166,7 +169,9 @@ findAssociatedResourceDeclForStruct(ASTContext &AST, const MemberExpr *ME) {
 
   EmbeddedResourceNameBuilder NameBuilder;
   const VarDecl *ParentVD =
-      getStructResourceParentDeclAndBuildName(ME, NameBuilder);
+      findStructResourceParentDeclAndBuildName(ME, NameBuilder);
+  if (!ParentVD)
+    return nullptr;
 
   if (!ParentVD->hasGlobalStorage())
     return nullptr;

@@ -5514,11 +5514,9 @@ LValue CodeGenFunction::EmitMemberExpr(const MemberExpr *E) {
 
   if (getLangOpts().HLSL) {
     QualType QT = E->getType();
-    // We have an HLSL buffer - emit using HLSL's layout rules.
     if (QT.getAddressSpace() == LangAS::hlsl_constant)
       return CGM.getHLSLRuntime().emitBufferMemberExpr(*this, E);
 
-    // Resource or resource array member of a global struct/class
     if (QT->isHLSLResourceRecord() || QT->isHLSLResourceRecordArray()) {
       std::optional<LValue> LV;
       LV = CGM.getHLSLRuntime().emitResourceMemberExpr(*this, E);
