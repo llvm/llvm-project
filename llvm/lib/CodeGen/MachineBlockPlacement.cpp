@@ -3538,7 +3538,6 @@ MachineBlockPlacementPass::run(MachineFunction &MF,
   auto *MPDT = MachineBlockPlacement::allowTailDupPlacement(MF)
                    ? &MFAM.getResult<MachinePostDominatorTreeAnalysis>(MF)
                    : nullptr;
-  auto *MDT = MFAM.getCachedResult<MachineDominatorTreeAnalysis>(MF);
   auto *PSI = MFAM.getResult<ModuleAnalysisManagerMachineFunctionProxy>(MF)
                   .getCachedResult<ProfileSummaryAnalysis>(
                       *MF.getFunction().getParent());
@@ -3551,10 +3550,6 @@ MachineBlockPlacementPass::run(MachineFunction &MF,
   if (MBP.run(MF))
     return getMachineFunctionPassPreservedAnalyses();
 
-  if (MDT)
-    MDT->updateBlockNumbers();
-  if (MPDT)
-    MPDT->updateBlockNumbers();
   return PreservedAnalyses::all();
 }
 
@@ -3598,10 +3593,10 @@ bool MachineBlockPlacement::run(MachineFunction &MF) {
   bool UseExtTspForPerf = false;
   bool UseExtTspForSize = false;
   if (3 <= MF.size() && MF.size() <= ExtTspBlockPlacementMaxBlocks) {
-    UseExtTspForPerf =
-        EnableExtTspBlockPlacement &&
-        (ApplyExtTspWithoutProfile || MF.getFunction().hasProfileData());
     UseExtTspForSize = OptForSize && ApplyExtTspForSize;
+    UseExtTspForPerf =
+        !UseExtTspForSize && EnableExtTspBlockPlacement &&
+        (ApplyExtTspWithoutProfile || MF.getFunction().hasProfileData());
   }
 
   // Apply tail duplication.
@@ -3772,11 +3767,6 @@ void MachineBlockPlacement::assignBlockOrder(
     const std::vector<const MachineBasicBlock *> &NewBlockOrder) {
   assert(F->size() == NewBlockOrder.size() && "Incorrect size of block order");
   F->RenumberBlocks();
-  // At this point, we possibly removed blocks from the function, so we can't
-  // renumber the domtree. At this point, we don't need it anymore, though.
-  // TODO: move this to the point where the dominator tree is actually
-  // invalidated (i.e., where blocks are removed without updating the domtree).
-  MPDT = nullptr;
 
   bool HasChanges = false;
   for (size_t I = 0; I < NewBlockOrder.size(); I++) {

@@ -30,6 +30,7 @@
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Overload.h"
+#include "clang/Sema/SemaAMDGPU.h"
 #include "clang/Sema/SemaARM.h"
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaObjC.h"
@@ -2942,6 +2943,8 @@ bool Sema::IsOverflowBehaviorTypeConversion(QualType FromType,
     return false;
 
   if (FromType->isOverflowBehaviorType() && !ToType->isOverflowBehaviorType()) {
+    if (ToType->isBooleanType())
+      return false;
     // Don't allow implicit conversion from OverflowBehaviorType to scoped enum
     if (const EnumType *ToEnumType = ToType->getAs<EnumType>()) {
       const EnumDecl *ToED = ToEnumType->getDecl()->getDefinitionOrSelf();
@@ -6363,12 +6366,13 @@ TryContextuallyConvertToBool(Sema &S, Expr *From) {
 ExprResult Sema::PerformContextuallyConvertToBool(Expr *From) {
   if (checkPlaceholderForOverload(*this, From))
     return ExprError();
+  if (From->getType() == Context.AMDGPUFeaturePredicateTy)
+    return AMDGPU().ExpandAMDGPUPredicateBuiltIn(From);
 
   ImplicitConversionSequence ICS = TryContextuallyConvertToBool(*this, From);
   if (!ICS.isBad())
     return PerformImplicitConversion(From, Context.BoolTy, ICS,
                                      AssignmentAction::Converting);
-
   if (!DiagnoseMultipleUserDefinedConversion(From, Context.BoolTy))
     return Diag(From->getBeginLoc(), diag::err_typecheck_bool_condition)
            << From->getType() << From->getSourceRange();
@@ -6463,6 +6467,14 @@ static ExprResult BuildConvertedConstantExpression(Sema &S, Expr *From,
 
   if (checkPlaceholderForOverload(S, From))
     return ExprError();
+
+  if (From->containsErrors()) {
+    // The expression already has errors, so the correct cast kind can't be
+    // determined. Use RecoveryExpr to keep the expected type T and mark the
+    // result as invalid, preventing further cascading errors.
+    return S.CreateRecoveryExpr(From->getBeginLoc(), From->getEndLoc(), {From},
+                                T);
+  }
 
   // C++1z [expr.const]p3:
   //  A converted constant expression of type T is an expression,
@@ -6575,6 +6587,12 @@ static ExprResult BuildConvertedConstantExpression(Sema &S, Expr *From,
     S.Diag(From->getBeginLoc(), diag::ext_cce_narrowing)
         << CCE << /*Constant*/ 1
         << PreNarrowingValue.getAsString(S.Context, PreNarrowingType) << T;
+    // If this is an SFINAE Context, treat the result as invalid so it stops
+    // substitution at this point, respecting C++26 [temp.deduct.general]p7.
+    // FIXME: Should do this whenever the above diagnostic is an error, but
+    // without further changes this would degrade some other diagnostics.
+    if (S.isSFINAEContext())
+      return ExprError();
     break;
 
   case NK_Dependent_Narrowing:
@@ -6590,6 +6608,8 @@ static ExprResult BuildConvertedConstantExpression(Sema &S, Expr *From,
     // constant expression.
     S.Diag(From->getBeginLoc(), diag::ext_cce_narrowing)
         << CCE << /*Constant*/ 0 << From->getType() << T;
+    if (S.isSFINAEContext())
+      return ExprError();
     break;
   }
   if (!ReturnPreNarrowingValue)
@@ -7464,8 +7484,13 @@ void Sema::AddOverloadCandidate(
       QualType ParamType = Proto->getParamType(ArgIdx);
       auto ParamABI = Proto->getExtParameterInfo(ArgIdx).getABI();
       if (ParamABI == ParameterABI::HLSLOut ||
-          ParamABI == ParameterABI::HLSLInOut)
+          ParamABI == ParameterABI::HLSLInOut) {
         ParamType = ParamType.getNonReferenceType();
+        if (ParamABI == ParameterABI::HLSLInOut &&
+            Args[ArgIdx]->getType().getAddressSpace() ==
+                LangAS::hlsl_groupshared)
+          Diag(Args[ArgIdx]->getBeginLoc(), diag::warn_hlsl_groupshared_inout);
+      }
       Candidate.Conversions[ConvIdx] = TryCopyInitialization(
           *this, Args[ArgIdx], ParamType, SuppressUserConversions,
           /*InOverloadResolution=*/true,
@@ -12195,6 +12220,16 @@ static void DiagnoseBadConversion(Sema &S, OverloadCandidate *Cand,
   if (TakingCandidateAddress && !checkAddressOfCandidateIsAvailable(S, Fn))
     return;
 
+  // __amdgpu_feature_predicate_t can be explicitly cast to the logical op type,
+  // although this is almost always an error and we advise against it.
+  if (FromTy == S.Context.AMDGPUFeaturePredicateTy &&
+      ToTy == S.Context.getLogicalOperationType()) {
+    S.Diag(Conv.Bad.FromExpr->getExprLoc(),
+           diag::err_amdgcn_predicate_type_needs_explicit_bool_cast)
+        << Conv.Bad.FromExpr << ToTy;
+    return;
+  }
+
   // Emit the generic diagnostic and, optionally, add the hints to it.
   PartialDiagnostic FDiag = S.PDiag(diag::note_ovl_candidate_bad_conv);
   FDiag << (unsigned)FnKindPair.first << (unsigned)FnKindPair.second << FnDesc
@@ -12818,7 +12853,9 @@ static void NoteFunctionCandidate(Sema &S, OverloadCandidate *Cand,
 
       S.Diag(Fn->getLocation(), diag::note_ovl_candidate_deleted)
           << (unsigned)FnKindPair.first << (unsigned)FnKindPair.second << FnDesc
-          << (Fn->isDeleted() ? (Fn->isDeletedAsWritten() ? 1 : 2) : 0);
+          << (Fn->isDeleted()
+                  ? (Fn->getCanonicalDecl()->isDeletedAsWritten() ? 1 : 2)
+                  : 0);
       MaybeEmitInheritedConstructorNote(S, Cand->FoundDecl);
       return;
     }

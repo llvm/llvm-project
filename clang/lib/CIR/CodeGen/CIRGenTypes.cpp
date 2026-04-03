@@ -1,5 +1,6 @@
 #include "CIRGenTypes.h"
 
+#include "CIRGenCXXABI.h"
 #include "CIRGenFunctionInfo.h"
 #include "CIRGenModule.h"
 #include "mlir/IR/BuiltinTypes.h"
@@ -69,14 +70,14 @@ bool CIRGenTypes::isFuncTypeConvertible(const FunctionType *ft) {
 mlir::Type CIRGenTypes::convertFunctionTypeInternal(QualType qft) {
   assert(qft.isCanonical());
   const FunctionType *ft = cast<FunctionType>(qft.getTypePtr());
-  // First, check whether we can build the full function type. If the function
-  // type depends on an incomplete type (e.g. a struct or enum), we cannot lower
-  // the function type.
-  if (!isFuncTypeConvertible(ft)) {
-    cgm.errorNYI(SourceLocation(), "function type involving an incomplete type",
-                 qft);
-    return cir::FuncType::get(SmallVector<mlir::Type, 1>{}, cgm.voidTy);
-  }
+
+  // In classic codegen, if the function type depends on an incomplete type
+  // (e.g. a struct or enum), it cannot lower the function type due to ABI
+  // handling requirements and returns a placeholder. In CIR, ABI handling is
+  // deferred until after codegen, and record types are identified by name, so
+  // incomplete record type references in the function type will automatically
+  // see the complete type once the record is defined. We can always produce a
+  // proper function type here.
 
   const CIRGenFunctionInfo *fi;
   if (const auto *fpt = dyn_cast<FunctionProtoType>(ft)) {
@@ -264,10 +265,6 @@ mlir::Type CIRGenTypes::convertRecordDeclType(const clang::RecordDecl *rd) {
   bool eraseResult = recordsBeingLaidOut.erase(key);
   (void)eraseResult;
   assert(eraseResult && "record not in RecordsBeingLaidOut set?");
-
-  // If this record blocked a FunctionType conversion, then recompute whatever
-  // was derived from that.
-  assert(!cir::MissingFeatures::skippedLayout());
 
   // If we're done converting the outer-most record, then convert any deferred
   // records as well.
@@ -602,7 +599,10 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
 
 mlir::Type CIRGenTypes::convertTypeForMem(clang::QualType qualType,
                                           bool forBitField) {
-  assert(!qualType->isConstantMatrixType() && "Matrix types NYI");
+  if (qualType->isConstantMatrixType()) {
+    cgm.errorNYI("Matrix type conversion");
+    return cgm.sInt32Ty;
+  }
 
   mlir::Type convertedType = convertType(qualType);
 
@@ -653,11 +653,12 @@ bool CIRGenTypes::isZeroInitializable(clang::QualType t) {
   if (const auto *rd = t->getAsRecordDecl())
     return isZeroInitializable(rd);
 
-  if (t->getAs<MemberPointerType>()) {
-    cgm.errorNYI(SourceLocation(), "isZeroInitializable for MemberPointerType",
-                 t);
-    return false;
-  }
+  if (const auto *mpt = t->getAs<MemberPointerType>())
+    return theCXXABI.isZeroInitializable(mpt);
+
+  if (t->getAs<HLSLInlineSpirvType>())
+    cgm.errorNYI(SourceLocation(),
+                 "isZeroInitializable for HLSLInlineSpirvType");
 
   return true;
 }
@@ -667,13 +668,15 @@ bool CIRGenTypes::isZeroInitializable(const RecordDecl *rd) {
 }
 
 const CIRGenFunctionInfo &CIRGenTypes::arrangeCIRFunctionInfo(
-    CanQualType returnType, llvm::ArrayRef<CanQualType> argTypes,
-    FunctionType::ExtInfo info, RequiredArgs required) {
+    CanQualType returnType, bool isInstanceMethod,
+    llvm::ArrayRef<CanQualType> argTypes, FunctionType::ExtInfo info,
+    RequiredArgs required) {
   assert(llvm::all_of(argTypes,
                       [](CanQualType t) { return t.isCanonicalAsParam(); }));
   // Lookup or create unique function info.
   llvm::FoldingSetNodeID id;
-  CIRGenFunctionInfo::Profile(id, info, required, returnType, argTypes);
+  CIRGenFunctionInfo::Profile(id, isInstanceMethod, info, required, returnType,
+                              argTypes);
 
   void *insertPos = nullptr;
   CIRGenFunctionInfo *fi = functionInfos.FindNodeOrInsertPos(id, insertPos);
@@ -690,7 +693,8 @@ const CIRGenFunctionInfo &CIRGenTypes::arrangeCIRFunctionInfo(
   assert(!cir::MissingFeatures::opCallCallConv());
 
   // Construction the function info. We co-allocate the ArgInfos.
-  fi = CIRGenFunctionInfo::create(info, returnType, argTypes, required);
+  fi = CIRGenFunctionInfo::create(info, isInstanceMethod, returnType, argTypes,
+                                  required);
   functionInfos.InsertNode(fi, insertPos);
 
   return *fi;

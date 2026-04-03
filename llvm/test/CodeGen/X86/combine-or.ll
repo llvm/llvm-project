@@ -200,37 +200,34 @@ define i64 @or_build_pair_not(i32 %a0, i32 %a1) {
   ret i64 %r
 }
 
-; FIXME: Failure to merge build vectors with common / override elements.
+; Merge build vectors with common / override elements.
 define <4 x i32> @or_build_vector_mixed_ops_v4i32(i32 %a0, i32 %a1, i32 %a2, i32 %a3) {
 ; SSE-LABEL: or_build_vector_mixed_ops_v4i32:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movl $-1, %eax
-; SSE-NEXT:    movd %eax, %xmm0
-; SSE-NEXT:    movd %ecx, %xmm1
-; SSE-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
-; SSE-NEXT:    movd %esi, %xmm2
-; SSE-NEXT:    shufps {{.*#+}} xmm2 = xmm2[1,0],xmm0[0,1]
-; SSE-NEXT:    movd %edx, %xmm3
-; SSE-NEXT:    punpckldq {{.*#+}} xmm3 = xmm3[0],xmm1[0],xmm3[1],xmm1[1]
-; SSE-NEXT:    movd %edi, %xmm0
-; SSE-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm3[0]
-; SSE-NEXT:    por %xmm2, %xmm0
+; SSE-NEXT:    movd %edi, %xmm1
+; SSE-NEXT:    pinsrd $1, %esi, %xmm1
+; SSE-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSE-NEXT:    pblendw {{.*#+}} xmm0 = xmm1[0,1,2,3],xmm0[4,5],xmm1[6,7]
+; SSE-NEXT:    pinsrd $3, %ecx, %xmm0
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: or_build_vector_mixed_ops_v4i32:
-; AVX:       # %bb.0:
-; AVX-NEXT:    movl $-1, %eax
-; AVX-NEXT:    vmovd %eax, %xmm0
-; AVX-NEXT:    vmovd %ecx, %xmm1
-; AVX-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
-; AVX-NEXT:    vmovd %esi, %xmm2
-; AVX-NEXT:    vshufps {{.*#+}} xmm0 = xmm2[1,0],xmm0[0,1]
-; AVX-NEXT:    vmovd %edx, %xmm2
-; AVX-NEXT:    vpunpckldq {{.*#+}} xmm1 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
-; AVX-NEXT:    vmovd %edi, %xmm2
-; AVX-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm2[0],xmm1[0]
-; AVX-NEXT:    vorps %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    retq
+; AVX1-LABEL: or_build_vector_mixed_ops_v4i32:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vmovd %edi, %xmm0
+; AVX1-NEXT:    vpinsrd $1, %esi, %xmm0, %xmm0
+; AVX1-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1,2,3],xmm1[4,5],xmm0[6,7]
+; AVX1-NEXT:    vpinsrd $3, %ecx, %xmm0, %xmm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: or_build_vector_mixed_ops_v4i32:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vmovd %edi, %xmm0
+; AVX2-NEXT:    vpinsrd $1, %esi, %xmm0, %xmm0
+; AVX2-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; AVX2-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0,1],xmm1[2],xmm0[3]
+; AVX2-NEXT:    vpinsrd $3, %ecx, %xmm0, %xmm0
+; AVX2-NEXT:    retq
   %x1 = insertelement <4 x i32> <i32 0, i32 poison, i32 -1, i32 poison>, i32 %a1, i32 1
   %y0 = insertelement <4 x i32> <i32 poison, i32 0, i32 -1, i32 poison>, i32 %a0, i32 0
   %y2 = insertelement <4 x i32> %y0, i32 %a2, i32 2

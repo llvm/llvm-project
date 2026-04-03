@@ -275,7 +275,7 @@ struct Struct {
     // CHECK-NEXT: cir.load
 
     HasSideEffects LocalHSE;
-    // CHECK-NEXT: cir.call{{.*}} : (!cir.ptr<!rec_HasSideEffects>) -> ()
+    // CHECK-NEXT: cir.call{{.*}} : (!cir.ptr<!rec_HasSideEffects>{{.*}}) -> ()
     HasSideEffects LocalHSEArr[5];
     int LocalInt;
 
@@ -338,7 +338,7 @@ void Struct::MemFunc2(HasSideEffects ArgHSE, int ArgInt, HasSideEffects *ArgHSEP
     // CHECK-NEXT: cir.store
     // CHECK-NEXT: cir.load
     HasSideEffects LocalHSE;
-    // CHECK-NEXT: cir.call{{.*}} : (!cir.ptr<!rec_HasSideEffects>) -> ()
+    // CHECK-NEXT: cir.call{{.*}} : (!cir.ptr<!rec_HasSideEffects>{{.*}}) -> ()
     HasSideEffects LocalHSEArr[5];
     // CHECK: do {
     // CHECK: } while {
@@ -406,7 +406,7 @@ extern "C" void NormalFunc(HasSideEffects ArgHSE, int ArgInt, HasSideEffects *Ar
     // CHECK-NEXT: cir.store
     // CHECK-NEXT: cir.store
     HasSideEffects LocalHSE;
-    // CHECK-NEXT: cir.call{{.*}} : (!cir.ptr<!rec_HasSideEffects>) -> ()
+    // CHECK-NEXT: cir.call{{.*}} : (!cir.ptr<!rec_HasSideEffects>{{.*}}) -> ()
     HasSideEffects LocalHSEArr[5];
     // CHECK: do {
     // CHECK: } while {

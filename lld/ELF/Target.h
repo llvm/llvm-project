@@ -32,6 +32,8 @@ class TargetInfo {
 public:
   TargetInfo(Ctx &ctx) : ctx(ctx) {}
   virtual uint32_t calcEFlags() const { return 0; }
+  // Create target-specific synthetic sections, defined in Arch/ files.
+  virtual void initTargetSpecificSections() {}
   virtual RelExpr getRelExpr(RelType type, const Symbol &s,
                              const uint8_t *loc) const = 0;
   virtual RelType getDynRel(RelType type) const { return 0; }
@@ -96,6 +98,12 @@ public:
   template <class ELFT> void scanSection1(InputSectionBase &);
   template <class ELFT, class RelTy>
   void scanSectionImpl(InputSectionBase &, Relocs<RelTy>);
+
+  // Called after parallel relocation scanning is complete but before
+  // postScanRelocations processes symbol flags. Targets may override this to
+  // perform single-threaded fixups that cannot run during parallel scanning
+  // (e.g. symbol table modifications).
+  virtual void finalizeRelocScan() {}
 
   virtual void relocate(uint8_t *loc, const Relocation &rel,
                         uint64_t val) const = 0;

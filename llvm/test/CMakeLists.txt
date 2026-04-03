@@ -66,13 +66,12 @@ set(LLVM_TEST_DEPENDS_COMMON
   count
   llvm-config
   not
+  split-file
   )
 
 set(LLVM_TEST_DEPENDS
   ${LLVM_TEST_DEPENDS_COMMON}
-  BugpointPasses
   LLVMWindowsDriver
-  bugpoint
   llc
   lli
   lli-child-target
@@ -156,7 +155,6 @@ set(LLVM_TEST_DEPENDS
   opt
   sancov
   sanstats
-  split-file
   verify-uselistorder
   yaml-bench
   yaml2obj

@@ -126,7 +126,7 @@ llvm::StringRef DAP::debug_adapter_path = "";
 DAP::DAP(Log &log, const ReplMode default_repl_mode,
          const std::vector<String> &pre_init_commands, bool no_lldbinit,
          llvm::StringRef client_name, DAPTransport &transport, MainLoop &loop)
-    : log(log), transport(transport), reference_storage(log),
+    : log(log), transport(transport), reference_storage(log, configuration),
       broadcaster("lldb-dap"),
       progress_event_reporter(
           [&](const ProgressEvent &event) { SendJSON(event.ToJSON()); }),
@@ -938,7 +938,7 @@ bool DAP::IsCancelled(const protocol::Request &req) {
 void DAP::ClearCancelRequest(const CancelArguments &args) {
   std::lock_guard<std::mutex> guard(m_cancelled_requests_mutex);
   if (args.requestId)
-    m_cancelled_requests.erase(*args.requestId);
+    m_cancelled_requests.erase(args.requestId);
 }
 
 template <typename T>
@@ -969,7 +969,7 @@ void DAP::Received(const protocol::Request &request) {
     {
       std::lock_guard<std::mutex> guard(m_cancelled_requests_mutex);
       if (cancel_args->requestId)
-        m_cancelled_requests.insert(*cancel_args->requestId);
+        m_cancelled_requests.insert(cancel_args->requestId);
     }
 
     // If a cancel is requested for the active request, make a best

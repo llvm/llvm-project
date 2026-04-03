@@ -51,6 +51,12 @@ static bool isPPCBareMetal(const llvm::Triple &Triple) {
          Triple.getEnvironment() == llvm::Triple::EABI;
 }
 
+/// Is the triple {ix86,x86_64}-*-none-elf?
+static bool isX86BareMetal(const llvm::Triple &Triple) {
+  return Triple.isX86() && Triple.getOS() == llvm::Triple::UnknownOS &&
+         Triple.getEnvironmentName() == "elf";
+}
+
 static bool findRISCVMultilibs(const Driver &D,
                                const llvm::Triple &TargetTriple,
                                const ArgList &Args, DetectedMultilibs &Result) {
@@ -351,7 +357,7 @@ void BareMetal::findMultilibs(const Driver &D, const llvm::Triple &Triple,
 bool BareMetal::handlesTarget(const llvm::Triple &Triple) {
   return arm::isARMEABIBareMetal(Triple) ||
          aarch64::isAArch64BareMetal(Triple) || isRISCVBareMetal(Triple) ||
-         isPPCBareMetal(Triple);
+         isPPCBareMetal(Triple) || isX86BareMetal(Triple);
 }
 
 Tool *BareMetal::buildLinker() const {
@@ -456,7 +462,7 @@ void BareMetal::AddClangCXXStdlibIncludeArgs(const ArgList &DriverArgs,
     return;
 
   const Driver &D = getDriver();
-  std::string Target = getTripleString();
+  StringRef Target = getTripleString();
 
   auto AddCXXIncludePath = [&](StringRef Path) {
     std::string Version = detectLibcxxVersion(Path);
@@ -672,11 +678,10 @@ void baremetal::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
 
-  Args.addAllArgs(CmdArgs,
-                  {options::OPT_L, options::OPT_u, options::OPT_T_Group,
-                   options::OPT_s, options::OPT_t, options::OPT_r});
-
+  Args.addAllArgs(CmdArgs, {options::OPT_L});
   TC.AddFilePathLibArgs(Args, CmdArgs);
+  Args.addAllArgs(CmdArgs, {options::OPT_u, options::OPT_T_Group,
+                            options::OPT_s, options::OPT_t, options::OPT_r});
 
   for (const auto &LibPath : TC.getLibraryPaths())
     CmdArgs.push_back(Args.MakeArgString(llvm::Twine("-L", LibPath)));

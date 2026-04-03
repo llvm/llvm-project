@@ -8,6 +8,7 @@ types:
   - type_name: dev_t
   - type_name: gid_t
   - type_name: ino_t
+  - type_name: key_t
   - type_name: mode_t
   - type_name: nlink_t
   - type_name: off_t

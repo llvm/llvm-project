@@ -62,9 +62,10 @@ bool vputils::isHeaderMask(const VPValue *V, const VPlan &Plan) {
 
   VPValue *A, *B;
 
-  auto m_CanonicalScalarIVSteps =
-      m_ScalarIVSteps(m_Specific(Plan.getVectorLoopRegion()->getCanonicalIV()),
-                      m_One(), m_Specific(&Plan.getVF()));
+  auto m_CanonicalScalarIVSteps = m_ScalarIVSteps(
+      m_CombineOr(m_CanonicalIV(),
+                  m_DerivedIV(m_ZeroInt(), m_CanonicalIV(), m_One())),
+      m_One(), m_Specific(&Plan.getVF()));
 
   if (match(V, m_ActiveLaneMask(m_VPValue(A), m_VPValue(B), m_One())))
     return B == Plan.getTripCount() &&
@@ -149,11 +150,10 @@ const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
   }
 
   // Helper to create SCEVs for binary and unary operations.
-  auto CreateSCEV =
-      [&](ArrayRef<VPValue *> Ops,
-          function_ref<const SCEV *(ArrayRef<const SCEV *>)> CreateFn)
+  auto CreateSCEV = [&](ArrayRef<VPValue *> Ops,
+                        function_ref<const SCEV *(ArrayRef<SCEVUse>)> CreateFn)
       -> const SCEV * {
-    SmallVector<const SCEV *, 2> SCEVOps;
+    SmallVector<SCEVUse, 2> SCEVOps;
     for (VPValue *Op : Ops) {
       const SCEV *S = getSCEVExprForVPValue(Op, PSE, L);
       if (isa<SCEVCouldNotCompute>(S))
@@ -165,46 +165,46 @@ const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
 
   VPValue *LHSVal, *RHSVal;
   if (match(V, m_Add(m_VPValue(LHSVal), m_VPValue(RHSVal))))
-    return CreateSCEV({LHSVal, RHSVal}, [&](ArrayRef<const SCEV *> Ops) {
+    return CreateSCEV({LHSVal, RHSVal}, [&](ArrayRef<SCEVUse> Ops) {
       return SE.getAddExpr(Ops[0], Ops[1], SCEV::FlagAnyWrap, 0);
     });
   if (match(V, m_Sub(m_VPValue(LHSVal), m_VPValue(RHSVal))))
-    return CreateSCEV({LHSVal, RHSVal}, [&](ArrayRef<const SCEV *> Ops) {
+    return CreateSCEV({LHSVal, RHSVal}, [&](ArrayRef<SCEVUse> Ops) {
       return SE.getMinusSCEV(Ops[0], Ops[1], SCEV::FlagAnyWrap, 0);
     });
   if (match(V, m_Not(m_VPValue(LHSVal)))) {
     // not X = xor X, -1 = -1 - X
-    return CreateSCEV({LHSVal}, [&](ArrayRef<const SCEV *> Ops) {
+    return CreateSCEV({LHSVal}, [&](ArrayRef<SCEVUse> Ops) {
       return SE.getMinusSCEV(SE.getMinusOne(Ops[0]->getType()), Ops[0]);
     });
   }
   if (match(V, m_Mul(m_VPValue(LHSVal), m_VPValue(RHSVal))))
-    return CreateSCEV({LHSVal, RHSVal}, [&](ArrayRef<const SCEV *> Ops) {
+    return CreateSCEV({LHSVal, RHSVal}, [&](ArrayRef<SCEVUse> Ops) {
       return SE.getMulExpr(Ops[0], Ops[1], SCEV::FlagAnyWrap, 0);
     });
   if (match(V,
             m_Binary<Instruction::UDiv>(m_VPValue(LHSVal), m_VPValue(RHSVal))))
-    return CreateSCEV({LHSVal, RHSVal}, [&](ArrayRef<const SCEV *> Ops) {
+    return CreateSCEV({LHSVal, RHSVal}, [&](ArrayRef<SCEVUse> Ops) {
       return SE.getUDivExpr(Ops[0], Ops[1]);
     });
   // Handle AND with constant mask: x & (2^n - 1) can be represented as x % 2^n.
   const APInt *Mask;
   if (match(V, m_c_BinaryAnd(m_VPValue(LHSVal), m_APInt(Mask))) &&
       (*Mask + 1).isPowerOf2())
-    return CreateSCEV({LHSVal}, [&](ArrayRef<const SCEV *> Ops) {
+    return CreateSCEV({LHSVal}, [&](ArrayRef<SCEVUse> Ops) {
       return SE.getURemExpr(Ops[0], SE.getConstant(*Mask + 1));
     });
   if (match(V, m_Trunc(m_VPValue(LHSVal)))) {
     const VPlan *Plan = V->getDefiningRecipe()->getParent()->getPlan();
     Type *DestTy = VPTypeAnalysis(*Plan).inferScalarType(V);
-    return CreateSCEV({LHSVal}, [&](ArrayRef<const SCEV *> Ops) {
+    return CreateSCEV({LHSVal}, [&](ArrayRef<SCEVUse> Ops) {
       return SE.getTruncateExpr(Ops[0], DestTy);
     });
   }
   if (match(V, m_ZExt(m_VPValue(LHSVal)))) {
     const VPlan *Plan = V->getDefiningRecipe()->getParent()->getPlan();
     Type *DestTy = VPTypeAnalysis(*Plan).inferScalarType(V);
-    return CreateSCEV({LHSVal}, [&](ArrayRef<const SCEV *> Ops) {
+    return CreateSCEV({LHSVal}, [&](ArrayRef<SCEVUse> Ops) {
       return SE.getZeroExtendExpr(Ops[0], DestTy);
     });
   }
@@ -225,35 +225,35 @@ const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
                                SE.getSignExtendExpr(V2, DestTy), SCEV::FlagNSW);
     }
 
-    return CreateSCEV({LHSVal}, [&](ArrayRef<const SCEV *> Ops) {
+    return CreateSCEV({LHSVal}, [&](ArrayRef<SCEVUse> Ops) {
       return SE.getSignExtendExpr(Ops[0], DestTy);
     });
   }
   if (match(V,
             m_Intrinsic<Intrinsic::umax>(m_VPValue(LHSVal), m_VPValue(RHSVal))))
-    return CreateSCEV({LHSVal, RHSVal}, [&](ArrayRef<const SCEV *> Ops) {
+    return CreateSCEV({LHSVal, RHSVal}, [&](ArrayRef<SCEVUse> Ops) {
       return SE.getUMaxExpr(Ops[0], Ops[1]);
     });
   if (match(V,
             m_Intrinsic<Intrinsic::smax>(m_VPValue(LHSVal), m_VPValue(RHSVal))))
-    return CreateSCEV({LHSVal, RHSVal}, [&](ArrayRef<const SCEV *> Ops) {
+    return CreateSCEV({LHSVal, RHSVal}, [&](ArrayRef<SCEVUse> Ops) {
       return SE.getSMaxExpr(Ops[0], Ops[1]);
     });
   if (match(V,
             m_Intrinsic<Intrinsic::umin>(m_VPValue(LHSVal), m_VPValue(RHSVal))))
-    return CreateSCEV({LHSVal, RHSVal}, [&](ArrayRef<const SCEV *> Ops) {
+    return CreateSCEV({LHSVal, RHSVal}, [&](ArrayRef<SCEVUse> Ops) {
       return SE.getUMinExpr(Ops[0], Ops[1]);
     });
   if (match(V,
             m_Intrinsic<Intrinsic::smin>(m_VPValue(LHSVal), m_VPValue(RHSVal))))
-    return CreateSCEV({LHSVal, RHSVal}, [&](ArrayRef<const SCEV *> Ops) {
+    return CreateSCEV({LHSVal, RHSVal}, [&](ArrayRef<SCEVUse> Ops) {
       return SE.getSMinExpr(Ops[0], Ops[1]);
     });
 
   ArrayRef<VPValue *> Ops;
   Type *SourceElementType;
   if (match(V, m_GetElementPtr(SourceElementType, Ops))) {
-    const SCEV *GEPExpr = CreateSCEV(Ops, [&](ArrayRef<const SCEV *> Ops) {
+    const SCEV *GEPExpr = CreateSCEV(Ops, [&](ArrayRef<SCEVUse> Ops) {
       return SE.getGEPExpr(Ops.front(), Ops.drop_front(), SourceElementType);
     });
     return PSE.getPredicatedSCEV(GEPExpr);
@@ -349,6 +349,7 @@ static bool preservesUniformity(unsigned Opcode) {
   case Instruction::Select:
   case VPInstruction::Not:
   case VPInstruction::Broadcast:
+  case VPInstruction::MaskedCond:
   case VPInstruction::PtrAdd:
     return true;
   default:
@@ -410,9 +411,8 @@ bool vputils::isUniformAcrossVFsAndUFs(VPValue *V) {
   }
 
   if (VPRegionBlock *EnclosingRegion = VPBB->getEnclosingLoopRegion()) {
-    auto *CanonicalIV = EnclosingRegion->getCanonicalIV();
-    // Canonical IV chain is uniform.
-    if (V == CanonicalIV || V == CanonicalIV->getBackedgeValue())
+    // Canonical IV is uniform.
+    if (V == EnclosingRegion->getCanonicalIV())
       return true;
   }
 
@@ -432,10 +432,8 @@ bool vputils::isUniformAcrossVFsAndUFs(VPValue *V) {
                all_of(R->operands(), isUniformAcrossVFsAndUFs);
       })
       .Case([](const VPInstruction *VPI) {
-        return (VPI->isScalarCast() &&
-                isUniformAcrossVFsAndUFs(VPI->getOperand(0))) ||
-               (preservesUniformity(VPI->getOpcode()) &&
-                all_of(VPI->operands(), isUniformAcrossVFsAndUFs));
+        return preservesUniformity(VPI->getOpcode()) &&
+               all_of(VPI->operands(), isUniformAcrossVFsAndUFs);
       })
       .Case([](const VPWidenCastRecipe *R) {
         // A cast is uniform according to its operand.
@@ -472,58 +470,64 @@ unsigned vputils::getVFScaleFactor(VPRecipeBase *R) {
 }
 
 std::optional<VPValue *>
-vputils::getRecipesForUncountableExit(VPlan &Plan,
-                                      SmallVectorImpl<VPRecipeBase *> &Recipes,
-                                      SmallVectorImpl<VPRecipeBase *> &GEPs) {
-  // Given a VPlan like the following (just including the recipes contributing
-  // to loop control exiting here, not the actual work), we're looking to match
-  // the recipes contributing to the uncountable exit condition comparison
-  // (here, vp<%4>) back to either live-ins or the address nodes for the load
-  // used as part of the uncountable exit comparison so that we can copy them
-  // to a preheader and rotate the address in the loop to the next vector
-  // iteration.
+vputils::getRecipesForUncountableExit(SmallVectorImpl<VPInstruction *> &Recipes,
+                                      SmallVectorImpl<VPInstruction *> &GEPs,
+                                      VPBasicBlock *LatchVPBB) {
+  // Given a plain CFG VPlan loop with countable latch exiting block
+  // \p LatchVPBB, we're looking to match the recipes contributing to the
+  // uncountable exit condition comparison (here, vp<%4>) back to either
+  // live-ins or the address nodes for the load used as part of the uncountable
+  // exit comparison so that we can either move them within the loop, or copy
+  // them to the preheader depending on the chosen method for dealing with
+  // stores in uncountable exit loops.
   //
   // Currently, the address of the load is restricted to a GEP with 2 operands
   // and a live-in base address. This constraint may be relaxed later.
   //
   // VPlan ' for UF>=1' {
-  // Live-in vp<%0> = VF
-  // Live-in ir<64> = original trip-count
+  // Live-in vp<%0> = VF * UF
+  // Live-in vp<%1> = vector-trip-count
+  // Live-in ir<20> = original trip-count
   //
-  // entry:
-  // Successor(s): preheader, vector.ph
+  // ir-bb<entry>:
+  // Successor(s): scalar.ph, vector.ph
   //
   // vector.ph:
-  // Successor(s): vector loop
+  // Successor(s): for.body
   //
-  // <x1> vector loop: {
-  //   vector.body:
-  //     EMIT vp<%2> = CANONICAL-INDUCTION ir<0>
-  //     vp<%3> = SCALAR-STEPS vp<%2>, ir<1>, vp<%0>
-  //     CLONE ir<%ee.addr> = getelementptr ir<0>, vp<%3>
-  //     WIDEN ir<%ee.load> = load ir<%ee.addr>
-  //     WIDEN vp<%4> = icmp eq ir<%ee.load>, ir<0>
-  //     EMIT vp<%5> = any-of vp<%4>
-  //     EMIT vp<%6> = add vp<%2>, vp<%0>
-  //     EMIT vp<%7> = icmp eq vp<%6>, ir<64>
-  //     EMIT branch-on-two-conds vp<%5>, vp<%7>
-  //   No successors
-  // }
-  // Successor(s): early.exit, middle.block
+  // for.body:
+  //   EMIT vp<%2> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
+  //   EMIT-SCALAR ir<%iv> = phi [ ir<0>, vector.ph ], [ ir<%iv.next>, for.inc ]
+  //   EMIT ir<%uncountable.addr> = getelementptr inbounds nuw ir<%pred>,ir<%iv>
+  //   EMIT ir<%uncountable.val> = load ir<%uncountable.addr>
+  //   EMIT ir<%uncountable.cond> = icmp sgt ir<%uncountable.val>, ir<500>
+  //   EMIT vp<%3> = masked-cond ir<%uncountable.cond>
+  // Successor(s): for.inc
+  //
+  // for.inc:
+  //   EMIT ir<%iv.next> = add nuw nsw ir<%iv>, ir<1>
+  //   EMIT ir<%countable.cond> = icmp eq ir<%iv.next>, ir<20>
+  //   EMIT vp<%index.next> = add nuw vp<%2>, vp<%0>
+  //   EMIT vp<%4> = any-of ir<%3>
+  //   EMIT vp<%5> = icmp eq vp<%index.next>, vp<%1>
+  //   EMIT vp<%6> = or vp<%4>, vp<%5>
+  //   EMIT branch-on-cond vp<%6>
+  // Successor(s): middle.block, for.body
   //
   // middle.block:
-  // Successor(s): preheader
+  // Successor(s): ir-bb<exit>, scalar.ph
   //
-  // preheader:
+  // ir-bb<exit>:
   // No successors
+  //
+  // scalar.ph:
   // }
 
   // Find the uncountable loop exit condition.
-  auto *Region = Plan.getVectorLoopRegion();
   VPValue *UncountableCondition = nullptr;
-  if (!match(Region->getExitingBasicBlock()->getTerminator(),
-             m_BranchOnTwoConds(m_AnyOf(m_VPValue(UncountableCondition)),
-                                m_VPValue())))
+  if (!match(LatchVPBB->getTerminator(),
+             m_BranchOnCond(m_c_BinaryOr(
+                 m_AnyOf(m_VPValue(UncountableCondition)), m_VPValue()))))
     return std::nullopt;
 
   SmallVector<VPValue *, 4> Worklist;
@@ -546,23 +550,31 @@ vputils::getRecipesForUncountableExit(VPlan &Plan,
     if (match(V, m_ICmp(m_VPValue(Op1), m_VPValue(Op2)))) {
       Worklist.push_back(Op1);
       Worklist.push_back(Op2);
-      Recipes.push_back(V->getDefiningRecipe());
-    } else if (auto *Load = dyn_cast<VPWidenLoadRecipe>(V)) {
-      // Reject masked loads for the time being; they make the exit condition
-      // more complex.
-      if (Load->isMasked())
+      Recipes.push_back(cast<VPInstruction>(V->getDefiningRecipe()));
+    } else if (match(V, m_VPInstruction<Instruction::Load>(m_VPValue(Op1)))) {
+      VPRecipeBase *GepR = Op1->getDefiningRecipe();
+      // Only matching base + single offset term for now.
+      if (GepR->getNumOperands() != 2)
         return std::nullopt;
-
-      VPValue *GEP = Load->getAddr();
-      if (!match(GEP, m_GetElementPtr(m_LiveIn(), m_VPValue())))
+      // Matching a GEP with a loop-invariant base ptr.
+      if (!match(GepR, m_VPInstruction<Instruction::GetElementPtr>(
+                           m_LiveIn(), m_VPValue())))
         return std::nullopt;
-
-      Recipes.push_back(Load);
-      Recipes.push_back(GEP->getDefiningRecipe());
-      GEPs.push_back(GEP->getDefiningRecipe());
+      Recipes.push_back(cast<VPInstruction>(V->getDefiningRecipe()));
+      Recipes.push_back(cast<VPInstruction>(GepR));
+      GEPs.push_back(cast<VPInstruction>(GepR));
+    } else if (match(V, m_VPInstruction<VPInstruction::MaskedCond>(
+                            m_VPValue(Op1)))) {
+      Worklist.push_back(Op1);
+      Recipes.push_back(cast<VPInstruction>(V->getDefiningRecipe()));
     } else
       return std::nullopt;
   }
+
+  // If we couldn't match anything, don't return the condition. It may be
+  // defined outside the loop.
+  if (Recipes.empty() || GEPs.empty())
+    return std::nullopt;
 
   return UncountableCondition;
 }
@@ -607,6 +619,27 @@ VPSingleDefRecipe *vputils::findHeaderMask(VPlan &Plan) {
     }
   }
   return HeaderMask;
+}
+
+SmallVector<VPBasicBlock *>
+VPBlockUtils::blocksInSingleSuccessorChainBetween(VPBasicBlock *FirstBB,
+                                                  VPBasicBlock *LastBB) {
+  assert(FirstBB->getParent() == LastBB->getParent() &&
+         "FirstBB and LastBB from different regions");
+#ifndef NDEBUG
+  bool InSingleSuccChain = false;
+  for (VPBlockBase *Succ = FirstBB; Succ; Succ = Succ->getSingleSuccessor())
+    InSingleSuccChain |= (Succ == LastBB);
+  assert(InSingleSuccChain &&
+         "LastBB unreachable from FirstBB in single-successor chain");
+#endif
+  auto Blocks = to_vector(
+      VPBlockUtils::blocksOnly<VPBasicBlock>(vp_depth_first_deep(FirstBB)));
+  auto *LastIt = find(Blocks, LastBB);
+  assert(LastIt != Blocks.end() &&
+         "LastBB unreachable from FirstBB in depth-first traversal");
+  Blocks.erase(std::next(LastIt), Blocks.end());
+  return Blocks;
 }
 
 bool VPBlockUtils::isHeader(const VPBlockBase *VPB,

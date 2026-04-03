@@ -147,6 +147,7 @@ LogicalResult spirv::Deserializer::processInstruction(
     return processMemoryModel(operands);
   case spirv::Opcode::OpEntryPoint:
   case spirv::Opcode::OpExecutionMode:
+  case spirv::Opcode::OpExecutionModeId:
     if (deferInstructions) {
       deferredInstructions.emplace_back(opcode, operands);
       return success();
@@ -447,6 +448,42 @@ Deserializer::processOp<spirv::ExecutionModeOp>(ArrayRef<uint32_t> words) {
   }
   auto values = opBuilder.getArrayAttr(attrListElems);
   spirv::ExecutionModeOp::create(
+      opBuilder, unknownLoc,
+      SymbolRefAttr::get(opBuilder.getContext(), fn.getName()), execMode,
+      values);
+  return success();
+}
+
+template <>
+LogicalResult
+Deserializer::processOp<spirv::ExecutionModeIdOp>(ArrayRef<uint32_t> words) {
+  unsigned wordIndex = 0;
+  unsigned const wordsSize = words.size();
+  if (wordIndex >= wordsSize)
+    return emitError(unknownLoc,
+                     "missing function result <id> in OpExecutionModeId");
+
+  // Get the function <id> to get the name of the function.
+  uint32_t fnID = words[wordIndex++];
+  FuncOp fn = getFunction(fnID);
+  if (!fn)
+    return emitError(unknownLoc, "no function matching <id> ") << fnID;
+
+  // Get the Execution mode.
+  if (wordIndex >= wordsSize)
+    return emitError(unknownLoc, "missing Execution Mode in OpExecutionModeId");
+
+  ExecutionModeAttr execMode = spirv::ExecutionModeAttr::get(
+      context, static_cast<spirv::ExecutionMode>(words[wordIndex++]));
+
+  // Get the values.
+  SmallVector<Attribute, 4> attrListElems;
+  while (wordIndex < words.size()) {
+    std::string id = getSpecConstantSymbol(words[wordIndex++]);
+    attrListElems.push_back(FlatSymbolRefAttr::get(context, id));
+  }
+  ArrayAttr values = opBuilder.getArrayAttr(attrListElems);
+  spirv::ExecutionModeIdOp::create(
       opBuilder, unknownLoc,
       SymbolRefAttr::get(opBuilder.getContext(), fn.getName()), execMode,
       values);

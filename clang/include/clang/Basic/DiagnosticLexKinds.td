@@ -769,7 +769,9 @@ def err_paste_at_start : Error<
   "'##' cannot appear at start of macro expansion">;
 def err_paste_at_end : Error<"'##' cannot appear at end of macro expansion">;
 def ext_paste_comma : Extension<
-  "token pasting of ',' and __VA_ARGS__ is a GNU extension">, InGroup<GNUZeroVariadicMacroArguments>;
+  "token pasting of ',' and '__VA_ARGS__' is a GNU extension%select{|; "
+  "consider using '__VA_OPT__(,)' instead}0">,
+  InGroup<GNUZeroVariadicMacroArguments>;
 def err_unterm_macro_invoc : Error<
   "unterminated function-like macro invocation">;
 def err_too_many_args_in_macro_invoc : Error<
@@ -996,6 +998,10 @@ def warn_non_modular_include_in_module : Warning<
 def warn_module_conflict : Warning<
   "module '%0' conflicts with already-imported module '%1': %2">,
   InGroup<ModuleConflict>;
+def warn_mmap_path_outside_directory : Warning<
+  "path refers outside of the module directory; such paths in implicitly "
+  "discovered module maps are deprecated">,
+  InGroup<DiagGroup<"module-map-path-outside-directory">>, DefaultIgnore;
 
 // C++20 modules
 def err_pp_module_name_is_macro : Error<

@@ -1,4 +1,5 @@
 # RUN: llc -global-isel=1 -O0 -run-pass=aarch64-O0-prelegalizer-combiner %s -o - -verify-machineinstrs | FileCheck %s --check-prefix=CHECK
+# RUN: llc -global-isel=1 -O0 -passes='require<libcall-lowering-info>,function(machine-function(aarch64-O0-prelegalizer-combiner))' %s -o - | FileCheck %s --check-prefix=CHECK
 
 --- |
   ; ModuleID = 'salvage-debug-info-dead.mir'

@@ -1837,6 +1837,11 @@ Decl *CXXRecordDecl::getLambdaContextDecl() const {
   return getLambdaData().ContextDecl.get(Source);
 }
 
+void CXXRecordDecl::setLambdaContextDecl(Decl *ContextDecl) {
+  assert(isLambda() && "Not a lambda closure type!");
+  getLambdaData().ContextDecl = ContextDecl;
+}
+
 void CXXRecordDecl::setLambdaNumbering(LambdaNumbering Numbering) {
   assert(isLambda() && "Not a lambda closure type!");
   getLambdaData().ManglingNumber = Numbering.ManglingNumber;
@@ -1844,7 +1849,6 @@ void CXXRecordDecl::setLambdaNumbering(LambdaNumbering Numbering) {
     getASTContext().DeviceLambdaManglingNumbers[this] =
         Numbering.DeviceManglingNumber;
   getLambdaData().IndexInContext = Numbering.IndexInContext;
-  getLambdaData().ContextDecl = Numbering.ContextDecl;
   getLambdaData().HasKnownInternalLinkage = Numbering.HasKnownInternalLinkage;
 }
 
@@ -2764,6 +2768,40 @@ bool CXXMethodDecl::isMoveAssignmentOperator() const {
   ASTContext &Context = getASTContext();
   CanQualType ClassType = Context.getCanonicalTagType(getParent());
   return Context.hasSameUnqualifiedType(ClassType, ParamType);
+}
+
+bool CXXMethodDecl::isCopyOrMoveConstructor() const {
+  if (const auto *Ctor = dyn_cast<CXXConstructorDecl>(this))
+    return Ctor->isCopyOrMoveConstructor();
+  return false;
+}
+
+bool CXXMethodDecl::isCopyOrMoveConstructorOrAssignment() const {
+  return isCopyOrMoveConstructor() || isCopyAssignmentOperator() ||
+         isMoveAssignmentOperator();
+}
+
+bool CXXMethodDecl::isMemcpyEquivalentSpecialMember(
+    const ASTContext &Ctx) const {
+  if (!isCopyOrMoveConstructorOrAssignment())
+    return false;
+
+  // Non-trivially-copyable fields with pointer field protection need to be
+  // copied one by one.
+  const CXXRecordDecl *Parent = getParent();
+  if (!Ctx.arePFPFieldsTriviallyCopyable(Parent) &&
+      Ctx.hasPFPFields(Ctx.getCanonicalTagType(Parent)))
+    return false;
+
+  // We can emit a memcpy for a trivial copy or move constructor/assignment.
+  if (isTrivial() && !Parent->mayInsertExtraPadding())
+    return true;
+
+  // We *must* emit a memcpy for a defaulted union copy or move op.
+  if (Parent->isUnion() && isDefaulted())
+    return true;
+
+  return false;
 }
 
 void CXXMethodDecl::addOverriddenMethod(const CXXMethodDecl *MD) {

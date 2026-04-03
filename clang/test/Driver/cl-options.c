@@ -579,10 +579,11 @@
 // ZGMLT: "-debug-info-kind=line-tables-only"
 
 // RUN: %clang_cl /c -### -- %s 2>&1 | FileCheck -check-prefix=BreproDefault %s
-// BreproDefault: "-mincremental-linker-compatible"
+// BreproDefault-NOT: "-mincremental-linker-compatible"
+// BreproDefault-NOT: "-mno-incremental-linker-compatible"
 
 // RUN: %clang_cl /Brepro- /Brepro /c '-###' -- %s 2>&1 | FileCheck -check-prefix=Brepro %s
-// Brepro-NOT: "-mincremental-linker-compatible"
+// Brepro: "-mno-incremental-linker-compatible"
 
 // RUN: %clang_cl /Brepro /Brepro- /c '-###' -- %s 2>&1 | FileCheck -check-prefix=Brepro_ %s
 // Brepro_: "-mincremental-linker-compatible"
@@ -671,13 +672,26 @@
 
 // RUN: %clang_cl /guard:cf /guard:ehcont -Wall -Wno-msvc-not-found -### -- %s 2>&1 | \
 // RUN:   FileCheck -check-prefix=BOTHGUARD %s --implicit-check-not=warning:
-// BOTHGUARD: -cfguard
-// BOTHGUARD-SAME: -ehcontguard
+// BOTHGUARD: -ehcontguard
+// BOTHGUARD-SAME: -cfguard
 // BOTHGUARD: -guard:cf
 // BOTHGUARD-SAME: -guard:ehcont
 
 // RUN: not %clang_cl /guard:foo -### -- %s 2>&1 | FileCheck -check-prefix=CFGUARDINVALID %s
 // CFGUARDINVALID: invalid value 'foo' in '/guard:'
+
+// /d2guardnochecks downgrades /guard:cf to table-only (no-checks).
+// RUN: %clang_cl /guard:cf /d2guardnochecks -### -- %s 2>&1 | FileCheck -check-prefix=D2GUARDNOCHECKS %s
+// D2GUARDNOCHECKS-NOT: "-cfguard"
+// D2GUARDNOCHECKS: "-cfguard-no-checks"
+
+// /d2guardnochecks is a no-op without /guard:cf.
+// RUN: %clang_cl /d2guardnochecks -### -- %s 2>&1 | FileCheck -check-prefix=D2GUARDNOCHECKS-NOOP %s
+// D2GUARDNOCHECKS-NOOP-NOT: -cfguard
+
+// /d2guardnochecks with /guard:cf,nochecks stays as nochecks.
+// RUN: %clang_cl /guard:cf,nochecks /d2guardnochecks -### -- %s 2>&1 | FileCheck -check-prefix=D2GUARDNOCHECKS-ALREADY %s
+// D2GUARDNOCHECKS-ALREADY: -cfguard-no-checks
 
 // Accept "core" clang options.
 // (/Zs is for syntax-only, -Werror makes it fail hard on unknown options)

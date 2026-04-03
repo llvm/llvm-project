@@ -69,6 +69,7 @@ class Process;
 class Stream;
 class SymbolContext;
 class Target;
+class Debugger;
 
 #ifndef NDEBUG
 /// Global properties used in the LLDB testsuite.
@@ -76,6 +77,19 @@ struct TestingProperties : public Properties {
   TestingProperties();
   bool GetInjectVarLocListError() const;
   static TestingProperties &GetGlobalTestingProperties();
+
+  /// Overwrites the testing.safe-auto-load-paths settings.
+  void SetSafeAutoLoadPaths(FileSpecList paths);
+
+  /// Appends a path to the testing.safe-auto-load-paths setting.
+  void AppendSafeAutoLoadPaths(FileSpec path);
+
+private:
+  friend Debugger;
+
+  /// Callers should use Debugger::GetSafeAutoLoadPaths since it
+  /// accounts for default paths configured via CMake.
+  FileSpecList GetSafeAutoLoadPaths() const;
 };
 #endif
 
@@ -99,10 +113,6 @@ public:
   static lldb::DebuggerSP
   CreateInstance(lldb::LogOutputCallback log_callback = nullptr,
                  void *baton = nullptr);
-
-  static lldb::TargetSP FindTargetWithProcessID(lldb::pid_t pid);
-
-  static lldb::TargetSP FindTargetWithProcess(Process *process);
 
   static void Initialize(LoadPluginCallbackType load_plugin_callback);
 
@@ -134,6 +144,12 @@ public:
 
   static void AssertCallback(llvm::StringRef message, llvm::StringRef backtrace,
                              llvm::StringRef prompt);
+
+  /// Get the list of paths that LLDB will consider automatically loading
+  /// scripting resources from. Currently whether to load scripts
+  /// unconditionally is controlled via the
+  /// `target.load-script-from-symbol-file` setting.
+  static FileSpecList GetSafeAutoLoadPaths();
 
   void Clear();
 

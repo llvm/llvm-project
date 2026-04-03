@@ -911,6 +911,15 @@ def : Pat<(vec.vt (xor (and (xor (vec.vt V128:$v1), (vec.vt V128:$v2)),
                        (vec.vt V128:$v2))),
           (BITSELECT $v2, $v1, $c)>;
 
+// vselect(cond, vnot(X), zero) => andnot(cond, X)
+// DAGCombiner converts and(vnot(X), sext(cmp)) into vselect(cmp, vnot(X), zero)
+// which the generic vselect pattern below lowers to v128.not + v128.bitselect.
+// Match it first and emit a single v128.andnot instead.
+foreach vec = IntVecs in
+def : Pat<(vec.vt (vselect
+            (vec.int_vt V128:$c), (vnot (vec.vt V128:$x)), immAllZerosV)),
+          (ANDNOT $c, $x)>;
+
 // Also implement vselect in terms of bitselect
 foreach vec = StdVecs in
 def : Pat<(vec.vt (vselect
@@ -999,7 +1008,9 @@ defvar inst = !cast<NI>(reduction[1]);
 defvar vec = !cast<Vec>(reduction[2]);
 def : Pat<(i32 (and (i32 (intrinsic (vec.vt V128:$x))), (i32 1))), (inst $x)>;
 def : Pat<(i32 (setne (i32 (intrinsic (vec.vt V128:$x))), (i32 0))), (inst $x)>;
+def : Pat<(i32 (setne (i32 (intrinsic (vec.vt V128:$x))), (i32 1))), (i32 (EQZ_I32 (inst $x)))>;
 def : Pat<(i32 (seteq (i32 (intrinsic (vec.vt V128:$x))), (i32 1))), (inst $x)>;
+def : Pat<(i32 (seteq (i32 (intrinsic (vec.vt V128:$x))), (i32 0))), (i32 (EQZ_I32 (inst $x)))>;
 }
 
 multiclass SIMDBitmask<Vec vec, bits<32> simdop> {
@@ -1358,7 +1369,7 @@ multiclass PMinMaxInt<Vec vec, NI baseMinInst, NI baseMaxInst> {
 // the wasm_simd128.h intrinsics because v128_t is an integer vector.
 foreach vec = [F32x4, F64x2, F16x8] in {
   defvar pmin = !cast<NI>("PMIN_"#vec);
-  defvar pmax = !cast<NI>("PMAX_"#vec); 
+  defvar pmax = !cast<NI>("PMAX_"#vec);
   defm : PMinMaxInt<vec, pmin, pmax>;
 }
 
@@ -1546,7 +1557,7 @@ def : Pat<(v4i32 (int_wasm_extadd_pairwise_signed (v8i16 V128:$in))),
 def : Pat<(v8i16 (int_wasm_extadd_pairwise_signed (v16i8 V128:$in))),
           (extadd_pairwise_s_I16x8 V128:$in)>;
 
-multiclass ExtAddPairwiseShuffle<ValueType from_ty, ValueType to_ty, string suffix,
+multiclass ExtAddPairwiseExtendShuffle<ValueType from_ty, ValueType to_ty, string suffix,
                               int a0, int a1, int a2, int a3, int a4, int a5, int a6, int a7,
                               int b0, int b1, int b2, int b3, int b4, int b5, int b6, int b7> {
   foreach sign = ["s", "u"] in {
@@ -1565,12 +1576,61 @@ multiclass ExtAddPairwiseShuffle<ValueType from_ty, ValueType to_ty, string suff
   }
 }
 
-defm : ExtAddPairwiseShuffle<v8i16, v4i32, "I32x4",
+defm : ExtAddPairwiseExtendShuffle<v8i16, v4i32, "I32x4",
                          0, 1, 4, 5, 8, 9, 12, 13,
                          2, 3, 6, 7, 10, 11, 14, 15>;
-defm : ExtAddPairwiseShuffle<v16i8, v8i16, "I16x8",
+defm : ExtAddPairwiseExtendShuffle<v16i8, v8i16, "I16x8",
                          0, 2, 4, 6, 8, 10, 12, 14,
                          1, 3, 5, 7, 9, 11, 13, 15>;
+
+multiclass ExtAddPairwiseShuffleExtend<ValueType from_ty, ValueType to_ty, string suffix,
+                                       int a0,  int a1,  int a2,  int a3,
+                                       int a4,  int a5,  int a6,  int a7,
+                                       int a8,  int a9,  int a10, int a11,
+                                       int a12, int a13, int a14, int a15,
+                                       int b0,  int b1,  int b2,  int b3,
+                                       int b4,  int b5,  int b6,  int b7,
+                                       int b8,  int b9,  int b10, int b11,
+                                       int b12, int b13, int b14, int b15> {
+  foreach sign = ["s", "u"] in {
+    def : Pat<(to_ty (add
+                      (wasm_shuffle
+                        (to_ty (!cast<SDNode>("extend_low_"#sign)  (from_ty V128:$vec))),
+                        (to_ty (!cast<SDNode>("extend_high_"#sign) (from_ty V128:$vec))),
+                        (i32 a0),  (i32 a1),  (i32 a2),  (i32 a3),
+                        (i32 a4),  (i32 a5),  (i32 a6),  (i32 a7),
+                        (i32 a8),  (i32 a9),  (i32 a10), (i32 a11),
+                        (i32 a12), (i32 a13), (i32 a14), (i32 a15)),
+                      (wasm_shuffle
+                        (to_ty (!cast<SDNode>("extend_low_"#sign)  (from_ty V128:$vec))),
+                        (to_ty (!cast<SDNode>("extend_high_"#sign) (from_ty V128:$vec))),
+                        (i32 b0),  (i32 b1),  (i32 b2),  (i32 b3),
+                        (i32 b4),  (i32 b5),  (i32 b6),  (i32 b7),
+                        (i32 b8),  (i32 b9),  (i32 b10), (i32 b11),
+                        (i32 b12), (i32 b13), (i32 b14), (i32 b15)))),
+              (!cast<Instruction>("extadd_pairwise_"#sign#"_"#suffix) V128:$vec)>;
+  }
+}
+
+defm : ExtAddPairwiseShuffleExtend<v8i16, v4i32, "I32x4",
+                                   0,  1,  2,  3,
+                                   8,  9,  10, 11,
+                                   16, 17, 18, 19,
+                                   24, 25, 26, 27,
+                                   4,  5,  6,  7,
+                                   12, 13, 14, 15,
+                                   20, 21, 22, 23,
+                                   28, 29, 30, 31>;
+
+defm : ExtAddPairwiseShuffleExtend<v16i8, v8i16, "I16x8",
+                                   0,  1,  4,  5,
+                                   8,  9,  12, 13,
+                                   16, 17, 20, 21,
+                                   24, 25, 28, 29,
+                                   2,  3,  6,  7,
+                                   10, 11, 14, 15,
+                                   18, 19, 22, 23,
+                                   26, 27, 30, 31>;
 
 // f64x2 <-> f32x4 conversions
 def demote_t : SDTypeProfile<1, 1, [SDTCisVec<0>, SDTCisVec<1>]>;
@@ -1782,21 +1842,21 @@ def relaxed_fmax : SDNode<"WebAssemblyISD::RELAXED_FMAX", SDTFPBinOp>;
 def relaxed_pmin :
   PatFrag<(ops node:$lhs, node:$rhs), (pmin $lhs, $rhs), [{
   return (N->getFlags().hasNoNaNs() ||
-          (CurDAG->isKnownNeverNaN(N->getOperand(0)) &&
-           CurDAG->isKnownNeverNaN(N->getOperand(1)))) &&
+          (CurDAG->isKnownNeverNaN(N->getOperand(1)) &&
+           CurDAG->isKnownNeverNaN(N->getOperand(2)))) &&
          (N->getFlags().hasNoSignedZeros() ||
-          CurDAG->isKnownNeverZeroFloat(N->getOperand(0)) ||
-          CurDAG->isKnownNeverZeroFloat(N->getOperand(1)));
+          CurDAG->isKnownNeverZeroFloat(N->getOperand(1)) ||
+          CurDAG->isKnownNeverZeroFloat(N->getOperand(2)));
 }]>;
 
 def relaxed_pmax :
   PatFrag<(ops node:$lhs, node:$rhs), (pmax $lhs, $rhs), [{
   return (N->getFlags().hasNoNaNs() ||
-          (CurDAG->isKnownNeverNaN(N->getOperand(0)) &&
-           CurDAG->isKnownNeverNaN(N->getOperand(1)))) &&
+          ((CurDAG->isKnownNeverNaN(N->getOperand(1))) &&
+           CurDAG->isKnownNeverNaN(N->getOperand(2)))) &&
          (N->getFlags().hasNoSignedZeros() ||
-          CurDAG->isKnownNeverZeroFloat(N->getOperand(0)) ||
-          CurDAG->isKnownNeverZeroFloat(N->getOperand(1)));
+          CurDAG->isKnownNeverZeroFloat(N->getOperand(1)) ||
+          CurDAG->isKnownNeverZeroFloat(N->getOperand(2)));
 }]>;
 
 let Predicates = [HasRelaxedSIMD] in {

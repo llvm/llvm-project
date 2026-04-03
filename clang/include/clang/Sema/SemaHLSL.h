@@ -132,6 +132,8 @@ public:
   bool ActOnUninitializedVarDecl(VarDecl *D);
   void ActOnEndOfTranslationUnit(TranslationUnitDecl *TU);
   void CheckEntryPoint(FunctionDecl *FD);
+
+  // Return true if everything is ok; returns false if there was an error.
   bool CheckResourceBinOp(BinaryOperatorKind Opc, Expr *LHSExpr, Expr *RHSExpr,
                           SourceLocation Loc);
 
@@ -188,6 +190,7 @@ public:
   void handleSemanticAttr(Decl *D, const ParsedAttr &AL);
 
   void handleVkExtBuiltinInputAttr(Decl *D, const ParsedAttr &AL);
+  void handleVkExtBuiltinOutputAttr(Decl *D, const ParsedAttr &AL);
   void handleVkPushConstantAttr(Decl *D, const ParsedAttr &AL);
 
   bool CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall);
@@ -200,6 +203,9 @@ public:
   bool IsTypedResourceElementCompatible(QualType T1);
 
   bool CheckCompatibleParameterABI(FunctionDecl *New, FunctionDecl *Old);
+
+  QualType ActOnTemplateShorthand(TemplateDecl *Template,
+                                  SourceLocation NameLoc);
 
   // Diagnose whether the input ID is uint/unit2/uint3 type.
   bool diagnoseInputIDType(QualType T, const ParsedAttr &AL);
@@ -220,6 +226,13 @@ public:
                                 const IdentifierInfo *CompName,
                                 SourceLocation CompLoc);
 
+  uint32_t getNextImplicitBindingOrderID() {
+    return ImplicitBindingNextOrderID++;
+  }
+
+  bool initGlobalResourceDecl(VarDecl *VD);
+  bool initGlobalResourceArrayDecl(VarDecl *VD);
+
 private:
   // HLSL resource type attributes need to be processed all at once.
   // This is a list to collect them.
@@ -233,6 +246,12 @@ private:
 
   // List of all resource bindings
   ResourceBindings Bindings;
+
+  // Map of local resource variables to their assigned global resources.
+  //
+  // The binding can be a nullptr, in which case, the variable has yet to be
+  // initialized or assigned to.
+  llvm::DenseMap<const VarDecl *, const DeclBindingInfo *> Assigns;
 
   // Global declaration collected for the $Globals default constant
   // buffer which will be created at the end of the translation unit.
@@ -307,12 +326,16 @@ private:
       const Attr *A, llvm::Triple::EnvironmentType Stage, IOType CurrentIOType,
       std::initializer_list<SemanticStageInfo> AllowedStages);
 
-  uint32_t getNextImplicitBindingOrderID() {
-    return ImplicitBindingNextOrderID++;
-  }
+  void handleGlobalStructOrArrayOfWithResources(VarDecl *VD);
 
-  bool initGlobalResourceDecl(VarDecl *VD);
-  bool initGlobalResourceArrayDecl(VarDecl *VD);
+  // Infer a common global binding info for an Expr
+  //
+  // Returns std::nullopt if the expr refers to non-unique global bindings.
+  // Returns nullptr if it refer to any global binding, otherwise it returns
+  // a reference to the global binding info.
+  std::optional<const DeclBindingInfo *> inferGlobalBinding(Expr *E);
+
+  void trackLocalResource(VarDecl *VDecl, Expr *E);
 };
 
 } // namespace clang

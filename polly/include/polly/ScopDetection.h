@@ -61,8 +61,8 @@ using llvm::AnalysisInfoMixin;
 using llvm::AnalysisKey;
 using llvm::AnalysisUsage;
 using llvm::BatchAAResults;
-using llvm::BranchInst;
 using llvm::CallInst;
+using llvm::CondBrInst;
 using llvm::DenseMap;
 using llvm::DominatorTree;
 using llvm::Function;
@@ -428,7 +428,7 @@ private:
   /// @param Condition    The branch condition.
   /// @param IsLoopBranch Flag to indicate the branch is a loop exit/latch.
   /// @param Context      The context of scop detection.
-  bool isValidBranch(BasicBlock &BB, BranchInst *BI, Value *Condition,
+  bool isValidBranch(BasicBlock &BB, CondBrInst *BI, Value *Condition,
                      bool IsLoopBranch, DetectionContext &Context);
 
   /// Check if the SCEV @p S is affine in the current @p Context.

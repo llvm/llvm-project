@@ -284,10 +284,10 @@ define void @ldg(ptr %p0, ptr addrspace(1) %p1) {
 
 ; CHECK-LABEL: @atomics
 define i32 @atomics(ptr %p0, i32 %a, float %b, double %c) {
-; CHECK: %1 = atomicrmw uinc_wrap ptr %p0, i32 %a seq_cst
-; CHECK: %2 = atomicrmw udec_wrap ptr %p0, i32 %a seq_cst
-; CHECK: %3 = atomicrmw fadd ptr %p0, float %b seq_cst
-; CHECK: %4 = atomicrmw fadd ptr %p0, double %c seq_cst
+; CHECK: %1 = atomicrmw uinc_wrap ptr %p0, i32 %a monotonic
+; CHECK: %2 = atomicrmw udec_wrap ptr %p0, i32 %a monotonic
+; CHECK: %3 = atomicrmw fadd ptr %p0, float %b monotonic
+; CHECK: %4 = atomicrmw fadd ptr %p0, double %c monotonic
 
   %r1 = call i32 @llvm.nvvm.atomic.load.inc.32.p0(ptr %p0, i32 %a)
   %r2 = call i32 @llvm.nvvm.atomic.load.dec.32.p0(ptr %p0, i32 %a)
