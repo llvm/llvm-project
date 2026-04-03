@@ -837,11 +837,11 @@ static OwningVec<Index> preprocessCDCtxIndex(Index CDCtxIndex) {
   Processed.reserve(CDCtxIndex.Children.size());
   for (const auto *Idx : CDCtxIndex.getSortedChildren()) {
     Index NewIdx = *Idx;
-    auto NewPath = NewIdx.getRelativeFilePath("");
+    SmallString<128> NewPath(NewIdx.getRelativeFilePath(""));
     sys::path::native(NewPath, sys::path::Style::posix);
     sys::path::append(NewPath, sys::path::Style::posix,
                       NewIdx.getFileBaseName() + ".md");
-    NewIdx.Path = NewPath;
+    NewIdx.Path = internString(NewPath);
     Processed.push_back(NewIdx);
   }
 
@@ -968,7 +968,7 @@ Error JSONGenerator::generateDocumentation(
     if (FileToInfos.contains(Path))
       continue;
     FileToInfos[Path].push_back(Info);
-    Info->DocumentationFileName = FileName;
+    Info->DocumentationFileName = internString(FileName);
   }
 
   if (CDCtx.Format == OutputFormatTy::md_mustache) {
