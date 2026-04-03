@@ -6065,6 +6065,84 @@ public:
   }
 };
 
+/// Represents the '#pragma omp split' loop transformation directive.
+///
+/// \code{.c}
+///   #pragma omp split counts(3, omp_fill, 2)
+///   for (int i = 0; i < n; ++i)
+///     ...
+/// \endcode
+///
+/// This directive transforms a single loop into multiple loops based on
+/// index ranges. The transformation splits the iteration space of the loop
+/// into multiple contiguous ranges. The \c counts clause is required and
+/// exactly one list item must be \c omp_fill.
+class OMPSplitDirective final
+    : public OMPCanonicalLoopNestTransformationDirective {
+  friend class ASTStmtReader;
+  friend class OMPExecutableDirective;
+
+  /// Offsets of child members.
+  enum {
+    PreInitsOffset = 0,
+    TransformedStmtOffset,
+  };
+
+  explicit OMPSplitDirective(SourceLocation StartLoc, SourceLocation EndLoc,
+                             unsigned NumLoops)
+      : OMPCanonicalLoopNestTransformationDirective(
+            OMPSplitDirectiveClass, llvm::omp::OMPD_split, StartLoc, EndLoc,
+            NumLoops) {}
+
+  void setPreInits(Stmt *PreInits) {
+    Data->getChildren()[PreInitsOffset] = PreInits;
+  }
+
+  void setTransformedStmt(Stmt *S) {
+    Data->getChildren()[TransformedStmtOffset] = S;
+  }
+
+public:
+  /// Create a new AST node representation for '#pragma omp split'.
+  ///
+  /// \param C         Context of the AST.
+  /// \param StartLoc  Location of the introducer (e.g. the 'omp' token).
+  /// \param EndLoc    Location of the directive's end (e.g. the tok::eod).
+  /// \param Clauses   The directive's clauses (e.g. the required \c counts
+  ///                  clause).
+  /// \param NumLoops  Number of affected loops (should be 1 for split).
+  /// \param AssociatedStmt  The outermost associated loop.
+  /// \param TransformedStmt The loop nest after splitting, or nullptr in
+  ///                        dependent contexts.
+  /// \param PreInits   Helper preinits statements for the loop nest.
+  static OMPSplitDirective *Create(const ASTContext &C, SourceLocation StartLoc,
+                                   SourceLocation EndLoc,
+                                   ArrayRef<OMPClause *> Clauses,
+                                   unsigned NumLoops, Stmt *AssociatedStmt,
+                                   Stmt *TransformedStmt, Stmt *PreInits);
+
+  /// Build an empty '#pragma omp split' AST node for deserialization.
+  ///
+  /// \param C          Context of the AST.
+  /// \param NumClauses Number of clauses to allocate.
+  /// \param NumLoops   Number of associated loops to allocate.
+  static OMPSplitDirective *CreateEmpty(const ASTContext &C,
+                                        unsigned NumClauses, unsigned NumLoops);
+
+  /// Gets/sets the associated loops after the transformation, i.e. after
+  /// de-sugaring.
+  Stmt *getTransformedStmt() const {
+    return Data->getChildren()[TransformedStmtOffset];
+  }
+
+  /// Return preinits statement.
+  Stmt *getPreInits() const { return Data->getChildren()[PreInitsOffset]; }
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == OMPSplitDirectiveClass;
+  }
+};
+
 /// This represents '#pragma omp scan' directive.
 ///
 /// \code

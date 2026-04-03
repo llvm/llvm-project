@@ -3277,6 +3277,11 @@ def warn_function_attribute_ignored_in_stmt : Warning<
   "use '%0' on statements">,
   InGroup<IgnoredAttributes>;
 
+def warn_stmt_attribute_ignored_in_function : Warning<
+  "attribute is ignored on this function as it only applies to statements; "
+  "use '%0' for functions">,
+  InGroup<IgnoredAttributes>;
+
 def err_musttail_needs_trivial_args : Error<
   "tail call requires that the return value, all parameters, and any "
   "temporaries created by the expression are trivially destructible">;
@@ -7439,7 +7444,8 @@ def err_illegal_decl_mempointer_in_nonclass
 def err_reference_to_void : Error<"cannot form a reference to 'void'">;
 def err_nonfunction_block_type : Error<
   "block pointer to non-function type is invalid">;
-def err_return_block_has_expr : Error<"void block should not return a value">;
+def err_return_block_has_expr : Error<
+  "void %select{block|lambda}0 should not return a value">;
 def err_block_return_missing_expr : Error<
   "non-void block should return a value">;
 def err_func_def_incomplete_result : Error<
@@ -11168,6 +11174,8 @@ def err_omp_bind_required_on_loop : Error<
   "construct">;
 def err_omp_loop_reduction_clause : Error<
   "'reduction' clause not allowed with '#pragma omp loop bind(teams)'">;
+def err_omp_split_counts_not_one_omp_fill : Error<
+  "exactly one 'omp_fill' must appear in the 'counts' clause">;
 def warn_break_binds_to_switch : Warning<
   "'break' is bound to loop, GCC binds it to switch">,
   InGroup<GccCompat>;

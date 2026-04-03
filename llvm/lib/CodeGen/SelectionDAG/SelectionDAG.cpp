@@ -6096,6 +6096,12 @@ KnownFPClass SelectionDAG::computeKnownFPClass(SDValue Op,
     Known = KnownFPClass::bitcast(VT.getFltSemantics(), Bits);
     break;
   }
+  case ISD::FABS: {
+    Known = computeKnownFPClass(Op.getOperand(0), DemandedElts,
+                                InterestedClasses, Depth + 1);
+    Known.fabs();
+    break;
+  }
   default:
     if (Opcode >= ISD::BUILTIN_OP_END || Opcode == ISD::INTRINSIC_WO_CHAIN ||
         Opcode == ISD::INTRINSIC_W_CHAIN || Opcode == ISD::INTRINSIC_VOID) {
