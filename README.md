@@ -1,44 +1,85 @@
-# The LLVM Compiler Infrastructure
+# Mage Fork of the LLVM Compiler Infrastructure
 
-[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/llvm/llvm-project/badge)](https://securityscorecards.dev/viewer/?uri=github.com/llvm/llvm-project)
-[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/8273/badge)](https://www.bestpractices.dev/projects/8273)
-[![libc++](https://github.com/llvm/llvm-project/actions/workflows/libcxx-build-and-test.yaml/badge.svg?branch=main&event=schedule)](https://github.com/llvm/llvm-project/actions/workflows/libcxx-build-and-test.yaml?query=event%3Aschedule)
+This repository is the LLVM fork used by [Mage](https://github.com/leandrolcampos/mage).
 
-Welcome to the LLVM project!
+Mage is a research project focused on developing microarchitecture-aware and portable algorithms for elementary functions on modern GPUs. It investigates trade-offs and derives optimization heuristics for lookup tables, polynomial evaluation, and precision extension across diverse GPU designs and under multiple accuracy profiles. It also explores whether GPU-optimized implementations can generalize beyond GPUs while ensuring bitwise-identical results across architectures.
 
-This repository contains the source code for LLVM, a toolkit for the
-construction of highly optimized compilers, optimizers, and run-time
-environments.
+## Branch model
 
-The LLVM project has multiple components. The core of the project is
-itself called "LLVM". This contains all of the tools, libraries, and header
-files needed to process intermediate representations and convert them into
-object files. Tools include an assembler, disassembler, bitcode analyzer, and
-bitcode optimizer.
+This fork uses two long-lived branches:
 
-C-like languages use the [Clang](https://clang.llvm.org/) frontend. This
-component compiles C, C++, Objective-C, and Objective-C++ code into LLVM bitcode
--- and from there into object files, using LLVM.
+- `mage-staging`
+- `main`
 
-Other components include:
-the [libc++ C++ standard library](https://libcxx.llvm.org),
-the [LLD linker](https://lld.llvm.org), and more.
+### `mage-staging`
 
-## Getting the Source Code and Building LLVM
+This is the default branch and the main working branch for research and development. It contains the LLVM baseline actively used for the project. Update it from `main` during the first week of each month, or when needed.
 
-Consult the
-[Getting Started with LLVM](https://llvm.org/docs/GettingStarted.html#getting-the-source-code-and-building-llvm)
-page for information on building and running LLVM.
+Typical update flow:
 
-For information on how to contribute to the LLVM project, please take a look at
-the [Contributing to LLVM](https://llvm.org/docs/Contributing.html) guide.
+```bash
+git switch main
+git fetch upstream
+git merge --ff-only upstream/main
+git push origin main
 
-## Getting in touch
+git switch mage-staging
+git merge main
+git push origin mage-staging
+```
 
-Join the [LLVM Discourse forums](https://discourse.llvm.org/), [Discord
-chat](https://discord.gg/xS7Z362),
-[LLVM Office Hours](https://llvm.org/docs/GettingInvolved.html#office-hours) or
-[Regular sync-ups](https://llvm.org/docs/GettingInvolved.html#online-sync-ups).
+### `main`
 
-The LLVM project has adopted a [code of conduct](https://llvm.org/docs/CodeOfConduct.html) for
-participants to all modes of communication within the project.
+This branch is a clean mirror of `upstream/main`. It must not carry Mage-specific changes.
+
+```bash
+git switch main
+git fetch upstream
+git merge --ff-only upstream/main
+git push origin main
+```
+
+## Short-lived local branches
+
+Short-lived research and development branches must be created from `mage-staging`.
+
+Naming convention:
+
+* `mage/<topic>`
+
+Typical flow:
+
+```bash
+git switch mage-staging
+git pull --ff-only
+git switch -c mage/<topic>
+```
+
+Use these branches for work that belongs to the Mage workflow, including prototypes, measurements, and exploratory patches.
+
+## Upstream branches
+
+Branches intended for upstream pull requests must be created from `main`.
+
+Naming convention:
+
+* `upstream/<topic>`
+
+Typical flow:
+
+```bash
+git switch main
+git pull --ff-only
+git switch -c upstream/<topic>
+```
+
+These branches should stay focused, reviewable, and as clean as possible with respect to upstream LLVM.
+
+## Important rule
+
+Do not use the same branch both as:
+
+* a local Mage branch
+* an upstream contribution branch
+
+If some work starts in a `mage/` branch and later becomes worth upstreaming, reproduce or cherry-pick the relevant changes in a clean `upstream/` branch created from `main`.
