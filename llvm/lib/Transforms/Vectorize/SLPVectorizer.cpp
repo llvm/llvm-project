@@ -142,6 +142,11 @@ static cl::opt<bool> SplitAlternateInstructions(
     "slp-split-alternate-instructions", cl::init(true), cl::Hidden,
     cl::desc("Improve the code quality by splitting alternate instructions"));
 
+static cl::opt<bool> SLPInstCountCheck(
+    "slp-inst-count-check", cl::init(true), cl::Hidden,
+    cl::desc("Reject vectorization if vector instruction count exceeds "
+             "scalar instruction count"));
+
 static cl::opt<int>
 MaxVectorRegSizeOption("slp-max-reg-size", cl::init(128), cl::Hidden,
     cl::desc("Attempt to vectorize for this register size in bits"));
@@ -3775,6 +3780,13 @@ private:
   bool areAllUsersVectorized(
       Instruction *I,
       const SmallDenseSet<Value *> *VectorizedVals = nullptr) const;
+
+  /// Estimates the number of unique scalar instructions in the tree.
+  unsigned getNumScalarInsts() const;
+
+  /// Estimates the number of vector instructions (including buildvectors,
+  /// shuffles, and extracts) that the tree will produce.
+  unsigned getNumVectorInsts() const;
 
   /// Return information about the vector formed for the specified index
   /// of a vector of (the same) instruction.
@@ -12817,6 +12829,113 @@ bool BoUpSLP::areAllUsersVectorized(
          });
 }
 
+unsigned BoUpSLP::getNumScalarInsts() const {
+  unsigned Count = 0;
+  for (const std::unique_ptr<TreeEntry> &Ptr : VectorizableTree) {
+    const TreeEntry &TE = *Ptr;
+    if (DeletedNodes.contains(&TE))
+      continue;
+    if (TE.isGather() || TransformedToGatherNodes.contains(&TE)) {
+      // Count instruction scalars in gathers — they exist in the scalar
+      // code regardless of vectorization. ExtractElement instructions
+      // become free when the vector input is used directly.
+      for (Value *V : TE.Scalars)
+        if (isa<Instruction>(V))
+          ++Count;
+      continue;
+    }
+    // Each vectorize entry represents a bundle of scalar instructions.
+    // Count per-entry without cross-entry deduplication, since shared
+    // scalars across entries still represent separate work in scalar code.
+    for (Value *V : TE.Scalars) {
+      auto *I = dyn_cast<Instruction>(V);
+      if (!I || (TE.hasCopyableElements() && TE.isCopyableElement(V)))
+        continue;
+      ++Count;
+    }
+  }
+  return Count;
+}
+
+unsigned BoUpSLP::getNumVectorInsts() const {
+  unsigned Count = 0;
+  SmallPtrSet<Value *, 4> GatherExtractSourceVecs;
+  for (const std::unique_ptr<TreeEntry> &Ptr : VectorizableTree) {
+    const TreeEntry &TE = *Ptr;
+    if (DeletedNodes.contains(&TE))
+      continue;
+    if (TE.State == TreeEntry::CombinedVectorize)
+      continue;
+    if (TE.CombinedOp == TreeEntry::ReducedBitcast ||
+        TE.CombinedOp == TreeEntry::ReducedBitcastBSwap ||
+        TE.CombinedOp == TreeEntry::ReducedBitcastLoads ||
+        TE.CombinedOp == TreeEntry::ReducedBitcastBSwapLoads ||
+        TE.CombinedOp == TreeEntry::ReducedCmpBitcast)
+      continue;
+    bool IsGatherOrTransformed =
+        TE.isGather() || TransformedToGatherNodes.contains(&TE);
+    if (IsGatherOrTransformed) {
+      if (TE.hasState()) {
+        if (const TreeEntry *E =
+                getSameValuesTreeEntry(TE.getMainOp(), TE.Scalars);
+            E && E->getVectorFactor() == TE.getVectorFactor())
+          continue;
+        SmallVector<Value *> RevScalars(TE.Scalars.rbegin(),
+                                       TE.Scalars.rend());
+        if (const TreeEntry *E =
+                getSameValuesTreeEntry(TE.getMainOp(), RevScalars);
+            E && E->getVectorFactor() == TE.getVectorFactor()) {
+          ++Count;
+          continue;
+        }
+      }
+      // ExtractElement gathers from the same source vector become a single
+      // shufflevector. Collect source vectors globally across all gather
+      // entries and count once at the end.
+      if (all_of(TE.Scalars,
+                 IsaPred<ExtractElementInst, UndefValue, Constant>)) {
+        for (Value *V : TE.Scalars)
+          if (auto *EE = dyn_cast<ExtractElementInst>(V))
+            GatherExtractSourceVecs.insert(EE->getVectorOperand());
+      } else {
+        for (Value *V : TE.Scalars) {
+          if (!isConstant(V) && !isa<PoisonValue>(V))
+            ++Count;
+        }
+      }
+      continue;
+    }
+    // InsertElement/ExtractElement vectorize entries don't produce real
+    // vector instructions — InsertElement at root IS the result, and
+    // ExtractElement entries reference the input vector directly.
+    if (TE.getOpcode() == Instruction::InsertElement ||
+        TE.getOpcode() == Instruction::ExtractElement)
+      continue;
+    if (TE.State == TreeEntry::SplitVectorize)
+      Count += 2;
+    else
+      ++Count;
+    if (!TE.ReorderIndices.empty() || !TE.ReuseShuffleIndices.empty())
+      ++Count;
+  }
+  Count += GatherExtractSourceVecs.size();
+  // Count extract instructions from ExternalUses, skipping insertelements
+  // (those get folded into shuffles, not real extracts).
+  SmallPtrSet<Value *, 8> CountedExtracts;
+  for (const ExternalUser &EU : ExternalUses) {
+    if (isa_and_nonnull<InsertElementInst>(EU.User))
+      continue;
+    if (EU.User && EphValues.count(EU.User))
+      continue;
+    if (ExternalUsesAsOriginalScalar.contains(EU.Scalar))
+      continue;
+    if (!CountedExtracts.insert(EU.Scalar).second)
+      continue;
+    ++Count;
+  }
+  return Count;
+}
+
 void BoUpSLP::TreeEntry::buildAltOpShuffleMask(
     const function_ref<bool(Instruction *)> IsAltOp, SmallVectorImpl<int> &Mask,
     SmallVectorImpl<Value *> *OpScalars,
@@ -18082,6 +18201,22 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
                                      ArrayRef<Value *> VectorizedVals,
                                      InstructionCost ReductionCost,
                                      Instruction *RdxRoot) {
+  // Reject vectorization if the vector code would produce more instructions
+  // than the scalar code. The cost model may underestimate overhead from
+  // shuffles, inserts, and extracts.
+  if (SLPInstCountCheck && VectorizableTree.front()->getVectorFactor() == 2 &&
+      SLPCostThreshold == 0) {
+    unsigned NumScalar = getNumScalarInsts();
+    unsigned NumVector = getNumVectorInsts();
+    LLVM_DEBUG(dbgs() << "SLP: Inst count check: vector=" << NumVector
+                      << " scalar=" << NumScalar << "\n");
+    if (NumVector > NumScalar) {
+      LLVM_DEBUG(dbgs() << "SLP: Rejecting tree: vector inst count "
+                        << NumVector << " > scalar inst count " << NumScalar
+                        << ".\n");
+      return InstructionCost::getInvalid();
+    }
+  }
   InstructionCost Cost = TreeCost;
 
   SmallDenseMap<std::tuple<const TreeEntry *, Value *, Instruction *>, unsigned>
