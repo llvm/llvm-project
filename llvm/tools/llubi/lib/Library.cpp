@@ -13,6 +13,8 @@
 #include "Library.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/IR/InstrTypes.h"
+#include "llvm/Support/Format.h"
+#include "llvm/Support/raw_ostream.h"
 
 namespace llvm::ubi {
 
@@ -86,7 +88,7 @@ AnyValue Library::executeCalloc(StringRef Name, Type *Type,
   const uint64_t Count = CountVal.asInteger().getLimitedValue();
   const uint64_t Size = SizeVal.asInteger().getLimitedValue();
 
-  bool Overflow;
+  bool Overflow = false;
   const uint64_t AllocSize = SaturatingMultiply(Count, Size, &Overflow);
   if (Overflow)
     return AnyValue::getNullValue(Ctx, Type);
@@ -145,17 +147,18 @@ AnyValue Library::executePrintf([[maybe_unused]] StringRef Name,
 
   const std::string &FormatStr = *FormatStrOpt;
   std::string Output;
+  raw_string_ostream OS(Output);
   unsigned ArgIndex = 1; // Start from 1 since 0 is the format string.
 
   for (unsigned I = 0; I < FormatStr.size();) {
     if (FormatStr[I] != '%') {
-      Output.push_back(FormatStr[I++]);
+      OS << FormatStr[I++];
       continue;
     }
 
     const size_t Start = I++;
     if (I < FormatStr.size() && FormatStr[I] == '%') {
-      Output.push_back('%');
+      OS << '%';
       ++I;
       continue;
     }
@@ -193,14 +196,12 @@ AnyValue Library::executePrintf([[maybe_unused]] StringRef Name,
       return AnyValue::poison();
     }
 
-    char Buf[1024];
     switch (Specifier) {
     case 'd':
     case 'i': {
       std::string HostFmt = CleanChunk + "ll" + Specifier;
-      snprintf(Buf, sizeof(Buf), HostFmt.c_str(),
-               static_cast<long long>(Arg.asInteger().getSExtValue()));
-      Output += Buf;
+      OS << format(HostFmt.c_str(),
+                   static_cast<long long>(Arg.asInteger().getSExtValue()));
       break;
     }
     case 'u':
@@ -209,9 +210,8 @@ AnyValue Library::executePrintf([[maybe_unused]] StringRef Name,
     case 'X':
     case 'c': {
       std::string HostFmt = CleanChunk + "ll" + Specifier;
-      snprintf(Buf, sizeof(Buf), HostFmt.c_str(),
-               static_cast<unsigned long long>(Arg.asInteger().getZExtValue()));
-      Output += Buf;
+      OS << format(HostFmt.c_str(),
+                   static_cast<unsigned long long>(Arg.asInteger().getZExtValue()));
       break;
     }
     case 'f':
@@ -220,18 +220,14 @@ AnyValue Library::executePrintf([[maybe_unused]] StringRef Name,
     case 'g':
     case 'G': {
       std::string HostFmt = CleanChunk + Specifier;
-      snprintf(Buf, sizeof(Buf), HostFmt.c_str(),
-               Arg.asFloat().convertToDouble());
-      Output += Buf;
+      OS << format(HostFmt.c_str(), Arg.asFloat().convertToDouble());
       break;
     }
     case 'p': {
       std::string HostFmt = CleanChunk + "llx";
-      snprintf(Buf, sizeof(Buf), HostFmt.c_str(),
-               static_cast<unsigned long long>(
-                   Arg.asPointer().address().getZExtValue()));
-      Output += "0x";
-      Output += Buf;
+      OS << "0x" << format(HostFmt.c_str(),
+                           static_cast<unsigned long long>(
+                               Arg.asPointer().address().getZExtValue()));
       break;
     }
     case 's': {
@@ -239,8 +235,7 @@ AnyValue Library::executePrintf([[maybe_unused]] StringRef Name,
       if (!StrOpt)
         return AnyValue::poison();
       std::string HostFmt = CleanChunk + "s";
-      snprintf(Buf, sizeof(Buf), HostFmt.c_str(), StrOpt->c_str());
-      Output += Buf;
+      OS << format(HostFmt.c_str(), StrOpt->c_str());
       break;
     }
     default:
@@ -249,6 +244,7 @@ AnyValue Library::executePrintf([[maybe_unused]] StringRef Name,
     }
   }
 
+  OS.flush();
   Handler.onPrint(Output);
   return AnyValue(APInt(32, Output.size()));
 }
