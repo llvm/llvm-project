@@ -1802,8 +1802,10 @@ void NVPTXAsmPrinter::bufferAggregateConstVec(const ConstantVector *CV,
 
   // Iterate through elements of vector one chunk at a time and buffer that
   // chunk.
-  for (unsigned I : llvm::seq(NumCompleteBytes))
-    bufferLEByte(ConvertSubCVtoInt8(CV, I, I + NumElemsPerByte), 0, aggBuffer);
+  for (unsigned ByteIdx : llvm::seq(NumCompleteBytes))
+    bufferLEByte(ConvertSubCVtoInt8(CV, ByteIdx * NumElemsPerByte,
+                                    (ByteIdx + 1) * NumElemsPerByte),
+                 0, aggBuffer);
 
   // For unevenly sized vectors add tail padding zeros.
   if (NumTailElems > 0)
