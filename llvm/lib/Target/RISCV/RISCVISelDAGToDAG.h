@@ -173,6 +173,8 @@ public:
 
   void selectSF_VC_X_SE(SDNode *Node);
 
+  bool tryCVBitManipExtractU(SDNode *Node);
+
   // Return the RISC-V condition code that matches the given DAG integer
   // condition code. The CondCode must be one of those supported by the RISC-V
   // ISA (see translateSetCCForBranch).

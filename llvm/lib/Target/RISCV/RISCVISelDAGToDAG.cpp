@@ -1097,6 +1097,71 @@ static bool isApplicableToPLIOrPLUI(int Val) {
          Bit15To8 == Bit7To0;
 }
 
+// --------------------------------------------------------------------------
+// cv.extractu: unsigned bitfield extract
+//
+// Matches:
+//   (and (srl X, C_offset), C_mask)  where C_mask = (1 << width) - 1
+//   (and X, C_mask)                  where C_mask = (1 << width) - 1 (offset=0)
+//
+// Emits: CV_EXTRACTU rd, rs1, IS3=width-1, IS2=offset
+//        (note: cv.extractu semantics is Is3+1 bits, so we encode width-1)
+//
+// Excludes: mask=0xFF (already cv.extbz) and mask=0xFFFF (already cv.exthz)
+//           when offset=0, to avoid stealing existing patterns.
+// --------------------------------------------------------------------------
+bool RISCVDAGToDAGISel::tryCVBitManipExtractU(SDNode *Node) {
+  if (!Subtarget->hasVendorXCVbitmanip() || Subtarget->is64Bit())
+    return false;
+
+  assert(Node->getOpcode() == ISD::AND);
+  SDLoc DL(Node);
+
+  SDValue LHS = Node->getOperand(0);
+  SDValue RHS = Node->getOperand(1);
+
+  // Canonicalize: constant on the right
+  auto *MaskC = dyn_cast<ConstantSDNode>(RHS);
+  if (!MaskC) {
+    std::swap(LHS, RHS);
+    MaskC = dyn_cast<ConstantSDNode>(RHS);
+  }
+  if (!MaskC)
+    return false;
+
+  uint32_t Mask = MaskC->getZExtValue();
+
+  // Mask must be a contiguous run of 1s starting from bit 0: (1 << w) - 1
+  if (!isMask_32(Mask))
+    return false;
+
+  unsigned Width = llvm::countr_one(Mask);
+  unsigned Offset = 0;
+  SDValue Base = LHS;
+
+  // Check if LHS is (srl X, C_offset)
+  if (LHS.getOpcode() == ISD::SRL) {
+    if (auto *ShiftC = dyn_cast<ConstantSDNode>(LHS.getOperand(1))) {
+      Offset = ShiftC->getZExtValue();
+      Base = LHS.getOperand(0);
+    }
+  }
+
+  // Skip cases already handled by cv.extbz / cv.exthz
+  if (Offset == 0 && (Mask == 0xFF || Mask == 0xFFFF))
+    return false;
+
+  // Validate: IS3 in [1,32], IS2 in [0,31], width + offset <= 32
+  if (Width == 0 || Width > 32 || Offset > 31 || (Width + Offset) > 32)
+    return false;
+
+  SDValue IS3 = CurDAG->getTargetConstant(Width - 1, DL, MVT::i32);
+  SDValue IS2 = CurDAG->getTargetConstant(Offset, DL, MVT::i32);
+
+  CurDAG->SelectNodeTo(Node, RISCV::CV_EXTRACTU, MVT::i32, Base, IS3, IS2);
+  return true;
+}
+
 void RISCVDAGToDAGISel::Select(SDNode *Node) {
   // If we have a custom node, we have already selected.
   if (Node->isMachineOpcode()) {
@@ -1504,6 +1569,10 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
 
     break;
   case ISD::AND: {
+    // xcvbitmanip: try extractu first
+    if (tryCVBitManipExtractU(Node))
+      return;
+
     auto *N1C = dyn_cast<ConstantSDNode>(Node->getOperand(1));
     if (!N1C)
       break;
