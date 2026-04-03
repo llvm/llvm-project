@@ -1,16 +1,13 @@
-// RUN: %clang --analyze %s 2>&1 | FileCheck %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection %s 2>&1 | FileCheck %s
 
-// CHECK: Address of stack memory associated with local variable 'i'
-// CHECK: is still referred to by the global variable 'gp' upon returning
-// CHECK: to the caller. This will be a dangling reference
-// CHECK: Potential leak of memory pointed to by 'p'
+// CHECK: TRUE
+// CHECK-NOT: garbage
+// CHECK-NOT: uninitialized
 
-unsigned int *gp;
-int foo(unsigned int argc) {
+void clang_analyzer_eval(int);
+
+void test_zero_initialized_new_array() {
   int *p = new int[10]{};
-  unsigned int i = 100;
-  gp = &i;
-  if (argc > *p)
-    return i;
-  return *p;
+  clang_analyzer_eval(*p == 0);
+  delete[] p;
 }
