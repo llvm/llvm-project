@@ -715,3 +715,288 @@ define i64 @mvmn_xor_i64(i64 %b, i64 %mask, i64 %a) nounwind {
   %xor2 = xor i64 %and, %a
   ret i64 %xor2
 }
+
+define signext i32 @mm_sati_8_i32(i32 signext %x) {
+; CHECK-LABEL: mm_sati_8_i32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    sati a0, a0, 8
+; CHECK-NEXT:    ret
+entry:
+  %0 = call i32 @llvm.smin.i32(i32 %x, i32 127)
+  %1 = call i32 @llvm.smax.i32(i32 %0, i32 -128)
+  ret i32 %1
+}
+
+define signext i32 @mm_sati_16_i32(i32 signext %x) {
+; CHECK-LABEL: mm_sati_16_i32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    sati a0, a0, 16
+; CHECK-NEXT:    ret
+entry:
+  %0 = call i32 @llvm.smax.i32(i32 %x, i32 -32768)
+  %1 = call i32 @llvm.smin.i32(i32 %0, i32 32767)
+  ret i32 %1
+}
+
+define signext i32 @mm_sati_24_i32(i32 signext %x) {
+; CHECK-LABEL: mm_sati_24_i32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    sati a0, a0, 24
+; CHECK-NEXT:    ret
+entry:
+  %0 = call i32 @llvm.smin.i32(i32 %x, i32 8388607)
+  %1 = call i32 @llvm.smax.i32(i32 %0, i32 -8388608)
+  ret i32 %1
+}
+
+define signext i32 @mm_sati_32_i32(i32 signext %x) {
+; CHECK-LABEL: mm_sati_32_i32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    ret
+entry:
+  %0 = call i32 @llvm.smax.i32(i32 %x, i32 -2147483648)
+  %1 = call i32 @llvm.smin.i32(i32 %0, i32 2147483647)
+  ret i32 %1
+}
+
+define signext i32 @mm_sati_1_i32(i32 signext %x) {
+; CHECK-LABEL: mm_sati_1_i32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    sati a0, a0, 1
+; CHECK-NEXT:    ret
+entry:
+  %0 = call i32 @llvm.smin.i32(i32 %x, i32 0)
+  %1 = call i32 @llvm.smax.i32(i32 %0, i32 -1)
+  ret i32 %1
+}
+
+define signext i32 @mm_sati_minallones_i32(i32 signext %x) {
+; CHECK-LABEL: mm_sati_minallones_i32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    li a0, 0
+; CHECK-NEXT:    ret
+entry:
+  %0 = call i32 @llvm.smin.i32(i32 %x, i32 -1)
+  %1 = call i32 @llvm.smax.i32(i32 %0, i32 0)
+  ret i32 %1
+}
+
+define signext i32 @mm_sati_minallones2_i32(i32 signext %x) {
+; CHECK-LABEL: mm_sati_minallones2_i32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    li a0, -1
+; CHECK-NEXT:    ret
+entry:
+  %0 = call i32 @llvm.smax.i32(i32 %x, i32 0)
+  %1 = call i32 @llvm.smin.i32(i32 %0, i32 -1)
+  ret i32 %1
+}
+
+define signext i32 @mm_usati_8_i32(i32 signext %x) {
+; CHECK-LABEL: mm_usati_8_i32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    usati a0, a0, 8
+; CHECK-NEXT:    ret
+entry:
+  %0 = call i32 @llvm.smin.i32(i32 %x, i32 255)
+  %1 = call i32 @llvm.smax.i32(i32 %0, i32 0)
+  ret i32 %1
+}
+
+define signext i32 @mm_usati_16_i32(i32 signext %x) {
+; CHECK-LABEL: mm_usati_16_i32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    usati a0, a0, 16
+; CHECK-NEXT:    ret
+entry:
+  %0 = call i32 @llvm.smax.i32(i32 %x, i32 0)
+  %1 = call i32 @llvm.smin.i32(i32 %0, i32 65535)
+  ret i32 %1
+}
+
+define signext i32 @mm_usati_1_i32(i32 signext %x) {
+; CHECK-LABEL: mm_usati_1_i32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    usati a0, a0, 1
+; CHECK-NEXT:    ret
+entry:
+  %0 = call i32 @llvm.smax.i32(i32 %x, i32 0)
+  %1 = call i32 @llvm.smin.i32(i32 %0, i32 1)
+  ret i32 %1
+}
+
+define signext i32 @mm_usati_31_i32(i32 signext %x) {
+; CHECK-LABEL: mm_usati_31_i32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    max a0, a0, zero
+; CHECK-NEXT:    ret
+entry:
+  %0 = call i32 @llvm.smin.i32(i32 %x, i32 2147483647)
+  %1 = call i32 @llvm.smax.i32(i32 %0, i32 0)
+  ret i32 %1
+}
+
+define signext i32 @mm_usati_32_i32(i32 signext %x) {
+; CHECK-LABEL: mm_usati_32_i32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    li a0, -1
+; CHECK-NEXT:    ret
+entry:
+  %0 = call i32 @llvm.smax.i32(i32 %x, i32 0)
+  %1 = call i32 @llvm.smin.i32(i32 %0, i32 4294967295)
+  ret i32 %1
+}
+
+define i64 @mm_sati_8_i64(i64 %x) {
+; CHECK-LABEL: mm_sati_8_i64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    sati a0, a0, 8
+; CHECK-NEXT:    ret
+entry:
+  %0 = call i64 @llvm.smin.i64(i64 %x, i64 127)
+  %1 = call i64 @llvm.smax.i64(i64 %0, i64 -128)
+  ret i64 %1
+}
+
+define i64 @mm_sati_16_i64(i64 %x) {
+; CHECK-LABEL: mm_sati_16_i64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    sati a0, a0, 16
+; CHECK-NEXT:    ret
+entry:
+  %0 = call i64 @llvm.smax.i64(i64 %x, i64 -32768)
+  %1 = call i64 @llvm.smin.i64(i64 %0, i64 32767)
+  ret i64 %1
+}
+
+define i64 @mm_sati_24_i64(i64 %x) {
+; CHECK-LABEL: mm_sati_24_i64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    sati a0, a0, 24
+; CHECK-NEXT:    ret
+entry:
+  %0 = call i64 @llvm.smin.i64(i64 %x, i64 8388607)
+  %1 = call i64 @llvm.smax.i64(i64 %0, i64 -8388608)
+  ret i64 %1
+}
+
+define i64 @mm_sati_32_i64(i64 %x) {
+; CHECK-LABEL: mm_sati_32_i64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    sati a0, a0, 32
+; CHECK-NEXT:    ret
+entry:
+  %0 = call i64 @llvm.smax.i64(i64 %x, i64 -2147483648)
+  %1 = call i64 @llvm.smin.i64(i64 %0, i64 2147483647)
+  ret i64 %1
+}
+
+define i64 @mm_sati_1_i64(i64 %x) {
+; CHECK-LABEL: mm_sati_1_i64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    sati a0, a0, 1
+; CHECK-NEXT:    ret
+entry:
+  %0 = call i64 @llvm.smin.i64(i64 %x, i64 0)
+  %1 = call i64 @llvm.smax.i64(i64 %0, i64 -1)
+  ret i64 %1
+}
+
+define i64 @mm_sati_minallones_i64(i64 %x) {
+; CHECK-LABEL: mm_sati_minallones_i64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    li a0, 0
+; CHECK-NEXT:    ret
+entry:
+  %0 = call i64 @llvm.smin.i64(i64 %x, i64 -1)
+  %1 = call i64 @llvm.smax.i64(i64 %0, i64 0)
+  ret i64 %1
+}
+
+define i64 @mm_sati_minallones2_i64(i64 %x) {
+; CHECK-LABEL: mm_sati_minallones2_i64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    li a0, -1
+; CHECK-NEXT:    ret
+entry:
+  %0 = call i64 @llvm.smax.i64(i64 %x, i64 0)
+  %1 = call i64 @llvm.smin.i64(i64 %0, i64 -1)
+  ret i64 %1
+}
+
+define i64 @mm_usati_8_i64(i64 %x) {
+; CHECK-LABEL: mm_usati_8_i64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    usati a0, a0, 8
+; CHECK-NEXT:    ret
+entry:
+  %0 = call i64 @llvm.smin.i64(i64 %x, i64 255)
+  %1 = call i64 @llvm.smax.i64(i64 %0, i64 0)
+  ret i64 %1
+}
+
+define i64 @mm_usati_16_i64(i64 %x) {
+; CHECK-LABEL: mm_usati_16_i64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    usati a0, a0, 16
+; CHECK-NEXT:    ret
+entry:
+  %0 = call i64 @llvm.smax.i64(i64 %x, i64 0)
+  %1 = call i64 @llvm.smin.i64(i64 %0, i64 65535)
+  ret i64 %1
+}
+
+define i64 @mm_usati_1_i64(i64 %x) {
+; CHECK-LABEL: mm_usati_1_i64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    usati a0, a0, 1
+; CHECK-NEXT:    ret
+entry:
+  %0 = call i64 @llvm.smax.i64(i64 %x, i64 0)
+  %1 = call i64 @llvm.smin.i64(i64 %0, i64 1)
+  ret i64 %1
+}
+
+define i64 @mm_usati_31_i64(i64 %x) {
+; CHECK-LABEL: mm_usati_31_i64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    usati a0, a0, 31
+; CHECK-NEXT:    ret
+entry:
+  %0 = call i64 @llvm.smin.i64(i64 %x, i64 2147483647)
+  %1 = call i64 @llvm.smax.i64(i64 %0, i64 0)
+  ret i64 %1
+}
+
+define i64 @mm_usati_32_i64(i64 %x) {
+; CHECK-LABEL: mm_usati_32_i64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    usati a0, a0, 32
+; CHECK-NEXT:    ret
+entry:
+  %0 = call i64 @llvm.smax.i64(i64 %x, i64 0)
+  %1 = call i64 @llvm.smin.i64(i64 %0, i64 4294967295)
+  ret i64 %1
+}
+
+define i64 @mm_usati_55_i64(i64 %x) {
+; CHECK-LABEL: mm_usati_55_i64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    usati a0, a0, 55
+; CHECK-NEXT:    ret
+entry:
+  %0 = call i64 @llvm.smax.i64(i64 %x, i64 0)
+  %1 = call i64 @llvm.smin.i64(i64 %0, i64 u0x7FFFFFFFFFFFFF)
+  ret i64 %1
+}
+
+define i64 @mm_usati_64_i64(i64 %x) {
+; CHECK-LABEL: mm_usati_64_i64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    li a0, -1
+; CHECK-NEXT:    ret
+entry:
+  %0 = call i64 @llvm.smax.i64(i64 %x, i64 0)
+  %1 = call i64 @llvm.smin.i64(i64 %0, i64 -1)
+  ret i64 %1
+}
