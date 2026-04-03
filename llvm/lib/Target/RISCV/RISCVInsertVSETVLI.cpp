@@ -780,9 +780,7 @@ bool RISCVInsertVSETVLI::canMutatePriorConfig(
           return false;
 
         MachineInstr *DefMI = MRI->getUniqueVRegDef(AVL.getReg());
-        if (!DefMI || DefMI->getOpcode() != RISCV::ADDI ||
-            !DefMI->getOperand(1).isReg() ||
-            DefMI->getOperand(1).getReg() != RISCV::X0 ||
+        if (!DefMI || !RISCVInstrInfo::isLoadImmediate(*DefMI) ||
             DefMI->getParent() != PrevMI.getParent()) {
           return false;
         }
