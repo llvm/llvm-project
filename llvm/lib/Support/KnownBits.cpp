@@ -526,7 +526,7 @@ KnownBits KnownBits::shl(const KnownBits &LHS, const KnownBits &RHS, bool NUW,
 }
 
 KnownBits KnownBits::lshr(const KnownBits &LHS, unsigned ShiftAmt) {
-   if (ShiftAmt == 0)
+  if (ShiftAmt == 0)
     return LHS;
 
   unsigned BitWidth = LHS.getBitWidth();
@@ -593,23 +593,13 @@ KnownBits KnownBits::lshr(const KnownBits &LHS, const KnownBits &RHS,
   return Known;
 }
 
-KnownBits KnownBits::ashr(const KnownBits &LHS, unsigned ShiftAmt,
-                          bool ShAmtNonZero, bool Exact) {
-  // TODO: This is simple fallback to generic RHS-based ashr.
-  // Add a specialized constant-shift implementation with identical semantics.
-  // KnownBits RHS = KnownBits::makeConstant(APInt(LHS.getBitWidth(), ShiftAmt));
-  // return ashr(LHS, RHS, ShAmtNonZero, Exact);
-
+KnownBits KnownBits::ashr(const KnownBits &LHS, unsigned ShiftAmt) {
   unsigned BitWidth = LHS.getBitWidth();
+
+  if (ShiftAmt == 0)
+    return LHS;
+
   KnownBits Known(BitWidth);
-
-  if (ShiftAmt == 0) {
-    if (!ShAmtNonZero)
-      return LHS;
-
-    Known.setAllZero();
-    return Known;
-  }
 
   if (ShiftAmt >= BitWidth) {
     Known.setAllZero();
@@ -618,11 +608,6 @@ KnownBits KnownBits::ashr(const KnownBits &LHS, unsigned ShiftAmt,
 
   if (LHS.isUnknown())
     return Known;
-
-  if (Exact && LHS.countMaxTrailingZeros() < ShiftAmt) {
-    Known.setAllZero();
-    return Known;
-  }
 
   Known = LHS;
   Known.Zero.ashrInPlace(ShiftAmt);
@@ -633,13 +618,6 @@ KnownBits KnownBits::ashr(const KnownBits &LHS, unsigned ShiftAmt,
 KnownBits KnownBits::ashr(const KnownBits &LHS, const KnownBits &RHS,
                           bool ShAmtNonZero, bool Exact) {
   unsigned BitWidth = LHS.getBitWidth();
-  auto ShiftByConst = [&](const KnownBits &LHS, unsigned ShiftAmt) {
-    KnownBits Known = LHS;
-    Known.Zero.ashrInPlace(ShiftAmt);
-    Known.One.ashrInPlace(ShiftAmt);
-    return Known;
-  };
-
   // Fast path for a common case when LHS is completely unknown.
   KnownBits Known(BitWidth);
   unsigned MinShiftAmount = RHS.getMinValue().getLimitedValue(BitWidth);
@@ -678,7 +656,7 @@ KnownBits KnownBits::ashr(const KnownBits &LHS, const KnownBits &RHS,
     if ((ShiftAmtZeroMask & ShiftAmt) != 0 ||
         (ShiftAmtOneMask | ShiftAmt) != ShiftAmt)
       continue;
-    Known = Known.intersectWith(ShiftByConst(LHS, ShiftAmt));
+    Known = Known.intersectWith(ashr(LHS, ShiftAmt));
     if (Known.isUnknown())
       break;
   }

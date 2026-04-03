@@ -474,9 +474,8 @@ public:
                                  bool ShAmtNonZero = false, bool Exact = false);
 
   /// Compute known bits for ashr(LHS, ShiftAmt).
-  /// This is shift by constant variant of ashr(LHS, ShiftAmt).
-  LLVM_ABI static KnownBits ashr(const KnownBits &LHS, unsigned ShiftAmt,
-                                 bool ShAmtNonZero = false, bool Exact = false);
+  /// This is shift by constant variant of ashr(LHS, RHS).
+  LLVM_ABI static KnownBits ashr(const KnownBits &LHS, unsigned ShiftAmt);
 
   /// Compute known bits for ashr(LHS, RHS).
   /// NOTE: RHS (shift amount) bitwidth doesn't need to be the same as LHS.
