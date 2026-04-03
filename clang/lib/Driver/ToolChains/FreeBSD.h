@@ -91,6 +91,8 @@ public:
   // Until dtrace (via CTF) and LLDB can deal with distributed debug info,
   // FreeBSD defaults to standalone/full debug info.
   bool GetDefaultStandaloneDebug() const override { return true; }
+  std::string getCompilerRT(const llvm::opt::ArgList &Args, StringRef Component,
+                            FileType Type, bool IsFortran) const override;
 
 protected:
   Tool *buildAssembler() const override;

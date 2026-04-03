@@ -9,6 +9,10 @@
 // CHECK-DEFAULT: "-lc++" "-lm"
 // CHECK-STDLIBCXX: "-lstdc++" "-lm"
 
+// RUN: %clangxx %s --print-libgcc-file-name --target=amd64-unknown-freebsd 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-BUILTIN %s
+// CHECK-BUILTIN: /usr/lib/libgcc.a
+
 // RUN: %clangxx %s -### -pg --target=amd64-unknown-freebsd -stdlib=platform 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-PG-DEFAULT %s
 // RUN: %clangxx %s -### -pg --target=amd64-unknown-freebsd14.0 -stdlib=platform 2>&1 \
