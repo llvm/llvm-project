@@ -140,6 +140,7 @@
 #include "llvm/Transforms/Utils/CountVisits.h"
 #include "llvm/Transforms/Utils/EntryExitInstrumenter.h"
 #include "llvm/Transforms/Utils/ExtraPassManager.h"
+#include "llvm/Transforms/Utils/InjectOpenMPVFABIMappings.h"
 #include "llvm/Transforms/Utils/InjectTLIMappings.h"
 #include "llvm/Transforms/Utils/LibCallsShrinkWrap.h"
 #include "llvm/Transforms/Utils/Mem2Reg.h"
@@ -1634,6 +1635,9 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
                           .convertSwitchToArithmetic(true)
                           .speculateUnpredictables(true)
                           .hoistLoadsStoresWithCondFaulting(true)));
+
+  // Enable LoopVectorize for OpenMP declare simd.
+  MPM.addPass(InjectOpenMPVFABIMappings());
 
   // Add the core optimizing pipeline.
   MPM.addPass(createModuleToFunctionPassAdaptor(std::move(OptimizePM),
