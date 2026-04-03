@@ -600,6 +600,28 @@ define i32 @add_shl_moreOneUse_4(i32 %x) {
   ret i32 %add
 }
 
+define i32 @select20(i1 zeroext %x) {
+; RV32IM-LABEL: select20:
+; RV32IM:       # %bb.0:
+; RV32IM-NEXT:    neg a0, a0
+; RV32IM-NEXT:    andi a0, a0, 20
+; RV32IM-NEXT:    ret
+;
+; RV32IMXQCIAC-LABEL: select20:
+; RV32IMXQCIAC:       # %bb.0:
+; RV32IMXQCIAC-NEXT:    neg a0, a0
+; RV32IMXQCIAC-NEXT:    andi a0, a0, 20
+; RV32IMXQCIAC-NEXT:    ret
+;
+; RV32IZBAMXQCIAC-LABEL: select20:
+; RV32IZBAMXQCIAC:       # %bb.0:
+; RV32IZBAMXQCIAC-NEXT:    neg a0, a0
+; RV32IZBAMXQCIAC-NEXT:    andi a0, a0, 20
+; RV32IZBAMXQCIAC-NEXT:    ret
+  %select = select i1 %x, i32 20, i32 0
+  ret i32 %select
+}
+
 define i32 @select65(i1 zeroext %x) {
 ; RV32IM-LABEL: select65:
 ; RV32IM:       # %bb.0:
@@ -617,5 +639,50 @@ define i32 @select65(i1 zeroext %x) {
 ; RV32IZBAMXQCIAC-NEXT:    qc.shladd a0, a0, a0, 6
 ; RV32IZBAMXQCIAC-NEXT:    ret
   %select = select i1 %x, i32 65, i32 0
+  ret i32 %select
+}
+
+
+define i32 @select1111(i1 zeroext %x) {
+; RV32IM-LABEL: select1111:
+; RV32IM:       # %bb.0:
+; RV32IM-NEXT:    neg a0, a0
+; RV32IM-NEXT:    andi a0, a0, 1111
+; RV32IM-NEXT:    ret
+;
+; RV32IMXQCIAC-LABEL: select1111:
+; RV32IMXQCIAC:       # %bb.0:
+; RV32IMXQCIAC-NEXT:    neg a0, a0
+; RV32IMXQCIAC-NEXT:    andi a0, a0, 1111
+; RV32IMXQCIAC-NEXT:    ret
+;
+; RV32IZBAMXQCIAC-LABEL: select1111:
+; RV32IZBAMXQCIAC:       # %bb.0:
+; RV32IZBAMXQCIAC-NEXT:    neg a0, a0
+; RV32IZBAMXQCIAC-NEXT:    andi a0, a0, 1111
+; RV32IZBAMXQCIAC-NEXT:    ret
+  %select = select i1 %x, i32 1111, i32 0
+  ret i32 %select
+}
+
+define i32 @select8193(i1 zeroext %x) {
+; RV32IM-LABEL: select8193:
+; RV32IM:       # %bb.0:
+; RV32IM-NEXT:    neg a0, a0
+; RV32IM-NEXT:    lui a1, 2
+; RV32IM-NEXT:    addi a1, a1, 1
+; RV32IM-NEXT:    and a0, a0, a1
+; RV32IM-NEXT:    ret
+;
+; RV32IMXQCIAC-LABEL: select8193:
+; RV32IMXQCIAC:       # %bb.0:
+; RV32IMXQCIAC-NEXT:    qc.shladd a0, a0, a0, 13
+; RV32IMXQCIAC-NEXT:    ret
+;
+; RV32IZBAMXQCIAC-LABEL: select8193:
+; RV32IZBAMXQCIAC:       # %bb.0:
+; RV32IZBAMXQCIAC-NEXT:    qc.shladd a0, a0, a0, 13
+; RV32IZBAMXQCIAC-NEXT:    ret
+  %select = select i1 %x, i32 8193, i32 0
   ret i32 %select
 }
