@@ -39,17 +39,6 @@ struct ExprPrintingResult {
 
 llvm::SmallString<32> FormatLoanEntityForSema(LoanEntity IssueEntity);
 llvm::SmallVector<ExprPrintingResult> FormatSrcExprForSema(const Expr *SrcExpr);
-
-inline __attribute__((always_inline)) llvm::SmallString<32>
-FormatValueDeclForSema(const ValueDecl *TargetValue) {
-  llvm::SmallString<32> Result;
-  if (TargetValue) {
-    Result += "variable '";
-    Result += TargetValue->getName();
-    Result += "'";
-  }
-  return Result;
-}
 } // namespace clang::lifetimes
 
 namespace clang::lifetimes::internal {

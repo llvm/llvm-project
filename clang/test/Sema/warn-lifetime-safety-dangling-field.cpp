@@ -17,7 +17,7 @@ struct CtorInit {
 struct CtorSet {
   std::string_view view;  // expected-note {{this field dangles}}
   CtorSet(std::string s) { view = s; } // expected-warning {{address of stack memory escapes to a field}} \
-                                       // expected-note {{variable 'view' aliases the storage of variable 's'}}
+                                       // expected-note {{variable 'view' aliases the storage of 's'}}
 };
 
 struct CtorInitLifetimeBound {
@@ -83,18 +83,18 @@ struct MemberSetters {
 
   void setWithParam(std::string s) {
     view = s;     // expected-warning {{address of stack memory escapes to a field}} \
-                  // expected-note {{variable 'view' aliases the storage of variable 's'}}
+                  // expected-note {{variable 'view' aliases the storage of 's'}}
     p = s.data(); // expected-warning {{address of stack memory escapes to a field}} \
-                  // expected-note {{function call result aliases the storage of variable 's'}} \
-                  // expected-note {{variable 'p' aliases the storage of variable 's'}}
+                  // expected-note {{function call result aliases the storage of 's'}} \
+                  // expected-note {{variable 'p' aliases the storage of 's'}}
   }
 
   void setWithParamAndReturn(std::string s) {
     view = s;     // expected-warning {{address of stack memory escapes to a field}} \
-                  // expected-note {{variable 'view' aliases the storage of variable 's'}}
+                  // expected-note {{variable 'view' aliases the storage of 's'}}
     p = s.data(); // expected-warning {{address of stack memory escapes to a field}} \
-                  // expected-note {{function call result aliases the storage of variable 's'}} \
-                  // expected-note {{variable 'p' aliases the storage of variable 's'}}
+                  // expected-note {{function call result aliases the storage of 's'}} \
+                  // expected-note {{variable 'p' aliases the storage of 's'}}
     return;
   }
 
@@ -112,19 +112,19 @@ struct MemberSetters {
   void setWithLocal() {
     std::string s;
     view = s;     // expected-warning {{address of stack memory escapes to a field}} \
-                  // expected-note {{variable 'view' aliases the storage of variable 's'}}
+                  // expected-note {{variable 'view' aliases the storage of 's'}}
     p = s.data(); // expected-warning {{address of stack memory escapes to a field}} \
-                  // expected-note {{function call result aliases the storage of variable 's'}} \
-                  // expected-note {{variable 'p' aliases the storage of variable 's'}}
+                  // expected-note {{function call result aliases the storage of 's'}} \
+                  // expected-note {{variable 'p' aliases the storage of 's'}}
   }
   
   void setWithLocalButMoved() {
     std::string s;
     view = s;                 // expected-warning-re {{address of stack memory escapes to a field. {{.*}} may have been moved}} \
-                              // expected-note {{variable 'view' aliases the storage of variable 's'}}
+                              // expected-note {{variable 'view' aliases the storage of 's'}}
     p = s.data();             // expected-warning-re {{address of stack memory escapes to a field. {{.*}} may have been moved}} \
-                              // expected-note {{function call result aliases the storage of variable 's'}} \
-                              // expected-note {{variable 'p' aliases the storage of variable 's'}}
+                              // expected-note {{function call result aliases the storage of 's'}} \
+                              // expected-note {{variable 'p' aliases the storage of 's'}}
     takeString(std::move(s)); // expected-note 2 {{potentially moved here}}
   }
 
@@ -148,20 +148,20 @@ struct MemberSetters {
 
     std::string local;
     view = local;     // expected-warning {{address of stack memory escapes to a field}} \
-                      // expected-note {{variable 'view' aliases the storage of variable 'local'}}
+                      // expected-note {{variable 'view' aliases the storage of 'local'}}
     p = local.data(); // expected-warning {{address of stack memory escapes to a field}} \
-                      // expected-note {{function call result aliases the storage of variable 'local'}} \
-                      // expected-note {{variable 'p' aliases the storage of variable 'local'}}
+                      // expected-note {{function call result aliases the storage of 'local'}} \
+                      // expected-note {{variable 'p' aliases the storage of 'local'}}
   }
 
   void use_after_scope() {
     {
       std::string local;
       view = local;     // expected-warning {{address of stack memory escapes to a field}} \
-                        // expected-note {{variable 'view' aliases the storage of variable 'local'}}
+                        // expected-note {{variable 'view' aliases the storage of 'local'}}
       p = local.data(); // expected-warning {{address of stack memory escapes to a field}} \
-                        // expected-note {{function call result aliases the storage of variable 'local'}} \
-                        // expected-note {{variable 'p' aliases the storage of variable 'local'}}
+                        // expected-note {{function call result aliases the storage of 'local'}} \
+                        // expected-note {{variable 'p' aliases the storage of 'local'}}
     }
     (void)view;
     (void)p;

@@ -228,6 +228,18 @@ getAliasListInMultiBlock(const AssignmentQueryContext &Context,
 
   return std::nullopt;
 }
+
+
+llvm::SmallString<32>
+FormatRHSValueDeclForSema(const ValueDecl *TargetValue) {
+  llvm::SmallString<32> Result;
+  if (TargetValue) {
+    Result += "'";
+    Result += TargetValue->getName();
+    Result += "'";
+  }
+  return Result;
+}
 } // namespace
 
 namespace clang::lifetimes {
@@ -242,15 +254,15 @@ llvm::SmallString<32> FormatLoanEntityForSema(LoanEntity IssueEntity) {
       return {};
 
     if (const auto *IDeclExpr = llvm::dyn_cast<DeclRefExpr>(PureExpr))
-      return FormatValueDeclForSema(IDeclExpr->getDecl());
+      return FormatRHSValueDeclForSema(IDeclExpr->getDecl());
     return {"the temporary"};
   }
   if (const auto *IssueParmDecl =
           llvm::dyn_cast<const ParmVarDecl *>(IssueEntity))
-    return FormatValueDeclForSema(IssueParmDecl);
+    return FormatRHSValueDeclForSema(IssueParmDecl);
   if (const auto *IssueCXXMD =
           llvm::dyn_cast<const CXXMethodDecl *>(IssueEntity))
-    return FormatValueDeclForSema(IssueCXXMD);
+    return FormatRHSValueDeclForSema(IssueCXXMD);
 
   return {"the temporary"};
 }

@@ -81,9 +81,9 @@ View return_view_directly(View a) {
 View conditional_return_view(View a, View b, bool c) {
   View res;
   if (c)  
-    res = a;   // expected-note {{variable 'res' aliases the storage of variable 'a'}}
+    res = a;   // expected-note {{variable 'res' aliases the storage of 'a'}}
   else
-    res = b;   // expected-note {{variable 'res' aliases the storage of variable 'b'}}
+    res = b;   // expected-note {{variable 'res' aliases the storage of 'b'}}
   return res;  // expected-note 2 {{param returned here}} 
 }
 
@@ -173,7 +173,7 @@ View only_one_paramter_annotated(View a [[clang::lifetimebound]],
 View reassigned_to_another_parameter(
     View a,
     View b) {     // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}.
-  a = b;          // expected-note {{variable 'a' aliases the storage of variable 'b'}}
+  a = b;          // expected-note {{variable 'a' aliases the storage of 'b'}}
   return a;       // expected-note {{param returned here}} 
 }
 

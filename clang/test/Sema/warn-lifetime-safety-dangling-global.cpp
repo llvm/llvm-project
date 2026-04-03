@@ -23,15 +23,15 @@ void invoke_function_with_side_effects() {
 void inlined() {
   int local;
   global = &local; // expected-warning {{address of stack memory escapes to global or static storage}} \
-                   // expected-note {{variable 'global' aliases the storage of variable 'local'}}
-  global_backup = global; // expected-note {{variable 'global_backup' aliases the storage of variable 'local'}}
+                   // expected-note {{variable 'global' aliases the storage of 'local'}}
+  global_backup = global; // expected-note {{variable 'global_backup' aliases the storage of 'local'}}
   global = nullptr;
 }
 
 void store_local_in_global() {
   int local;
   global = &local; // expected-warning {{address of stack memory escapes to global or static storage}} \
-                   // expected-note {{variable 'global' aliases the storage of variable 'local'}}
+                   // expected-note {{variable 'global' aliases the storage of 'local'}}
 }
 
 void store_then_clear() {
@@ -43,5 +43,5 @@ void store_then_clear() {
 void dangling_static_field() {
   int local;
   ObjWithStaticField::static_field = &local; // expected-warning {{address of stack memory escapes to global or static storage}} \
-                                             // expected-note {{variable 'static_field' aliases the storage of variable 'local'}}
+                                             // expected-note {{variable 'static_field' aliases the storage of 'local'}}
 }

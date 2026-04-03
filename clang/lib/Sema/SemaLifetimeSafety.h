@@ -38,6 +38,17 @@ inline bool IsLifetimeSafetyDiagnosticEnabled(Sema &S, const Decl *D) {
                           D->getBeginLoc());
 }
 
+inline __attribute__((always_inline)) llvm::SmallString<32>
+FormatLHSValueDeclForSema(const ValueDecl *TargetValue) {
+  llvm::SmallString<32> Result;
+  if (TargetValue) {
+    Result += "variable '";
+    Result += TargetValue->getName();
+    Result += "'";
+  }
+  return Result;
+}
+
 inline void reportAssignmentImpl(Sema &S, LoanEntity IssueEntity,
                                  const ValueDecl *LHS, const Expr *RHS,
                                  const SourceLocation LHSExploc) {
@@ -47,13 +58,13 @@ inline void reportAssignmentImpl(Sema &S, LoanEntity IssueEntity,
   if (SrcMsgList.size() == 1 &&
       llvm::isa<DeclRefExpr>(SrcMsgList[0].CurrExpr)) {
     S.Diag(LHSExploc, diag::note_lifetime_safety_note_alias_chain)
-        << FormatValueDeclForSema(LHS) << IssueMsg;
+        << FormatLHSValueDeclForSema(LHS) << IssueMsg;
   } else {
     for (const auto &SrcMsg : llvm::reverse(SrcMsgList))
       S.Diag(RHS->getBeginLoc(), diag::note_lifetime_safety_note_alias_chain)
           << SrcMsg.CurrExpr->getSourceRange() << SrcMsg.Value << IssueMsg;
     S.Diag(LHSExploc, diag::note_lifetime_safety_note_alias_chain)
-        << FormatValueDeclForSema(LHS) << IssueMsg;
+        << FormatLHSValueDeclForSema(LHS) << IssueMsg;
   }
 }
 
