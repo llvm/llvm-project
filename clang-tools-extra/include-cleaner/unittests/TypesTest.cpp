@@ -101,6 +101,8 @@ TEST(RecordedIncludesTest, MatchVerbatimMixedAbsoluteRelative) {
 
 TEST(NormalizePathTest, RemovesDotSegments) {
   EXPECT_EQ(normalizePath("foo/./bar/../baz").str(), "foo/baz");
+  EXPECT_EQ(normalizePath("/foo/./bar").str(), "/foo/bar");
+  EXPECT_EQ(normalizePath("/foo/../bar").str(), "/bar");
   EXPECT_EQ(normalizePath("foo/bar/").str(), "foo/bar");
 }
 
