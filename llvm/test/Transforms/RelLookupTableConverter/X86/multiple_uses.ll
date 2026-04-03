@@ -62,7 +62,6 @@ define void @accross_functions(i32 %idx) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SHIFT:%.*]] = shl i32 %idx, 2
 ; CHECK-NEXT:    [[RES:%.*]] = call ptr @llvm.load.relative.i32(ptr @switch.table.multiple_uses.rel, i32 [[SHIFT]])
-;
 entry:
   %gep1 = getelementptr inbounds [3 x ptr], ptr @switch.table.multiple_uses, i32 0, i32 %idx
   %load1 = load ptr, ptr %gep1, align 8
