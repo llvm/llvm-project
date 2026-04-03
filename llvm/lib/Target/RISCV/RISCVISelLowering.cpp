@@ -6245,7 +6245,7 @@ static SDValue tryWidenMaskForShuffle(SDValue Op, SelectionDAG &DAG) {
 }
 
 SDValue RISCVTargetLowering::lowerVECTOR_SHUFFLE(SDValue Op,
-                                                  SelectionDAG &DAG) const {
+                                                 SelectionDAG &DAG) const {
   SDValue V1 = Op.getOperand(0);
   SDValue V2 = Op.getOperand(1);
   SDLoc DL(Op);
@@ -6499,9 +6499,10 @@ SDValue RISCVTargetLowering::lowerVECTOR_SHUFFLE(SDValue Op,
         const unsigned MinVLMAX = Subtarget.getRealMinVLen() / EltSize;
         if (NumElts < MinVLMAX) {
           MVT ConcatVT = VT.getDoubleNumVectorElementsVT();
-          SDValue Concat = DAG.getNode(ISD::CONCAT_VECTORS, DL, ConcatVT, V1, V2);
-          SDValue Res =
-              lowerVZIP(Opc, Concat, DAG.getUNDEF(ConcatVT), DL, DAG, Subtarget);
+          SDValue Concat =
+              DAG.getNode(ISD::CONCAT_VECTORS, DL, ConcatVT, V1, V2);
+          SDValue Res = lowerVZIP(Opc, Concat, DAG.getUNDEF(ConcatVT), DL, DAG,
+                                  Subtarget);
           return DAG.getExtractSubvector(DL, VT, Res, 0);
         }
 
