@@ -37,37 +37,44 @@ public:
 
   static lldb::ValueObjectSP
   Create(ExecutionContextScope *exe_scope, lldb::ByteOrder byte_order,
-         uint32_t addr_byte_size, lldb::addr_t address = LLDB_INVALID_ADDRESS);
+         uint32_t addr_byte_size, lldb::addr_t address = LLDB_INVALID_ADDRESS,
+         ValueObjectManager *manager = nullptr);
 
   static lldb::ValueObjectSP
   Create(ExecutionContextScope *exe_scope, const CompilerType &compiler_type,
          ConstString name, const DataExtractor &data,
-         lldb::addr_t address = LLDB_INVALID_ADDRESS);
+         lldb::addr_t address = LLDB_INVALID_ADDRESS,
+         ValueObjectManager *manager = nullptr);
 
   static lldb::ValueObjectSP
   Create(ExecutionContextScope *exe_scope, const CompilerType &compiler_type,
          ConstString name, const lldb::DataBufferSP &result_data_sp,
          lldb::ByteOrder byte_order, uint32_t addr_size,
-         lldb::addr_t address = LLDB_INVALID_ADDRESS);
+         lldb::addr_t address = LLDB_INVALID_ADDRESS,
+         ValueObjectManager *manager = nullptr);
 
   static lldb::ValueObjectSP Create(ExecutionContextScope *exe_scope,
                                     const CompilerType &compiler_type,
                                     ConstString name, lldb::addr_t address,
                                     AddressType address_type,
-                                    uint32_t addr_byte_size);
+                                    uint32_t addr_byte_size,
+                                    ValueObjectManager *manager = nullptr);
 
   static lldb::ValueObjectSP Create(ExecutionContextScope *exe_scope,
                                     Value &value, ConstString name,
-                                    Module *module = nullptr);
+                                    Module *module = nullptr,
+                                    ValueObjectManager *manager = nullptr);
 
   static lldb::ValueObjectSP Create(ExecutionContextScope *exe_scope,
                                     const CompilerType &compiler_type,
                                     Scalar &scalar, ConstString name,
-                                    Module *module = nullptr);
+                                    Module *module = nullptr,
+                                    ValueObjectManager *manager = nullptr);
 
   // When an expression fails to evaluate, we return an error
   static lldb::ValueObjectSP Create(ExecutionContextScope *exe_scope,
-                                    Status &&error);
+                                    Status &&error,
+                                    ValueObjectManager *manager = nullptr);
 
   llvm::Expected<uint64_t> GetByteSize() override;
 

@@ -88,16 +88,16 @@ public:
 
 protected:
   lldb::ValueObjectSP
-  CreateValueObjectFromExpression(llvm::StringRef name,
+  CreateChildValueObjectFromExpression(llvm::StringRef name,
                                   llvm::StringRef expression,
                                   const ExecutionContext &exe_ctx);
 
   lldb::ValueObjectSP
-  CreateValueObjectFromAddress(llvm::StringRef name, uint64_t address,
+  CreateChildValueObjectFromAddress(llvm::StringRef name, uint64_t address,
                                const ExecutionContext &exe_ctx,
                                CompilerType type, bool do_deref = true);
 
-  lldb::ValueObjectSP CreateValueObjectFromData(llvm::StringRef name,
+  lldb::ValueObjectSP CreateChildValueObjectFromData(llvm::StringRef name,
                                                 const DataExtractor &data,
                                                 const ExecutionContext &exe_ctx,
                                                 CompilerType type);

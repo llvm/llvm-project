@@ -86,7 +86,7 @@ lldb_private::formatters::MsvcStlDequeSyntheticFrontEnd::GetChildAtIndex(
 
   StreamString name;
   name.Printf("[%" PRIu64 "]", (uint64_t)idx);
-  return CreateValueObjectFromAddress(name.GetString(), second_address,
+  return CreateChildValueObjectFromAddress(name.GetString(), second_address,
                                       m_backend.GetExecutionContextRef(),
                                       m_element_type);
 }

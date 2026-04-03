@@ -167,11 +167,11 @@ lldb_private::formatters::StdlibCoroutineHandleSyntheticFrontEnd::Update() {
       /*result_type=*/void_type, args,
       /*is_variadic=*/false, /*qualifiers=*/0);
   CompilerType coro_func_ptr_type = coro_func_type.GetPointerType();
-  ValueObjectSP resume_ptr_sp = CreateValueObjectFromAddress(
+  ValueObjectSP resume_ptr_sp = CreateChildValueObjectFromAddress(
       "resume", frame_ptr_addr + 0 * ptr_size, exe_ctx, coro_func_ptr_type);
   assert(resume_ptr_sp);
   m_children.push_back(std::move(resume_ptr_sp));
-  ValueObjectSP destroy_ptr_sp = CreateValueObjectFromAddress(
+  ValueObjectSP destroy_ptr_sp = CreateChildValueObjectFromAddress(
       "destroy", frame_ptr_addr + 1 * ptr_size, exe_ctx, coro_func_ptr_type);
   assert(destroy_ptr_sp);
   m_children.push_back(std::move(destroy_ptr_sp));
@@ -182,11 +182,11 @@ lldb_private::formatters::StdlibCoroutineHandleSyntheticFrontEnd::Update() {
   // those pointers. We do so to avoid potential very deep recursion in case
   // there is a cycle formed between `std::coroutine_handle`s and their
   // promises.
-  ValueObjectSP promise_ptr_sp = CreateValueObjectFromAddress(
+  ValueObjectSP promise_ptr_sp = CreateChildValueObjectFromAddress(
       "promise", frame_ptr_addr + 2 * ptr_size, exe_ctx,
       promise_type.GetPointerType(), /*do_deref=*/false);
   m_children.push_back(std::move(promise_ptr_sp));
-  ValueObjectSP coroframe_ptr_sp = CreateValueObjectFromAddress(
+  ValueObjectSP coroframe_ptr_sp = CreateChildValueObjectFromAddress(
       "coro_frame", frame_ptr_addr, exe_ctx, coro_frame_type.GetPointerType(),
       /*do_deref=*/false);
   m_children.push_back(std::move(coroframe_ptr_sp));

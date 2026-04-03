@@ -88,7 +88,7 @@ public:
     offset = offset + m_start->GetValueAsUnsigned(0);
     StreamString name;
     name.Printf("[%" PRIu64 "]", (uint64_t)idx);
-    return CreateValueObjectFromAddress(name.GetString(), offset,
+    return CreateChildValueObjectFromAddress(name.GetString(), offset,
                                         m_backend.GetExecutionContextRef(),
                                         m_element_type);
   }

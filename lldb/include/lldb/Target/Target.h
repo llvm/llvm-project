@@ -284,6 +284,10 @@ public:
   void SetDebugUtilityExpression(bool debug);
 
   bool GetDebugUtilityExpression() const;
+  
+  void SetCheckValueObjectOwnership(bool check);
+  
+  bool GetCheckValueObjectOwnership() const;
 
   std::optional<LoadScriptFromSymFile>
   GetAutoLoadScriptsForModule(llvm::StringRef module_name) const;

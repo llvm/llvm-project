@@ -210,7 +210,7 @@ lldb::ValueObjectSP lldb_private::formatters::
   const bool thread_and_frame_only_if_stopped = true;
   ExecutionContext exe_ctx =
       val_hash->GetExecutionContextRef().Lock(thread_and_frame_only_if_stopped);
-  return CreateValueObjectFromData(stream.GetString(), data, exe_ctx,
+  return CreateChildValueObjectFromData(stream.GetString(), data, exe_ctx,
                                    m_element_type);
 }
 
