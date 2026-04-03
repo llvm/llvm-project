@@ -12880,8 +12880,7 @@ unsigned BoUpSLP::getNumVectorInsts() const {
                 getSameValuesTreeEntry(TE.getMainOp(), TE.Scalars);
             E && E->getVectorFactor() == TE.getVectorFactor())
           continue;
-        SmallVector<Value *> RevScalars(TE.Scalars.rbegin(),
-                                       TE.Scalars.rend());
+        SmallVector<Value *> RevScalars(TE.Scalars.rbegin(), TE.Scalars.rend());
         if (const TreeEntry *E =
                 getSameValuesTreeEntry(TE.getMainOp(), RevScalars);
             E && E->getVectorFactor() == TE.getVectorFactor()) {
