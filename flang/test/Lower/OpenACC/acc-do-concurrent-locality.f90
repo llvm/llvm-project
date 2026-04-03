@@ -239,3 +239,58 @@ end subroutine
 ! CHECK-DAG: acc.reduction varPtr(%{{.*}} : !fir.ref<f32>) recipe(@reduction_add{{.*}}) -> !fir.ref<f32> {name = "s1"}
 ! CHECK-DAG: acc.reduction varPtr(%{{.*}} : !fir.ref<f32>) recipe(@reduction_add{{.*}}) -> !fir.ref<f32> {name = "s2"}
 ! CHECK: acc.loop {{.*}}reduction(
+
+! ---------------------------------------------------------------------------
+! Explicit loop par mode clauses: auto, seq, independent
+! ---------------------------------------------------------------------------
+
+! kernels loop auto with reduce
+! CHECK-LABEL: func.func @_QPreduce_kernels_loop_auto
+subroutine reduce_kernels_loop_auto()
+  real :: a(10), s
+  integer :: i
+  s = 0.
+  !$acc kernels loop auto
+  do concurrent(i=1:10) reduce(+:s)
+    s = s + a(i)
+  end do
+end subroutine
+
+! CHECK: acc.kernels combined(loop)
+! CHECK: %[[RED:.*]] = acc.reduction varPtr(%{{.*}} : !fir.ref<f32>) recipe(@reduction_add{{.*}}) -> !fir.ref<f32> {name = "s"}
+! CHECK: acc.loop combined(kernels) {{.*}}reduction(%[[RED]] : !fir.ref<f32>)
+! CHECK: } attributes {auto_ = [#acc.device_type<none>], inclusiveUpperbound = array<i1: true>}
+
+! kernels loop seq with reduce
+! CHECK-LABEL: func.func @_QPreduce_kernels_loop_seq
+subroutine reduce_kernels_loop_seq()
+  real :: a(10), s
+  integer :: i
+  s = 0.
+  !$acc kernels loop seq
+  do concurrent(i=1:10) reduce(+:s)
+    s = s + a(i)
+  end do
+end subroutine
+
+! CHECK: acc.kernels combined(loop)
+! CHECK: %[[RED:.*]] = acc.reduction varPtr(%{{.*}} : !fir.ref<f32>) recipe(@reduction_add{{.*}}) -> !fir.ref<f32> {name = "s"}
+! CHECK: acc.loop combined(kernels) {{.*}}reduction(%[[RED]] : !fir.ref<f32>)
+! CHECK: } attributes {inclusiveUpperbound = array<i1: true>, seq = [#acc.device_type<none>]}
+
+! kernels loop independent with reduce
+! CHECK-LABEL: func.func @_QPreduce_kernels_loop_independent
+subroutine reduce_kernels_loop_independent()
+  real :: a(10), s
+  integer :: i
+  s = 0.
+  !$acc kernels loop independent
+  do concurrent(i=1:10) reduce(+:s)
+    s = s + a(i)
+  end do
+end subroutine
+
+! CHECK: acc.kernels combined(loop)
+! CHECK: %[[RED:.*]] = acc.reduction varPtr(%{{.*}} : !fir.ref<f32>) recipe(@reduction_add{{.*}}) -> !fir.ref<f32> {name = "s"}
+! CHECK: acc.loop combined(kernels) {{.*}}reduction(%[[RED]] : !fir.ref<f32>)
+! CHECK: } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
