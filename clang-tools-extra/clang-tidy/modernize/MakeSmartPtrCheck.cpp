@@ -78,21 +78,22 @@ void MakeSmartPtrCheck::registerMatchers(ast_matchers::MatchFinder *Finder) {
   auto IsPlacement = hasAnyPlacementArg(anything());
 
   Finder->addMatcher(
-      traverse(TK_AsIs,
-               cxxConstructExpr(
-                   anyOf(hasParent(cxxBindTemporaryExpr()),
-                         hasParent(varDecl().bind(DirectVar)),
-                         hasParent(exprWithCleanups(hasParent(varDecl().bind(DirectVar))))),
-                   hasType(getSmartPointerTypeMatcher()), argumentCountIs(1),
-                   hasArgument(0, ignoringCleanups(
-                                      cxxNewExpr(hasType(pointsTo(qualType(
-                                                     hasCanonicalType(
-                                                         equalsBoundNode(
-                                                             PointerType))))),
-                                                 CanCallCtor, unless(IsPlacement))
-                                          .bind(NewExpression))),
-                   unless(isInTemplateInstantiation()))
-                   .bind(ConstructorCall)),
+      traverse(
+          TK_AsIs,
+          cxxConstructExpr(
+              anyOf(hasParent(cxxBindTemporaryExpr()),
+                    hasParent(varDecl().bind(DirectVar)),
+                    hasParent(exprWithCleanups(
+                        hasParent(varDecl().bind(DirectVar))))),
+              hasType(getSmartPointerTypeMatcher()), argumentCountIs(1),
+              hasArgument(
+                  0, ignoringCleanups(
+                         cxxNewExpr(hasType(pointsTo(qualType(hasCanonicalType(
+                                        equalsBoundNode(PointerType))))),
+                                    CanCallCtor, unless(IsPlacement))
+                             .bind(NewExpression))),
+              unless(isInTemplateInstantiation()))
+              .bind(ConstructorCall)),
       this);
 
   Finder->addMatcher(

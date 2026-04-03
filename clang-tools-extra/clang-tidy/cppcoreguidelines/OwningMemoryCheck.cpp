@@ -65,7 +65,8 @@ void OwningMemoryCheck::registerMatchers(MatchFinder *Finder) {
                 functionDecl(returns(qualType(hasDeclaration(OwnerDecl))))))),
             CreatesLegacyOwner, LegacyOwnerCast);
 
-  const auto ConsideredOwner = ignoringCleanups(eachOf(IsOwnerType, CreatesOwner));
+  const auto ConsideredOwner =
+      ignoringCleanups(eachOf(IsOwnerType, CreatesOwner));
   const auto ScopeDeclaration = anyOf(translationUnitDecl(), namespaceDecl(),
                                       recordDecl(), functionDecl());
 
