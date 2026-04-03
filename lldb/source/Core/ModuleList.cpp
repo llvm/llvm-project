@@ -1373,14 +1373,14 @@ bool ModuleList::LoadScriptingResourceInTargetForModule(Module &module,
   if (!feedback_stream.Empty())
     debugger.ReportWarning(feedback_stream.GetString().str(), debugger.GetID());
 
+  const bool trusted = platform_sp->IsSymbolFileTrusted(module);
+
   for (const auto &[scripting_fspec, load_style] : file_specs) {
     if (load_style == eLoadScriptFromSymFileFalse)
       continue;
 
     if (!FileSystem::Instance().Exists(scripting_fspec))
       continue;
-
-    const bool trusted = platform_sp->IsSymbolFileTrusted(module);
 
     switch (load_style) {
     case eLoadScriptFromSymFileFalse:
@@ -1409,7 +1409,7 @@ To run all discovered debug scripts in this session:
               scripting_fspec.GetPath()),
           debugger.GetID());
 
-      return false;
+      continue;
     }
 
     LLDB_LOG(log, "Auto-loading {0}", scripting_fspec.GetPath());
