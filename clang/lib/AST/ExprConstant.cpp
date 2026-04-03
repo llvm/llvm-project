@@ -16829,6 +16829,20 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     }
   }
 
+  case Builtin::BIstdc_leading_zeros:
+  case Builtin::BIstdc_leading_ones:
+  case Builtin::BIstdc_trailing_zeros:
+  case Builtin::BIstdc_trailing_ones:
+  case Builtin::BIstdc_first_leading_zero:
+  case Builtin::BIstdc_first_leading_one:
+  case Builtin::BIstdc_first_trailing_zero:
+  case Builtin::BIstdc_first_trailing_one:
+  case Builtin::BIstdc_count_zeros:
+  case Builtin::BIstdc_count_ones:
+  case Builtin::BIstdc_has_single_bit:
+  case Builtin::BIstdc_bit_width:
+  case Builtin::BIstdc_bit_floor:
+  case Builtin::BIstdc_bit_ceil:
   case Builtin::BI__builtin_stdc_leading_zeros:
   case Builtin::BI__builtin_stdc_leading_ones:
   case Builtin::BI__builtin_stdc_trailing_zeros:

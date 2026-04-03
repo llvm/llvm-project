@@ -4413,6 +4413,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
         });
   }
 
+  case Builtin::BIstdc_leading_zeros:
   case Builtin::BI__builtin_stdc_leading_zeros: {
     unsigned ResWidth = S.getASTContext().getIntWidth(Call->getType());
     return interp__builtin_elementwise_int_unaryop(
@@ -4421,6 +4422,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
         });
   }
 
+  case Builtin::BIstdc_leading_ones:
   case Builtin::BI__builtin_stdc_leading_ones: {
     unsigned ResWidth = S.getASTContext().getIntWidth(Call->getType());
     return interp__builtin_elementwise_int_unaryop(
@@ -4429,6 +4431,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
         });
   }
 
+  case Builtin::BIstdc_trailing_zeros:
   case Builtin::BI__builtin_stdc_trailing_zeros: {
     unsigned ResWidth = S.getASTContext().getIntWidth(Call->getType());
     return interp__builtin_elementwise_int_unaryop(
@@ -4437,6 +4440,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
         });
   }
 
+  case Builtin::BIstdc_trailing_ones:
   case Builtin::BI__builtin_stdc_trailing_ones: {
     unsigned ResWidth = S.getASTContext().getIntWidth(Call->getType());
     return interp__builtin_elementwise_int_unaryop(
@@ -4445,6 +4449,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
         });
   }
 
+  case Builtin::BIstdc_first_leading_zero:
   case Builtin::BI__builtin_stdc_first_leading_zero: {
     unsigned ResWidth = S.getASTContext().getIntWidth(Call->getType());
     return interp__builtin_elementwise_int_unaryop(
@@ -4453,6 +4458,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
         });
   }
 
+  case Builtin::BIstdc_first_leading_one:
   case Builtin::BI__builtin_stdc_first_leading_one: {
     unsigned ResWidth = S.getASTContext().getIntWidth(Call->getType());
     return interp__builtin_elementwise_int_unaryop(
@@ -4461,6 +4467,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
         });
   }
 
+  case Builtin::BIstdc_first_trailing_zero:
   case Builtin::BI__builtin_stdc_first_trailing_zero: {
     unsigned ResWidth = S.getASTContext().getIntWidth(Call->getType());
     return interp__builtin_elementwise_int_unaryop(
@@ -4469,6 +4476,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
         });
   }
 
+  case Builtin::BIstdc_first_trailing_one:
   case Builtin::BI__builtin_stdc_first_trailing_one: {
     unsigned ResWidth = S.getASTContext().getIntWidth(Call->getType());
     return interp__builtin_elementwise_int_unaryop(
@@ -4477,6 +4485,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
         });
   }
 
+  case Builtin::BIstdc_count_zeros:
   case Builtin::BI__builtin_stdc_count_zeros: {
     unsigned ResWidth = S.getASTContext().getIntWidth(Call->getType());
     return interp__builtin_elementwise_int_unaryop(
@@ -4486,6 +4495,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
         });
   }
 
+  case Builtin::BIstdc_count_ones:
   case Builtin::BI__builtin_stdc_count_ones: {
     unsigned ResWidth = S.getASTContext().getIntWidth(Call->getType());
     return interp__builtin_elementwise_int_unaryop(
@@ -4494,6 +4504,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
         });
   }
 
+  case Builtin::BIstdc_has_single_bit:
   case Builtin::BI__builtin_stdc_has_single_bit: {
     unsigned ResWidth = S.getASTContext().getIntWidth(Call->getType());
     return interp__builtin_elementwise_int_unaryop(
@@ -4502,6 +4513,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
         });
   }
 
+  case Builtin::BIstdc_bit_width:
   case Builtin::BI__builtin_stdc_bit_width: {
     unsigned ResWidth = S.getASTContext().getIntWidth(Call->getType());
     return interp__builtin_elementwise_int_unaryop(
@@ -4511,6 +4523,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
         });
   }
 
+  case Builtin::BIstdc_bit_floor:
   case Builtin::BI__builtin_stdc_bit_floor:
     return interp__builtin_elementwise_int_unaryop(
         S, OpPC, Call, [](const APSInt &Val) {
@@ -4521,6 +4534,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
                                      BitWidth - Val.countl_zero() - 1);
         });
 
+  case Builtin::BIstdc_bit_ceil:
   case Builtin::BI__builtin_stdc_bit_ceil:
     return interp__builtin_elementwise_int_unaryop(
         S, OpPC, Call, [](const APSInt &Val) {

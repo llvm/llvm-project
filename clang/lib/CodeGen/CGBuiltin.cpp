@@ -3733,6 +3733,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI_rotr64:
     return emitRotate(E, true);
 
+  case Builtin::BIstdc_leading_zeros:
   case Builtin::BI__builtin_stdc_leading_zeros: {
     Value *ArgValue = EmitScalarExpr(E->getArg(0));
     llvm::Type *ArgType = ArgValue->getType();
@@ -3743,6 +3744,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
       Result = Builder.CreateIntCast(Result, ResultType, false);
     return RValue::get(Result);
   }
+  case Builtin::BIstdc_leading_ones:
   case Builtin::BI__builtin_stdc_leading_ones: {
     Value *ArgValue = EmitScalarExpr(E->getArg(0));
     llvm::Type *ArgType = ArgValue->getType();
@@ -3754,6 +3756,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
       Result = Builder.CreateIntCast(Result, ResultType, false);
     return RValue::get(Result);
   }
+  case Builtin::BIstdc_trailing_zeros:
   case Builtin::BI__builtin_stdc_trailing_zeros: {
     Value *ArgValue = EmitScalarExpr(E->getArg(0));
     llvm::Type *ArgType = ArgValue->getType();
@@ -3764,6 +3767,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
       Result = Builder.CreateIntCast(Result, ResultType, false);
     return RValue::get(Result);
   }
+  case Builtin::BIstdc_trailing_ones:
   case Builtin::BI__builtin_stdc_trailing_ones: {
     Value *ArgValue = EmitScalarExpr(E->getArg(0));
     llvm::Type *ArgType = ArgValue->getType();
@@ -3775,6 +3779,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
       Result = Builder.CreateIntCast(Result, ResultType, false);
     return RValue::get(Result);
   }
+  case Builtin::BIstdc_first_leading_zero:
   case Builtin::BI__builtin_stdc_first_leading_zero: {
     Value *ArgValue = EmitScalarExpr(E->getArg(0));
     llvm::Type *ArgType = ArgValue->getType();
@@ -3792,6 +3797,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
       Result = Builder.CreateIntCast(Result, ResultType, false);
     return RValue::get(Result);
   }
+  case Builtin::BIstdc_first_leading_one:
   case Builtin::BI__builtin_stdc_first_leading_one: {
     Value *ArgValue = EmitScalarExpr(E->getArg(0));
     llvm::Type *ArgType = ArgValue->getType();
@@ -3807,6 +3813,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
       Result = Builder.CreateIntCast(Result, ResultType, false);
     return RValue::get(Result);
   }
+  case Builtin::BIstdc_first_trailing_zero:
   case Builtin::BI__builtin_stdc_first_trailing_zero: {
     Value *ArgValue = EmitScalarExpr(E->getArg(0));
     llvm::Type *ArgType = ArgValue->getType();
@@ -3824,6 +3831,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
       Result = Builder.CreateIntCast(Result, ResultType, false);
     return RValue::get(Result);
   }
+  case Builtin::BIstdc_first_trailing_one:
   case Builtin::BI__builtin_stdc_first_trailing_one: {
     Value *ArgValue = EmitScalarExpr(E->getArg(0));
     llvm::Type *ArgType = ArgValue->getType();
@@ -3839,6 +3847,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
       Result = Builder.CreateIntCast(Result, ResultType, false);
     return RValue::get(Result);
   }
+  case Builtin::BIstdc_count_zeros:
   case Builtin::BI__builtin_stdc_count_zeros: {
     Value *ArgValue = EmitScalarExpr(E->getArg(0));
     llvm::Type *ArgType = ArgValue->getType();
@@ -3852,6 +3861,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
       Result = Builder.CreateIntCast(Result, ResultType, false);
     return RValue::get(Result);
   }
+  case Builtin::BIstdc_count_ones:
   case Builtin::BI__builtin_stdc_count_ones: {
     Value *ArgValue = EmitScalarExpr(E->getArg(0));
     llvm::Type *ArgType = ArgValue->getType();
@@ -3862,6 +3872,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
       Result = Builder.CreateIntCast(Result, ResultType, false);
     return RValue::get(Result);
   }
+  case Builtin::BIstdc_has_single_bit:
   case Builtin::BI__builtin_stdc_has_single_bit: {
     Value *ArgValue = EmitScalarExpr(E->getArg(0));
     llvm::Type *ArgType = ArgValue->getType();
@@ -3870,6 +3881,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     Value *PopCnt = Builder.CreateCall(F, ArgValue);
     return RValue::get(Builder.CreateICmpEQ(PopCnt, One));
   }
+  case Builtin::BIstdc_bit_width:
   case Builtin::BI__builtin_stdc_bit_width: {
     Value *ArgValue = EmitScalarExpr(E->getArg(0));
     llvm::Type *ArgType = ArgValue->getType();
@@ -3882,6 +3894,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
       Result = Builder.CreateIntCast(Result, ResultType, false);
     return RValue::get(Result);
   }
+  case Builtin::BIstdc_bit_floor:
   case Builtin::BI__builtin_stdc_bit_floor: {
     Value *ArgValue = EmitScalarExpr(E->getArg(0));
     llvm::Type *ArgType = ArgValue->getType();
@@ -3897,6 +3910,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     Value *Result = Builder.CreateSelect(IsZero, Zero, Shifted);
     return RValue::get(Result);
   }
+  case Builtin::BIstdc_bit_ceil:
   case Builtin::BI__builtin_stdc_bit_ceil: {
     Value *ArgValue = EmitScalarExpr(E->getArg(0));
     llvm::Type *ArgType = ArgValue->getType();

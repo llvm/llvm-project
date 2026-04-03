@@ -1,5 +1,6 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-unknown -fsyntax-only -verify %s
-// RUN: %clang_cc1 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -std=c23 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -std=c23 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -std=c23 -isystem %S/Inputs -fsyntax-only -verify %s
 
 // Test stdc_leading_zeros
 _Static_assert(__builtin_stdc_leading_zeros((unsigned char)0) == 8, "");
@@ -376,3 +377,25 @@ void test_errors(int si, float f) {
   __builtin_stdc_bit_ceil(si);       // expected-error {{1st argument must be a scalar unsigned integer type (was 'int')}}
   __builtin_stdc_bit_ceil(f);        // expected-error {{1st argument must be a scalar unsigned integer type (was 'float')}}
 }
+
+#ifdef __has_include
+#if __has_include(<stdbit.h>)
+#include <stdbit.h>
+
+_Static_assert(stdc_leading_zeros(0U) == 32, "");
+_Static_assert(stdc_leading_zeros(1U) == 31, "");
+_Static_assert(stdc_leading_ones(0xFFFFFFFFU) == 32, "");
+_Static_assert(stdc_trailing_zeros(0U) == 32, "");
+_Static_assert(stdc_trailing_ones(0xFFFFFFFFU) == 32, "");
+_Static_assert(stdc_first_leading_zero(0U) == 1, "");
+_Static_assert(stdc_first_leading_one(0U) == 0, "");
+_Static_assert(stdc_first_trailing_zero(0U) == 1, "");
+_Static_assert(stdc_first_trailing_one(0U) == 0, "");
+_Static_assert(stdc_count_zeros(0U) == 32, "");
+_Static_assert(stdc_count_ones(0xFFFFFFFFU) == 32, "");
+_Static_assert(stdc_has_single_bit(4U) == 1, "");
+_Static_assert(stdc_bit_width(7U) == 3, "");
+_Static_assert(stdc_bit_floor(6U) == 4U, "");
+_Static_assert(stdc_bit_ceil(6U) == 8U, "");
+#endif
+#endif
