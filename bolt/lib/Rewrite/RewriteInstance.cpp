@@ -6345,6 +6345,13 @@ void RewriteInstance::rewriteFile() {
     BC->printSections(BC->outs());
   }
 
+  if (OS.has_error()) {
+    BC->errs() << "BOLT-ERROR: failed to write output file '"
+               << opts::OutputFilename << "': " << OS.error().message() << "\n";
+    OS.clear_error();
+    exit(1);
+  }
+
   Out->keep();
   EC = sys::fs::setPermissions(
       opts::OutputFilename,
