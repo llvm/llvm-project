@@ -234,8 +234,7 @@ public:
   ArrayRef<SCEVUse> operands() const { return ArrayRef(Operands, NumOperands); }
 
   NoWrapFlags getNoWrapFlags(NoWrapFlags Mask = NoWrapMask) const {
-    return static_cast<NoWrapFlags>(static_cast<unsigned>(SubclassData) &
-                                    static_cast<unsigned>(Mask));
+    return static_cast<NoWrapFlags>(SubclassData) & Mask;
   }
 
   bool hasNoUnsignedWrap() const {
@@ -1054,17 +1053,10 @@ private:
 template <typename SCEVPtrT>
 inline SCEVNoWrapFlags
 SCEVUseT<SCEVPtrT>::getNoWrapFlags(SCEVNoWrapFlags Mask) const {
-  unsigned Flags = static_cast<unsigned>(SCEV::FlagAnyWrap);
+  SCEVNoWrapFlags Flags = SCEVNoWrapFlags::FlagAnyWrap;
   if (auto *NAry = dyn_cast<SCEVNAryExpr>(Base::getPointer()))
-    Flags = static_cast<unsigned>(NAry->getNoWrapFlags());
-  // Use-flags only encode NUW/NSW in 2 bits; shift to align with NoWrapFlags.
-  unsigned UseFlags = Base::getInt() << 1;
-  // NUW or NSW implies NW.
-  if (UseFlags & static_cast<unsigned>(SCEVNoWrapFlags::FlagNUW |
-                                       SCEVNoWrapFlags::FlagNSW))
-    UseFlags |= static_cast<unsigned>(SCEVNoWrapFlags::FlagNW);
-  return static_cast<SCEVNoWrapFlags>((Flags | UseFlags) &
-                                      static_cast<unsigned>(Mask));
+    Flags = NAry->getNoWrapFlags();
+  return (Flags | getUseNoWrapFlags()) & Mask;
 }
 
 } // end namespace llvm

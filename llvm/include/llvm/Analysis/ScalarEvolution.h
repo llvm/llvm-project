@@ -634,8 +634,8 @@ public:
     ProperlyDominatesBlock ///< The SCEV properly dominates the block.
   };
 
-  /// Convenient NoWrapFlags manipulation that hides enum casts and is
-  /// visible in the ScalarEvolution name space.
+  /// Convenient NoWrapFlags manipulation. TODO: Replace with & operator of
+  /// enum class.
   [[nodiscard]] static SCEV::NoWrapFlags maskFlags(SCEV::NoWrapFlags Flags,
                                                    SCEV::NoWrapFlags Mask) {
     return Flags & Mask;
