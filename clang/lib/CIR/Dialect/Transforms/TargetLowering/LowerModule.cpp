@@ -50,6 +50,9 @@ createTargetLoweringInfo(LowerModule &lm) {
   switch (triple.getArch()) {
   case llvm::Triple::amdgcn:
     return createAMDGPUTargetLoweringInfo();
+  case llvm::Triple::nvptx:
+  case llvm::Triple::nvptx64:
+    return createNVPTXTargetLoweringInfo();
   default:
     assert(!cir::MissingFeatures::targetLoweringInfo());
     return std::make_unique<TargetLoweringInfo>();
