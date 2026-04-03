@@ -325,6 +325,13 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
     FastMathFlags FMF = cast<FPMathOperator>(I).getFastMathFlags();
     DenormalMode DenormMode = getCurrentDenormalMode(I);
 
+    if (!isDefaultFPEnvironment(CurrentExceptionBehavior,
+                                CurrentRoundingMode)) {
+      Status = false;
+      reportImmediateUB("Non-constrained floating-point operation assumes "
+                        "default floating-point environment");
+    }
+
     visitBinOp(I, [&](const AnyValue &LHS, const AnyValue &RHS) -> AnyValue {
       if (LHS.isPoison() || RHS.isPoison())
         return AnyValue::poison();
@@ -476,6 +483,11 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
   DenormalMode getCurrentDenormalMode(Instruction &I) {
     return CurrentFrame->Func.getDenormalMode(
         I.getOperand(0)->getType()->getScalarType()->getFltSemantics());
+  }
+
+  bool isDefaultFPEnv() {
+    return isDefaultFPEnvironment(CurrentExceptionBehavior,
+                                  CurrentRoundingMode);
   }
 
 public:
@@ -833,12 +845,6 @@ public:
   }
 
   void visitFAdd(BinaryOperator &I) {
-    if (!isDefaultFPEnvironment(CurrentExceptionBehavior,
-                                CurrentRoundingMode)) {
-      Status = false;
-      reportImmediateUB("Non-constrained floating-point operation assumes "
-                        "default floating-point environment");
-    }
     visitFPBinOp(I, [](const APFloat &LHS, const APFloat &RHS) -> APFloat {
       APFloat Res = LHS;
       Res.add(RHS, APFloat::rmNearestTiesToEven);
@@ -847,12 +853,6 @@ public:
   }
 
   void visitFSub(BinaryOperator &I) {
-    if (!isDefaultFPEnvironment(CurrentExceptionBehavior,
-                                CurrentRoundingMode)) {
-      Status = false;
-      reportImmediateUB("Non-constrained floating-point operation assumes "
-                        "default floating-point environment");
-    }
     visitFPBinOp(I, [](const APFloat &LHS, const APFloat &RHS) -> APFloat {
       APFloat Res = LHS;
       Res.subtract(RHS, APFloat::rmNearestTiesToEven);
@@ -861,12 +861,6 @@ public:
   }
 
   void visitFMul(BinaryOperator &I) {
-    if (!isDefaultFPEnvironment(CurrentExceptionBehavior,
-                                CurrentRoundingMode)) {
-      Status = false;
-      reportImmediateUB("Non-constrained floating-point operation assumes "
-                        "default floating-point environment");
-    }
     visitFPBinOp(I, [](const APFloat &LHS, const APFloat &RHS) -> APFloat {
       APFloat Res = LHS;
       Res.multiply(RHS, APFloat::rmNearestTiesToEven);
@@ -875,12 +869,6 @@ public:
   }
 
   void visitFDiv(BinaryOperator &I) {
-    if (!isDefaultFPEnvironment(CurrentExceptionBehavior,
-                                CurrentRoundingMode)) {
-      Status = false;
-      reportImmediateUB("Non-constrained floating-point operation assumes "
-                        "default floating-point environment");
-    }
     visitFPBinOp(I, [](const APFloat &LHS, const APFloat &RHS) -> APFloat {
       APFloat Res = LHS;
       Res.divide(RHS, APFloat::rmNearestTiesToEven);
@@ -889,12 +877,6 @@ public:
   }
 
   void visitFRem(BinaryOperator &I) {
-    if (!isDefaultFPEnvironment(CurrentExceptionBehavior,
-                                CurrentRoundingMode)) {
-      Status = false;
-      reportImmediateUB("Non-constrained floating-point operation assumes "
-                        "default floating-point environment");
-    }
     visitFPBinOp(I, [](const APFloat &LHS, const APFloat &RHS) -> APFloat {
       APFloat Res = LHS;
       Res.mod(RHS);
@@ -903,12 +885,6 @@ public:
   }
 
   void visitFNeg(UnaryOperator &I) {
-    if (!isDefaultFPEnvironment(CurrentExceptionBehavior,
-                                CurrentRoundingMode)) {
-      Status = false;
-      reportImmediateUB("Non-constrained floating-point operation assumes "
-                        "default floating-point environment");
-    }
     visitFPUnOp(I, [](const APFloat &Operand) -> APFloat { return -Operand; });
   }
 
