@@ -1376,16 +1376,22 @@ bool ModuleList::LoadScriptingResourceInTargetForModule(Module &module,
     debugger.ReportWarning(feedback_stream.GetString().str(), debugger.GetID());
 
   for (const auto &[scripting_fspec, load_style] : file_specs) {
-    if (load_style == eLoadScriptFromSymFileFalse)
-      continue;
-
     if (!FileSystem::Instance().Exists(scripting_fspec))
       continue;
 
-    if (load_style == eLoadScriptFromSymFileWarn) {
-      // clang-format off
+    switch (load_style) {
+    case eLoadScriptFromSymFileFalse:
+      continue;
+    case eLoadScriptFromSymFileTrue:
+      break;
+    case eLoadScriptFromSymFileTrusted:
+      if (!platform_sp->IsSymbolFileTrusted(module))
+        continue;
+      break;
+    case eLoadScriptFromSymFileWarn:
       debugger.ReportWarning(
           llvm::formatv(
+      // clang-format off
 R"('{0}' contains a debug script. To run this script in this debug session:
 
     command script import "{1}"
@@ -1394,10 +1400,10 @@ To run all discovered debug scripts in this session:
 
     settings set target.load-script-from-symbol-file true
 )",
+      // clang-format on
               module.GetFileSpec().GetFileNameStrippingExtension(),
               scripting_fspec.GetPath()),
           debugger.GetID());
-      // clang-format on
 
       return false;
     }
