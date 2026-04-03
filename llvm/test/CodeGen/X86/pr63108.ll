@@ -16,11 +16,11 @@ define i32 @PR63108() {
 ; SSE-NEXT:    pxor %xmm0, %xmm0
 ; SSE-NEXT:    movd {{.*#+}} xmm1 = [57339,0,0,0]
 ; SSE-NEXT:    xorl %eax, %eax
+; SSE-NEXT:    testb %al, %al
 ; SSE-NEXT:    .p2align 4
 ; SSE-NEXT:  .LBB0_3: # %vector.body
 ; SSE-NEXT:    # =>This Inner Loop Header: Depth=1
 ; SSE-NEXT:    movdqa %xmm1, %xmm2
-; SSE-NEXT:    testb %al, %al
 ; SSE-NEXT:    pxor %xmm1, %xmm1
 ; SSE-NEXT:    jne .LBB0_3
 ; SSE-NEXT:  # %bb.4: # %middle.block
@@ -50,12 +50,12 @@ define i32 @PR63108() {
 ; AVX1-NEXT:  .LBB0_2: # %vector.body.preheader
 ; AVX1-NEXT:    vmovss {{.*#+}} xmm0 = [57339,0,0,0]
 ; AVX1-NEXT:    xorl %eax, %eax
+; AVX1-NEXT:    testb %al, %al
 ; AVX1-NEXT:    .p2align 4
 ; AVX1-NEXT:  .LBB0_3: # %vector.body
 ; AVX1-NEXT:    # =>This Inner Loop Header: Depth=1
 ; AVX1-NEXT:    vmovaps %ymm0, %ymm1
 ; AVX1-NEXT:    vxorps %xmm0, %xmm0, %xmm0
-; AVX1-NEXT:    testb %al, %al
 ; AVX1-NEXT:    jne .LBB0_3
 ; AVX1-NEXT:  # %bb.4: # %middle.block
 ; AVX1-NEXT:    vxorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm0
@@ -86,12 +86,12 @@ define i32 @PR63108() {
 ; AVX2-NEXT:  .LBB0_2: # %vector.body.preheader
 ; AVX2-NEXT:    vmovd {{.*#+}} xmm0 = [57339,0,0,0]
 ; AVX2-NEXT:    xorl %eax, %eax
+; AVX2-NEXT:    testb %al, %al
 ; AVX2-NEXT:    .p2align 4
 ; AVX2-NEXT:  .LBB0_3: # %vector.body
 ; AVX2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; AVX2-NEXT:    vmovdqa %ymm0, %ymm1
 ; AVX2-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; AVX2-NEXT:    testb %al, %al
 ; AVX2-NEXT:    jne .LBB0_3
 ; AVX2-NEXT:  # %bb.4: # %middle.block
 ; AVX2-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm0
@@ -122,12 +122,12 @@ define i32 @PR63108() {
 ; AVX512-NEXT:  .LBB0_2: # %vector.body.preheader
 ; AVX512-NEXT:    vmovd {{.*#+}} xmm0 = [57339,0,0,0]
 ; AVX512-NEXT:    xorl %eax, %eax
+; AVX512-NEXT:    testb %al, %al
 ; AVX512-NEXT:    .p2align 4
 ; AVX512-NEXT:  .LBB0_3: # %vector.body
 ; AVX512-NEXT:    # =>This Inner Loop Header: Depth=1
 ; AVX512-NEXT:    vmovdqa %ymm0, %ymm1
 ; AVX512-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; AVX512-NEXT:    testb %al, %al
 ; AVX512-NEXT:    jne .LBB0_3
 ; AVX512-NEXT:  # %bb.4: # %middle.block
 ; AVX512-NEXT:    vpxord {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm1, %ymm0

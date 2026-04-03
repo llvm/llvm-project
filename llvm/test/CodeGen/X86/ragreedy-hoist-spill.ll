@@ -82,11 +82,11 @@ define ptr @SyFgets(ptr %line, i64 %length, i64 %fid) {
 ; CHECK-NEXT:    movq _syCTRO@GOTPCREL(%rip), %rax
 ; CHECK-NEXT:    movl $1, %r13d
 ; CHECK-NEXT:    movb $1, %cl
+; CHECK-NEXT:    testb %cl, %cl
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  LBB0_9: ## %do.body
 ; CHECK-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movl $0, (%rax)
-; CHECK-NEXT:    testb %cl, %cl
 ; CHECK-NEXT:    jne LBB0_9
 ; CHECK-NEXT:  ## %bb.10: ## %do.end
 ; CHECK-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill

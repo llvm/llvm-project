@@ -233,10 +233,10 @@ define i32 @pr128158(i64 %x) {
 ; X64-NEXT:    movabsq $-4294967296, %rax # imm = 0xFFFFFFFF00000000
 ; X64-NEXT:    addq %rdi, %rax
 ; X64-NEXT:    shrq $32, %rax
+; X64-NEXT:    cmpl $9, %eax
 ; X64-NEXT:    .p2align 4
 ; X64-NEXT:  .LBB16_1: # %for.body
 ; X64-NEXT:    # =>This Inner Loop Header: Depth=1
-; X64-NEXT:    cmpl $9, %eax
 ; X64-NEXT:    jb .LBB16_1
 ; X64-NEXT:  # %bb.2: # %exit
 ; X64-NEXT:    xorl %eax, %eax

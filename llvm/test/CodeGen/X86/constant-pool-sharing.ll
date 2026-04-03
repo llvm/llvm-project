@@ -12,12 +12,12 @@ define void @share_v4i32_v4f32(ptr %p, ptr %q, i1 %t) nounwind {
 ; SSE-LINUX-LABEL: share_v4i32_v4f32:
 ; SSE-LINUX:       # %bb.0: # %entry
 ; SSE-LINUX-NEXT:    movaps {{.*#+}} xmm0 = [1073741824,1073741824,1073741824,1073741824]
+; SSE-LINUX-NEXT:    testb $1, %dl
 ; SSE-LINUX-NEXT:    .p2align 4
 ; SSE-LINUX-NEXT:  .LBB0_1: # %loop
 ; SSE-LINUX-NEXT:    # =>This Inner Loop Header: Depth=1
 ; SSE-LINUX-NEXT:    movaps %xmm0, (%rdi)
 ; SSE-LINUX-NEXT:    movaps %xmm0, (%rsi)
-; SSE-LINUX-NEXT:    testb $1, %dl
 ; SSE-LINUX-NEXT:    jne .LBB0_1
 ; SSE-LINUX-NEXT:  # %bb.2: # %ret
 ; SSE-LINUX-NEXT:    retq
@@ -25,12 +25,12 @@ define void @share_v4i32_v4f32(ptr %p, ptr %q, i1 %t) nounwind {
 ; SSE-MSVC-LABEL: share_v4i32_v4f32:
 ; SSE-MSVC:       # %bb.0: # %entry
 ; SSE-MSVC-NEXT:    movaps {{.*#+}} xmm0 = [1073741824,1073741824,1073741824,1073741824]
+; SSE-MSVC-NEXT:    testb $1, %r8b
 ; SSE-MSVC-NEXT:    .p2align 4
 ; SSE-MSVC-NEXT:  .LBB0_1: # %loop
 ; SSE-MSVC-NEXT:    # =>This Inner Loop Header: Depth=1
 ; SSE-MSVC-NEXT:    movaps %xmm0, (%rcx)
 ; SSE-MSVC-NEXT:    movaps %xmm0, (%rdx)
-; SSE-MSVC-NEXT:    testb $1, %r8b
 ; SSE-MSVC-NEXT:    jne .LBB0_1
 ; SSE-MSVC-NEXT:  # %bb.2: # %ret
 ; SSE-MSVC-NEXT:    retq
@@ -39,12 +39,12 @@ define void @share_v4i32_v4f32(ptr %p, ptr %q, i1 %t) nounwind {
 ; AVX-LINUX:       # %bb.0: # %entry
 ; AVX-LINUX-NEXT:    vbroadcastss {{.*#+}} xmm0 = [1073741824,1073741824,1073741824,1073741824]
 ; AVX-LINUX-NEXT:    vbroadcastss {{.*#+}} xmm1 = [1073741824,1073741824,1073741824,1073741824]
+; AVX-LINUX-NEXT:    testb $1, %dl
 ; AVX-LINUX-NEXT:    .p2align 4
 ; AVX-LINUX-NEXT:  .LBB0_1: # %loop
 ; AVX-LINUX-NEXT:    # =>This Inner Loop Header: Depth=1
 ; AVX-LINUX-NEXT:    vmovaps %xmm0, (%rdi)
 ; AVX-LINUX-NEXT:    vmovaps %xmm1, (%rsi)
-; AVX-LINUX-NEXT:    testb $1, %dl
 ; AVX-LINUX-NEXT:    jne .LBB0_1
 ; AVX-LINUX-NEXT:  # %bb.2: # %ret
 ; AVX-LINUX-NEXT:    retq
@@ -53,12 +53,12 @@ define void @share_v4i32_v4f32(ptr %p, ptr %q, i1 %t) nounwind {
 ; AVX-MSVC:       # %bb.0: # %entry
 ; AVX-MSVC-NEXT:    vbroadcastss {{.*#+}} xmm0 = [1073741824,1073741824,1073741824,1073741824]
 ; AVX-MSVC-NEXT:    vbroadcastss {{.*#+}} xmm1 = [1073741824,1073741824,1073741824,1073741824]
+; AVX-MSVC-NEXT:    testb $1, %r8b
 ; AVX-MSVC-NEXT:    .p2align 4
 ; AVX-MSVC-NEXT:  .LBB0_1: # %loop
 ; AVX-MSVC-NEXT:    # =>This Inner Loop Header: Depth=1
 ; AVX-MSVC-NEXT:    vmovaps %xmm0, (%rcx)
 ; AVX-MSVC-NEXT:    vmovaps %xmm1, (%rdx)
-; AVX-MSVC-NEXT:    testb $1, %r8b
 ; AVX-MSVC-NEXT:    jne .LBB0_1
 ; AVX-MSVC-NEXT:  # %bb.2: # %ret
 ; AVX-MSVC-NEXT:    retq

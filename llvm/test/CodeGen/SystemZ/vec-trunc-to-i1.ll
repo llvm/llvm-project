@@ -11,9 +11,10 @@ define void @pr32275(<4 x i8> %B15) {
 ; CHECK-NEXT:    vrepif %v1, 1
 ; CHECK-NEXT:    vn %v0, %v0, %v1
 ; CHECK-NEXT:    vlgvf %r0, %v0, 3
+; CHECK-NEXT:    chi %r0, 0
 ; CHECK-NEXT:  .LBB0_1: # %CF34
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    cijlh %r0, 0, .LBB0_1
+; CHECK-NEXT:    jlh .LBB0_1
 ; CHECK-NEXT:  # %bb.2: # %CF36
 ; CHECK-NEXT:    br %r14
 BB:

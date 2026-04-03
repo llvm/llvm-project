@@ -208,20 +208,20 @@ define <8 x i64> @combine_zext_pmuludq_256(<8 x i32> %a) {
 define void @PR39398(i32 %a0) {
 ; SSE-LABEL: PR39398:
 ; SSE:       # %bb.0: # %bb
+; SSE-NEXT:    cmpl $232, %edi
 ; SSE-NEXT:    .p2align 4
 ; SSE-NEXT:  .LBB5_1: # %bb10
 ; SSE-NEXT:    # =>This Inner Loop Header: Depth=1
-; SSE-NEXT:    cmpl $232, %edi
 ; SSE-NEXT:    jne .LBB5_1
 ; SSE-NEXT:  # %bb.2: # %bb34
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: PR39398:
 ; AVX:       # %bb.0: # %bb
+; AVX-NEXT:    cmpl $232, %edi
 ; AVX-NEXT:    .p2align 4
 ; AVX-NEXT:  .LBB5_1: # %bb10
 ; AVX-NEXT:    # =>This Inner Loop Header: Depth=1
-; AVX-NEXT:    cmpl $232, %edi
 ; AVX-NEXT:    jne .LBB5_1
 ; AVX-NEXT:  # %bb.2: # %bb34
 ; AVX-NEXT:    retq
