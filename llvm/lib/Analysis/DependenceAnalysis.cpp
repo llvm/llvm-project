@@ -2093,8 +2093,9 @@ bool DependenceInfo::accumulateCoefficientsGCD(const SCEV *Expr,
 /// Compute \p RunningGCD and return the start value of the innermost
 /// \p SCEVAddRecExpr. In order to calculate the return value we do not
 /// return immediately if it is proved that \p RunningGCD = 1.
-const SCEV *analyzeCoefficientsForGCD(const SCEV *Coefficients,
-                                      APInt &RunningGCD, ScalarEvolution *SE) {
+static const SCEV *analyzeCoefficientsForGCD(const SCEV *Coefficients,
+                                             APInt &RunningGCD,
+                                             ScalarEvolution *SE) {
   while (const SCEVAddRecExpr *AddRec =
              dyn_cast<SCEVAddRecExpr>(Coefficients)) {
     const SCEV *Coeff = AddRec->getStepRecurrence(*SE);
