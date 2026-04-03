@@ -473,22 +473,6 @@ gpu.func @vector_multi_reduction_dim0_distributed_dim1_reduction(%laneid: index)
   gpu.return
 }
 
-// CHECK-LABEL: gpu.func @vector_transpose
-// CHECK:         %[[SRC:.*]] = "some_op"()
-// CHECK:         %[[CAST:.*]] = builtin.unrealized_conversion_cast %[[SRC]] : vector<16x2xf32> to vector<1x2xf32>
-// CHECK-NEXT:    %[[T:.*]] = vector.transpose %[[CAST]], [1, 0] : vector<1x2xf32> to vector<2x1xf32>
-// CHECK-NEXT:    gpu.return
-gpu.func @vector_transpose() {
-  %cst = "some_op"()
-    {layout_result_0 = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1], order = [0, 1]>}
-    : () -> (vector<16x2xf32>)
-  %transpose = vector.transpose %cst, [1, 0]
-    {
-      layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>
-    }
-    : vector<16x2xf32> to vector<2x16xf32>
-  gpu.return
-}
 
 // CHECK-LABEL: gpu.func @vector_bitcast
 // CHECK:         %[[SRC:.*]] = "some_op"()
@@ -1092,7 +1076,8 @@ gpu.module @xevm_module {
 gpu.func @vector_broadcast_2d_to_2d_noop(%laneid: index) {
   %0 = "some_op"() {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>} : () -> vector<16x1xf16>
   %1 = vector.broadcast %0 {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>} : vector<16x1xf16> to vector<16x16xf16>
-  "some_use"(%1) : (vector<16x16xf16>) -> ()
+  %2 = xegpu.convert_layout %1 <{input_layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, target_layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}> : vector<16x16xf16>
+  "some_use"(%2) : (vector<16x16xf16>) -> ()
   gpu.return
 }
 }

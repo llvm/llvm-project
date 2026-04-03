@@ -365,6 +365,12 @@ bool xegpu::recoverTemporaryLayouts(Operation *rootOp) {
   });
 
   LLVM_DEBUG(DBGS() << "=== recoverTemporaryLayouts END ===\n");
+  // print the root op after
+  LLVM_DEBUG({
+    DBGS() << "After recoverTemporaryLayouts, IR:\n";
+    rootOp->print(llvm::dbgs(), OpPrintingFlags().printGenericOpForm());
+    llvm::dbgs() << "\n";
+  });
   return true;
 }
 

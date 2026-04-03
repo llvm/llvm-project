@@ -1318,7 +1318,7 @@ mlir::Type TensorDescType::parse(AsmParser &parser) {
     mlir::Attribute attr;
     ParseResult res = parser.parseAttribute(attr);
     if (mlir::succeeded(res)) {
-      if (mlir::isa<LayoutAttr>(attr)) {
+      if (mlir::isa<DistributeLayoutAttr>(attr)) {
         layout = attr;
         continue;
       }

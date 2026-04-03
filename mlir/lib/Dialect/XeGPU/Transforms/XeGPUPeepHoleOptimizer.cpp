@@ -28,6 +28,7 @@
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/Debug.h"
 #include <optional>
 
 namespace mlir {
@@ -147,13 +148,25 @@ static xegpu::TensorDescType tryOptimize(xegpu::TensorDescType tdescType,
   SmallVector<int64_t> supportedShape = {supportedHeight, supportedWidth};
   auto ctx = tdescType.getContext();
   auto origLayout = tdescType.getLayoutAttr();
-  SmallVector<int32_t> laneLayoutI32(
-      origLayout.getEffectiveLaneLayoutAsInt().begin(),
-      origLayout.getEffectiveLaneLayoutAsInt().end());
+  auto laneLayoutI64 = origLayout.getEffectiveLaneLayoutAsInt();
+  SmallVector<int32_t> laneLayoutI32(laneLayoutI64.begin(),
+                                     laneLayoutI64.end());
+  LLVM_DEBUG({
+    DBGS() << "tryOptimize: origLayout=" << origLayout << "\n";
+    DBGS() << "  laneLayoutI32=[";
+    llvm::interleaveComma(laneLayoutI32, llvm::dbgs());
+    llvm::dbgs() << "], laneData=[1, 1]";
+    if (origLayout.getOrder())
+      llvm::dbgs() << ", order=" << origLayout.getOrder();
+    llvm::dbgs() << "\n";
+    DBGS() << "  supportedShape=[" << supportedHeight << ", " << supportedWidth
+           << "], newElemTy=" << newElemTy << ", arrayLen=" << arrayLen << "\n";
+  });
   xegpu::LayoutAttr newLayout = xegpu::LayoutAttr::get(
       ctx, /*lane_layout=*/DenseI32ArrayAttr::get(ctx, laneLayoutI32),
       /*lane_data=*/DenseI32ArrayAttr::get(ctx, {1, 1}),
       /*order=*/origLayout.getOrder());
+  LLVM_DEBUG(DBGS() << "  newLayout=" << newLayout << "\n");
   // Array length can not be larger than 1 for transpose case.
   return xegpu::TensorDescType::get(supportedShape, newElemTy, arrayLen,
                                     tdescType.getBoundaryCheck(),

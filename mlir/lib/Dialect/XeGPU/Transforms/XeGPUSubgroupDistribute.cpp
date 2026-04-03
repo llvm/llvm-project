@@ -800,10 +800,17 @@ struct StoreDistribution final : public gpu::WarpDistributionPattern {
   using gpu::WarpDistributionPattern::WarpDistributionPattern;
   LogicalResult matchAndRewrite(gpu::WarpExecuteOnLane0Op warpOp,
                                 PatternRewriter &rewriter) const override {
+    LLVM_DEBUG(DBGS() << "StoreDistribution: attempting to match\n");
     Operation *lastNode = warpOp.getTerminator()->getPrevNode();
     auto storeScatterOp = dyn_cast_or_null<xegpu::StoreScatterOp>(lastNode);
-    if (!storeScatterOp)
+    if (!storeScatterOp) {
+      LLVM_DEBUG(
+          DBGS()
+          << "StoreDistribution: last node is not StoreScatterOp, skipping\n");
       return failure();
+    }
+    LLVM_DEBUG(DBGS() << "StoreDistribution: matched StoreScatterOp: "
+                      << *storeScatterOp << "\n");
     auto offsets = storeScatterOp.getOffsets();
     if (!offsets || !isa<VectorType>(offsets.getType()))
       return rewriter.notifyMatchFailure(
@@ -811,10 +818,15 @@ struct StoreDistribution final : public gpu::WarpDistributionPattern {
     VectorType offsetsTy = cast<VectorType>(offsets.getType());
     VectorType maskTy = cast<VectorType>(storeScatterOp.getMask().getType());
     VectorType storeVecTy = cast<VectorType>(storeScatterOp.getValueType());
+    LLVM_DEBUG(DBGS() << "StoreDistribution: offsetsTy=" << offsetsTy
+                      << ", maskTy=" << maskTy << ", storeVecTy=" << storeVecTy
+                      << "\n");
 
     // Add handling for leading unit dimensions support
     int chunkSize = storeScatterOp.getChunkSize().value_or(1);
     int effectiveVecRank = (chunkSize == 1) ? 1 : 2;
+    LLVM_DEBUG(DBGS() << "StoreDistribution: chunkSize=" << chunkSize
+                      << ", effectiveVecRank=" << effectiveVecRank << "\n");
 
     // Check that all leading dimensions are unit dimensions
     for (int i = 0; i < storeVecTy.getRank() - effectiveVecRank; i++) {
@@ -831,6 +843,24 @@ struct StoreDistribution final : public gpu::WarpDistributionPattern {
         xegpu::getTemporaryLayout(storeScatterOp->getOpOperand(2));
     auto layoutMask =
         xegpu::getTemporaryLayout(storeScatterOp->getOpOperand(3));
+    LLVM_DEBUG({
+      DBGS() << "StoreDistribution: layoutPayload=";
+      if (layoutPayload)
+        DBGS() << layoutPayload;
+      else
+        DBGS() << "(null)";
+      DBGS() << ", layoutOffsets=";
+      if (layoutOffsets)
+        DBGS() << layoutOffsets;
+      else
+        DBGS() << "(null)";
+      DBGS() << ", layoutMask=";
+      if (layoutMask)
+        DBGS() << layoutMask;
+      else
+        DBGS() << "(null)";
+      DBGS() << "\n";
+    });
 
     FailureOr<VectorType> distStoreVecByWarpOpOrFailure =
         getDistVecTypeBasedOnLaneLayout(layoutPayload, storeVecTy);
@@ -849,6 +879,9 @@ struct StoreDistribution final : public gpu::WarpDistributionPattern {
     VectorType distPayloadTy = distStoreVecByWarpOpOrFailure.value();
     VectorType distOffsetsTy = distOffsetsByWarpOpOrFailure.value();
     VectorType distMaskTy = distMaskByWarpOpOrFailure.value();
+    LLVM_DEBUG(DBGS() << "StoreDistribution: distPayloadTy=" << distPayloadTy
+                      << ", distOffsetsTy=" << distOffsetsTy
+                      << ", distMaskTy=" << distMaskTy << "\n");
 
     SmallVector<size_t> newRetIndices;
     SmallVector<Value> operands = storeScatterOp->getOperands();
@@ -885,7 +918,10 @@ struct StoreDistribution final : public gpu::WarpDistributionPattern {
         rewriter, newWarpOp.getLoc(), TypeRange{}, newStoreScatterOpOperands,
         storeScatterOp->getAttrs());
     xegpu::removeLayoutAttrs(newOp);
+    LLVM_DEBUG(DBGS() << "StoreDistribution: created new op: " << newOp
+                      << "\n");
     rewriter.eraseOp(storeScatterOp);
+    LLVM_DEBUG(DBGS() << "StoreDistribution: done\n");
     return success();
   }
 };
