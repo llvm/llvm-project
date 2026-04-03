@@ -923,7 +923,7 @@ void Target::ApplyNameToBreakpoints(BreakpointName &bp_name) {
 void Target::GetBreakpointNames(std::vector<std::string> &names) {
   names.clear();
   for (const auto& bp_name_entry : m_breakpoint_names) {
-    names.push_back(bp_name_entry.first.AsCString());
+    names.push_back(bp_name_entry.first.GetString());
   }
   llvm::sort(names);
 }
