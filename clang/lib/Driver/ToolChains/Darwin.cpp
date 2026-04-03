@@ -979,7 +979,50 @@ AppleMachO::AppleMachO(const Driver &D, const llvm::Triple &Triple,
 
 /// Darwin - Darwin tool chain for i386 and x86_64.
 Darwin::Darwin(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
-    : AppleMachO(D, Triple, Args), TargetInitialized(false) {}
+    : AppleMachO(D, Triple, Args), TargetInitialized(false) {
+  // Initialize the target platform from the triple. This provides a baseline
+  // so that methods like isTargetMacOSBased() work even if TranslateArgs /
+  // AddDeploymentTarget hasn't run yet (e.g. when Darwin is used as a host
+  // toolchain for HIP/CUDA offloading where BoundArch is empty).
+  // AddDeploymentTarget may later re-initialize with refined values from
+  // command-line arguments and SDK detection.
+  llvm::Triple::OSType OS = Triple.getOS();
+  DarwinPlatformKind Platform;
+  switch (OS) {
+  case llvm::Triple::Darwin:
+  case llvm::Triple::MacOSX:
+    Platform = MacOS;
+    break;
+  case llvm::Triple::IOS:
+    Platform = IPhoneOS;
+    break;
+  case llvm::Triple::TvOS:
+    Platform = TvOS;
+    break;
+  case llvm::Triple::WatchOS:
+    Platform = WatchOS;
+    break;
+  case llvm::Triple::XROS:
+    Platform = XROS;
+    break;
+  case llvm::Triple::DriverKit:
+    Platform = DriverKit;
+    break;
+  default:
+    return;
+  }
+
+  DarwinEnvironmentKind Environment = NativeEnvironment;
+  if (Triple.isSimulatorEnvironment())
+    Environment = Simulator;
+  else if (Triple.isMacCatalystEnvironment())
+    Environment = MacCatalyst;
+
+  VersionTuple OsVer = Triple.getOSVersion();
+  setTarget(Platform, Environment, OsVer.getMajor(),
+            OsVer.getMinor().value_or(0), OsVer.getSubminor().value_or(0),
+            VersionTuple());
+}
 
 types::ID MachO::LookupTypeForExtension(StringRef Ext) const {
   types::ID Ty = ToolChain::LookupTypeForExtension(Ext);
@@ -1140,50 +1183,6 @@ VersionTuple MachO::getLinkerVersion(const llvm::opt::ArgList &Args) const {
 
 Darwin::~Darwin() {}
 
-void Darwin::ensureTargetInitialized() const {
-  if (TargetInitialized)
-    return;
-
-  llvm::Triple::OSType OS = getTriple().getOS();
-
-  DarwinPlatformKind Platform;
-  switch (OS) {
-  case llvm::Triple::Darwin:
-  case llvm::Triple::MacOSX:
-    Platform = MacOS;
-    break;
-  case llvm::Triple::IOS:
-    Platform = IPhoneOS;
-    break;
-  case llvm::Triple::TvOS:
-    Platform = TvOS;
-    break;
-  case llvm::Triple::WatchOS:
-    Platform = WatchOS;
-    break;
-  case llvm::Triple::XROS:
-    Platform = XROS;
-    break;
-  case llvm::Triple::DriverKit:
-    Platform = DriverKit;
-    break;
-  default:
-    // Unknown platform; leave uninitialized.
-    return;
-  }
-
-  DarwinEnvironmentKind Environment = NativeEnvironment;
-  if (getTriple().isSimulatorEnvironment())
-    Environment = Simulator;
-  else if (getTriple().isMacCatalystEnvironment())
-    Environment = MacCatalyst;
-
-  VersionTuple OsVer = getTriple().getOSVersion();
-  setTarget(Platform, Environment, OsVer.getMajor(),
-            OsVer.getMinor().value_or(0), OsVer.getSubminor().value_or(0),
-            VersionTuple());
-}
-
 AppleMachO::~AppleMachO() {}
 
 MachO::~MachO() {}
@@ -1225,12 +1224,8 @@ std::string Darwin::ComputeEffectiveClangTriple(const ArgList &Args,
                                                 types::ID InputType) const {
   llvm::Triple Triple(ComputeLLVMTriple(Args, InputType));
 
-  // If the target isn't initialized (e.g., an unknown Darwin platform, return
-  // the default triple). Note: we intentionally do NOT call
-  // ensureTargetInitialized() here because this method is called before
-  // AddDeploymentTarget() in some code paths (e.g. -print-libgcc-file-name),
-  // and lazy init with version 0.0.0 would conflict with the real version
-  // that AddDeploymentTarget() later sets via setTarget().
+  // If the target isn't initialized (e.g., an unknown Darwin platform), return
+  // the default triple.
   if (!isTargetInitialized())
     return Triple.getTriple();
 
@@ -1296,11 +1291,6 @@ void DarwinClang::addClangWarningOptions(ArgStringList &CC1Args) const {
   CC1Args.push_back("-Werror=undef-prefix");
 
   // For modern targets, promote certain warnings to errors.
-  // Lazily initialize the target if needed (e.g. when Darwin is used as
-  // a host toolchain for device offloading).
-  ensureTargetInitialized();
-  if (!isTargetInitialized())
-    return;
   if (isTargetWatchOSBased() || getTriple().isArch64Bit()) {
     // Always enable -Wdeprecated-objc-isa-usage and promote it
     // to an error.
@@ -3998,9 +3988,6 @@ void Darwin::addStartObjectFileArgs(const ArgList &Args,
 }
 
 void Darwin::CheckObjCARC() const {
-  ensureTargetInitialized();
-  if (!isTargetInitialized())
-    return;
   if (isTargetIOSBased() || isTargetWatchOSBased() || isTargetXROS() ||
       (isTargetMacOSBased() && !isMacosxVersionLT(10, 6)))
     return;
@@ -4020,9 +4007,6 @@ SanitizerMask Darwin::getSupportedSanitizers() const {
   Res |= SanitizerKind::FuzzerNoLink;
   Res |= SanitizerKind::ObjCCast;
 
-  ensureTargetInitialized();
-  if (!isTargetInitialized())
-    return Res;
   // Prior to 10.9, macOS shipped a version of the C++ standard library without
   // C++11 support. The same is true of iOS prior to version 5. These OS'es are
   // incompatible with -fsanitize=vptr.
