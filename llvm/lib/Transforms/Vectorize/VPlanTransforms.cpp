@@ -6068,7 +6068,7 @@ getPartialReductionLinkCost(VPCostContext &CostCtx,
     return {ExtOpType, ExtKind};
   };
 
-  ExtendedReductionOperand ExtendedOp = Link.ExtendedOp;
+  const ExtendedReductionOperand &ExtendedOp = Link.ExtendedOp;
   VPWidenCastRecipe *ExtendA = ExtendedOp.CastRecipes[0];
   VPWidenCastRecipe *ExtendB = ExtendedOp.CastRecipes[1];
 
@@ -6253,7 +6253,7 @@ getScaledReductions(VPReductionPHIRecipe *RedPhiR, VPCostContext &CostCtx,
     CurrentValue = PrevValue;
   }
 
-  // The chains were collected by traversing backwards from the exit value.
+  // The chain links were collected by traversing backwards from the exit value.
   // Reverse the chains so they are in program order.
   std::reverse(Chain.begin(), Chain.end());
   return Chain;
@@ -6308,7 +6308,7 @@ void VPlanTransforms::createPartialReductions(VPlan &Plan,
     // the entire chain is cheaper when using partial reductions than when
     // handling the entire chain using regular reductions.
     for (const VPPartialReductionChain &Link : Chain) {
-      ExtendedReductionOperand ExtendedOp = Link.ExtendedOp;
+      const ExtendedReductionOperand &ExtendedOp = Link.ExtendedOp;
       InstructionCost LinkCost = getPartialReductionLinkCost(CostCtx, Link, VF);
       if (!LinkCost.isValid())
         return false;
