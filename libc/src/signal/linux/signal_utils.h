@@ -142,11 +142,15 @@ public:
         result = abort_lock.read_lock(cpp::nullopt);
     } while (result == RawRwLock::LockResult::Overflow);
 
-    (void)block_all_signals(old_mask);
+    // This uses a valid sigset_t size and internal storage. A failure here
+    // would indicate a kernel ABI mismatch, which is not actionable here.
+    block_all_signals(old_mask);
   }
 
   LIBC_INLINE ~SigAbortGuard() {
-    (void)restore_signals(old_mask);
+    // This restores a previously saved mask from internal storage. A failure
+    // here would likewise be a non-recoverable kernel ABI issue.
+    restore_signals(old_mask);
     (void)abort_lock.unlock();
   }
 };
