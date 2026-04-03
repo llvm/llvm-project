@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -emit-llvm -o - %s -target-feature +avx | FileCheck %s --check-prefix=SYSV
 // RUN: %clang_cc1 -triple x86_64-sie-ps5 -std=c++20 -emit-llvm -o - %s -target-feature +avx | FileCheck %s --check-prefix=PS
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -fclang-abi-compat=21 -emit-llvm -o - %s -target-feature +avx | FileCheck %s --check-prefix=CLANG21
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -fclang-abi-compat=22 -emit-llvm -o - %s -target-feature +avx | FileCheck %s --check-prefix=CLANG22
 
 typedef unsigned long long v4ull __attribute__((vector_size(32)));
 
@@ -46,8 +46,8 @@ unsigned long long pass_empty_field_then_vector(EmptyFieldThenVector X) {
 // PS-LABEL: define dso_local void @_Z30return_empty_field_then_vectorv(ptr dead_on_unwind noalias writable sret(%struct.EmptyFieldThenVector) align 32 %agg.result)
 // PS-LABEL: define dso_local noundef i64 @_Z28pass_empty_field_then_vector20EmptyFieldThenVector(ptr noundef byval(%struct.EmptyFieldThenVector) align 32 %X)
 
-// Clang21 ABI compatibility mode keeps the legacy ABI behavior: the empty-base case and [[no_unique_address]] empty-field case both as indirect
-// CLANG21-LABEL: define dso_local void @_Z29return_empty_base_then_vectorv(ptr dead_on_unwind noalias writable sret(%struct.EmptyBaseThenVector) align 32 %agg.result) 
-// CLANG21-LABEL: define dso_local noundef i64 @_Z27pass_empty_base_then_vector19EmptyBaseThenVector(ptr noundef byval(%struct.EmptyBaseThenVector) align 32 %X)
-// CLANG21-LABEL: define dso_local void @_Z30return_empty_field_then_vectorv(ptr dead_on_unwind noalias writable sret(%struct.EmptyFieldThenVector) align 32 %agg.result)
-// CLANG21-LABEL: define dso_local noundef i64 @_Z28pass_empty_field_then_vector20EmptyFieldThenVector(ptr noundef byval(%struct.EmptyFieldThenVector) align 32 %X)
+// Clang22 ABI compatibility mode keeps the legacy ABI behavior: the empty-base case and [[no_unique_address]] empty-field case both as indirect
+// CLANG22-LABEL: define dso_local void @_Z29return_empty_base_then_vectorv(ptr dead_on_unwind noalias writable sret(%struct.EmptyBaseThenVector) align 32 %agg.result) 
+// CLANG22-LABEL: define dso_local noundef i64 @_Z27pass_empty_base_then_vector19EmptyBaseThenVector(ptr noundef byval(%struct.EmptyBaseThenVector) align 32 %X)
+// CLANG22-LABEL: define dso_local void @_Z30return_empty_field_then_vectorv(ptr dead_on_unwind noalias writable sret(%struct.EmptyFieldThenVector) align 32 %agg.result)
+// CLANG22-LABEL: define dso_local noundef i64 @_Z28pass_empty_field_then_vector20EmptyFieldThenVector(ptr noundef byval(%struct.EmptyFieldThenVector) align 32 %X)
