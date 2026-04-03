@@ -495,7 +495,10 @@ public:
   /// This overload can be used if the addends are written directly instead of
   /// using relocations on the input section (e.g. MipsGotSection::writeTo()).
   template <bool shard = false> void addReloc(const DynamicReloc &reloc) {
-    relocs.push_back(reloc);
+    if (reloc.type == relativeRel)
+      relativeRelocs.push_back(reloc);
+    else
+      relocs.push_back(reloc);
   }
   /// Add a dynamic relocation against \p sym with an optional addend.
   void addSymbolReloc(RelType dynType, InputSectionBase &isec,
@@ -532,11 +535,11 @@ public:
         {dynType, &sec, offsetInSec, isAgainstSymbol, sym, addend, expr});
   }
   bool isNeeded() const override {
-    return !relocs.empty() ||
+    return !relocs.empty() || !relativeRelocs.empty() ||
            llvm::any_of(relocsVec, [](auto &v) { return !v.empty(); });
   }
   size_t getSize() const override {
-    size_t count = relocs.size();
+    size_t count = relocs.size() + relativeRelocs.size();
     for (const auto &v : relocsVec)
       count += v.size();
     return count * this->entsize;
@@ -545,16 +548,16 @@ public:
   void finalizeContents() override;
 
   int32_t dynamicTag, sizeDynamicTag;
-  SmallVector<DynamicReloc, 0> relocs;
+  SmallVector<DynamicReloc, 0> relocs, relativeRelocs;
 
 protected:
   void mergeRels();
-  void partitionRels();
   void computeRels();
   // Used when parallel relocation scanning adds relocations. The elements
-  // will be moved into relocs by mergeRel().
+  // will be classified into relativeRelocs or relocs by mergeRels().
   SmallVector<SmallVector<DynamicReloc, 0>, 0> relocsVec;
   size_t numRelativeRelocs = 0; // used by -z combreloc
+  RelType relativeRel;
   bool combreloc;
 };
 
@@ -1141,67 +1144,6 @@ private:
   size_t shardOffsets[numShards];
 };
 
-// .MIPS.abiflags section.
-template <class ELFT>
-class MipsAbiFlagsSection final : public SyntheticSection {
-  using Elf_Mips_ABIFlags = llvm::object::Elf_Mips_ABIFlags<ELFT>;
-
-public:
-  static std::unique_ptr<MipsAbiFlagsSection> create(Ctx &);
-
-  MipsAbiFlagsSection(Ctx &, Elf_Mips_ABIFlags flags);
-  size_t getSize() const override { return sizeof(Elf_Mips_ABIFlags); }
-  void writeTo(uint8_t *buf) override;
-
-private:
-  Elf_Mips_ABIFlags flags;
-};
-
-// .MIPS.options section.
-template <class ELFT> class MipsOptionsSection final : public SyntheticSection {
-  using Elf_Mips_Options = llvm::object::Elf_Mips_Options<ELFT>;
-  using Elf_Mips_RegInfo = llvm::object::Elf_Mips_RegInfo<ELFT>;
-
-public:
-  static std::unique_ptr<MipsOptionsSection<ELFT>> create(Ctx &);
-
-  MipsOptionsSection(Ctx &, Elf_Mips_RegInfo reginfo);
-  void writeTo(uint8_t *buf) override;
-
-  size_t getSize() const override {
-    return sizeof(Elf_Mips_Options) + sizeof(Elf_Mips_RegInfo);
-  }
-
-private:
-  Elf_Mips_RegInfo reginfo;
-};
-
-// MIPS .reginfo section.
-template <class ELFT> class MipsReginfoSection final : public SyntheticSection {
-  using Elf_Mips_RegInfo = llvm::object::Elf_Mips_RegInfo<ELFT>;
-
-public:
-  static std::unique_ptr<MipsReginfoSection> create(Ctx &);
-
-  MipsReginfoSection(Ctx &, Elf_Mips_RegInfo reginfo);
-  size_t getSize() const override { return sizeof(Elf_Mips_RegInfo); }
-  void writeTo(uint8_t *buf) override;
-
-private:
-  Elf_Mips_RegInfo reginfo;
-};
-
-// This is a MIPS specific section to hold a space within the data segment
-// of executable file which is pointed to by the DT_MIPS_RLD_MAP entry.
-// See "Dynamic section" in Chapter 5 in the following document:
-// ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf
-class MipsRldMapSection final : public SyntheticSection {
-public:
-  MipsRldMapSection(Ctx &);
-  size_t getSize() const override { return ctx.arg.wordsize; }
-  void writeTo(uint8_t *buf) override {}
-};
-
 // Representation of the combined .ARM.Exidx input sections. We process these
 // as a SyntheticSection like .eh_frame as we need to merge duplicate entries
 // and add terminating sentinel entries.
@@ -1304,56 +1246,6 @@ public:
 private:
   SmallVector<Thunk *, 0> thunks;
   size_t size = 0;
-};
-
-// Cortex-M Security Extensions. Prefix for functions that should be exported
-// for the non-secure world.
-const char ACLESESYM_PREFIX[] = "__acle_se_";
-const int ACLESESYM_SIZE = 8;
-
-class ArmCmseSGVeneer {
-public:
-  ArmCmseSGVeneer(Symbol *sym, Symbol *acleSeSym,
-                  std::optional<uint64_t> addr = std::nullopt)
-      : sym(sym), acleSeSym(acleSeSym), entAddr{addr} {}
-  static const size_t size{ACLESESYM_SIZE};
-  std::optional<uint64_t> getAddr() const { return entAddr; };
-
-  Symbol *sym;
-  Symbol *acleSeSym;
-  uint64_t offset = 0;
-
-private:
-  const std::optional<uint64_t> entAddr;
-};
-
-class ArmCmseSGSection final : public SyntheticSection {
-public:
-  ArmCmseSGSection(Ctx &ctx);
-  bool isNeeded() const override { return !entries.empty(); }
-  size_t getSize() const override;
-  void writeTo(uint8_t *buf) override;
-  void addSGVeneer(Symbol *sym, Symbol *ext_sym);
-  void addMappingSymbol();
-  void finalizeContents() override;
-  void exportEntries(SymbolTableBaseSection *symTab);
-  uint64_t impLibMaxAddr = 0;
-
-private:
-  SmallVector<std::pair<Symbol *, Symbol *>, 0> entries;
-  SmallVector<std::unique_ptr<ArmCmseSGVeneer>, 0> sgVeneers;
-  uint64_t newEntries = 0;
-};
-
-// Used to compute outSecOff of .got2 in each object file. This is needed to
-// synthesize PLT entries for PPC32 Secure PLT ABI.
-class PPC32Got2Section final : public SyntheticSection {
-public:
-  PPC32Got2Section(Ctx &);
-  size_t getSize() const override { return 0; }
-  bool isNeeded() const override;
-  void finalizeContents() override;
-  void writeTo(uint8_t *buf) override {}
 };
 
 // This section is used to store the addresses of functions that are called

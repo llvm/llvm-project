@@ -46,6 +46,7 @@ public:
   void addPreISel(PassManagerWrapper &PMW) const;
   Error addInstSelector(PassManagerWrapper &PMW) const;
   void addILPOpts(PassManagerWrapper &PMW) const;
+  void addPreRegBankSelect(PassManagerWrapper &PMW) const;
   void addMachineSSAOptimization(PassManagerWrapper &PMW) const;
   void addPreRegAlloc(PassManagerWrapper &PMW) const;
   // TODO(boomanaiden154): We need to add addPostFastRegAllocRewrite here once
@@ -129,10 +130,13 @@ void X86CodeGenPassBuilder::addILPOpts(PassManagerWrapper &PMW) const {
   addMachineFunctionPass(X86CmovConversionPass(), PMW);
 }
 
+void X86CodeGenPassBuilder::addPreRegBankSelect(PassManagerWrapper &PMW) const {
+  addMachineFunctionPass(X86PostLegalizerCombinerPass(), PMW);
+}
+
 void X86CodeGenPassBuilder::addMachineSSAOptimization(
     PassManagerWrapper &PMW) const {
-  // TODO(boomanaiden154): Add X86DomainReassignmentPass here once it has been
-  // ported.
+  addMachineFunctionPass(X86DomainReassignmentPass(), PMW);
   Base::addMachineSSAOptimization(PMW);
 }
 

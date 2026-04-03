@@ -774,6 +774,11 @@ static Type parseStructType(SPIRVDialect const &dialect,
     Type memberType;
     if (parser.parseType(memberType))
       return Type();
+    if (!isa<SPIRVType>(memberType)) {
+      parser.emitError(parser.getNameLoc(),
+                       "member type must be a valid SPIR-V type");
+      return Type();
+    }
     memberTypes.push_back(memberType);
 
     if (succeeded(parser.parseOptionalLSquare()))
@@ -1034,6 +1039,10 @@ LogicalResult SPIRVDialect::verifyOperationAttribute(Operation *op,
   } else if (symbol == spirv::getTargetEnvAttrName()) {
     if (!isa<spirv::TargetEnvAttr>(attr))
       return op->emitError("'") << symbol << "' must be a spirv::TargetEnvAttr";
+  } else if (symbol == spirv::getLoopControlAttrName()) {
+    if (!isa<spirv::LoopControlAttr>(attr))
+      return op->emitError("'")
+             << symbol << "' must be a spirv::LoopControlAttr";
   } else {
     return op->emitError("found unsupported '")
            << symbol << "' attribute on operation";

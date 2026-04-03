@@ -444,10 +444,10 @@ declare i32 @llvm.umin.i32(i32, i32) #1
 declare i32 @llvm.smin.i32(i32, i32) #1
 declare i32 @llvm.umax.i32(i32, i32) #1
 
-attributes #0 = { nounwind "uniform-work-group-size"="true" }
+attributes #0 = { nounwind "uniform-work-group-size" }
 attributes #1 = { nounwind readnone speculatable }
-attributes #2 = { nounwind "uniform-work-group-size"="true" }
-attributes #3 = { nounwind "uniform-work-group-size"="false" }
+attributes #2 = { nounwind "uniform-work-group-size" }
+attributes #3 = { nounwind }
 
 !0 = !{i32 8, i32 16, i32 2}
 !1 = !{i32 8, i32 16}

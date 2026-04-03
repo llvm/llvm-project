@@ -163,6 +163,33 @@ if (LLDB_ENABLE_LIBEDIT)
   set(CMAKE_EXTRA_INCLUDE_FILES)
 endif()
 
+if (APPLE)
+  set(default_enable_mte OFF)
+
+  # The MTE launcher complicates injecting the sanitizer runtime libraries.
+  # Default to OFF when any sanitizer is enabled.
+  if (NOT LLVM_USE_SANITIZER)
+    execute_process(
+        COMMAND sysctl -n hw.optional.arm.FEAT_MTE4
+        OUTPUT_VARIABLE SYSCTL_OUTPUT
+        ERROR_QUIET
+        RESULT_VARIABLE SYSCTL_RESULT
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+    if(SYSCTL_RESULT EQUAL 0 AND SYSCTL_OUTPUT STREQUAL "1")
+      set(default_enable_mte ON)
+    endif()
+  endif()
+
+  option(LLDB_ENABLE_MTE "Run the LLDB test suite with MTE enabled." ${default_enable_mte})
+
+  if (LLDB_ENABLE_MTE)
+    message(STATUS "Running the LLDB test suite with MTE")
+  endif()
+else()
+  set(LLDB_ENABLE_MTE OFF)
+endif()
+
 if (LLDB_ENABLE_PYTHON)
   if(CMAKE_SYSTEM_NAME MATCHES "Windows")
     set(default_embed_python_home ON)
@@ -172,8 +199,6 @@ if (LLDB_ENABLE_PYTHON)
   option(LLDB_EMBED_PYTHON_HOME
     "Embed PYTHONHOME in the binary. If set to OFF, PYTHONHOME environment variable will be used to to locate Python."
     ${default_embed_python_home})
-
-  include_directories(${Python3_INCLUDE_DIRS})
 
   if (LLDB_EMBED_PYTHON_HOME)
     get_filename_component(PYTHON_HOME "${Python3_EXECUTABLE}" DIRECTORY)

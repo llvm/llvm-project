@@ -39,15 +39,13 @@ coroutine ArrayInitCoro() {
   //  - We activate the cleanup after the first element and deactivate it in await.ready (see cleanup.isactive).
 
   // CHECK-LABEL: define dso_local void @_Z13ArrayInitCorov
-  // CHECK: %arrayinit.endOfInit = alloca ptr, align 8
-  // CHECK: %cleanup.isactive = alloca i1, align 1
   Printy arr[2] = {
     Printy("a"),
     // CHECK:       store i1 true, ptr %cleanup.isactive.reload.addr, align 1
     // CHECK-NEXT:  store ptr %arr.reload.addr, ptr %arrayinit.endOfInit.reload.addr, align 8
     // CHECK-NEXT:  call void @_ZN6PrintyC1EPKc(ptr noundef nonnull align 8 dereferenceable(8) %arr.reload.addr, ptr noundef @.str)
     // CHECK-NEXT:  %arrayinit.element = getelementptr inbounds %struct.Printy, ptr %arr.reload.addr, i64 1
-    // CHECK-NEXT:  %arrayinit.element.spill.addr = getelementptr inbounds %_Z13ArrayInitCorov.Frame, ptr %0, i32 0, i32 10
+    // CHECK-NEXT:  %arrayinit.element.spill.addr = getelementptr inbounds i8, ptr %0, i64 48
     // CHECK-NEXT:  store ptr %arrayinit.element, ptr %arrayinit.element.spill.addr, align 8
     // CHECK-NEXT:  store ptr %arrayinit.element, ptr %arrayinit.endOfInit.reload.addr, align 8
     co_await Awaiter{}
@@ -61,7 +59,7 @@ coroutine ArrayInitCoro() {
   // CHECK:         br label %cleanup{{.*}}
 
   // CHECK:       await.ready:
-  // CHECK-NEXT:    %arrayinit.element.reload.addr = getelementptr inbounds %_Z13ArrayInitCorov.Frame, ptr %0, i32 0, i32 10
+  // CHECK-NEXT:    %arrayinit.element.reload.addr = getelementptr inbounds i8, ptr %0, i64 48
   // CHECK-NEXT:    %arrayinit.element.reload = load ptr, ptr %arrayinit.element.reload.addr, align 8
   // CHECK-NEXT:    call void @_ZN7Awaiter12await_resumeEv
   // CHECK-NEXT:    store i1 false, ptr %cleanup.isactive.reload.addr, align 1

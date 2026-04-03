@@ -845,11 +845,11 @@ def SimdOp : OpenMP_Op<"simd", traits = [
   let hasRegionVerifier = 1;
 }
 
-
-def YieldOp : OpenMP_Op<"yield",
-    [Pure, ReturnLike, Terminator,
-     ParentOneOf<["AtomicUpdateOp", "DeclareReductionOp", "LoopNestOp",
-                  "PrivateClauseOp"]>]> {
+def YieldOp
+    : OpenMP_Op<"yield", [Pure, ReturnLike, Terminator,
+                          ParentOneOf<["AtomicUpdateOp", "DeclareReductionOp",
+                                       "LoopNestOp", "PrivateClauseOp",
+                                       "IteratorOp"]>]> {
   let summary = "loop yield and termination operation";
   let description = [{
     "omp.yield" yields SSA values from the OpenMP dialect op region and
@@ -1665,9 +1665,9 @@ def OrderedRegionOp : OpenMP_Op<"ordered.region", clauses = [
 // 2.17.5 taskwait Construct
 //===----------------------------------------------------------------------===//
 
-def TaskwaitOp : OpenMP_Op<"taskwait", clauses = [
-    OpenMP_DependClause, OpenMP_NowaitClause
-  ]> {
+def TaskwaitOp
+    : OpenMP_Op<"taskwait", traits = [AttrSizedOperandSegments],
+                clauses = [OpenMP_DependClause, OpenMP_NowaitClause]> {
   let summary = "taskwait construct";
   let description = [{
     The taskwait construct specifies a wait on the completion of child tasks
@@ -2296,6 +2296,59 @@ def DeclareSimdOp
 
   let builders = [OpBuilder<(
       ins CArg<"const DeclareSimdOperands &">:$clauses)>];
+
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// Affinity Entry Op
+//===----------------------------------------------------------------------===//
+
+def AffinityEntryOp : OpenMP_Op<"affinity_entry", [Pure]> {
+  let summary = "OpenMP affinity clause entry value";
+
+  let arguments = (ins OpenMP_PointerLikeType:$addr, IntLikeType:$len);
+
+  let results = (outs OpenMP_AffinityEntryType:$entry);
+
+  let assemblyFormat = [{
+    $addr `,` $len `:` `(` type($addr) `,` type($len) `)` `->`
+    qualified(type($entry)) attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// Iterator Op
+//===----------------------------------------------------------------------===//
+
+def IteratorOp : OpenMP_Op<"iterator",
+                           [AttrSizedOperandSegments,
+                            SingleBlockImplicitTerminator<"YieldOp">],
+                           clauses = [OpenMP_LoopRelatedClause]> {
+  let summary = "OpenMP iterator modifier";
+  let description = [{
+    The result of `omp.iterator` is an abstract handle of type
+    `!omp.iterated<T>`, representing the list of yielded values. This handle
+    can be directly consumed by OpenMP clauses that accept iterator modifiers,
+    such as `affinity`, `map`, `to`, `from`, or `depend`.
+
+    Example:
+      %it = omp.iterator(%i, %j) =
+        (%lb_i to %ub_i step %st_i, %lb_j to %ub_j step %st_j) {
+        %addr = ...
+        omp.yield(%addr)
+      } -> !omp.iterated<ptr>
+  }];
+
+  let regions = (region SizedRegion<1>:$region);
+  let results = (outs OpenMP_IteratedType:$iterated);
+
+  let assemblyFormat = [{
+    `(` custom<IteratorHeader>($region,
+                                $loop_lower_bounds, $loop_upper_bounds, $loop_steps,
+                                type($loop_lower_bounds), type($loop_upper_bounds), type($loop_steps))
+    `->` qualified(type($iterated)) attr-dict
+  }];
 
   let hasVerifier = 1;
 }

@@ -13,6 +13,7 @@
 #include "flang/Optimizer/Dialect/CUF/CUFOps.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
+#include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "flang/Runtime/CUDA/common.h"
 #include "flang/Runtime/CUDA/descriptor.h"
@@ -48,6 +49,8 @@ static mlir::Value createConvertOp(mlir::PatternRewriter &rewriter,
   return val;
 }
 
+static constexpr llvm::StringRef managedPtrSuffix{".managed.ptr"};
+
 struct CUFDeviceAddressOpConversion
     : public mlir::OpRewritePattern<cuf::DeviceAddressOp> {
   using OpRewritePattern::OpRewritePattern;
@@ -59,10 +62,25 @@ struct CUFDeviceAddressOpConversion
   mlir::LogicalResult
   matchAndRewrite(cuf::DeviceAddressOp op,
                   mlir::PatternRewriter &rewriter) const override {
-    if (auto global = symTab.lookup<fir::GlobalOp>(
-            op.getHostSymbol().getRootReference().getValue())) {
+    auto symName = op.getHostSymbol().getRootReference().getValue();
+    if (auto global = symTab.lookup<fir::GlobalOp>(symName)) {
       auto mod = op->getParentOfType<mlir::ModuleOp>();
       mlir::Location loc = op.getLoc();
+
+      // For non-allocatable managed globals, CUFAddConstructor created a
+      // companion pointer global (@sym.managed.ptr) that holds the unified
+      // memory address. Load from it instead of calling CUFGetDeviceAddress.
+      std::string ptrGlobalName = (symName + managedPtrSuffix).str();
+      if (auto ptrGlobal = symTab.lookup<fir::GlobalOp>(ptrGlobalName)) {
+        auto ptrRef = fir::AddrOfOp::create(
+            rewriter, loc, ptrGlobal.resultType(), ptrGlobal.getSymbol());
+        auto rawPtr = fir::LoadOp::create(rewriter, loc, ptrRef);
+        auto converted =
+            fir::ConvertOp::create(rewriter, loc, op.getType(), rawPtr);
+        rewriter.replaceOp(op, converted);
+        return success();
+      }
+
       auto hostAddr = fir::AddrOfOp::create(
           rewriter, loc, fir::ReferenceType::get(global.getType()),
           op.getHostSymbol());

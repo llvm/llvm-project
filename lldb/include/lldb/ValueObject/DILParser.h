@@ -71,8 +71,7 @@ public:
                                          DILLexer lexer,
                                          std::shared_ptr<StackFrame> frame_sp,
                                          lldb::DynamicValueType use_dynamic,
-                                         bool use_synthetic, bool fragile_ivar,
-                                         bool check_ptr_vs_member);
+                                         uint32_t options);
 
   ~DILParser() = default;
 
@@ -94,6 +93,7 @@ private:
   ASTNodeUP Run();
 
   ASTNodeUP ParseExpression();
+  ASTNodeUP ParseAdditiveExpression();
   ASTNodeUP ParseUnaryExpression();
   ASTNodeUP ParsePostfixExpression();
   ASTNodeUP ParsePrimaryExpression();

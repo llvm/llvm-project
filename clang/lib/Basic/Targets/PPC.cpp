@@ -678,6 +678,57 @@ void PPCTargetInfo::setFeatureEnabled(llvm::StringMap<bool> &Features,
   }
 }
 
+ParsedTargetAttr PPCTargetInfo::parseTargetAttr(StringRef Features) const {
+  ParsedTargetAttr Ret;
+  if (Features == "default")
+    return Ret;
+  SmallVector<StringRef, 1> AttrFeatures;
+  Features.split(AttrFeatures, ",");
+
+  // Grab the various features and prepend a "+" to turn on the feature to
+  // the backend and add them to our existing set of features.
+  for (auto &Feature : AttrFeatures) {
+    // Go ahead and trim whitespace rather than either erroring or
+    // accepting it weirdly.
+    Feature = Feature.trim();
+
+    if (Feature.starts_with("cpu=")) {
+      if (!Ret.CPU.empty())
+        Ret.Duplicate = "cpu=";
+      else
+        Ret.CPU = Feature.split("=").second.trim();
+    } else if (Feature.starts_with("tune=")) {
+      if (!Ret.Tune.empty())
+        Ret.Duplicate = "tune=";
+      else
+        Ret.Tune = Feature.split("=").second.trim();
+    } else if (Feature.starts_with("no-"))
+      Ret.Features.push_back("-" + Feature.split("-").second.str());
+    else
+      Ret.Features.push_back("+" + Feature.str());
+  }
+  return Ret;
+}
+
+llvm::APInt PPCTargetInfo::getFMVPriority(ArrayRef<StringRef> Features) const {
+  if (Features.empty())
+    return llvm::APInt(32, 0);
+  assert(Features.size() == 1 && "one feature/cpu per clone on PowerPC");
+  ParsedTargetAttr ParsedAttr = parseTargetAttr(Features[0]);
+  if (!ParsedAttr.CPU.empty()) {
+    int Priority = llvm::StringSwitch<int>(ParsedAttr.CPU)
+                       .Case("pwr7", 1)
+                       .Case("pwr8", 2)
+                       .Case("pwr9", 3)
+                       .Case("pwr10", 4)
+                       .Case("pwr11", 5)
+                       .Default(0);
+    return llvm::APInt(32, Priority);
+  }
+  assert(false && "unimplemented");
+  return llvm::APInt(32, 0);
+}
+
 // Make sure that registers are added in the correct array index which should be
 // the DWARF number for PPC registers.
 const char *const PPCTargetInfo::GCCRegNames[] = {

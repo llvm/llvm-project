@@ -303,26 +303,15 @@ define <2 x double> @test_fabd_v2f64(<2 x double> %lhs, <2 x double> %rhs) {
 }
 
 define <8 x i16> @test_uabd_knownbits_vec8i16(<8 x i16> %lhs, <8 x i16> %rhs) {
-; CHECK-SD-LABEL: test_uabd_knownbits_vec8i16:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    movi v2.8h, #15
-; CHECK-SD-NEXT:    and v0.16b, v0.16b, v2.16b
-; CHECK-SD-NEXT:    and v1.16b, v1.16b, v2.16b
-; CHECK-SD-NEXT:    uabd v0.8h, v0.8h, v1.8h
-; CHECK-SD-NEXT:    rev64 v0.8h, v0.8h
-; CHECK-SD-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_uabd_knownbits_vec8i16:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi v2.8h, #15
-; CHECK-GI-NEXT:    and v0.16b, v0.16b, v2.16b
-; CHECK-GI-NEXT:    and v1.16b, v1.16b, v2.16b
-; CHECK-GI-NEXT:    uabd v0.8h, v0.8h, v1.8h
-; CHECK-GI-NEXT:    rev64 v0.8h, v0.8h
-; CHECK-GI-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
-; CHECK-GI-NEXT:    and v0.16b, v0.16b, v2.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_uabd_knownbits_vec8i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi v2.8h, #15
+; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
+; CHECK-NEXT:    and v1.16b, v1.16b, v2.16b
+; CHECK-NEXT:    uabd v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    rev64 v0.8h, v0.8h
+; CHECK-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    ret
   %and1 = and <8 x i16> %lhs, <i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15>
   %and2 = and <8 x i16> %rhs, <i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15>
   %uabd = call <8 x i16> @llvm.aarch64.neon.uabd.v8i16(<8 x i16> %and1, <8 x i16> %and2)

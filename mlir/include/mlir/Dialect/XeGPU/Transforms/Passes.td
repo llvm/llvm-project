@@ -11,15 +11,6 @@
 
 include "mlir/Pass/PassBase.td"
 
-def XeGPUFoldAliasOps : Pass<"xegpu-fold-alias-ops"> {
-  let summary = "Fold alias ops into XeGPU ops";
-  let description = [{
-    The pass folds aliasing ops into XeGPU ops that they operate on the original
-    source references.
-  }];
-  let dependentDialects = ["memref::MemRefDialect", "xegpu::XeGPUDialect"];
-}
-
 def XeGPUSubgroupDistribute : Pass<"xegpu-subgroup-distribute"> {
   let summary = "Distribute XeGPU ops to work items";
   let description = [{
@@ -64,7 +55,11 @@ def XeGPUPropagateLayout : Pass<"xegpu-propagate-layout"> {
     Option<
     "layoutKind", "layout-kind", "std::string",
     /*default=*/"\"lane\"",
-    "Propagate `subgroup` / `inst` / `lane` level of xegpu layouts.">
+    "Propagate `subgroup` / `inst` / `lane` level of xegpu layouts.">,
+    Option<
+    "indexBitWidth", "index-bitwidth", "unsigned",
+    /*default=*/"64",
+    "Vectors of `index` type should also be distributable, inst-data and lower levels need to know the index size.">
   ];
 }
 

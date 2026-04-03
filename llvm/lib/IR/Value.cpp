@@ -53,7 +53,7 @@ static inline Type *checkType(Type *Ty) {
 Value::Value(Type *ty, unsigned scid)
     : SubclassID(scid), HasValueHandle(0), SubclassOptionalData(0),
       SubclassData(0), NumUserOperands(0), IsUsedByMD(false), HasName(false),
-      HasMetadata(false), VTy(checkType(ty)) {
+      VTy(checkType(ty)) {
   static_assert(ConstantFirstVal == 0, "!(SubclassID < ConstantFirstVal)");
   // FIXME: Why isn't this in the subclass gunk??
   // Note, we cannot call isa<CallInst> before the CallInst has been
@@ -79,10 +79,6 @@ Value::~Value() {
     ValueHandleBase::ValueIsDeleted(this);
   if (isUsedByMetadata())
     ValueAsMetadata::handleDeletion(this);
-
-  // Remove associated metadata from context.
-  if (HasMetadata)
-    clearMetadata();
 
 #ifndef NDEBUG      // Only in -g mode...
   // Check to make sure that there are no uses of this value that are still
@@ -558,7 +554,7 @@ void Value::replaceNonMetadataUsesWith(Value *New) {
   doRAUW(New, ReplaceMetadataUses::No);
 }
 
-void Value::replaceUsesWithIf(Value *New,
+bool Value::replaceUsesWithIf(Value *New,
                               llvm::function_ref<bool(Use &U)> ShouldReplace) {
   assert(New && "Value::replaceUsesWithIf(<null>) is invalid!");
   assert(New->getType() == getType() &&
@@ -567,9 +563,12 @@ void Value::replaceUsesWithIf(Value *New,
   SmallVector<TrackingVH<Constant>, 8> Consts;
   SmallPtrSet<Constant *, 8> Visited;
 
+  bool Changed = false;
   for (Use &U : llvm::make_early_inc_range(uses())) {
     if (!ShouldReplace(U))
       continue;
+    Changed = true;
+
     // Must handle Constants specially, we cannot call replaceUsesOfWith on a
     // constant because they are uniqued.
     if (auto *C = dyn_cast<Constant>(U.getUser())) {
@@ -587,6 +586,8 @@ void Value::replaceUsesWithIf(Value *New,
     //        not just the one passed to ShouldReplace
     Consts.pop_back_val()->handleOperandChange(this, New);
   }
+
+  return Changed;
 }
 
 /// Replace debug record uses of MetadataAsValue(ValueAsMetadata(V)) outside BB
@@ -774,7 +775,7 @@ const Value *Value::stripAndAccumulateConstantOffsets(
         APInt OldOffset = Offset;
         Offset = Offset.sadd_ov(GEPOffsetST, Overflow);
         if (Overflow) {
-          Offset = OldOffset;
+          Offset = std::move(OldOffset);
           return V;
         }
       }
@@ -843,7 +844,8 @@ bool Value::canBeFreed() const {
       return false;
   }
 
-  if (isa<IntToPtrInst>(this) && getMetadata(LLVMContext::MD_nofree))
+  if (auto *ITP = dyn_cast<IntToPtrInst>(this);
+      ITP && ITP->hasMetadata(LLVMContext::MD_nofree))
     return false;
 
   const Function *F = nullptr;

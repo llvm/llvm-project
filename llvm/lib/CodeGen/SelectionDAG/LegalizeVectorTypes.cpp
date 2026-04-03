@@ -62,6 +62,9 @@ void DAGTypeLegalizer::ScalarizeVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::BUILD_VECTOR:      R = ScalarizeVecRes_BUILD_VECTOR(N); break;
   case ISD::EXTRACT_SUBVECTOR: R = ScalarizeVecRes_EXTRACT_SUBVECTOR(N); break;
   case ISD::FP_ROUND:          R = ScalarizeVecRes_FP_ROUND(N); break;
+  case ISD::CONVERT_FROM_ARBITRARY_FP:
+    R = ScalarizeVecRes_CONVERT_FROM_ARBITRARY_FP(N);
+    break;
   case ISD::AssertZext:
   case ISD::AssertSext:
   case ISD::FPOWI:
@@ -478,6 +481,23 @@ SDValue DAGTypeLegalizer::ScalarizeVecRes_FP_ROUND(SDNode *N) {
                      N->getOperand(1));
 }
 
+SDValue DAGTypeLegalizer::ScalarizeVecRes_CONVERT_FROM_ARBITRARY_FP(SDNode *N) {
+  SDLoc DL(N);
+  SDValue Op = N->getOperand(0);
+  EVT OpVT = Op.getValueType();
+  // The result needs scalarizing, but it's not a given that the source does.
+  // See similar logic in ScalarizeVecRes_UnaryOp.
+  if (getTypeAction(OpVT) == TargetLowering::TypeScalarizeVector) {
+    Op = GetScalarizedVector(Op);
+  } else {
+    EVT VT = OpVT.getVectorElementType();
+    Op = DAG.getExtractVectorElt(DL, VT, Op, 0);
+  }
+  return DAG.getNode(ISD::CONVERT_FROM_ARBITRARY_FP, DL,
+                     N->getValueType(0).getVectorElementType(), Op,
+                     N->getOperand(1));
+}
+
 SDValue DAGTypeLegalizer::ScalarizeVecRes_UnaryOpWithExtraInput(SDNode *N) {
   SDValue Op = GetScalarizedVector(N->getOperand(0));
   return DAG.getNode(N->getOpcode(), SDLoc(N), Op.getValueType(), Op,
@@ -818,6 +838,7 @@ bool DAGTypeLegalizer::ScalarizeVectorOperand(SDNode *N, unsigned OpNo) {
     break;
   case ISD::FP_TO_SINT_SAT:
   case ISD::FP_TO_UINT_SAT:
+  case ISD::CONVERT_FROM_ARBITRARY_FP:
     Res = ScalarizeVecOp_UnaryOpWithExtraInput(N);
     break;
   case ISD::STRICT_SINT_TO_FP:
@@ -887,6 +908,10 @@ bool DAGTypeLegalizer::ScalarizeVectorOperand(SDNode *N, unsigned OpNo) {
     break;
   case ISD::VECTOR_FIND_LAST_ACTIVE:
     Res = ScalarizeVecOp_VECTOR_FIND_LAST_ACTIVE(N);
+    break;
+  case ISD::CTTZ_ELTS:
+  case ISD::CTTZ_ELTS_ZERO_POISON:
+    Res = ScalarizeVecOp_CTTZ_ELTS(N);
     break;
   }
 
@@ -1200,6 +1225,18 @@ SDValue DAGTypeLegalizer::ScalarizeVecOp_VECTOR_FIND_LAST_ACTIVE(SDNode *N) {
   return DAG.getConstant(0, SDLoc(N), VT);
 }
 
+SDValue DAGTypeLegalizer::ScalarizeVecOp_CTTZ_ELTS(SDNode *N) {
+  // The number of trailing zero elements is 1 if the element is 0, and 0
+  // otherwise.
+  if (N->getOpcode() == ISD::CTTZ_ELTS_ZERO_POISON)
+    return DAG.getConstant(0, SDLoc(N), N->getValueType(0));
+  SDValue Op = GetScalarizedVector(N->getOperand(0));
+  SDValue SetCC =
+      DAG.getSetCC(SDLoc(N), MVT::i1, Op,
+                   DAG.getConstant(0, SDLoc(N), Op.getValueType()), ISD::SETEQ);
+  return DAG.getZExtOrTrunc(SetCC, SDLoc(N), N->getValueType(0));
+}
+
 //===----------------------------------------------------------------------===//
 //  Result Vector Splitting
 //===----------------------------------------------------------------------===//
@@ -1382,6 +1419,7 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::VP_UINT_TO_FP:
   case ISD::FCANONICALIZE:
   case ISD::AssertNoFPClass:
+  case ISD::CONVERT_FROM_ARBITRARY_FP:
     SplitVecRes_UnaryOp(N, Lo, Hi);
     break;
   case ISD::ADDRSPACECAST:
@@ -2783,7 +2821,8 @@ void DAGTypeLegalizer::SplitVecRes_UnaryOp(SDNode *N, SDValue &Lo,
   const SDNodeFlags Flags = N->getFlags();
   unsigned Opcode = N->getOpcode();
   if (N->getNumOperands() <= 2) {
-    if (Opcode == ISD::FP_ROUND || Opcode == ISD::AssertNoFPClass) {
+    if (Opcode == ISD::FP_ROUND || Opcode == ISD::AssertNoFPClass ||
+        Opcode == ISD::CONVERT_FROM_ARBITRARY_FP) {
       Lo = DAG.getNode(Opcode, dl, LoVT, Lo, N->getOperand(1), Flags);
       Hi = DAG.getNode(Opcode, dl, HiVT, Hi, N->getOperand(1), Flags);
     } else {
@@ -3596,7 +3635,10 @@ bool DAGTypeLegalizer::SplitVectorOperand(SDNode *N, unsigned OpNo) {
     break;
   case ISD::STRICT_FP_ROUND:
   case ISD::VP_FP_ROUND:
-  case ISD::FP_ROUND:          Res = SplitVecOp_FP_ROUND(N); break;
+  case ISD::FP_ROUND:
+  case ISD::CONVERT_FROM_ARBITRARY_FP:
+    Res = SplitVecOp_FP_ROUND(N);
+    break;
   case ISD::FCOPYSIGN:         Res = SplitVecOp_FPOpDifferentTypes(N); break;
   case ISD::STORE:
     Res = SplitVecOp_STORE(cast<StoreSDNode>(N), OpNo);
@@ -3715,6 +3757,10 @@ bool DAGTypeLegalizer::SplitVectorOperand(SDNode *N, unsigned OpNo) {
   case ISD::VP_REDUCE_FMAXIMUM:
   case ISD::VP_REDUCE_FMINIMUM:
     Res = SplitVecOp_VP_REDUCE(N, OpNo);
+    break;
+  case ISD::CTTZ_ELTS:
+  case ISD::CTTZ_ELTS_ZERO_POISON:
+    Res = SplitVecOp_CttzElts(N);
     break;
   case ISD::VP_CTTZ_ELTS:
   case ISD::VP_CTTZ_ELTS_ZERO_UNDEF:
@@ -4732,8 +4778,8 @@ SDValue DAGTypeLegalizer::SplitVecOp_FP_ROUND(SDNode *N) {
     Lo = DAG.getNode(ISD::VP_FP_ROUND, DL, OutVT, Lo, MaskLo, EVLLo);
     Hi = DAG.getNode(ISD::VP_FP_ROUND, DL, OutVT, Hi, MaskHi, EVLHi);
   } else {
-    Lo = DAG.getNode(ISD::FP_ROUND, DL, OutVT, Lo, N->getOperand(1));
-    Hi = DAG.getNode(ISD::FP_ROUND, DL, OutVT, Hi, N->getOperand(1));
+    Lo = DAG.getNode(N->getOpcode(), DL, OutVT, Lo, N->getOperand(1));
+    Hi = DAG.getNode(N->getOpcode(), DL, OutVT, Hi, N->getOperand(1));
   }
 
   return DAG.getNode(ISD::CONCAT_VECTORS, DL, ResVT, Lo, Hi);
@@ -4800,6 +4846,26 @@ SDValue DAGTypeLegalizer::SplitVecOp_FP_TO_XINT_SAT(SDNode *N) {
   Hi = DAG.getNode(N->getOpcode(), dl, NewResVT, Hi, N->getOperand(1));
 
   return DAG.getNode(ISD::CONCAT_VECTORS, dl, ResVT, Lo, Hi);
+}
+
+SDValue DAGTypeLegalizer::SplitVecOp_CttzElts(SDNode *N) {
+  SDLoc DL(N);
+  EVT ResVT = N->getValueType(0);
+
+  SDValue Lo, Hi;
+  SDValue VecOp = N->getOperand(0);
+  GetSplitVector(VecOp, Lo, Hi);
+
+  // if CTTZ_ELTS(Lo) != VL => CTTZ_ELTS(Lo).
+  // else => VL + (CTTZ_ELTS(Hi) or CTTZ_ELTS_ZERO_POISON(Hi)).
+  SDValue ResLo = DAG.getNode(ISD::CTTZ_ELTS, DL, ResVT, Lo);
+  SDValue VL =
+      DAG.getElementCount(DL, ResVT, Lo.getValueType().getVectorElementCount());
+  SDValue ResLoNotVL =
+      DAG.getSetCC(DL, getSetCCResultType(ResVT), ResLo, VL, ISD::SETNE);
+  SDValue ResHi = DAG.getNode(N->getOpcode(), DL, ResVT, Hi);
+  return DAG.getSelect(DL, ResVT, ResLoNotVL, ResLo,
+                       DAG.getNode(ISD::ADD, DL, ResVT, VL, ResHi));
 }
 
 SDValue DAGTypeLegalizer::SplitVecOp_VP_CttzElements(SDNode *N) {
@@ -5142,6 +5208,7 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::VP_UINT_TO_FP:
   case ISD::ZERO_EXTEND:
   case ISD::VP_ZERO_EXTEND:
+  case ISD::CONVERT_FROM_ARBITRARY_FP:
     Res = WidenVecRes_Convert(N);
     break;
 
@@ -7278,6 +7345,7 @@ bool DAGTypeLegalizer::WidenVectorOperand(SDNode *N, unsigned OpNo) {
   case ISD::UINT_TO_FP:
   case ISD::STRICT_UINT_TO_FP:
   case ISD::TRUNCATE:
+  case ISD::CONVERT_FROM_ARBITRARY_FP:
     Res = WidenVecOp_Convert(N);
     break;
 
@@ -7499,7 +7567,7 @@ SDValue DAGTypeLegalizer::WidenVecOp_Convert(SDNode *N) {
       // use the new one.
       ReplaceValueWith(SDValue(N, 1), Res.getValue(1));
     } else {
-      if (Opcode == ISD::FP_ROUND)
+      if (Opcode == ISD::FP_ROUND || Opcode == ISD::CONVERT_FROM_ARBITRARY_FP)
         Res = DAG.getNode(Opcode, dl, WideVT, InOp, N->getOperand(1));
       else
         Res = DAG.getNode(Opcode, dl, WideVT, InOp);
@@ -7523,9 +7591,13 @@ SDValue DAGTypeLegalizer::WidenVecOp_Convert(SDNode *N) {
     SDValue NewChain = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, OpChains);
     ReplaceValueWith(SDValue(N, 1), NewChain);
   } else {
-    for (unsigned i = 0; i < NumElts; ++i)
-      Ops[i] = DAG.getNode(Opcode, dl, EltVT,
-                           DAG.getExtractVectorElt(dl, InEltVT, InOp, i));
+    for (unsigned i = 0; i < NumElts; ++i) {
+      SDValue Elt = DAG.getExtractVectorElt(dl, InEltVT, InOp, i);
+      if (Opcode == ISD::FP_ROUND || Opcode == ISD::CONVERT_FROM_ARBITRARY_FP)
+        Ops[i] = DAG.getNode(Opcode, dl, EltVT, Elt, N->getOperand(1));
+      else
+        Ops[i] = DAG.getNode(Opcode, dl, EltVT, Elt);
+    }
   }
 
   return DAG.getBuildVector(VT, dl, Ops);

@@ -41,7 +41,7 @@ AVAILABLE_EXTERNALLY_ALTERNATE void *memmove(void *a, const void *b, size_t c) {
 // CHECK-NEXT:    store ptr [[TMP0]], ptr [[A_ADDR_I]], align 8
 // CHECK-NEXT:    store ptr [[TMP1]], ptr [[B_ADDR_I]], align 8
 // CHECK-NEXT:    store i64 [[TMP2]], ptr [[C_ADDR_I]], align 8
-// CHECK-NEXT:    call void asm sideeffect "# memcpy.inline marker", "~{dirflag},~{fpsr},~{flags}"() #[[ATTR3:[0-9]+]], !srcloc !2
+// CHECK-NEXT:    call void asm sideeffect "# memcpy.inline marker", "~{dirflag},~{fpsr},~{flags}"() #[[ATTR3:[0-9]+]], !srcloc [[META2:![0-9]+]]
 // CHECK-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[A_ADDR_I]], align 8
 // CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[B_ADDR_I]], align 8
 // CHECK-NEXT:    [[TMP5:%.*]] = load i64, ptr [[C_ADDR_I]], align 8
@@ -69,7 +69,7 @@ void *foo(void *a, const void *b, size_t c) {
 // CHECK-NEXT:    store ptr [[TMP0]], ptr [[A_ADDR_I]], align 8
 // CHECK-NEXT:    store ptr [[TMP1]], ptr [[B_ADDR_I]], align 8
 // CHECK-NEXT:    store i64 [[TMP2]], ptr [[C_ADDR_I]], align 8
-// CHECK-NEXT:    call void asm sideeffect "# memmove.inline marker", "~{dirflag},~{fpsr},~{flags}"() #[[ATTR3]], !srcloc !3
+// CHECK-NEXT:    call void asm sideeffect "# memmove.inline marker", "~{dirflag},~{fpsr},~{flags}"() #[[ATTR3]], !srcloc [[META3:![0-9]+]]
 // CHECK-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[A_ADDR_I]], align 8
 // CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[B_ADDR_I]], align 8
 // CHECK-NEXT:    [[TMP5:%.*]] = load i64, ptr [[C_ADDR_I]], align 8

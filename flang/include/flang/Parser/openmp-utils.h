@@ -113,22 +113,14 @@ template <typename T> OmpDirectiveName GetOmpDirectiveName(const T &x) {
   return detail::DirectiveNameScope::GetOmpDirectiveName(x);
 }
 
+std::string GetUpperName(llvm::omp::Clause id, unsigned version);
+std::string GetUpperName(llvm::omp::Directive id, unsigned version);
+
 const OpenMPDeclarativeConstruct *GetOmp(const DeclarationConstruct &x);
 const OpenMPConstruct *GetOmp(const ExecutionPartConstruct &x);
 
 const OpenMPLoopConstruct *GetOmpLoop(const ExecutionPartConstruct &x);
 const DoConstruct *GetDoConstruct(const ExecutionPartConstruct &x);
-
-// Is the template argument "Statement<T>" for some T?
-template <typename T> struct IsStatement {
-  static constexpr bool value{false};
-};
-template <typename T> struct IsStatement<Statement<T>> {
-  static constexpr bool value{true};
-};
-
-std::optional<Label> GetStatementLabel(const ExecutionPartConstruct &x);
-std::optional<Label> GetFinalLabel(const OpenMPConstruct &x);
 
 namespace detail {
 // Clauses with flangClass = "OmpObjectList".
@@ -223,6 +215,9 @@ const T *GetFirstArgument(const OmpDirectiveSpecification &spec) {
   return nullptr;
 }
 
+const OmpClause *FindClause(
+    const OmpDirectiveSpecification &spec, llvm::omp::Clause clauseId);
+
 const BlockConstruct *GetFortranBlockConstruct(
     const ExecutionPartConstruct &epc);
 const Block &GetInnermostExecPart(const Block &block);
@@ -238,6 +233,19 @@ struct OmpAllocateInfo {
 };
 
 OmpAllocateInfo SplitOmpAllocate(const OmpAllocateDirective &x);
+
+template <typename R, typename = void, typename = void> struct is_range {
+  static constexpr bool value{false};
+};
+
+template <typename R>
+struct is_range<R, //
+    std::void_t<decltype(std::declval<R>().begin())>,
+    std::void_t<decltype(std::declval<R>().end())>> {
+  static constexpr bool value{true};
+};
+
+template <typename R> constexpr bool is_range_v = is_range<R>::value;
 
 // Iterate over a range of parser::Block::const_iterator's. When the end
 // of the range is reached, the iterator becomes invalid.
@@ -277,14 +285,28 @@ struct ExecutionPartIterator {
   using IteratorType = Block::const_iterator;
   using IteratorRange = llvm::iterator_range<IteratorType>;
 
+  // An iterator range with a third iterator indicating a position inside
+  // the range.
+  struct IteratorGauge : public IteratorRange {
+    IteratorGauge(IteratorType b, IteratorType e)
+        : IteratorRange(b, e), at(b) {}
+    IteratorGauge(IteratorRange r) : IteratorRange(r), at(r.begin()) {}
+
+    bool atEnd() const { return at == end(); }
+    IteratorType at;
+  };
+
   struct Construct {
     Construct(IteratorType b, IteratorType e, const ExecutionPartConstruct *c)
-        : range(b, e), owner(c) {}
+        : location(b, e), owner(c) {}
     template <typename R>
     Construct(const R &r, const ExecutionPartConstruct *c)
-        : range(r), owner(c) {}
+        : location(r), owner(c) {}
     Construct(const Construct &c) = default;
-    IteratorRange range;
+    // The original range of the construct with the current position in it.
+    // The location.at is the construct currently being pointed at, or
+    // stepped into.
+    IteratorGauge location;
     const ExecutionPartConstruct *owner;
   };
 
@@ -296,9 +318,7 @@ struct ExecutionPartIterator {
     stack_.emplace_back(b, e, c);
     adjust();
   }
-  template <typename R, //
-      typename = decltype(std::declval<R>().begin()),
-      typename = decltype(std::declval<R>().end())>
+  template <typename R, typename = std::enable_if_t<is_range_v<R>>>
   ExecutionPartIterator(const R &range, Step stepping = Step::Default,
       const ExecutionPartConstruct *construct = nullptr)
       : ExecutionPartIterator(range.begin(), range.end(), stepping, construct) {
@@ -315,6 +335,7 @@ struct ExecutionPartIterator {
 
   bool valid() const { return !stack_.empty(); }
 
+  const std::vector<Construct> &stack() const { return stack_; }
   decltype(auto) operator*() const { return *at(); }
   bool operator==(const ExecutionPartIterator &other) const {
     if (valid() != other.valid()) {
@@ -322,7 +343,7 @@ struct ExecutionPartIterator {
     }
     // Invalid iterators are considered equal.
     return !valid() ||
-        stack_.back().range.begin() == other.stack_.back().range.begin();
+        stack_.back().location.at == other.stack_.back().location.at;
   }
   bool operator!=(const ExecutionPartIterator &other) const {
     return !(*this == other);
@@ -351,7 +372,7 @@ struct ExecutionPartIterator {
   using iterator_category = std::forward_iterator_tag;
 
 private:
-  IteratorType at() const { return stack_.back().range.begin(); };
+  IteratorType at() const { return stack_.back().location.at; };
 
   // If the iterator is not at a legal location, keep advancing it until
   // it lands at a legal location or becomes invalid.
@@ -368,9 +389,7 @@ template <typename Iterator = ExecutionPartIterator> struct ExecutionPartRange {
       Step stepping = Step::Default,
       const ExecutionPartConstruct *owner = nullptr)
       : begin_(begin, end, stepping, owner), end_() {}
-  template <typename R, //
-      typename = decltype(std::declval<R>().begin()),
-      typename = decltype(std::declval<R>().end())>
+  template <typename R, typename = std::enable_if_t<is_range_v<R>>>
   ExecutionPartRange(const R &range, Step stepping = Step::Default,
       const ExecutionPartConstruct *owner = nullptr)
       : ExecutionPartRange(range.begin(), range.end(), stepping, owner) {}
@@ -390,9 +409,7 @@ struct LoopNestIterator : public ExecutionPartIterator {
       : ExecutionPartIterator(b, e, s, c) {
     adjust();
   }
-  template <typename R, //
-      typename = decltype(std::declval<R>().begin()),
-      typename = decltype(std::declval<R>().end())>
+  template <typename R, typename = std::enable_if_t<is_range_v<R>>>
   LoopNestIterator(const R &range, Step stepping = Step::Default,
       const ExecutionPartConstruct *construct = nullptr)
       : LoopNestIterator(range.begin(), range.end(), stepping, construct) {}

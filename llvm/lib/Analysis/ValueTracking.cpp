@@ -499,8 +499,9 @@ static void computeKnownBitsAddSub(bool Add, const Value *Op0, const Value *Op1,
   KnownOut = KnownBits::computeForAddSub(Add, NSW, NUW, Known2, KnownOut);
 
   if (!Add && NSW && !KnownOut.isNonNegative() &&
-      isImpliedByDomCondition(ICmpInst::ICMP_SLE, Op1, Op0, Q.CxtI, Q.DL)
-          .value_or(false))
+      (isImpliedByDomCondition(ICmpInst::ICMP_SLE, Op1, Op0, Q.CxtI, Q.DL)
+           .value_or(false) ||
+       match(Op1, m_c_SMin(m_Specific(Op0), m_Value()))))
     KnownOut.makeNonNegative();
 
   if (Add)
@@ -631,11 +632,9 @@ static bool isEphemeralValueOf(const Instruction *I, const Value *E) {
       if (V == I || (!V->mayHaveSideEffects() && !V->isTerminator())) {
         EphValues.insert(V);
 
-        if (const User *U = dyn_cast<User>(V)) {
-          for (const Use &U : U->operands()) {
-            if (const auto *I = dyn_cast<Instruction>(U.get()))
-              WorkSet.push_back(I);
-          }
+        for (const Use &U : V->operands()) {
+          if (const auto *I = dyn_cast<Instruction>(U.get()))
+            WorkSet.push_back(I);
         }
       }
     }
@@ -1058,7 +1057,7 @@ void llvm::computeKnownBitsFromContext(const Value *V, KnownBits &Known,
 
   if (Q.DC && Q.DT) {
     // Handle dominating conditions.
-    for (BranchInst *BI : Q.DC->conditionsFor(V)) {
+    for (CondBrInst *BI : Q.DC->conditionsFor(V)) {
       BasicBlockEdge Edge0(BI->getParent(), BI->getSuccessor(0));
       if (Q.DT->dominates(Edge0, Q.CxtI->getParent()))
         computeKnownBitsFromCond(V, BI->getCondition(), Known, Q,
@@ -1340,7 +1339,7 @@ void llvm::adjustKnownBitsForSelectArm(KnownBits &Known, Value *Cond,
 
   // Finally, we know we get information from the condition and its valid,
   // so return it.
-  Known = CondRes;
+  Known = std::move(CondRes);
 }
 
 // Match a signed min+max clamp pattern like smax(smin(In, CHigh), CLow).
@@ -2265,6 +2264,16 @@ static void computeKnownBitsFromOperator(const Operator *I,
           Known.Zero.setBitsFrom(KnownZeroFirstBit);
         break;
       }
+      case Intrinsic::amdgcn_mbcnt_hi:
+      case Intrinsic::amdgcn_mbcnt_lo: {
+        // Wave64 mbcnt_lo returns at most 32 + src1. Otherwise these return at
+        // most 31 + src1.
+        Known.Zero.setBitsFrom(
+            II->getIntrinsicID() == Intrinsic::amdgcn_mbcnt_lo ? 6 : 5);
+        computeKnownBits(I->getOperand(1), Known2, Q, Depth + 1);
+        Known = KnownBits::add(Known, Known2);
+        break;
+      }
       case Intrinsic::vscale: {
         if (!II->getParent() || !II->getFunction())
           break;
@@ -2674,7 +2683,7 @@ bool llvm::isKnownToBeAPowerOfTwo(const Value *V, bool OrZero,
 
   // Handle dominating conditions.
   if (Q.DC && Q.CxtI && Q.DT) {
-    for (BranchInst *BI : Q.DC->conditionsFor(V)) {
+    for (CondBrInst *BI : Q.DC->conditionsFor(V)) {
       Value *Cond = BI->getCondition();
 
       BasicBlockEdge Edge0(BI->getParent(), BI->getSuccessor(0));
@@ -2991,13 +3000,11 @@ static bool isKnownNonNullFromDominatingCondition(const Value *V,
             continue;
           }
 
-        if (const BranchInst *BI = dyn_cast<BranchInst>(Curr)) {
-          assert(BI->isConditional() && "uses a comparison!");
-
+        if (const CondBrInst *BI = dyn_cast<CondBrInst>(Curr)) {
           BasicBlock *NonNullSuccessor =
               BI->getSuccessor(NonNullIfTrue ? 0 : 1);
           BasicBlockEdge Edge(BI->getParent(), NonNullSuccessor);
-          if (Edge.isSingleEdge() && DT->dominates(Edge, CtxI->getParent()))
+          if (DT->dominates(Edge, CtxI->getParent()))
             return true;
         } else if (NonNullIfTrue && isGuard(Curr) &&
                    DT->dominates(cast<Instruction>(Curr), CtxI)) {
@@ -4075,7 +4082,7 @@ static bool isKnownNonEqualFromContext(const Value *V1, const Value *V2,
   // Try to infer NonEqual based on information from dominating conditions.
   if (Q.DC && Q.DT) {
     auto IsKnownNonEqualFromDominatingCondition = [&](const Value *V) {
-      for (BranchInst *BI : Q.DC->conditionsFor(V)) {
+      for (CondBrInst *BI : Q.DC->conditionsFor(V)) {
         Value *Cond = BI->getCondition();
         BasicBlockEdge Edge0(BI->getParent(), BI->getSuccessor(0));
         if (Q.DT->dominates(Edge0, Q.CxtI->getParent()) &&
@@ -4860,7 +4867,7 @@ static KnownFPClass computeKnownFPClassFromContext(const Value *V,
 
   if (Q.DC && Q.DT) {
     // Handle dominating conditions.
-    for (BranchInst *BI : Q.DC->conditionsFor(V)) {
+    for (CondBrInst *BI : Q.DC->conditionsFor(V)) {
       Value *Cond = BI->getCondition();
 
       BasicBlockEdge Edge0(BI->getParent(), BI->getSuccessor(0));
@@ -4965,6 +4972,22 @@ static constexpr KnownFPClass::MinMaxKind getMinMaxKind(Intrinsic::ID IID) {
   }
 }
 
+/// \return true if this is a floating point value that is known to have a
+/// magnitude smaller than 1. i.e., fabs(X) <= 1.0 or is nan.
+static bool isAbsoluteValueULEOne(const Value *V) {
+  // TODO: Handle frexp
+  // TODO: Other rounding intrinsics?
+
+  // fabs(x - floor(x)) <= 1
+  const Value *SubFloorX;
+  if (match(V, m_FSub(m_Value(SubFloorX),
+                      m_Intrinsic<Intrinsic::floor>(m_Deferred(SubFloorX)))))
+    return true;
+
+  return match(V, m_Intrinsic<Intrinsic::amdgcn_trig_preop>(m_Value())) ||
+         match(V, m_Intrinsic<Intrinsic::amdgcn_fract>(m_Value()));
+}
+
 void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
                          FPClassTest InterestedClasses, KnownFPClass &Known,
                          const SimplifyQuery &Q, unsigned Depth) {
@@ -5031,6 +5054,29 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     }
     if (SignBitAllOne != SignBitAllZero)
       Known.SignBit = SignBitAllOne;
+    return;
+  }
+
+  if (const auto *CDS = dyn_cast<ConstantDataSequential>(V)) {
+    Known.KnownFPClasses = fcNone;
+    for (size_t I = 0, E = CDS->getNumElements(); I != E; ++I)
+      Known |= CDS->getElementAsAPFloat(I).classify();
+    return;
+  }
+
+  if (const auto *CA = dyn_cast<ConstantAggregate>(V)) {
+    // TODO: Handle complex aggregates
+    Known.KnownFPClasses = fcNone;
+    for (const Use &Op : CA->operands()) {
+      auto *CFP = dyn_cast<ConstantFP>(Op.get());
+      if (!CFP) {
+        Known = KnownFPClass();
+        return;
+      }
+
+      Known |= CFP->getValueAPF().classify();
+    }
+
     return;
   }
 
@@ -5500,7 +5546,8 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       break;
     }
     case Intrinsic::amdgcn_trig_preop: {
-      Known.knownNot(fcNan | fcInf);
+      // Always returns a value [0, 1)
+      Known.knownNot(fcNan | fcInf | fcNegative);
       break;
     }
     default:
@@ -5573,56 +5620,52 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
                 Op->getType()->getScalarType()->getFltSemantics())
           : DenormalMode::getDynamic();
 
+    Value *LHS = Op->getOperand(0);
+    Value *RHS = Op->getOperand(1);
     // X * X is always non-negative or a NaN.
     // FIXME: Should check isGuaranteedNotToBeUndef
-    if (Op->getOperand(0) == Op->getOperand(1)) {
+    if (LHS == RHS) {
       KnownFPClass KnownSrc;
-      computeKnownFPClass(Op->getOperand(0), DemandedElts, fcAllFlags, KnownSrc,
-                          Q, Depth + 1);
+      computeKnownFPClass(LHS, DemandedElts, fcAllFlags, KnownSrc, Q,
+                          Depth + 1);
       Known = KnownFPClass::square(KnownSrc, Mode);
       break;
     }
 
     KnownFPClass KnownLHS, KnownRHS;
 
-    bool CannotBeSubnormal = false;
     const APFloat *CRHS;
-    if (match(Op->getOperand(1), m_APFloat(CRHS))) {
-      // Match denormal scaling pattern, similar to the case in ldexp. If the
-      // constant's exponent is sufficiently large, the result cannot be
-      // subnormal.
-
-      // TODO: Should do general ConstantFPRange analysis.
-      const fltSemantics &Flt =
-          Op->getType()->getScalarType()->getFltSemantics();
-      unsigned Precision = APFloat::semanticsPrecision(Flt);
-      const int MantissaBits = Precision - 1;
-
-      int MinKnownExponent = ilogb(*CRHS);
-      if (MinKnownExponent >= MantissaBits)
-        CannotBeSubnormal = true;
-
-      KnownRHS = KnownFPClass(*CRHS);
+    if (match(RHS, m_APFloat(CRHS))) {
+      computeKnownFPClass(LHS, DemandedElts, fcAllFlags, KnownLHS, Q,
+                          Depth + 1);
+      Known = KnownFPClass::fmul(KnownLHS, *CRHS, Mode);
     } else {
-      computeKnownFPClass(Op->getOperand(1), DemandedElts, fcAllFlags, KnownRHS,
-                          Q, Depth + 1);
+      computeKnownFPClass(RHS, DemandedElts, fcAllFlags, KnownRHS, Q,
+                          Depth + 1);
+      // TODO: Improve accuracy in unfused FMA pattern. We can prove an
+      // additional not-nan if the addend is known-not negative infinity if the
+      // multiply is known-not infinity.
+
+      computeKnownFPClass(LHS, DemandedElts, fcAllFlags, KnownLHS, Q,
+                          Depth + 1);
+      Known = KnownFPClass::fmul(KnownLHS, KnownRHS, Mode);
     }
 
-    // TODO: Improve accuracy in unfused FMA pattern. We can prove an additional
-    // not-nan if the addend is known-not negative infinity if the multiply is
-    // known-not infinity.
+    /// Propgate no-infs if the other source is known smaller than one, such
+    /// that this cannot introduce overflow.
+    if (KnownLHS.isKnownNever(fcInf) && isAbsoluteValueULEOne(RHS))
+      Known.knownNot(fcInf);
+    else if (KnownRHS.isKnownNever(fcInf) && isAbsoluteValueULEOne(LHS))
+      Known.knownNot(fcInf);
 
-    computeKnownFPClass(Op->getOperand(0), DemandedElts, fcAllFlags, KnownLHS,
-                        Q, Depth + 1);
-
-    Known = KnownFPClass::fmul(KnownLHS, KnownRHS, Mode);
-    if (CannotBeSubnormal)
-      Known.knownNot(fcSubnormal);
     break;
   }
   case Instruction::FDiv:
   case Instruction::FRem: {
     const bool WantNan = (InterestedClasses & fcNan) != fcNone;
+
+    if (Op->getOpcode() == Instruction::FRem)
+      Known.knownNot(fcInf);
 
     if (Op->getOperand(0) == Op->getOperand(1) &&
         isGuaranteedNotToBeUndef(Op->getOperand(0), Q.AC, Q.CxtI, Q.DT)) {
@@ -5734,16 +5777,43 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
 
     // sitofp and uitofp turn into +0.0 for zero.
     Known.knownNot(fcNegZero);
+
+    // UIToFP is always non-negative regardless of known bits.
     if (Op->getOpcode() == Instruction::UIToFP)
       Known.signBitMustBeZero();
 
+    // Only compute known bits if we can learn something useful from them.
+    if (!(InterestedClasses & (fcPosZero | fcNormal | fcInf)))
+      break;
+
+    KnownBits IntKnown =
+        computeKnownBits(Op->getOperand(0), DemandedElts, Q, Depth + 1);
+
+    // If the integer is non-zero, the result cannot be +0.0
+    if (IntKnown.isNonZero())
+      Known.knownNot(fcPosZero);
+
+    if (Op->getOpcode() == Instruction::SIToFP) {
+      // If the signed integer is known non-negative, the result is
+      // non-negative. If the signed integer is known negative, the result is
+      // negative.
+      if (IntKnown.isNonNegative()) {
+        Known.signBitMustBeZero();
+      } else if (IntKnown.isNegative()) {
+        Known.signBitMustBeOne();
+      }
+    }
+
+    // Guard kept for ilogb()
     if (InterestedClasses & fcInf) {
-      // Get width of largest magnitude integer (remove a bit if signed).
+      // Get width of largest magnitude integer known.
       // This still works for a signed minimum value because the largest FP
       // value is scaled by some fraction close to 2.0 (1.0 + 0.xxxx).
-      int IntSize = Op->getOperand(0)->getType()->getScalarSizeInBits();
-      if (Op->getOpcode() == Instruction::SIToFP)
-        --IntSize;
+      int IntSize = IntKnown.getBitWidth();
+      if (Op->getOpcode() == Instruction::UIToFP)
+        IntSize -= IntKnown.countMinLeadingZeros();
+      else if (Op->getOpcode() == Instruction::SIToFP)
+        IntSize -= IntKnown.countMinSignBits();
 
       // If the exponent of the largest finite FP value can hold the largest
       // integer, the result of the cast must be finite.
@@ -5924,6 +5994,34 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       }
     }
 
+    // Look for the case of a for loop which has a positive
+    // initial value and is incremented by a squared value.
+    // This will propagate sign information out of such loops.
+    if (P->getNumIncomingValues() != 2 || Known.cannotBeOrderedLessThanZero())
+      break;
+    for (unsigned I = 0; I < 2; I++) {
+      Value *RecurValue = P->getIncomingValue(1 - I);
+      IntrinsicInst *II = dyn_cast<IntrinsicInst>(RecurValue);
+      if (!II)
+        continue;
+      Value *R, *L, *Init;
+      PHINode *PN;
+      if (matchSimpleTernaryIntrinsicRecurrence(II, PN, Init, L, R) &&
+          PN == P) {
+        switch (II->getIntrinsicID()) {
+        case Intrinsic::fma:
+        case Intrinsic::fmuladd: {
+          KnownFPClass KnownStart;
+          computeKnownFPClass(Init, DemandedElts, InterestedClasses, KnownStart,
+                              Q, Depth + 1);
+          if (KnownStart.cannotBeOrderedLessThanZero() && L == R &&
+              isGuaranteedNotToBeUndef(L, Q.AC, Q.CxtI, Q.DT, Depth + 1))
+            Known.knownNot(KnownFPClass::OrderedLessThanZeroMask);
+          break;
+        }
+        }
+      }
+    }
     break;
   }
   case Instruction::BitCast: {
@@ -5932,54 +6030,31 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
         !Src->getType()->isIntOrIntVectorTy())
       break;
 
-    const Type *Ty = Op->getType()->getScalarType();
-    KnownBits Bits(Ty->getScalarSizeInBits());
-    computeKnownBits(Src, DemandedElts, Bits, Q, Depth + 1);
+    const Type *Ty = Op->getType();
 
-    // Transfer information from the sign bit.
-    if (Bits.isNonNegative())
-      Known.signBitMustBeZero();
-    else if (Bits.isNegative())
-      Known.signBitMustBeOne();
+    Value *CastLHS, *CastRHS;
 
-    if (Ty->isIEEELikeFPTy()) {
-      // IEEE floats are NaN when all bits of the exponent plus at least one of
-      // the fraction bits are 1. This means:
-      //   - If we assume unknown bits are 0 and the value is NaN, it will
-      //     always be NaN
-      //   - If we assume unknown bits are 1 and the value is not NaN, it can
-      //     never be NaN
-      // Note: They do not hold for x86_fp80 format.
-      if (APFloat(Ty->getFltSemantics(), Bits.One).isNaN())
-        Known.KnownFPClasses = fcNan;
-      else if (!APFloat(Ty->getFltSemantics(), ~Bits.Zero).isNaN())
-        Known.knownNot(fcNan);
-
-      // Build KnownBits representing Inf and check if it must be equal or
-      // unequal to this value.
-      auto InfKB = KnownBits::makeConstant(
-          APFloat::getInf(Ty->getFltSemantics()).bitcastToAPInt());
-      InfKB.Zero.clearSignBit();
-      if (const auto InfResult = KnownBits::eq(Bits, InfKB)) {
-        assert(!InfResult.value());
-        Known.knownNot(fcInf);
-      } else if (Bits == InfKB) {
-        Known.KnownFPClasses = fcInf;
+    // Match bitcast(umax(bitcast(a), bitcast(b)))
+    if (match(Src, m_c_MaxOrMin(m_BitCast(m_Value(CastLHS)),
+                                m_BitCast(m_Value(CastRHS)))) &&
+        CastLHS->getType() == Ty && CastRHS->getType() == Ty) {
+      KnownFPClass KnownLHS, KnownRHS;
+      computeKnownFPClass(CastRHS, DemandedElts, InterestedClasses, KnownRHS, Q,
+                          Depth + 1);
+      if (!KnownRHS.isUnknown()) {
+        computeKnownFPClass(CastLHS, DemandedElts, InterestedClasses, KnownLHS,
+                            Q, Depth + 1);
+        Known = KnownLHS | KnownRHS;
       }
 
-      // Build KnownBits representing Zero and check if it must be equal or
-      // unequal to this value.
-      auto ZeroKB = KnownBits::makeConstant(
-          APFloat::getZero(Ty->getFltSemantics()).bitcastToAPInt());
-      ZeroKB.Zero.clearSignBit();
-      if (const auto ZeroResult = KnownBits::eq(Bits, ZeroKB)) {
-        assert(!ZeroResult.value());
-        Known.knownNot(fcZero);
-      } else if (Bits == ZeroKB) {
-        Known.KnownFPClasses = fcZero;
-      }
+      return;
     }
 
+    const Type *EltTy = Ty->getScalarType();
+    KnownBits Bits(EltTy->getPrimitiveSizeInBits());
+    computeKnownBits(Src, DemandedElts, Bits, Q, Depth + 1);
+
+    Known = KnownFPClass::bitcast(EltTy->getFltSemantics(), Bits);
     break;
   }
   default:
@@ -7174,7 +7249,8 @@ bool llvm::isSafeToSpeculativelyExecuteWithOpcode(
   case Instruction::PHI:
   case Instruction::Store:
   case Instruction::Ret:
-  case Instruction::Br:
+  case Instruction::UncondBr:
+  case Instruction::CondBr:
   case Instruction::IndirectBr:
   case Instruction::Switch:
   case Instruction::Unreachable:
@@ -7423,7 +7499,7 @@ OverflowResult llvm::computeOverflowForSignedSub(const Value *LHS,
 
 bool llvm::isOverflowIntrinsicNoWrap(const WithOverflowInst *WO,
                                      const DominatorTree &DT) {
-  SmallVector<const BranchInst *, 2> GuardingBranches;
+  SmallVector<const CondBrInst *, 2> GuardingBranches;
   SmallVector<const ExtractValueInst *, 2> Results;
 
   for (const User *U : WO->users()) {
@@ -7436,10 +7512,8 @@ bool llvm::isOverflowIntrinsicNoWrap(const WithOverflowInst *WO,
         assert(EVI->getIndices()[0] == 1 && "Obvious from CI's type");
 
         for (const auto *U : EVI->users())
-          if (const auto *B = dyn_cast<BranchInst>(U)) {
-            assert(B->isConditional() && "How else is it using an i1?");
+          if (const auto *B = dyn_cast<CondBrInst>(U))
             GuardingBranches.push_back(B);
-          }
       }
     } else {
       // We are using the aggregate directly in a way we don't want to analyze
@@ -7448,10 +7522,8 @@ bool llvm::isOverflowIntrinsicNoWrap(const WithOverflowInst *WO,
     }
   }
 
-  auto AllUsesGuardedByBranch = [&](const BranchInst *BI) {
+  auto AllUsesGuardedByBranch = [&](const CondBrInst *BI) {
     BasicBlockEdge NoWrapEdge(BI->getParent(), BI->getSuccessor(1));
-    if (!NoWrapEdge.isSingleEdge())
-      return false;
 
     // Check if all users of the add are provably no-wrap.
     for (const auto *Result : Results) {
@@ -7533,7 +7605,7 @@ static bool canCreateUndefOrPoison(const Operator *Op, UndefPoisonKind Kind,
   case Instruction::Call:
     if (auto *II = dyn_cast<IntrinsicInst>(Op)) {
       switch (II->getIntrinsicID()) {
-      // TODO: Add more intrinsics.
+      // NOTE: Use IntrNoCreateUndefOrPoison when possible.
       case Intrinsic::ctlz:
       case Intrinsic::cttz:
       case Intrinsic::abs:
@@ -7789,12 +7861,11 @@ static bool isGuaranteedNotToBeUndefOrPoison(
   // if what we are checking for includes undef and the value is not an integer.
   if (!includesUndef(Kind) || V->getType()->isIntegerTy())
     while (Dominator) {
-      auto *TI = Dominator->getBlock()->getTerminator();
+      auto *TI = Dominator->getBlock()->getTerminatorOrNull();
 
       Value *Cond = nullptr;
-      if (auto BI = dyn_cast_or_null<BranchInst>(TI)) {
-        if (BI->isConditional())
-          Cond = BI->getCondition();
+      if (auto BI = dyn_cast_or_null<CondBrInst>(TI)) {
+        Cond = BI->getCondition();
       } else if (auto SI = dyn_cast_or_null<SwitchInst>(TI)) {
         Cond = SI->getCondition();
       }
@@ -8129,12 +8200,10 @@ static bool handleGuaranteedWellDefinedOps(const Instruction *I,
       if (Handle(cast<SwitchInst>(I)->getCondition()))
         return true;
       break;
-    case Instruction::Br: {
-      auto *BR = cast<BranchInst>(I);
-      if (BR->isConditional() && Handle(BR->getCondition()))
+    case Instruction::CondBr:
+      if (Handle(cast<CondBrInst>(I)->getCondition()))
         return true;
       break;
-    }
     default:
       break;
   }
@@ -9244,6 +9313,40 @@ static bool matchTwoInputRecurrence(const PHINode *PN, InstTy *&Inst,
   return false;
 }
 
+template <typename InstTy>
+static bool matchThreeInputRecurrence(const PHINode *PN, InstTy *&Inst,
+                                      Value *&Init, Value *&OtherOp0,
+                                      Value *&OtherOp1) {
+  if (PN->getNumIncomingValues() != 2)
+    return false;
+
+  for (unsigned I = 0; I != 2; ++I) {
+    if (auto *Operation = dyn_cast<InstTy>(PN->getIncomingValue(I));
+        Operation && Operation->getNumOperands() >= 3) {
+      Value *Op0 = Operation->getOperand(0);
+      Value *Op1 = Operation->getOperand(1);
+      Value *Op2 = Operation->getOperand(2);
+
+      if (Op0 != PN && Op1 != PN && Op2 != PN)
+        continue;
+
+      Inst = Operation;
+      Init = PN->getIncomingValue(!I);
+      if (Op0 == PN) {
+        OtherOp0 = Op1;
+        OtherOp1 = Op2;
+      } else if (Op1 == PN) {
+        OtherOp0 = Op0;
+        OtherOp1 = Op2;
+      } else {
+        OtherOp0 = Op0;
+        OtherOp1 = Op1;
+      }
+      return true;
+    }
+  }
+  return false;
+}
 bool llvm::matchSimpleRecurrence(const PHINode *P, BinaryOperator *&BO,
                                  Value *&Start, Value *&Step) {
   // We try to match a recurrence of the form:
@@ -9278,6 +9381,25 @@ bool llvm::matchSimpleBinaryIntrinsicRecurrence(const IntrinsicInst *I,
     P = dyn_cast<PHINode>(I->getArgOperand(1));
 
   return P && matchTwoInputRecurrence(P, II, Init, OtherOp) && II == I;
+}
+
+bool llvm::matchSimpleTernaryIntrinsicRecurrence(const IntrinsicInst *I,
+                                                 PHINode *&P, Value *&Init,
+                                                 Value *&OtherOp0,
+                                                 Value *&OtherOp1) {
+  if (I->arg_size() != 3 || I->getType() != I->getArgOperand(0)->getType() ||
+      I->getType() != I->getArgOperand(1)->getType() ||
+      I->getType() != I->getArgOperand(2)->getType())
+    return false;
+  IntrinsicInst *II = nullptr;
+  P = dyn_cast<PHINode>(I->getArgOperand(0));
+  if (!P) {
+    P = dyn_cast<PHINode>(I->getArgOperand(1));
+    if (!P)
+      P = dyn_cast<PHINode>(I->getArgOperand(2));
+  }
+  return P && matchThreeInputRecurrence(P, II, Init, OtherOp0, OtherOp1) &&
+         II == I;
 }
 
 /// Return true if "icmp Pred LHS RHS" is always true.

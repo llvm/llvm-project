@@ -710,7 +710,8 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
         return false;
       if (Tok->is(TT_TemplateCloser)) {
         Tok = Tok->MatchingParen;
-        assert(Tok);
+        if (!Tok)
+          return false;
       }
       if (Tok->FirstAfterPPLine)
         return false;
@@ -1237,6 +1238,25 @@ unsigned ContinuationIndenter::addTokenOnNewLine(LineState &State,
     }
   }
 
+  switch (Style.BreakInheritanceList) {
+  case FormatStyle::BILS_BeforeColon:
+  case FormatStyle::BILS_AfterComma:
+    CurrentState.IsAligned = CurrentState.IsAligned ||
+                             Current.is(TT_InheritanceColon) ||
+                             Previous.is(TT_InheritanceComma);
+    break;
+  case FormatStyle::BILS_BeforeComma:
+    CurrentState.IsAligned =
+        CurrentState.IsAligned ||
+        Current.isOneOf(TT_InheritanceColon, TT_InheritanceComma);
+    break;
+  case FormatStyle::BILS_AfterColon:
+    CurrentState.IsAligned =
+        CurrentState.IsAligned ||
+        Previous.isOneOf(TT_InheritanceColon, TT_InheritanceComma);
+    break;
+  }
+
   if ((PreviousNonComment &&
        PreviousNonComment->isOneOf(tok::comma, tok::semi) &&
        !CurrentState.AvoidBinPacking) ||
@@ -1253,8 +1273,10 @@ unsigned ContinuationIndenter::addTokenOnNewLine(LineState &State,
       (PreviousNonComment && PreviousNonComment->is(tok::question))) {
     CurrentState.BreakBeforeParameter = true;
   }
-  if (Current.is(TT_BinaryOperator) && Current.CanBreakBefore)
+  if (Current.is(TT_BinaryOperator) && Current.CanBreakBefore) {
     CurrentState.BreakBeforeParameter = false;
+    CurrentState.IsAligned = true;
+  }
 
   if (!DryRun) {
     unsigned MaxEmptyLinesToKeep = Style.MaxEmptyLinesToKeep + 1;
@@ -2500,7 +2522,7 @@ unsigned ContinuationIndenter::handleEndOfLine(const FormatToken &Current,
       Strict = StrictPenalty <= Penalty;
       if (Strict) {
         Penalty = StrictPenalty;
-        State = StrictState;
+        State = std::move(StrictState);
       }
     }
     if (!DryRun) {

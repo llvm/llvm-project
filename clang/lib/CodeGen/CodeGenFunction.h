@@ -119,7 +119,17 @@ enum TypeEvaluationKind {
 /// Helper class with most of the code for saving a value for a
 /// conditional expression cleanup.
 struct DominatingLLVMValue {
-  typedef llvm::PointerIntPair<llvm::Value *, 1, bool> saved_type;
+  struct saved_type {
+    llvm::Value *Value; // Original value if not saved, alloca if saved
+    llvm::Type *Type;   // nullptr if not saved, element type if saved
+
+    saved_type() : Value(nullptr), Type(nullptr) {}
+    saved_type(llvm::Value *V) : Value(V), Type(nullptr) {}
+    saved_type(llvm::AllocaInst *Alloca, llvm::Type *Ty)
+        : Value(Alloca), Type(Ty) {}
+
+    bool isSaved() const { return Type != nullptr; }
+  };
 
   /// Answer whether the given value needs extra work to be saved.
   static bool needsSaving(llvm::Value *value) {
@@ -2002,7 +2012,7 @@ public:
                                 llvm::BasicBlock &FiniBB, llvm::Function *Fn,
                                 ArrayRef<llvm::Value *> Args) {
       llvm::BasicBlock *CodeGenIPBB = CodeGenIP.getBlock();
-      if (llvm::Instruction *CodeGenIPBBTI = CodeGenIPBB->getTerminator())
+      if (llvm::Instruction *CodeGenIPBBTI = CodeGenIPBB->getTerminatorOrNull())
         CodeGenIPBBTI->eraseFromParent();
 
       CGF.Builder.SetInsertPoint(CodeGenIPBB);
@@ -2451,6 +2461,14 @@ public:
                                  const ThunkInfo *Thunk, bool IsUnprototyped);
 
   void FinishThunk();
+
+  /// Start an Objective-C direct method thunk.
+  void StartObjCDirectPreconditionThunk(const ObjCMethodDecl *OMD,
+                                        llvm::Function *Fn,
+                                        const CGFunctionInfo &FI);
+
+  /// Finish an Objective-C direct method thunk.
+  void FinishObjCDirectPreconditionThunk();
 
   /// Emit a musttail call for a thunk with a potentially adjusted this pointer.
   void EmitMustTailThunk(GlobalDecl GD, llvm::Value *AdjustedThisPtr,
@@ -3675,6 +3693,8 @@ public:
   LValue EmitCoyieldLValue(const CoyieldExpr *E);
   RValue EmitCoroutineIntrinsic(const CallExpr *E, unsigned int IID);
 
+  void EmitSYCLKernelCallStmt(const SYCLKernelCallStmt &S);
+
   void EnterCXXTryStmt(const CXXTryStmt &S, bool IsFnTryBlock = false);
   void ExitCXXTryStmt(const CXXTryStmt &S, bool IsFnTryBlock = false);
 
@@ -3744,6 +3764,9 @@ public:
   llvm::Function *
   GenerateOpenMPCapturedStmtFunction(const CapturedStmt &S,
                                      const OMPExecutableDirective &D);
+  llvm::Function *
+  GenerateOpenMPCapturedStmtFunctionAggregate(const CapturedStmt &S,
+                                              const OMPExecutableDirective &D);
   void GenerateOpenMPCapturedVars(const CapturedStmt &S,
                                   SmallVectorImpl<llvm::Value *> &CapturedVars);
   void emitOMPSimpleStore(LValue LVal, RValue RVal, QualType RValTy,
@@ -4900,6 +4923,8 @@ public:
 
   llvm::Value *BuildVector(ArrayRef<llvm::Value *> Ops);
   llvm::Value *EmitX86BuiltinExpr(unsigned BuiltinID, const CallExpr *E);
+  llvm::Value *EmitPPCBuiltinCpu(unsigned BuiltinID, llvm::Type *ReturnType,
+                                 StringRef CPUStr);
   llvm::Value *EmitPPCBuiltinExpr(unsigned BuiltinID, const CallExpr *E);
   llvm::Value *EmitAMDGPUBuiltinExpr(unsigned BuiltinID, const CallExpr *E);
   llvm::Value *EmitHLSLBuiltinExpr(unsigned BuiltinID, const CallExpr *E,
@@ -5566,6 +5591,8 @@ public:
                                        ArrayRef<FMVResolverOption> Options);
   void EmitRISCVMultiVersionResolver(llvm::Function *Resolver,
                                      ArrayRef<FMVResolverOption> Options);
+  void EmitPPCAIXMultiVersionResolver(llvm::Function *Resolver,
+                                      ArrayRef<FMVResolverOption> Options);
 
   Address EmitAddressOfPFPField(Address RecordPtr, const PFPField &Field);
   Address EmitAddressOfPFPField(Address RecordPtr, Address FieldPtr,
@@ -5598,28 +5625,29 @@ private:
 inline DominatingLLVMValue::saved_type
 DominatingLLVMValue::save(CodeGenFunction &CGF, llvm::Value *value) {
   if (!needsSaving(value))
-    return saved_type(value, false);
+    return saved_type(value);
 
   // Otherwise, we need an alloca.
   auto align = CharUnits::fromQuantity(
-      CGF.CGM.getDataLayout().getPrefTypeAlign(value->getType()));
-  Address alloca =
-      CGF.CreateTempAlloca(value->getType(), align, "cond-cleanup.save");
-  CGF.Builder.CreateStore(value, alloca);
+                   CGF.CGM.getDataLayout().getPrefTypeAlign(value->getType()))
+                   .getAsAlign();
+  llvm::AllocaInst *AI =
+      CGF.CreateTempAlloca(value->getType(), "cond-cleanup.save");
+  AI->setAlignment(align);
+  CGF.Builder.CreateAlignedStore(value, AI, align);
 
-  return saved_type(alloca.emitRawPointer(CGF), true);
+  return saved_type(AI, value->getType());
 }
 
 inline llvm::Value *DominatingLLVMValue::restore(CodeGenFunction &CGF,
                                                  saved_type value) {
   // If the value says it wasn't saved, trust that it's still dominating.
-  if (!value.getInt())
-    return value.getPointer();
+  if (!value.isSaved())
+    return value.Value;
 
   // Otherwise, it should be an alloca instruction, as set up in save().
-  auto alloca = cast<llvm::AllocaInst>(value.getPointer());
-  return CGF.Builder.CreateAlignedLoad(alloca->getAllocatedType(), alloca,
-                                       alloca->getAlign());
+  auto Alloca = cast<llvm::AllocaInst>(value.Value);
+  return CGF.Builder.CreateAlignedLoad(value.Type, Alloca, Alloca->getAlign());
 }
 
 } // end namespace CodeGen

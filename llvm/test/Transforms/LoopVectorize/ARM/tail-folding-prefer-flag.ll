@@ -11,7 +11,7 @@ target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
 ; get tail-folded, except with -prefer-predicate-over-epilog which then
 ; overrules this.
 ;
-define dso_local void @flag_overrules_hint(ptr noalias nocapture %A, ptr noalias nocapture readonly %B, ptr noalias nocapture readonly %C) local_unnamed_addr #0 {
+define void @flag_overrules_hint(ptr noalias nocapture %A, ptr noalias nocapture readonly %B, ptr noalias nocapture readonly %C) #0 {
 ; CHECK-LABEL: flag_overrules_hint(
 ; CHECK:       vector.body:
 ; CHECK-NOT:   @llvm.masked.load.v8i32.p0(
@@ -49,7 +49,7 @@ for.body:
   br i1 %exitcond, label %for.cond.cleanup, label %for.body, !llvm.loop !10
 }
 
-define dso_local void @interleave4(ptr noalias nocapture %A, ptr noalias nocapture readonly %B, ptr noalias nocapture readonly %C, i32 %N) local_unnamed_addr #0 {
+define void @interleave4(ptr noalias nocapture %A, ptr noalias nocapture readonly %B, ptr noalias nocapture readonly %C, i32 %N) #0 {
 ; PREDFLAG-LABEL: interleave4(
 ; PREDFLAG:  %[[ADD2:.*]] = add i32 %index, 4
 ; PREDFLAG:  %[[ADD3:.*]] = add i32 %index, 8

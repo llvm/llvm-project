@@ -5,7 +5,7 @@
 // Modules:
 // RUN: %clang_cc1 -x objective-c -debug-info-kind=limited -dwarf-ext-refs -fmodules \
 // RUN:     -fmodule-format=obj -fimplicit-module-maps -DMODULES \
-// RUN:     -fmodules-cache-path=%t %s -I %S/Inputs -I %t -emit-llvm -o %t-mod.ll
+// RUN:     -fmodules-cache-path=%t/cache %s -I %S/Inputs -I %t -emit-llvm -o %t-mod.ll
 // RUN: cat %t-mod.ll |  FileCheck %s
 // RUN: cat %t-mod.ll |  FileCheck %s --check-prefix=DWOID
 

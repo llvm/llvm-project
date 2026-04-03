@@ -1398,7 +1398,7 @@ Echo text to the screen
 
 .. code-block:: shell
 
-  (lldb) script print "Here is some text"
+  (lldb) script print("Here is some text")
 
 Remap source file pathnames for the debug session
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1416,8 +1416,11 @@ file path instead of the build system's file path.
 
   (lldb) settings set target.source-map /buildbot/path /my/path
 
-Supply a catchall directory to search for source files in.
+Supply a catchall directory to search for source files in
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. code-block:: shell
 
   (gdb) directory /my/path
+
+There is no equivalent LLDB command, use ``target.source-map`` instead.

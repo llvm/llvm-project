@@ -1169,9 +1169,12 @@ public:
   /// Populates `effects` with side effects implied by this trait.
   void getPotentialTopLevelEffects(
       SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+    Region &region = this->getOperation()->getRegion(0);
+    if (region.empty())
+      return;
     detail::getPotentialTopLevelEffects(
         this->getOperation(), cast<OpTy>(this->getOperation()).getRoot(),
-        *getBodyBlock(), effects);
+        region.front(), effects);
   }
 
   /// Sets up the mapping between the entry block of the given region of this op
@@ -1256,7 +1259,7 @@ public:
 // as CSE/DCE to work.
 struct TransformMappingResource
     : public SideEffects::Resource::Base<TransformMappingResource> {
-  StringRef getName() override { return "transform.mapping"; }
+  StringRef getName() const override { return "transform.mapping"; }
 };
 
 /// Side effect resource corresponding to the Payload IR itself. Only Read and
@@ -1267,7 +1270,7 @@ struct TransformMappingResource
 /// while still allowing the reordering of those that only access it.
 struct PayloadIRResource
     : public SideEffects::Resource::Base<PayloadIRResource> {
-  StringRef getName() override { return "transform.payload_ir"; }
+  StringRef getName() const override { return "transform.payload_ir"; }
 };
 
 /// Populates `effects` with the memory effects indicating the operation on the

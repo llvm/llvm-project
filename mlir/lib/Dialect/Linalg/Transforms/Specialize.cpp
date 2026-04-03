@@ -35,13 +35,12 @@ namespace mlir {
                  genericOp.getDpsInputs()[(OPERANDS_SWAP) ? 0 : 1]},           \
       ValueRange{genericOp.getDpsInits()[0]}))
 
-#define REPLACE_UNARY_OP(NEWOP)                                                \
-  (rewriter.replaceOpWithNewOp<NEWOP>(genericOp,                               \
-                                      ValueRange{genericOp.getDpsInputs()[0]}, \
-                                      ValueRange{genericOp.getDpsInits()[0]}))
-
 using namespace mlir;
 using namespace mlir::linalg;
+
+//===----------------------------------------------------------------------===//
+// Specialize linalg generic to elementwise ops.
+//===----------------------------------------------------------------------===//
 
 // Given a elementwise single binary linalg generic op, checks whether the
 // binary op accesses operands as swapped. e.g.
@@ -65,6 +64,98 @@ static bool areBinOpsSwapped(GenericOp genericOp) {
            "binary op uses just one block arg");
   }
   return swapped;
+}
+
+// Attempt to specialize linalg.generic to named elementwise ops or
+// linalg.elementwise.
+//
+// Example:
+//   %0 = linalg.generic {
+//       indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>,
+//                        affine_map<(d0, d1) -> (d0, d1)>],
+//       iterator_types = ["parallel", "parallel"]
+//     } ins(%In : tensor<?x?xf32>) outs(%Out : tensor<?x?xf32>) {
+//     ^bb0(%in: f32, %out: f32):
+//       %1 = math.exp %in : f32
+//       linalg.yield %1 : f32
+//     } -> tensor<?x?xf32>
+//
+// is specialized to either
+//   linalg.exp ins(...) outs(...) -> ...
+// or
+//   linalg.elementwise kind=#linalg.elementwise_kind<exp> ...
+//
+// Only the category op can carry non-identity indexing maps; these are
+// transferred verbatim from the `genericOp`.
+static FailureOr<LinalgOp>
+specializeLinalgUnaryElementwise(RewriterBase &rewriter, GenericOp genericOp,
+                                 bool emitCategoryOp) {
+  bool hasNonIdentityMaps =
+      !llvm::all_of(genericOp.getIndexingMapsArray(),
+                    [](AffineMap map) { return map.isIdentity(); });
+
+  // Early exit: Named ops cannot carry user-defined maps.
+  if (hasNonIdentityMaps && !emitCategoryOp)
+    return rewriter.notifyMatchFailure(
+        genericOp,
+        "non-identity indexing maps prevent specialization to named op");
+
+  // Helper to dispatch between named op and `linalg.elementwise`.
+  // Lambdas with explicit template parameter list are a C++20 feature, hence
+  // the dummy op object.
+  auto replaceUnaryOp = [&](auto namedOp, ElementwiseKind kind) -> LinalgOp {
+    LinalgOp newOp;
+    if (!emitCategoryOp)
+      newOp = decltype(namedOp)::create(
+          rewriter, genericOp.getLoc(), genericOp.getDpsInputs(),
+          genericOp.getDpsInits(), ArrayRef<NamedAttribute>{});
+    else
+      newOp = ElementwiseOp::create(
+          rewriter, genericOp.getLoc(), genericOp.getDpsInputs(),
+          genericOp.getDpsInits(),
+          ElementwiseKindAttr::get(rewriter.getContext(), kind),
+          genericOp.getIndexingMaps());
+
+    rewriter.replaceOp(genericOp, newOp);
+    return newOp;
+  };
+
+  // Inspect body operation to determine named op or elementwise kind.
+  Operation *op = &genericOp.getBody()->front();
+
+  if (isa<math::ExpOp>(op))
+    return replaceUnaryOp(ExpOp{}, ElementwiseKind::exp);
+  if (isa<math::LogOp>(op))
+    return replaceUnaryOp(LogOp{}, ElementwiseKind::log);
+  if (isa<math::AbsFOp>(op))
+    return replaceUnaryOp(AbsOp{}, ElementwiseKind::abs);
+  if (isa<math::CeilOp>(op))
+    return replaceUnaryOp(CeilOp{}, ElementwiseKind::ceil);
+  if (isa<math::FloorOp>(op))
+    return replaceUnaryOp(FloorOp{}, ElementwiseKind::floor);
+  if (isa<arith::NegFOp>(op))
+    return replaceUnaryOp(NegFOp{}, ElementwiseKind::negf);
+  if (auto divOp = dyn_cast<arith::DivFOp>(op)) {
+    if (auto constOp = dyn_cast_if_present<arith::ConstantOp>(
+            divOp.getLhs().getDefiningOp()))
+      if (cast<FloatAttr>(constOp.getValue()).getValue().isExactlyValue(1.0))
+        return replaceUnaryOp(ReciprocalOp{}, ElementwiseKind::reciprocal);
+  }
+  if (isa<math::RoundOp>(op))
+    return replaceUnaryOp(RoundOp{}, ElementwiseKind::round);
+  if (isa<math::SqrtOp>(op))
+    return replaceUnaryOp(SqrtOp{}, ElementwiseKind::sqrt);
+  if (isa<math::RsqrtOp>(op))
+    return replaceUnaryOp(RsqrtOp{}, ElementwiseKind::rsqrt);
+  if (auto mulOp = dyn_cast<arith::MulFOp>(op);
+      mulOp && mulOp.getLhs() == mulOp.getRhs())
+    return replaceUnaryOp(SquareOp{}, ElementwiseKind::square);
+  if (isa<math::TanhOp>(op))
+    return replaceUnaryOp(TanhOp{}, ElementwiseKind::tanh);
+  if (isa<math::ErfOp>(op))
+    return replaceUnaryOp(ErfOp{}, ElementwiseKind::erf);
+
+  return failure();
 }
 
 //===----------------------------------------------------------------------===//
@@ -133,23 +224,37 @@ static IndexMatchResult matchOperandMap(AffineMap map, unsigned rowDimIdx,
 
 // Replaces genericOp with `NamedOpTy` op, supplied as a template arg.
 // All the variants expressed as pseudo regular expression:
-// `linalg.{batch_}?matmul{_transpose_a | _transpose_b}?`
-// have same number of ins/out, so its easy to stamp different versions.
+// `linalg.{batch_}?matmul` have same number of ins/out, so it's easy to
+// stamp different versions.
 // `castTy` is an optional type function that indicates whether (and which) cast
 // attribute is needed for the named matmul op variant.
 template <typename NamedOpTy>
 static LinalgOp replaceWithMatmulVariant(RewriterBase &rewriter, GenericOp op,
-                                         std::optional<TypeFn> castTy) {
-  SmallVector<NamedAttribute> castAttrVec;
+                                         std::optional<TypeFn> castTy,
+                                         ArrayRef<AffineMap> indexingMaps) {
+  SmallVector<NamedAttribute> attributes;
   // Only explicitly specify the cast attribute for unsigned cast; signed is
   // the default for linalg.matmul/linalg.batch_matmul.
-  if (castTy.has_value() && *castTy == TypeFn::cast_unsigned)
-    castAttrVec = {rewriter.getNamedAttr(
-        "cast", TypeFnAttr::get(rewriter.getContext(), *castTy))};
+  if (castTy.has_value() && *castTy == TypeFn::cast_unsigned) {
+    auto castAttr = rewriter.getNamedAttr(
+        "cast", TypeFnAttr::get(rewriter.getContext(), *castTy));
+    attributes.push_back(castAttr);
+  }
+
+  // Set the original generic's maps to preserve operand indexing semantics like
+  // transposition.
+  SmallVector<Attribute, 3> indexingMapsAttrVal =
+      llvm::map_to_vector(indexingMaps, [](AffineMap map) -> Attribute {
+        return AffineMapAttr::get(map);
+      });
+  auto indexingMapsAttr = rewriter.getNamedAttr(
+      "indexing_maps", rewriter.getArrayAttr(indexingMapsAttrVal));
+  attributes.push_back(indexingMapsAttr);
 
   LinalgOp namedOp = rewriter.replaceOpWithNewOp<NamedOpTy>(
       op, ValueRange{op.getDpsInputs()[0], op.getDpsInputs()[1]},
-      ValueRange{op.getDpsInits()[0]}, castAttrVec);
+      ValueRange{op.getDpsInits()[0]}, attributes);
+
   return namedOp;
 }
 
@@ -204,7 +309,8 @@ static std::optional<TypeFn> getCastTypeForMatmulLikeOp(GenericOp genericOp) {
 
 // Converts linalg.generic to named linalg.*matmul* where possible.
 static FailureOr<LinalgOp> specializeLinalgContractions(RewriterBase &rewriter,
-                                                        GenericOp genericOp) {
+                                                        GenericOp genericOp,
+                                                        bool emitCategoryOp) {
   if (genericOp.getNumDpsInputs() != 2 || genericOp.getNumDpsInits() != 1)
     return failure();
 
@@ -214,6 +320,31 @@ static FailureOr<LinalgOp> specializeLinalgContractions(RewriterBase &rewriter,
                    [](AffineMap m) { return !m.isProjectedPermutation(); }))
     return failure();
 
+  // Only mul+add contraction is supported.
+  // Currently, there is no way to control the contraction body type in named
+  // and category ops which all default to mul+add only.
+  if (!mlir::linalg::detail::isContractionBody(
+          *genericOp.getBlock(), [](Operation *first, Operation *second) {
+            return (isa<arith::MulFOp>(first) && isa<arith::AddFOp>(second)) ||
+                   (isa<arith::MulIOp>(first) && isa<arith::AddIOp>(second)) ||
+                   (isa<complex::MulOp>(first) && isa<complex::AddOp>(second));
+          }))
+    return failure();
+
+  // Determine the cast type for the named matmul op, or bail out if casts
+  // cannot be represented by the named op.
+  std::optional<TypeFn> castTy = getCastTypeForMatmulLikeOp(genericOp);
+  if (!castTy)
+    return rewriter.notifyMatchFailure(
+        genericOp, "contains invalid cast ops for the named matmul op");
+
+  // In case of category op, wider range of variants is supported.
+  if (emitCategoryOp)
+    return replaceWithMatmulVariant<ContractOp>(
+        rewriter, genericOp, castTy, genericOp.getIndexingMapsArray());
+
+  // Further checks for named variants.
+  //
   // Linalg generic contraction can be across multiple axis e.g.
   // ```
   //      linalg.generic
@@ -238,14 +369,6 @@ static FailureOr<LinalgOp> specializeLinalgContractions(RewriterBase &rewriter,
     return failure();
   auto dims = *res;
   if (dims.m.size() != 1 || dims.n.size() != 1 || dims.k.size() != 1)
-    return failure();
-
-  if (!mlir::linalg::detail::isContractionBody(
-          *genericOp.getBlock(), [](Operation *first, Operation *second) {
-            return (isa<arith::MulFOp>(first) && isa<arith::AddFOp>(second)) ||
-                   (isa<arith::MulIOp>(first) && isa<arith::AddIOp>(second)) ||
-                   (isa<complex::MulOp>(first) && isa<complex::AddOp>(second));
-          }))
     return failure();
 
   // Check rank of operands
@@ -286,22 +409,38 @@ static FailureOr<LinalgOp> specializeLinalgContractions(RewriterBase &rewriter,
   if (llvm::is_contained({a, b, c}, IndexMatchResult::Mismatch))
     return failure();
 
-  if (c != IndexMatchResult::Match ||
-      (a == IndexMatchResult::Transposed && b == IndexMatchResult::Transposed))
-    return failure();
+  // Build indexing maps for the named op in its canonical dimension ordering
+  auto *ctx = genericOp.getContext();
+  unsigned numLoopDims = numOfBatchDims + 3;
+  unsigned mIdx = numOfBatchDims;
+  unsigned nIdx = mIdx + 1;
+  unsigned kIdx = mIdx + 2;
 
-  // Determine the cast type for the named matmul op, or bail out if casts
-  // cannot be represented by the named op.
-  std::optional<TypeFn> castTy = getCastTypeForMatmulLikeOp(genericOp);
-  if (!castTy)
-    return rewriter.notifyMatchFailure(
-        genericOp, "contains invalid cast ops for the named matmul op");
+  // TODO: add support for indexing_maps with broadcasts.
+  auto makeMap = [&](IndexMatchResult match, unsigned rowIdx, unsigned colIdx) {
+    SmallVector<unsigned> tensorDims;
+    for (unsigned i = 0; i < numOfBatchDims; ++i)
+      tensorDims.push_back(i);
+    if (match == IndexMatchResult::Transposed)
+      llvm::append_values(tensorDims, colIdx, rowIdx);
+    else
+      llvm::append_values(tensorDims, rowIdx, colIdx);
+    return AffineMap::getMultiDimMapWithTargets(numLoopDims, tensorDims, ctx);
+  };
 
-  /// Codegen the different matmul variants.
+  auto mapA = makeMap(a, mIdx, kIdx);
+  auto mapB = makeMap(b, kIdx, nIdx);
+  auto mapC = makeMap(c, mIdx, nIdx);
+
+  SmallVector<AffineMap> namedOpMaps = {mapA, mapB, mapC};
+
+  // Codegen the different matmul variants.
   if (numOfBatchDims) {
-    return replaceWithMatmulVariant<BatchMatmulOp>(rewriter, genericOp, castTy);
+    return replaceWithMatmulVariant<BatchMatmulOp>(rewriter, genericOp, castTy,
+                                                   namedOpMaps);
   }
-  return replaceWithMatmulVariant<MatmulOp>(rewriter, genericOp, castTy);
+  return replaceWithMatmulVariant<MatmulOp>(rewriter, genericOp, castTy,
+                                            namedOpMaps);
 }
 
 /// Utility to specialize a `genericOp` with a convolution op of type `ConvOpTy`
@@ -404,8 +543,28 @@ static FailureOr<LinalgOp> specializeLinalgConvolutions(RewriterBase &rewriter,
 //===----------------------------------------------------------------------===//
 // Categorize linalg generic to named op where possible.
 //===----------------------------------------------------------------------===//
-FailureOr<LinalgOp> mlir::linalg::specializeGenericOp(RewriterBase &rewriter,
-                                                      GenericOp genericOp) {
+FailureOr<LinalgOp> mlir::linalg::specializeGenericOp(
+    RewriterBase &rewriter, GenericOp genericOp,
+    const GenericOpSpecializationOptions &options) {
+  // Unary elementwise - e.g. exp
+  if (isaElemwiseSingleUnaryOpInterface(genericOp, options.emitCategoryOps)) {
+    return specializeLinalgUnaryElementwise(rewriter, genericOp,
+                                            options.emitCategoryOps);
+  }
+
+  // Contraction - e.g. matmul
+  if (isaContractionOpInterface(genericOp)) {
+    return specializeLinalgContractions(rewriter, genericOp,
+                                        options.emitCategoryOps);
+  }
+
+  // Early exit in case of category specialization.
+  // TODO: Remove when matches for other ops account for both named and
+  // category.
+  if (options.emitCategoryOps)
+    return rewriter.notifyMatchFailure(
+        genericOp, "no matching category op specialization");
+
   // Copy
   if (isaCopyOpInterface(genericOp)) {
     LinalgOp namedOp = rewriter.replaceOpWithNewOp<CopyOp>(
@@ -443,15 +602,6 @@ FailureOr<LinalgOp> mlir::linalg::specializeGenericOp(RewriterBase &rewriter,
     return namedOp;
   }
 
-  // Elementwise Unary
-  if (isaElemwiseSingleUnaryOpInterface(genericOp)) {
-    Operation *op = &genericOp.getBody()->front();
-    if (isa<math::ExpOp>(op)) {
-      LinalgOp namedOp = REPLACE_UNARY_OP(ExpOp);
-      return namedOp;
-    }
-  }
-
   // Elementwise Binary
   if (isaElemwiseSingleBinaryOpInterface(genericOp)) {
     bool swap = areBinOpsSwapped(genericOp);
@@ -474,16 +624,12 @@ FailureOr<LinalgOp> mlir::linalg::specializeGenericOp(RewriterBase &rewriter,
     }
   }
 
-  // Contraction - e.g. matmul
-  if (isaContractionOpInterface(genericOp)) {
-    return specializeLinalgContractions(rewriter, genericOp);
-  }
-
   // Convolution - e.g. *conv/pooling*
-  if (isaConvolutionOpInterface(genericOp)) {
+  if (isaConvolutionOpInterface(genericOp))
     return specializeLinalgConvolutions(rewriter, genericOp);
-  }
-  return failure();
+
+  return rewriter.notifyMatchFailure(genericOp,
+                                     "no matching named op specialization");
 }
 
 namespace {
@@ -507,6 +653,7 @@ void LinalgSpecializeGenericOpsPass::runOnOperation() {
 }
 
 void mlir::linalg::populateLinalgGenericOpsSpecializationPatterns(
-    RewritePatternSet &patterns) {
-  patterns.add<LinalgSpecializationPattern>(patterns.getContext());
+    RewritePatternSet &patterns,
+    const GenericOpSpecializationOptions &options) {
+  patterns.add<LinalgSpecializationPattern>(patterns.getContext(), options);
 }

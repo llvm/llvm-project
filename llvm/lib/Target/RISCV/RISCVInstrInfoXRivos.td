@@ -62,7 +62,8 @@ class CustomRivosXVI<bits<6> funct6, RISCVVFormat opv, dag outs, dag ins,
 
 let Predicates = [HasVendorXRivosVizip], DecoderNamespace = "XRivos",
   Constraints = "@earlyclobber $vd", VS1VS2Constraint = Vrgather,
-  Inst<6-0> = OPC_CUSTOM_2.Value, ReadsPastVL = 1 in  {
+  Inst{6-0} = OPC_CUSTOM_2.Value, ReadsPastVL = 1,
+  ElementsDependOn = EltDepsNone in  {
 defm RI_VZIPEVEN_V : VALU_IV_V<"ri.vzipeven", 0b001100>;
 defm RI_VZIPODD_V : VALU_IV_V<"ri.vzipodd", 0b011100>;
 defm RI_VZIP2A_V : VALU_IV_V<"ri.vzip2a", 0b000100>;
@@ -113,87 +114,3 @@ defm : RIVPatBinaryVL_VV<ri_vzip2a_vl, "PseudoRI_VZIP2A">;
 defm : RIVPatBinaryVL_VV<ri_vzip2b_vl, "PseudoRI_VZIP2B">;
 defm : RIVPatBinaryVL_VV<ri_vunzip2a_vl, "PseudoRI_VUNZIP2A">;
 defm : RIVPatBinaryVL_VV<ri_vunzip2b_vl, "PseudoRI_VUNZIP2B">;
-
-//===----------------------------------------------------------------------===//
-// XRivosVisni
-//===----------------------------------------------------------------------===//
-
-let Predicates = [HasVendorXRivosVisni], DecoderNamespace = "XRivos",
-  mayLoad = false, mayStore = false, hasSideEffects = false in {
-
-let isReMaterializable = 1, isAsCheapAsAMove = 1 in
-def RI_VZERO : RVInstVUnary<0b000000, 0b00000, OPCFG, (outs VR:$vd),
-                            (ins), "ri.vzero.v", "$vd"> {
-  let vm = 0;
-  let vs2 = 0;
-
-  let Inst{6-0} = OPC_CUSTOM_2.Value;
-
-  let VMConstraint = false;
-}
-
-def RI_VINSERT : CustomRivosVXI<0b010000, OPMVX, (outs VR:$vd_wb),
-                                (ins VR:$vd, GPR:$rs1, uimm5:$imm),
-                                "ri.vinsert.v.x", "$vd, $rs1, $imm">;
-
-let ReadsPastVL = 1 in
-def RI_VEXTRACT : CustomRivosXVI<0b010111, OPMVV, (outs GPR:$rd),
-                                (ins VR:$vs2, uimm5:$imm),
-                                "ri.vextract.x.v", "$rd, $vs2, $imm">;
-}
-
-// RI_VEXTRACT matches the semantics of ri.vextract.x.v. The result is always
-// XLenVT sign extended from the vector element size.  VEXTRACT does *not*
-// have a VL operand.
-def ri_vextract : RVSDNode<"RI_VEXTRACT",
-                           SDTypeProfile<1, 2, [SDTCisInt<0>, SDTCisVec<1>,
-                                                SDTCisInt<2>,
-                                                SDTCisInt<1>]>>;
-
-// RI_VINSERT_VL matches the semantics of ri.vinsert.v.x. It carries a VL operand.
-def ri_vinsert_vl : RVSDNode<"RI_VINSERT_VL",
-                             SDTypeProfile<1, 5, [SDTCisSameAs<0, 1>,
-                                                  SDTCisInt<0>,
-                                                  SDTCisVT<2, XLenVT>,
-                                                  SDTCisVT<3, XLenVT>,
-                                                  SDTCisVT<4, XLenVT>]>>;
-
-let Predicates = [HasVendorXRivosVisni], mayLoad = 0, mayStore = 0,
-    hasSideEffects = 0, HasSEWOp = 1 in
-foreach m = MxList in {
-  defvar mx = m.MX;
-  let VLMul = m.value in {
-    let BaseInstr = RI_VEXTRACT in
-    def PseudoRI_VEXTRACT_  # mx :
-      RISCVVPseudo<(outs GPR:$rd),
-                   (ins m.vrclass:$rs2, uimm5:$idx, sew:$sew),
-                   []>;
-
-    let HasVLOp = 1, BaseInstr = RI_VINSERT, HasVecPolicyOp = 1,
-        Constraints = "$rd = $rs1" in
-    def PseudoRI_VINSERT_ # mx :
-      RISCVVPseudo<(outs m.vrclass:$rd),
-                   (ins m.vrclass:$rs1, GPR:$rs2, uimm5:$idx, AVL:$vl,
-                        sew:$sew, vec_policy:$policy),
-                   []>;
-  }
-}
-
-
-
-foreach vti = AllIntegerVectors in
-  let Predicates = GetVTypePredicates<vti>.Predicates in {
-    def : Pat<(XLenVT (ri_vextract (vti.Vector vti.RegClass:$vs2), uimm5:$imm)),
-              (!cast<Instruction>("PseudoRI_VEXTRACT_" # vti.LMul.MX)
-               $vs2, uimm5:$imm, vti.Log2SEW)>;
-
-    def : Pat<(vti.Vector (ri_vinsert_vl (vti.Vector vti.RegClass:$merge),
-                                          vti.ScalarRegClass:$rs1,
-                                          uimm5:$imm,
-                                          VLOpFrag,
-                                          (XLenVT timm:$policy))),
-              (!cast<Instruction>("PseudoRI_VINSERT_" # vti.LMul.MX)
-               $merge, vti.ScalarRegClass:$rs1, uimm5:$imm,
-               GPR:$vl, vti.Log2SEW, (XLenVT timm:$policy))>;
-
-  }

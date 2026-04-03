@@ -20,10 +20,10 @@
 // CHECK-SAME:    %[[VAL_6:.*6]]: memref<?x?xf64>) kernel {
 // CHECK-DAG:     %[[VAL_7:.*]] = arith.constant 1 : index
 // CHECK-DAG:     %[[VAL_8:.*]] = arith.constant 0 : index
-// CHECK:         %[[VAL_9:.*]] = gpu.block_id  x
-// CHECK:         %[[VAL_10:.*]] = gpu.block_dim  x
-// CHECK:         %[[VAL_11:.*]] = gpu.thread_id  x
-// CHECK:         %[[VAL_12:.*]] = gpu.grid_dim  x
+// CHECK:         %[[VAL_9:.*]] = gpu.block_id x
+// CHECK:         %[[VAL_10:.*]] = gpu.block_dim x
+// CHECK:         %[[VAL_11:.*]] = gpu.thread_id x
+// CHECK:         %[[VAL_12:.*]] = gpu.grid_dim x
 // CHECK:         %[[VAL_13:.*]] = arith.muli %[[VAL_9]], %[[VAL_10]] : index
 // CHECK:         %[[VAL_14:.*]] = arith.addi %[[VAL_13]], %[[VAL_11]] : index
 // CHECK:         %[[VAL_15:.*]] = arith.muli %[[VAL_10]], %[[VAL_12]] : index

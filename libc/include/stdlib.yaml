@@ -12,12 +12,15 @@ types:
   - type_name: __qsortcompare_t
   - type_name: __qsortrcompare_t
   - type_name: __search_compare_t
+  - type_name: constraint_handler_t
   - type_name: div_t
   - type_name: ldiv_t
   - type_name: lldiv_t
   - type_name: locale_t
+  - type_name: rsize_t
   - type_name: size_t
-  - type_name: wchar_t  
+  - type_name: wchar_t
+  - type_name: errno_t
 enums: []
 objects: []
 functions:

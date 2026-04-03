@@ -30,19 +30,19 @@
 ; CHECK-MIR-DAG:   [[float:%[0-9]+\:id\(s32\)]] = OpExtInst [[void_type]], 3, 2, {{%[0-9]+\:[a-z0-9\(\)]+}}, [[i32_32]], [[enc_float]], [[i32_0]]
 ; CHECK-MIR-DAG:   [[double:%[0-9]+\:id\(s32\)]] = OpExtInst [[void_type]], 3, 2, {{%[0-9]+\:[a-z0-9\(\)]+}}, [[i32_64]], [[enc_float]], [[i32_0]]
 ; CHECK-MIR-DAG:   [[int:%[0-9]+\:id\(s32\)]] = OpExtInst [[void_type]], 3, 2, {{%[0-9]+\:[a-z0-9\(\)]+}}, [[i32_32]], [[enc_signed]], [[i32_0]]
-; CHECK-MIR-DAG:   OpExtInst [[void_type]], 3, 3, [[bool]], [[i32_8]], [[i32_0]]
-; CHECK-MIR-DAG:   OpExtInst [[void_type]], 3, 3, [[short]], [[i32_8]], [[i32_0]]
-; CHECK-MIR-DAG:   OpExtInst [[void_type]], 3, 3, [[char]], [[i32_8]], [[i32_0]]
-; CHECK-MIR-DAG:   OpExtInst [[void_type]], 3, 3, [[long]], [[i32_8]], [[i32_0]]
-; CHECK-MIR-DAG:   OpExtInst [[void_type]], 3, 3, [[unsigned_int]], [[i32_8]], [[i32_0]]
-; CHECK-MIR-DAG:   OpExtInst [[void_type]], 3, 3, [[unsigned_short]], [[i32_8]], [[i32_0]]
-; CHECK-MIR-DAG:   OpExtInst [[void_type]], 3, 3, [[unsigned_char]], [[i32_8]], [[i32_0]]
-; CHECK-MIR-DAG:   OpExtInst [[void_type]], 3, 3, [[unsigned_long]], [[i32_8]], [[i32_0]]
-; CHECK-MIR-DAG:   OpExtInst [[void_type]], 3, 3, [[float]], [[i32_8]], [[i32_0]]
-; CHECK-MIR-DAG:   OpExtInst [[void_type]], 3, 3, [[double]], [[i32_8]], [[i32_0]]
-; CHECK-MIR-DAG:   OpExtInst [[void_type]], 3, 3, [[int]], [[i32_5]], [[i32_0]]
-; CHECK-MIR-DAG:   [[debug_info_none:%[0-9]+\:id\(s32\)]] = OpExtInst [[void_type]], 3, 0
-; CHECK-MIR-DAG:   OpExtInst [[void_type]], 3, 3, [[debug_info_none]], [[i32_5]], [[i32_0]]
+; CHECK-MIR:   OpExtInst [[void_type]], 3, 3, [[bool]], [[i32_8]], [[i32_0]]
+; CHECK-MIR:   OpExtInst [[void_type]], 3, 3, [[short]], [[i32_8]], [[i32_0]]
+; CHECK-MIR:   OpExtInst [[void_type]], 3, 3, [[char]], [[i32_8]], [[i32_0]]
+; CHECK-MIR:   OpExtInst [[void_type]], 3, 3, [[long]], [[i32_8]], [[i32_0]]
+; CHECK-MIR:   OpExtInst [[void_type]], 3, 3, [[unsigned_int]], [[i32_8]], [[i32_0]]
+; CHECK-MIR:   OpExtInst [[void_type]], 3, 3, [[unsigned_short]], [[i32_8]], [[i32_0]]
+; CHECK-MIR:   OpExtInst [[void_type]], 3, 3, [[unsigned_char]], [[i32_8]], [[i32_0]]
+; CHECK-MIR:   OpExtInst [[void_type]], 3, 3, [[unsigned_long]], [[i32_8]], [[i32_0]]
+; CHECK-MIR:   OpExtInst [[void_type]], 3, 3, [[float]], [[i32_8]], [[i32_0]]
+; CHECK-MIR:   OpExtInst [[void_type]], 3, 3, [[double]], [[i32_8]], [[i32_0]]
+; CHECK-MIR:   OpExtInst [[void_type]], 3, 3, [[int]], [[i32_5]], [[i32_0]]
+; CHECK-MIR:   [[debug_info_none:%[0-9]+\:id\(s32\)]] = OpExtInst [[void_type]], 3, 0
+; CHECK-MIR:   OpExtInst [[void_type]], 3, 3, [[debug_info_none]], [[i32_5]], [[i32_0]]
 
 ; CHECK-SPIRV:	[[i32type:%[0-9]+]] = OpTypeInt 32 0
 ; CHECK-SPIRV-DAG:	[[i32_8:%[0-9]+]] = OpConstant [[i32type]] 8{{$}}
@@ -81,7 +81,7 @@
 ; CHECK-SPIRV-DAG:	[[debug_info_none:%[0-9]+]] = OpExtInst {{%[0-9]+ %[0-9]+}} DebugInfoNone
 ; CHECK-SPIRV-DAG:	OpExtInst {{%[0-9]+ %[0-9]+}} DebugTypePointer [[debug_info_none]] [[i32_5]] [[i32_0]]
 
-; CHECK-OPTION-NOT: DebugTypePointer
+; CHECK-OPTION: DebugTypePointer
 
 @gi0 = dso_local addrspace(1) global ptr addrspace(4) null, align 4, !dbg !0
 @gv0 = dso_local addrspace(1) global ptr addrspace(4) null, align 4, !dbg !5

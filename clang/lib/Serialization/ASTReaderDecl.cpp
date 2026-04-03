@@ -636,6 +636,7 @@ void ASTDeclReader::VisitDecl(Decl *D) {
       break;
     case Decl::ModuleOwnershipKind::Unowned:
     case Decl::ModuleOwnershipKind::VisibleWhenImported:
+    case Decl::ModuleOwnershipKind::VisiblePromoted:
     case Decl::ModuleOwnershipKind::ReachableWhenImported:
     case Decl::ModuleOwnershipKind::ModulePrivate:
       break;
@@ -3642,7 +3643,6 @@ template<>
 void ASTDeclReader::attachPreviousDeclImpl(ASTReader &Reader,
                                            Redeclarable<VarDecl> *D,
                                            Decl *Previous, Decl *Canon) {
-  auto *VD = static_cast<VarDecl *>(D);
   auto *PrevVD = cast<VarDecl>(Previous);
   D->RedeclLink.setPrevious(PrevVD);
   D->First = PrevVD->First;
@@ -3650,11 +3650,20 @@ void ASTDeclReader::attachPreviousDeclImpl(ASTReader &Reader,
   // We should keep at most one definition on the chain.
   // FIXME: Cache the definition once we've found it. Building a chain with
   // N definitions currently takes O(N^2) time here.
+  auto *VD = static_cast<VarDecl *>(D);
   if (VD->isThisDeclarationADefinition() == VarDecl::Definition) {
     for (VarDecl *CurD = PrevVD; CurD; CurD = CurD->getPreviousDecl()) {
       if (CurD->isThisDeclarationADefinition() == VarDecl::Definition) {
+        // FIXME: For header modules, there are some problems if we don't
+        // demote definition to declaration.
+        // See clang/test/Modules/module-init-forcelly-loaded-module.cpp
+        // for example. Maybe we are able to handle the CodeGen part
+        // to avoid it emitting duplicated definitions. But just workaround
+        // now temporarily.
+        if (VD->getOwningModule() &&
+            VD->getOwningModule()->isHeaderLikeModule())
+          VD->demoteThisDefinitionToDeclaration();
         Reader.mergeDefinitionVisibility(CurD, VD);
-        VD->demoteThisDefinitionToDeclaration();
         break;
       }
     }
@@ -4972,6 +4981,11 @@ void ASTDeclReader::UpdateDecl(Decl *D) {
           Reader.getContext(), AllocatorKind, Allocator, Alignment, SR));
       break;
     }
+
+    case DeclUpdateKind::DeclMarkedOpenMPIndirectCall:
+      D->addAttr(OMPTargetIndirectCallAttr::CreateImplicit(Reader.getContext(),
+                                                           readSourceRange()));
+      break;
 
     case DeclUpdateKind::DeclExported: {
       unsigned SubmoduleID = readSubmoduleID();

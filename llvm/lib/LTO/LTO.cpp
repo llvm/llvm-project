@@ -110,6 +110,7 @@ static cl::opt<bool>
 namespace llvm {
 extern cl::opt<bool> CodeGenDataThinLTOTwoRounds;
 extern cl::opt<bool> ForceImportAll;
+extern cl::opt<bool> AlwaysRenamePromotedLocals;
 } // end namespace llvm
 
 namespace llvm {
@@ -509,7 +510,8 @@ void llvm::thinLTOResolvePrevailingInIndex(
 static void thinLTOInternalizeAndPromoteGUID(
     ValueInfo VI, function_ref<bool(StringRef, ValueInfo)> isExported,
     function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
-        isPrevailing) {
+        isPrevailing,
+    DenseSet<StringRef> *ExternallyVisibleSymbolNamesPtr) {
   // Before performing index-based internalization and promotion for this GUID,
   // the local flag should be consistent with the summary list linkage types.
   VI.verifyLocal();
@@ -518,12 +520,24 @@ static void thinLTOInternalizeAndPromoteGUID(
       VI.getSummaryList().size() == 1 &&
       !GlobalValue::isLocalLinkage(VI.getSummaryList().front()->linkage());
 
+  bool NameRecorded = false;
   for (auto &S : VI.getSummaryList()) {
     // First see if we need to promote an internal value because it is not
     // exported.
     if (isExported(S->modulePath(), VI)) {
-      if (GlobalValue::isLocalLinkage(S->linkage()))
+      if (GlobalValue::isLocalLinkage(S->linkage())) {
+        // Only the first local GlobalValue in a list of summaries does not
+        // need renaming. In rare cases if there exist more than one summaries
+        // in the list, the rest of them must have renaming (through promotion)
+        // to avoid conflict.
+        if (ExternallyVisibleSymbolNamesPtr && !NameRecorded) {
+          NameRecorded = true;
+          if (ExternallyVisibleSymbolNamesPtr->insert(VI.name()).second)
+            S->setNoRenameOnPromotion(true);
+        }
+
         S->promote();
+      }
       continue;
     }
 
@@ -593,11 +607,14 @@ void llvm::thinLTOInternalizeAndPromoteInIndex(
     ModuleSummaryIndex &Index,
     function_ref<bool(StringRef, ValueInfo)> isExported,
     function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
-        isPrevailing) {
+        isPrevailing,
+    DenseSet<StringRef> *ExternallyVisibleSymbolNamesPtr) {
   assert(!Index.withInternalizeAndPromote());
+
   for (auto &I : Index)
     thinLTOInternalizeAndPromoteGUID(Index.getValueInfo(I), isExported,
-                                     isPrevailing);
+                                     isPrevailing,
+                                     ExternallyVisibleSymbolNamesPtr);
   Index.setWithInternalizeAndPromote();
 }
 
@@ -1523,7 +1540,6 @@ namespace {
 /// generated files back into the link.
 class CGThinBackend : public ThinBackendProc {
 protected:
-  AddStreamFn AddStream;
   DenseSet<GlobalValue::GUID> CfiFunctionDefs;
   DenseSet<GlobalValue::GUID> CfiFunctionDecls;
   bool ShouldEmitIndexFiles;
@@ -1532,12 +1548,10 @@ public:
   CGThinBackend(
       const Config &Conf, ModuleSummaryIndex &CombinedIndex,
       const DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries,
-      AddStreamFn AddStream, lto::IndexWriteCallback OnWrite,
-      bool ShouldEmitIndexFiles, bool ShouldEmitImportsFiles,
-      ThreadPoolStrategy ThinLTOParallelism)
+      lto::IndexWriteCallback OnWrite, bool ShouldEmitIndexFiles,
+      bool ShouldEmitImportsFiles, ThreadPoolStrategy ThinLTOParallelism)
       : ThinBackendProc(Conf, CombinedIndex, ModuleToDefinedGVSummaries,
                         OnWrite, ShouldEmitImportsFiles, ThinLTOParallelism),
-        AddStream(std::move(AddStream)),
         ShouldEmitIndexFiles(ShouldEmitIndexFiles) {
     auto &Defs = CombinedIndex.cfiFunctionDefs();
     CfiFunctionDefs.insert_range(Defs.guids());
@@ -1550,6 +1564,9 @@ public:
 /// an in-process thread when invoked for each task.
 class InProcessThinBackend : public CGThinBackend {
 protected:
+  // Callback used to add generated native object files to the link by code
+  // generating directly into the returned output stream.
+  AddStreamFn AddStream;
   FileCache Cache;
 
 public:
@@ -1559,10 +1576,10 @@ public:
       const DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries,
       AddStreamFn AddStream, FileCache Cache, lto::IndexWriteCallback OnWrite,
       bool ShouldEmitIndexFiles, bool ShouldEmitImportsFiles)
-      : CGThinBackend(Conf, CombinedIndex, ModuleToDefinedGVSummaries,
-                      AddStream, OnWrite, ShouldEmitIndexFiles,
-                      ShouldEmitImportsFiles, ThinLTOParallelism),
-        Cache(std::move(Cache)) {}
+      : CGThinBackend(Conf, CombinedIndex, ModuleToDefinedGVSummaries, OnWrite,
+                      ShouldEmitIndexFiles, ShouldEmitImportsFiles,
+                      ThinLTOParallelism),
+        AddStream(std::move(AddStream)), Cache(std::move(Cache)) {}
 
   virtual Error runThinLTOBackendThread(
       AddStreamFn AddStream, FileCache Cache, unsigned Task, BitcodeModule BM,
@@ -2047,8 +2064,19 @@ Error LTO::runThinLTO(AddStreamFn AddStream, FileCache Cache,
   // no index entries in the typeIdMetadata map (e.g. if we are instead
   // performing IR-based WPD in hybrid regular/thin LTO mode).
   std::map<ValueInfo, std::vector<VTableSlotSummary>> LocalWPDTargetsMap;
+  DenseSet<StringRef> ExternallyVisibleSymbolNames;
+
+  // Used by the promotion-time renaming logic. When non-null, this set
+  // identifies symbols that should not be renamed during promotion.
+  // It is non-null only when whole-program visibility is enabled and
+  // renaming is not forced. Otherwise, the default renaming behavior applies.
+  DenseSet<StringRef> *ExternallyVisibleSymbolNamesPtr =
+      (WholeProgramVisibilityEnabledInLTO && !AlwaysRenamePromotedLocals)
+          ? &ExternallyVisibleSymbolNames
+          : nullptr;
   runWholeProgramDevirtOnIndex(ThinLTO.CombinedIndex, ExportedGUIDs,
-                               LocalWPDTargetsMap);
+                               LocalWPDTargetsMap,
+                               ExternallyVisibleSymbolNamesPtr);
 
   auto isPrevailing = [&](GlobalValue::GUID GUID, const GlobalValueSummary *S) {
     return ThinLTO.isPrevailingModuleForGUID(GUID, S->modulePath());
@@ -2056,7 +2084,7 @@ Error LTO::runThinLTO(AddStreamFn AddStream, FileCache Cache,
   if (EnableMemProfContextDisambiguation) {
     MemProfContextDisambiguation ContextDisambiguation;
     ContextDisambiguation.run(
-        ThinLTO.CombinedIndex, isPrevailing,
+        ThinLTO.CombinedIndex, isPrevailing, RegularLTO.Ctx,
         [&](StringRef PassName, StringRef RemarkName, const Twine &Msg) {
           auto R = OptimizationRemark(PassName.data(), RemarkName,
                                       LinkerRemarkFunction);
@@ -2108,10 +2136,27 @@ Error LTO::runThinLTO(AddStreamFn AddStream, FileCache Cache,
   // Update local devirtualized targets that were exported by cross-module
   // importing or by other devirtualizations marked in the ExportedGUIDs set.
   updateIndexWPDForExports(ThinLTO.CombinedIndex, isExported,
-                           LocalWPDTargetsMap);
+                           LocalWPDTargetsMap, ExternallyVisibleSymbolNamesPtr);
+
+  if (ExternallyVisibleSymbolNamesPtr) {
+    // Add to ExternallyVisibleSymbolNames the set of unique names used by all
+    // externally visible symbols in the index.
+    for (auto &I : ThinLTO.CombinedIndex) {
+      ValueInfo VI = ThinLTO.CombinedIndex.getValueInfo(I);
+      for (const auto &Summary : VI.getSummaryList()) {
+        const GlobalValueSummary *Base = Summary->getBaseObject();
+        if (GlobalValue::isLocalLinkage(Base->linkage()))
+          continue;
+
+        ExternallyVisibleSymbolNamesPtr->insert(VI.name());
+        break;
+      }
+    }
+  }
 
   thinLTOInternalizeAndPromoteInIndex(ThinLTO.CombinedIndex, isExported,
-                                      isPrevailing);
+                                      isPrevailing,
+                                      ExternallyVisibleSymbolNamesPtr);
 
   auto recordNewLinkage = [&](StringRef ModuleIdentifier,
                               GlobalValue::GUID GUID,
@@ -2329,32 +2374,36 @@ class OutOfProcessThinBackend : public CGThinBackend {
   // Cache
   FileCache Cache;
 
+  // Callback to add a pre-existing native object buffer to the link.
+  AddBufferFn AddBuffer;
+
 public:
   OutOfProcessThinBackend(
       const Config &Conf, ModuleSummaryIndex &CombinedIndex,
       ThreadPoolStrategy ThinLTOParallelism,
       const DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries,
-      AddStreamFn AddStream, FileCache CacheFn, lto::IndexWriteCallback OnWrite,
+      FileCache CacheFn, lto::IndexWriteCallback OnWrite,
       bool ShouldEmitIndexFiles, bool ShouldEmitImportsFiles,
       StringRef LinkerOutputFile, StringRef Distributor,
       ArrayRef<StringRef> DistributorArgs, StringRef RemoteCompiler,
       ArrayRef<StringRef> RemoteCompilerPrependArgs,
-      ArrayRef<StringRef> RemoteCompilerArgs, bool SaveTemps)
-      : CGThinBackend(Conf, CombinedIndex, ModuleToDefinedGVSummaries,
-                      AddStream, OnWrite, ShouldEmitIndexFiles,
-                      ShouldEmitImportsFiles, ThinLTOParallelism),
+      ArrayRef<StringRef> RemoteCompilerArgs, bool SaveTemps,
+      AddBufferFn AddBuffer)
+      : CGThinBackend(Conf, CombinedIndex, ModuleToDefinedGVSummaries, OnWrite,
+                      ShouldEmitIndexFiles, ShouldEmitImportsFiles,
+                      ThinLTOParallelism),
         LinkerOutputFile(LinkerOutputFile), DistributorPath(Distributor),
         DistributorArgs(DistributorArgs), RemoteCompiler(RemoteCompiler),
         RemoteCompilerPrependArgs(RemoteCompilerPrependArgs),
         RemoteCompilerArgs(RemoteCompilerArgs), SaveTemps(SaveTemps),
-        Cache(std::move(CacheFn)) {}
+        Cache(std::move(CacheFn)), AddBuffer(std::move(AddBuffer)) {}
 
   void setup(unsigned ThinLTONumTasks, unsigned ThinLTOTaskOffset,
              llvm::Triple Triple) override {
     UID = itostr(sys::Process::getProcessId());
     Jobs.resize((size_t)ThinLTONumTasks);
     this->ThinLTOTaskOffset = ThinLTOTaskOffset;
-    this->Triple = Triple;
+    this->Triple = std::move(Triple);
     this->Conf.Dtlto = 1;
   }
 
@@ -2678,11 +2727,12 @@ public:
                   Job.NativeObjectPath + ": " + EC.message(),
               inconvertibleErrorCode());
 
-        MemoryBufferRef ObjFileMbRef = ObjFileMbOrErr->get()->getMemBufferRef();
         if (Cache.isValid()) {
           // Cache hits are taken care of earlier. At this point, we could only
           // have cache misses.
           assert(Job.CacheAddStream);
+          MemoryBufferRef ObjFileMbRef =
+              ObjFileMbOrErr->get()->getMemBufferRef();
           // Obtain a file stream for a storing a cache entry.
           auto CachedFileStreamOrErr =
               Job.CacheAddStream(Job.Task, Job.ModuleID);
@@ -2698,13 +2748,7 @@ public:
           if (Error Err = CacheStream.commit())
             return Err;
         } else {
-          auto StreamOrErr = AddStream(Job.Task, Job.ModuleID);
-          if (Error Err = StreamOrErr.takeError())
-            report_fatal_error(std::move(Err));
-          auto &Stream = *StreamOrErr->get();
-          *Stream.OS << ObjFileMbRef.getBuffer();
-          if (Error Err = Stream.commit())
-            report_fatal_error(std::move(Err));
+          AddBuffer(Job.Task, Job.ModuleID, std::move(*ObjFileMbOrErr));
         }
       }
     }
@@ -2719,17 +2763,18 @@ ThinBackend lto::createOutOfProcessThinBackend(
     StringRef LinkerOutputFile, StringRef Distributor,
     ArrayRef<StringRef> DistributorArgs, StringRef RemoteCompiler,
     ArrayRef<StringRef> RemoteCompilerPrependArgs,
-    ArrayRef<StringRef> RemoteCompilerArgs, bool SaveTemps) {
+    ArrayRef<StringRef> RemoteCompilerArgs, bool SaveTemps,
+    AddBufferFn AddBuffer) {
   auto Func =
       [=](const Config &Conf, ModuleSummaryIndex &CombinedIndex,
           const DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries,
-          AddStreamFn AddStream, FileCache Cache) {
+          AddStreamFn, FileCache Cache) {
         return std::make_unique<OutOfProcessThinBackend>(
-            Conf, CombinedIndex, Parallelism, ModuleToDefinedGVSummaries,
-            AddStream, Cache, OnWrite, ShouldEmitIndexFiles,
-            ShouldEmitImportsFiles, LinkerOutputFile, Distributor,
-            DistributorArgs, RemoteCompiler, RemoteCompilerPrependArgs,
-            RemoteCompilerArgs, SaveTemps);
+            Conf, CombinedIndex, Parallelism, ModuleToDefinedGVSummaries, Cache,
+            OnWrite, ShouldEmitIndexFiles, ShouldEmitImportsFiles,
+            LinkerOutputFile, Distributor, DistributorArgs, RemoteCompiler,
+            RemoteCompilerPrependArgs, RemoteCompilerArgs, SaveTemps,
+            AddBuffer);
       };
   return ThinBackend(Func, Parallelism);
 }
