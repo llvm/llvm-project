@@ -31,26 +31,18 @@ findConstToRemove(const VarDecl *VD, const MatchFinder::MatchResult &Result) {
                          VD->getType()->isNullPtrType() ||
                          VD->getType()->isMemberPointerType();
 
-  const auto ConstSearchStartLoc = [&]() -> std::optional<SourceLocation> {
-    if (!IsPointer)
-      return VD->getBeginLoc();
-
-    SourceLocation StarLoc = utils::lexer::findPreviousTokenKind(
+  // If the 'findPreviousTokenKind' below fails,
+  // we know it is a pointer but cannot find the start token.
+  // This can happen when either type is aliased or `auto` was used.
+  // e.g: constexpr const auto const str = "hello";
+  // In cases like this, clang analyzer already warns about the use of const
+  // as duplicate, so we can safely ignore these cases.
+  const SourceLocation ConstSearchStartLoc = !IsPointer
+      ? VD->getBeginLoc()
+      : utils::lexer::findPreviousTokenKind(
         NameBeginLoc, SM, Result.Context->getLangOpts(), tok::star);
 
-    if (StarLoc.isValid())
-      return StarLoc;
-
-    // We know it is a pointer but cannot find the start token.
-    // This can happen when either type is aliased or `auto` was used.
-    // e.g: constexpr const auto const str = "hello";
-    // In cases like this, clang analyzer already warns about the use of const
-    // as duplicate, so we can safely ignore these cases.
-
-    return std::nullopt;
-  }();
-
-  if (!ConstSearchStartLoc || !ConstSearchStartLoc->isValid())
+  if (ConstSearchStartLoc.isInvalid())
     return std::nullopt;
 
   const CharSourceRange FileRange = Lexer::makeFileCharRange(
