@@ -161,7 +161,7 @@ public:
   ///
   /// \param Offset The string table offset for the string to retrieve.
   /// \returns The string from the strin table.
-  StringRef getString(uint32_t Offset) const { return StrTab[Offset]; }
+  StringRef getString(gsym_strp_t Offset) const { return StrTab[Offset]; }
 
   /// Get the a file entry for the suppplied file index.
   ///

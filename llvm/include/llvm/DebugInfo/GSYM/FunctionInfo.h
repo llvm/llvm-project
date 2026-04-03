@@ -104,8 +104,8 @@ struct FunctionInfo {
   /// GSYM file.
   SmallString<32> EncodingCache;
 
-  FunctionInfo(uint64_t Addr = 0, uint64_t Size = 0, uint32_t N = 0)
-      : Range(Addr, Addr + Size), Name(N) {}
+  FunctionInfo(uint64_t Addr = 0, uint64_t Size = 0, gsym_strp_t Name = 0)
+      : Range(Addr, Addr + Size), Name(Name) {}
 
   /// Query if a FunctionInfo has rich debug info.
   ///

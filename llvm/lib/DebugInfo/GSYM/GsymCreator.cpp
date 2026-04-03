@@ -34,8 +34,8 @@ uint32_t GsymCreator::insertFile(StringRef Path, llvm::sys::path::Style Style) {
   // If we inline the insertString() function call into the constructor, the
   // call order is undefined due to parameter lists not having any ordering
   // requirements.
-  const uint32_t Dir = insertString(directory);
-  const uint32_t Base = insertString(filename);
+  const gsym_strp_t Dir = insertString(directory);
+  const gsym_strp_t Base = insertString(filename);
   return insertFileEntry(FileEntry(Dir, Base));
 }
 
@@ -57,11 +57,11 @@ uint32_t GsymCreator::copyFile(const GsymCreator &SrcGC, uint32_t FileIdx) {
     return 0;
   const FileEntry SrcFE = SrcGC.Files[FileIdx];
   // Copy the strings for the file and then add the newly converted file entry.
-  uint32_t Dir =
+  gsym_strp_t Dir =
       SrcFE.Dir == 0
           ? 0
           : StrTab.add(SrcGC.StringOffsetMap.find(SrcFE.Dir)->second);
-  uint32_t Base = StrTab.add(SrcGC.StringOffsetMap.find(SrcFE.Base)->second);
+  gsym_strp_t Base = StrTab.add(SrcGC.StringOffsetMap.find(SrcFE.Base)->second);
   FileEntry DstFE(Dir, Base);
   return insertFileEntry(DstFE);
 }
@@ -237,14 +237,15 @@ llvm::Error GsymCreator::finalize(OutputAggregator &Out) {
   return Error::success();
 }
 
-uint32_t GsymCreator::copyString(const GsymCreator &SrcGC, uint32_t StrOff) {
+gsym_strp_t GsymCreator::copyString(const GsymCreator &SrcGC,
+                                    gsym_strp_t StrOff) {
   // String offset at zero is always the empty string, no copying needed.
   if (StrOff == 0)
     return 0;
   return StrTab.add(SrcGC.StringOffsetMap.find(StrOff)->second);
 }
 
-uint32_t GsymCreator::insertString(StringRef S, bool Copy) {
+gsym_strp_t GsymCreator::insertString(StringRef S, bool Copy) {
   if (S.empty())
     return 0;
 
@@ -262,7 +263,7 @@ uint32_t GsymCreator::insertString(StringRef S, bool Copy) {
       CHStr = CachedHashStringRef{StringStorage.insert(S).first->getKey(),
                                   CHStr.hash()};
   }
-  const uint32_t StrOff = StrTab.add(CHStr);
+  const gsym_strp_t StrOff = StrTab.add(CHStr);
   // Save a mapping of string offsets to the cached string reference in case
   // we need to segment the GSYM file and copy string from one string table to
   // another.
@@ -270,7 +271,7 @@ uint32_t GsymCreator::insertString(StringRef S, bool Copy) {
   return StrOff;
 }
 
-StringRef GsymCreator::getString(uint32_t Offset) {
+StringRef GsymCreator::getString(gsym_strp_t Offset) {
   auto I = StringOffsetMap.find(Offset);
   assert(I != StringOffsetMap.end() &&
          "GsymCreator::getString expects a valid offset as parameter.");

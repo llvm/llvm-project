@@ -26,7 +26,7 @@ Error CallSiteInfo::encode(FileWriter &O) const {
   O.writeU64(ReturnOffset);
   O.writeU8(Flags);
   O.writeU32(MatchRegex.size());
-  for (uint32_t Entry : MatchRegex)
+  for (gsym_strp_t Entry : MatchRegex)
     O.writeStringOffset(Entry);
   return Error::success();
 }
@@ -56,11 +56,11 @@ Expected<CallSiteInfo> CallSiteInfo::decode(DataExtractor &Data,
 
   CSI.MatchRegex.reserve(NumEntries);
   for (uint32_t i = 0; i < NumEntries; ++i) {
-    if (!Data.isValidOffsetForDataOfSize(Offset, sizeof(uint32_t)))
+    if (!Data.isValidOffsetForDataOfSize(Offset, Data.getStringOffsetSize()))
       return createStringError(std::errc::io_error,
                                "0x%8.8" PRIx64 ": missing MatchRegex entry",
                                Offset);
-    uint32_t Entry = Data.getStringOffset(&Offset);
+    gsym_strp_t Entry = Data.getStringOffset(&Offset);
     CSI.MatchRegex.push_back(Entry);
   }
 
@@ -207,7 +207,7 @@ Error CallSiteInfoLoader::processYAMLFunctions(
       // start address to make the offset absolute.
       CSI.ReturnOffset = CallSiteYAML.return_offset;
       for (const auto &Regex : CallSiteYAML.match_regex) {
-        uint32_t StrOffset = GCreator.insertString(Regex);
+        gsym_strp_t StrOffset = GCreator.insertString(Regex);
         CSI.MatchRegex.push_back(StrOffset);
       }
 

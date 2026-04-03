@@ -206,8 +206,9 @@ TEST(GSYMTest, TestFunctionInfoDecodeErrors) {
       "0x00000004: missing FunctionInfo Name");
   // Write out an invalid Name string table offset of zero.
   FW.writeU32(0);
-  TestFunctionInfoDecodeError(ByteOrder, OutStrm.str(), BaseAddr,
-      "0x00000004: invalid FunctionInfo Name value 0x00000000");
+  TestFunctionInfoDecodeError(
+      ByteOrder, OutStrm.str(), BaseAddr,
+      "0x00000004: invalid FunctionInfo Name value 0x0");
   // Modify the Name to be 0x00000001, which is a valid value.
   FW.fixup32(0x00000001, 4);
   TestFunctionInfoDecodeError(ByteOrder, OutStrm.str(), BaseAddr,

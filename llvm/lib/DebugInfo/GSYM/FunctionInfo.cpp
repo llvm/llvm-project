@@ -53,8 +53,9 @@ llvm::Expected<FunctionInfo> FunctionInfo::decode(DataExtractor &Data,
   FI.Name = Data.getStringOffset(&Offset);
   if (FI.Name == 0)
     return createStringError(std::errc::io_error,
-        "0x%8.8" PRIx64 ": invalid FunctionInfo Name value 0x%8.8x",
-        Offset - 4, FI.Name);
+                             "0x%8.8" PRIx64
+                             ": invalid FunctionInfo Name value 0x%" PRIx64,
+                             Offset - Data.getStringOffsetSize(), FI.Name);
   bool Done = false;
   while (!Done) {
     if (!Data.isValidOffsetForDataOfSize(Offset, 4))
@@ -245,7 +246,7 @@ FunctionInfo::lookup(DataExtractor &Data, const GsymReader &GR,
   LR.LookupAddr = Addr;
   uint64_t Offset = 0;
   LR.FuncRange = {FuncAddr, FuncAddr + Data.getU32(&Offset)};
-  uint32_t NameOffset = Data.getStringOffset(&Offset);
+  gsym_strp_t NameOffset = Data.getStringOffset(&Offset);
   // The "lookup" functions doesn't report errors as accurately as the "decode"
   // function as it is meant to be fast. For more accurage errors we could call
   // "decode".
@@ -261,8 +262,9 @@ FunctionInfo::lookup(DataExtractor &Data, const GsymReader &GR,
 
   if (NameOffset == 0)
     return createStringError(std::errc::io_error,
-        "0x%8.8" PRIx64 ": invalid FunctionInfo Name value 0x00000000",
-        Offset - 4);
+                             "0x%8.8" PRIx64
+                             ": invalid FunctionInfo Name value 0x0",
+                             Offset - Data.getStringOffsetSize());
   LR.FuncName = GR.getString(NameOffset);
   bool Done = false;
   std::optional<LineEntry> LineEntry;
@@ -311,7 +313,7 @@ FunctionInfo::lookup(DataExtractor &Data, const GsymReader &GR,
             // Check if the call site matches the lookup address
             if (CS.ReturnOffset == Addr - FuncAddr) {
               // Get regex patterns
-              for (uint32_t RegexOffset : CS.MatchRegex) {
+              for (gsym_strp_t RegexOffset : CS.MatchRegex) {
                 LR.CallSiteFuncRegex.push_back(GR.getString(RegexOffset));
               }
               break;

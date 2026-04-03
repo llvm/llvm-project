@@ -11,6 +11,7 @@
 
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/Hashing.h"
+#include "llvm/DebugInfo/GSYM/GsymTypes.h"
 #include <functional>
 #include <stdint.h>
 
@@ -25,12 +26,12 @@ struct FileEntry {
 
   /// Offsets in the string table.
   /// @{
-  uint64_t Dir = 0;
-  uint64_t Base = 0;
+  gsym_strp_t Dir = 0;
+  gsym_strp_t Base = 0;
   /// @}
 
   FileEntry() = default;
-  FileEntry(uint64_t D, uint64_t B) : Dir(D), Base(B) {}
+  FileEntry(gsym_strp_t D, gsym_strp_t B) : Dir(D), Base(B) {}
 
   /// Returns the on-disk encoded size of a FileEntry for the given string
   /// offset size. Each FileEntry has two string offsets (Dir and Base).

@@ -251,7 +251,7 @@ protected:
   /// \param SrcGC The source gsym creator to copy from.
   /// \param StrOff The string table offset from \a SrcGC to copy.
   /// \returns The new string table offset of the string within this object.
-  uint32_t copyString(const GsymCreator &SrcGC, uint32_t StrOff);
+  gsym_strp_t copyString(const GsymCreator &SrcGC, gsym_strp_t StrOff);
 
   /// Copy a file from \a SrcGC into this object.
   ///
@@ -364,7 +364,7 @@ public:
   ///             the string is owned by another object that will stay around
   ///             long enough for the GsymCreator to save the GSYM file.
   /// \returns The unique 32 bit offset into the string table.
-  LLVM_ABI uint32_t insertString(StringRef S, bool Copy = true);
+  LLVM_ABI gsym_strp_t insertString(StringRef S, bool Copy = true);
 
   /// Retrieve a string from the GSYM string table given its offset.
   ///
@@ -374,7 +374,7 @@ public:
   /// \param Offset The offset of the string to retrieve, previously returned by
   /// insertString.
   /// \returns The string at the given offset in the string table.
-  LLVM_ABI StringRef getString(uint32_t Offset);
+  LLVM_ABI StringRef getString(gsym_strp_t Offset);
 
   /// Insert a file into this GSYM creator.
   ///
