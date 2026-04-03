@@ -76,7 +76,6 @@ CheckInvalidProgramTranslation(llvm::StringRef fpo_program,
   ArchSpec arch_spec("i686-pc-windows");
   llvm::Triple::ArchType arch_type = arch_spec.GetMachine();
   ByteOrder byte_order = arch_spec.GetByteOrder();
-  uint32_t address_size = arch_spec.GetAddressByteSize();
 
   // program translation
   StreamBuffer<32> stream(Stream::eBinary, byte_order);
