@@ -95,7 +95,7 @@ static const Loan *createLoan(FactManager &FactMgr,
 }
 
 static bool producesConditionalResult(const Expr *E) {
-  return isa<CXXThrowExpr>(E->IgnoreParenImpCasts());
+  return !isa<CXXThrowExpr>(E->IgnoreParenImpCasts());
 }
 
 void FactsGenerator::run() {
@@ -412,7 +412,7 @@ void FactsGenerator::VisitConditionalOperator(const ConditionalOperator *CO) {
     const Expr *FalseExpr = CO->getFalseExpr();
     bool Initialized = false;
     for (const Expr *Branch : {TrueExpr, FalseExpr}) {
-      if (producesConditionalResult(Branch))
+      if (!producesConditionalResult(Branch))
         continue;
       if (!Initialized) {
         killAndFlowOrigin(*CO, *Branch);
