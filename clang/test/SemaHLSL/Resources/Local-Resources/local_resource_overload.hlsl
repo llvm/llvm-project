@@ -12,19 +12,16 @@
 RWByteAddressBuffer gBuf0 : register(u0);
 RWStructuredBuffer<uint> gSB : register(u1);
 
-void DoStore(RWByteAddressBuffer buf, uint idx, uint val)
-{
+void DoStore(RWByteAddressBuffer buf, uint idx, uint val) {
     buf.Store(idx * 4, val);
 }
 
-void DoStore(RWStructuredBuffer<uint> buf, uint idx, uint val)
-{
+void DoStore(RWStructuredBuffer<uint> buf, uint idx, uint val) {
     buf[idx] = val;
 }
 
 [numthreads(1,1,1)]
-void main(uint3 tid : SV_DispatchThreadID)
-{
+void main(uint3 tid : SV_DispatchThreadID) {
     RWByteAddressBuffer localBuf = gBuf0;
     RWStructuredBuffer<uint> localSB = gSB;
     DoStore(localBuf, tid.x, 1);

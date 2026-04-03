@@ -5,14 +5,12 @@
 
 // DXC: passes (both sema and codegen).
 
-RWByteAddressBuffer Pass_ReturnLocal_Uninitialized()
-{
+RWByteAddressBuffer Pass_ReturnLocal_Uninitialized() {
     RWByteAddressBuffer buf;
     return buf;
 }
 
 [numthreads(8,8,1)]
-void main(uint3 tid : SV_DispatchThreadID)
-{
+void main(uint3 tid : SV_DispatchThreadID) {
     RWByteAddressBuffer tmp = Pass_ReturnLocal_Uninitialized();
 }

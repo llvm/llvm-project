@@ -8,8 +8,7 @@
 RWByteAddressBuffer gBuf0 : register(u0);
 RWByteAddressBuffer gBuf1 : register(u1);
 
-uint Pass_Shadow(uint idx)
-{
+uint Pass_Shadow(uint idx) {
     RWByteAddressBuffer buf = gBuf0;
     {
         RWByteAddressBuffer buf = gBuf1;
@@ -20,8 +19,7 @@ uint Pass_Shadow(uint idx)
 }
 
 [numthreads(8,8,1)]
-void main(uint3 tid : SV_DispatchThreadID)
-{
+void main(uint3 tid : SV_DispatchThreadID) {
     uint idx = tid.x + tid.y * 8;
     Pass_Shadow(idx);
 }

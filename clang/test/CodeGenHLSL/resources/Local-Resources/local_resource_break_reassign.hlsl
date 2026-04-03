@@ -12,11 +12,10 @@ RWByteAddressBuffer gBuf0 : register(u0);
 RWByteAddressBuffer gBuf1 : register(u1);
 
 [numthreads(1,1,1)]
-void main(uint3 tid : SV_DispatchThreadID)
-{
+void main(uint3 tid : SV_DispatchThreadID) {
     RWByteAddressBuffer buf = gBuf0;
-    for(uint i = 0; i < 4; i++) {
-        if(i == tid.x) break;
+    for (uint i = 0; i < 4; i++) {
+        if (i == tid.x) break;
         buf = gBuf1;
     }
     buf.Store(tid.x * 4, 42);

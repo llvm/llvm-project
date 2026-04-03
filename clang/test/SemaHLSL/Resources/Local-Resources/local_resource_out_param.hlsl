@@ -9,14 +9,12 @@
 
 RWByteAddressBuffer gBuf0 : register(u0);
 
-void WriteThrough(out RWByteAddressBuffer buf)
-{
+void WriteThrough(out RWByteAddressBuffer buf) {
     buf = gBuf0;
 }
 
 [numthreads(1,1,1)]
-void main(uint3 tid : SV_DispatchThreadID)
-{
+void main(uint3 tid : SV_DispatchThreadID) {
     RWByteAddressBuffer local;
     WriteThrough(local);
     local.Store(tid.x * 4, 42);

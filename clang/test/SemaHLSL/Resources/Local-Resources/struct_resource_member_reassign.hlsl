@@ -16,8 +16,7 @@ RWByteAddressBuffer gBuf1 : register(u1);
 struct ResHolder { RWByteAddressBuffer buf; };
 
 [numthreads(1,1,1)]
-void main(uint3 tid : SV_DispatchThreadID)
-{
+void main(uint3 tid : SV_DispatchThreadID) {
     ResHolder h;
     h.buf = gBuf0;
     h.buf = gBuf1;

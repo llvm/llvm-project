@@ -9,8 +9,7 @@
 RWByteAddressBuffer gBuf0 : register(u0);
 SamplerState gSampler : register(s0);
 
-uint Fail_Reinterpret(uint offset, uint value)
-{
+uint Fail_Reinterpret(uint offset, uint value) {
     RWByteAddressBuffer buf = gBuf0;
     ((RWByteAddressBuffer)gSampler).Store(offset, value);
     // expected-error@-1 {{no matching conversion for C-style cast from 'SamplerState' to 'RWByteAddressBuffer'}}
@@ -20,7 +19,6 @@ uint Fail_Reinterpret(uint offset, uint value)
 }
 
 [numthreads(1,1,1)]
-void main(uint3 tid : SV_DispatchThreadID)
-{
+void main(uint3 tid : SV_DispatchThreadID) {
     Fail_Reinterpret(tid.x * 4, 8);
 }

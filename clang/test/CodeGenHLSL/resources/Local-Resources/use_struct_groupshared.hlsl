@@ -16,8 +16,7 @@
 RWByteAddressBuffer gOut  : register(u3);
 
 // CHECK: note: passing argument to parameter 'buf' here
-uint DoStore(RWByteAddressBuffer buf, uint offset, uint value)
-{
+uint DoStore(RWByteAddressBuffer buf, uint offset, uint value) {
     buf.Store(offset, value);
     return value;
 }
@@ -29,15 +28,13 @@ struct PassBufStruct { RWByteAddressBuffer buf; };
 
 groupshared PassBufStruct sharedStruct;
 
-uint Use_PassSharedStruct(uint idx)
-{
+uint Use_PassSharedStruct(uint idx) {
     // CHECK: error: no matching constructor for initialization of 'RWByteAddressBuffer'
     return DoStore(sharedStruct.buf, idx * 4, 1);
 }
 
 [numthreads(8,8,1)]
-void main(uint3 tid : SV_DispatchThreadID)
-{
+void main(uint3 tid : SV_DispatchThreadID) {
     uint idx = tid.x + tid.y * 8;
     Use_PassSharedStruct(idx);    
 }

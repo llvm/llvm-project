@@ -9,8 +9,7 @@
 RWByteAddressBuffer gBuf0 : register(u0);
 
 [numthreads(1,1,1)]
-void main(uint3 tid : SV_DispatchThreadID)
-{
+void main(uint3 tid : SV_DispatchThreadID) {
     volatile RWByteAddressBuffer buf = gBuf0;
     // expected-note@*:* {{candidate function template not viable: 'this' argument has type 'volatile RWByteAddressBuffer', but method is not marked volatile}}
     // expected-note@*:* {{candidate function not viable: 'this' argument has type 'volatile RWByteAddressBuffer', but method is not marked volatile}}

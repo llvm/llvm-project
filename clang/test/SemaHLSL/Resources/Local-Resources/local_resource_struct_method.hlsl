@@ -17,8 +17,7 @@ struct Wrapper {
 };
 
 [numthreads(1,1,1)]
-void main(uint3 tid : SV_DispatchThreadID)
-{
+void main(uint3 tid : SV_DispatchThreadID) {
     Wrapper w;
     w.buf = gBuf0;
     w.DoStore(tid.x, 42);

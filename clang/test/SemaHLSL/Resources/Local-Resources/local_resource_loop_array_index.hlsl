@@ -7,11 +7,9 @@
 
 RWByteAddressBuffer gBufArray[4] : register(u10);
 
-uint Pass_Loop(uint idx)
-{
+uint Pass_Loop(uint idx) {
     uint sum = 0;
-    for(unsigned int i=0;i<4;i++)
-    {    
+    for (unsigned int i=0;i<4;i++) {    
         RWByteAddressBuffer buf = gBufArray[i];
         buf.Store(idx * 4 + i * 4, 15);
 
@@ -21,8 +19,7 @@ uint Pass_Loop(uint idx)
 }
 
 [numthreads(8,8,1)]
-void main(uint3 tid : SV_DispatchThreadID)
-{
+void main(uint3 tid : SV_DispatchThreadID) {
     uint idx = tid.x + tid.y * 8;
     Pass_Loop(idx);
 }

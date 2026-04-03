@@ -9,8 +9,7 @@
 // DXC: passes (both sema and codegen).
 
 [numthreads(1,1,1)]
-void main(uint3 tid : SV_DispatchThreadID)
-{
+void main(uint3 tid : SV_DispatchThreadID) {
     RWByteAddressBuffer buf;
     buf.Store(tid.x * 4, 42);
 }

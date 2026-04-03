@@ -10,8 +10,7 @@ RWByteAddressBuffer gBuf1 : register(u1);
 
 RWByteAddressBuffer gOut  : register(u3);
 
-uint Pass_ExpressionInit(uint idx)
-{
+uint Pass_ExpressionInit(uint idx) {
     RWByteAddressBuffer buf = (true ? gBuf0 : gBuf1);
     buf.Store(idx * 4, 3);
 
@@ -19,8 +18,7 @@ uint Pass_ExpressionInit(uint idx)
 }
 
 [numthreads(8,8,1)]
-void main(uint3 tid : SV_DispatchThreadID)
-{    
+void main(uint3 tid : SV_DispatchThreadID) {    
     uint idx = tid.x + tid.y * 8;
     Pass_ExpressionInit(idx);    
 }

@@ -11,8 +11,7 @@ RWByteAddressBuffer gBuf0 : register(u0);
 RWByteAddressBuffer gBuf1 : register(u1);
 
 [numthreads(1,1,1)]
-void main(uint3 tid : SV_DispatchThreadID)
-{
+void main(uint3 tid : SV_DispatchThreadID) {
     // expected-warning@+1 {{left operand of comma operator has no effect}}
     RWByteAddressBuffer buf = (gBuf0, gBuf1);
     buf.Store(tid.x * 4, 42);

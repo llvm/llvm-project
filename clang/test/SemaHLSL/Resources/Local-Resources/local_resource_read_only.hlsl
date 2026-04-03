@@ -12,14 +12,12 @@
 
 ByteAddressBuffer gBuf0 : register(t0);
 
-uint Pass_ReadOnlyLocal(uint idx)
-{
+uint Pass_ReadOnlyLocal(uint idx) {
     ByteAddressBuffer buf = gBuf0;
     return buf.Load(idx * 4);
 }
 
 [numthreads(1,1,1)]
-void main(uint3 tid : SV_DispatchThreadID)
-{
+void main(uint3 tid : SV_DispatchThreadID) {
     Pass_ReadOnlyLocal(tid.x);
 }

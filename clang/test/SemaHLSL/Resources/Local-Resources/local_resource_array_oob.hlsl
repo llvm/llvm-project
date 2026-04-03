@@ -11,8 +11,7 @@
 RWByteAddressBuffer gBufArray[4] : register(u0);
 
 [numthreads(1,1,1)]
-void main(uint3 tid : SV_DispatchThreadID)
-{
+void main(uint3 tid : SV_DispatchThreadID) {
     RWByteAddressBuffer buf = gBufArray[5];
     // expected-warning@-1 {{array index 5 is past the end of the array (that has type 'RWByteAddressBuffer[4]')}}
     

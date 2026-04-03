@@ -7,14 +7,12 @@
 
 RWByteAddressBuffer gBuf0 : register(u0);
 
-RWByteAddressBuffer Pass_ReturnLocal()
-{
+RWByteAddressBuffer Pass_ReturnLocal() {
     RWByteAddressBuffer buf = gBuf0;
     return buf;
 }
 
 [numthreads(8,8,1)]
-void main(uint3 tid : SV_DispatchThreadID)
-{
+void main(uint3 tid : SV_DispatchThreadID) {
     RWByteAddressBuffer tmp = Pass_ReturnLocal();
 }

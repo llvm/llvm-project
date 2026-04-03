@@ -17,7 +17,6 @@ uint Fail_DefaultParam(RWByteAddressBuffer buf = gBuf0, uint offset)
 }
 
 [numthreads(1,1,1)]
-void main(uint3 tid : SV_DispatchThreadID)
-{
+void main(uint3 tid : SV_DispatchThreadID) {
     Fail_DefaultParam(gBuf0, tid.x * 4);
 }

@@ -9,8 +9,7 @@
 
 RWByteAddressBuffer gBuf0 : register(u0);
 
-void Fail_LocalBuffer()
-{
+void Fail_LocalBuffer() {
     RWStructuredBuffer<RWByteAddressBuffer> badBuffer;
     // expected-error@-1 {{constraints not satisfied for class template 'RWStructuredBuffer' [with element_type = RWByteAddressBuffer]}}
     // expected-note@*:* {{because 'RWByteAddressBuffer' does not satisfy '__is_structured_resource_element_compatible'}}
@@ -18,7 +17,6 @@ void Fail_LocalBuffer()
 }
 
 [numthreads(1,1,1)]
-void main(uint3 tid : SV_DispatchThreadID)
-{
+void main(uint3 tid : SV_DispatchThreadID) {
     Fail_LocalBuffer();
 }

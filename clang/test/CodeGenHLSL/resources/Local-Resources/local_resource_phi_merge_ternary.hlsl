@@ -9,8 +9,7 @@
 RWByteAddressBuffer gBuf0 : register(u0);
 RWByteAddressBuffer gBuf2 : register(u2);
 
-uint Pass_PhiMerge(bool cond, uint idx)
-{
+uint Pass_PhiMerge(bool cond, uint idx) {
     RWByteAddressBuffer buf;
     // DXC: error after sema: local resource not guaranteed to map to unique global resource.
     // CHECK: warning: assignment of 'cond ? gBuf0 : gBuf2' to local resource 'buf' is not to the same unique global resource
@@ -24,8 +23,7 @@ uint Pass_PhiMerge(bool cond, uint idx)
 // CHECK: define void @main()
 
 [numthreads(8,8,1)]
-void main(uint3 tid : SV_DispatchThreadID)
-{
+void main(uint3 tid : SV_DispatchThreadID) {
     uint idx = tid.x + tid.y * 8;
     Pass_PhiMerge(idx < 32, idx);
 }

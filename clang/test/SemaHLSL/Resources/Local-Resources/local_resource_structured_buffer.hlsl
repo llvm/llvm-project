@@ -11,15 +11,13 @@
 
 RWStructuredBuffer<uint> gSB : register(u0);
 
-uint Pass_StructuredBufferLocal(uint idx)
-{
+uint Pass_StructuredBufferLocal(uint idx) {
     RWStructuredBuffer<uint> sb = gSB;
     sb[idx] = 42;
     return 42;
 }
 
 [numthreads(1,1,1)]
-void main(uint3 tid : SV_DispatchThreadID)
-{
+void main(uint3 tid : SV_DispatchThreadID) {
     Pass_StructuredBufferLocal(tid.x);
 }

@@ -10,8 +10,7 @@
 RWByteAddressBuffer gBufArray[4] : register(u0);
 
 [numthreads(1,1,1)]
-void main(uint3 tid : SV_DispatchThreadID)
-{
+void main(uint3 tid : SV_DispatchThreadID) {
     RWByteAddressBuffer localArr[2];
     localArr[0] = gBufArray[0];
     localArr[1] = gBufArray[1];

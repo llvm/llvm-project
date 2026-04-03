@@ -9,14 +9,12 @@ RWByteAddressBuffer gBuf0 : register(u0);
 RWByteAddressBuffer gBuf1 : register(u1);
 RWByteAddressBuffer gBuf2 : register(u2);
 
-uint Pass_SwitchDefault(int v, uint idx)
-{
+uint Pass_SwitchDefault(int v, uint idx) {
     // expected-note@+2{{variable 'buf' is declared here}}
     // expected-note@+1{{variable 'buf' is declared here}}
     RWByteAddressBuffer buf = gBuf0;
 
-    switch(v)
-    {
+    switch (v) {
         // DXC: no diagnostic. Clang: warning.
         // expected-warning@+1{{assignment of 'gBuf1' to local resource 'buf' is not to the same unique global resource}}
         case 0: buf = gBuf1; break;
@@ -31,8 +29,7 @@ uint Pass_SwitchDefault(int v, uint idx)
 }
 
 [numthreads(8,8,1)]
-void main(uint3 tid : SV_DispatchThreadID)
-{
+void main(uint3 tid : SV_DispatchThreadID) {
     uint idx = tid.x + tid.y * 8;
     Pass_SwitchDefault(0, idx);
 }

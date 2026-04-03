@@ -11,8 +11,7 @@
 
 groupshared RWByteAddressBuffer sharedBuf;
 
-uint Use_SharedDirect(uint idx)
-{
+uint Use_SharedDirect(uint idx) {
     // expected-note@*:*{{candidate function template not viable: 'this' object is in address space 'groupshared', but method expects object in generic address space}}
     // expected-note@*:*{{candidate function not viable: 'this' object is in address space 'groupshared', but method expects object in generic address space}}
     // expected-error@+1{{no matching member function for call to 'Store'}}
@@ -21,8 +20,7 @@ uint Use_SharedDirect(uint idx)
 }
 
 [numthreads(8,8,1)]
-void main(uint3 tid : SV_DispatchThreadID)
-{
+void main(uint3 tid : SV_DispatchThreadID) {
     uint idx = tid.x + tid.y * 8;
     Use_SharedDirect(idx);
 }

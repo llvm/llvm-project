@@ -9,8 +9,7 @@
 RWByteAddressBuffer gBuf0 : register(u0);
 RWByteAddressBuffer gBuf1 : register(u1);
 
-uint Pass_IfAlias(bool cond, uint idx)
-{
+uint Pass_IfAlias(bool cond, uint idx) {
     RWByteAddressBuffer buf;
     // DXC: error after sema: local resource not guaranteed to map to unique global resource.
     // CHECK: warning: assignment of 'cond ? gBuf0 : gBuf1' to local resource 'buf' is not to the same unique global resource
@@ -24,8 +23,7 @@ uint Pass_IfAlias(bool cond, uint idx)
 // CHECK: define void @main()
 
 [numthreads(8,8,1)]
-void main(uint3 tid : SV_DispatchThreadID)
-{
+void main(uint3 tid : SV_DispatchThreadID) {
     uint idx = tid.x + tid.y * 8;
     Pass_IfAlias(idx < 32, idx);
 }

@@ -12,8 +12,7 @@ RWByteAddressBuffer gBuf0 : register(u0);
 RWStructuredBuffer<uint> gSB : register(u1);
 
 [numthreads(1,1,1)]
-void main(uint3 tid : SV_DispatchThreadID)
-{
+void main(uint3 tid : SV_DispatchThreadID) {
     RWByteAddressBuffer localBuf = gBuf0;
     RWStructuredBuffer<uint> localSB = gSB;
     localBuf.Store(tid.x * 4, 42);

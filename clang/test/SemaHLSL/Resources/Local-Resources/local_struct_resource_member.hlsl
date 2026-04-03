@@ -7,13 +7,11 @@
 
 RWByteAddressBuffer gBuf0 : register(u0);
 
-struct PassStruct
-{
+struct PassStruct {
     RWByteAddressBuffer buf;
 };
 
-uint Pass_Struct(uint idx)
-{
+uint Pass_Struct(uint idx) {
     PassStruct s;
     s.buf = gBuf0;
     s.buf.Store(idx * 4, 16);
@@ -22,8 +20,7 @@ uint Pass_Struct(uint idx)
 }
 
 [numthreads(8,8,1)]
-void main(uint3 tid : SV_DispatchThreadID)
-{
+void main(uint3 tid : SV_DispatchThreadID) {
     uint idx = tid.x + tid.y * 8;
     Pass_Struct(idx);
 }

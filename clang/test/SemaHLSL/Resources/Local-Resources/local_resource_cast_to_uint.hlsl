@@ -8,15 +8,13 @@
 
 RWByteAddressBuffer gBuf0 : register(u0);
 
-uint Fail_Cast()
-{
+uint Fail_Cast() {
     RWByteAddressBuffer buf = gBuf0;
     return (uint)buf;
     // expected-error@-1 {{cannot convert 'RWByteAddressBuffer' to 'uint' (aka 'unsigned int') without a conversion operator}}
 }
 
 [numthreads(1,1,1)]
-void main(uint3 tid : SV_DispatchThreadID)
-{
+void main(uint3 tid : SV_DispatchThreadID) {
     Fail_Cast();
 }

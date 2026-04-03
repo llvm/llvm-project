@@ -7,8 +7,7 @@
 
 RWByteAddressBuffer gBuf0 : register(u0);
 
-uint Pass_Alias(uint idx)
-{
+uint Pass_Alias(uint idx) {
     RWByteAddressBuffer buf = gBuf0;
     buf.Store(idx * 4, 12);
 
@@ -16,8 +15,7 @@ uint Pass_Alias(uint idx)
 }
 
 [numthreads(8,8,1)]
-void main(uint3 tid : SV_DispatchThreadID)
-{
+void main(uint3 tid : SV_DispatchThreadID) {
     uint idx = tid.x + tid.y * 8;
     Pass_Alias(idx);
 }

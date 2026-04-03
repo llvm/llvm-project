@@ -10,8 +10,7 @@ RWByteAddressBuffer gBuf1 : register(u1);
 struct NestedInner { RWByteAddressBuffer buf; };
 struct NestedOuter { NestedInner inner; };
 
-uint Pass_NestedStruct(uint idx)
-{
+uint Pass_NestedStruct(uint idx) {
     NestedOuter s;
     s.inner.buf = gBuf1;
     s.inner.buf.Store(idx * 4, 28);
@@ -20,8 +19,7 @@ uint Pass_NestedStruct(uint idx)
 }
 
 [numthreads(8,8,1)]
-void main(uint3 tid : SV_DispatchThreadID)
-{
+void main(uint3 tid : SV_DispatchThreadID) {
     uint idx = tid.x + tid.y * 8;
     Pass_NestedStruct(idx);
 }
