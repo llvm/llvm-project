@@ -91,19 +91,25 @@ public:
 
   /// Tracks function scope overall cleanup handling.
   EHScopeStack ehStack;
-  llvm::SmallVector<char, 256> lifetimeExtendedCleanupStack;
 
-  /// Header for data within LifetimeExtendedCleanupStack.
-  struct alignas(uint64_t) LifetimeExtendedCleanupHeader {
-    unsigned size;
-    LLVM_PREFERRED_TYPE(CleanupKind)
-    unsigned kind : 31;
-    LLVM_PREFERRED_TYPE(bool)
-    unsigned isConditional : 1;
+  typedef void Destroyer(CIRGenFunction &cgf, Address addr, QualType ty);
 
-    size_t getSize() const { return size; }
-    CleanupKind getKind() const { return static_cast<CleanupKind>(kind); }
+  /// An entry in the lifetime-extended cleanup stack. Each entry represents a
+  /// cleanup that was deferred past a full-expression boundary (e.g.,
+  /// destroying a temporary bound to a local reference). When the enclosing
+  /// scope exits, these entries are promoted to the EH scope stack.
+  ///
+  /// Currently only DestroyObject cleanups are lifetime-extended. When other
+  /// cleanup types are needed (e.g., CallLifetimeEnd), this struct can be
+  /// extended with a std::variant of cleanup data types.
+  struct LifetimeExtendedCleanupEntry {
+    CleanupKind kind;
+    Address addr;
+    QualType type;
+    Destroyer *destroyer;
   };
+
+  llvm::SmallVector<LifetimeExtendedCleanupEntry> lifetimeExtendedCleanupStack;
 
   GlobalDecl curSEHParent;
 
@@ -1017,29 +1023,11 @@ public:
   }
 
   /// Queue a cleanup to be pushed after finishing the current full-expression.
-  /// This serializes the cleanup into a byte buffer
-  /// (lifetimeExtendedCleanupStack) so that popCleanupBlocks can later copy it
-  /// onto the EH scope stack for the enclosing scope. This approach is modeled
-  /// after classic codegen's pushCleanupAfterFullExprWithActiveFlag. The
-  /// byte-buffer serialization looks low-level, but it is needed because
-  /// multiple unrelated cleanup types (DestroyObject, CallLifetimeEnd,
-  /// CallObjCArcUse in classic codegen) all flow through this path, and the
-  /// polymorphic Cleanup objects are POD-like by contract, making the
-  /// serialization safe.
-  template <class T, class... As>
-  void pushCleanupAfterFullExprWithActiveFlag(CleanupKind kind, As... a) {
-    LifetimeExtendedCleanupHeader header = {sizeof(T), kind,
-                                            /*isConditional=*/false};
-
-    size_t oldSize = lifetimeExtendedCleanupStack.size();
-    lifetimeExtendedCleanupStack.resize(oldSize + sizeof(header) +
-                                        header.getSize());
-
-    static_assert(alignof(LifetimeExtendedCleanupHeader) == alignof(T),
-                  "Cleanup will be allocated on misaligned address");
-    char *buffer = &lifetimeExtendedCleanupStack[oldSize];
-    new (buffer) LifetimeExtendedCleanupHeader(header);
-    new (buffer + sizeof(header)) T(a...);
+  /// When the enclosing RunCleanupsScope exits, popCleanupBlocks promotes these
+  /// entries onto the EH scope stack for the enclosing scope.
+  void pushCleanupAfterFullExpr(CleanupKind kind, Address addr, QualType type,
+                                Destroyer *destroyer) {
+    lifetimeExtendedCleanupStack.push_back({kind, addr, type, destroyer});
   }
 
   /// Enters a new scope for capturing cleanups, all of which
@@ -1296,8 +1284,6 @@ public:
 
   LexicalScope *curLexScope = nullptr;
 
-  typedef void Destroyer(CIRGenFunction &cgf, Address addr, QualType ty);
-
   static Destroyer destroyCXXObject;
 
   void pushDestroy(QualType::DestructionKind dtorKind, Address addr,
@@ -1309,6 +1295,11 @@ public:
   void pushLifetimeExtendedDestroy(CleanupKind kind, Address addr,
                                    QualType type, Destroyer *destroyer,
                                    bool useEHCleanupForArray);
+
+  /// Promote a single lifetime-extended cleanup entry onto the EH scope stack.
+  /// Defined in CIRGenDecl.cpp where the concrete cleanup types are visible.
+  void pushLifetimeExtendedCleanupToEHStack(
+      const LifetimeExtendedCleanupEntry &entry);
 
   Destroyer *getDestroyer(clang::QualType::DestructionKind kind);
 

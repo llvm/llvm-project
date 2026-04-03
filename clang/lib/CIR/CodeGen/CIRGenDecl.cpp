@@ -1029,8 +1029,13 @@ void CIRGenFunction::pushLifetimeExtendedDestroy(CleanupKind cleanupKind,
 
   assert(!cir::MissingFeatures::useEHCleanupForArray());
 
-  pushCleanupAfterFullExprWithActiveFlag<DestroyObject>(cleanupKind, addr, type,
-                                                        destroyer);
+  pushCleanupAfterFullExpr(cleanupKind, addr, type, destroyer);
+}
+
+void CIRGenFunction::pushLifetimeExtendedCleanupToEHStack(
+    const LifetimeExtendedCleanupEntry &entry) {
+  ehStack.pushCleanup<DestroyObject>(entry.kind, entry.addr, entry.type,
+                                     entry.destroyer);
 }
 
 /// Destroys all the elements of the given array, beginning from last to first.

@@ -550,21 +550,10 @@ void CIRGenFunction::popCleanupBlocks(
     size_t oldLifetimeExtendedSize, ArrayRef<mlir::Value *> valuesToReload) {
   popCleanupBlocks(oldCleanupStackDepth, valuesToReload);
 
-  // Move our deferred cleanups onto the EH stack.
-  for (size_t i = oldLifetimeExtendedSize,
-              e = lifetimeExtendedCleanupStack.size();
-       i != e;) {
-    assert((i % alignof(LifetimeExtendedCleanupHeader) == 0) &&
-           "misaligned cleanup stack entry");
-
-    LifetimeExtendedCleanupHeader &header =
-        reinterpret_cast<LifetimeExtendedCleanupHeader &>(
-            lifetimeExtendedCleanupStack[i]);
-    i += sizeof(header);
-
-    ehStack.pushCopyOfCleanup(
-        header.getKind(), &lifetimeExtendedCleanupStack[i], header.getSize());
-    i += header.getSize();
-  }
-  lifetimeExtendedCleanupStack.resize(oldLifetimeExtendedSize);
+  // Promote deferred lifetime-extended cleanups onto the EH scope stack.
+  for (const LifetimeExtendedCleanupEntry &cleanup : llvm::make_range(
+           lifetimeExtendedCleanupStack.begin() + oldLifetimeExtendedSize,
+           lifetimeExtendedCleanupStack.end()))
+    pushLifetimeExtendedCleanupToEHStack(cleanup);
+  lifetimeExtendedCleanupStack.truncate(oldLifetimeExtendedSize);
 }
