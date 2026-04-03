@@ -5,19 +5,21 @@
 
 RWByteAddressBuffer gBuf0 : register(u0);
 
-RWByteAddressBuffer gOut  : register(u3);
-
-void Pass_LoopVar()
+uint Pass_AliasChain(uint idx)
 {
-    for(RWByteAddressBuffer buf = gBuf0; false == false; )
-    {
-        buf.Store(0, 0);
-        break; 
-    }
+    RWByteAddressBuffer a = gBuf0;
+    RWByteAddressBuffer b = a;
+    RWByteAddressBuffer c = b;
+
+    c.Store(idx * 4, 27);
+
+
+    return 27;
 }
 
 [numthreads(8,8,1)]
 void main(uint3 tid : SV_DispatchThreadID)
-{    
-    Pass_LoopVar();    
+{
+    uint idx = tid.x + tid.y * 8;
+    Pass_AliasChain(idx);
 }

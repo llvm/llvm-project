@@ -5,19 +5,14 @@
 
 RWByteAddressBuffer gBuf0 : register(u0);
 
-RWByteAddressBuffer gOut  : register(u3);
-
-void Pass_LoopVar()
+RWByteAddressBuffer Pass_ReturnLocal()
 {
-    for(RWByteAddressBuffer buf = gBuf0; false == false; )
-    {
-        buf.Store(0, 0);
-        break; 
-    }
+    RWByteAddressBuffer buf = gBuf0;
+    return buf;
 }
 
 [numthreads(8,8,1)]
 void main(uint3 tid : SV_DispatchThreadID)
-{    
-    Pass_LoopVar();    
+{
+    RWByteAddressBuffer tmp = Pass_ReturnLocal();
 }

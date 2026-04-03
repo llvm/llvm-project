@@ -5,19 +5,20 @@
 
 RWByteAddressBuffer gBuf0 : register(u0);
 
-RWByteAddressBuffer gOut  : register(u3);
+struct S { RWByteAddressBuffer arr[2]; };
 
-void Pass_LoopVar()
+uint Pass_StructArrayAssignment(uint idx)
 {
-    for(RWByteAddressBuffer buf = gBuf0; false == false; )
-    {
-        buf.Store(0, 0);
-        break; 
-    }
+    S s;
+    s.arr[0] = gBuf0;
+    s.arr[0].Store(idx * 4, 9);
+
+    return 9;
 }
 
 [numthreads(8,8,1)]
 void main(uint3 tid : SV_DispatchThreadID)
-{    
-    Pass_LoopVar();    
+{
+    uint idx = tid.x + tid.y * 8;
+    Pass_StructArrayAssignment(idx);
 }

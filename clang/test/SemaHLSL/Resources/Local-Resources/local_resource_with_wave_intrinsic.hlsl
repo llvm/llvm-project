@@ -5,19 +5,18 @@
 
 RWByteAddressBuffer gBuf0 : register(u0);
 
-RWByteAddressBuffer gOut  : register(u3);
-
-void Pass_LoopVar()
+uint Pass_WaveUse(uint idx)
 {
-    for(RWByteAddressBuffer buf = gBuf0; false == false; )
-    {
-        buf.Store(0, 0);
-        break; 
-    }
+    RWByteAddressBuffer buf = gBuf0;
+    uint active = WaveActiveCountBits(true);
+    buf.Store(idx * 4, active);
+
+    return active;
 }
 
 [numthreads(8,8,1)]
 void main(uint3 tid : SV_DispatchThreadID)
-{    
-    Pass_LoopVar();    
+{
+    uint idx = tid.x + tid.y * 8;
+    Pass_WaveUse(idx);
 }
