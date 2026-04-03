@@ -7137,10 +7137,18 @@ static bool planContainsAdditionalSimplifications(VPlan &Plan,
     return nullptr;
   };
 
-  // Check if a select for a safe divisor was hoisted to the pre-header. If so,
-  // the select doesn't need to be considered for the vector loop cost; go with
-  // the more accurate VPlan-based cost model.
   for (VPRecipeBase &R : *Plan.getVectorPreheader()) {
+    // Reverse operations for reverse memory accesses may be hoisted to the
+    // preheader by LICM if the reversed value is loop invariant. In this case,
+    // the VPlan-based cost model diverges from the legacy cost model.
+    if (match(&R,
+              m_CombineOr(m_Reverse(m_VPValue()),
+                          m_Intrinsic<Intrinsic::experimental_vp_reverse>())))
+      return true;
+
+    // Check if a select for a safe divisor was hoisted to the pre-header. If
+    // so, the select doesn't need to be considered for the vector loop cost; go
+    // with the more accurate VPlan-based cost model.
     auto *VPI = dyn_cast<VPInstruction>(&R);
     if (!VPI || VPI->getOpcode() != Instruction::Select)
       continue;
@@ -7193,20 +7201,6 @@ static bool planContainsAdditionalSimplifications(VPlan &Plan,
         if (AddrI && vputils::isSingleScalar(WidenMemR->getAddr()) !=
                          CostCtx.isLegacyUniformAfterVectorization(AddrI, VF))
           return true;
-
-        if (WidenMemR->isReverse()) {
-          // If the stored value of a reverse store is invariant, LICM will
-          // hoist the reverse operation to the preheader. In this case, the
-          // result of the VPlan-based cost model will diverge from that of
-          // the legacy model.
-          if (auto *StoreR = dyn_cast<VPWidenStoreRecipe>(WidenMemR))
-            if (StoreR->getStoredValue()->isDefinedOutsideLoopRegions())
-              return true;
-
-          if (auto *StoreR = dyn_cast<VPWidenStoreEVLRecipe>(WidenMemR))
-            if (StoreR->getStoredValue()->isDefinedOutsideLoopRegions())
-              return true;
-        }
       }
 
       // The legacy cost model costs non-header phis with a scalar VF as a phi,
@@ -7754,10 +7748,13 @@ VPRecipeBase *VPRecipeBuilder::tryToWidenMemory(VPInstruction *VPI,
     Ptr = VectorPtr;
   }
 
+  if (Reverse && Mask)
+    Mask = Builder.createNaryOp(VPInstruction::Reverse, Mask, I->getDebugLoc());
+
   if (VPI->getOpcode() == Instruction::Load) {
     auto *Load = cast<LoadInst>(I);
-    auto *LoadR = new VPWidenLoadRecipe(*Load, Ptr, Mask, Consecutive, Reverse,
-                                        *VPI, Load->getDebugLoc());
+    auto *LoadR = new VPWidenLoadRecipe(*Load, Ptr, Mask, Consecutive, *VPI,
+                                        Load->getDebugLoc());
     if (Reverse) {
       Builder.insert(LoadR);
       return new VPInstruction(VPInstruction::Reverse, LoadR, {}, {},
@@ -7771,8 +7768,8 @@ VPRecipeBase *VPRecipeBuilder::tryToWidenMemory(VPInstruction *VPI,
   if (Reverse)
     StoredVal = Builder.createNaryOp(VPInstruction::Reverse, StoredVal,
                                      Store->getDebugLoc());
-  return new VPWidenStoreRecipe(*Store, Ptr, StoredVal, Mask, Consecutive,
-                                Reverse, *VPI, Store->getDebugLoc());
+  return new VPWidenStoreRecipe(*Store, Ptr, StoredVal, Mask, Consecutive, *VPI,
+                                Store->getDebugLoc());
 }
 
 VPWidenIntOrFpInductionRecipe *
