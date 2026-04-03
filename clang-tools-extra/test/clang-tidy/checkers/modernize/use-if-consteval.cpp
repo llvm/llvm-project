@@ -27,8 +27,8 @@ int direct() {
     return 1;
   else
     return 2;
-  // CHECK-MESSAGES: :[[@LINE-4]]:7: warning: use 'if consteval' instead of checking 'std::is_constant_evaluated()' in this 'if' statement [modernize-use-if-consteval]
-  // CHECK-FIXES: if consteval {
+  // CHECK-MESSAGES: :[[@LINE-4]]:7: warning: use 'if consteval' instead of checking 'std::is_constant_evaluated()' [modernize-use-if-consteval]
+  // CHECK-FIXES:      if consteval {
   // CHECK-FIXES-NEXT:   return 1;
   // CHECK-FIXES-NEXT: } else {
   // CHECK-FIXES-NEXT:   return 2;
@@ -40,8 +40,8 @@ int direct_global() {
     return 1;
   }
   return 2;
-  // CHECK-MESSAGES: :[[@LINE-4]]:7: warning: use 'if consteval' instead of checking 'std::is_constant_evaluated()' in this 'if' statement [modernize-use-if-consteval]
-  // CHECK-FIXES: if consteval {
+  // CHECK-MESSAGES: :[[@LINE-4]]:7: warning: use 'if consteval' instead of checking 'std::is_constant_evaluated()' [modernize-use-if-consteval]
+  // CHECK-FIXES:      if consteval {
 }
 
 int compact_spacing() {
@@ -49,8 +49,8 @@ int compact_spacing() {
     return 1;
   }
   return 2;
-  // CHECK-MESSAGES: :[[@LINE-4]]:6: warning: use 'if consteval' instead of checking 'std::is_constant_evaluated()' in this 'if' statement [modernize-use-if-consteval]
-  // CHECK-FIXES: if consteval {
+  // CHECK-MESSAGES: :[[@LINE-4]]:6: warning: use 'if consteval' instead of checking 'std::is_constant_evaluated()' [modernize-use-if-consteval]
+  // CHECK-FIXES:      if consteval {
 }
 
 int using_decl() {
@@ -59,8 +59,8 @@ int using_decl() {
     return 1;
   }
   return 2;
-  // CHECK-MESSAGES: :[[@LINE-4]]:7: warning: use 'if consteval' instead of checking 'std::is_constant_evaluated()' in this 'if' statement [modernize-use-if-consteval]
-  // CHECK-FIXES: if consteval {
+  // CHECK-MESSAGES: :[[@LINE-4]]:7: warning: use 'if consteval' instead of checking 'std::is_constant_evaluated()' [modernize-use-if-consteval]
+  // CHECK-FIXES:      if consteval {
 }
 
 int using_namespace() {
@@ -69,8 +69,8 @@ int using_namespace() {
     return 1;
   }
   return 2;
-  // CHECK-MESSAGES: :[[@LINE-4]]:7: warning: use 'if consteval' instead of checking 'std::is_constant_evaluated()' in this 'if' statement [modernize-use-if-consteval]
-  // CHECK-FIXES: if consteval {
+  // CHECK-MESSAGES: :[[@LINE-4]]:7: warning: use 'if consteval' instead of checking 'std::is_constant_evaluated()' [modernize-use-if-consteval]
+  // CHECK-FIXES:      if consteval {
 }
 
 int namespace_alias() {
@@ -78,16 +78,16 @@ int namespace_alias() {
     return 1;
   }
   return 2;
-  // CHECK-MESSAGES: :[[@LINE-4]]:7: warning: use 'if consteval' instead of checking 'std::is_constant_evaluated()' in this 'if' statement [modernize-use-if-consteval]
-  // CHECK-FIXES: if consteval {
+  // CHECK-MESSAGES: :[[@LINE-4]]:7: warning: use 'if consteval' instead of checking 'std::is_constant_evaluated()' [modernize-use-if-consteval]
+  // CHECK-FIXES:      if consteval {
 }
 
 int negated() {
   if (!std::is_constant_evaluated())
     return 1;
   return 2;
-  // CHECK-MESSAGES: :[[@LINE-3]]:8: warning: use 'if !consteval' instead of checking 'std::is_constant_evaluated()' in this 'if' statement [modernize-use-if-consteval]
-  // CHECK-FIXES: if !consteval {
+  // CHECK-MESSAGES: :[[@LINE-3]]:8: warning: use 'if !consteval' instead of checking 'std::is_constant_evaluated()' [modernize-use-if-consteval]
+  // CHECK-FIXES:      if !consteval {
   // CHECK-FIXES-NEXT:   return 1;
   // CHECK-FIXES-NEXT: }
   // CHECK-FIXES-NEXT:   return 2;
@@ -97,8 +97,8 @@ int negated_alternative_token() {
   if (not std::is_constant_evaluated())
     return 1;
   return 2;
-  // CHECK-MESSAGES: :[[@LINE-3]]:11: warning: use 'if !consteval' instead of checking 'std::is_constant_evaluated()' in this 'if' statement [modernize-use-if-consteval]
-  // CHECK-FIXES: if !consteval {
+  // CHECK-MESSAGES: :[[@LINE-3]]:11: warning: use 'if !consteval' instead of checking 'std::is_constant_evaluated()' [modernize-use-if-consteval]
+  // CHECK-FIXES:      if !consteval {
   // CHECK-FIXES-NEXT:   return 1;
   // CHECK-FIXES-NEXT: }
   // CHECK-FIXES-NEXT:   return 2;
@@ -109,8 +109,8 @@ int extra_parens() {
     return 1;
   }
   return 2;
-  // CHECK-MESSAGES: :[[@LINE-4]]:10: warning: use 'if consteval' instead of checking 'std::is_constant_evaluated()' in this 'if' statement [modernize-use-if-consteval]
-  // CHECK-FIXES: if consteval {
+  // CHECK-MESSAGES: :[[@LINE-4]]:10: warning: use 'if consteval' instead of checking 'std::is_constant_evaluated()' [modernize-use-if-consteval]
+  // CHECK-FIXES:      if consteval {
 }
 
 template <typename T>
@@ -119,8 +119,8 @@ int templated() {
     return sizeof(T);
   }
   return 0;
-  // CHECK-MESSAGES: :[[@LINE-4]]:7: warning: use 'if consteval' instead of checking 'std::is_constant_evaluated()' in this 'if' statement [modernize-use-if-consteval]
-  // CHECK-FIXES: if consteval {
+  // CHECK-MESSAGES: :[[@LINE-4]]:7: warning: use 'if consteval' instead of checking 'std::is_constant_evaluated()' [modernize-use-if-consteval]
+  // CHECK-FIXES:      if consteval {
 }
 
 template int templated<int>();
@@ -130,8 +130,8 @@ auto Lambda = [] {
   if (std::is_constant_evaluated())
     return 1;
   return 2;
-  // CHECK-MESSAGES: :[[@LINE-3]]:7: warning: use 'if consteval' instead of checking 'std::is_constant_evaluated()' in this 'if' statement [modernize-use-if-consteval]
-  // CHECK-FIXES: if consteval {
+  // CHECK-MESSAGES: :[[@LINE-3]]:7: warning: use 'if consteval' instead of checking 'std::is_constant_evaluated()' [modernize-use-if-consteval]
+  // CHECK-FIXES:      if consteval {
   // CHECK-FIXES-NEXT:   return 1;
   // CHECK-FIXES-NEXT: }
   // CHECK-FIXES-NEXT:   return 2;
@@ -144,8 +144,8 @@ int else_if_chain(int Value) {
     return 1;
   else
     return 2;
-  // CHECK-MESSAGES: :[[@LINE-4]]:12: warning: use 'if consteval' instead of checking 'std::is_constant_evaluated()' in this 'if' statement [modernize-use-if-consteval]
-  // CHECK-FIXES: else if consteval {
+  // CHECK-MESSAGES: :[[@LINE-4]]:12: warning: use 'if consteval' instead of checking 'std::is_constant_evaluated()' [modernize-use-if-consteval]
+  // CHECK-FIXES:      else if consteval {
   // CHECK-FIXES-NEXT:   return 1;
   // CHECK-FIXES-NEXT: } else {
   // CHECK-FIXES-NEXT:   return 2;
@@ -158,8 +158,8 @@ int macro_header_safe() {
   } else {
     return 2;
   }
-  // CHECK-MESSAGES: :[[@LINE-5]]:7: warning: use 'if consteval' instead of checking 'std::is_constant_evaluated()' in this 'if' statement [modernize-use-if-consteval]
-  // CHECK-FIXES: if consteval {
+  // CHECK-MESSAGES: :[[@LINE-5]]:7: warning: use 'if consteval' instead of checking 'std::is_constant_evaluated()' [modernize-use-if-consteval]
+  // CHECK-FIXES:      if consteval {
 }
 
 int with_init() {
@@ -167,8 +167,8 @@ int with_init() {
     return X + 1;
   }
   return 0;
-  // CHECK-MESSAGES: :[[@LINE-4]]:18: warning: use 'if consteval' instead of checking 'std::is_constant_evaluated()' in this 'if' statement [modernize-use-if-consteval]
-  // CHECK-FIXES: if (int X = 0; std::is_constant_evaluated()) {
+  // CHECK-MESSAGES: :[[@LINE-4]]:18: warning: use 'if consteval' instead of checking 'std::is_constant_evaluated()' [modernize-use-if-consteval]
+  // CHECK-FIXES:      if (int X = 0; std::is_constant_evaluated()) {
 }
 
 int with_condition_variable() {
@@ -176,8 +176,8 @@ int with_condition_variable() {
     return B ? 1 : 2;
   else
     return 3;
-  // CHECK-MESSAGES: :[[@LINE-4]]:16: warning: use 'if consteval' instead of checking 'std::is_constant_evaluated()' in this 'if' statement [modernize-use-if-consteval]
-  // CHECK-FIXES: if (bool B = std::is_constant_evaluated())
+  // CHECK-MESSAGES: :[[@LINE-4]]:16: warning: use 'if consteval' instead of checking 'std::is_constant_evaluated()' [modernize-use-if-consteval]
+  // CHECK-FIXES:      if (bool B = std::is_constant_evaluated())
   // CHECK-FIXES-NEXT:   return B ? 1 : 2;
   // CHECK-FIXES-NEXT: else
   // CHECK-FIXES-NEXT:   return 3;
@@ -188,8 +188,8 @@ int macro_header_unsafe() {
     return 1;
   }
   return 0;
-  // CHECK-MESSAGES: :[[@LINE-4]]:3: warning: use 'if consteval' instead of checking 'std::is_constant_evaluated()' in this 'if' statement [modernize-use-if-consteval]
-  // CHECK-FIXES: IF_ICE_HEADER {
+  // CHECK-MESSAGES: :[[@LINE-4]]:3: warning: use 'if consteval' instead of checking 'std::is_constant_evaluated()' [modernize-use-if-consteval]
+  // CHECK-FIXES:      IF_ICE_HEADER {
 }
 
 int macro_if_token_unsafe() {
@@ -197,16 +197,16 @@ int macro_if_token_unsafe() {
     return 1;
   }
   return 0;
-  // CHECK-MESSAGES: :[[@LINE-4]]:12: warning: use 'if consteval' instead of checking 'std::is_constant_evaluated()' in this 'if' statement [modernize-use-if-consteval]
-  // CHECK-FIXES: IF_ONLY consteval {
+  // CHECK-MESSAGES: :[[@LINE-4]]:12: warning: use 'if consteval' instead of checking 'std::is_constant_evaluated()' [modernize-use-if-consteval]
+  // CHECK-FIXES:      IF_ONLY consteval {
 }
 
 int macro_body_unsafe() {
   if (std::is_constant_evaluated())
     RETURN_ONE()
   return 2;
-  // CHECK-MESSAGES: :[[@LINE-3]]:7: warning: use 'if consteval' instead of checking 'std::is_constant_evaluated()' in this 'if' statement [modernize-use-if-consteval]
-  // CHECK-FIXES: if (std::is_constant_evaluated())
+  // CHECK-MESSAGES: :[[@LINE-3]]:7: warning: use 'if consteval' instead of checking 'std::is_constant_evaluated()' [modernize-use-if-consteval]
+  // CHECK-FIXES:      if (std::is_constant_evaluated())
   // CHECK-FIXES-NEXT:   RETURN_ONE()
   // CHECK-FIXES-NEXT:   return 2;
 }
@@ -217,8 +217,8 @@ int macro_else_unsafe() {
   else
     RETURN_THREE()
   return 4;
-  // CHECK-MESSAGES: :[[@LINE-5]]:7: warning: use 'if consteval' instead of checking 'std::is_constant_evaluated()' in this 'if' statement [modernize-use-if-consteval]
-  // CHECK-FIXES: if consteval {
+  // CHECK-MESSAGES: :[[@LINE-5]]:7: warning: use 'if consteval' instead of checking 'std::is_constant_evaluated()' [modernize-use-if-consteval]
+  // CHECK-FIXES:      if consteval {
   // CHECK-FIXES-NEXT:   return 1;
   // CHECK-FIXES-NEXT: } else
   // CHECK-FIXES-NEXT:   RETURN_THREE()
@@ -230,7 +230,7 @@ int not_std() {
     return 1;
   }
   return 0;
-  // CHECK-MESSAGES-NOT: :[[@LINE-4]]:7: warning: use 'if consteval' instead of checking 'std::is_constant_evaluated()' in this 'if' statement [modernize-use-if-consteval]
+  // CHECK-MESSAGES-NOT: :[[@LINE-4]]:7: warning: use 'if consteval' instead of checking 'std::is_constant_evaluated()' [modernize-use-if-consteval]
 }
 
 int composite_conditions() {
@@ -241,8 +241,8 @@ int composite_conditions() {
     return 2;
   }
   return 0;
-  // CHECK-MESSAGES-NOT: :[[@LINE-7]]:7: warning: use 'if consteval' instead of checking 'std::is_constant_evaluated()' in this 'if' statement [modernize-use-if-consteval]
-  // CHECK-MESSAGES-NOT: :[[@LINE-5]]:9: warning: use 'if consteval' instead of checking 'std::is_constant_evaluated()' in this 'if' statement [modernize-use-if-consteval]
+  // CHECK-MESSAGES-NOT: :[[@LINE-7]]:7: warning: use 'if consteval' instead of checking 'std::is_constant_evaluated()' [modernize-use-if-consteval]
+  // CHECK-MESSAGES-NOT: :[[@LINE-5]]:9: warning: use 'if consteval' instead of checking 'std::is_constant_evaluated()' [modernize-use-if-consteval]
 }
 
 int if_constexpr() {
@@ -250,12 +250,12 @@ int if_constexpr() {
     return 1;
   }
   return 2;
-  // CHECK-MESSAGES-NOT: :[[@LINE-4]]:17: warning: use 'if consteval' instead of checking 'std::is_constant_evaluated()' in this 'if' statement [modernize-use-if-consteval]
+  // CHECK-MESSAGES-NOT: :[[@LINE-4]]:17: warning: use 'if consteval' instead of checking 'std::is_constant_evaluated()' [modernize-use-if-consteval]
 }
 
 int already_if_consteval() {
   if consteval {
-    // CHECK-MESSAGES-NOT: :[[@LINE-1]] warning: use 'if consteval' instead of checking 'std::is_constant_evaluated()' in this 'if' statement [modernize-use-if-consteval]
+    // CHECK-MESSAGES-NOT: :[[@LINE-1]] warning: use 'if consteval' instead of checking 'std::is_constant_evaluated()' [modernize-use-if-consteval]
     return 1;
   } else {
     return 2;
@@ -264,7 +264,7 @@ int already_if_consteval() {
 
 int already_if_not_consteval() {
   if !consteval {
-    // CHECK-MESSAGES-NOT: :[[@LINE-1]] warning: use 'if consteval' instead of checking 'std::is_constant_evaluated()' in this 'if' statement [modernize-use-if-consteval]
+    // CHECK-MESSAGES-NOT: :[[@LINE-1]] warning: use 'if consteval' instead of checking 'std::is_constant_evaluated()' [modernize-use-if-consteval]
     return 1;
   } else {
     return 2;
@@ -274,9 +274,9 @@ int already_if_not_consteval() {
 template <typename T>
 concept HasICE = requires {
   std::is_constant_evaluated();
-  // CHECK-MESSAGES-NOT: :[[@LINE-1]] warning: use 'if consteval' instead of checking 'std::is_constant_evaluated()' in this 'if' statement [modernize-use-if-consteval]
+  // CHECK-MESSAGES-NOT: :[[@LINE-1]] warning: use 'if consteval' instead of checking 'std::is_constant_evaluated()' [modernize-use-if-consteval]
 };
 
 using ICEPtr = decltype(std::is_constant_evaluated()) *;
 ICEPtr Ptr = nullptr;
-// CHECK-MESSAGES-NOT: :[[@LINE-2]] warning: use 'if consteval' instead of checking 'std::is_constant_evaluated()' in this 'if' statement [modernize-use-if-consteval]
+// CHECK-MESSAGES-NOT: :[[@LINE-2]] warning: use 'if consteval' instead of checking 'std::is_constant_evaluated()' [modernize-use-if-consteval]

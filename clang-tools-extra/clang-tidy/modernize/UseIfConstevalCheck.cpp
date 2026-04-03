@@ -83,7 +83,7 @@ void UseIfConstevalCheck::registerMatchers(MatchFinder *Finder) {
                  ignoringParenImpCasts(IsNegatedConstantEvaluatedExpr)));
 
   Finder->addMatcher(
-      ifStmt(unless(anyOf(isConstexpr(), isConsteval())),
+      ifStmt(unless(isConstexpr()),
              anyOf(hasCondition(IsConstantEvaluatedExpr),
                    hasConditionVariableStatement(declStmt(hasSingleDecl(
                        varDecl(hasInitializer(IsConstantEvaluatedExpr)))))))
@@ -103,8 +103,7 @@ void UseIfConstevalCheck::check(const MatchFinder::MatchResult &Result) {
       Result.SourceManager->getExpansionLoc(Call->getExprLoc());
 
   auto Diag = diag(DiagLoc, "use 'if %0' instead of checking "
-                            "'std::is_constant_evaluated()' in this "
-                            "'if' statement")
+                            "'std::is_constant_evaluated()'")
               << ConstevalClause;
 
   if (If->hasInitStorage() || If->hasVarStorage())
