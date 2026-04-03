@@ -8,5 +8,9 @@ static_library("Analyses") {
     "//clang/lib/ScalableStaticAnalysisFramework/Core",
     "//llvm/lib/Support",
   ]
-  sources = [ "UnsafeBufferUsage/UnsafeBufferUsageExtractor.cpp" ]
+  sources = [
+    "CallGraph/CallGraphExtractor.cpp",
+    "CallGraph/CallGraphJSONFormat.cpp",
+    "UnsafeBufferUsage/UnsafeBufferUsageExtractor.cpp",
+  ]
 }

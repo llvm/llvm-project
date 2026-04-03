@@ -593,22 +593,16 @@ static bool GetOsFromOSABI(unsigned char osabi_byte,
 
 ModuleSpecList ObjectFileELF::GetModuleSpecifications(
     const lldb_private::FileSpec &file, lldb::DataExtractorSP &extractor_sp,
-    lldb::offset_t data_offset, lldb::offset_t file_offset,
-    lldb::offset_t length) {
+    lldb::offset_t file_offset, lldb::offset_t length) {
   Log *log = GetLog(LLDBLog::Modules);
 
   if (!extractor_sp || !extractor_sp->HasData())
     return {};
   if (ObjectFileELF::MagicBytesMatch(extractor_sp->GetSharedDataBuffer(), 0,
                                      extractor_sp->GetByteSize())) {
-    DataExtractor data;
-    if (extractor_sp && extractor_sp->HasData()) {
-      data = *extractor_sp->GetSubsetExtractorSP(data_offset);
-      data_offset = 0;
-    }
     elf::ELFHeader header;
-    lldb::offset_t header_offset = data_offset;
-    if (header.Parse(data, &header_offset)) {
+    lldb::offset_t header_offset = 0;
+    if (header.Parse(*extractor_sp, &header_offset)) {
       ModuleSpec spec(file);
       // In Android API level 23 and above, bionic dynamic linker is able to
       // load .so file directly from zip file. In that case, .so file is
@@ -653,18 +647,17 @@ ModuleSpecList ObjectFileELF::GetModuleSpecifications(
         // calculate CRC32 with this data file_offset and
         // length. It is important for Android zip .so file, which is a slice
         // of a file, to not access the outside of the file slice range.
-        if (data.GetByteSize() < length)
+        if (extractor_sp->GetByteSize() < length)
           if (DataBufferSP data_sp = MapFileData(file, length, file_offset)) {
-            data.SetData(data_sp);
-            data_offset = 0;
+            extractor_sp->SetData(data_sp);
           }
         // In case there is header extension in the section #0, the header we
         // parsed above could have sentinel values for e_phnum, e_shnum, and
         // e_shstrndx.  In this case we need to reparse the header with a
         // bigger data source to get the actual values.
         if (header.HasHeaderExtension()) {
-          lldb::offset_t header_offset = data_offset;
-          header.Parse(data, &header_offset);
+          lldb::offset_t header_offset = 0;
+          header.Parse(*extractor_sp, &header_offset);
         }
 
         uint32_t gnu_debuglink_crc = 0;
@@ -672,7 +665,7 @@ ModuleSpecList ObjectFileELF::GetModuleSpecifications(
         SectionHeaderColl section_headers;
         lldb_private::UUID &uuid = spec.GetUUID();
 
-        GetSectionHeaderInfo(section_headers, data, header, uuid,
+        GetSectionHeaderInfo(section_headers, *extractor_sp, header, uuid,
                              gnu_debuglink_file, gnu_debuglink_crc,
                              spec.GetArchitecture());
 
@@ -699,12 +692,12 @@ ModuleSpecList ObjectFileELF::GetModuleSpecifications(
             // to fallback to something simpler.
             if (header.e_type == llvm::ELF::ET_CORE) {
               ProgramHeaderColl program_headers;
-              GetProgramHeaderInfo(program_headers, data, header);
+              GetProgramHeaderInfo(program_headers, *extractor_sp, header);
 
-              core_notes_crc =
-                  CalculateELFNotesSegmentsCRC32(program_headers, data);
+              core_notes_crc = CalculateELFNotesSegmentsCRC32(program_headers,
+                                                              *extractor_sp);
             } else {
-              gnu_debuglink_crc = calc_crc32(0, data);
+              gnu_debuglink_crc = calc_crc32(0, *extractor_sp);
             }
           }
           using u32le = llvm::support::ulittle32_t;
@@ -2223,7 +2216,7 @@ std::shared_ptr<ObjectFileELF> ObjectFileELF::GetGnuDebugDataObjectFile() {
   if (err) {
     GetModule()->ReportWarning(
         "An error occurred while decompression the section {0}: {1}",
-        section->GetName().AsCString(), llvm::toString(std::move(err)).c_str());
+        section->GetName(), llvm::toString(std::move(err)).c_str());
     return nullptr;
   }
 
@@ -3050,7 +3043,7 @@ unsigned ObjectFileELF::ApplyRelocations(
   for (unsigned i = 0; i < num_relocations; ++i) {
     if (!rel.Parse(rel_data, &offset)) {
       GetModule()->ReportError(".rel{0}[{1:d}] failed to parse relocation",
-                               rel_section->GetName().AsCString(), i);
+                               rel_section->GetName(), i);
       break;
     }
     const Symbol *symbol = nullptr;
@@ -3065,8 +3058,7 @@ unsigned ObjectFileELF::ApplyRelocations(
         case R_ARM_REL32:
           GetModule()->ReportError("unsupported AArch32 relocation:"
                                    " .rel{0}[{1}], type {2}",
-                                   rel_section->GetName().AsCString(), i,
-                                   reloc_type(rel));
+                                   rel_section->GetName(), i, reloc_type(rel));
           break;
         default:
           assert(false && "unexpected relocation type");
@@ -3095,16 +3087,15 @@ unsigned ObjectFileELF::ApplyRelocations(
             *dst = value;
           } else {
             GetModule()->ReportError(".rel{0}[{1}] unknown symbol id: {2:d}",
-                                    rel_section->GetName().AsCString(), i,
-                                    reloc_symbol(rel));
+                                     rel_section->GetName(), i,
+                                     reloc_symbol(rel));
           }
           break;
         case R_386_NONE:
         case R_386_PC32:
           GetModule()->ReportError("unsupported i386 relocation:"
                                    " .rel{0}[{1}], type {2}",
-                                   rel_section->GetName().AsCString(), i,
-                                   reloc_type(rel));
+                                   rel_section->GetName(), i, reloc_type(rel));
           break;
         default:
           assert(false && "unexpected relocation type");
