@@ -52,6 +52,7 @@ llvm::Error GsymCreatorV1::encode(FileWriter &O) const {
   if (Err)
     return Err;
 
+  O.setStringOffsetSize(getStringOffsetSize());
   encodeAddrOffsets(O, Hdr.AddrOffSize, Hdr.BaseAddress);
 
   O.alignTo(4);

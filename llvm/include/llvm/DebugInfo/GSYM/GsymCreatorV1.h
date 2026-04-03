@@ -10,6 +10,7 @@
 #define LLVM_DEBUGINFO_GSYM_GSYMCREATORV1_H
 
 #include "llvm/DebugInfo/GSYM/GsymCreator.h"
+#include "llvm/DebugInfo/GSYM/Header.h"
 
 namespace llvm {
 namespace gsym {
@@ -21,7 +22,9 @@ class GsymCreatorV1 : public GsymCreator {
 public:
   GsymCreatorV1(bool Quiet = false) : GsymCreator(Quiet) {}
 
-  uint8_t getStringOffsetSize() const override { return 4; }
+  uint8_t getStringOffsetSize() const override {
+    return Header::getStringOffsetByteSize();
+  }
   LLVM_ABI llvm::Error encode(FileWriter &O) const override;
 };
 

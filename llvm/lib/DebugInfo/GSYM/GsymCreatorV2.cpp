@@ -86,9 +86,8 @@ llvm::Error GsymCreatorV2::encode(FileWriter &O) const {
   const uint64_t AddrOffsetsSize = Funcs.size() * AddrOffSize;
   CurOffset += AddrOffsetsSize;
 
-  const uint8_t AddrInfoOffSize = 8;
-
   // AddrInfoOffsets section.
+  const uint8_t AddrInfoOffSize = 8;
   CurOffset = llvm::alignTo(CurOffset, AddrInfoOffSize);
   const uint64_t AddrInfoOffsetsOffset = CurOffset;
   const uint64_t AddrInfoOffsetsSize = Funcs.size() * AddrInfoOffSize;
@@ -151,7 +150,7 @@ llvm::Error GsymCreatorV2::encode(FileWriter &O) const {
   O.alignTo(AddrInfoOffSize);
   assert(O.tell() == AddrInfoOffsetsOffset);
   for (uint64_t RelOff : FIRelativeOffsets)
-    O.writeUnsigned(RelOff, AddrInfoOffSize);
+    O.writeU64(RelOff);
 
   // Write FileTable section.
   O.alignTo(4);
