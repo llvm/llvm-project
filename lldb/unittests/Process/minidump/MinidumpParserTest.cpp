@@ -385,15 +385,15 @@ Streams:
       testing::Pair(
           testing::ElementsAre(
               MemoryRegionInfo({0x0, 0x10000}, no, no, no, unknown, no,
-                               ConstString(), unknown, 0, unknown),
+                               ConstString(), unknown, 0),
               MemoryRegionInfo({0x10000, 0x21000}, yes, yes, no, unknown, yes,
-                               ConstString(), unknown, 0, unknown),
+                               ConstString(), unknown, 0),
               MemoryRegionInfo({0x40000, 0x1000}, yes, no, no, unknown, yes,
-                               ConstString(), unknown, 0, unknown),
+                               ConstString(), unknown, 0),
               MemoryRegionInfo({0x7ffe0000, 0x1000}, yes, no, no, unknown, yes,
-                               ConstString(), unknown, 0, unknown),
+                               ConstString(), unknown, 0),
               MemoryRegionInfo({0x7ffe1000, 0xf000}, no, no, no, unknown, yes,
-                               ConstString(), unknown, 0, unknown)),
+                               ConstString(), unknown, 0)),
           true));
 }
 
@@ -419,9 +419,9 @@ Streams:
       testing::Pair(
           testing::ElementsAre(
               MemoryRegionInfo({0x1000, 0x10}, yes, unknown, unknown, unknown,
-                               yes, ConstString(), unknown, 0, unknown),
+                               yes, ConstString(), unknown, 0),
               MemoryRegionInfo({0x2000, 0x20}, yes, unknown, unknown, unknown,
-                               yes, ConstString(), unknown, 0, unknown)),
+                               yes, ConstString(), unknown, 0)),
           false));
 }
 
@@ -435,9 +435,9 @@ TEST_F(MinidumpParserTest, GetMemoryRegionInfoFromMemory64List) {
       testing::Pair(
           testing::ElementsAre(
               MemoryRegionInfo({0x1000, 0x10}, yes, unknown, unknown, unknown,
-                               yes, ConstString(), unknown, 0, unknown),
+                               yes, ConstString(), unknown, 0),
               MemoryRegionInfo({0x2000, 0x20}, yes, unknown, unknown, unknown,
-                               yes, ConstString(), unknown, 0, unknown)),
+                               yes, ConstString(), unknown, 0)),
           false));
 }
 
@@ -462,22 +462,22 @@ Streams:
   ConstString app_process("/system/bin/app_process");
   ConstString linker("/system/bin/linker");
   ConstString liblog("/system/lib/liblog.so");
-  EXPECT_THAT(parser->BuildMemoryRegions(),
-              testing::Pair(
-                  testing::ElementsAre(
-                      MemoryRegionInfo({0x400d9000, 0x2000}, yes, no, yes, no,
-                                       yes, app_process, unknown, 0, unknown),
-                      MemoryRegionInfo({0x400db000, 0x1000}, yes, no, no, no,
-                                       yes, app_process, unknown, 0, unknown),
-                      MemoryRegionInfo({0x400dc000, 0x1000}, yes, yes, no, no,
-                                       yes, ConstString(), unknown, 0, unknown),
-                      MemoryRegionInfo({0x400ec000, 0x1000}, yes, no, no, no,
-                                       yes, ConstString(), unknown, 0, unknown),
-                      MemoryRegionInfo({0x400ee000, 0x1000}, yes, yes, no, no,
-                                       yes, linker, unknown, 0, unknown),
-                      MemoryRegionInfo({0x400fc000, 0x1000}, yes, yes, yes, no,
-                                       yes, liblog, unknown, 0, unknown)),
-                  true));
+  EXPECT_THAT(
+      parser->BuildMemoryRegions(),
+      testing::Pair(testing::ElementsAre(
+                        MemoryRegionInfo({0x400d9000, 0x2000}, yes, no, yes, no,
+                                         yes, app_process, unknown, 0),
+                        MemoryRegionInfo({0x400db000, 0x1000}, yes, no, no, no,
+                                         yes, app_process, unknown, 0),
+                        MemoryRegionInfo({0x400dc000, 0x1000}, yes, yes, no, no,
+                                         yes, ConstString(), unknown, 0),
+                        MemoryRegionInfo({0x400ec000, 0x1000}, yes, no, no, no,
+                                         yes, ConstString(), unknown, 0),
+                        MemoryRegionInfo({0x400ee000, 0x1000}, yes, yes, no, no,
+                                         yes, linker, unknown, 0),
+                        MemoryRegionInfo({0x400fc000, 0x1000}, yes, yes, yes,
+                                         no, yes, liblog, unknown, 0)),
+                    true));
 }
 
 TEST_F(MinidumpParserTest, GetMemoryRegionInfoLinuxMapsError) {
@@ -496,7 +496,7 @@ Streams:
   EXPECT_THAT(parser->BuildMemoryRegions(),
               testing::Pair(testing::ElementsAre(MemoryRegionInfo(
                                 {0x400fc000, 0x1000}, yes, yes, yes, no, yes,
-                                ConstString(nullptr), unknown, 0, unknown)),
+                                ConstString(nullptr), unknown, 0)),
                             true));
 }
 
