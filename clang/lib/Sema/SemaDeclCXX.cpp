@@ -5044,10 +5044,8 @@ BuildImplicitMemberInitializer(Sema &SemaRef, CXXConstructorDecl *Constructor,
     }
 
     InitializedEntity Entity =
-        Indirect ? InitializedEntity::InitializeMember(Indirect, nullptr,
-                                                       /*Implicit*/ true)
-                 : InitializedEntity::InitializeMember(Field, nullptr,
-                                                       /*Implicit*/ true);
+        Indirect ? InitializedEntity::InitializeMemberImplicit(Indirect)
+                 : InitializedEntity::InitializeMemberImplicit(Field);
 
     // Direct-initialize to use the copy constructor.
     InitializationKind InitKind =
@@ -5078,10 +5076,8 @@ BuildImplicitMemberInitializer(Sema &SemaRef, CXXConstructorDecl *Constructor,
 
   if (FieldBaseElementType->isRecordType()) {
     InitializedEntity InitEntity =
-        Indirect ? InitializedEntity::InitializeMember(Indirect, nullptr,
-                                                       /*Implicit*/ true)
-                 : InitializedEntity::InitializeMember(Field, nullptr,
-                                                       /*Implicit*/ true);
+        Indirect ? InitializedEntity::InitializeMemberImplicit(Indirect)
+                 : InitializedEntity::InitializeMemberImplicit(Field);
     InitializationKind InitKind =
       InitializationKind::CreateDefault(Loc);
 
@@ -5282,7 +5278,7 @@ static bool CollectFieldInitializer(Sema &SemaRef, BaseAndFieldInfo &Info,
     if (DIE.isInvalid())
       return true;
 
-    auto Entity = InitializedEntity::InitializeMember(Field, nullptr, true);
+    auto Entity = InitializedEntity::InitializeMemberImplicit(Field);
     SemaRef.checkInitializerLifetime(Entity, DIE.get());
 
     CXXCtorInitializer *Init;
@@ -9039,7 +9035,7 @@ bool Sema::CheckExplicitlyDefaultedComparison(Scope *S, FunctionDecl *FD,
       } else {
         Loc = MD->getLocation();
         if (FunctionTypeLoc Loc = MD->getFunctionTypeLoc())
-          InsertLoc = Loc.getRParenLoc();
+          InsertLoc = getLocForEndOfToken(Loc.getRParenLoc());
       }
       // Don't diagnose an implicit 'operator=='; we will have diagnosed the
       // corresponding defaulted 'operator<=>' already.
@@ -12930,19 +12926,11 @@ bool Sema::CheckUsingShadowDecl(BaseUsingDecl *BUD, NamedDecl *Orig,
   if (FoundEquivalentDecl)
     return false;
 
-  // Always emit a diagnostic for a mismatch between an unresolved
-  // using_if_exists and a resolved using declaration in either direction.
+  // This using_if_exists decl cannot be a subsitute for the original decl,
+  // so do not create a shadow decl for this case.
   if (isa<UnresolvedUsingIfExistsDecl>(Target) !=
-      (isa_and_nonnull<UnresolvedUsingIfExistsDecl>(NonTag))) {
-    if (!NonTag && !Tag)
-      return false;
-    Diag(BUD->getLocation(), diag::err_using_decl_conflict);
-    Diag(Target->getLocation(), diag::note_using_decl_target);
-    Diag((NonTag ? NonTag : Tag)->getLocation(),
-         diag::note_using_decl_conflict);
-    BUD->setInvalidDecl();
-    return true;
-  }
+      (isa_and_nonnull<UnresolvedUsingIfExistsDecl>(NonTag)))
+    return false;
 
   if (FunctionDecl *FD = Target->getAsFunction()) {
     NamedDecl *OldDecl = nullptr;

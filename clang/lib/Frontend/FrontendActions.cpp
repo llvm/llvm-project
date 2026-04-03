@@ -188,7 +188,8 @@ bool GeneratePCHAction::BeginSourceFileAction(CompilerInstance &CI) {
 std::vector<std::unique_ptr<ASTConsumer>>
 GenerateModuleAction::CreateMultiplexConsumer(CompilerInstance &CI,
                                               StringRef InFile) {
-  std::unique_ptr<raw_pwrite_stream> OS = CreateOutputFile(CI, InFile);
+  if (!OS)
+    OS = CreateOutputFile(CI, InFile);
   if (!OS)
     return {};
 

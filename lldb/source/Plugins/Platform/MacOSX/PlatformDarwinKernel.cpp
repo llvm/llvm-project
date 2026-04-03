@@ -755,6 +755,7 @@ Status PlatformDarwinKernel::GetSharedModuleKext(
   Status error;
   module_sp.reset();
   const FileSpec &platform_file = module_spec.GetFileSpec();
+  UpdateKextandKernelsLocalScan();
 
   // Treat the file's path as a kext bundle ID (e.g.
   // "com.apple.driver.AppleIRController") and search our kext index.

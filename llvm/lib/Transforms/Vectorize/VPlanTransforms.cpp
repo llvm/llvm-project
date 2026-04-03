@@ -94,10 +94,38 @@ bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
           Intrinsic::ID VectorID = getVectorIntrinsicIDForCall(CI, &TLI);
           if (VectorID == Intrinsic::not_intrinsic)
             return false;
-          NewRecipe = new VPWidenIntrinsicRecipe(
-              *CI, getVectorIntrinsicIDForCall(CI, &TLI),
-              drop_end(Ingredient.operands()), CI->getType(), VPIRFlags(*CI),
-              *VPI, CI->getDebugLoc());
+
+          // The noalias.scope.decl intrinsic declares a noalias scope that
+          // is valid for a single iteration. Emitting it as a single-scalar
+          // replicate would incorrectly extend the scope across multiple
+          // original iterations packed into one vector iteration.
+          // FIXME: If we want to vectorize this loop, then we have to drop
+          // all the associated !alias.scope and !noalias.
+          if (VectorID == Intrinsic::experimental_noalias_scope_decl)
+            return false;
+
+          // These intrinsics are recognized by getVectorIntrinsicIDForCall
+          // but are not widenable. Emit them as replicate instead of widening.
+          if (VectorID == Intrinsic::assume ||
+              VectorID == Intrinsic::lifetime_end ||
+              VectorID == Intrinsic::lifetime_start ||
+              VectorID == Intrinsic::sideeffect ||
+              VectorID == Intrinsic::pseudoprobe) {
+            // If the operand of llvm.assume holds before vectorization, it will
+            // also hold per lane.
+            // llvm.pseudoprobe requires to be duplicated per lane for accurate
+            // sample count.
+            const bool IsSingleScalar = VectorID != Intrinsic::assume &&
+                                        VectorID != Intrinsic::pseudoprobe;
+            NewRecipe = new VPReplicateRecipe(CI, Ingredient.operands(),
+                                              /*IsSingleScalar=*/IsSingleScalar,
+                                              /*Mask=*/nullptr, *VPI, *VPI,
+                                              Ingredient.getDebugLoc());
+          } else {
+            NewRecipe = new VPWidenIntrinsicRecipe(
+                *CI, VectorID, drop_end(Ingredient.operands()), CI->getType(),
+                VPIRFlags(*CI), *VPI, CI->getDebugLoc());
+          }
         } else if (auto *CI = dyn_cast<CastInst>(Inst)) {
           NewRecipe = new VPWidenCastRecipe(
               CI->getOpcode(), Ingredient.getOperand(0), CI->getType(), CI,
@@ -2017,9 +2045,9 @@ static bool optimizeVectorInductionWidthForTCAndVFUF(VPlan &Plan,
     // comparison with the backedge-taken-count.
     VPUser *SingleUser = WideIV->getSingleUser();
     if (!SingleUser ||
-        !match(SingleUser, m_ICmp(m_Specific(WideIV),
-                                  m_Broadcast(m_Specific(
-                                      Plan.getOrCreateBackedgeTakenCount())))))
+        !match(SingleUser,
+               m_ICmp(m_Specific(WideIV),
+                      m_Broadcast(m_Specific(Plan.getBackedgeTakenCount())))))
       continue;
 
     // Update IV operands and comparison bound to use new narrower type.
@@ -2630,8 +2658,9 @@ void VPlanTransforms::cse(VPlan &Plan) {
   VPDominatorTree VPDT(Plan);
   DenseMap<VPSingleDefRecipe *, VPSingleDefRecipe *, VPCSEDenseMapInfo> CSEMap;
 
-  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
-           vp_depth_first_deep(Plan.getEntry()))) {
+  ReversePostOrderTraversal<VPBlockDeepTraversalWrapper<VPBlockBase *>> RPOT(
+      Plan.getEntry());
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(RPOT)) {
     for (VPRecipeBase &R : *VPBB) {
       auto *Def = dyn_cast<VPSingleDefRecipe>(&R);
       if (!Def || !VPCSEDenseMapInfo::canHandle(Def))
@@ -3207,12 +3236,10 @@ static void fixupVFUsersForEVL(VPlan &Plan, VPValue &EVL) {
   });
 
   assert(all_of(Plan.getVFxUF().users(),
-                [&LoopRegion, &Plan](VPUser *U) {
-                  return match(U,
-                               m_c_Add(m_Specific(LoopRegion->getCanonicalIV()),
-                                       m_Specific(&Plan.getVFxUF()))) ||
-                         isa<VPWidenPointerInductionRecipe>(U);
-                }) &&
+                match_fn(m_CombineOr(
+                    m_c_Add(m_Specific(LoopRegion->getCanonicalIV()),
+                            m_Specific(&Plan.getVFxUF())),
+                    m_Isa<VPWidenPointerInductionRecipe>()))) &&
          "Only users of VFxUF should be VPWidenPointerInductionRecipe and the "
          "increment of the canonical induction.");
   Plan.getVFxUF().replaceUsesWithIf(&EVL, [](VPUser &U, unsigned Idx) {
@@ -4403,9 +4430,8 @@ tryToMatchAndCreateExtendedReduction(VPReductionRecipe *Red, VPCostContext &Ctx,
 
   VPValue *A;
   // Match reduce(ext)).
-  if (isa<VPWidenCastRecipe>(VecOp) &&
-      (match(VecOp, m_ZExtOrSExt(m_VPValue(A))) ||
-       match(VecOp, m_FPExt(m_VPValue(A)))) &&
+  if (match(VecOp, m_Isa<VPWidenCastRecipe>(m_CombineOr(
+                       m_ZExtOrSExt(m_VPValue(A)), m_FPExt(m_VPValue(A))))) &&
       IsExtendedRedValidAndClampRange(
           RecurrenceDescriptor::getOpcode(Red->getRecurrenceKind()),
           cast<VPWidenCastRecipe>(VecOp)->getOpcode(),
@@ -4665,8 +4691,8 @@ void VPlanTransforms::materializeBroadcasts(VPlan &Plan) {
 #endif
 
   SmallVector<VPValue *> VPValues;
-  if (Plan.getOrCreateBackedgeTakenCount()->getNumUsers() > 0)
-    VPValues.push_back(Plan.getOrCreateBackedgeTakenCount());
+  if (VPValue *BTC = Plan.getBackedgeTakenCount())
+    VPValues.push_back(BTC);
   append_range(VPValues, Plan.getLiveIns());
   for (VPRecipeBase &R : *Plan.getEntry())
     append_range(VPValues, R.definedValues());
