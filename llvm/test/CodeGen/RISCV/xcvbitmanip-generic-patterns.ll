@@ -227,6 +227,71 @@ define i32 @test_no_bclr_exthz(i32 %x) {
 }
 
 ;===----------------------------------------------------------------------===;
+; cv.bset — set a contiguous range of bits: x | (mask << offset)
+;===----------------------------------------------------------------------===;
+
+; Set bits [4:6] (3 bits at offset 4): x | 0x70
+define i32 @test_bset_3_4(i32 %x) {
+; CHECK-LABEL: test_bset_3_4:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    cv.bset a0, a0, 2, 4
+; CHECK-NEXT:    ret
+  %res = or i32 %x, 112   ; 0x70 = 0x7 << 4
+  ret i32 %res
+}
+
+; Set bit 15: x | 0x8000
+define i32 @test_bset_1_15(i32 %x) {
+; CHECK-LABEL: test_bset_1_15:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    cv.bset a0, a0, 0, 15
+; CHECK-NEXT:    ret
+  %res = or i32 %x, 32768   ; 0x8000 = 1 << 15
+  ret i32 %res
+}
+
+; Set bits [8:15] (8 bits at offset 8): x | 0xFF00
+define i32 @test_bset_8_8(i32 %x) {
+; CHECK-LABEL: test_bset_8_8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    cv.bset a0, a0, 7, 8
+; CHECK-NEXT:    ret
+  %res = or i32 %x, 65280   ; 0xFF00 = 0xFF << 8
+  ret i32 %res
+}
+
+; Set bits [0:3] (4 bits at offset 0): x | 0xF
+define i32 @test_bset_4_0(i32 %x) {
+; CHECK-LABEL: test_bset_4_0:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    cv.bset a0, a0, 3, 0
+; CHECK-NEXT:    ret
+  %res = or i32 %x, 15   ; 0xF = (1 << 4) - 1
+  ret i32 %res
+}
+
+; Set single bit at MSB: x | 0x80000000
+define i32 @test_bset_1_31(i32 %x) {
+; CHECK-LABEL: test_bset_1_31:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    cv.bset a0, a0, 0, 31
+; CHECK-NEXT:    ret
+  %res = or i32 %x, -2147483648   ; 0x80000000 = 1 << 31
+  ret i32 %res
+}
+
+; Non-contiguous constant (0x55 = 01010101): should NOT become cv.bset,
+; falls through to standard ORI lowering.
+define i32 @test_no_bset_noncontiguous(i32 %x) {
+; CHECK-LABEL: test_no_bset_noncontiguous:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ori a0, a0, 85
+; CHECK-NEXT:    ret
+  %res = or i32 %x, 85   ; 0x55 = 01010101, not a shifted mask
+  ret i32 %res
+}
+
+;===----------------------------------------------------------------------===;
 ; Realistic embedded bitfield examples
 ;===----------------------------------------------------------------------===;
 
@@ -262,5 +327,16 @@ define i32 @test_clear_irq_flag(i32 %reg) {
 ; CHECK-NEXT:    cv.bclr a0, a0, 0, 5
 ; CHECK-NEXT:    ret
   %res = and i32 %reg, -33   ; ~(1 << 5) = 0xFFFFFFDF
+  ret i32 %res
+}
+
+; Set enable bits [8:11] in a control register
+; Equivalent to: reg | (0xF << 8)
+define i32 @test_set_enable_bits(i32 %reg) {
+; CHECK-LABEL: test_set_enable_bits:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    cv.bset a0, a0, 3, 8
+; CHECK-NEXT:    ret
+  %res = or i32 %reg, 3840   ; 0xF00 = 0xF << 8
   ret i32 %res
 }

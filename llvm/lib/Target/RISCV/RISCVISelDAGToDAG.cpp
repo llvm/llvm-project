@@ -1283,6 +1283,54 @@ bool RISCVDAGToDAGISel::tryCVBitManipBClr(SDNode *Node) {
   return true;
 }
 
+// --------------------------------------------------------------------------
+// cv.bset: set a contiguous range of bits to 1
+//
+// Matches:
+//   (or X, C) where C is a shifted mask: C = ((1 << width) - 1) << offset
+//
+// Emits: CV_BSET rd, rs1, IS3=width-1, IS2=offset
+//        (note: cv.bset semantics is Is3+1 bits, so we encode width-1)
+// --------------------------------------------------------------------------
+bool RISCVDAGToDAGISel::tryCVBitManipBSet(SDNode *Node) {
+  if (!Subtarget->hasVendorXCVbitmanip() || Subtarget->is64Bit())
+    return false;
+
+  assert(Node->getOpcode() == ISD::OR);
+  SDLoc DL(Node);
+
+  SDValue LHS = Node->getOperand(0);
+  SDValue RHS = Node->getOperand(1);
+
+  // Canonicalize: constant on the right
+  auto *ValC = dyn_cast<ConstantSDNode>(RHS);
+  if (!ValC) {
+    std::swap(LHS, RHS);
+    ValC = dyn_cast<ConstantSDNode>(RHS);
+  }
+  if (!ValC)
+    return false;
+
+  uint32_t Val = ValC->getZExtValue();
+
+  // Must be a non-zero shifted mask: contiguous 1s at some offset
+  if (Val == 0 || !isShiftedMask_32(Val))
+    return false;
+
+  unsigned Width = llvm::popcount(Val);
+  unsigned Offset = llvm::countr_zero(Val);
+
+  // Validate ranges
+  if (Width == 0 || Width > 32 || Offset > 31 || (Width + Offset) > 32)
+    return false;
+
+  SDValue IS3 = CurDAG->getTargetConstant(Width - 1, DL, MVT::i32);
+  SDValue IS2 = CurDAG->getTargetConstant(Offset, DL, MVT::i32);
+
+  CurDAG->SelectNodeTo(Node, RISCV::CV_BSET, MVT::i32, LHS, IS3, IS2);
+  return true;
+}
+
 void RISCVDAGToDAGISel::Select(SDNode *Node) {
   // If we have a custom node, we have already selected.
   if (Node->isMachineOpcode()) {
@@ -1682,6 +1730,9 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     return;
   }
   case ISD::OR: {
+    if (tryCVBitManipBSet(Node))
+      return;
+
     if (tryShrinkShlLogicImm(Node))
       return;
 
