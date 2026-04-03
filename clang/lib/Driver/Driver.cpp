@@ -4746,8 +4746,9 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
     // Call spirv-val for SPIR-V when -Vd not in Args.
     if (TC.requiresValidation(Args)) {
       Action *LastAction = Actions.back();
-      Actions.push_back(
-          C.MakeAction<BinaryAnalyzeJobAction>(LastAction, types::TY_Object));
+      if (LastAction->getType() == types::TY_Object)
+        Actions.push_back(
+            C.MakeAction<BinaryAnalyzeJobAction>(LastAction, types::TY_Object));
     }
   }
 

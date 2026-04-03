@@ -300,43 +300,35 @@ void tools::hlsl::Validator::ConstructJob(Compilation &C, const JobAction &JA,
                                           const InputInfoList &Inputs,
                                           const ArgList &Args,
                                           const char *LinkingOutput) const {
-  std::string DxvPath = getToolChain().GetProgramPath("dxv");
-  assert(DxvPath != "dxv" && "cannot find dxv");
-
-  ArgStringList CmdArgs;
-  assert(Inputs.size() == 1 && "Unable to handle multiple inputs.");
-  const InputInfo &Input = Inputs[0];
-  CmdArgs.push_back(Input.getFilename());
-  CmdArgs.push_back("-o");
-  CmdArgs.push_back(Output.getFilename());
-
-  const char *Exec = Args.MakeArgString(DxvPath);
-  C.addCommand(std::make_unique<Command>(JA, *this, ResponseFileSupport::None(),
-                                         Exec, CmdArgs, Inputs, Input));
-}
-
-void tools::hlsl::SPIRV_Validator::ConstructJob(
-    Compilation &C, const JobAction &JA, const InputInfo &Output,
-    const InputInfoList &Inputs, const ArgList &Args,
-    const char *LinkingOutput) const {
-  std::string SPIRVValPath = getToolChain().GetProgramPath("spirv-val");
-  assert(SPIRVValPath != "spirv-val" && "cannot find spirv-val");
-
   ArgStringList CmdArgs;
   assert(Inputs.size() == 1 && "Unable to handle multiple inputs.");
   const InputInfo &Input = Inputs[0];
 
   const llvm::Triple &T = getToolChain().getTriple();
-  CmdArgs.push_back("--target-env");
-  CmdArgs.push_back(Args.MakeArgString(T.getOSName()));
+  if (T.isSPIRV()) {
+    std::string SPIRVValPath = getToolChain().GetProgramPath("spirv-val");
+    assert(SPIRVValPath != "spirv-val" && "cannot find spirv-val");
 
-  CmdArgs.push_back("--scalar-block-layout");
+    CmdArgs.push_back("--target-env");
+    CmdArgs.push_back(Args.MakeArgString(T.getOSName()));
+    CmdArgs.push_back("--scalar-block-layout");
+    CmdArgs.push_back(Input.getFilename());
 
-  CmdArgs.push_back(Input.getFilename());
+    const char *Exec = Args.MakeArgString(SPIRVValPath);
+    C.addCommand(std::make_unique<Command>(
+        JA, *this, ResponseFileSupport::None(), Exec, CmdArgs, Inputs, Input));
+  } else {
+    std::string DxvPath = getToolChain().GetProgramPath("dxv");
+    assert(DxvPath != "dxv" && "cannot find dxv");
 
-  const char *Exec = Args.MakeArgString(SPIRVValPath);
-  C.addCommand(std::make_unique<Command>(JA, *this, ResponseFileSupport::None(),
-                                         Exec, CmdArgs, Inputs, Input));
+    CmdArgs.push_back(Input.getFilename());
+    CmdArgs.push_back("-o");
+    CmdArgs.push_back(Output.getFilename());
+
+    const char *Exec = Args.MakeArgString(DxvPath);
+    C.addCommand(std::make_unique<Command>(
+        JA, *this, ResponseFileSupport::None(), Exec, CmdArgs, Inputs, Input));
+  }
 }
 
 void tools::hlsl::MetalConverter::ConstructJob(
@@ -417,11 +409,6 @@ Tool *clang::driver::toolchains::HLSLToolChain::getTool(
     Action::ActionClass AC) const {
   switch (AC) {
   case Action::BinaryAnalyzeJobClass:
-    if (getTriple().isSPIRV()) {
-      if (!SPIRVValidator)
-        SPIRVValidator.reset(new tools::hlsl::SPIRV_Validator(*this));
-      return SPIRVValidator.get();
-    }
     if (!Validator)
       Validator.reset(new tools::hlsl::Validator(*this));
     return Validator.get();
@@ -625,12 +612,15 @@ bool HLSLToolChain::requiresValidation(DerivedArgList &Args,
     return false;
   }
 
-  std::string SpirvValPath = GetProgramPath("spirv-val");
-  if (SpirvValPath != "spirv-val")
-    return true;
+  if (getTriple().isSPIRV()) {
+    std::string SpirvValPath = GetProgramPath("spirv-val");
+    if (SpirvValPath != "spirv-val")
+      return true;
 
-  if (Diagnose)
-    getDriver().Diag(diag::warn_drv_dxc_missing_spirv_val);
+    if (Diagnose)
+      getDriver().Diag(diag::warn_drv_dxc_missing_spirv_val);
+  }
+
   return false;
 }
 
@@ -650,11 +640,11 @@ bool HLSLToolChain::isLastJob(DerivedArgList &Args,
   if (requiresBinaryTranslation(Args))
     return AC == Action::Action::BinaryTranslatorJobClass;
   // For SPIR-V, spirv-val is a pure validator that doesn't produce output
-  // files, so the compile step is the output-producing step. For DXIL, dxv
-  // validates and signs, producing the final output.
+  // files, so the compile step is the last output-producing job. For DXIL,
+  // dxv validates and signs, producing the final output.
   if (requiresValidation(Args, /*Diagnose=*/false)) {
     if (getTriple().isSPIRV())
-      return AC != Action::Action::BinaryAnalyzeJobClass;
+      return AC == Action::Action::AssembleJobClass;
     return AC == Action::Action::BinaryAnalyzeJobClass;
   }
   if (requiresObjcopy(Args))

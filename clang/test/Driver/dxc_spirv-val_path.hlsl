@@ -17,7 +17,7 @@
 
 // RUN: %clang_dxc -spirv -Tlib_6_3 -ccc-print-bindings --spirv-val-path=%t.dir -Fo %t.spv  %s 2>&1 | FileCheck %s --check-prefix=BINDINGS
 // BINDINGS: "spirv1.6-unknown-vulkan1.3-library" - "clang", inputs: ["[[INPUT:.+]]"], output: "[[spv:.+]].spv"
-// BINDINGS-NEXT: "spirv1.6-unknown-vulkan1.3-library" - "hlsl::SPIRV_Validator", inputs: ["[[spv]].spv"], output: "{{.+}}.obj"
+// BINDINGS-NEXT: "spirv1.6-unknown-vulkan1.3-library" - "hlsl::Validator", inputs: ["[[spv]].spv"], output: "{{.+}}.obj"
 
 // RUN: %clang_dxc -spirv -Tlib_6_3 -ccc-print-phases --spirv-val-path=%t.dir -Fo %t.spv  %s 2>&1 | FileCheck %s --check-prefix=PHASES
 

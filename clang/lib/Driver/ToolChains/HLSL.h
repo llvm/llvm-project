@@ -20,20 +20,9 @@ namespace tools {
 namespace hlsl {
 class LLVM_LIBRARY_VISIBILITY Validator : public Tool {
 public:
-  Validator(const ToolChain &TC) : Tool("hlsl::Validator", "dxv", TC) {}
-
-  bool hasIntegratedCPP() const override { return false; }
-
-  void ConstructJob(Compilation &C, const JobAction &JA,
-                    const InputInfo &Output, const InputInfoList &Inputs,
-                    const llvm::opt::ArgList &TCArgs,
-                    const char *LinkingOutput) const override;
-};
-
-class LLVM_LIBRARY_VISIBILITY SPIRV_Validator : public Tool {
-public:
-  SPIRV_Validator(const ToolChain &TC)
-      : Tool("hlsl::SPIRV_Validator", "spirv-val", TC) {}
+  Validator(const ToolChain &TC)
+      : Tool("hlsl::Validator", TC.getTriple().isSPIRV() ? "spirv-val" : "dxv",
+             TC) {}
 
   bool hasIntegratedCPP() const override { return false; }
 
@@ -95,11 +84,14 @@ public:
   bool requiresBinaryTranslation(llvm::opt::DerivedArgList &Args) const;
   bool requiresObjcopy(llvm::opt::DerivedArgList &Args) const;
 
-  /// If we are targeting DXIL then the last job should output the DXContainer
-  /// to the specified output file with /Fo. Otherwise, we will emit to a
-  /// temporary file for the next job to use.
+  /// Determines whether the given action class is the last job that produces
+  /// an output file. This is used to decide whether to write to the -Fo
+  /// output path or to a temporary file.
   ///
-  /// Returns true if we should output to the final result file.
+  /// For example, spirv-val is a pure validator that runs after the compile
+  /// step but doesn't produce output, so the compile step is the last
+  /// output-producing job. For DXIL, dxv validates and signs, producing the
+  /// final output.
   bool isLastJob(llvm::opt::DerivedArgList &Args, Action::ActionClass AC) const;
 
   // Set default DWARF version to 4 for DXIL uses version 4.
@@ -109,7 +101,6 @@ public:
 
 private:
   mutable std::unique_ptr<tools::hlsl::Validator> Validator;
-  mutable std::unique_ptr<tools::hlsl::SPIRV_Validator> SPIRVValidator;
   mutable std::unique_ptr<tools::hlsl::MetalConverter> MetalConverter;
   mutable std::unique_ptr<tools::hlsl::LLVMObjcopy> LLVMObjcopy;
 };
