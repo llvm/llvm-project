@@ -24,10 +24,8 @@ class GsymReaderV1 : public GsymReader {
 
   const Header *Hdr = nullptr;
   ArrayRef<FileEntry<uint32_t>> Files;
-  ArrayRef<uint32_t> AddrInfoOffsets;
   struct SwappedData {
     Header Hdr;
-    std::vector<uint32_t> AddrInfoOffsets;
     std::vector<FileEntry<uint32_t>> Files;
   };
   std::unique_ptr<SwappedData> Swap;
@@ -58,9 +56,6 @@ public:
       return FileEntry<uint64_t>(Files[Index].Dir, Files[Index].Base);
     return std::nullopt;
   }
-
-  // GlobalData accessors
-  uint64_t getAddressInfoOffset(size_t Index) const override;
 
   using GsymReader::dump;
   LLVM_ABI void dump(raw_ostream &OS) override;

@@ -25,7 +25,8 @@ using namespace llvm;
 using namespace gsym;
 
 GsymReader::GsymReader(std::unique_ptr<MemoryBuffer> Buffer)
-    : MemBuffer(std::move(Buffer)), Endian(llvm::endianness::native) {}
+    : MemBuffer(std::move(Buffer)), Endian(llvm::endianness::native),
+      AddrInfoOffsetsData(StringRef(), true, 0) {}
 
 GsymReader::GsymReader(GsymReader &&RHS) = default;
 
@@ -198,6 +199,11 @@ Expected<uint64_t> GsymReader::getAddressIndex(const uint64_t Addr) const {
   }
   return createStringError(std::errc::invalid_argument,
                            "address 0x%" PRIx64 " is not in GSYM", Addr);
+}
+
+uint64_t GsymReader::getAddressInfoOffset(size_t Index) const {
+  uint64_t Offset = Index * getAddressInfoOffsetByteSize();
+  return AddrInfoOffsetsData.getUnsigned(&Offset, getAddressInfoOffsetByteSize());
 }
 
 llvm::Expected<DataExtractor>

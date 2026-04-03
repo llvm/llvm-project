@@ -50,6 +50,7 @@ protected:
   llvm::endianness Endian;
   ArrayRef<uint8_t> AddrOffsets;
   std::vector<uint8_t> SwappedAddrOffsets;
+  DataExtractor AddrInfoOffsetsData;
   StringTable StrTab;
 
   GsymReader(std::unique_ptr<MemoryBuffer> Buffer);
@@ -366,7 +367,7 @@ protected:
   /// \param Index An index into the address table.
   /// \returns An optional GSYM data offset for the offset of the FunctionInfo
   /// that needs to be decoded.
-  virtual uint64_t getAddressInfoOffset(size_t Index) const = 0;
+  virtual uint64_t getAddressInfoOffset(size_t Index) const;
 
   /// Parse address offsets from a DataExtractor into AddrOffsets.
   ///

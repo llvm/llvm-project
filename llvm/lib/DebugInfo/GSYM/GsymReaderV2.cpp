@@ -20,8 +20,7 @@ using namespace llvm;
 using namespace gsym;
 
 GsymReaderV2::GsymReaderV2(std::unique_ptr<MemoryBuffer> Buffer)
-    : GsymReader(std::move(Buffer)), AddrInfoOffsetsData(StringRef(), true, 8),
-      FileData(StringRef(), true, 8) {}
+    : GsymReader(std::move(Buffer)), FileData(StringRef(), true, 8) {}
 
 GsymReaderV2::GsymReaderV2(GsymReaderV2 &&RHS) = default;
 GsymReaderV2::~GsymReaderV2() = default;
@@ -225,10 +224,7 @@ std::optional<FileEntry<uint64_t>> GsymReaderV2::getFile(uint32_t Index) const {
 }
 
 uint64_t GsymReaderV2::getAddressInfoOffset(size_t Index) const {
-  uint64_t Offset = Index * getAddressInfoOffsetByteSize();
-  uint64_t RelOff =
-      AddrInfoOffsetsData.getUnsigned(&Offset, getAddressInfoOffsetByteSize());
-  return RelOff +
+  return GsymReader::getAddressInfoOffset(Index) +
          GlobalDataSections.at(GlobalInfoType::FunctionInfo).FileOffset;
 }
 

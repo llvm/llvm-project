@@ -97,14 +97,22 @@ llvm::Error GsymReaderV1::parse() {
   if (auto Err = parseAddrOffsets(Data, Offset, Swap != nullptr))
     return Err;
 
+  // Parse AddrInfoOffsets (shared by swap and non-swap paths).
+  {
+    const bool IsLittleEndian = (Endian == llvm::endianness::little);
+    Offset = alignTo(Offset, 4);
+    uint64_t AISize = static_cast<uint64_t>(Hdr->NumAddresses) * 4;
+    StringRef AIData = MemBuffer->getBuffer().substr(Offset, AISize);
+    if (AIData.size() < AISize)
+      return createStringError(std::errc::invalid_argument,
+                               "failed to read address info offsets table");
+    AddrInfoOffsetsData = DataExtractor(AIData, IsLittleEndian, 4);
+    Offset += AISize;
+  }
+
   if (!Swap) {
     // Use BinaryStreamReader for the remaining sections (sequential layout).
     FileData.setOffset(Offset);
-
-    if (FileData.padToAlignment(4) ||
-        FileData.readArray(AddrInfoOffsets, Hdr->NumAddresses))
-      return createStringError(std::errc::invalid_argument,
-                               "failed to read address info offsets table");
 
     uint32_t NumFiles = 0;
     if (FileData.readInteger(NumFiles) || FileData.readArray(Files, NumFiles))
@@ -116,14 +124,6 @@ llvm::Error GsymReaderV1::parse() {
       return createStringError(std::errc::invalid_argument,
                                "failed to read string table");
   } else {
-    Offset = alignTo(Offset, 4);
-    Swap->AddrInfoOffsets.resize(Hdr->NumAddresses);
-    if (Data.getU32(&Offset, Swap->AddrInfoOffsets.data(), Hdr->NumAddresses))
-      AddrInfoOffsets = ArrayRef<uint32_t>(Swap->AddrInfoOffsets);
-    else
-      return createStringError(std::errc::invalid_argument,
-                               "failed to read address table");
-
     const uint32_t NumFiles = Data.getU32(&Offset);
     if (NumFiles > 0) {
       Swap->Files.resize(NumFiles);
@@ -146,10 +146,6 @@ llvm::Error GsymReaderV1::parse() {
 const Header &GsymReaderV1::getHeader() const {
   assert(Hdr);
   return *Hdr;
-}
-
-uint64_t GsymReaderV1::getAddressInfoOffset(size_t Index) const {
-  return AddrInfoOffsets[Index];
 }
 
 void GsymReaderV1::dump(raw_ostream &OS) {
@@ -201,7 +197,7 @@ void GsymReaderV1::dump(raw_ostream &OS) {
   OS << "INDEX  Offset\n";
   OS << "====== ==========\n";
   for (uint32_t I = 0; I < getNumAddresses(); ++I)
-    OS << format("[%4u] ", I) << HEX32(AddrInfoOffsets[I]) << "\n";
+    OS << format("[%4u] ", I) << HEX32(getAddressInfoOffset(I)) << "\n";
   OS << "\nFiles:\n";
   OS << "INDEX  DIRECTORY  BASENAME   PATH\n";
   OS << "====== ========== ========== ==============================\n";
@@ -217,7 +213,7 @@ void GsymReaderV1::dump(raw_ostream &OS) {
   OS << "\n" << StrTab << "\n";
 
   for (uint32_t I = 0; I < getNumAddresses(); ++I) {
-    OS << "FunctionInfo @ " << HEX32(AddrInfoOffsets[I]) << ": ";
+    OS << "FunctionInfo @ " << HEX32(getAddressInfoOffset(I)) << ": ";
     if (auto FI = getFunctionInfoAtIndex(I))
       dump(OS, *FI);
     else

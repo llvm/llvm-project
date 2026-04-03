@@ -28,9 +28,6 @@ class GsymReaderV2 : public GsymReader {
   const HeaderV2 *Hdr = nullptr;
   /// Parsed GlobalData section descriptors, keyed by type.
   std::map<GlobalInfoType, GlobalData> GlobalDataSections;
-  /// DataExtractor for on-demand addr info offset decoding. Contains exactly
-  /// the AddrInfoOffsets section data.
-  DataExtractor AddrInfoOffsetsData;
   /// DataExtractor for on-demand file table decoding. Contains exactly the
   /// file entry data (does not include the NumFiles uint32_t).
   DataExtractor FileData;
