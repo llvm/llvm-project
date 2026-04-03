@@ -609,14 +609,12 @@ define i32 @select20(i1 zeroext %x) {
 ;
 ; RV32IMXQCIAC-LABEL: select20:
 ; RV32IMXQCIAC:       # %bb.0:
-; RV32IMXQCIAC-NEXT:    neg a0, a0
-; RV32IMXQCIAC-NEXT:    andi a0, a0, 20
+; RV32IMXQCIAC-NEXT:    qc.c.muliadd a0, a0, 19
 ; RV32IMXQCIAC-NEXT:    ret
 ;
 ; RV32IZBAMXQCIAC-LABEL: select20:
 ; RV32IZBAMXQCIAC:       # %bb.0:
-; RV32IZBAMXQCIAC-NEXT:    neg a0, a0
-; RV32IZBAMXQCIAC-NEXT:    andi a0, a0, 20
+; RV32IZBAMXQCIAC-NEXT:    qc.c.muliadd a0, a0, 19
 ; RV32IZBAMXQCIAC-NEXT:    ret
   %select = select i1 %x, i32 20, i32 0
   ret i32 %select
@@ -631,12 +629,12 @@ define i32 @select65(i1 zeroext %x) {
 ;
 ; RV32IMXQCIAC-LABEL: select65:
 ; RV32IMXQCIAC:       # %bb.0:
-; RV32IMXQCIAC-NEXT:    qc.shladd a0, a0, a0, 6
+; RV32IMXQCIAC-NEXT:    qc.muliadd a0, a0, 64
 ; RV32IMXQCIAC-NEXT:    ret
 ;
 ; RV32IZBAMXQCIAC-LABEL: select65:
 ; RV32IZBAMXQCIAC:       # %bb.0:
-; RV32IZBAMXQCIAC-NEXT:    qc.shladd a0, a0, a0, 6
+; RV32IZBAMXQCIAC-NEXT:    qc.muliadd a0, a0, 64
 ; RV32IZBAMXQCIAC-NEXT:    ret
   %select = select i1 %x, i32 65, i32 0
   ret i32 %select
@@ -652,14 +650,12 @@ define i32 @select1111(i1 zeroext %x) {
 ;
 ; RV32IMXQCIAC-LABEL: select1111:
 ; RV32IMXQCIAC:       # %bb.0:
-; RV32IMXQCIAC-NEXT:    neg a0, a0
-; RV32IMXQCIAC-NEXT:    andi a0, a0, 1111
+; RV32IMXQCIAC-NEXT:    qc.muliadd a0, a0, 1110
 ; RV32IMXQCIAC-NEXT:    ret
 ;
 ; RV32IZBAMXQCIAC-LABEL: select1111:
 ; RV32IZBAMXQCIAC:       # %bb.0:
-; RV32IZBAMXQCIAC-NEXT:    neg a0, a0
-; RV32IZBAMXQCIAC-NEXT:    andi a0, a0, 1111
+; RV32IZBAMXQCIAC-NEXT:    qc.muliadd a0, a0, 1110
 ; RV32IZBAMXQCIAC-NEXT:    ret
   %select = select i1 %x, i32 1111, i32 0
   ret i32 %select

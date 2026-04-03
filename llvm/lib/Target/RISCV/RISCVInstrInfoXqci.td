@@ -29,6 +29,12 @@ def qc_insb : RVSDNode<"QC_INSB", SDTypeProfile<1, 4, [SDTCisSameAs<0, 1>,
                                                        SDTCisInt<4>]>,
                        []>;
 
+def SDTIntMulAddOp : SDTypeProfile<1, 3, [
+  SDTCisSameAs<0, 1>, SDTCisSameAs<0, 2>, SDTCisVT<0, i32>, SDTCisInt<2>
+]>;
+
+def qc_muliadd : RVSDNode<"QC_MULIADD", SDTIntMulAddOp>;
+
 def qc_e_li : RVSDNode<"QC_E_LI", SDTIntUnaryOp>;
 
 def uimm5nonzero : RISCVOp<XLenVT>,
@@ -98,6 +104,8 @@ def tuimm7_lsb00 : TImmLeaf<XLenVT,[{return isShiftedUInt<5, 2>(Imm);}]>;
 def uimm10 : RISCVUImmLeafOp<10>;
 
 def uimm11 : RISCVUImmLeafOp<11>;
+
+def timm12 : TImmLeaf<XLenVT, [{return isInt<12>(Imm);}]>;
 
 // A 14-bit unsigned immediate where the least significant two bits are zero.
 def uimm14lsb00 : RISCVOp,
@@ -1476,6 +1484,8 @@ class SelectQCbiSFB<CondCode Cond, DAGOperand InTyImm, SDNodeXForm xform>
 let Predicates = [HasVendorXqciac, IsRV32] in {
 def : Pat<(i32 (add GPRNoX0:$rd, (mul GPRNoX0:$rs1, simm12_lo:$imm12))),
           (QC_MULIADD GPRNoX0:$rd, GPRNoX0:$rs1, simm12_lo:$imm12)>;
+def : Pat<(i32 (qc_muliadd GPRNoX0:$rd, GPRNoX0:$rs1, (i32 timm12:$imm12))),
+          (QC_MULIADD GPRNoX0:$rd, GPRNoX0:$rs1, timm12:$imm12)>;
 def : Pat<(i32 (riscv_add_like_non_imm12 (shl GPRNoX0:$rs1, (i32 uimm5gt3:$imm)), GPRNoX0:$rs2)),
           (QC_SHLADD GPRNoX0:$rs1, GPRNoX0:$rs2, uimm5gt3:$imm)>;
 def : Pat<(i32 (riscv_shl_add GPRNoX0:$rs1, (i32 tuimm5gt3:$imm), GPRNoX0:$rs2)),
