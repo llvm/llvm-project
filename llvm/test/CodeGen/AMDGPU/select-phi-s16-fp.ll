@@ -21,6 +21,7 @@ define void @phi_vec1half_to_f32_with_const_folding(ptr addrspace(1) %dst) #0 {
 ; CHECK-NEXT:    s_mov_b32 s9, s10
 ; CHECK-NEXT:    v_mov_b32_e32 v2, s4
 ; CHECK-NEXT:    buffer_store_short v2, v[0:1], s[8:11], 0 addr64 offset:2
+; CHECK-NEXT:    buffer_store_short v0, v[0:1], s[8:11], 0 addr64
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
@@ -53,6 +54,7 @@ define void @phi_vec1half_to_f32(ptr addrspace(1) %src, ptr addrspace(1) %dst) #
 ; CHECK-NEXT:    s_mov_b32 s5, s6
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    buffer_store_short v0, v[2:3], s[4:7], 0 addr64 offset:2
+; CHECK-NEXT:    buffer_store_short v0, v[2:3], s[4:7], 0 addr64
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
@@ -76,8 +78,10 @@ define void @phi_vec1bf16_to_f32(ptr addrspace(1) %src, ptr addrspace(1) %dst) #
 ; CHECK-NEXT:    s_mov_b32 s4, s6
 ; CHECK-NEXT:    s_mov_b32 s5, s6
 ; CHECK-NEXT:    buffer_load_ushort v0, v[0:1], s[4:7], 0 addr64
-; CHECK-NEXT:    s_mov_b32 s4, 16
+; CHECK-NEXT:    s_mov_b32 s4, 0xffff
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    v_and_b32_e64 v0, v0, s4
+; CHECK-NEXT:    s_mov_b32 s4, 16
 ; CHECK-NEXT:    v_lshlrev_b32_e64 v0, s4, v0
 ; CHECK-NEXT:  ; %bb.1: ; %bb
 ; CHECK-NEXT:    v_mul_f32_e64 v0, 1.0, v0
@@ -88,6 +92,7 @@ define void @phi_vec1bf16_to_f32(ptr addrspace(1) %src, ptr addrspace(1) %dst) #
 ; CHECK-NEXT:    s_mov_b32 s4, s6
 ; CHECK-NEXT:    s_mov_b32 s5, s6
 ; CHECK-NEXT:    buffer_store_short v0, v[2:3], s[4:7], 0 addr64 offset:2
+; CHECK-NEXT:    buffer_store_short v0, v[2:3], s[4:7], 0 addr64
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
@@ -116,6 +121,7 @@ define void @phi_vec1bf16_to_f32_with_const_folding(ptr addrspace(1) %dst) #0 {
 ; CHECK-NEXT:    s_mov_b32 s4, s6
 ; CHECK-NEXT:    s_mov_b32 s5, s6
 ; CHECK-NEXT:    buffer_store_short v2, v[0:1], s[4:7], 0 addr64 offset:2
+; CHECK-NEXT:    buffer_store_short v0, v[0:1], s[4:7], 0 addr64
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:

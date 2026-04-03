@@ -8,6 +8,7 @@
 
 #ifdef AARCH64_AVAILABLE
 #include "AArch64Subtarget.h"
+#include "MCTargetDesc/AArch64MCAsmInfo.h"
 #include "MCTargetDesc/AArch64MCTargetDesc.h"
 #endif // AARCH64_AVAILABLE
 
@@ -623,6 +624,65 @@ TEST_P(MCPlusBuilderTester, AArch64_Psign_Pauth_variants) {
   ASSERT_FALSE(BC->MIB->isPAuthOnLR(Retab));
   ASSERT_TRUE(BC->MIB->isPAuthAndRet(Retaa));
   ASSERT_TRUE(BC->MIB->isPAuthAndRet(Retab));
+}
+
+TEST_P(MCPlusBuilderTester, AArch64_isCleanRegXOR) {
+  if (GetParam() != Triple::aarch64)
+    GTEST_SKIP();
+
+  BinaryFunction *BF = BC->createInjectedBinaryFunction("BF", true);
+  BinaryBasicBlock *BB = BF->addBasicBlock();
+
+  // eor x0, x0, x0
+  MCInst EORXrs = MCInstBuilder(AArch64::EORXrs)
+                      .addReg(AArch64::X0)
+                      .addReg(AArch64::X0)
+                      .addReg(AArch64::X0)
+                      .addImm(0);
+  ASSERT_TRUE(BC->MIB->isCleanRegXOR(EORXrs));
+
+  // eor w0, w0, w0
+  MCInst EORWrs = MCInstBuilder(AArch64::EORWrs)
+                      .addReg(AArch64::W0)
+                      .addReg(AArch64::W0)
+                      .addReg(AArch64::W0)
+                      .addImm(0);
+  ASSERT_TRUE(BC->MIB->isCleanRegXOR(EORWrs));
+
+  // mov x0, xzr
+  MCInst ORRXrs = MCInstBuilder(AArch64::ORRXrs)
+                      .addReg(AArch64::X0)
+                      .addReg(AArch64::XZR)
+                      .addReg(AArch64::XZR)
+                      .addImm(0);
+  ASSERT_TRUE(BC->MIB->isCleanRegXOR(ORRXrs));
+
+  // mov w0, wzr
+  MCInst ORRWrs = MCInstBuilder(AArch64::ORRWrs)
+                      .addReg(AArch64::W0)
+                      .addReg(AArch64::WZR)
+                      .addReg(AArch64::WZR)
+                      .addImm(0);
+  ASSERT_TRUE(BC->MIB->isCleanRegXOR(ORRWrs));
+
+  // mov x0, #0
+  MCInst MOVZXi =
+      MCInstBuilder(AArch64::MOVZXi).addReg(AArch64::X0).addImm(0).addImm(0);
+  ASSERT_TRUE(BC->MIB->isCleanRegXOR(MOVZXi));
+
+  // mov w0, #0
+  MCInst MOVZWi =
+      MCInstBuilder(AArch64::MOVZWi).addReg(AArch64::W0).addImm(0).addImm(0);
+  ASSERT_TRUE(BC->MIB->isCleanRegXOR(MOVZWi));
+
+  // movz x0, #:abs_g3:symbol
+  MCInst MOVZXiWithExpr =
+      MCInstBuilder(AArch64::MOVZXi)
+          .addReg(AArch64::X0)
+          .addExpr(MCSpecifierExpr::create(BB->getLabel(), AArch64::S_ABS_G3,
+                                           *BC->Ctx.get()))
+          .addImm(48);
+  ASSERT_FALSE(BC->MIB->isCleanRegXOR(MOVZXiWithExpr));
 }
 
 #endif // AARCH64_AVAILABLE
