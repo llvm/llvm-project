@@ -229,9 +229,7 @@ getAliasListInMultiBlock(const AssignmentQueryContext &Context,
   return std::nullopt;
 }
 
-
-llvm::SmallString<32>
-FormatRHSValueDeclForSema(const ValueDecl *TargetValue) {
+llvm::SmallString<32> FormatRHSValueDeclForSema(const ValueDecl *TargetValue) {
   llvm::SmallString<32> Result;
   if (TargetValue) {
     Result += "'";
