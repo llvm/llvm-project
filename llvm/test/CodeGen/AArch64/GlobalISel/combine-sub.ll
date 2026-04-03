@@ -8,7 +8,6 @@ define i64 @sub_minus_one(i64 %a) {
 ; GISEL-NEXT:    mvn x0, x0
 ; GISEL-NEXT:    ret
 entry:
-; fold (A - (0 - B)) to (A + B)
   %sub1 = sub i64 -1, %a
   ret i64 %sub1
 }
