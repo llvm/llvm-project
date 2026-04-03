@@ -30,9 +30,10 @@ TEST_F(YAMLGeneratorTest, emitNamespaceYAML) {
   I.Path = "path/to/A";
   I.Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
 
-  I.Children.Namespaces.emplace_back(
-      EmptySID, "ChildNamespace", InfoType::IT_namespace,
-      "path::to::A::Namespace::ChildNamespace", "path/to/A/Namespace");
+  Reference NewNamespace(EmptySID, "ChildNamespace", InfoType::IT_namespace,
+                         "path::to::A::Namespace::ChildNamespace",
+                         "path/to/A/Namespace");
+  I.Children.Namespaces.push_back(NewNamespace);
   I.Children.Records.emplace_back(EmptySID, "ChildStruct", InfoType::IT_record,
                                   "path::to::A::Namespace::ChildStruct",
                                   "path/to/A/Namespace");
@@ -411,8 +412,15 @@ TEST_F(YAMLGeneratorTest, emitCommentYAML) {
   HTML->Children.emplace_back(allocatePtr<CommentInfo>());
   HTML->Children.back()->Kind = CommentKind::CK_HTMLStartTagComment;
   HTML->Children.back()->Name = "ul";
-  HTML->Children.back()->AttrKeys.emplace_back("class");
-  HTML->Children.back()->AttrValues.emplace_back("test");
+  {
+    llvm::SmallVector<StringRef, 1> Keys = {"class"};
+    HTML->Children.back()->AttrKeys =
+        allocateArray<StringRef>(Keys, TransientArena);
+
+    llvm::SmallVector<StringRef, 1> Values = {"test"};
+    HTML->Children.back()->AttrValues =
+        allocateArray<StringRef>(Values, TransientArena);
+  }
   HTML->Children.emplace_back(allocatePtr<CommentInfo>());
   HTML->Children.back()->Kind = CommentKind::CK_HTMLStartTagComment;
   HTML->Children.back()->Name = "li";

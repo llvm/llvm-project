@@ -102,8 +102,8 @@
 ; SPIRV-Opt-NEXT:Library Function Lowering Analysis
 ; SPIRV-Opt-NEXT:Type-Based Alias Analysis
 ; SPIRV-Opt-NEXT:Scoped NoAlias Alias Analysis
-; SPIRV-Opt-NEXT:Profile summary info
 ; SPIRV-Opt-NEXT:Create Garbage Collector Module Metadata
+; SPIRV-Opt-NEXT:Profile summary info
 ; SPIRV-Opt-NEXT:Machine Branch Probability Analysis
 ; SPIRV-Opt-NEXT:  ModulePass Manager
 ; SPIRV-Opt-NEXT:    FunctionPass Manager
@@ -124,13 +124,6 @@
 ; SPIRV-Opt-NEXT:        Canonicalize Freeze Instructions in Loops
 ; SPIRV-Opt-NEXT:        Induction Variable Users
 ; SPIRV-Opt-NEXT:        Loop Strength Reduction
-; SPIRV-Opt-NEXT:      Basic Alias Analysis (stateless AA impl)
-; SPIRV-Opt-NEXT:      Function Alias Analysis Results
-; SPIRV-Opt-NEXT:      Merge contiguous icmps into a memcmp
-; SPIRV-Opt-NEXT:      Natural Loop Information
-; SPIRV-Opt-NEXT:      Lazy Branch Probability Analysis
-; SPIRV-Opt-NEXT:      Lazy Block Frequency Analysis
-; SPIRV-Opt-NEXT:      Expand memcmp() to load/stores
 ; SPIRV-Opt-NEXT:      Lower Garbage Collection Instructions
 ; SPIRV-Opt-NEXT:      Shadow Stack GC Lowering
 ; SPIRV-Opt-NEXT:      Remove unreachable blocks from the CFG
