@@ -1411,7 +1411,7 @@ define amdgpu_ps void @if_after_kill_block(float %arg, float %arg1, float %arg2,
 ; SI-NEXT:    s_andn2_b64 exec, exec, vcc
 ; SI-NEXT:  .LBB13_3: ; %bb4
 ; SI-NEXT:    s_or_b64 exec, exec, s[2:3]
-; SI-NEXT:    image_sample_c v0, v[2:3], s[0:7], s[0:3] dmask:0x10
+; SI-NEXT:    image_sample_c v0, v[2:3], s[0:7], s[0:3] dmask:0x1
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    v_cmp_neq_f32_e32 vcc, 0, v0
 ; SI-NEXT:    s_and_saveexec_b64 s[0:1], vcc
@@ -1445,7 +1445,7 @@ define amdgpu_ps void @if_after_kill_block(float %arg, float %arg1, float %arg2,
 ; GFX10-WAVE64-NEXT:    s_andn2_b64 exec, exec, vcc
 ; GFX10-WAVE64-NEXT:  .LBB13_3: ; %bb4
 ; GFX10-WAVE64-NEXT:    s_or_b64 exec, exec, s[2:3]
-; GFX10-WAVE64-NEXT:    image_sample_c v0, v[2:3], s[0:7], s[0:3] dmask:0x10 dim:SQ_RSRC_IMG_1D
+; GFX10-WAVE64-NEXT:    image_sample_c v0, v[2:3], s[0:7], s[0:3] dmask:0x1 dim:SQ_RSRC_IMG_1D
 ; GFX10-WAVE64-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-WAVE64-NEXT:    v_cmp_neq_f32_e32 vcc, 0, v0
 ; GFX10-WAVE64-NEXT:    s_and_saveexec_b64 s[0:1], vcc
@@ -1477,7 +1477,7 @@ define amdgpu_ps void @if_after_kill_block(float %arg, float %arg1, float %arg2,
 ; GFX10-WAVE32-NEXT:    s_andn2_b32 exec_lo, exec_lo, vcc_lo
 ; GFX10-WAVE32-NEXT:  .LBB13_3: ; %bb4
 ; GFX10-WAVE32-NEXT:    s_or_b32 exec_lo, exec_lo, s1
-; GFX10-WAVE32-NEXT:    image_sample_c v0, v[2:3], s[0:7], s[0:3] dmask:0x10 dim:SQ_RSRC_IMG_1D
+; GFX10-WAVE32-NEXT:    image_sample_c v0, v[2:3], s[0:7], s[0:3] dmask:0x1 dim:SQ_RSRC_IMG_1D
 ; GFX10-WAVE32-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-WAVE32-NEXT:    v_cmp_neq_f32_e32 vcc_lo, 0, v0
 ; GFX10-WAVE32-NEXT:    s_and_saveexec_b32 s0, vcc_lo
@@ -1511,7 +1511,7 @@ define amdgpu_ps void @if_after_kill_block(float %arg, float %arg1, float %arg2,
 ; GFX11-NEXT:  .LBB13_3: ; %bb4
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_or_b64 exec, exec, s[2:3]
-; GFX11-NEXT:    image_sample_c v0, v[2:3], s[0:7], s[0:3] dmask:0x10 dim:SQ_RSRC_IMG_1D
+; GFX11-NEXT:    image_sample_c v0, v[2:3], s[0:7], s[0:3] dmask:0x1 dim:SQ_RSRC_IMG_1D
 ; GFX11-NEXT:    s_mov_b64 s[0:1], exec
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_cmpx_neq_f32_e32 0, v0
@@ -1536,7 +1536,7 @@ bb3:                                              ; preds = %bb
   br label %bb4
 
 bb4:                                              ; preds = %bb3, %bb
-  %tmp5 = call <4 x float> @llvm.amdgcn.image.sample.c.1d.v4f32.f32(i32 16, float %arg2, float %arg3, <8 x i32> poison, <4 x i32> poison, i1 0, i32 0, i32 0)
+  %tmp5 = call <4 x float> @llvm.amdgcn.image.sample.c.1d.v4f32.f32(i32 15, float %arg2, float %arg3, <8 x i32> poison, <4 x i32> poison, i1 0, i32 0, i32 0)
   %tmp6 = extractelement <4 x float> %tmp5, i32 0
   %tmp7 = fcmp une float %tmp6, 0.000000e+00
   br i1 %tmp7, label %bb8, label %bb9
