@@ -147,13 +147,8 @@ static xegpu::DistributeLayoutAttr getLayoutFromUsePoints(Value result) {
       // under debug mode, we want to check all the use points to make sure
       // there is no conflict, so we do not break here. In release mode, we can
       // break at the first use
-#ifndef NDEBUG
-      assert(!layout || layout == tmpLayout);
-      layout = tmpLayout;
-#else
-      layout = tmpLayout;
-      break;
-#endif
+      if (!layout)
+        layout = tmpLayout;
     }
   }
   return layout;
@@ -215,127 +210,118 @@ static void propagateRegionResultsToYieldOperands(
                     << " operands), parent="
                     << yieldOp->getParentOp()->getName() << "\n");
 
-  if (func::FuncOp func = dyn_cast<func::FuncOp>(yieldOp->getParentOp())) {
+  if (isa<func::FuncOp>(yieldOp->getParentOp())) {
     LLVM_DEBUG(DBGS() << "  skipping (parent is FuncOp)\n");
     return;
   }
-  llvm::SmallVector<mlir::RegionSuccessor> successors;
-  llvm::SmallVector<mlir::Attribute> operands(yieldOp->getNumOperands(),
-                                              nullptr);
-  yieldOp.getSuccessorRegions(operands, successors);
 
-  auto regionBranchOp = cast<RegionBranchOpInterface>(yieldOp->getParentOp());
+  auto regionBranchOp =
+      dyn_cast<RegionBranchOpInterface>(yieldOp->getParentOp());
+  if (!regionBranchOp) {
+    LLVM_DEBUG(DBGS() << "  skipping (parent is not RegionBranchOp)\n");
+    return;
+  }
 
-  LLVM_DEBUG(DBGS() << "  found " << successors.size() << " successors\n");
-  for (mlir::RegionSuccessor &successor : successors) {
-    // debug print out successorr
-    LLVM_DEBUG({
-      DBGS() << "  successor: ";
-      if (successor.isParent()) {
-        DBGS() << "(parent operation)";
-      } else {
-        DBGS() << "region with " << successor.getSuccessor()->getNumArguments()
-               << " arguments";
-      }
-      DBGS() << "\n";
-    });
-    // find out the successor which is the parent region of yieldOp
-    // if (successor.getSuccessor() != yieldOp->getParentRegion()) {
-    //   LLVM_DEBUG(DBGS() << "  skipping successor (not parent region)\n");
-    //   continue;
-    // }
-    if (!successor.isParent())
-      continue;
-    // propagate the layout from region result to yield operands
-    ValueRange successorInputs = regionBranchOp.getSuccessorInputs(successor);
-    LLVM_DEBUG(DBGS() << "  propagating " << successorInputs.size()
-                      << " region results to yield operands\n");
-    for (unsigned i = 0; i < successorInputs.size(); ++i) {
-      Value regionResult = successorInputs[i];
+  // Gather layouts for each result of the parent region op from external
+  // use points.
+  unsigned numResults = regionBranchOp->getNumResults();
+  LLVM_DEBUG(DBGS() << "  parent op has " << numResults << " results\n");
 
-      // debug print regionResult
-      LLVM_DEBUG({
-        DBGS() << " before propagateRegionResultsToYieldOperands, Region IR:";
-        DBGS() << "    region result #" << i
-               << ": type=" << regionResult.getType();
-        llvm::dbgs() << regionResult;
-        llvm::dbgs() << "\n";
-      });
-      // find all the use of region result, and propagate the layout to the
-      // corresponding yield operand for all use of region result, get its
-      // layout from temporary operand layout if any of these use have it
-      xegpu::DistributeLayoutAttr layout = getLayoutFromUsePoints(regionResult);
-
-      // auto layout = xegpu::getDistributeLayoutAttr(regionResult);
-      if (layout == nullptr) {
-        LLVM_DEBUG(DBGS() << "    region result #" << i
-                          << ": skipped (no layout)\n");
-        continue;
-      }
-      assert(
-          layout &&
-          "region result layout must be defined before propagating to yield");
-
-      if (auto opResult = dyn_cast<OpResult>(regionResult))
-        xegpu::setTemporaryLayout(opResult, layout);
-      xegpu::setTemporaryLayout(yieldOp->getOpOperand(i), layout);
-
-      LLVM_DEBUG({
-        DBGS() << " after propagateRegionResultsToYieldOperands, Region IR:";
-        regionResult.print(llvm::dbgs());
-        if (Operation *defOp = regionResult.getDefiningOp())
-          defOp->print(llvm::dbgs(), OpPrintingFlags().printGenericOpForm());
-        llvm::dbgs() << "\n";
-      });
+  SmallVector<xegpu::DistributeLayoutAttr> resultLayouts(numResults, nullptr);
+  for (unsigned i = 0; i < numResults; ++i) {
+    OpResult result = regionBranchOp->getResult(i);
+    resultLayouts[i] = getLayoutFromUsePoints(result);
+    if (resultLayouts[i]) {
+      LLVM_DEBUG(DBGS() << "  result #" << i << ": type=" << result.getType()
+                        << ", layout=" << resultLayouts[i] << "\n");
+      xegpu::setTemporaryLayout(result, resultLayouts[i]);
+    } else {
+      LLVM_DEBUG(DBGS() << "  result #" << i
+                        << ": skipped (no layout from use points)\n");
     }
   }
+
+  // Use getSuccessorOperands to find which operands of the terminator
+  // flow to a successor. This handles index offsets automatically (e.g.,
+  // scf.condition's predicate at operand #0 is excluded).
+  // Pick the first successor to determine the operand range.
+  SmallVector<RegionSuccessor> successors;
+  SmallVector<Attribute> operandAttrs(yieldOp->getNumOperands(), nullptr);
+  yieldOp.getSuccessorRegions(operandAttrs, successors);
+  assert(!successors.empty() && "terminator must have at least one successor");
+
+  OperandRange succOps = yieldOp.getSuccessorOperands(successors.front());
+  unsigned beginIdx = succOps.getBeginOperandIndex();
+  unsigned count = std::min(static_cast<unsigned>(succOps.size()), numResults);
+
+  LLVM_DEBUG(DBGS() << "  " << count << " successor operands starting at index "
+                    << beginIdx << "\n");
+
+  for (unsigned i = 0; i < count; ++i) {
+    if (!resultLayouts[i])
+      continue;
+    LLVM_DEBUG(DBGS() << "    -> setting layout on operand #" << (beginIdx + i)
+                      << "\n");
+    xegpu::setTemporaryLayout(yieldOp->getOpOperand(beginIdx + i),
+                              resultLayouts[i]);
+  }
+
+  LLVM_DEBUG({
+    DBGS() << " after propagateRegionResultsToYieldOperands:\n";
+    yieldOp->print(llvm::dbgs(), OpPrintingFlags().printGenericOpForm());
+    llvm::dbgs() << "\n";
+  });
 }
 
 static void propagateRegionArgsToInits(mlir::RegionBranchOpInterface regionOp) {
   LLVM_DEBUG(DBGS() << "propagateRegionArgsToInits: " << regionOp->getName()
                     << " (" << regionOp->getNumOperands() << " operands, "
                     << regionOp->getNumRegions() << " regions)\n");
-  DBGS() << " before propagateRegionArgsToInits, Region IR:";
-  regionOp.print(llvm::dbgs());
-  DBGS() << " complex debug Region IR:";
-  regionOp.print(llvm::dbgs(), OpPrintingFlags().printGenericOpForm());
-  // Get entry successors (regions that can be entered initially)
-  SmallVector<RegionSuccessor> successors;
-  regionOp.getEntrySuccessorRegions(/*operands=*/ArrayRef<Attribute>(),
-                                    successors);
+  LLVM_DEBUG({
+    DBGS() << " before propagateRegionArgsToInits, Region IR:\n";
+    regionOp.print(llvm::dbgs(), OpPrintingFlags().printGenericOpForm());
+    llvm::dbgs() << "\n";
+  });
 
-  LLVM_DEBUG(DBGS() << "  found " << successors.size()
-                    << " entry successors\n");
-  // For each possible entry region, get the operands forwarded to it
-  for (RegionSuccessor &successor : successors) {
-    OperandRange initOperands = regionOp.getEntrySuccessorOperands(successor);
-    unsigned beginIdx = initOperands.getBeginOperandIndex();
-    unsigned numArgs = successor.getSuccessor()->getNumArguments();
-    LLVM_DEBUG(DBGS() << "  successor region: " << numArgs
-                      << " args, initOperands beginIdx=" << beginIdx
-                      << ", count=" << initOperands.size() << "\n");
-    // initOperands are the initialization arguments for this successor
-    // iterate the region arguments
-    for (unsigned i = 0; i < numArgs; ++i) {
-      Value regionArg =
-          successor.getSuccessor()->getArgument(i); // region argument
-      auto layout = xegpu::getDistributeLayoutAttr(regionArg);
-      if (layout == nullptr) {
-        LLVM_DEBUG(DBGS() << "    region argument #" << i
-                          << ": skipped (no layout)\n");
+  // Iterate all regions of the region op. For each block argument that has a
+  // layout (determined from its use points), trace back to find the
+  // corresponding init operand of the regionOp and set the layout on it.
+  // This works generically for scf.for, scf.while, and other
+  // RegionBranchOpInterface ops.
+  for (Region &region : regionOp->getRegions()) {
+    RegionSuccessor regionSuccessor(&region);
+    for (auto [argIdx, regionArg] : llvm::enumerate(region.getArguments())) {
+      auto layout = getLayoutFromUsePoints(regionArg);
+      if (!layout) {
+        LLVM_DEBUG(DBGS() << "  region #" << region.getRegionNumber()
+                          << " arg #" << argIdx << ": skipped (no layout)\n");
         continue;
       }
-      assert(
-          layout &&
-          "region argument layout must be defined before propagating to init");
-      LLVM_DEBUG(DBGS() << "    regionArg #" << i << ": type="
-                        << regionArg.getType() << ", layout=" << layout
-                        << " -> init operand #" << (beginIdx + i) << "\n");
-      xegpu::setTemporaryLayout(regionOp->getOpOperand(beginIdx + i), layout);
+      LLVM_DEBUG(DBGS() << "  region #" << region.getRegionNumber() << " arg #"
+                        << argIdx << ": type=" << regionArg.getType()
+                        << ", layout=" << layout << "\n");
+
+      // Find all predecessor values that flow into this block argument.
+      SmallVector<Value> predValues;
+      regionOp.getPredecessorValues(regionSuccessor, argIdx, predValues);
+      for (Value predVal : predValues) {
+        // Match predecessor value to an operand of the regionOp.
+        for (OpOperand &operand : regionOp->getOpOperands()) {
+          if (operand.get() == predVal) {
+            LLVM_DEBUG(DBGS() << "    -> setting layout on init operand #"
+                              << operand.getOperandNumber() << "\n");
+            xegpu::setTemporaryLayout(operand, layout);
+          }
+        }
+      }
     }
   }
-  DBGS() << " after propagateRegionArgsToInits, Region IR:";
-  regionOp.print(llvm::dbgs());
+
+  LLVM_DEBUG({
+    DBGS() << " after propagateRegionArgsToInits, Region IR:\n";
+    regionOp.print(llvm::dbgs(), OpPrintingFlags().printGenericOpForm());
+    llvm::dbgs() << "\n";
+  });
 }
 
 bool xegpu::recoverTemporaryLayouts(Operation *rootOp) {
@@ -345,16 +331,6 @@ bool xegpu::recoverTemporaryLayouts(Operation *rootOp) {
     LLVM_DEBUG(DBGS() << "Processing func: " << funcName << "\n");
     walkRegionBackward(body, [&](Operation *op) {
       LLVM_DEBUG(DBGS() << "Visiting op: " << op->getName());
-      if (op->getNumResults() > 0) {
-        LLVM_DEBUG(llvm::dbgs() << " [results: " << op->getNumResults());
-        for (OpResult res : op->getResults()) {
-          auto layout = xegpu::getDistributeLayoutAttr(res);
-          LLVM_DEBUG(llvm::dbgs() << " r#" << res.getResultNumber() << "="
-                                  << (layout ? layout : nullptr));
-        }
-        LLVM_DEBUG(llvm::dbgs() << "]");
-      }
-      LLVM_DEBUG(llvm::dbgs() << "\n");
       if (auto regionOp = dyn_cast<mlir::RegionBranchOpInterface>(op)) {
         // hit the region op after visiting inside region
         LLVM_DEBUG(DBGS() << "  -> dispatching as RegionBranchOp\n");
@@ -1415,16 +1391,16 @@ xegpu::setupDpasLayout(xegpu::LayoutKind layoutKind, VectorType aTy,
 xegpu::DistributeLayoutAttr
 xegpu::inferSourceLayoutFromResult(OpOperand &operand,
                                    xegpu::DistributeLayoutAttr resLayout) {
+  if (!resLayout) {
+    LLVM_DEBUG(DBGS() << "no resLayout, returning null\n");
+    return xegpu::DistributeLayoutAttr();
+  }
   Operation *op = operand.getOwner();
   unsigned idx = operand.getOperandNumber();
 
   // For vector::BroadcastOp, infer the source layout from the result layout.
   if (auto broadcast = dyn_cast<vector::BroadcastOp>(op)) {
     LLVM_DEBUG(DBGS() << "  -> BroadcastOp\n");
-    if (!resLayout) {
-      LLVM_DEBUG(DBGS() << "     no resLayout, returning null\n");
-      return xegpu::DistributeLayoutAttr();
-    }
     auto srcTy = dyn_cast<VectorType>(broadcast.getSourceType());
     if (!srcTy) {
       LLVM_DEBUG(DBGS() << "     source is not VectorType, returning null\n");
@@ -1443,10 +1419,6 @@ xegpu::inferSourceLayoutFromResult(OpOperand &operand,
   if (auto reduction = dyn_cast<vector::MultiDimReductionOp>(op)) {
     LLVM_DEBUG(DBGS() << "  -> MultiDimReductionOp, operand idx=" << idx
                       << "\n");
-    if (!resLayout) {
-      LLVM_DEBUG(DBGS() << "     no resLayout, returning null\n");
-      return xegpu::DistributeLayoutAttr();
-    }
     if (idx == 0) {
       SmallVector<int64_t> reductionDims(reduction.getReductionDims());
       LLVM_DEBUG({
@@ -1467,10 +1439,6 @@ xegpu::inferSourceLayoutFromResult(OpOperand &operand,
 
   if (auto reduction = dyn_cast<vector::ReductionOp>(op)) {
     LLVM_DEBUG(DBGS() << "  -> ReductionOp\n");
-    if (!resLayout) {
-      LLVM_DEBUG(DBGS() << "     no resLayout, returning null\n");
-      return xegpu::DistributeLayoutAttr();
-    }
     auto inferred = xegpu::inferReductionSourceLayout(resLayout);
     LLVM_DEBUG(DBGS() << "     inferred=" << inferred << "\n");
     return inferred;
@@ -1480,10 +1448,6 @@ xegpu::inferSourceLayoutFromResult(OpOperand &operand,
   // element type bitwidths.
   if (auto bitcast = dyn_cast<vector::BitCastOp>(op)) {
     LLVM_DEBUG(DBGS() << "  -> BitCastOp\n");
-    if (!resLayout) {
-      LLVM_DEBUG(DBGS() << "     no resLayout, returning null\n");
-      return xegpu::DistributeLayoutAttr();
-    }
     int resElemBitWidth =
         bitcast.getResultVectorType().getElementType().getIntOrFloatBitWidth();
     int srcElemBitWidth =
@@ -1508,10 +1472,6 @@ xegpu::inferSourceLayoutFromResult(OpOperand &operand,
                             llvm::dbgs());
       llvm::dbgs() << "]\n";
     });
-    if (!resLayout) {
-      LLVM_DEBUG(DBGS() << "     no resLayout, returning null\n");
-      return xegpu::DistributeLayoutAttr();
-    }
     auto inferred = xegpu::inferShapeCastSourceLayout(
         resLayout, shapeCast.getResultVectorType().getShape(),
         shapeCast.getSourceVectorType().getShape());
@@ -1524,10 +1484,6 @@ xegpu::inferSourceLayoutFromResult(OpOperand &operand,
   if (auto insertSlice = dyn_cast<vector::InsertStridedSliceOp>(op)) {
     LLVM_DEBUG(DBGS() << "  -> InsertStridedSliceOp, operand idx=" << idx
                       << "\n");
-    if (!resLayout) {
-      LLVM_DEBUG(DBGS() << "     no resLayout, returning null\n");
-      return xegpu::DistributeLayoutAttr();
-    }
     if (idx == 0) {
       auto inferred = xegpu::inferInsertStridedSliceSourceLayout(
           resLayout, insertSlice.getDestVectorType().getShape(),
@@ -1549,10 +1505,6 @@ xegpu::inferSourceLayoutFromResult(OpOperand &operand,
       llvm::interleaveComma(transpose.getPermutation(), llvm::dbgs());
       llvm::dbgs() << "]\n";
     });
-    if (!resLayout) {
-      LLVM_DEBUG(DBGS() << "     no resLayout, returning null\n");
-      return xegpu::DistributeLayoutAttr();
-    }
     auto inferred = xegpu::inferTransposeSourceLayout(
         resLayout, transpose.getPermutation());
     LLVM_DEBUG(DBGS() << "     inferred=" << inferred << "\n");
@@ -1564,8 +1516,7 @@ xegpu::inferSourceLayoutFromResult(OpOperand &operand,
   if (OpTrait::hasElementwiseMappableTraits(op) && op->getNumResults() == 1) {
     LLVM_DEBUG(DBGS() << "  -> elementwise op, using resLayout="
                       << (resLayout ? resLayout : nullptr) << "\n");
-    if (!resLayout)
-      return xegpu::DistributeLayoutAttr();
+
     return resLayout;
   }
   return xegpu::DistributeLayoutAttr();
@@ -1581,7 +1532,7 @@ xegpu::DistributeLayoutAttr xegpu::getConsumerLayoutAt(OpOperand &operand) {
     return inferredOperandLayout;
   // By default, assume no layout conflict and return the current layout of
   // the operand.
-  auto fallback = xegpu::getDistributeLayoutAttr(operand);
+  auto fallback = xegpu::getDistributeLayoutAttr(operand.get());
   LLVM_DEBUG(DBGS() << "  -> fallback (unhandled op " << op->getName()
                     << "), returning operand layout="
                     << (fallback ? fallback : nullptr) << "\n");
