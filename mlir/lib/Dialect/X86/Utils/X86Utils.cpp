@@ -324,9 +324,11 @@ LogicalResult shuffleBeforeWriteLikeOp(PatternRewriter &rewriter,
   auto newVecA = vector::ShapeCastOp::create(rewriter, loc, accTy, shuffledLo);
   auto newVecB = vector::ShapeCastOp::create(rewriter, loc, accTy, shuffledHi);
 
-  // Update write operands in place
-  opA->setOperand(0, newVecA.getResult());
-  opB->setOperand(0, newVecB.getResult());
+  // Update write operands in place via the rewriter to notify it of changes.
+  rewriter.modifyOpInPlace(opA,
+                           [&]() { opA->setOperand(0, newVecA.getResult()); });
+  rewriter.modifyOpInPlace(opB,
+                           [&]() { opB->setOperand(0, newVecB.getResult()); });
 
   return success();
 }

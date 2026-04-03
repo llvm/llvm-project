@@ -67,9 +67,9 @@ void test_constant_stride_one() {
 // CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR_DIM]], ptr [[TMP10]], i32 0, i32 0
 // CHECK-NEXT:    store i64 0, ptr [[TMP11]], align 8
 // CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR_DIM]], ptr [[TMP10]], i32 0, i32 1
-// CHECK-NEXT:    store i64 1, ptr [[TMP12]], align 8
+// CHECK-NEXT:    store i64 4, ptr [[TMP12]], align 8
 // CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR_DIM]], ptr [[TMP10]], i32 0, i32 2
-// CHECK-NEXT:    store i64 4, ptr [[TMP13]], align 8
+// CHECK-NEXT:    store i64 1, ptr [[TMP13]], align 8
 // CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
 // CHECK-NEXT:    store ptr [[DIMS]], ptr [[TMP14]], align 8
 // CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
@@ -105,9 +105,9 @@ void test_constant_stride_one() {
 // CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR_DIM_0]], ptr [[TMP10]], i32 0, i32 0
 // CHECK-NEXT:    store i64 0, ptr [[TMP11]], align 8
 // CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR_DIM_0]], ptr [[TMP10]], i32 0, i32 1
-// CHECK-NEXT:    store i64 1, ptr [[TMP12]], align 8
+// CHECK-NEXT:    store i64 4, ptr [[TMP12]], align 8
 // CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR_DIM_0]], ptr [[TMP10]], i32 0, i32 2
-// CHECK-NEXT:    store i64 4, ptr [[TMP13]], align 8
+// CHECK-NEXT:    store i64 1, ptr [[TMP13]], align 8
 // CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
 // CHECK-NEXT:    store ptr [[DIMS]], ptr [[TMP14]], align 8
 // CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0

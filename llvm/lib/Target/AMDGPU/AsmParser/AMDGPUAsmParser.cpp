@@ -5037,12 +5037,6 @@ bool AMDGPUAsmParser::validateNeg(const MCInst &Inst, AMDGPU::OpName OpName) {
     }
   }
 
-  // neg_lo[0:1] and neg_hi[0:1] are reserved and shall not used on gfx1250.
-  // in the _iu8 case neg bits are repurposed for signed/unsigned.
-  if (isGFX1250() && (TSFlags & SIInstrFlags::IsWMMA) && (Neg & 3) &&
-      Inst.getOpcode() != AMDGPU::V_WMMA_I32_16X16X64_IU8_w32_twoaddr_gfx1250)
-    return false;
-
   return true;
 }
 
@@ -5776,7 +5770,8 @@ bool AMDGPUAsmParser::checkUnsupportedInstruction(StringRef Mnemo,
 
   // Finally check if this instruction is supported on any other GPU.
   if (isSupportedMnemo(Mnemo, FeatureBitset().set())) {
-    return Error(IDLoc, "instruction not supported on this GPU");
+    return Error(IDLoc, "instruction not supported on this GPU (" +
+                            getSTI().getCPU() + ")" + ": " + Mnemo);
   }
 
   // Instruction not supported on any GPU. Probably a typo.

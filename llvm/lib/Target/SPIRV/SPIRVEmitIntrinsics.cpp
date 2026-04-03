@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "SPIRVEmitIntrinsics.h"
 #include "SPIRV.h"
 #include "SPIRVBuiltins.h"
 #include "SPIRVSubtarget.h"
@@ -18,6 +19,8 @@
 #include "SPIRVUtils.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/StringSet.h"
+#include "llvm/Analysis/LoopInfo.h"
+#include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/InstVisitor.h"
@@ -159,7 +162,7 @@ static bool isaGEP(const Value *V) {
 class SPIRVEmitIntrinsics
     : public ModulePass,
       public InstVisitor<SPIRVEmitIntrinsics, Instruction *> {
-  SPIRVTargetMachine *TM = nullptr;
+  const SPIRVTargetMachine &TM;
   SPIRVGlobalRegistry *GR = nullptr;
   Function *CurrF = nullptr;
   bool TrackConstants = true;
@@ -167,6 +170,7 @@ class SPIRVEmitIntrinsics
   DenseMap<Instruction *, Constant *> AggrConsts;
   DenseMap<Instruction *, Type *> AggrConstTypes;
   DenseSet<Instruction *> AggrStores;
+  SmallPtrSet<Instruction *, 8> DeletedInstrs;
   GlobalVariableUsers GVUsers;
   std::unordered_set<Value *> Named;
 
@@ -344,8 +348,7 @@ class SPIRVEmitIntrinsics
 
 public:
   static char ID;
-  SPIRVEmitIntrinsics(SPIRVTargetMachine *TM = nullptr)
-      : ModulePass(ID), TM(TM) {}
+  SPIRVEmitIntrinsics(const SPIRVTargetMachine &TM) : ModulePass(ID), TM(TM) {}
   Instruction *visitInstruction(Instruction &I) { return &I; }
   Instruction *visitSwitchInst(SwitchInst &I);
   Instruction *visitGetElementPtrInst(GetElementPtrInst &I);
@@ -410,8 +413,8 @@ Value *getPointerRoot(Value *I) {
 
 char SPIRVEmitIntrinsics::ID = 0;
 
-INITIALIZE_PASS(SPIRVEmitIntrinsics, "emit-intrinsics", "SPIRV emit intrinsics",
-                false, false)
+INITIALIZE_PASS(SPIRVEmitIntrinsics, "spirv-emit-intrinsics",
+                "SPIRV emit intrinsics", false, false)
 
 static inline bool isAssignTypeInstr(const Instruction *I) {
   return isa<IntrinsicInst>(I) &&
@@ -845,7 +848,7 @@ Type *SPIRVEmitIntrinsics::getGEPTypeLogical(GetElementPtrInst *GEP) {
 Type *SPIRVEmitIntrinsics::getGEPType(GetElementPtrInst *Ref) {
   if (Ref->getSourceElementType() ==
           IntegerType::getInt8Ty(CurrF->getContext()) &&
-      TM->getSubtargetImpl()->isLogicalSPIRV()) {
+      TM.getSubtargetImpl()->isLogicalSPIRV()) {
     return getGEPTypeLogical(Ref);
   }
 
@@ -1135,7 +1138,7 @@ bool SPIRVEmitIntrinsics::deduceOperandElementTypeCalledFunction(
       getOclOrSpirvBuiltinDemangledName(CalledF->getName());
   if (DemangledName.length() > 0 &&
       !StringRef(DemangledName).starts_with("llvm.")) {
-    const SPIRVSubtarget &ST = TM->getSubtarget<SPIRVSubtarget>(*CalledF);
+    const SPIRVSubtarget &ST = TM.getSubtarget<SPIRVSubtarget>(*CalledF);
     auto [Grp, Opcode, ExtNo] = SPIRV::mapBuiltinToOpcode(
         DemangledName, ST.getPreferredInstructionSet());
     if (Opcode == SPIRV::OpGroupAsyncCopy) {
@@ -1491,6 +1494,29 @@ void SPIRVEmitIntrinsics::replaceMemInstrUses(Instruction *Old,
     } else if (isMemInstrToReplace(U) || isa<ReturnInst>(U) ||
                isa<CallInst>(U)) {
       U->replaceUsesOfWith(Old, New);
+    } else if (auto *Phi = dyn_cast<PHINode>(U)) {
+      if (Phi->getType() != New->getType()) {
+        Phi->mutateType(New->getType());
+        Phi->replaceUsesOfWith(Old, New);
+        // Convert extractvalue users of the mutated PHI to spv_extractv
+        SmallVector<ExtractValueInst *, 4> EVUsers;
+        for (User *PhiUser : Phi->users())
+          if (auto *EV = dyn_cast<ExtractValueInst>(PhiUser))
+            EVUsers.push_back(EV);
+        for (ExtractValueInst *EV : EVUsers) {
+          B.SetInsertPoint(EV);
+          SmallVector<Value *> Args(EV->operand_values());
+          for (unsigned Idx : EV->indices())
+            Args.push_back(B.getInt32(Idx));
+          auto *NewEV =
+              B.CreateIntrinsic(Intrinsic::spv_extractv, {EV->getType()}, Args);
+          EV->replaceAllUsesWith(NewEV);
+          DeletedInstrs.insert(EV);
+          EV->eraseFromParent();
+        }
+      } else {
+        Phi->replaceUsesOfWith(Old, New);
+      }
     } else {
       llvm_unreachable("illegal aggregate intrinsic user");
     }
@@ -1751,7 +1777,7 @@ Instruction *SPIRVEmitIntrinsics::visitGetElementPtrInst(GetElementPtrInst &I) {
   IRBuilder<> B(I.getParent());
   B.SetInsertPoint(&I);
 
-  if (TM->getSubtargetImpl()->isLogicalSPIRV() && !isFirstIndexZero(&I)) {
+  if (TM.getSubtargetImpl()->isLogicalSPIRV() && !isFirstIndexZero(&I)) {
     // Logical SPIR-V cannot use the OpPtrAccessChain instruction. If the first
     // index of the GEP is not 0, then we need to try to adjust it.
     //
@@ -1987,7 +2013,7 @@ void SPIRVEmitIntrinsics::insertPtrCastOrAssignTypeInstr(Instruction *I,
     // the first index is 0, then we can trivially lower to OpAccessChain. If
     // not we need to try to rewrite the GEP. We avoid adding a pointer cast at
     // this time, and will rewrite the GEP when visiting it.
-    if (TM->getSubtargetImpl()->isLogicalSPIRV() && !isFirstIndexZero(GEPI)) {
+    if (TM.getSubtargetImpl()->isLogicalSPIRV() && !isFirstIndexZero(GEPI)) {
       return;
     }
 
@@ -2152,7 +2178,7 @@ Instruction *SPIRVEmitIntrinsics::visitLoadInst(LoadInst &I) {
   IRBuilder<> B(I.getParent());
   B.SetInsertPoint(&I);
   TrackConstants = false;
-  const auto *TLI = TM->getSubtargetImpl()->getTargetLowering();
+  const auto *TLI = TM.getSubtargetImpl()->getTargetLowering();
   MachineMemOperand::Flags Flags =
       TLI->getLoadMemOperandFlags(I, CurrF->getDataLayout());
   auto *NewI =
@@ -2169,7 +2195,7 @@ Instruction *SPIRVEmitIntrinsics::visitStoreInst(StoreInst &I) {
   IRBuilder<> B(I.getParent());
   B.SetInsertPoint(&I);
   TrackConstants = false;
-  const auto *TLI = TM->getSubtargetImpl()->getTargetLowering();
+  const auto *TLI = TM.getSubtargetImpl()->getTargetLowering();
   MachineMemOperand::Flags Flags =
       TLI->getStoreMemOperandFlags(I, CurrF->getDataLayout());
   auto *PtrOp = I.getPointerOperand();
@@ -2198,7 +2224,7 @@ Instruction *SPIRVEmitIntrinsics::visitStoreInst(StoreInst &I) {
 Instruction *SPIRVEmitIntrinsics::visitAllocaInst(AllocaInst &I) {
   Value *ArraySize = nullptr;
   if (I.isArrayAllocation()) {
-    const SPIRVSubtarget *STI = TM->getSubtargetImpl(*I.getFunction());
+    const SPIRVSubtarget *STI = TM.getSubtargetImpl(*I.getFunction());
     if (!STI->canUseExtension(
             SPIRV::Extension::SPV_INTEL_variable_length_array))
       report_fatal_error(
@@ -2418,7 +2444,8 @@ void SPIRVEmitIntrinsics::insertAssignTypeIntrs(Instruction *I,
           report_fatal_error("Unknown composite intrinsic type");
         TypeToAssign = It->second;
       }
-    }
+    } else if (auto It = AggrConstTypes.find(I); It != AggrConstTypes.end())
+      TypeToAssign = It->second;
     TypeToAssign = restoreMutatedType(GR, I, TypeToAssign);
     GR->buildAssignType(B, TypeToAssign, I);
   }
@@ -2463,7 +2490,7 @@ void SPIRVEmitIntrinsics::insertAssignTypeIntrs(Instruction *I,
 
 bool SPIRVEmitIntrinsics::shouldTryToAddMemAliasingDecoration(
     Instruction *Inst) {
-  const SPIRVSubtarget *STI = TM->getSubtargetImpl(*Inst->getFunction());
+  const SPIRVSubtarget *STI = TM.getSubtargetImpl(*Inst->getFunction());
   if (!STI->canUseExtension(SPIRV::Extension::SPV_INTEL_memory_access_aliasing))
     return false;
   // Add aliasing decorations to internal load and store intrinsics
@@ -2521,7 +2548,7 @@ void SPIRVEmitIntrinsics::insertSpirvDecorations(Instruction *I,
   }
   // MD_fpmath
   if (MDNode *MD = I->getMetadata(LLVMContext::MD_fpmath)) {
-    const SPIRVSubtarget *STI = TM->getSubtargetImpl(*I->getFunction());
+    const SPIRVSubtarget *STI = TM.getSubtargetImpl(*I->getFunction());
     bool AllowFPMaxError =
         STI->canUseExtension(SPIRV::Extension::SPV_INTEL_fp_max_error);
     if (!AllowFPMaxError)
@@ -2571,7 +2598,7 @@ static SPIRV::FPFastMathDefaultInfo &getFPFastMathDefaultInfo(
 }
 
 void SPIRVEmitIntrinsics::insertConstantsForFPFastMathDefault(Module &M) {
-  const SPIRVSubtarget *ST = TM->getSubtargetImpl();
+  const SPIRVSubtarget *ST = TM.getSubtargetImpl();
   if (!ST->canUseExtension(SPIRV::Extension::SPV_KHR_float_controls2))
     return;
 
@@ -3060,33 +3087,64 @@ SPIRVEmitIntrinsics::simplifyZeroLengthArrayGepInst(GetElementPtrInst *GEP) {
 
 void SPIRVEmitIntrinsics::emitUnstructuredLoopControls(Function &F,
                                                        IRBuilder<> &B) {
-  const SPIRVSubtarget *ST = TM->getSubtargetImpl(F);
+  const SPIRVSubtarget *ST = TM.getSubtargetImpl(F);
   // Shaders use SPIRVStructurizer which emits OpLoopMerge via spv_loop_merge.
   if (ST->isShader())
     return;
-  if (!ST->canUseExtension(
-          SPIRV::Extension::SPV_INTEL_unstructured_loop_controls))
+
+  if (ST->canUseExtension(
+          SPIRV::Extension::SPV_INTEL_unstructured_loop_controls)) {
+    for (BasicBlock &BB : F) {
+      Instruction *Term = BB.getTerminator();
+      MDNode *LoopMD = Term->getMetadata(LLVMContext::MD_loop);
+      if (!LoopMD)
+        continue;
+
+      SmallVector<unsigned, 1> Ops =
+          getSpirvLoopControlOperandsFromLoopMetadata(LoopMD);
+      unsigned LC = Ops[0];
+      if (LC == SPIRV::LoopControl::None)
+        continue;
+
+      // Emit intrinsic: loop control mask + optional parameters.
+      B.SetInsertPoint(Term);
+      SmallVector<Value *, 4> IntrArgs;
+      for (unsigned Op : Ops)
+        IntrArgs.push_back(B.getInt32(Op));
+      B.CreateIntrinsic(Intrinsic::spv_loop_control_intel, IntrArgs);
+    }
+    return;
+  }
+
+  // For non-shader targets without the Intel extension, emit OpLoopMerge
+  // using spv_loop_merge intrinsics, mirroring the structurizer approach.
+  DominatorTree DT(F);
+  LoopInfo LI(DT);
+  if (LI.empty())
     return;
 
-  for (BasicBlock &BB : F) {
-    Instruction *Term = BB.getTerminator();
-    MDNode *LoopMD = Term->getMetadata(LLVMContext::MD_loop);
-    if (!LoopMD)
+  for (Loop *L : LI.getLoopsInPreorder()) {
+    BasicBlock *Latch = L->getLoopLatch();
+    if (!Latch)
+      continue;
+    BasicBlock *MergeBlock = L->getUniqueExitBlock();
+    if (!MergeBlock)
       continue;
 
-    SmallVector<unsigned, 1> Ops =
-        getSpirvLoopControlOperandsFromLoopMetadata(LoopMD);
-    unsigned LC = Ops[0];
-    if (LC == SPIRV::LoopControl::None)
+    // Check for loop unroll metadata on the latch terminator.
+    SmallVector<unsigned, 1> LoopControlOps =
+        getSpirvLoopControlOperandsFromLoopMetadata(L);
+    if (LoopControlOps[0] == SPIRV::LoopControl::None)
       continue;
 
-    // Emit intrinsic: loop control mask + optional parameters.
-    B.SetInsertPoint(Term);
-    SmallVector<Value *, 4> IntrArgs;
-    IntrArgs.push_back(B.getInt32(LC));
-    for (unsigned I = 1; I < Ops.size(); ++I)
-      IntrArgs.push_back(B.getInt32(Ops[I]));
-    B.CreateIntrinsic(Intrinsic::spv_loop_control_intel, IntrArgs);
+    BasicBlock *Header = L->getHeader();
+    B.SetInsertPoint(Header->getTerminator());
+    auto *MergeAddress = BlockAddress::get(&F, MergeBlock);
+    auto *ContinueAddress = BlockAddress::get(&F, Latch);
+    SmallVector<Value *, 4> Args = {MergeAddress, ContinueAddress};
+    for (unsigned Imm : LoopControlOps)
+      Args.emplace_back(B.getInt32(Imm));
+    B.CreateIntrinsic(Intrinsic::spv_loop_merge, {Args});
   }
 }
 
@@ -3094,7 +3152,7 @@ bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
   if (Func.isDeclaration())
     return false;
 
-  const SPIRVSubtarget &ST = TM->getSubtarget<SPIRVSubtarget>(Func);
+  const SPIRVSubtarget &ST = TM.getSubtarget<SPIRVSubtarget>(Func);
   GR = ST.getSPIRVGlobalRegistry();
 
   if (!CurrF)
@@ -3106,6 +3164,7 @@ bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
   AggrConsts.clear();
   AggrConstTypes.clear();
   AggrStores.clear();
+  DeletedInstrs.clear();
 
   // Fix GEP result types ahead of inference, and simplify if possible.
   // Data structure for dead instructions that were simplified and replaced.
@@ -3158,6 +3217,14 @@ bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
 
   preprocessUndefs(B);
   preprocessCompositeConstants(B);
+
+  for (BasicBlock &BB : Func)
+    for (PHINode &Phi : BB.phis())
+      if (Phi.getType()->isAggregateType()) {
+        AggrConstTypes[&Phi] = Phi.getType();
+        Phi.mutateType(B.getInt32Ty());
+      }
+
   preprocessBoolVectorBitcasts(Func);
   SmallVector<Instruction *> Worklist(
       llvm::make_pointer_range(instructions(Func)));
@@ -3198,6 +3265,8 @@ bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
         deduceOperandElementType(&Phi, nullptr);
 
   for (auto *I : Worklist) {
+    if (DeletedInstrs.count(I))
+      continue;
     TrackConstants = true;
     if (!I->getType()->isVoidTy() || isa<StoreInst>(I))
       setInsertPointAfterDef(B, I);
@@ -3290,7 +3359,7 @@ void SPIRVEmitIntrinsics::parseFunDeclarations(Module &M) {
     if (DemangledName.empty())
       continue;
     // allow only OpGroupAsyncCopy use case at the moment
-    const SPIRVSubtarget &ST = TM->getSubtarget<SPIRVSubtarget>(F);
+    const SPIRVSubtarget &ST = TM.getSubtarget<SPIRVSubtarget>(F);
     auto [Grp, Opcode, ExtNo] = SPIRV::mapBuiltinToOpcode(
         DemangledName, ST.getPreferredInstructionSet());
     if (Opcode != SPIRV::OpGroupAsyncCopy)
@@ -3324,7 +3393,7 @@ void SPIRVEmitIntrinsics::parseFunDeclarations(Module &M) {
 }
 
 bool SPIRVEmitIntrinsics::processMaskedMemIntrinsic(IntrinsicInst &I) {
-  const SPIRVSubtarget &ST = TM->getSubtarget<SPIRVSubtarget>(*I.getFunction());
+  const SPIRVSubtarget &ST = TM.getSubtarget<SPIRVSubtarget>(*I.getFunction());
 
   if (I.getIntrinsicID() == Intrinsic::masked_gather) {
     if (!ST.canUseExtension(
@@ -3523,6 +3592,14 @@ bool SPIRVEmitIntrinsics::runOnModule(Module &M) {
   return Changed;
 }
 
-ModulePass *llvm::createSPIRVEmitIntrinsicsPass(SPIRVTargetMachine *TM) {
+PreservedAnalyses
+llvm::SPIRVEmitIntrinsicsPass::run(Module &M, ModuleAnalysisManager &AM) {
+  SPIRVEmitIntrinsics Legacy(TM);
+  if (Legacy.runOnModule(M))
+    return PreservedAnalyses::none();
+  return PreservedAnalyses::all();
+}
+
+ModulePass *llvm::createSPIRVEmitIntrinsicsPass(const SPIRVTargetMachine &TM) {
   return new SPIRVEmitIntrinsics(TM);
 }

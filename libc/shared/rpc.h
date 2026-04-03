@@ -41,7 +41,7 @@ namespace rpc {
 #endif
 
 /// Generic codes that can be used when implementing the server.
-enum Status {
+enum RPCStatus {
   RPC_SUCCESS = 0x0,
   RPC_ERROR = 0x1000,
   RPC_UNHANDLED_OPCODE = 0x1001,
@@ -69,7 +69,9 @@ struct Header {
 };
 
 /// The maximum number of parallel ports that the RPC interface can support.
-constexpr static uint64_t MAX_PORT_COUNT = 4096;
+/// This should be greater than the expected hardware's occupancy to ensure the
+/// interface is non-blocking.
+constexpr static uint64_t MAX_PORT_COUNT = 16384;
 
 /// A common process used to synchronize communication between a client and a
 /// server. The process contains a read-only inbox and a write-only outbox used

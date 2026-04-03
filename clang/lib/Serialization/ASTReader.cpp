@@ -19,6 +19,7 @@
 #include "clang/AST/ASTStructuralEquivalence.h"
 #include "clang/AST/ASTUnresolvedSet.h"
 #include "clang/AST/AbstractTypeReader.h"
+#include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclCXX.h"
@@ -240,7 +241,7 @@ bool ChainedASTReaderListener::needsSystemInputFileVisitation() {
   Second->needsSystemInputFileVisitation();
 }
 
-void ChainedASTReaderListener::visitModuleFile(StringRef Filename,
+void ChainedASTReaderListener::visitModuleFile(ModuleFileName Filename,
                                                ModuleKind Kind) {
   First->visitModuleFile(Filename, Kind);
   Second->visitModuleFile(Filename, Kind);
@@ -3193,8 +3194,7 @@ ASTReader::getModuleForRelocationChecks(ModuleFile &F, bool DirectoryCheck) {
   if (HSOpts.ModulesValidateOncePerBuildSession && IsImplicitModule) {
     if (F.InputFilesValidationTimestamp >= HSOpts.BuildSessionTimestamp)
       return {std::nullopt, IgnoreError};
-    if (static_cast<uint64_t>(F.File.getModificationTime()) >=
-        HSOpts.BuildSessionTimestamp)
+    if (static_cast<uint64_t>(F.ModTime) >= HSOpts.BuildSessionTimestamp)
       return {std::nullopt, IgnoreError};
   }
 
@@ -4033,6 +4033,27 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
       }
       break;
 
+    case EXTNAME_UNDECLARED_IDENTIFIERS:
+      if (Record.size() % 3 != 0)
+        return llvm::createStringError(std::errc::illegal_byte_sequence,
+                                       "invalid extname identifiers record");
+
+      // FIXME: Ignore #pragma redefine_extname'd, undeclared identifiers from
+      // non-original PCH files. This isn't the way to do it :)
+      ExtnameUndeclaredIdentifiers.clear();
+
+      // Translate the #pragma redefine_extname'd, undeclared identifiers into
+      // global IDs.
+      for (unsigned I = 0, N = Record.size(); I < N; /* in loop */) {
+        ExtnameUndeclaredIdentifiers.push_back(
+            getGlobalIdentifierID(F, Record[I++]));
+        ExtnameUndeclaredIdentifiers.push_back(
+            getGlobalIdentifierID(F, Record[I++]));
+        ExtnameUndeclaredIdentifiers.push_back(
+            ReadSourceLocation(F, Record, I).getRawEncoding());
+      }
+      break;
+
     case SELECTOR_OFFSETS: {
       F.SelectorOffsets = (const uint32_t *)Blob.data();
       F.LocalNumSelectors = Record[0];
@@ -4593,10 +4614,11 @@ void ASTReader::ReadModuleOffsetMap(ModuleFile &F) const {
     uint16_t Len = endian::readNext<uint16_t, llvm::endianness::little>(Data);
     StringRef Name = StringRef((const char*)Data, Len);
     Data += Len;
-    ModuleFile *OM = (Kind == MK_PrebuiltModule || Kind == MK_ExplicitModule ||
-                              Kind == MK_ImplicitModule
-                          ? ModuleMgr.lookupByModuleName(Name)
-                          : ModuleMgr.lookupByFileName(Name));
+    ModuleFile *OM =
+        (Kind == MK_PrebuiltModule || Kind == MK_ExplicitModule ||
+                 Kind == MK_ImplicitModule
+             ? ModuleMgr.lookupByModuleName(Name)
+             : ModuleMgr.lookupByFileName(ModuleFileName::makeExplicit(Name)));
     if (!OM) {
       std::string Msg = "refers to unknown module, cannot find ";
       Msg.append(std::string(Name));
@@ -5880,7 +5902,7 @@ namespace {
     bool ReadTargetOptions(const TargetOptions &TargetOpts,
                            StringRef ModuleFilename, bool Complain,
                            bool AllowCompatibleDifferences) override {
-      return checkTargetOptions(ExistingTargetOpts, TargetOpts, ModuleFilename,
+      return checkTargetOptions(TargetOpts, ExistingTargetOpts, ModuleFilename,
                                 nullptr, AllowCompatibleDifferences);
     }
 
@@ -9691,6 +9713,27 @@ void ASTReader::ReadWeakUndeclaredIdentifiers(
   WeakUndeclaredIdentifiers.clear();
 }
 
+void ASTReader::ReadExtnameUndeclaredIdentifiers(
+    SmallVectorImpl<std::pair<IdentifierInfo *, AsmLabelAttr *>> &ExtnameIDs) {
+  if (ExtnameUndeclaredIdentifiers.empty())
+    return;
+
+  for (unsigned I = 0, N = ExtnameUndeclaredIdentifiers.size(); I < N; I += 3) {
+    IdentifierInfo *NameId =
+        DecodeIdentifierInfo(ExtnameUndeclaredIdentifiers[I]);
+    IdentifierInfo *ExtnameId =
+        DecodeIdentifierInfo(ExtnameUndeclaredIdentifiers[I+1]);
+    SourceLocation Loc =
+        SourceLocation::getFromRawEncoding(ExtnameUndeclaredIdentifiers[I+2]);
+    AsmLabelAttr *Attr = AsmLabelAttr::CreateImplicit(
+        getContext(), ExtnameId->getName(),
+        AttributeCommonInfo(ExtnameId, SourceRange(Loc),
+                            AttributeCommonInfo::Form::Pragma()));
+    ExtnameIDs.push_back(std::make_pair(NameId, Attr));
+  }
+  ExtnameUndeclaredIdentifiers.clear();
+}
+
 void ASTReader::ReadUsedVTables(SmallVectorImpl<ExternalVTableUse> &VTables) {
   for (unsigned Idx = 0, N = VTableUses.size(); Idx < N; /* In loop */) {
     ExternalVTableUse VT;
@@ -11394,6 +11437,11 @@ OMPClause *OMPClauseReader::readClause() {
     C = OMPSizesClause::CreateEmpty(Context, NumSizes);
     break;
   }
+  case llvm::omp::OMPC_counts: {
+    unsigned NumCounts = Record.readInt();
+    C = OMPCountsClause::CreateEmpty(Context, NumCounts);
+    break;
+  }
   case llvm::omp::OMPC_permutation: {
     unsigned NumLoops = Record.readInt();
     C = OMPPermutationClause::CreateEmpty(Context, NumLoops);
@@ -11803,6 +11851,16 @@ void OMPClauseReader::VisitOMPSimdlenClause(OMPSimdlenClause *C) {
 
 void OMPClauseReader::VisitOMPSizesClause(OMPSizesClause *C) {
   for (Expr *&E : C->getSizesRefs())
+    E = Record.readSubExpr();
+  C->setLParenLoc(Record.readSourceLocation());
+}
+
+void OMPClauseReader::VisitOMPCountsClause(OMPCountsClause *C) {
+  bool HasFill = Record.readBool();
+  if (HasFill)
+    C->setOmpFillIndex(Record.readInt());
+  C->setOmpFillLoc(Record.readSourceLocation());
+  for (Expr *&E : C->getCountsRefs())
     E = Record.readSubExpr();
   C->setLParenLoc(Record.readSourceLocation());
 }

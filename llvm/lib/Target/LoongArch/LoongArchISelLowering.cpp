@@ -8562,13 +8562,14 @@ bool LoongArchTargetLowering::isEligibleForTailCallOptimization(
     return false;
 
   // Do not tail call opt if caller's and callee's byval arguments do not match.
-  for (unsigned i = 0, j = 0; i < Outs.size(); i++) {
+  for (unsigned i = 0, j = 0; i < Outs.size(); ++i) {
     if (!Outs[i].Flags.isByVal())
       continue;
-    if (j++ >= LoongArchFI->getIncomingByValArgsSize())
+    if (j >= LoongArchFI->getIncomingByValArgsSize())
       return false;
-    if (LoongArchFI->getIncomingByValArgs(i).getValueType() != Outs[i].ArgVT)
+    if (LoongArchFI->getIncomingByValArgs(j).getValueType() != Outs[i].ArgVT)
       return false;
+    ++j;
   }
 
   // The callee has to preserve all registers the caller needs to preserve.
@@ -9152,6 +9153,24 @@ EVT LoongArchTargetLowering::getSetCCResultType(const DataLayout &DL,
   if (!VT.isVector())
     return getPointerTy(DL);
   return VT.changeVectorElementTypeToInteger();
+}
+
+bool LoongArchTargetLowering::canMergeStoresTo(
+    unsigned AddressSpace, EVT MemVT, const MachineFunction &MF) const {
+  // Do not merge to float value size (128 or 256 bits) if no implicit
+  // float attribute is set.
+  bool NoFloat = MF.getFunction().hasFnAttribute(Attribute::NoImplicitFloat);
+  unsigned MaxIntSize = Subtarget.is64Bit() ? 64 : 32;
+  if (NoFloat)
+    return MemVT.getSizeInBits() <= MaxIntSize;
+
+  // Make sure we don't merge greater than our maximum supported vector width.
+  if (Subtarget.hasExtLASX())
+    MaxIntSize = 256;
+  else if (Subtarget.hasExtLSX())
+    MaxIntSize = 128;
+
+  return MemVT.getSizeInBits() <= MaxIntSize;
 }
 
 bool LoongArchTargetLowering::hasAndNot(SDValue Y) const {

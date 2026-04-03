@@ -40,6 +40,13 @@ continue
 p &local
 v -T local_float
 
+continue
+
+p &a4_0
+p &a8_0
+v -T varwidth
+v -T varwidth_tier1
+
 #--- checks
 # CHECK:      (lldb) p &f
 # CHECK-NEXT: (float *) [[PTR_F:0x[0-9a-zA-Z]+]]
@@ -121,4 +128,22 @@ v -T local_float
 # CHECK:      (lldb) v -T local_float
 # CHECK-NEXT: (llvm::PointerUnion<Local *, float *>) local_float = {
 # CHECK-NEXT:   (Local *) Pointer = [[PTR_LOCAL]]
+# CHECK-NEXT: }
+
+# CHECK:      (lldb) p &a4_0
+# CHECK-NEXT: (Align4<0> *) [[PTR_A4:0x[0-9a-zA-Z]+]]
+
+# CHECK:      (lldb) p &a8_0
+# CHECK-NEXT: (Align8<0> *) [[PTR_A8:0x[0-9a-zA-Z]+]]
+
+# Variable-width tag encoding: formatter falls back to void* with
+# tag bits stripped, since fixed-width decoding doesn't apply.
+# CHECK:      (lldb) v -T varwidth
+# CHECK-NEXT: (llvm::PointerUnion<Align4<0> *, Align4<1> *, Align4<2> *, Align8<0> *, Align8<1> *>) varwidth = {
+# CHECK-NEXT:   (void *) Pointer = [[PTR_A4]]
+# CHECK-NEXT: }
+
+# CHECK:      (lldb) v -T varwidth_tier1
+# CHECK-NEXT: (llvm::PointerUnion<Align4<0> *, Align4<1> *, Align4<2> *, Align8<0> *, Align8<1> *>) varwidth_tier1 = {
+# CHECK-NEXT:   (void *) Pointer = [[PTR_A8]]
 # CHECK-NEXT: }

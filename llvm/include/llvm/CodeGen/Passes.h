@@ -553,9 +553,6 @@ LLVM_ABI FunctionPass *createReplaceWithVeclibLegacyPass();
 // Expands large div/rem and floating-point instructions.
 LLVM_ABI FunctionPass *createExpandIRInstsPass(CodeGenOptLevel);
 
-// This pass expands memcmp() to load/stores.
-LLVM_ABI FunctionPass *createExpandMemCmpLegacyPass();
-
 /// Creates Break False Dependencies pass. \see BreakFalseDeps.cpp
 LLVM_ABI FunctionPass *createBreakFalseDeps();
 
