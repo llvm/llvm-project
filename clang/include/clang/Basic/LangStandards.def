@@ -38,76 +38,76 @@
 
 // C89-ish modes.
 LANGSTANDARD(c89, "c89",
-             C, "ISO C 1990", 0, std::nullopt)
+             C, "ISO C 1990", C89, std::nullopt)
 LANGSTANDARD_ALIAS(c89, "c90")
 LANGSTANDARD_ALIAS(c89, "iso9899:1990")
 
 LANGSTANDARD(c94, "iso9899:199409",
              C, "ISO C 1990 with amendment 1",
-             Digraphs, 199409)
+             C89 | Digraphs, 199409)
 
 LANGSTANDARD(gnu89, "gnu89",
              C, "ISO C 1990 with GNU extensions",
-             LineComment | Digraphs | GNUMode, std::nullopt)
+             C89 | LineComment | Digraphs | GNUMode, std::nullopt)
 LANGSTANDARD_ALIAS(gnu89, "gnu90")
 
 // C99-ish modes
 LANGSTANDARD(c99, "c99",
              C, "ISO C 1999",
-             LineComment | C99 | Digraphs | HexFloat, 199901)
+             LineComment | C89 | C99 | Digraphs | HexFloat, 199901)
 LANGSTANDARD_ALIAS(c99, "iso9899:1999")
 LANGSTANDARD_ALIAS_DEPR(c99, "c9x")
 LANGSTANDARD_ALIAS_DEPR(c99, "iso9899:199x")
 
 LANGSTANDARD(gnu99, "gnu99",
              C, "ISO C 1999 with GNU extensions",
-             LineComment | C99 | Digraphs | GNUMode | HexFloat, 199901)
+             LineComment | C89 | C99 | Digraphs | GNUMode | HexFloat, 199901)
 LANGSTANDARD_ALIAS_DEPR(gnu99, "gnu9x")
 
 // C11 modes
 LANGSTANDARD(c11, "c11",
              C, "ISO C 2011",
-             LineComment | C99 | C11 | Digraphs | HexFloat, 201112)
+             LineComment | C89 | C99 | C11 | Digraphs | HexFloat, 201112)
 LANGSTANDARD_ALIAS(c11, "iso9899:2011")
 LANGSTANDARD_ALIAS_DEPR(c11, "c1x")
 LANGSTANDARD_ALIAS_DEPR(c11, "iso9899:201x")
 
 LANGSTANDARD(gnu11, "gnu11",
              C, "ISO C 2011 with GNU extensions",
-             LineComment | C99 | C11 | Digraphs | GNUMode | HexFloat, 201112)
+             LineComment | C89 | C99 | C11 | Digraphs | GNUMode | HexFloat, 201112)
 LANGSTANDARD_ALIAS_DEPR(gnu11, "gnu1x")
 
 // C17 modes
 LANGSTANDARD(c17, "c17",
              C, "ISO C 2017",
-             LineComment | C99 | C11 | C17 | Digraphs | HexFloat, 201710)
+             LineComment | C89 | C99 | C11 | C17 | Digraphs | HexFloat, 201710)
 LANGSTANDARD_ALIAS(c17, "iso9899:2017")
 LANGSTANDARD_ALIAS(c17, "c18")
 LANGSTANDARD_ALIAS(c17, "iso9899:2018")
 LANGSTANDARD(gnu17, "gnu17",
              C, "ISO C 2017 with GNU extensions",
-             LineComment | C99 | C11 | C17 | Digraphs | GNUMode | HexFloat, 201710)
+             LineComment | C89 | C99 | C11 | C17 | Digraphs | GNUMode | HexFloat, 201710)
 LANGSTANDARD_ALIAS(gnu17, "gnu18")
 
 // C23 modes
 LANGSTANDARD(c23, "c23",
              C, "ISO C 2023",
-             LineComment | C99 | C11 | C17 | C23 | Digraphs | HexFloat, 202311)
+             LineComment | C89 | C99 | C11 | C17 | C23 | Digraphs | HexFloat, 202311)
 LANGSTANDARD_ALIAS(c23, "iso9899:2024")
 LANGSTANDARD_ALIAS_DEPR(c23, "c2x")
 LANGSTANDARD(gnu23, "gnu23",
              C, "ISO C 2023 with GNU extensions",
-             LineComment | C99 | C11 | C17 | C23 | Digraphs | GNUMode | HexFloat, 202311)
+             LineComment | C89 | C99 | C11 | C17 | C23 | Digraphs | GNUMode | HexFloat, 202311)
 LANGSTANDARD_ALIAS_DEPR(gnu23, "gnu2x")
 
 // C2y modes
 // FIXME: Use correct version code for C2y once published.
 LANGSTANDARD(c2y, "c2y",
              C, "Working Draft for ISO C2y",
-             LineComment | C99 | C11 | C17 | C23 | C2y | Digraphs | HexFloat, 202400)
+             LineComment | C89 | C99 | C11 | C17 | C23 | C2y | Digraphs | HexFloat, 202400)
 LANGSTANDARD(gnu2y, "gnu2y",
              C, "Working Draft for ISO C2y with GNU extensions",
-             LineComment | C99 | C11 | C17 | C23 | C2y | Digraphs | GNUMode | HexFloat, 202400)
+             LineComment | C89 | C99 | C11 | C17 | C23 | C2y | Digraphs | GNUMode | HexFloat, 202400)
 // TODO: Add the iso9899:202y alias once ISO publishes the standard.
 
 // C++ modes
@@ -194,21 +194,21 @@ LANGSTANDARD_ALIAS(gnucxx26, "gnu++26")
 // OpenCL
 LANGSTANDARD(opencl10, "cl1.0",
              OpenCL, "OpenCL 1.0",
-             LineComment | C99 | Digraphs | HexFloat | OpenCL, std::nullopt)
+             LineComment | C89 | C99 | Digraphs | HexFloat | OpenCL, std::nullopt)
 LANGSTANDARD_ALIAS_DEPR(opencl10, "cl")
 
 LANGSTANDARD(opencl11, "cl1.1",
              OpenCL, "OpenCL 1.1",
-             LineComment | C99 | Digraphs | HexFloat | OpenCL, std::nullopt)
+             LineComment | C89 | C99 | Digraphs | HexFloat | OpenCL, std::nullopt)
 LANGSTANDARD(opencl12, "cl1.2",
              OpenCL, "OpenCL 1.2",
-             LineComment | C99 | Digraphs | HexFloat | OpenCL, std::nullopt)
+             LineComment | C89 | C99 | Digraphs | HexFloat | OpenCL, std::nullopt)
 LANGSTANDARD(opencl20, "cl2.0",
              OpenCL, "OpenCL 2.0",
-             LineComment | C99 | Digraphs | HexFloat | OpenCL, std::nullopt)
+             LineComment | C89 | C99 | Digraphs | HexFloat | OpenCL, std::nullopt)
 LANGSTANDARD(opencl30, "cl3.0",
              OpenCL, "OpenCL 3.0",
-             LineComment | C99 | Digraphs | HexFloat | OpenCL, std::nullopt)
+             LineComment | C89 | C99 | Digraphs | HexFloat | OpenCL, std::nullopt)
 
 LANGSTANDARD(openclcpp10, "clc++1.0",
              OpenCL, "C++ for OpenCL 1.0",

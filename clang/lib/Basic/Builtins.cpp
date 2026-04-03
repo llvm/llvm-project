@@ -195,7 +195,7 @@ static bool builtinIsSupported(const llvm::StringTable &Strings,
   if (!LangOpts.C23 && BuiltinInfo.Langs == C23_LANG)
     return false;
   /* C99 unsupported */
-  if (!LangOpts.C99 && BuiltinInfo.Langs == C99_LANG)
+  if (LangOpts.C89 && !LangOpts.C99 && BuiltinInfo.Langs == C99_LANG)
     return false;
   return true;
 }
