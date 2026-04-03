@@ -91,6 +91,86 @@ define i32 @test_no_extractu_0xffff(i32 %x) {
 }
 
 ;===----------------------------------------------------------------------===;
+; cv.extract — signed bitfield extract: (sra (shl x, C1), C2)
+;===----------------------------------------------------------------------===;
+
+; Signed extract 4 bits at offset 4: ((int)(x << 24)) >> 28
+; C1=24, C2=28 → width=4, offset=4
+define i32 @test_extract_4_4(i32 %x) {
+; CHECK-LABEL: test_extract_4_4:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    cv.extract a0, a0, 3, 4
+; CHECK-NEXT:    ret
+  %shl = shl i32 %x, 24
+  %res = ashr i32 %shl, 28
+  ret i32 %res
+}
+
+; Signed extract 8 bits at offset 8: ((int)(x << 16)) >> 24
+; C1=16, C2=24 → width=8, offset=8
+define i32 @test_extract_8_8(i32 %x) {
+; CHECK-LABEL: test_extract_8_8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    cv.extract a0, a0, 7, 8
+; CHECK-NEXT:    ret
+  %shl = shl i32 %x, 16
+  %res = ashr i32 %shl, 24
+  ret i32 %res
+}
+
+; Signed extract 12 bits at offset 4: ((int)(x << 16)) >> 20
+; C1=16, C2=20 → width=12, offset=4
+define i32 @test_extract_12_4(i32 %x) {
+; CHECK-LABEL: test_extract_12_4:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    cv.extract a0, a0, 11, 4
+; CHECK-NEXT:    ret
+  %shl = shl i32 %x, 16
+  %res = ashr i32 %shl, 20
+  ret i32 %res
+}
+
+; Signed extract 1 bit at offset 15 (sign bit of upper halfword):
+; C1=16, C2=31 → width=1, offset=15
+define i32 @test_extract_1_15(i32 %x) {
+; CHECK-LABEL: test_extract_1_15:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    cv.extract a0, a0, 0, 15
+; CHECK-NEXT:    ret
+  %shl = shl i32 %x, 16
+  %res = ashr i32 %shl, 31
+  ret i32 %res
+}
+
+; Excluded: signed extract of low 8 bits (width=8, offset=0) should NOT become
+; cv.extract. Handled by sext_inreg i8 → cv.extbs when xcvalu is enabled, or
+; slli+srai pair otherwise.
+define i32 @test_no_extract_extbs(i32 %x) {
+; CHECK-LABEL: test_no_extract_extbs:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    slli a0, a0, 24
+; CHECK-NEXT:    srai a0, a0, 24
+; CHECK-NEXT:    ret
+  %shl = shl i32 %x, 24
+  %res = ashr i32 %shl, 24
+  ret i32 %res
+}
+
+; Excluded: signed extract of low 16 bits (width=16, offset=0) should NOT
+; become cv.extract. Handled by sext_inreg i16 → cv.exths when xcvalu is
+; enabled, or slli+srai pair otherwise.
+define i32 @test_no_extract_exths(i32 %x) {
+; CHECK-LABEL: test_no_extract_exths:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    slli a0, a0, 16
+; CHECK-NEXT:    srai a0, a0, 16
+; CHECK-NEXT:    ret
+  %shl = shl i32 %x, 16
+  %res = ashr i32 %shl, 16
+  ret i32 %res
+}
+
+;===----------------------------------------------------------------------===;
 ; Realistic embedded bitfield examples
 ;===----------------------------------------------------------------------===;
 
@@ -104,4 +184,16 @@ define i32 @test_read_status_field(i32 %reg) {
   %shr = lshr i32 %reg, 3
   %field = and i32 %shr, 7
   ret i32 %field
+}
+
+; Signed extract of a 10-bit ADC value at bits [2:11]
+; Equivalent to: ((int)(x << 20)) >> 22
+define i32 @test_signed_adc_extract(i32 %reg) {
+; CHECK-LABEL: test_signed_adc_extract:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    cv.extract a0, a0, 9, 2
+; CHECK-NEXT:    ret
+  %shl = shl i32 %reg, 20
+  %res = ashr i32 %shl, 22
+  ret i32 %res
 }

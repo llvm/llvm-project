@@ -1162,6 +1162,64 @@ bool RISCVDAGToDAGISel::tryCVBitManipExtractU(SDNode *Node) {
   return true;
 }
 
+// --------------------------------------------------------------------------
+// cv.extract: signed bitfield extract
+//
+// Matches:
+//   (sra (shl X, C1), C2)
+//   where: width = 32 - C2, offset = C2 - C1
+//          C1 = 32 - width - offset, C2 = 32 - width
+//
+// Emits: CV_EXTRACT rd, rs1, IS3=width-1, IS2=offset
+//        (note: cv.extract semantics is Is3+1 bits, so we encode width-1)
+//
+// Excludes: (sra (shl X, 16), 16) → already sext_inreg i16 → cv.exths
+//           (sra (shl X, 24), 24) → already sext_inreg i8  → cv.extbs
+// --------------------------------------------------------------------------
+bool RISCVDAGToDAGISel::tryCVBitManipExtract(SDNode *Node) {
+  if (!Subtarget->hasVendorXCVbitmanip() || Subtarget->is64Bit())
+    return false;
+
+  assert(Node->getOpcode() == ISD::SRA);
+  SDLoc DL(Node);
+
+  // Check: (sra (shl X, C1), C2)
+  SDValue ShlNode = Node->getOperand(0);
+  if (ShlNode.getOpcode() != ISD::SHL)
+    return false;
+
+  auto *C2Node = dyn_cast<ConstantSDNode>(Node->getOperand(1));
+  auto *C1Node = dyn_cast<ConstantSDNode>(ShlNode.getOperand(1));
+  if (!C2Node || !C1Node)
+    return false;
+
+  unsigned C1 = C1Node->getZExtValue();
+  unsigned C2 = C2Node->getZExtValue();
+
+  // C2 >= C1 required (otherwise offset would be negative)
+  if (C2 < C1 || C2 >= 32 || C1 >= 32)
+    return false;
+
+  unsigned Width = 32 - C2;
+  unsigned Offset = C2 - C1;
+
+  // Skip cases already handled by cv.extbs (width=8, offset=0) and
+  // cv.exths (width=16, offset=0) via sext_inreg patterns
+  if (Offset == 0 && (Width == 8 || Width == 16))
+    return false;
+
+  // Validate ranges
+  if (Width == 0 || Width > 32 || Offset > 31 || (Width + Offset) > 32)
+    return false;
+
+  SDValue Base = ShlNode.getOperand(0);
+  SDValue IS3 = CurDAG->getTargetConstant(Width - 1, DL, MVT::i32);
+  SDValue IS2 = CurDAG->getTargetConstant(Offset, DL, MVT::i32);
+
+  CurDAG->SelectNodeTo(Node, RISCV::CV_EXTRACT, MVT::i32, Base, IS3, IS2);
+  return true;
+}
+
 void RISCVDAGToDAGISel::Select(SDNode *Node) {
   // If we have a custom node, we have already selected.
   if (Node->isMachineOpcode()) {
@@ -1489,6 +1547,9 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     return;
   }
   case ISD::SRA: {
+    if (tryCVBitManipExtract(Node))
+      return;
+
     if (trySignedBitfieldExtract(Node))
       return;
 
