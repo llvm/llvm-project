@@ -49,6 +49,11 @@ protected:
   LLVM_ABI ~GlobalObject();
 
   Comdat *ObjComdat = nullptr;
+
+  friend class Value;
+  /// Index of first metadata attachment in context, or zero.
+  unsigned MetadataIndex = 0;
+
   enum {
     LastAlignmentBit = 5,
     LastCodeModelBit = 8,
