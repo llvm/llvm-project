@@ -221,10 +221,17 @@ void printVisibilityAttr(OpAsmPrinter &printer,
   }
 }
 
-void parseVisibilityAttr(OpAsmParser &parser, cir::VisibilityAttr &visibility) {
+void printVisibilityAttr(OpAsmPrinter &printer, cir::GlobalOp,
+                         cir::VisibilityAttr visibility) {
+  printVisibilityAttr(printer, visibility);
+}
+
+mlir::OptionalParseResult parseVisibilityAttr(OpAsmParser &parser,
+                                              cir::VisibilityAttr &visibility) {
   cir::VisibilityKind visibilityKind =
       parseOptionalCIRKeyword(parser, cir::VisibilityKind::Default);
   visibility = cir::VisibilityAttr::get(parser.getContext(), visibilityKind);
+  return mlir::success();
 }
 
 //===----------------------------------------------------------------------===//
