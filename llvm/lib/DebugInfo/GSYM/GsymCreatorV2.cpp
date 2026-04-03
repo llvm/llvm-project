@@ -16,18 +16,6 @@
 using namespace llvm;
 using namespace gsym;
 
-/// Return the minimum number of bytes (1-8) needed to hold the value.
-static uint8_t bytesRequiredForUnsigned(uint64_t Value) {
-  if (Value == 0)
-    return 1;
-  uint8_t Bytes = 0;
-  while (Value > 0) {
-    ++Bytes;
-    Value >>= 8;
-  }
-  return Bytes;
-}
-
 std::unique_ptr<GsymCreator> GsymCreatorV2::createNew(bool Quiet) const {
   return std::make_unique<GsymCreatorV2>(Quiet);
 }
@@ -41,7 +29,14 @@ uint8_t GsymCreatorV2::getAddressOffsetSize() const {
   const std::optional<uint64_t> LastFuncAddr = getLastFunctionAddress();
   if (BaseAddress && LastFuncAddr) {
     const uint64_t AddrDelta = *LastFuncAddr - *BaseAddress;
-    return bytesRequiredForUnsigned(AddrDelta);
+    // V2 only supports power-of-two sizes (1/2/4/8) for AddrOffSize.
+    if (AddrDelta <= UINT8_MAX)
+      return 1;
+    if (AddrDelta <= UINT16_MAX)
+      return 2;
+    if (AddrDelta <= UINT32_MAX)
+      return 4;
+    return 8;
   }
   return 1;
 }

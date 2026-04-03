@@ -270,7 +270,7 @@ public:
   /// \param Index A index into the address table.
   /// \returns A resolved virtual address for adddress in the address table
   /// or std::nullopt if Index is out of bounds.
-  virtual std::optional<uint64_t> getAddress(size_t Index) const = 0;
+  LLVM_ABI std::optional<uint64_t> getAddress(size_t Index) const;
 
   /// Get an unsigned integer of any byte size 1-8 from a byte array.
   ///
@@ -292,18 +292,75 @@ public:
 protected:
   /// Get an appropriate address info offsets array.
   ///
-  /// The address table in the GSYM file is stored as array of 1-8 byte offsets
-  /// from the base address. The table is stored internally as an array of
-  /// bytes that are in the correct endianness. When we access this table we
-  /// must get an array that matches those sizes. This templatized helper
-  /// function is used when accessing address offsets in the AddrOffsets member
-  /// variable.
+  /// The address table in the GSYM file is stored as array of 1, 2, 4 or 8
+  /// byte offsets from the The gsym::Header::BaseAddress. The table is stored
+  /// internally as a array of bytes that are in the correct endianness. When
+  /// we access this table we must get an array that matches those sizes. This
+  /// templatized helper function is used when accessing address offsets in the
+  /// AddrOffsets member variable.
   ///
   /// \returns An ArrayRef of an appropriate address offset size.
   template <class T> ArrayRef<T>
   getAddrOffsets() const {
     return ArrayRef<T>(reinterpret_cast<const T *>(AddrOffsets.data()),
                        AddrOffsets.size()/sizeof(T));
+  }
+
+  /// Get an appropriate address from the address table.
+  ///
+  /// The address table in the GSYM file is stored as array of 1, 2, 4 or 8
+  /// byte address offsets from the The gsym::Header::BaseAddress. The table is
+  /// stored internally as a array of bytes that are in the correct endianness.
+  /// In order to extract an address from the address table we must access the
+  /// address offset using the correct size and then add it to the BaseAddress
+  /// in the header.
+  ///
+  /// \param Index An index into the AddrOffsets array.
+  /// \returns An virtual address that matches the original object file for the
+  /// address as the specified index, or std::nullopt if Index is out of bounds.
+  template <class T>
+  std::optional<uint64_t> addressForIndex(size_t Index) const {
+    ArrayRef<T> AIO = getAddrOffsets<T>();
+    if (Index < AIO.size())
+      return AIO[Index] + getBaseAddress();
+    return std::nullopt;
+  }
+  /// Lookup an address offset in the AddrOffsets table.
+  ///
+  /// Given an address offset, look it up using a binary search of the
+  /// AddrOffsets table.
+  ///
+  /// \param AddrOffset An address offset, that has already been computed by
+  /// subtracting the gsym::Header::BaseAddress.
+  /// \returns The matching address offset index. This index will be used to
+  /// extract the FunctionInfo data's offset from the AddrInfoOffsets array.
+  template <class T>
+  std::optional<uint64_t>
+  getAddressOffsetIndex(const uint64_t AddrOffset) const {
+    ArrayRef<T> AIO = getAddrOffsets<T>();
+    const auto Begin = AIO.begin();
+    const auto End = AIO.end();
+    auto Iter = std::lower_bound(Begin, End, AddrOffset);
+    // Watch for addresses that fall between the gsym::Header::BaseAddress and
+    // the first address offset.
+    if (Iter == Begin && AddrOffset < *Begin)
+      return std::nullopt;
+    if (Iter == End || AddrOffset < *Iter)
+      --Iter;
+
+    // GSYM files have sorted function infos with the most information (line
+    // table and/or inline info) first in the array of function infos, so
+    // always backup as much as possible as long as the address offset is the
+    // same as the previous entry.
+    while (Iter != Begin) {
+      auto Prev = Iter - 1;
+      if (*Prev == *Iter)
+        Iter = Prev;
+      else
+        break;
+    }
+
+    return std::distance(Begin, Iter);
   }
 
   /// Given an address, find the address index.
@@ -315,7 +372,7 @@ protected:
   /// \returns An index into the address table. This index can be used to
   /// extract the FunctionInfo data's offset from the AddrInfoOffsets array.
   /// Returns an error if the address isn't in the GSYM with details of why.
-  virtual Expected<uint64_t> getAddressIndex(const uint64_t Addr) const = 0;
+  LLVM_ABI Expected<uint64_t> getAddressIndex(const uint64_t Addr) const;
 
   /// Given an address index, get the offset for the FunctionInfo.
   ///

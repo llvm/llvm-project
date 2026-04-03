@@ -156,6 +156,50 @@ GsymReader::copyBuffer(StringRef Bytes) {
   }
 }
 
+std::optional<uint64_t> GsymReader::getAddress(size_t Index) const {
+  switch (getAddressOffsetByteSize()) {
+  case 1:
+    return addressForIndex<uint8_t>(Index);
+  case 2:
+    return addressForIndex<uint16_t>(Index);
+  case 4:
+    return addressForIndex<uint32_t>(Index);
+  case 8:
+    return addressForIndex<uint64_t>(Index);
+  }
+  return std::nullopt;
+}
+
+Expected<uint64_t> GsymReader::getAddressIndex(const uint64_t Addr) const {
+  const uint64_t BaseAddr = getBaseAddress();
+  if (Addr >= BaseAddr) {
+    const uint64_t AddrOffset = Addr - BaseAddr;
+    std::optional<uint64_t> AddrOffsetIndex;
+    switch (getAddressOffsetByteSize()) {
+    case 1:
+      AddrOffsetIndex = getAddressOffsetIndex<uint8_t>(AddrOffset);
+      break;
+    case 2:
+      AddrOffsetIndex = getAddressOffsetIndex<uint16_t>(AddrOffset);
+      break;
+    case 4:
+      AddrOffsetIndex = getAddressOffsetIndex<uint32_t>(AddrOffset);
+      break;
+    case 8:
+      AddrOffsetIndex = getAddressOffsetIndex<uint64_t>(AddrOffset);
+      break;
+    default:
+      return createStringError(std::errc::invalid_argument,
+                               "unsupported address offset size %" PRIu64,
+                               getAddressOffsetByteSize());
+    }
+    if (AddrOffsetIndex)
+      return *AddrOffsetIndex;
+  }
+  return createStringError(std::errc::invalid_argument,
+                           "address 0x%" PRIx64 " is not in GSYM", Addr);
+}
+
 llvm::Expected<DataExtractor>
 GsymReader::getFunctionInfoDataForAddress(uint64_t Addr,
                                           uint64_t &FuncStartAddr) const {
