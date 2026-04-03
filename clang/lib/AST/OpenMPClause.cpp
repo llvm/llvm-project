@@ -15,10 +15,12 @@
 #include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclOpenMP.h"
+#include "clang/AST/Expr.h"
 #include "clang/AST/ExprOpenMP.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/OpenMPKinds.h"
 #include "clang/Basic/TargetInfo.h"
+#include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <algorithm>
@@ -984,6 +986,26 @@ OMPSizesClause *OMPSizesClause::CreateEmpty(const ASTContext &C,
                                             unsigned NumSizes) {
   void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(NumSizes));
   return new (Mem) OMPSizesClause(NumSizes);
+}
+
+OMPCountsClause *OMPCountsClause::Create(
+    const ASTContext &C, SourceLocation StartLoc, SourceLocation LParenLoc,
+    SourceLocation EndLoc, ArrayRef<Expr *> Counts,
+    std::optional<unsigned> FillIdx, SourceLocation FillLoc) {
+  OMPCountsClause *Clause = CreateEmpty(C, Counts.size());
+  Clause->setLocStart(StartLoc);
+  Clause->setLParenLoc(LParenLoc);
+  Clause->setLocEnd(EndLoc);
+  Clause->setCountsRefs(Counts);
+  Clause->setOmpFillIndex(FillIdx);
+  Clause->setOmpFillLoc(FillLoc);
+  return Clause;
+}
+
+OMPCountsClause *OMPCountsClause::CreateEmpty(const ASTContext &C,
+                                              unsigned NumCounts) {
+  void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(NumCounts));
+  return new (Mem) OMPCountsClause(NumCounts);
 }
 
 OMPPermutationClause *OMPPermutationClause::Create(const ASTContext &C,
@@ -1981,6 +2003,19 @@ void OMPClausePrinter::VisitOMPSizesClause(OMPSizesClause *Node) {
     Size->printPretty(OS, nullptr, Policy, 0);
     First = false;
   }
+  OS << ")";
+}
+
+void OMPClausePrinter::VisitOMPCountsClause(OMPCountsClause *Node) {
+  OS << "counts(";
+  std::optional<unsigned> FillIdx = Node->getOmpFillIndex();
+  ArrayRef<Expr *> Refs = Node->getCountsRefs();
+  llvm::interleaveComma(llvm::seq<unsigned>(Refs.size()), OS, [&](unsigned I) {
+    if (FillIdx && I == *FillIdx)
+      OS << "omp_fill";
+    else
+      Refs[I]->printPretty(OS, nullptr, Policy, 0);
+  });
   OS << ")";
 }
 
