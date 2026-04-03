@@ -14,7 +14,8 @@ TEST(LlvmLibcSharedRpcTest, TestIncrement) {
   constexpr uint32_t port_count = 8;
   constexpr uint32_t lane_size = 4;
   alignas(64)
-      uint8_t buffer[::rpc::Server::allocation_size(lane_size, port_count)];
+      uint8_t buffer[::rpc::Server::allocation_size(lane_size, port_count)] = {
+          0};
 
   using ProcAType = ::rpc::Process<false>;
   using ProcBType = ::rpc::Process<true>;
