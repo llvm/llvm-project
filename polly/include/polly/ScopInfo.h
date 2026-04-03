@@ -2490,7 +2490,7 @@ public:
   /// for complex cases without "error handling code" needed on the users side.
   PWACtx getPwAff(const SCEV *E, BasicBlock *BB = nullptr,
                   bool NonNegative = false,
-                  RecordedAssumptionsTy *RecordedAssumptions = nullptr);
+                  RecordedAssumptionsTy *RecordedAssumptions = nullptr, bool IsInsideDomain = true);
 
   /// Compute the isl representation for the SCEV @p E
   ///

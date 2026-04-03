@@ -2036,11 +2036,9 @@ void Scop::intersectDefinedBehavior(isl::set Set, AssumptionSign Sign) {
 
   // Limit the complexity of the context. If complexity is exceeded, simplify
   // the set and check again.
-  if (DefinedBehaviorContext.n_basic_set().release() >
-      MaxDisjunktsInDefinedBehaviourContext) {
+  if (DefinedBehaviorContext.n_basic_set().release() >   MaxDisjunktsInDefinedBehaviourContext) {
     simplify(DefinedBehaviorContext);
-    if (DefinedBehaviorContext.n_basic_set().release() >
-        MaxDisjunktsInDefinedBehaviourContext)
+    if (DefinedBehaviorContext.n_basic_set().release() >   MaxDisjunktsInDefinedBehaviourContext)
       DefinedBehaviorContext = {};
   }
 }
@@ -2169,13 +2167,13 @@ isl::ctx Scop::getIslCtx() const { return IslCtx.get(); }
 
 __isl_give PWACtx Scop::getPwAff(const SCEV *E, BasicBlock *BB,
                                  bool NonNegative,
-                                 RecordedAssumptionsTy *RecordedAssumptions) {
+                                 RecordedAssumptionsTy *RecordedAssumptions, bool IsInsideDomain) {
   // First try to use the SCEVAffinator to generate a piecewise defined
   // affine function from @p E in the context of @p BB. If that tasks becomes to
   // complex the affinator might return a nullptr. In such a case we invalidate
   // the SCoP and return a dummy value. This way we do not need to add error
   // handling code to all users of this function.
-  auto PWAC = Affinator.getPwAff(E, BB, RecordedAssumptions);
+  auto PWAC = Affinator.getPwAff(E, BB, RecordedAssumptions, IsInsideDomain);
   if (!PWAC.first.is_null()) {
     // TODO: We could use a heuristic and either use:
     //         SCEVAffinator::takeNonNegativeAssumption
