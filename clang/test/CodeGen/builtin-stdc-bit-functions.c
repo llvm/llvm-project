@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -ffreestanding -std=c23 %s -emit-llvm -o - | FileCheck %s
 // RUN: %if clang-target-64-bits %{ %clang_cc1 -ffreestanding -std=c23 %s -emit-llvm -o - | FileCheck %s --check-prefix=INT128 %}
-// RUN: %clang_cc1 -ffreestanding -std=c23 -isystem %S/Inputs -DTEST_LIB_SPELLINGS -Wno-implicit-function-declaration %s -emit-llvm -o - | FileCheck %s --check-prefix=LIB
+// RUN: %clang_cc1 -ffreestanding -std=c23 -isystem %S/Inputs -DTEST_LIB_SPELLINGS %s -emit-llvm -o - | FileCheck %s --check-prefix=LIB
 
 // CHECK-LABEL: test_leading_zeros
 // CHECK: call i8 @llvm.ctlz.i8(i8 %{{.*}}, i1 false)
@@ -315,8 +315,6 @@ void test_int128_floor_ceil(unsigned __int128 u128) {
 #endif
 
 #ifdef TEST_LIB_SPELLINGS
-#ifdef __has_include
-#if __has_include(<stdbit.h>)
 #include <stdbit.h>
 
 // LIB-LABEL: test_lib_leading_zeros
@@ -405,6 +403,4 @@ void test_lib_bit_floor(unsigned ui) {
 void test_lib_bit_ceil(unsigned ui) {
   volatile unsigned r = stdc_bit_ceil(ui);
 }
-#endif
-#endif
 #endif
