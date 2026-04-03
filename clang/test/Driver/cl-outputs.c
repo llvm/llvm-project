@@ -313,9 +313,16 @@
 
 // RUN: %clang_cl /c /Fodir/ /clang:-fembed-bitcode -### -- %s 2>&1 | FileCheck -check-prefix=FoNAMEBC %s
 // FoNAMEBC:  "-o" "dir/cl-outputs.bc"
+// FoNAMEBC:  "-o" "dir/cl-outputs.obj"
 
-// RUN: %clang_cl /c /clang:-emit-llvm -### -- %s 2>&1 | FileCheck -check-prefix=FoNAMEBC2 %s
-// FoNAMEBC2:  "-o" "cl-outputs.bc"
+// RUN: %clang_cl /c /clang:-emit-llvm -### -- %s 2>&1 | FileCheck -check-prefix=EMITLLVM %s
+// EMITLLVM:  "-o" "cl-outputs.bc"
 
-// RUN: %clang_cl /c /Fodir/ /clang:-emit-llvm -### -- %s 2>&1 | FileCheck -check-prefix=FoNAMEBC3 %s
-// FoNAMEBC3:  "-o" "dir/cl-outputs.bc"
+// RUN: %clang_cl /c /Fodir/ /clang:-emit-llvm -### -- %s 2>&1 | FileCheck -check-prefix=EMITLLVM_Fo %s
+// EMITLLVM_Fo:  "-o" "dir/cl-outputs.bc"
+
+// RUN: %clang_cl /c /odir/ /clang:-emit-llvm -### -- %s 2>&1 | FileCheck -check-prefix=EMITLLVM_o %s
+// EMITLLVM_o:  "-o" "dir/cl-outputs.bc"
+
+// RUN: %clang_cl /c /omain.bc /clang:-emit-llvm -### -- %s 2>&1 | FileCheck -check-prefix=EMITLLVM_oNAME %s
+// EMITLLVM_oNAME:  "-o" "main.bc"

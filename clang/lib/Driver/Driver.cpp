@@ -6631,8 +6631,13 @@ const char *Driver::GetNamedOutputPath(Compilation &C, const JobAction &JA,
         MakeCLOutputFilename(C.getArgs(), Val, BaseName, types::TY_Object);
   } else if ((JA.getType() == types::TY_LLVM_BC ||
               JA.getType() == types::TY_LLVM_IR) &&
-             IsCLMode() && C.getArgs().hasArg(options::OPT__SLASH_Fo)) {
-    StringRef Val = C.getArgs().getLastArg(options::OPT__SLASH_Fo)->getValue();
+             IsCLMode() &&
+             C.getArgs().hasArg(options::OPT__SLASH_Fo,
+                                options::OPT__SLASH_o)) {
+    StringRef Val =
+        C.getArgs()
+            .getLastArg(options::OPT__SLASH_Fo, options::OPT__SLASH_o)
+            ->getValue();
     NamedOutput =
         MakeCLOutputFilename(C.getArgs(), Val, BaseName, JA.getType());
   } else {
