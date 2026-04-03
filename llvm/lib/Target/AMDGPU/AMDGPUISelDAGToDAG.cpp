@@ -2103,17 +2103,6 @@ bool AMDGPUDAGToDAGISel::SelectGlobalSAddr(SDNode *N, SDValue Addr,
       isa<ConstantSDNode>(Addr))
     return false;
 
-  // On targets with XCNT, avoid placing a pure-uniform address into SADDR
-  // with a zero voffset. When the RA reuses the SGPR pair across multiple
-  // loads (common under high SGPR pressure), SIInsertWaitcnts must serialize
-  // each load with s_wait_xcnt for XNACK replay safety. Falling through to
-  // the VADDR pattern lets addresses stay in VGPRs where the RA naturally
-  // assigns distinct registers, avoiding the hazard entirely.
-  // The add(sgpr, extend(vgpr)) patterns matched above still select SADDR
-  // since those have a stable SGPR base that is not recomputed per load.
-  if (Subtarget->hasWaitXcnt())
-    return false;
-
   // It's cheaper to materialize a single 32-bit zero for vaddr than the two
   // moves required to copy a 64-bit SGPR to VGPR.
   SAddr = Addr;
