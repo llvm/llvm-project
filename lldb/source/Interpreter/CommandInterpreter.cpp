@@ -3173,14 +3173,14 @@ void CommandInterpreter::OutputHelpText(Stream &strm, llvm::StringRef word_text,
 
   uint32_t chars_left = max_columns;
 
-  auto nextChunkLength = [](llvm::StringRef S) {
+  auto next_chunk_length = [](llvm::StringRef S) {
     size_t pos = S.find_first_of(" \n", S.find_first_not_of(' '));
     return pos == llvm::StringRef::npos ? S.size() : pos;
   };
 
   while (!text.empty()) {
     if (text.front() == '\n' ||
-        (text.front() == ' ' && nextChunkLength(text) > chars_left)) {
+        (text.front() == ' ' && next_chunk_length(text) > chars_left)) {
       strm.EOL();
       strm.Indent();
       chars_left = max_columns - indent_size;
