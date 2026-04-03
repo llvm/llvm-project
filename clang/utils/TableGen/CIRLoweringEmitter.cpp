@@ -27,6 +27,9 @@ std::vector<std::string> CXXABILoweringPatternsList;
 std::vector<std::string> CXXABILoweringAttrAlwaysLegal;
 std::vector<std::string> LLVMLoweringPatterns;
 std::vector<std::string> LLVMLoweringPatternsList;
+std::string CIRAttrToValueVisitFunc;
+std::vector<std::string> CIRAttrToValueVisitorCaseTypes;
+std::vector<std::string> CIRAttrToValueVisitorDecls;
 
 struct CustomLoweringCtor {
   struct Param {
@@ -249,63 +252,47 @@ void GenerateCIREnumAttrs(const Record *Record) {
   // they never have an 'illegal' CXXABI type in them.
   CXXABILoweringAttrAlwaysLegal.push_back("cir::" + OpName);
 }
+
+void GenerateAttrToValueVisitor(const Record *Rec) {
+  const Record *DialectRec = Rec->getValueAsDef("dialect");
+  llvm::StringRef Ns = DialectRec->getValueAsString("cppNamespace");
+  Ns.consume_front("::");
+  std::string CppClassRef = Ns.str();
+  CppClassRef += "::";
+  CppClassRef += Rec->getValueAsString("cppClassName");
+
+  std::string CodeBuffer;
+  llvm::raw_string_ostream Code(CodeBuffer);
+  Code << "  mlir::Value visitCirAttr(" << CppClassRef << " attr);";
+  CIRAttrToValueVisitorDecls.push_back(std::move(CodeBuffer));
+  CIRAttrToValueVisitorCaseTypes.push_back(std::move(CppClassRef));
+}
+
+void GenerateAttrToValueVisitFunc() {
+  std::string CodeBuffer;
+  llvm::raw_string_ostream Code(CodeBuffer);
+  Code << "  mlir::Value visit(mlir::Attribute attr) {\n"
+       << "    return llvm::TypeSwitch<mlir::Attribute, mlir::Value>(attr)\n"
+       << "        .Case<\n              "
+       << llvm::join(CIRAttrToValueVisitorCaseTypes, ",\n              ")
+       << ">(\n"
+       << "            [&](auto attrT) { return visitCirAttr(attrT); })\n"
+       << "        .Default([this](mlir::Attribute attr) {\n"
+       << "          mlir::emitError(parentOp->getLoc(), \"unsupported CIR "
+          "attribute in LLVM constant lowering\")\n"
+       << "              << attr;\n"
+       << "          return mlir::Value();\n"
+       << "        });\n"
+       << "  }\n";
+  CIRAttrToValueVisitFunc = std::move(CodeBuffer);
+}
+
 void GenerateCIRAttrs(const Record *Record) {
   std::string OpName = GetOpCppClassName(Record);
   if (!Record->getValueAsBit("canHaveIllegalCXXABIType"))
     CXXABILoweringAttrAlwaysLegal.push_back("cir::" + OpName);
-}
-
-static std::string getCIRAttrCppClassRef(const Record *AttrRecord) {
-  const Record *DialectRec = AttrRecord->getValueAsDef("dialect");
-  llvm::StringRef Ns = DialectRec->getValueAsString("cppNamespace");
-  Ns.consume_front("::");
-  std::string Result = Ns.str();
-  Result += "::";
-  Result += AttrRecord->getValueAsString("cppClassName");
-  return Result;
-}
-
-static void emitCIRAttrToValueVisitor(const llvm::RecordKeeper &RK,
-                                      llvm::raw_ostream &OS) {
-  std::vector<const Record *> Attrs;
-  for (const Record *R : RK.getAllDerivedDefinitions("CIR_Attr")) {
-    if (!R->getValueAsBit("hasAttrToValueLowering"))
-      continue;
-    Attrs.push_back(R);
-  }
-
-  if (Attrs.empty())
-    PrintFatalError("no CIR attributes with hasAttrToValueLowering");
-
-  llvm::sort(Attrs, [](const Record *A, const Record *B) {
-    return getCIRAttrCppClassRef(A) < getCIRAttrCppClassRef(B);
-  });
-
-  OS << "#ifdef GET_CIR_ATTR_TO_VALUE_VISITOR_DECLS\n";
-  OS << "  mlir::Value visit(mlir::Attribute attr) {\n";
-  OS << "    return llvm::TypeSwitch<mlir::Attribute, mlir::Value>(attr)\n";
-  OS << "        .Case<";
-  for (size_t I = 0; I < Attrs.size(); ++I) {
-    if (I != 0)
-      OS << ",";
-    OS << "\n              ";
-    OS << getCIRAttrCppClassRef(Attrs[I]);
-  }
-  OS << ">(\n";
-  OS << "            [&](auto attrT) { return visitCirAttr(attrT); })\n";
-  OS << "        .Default([this](mlir::Attribute attr) {\n";
-  OS << "          mlir::emitError(parentOp->getLoc(), \"unsupported CIR "
-        "attribute in LLVM constant lowering\")\n";
-  OS << "              << attr;\n";
-  OS << "          return mlir::Value();\n";
-  OS << "        });\n";
-  OS << "  }\n\n";
-
-  for (const Record *R : Attrs) {
-    OS << "  mlir::Value visitCirAttr(" << getCIRAttrCppClassRef(R)
-       << " attr);\n";
-  }
-  OS << "#endif // GET_CIR_ATTR_TO_VALUE_VISITOR_DECLS\n\n";
+  if (Record->getValueAsBit("hasAttrToValueLowering"))
+    GenerateAttrToValueVisitor(Record);
 }
 } // namespace
 
@@ -318,8 +305,12 @@ void clang::EmitCIRLowering(const llvm::RecordKeeper &RK,
     GenerateCIREnumAttrs(OpRecord);
   for (const auto *OpRecord : RK.getAllDerivedDefinitions("CIR_Attr"))
     GenerateCIRAttrs(OpRecord);
+  GenerateAttrToValueVisitFunc();
 
-  emitCIRAttrToValueVisitor(RK, OS);
+  OS << "#ifdef GET_CIR_ATTR_TO_VALUE_VISITOR_DECLS\n"
+     << CIRAttrToValueVisitFunc << "\n"
+     << llvm::join(CIRAttrToValueVisitorDecls, "\n") << "\n"
+     << "#endif // GET_CIR_ATTR_TO_VALUE_VISITOR_DECLS\n\n";
 
   OS << "#ifdef GET_ABI_LOWERING_PATTERNS\n"
      << llvm::join(CXXABILoweringPatterns, "\n") << "#endif\n\n";
