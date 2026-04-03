@@ -144,6 +144,11 @@ static cl::opt<unsigned>
 MaxArraySize("instcombine-maxarray-size", cl::init(1024),
              cl::desc("Maximum array size considered when doing a combine"));
 
+static cl::opt<unsigned> MaxAllocSiteRemovableUsers(
+    "instcombine-max-allocsite-removable-users", cl::Hidden, cl::init(2048),
+    cl::desc("Maximum direct users before skipping alloc-site "
+             "removability analysis"));
+
 namespace llvm {
 extern cl::opt<bool> ProfcheckDisableMetadataFixes;
 } // end namespace llvm
@@ -3732,7 +3737,7 @@ static bool isRemovableWrite(CallBase &CB, Value *UsedV,
 }
 
 static std::optional<ModRefInfo>
-isAllocSiteRemovable(Instruction *AI, SmallVectorImpl<WeakTrackingVH> &Users,
+isAllocSiteRemovable(Instruction *AI, SmallVectorImpl<Instruction *> &Users,
                      const TargetLibraryInfo &TLI, bool KnowInit) {
   SmallVector<Instruction*, 4> Worklist;
   const std::optional<StringRef> Family = getAllocationFamily(AI, &TLI);
@@ -3892,6 +3897,11 @@ Instruction *InstCombinerImpl::visitAllocSite(Instruction &MI) {
   // outputs of a program (when we convert a malloc to an alloca, the fact that
   // the allocation is now on the stack is potentially visible, for example),
   // but we believe in a permissible manner.
+  //
+  // Collect into Instruction* first to avoid expensive WeakTrackingVH
+  // register/unregister overhead; convert to WeakTrackingVH only when the
+  // site is actually removable.
+  SmallVector<Instruction *, 64> RawUsers;
   SmallVector<WeakTrackingVH, 64> Users;
 
   // If we are removing an alloca with a dbg.declare, insert dbg.value calls
@@ -3922,8 +3932,25 @@ Instruction *InstCombinerImpl::visitAllocSite(Instruction &MI) {
       F.hasFnAttribute(Attribute::SanitizeAddress))
     KnowInitUndef = false;
 
+  // Skip alloc sites with many direct users -- they are almost never removable
+  // and the transitive user walk in isAllocSiteRemovable is expensive.
+  {
+    unsigned DirectUserCount = 0;
+    for (auto UI = MI.user_begin(), UE = MI.user_end(); UI != UE; ++UI) {
+      if (++DirectUserCount > MaxAllocSiteRemovableUsers)
+        break;
+    }
+    if (DirectUserCount > MaxAllocSiteRemovableUsers)
+      return nullptr;
+  }
+
   auto Removable =
-      isAllocSiteRemovable(&MI, Users, TLI, KnowInitZero | KnowInitUndef);
+      isAllocSiteRemovable(&MI, RawUsers, TLI, KnowInitZero | KnowInitUndef);
+  if (Removable) {
+    Users.reserve(RawUsers.size());
+    for (Instruction *I : RawUsers)
+      Users.emplace_back(I);
+  }
   if (Removable) {
     for (WeakTrackingVH &User : Users) {
       // Lowering all @llvm.objectsize and MTI calls first because they may use
