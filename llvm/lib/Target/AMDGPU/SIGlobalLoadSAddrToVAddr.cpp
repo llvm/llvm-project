@@ -17,6 +17,7 @@
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIInstrInfo.h"
+#include "SIMachineFunctionInfo.h"
 #include "SIRegisterInfo.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -40,12 +41,15 @@ static cl::opt<unsigned> SAddrToVAddrWindow(
     cl::desc("Instruction window to scan for saddr redefinition"), cl::init(4),
     cl::Hidden);
 
-static bool isEnabled() {
+static cl::opt<unsigned> SAddrToVAddrKillGroupSize(
+    "amdgpu-global-load-saddr-to-vaddr-kill-group-size",
+    cl::desc("Max converted loads per KILL group (0 = single KILL per block)"),
+    cl::init(16), cl::Hidden);
+
+static bool isEnabled(const GCNSubtarget &ST) {
   if (EnableSAddrToVAddr.getNumOccurrences())
     return EnableSAddrToVAddr;
-  if (const char *Env = std::getenv("AMDGPU_GLOBAL_LOAD_SADDR_TO_VADDR"))
-    return StringRef(Env) != "0";
-  return false;
+  return ST.hasWaitXcnt();
 }
 
 namespace {
@@ -54,6 +58,7 @@ class SIGlobalLoadSAddrToVAddr {
   const SIInstrInfo *TII = nullptr;
   const SIRegisterInfo *TRI = nullptr;
   MachineRegisterInfo *MRI = nullptr;
+  unsigned MaxAddrVGPRsPerBB = 0;
 
   bool convertToVAddr(MachineInstr &MI, MachineBasicBlock &MBB,
                       Register &NewAddrReg);
@@ -70,7 +75,8 @@ public:
   SIGlobalLoadSAddrToVAddrLegacy() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override {
-    if (!isEnabled())
+    const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+    if (!isEnabled(ST))
       return false;
     SIGlobalLoadSAddrToVAddr Impl;
     return Impl.run(MF);
@@ -99,7 +105,8 @@ char &llvm::SIGlobalLoadSAddrToVAddrLegacyID =
 PreservedAnalyses
 SIGlobalLoadSAddrToVAddrPass::run(MachineFunction &MF,
                                   MachineFunctionAnalysisManager &MFAM) {
-  if (!isEnabled())
+  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+  if (!isEnabled(ST))
     return PreservedAnalyses::all();
   SIGlobalLoadSAddrToVAddr Impl;
   if (!Impl.run(MF))
@@ -221,11 +228,37 @@ bool SIGlobalLoadSAddrToVAddr::run(MachineFunction &MF) {
   TRI = ST.getRegisterInfo();
   MRI = &MF.getRegInfo();
 
+  const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
+  unsigned Occupancy = MFI->getOccupancy();
+  unsigned MaxVGPRs = ST.getMaxNumVGPRs(MF);
+
+  // Reserve at most a quarter of the VGPR budget for converted address
+  // registers. Each conversion creates one vreg_64 kept live to the
+  // group's KILL, so the cost is 2 VGPRs per conversion.
+  MaxAddrVGPRsPerBB = MaxVGPRs / 4;
+
+  LLVM_DEBUG(dbgs() << "SAddrToVAddr: occupancy=" << Occupancy
+                    << " maxVGPRs=" << MaxVGPRs
+                    << " addrBudget=" << MaxAddrVGPRsPerBB << " VGPRs\n");
+
   bool Changed = false;
 
   for (MachineBasicBlock &MBB : MF) {
-    SmallVector<Register, 32> AddrRegs;
-    MachineInstr *LastConverted = nullptr;
+    SmallVector<Register, 8> GroupRegs;
+    MachineInstr *GroupLast = nullptr;
+    unsigned TotalAddrVGPRs = 0;
+
+    auto FlushGroup = [&]() {
+      if (GroupLast && GroupRegs.size() > 1) {
+        auto InsertPt = std::next(GroupLast->getIterator());
+        auto KillMI = BuildMI(MBB, InsertPt, GroupLast->getDebugLoc(),
+                              TII->get(TargetOpcode::KILL));
+        for (Register R : GroupRegs)
+          KillMI.addReg(R);
+      }
+      GroupRegs.clear();
+      GroupLast = nullptr;
+    };
 
     for (auto MII = MBB.begin(), MIE = MBB.end(); MII != MIE; ++MII) {
       MachineInstr &MI = *MII;
@@ -248,26 +281,27 @@ bool SIGlobalLoadSAddrToVAddr::run(MachineFunction &MF) {
       if (!sAddrRedefinedInWindow(MI, SAddr.getReg()))
         continue;
 
-      LLVM_DEBUG(dbgs() << "SAddr redef in window: " << MI);
+      // Stop converting in this BB if we would exceed the VGPR budget.
+      if (TotalAddrVGPRs + 2 > MaxAddrVGPRsPerBB) {
+        LLVM_DEBUG(dbgs() << "  Skipping (VGPR budget exhausted): " << MI);
+        continue;
+      }
+
+      LLVM_DEBUG(dbgs() << "  SAddr redef in window: " << MI);
       Register NewAddr;
       if (convertToVAddr(MI, MBB, NewAddr)) {
-        AddrRegs.push_back(NewAddr);
-        LastConverted = &MI;
+        GroupRegs.push_back(NewAddr);
+        GroupLast = &MI;
+        TotalAddrVGPRs += 2;
         Changed = true;
+
+        if (SAddrToVAddrKillGroupSize > 0 &&
+            GroupRegs.size() >= SAddrToVAddrKillGroupSize)
+          FlushGroup();
       }
     }
 
-    // Insert KILL after the last converted load to extend the live ranges of
-    // all address VGPRs. This prevents the register allocator from reusing
-    // the same physical registers, which would introduce WAR hazards and
-    // require s_wait_xcnt between consecutive loads.
-    if (LastConverted && AddrRegs.size() > 1) {
-      auto InsertPt = std::next(LastConverted->getIterator());
-      auto KillMI = BuildMI(MBB, InsertPt, LastConverted->getDebugLoc(),
-                            TII->get(TargetOpcode::KILL));
-      for (Register R : AddrRegs)
-        KillMI.addReg(R);
-    }
+    FlushGroup();
   }
 
   return Changed;

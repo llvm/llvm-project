@@ -1,6 +1,6 @@
-# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 -run-pass=si-global-load-saddr-to-vaddr -amdgpu-global-load-saddr-to-vaddr=1 -o - %s | FileCheck -check-prefix=CONVERT %s
-# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 -run-pass=si-global-load-saddr-to-vaddr -o - %s | FileCheck -check-prefix=DISABLED %s
-# RUN: env AMDGPU_GLOBAL_LOAD_SADDR_TO_VADDR=1 llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 -run-pass=si-global-load-saddr-to-vaddr -o - %s | FileCheck -check-prefix=CONVERT %s
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 -run-pass=si-global-load-saddr-to-vaddr -o - %s | FileCheck -check-prefix=CONVERT %s
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 -run-pass=si-global-load-saddr-to-vaddr -amdgpu-global-load-saddr-to-vaddr=0 -o - %s | FileCheck -check-prefix=DISABLED %s
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 -run-pass=si-global-load-saddr-to-vaddr -o - %s | FileCheck -check-prefix=DISABLED %s
 
 # Test: Basic conversion - saddr redefined 1 instruction after load
 ---
