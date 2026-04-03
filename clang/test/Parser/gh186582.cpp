@@ -1,7 +1,6 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s
-a(   ::template operator // expected-error 2 {{expected a type}} \
-                         // expected-error {{a type specifier is required for all declarations}} \
-                         // expected-error {{expected ';' after top level declarator}}
+// RUN: %clang_cc1 -fsyntax-only -std=c++23 -verify %s
 
-
-
+a(   ::template operator; 
+// expected-error@3 {{expected a type}}
+// expected-error@3 {{a type specifier is required for all declarations}}
+// expected-error@3 {{expected unqualified-id}}
