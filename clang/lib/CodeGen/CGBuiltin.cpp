@@ -2642,6 +2642,62 @@ static RValue EmitHipStdParUnsupportedBuiltin(CodeGenFunction *CGF,
   return RValue::get(CGF->Builder.CreateCall(UBF, Args));
 }
 
+// stdc_{leading,trailing}_{zeros,ones} and stdc_count_ones: counts bits using
+// ctlz, cttz, or ctpop (IsPop). InvertArg flips the input to count the
+// opposite bit value.
+RValue CodeGenFunction::emitStdcCountIntrinsic(const CallExpr *E,
+                                               Intrinsic::ID IntID,
+                                               bool InvertArg, bool IsPop) {
+  Value *ArgValue = EmitScalarExpr(E->getArg(0));
+  llvm::Type *ArgType = ArgValue->getType();
+  llvm::Type *ResultType = ConvertType(E->getType());
+  Value *ActualArg = InvertArg ? Builder.CreateNot(ArgValue) : ArgValue;
+  Function *F = CGM.getIntrinsic(IntID, ArgType);
+  Value *Result = IsPop ? Builder.CreateCall(F, ActualArg)
+                        : Builder.CreateCall(F, {ActualArg, Builder.getFalse()});
+  if (Result->getType() != ResultType)
+    Result = Builder.CreateIntCast(Result, ResultType, false);
+  return RValue::get(Result);
+}
+
+// stdc_count_zeros (BitWidth - ctpop) and stdc_bit_width (BitWidth - ctlz).
+// IsPop selects ctpop; otherwise ctlz is used.
+RValue CodeGenFunction::emitStdcBitWidthMinus(const CallExpr *E,
+                                              Intrinsic::ID IntID, bool IsPop) {
+  Value *ArgValue = EmitScalarExpr(E->getArg(0));
+  llvm::Type *ArgType = ArgValue->getType();
+  llvm::Type *ResultType = ConvertType(E->getType());
+  unsigned BitWidth = ArgType->getIntegerBitWidth();
+  Function *F = CGM.getIntrinsic(IntID, ArgType);
+  Value *Cnt = IsPop ? Builder.CreateCall(F, ArgValue)
+                     : Builder.CreateCall(F, {ArgValue, Builder.getFalse()});
+  Value *Result = Builder.CreateSub(ConstantInt::get(ArgType, BitWidth), Cnt);
+  if (Result->getType() != ResultType)
+    Result = Builder.CreateIntCast(Result, ResultType, false);
+  return RValue::get(Result);
+}
+
+// stdc_first_{leading,trailing}_{zero,one}: returns the 1-based position of
+// the first matching bit, or 0 if no such bit exists. InvertArg flips the
+// input to search for zeros instead of ones.
+RValue CodeGenFunction::emitStdcFirstBit(const CallExpr *E,
+                                         Intrinsic::ID IntID, bool InvertArg) {
+  Value *ArgValue = EmitScalarExpr(E->getArg(0));
+  llvm::Type *ArgType = ArgValue->getType();
+  llvm::Type *ResultType = ConvertType(E->getType());
+  Value *Zero = ConstantInt::get(ArgType, 0);
+  Value *One = ConstantInt::get(ArgType, 1);
+  Value *ActualArg = InvertArg ? Builder.CreateNot(ArgValue) : ArgValue;
+  Function *F = CGM.getIntrinsic(IntID, ArgType);
+  Value *Cnt = Builder.CreateCall(F, {ActualArg, Builder.getFalse()});
+  Value *Tmp = Builder.CreateAdd(Cnt, One);
+  Value *IsZero = Builder.CreateICmpEQ(ActualArg, Zero);
+  Value *Result = Builder.CreateSelect(IsZero, Zero, Tmp);
+  if (Result->getType() != ResultType)
+    Result = Builder.CreateIntCast(Result, ResultType, false);
+  return RValue::get(Result);
+}
+
 RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
                                         const CallExpr *E,
                                         ReturnValueSlot ReturnValue) {
@@ -3734,144 +3790,36 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     return emitRotate(E, true);
 
   case Builtin::BIstdc_leading_zeros:
-  case Builtin::BI__builtin_stdc_leading_zeros: {
-    Value *ArgValue = EmitScalarExpr(E->getArg(0));
-    llvm::Type *ArgType = ArgValue->getType();
-    llvm::Type *ResultType = ConvertType(E->getType());
-    Function *F = CGM.getIntrinsic(Intrinsic::ctlz, ArgType);
-    Value *Result = Builder.CreateCall(F, {ArgValue, Builder.getFalse()});
-    if (Result->getType() != ResultType)
-      Result = Builder.CreateIntCast(Result, ResultType, false);
-    return RValue::get(Result);
-  }
+  case Builtin::BI__builtin_stdc_leading_zeros:
+    return emitStdcCountIntrinsic(E, Intrinsic::ctlz, /*InvertArg=*/false);
   case Builtin::BIstdc_leading_ones:
-  case Builtin::BI__builtin_stdc_leading_ones: {
-    Value *ArgValue = EmitScalarExpr(E->getArg(0));
-    llvm::Type *ArgType = ArgValue->getType();
-    llvm::Type *ResultType = ConvertType(E->getType());
-    Function *F = CGM.getIntrinsic(Intrinsic::ctlz, ArgType);
-    Value *Result = Builder.CreateCall(
-        F, {Builder.CreateNot(ArgValue), Builder.getFalse()});
-    if (Result->getType() != ResultType)
-      Result = Builder.CreateIntCast(Result, ResultType, false);
-    return RValue::get(Result);
-  }
+  case Builtin::BI__builtin_stdc_leading_ones:
+    return emitStdcCountIntrinsic(E, Intrinsic::ctlz, /*InvertArg=*/true);
   case Builtin::BIstdc_trailing_zeros:
-  case Builtin::BI__builtin_stdc_trailing_zeros: {
-    Value *ArgValue = EmitScalarExpr(E->getArg(0));
-    llvm::Type *ArgType = ArgValue->getType();
-    llvm::Type *ResultType = ConvertType(E->getType());
-    Function *F = CGM.getIntrinsic(Intrinsic::cttz, ArgType);
-    Value *Result = Builder.CreateCall(F, {ArgValue, Builder.getFalse()});
-    if (Result->getType() != ResultType)
-      Result = Builder.CreateIntCast(Result, ResultType, false);
-    return RValue::get(Result);
-  }
+  case Builtin::BI__builtin_stdc_trailing_zeros:
+    return emitStdcCountIntrinsic(E, Intrinsic::cttz, /*InvertArg=*/false);
   case Builtin::BIstdc_trailing_ones:
-  case Builtin::BI__builtin_stdc_trailing_ones: {
-    Value *ArgValue = EmitScalarExpr(E->getArg(0));
-    llvm::Type *ArgType = ArgValue->getType();
-    llvm::Type *ResultType = ConvertType(E->getType());
-    Function *F = CGM.getIntrinsic(Intrinsic::cttz, ArgType);
-    Value *Result = Builder.CreateCall(
-        F, {Builder.CreateNot(ArgValue), Builder.getFalse()});
-    if (Result->getType() != ResultType)
-      Result = Builder.CreateIntCast(Result, ResultType, false);
-    return RValue::get(Result);
-  }
+  case Builtin::BI__builtin_stdc_trailing_ones:
+    return emitStdcCountIntrinsic(E, Intrinsic::cttz, /*InvertArg=*/true);
   case Builtin::BIstdc_first_leading_zero:
-  case Builtin::BI__builtin_stdc_first_leading_zero: {
-    Value *ArgValue = EmitScalarExpr(E->getArg(0));
-    llvm::Type *ArgType = ArgValue->getType();
-    llvm::Type *ResultType = ConvertType(E->getType());
-    Value *Zero = ConstantInt::get(ArgType, 0);
-    Value *One = ConstantInt::get(ArgType, 1);
-    Function *F = CGM.getIntrinsic(Intrinsic::ctlz, ArgType);
-    Value *Cnt = Builder.CreateCall(
-        F, {Builder.CreateNot(ArgValue), Builder.getFalse()});
-    Value *Tmp = Builder.CreateAdd(Cnt, One);
-    Value *IsAllOnes =
-        Builder.CreateICmpEQ(ArgValue, Constant::getAllOnesValue(ArgType));
-    Value *Result = Builder.CreateSelect(IsAllOnes, Zero, Tmp);
-    if (Result->getType() != ResultType)
-      Result = Builder.CreateIntCast(Result, ResultType, false);
-    return RValue::get(Result);
-  }
+  case Builtin::BI__builtin_stdc_first_leading_zero:
+    return emitStdcFirstBit(E, Intrinsic::ctlz, /*InvertArg=*/true);
   case Builtin::BIstdc_first_leading_one:
-  case Builtin::BI__builtin_stdc_first_leading_one: {
-    Value *ArgValue = EmitScalarExpr(E->getArg(0));
-    llvm::Type *ArgType = ArgValue->getType();
-    llvm::Type *ResultType = ConvertType(E->getType());
-    Value *Zero = ConstantInt::get(ArgType, 0);
-    Value *One = ConstantInt::get(ArgType, 1);
-    Function *F = CGM.getIntrinsic(Intrinsic::ctlz, ArgType);
-    Value *Cnt = Builder.CreateCall(F, {ArgValue, Builder.getFalse()});
-    Value *Tmp = Builder.CreateAdd(Cnt, One);
-    Value *IsZero = Builder.CreateICmpEQ(ArgValue, Zero);
-    Value *Result = Builder.CreateSelect(IsZero, Zero, Tmp);
-    if (Result->getType() != ResultType)
-      Result = Builder.CreateIntCast(Result, ResultType, false);
-    return RValue::get(Result);
-  }
+  case Builtin::BI__builtin_stdc_first_leading_one:
+    return emitStdcFirstBit(E, Intrinsic::ctlz, /*InvertArg=*/false);
   case Builtin::BIstdc_first_trailing_zero:
-  case Builtin::BI__builtin_stdc_first_trailing_zero: {
-    Value *ArgValue = EmitScalarExpr(E->getArg(0));
-    llvm::Type *ArgType = ArgValue->getType();
-    llvm::Type *ResultType = ConvertType(E->getType());
-    Value *Zero = ConstantInt::get(ArgType, 0);
-    Value *One = ConstantInt::get(ArgType, 1);
-    Function *F = CGM.getIntrinsic(Intrinsic::cttz, ArgType);
-    Value *Cnt = Builder.CreateCall(
-        F, {Builder.CreateNot(ArgValue), Builder.getFalse()});
-    Value *Tmp = Builder.CreateAdd(Cnt, One);
-    Value *IsAllOnes =
-        Builder.CreateICmpEQ(ArgValue, Constant::getAllOnesValue(ArgType));
-    Value *Result = Builder.CreateSelect(IsAllOnes, Zero, Tmp);
-    if (Result->getType() != ResultType)
-      Result = Builder.CreateIntCast(Result, ResultType, false);
-    return RValue::get(Result);
-  }
+  case Builtin::BI__builtin_stdc_first_trailing_zero:
+    return emitStdcFirstBit(E, Intrinsic::cttz, /*InvertArg=*/true);
   case Builtin::BIstdc_first_trailing_one:
-  case Builtin::BI__builtin_stdc_first_trailing_one: {
-    Value *ArgValue = EmitScalarExpr(E->getArg(0));
-    llvm::Type *ArgType = ArgValue->getType();
-    llvm::Type *ResultType = ConvertType(E->getType());
-    Value *Zero = ConstantInt::get(ArgType, 0);
-    Value *One = ConstantInt::get(ArgType, 1);
-    Function *F = CGM.getIntrinsic(Intrinsic::cttz, ArgType);
-    Value *Cnt = Builder.CreateCall(F, {ArgValue, Builder.getFalse()});
-    Value *Tmp = Builder.CreateAdd(Cnt, One);
-    Value *IsZero = Builder.CreateICmpEQ(ArgValue, Zero);
-    Value *Result = Builder.CreateSelect(IsZero, Zero, Tmp);
-    if (Result->getType() != ResultType)
-      Result = Builder.CreateIntCast(Result, ResultType, false);
-    return RValue::get(Result);
-  }
+  case Builtin::BI__builtin_stdc_first_trailing_one:
+    return emitStdcFirstBit(E, Intrinsic::cttz, /*InvertArg=*/false);
   case Builtin::BIstdc_count_zeros:
-  case Builtin::BI__builtin_stdc_count_zeros: {
-    Value *ArgValue = EmitScalarExpr(E->getArg(0));
-    llvm::Type *ArgType = ArgValue->getType();
-    llvm::Type *ResultType = ConvertType(E->getType());
-    unsigned BitWidth = ArgType->getIntegerBitWidth();
-    Function *F = CGM.getIntrinsic(Intrinsic::ctpop, ArgType);
-    Value *PopCnt = Builder.CreateCall(F, ArgValue);
-    Value *Result =
-        Builder.CreateSub(ConstantInt::get(ArgType, BitWidth), PopCnt);
-    if (Result->getType() != ResultType)
-      Result = Builder.CreateIntCast(Result, ResultType, false);
-    return RValue::get(Result);
-  }
+  case Builtin::BI__builtin_stdc_count_zeros:
+    return emitStdcBitWidthMinus(E, Intrinsic::ctpop, /*IsPop=*/true);
   case Builtin::BIstdc_count_ones:
-  case Builtin::BI__builtin_stdc_count_ones: {
-    Value *ArgValue = EmitScalarExpr(E->getArg(0));
-    llvm::Type *ArgType = ArgValue->getType();
-    llvm::Type *ResultType = ConvertType(E->getType());
-    Function *F = CGM.getIntrinsic(Intrinsic::ctpop, ArgType);
-    Value *Result = Builder.CreateCall(F, ArgValue);
-    if (Result->getType() != ResultType)
-      Result = Builder.CreateIntCast(Result, ResultType, false);
-    return RValue::get(Result);
-  }
+  case Builtin::BI__builtin_stdc_count_ones:
+    return emitStdcCountIntrinsic(E, Intrinsic::ctpop, /*InvertArg=*/false,
+                                  /*IsPop=*/true);
   case Builtin::BIstdc_has_single_bit:
   case Builtin::BI__builtin_stdc_has_single_bit: {
     Value *ArgValue = EmitScalarExpr(E->getArg(0));
@@ -3882,18 +3830,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     return RValue::get(Builder.CreateICmpEQ(PopCnt, One));
   }
   case Builtin::BIstdc_bit_width:
-  case Builtin::BI__builtin_stdc_bit_width: {
-    Value *ArgValue = EmitScalarExpr(E->getArg(0));
-    llvm::Type *ArgType = ArgValue->getType();
-    llvm::Type *ResultType = ConvertType(E->getType());
-    unsigned BitWidth = ArgType->getIntegerBitWidth();
-    Function *F = CGM.getIntrinsic(Intrinsic::ctlz, ArgType);
-    Value *LZ = Builder.CreateCall(F, {ArgValue, Builder.getFalse()});
-    Value *Result = Builder.CreateSub(ConstantInt::get(ArgType, BitWidth), LZ);
-    if (Result->getType() != ResultType)
-      Result = Builder.CreateIntCast(Result, ResultType, false);
-    return RValue::get(Result);
-  }
+  case Builtin::BI__builtin_stdc_bit_width:
+    return emitStdcBitWidthMinus(E, Intrinsic::ctlz, /*IsPop=*/false);
   case Builtin::BIstdc_bit_floor:
   case Builtin::BI__builtin_stdc_bit_floor: {
     Value *ArgValue = EmitScalarExpr(E->getArg(0));

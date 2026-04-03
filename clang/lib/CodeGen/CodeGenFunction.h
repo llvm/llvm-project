@@ -4769,6 +4769,13 @@ public:
 
   RValue emitRotate(const CallExpr *E, bool IsRotateRight);
 
+  RValue emitStdcCountIntrinsic(const CallExpr *E, llvm::Intrinsic::ID IntID,
+                                bool InvertArg, bool IsPop = false);
+  RValue emitStdcBitWidthMinus(const CallExpr *E, llvm::Intrinsic::ID IntID,
+                               bool IsPop);
+  RValue emitStdcFirstBit(const CallExpr *E, llvm::Intrinsic::ID IntID,
+                          bool InvertArg);
+
   /// Emit IR for __builtin_os_log_format.
   RValue emitBuiltinOSLogFormat(const CallExpr &E);
 
