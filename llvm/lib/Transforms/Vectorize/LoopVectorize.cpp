@@ -4360,6 +4360,13 @@ VectorizationFactor LoopVectorizationPlanner::selectEpilogueVectorizationFactor(
   }
 
   if (EpilogueVectorizationForceVF > 1) {
+    if (EpilogueVectorizationForceVF >=
+        IC * estimateElementCount(MainLoopVF, CM.getVScaleForTuning())) {
+      LLVM_DEBUG(dbgs() << "LEV: Forced epilogue VF results in dead epilogue "
+                           "vector loop, skipping vectorizing epilogue.\n");
+      return Result;
+    }
+
     LLVM_DEBUG(dbgs() << "LEV: Epilogue vectorization factor is forced.\n");
     ElementCount ForcedEC = ElementCount::getFixed(EpilogueVectorizationForceVF);
     if (hasPlanWithVF(ForcedEC))
@@ -6767,6 +6774,14 @@ void LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
       CM.collectInLoopReductions();
       if (CM.selectUserVectorizationFactor(UserVF)) {
         LLVM_DEBUG(dbgs() << "LV: Using user VF " << UserVF << ".\n");
+        ElementCount EpilogueVF =
+            ElementCount::getFixed(EpilogueVectorizationForceVF);
+        if (EpilogueVectorizationForceVF > 1 &&
+            ElementCount::isKnownLT(EpilogueVF, UserVF)) {
+          // Build a separate plan for the forced epilogue VF.
+          CM.collectNonVectorizedAndSetWideningDecisions(EpilogueVF);
+          buildVPlansWithVPRecipes(EpilogueVF, EpilogueVF);
+        }
         buildVPlansWithVPRecipes(UserVF, UserVF);
         LLVM_DEBUG(printPlans(dbgs()));
         return;
@@ -7152,10 +7167,19 @@ VectorizationFactor LoopVectorizationPlanner::computeBestVF() {
   if (VPlans.empty())
     return VectorizationFactor::Disabled();
   // If there is a single VPlan with a single VF, return it directly.
-  VPlan &FirstPlan = *VPlans[0];
-  if (VPlans.size() == 1 && size(FirstPlan.vectorFactors()) == 1)
-    return {*FirstPlan.vectorFactors().begin(), 0, 0};
+  if (VPlans.size() == 1 && size(VPlans[0]->vectorFactors()) == 1)
+    return {*VPlans[0]->vectorFactors().begin(), 0, 0};
 
+  ElementCount UserVF = Hints.getWidth();
+  if (EpilogueVectorizationForceVF > 1 && UserVF && hasPlanWithVF(UserVF)) {
+    [[maybe_unused]] ElementCount EpilogueVF =
+        ElementCount::getFixed(EpilogueVectorizationForceVF);
+    assert(*VPlans[0]->vectorFactors().begin() == EpilogueVF &&
+           "expected first plan to be for the forced epilogue VF");
+    return {UserVF, 0, 0};
+  }
+
+  ElementCount ScalarVF = ElementCount::getFixed(1);
   LLVM_DEBUG(dbgs() << "LV: Computing best VF using cost kind: "
                     << (CM.CostKind == TTI::TCK_RecipThroughput
                             ? "Reciprocal Throughput\n"
@@ -7166,7 +7190,6 @@ VectorizationFactor LoopVectorizationPlanner::computeBestVF() {
                             ? "Code Size and Latency\n"
                             : "Unknown\n"));
 
-  ElementCount ScalarVF = ElementCount::getFixed(1);
   assert(hasPlanWithVF(ScalarVF) &&
          "More than a single plan/VF w/o any plan having scalar VF");
 
