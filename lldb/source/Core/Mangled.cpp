@@ -567,6 +567,6 @@ ConstString Mangled::GetBaseName() const {
     return {};
 
   const auto &range = demangled_info->BasenameRange;
-  return ConstString(demangled_name.GetStringRef().substr(
-      range.first, range.second - range.first));
+  return ConstString(
+      demangled_name.GetStringRef().slice(range.first, range.second));
 }
