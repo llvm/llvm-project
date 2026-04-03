@@ -210,8 +210,8 @@ AnyValue Library::executePrintf([[maybe_unused]] StringRef Name,
     case 'X':
     case 'c': {
       std::string HostFmt = CleanChunk + "ll" + Specifier;
-      OS << format(HostFmt.c_str(),
-                   static_cast<unsigned long long>(Arg.asInteger().getZExtValue()));
+      OS << format(HostFmt.c_str(), static_cast<unsigned long long>(
+                                        Arg.asInteger().getZExtValue()));
       break;
     }
     case 'f':
@@ -225,9 +225,10 @@ AnyValue Library::executePrintf([[maybe_unused]] StringRef Name,
     }
     case 'p': {
       std::string HostFmt = CleanChunk + "llx";
-      OS << "0x" << format(HostFmt.c_str(),
-                           static_cast<unsigned long long>(
-                               Arg.asPointer().address().getZExtValue()));
+      OS << "0x"
+         << format(HostFmt.c_str(),
+                   static_cast<unsigned long long>(
+                       Arg.asPointer().address().getZExtValue()));
       break;
     }
     case 's': {
