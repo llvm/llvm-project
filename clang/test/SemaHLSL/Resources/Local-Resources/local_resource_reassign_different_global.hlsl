@@ -4,6 +4,8 @@
 // DXC compiles this without any diagnostics (even with -Wall).
 // Clang emits -Whlsl-explicit-binding warnings for reassignment
 // to a different global; DXC does not.
+//
+// DXC: passes (both sema and codegen).
 
 RWByteAddressBuffer gBuf0 : register(u0);
 RWByteAddressBuffer gBuf1 : register(u1);

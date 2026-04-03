@@ -3,6 +3,8 @@
 
 // expected-no-diagnostics
 
+// DXC: passes (both sema and codegen).
+
 RWByteAddressBuffer Pass_ReturnLocal_Uninitialized()
 {
     RWByteAddressBuffer buf;

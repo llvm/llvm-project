@@ -3,6 +3,8 @@
 
 // expected-no-diagnostics
 
+// DXC: passes (both sema and codegen).
+
 RWByteAddressBuffer gBufArray[4] : register(u10);
 
 uint Pass_Loop(uint idx)

@@ -3,6 +3,8 @@
 
 // expected-no-diagnostics
 
+// DXC: passes (both sema and codegen).
+
 RWByteAddressBuffer gBuf1 : register(u1);
 
 uint Pass_Level2(RWByteAddressBuffer buf, uint idx)

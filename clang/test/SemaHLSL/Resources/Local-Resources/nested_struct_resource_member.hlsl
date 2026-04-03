@@ -3,6 +3,8 @@
 
 // expected-no-diagnostics
 
+// DXC: passes (both sema and codegen).
+
 RWByteAddressBuffer gBuf1 : register(u1);
 
 struct NestedInner { RWByteAddressBuffer buf; };
