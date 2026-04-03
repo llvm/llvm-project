@@ -859,6 +859,21 @@ gpu.func @convert_layout_removed_when_compatible() {
 }
 
 // -----
+gpu.module @xevm_module {
+// CHECK-LABEL: gpu.func @convert_layout_scalar
+// CHECK-NOT: xegpu.convert_layout
+gpu.func @convert_layout_scalar() {
+  %0 = "some_op"() : () -> f32
+  %1 = xegpu.convert_layout %0
+    <{input_layout = #xegpu.slice<#xegpu.layout<lane_layout = [16], lane_data = [1]>, dims = [0]>,
+    target_layout = #xegpu.slice<#xegpu.layout<lane_layout = [16], lane_data = [1]>, dims = [0]>}>
+    : f32
+  "some_use"(%1) : (f32) -> ()
+  gpu.return
+}
+}
+
+// -----
 // load_matrix and store_matrix with coordinate computation (offsets [0,0])
 gpu.module @xevm_module {
 // CHECK-LABEL: gpu.func @load_store_matrix_1
