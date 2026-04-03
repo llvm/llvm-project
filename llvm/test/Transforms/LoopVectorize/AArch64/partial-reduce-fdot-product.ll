@@ -956,8 +956,8 @@ define double @ext_fmul_half_to_double(i64 %n, ptr %a, i8 %b) #2 {
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <2 x double> [ <double 0.000000e+00, double -0.000000e+00>, %[[VECTOR_PH]] ], [ [[PARTIAL_REDUCE:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi <2 x double> [ splat (double -0.000000e+00), %[[VECTOR_PH]] ], [ [[PARTIAL_REDUCE3:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <8 x double> [ <double 0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>, %[[VECTOR_PH]] ], [ [[TMP9:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi <8 x double> [ splat (double -0.000000e+00), %[[VECTOR_PH]] ], [ [[TMP10:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr half, ptr [[A]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr half, ptr [[TMP1]], i64 8
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x half>, ptr [[TMP1]], align 2
@@ -967,15 +967,15 @@ define double @ext_fmul_half_to_double(i64 %n, ptr %a, i8 %b) #2 {
 ; CHECK-NEXT:    [[TMP5:%.*]] = fmul reassoc contract <8 x float> [[TMP3]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = fmul reassoc contract <8 x float> [[TMP4]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = fpext <8 x float> [[TMP5]] to <8 x double>
-; CHECK-NEXT:    [[PARTIAL_REDUCE]] = call reassoc contract <2 x double> @llvm.vector.partial.reduce.fadd.v2f64.v8f64(<2 x double> [[VEC_PHI]], <8 x double> [[TMP7]])
 ; CHECK-NEXT:    [[TMP8:%.*]] = fpext <8 x float> [[TMP6]] to <8 x double>
-; CHECK-NEXT:    [[PARTIAL_REDUCE3]] = call reassoc contract <2 x double> @llvm.vector.partial.reduce.fadd.v2f64.v8f64(<2 x double> [[VEC_PHI1]], <8 x double> [[TMP8]])
+; CHECK-NEXT:    [[TMP9]] = fadd reassoc contract <8 x double> [[VEC_PHI]], [[TMP7]]
+; CHECK-NEXT:    [[TMP10]] = fadd reassoc contract <8 x double> [[VEC_PHI1]], [[TMP8]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP11]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP30:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[BIN_RDX:%.*]] = fadd reassoc contract <2 x double> [[PARTIAL_REDUCE3]], [[PARTIAL_REDUCE]]
-; CHECK-NEXT:    [[TMP10:%.*]] = call reassoc contract double @llvm.vector.reduce.fadd.v2f64(double -0.000000e+00, <2 x double> [[BIN_RDX]])
+; CHECK-NEXT:    [[BIN_RDX:%.*]] = fadd reassoc contract <8 x double> [[TMP10]], [[TMP9]]
+; CHECK-NEXT:    [[TMP12:%.*]] = call reassoc contract double @llvm.vector.reduce.fadd.v8f64(double -0.000000e+00, <8 x double> [[BIN_RDX]])
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], [[EXIT:label %.*]], label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:

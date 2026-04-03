@@ -150,7 +150,7 @@ static void BM_BitcodeReader_Scale(benchmark::State &State) {
   ClangDocBitcodeWriter Writer(Stream, Diags);
   for (int i = 0; i < NumRecords; ++i) {
     RecordInfo RI;
-    RI.Name = "Record" + std::to_string(i);
+    RI.Name = internString("Record" + std::to_string(i));
     RI.USR = {(uint8_t)(i & 0xFF)};
     Writer.emitBlock(RI);
   }
@@ -180,7 +180,6 @@ static void BM_JSONGenerator_Scale(benchmark::State &State) {
     llvm::consumeError(G.takeError());
     return;
   }
-
   int NumRecords = State.range(0);
   auto NI = allocatePtr<NamespaceInfo>();
   NI->Name = "GlobalNamespace";
@@ -218,10 +217,10 @@ static void BM_Index_Insertion(benchmark::State &State) {
     Index Idx;
     for (int i = 0; i < State.range(0); ++i) {
       RecordInfo I;
-      I.Name = "Record" + std::to_string(i);
+      I.Name = internString("Record" + std::to_string(i));
       // Vary USR to ensure unique entries
       I.USR = {(uint8_t)(i & 0xFF), (uint8_t)((i >> 8) & 0xFF)};
-      I.Path = "path/to/record";
+      I.Path = internString("path/to/record");
       Generator::addInfoToIndex(Idx, &I);
     }
     benchmark::DoNotOptimize(Idx);

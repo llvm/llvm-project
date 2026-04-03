@@ -762,6 +762,10 @@ def CIR_RecordType : CIR_Type<"Record", "record", [
     // a conflict in RecordStorage because two types will have the same hash.
     void removeABIConversionNamePrefix();
 
+    bool isSized() const {
+      return isComplete();
+    }
+
   private:
 
     static constexpr char abi_conversion_prefix[] = "__post_abi_";

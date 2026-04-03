@@ -551,3 +551,39 @@ entry:
   %conv = fptosi float %ret to i32
   ret i32 %conv
 }
+
+define i32 @signbits_sitofp_fptosi_roundtrip(i32 %x) {
+; CHECK-LABEL: @signbits_sitofp_fptosi_roundtrip(
+; CHECK-NEXT:    [[M:%.*]] = ashr i32 [[X:%.*]], 7
+; CHECK-NEXT:    ret i32 [[M]]
+;
+  %m = ashr i32 %x, 7
+  %f = sitofp i32 %m to float
+  %r = fptosi float %f to i32
+  ret i32 %r
+}
+
+define <4 x i32> @signbits_sitofp_fptosi_roundtrip_vec(<4 x i32> %x) {
+; CHECK-LABEL: @signbits_sitofp_fptosi_roundtrip_vec(
+; CHECK-NEXT:    [[M:%.*]] = ashr <4 x i32> [[X:%.*]], splat (i32 7)
+; CHECK-NEXT:    ret <4 x i32> [[M]]
+;
+  %m = ashr <4 x i32> %x, splat (i32 7)
+  %f = sitofp <4 x i32> %m to <4 x float>
+  %r = fptosi <4 x float> %f to <4 x i32>
+  ret <4 x i32> %r
+}
+
+; Negative: 26 significant bits, 25 mantissa > 24.
+define i32 @signbits_sitofp_fptosi_roundtrip_neg(i32 %x) {
+; CHECK-LABEL: @signbits_sitofp_fptosi_roundtrip_neg(
+; CHECK-NEXT:    [[M:%.*]] = ashr i32 [[X:%.*]], 6
+; CHECK-NEXT:    [[F:%.*]] = sitofp i32 [[M]] to float
+; CHECK-NEXT:    [[R:%.*]] = fptosi float [[F]] to i32
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %m = ashr i32 %x, 6
+  %f = sitofp i32 %m to float
+  %r = fptosi float %f to i32
+  ret i32 %r
+}

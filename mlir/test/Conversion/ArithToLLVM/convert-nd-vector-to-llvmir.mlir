@@ -237,12 +237,9 @@ func.func @index_cast_2d(%arg0: vector<1x2x3xi1>) {
   // CHECK: %[[SEXT2:.*]] = llvm.sext %[[EXTRACT2]] : vector<3xi1> to vector<3xi{{.*}}>
   // CHECK: %[[INSERT2:.*]] = llvm.insertvalue %[[SEXT2]], %[[INSERT1]][0, 1] : !llvm.array<1 x array<2 x vector<3xi{{.*}}>>>
   %0 = arith.index_cast %arg0: vector<1x2x3xi1> to vector<1x2x3xindex>
-  // CHECK: %[[EXTRACT3:.*]] = llvm.extractvalue %[[INSERT2]][0, 0] : !llvm.array<1 x array<2 x vector<3xi{{.*}}>>>
-  // CHECK: %[[TRUNC1:.*]] = llvm.trunc %[[EXTRACT3]] : vector<3xi{{.*}}> to vector<3xi1>
-  // CHECK: %[[INSERT3:.*]] = llvm.insertvalue %[[TRUNC1]], %{{.*}}[0, 0] : !llvm.array<1 x array<2 x vector<3xi1>>>
-  // CHECK: %[[EXTRACT4:.*]] = llvm.extractvalue %[[INSERT2]][0, 1] : !llvm.array<1 x array<2 x vector<3xi{{.*}}>>>
-  // CHECK: %[[TRUNC2:.*]] = llvm.trunc %[[EXTRACT4]] : vector<3xi{{.*}}> to vector<3xi1>
-  // CHECK: %[[INSERT4:.*]] = llvm.insertvalue %[[TRUNC2]], %[[INSERT3]][0, 1] : !llvm.array<1 x array<2 x vector<3xi1>>>
+  // The back-cast folds away: index_cast(index_cast(x:i1):index):i1 -> x
+  // because index (64-bit) is wider than i1, so the round-trip is lossless.
+  // CHECK-NOT: llvm.trunc
   %1 = arith.index_cast %0: vector<1x2x3xindex> to vector<1x2x3xi1>
   return
 }

@@ -13,6 +13,7 @@
 
 #include <ctime>
 #include <memory>
+#include <sys/types.h>
 #include <system_error>
 
 namespace llvm {

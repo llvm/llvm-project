@@ -65,8 +65,8 @@ define amdgpu_kernel void @sat_pk4_i4_i8_f32_s(i32 inreg %src, ptr %out) #1 {
 ; SDAG-REAL16:       ; %bb.0:
 ; SDAG-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; SDAG-REAL16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8 nv
-; SDAG-REAL16-NEXT:    v_sat_pk4_i4_i8_e32 v0.l, s8
 ; SDAG-REAL16-NEXT:    v_mov_b32_e32 v1, 0
+; SDAG-REAL16-NEXT:    v_sat_pk4_i4_i8_e32 v0.l, s8
 ; SDAG-REAL16-NEXT:    s_wait_kmcnt 0x0
 ; SDAG-REAL16-NEXT:    flat_store_b16 v1, v0, s[0:1]
 ; SDAG-REAL16-NEXT:    s_endpgm
@@ -114,8 +114,8 @@ define amdgpu_kernel void @sat_pk4_i4_i8_f32_i(ptr %out) #1 {
 ; SDAG-REAL16:       ; %bb.0:
 ; SDAG-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; SDAG-REAL16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
-; SDAG-REAL16-NEXT:    v_sat_pk4_i4_i8_e32 v0.l, 0x64
 ; SDAG-REAL16-NEXT:    v_mov_b32_e32 v1, 0
+; SDAG-REAL16-NEXT:    v_sat_pk4_i4_i8_e32 v0.l, 0x64
 ; SDAG-REAL16-NEXT:    s_wait_kmcnt 0x0
 ; SDAG-REAL16-NEXT:    flat_store_b16 v1, v0, s[0:1]
 ; SDAG-REAL16-NEXT:    s_endpgm
@@ -212,8 +212,8 @@ define amdgpu_kernel void @sat_pk4_u4_u8_f32_s(i32 inreg %src, ptr %out) #1 {
 ; SDAG-REAL16:       ; %bb.0:
 ; SDAG-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; SDAG-REAL16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8 nv
-; SDAG-REAL16-NEXT:    v_sat_pk4_u4_u8_e32 v0.l, s8
 ; SDAG-REAL16-NEXT:    v_mov_b32_e32 v1, 0
+; SDAG-REAL16-NEXT:    v_sat_pk4_u4_u8_e32 v0.l, s8
 ; SDAG-REAL16-NEXT:    s_wait_kmcnt 0x0
 ; SDAG-REAL16-NEXT:    flat_store_b16 v1, v0, s[0:1]
 ; SDAG-REAL16-NEXT:    s_endpgm
@@ -261,8 +261,8 @@ define amdgpu_kernel void @sat_pk4_u4_u8_f32_i(ptr %out) #1 {
 ; SDAG-REAL16:       ; %bb.0:
 ; SDAG-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; SDAG-REAL16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
-; SDAG-REAL16-NEXT:    v_sat_pk4_u4_u8_e32 v0.l, 0x64
 ; SDAG-REAL16-NEXT:    v_mov_b32_e32 v1, 0
+; SDAG-REAL16-NEXT:    v_sat_pk4_u4_u8_e32 v0.l, 0x64
 ; SDAG-REAL16-NEXT:    s_wait_kmcnt 0x0
 ; SDAG-REAL16-NEXT:    flat_store_b16 v1, v0, s[0:1]
 ; SDAG-REAL16-NEXT:    s_endpgm

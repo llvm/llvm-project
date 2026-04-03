@@ -157,6 +157,8 @@ Status Platform::GetFileWithUUID(const FileSpec &platform_file,
   return Status();
 }
 
+bool Platform::IsSymbolFileTrusted(Module &module) { return false; }
+
 llvm::SmallDenseMap<FileSpec, LoadScriptFromSymFile>
 Platform::LocateExecutableScriptingResourcesFromSafePaths(
     Stream &feedback_stream, FileSpec module_spec, const Target &target) {
@@ -1896,7 +1898,7 @@ uint32_t Platform::LoadImage(lldb_private::Process *process,
     // Only local file was specified. Install it to the current working
     // directory.
     FileSpec target_file = GetWorkingDirectory();
-    target_file.AppendPathComponent(local_file.GetFilename().AsCString());
+    target_file.AppendPathComponent(local_file.GetFilename());
     if (IsRemote() || local_file != target_file) {
       error = Install(local_file, target_file);
       if (error.Fail())

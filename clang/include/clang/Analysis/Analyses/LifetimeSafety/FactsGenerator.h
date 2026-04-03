@@ -64,6 +64,8 @@ private:
 
   void handleAssignment(const Expr *LHSExpr, const Expr *RHSExpr);
 
+  void handlePointerArithmetic(const BinaryOperator *BO);
+
   void handleCXXCtorInitializer(const CXXCtorInitializer *CII);
 
   void handleLifetimeEnds(const CFGLifetimeEnds &LifetimeEnds);

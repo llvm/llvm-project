@@ -7,9 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "TestUtils.h"
+#include "clang-c/BuildSystem.h"
 #include "clang-c/Index.h"
 #include "clang-c/Rewrite.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Chrono.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
@@ -354,6 +356,70 @@ TEST(libclang, ModuleMapDescriptor) {
   EXPECT_STREQ(Contents, BufStr.c_str());
   clang_free(BufPtr);
   clang_ModuleMapDescriptor_dispose(MMD);
+}
+
+TEST(libclang, ModuleCache_prune) {
+  llvm::SmallString<256> CacheDir;
+  ASSERT_FALSE(
+      llvm::sys::fs::createUniqueDirectory("libclang-module-cache", CacheDir));
+
+  auto writeFile = [](const llvm::Twine &Path, llvm::StringRef Content = "") {
+    std::error_code EC;
+    llvm::raw_fd_ostream OS(Path.str(), EC);
+    ASSERT_FALSE(EC);
+    OS << Content;
+  };
+
+  auto setOldAccessTime = [](const llvm::Twine &Path) {
+    int FD;
+    std::error_code EC = llvm::sys::fs::openFileForReadWrite(
+        Path, FD, llvm::sys::fs::CD_OpenExisting, llvm::sys::fs::OF_None);
+    ASSERT_FALSE(EC);
+    // Set the access time to be old enough to get pruned.
+    time_t OldTime = time(nullptr) - 86400;
+    EC = llvm::sys::fs::setLastAccessAndModificationTime(
+        FD, llvm::sys::toTimePoint(OldTime));
+    ASSERT_FALSE(EC);
+    ::close(FD);
+  };
+
+  // Create a subdirectory with a .pcm file and a .timestamp file.
+  llvm::SmallString<256> SubDir(CacheDir);
+  llvm::sys::path::append(SubDir, "ABCDEF");
+  ASSERT_FALSE(llvm::sys::fs::create_directory(SubDir));
+
+  llvm::SmallString<256> PCMFile(SubDir);
+  llvm::sys::path::append(PCMFile, "Foo.pcm");
+  writeFile(PCMFile, "fake pcm");
+
+  // Also create a .pcm file in the root of the cache directory.
+  llvm::SmallString<256> RootPCMFile(CacheDir);
+  llvm::sys::path::append(RootPCMFile, "Bar.pcm");
+  writeFile(RootPCMFile, "fake pcm");
+
+  setOldAccessTime(PCMFile);
+  setOldAccessTime(RootPCMFile);
+
+  // Create the modules.timestamp file with an old modification time so the
+  // prune interval check passes.
+  llvm::SmallString<256> ModulesTimestamp(CacheDir);
+  llvm::sys::path::append(ModulesTimestamp, "modules.timestamp");
+  writeFile(ModulesTimestamp);
+  setOldAccessTime(ModulesTimestamp);
+
+  // Verify the files exist before pruning.
+  EXPECT_TRUE(llvm::sys::fs::exists(PCMFile));
+  EXPECT_TRUE(llvm::sys::fs::exists(RootPCMFile));
+
+  clang_ModuleCache_prune(CacheDir.c_str(), /*PruneInterval=*/1,
+                          /*PruneAfter=*/1);
+
+  // The old .pcm files should have been removed from both the subdirectory
+  // and the root.
+  EXPECT_FALSE(llvm::sys::fs::exists(PCMFile));
+  EXPECT_FALSE(llvm::sys::fs::exists(RootPCMFile));
+
+  llvm::sys::fs::remove_directories(CacheDir);
 }
 
 TEST_F(LibclangParseTest, GlobalOptions) {

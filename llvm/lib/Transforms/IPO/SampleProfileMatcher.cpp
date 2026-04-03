@@ -424,7 +424,7 @@ void SampleProfileMatcher::runOnFunction(Function &F) {
 
   // The matching result will be saved to IRToProfileLocationMap, create a
   // new map for each function.
-  auto &IRToProfileLocationMap = getIRToProfileLocationMap(F);
+  auto &IRToProfileLocationMap = getIRToProfileLocationMap(*FSForMatching);
   runStaleProfileMatching(F, IRAnchors, ProfileAnchors, IRToProfileLocationMap,
                           RunCFGMatching, RunCGMatching);
   // Find and update callsite match states after matching.

@@ -1006,9 +1006,8 @@ struct SharedModuleListInfo {
   SharedModuleList module_list;
   ModuleListProperties module_list_properties;
 };
-}
-static SharedModuleListInfo &GetSharedModuleListInfo()
-{
+} // namespace
+static SharedModuleListInfo &GetSharedModuleListInfo() {
   static SharedModuleListInfo *g_shared_module_list_info = nullptr;
   static llvm::once_flag g_once_flag;
   llvm::call_once(g_once_flag, []() {
@@ -1141,9 +1140,8 @@ ModuleList::GetSharedModule(const ModuleSpec &module_spec, ModuleSP &module_sp,
     if (uuid_ptr && *uuid_ptr != module_sp->GetUUID()) {
       module_sp.reset();
     } else {
-      if (module_sp->GetObjectFile() &&
-          module_sp->GetObjectFile()->GetType() ==
-              ObjectFile::eTypeStubLibrary) {
+      if (module_sp->GetObjectFile() && module_sp->GetObjectFile()->GetType() ==
+                                            ObjectFile::eTypeStubLibrary) {
         module_sp.reset();
       } else {
         if (did_create_ptr) {
@@ -1332,6 +1330,95 @@ bool ModuleList::RemoveSharedModuleIfOrphaned(const ModuleWP module_wp) {
   return GetSharedModuleList().RemoveIfOrphaned(module_wp);
 }
 
+static bool LoadScriptingModule(const FileSpec &scripting_fspec,
+                                ScriptInterpreter &script_interpreter,
+                                Target &target, Status &error) {
+  assert(scripting_fspec);
+
+  StreamString scripting_stream;
+  scripting_fspec.Dump(scripting_stream.AsRawOstream());
+  LoadScriptOptions options;
+  return script_interpreter.LoadScriptingModule(
+      scripting_stream.GetData(), options, error,
+      /*module_sp*/ nullptr, /*extra_path*/ {}, target.shared_from_this());
+}
+
+bool ModuleList::LoadScriptingResourceInTargetForModule(Module &module,
+                                                        Target &target,
+                                                        Status &error) {
+  Log *log = GetLog(LLDBLog::Modules);
+
+  Debugger &debugger = target.GetDebugger();
+  const ScriptLanguage script_language = debugger.GetScriptLanguage();
+  if (script_language == eScriptLanguageNone)
+    return true;
+
+  ScriptInterpreter *script_interpreter = debugger.GetScriptInterpreter();
+  if (!script_interpreter) {
+    error = Status::FromErrorString("invalid ScriptInterpreter");
+    return false;
+  }
+
+  PlatformSP platform_sp = target.GetPlatform();
+  if (!platform_sp) {
+    error = Status::FromErrorString("invalid Platform");
+    return false;
+  }
+
+  StreamString feedback_stream;
+  llvm::SmallDenseMap<FileSpec, LoadScriptFromSymFile> file_specs =
+      platform_sp->LocateExecutableScriptingResources(&target, module,
+                                                      feedback_stream);
+
+  if (!feedback_stream.Empty())
+    debugger.ReportWarning(feedback_stream.GetString().str(), debugger.GetID());
+
+  for (const auto &[scripting_fspec, load_style] : file_specs) {
+    if (!FileSystem::Instance().Exists(scripting_fspec))
+      continue;
+
+    switch (load_style) {
+    case eLoadScriptFromSymFileFalse:
+      continue;
+    case eLoadScriptFromSymFileTrue:
+      break;
+    case eLoadScriptFromSymFileTrusted:
+      if (!platform_sp->IsSymbolFileTrusted(module))
+        continue;
+      break;
+    case eLoadScriptFromSymFileWarn:
+      debugger.ReportWarning(
+          llvm::formatv(
+              // clang-format off
+R"('{0}' contains a debug script. To run this script in this debug session:
+
+    command script import "{1}"
+
+To run all discovered debug scripts in this session:
+
+    settings set target.load-script-from-symbol-file true
+)",
+              // clang-format on
+              module.GetFileSpec().GetFileNameStrippingExtension(),
+              scripting_fspec.GetPath()),
+          debugger.GetID());
+
+      return false;
+    }
+
+    LLDB_LOG(log, "Auto-loading {0}", scripting_fspec.GetPath());
+
+    if (!LoadScriptingModule(scripting_fspec, *script_interpreter, target,
+                             error)) {
+      LLDB_LOG(log, "Failed to load '{0}'. Remaining scripts won't be loaded.",
+               scripting_fspec.GetPath());
+      return false;
+    }
+  }
+
+  return true;
+}
+
 bool ModuleList::LoadScriptingResourcesInTarget(Target *target,
                                                 std::list<Status> &errors,
                                                 bool continue_on_error) {
@@ -1347,7 +1434,7 @@ bool ModuleList::LoadScriptingResourcesInTarget(Target *target,
   for (auto module : tmp_module_list.ModulesNoLocking()) {
     if (module) {
       Status error;
-      if (!module->LoadScriptingResourceInTarget(target, error)) {
+      if (!LoadScriptingResourceInTargetForModule(*module, *target, error)) {
         if (error.Fail() && error.AsCString()) {
           error = Status::FromErrorStringWithFormat(
               "unable to load scripting data for "
@@ -1389,7 +1476,6 @@ bool ModuleList::AnyOf(
 
   return false;
 }
-
 
 void ModuleList::Swap(ModuleList &other) {
   // scoped_lock locks both mutexes at once.

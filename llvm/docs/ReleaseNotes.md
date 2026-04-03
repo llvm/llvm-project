@@ -244,6 +244,8 @@ Changes to LLDB
 * ``SBTarget::GetDataByteSize()``, ``SBTarget::GetCodeByteSize()``, and ``SBSection::GetTargetByteSize()``
   have been deprecated. They always return 1, as before.
 * A new ``webinspector-wasm`` platform was added to list and attach to WebAssebly processes in Safari.
+* The default for `load-script-from-symbol-file` was changed from `warn` to `trusted`. This means that scripts from
+  code signed dSYM bundles are now loaded automatically, while untrusted bundles continue to produce a warning.
 
 ### FreeBSD
 
@@ -256,7 +258,7 @@ Changes to LLDB
 #### Kernel Debugging
 
 * The plugin that analyzes FreeBSD kernel core dump and live core has been renamed from `freebsd-kernel` to
- `freebsd-kernel-core`. Remote kernel debugging is still handled by the `gdb-remote` plugin. 
+ `freebsd-kernel-core`. Remote kernel debugging is still handled by the `gdb-remote` plugin.
 * Support for libfbsdvmcore has been removed. As a result, FreeBSD kernel dump debugging is now only
   available on FreeBSD hosts. Live kernel debugging through the GDB remote protocol is still available
   from any platform.

@@ -65,16 +65,6 @@ cir::FuncType CIRGenTypes::getFunctionType(const CIRGenFunctionInfo &info) {
                             info.isVariadic());
 }
 
-cir::FuncType CIRGenTypes::getFunctionTypeForVTable(GlobalDecl gd) {
-  const CXXMethodDecl *md = cast<CXXMethodDecl>(gd.getDecl());
-  const FunctionProtoType *fpt = md->getType()->getAs<FunctionProtoType>();
-
-  if (!isFuncTypeConvertible(fpt))
-    cgm.errorNYI("getFunctionTypeForVTable: non-convertible function type");
-
-  return getFunctionType(gd);
-}
-
 CIRGenCallee CIRGenCallee::prepareConcreteCallee(CIRGenFunction &cgf) const {
   if (isVirtual()) {
     const CallExpr *ce = getVirtualCallExpr();

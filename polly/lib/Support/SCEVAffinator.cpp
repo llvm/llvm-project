@@ -178,7 +178,7 @@ bool SCEVAffinator::hasNSWAddRecForLoop(Loop *L) const {
       continue;
     if (AddRec->getLoop() != L)
       continue;
-    if (AddRec->getNoWrapFlags() & SCEV::FlagNSW)
+    if (AddRec->hasNoSignedWrap())
       return true;
   }
 
@@ -189,7 +189,7 @@ bool SCEVAffinator::computeModuloForExpr(const SCEV *Expr) {
   unsigned Width = TD.getTypeSizeInBits(Expr->getType());
   // We assume nsw expressions never overflow.
   if (auto *NAry = dyn_cast<SCEVNAryExpr>(Expr))
-    if (NAry->getNoWrapFlags() & SCEV::FlagNSW)
+    if (NAry->hasNoSignedWrap())
       return false;
   return Width <= MaxSmallBitWidth;
 }

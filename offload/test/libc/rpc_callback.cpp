@@ -132,7 +132,7 @@ int sum_array(const int *arr, int n) {
 //===------------------------------------------------------------------------===
 
 template <uint32_t NUM_LANES>
-rpc::Status handleOpcodesImpl(rpc::Server::Port &Port) {
+rpc::RPCStatus handleOpcodesImpl(rpc::Server::Port &Port) {
   switch (Port.get_opcode()) {
   case FOO_OPCODE:
     rpc::invoke<NUM_LANES>(Port, foo);

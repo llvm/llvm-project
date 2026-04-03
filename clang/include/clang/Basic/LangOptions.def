@@ -160,7 +160,6 @@ ENUM_LANGOPT(CompilingModule, CompilingModuleKind, 3, CMK_None, Benign,
              "compiling a module interface")
 LANGOPT(CompilingPCH, 1, 0, Benign, "building a pch")
 LANGOPT(BuildingPCHWithObjectFile, 1, 0, Benign, "building a pch which has a corresponding object file")
-LANGOPT(CacheGeneratedPCH, 1, 0, Benign, "cache generated PCH files in memory")
 LANGOPT(PCHInstantiateTemplates, 1, 0, Benign, "instantiate templates while building a PCH")
 LANGOPT(ModulesDeclUse    , 1, 0, Compatible, "require declaration of module uses")
 LANGOPT(ModulesSearchAll  , 1, 1, Benign, "searching even non-imported modules to find unresolved references")

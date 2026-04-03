@@ -5806,6 +5806,31 @@ SDValue AMDGPUTargetLowering::PerformDAGCombine(SDNode *N,
   return SDValue();
 }
 
+bool AMDGPUTargetLowering::SimplifyDemandedBitsForTargetNode(
+    SDValue Op, const APInt &OriginalDemandedBits,
+    const APInt &OriginalDemandedElts, KnownBits &Known, TargetLoweringOpt &TLO,
+    unsigned Depth) const {
+  switch (Op.getOpcode()) {
+  case ISD::INTRINSIC_WO_CHAIN: {
+    switch (Op.getConstantOperandVal(0)) {
+    case Intrinsic::amdgcn_readfirstlane: {
+      if (SimplifyDemandedBits(Op.getOperand(1), OriginalDemandedBits,
+                               OriginalDemandedElts, Known, TLO, Depth + 1))
+        return true;
+      break;
+    }
+    default:
+      break;
+    }
+    break;
+  }
+  default:
+    break;
+  }
+
+  return false;
+}
+
 //===----------------------------------------------------------------------===//
 // Helper functions
 //===----------------------------------------------------------------------===//

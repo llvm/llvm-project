@@ -1373,14 +1373,13 @@ define i8 @pow2_trunc_vec(i8 %x8, <4 x i32> %a, ptr %p) {
 ; CHECK-NEXT:    movdqa {{.*#+}} xmm1 = [0,4294967295,4294967295,4294967295]
 ; CHECK-NEXT:    psubd %xmm0, %xmm1
 ; CHECK-NEXT:    pand %xmm0, %xmm1
-; CHECK-NEXT:    movd %xmm1, %ecx
+; CHECK-NEXT:    movd %xmm1, %eax
 ; CHECK-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; CHECK-NEXT:    packuswb %xmm1, %xmm1
 ; CHECK-NEXT:    packuswb %xmm1, %xmm1
 ; CHECK-NEXT:    movd %xmm1, (%rsi)
-; CHECK-NEXT:    movzbl %dil, %eax
-; CHECK-NEXT:    divb %cl
-; CHECK-NEXT:    movzbl %ah, %eax
+; CHECK-NEXT:    decb %al
+; CHECK-NEXT:    andb %dil, %al
 ; CHECK-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retq
   %a.neg = sub <4 x i32> <i32 0, i32 -1, i32 -1, i32 -1>, %a

@@ -17,33 +17,9 @@ class TestTailCallFrameSBAPI(TestBase):
         self.do_test()
 
     def do_test(self):
-        exe = self.getBuildArtifact("a.out")
-
-        # Create a target by the debugger.
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
-
-        breakpoint = target.BreakpointCreateBySourceRegex(
-            "break here", lldb.SBFileSpec("main.cpp")
+        _, _, thread, _ = lldbutil.run_to_source_breakpoint(
+            self, "break here", lldb.SBFileSpec("main.cpp")
         )
-        self.assertTrue(
-            breakpoint and breakpoint.GetNumLocations() == 1, VALID_BREAKPOINT
-        )
-
-        error = lldb.SBError()
-        launch_info = target.GetLaunchInfo()
-        process = target.Launch(launch_info, error)
-        self.assertTrue(process, PROCESS_IS_VALID)
-
-        # Did we hit our breakpoint?
-        threads = lldbutil.get_threads_stopped_at_breakpoint(process, breakpoint)
-        self.assertEqual(
-            len(threads), 1, "There should be a thread stopped at our breakpoint"
-        )
-
-        self.assertEqual(breakpoint.GetHitCount(), 1)
-
-        thread = threads[0]
 
         # Here's what we expect to see in the backtrace:
         #   frame #0: ... a.out`sink() at main.cpp:13:4 [opt]

@@ -38,7 +38,8 @@ extern "C" hipModule_t mgpuModuleLoad(void *data, size_t /*gpuBlobSize*/) {
   return module;
 }
 
-extern "C" hipModule_t mgpuModuleLoadJIT(void *data, int optLevel) {
+extern "C" hipModule_t mgpuModuleLoadJIT(void *data, int optLevel,
+                                         size_t /*assmeblySize*/) {
   assert(false && "This function is not available in HIP.");
   return nullptr;
 }

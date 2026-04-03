@@ -510,8 +510,6 @@ public:
   ///     \b true if it is, \b false otherwise.
   bool IsLoadedInTarget(Target *target);
 
-  bool LoadScriptingResourceInTarget(Target *target, Status &error);
-
   /// Get the number of compile units for this module.
   ///
   /// \return

@@ -853,8 +853,7 @@ func.func @fusion_different_axes(%arg0 : tensor<5000xi64>, %arg1 : tensor<5000xi
 // CHECK-SAME:       %[[B1:.+]]: i32
 //  CHECK-DAG:     %[[T0:.+]] = linalg.index 0
 //  CHECK-DAG:     %[[CAST1:.+]] = arith.index_cast %[[T0]] : index to i64
-//  CHECK-DAG:     %[[CAST2:.+]] = arith.index_cast %[[CAST1]] : i64 to index
-//      CHECK:     %[[EXTRACT:.+]] = tensor.extract %[[ARG1]][%[[CAST2]]]
+//      CHECK:     %[[EXTRACT:.+]] = tensor.extract %[[ARG1]][%[[T0]]]
 //      CHECK:     linalg.yield %[[CAST1]], %[[EXTRACT]]
 //      CHECK:   return %[[RESULT]]#1
 

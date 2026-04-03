@@ -1279,10 +1279,7 @@ protected:
       return;
     }
 
-    StreamString buffer(
-        Stream::eBinary,
-        process->GetTarget().GetArchitecture().GetAddressByteSize(),
-        process->GetTarget().GetArchitecture().GetByteOrder());
+    StreamString buffer(Stream::eBinary, process->GetByteOrder());
 
     OptionValueUInt64 &byte_size_value = m_format_options.GetByteSizeValue();
     size_t item_byte_size = byte_size_value.GetCurrentValue();
@@ -1336,7 +1333,7 @@ protected:
       return;
     } else if (item_byte_size == 0) {
       if (m_format_options.GetFormat() == eFormatPointer)
-        item_byte_size = buffer.GetAddressByteSize();
+        item_byte_size = process->GetAddressByteSize();
       else
         item_byte_size = 1;
     }

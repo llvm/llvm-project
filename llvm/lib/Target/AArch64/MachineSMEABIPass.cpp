@@ -1169,13 +1169,14 @@ INITIALIZE_PASS(MachineSMEABI, "aarch64-machine-sme-abi", "Machine SME ABI",
 
 bool MachineSMEABI::runOnMachineFunction(MachineFunction &MF) {
   Subtarget = &MF.getSubtarget<AArch64Subtarget>();
-  if (!Subtarget->hasSME())
-    return false;
 
   AFI = MF.getInfo<AArch64FunctionInfo>();
   SMEAttrs SMEFnAttrs = AFI->getSMEFnAttrs();
   if (!SMEFnAttrs.hasZAState() && !SMEFnAttrs.hasZT0State() &&
       !SMEFnAttrs.hasAgnosticZAInterface())
+    return false;
+
+  if (!Subtarget->hasSME() && !SMEFnAttrs.hasAgnosticZAInterface())
     return false;
 
   assert(MF.getRegInfo().isSSA() && "Expected to be run on SSA form!");

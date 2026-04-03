@@ -359,6 +359,12 @@ def sub_to_add : GICombineRule<
          [{ return Helper.matchCombineSubToAdd(*${mi}, ${matchinfo}); }]),
   (apply [{ Helper.applyBuildFnNoErase(*${mi}, ${matchinfo}); }])>;
 
+// (sub -1, x) -> (xor x, -1)
+def sub_minus_one : GICombineRule<
+  (defs root:$root),
+  (match (G_SUB $root, -1, $op1)),
+  (apply (G_XOR $root, $op1, -1))>;
+
 // shl ([asz]ext x), y => zext (shl x, y), if shift does not overflow int
 def reduce_shl_of_extend_matchdata : GIDefMatchData<"RegisterImmPair">;
 def reduce_shl_of_extend : GICombineRule<
@@ -2360,9 +2366,9 @@ def all_combines : GICombineGroup<[integer_reassoc_combines, trivial_combines,
     fsub_to_fneg, commute_constant_to_rhs, match_ands, match_ors,
     simplify_neg_minmax, combine_concat_vector,
     sext_trunc, zext_trunc, prefer_sign_combines, shuffle_combines,
-    combine_use_vector_truncate, merge_combines, overflow_combines, 
+    combine_use_vector_truncate, merge_combines, overflow_combines,
     truncsat_combines, lshr_of_trunc_of_lshr, ctls_combines, add_shift, sub_one_from_sub,
-    binop_with_neg]>;
+    binop_with_neg, sub_minus_one]>;
 
 // A combine group used to for prelegalizer combiners at -O0. The combines in
 // this group have been selected based on experiments to balance code size and

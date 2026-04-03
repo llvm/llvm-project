@@ -1007,6 +1007,37 @@ void CIRGenFunction::pushDestroy(CleanupKind cleanupKind, Address addr,
   pushFullExprCleanup<DestroyObject>(cleanupKind, addr, type, destroyer);
 }
 
+void CIRGenFunction::pushLifetimeExtendedDestroy(CleanupKind cleanupKind,
+                                                 Address addr, QualType type,
+                                                 Destroyer *destroyer,
+                                                 bool useEHCleanupForArray) {
+  if (isInConditionalBranch()) {
+    cgm.errorNYI("conditional lifetime-extended destroy");
+    return;
+  }
+
+  // Classic codegen also uses pushDestroyAndDeferDeactivation here to push an
+  // EH cleanup that protects the temporary during the rest of the full
+  // expression, then deactivates it when the full expression ends. We don't
+  // have deferred deactivation yet, so we only queue the lifetime-extended
+  // cleanup below. When deferred deactivation is implemented, add the
+  // pushDestroyAndDeferDeactivation call here.
+  if (getLangOpts().Exceptions) {
+    cgm.errorNYI("lifetime-extended cleanup with exceptions enabled");
+    return;
+  }
+
+  assert(!cir::MissingFeatures::useEHCleanupForArray());
+
+  pushCleanupAfterFullExpr(cleanupKind, addr, type, destroyer);
+}
+
+void CIRGenFunction::pushLifetimeExtendedCleanupToEHStack(
+    const LifetimeExtendedCleanupEntry &entry) {
+  ehStack.pushCleanup<DestroyObject>(entry.kind, entry.addr, entry.type,
+                                     entry.destroyer);
+}
+
 /// Destroys all the elements of the given array, beginning from last to first.
 /// The array cannot be zero-length.
 ///

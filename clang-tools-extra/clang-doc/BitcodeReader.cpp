@@ -28,6 +28,12 @@ static llvm::Error decodeRecord(const Record &R,
   return llvm::Error::success();
 }
 
+static llvm::Error decodeRecord(const Record &R, llvm::StringRef &Field,
+                                llvm::StringRef Blob) {
+  Field = internString(Blob);
+  return llvm::Error::success();
+}
+
 static llvm::Error decodeRecord(const Record &R, SymbolID &Field,
                                 llvm::StringRef Blob) {
   if (R[0] != BitCodeConstants::USRHashSize)
@@ -121,14 +127,6 @@ static llvm::Error decodeRecord(const Record &R, FieldId &Field,
   }
   return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                  "invalid value for FieldId");
-}
-
-static llvm::Error
-decodeRecord(const Record &R,
-             llvm::SmallVectorImpl<llvm::SmallString<16>> &Field,
-             llvm::StringRef Blob) {
-  Field.push_back(Blob);
-  return llvm::Error::success();
 }
 
 static llvm::Error decodeRecord(const Record &R,
@@ -341,7 +339,10 @@ static llvm::Error parseRecord(const Record &R, unsigned ID,
 }
 
 static llvm::Error parseRecord(const Record &R, unsigned ID,
-                               llvm::StringRef Blob, CommentInfo *I) {
+                               llvm::StringRef Blob, CommentInfo *I,
+                               llvm::SmallVectorImpl<StringRef> &AttrKeys,
+                               llvm::SmallVectorImpl<StringRef> &AttrValues,
+                               llvm::SmallVectorImpl<StringRef> &Args) {
   llvm::SmallString<16> KindStr;
   switch (ID) {
   case COMMENT_KIND:
@@ -360,11 +361,14 @@ static llvm::Error parseRecord(const Record &R, unsigned ID,
   case COMMENT_CLOSENAME:
     return decodeRecord(R, I->CloseName, Blob);
   case COMMENT_ATTRKEY:
-    return decodeRecord(R, I->AttrKeys, Blob);
+    AttrKeys.push_back(internString(Blob));
+    return llvm::Error::success();
   case COMMENT_ATTRVAL:
-    return decodeRecord(R, I->AttrValues, Blob);
+    AttrValues.push_back(internString(Blob));
+    return llvm::Error::success();
   case COMMENT_ARG:
-    return decodeRecord(R, I->Args, Blob);
+    Args.push_back(internString(Blob));
+    return llvm::Error::success();
   case COMMENT_SELFCLOSING:
     return decodeRecord(R, I->SelfClosing, Blob);
   case COMMENT_EXPLICIT:
@@ -372,6 +376,70 @@ static llvm::Error parseRecord(const Record &R, unsigned ID,
   default:
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "invalid field for CommentInfo");
+  }
+}
+
+template <>
+llvm::Error ClangDocBitcodeReader::readBlock(unsigned ID, CommentInfo *I) {
+  llvm::TimeTraceScope("Reducing infos", "readBlock");
+  if (llvm::Error Err = Stream.EnterSubBlock(ID))
+    return Err;
+
+  llvm::SmallVector<StringRef> AttrKeys;
+  llvm::SmallVector<StringRef> AttrValues;
+  llvm::SmallVector<StringRef> Args;
+
+  while (true) {
+    unsigned BlockOrCode = 0;
+    llvm::Expected<Cursor> C = skipUntilRecordOrBlock(BlockOrCode);
+    if (!C)
+      return C.takeError();
+
+    switch (*C) {
+    case Cursor::BadBlock:
+      return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                     "bad block found");
+    case Cursor::BlockEnd: {
+      if (!AttrKeys.empty()) {
+        StringRef *KeysMem =
+            TransientArena.Allocate<StringRef>(AttrKeys.size());
+        std::uninitialized_copy(AttrKeys.begin(), AttrKeys.end(), KeysMem);
+        I->AttrKeys = llvm::ArrayRef<StringRef>(KeysMem, AttrKeys.size());
+      }
+      if (!AttrValues.empty()) {
+        StringRef *ValuesMem =
+            TransientArena.Allocate<StringRef>(AttrValues.size());
+        std::uninitialized_copy(AttrValues.begin(), AttrValues.end(),
+                                ValuesMem);
+        I->AttrValues = llvm::ArrayRef<StringRef>(ValuesMem, AttrValues.size());
+      }
+      if (!Args.empty()) {
+        StringRef *ArgsMem = TransientArena.Allocate<StringRef>(Args.size());
+        std::uninitialized_copy(Args.begin(), Args.end(), ArgsMem);
+        I->Args = llvm::ArrayRef<StringRef>(ArgsMem, Args.size());
+      }
+      return llvm::Error::success();
+    }
+    case Cursor::BlockBegin:
+      if (llvm::Error Err = readSubBlock(BlockOrCode, I)) {
+        if (llvm::Error Skipped = Stream.SkipBlock())
+          return joinErrors(std::move(Err), std::move(Skipped));
+        return Err;
+      }
+      continue;
+    case Cursor::Record:
+      break;
+    }
+
+    Record R;
+    llvm::StringRef Blob;
+    llvm::Expected<unsigned> MaybeRecID =
+        Stream.readRecord(BlockOrCode, R, &Blob);
+    if (!MaybeRecID)
+      return MaybeRecID.takeError();
+    if (llvm::Error Err = parseRecord(R, MaybeRecID.get(), Blob, I, AttrKeys,
+                                      AttrValues, Args))
+      return Err;
   }
 }
 
@@ -549,13 +617,6 @@ template <> llvm::Error addTypeInfo(FunctionInfo *I, TypeInfo &&T) {
 
 template <> llvm::Error addTypeInfo(FunctionInfo *I, FieldTypeInfo &&T) {
   I->Params.emplace_back(std::move(T));
-  return llvm::Error::success();
-}
-
-template <> llvm::Error addTypeInfo(FriendInfo *I, FieldTypeInfo &&T) {
-  if (!I->Params)
-    I->Params.emplace();
-  I->Params->emplace_back(std::move(T));
   return llvm::Error::success();
 }
 
@@ -875,6 +936,51 @@ llvm::Error ClangDocBitcodeReader::readBlock(unsigned ID, T I) {
     case Cursor::BlockEnd:
       return llvm::Error::success();
     case Cursor::BlockBegin:
+      if (llvm::Error Err = readSubBlock(BlockOrCode, I)) {
+        if (llvm::Error Skipped = Stream.SkipBlock())
+          return joinErrors(std::move(Err), std::move(Skipped));
+        return Err;
+      }
+      continue;
+    case Cursor::Record:
+      break;
+    }
+    if (auto Err = readRecord(BlockOrCode, I))
+      return Err;
+  }
+}
+
+template <>
+llvm::Error ClangDocBitcodeReader::readBlock(unsigned ID, FriendInfo *I) {
+  llvm::TimeTraceScope("Reducing infos", "readBlock");
+  if (llvm::Error Err = Stream.EnterSubBlock(ID))
+    return Err;
+
+  llvm::SmallVector<FieldTypeInfo, 4> LocalParams;
+
+  while (true) {
+    unsigned BlockOrCode = 0;
+    llvm::Expected<Cursor> C = skipUntilRecordOrBlock(BlockOrCode);
+    if (!C)
+      return C.takeError();
+
+    switch (*C) {
+    case Cursor::BadBlock:
+      return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                     "bad block found");
+    case Cursor::BlockEnd: {
+      if (!LocalParams.empty())
+        I->Params = allocateArray<FieldTypeInfo>(LocalParams, TransientArena);
+      return llvm::Error::success();
+    }
+    case Cursor::BlockBegin:
+      if (BlockOrCode == BI_FIELD_TYPE_BLOCK_ID) {
+        FieldTypeInfo FI;
+        if (auto Err = readBlock(BlockOrCode, &FI))
+          return Err;
+        LocalParams.push_back(std::move(FI));
+        continue;
+      }
       if (llvm::Error Err = readSubBlock(BlockOrCode, I)) {
         if (llvm::Error Skipped = Stream.SkipBlock())
           return joinErrors(std::move(Err), std::move(Skipped));

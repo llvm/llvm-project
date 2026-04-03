@@ -472,8 +472,7 @@ class LLVMPartiallyDependentType<int oidx, IIT_Base IIT_Info>
 
 // Match the type of another intrinsic parameter. `oidx` is the overload index
 // of the overloaded type that this type is dependent on. Overload types are
-// either LLVMAnyType or LLVMPartiallyDependentType. The `oidx` value must refer
-// to a previously listed type. For example:
+// either LLVMAnyType or LLVMPartiallyDependentType.
 //
 //   Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_anyfloat_ty, LLVMMatchType<0>]>
 //

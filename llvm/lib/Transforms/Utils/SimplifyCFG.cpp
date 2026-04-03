@@ -201,11 +201,6 @@ static cl::opt<unsigned> MaxSwitchCasesPerResult(
     "max-switch-cases-per-result", cl::Hidden, cl::init(16),
     cl::desc("Limit cases to analyze when converting a switch to select"));
 
-static cl::opt<unsigned> MaxJumpThreadingLiveBlocks(
-    "max-jump-threading-live-blocks", cl::Hidden, cl::init(24),
-    cl::desc("Limit number of blocks a define in a threaded block is allowed "
-             "to be live in"));
-
 extern cl::opt<bool> ProfcheckDisableMetadataFixes;
 
 } // end namespace llvm
@@ -3444,27 +3439,8 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(CondBrInst *BI,
   return true;
 }
 
-using BlocksSet = SmallPtrSet<BasicBlock *, 8>;
-
-// Return false if number of blocks searched is too much.
-static bool findReaching(BasicBlock *BB, BasicBlock *DefBB,
-                         BlocksSet &ReachesNonLocalUses) {
-  if (BB == DefBB)
-    return true;
-  if (!ReachesNonLocalUses.insert(BB).second)
-    return true;
-
-  if (ReachesNonLocalUses.size() > MaxJumpThreadingLiveBlocks)
-    return false;
-  for (BasicBlock *Pred : predecessors(BB))
-    if (!findReaching(Pred, DefBB, ReachesNonLocalUses))
-      return false;
-  return true;
-}
-
 /// Return true if we can thread a branch across this block.
-static bool blockIsSimpleEnoughToThreadThrough(BasicBlock *BB,
-                                               BlocksSet &NonLocalUseBlocks) {
+static bool blockIsSimpleEnoughToThreadThrough(BasicBlock *BB) {
   int Size = 0;
   EphemeralValueTracker EphTracker;
 
@@ -3484,16 +3460,12 @@ static bool blockIsSimpleEnoughToThreadThrough(BasicBlock *BB,
         return false; // Don't clone large BB's.
     }
 
-    // Record blocks with non-local uses of values defined in the current basic
-    // block.
+    // We can only support instructions that do not define values that are
+    // live outside of the current basic block.
     for (User *U : I.users()) {
       Instruction *UI = cast<Instruction>(U);
-      BasicBlock *UsedInBB = UI->getParent();
-      if (UsedInBB == BB) {
-        if (isa<PHINode>(UI))
-          return false;
-      } else
-        NonLocalUseBlocks.insert(UsedInBB);
+      if (UI->getParent() != BB || isa<PHINode>(UI))
+        return false;
     }
 
     // Looks ok, continue checking.
@@ -3552,37 +3524,18 @@ foldCondBranchOnValueKnownInPredecessorImpl(CondBrInst *BI, DomTreeUpdater *DTU,
     return false;
 
   // Now we know that this block has multiple preds and two succs.
-  // Check that the block is small enough and record which non-local blocks use
-  // values defined in the block.
-
-  BlocksSet NonLocalUseBlocks;
-  BlocksSet ReachesNonLocalUseBlocks;
-  if (!blockIsSimpleEnoughToThreadThrough(BB, NonLocalUseBlocks))
+  // Check that the block is small enough and values defined in the block are
+  // not used outside of it.
+  if (!blockIsSimpleEnoughToThreadThrough(BB))
     return false;
-
-  // Jump-threading can only be done to destinations where no values defined
-  // in BB are live.
-
-  // Quickly check if both destinations have uses.  If so, jump-threading cannot
-  // be done.
-  if (NonLocalUseBlocks.contains(BI->getSuccessor(0)) &&
-      NonLocalUseBlocks.contains(BI->getSuccessor(1)))
-    return false;
-
-  // Search backward from NonLocalUseBlocks to find which blocks
-  // reach non-local uses.
-  for (BasicBlock *UseBB : NonLocalUseBlocks)
-    // Give up if too many blocks are searched.
-    if (!findReaching(UseBB, BB, ReachesNonLocalUseBlocks))
-      return false;
 
   for (const auto &Pair : KnownValues) {
+    // Okay, we now know that all edges from PredBB should be revectored to
+    // branch to RealDest.
     ConstantInt *CB = Pair.first;
     ArrayRef<BasicBlock *> PredBBs = Pair.second.getArrayRef();
     BasicBlock *RealDest = BI->getSuccessor(!CB->getZExtValue());
 
-    // Okay, we now know that all edges from PredBB should be revectored to
-    // branch to RealDest.
     if (RealDest == BB)
       continue; // Skip self loops.
 
@@ -3590,10 +3543,6 @@ foldCondBranchOnValueKnownInPredecessorImpl(CondBrInst *BI, DomTreeUpdater *DTU,
     if (any_of(PredBBs, [](BasicBlock *PredBB) {
           return isa<IndirectBrInst>(PredBB->getTerminator());
         }))
-      continue;
-
-    // Only revector to RealDest if no values defined in BB are live.
-    if (ReachesNonLocalUseBlocks.contains(RealDest))
       continue;
 
     LLVM_DEBUG({

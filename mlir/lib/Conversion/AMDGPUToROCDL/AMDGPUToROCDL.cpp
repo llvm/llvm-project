@@ -4105,6 +4105,8 @@ void mlir::amdgpu::populateCommonGPUTypeAndAttributeConversions(
           return ROCDL::ROCDLDialect::kSharedMemoryAddressSpace;
         case gpu::AddressSpace::Private:
           return ROCDL::ROCDLDialect::kPrivateMemoryAddressSpace;
+        case gpu::AddressSpace::Constant:
+          return ROCDL::ROCDLDialect::kConstantMemoryAddressSpace;
         }
         llvm_unreachable("unknown address space enum value");
       });

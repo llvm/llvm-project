@@ -142,8 +142,7 @@ GeneratePCHAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
       CI.getPreprocessor(), CI.getModuleCache(), OutputFile, Sysroot, Buffer,
       CI.getCodeGenOpts(), FrontendOpts.ModuleFileExtensions,
       CI.getPreprocessorOpts().AllowPCHWithCompilerErrors,
-      FrontendOpts.IncludeTimestamps, FrontendOpts.BuildingImplicitModule,
-      +CI.getLangOpts().CacheGeneratedPCH));
+      FrontendOpts.IncludeTimestamps, FrontendOpts.BuildingImplicitModule));
   Consumers.push_back(CI.getPCHContainerWriter().CreatePCHContainerGenerator(
       CI, std::string(InFile), OutputFile, std::move(OS), Buffer));
 
@@ -207,9 +206,7 @@ GenerateModuleAction::CreateMultiplexConsumer(CompilerInstance &CI,
       /*IncludeTimestamps=*/
       +CI.getFrontendOpts().BuildingImplicitModule &&
           +CI.getFrontendOpts().IncludeTimestamps,
-      /*BuildingImplicitModule=*/+CI.getFrontendOpts().BuildingImplicitModule,
-      /*ShouldCacheASTInMemory=*/
-      +CI.getFrontendOpts().BuildingImplicitModule));
+      /*BuildingImplicitModule=*/+CI.getFrontendOpts().BuildingImplicitModule));
   Consumers.push_back(CI.getPCHContainerWriter().CreatePCHContainerGenerator(
       CI, std::string(InFile), OutputFile, std::move(OS), Buffer));
   return Consumers;

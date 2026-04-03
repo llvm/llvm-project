@@ -1369,6 +1369,25 @@ inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
 }
 
 inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
+                                             const llvm::Twine &S) {
+  DB.AddString(S.str());
+  return DB;
+}
+
+inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
+                                             const std::string &S) {
+  DB.AddString(S);
+  return DB;
+}
+
+inline const StreamingDiagnostic &
+operator<<(const StreamingDiagnostic &DB,
+           const llvm::SmallVectorImpl<char> &S) {
+  DB.AddString(llvm::StringRef(S.data(), S.size()));
+  return DB;
+}
+
+inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
                                              const char *Str) {
   DB.AddTaggedVal(reinterpret_cast<intptr_t>(Str),
                   DiagnosticsEngine::ak_c_string);

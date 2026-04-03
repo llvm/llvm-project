@@ -1238,6 +1238,15 @@ StyleKind IdentifierNamingCheck::findStyleKind(
   if (const auto *Decl = dyn_cast<VarDecl>(D))
     return findStyleKindForVar(Decl, Decl->getType(), NamingStyles);
 
+  // C++17 structured bindings: treat each binding as if it were a variable
+  // with the same storage and qualifiers as the parent DecompositionDecl.
+  if (const auto *BD = dyn_cast<BindingDecl>(D)) {
+    if (const auto *Decomp = dyn_cast_or_null<VarDecl>(BD->getDecomposedDecl()))
+      if (!BD->getType().isNull())
+        return findStyleKindForVar(Decomp, BD->getType(), NamingStyles);
+    return SK_Invalid;
+  }
+
   if (const auto *Decl = dyn_cast<CXXMethodDecl>(D)) {
     if (Decl->isMain() || !Decl->isUserProvided() ||
         Decl->size_overridden_methods() > 0 || Decl->hasAttr<OverrideAttr>())

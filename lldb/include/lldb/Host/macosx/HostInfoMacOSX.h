@@ -58,6 +58,10 @@ public:
   static bool SharedCacheIndexFiles(FileSpec &filepath, UUID &uuid,
                                     lldb::SymbolSharedCacheUse sc_mode);
 
+  /// Check whether a bundle at the given path has a valid code signature that
+  /// chains to a trusted anchor in the system trust store.
+  static bool IsBundleCodeSignTrusted(const FileSpec &bundle_path);
+
 protected:
   static bool ComputeSupportExeDirectory(FileSpec &file_spec);
   static void ComputeHostArchitectureSupport(ArchSpec &arch_32,

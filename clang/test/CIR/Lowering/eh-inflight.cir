@@ -52,5 +52,32 @@ cir.func @inflight_exception_with_catch_type_list() personality(@__gxx_personali
 // CHECK:   llvm.return
 // CHECK: }
 
+cir.func @inflight_exception_catch_all_with_type_list() personality(@__gxx_personality_v0) {
+  %exception_ptr, %type_id = cir.eh.inflight_exception catch_all [@_ZTIi]
+  cir.return
+}
+
+// CHECK: llvm.func @inflight_exception_catch_all_with_type_list() attributes {personality = @__gxx_personality_v0} {
+// CHECK:   %[[NULL:.*]] = llvm.mlir.zero : !llvm.ptr
+// CHECK:   %[[TI_ADDR:.*]] = llvm.mlir.addressof @_ZTIi : !llvm.ptr
+// CHECK:   %[[LP:.*]] = llvm.landingpad (catch %[[TI_ADDR]] : !llvm.ptr) (catch %[[NULL]] : !llvm.ptr) : !llvm.struct<(ptr, i32)>
+// CHECK:   %[[EXCEPTION_PTR:.*]] = llvm.extractvalue %[[LP]][0] : !llvm.struct<(ptr, i32)>
+// CHECK:   %[[TYPE_ID:.*]] = llvm.extractvalue %[[LP]][1] : !llvm.struct<(ptr, i32)>
+// CHECK:   llvm.return
+// CHECK: }
+
+cir.func @inflight_exception_catch_all_only() personality(@__gxx_personality_v0) {
+  %exception_ptr, %type_id = cir.eh.inflight_exception catch_all
+  cir.return
+}
+
+// CHECK: llvm.func @inflight_exception_catch_all_only() attributes {personality = @__gxx_personality_v0} {
+// CHECK:   %[[NULL:.*]] = llvm.mlir.zero : !llvm.ptr
+// CHECK:   %[[LP:.*]] = llvm.landingpad (catch %[[NULL]] : !llvm.ptr) : !llvm.struct<(ptr, i32)>
+// CHECK:   %[[EXCEPTION_PTR:.*]] = llvm.extractvalue %[[LP]][0] : !llvm.struct<(ptr, i32)>
+// CHECK:   %[[TYPE_ID:.*]] = llvm.extractvalue %[[LP]][1] : !llvm.struct<(ptr, i32)>
+// CHECK:   llvm.return
+// CHECK: }
+
 
 }

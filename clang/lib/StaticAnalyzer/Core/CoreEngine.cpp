@@ -707,26 +707,3 @@ ExplodedNode *BranchNodeBuilder::generateNode(ProgramStateRef State,
   ExplodedNode *Succ = NodeBuilder::generateNode(Loc, State, NodePred);
   return Succ;
 }
-
-ExplodedNode *SwitchNodeBuilder::generateCaseStmtNode(const CFGBlock *Block,
-                                                      ProgramStateRef St,
-                                                      ExplodedNode *Pred) {
-  BlockEdge BE(C.getBlock(), Block, Pred->getLocationContext());
-  return generateNode(BE, St, Pred);
-}
-
-ExplodedNode *SwitchNodeBuilder::generateDefaultCaseNode(ProgramStateRef St,
-                                                         ExplodedNode *Pred) {
-  // Get the block for the default case.
-  const CFGBlock *Src = C.getBlock();
-  assert(Src->succ_rbegin() != Src->succ_rend());
-  CFGBlock *DefaultBlock = *Src->succ_rbegin();
-
-  // Basic correctness check for default blocks that are unreachable and not
-  // caught by earlier stages.
-  if (!DefaultBlock)
-    return nullptr;
-
-  BlockEdge BE(Src, DefaultBlock, Pred->getLocationContext());
-  return generateNode(BE, St, Pred);
-}

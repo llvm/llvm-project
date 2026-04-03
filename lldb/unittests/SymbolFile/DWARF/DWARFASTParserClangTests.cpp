@@ -307,7 +307,7 @@ DWARF:
     lldb::TypeSP type =
         tester.GetParser().ParseTypeFromDWARF(sc, func, &new_type);
     found_function_types.push_back(
-        type->GetForwardCompilerType().GetTypeName().AsCString());
+        type->GetForwardCompilerType().GetTypeName().GetString());
   }
 
   // Compare the parsed function types against the expected list of types.

@@ -469,7 +469,7 @@ private:
   const Function &Fn;
 
   /// Description of the resource type (e.g. stack size)
-  const char *ResourceName;
+  const Twine &ResourceName;
 
   /// The computed size usage
   uint64_t ResourceSize;
@@ -480,13 +480,14 @@ private:
 public:
   /// \p The function that is concerned by this stack size diagnostic.
   /// \p The computed stack size.
-  DiagnosticInfoResourceLimit(const Function &Fn, const char *ResourceName,
+  DiagnosticInfoResourceLimit(const Function &Fn,
+                              const Twine &ResourceName LLVM_LIFETIME_BOUND,
                               uint64_t ResourceSize, uint64_t ResourceLimit,
                               DiagnosticSeverity Severity = DS_Warning,
                               DiagnosticKind Kind = DK_ResourceLimit);
 
   const Function &getFunction() const { return Fn; }
-  const char *getResourceName() const { return ResourceName; }
+  const Twine &getResourceName() const { return ResourceName; }
   uint64_t getResourceSize() const { return ResourceSize; }
   uint64_t getResourceLimit() const { return ResourceLimit; }
 

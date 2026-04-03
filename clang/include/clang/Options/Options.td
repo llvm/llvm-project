@@ -6011,10 +6011,13 @@ def mrelax_all : Flag<["-"], "mrelax-all">, Group<m_Group>,
   MarshallingInfoFlag<CodeGenOpts<"RelaxAll">>;
 def mincremental_linker_compatible : Flag<["-"], "mincremental-linker-compatible">, Group<m_Group>,
   Visibility<[ClangOption, CC1Option, CC1AsOption]>,
+  Default<"T.isDefaultIncrementalLinkerCompatibleByDefault()">,
   HelpText<"(integrated-as) Emit an object file which can be used with an incremental linker">,
   MarshallingInfoFlag<CodeGenOpts<"IncrementalLinkerCompatible">>;
 def mno_incremental_linker_compatible : Flag<["-"], "mno-incremental-linker-compatible">, Group<m_Group>,
-  HelpText<"(integrated-as) Emit an object file which cannot be used with an incremental linker">;
+  Visibility<[ClangOption, CC1Option, CC1AsOption]>,
+  HelpText<"(integrated-as) Emit an object file which cannot be used with an incremental linker">,
+  MarshallingInfoNegativeFlag<CodeGenOpts<"IncrementalLinkerCompatible">>;
 def mrtd : Flag<["-"], "mrtd">, Group<m_Group>,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Make StdCall calling convention the default">;

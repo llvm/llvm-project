@@ -796,8 +796,8 @@ bool ValueObjectPrinter::PrintChildrenOneLiner(bool hide_names) {
           m_stream->PutCString(", ");
         did_print_children = true;
         if (!hide_names) {
-          const char *name = child_sp.get()->GetName().AsCString();
-          if (name && *name) {
+          llvm::StringRef name = child_sp.get()->GetName().GetStringRef();
+          if (!name.empty()) {
             m_stream->PutCString(name);
             m_stream->PutCString(" = ");
           }

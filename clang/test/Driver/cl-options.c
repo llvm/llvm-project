@@ -579,10 +579,11 @@
 // ZGMLT: "-debug-info-kind=line-tables-only"
 
 // RUN: %clang_cl /c -### -- %s 2>&1 | FileCheck -check-prefix=BreproDefault %s
-// BreproDefault: "-mincremental-linker-compatible"
+// BreproDefault-NOT: "-mincremental-linker-compatible"
+// BreproDefault-NOT: "-mno-incremental-linker-compatible"
 
 // RUN: %clang_cl /Brepro- /Brepro /c '-###' -- %s 2>&1 | FileCheck -check-prefix=Brepro %s
-// Brepro-NOT: "-mincremental-linker-compatible"
+// Brepro: "-mno-incremental-linker-compatible"
 
 // RUN: %clang_cl /Brepro /Brepro- /c '-###' -- %s 2>&1 | FileCheck -check-prefix=Brepro_ %s
 // Brepro_: "-mincremental-linker-compatible"

@@ -318,6 +318,7 @@ void ItaniumEHLowering::lowerEhInitiate(
   builder.setInsertionPoint(initiateOp);
   auto inflightOp = cir::EhInflightOp::create(
       builder, initiateOp.getLoc(), /*cleanup=*/initiateOp.getCleanup(),
+      /*catch_all=*/false,
       /*catch_type_list=*/mlir::ArrayAttr{});
 
   ehTokenMap[rootToken] = {inflightOp.getExceptionPtr(),
@@ -412,6 +413,8 @@ void ItaniumEHLowering::lowerEhInitiate(
                 mlir::cast<cir::GlobalViewAttr>(attr).getSymbol());
           inflightOp.setCatchTypeListAttr(builder.getArrayAttr(typeSymbols));
         }
+        if (op.getDefaultIsCatchAll())
+          inflightOp.setCatchAllAttr(builder.getUnitAttr());
         // Only lower the dispatch once. A sibling initiate sharing the same
         // dispatch will still read its catch types (above), but the comparison
         // chain and branch replacement are only created the first time.

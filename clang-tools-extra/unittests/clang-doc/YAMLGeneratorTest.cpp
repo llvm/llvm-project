@@ -411,8 +411,15 @@ TEST_F(YAMLGeneratorTest, emitCommentYAML) {
   HTML->Children.emplace_back(allocatePtr<CommentInfo>());
   HTML->Children.back()->Kind = CommentKind::CK_HTMLStartTagComment;
   HTML->Children.back()->Name = "ul";
-  HTML->Children.back()->AttrKeys.emplace_back("class");
-  HTML->Children.back()->AttrValues.emplace_back("test");
+  {
+    llvm::SmallVector<StringRef, 1> Keys = {"class"};
+    HTML->Children.back()->AttrKeys =
+        allocateArray<StringRef>(Keys, TransientArena);
+
+    llvm::SmallVector<StringRef, 1> Values = {"test"};
+    HTML->Children.back()->AttrValues =
+        allocateArray<StringRef>(Values, TransientArena);
+  }
   HTML->Children.emplace_back(allocatePtr<CommentInfo>());
   HTML->Children.back()->Kind = CommentKind::CK_HTMLStartTagComment;
   HTML->Children.back()->Name = "li";

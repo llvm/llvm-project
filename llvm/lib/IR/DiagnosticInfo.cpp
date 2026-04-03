@@ -104,7 +104,7 @@ void DiagnosticInfoRegAllocFailure::print(DiagnosticPrinter &DP) const {
 }
 
 DiagnosticInfoResourceLimit::DiagnosticInfoResourceLimit(
-    const Function &Fn, const char *ResourceName, uint64_t ResourceSize,
+    const Function &Fn, const Twine &ResourceName, uint64_t ResourceSize,
     uint64_t ResourceLimit, DiagnosticSeverity Severity, DiagnosticKind Kind)
     : DiagnosticInfoWithLocationBase(Kind, Severity, Fn, Fn.getSubprogram()),
       Fn(Fn), ResourceName(ResourceName), ResourceSize(ResourceSize),
