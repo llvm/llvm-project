@@ -39,7 +39,7 @@ lldb_private::FunctionCallLabel::fromString(llvm::StringRef label) {
   label.split(components, ":", /*MaxSplit=*/4);
 
   if (components.size() != 5)
-    return llvm::createStringError("malformed function call label.");
+    return llvm::createStringError("malformed function call label");
 
   if (components[0] != FunctionCallLabelPrefix)
     return llvm::createStringErrorV(
