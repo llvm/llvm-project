@@ -409,7 +409,7 @@ KnownBits KnownBits::shl(const KnownBits &LHS, unsigned ShiftAmt, bool NUW,
   // TODO: This is simple fallback to generic RHS-based shl.
   // Add a specialized constant-shift implementation with identical semantics.
   KnownBits RHS = KnownBits::makeConstant(APInt(LHS.getBitWidth(), ShiftAmt));
-  return shl(LHS, RHS, NUW, NSW);
+  return shl(LHS, RHS, NUW, NSW, ShiftAmt != 0);
 }
 
 KnownBits KnownBits::shl(const KnownBits &LHS, const KnownBits &RHS, bool NUW,
