@@ -3781,7 +3781,7 @@ private:
       Instruction *I,
       const SmallDenseSet<Value *> *VectorizedVals = nullptr) const;
 
-  /// Estimates the number of unique scalar instructions in the tree.
+  /// Estimates the number of scalar instructions in the tree.
   unsigned getNumScalarInsts() const;
 
   /// Estimates the number of vector instructions (including buildvectors,
