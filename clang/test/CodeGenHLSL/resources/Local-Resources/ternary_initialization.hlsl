@@ -2,6 +2,9 @@
 // RUN:   dxil-pc-shadermodel6.6-compute -emit-llvm -disable-llvm-passes 2>&1 -o - %s | llvm-cxxfilt | FileCheck %s
 
 // This test fails after verify.
+//
+// DXC: passes sema but fails codegen (DxilCondenseResources) with:
+//   "local resource not guaranteed to map to unique global resource."
 
 RWByteAddressBuffer gOut  : register(u3);
 RWByteAddressBuffer gBuf0 : register(u0);

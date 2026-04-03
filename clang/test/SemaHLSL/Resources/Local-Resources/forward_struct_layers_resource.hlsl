@@ -3,6 +3,8 @@
 
 // expected-no-diagnostics
 
+// DXC: passes (both sema and codegen).
+
 RWByteAddressBuffer gBuf2 : register(u2);
 
 struct ForwardA { RWByteAddressBuffer buf; };

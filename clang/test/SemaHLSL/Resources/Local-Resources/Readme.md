@@ -39,10 +39,13 @@ Tests where **codegen is the interesting stage**. This includes:
 | `local_resource_copy_between_locals.hlsl` | Copy one local resource to another (`a = g; b = a`) |
 | `local_resource_self_assign.hlsl` | Self-assignment (`buf = buf`) |
 | `use_local_resource_uninitialized.hlsl` | Using an uninitialized local resource |
+| `local_resource_default_init_store.hlsl` | Store through a default-initialized (unbound) resource *(both compilers pass)* |
 | `return_local_resource_uninitialized.hlsl` | Returning an uninitialized local resource |
 | `return_local_resource_initialized.hlsl` | Returning a local resource initialized from a global |
 | `expression_init.hlsl` | Initializing with a parenthesized ternary expression |
 | `local_resource_aggregate_init.hlsl` | Aggregate initialization of a struct containing a resource |
+| `local_resource_multi_decl.hlsl` | Two resource variables declared in a single statement |
+| `local_resource_comma_init.hlsl` | Comma expression in initializer — left operand discarded with warning *(clang warns, DXC silent)* |
 
 ### Parameter Passing
 | File | Pattern |
@@ -63,20 +66,24 @@ Tests where **codegen is the interesting stage**. This includes:
 | `local_resource_array_copy.hlsl` | Copy one local resource array to another |
 | `local_resource_array_dynamic_index.hlsl` | Runtime dynamic index into a local resource array |
 | `local_resource_array_partial_init.hlsl` | Partially initialized resource array (`{g0}` for a 2-element array) |
+| `local_resource_array_size_one.hlsl` | Local resource array of size 1 (edge case) |
 | `struct_resource_member_reassign.hlsl` | Reassign a struct's resource member to a different global |
 | `local_resource_struct_return.hlsl` | Function returns a struct containing a resource |
 | `local_resource_mixed_struct.hlsl` | Struct with both a resource member and a scalar member |
+| `local_resource_struct_method.hlsl` | User-defined struct with a member function that uses a resource |
 
 ### Control Flow
 | File | Pattern |
 |------|---------|
 | `local_resource_shadow_inner_scope.hlsl` | Shadowed resource in an inner block |
 | `local_resource_block_lifetime.hlsl` | Assigned in inner block, used in outer scope |
+| `local_resource_conditional_init.hlsl` | Resource only initialized in one branch of an if *(both compilers pass)* |
 | `local_resource_nested_blocks_reassign.hlsl` | Reassigned across nested blocks *(clang warns, DXC silent)* |
 | `local_resource_early_return_reassign.hlsl` | Reassigned after an early return path *(clang warns, DXC silent)* |
 | `local_resource_unreachable_reassign.hlsl` | Reassigned in code after an early return *(clang warns, DXC silent)* |
 | `local_resource_switch_reassign.hlsl` | Reassigned in switch cases *(clang warns, DXC silent)* |
 | `local_resource_switch_fallthrough.hlsl` | Switch with fallthrough reassignment *(clang warns, DXC silent)* |
+| `local_resource_switch_default.hlsl` | Switch with explicit default case reassignment *(clang warns, DXC silent)* |
 
 ### Loop Patterns
 | File | Pattern |
@@ -92,6 +99,8 @@ Tests where **codegen is the interesting stage**. This includes:
 |------|---------|
 | `local_resource_reassign_different_global.hlsl` | Reassign to a different global *(clang warns, DXC silent)* |
 | `local_resource_deep_phi.hlsl` | Nested if/else with ternary *(clang warns, DXC silent)* |
+| `local_resource_ternary_lvalue.hlsl` | Ternary expression as lvalue for resource assignment *(clang silent, DXC ICEs)* |
+| `local_resource_swap.hlsl` | Swap two local resources through a temporary *(both compilers pass, no warnings)* |
 
 ### Bindless
 | File | Pattern |
@@ -106,16 +115,21 @@ Tests where **codegen is the interesting stage**. This includes:
 | `local_resource_with_wave_intrinsic.hlsl` | Resource used alongside wave intrinsics |
 | `local_resource_multiple_uses.hlsl` | Same local resource passed to multiple helper functions |
 | `local_resource_from_function_return.hlsl` | Local resource initialized from a function's return value |
+| `local_resource_template_function.hlsl` | Template function taking a resource parameter |
+| `local_resource_chained_call.hlsl` | Method called directly on a function return value (`GetBuf().Store(...)`) |
+| `local_resource_overload.hlsl` | Function overloading where overloads differ by resource type |
 
 ### Static and Storage
 | File | Pattern |
 |------|---------|
 | `local_resource_static_local.hlsl` | Static local resource initialized from a global *(passes both compilers with RWByteAddressBuffer; DXC ICEs with Texture2D)* |
 
-### Type Mixing
+### Type Mixing and Alternative Resource Types
 | File | Pattern |
 |------|---------|
 | `local_resource_different_types.hlsl` | Two different resource types (`RWByteAddressBuffer` + `RWStructuredBuffer`) in the same function |
+| `local_resource_read_only.hlsl` | Read-only `ByteAddressBuffer` as local — only `Load` available (no `Store`) |
+| `local_resource_structured_buffer.hlsl` | `RWStructuredBuffer<uint>` as local with subscript operator access |
 
 ### Invalid Type Operations (Sema Failures)
 | File | Pattern |
@@ -129,6 +143,7 @@ Tests where **codegen is the interesting stage**. This includes:
 | `local_resource_assign_wrong_type.hlsl` | Assign `RWStructuredBuffer` to `RWByteAddressBuffer` (type mismatch) |
 | `local_resource_volatile.hlsl` | `volatile` qualifier on resource prevents method calls *(clang errors, DXC accepts)* |
 | `local_resource_const_reassign.hlsl` | `const` local resource prevents reassignment *(both compilers error)* |
+| `local_resource_static_const.hlsl` | `static const` prevents calling any methods — `Load` and `Store` are not `const`-qualified *(clang errors, DXC ICEs)* |
 
 ### Invalid Declarations (Sema Failures)
 | File | Pattern |
@@ -136,13 +151,14 @@ Tests where **codegen is the interesting stage**. This includes:
 | `local_resource_default_param.hlsl` | Resource parameter with default followed by parameter without default |
 | `local_resource_as_structured_buffer_element.hlsl` | Resource type as element of `RWStructuredBuffer` (intangible type) |
 | `local_resource_array_oob.hlsl` | Compile-time out-of-bounds index into resource array *(clang warns, DXC errors)* |
+| `local_resource_zero_init.hlsl` | Brace (zero) initialization `= {}` rejected — empty initializer list *(both compilers error)* |
 
-### Groupshared Resources
+### Groupshared Resources (now in `CodeGenHLSL/resources/Local-Resources/`)
 | File | Pattern |
 |------|---------|
-| `use_groupshared.hlsl` | Passing a groupshared resource as a function argument *(fails sema — constructor mismatch)* |
+| `use_groupshared.hlsl` | Passing a groupshared resource as a function argument *(clang sema error; DXC validation error)* |
 | `use_groupshared_direct_store.hlsl` | Calling Store directly on a groupshared resource *(fails sema — address space mismatch)* |
-| `use_struct_groupshared.hlsl` | Using a resource from a groupshared struct *(expected to fail sema — see TODO in file)* |
+| `use_struct_groupshared.hlsl` | Using a resource from a groupshared struct *(expected to fail — see TODO in file; DXC validation error)* |
 
 ### CodeGen Tests (`CodeGenHLSL/resources/Local-Resources/`)
 | File | Pattern |
@@ -151,11 +167,13 @@ Tests where **codegen is the interesting stage**. This includes:
 | `local_resource_ternary_assign.hlsl` | Ternary assignment post-declaration *(DXC codegen error)* |
 | `local_resource_phi_merge_ternary.hlsl` | Ternary phi merge *(DXC codegen error)* |
 | `local_resource_wave_uniform.hlsl` | Wave-conditional reassignment *(DXC codegen error; clang warns)* |
-| `local_resource_default_init_store.hlsl` | Store through a default-initialized (unbound) resource *(DXC codegen error; clang silent)* |
 | `local_resource_break_reassign.hlsl` | Reassignment before a break in a loop *(DXC codegen error; clang warns)* |
-| `local_resource_conditional_init.hlsl` | Resource only initialized in one branch of an if *(DXC codegen error; clang silent)* |
 | `local_resource_ternary_as_argument.hlsl` | Ternary resource passed directly as a function argument *(DXC codegen error; clang silent)* |
 | `local_resource_nested_ternary.hlsl` | Nested ternary (`c1 ? g0 : (c2 ? g1 : g2)`) *(DXC codegen 2 errors; clang warns)* |
+| `local_resource_continue_reassign.hlsl` | Reassignment before `continue` in a loop *(DXC codegen error; clang warns)* |
+| `local_resource_multiple_returns.hlsl` | Multiple return paths returning different resources *(DXC codegen error; clang warns)* |
+| `use_groupshared.hlsl` | Passing a groupshared resource as a function argument *(clang sema error; DXC validation error)* |
+| `use_struct_groupshared.hlsl` | Using a resource from a groupshared struct *(expected failure — clang currently silent; DXC validation error)* |
 
 ## Key Behavioral Differences: Clang vs DXC
 

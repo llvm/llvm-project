@@ -3,6 +3,8 @@
 
 // expected-no-diagnostics
 
+// DXC: passes (both sema and codegen).
+
 RWByteAddressBuffer gBuf0 : register(u0);
 
 struct PassStruct

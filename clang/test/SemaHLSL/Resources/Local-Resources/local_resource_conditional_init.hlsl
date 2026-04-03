@@ -1,12 +1,12 @@
 // RUN: %clang_cc1 -std=hlsl202x -finclude-default-header -triple \
-// RUN:   dxil-pc-shadermodel6.3-compute %s -emit-llvm -disable-llvm-passes \
-// RUN:   -o - 2>&1 | llvm-cxxfilt | FileCheck %s
+// RUN:   dxil-pc-shadermodel6.3-compute %s -emit-llvm -o - -verify
+
+// expected-no-diagnostics
 
 // Test that a resource declared without initialization and only assigned
 // in one branch produces valid IR in clang.
 //
-// DXC: passes sema but fails codegen with:
-//   "local resource not guaranteed to map to unique global resource."
+// DXC: passes (both sema and codegen).
 
 RWByteAddressBuffer gBuf0 : register(u0);
 
@@ -18,7 +18,3 @@ void main(uint3 tid : SV_DispatchThreadID)
         buf = gBuf0;
     buf.Store(tid.x * 4, 42);
 }
-
-// CHECK-NOT: error:
-// CHECK-NOT: warning:
-// CHECK: define {{.*}} @main(

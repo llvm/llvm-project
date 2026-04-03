@@ -3,6 +3,8 @@
 
 // expected-no-diagnostics
 
+// DXC: passes (both sema and codegen).
+
 uint Pass_Uninitialized(uint idx)
 {
     RWByteAddressBuffer buf;
