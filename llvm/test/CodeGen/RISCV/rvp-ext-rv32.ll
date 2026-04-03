@@ -626,8 +626,8 @@ define <2 x i16> @test_non_const_splat_i16(i16 %elt) {
 }
 
 ; Test add(vec, splat(scalar)) pattern
-define <4 x i8> @test_padd_bs_from_scalar_splat(<4 x i8> %a, i8 %b) {
-; CHECK-LABEL: test_padd_bs_from_scalar_splat:
+define <4 x i8> @test_padd_bs_splat_lhs(<4 x i8> %a, i8 %b) {
+; CHECK-LABEL: test_padd_bs_splat_lhs:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    padd.bs a0, a0, a1
 ; CHECK-NEXT:    ret
@@ -637,14 +637,36 @@ define <4 x i8> @test_padd_bs_from_scalar_splat(<4 x i8> %a, i8 %b) {
   ret <4 x i8> %res
 }
 
-define <2 x i16> @test_padd_hs_from_scalar_splat(<2 x i16> %a, i16 %b) {
-; CHECK-LABEL: test_padd_hs_from_scalar_splat:
+define <4 x i8> @test_padd_bs_splat_rhs(<4 x i8> %a, i8 %b) {
+; CHECK-LABEL: test_padd_bs_splat_rhs:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    padd.bs a0, a0, a1
+; CHECK-NEXT:    ret
+  %insert = insertelement <4 x i8> poison, i8 %b, i32 0
+  %splat = shufflevector <4 x i8> %insert, <4 x i8> poison, <4 x i32> zeroinitializer
+  %res = add <4 x i8> %a, %splat
+  ret <4 x i8> %res
+}
+
+define <2 x i16> @test_padd_hs_splat_lhs(<2 x i16> %a, i16 %b) {
+; CHECK-LABEL: test_padd_hs_splat_lhs:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    padd.hs a0, a0, a1
 ; CHECK-NEXT:    ret
   %insert = insertelement <2 x i16> poison, i16 %b, i32 0
   %splat = shufflevector <2 x i16> %insert, <2 x i16> poison, <2 x i32> zeroinitializer
   %res = add <2 x i16> %splat, %a
+  ret <2 x i16> %res
+}
+
+define <2 x i16> @test_padd_hs_splat_rhs(<2 x i16> %a, i16 %b) {
+; CHECK-LABEL: test_padd_hs_splat_rhs:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    padd.hs a0, a0, a1
+; CHECK-NEXT:    ret
+  %insert = insertelement <2 x i16> poison, i16 %b, i32 0
+  %splat = shufflevector <2 x i16> %insert, <2 x i16> poison, <2 x i32> zeroinitializer
+  %res = add <2 x i16> %a, %splat
   ret <2 x i16> %res
 }
 
@@ -1941,10 +1963,10 @@ define <2 x i16> @test_select_v2i16(i1 %cond, <2 x i16> %a, <2 x i16> %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andi a3, a0, 1
 ; CHECK-NEXT:    mv a0, a1
-; CHECK-NEXT:    bnez a3, .LBB136_2
+; CHECK-NEXT:    bnez a3, .LBB138_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a0, a2
-; CHECK-NEXT:  .LBB136_2:
+; CHECK-NEXT:  .LBB138_2:
 ; CHECK-NEXT:    ret
   %res = select i1 %cond, <2 x i16> %a, <2 x i16> %b
   ret <2 x i16> %res
@@ -1955,10 +1977,10 @@ define <4 x i8> @test_select_v4i8(i1 %cond, <4 x i8> %a, <4 x i8> %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andi a3, a0, 1
 ; CHECK-NEXT:    mv a0, a1
-; CHECK-NEXT:    bnez a3, .LBB137_2
+; CHECK-NEXT:    bnez a3, .LBB139_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a0, a2
-; CHECK-NEXT:  .LBB137_2:
+; CHECK-NEXT:  .LBB139_2:
 ; CHECK-NEXT:    ret
   %res = select i1 %cond, <4 x i8> %a, <4 x i8> %b
   ret <4 x i8> %res
