@@ -655,8 +655,8 @@ void JSONGenerator::serializeInfo(const FriendInfo &I, Object &Obj) {
   Obj["IsClass"] = I.IsClass;
   if (I.Template)
     serializeInfo(I.Template.value(), Obj);
-  if (I.Params)
-    serializeArray(I.Params.value(), Obj, "Params", serializeInfoLambda());
+  if (!I.Params.empty())
+    serializeArray(I.Params, Obj, "Params", serializeInfoLambda());
   if (I.ReturnType) {
     auto ReturnTypeObj = Object();
     serializeInfo(I.ReturnType.value(), ReturnTypeObj);

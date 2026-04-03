@@ -522,7 +522,7 @@ struct FriendInfo : public SymbolInfo, public llvm::ilist_node<FriendInfo> {
   Reference Ref;
   std::optional<TemplateInfo> Template;
   std::optional<TypeInfo> ReturnType;
-  std::optional<SmallVector<FieldTypeInfo, 4>> Params;
+  llvm::ArrayRef<FieldTypeInfo> Params;
   bool IsClass = false;
 };
 

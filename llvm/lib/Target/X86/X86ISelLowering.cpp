@@ -58877,11 +58877,12 @@ static SDValue matchPMADDWD(SelectionDAG &DAG, SDNode *N,
     return SDValue();
 
   SDValue Op0, Op1, Accum;
-  if (!sd_match(N, m_Add(m_AllOf(m_Opc(ISD::BUILD_VECTOR), m_Value(Op0)),
-                         m_AllOf(m_Opc(ISD::BUILD_VECTOR), m_Value(Op1)))) &&
-      !sd_match(N, m_Add(m_AllOf(m_Opc(ISD::BUILD_VECTOR), m_Value(Op0)),
-                         m_Add(m_Value(Accum), m_AllOf(m_Opc(ISD::BUILD_VECTOR),
-                                                       m_Value(Op1))))))
+  if (!sd_match(N, m_Add(m_Value(Op0, m_SpecificOpc(ISD::BUILD_VECTOR)),
+                         m_Value(Op1, m_SpecificOpc(ISD::BUILD_VECTOR)))) &&
+      !sd_match(N,
+                m_Add(m_Value(Op0, m_SpecificOpc(ISD::BUILD_VECTOR)),
+                      m_Add(m_Value(Accum),
+                            m_Value(Op1, m_SpecificOpc(ISD::BUILD_VECTOR))))))
     return SDValue();
 
   // Check if one of Op0,Op1 is of the form:
