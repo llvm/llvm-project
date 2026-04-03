@@ -58,7 +58,7 @@ class TypeMatcher {
     if (type.IsEmpty())
       return type;
 
-    llvm::StringRef type_lexer(type.GetStringRef());
+    llvm::StringRef type_lexer(type);
 
     type_lexer.consume_front("class ");
     type_lexer.consume_front("enum ");
