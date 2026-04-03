@@ -6330,7 +6330,7 @@ def CIR_TanOp : CIR_UnaryFPToFPBuiltinOp<"tan", "TanOp"> {
   }];
 }
 
-def CIR_TruncOp : CIR_UnaryFPToFPBuiltinOp<"trunc", "TruncOp"> {
+def CIR_TruncOp : CIR_UnaryFPToFPBuiltinOp<"trunc", "FTruncOp"> {
   let summary = "Truncates floating-point value to integer";
   let description = [{
     `cir.trunc` truncates a floating-point operand to an integer value
@@ -6379,7 +6379,7 @@ def CIR_AbsOp : CIR_Op<"abs", [Pure, SameOperandsAndResultType]> {
   let assemblyFormat = "$src ( `min_is_poison` $min_is_poison^ )? `:` type($src) attr-dict";
 }
 
-def CIR_FloorOp : CIR_UnaryFPToFPBuiltinOp<"floor", "FloorOp"> {
+def CIR_FloorOp : CIR_UnaryFPToFPBuiltinOp<"floor", "FFloorOp"> {
   let summary = "Computes the floating-point floor value";
   let description = [{
     `cir.floor` computes the floor of a floating-point operand and returns
@@ -6481,6 +6481,8 @@ def CIR_FMaxNumOp : CIR_BinaryFPToFPBuiltinOp<"fmaxnum", "MaxNumOp"> {
     `cir.fmaxnum` returns the larger of its two operands. If one operand is
     NaN, the other operand is returned.
   }];
+  // Needs custom lowering for FastmathFlags::nsz.
+  let llvmOp = "";
 }
 
 def CIR_FMaximumOp : CIR_BinaryFPToFPBuiltinOp<"fmaximum", "MaximumOp"> {
@@ -6497,6 +6499,8 @@ def CIR_FMinNumOp : CIR_BinaryFPToFPBuiltinOp<"fminnum", "MinNumOp"> {
     `cir.fminnum` returns the smaller of its two operands. If one operand is
     NaN, the other operand is returned.
   }];
+  // Needs custom lowering for FastmathFlags::nsz.
+  let llvmOp = "";
 }
 
 def CIR_FMinimumOp : CIR_BinaryFPToFPBuiltinOp<"fminimum", "MinimumOp"> {
