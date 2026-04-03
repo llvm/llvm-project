@@ -26,6 +26,7 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachinePostDominators.h"
+#include "llvm/CodeGen/Register.h"
 #include "llvm/CodeGen/TargetSchedule.h"
 #include "llvm/Support/BranchProbability.h"
 using namespace llvm;
@@ -80,6 +81,8 @@ private:
   // appropriate source modifers and operands into the unpacked instructions.
   void addOperandAndMods(MachineInstrBuilder &NewMI, unsigned SrcMods,
                          bool IsHiBits, const MachineOperand &SrcMO);
+
+  bool eliminateSaveRestore(MachineBasicBlock &MBB);
 
 public:
   bool run(MachineFunction &MF, MachineLoopInfo *MLI);
@@ -726,6 +729,160 @@ void SIPreEmitPeephole::performF32Unpacking(MachineInstr &I) {
   I.eraseFromParent();
 }
 
+// Before the change:
+// tmp = orig          ; SaveInstr
+// orig = OP(tmp, ...) ; ModifyInstr
+// uses(orig)          ;
+// orig = tmp          ; RestoreInstr
+//
+// After the change:
+// tmp = OP(orig)
+// use(tmp)
+//
+// So, the live range of tmp must be ended here, or else bail out.
+bool SIPreEmitPeephole::eliminateSaveRestore(MachineBasicBlock &MBB) {
+  if (MBB.empty())
+    return false;
+
+  bool Changed = false;
+  const TargetRegisterInfo *TRI = MBB.getParent()->getSubtarget().getRegisterInfo();
+  using InstrIt = MachineBasicBlock::iterator;
+
+  // For now, only work on V_MOV_B32 so there will be no physical reigster pair in the IR.
+  auto IsVMov = [](InstrIt I) {
+    return I->getOpcode() == AMDGPU::V_MOV_B32_e32 ||
+           I->getOpcode() == AMDGPU::V_MOV_B32_e64;
+  };
+
+  InstrIt I = MBB.begin();
+  InstrIt E = MBB.end();
+  auto FindModifyInstr = [&] (InstrIt Start, InstrIt End, Register Orig, Register Tmp) {
+      InstrIt Next = Start;
+      while (Next != End) {
+          // Mask is changed in the current block and bail out for now.
+          if (Next->modifiesRegister(AMDGPU::EXEC, TRI)) {
+              return End;
+          }
+
+          // Def/use are tied which make swap complex, skip for now.
+          for (size_t Idx = 0; Idx < Next->getNumDefs(); Idx++)
+              if (Next->isRegTiedToUseOperand(Idx)) return End;
+
+          for (size_t Idx = Next->getNumDefs(); Idx < Next->getNumOperands(); Idx++)
+              if (Next->isRegTiedToDefOperand(Idx)) return End;
+
+          // If the value of Tmp is changed, bail out.
+          if (Next->modifiesRegister(Tmp, TRI)) return End;
+
+          if (Next->definesRegister(Orig, TRI)) {
+              // If the instru changes Orig and reads Tmp, then it is found.
+              if (Next->readsVirtualRegister(Tmp) && !Next->killsRegister(Tmp, TRI)) break;
+              // Or else the Orig is changed, bail out.
+              return End;
+          }
+
+          ++Next;
+      }
+
+      return Next;
+  };
+
+  auto FindRestoreInstr = [&] (InstrIt Start, InstrIt End, Register Orig, Register Tmp, llvm::SmallVector<InstrIt, 4> &Candidates) {
+      InstrIt Next = Start;
+      while (Next != End) {
+          // Mask is changed in the current block and bail out for now.
+          if (Next->modifiesRegister(AMDGPU::EXEC, TRI)) {
+              return End;
+          }
+
+          if (IsVMov(Next) && Next->getOperand(0).getReg() == Orig &&
+              Next->getOperand(1).isReg() && Next->getOperand(1).getReg() == Tmp) {
+              if (!Next->killsRegister(Tmp, TRI))
+                  return End;
+
+              break;
+          }
+
+          // Tmp and Orig should not be changed so that the restore instr `v_mov orig, tmp` is valid.
+          if (Next->killsRegister(Tmp, TRI) or Next->killsRegister(Orig, TRI))
+              return End;
+
+          if (Next->readsRegister(Orig, TRI))
+              Candidates.push_back(Next);
+
+          ++Next;
+      }
+
+      return Next;
+  };
+
+  while (I != E) {
+    // Find the initial V_MOV tmp, orig
+    if (!IsVMov(I) || !I->getOperand(0).isReg() || !I->getOperand(1).isReg()) {
+      ++I;
+      continue;
+    }
+
+    Register Tmp = I->getOperand(0).getReg();
+    Register Orig = I->getOperand(1).getReg();
+
+    InstrIt SaveInstr = I;
+
+    // Find instruction <op> orig, tmp
+    InstrIt ModifyInstr = FindModifyInstr(std::next(SaveInstr), E, Orig, Tmp);
+    if (ModifyInstr == E) {
+      ++I;
+      continue;
+    }
+
+    // Find the restore, collecting candidates
+    llvm::SmallVector<InstrIt, 4> Candidates;
+    InstrIt RestoreInstr = FindRestoreInstr(std::next(ModifyInstr), E, Orig, Tmp, Candidates);
+    if (RestoreInstr == E) {
+      ++I;
+      continue;
+    }
+
+    // Swap Orig and Tmp in ModifyInstr
+    for (MachineOperand &MO : ModifyInstr->operands()) {
+      if (MO.isReg()) {
+        if (TRI->regsOverlap(MO.getReg(), Orig)) {
+          MO.setReg(Tmp);
+          MO.setIsRenamable(false);
+        } else if (TRI->regsOverlap(MO.getReg(), Tmp)) {
+          MO.setReg(Orig);
+          MO.setIsRenamable(false);
+        }
+      }
+    }
+
+    MachineInstr *LastUse = Candidates.empty() ? nullptr : &*Candidates.back();
+
+    for (auto &Candidate : Candidates) {
+      for (MachineOperand &MO : Candidate->operands()) {
+        if (MO.isReg() && MO.isUse() && TRI->regsOverlap(MO.getReg(), Orig)) {
+          MO.setReg(Tmp);
+          MO.setIsRenamable(false);
+
+          // Clear old kill flags on Orig, and only set kill on Tmp for the LAST use
+          MO.setIsKill(false);
+          if (&*Candidate == LastUse) {
+            MO.setIsKill(true); // Manually kill Tmp at the last replaced use
+          }
+        }
+      }
+    }
+
+    I = std::next(RestoreInstr);
+    SaveInstr->eraseFromParent();
+    RestoreInstr->eraseFromParent();
+
+    Changed = true;
+  }
+
+  return Changed;
+}
+
 MachineInstrBuilder SIPreEmitPeephole::createUnpackedMI(MachineInstr &I,
                                                         uint32_t UnpackedOpcode,
                                                         bool IsHiBits) {
@@ -846,8 +1003,7 @@ bool SIPreEmitPeephole::run(MachineFunction &MF, MachineLoopInfo *LoopInfo) {
   // side effects.
 
   // Perform the extra MF scans only for supported archs
-  if (!ST.hasGFX940Insts())
-    return Changed;
+  if (ST.hasGFX940Insts()) {
   for (MachineBasicBlock &MBB : MF) {
     // Unpack packed instructions overlapped by MFMAs. This allows the
     // compiler to co-issue unpacked instructions with MFMA
@@ -864,6 +1020,13 @@ bool SIPreEmitPeephole::run(MachineFunction &MF, MachineLoopInfo *LoopInfo) {
     }
     for (MachineInstr *MI : InstrsToUnpack) {
       performF32Unpacking(*MI);
+    }
+  }
+  }
+
+  if (ST.hasGFX950Insts()) {
+    for (MachineBasicBlock &MBB: MF) {
+      Changed |= eliminateSaveRestore(MBB);
     }
   }
 
