@@ -10,9 +10,9 @@ Examples:
 .. code-block:: c++
 
    // Finds:
-   constexpr const int var = {};  // redundant use of `const`
+   constexpr const int var = 10;  // redundant use of `const`
    // replaced by:
-   constexpr int var = {};
+   constexpr int var = 10;
 
    // Finds:
    constexpr const int arr[] = {}; // redundant use of `const`
