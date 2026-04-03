@@ -98,6 +98,12 @@ void explicitDestructor() {
   std::move(a);
   a.~A(); // It's always valid to destruct a moved object.
 
+  using B = AnnotatedContainer<int>;
+  alignas(B) char other_storage[sizeof(B)];
+  B& a_p = *new (other_storage) B();
+  std::move(a_p);
+  a_p.~B(); // Same as above, but with a template class.
+
   A& b = *new (storage) A();
   std::move(b);
   (b).~A(); // Parenthesis should not change the behavior.
