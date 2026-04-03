@@ -499,6 +499,12 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::SSHLSAT, MVT::i32, Legal);
   }
 
+  if (Subtarget.hasStdExtP() && !Subtarget.is64Bit()) {
+    // FIXME: Support i32 on RV64+P by inserting into a v2i32 vector, doing
+    // paadd.w, paaddu.w and extracting.
+    setOperationAction({ISD::AVGFLOORS, ISD::AVGFLOORU}, MVT::i32, Legal);
+  }
+
   if (Subtarget.hasStdExtZbc() || Subtarget.hasStdExtZbkc())
     setOperationAction({ISD::CLMUL, ISD::CLMULH}, XLenVT, Legal);
   if (Subtarget.hasStdExtZbc())
