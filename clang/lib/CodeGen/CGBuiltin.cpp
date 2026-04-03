@@ -2653,8 +2653,9 @@ RValue CodeGenFunction::emitStdcCountIntrinsic(const CallExpr *E,
   llvm::Type *ResultType = ConvertType(E->getType());
   Value *ActualArg = InvertArg ? Builder.CreateNot(ArgValue) : ArgValue;
   Function *F = CGM.getIntrinsic(IntID, ArgType);
-  Value *Result = IsPop ? Builder.CreateCall(F, ActualArg)
-                        : Builder.CreateCall(F, {ActualArg, Builder.getFalse()});
+  Value *Result = IsPop
+                      ? Builder.CreateCall(F, ActualArg)
+                      : Builder.CreateCall(F, {ActualArg, Builder.getFalse()});
   if (Result->getType() != ResultType)
     Result = Builder.CreateIntCast(Result, ResultType, false);
   return RValue::get(Result);
@@ -2680,8 +2681,8 @@ RValue CodeGenFunction::emitStdcBitWidthMinus(const CallExpr *E,
 // stdc_first_{leading,trailing}_{zero,one}: returns the 1-based position of
 // the first matching bit, or 0 if no such bit exists. InvertArg flips the
 // input to search for zeros instead of ones.
-RValue CodeGenFunction::emitStdcFirstBit(const CallExpr *E,
-                                         Intrinsic::ID IntID, bool InvertArg) {
+RValue CodeGenFunction::emitStdcFirstBit(const CallExpr *E, Intrinsic::ID IntID,
+                                         bool InvertArg) {
   Value *ArgValue = EmitScalarExpr(E->getArg(0));
   llvm::Type *ArgType = ArgValue->getType();
   llvm::Type *ResultType = ConvertType(E->getType());
