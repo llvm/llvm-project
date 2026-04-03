@@ -49,7 +49,7 @@ ELFObjectWriter &MCELFStreamer::getWriter() {
   return static_cast<ELFObjectWriter &>(getAssembler().getWriter());
 }
 
-void MCELFStreamer::initSections(bool, const MCSubtargetInfo &STI) {
+void MCELFStreamer::initSections(const MCSubtargetInfo &STI) {
   MCContext &Ctx = getContext();
   switchSection(Ctx.getObjectFileInfo()->getTextSection());
   emitCodeAlignment(Align(Ctx.getObjectFileInfo()->getTextSectionAlignment()),

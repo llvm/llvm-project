@@ -915,3 +915,13 @@ llvm.func @nanosleep(%duration: i32) {
   nvvm.nanosleep %duration
   llvm.return
 }
+
+// -----
+
+// CHECK: @managed_g = addrspace(1) global i32 0
+// CHECK: @managed_decl = external addrspace(1) global i32
+// CHECK: !nvvm.annotations = !{![[MANAGED0:[0-9]+]], ![[MANAGED1:[0-9]+]]}
+// CHECK: ![[MANAGED0]] = !{ptr addrspace(1) @managed_g, !"managed", i32 1}
+// CHECK: ![[MANAGED1]] = !{ptr addrspace(1) @managed_decl, !"managed", i32 1}
+llvm.mlir.global external @managed_g(0 : i32) {addr_space = 1 : i32, nvvm.managed} : i32
+llvm.mlir.global external @managed_decl() {addr_space = 1 : i32, nvvm.managed} : i32

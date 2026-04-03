@@ -163,18 +163,29 @@ struct VPlanTransforms {
   LLVM_ABI_FOR_TEST static void addMiddleCheck(VPlan &Plan, bool TailFolded);
 
   // Create a check to \p Plan to see if the vector loop should be executed.
+  // If \p CheckBlock is non-null, the compare and branch are placed there;
+  // ExpandSCEV recipes are always placed in Entry.
   static void addMinimumIterationCheck(
       VPlan &Plan, ElementCount VF, unsigned UF,
       ElementCount MinProfitableTripCount, bool RequiresScalarEpilogue,
       bool TailFolded, Loop *OrigLoop, const uint32_t *MinItersBypassWeights,
-      DebugLoc DL, PredicatedScalarEvolution &PSE);
+      DebugLoc DL, PredicatedScalarEvolution &PSE,
+      VPBasicBlock *CheckBlock = nullptr);
+
+  /// Add a new check block before the vector preheader to \p Plan to check if
+  /// the main vector loop should be executed (TC >= VF * UF).
+  static void
+  addIterationCountCheckBlock(VPlan &Plan, ElementCount VF, unsigned UF,
+                              bool RequiresScalarEpilogue, Loop *OrigLoop,
+                              const uint32_t *MinItersBypassWeights,
+                              DebugLoc DL, PredicatedScalarEvolution &PSE);
 
   /// Add a check to \p Plan to see if the epilogue vector loop should be
   /// executed.
   static void addMinimumVectorEpilogueIterationCheck(
-      VPlan &Plan, Value *TripCount, Value *VectorTripCount,
-      bool RequiresScalarEpilogue, ElementCount EpilogueVF, unsigned EpilogueUF,
-      unsigned MainLoopStep, unsigned EpilogueLoopStep, ScalarEvolution &SE);
+      VPlan &Plan, Value *VectorTripCount, bool RequiresScalarEpilogue,
+      ElementCount EpilogueVF, unsigned EpilogueUF, unsigned MainLoopStep,
+      unsigned EpilogueLoopStep, ScalarEvolution &SE);
 
   /// Replace loops in \p Plan's flat CFG with VPRegionBlocks, turning \p Plan's
   /// flat CFG into a hierarchical CFG.
@@ -230,10 +241,11 @@ struct VPlanTransforms {
   /// Explicitly unroll \p Plan by \p UF.
   static void unrollByUF(VPlan &Plan, unsigned UF);
 
-  /// Replace each replicating VPReplicateRecipe and VPInstruction outside of
-  /// any replicate region in \p Plan with \p VF single-scalar recipes.
-  /// TODO: Also replicate VPScalarIVSteps and VPReplicateRecipes inside
-  /// replicate regions, thereby dissolving the latter.
+  /// Replace replicating VPReplicateRecipe, VPScalarIVStepsRecipe and
+  /// VPInstruction in \p Plan with \p VF single-scalar recipes. Replicate
+  /// regions are dissolved by replicating their blocks and their recipes \p VF
+  /// times.
+  /// TODO: Also dissolve replicate regions with live outs.
   static void replicateByVF(VPlan &Plan, ElementCount VF);
 
   /// Optimize \p Plan based on \p BestVF and \p BestUF. This may restrict the
@@ -242,10 +254,19 @@ struct VPlanTransforms {
                                  unsigned BestUF,
                                  PredicatedScalarEvolution &PSE);
 
+  /// Try to simplify VPInstruction::ExplicitVectorLength recipes when the AVL
+  /// is known to be <= VF, replacing them with the AVL directly.
+  static bool simplifyKnownEVL(VPlan &Plan, ElementCount VF,
+                               PredicatedScalarEvolution &PSE);
+
   /// Apply VPlan-to-VPlan optimizations to \p Plan, including induction recipe
   /// optimizations, dead recipe removal, replicate region optimizations and
   /// block merging.
   LLVM_ABI_FOR_TEST static void optimize(VPlan &Plan);
+
+  /// Remove redundant VPBasicBlocks by merging them into their single
+  /// predecessor if the latter has a single successor.
+  static bool mergeBlocksIntoPredecessors(VPlan &Plan);
 
   /// Wrap predicated VPReplicateRecipes with a mask operand in an if-then
   /// region block and remove the mask operand. Optimize the created regions by
@@ -363,8 +384,9 @@ struct VPlanTransforms {
   static void simplifyRecipes(VPlan &Plan);
 
   /// Remove BranchOnCond recipes with true or false conditions together with
-  /// removing dead edges to their successors.
-  static void removeBranchOnConst(VPlan &Plan);
+  /// removing dead edges to their successors. If \p OnlyLatches is true, only
+  /// process loop latches.
+  static void removeBranchOnConst(VPlan &Plan, bool OnlyLatches = false);
 
   /// Perform common-subexpression-elimination on \p Plan.
   static void cse(VPlan &Plan);

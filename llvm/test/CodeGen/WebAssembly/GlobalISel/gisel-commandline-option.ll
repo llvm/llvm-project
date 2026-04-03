@@ -25,6 +25,7 @@
 ; ENABLED-O1-NEXT:  WebAssemblyPostLegalizerCombiner
 ; ENABLED-NEXT:  RegBankSelect
 ; ENABLED-NEXT:  Analysis for ComputingKnownBits
+; ENABLED-O1-NEXT:  Dominator Tree Construction
 ; ENABLED-O1-NEXT:  Natural Loop Information
 ; ENABLED-O1-NEXT:  Lazy Branch Probability Analysis
 ; ENABLED-O1-NEXT:  Lazy Block Frequency Analysis

@@ -804,15 +804,15 @@ public:
   }
 
   bool hasPendingFlat() const {
-    return ((LastFlat[DS_CNT] > ScoreLBs[DS_CNT] &&
-             LastFlat[DS_CNT] <= ScoreUBs[DS_CNT]) ||
-            (LastFlat[LOAD_CNT] > ScoreLBs[LOAD_CNT] &&
-             LastFlat[LOAD_CNT] <= ScoreUBs[LOAD_CNT]));
+    return ((LastFlatDsCnt > ScoreLBs[DS_CNT] &&
+             LastFlatDsCnt <= ScoreUBs[DS_CNT]) ||
+            (LastFlatLoadCnt > ScoreLBs[LOAD_CNT] &&
+             LastFlatLoadCnt <= ScoreUBs[LOAD_CNT]));
   }
 
   void setPendingFlat() {
-    LastFlat[LOAD_CNT] = ScoreUBs[LOAD_CNT];
-    LastFlat[DS_CNT] = ScoreUBs[DS_CNT];
+    LastFlatLoadCnt = ScoreUBs[LOAD_CNT];
+    LastFlatDsCnt = ScoreUBs[DS_CNT];
   }
 
   bool hasPendingGDS() const {
@@ -942,7 +942,8 @@ private:
   unsigned ScoreUBs[NUM_INST_CNTS] = {0};
   WaitEventSet PendingEvents;
   // Remember the last flat memory operation.
-  unsigned LastFlat[NUM_INST_CNTS] = {0};
+  unsigned LastFlatDsCnt = 0;
+  unsigned LastFlatLoadCnt = 0;
   // Remember the last GDS operation.
   unsigned LastGDS = 0;
 
@@ -1680,13 +1681,13 @@ bool WaitcntBrackets::counterOutOfOrder(InstCounterType T) const {
   // so having GLOBAL_INV_ACCESS mixed with other LOAD_CNT events doesn't cause
   // out-of-order completion.
   if (T == LOAD_CNT) {
-    unsigned Events = hasPendingEvent(T);
+    WaitEventSet Events = PendingEvents & Context->getWaitEvents(T);
     // Remove GLOBAL_INV_ACCESS from the event mask before checking for mixed
     // events
-    Events &= ~(1 << GLOBAL_INV_ACCESS);
+    Events.remove(GLOBAL_INV_ACCESS);
     // Return true only if there are still multiple event types after removing
     // GLOBAL_INV
-    return Events & (Events - 1);
+    return Events.twoOrMore();
   }
 
   return hasMixedPendingEvents(T);
@@ -3073,10 +3074,13 @@ bool WaitcntBrackets::merge(const WaitcntBrackets &Other) {
 
     ScoreUBs[T] = NewUB;
 
-    StrictDom |= mergeScore(M, LastFlat[T], Other.LastFlat[T]);
+    if (T == LOAD_CNT)
+      StrictDom |= mergeScore(M, LastFlatLoadCnt, Other.LastFlatLoadCnt);
 
-    if (T == DS_CNT)
+    if (T == DS_CNT) {
+      StrictDom |= mergeScore(M, LastFlatDsCnt, Other.LastFlatDsCnt);
       StrictDom |= mergeScore(M, LastGDS, Other.LastGDS);
+    }
 
     if (T == KM_CNT) {
       StrictDom |= mergeScore(M, SCCScore, Other.SCCScore);

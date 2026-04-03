@@ -95,7 +95,7 @@ define i16 @v_add_i16(i16 %a, i16 %b) {
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_add_nc_u16 v0, v0, v1
+; GFX12-NEXT:    v_add_nc_u16 v0.l, v0.l, v1.l
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %c = add i16 %a, %b
   ret i16 %c

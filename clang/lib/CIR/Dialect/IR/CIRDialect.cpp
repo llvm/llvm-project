@@ -221,10 +221,17 @@ void printVisibilityAttr(OpAsmPrinter &printer,
   }
 }
 
-void parseVisibilityAttr(OpAsmParser &parser, cir::VisibilityAttr &visibility) {
+void printVisibilityAttr(OpAsmPrinter &printer, cir::GlobalOp,
+                         cir::VisibilityAttr visibility) {
+  printVisibilityAttr(printer, visibility);
+}
+
+mlir::OptionalParseResult parseVisibilityAttr(OpAsmParser &parser,
+                                              cir::VisibilityAttr &visibility) {
   cir::VisibilityKind visibilityKind =
       parseOptionalCIRKeyword(parser, cir::VisibilityKind::Default);
   visibility = cir::VisibilityAttr::get(parser.getContext(), visibilityKind);
+  return mlir::success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -2215,17 +2222,18 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
 
   // Parse CXXSpecialMember attribute
   if (parser.parseOptionalKeyword("special_member").succeeded()) {
-    cir::CXXCtorAttr ctorAttr;
-    cir::CXXDtorAttr dtorAttr;
-    cir::CXXAssignAttr assignAttr;
     if (parser.parseLess().failed())
       return failure();
-    if (parser.parseOptionalAttribute(ctorAttr).has_value())
-      state.addAttribute(specialMemberAttr, ctorAttr);
-    else if (parser.parseOptionalAttribute(dtorAttr).has_value())
-      state.addAttribute(specialMemberAttr, dtorAttr);
-    else if (parser.parseOptionalAttribute(assignAttr).has_value())
-      state.addAttribute(specialMemberAttr, assignAttr);
+
+    mlir::Attribute attr;
+    if (parser.parseAttribute(attr).failed())
+      return failure();
+    if (!mlir::isa<cir::CXXCtorAttr, cir::CXXDtorAttr, cir::CXXAssignAttr>(
+            attr))
+      return parser.emitError(parser.getCurrentLocation(),
+                              "expected a C++ special member attribute");
+    state.addAttribute(specialMemberAttr, attr);
+
     if (parser.parseGreater().failed())
       return failure();
   }

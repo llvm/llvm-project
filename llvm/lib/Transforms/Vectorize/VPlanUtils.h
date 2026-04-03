@@ -80,9 +80,9 @@ unsigned getVFScaleFactor(VPRecipeBase *R);
 /// \p GEPs.
 LLVM_ABI_FOR_TEST
 std::optional<VPValue *>
-getRecipesForUncountableExit(VPlan &Plan,
-                             SmallVectorImpl<VPRecipeBase *> &Recipes,
-                             SmallVectorImpl<VPRecipeBase *> &GEPs);
+getRecipesForUncountableExit(SmallVectorImpl<VPInstruction *> &Recipes,
+                             SmallVectorImpl<VPInstruction *> &GEPs,
+                             VPBasicBlock *LatchVPBB);
 
 /// Return a MemoryLocation for \p R with noalias metadata populated from
 /// \p R, if the recipe is supported and std::nullopt otherwise. The pointer of
@@ -260,6 +260,13 @@ public:
     Old->clearSuccessors();
   }
 
+  /// Clone the CFG for all nodes reachable from \p Entry, including cloning
+  /// the blocks and their recipes. Operands of cloned recipes will NOT be
+  /// updated. Remapping of operands must be done separately. Returns a pair
+  /// with the new entry and exiting blocks of the cloned region. If \p Entry
+  /// isn't part of a region, return nullptr for the exiting block.
+  static std::pair<VPBlockBase *, VPBlockBase *> cloneFrom(VPBlockBase *Entry);
+
   /// Return an iterator range over \p Range which only includes \p BlockTy
   /// blocks. The accesses are casted to \p BlockTy.
   template <typename BlockTy, typename T>
@@ -278,6 +285,12 @@ public:
       return cast<BlockTy>(&Block);
     });
   }
+
+  /// Returns the blocks between \p FirstBB and \p LastBB, where FirstBB
+  /// to LastBB forms a single-sucessor chain.
+  static SmallVector<VPBasicBlock *>
+  blocksInSingleSuccessorChainBetween(VPBasicBlock *FirstBB,
+                                      VPBasicBlock *LastBB);
 
   /// Inserts \p BlockPtr on the edge between \p From and \p To. That is, update
   /// \p From's successor to \p To to point to \p BlockPtr and \p To's

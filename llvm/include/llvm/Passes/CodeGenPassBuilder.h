@@ -29,7 +29,6 @@
 #include "llvm/CodeGen/DetectDeadLanes.h"
 #include "llvm/CodeGen/DwarfEHPrepare.h"
 #include "llvm/CodeGen/ExpandIRInsts.h"
-#include "llvm/CodeGen/ExpandMemCmp.h"
 #include "llvm/CodeGen/ExpandPostRAPseudos.h"
 #include "llvm/CodeGen/ExpandReductions.h"
 #include "llvm/CodeGen/FEntryInserter.h"
@@ -698,6 +697,12 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addISelPasses(
   if (TM.useEmulatedTLS())
     addModulePass(LowerEmuTLSPass(), PMW);
 
+  // ObjCARCContract operates on ObjC intrinsics and must run before
+  // PreISelIntrinsicLowering.
+  if (getOptLevel() != CodeGenOptLevel::None) {
+    addFunctionPass(ObjCARCContractPass(), PMW);
+    flushFPMsToMPM(PMW);
+  }
   addModulePass(PreISelIntrinsicLoweringPass(&TM), PMW);
   addFunctionPass(ExpandIRInstsPass(TM, getOptLevel()), PMW);
 
@@ -728,16 +733,6 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addIRPasses(
     addFunctionPass(createFunctionToLoopPassAdaptor(std::move(LPM),
                                                     /*UseMemorySSA=*/false),
                     PMW);
-  }
-
-  if (getOptLevel() != CodeGenOptLevel::None) {
-    // The MergeICmpsPass tries to create memcmp calls by grouping sequences of
-    // loads and compares. ExpandMemCmpPass then tries to expand those calls
-    // into optimally-sized loads and compares. The transforms are enabled by a
-    // target lowering hook.
-    if (!Opt.DisableMergeICmps)
-      addFunctionPass(MergeICmpsPass(), PMW);
-    addFunctionPass(ExpandMemCmpPass(), PMW);
   }
 
   // Run GC lowering passes for builtin collectors
@@ -855,9 +850,6 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addISelPrepare(
 
   if (Opt.RequiresCodeGenSCCOrder && !AddInCGSCCOrder)
     requireCGSCCOrder(PMW);
-
-  if (getOptLevel() != CodeGenOptLevel::None)
-    addFunctionPass(ObjCARCContractPass(), PMW);
 
   addFunctionPass(InlineAsmPreparePass(), PMW);
   // Add both the safe stack and the stack protection passes: each of them will

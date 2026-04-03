@@ -36,7 +36,13 @@
 #include "llvm/ADT/ScopeExit.h"
 #include <type_traits>
 
-#if __has_cpp_attribute(clang::preserve_none)
+// preserve_none causes problems when asan is enabled on both AArch64 and other
+// platforms. Disable it until all the bugs are fixed here.
+//
+// See https://github.com/llvm/llvm-project/issues/177519 for AArch64.
+#if !defined(__aarch64__) && !defined(__i386__) &&                             \
+    !__has_feature(address_sanitizer) &&                                       \
+    __has_cpp_attribute(clang::preserve_none)
 #define PRESERVE_NONE [[clang::preserve_none]]
 #else
 #define PRESERVE_NONE
@@ -717,7 +723,7 @@ bool Neg(InterpState &S, CodePtr OpPC) {
       return true;
     }
 
-    assert(isIntegerType(Name) &&
+    assert((isIntegerType(Name) || Name == PT_FixedPoint) &&
            "don't expect other types to fail at constexpr negation");
     S.Stk.push<T>(Result);
 
@@ -1656,9 +1662,9 @@ bool InitThisFieldActivate(InterpState &S, CodePtr OpPC, uint32_t I) {
 // FIXME: The Field pointer here is too much IMO and we could instead just
 // pass an Offset + BitWidth pair.
 template <PrimType Name, class T = typename PrimConv<Name>::T>
-bool InitThisBitField(InterpState &S, CodePtr OpPC, const Record::Field *F,
-                      uint32_t FieldOffset) {
-  assert(F->isBitField());
+bool InitThisBitField(InterpState &S, CodePtr OpPC,
+                      uint32_t FieldOffset, // const Record::Field *F,
+                      uint32_t FieldBitWidth) {
   if (S.checkingPotentialConstantExpression() && S.Current->getDepth() == 0)
     return false;
   if (!CheckThis(S, OpPC))
@@ -1667,15 +1673,14 @@ bool InitThisBitField(InterpState &S, CodePtr OpPC, const Record::Field *F,
   const Pointer &Field = This.atField(FieldOffset);
   assert(Field.canBeInitialized());
   const auto &Value = S.Stk.pop<T>();
-  Field.deref<T>() = Value.truncate(F->Decl->getBitWidthValue());
+  Field.deref<T>() = Value.truncate(FieldBitWidth);
   Field.initialize();
   return true;
 }
 
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool InitThisBitFieldActivate(InterpState &S, CodePtr OpPC,
-                              const Record::Field *F, uint32_t FieldOffset) {
-  assert(F->isBitField());
+                              uint32_t FieldOffset, uint32_t FieldBitWidth) {
   if (S.checkingPotentialConstantExpression() && S.Current->getDepth() == 0)
     return false;
   if (!CheckThis(S, OpPC))
@@ -1684,7 +1689,7 @@ bool InitThisBitFieldActivate(InterpState &S, CodePtr OpPC,
   const Pointer &Field = This.atField(FieldOffset);
   assert(Field.canBeInitialized());
   const auto &Value = S.Stk.pop<T>();
-  Field.deref<T>() = Value.truncate(F->Decl->getBitWidthValue());
+  Field.deref<T>() = Value.truncate(FieldBitWidth);
   Field.initialize();
   Field.activate();
   return true;
@@ -1725,8 +1730,8 @@ bool InitFieldActivate(InterpState &S, CodePtr OpPC, uint32_t I) {
 }
 
 template <PrimType Name, class T = typename PrimConv<Name>::T>
-bool InitBitField(InterpState &S, CodePtr OpPC, const Record::Field *F) {
-  assert(F->isBitField());
+bool InitBitField(InterpState &S, CodePtr OpPC, uint32_t FieldOffset,
+                  uint32_t FieldBitWidth) {
   const T &Value = S.Stk.pop<T>();
   const Pointer &Ptr = S.Stk.peek<Pointer>();
   if (!CheckRange(S, OpPC, Ptr, CSK_Field))
@@ -1734,9 +1739,9 @@ bool InitBitField(InterpState &S, CodePtr OpPC, const Record::Field *F) {
   if (!CheckArray(S, OpPC, Ptr))
     return false;
 
-  const Pointer &Field = Ptr.atField(F->Offset);
+  const Pointer &Field = Ptr.atField(FieldOffset);
 
-  unsigned BitWidth = std::min(F->Decl->getBitWidthValue(), Value.bitWidth());
+  unsigned BitWidth = std::min(FieldBitWidth, Value.bitWidth());
   if constexpr (needsAlloc<T>()) {
     T Result = S.allocAP<T>(Value.bitWidth());
     if constexpr (T::isSigned())
@@ -1748,16 +1753,15 @@ bool InitBitField(InterpState &S, CodePtr OpPC, const Record::Field *F) {
 
     Field.deref<T>() = Result;
   } else {
-    Field.deref<T>() = Value.truncate(F->Decl->getBitWidthValue());
+    Field.deref<T>() = Value.truncate(FieldBitWidth);
   }
   Field.initialize();
   return true;
 }
 
 template <PrimType Name, class T = typename PrimConv<Name>::T>
-bool InitBitFieldActivate(InterpState &S, CodePtr OpPC,
-                          const Record::Field *F) {
-  assert(F->isBitField());
+bool InitBitFieldActivate(InterpState &S, CodePtr OpPC, uint32_t FieldOffset,
+                          uint32_t FieldBitWidth) {
   const T &Value = S.Stk.pop<T>();
   const Pointer &Ptr = S.Stk.peek<Pointer>();
   if (!CheckRange(S, OpPC, Ptr, CSK_Field))
@@ -1765,9 +1769,9 @@ bool InitBitFieldActivate(InterpState &S, CodePtr OpPC,
   if (!CheckArray(S, OpPC, Ptr))
     return false;
 
-  const Pointer &Field = Ptr.atField(F->Offset);
+  const Pointer &Field = Ptr.atField(FieldOffset);
 
-  unsigned BitWidth = std::min(F->Decl->getBitWidthValue(), Value.bitWidth());
+  unsigned BitWidth = std::min(FieldBitWidth, Value.bitWidth());
   if constexpr (needsAlloc<T>()) {
     T Result = S.allocAP<T>(Value.bitWidth());
     if constexpr (T::isSigned())
@@ -1779,7 +1783,7 @@ bool InitBitFieldActivate(InterpState &S, CodePtr OpPC,
 
     Field.deref<T>() = Result;
   } else {
-    Field.deref<T>() = Value.truncate(F->Decl->getBitWidthValue());
+    Field.deref<T>() = Value.truncate(FieldBitWidth);
   }
   Field.activate();
   Field.initialize();
