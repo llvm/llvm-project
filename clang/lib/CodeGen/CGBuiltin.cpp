@@ -3918,13 +3918,6 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     Value *Zero = ConstantInt::get(ArgType, 0);
     Value *One = ConstantInt::get(ArgType, 1);
 
-    if (auto *CI = dyn_cast<ConstantInt>(ArgValue)) {
-      if (CI->isMinusOne())
-        return RValue::get(CI);
-      if (CI->isZero() || CI->isOne())
-        return RValue::get(ConstantInt::get(ArgType, 1));
-    }
-
     Value *IsLEOne = Builder.CreateICmpULE(ArgValue, One, "isleone");
 
     BasicBlock *EntryBB = Builder.GetInsertBlock();

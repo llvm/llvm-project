@@ -239,19 +239,6 @@ void test_bitint_first_and_count(unsigned _BitInt(9) bi9) {
   r = __builtin_stdc_count_zeros(bi9);
 }
 
-// CHECK-LABEL: test_bit_ceil_all_ones
-// CHECK: store volatile i32 -1, ptr %r
-void test_bit_ceil_all_ones(void) {
-  volatile unsigned int r = __builtin_stdc_bit_ceil(0xFFFFFFFFU);
-}
-
-// CHECK-LABEL: test_bit_ceil_all_ones_bitint
-// CHECK: store volatile i32 131071, ptr %r
-void test_bit_ceil_all_ones_bitint(void) {
-  volatile unsigned _BitInt(17) r =
-      __builtin_stdc_bit_ceil((unsigned _BitInt(17))(-1));
-}
-
 // CHECK-LABEL: test_bit_floor_all_ones_bitint
 // CHECK: store volatile i32 65536, ptr %r
 void test_bit_floor_all_ones_bitint(void) {
