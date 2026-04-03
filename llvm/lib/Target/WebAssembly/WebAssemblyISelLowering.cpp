@@ -3360,7 +3360,7 @@ static SDValue performBitcastCombine(SDNode *N,
     for (SDValue V : VectorsToShuffle) {
       ReturningInteger = DAG.getNode(
           ISD::SHL, DL, ReturnType,
-          {DAG.getShiftAmountConstant(16, ReturnType, DL), ReturningInteger});
+          {ReturningInteger, DAG.getShiftAmountConstant(16, ReturnType, DL)});
 
       SDValue ExtendedV = DAG.getZExtOrTrunc(V, DL, ReturnType);
       ReturningInteger =
