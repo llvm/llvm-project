@@ -526,6 +526,17 @@ KnownBits KnownBits::shl(const KnownBits &LHS, const KnownBits &RHS, bool NUW,
 }
 
 KnownBits KnownBits::lshr(const KnownBits &LHS, unsigned ShiftAmt) {
+   if (ShiftAmt == 0)
+    return LHS;
+
+  unsigned BitWidth = LHS.getBitWidth();
+
+  if (ShiftAmt >= BitWidth) {
+    KnownBits Known(BitWidth);
+    Known.setAllZero();
+    return Known;
+  }
+
   KnownBits Known = LHS;
   Known >>= ShiftAmt;
   // High bits are known zero.
@@ -586,8 +597,37 @@ KnownBits KnownBits::ashr(const KnownBits &LHS, unsigned ShiftAmt,
                           bool ShAmtNonZero, bool Exact) {
   // TODO: This is simple fallback to generic RHS-based ashr.
   // Add a specialized constant-shift implementation with identical semantics.
-  KnownBits RHS = KnownBits::makeConstant(APInt(LHS.getBitWidth(), ShiftAmt));
-  return ashr(LHS, RHS, ShAmtNonZero, Exact);
+  // KnownBits RHS = KnownBits::makeConstant(APInt(LHS.getBitWidth(), ShiftAmt));
+  // return ashr(LHS, RHS, ShAmtNonZero, Exact);
+
+  unsigned BitWidth = LHS.getBitWidth();
+  KnownBits Known(BitWidth);
+
+  if (ShiftAmt == 0) {
+    if (!ShAmtNonZero)
+      return LHS;
+
+    Known.setAllZero();
+    return Known;
+  }
+
+  if (ShiftAmt >= BitWidth) {
+    Known.setAllZero();
+    return Known;
+  }
+
+  if (LHS.isUnknown())
+    return Known;
+
+  if (Exact && LHS.countMaxTrailingZeros() < ShiftAmt) {
+    Known.setAllZero();
+    return Known;
+  }
+
+  Known = LHS;
+  Known.Zero.ashrInPlace(ShiftAmt);
+  Known.One.ashrInPlace(ShiftAmt);
+  return Known;
 }
 
 KnownBits KnownBits::ashr(const KnownBits &LHS, const KnownBits &RHS,
