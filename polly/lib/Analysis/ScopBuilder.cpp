@@ -920,7 +920,7 @@ bool ScopBuilder::buildDomainsWithBranchConstraints(
     SmallVector<isl_set *, 8> ConditionSets;
     if (RN->isSubRegion())
       ConditionSets.push_back(Domain.copy());
-    else if (!buildConditionSets(BB, TI, BBLoop, Domain.get(), InvalidDomainMap, ConditionSets, /*IsInsideDomain=*/true))
+    else if (!buildConditionSets(BB, TI, BBLoop, Domain.get(), InvalidDomainMap, ConditionSets, /*IsInsideDomain=*/false))
       return false;
 
     // Now iterate over the successors and set their initial domain based on

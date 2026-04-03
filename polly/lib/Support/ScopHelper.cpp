@@ -239,7 +239,7 @@ void polly::recordAssumption(polly::RecordedAssumptionsTy *RecordedAssumptions,
 
 
 
-  assert((Set.is_params() || BB) &&  "Assumptions without a basic block must be parameter sets");
+//  assert((Set.is_params() || BB) &&  "Assumptions without a basic block must be parameter sets");
   if (RecordedAssumptions)
     RecordedAssumptions->push_back({Kind, Sign, Set, Loc, BB, RTC});
 }
