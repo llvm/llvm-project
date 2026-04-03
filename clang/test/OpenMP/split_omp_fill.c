@@ -16,7 +16,9 @@ void foo(int n) {
   // PRINT:     #pragma omp split counts(3, omp_fill)
   // DUMP: OMPSplitDirective
   // DUMP-NEXT: |-OMPCountsClause
-  // DUMP-NEXT: | |-IntegerLiteral {{.*}} 'int' 3
+  // DUMP-NEXT: | |-ConstantExpr {{.*}} 'int'
+  // DUMP-NEXT: | | |-value: Int 3
+  // DUMP-NEXT: | | `-IntegerLiteral {{.*}} 'int' 3
   // DUMP-NEXT: | `-{{.*}}
   // DUMP-NEXT: {{.*}}`-ForStmt
 #pragma omp split counts(3, omp_fill)

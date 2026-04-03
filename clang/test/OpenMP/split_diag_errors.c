@@ -36,7 +36,7 @@ void test_float_count(void) {
   for (int i = 0; i < 10; ++i) {
   }
 }
-// FLOAT: error: {{.*}}integral or unscoped enumeration type
+// FLOAT: error: {{.*}}integer constant expression must have integer type
 #endif
 
 #ifdef TEST_WHILE

@@ -78,6 +78,15 @@ void parse_and_clause_errors() {
   #pragma omp split counts(omp_fill, 2)
   for (int i = 0; i < 10; ++i)
     body(i);
+
+  // OpenMP 6.0: non-`omp_fill` list items must be integral constant expressions.
+  {
+    int v = 3; // expected-note {{declared here}}
+    #pragma omp split counts(v, omp_fill) // expected-error {{expression is not an integral constant expression}} \
+                                            // expected-note {{read of non-const variable 'v' is not allowed in a constant expression}}
+    for (int i = 0; i < 10; ++i)
+      body(i);
+  }
 }
 
 void associated_statement_diagnostics() {

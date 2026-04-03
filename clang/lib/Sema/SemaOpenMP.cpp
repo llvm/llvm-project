@@ -18102,6 +18102,10 @@ OMPClause *SemaOpenMP::ActOnOpenMPCountsClause(ArrayRef<Expr *> CountExprs,
                                                unsigned FillCount) {
   SmallVector<Expr *> SanitizedCountExprs(CountExprs);
 
+  // OpenMP 6.0: each list item in counts(...) is either the omp_fill keyword
+  // or an integral constant expression (non-negative). Runtime variables are
+  // not permitted; this matches split codegen, which needs segment sizes at
+  // compile time.
   for (unsigned I = 0; I < SanitizedCountExprs.size(); ++I) {
     Expr *&CountExpr = SanitizedCountExprs[I];
     if (FillIdx && I == *FillIdx)
@@ -18109,15 +18113,12 @@ OMPClause *SemaOpenMP::ActOnOpenMPCountsClause(ArrayRef<Expr *> CountExprs,
     if (!CountExpr)
       continue;
 
-    bool IsValid = isNonNegativeIntegerValue(CountExpr, SemaRef, OMPC_counts,
-                                             /*StrictlyPositive=*/false);
-
-    QualType CountTy = CountExpr->getType();
-    if (!CountTy->isIntegerType())
-      IsValid = false;
-
-    if (!CountExpr->isInstantiationDependent() && !IsValid)
+    ExprResult Verified = VerifyPositiveIntegerConstantInClause(
+        CountExpr, OMPC_counts, /*StrictlyPositive=*/false);
+    if (Verified.isInvalid())
       CountExpr = nullptr;
+    else
+      CountExpr = Verified.get();
   }
 
   if (FillCount != 1) {
