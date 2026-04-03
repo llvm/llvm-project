@@ -1338,7 +1338,7 @@ LogicalResult ResolveLayoutConflicts::run() {
     // as anchor op for the reduction op's layout.
     if (isa<vector::MultiDimReductionOp>(op) || isa<vector::ReductionOp>(op)) {
       for (OpResult result : op->getResults()) {
-        if (result.getType().isIntOrFloat()) {
+        if (result.getType().isIntOrFloat() || result.use_empty()) {
           auto res = assignResultLayout(result);
           if (failed(res)) {
             DBGS() << "Failed to resolve vector consumer for multi-reduction "
