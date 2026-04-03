@@ -27,6 +27,7 @@ namespace clang::lifetimes {
 using OriginDestExpr =
     llvm::PointerUnion<const DeclRefExpr *, const ValueDecl *,
                        const MemberExpr *>;
+using LoanEntity = llvm::PointerUnion<const Expr *, const ParmVarDecl *>;
 
 using AssignmentPair = std::pair<OriginDestExpr, const Expr *>;
 
@@ -35,7 +36,7 @@ struct ExprPrintingResult {
   const Expr *CurrExpr;
 };
 
-ExprPrintingResult FormatIssueExprForSema(const Expr *IssueExpr);
+llvm::SmallString<32> FormatLoanEntityForSema(LoanEntity IssueEntity);
 llvm::SmallVector<ExprPrintingResult> FormatSrcExprForSema(const Expr *SrcExpr);
 
 inline __attribute__((always_inline)) llvm::SmallString<32>

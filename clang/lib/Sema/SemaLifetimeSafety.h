@@ -38,11 +38,12 @@ inline bool IsLifetimeSafetyDiagnosticEnabled(Sema &S, const Decl *D) {
                           D->getBeginLoc());
 }
 
-inline void reportAssignmentImpl(Sema &S, const Expr *IssueExpr,
+inline void reportAssignmentImpl(Sema &S, LoanEntity IssueEntity,
                                  const ValueDecl *LHS, const Expr *RHS,
                                  const SourceLocation LHSExploc) {
-  const auto [IssueMsg, _] = FormatIssueExprForSema(IssueExpr);
-  const auto SrcMsgList = FormatSrcExprForSema(RHS);
+  const llvm::SmallString<32> IssueMsg = FormatLoanEntityForSema(IssueEntity);
+  const llvm::SmallVector<ExprPrintingResult> SrcMsgList =
+      FormatSrcExprForSema(RHS);
   if (SrcMsgList.size() == 1 &&
       llvm::isa<DeclRefExpr>(SrcMsgList[0].CurrExpr)) {
     S.Diag(LHSExploc, diag::note_lifetime_safety_note_alias_chain)
@@ -56,19 +57,19 @@ inline void reportAssignmentImpl(Sema &S, const Expr *IssueExpr,
   }
 }
 
-inline void reportAssignment(Sema &S, const Expr *IssueExpr,
+inline void reportAssignment(Sema &S, LoanEntity IssueEntity,
                              const OriginDestExpr &LHS, const Expr *RHS) {
   if (!LHS || !RHS)
     return;
 
   if (const DeclRefExpr *LDExpr = llvm::dyn_cast<const DeclRefExpr *>(LHS)) {
-    reportAssignmentImpl(S, IssueExpr, LDExpr->getDecl(), RHS,
+    reportAssignmentImpl(S, IssueEntity, LDExpr->getDecl(), RHS,
                          LDExpr->getExprLoc());
   } else if (const ValueDecl *LVDecl = llvm::dyn_cast<const ValueDecl *>(LHS)) {
-    reportAssignmentImpl(S, IssueExpr, LVDecl, RHS, LVDecl->getLocation());
+    reportAssignmentImpl(S, IssueEntity, LVDecl, RHS, LVDecl->getLocation());
   } else if (const MemberExpr *LVDecl =
                  llvm::dyn_cast<const MemberExpr *>(LHS)) {
-    reportAssignmentImpl(S, IssueExpr, LVDecl->getMemberDecl(), RHS,
+    reportAssignmentImpl(S, IssueEntity, LVDecl->getMemberDecl(), RHS,
                          LVDecl->getExprLoc());
   }
 }

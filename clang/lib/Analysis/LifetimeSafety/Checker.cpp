@@ -332,7 +332,7 @@ public:
     return nullptr;
   }
 
-  static void suggestWithScopeForParmVar(LifetimeSafetySemaHelper *SemaHelper,
+  void suggestWithScopeForParmVar(LifetimeSafetySemaHelper *SemaHelper,
                                          const ParmVarDecl *PVD,
                                          SourceManager &SM,
                                          EscapingTarget EscapeTarget) {
@@ -352,14 +352,14 @@ public:
   static void
   suggestWithScopeForImplicitThis(LifetimeSafetySemaHelper *SemaHelper,
                                   const CXXMethodDecl *MD, SourceManager &SM,
-                                  const Expr *EscapeExpr) {
+                                  const Expr *EscapeFact) {
     if (const FunctionDecl *CrossTUDecl = getCrossTUDecl(*MD, SM))
       SemaHelper->suggestLifetimeboundToImplicitThis(
           SuggestionScope::CrossTU, cast<CXXMethodDecl>(CrossTUDecl),
-          EscapeExpr);
+          EscapeFact);
     else
-      SemaHelper->suggestLifetimeboundToImplicitThis(SuggestionScope::IntraTU,
-                                                     MD, EscapeExpr);
+      SemaHelper->suggestLifetimeboundToImplicitThis(
+          SuggestionScope::IntraTU, MD, EscapeFact);
   }
 
   void suggestAnnotations() {

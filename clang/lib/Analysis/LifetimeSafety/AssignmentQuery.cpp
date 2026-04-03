@@ -232,16 +232,25 @@ getAliasListInMultiBlock(const AssignmentQueryContext &Context,
 
 namespace clang::lifetimes {
 
-ExprPrintingResult FormatIssueExprForSema(const Expr *IssueExpr) {
-  if (!IssueExpr)
-    return {};
-  const auto *PureExpr = IssueExpr->IgnoreParenCasts();
-  if (!PureExpr)
+llvm::SmallString<32> FormatLoanEntityForSema(LoanEntity IssueEntity) {
+  if (!IssueEntity)
     return {};
 
-  if (const auto *IDeclExpr = llvm::dyn_cast<DeclRefExpr>(PureExpr))
-    return {FormatValueDeclForSema(IDeclExpr->getDecl()), IssueExpr};
-  return {{"the temporary"}, IssueExpr};
+  if (const auto *IssueExpr = llvm::dyn_cast<const Expr *>(IssueEntity)) {
+    const auto *PureExpr = IssueExpr->IgnoreParenCasts();
+    if (!PureExpr)
+      return {};
+
+    if (const auto *IDeclExpr = llvm::dyn_cast<DeclRefExpr>(PureExpr))
+      return FormatValueDeclForSema(IDeclExpr->getDecl());
+    return {"the temporary"};
+  }
+  if (const auto *IssueParmDecl =
+          llvm::dyn_cast<const ParmVarDecl *>(IssueEntity)) {
+    return FormatValueDeclForSema(IssueParmDecl);
+  }
+
+  return {"the temporary"};
 }
 
 llvm::SmallVector<ExprPrintingResult>
@@ -337,8 +346,8 @@ getAliasList(const AssignmentQueryContext &Context, const Fact *CausingFact,
                      "traceback will fail.");
   }
 
-  const CFGBlock *EndBlock = Context.ADC.getCFGStmtMap()->getBlock(IssueExpr);
-  assert(EndBlock && "Searching CFGBlock failed");
+  const CFGBlock *EndBlock =
+      IssueExpr ? Context.ADC.getCFGStmtMap()->getBlock(IssueExpr) : nullptr;
 
   for (auto TargetOID : TargetOIDList) {
     if (StartBlock == EndBlock) {
