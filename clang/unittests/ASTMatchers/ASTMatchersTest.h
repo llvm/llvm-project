@@ -290,20 +290,6 @@ testing::AssertionResult notMatchesWithOpenMP51(const Twine &Code,
 }
 
 template <typename T>
-testing::AssertionResult matchesWithOpenMP60(const Twine &Code,
-                                             const T &AMatcher) {
-  return matchesConditionally(Code, AMatcher, true,
-                              {"-fopenmp=libomp", "-fopenmp-version=60"});
-}
-
-template <typename T>
-testing::AssertionResult notMatchesWithOpenMP60(const Twine &Code,
-                                                const T &AMatcher) {
-  return matchesConditionally(Code, AMatcher, false,
-                              {"-fopenmp=libomp", "-fopenmp-version=60"});
-}
-
-template <typename T>
 testing::AssertionResult matchesWithFixedpoint(const std::string &Code,
                                                const T &AMatcher) {
   return matchesConditionally(Code, AMatcher, true, {"-ffixed-point"},
