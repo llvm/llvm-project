@@ -21,3 +21,58 @@ define i8 @iszero_constant_v4f32() nounwind {
   %r = bitcast <8 x i1> %f to i8
   ret i8 %r
 }
+
+define i1 @extract_nonconst_idx_const_vec_isnan(i32 %idx) nounwind {
+; CHECK-LABEL: extract_nonconst_idx_const_vec_isnan:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a0, 0
+; CHECK-NEXT:    ret
+  %elt = extractelement <4 x float> <float 1.0, float 2.0, float 3.0, float 4.0>, i32 %idx
+  %res = call i1 @llvm.is.fpclass.f32(float %elt, i32 3)  ; 0x3 = nan
+  ret i1 %res
+}
+
+define i1 @extract_oob_idx_const_vec_isnan() nounwind {
+; CHECK-LABEL: extract_oob_idx_const_vec_isnan:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fclass.s a0, fa5
+; CHECK-NEXT:    andi a0, a0, 768
+; CHECK-NEXT:    snez a0, a0
+; CHECK-NEXT:    ret
+  %elt = extractelement <4 x float> <float 1.0, float 2.0, float 3.0, float 4.0>, i32 6
+  %res = call i1 @llvm.is.fpclass.f32(float %elt, i32 3)  ; 0x3 = nan
+  ret i1 %res
+}
+
+define i1 @extract_fabs_vec_isneg(<4 x float> %a0) nounwind {
+; CHECK-LABEL: extract_fabs_vec_isneg:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a0, 0
+; CHECK-NEXT:    ret
+  %abs = call <4 x float> @llvm.fabs.v4f32(<4 x float> %a0)
+  %elt = extractelement <4 x float> %abs, i32 2
+  %res = call i1 @llvm.is.fpclass.f32(float %elt, i32 60)  ; 0x3C = negative
+  ret i1 %res
+}
+
+define i1 @extract_fabs_unknown_idx_isneg(<4 x float> %a0, i32 %idx) nounwind {
+; CHECK-LABEL: extract_fabs_unknown_idx_isneg:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a0, 0
+; CHECK-NEXT:    ret
+  %abs = call <4 x float> @llvm.fabs.v4f32(<4 x float> %a0)
+  %elt = extractelement <4 x float> %abs, i32 %idx
+  %res = call i1 @llvm.is.fpclass.f32(float %elt, i32 60)  ; 0x3C = negative
+  ret i1 %res
+}
+
+define i1 @extract_scalable_fabs_isneg(<vscale x 4 x float> %a0) nounwind {
+; CHECK-LABEL: extract_scalable_fabs_isneg:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a0, 0
+; CHECK-NEXT:    ret
+  %abs = call <vscale x 4 x float> @llvm.fabs.nxv4f32(<vscale x 4 x float> %a0)
+  %elt = extractelement <vscale x 4 x float> %abs, i32 0
+  %res = call i1 @llvm.is.fpclass.f32(float %elt, i32 60)  ; 0x3C = negative
+  ret i1 %res
+}
