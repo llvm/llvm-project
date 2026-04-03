@@ -359,8 +359,8 @@ subroutine nested_loop_with_reduction(x, y)
   !$acc end parallel
 
 ! CHECK: acc.parallel {
-! CHECK: %[[REDUCTION_X:.*]] = acc.reduction varPtr(%{{.*}} : !fir.ref<i32>) recipe(@reduction_add_optional_ref_i32) -> !fir.ref<i32> {name = "x"}
-! CHECK: %[[REDUCTION_Y:.*]] = acc.reduction varPtr(%{{.*}} : !fir.ref<i32>) recipe(@reduction_add_optional_ref_i32) -> !fir.ref<i32> {name = "y"}
+! CHECK: %[[REDUCTION_X:.*]] = acc.reduction varPtr(%{{.*}} : !fir.ref<i32>) recipe(@reduction_add_ref_i32) -> !fir.ref<i32> {name = "x"}
+! CHECK: %[[REDUCTION_Y:.*]] = acc.reduction varPtr(%{{.*}} : !fir.ref<i32>) recipe(@reduction_add_ref_i32) -> !fir.ref<i32> {name = "y"}
 ! CHECK: %[[PRIVATE_I:.*]] = acc.private varPtr(%{{.*}} : !fir.ref<i32>) recipe(@privatization_ref_i32) -> !fir.ref<i32> {implicit = true, name = "i"}
 ! CHECK: acc.loop private(%[[PRIVATE_I]] : !fir.ref<i32>) reduction(%[[REDUCTION_X]], %[[REDUCTION_Y]] : !fir.ref<i32>, !fir.ref<i32>) control(%{{.*}} : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32)
 ! CHECK: %[[PRIVATE_I_DECLARE:.*]]:2 = hlfir.declare %[[PRIVATE_I]] {uniq_name = "_QFnested_loop_with_reductionEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)

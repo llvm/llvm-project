@@ -1181,8 +1181,7 @@ genReductions(const Fortran::parser::AccObjectListWithReduction &objectList,
       fastMathAttr = mlir::arith::FastMathFlagsAttr::get(
           builder.getContext(), builder.getFastMathFlags());
     mlir::SymbolRefAttr recipe = fir::acc::createOrGetReductionRecipe(
-        builder, operandLocation, op.getAccVar(), mlirOp, bounds,
-        fastMathAttr);
+        builder, operandLocation, info.addr, mlirOp, bounds, fastMathAttr);
     op.setRecipeAttr(recipe);
     reductionOperands.push_back(op.getAccVar());
     // Track the symbol and its corresponding mlir::Value if requested so that
@@ -1605,7 +1604,7 @@ static void processDoConcurrentLocalitySpecs(
           fastMathAttr = mlir::arith::FastMathFlagsAttr::get(
               builder.getContext(), builder.getFastMathFlags());
         mlir::SymbolRefAttr recipe = fir::acc::createOrGetReductionRecipe(
-            builder, loc, op.getAccVar(), mlirOp, bounds, fastMathAttr);
+            builder, loc, symAddr, mlirOp, bounds, fastMathAttr);
         op.setRecipeAttr(recipe);
         reductionOperands.push_back(op.getAccVar());
         dataMap.emplaceSymbol(op.getAccVar(),
