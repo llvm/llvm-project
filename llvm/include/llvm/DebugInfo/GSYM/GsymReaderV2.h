@@ -36,7 +36,6 @@ class GsymReaderV2 : public GsymReader {
   DataExtractor FileData;
   struct SwappedData {
     HeaderV2 Hdr;
-    std::vector<uint8_t> AddrOffsets;
   };
   std::unique_ptr<SwappedData> Swap;
 

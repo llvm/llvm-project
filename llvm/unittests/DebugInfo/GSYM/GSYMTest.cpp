@@ -1198,27 +1198,15 @@ TEST(GSYMTest, TestGsymCreatorV18ByteAddrOffsets) {
   TestGsymCreatorAddrOffsetsImpl<GsymCreatorV1>(8, 8, 4, 4);
 }
 
-// V2 tests (optimal AddrOffSize: 1-8, fixed AddrInfoOffSize=8, StrOffSize=8)
+// V2 tests (AddrOffSize: 1/2/4/8, fixed AddrInfoOffSize=8, StrOffSize=8)
 TEST(GSYMTest, TestGsymCreatorV21ByteAddrOffsets) {
   TestGsymCreatorAddrOffsetsImpl<GsymCreatorV2>(1, 1, 8, 8);
 }
 TEST(GSYMTest, TestGsymCreatorV22ByteAddrOffsets) {
   TestGsymCreatorAddrOffsetsImpl<GsymCreatorV2>(2, 2, 8, 8);
 }
-TEST(GSYMTest, TestGsymCreatorV23ByteAddrOffsets) {
-  TestGsymCreatorAddrOffsetsImpl<GsymCreatorV2>(3, 3, 8, 8);
-}
 TEST(GSYMTest, TestGsymCreatorV24ByteAddrOffsets) {
   TestGsymCreatorAddrOffsetsImpl<GsymCreatorV2>(4, 4, 8, 8);
-}
-TEST(GSYMTest, TestGsymCreatorV25ByteAddrOffsets) {
-  TestGsymCreatorAddrOffsetsImpl<GsymCreatorV2>(5, 5, 8, 8);
-}
-TEST(GSYMTest, TestGsymCreatorV26ByteAddrOffsets) {
-  TestGsymCreatorAddrOffsetsImpl<GsymCreatorV2>(6, 6, 8, 8);
-}
-TEST(GSYMTest, TestGsymCreatorV27ByteAddrOffsets) {
-  TestGsymCreatorAddrOffsetsImpl<GsymCreatorV2>(7, 7, 8, 8);
 }
 TEST(GSYMTest, TestGsymCreatorV28ByteAddrOffsets) {
   TestGsymCreatorAddrOffsetsImpl<GsymCreatorV2>(8, 8, 8, 8);

@@ -158,23 +158,10 @@ llvm::Error GsymReaderV2::parse() {
                              "AddrInfoOffsets section size mismatch");
 
   // AddrOffsets
-  if (!Swap) {
-    llvm::Expected<llvm::ArrayRef<uint8_t>> Bytes = AddrOffsetsGD.getBytes(DE);
-    if (!Bytes)
-      return Bytes.takeError();
-    AddrOffsets = *Bytes;
-  } else {
-    // Do the byte-swapping for the AddrOffsets section for byte size 1-8.
-    uint64_t AOff = AddrOffsetsGD.FileOffset;
-    const size_t TotalBytes =
-        static_cast<size_t>(Hdr->NumAddresses) * Hdr->AddrOffSize;
-    Swap->AddrOffsets.resize(TotalBytes);
-    for (uint32_t I = 0; I < Hdr->NumAddresses; ++I) {
-      uint64_t Val = DE.getUnsigned(&AOff, Hdr->AddrOffSize);
-      memcpy(Swap->AddrOffsets.data() + I * Hdr->AddrOffSize, &Val,
-             Hdr->AddrOffSize);
-    }
-    AddrOffsets = ArrayRef<uint8_t>(Swap->AddrOffsets);
+  {
+    uint64_t AddrOffsetsOff = AddrOffsetsGD.FileOffset;
+    if (auto Err = parseAddrOffsets(DE, AddrOffsetsOff, Swap != nullptr))
+      return Err;
   }
 
   // AddrInfoOffsets

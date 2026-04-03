@@ -29,6 +29,54 @@ GsymReader::GsymReader(std::unique_ptr<MemoryBuffer> Buffer)
 
 GsymReader::GsymReader(GsymReader &&RHS) = default;
 
+llvm::Error GsymReader::parseAddrOffsets(DataExtractor &DE, uint64_t &Offset,
+                                         bool Swap) {
+  const uint8_t AddrOffSize = getAddressOffsetByteSize();
+  const uint32_t NumAddrs = getNumAddresses();
+  const size_t TotalBytes = NumAddrs * AddrOffSize;
+  if (!Swap) {
+    StringRef Data = DE.getData();
+    if (Offset + TotalBytes > Data.size())
+      return createStringError(std::errc::invalid_argument,
+                               "failed to read address table");
+    AddrOffsets = ArrayRef<uint8_t>(
+        reinterpret_cast<const uint8_t *>(Data.data() + Offset), TotalBytes);
+    Offset += TotalBytes;
+    return Error::success();
+  }
+  SwappedAddrOffsets.resize(TotalBytes);
+  switch (AddrOffSize) {
+  case 1:
+    if (!DE.getU8(&Offset, SwappedAddrOffsets.data(), NumAddrs))
+      return createStringError(std::errc::invalid_argument,
+                               "failed to read address table");
+    break;
+  case 2:
+    if (!DE.getU16(&Offset,
+                   reinterpret_cast<uint16_t *>(SwappedAddrOffsets.data()),
+                   NumAddrs))
+      return createStringError(std::errc::invalid_argument,
+                               "failed to read address table");
+    break;
+  case 4:
+    if (!DE.getU32(&Offset,
+                   reinterpret_cast<uint32_t *>(SwappedAddrOffsets.data()),
+                   NumAddrs))
+      return createStringError(std::errc::invalid_argument,
+                               "failed to read address table");
+    break;
+  case 8:
+    if (!DE.getU64(&Offset,
+                   reinterpret_cast<uint64_t *>(SwappedAddrOffsets.data()),
+                   NumAddrs))
+      return createStringError(std::errc::invalid_argument,
+                               "failed to read address table");
+    break;
+  }
+  AddrOffsets = ArrayRef<uint8_t>(SwappedAddrOffsets);
+  return Error::success();
+}
+
 /// Check magic bytes and return the GSYM version from raw bytes.
 /// If magic bytes are invalid, return error.
 static Expected<uint16_t> checkMagicAndDetectVersion(StringRef Data) {

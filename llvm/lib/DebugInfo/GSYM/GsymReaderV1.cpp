@@ -91,11 +91,15 @@ llvm::Error GsymReaderV1::parse() {
   if (Error Err = Hdr->checkForError())
     return Err;
 
+  // Parse AddrOffsets (shared by swap and non-swap paths).
+  DataExtractor Data(MemBuffer->getBuffer(), DataIsLittleEndian, 4);
+  uint64_t Offset = alignTo(sizeof(Header), Hdr->AddrOffSize);
+  if (auto Err = parseAddrOffsets(Data, Offset, Swap != nullptr))
+    return Err;
+
   if (!Swap) {
-    if (FileData.padToAlignment(Hdr->AddrOffSize) ||
-        FileData.readArray(AddrOffsets, Hdr->NumAddresses * Hdr->AddrOffSize))
-      return createStringError(std::errc::invalid_argument,
-                               "failed to read address table");
+    // Use BinaryStreamReader for the remaining sections (sequential layout).
+    FileData.setOffset(Offset);
 
     if (FileData.padToAlignment(4) ||
         FileData.readArray(AddrInfoOffsets, Hdr->NumAddresses))
@@ -112,39 +116,6 @@ llvm::Error GsymReaderV1::parse() {
       return createStringError(std::errc::invalid_argument,
                                "failed to read string table");
   } else {
-    DataExtractor Data(MemBuffer->getBuffer(), DataIsLittleEndian, 4);
-
-    uint64_t Offset = alignTo(sizeof(Header), Hdr->AddrOffSize);
-    Swap->AddrOffsets.resize(Hdr->NumAddresses * Hdr->AddrOffSize);
-    switch (Hdr->AddrOffSize) {
-    case 1:
-      if (!Data.getU8(&Offset, Swap->AddrOffsets.data(), Hdr->NumAddresses))
-        return createStringError(std::errc::invalid_argument,
-                                 "failed to read address table");
-      break;
-    case 2:
-      if (!Data.getU16(&Offset,
-                       reinterpret_cast<uint16_t *>(Swap->AddrOffsets.data()),
-                       Hdr->NumAddresses))
-        return createStringError(std::errc::invalid_argument,
-                                 "failed to read address table");
-      break;
-    case 4:
-      if (!Data.getU32(&Offset,
-                       reinterpret_cast<uint32_t *>(Swap->AddrOffsets.data()),
-                       Hdr->NumAddresses))
-        return createStringError(std::errc::invalid_argument,
-                                 "failed to read address table");
-      break;
-    case 8:
-      if (!Data.getU64(&Offset,
-                       reinterpret_cast<uint64_t *>(Swap->AddrOffsets.data()),
-                       Hdr->NumAddresses))
-        return createStringError(std::errc::invalid_argument,
-                                 "failed to read address table");
-    }
-    AddrOffsets = ArrayRef<uint8_t>(Swap->AddrOffsets);
-
     Offset = alignTo(Offset, 4);
     Swap->AddrInfoOffsets.resize(Hdr->NumAddresses);
     if (Data.getU32(&Offset, Swap->AddrInfoOffsets.data(), Hdr->NumAddresses))

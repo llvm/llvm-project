@@ -49,6 +49,7 @@ protected:
   std::unique_ptr<MemoryBuffer> MemBuffer;
   llvm::endianness Endian;
   ArrayRef<uint8_t> AddrOffsets;
+  std::vector<uint8_t> SwappedAddrOffsets;
   StringTable StrTab;
 
   GsymReader(std::unique_ptr<MemoryBuffer> Buffer);
@@ -326,6 +327,15 @@ protected:
   /// \returns An optional GSYM data offset for the offset of the FunctionInfo
   /// that needs to be decoded.
   virtual uint64_t getAddressInfoOffset(size_t Index) const = 0;
+
+  /// Parse address offsets from a DataExtractor into AddrOffsets.
+  ///
+  /// \param DE DataExtractor over the buffer containing address offsets.
+  /// \param Offset The byte offset into DE where address offsets start.
+  ///   Advanced past the address offsets on success.
+  /// \param Swap True if byte swapping is needed.
+  /// \returns Error on failure.
+  llvm::Error parseAddrOffsets(DataExtractor &DE, uint64_t &Offset, bool Swap);
 
   /// Given an address, find the correct function info data and function
   /// address.

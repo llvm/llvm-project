@@ -27,7 +27,6 @@ class GsymReaderV1 : public GsymReader {
   ArrayRef<uint32_t> AddrInfoOffsets;
   struct SwappedData {
     Header Hdr;
-    std::vector<uint8_t> AddrOffsets;
     std::vector<uint32_t> AddrInfoOffsets;
     std::vector<FileEntry<uint32_t>> Files;
   };
