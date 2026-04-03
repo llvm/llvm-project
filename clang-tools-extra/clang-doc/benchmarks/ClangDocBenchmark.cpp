@@ -117,13 +117,13 @@ static void BM_MergeInfos_Scale(benchmark::State &State) {
 
   for (auto _ : State) {
     State.PauseTiming();
-    OwningPtrArray<Info> Input;
+    SmallVector<Info *> Input;
     Input.reserve(State.range(0));
-    for (int i = 0; i < State.range(0); ++i) {
-      auto I = allocatePtr<FunctionInfo>();
+    for (int Idx = 0; Idx < State.range(0); ++Idx) {
+      auto *I = allocatePtr<FunctionInfo>();
       I->Name = "f";
       I->USR = USR;
-      I->DefLoc = Location(10, i, "test.cpp");
+      I->DefLoc = Location(10, Idx, "test.cpp");
       Input.push_back(std::move(I));
     }
     State.ResumeTiming();
