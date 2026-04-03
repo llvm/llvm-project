@@ -42,11 +42,9 @@ define i64 @mul64_add_hi_order_a(ptr %x, i64 %y) {
 ; CHECK-LABEL: mul64_add_hi_order_a:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq %rsi, %rax
-; CHECK-NEXT:    movq 8(%rdi), %rcx
-; CHECK-NEXT:    imulq %rsi, %rcx
+; CHECK-NEXT:    imulq 8(%rdi), %rsi
 ; CHECK-NEXT:    mulq (%rdi)
-; CHECK-NEXT:    addq %rdx, %rcx
-; CHECK-NEXT:    movq %rcx, %rax
+; CHECK-NEXT:    leaq (%rdx,%rsi), %rax
 ; CHECK-NEXT:    retq
   %p1 = getelementptr inbounds i64, ptr %x, i64 1
   %qv = load i64, ptr %p1, align 8
