@@ -116,9 +116,8 @@ static bool hasNoName(const NamedDecl *Decl) {
 }
 
 static const NamedDecl *getFailureForNamedDecl(const NamedDecl *ND) {
-  if (const auto *Template = dyn_cast<FunctionTemplateDecl>(ND))
-    if (const FunctionDecl *TemplatedDecl = Template->getTemplatedDecl())
-      ND = TemplatedDecl;
+  if (isa<FunctionTemplateDecl, ClassTemplateDecl, VarTemplateDecl>(ND))
+    ND = cast<RedeclarableTemplateDecl>(ND)->getTemplatedDecl();
 
   const auto *Canonical = cast<NamedDecl>(ND->getCanonicalDecl());
   if (Canonical != ND)
@@ -274,6 +273,9 @@ public:
   }
 
   bool VisitNamedDecl(NamedDecl *Decl) {
+    if (isa<TypeAliasTemplateDecl>(Decl))
+      return true;
+
     const SourceRange UsageRange =
         DeclarationNameInfo(Decl->getDeclName(), Decl->getLocation())
             .getSourceRange();
