@@ -7384,7 +7384,6 @@ TargetLowering::prepareSREMEqFold(EVT SETCCVT, SDValue REMNode,
   bool HadOneDivisor = false;
   bool AllDivisorsAreOnes = true;
   bool HadEvenDivisor = false;
-  bool NeedToApplyOffset = false;
   bool AllDivisorsArePowerOfTwo = true;
   SmallVector<SDValue, 16> PAmts, AAmts, KAmts, QAmts;
 
@@ -7424,9 +7423,6 @@ TargetLowering::prepareSREMEqFold(EVT SETCCVT, SDValue REMNode,
     // A = floor((2^(W - 1) - 1) / D0) & -2^K
     APInt A = APInt::getSignedMaxValue(W).udiv(D0);
     A.clearLowBits(K);
-
-    // FIXME: Do we need this flag? Is A ever 0 other than when D is INT_MIN?
-    NeedToApplyOffset |= A != 0;
 
     // Q = floor((2 * A) / (2^K))
     APInt Q = (2 * A).udiv(APInt::getOneBitSet(W, K));
@@ -7521,15 +7517,13 @@ TargetLowering::prepareSREMEqFold(EVT SETCCVT, SDValue REMNode,
   SDValue Op0 = DAG.getNode(ISD::MUL, DL, VT, N, PVal);
   Created.push_back(Op0.getNode());
 
-  if (NeedToApplyOffset) {
-    // We need ADD to do this.
-    if (!DCI.isBeforeLegalizeOps() && !isOperationLegalOrCustom(ISD::ADD, VT))
-      return SDValue();
+  // We need ADD to do this.
+  if (!DCI.isBeforeLegalizeOps() && !isOperationLegalOrCustom(ISD::ADD, VT))
+    return SDValue();
 
-    // (add (mul N, P), A)
-    Op0 = DAG.getNode(ISD::ADD, DL, VT, Op0, AVal);
-    Created.push_back(Op0.getNode());
-  }
+  // (add (mul N, P), A)
+  Op0 = DAG.getNode(ISD::ADD, DL, VT, Op0, AVal);
+  Created.push_back(Op0.getNode());
 
   // Rotate right only if any divisor was even. We avoid rotates for all-odd
   // divisors as a performance improvement, since rotating by 0 is a no-op.

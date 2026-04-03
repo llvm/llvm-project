@@ -2546,11 +2546,6 @@ void ASTStmtWriter::VisitOMPInterchangeDirective(OMPInterchangeDirective *D) {
   Code = serialization::STMT_OMP_INTERCHANGE_DIRECTIVE;
 }
 
-void ASTStmtWriter::VisitOMPSplitDirective(OMPSplitDirective *D) {
-  VisitOMPCanonicalLoopNestTransformationDirective(D);
-  Code = serialization::STMT_OMP_SPLIT_DIRECTIVE;
-}
-
 void ASTStmtWriter::VisitOMPCanonicalLoopSequenceTransformationDirective(
     OMPCanonicalLoopSequenceTransformationDirective *D) {
   VisitStmt(D);
