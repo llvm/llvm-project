@@ -236,13 +236,44 @@ void GsymReaderV2::dump(raw_ostream &OS) {
   const auto &Header = getHeader();
   OS << Header << "\n";
   OS << "Address Table:\n";
-  OS << "INDEX  OFFSET" << format("%-2u", getAddressOffsetByteSize() * 8)
-     << " (ADDRESS)\n";
+  OS << "INDEX  OFFSET";
+  switch (getAddressOffsetByteSize()) {
+  case 1:
+    OS << "8 ";
+    break;
+  case 2:
+    OS << "16";
+    break;
+  case 4:
+    OS << "32";
+    break;
+  case 8:
+    OS << "64";
+    break;
+  default:
+    OS << "??";
+    break;
+  }
+  OS << " (ADDRESS)\n";
   OS << "====== =============================== \n";
   for (uint32_t I = 0; I < getNumAddresses(); ++I) {
     OS << format("[%4u] ", I);
-    auto AddrOff = getUnsigned(AddrOffsets, getAddressOffsetByteSize(), I);
-    OS << format_hex(AddrOff.value_or(0), getAddressOffsetByteSize() * 2 + 2);
+    switch (getAddressOffsetByteSize()) {
+    case 1:
+      OS << HEX8(getAddrOffsets<uint8_t>()[I]);
+      break;
+    case 2:
+      OS << HEX16(getAddrOffsets<uint16_t>()[I]);
+      break;
+    case 4:
+      OS << HEX32(getAddrOffsets<uint32_t>()[I]);
+      break;
+    case 8:
+      OS << HEX32(getAddrOffsets<uint64_t>()[I]);
+      break;
+    default:
+      break;
+    }
     OS << " (" << HEX64(*getAddress(I)) << ")\n";
   }
   OS << "\nAddress Info Offsets:\n";
