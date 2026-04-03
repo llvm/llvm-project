@@ -96,6 +96,7 @@ struct TransferrableTargetInfo {
   unsigned char FloatWidth, FloatAlign;
   unsigned char DoubleWidth, DoubleAlign;
   unsigned char LongDoubleWidth, LongDoubleAlign, Float128Align, Ibm128Align;
+  unsigned char MetaInfoWidth, MetaInfoAlign;
   unsigned char LargeArrayMinWidth, LargeArrayAlign;
   unsigned char LongWidth, LongAlign;
   unsigned char LongLongWidth, LongLongAlign;
@@ -823,6 +824,10 @@ public:
   unsigned getIbm128Width() const { return 128; }
   unsigned getIbm128Align() const { return Ibm128Align; }
   const llvm::fltSemantics &getIbm128Format() const { return *Ibm128Format; }
+
+  /// getMetaInfoWidth/Align - Returns the size/align of std::meta::info.
+  unsigned getMetaInfoWidth() const { return MetaInfoWidth; }
+  unsigned getMetaInfoAlign() const { return MetaInfoAlign; }
 
   /// Return the mangled code of long double.
   virtual const char *getLongDoubleMangling() const { return "e"; }

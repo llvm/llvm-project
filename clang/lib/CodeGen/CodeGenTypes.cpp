@@ -515,6 +515,10 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
       ResultType = llvm::PointerType::getUnqual(getLLVMContext());
       break;
 
+    case BuiltinType::MetaInfo:
+      ResultType = llvm::IntegerType::get(getLLVMContext(), 64);
+      break;
+
     case BuiltinType::UInt128:
     case BuiltinType::Int128:
       ResultType = llvm::IntegerType::get(getLLVMContext(), 128);

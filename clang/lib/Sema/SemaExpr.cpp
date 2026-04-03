@@ -12890,6 +12890,13 @@ QualType Sema::CheckCompareOperands(ExprResult &LHS, ExprResult &RHS,
         *CCT, Loc, ComparisonCategoryUsage::OperatorInExpression);
   };
 
+  if(LHSType->isMetaInfoType() && RHSType->isMetaInfoType()){
+    if(!BinaryOperator::isEqualityOp(Opc)) {
+      return InvalidOperands(Loc, LHS, RHS);
+    }
+    return computeResultTy();
+  }
+
   if (!IsOrdered && LHSIsNull != RHSIsNull) {
     bool IsEquality = Opc == BO_EQ;
     if (RHSIsNull)

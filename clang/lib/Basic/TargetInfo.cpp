@@ -125,6 +125,8 @@ TargetInfo::TargetInfo(const llvm::Triple &T) : Triple(T) {
   LongDoubleAlign = 64;
   Float128Align = 128;
   Ibm128Align = 128;
+  MetaInfoWidth = 64;
+  MetaInfoAlign = 64;
   LargeArrayMinWidth = 0;
   LargeArrayAlign = 0;
   MaxAtomicPromoteWidth = MaxAtomicInlineWidth = 0;

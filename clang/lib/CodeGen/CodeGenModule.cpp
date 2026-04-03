@@ -6085,6 +6085,9 @@ void CodeGenModule::EmitGlobalVarDefinition(const VarDecl *D,
   if (getLangOpts().OpenCL && ASTTy->isSamplerT())
     return;
 
+  if (getLangOpts().Reflection && ASTTy->isMetaInfoType())
+    return;
+
   // HLSL default buffer constants will be emitted during HLSLBufferDecl codegen
   if (getLangOpts().HLSL &&
       D->getType().getAddressSpace() == LangAS::hlsl_constant)

@@ -25,6 +25,7 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/NestedNameSpecifier.h"
 #include "clang/AST/OperationKinds.h"
+#include "clang/AST/Reflection.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/TemplateBase.h"
@@ -5508,15 +5509,18 @@ public:
 ///  - an id-expression.
 class CXXReflectExpr : public Expr {
 
-  // TODO(Reflection): add support for TemplateReference, NamespaceReference and
-  // DeclRefExpr
-  using operand_type = llvm::PointerUnion<const TypeSourceInfo *>;
 
-  SourceLocation CaretCaretLoc;
-  operand_type Operand;
+  private:
+    // TODO(Reflection): add support for TemplateReference, NamespaceReference and
+    // DeclRefExpr
+    using operand_type = llvm::PointerUnion<const TypeSourceInfo *>;
 
-  CXXReflectExpr(SourceLocation CaretCaretLoc, const TypeSourceInfo *TSI);
-  CXXReflectExpr(EmptyShell Empty);
+    SourceLocation CaretCaretLoc;
+    ReflectionKind Kind;
+    operand_type Operand;
+
+    CXXReflectExpr(ASTContext &C, SourceLocation CaretCaretLoc, const TypeSourceInfo *TSI);
+    CXXReflectExpr(EmptyShell Empty);
 
 public:
   static CXXReflectExpr *Create(ASTContext &C, SourceLocation OperatorLoc,
@@ -5538,6 +5542,8 @@ public:
 
   /// Returns location of the '^^'-operator.
   SourceLocation getOperatorLoc() const { return CaretCaretLoc; }
+  ReflectionKind getKind() const { return Kind; }
+  const void* getOpaqueValue() const { return Operand.getOpaqueValue(); }
 
   child_range children() {
     // TODO(Reflection)
