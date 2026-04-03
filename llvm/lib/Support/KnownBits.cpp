@@ -406,10 +406,42 @@ static unsigned getMaxShiftAmount(const APInt &MaxValue, unsigned BitWidth) {
 
 KnownBits KnownBits::shl(const KnownBits &LHS, unsigned ShiftAmt, bool NUW,
                          bool NSW) {
-  // TODO: This is simple fallback to generic RHS-based shl.
-  // Add a specialized constant-shift implementation with identical semantics.
-  KnownBits RHS = KnownBits::makeConstant(APInt(LHS.getBitWidth(), ShiftAmt));
-  return shl(LHS, RHS, NUW, NSW, ShiftAmt != 0);
+  if (ShiftAmt == 0)
+    return LHS;
+
+  unsigned BitWidth = LHS.getBitWidth();
+  KnownBits Known(BitWidth);
+
+  if (ShiftAmt >= BitWidth)
+    return Known;
+
+  if (LHS.isUnknown()) {
+    Known.Zero.setLowBits(ShiftAmt);
+    if (NUW && NSW)
+      Known.makeNonNegative();
+    return Known;
+  }
+
+  bool ShiftedOutZero, ShiftedOutOne;
+  Known.One = LHS.One.ushl_ov(ShiftAmt, ShiftedOutOne);
+  if (NUW && ShiftedOutOne) {
+    // ones shifted out means this is always poison.
+    Known.setAllZero();
+    return Known;
+  }
+  Known.Zero = LHS.Zero.ushl_ov(ShiftAmt, ShiftedOutZero);
+  Known.Zero.setLowBits(ShiftAmt);
+
+  if (NSW) {
+    if (NUW)
+      ShiftedOutZero = true;
+    if (ShiftedOutZero)
+      Known.makeNonNegative();
+    else if (ShiftedOutOne)
+      Known.makeNegative();
+  }
+
+  return Known;
 }
 
 KnownBits KnownBits::shl(const KnownBits &LHS, const KnownBits &RHS, bool NUW,
