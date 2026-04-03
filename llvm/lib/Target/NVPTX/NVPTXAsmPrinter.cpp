@@ -1766,13 +1766,31 @@ void NVPTXAsmPrinter::bufferAggregateConstVec(const ConstantVector *CV,
   assert(8 % ElemTySize == 0 && "Element type size must evenly divide a byte.");
   // Number of elements to merge to form a full byte.
   unsigned ChunkSize = 8 / ElemTySize;
+  unsigned NumChunks = NumElems / ChunkSize;
+  unsigned NumTailElems = NumElems % ChunkSize;
 
-  // Helper lambda to constant-fold array of sub-byte constants to i8.
-  auto ConvertSubCVtoInt8 = [this](ArrayRef<Constant *> SubCVElems) {
+  // Helper lambda to constant-fold sub-vector of sub-byte type elements into
+  // i8. Start and end indices of the sub-vector is provided, along with number
+  // of padding zeros if required.
+  auto ConvertSubCVtoInt8 = [this, &ElemTy](const ConstantVector *CV,
+                                            unsigned Start, unsigned End,
+                                            unsigned NumPaddingZeros) {
+    // Collect elements to create sub-vector.
+    SmallVector<Constant *, 8> SubCVElems;
+    for (unsigned I = Start; I < End; ++I)
+      SubCVElems.push_back(CV->getAggregateElement(I));
+
+    // Optionally pad with zeros.
+    if (NumPaddingZeros) {
+      SmallVector<Constant *, 8> Zeros(NumPaddingZeros,
+                                       ConstantInt::getNullValue(ElemTy));
+      SubCVElems.append(Zeros);
+    }
+
     auto SubCV = ConstantVector::get(SubCVElems);
     Type *Int8Ty = IntegerType::get(SubCV->getContext(), 8);
 
-    // Merge elements of the chunk using ConstantFolding.
+    // Merge elements of the sub-vector using ConstantFolding.
     ConstantInt *MergedElem =
         dyn_cast_or_null<ConstantInt>(ConstantFoldConstant(
             ConstantExpr::getBitCast(const_cast<Constant *>(SubCV), Int8Ty),
@@ -1787,37 +1805,17 @@ void NVPTXAsmPrinter::bufferAggregateConstVec(const ConstantVector *CV,
 
   // Iterate through elements of vector one chunk at a time and buffer that
   // chunk.
-  unsigned TailPaddedChunkBegin = 0;
-  bool NeedTailPadding = false;
-  for (unsigned I = 0; I < NumElems; I += ChunkSize) {
-    // If we have less elements than chunk size, then break to pad the final
-    // chunk with zeroes.
-    if (NumElems - I < ChunkSize) {
-      TailPaddedChunkBegin = I;
-      NeedTailPadding = true;
-      break;
-    }
-
-    // Collect elements in chunk to create sub-vector.
-    SmallVector<Constant *, 8> SubCVElems;
-    for (unsigned J = I; J < ChunkSize; ++J)
-      SubCVElems.push_back(CV->getAggregateElement(J));
-
-    // Buffer merged element.
-    bufferLEByte(ConvertSubCVtoInt8(SubCVElems), 0, aggBuffer);
-  }
+  for (unsigned I = 0; I < NumChunks; ++I)
+    bufferLEByte(
+        ConvertSubCVtoInt8(CV, I, I + ChunkSize, 0 /*NumPaddingZeros*/), 0,
+        aggBuffer);
 
   // For unevenly sized vectors add tail padding zeros.
-  if (NeedTailPadding) {
-    SmallVector<Constant *, 8> TailPaddedElems;
-    for (unsigned I = TailPaddedChunkBegin; I < NumElems; ++I)
-      TailPaddedElems.push_back(CV->getAggregateElement(I));
-
-    unsigned NumPaddingZeros = ChunkSize - (NumElems - TailPaddedChunkBegin);
-    TailPaddedElems.append(
-        SmallVector(NumPaddingZeros, ConstantInt::getNullValue(ElemTy)));
-
-    bufferLEByte(ConvertSubCVtoInt8(TailPaddedElems), 0, aggBuffer);
+  if (NumTailElems > 0) {
+    unsigned TailStart = NumElems - NumTailElems;
+    unsigned NumPaddingZeros = ChunkSize - NumTailElems;
+    bufferLEByte(ConvertSubCVtoInt8(CV, TailStart, NumElems, NumPaddingZeros),
+                 0, aggBuffer);
   }
 }
 
