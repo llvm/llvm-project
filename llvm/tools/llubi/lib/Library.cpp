@@ -17,6 +17,7 @@
 namespace llvm::ubi {
 
 static uint64_t getMaxAlign(const DataLayout &DL) {
+  // Return an alignment of 16 for 64-bit platforms, and 8 for 32-bit ones.
   return DL.getPointerABIAlignment(0).value() >= 8 ? 16 : 8;
 }
 
@@ -65,7 +66,7 @@ AnyValue Library::executeMalloc(StringRef Name, Type *Type,
                                 ArrayRef<AnyValue> Args) {
   const auto &SizeVal = Args[0];
 
-  const uint64_t AllocSize = SizeVal.asInteger().getZExtValue();
+  const uint64_t AllocSize = SizeVal.asInteger().getLimitedValue();
   const uint64_t MaxAlign = getMaxAlign(DL);
 
   const auto Obj =
@@ -82,8 +83,8 @@ AnyValue Library::executeCalloc(StringRef Name, Type *Type,
   const auto &CountVal = Args[0];
   const auto &SizeVal = Args[1];
 
-  const uint64_t Count = CountVal.asInteger().getZExtValue();
-  const uint64_t Size = SizeVal.asInteger().getZExtValue();
+  const uint64_t Count = CountVal.asInteger().getLimitedValue();
+  const uint64_t Size = SizeVal.asInteger().getLimitedValue();
 
   bool Overflow;
   const uint64_t AllocSize = SaturatingMultiply(Count, Size, &Overflow);
