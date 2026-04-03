@@ -208,6 +208,8 @@ AnyValue Library::executePrintf([[maybe_unused]] StringRef Name,
     case 'o':
     case 'x':
     case 'X':
+    case 'b':
+    case 'B':
     case 'c': {
       std::string HostFmt = CleanChunk + "ll" + Specifier;
       OS << format(HostFmt.c_str(), static_cast<unsigned long long>(
@@ -218,9 +220,17 @@ AnyValue Library::executePrintf([[maybe_unused]] StringRef Name,
     case 'e':
     case 'E':
     case 'g':
-    case 'G': {
+    case 'G':
+    case 'a':
+    case 'A': {
       std::string HostFmt = CleanChunk + Specifier;
       OS << format(HostFmt.c_str(), Arg.asFloat().convertToDouble());
+      break;
+    }
+    case 'n': {
+      OS.flush();
+      Executor.store(Arg, Align(4), AnyValue(APInt(32, Output.size())),
+                     Type::getInt32Ty(Ctx.getContext()));
       break;
     }
     case 'p': {
