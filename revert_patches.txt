@@ -11,12 +11,9 @@ breaks smoke*
 breaks rocgdb UT
 [Clang][CodeGen] Restore isEmptyFieldForLayout for empty class handling
 ---
-mlir tests breaking
-[IR] Require well-formed IR for BasicBlock::getTerminator (#189416)
----
 needs SPIRV/COMGR
 18e695890306 [SPIRV][AMDGPU][clang][CodeGen][opt] Add late-resolved 
 ---
-inf loop on check-mlir
-[SLP] Do not skip tiny trees with gathered loads to vectorize
+break rock build
+[compiler-rt] Split the GPU.cmake cache file to AMDGPU and NVPTX (#190349)
 ---
