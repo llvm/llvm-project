@@ -347,7 +347,7 @@ __isl_give isl_pw_aff *
 ScopBuilder::getPwAff(BasicBlock *BB,
                       DenseMap<BasicBlock *, isl::set> &InvalidDomainMap,
                       const SCEV *E, bool NonNegative, bool IsInsideDomain) {
-  PWACtx PWAC = scop->getPwAff(E, BB, NonNegative, &RecordedAssumptions, IsInsideDomain);
+  PWACtx PWAC = scop->getPwAff(E, BB, NonNegative, &RecordedAssumptions,  IsInsideDomain);
   InvalidDomainMap[BB] = InvalidDomainMap[BB].unite(PWAC.second);
   return PWAC.first.release();
 }
@@ -396,7 +396,7 @@ bool ScopBuilder::buildConditionSets(
   Value *Condition = SI->getCondition();
 
   isl_pw_aff *LHS, *RHS;
-  LHS = getPwAff(BB, InvalidDomainMap, SE.getSCEVAtScope(Condition, L), IsInsideDomain);
+  LHS = getPwAff(BB, InvalidDomainMap, SE.getSCEVAtScope(Condition, L), /*NonNegative=*/false, IsInsideDomain);
 
   unsigned NumSuccessors = SI->getNumSuccessors();
   ConditionSets.resize(NumSuccessors);
@@ -404,7 +404,7 @@ bool ScopBuilder::buildConditionSets(
     unsigned Idx = Case.getSuccessorIndex();
     ConstantInt *CaseValue = Case.getCaseValue();
 
-    RHS = getPwAff(BB, InvalidDomainMap, SE.getSCEV(CaseValue), IsInsideDomain );
+    RHS = getPwAff(BB, InvalidDomainMap, SE.getSCEV(CaseValue),/*NonNegative=*/false,  IsInsideDomain );
     isl_set *CaseConditionSet =
         buildConditionSet(ICmpInst::ICMP_EQ, isl::manage_copy(LHS),
                           isl::manage(RHS))
@@ -435,8 +435,8 @@ bool ScopBuilder::buildConditionSets(
     const SCEV *LHSSCEV = SE.getSCEVAtScope(Load, L);
     const SCEV *RHSSCEV = SE.getZero(LHSSCEV->getType());
     bool NonNeg = false;
-    isl_pw_aff *LHS = getPwAff(BB, InvalidDomainMap, LHSSCEV, NonNeg);
-    isl_pw_aff *RHS = getPwAff(BB, InvalidDomainMap, RHSSCEV, NonNeg);
+    isl_pw_aff *LHS = getPwAff(BB, InvalidDomainMap, LHSSCEV, NonNeg, IsInsideDomain);
+    isl_pw_aff *RHS = getPwAff(BB, InvalidDomainMap, RHSSCEV, NonNeg, IsInsideDomain);
     ConsequenceCondSet = buildConditionSet(ICmpInst::ICMP_SLE, isl::manage(LHS),
                                            isl::manage(RHS))
                              .release();
@@ -3262,8 +3262,7 @@ void ScopBuilder::buildAccessRelations(ScopStmt &Stmt) {
     for (const SCEV *Subscript : Access->subscripts()) {
       if (!Access->isAffine() || !Subscript)
         continue;
-      scop->getPwAff(Subscript, Stmt.getEntryBlock(), false,
-                     &RecordedAssumptions);
+      scop->getPwAff(Subscript, Stmt.getEntryBlock(), false, &RecordedAssumptions);
     }
     Access->buildAccessRelation(SAI);
     scop->addAccessData(Access);
