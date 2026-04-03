@@ -240,11 +240,6 @@ static void commentInfoMapping(IO &IO, CommentInfo &I) {
       QArgs.push_back(QuotedString(S));
   }
   IO.mapOptional("Args", QArgs, std::vector<QuotedString>());
-  if (!IO.outputting()) {
-    I.Args.clear();
-    for (auto &Q : QArgs)
-      I.Args.push_back(Q.Ref);
-  }
 
   std::vector<QuotedString> QAttrKeys;
   if (IO.outputting()) {
@@ -252,11 +247,6 @@ static void commentInfoMapping(IO &IO, CommentInfo &I) {
       QAttrKeys.push_back(QuotedString(S));
   }
   IO.mapOptional("AttrKeys", QAttrKeys, std::vector<QuotedString>());
-  if (!IO.outputting()) {
-    I.AttrKeys.clear();
-    for (auto &Q : QAttrKeys)
-      I.AttrKeys.push_back(Q.Ref);
-  }
 
   std::vector<QuotedString> QAttrValues;
   if (IO.outputting()) {
@@ -264,11 +254,6 @@ static void commentInfoMapping(IO &IO, CommentInfo &I) {
       QAttrValues.push_back(QuotedString(S));
   }
   IO.mapOptional("AttrValues", QAttrValues, std::vector<QuotedString>());
-  if (!IO.outputting()) {
-    I.AttrValues.clear();
-    for (auto &Q : QAttrValues)
-      I.AttrValues.push_back(Q.Ref);
-  }
 
   IO.mapOptional("Children", I.Children);
 }

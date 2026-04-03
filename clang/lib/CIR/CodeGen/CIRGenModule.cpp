@@ -1970,6 +1970,9 @@ void CIRGenModule::emitTopLevelDecl(Decl *decl) {
       emitGlobal(fd);
     break;
   }
+  case Decl::Export:
+    emitDeclContext(cast<ExportDecl>(decl));
+    break;
 
   case Decl::Var:
   case Decl::Decomposition:

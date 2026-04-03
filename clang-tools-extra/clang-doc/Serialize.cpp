@@ -244,18 +244,38 @@ void ClangDocCommentVisitor::visitTextComment(const TextComment *C) {
 void ClangDocCommentVisitor::visitInlineCommandComment(
     const InlineCommandComment *C) {
   CurrentCI.Name = internString(getCommandName(C->getCommandID()));
+  llvm::SmallVector<StringRef> Args;
   for (unsigned I = 0, E = C->getNumArgs(); I != E; ++I)
-    CurrentCI.Args.push_back(internString(C->getArgText(I).trim()));
+    Args.push_back(internString(C->getArgText(I).trim()));
+  if (!Args.empty()) {
+    StringRef *ArgsMem = TransientArena.Allocate<StringRef>(Args.size());
+    std::uninitialized_copy(Args.begin(), Args.end(), ArgsMem);
+    CurrentCI.Args = llvm::ArrayRef<StringRef>(ArgsMem, Args.size());
+  }
 }
 
 void ClangDocCommentVisitor::visitHTMLStartTagComment(
     const HTMLStartTagComment *C) {
   CurrentCI.Name = internString(C->getTagName());
   CurrentCI.SelfClosing = C->isSelfClosing();
+  llvm::SmallVector<StringRef> AttrKeys;
+  llvm::SmallVector<StringRef> AttrValues;
   for (unsigned I = 0, E = C->getNumAttrs(); I < E; ++I) {
     const HTMLStartTagComment::Attribute &Attr = C->getAttr(I);
-    CurrentCI.AttrKeys.push_back(internString(Attr.Name));
-    CurrentCI.AttrValues.push_back(internString(Attr.Value));
+    AttrKeys.push_back(internString(Attr.Name));
+    AttrValues.push_back(internString(Attr.Value));
+  }
+  if (!AttrKeys.empty()) {
+    StringRef *KeysMem = TransientArena.Allocate<StringRef>(AttrKeys.size());
+    std::uninitialized_copy(AttrKeys.begin(), AttrKeys.end(), KeysMem);
+    CurrentCI.AttrKeys = llvm::ArrayRef<StringRef>(KeysMem, AttrKeys.size());
+  }
+  if (!AttrValues.empty()) {
+    StringRef *ValuesMem =
+        TransientArena.Allocate<StringRef>(AttrValues.size());
+    std::uninitialized_copy(AttrValues.begin(), AttrValues.end(), ValuesMem);
+    CurrentCI.AttrValues =
+        llvm::ArrayRef<StringRef>(ValuesMem, AttrValues.size());
   }
 }
 
@@ -268,8 +288,14 @@ void ClangDocCommentVisitor::visitHTMLEndTagComment(
 void ClangDocCommentVisitor::visitBlockCommandComment(
     const BlockCommandComment *C) {
   CurrentCI.Name = internString(getCommandName(C->getCommandID()));
+  llvm::SmallVector<StringRef> Args;
   for (unsigned I = 0, E = C->getNumArgs(); I < E; ++I)
-    CurrentCI.Args.push_back(internString(C->getArgText(I).trim()));
+    Args.push_back(internString(C->getArgText(I).trim()));
+  if (!Args.empty()) {
+    StringRef *ArgsMem = TransientArena.Allocate<StringRef>(Args.size());
+    std::uninitialized_copy(Args.begin(), Args.end(), ArgsMem);
+    CurrentCI.Args = llvm::ArrayRef<StringRef>(ArgsMem, Args.size());
+  }
 }
 
 void ClangDocCommentVisitor::visitParamCommandComment(
