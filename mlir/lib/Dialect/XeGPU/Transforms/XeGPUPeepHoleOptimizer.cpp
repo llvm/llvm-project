@@ -145,10 +145,15 @@ static xegpu::TensorDescType tryOptimize(xegpu::TensorDescType tdescType,
     return tdescType;
 
   SmallVector<int64_t> supportedShape = {supportedHeight, supportedWidth};
+  auto ctx = tdescType.getContext();
+  auto origLayout = tdescType.getLayoutAttr();
+  SmallVector<int32_t> laneLayoutI32(
+      origLayout.getEffectiveLaneLayoutAsInt().begin(),
+      origLayout.getEffectiveLaneLayoutAsInt().end());
   xegpu::LayoutAttr newLayout = xegpu::LayoutAttr::get(
-      tdescType.getContext(), tdescType.getLayoutAttr().getLaneLayout(),
-      DenseI32ArrayAttr::get(tdescType.getContext(), {1, 1}),
-      tdescType.getLayoutAttr().getOrder());
+      ctx, /*lane_layout=*/DenseI32ArrayAttr::get(ctx, laneLayoutI32),
+      /*lane_data=*/DenseI32ArrayAttr::get(ctx, {1, 1}),
+      /*order=*/origLayout.getOrder());
   // Array length can not be larger than 1 for transpose case.
   return xegpu::TensorDescType::get(supportedShape, newElemTy, arrayLen,
                                     tdescType.getBoundaryCheck(),

@@ -141,7 +141,8 @@ static xegpu::DistributeLayoutAttr getLayoutFromUsePoints(Value result) {
     if (auto tmpLayout = xegpu::getDistributeLayoutAttr(use)) {
       // debug print the use and op, and the tmpLayout
       LLVM_DEBUG({
-        DBGS() << "      use: " << use.getOwner()->getName() << use.getOwner();
+        DBGS() << "getLayoutFromUsePoints  use: " << use.getOwner()->getName()
+               << use.getOwner();
         llvm::dbgs() << ", tmpLayout=" << tmpLayout << "\n";
       });
       // under debug mode, we want to check all the use points to make sure
@@ -175,10 +176,16 @@ static void propagateResultsToRegularOperands(Operation *op) {
   // its layout is not stored as an attribute but encoded in the type itself.
   // For vector type, we attach the layout as an attribute to op.
   if (auto tensorDescTy = dyn_cast<xegpu::TensorDescType>(resultType)) {
-    auto typeWithLayout = xegpu::TensorDescType::get(
-        tensorDescTy.getContext(), tensorDescTy.getShape(),
-        tensorDescTy.getElementType(), tensorDescTy.getEncoding(), resLayout);
-    result.setType(typeWithLayout);
+    auto layout = tensorDescTy.getLayoutAttr();
+    // TODO: remove the layout check. The tensorDescType's layout is treated as
+    // temporary layout, which needs to be set by layout recovery.
+    // allow it now to pass some legacy test case
+    if (!layout) {
+      auto typeWithLayout = xegpu::TensorDescType::get(
+          tensorDescTy.getContext(), tensorDescTy.getShape(),
+          tensorDescTy.getElementType(), tensorDescTy.getEncoding(), resLayout);
+      result.setType(typeWithLayout);
+    }
   }
 
   for (OpOperand &opr : op->getOpOperands()) {
@@ -226,6 +233,8 @@ static void propagateRegionResultsToYieldOperands(
   // use points.
   unsigned numResults = regionBranchOp->getNumResults();
   LLVM_DEBUG(DBGS() << "  parent op has " << numResults << " results\n");
+  if (numResults == 0)
+    return;
 
   SmallVector<xegpu::DistributeLayoutAttr> resultLayouts(numResults, nullptr);
   for (unsigned i = 0; i < numResults; ++i) {
@@ -303,7 +312,7 @@ static void propagateRegionArgsToInits(mlir::RegionBranchOpInterface regionOp) {
 
       // Find all predecessor values that flow into this block argument.
       SmallVector<Value> predValues;
-      regionOp.getPredecessorValues(regionSuccessor, argIdx, predValues);
+      regionOp.getPredecessorValues(regionSuccessor, argIdx - 1, predValues);
       for (Value predVal : predValues) {
         // Match predecessor value to an operand of the regionOp.
         for (OpOperand &operand : regionOp->getOpOperands()) {

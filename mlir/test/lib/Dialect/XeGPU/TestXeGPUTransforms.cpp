@@ -106,10 +106,9 @@ struct TestXeGPUUnrollingPatterns
         }
 
         if (auto layout = tdescTy.getLayoutAttr()) {
-          auto inst_data = layout.getInstData();
-          if (inst_data && layout.isForSubgroup())
-            return SmallVector<int64_t>(inst_data.asArrayRef().begin(),
-                                        inst_data.asArrayRef().end());
+          auto inst_data = layout.getEffectiveInstDataAsInt();
+          if (!inst_data.empty() && layout.isForSubgroup())
+            return SmallVector<int64_t>(inst_data.begin(), inst_data.end());
         }
       }
 
@@ -138,9 +137,9 @@ struct TestXeGPUUnrollingPatterns
 
               if (chunkSize > 1) {
                 int64_t blockedChunkSize = chunkSize;
-                auto instData = layout.getInstData();
+                auto instData = layout.getEffectiveInstDataAsInt();
                 if (!instData.empty())
-                  blockedChunkSize = instData.asArrayRef().back();
+                  blockedChunkSize = instData.back();
 
                 // To create a new attribute with a different chunk_size:
                 auto newEncoding = xegpu::ScatterTensorDescAttr::get(
@@ -150,7 +149,7 @@ struct TestXeGPUUnrollingPatterns
               }
             }
             if (layout) {
-              if (layout.getLaneLayout() == nullptr)
+              if (layout.getEffectiveLaneLayoutAsInt().empty())
                 layout = xegpu::LayoutAttr();
               else
                 layout = layout.dropInstData();
