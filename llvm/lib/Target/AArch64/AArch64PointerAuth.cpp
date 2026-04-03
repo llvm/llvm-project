@@ -61,8 +61,7 @@ char AArch64PointerAuth::ID = 0;
 static void emitPACSymOffsetIntoReg(const TargetInstrInfo &TII,
                                     MachineBasicBlock &MBB,
                                     MachineBasicBlock::iterator I, DebugLoc DL,
-                                    MCSymbol *PACSym,
-                                    Register Reg) {
+                                    MCSymbol *PACSym, Register Reg) {
   BuildMI(MBB, I, DL, TII.get(AArch64::ADRP), Reg)
       .addSym(PACSym, AArch64II::MO_PAGE)
       .setMIFlag(MachineInstr::FrameDestroy);
@@ -217,7 +216,8 @@ void AArch64PointerAuth::authenticateLR(
         // The PACM hint-space instruction modifies the following AUTI[AB]1716
         // to optionally take x15 as an extra operand depending on the
         // presence of +pauth-lr at runtime. On machines without +pauth-lr, it
-        // behaves as a nop, and the address of the PACI[AB]SP in x15 is ignored.
+        // behaves as a nop, and the address of the PACI[AB]SP in x15 is
+        // ignored.
         BuildMI(MBB, MBBI, DL, TII->get(AArch64::PACM))
             .setMIFlag(MachineInstr::FrameDestroy);
 
