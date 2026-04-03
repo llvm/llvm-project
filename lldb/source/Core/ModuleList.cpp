@@ -1342,7 +1342,7 @@ static bool LoadScriptingModule(const FileSpec &scripting_fspec,
   LoadScriptOptions options;
   return script_interpreter.LoadScriptingModule(
       scripting_stream.GetData(), options, error,
-      /*module_sp*/nullptr, /*extra_path*/{}, target.shared_from_this());
+      /*module_sp*/ nullptr, /*extra_path*/ {}, target.shared_from_this());
 }
 
 bool ModuleList::LoadScriptingResourceInTargetForModule(Module &module,
