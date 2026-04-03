@@ -218,7 +218,10 @@ static Error getTargetTripleAndFeatures(hsa_agent_t Agent,
     // position that is supposed to be the object format. Reconstitute the valid
     // part of the triple for parsing, and take the appended subtarget name.
     SmallVector<StringRef, 5> Components;
-    llvm::StringRef(ISAName).split(Components, '-', /*MaxSplit=*/4);
+
+    llvm::StringRef TripleLikeStr(ISAName.data(), ISAName.size());
+    TripleLikeStr.split(Components, '-', /*MaxSplit=*/4);
+
     if (Components.size() == 5) {
       llvm::Triple TripleTarget(Components[0], Components[1], Components[2]);
       if (TripleTarget.isAMDGCN() && TripleTarget.getOS() == Triple::AMDHSA)
