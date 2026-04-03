@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -x hip -std=c++11 -triple amdgcn -fcuda-is-device -emit-llvm -Wno-deprecated-builtins %s -o - | FileCheck -enable-var-scope %s
+// RUN: %clang_cc1 -x hip -std=c++11 -triple amdgcn -fcuda-is-device -emit-llvm %s -o - | FileCheck -enable-var-scope %s
 #include "Inputs/cuda.h"
 
 // CHECK-LABEL: @_Z24atomic32_op_singlethreadPiii

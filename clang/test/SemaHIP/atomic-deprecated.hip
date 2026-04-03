@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -x hip -triple amdgcn -fcuda-is-device -verify -fsyntax-only -Wdeprecated-builtins %s
-// RUN: %clang_cc1 -x hip -triple amdgcn -fcuda-is-device -fdiagnostics-parseable-fixits -Wdeprecated-builtins %s 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -x hip -triple amdgcn -fcuda-is-device -verify -fsyntax-only -Whip-deprecated-builtins %s
+// RUN: %clang_cc1 -x hip -triple amdgcn -fcuda-is-device -fdiagnostics-parseable-fixits -Whip-deprecated-builtins %s 2>&1 | FileCheck %s
 
 #define __device__ __attribute__((device))
 

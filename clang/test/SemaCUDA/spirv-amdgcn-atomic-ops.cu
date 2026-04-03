@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -x hip -std=c++11 -triple spirv64-amd-amdhsa -fcuda-is-device -verify -fsyntax-only -Wno-deprecated-builtins %s
+// RUN: %clang_cc1 -x hip -std=c++11 -triple spirv64-amd-amdhsa -fcuda-is-device -verify -fsyntax-only %s
 
 #include "Inputs/cuda.h"
 

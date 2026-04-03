@@ -3,10 +3,10 @@
 // fixed source are compiled and checked against the same CHECK lines.
 //
 // RUN: %clang_cc1 -x hip -std=c++11 -triple amdgcn -fcuda-is-device \
-// RUN:   -emit-llvm -Wno-deprecated-builtins %s -o - | FileCheck %s
+// RUN:   -emit-llvm %s -o - | FileCheck %s
 // RUN: cp %s %t
 // RUN: %clang_cc1 -x hip -std=c++11 -triple amdgcn -fcuda-is-device \
-// RUN:   -Wdeprecated-builtins -fixit %t
+// RUN:   -fixit %t
 // RUN: %clang_cc1 -x hip -std=c++11 -triple amdgcn -fcuda-is-device \
 // RUN:   -emit-llvm %t -o - | FileCheck %s
 

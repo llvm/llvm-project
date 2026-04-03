@@ -4609,7 +4609,7 @@ static void DiagnoseDeprecatedHIPAtomic(Sema &S, SourceRange ExprRange,
     llvm_unreachable("unhandled HIP atomic op");
   }
 
-  auto DB = S.Diag(ExprRange.getBegin(), diag::warn_deprecated_builtin)
+  auto DB = S.Diag(ExprRange.getBegin(), diag::warn_hip_deprecated_builtin)
             << OldName << NewName;
   if (!CanFixIt)
     return;
