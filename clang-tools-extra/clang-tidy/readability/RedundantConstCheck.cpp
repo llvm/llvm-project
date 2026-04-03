@@ -37,10 +37,11 @@ findConstToRemove(const VarDecl *VD, const MatchFinder::MatchResult &Result) {
   // e.g: constexpr const auto const str = "hello";
   // In cases like this, clang analyzer already warns about the use of const
   // as duplicate, so we can safely ignore these cases.
-  const SourceLocation ConstSearchStartLoc = !IsPointer
-      ? VD->getBeginLoc()
-      : utils::lexer::findPreviousTokenKind(
-        NameBeginLoc, SM, Result.Context->getLangOpts(), tok::star);
+  const SourceLocation ConstSearchStartLoc =
+      !IsPointer
+          ? VD->getBeginLoc()
+          : utils::lexer::findPreviousTokenKind(
+                NameBeginLoc, SM, Result.Context->getLangOpts(), tok::star);
 
   if (ConstSearchStartLoc.isInvalid())
     return std::nullopt;
