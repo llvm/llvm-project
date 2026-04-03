@@ -429,15 +429,13 @@ unreachable:                                      ; preds = %rethrow
 ; CHECK:   try
 ; CHECK:     try
 ; CHECK:       call  __cxa_throw
-; CHECK:     catch   {{.*}} __cpp_exception
-; CHECK:       call  $drop=, __cxa_begin_catch
+; CHECK:     catch
 ; CHECK:       call  __cxa_end_catch
 ; CHECK:       try
 ; CHECK:         try
 ; Note that this rethrow targets the top-level catch_all
 ; CHECK:           rethrow   4
-; CHECK:         catch   {{.*}} __cpp_exception
-; CHECK:           call  $drop=, __cxa_begin_catch
+; CHECK:         catch
 ; CHECK:           call  __cxa_end_catch
 ; CHECK:           return
 ; CHECK:         end_try
