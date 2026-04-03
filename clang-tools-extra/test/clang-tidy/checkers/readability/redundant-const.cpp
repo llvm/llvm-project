@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy -std=c++11-or-later %s readability-redundant-const %t --
+// RUN: %check_clang_tidy -std=c++11-or-later %s readability-redundant-const %t
 
 struct Foo {};
 
