@@ -1342,7 +1342,7 @@ static bool LoadScriptingModule(const FileSpec &scripting_fspec,
   LoadScriptOptions options;
   return script_interpreter.LoadScriptingModule(
       scripting_stream.GetData(), options, error,
-      /*module_sp*/ nullptr, /*extra_path*/ {}, target.shared_from_this());
+      /*module_sp*/nullptr, /*extra_path*/{}, target.shared_from_this());
 }
 
 bool ModuleList::LoadScriptingResourceInTargetForModule(Module &module,
@@ -1361,8 +1361,7 @@ bool ModuleList::LoadScriptingResourceInTargetForModule(Module &module,
     return false;
   }
 
-  PlatformSP platform_sp(target.GetPlatform());
-
+  PlatformSP platform_sp = target.GetPlatform();
   if (!platform_sp) {
     error = Status::FromErrorString("invalid Platform");
     return false;
