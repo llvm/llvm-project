@@ -174,13 +174,13 @@ define amdgpu_kernel void @v_multiple_frame_indexes_literal_offsets() #0 {
 ; CHECK-NEXT:    s_movk_i32 s32, 0x400
 ; CHECK-NEXT:    s_mov_b64 s[4:5], exec
 ; CHECK-NEXT:  .LBB3_1: ; =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    v_readfirstlane_b32 s15, v3
-; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc, s15, v3
+; CHECK-NEXT:    v_readfirstlane_b32 s16, v3
+; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc, s16, v3
 ; CHECK-NEXT:    s_and_saveexec_b64 s[52:53], vcc
 ; CHECK-NEXT:    s_getpc_b64 s[4:5]
 ; CHECK-NEXT:    s_add_u32 s4, s4, user@gotpcrel32@lo+4
 ; CHECK-NEXT:    s_addc_u32 s5, s5, user@gotpcrel32@hi+12
-; CHECK-NEXT:    s_load_dwordx2 s[16:17], s[4:5], 0x0
+; CHECK-NEXT:    s_load_dwordx2 s[18:19], s[4:5], 0x0
 ; CHECK-NEXT:    s_mov_b64 s[4:5], s[48:49]
 ; CHECK-NEXT:    s_mov_b64 s[6:7], s[38:39]
 ; CHECK-NEXT:    s_mov_b64 s[8:9], s[36:37]
@@ -188,9 +188,10 @@ define amdgpu_kernel void @v_multiple_frame_indexes_literal_offsets() #0 {
 ; CHECK-NEXT:    s_mov_b32 s12, s51
 ; CHECK-NEXT:    s_mov_b32 s13, s50
 ; CHECK-NEXT:    s_mov_b32 s14, s33
-; CHECK-NEXT:    s_mov_b32 s0, s15
+; CHECK-NEXT:    s_mov_b32 s0, s16
+; CHECK-NEXT:    ; implicit-def: $sgpr15
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_swappc_b64 s[30:31], s[16:17]
+; CHECK-NEXT:    s_swappc_b64 s[30:31], s[18:19]
 ; CHECK-NEXT:    ; implicit-def: $vgpr3
 ; CHECK-NEXT:    ; implicit-def: $vgpr31
 ; CHECK-NEXT:    s_xor_b64 exec, exec, s[52:53]
@@ -238,10 +239,10 @@ define amdgpu_kernel void @call_user_i32_inreg_i32_i32_inreg(i32 %a, i32 %a1, i3
 ; CHECK-NEXT:    s_mov_b32 s32, 0
 ; CHECK-NEXT:    s_mov_b64 s[4:5], exec
 ; CHECK-NEXT:  .LBB4_1: ; =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    v_readfirstlane_b32 s15, v4
-; CHECK-NEXT:    v_readfirstlane_b32 s16, v3
-; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc, s15, v4
-; CHECK-NEXT:    v_cmp_eq_u32_e64 s[4:5], s16, v3
+; CHECK-NEXT:    v_readfirstlane_b32 s16, v4
+; CHECK-NEXT:    v_readfirstlane_b32 s17, v3
+; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc, s16, v4
+; CHECK-NEXT:    v_cmp_eq_u32_e64 s[4:5], s17, v3
 ; CHECK-NEXT:    s_and_b64 s[4:5], vcc, s[4:5]
 ; CHECK-NEXT:    s_and_saveexec_b64 s[52:53], s[4:5]
 ; CHECK-NEXT:    s_getpc_b64 s[4:5]
@@ -256,8 +257,9 @@ define amdgpu_kernel void @call_user_i32_inreg_i32_i32_inreg(i32 %a, i32 %a1, i3
 ; CHECK-NEXT:    s_mov_b32 s13, s50
 ; CHECK-NEXT:    s_mov_b32 s14, s33
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s70
-; CHECK-NEXT:    s_mov_b32 s1, s15
-; CHECK-NEXT:    s_mov_b32 s0, s16
+; CHECK-NEXT:    s_mov_b32 s1, s16
+; CHECK-NEXT:    s_mov_b32 s0, s17
+; CHECK-NEXT:    ; implicit-def: $sgpr15
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[18:19]
 ; CHECK-NEXT:    ; implicit-def: $vgpr4
@@ -308,10 +310,10 @@ define amdgpu_kernel void @call_user_ft_inreg_ft_ft_inreg(i32 %a, float %a1, flo
 ; CHECK-NEXT:    s_mov_b32 s32, 0
 ; CHECK-NEXT:    s_mov_b64 s[4:5], exec
 ; CHECK-NEXT:  .LBB5_1: ; =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    v_readfirstlane_b32 s15, v4
-; CHECK-NEXT:    v_readfirstlane_b32 s16, v3
-; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc, s15, v4
-; CHECK-NEXT:    v_cmp_eq_u32_e64 s[4:5], s16, v3
+; CHECK-NEXT:    v_readfirstlane_b32 s16, v4
+; CHECK-NEXT:    v_readfirstlane_b32 s17, v3
+; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc, s16, v4
+; CHECK-NEXT:    v_cmp_eq_u32_e64 s[4:5], s17, v3
 ; CHECK-NEXT:    s_and_b64 s[4:5], vcc, s[4:5]
 ; CHECK-NEXT:    s_and_saveexec_b64 s[52:53], s[4:5]
 ; CHECK-NEXT:    s_getpc_b64 s[4:5]
@@ -326,8 +328,9 @@ define amdgpu_kernel void @call_user_ft_inreg_ft_ft_inreg(i32 %a, float %a1, flo
 ; CHECK-NEXT:    s_mov_b32 s13, s50
 ; CHECK-NEXT:    s_mov_b32 s14, s33
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s70
-; CHECK-NEXT:    s_mov_b32 s1, s15
-; CHECK-NEXT:    s_mov_b32 s0, s16
+; CHECK-NEXT:    s_mov_b32 s1, s16
+; CHECK-NEXT:    s_mov_b32 s0, s17
+; CHECK-NEXT:    ; implicit-def: $sgpr15
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[18:19]
 ; CHECK-NEXT:    ; implicit-def: $vgpr4
@@ -388,16 +391,16 @@ define amdgpu_kernel void @call_user_2xft_inreg_ft_2xft_inreg(i32 %a, <2 x float
 ; CHECK-NEXT:    s_mov_b32 s32, 0
 ; CHECK-NEXT:    s_mov_b64 s[4:5], exec
 ; CHECK-NEXT:  .LBB6_1: ; =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    v_readfirstlane_b32 s15, v6
-; CHECK-NEXT:    v_readfirstlane_b32 s16, v5
-; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc, s15, v6
-; CHECK-NEXT:    v_cmp_eq_u32_e64 s[4:5], s16, v5
-; CHECK-NEXT:    v_readfirstlane_b32 s17, v4
+; CHECK-NEXT:    v_readfirstlane_b32 s16, v6
+; CHECK-NEXT:    v_readfirstlane_b32 s17, v5
+; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc, s16, v6
+; CHECK-NEXT:    v_cmp_eq_u32_e64 s[4:5], s17, v5
+; CHECK-NEXT:    v_readfirstlane_b32 s18, v4
 ; CHECK-NEXT:    s_and_b64 s[4:5], vcc, s[4:5]
-; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc, s17, v4
-; CHECK-NEXT:    v_readfirstlane_b32 s18, v3
+; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc, s18, v4
+; CHECK-NEXT:    v_readfirstlane_b32 s19, v3
 ; CHECK-NEXT:    s_and_b64 s[4:5], s[4:5], vcc
-; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc, s18, v3
+; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc, s19, v3
 ; CHECK-NEXT:    s_and_b64 s[4:5], s[4:5], vcc
 ; CHECK-NEXT:    s_and_saveexec_b64 s[52:53], s[4:5]
 ; CHECK-NEXT:    s_getpc_b64 s[4:5]
@@ -412,10 +415,11 @@ define amdgpu_kernel void @call_user_2xft_inreg_ft_2xft_inreg(i32 %a, <2 x float
 ; CHECK-NEXT:    s_mov_b32 s13, s50
 ; CHECK-NEXT:    s_mov_b32 s14, s33
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s54
-; CHECK-NEXT:    s_mov_b32 s3, s15
-; CHECK-NEXT:    s_mov_b32 s2, s16
-; CHECK-NEXT:    s_mov_b32 s1, s17
-; CHECK-NEXT:    s_mov_b32 s0, s18
+; CHECK-NEXT:    s_mov_b32 s3, s16
+; CHECK-NEXT:    s_mov_b32 s2, s17
+; CHECK-NEXT:    s_mov_b32 s1, s18
+; CHECK-NEXT:    s_mov_b32 s0, s19
+; CHECK-NEXT:    ; implicit-def: $sgpr15
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[20:21]
 ; CHECK-NEXT:    ; implicit-def: $vgpr6
