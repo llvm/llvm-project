@@ -8,12 +8,11 @@
 RWByteAddressBuffer gBuf0 : register(u0);
 RWByteAddressBuffer gBuf1 : register(u1);
 
-uint Pass_EarlyReturn(bool cond, uint idx)
-{
+uint Pass_EarlyReturn(bool cond, uint idx) {
     // expected-note@+1{{variable 'buf' is declared here}}
     RWByteAddressBuffer buf = gBuf0;
 
-    if(cond)
+    if (cond)
         buf.Store(idx * 4, 31);
 
         return 31;
@@ -26,8 +25,7 @@ uint Pass_EarlyReturn(bool cond, uint idx)
 }
 
 [numthreads(8,8,1)]
-void main(uint3 tid : SV_DispatchThreadID)
-{
+void main(uint3 tid : SV_DispatchThreadID) {
     uint idx = tid.x + tid.y * 8;
     Pass_EarlyReturn(true, idx);
 }

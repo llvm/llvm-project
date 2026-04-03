@@ -10,11 +10,9 @@ RWByteAddressBuffer gBuf0 : register(u0);
 RWByteAddressBuffer gBuf1 : register(u1);
 
 // CHECK: warning: assignment of 'gBuf1' to local resource 'buf' is not to the same unique global resource
-RWByteAddressBuffer Pass_MultipleReturns(bool cond, uint idx)
-{
+RWByteAddressBuffer Pass_MultipleReturns(bool cond, uint idx) {
     RWByteAddressBuffer buf = gBuf0;
-    if(cond)
-    {
+    if (cond) {
         buf.Store(idx * 4, 1);
         return buf;
     }
@@ -28,8 +26,7 @@ RWByteAddressBuffer Pass_MultipleReturns(bool cond, uint idx)
 // CHECK: define void @main()
 
 [numthreads(8,8,1)]
-void main(uint3 tid : SV_DispatchThreadID)
-{
+void main(uint3 tid : SV_DispatchThreadID) {
     uint idx = tid.x + tid.y * 8;
     RWByteAddressBuffer result = Pass_MultipleReturns(idx < 32, idx);
     result.Store(0, idx);

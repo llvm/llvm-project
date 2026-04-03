@@ -7,8 +7,7 @@
 
 RWByteAddressBuffer gBuf0 : register(u0);
 
-uint Pass_WaveUse(uint idx)
-{
+uint Pass_WaveUse(uint idx) {
     RWByteAddressBuffer buf = gBuf0;
     uint active = WaveActiveCountBits(true);
     buf.Store(idx * 4, active);
@@ -17,8 +16,7 @@ uint Pass_WaveUse(uint idx)
 }
 
 [numthreads(8,8,1)]
-void main(uint3 tid : SV_DispatchThreadID)
-{
+void main(uint3 tid : SV_DispatchThreadID) {
     uint idx = tid.x + tid.y * 8;
     Pass_WaveUse(idx);
 }

@@ -10,8 +10,7 @@ RWByteAddressBuffer gBuf2 : register(u2);
 struct ForwardA { RWByteAddressBuffer buf; };
 struct ForwardB { ForwardA a; };
 
-uint Pass_ForwardStructLayers(uint idx)
-{
+uint Pass_ForwardStructLayers(uint idx) {
     ForwardB b;
     b.a.buf = gBuf2;
     b.a.buf.Store(idx * 4, 29);
@@ -20,8 +19,7 @@ uint Pass_ForwardStructLayers(uint idx)
 }
 
 [numthreads(8,8,1)]
-void main(uint3 tid : SV_DispatchThreadID)
-{
+void main(uint3 tid : SV_DispatchThreadID) {
     uint idx = tid.x + tid.y * 8;
     Pass_ForwardStructLayers(idx);
 }

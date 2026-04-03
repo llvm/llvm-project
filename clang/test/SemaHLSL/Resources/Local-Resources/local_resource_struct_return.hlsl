@@ -11,16 +11,14 @@ RWByteAddressBuffer gBuf0 : register(u0);
 
 struct ResHolder { RWByteAddressBuffer buf; };
 
-ResHolder MakeHolder()
-{
+ResHolder MakeHolder() {
     ResHolder h;
     h.buf = gBuf0;
     return h;
 }
 
 [numthreads(1,1,1)]
-void main(uint3 tid : SV_DispatchThreadID)
-{
+void main(uint3 tid : SV_DispatchThreadID) {
     ResHolder h = MakeHolder();
     h.buf.Store(tid.x * 4, 42);
 }

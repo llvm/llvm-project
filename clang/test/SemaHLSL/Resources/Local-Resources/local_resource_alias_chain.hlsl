@@ -7,8 +7,7 @@
 
 RWByteAddressBuffer gBuf0 : register(u0);
 
-uint Pass_AliasChain(uint idx)
-{
+uint Pass_AliasChain(uint idx) {
     RWByteAddressBuffer a = gBuf0;
     RWByteAddressBuffer b = a;
     RWByteAddressBuffer c = b;
@@ -20,8 +19,7 @@ uint Pass_AliasChain(uint idx)
 }
 
 [numthreads(8,8,1)]
-void main(uint3 tid : SV_DispatchThreadID)
-{
+void main(uint3 tid : SV_DispatchThreadID) {
     uint idx = tid.x + tid.y * 8;
     Pass_AliasChain(idx);
 }

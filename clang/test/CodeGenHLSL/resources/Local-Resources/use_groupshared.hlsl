@@ -9,15 +9,13 @@
 
 RWByteAddressBuffer gOut  : register(u3);
 
-uint DoStore(RWByteAddressBuffer buf, uint offset, uint value)
-{
+uint DoStore(RWByteAddressBuffer buf, uint offset, uint value) {
     buf.Store(offset, value);
     return value;
 }
 
 groupshared RWByteAddressBuffer sharedBuf;
-uint Use_Shared(uint idx)
-{
+uint Use_Shared(uint idx) {
     return DoStore(sharedBuf, idx * 4, 1);
 }
 
@@ -27,8 +25,7 @@ uint Use_Shared(uint idx)
 // CHECK: note: passing argument to parameter 'buf' here
 
 [numthreads(8,8,1)]
-void main(uint3 tid : SV_DispatchThreadID)
-{
+void main(uint3 tid : SV_DispatchThreadID) {
     uint idx = tid.x + tid.y * 8;
     Use_Shared(idx);
 }

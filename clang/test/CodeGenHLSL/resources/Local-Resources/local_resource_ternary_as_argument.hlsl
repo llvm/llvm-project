@@ -11,14 +11,12 @@
 RWByteAddressBuffer gBuf0 : register(u0);
 RWByteAddressBuffer gBuf1 : register(u1);
 
-void Helper(RWByteAddressBuffer buf, uint offset, uint value)
-{
+void Helper(RWByteAddressBuffer buf, uint offset, uint value) {
     buf.Store(offset, value);
 }
 
 [numthreads(1,1,1)]
-void main(uint3 tid : SV_DispatchThreadID)
-{
+void main(uint3 tid : SV_DispatchThreadID) {
     bool cond = tid.x > 0;
     Helper(cond ? gBuf0 : gBuf1, tid.x * 4, 42);
 }

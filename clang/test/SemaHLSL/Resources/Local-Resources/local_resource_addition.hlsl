@@ -8,15 +8,13 @@
 
 RWByteAddressBuffer gBuf0 : register(u0);
 
-float Fail_Add()
-{
+float Fail_Add() {
     RWByteAddressBuffer buf = gBuf0;
     return buf + buf;
     // expected-error@-1 {{invalid operands to binary expression ('RWByteAddressBuffer' and 'RWByteAddressBuffer')}}
 }
 
 [numthreads(1,1,1)]
-void main(uint3 tid : SV_DispatchThreadID)
-{
+void main(uint3 tid : SV_DispatchThreadID) {
     Fail_Add();
 }

@@ -10,8 +10,7 @@
 //   "too few elements in vector initialization (expected 1 element, have 0)"
 
 [numthreads(1,1,1)]
-void main(uint3 tid : SV_DispatchThreadID)
-{
+void main(uint3 tid : SV_DispatchThreadID) {
     RWByteAddressBuffer buf = {};
     // expected-error@-1 {{too few initializers in list for type 'RWByteAddressBuffer' (expected 1 but found 0)}}
     buf.Store(tid.x * 4, 42);

@@ -13,8 +13,7 @@ RWByteAddressBuffer gBuf0 : register(u0);
 RWByteAddressBuffer gBuf1 : register(u1);
 
 [numthreads(1,1,1)]
-void main(uint3 tid : SV_DispatchThreadID)
-{
+void main(uint3 tid : SV_DispatchThreadID) {
     RWByteAddressBuffer a = gBuf0;
     RWByteAddressBuffer b = gBuf1;
     bool cond = tid.x > 0;

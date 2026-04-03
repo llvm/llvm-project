@@ -9,11 +9,10 @@ RWByteAddressBuffer gBuf0 : register(u0);
 RWByteAddressBuffer gBuf1 : register(u1);
 RWByteAddressBuffer gBuf2 : register(u2);
 
-uint Pass_DeepPhi(bool a, bool b, uint idx)
-{
+uint Pass_DeepPhi(bool a, bool b, uint idx) {
     RWByteAddressBuffer buf;
 
-    if(a)
+    if (a)
         // DXC: no diagnostic. Clang: warning.
         // expected-warning@+1{{assignment of 'b ? gBuf0 : gBuf1' to local resource 'buf' is not to the same unique global resource}}
         buf = b ? gBuf0 : gBuf1;
@@ -27,8 +26,7 @@ uint Pass_DeepPhi(bool a, bool b, uint idx)
 }
 
 [numthreads(8,8,1)]
-void main(uint3 tid : SV_DispatchThreadID)
-{
+void main(uint3 tid : SV_DispatchThreadID) {
     uint idx = tid.x + tid.y * 8;
     Pass_DeepPhi(true, false, idx);
 }

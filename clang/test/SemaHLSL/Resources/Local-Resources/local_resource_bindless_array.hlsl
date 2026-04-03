@@ -7,8 +7,7 @@
 
 RWByteAddressBuffer gBufArray[4] : register(u10);
 
-uint Pass_Bindless(uint idx)
-{
+uint Pass_Bindless(uint idx) {
     RWByteAddressBuffer buf = gBufArray[idx & 3];
     buf.Store(idx * 4, 21);
 
@@ -16,8 +15,7 @@ uint Pass_Bindless(uint idx)
 }
 
 [numthreads(8,8,1)]
-void main(uint3 tid : SV_DispatchThreadID)
-{
+void main(uint3 tid : SV_DispatchThreadID) {
     uint idx = tid.x + tid.y * 8;
     Pass_Bindless(idx);
 }

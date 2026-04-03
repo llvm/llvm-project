@@ -11,8 +11,7 @@ RWByteAddressBuffer gBuf0 : register(u0);
 RWByteAddressBuffer gBuf1 : register(u1);
 
 [numthreads(1,1,1)]
-void main(uint3 tid : SV_DispatchThreadID)
-{
+void main(uint3 tid : SV_DispatchThreadID) {
     const RWByteAddressBuffer buf = gBuf0;
     buf = gBuf1;
     // expected-warning@-1 {{assignment of 'gBuf1' to local resource 'buf' is not to the same unique global resource}}

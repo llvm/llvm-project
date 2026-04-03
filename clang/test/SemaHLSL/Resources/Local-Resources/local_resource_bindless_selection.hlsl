@@ -7,8 +7,7 @@
 
 RWByteAddressBuffer gBufArray[4] : register(u10);
 
-uint Pass_BindlessSelection(uint a, uint b, uint idx)
-{
+uint Pass_BindlessSelection(uint a, uint b, uint idx) {
     RWByteAddressBuffer buf;
 
     buf = gBufArray[a & 3];
@@ -21,8 +20,7 @@ uint Pass_BindlessSelection(uint a, uint b, uint idx)
 }
 
 [numthreads(8,8,1)]
-void main(uint3 tid : SV_DispatchThreadID)
-{
+void main(uint3 tid : SV_DispatchThreadID) {
     uint idx = tid.x + tid.y * 8;
     Pass_BindlessSelection(2, 3, idx);
 }

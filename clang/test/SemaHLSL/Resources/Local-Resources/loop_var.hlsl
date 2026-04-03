@@ -9,17 +9,14 @@ RWByteAddressBuffer gBuf0 : register(u0);
 
 RWByteAddressBuffer gOut  : register(u3);
 
-void Pass_LoopVar()
-{
-    for(RWByteAddressBuffer buf = gBuf0; false == false; )
-    {
+void Pass_LoopVar() {
+    for (RWByteAddressBuffer buf = gBuf0; false == false; ) {
         buf.Store(0, 0);
         break; 
     }
 }
 
 [numthreads(8,8,1)]
-void main(uint3 tid : SV_DispatchThreadID)
-{    
+void main(uint3 tid : SV_DispatchThreadID) {    
     Pass_LoopVar();    
 }

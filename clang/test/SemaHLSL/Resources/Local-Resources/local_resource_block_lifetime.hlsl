@@ -7,8 +7,7 @@
 
 RWByteAddressBuffer gBuf1 : register(u1);
 
-uint Pass_BlockLifetime(uint idx)
-{
+uint Pass_BlockLifetime(uint idx) {
     RWByteAddressBuffer buf;
     {
         buf = gBuf1;
@@ -19,8 +18,7 @@ uint Pass_BlockLifetime(uint idx)
 }
 
 [numthreads(8,8,1)]
-void main(uint3 tid : SV_DispatchThreadID)
-{
+void main(uint3 tid : SV_DispatchThreadID) {
     uint idx = tid.x + tid.y * 8;
     Pass_BlockLifetime(idx);
 }

@@ -11,8 +11,7 @@
 
 RWByteAddressBuffer gBuf0 : register(u0);
 
-uint Pass_StaticLocal(uint idx)
-{
+uint Pass_StaticLocal(uint idx) {
     static RWByteAddressBuffer buf = gBuf0;
     buf.Store(idx * 4, 1);
 
@@ -20,7 +19,6 @@ uint Pass_StaticLocal(uint idx)
 }
 
 [numthreads(1,1,1)]
-void main(uint3 tid : SV_DispatchThreadID)
-{
+void main(uint3 tid : SV_DispatchThreadID) {
     Pass_StaticLocal(tid.x);
 }

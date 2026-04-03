@@ -11,8 +11,7 @@
 
 RWByteAddressBuffer gBuf0 : register(u0);
 
-uint Pass_ArraySizeOne(uint idx)
-{
+uint Pass_ArraySizeOne(uint idx) {
     RWByteAddressBuffer arr[1];
     arr[0] = gBuf0;
     arr[0].Store(idx * 4, 42);
@@ -20,7 +19,6 @@ uint Pass_ArraySizeOne(uint idx)
 }
 
 [numthreads(1,1,1)]
-void main(uint3 tid : SV_DispatchThreadID)
-{
+void main(uint3 tid : SV_DispatchThreadID) {
     Pass_ArraySizeOne(tid.x);
 }

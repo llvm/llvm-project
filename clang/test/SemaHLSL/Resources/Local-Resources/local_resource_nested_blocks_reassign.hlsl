@@ -8,8 +8,7 @@
 RWByteAddressBuffer gBuf1 : register(u1);
 RWByteAddressBuffer gBuf2 : register(u2);
 
-uint Pass_NestedBlocks(uint idx)
-{
+uint Pass_NestedBlocks(uint idx) {
     // expected-note@+1{{variable 'buf' is declared here}}
     RWByteAddressBuffer buf;
 
@@ -29,8 +28,7 @@ uint Pass_NestedBlocks(uint idx)
 }
 
 [numthreads(8,8,1)]
-void main(uint3 tid : SV_DispatchThreadID)
-{
+void main(uint3 tid : SV_DispatchThreadID) {
     uint idx = tid.x + tid.y * 8;
     Pass_NestedBlocks(idx);
 }

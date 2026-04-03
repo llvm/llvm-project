@@ -10,8 +10,7 @@
 RWByteAddressBuffer gBuf0 : register(u0);
 RWByteAddressBuffer gBuf1 : register(u1);
 
-uint Pass_Reassign(uint idx)
-{
+uint Pass_Reassign(uint idx) {
     // expected-note@+1{{variable 'buf' is declared here}}
     RWByteAddressBuffer buf = gBuf0;
     // expected-warning@+1{{assignment of 'gBuf1' to local resource 'buf' is not to the same unique global resource}}
@@ -22,8 +21,7 @@ uint Pass_Reassign(uint idx)
 }
 
 [numthreads(8,8,1)]
-void main(uint3 tid : SV_DispatchThreadID)
-{
+void main(uint3 tid : SV_DispatchThreadID) {
     uint idx = tid.x + tid.y * 8;
     Pass_Reassign(idx);
 }

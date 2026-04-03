@@ -10,8 +10,7 @@ RWByteAddressBuffer gBuf0 : register(u0);
 RWStructuredBuffer<uint> gSB : register(u1);
 
 [numthreads(1,1,1)]
-void main(uint3 tid : SV_DispatchThreadID)
-{
+void main(uint3 tid : SV_DispatchThreadID) {
     RWByteAddressBuffer buf = gBuf0;
     RWStructuredBuffer<uint> sb = gSB;
     buf = sb;

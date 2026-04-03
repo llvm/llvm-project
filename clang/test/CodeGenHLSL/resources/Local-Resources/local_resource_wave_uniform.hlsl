@@ -11,10 +11,9 @@
 RWByteAddressBuffer gBuf0 : register(u0);
 RWByteAddressBuffer gBuf1 : register(u1);
 
-uint Fail_WaveUniform(uint offset, uint value)
-{
+uint Fail_WaveUniform(uint offset, uint value) {
     RWByteAddressBuffer buf = gBuf0;
-    if(WaveActiveAllTrue(true))
+    if (WaveActiveAllTrue(true))
         buf = gBuf1;
     // expected-warning: assignment of 'gBuf1' to local resource 'buf' is not to the same unique global resource
     buf.Store(offset, value);
@@ -28,7 +27,6 @@ uint Fail_WaveUniform(uint offset, uint value)
 // CHECK-NOT: error:
 
 [numthreads(1,1,1)]
-void main(uint3 tid : SV_DispatchThreadID)
-{
+void main(uint3 tid : SV_DispatchThreadID) {
     Fail_WaveUniform(tid.x * 4, 10);
 }

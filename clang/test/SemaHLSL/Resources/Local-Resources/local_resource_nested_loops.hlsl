@@ -7,12 +7,10 @@
 
 RWByteAddressBuffer gBufArray[4] : register(u10);
 
-uint Pass_NestedLoops(uint idx)
-{
+uint Pass_NestedLoops(uint idx) {
     uint sum = 0;
-    for(unsigned int i=0;i<2;i++)
-    for(unsigned int j=0;j<2;j++)
-    {        
+    for (unsigned int i=0;i<2;i++)
+    for (unsigned int j=0;j<2;j++) {        
         RWByteAddressBuffer buf = gBufArray[i+j];
         buf.Store(idx * 4 + (i+j)*4, 23);
 
@@ -22,8 +20,7 @@ uint Pass_NestedLoops(uint idx)
 }
 
 [numthreads(8,8,1)]
-void main(uint3 tid : SV_DispatchThreadID)
-{
+void main(uint3 tid : SV_DispatchThreadID) {
     uint idx = tid.x + tid.y * 8;
     Pass_NestedLoops(idx);
 }

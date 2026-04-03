@@ -16,8 +16,7 @@ struct Node {
 };
 
 [numthreads(1,1,1)]
-void main(uint3 tid : SV_DispatchThreadID)
-{
+void main(uint3 tid : SV_DispatchThreadID) {
     Node n;
     n.buf = gBuf0;
     n.next = 0;

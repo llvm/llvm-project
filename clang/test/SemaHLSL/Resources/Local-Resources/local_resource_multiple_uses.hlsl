@@ -10,19 +10,16 @@
 
 RWByteAddressBuffer gBuf0 : register(u0);
 
-void HelperA(RWByteAddressBuffer buf, uint offset)
-{
+void HelperA(RWByteAddressBuffer buf, uint offset) {
     buf.Store(offset, 1);
 }
 
-void HelperB(RWByteAddressBuffer buf, uint offset)
-{
+void HelperB(RWByteAddressBuffer buf, uint offset) {
     buf.Store(offset, 2);
 }
 
 [numthreads(1,1,1)]
-void main(uint3 tid : SV_DispatchThreadID)
-{
+void main(uint3 tid : SV_DispatchThreadID) {
     RWByteAddressBuffer local = gBuf0;
     HelperA(local, tid.x * 4);
     HelperB(local, tid.x * 4 + 4);

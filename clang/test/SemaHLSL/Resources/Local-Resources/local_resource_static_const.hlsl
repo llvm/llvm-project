@@ -10,8 +10,7 @@
 
 RWByteAddressBuffer gBuf0 : register(u0);
 
-uint Fail_StaticConst(uint idx)
-{
+uint Fail_StaticConst(uint idx) {
     static const RWByteAddressBuffer buf = gBuf0;
     // expected-note@*:* {{candidate function not viable: 'this' argument has type 'const RWByteAddressBuffer', but method is not marked const}}
     // expected-note@*:* {{candidate template ignored: couldn't infer template argument 'element_type'}}
@@ -22,7 +21,6 @@ uint Fail_StaticConst(uint idx)
 }
 
 [numthreads(1,1,1)]
-void main(uint3 tid : SV_DispatchThreadID)
-{
+void main(uint3 tid : SV_DispatchThreadID) {
     Fail_StaticConst(tid.x);
 }

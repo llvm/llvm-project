@@ -9,15 +9,13 @@
 
 RWByteAddressBuffer gBuf0 : register(u0);
 
-bool Fail_Bool()
-{
+bool Fail_Bool() {
     RWByteAddressBuffer buf = gBuf0;
     return buf;
     // expected-error@-1 {{no viable conversion from returned value of type 'RWByteAddressBuffer' to function return type 'bool'}}
 }
 
 [numthreads(1,1,1)]
-void main(uint3 tid : SV_DispatchThreadID)
-{
+void main(uint3 tid : SV_DispatchThreadID) {
     Fail_Bool();
 }
