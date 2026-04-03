@@ -73,7 +73,8 @@ enum InlineStrategy {
 enum LoadScriptFromSymFile {
   eLoadScriptFromSymFileTrue,
   eLoadScriptFromSymFileFalse,
-  eLoadScriptFromSymFileWarn
+  eLoadScriptFromSymFileWarn,
+  eLoadScriptFromSymFileTrusted,
 };
 
 enum LoadCWDlldbinitFile {

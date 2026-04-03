@@ -345,7 +345,6 @@ Changes to LLDB
   `mte_ctrl`. This will only be shown on hardware that has the
   `FEAT_MTE_STORE_ONLY` architecture feature.
 
-
 ### Changes to lldb-dap
 
 * Breakpoints can now be set for specific columns within a line.
