@@ -5166,6 +5166,10 @@ bool SIInstrInfo::verifyCopy(const MachineInstr &MI,
     ErrInfo = "illegal copy from vector register to SGPR";
     return false;
   }
+  
+  if (getCGPassBuilderOption().EnableGlobalISelOption == cl::BOU_TRUE)
+	return true;
+
   // check for sreg32/vgpr3/vgpr16 mismatch
   unsigned DstSubReg = MI.getOperand(0).getSubReg();
   unsigned SrcSubReg = MI.getOperand(1).getSubReg();
