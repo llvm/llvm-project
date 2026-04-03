@@ -239,7 +239,7 @@ class HelpCommandTestCase(TestBase):
     def test_help_format_output(self):
         """Test that help output reaches TerminalWidth and wraps to the next
         line if needed."""
-        self.runCmd("settings set term-width 118")
+        self.runCmd("settings set term-width 105")
         self.expect(
             "help format",
             matching=True,
@@ -249,9 +249,9 @@ class HelpCommandTestCase(TestBase):
             ],
         )
 
-        # The length of the first line will not be exactly 108 because we split
+        # The length of the first line will not be exactly 105 because we split
         # at the last whitespace point before the limit.
-        self.runCmd("settings set term-width 108")
+        self.runCmd("settings set term-width 104")
         self.expect(
             "help format",
             matching=True,
@@ -268,6 +268,17 @@ class HelpCommandTestCase(TestBase):
             patterns=[
                 r"<format> -- One of the format names \(or one-character names\) that can be used to show a\n"
                 r"\s+variable's value:\n"
+            ],
+        )
+
+        # Check that line splitting works with newline characters too. The raw input after the word "pointer" does not
+        # contain spaces among the more than one hundred subsequent characters, the words are separated with newlines.
+        self.runCmd("settings set term-width 80")
+        self.expect(
+            "help format",
+            matching=True,
+            substrs=[
+                "'p' or \"pointer\""
             ],
         )
 
