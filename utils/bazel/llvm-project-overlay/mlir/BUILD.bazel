@@ -8225,12 +8225,23 @@ cc_library(
     ],
 )
 
+gentbl_cc_library(
+    name = "ConvertToEmitCPatternInterfaceIncGen",
+    tbl_outs = {
+        "include/mlir/Conversion/ConvertToEmitC/ConvertToEmitCPatternInterface.h.inc": ["-gen-dialect-interface-decls"],
+    },
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Conversion/ConvertToEmitC/ConvertToEmitCPatternInterface.td",
+    deps = [":OpBaseTdFiles"],
+)
+
 cc_library(
     name = "ConvertToEmitCInterface",
     hdrs = ["include/mlir/Conversion/ConvertToEmitC/ToEmitCInterface.h"],
     includes = ["include"],
     deps = [
         ":ConversionPassIncGen",
+        ":ConvertToEmitCPatternInterfaceIncGen",
         ":IR",
         "//llvm:Support",
     ],
