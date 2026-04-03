@@ -175,6 +175,7 @@ public:
 
   bool tryCVBitManipExtractU(SDNode *Node);
   bool tryCVBitManipExtract(SDNode *Node);
+  bool tryCVBitManipBClr(SDNode *Node);
 
   // Return the RISC-V condition code that matches the given DAG integer
   // condition code. The CondCode must be one of those supported by the RISC-V

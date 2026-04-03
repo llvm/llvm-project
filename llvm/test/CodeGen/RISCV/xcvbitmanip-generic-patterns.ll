@@ -171,6 +171,62 @@ define i32 @test_no_extract_exths(i32 %x) {
 }
 
 ;===----------------------------------------------------------------------===;
+; cv.bclr — clear a contiguous range of bits: x & ~(mask << offset)
+;===----------------------------------------------------------------------===;
+
+; Clear bits [4:6] (3 bits at offset 4): x & 0xFFFFFF8F
+define i32 @test_bclr_3_4(i32 %x) {
+; CHECK-LABEL: test_bclr_3_4:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    cv.bclr a0, a0, 2, 4
+; CHECK-NEXT:    ret
+  %res = and i32 %x, -113   ; 0xFFFFFF8F = ~(0x7 << 4)
+  ret i32 %res
+}
+
+; Clear bit 15 (1 bit at offset 15): x & 0xFFFF7FFF
+define i32 @test_bclr_1_15(i32 %x) {
+; CHECK-LABEL: test_bclr_1_15:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    cv.bclr a0, a0, 0, 15
+; CHECK-NEXT:    ret
+  %res = and i32 %x, -32769   ; 0xFFFF7FFF = ~(1 << 15)
+  ret i32 %res
+}
+
+; Clear bits [8:15] (8 bits at offset 8): x & 0xFFFF00FF
+define i32 @test_bclr_8_8(i32 %x) {
+; CHECK-LABEL: test_bclr_8_8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    cv.bclr a0, a0, 7, 8
+; CHECK-NEXT:    ret
+  %res = and i32 %x, -65281   ; 0xFFFF00FF = ~(0xFF << 8)
+  ret i32 %res
+}
+
+; Clear bits [0:3] (4 bits at offset 0): x & 0xFFFFFFF0
+define i32 @test_bclr_4_0(i32 %x) {
+; CHECK-LABEL: test_bclr_4_0:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    cv.bclr a0, a0, 3, 0
+; CHECK-NEXT:    ret
+  %res = and i32 %x, -16   ; 0xFFFFFFF0 = ~(0xF << 0)
+  ret i32 %res
+}
+
+; Excluded: x & 0x0000FFFF is a low mask, should NOT become cv.bclr.
+; Handled by base ISA shift pair or cv.exthz when xcvalu is enabled.
+define i32 @test_no_bclr_exthz(i32 %x) {
+; CHECK-LABEL: test_no_bclr_exthz:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    slli a0, a0, 16
+; CHECK-NEXT:    srli a0, a0, 16
+; CHECK-NEXT:    ret
+  %res = and i32 %x, 65535
+  ret i32 %res
+}
+
+;===----------------------------------------------------------------------===;
 ; Realistic embedded bitfield examples
 ;===----------------------------------------------------------------------===;
 
@@ -195,5 +251,16 @@ define i32 @test_signed_adc_extract(i32 %reg) {
 ; CHECK-NEXT:    ret
   %shl = shl i32 %reg, 20
   %res = ashr i32 %shl, 22
+  ret i32 %res
+}
+
+; Clear an interrupt flag at bit 5
+; Equivalent to: reg & ~(1 << 5)
+define i32 @test_clear_irq_flag(i32 %reg) {
+; CHECK-LABEL: test_clear_irq_flag:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    cv.bclr a0, a0, 0, 5
+; CHECK-NEXT:    ret
+  %res = and i32 %reg, -33   ; ~(1 << 5) = 0xFFFFFFDF
   ret i32 %res
 }

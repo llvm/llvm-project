@@ -1220,6 +1220,69 @@ bool RISCVDAGToDAGISel::tryCVBitManipExtract(SDNode *Node) {
   return true;
 }
 
+// --------------------------------------------------------------------------
+// cv.bclr: clear a contiguous range of bits
+//
+// Matches:
+//   (and X, C) where ~C is a shifted mask: ~C = ((1 << width) - 1) << offset
+//
+// Emits: CV_BCLR rd, rs1, IS3=width-1, IS2=offset
+//        (note: cv.bclr semantics is Is3+1 bits, so we encode width-1)
+//
+// Excludes: C = 0xFF (cv.extbz), C = 0xFFFF (cv.exthz), C = 0 (no-op)
+// --------------------------------------------------------------------------
+bool RISCVDAGToDAGISel::tryCVBitManipBClr(SDNode *Node) {
+  if (!Subtarget->hasVendorXCVbitmanip() || Subtarget->is64Bit())
+    return false;
+
+  assert(Node->getOpcode() == ISD::AND);
+  SDLoc DL(Node);
+
+  SDValue LHS = Node->getOperand(0);
+  SDValue RHS = Node->getOperand(1);
+
+  // Canonicalize: constant on the right
+  auto *MaskC = dyn_cast<ConstantSDNode>(RHS);
+  if (!MaskC) {
+    std::swap(LHS, RHS);
+    MaskC = dyn_cast<ConstantSDNode>(RHS);
+  }
+  if (!MaskC)
+    return false;
+
+  uint32_t Mask = MaskC->getZExtValue();
+  uint32_t InvMask = ~Mask;
+
+  // If mask is all-ones (invmask = 0), nothing to clear
+  if (InvMask == 0)
+    return false;
+
+  // Skip cases where the mask itself is a low mask (extractu/extbz/exthz handle those)
+  if (isMask_32(Mask))
+    return false;
+
+  // ~C must be a shifted mask: contiguous 1s at some offset
+  if (!isShiftedMask_32(InvMask))
+    return false;
+
+  unsigned Width = llvm::popcount(InvMask);
+  unsigned Offset = llvm::countr_zero(InvMask);
+
+  // Skip if LHS is itself a shift — let extractu handle (srl X, C) & mask patterns
+  if (LHS.getOpcode() == ISD::SRL)
+    return false;
+
+  // Validate ranges
+  if (Width == 0 || Width > 32 || Offset > 31 || (Width + Offset) > 32)
+    return false;
+
+  SDValue IS3 = CurDAG->getTargetConstant(Width - 1, DL, MVT::i32);
+  SDValue IS2 = CurDAG->getTargetConstant(Offset, DL, MVT::i32);
+
+  CurDAG->SelectNodeTo(Node, RISCV::CV_BCLR, MVT::i32, LHS, IS3, IS2);
+  return true;
+}
+
 void RISCVDAGToDAGISel::Select(SDNode *Node) {
   // If we have a custom node, we have already selected.
   if (Node->isMachineOpcode()) {
@@ -1632,6 +1695,9 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
   case ISD::AND: {
     // xcvbitmanip: try extractu first
     if (tryCVBitManipExtractU(Node))
+      return;
+    // xcvbitmanip: then try bclr
+    if (tryCVBitManipBClr(Node))
       return;
 
     auto *N1C = dyn_cast<ConstantSDNode>(Node->getOperand(1));
