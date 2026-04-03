@@ -1719,8 +1719,9 @@ static void pushTemporaryCleanup(CIRGenFunction &cgf,
     break;
 
   case SD_Automatic:
-    cgf.cgm.errorNYI(e->getSourceRange(),
-                     "pushTemporaryCleanup: automatic storage duration");
+    cgf.pushLifetimeExtendedDestroy(
+        NormalAndEHCleanup, referenceTemporary, e->getType(),
+        CIRGenFunction::destroyCXXObject, cgf.getLangOpts().Exceptions);
     break;
 
   case SD_Dynamic:
