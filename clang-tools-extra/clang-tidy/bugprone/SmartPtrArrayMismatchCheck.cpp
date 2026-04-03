@@ -8,10 +8,12 @@
 
 #include "SmartPtrArrayMismatchCheck.h"
 #include "../utils/ASTUtils.h"
+#include "../utils/Matchers.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Lexer.h"
 
 using namespace clang::ast_matchers;
+using namespace clang::tidy::matchers;
 
 namespace clang::tidy::bugprone {
 
@@ -59,21 +61,22 @@ void SmartPtrArrayMismatchCheck::registerMatchers(MatchFinder *Finder) {
                          parameterCountIs(1), isExplicit())
           .bind(ConstructorN);
   auto FindConstructExpr =
-      cxxConstructExpr(
-          hasDeclaration(FindConstructor), argumentCountIs(1),
-          hasArgument(0,
-                      cxxNewExpr(isArray(),
-                                 hasType(hasCanonicalType(pointerType(
-                                     pointee(equalsBoundNode(PointerTypeN))))))
-                          .bind(NewExprN)))
-          .bind(ConstructExprN);
+      expr(ignoringCleanups(
+          cxxConstructExpr(
+              hasDeclaration(FindConstructor), argumentCountIs(1),
+              hasArgument(0,
+                          ignoringCleanups(cxxNewExpr(isArray(),
+                                                      hasType(hasCanonicalType(pointerType(
+                                                          pointee(equalsBoundNode(PointerTypeN))))))
+                                              .bind(NewExprN))))
+      )).bind(ConstructExprN);
   Finder->addMatcher(FindConstructExpr, this);
 }
 
 void SmartPtrArrayMismatchCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *FoundNewExpr = Result.Nodes.getNodeAs<CXXNewExpr>(NewExprN);
   const auto *FoundConstructExpr =
-      Result.Nodes.getNodeAs<CXXConstructExpr>(ConstructExprN);
+      Result.Nodes.getNodeAs<Expr>(ConstructExprN);
   const auto *FoundConstructorDecl =
       Result.Nodes.getNodeAs<CXXConstructorDecl>(ConstructorN);
 

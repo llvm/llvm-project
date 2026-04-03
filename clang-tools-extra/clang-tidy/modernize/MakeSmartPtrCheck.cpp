@@ -7,12 +7,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "MakeSmartPtrCheck.h"
+#include "../utils/Matchers.h"
 #include "../utils/TypeTraits.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/Lex/Preprocessor.h"
 
 using namespace clang::ast_matchers;
+using namespace clang::tidy::matchers;
 
 namespace clang::tidy::modernize {
 
@@ -79,13 +81,16 @@ void MakeSmartPtrCheck::registerMatchers(ast_matchers::MatchFinder *Finder) {
       traverse(TK_AsIs,
                cxxConstructExpr(
                    anyOf(hasParent(cxxBindTemporaryExpr()),
-                         hasParent(varDecl().bind(DirectVar))),
+                         hasParent(varDecl().bind(DirectVar)),
+                         hasParent(exprWithCleanups(hasParent(varDecl().bind(DirectVar))))),
                    hasType(getSmartPointerTypeMatcher()), argumentCountIs(1),
-                   hasArgument(
-                       0, cxxNewExpr(hasType(pointsTo(qualType(hasCanonicalType(
-                                         equalsBoundNode(PointerType))))),
-                                     CanCallCtor, unless(IsPlacement))
-                              .bind(NewExpression)),
+                   hasArgument(0, ignoringCleanups(
+                                      cxxNewExpr(hasType(pointsTo(qualType(
+                                                     hasCanonicalType(
+                                                         equalsBoundNode(
+                                                             PointerType))))),
+                                                 CanCallCtor, unless(IsPlacement))
+                                          .bind(NewExpression))),
                    unless(isInTemplateInstantiation()))
                    .bind(ConstructorCall)),
       this);
@@ -95,8 +100,9 @@ void MakeSmartPtrCheck::registerMatchers(ast_matchers::MatchFinder *Finder) {
           TK_AsIs,
           cxxMemberCallExpr(
               unless(isInTemplateInstantiation()),
-              hasArgument(0, cxxNewExpr(CanCallCtor, unless(IsPlacement))
-                                 .bind(NewExpression)),
+              hasArgument(0, ignoringCleanups(
+                                 cxxNewExpr(CanCallCtor, unless(IsPlacement))
+                                     .bind(NewExpression))),
               callee(cxxMethodDecl(hasName("reset"))),
               anyOf(thisPointerType(getSmartPointerTypeMatcher()),
                     on(ignoringImplicit(anyOf(

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "OwningMemoryCheck.h"
+#include "../utils/Matchers.h"
 #include "../utils/OptionsUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
@@ -14,6 +15,7 @@
 
 using namespace clang::ast_matchers;
 using namespace clang::ast_matchers::internal;
+using namespace clang::tidy::matchers;
 
 namespace clang::tidy::cppcoreguidelines {
 
@@ -58,12 +60,12 @@ void OwningMemoryCheck::registerMatchers(MatchFinder *Finder) {
   const auto LegacyOwnerConsumers = functionDecl(LegacyConsumerFunctions);
 
   const auto CreatesOwner =
-      anyOf(cxxNewExpr(),
-            callExpr(callee(
-                functionDecl(returns(qualType(hasDeclaration(OwnerDecl)))))),
+      anyOf(ignoringCleanups(cxxNewExpr()),
+            ignoringCleanups(callExpr(callee(
+                functionDecl(returns(qualType(hasDeclaration(OwnerDecl))))))),
             CreatesLegacyOwner, LegacyOwnerCast);
 
-  const auto ConsideredOwner = eachOf(IsOwnerType, CreatesOwner);
+  const auto ConsideredOwner = ignoringCleanups(eachOf(IsOwnerType, CreatesOwner));
   const auto ScopeDeclaration = anyOf(translationUnitDecl(), namespaceDecl(),
                                       recordDecl(), functionDecl());
 
