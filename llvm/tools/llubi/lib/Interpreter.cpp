@@ -126,17 +126,6 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
     return Val;
   }
 
-  enum class NaNPayloadCastMode {
-    None,
-    FPExt,
-    FPTrunc,
-  };
-
-  static unsigned getNaNPayloadBitWidth(const fltSemantics &Sem) {
-    unsigned Precision = APFloat::semanticsPrecision(Sem);
-    return Precision > 2 ? Precision - 2 : 0;
-  }
-
   NaNPropagationBehavior resolveNaNPropagationBehavior() {
     NaNPropagationBehavior Choice = Ctx.getNaNPropagationBehavior();
     if (Choice == NaNPropagationBehavior::NonDeterministic) {
@@ -155,67 +144,20 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
     return Fallback;
   }
 
-  APInt getNaNPayload(const APFloat &NaNVal) {
-    unsigned PayloadBits = getNaNPayloadBitWidth(NaNVal.getSemantics());
-    if (!PayloadBits)
-      return APInt(1, 0);
-    return NaNVal.bitcastToAPInt().extractBits(PayloadBits, 0);
-  }
-
-  APInt castNaNPayload(const APInt &SrcPayload, unsigned SrcPayloadBits,
-                       unsigned DstPayloadBits, NaNPayloadCastMode CastMode) {
-    if (!DstPayloadBits)
-      return APInt(1, 0);
-
-    APInt CanonicalSrc = SrcPayload.zextOrTrunc(SrcPayloadBits);
-    if (CastMode == NaNPayloadCastMode::FPExt &&
-        SrcPayloadBits < DstPayloadBits)
-      return CanonicalSrc.zext(DstPayloadBits)
-          .shl(DstPayloadBits - SrcPayloadBits);
-    if (CastMode == NaNPayloadCastMode::FPTrunc &&
-        SrcPayloadBits > DstPayloadBits)
-      return CanonicalSrc.lshr(SrcPayloadBits - DstPayloadBits)
-          .trunc(DstPayloadBits);
-    return CanonicalSrc.zextOrTrunc(DstPayloadBits);
-  }
-
-  APFloat buildNaN(const fltSemantics &Sem, bool IsNegative, bool IsSignaling,
-                   const APInt &Payload) {
-    unsigned SignificandBits = APFloat::semanticsPrecision(Sem) - 1;
-    APInt Fill = APInt::getZero(SignificandBits);
-    unsigned PayloadBits = getNaNPayloadBitWidth(Sem);
-    if (PayloadBits)
-      Fill.insertBits(Payload.zextOrTrunc(PayloadBits), 0);
-
-    if (IsSignaling)
-      return APFloat::getSNaN(Sem, IsNegative, &Fill);
-    return APFloat::getQNaN(Sem, IsNegative, &Fill);
-  }
-
   APFloat propagateInputNaN(const APFloat &InputNaN, const fltSemantics &DstSem,
-                            bool QuietingMode, bool FlipSign,
-                            NaNPayloadCastMode CastMode) {
-    unsigned SrcPayloadBits = getNaNPayloadBitWidth(InputNaN.getSemantics());
-    unsigned DstPayloadBits = getNaNPayloadBitWidth(DstSem);
-    APInt MappedPayload = castNaNPayload(
-        getNaNPayload(InputNaN), SrcPayloadBits, DstPayloadBits, CastMode);
-
-    bool IsSignaling = InputNaN.isSignaling();
-    bool OutputIsSignaling = !QuietingMode && IsSignaling;
-    if (OutputIsSignaling &&
-        (DstPayloadBits == 0 ||
-         (CastMode == NaNPayloadCastMode::FPTrunc && MappedPayload.isZero())))
-      OutputIsSignaling = false;
-
-    bool IsNegative = InputNaN.isNegative();
+                            bool QuietingMode, bool FlipSign) {
+    APFloat Res = InputNaN;
+    bool LosesInfo;
+    Res.convert(DstSem, APFloat::rmNearestTiesToEven, &LosesInfo);
     if (FlipSign)
-      IsNegative = !IsNegative;
-    return buildNaN(DstSem, IsNegative, OutputIsSignaling, MappedPayload);
+      Res.changeSign();
+    if (QuietingMode && Res.isSignaling())
+      Res = Res.makeQuiet();
+    return Res;
   }
 
-  APFloat
-  applyNaNPropagation(const APFloat &Result, ArrayRef<const APFloat *> Inputs,
-                      NaNPayloadCastMode CastMode = NaNPayloadCastMode::None) {
+  APFloat applyNaNPropagation(const APFloat &Result,
+                              ArrayRef<const APFloat *> Inputs) {
     if (!Result.isNaN())
       return Result;
 
@@ -227,11 +169,11 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
     case NaNPropagationBehavior::QuietingNaN:
       return propagateInputNaN(pickNaNSource(Inputs, Result),
                                Result.getSemantics(), /*QuietingMode=*/true,
-                               SignChoice, CastMode);
+                               SignChoice);
     case NaNPropagationBehavior::UnchangedNaN:
       return propagateInputNaN(pickNaNSource(Inputs, Result),
                                Result.getSemantics(), /*QuietingMode=*/false,
-                               SignChoice, CastMode);
+                               SignChoice);
     case NaNPropagationBehavior::TargetSpecificNaN: {
       APInt Payload(64, Ctx.getRandomUInt64());
       return APFloat::getQNaN(Result.getSemantics(), SignChoice, &Payload);
@@ -953,10 +895,7 @@ public:
 
       FOperand = handleDenormal(std::move(FOperand), DenormMode.Output, true);
 
-      NaNPayloadCastMode CastMode = isa<FPExtInst>(I)
-                                        ? NaNPayloadCastMode::FPExt
-                                        : NaNPayloadCastMode::FPTrunc;
-      return AnyValue(applyNaNPropagation(FOperand, {&SourceNaN}, CastMode));
+      return AnyValue(applyNaNPropagation(FOperand, {&SourceNaN}));
     });
   }
 
