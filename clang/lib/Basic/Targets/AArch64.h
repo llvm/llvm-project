@@ -69,87 +69,23 @@ class LLVM_LIBRARY_VISIBILITY AArch64TargetInfo : public TargetInfo {
   };
 
   unsigned FPU = FPUMode;
-  bool HasCRC = false;
-  bool HasCSSC = false;
-  bool HasAES = false;
-  bool HasSHA2 = false;
-  bool HasSHA3 = false;
-  bool HasSM4 = false;
-  bool HasFullFP16 = false;
-  bool HasDotProd = false;
-  bool HasFP16FML = false;
-  bool HasMTE = false;
-  bool HasPAuth = false;
-  bool HasLS64 = false;
-  bool HasRandGen = false;
-  bool HasMatMul = false;
-  bool HasBFloat16 = false;
-  bool HasSVE2 = false;
-  bool HasSVE2p1 = false;
-  bool HasSVEAES = false;
-  bool HasSVE2SHA3 = false;
-  bool HasSVE2SM4 = false;
-  bool HasSVEB16B16 = false;
-  bool HasSVEBitPerm = false;
-  bool HasMatmulFP64 = false;
-  bool HasMatmulFP32 = false;
-  bool HasLSE = false;
-  bool HasFlagM = false;
-  bool HasAlternativeNZCV = false;
-  bool HasMOPS = false;
-  bool HasD128 = false;
-  bool HasRCPC = false;
-  bool HasRDM = false;
-  bool HasDIT = false;
-  bool HasCCPP = false;
-  bool HasCCDP = false;
-  bool HasFRInt3264 = false;
-  bool HasSME = false;
-  bool HasSME2 = false;
-  bool HasSMEF64F64 = false;
-  bool HasSMEI16I64 = false;
-  bool HasSMEF16F16 = false;
-  bool HasSMEB16B16 = false;
-  bool HasSME2p1 = false;
-  bool HasFP8 = false;
-  bool HasFP8FMA = false;
-  bool HasFP8DOT2 = false;
-  bool HasFP8DOT4 = false;
-  bool HasSSVE_FP8DOT2 = false;
-  bool HasSSVE_FP8DOT4 = false;
-  bool HasSSVE_FP8FMA = false;
-  bool HasSME_F8F32 = false;
-  bool HasSME_F8F16 = false;
-  bool HasSB = false;
-  bool HasPredRes = false;
-  bool HasSSBS = false;
-  bool HasBTI = false;
-  bool HasWFxT = false;
-  bool HasJSCVT = false;
-  bool HasFCMA = false;
+  llvm::AArch64::ExtensionBitset EnabledExtensions;
+  unsigned ExplicitFPUCompat = 0;
   bool HasNoFP = false;
   bool HasNoNeon = false;
   bool HasNoSVE = false;
   bool HasFMV = true;
-  bool HasGCS = false;
-  bool HasRCPC3 = false;
-  bool HasSMEFA64 = false;
-  bool HasPAuthLR = false;
-  bool HasFPRCVT = false;
-  bool HasF8F16MM = false;
-  bool HasF8F32MM = false;
-  bool HasSVE_F16F32MM = false;
-  bool HasSVE_BFSCALE = false;
-  bool HasSVE_AES2 = false;
-  bool HasSSVE_AES = false;
-  bool HasSVE2p2 = false;
-  bool HasSME2p2 = false;
 
   const llvm::AArch64::ArchInfo *ArchInfo = &llvm::AArch64::ARMV8A;
 
   AArch64FeatureSet HasFeatureLookup;
 
   void computeFeatureLookup();
+  bool hasExtension(llvm::AArch64::ArchExtKind Ext) const;
+  bool hasPAuth() const;
+  bool hasFullFP16() const;
+  void setFeatureStateFromEnabledExtensions(
+      const llvm::AArch64::ExtensionBitset &EnabledExtensions);
 
 protected:
   std::string ABI;
@@ -159,6 +95,8 @@ public:
 
   StringRef getABI() const override;
   bool setABI(const std::string &Name) override;
+  bool hasFeatureEnabled(const llvm::StringMap<bool> &Features,
+                         StringRef Name) const override;
 
   bool validateBranchProtection(StringRef Spec, StringRef Arch,
                                 BranchProtectionInfo &BPI,

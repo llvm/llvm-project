@@ -1476,7 +1476,7 @@ void SemaARM::CheckSMEFunctionDefAttributes(const FunctionDecl *FD) {
   if (UsesSM || UsesZA) {
     llvm::StringMap<bool> FeatureMap;
     Context.getFunctionFeatureMap(FeatureMap, FD);
-    if (!FeatureMap.contains("sme")) {
+    if (!Context.getTargetInfo().hasFeatureEnabled(FeatureMap, "sme")) {
       if (UsesSM)
         Diag(FD->getLocation(),
              diag::err_sme_definition_using_sm_in_non_sme_target);
@@ -1488,7 +1488,7 @@ void SemaARM::CheckSMEFunctionDefAttributes(const FunctionDecl *FD) {
   if (UsesZT0) {
     llvm::StringMap<bool> FeatureMap;
     Context.getFunctionFeatureMap(FeatureMap, FD);
-    if (!FeatureMap.contains("sme2")) {
+    if (!Context.getTargetInfo().hasFeatureEnabled(FeatureMap, "sme2")) {
       Diag(FD->getLocation(),
            diag::err_sme_definition_using_zt0_in_non_sme2_target);
     }
@@ -1765,7 +1765,7 @@ bool SemaARM::checkSVETypeSupport(QualType Ty, SourceLocation Loc,
     return false;
 
   // No SVE environment available.
-  if (!FeatureMap.lookup("sme"))
+  if (!getASTContext().getTargetInfo().hasFeatureEnabled(FeatureMap, "sme"))
     return Diag(Loc, diag::err_sve_vector_in_non_sve_target) << Ty;
 
   // SVE environment only available to streaming functions.

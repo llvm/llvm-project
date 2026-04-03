@@ -235,6 +235,7 @@
 
 // RUN: %clang -target aarch64-none-linux-gnu -march=armv8-a+sve2-aes -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE2AES %s
 // RUN: %clang -target aarch64-none-linux-gnu -march=armv8-a+sve-aes+sve2 -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE2AES %s
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve2-aes -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE2AES %s
 // CHECK-SVE2AES: __ARM_FEATURE_AES 1
 // CHECK-SVE2AES: __ARM_FEATURE_SVE2 1
 // CHECK-SVE2AES: __ARM_FEATURE_SVE2_AES 1
@@ -253,10 +254,12 @@
 
 // RUN: %clang -target aarch64-none-linux-gnu -march=armv8-a+sve2-bitperm -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE2BITPERM %s
 // RUN: %clang -target aarch64-none-linux-gnu -march=armv8-a+sve-bitperm+sve2 -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE2BITPERM %s
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve2-bitperm -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE2BITPERM %s
 // CHECK-SVE2BITPERM: __ARM_FEATURE_SVE2 1
 // CHECK-SVE2BITPERM: __ARM_FEATURE_SVE2_BITPERM 1
 
 // RUN: %clang -target aarch64-none-linux-gnu -march=armv9-a+sve2p1 -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE2p1 %s
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve2p1 -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE2p1 %s
 // CHECK-SVE2p1: __ARM_FEATURE_FP16_SCALAR_ARITHMETIC 1
 // CHECK-SVE2p1: __ARM_FEATURE_FP16_VECTOR_ARITHMETIC 1
 // CHECK-SVE2p1: __ARM_FEATURE_SVE2 1
@@ -271,6 +274,16 @@
 // CHECK-DOTPROD: __ARM_NEON 1
 // CHECK-DOTPROD: __ARM_NEON_FP 0xE
 
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +jscvt -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-JSCVT-DIRECT %s
+// CHECK-JSCVT-DIRECT: #define __ARM_NEON 1
+// CHECK-JSCVT-DIRECT: #define __ARM_NEON_FP 0xE
+
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sme -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SME-DIRECT %s
+// CHECK-SME-DIRECT-NOT: #define __ARM_NEON 1
+// CHECK-SME-DIRECT-NOT: #define __ARM_NEON_FP 0xE
+// CHECK-SME-DIRECT: #define __ARM_FEATURE_LOCALLY_STREAMING 1
+// CHECK-SME-DIRECT: #define __ARM_FEATURE_SME
+
 // On ARMv8.2-A and above, +fp16fml implies +fp16.
 // On ARMv8.4-A and above, +fp16 implies +fp16fml.
 // RUN: %clang --target=aarch64 -march=armv8.2-a+nofp16fml+fp16 -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=CHECK-FULLFP16-NOFML --check-prefix=CHECK-FULLFP16-VECTOR-SCALAR %s
@@ -283,12 +296,18 @@
 // RUN: %clang --target=aarch64 -march=armv8.4-a+fp16+nofp16fml -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=CHECK-FULLFP16-NOFML --check-prefix=CHECK-FULLFP16-VECTOR-SCALAR %s
 // RUN: %clang --target=aarch64 -march=armv8.4-a+fp16fml -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=CHECK-FULLFP16-FML --check-prefix=CHECK-FULLFP16-VECTOR-SCALAR %s
 // RUN: %clang --target=aarch64 -march=armv8.4-a+fp16 -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=CHECK-FULLFP16-FML --check-prefix=CHECK-FULLFP16-VECTOR-SCALAR %s
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +fullfp16 -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=CHECK-FULLFP16-DIRECT %s
 // CHECK-FULLFP16-FML:           #define __ARM_FEATURE_FP16_FML 1
 // CHECK-FULLFP16-NOFML-NOT:     #define __ARM_FEATURE_FP16_FML 1
 // CHECK-FULLFP16-VECTOR-SCALAR: #define __ARM_FEATURE_FP16_SCALAR_ARITHMETIC 1
 // CHECK-FULLFP16-VECTOR-SCALAR: #define __ARM_FEATURE_FP16_VECTOR_ARITHMETIC 1
 // CHECK-FULLFP16-VECTOR-SCALAR: #define __ARM_FP 0xE
 // CHECK-FULLFP16-VECTOR-SCALAR: #define __ARM_FP16_FORMAT_IEEE 1
+// CHECK-FULLFP16-DIRECT:        #define __ARM_FEATURE_FP16_SCALAR_ARITHMETIC 1
+// CHECK-FULLFP16-DIRECT:        #define __ARM_FEATURE_FP16_VECTOR_ARITHMETIC 1
+// CHECK-FULLFP16-DIRECT:        #define __ARM_FP 0xE
+// CHECK-FULLFP16-DIRECT:        #define __ARM_FP16_FORMAT_IEEE 1
+// CHECK-FULLFP16-DIRECT:        #define __ARM_NEON 1
 
 // +fp16fml+nosimd doesn't make sense as the fp16fml instructions all require SIMD.
 // However, as +fp16fml implies +fp16 there is a set of defines that we would expect.
@@ -736,12 +755,14 @@
 // CHECK-SVEB16B16: __ARM_FEATURE_SVE_B16B16 1
 
 // RUN: %clang --target=aarch64 -march=armv9-a+sme-f16f16 -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SMEF16F16 %s
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sme-f16f16 -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SMEF16F16 %s
 // CHECK-SMEF16F16: __ARM_FEATURE_LOCALLY_STREAMING 1
 // CHECK-SMEF16F16: __ARM_FEATURE_SME 1
 // CHECK-SMEF16F16: __ARM_FEATURE_SME2 1
 // CHECK-SMEF16F16: __ARM_FEATURE_SME_F16F16 1
 
 // RUN: %clang --target=aarch64 -march=armv9-a+sme-b16b16 -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SMEB16B16 %s
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sme-b16b16 -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SMEB16B16 %s
 // CHECK-SMEB16B16: __ARM_FEATURE_LOCALLY_STREAMING 1
 // CHECK-SMEB16B16: __ARM_FEATURE_SME 1
 // CHECK-SMEB16B16: __ARM_FEATURE_SME2 1
@@ -818,6 +839,7 @@
 //  CHECK-SSVE-AES: __ARM_FEATURE_SVE2_AES 1
 
 // RUN: %clang -target aarch64-none-linux-gnu -march=armv9-a+sve2p2 -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE2p2 %s
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve2p2 -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE2p2 %s
 // CHECK-SVE2p2: __ARM_FEATURE_FP16_SCALAR_ARITHMETIC 1
 // CHECK-SVE2p2: __ARM_FEATURE_FP16_VECTOR_ARITHMETIC 1
 // CHECK-SVE2p2: __ARM_FEATURE_SVE2 1

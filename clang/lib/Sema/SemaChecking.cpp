@@ -4347,7 +4347,7 @@ void Sema::checkCall(NamedDecl *FDecl, const FunctionProtoType *Proto,
       if (auto *CallerFD = dyn_cast<FunctionDecl>(CurContext)) {
         llvm::StringMap<bool> CallerFeatureMap;
         Context.getFunctionFeatureMap(CallerFeatureMap, CallerFD);
-        if (!CallerFeatureMap.contains("sme"))
+        if (!Context.getTargetInfo().hasFeatureEnabled(CallerFeatureMap, "sme"))
           Diag(Loc, diag::err_sme_call_in_non_sme_target);
       } else if (!Context.getTargetInfo().hasFeature("sme")) {
         Diag(Loc, diag::err_sme_call_in_non_sme_target);

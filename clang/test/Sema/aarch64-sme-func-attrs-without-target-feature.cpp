@@ -21,6 +21,11 @@ __arm_locally_streaming __attribute__((target("sme"))) void locally_streaming_de
 // Test that it also works with the target("sme2") attribute.
 __attribute__((target("sme2"))) void streaming_def_sme2_attr() __arm_streaming { } // OK
 
+// Explicit target disables must win over arch/default SME implications.
+__attribute__((target("arch=armv9.3-a,no-sme"))) void streaming_def_arch_no_sme() __arm_streaming { } // expected-error {{function executed in streaming-SVE mode requires 'sme'}}
+__attribute__((target("sme2,no-sme"))) void streaming_def_sme2_no_sme() __arm_streaming { } // expected-error {{function executed in streaming-SVE mode requires 'sme'}}
+__attribute__((target("sme2,no-sme"))) void inout_zt0_def_sme2_no_sme() __arm_inout("zt0") { } // expected-error {{function using ZT0 state requires 'sme2'}}
+
 // No code is generated for declarations, so it should be fine to declare using the attribute.
 void streaming_compatible_decl() __arm_streaming_compatible; // OK
 void streaming_decl() __arm_streaming; // OK
