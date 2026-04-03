@@ -64,6 +64,7 @@ struct AuthReloc {
   int32_t addend;
   AuthInfo info;
 };
+static_assert(sizeof(AuthReloc) == 8, "AuthReloc must match int64_t size");
 
 struct Relocation {
   uint8_t type = llvm::MachO::GENERIC_RELOC_INVALID;

@@ -201,9 +201,9 @@ static bool compatWithTargetArch(const InputFile *file, const Header *hdr) {
     return false;
   }
 
-  // Reject arm64 objects when linking for arm64e.
+  // Reject non-arm64e objects when linking for arm64e.
   if (config->arch() == AK_arm64e && hdr->cputype == CPU_TYPE_ARM64 &&
-      (hdr->cpusubtype & ~CPU_SUBTYPE_MASK) == CPU_SUBTYPE_ARM64_ALL) {
+      (hdr->cpusubtype & ~CPU_SUBTYPE_MASK) != CPU_SUBTYPE_ARM64E) {
     warn(toString(file) +
          " has architecture arm64 which is incompatible with "
          "target architecture arm64e (arm64e requires pointer authentication)");

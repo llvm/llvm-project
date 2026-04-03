@@ -951,9 +951,7 @@ static TargetInfo *createTargetInfo(InputArgList &args) {
   case CPU_TYPE_X86_64:
     return createX86_64TargetInfo();
   case CPU_TYPE_ARM64:
-    if (cpuSubtype == CPU_SUBTYPE_ARM64E ||
-        cpuSubtype == CPU_SUBTYPE_ARM64E_VERSIONED_PTRAUTH_ABI_MASK ||
-        cpuSubtype == CPU_SUBTYPE_ARM64E_WITH_PTRAUTH_VERSION(0, 0))
+    if ((cpuSubtype & ~CPU_SUBTYPE_MASK) == CPU_SUBTYPE_ARM64E)
       return createARM64eTargetInfo();
     return createARM64TargetInfo();
   case CPU_TYPE_ARM64_32:
@@ -1247,8 +1245,14 @@ static bool dataConstDefault(const InputArgList &args) {
 
 static bool shouldEmitChainedFixups(const InputArgList &args) {
   const Arg *arg = args.getLastArg(OPT_fixup_chains, OPT_no_fixup_chains);
-  if (arg && arg->getOption().matches(OPT_no_fixup_chains))
+  if (arg && arg->getOption().matches(OPT_no_fixup_chains)) {
+    if (config->arch() == AK_arm64e) {
+      warn(
+          "-no_fixup_chains is incompatible with arm64e; using chained fixups");
+      return true;
+    }
     return false;
+  }
 
   bool requested = arg && arg->getOption().matches(OPT_fixup_chains);
   if (!config->isPic) {
@@ -1980,8 +1984,6 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
   config->emitDataInCodeInfo =
       args.hasFlag(OPT_data_in_code_info, OPT_no_data_in_code_info, true);
   config->emitChainedFixups = shouldEmitChainedFixups(args);
-  if (config->arch() == AK_arm64e && !config->emitChainedFixups)
-    error("arm64e requires chained fixups; cannot use -no_fixup_chains");
   config->emitInitOffsets =
       config->emitChainedFixups || args.hasArg(OPT_init_offsets);
   config->emitRelativeMethodLists = shouldEmitRelativeMethodLists(args);
