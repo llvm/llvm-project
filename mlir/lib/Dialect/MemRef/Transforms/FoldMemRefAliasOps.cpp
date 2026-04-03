@@ -92,14 +92,6 @@ static Value getMemRefOperand(vector::TransferWriteOp op) {
   return op.getBase();
 }
 
-static Value getMemRefOperand(gpu::SubgroupMmaLoadMatrixOp op) {
-  return op.getSrcMemref();
-}
-
-static Value getMemRefOperand(gpu::SubgroupMmaStoreMatrixOp op) {
-  return op.getDstMemref();
-}
-
 //===----------------------------------------------------------------------===//
 // Patterns
 //===----------------------------------------------------------------------===//
@@ -372,11 +364,6 @@ LogicalResult LoadOpOfSubViewOpFolder<OpTy>::matchAndRewrite(
                 subViewOp.getDroppedDims())),
             op.getPadding(), op.getMask(), op.getInBoundsAttr());
       })
-      .Case([&](gpu::SubgroupMmaLoadMatrixOp op) {
-        rewriter.replaceOpWithNewOp<gpu::SubgroupMmaLoadMatrixOp>(
-            op, op.getType(), subViewOp.getSource(), sourceIndices,
-            op.getLeadDimension(), op.getTransposeAttr());
-      })
       .Case([&](nvgpu::LdMatrixOp op) {
         rewriter.replaceOpWithNewOp<nvgpu::LdMatrixOp>(
             op, op.getType(), subViewOp.getSource(), sourceIndices,
@@ -542,11 +529,6 @@ LogicalResult StoreOpOfSubViewOpFolder<OpTy>::matchAndRewrite(
         rewriter.replaceOpWithNewOp<vector::MaskedStoreOp>(
             op, subViewOp.getSource(), sourceIndices, op.getMask(),
             op.getValueToStore());
-      })
-      .Case([&](gpu::SubgroupMmaStoreMatrixOp op) {
-        rewriter.replaceOpWithNewOp<gpu::SubgroupMmaStoreMatrixOp>(
-            op, op.getSrc(), subViewOp.getSource(), sourceIndices,
-            op.getLeadDimension(), op.getTransposeAttr());
       })
       .DefaultUnreachable("unexpected operation");
   return success();
@@ -885,11 +867,9 @@ void memref::populateFoldMemRefAliasOpPatterns(RewritePatternSet &patterns) {
       LoadOpOfSubViewOpFolder<vector::LoadOp>,
       LoadOpOfSubViewOpFolder<vector::MaskedLoadOp>,
       LoadOpOfSubViewOpFolder<vector::TransferReadOp>,
-      LoadOpOfSubViewOpFolder<gpu::SubgroupMmaLoadMatrixOp>,
       StoreOpOfSubViewOpFolder<vector::TransferWriteOp>,
       StoreOpOfSubViewOpFolder<vector::StoreOp>,
       StoreOpOfSubViewOpFolder<vector::MaskedStoreOp>,
-      StoreOpOfSubViewOpFolder<gpu::SubgroupMmaStoreMatrixOp>,
       LoadOpOfExpandShapeOpFolder<vector::LoadOp>,
       LoadOpOfExpandShapeOpFolder<vector::MaskedLoadOp>,
       LoadOpOfExpandShapeOpFolder<vector::TransferReadOp>,
