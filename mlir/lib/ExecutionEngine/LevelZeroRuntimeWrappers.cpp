@@ -530,7 +530,7 @@ extern "C" ze_module_handle_t mgpuModuleLoadJIT(void *data, int optLevel,
   assert((assemblySize == 0 ||
           reinterpret_cast<char *>(data)[assemblySize - 1] == 0) &&
          "Expected null terminator at the end of the assembly string.");
-  auto actualAssemblySize = assemblySize - 1;
+  size_t actualAssemblySize = assemblySize - 1;
   assert(actualAssemblySize % 4 == 0 &&
          "SPIR-V binary size must be a multiple of 4");
   return catchAll([&]() {
