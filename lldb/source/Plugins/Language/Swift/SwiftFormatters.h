@@ -30,6 +30,7 @@
 #include "SwiftOptional.h"
 #include "SwiftSet.h"
 #include "SwiftUnsafeTypes.h"
+#include "SystemValueTypes.h"
 
 namespace lldb_private {
 namespace formatters {
