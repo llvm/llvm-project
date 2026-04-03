@@ -259,28 +259,41 @@ struct CommentInfo {
   // the vector.
   bool operator<(const CommentInfo &Other) const;
 
-  llvm::ArrayRef<CommentInfo> Children =
-      {};                   // List of child comments for this CommentInfo.
-  StringRef Direction = {}; // Parameter direction (for (T)ParamCommand).
-  StringRef Name = {};      // Name of the comment (for Verbatim and HTML).
-  StringRef ParamName = {}; // Parameter name (for (T)ParamCommand).
-  StringRef CloseName = {}; // Closing tag name (for VerbatimBlock).
-  StringRef Text = {};      // Text of the comment.
-  llvm::ArrayRef<StringRef> AttrKeys = {}; // List of attribute keys (for HTML).
-  llvm::ArrayRef<StringRef> AttrValues =
-      {}; // List of attribute values for each key (for HTML).
-  llvm::ArrayRef<StringRef> Args =
-      {}; // List of arguments to commands (for InlineCommand).
-  CommentKind Kind = CommentKind::
-      CK_Unknown; // Kind of comment (FullComment, ParagraphComment,
-                  // TextComment, InlineCommandComment, HTMLStartTagComment,
-                  // HTMLEndTagComment, BlockCommandComment,
-                  // ParamCommandComment, TParamCommandComment,
-                  // VerbatimBlockComment, VerbatimBlockLineComment,
-                  // VerbatimLineComment).
-  bool SelfClosing = false; // Indicates if tag is self-closing (for HTML).
-  bool Explicit = false;    // Indicates if the direction of a param is explicit
-                            // (for (T)ParamCommand).
+  // List of child comments for this CommentInfo.
+  ArrayRef<CommentInfo> Children = {};
+
+  // Parameter direction (for (T)ParamCommand).
+  StringRef Direction = {};
+
+  // Name of the comment (for Verbatim and HTML).
+  StringRef Name = {};
+
+  // Parameter name (for (T)ParamCommand).
+  StringRef ParamName = {};
+
+  // Closing tag name (for VerbatimBlock).
+  StringRef CloseName = {};
+
+  // Text of the comment.
+  StringRef Text = {};
+
+  // List of attribute keys (for HTML).
+  ArrayRef<StringRef> AttrKeys = {};
+
+  // List of attribute values for each key (for HTML).
+  ArrayRef<StringRef> AttrValues = {};
+
+  // List of arguments to commands (for InlineCommand).
+  ArrayRef<StringRef> Args = {};
+
+  // Type of comment. Unknown by default.
+  CommentKind Kind = CommentKind::CK_Unknown;
+
+  // Indicates if tag is self-closing (for HTML).
+  bool SelfClosing = false;
+
+  // Indicates if the direction of a param is explicit (for (T)ParamCommand).
+  bool Explicit = false;
 };
 
 struct Reference {
