@@ -2475,9 +2475,12 @@ void pointer_arithmetic_use_after_scope() {
   int* p3;
   {
     int a[10]{};
-    p = a + 5;  // expected-warning {{object whose reference is captured does not live long enough}}
-    p2 = a - 5; // expected-warning {{object whose reference is captured does not live long enough}}
-    p3 = 5 + a; // expected-warning {{object whose reference is captured does not live long enough}}
+    p = a + 5;  // expected-warning {{object whose reference is captured does not live long enough}} \
+                // expected-note {{variable 'p' aliases the storage of variable 'a'}}
+    p2 = a - 5; // expected-warning {{object whose reference is captured does not live long enough}} \
+                // expected-note {{variable 'p2' aliases the storage of variable 'a'}}
+    p3 = 5 + a; // expected-warning {{object whose reference is captured does not live long enough}} \
+                // expected-note {{variable 'p3' aliases the storage of variable 'a'}}
   }             // expected-note 3 {{destroyed here}}
   (void)*p;     // expected-note {{later used here}}
   (void)*p2;    // expected-note {{later used here}}
