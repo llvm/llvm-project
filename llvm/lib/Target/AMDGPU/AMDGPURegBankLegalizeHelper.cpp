@@ -905,30 +905,31 @@ bool RegBankLegalizeHelper::lowerExtrVecEltToSel(MachineInstr &MI) {
   LLT VecTy = MRI.getType(Src);
   LLT ScalarTy = VecTy.getScalarType();
   unsigned NumElts = VecTy.getNumElements();
+  MachineRegisterInfo::VRegAttrs VgprRB_EltTy = {VgprRB, ScalarTy};
 
-  auto Unmerge = B.buildUnmerge({VgprRB, ScalarTy}, Src);
+  auto Unmerge = B.buildUnmerge(VgprRB_EltTy, Src);
 
   if (ScalarTy.getSizeInBits() == 32) {
     Register PrevSelect = Unmerge.getReg(0);
     for (unsigned I = 1; I < NumElts; ++I) {
       auto IdxConst = B.buildConstant({SgprRB, MRI.getType(Idx)}, I);
-      auto Cmp = B.buildICmp(CmpInst::ICMP_EQ, {VccRB, S1}, Idx, IdxConst);
+      auto Cmp = B.buildICmp(CmpInst::ICMP_EQ, VccRB_S1, Idx, IdxConst);
       PrevSelect =
-          B.buildSelect({VgprRB, ScalarTy}, Cmp, Unmerge.getReg(I), PrevSelect)
+          B.buildSelect(VgprRB_EltTy, Cmp, Unmerge.getReg(I), PrevSelect)
               .getReg(0);
     }
     B.buildCopy(Dst, PrevSelect);
   } else if (ScalarTy.getSizeInBits() == 64) {
-    auto InitUnmerge = B.buildUnmerge({VgprRB, S32}, Unmerge.getReg(0));
+    auto InitUnmerge = B.buildUnmerge(VgprRB_S32, Unmerge.getReg(0));
     Register PrevLo = InitUnmerge.getReg(0);
     Register PrevHi = InitUnmerge.getReg(1);
     for (unsigned I = 1; I < NumElts; ++I) {
       auto IdxConst = B.buildConstant({SgprRB, MRI.getType(Idx)}, I);
-      auto Cmp = B.buildICmp(CmpInst::ICMP_EQ, {VccRB, S1}, Idx, IdxConst);
-      auto EltUnmerge = B.buildUnmerge({VgprRB, S32}, Unmerge.getReg(I));
-      PrevLo = B.buildSelect({VgprRB, S32}, Cmp, EltUnmerge.getReg(0), PrevLo)
+      auto Cmp = B.buildICmp(CmpInst::ICMP_EQ, VccRB_S1, Idx, IdxConst);
+      auto EltUnmerge = B.buildUnmerge(VgprRB_S32, Unmerge.getReg(I));
+      PrevLo = B.buildSelect(VgprRB_S32, Cmp, EltUnmerge.getReg(0), PrevLo)
                    .getReg(0);
-      PrevHi = B.buildSelect({VgprRB, S32}, Cmp, EltUnmerge.getReg(1), PrevHi)
+      PrevHi = B.buildSelect(VgprRB_S32, Cmp, EltUnmerge.getReg(1), PrevHi)
                    .getReg(0);
     }
     B.buildMergeLikeInstr(Dst, {PrevLo, PrevHi});
@@ -965,12 +966,12 @@ bool RegBankLegalizeHelper::lowerExtrVecEltTo32(MachineInstr &MI) {
   auto CastSrc = B.buildBitcast({VgprRB, Vec32Ty}, Src);
 
   // Calculate new Lo and Hi indices
-  auto One = B.buildConstant({SgprRB, S32}, 1);
-  auto IdxLo = B.buildShl({SgprRB, S32}, Idx, One);
-  auto IdxHi = B.buildAdd({SgprRB, S32}, IdxLo, One);
+  auto One = B.buildConstant(SgprRB_S32, 1);
+  auto IdxLo = B.buildShl(SgprRB_S32, Idx, One);
+  auto IdxHi = B.buildAdd(SgprRB_S32, IdxLo, One);
 
-  auto ExtLo = B.buildExtractVectorElement({VgprRB, S32}, CastSrc, IdxLo);
-  auto ExtHi = B.buildExtractVectorElement({VgprRB, S32}, CastSrc, IdxHi);
+  auto ExtLo = B.buildExtractVectorElement(VgprRB_S32, CastSrc, IdxLo);
+  auto ExtHi = B.buildExtractVectorElement(VgprRB_S32, CastSrc, IdxHi);
 
   B.buildMergeLikeInstr(Dst, {ExtLo.getReg(0), ExtHi.getReg(0)});
 
