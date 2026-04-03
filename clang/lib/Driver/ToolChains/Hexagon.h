@@ -102,8 +102,12 @@ public:
   std::string getHexagonTargetDir(
       const std::string &InstalledDir,
       const SmallVectorImpl<std::string> &PrefixDirs) const;
+  SmallString<128> getEffectiveSysRoot() const;
+  void getBaseIncludeDir(llvm::SmallString<128> &) const;
+  void getLibraryDir(const llvm::opt::ArgList &Args,
+                     llvm::SmallString<128> &) const;
   void getHexagonLibraryPaths(const llvm::opt::ArgList &Args,
-      ToolChain::path_list &LibPaths) const;
+                              ToolChain::path_list &LibPaths) const;
 
   std::string getCompilerRTPath() const override;
 

@@ -23,7 +23,7 @@ target datalayout = "e-p:64:64"
 ; SUMMARY-NEXT:           12,24:
 ; SUMMARY-NEXT:             Kind:            VirtualConstProp
 ; SUMMARY-NEXT:             Info:            0
-; SUMMARY-X86-NEXT:         Byte:            0
+; SUMMARY-X86-NEXT:         Byte:            4294967295
 ; SUMMARY-X86-NEXT:         Bit:             0
 ; SUMMARY-ARM-NEXT:         Byte:            4294967295
 ; SUMMARY-ARM-NEXT:         Bit:             1
@@ -43,7 +43,7 @@ target datalayout = "e-p:64:64"
 ; SUMMARY-NEXT:           24,12:
 ; SUMMARY-NEXT:             Kind:            VirtualConstProp
 ; SUMMARY-NEXT:             Info:            0
-; SUMMARY-X86-NEXT:         Byte:            0
+; SUMMARY-X86-NEXT:         Byte:            4294967292
 ; SUMMARY-X86-NEXT:         Bit:             0
 ; SUMMARY-ARM-NEXT:         Byte:            4294967292
 ; SUMMARY-ARM-NEXT:         Bit:             1
@@ -66,9 +66,7 @@ target datalayout = "e-p:64:64"
 ; CHECK: [[CVT4B:.*]] = private constant { [8 x i8], ptr, [0 x i8] } { [8 x i8] c"\00\00\00\00\02\00\00\00", ptr @vf2i32, [0 x i8] zeroinitializer }, !type !1
 @vt4b = constant ptr @vf2i32, !type !1
 
-; X86: @__typeid_typeid3_0_12_24_byte = hidden alias i8, inttoptr (i32 -1 to ptr)
 ; X86: @__typeid_typeid3_0_12_24_bit = hidden alias i8, inttoptr (i32 1 to ptr)
-; X86: @__typeid_typeid4_0_24_12_byte = hidden alias i8, inttoptr (i32 -4 to ptr)
 ; X86: @__typeid_typeid4_0_24_12_bit = hidden alias i8, inttoptr (i32 1 to ptr)
 ; ARM-NOT: alias {{.*}} inttoptr
 

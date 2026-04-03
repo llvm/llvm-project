@@ -827,6 +827,12 @@ public:
     Regs.set(X86::R15);
   }
 
+  void removeNonScavengeableRegs(BitVector &Regs) const override {
+    BitVector FP = getAliases(X86::RBP);
+    FP.flip();
+    Regs &= FP;
+  }
+
   void getClassicGPRegs(BitVector &Regs) const override {
     Regs |= getAliases(X86::RAX);
     Regs |= getAliases(X86::RBX);
