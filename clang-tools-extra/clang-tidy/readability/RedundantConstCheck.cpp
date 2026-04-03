@@ -47,7 +47,7 @@ findConstToRemove(const VarDecl *VD, const MatchFinder::MatchResult &Result) {
     return std::nullopt;
 
   const CharSourceRange FileRange = Lexer::makeFileCharRange(
-      CharSourceRange::getCharRange(*ConstSearchStartLoc, NameBeginLoc), SM,
+      CharSourceRange::getCharRange(ConstSearchStartLoc, NameBeginLoc), SM,
       Result.Context->getLangOpts());
 
   if (!FileRange.isValid())
