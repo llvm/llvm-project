@@ -1765,27 +1765,24 @@ void NVPTXAsmPrinter::bufferAggregateConstVec(const ConstantVector *CV,
   assert(ElemTySize < 8 && "Expected sub-byte data type.");
   assert(8 % ElemTySize == 0 && "Element type size must evenly divide a byte.");
   // Number of elements to merge to form a full byte.
-  unsigned ChunkSize = 8 / ElemTySize;
-  unsigned NumChunks = NumElems / ChunkSize;
-  unsigned NumTailElems = NumElems % ChunkSize;
+  unsigned NumElemsPerByte = 8 / ElemTySize;
+  unsigned NumCompleteBytes = NumElems / NumElemsPerByte;
+  unsigned NumTailElems = NumElems % NumElemsPerByte;
 
   // Helper lambda to constant-fold sub-vector of sub-byte type elements into
   // i8. Start and end indices of the sub-vector is provided, along with number
   // of padding zeros if required.
   auto ConvertSubCVtoInt8 = [this, &ElemTy](const ConstantVector *CV,
                                             unsigned Start, unsigned End,
-                                            unsigned NumPaddingZeros) {
+                                            unsigned NumPaddingZeros = 0) {
     // Collect elements to create sub-vector.
     SmallVector<Constant *, 8> SubCVElems;
     for (unsigned I = Start; I < End; ++I)
       SubCVElems.push_back(CV->getAggregateElement(I));
 
     // Optionally pad with zeros.
-    if (NumPaddingZeros) {
-      SmallVector<Constant *, 8> Zeros(NumPaddingZeros,
-                                       ConstantInt::getNullValue(ElemTy));
-      SubCVElems.append(Zeros);
-    }
+    for (auto _ : llvm::seq(NumPaddingZeros))
+      SubCVElems.push_back(ConstantInt::getNullValue(ElemTy));
 
     auto SubCV = ConstantVector::get(SubCVElems);
     Type *Int8Ty = IntegerType::get(SubCV->getContext(), 8);
@@ -1805,18 +1802,14 @@ void NVPTXAsmPrinter::bufferAggregateConstVec(const ConstantVector *CV,
 
   // Iterate through elements of vector one chunk at a time and buffer that
   // chunk.
-  for (unsigned I = 0; I < NumChunks; ++I)
-    bufferLEByte(
-        ConvertSubCVtoInt8(CV, I, I + ChunkSize, 0 /*NumPaddingZeros*/), 0,
-        aggBuffer);
+  for (unsigned I = 0; I < NumCompleteBytes; ++I)
+    bufferLEByte(ConvertSubCVtoInt8(CV, I, I + NumElemsPerByte), 0, aggBuffer);
 
   // For unevenly sized vectors add tail padding zeros.
-  if (NumTailElems > 0) {
-    unsigned TailStart = NumElems - NumTailElems;
-    unsigned NumPaddingZeros = ChunkSize - NumTailElems;
-    bufferLEByte(ConvertSubCVtoInt8(CV, TailStart, NumElems, NumPaddingZeros),
+  if (NumTailElems > 0)
+    bufferLEByte(ConvertSubCVtoInt8(CV, NumElems - NumTailElems, NumElems,
+                                    NumElemsPerByte - NumTailElems),
                  0, aggBuffer);
-  }
 }
 
 /// lowerConstantForGV - Return an MCExpr for the given Constant.  This is mostly
