@@ -451,9 +451,8 @@ buildCombinedCondition(llvm::ArrayRef<const IfStmt *> Chain,
 
   for (const auto &[Index, If] : llvm::enumerate(Chain)) {
     const bool IsRoot = Index == 0;
-    if (!IsRoot && !hasOnlyPayloadCommentsInNestedHeader(If, SM, LangOpts)) {
+    if (!IsRoot && !hasOnlyPayloadCommentsInNestedHeader(If, SM, LangOpts))
       return {CombinedConditionBuildStatus::UnsupportedCommentPlacement, {}};
-    }
 
     if (IsRoot && If->hasVarStorage()) {
       const auto *const ConditionVariable = If->getConditionVariable();
