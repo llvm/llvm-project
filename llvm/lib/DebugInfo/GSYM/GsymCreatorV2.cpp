@@ -24,23 +24,6 @@ uint8_t GsymCreatorV2::getStringOffsetSize() const {
   return HeaderV2::getStringOffsetByteSize();
 }
 
-uint8_t GsymCreatorV2::getAddressOffsetSize() const {
-  const std::optional<uint64_t> BaseAddress = getBaseAddress();
-  const std::optional<uint64_t> LastFuncAddr = getLastFunctionAddress();
-  if (BaseAddress && LastFuncAddr) {
-    const uint64_t AddrDelta = *LastFuncAddr - *BaseAddress;
-    // V2 only supports power-of-two sizes (1/2/4/8) for AddrOffSize.
-    if (AddrDelta <= UINT8_MAX)
-      return 1;
-    if (AddrDelta <= UINT16_MAX)
-      return 2;
-    if (AddrDelta <= UINT32_MAX)
-      return 4;
-    return 8;
-  }
-  return 1;
-}
-
 uint64_t GsymCreatorV2::calculateHeaderAndTableSize() const {
   const uint64_t HeaderSize = HeaderV2::getEncodedSize();
   const size_t NumFuncs = Funcs.size();

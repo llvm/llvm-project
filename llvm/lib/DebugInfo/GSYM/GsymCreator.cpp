@@ -337,11 +337,34 @@ std::optional<uint64_t> GsymCreator::getBaseAddress() const {
   return getFirstFunctionAddress();
 }
 
+uint8_t GsymCreator::getAddressOffsetSize() const {
+  const std::optional<uint64_t> BaseAddress = getBaseAddress();
+  const std::optional<uint64_t> LastFuncAddr = getLastFunctionAddress();
+  if (BaseAddress && LastFuncAddr) {
+    const uint64_t AddrDelta = *LastFuncAddr - *BaseAddress;
+    if (AddrDelta <= UINT8_MAX)
+      return 1;
+    else if (AddrDelta <= UINT16_MAX)
+      return 2;
+    else if (AddrDelta <= UINT32_MAX)
+      return 4;
+    return 8;
+  }
+  return 1;
+}
+
 uint64_t GsymCreator::getMaxAddressOffset() const {
-  const uint8_t Size = getAddressOffsetSize();
-  if (Size >= 8)
+  switch (getAddressOffsetSize()) {
+  case 1:
+    return UINT8_MAX;
+  case 2:
+    return UINT16_MAX;
+  case 4:
+    return UINT32_MAX;
+  case 8:
     return UINT64_MAX;
-  return (static_cast<uint64_t>(1) << (Size * 8)) - 1;
+  }
+  llvm_unreachable("invalid address offset");
 }
 
 llvm::Error
@@ -373,9 +396,21 @@ void GsymCreator::encodeAddrOffsets(FileWriter &O, uint8_t AddrOffSize,
     // introduced when the code changes that can cause problems here so it is
     // good to catch this during testing.
     assert(AddrOffset <= MaxAddressOffset);
-    // Suppress unused variable warning in release builds.
     (void)MaxAddressOffset;
-    O.writeUnsigned(AddrOffset, AddrOffSize);
+    switch (AddrOffSize) {
+    case 1:
+      O.writeU8(static_cast<uint8_t>(AddrOffset));
+      break;
+    case 2:
+      O.writeU16(static_cast<uint16_t>(AddrOffset));
+      break;
+    case 4:
+      O.writeU32(static_cast<uint32_t>(AddrOffset));
+      break;
+    case 8:
+      O.writeU64(AddrOffset);
+      break;
+    }
   }
 }
 
