@@ -23,13 +23,9 @@
 #include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/Support/FormatVariadic.h"
 #include <cstdint>
 #include <numeric>
-
-#define DEBUG_TYPE "xegpu-utils"
-#define DBGS() (llvm::dbgs() << "[" DEBUG_TYPE "]: ")
 
 using namespace mlir;
 
@@ -149,31 +145,19 @@ std::string xegpu::getTemporaryLayoutName(const OpResult result) {
 }
 
 xegpu::DistributeLayoutAttr xegpu::getDistributeLayoutAttr(const Value value) {
-  LLVM_DEBUG(DBGS() << "getDistributeLayoutAttr(Value): type="
-                    << value.getType() << "\n");
-  if (!value) {
-    LLVM_DEBUG(DBGS() << "  -> null value, returning nullptr\n");
+  if (!value)
     return nullptr;
-  }
 
   if (auto tdescTy =
-          dyn_cast_if_present<xegpu::TensorDescType>(value.getType())) {
-    auto layout = tdescTy.getLayoutAttr();
-    LLVM_DEBUG(DBGS() << "  -> TensorDescType, layout="
-                      << (layout ? layout : nullptr) << "\n");
-    return layout;
-  }
+          dyn_cast_if_present<xegpu::TensorDescType>(value.getType()))
+    return tdescTy.getLayoutAttr();
 
   if (auto result = dyn_cast<OpResult>(value)) {
     Operation *defOp = result.getDefiningOp();
     assert(defOp && "result must have a defining op");
-    LLVM_DEBUG(DBGS() << "  OpResult #" << result.getResultNumber() << " from "
-                      << defOp->getName() << "\n");
 
     if (auto anchorOp = dyn_cast<xegpu::AnchorLayoutInterface>(defOp)) {
       auto layout = anchorOp.getAnchorLayout();
-      LLVM_DEBUG(DBGS() << "  -> AnchorLayoutInterface, layout="
-                        << (layout ? layout : nullptr) << "\n");
       return layout;
     }
 
@@ -181,100 +165,60 @@ xegpu::DistributeLayoutAttr xegpu::getDistributeLayoutAttr(const Value value) {
     if (defOp->hasAttr(layoutName)) {
       auto layout =
           defOp->getAttrOfType<xegpu::DistributeLayoutAttr>(layoutName);
-      LLVM_DEBUG(DBGS() << "  -> temporary attr '" << layoutName
-                        << "', layout=" << layout << "\n");
       return layout;
     }
-    LLVM_DEBUG(DBGS() << "  -> OpResult: no layout found (checked '"
-                      << layoutName << "')\n");
   }
 
   if (auto arg = dyn_cast<BlockArgument>(value)) {
     auto *parentOp = arg.getOwner()->getParentOp();
-    LLVM_DEBUG(DBGS() << "  BlockArgument #" << arg.getArgNumber() << " of "
-                      << (parentOp ? parentOp->getName().getStringRef()
-                                   : StringRef("(null)"))
-                      << "\n");
     if (auto loop = dyn_cast_if_present<LoopLikeOpInterface>(parentOp)) {
       OpOperand *tiedInit = loop.getTiedLoopInit(arg);
       if (tiedInit) {
-        LLVM_DEBUG(DBGS() << "  -> LoopLikeOp, recursing into tiedInit "
-                          << "operand #" << tiedInit->getOperandNumber()
-                          << "\n");
         return getDistributeLayoutAttr(tiedInit->get());
       }
-      LLVM_DEBUG(DBGS() << "  -> LoopLikeOp, no tiedInit\n");
     }
   }
 
-  LLVM_DEBUG(DBGS() << "  -> returning nullptr\n");
   return nullptr;
 }
 xegpu::DistributeLayoutAttr
 xegpu::getDistributeLayoutAttr(const OpOperand &opr) {
   Operation *op = opr.getOwner();
   unsigned idx = const_cast<OpOperand &>(opr).getOperandNumber();
-  LLVM_DEBUG(DBGS() << "getDistributeLayoutAttr(OpOperand): operand #" << idx
-                    << " of " << op->getName()
-                    << ", type=" << opr.get().getType() << "\n");
 
   if (auto anchorOp = dyn_cast<xegpu::AnchorLayoutInterface>(op)) {
     if (auto dpasOp = dyn_cast<xegpu::DpasOp>(op)) {
       if (idx == 0) {
-        auto layout = dpasOp.getLayoutAAttr();
-        LLVM_DEBUG(DBGS() << "  -> DpasOp layoutA="
-                          << (layout ? layout : nullptr) << "\n");
-        return layout;
+        return dpasOp.getLayoutAAttr();
       } else if (idx == 1) {
-        auto layout = dpasOp.getLayoutBAttr();
-        LLVM_DEBUG(DBGS() << "  -> DpasOp layoutB="
-                          << (layout ? layout : nullptr) << "\n");
-        return layout;
+        return dpasOp.getLayoutBAttr();
       } else if (idx == 2) {
-        auto layout = dpasOp.getLayoutCdAttr();
-        LLVM_DEBUG(DBGS() << "  -> DpasOp layoutCd="
-                          << (layout ? layout : nullptr) << "\n");
-        return layout;
+        return dpasOp.getLayoutCdAttr();
       }
     }
     if (auto convertOp = dyn_cast<xegpu::ConvertLayoutOp>(op)) {
-      auto layout = convertOp.getInputLayoutAttr();
-      LLVM_DEBUG(DBGS() << "  -> ConvertLayoutOp inputLayout="
-                        << (layout ? layout : nullptr) << "\n");
-      return layout;
+      return convertOp.getInputLayoutAttr();
     }
     auto layout = anchorOp.getAnchorLayout();
 
-    if (idx == 0) {
-      LLVM_DEBUG(DBGS() << "  -> AnchorLayoutInterface idx=0, layout="
-                        << (layout ? layout : nullptr) << "\n");
+    if (idx == 0)
       return layout;
-    }
 
     // For store operations (StoreScatterOp, StoreNdOp, StoreMatrixOp),
     // the layout is valid for the first two operands: value and memref/tdesc.
     // For other operations, the layout applies to the first operand only.
     if (isa<xegpu::StoreScatterOp, xegpu::StoreNdOp, xegpu::StoreMatrixOp>(
             op) &&
-        (idx < 2)) {
-      LLVM_DEBUG(DBGS() << "  -> Store op idx=" << idx
-                        << ", layout=" << (layout ? layout : nullptr) << "\n");
+        (idx < 2))
       return layout;
-    }
-    LLVM_DEBUG(DBGS() << "  -> AnchorLayoutInterface idx=" << idx
-                      << " not covered, falling through\n");
   }
 
   std::string layoutName = xegpu::getTemporaryLayoutName(opr);
   if (op->hasAttr(layoutName)) {
     auto layout = op->getAttrOfType<xegpu::DistributeLayoutAttr>(layoutName);
-    LLVM_DEBUG(DBGS() << "  -> temporary attr '" << layoutName
-                      << "', layout=" << layout << "\n");
     return layout;
   }
 
-  LLVM_DEBUG(DBGS() << "  -> returning nullptr (checked '" << layoutName
-                    << "')\n");
   return nullptr;
 }
 
