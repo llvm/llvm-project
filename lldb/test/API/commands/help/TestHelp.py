@@ -271,15 +271,14 @@ class HelpCommandTestCase(TestBase):
             ],
         )
 
-        # Check that line splitting works with newline characters too. The raw input after the word "pointer" does not
-        # contain spaces among the more than one hundred subsequent characters, the words are separated with newlines.
+        # Check that line splitting works with newline characters too. The raw
+        # input after the word "pointer" does not contain spaces among more than
+        # a hundred subsequent characters, the words are separated by newlines.
         self.runCmd("settings set term-width 80")
         self.expect(
             "help format",
             matching=True,
-            substrs=[
-                "'p' or \"pointer\""
-            ],
+            substrs=["'p' or \"pointer\""],
         )
 
     @no_debug_info_test
