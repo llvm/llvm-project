@@ -21,10 +21,15 @@
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
+#include "SIRegisterInfo.h"
+#include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
+#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachinePostDominators.h"
 #include "llvm/CodeGen/TargetSchedule.h"
 #include "llvm/Support/BranchProbability.h"
@@ -80,6 +85,7 @@ private:
   // appropriate source modifers and operands into the unpacked instructions.
   void addOperandAndMods(MachineInstrBuilder &NewMI, unsigned SrcMods,
                          bool IsHiBits, const MachineOperand &SrcMO);
+  bool optimizeBufferLoadM0(MachineBasicBlock &MBB);
 
 public:
   bool run(MachineFunction &MF, MachineLoopInfo *MLI);
@@ -726,6 +732,97 @@ void SIPreEmitPeephole::performF32Unpacking(MachineInstr &I) {
   I.eraseFromParent();
 }
 
+static bool IsVecBufferLoad(const SIInstrInfo *TII, const MachineInstr &MI) {
+  return MI.mayLoad() && (TII->isMTBUF(MI) || TII->isMUBUF(MI));
+};
+
+static MachineInstr *getPrevNonDebugInst(MachineInstr *MI) {
+  for (MachineInstr *I = MI->getPrevNode(); I; I = I->getPrevNode())
+    if (!I->isDebugInstr())
+      return I;
+  return nullptr;
+}
+
+// return true if all of three are true:
+// no flow dependency from BufferLoad to MFMA
+// no anti-flow dependency from BufferLoad to MFMA
+// no output dependency between BufferLoad and MFMA
+static bool canbeReordered(MachineInstr *BufferLoad, MachineInstr *MFMA,
+                           const SIRegisterInfo *TRI) {
+  bool HasFlowDep =
+      llvm::any_of(BufferLoad->defs(), [MFMA, TRI](const auto &def) {
+        return def.isReg() && MFMA->readsRegister(def.getReg(), TRI);
+      });
+
+  bool HasAntiDep =
+      llvm::any_of(MFMA->defs(), [BufferLoad, TRI](const auto &def) {
+        return def.isReg() && BufferLoad->readsRegister(def.getReg(), TRI);
+      });
+
+  bool HasOutputDep =
+      llvm::any_of(MFMA->defs(), [BufferLoad, TRI](const auto &def) {
+        return def.isReg() && BufferLoad->modifiesRegister(def.getReg(), TRI);
+      });
+
+  return !HasFlowDep && !HasAntiDep && !HasOutputDep;
+}
+
+// pattern 1: s_mov_b32 m0 --> s_nop 0 --> buffer_load --> mfma
+// pattern 2: s_mov_b32 m0 --> buffer_load --> mfma
+// swap buffer_load and mfma, the remove s_nop 0
+bool SIPreEmitPeephole::optimizeBufferLoadM0(MachineBasicBlock &MBB) {
+  if (MBB.empty()) {
+    return false;
+  }
+
+  bool Changed = false;
+  using InstrIt = MachineBasicBlock::iterator;
+  for (InstrIt I = MBB.begin(), E = MBB.end(); I != E; ++I) {
+    if (!TII->isMFMA(I->getOpcode()))
+      continue;
+    MachineInstr *MFMA = &*I;
+
+    if (I == MBB.begin())
+      continue;
+    MachineInstr *Prev = getPrevNonDebugInst(&*I);
+    if (Prev == nullptr || !IsVecBufferLoad(TII, *Prev) ||
+        !Prev->readsRegister(AMDGPU::M0, TRI))
+      continue;
+
+    MachineInstr *BufferLoad = Prev;
+    Prev = getPrevNonDebugInst(Prev);
+    if (Prev == nullptr)
+      continue;
+
+    MachineInstr *MaybeNop = Prev;
+    MachineInstr *MaybeSMov = nullptr;
+    // In the current lowering pipeline, the post-RA-hazard-rec is just after
+    // this pass, so there is no s_nop. But we still do the check here in case
+    // the order of passes is changed.
+    if (MaybeNop->getOpcode() == AMDGPU::S_NOP &&
+        MaybeNop->getOperand(0).getImm() == 0) {
+      MaybeSMov = getPrevNonDebugInst(MaybeNop);
+    } else {
+      MaybeSMov = MaybeNop;
+      MaybeNop = nullptr;
+    }
+
+    if (MaybeSMov == nullptr || MaybeSMov->getOpcode() != AMDGPU::S_MOV_B32 ||
+        !MaybeSMov->modifiesRegister(AMDGPU::M0, TRI))
+      continue;
+
+    if (!canbeReordered(BufferLoad, MFMA, TRI))
+      continue;
+
+    Changed = true;
+    MBB.splice(std::next(I), &MBB, BufferLoad);
+    if (MaybeNop != nullptr)
+      MaybeNop->eraseFromParent();
+  }
+
+  return Changed;
+}
+
 MachineInstrBuilder SIPreEmitPeephole::createUnpackedMI(MachineInstr &I,
                                                         uint32_t UnpackedOpcode,
                                                         bool IsHiBits) {
@@ -864,6 +961,12 @@ bool SIPreEmitPeephole::run(MachineFunction &MF, MachineLoopInfo *LoopInfo) {
     }
     for (MachineInstr *MI : InstrsToUnpack) {
       performF32Unpacking(*MI);
+    }
+  }
+
+  if (ST.hasGFX950Insts()) {
+    for (MachineBasicBlock &MBB : MF) {
+      Changed |= optimizeBufferLoadM0(MBB);
     }
   }
 
