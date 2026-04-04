@@ -3926,10 +3926,12 @@ mlir::LogicalResult CIRToLLVMEhInflightOpLowering::matchAndRewrite(
           rewriter, loc, llvmPtrTy, symAttr.getValue());
       catchSymAddrs.push_back(addrOp);
     }
-  } else if (!op.getCleanup()) {
-    // We need to emit catch-all only if cleanup is not set, because when we
-    // have catch-all handler, there is no case when we set would unwind past
-    // the handler
+  }
+
+  // Emit a catch-all clause (catch ptr null) when:
+  //   - The catch_all attribute is set (typed catches + catch-all), or
+  //   - No typed catches and no cleanup (legacy pure catch-all form)
+  if (op.getCatchAll() || (!catchListAttr && !op.getCleanup())) {
     mlir::OpBuilder::InsertionGuard guard(rewriter);
     rewriter.setInsertionPointToStart(entryBlock);
     mlir::Value nullOp = mlir::LLVM::ZeroOp::create(rewriter, loc, llvmPtrTy);
@@ -3943,7 +3945,10 @@ mlir::LogicalResult CIRToLLVMEhInflightOpLowering::matchAndRewrite(
   auto landingPadOp = mlir::LLVM::LandingpadOp::create(
       rewriter, loc, llvmLandingPadStructTy, catchSymAddrs);
 
-  if (op.getCleanup())
+  // The LLVM cleanup flag is only needed when there is no catch-all handler,
+  // since catch-all (catch ptr null) already ensures the personality function
+  // enters the landing pad for all exception types.
+  if (op.getCleanup() && !op.getCatchAll())
     landingPadOp.setCleanup(true);
 
   mlir::Value slot =
