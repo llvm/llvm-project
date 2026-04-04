@@ -501,12 +501,13 @@ public:
 
 class LLVM_ABI DiagnosticInfoStackSize : public DiagnosticInfoResourceLimit {
   void anchor() override;
+  const Twine ResourceName{"stack frame size"};
 
 public:
   DiagnosticInfoStackSize(const Function &Fn, uint64_t StackSize,
                           uint64_t StackLimit,
                           DiagnosticSeverity Severity = DS_Warning)
-      : DiagnosticInfoResourceLimit(Fn, "stack frame size", StackSize,
+      : DiagnosticInfoResourceLimit(Fn, ResourceName, StackSize,
                                     StackLimit, Severity, DK_StackSize) {}
 
   uint64_t getStackSize() const { return getResourceSize(); }
