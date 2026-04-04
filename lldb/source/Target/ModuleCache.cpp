@@ -139,8 +139,8 @@ Status CreateHostSysRootModuleLink(const FileSpec &root_dir_spec,
     DecrementRefExistingModule(root_dir_spec, sysroot_module_path_spec);
   }
 
-  Status error = MakeDirectory(
-      FileSpec(sysroot_module_path_spec.GetDirectory().AsCString()));
+  Status error =
+      MakeDirectory(FileSpec(sysroot_module_path_spec.GetDirectory()));
   if (error.Fail())
     return error;
 

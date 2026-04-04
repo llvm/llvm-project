@@ -27,6 +27,10 @@
 namespace clang {
 namespace doc {
 
+// Thread local arenas usable in each thread pool
+thread_local llvm::BumpPtrAllocator TransientArena;
+thread_local llvm::BumpPtrAllocator PersistentArena;
+
 ConcurrentStringPool &getGlobalStringPool() {
   static ConcurrentStringPool GlobalPool;
   return GlobalPool;

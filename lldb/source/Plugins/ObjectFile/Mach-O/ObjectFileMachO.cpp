@@ -3808,9 +3808,11 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
               // This is usually the second N_SO entry that contains just the
               // filename, so here we combine it with the first one if we are
               // minimizing the symbol table
-              const char *so_path =
-                  sym[sym_idx - 1].GetMangled().GetDemangledName().AsCString();
-              if (so_path && so_path[0]) {
+              llvm::StringRef so_path = sym[sym_idx - 1]
+                                            .GetMangled()
+                                            .GetDemangledName()
+                                            .GetStringRef();
+              if (!so_path.empty()) {
                 std::string full_so_path(so_path);
                 const size_t double_slash_pos = full_so_path.find("//");
                 if (double_slash_pos != std::string::npos) {
