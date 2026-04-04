@@ -32,17 +32,16 @@ AST_MATCHER(clang::LambdaExpr, isGenericLambdaInCxx20OrLater) {
 namespace clang::tidy::readability {
 
 void RedundantLambdaParenthesesCheck::registerMatchers(MatchFinder *Finder) {
-  Finder->addMatcher(
-      lambdaExpr(hasExplicitOrGenericParameters(), hasNoParameters(),
-                 isGenericLambdaInCxx20OrLater())
-          .bind("lambda"),
-      this);
+  Finder->addMatcher(lambdaExpr(hasExplicitOrGenericParameters(),
+                                hasNoParameters(),
+                                isGenericLambdaInCxx20OrLater())
+                         .bind("lambda"),
+                     this);
 }
 
 void RedundantLambdaParenthesesCheck::check(
     const MatchFinder::MatchResult &Result) {
   const auto *Lambda = Result.Nodes.getNodeAs<LambdaExpr>("lambda");
-
 
   if (Lambda->getBeginLoc().isMacroID())
     return;
@@ -54,9 +53,8 @@ void RedundantLambdaParenthesesCheck::check(
           ? Lexer::getLocForEndOfToken(
                 Lambda->getTemplateParameterList()->getRAngleLoc(), 0,
                 *Result.SourceManager, LangOpts)
-          : Lexer::getLocForEndOfToken(
-                Lambda->getIntroducerRange().getEnd(), 0,
-                *Result.SourceManager, LangOpts);
+          : Lexer::getLocForEndOfToken(Lambda->getIntroducerRange().getEnd(), 0,
+                                       *Result.SourceManager, LangOpts);
 
   Token Tok;
   if (Lexer::getRawToken(ScanFrom, Tok, *Result.SourceManager, LangOpts,

@@ -22,7 +22,7 @@ class RedundantLambdaParenthesesCheck : public ClangTidyCheck {
 public:
   RedundantLambdaParenthesesCheck(StringRef Name, ClangTidyContext *Context)
       : ClangTidyCheck(Name, Context) {}
-  
+
   std::optional<TraversalKind> getCheckTraversalKind() const override {
     return TK_IgnoreUnlessSpelledInSource;
   }
