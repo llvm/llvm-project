@@ -2036,9 +2036,11 @@ void Scop::intersectDefinedBehavior(isl::set Set, AssumptionSign Sign) {
 
   // Limit the complexity of the context. If complexity is exceeded, simplify
   // the set and check again.
-  if (DefinedBehaviorContext.n_basic_set().release() >   MaxDisjunktsInDefinedBehaviourContext) {
+  if (DefinedBehaviorContext.n_basic_set().release() >
+      MaxDisjunktsInDefinedBehaviourContext) {
     simplify(DefinedBehaviorContext);
-    if (DefinedBehaviorContext.n_basic_set().release() >   MaxDisjunktsInDefinedBehaviourContext)
+    if (DefinedBehaviorContext.n_basic_set().release() >
+        MaxDisjunktsInDefinedBehaviourContext)
       DefinedBehaviorContext = {};
   }
 }
@@ -2167,7 +2169,8 @@ isl::ctx Scop::getIslCtx() const { return IslCtx.get(); }
 
 __isl_give PWACtx Scop::getPwAff(const SCEV *E, BasicBlock *BB,
                                  bool NonNegative,
-                                 RecordedAssumptionsTy *RecordedAssumptions, bool IsInsideDomain) {
+                                 RecordedAssumptionsTy *RecordedAssumptions,
+                                 bool IsInsideDomain) {
   // First try to use the SCEVAffinator to generate a piecewise defined
   // affine function from @p E in the context of @p BB. If that tasks becomes to
   // complex the affinator might return a nullptr. In such a case we invalidate

@@ -113,7 +113,8 @@ class ScopBuilder final {
   bool buildConditionSets(BasicBlock *BB, Instruction *TI, Loop *L,
                           __isl_keep isl_set *Domain,
                           DenseMap<BasicBlock *, isl::set> &InvalidDomainMap,
-                          SmallVectorImpl<__isl_give isl_set *> &ConditionSets,bool IsInsideDomain = true);
+                          SmallVectorImpl<__isl_give isl_set *> &ConditionSets,
+                          bool IsInsideDomain = true);
 
   /// Build the conditions sets for the branch condition @p Condition in
   /// the @p Domain.
@@ -126,7 +127,8 @@ class ScopBuilder final {
   bool buildConditionSets(BasicBlock *BB, Value *Condition, Instruction *TI,
                           Loop *L, __isl_keep isl_set *Domain,
                           DenseMap<BasicBlock *, isl::set> &InvalidDomainMap,
-                          SmallVectorImpl<__isl_give isl_set *> &ConditionSets, bool IsInsideDomain = true);
+                          SmallVectorImpl<__isl_give isl_set *> &ConditionSets,
+                          bool IsInsideDomain = true);
 
   /// Build the conditions sets for the switch @p SI in the @p Domain.
   ///
@@ -136,7 +138,8 @@ class ScopBuilder final {
   bool buildConditionSets(BasicBlock *BB, SwitchInst *SI, Loop *L,
                           __isl_keep isl_set *Domain,
                           DenseMap<BasicBlock *, isl::set> &InvalidDomainMap,
-                          SmallVectorImpl<__isl_give isl_set *> &ConditionSets, bool IsInsideDomain = true);
+                          SmallVectorImpl<__isl_give isl_set *> &ConditionSets,
+                          bool IsInsideDomain = true);
 
   /// Build condition sets for unsigned ICmpInst(s).
   /// Special handling is required for unsigned operands to ensure that if
@@ -150,7 +153,7 @@ class ScopBuilder final {
       BasicBlock *BB, Value *Condition, __isl_keep isl_set *Domain,
       const SCEV *SCEV_TestVal, const SCEV *SCEV_UpperBound,
       DenseMap<BasicBlock *, isl::set> &InvalidDomainMap,
-      bool IsStrictUpperBound,bool IsInsideDomain = true);
+      bool IsStrictUpperBound, bool IsInsideDomain = true);
 
   /// Propagate the domain constraints through the region @p R.
   ///

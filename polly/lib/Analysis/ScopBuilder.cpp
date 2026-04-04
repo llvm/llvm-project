@@ -347,7 +347,8 @@ __isl_give isl_pw_aff *
 ScopBuilder::getPwAff(BasicBlock *BB,
                       DenseMap<BasicBlock *, isl::set> &InvalidDomainMap,
                       const SCEV *E, bool NonNegative, bool IsInsideDomain) {
-  PWACtx PWAC = scop->getPwAff(E, BB, NonNegative, &RecordedAssumptions,  IsInsideDomain);
+  PWACtx PWAC =
+      scop->getPwAff(E, BB, NonNegative, &RecordedAssumptions, IsInsideDomain);
   InvalidDomainMap[BB] = InvalidDomainMap[BB].unite(PWAC.second);
   return PWAC.first.release();
 }
@@ -363,13 +364,15 @@ ScopBuilder::getPwAff(BasicBlock *BB,
 __isl_give isl_set *ScopBuilder::buildUnsignedConditionSets(
     BasicBlock *BB, Value *Condition, __isl_keep isl_set *Domain,
     const SCEV *SCEV_TestVal, const SCEV *SCEV_UpperBound,
-    DenseMap<BasicBlock *, isl::set> &InvalidDomainMap,
-    bool IsStrictUpperBound, bool IsInsideDomain) {
+    DenseMap<BasicBlock *, isl::set> &InvalidDomainMap, bool IsStrictUpperBound,
+    bool IsInsideDomain) {
   // Do not take NonNeg assumption on TestVal
   // as it might have MSB (Sign bit) set.
-  isl_pw_aff *TestVal = getPwAff(BB, InvalidDomainMap, SCEV_TestVal, /*NonNegative=*/ false, IsInsideDomain);
+  isl_pw_aff *TestVal = getPwAff(BB, InvalidDomainMap, SCEV_TestVal,
+                                 /*NonNegative=*/false, IsInsideDomain);
   // Take NonNeg assumption on UpperBound.
-  isl_pw_aff *UpperBound = getPwAff(BB, InvalidDomainMap, SCEV_UpperBound,  /*NonNegative=*/true, IsInsideDomain);
+  isl_pw_aff *UpperBound = getPwAff(BB, InvalidDomainMap, SCEV_UpperBound,
+                                    /*NonNegative=*/true, IsInsideDomain);
 
   // 0 <= TestVal
   isl_set *First =
@@ -396,7 +399,8 @@ bool ScopBuilder::buildConditionSets(
   Value *Condition = SI->getCondition();
 
   isl_pw_aff *LHS, *RHS;
-  LHS = getPwAff(BB, InvalidDomainMap, SE.getSCEVAtScope(Condition, L), /*NonNegative=*/false, IsInsideDomain);
+  LHS = getPwAff(BB, InvalidDomainMap, SE.getSCEVAtScope(Condition, L),
+                 /*NonNegative=*/false, IsInsideDomain);
 
   unsigned NumSuccessors = SI->getNumSuccessors();
   ConditionSets.resize(NumSuccessors);
@@ -404,12 +408,14 @@ bool ScopBuilder::buildConditionSets(
     unsigned Idx = Case.getSuccessorIndex();
     ConstantInt *CaseValue = Case.getCaseValue();
 
-    RHS = getPwAff(BB, InvalidDomainMap, SE.getSCEV(CaseValue),/*NonNegative=*/false,  IsInsideDomain );
+    RHS = getPwAff(BB, InvalidDomainMap, SE.getSCEV(CaseValue),
+                   /*NonNegative=*/false, IsInsideDomain);
     isl_set *CaseConditionSet =
         buildConditionSet(ICmpInst::ICMP_EQ, isl::manage_copy(LHS),
                           isl::manage(RHS))
             .release();
-    ConditionSets[Idx] = isl_set_coalesce(  isl_set_intersect(CaseConditionSet, isl_set_copy(Domain)));
+    ConditionSets[Idx] = isl_set_coalesce(
+        isl_set_intersect(CaseConditionSet, isl_set_copy(Domain)));
   }
 
   assert(ConditionSets[0] == nullptr && "Default condition set was set");
@@ -435,8 +441,10 @@ bool ScopBuilder::buildConditionSets(
     const SCEV *LHSSCEV = SE.getSCEVAtScope(Load, L);
     const SCEV *RHSSCEV = SE.getZero(LHSSCEV->getType());
     bool NonNeg = false;
-    isl_pw_aff *LHS = getPwAff(BB, InvalidDomainMap, LHSSCEV, NonNeg, IsInsideDomain);
-    isl_pw_aff *RHS = getPwAff(BB, InvalidDomainMap, RHSSCEV, NonNeg, IsInsideDomain);
+    isl_pw_aff *LHS =
+        getPwAff(BB, InvalidDomainMap, LHSSCEV, NonNeg, IsInsideDomain);
+    isl_pw_aff *RHS =
+        getPwAff(BB, InvalidDomainMap, RHSSCEV, NonNeg, IsInsideDomain);
     ConsequenceCondSet = buildConditionSet(ICmpInst::ICMP_SLE, isl::manage(LHS),
                                            isl::manage(RHS))
                              .release();
@@ -460,8 +468,11 @@ bool ScopBuilder::buildConditionSets(
     auto Opcode = BinOp->getOpcode();
     assert(Opcode == Instruction::And || Opcode == Instruction::Or);
 
-    bool Valid = buildConditionSets(BB, BinOp->getOperand(0), TI, L, Domain,  InvalidDomainMap, ConditionSets, IsInsideDomain) &&
-                 buildConditionSets(BB, BinOp->getOperand(1), TI, L, Domain, InvalidDomainMap, ConditionSets, IsInsideDomain);
+    bool Valid =
+        buildConditionSets(BB, BinOp->getOperand(0), TI, L, Domain,
+                           InvalidDomainMap, ConditionSets, IsInsideDomain) &&
+        buildConditionSets(BB, BinOp->getOperand(1), TI, L, Domain,
+                           InvalidDomainMap, ConditionSets, IsInsideDomain);
     if (!Valid) {
       while (!ConditionSets.empty())
         isl_set_free(ConditionSets.pop_back_val());
@@ -497,29 +508,32 @@ bool ScopBuilder::buildConditionSets(
 
     switch (ICond->getPredicate()) {
     case ICmpInst::ICMP_ULT:
-      ConsequenceCondSet =
-          buildUnsignedConditionSets(BB, Condition, Domain, LeftOperand,
-                                     RightOperand, InvalidDomainMap, /*IsStrictUpperBound=*/ true , IsInsideDomain );
+      ConsequenceCondSet = buildUnsignedConditionSets(
+          BB, Condition, Domain, LeftOperand, RightOperand, InvalidDomainMap,
+          /*IsStrictUpperBound=*/true, IsInsideDomain);
       break;
     case ICmpInst::ICMP_ULE:
-      ConsequenceCondSet =
-          buildUnsignedConditionSets(BB, Condition, Domain, LeftOperand,
-                                     RightOperand, InvalidDomainMap, /*IsStrictUpperBound=*/ false , IsInsideDomain );
+      ConsequenceCondSet = buildUnsignedConditionSets(
+          BB, Condition, Domain, LeftOperand, RightOperand, InvalidDomainMap,
+          /*IsStrictUpperBound=*/false, IsInsideDomain);
       break;
     case ICmpInst::ICMP_UGT:
-      ConsequenceCondSet =
-          buildUnsignedConditionSets(BB, Condition, Domain, RightOperand,
-                                     LeftOperand, InvalidDomainMap, /*IsStrictUpperBound=*/ true , IsInsideDomain );
+      ConsequenceCondSet = buildUnsignedConditionSets(
+          BB, Condition, Domain, RightOperand, LeftOperand, InvalidDomainMap,
+          /*IsStrictUpperBound=*/true, IsInsideDomain);
       break;
     case ICmpInst::ICMP_UGE:
-      ConsequenceCondSet =
-          buildUnsignedConditionSets(BB, Condition, Domain, RightOperand,
-                                     LeftOperand, InvalidDomainMap, /*IsStrictUpperBound=*/ false , IsInsideDomain );
+      ConsequenceCondSet = buildUnsignedConditionSets(
+          BB, Condition, Domain, RightOperand, LeftOperand, InvalidDomainMap,
+          /*IsStrictUpperBound=*/false, IsInsideDomain);
       break;
     default:
       LHS = getPwAff(BB, InvalidDomainMap, LeftOperand, NonNeg, IsInsideDomain);
-      RHS = getPwAff(BB, InvalidDomainMap, RightOperand, NonNeg, IsInsideDomain);
-      ConsequenceCondSet = buildConditionSet(ICond->getPredicate(),  isl::manage(LHS), isl::manage(RHS))   .release();
+      RHS =
+          getPwAff(BB, InvalidDomainMap, RightOperand, NonNeg, IsInsideDomain);
+      ConsequenceCondSet = buildConditionSet(ICond->getPredicate(),
+                                             isl::manage(LHS), isl::manage(RHS))
+                               .release();
       break;
     }
   }
@@ -560,9 +574,10 @@ bool ScopBuilder::buildConditionSets(
 bool ScopBuilder::buildConditionSets(
     BasicBlock *BB, Instruction *TI, Loop *L, __isl_keep isl_set *Domain,
     DenseMap<BasicBlock *, isl::set> &InvalidDomainMap,
-    SmallVectorImpl<__isl_give isl_set *> &ConditionSets ,bool IsInsideDomain ) {
+    SmallVectorImpl<__isl_give isl_set *> &ConditionSets, bool IsInsideDomain) {
   if (SwitchInst *SI = dyn_cast<SwitchInst>(TI))
-    return buildConditionSets(BB, SI, L, Domain, InvalidDomainMap,      ConditionSets, IsInsideDomain);
+    return buildConditionSets(BB, SI, L, Domain, InvalidDomainMap,
+                              ConditionSets, IsInsideDomain);
 
   if (isa<UncondBrInst>(TI)) {
     ConditionSets.push_back(isl_set_copy(Domain));
@@ -570,10 +585,12 @@ bool ScopBuilder::buildConditionSets(
   }
 
   Value *Condition = cast<CondBrInst>(TI)->getCondition();
-  return buildConditionSets(BB, Condition, TI, L, Domain, InvalidDomainMap,  ConditionSets, IsInsideDomain);
+  return buildConditionSets(BB, Condition, TI, L, Domain, InvalidDomainMap,
+                            ConditionSets, IsInsideDomain);
 }
 
-bool ScopBuilder::propagateDomainConstraints( Region *R, DenseMap<BasicBlock *, isl::set> &InvalidDomainMap) {
+bool ScopBuilder::propagateDomainConstraints(
+    Region *R, DenseMap<BasicBlock *, isl::set> &InvalidDomainMap) {
   // Iterate over the region R and propagate the domain constrains from the
   // predecessors to the current node. In contrast to the
   // buildDomainsWithBranchConstraints function, this one will pull the domain
@@ -920,7 +937,8 @@ bool ScopBuilder::buildDomainsWithBranchConstraints(
     SmallVector<isl_set *, 8> ConditionSets;
     if (RN->isSubRegion())
       ConditionSets.push_back(Domain.copy());
-    else if (!buildConditionSets(BB, TI, BBLoop, Domain.get(), InvalidDomainMap, ConditionSets, /*IsInsideDomain=*/false))
+    else if (!buildConditionSets(BB, TI, BBLoop, Domain.get(), InvalidDomainMap,
+                                 ConditionSets, /*IsInsideDomain=*/false))
       return false;
 
     // Now iterate over the successors and set their initial domain based on
@@ -1315,14 +1333,14 @@ void ScopBuilder::buildEscapingDependences(Instruction *Inst) {
 void ScopBuilder::addRecordedAssumptions() {
   for (auto &AS : llvm::reverse(RecordedAssumptions)) {
     isl::set S = AS.Set;
-    AssumptionSign Sign =  AS.Sign;
+    AssumptionSign Sign = AS.Sign;
 
     if (AS.BB && !AS.Set.is_params()) {
-          // If the domain was deleted the assumptions are void.
+      // If the domain was deleted the assumptions are void.
       // FIXME (correctness): Cannot just delete assumptions with RequiresRTC
-    isl::set Dom = scop->getDomainConditions(AS.BB);
-    if (Dom.is_null())
-      continue;
+      isl::set Dom = scop->getDomainConditions(AS.BB);
+      if (Dom.is_null())
+        continue;
 
       // If a basic block was given use its domain to simplify the assumption.
       // In case of restrictions we know they only have to hold on the domain,
@@ -1334,22 +1352,23 @@ void ScopBuilder::addRecordedAssumptions() {
       // To avoid the complement we will register A - B as a restriction not an
       // assumption.
       if (AS.Sign == AS_RESTRICTION) {
-        S =  std::move(S).intersect(std::move(Dom)) ;
-      } else  {
-        S = std::move( Dom).subtract (std::move(S));
-             Sign = AS_RESTRICTION;
-        }
+        S = std::move(S).intersect(std::move(Dom));
+      } else {
+        S = std::move(Dom).subtract(std::move(S));
+        Sign = AS_RESTRICTION;
       }
+    }
 
-
-    // FIXME (correctness): .params() is an overapproximation; if an AS_ASSUMPTION says 
+    // FIXME (correctness): .params() is an overapproximation; if an
+    // AS_ASSUMPTION says
     //    [p] -> { [i] : p == 1 and i == 1 }
-    // the params space will be 
+    // the params space will be
     //    [p] -> { [] : }
-    // because there is am element with p == 1 in the set; if RequiresRTC is true, we will not include a check for p at all.
+    // because there is am element with p == 1 in the set; if RequiresRTC is
+    // true, we will not include a check for p at all.
     S = std::move(S).params();
 
-    #if 0
+#if 0
     auto PSet = Set.params(); // overapproximation
     auto Overapproximation = Set.get_space().universe_set().intersect_params(PSet);
     if (Sign == AS_ASSUMPTION ) {
@@ -1370,19 +1389,18 @@ void ScopBuilder::addRecordedAssumptions() {
       }
     }
     Set = PSet;
-    #endif 
+#endif
 
-    #if 0
+#if 0
 
     if (!AS.BB) {
       scop->addAssumption(AS.Kind, AS.Set, AS.Loc, AS.Sign, nullptr /* BasicBlock */, AS.RequiresRTC);
       continue;
     }
-    #endif  
+#endif
 
-
-
-    scop->addAssumption(AS.Kind, std::move(S), AS.Loc, Sign, AS.BB,   AS.RequiresRTC);
+    scop->addAssumption(AS.Kind, std::move(S), AS.Loc, Sign, AS.BB,
+                        AS.RequiresRTC);
   }
 }
 
@@ -3262,7 +3280,8 @@ void ScopBuilder::buildAccessRelations(ScopStmt &Stmt) {
     for (const SCEV *Subscript : Access->subscripts()) {
       if (!Access->isAffine() || !Subscript)
         continue;
-      scop->getPwAff(Subscript, Stmt.getEntryBlock(), false, &RecordedAssumptions);
+      scop->getPwAff(Subscript, Stmt.getEntryBlock(), false,
+                     &RecordedAssumptions);
     }
     Access->buildAccessRelation(SAI);
     scop->addAccessData(Access);

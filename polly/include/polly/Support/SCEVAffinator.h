@@ -38,7 +38,8 @@ public:
   ///
   /// @returns The isl representation of the SCEV @p E in @p Domain.
   PWACtx getPwAff(const llvm::SCEV *E, llvm::BasicBlock *BB = nullptr,
-                  RecordedAssumptionsTy *RecordedAssumptions = nullptr, bool IsInsideDomain = true);
+                  RecordedAssumptionsTy *RecordedAssumptions = nullptr,
+                  bool IsInsideDomain = true);
 
   /// Take the assumption that @p PWAC is non-negative.
   void takeNonNegativeAssumption(
@@ -66,10 +67,8 @@ private:
   llvm::ScalarEvolution &SE;
   llvm::LoopInfo &LI;
 
-
   llvm::BasicBlock *BB;
   bool IsInsideDomain;
-
 
   RecordedAssumptionsTy *RecordedAssumptions = nullptr;
 
