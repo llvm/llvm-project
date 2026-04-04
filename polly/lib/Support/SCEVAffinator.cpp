@@ -115,8 +115,10 @@ PWACtx SCEVAffinator::getPWACtxFromPWA(isl::pw_aff PWA) {
 }
 
 PWACtx SCEVAffinator::getPwAff(const SCEV *Expr, BasicBlock *BB,
-                               RecordedAssumptionsTy *RecordedAssumptions) {
+                               RecordedAssumptionsTy *RecordedAssumptions,
+                               bool IsInsideDomain) {
   this->BB = BB;
+  this->IsInsideDomain = IsInsideDomain;
   this->RecordedAssumptions = RecordedAssumptions;
 
   if (BB) {
@@ -309,7 +311,7 @@ PWACtx SCEVAffinator::visitTruncateExpr(const SCEVTruncateExpr *Expr) {
   }
 
   recordAssumption(RecordedAssumptions, UNSIGNED, isl::manage(OutOfBoundsDom),
-                   DebugLoc(), AS_RESTRICTION, BB);
+                   DebugLoc(), AS_RESTRICTION, IsInsideDomain ? BB : nullptr);
 
   return OpPWAC;
 }
