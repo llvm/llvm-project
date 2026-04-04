@@ -568,6 +568,13 @@ def _float(arg, kind, pred):
         raise _error(desc, kind, arg)
     if not pred(f):
         raise _error(desc, kind, arg)
+def _float(arg, kind, pred):
+    try:
+        f = float(arg)
+        if not pred(f):
+            raise ValueError()
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"requires {kind} float, but found '{arg}'")
     return f
 
 
