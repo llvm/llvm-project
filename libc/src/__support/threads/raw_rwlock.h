@@ -1,27 +1,22 @@
-//===--- Implementation of a Linux RwLock class ---------------*- C++ -*-===//
+//===--- Implementation of the RawRwLock class -----------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#ifndef LLVM_LIBC_SRC_SUPPORT_THREADS_LINUX_RWLOCK_H
-#define LLVM_LIBC_SRC_SUPPORT_THREADS_LINUX_RWLOCK_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_THREADS_RAW_RWLOCK_H
+#define LLVM_LIBC_SRC___SUPPORT_THREADS_RAW_RWLOCK_H
 
 #include "hdr/errno_macros.h"
-#include "hdr/types/pid_t.h"
 #include "src/__support/CPP/atomic.h"
 #include "src/__support/CPP/limits.h"
 #include "src/__support/CPP/optional.h"
-#include "src/__support/OSUtil/syscall.h"
 #include "src/__support/common.h"
 #include "src/__support/libc_assert.h"
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"
-#include "src/__support/threads/identifier.h"
-#include "src/__support/threads/linux/futex_utils.h"
-#include "src/__support/threads/linux/futex_word.h"
 #include "src/__support/threads/raw_mutex.h"
 #include "src/__support/threads/sleep.h"
 
@@ -39,12 +34,19 @@
 #endif
 
 namespace LIBC_NAMESPACE_DECL {
-// Forward declaration of the RwLock class.
-class RwLock;
 // A namespace to rwlock specific utilities.
 namespace rwlock {
 // The role of the thread in the RwLock.
 enum class Role { Reader = 0, Writer = 1 };
+
+enum class LockResult : int {
+  Success = 0,
+  TimedOut = ETIMEDOUT,
+  Overflow = EAGAIN,
+  Busy = EBUSY,
+  Deadlock = EDEADLOCK,
+  PermissionDenied = EPERM,
+};
 
 // A waiting queue to keep track of the pending readers and writers.
 class WaitingQueue final : private RawMutex {
@@ -296,7 +298,7 @@ public:
 };
 } // namespace rwlock
 
-class RwLock {
+class RawRwLock {
   using RwState = rwlock::RwState;
   using Role = rwlock::Role;
   using WaitingQueue = rwlock::WaitingQueue;
@@ -307,14 +309,7 @@ public:
   // because it is a common error to assume the lock success without checking
   // the return value, which can lead to undefined behaviors or other subtle
   // bugs that are hard to reason about.
-  enum class LockResult : int {
-    Success = 0,
-    TimedOut = ETIMEDOUT,
-    Overflow = EAGAIN, /* EAGAIN is specified in the standard for overflow. */
-    Busy = EBUSY,
-    Deadlock = EDEADLOCK,
-    PermissionDenied = EPERM,
-  };
+  using LockResult = rwlock::LockResult;
 
 private:
   // Whether the RwLock is shared between processes.
@@ -325,10 +320,6 @@ private:
   unsigned preference : 1;
   // RwState to keep track of the RwLock.
   cpp::Atomic<int> state;
-  // writer_tid is used to keep track of the thread id of the writer. Notice
-  // that TLS address is not a good idea here since it may remains the same
-  // across forked processes.
-  cpp::Atomic<pid_t> writer_tid;
   // Waiting queue to keep track of the  readers and writers.
   WaitingQueue queue;
 
@@ -357,10 +348,8 @@ private:
       while (LIBC_LIKELY(old.can_acquire<Role::Writer>(get_preference()))) {
         if (LIBC_LIKELY(old.compare_exchange_weak_with(
                 state, old.set_writer_bit(), cpp::MemoryOrder::ACQUIRE,
-                cpp::MemoryOrder::RELAXED))) {
-          writer_tid.store(internal::gettid(), cpp::MemoryOrder::RELAXED);
+                cpp::MemoryOrder::RELAXED)))
           return LockResult::Success;
-        }
         // Notice that old is updated by the compare_exchange_weak_with
         // function.
       }
@@ -368,34 +357,10 @@ private:
     }
   }
 
-public:
-  LIBC_INLINE constexpr RwLock(Role preference = Role::Reader,
-                               bool is_pshared = false)
-      : is_pshared(is_pshared),
-        preference(static_cast<unsigned>(preference) & 1u), state(0),
-        writer_tid(0), queue() {}
-
-  [[nodiscard]]
-  LIBC_INLINE LockResult try_read_lock() {
-    RwState old = RwState::load(state, cpp::MemoryOrder::RELAXED);
-    return try_lock<Role::Reader>(old);
-  }
-  [[nodiscard]]
-  LIBC_INLINE LockResult try_write_lock() {
-    RwState old = RwState::load(state, cpp::MemoryOrder::RELAXED);
-    return try_lock<Role::Writer>(old);
-  }
-
-private:
   template <Role role>
   LIBC_INLINE LockResult
   lock_slow(cpp::optional<Futex::Timeout> timeout = cpp::nullopt,
             unsigned spin_count = LIBC_COPT_RWLOCK_DEFAULT_SPIN_COUNT) {
-    // Phase 1: deadlock detection.
-    // A deadlock happens if this is a RAW/WAW lock in the same thread.
-    if (writer_tid.load(cpp::MemoryOrder::RELAXED) == internal::gettid())
-      return LockResult::Deadlock;
-
 #if LIBC_COPT_TIMEOUT_ENSURE_MONOTONICITY
     // Phase 2: convert the timeout if necessary.
     if (timeout)
@@ -465,27 +430,6 @@ private:
     }
   }
 
-public:
-  [[nodiscard]]
-  LIBC_INLINE LockResult
-  read_lock(cpp::optional<Futex::Timeout> timeout = cpp::nullopt,
-            unsigned spin_count = LIBC_COPT_RWLOCK_DEFAULT_SPIN_COUNT) {
-    LockResult result = try_read_lock();
-    if (LIBC_LIKELY(result != LockResult::Busy))
-      return result;
-    return lock_slow<Role::Reader>(timeout, spin_count);
-  }
-  [[nodiscard]]
-  LIBC_INLINE LockResult
-  write_lock(cpp::optional<Futex::Timeout> timeout = cpp::nullopt,
-             unsigned spin_count = LIBC_COPT_RWLOCK_DEFAULT_SPIN_COUNT) {
-    LockResult result = try_write_lock();
-    if (LIBC_LIKELY(result != LockResult::Busy))
-      return result;
-    return lock_slow<Role::Writer>(timeout, spin_count);
-  }
-
-private:
   // Compiler (clang 19.0) somehow decides that this function may be inlined,
   // which leads to a larger unlock function that is infeasible to be inlined.
   // Since notifcation routine is colder we mark it as noinline explicitly.
@@ -502,8 +446,9 @@ private:
       } else if (guard.pending_count<Role::Reader>() != 0) {
         guard.serialization<Role::Reader>()++;
         status = WakeTarget::Readers;
-      } else
+      } else {
         status = WakeTarget::None;
+      }
     }
 
     if (status == WakeTarget::Readers)
@@ -513,16 +458,52 @@ private:
   }
 
 public:
+  LIBC_INLINE bool has_active_writer() {
+    return RwState::load(state, cpp::MemoryOrder::RELAXED).has_active_writer();
+  }
+
+  LIBC_INLINE constexpr RawRwLock(Role preference = Role::Reader,
+                                  bool is_pshared = false)
+      : is_pshared(is_pshared),
+        preference(static_cast<unsigned>(preference) & 1u), state(0), queue() {}
+
+  [[nodiscard]]
+  LIBC_INLINE LockResult try_read_lock() {
+    RwState old = RwState::load(state, cpp::MemoryOrder::RELAXED);
+    return try_lock<Role::Reader>(old);
+  }
+
+  [[nodiscard]]
+  LIBC_INLINE LockResult try_write_lock() {
+    RwState old = RwState::load(state, cpp::MemoryOrder::RELAXED);
+    return try_lock<Role::Writer>(old);
+  }
+
+  [[nodiscard]]
+  LIBC_INLINE LockResult
+  read_lock(cpp::optional<Futex::Timeout> timeout = cpp::nullopt,
+            unsigned spin_count = LIBC_COPT_RWLOCK_DEFAULT_SPIN_COUNT) {
+    LockResult result = try_read_lock();
+    if (LIBC_LIKELY(result != LockResult::Busy))
+      return result;
+    return lock_slow<Role::Reader>(timeout, spin_count);
+  }
+
+  [[nodiscard]]
+  LIBC_INLINE LockResult
+  write_lock(cpp::optional<Futex::Timeout> timeout = cpp::nullopt,
+             unsigned spin_count = LIBC_COPT_RWLOCK_DEFAULT_SPIN_COUNT) {
+    LockResult result = try_write_lock();
+    if (LIBC_LIKELY(result != LockResult::Busy))
+      return result;
+    return lock_slow<Role::Writer>(timeout, spin_count);
+  }
+
   [[nodiscard]]
   LIBC_INLINE LockResult unlock() {
     RwState old = RwState::load(state, cpp::MemoryOrder::RELAXED);
     if (old.has_active_writer()) {
       // The lock is held by a writer.
-      // Check if we are the owner of the lock.
-      if (writer_tid.load(cpp::MemoryOrder::RELAXED) != internal::gettid())
-        return LockResult::PermissionDenied;
-      // clear writer tid.
-      writer_tid.store(0, cpp::MemoryOrder::RELAXED);
       // clear the writer bit.
       old =
           RwState::fetch_clear_active_writer(state, cpp::MemoryOrder::RELEASE);
@@ -536,23 +517,25 @@ public:
       // If there is no pending readers or writers, we are done.
       if (!old.has_last_reader() || !old.has_pending())
         return LockResult::Success;
-    } else
+    } else {
       return LockResult::PermissionDenied;
+    }
 
     notify_pending_threads();
     return LockResult::Success;
   }
 
-  // We do not allocate any special resources for the RwLock, so this function
-  // will only check if the lock is currently held by any thread.
   [[nodiscard]]
   LIBC_INLINE LockResult check_for_destroy() {
+    // We do not allocate any special resources for the RwLock, so this function
+    // will only check if the lock is currently held by any thread.
     RwState old = RwState::load(state, cpp::MemoryOrder::RELAXED);
     if (old.has_active_owner())
       return LockResult::Busy;
     return LockResult::Success;
   }
 };
+
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SRC_SUPPORT_THREADS_LINUX_RWLOCK_H
+#endif // LLVM_LIBC_SRC___SUPPORT_THREADS_RAW_RWLOCK_H
