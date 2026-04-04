@@ -4459,8 +4459,6 @@ shouldBundleHIPAsmWithNewDriver(const Compilation &C,
   auto HIPTCs = C.getOffloadToolChains(Action::OFK_HIP);
   for (auto It = HIPTCs.first; It != HIPTCs.second; ++It) {
     const ToolChain *TC = It->second;
-    if (!TC)
-      continue;
     const llvm::Triple &Tr = TC->getTriple();
     if (!Tr.isAMDGPU())
       return false;

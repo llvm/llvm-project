@@ -11,6 +11,7 @@ add_header_library(
     libc.src.__support.OSUtil.linux.vdso
     libc.src.__support.OSUtil.osutil
     libc.src.__support.error_or
+    libc.src.__support.threads.raw_rwlock
 )
 
 add_entrypoint_object(

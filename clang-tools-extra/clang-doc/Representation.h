@@ -21,6 +21,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/ilist_node.h"
+#include "llvm/ADT/simple_ilist.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Mutex.h"
 #include "llvm/Support/StringSaver.h"
@@ -105,6 +106,11 @@ template <typename T> using OwningPtrArray = std::vector<OwnedPtr<T>>;
 template <typename T, typename... Args>
 OwnedPtr<T> allocatePtr(Args &&...args) {
   return std::make_unique<T>(std::forward<Args>(args)...);
+}
+
+template <typename T, typename... Args>
+T *allocatePtr(llvm::BumpPtrAllocator &Alloc, Args &&...args) {
+  return new (Alloc.Allocate<T>()) T(std::forward<Args>(args)...);
 }
 
 // A helper function to access the underlying pointer from an owned pointer,
@@ -197,7 +203,7 @@ struct CommentInfo : public llvm::ilist_node<CommentInfo> {
                             // (for (T)ParamCommand).
 };
 
-struct Reference {
+struct Reference : public llvm::ilist_node<Reference> {
   // This variant (that takes no qualified name parameter) uses the Name as the
   // QualName (very useful in unit tests to reduce verbosity). This can't use an
   // empty string to indicate the default because we need to accept the empty
@@ -273,7 +279,7 @@ struct ScopeChildren {
   //
   // Namespaces are not syntactically valid as children of records, but making
   // this general for all possible container types reduces code complexity.
-  OwningVec<Reference> Namespaces;
+  llvm::simple_ilist<Reference> Namespaces;
   OwningVec<Reference> Records;
   OwningVec<FunctionInfo> Functions;
   OwningVec<EnumInfo> Enums;
@@ -522,7 +528,7 @@ struct FriendInfo : public SymbolInfo, public llvm::ilist_node<FriendInfo> {
   Reference Ref;
   std::optional<TemplateInfo> Template;
   std::optional<TypeInfo> ReturnType;
-  std::optional<SmallVector<FieldTypeInfo, 4>> Params;
+  llvm::ArrayRef<FieldTypeInfo> Params;
   bool IsClass = false;
 };
 
@@ -750,6 +756,32 @@ struct ClangDocContext {
   bool PublicOnly; // Indicates if only public declarations are documented.
   bool FTimeTrace; // Indicates if ftime trace is turned on
 };
+
+// Ensure arena allocated types remain safe to allocate in the arena.
+// Only trivially destructible types are safe, so enforce that at compile-time.
+static_assert(std::is_trivially_destructible_v<ConstraintInfo>);
+static_assert(std::is_trivially_destructible_v<FieldTypeInfo>);
+static_assert(std::is_trivially_destructible_v<Location>);
+static_assert(std::is_trivially_destructible_v<Reference>);
+static_assert(std::is_trivially_destructible_v<TemplateParamInfo>);
+static_assert(std::is_trivially_destructible_v<TypeInfo>);
+
+// FIXME: These types need to be trivially destructible for arena allocation.
+static_assert(!std::is_trivially_destructible_v<CommentInfo>);
+static_assert(!std::is_trivially_destructible_v<ConceptInfo>);
+static_assert(!std::is_trivially_destructible_v<EnumInfo>);
+static_assert(!std::is_trivially_destructible_v<FriendInfo>);
+static_assert(!std::is_trivially_destructible_v<FunctionInfo>);
+static_assert(!std::is_trivially_destructible_v<Info>);
+static_assert(!std::is_trivially_destructible_v<MemberTypeInfo>);
+static_assert(!std::is_trivially_destructible_v<NamespaceInfo>);
+static_assert(!std::is_trivially_destructible_v<RecordInfo>);
+static_assert(!std::is_trivially_destructible_v<ScopeChildren>);
+static_assert(!std::is_trivially_destructible_v<SymbolInfo>);
+static_assert(!std::is_trivially_destructible_v<TemplateInfo>);
+static_assert(!std::is_trivially_destructible_v<TemplateSpecializationInfo>);
+static_assert(!std::is_trivially_destructible_v<TypedefInfo>);
+static_assert(!std::is_trivially_destructible_v<VarInfo>);
 
 } // namespace doc
 } // namespace clang
