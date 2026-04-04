@@ -143,7 +143,6 @@ AST_MATCHER(CallExpr, hasBitCastReplacementContext) {
 
         if (!DiscardedComma) {
           Builder->setBinding("replacementRoot", DynTypedNode::create(*Cast));
-          Builder->setBinding("discardedVoidCast", DynTypedNode::create(*Cast));
           return true;
         }
 
@@ -244,13 +243,10 @@ void UseBitCastCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *ReplacementRoot = Result.Nodes.getNodeAs<Expr>("replacementRoot");
   const auto *DiscardedComma =
       Result.Nodes.getNodeAs<BinaryOperator>("discardedComma");
-  const auto *DiscardedVoidCast =
-      Result.Nodes.getNodeAs<CastExpr>("discardedVoidCast");
   assert(MemcpyCall);
   assert(DstExpr);
   assert(SrcExpr);
   assert(ReplacementRoot);
-  assert(!DiscardedVoidCast || ReplacementRoot == DiscardedVoidCast);
 
   const SourceManager &SM = *Result.SourceManager;
   const LangOptions &LangOpts = getLangOpts();
