@@ -820,6 +820,7 @@ private:
         State = IES_ERROR;
         break;
       case IES_PLUS:
+      case IES_MINUS:
       case IES_LPAREN:
       case IES_LBRAC:
         State = IES_REGISTER;
@@ -829,12 +830,12 @@ private:
       case IES_MULTIPLY:
         // Index Register - Scale * Register
         if (PrevState == IES_INTEGER) {
-          if (IndexReg)
-            return regsUseUpError(ErrMsg);
           if (NegativeAdditiveTerm) {
             ErrMsg = "scale factor in address cannot be negative";
             return true;
           }
+          if (IndexReg)
+            return regsUseUpError(ErrMsg);
           State = IES_REGISTER;
           IndexReg = Reg;
           // Get the scale and replace the 'Scale * Register' with '0'.
@@ -915,12 +916,12 @@ private:
         State = IES_INTEGER;
         if (PrevState == IES_REGISTER && CurrState == IES_MULTIPLY) {
           // Index Register - Register * Scale
-          if (IndexReg)
-            return regsUseUpError(ErrMsg);
           if (NegativeAdditiveTerm) {
             ErrMsg = "scale factor in address cannot be negative";
             return true;
           }
+          if (IndexReg)
+            return regsUseUpError(ErrMsg);
           IndexReg = TmpReg;
           Scale = TmpInt;
           if (checkScale(Scale, ErrMsg))
@@ -1025,6 +1026,10 @@ private:
           } else {
             if (IndexReg)
               return regsUseUpError(ErrMsg);
+            if (NegativeAdditiveTerm) {
+              ErrMsg = "scale factor in address cannot be negative";
+              return true;
+            }
             IndexReg = TmpReg;
             Scale = 0;
           }
@@ -1090,6 +1095,10 @@ private:
           } else {
             if (IndexReg)
               return regsUseUpError(ErrMsg);
+            if (NegativeAdditiveTerm) {
+              ErrMsg = "scale factor in address cannot be negative";
+              return true;
+            }
             IndexReg = TmpReg;
             Scale = 0;
           }
