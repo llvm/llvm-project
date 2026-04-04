@@ -403,8 +403,6 @@ mlir::LogicalResult CIRGenFunction::emitStmt(const Stmt *s,
     return emitOMPGenericLoopDirective(cast<OMPGenericLoopDirective>(*s));
   case Stmt::OMPReverseDirectiveClass:
     return emitOMPReverseDirective(cast<OMPReverseDirective>(*s));
-  case Stmt::OMPSplitDirectiveClass:
-    return emitOMPSplitDirective(cast<OMPSplitDirective>(*s));
   case Stmt::OMPInterchangeDirectiveClass:
     return emitOMPInterchangeDirective(cast<OMPInterchangeDirective>(*s));
   case Stmt::OMPAssumeDirectiveClass:
