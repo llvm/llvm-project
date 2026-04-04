@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "UseBitCastCheck.h"
-#include "../utils/Matchers.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
@@ -16,6 +15,7 @@
 #include "clang/Lex/Lexer.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Twine.h"
+#include <cassert>
 
 using namespace clang::ast_matchers;
 
@@ -230,12 +230,11 @@ void UseBitCastCheck::registerPPCallbacks(const SourceManager &SM,
 }
 
 void UseBitCastCheck::registerMatchers(MatchFinder *Finder) {
-  Finder->addMatcher(
-      callExpr(callee(functionDecl(hasName("::memcpy"))),
-               hasBitCastReplacementContext(), isBitCastMemcpyCandidate(),
-               unless(hasAncestor(expr(matchers::hasUnevaluatedContext()))))
-          .bind("memcpy"),
-      this);
+  Finder->addMatcher(callExpr(callee(functionDecl(hasName("::memcpy"))),
+                              hasBitCastReplacementContext(),
+                              isBitCastMemcpyCandidate())
+                         .bind("memcpy"),
+                     this);
 }
 
 void UseBitCastCheck::check(const MatchFinder::MatchResult &Result) {
@@ -260,7 +259,7 @@ void UseBitCastCheck::check(const MatchFinder::MatchResult &Result) {
   if (DstText.empty() || SrcText.empty())
     return;
 
-  const PrintingPolicy Policy(LangOpts);
+  const PrintingPolicy &Policy = Result.Context->getPrintingPolicy();
   const QualType DstType =
       DstExpr->getType().getNonReferenceType().getUnqualifiedType();
   const std::string DstTypeName = DstType.getAsString(Policy);
