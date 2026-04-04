@@ -36,10 +36,10 @@ void initializeLFIMCStreamer(MCStreamer &Streamer, MCContext &Ctx,
                              const Triple &TheTriple) {
   assert(TheTriple.isLFI());
 
-  std::string Error; // empty
+  std::string Error;
   const Target *TheTarget = TargetRegistry::lookupTarget(TheTriple, Error);
 
-  // Create the Target specific MCLFIRewriter.
+  // Create the target-specific MCLFIRewriter.
   assert(TheTarget != nullptr);
   if (FlagEnableRewriting) {
     auto MRI =
