@@ -1871,7 +1871,7 @@ const SCEV *ScalarEvolution::getZeroExtendExprImpl(const SCEV *Op, Type *Ty,
           const SCEV *SResidual =
               getAddRecExpr(getConstant(C - D), Step, L, AR->getNoWrapFlags());
           const SCEV *SZExtR = getZeroExtendExpr(SResidual, Ty, Depth + 1);
-          return getAddExpr(SZExtD, SZExtR, (SCEV::FlagNSW | SCEV::FlagNUW),
+          return getAddExpr(SZExtD, SZExtR, SCEV::FlagNSW | SCEV::FlagNUW,
                             Depth + 1);
         }
       }

@@ -115,10 +115,13 @@ enum class SCEVNoWrapFlags {
 class SCEV;
 
 template <typename SCEVPtrT = const SCEV *>
-struct SCEVUseT : PointerIntPair<SCEVPtrT, 2> {
+struct SCEVUseT : private PointerIntPair<SCEVPtrT, 2> {
   using Base = PointerIntPair<SCEVPtrT, 2>;
+  using Base::getOpaqueValue;
+  using Base::getPointer;
+  using Base::setFromOpaqueValue;
 
-  SCEVUseT() : Base() { Base::setFromOpaqueValue(nullptr); }
+  SCEVUseT() : Base() { setFromOpaqueValue(nullptr); }
   SCEVUseT(SCEVPtrT S) : Base(S, 0) {}
   /// Construct with NoWrapFlags; only NUW/NSW are encoded, NW is dropped.
   SCEVUseT(SCEVPtrT S, SCEVNoWrapFlags Flags)
@@ -128,14 +131,12 @@ struct SCEVUseT : PointerIntPair<SCEVPtrT, 2> {
   SCEVUseT(const SCEVUseT<OtherPtrT> &Other)
       : SCEVUseT(Other.getPointer(), Other.getUseNoWrapFlags()) {}
 
-  operator SCEVPtrT() const { return Base::getPointer(); }
-  SCEVPtrT operator->() const { return Base::getPointer(); }
-
-  void *getRawPointer() const { return Base::getOpaqueValue(); }
+  operator SCEVPtrT() const { return getPointer(); }
+  SCEVPtrT operator->() const { return getPointer(); }
 
   /// Returns true of the SCEVUse is canonical, i.e. no SCEVUse flags set in any
   /// operands.
-  bool isCanonical() const { return getCanonical() == getRawPointer(); }
+  bool isCanonical() const { return getCanonical() == getOpaqueValue(); }
 
   /// Return the canonical SCEV for this SCEVUse.
   const SCEV *getCanonical() const;
@@ -156,10 +157,15 @@ struct SCEVUseT : PointerIntPair<SCEVPtrT, 2> {
   }
 
   bool operator==(const SCEVUseT &RHS) const {
-    return getRawPointer() == RHS.getRawPointer();
+    return getOpaqueValue() == RHS.getOpaqueValue();
   }
 
-  bool operator==(const SCEV *RHS) const { return getRawPointer() == RHS; }
+  bool operator!=(const SCEVUseT &RHS) const { return !(*this == RHS); }
+
+  bool operator>(const SCEVUseT &RHS) const { return Base::operator>(RHS); }
+
+  bool operator==(const SCEV *RHS) const { return getOpaqueValue() == RHS; }
+  bool operator!=(const SCEV *RHS) const { return getOpaqueValue() != RHS; }
 
   /// Print out the internal representation of this scalar to the specified
   /// stream.  This should really only be used for debugging purposes.
@@ -167,11 +173,6 @@ struct SCEVUseT : PointerIntPair<SCEVPtrT, 2> {
 
   /// This method is used for debugging.
   void dump() const;
-
-private:
-  using Base::getInt;
-  using Base::setInt;
-  using Base::setPointer;
 };
 
 /// Deduction guide for various SCEV subclass pointers.
@@ -205,11 +206,11 @@ template <> struct DenseMapInfo<SCEVUse> {
   }
 
   static unsigned getHashValue(SCEVUse U) {
-    return hash_value(U.getRawPointer());
+    return hash_value(U.getOpaqueValue());
   }
 
   static bool isEqual(const SCEVUse LHS, const SCEVUse RHS) {
-    return LHS.getRawPointer() == RHS.getRawPointer();
+    return LHS.getOpaqueValue() == RHS.getOpaqueValue();
   }
 };
 
@@ -2720,12 +2721,12 @@ template <> struct DenseMapInfo<ScalarEvolution::FoldID> {
 };
 
 template <> inline const SCEV *SCEVUseT<const SCEV *>::getCanonical() const {
-  return Base::getPointer()->getCanonical();
+  return getPointer()->getCanonical();
 }
 
 template <typename SCEVPtrT>
 void SCEVUseT<SCEVPtrT>::print(raw_ostream &OS) const {
-  Base::getPointer()->print(OS);
+  getPointer()->print(OS);
   SCEV::NoWrapFlags Flags = getUseNoWrapFlags();
   if (any(Flags & SCEV::FlagNUW))
     OS << "(u nuw)";
