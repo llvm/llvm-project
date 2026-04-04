@@ -200,6 +200,11 @@ New check aliases
   :doc:`performance-prefer-single-char-overloads
   <clang-tidy/checks/performance/prefer-single-char-overloads>`.
   The `performance-faster-string-find` name is kept as an alias.
+  
+- Renamed :doc:`hicpp-signed-bitwise <clang-tidy/checks/hicpp/signed-bitwise>`
+  to :doc:`bugprone-signed-bitwise
+  <clang-tidy/checks/bugprone/signed-bitwise>`. The `hicpp-signed-bitwise`
+  name is kept as an alias.
 
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^

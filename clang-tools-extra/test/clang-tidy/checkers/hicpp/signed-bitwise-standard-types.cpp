@@ -1,4 +1,4 @@
-// RUN: clang-tidy %s -checks='-*,hicpp-signed-bitwise' -- -std=c++11
+// RUN: clang-tidy %s -checks='-*,bugprone-signed-bitwise' -- -std=c++11
 // FIXME: Make the test work in all language modes.
 
 #include "signed-bitwise-standard-types.h"

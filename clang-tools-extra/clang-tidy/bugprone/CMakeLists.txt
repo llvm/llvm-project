@@ -74,6 +74,7 @@ add_clang_library(clangTidyBugproneModule STATIC
   ReturnConstRefFromParameterCheck.cpp
   SharedPtrArrayMismatchCheck.cpp
   SignalHandlerCheck.cpp
+  SignedBitwiseCheck.cpp
   SignedCharMisuseCheck.cpp
   SizeofContainerCheck.cpp
   SizeofExpressionCheck.cpp

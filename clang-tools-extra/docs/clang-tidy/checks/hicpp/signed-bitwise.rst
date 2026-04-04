@@ -1,12 +1,13 @@
 .. title:: clang-tidy - hicpp-signed-bitwise
+.. meta::
+   :http-equiv=refresh: 5;URL=../bugprone/signed-bitwise.html
 
 hicpp-signed-bitwise
 ====================
 
-Finds uses of bitwise operations on signed integer types, which may lead to
-undefined or implementation defined behavior.
-
-The according rule is defined in the `High Integrity C++ Standard, Section 5.6.1 <https://www.perforce.com/resources/qac/high-integrity-cpp-coding-rules>`_.
+The `hicpp-signed-bitwise` check is an alias, please see
+`bugprone-signed-bitwise <../bugprone/signed-bitwise.html>`_ for more
+information.
 
 Options
 -------
