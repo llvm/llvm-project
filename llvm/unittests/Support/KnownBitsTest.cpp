@@ -583,7 +583,7 @@ TEST(KnownBitsTest, BinaryExhaustive) {
             KnownBits::shl(Known1, ShiftAmt, /*NUW=*/false, /*NSW=*/true);
 
         EXPECT_EQ(Generic, Const)
-            << "shl const mismatch for\n"
+            << "shl nsw const mismatch for\n"
             << "Known1 = " << Known1 << "\n"
             << "Known2 = " << Known2 << " (" << ShiftAmt << ")\n\n";
 
@@ -611,7 +611,36 @@ TEST(KnownBitsTest, BinaryExhaustive) {
         return Res;
       },
       /*CheckOptimality=*/true, /*RefinePoisonToZero=*/true);
+  testBinaryOpExhaustive(
+      "shl nuw const",
+      [](const KnownBits &Known1, const KnownBits &Known2) {
+        KnownBits Generic =
+            KnownBits::shl(Known1, Known2, /*NUW=*/true, /*NSW=*/true);
 
+        if (!Known2.isConstant() || Known1.hasConflict() ||
+            Known2.hasConflict())
+          return Generic;
+
+        unsigned ShiftAmt = Known2.getConstant().getLimitedValue();
+        KnownBits Const =
+            KnownBits::shl(Known1, ShiftAmt, /*NUW=*/true, /*NSW=*/true);
+
+        EXPECT_EQ(Generic, Const)
+            << "shl nuw const mismatch for\n"
+            << "Known1 = " << Known1 << "\n"
+            << "Known2 = " << Known2 << " (" << ShiftAmt << ")\n\n";
+
+        return Const;
+      },
+      [](const APInt &N1, const APInt &N2) -> std::optional<APInt> {
+        bool OverflowUnsigned, OverflowSigned;
+        APInt Res = N1.ushl_ov(N2, OverflowUnsigned);
+        (void)N1.sshl_ov(N2, OverflowSigned);
+        if (OverflowUnsigned || OverflowSigned)
+          return std::nullopt;
+        return Res;
+      },
+      /*CheckOptimality=*/true, /*RefinePoisonToZero=*/true);
   testBinaryOpExhaustive(
       "lshr",
       [](const KnownBits &Known1, const KnownBits &Known2) {
