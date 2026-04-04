@@ -2975,7 +2975,7 @@ TEST(GSYMTest, TestGsymSegmentingNoBaseV2) {
   TestGsymSegmentingNoBase<GsymCreatorV2>(256);
 }
 
-TEST(GSYMTest, TestDWARFInlineRangeScopes) {
+template <typename CreatorT> static void TestDWARFInlineRangeScopes() {
   // Test cases where inlined functions address ranges are not contained in the
   // parent ranges and that we can successfully remove them and emit error
   // messages. The DWARF for this looks like the dump below. The inlined
@@ -3207,7 +3207,7 @@ TEST(GSYMTest, TestDWARFInlineRangeScopes) {
   std::string errors;
   raw_string_ostream OS(errors);
   OutputAggregator OSAgg(&OS);
-  GsymCreatorV1 GC;
+  CreatorT GC;
   DwarfTransformer DT(*DwarfContext, GC);
   const uint32_t ThreadCount = 1;
   ASSERT_THAT_ERROR(DT.convert(ThreadCount, OSAgg), Succeeded());
@@ -3216,17 +3216,19 @@ TEST(GSYMTest, TestDWARFInlineRangeScopes) {
   raw_svector_ostream OutStrm(Str);
   const auto ByteOrder = llvm::endianness::native;
   FileWriter FW(OutStrm, ByteOrder);
+  FW.setStringOffsetSize(GC.getStringOffsetSize());
   ASSERT_THAT_ERROR(GC.encode(FW), Succeeded());
-  Expected<GsymReaderV1> GR = GsymReaderV1::copyBuffer(OutStrm.str());
+  auto GR = GsymReader::copyBuffer(OutStrm.str());
   ASSERT_THAT_EXPECTED(GR, Succeeded());
+  const GsymReader &Reader = **GR;
   // There should only be one function in our GSYM.
-  EXPECT_EQ(GR->getNumAddresses(), 1u);
-  auto ExpFI = GR->getFunctionInfo(0x1000);
+  EXPECT_EQ(Reader.getNumAddresses(), 1u);
+  auto ExpFI = Reader.getFunctionInfo(0x1000);
   ASSERT_THAT_EXPECTED(ExpFI, Succeeded());
   ASSERT_EQ(ExpFI->Range, AddressRange(0x1000, 0x2000));
   EXPECT_TRUE(ExpFI->OptLineTable.has_value());
   EXPECT_TRUE(ExpFI->Inline.has_value());
-  StringRef FuncName = GR->getString(ExpFI->Name);
+  StringRef FuncName = Reader.getString(ExpFI->Name);
   EXPECT_EQ(FuncName, "foo");
   std::vector<std::string> ExpectedLogErrors = {
     "error: inlined function DIE at 0x0000002a has a range [0x0000000000000fff "
@@ -3245,7 +3247,7 @@ TEST(GSYMTest, TestDWARFInlineRangeScopes) {
   // we have only 1 inline function inside of this, even though the DWARF
   // contains two. One of the inline functions in "foo" is invalid, so we must
   // only end up with 1.
-  StringRef InlineFuncName = GR->getString(ExpFI->Inline->Name);
+  StringRef InlineFuncName = Reader.getString(ExpFI->Inline->Name);
   EXPECT_EQ(InlineFuncName, "foo");
   EXPECT_EQ(ExpFI->Inline->CallFile, 0u);
   EXPECT_EQ(ExpFI->Inline->CallLine, 0u);
@@ -3256,7 +3258,7 @@ TEST(GSYMTest, TestDWARFInlineRangeScopes) {
   // DWARF, but one has an address range which isn't contained in any ranges
   // from "foo", so only 1 inline function be parsed.
   InlineInfo &Inline1 = ExpFI->Inline->Children[0];
-  StringRef Inline1Name = GR->getString(Inline1.Name);
+  StringRef Inline1Name = Reader.getString(Inline1.Name);
   EXPECT_EQ(Inline1Name, "valid1");
   EXPECT_EQ(Inline1.CallFile, 1u);
   EXPECT_EQ(Inline1.CallLine, 11u);
@@ -3267,14 +3269,21 @@ TEST(GSYMTest, TestDWARFInlineRangeScopes) {
   // DWARF, but one has an address range which isn't contained in any ranges
   // from "valid1", so only 1 inline function be parsed.
   InlineInfo &Inline2 = Inline1.Children[0];
-  StringRef Inline2Name = GR->getString(Inline2.Name);
+  StringRef Inline2Name = Reader.getString(Inline2.Name);
   EXPECT_EQ(Inline2Name, "valid2");
   EXPECT_EQ(Inline2.CallFile, 1u);
   EXPECT_EQ(Inline2.CallLine, 13u);
   EXPECT_EQ(Inline2.Children.size(), 0u);
 }
 
-TEST(GSYMTest, TestDWARFEmptyInline) {
+TEST(GSYMTest, TestDWARFInlineRangeScopes) {
+  TestDWARFInlineRangeScopes<GsymCreatorV1>();
+}
+TEST(GSYMTest, TestDWARFInlineRangeScopesV2) {
+  TestDWARFInlineRangeScopes<GsymCreatorV2>();
+}
+
+template <typename CreatorT> static void TestDWARFEmptyInline() {
   // Test cases where we have inline function information in the DWARF that
   // results in us trying to parse the inline info, but since the inline
   // info ends up not adding any valid inline functions due to ranges
@@ -3435,7 +3444,7 @@ TEST(GSYMTest, TestDWARFEmptyInline) {
   std::string errors;
   raw_string_ostream OS(errors);
   OutputAggregator OSAgg(&OS);
-  GsymCreatorV1 GC;
+  CreatorT GC;
   DwarfTransformer DT(*DwarfContext, GC);
   const uint32_t ThreadCount = 1;
   ASSERT_THAT_ERROR(DT.convert(ThreadCount, OSAgg), Succeeded());
@@ -3444,17 +3453,19 @@ TEST(GSYMTest, TestDWARFEmptyInline) {
   raw_svector_ostream OutStrm(Str);
   const auto ByteOrder = llvm::endianness::native;
   FileWriter FW(OutStrm, ByteOrder);
+  FW.setStringOffsetSize(GC.getStringOffsetSize());
   ASSERT_THAT_ERROR(GC.encode(FW), Succeeded());
-  Expected<GsymReaderV1> GR = GsymReaderV1::copyBuffer(OutStrm.str());
+  auto GR = GsymReader::copyBuffer(OutStrm.str());
   ASSERT_THAT_EXPECTED(GR, Succeeded());
+  const GsymReader &Reader = **GR;
   // There should only be one function in our GSYM.
-  EXPECT_EQ(GR->getNumAddresses(), 1u);
-  auto ExpFI = GR->getFunctionInfo(0x1000);
+  EXPECT_EQ(Reader.getNumAddresses(), 1u);
+  auto ExpFI = Reader.getFunctionInfo(0x1000);
   ASSERT_THAT_EXPECTED(ExpFI, Succeeded());
   ASSERT_EQ(ExpFI->Range, AddressRange(0x1000, 0x1050));
   EXPECT_TRUE(ExpFI->OptLineTable.has_value());
   EXPECT_FALSE(ExpFI->Inline.has_value());
-  StringRef FuncName = GR->getString(ExpFI->Name);
+  StringRef FuncName = Reader.getString(ExpFI->Name);
   EXPECT_EQ(FuncName, "foo");
   std::vector<std::string> ExpectedLogErrors = {
     "error: inlined function DIE at 0x0000002a has a range [0x0000000000001100"
@@ -3470,7 +3481,12 @@ TEST(GSYMTest, TestDWARFEmptyInline) {
   }
 }
 
-TEST(GSYMTest, TestFinalizeForLineTables) {
+TEST(GSYMTest, TestDWARFEmptyInline) { TestDWARFEmptyInline<GsymCreatorV1>(); }
+TEST(GSYMTest, TestDWARFEmptyInlineV2) {
+  TestDWARFEmptyInline<GsymCreatorV2>();
+}
+
+template <typename CreatorT> static void TestFinalizeForLineTables() {
   // This example has two compile units:
   // - one contains a function "foo" with line table entries and "bar" without
   // - one contains a function "bar" with line table entries and "foo" without
@@ -3672,7 +3688,7 @@ TEST(GSYMTest, TestFinalizeForLineTables) {
   std::string errors;
   raw_string_ostream OS(errors);
   OutputAggregator OSAgg(&OS);
-  GsymCreatorV1 GC;
+  CreatorT GC;
   DwarfTransformer DT(*DwarfContext, GC);
   const uint32_t ThreadCount = 1;
   ASSERT_THAT_ERROR(DT.convert(ThreadCount, OSAgg), Succeeded());
@@ -3681,32 +3697,40 @@ TEST(GSYMTest, TestFinalizeForLineTables) {
   raw_svector_ostream OutStrm(Str);
   const auto ByteOrder = llvm::endianness::native;
   FileWriter FW(OutStrm, ByteOrder);
+  FW.setStringOffsetSize(GC.getStringOffsetSize());
   ASSERT_THAT_ERROR(GC.encode(FW), Succeeded());
-  Expected<GsymReaderV1> GR = GsymReaderV1::copyBuffer(OutStrm.str());
+  auto GR = GsymReader::copyBuffer(OutStrm.str());
   ASSERT_THAT_EXPECTED(GR, Succeeded());
+  const GsymReader &Reader = **GR;
   // There should only be two functions in our GSYM.
-  EXPECT_EQ(GR->getNumAddresses(), 2u);
+  EXPECT_EQ(Reader.getNumAddresses(), 2u);
   // Verify "foo" is present and has a line table
-  auto ExpFI = GR->getFunctionInfo(0x1000);
+  auto ExpFI = Reader.getFunctionInfo(0x1000);
   ASSERT_THAT_EXPECTED(ExpFI, Succeeded());
   ASSERT_EQ(ExpFI->Range, AddressRange(0x1000, 0x1050));
   EXPECT_TRUE(ExpFI->OptLineTable.has_value());
   EXPECT_FALSE(ExpFI->Inline.has_value());
-  StringRef FuncName = GR->getString(ExpFI->Name);
+  StringRef FuncName = Reader.getString(ExpFI->Name);
   EXPECT_EQ(FuncName, "foo");
 
   // Verify "foo" is present and has a line table
-  auto ExpFI2 = GR->getFunctionInfo(0x2000);
+  auto ExpFI2 = Reader.getFunctionInfo(0x2000);
   ASSERT_THAT_EXPECTED(ExpFI2, Succeeded());
   ASSERT_EQ(ExpFI2->Range, AddressRange(0x2000, 0x2050));
   EXPECT_TRUE(ExpFI2->OptLineTable.has_value());
   EXPECT_FALSE(ExpFI2->Inline.has_value());
-  StringRef FuncName2 = GR->getString(ExpFI2->Name);
+  StringRef FuncName2 = Reader.getString(ExpFI2->Name);
   EXPECT_EQ(FuncName2, "bar");
 }
 
+TEST(GSYMTest, TestFinalizeForLineTables) {
+  TestFinalizeForLineTables<GsymCreatorV1>();
+}
+TEST(GSYMTest, TestFinalizeForLineTablesV2) {
+  TestFinalizeForLineTables<GsymCreatorV2>();
+}
 
-TEST(GSYMTest, TestRangeWarnings) {
+template <typename CreatorT> static void TestRangeWarnings() {
   // This example has a single compile unit that has a DW_TAG_subprogram that
   // has two discontiguous ranges. We will create two FunctionInfo objects for
   // each range in the function that only contains info for each range. We also
@@ -3952,7 +3976,7 @@ TEST(GSYMTest, TestRangeWarnings) {
   std::string errors;
   raw_string_ostream OS(errors);
   OutputAggregator OSAgg(&OS);
-  GsymCreatorV1 GC;
+  CreatorT GC;
   DwarfTransformer DT(*DwarfContext, GC);
   const uint32_t ThreadCount = 1;
   ASSERT_THAT_ERROR(DT.convert(ThreadCount, OSAgg), Succeeded());
@@ -3961,34 +3985,39 @@ TEST(GSYMTest, TestRangeWarnings) {
   raw_svector_ostream OutStrm(Str);
   const auto ByteOrder = llvm::endianness::native;
   FileWriter FW(OutStrm, ByteOrder);
+  FW.setStringOffsetSize(GC.getStringOffsetSize());
   ASSERT_THAT_ERROR(GC.encode(FW), Succeeded());
-  Expected<GsymReaderV1> GR = GsymReaderV1::copyBuffer(OutStrm.str());
+  auto GR = GsymReader::copyBuffer(OutStrm.str());
   ASSERT_THAT_EXPECTED(GR, Succeeded());
+  const GsymReader &Reader = **GR;
   // There should be two functions in our GSYM.
-  EXPECT_EQ(GR->getNumAddresses(), 2u);
+  EXPECT_EQ(Reader.getNumAddresses(), 2u);
   // Verify "foo" is present and has a line table
-  auto ExpFI = GR->getFunctionInfo(0x1000);
+  auto ExpFI = Reader.getFunctionInfo(0x1000);
   ASSERT_THAT_EXPECTED(ExpFI, Succeeded());
   ASSERT_EQ(ExpFI->Range, AddressRange(0x1000, 0x1050));
   EXPECT_TRUE(ExpFI->OptLineTable.has_value());
   EXPECT_TRUE(ExpFI->Inline.has_value());
-  StringRef FuncName = GR->getString(ExpFI->Name);
+  StringRef FuncName = Reader.getString(ExpFI->Name);
   EXPECT_EQ(FuncName, "foo");
 
   // Verify "foo" is present and has a line table
-  auto ExpFI2 = GR->getFunctionInfo(0x2000);
+  auto ExpFI2 = Reader.getFunctionInfo(0x2000);
   ASSERT_THAT_EXPECTED(ExpFI2, Succeeded());
   ASSERT_EQ(ExpFI2->Range, AddressRange(0x2000, 0x2050));
   EXPECT_TRUE(ExpFI2->OptLineTable.has_value());
   EXPECT_TRUE(ExpFI2->Inline.has_value());
-  StringRef FuncName2 = GR->getString(ExpFI2->Name);
+  StringRef FuncName2 = Reader.getString(ExpFI2->Name);
   EXPECT_EQ(FuncName2, "foo");
 
   // Make sure we don't see spurious errors in the output:
   EXPECT_TRUE(errors.find("error:") == std::string::npos);
 }
 
-TEST(GSYMTest, TestEmptyRangeWarnings) {
+TEST(GSYMTest, TestRangeWarnings) { TestRangeWarnings<GsymCreatorV1>(); }
+TEST(GSYMTest, TestRangeWarningsV2) { TestRangeWarnings<GsymCreatorV2>(); }
+
+template <typename CreatorT> static void TestEmptyRangeWarnings() {
   // This example has a single compile unit that has a DW_TAG_subprogram that
   // has a function that contains an inlined function that has an empty range.
   // We want to make sure that if we run into only empty inline functions
@@ -4154,7 +4183,7 @@ TEST(GSYMTest, TestEmptyRangeWarnings) {
   std::string errors;
   raw_string_ostream OS(errors);
   OutputAggregator OSAgg(&OS);
-  GsymCreatorV1 GC;
+  CreatorT GC;
   DwarfTransformer DT(*DwarfContext, GC);
   const uint32_t ThreadCount = 1;
   ASSERT_THAT_ERROR(DT.convert(ThreadCount, OSAgg), Succeeded());
@@ -4163,26 +4192,34 @@ TEST(GSYMTest, TestEmptyRangeWarnings) {
   raw_svector_ostream OutStrm(Str);
   const auto ByteOrder = llvm::endianness::native;
   FileWriter FW(OutStrm, ByteOrder);
+  FW.setStringOffsetSize(GC.getStringOffsetSize());
   ASSERT_THAT_ERROR(GC.encode(FW), Succeeded());
-  Expected<GsymReaderV1> GR = GsymReaderV1::copyBuffer(OutStrm.str());
+  auto GR = GsymReader::copyBuffer(OutStrm.str());
   ASSERT_THAT_EXPECTED(GR, Succeeded());
+  const GsymReader &Reader = **GR;
   // There should be one function in our GSYM.
-  EXPECT_EQ(GR->getNumAddresses(), 1u);
+  EXPECT_EQ(Reader.getNumAddresses(), 1u);
   // Verify "foo" is present and has a line table and no inline info.
-  auto ExpFI = GR->getFunctionInfo(0x1000);
+  auto ExpFI = Reader.getFunctionInfo(0x1000);
   ASSERT_THAT_EXPECTED(ExpFI, Succeeded());
   ASSERT_EQ(ExpFI->Range, AddressRange(0x1000, 0x1050));
   EXPECT_TRUE(ExpFI->OptLineTable.has_value());
   EXPECT_FALSE(ExpFI->Inline.has_value());
-  StringRef FuncName = GR->getString(ExpFI->Name);
+  StringRef FuncName = Reader.getString(ExpFI->Name);
   EXPECT_EQ(FuncName, "foo");
 
   // Make sure we don't see spurious errors in the output:
   EXPECT_TRUE(errors.find("error:") == std::string::npos);
 }
 
+TEST(GSYMTest, TestEmptyRangeWarnings) {
+  TestEmptyRangeWarnings<GsymCreatorV1>();
+}
+TEST(GSYMTest, TestEmptyRangeWarningsV2) {
+  TestEmptyRangeWarnings<GsymCreatorV2>();
+}
 
-TEST(GSYMTest, TestEmptyLinkageName) {
+template <typename CreatorT> static void TestEmptyLinkageName() {
   // This example has a single compile unit that has a DW_TAG_subprogram that
   // has a function that has an empty linkage name and a valid normal name.
   // Previously this would cause an encoding error:
@@ -4306,7 +4343,7 @@ TEST(GSYMTest, TestEmptyLinkageName) {
   std::string errors;
   raw_string_ostream OS(errors);
   OutputAggregator OSAgg(&OS);
-  GsymCreatorV1 GC;
+  CreatorT GC;
   DwarfTransformer DT(*DwarfContext, GC);
   const uint32_t ThreadCount = 1;
   ASSERT_THAT_ERROR(DT.convert(ThreadCount, OSAgg), Succeeded());
@@ -4315,25 +4352,32 @@ TEST(GSYMTest, TestEmptyLinkageName) {
   raw_svector_ostream OutStrm(Str);
   const auto ByteOrder = llvm::endianness::native;
   FileWriter FW(OutStrm, ByteOrder);
+  FW.setStringOffsetSize(GC.getStringOffsetSize());
   ASSERT_THAT_ERROR(GC.encode(FW), Succeeded());
-  Expected<GsymReaderV1> GR = GsymReaderV1::copyBuffer(OutStrm.str());
+  auto GR = GsymReader::copyBuffer(OutStrm.str());
   ASSERT_THAT_EXPECTED(GR, Succeeded());
+  const GsymReader &Reader = **GR;
   // There should be one function in our GSYM.
-  EXPECT_EQ(GR->getNumAddresses(), 1u);
+  EXPECT_EQ(Reader.getNumAddresses(), 1u);
   // Verify "foo" is present and has a line table and no inline info.
-  auto ExpFI = GR->getFunctionInfo(0x1000);
+  auto ExpFI = Reader.getFunctionInfo(0x1000);
   ASSERT_THAT_EXPECTED(ExpFI, Succeeded());
   ASSERT_EQ(ExpFI->Range, AddressRange(0x1000, 0x1050));
   EXPECT_TRUE(ExpFI->OptLineTable.has_value());
   EXPECT_FALSE(ExpFI->Inline.has_value());
-  StringRef FuncName = GR->getString(ExpFI->Name);
+  StringRef FuncName = Reader.getString(ExpFI->Name);
   EXPECT_EQ(FuncName, "foo");
 
   // Make sure we don't see spurious errors in the output:
   EXPECT_TRUE(errors.find("error:") == std::string::npos);
 }
 
-TEST(GSYMTest, TestLineTablesWithEmptyRanges) {
+TEST(GSYMTest, TestEmptyLinkageName) { TestEmptyLinkageName<GsymCreatorV1>(); }
+TEST(GSYMTest, TestEmptyLinkageNameV2) {
+  TestEmptyLinkageName<GsymCreatorV2>();
+}
+
+template <typename CreatorT> static void TestLineTablesWithEmptyRanges() {
   // Test that lookups find the right line table entry when there are multiple
   // line entries with the same address. When we have multiple line table
   // entries with the same address, we need to pick the last one in the line
@@ -4467,7 +4511,7 @@ TEST(GSYMTest, TestLineTablesWithEmptyRanges) {
   std::string errors;
   raw_string_ostream OS(errors);
   OutputAggregator OSAgg(&OS);
-  GsymCreatorV1 GC;
+  CreatorT GC;
   DwarfTransformer DT(*DwarfContext, GC);
   const uint32_t ThreadCount = 1;
   ASSERT_THAT_ERROR(DT.convert(ThreadCount, OSAgg), Succeeded());
@@ -4476,18 +4520,20 @@ TEST(GSYMTest, TestLineTablesWithEmptyRanges) {
   raw_svector_ostream OutStrm(Str);
   const auto ByteOrder = llvm::endianness::native;
   FileWriter FW(OutStrm, ByteOrder);
+  FW.setStringOffsetSize(GC.getStringOffsetSize());
   ASSERT_THAT_ERROR(GC.encode(FW), Succeeded());
-  Expected<GsymReaderV1> GR = GsymReaderV1::copyBuffer(OutStrm.str());
+  auto GR = GsymReader::copyBuffer(OutStrm.str());
   ASSERT_THAT_EXPECTED(GR, Succeeded());
+  const GsymReader &Reader = **GR;
   // There should be one function in our GSYM.
-  EXPECT_EQ(GR->getNumAddresses(), 1u);
+  EXPECT_EQ(Reader.getNumAddresses(), 1u);
   // Verify "foo" is present and has a line table and no inline info.
-  auto ExpFI = GR->getFunctionInfo(0x1000);
+  auto ExpFI = Reader.getFunctionInfo(0x1000);
   ASSERT_THAT_EXPECTED(ExpFI, Succeeded());
   ASSERT_EQ(ExpFI->Range, AddressRange(0x1000, 0x1050));
   EXPECT_TRUE(ExpFI->OptLineTable.has_value());
   EXPECT_FALSE(ExpFI->Inline.has_value());
-  StringRef FuncName = GR->getString(ExpFI->Name);
+  StringRef FuncName = Reader.getString(ExpFI->Name);
   EXPECT_EQ(FuncName, "foo");
 
   // Make sure we don't see spurious errors in the output:
@@ -4496,13 +4542,20 @@ TEST(GSYMTest, TestLineTablesWithEmptyRanges) {
   // Make sure that when we lookup address 0x1010, that we get the entry that
   // matches line 12, the second line entry that also has the address of
   // 0x1010.
-  auto LR = GR->lookup(0x1010);
+  auto LR = Reader.lookup(0x1010);
   ASSERT_THAT_EXPECTED(LR, Succeeded());
   SourceLocation src_loc = {"foo", "/tmp", "main.cpp", 12, 16};
   EXPECT_THAT(LR->Locations, testing::ElementsAre(src_loc));
 }
 
-TEST(GSYMTest, TestHandlingOfInvalidFileIndexes) {
+TEST(GSYMTest, TestLineTablesWithEmptyRanges) {
+  TestLineTablesWithEmptyRanges<GsymCreatorV1>();
+}
+TEST(GSYMTest, TestLineTablesWithEmptyRangesV2) {
+  TestLineTablesWithEmptyRanges<GsymCreatorV2>();
+}
+
+template <typename CreatorT> static void TestHandlingOfInvalidFileIndexes() {
   // Test that llvm-gsymutil can handle invalid file indexes in the following
   // cases:
   //  - In line entries in the line table
@@ -4787,7 +4840,7 @@ TEST(GSYMTest, TestHandlingOfInvalidFileIndexes) {
   std::string errors;
   raw_string_ostream OS(errors);
   OutputAggregator OSAgg(&OS);
-  GsymCreatorV1 GC;
+  CreatorT GC;
   DwarfTransformer DT(*DwarfContext, GC);
   const uint32_t ThreadCount = 1;
   ASSERT_THAT_ERROR(DT.convert(ThreadCount, OSAgg), Succeeded());
@@ -4796,16 +4849,18 @@ TEST(GSYMTest, TestHandlingOfInvalidFileIndexes) {
   raw_svector_ostream OutStrm(Str);
   const auto ByteOrder = llvm::endianness::native;
   FileWriter FW(OutStrm, ByteOrder);
+  FW.setStringOffsetSize(GC.getStringOffsetSize());
   ASSERT_THAT_ERROR(GC.encode(FW), Succeeded());
-  Expected<GsymReaderV1> GR = GsymReaderV1::copyBuffer(OutStrm.str());
+  auto GR = GsymReader::copyBuffer(OutStrm.str());
   ASSERT_THAT_EXPECTED(GR, Succeeded());
+  const GsymReader &Reader = **GR;
   // There should be one function in our GSYM.
-  EXPECT_EQ(GR->getNumAddresses(), 3u);
+  EXPECT_EQ(Reader.getNumAddresses(), 3u);
   // Verify "foo" is present and has a line table and no inline info.
-  auto ExpFI = GR->getFunctionInfo(0x1000);
+  auto ExpFI = Reader.getFunctionInfo(0x1000);
   ASSERT_THAT_EXPECTED(ExpFI, Succeeded());
   ASSERT_EQ(ExpFI->Range, AddressRange(0x1000, 0x1050));
-  StringRef FuncName = GR->getString(ExpFI->Name);
+  StringRef FuncName = Reader.getString(ExpFI->Name);
   EXPECT_EQ(FuncName, "foo");
 
   EXPECT_TRUE(ExpFI->OptLineTable.has_value());
@@ -4817,13 +4872,13 @@ TEST(GSYMTest, TestHandlingOfInvalidFileIndexes) {
   // Make sure that we only have one inline function, not two. We remove one of
   // the inline functions because it has an invalid DW_AT_call_file attribute.
   ASSERT_EQ(ExpFI->Inline->Children.size(), 1u);
-  StringRef InlineName = GR->getString(ExpFI->Inline->Children[0].Name);
+  StringRef InlineName = Reader.getString(ExpFI->Inline->Children[0].Name);
   EXPECT_EQ(InlineName, "inline_with_valid_call_file");
 
-  ExpFI = GR->getFunctionInfo(0x0000000000002000);
+  ExpFI = Reader.getFunctionInfo(0x0000000000002000);
   ASSERT_THAT_EXPECTED(ExpFI, Succeeded());
   ASSERT_EQ(ExpFI->Range, AddressRange(0x2000, 0x2050));
-  FuncName = GR->getString(ExpFI->Name);
+  FuncName = Reader.getString(ExpFI->Name);
   EXPECT_EQ(FuncName, "func_with_valid_decl_file");
   EXPECT_FALSE(ExpFI->Inline.has_value());
   // Make sure we only have 1 entry in the line table which indicates we were
@@ -4831,10 +4886,10 @@ TEST(GSYMTest, TestHandlingOfInvalidFileIndexes) {
   EXPECT_TRUE(ExpFI->OptLineTable.has_value());
   ASSERT_EQ(ExpFI->OptLineTable->size(), 1u);
 
-  ExpFI = GR->getFunctionInfo(0x0000000000003000);
+  ExpFI = Reader.getFunctionInfo(0x0000000000003000);
   ASSERT_THAT_EXPECTED(ExpFI, Succeeded());
   ASSERT_EQ(ExpFI->Range, AddressRange(0x3000, 0x3050));
-  FuncName = GR->getString(ExpFI->Name);
+  FuncName = Reader.getString(ExpFI->Name);
   EXPECT_EQ(FuncName, "func_with_invalid_decl_file");
   EXPECT_FALSE(ExpFI->Inline.has_value());
   // Make sure we only no line table because there are no line entries in the
@@ -4858,7 +4913,15 @@ TEST(GSYMTest, TestHandlingOfInvalidFileIndexes) {
     EXPECT_TRUE(errors.find(Error) != std::string::npos);
 }
 
-TEST(GSYMTest, TestLookupsOfOverlappingAndUnequalRanges) {
+TEST(GSYMTest, TestHandlingOfInvalidFileIndexes) {
+  TestHandlingOfInvalidFileIndexes<GsymCreatorV1>();
+}
+TEST(GSYMTest, TestHandlingOfInvalidFileIndexesV2) {
+  TestHandlingOfInvalidFileIndexes<GsymCreatorV2>();
+}
+
+template <typename CreatorT>
+static void TestLookupsOfOverlappingAndUnequalRanges() {
   // Test that llvm-gsymutil lookup the correct funtion info when address
   // ranges overlap. When functions overlap we always want to pick the first
   // function info when symbolicating if there are multiple entries with the
@@ -5002,7 +5065,7 @@ TEST(GSYMTest, TestLookupsOfOverlappingAndUnequalRanges) {
   std::string errors;
   raw_string_ostream OS(errors);
   OutputAggregator OSAgg(&OS);
-  GsymCreatorV1 GC;
+  CreatorT GC;
   DwarfTransformer DT(*DwarfContext, GC);
   const uint32_t ThreadCount = 1;
   ASSERT_THAT_ERROR(DT.convert(ThreadCount, OSAgg), Succeeded());
@@ -5011,26 +5074,28 @@ TEST(GSYMTest, TestLookupsOfOverlappingAndUnequalRanges) {
   raw_svector_ostream OutStrm(Str);
   const auto ByteOrder = llvm::endianness::native;
   FileWriter FW(OutStrm, ByteOrder);
+  FW.setStringOffsetSize(GC.getStringOffsetSize());
   ASSERT_THAT_ERROR(GC.encode(FW), Succeeded());
-  Expected<GsymReaderV1> GR = GsymReaderV1::copyBuffer(OutStrm.str());
+  auto GR = GsymReader::copyBuffer(OutStrm.str());
   ASSERT_THAT_EXPECTED(GR, Succeeded());
+  GsymReader &Reader = **GR;
   // There should be two functions in our GSYM.
-  EXPECT_EQ(GR->getNumAddresses(), 2u);
+  EXPECT_EQ(Reader.getNumAddresses(), 2u);
   // Verify "foo" is correctly looked up for each of its addresses.
   for (uint64_t Addr = 0x1000; Addr < 0x1050; ++Addr) {
-    auto ExpFI = GR->getFunctionInfo(Addr);
+    auto ExpFI = Reader.getFunctionInfo(Addr);
     ASSERT_THAT_EXPECTED(ExpFI, Succeeded());
     ASSERT_EQ(ExpFI->Range, AddressRange(0x1000, 0x1050));
-    StringRef FuncName = GR->getString(ExpFI->Name);
+    StringRef FuncName = Reader.getString(ExpFI->Name);
     EXPECT_EQ(FuncName, "foo");
   }
 
   // Verify "bar" is correctly looked up for each of its addresses.
   for (uint64_t Addr = 0x1050; Addr < 0x1100; ++Addr) {
-    auto ExpFI = GR->getFunctionInfo(Addr);
+    auto ExpFI = Reader.getFunctionInfo(Addr);
     ASSERT_THAT_EXPECTED(ExpFI, Succeeded());
     ASSERT_EQ(ExpFI->Range, AddressRange(0x1000, 0x1100));
-    StringRef FuncName = GR->getString(ExpFI->Name);
+    StringRef FuncName = Reader.getString(ExpFI->Name);
     EXPECT_EQ(FuncName, "bar");
   }
 
@@ -5042,20 +5107,27 @@ TEST(GSYMTest, TestLookupsOfOverlappingAndUnequalRanges) {
 
   SmallString<512> DumpStr;
   raw_svector_ostream DumpStrm(DumpStr);
-  GR->dump(DumpStrm);
+  Reader.dump(DumpStrm);
 
   // Make sure we see both "foo" and "bar" in the output of an entire GSYM
   // dump. Prior to this fix we would two "foo" entries.
   std::vector<std::string> ExpectedDumpLines = {
-      "@ 0x00000068: [0x0000000000001000 - 0x0000000000001050) \"foo\"",
-      "@ 0x00000088: [0x0000000000001000 - 0x0000000000001100) \"bar\""};
+      "[0x0000000000001000 - 0x0000000000001050) \"foo\"",
+      "[0x0000000000001000 - 0x0000000000001100) \"bar\""};
   // Make sure all expected errors are in the error stream for the two invalid
   // inlined functions that we removed due to invalid range scoping.
   for (const auto &Line : ExpectedDumpLines)
     EXPECT_TRUE(DumpStr.find(Line) != std::string::npos);
 }
 
-TEST(GSYMTest, TestUnableToLocateDWO) {
+TEST(GSYMTest, TestLookupsOfOverlappingAndUnequalRanges) {
+  TestLookupsOfOverlappingAndUnequalRanges<GsymCreatorV1>();
+}
+TEST(GSYMTest, TestLookupsOfOverlappingAndUnequalRangesV2) {
+  TestLookupsOfOverlappingAndUnequalRanges<GsymCreatorV2>();
+}
+
+template <typename CreatorT> static void TestUnableToLocateDWO() {
   // Test that llvm-gsymutil will not produce "uanble to locate DWO file" for
   // Apple binaries. Apple uses DW_AT_GNU_dwo_id for non split DWARF purposes
   // and this makes llvm-gsymutil create warnings and errors.
@@ -5102,7 +5174,7 @@ TEST(GSYMTest, TestUnableToLocateDWO) {
   std::string errors;
   raw_string_ostream OS(errors);
   OutputAggregator OSAgg(&OS);
-  GsymCreatorV1 GC;
+  CreatorT GC;
   // Make a DWARF transformer that is MachO (Apple) to avoid warnings about
   // not finding DWO files.
   DwarfTransformer DT(*DwarfContext, GC, /*LDCS=*/false, /*MachO*/ true);
@@ -5115,7 +5187,15 @@ TEST(GSYMTest, TestUnableToLocateDWO) {
   EXPECT_TRUE(errors.find(warn) == std::string::npos);
 }
 
-TEST(GSYMTest, TestDWARFTransformNoErrorForMissingFileDecl) {
+TEST(GSYMTest, TestUnableToLocateDWO) {
+  TestUnableToLocateDWO<GsymCreatorV1>();
+}
+TEST(GSYMTest, TestUnableToLocateDWOV2) {
+  TestUnableToLocateDWO<GsymCreatorV2>();
+}
+
+template <typename CreatorT>
+static void TestDWARFTransformNoErrorForMissingFileDecl() {
   // Test that if llvm-gsymutil finds a line table for a compile unit and if
   // there are no matching entries for a function in that compile unit, that
   // it doesn't print out a error saying that a DIE has an invalid file index
@@ -5229,7 +5309,7 @@ TEST(GSYMTest, TestDWARFTransformNoErrorForMissingFileDecl) {
   std::string errors;
   raw_string_ostream OS(errors);
   OutputAggregator OSAgg(&OS);
-  GsymCreatorV1 GC;
+  CreatorT GC;
   DwarfTransformer DT(*DwarfContext, GC);
   const uint32_t ThreadCount = 1;
   ASSERT_THAT_ERROR(DT.convert(ThreadCount, OSAgg), Succeeded());
@@ -5239,4 +5319,11 @@ TEST(GSYMTest, TestDWARFTransformNoErrorForMissingFileDecl) {
   std::string error_str("error: function DIE at 0x00000015 has an invalid file "
                         "index 4294967295 in its DW_AT_decl_file attribute");
   EXPECT_TRUE(errors.find(error_str) == std::string::npos);
+}
+
+TEST(GSYMTest, TestDWARFTransformNoErrorForMissingFileDecl) {
+  TestDWARFTransformNoErrorForMissingFileDecl<GsymCreatorV1>();
+}
+TEST(GSYMTest, TestDWARFTransformNoErrorForMissingFileDeclV2) {
+  TestDWARFTransformNoErrorForMissingFileDecl<GsymCreatorV2>();
 }
