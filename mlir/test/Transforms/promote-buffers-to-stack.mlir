@@ -626,3 +626,17 @@ func.func @huge_static_memref() {
   %alloc = memref.alloc() : memref<3090540x3090540x3090540xi32>
   return
 }
+
+// -----
+
+// Test that allocations with memref element types (nested memrefs) are not
+// promoted to stack allocations, since no data layout information is available
+// for the inner memref type.
+
+// CHECK-LABEL: func @nestedMemref
+func.func @nestedMemref() {
+  %0 = memref.alloc() : memref<1xmemref<2xf32>>
+  return
+}
+// CHECK-NEXT: memref.alloc()
+// CHECK-NEXT: return

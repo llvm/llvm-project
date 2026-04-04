@@ -289,9 +289,7 @@ define void @const_tc_with_predicated_store(i1 %c1, i1 %c2, i1 %c3, ptr %dst) #1
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i1> [[BROADCAST_SPLATINSERT4]], <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
-; CHECK-NEXT:    [[TMP4:%.*]] = call <vscale x 4 x i32> @llvm.stepvector.nxv4i32()
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult <vscale x 4 x i32> [[TMP4]], splat (i32 57)
-; CHECK-NEXT:    [[TMP6:%.*]] = select <vscale x 4 x i1> [[TMP5]], <vscale x 4 x i1> [[TMP2]], <vscale x 4 x i1> zeroinitializer
+; CHECK-NEXT:    [[TMP6:%.*]] = call <vscale x 4 x i1> @llvm.vp.merge.nxv4i1(<vscale x 4 x i1> splat (i1 true), <vscale x 4 x i1> [[TMP2]], <vscale x 4 x i1> zeroinitializer, i32 57)
 ; CHECK-NEXT:    [[TMP10:%.*]] = select <vscale x 4 x i1> [[TMP6]], <vscale x 4 x i1> [[BROADCAST_SPLAT]], <vscale x 4 x i1> zeroinitializer
 ; CHECK-NEXT:    [[PREDPHI5:%.*]] = select <vscale x 4 x i1> [[TMP10]], <vscale x 4 x float> [[PREDPHI]], <vscale x 4 x float> splat (float 2.000000e+00)
 ; CHECK-NEXT:    call void @llvm.vp.store.nxv4f32.p0(<vscale x 4 x float> [[PREDPHI5]], ptr align 4 [[DST:%.*]], <vscale x 4 x i1> splat (i1 true), i32 57)
@@ -346,13 +344,9 @@ define i8 @mul_non_pow_2_low_trip_count(ptr noalias %a) {
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <8 x i8> [ <i8 2, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>, [[VECTOR_PH]] ], [ [[TMP1:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 [[INDEX]]
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i8>, ptr [[TMP0]], align 1
-; CHECK-NEXT:    [[TMP1]] = mul <8 x i8> [[WIDE_LOAD]], [[VEC_PHI]]
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
-; CHECK-NEXT:    br i1 true, label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i8>, ptr [[TMP0:%.*]], align 1
+; CHECK-NEXT:    [[TMP1:%.*]] = mul <8 x i8> [[WIDE_LOAD]], <i8 2, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
+; CHECK-NEXT:    br label [[MIDDLE_BLOCK:%.*]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i8 @llvm.vector.reduce.mul.v8i8(<8 x i8> [[TMP1]])
 ; CHECK-NEXT:    br label [[SCALAR_PH:%.*]]
@@ -361,7 +355,7 @@ define i8 @mul_non_pow_2_low_trip_count(ptr noalias %a) {
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 8, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[RDX:%.*]] = phi i8 [ [[TMP3]], [[SCALAR_PH]] ], [ [[MUL:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[A]], i64 [[IV]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[TMP0]], i64 [[IV]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i8, ptr [[GEP]], align 1
 ; CHECK-NEXT:    [[MUL]] = mul i8 [[TMP5]], [[RDX]]
 ; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1

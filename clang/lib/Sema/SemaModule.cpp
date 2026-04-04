@@ -386,9 +386,9 @@ Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
       Diag(Path[0].getLoc(), diag::err_module_redefinition) << ModuleName;
       if (M->DefinitionLoc.isValid())
         Diag(M->DefinitionLoc, diag::note_prev_module_definition);
-      else if (OptionalFileEntryRef FE = M->getASTFile())
+      else if (const ModuleFileName *FileName = M->getASTFileName())
         Diag(M->DefinitionLoc, diag::note_prev_module_definition_from_ast_file)
-            << FE->getName();
+            << *FileName;
       Mod = M;
       break;
     }
@@ -464,9 +464,6 @@ Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
   ImportState = ModuleImportState::ImportAllowed;
 
   getASTContext().setCurrentNamedModule(Mod);
-
-  if (auto *Listener = getASTMutationListener())
-    Listener->EnteringModulePurview();
 
   // We already potentially made an implicit import (in the case of a module
   // implementation unit importing its interface).  Make this module visible

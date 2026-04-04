@@ -600,7 +600,7 @@ void RISCVPassConfig::addPreEmitPass2() {
   addPass(createRISCVExpandAtomicPseudoPass());
 
   // KCFI indirect call checks are lowered to a bundle.
-  addPass(createUnpackMachineBundles([&](const MachineFunction &MF) {
+  addPass(createUnpackMachineBundlesLegacy([&](const MachineFunction &MF) {
     return MF.getFunction().getParent()->getModuleFlag("kcfi");
   }));
 

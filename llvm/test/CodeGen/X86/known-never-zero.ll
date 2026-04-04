@@ -511,9 +511,9 @@ define i32 @umax_known_nonzero_vec(<16 x i8> %x, ptr %p) {
 ; X86-NEXT:    pcmpgtb %xmm3, %xmm4
 ; X86-NEXT:    movdqa %xmm4, %xmm5
 ; X86-NEXT:    pandn %xmm1, %xmm5
-; X86-NEXT:    psllw $2, %xmm1
+; X86-NEXT:    paddb %xmm1, %xmm1
+; X86-NEXT:    paddb %xmm1, %xmm1
 ; X86-NEXT:    pand %xmm4, %xmm1
-; X86-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
 ; X86-NEXT:    por %xmm5, %xmm1
 ; X86-NEXT:    paddb %xmm3, %xmm3
 ; X86-NEXT:    pcmpgtb %xmm3, %xmm2
@@ -533,8 +533,8 @@ define i32 @umax_known_nonzero_vec(<16 x i8> %x, ptr %p) {
 ; X64-NEXT:    vpsllw $5, %xmm0, %xmm1
 ; X64-NEXT:    vpmovsxbq {{.*#+}} xmm2 = [4,0]
 ; X64-NEXT:    vpblendvb %xmm1, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm2
-; X64-NEXT:    vpsllw $2, %xmm2, %xmm3
-; X64-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3, %xmm3
+; X64-NEXT:    vpaddb %xmm2, %xmm2, %xmm3
+; X64-NEXT:    vpaddb %xmm3, %xmm3, %xmm3
 ; X64-NEXT:    vpaddb %xmm1, %xmm1, %xmm1
 ; X64-NEXT:    vpblendvb %xmm1, %xmm3, %xmm2, %xmm2
 ; X64-NEXT:    vpaddb %xmm2, %xmm2, %xmm3
@@ -627,9 +627,9 @@ define i32 @umin_known_nonzero_vec(<16 x i8> %x, ptr %p) {
 ; X86-NEXT:    pcmpgtb %xmm3, %xmm4
 ; X86-NEXT:    movdqa %xmm4, %xmm5
 ; X86-NEXT:    pandn %xmm1, %xmm5
-; X86-NEXT:    psllw $2, %xmm1
+; X86-NEXT:    paddb %xmm1, %xmm1
+; X86-NEXT:    paddb %xmm1, %xmm1
 ; X86-NEXT:    pand %xmm4, %xmm1
-; X86-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
 ; X86-NEXT:    por %xmm5, %xmm1
 ; X86-NEXT:    paddb %xmm3, %xmm3
 ; X86-NEXT:    pcmpgtb %xmm3, %xmm2
@@ -651,8 +651,8 @@ define i32 @umin_known_nonzero_vec(<16 x i8> %x, ptr %p) {
 ; X64-NEXT:    vpsllw $5, %xmm0, %xmm1
 ; X64-NEXT:    vpmovsxbq {{.*#+}} xmm2 = [4,0]
 ; X64-NEXT:    vpblendvb %xmm1, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm2
-; X64-NEXT:    vpsllw $2, %xmm2, %xmm3
-; X64-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3, %xmm3
+; X64-NEXT:    vpaddb %xmm2, %xmm2, %xmm3
+; X64-NEXT:    vpaddb %xmm3, %xmm3, %xmm3
 ; X64-NEXT:    vpaddb %xmm1, %xmm1, %xmm1
 ; X64-NEXT:    vpblendvb %xmm1, %xmm3, %xmm2, %xmm2
 ; X64-NEXT:    vpaddb %xmm2, %xmm2, %xmm3
@@ -2701,6 +2701,52 @@ define i32 @sext_known_nonzero(i16 %xx) {
   %x = shl nuw nsw i16 256, %xx
   %z = sext i16 %x to i32
   %r = call i32 @llvm.cttz.i32(i32 %z, i1 false)
+  ret i32 %r
+}
+
+define i32 @sext_known_nonzero_vec(<8 x i16> %xx, ptr %p) {
+; X86-LABEL: sext_known_nonzero_vec:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    pxor %xmm1, %xmm1
+; X86-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
+; X86-NEXT:    pslld $23, %xmm0
+; X86-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-NEXT:    cvttps2dq %xmm0, %xmm0
+; X86-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,2,2,2]
+; X86-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,3,2,2,4,5,6,7]
+; X86-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,4,5,6,4]
+; X86-NEXT:    psrad $16, %xmm0
+; X86-NEXT:    movdqa %xmm1, 16(%eax)
+; X86-NEXT:    movdqa %xmm0, (%eax)
+; X86-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
+; X86-NEXT:    movd %xmm0, %eax
+; X86-NEXT:    rep bsfl %eax, %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: sext_known_nonzero_vec:
+; X64:       # %bb.0:
+; X64-NEXT:    vpmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
+; X64-NEXT:    vpslld $23, %xmm0, %xmm0
+; X64-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; X64-NEXT:    vcvttps2dq %xmm0, %xmm0
+; X64-NEXT:    vpackusdw %xmm0, %xmm0, %xmm0
+; X64-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; X64-NEXT:    vpblendw {{.*#+}} xmm0 = xmm1[0,1],xmm0[2],xmm1[3,4,5,6,7]
+; X64-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[3,2,1,0,4,5,6,7]
+; X64-NEXT:    vpmovsxwd %xmm0, %xmm0
+; X64-NEXT:    vmovdqa %xmm1, 16(%rdi)
+; X64-NEXT:    vmovdqa %xmm0, (%rdi)
+; X64-NEXT:    vpextrd $1, %xmm0, %eax
+; X64-NEXT:    rep bsfl %eax, %eax
+; X64-NEXT:    retq
+  %x = shl <8 x i16> <i16 0, i16 0, i16 1, i16 0, i16 0, i16 0, i16 0, i16 0>, %xx
+  %s = shufflevector <8 x i16> %x, <8 x i16> poison, <8 x i32> <i32 3, i32 2, i32 1, i32 0, i32 4, i32 5, i32 6, i32 7>
+  %z = sext <8 x i16> %s to <8 x i32>
+  store <8 x i32> %z, ptr %p
+  %e = extractelement <8 x i32> %z, i32 1
+  %r = call i32 @llvm.cttz.i32(i32 %e, i1 false)
   ret i32 %r
 }
 

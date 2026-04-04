@@ -1842,7 +1842,7 @@ define void @foo1() {
     EXPECT_EQ(Buff, R"IR(
 void @foo0(i32 %arg0, i32 %arg1) {
 bb0:
-  br label %bb1 ; SB4. (Br)
+  br label %bb1 ; SB4. (UncondBr)
 
 bb1:
   ret void ; SB6. (Ret)
@@ -1983,7 +1983,7 @@ bb1:
     BB0.dumpOS(BS);
     EXPECT_EQ(Buff, R"IR(
 bb0:
-  br label %bb1 ; SB3. (Br)
+  br label %bb1 ; SB3. (UncondBr)
 )IR");
   }
 #endif // NDEBUG
@@ -3098,11 +3098,7 @@ define void @foo(i1 %cond0, i1 %cond2) {
       Ctx.getValue(getBasicBlockByName(*LLVMF, "bb2")));
   auto *Ret2 = BB2->getTerminator();
   auto It = BB0->begin();
-  auto *Br0 = cast<sandboxir::BranchInst>(&*It++);
-  // Check isUnconditional().
-  EXPECT_FALSE(Br0->isUnconditional());
-  // Check isConditional().
-  EXPECT_TRUE(Br0->isConditional());
+  auto *Br0 = cast<sandboxir::CondBrInst>(&*It++);
   // Check getCondition().
   EXPECT_EQ(Br0->getCondition(), Cond0);
   // Check setCondition().
@@ -3111,27 +3107,29 @@ define void @foo(i1 %cond0, i1 %cond2) {
   // Check getNumSuccessors().
   EXPECT_EQ(Br0->getNumSuccessors(), 2u);
   // Check getSuccessor().
-  EXPECT_EQ(Br0->getSuccessor(0), BB1);
-  EXPECT_EQ(Br0->getSuccessor(1), BB2);
+  EXPECT_EQ(cast<sandboxir::CondBrInst>(Br0)->getSuccessor(0), BB1);
+  EXPECT_EQ(cast<sandboxir::CondBrInst>(Br0)->getSuccessor(1), BB2);
   // Check swapSuccessors().
   Br0->swapSuccessors();
-  EXPECT_EQ(Br0->getSuccessor(0), BB2);
-  EXPECT_EQ(Br0->getSuccessor(1), BB1);
+  EXPECT_EQ(cast<sandboxir::CondBrInst>(Br0)->getSuccessor(0), BB2);
+  EXPECT_EQ(cast<sandboxir::CondBrInst>(Br0)->getSuccessor(1), BB1);
   // Check successors().
   EXPECT_EQ(range_size(Br0->successors()), 2u);
   unsigned SuccIdx = 0;
-  SmallVector<sandboxir::BasicBlock *> ExpectedSuccs({BB1, BB2});
+  SmallVector<sandboxir::BasicBlock *> ExpectedSuccs({BB2, BB1});
   for (sandboxir::BasicBlock *Succ : Br0->successors())
     EXPECT_EQ(Succ, ExpectedSuccs[SuccIdx++]);
 
   {
-    // Check unconditional BranchInst::create() InsertBefore.
-    auto *Br = sandboxir::BranchInst::create(BB1, Ret1->getIterator(), Ctx);
-    EXPECT_FALSE(Br->isConditional());
-    EXPECT_TRUE(Br->isUnconditional());
-#ifndef NDEBUG
-    EXPECT_DEATH(Br->getCondition(), ".*condition.*");
-#endif // NDEBUG
+    // Check UncondBrInst::create() InsertBefore.
+    auto *Br = sandboxir::UncondBrInst::create(BB1, Ret1->getIterator(), Ctx);
+    EXPECT_EQ(Br->getSuccessor(), BB1);
+    // Check UncondBrInst::setSuccessor().
+    EXPECT_EQ(Br->getSuccessor(), BB1);
+    Br->setSuccessor(BB2);
+    EXPECT_EQ(Br->getSuccessor(), BB2);
+    Br->setSuccessor(BB1);
+
     unsigned SuccIdx = 0;
     SmallVector<sandboxir::BasicBlock *> ExpectedSuccs({BB1});
     for (sandboxir::BasicBlock *Succ : Br->successors())
@@ -3139,13 +3137,8 @@ define void @foo(i1 %cond0, i1 %cond2) {
     EXPECT_EQ(Br->getNextNode(), Ret1);
   }
   {
-    // Check unconditional BranchInst::create() InsertAtEnd.
-    auto *Br = sandboxir::BranchInst::create(BB1, /*InsertAtEnd=*/BB1, Ctx);
-    EXPECT_FALSE(Br->isConditional());
-    EXPECT_TRUE(Br->isUnconditional());
-#ifndef NDEBUG
-    EXPECT_DEATH(Br->getCondition(), ".*condition.*");
-#endif // NDEBUG
+    // Check UncondBrInst::create() InsertAtEnd.
+    auto *Br = sandboxir::UncondBrInst::create(BB1, /*InsertAtEnd=*/BB1, Ctx);
     unsigned SuccIdx = 0;
     SmallVector<sandboxir::BasicBlock *> ExpectedSuccs({BB1});
     for (sandboxir::BasicBlock *Succ : Br->successors())
@@ -3153,25 +3146,38 @@ define void @foo(i1 %cond0, i1 %cond2) {
     EXPECT_EQ(Br->getPrevNode(), Ret1);
   }
   {
-    // Check conditional BranchInst::create() InsertBefore.
-    auto *Br = sandboxir::BranchInst::create(BB1, BB2, Cond0,
+    // Check CondBrInst::create() InsertBefore.
+    auto *Br = sandboxir::CondBrInst::create(Cond0, BB1, BB2,
                                              Ret1->getIterator(), Ctx);
-    EXPECT_TRUE(Br->isConditional());
     EXPECT_EQ(Br->getCondition(), Cond0);
+
+    // Check CondBrInst::setSuccessor().
+    EXPECT_EQ(Br->getSuccessor(0), BB1);
+    EXPECT_EQ(Br->getSuccessor(1), BB2);
+    Br->setSuccessor(0, BB2);
+    EXPECT_EQ(Br->getSuccessor(0), BB2);
+    EXPECT_EQ(Br->getSuccessor(1), BB2);
+    Br->setSuccessor(1, BB1);
+    EXPECT_EQ(Br->getSuccessor(0), BB2);
+    EXPECT_EQ(Br->getSuccessor(1), BB1);
+    Br->setSuccessor(0, BB1);
+    Br->setSuccessor(1, BB2);
+    EXPECT_EQ(Br->getSuccessor(0), BB1);
+    EXPECT_EQ(Br->getSuccessor(1), BB2);
+
     unsigned SuccIdx = 0;
-    SmallVector<sandboxir::BasicBlock *> ExpectedSuccs({BB2, BB1});
+    SmallVector<sandboxir::BasicBlock *> ExpectedSuccs({BB1, BB2});
     for (sandboxir::BasicBlock *Succ : Br->successors())
       EXPECT_EQ(Succ, ExpectedSuccs[SuccIdx++]);
     EXPECT_EQ(Br->getNextNode(), Ret1);
   }
   {
-    // Check conditional BranchInst::create() InsertAtEnd.
-    auto *Br = sandboxir::BranchInst::create(BB1, BB2, Cond0,
+    // Check CondBrInst::create() InsertAtEnd.
+    auto *Br = sandboxir::CondBrInst::create(Cond0, BB1, BB2,
                                              /*InsertAtEnd=*/BB2, Ctx);
-    EXPECT_TRUE(Br->isConditional());
     EXPECT_EQ(Br->getCondition(), Cond0);
     unsigned SuccIdx = 0;
-    SmallVector<sandboxir::BasicBlock *> ExpectedSuccs({BB2, BB1});
+    SmallVector<sandboxir::BasicBlock *> ExpectedSuccs({BB1, BB2});
     for (sandboxir::BasicBlock *Succ : Br->successors())
       EXPECT_EQ(Succ, ExpectedSuccs[SuccIdx++]);
     EXPECT_EQ(Br->getPrevNode(), Ret2);
@@ -5875,7 +5881,7 @@ bb5:
   auto It = BB2->begin();
   // Check classof().
   auto *PHI = cast<sandboxir::PHINode>(&*It++);
-  auto *Br = cast<sandboxir::BranchInst>(&*It++);
+  auto *Br = cast<sandboxir::UncondBrInst>(&*It++);
   // Check blocks().
   EXPECT_EQ(range_size(PHI->blocks()), range_size(LLVMPHI->blocks()));
   auto BlockIt = PHI->block_begin();

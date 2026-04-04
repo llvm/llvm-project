@@ -411,6 +411,24 @@ static int run(int argc, char **argv) {
   auto DTLTOCompilerArgsSV = llvm::to_vector<0>(llvm::map_range(
       DTLTOCompilerArgs, [](const std::string &S) { return StringRef(S); }));
 
+  auto AddStream =
+      [&](size_t Task,
+          const Twine &ModuleName) -> std::unique_ptr<CachedFileStream> {
+    std::string Path = OutputFilename + "." + utostr(Task);
+
+    std::error_code EC;
+    auto S = std::make_unique<raw_fd_ostream>(Path, EC, sys::fs::OF_None);
+    check(EC, Path);
+    return std::make_unique<CachedFileStream>(std::move(S), Path);
+  };
+
+  auto AddBuffer = [&](size_t Task, const Twine &ModuleName,
+                       std::unique_ptr<MemoryBuffer> MB) {
+    auto Stream = AddStream(Task, ModuleName);
+    *Stream->OS << MB->getBuffer();
+    check(Stream->commit(), "Failed to commit cache");
+  };
+
   ThinBackend Backend;
   if (ThinLTODistributedIndexes)
     Backend = createWriteIndexesThinBackend(llvm::hardware_concurrency(Threads),
@@ -425,7 +443,7 @@ static int run(int argc, char **argv) {
         llvm::heavyweight_hardware_concurrency(Threads),
         /*OnWrite=*/{}, ThinLTOEmitIndexes, ThinLTOEmitImports, OutputFilename,
         DTLTODistributor, DTLTODistributorArgsSV, DTLTOCompiler,
-        DTLTOCompilerPrependArgsSV, DTLTOCompilerArgsSV, SaveTemps);
+        DTLTOCompilerPrependArgsSV, DTLTOCompilerArgsSV, SaveTemps, AddBuffer);
   } else
     Backend = createInProcessThinBackend(
         llvm::heavyweight_hardware_concurrency(Threads),
@@ -495,24 +513,6 @@ static int run(int argc, char **argv) {
   }
   if (HasErrors)
     return 1;
-
-  auto AddStream =
-      [&](size_t Task,
-          const Twine &ModuleName) -> std::unique_ptr<CachedFileStream> {
-    std::string Path = OutputFilename + "." + utostr(Task);
-
-    std::error_code EC;
-    auto S = std::make_unique<raw_fd_ostream>(Path, EC, sys::fs::OF_None);
-    check(EC, Path);
-    return std::make_unique<CachedFileStream>(std::move(S), Path);
-  };
-
-  auto AddBuffer = [&](size_t Task, const Twine &ModuleName,
-                       std::unique_ptr<MemoryBuffer> MB) {
-    auto Stream = AddStream(Task, ModuleName);
-    *Stream->OS << MB->getBuffer();
-    check(Stream->commit(), "Failed to commit cache");
-  };
 
   FileCache Cache;
   if (!CacheDir.empty())

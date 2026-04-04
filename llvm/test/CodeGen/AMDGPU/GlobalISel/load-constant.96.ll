@@ -70,7 +70,7 @@ define <3 x i32> @v_load_constant_v3i32_align1(ptr addrspace(4) %ptr) {
 ; GFX1250-UNALIGNED:       ; %bb.0:
 ; GFX1250-UNALIGNED-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-UNALIGNED-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-UNALIGNED-NEXT:    global_load_b96 v[0:2], v[0:1], off
+; GFX1250-UNALIGNED-NEXT:    global_load_b96 v[0:2], v[0:1], off nv
 ; GFX1250-UNALIGNED-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-UNALIGNED-NEXT:    s_set_pc_i64 s[30:31]
 ;
@@ -79,18 +79,18 @@ define <3 x i32> @v_load_constant_v3i32_align1(ptr addrspace(4) %ptr) {
 ; GFX1250-NOUNALIGNED-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NOUNALIGNED-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NOUNALIGNED-NEXT:    s_clause 0xb
-; GFX1250-NOUNALIGNED-NEXT:    global_load_u8 v2, v[0:1], off
-; GFX1250-NOUNALIGNED-NEXT:    global_load_u8 v3, v[0:1], off offset:1
-; GFX1250-NOUNALIGNED-NEXT:    global_load_u8 v4, v[0:1], off offset:2
-; GFX1250-NOUNALIGNED-NEXT:    global_load_u8 v5, v[0:1], off offset:3
-; GFX1250-NOUNALIGNED-NEXT:    global_load_u8 v6, v[0:1], off offset:4
-; GFX1250-NOUNALIGNED-NEXT:    global_load_u8 v7, v[0:1], off offset:5
-; GFX1250-NOUNALIGNED-NEXT:    global_load_u8 v8, v[0:1], off offset:6
-; GFX1250-NOUNALIGNED-NEXT:    global_load_u8 v9, v[0:1], off offset:7
-; GFX1250-NOUNALIGNED-NEXT:    global_load_u8 v10, v[0:1], off offset:8
-; GFX1250-NOUNALIGNED-NEXT:    global_load_u8 v11, v[0:1], off offset:9
-; GFX1250-NOUNALIGNED-NEXT:    global_load_u8 v12, v[0:1], off offset:11
-; GFX1250-NOUNALIGNED-NEXT:    global_load_u8 v13, v[0:1], off offset:10
+; GFX1250-NOUNALIGNED-NEXT:    global_load_u8 v2, v[0:1], off nv
+; GFX1250-NOUNALIGNED-NEXT:    global_load_u8 v3, v[0:1], off offset:1 nv
+; GFX1250-NOUNALIGNED-NEXT:    global_load_u8 v4, v[0:1], off offset:2 nv
+; GFX1250-NOUNALIGNED-NEXT:    global_load_u8 v5, v[0:1], off offset:3 nv
+; GFX1250-NOUNALIGNED-NEXT:    global_load_u8 v6, v[0:1], off offset:4 nv
+; GFX1250-NOUNALIGNED-NEXT:    global_load_u8 v7, v[0:1], off offset:5 nv
+; GFX1250-NOUNALIGNED-NEXT:    global_load_u8 v8, v[0:1], off offset:6 nv
+; GFX1250-NOUNALIGNED-NEXT:    global_load_u8 v9, v[0:1], off offset:7 nv
+; GFX1250-NOUNALIGNED-NEXT:    global_load_u8 v10, v[0:1], off offset:8 nv
+; GFX1250-NOUNALIGNED-NEXT:    global_load_u8 v11, v[0:1], off offset:9 nv
+; GFX1250-NOUNALIGNED-NEXT:    global_load_u8 v12, v[0:1], off offset:11 nv
+; GFX1250-NOUNALIGNED-NEXT:    global_load_u8 v13, v[0:1], off offset:10 nv
 ; GFX1250-NOUNALIGNED-NEXT:    s_wait_loadcnt 0xa
 ; GFX1250-NOUNALIGNED-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NOUNALIGNED-NEXT:    v_lshl_or_b32 v0, v3, 8, v2
@@ -306,7 +306,7 @@ define <3 x i32> @v_load_constant_v3i32_align2(ptr addrspace(4) %ptr) {
 ; GFX1250-UNALIGNED:       ; %bb.0:
 ; GFX1250-UNALIGNED-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-UNALIGNED-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-UNALIGNED-NEXT:    global_load_b96 v[0:2], v[0:1], off
+; GFX1250-UNALIGNED-NEXT:    global_load_b96 v[0:2], v[0:1], off nv
 ; GFX1250-UNALIGNED-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-UNALIGNED-NEXT:    s_set_pc_i64 s[30:31]
 ;
@@ -315,12 +315,12 @@ define <3 x i32> @v_load_constant_v3i32_align2(ptr addrspace(4) %ptr) {
 ; GFX1250-NOUNALIGNED-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NOUNALIGNED-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NOUNALIGNED-NEXT:    s_clause 0x5
-; GFX1250-NOUNALIGNED-NEXT:    global_load_u16 v2, v[0:1], off
-; GFX1250-NOUNALIGNED-NEXT:    global_load_u16 v3, v[0:1], off offset:2
-; GFX1250-NOUNALIGNED-NEXT:    global_load_u16 v4, v[0:1], off offset:4
-; GFX1250-NOUNALIGNED-NEXT:    global_load_u16 v5, v[0:1], off offset:6
-; GFX1250-NOUNALIGNED-NEXT:    global_load_u16 v6, v[0:1], off offset:8
-; GFX1250-NOUNALIGNED-NEXT:    global_load_u16 v7, v[0:1], off offset:10
+; GFX1250-NOUNALIGNED-NEXT:    global_load_u16 v2, v[0:1], off nv
+; GFX1250-NOUNALIGNED-NEXT:    global_load_u16 v3, v[0:1], off offset:2 nv
+; GFX1250-NOUNALIGNED-NEXT:    global_load_u16 v4, v[0:1], off offset:4 nv
+; GFX1250-NOUNALIGNED-NEXT:    global_load_u16 v5, v[0:1], off offset:6 nv
+; GFX1250-NOUNALIGNED-NEXT:    global_load_u16 v6, v[0:1], off offset:8 nv
+; GFX1250-NOUNALIGNED-NEXT:    global_load_u16 v7, v[0:1], off offset:10 nv
 ; GFX1250-NOUNALIGNED-NEXT:    s_wait_loadcnt 0x4
 ; GFX1250-NOUNALIGNED-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NOUNALIGNED-NEXT:    v_lshl_or_b32 v0, v3, 16, v2
@@ -446,7 +446,7 @@ define <3 x i32> @v_load_constant_v3i32_align4(ptr addrspace(4) %ptr) {
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    global_load_b96 v[0:2], v[0:1], off
+; GFX1250-NEXT:    global_load_b96 v[0:2], v[0:1], off nv
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
 ;
@@ -511,7 +511,7 @@ define i96 @v_load_constant_i96_align8(ptr addrspace(4) %ptr) {
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    global_load_b96 v[0:2], v[0:1], off
+; GFX1250-NEXT:    global_load_b96 v[0:2], v[0:1], off nv
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
 ;
@@ -576,7 +576,7 @@ define <3 x i32> @v_load_constant_v3i32_align8(ptr addrspace(4) %ptr) {
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    global_load_b96 v[0:2], v[0:1], off
+; GFX1250-NEXT:    global_load_b96 v[0:2], v[0:1], off nv
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
 ;
@@ -641,7 +641,7 @@ define <6 x i16> @v_load_constant_v6i16_align8(ptr addrspace(4) %ptr) {
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    global_load_b96 v[0:2], v[0:1], off
+; GFX1250-NEXT:    global_load_b96 v[0:2], v[0:1], off nv
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
 ;
@@ -730,7 +730,7 @@ define <12 x i8> @v_load_constant_v12i8_align8(ptr addrspace(4) %ptr) {
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    global_load_b96 v[0:2], v[0:1], off
+; GFX1250-NEXT:    global_load_b96 v[0:2], v[0:1], off nv
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    v_dual_lshrrev_b32 v13, 8, v0 :: v_dual_lshrrev_b32 v12, 16, v0
 ; GFX1250-NEXT:    v_dual_lshrrev_b32 v3, 24, v0 :: v_dual_lshrrev_b32 v5, 8, v1
@@ -838,7 +838,7 @@ define <3 x i32> @v_load_constant_v3i32_align16(ptr addrspace(4) %ptr) {
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    global_load_b96 v[0:2], v[0:1], off
+; GFX1250-NEXT:    global_load_b96 v[0:2], v[0:1], off nv
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
 ;
@@ -921,9 +921,9 @@ define amdgpu_ps <3 x i32> @s_load_constant_v3i32_align1(ptr addrspace(4) inreg 
 ;
 ; GFX1250-UNALIGNED-LABEL: s_load_constant_v3i32_align1:
 ; GFX1250-UNALIGNED:       ; %bb.0:
-; GFX1250-UNALIGNED-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-UNALIGNED-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-UNALIGNED-NEXT:    v_mov_b32_e32 v0, 0
-; GFX1250-UNALIGNED-NEXT:    global_load_b96 v[0:2], v0, s[0:1]
+; GFX1250-UNALIGNED-NEXT:    global_load_b96 v[0:2], v0, s[0:1] nv
 ; GFX1250-UNALIGNED-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-UNALIGNED-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX1250-UNALIGNED-NEXT:    v_readfirstlane_b32 s1, v1
@@ -932,20 +932,20 @@ define amdgpu_ps <3 x i32> @s_load_constant_v3i32_align1(ptr addrspace(4) inreg 
 ;
 ; GFX1250-NOUNALIGNED-LABEL: s_load_constant_v3i32_align1:
 ; GFX1250-NOUNALIGNED:       ; %bb.0:
-; GFX1250-NOUNALIGNED-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-NOUNALIGNED-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NOUNALIGNED-NEXT:    s_clause 0xb
-; GFX1250-NOUNALIGNED-NEXT:    s_load_u8 s2, s[0:1], 0x1
-; GFX1250-NOUNALIGNED-NEXT:    s_load_u8 s3, s[0:1], 0x3
-; GFX1250-NOUNALIGNED-NEXT:    s_load_u8 s4, s[0:1], 0x2
-; GFX1250-NOUNALIGNED-NEXT:    s_load_u8 s5, s[0:1], 0x5
-; GFX1250-NOUNALIGNED-NEXT:    s_load_u8 s6, s[0:1], 0x7
-; GFX1250-NOUNALIGNED-NEXT:    s_load_u8 s7, s[0:1], 0x6
-; GFX1250-NOUNALIGNED-NEXT:    s_load_u8 s8, s[0:1], 0x9
-; GFX1250-NOUNALIGNED-NEXT:    s_load_u8 s9, s[0:1], 0xb
-; GFX1250-NOUNALIGNED-NEXT:    s_load_u8 s10, s[0:1], 0x0
-; GFX1250-NOUNALIGNED-NEXT:    s_load_u8 s11, s[0:1], 0x4
-; GFX1250-NOUNALIGNED-NEXT:    s_load_u8 s12, s[0:1], 0xa
-; GFX1250-NOUNALIGNED-NEXT:    s_load_u8 s13, s[0:1], 0x8
+; GFX1250-NOUNALIGNED-NEXT:    s_load_u8 s2, s[0:1], 0x1 nv
+; GFX1250-NOUNALIGNED-NEXT:    s_load_u8 s3, s[0:1], 0x3 nv
+; GFX1250-NOUNALIGNED-NEXT:    s_load_u8 s4, s[0:1], 0x2 nv
+; GFX1250-NOUNALIGNED-NEXT:    s_load_u8 s5, s[0:1], 0x5 nv
+; GFX1250-NOUNALIGNED-NEXT:    s_load_u8 s6, s[0:1], 0x7 nv
+; GFX1250-NOUNALIGNED-NEXT:    s_load_u8 s7, s[0:1], 0x6 nv
+; GFX1250-NOUNALIGNED-NEXT:    s_load_u8 s8, s[0:1], 0x9 nv
+; GFX1250-NOUNALIGNED-NEXT:    s_load_u8 s9, s[0:1], 0xb nv
+; GFX1250-NOUNALIGNED-NEXT:    s_load_u8 s10, s[0:1], 0x0 nv
+; GFX1250-NOUNALIGNED-NEXT:    s_load_u8 s11, s[0:1], 0x4 nv
+; GFX1250-NOUNALIGNED-NEXT:    s_load_u8 s12, s[0:1], 0xa nv
+; GFX1250-NOUNALIGNED-NEXT:    s_load_u8 s13, s[0:1], 0x8 nv
 ; GFX1250-NOUNALIGNED-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NOUNALIGNED-NEXT:    s_lshl_b32 s0, s2, 8
 ; GFX1250-NOUNALIGNED-NEXT:    s_lshl_b32 s1, s3, 24
@@ -1201,9 +1201,9 @@ define amdgpu_ps <3 x i32> @s_load_constant_v3i32_align2(ptr addrspace(4) inreg 
 ;
 ; GFX1250-UNALIGNED-LABEL: s_load_constant_v3i32_align2:
 ; GFX1250-UNALIGNED:       ; %bb.0:
-; GFX1250-UNALIGNED-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-UNALIGNED-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-UNALIGNED-NEXT:    v_mov_b32_e32 v0, 0
-; GFX1250-UNALIGNED-NEXT:    global_load_b96 v[0:2], v0, s[0:1]
+; GFX1250-UNALIGNED-NEXT:    global_load_b96 v[0:2], v0, s[0:1] nv
 ; GFX1250-UNALIGNED-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-UNALIGNED-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX1250-UNALIGNED-NEXT:    v_readfirstlane_b32 s1, v1
@@ -1212,14 +1212,14 @@ define amdgpu_ps <3 x i32> @s_load_constant_v3i32_align2(ptr addrspace(4) inreg 
 ;
 ; GFX1250-NOUNALIGNED-LABEL: s_load_constant_v3i32_align2:
 ; GFX1250-NOUNALIGNED:       ; %bb.0:
-; GFX1250-NOUNALIGNED-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-NOUNALIGNED-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NOUNALIGNED-NEXT:    s_clause 0x5
-; GFX1250-NOUNALIGNED-NEXT:    s_load_u16 s2, s[0:1], 0x2
-; GFX1250-NOUNALIGNED-NEXT:    s_load_u16 s3, s[0:1], 0x6
-; GFX1250-NOUNALIGNED-NEXT:    s_load_u16 s4, s[0:1], 0xa
-; GFX1250-NOUNALIGNED-NEXT:    s_load_u16 s5, s[0:1], 0x0
-; GFX1250-NOUNALIGNED-NEXT:    s_load_u16 s6, s[0:1], 0x4
-; GFX1250-NOUNALIGNED-NEXT:    s_load_u16 s7, s[0:1], 0x8
+; GFX1250-NOUNALIGNED-NEXT:    s_load_u16 s2, s[0:1], 0x2 nv
+; GFX1250-NOUNALIGNED-NEXT:    s_load_u16 s3, s[0:1], 0x6 nv
+; GFX1250-NOUNALIGNED-NEXT:    s_load_u16 s4, s[0:1], 0xa nv
+; GFX1250-NOUNALIGNED-NEXT:    s_load_u16 s5, s[0:1], 0x0 nv
+; GFX1250-NOUNALIGNED-NEXT:    s_load_u16 s6, s[0:1], 0x4 nv
+; GFX1250-NOUNALIGNED-NEXT:    s_load_u16 s7, s[0:1], 0x8 nv
 ; GFX1250-NOUNALIGNED-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NOUNALIGNED-NEXT:    s_lshl_b32 s0, s2, 16
 ; GFX1250-NOUNALIGNED-NEXT:    s_lshl_b32 s1, s3, 16
@@ -1357,10 +1357,10 @@ define amdgpu_ps <3 x i32> @s_load_constant_v3i32_align4(ptr addrspace(4) inreg 
 ;
 ; GFX1250-LABEL: s_load_constant_v3i32_align4:
 ; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_mov_b32 s4, s0
 ; GFX1250-NEXT:    s_mov_b32 s5, s1
-; GFX1250-NEXT:    s_load_b96 s[0:2], s[4:5], 0x0
+; GFX1250-NEXT:    s_load_b96 s[0:2], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    ; return to shader part epilog
 ;
@@ -1409,10 +1409,10 @@ define amdgpu_ps i96 @s_load_constant_i96_align8(ptr addrspace(4) inreg %ptr) {
 ;
 ; GFX1250-LABEL: s_load_constant_i96_align8:
 ; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_mov_b32 s4, s0
 ; GFX1250-NEXT:    s_mov_b32 s5, s1
-; GFX1250-NEXT:    s_load_b96 s[0:2], s[4:5], 0x0
+; GFX1250-NEXT:    s_load_b96 s[0:2], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    ; return to shader part epilog
 ;
@@ -1461,10 +1461,10 @@ define amdgpu_ps <3 x i32> @s_load_constant_v3i32_align8(ptr addrspace(4) inreg 
 ;
 ; GFX1250-LABEL: s_load_constant_v3i32_align8:
 ; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_mov_b32 s4, s0
 ; GFX1250-NEXT:    s_mov_b32 s5, s1
-; GFX1250-NEXT:    s_load_b96 s[0:2], s[4:5], 0x0
+; GFX1250-NEXT:    s_load_b96 s[0:2], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    ; return to shader part epilog
 ;
@@ -1513,10 +1513,10 @@ define amdgpu_ps <3 x i32> @s_load_constant_v6i16_align8(ptr addrspace(4) inreg 
 ;
 ; GFX1250-LABEL: s_load_constant_v6i16_align8:
 ; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_mov_b32 s4, s0
 ; GFX1250-NEXT:    s_mov_b32 s5, s1
-; GFX1250-NEXT:    s_load_b96 s[0:2], s[4:5], 0x0
+; GFX1250-NEXT:    s_load_b96 s[0:2], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    ; return to shader part epilog
 ;
@@ -1592,10 +1592,10 @@ define amdgpu_ps <12 x i8> @s_load_constant_v12i8_align8(ptr addrspace(4) inreg 
 ;
 ; GFX1250-LABEL: s_load_constant_v12i8_align8:
 ; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_mov_b32 s4, s0
 ; GFX1250-NEXT:    s_mov_b32 s5, s1
-; GFX1250-NEXT:    s_load_b96 s[0:2], s[4:5], 0x0
+; GFX1250-NEXT:    s_load_b96 s[0:2], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    s_lshr_b32 s13, s0, 8
 ; GFX1250-NEXT:    s_lshr_b32 s12, s0, 16
@@ -1684,8 +1684,8 @@ define amdgpu_ps <3 x i32> @s_load_constant_v3i32_align16(ptr addrspace(4) inreg
 ;
 ; GFX1250-LABEL: s_load_constant_v3i32_align16:
 ; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    ; return to shader part epilog
 ;

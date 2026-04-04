@@ -74,7 +74,6 @@ enum class MallocFamily {
   MSVCNew,            // new(unsigned int)
   MSVCArrayNew,       // new[](unsigned int)
   VecMalloc,
-  KmpcAllocShared,
 };
 
 StringRef mangledNameForMallocFamily(const MallocFamily &Family) {
@@ -95,8 +94,6 @@ StringRef mangledNameForMallocFamily(const MallocFamily &Family) {
     return "??_U@YAPAXI@Z";
   case MallocFamily::VecMalloc:
     return "vec_malloc";
-  case MallocFamily::KmpcAllocShared:
-    return "__kmpc_alloc_shared";
   }
   llvm_unreachable("missing an alloc family");
 }
@@ -152,7 +149,6 @@ static const std::pair<LibFunc, AllocFnsTy> AllocationFnData[] = {
     {LibFunc_dunder_strdup,                     {StrDupLike,       1, -1, -1, -1, MallocFamily::Malloc}},
     {LibFunc_strndup,                           {StrDupLike,       2,  1, -1, -1, MallocFamily::Malloc}},
     {LibFunc_dunder_strndup,                    {StrDupLike,       2,  1, -1, -1, MallocFamily::Malloc}},
-    {LibFunc___kmpc_alloc_shared,               {MallocLike,       1,  0, -1, -1, MallocFamily::KmpcAllocShared}},
 };
 // clang-format on
 
@@ -478,7 +474,6 @@ static const std::pair<LibFunc, FreeFnsTy> FreeFnData[] = {
     {LibFunc_msvc_delete_array_ptr64_longlong,   {2, MallocFamily::MSVCArrayNew}},       // delete[](void*, ulonglong)
     {LibFunc_msvc_delete_array_ptr32_nothrow,    {2, MallocFamily::MSVCArrayNew}},       // delete[](void*, nothrow)
     {LibFunc_msvc_delete_array_ptr64_nothrow,    {2, MallocFamily::MSVCArrayNew}},       // delete[](void*, nothrow)
-    {LibFunc___kmpc_free_shared,                 {2, MallocFamily::KmpcAllocShared}},    // OpenMP Offloading RTL free
     {LibFunc_ZdlPvSt11align_val_tRKSt9nothrow_t, {3, MallocFamily::CPPNewAligned}},      // delete(void*, align_val_t, nothrow)
     {LibFunc_ZdaPvSt11align_val_tRKSt9nothrow_t, {3, MallocFamily::CPPNewArrayAligned}}, // delete[](void*, align_val_t, nothrow)
     {LibFunc_ZdlPvjSt11align_val_t,              {3, MallocFamily::CPPNewAligned}},      // delete(void*, unsigned int, align_val_t)
