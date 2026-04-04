@@ -2176,7 +2176,7 @@ __isl_give PWACtx Scop::getPwAff(const SCEV *E, BasicBlock *BB,
   // complex the affinator might return a nullptr. In such a case we invalidate
   // the SCoP and return a dummy value. This way we do not need to add error
   // handling code to all users of this function.
-  auto PWAC = Affinator.getPwAff(E, BB, RecordedAssumptions, IsInsideDomain);
+  PWACtx PWAC = Affinator.getPwAff(E, BB, RecordedAssumptions, IsInsideDomain);
   if (!PWAC.first.is_null()) {
     // TODO: We could use a heuristic and either use:
     //         SCEVAffinator::takeNonNegativeAssumption

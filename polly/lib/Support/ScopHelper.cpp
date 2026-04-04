@@ -210,35 +210,6 @@ void polly::recordAssumption(polly::RecordedAssumptionsTy *RecordedAssumptions,
                              polly::AssumptionKind Kind, isl::set Set,
                              DebugLoc Loc, polly::AssumptionSign Sign,
                              BasicBlock *BB, bool RTC) {
-#if 0
-  if (!BB)  {
-    auto PSet = Set.params(); // overapproximation
-    auto Overapproximation = Set.get_space().universe_set().intersect_params(PSet);
-    if (Sign == AS_ASSUMPTION ) {
-      if (RTC) {
-          if (!Overapproximation.is_subset (Set) ) {
-              assert(!"Cannot RTC-check domain values");
-          }
-      } else {
-        // OK -- ???
-      }
-    } else if (Sign == AS_RESTRICTION) {
-      if (RTC) {
-          // OK -- rejecting more than necessary
-      } else {
-          if (!Overapproximation.is_subset (Set) ) {
-              assert(!"Allowing more executions than are valid");
-          }
-      }
-    }
-    Set = PSet;
-  }
-#endif
-
-  // assert((!RTC || !BB) && "Can only introduce RTC checks for parameters");
-
-  //  assert((Set.is_params() || BB) &&  "Assumptions without a basic block must
-  //  be parameter sets");
   if (RecordedAssumptions)
     RecordedAssumptions->push_back({Kind, Sign, Set, Loc, BB, RTC});
 }

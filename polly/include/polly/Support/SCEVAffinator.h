@@ -33,8 +33,16 @@ public:
 
   /// Translate a SCEV to an isl::pw_aff.
   ///
-  /// @param E  he expression that is translated.
+  /// @param E  The expression that is translated.
   /// @param BB The block in which @p E is executed.
+  /// @param RecordedAssumptions If set, assumptions that make the translation
+  ///                            valid are added here.
+  /// @param IsInsideDomain If true, assumptions only need to apply during the
+  ///                       execution of @p BB. That is, when we know that we
+  ///                       are in its domain. Must be false if the SCEV is
+  ///                       evaluated outside a ScopStmt, or for code that
+  ///                       computes the domain (since while doing that, we
+  ///                       don't know whether we are in the domain yet).
   ///
   /// @returns The isl representation of the SCEV @p E in @p Domain.
   PWACtx getPwAff(const llvm::SCEV *E, llvm::BasicBlock *BB = nullptr,
@@ -66,9 +74,12 @@ private:
   unsigned NumIterators;
   llvm::ScalarEvolution &SE;
   llvm::LoopInfo &LI;
-
   llvm::BasicBlock *BB;
-  bool IsInsideDomain;
+
+  /// Whether the evaluation takes place only when @p BB's domain has already
+  /// been checked.
+  /// @see getPwAff
+  bool IsInsideDomain = true;
 
   RecordedAssumptionsTy *RecordedAssumptions = nullptr;
 

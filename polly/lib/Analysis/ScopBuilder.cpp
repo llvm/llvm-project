@@ -333,16 +333,6 @@ isl::set ScopBuilder::adjustDomainDimensions(isl::set Dom, Loop *OldL,
   return Dom;
 }
 
-/// Compute the isl representation for the SCEV @p E in this BB.
-///
-/// @param BB               The BB for which isl representation is to be
-/// computed.
-/// @param InvalidDomainMap A map of BB to their invalid domains.
-/// @param E                The SCEV that should be translated.
-/// @param NonNegative      Flag to indicate the @p E has to be non-negative.
-///
-/// Note that this function will also adjust the invalid context accordingly.
-
 __isl_give isl_pw_aff *
 ScopBuilder::getPwAff(BasicBlock *BB,
                       DenseMap<BasicBlock *, isl::set> &InvalidDomainMap,
@@ -764,7 +754,8 @@ bool ScopBuilder::addLoopBoundsToHeaderDomain(
       SmallVector<isl_set *, 8> ConditionSets;
       int idx = BI->getSuccessor(0) != HeaderBB;
       if (!buildConditionSets(LatchBB, TI, L, LatchBBDom.get(),
-                              InvalidDomainMap, ConditionSets))
+                              InvalidDomainMap, ConditionSets,
+                              /*IsInsideDomain=*/false))
         return false;
 
       // Free the non back edge condition set as we do not need it.
@@ -1335,9 +1326,10 @@ void ScopBuilder::addRecordedAssumptions() {
     isl::set S = AS.Set;
     AssumptionSign Sign = AS.Sign;
 
+    // Assumptions/restructions apply only when the code containing it is
+    // actually executed
     if (AS.BB && !AS.Set.is_params()) {
       // If the domain was deleted the assumptions are void.
-      // FIXME (correctness): Cannot just delete assumptions with RequiresRTC
       isl::set Dom = scop->getDomainConditions(AS.BB);
       if (Dom.is_null())
         continue;
@@ -1351,7 +1343,7 @@ void ScopBuilder::addRecordedAssumptions() {
       //
       // To avoid the complement we will register A - B as a restriction not an
       // assumption.
-      if (AS.Sign == AS_RESTRICTION) {
+      if (Sign == AS_RESTRICTION) {
         S = std::move(S).intersect(std::move(Dom));
       } else {
         S = std::move(Dom).subtract(std::move(S));
@@ -1359,47 +1351,39 @@ void ScopBuilder::addRecordedAssumptions() {
       }
     }
 
-    // FIXME (correctness): .params() is an overapproximation; if an
-    // AS_ASSUMPTION says
+    isl::set PSet = S.params();
+#ifndef NDEBUG
+    // .params() is an overapproximation; if an AS_ASSUMPTION says
+    //
     //    [p] -> { [i] : p == 1 and i == 1 }
+    //
     // the params space will be
+    //
     //    [p] -> { [] : }
-    // because there is am element with p == 1 in the set; if RequiresRTC is
-    // true, we will not include a check for p at all.
-    S = std::move(S).params();
-
-#if 0
-    auto PSet = Set.params(); // overapproximation
-    auto Overapproximation = Set.get_space().universe_set().intersect_params(PSet);
-    if (Sign == AS_ASSUMPTION ) {
-      if (RTC) {
-          if (!Overapproximation.is_subset (Set) ) {
-              assert(!"Cannot RTC-check domain values");
-          }
-      } else {
-        // OK -- ???
-      }
-    } else if (Sign == AS_RESTRICTION) {
-      if (RTC) {
-          // OK -- rejecting more than necessary
-      } else {
-          if (!Overapproximation.is_subset (Set) ) {
-              assert(!"Allowing more executions than are valid");
-          }
-      }
-    }
-    Set = PSet;
-#endif
-
-#if 0
-
-    if (!AS.BB) {
-      scop->addAssumption(AS.Kind, AS.Set, AS.Loc, AS.Sign, nullptr /* BasicBlock */, AS.RequiresRTC);
-      continue;
+    //
+    // (because there is at least one element with p == 1 in the set);
+    // if RequiresRTC is true, we will not include a check for p at all. The
+    // code above adds the domain constraints which don't need (and should not)
+    // to checked, but the actual assumption/restructions should have access to
+    // the parameters only.
+    if (AS.RequiresRTC && Sign == AS_RESTRICTION) {
+      // Overapproximation is OK in this case: failing more RTC checks than
+      // strictly necessary (Underapproximation of RTC-checked AS_ASSUMPTIONs
+      // would be as well)
+    } else if (!AS.RequiresRTC && Sign == AS_ASSUMPTION) {
+      // Overapproximation of defined behavior is OK: Only too optimistic
+      // assumptions could lead to invalid transformations; the universe set
+      // would be equivalent to "no assumptions" (Underapproximation of
+      // undefined behaviour would be as well)
+    } else {
+      isl::set ReconstructedSet =
+          S.get_space().universe_set().intersect_params(PSet);
+      assert(ReconstructedSet.is_subset(S) &&
+             "Must not overapproximate assumptions/restructions");
     }
 #endif
 
-    scop->addAssumption(AS.Kind, std::move(S), AS.Loc, Sign, AS.BB,
+    scop->addAssumption(AS.Kind, std::move(PSet), AS.Loc, Sign, AS.BB,
                         AS.RequiresRTC);
   }
 }
