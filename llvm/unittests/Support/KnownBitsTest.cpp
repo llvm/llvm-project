@@ -522,16 +522,17 @@ TEST(KnownBitsTest, BinaryExhaustive) {
       [](const KnownBits &Known1, const KnownBits &Known2) {
         KnownBits Generic = KnownBits::shl(Known1, Known2);
 
-        if (!Known2.isConstant() || Known1.hasConflict() || Known2.hasConflict())
+        if (!Known2.isConstant() || Known1.hasConflict() ||
+            Known2.hasConflict())
           return Generic;
 
         unsigned ShiftAmt = Known2.getConstant().getLimitedValue();
         KnownBits Const = KnownBits::shl(Known1, ShiftAmt);
 
-        EXPECT_EQ(Generic, Const) << "shl const mismatch for\n"
-                                  << "Known1 = " << Known1 << "\n"
-                                  << "Known2 = " << Known2
-                                  << " (" << ShiftAmt << ")\n\n";
+        EXPECT_EQ(Generic, Const)
+            << "shl const mismatch for\n"
+            << "Known1 = " << Known1 << "\n"
+            << "Known2 = " << Known2 << " (" << ShiftAmt << ")\n\n";
 
         return Const;
       },
@@ -571,19 +572,20 @@ TEST(KnownBitsTest, BinaryExhaustive) {
       "shl nsw const",
       [](const KnownBits &Known1, const KnownBits &Known2) {
         KnownBits Generic =
-          KnownBits::shl(Known1, Known2, /*NUW=*/false, /*NSW=*/true);
+            KnownBits::shl(Known1, Known2, /*NUW=*/false, /*NSW=*/true);
 
-        if (!Known2.isConstant() || Known1.hasConflict() || Known2.hasConflict())
+        if (!Known2.isConstant() || Known1.hasConflict() ||
+            Known2.hasConflict())
           return Generic;
 
         unsigned ShiftAmt = Known2.getConstant().getLimitedValue();
         KnownBits Const =
-          KnownBits::shl(Known1, ShiftAmt, /*NUW=*/false, /*NSW=*/true);
+            KnownBits::shl(Known1, ShiftAmt, /*NUW=*/false, /*NSW=*/true);
 
-        EXPECT_EQ(Generic, Const) << "shl const mismatch for\n"
-                                  << "Known1 = " << Known1 << "\n"
-                                  << "Known2 = " << Known2
-                                  << " (" << ShiftAmt << ")\n\n";
+        EXPECT_EQ(Generic, Const)
+            << "shl const mismatch for\n"
+            << "Known1 = " << Known1 << "\n"
+            << "Known2 = " << Known2 << " (" << ShiftAmt << ")\n\n";
 
         return Const;
       },
@@ -640,16 +642,17 @@ TEST(KnownBitsTest, BinaryExhaustive) {
       [](const KnownBits &Known1, const KnownBits &Known2) {
         KnownBits Generic = KnownBits::lshr(Known1, Known2);
 
-        if (!Known2.isConstant() || Known1.hasConflict() || Known2.hasConflict())
+        if (!Known2.isConstant() || Known1.hasConflict() ||
+            Known2.hasConflict())
           return Generic;
 
         unsigned ShiftAmt = Known2.getConstant().getLimitedValue();
         KnownBits Const = KnownBits::lshr(Known1, ShiftAmt);
 
-        EXPECT_EQ(Generic, Const) << "lshr const mismatch for\n"
-                                  << "Known1 = " << Known1 << "\n"
-                                  << "Known2 = " << Known2
-                                  << " (" << ShiftAmt << ")\n\n";
+        EXPECT_EQ(Generic, Const)
+            << "lshr const mismatch for\n"
+            << "Known1 = " << Known1 << "\n"
+            << "Known2 = " << Known2 << " (" << ShiftAmt << ")\n\n";
 
         return Const;
       },
@@ -690,16 +693,17 @@ TEST(KnownBitsTest, BinaryExhaustive) {
       [](const KnownBits &Known1, const KnownBits &Known2) {
         KnownBits Generic = KnownBits::ashr(Known1, Known2);
 
-        if (!Known2.isConstant() || Known1.hasConflict() || Known2.hasConflict())
+        if (!Known2.isConstant() || Known1.hasConflict() ||
+            Known2.hasConflict())
           return Generic;
 
         unsigned ShiftAmt = Known2.getConstant().getLimitedValue();
         KnownBits Const = KnownBits::ashr(Known1, ShiftAmt);
 
-        EXPECT_EQ(Generic, Const) << "ashr const mismatch for\n"
-                                  << "Known1 = " << Known1 << "\n"
-                                  << "Known2 = " << Known2
-                                  << " (" << ShiftAmt << ")\n\n";
+        EXPECT_EQ(Generic, Const)
+            << "ashr const mismatch for\n"
+            << "Known1 = " << Known1 << "\n"
+            << "Known2 = " << Known2 << " (" << ShiftAmt << ")\n\n";
 
         return Const;
       },
