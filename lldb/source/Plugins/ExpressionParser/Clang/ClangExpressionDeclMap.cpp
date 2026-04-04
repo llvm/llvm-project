@@ -1472,9 +1472,10 @@ void ClangExpressionDeclMap::FindExternalVisibleDecls(
 
     if (data_symbol) {
       std::string warning("got name from symbols: ");
-      warning.append(name.AsCString());
-      const unsigned diag_id = m_ast_context->getDiagnostics().getCustomDiagID(
-          clang::DiagnosticsEngine::Level::Warning, "%0");
+      warning.append(name.GetStringRef());
+      const unsigned diag_id =
+          m_ast_context->getDiagnostics().getCustomDiagID(
+              clang::DiagnosticsEngine::Level::Warning, "%0");
       m_ast_context->getDiagnostics().Report(diag_id) << warning.c_str();
       AddOneGenericVariable(context, *data_symbol);
       context.m_found_variable = true;
@@ -1824,7 +1825,8 @@ void ClangExpressionDeclMap::AddOneFunction(NameSearchContext &context,
     Type *function_type = function->GetType();
 
     const auto lang = function->GetCompileUnit()->GetLanguage();
-    const auto name = function->GetMangled().GetMangledName().AsCString();
+    const llvm::StringRef name =
+        function->GetMangled().GetMangledName().GetStringRef();
     const bool extern_c =
         (Language::LanguageIsC(lang) && !Mangled::IsMangledName(name)) ||
         (Language::LanguageIsObjC(lang) &&
