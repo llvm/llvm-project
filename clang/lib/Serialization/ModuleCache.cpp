@@ -10,6 +10,7 @@
 
 #include "clang/Serialization/InMemoryModuleCache.h"
 #include "clang/Serialization/ModuleFile.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/IOSandbox.h"
 #include "llvm/Support/LockFileManager.h"
@@ -101,6 +102,25 @@ void clang::maybePruneImpl(StringRef Path, time_t PruneInterval,
   }
 }
 
+Expected<std::unique_ptr<llvm::MemoryBuffer>>
+clang::readImpl(StringRef FileName, off_t &Size, time_t &ModTime) {
+  Expected<llvm::sys::fs::file_t> FD =
+      llvm::sys::fs::openNativeFileForRead(FileName);
+  if (!FD)
+    return FD.takeError();
+  llvm::sys::fs::file_status Status;
+  if (std::error_code EC = llvm::sys::fs::status(*FD, Status))
+    return llvm::errorCodeToError(EC);
+  llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> Buf =
+      llvm::MemoryBuffer::getOpenFile(*FD, FileName, Status.getSize(),
+                                      /*RequiresNullTerminator=*/false);
+  if (!Buf)
+    return llvm::errorCodeToError(Buf.getError());
+  Size = Status.getSize();
+  ModTime = llvm::sys::toTimeT(Status.getLastModificationTime());
+  return std::move(*Buf);
+}
+
 namespace {
 class CrossProcessModuleCache : public ModuleCache {
   InMemoryModuleCache InMemory;
@@ -160,6 +180,14 @@ public:
   InMemoryModuleCache &getInMemoryModuleCache() override { return InMemory; }
   const InMemoryModuleCache &getInMemoryModuleCache() const override {
     return InMemory;
+  }
+
+  Expected<std::unique_ptr<llvm::MemoryBuffer>>
+  read(StringRef FileName, off_t &Size, time_t &ModTime) override {
+    // This is a compiler-internal input/output, let's bypass the sandbox.
+    auto BypassSandbox = llvm::sys::sandbox::scopedDisable();
+
+    return readImpl(FileName, Size, ModTime);
   }
 };
 } // namespace
