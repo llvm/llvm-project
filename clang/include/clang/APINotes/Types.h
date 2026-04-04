@@ -338,11 +338,10 @@ inline bool operator!=(const ContextInfo &LHS, const ContextInfo &RHS) {
   return !(LHS == RHS);
 }
 
-/* TO_UPSTREAM(BoundsSafety) ON */
 class BoundsSafetyInfo {
 public:
   enum class BoundsSafetyKind {
-    CountedBy = 0,
+    CountedBy,
     CountedByOrNull,
     SizedBy,
     SizedByOrNull,
@@ -350,25 +349,28 @@ public:
   };
 
 private:
-  /// Whether this property has been audited for nullability.
-  LLVM_PREFERRED_TYPE(bool)
-  unsigned KindAudited : 1;
-
-  /// The kind of nullability for this property. Only valid if the nullability
-  /// has been audited.
+  /// The kind of bounds safety for this property. Only valid if the bounds
+  /// safety has been audited.
   LLVM_PREFERRED_TYPE(BoundsSafetyKind)
   unsigned Kind : 3;
 
+  /// Whether the bounds safety kind has been audited.
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned KindAudited : 1;
+
+  /// The pointer indirection level at which the bounds annotation applies.
+  /// Only valid if LevelAudited is set.
+  unsigned Level : 3;
+
+  /// Whether the pointer indirection level has been specified.
   LLVM_PREFERRED_TYPE(bool)
   unsigned LevelAudited : 1;
-
-  unsigned Level : 3;
 
 public:
   std::string ExternalBounds;
 
   BoundsSafetyInfo()
-      : KindAudited(false), Kind(0), LevelAudited(false), Level(0),
+      : Kind(0), KindAudited(false), Level(0), LevelAudited(false),
         ExternalBounds("") {}
 
   std::optional<BoundsSafetyKind> getKind() const {
@@ -402,7 +404,11 @@ inline bool operator==(const BoundsSafetyInfo &LHS,
          LHS.LevelAudited == RHS.LevelAudited && LHS.Level == RHS.Level &&
          LHS.ExternalBounds == RHS.ExternalBounds;
 }
-/* TO_UPSTREAM(BoundsSafety) OFF */
+
+inline bool operator!=(const BoundsSafetyInfo &LHS,
+                       const BoundsSafetyInfo &RHS) {
+  return !(LHS == RHS);
+}
 
 /// API notes for a variable/property.
 class VariableInfo : public CommonEntityInfo {
@@ -543,9 +549,7 @@ class ParamInfo : public VariableInfo {
   unsigned RawRetainCountConvention : 3;
 
 public:
-  /* TO_UPSTREAM(BoundsSafety) ON */
   std::optional<BoundsSafetyInfo> BoundsSafety;
-  /* TO_UPSTREAM(BoundsSafety) OFF */
 
   ParamInfo()
       : NoEscapeSpecified(false), NoEscape(false),
@@ -596,10 +600,8 @@ public:
     if (!RawRetainCountConvention)
       RawRetainCountConvention = RHS.RawRetainCountConvention;
 
-    /* TO_UPSTREAM(BoundsSafety) ON */
     if (!BoundsSafety)
       BoundsSafety = RHS.BoundsSafety;
-    /* TO_UPSTREAM(BoundsSafety) OFF */
 
     return *this;
   }
@@ -616,9 +618,7 @@ inline bool operator==(const ParamInfo &LHS, const ParamInfo &RHS) {
          LHS.LifetimeboundSpecified == RHS.LifetimeboundSpecified &&
          LHS.Lifetimebound == RHS.Lifetimebound &&
          LHS.RawRetainCountConvention == RHS.RawRetainCountConvention &&
-         /* TO_UPSTREAM(BoundsSafety) ON */
          LHS.BoundsSafety == RHS.BoundsSafety;
-  /* TO_UPSTREAM(BoundsSafety) OFF */
 }
 
 inline bool operator!=(const ParamInfo &LHS, const ParamInfo &RHS) {

@@ -76,12 +76,9 @@ LLVM_DUMP_METHOD void ObjCPropertyInfo::dump(llvm::raw_ostream &OS) const {
   OS << '\n';
 }
 
-/* TO_UPSTREAM(BoundsSafety) ON */
 LLVM_DUMP_METHOD void BoundsSafetyInfo::dump(llvm::raw_ostream &OS) const {
   if (KindAudited) {
-    assert((BoundsSafetyKind)Kind >= BoundsSafetyKind::CountedBy);
-    assert((BoundsSafetyKind)Kind <= BoundsSafetyKind::EndedBy);
-    switch ((BoundsSafetyKind)Kind) {
+    switch (static_cast<BoundsSafetyKind>(Kind)) {
     case BoundsSafetyKind::CountedBy:
       OS << "[counted_by] ";
       break;
@@ -104,7 +101,6 @@ LLVM_DUMP_METHOD void BoundsSafetyInfo::dump(llvm::raw_ostream &OS) const {
   OS << "ExternalBounds: "
      << (ExternalBounds.empty() ? "<missing>" : ExternalBounds) << '\n';
 }
-/* TO_UPSTREAM(BoundsSafety) OFF */
 
 LLVM_DUMP_METHOD void ParamInfo::dump(llvm::raw_ostream &OS) const {
   static_cast<const VariableInfo &>(*this).dump(OS);
@@ -114,10 +110,8 @@ LLVM_DUMP_METHOD void ParamInfo::dump(llvm::raw_ostream &OS) const {
     OS << (Lifetimebound ? "[Lifetimebound] " : "");
   OS << "RawRetainCountConvention: " << RawRetainCountConvention << ' ';
   OS << '\n';
-  /* TO_UPSTREAM(BoundsSafety) ON */
   if (BoundsSafety)
     BoundsSafety->dump(OS);
-  /* TO_UPSTREAM(BoundsSafety) OFF */
 }
 
 LLVM_DUMP_METHOD void FunctionInfo::dump(llvm::raw_ostream &OS) const {
