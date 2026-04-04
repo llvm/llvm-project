@@ -77,6 +77,14 @@ void const_source_case() {
   // CHECK-FIXES: dst = std::bit_cast<unsigned int>(src);
 }
 
+void sizeof_type_source_case() {
+  float src = 1.0f;
+  unsigned int dst;
+  std::memcpy(&dst, &src, sizeof(float));
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use 'std::bit_cast' instead of 'memcpy' for type punning
+  // CHECK-FIXES: dst = std::bit_cast<unsigned int>(src);
+}
+
 void std_array_case() {
   std::array<float, 1> src{{1.0f}};
   std::array<unsigned int, 1> dst{};
@@ -271,6 +279,15 @@ To template_case(From src) {
   std::memcpy(&dst, &src, sizeof(src));
   // CHECK-MESSAGES-NOT: :[[@LINE-1]]:3: warning: use 'std::bit_cast' instead of 'memcpy' for type punning
   return dst;
+}
+
+template <typename T>
+void non_dependent_template_case() {
+  float src = 1.0f;
+  unsigned int dst;
+  memcpy(&dst, &src, sizeof(src));
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use 'std::bit_cast' instead of 'memcpy' for type punning
+  // CHECK-FIXES: dst = std::bit_cast<unsigned int>(src);
 }
 
 void unevaluated_case() {
