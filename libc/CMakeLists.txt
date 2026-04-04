@@ -403,6 +403,7 @@ else()
 endif()
 
 add_subdirectory(include)
+add_subdirectory(shared)
 add_subdirectory(config)
 add_subdirectory(hdr)
 add_subdirectory(src)
