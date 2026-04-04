@@ -5327,3 +5327,210 @@ TEST(GSYMTest, TestDWARFTransformNoErrorForMissingFileDecl) {
 TEST(GSYMTest, TestDWARFTransformNoErrorForMissingFileDeclV2) {
   TestDWARFTransformNoErrorForMissingFileDecl<GsymCreatorV2>();
 }
+
+//===----------------------------------------------------------------------===//
+// 8-byte string offset (gsym_strp_t) unit tests
+//
+// These tests verify that values > UINT32_MAX survive encoding/decoding
+// without truncation when using 8-byte string offsets (V2 format).
+//===----------------------------------------------------------------------===//
+
+/// Test FunctionInfo encoding/decoding with Name > UINT32_MAX.
+TEST(GSYMTest, TestFunctionInfoLargeNameOffset) {
+  const gsym_strp_t LargeName = 0x1'2345'6789;
+  const uint64_t BaseAddr = 0x5000;
+  const uint32_t FuncSize = 0x100;
+
+  // Encode.
+  SmallString<128> Buf;
+  raw_svector_ostream OS(Buf);
+  FileWriter FW(OS, llvm::endianness::little);
+  FW.setStringOffsetSize(8);
+
+  FunctionInfo FI(BaseAddr, FuncSize, LargeName);
+  auto EncResult = FI.encode(FW);
+  ASSERT_THAT_EXPECTED(EncResult, Succeeded());
+
+  // Decode.
+  DataExtractor DE(StringRef(Buf.data(), Buf.size()), /*IsLittleEndian=*/true,
+                   8);
+  DE.setStringOffsetSize(8);
+  auto DecResult = FunctionInfo::decode(DE, BaseAddr);
+  ASSERT_THAT_EXPECTED(DecResult, Succeeded());
+
+  EXPECT_EQ(DecResult->Name, LargeName);
+  EXPECT_EQ(DecResult->Range, AddressRange(BaseAddr, BaseAddr + FuncSize));
+}
+
+/// Test InlineInfo encoding/decoding with Name > UINT32_MAX.
+TEST(GSYMTest, TestInlineInfoLargeNameOffset) {
+  const gsym_strp_t LargeName = 0xAB'CDEF'0123;
+  const uint64_t BaseAddr = 0x1000;
+
+  InlineInfo II;
+  II.Name = LargeName;
+  II.CallFile = 1;
+  II.CallLine = 42;
+  II.Ranges.insert(AddressRange(0x1000, 0x1100));
+
+  // Encode.
+  SmallString<128> Buf;
+  raw_svector_ostream OS(Buf);
+  FileWriter FW(OS, llvm::endianness::little);
+  FW.setStringOffsetSize(8);
+  llvm::Error EncErr = II.encode(FW, BaseAddr);
+  ASSERT_FALSE(bool(EncErr));
+
+  // Decode.
+  DataExtractor DE(StringRef(Buf.data(), Buf.size()), /*IsLittleEndian=*/true,
+                   8);
+  DE.setStringOffsetSize(8);
+  auto DecResult = InlineInfo::decode(DE, BaseAddr);
+  ASSERT_THAT_EXPECTED(DecResult, Succeeded());
+
+  EXPECT_EQ(DecResult->Name, LargeName);
+  EXPECT_EQ(DecResult->CallFile, 1u);
+  EXPECT_EQ(DecResult->CallLine, 42u);
+  EXPECT_EQ(DecResult->Ranges.size(), 1u);
+}
+
+/// Test CallSiteInfo encoding/decoding with MatchRegex entries > UINT32_MAX.
+TEST(GSYMTest, TestCallSiteInfoLargeMatchRegex) {
+  const gsym_strp_t LargeRegex1 = 0x1'0000'0001;
+  const gsym_strp_t LargeRegex2 = 0xDEAD'BEEF'CAFE'BABEull;
+
+  CallSiteInfo CSI;
+  CSI.ReturnOffset = 0x10;
+  CSI.Flags = CallSiteInfo::InternalCall;
+  CSI.MatchRegex.push_back(LargeRegex1);
+  CSI.MatchRegex.push_back(LargeRegex2);
+
+  // Encode.
+  SmallString<128> Buf;
+  raw_svector_ostream OS(Buf);
+  FileWriter FW(OS, llvm::endianness::little);
+  FW.setStringOffsetSize(8);
+  llvm::Error EncErr = CSI.encode(FW);
+  ASSERT_FALSE(bool(EncErr));
+
+  // Decode.
+  DataExtractor DE(StringRef(Buf.data(), Buf.size()), /*IsLittleEndian=*/true,
+                   8);
+  DE.setStringOffsetSize(8);
+  uint64_t Offset = 0;
+  auto DecResult = CallSiteInfo::decode(DE, Offset);
+  ASSERT_THAT_EXPECTED(DecResult, Succeeded());
+
+  EXPECT_EQ(DecResult->ReturnOffset, 0x10u);
+  EXPECT_EQ(DecResult->Flags, CallSiteInfo::InternalCall);
+  ASSERT_EQ(DecResult->MatchRegex.size(), 2u);
+  EXPECT_EQ(DecResult->MatchRegex[0], LargeRegex1);
+  EXPECT_EQ(DecResult->MatchRegex[1], LargeRegex2);
+}
+
+/// Test CallSiteInfoCollection encoding/decoding with large string offsets.
+TEST(GSYMTest, TestCallSiteInfoCollectionLargeMatchRegex) {
+  const gsym_strp_t LargeRegex = 0xFF'FFFF'FFFF;
+
+  CallSiteInfoCollection CSIC;
+  CallSiteInfo CSI;
+  CSI.ReturnOffset = 0x20;
+  CSI.MatchRegex.push_back(LargeRegex);
+  CSIC.CallSites.push_back(CSI);
+
+  // Encode.
+  SmallString<128> Buf;
+  raw_svector_ostream OS(Buf);
+  FileWriter FW(OS, llvm::endianness::little);
+  FW.setStringOffsetSize(8);
+  llvm::Error EncErr = CSIC.encode(FW);
+  ASSERT_FALSE(bool(EncErr));
+
+  // Decode.
+  DataExtractor DE(StringRef(Buf.data(), Buf.size()), /*IsLittleEndian=*/true,
+                   8);
+  DE.setStringOffsetSize(8);
+  auto DecResult = CallSiteInfoCollection::decode(DE);
+  ASSERT_THAT_EXPECTED(DecResult, Succeeded());
+
+  ASSERT_EQ(DecResult->CallSites.size(), 1u);
+  ASSERT_EQ(DecResult->CallSites[0].MatchRegex.size(), 1u);
+  EXPECT_EQ(DecResult->CallSites[0].MatchRegex[0], LargeRegex);
+}
+
+/// Test FunctionInfo with all optional data containing large string offsets.
+TEST(GSYMTest, TestFunctionInfoAllFieldsLargeOffsets) {
+  const gsym_strp_t LargeFuncName = 0x2'0000'0000;
+  const gsym_strp_t LargeInlineName = 0x3'0000'0000;
+  const gsym_strp_t LargeRegex = 0x4'0000'0000;
+  const uint64_t BaseAddr = 0x8000;
+
+  FunctionInfo FI(BaseAddr, 0x200, LargeFuncName);
+
+  // Add InlineInfo with large name.
+  FI.Inline = InlineInfo();
+  FI.Inline->Name = LargeInlineName;
+  FI.Inline->CallFile = 1;
+  FI.Inline->CallLine = 10;
+  FI.Inline->Ranges.insert(AddressRange(0x8010, 0x8100));
+
+  // Add CallSiteInfo with large regex offset.
+  FI.CallSites = CallSiteInfoCollection();
+  CallSiteInfo CSI;
+  CSI.ReturnOffset = 0x30;
+  CSI.MatchRegex.push_back(LargeRegex);
+  FI.CallSites->CallSites.push_back(CSI);
+
+  // Encode.
+  SmallString<256> Buf;
+  raw_svector_ostream OS(Buf);
+  FileWriter FW(OS, llvm::endianness::little);
+  FW.setStringOffsetSize(8);
+  auto EncResult = FI.encode(FW);
+  ASSERT_THAT_EXPECTED(EncResult, Succeeded());
+
+  // Decode.
+  DataExtractor DE(StringRef(Buf.data(), Buf.size()), /*IsLittleEndian=*/true,
+                   8);
+  DE.setStringOffsetSize(8);
+  auto DecResult = FunctionInfo::decode(DE, BaseAddr);
+  ASSERT_THAT_EXPECTED(DecResult, Succeeded());
+
+  EXPECT_EQ(DecResult->Name, LargeFuncName);
+  ASSERT_TRUE(DecResult->Inline.has_value());
+  EXPECT_EQ(DecResult->Inline->Name, LargeInlineName);
+  ASSERT_TRUE(DecResult->CallSites.has_value());
+  ASSERT_EQ(DecResult->CallSites->CallSites.size(), 1u);
+  ASSERT_EQ(DecResult->CallSites->CallSites[0].MatchRegex.size(), 1u);
+  EXPECT_EQ(DecResult->CallSites->CallSites[0].MatchRegex[0], LargeRegex);
+}
+
+/// Test MergedFunctionsInfo encoding/decoding with large string offsets.
+TEST(GSYMTest, TestMergedFunctionsInfoLargeOffsets) {
+  const gsym_strp_t LargeName1 = 0x5'0000'0001;
+  const gsym_strp_t LargeName2 = 0x6'0000'0002;
+  const uint64_t BaseAddr = 0x9000;
+
+  MergedFunctionsInfo MFI;
+  MFI.MergedFunctions.push_back(FunctionInfo(BaseAddr, 0x100, LargeName1));
+  MFI.MergedFunctions.push_back(FunctionInfo(BaseAddr, 0x100, LargeName2));
+
+  // Encode.
+  SmallString<256> Buf;
+  raw_svector_ostream OS(Buf);
+  FileWriter FW(OS, llvm::endianness::little);
+  FW.setStringOffsetSize(8);
+  llvm::Error EncErr = MFI.encode(FW);
+  ASSERT_FALSE(bool(EncErr));
+
+  // Decode.
+  DataExtractor DE(StringRef(Buf.data(), Buf.size()), /*IsLittleEndian=*/true,
+                   8);
+  DE.setStringOffsetSize(8);
+  auto DecResult = MergedFunctionsInfo::decode(DE, BaseAddr);
+  ASSERT_THAT_EXPECTED(DecResult, Succeeded());
+
+  ASSERT_EQ(DecResult->MergedFunctions.size(), 2u);
+  EXPECT_EQ(DecResult->MergedFunctions[0].Name, LargeName1);
+  EXPECT_EQ(DecResult->MergedFunctions[1].Name, LargeName2);
+}
