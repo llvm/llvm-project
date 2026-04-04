@@ -498,12 +498,6 @@ void OMPClauseProfiler::VisitOMPSizesClause(const OMPSizesClause *C) {
       Profiler->VisitExpr(E);
 }
 
-void OMPClauseProfiler::VisitOMPCountsClause(const OMPCountsClause *C) {
-  for (auto *E : C->getCountsRefs())
-    if (E)
-      Profiler->VisitExpr(E);
-}
-
 void OMPClauseProfiler::VisitOMPPermutationClause(
     const OMPPermutationClause *C) {
   for (Expr *E : C->getArgsRefs())
@@ -1054,10 +1048,6 @@ void StmtProfiler::VisitOMPReverseDirective(const OMPReverseDirective *S) {
 
 void StmtProfiler::VisitOMPInterchangeDirective(
     const OMPInterchangeDirective *S) {
-  VisitOMPCanonicalLoopNestTransformationDirective(S);
-}
-
-void StmtProfiler::VisitOMPSplitDirective(const OMPSplitDirective *S) {
   VisitOMPCanonicalLoopNestTransformationDirective(S);
 }
 
