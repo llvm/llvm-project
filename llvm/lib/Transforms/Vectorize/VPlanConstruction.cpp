@@ -897,6 +897,18 @@ static bool tryToSinkOrHoistRecurrenceUsers(VPBasicBlock *HeaderVPBB,
   return true;
 }
 
+/// Returns true if \p PhiR's increment is used in an exit block.
+static bool isUsedInExitBlock(VPlan &Plan, VPPhi *PhiR) {
+  for (auto *EB : Plan.getExitBlocks())
+    for (VPRecipeBase &R : EB->phis())
+      for (VPValue *Op : R.operands()) {
+        if (match(Op,
+                  m_ExtractLastLaneOfLastPart(m_Specific(PhiR->getOperand(1)))))
+          return true;
+      }
+  return false;
+}
+
 bool VPlanTransforms::createHeaderPhiRecipes(
     VPlan &Plan, PredicatedScalarEvolution &PSE, Loop &OrigLoop,
     const MapVector<PHINode *, InductionDescriptor> &Inductions,
@@ -920,15 +932,30 @@ bool VPlanTransforms::createHeaderPhiRecipes(
     VPIRValue *Start = cast<VPIRValue>(PhiR->getOperand(0));
     VPValue *BackedgeValue = PhiR->getOperand(1);
 
+    auto InductionIt = Inductions.find(Phi);
+
     if (FixedOrderRecurrences.contains(Phi)) {
       // TODO: Currently fixed-order recurrences are modeled as chains of
       // first-order recurrences. If there are no users of the intermediate
       // recurrences in the chain, the fixed order recurrence should be
       // modeled directly, enabling more efficient codegen.
+
+      // If the phi is also an induction, prefer the induction when its
+      // predicates are already implied by the existing PSE predicates (e.g.
+      // from LAA), so there is no extra runtime overhead. Otherwise keep the
+      // FOR to avoid adding extra runtime checks.
+      if (InductionIt != Inductions.end() &&
+          all_of(InductionIt->second.getNoWrapPredicates(),
+                 [&PSE](const SCEVPredicate *P) {
+                   return PSE.getPredicate().implies(P, *PSE.getSE());
+                 }) &&
+          !isUsedInExitBlock(Plan, PhiR))
+        return createWidenInductionRecipe(Phi, PhiR, Start, InductionIt->second,
+                                          Plan, PSE, OrigLoop,
+                                          PhiR->getDebugLoc());
       return new VPFirstOrderRecurrencePHIRecipe(Phi, *Start, *BackedgeValue);
     }
 
-    auto InductionIt = Inductions.find(Phi);
     if (InductionIt != Inductions.end())
       return createWidenInductionRecipe(Phi, PhiR, Start, InductionIt->second,
                                         Plan, PSE, OrigLoop,

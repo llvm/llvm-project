@@ -704,7 +704,8 @@ void LoopVectorizationLegality::addInductionPhi(PHINode *Phi,
     // one if there are multiple (no good reason for doing this other
     // than it is expedient). We've checked that it begins at zero and
     // steps by one, so this is a canonical induction variable.
-    if (!PrimaryInduction || PhiTy == WidestIndTy)
+    if (!PrimaryInduction ||
+        (PhiTy == WidestIndTy && !FixedOrderRecurrences.contains(Phi)))
       PrimaryInduction = Phi;
   }
 
@@ -870,18 +871,21 @@ bool LoopVectorizationLegality::canVectorizeInstr(Instruction &I) {
       return true;
     }
 
-    if (RecurrenceDescriptor::isFixedOrderRecurrence(Phi, TheLoop, DT)) {
+    bool IsFOR = RecurrenceDescriptor::isFixedOrderRecurrence(Phi, TheLoop, DT);
+    if (IsFOR) {
       FixedOrderRecurrences.insert(Phi);
-      return true;
     }
 
     // As a last resort, coerce the PHI to a AddRec expression
     // and re-try classifying it a an induction PHI.
-    if (InductionDescriptor::isInductionPHI(Phi, TheLoop, PSE, ID, true) &&
-        !IsDisallowedStridedPointerInduction(ID)) {
+    bool IsPredIV =
+        InductionDescriptor::isInductionPHI(Phi, TheLoop, PSE, ID, true) &&
+        !IsDisallowedStridedPointerInduction(ID);
+    if (IsPredIV)
       addInductionPhi(Phi, ID);
+
+    if (IsFOR || IsPredIV)
       return true;
-    }
 
     reportVectorizationFailure("Found an unidentified PHI",
                                "value that could not be identified as "
