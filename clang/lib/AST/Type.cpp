@@ -463,9 +463,16 @@ BitIntType::BitIntType(bool IsUnsigned, unsigned NumBits)
       NumBits(NumBits) {}
 
 DependentBitIntType::DependentBitIntType(bool IsUnsigned, Expr *NumBitsExpr)
+    // DependentBitIntType must always be type-dependent.
+    // The expression must be value-dependent, so will also be
+    // instantiation-dependent.
     : Type(DependentBitInt, QualType{},
-           toTypeDependence(NumBitsExpr->getDependence())),
-      ExprAndUnsigned(NumBitsExpr, IsUnsigned) {}
+           toTypeDependence(NumBitsExpr->getDependence()) |
+               TypeDependence::Dependent),
+      ExprAndUnsigned(NumBitsExpr, IsUnsigned) {
+  assert(NumBitsExpr->isValueDependent() &&
+         "NumBitsExpr must be value-dependent");
+}
 
 bool DependentBitIntType::isUnsigned() const {
   return ExprAndUnsigned.getInt();
@@ -4152,13 +4159,10 @@ TypedefType::TypedefType(TypeClass TC, ElaboratedTypeKeyword Keyword,
                          NestedNameSpecifier Qualifier,
                          const TypedefNameDecl *D, QualType UnderlyingType,
                          bool HasTypeDifferentFromDecl)
-    : TypeWithKeyword(
-          Keyword, TC, UnderlyingType.getCanonicalType(),
-          toSemanticDependence(UnderlyingType->getDependence()) |
-              (Qualifier
-                   ? toTypeDependence(Qualifier.getDependence() &
-                                      ~NestedNameSpecifierDependence::Dependent)
-                   : TypeDependence{})),
+    : TypeWithKeyword(Keyword, TC, UnderlyingType.getCanonicalType(),
+                      toSemanticDependence(UnderlyingType->getDependence()) |
+                          toSyntacticDependence(
+                              toTypeDependence(Qualifier.getDependence()))),
       Decl(const_cast<TypedefNameDecl *>(D)) {
   if ((TypedefBits.hasQualifier = !!Qualifier))
     *getTrailingObjects<NestedNameSpecifier>() = Qualifier;
@@ -4175,13 +4179,10 @@ UnresolvedUsingType::UnresolvedUsingType(ElaboratedTypeKeyword Keyword,
                                          NestedNameSpecifier Qualifier,
                                          const UnresolvedUsingTypenameDecl *D,
                                          const Type *CanonicalType)
-    : TypeWithKeyword(
-          Keyword, UnresolvedUsing, QualType(CanonicalType, 0),
-          TypeDependence::DependentInstantiation |
-              (Qualifier
-                   ? toTypeDependence(Qualifier.getDependence() &
-                                      ~NestedNameSpecifierDependence::Dependent)
-                   : TypeDependence{})),
+    : TypeWithKeyword(Keyword, UnresolvedUsing, QualType(CanonicalType, 0),
+                      TypeDependence::DependentInstantiation |
+                          toSyntacticDependence(
+                              toTypeDependence(Qualifier.getDependence()))),
       Decl(const_cast<UnresolvedUsingTypenameDecl *>(D)) {
   if ((UnresolvedUsingBits.hasQualifier = !!Qualifier))
     *getTrailingObjects<NestedNameSpecifier>() = Qualifier;
@@ -4191,7 +4192,9 @@ UsingType::UsingType(ElaboratedTypeKeyword Keyword,
                      NestedNameSpecifier Qualifier, const UsingShadowDecl *D,
                      QualType UnderlyingType)
     : TypeWithKeyword(Keyword, Using, UnderlyingType.getCanonicalType(),
-                      toSemanticDependence(UnderlyingType->getDependence())),
+                      toSemanticDependence(UnderlyingType->getDependence()) |
+                          toSyntacticDependence(
+                              toTypeDependence(Qualifier.getDependence()))),
       D(const_cast<UsingShadowDecl *>(D)), UnderlyingType(UnderlyingType) {
   if ((UsingBits.hasQualifier = !!Qualifier))
     *getTrailingObjects() = Qualifier;
@@ -4263,19 +4266,17 @@ QualType TypeOfType::desugar() const {
              : QT;
 }
 
-DecltypeType::DecltypeType(Expr *E, QualType underlyingType, QualType can)
+DecltypeType::DecltypeType(Expr *E, CanonicalizationKindOrNone ExprCanonKind,
+                           QualType UnderlyingType, QualType CanonType)
     // C++11 [temp.type]p2: "If an expression e involves a template parameter,
     // decltype(e) denotes a unique dependent type." Hence a decltype type is
     // type-dependent even if its expression is only instantiation-dependent.
-    : Type(Decltype, can,
-           toTypeDependence(E->getDependence()) |
-               (E->isInstantiationDependent() ? TypeDependence::Dependent
-                                              : TypeDependence::None) |
-               (E->getType()->getDependence() &
-                TypeDependence::VariablyModified)),
-      E(E), UnderlyingType(underlyingType) {}
+    : Type(Decltype, CanonType, toTypeDependence(E->getDependence())), E(E),
+      UnderlyingType(UnderlyingType) {
+  DecltypeTypeBits.ExprCanonKind = ExprCanonKind.toInternalRepresentation();
+}
 
-bool DecltypeType::isSugared() const { return !E->isInstantiationDependent(); }
+bool DecltypeType::isSugared() const { return !E->isTypeDependent(); }
 
 QualType DecltypeType::desugar() const {
   if (isSugared())
@@ -4284,12 +4285,13 @@ QualType DecltypeType::desugar() const {
   return QualType(this, 0);
 }
 
-DependentDecltypeType::DependentDecltypeType(Expr *E)
-    : DecltypeType(E, QualType()) {}
-
-void DependentDecltypeType::Profile(llvm::FoldingSetNodeID &ID,
-                                    const ASTContext &Context, Expr *E) {
-  E->Profile(ID, Context, true);
+void DecltypeType::Profile(llvm::FoldingSetNodeID &ID,
+                           const ASTContext &Context, Expr *E,
+                           CanonicalizationKindOrNone ExprCanonKind,
+                           QualType UnderlyingType) {
+  ID.AddInteger(ExprCanonKind.toInternalRepresentation());
+  E->Profile(ID, Context, ExprCanonKind);
+  UnderlyingType.Profile(ID);
 }
 
 PackIndexingType::PackIndexingType(QualType Canonical, QualType Pattern,
@@ -4702,29 +4704,25 @@ bool TemplateSpecializationType::anyInstantiationDependentTemplateArguments(
   return false;
 }
 
-static TypeDependence
-getTemplateSpecializationTypeDependence(QualType Underlying, TemplateName T) {
-  TypeDependence D = Underlying.isNull()
-                         ? TypeDependence::DependentInstantiation
-                         : toSemanticDependence(Underlying->getDependence());
-  D |= toTypeDependence(T.getDependence()) & TypeDependence::UnexpandedPack;
-  if (isPackProducingBuiltinTemplateName(T)) {
-    if (Underlying.isNull()) // Dependent, will produce a pack on substitution.
-      D |= TypeDependence::UnexpandedPack;
-    else
-      D |= (Underlying->getDependence() & TypeDependence::UnexpandedPack);
-  }
-  return D;
-}
-
 TemplateSpecializationType::TemplateSpecializationType(
     ElaboratedTypeKeyword Keyword, TemplateName T, bool IsAlias,
     ArrayRef<TemplateArgument> Args, QualType Underlying)
-    : TypeWithKeyword(Keyword, TemplateSpecialization,
-                      Underlying.isNull() ? QualType(this, 0)
-                                          : Underlying.getCanonicalType(),
-                      getTemplateSpecializationTypeDependence(Underlying, T)),
+    : TypeWithKeyword(
+          Keyword, TemplateSpecialization,
+          Underlying.isNull() ? QualType(this, 0)
+                              : Underlying.getCanonicalType(),
+          toSyntacticDependence(toTypeDependence(T.getDependence()))),
       Template(T) {
+  addDependence(Underlying.isNull()
+                    ? TypeDependence::DependentInstantiation
+                    : toSemanticDependence(Underlying->getDependence()));
+
+  // FIXME: Ugly hack, pack producing templates break the syntactic/semantic
+  // dependence distinction.
+  if ((Underlying.isNull() || Underlying->containsUnexpandedParameterPack()) &&
+      isPackProducingBuiltinTemplateName(T))
+    addDependence(TypeDependence::UnexpandedPack);
+
   TemplateSpecializationTypeBits.NumArgs = Args.size();
   TemplateSpecializationTypeBits.TypeAlias = IsAlias;
 
@@ -4759,23 +4757,30 @@ QualType TemplateSpecializationType::getAliasedType() const {
 }
 
 bool clang::TemplateSpecializationType::isSugared() const {
-  return !isDependentType() || isCurrentInstantiation() || isTypeAlias() ||
-         (isPackProducingBuiltinTemplateName(Template) &&
-          isa<SubstBuiltinTemplatePackType>(*getCanonicalTypeInternal()));
+  return isTypeAlias() ||
+         !isa<TemplateSpecializationType>(getCanonicalTypeInternal());
 }
 
 void TemplateSpecializationType::Profile(llvm::FoldingSetNodeID &ID,
                                          const ASTContext &Ctx) {
-  Profile(ID, getKeyword(), Template, template_arguments(),
-          isSugared() ? desugar() : QualType(), Ctx);
+  Profile(ID, getKeyword(), Template, template_arguments(), isTypeAlias(),
+          desugar(), Ctx);
 }
 
 void TemplateSpecializationType::Profile(llvm::FoldingSetNodeID &ID,
                                          ElaboratedTypeKeyword Keyword,
                                          TemplateName T,
                                          ArrayRef<TemplateArgument> Args,
-                                         QualType Underlying,
+                                         bool IsTypeAlias, QualType Underlying,
                                          const ASTContext &Context) {
+  assert(IsTypeAlias || Underlying.isNull() || Underlying.isCanonical());
+  if (!Underlying.isNull()) {
+    if (!IsTypeAlias && isa<TemplateSpecializationType>(Underlying))
+      Underlying = QualType();
+  } else {
+    assert(!IsTypeAlias);
+  }
+
   ID.AddInteger(llvm::to_underlying(Keyword));
   T.Profile(ID);
   Underlying.Profile(ID);

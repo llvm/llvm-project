@@ -162,7 +162,7 @@ template <typename T> struct PathFieldId {
 };
 template <PathFieldId...> constexpr auto PathImplHelper();
 
-template <int N> using FieldName = FieldName<N>;
+template <int N> using FieldName = FieldNameEnum::type;
 enum class FieldNumber;
 template <PathFieldId... fields>
 constexpr auto Path = PathImplHelper<fields...>();

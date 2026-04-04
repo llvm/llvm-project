@@ -9,7 +9,9 @@
 // RUN: %clang_cc1 -std=c++2b -fcxx-exceptions -DUSE_CONSTEVAL -DPAREN_INIT -fexceptions -fexperimental-new-constant-interpreter -DNEW_INTERP -verify %s
 // RUN: %clang_cc1 -std=c++1z -fcxx-exceptions -fms-extensions -DMS -fexceptions -fexperimental-new-constant-interpreter -DNEW_INTERP -fms-compatibility -verify %s
 // RUN: %clang_cc1 -std=c++2a -fcxx-exceptions -fms-extensions -DMS -DUSE_CONSTEVAL -fexceptions -fexperimental-new-constant-interpreter -DNEW_INTERP -verify -fms-compatibility %s
+#ifndef MS
 // expected-no-diagnostics
+#endif
 
 #define assert(...) ((__VA_ARGS__) ? ((void)0) : throw 42)
 #define CURRENT_FROM_MACRO() SL::current()
@@ -1088,6 +1090,9 @@ namespace GH178324 {
     using e = int;
   };
   void current(const char * = __builtin_FUNCSIG());
-  template <class> void c() { decltype(a(current()))::e; }
+  template <class> void c() {
+    decltype(a(current()))::e;
+    // expected-warning@-1 {{declaration does not declare anything}}
+  }
 } // namespace GH178324
 #endif

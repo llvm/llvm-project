@@ -994,6 +994,8 @@ public:
   }
 
   void VisitDecltypeType(const DecltypeType *T) {
+    ID.AddInteger(T->getExprCanonicalizationKind().toInternalRepresentation());
+    // FIXME: The kind above should affect how the expression is hashed.
     Hash.AddStmt(T->getUnderlyingExpr());
     VisitType(T);
   }

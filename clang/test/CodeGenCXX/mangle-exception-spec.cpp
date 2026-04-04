@@ -35,15 +35,8 @@ template auto h<>(int()) -> int (*)();
 // CHECK: define {{.*}} @_Z1hIJfEEPDwDpT_iEFivEPDwiS1_EFivE(
 template auto h<float>(int()) -> int (*)();
 
-// FIXME: The C++11 manglings here are wrong; they should be the same as the
-// C++17 manglings.
-// The mangler mishandles substitutions for instantiation-dependent types that
-// differ only in type sugar that is not relevant for mangling. (In this case,
-// the types differ in presence/absence of ParenType nodes under the pointer.)
 template<typename...T> auto i(int() throw(int, T...)) -> int (*)() throw(int, T...) { return nullptr; }
-// CHECK-CXX11: define {{.*}} @_Z1iIJEEPDwiDpT_EFivEPS2_(
-// CHECK-CXX17: define {{.*}} @_Z1iIJEEPDwiDpT_EFivES3_(
+// CHECK: define {{.*}} @_Z1iIJEEPDwiDpT_EFivES3_(
 template auto i<>(int()) -> int (*)();
-// CHECK-CXX11: define {{.*}} @_Z1iIJfEEPDwiDpT_EFivEPS2_(
-// CHECK-CXX17: define {{.*}} @_Z1iIJfEEPDwiDpT_EFivES3_(
+// CHECK: define {{.*}} @_Z1iIJfEEPDwiDpT_EFivES3_(
 template auto i<float>(int()) -> int (*)();

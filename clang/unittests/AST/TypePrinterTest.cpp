@@ -254,7 +254,7 @@ TEST(TypePrinter, TemplateArgumentsSubstitution_Expressions) {
     const int Result = 42;
     auto *ConstExpr = createBinOpExpr(LHS, RHS, Result);
     // Arg is instantiated with '40 + 2'
-    TemplateArgument Arg(ConstExpr, /*IsCanonical=*/false);
+    TemplateArgument Arg(ConstExpr, /*CanonKind=*/std::nullopt);
 
     // Param has default expr of '42'
     auto const *Param = Params->getParam(1);
@@ -270,7 +270,7 @@ TEST(TypePrinter, TemplateArgumentsSubstitution_Expressions) {
     auto *ConstExpr = createBinOpExpr(LHS, RHS, Result);
 
     // Arg is instantiated with '40 + 1'
-    TemplateArgument Arg(ConstExpr, /*IsCanonical=*/false);
+    TemplateArgument Arg(ConstExpr, /*CanonKind=*/std::nullopt);
 
     // Param has default expr of '42'
     auto const *Param = Params->getParam(1);
@@ -286,7 +286,7 @@ TEST(TypePrinter, TemplateArgumentsSubstitution_Expressions) {
     auto *ConstExpr = createBinOpExpr(LHS, RHS, Result);
 
     // Arg is instantiated with '4 + 0'
-    TemplateArgument Arg(ConstExpr, /*IsCanonical=*/false);
+    TemplateArgument Arg(ConstExpr, /*CanonKind=*/std::nullopt);
 
     // Param has is value-dependent expression (i.e., sizeof(T))
     auto const *Param = Params->getParam(3);

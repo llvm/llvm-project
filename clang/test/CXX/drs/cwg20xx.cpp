@@ -64,6 +64,19 @@ namespace cwg2061 { // cwg2061: 2.7
 #endif // C++11
 } // namespace cwg2061
 
+namespace cwg2064 { // cwg2064: 23
+#if __cplusplus >= 201103L
+  template<typename T> struct X {
+    template<typename U> struct Y {};
+  };
+  template<typename T> void g() {
+    X<decltype(sizeof(T))>::Y<int> y; // ok
+    return X<decltype(sizeof(T))>::f();
+    // expected-error@-1 {{no member named 'f' in 'cwg2064::X<unsigned long>'}}
+  }
+#endif
+}
+
 namespace cwg2076 { // cwg2076: 13
 #if __cplusplus >= 201103L
   namespace std_example {

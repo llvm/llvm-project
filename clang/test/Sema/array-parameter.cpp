@@ -4,7 +4,7 @@ template <int N>
 void func(int i[10]); // expected-note {{previously declared as 'int[10]' here}}
 
 template <int N>
-void func(int i[N]); // expected-warning {{argument 'i' of type 'int[N]' with mismatched bound}}
+void func(int i[11]); // expected-warning {{argument 'i' of type 'int[11]' with mismatched bound}}
 
 template <int N>
 void func(int (&Val)[N]);

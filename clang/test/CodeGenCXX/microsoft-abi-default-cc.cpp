@@ -49,7 +49,7 @@ void static_qux() {}
 namespace PR31656 {
 template <int I>
 void __cdecl callee(int args[I]);
-// GCABI-LABEL: declare void @_ZN7PR316566calleeILi1EEEvPi(
+// GCABI-LABEL: declare void @_ZN7PR316566calleeILi1EEEvAT__i(
 // MSABI: declare dso_local void @"??$callee@$00@PR31656@@YAXQAH@Z"(
 
 void caller() { callee<1>(0); }
