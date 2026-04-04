@@ -19,7 +19,11 @@
   __attribute__((__always_inline__, __nodebug__, __target__("avx512vnni"),     \
                  __min_vector_width__(512)))
 
+#if defined(__cplusplus) && (__cplusplus >= 201103L)
 #define __DEFAULT_FN_ATTRS_CONSTEXPR __DEFAULT_FN_ATTRS constexpr
+#else
+#define __DEFAULT_FN_ATTRS_CONSTEXPR __DEFAULT_FN_ATTRS
+#endif
 
 static __inline__ __m512i __DEFAULT_FN_ATTRS_CONSTEXPR
 _mm512_dpbusd_epi32(__m512i __S, __m512i __A, __m512i __B)
