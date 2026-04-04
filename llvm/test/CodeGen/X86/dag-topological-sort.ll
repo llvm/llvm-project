@@ -56,3 +56,4 @@ define <4 x float> @load_float4_float3_as_float2_float(ptr nocapture readonly de
   %9 = insertelement <4 x float> %6, float %8, i32 2
   ret <4 x float> %9
 }
+

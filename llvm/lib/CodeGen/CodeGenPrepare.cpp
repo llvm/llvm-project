@@ -469,6 +469,7 @@ private:
   bool optimizeURem(Instruction *Rem);
   bool combineToUSubWithOverflow(CmpInst *Cmp, ModifyDT &ModifiedDT);
   bool combineToUAddWithOverflow(CmpInst *Cmp, ModifyDT &ModifiedDT);
+  bool combineToUSubWithCarry(BinaryOperator *I);
   bool unfoldPowerOf2Test(CmpInst *Cmp);
   void verifyBFIUpdates(Function &F);
   bool _run(Function &F);
@@ -1794,6 +1795,52 @@ bool CodeGenPrepare::combineToUSubWithOverflow(CmpInst *Cmp,
 
   // Reset callers - do not crash by iterating over a dead instruction.
   ModifiedDT = ModifyDT::ModifyInstDT;
+  return true;
+}
+
+/// Reconstruct a subtract-with-borrow chain from its canonicalized icmp form.
+///
+/// InstCombine simplifies chained usub.with.overflow intrinsics (used for
+/// multi-precision subtraction) into icmp patterns:
+///   carry_out = or(icmp ult A, B, and(icmp eq A, B, carry_in))
+///
+/// This prevents the backend from generating efficient subtract-with-borrow
+/// instructions (e.g. x86 sbb, aarch64 sbcs). Reconstruct the chained
+/// usub.with.overflow form that the DAG combiner can lower to USUBO_CARRY.
+bool CodeGenPrepare::combineToUSubWithCarry(BinaryOperator *I) {
+  // Match: or(icmp ult A, B, and(icmp eq A, B, carry_in))
+  // with all commuted variants of or, and, and icmp eq operand order.
+  Value *A, *B, *CarryIn;
+  if (!match(I,
+             m_c_Or(m_SpecificICmp(ICmpInst::ICMP_ULT, m_Value(A), m_Value(B)),
+                    m_c_And(m_c_SpecificICmp(ICmpInst::ICMP_EQ, m_Deferred(A),
+                                             m_Deferred(B)),
+                            m_Value(CarryIn)))))
+    return false;
+
+  Type *OpTy = A->getType();
+  EVT VT = TLI->getValueType(*DL, OpTy);
+  if (VT.isSimple())
+    VT = TLI->getTypeToTransformTo(I->getContext(), VT);
+  if (!TLI->isOperationLegalOrCustom(ISD::USUBO_CARRY, VT))
+    return false;
+
+  // Decompose into two usub.with.overflow whose borrows are OR'd.
+  // The DAG combiner (combineCarryDiamond) folds this into USUBO_CARRY.
+  IRBuilder<> Builder(I);
+
+  Value *CarryExt = Builder.CreateZExt(CarryIn, OpTy, "carry.ext");
+  Value *Sub1 =
+      Builder.CreateBinaryIntrinsic(Intrinsic::usub_with_overflow, A, B);
+  Value *Diff = Builder.CreateExtractValue(Sub1, 0, "diff");
+  Value *Borrow1 = Builder.CreateExtractValue(Sub1, 1, "borrow");
+  Value *Sub2 = Builder.CreateBinaryIntrinsic(Intrinsic::usub_with_overflow,
+                                              Diff, CarryExt);
+  Value *Borrow2 = Builder.CreateExtractValue(Sub2, 1, "borrow");
+  Value *Result = Builder.CreateOr(Borrow1, Borrow2, "carry.out");
+
+  replaceAllUsesWith(I, Result, FreshBBs, IsHugeFunc);
+  I->eraseFromParent();
   return true;
 }
 
@@ -9004,6 +9051,9 @@ bool CodeGenPrepare::optimizeInst(Instruction *I, ModifyDT &ModifiedDT) {
 
   if (BinOp && BinOp->getOpcode() == Instruction::And && EnableAndCmpSinking &&
       sinkAndCmp0Expression(BinOp, *TLI, InsertedInsts))
+    return true;
+
+  if (BinOp && combineToUSubWithCarry(BinOp))
     return true;
 
   // TODO: Move this into the switch on opcode - it handles shifts already.
