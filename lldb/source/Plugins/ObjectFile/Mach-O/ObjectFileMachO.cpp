@@ -4517,11 +4517,11 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
                   ++sym_idx;
                 }
               } else {
-                if (log)
-                  log->Warning("symbol stub referencing symbol table symbol "
-                               "%u that isn't in our minimal symbol table, "
-                               "fix this!!!",
-                               stub_sym_id);
+                LLDB_LOGF(log,
+                          "warning: symbol stub referencing symbol table "
+                          "symbol %u that isn't in our minimal symbol table, "
+                          "fix this!!!",
+                          stub_sym_id);
               }
             }
           }
