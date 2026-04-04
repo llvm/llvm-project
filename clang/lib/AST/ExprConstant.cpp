@@ -14646,22 +14646,36 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
   case X86::BI__builtin_ia32_vpdpbusd128:
   case X86::BI__builtin_ia32_vpdpbusd256:
   case X86::BI__builtin_ia32_vpdpbusd512: {
-    // TODO: Before I make a PR, I should encapsulate all this into a
-    // lambda at the top of the function. 
-    bool IsByteDot =
-        E->getBuiltinCallee() == X86::BI__builtin_ia32_vpdpbusd128  ||
-        E->getBuiltinCallee() == X86::BI__builtin_ia32_vpdpbusd256  ||
-        E->getBuiltinCallee() == X86::BI__builtin_ia32_vpdpbusd512  ||
-        E->getBuiltinCallee() == X86::BI__builtin_ia32_vpdpbusds128 ||
-        E->getBuiltinCallee() == X86::BI__builtin_ia32_vpdpbusds256 ||
-        E->getBuiltinCallee() == X86::BI__builtin_ia32_vpdpbusds512;
-    bool IsSaturating =
-        E->getBuiltinCallee() == X86::BI__builtin_ia32_vpdpwssds128 ||
-        E->getBuiltinCallee() == X86::BI__builtin_ia32_vpdpwssds256 ||
-        E->getBuiltinCallee() == X86::BI__builtin_ia32_vpdpwssds512 ||
-        E->getBuiltinCallee() == X86::BI__builtin_ia32_vpdpbusds128 ||
-        E->getBuiltinCallee() == X86::BI__builtin_ia32_vpdpbusds256 ||
-        E->getBuiltinCallee() == X86::BI__builtin_ia32_vpdpbusds512;
+    unsigned BuiltinID = E->getBuiltinCallee();
+    bool IsDottingWord = false;
+    bool IsSaturating = false;
+    switch (BuiltinID) {
+    case X86::BI__builtin_ia32_vpdpwssd128:
+	case X86::BI__builtin_ia32_vpdpwssd256:
+	case X86::BI__builtin_ia32_vpdpwssd512:
+	  IsDottingWord = true;
+	  IsSaturating = false;
+	  break;
+	case X86::BI__builtin_ia32_vpdpwssds128:
+	case X86::BI__builtin_ia32_vpdpwssds256:
+	case X86::BI__builtin_ia32_vpdpwssds512:
+	  IsDottingWord = true;
+	  IsSaturating = true;
+	  break;
+	case X86::BI__builtin_ia32_vpdpbusds128:
+	case X86::BI__builtin_ia32_vpdpbusds256:
+	case X86::BI__builtin_ia32_vpdpbusds512:
+	  IsDottingWord = false;
+	  IsSaturating = true;
+	  break;
+	case X86::BI__builtin_ia32_vpdpbusd128:
+	case X86::BI__builtin_ia32_vpdpbusd256:
+	case X86::BI__builtin_ia32_vpdpbusd512:
+	  IsDottingWord = false;
+	  IsSaturating = false;
+	  break;
+    }
+	
 
     APValue Source, OperandA, OperandB;
     if (!EvaluateAsRValue(Info, E->getArg(0), Source) ||
@@ -14670,23 +14684,24 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
 	  return false;
     }
 
-    // Assume IsByteDot == true and IsSaturating == false
-    
+
     unsigned NumElements = Source.getVectorLength();
 
     SmallVector<APValue, 16> Result;
     Result.reserve(NumElements);
-
+	unsigned Iters = IsDottingWord ? 2 : 4;
     for (unsigned I = 0; I < NumElements; ++I) {
       APSInt DotProduct = Source.getVectorElt(I).getInt();
       if (IsSaturating) {
 		DotProduct = DotProduct.sext(64);
       }
-      unsigned Iters = IsByteDot ? 4 : 2;
       for (unsigned J = 0; J < Iters; ++J) {
-        APSInt OpA = IsByteDot
-            ? APSInt(OperandA.getVectorElt(Iters*I+J).getInt().zext(16), false)
-            : APSInt(OperandA.getVectorElt(Iters*I+J).getInt(), false);
+        APSInt OpA;
+        if (IsDottingWord) {
+		  OpA = APSInt(OperandA.getVectorElt(Iters*I+J).getInt(), false);
+        } else {
+		  OpA = APSInt(OperandA.getVectorElt(Iters*I+J).getInt().zext(16), true);
+		}
         APSInt OpB = APSInt(OperandB.getVectorElt(Iters*I+J).getInt().sext(16), false);
         DotProduct += APSInt((OpA * OpB).sext(64), false);
       }
