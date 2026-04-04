@@ -184,8 +184,8 @@ bool CSKYAsmBackend::fixupNeedsRelaxationAdvanced(const MCFragment &,
 std::optional<bool> CSKYAsmBackend::evaluateFixup(const MCFragment &F,
                                                   MCFixup &Fixup, MCValue &,
                                                   uint64_t &Value) {
-  // PC-relative fixups with scaled offsets compute displacement relative to
-  // AlignDown(PC, 4). Pre-seed Value with the low bits so the generic
+  // These forward-only constant pool load fixups compute displacement relative
+  // to AlignDown(PC, 4). Pre-seed Value with the low bits so the generic
   // evaluateFixup effectively subtracts the aligned offset. Subtract Stretch
   // to use the pre-Stretch (old) source offset, avoiding an epoch mismatch
   // with the generic Stretch-adjusted displacement (see ARMAsmBackend).
