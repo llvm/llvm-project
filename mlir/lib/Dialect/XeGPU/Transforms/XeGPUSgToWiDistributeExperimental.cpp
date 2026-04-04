@@ -62,34 +62,6 @@ static Value castValueTo(ConversionPatternRewriter &rewriter,
   return newOp.getResult(0);
 }
 
-/// Checks if all XeGPU anchor ops and vector results have valid layouts.
-static LogicalResult verifyLayouts(Operation *root) {
-  auto walkResult = root->walk([&](Operation *nestedOp) -> WalkResult {
-    if (auto anchorOp = dyn_cast<xegpu::AnchorLayoutInterface>(nestedOp)) {
-      auto layout = anchorOp.getAnchorLayout();
-      if (!layout) {
-        nestedOp->emitError("expected anchor layout attribute on operation");
-        return WalkResult::interrupt();
-      }
-      return WalkResult::advance();
-    }
-    // For each vector result, check if the op contains a result layout
-    // attribute.
-    for (OpResult result : nestedOp->getResults()) {
-      if (isa<VectorType>(result.getType())) {
-        auto layout = xegpu::getDistributeLayoutAttr(result);
-        if (!layout) {
-          nestedOp->emitError(
-              "expected result layout attribute on vector result");
-          return WalkResult::interrupt();
-        }
-      }
-    }
-    return WalkResult::advance();
-  });
-  return walkResult.wasInterrupted() ? failure() : success();
-}
-
 /// A vector::MultiDimReductionOp at subgroup level in expected form if, it has
 /// exactly 1 reduction dimension, it had valid result layout attribute, and
 /// result type can be distributed to lanes using the layout.
@@ -1551,14 +1523,6 @@ void XeGPUSgToWiDistributeExperimentalPass::runOnOperation() {
     return;
   }
 
-  // Verify if all XeGPU anchor ops and vector ops have result layouts.
-  // TODO: This can be removed once the full layout refactoring is done.
-  if (failed(verifyLayouts(root))) {
-    LLVM_DEBUG(DBGS() << "XeGPUSgToWiDistributeExperimentalPass: layout "
-                         "verification failed\n");
-    signalPassFailure();
-    return;
-  }
   // Collect existing UnrealizedConversionCastOps. These must be preserved.
   llvm::SmallSetVector<UnrealizedConversionCastOp, 8> existingCasts;
   root->walk(
