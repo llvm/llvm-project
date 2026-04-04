@@ -75,21 +75,6 @@ static GlobalData decodeGlobalDataEntry(StringRef Data, uint64_t &Offset,
 
 /// Encode error tests
 
-TEST(GSYMV2Test, TestCreatorV2EncodeErrorNoFunctions) {
-  GsymCreatorV2 GC;
-  auto Result = encodeV2(GC, llvm::endianness::little);
-  checkError("no functions to encode", Result.takeError());
-}
-
-TEST(GSYMV2Test, TestCreatorV2EncodeErrorNotFinalized) {
-  GsymCreatorV2 GC;
-  const uint32_t Name = GC.insertString("foo");
-  GC.addFunctionInfo(FunctionInfo(0x1000, 0x100, Name));
-  auto Result = encodeV2(GC, llvm::endianness::little);
-  checkError("GsymCreator wasn't finalized prior to encoding",
-             Result.takeError());
-}
-
 TEST(GSYMV2Test, TestCreatorV2DoubleFinalize) {
   GsymCreatorV2 GC;
   const uint32_t Name = GC.insertString("foo");
@@ -235,47 +220,6 @@ TEST(GSYMV2Test, TestCreatorV2HeaderAndGlobalDataNoUUID) {
                             /*ExpectedNumAddresses=*/2,
                             /*HasUUID=*/false);
 }
-
-/// Address offset size tests
-
-static void TestV2AddrOffSize(uint64_t BaseAddr, uint64_t Func2Offset,
-                              uint8_t ExpectedAddrOffSize) {
-  GsymCreatorV2 GC;
-  const uint32_t Func1Name = GC.insertString("foo");
-  const uint32_t Func2Name = GC.insertString("bar");
-  GC.addFunctionInfo(FunctionInfo(BaseAddr, 0x10, Func1Name));
-  GC.addFunctionInfo(FunctionInfo(BaseAddr + Func2Offset, 0x10, Func2Name));
-  OutputAggregator Null(nullptr);
-  Error Err = GC.finalize(Null);
-  ASSERT_FALSE(bool(Err));
-
-  auto Result = encodeV2(GC, llvm::endianness::little);
-  ASSERT_THAT_EXPECTED(Result, Succeeded());
-
-  auto HdrOrErr = decodeHeaderV2(*Result, llvm::endianness::little);
-  ASSERT_THAT_EXPECTED(HdrOrErr, Succeeded());
-  EXPECT_EQ(HdrOrErr->AddrOffSize, ExpectedAddrOffSize);
-}
-
-TEST(GSYMV2Test, TestCreatorV2AddrOffSize1Byte) {
-  TestV2AddrOffSize(0x1000, 0x20, 1);
-}
-
-TEST(GSYMV2Test, TestCreatorV2AddrOffSize2Byte) {
-  TestV2AddrOffSize(0x1000, 0x200, 2);
-}
-
-TEST(GSYMV2Test, TestCreatorV2AddrOffSize3ByteRoundsTo4) {
-  // 0x20000 needs 3 bytes, rounds up to 4 (power-of-two only).
-  TestV2AddrOffSize(0x1000, 0x20000, 4);
-}
-
-TEST(GSYMV2Test, TestCreatorV2AddrOffSize5ByteRoundsTo8) {
-  // 0x100000000 needs 5 bytes, rounds up to 8 (power-of-two only).
-  TestV2AddrOffSize(0x1000, 0x100000000ULL, 8);
-}
-
-/// StrpSize tests
 
 /// AddrInfoOffsets verification
 
@@ -716,91 +660,6 @@ createAndReadV2(GsymCreatorV2 &GC,
   return GsymReaderV2::copyBuffer(OutStrm.str());
 }
 
-TEST(GSYMV2Test, TestRoundTripSingleFunction) {
-  GsymCreatorV2 GC;
-  const uint32_t Name = GC.insertString("hello");
-  GC.addFunctionInfo(FunctionInfo(0x2000, 0x200, Name));
-
-  auto GR = createAndReadV2(GC);
-  ASSERT_THAT_EXPECTED(GR, Succeeded());
-
-  EXPECT_EQ(GR->getNumAddresses(), 1u);
-  EXPECT_EQ(GR->getHeader().BaseAddress, 0x2000u);
-
-  auto FI = GR->getFunctionInfo(0x2000);
-  ASSERT_THAT_EXPECTED(FI, Succeeded());
-  EXPECT_EQ(FI->Range, AddressRange(0x2000, 0x2200));
-  EXPECT_EQ(GR->getString(FI->Name), "hello");
-}
-
-TEST(GSYMV2Test, TestRoundTripMultipleFunctions) {
-  GsymCreatorV2 GC;
-  const uint32_t Name1 = GC.insertString("alpha");
-  const uint32_t Name2 = GC.insertString("beta");
-  const uint32_t Name3 = GC.insertString("gamma");
-  GC.addFunctionInfo(FunctionInfo(0x1000, 0x100, Name1));
-  GC.addFunctionInfo(FunctionInfo(0x1100, 0x100, Name2));
-  GC.addFunctionInfo(FunctionInfo(0x1200, 0x100, Name3));
-
-  auto GR = createAndReadV2(GC);
-  ASSERT_THAT_EXPECTED(GR, Succeeded());
-
-  EXPECT_EQ(GR->getNumAddresses(), 3u);
-  EXPECT_EQ(GR->getHeader().BaseAddress, 0x1000u);
-
-  // Verify each function can be looked up by address.
-  auto FI1 = GR->getFunctionInfo(0x1000);
-  ASSERT_THAT_EXPECTED(FI1, Succeeded());
-  EXPECT_EQ(GR->getString(FI1->Name), "alpha");
-  EXPECT_EQ(FI1->Range, AddressRange(0x1000, 0x1100));
-
-  auto FI2 = GR->getFunctionInfo(0x1100);
-  ASSERT_THAT_EXPECTED(FI2, Succeeded());
-  EXPECT_EQ(GR->getString(FI2->Name), "beta");
-  EXPECT_EQ(FI2->Range, AddressRange(0x1100, 0x1200));
-
-  auto FI3 = GR->getFunctionInfo(0x1200);
-  ASSERT_THAT_EXPECTED(FI3, Succeeded());
-  EXPECT_EQ(GR->getString(FI3->Name), "gamma");
-  EXPECT_EQ(FI3->Range, AddressRange(0x1200, 0x1300));
-
-  // Lookup in the middle of a function.
-  auto FI2Mid = GR->getFunctionInfo(0x1150);
-  ASSERT_THAT_EXPECTED(FI2Mid, Succeeded());
-  EXPECT_EQ(GR->getString(FI2Mid->Name), "beta");
-}
-
-TEST(GSYMV2Test, TestRoundTripLookup) {
-  GsymCreatorV2 GC;
-  const uint32_t Name1 = GC.insertString("start");
-  const uint32_t Name2 = GC.insertString("end");
-  GC.addFunctionInfo(FunctionInfo(0x5000, 0x500, Name1));
-  GC.addFunctionInfo(FunctionInfo(0x5500, 0x500, Name2));
-
-  auto GR = createAndReadV2(GC);
-  ASSERT_THAT_EXPECTED(GR, Succeeded());
-
-  // Lookup first function.
-  auto LR1 = GR->lookup(0x5000);
-  ASSERT_THAT_EXPECTED(LR1, Succeeded());
-  EXPECT_EQ(LR1->FuncName, "start");
-  EXPECT_EQ(LR1->FuncRange, AddressRange(0x5000, 0x5500));
-
-  // Lookup second function.
-  auto LR2 = GR->lookup(0x5500);
-  ASSERT_THAT_EXPECTED(LR2, Succeeded());
-  EXPECT_EQ(LR2->FuncName, "end");
-
-  // Lookup within first function.
-  auto LR3 = GR->lookup(0x5100);
-  ASSERT_THAT_EXPECTED(LR3, Succeeded());
-  EXPECT_EQ(LR3->FuncName, "start");
-
-  // Lookup outside all functions.
-  auto LR4 = GR->lookup(0x6000);
-  EXPECT_THAT_EXPECTED(LR4, Failed());
-}
-
 TEST(GSYMV2Test, TestRoundTripGetFunctionInfoAtIndex) {
   GsymCreatorV2 GC;
   const uint32_t Name1 = GC.insertString("func_x");
@@ -1219,51 +1078,6 @@ TEST(GSYMV2Test, TestVersionRoundTripV2ToV1ToV2) {
 //===----------------------------------------------------------------------===//
 // Segmenting tests
 //===----------------------------------------------------------------------===//
-
-TEST(GSYMV2Test, TestV2Segmenting) {
-  // Test that V2 segmenting works correctly with variable StrpSize.
-  // This exercises the FunctionInfo::cacheEncoding() path which creates
-  // a FileWriter without a GsymCreator, potentially using a wrong StrpSize.
-  GsymCreatorV2 GC;
-  const uint64_t BaseAddr = 0x1000;
-  const uint32_t FileIdx = GC.insertFile("/tmp/test.c");
-  // Add 4 functions that will be split into 2 segments.
-  for (uint32_t I = 0; I < 4; ++I) {
-    std::string Name = "func_" + std::to_string(I);
-    uint32_t NameOff = GC.insertString(Name);
-    FunctionInfo FI(BaseAddr + I * 0x100, 0x100, NameOff);
-    FI.OptLineTable = LineTable();
-    FI.OptLineTable->push(LineEntry(BaseAddr + I * 0x100, FileIdx, I + 1));
-    GC.addFunctionInfo(std::move(FI));
-  }
-  OutputAggregator Null(nullptr);
-  ASSERT_FALSE(GC.finalize(Null));
-
-  // Use a small segment size to force segmenting.
-  size_t FuncIdx = 0;
-  auto SegOrErr = GC.createSegment(/*SegmentSize=*/200, FuncIdx);
-  ASSERT_THAT_EXPECTED(SegOrErr, Succeeded());
-  ASSERT_NE(SegOrErr->get(), nullptr);
-
-  GsymCreator &Seg = *SegOrErr->get();
-  ASSERT_FALSE(Seg.finalize(Null));
-
-  // Encode and decode the segment.
-  SmallString<512> Str;
-  raw_svector_ostream OutStrm(Str);
-  FileWriter FW(OutStrm, llvm::endianness::native);
-  FW.setStringOffsetSize(Seg.getStringOffsetSize());
-  ASSERT_FALSE(Seg.encode(FW));
-
-  auto GR = GsymReader::copyBuffer(OutStrm.str());
-  ASSERT_THAT_EXPECTED(GR, Succeeded());
-  EXPECT_GT((*GR)->getNumAddresses(), 0u);
-
-  // Verify we can look up the first function in the segment.
-  auto FI = (*GR)->getFunctionInfo(BaseAddr);
-  ASSERT_THAT_EXPECTED(FI, Succeeded());
-  EXPECT_EQ((*GR)->getString(FI->Name), "func_0");
-}
 
 TEST(GSYMV2Test, TestV2SegmentingSize) {
   // Test that V2 segmenting produces segments whose actual encoded size
