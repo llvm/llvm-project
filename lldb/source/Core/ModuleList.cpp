@@ -1402,19 +1402,24 @@ bool ModuleList::LoadScriptingResourceInTargetForModule(
   if (!feedback_stream.Empty())
     debugger.ReportWarning(feedback_stream.GetString().str(), debugger.GetID());
 
+  const bool trusted = platform_sp->IsSymbolFileTrusted(module);
+
   for (const auto &[scripting_fspec, load_style] : file_specs) {
+    if (load_style == eLoadScriptFromSymFileFalse)
+      continue;
+
     if (!FileSystem::Instance().Exists(scripting_fspec))
       continue;
 
     switch (load_style) {
     case eLoadScriptFromSymFileFalse:
-      continue;
+      llvm_unreachable("case already handled");
     case eLoadScriptFromSymFileTrue:
       break;
     case eLoadScriptFromSymFileTrusted:
-      if (!platform_sp->IsSymbolFileTrusted(module))
-        continue;
-      break;
+      if (trusted)
+        break;
+      LLVM_FALLTHROUGH;
     case eLoadScriptFromSymFileWarn:
       warned_script_paths.emplace_back(scripting_fspec.GetPath());
       continue;

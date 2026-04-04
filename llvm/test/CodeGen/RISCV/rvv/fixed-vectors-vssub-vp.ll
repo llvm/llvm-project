@@ -370,11 +370,10 @@ define <16 x i8> @vssub_vi_v16i8_unmasked(<16 x i8> %va, i32 zeroext %evl) {
 define <256 x i8> @vssub_vi_v258i8(<256 x i8> %va, <256 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vssub_vi_v258i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
-; CHECK-NEXT:    vmv1r.v v24, v0
 ; CHECK-NEXT:    li a2, 128
-; CHECK-NEXT:    addi a3, a1, -128
 ; CHECK-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
+; CHECK-NEXT:    vmv1r.v v24, v0
+; CHECK-NEXT:    addi a3, a1, -128
 ; CHECK-NEXT:    vlm.v v0, (a0)
 ; CHECK-NEXT:    sltu a0, a1, a3
 ; CHECK-NEXT:    addi a0, a0, -1
