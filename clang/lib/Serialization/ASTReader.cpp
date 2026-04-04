@@ -7635,6 +7635,7 @@ void TypeLocReader::VisitTypeOfTypeLoc(TypeOfTypeLoc TL) {
 }
 
 void TypeLocReader::VisitDecltypeTypeLoc(DecltypeTypeLoc TL) {
+  TL.setUnderlyingExpr(Reader.readExpr());
   TL.setDecltypeLoc(readSourceLocation());
   TL.setRParenLoc(readSourceLocation());
 }
@@ -10272,12 +10273,12 @@ ASTRecordReader::readTemplateParameterList() {
 }
 
 void ASTRecordReader::readTemplateArgumentList(
-                        SmallVectorImpl<TemplateArgument> &TemplArgs,
-                        bool Canonicalize) {
+    SmallVectorImpl<TemplateArgument> &TemplArgs,
+    CanonicalizationKindOrNone CanonKind) {
   unsigned NumTemplateArgs = readInt();
   TemplArgs.reserve(NumTemplateArgs);
   while (NumTemplateArgs--)
-    TemplArgs.push_back(readTemplateArgument(Canonicalize));
+    TemplArgs.push_back(readTemplateArgument(CanonKind));
 }
 
 /// Read a UnresolvedSet structure.

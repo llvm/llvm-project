@@ -916,7 +916,7 @@ ASTNodeImporter::import(const TemplateArgument &From) {
 
   case TemplateArgument::Expression:
     if (ExpectedExpr ToExpr = import(From.getAsExpr()))
-      return TemplateArgument(*ToExpr, From.isCanonicalExpr(),
+      return TemplateArgument(*ToExpr, From.getExprCanonKind(),
                               From.getIsDefaulted());
     else
       return ToExpr.takeError();
@@ -1722,7 +1722,7 @@ ExpectedType ASTNodeImporter::VisitDecltypeType(const DecltypeType *T) {
     return ToUnderlyingTypeOrErr.takeError();
 
   return Importer.getToContext().getDecltypeType(
-      *ToExprOrErr, *ToUnderlyingTypeOrErr);
+      *ToExprOrErr, T->getExprCanonicalizationKind(), *ToUnderlyingTypeOrErr);
 }
 
 ExpectedType
@@ -6535,7 +6535,6 @@ ExpectedDecl ASTNodeImporter::VisitClassTemplateSpecializationDecl(
             ASTTemplateArgumentListInfo::Create(Importer.getToContext(),
                                                 ToTAInfo),
             ClassTemplate, ArrayRef(TemplateArgs),
-            /*CanonInjectedTST=*/CanQualType(),
             cast_or_null<ClassTemplatePartialSpecializationDecl>(PrevDecl)))
       return D2;
 

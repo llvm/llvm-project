@@ -546,8 +546,9 @@ DeduceNullPtrTemplateArgument(Sema &S, TemplateParameterList *TemplateParams,
                                                         : CK_NullToPointer)
                     .get();
   return DeduceNonTypeTemplateArgument(
-      S, TemplateParams, NTTP, TemplateArgument(Value, /*IsCanonical=*/false),
-      Value->getType(), Info, PartialOrdering, Deduced, HasDeducedAnyParam);
+      S, TemplateParams, NTTP,
+      TemplateArgument(Value, /*CanonKind=*/std::nullopt), Value->getType(),
+      Info, PartialOrdering, Deduced, HasDeducedAnyParam);
 }
 
 /// Deduce the value of the given non-type template parameter
@@ -561,8 +562,9 @@ DeduceNonTypeTemplateArgument(Sema &S, TemplateParameterList *TemplateParams,
                               SmallVectorImpl<DeducedTemplateArgument> &Deduced,
                               bool *HasDeducedAnyParam) {
   return DeduceNonTypeTemplateArgument(
-      S, TemplateParams, NTTP, TemplateArgument(Value, /*IsCanonical=*/false),
-      Value->getType(), Info, PartialOrdering, Deduced, HasDeducedAnyParam);
+      S, TemplateParams, NTTP,
+      TemplateArgument(Value, /*CanonKind=*/std::nullopt), Value->getType(),
+      Info, PartialOrdering, Deduced, HasDeducedAnyParam);
 }
 
 /// Deduce the value of the given non-type template parameter
@@ -2870,7 +2872,8 @@ Sema::getTrivialTemplateArgumentLoc(const TemplateArgument &Arg,
       NTTPType = Arg.getParamTypeForDecl();
     Expr *E = BuildExpressionFromDeclTemplateArgument(Arg, NTTPType, Loc)
                   .getAs<Expr>();
-    return TemplateArgumentLoc(TemplateArgument(E, /*IsCanonical=*/false), E);
+    return TemplateArgumentLoc(TemplateArgument(E, /*CanonKind=*/std::nullopt),
+                               E);
   }
 
   case TemplateArgument::NullPtr: {
@@ -2885,7 +2888,8 @@ Sema::getTrivialTemplateArgumentLoc(const TemplateArgument &Arg,
   case TemplateArgument::Integral:
   case TemplateArgument::StructuralValue: {
     Expr *E = BuildExpressionFromNonTypeTemplateArgument(Arg, Loc).get();
-    return TemplateArgumentLoc(TemplateArgument(E, /*IsCanonical=*/false), E);
+    return TemplateArgumentLoc(TemplateArgument(E, /*CanonKind=*/std::nullopt),
+                               E);
   }
 
     case TemplateArgument::Template:

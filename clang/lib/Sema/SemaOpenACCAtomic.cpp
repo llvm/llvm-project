@@ -424,9 +424,9 @@ class AtomicOperandChecker {
 
     llvm::FoldingSetNodeID LHS_ID, InnerLHS_ID, InnerRHS_ID;
     AssignInf.LHS->Profile(LHS_ID, SemaRef.getASTContext(),
-                           /*Canonical=*/true);
+                           CanonicalizationKind::Structural);
     BinInf->LHS->Profile(InnerLHS_ID, SemaRef.getASTContext(),
-                         /*Canonical=*/true);
+                         CanonicalizationKind::Structural);
 
     // This is X = X binop expr;
     // Check the RHS is an expression.
@@ -440,7 +440,7 @@ class AtomicOperandChecker {
           IDACInfo::AssignBinOp, AssignInf.LHS};
 
     BinInf->RHS->Profile(InnerRHS_ID, SemaRef.getASTContext(),
-                         /*Canonical=*/true);
+                         CanonicalizationKind::Structural);
     // This is X = expr binop X;
     // Check the LHS is an expression
     if (LHS_ID == InnerRHS_ID)

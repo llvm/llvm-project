@@ -6086,6 +6086,7 @@ namespace {
     }
     void VisitDecltypeTypeLoc(DecltypeTypeLoc TL) {
       assert(DS.getTypeSpecType() == DeclSpec::TST_decltype);
+      TL.setUnderlyingExpr(DS.getRepAsExpr());
       TL.setDecltypeLoc(DS.getTypeSpecTypeLoc());
       TL.setRParenLoc(DS.getTypeofParensRange().getEnd());
     }
@@ -10083,7 +10084,8 @@ QualType Sema::BuildDecltypeType(Expr *E, bool AsUnevaluated) {
     // used to build SFINAE gadgets.
     Diag(E->getExprLoc(), diag::warn_side_effects_unevaluated_context);
   }
-  return Context.getDecltypeType(E, getDecltypeForExpr(E));
+  return Context.getDecltypeType(E, /*ExprCanonKind=*/std::nullopt,
+                                 getDecltypeForExpr(E));
 }
 
 QualType Sema::ActOnPackIndexingType(QualType Pattern, Expr *IndexExpr,

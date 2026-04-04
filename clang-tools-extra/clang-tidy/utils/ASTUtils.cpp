@@ -106,8 +106,11 @@ bool areStatementsIdentical(const Stmt *FirstStmt, const Stmt *SecondStmt,
   }
 
   llvm::FoldingSetNodeID DataFirst, DataSecond;
-  FirstStmt->Profile(DataFirst, Context, Canonical);
-  SecondStmt->Profile(DataSecond, Context, Canonical);
+  auto CanonKind =
+      Canonical ? CanonicalizationKindOrNone(CanonicalizationKind::Structural)
+                : std::nullopt;
+  FirstStmt->Profile(DataFirst, Context, CanonKind);
+  SecondStmt->Profile(DataSecond, Context, CanonKind);
   return DataFirst == DataSecond;
 }
 

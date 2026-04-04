@@ -310,7 +310,7 @@ void ConstantArrayType::Profile(llvm::FoldingSetNodeID &ID,
   ID.AddInteger(TypeQuals);
   ID.AddBoolean(SizeExpr != nullptr);
   if (SizeExpr)
-    SizeExpr->Profile(ID, Context, true);
+    SizeExpr->Profile(ID, Context, CanonicalizationKind::Structural);
 }
 
 QualType ArrayParameterType::getConstantArrayType(const ASTContext &Ctx) const {
@@ -332,7 +332,7 @@ void DependentSizedArrayType::Profile(llvm::FoldingSetNodeID &ID,
   ID.AddInteger(llvm::to_underlying(SizeMod));
   ID.AddInteger(TypeQuals);
   if (E)
-    E->Profile(ID, Context, true);
+    E->Profile(ID, Context, CanonicalizationKind::Structural);
 }
 
 DependentVectorType::DependentVectorType(QualType ElementType,
@@ -353,7 +353,7 @@ void DependentVectorType::Profile(llvm::FoldingSetNodeID &ID,
                                   VectorKind VecKind) {
   ID.AddPointer(ElementType.getAsOpaquePtr());
   ID.AddInteger(llvm::to_underlying(VecKind));
-  SizeExpr->Profile(ID, Context, true);
+  SizeExpr->Profile(ID, Context, CanonicalizationKind::Structural);
 }
 
 DependentSizedExtVectorType::DependentSizedExtVectorType(QualType ElementType,
@@ -372,7 +372,7 @@ void DependentSizedExtVectorType::Profile(llvm::FoldingSetNodeID &ID,
                                           QualType ElementType,
                                           Expr *SizeExpr) {
   ID.AddPointer(ElementType.getAsOpaquePtr());
-  SizeExpr->Profile(ID, Context, true);
+  SizeExpr->Profile(ID, Context, CanonicalizationKind::Structural);
 }
 
 DependentAddressSpaceType::DependentAddressSpaceType(QualType PointeeType,
@@ -391,7 +391,7 @@ void DependentAddressSpaceType::Profile(llvm::FoldingSetNodeID &ID,
                                         QualType PointeeType,
                                         Expr *AddrSpaceExpr) {
   ID.AddPointer(PointeeType.getAsOpaquePtr());
-  AddrSpaceExpr->Profile(ID, Context, true);
+  AddrSpaceExpr->Profile(ID, Context, CanonicalizationKind::Structural);
 }
 
 MatrixType::MatrixType(TypeClass tc, QualType matrixType, QualType canonType,
@@ -437,8 +437,8 @@ void DependentSizedMatrixType::Profile(llvm::FoldingSetNodeID &ID,
                                        QualType ElementType, Expr *RowExpr,
                                        Expr *ColumnExpr) {
   ID.AddPointer(ElementType.getAsOpaquePtr());
-  RowExpr->Profile(ID, CTX, true);
-  ColumnExpr->Profile(ID, CTX, true);
+  RowExpr->Profile(ID, CTX, CanonicalizationKind::Structural);
+  ColumnExpr->Profile(ID, CTX, CanonicalizationKind::Structural);
 }
 
 VectorType::VectorType(QualType vecType, unsigned nElements, QualType canonType,
@@ -486,7 +486,7 @@ void DependentBitIntType::Profile(llvm::FoldingSetNodeID &ID,
                                   const ASTContext &Context, bool IsUnsigned,
                                   Expr *NumBitsExpr) {
   ID.AddBoolean(IsUnsigned);
-  NumBitsExpr->Profile(ID, Context, true);
+  NumBitsExpr->Profile(ID, Context, CanonicalizationKind::Structural);
 }
 
 bool BoundsAttributedType::referencesFieldDecls() const {
@@ -4055,7 +4055,10 @@ void FunctionProtoType::Profile(llvm::FoldingSetNodeID &ID, QualType Result,
     for (QualType Ex : epi.ExceptionSpec.Exceptions)
       ID.AddPointer(Ex.getAsOpaquePtr());
   } else if (isComputedNoexcept(epi.ExceptionSpec.Type)) {
-    epi.ExceptionSpec.NoexceptExpr->Profile(ID, Context, Canonical);
+    epi.ExceptionSpec.NoexceptExpr->Profile(
+        ID, Context,
+        Canonical ? CanonicalizationKindOrNone(CanonicalizationKind::Structural)
+                  : std::nullopt);
   } else if (epi.ExceptionSpec.Type == EST_Uninstantiated ||
              epi.ExceptionSpec.Type == EST_Unevaluated) {
     ID.AddPointer(epi.ExceptionSpec.SourceDecl->getCanonicalDecl());
@@ -4244,7 +4247,7 @@ QualType TypeOfExprType::desugar() const {
 void DependentTypeOfExprType::Profile(llvm::FoldingSetNodeID &ID,
                                       const ASTContext &Context, Expr *E,
                                       bool IsUnqual) {
-  E->Profile(ID, Context, true);
+  E->Profile(ID, Context, CanonicalizationKind::Structural);
   ID.AddBoolean(IsUnqual);
 }
 
@@ -4353,7 +4356,7 @@ void PackIndexingType::Profile(llvm::FoldingSetNodeID &ID,
                                Expr *E, bool FullySubstituted,
                                ArrayRef<QualType> Expansions) {
 
-  E->Profile(ID, Context, true);
+  E->Profile(ID, Context, CanonicalizationKind::Structural);
   ID.AddBoolean(FullySubstituted);
   if (!Expansions.empty()) {
     ID.AddInteger(Expansions.size());

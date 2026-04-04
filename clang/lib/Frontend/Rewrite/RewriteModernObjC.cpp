@@ -883,7 +883,8 @@ RewriteModernObjC::getIvarAccessString(ObjCIvarDecl *D) {
                                         ICIS_NoInit);
       MemberExpr *ME = MemberExpr::CreateImplicit(
           *Context, PE, true, FD, FD->getType(), VK_LValue, OK_Ordinary);
-      IvarT = Context->getDecltypeType(ME, ME->getType());
+      IvarT = Context->getDecltypeType(ME, /*ExprCanonKind=*/std::nullopt,
+                                       ME->getType());
     }
   }
   convertObjCTypeToCStyleType(IvarT);
@@ -7484,7 +7485,8 @@ Stmt *RewriteModernObjC::RewriteObjCIvarRefExpr(ObjCIvarRefExpr *IV) {
                                             /*Mutable=*/true, ICIS_NoInit);
           MemberExpr *ME = MemberExpr::CreateImplicit(
               *Context, PE, true, FD, FD->getType(), VK_LValue, OK_Ordinary);
-          IvarT = Context->getDecltypeType(ME, ME->getType());
+          IvarT = Context->getDecltypeType(ME, /*ExprCanonKind=*/std::nullopt,
+                                           ME->getType());
         }
       }
       convertObjCTypeToCStyleType(IvarT);

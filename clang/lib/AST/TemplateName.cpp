@@ -361,12 +361,7 @@ TemplateNameDependence TemplateName::getDependence() const {
       if (TTP->isParameterPack())
         D |= TemplateNameDependence::UnexpandedPack;
     }
-    // FIXME: Hack, getDeclContext() can be null if Template is still
-    // initializing due to PCH reading, so we check it before using it.
-    // Should probably modify TemplateSpecializationType to allow constructing
-    // it without the isDependent() checking.
-    if (Template->getDeclContext() &&
-        Template->getDeclContext()->isDependentContext())
+    if (Template->getDeclContext()->isDependentContext())
       D |= TemplateNameDependence::DependentInstantiation;
     return D;
   }
