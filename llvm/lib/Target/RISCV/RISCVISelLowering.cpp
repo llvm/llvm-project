@@ -1099,24 +1099,17 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       if (Subtarget.hasStdExtZvbb()) {
         setOperationAction(ISD::BITREVERSE, VT, Legal);
         setOperationAction(ISD::VP_BITREVERSE, VT, Custom);
-        setOperationAction({ISD::VP_CTLZ, ISD::VP_CTLZ_ZERO_UNDEF, ISD::VP_CTTZ,
-                            ISD::VP_CTTZ_ZERO_UNDEF, ISD::VP_CTPOP},
-                           VT, Custom);
       } else {
         setOperationAction({ISD::BITREVERSE, ISD::VP_BITREVERSE}, VT, Expand);
         setOperationAction({ISD::CTLZ, ISD::CTTZ, ISD::CTPOP}, VT, Expand);
-        setOperationAction({ISD::VP_CTLZ, ISD::VP_CTLZ_ZERO_UNDEF, ISD::VP_CTTZ,
-                            ISD::VP_CTTZ_ZERO_UNDEF, ISD::VP_CTPOP},
-                           VT, Expand);
 
         // Lower CTLZ_ZERO_UNDEF and CTTZ_ZERO_UNDEF if element of VT in the
         // range of f32.
         EVT FloatVT = MVT::getVectorVT(MVT::f32, VT.getVectorElementCount());
         if (isTypeLegal(FloatVT)) {
-          setOperationAction({ISD::CTLZ, ISD::CTLZ_ZERO_UNDEF,
-                              ISD::CTTZ_ZERO_UNDEF, ISD::VP_CTLZ,
-                              ISD::VP_CTLZ_ZERO_UNDEF, ISD::VP_CTTZ_ZERO_UNDEF},
-                             VT, Custom);
+          setOperationAction(
+              {ISD::CTLZ, ISD::CTLZ_ZERO_UNDEF, ISD::CTTZ_ZERO_UNDEF}, VT,
+              Custom);
         }
       }
 
@@ -6861,15 +6854,6 @@ RISCVTargetLowering::lowerCTLZ_CTTZ_ZERO_UNDEF(SDValue Op,
   SDLoc DL(Op);
   MVT ContainerVT = VT;
 
-  SDValue Mask, VL;
-  if (Op->isVPOpcode()) {
-    Mask = Op.getOperand(1);
-    if (VT.isFixedLengthVector())
-      Mask = convertToScalableVector(getMaskTypeFor(ContainerVT), Mask, DAG,
-                                     Subtarget);
-    VL = Op.getOperand(2);
-  }
-
   // We choose FP type that can represent the value if possible. Otherwise, we
   // use rounding to zero conversion for correct exponent of the result.
   // TODO: Use f16 for i8 when possible?
@@ -6889,27 +6873,19 @@ RISCVTargetLowering::lowerCTLZ_CTTZ_ZERO_UNDEF(SDValue Op,
   if (Op.getOpcode() == ISD::CTTZ_ZERO_UNDEF) {
     SDValue Neg = DAG.getNegative(Src, DL, VT);
     Src = DAG.getNode(ISD::AND, DL, VT, Src, Neg);
-  } else if (Op.getOpcode() == ISD::VP_CTTZ_ZERO_UNDEF) {
-    SDValue Neg = DAG.getNode(ISD::VP_SUB, DL, VT, DAG.getConstant(0, DL, VT),
-                              Src, Mask, VL);
-    Src = DAG.getNode(ISD::VP_AND, DL, VT, Src, Neg, Mask, VL);
   }
 
   // We have a legal FP type, convert to it.
   SDValue FloatVal;
   if (FloatVT.bitsGT(VT)) {
-    if (Op->isVPOpcode())
-      FloatVal = DAG.getNode(ISD::VP_UINT_TO_FP, DL, FloatVT, Src, Mask, VL);
-    else
-      FloatVal = DAG.getNode(ISD::UINT_TO_FP, DL, FloatVT, Src);
+    FloatVal = DAG.getNode(ISD::UINT_TO_FP, DL, FloatVT, Src);
   } else {
     // Use RTZ to avoid rounding influencing exponent of FloatVal.
     if (VT.isFixedLengthVector()) {
       ContainerVT = getContainerForFixedLengthVector(VT);
       Src = convertToScalableVector(ContainerVT, Src, DAG, Subtarget);
     }
-    if (!Op->isVPOpcode())
-      std::tie(Mask, VL) = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget);
+    auto [Mask, VL] = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget);
     SDValue RTZRM =
         DAG.getTargetConstant(RISCVFPRndMode::RTZ, DL, Subtarget.getXLenVT());
     MVT ContainerFloatVT =
@@ -6924,20 +6900,13 @@ RISCVTargetLowering::lowerCTLZ_CTTZ_ZERO_UNDEF(SDValue Op,
   SDValue Bitcast = DAG.getBitcast(IntVT, FloatVal);
   unsigned ShiftAmt = FloatEltVT == MVT::f64 ? 52 : 23;
 
-  SDValue Exp;
   // Restore back to original type. Truncation after SRL is to generate vnsrl.
-  if (Op->isVPOpcode()) {
-    Exp = DAG.getNode(ISD::VP_SRL, DL, IntVT, Bitcast,
-                      DAG.getConstant(ShiftAmt, DL, IntVT), Mask, VL);
-    Exp = DAG.getVPZExtOrTrunc(DL, VT, Exp, Mask, VL);
-  } else {
-    Exp = DAG.getNode(ISD::SRL, DL, IntVT, Bitcast,
-                      DAG.getConstant(ShiftAmt, DL, IntVT));
-    if (IntVT.bitsLT(VT))
-      Exp = DAG.getNode(ISD::ZERO_EXTEND, DL, VT, Exp);
-    else if (IntVT.bitsGT(VT))
-      Exp = DAG.getNode(ISD::TRUNCATE, DL, VT, Exp);
-  }
+  SDValue Exp = DAG.getNode(ISD::SRL, DL, IntVT, Bitcast,
+                            DAG.getConstant(ShiftAmt, DL, IntVT));
+  if (IntVT.bitsLT(VT))
+    Exp = DAG.getNode(ISD::ZERO_EXTEND, DL, VT, Exp);
+  else if (IntVT.bitsGT(VT))
+    Exp = DAG.getNode(ISD::TRUNCATE, DL, VT, Exp);
 
   // The exponent contains log2 of the value in biased form.
   unsigned ExponentBias = FloatEltVT == MVT::f64 ? 1023 : 127;
@@ -6945,27 +6914,18 @@ RISCVTargetLowering::lowerCTLZ_CTTZ_ZERO_UNDEF(SDValue Op,
   if (Op.getOpcode() == ISD::CTTZ_ZERO_UNDEF)
     return DAG.getNode(ISD::SUB, DL, VT, Exp,
                        DAG.getConstant(ExponentBias, DL, VT));
-  if (Op.getOpcode() == ISD::VP_CTTZ_ZERO_UNDEF)
-    return DAG.getNode(ISD::VP_SUB, DL, VT, Exp,
-                       DAG.getConstant(ExponentBias, DL, VT), Mask, VL);
 
   // For leading zeros, we need to remove the bias and convert from log2 to
   // leading zeros. We can do this by subtracting from (Bias + (EltSize - 1)).
   unsigned Adjust = ExponentBias + (EltSize - 1);
-  SDValue Res;
-  if (Op->isVPOpcode())
-    Res = DAG.getNode(ISD::VP_SUB, DL, VT, DAG.getConstant(Adjust, DL, VT), Exp,
-                      Mask, VL);
-  else
-    Res = DAG.getNode(ISD::SUB, DL, VT, DAG.getConstant(Adjust, DL, VT), Exp);
+  SDValue Res =
+      DAG.getNode(ISD::SUB, DL, VT, DAG.getConstant(Adjust, DL, VT), Exp);
 
   // The above result with zero input equals to Adjust which is greater than
   // EltSize. Hence, we can do min(Res, EltSize) for CTLZ.
   if (Op.getOpcode() == ISD::CTLZ)
     Res = DAG.getNode(ISD::UMIN, DL, VT, Res, DAG.getConstant(EltSize, DL, VT));
-  else if (Op.getOpcode() == ISD::VP_CTLZ)
-    Res = DAG.getNode(ISD::VP_UMIN, DL, VT, Res,
-                      DAG.getConstant(EltSize, DL, VT), Mask, VL);
+
   return Res;
 }
 
@@ -7614,14 +7574,9 @@ static unsigned getRISCVVLOp(SDValue Op) {
   VP_CASE(SSUBSAT)    // VP_SSUBSAT
   VP_CASE(USUBSAT)    // VP_USUBSAT
   VP_CASE(BSWAP)      // VP_BSWAP
-  VP_CASE(CTLZ)       // VP_CTLZ
-  VP_CASE(CTTZ)       // VP_CTTZ
-  VP_CASE(CTPOP)      // VP_CTPOP
   case ISD::CTLZ_ZERO_UNDEF:
-  case ISD::VP_CTLZ_ZERO_UNDEF:
     return RISCVISD::CTLZ_VL;
   case ISD::CTTZ_ZERO_UNDEF:
-  case ISD::VP_CTTZ_ZERO_UNDEF:
     return RISCVISD::CTTZ_VL;
   case ISD::FMA:
   case ISD::VP_FMA:
@@ -9097,18 +9052,6 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::VP_UMAX:
   case ISD::VP_BITREVERSE:
   case ISD::VP_BSWAP:
-    return lowerVPOp(Op, DAG);
-  case ISD::VP_CTLZ:
-  case ISD::VP_CTLZ_ZERO_UNDEF:
-    if (Subtarget.hasStdExtZvbb())
-      return lowerVPOp(Op, DAG);
-    return lowerCTLZ_CTTZ_ZERO_UNDEF(Op, DAG);
-  case ISD::VP_CTTZ:
-  case ISD::VP_CTTZ_ZERO_UNDEF:
-    if (Subtarget.hasStdExtZvbb())
-      return lowerVPOp(Op, DAG);
-    return lowerCTLZ_CTTZ_ZERO_UNDEF(Op, DAG);
-  case ISD::VP_CTPOP:
     return lowerVPOp(Op, DAG);
   case ISD::EXPERIMENTAL_VP_STRIDED_LOAD:
     return lowerVPStridedLoad(Op, DAG);
