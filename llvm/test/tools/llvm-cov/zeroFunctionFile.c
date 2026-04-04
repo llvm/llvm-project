@@ -16,5 +16,4 @@ int main() {
 // RUN: llvm-cov show -j 1 %S/Inputs/zeroFunctionFile.covmapping -format html -instr-profile %t.profdata -o %t.dir
 // RUN: FileCheck %s -input-file=%t.dir/index.html -check-prefix=HTML
 // HTML-NO: 0.00% (0/0)
-// HTML: Files which contain no functions
-// HTML: zeroFunctionFile.h
+// HTML-NOT: Files which contain no functions

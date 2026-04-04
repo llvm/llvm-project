@@ -64,14 +64,15 @@ auto sumMCDCPairs(const ArrayRef<MCDCRecord> &Records) {
 }
 
 static std::pair<RegionCoverageInfo, LineCoverageInfo>
-sumRegions(ArrayRef<CountedRegion> CodeRegions, const CoverageData &CD) {
+sumRegions(const CoverageData &CD) {
   // Compute the region coverage.
   size_t NumCodeRegions = 0, CoveredRegions = 0;
-  for (auto &CR : CodeRegions) {
-    if (CR.Kind != CounterMappingRegion::CodeRegion)
+  for (auto I = CD.begin(), E = CD.end(); I != E; ++I) {
+    if (!I->IsRegionEntry || !I->HasCount || I->IsGapRegion)
       continue;
+
     ++NumCodeRegions;
-    if (CR.ExecutionCount != 0)
+    if (I->Count)
       ++CoveredRegions;
   }
 
@@ -89,9 +90,8 @@ sumRegions(ArrayRef<CountedRegion> CodeRegions, const CoverageData &CD) {
           LineCoverageInfo(CoveredLines, NumLines)};
 }
 
-CoverageDataSummary::CoverageDataSummary(const CoverageData &CD,
-                                         ArrayRef<CountedRegion> CodeRegions) {
-  std::tie(RegionCoverage, LineCoverage) = sumRegions(CodeRegions, CD);
+CoverageDataSummary::CoverageDataSummary(const CoverageData &CD) {
+  std::tie(RegionCoverage, LineCoverage) = sumRegions(CD);
   BranchCoverage = sumBranches(CD.getBranches());
   MCDCCoverage = sumMCDCPairs(CD.getMCDCRecords());
 }
@@ -104,36 +104,10 @@ FunctionCoverageSummary::get(const CoverageMapping &CM,
   auto Summary =
       FunctionCoverageSummary(Function.Name, Function.ExecutionCount);
 
-  Summary += CoverageDataSummary(CD, Function.CountedRegions);
+  Summary += CoverageDataSummary(CD);
 
   // Compute the branch coverage, including branches from expansions.
   Summary.BranchCoverage += sumBranchExpansions(CM, CD.getExpansions());
 
-  return Summary;
-}
-
-FunctionCoverageSummary
-FunctionCoverageSummary::get(const InstantiationGroup &Group,
-                             ArrayRef<FunctionCoverageSummary> Summaries) {
-  std::string Name;
-  if (Group.hasName()) {
-    Name = std::string(Group.getName());
-  } else {
-    llvm::raw_string_ostream OS(Name);
-    OS << "Definition at line " << Group.getLine() << ", column "
-       << Group.getColumn();
-  }
-
-  FunctionCoverageSummary Summary(Name, Group.getTotalExecutionCount());
-  Summary.RegionCoverage = Summaries[0].RegionCoverage;
-  Summary.LineCoverage = Summaries[0].LineCoverage;
-  Summary.BranchCoverage = Summaries[0].BranchCoverage;
-  Summary.MCDCCoverage = Summaries[0].MCDCCoverage;
-  for (const auto &FCS : Summaries.drop_front()) {
-    Summary.RegionCoverage.merge(FCS.RegionCoverage);
-    Summary.LineCoverage.merge(FCS.LineCoverage);
-    Summary.BranchCoverage.merge(FCS.BranchCoverage);
-    Summary.MCDCCoverage.merge(FCS.MCDCCoverage);
-  }
   return Summary;
 }
