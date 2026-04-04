@@ -521,14 +521,10 @@ void LookupResult::resolveKind() {
 
   llvm::SmallVector<const NamedDecl *, 4> EquivalentNonFunctions;
   llvm::BitVector RemovedDecls(N);
-  llvm::BitVector UnresolvedUsingDecls(N);
 
   for (unsigned I = 0; I < N; I++) {
     const NamedDecl *D = Decls[I]->getUnderlyingDecl();
     D = cast<NamedDecl>(D->getCanonicalDecl());
-
-    if (isa<UnresolvedUsingIfExistsDecl>(D))
-      UnresolvedUsingDecls.set(I);
 
     // Ignore an invalid declaration unless it's the only one left.
     // Also ignore HLSLBufferDecl which not have name conflict with other Decls.
@@ -637,37 +633,16 @@ void LookupResult::resolveKind() {
     getSema().diagnoseEquivalentInternalLinkageDeclarations(
         getNameLoc(), HasNonFunction, EquivalentNonFunctions);
 
-  // A lookup can be ambiguous if we find multiple declarations that cannot
-  // coexist. This occurs if:
-  //
-  // 1. We have a non-function (like a variable or namespace), which cannot
-  //    be overloaded, and either a function or an unresolved using declaration.
-  bool ConflictWithNonFunction =
-      HasNonFunction && (HasFunction || HasUnresolved);
-
-  // 2. We have a hidden tag (struct or enum) and another declaration, and
-  //    Because they both remain in the results, they must be from different
-  //    scopes. If they were in the same scope, the tag would have been hidden
-  //    and removed prior.
-  bool HiddenTagConflict =
-      HideTags && HasTag && (HasFunction || HasNonFunction || HasUnresolved);
-
-  if (ConflictWithNonFunction || HiddenTagConflict)
-    Ambiguous = true;
-
-  if (Ambiguous && UnresolvedUsingDecls.count()) {
-    // If we would have an ambiguous reference but any of them are
-    // using_if_exist decls, ignore them since they are unresolved.
-    RemovedDecls |= UnresolvedUsingDecls;
-    Ambiguous = false;
-  }
-
   // Remove decls by replacing them with decls from the end (which
   // means that we need to iterate from the end) and then truncating
   // to the new size.
   for (int I = RemovedDecls.find_last(); I >= 0; I = RemovedDecls.find_prev(I))
     Decls[I] = Decls[--N];
   Decls.truncate(N);
+
+  if ((HasNonFunction && (HasFunction || HasUnresolved)) ||
+      (HideTags && HasTag && (HasFunction || HasNonFunction || HasUnresolved)))
+    Ambiguous = true;
 
   if (Ambiguous && ReferenceToPlaceHolderVariable)
     setAmbiguous(LookupAmbiguityKind::AmbiguousReferenceToPlaceholderVariable);
