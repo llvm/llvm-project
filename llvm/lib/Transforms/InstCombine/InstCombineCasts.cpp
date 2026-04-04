@@ -2066,15 +2066,23 @@ static bool isKnownExactCastIntToFP(CastInst &I, InstCombinerImpl &IC) {
       return true;
   }
 
-  // TODO:
   // Try harder to find if the source integer type has less significant bits.
-  // For example, compute number of sign bits.
+  // Compute number of sign bits or determine trailing zeros.
   KnownBits SrcKnown = IC.computeKnownBits(Src, &I);
   int SigBits = (int)SrcTy->getScalarSizeInBits() -
                 SrcKnown.countMinLeadingZeros() -
                 SrcKnown.countMinTrailingZeros();
   if (SigBits <= DestNumSigBits)
     return true;
+
+  // For sitofp, the sign maps to the FP sign bit, so only magnitude bits
+  // (BitWidth - NumSignBits) consume mantissa.
+  if (IsSigned) {
+    SigBits =
+        (int)SrcTy->getScalarSizeInBits() - IC.ComputeNumSignBits(Src, &I);
+    if (SigBits <= DestNumSigBits)
+      return true;
+  }
 
   return false;
 }
