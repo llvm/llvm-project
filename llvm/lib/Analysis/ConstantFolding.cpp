@@ -105,6 +105,35 @@ static Constant *foldConstVectorToAPInt(APInt &Result, Type *DestTy,
   return nullptr;
 }
 
+/// Check whether folding this bitcast into a byte vector would mix poison and
+/// non-poison bits in the same output lane. While integer types track poison on
+/// a per-value basis, byte types track it on a per-bit basis. However,
+/// `ConstantByte` cannot represent values with both poison and non-poison bits.
+///
+/// Source elements are grouped by the output lane they map to. Returns true if
+/// any group contains both poison and non-poison elements.
+static bool foldMixesPoisonBits(Constant *C, unsigned NumSrcElt,
+                                unsigned NumDstElt) {
+  unsigned Ratio = NumSrcElt / NumDstElt;
+  for (unsigned i = 0; i != NumSrcElt; i += Ratio) {
+    bool HasPoison = false;
+    bool HasNonPoison = false;
+    for (unsigned j = 0; j != Ratio; ++j) {
+      Constant *Src = C->getAggregateElement(i + j);
+      // Conservatively bail out.
+      if (!Src)
+        return true;
+      if (isa<PoisonValue>(Src))
+        HasPoison = true;
+      else
+        HasNonPoison = true;
+    }
+    if (HasPoison && HasNonPoison)
+      return true;
+  }
+  return false;
+}
+
 /// Constant fold bitcast, symbolically evaluating it with DataLayout.
 /// This always returns a non-null constant, but it may be a
 /// ConstantExpr if unfoldable.
@@ -201,6 +230,12 @@ Constant *FoldBitCast(Constant *C, Type *DestTy, const DataLayout &DL) {
 
   // Handle byte destination type by folding through integers.
   if (DstEltTy->isByteTy()) {
+    // When combining elements into larger byte values, bail out if the fold
+    // mixes poison and non-poison bits in the same destination element. Byte
+    // types track poison per bit, and no constant value can represent that.
+    if (NumDstElt < NumSrcElt && foldMixesPoisonBits(C, NumSrcElt, NumDstElt))
+      return ConstantExpr::getBitCast(C, DestTy);
+
     // Fold to a vector of integers with same size as the byte type.
     unsigned ByteWidth = DstEltTy->getPrimitiveSizeInBits();
     auto *DestIVTy = FixedVectorType::get(
