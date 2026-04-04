@@ -2165,7 +2165,7 @@ static bool tryToReplaceALMWithWideALM(VPlan &Plan, ElementCount VF,
     }
   }
 
-  assert(all_of(Phis, [](VPActiveLaneMaskPHIRecipe *Phi) { return Phi; }) &&
+  assert(all_of(Phis, not_equal_to(nullptr)) &&
          "Expected one VPActiveLaneMaskPHIRecipe for each unroll part");
 
   auto *EntryALM = cast<VPInstruction>(Phis[0]->getStartValue());
