@@ -616,6 +616,11 @@ LLVM_22 {
     clang_experimental_DependencyScannerServiceOptions_setAsyncScanModules;
 };
 
+LLVM_23 {
+  global:
+    clang_ModuleCache_prune;
+};
+
 # Example of how to add a new symbol version entry.  If you do add a new symbol
 # version, please update the example to depend on the version you added.
 # LLVM_X {
