@@ -166,6 +166,8 @@ public:
 
   bool IsMemberFunctionPointerType() const;
 
+  bool IsMemberDataPointerType() const;
+
   bool
   IsBlockPointerType(CompilerType *function_pointer_type_ptr = nullptr) const;
 
@@ -201,6 +203,8 @@ public:
   bool IsTypedefType() const;
 
   bool IsVoidType() const;
+
+  bool HasPointerAuthQualifier() const;
 
   /// This is used when you don't care about the signedness of the integer.
   bool IsInteger() const;

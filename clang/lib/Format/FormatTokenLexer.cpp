@@ -163,8 +163,6 @@ void FormatTokenLexer::tryMergePreviousTokens() {
     return;
   if (tryMergeForEach())
     return;
-  if (Style.isCpp() && tryTransformTryUsageForC())
-    return;
 
   if ((Style.Language == FormatStyle::LK_Cpp ||
        Style.Language == FormatStyle::LK_ObjC) &&
@@ -530,26 +528,6 @@ bool FormatTokenLexer::tryMergeForEach() {
                              Each->TokenText.end() - For->TokenText.begin());
   For->ColumnWidth += Each->ColumnWidth;
   Tokens.erase(Tokens.end() - 1);
-  return true;
-}
-
-bool FormatTokenLexer::tryTransformTryUsageForC() {
-  if (Tokens.size() < 2)
-    return false;
-  auto &Try = *(Tokens.end() - 2);
-  if (Try->isNot(tok::kw_try))
-    return false;
-  auto &Next = *(Tokens.end() - 1);
-  if (Next->isOneOf(tok::l_brace, tok::colon, tok::hash, tok::comment))
-    return false;
-
-  if (Tokens.size() > 2) {
-    auto &At = *(Tokens.end() - 3);
-    if (At->is(tok::at))
-      return false;
-  }
-
-  Try->Tok.setKind(tok::identifier);
   return true;
 }
 

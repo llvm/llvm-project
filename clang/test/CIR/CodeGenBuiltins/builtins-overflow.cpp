@@ -13,7 +13,7 @@ bool test_add_overflow_uint_uint_uint(unsigned x, unsigned y, unsigned *res) {
 //      CIR:   %[[#LHS:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!u32i>, !u32i
 // CIR-NEXT:   %[[#RHS:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!u32i>, !u32i
 // CIR-NEXT:   %[[#RES_PTR:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!cir.ptr<!u32i>>, !cir.ptr<!u32i>
-// CIR-NEXT:   %[[RES:.+]], %{{.+}} = cir.binop.overflow(add, %[[#LHS]], %[[#RHS]]) : !u32i, (!u32i, !cir.bool)
+// CIR-NEXT:   %[[RES:.+]], %{{.+}} = cir.add.overflow %[[#LHS]], %[[#RHS]] : !u32i -> !u32i
 // CIR-NEXT:   cir.store{{.*}} %[[RES]], %[[#RES_PTR]] : !u32i, !cir.ptr<!u32i>
 //      CIR: }
 
@@ -31,7 +31,7 @@ bool test_add_overflow_int_int_int(int x, int y, int *res) {
 //      CIR:   %[[#LHS:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!s32i>, !s32i
 // CIR-NEXT:   %[[#RHS:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!s32i>, !s32i
 // CIR-NEXT:   %[[#RES_PTR:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
-// CIR-NEXT:   %[[RES:.+]], %{{.+}} = cir.binop.overflow(add, %[[#LHS]], %[[#RHS]]) : !s32i, (!s32i, !cir.bool)
+// CIR-NEXT:   %[[RES:.+]], %{{.+}} = cir.add.overflow %[[#LHS]], %[[#RHS]] : !s32i -> !s32i
 // CIR-NEXT:   cir.store{{.*}} %[[RES]], %[[#RES_PTR]] : !s32i, !cir.ptr<!s32i>
 //      CIR: }
 
@@ -43,7 +43,7 @@ bool test_add_overflow_xint31_xint31_xint31(_BitInt(31) x, _BitInt(31) y, _BitIn
 //      CIR:   %[[#LHS:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!cir.int<s, 31>>, !cir.int<s, 31>
 // CIR-NEXT:   %[[#RHS:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!cir.int<s, 31>>, !cir.int<s, 31>
 // CIR-NEXT:   %[[#RES_PTR:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!cir.ptr<!cir.int<s, 31>>>, !cir.ptr<!cir.int<s, 31>>
-// CIR-NEXT:   %[[RES:.+]], %{{.+}} = cir.binop.overflow(add, %[[#LHS]], %[[#RHS]]) : !cir.int<s, 31>, (!cir.int<s, 31>, !cir.bool)
+// CIR-NEXT:   %[[RES:.+]], %{{.+}} = cir.add.overflow %[[#LHS]], %[[#RHS]] : !cir.int<s, 31> -> !cir.int<s, 31>
 // CIR-NEXT:   cir.store{{.*}} %[[RES]], %[[#RES_PTR]] : !cir.int<s, 31>, !cir.ptr<!cir.int<s, 31>>
 //      CIR: }
 
@@ -55,7 +55,7 @@ bool test_sub_overflow_uint_uint_uint(unsigned x, unsigned y, unsigned *res) {
 //      CIR:   %[[#LHS:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!u32i>, !u32i
 // CIR-NEXT:   %[[#RHS:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!u32i>, !u32i
 // CIR-NEXT:   %[[#RES_PTR:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!cir.ptr<!u32i>>, !cir.ptr<!u32i>
-// CIR-NEXT:   %[[RES:.+]], %{{.+}} = cir.binop.overflow(sub, %[[#LHS]], %[[#RHS]]) : !u32i, (!u32i, !cir.bool)
+// CIR-NEXT:   %[[RES:.+]], %{{.+}} = cir.sub.overflow %[[#LHS]], %[[#RHS]] : !u32i -> !u32i
 // CIR-NEXT:   cir.store{{.*}} %[[RES]], %[[#RES_PTR]] : !u32i, !cir.ptr<!u32i>
 //      CIR: }
 
@@ -67,7 +67,7 @@ bool test_sub_overflow_int_int_int(int x, int y, int *res) {
 //      CIR:   %[[#LHS:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!s32i>, !s32i
 // CIR-NEXT:   %[[#RHS:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!s32i>, !s32i
 // CIR-NEXT:   %[[#RES_PTR:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
-// CIR-NEXT:   %[[RES:.+]], %{{.+}} = cir.binop.overflow(sub, %[[#LHS]], %[[#RHS]]) : !s32i, (!s32i, !cir.bool)
+// CIR-NEXT:   %[[RES:.+]], %{{.+}} = cir.sub.overflow %[[#LHS]], %[[#RHS]] : !s32i -> !s32i
 // CIR-NEXT:   cir.store{{.*}} %[[RES]], %[[#RES_PTR]] : !s32i, !cir.ptr<!s32i>
 //      CIR: }
 
@@ -79,7 +79,7 @@ bool test_sub_overflow_xint31_xint31_xint31(_BitInt(31) x, _BitInt(31) y, _BitIn
 //      CIR:   %[[#LHS:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!cir.int<s, 31>>, !cir.int<s, 31>
 // CIR-NEXT:   %[[#RHS:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!cir.int<s, 31>>, !cir.int<s, 31>
 // CIR-NEXT:   %[[#RES_PTR:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!cir.ptr<!cir.int<s, 31>>>, !cir.ptr<!cir.int<s, 31>>
-// CIR-NEXT:   %[[RES:.+]], %{{.+}} = cir.binop.overflow(sub, %[[#LHS]], %[[#RHS]]) : !cir.int<s, 31>, (!cir.int<s, 31>, !cir.bool)
+// CIR-NEXT:   %[[RES:.+]], %{{.+}} = cir.sub.overflow %[[#LHS]], %[[#RHS]] : !cir.int<s, 31> -> !cir.int<s, 31>
 // CIR-NEXT:   cir.store{{.*}} %[[RES]], %[[#RES_PTR]] : !cir.int<s, 31>, !cir.ptr<!cir.int<s, 31>>
 //      CIR: }
 
@@ -91,7 +91,7 @@ bool test_mul_overflow_uint_uint_uint(unsigned x, unsigned y, unsigned *res) {
 //      CIR:   %[[#LHS:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!u32i>, !u32i
 // CIR-NEXT:   %[[#RHS:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!u32i>, !u32i
 // CIR-NEXT:   %[[#RES_PTR:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!cir.ptr<!u32i>>, !cir.ptr<!u32i>
-// CIR-NEXT:   %[[RES:.+]], %{{.+}} = cir.binop.overflow(mul, %[[#LHS]], %[[#RHS]]) : !u32i, (!u32i, !cir.bool)
+// CIR-NEXT:   %[[RES:.+]], %{{.+}} = cir.mul.overflow %[[#LHS]], %[[#RHS]] : !u32i -> !u32i
 // CIR-NEXT:   cir.store{{.*}} %[[RES]], %[[#RES_PTR]] : !u32i, !cir.ptr<!u32i>
 //      CIR: }
 
@@ -103,7 +103,7 @@ bool test_mul_overflow_int_int_int(int x, int y, int *res) {
 //      CIR:   %[[#LHS:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!s32i>, !s32i
 // CIR-NEXT:   %[[#RHS:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!s32i>, !s32i
 // CIR-NEXT:   %[[#RES_PTR:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
-// CIR-NEXT:   %[[RES:.+]], %{{.+}} = cir.binop.overflow(mul, %[[#LHS]], %[[#RHS]]) : !s32i, (!s32i, !cir.bool)
+// CIR-NEXT:   %[[RES:.+]], %{{.+}} = cir.mul.overflow %[[#LHS]], %[[#RHS]] : !s32i -> !s32i
 // CIR-NEXT:   cir.store{{.*}} %[[RES]], %[[#RES_PTR]] : !s32i, !cir.ptr<!s32i>
 //      CIR: }
 
@@ -115,7 +115,7 @@ bool test_mul_overflow_xint31_xint31_xint31(_BitInt(31) x, _BitInt(31) y, _BitIn
 //      CIR:   %[[#LHS:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!cir.int<s, 31>>, !cir.int<s, 31>
 // CIR-NEXT:   %[[#RHS:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!cir.int<s, 31>>, !cir.int<s, 31>
 // CIR-NEXT:   %[[#RES_PTR:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!cir.ptr<!cir.int<s, 31>>>, !cir.ptr<!cir.int<s, 31>>
-// CIR-NEXT:   %[[RES:.+]], %{{.+}} = cir.binop.overflow(mul, %[[#LHS]], %[[#RHS]]) : !cir.int<s, 31>, (!cir.int<s, 31>, !cir.bool)
+// CIR-NEXT:   %[[RES:.+]], %{{.+}} = cir.mul.overflow %[[#LHS]], %[[#RHS]] : !cir.int<s, 31> -> !cir.int<s, 31>
 // CIR-NEXT:   cir.store{{.*}} %[[RES]], %[[#RES_PTR]] : !cir.int<s, 31>, !cir.ptr<!cir.int<s, 31>>
 //      CIR: }
 
@@ -127,7 +127,7 @@ bool test_mul_overflow_ulong_ulong_long(unsigned long x, unsigned long y, unsign
 //      CIR:   %[[#LHS:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!u64i>, !u64i
 // CIR-NEXT:   %[[#RHS:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!u64i>, !u64i
 // CIR-NEXT:   %[[#RES_PTR:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!cir.ptr<!u64i>>, !cir.ptr<!u64i>
-// CIR-NEXT:   %[[RES:.+]], %{{.+}} = cir.binop.overflow(mul, %[[#LHS]], %[[#RHS]]) : !u64i, (!u64i, !cir.bool)
+// CIR-NEXT:   %[[RES:.+]], %{{.+}} = cir.mul.overflow %[[#LHS]], %[[#RHS]] : !u64i -> !u64i
 // CIR-NEXT:   cir.store{{.*}} %[[RES]], %[[#RES_PTR]] : !u64i, !cir.ptr<!u64i>
 //      CIR: }
 
@@ -141,7 +141,7 @@ bool test_add_overflow_uint_int_int(unsigned x, int y, int *res) {
 // CIR-NEXT:   %[[#RES_PTR:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
 // CIR-NEXT:   %[[#PROM_X:]] = cir.cast integral %[[#X]] : !u32i -> !cir.int<s, 33>
 // CIR-NEXT:   %[[#PROM_Y:]] = cir.cast integral %[[#Y]] : !s32i -> !cir.int<s, 33>
-// CIR-NEXT:   %[[RES:.+]], %{{.+}} = cir.binop.overflow(add, %[[#PROM_X]], %[[#PROM_Y]]) : !cir.int<s, 33>, (!s32i, !cir.bool)
+// CIR-NEXT:   %[[RES:.+]], %{{.+}} = cir.add.overflow %[[#PROM_X]], %[[#PROM_Y]] : !cir.int<s, 33> -> !s32i
 // CIR-NEXT:   cir.store{{.*}} %[[RES]], %[[#RES_PTR]] : !s32i, !cir.ptr<!s32i>
 //      CIR: }
 
@@ -153,7 +153,7 @@ bool test_add_overflow_volatile(int x, int y, volatile int *res) {
 //      CIR:   %[[#X:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!s32i>, !s32i
 // CIR-NEXT:   %[[#Y:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!s32i>, !s32i
 // CIR-NEXT:   %[[#RES_PTR:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
-// CIR-NEXT:   %[[RES:.+]], %{{.+}} = cir.binop.overflow(add, %[[#X]], %[[#Y]]) : !s32i, (!s32i, !cir.bool)
+// CIR-NEXT:   %[[RES:.+]], %{{.+}} = cir.add.overflow %[[#X]], %[[#Y]] : !s32i -> !s32i
 // CIR-NEXT:   cir.store volatile{{.*}} %[[RES]], %[[#RES_PTR]] : !s32i, !cir.ptr<!s32i>
 //      CIR: }
 
@@ -165,7 +165,7 @@ bool test_uadd_overflow(unsigned x, unsigned y, unsigned *res) {
 //      CIR:   %[[#X:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!u32i>, !u32i
 // CIR-NEXT:   %[[#Y:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!u32i>, !u32i
 // CIR-NEXT:   %[[#RES_PTR:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!cir.ptr<!u32i>>, !cir.ptr<!u32i>
-// CIR-NEXT:   %[[RES:.+]], %{{.+}} = cir.binop.overflow(add, %[[#X]], %[[#Y]]) : !u32i, (!u32i, !cir.bool)
+// CIR-NEXT:   %[[RES:.+]], %{{.+}} = cir.add.overflow %[[#X]], %[[#Y]] : !u32i -> !u32i
 // CIR-NEXT:   cir.store{{.*}} %[[RES]], %[[#RES_PTR]] : !u32i, !cir.ptr<!u32i>
 //      CIR: }
 
@@ -177,7 +177,7 @@ bool test_uaddl_overflow(unsigned long x, unsigned long y, unsigned long *res) {
 //      CIR:   %[[#X:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!u64i>, !u64i
 // CIR-NEXT:   %[[#Y:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!u64i>, !u64i
 // CIR-NEXT:   %[[#RES_PTR:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!cir.ptr<!u64i>>, !cir.ptr<!u64i>
-// CIR-NEXT:   %[[RES:.+]], %{{.+}} = cir.binop.overflow(add, %[[#X]], %[[#Y]]) : !u64i, (!u64i, !cir.bool)
+// CIR-NEXT:   %[[RES:.+]], %{{.+}} = cir.add.overflow %[[#X]], %[[#Y]] : !u64i -> !u64i
 // CIR-NEXT:   cir.store{{.*}} %[[RES]], %[[#RES_PTR]] : !u64i, !cir.ptr<!u64i>
 //      CIR: }
 
@@ -189,7 +189,7 @@ bool test_uaddll_overflow(unsigned long long x, unsigned long long y, unsigned l
 //      CIR:   %[[#X:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!u64i>, !u64i
 // CIR-NEXT:   %[[#Y:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!u64i>, !u64i
 // CIR-NEXT:   %[[#RES_PTR:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!cir.ptr<!u64i>>, !cir.ptr<!u64i>
-// CIR-NEXT:   %[[RES:.+]], %{{.+}} = cir.binop.overflow(add, %[[#X]], %[[#Y]]) : !u64i, (!u64i, !cir.bool)
+// CIR-NEXT:   %[[RES:.+]], %{{.+}} = cir.add.overflow %[[#X]], %[[#Y]] : !u64i -> !u64i
 // CIR-NEXT:   cir.store{{.*}} %[[RES]], %[[#RES_PTR]] : !u64i, !cir.ptr<!u64i>
 //      CIR: }
 
@@ -201,7 +201,7 @@ bool test_usub_overflow(unsigned x, unsigned y, unsigned *res) {
 //      CIR:   %[[#X:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!u32i>, !u32i
 // CIR-NEXT:   %[[#Y:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!u32i>, !u32i
 // CIR-NEXT:   %[[#RES_PTR:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!cir.ptr<!u32i>>, !cir.ptr<!u32i>
-// CIR-NEXT:   %[[RES:.+]], %{{.+}} = cir.binop.overflow(sub, %[[#X]], %[[#Y]]) : !u32i, (!u32i, !cir.bool)
+// CIR-NEXT:   %[[RES:.+]], %{{.+}} = cir.sub.overflow %[[#X]], %[[#Y]] : !u32i -> !u32i
 // CIR-NEXT:   cir.store{{.*}} %[[RES]], %[[#RES_PTR]] : !u32i, !cir.ptr<!u32i>
 //      CIR: }
 
@@ -213,7 +213,7 @@ bool test_usubl_overflow(unsigned long x, unsigned long y, unsigned long *res) {
 //      CIR:   %[[#X:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!u64i>, !u64i
 // CIR-NEXT:   %[[#Y:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!u64i>, !u64i
 // CIR-NEXT:   %[[#RES_PTR:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!cir.ptr<!u64i>>, !cir.ptr<!u64i>
-// CIR-NEXT:   %[[RES:.+]], %{{.+}} = cir.binop.overflow(sub, %[[#X]], %[[#Y]]) : !u64i, (!u64i, !cir.bool)
+// CIR-NEXT:   %[[RES:.+]], %{{.+}} = cir.sub.overflow %[[#X]], %[[#Y]] : !u64i -> !u64i
 // CIR-NEXT:   cir.store{{.*}} %[[RES]], %[[#RES_PTR]] : !u64i, !cir.ptr<!u64i>
 //      CIR: }
 
@@ -225,7 +225,7 @@ bool test_usubll_overflow(unsigned long long x, unsigned long long y, unsigned l
 //      CIR:   %[[#X:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!u64i>, !u64i
 // CIR-NEXT:   %[[#Y:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!u64i>, !u64i
 // CIR-NEXT:   %[[#RES_PTR:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!cir.ptr<!u64i>>, !cir.ptr<!u64i>
-// CIR-NEXT:   %[[RES:.+]], %{{.+}} = cir.binop.overflow(sub, %[[#X]], %[[#Y]]) : !u64i, (!u64i, !cir.bool)
+// CIR-NEXT:   %[[RES:.+]], %{{.+}} = cir.sub.overflow %[[#X]], %[[#Y]] : !u64i -> !u64i
 // CIR-NEXT:   cir.store{{.*}} %[[RES]], %[[#RES_PTR]] : !u64i, !cir.ptr<!u64i>
 //      CIR: }
 
@@ -237,7 +237,7 @@ bool test_umul_overflow(unsigned x, unsigned y, unsigned *res) {
 //      CIR:   %[[#X:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!u32i>, !u32i
 // CIR-NEXT:   %[[#Y:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!u32i>, !u32i
 // CIR-NEXT:   %[[#RES_PTR:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!cir.ptr<!u32i>>, !cir.ptr<!u32i>
-// CIR-NEXT:   %[[RES:.+]], %{{.+}} = cir.binop.overflow(mul, %[[#X]], %[[#Y]]) : !u32i, (!u32i, !cir.bool)
+// CIR-NEXT:   %[[RES:.+]], %{{.+}} = cir.mul.overflow %[[#X]], %[[#Y]] : !u32i -> !u32i
 // CIR-NEXT:   cir.store{{.*}} %[[RES]], %[[#RES_PTR]] : !u32i, !cir.ptr<!u32i>
 //      CIR: }
 
@@ -249,7 +249,7 @@ bool test_umull_overflow(unsigned long x, unsigned long y, unsigned long *res) {
 //      CIR:   %[[#X:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!u64i>, !u64i
 // CIR-NEXT:   %[[#Y:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!u64i>, !u64i
 // CIR-NEXT:   %[[#RES_PTR:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!cir.ptr<!u64i>>, !cir.ptr<!u64i>
-// CIR-NEXT:   %[[RES:.+]], %{{.+}} = cir.binop.overflow(mul, %[[#X]], %[[#Y]]) : !u64i, (!u64i, !cir.bool)
+// CIR-NEXT:   %[[RES:.+]], %{{.+}} = cir.mul.overflow %[[#X]], %[[#Y]] : !u64i -> !u64i
 // CIR-NEXT:   cir.store{{.*}} %[[RES]], %[[#RES_PTR]] : !u64i, !cir.ptr<!u64i>
 //      CIR: }
 
@@ -261,7 +261,7 @@ bool test_umulll_overflow(unsigned long long x, unsigned long long y, unsigned l
 //      CIR:   %[[#X:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!u64i>, !u64i
 // CIR-NEXT:   %[[#Y:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!u64i>, !u64i
 // CIR-NEXT:   %[[#RES_PTR:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!cir.ptr<!u64i>>, !cir.ptr<!u64i>
-// CIR-NEXT:   %[[RES:.+]], %{{.+}} = cir.binop.overflow(mul, %[[#X]], %[[#Y]]) : !u64i, (!u64i, !cir.bool)
+// CIR-NEXT:   %[[RES:.+]], %{{.+}} = cir.mul.overflow %[[#X]], %[[#Y]] : !u64i -> !u64i
 // CIR-NEXT:   cir.store{{.*}} %[[RES]], %[[#RES_PTR]] : !u64i, !cir.ptr<!u64i>
 //      CIR: }
 
@@ -273,7 +273,7 @@ bool test_sadd_overflow(int x, int y, int *res) {
 //      CIR:   %[[#X:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!s32i>, !s32i
 // CIR-NEXT:   %[[#Y:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!s32i>, !s32i
 // CIR-NEXT:   %[[#RES_PTR:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
-// CIR-NEXT:   %[[RES:.+]], %{{.+}} = cir.binop.overflow(add, %[[#X]], %[[#Y]]) : !s32i, (!s32i, !cir.bool)
+// CIR-NEXT:   %[[RES:.+]], %{{.+}} = cir.add.overflow %[[#X]], %[[#Y]] : !s32i -> !s32i
 // CIR-NEXT:   cir.store{{.*}} %[[RES]], %[[#RES_PTR]] : !s32i, !cir.ptr<!s32i>
 //      CIR: }
 
@@ -285,7 +285,7 @@ bool test_saddl_overflow(long x, long y, long *res) {
 //      CIR:   %[[#X:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!s64i>, !s64i
 // CIR-NEXT:   %[[#Y:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!s64i>, !s64i
 // CIR-NEXT:   %[[#RES_PTR:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!cir.ptr<!s64i>>, !cir.ptr<!s64i>
-// CIR-NEXT:   %[[RES:.+]], %{{.+}} = cir.binop.overflow(add, %[[#X]], %[[#Y]]) : !s64i, (!s64i, !cir.bool)
+// CIR-NEXT:   %[[RES:.+]], %{{.+}} = cir.add.overflow %[[#X]], %[[#Y]] : !s64i -> !s64i
 // CIR-NEXT:   cir.store{{.*}} %[[RES]], %[[#RES_PTR]] : !s64i, !cir.ptr<!s64i>
 //      CIR: }
 
@@ -297,7 +297,7 @@ bool test_saddll_overflow(long long x, long long y, long long *res) {
 //      CIR:   %[[#X:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!s64i>, !s64i
 // CIR-NEXT:   %[[#Y:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!s64i>, !s64i
 // CIR-NEXT:   %[[#RES_PTR:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!cir.ptr<!s64i>>, !cir.ptr<!s64i>
-// CIR-NEXT:   %[[RES:.+]], %{{.+}} = cir.binop.overflow(add, %[[#X]], %[[#Y]]) : !s64i, (!s64i, !cir.bool)
+// CIR-NEXT:   %[[RES:.+]], %{{.+}} = cir.add.overflow %[[#X]], %[[#Y]] : !s64i -> !s64i
 // CIR-NEXT:   cir.store{{.*}} %[[RES]], %[[#RES_PTR]] : !s64i, !cir.ptr<!s64i>
 //      CIR: }
 
@@ -309,7 +309,7 @@ bool test_ssub_overflow(int x, int y, int *res) {
 //      CIR:   %[[#X:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!s32i>, !s32i
 // CIR-NEXT:   %[[#Y:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!s32i>, !s32i
 // CIR-NEXT:   %[[#RES_PTR:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
-// CIR-NEXT:   %[[RES:.+]], %{{.+}} = cir.binop.overflow(sub, %[[#X]], %[[#Y]]) : !s32i, (!s32i, !cir.bool)
+// CIR-NEXT:   %[[RES:.+]], %{{.+}} = cir.sub.overflow %[[#X]], %[[#Y]] : !s32i -> !s32i
 // CIR-NEXT:   cir.store{{.*}} %[[RES]], %[[#RES_PTR]] : !s32i, !cir.ptr<!s32i>
 //      CIR: }
 
@@ -321,7 +321,7 @@ bool test_ssubl_overflow(long x, long y, long *res) {
 //      CIR:   %[[#X:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!s64i>, !s64i
 // CIR-NEXT:   %[[#Y:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!s64i>, !s64i
 // CIR-NEXT:   %[[#RES_PTR:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!cir.ptr<!s64i>>, !cir.ptr<!s64i>
-// CIR-NEXT:   %[[RES:.+]], %{{.+}} = cir.binop.overflow(sub, %[[#X]], %[[#Y]]) : !s64i, (!s64i, !cir.bool)
+// CIR-NEXT:   %[[RES:.+]], %{{.+}} = cir.sub.overflow %[[#X]], %[[#Y]] : !s64i -> !s64i
 // CIR-NEXT:   cir.store{{.*}} %[[RES]], %[[#RES_PTR]] : !s64i, !cir.ptr<!s64i>
 //      CIR: }
 
@@ -333,7 +333,7 @@ bool test_ssubll_overflow(long long x, long long y, long long *res) {
 //      CIR:   %[[#X:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!s64i>, !s64i
 // CIR-NEXT:   %[[#Y:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!s64i>, !s64i
 // CIR-NEXT:   %[[#RES_PTR:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!cir.ptr<!s64i>>, !cir.ptr<!s64i>
-// CIR-NEXT:   %[[RES:.+]], %{{.+}} = cir.binop.overflow(sub, %[[#X]], %[[#Y]]) : !s64i, (!s64i, !cir.bool)
+// CIR-NEXT:   %[[RES:.+]], %{{.+}} = cir.sub.overflow %[[#X]], %[[#Y]] : !s64i -> !s64i
 // CIR-NEXT:   cir.store{{.*}} %[[RES]], %[[#RES_PTR]] : !s64i, !cir.ptr<!s64i>
 //      CIR: }
 
@@ -345,7 +345,7 @@ bool test_smul_overflow(int x, int y, int *res) {
 //      CIR:   %[[#X:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!s32i>, !s32i
 // CIR-NEXT:   %[[#Y:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!s32i>, !s32i
 // CIR-NEXT:   %[[#RES_PTR:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
-// CIR-NEXT:   %[[RES:.+]], %{{.+}} = cir.binop.overflow(mul, %[[#X]], %[[#Y]]) : !s32i, (!s32i, !cir.bool)
+// CIR-NEXT:   %[[RES:.+]], %{{.+}} = cir.mul.overflow %[[#X]], %[[#Y]] : !s32i -> !s32i
 // CIR-NEXT:   cir.store{{.*}} %[[RES]], %[[#RES_PTR]] : !s32i, !cir.ptr<!s32i>
 //      CIR: }
 
@@ -357,7 +357,7 @@ bool test_smull_overflow(long x, long y, long *res) {
 //      CIR:   %[[#X:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!s64i>, !s64i
 // CIR-NEXT:   %[[#Y:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!s64i>, !s64i
 // CIR-NEXT:   %[[#RES_PTR:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!cir.ptr<!s64i>>, !cir.ptr<!s64i>
-// CIR-NEXT:   %[[RES:.+]], %{{.+}} = cir.binop.overflow(mul, %[[#X]], %[[#Y]]) : !s64i, (!s64i, !cir.bool)
+// CIR-NEXT:   %[[RES:.+]], %{{.+}} = cir.mul.overflow %[[#X]], %[[#Y]] : !s64i -> !s64i
 // CIR-NEXT:   cir.store{{.*}} %[[RES]], %[[#RES_PTR]] : !s64i, !cir.ptr<!s64i>
 //      CIR: }
 
@@ -369,6 +369,6 @@ bool test_smulll_overflow(long long x, long long y, long long *res) {
 //      CIR:   %[[#X:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!s64i>, !s64i
 // CIR-NEXT:   %[[#Y:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!s64i>, !s64i
 // CIR-NEXT:   %[[#RES_PTR:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!cir.ptr<!s64i>>, !cir.ptr<!s64i>
-// CIR-NEXT:   %[[RES:.+]], %{{.+}} = cir.binop.overflow(mul, %[[#X]], %[[#Y]]) : !s64i, (!s64i, !cir.bool)
+// CIR-NEXT:   %[[RES:.+]], %{{.+}} = cir.mul.overflow %[[#X]], %[[#Y]] : !s64i -> !s64i
 // CIR-NEXT:   cir.store{{.*}} %[[RES]], %[[#RES_PTR]] : !s64i, !cir.ptr<!s64i>
 //      CIR: }

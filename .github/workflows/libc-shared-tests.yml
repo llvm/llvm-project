@@ -1,0 +1,97 @@
+name: libc Precommit CI - shared tests
+permissions:
+  contents: read
+on:
+  pull_request:
+    paths:
+      - 'libc/**'
+      - '.github/workflows/libc-shared-tests.yml'
+
+jobs:
+  windows-msvc-shared:
+    name: libc-shared-test with MSVC (${{ matrix.arch }})
+    strategy:
+      fail-fast: false # If one arch fails, let the other finish
+      matrix:
+        include:
+          - arch: amd64
+            os: windows-2022
+          - arch: amd64_x86
+            os: windows-2022
+          - arch: arm64
+            os: windows-11-arm
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout LLVM
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup MSVC Dev Environment
+        uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1.13.0
+        with:
+          arch: ${{ matrix.arch }}
+
+      - name: Configure CMake
+        run: |
+          cmake -B build -S runtimes -G Ninja `
+            -DLLVM_ENABLE_RUNTIMES=libc `
+            -DCMAKE_C_COMPILER=cl `
+            -DCMAKE_CXX_COMPILER=cl `
+            -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build and Test
+        run: cmake --build build --target libc-shared-tests
+
+  linux-cross-arch-shared:
+    name: libc-shared-tests on (${{ matrix.arch }})
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false # If one arch fails, let the other finish
+      matrix:
+        include:
+          - arch: aarch64
+            libc: libc6-dev-arm64-cross
+            libcpp: libstdc++6-arm64-cross
+            target_triple: aarch64-linux-gnu
+            gcc_arch: aarch64-linux-gnu
+          - arch: riscv64
+            libc: libc6-dev-riscv64-cross
+            libcpp: libstdc++6-riscv64-cross
+            target_triple: riscv64-linux-gnu
+            gcc_arch: riscv64-linux-gnu
+          - arch: ppc64le
+            libc: libc6-dev-ppc64el-cross
+            libcpp: libstdc++6-ppc64el-cross
+            target_triple: powerpc64le-linux-gnu
+            gcc_arch: powerpc64le-linux-gnu
+
+    steps:
+      - name: Checkout LLVM
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          persist-credentials: false
+
+      - name: Prepare dependencies
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y cmake ninja-build clang lld qemu-user-static \
+            ${{ matrix.libc }} ${{ matrix.libcpp }} \
+            gcc-${{ matrix.target_triple }} g++-${{ matrix.target_triple }}
+
+      - name: Configure CMake
+        run: |
+          cmake -B build -S runtimes -G Ninja \
+            -DLLVM_ENABLE_RUNTIMES=libc \
+            -DCMAKE_C_COMPILER=clang \
+            -DCMAKE_CXX_COMPILER=clang++ \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DLIBC_TARGET_TRIPLE=${{ matrix.target_triple }}
+
+      - name: Build and Run
+        env:
+          QEMU_LD_PREFIX: /usr/${{ matrix.target_triple }}
+        run: |
+          cmake --build build --target libc-shared-tests

@@ -1086,6 +1086,20 @@ struct CUDADeviceTy : public GenericDeviceTy {
     return Plugin::check(Res, "error in cuEventSynchronize: %s");
   }
 
+  /// Get the elapsed time in milliseconds between two events.
+  Expected<float> getEventElapsedTimeImpl(void *StartEventPtr,
+                                          void *EndEventPtr) override {
+    CUevent StartEvent = reinterpret_cast<CUevent>(StartEventPtr);
+    CUevent EndEvent = reinterpret_cast<CUevent>(EndEventPtr);
+
+    float ElapsedTime = 0.0f;
+    CUresult Res = cuEventElapsedTime(&ElapsedTime, StartEvent, EndEvent);
+    if (auto Err = Plugin::check(Res, "error in cuEventElapsedTime: %s"))
+      return std::move(Err);
+
+    return ElapsedTime;
+  }
+
   /// Print information about the device.
   Expected<InfoTreeNode> obtainInfoImpl() override {
     char TmpChar[1000];
@@ -1490,10 +1504,6 @@ Error CUDAKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
   // whenever there is a kernel running and let it sleep otherwise.
   if (GenericDevice.getRPCServer())
     GenericDevice.Plugin.getRPCServer().Thread->notify();
-
-  // Increase to the requested dynamic memory size for the device if needed.
-  DynBlockMemSize =
-      std::max(DynBlockMemSize, GenericDevice.getDynamicMemorySize());
 
   // In case we require more memory than the current limit.
   if (DynBlockMemSize >= MaxDynBlockMemSize) {

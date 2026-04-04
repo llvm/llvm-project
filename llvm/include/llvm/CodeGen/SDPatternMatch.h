@@ -29,8 +29,8 @@ namespace llvm {
 namespace SDPatternMatch {
 
 /// MatchContext can repurpose existing patterns to behave differently under
-/// a certain context. For instance, `m_Opc(ISD::ADD)` matches plain ADD nodes
-/// in normal circumstances, but matches VP_ADD nodes under a custom
+/// a certain context. For instance, `m_SpecificOpc(ISD::ADD)` matches plain ADD
+/// nodes in normal circumstances, but matches VP_ADD nodes under a custom
 /// VPMatchContext. This design is meant to facilitate code / pattern reusing.
 class BasicMatchContext {
   const SelectionDAG *DAG;
@@ -224,7 +224,9 @@ template <typename... Preds> auto m_NoneOf(const Preds &...preds) {
   return m_Unless(m_AnyOf(preds...));
 }
 
-inline Opcode_match m_Opc(unsigned Opcode) { return Opcode_match(Opcode); }
+inline Opcode_match m_SpecificOpc(unsigned Opcode) {
+  return Opcode_match(Opcode);
+}
 
 inline auto m_Undef() {
   return m_AnyOf(Opcode_match(ISD::UNDEF), Opcode_match(ISD::POISON));
@@ -497,7 +499,8 @@ struct Operands_match<OpIdx, OpndPred, OpndPreds...>
 
 template <typename... OpndPreds>
 auto m_Node(unsigned Opcode, const OpndPreds &...preds) {
-  return m_AllOf(m_Opc(Opcode), Operands_match<0, OpndPreds...>(preds...));
+  return m_AllOf(m_SpecificOpc(Opcode),
+                 Operands_match<0, OpndPreds...>(preds...));
 }
 
 /// Provide number of operands that are not chain or glue, as well as the first
@@ -547,7 +550,7 @@ struct TernaryOpc_match {
 
   template <typename MatchContext>
   bool match(const MatchContext &Ctx, SDValue N) {
-    if (sd_context_match(N, Ctx, m_Opc(Opcode))) {
+    if (sd_context_match(N, Ctx, m_SpecificOpc(Opcode))) {
       EffectiveOperands<ExcludeChain> EO(N, Ctx);
       assert(EO.Size == 3);
       return ((Op0.match(Ctx, N->getOperand(EO.FirstIndex)) &&
@@ -649,7 +652,7 @@ struct BinaryOpc_match {
 
   template <typename MatchContext>
   bool match(const MatchContext &Ctx, SDValue N) {
-    if (sd_context_match(N, Ctx, m_Opc(Opcode))) {
+    if (sd_context_match(N, Ctx, m_SpecificOpc(Opcode))) {
       EffectiveOperands<ExcludeChain> EO(N, Ctx);
       assert(EO.Size == 2);
       if (!((LHS.match(Ctx, N->getOperand(EO.FirstIndex)) &&
@@ -724,15 +727,15 @@ struct MaxMin_match {
              (Commutable && LHS.match(Ctx, R) && RHS.match(Ctx, L));
     };
 
-    if (sd_context_match(N, Ctx, m_Opc(ISD::SELECT)) ||
-        sd_context_match(N, Ctx, m_Opc(ISD::VSELECT))) {
+    if (sd_context_match(N, Ctx, m_SpecificOpc(ISD::SELECT)) ||
+        sd_context_match(N, Ctx, m_SpecificOpc(ISD::VSELECT))) {
       EffectiveOperands<ExcludeChain> EO_SELECT(N, Ctx);
       assert(EO_SELECT.Size == 3);
       SDValue Cond = N->getOperand(EO_SELECT.FirstIndex);
       SDValue TrueValue = N->getOperand(EO_SELECT.FirstIndex + 1);
       SDValue FalseValue = N->getOperand(EO_SELECT.FirstIndex + 2);
 
-      if (sd_context_match(Cond, Ctx, m_Opc(ISD::SETCC))) {
+      if (sd_context_match(Cond, Ctx, m_SpecificOpc(ISD::SETCC))) {
         EffectiveOperands<ExcludeChain> EO_SETCC(Cond, Ctx);
         assert(EO_SETCC.Size == 3);
         SDValue L = Cond->getOperand(EO_SETCC.FirstIndex);
@@ -743,7 +746,7 @@ struct MaxMin_match {
       }
     }
 
-    if (sd_context_match(N, Ctx, m_Opc(ISD::SELECT_CC))) {
+    if (sd_context_match(N, Ctx, m_SpecificOpc(ISD::SELECT_CC))) {
       EffectiveOperands<ExcludeChain> EO_SELECT(N, Ctx);
       assert(EO_SELECT.Size == 5);
       SDValue L = N->getOperand(EO_SELECT.FirstIndex);
@@ -1098,7 +1101,7 @@ template <typename Opnd_P, bool ExcludeChain = false> struct UnaryOpc_match {
 
   template <typename MatchContext>
   bool match(const MatchContext &Ctx, SDValue N) {
-    if (sd_context_match(N, Ctx, m_Opc(Opcode))) {
+    if (sd_context_match(N, Ctx, m_SpecificOpc(Opcode))) {
       EffectiveOperands<ExcludeChain> EO(N, Ctx);
       assert(EO.Size == 1);
       if (!Opnd.match(Ctx, N->getOperand(EO.FirstIndex)))

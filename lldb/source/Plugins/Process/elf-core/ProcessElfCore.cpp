@@ -306,10 +306,9 @@ void ProcessElfCore::UpdateBuildIdForNTFileEntries() {
       // Assert that either the path is not in the map or the UUID matches
       assert(m_uuids.count(entry.path) == 0 || m_uuids[entry.path] == uuid);
       m_uuids[entry.path] = uuid;
-      if (log)
-        LLDB_LOGF(log, "%s found UUID @ %16.16" PRIx64 ": %s \"%s\"",
-                  __FUNCTION__, entry.start, uuid.GetAsString().c_str(),
-                  entry.path.c_str());
+      LLDB_LOGF(log, "%s found UUID @ %16.16" PRIx64 ": %s \"%s\"",
+                __FUNCTION__, entry.start, uuid.GetAsString().c_str(),
+                entry.path.c_str());
     }
   }
 }
@@ -401,43 +400,43 @@ Status ProcessElfCore::DoGetMemoryRegionInfo(lldb::addr_t load_addr,
       region_info.GetRange().SetRangeEnd(permission_entry->GetRangeEnd());
       const Flags permissions(permission_entry->data);
       region_info.SetReadable(permissions.Test(lldb::ePermissionsReadable)
-                                  ? MemoryRegionInfo::eYes
-                                  : MemoryRegionInfo::eNo);
+                                  ? eLazyBoolYes
+                                  : eLazyBoolNo);
       region_info.SetWritable(permissions.Test(lldb::ePermissionsWritable)
-                                  ? MemoryRegionInfo::eYes
-                                  : MemoryRegionInfo::eNo);
+                                  ? eLazyBoolYes
+                                  : eLazyBoolNo);
       region_info.SetExecutable(permissions.Test(lldb::ePermissionsExecutable)
-                                    ? MemoryRegionInfo::eYes
-                                    : MemoryRegionInfo::eNo);
-      region_info.SetMapped(MemoryRegionInfo::eYes);
+                                    ? eLazyBoolYes
+                                    : eLazyBoolNo);
+      region_info.SetMapped(eLazyBoolYes);
 
       // A region is memory tagged if there is a memory tag segment that covers
       // the exact same range.
-      region_info.SetMemoryTagged(MemoryRegionInfo::eNo);
+      region_info.SetMemoryTagged(eLazyBoolNo);
       const VMRangeToFileOffset::Entry *tag_entry =
           m_core_tag_ranges.FindEntryStartsAt(permission_entry->GetRangeBase());
       if (tag_entry &&
           tag_entry->GetRangeEnd() == permission_entry->GetRangeEnd())
-        region_info.SetMemoryTagged(MemoryRegionInfo::eYes);
+        region_info.SetMemoryTagged(eLazyBoolYes);
     } else if (load_addr < permission_entry->GetRangeBase()) {
       region_info.GetRange().SetRangeBase(load_addr);
       region_info.GetRange().SetRangeEnd(permission_entry->GetRangeBase());
-      region_info.SetReadable(MemoryRegionInfo::eNo);
-      region_info.SetWritable(MemoryRegionInfo::eNo);
-      region_info.SetExecutable(MemoryRegionInfo::eNo);
-      region_info.SetMapped(MemoryRegionInfo::eNo);
-      region_info.SetMemoryTagged(MemoryRegionInfo::eNo);
+      region_info.SetReadable(eLazyBoolNo);
+      region_info.SetWritable(eLazyBoolNo);
+      region_info.SetExecutable(eLazyBoolNo);
+      region_info.SetMapped(eLazyBoolNo);
+      region_info.SetMemoryTagged(eLazyBoolNo);
     }
     return Status();
   }
 
   region_info.GetRange().SetRangeBase(load_addr);
   region_info.GetRange().SetRangeEnd(LLDB_INVALID_ADDRESS);
-  region_info.SetReadable(MemoryRegionInfo::eNo);
-  region_info.SetWritable(MemoryRegionInfo::eNo);
-  region_info.SetExecutable(MemoryRegionInfo::eNo);
-  region_info.SetMapped(MemoryRegionInfo::eNo);
-  region_info.SetMemoryTagged(MemoryRegionInfo::eNo);
+  region_info.SetReadable(eLazyBoolNo);
+  region_info.SetWritable(eLazyBoolNo);
+  region_info.SetExecutable(eLazyBoolNo);
+  region_info.SetMapped(eLazyBoolNo);
+  region_info.SetMemoryTagged(eLazyBoolNo);
   return Status();
 }
 
@@ -547,10 +546,8 @@ static void ParseFreeBSDPrStatus(ThreadData &thread_data,
   int pr_version = data.GetU32(&offset);
 
   Log *log = GetLog(LLDBLog::Process);
-  if (log) {
-    if (pr_version > 1)
-      LLDB_LOGF(log, "FreeBSD PRSTATUS unexpected version %d", pr_version);
-  }
+  if (pr_version > 1)
+    LLDB_LOGF(log, "FreeBSD PRSTATUS unexpected version %d", pr_version);
 
   // Skip padding, pr_statussz, pr_gregsetsz, pr_fpregsetsz, pr_osreldate
   if (lp64)
@@ -575,10 +572,8 @@ static void ParseFreeBSDPrPsInfo(ProcessElfCore &process,
   int pr_version = data.GetU32(&offset);
 
   Log *log = GetLog(LLDBLog::Process);
-  if (log) {
-    if (pr_version > 1)
-      LLDB_LOGF(log, "FreeBSD PRPSINFO unexpected version %d", pr_version);
-  }
+  if (pr_version > 1)
+    LLDB_LOGF(log, "FreeBSD PRPSINFO unexpected version %d", pr_version);
 
   // Skip pr_psinfosz, pr_fname, pr_psargs
   offset += 108;

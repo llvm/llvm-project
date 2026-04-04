@@ -1899,15 +1899,21 @@ the configuration (without a prefix: ``Auto``).
   Dependent on the value, ``int f() { return 0; }`` can be put on a
   single line.
 
-  Possible values:
+  Nested configuration flags:
 
-  * ``SFS_None`` (in configuration: ``None``)
+  Different styles for merging short functions containing at most one
+  statement.
+
+  They can be read as a whole for compatibility. The choices are:
+
+  * ``None``
     Never merge functions into a single line.
 
-  * ``SFS_InlineOnly`` (in configuration: ``InlineOnly``)
+  * ``InlineOnly``
     Only merge functions defined inside a class. Same as ``inline``,
-    except it does not imply ``empty``: i.e. top level empty functions
-    are not merged either.
+    except it does not implies ``empty``: i.e. top level empty functions
+    are not merged either. This option is **deprecated** and is retained
+    for backwards compatibility. See ``Inline`` of ``ShortFunctionStyle``.
 
     .. code-block:: c++
 
@@ -1920,8 +1926,10 @@ the configuration (without a prefix: ``Auto``).
       void f() {
       }
 
-  * ``SFS_Empty`` (in configuration: ``Empty``)
-    Only merge empty functions.
+  * ``Empty``
+    Only merge empty functions. This option is **deprecated** and is
+    retained for backwards compatibility. See ``Empty`` of
+    ``ShortFunctionStyle``.
 
     .. code-block:: c++
 
@@ -1930,8 +1938,10 @@ the configuration (without a prefix: ``Auto``).
         bar2();
       }
 
-  * ``SFS_Inline`` (in configuration: ``Inline``)
-    Only merge functions defined inside a class. Implies ``empty``.
+  * ``Inline``
+    Only merge functions defined inside a class. Implies ``empty``. This
+    option is **deprecated** and is retained for backwards compatibility.
+    See ``Inline`` and ``Empty`` of ``ShortFunctionStyle``.
 
     .. code-block:: c++
 
@@ -1943,7 +1953,7 @@ the configuration (without a prefix: ``Auto``).
       }
       void f() {}
 
-  * ``SFS_All`` (in configuration: ``All``)
+  * ``All``
     Merge all functions fitting on a single line.
 
     .. code-block:: c++
@@ -1953,6 +1963,52 @@ the configuration (without a prefix: ``Auto``).
       };
       void f() { bar(); }
 
+  Also can be specified as a nested configuration flag:
+
+  .. code-block:: c++
+
+    # Example of usage:
+    AllowShortFunctionsOnASingleLine: InlineOnly
+
+    # or more granular control:
+    AllowShortFunctionsOnASingleLine:
+      Empty: false
+      Inline: true
+      Other: false
+
+  * ``bool Empty`` Merge top-level empty functions.
+
+    .. code-block:: c++
+
+      void f() {}
+      void f2() {
+        bar2();
+      }
+      void f3() { /* comment */ }
+
+  * ``bool Inline`` Merge functions defined inside a class.
+
+    .. code-block:: c++
+
+      class Foo {
+        void f() { foo(); }
+        void g() {}
+      };
+      void f() {
+        foo();
+      }
+      void f() {
+      }
+
+  * ``bool Other`` Merge all functions fitting on a single line. Please note that this
+    control does not include Empty
+
+    .. code-block:: c++
+
+      class Foo {
+        void f() { foo(); }
+      };
+      void f() { bar(); }
 
 
 .. _AllowShortIfStatementsOnASingleLine:
@@ -2086,6 +2142,42 @@ the configuration (without a prefix: ``Auto``).
 
 **AllowShortNamespacesOnASingleLine** (``Boolean``) :versionbadge:`clang-format 20` :ref:`¶ <AllowShortNamespacesOnASingleLine>`
   If ``true``, ``namespace a { class b; }`` can be put on a single line.
+
+.. _AllowShortRecordOnASingleLine:
+
+**AllowShortRecordOnASingleLine** (``ShortRecordStyle``) :versionbadge:`clang-format 23` :ref:`¶ <AllowShortRecordOnASingleLine>`
+  Dependent on the value, ``struct bar { int i; };`` can be put on a single
+  line.
+
+  Possible values:
+
+  * ``SRS_Never`` (in configuration: ``Never``)
+    Never merge records into a single line.
+
+  * ``SRS_EmptyAndAttached`` (in configuration: ``EmptyAndAttached``)
+    Only merge empty records if the opening brace was not wrapped,
+    i.e. the corresponding ``BraceWrapping.After...`` option was not set.
+
+  * ``SRS_Empty`` (in configuration: ``Empty``)
+    Only merge empty records.
+
+    .. code-block:: c++
+
+      struct foo {};
+      struct bar
+      {
+        int i;
+      };
+
+  * ``SRS_Always`` (in configuration: ``Always``)
+    Merge all records that fit on a single line.
+
+    .. code-block:: c++
+
+      struct foo {};
+      struct bar { int i; };
+
+
 
 .. _AlwaysBreakAfterDefinitionReturnType:
 
@@ -2635,7 +2727,7 @@ the configuration (without a prefix: ``Auto``).
   Possible values:
 
   * ``ABS_Always`` (in configuration: ``Always``)
-    Always break after attributes.
+    Always break after the last attribute of the group.
 
     .. code-block:: c++
 
@@ -2666,7 +2758,7 @@ the configuration (without a prefix: ``Auto``).
       }
 
   * ``ABS_Leave`` (in configuration: ``Leave``)
-    Leave the line breaking after attributes as is.
+    Leave the line breaking after the last attribute of the group as is.
 
     .. code-block:: c++
 
@@ -2692,8 +2784,24 @@ the configuration (without a prefix: ``Auto``).
         return;
       }
 
+  * ``ABS_LeaveAll`` (in configuration: ``LeaveAll``)
+    Same as ``Leave`` except that it applies to all attributes of the group.
+
+    .. code-block:: c++
+
+      [[deprecated("Don't use this version")]]
+      [[nodiscard]]
+      bool foo() {
+        return true;
+      }
+
+      [[deprecated("Don't use this version")]]
+      [[nodiscard]] bool bar() {
+        return true;
+      }
+
   * ``ABS_Never`` (in configuration: ``Never``)
-    Never break after attributes.
+    Never break after the last attribute of the group.
 
     .. code-block:: c++
 
@@ -5691,6 +5799,11 @@ the configuration (without a prefix: ``Auto``).
   clang-format skips the comment and the next line. Otherwise, clang-format
   skips lines containing a matched token.
 
+  .. note::
+
+   This option does not apply to ``IntegerLiteralSeparator`` and
+   ``NumericLiteralCase``.
+
   .. code-block:: c++
 
      // OneLineFormatOffRegex: ^(// NOLINT|logger$)
@@ -6717,6 +6830,16 @@ the configuration (without a prefix: ``Auto``).
 
      true:                                  false:
      Foo::Foo() : a(a) {}                   Foo::Foo(): a(a) {}
+
+.. _SpaceBeforeEnumUnderlyingTypeColon:
+
+**SpaceBeforeEnumUnderlyingTypeColon** (``Boolean``) :versionbadge:`clang-format 23` :ref:`¶ <SpaceBeforeEnumUnderlyingTypeColon>`
+  If ``false``, spaces will be removed before enum underlying type colon.
+
+  .. code-block:: c++
+
+     true:                                  false:
+     enum E : int {}                        enum E: int {}
 
 .. _SpaceBeforeInheritanceColon:
 

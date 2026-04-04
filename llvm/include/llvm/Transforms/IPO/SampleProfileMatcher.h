@@ -14,6 +14,7 @@
 #ifndef LLVM_TRANSFORMS_IPO_SAMPLEPROFILEMATCHER_H
 #define LLVM_TRANSFORMS_IPO_SAMPLEPROFILEMATCHER_H
 
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Transforms/Utils/SampleProfileLoaderBaseImpl.h"
 
@@ -76,7 +77,7 @@ class SampleProfileMatcher {
   // The new functions found by the call graph matching. The map's key is the
   // the new(renamed) function pointer and the value is old(unused) profile
   // name.
-  std::unordered_map<Function *, FunctionId> FuncToProfileNameMap;
+  MapVector<Function *, FunctionId> FuncToProfileNameMap;
 
   // A map pointer to the FuncNameToProfNameMap in SampleProfileLoader,
   // which maps the function name to the matched profile name. This is used
@@ -202,8 +203,8 @@ private:
   void computeAndReportProfileStaleness();
   void UpdateWithSalvagedProfiles();
 
-  LocToLocMap &getIRToProfileLocationMap(const Function &F) {
-    return FuncMappings[FunctionSamples::getCanonicalFnName(F.getName())];
+  LocToLocMap &getIRToProfileLocationMap(const FunctionSamples &FS) {
+    return FuncMappings[FS.getFuncName()];
   }
   void distributeIRToProfileLocationMap();
   void distributeIRToProfileLocationMap(FunctionSamples &FS);

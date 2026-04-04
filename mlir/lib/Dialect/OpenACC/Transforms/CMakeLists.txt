@@ -1,5 +1,8 @@
 add_mlir_dialect_library(MLIROpenACCTransforms
+  ACCBindRoutine.cpp
   ACCComputeLowering.cpp
+  ACCRoutineLowering.cpp
+  ACCRoutineToGPUFunc.cpp
   ACCDeclareGPUModuleInsertion.cpp
   ACCIfClauseLowering.cpp
   ACCImplicitData.cpp

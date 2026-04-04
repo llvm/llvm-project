@@ -51,14 +51,20 @@ public:
   void VisitCXXBindTemporaryExpr(const CXXBindTemporaryExpr *BTE);
   void VisitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *MTE);
   void VisitLambdaExpr(const LambdaExpr *LE);
+  void VisitArraySubscriptExpr(const ArraySubscriptExpr *ASE);
 
 private:
   OriginList *getOriginsList(const ValueDecl &D);
   OriginList *getOriginsList(const Expr &E);
 
+  bool hasOrigins(QualType QT) const;
+  bool hasOrigins(const Expr *E) const;
+
   void flow(OriginList *Dst, OriginList *Src, bool Kill);
 
   void handleAssignment(const Expr *LHSExpr, const Expr *RHSExpr);
+
+  void handlePointerArithmetic(const BinaryOperator *BO);
 
   void handleCXXCtorInitializer(const CXXCtorInitializer *CII);
 
@@ -111,6 +117,8 @@ private:
   void handleUse(const Expr *E);
 
   void markUseAsWrite(const DeclRefExpr *DRE);
+
+  bool escapesViaReturn(OriginID OID) const;
 
   llvm::SmallVector<Fact *> issuePlaceholderLoans();
   FactManager &FactMgr;

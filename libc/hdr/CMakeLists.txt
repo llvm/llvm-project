@@ -150,6 +150,24 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  sys_ipc_macros
+  HDRS
+    sys_ipc_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.sys_ipc
+    libc.include.llvm-libc-macros.sys_ipc_macros
+)
+
+add_proxy_header_library(
+  sys_sem_macros
+  HDRS
+    sys_sem_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.sys_sem
+    libc.include.llvm-libc-macros.sys_sem_macros
+)
+
+add_proxy_header_library(
   sys_socket_macros
   HDRS
     sys_socket_macros.h

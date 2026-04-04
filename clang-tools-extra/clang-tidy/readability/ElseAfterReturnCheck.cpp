@@ -45,40 +45,52 @@ AST_MATCHER_P(Stmt, stripLabelLikeStatements,
   return InnerMatcher.matches(*S, Finder, Builder);
 }
 
+AST_MATCHER_P(Stmt, hasFinalStmt, ast_matchers::internal::Matcher<Stmt>,
+              InnerMatcher) {
+  for (const Stmt *S = &Node;;) {
+    S = S->stripLabelLikeStatements();
+    if (const auto *Compound = dyn_cast<CompoundStmt>(S)) {
+      if (Compound->body_empty())
+        return false;
+      S = Compound->body_back();
+    } else {
+      return InnerMatcher.matches(*S, Finder, Builder);
+    }
+  }
+}
+
 } // namespace
 
 static constexpr char InterruptingStr[] = "interrupting";
-static constexpr char WarningMessage[] = "do not use 'else' after '%0'";
+static constexpr char WarningMessage[] = "do not use 'else' after %0";
 static constexpr char WarnOnUnfixableStr[] = "WarnOnUnfixable";
 static constexpr char WarnOnConditionVariablesStr[] =
     "WarnOnConditionVariables";
 
-static const DeclRefExpr *findUsage(const Stmt *Node, int64_t DeclIdentifier) {
+static const DeclRefExpr *findUsage(const Stmt *Node, const Decl *D) {
   if (!Node)
     return nullptr;
   if (const auto *DeclRef = dyn_cast<DeclRefExpr>(Node)) {
-    if (DeclRef->getDecl()->getID() == DeclIdentifier)
+    if (DeclRef->getDecl() == D)
       return DeclRef;
   } else {
     for (const Stmt *ChildNode : Node->children())
-      if (const DeclRefExpr *Result = findUsage(ChildNode, DeclIdentifier))
+      if (const DeclRefExpr *Result = findUsage(ChildNode, D))
         return Result;
   }
   return nullptr;
 }
 
-static const DeclRefExpr *
-findUsageRange(const Stmt *Node,
-               const llvm::ArrayRef<int64_t> &DeclIdentifiers) {
+static const DeclRefExpr *findUsageRange(const Stmt *Node,
+                                         DeclStmt::decl_const_range Decls) {
   if (!Node)
     return nullptr;
   if (const auto *DeclRef = dyn_cast<DeclRefExpr>(Node)) {
-    if (llvm::is_contained(DeclIdentifiers, DeclRef->getDecl()->getID()))
+    if (llvm::is_contained(Decls, DeclRef->getDecl()))
       return DeclRef;
   } else {
     for (const Stmt *ChildNode : Node->children())
-      if (const DeclRefExpr *Result =
-              findUsageRange(ChildNode, DeclIdentifiers))
+      if (const DeclRefExpr *Result = findUsageRange(ChildNode, Decls))
         return Result;
   }
   return nullptr;
@@ -91,19 +103,14 @@ static const DeclRefExpr *checkInitDeclUsageInElse(const IfStmt *If) {
   if (InitDeclStmt->isSingleDecl()) {
     const Decl *InitDecl = InitDeclStmt->getSingleDecl();
     assert(isa<VarDecl>(InitDecl) && "SingleDecl must be a VarDecl");
-    return findUsage(If->getElse(), InitDecl->getID());
+    return findUsage(If->getElse(), InitDecl);
   }
-  SmallVector<int64_t, 4> DeclIdentifiers;
-  for (const Decl *ChildDecl : InitDeclStmt->decls()) {
-    assert(isa<VarDecl>(ChildDecl) && "Init Decls must be a VarDecl");
-    DeclIdentifiers.push_back(ChildDecl->getID());
-  }
-  return findUsageRange(If->getElse(), DeclIdentifiers);
+  return findUsageRange(If->getElse(), InitDeclStmt->decls());
 }
 
 static const DeclRefExpr *checkConditionVarUsageInElse(const IfStmt *If) {
   if (const VarDecl *CondVar = If->getConditionVariable())
-    return findUsage(If->getElse(), CondVar->getID());
+    return findUsage(If->getElse(), CondVar);
   return nullptr;
 }
 
@@ -122,33 +129,13 @@ static void removeElseAndBrackets(DiagnosticBuilder &Diag, ASTContext &Context,
   auto Remap = [&](SourceLocation Loc) {
     return Context.getSourceManager().getExpansionLoc(Loc);
   };
-  auto TokLen = [&](SourceLocation Loc) {
-    return Lexer::MeasureTokenLength(Loc, Context.getSourceManager(),
-                                     Context.getLangOpts());
-  };
 
   if (const auto *CS = dyn_cast<CompoundStmt>(Else)) {
-    Diag << tooling::fixit::createRemoval(ElseLoc);
-    const SourceLocation LBrace = CS->getLBracLoc();
-    const SourceLocation RBrace = CS->getRBracLoc();
-    const SourceLocation RangeStart =
-        Remap(LBrace).getLocWithOffset(TokLen(LBrace) + 1);
-    const SourceLocation RangeEnd = Remap(RBrace).getLocWithOffset(-1);
-
-    const StringRef Repl = Lexer::getSourceText(
-        CharSourceRange::getTokenRange(RangeStart, RangeEnd),
-        Context.getSourceManager(), Context.getLangOpts());
-    Diag << tooling::fixit::createReplacement(CS->getSourceRange(), Repl);
+    Diag << tooling::fixit::createRemoval(ElseLoc)
+         << tooling::fixit::createRemoval(Remap(CS->getLBracLoc()))
+         << tooling::fixit::createRemoval(Remap(CS->getRBracLoc()));
   } else {
-    const SourceLocation ElseExpandedLoc = Remap(ElseLoc);
-    const SourceLocation EndLoc = Remap(Else->getEndLoc());
-
-    const StringRef Repl = Lexer::getSourceText(
-        CharSourceRange::getTokenRange(
-            ElseExpandedLoc.getLocWithOffset(TokLen(ElseLoc) + 1), EndLoc),
-        Context.getSourceManager(), Context.getLangOpts());
-    Diag << tooling::fixit::createReplacement(
-        SourceRange(ElseExpandedLoc, EndLoc), Repl);
+    Diag << tooling::fixit::createRemoval(Remap(ElseLoc));
   }
 }
 
@@ -172,15 +159,13 @@ void ElseAfterReturnCheck::registerPPCallbacks(const SourceManager &SM,
 }
 
 void ElseAfterReturnCheck::registerMatchers(MatchFinder *Finder) {
-  const auto InterruptsControlFlow = stmt(anyOf(
-      returnStmt().bind(InterruptingStr), continueStmt().bind(InterruptingStr),
-      breakStmt().bind(InterruptingStr), cxxThrowExpr().bind(InterruptingStr)));
+  const auto InterruptsControlFlow =
+      stmt(anyOf(returnStmt(), continueStmt(), breakStmt(), cxxThrowExpr(),
+                 callExpr(callee(functionDecl(isNoReturn())))));
 
   const auto IfWithInterruptingThenElse =
       ifStmt(unless(isConstexpr()), unless(isConsteval()),
-             hasThen(stripLabelLikeStatements(
-                 stmt(anyOf(InterruptsControlFlow,
-                            compoundStmt(has(InterruptsControlFlow)))))),
+             hasThen(hasFinalStmt(InterruptsControlFlow.bind(InterruptingStr))),
              hasElse(stmt().bind("else")))
           .bind("if");
 
@@ -231,13 +216,15 @@ static bool hasPreprocessorBranchEndBetweenLocations(
 
 static StringRef getControlFlowString(const Stmt &Stmt) {
   if (isa<ReturnStmt>(Stmt))
-    return "return";
+    return "'return'";
   if (isa<ContinueStmt>(Stmt))
-    return "continue";
+    return "'continue'";
   if (isa<BreakStmt>(Stmt))
-    return "break";
+    return "'break'";
   if (isa<CXXThrowExpr>(Stmt))
-    return "throw";
+    return "'throw'";
+  if (isa<CallExpr>(Stmt))
+    return "calling a function that doesn't return";
   llvm_unreachable("Unknown control flow interrupter");
 }
 
