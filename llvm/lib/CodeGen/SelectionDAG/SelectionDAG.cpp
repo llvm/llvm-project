@@ -6077,6 +6077,7 @@ KnownFPClass SelectionDAG::computeKnownFPClass(SDValue Op,
     return Known;
 
   [[maybe_unused]] EVT VT = Op.getValueType();
+  assert(VT.isFloatingPoint() && "Computing KnownFPClass on non-FP op!");
   assert((!VT.isFixedLengthVector() ||
           DemandedElts.getBitWidth() == VT.getVectorNumElements()) &&
          "Unexpected vector size");
