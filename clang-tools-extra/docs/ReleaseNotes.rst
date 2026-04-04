@@ -148,8 +148,8 @@ New checks
 - New :doc:`modernize-use-bit-cast
   <clang-tidy/checks/modernize/use-bit-cast>` check.
 
-  Finds conservative object-to-object ``memcpy`` type punning that can be
-  rewritten as ``std::bit_cast`` in C++20 and later.
+  Finds ``memcpy``-based type punning that can be rewritten as
+  ``std::bit_cast`` in C++20 and later.
 
 - New :doc:`modernize-use-std-bit
   <clang-tidy/checks/modernize/use-std-bit>` check.
