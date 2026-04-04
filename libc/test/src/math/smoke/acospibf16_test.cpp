@@ -26,8 +26,7 @@ public:
         aNaN, LIBC_NAMESPACE::acospibf16(sNaN), FE_INVALID);
     EXPECT_MATH_ERRNO(0);
 
-    EXPECT_FP_EQ_ALL_ROUNDING(bfloat16(0.5),
-                              LIBC_NAMESPACE::acospibf16(zero));
+    EXPECT_FP_EQ_ALL_ROUNDING(bfloat16(0.5), LIBC_NAMESPACE::acospibf16(zero));
     EXPECT_MATH_ERRNO(0);
 
     EXPECT_FP_EQ_ALL_ROUNDING(bfloat16(0.5),
