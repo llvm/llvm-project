@@ -260,9 +260,10 @@ class ScopBuilder final {
   ///
   /// Note that this function will also adjust the invalid context
   /// accordingly.
-  __isl_give isl_pw_aff *
-  getPwAff(BasicBlock *BB, DenseMap<BasicBlock *, isl::set> &InvalidDomainMap,
-           const SCEV *E, bool NonNegative = false, bool IsInsideDomain = true);
+  isl::pw_aff getPwAff(BasicBlock *BB,
+                       DenseMap<BasicBlock *, isl::set> &InvalidDomainMap,
+                       const SCEV *E, bool NonNegative = false,
+                       bool IsInsideDomain = true);
 
   /// Create equivalence classes for required invariant accesses.
   ///
