@@ -5,11 +5,13 @@
 # LLVM libc project.
 load("@bazel_skylib//lib:selects.bzl", "selects")
 load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
+load("@rules_cc//cc:defs.bzl", "cc_library")
 load("@rules_python//python:defs.bzl", "py_binary")
 load(
     ":libc_build_rules.bzl",
     "libc_function",
     "libc_generated_header",
+    "libc_header_info",
     "libc_header_library",
     "libc_math_function",
     "libc_support_library",
@@ -83,6 +85,22 @@ config_setting(
     flag_values = {":mpc": "system"},
 )
 
+# A flag to enable modular format for printf.
+# Usage: `--@llvm-project//libc:modular_format=<disable|enable>`.
+string_flag(
+    name = "modular_format",
+    build_setting_default = "disable",
+    values = [
+        "disable",
+        "enable",
+    ],
+)
+
+config_setting(
+    name = "modular_format_enable",
+    flag_values = {":modular_format": "enable"},
+)
+
 ########################### Header Generation ##################################
 
 py_binary(
@@ -93,23 +111,205 @@ py_binary(
     deps = ["@pyyaml//:yaml"],
 )
 
+LLVM_LIBC_HEADERS = [
+    libc_header_info(
+        "arpa/inet",
+        has_def_template = True,
+    ),
+    libc_header_info(
+        "assert",
+        has_def_template = True,
+    ),
+    libc_header_info(
+        "complex",
+        has_def_template = True,
+    ),
+    libc_header_info(
+        "elf",
+        has_def_template = True,
+    ),
+    libc_header_info(
+        "errno",
+        has_def_template = True,
+    ),
+    libc_header_info(
+        "fcntl",
+        has_def_template = True,
+    ),
+    libc_header_info(
+        "inttypes",
+        has_def_template = True,
+    ),
+    libc_header_info(
+        "link",
+        has_def_template = True,
+    ),
+    libc_header_info(
+        "math",
+        has_def_template = True,
+    ),
+    libc_header_info(
+        "netinet/in",
+        has_def_template = True,
+    ),
+    libc_header_info(
+        "poll",
+        has_def_template = True,
+    ),
+    libc_header_info(
+        "sched",
+        has_def_template = True,
+    ),
+    libc_header_info(
+        "signal",
+        has_def_template = True,
+    ),
+    libc_header_info(
+        "stdbit",
+        has_def_template = True,
+    ),
+    libc_header_info(
+        "stdfix",
+        has_def_template = True,
+    ),
+    libc_header_info(
+        "stdio",
+        has_def_template = True,
+    ),
+    libc_header_info(
+        "sysexits",
+        has_def_template = True,
+    ),
+    libc_header_info(
+        "sys/prctl",
+        has_def_template = True,
+    ),
+    libc_header_info(
+        "sys/syscall",
+        has_def_template = True,
+    ),
+    libc_header_info(
+        "termios",
+        has_def_template = True,
+    ),
+    libc_header_info(
+        "unistd",
+        has_def_template = True,
+    ),
+    libc_header_info("ctype"),
+    libc_header_info("dirent"),
+    libc_header_info("dlfcn"),
+    libc_header_info("endian"),
+    libc_header_info("features"),
+    libc_header_info("fenv"),
+    libc_header_info("float"),
+    libc_header_info("limits"),
+    libc_header_info("locale"),
+    libc_header_info("nl_types"),
+    libc_header_info("pthread"),
+    libc_header_info("search"),
+    libc_header_info("setjmp"),
+    libc_header_info("spawn"),
+    libc_header_info("stdckdint"),
+    libc_header_info("stdint"),
+    libc_header_info("string"),
+    libc_header_info("strings"),
+    libc_header_info("sys/auxv"),
+    libc_header_info("sys/epoll"),
+    libc_header_info("sys/ioctl"),
+    libc_header_info("sys/ipc"),
+    libc_header_info("sys/mman"),
+    libc_header_info("sys/random"),
+    libc_header_info("sys/resource"),
+    libc_header_info("sys/select"),
+    libc_header_info("sys/socket"),
+    libc_header_info("sys/stat"),
+    libc_header_info("sys/statvfs"),
+    libc_header_info("sys/time"),
+    libc_header_info("sys/types"),
+    libc_header_info("sys/utsname"),
+    libc_header_info("sys/wait"),
+    libc_header_info("threads"),
+    libc_header_info("time"),
+    libc_header_info("uchar"),
+    libc_header_info("wchar"),
+    libc_header_info("wctype"),
+    libc_header_info(
+        "stdlib",
+        has_def_template = True,
+        other_srcs = ["include/stdlib-malloc.yaml"],
+    ),
+    libc_header_info(
+        "malloc",
+        other_srcs = ["include/stdlib-malloc.yaml"],
+    ),
+]
+
+[
+    libc_generated_header(
+        name = info.target_name,
+        hdr = info.staging_path,
+        other_srcs = info.other_srcs,
+        yaml_template = info.yaml_template,
+    )
+    for info in LLVM_LIBC_HEADERS
+]
+
+# needed for startup and VDSO. Doesn't get placed in /include so is handled separately.
 libc_generated_header(
-    name = "include_stdbit_h",
-    hdr = "staging/include/stdbit.h",
-    other_srcs = ["include/stdbit.h.def"],
-    yaml_template = "include/stdbit.yaml",
+    name = "hdr_elf_proxy_h",
+    hdr = "staging/hdr/elf_proxy.h",
+    proxy = True,
+    yaml_template = "include/elf.yaml",
 )
 
-# Library containing all headers that can be transitively included by generated llvm-libc
-# public headers (or by the unit tests).
+# Static headers that need to be in staging/include
+STATIC_HEADERS = glob(
+    ["include/llvm-libc-types/**/*.h"],
+) + glob(
+    ["include/llvm-libc-macros/**/*.h"],
+    exclude = [
+        "include/llvm-libc-macros/_LIBC_MODULAR_FORMAT_PRINTF.h",
+        "include/llvm-libc-macros/_LIBC_MODULAR_FORMAT_PRINTF-disable.h",
+    ],
+) + ["include/__llvm-libc-common.h"]
+
+genrule(
+    name = "copy_llvm_libc_static_headers",
+    srcs = STATIC_HEADERS,
+    outs = ["staging/" + f for f in STATIC_HEADERS],
+    cmd = """srcs=($(SRCS))\n outs=($(OUTS))\n for i in "$${!srcs[@]}"; do cp "$${srcs[$$i]}" "$${outs[$$i]}"; done""",
+)
+
+genrule(
+    name = "copy_modular_format_header",
+    srcs = select({
+        ":modular_format_enable": ["include/llvm-libc-macros/_LIBC_MODULAR_FORMAT_PRINTF.h"],
+        "//conditions:default": ["include/llvm-libc-macros/_LIBC_MODULAR_FORMAT_PRINTF-disable.h"],
+    }),
+    outs = ["staging/include/llvm-libc-macros/_LIBC_MODULAR_FORMAT_PRINTF.h"],
+    cmd = "cp $< $@",
+)
+
+STATIC_AND_CONDITIONAL_HEADERS = STATIC_HEADERS + ["include/llvm-libc-macros/_LIBC_MODULAR_FORMAT_PRINTF.h"]
+
+cc_library(
+    name = "public_headers",
+    hdrs = [header.target_name for header in LLVM_LIBC_HEADERS],
+    includes = ["staging/include"],
+    textual_hdrs = ["staging/" + f for f in STATIC_AND_CONDITIONAL_HEADERS],
+    deps = [
+        ":copy_llvm_libc_static_headers",
+        ":copy_modular_format_header",
+    ],
+)
+
+# Textual versions of the static headers. These are taken from the source tree
+# and are separate from the generated headers above. They are used for
+# testing purposes.
 libc_support_library(
     name = "public_headers_deps",
-    textual_hdrs = [
-        "include/__llvm-libc-common.h",
-    ] + glob([
-        "include/llvm-libc-types/**/*.h",
-        "include/llvm-libc-macros/**/*.h",
-    ]),
+    textual_hdrs = STATIC_AND_CONDITIONAL_HEADERS,
 )
 
 ################################## Base Config #################################
@@ -120,6 +320,20 @@ libc_support_library(
     deps = [
         "__support_macros_properties_architectures",
         "__support_macros_properties_compiler",
+    ],
+)
+
+libc_support_library(
+    name = "__support_macros_macro_utils",
+    hdrs = ["src/__support/macros/macro-utils.h"],
+)
+
+libc_support_library(
+    name = "__support_macros_is_defined",
+    hdrs = ["src/__support/macros/is_defined.h"],
+    deps = [
+        ":__support_cpp_string_view",
+        ":__support_macros_macro_utils",
     ],
 )
 
@@ -738,6 +952,7 @@ libc_support_library(
     deps = [
         ":__support_common",
         ":__support_macros_config",
+        ":__support_macros_macro_utils",
         ":__support_macros_properties_compiler",
         ":__support_macros_properties_os",
         ":func_aligned_alloc",
@@ -1210,6 +1425,32 @@ libc_support_library(
         ":hdr_stdio_macros",
         ":hdr_stdio_overlay",
         ":string_memory_utils",
+        ":types_off_t",
+    ],
+)
+
+libc_support_library(
+    name = "__support_file_platform_file",
+    srcs = [
+        "src/__support/File/linux/file.cpp",
+    ],
+    hdrs = [
+        "src/__support/File/linux/file.h",
+        "src/__support/File/linux/lseekImpl.h",
+    ],
+    deps = [
+        ":__support_alloc_checker",
+        ":__support_common",
+        ":__support_cpp_new",
+        ":__support_error_or",
+        ":__support_file_file",
+        ":__support_libc_errno",
+        ":__support_macros_config",
+        ":__support_osutil_fcntl",
+        ":__support_osutil_syscall",
+        ":hdr_fcntl_macros",
+        ":hdr_stdint_proxy",
+        ":hdr_stdio_macros",
         ":types_off_t",
     ],
 )
@@ -1726,6 +1967,86 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_osutil_linux_syscall_wrappers_open",
+    hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/open.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_error_or",
+        ":__support_macros_config",
+        ":__support_osutil_syscall",
+        ":hdr_fcntl_macros",
+        ":types_mode_t",
+    ],
+)
+
+libc_support_library(
+    name = "__support_osutil_linux_syscall_wrappers_close",
+    hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/close.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_error_or",
+        ":__support_macros_config",
+        ":__support_osutil_syscall",
+    ],
+)
+
+libc_support_library(
+    name = "__support_osutil_linux_syscall_wrappers_read",
+    hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/read.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_error_or",
+        ":__support_macros_config",
+        ":__support_osutil_syscall",
+        ":types_ssize_t",
+    ],
+)
+
+libc_support_library(
+    name = "__support_osutil_linux_syscall_wrappers_write",
+    hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/write.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_error_or",
+        ":__support_macros_config",
+        ":__support_osutil_syscall",
+        ":types_ssize_t",
+    ],
+)
+
+libc_support_library(
+    name = "__support_osutil_linux_syscall_wrappers_getrandom",
+    hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/getrandom.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_error_or",
+        ":__support_macros_config",
+        ":__support_osutil_syscall",
+        ":types_ssize_t",
+    ],
+)
+
+libc_support_library(
     name = "__support_osutil_linux_auxv",
     hdrs = ["src/__support/OSUtil/linux/auxv.h"],
     target_compatible_with = select({
@@ -2073,6 +2394,21 @@ libc_support_library(
         ":types_char32_t",
         ":types_size_t",
         ":types_wchar_t",
+    ],
+)
+
+libc_support_library(
+    name = "__support_wchar_string_converter",
+    hdrs = ["src/__support/wchar/string_converter.h"],
+    deps = [
+        ":__support_common",
+        ":__support_cpp_type_traits",
+        ":__support_error_or",
+        ":__support_wchar_character_converter",
+        ":__support_wchar_mbstate",
+        ":types_char32_t",
+        ":types_char8_t",
+        ":types_size_t",
     ],
 )
 
@@ -2576,6 +2912,8 @@ libc_support_library(
         ":__support_fputil_fp_bits",
         ":__support_fputil_multiply_add",
         ":__support_fputil_polyeval",
+        ":__support_macros_attributes",
+        ":__support_macros_optimization",
         ":__support_math_acosh_float_constants",
     ],
 )
@@ -2584,6 +2922,7 @@ libc_support_library(
     name = "__support_math_acoshf",
     hdrs = ["src/__support/math/acoshf.h"],
     deps = [
+        ":__support_fputil_except_value_utils",
         ":__support_fputil_fenv_impl",
         ":__support_fputil_fp_bits",
         ":__support_fputil_multiply_add",
@@ -2866,6 +3205,27 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_asinpi",
+    hdrs = ["src/__support/math/asinpi.h"],
+    deps = [
+        ":__support_fputil_cast",
+        ":__support_fputil_double_double",
+        ":__support_fputil_dyadic_float",
+        ":__support_fputil_except_value_utils",
+        ":__support_fputil_fenv_impl",
+        ":__support_fputil_fp_bits",
+        ":__support_fputil_multiply_add",
+        ":__support_fputil_polyeval",
+        ":__support_fputil_rounding_mode",
+        ":__support_fputil_sqrt",
+        ":__support_macros_config",
+        ":__support_macros_optimization",
+        ":__support_macros_properties_cpu_features",
+        ":__support_math_asin_utils",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_asinpif",
     hdrs = ["src/__support/math/asinpif.h"],
     deps = [
@@ -2961,6 +3321,36 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_atan2f16",
+    hdrs = ["src/__support/math/atan2f16.h"],
+    deps = [
+        ":__support_fputil_cast",
+        ":__support_fputil_fenv_impl",
+        ":__support_fputil_fp_bits",
+        ":__support_fputil_multiply_add",
+        ":__support_fputil_nearest_integer",
+        ":__support_macros_optimization",
+        ":__support_math_inv_trigf_utils",
+        ":llvm_libc_macros_float16_macros",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_atanbf16",
+    hdrs = ["src/__support/math/atanbf16.h"],
+    deps = [
+        ":__support_fputil_bfloat16",
+        ":__support_fputil_cast",
+        ":__support_fputil_fenv_impl",
+        ":__support_fputil_fp_bits",
+        ":__support_fputil_multiply_add",
+        ":__support_fputil_polyeval",
+        ":__support_fputil_sqrt",
+        ":__support_macros_optimization",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_atanf",
     hdrs = ["src/__support/math/atanf.h"],
     deps = [
@@ -2989,6 +3379,21 @@ libc_support_library(
         ":__support_fputil_sqrt",
         ":__support_macros_optimization",
         ":llvm_libc_macros_float16_macros",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_asinbf16",
+    hdrs = ["src/__support/math/asinbf16.h"],
+    deps = [
+        ":__support_fputil_bfloat16",
+        ":__support_fputil_cast",
+        ":__support_fputil_fenv_impl",
+        ":__support_fputil_fp_bits",
+        ":__support_fputil_multiply_add",
+        ":__support_fputil_sqrt",
+        ":__support_macros_optimization",
+        ":__support_math_inv_trigf_utils",
     ],
 )
 
@@ -3052,6 +3457,23 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_atanpif16",
+    hdrs = ["src/__support/math/atanpif16.h"],
+    deps = [
+        ":__support_fputil_cast",
+        ":__support_fputil_fenv_impl",
+        ":__support_fputil_fp_bits",
+        ":__support_fputil_multiply_add",
+        ":__support_fputil_polyeval",
+        ":__support_fputil_sqrt",
+        ":__support_macros_config",
+        ":__support_macros_optimization",
+        ":hdr_fenv_macros",
+        ":llvm_libc_macros_float16_macros",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_bf16add",
     hdrs = ["src/__support/math/bf16add.h"],
     deps = [
@@ -3093,6 +3515,16 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_bf16div",
+    hdrs = ["src/__support/math/bf16div.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_fputil_bfloat16",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_bf16divf",
     hdrs = ["src/__support/math/bf16divf.h"],
     deps = [
@@ -3108,6 +3540,28 @@ libc_support_library(
     deps = [
         ":__support_fputil_basic_operations",
         ":__support_fputil_bfloat16",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_bf16divf128",
+    hdrs = ["src/__support/math/bf16divf128.h"],
+    deps = [
+        ":__support_common",
+        ":__support_fputil_basic_operations",
+        ":__support_fputil_bfloat16",
+        ":__support_macros_config",
+        ":llvm_libc_types_float128",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_bf16fma",
+    hdrs = ["src/__support/math/bf16fma.h"],
+    deps = [
+        ":__support_fputil_bfloat16",
+        ":__support_fputil_fma",
         ":__support_macros_config",
     ],
 )
@@ -3532,6 +3986,25 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_daddf128",
+    hdrs = ["src/__support/math/daddf128.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+        ":llvm_libc_types_float128",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_daddl",
+    hdrs = ["src/__support/math/daddl.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_dsqrtl",
     hdrs = ["src/__support/math/dsqrtl.h"],
     deps = [
@@ -3589,6 +4062,37 @@ libc_support_library(
         ":__support_fputil_polyeval",
         ":__support_macros_config",
         ":__support_macros_optimization",
+        ":__support_math_common_constants",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_erff16",
+    hdrs = ["src/__support/math/erff16.h"],
+    deps = [
+        ":__support_fputil_except_value_utils",
+        ":__support_fputil_fenv_impl",
+        ":__support_fputil_fp_bits",
+        ":__support_fputil_multiply_add",
+        ":__support_macros_config",
+        ":__support_macros_optimization",
+        ":__support_math_common_constants",
+        ":llvm_libc_macros_float16_macros",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_erfcf16",
+    hdrs = ["src/__support/math/erfcf16.h"],
+    deps = [
+        ":__support_fputil_cast",
+        ":__support_fputil_except_value_utils",
+        ":__support_fputil_fenv_impl",
+        ":__support_fputil_fp_bits",
+        ":__support_fputil_multiply_add",
+        ":__support_macros_config",
+        ":__support_macros_optimization",
+        ":llvm_libc_macros_float16_macros",
     ],
 )
 
@@ -4045,6 +4549,17 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_fmabf16",
+    hdrs = ["src/__support/math/fmabf16.h"],
+    deps = [
+        ":__support_common",
+        ":__support_fputil_bfloat16",
+        ":__support_fputil_fma",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_fmax",
     hdrs = ["src/__support/math/fmax.h"],
     deps = [
@@ -4108,6 +4623,34 @@ libc_support_library(
         ":__support_common",
         ":__support_fputil_fma",
         ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_fma",
+    hdrs = ["src/__support/math/fma.h"],
+    deps = [
+        ":__support_fputil_fma",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_fmaf",
+    hdrs = ["src/__support/math/fmaf.h"],
+    deps = [
+        ":__support_fputil_fma",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_fmaf16",
+    hdrs = ["src/__support/math/fmaf16.h"],
+    deps = [
+        ":__support_fputil_fma",
+        ":__support_macros_config",
+        ":llvm_libc_macros_float16_macros",
     ],
 )
 
@@ -4684,6 +5227,7 @@ libc_support_library(
         ":__support_macros_optimization",
         ":__support_macros_properties_cpu_features",
         ":__support_math_acosh_float_constants",
+        ":__support_math_acoshf_utils",
         ":__support_math_common_constants",
     ],
 )
@@ -5260,6 +5804,21 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_log_bf16",
+    hdrs = ["src/__support/math/log_bf16.h"],
+    deps = [
+        ":__support_common",
+        ":__support_fputil_bfloat16",
+        ":__support_fputil_cast",
+        ":__support_fputil_fp_bits",
+        ":__support_fputil_multiply_add",
+        ":__support_macros_config",
+        ":__support_macros_optimization",
+        ":__support_macros_properties_cpu_features",
+    ],
+)
+
+libc_support_library(
     name = "__support_range_reduction_double",
     hdrs = [
         "src/__support/math/range_reduction_double_common.h",
@@ -5472,10 +6031,31 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_sqrtbf16",
+    hdrs = ["src/__support/math/sqrtbf16.h"],
+    deps = [
+        ":__support_common",
+        ":__support_fputil_bfloat16",
+        ":__support_fputil_sqrt",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_sqrtf",
     hdrs = ["src/__support/math/sqrtf.h"],
     deps = [
         ":__support_fputil_sqrt",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_hypot",
+    hdrs = ["src/__support/math/hypot.h"],
+    deps = [
+        ":__support_common",
+        ":__support_fputil_hypot",
+        ":__support_macros_config",
     ],
 )
 
@@ -5491,6 +6071,17 @@ libc_support_library(
         ":__support_fputil_sqrt",
         ":__support_macros_config",
         ":__support_macros_optimization",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_hypotbf16",
+    hdrs = ["src/__support/math/hypotbf16.h"],
+    deps = [
+        ":__support_common",
+        ":__support_fputil_bfloat16",
+        ":__support_fputil_hypot",
+        ":__support_macros_config",
     ],
 )
 
@@ -6003,6 +6594,13 @@ libc_math_function(
 )
 
 libc_math_function(
+    name = "asinbf16",
+    additional_deps = [
+        ":__support_math_asinbf16",
+    ],
+)
+
+libc_math_function(
     name = "asinf",
     additional_deps = [":__support_math_asinf"],
 )
@@ -6027,10 +6625,22 @@ libc_math_function(
 )
 
 libc_math_function(
+    name = "asinpi",
+    additional_deps = [
+        ":__support_math_asinpi",
+    ],
+)
+
+libc_math_function(
     name = "asinpif",
     additional_deps = [
         ":__support_math_asinpif",
     ],
+)
+
+libc_math_function(
+    name = "atanbf16",
+    additional_deps = [":__support_math_atanbf16"],
 )
 
 libc_math_function(
@@ -6063,6 +6673,11 @@ libc_math_function(
 )
 
 libc_math_function(
+    name = "atan2f16",
+    additional_deps = [":__support_math_atan2f16"],
+)
+
+libc_math_function(
     name = "atan2",
     additional_deps = [":__support_math_atan2"],
 )
@@ -6077,6 +6692,11 @@ libc_math_function(
     additional_deps = [
         ":__support_math_atanhf16",
     ],
+)
+
+libc_math_function(
+    name = "atanpif16",
+    additional_deps = [":__support_math_atanpif16"],
 )
 
 libc_math_function(
@@ -6100,6 +6720,11 @@ libc_math_function(
 )
 
 libc_math_function(
+    name = "bf16div",
+    additional_deps = [":__support_math_bf16div"],
+)
+
+libc_math_function(
     name = "bf16divl",
     additional_deps = [":__support_math_bf16divl"],
 )
@@ -6117,6 +6742,11 @@ libc_math_function(
 libc_math_function(
     name = "bf16subf128",
     additional_deps = [":__support_math_bf16subf128"],
+)
+
+libc_math_function(
+    name = "bf16fma",
+    additional_deps = [":__support_math_bf16fma"],
 )
 
 libc_math_function(
@@ -6173,6 +6803,13 @@ libc_math_function(
     name = "bf16divf",
     additional_deps = [
         ":__support_math_bf16divf",
+    ],
+)
+
+libc_math_function(
+    name = "bf16divf128",
+    additional_deps = [
+        ":__support_math_bf16divf128",
     ],
 )
 
@@ -6343,10 +6980,18 @@ libc_math_function(
     ],
 )
 
-libc_math_function(name = "daddl")
+libc_math_function(
+    name = "daddl",
+    additional_deps = [
+        ":__support_math_daddl",
+    ],
+)
 
 libc_math_function(
     name = "daddf128",
+    additional_deps = [
+        ":__support_math_daddf128",
+    ],
 )
 
 libc_math_function(name = "ddivl")
@@ -6395,6 +7040,20 @@ libc_math_function(
 libc_math_function(
     name = "erff",
     additional_deps = [":__support_math_erff"],
+)
+
+libc_math_function(
+    name = "erff16",
+    additional_deps = [
+        ":__support_math_erff16",
+    ],
+)
+
+libc_math_function(
+    name = "erfcf16",
+    additional_deps = [
+        ":__support_math_erfcf16",
+    ],
 )
 
 libc_math_function(
@@ -6816,18 +7475,25 @@ libc_math_function(
 
 libc_math_function(
     name = "fma",
-    additional_deps = [":__support_fputil_fma"],
+    additional_deps = [":__support_math_fma"],
 )
 
 libc_math_function(
     name = "fmaf",
-    additional_deps = [":__support_fputil_fma"],
+    additional_deps = [":__support_math_fmaf"],
 )
 
 libc_math_function(
     name = "fmaf16",
     additional_deps = [
-        ":__support_fputil_fma",
+        ":__support_math_fmaf16",
+    ],
+)
+
+libc_math_function(
+    name = "fmabf16",
+    additional_deps = [
+        ":__support_math_fmabf16",
     ],
 )
 
@@ -7163,13 +7829,25 @@ libc_math_function(
     ],
 )
 
-libc_math_function(name = "hypot")
+libc_math_function(
+    name = "hypot",
+    additional_deps = [
+        ":__support_math_hypot",
+    ],
+)
 
 libc_math_function(
     name = "hypotf",
     additional_deps = [
         ":__support_math_hypotf",
         ":errno",
+    ],
+)
+
+libc_math_function(
+    name = "hypotbf16",
+    additional_deps = [
+        ":__support_math_hypotbf16",
     ],
 )
 
@@ -7392,6 +8070,13 @@ libc_math_function(
     name = "logbf16",
     additional_deps = [
         ":__support_math_logbf16",
+    ],
+)
+
+libc_math_function(
+    name = "log_bf16",
+    additional_deps = [
+        ":__support_math_log_bf16",
     ],
 )
 
@@ -7966,6 +8651,11 @@ libc_math_function(
 libc_math_function(
     name = "sqrt",
     additional_deps = [":__support_math_sqrt"],
+)
+
+libc_math_function(
+    name = "sqrtbf16",
+    additional_deps = [":__support_math_sqrtbf16"],
 )
 
 libc_math_function(
@@ -8638,6 +9328,7 @@ libc_support_library(
         ":__support_cpp_type_traits",
         ":__support_macros_attributes",
         ":__support_macros_config",
+        ":__support_macros_is_defined",
         ":__support_macros_optimization",
         ":__support_macros_properties_architectures",
         ":__support_macros_properties_compiler",
@@ -9163,7 +9854,7 @@ libc_function(
         ":__support_common",
         ":__support_libc_errno",
         ":__support_macros_config",
-        ":__support_osutil_fcntl",
+        ":__support_osutil_linux_syscall_wrappers_open",
         ":errno",
         ":hdr_fcntl_macros",
         ":types_mode_t",
@@ -9257,7 +9948,7 @@ libc_function(
         ":__support_common",
         ":__support_libc_errno",
         ":__support_macros_config",
-        ":__support_osutil_fcntl",
+        ":__support_osutil_linux_syscall_wrappers_close",
         ":errno",
     ],
 )
@@ -9573,7 +10264,7 @@ libc_function(
         ":__support_libc_errno",
         ":__support_macros_config",
         ":__support_macros_sanitizer",
-        ":__support_osutil_syscall",
+        ":__support_osutil_linux_syscall_wrappers_read",
         ":errno",
         ":hdr_unistd_macros",
         ":types_size_t",
@@ -9755,7 +10446,7 @@ libc_function(
         ":__support_common",
         ":__support_libc_errno",
         ":__support_macros_config",
-        ":__support_osutil_syscall",
+        ":__support_osutil_linux_syscall_wrappers_write",
         ":errno",
         ":hdr_unistd_macros",
         ":types_size_t",
@@ -9764,6 +10455,31 @@ libc_function(
 )
 
 ################################ stdio targets #################################
+
+libc_support_library(
+    name = "stdin",
+    srcs = ["src/stdio/linux/stdin.cpp"],
+    hdrs = ["src/stdio/stdin.h"],
+    deps = [
+        "__support_common",
+        ":__support_file_file",
+        ":__support_file_platform_file",
+        ":__support_macros_config",
+        ":types_FILE",
+    ],
+)
+
+libc_support_library(
+    name = "stdout",
+    srcs = ["src/stdio/linux/stdout.cpp"],
+    hdrs = ["src/stdio/stdout.h"],
+    deps = [
+        ":__support_common",
+        ":__support_file_platform_file",
+        ":__support_macros_config",
+        ":types_FILE",
+    ],
+)
 
 libc_support_library(
     name = "printf_config",
@@ -9801,6 +10517,7 @@ libc_support_library(
         ":__support_fputil_fp_bits",
         ":__support_libc_errno",
         ":__support_macros_config",
+        ":__support_macros_properties_types",
         ":__support_str_to_integer",
         ":errno",
         ":llvm_libc_macros_stdfix_macros",
@@ -9813,6 +10530,7 @@ libc_support_library(
 libc_support_library(
     name = "printf_writer",
     hdrs = ["src/stdio/printf_core/writer.h"],
+    textual_hdrs = ["src/stdio/printf_core/write_modes.def"],
     deps = [
         ":__support_cpp_string_view",
         ":__support_macros_config",
@@ -9855,12 +10573,16 @@ libc_support_library(
         ":__support_stringutil",
         ":__support_uint128",
         ":__support_wchar_mbstate",
+        ":__support_wchar_string_converter",
         ":__support_wchar_wcrtomb",
         ":hdr_limits_macros",
         ":hdr_wchar_macros",
         ":printf_config",
         ":printf_core_structs",
         ":printf_writer",
+        ":string_utils",
+        ":types_char32_t",
+        ":types_char8_t",
         ":types_wchar_t",
         ":types_wint_t",
     ],
@@ -9994,6 +10716,7 @@ libc_function(
         ":errno",
         ":printf_core_structs",
         ":printf_error_mapper",
+        ":stdout",
         ":types_FILE",
         ":vfprintf_internal",
     ],
@@ -10077,6 +10800,7 @@ libc_function(
         ":errno",
         ":printf_core_structs",
         ":printf_error_mapper",
+        ":stdout",
         ":types_FILE",
         ":vfprintf_internal",
     ],
@@ -10212,6 +10936,7 @@ libc_function(
         ":__support_arg_list",
         ":__support_file_file",
         ":__support_macros_config",
+        ":stdin",
         ":types_FILE",
         ":vfscanf_internal",
     ],
@@ -10225,6 +10950,7 @@ libc_function(
         ":__support_arg_list",
         ":__support_file_file",
         ":__support_macros_config",
+        ":stdin",
         ":types_FILE",
         ":vfscanf_internal",
     ],
@@ -10639,7 +11365,7 @@ libc_function(
         ":__support_common",
         ":__support_libc_errno",
         ":__support_macros_config",
-        ":__support_osutil_fcntl",
+        ":__support_osutil_linux_syscall_wrappers_open",
         ":errno",
         ":hdr_fcntl_macros",
         ":shm_common",

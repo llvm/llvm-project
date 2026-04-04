@@ -86,8 +86,6 @@ void X86SelectionDAGInfo::verifyTargetNode(const SelectionDAG &DAG,
   case X86ISD::INSERTQI:
   case X86ISD::EXTRQI:
     // result #0 must have type v2i64, but has type v16i8/v8i16
-  case X86ISD::CMPCCXADD:
-    // operand #4 must have type i8, but has type i32
     return;
   }
 
@@ -266,8 +264,16 @@ SDValue X86SelectionDAGInfo::EmitTargetCodeForMemset(
     SelectionDAG &DAG, const SDLoc &dl, SDValue Chain, SDValue Dst, SDValue Val,
     SDValue Size, Align Alignment, bool isVolatile, bool AlwaysInline,
     MachinePointerInfo DstPtrInfo) const {
+  const X86Subtarget &Subtarget =
+      DAG.getMachineFunction().getSubtarget<X86Subtarget>();
+
   // If to a segment-relative address space, use the default lowering.
   if (DstPtrInfo.getAddrSpace() >= 256)
+    return SDValue();
+
+  // REP STOS uses EDI on x86-32. Fall back if the user reserved EDI, so the
+  // generic expander can avoid emitting REP STOS.
+  if (!Subtarget.is64Bit() && Subtarget.isRegisterReservedByUser(X86::EDI))
     return SDValue();
 
   // If the base register might conflict with our physical registers, bail out.
@@ -280,8 +286,6 @@ SDValue X86SelectionDAGInfo::EmitTargetCodeForMemset(
   if (!ConstantSize)
     return SDValue();
 
-  const X86Subtarget &Subtarget =
-      DAG.getMachineFunction().getSubtarget<X86Subtarget>();
   return emitConstantSizeRepstos(
       DAG, Subtarget, dl, Chain, Dst, Val, ConstantSize->getZExtValue(),
       Size.getValueType(), Alignment, isVolatile, AlwaysInline, DstPtrInfo);
@@ -380,8 +384,16 @@ SDValue X86SelectionDAGInfo::EmitTargetCodeForMemcpy(
     SelectionDAG &DAG, const SDLoc &dl, SDValue Chain, SDValue Dst, SDValue Src,
     SDValue Size, Align Alignment, bool isVolatile, bool AlwaysInline,
     MachinePointerInfo DstPtrInfo, MachinePointerInfo SrcPtrInfo) const {
+  const X86Subtarget &Subtarget =
+      DAG.getMachineFunction().getSubtarget<X86Subtarget>();
+
   // If to a segment-relative address space, use the default lowering.
   if (DstPtrInfo.getAddrSpace() >= 256 || SrcPtrInfo.getAddrSpace() >= 256)
+    return SDValue();
+
+  // REP MOVS uses EDI/ESI on x86-32. fall back only when EDI is
+  // reserved so the generic expander can avoid emitting REP MOVS.
+  if (!Subtarget.is64Bit() && Subtarget.isRegisterReservedByUser(X86::EDI))
     return SDValue();
 
   // If the base registers conflict with our physical registers, use the default
@@ -390,9 +402,6 @@ SDValue X86SelectionDAGInfo::EmitTargetCodeForMemcpy(
                                   X86::ECX, X86::ESI, X86::EDI};
   if (isBaseRegConflictPossible(DAG, ClobberSet))
     return SDValue();
-
-  const X86Subtarget &Subtarget =
-      DAG.getMachineFunction().getSubtarget<X86Subtarget>();
 
   // If enabled and available, use fast short rep mov.
   if (UseFSRMForMemcpy && Subtarget.hasFSRM())

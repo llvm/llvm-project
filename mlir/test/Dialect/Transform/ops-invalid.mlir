@@ -972,3 +972,16 @@ module attributes { transform.with_named_sequence } {
     "transform.yield"() : () -> ()
   }) : () -> ()
 }
+
+// -----
+
+// Regression test for https://github.com/llvm/llvm-project/issues/60213:
+// Verifying a transform.sequence with an empty body region must not crash.
+// Previously, verifyTransformOpInterface called getEffects, which called
+// getBodyBlock() -> Region::front() on an empty region, causing an assertion.
+transform.sequence failures(propagate) {
+^bb0(%arg0: !pdl.operation):
+// expected-error @below {{region #0 ('body') failed to verify constraint: region with 1 blocks}}
+  "transform.sequence"(%arg0) <{failure_propagation_mode = 1 : i32, operandSegmentSizes = array<i32: 1, 0>}> ({
+  }) : (!pdl.operation) -> ()
+}

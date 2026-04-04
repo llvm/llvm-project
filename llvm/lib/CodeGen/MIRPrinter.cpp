@@ -42,6 +42,7 @@
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRPrintingPasses.h"
+#include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/ModuleSlotTracker.h"
@@ -72,6 +73,12 @@ static cl::opt<bool> SimplifyMIR(
 
 static cl::opt<bool> PrintLocations("mir-debug-loc", cl::Hidden, cl::init(true),
                                     cl::desc("Print MIR debug-locations"));
+
+// TODO: Remove once the transition to the symbolic form is over.
+static cl::opt<bool>
+    PrintSymbolicInlineAsmOps("print-symbolic-inline-asm-ops", cl::Hidden,
+                              cl::init(false),
+                              cl::desc("Print inline asm operands as names"));
 
 namespace {
 
@@ -966,6 +973,35 @@ static void printMIOperand(raw_ostream &OS, MFPrintState &State,
       MachineOperand::printTargetFlags(OS, Op);
       MachineOperand::printSubRegIdx(OS, Op.getImm(), TRI);
       break;
+    }
+    if (PrintSymbolicInlineAsmOps && MI.isInlineAsm()) {
+      if (OpIdx == InlineAsm::MIOp_ExtraInfo) {
+        unsigned ExtraInfo = Op.getImm();
+        interleave(InlineAsm::getExtraInfoNames(ExtraInfo), OS, " ");
+        break;
+      }
+
+      int FlagIdx = MI.findInlineAsmFlagIdx(OpIdx);
+      if (FlagIdx >= 0 && (unsigned)FlagIdx == OpIdx) {
+        InlineAsm::Flag F(Op.getImm());
+        OS << F.getKindName();
+
+        unsigned RCID;
+        if ((F.isRegDefKind() || F.isRegUseKind() ||
+             F.isRegDefEarlyClobberKind()) &&
+            F.hasRegClassConstraint(RCID))
+          OS << ':' << TRI->getRegClassName(TRI->getRegClass(RCID));
+
+        if (F.isMemKind()) {
+          InlineAsm::ConstraintCode MCID = F.getMemoryConstraintID();
+          OS << ':' << InlineAsm::getMemConstraintName(MCID);
+        }
+
+        unsigned TiedTo;
+        if (F.isUseOperandTiedToDef(TiedTo))
+          OS << " tiedto:$" << TiedTo;
+        break;
+      }
     }
     [[fallthrough]];
   case MachineOperand::MO_Register:

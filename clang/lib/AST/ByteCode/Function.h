@@ -109,10 +109,14 @@ public:
 
   struct ParamDescriptor {
     const Descriptor *Desc;
+    /// Offset on the stack.
     unsigned Offset;
+    /// Offset in the InterpFrame.
+    unsigned BlockOffset;
     PrimType T;
-    ParamDescriptor(const Descriptor *Desc, unsigned Offset, PrimType T)
-        : Desc(Desc), Offset(Offset), T(T) {}
+    ParamDescriptor(const Descriptor *Desc, unsigned Offset,
+                    unsigned BlockOffset, PrimType T)
+        : Desc(Desc), Offset(Offset), BlockOffset(BlockOffset), T(T) {}
   };
 
   /// Returns the size of the function's local stack.
@@ -143,7 +147,9 @@ public:
   }
 
   /// Returns a parameter descriptor.
-  ParamDescriptor getParamDescriptor(unsigned Offset) const;
+  ParamDescriptor getParamDescriptor(unsigned Index) const {
+    return ParamDescriptors[Index];
+  }
 
   /// Checks if the first argument is a RVO pointer.
   bool hasRVO() const { return HasRVO; }
@@ -220,13 +226,15 @@ public:
 
   bool isVariadic() const { return Variadic; }
 
-  unsigned getNumParams() const { return ParamDescriptors.size(); }
+  unsigned getNumParams() const {
+    return ParamDescriptors.size() + hasThisPointer() + hasRVO();
+  }
 
   /// Returns the number of parameter this function takes when it's called,
   /// i.e excluding the instance pointer and the RVO pointer.
   unsigned getNumWrittenParams() const {
     assert(getNumParams() >= (unsigned)(hasThisPointer() + hasRVO()));
-    return getNumParams() - hasThisPointer() - hasRVO();
+    return ParamDescriptors.size();
   }
   unsigned getWrittenArgSize() const {
     return ArgSize - (align(primSize(PT_Ptr)) * (hasThisPointer() + hasRVO()));
@@ -237,14 +245,6 @@ public:
             dyn_cast<const FunctionDecl *>(Source)))
       return MD->isExplicitObjectMemberFunction();
     return false;
-  }
-
-  unsigned getParamOffset(unsigned ParamIndex) const {
-    return ParamDescriptors[ParamIndex].Offset;
-  }
-
-  PrimType getParamType(unsigned ParamIndex) const {
-    return ParamDescriptors[ParamIndex].T;
   }
 
 private:
@@ -293,8 +293,6 @@ private:
   llvm::SmallVector<Scope, 2> Scopes;
   /// List of all parameters, including RVO and instance pointer.
   llvm::SmallVector<ParamDescriptor> ParamDescriptors;
-  /// Map from Parameter offset to parameter descriptor.
-  llvm::DenseMap<unsigned, ParamDescriptor> Params;
   /// Flag to indicate if the function is valid.
   LLVM_PREFERRED_TYPE(bool)
   unsigned IsValid : 1;
@@ -327,7 +325,8 @@ private:
 
 public:
   /// Dumps the disassembled bytecode to \c llvm::errs().
-  void dump(CodePtr PC = {}) const;
+  void dump() const { dump({}); }
+  void dump(CodePtr PC) const;
   void dump(llvm::raw_ostream &OS, CodePtr PC = {}) const;
 };
 

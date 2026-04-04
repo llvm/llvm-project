@@ -12,7 +12,6 @@
 
 #include <cassert>
 #include <cstddef>
-#include <ffi.h>
 #include <string>
 #include <unordered_map>
 
@@ -65,8 +64,7 @@ using namespace error;
 /// Class implementing kernel functionalities for GenELF64.
 struct GenELF64KernelTy : public GenericKernelTy {
   /// Construct the kernel with a name and an execution mode.
-  GenELF64KernelTy(const char *Name, bool SupportsFFI)
-      : GenericKernelTy(Name), Func(nullptr), SupportsFFI(SupportsFFI) {}
+  GenELF64KernelTy(const char *Name) : GenericKernelTy(Name), Func(nullptr) {}
 
   /// Initialize the kernel.
   Error initImpl(GenericDeviceTy &Device, DeviceImageTy &Image) override {
@@ -84,7 +82,7 @@ struct GenELF64KernelTy : public GenericKernelTy {
                            "invalid function for kernel %s", getName());
 
     // Save the function pointer.
-    Func = (void (*)())Global.getPtr();
+    Func = reinterpret_cast<KernelTy *>(Global.getPtr());
 
     KernelEnvironment.Configuration.ExecMode = OMP_TGT_EXEC_MODE_GENERIC;
     KernelEnvironment.Configuration.MayUseNestedParallelism = /*Unknown=*/2;
@@ -95,29 +93,17 @@ struct GenELF64KernelTy : public GenericKernelTy {
     return Plugin::success();
   }
 
-  /// Launch the kernel using the libffi.
+  /// Launch the kernel using the arguments.
   Error launchImpl(GenericDeviceTy &GenericDevice, uint32_t NumThreads[3],
-                   uint32_t NumBlocks[3], KernelArgsTy &KernelArgs,
-                   KernelLaunchParamsTy LaunchParams,
+                   uint32_t NumBlocks[3], uint32_t DynBlockMemSize,
+                   KernelArgsTy &KernelArgs, KernelLaunchParamsTy LaunchParams,
                    AsyncInfoWrapperTy &AsyncInfoWrapper) const override {
-    if (!SupportsFFI)
+    if (KernelArgs.Version < OMP_KERNEL_ARG_VERSION)
       return Plugin::error(ErrorCode::UNSUPPORTED,
-                           "libffi is not available, cannot launch kernel");
-    // Create a vector of ffi_types, one per argument.
-    SmallVector<ffi_type *, 16> ArgTypes(KernelArgs.NumArgs, &ffi_type_pointer);
-    ffi_type **ArgTypesPtr = (ArgTypes.size()) ? &ArgTypes[0] : nullptr;
-
-    // Prepare the cif structure before running the kernel function.
-    ffi_cif Cif;
-    ffi_status Status = ffi_prep_cif(&Cif, FFI_DEFAULT_ABI, KernelArgs.NumArgs,
-                                     &ffi_type_void, ArgTypesPtr);
-    if (Status != FFI_OK)
-      return Plugin::error(ErrorCode::UNKNOWN, "error in ffi_prep_cif: %d",
-                           Status);
-
-    // Call the kernel function through libffi.
-    long Return;
-    ffi_call(&Cif, Func, &Return, (void **)LaunchParams.Ptrs);
+                           "Incompatible kernel argument version for plugin");
+    // TODO: The data will need to be copied locally if we ever support
+    //       asynchronous kernel launches in the host interface.
+    Func(LaunchParams.Data);
     return Plugin::success();
   }
 
@@ -130,10 +116,10 @@ struct GenELF64KernelTy : public GenericKernelTy {
   }
 
 private:
+  /// Host kernel arguments are defined as a single, contiguous buffer.
+  using KernelTy = void(void *);
   /// The kernel function to execute.
-  void (*Func)(void);
-  /// Whether this kernel supports FFI-based launch.
-  bool SupportsFFI;
+  KernelTy *Func;
 };
 
 /// Class implementing the GenELF64 device images properties.
@@ -156,9 +142,8 @@ private:
 struct GenELF64DeviceTy : public GenericDeviceTy {
   /// Create the device with a specific id.
   GenELF64DeviceTy(GenericPluginTy &Plugin, int32_t DeviceId,
-                   int32_t NumDevices, bool SupportsFFI)
-      : GenericDeviceTy(Plugin, DeviceId, NumDevices, GenELF64GridValues),
-        SupportsFFI(SupportsFFI) {}
+                   int32_t NumDevices)
+      : GenericDeviceTy(Plugin, DeviceId, NumDevices, GenELF64GridValues) {}
 
   ~GenELF64DeviceTy() {}
 
@@ -190,7 +175,7 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
       return Plugin::error(ErrorCode::OUT_OF_RESOURCES,
                            "failed to allocate memory for GenELF64 kernel");
 
-    new (GenELF64Kernel) GenELF64KernelTy(Name, SupportsFFI);
+    new (GenELF64Kernel) GenELF64KernelTy(Name);
 
     return *GenELF64Kernel;
   }
@@ -375,6 +360,10 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
     return true;
   }
   Error syncEventImpl(void *EventPtr) override { return Plugin::success(); }
+  Expected<float> getEventElapsedTimeImpl(void *StartEventPtr,
+                                          void *EndEventPtr) override {
+    return 0.0f;
+  }
 
   /// Print information about the device.
   Expected<InfoTreeNode> obtainInfoImpl() override {
@@ -442,9 +431,6 @@ private:
       1, // GV_Max_WG_Size
       1, // GV_Default_WG_Size
   };
-
-  /// Whether this device supports FFI-based launch.
-  bool SupportsFFI;
 };
 
 class GenELF64GlobalHandlerTy final : public GenericGlobalHandlerTy {
@@ -483,13 +469,6 @@ struct GenELF64PluginTy final : public GenericPluginTy {
   GenELF64PluginTy(GenELF64PluginTy &&) = delete;
   /// Initialize the plugin and return the number of devices.
   Expected<int32_t> initImpl() override {
-#ifdef USES_DYNAMIC_FFI
-    SupportsFFI = ffi_init() == FFI_OK ? true : false;
-    if (!SupportsFFI)
-      ODBG(OLDT_Init)
-          << "libffi is not available, kernels will not be launched "
-             "through libffi, and some features may be unavailable";
-#endif
     ODBG(OLDT_Init) << "GenELF64 plugin detected " << ODBG_IF_LEVEL(2)
                     << NUM_DEVICES << " " << ODBG_RESET_LEVEL() << "devices";
 
@@ -502,7 +481,7 @@ struct GenELF64PluginTy final : public GenericPluginTy {
   /// Creates a generic ELF device.
   GenericDeviceTy *createDevice(GenericPluginTy &Plugin, int32_t DeviceId,
                                 int32_t NumDevices) override {
-    return new GenELF64DeviceTy(Plugin, DeviceId, NumDevices, SupportsFFI);
+    return new GenELF64DeviceTy(Plugin, DeviceId, NumDevices);
   }
 
   /// Creates a generic global handler.
@@ -557,10 +536,6 @@ struct GenELF64PluginTy final : public GenericPluginTy {
   }
 
   const char *getName() const override { return GETNAME(TARGET_NAME); }
-
-private:
-  /// Whether this plugin supports FFI-based launch.
-  bool SupportsFFI = true;
 };
 
 template <typename... ArgsTy>

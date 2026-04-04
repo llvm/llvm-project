@@ -168,8 +168,7 @@ cl::opt<bool> SkipRetExitBlock(
     "skip-ret-exit-block", cl::init(true),
     cl::desc("Suppress counter promotion if exit blocks contain ret."));
 
-static cl::opt<bool> SampledInstr("sampled-instrumentation", cl::ZeroOrMore,
-                                  cl::init(false),
+static cl::opt<bool> SampledInstr("sampled-instrumentation",
                                   cl::desc("Do PGO instrumentation sampling"));
 
 static cl::opt<unsigned> SampledInstrPeriod(
@@ -1193,8 +1192,19 @@ void InstrLowerer::lowerIncrement(InstrProfIncrementInst *Inc) {
   auto *Addr = getCounterAddress(Inc);
 
   IRBuilder<> Builder(Inc);
-  if (Options.Atomic || AtomicCounterUpdateAll ||
-      (Inc->getIndex()->isNullValue() && AtomicFirstCounter)) {
+  if (isGPUProfTarget(M)) {
+    auto *I64Ty = Builder.getInt64Ty();
+    auto *PtrTy = Builder.getPtrTy();
+    auto *CalleeTy = FunctionType::get(Type::getVoidTy(M.getContext()),
+                                       {PtrTy, PtrTy, I64Ty}, false);
+    auto Callee =
+        M.getOrInsertFunction("__llvm_profile_instrument_gpu", CalleeTy);
+    Value *CastAddr = Builder.CreatePointerBitCastOrAddrSpaceCast(Addr, PtrTy);
+    Value *Uniform =
+        ConstantPointerNull::get(PointerType::getUnqual(M.getContext()));
+    Builder.CreateCall(Callee, {CastAddr, Uniform, Inc->getStep()});
+  } else if (Options.Atomic || AtomicCounterUpdateAll ||
+             (Inc->getIndex()->isNullValue() && AtomicFirstCounter)) {
     Builder.CreateAtomicRMW(AtomicRMWInst::Add, Addr, Inc->getStep(),
                             MaybeAlign(), AtomicOrdering::Monotonic);
   } else {
@@ -1415,6 +1425,10 @@ static inline Constant *getFuncAddrForProfData(Function *Fn) {
 }
 
 static bool needsRuntimeRegistrationOfSectionRange(const Triple &TT) {
+  // NVPTX is an ELF target but PTX does not expose sections or linker symbols.
+  if (TT.isNVPTX())
+    return true;
+
   // compiler-rt uses linker support to get data/counters/name start/end for
   // ELF, COFF, Mach-O, XCOFF, and Wasm.
   if (TT.isOSBinFormatELF() || TT.isOSBinFormatCOFF() ||
@@ -1805,10 +1819,6 @@ void InstrLowerer::createDataVariable(InstrProfCntrInstBase *Inc) {
   for (uint32_t Kind = IPVK_First; Kind <= IPVK_Last; ++Kind)
     Int16ArrayVals[Kind] = ConstantInt::get(Int16Ty, PD.NumValueSites[Kind]);
 
-  if (isGPUProfTarget(M)) {
-    Linkage = GlobalValue::ExternalLinkage;
-    Visibility = GlobalValue::ProtectedVisibility;
-  }
   // If the data variable is not referenced by code (if we don't emit
   // @llvm.instrprof.value.profile, NS will be 0), and the counter keeps the
   // data variable live under linker GC, the data variable can be private. This
@@ -1820,12 +1830,17 @@ void InstrLowerer::createDataVariable(InstrProfCntrInstBase *Inc) {
   // If profd is in a deduplicate comdat, NS==0 with a hash suffix guarantees
   // that other copies must have the same CFG and cannot have value profiling.
   // If no hash suffix, other profd copies may be referenced by code.
-  else if (NS == 0 && !(DataReferencedByCode && NeedComdat && !Renamed) &&
-           (TT.isOSBinFormatELF() ||
-            (!DataReferencedByCode && TT.isOSBinFormatCOFF()))) {
+  if (NS == 0 && !(DataReferencedByCode && NeedComdat && !Renamed) &&
+      (TT.isOSBinFormatELF() ||
+       (!DataReferencedByCode && TT.isOSBinFormatCOFF()))) {
     Linkage = GlobalValue::PrivateLinkage;
     Visibility = GlobalValue::DefaultVisibility;
   }
+  // AMDGPU objects are always ET_DYN, so non-local symbols with default
+  // visibility are preemptible. The CounterPtr label difference emits a REL32
+  // relocation that lld rejects against preemptible targets.
+  if (TT.isAMDGPU() && !GlobalValue::isLocalLinkage(Linkage))
+    Visibility = GlobalValue::ProtectedVisibility;
   auto *Data =
       new GlobalVariable(M, DataTy, false, Linkage, nullptr, DataVarName);
   Constant *RelativeCounterPtr;
@@ -1839,6 +1854,12 @@ void InstrLowerer::createDataVariable(InstrProfCntrInstBase *Inc) {
     RelativeCounterPtr = ConstantExpr::getPtrToInt(CounterPtr, IntPtrTy);
     if (BitmapPtr != nullptr)
       RelativeBitmapPtr = ConstantExpr::getPtrToInt(BitmapPtr, IntPtrTy);
+  } else if (TT.isNVPTX()) {
+    // The NVPTX target cannot handle self-referencing constant expressions in
+    // global initializers at all. Use absolute pointers and have the runtime
+    // registration convert them to relative offsets.
+    DataSectionKind = IPSK_data;
+    RelativeCounterPtr = ConstantExpr::getPtrToInt(CounterPtr, IntPtrTy);
   } else {
     // Reference the counter variable with a label difference (link-time
     // constant).
@@ -1943,10 +1964,6 @@ void InstrLowerer::emitNameData() {
   NamesVar = new GlobalVariable(M, NamesVal->getType(), true,
                                 GlobalValue::PrivateLinkage, NamesVal,
                                 getInstrProfNamesVarName());
-  if (isGPUProfTarget(M)) {
-    NamesVar->setLinkage(GlobalValue::ExternalLinkage);
-    NamesVar->setVisibility(GlobalValue::ProtectedVisibility);
-  }
 
   NamesSize = CompressedNameStr.size();
   setGlobalVariableLargeSection(TT, *NamesVar);
@@ -2038,6 +2055,11 @@ void InstrLowerer::emitRegistration() {
 }
 
 bool InstrLowerer::emitRuntimeHook() {
+  // GPU profiling data is read directly by the host offload runtime. We do not
+  // need the standard runtime hook.
+  if (TT.isGPU())
+    return false;
+
   // We expect the linker to be invoked with -u<hook_var> flag for Linux
   // in which case there is no need to emit the external variable.
   if (TT.isOSLinux() || TT.isOSAIX())
@@ -2052,10 +2074,7 @@ bool InstrLowerer::emitRuntimeHook() {
   auto *Var =
       new GlobalVariable(M, Int32Ty, false, GlobalValue::ExternalLinkage,
                          nullptr, getInstrProfRuntimeHookVarName());
-  if (isGPUProfTarget(M))
-    Var->setVisibility(GlobalValue::ProtectedVisibility);
-  else
-    Var->setVisibility(GlobalValue::HiddenVisibility);
+  Var->setVisibility(GlobalValue::HiddenVisibility);
 
   if (TT.isOSBinFormatELF() && !TT.isPS()) {
     // Mark the user variable as used so that it isn't stripped out.

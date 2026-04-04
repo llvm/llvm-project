@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # ===----------------------------------------------------------------------===##
 #
 # Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -166,7 +166,8 @@ def main(argv):
 
         logging.info(f'Submitting results to {args.lnt_url}')
         submission_url = f'{args.lnt_url}/db_default/v4/{args.test_suite}/submitRun'
-        run([build_dir / '.venv/bin/lnt', 'submit', '--ignore-regressions', submission_url, build_dir / 'benchmarks.json'])
+        run([build_dir / '.venv/bin/lnt', 'submit', '--ignore-regressions', '--merge', 'append',
+                                                    submission_url, build_dir / 'benchmarks.json'])
 
 
 if __name__ == '__main__':

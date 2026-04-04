@@ -62,16 +62,19 @@ void DefaultResourceStrategy::used(uint64_t Mask) {
   RemovedFromNextInSequence = 0;
 }
 
+static uint64_t computeResourceSizeMask(uint64_t Mask, bool IsAGroup,
+                                        unsigned NumUnits) {
+  if (IsAGroup)
+    return Mask ^ (1ULL << getResourceStateIndex(Mask));
+  return (1ULL << NumUnits) - 1;
+}
+
 ResourceState::ResourceState(const MCProcResourceDesc &Desc, unsigned Index,
                              uint64_t Mask)
     : ProcResourceDescIndex(Index), ResourceMask(Mask),
-      BufferSize(Desc.BufferSize), IsAGroup(llvm::popcount(ResourceMask) > 1) {
-  if (IsAGroup) {
-    ResourceSizeMask =
-        ResourceMask ^ 1ULL << getResourceStateIndex(ResourceMask);
-  } else {
-    ResourceSizeMask = (1ULL << Desc.NumUnits) - 1;
-  }
+      IsAGroup(llvm::popcount(ResourceMask) > 1),
+      ResourceSizeMask(computeResourceSizeMask(Mask, IsAGroup, Desc.NumUnits)),
+      BufferSize(Desc.BufferSize) {
   ReadyMask = ResourceSizeMask;
   AvailableSlots = BufferSize == -1 ? 0U : static_cast<unsigned>(BufferSize);
   Unavailable = false;

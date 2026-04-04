@@ -1375,7 +1375,12 @@ class PatGpr<SDPatternOperator OpNode, RVInst Inst, ValueType vt = XLenVT>
 class PatGprGpr<SDPatternOperator OpNode, RVInst Inst, ValueType vt = XLenVT>
     : Pat<(vt (OpNode (vt GPR:$rs1), (vt GPR:$rs2))), (Inst GPR:$rs1, GPR:$rs2)>;
 
-class PatGprImm<SDPatternOperator OpNode, RVInst Inst, ImmLeaf ImmType,
+class PatGprSplatGpr<SDPatternOperator OpNode, RVInst Inst, ValueType VecVT,
+                     ValueType ScalarVT = XLenVT>
+    : Pat<(VecVT (OpNode GPR:$rs1, (splat_vector (ScalarVT GPR:$rs2)))),
+          (Inst GPR:$rs1, GPR:$rs2)>;
+
+class PatGprImm<SDPatternOperator OpNode, RVInst Inst, SDPatternOperator ImmType,
                 ValueType vt = XLenVT>
     : Pat<(vt (OpNode (vt GPR:$rs1), ImmType:$imm)),
           (Inst GPR:$rs1, ImmType:$imm)>;
@@ -1475,9 +1480,9 @@ def riscv_or_disjoint : PatFrag<(ops node:$lhs, node:$rhs), (or node:$lhs, node:
 }]>;
 def : PatGprSimm12<riscv_or_disjoint, ADDI>;
 
-def add_like : PatFrags<(ops node:$lhs, node:$rhs),
-                        [(riscv_or_disjoint node:$lhs, node:$rhs),
-                         (add  node:$lhs, node:$rhs)]>;
+def riscv_add_like : PatFrags<(ops node:$lhs, node:$rhs),
+                              [(riscv_or_disjoint node:$lhs, node:$rhs),
+                               (add  node:$lhs, node:$rhs)]>;
 
 def riscv_xor_like : PatFrags<(ops node:$lhs, node:$rhs),
                               [(riscv_or_disjoint node:$lhs, node:$rhs),
@@ -1503,7 +1508,7 @@ def : Pat<(XLenVT (and GPR:$rs, immop_oneuse<TrailingOnesMask>:$mask)),
 // zero-extends it). For RISC-V, the mask is unnecessary as shifts in the base
 // ISA only read the least significant 5 bits (RV32I) or 6 bits (RV64I).
 def shiftMaskXLen : ComplexPattern<XLenVT, 1, "selectShiftMaskXLen", [], [], 0>;
-def shiftMask32   : ComplexPattern<i64, 1, "selectShiftMask32", [], [], 0>;
+def shiftMask32   : ComplexPattern<XLenVT, 1, "selectShiftMask<32>", [], [], 0>;
 // FIXME: This is labelled as handling 's32', however the ComplexPattern it
 // refers to handles both i32 and i64 based on the HwMode. Currently this LLT
 // parameter appears to be ignored so this pattern works for both, however we
@@ -1516,12 +1521,14 @@ def GIShiftMask32 :
     GIComplexOperandMatcher<s64, "selectShiftMask32">,
     GIComplexPatternEquiv<shiftMask32>;
 
+class PatGprShiftMask<SDPatternOperator OpNode, RVInst Inst,
+                      ComplexPattern ShiftMask, ValueType vt = XLenVT>
+    : Pat<(vt (OpNode GPR:$rs1, ShiftMask:$rs2)),
+          (Inst GPR:$rs1, ShiftMask:$rs2)>;
 class PatGprShiftMaskXLen<SDPatternOperator OpNode, RVInst Inst>
-    : Pat<(OpNode GPR:$rs1, shiftMaskXLen:$rs2),
-          (Inst GPR:$rs1, shiftMaskXLen:$rs2)>;
+    : PatGprShiftMask<OpNode, Inst, shiftMaskXLen>;
 class PatGprShiftMask32<SDPatternOperator OpNode, RVInst Inst>
-    : Pat<(OpNode GPR:$rs1, shiftMask32:$rs2),
-          (Inst GPR:$rs1, shiftMask32:$rs2)>;
+    : PatGprShiftMask<OpNode, Inst, shiftMask32, i64>;
 
 def : PatGprShiftMaskXLen<shl, SLL>;
 def : PatGprShiftMaskXLen<srl, SRL>;
@@ -1548,7 +1555,7 @@ def : GICustomOperandRenderer<"renderFrameIndex">,
 
 def : Pat<(frameindex:$fi), (ADDI (iPTR (to_tframeindex $fi)), 0)>;
 
-def : Pat<(add_like frameindex:$fi, simm12_lo:$offset),
+def : Pat<(riscv_add_like frameindex:$fi, simm12_lo:$offset),
           (ADDI (iPTR (to_tframeindex $fi)), simm12_lo:$offset)>;
 
 def GIAddrRegImm :
@@ -1741,6 +1748,20 @@ class LongBccPseudo : Pseudo<(outs),
                              (ins GPR:$rs1, GPR:$rs2, simm21_lsb0_jal:$imm20),
                              []> {
   let Size = 8;
+  let isBarrier = 1;
+  let isBranch = 1;
+  let hasSideEffects = 0;
+  let mayStore = 0;
+  let mayLoad = 0;
+  let isAsmParserOnly = 1;
+  let hasNoSchedulingInfo = 1;
+}
+
+class LongBcciPseudo<DAGOperand InTyImm, int size>
+    : Pseudo<(outs),
+             (ins GPR:$rs1, InTyImm:$imm, simm21_lsb0_jal:$imm20),
+             []> {
+  let Size = size;
   let isBarrier = 1;
   let isBranch = 1;
   let hasSideEffects = 0;
@@ -2357,6 +2378,7 @@ include "RISCVInstrInfoZvabd.td"
 include "RISCVInstrInfoZvk.td"
 include "RISCVInstrInfoZvdot4a8i.td"
 include "RISCVInstrInfoZvfofp8min.td"
+include "RISCVInstrInfoZvzip.td"
 
 // Packed SIMD
 include "RISCVInstrInfoP.td"

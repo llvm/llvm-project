@@ -7,8 +7,8 @@
 ; scalar iteration overhead for a low trip count loop. Make sure we pick
 ; the correct insertion point when fixing first order recurrences.
 
-@A = external dso_local global [5 x i32], align 4
-@B = external dso_local global [5 x i32], align 4
+@A = external global [5 x i32], align 4
+@B = external global [5 x i32], align 4
 
 define void @func_21() {
 ; CHECK-LABEL: @func_21(
