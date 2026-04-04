@@ -166,8 +166,7 @@ New checks
 - New :doc:`readability-redundant-lambda-parentheses
   <clang-tidy/checks/readability/redundant-lambda-parentheses>` check.
 
-  Finds and removes redundant empty parameter lists from lambda expressions
-  when the rewrite is valid for the active language standard.
+  Finds lambda expressions with a redundant empty parameter list and removes it.
 
 - New :doc:`readability-redundant-qualified-alias
   <clang-tidy/checks/readability/redundant-qualified-alias>` check.
