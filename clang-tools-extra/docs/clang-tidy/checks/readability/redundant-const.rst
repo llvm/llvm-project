@@ -46,4 +46,4 @@ The check also analyzes pointers:
    constexpr const char* ok = "ok"; // OK
 
 
-Requires C++11 or above.
+Requires C++11 or C23.

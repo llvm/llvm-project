@@ -16,9 +16,6 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::readability {
 
-static const internal::VariadicDynCastAllOfMatcher<Decl, VarTemplateDecl>
-    VarTemplateDecl;
-
 static std::optional<Token>
 findConstToRemove(const VarDecl *VD, const MatchFinder::MatchResult &Result) {
   const SourceManager &SM = *Result.SourceManager;
@@ -35,7 +32,7 @@ findConstToRemove(const VarDecl *VD, const MatchFinder::MatchResult &Result) {
   // we know it is a pointer but cannot find the start token.
   // This can happen when either type is aliased or `auto` was used.
   // e.g: constexpr const auto const str = "hello";
-  // In cases like this, clang analyzer already warns about the use of const
+  // In cases like this, Clang already warns about the use of const
   // as duplicate, so we can safely ignore these cases.
   const SourceLocation ConstSearchStartLoc =
       !IsPointer
@@ -63,9 +60,7 @@ RedundantConstCheck::RedundantConstCheck(StringRef Name,
 
 void RedundantConstCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
-      varDecl(isConstexpr(), unless(anyOf(hasAncestor(VarTemplateDecl()),
-                                          hasType(referenceType()))))
-          .bind("var_decl"),
+      varDecl(isConstexpr(), unless(hasType(referenceType()))).bind("var_decl"),
       this);
 }
 
@@ -82,13 +77,13 @@ void RedundantConstCheck::check(const MatchFinder::MatchResult &Result) {
   const auto ConstRange =
       CharSourceRange::getCharRange(Tok->getLocation(), Tok->getEndLoc());
   diag(Tok->getLocation(),
-       "redundant 'const' in constexpr variable declaration")
+       "redundant use of `const`; `constexpr` already implies `const`.")
       << ConstRange << FixItHint::CreateRemoval(ConstRange);
 }
 
 bool RedundantConstCheck::isLanguageVersionSupported(
     const LangOptions &LangOpts) const {
-  return LangOpts.CPlusPlus11;
+  return LangOpts.CPlusPlus11 || LangOpts.C23;
 }
 
 std::optional<TraversalKind>
