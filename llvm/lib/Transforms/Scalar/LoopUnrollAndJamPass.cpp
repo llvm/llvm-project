@@ -148,10 +148,9 @@ static bool computeUnrollAndJamCount(
     TargetTransformInfo::UnrollingPreferences &UP,
     TargetTransformInfo::PeelingPreferences &PP) {
   unsigned OuterLoopSize = OuterUCE.getRolledLoopSize();
-  // First up use computeUnrollCount from the loop unroller to get a count
-  // for unrolling the outer loop, plus any loops requiring explicit
-  // unrolling we leave to the unroller. This uses UP.Threshold /
-  // UP.PartialThreshold / UP.MaxCount to come up with sensible loop values.
+  // Use computeUnrollCount from the loop unroller to get a count for
+  // unrolling the outer loop. This uses UP.Threshold / UP.PartialThreshold /
+  // UP.MaxCount to come up with sensible loop values.
   // We have already checked that the loop has no unroll.* pragmas.
   computeUnrollCount(L, TTI, DT, LI, AC, SE, EphValues, ORE, OuterTripCount,
                      /*MaxTripCount*/ 0, /*MaxOrZero*/ false, OuterTripMultiple,

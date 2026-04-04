@@ -995,6 +995,15 @@ static Instruction *replaceGEPIdxWithZero(InstCombinerImpl &IC, Value *Ptr,
       NewGEPI->setOperand(Idx,
         ConstantInt::get(GEPI->getOperand(Idx)->getType(), 0));
       IC.InsertNewInstBefore(NewGEPI, GEPI->getIterator());
+      // If the memory instruction is guaranteed to execute whenever the GEP
+      // does, the dereference proves the index is unconditionally zero.
+      // Replace the GEP for all users so they all benefit.
+      if (GEPI->getParent() == MemI.getParent() &&
+          isGuaranteedToTransferExecutionToSuccessor(GEPI->getIterator(),
+                                                     MemI.getIterator())) {
+        IC.replaceInstUsesWith(*GEPI, NewGEPI);
+        IC.eraseInstFromFunction(*GEPI);
+      }
       return NewGEPI;
     }
   }
@@ -1175,6 +1184,7 @@ Instruction *InstCombinerImpl::visitLoadInst(LoadInst &LI) {
     if (Value *V = simplifyNonNullOperand(Op, /*HasDereferenceable=*/true))
       return replaceOperand(LI, 0, V);
 
+  // load(llvm.protected.field.ptr(ptr)) -> llvm.ptrauth.auth(load(ptr))
   if (isa<PointerType>(LI.getType())) {
     if (auto *II = dyn_cast<IntrinsicInst>(Op)) {
       if (II->getIntrinsicID() == Intrinsic::protected_field_ptr) {
@@ -1572,6 +1582,8 @@ Instruction *InstCombinerImpl::visitStoreInst(StoreInst &SI) {
     if (Value *V = simplifyNonNullOperand(Ptr, /*HasDereferenceable=*/true))
       return replaceOperand(SI, 1, V);
 
+  // store(ptr1, llvm.protected.field.ptr(ptr2)) ->
+  // store(llvm.ptrauth.sign(ptr1), ptr2)
   if (isa<PointerType>(Val->getType())) {
     if (auto *II = dyn_cast<IntrinsicInst>(Ptr)) {
       if (II->getIntrinsicID() == Intrinsic::protected_field_ptr) {
@@ -1630,10 +1642,9 @@ bool InstCombinerImpl::mergeStoreIntoSuccessor(StoreInst &SI) {
   if (StoreBB == DestBB || OtherBB == DestBB)
     return false;
 
-  // Verify that the other block ends in a branch and is not otherwise empty.
+  // Verify that the other block is not empty apart from the terminator.
   BasicBlock::iterator BBI(OtherBB->getTerminator());
-  BranchInst *OtherBr = dyn_cast<BranchInst>(BBI);
-  if (!OtherBr || BBI == OtherBB->begin())
+  if (BBI == OtherBB->begin())
     return false;
 
   auto OtherStoreIsMergeable = [&](StoreInst *OtherStore) -> bool {
@@ -1650,7 +1661,7 @@ bool InstCombinerImpl::mergeStoreIntoSuccessor(StoreInst &SI) {
   // If the other block ends in an unconditional branch, check for the 'if then
   // else' case. There is an instruction before the branch.
   StoreInst *OtherStore = nullptr;
-  if (OtherBr->isUnconditional()) {
+  if (isa<UncondBrInst>(BBI)) {
     --BBI;
     // Skip over debugging info and pseudo probes.
     while (BBI->isDebugOrPseudoInst()) {
@@ -1663,7 +1674,7 @@ bool InstCombinerImpl::mergeStoreIntoSuccessor(StoreInst &SI) {
     OtherStore = dyn_cast<StoreInst>(BBI);
     if (!OtherStoreIsMergeable(OtherStore))
       return false;
-  } else {
+  } else if (auto *OtherBr = dyn_cast<CondBrInst>(BBI)) {
     // Otherwise, the other block ended with a conditional branch. If one of the
     // destinations is StoreBB, then we have the if/then case.
     if (OtherBr->getSuccessor(0) != StoreBB &&
@@ -1693,7 +1704,8 @@ bool InstCombinerImpl::mergeStoreIntoSuccessor(StoreInst &SI) {
       if (I->mayReadFromMemory() || I->mayThrow() || I->mayWriteToMemory())
         return false;
     }
-  }
+  } else
+    return false;
 
   // Insert a PHI node now if we need it.
   Value *MergedVal = OtherStore->getValueOperand();

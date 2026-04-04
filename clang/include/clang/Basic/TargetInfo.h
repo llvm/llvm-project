@@ -1571,7 +1571,7 @@ public:
   /// which requires support for cpu_supports and cpu_is functionality.
   bool supportsMultiVersioning() const {
     return getTriple().isX86() || getTriple().isAArch64() ||
-           getTriple().isRISCV();
+           getTriple().isRISCV() || getTriple().isOSAIX();
   }
 
   /// Identify whether this target supports IFuncs.

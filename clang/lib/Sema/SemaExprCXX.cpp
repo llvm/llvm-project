@@ -2206,9 +2206,8 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
           << /*array*/ 2
           << (*ArraySize ? (*ArraySize)->getSourceRange() : TypeRange));
 
-    InitializedEntity Entity =
-        InitializedEntity::InitializeNew(StartLoc, AllocType,
-                                         /*VariableLengthArrayNew=*/false);
+    InitializedEntity Entity = InitializedEntity::InitializeNew(
+        StartLoc, AllocType, InitializedEntity::NewArrayKind::KnownLength);
     AllocType = DeduceTemplateSpecializationFromInitializer(
         AllocTypeInfo, Entity, Kind, Exprs);
     if (AllocType.isNull())
@@ -2592,7 +2591,9 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
 
     bool VariableLengthArrayNew = ArraySize && *ArraySize && !KnownArraySize;
     InitializedEntity Entity = InitializedEntity::InitializeNew(
-        StartLoc, InitType, VariableLengthArrayNew);
+        StartLoc, InitType,
+        VariableLengthArrayNew ? InitializedEntity::NewArrayKind::UnknownLength
+                               : InitializedEntity::NewArrayKind::KnownLength);
     InitializationSequence InitSeq(*this, Entity, Kind, Exprs);
     ExprResult FullInit = InitSeq.Perform(*this, Entity, Kind, Exprs);
     if (FullInit.isInvalid())
@@ -2636,17 +2637,31 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
     MarkFunctionReferenced(StartLoc, OperatorDelete);
   }
 
-  // For MSVC vector deleting destructors support we record that for the class
-  // new[] was called. We try to optimize the code size and only emit vector
-  // deleting destructors when they are required. Vector deleting destructors
-  // are required for delete[] call but MSVC triggers emission of them
-  // whenever new[] is called for an object of the class and we do the same
-  // for compatibility.
-  if (const CXXConstructExpr *CCE =
-          dyn_cast_or_null<CXXConstructExpr>(Initializer);
-      CCE && ArraySize) {
-    Context.setClassNeedsVectorDeletingDestructor(
-        CCE->getConstructor()->getParent());
+  // new[] will trigger vector deleting destructor emission if the class has
+  // virtual destructor for MSVC compatibility. Perform necessary checks.
+  if (Context.getTargetInfo().emitVectorDeletingDtors(Context.getLangOpts())) {
+    if (const CXXConstructExpr *CCE =
+            dyn_cast_or_null<CXXConstructExpr>(Initializer);
+        CCE && ArraySize) {
+      CXXRecordDecl *ClassDecl = CCE->getConstructor()->getParent();
+      // We probably already did this for another new[] with this class so don't
+      // do it twice.
+      if (!Context.classMaybeNeedsVectorDeletingDestructor(ClassDecl)) {
+        auto *Dtor = ClassDecl->getDestructor();
+        if (Dtor && Dtor->isVirtual() && !Dtor->isDeleted()) {
+          Context.setClassMaybeNeedsVectorDeletingDestructor(ClassDecl);
+          if (!Dtor->isDefined() && !Dtor->isInvalidDecl()) {
+            // Call CheckDestructor if destructor is not defined. This is
+            // needed to find operators delete and delete[] for vector deleting
+            // destructor body because new[] will trigger emission of vector
+            // deleting destructor body even if destructor is defined in another
+            // translation unit.
+            ContextRAII SavedContext(*this, Dtor);
+            CheckDestructor(Dtor);
+          }
+        }
+      }
+    }
   }
 
   return CXXNewExpr::Create(Context, UseGlobal, OperatorNew, OperatorDelete,
@@ -3430,6 +3445,13 @@ void Sema::DeclareGlobalNewDelete() {
     AlignValT->setIntegerType(Context.getSizeType());
     AlignValT->setPromotionType(Context.getSizeType());
     AlignValT->setImplicit(true);
+
+    // Add to the std namespace so that the module merger can find it via
+    // noload_lookup and merge it with the module's explicit definition.
+    // We want the created EnumDecl to be available for redeclaration lookups,
+    // but not for regular name lookups (same pattern as
+    // getOrCreateStdNamespace).
+    getOrCreateStdNamespace()->addDecl(AlignValT);
 
     StdAlignValT = AlignValT;
   }
@@ -6617,6 +6639,9 @@ ExprResult Sema::MaybeBindToTemporary(Expr *E) {
       ObjCMethodDecl *D = nullptr;
       if (ObjCMessageExpr *Send = dyn_cast<ObjCMessageExpr>(E)) {
         D = Send->getMethodDecl();
+      } else if (auto *OL = dyn_cast<ObjCObjectLiteral>(E);
+                 OL && OL->isGlobalAllocation()) {
+        return E;
       } else if (ObjCBoxedExpr *BoxedExpr = dyn_cast<ObjCBoxedExpr>(E)) {
         D = BoxedExpr->getBoxingMethod();
       } else if (ObjCArrayLiteral *ArrayLit = dyn_cast<ObjCArrayLiteral>(E)) {
@@ -6627,8 +6652,8 @@ ExprResult Sema::MaybeBindToTemporary(Expr *E) {
           return E;
 
         D = ArrayLit->getArrayWithObjectsMethod();
-      } else if (ObjCDictionaryLiteral *DictLit
-                                        = dyn_cast<ObjCDictionaryLiteral>(E)) {
+      } else if (ObjCDictionaryLiteral *DictLit =
+                     dyn_cast<ObjCDictionaryLiteral>(E)) {
         // Don't do reclaims if we're using the zero-element dictionary
         // constant.
         if (DictLit->getNumElements() == 0 &&
@@ -7483,7 +7508,7 @@ static void MaybeDecrementCount(
   if ((IsCompoundAssign || isIncrementDecrementUnaryOp) &&
       VD->getType().isVolatileQualified())
     return;
-  auto iter = RefsMinusAssignments.find(VD);
+  auto iter = RefsMinusAssignments.find(VD->getCanonicalDecl());
   if (iter == RefsMinusAssignments.end())
     return;
   iter->getSecond()--;

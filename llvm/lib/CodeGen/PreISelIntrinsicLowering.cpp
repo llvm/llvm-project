@@ -495,6 +495,8 @@ static bool expandPtrauthForEmuPAC(Function &Intr) {
 
   Type *Int64Ty = Type::getInt64Ty(M.getContext());
 
+  assert(Intr.getIntrinsicID() == Intrinsic::ptrauth_sign ||
+         Intr.getIntrinsicID() == Intrinsic::ptrauth_auth);
   auto *EmuFnTy = FunctionType::get(Int64Ty, {Int64Ty, Int64Ty}, false);
   FunctionCallee EmuIntr = M.getOrInsertFunction(
       Intr.getIntrinsicID() == Intrinsic::ptrauth_auth ? "__emupac_autda"
@@ -566,10 +568,12 @@ static bool expandProtectedFieldPtr(Function &Intr) {
         }
       }
 
-      // The only remaining uses should be non-load/store uses. Any loads or
-      // stores were removed by InstCombine. This means that we couldn't rewrite
-      // away this use of the intrinsic. Replace it with the pointer operand,
-      // and arrange to define a deactivation symbol.
+      // If we are here, this means that we couldn't rewrite away this use of
+      // the intrinsic. Any load or store uses were removed by InstCombine, and
+      // in general, we can't rewrite away non-load/store uses of
+      // llvm.protected.field.ptr because doing so could expose the encoded
+      // pointer value to the program. Replace it with the pointer operand, and
+      // arrange to define a deactivation symbol.
       U.set(Pointer);
       if (DS)
         DSsToDeactivate.insert(DS);

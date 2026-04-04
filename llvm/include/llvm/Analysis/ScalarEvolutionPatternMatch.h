@@ -23,9 +23,9 @@ template <typename Pattern> bool match(const SCEV *S, const Pattern &P) {
   return P.match(S);
 }
 
-template <typename Pattern> bool match(const SCEVUse U, const Pattern &P) {
-  const SCEV *S = U.getPointer();
-  return const_cast<Pattern &>(P).match(S);
+template <typename SCEVPtrT, typename Pattern>
+bool match(const SCEVUseT<SCEVPtrT> U, const Pattern &P) {
+  return P.match(U.getPointer());
 }
 
 template <typename Predicate> struct cst_pred_ty : public Predicate {
@@ -88,8 +88,24 @@ template <typename Class> struct bind_ty {
   }
 };
 
+template <typename SCEVPtrT> struct bind_ty<SCEVUseT<SCEVPtrT>> {
+  SCEVUseT<SCEVPtrT> &VR;
+
+  bind_ty(SCEVUseT<SCEVPtrT> &V) : VR(V) {}
+
+  template <typename ITy> bool match(ITy *V) const {
+    VR = V;
+    return true;
+  }
+};
+
 /// Match a SCEV, capturing it if we match.
 inline bind_ty<const SCEV> m_SCEV(const SCEV *&V) { return V; }
+
+template <typename SCEVPtrT>
+inline bind_ty<SCEVUseT<SCEVPtrT>> m_SCEV(SCEVUseT<SCEVPtrT> &V) {
+  return V;
+}
 inline bind_ty<const SCEVConstant> m_SCEVConstant(const SCEVConstant *&V) {
   return V;
 }

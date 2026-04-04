@@ -93,7 +93,7 @@ and used in SamplePGO mode only as described for the call instruction. If both
 weights are specified then the second weight contains the count of unwind branch
 taken and the first weight contains the execution count of the call minus
 the count of unwind branch taken. Both weights specified are used to calculate
-BranchProbability as for BranchInst and for SamplePGO the sum of both weights
+BranchProbability as for CondBrInst and for SamplePGO the sum of both weights
 is used.
 
 .. code-block:: none

@@ -3598,6 +3598,12 @@ bool IRTranslator::translateAtomicRMW(const User &U,
   case AtomicRMWInst::FMinimum:
     Opcode = TargetOpcode::G_ATOMICRMW_FMINIMUM;
     break;
+  case AtomicRMWInst::FMaximumNum:
+    Opcode = TargetOpcode::G_ATOMICRMW_FMAXIMUMNUM;
+    break;
+  case AtomicRMWInst::FMinimumNum:
+    Opcode = TargetOpcode::G_ATOMICRMW_FMINIMUMNUM;
+    break;
   case AtomicRMWInst::UIncWrap:
     Opcode = TargetOpcode::G_ATOMICRMW_UINC_WRAP;
     break;
@@ -4271,7 +4277,7 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
     ArrayRef<Register> VRegs = getOrCreateVRegs(Arg);
     VRegArgs.push_back(VRegs);
 
-    if (Arg.hasSwiftErrorAttr()) {
+    if (CLI->supportSwiftError() && Arg.hasSwiftErrorAttr()) {
       assert(VRegs.size() == 1 && "Too many vregs for Swift error");
       SwiftError.setCurrentVReg(EntryBB, SwiftError.getFunctionArg(), VRegs[0]);
     }

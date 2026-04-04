@@ -62,11 +62,7 @@ V add(Ty *Address, V Val, atomic::OrderingTy Ordering,
 template <typename Ty, typename V = utils::remove_addrspace_t<Ty>>
 V load(Ty *Address, atomic::OrderingTy Ordering,
        MemScopeTy MemScope = MemScopeTy::device) {
-#ifdef __NVPTX__
-  return __scoped_atomic_fetch_add(Address, V(0), Ordering, MemScope);
-#else
   return __scoped_atomic_load_n(Address, Ordering, MemScope);
-#endif
 }
 
 template <typename Ty, typename V = utils::remove_addrspace_t<Ty>>
@@ -179,34 +175,21 @@ atomicExchange(uint32_t *Address, uint32_t Val, atomic::OrderingTy Ordering,
 
 } // namespace atomic
 
-// FIXME: NVPTX does not respect the memory scope argument.
 namespace fence {
 
 /// Memory fence with \p Ordering semantics for the team.
 static inline void team(atomic::OrderingTy Ordering) {
-#ifdef __NVPTX__
-  __nvvm_membar_cta();
-#else
   __scoped_atomic_thread_fence(Ordering, atomic::workgroup);
-#endif
 }
 
 /// Memory fence with \p Ordering semantics for the contention group.
 static inline void kernel(atomic::OrderingTy Ordering) {
-#ifdef __NVPTX__
-  __nvvm_membar_gl();
-#else
   __scoped_atomic_thread_fence(Ordering, atomic::device);
-#endif
 }
 
 /// Memory fence with \p Ordering semantics for the system.
 static inline void system(atomic::OrderingTy Ordering) {
-#ifdef __NVPTX__
-  __nvvm_membar_sys();
-#else
   __scoped_atomic_thread_fence(Ordering, atomic::system);
-#endif
 }
 
 } // namespace fence

@@ -2833,15 +2833,16 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
       // The count is the same in the larger type except if the original
       // value was zero.  This can be handled by setting the bit just off
       // the top of the original type.
-      auto TopBit =
-          APInt::getOneBitSet(WideTy.getSizeInBits(), CurTy.getSizeInBits());
+      auto TopBit = APInt::getOneBitSet(WideTy.getScalarSizeInBits(),
+                                        CurTy.getScalarSizeInBits());
       MIBSrc = MIRBuilder.buildOr(
         WideTy, MIBSrc, MIRBuilder.buildConstant(WideTy, TopBit));
       // Now we know the operand is non-zero, use the more relaxed opcode.
       NewOpc = TargetOpcode::G_CTTZ_ZERO_UNDEF;
     }
 
-    unsigned SizeDiff = WideTy.getSizeInBits() - CurTy.getSizeInBits();
+    unsigned SizeDiff =
+        WideTy.getScalarSizeInBits() - CurTy.getScalarSizeInBits();
 
     if (Opcode == TargetOpcode::G_CTLZ_ZERO_UNDEF) {
       // An optimization where the result is the CTLZ after the left shift by
@@ -2857,8 +2858,13 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     // This is already the correct result for CTPOP and CTTZs
     if (Opcode == TargetOpcode::G_CTLZ || Opcode == TargetOpcode::G_CTLS) {
       // The correct result is NewOp - (Difference in widety and current ty).
+      // At this stage SUB is guaranteed to be positive no-wrap,
+      // that to be used in further KnownBits optimizations for CTLZ.
       MIBNewOp = MIRBuilder.buildSub(
-          WideTy, MIBNewOp, MIRBuilder.buildConstant(WideTy, SizeDiff));
+          WideTy, MIBNewOp, MIRBuilder.buildConstant(WideTy, SizeDiff),
+          Opcode == TargetOpcode::G_CTLZ
+              ? std::optional<unsigned>(MachineInstr::NoUWrap)
+              : std::nullopt);
     }
 
     MIRBuilder.buildZExtOrTrunc(MI.getOperand(0), MIBNewOp);
@@ -5620,6 +5626,7 @@ LegalizerHelper::fewerElementsVector(MachineInstr &MI, unsigned TypeIdx,
   case G_CTTZ:
   case G_CTTZ_ZERO_UNDEF:
   case G_CTPOP:
+  case G_CTLS:
   case G_FCOPYSIGN:
   case G_ZEXT:
   case G_SEXT:

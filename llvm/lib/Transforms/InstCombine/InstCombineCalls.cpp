@@ -3320,7 +3320,9 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         if (CI->getArgOperand(1) != Key || CI->getArgOperand(2) != Disc)
           break;
       } else if (CI->getIntrinsicID() == Intrinsic::ptrauth_resign) {
-        if (CI->getArgOperand(3) != Key || CI->getArgOperand(4) != Disc || DS)
+        // The resign intrinsic does not support deactivation symbols.
+        assert(!DS);
+        if (CI->getArgOperand(3) != Key || CI->getArgOperand(4) != Disc)
           break;
         AuthKey = CI->getArgOperand(1);
         AuthDisc = CI->getArgOperand(2);

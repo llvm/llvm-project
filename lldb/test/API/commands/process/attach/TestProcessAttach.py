@@ -14,6 +14,7 @@ exe_name = "ProcessAttach"  # Must match Makefile
 
 
 class ProcessAttachTestCase(TestBase):
+    SHARED_BUILD_TESTCASE = False
     NO_DEBUG_INFO_TESTCASE = True
 
     def setUp(self):

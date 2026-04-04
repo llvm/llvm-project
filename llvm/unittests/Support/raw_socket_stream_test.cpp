@@ -1,3 +1,4 @@
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Casting.h"
@@ -34,9 +35,7 @@ TEST(raw_socket_streamTest, CLIENT_TO_SERVER_AND_SERVER_TO_CLIENT) {
   SmallString<100> SocketPath;
   llvm::sys::fs::createUniquePath("client_server_comms-%%%%%%.sock", SocketPath,
                                   true);
-
-  // Make sure socket file does not exist. May still be there from the last test
-  std::remove(SocketPath.c_str());
+  auto Cleanup = llvm::scope_exit([&] { std::remove(SocketPath.c_str()); });
 
   Expected<ListeningSocket> MaybeServerListener =
       ListeningSocket::createUnix(SocketPath);
@@ -76,9 +75,7 @@ TEST(raw_socket_streamTest, READ_WITH_TIMEOUT) {
   SmallString<100> SocketPath;
   llvm::sys::fs::createUniquePath("read_with_timeout-%%%%%%.sock", SocketPath,
                                   true);
-
-  // Make sure socket file does not exist. May still be there from the last test
-  std::remove(SocketPath.c_str());
+  auto Cleanup = llvm::scope_exit([&] { std::remove(SocketPath.c_str()); });
 
   Expected<ListeningSocket> MaybeServerListener =
       ListeningSocket::createUnix(SocketPath);
@@ -109,9 +106,7 @@ TEST(raw_socket_streamTest, ACCEPT_WITH_TIMEOUT) {
   SmallString<100> SocketPath;
   llvm::sys::fs::createUniquePath("accept_with_timeout-%%%%%%.sock", SocketPath,
                                   true);
-
-  // Make sure socket file does not exist. May still be there from the last test
-  std::remove(SocketPath.c_str());
+  auto Cleanup = llvm::scope_exit([&] { std::remove(SocketPath.c_str()); });
 
   Expected<ListeningSocket> MaybeServerListener =
       ListeningSocket::createUnix(SocketPath);
@@ -131,9 +126,7 @@ TEST(raw_socket_streamTest, ACCEPT_WITH_SHUTDOWN) {
   SmallString<100> SocketPath;
   llvm::sys::fs::createUniquePath("accept_with_shutdown-%%%%%%.sock",
                                   SocketPath, true);
-
-  // Make sure socket file does not exist. May still be there from the last test
-  std::remove(SocketPath.c_str());
+  auto Cleanup = llvm::scope_exit([&] { std::remove(SocketPath.c_str()); });
 
   Expected<ListeningSocket> MaybeServerListener =
       ListeningSocket::createUnix(SocketPath);
