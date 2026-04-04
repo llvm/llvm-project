@@ -601,30 +601,34 @@ constexpr T AbsoluteDifference(U X, V Y) {
   return X > Y ? (X - Y) : (Y - X);
 }
 
-/// Add two unsigned integers, X and Y, of type T.  Clamp the result to the
-/// maximum representable value of T on overflow.  ResultOverflowed indicates if
-/// the result is larger than the maximum representable value of type T.
+/// Add two unsigned integers, X and Y, of type T. Clamp the result to the
+/// maximum representable value of T on overflow.
 template <typename T>
-std::enable_if_t<std::is_unsigned_v<T>, T>
-SaturatingAdd(T X, T Y, bool *ResultOverflowed = nullptr) {
-  bool Dummy;
-  bool &Overflowed = ResultOverflowed ? *ResultOverflowed : Dummy;
-  // Hacker's Delight, p. 29
+std::enable_if_t<std::is_unsigned_v<T>, T> SaturatingAdd(T X, T Y) {
   T Z = X + Y;
-  Overflowed = (Z < X || Z < Y);
-  if (Overflowed)
-    return std::numeric_limits<T>::max();
-  else
-    return Z;
+  // Z < X and Z < Y are equivalent overflow checks, so one suffices
+  return Z | -(Z < X);
 }
 
-/// Add multiple unsigned integers of type T.  Clamp the result to the
+/// Add two unsigned integers, X and Y, of type T. Clamp the result to the
+/// maximum representable value of T on overflow. Overflowed indicates if
+/// the result is larger than the maximum representable value of type T.
+template <typename T>
+std::enable_if_t<std::is_unsigned_v<T>, T> SaturatingAdd(T X, T Y,
+                                                         bool &Overflowed) {
+  T Z = X + Y;
+  // Z < X and Z < Y are equivalent overflow checks, so one suffices
+  Overflowed = (Z < X);
+  return Z | -Overflowed;
+}
+
+/// Add multiple unsigned integers of type T. Clamp the result to the
 /// maximum representable value of T on overflow.
 template <class T, class... Ts>
 std::enable_if_t<std::is_unsigned_v<T>, T> SaturatingAdd(T X, T Y, T Z,
                                                          Ts... Args) {
   bool Overflowed = false;
-  T XY = SaturatingAdd(X, Y, &Overflowed);
+  T XY = SaturatingAdd(X, Y, Overflowed);
   if (Overflowed)
     return SaturatingAdd(std::numeric_limits<T>::max(), T(1), Args...);
   return SaturatingAdd(XY, Z, Args...);
@@ -670,7 +674,7 @@ SaturatingMultiply(T X, T Y, bool *ResultOverflowed = nullptr) {
   }
   Z <<= 1;
   if (X & 1)
-    return SaturatingAdd(Z, Y, ResultOverflowed);
+    return SaturatingAdd(Z, Y, Overflowed);
 
   return Z;
 }
@@ -689,7 +693,7 @@ SaturatingMultiplyAdd(T X, T Y, T A, bool *ResultOverflowed = nullptr) {
   if (Overflowed)
     return Product;
 
-  return SaturatingAdd(A, Product, &Overflowed);
+  return SaturatingAdd(A, Product, Overflowed);
 }
 
 /// Use this rather than HUGE_VALF; the latter causes warnings on MSVC.
