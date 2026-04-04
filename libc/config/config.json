@@ -186,5 +186,11 @@
       "value": false,
       "doc": "Trap with SIGFPE when feraiseexcept is called with unmasked floating point exceptions, similar to glibc's behavior.  This is currently working only on x86 with SSE."
     }
+  },
+  "assert": {
+    "LIBC_COPT_USE_C_ASSERT": {
+      "value": false,
+      "doc": "Use the system assert macro for LIBC_ASSERT."
+    }
   }
 }
