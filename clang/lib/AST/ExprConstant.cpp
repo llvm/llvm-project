@@ -14698,11 +14698,11 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
       for (unsigned J = 0; J < Iters; ++J) {
         APSInt OpA;
         if (IsDottingWord) {
-		  OpA = APSInt(OperandA.getVectorElt(Iters*I+J).getInt(), false);
+		  OpA = APSInt(OperandA.getVectorElt(Iters*I+J).getInt().sext(64), false);
         } else {
-		  OpA = APSInt(OperandA.getVectorElt(Iters*I+J).getInt().zext(16), true);
+		  OpA = APSInt(OperandA.getVectorElt(Iters*I+J).getInt().zext(64), true);
 		}
-        APSInt OpB = APSInt(OperandB.getVectorElt(Iters*I+J).getInt().sext(16), false);
+        APSInt OpB = APSInt(OperandB.getVectorElt(Iters*I+J).getInt().sext(64), false);
         DotProduct += APSInt((OpA * OpB).sext(64), false);
       }
       if (IsSaturating) {
