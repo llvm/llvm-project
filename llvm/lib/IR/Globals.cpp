@@ -105,7 +105,13 @@ void GlobalValue::eraseFromParent() {
   llvm_unreachable("not a global");
 }
 
-GlobalObject::~GlobalObject() { setComdat(nullptr); }
+GlobalObject::~GlobalObject() {
+  // Remove associated metadata from context.
+  if (hasMetadata())
+    clearMetadata();
+
+  setComdat(nullptr);
+}
 
 bool GlobalValue::isInterposable() const {
   // Be conservative with llvm.ptrauth wrappers.
