@@ -1113,7 +1113,7 @@ NativeProcessNetBSD::SaveCore(llvm::StringRef path_hint) {
 
   if (std::error_code errc =
           llvm::sys::fs::createTemporaryFile("lldb", "core", path))
-    return llvm::createStringError(errc, "Unable to create a temporary file");
+    return llvm::createStringError(errc, "unable to create a temporary file");
 
   error = PtraceWrapper(PT_DUMPCORE, GetID(), path.data(), path.size());
   if (error.Fail())

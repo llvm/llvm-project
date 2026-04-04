@@ -2457,7 +2457,7 @@ GDBRemoteCommunicationServerLLGS::Handle_H(StringExtractorGDBRemote &packet) {
   auto new_process_it = m_debugged_processes.find(pid);
   if (new_process_it == m_debugged_processes.end())
     return SendErrorResponse(
-        llvm::createStringErrorV("No process with PID {0} debugged", pid));
+        llvm::createStringErrorV("no process with PID {0} debugged", pid));
 
   // Ensure we have the given thread when not specifying -1 (all threads) or 0
   // (any thread).

@@ -1072,7 +1072,7 @@ NativeProcessFreeBSD::SaveCore(llvm::StringRef path_hint) {
       openFile(path, pc.pc_fd, CD_CreateNew, FA_Write, OF_None)) {
     if (std::error_code errc =
             createTemporaryFile("lldb", "core", pc.pc_fd, path))
-      return llvm::createStringError(errc, "Unable to create a temporary file");
+      return llvm::createStringError(errc, "unable to create a temporary file");
   }
   error = PtraceWrapper(PT_COREDUMP, GetID(), &pc, sizeof(pc));
 
