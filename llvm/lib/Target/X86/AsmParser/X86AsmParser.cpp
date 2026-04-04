@@ -830,12 +830,12 @@ private:
       case IES_MULTIPLY:
         // Index Register - Scale * Register
         if (PrevState == IES_INTEGER) {
+          if (IndexReg)
+            return regsUseUpError(ErrMsg);
           if (NegativeAdditiveTerm) {
             ErrMsg = "scale factor in address cannot be negative";
             return true;
           }
-          if (IndexReg)
-            return regsUseUpError(ErrMsg);
           State = IES_REGISTER;
           IndexReg = Reg;
           // Get the scale and replace the 'Scale * Register' with '0'.
@@ -916,12 +916,12 @@ private:
         State = IES_INTEGER;
         if (PrevState == IES_REGISTER && CurrState == IES_MULTIPLY) {
           // Index Register - Register * Scale
+          if (IndexReg)
+            return regsUseUpError(ErrMsg);
           if (NegativeAdditiveTerm) {
             ErrMsg = "scale factor in address cannot be negative";
             return true;
           }
-          if (IndexReg)
-            return regsUseUpError(ErrMsg);
           IndexReg = TmpReg;
           Scale = TmpInt;
           if (checkScale(Scale, ErrMsg))
@@ -2234,7 +2234,8 @@ bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
       break;
     case AsmToken::RBrac:
       if (SM.onRBrac(ErrMsg)) {
-        return Error(Tok.getLoc(), ErrMsg);
+        return Error(SM.getLocForNegativeScaleError(ErrMsg, Tok.getLoc()),
+                     ErrMsg);
       }
       break;
     case AsmToken::LParen:  SM.onLParen(); break;
