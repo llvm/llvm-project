@@ -18082,11 +18082,11 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
     LLVM_DEBUG(dbgs() << "Scale " << Scale << " For entry " << TE.Idx << "\n");
     return C * Scale;
   };
-  Instruction *ReductionRoot = nullptr;
+  Instruction *ReductionRoot = RdxRoot;
   if (UserIgnoreList) {
     // Scale reduction cost to the factor of the loop nest trip count.
     ReductionCost = ScaleCost(ReductionCost, *VectorizableTree.front().get(),
-                              /*Scalar=*/nullptr, RdxRoot);
+                              /*Scalar=*/nullptr, ReductionRoot);
   }
 
   // Add the cost for reduction.
