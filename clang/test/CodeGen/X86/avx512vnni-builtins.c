@@ -2,8 +2,11 @@
 //  RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=i386-apple-darwin -target-feature +avx512vnni -emit-llvm -o - -Wall -Werror | FileCheck %s
 //  RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +avx512vnni -emit-llvm -o - -Wall -Werror | FileCheck %s
 //  RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=i386-apple-darwin -target-feature +avx512vnni -emit-llvm -o - -Wall -Werror | FileCheck %s
+//  RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +avx512vnni -emit-llvm -o - -Wall -Werror | FileCheck %s
+//  RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +avx512vnni -emit-llvm -o - -Wall -Werror -fexperimental-new-constant-interpreter | FileCheck %s
 
 #include <immintrin.h>
+#include "builtin_test_helpers.h"
 
 __m512i test_mm512_mask_dpbusd_epi32(__m512i __S, __mmask16 __U, __m512i __A, __m512i __B) {
   // CHECK-LABEL: test_mm512_mask_dpbusd_epi32
@@ -24,6 +27,11 @@ __m512i test_mm512_dpbusd_epi32(__m512i __S, __m512i __A, __m512i __B) {
   // CHECK: call <16 x i32> @llvm.x86.avx512.vpdpbusd.512(<16 x i32> %{{.*}}, <64 x i8> %{{.*}}, <64 x i8> %{{.*}})
   return _mm512_dpbusd_epi32(__S, __A, __B);
 }
+// Each lane: 1*1 + 1*1 + 1*1 + 1*1 = 4
+TEST_CONSTEXPR(match_v16si(_mm512_dpbusd_epi32((__m512i)(__v16si){0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+  (__m512i)(__v64qu){1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1},
+  (__m512i)(__v64qi){1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1}),
+  4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4));
 
 __m512i test_mm512_mask_dpbusds_epi32(__m512i __S, __mmask16 __U, __m512i __A, __m512i __B) {
   // CHECK-LABEL: test_mm512_mask_dpbusds_epi32
