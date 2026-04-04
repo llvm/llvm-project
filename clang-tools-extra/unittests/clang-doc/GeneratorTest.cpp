@@ -15,7 +15,9 @@
 namespace clang {
 namespace doc {
 
-TEST(GeneratorTest, emitIndex) {
+class GeneratorTest : public ClangDocContextTest {};
+
+TEST_F(GeneratorTest, emitIndex) {
   Index Idx;
   auto InfoA = std::make_unique<Info>();
   InfoA->Name = "A";
@@ -80,7 +82,7 @@ TEST(GeneratorTest, emitIndex) {
   CheckIndex(ExpectedIdx, Idx);
 }
 
-TEST(GeneratorTest, sortIndex) {
+TEST_F(GeneratorTest, sortIndex) {
   Index Idx;
   Index IndexA;
   IndexA.Name = "a";
