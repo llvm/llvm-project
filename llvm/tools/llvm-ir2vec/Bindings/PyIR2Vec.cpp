@@ -195,15 +195,14 @@ NB_MODULE(ir2vec, m) {
   m.doc() = std::string("Python bindings for ") + ToolName;
 
   nb::enum_<IR2VecKind>(m, "IR2VecKind",
-                       "Embedding mode for IR2Vec representations")
+                        "Embedding mode for IR2Vec representations")
       .value("Symbolic", IR2VecKind::Symbolic, "Symbolic encodings only")
       .value("FlowAware", IR2VecKind::FlowAware,
-            "Flow-aware encodings (includes data/control flow)")
+             "Flow-aware encodings (includes data/control flow)")
       .export_values();
 
   nb::class_<PyIR2VecTool>(m, "IR2VecTool")
-      .def(nb::init<const std::string &, IR2VecKind,
-                    const std::string &>(),
+      .def(nb::init<const std::string &, IR2VecKind, const std::string &>(),
            nb::arg("filename"), nb::arg("mode"), nb::arg("vocabPath"))
       .def("getFuncNames", &PyIR2VecTool::getFuncNames,
            "Get list of all defined functions in the module\n"
@@ -233,6 +232,6 @@ NB_MODULE(ir2vec, m) {
          const std::string &vocabPath) {
         return std::make_unique<PyIR2VecTool>(filename, mode, vocabPath);
       },
-      nb::arg("filename"), nb::arg("mode") = IR2VecKind::Symbolic, nb::arg("vocabPath"),
-      nb::rv_policy::take_ownership);
+      nb::arg("filename"), nb::arg("mode") = IR2VecKind::Symbolic,
+      nb::arg("vocabPath"), nb::rv_policy::take_ownership);
 }
