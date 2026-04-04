@@ -1034,6 +1034,8 @@ private:
             Scale = 0;
           }
         }
+        NegativeAdditiveTerm = false;
+        NegativeAdditiveTermLoc = SMLoc();
         break;
       }
       PrevState = CurrState;
