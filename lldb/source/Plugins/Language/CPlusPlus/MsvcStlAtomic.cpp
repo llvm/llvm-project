@@ -86,8 +86,7 @@ llvm::Expected<size_t> lldb_private::formatters::
     MsvcStlAtomicSyntheticFrontEnd::GetIndexOfChildWithName(ConstString name) {
   if (name == "Value")
     return 0;
-  return llvm::createStringErrorV("type has no child named '{0}'",
-                                  name.GetStringRef());
+  return llvm::createStringErrorV("type has no child named '{0}'", name);
 }
 
 lldb_private::SyntheticChildrenFrontEnd *

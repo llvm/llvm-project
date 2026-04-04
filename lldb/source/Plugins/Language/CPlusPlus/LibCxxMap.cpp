@@ -484,8 +484,7 @@ llvm::Expected<size_t>
 lldb_private::formatters::LibCxxMapIteratorSyntheticFrontEnd::
     GetIndexOfChildWithName(ConstString name) {
   if (!m_pair_sp)
-    return llvm::createStringErrorV("type has no child named '{0}'",
-                                    name.GetStringRef());
+    return llvm::createStringErrorV("type has no child named '{0}'", name);
 
   return m_pair_sp->GetIndexOfChildWithName(name);
 }

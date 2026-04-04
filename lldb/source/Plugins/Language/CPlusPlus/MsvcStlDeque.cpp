@@ -159,13 +159,11 @@ lldb_private::formatters::MsvcStlDequeSyntheticFrontEnd::Update() {
 llvm::Expected<size_t> lldb_private::formatters::MsvcStlDequeSyntheticFrontEnd::
     GetIndexOfChildWithName(ConstString name) {
   if (!m_map)
-    return llvm::createStringErrorV("type has no child named '{0}'",
-                                    name.GetStringRef());
+    return llvm::createStringErrorV("type has no child named '{0}'", name);
   if (auto optional_idx = ExtractIndexFromString(name.GetCString()))
     return *optional_idx;
 
-  return llvm::createStringErrorV("type has no child named '{0}'",
-                                  name.GetStringRef());
+  return llvm::createStringErrorV("type has no child named '{0}'", name);
 }
 
 bool lldb_private::formatters::IsMsvcStlDeque(ValueObject &valobj) {

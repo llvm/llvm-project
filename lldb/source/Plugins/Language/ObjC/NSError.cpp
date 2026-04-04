@@ -167,8 +167,7 @@ public:
     static ConstString g_userInfo("_userInfo");
     if (name == g_userInfo)
       return 0;
-    return llvm::createStringErrorV("type has no child named '{0}'",
-                                    name.GetStringRef());
+    return llvm::createStringErrorV("type has no child named '{0}'", name);
   }
 
 private:

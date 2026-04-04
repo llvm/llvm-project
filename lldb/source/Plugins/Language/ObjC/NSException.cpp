@@ -164,8 +164,7 @@ public:
     if (name == g_reason) return 1;
     if (name == g_userInfo) return 2;
     if (name == g_reserved) return 3;
-    return llvm::createStringErrorV("type has no child named '{0}'",
-                                    name.GetStringRef());
+    return llvm::createStringErrorV("type has no child named '{0}'", name);
   }
 
 private:

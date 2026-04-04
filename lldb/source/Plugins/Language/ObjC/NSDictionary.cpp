@@ -931,8 +931,7 @@ llvm::Expected<size_t> lldb_private::formatters::
   static const ConstString g_zero("[0]");
   if (name == g_zero)
     return 0;
-  return llvm::createStringErrorV("type has no child named '{0}'",
-                                  name.GetStringRef());
+  return llvm::createStringErrorV("type has no child named '{0}'", name);
 }
 
 llvm::Expected<uint32_t> lldb_private::formatters::

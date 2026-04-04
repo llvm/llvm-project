@@ -24,8 +24,7 @@ public:
   llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override {
     if (m_container_sp)
       return m_container_sp->GetIndexOfChildWithName(name);
-    return llvm::createStringErrorV("type has no child named '{0}'",
-                                    name.GetStringRef());
+    return llvm::createStringErrorV("type has no child named '{0}'", name);
   }
 
   lldb::ChildCacheState Update() override;

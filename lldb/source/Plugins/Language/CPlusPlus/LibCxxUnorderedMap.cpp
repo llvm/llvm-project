@@ -393,8 +393,7 @@ lldb_private::formatters::LibCxxUnorderedMapIteratorSyntheticFrontEnd::
     return 0;
   if (name == "second")
     return 1;
-  return llvm::createStringErrorV("type has no child named '{0}'",
-                                  name.GetStringRef());
+  return llvm::createStringErrorV("type has no child named '{0}'", name);
 }
 
 SyntheticChildrenFrontEnd *
