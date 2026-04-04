@@ -139,6 +139,14 @@ void comma_lhs_case() {
   // CHECK-FIXES: int value = ((void)(dst = std::bit_cast<unsigned int>(src)), 42);
 }
 
+void comma_rhs_case() {
+  float src = 1.0f;
+  unsigned int dst;
+  (0, std::memcpy(&dst, &src, sizeof(src)));
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use 'std::bit_cast' instead of 'memcpy' for type punning
+  // CHECK-FIXES: (0, dst = std::bit_cast<unsigned int>(src));
+}
+
 void void_cast_case() {
   float src = 1.0f;
   unsigned int dst;

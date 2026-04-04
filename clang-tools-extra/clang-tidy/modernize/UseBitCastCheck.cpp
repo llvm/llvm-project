@@ -15,7 +15,7 @@
 #include "clang/Lex/Lexer.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Twine.h"
-#include <cassert>
+#include "llvm/ADT/TypeSwitch.h"
 
 using namespace clang::ast_matchers;
 
@@ -96,34 +96,55 @@ static bool isMatchingSizeOfExpression(const Expr *SizeExpr, QualType SrcType,
 }
 
 static bool isStatementBody(const Stmt *Current, const Stmt *Parent) {
-  if (const auto *Block = dyn_cast<CompoundStmt>(Parent))
-    return llvm::is_contained(Block->body(), Current);
+  const auto IsCurrentBody = [Current](const Stmt *Body) {
+    if (Body == Current)
+      return true;
 
-  if (const auto *If = dyn_cast<IfStmt>(Parent))
-    return If->getThen() == Current || If->getElse() == Current;
-  if (const auto *While = dyn_cast<WhileStmt>(Parent))
-    return While->getBody() == Current;
-  if (const auto *Do = dyn_cast<DoStmt>(Parent))
-    return Do->getBody() == Current;
-  if (const auto *For = dyn_cast<ForStmt>(Parent))
-    return For->getBody() == Current;
-  if (const auto *RangeFor = dyn_cast<CXXForRangeStmt>(Parent))
-    return RangeFor->getBody() == Current;
-  if (const auto *Label = dyn_cast<LabelStmt>(Parent))
-    return Label->getSubStmt() == Current;
-  if (const auto *Case = dyn_cast<SwitchCase>(Parent))
-    return Case->getSubStmt() == Current;
-  if (const auto *Attributed = dyn_cast<AttributedStmt>(Parent))
-    return Attributed->getSubStmt() == Current;
+    // IgnoreUnlessSpelledInSource can make `Current` skip over a parenthesized
+    // body expression even though the enclosing statement still stores it.
+    const auto *BodyExpr = dyn_cast_or_null<Expr>(Body);
+    return BodyExpr && BodyExpr->IgnoreParenImpCasts() == Current;
+  };
 
-  return false;
+  return llvm::TypeSwitch<const Stmt *, bool>(Parent)
+      .Case<CompoundStmt>([&](const CompoundStmt *Block) {
+        return llvm::any_of(Block->body(), IsCurrentBody);
+      })
+      .Case<IfStmt>([&](const IfStmt *If) {
+        return IsCurrentBody(If->getThen()) || IsCurrentBody(If->getElse());
+      })
+      .Case<WhileStmt, DoStmt, ForStmt, CXXForRangeStmt>(
+          [&](const auto *Loop) { return IsCurrentBody(Loop->getBody()); })
+      .Case<LabelStmt, SwitchCase, AttributedStmt>([&](const auto *Wrapper) {
+        return IsCurrentBody(Wrapper->getSubStmt());
+      })
+      .Default(false);
 }
 
 namespace {
 
+// Accept only discarded-value uses of the memcpy call:
+//   memcpy(...);
+//   (void)memcpy(...);
+//   (memcpy(...), rhs);
+//   (lhs, memcpy(...));    if the enclosing comma expression is discarded
+//   (void)(lhs, memcpy(...));
+// Skip transparent wrappers on the way up and reject any other parent shape.
 AST_MATCHER(CallExpr, hasBitCastReplacementContext) {
   const Stmt *Current = &Node;
-  const BinaryOperator *DiscardedComma = nullptr;
+  bool SawDiscardedCommaRHS = false;
+  const auto IsTransparentReplacementParent = [](const Expr *ExprNode) {
+    return isa<ExprWithCleanups, ImplicitCastExpr, MaterializeTemporaryExpr,
+               CXXBindTemporaryExpr, ParenExpr>(ExprNode);
+  };
+  const auto BindReplacementContext = [&](const Expr &ReplacementRoot,
+                                          const BinaryOperator *CommaLHS) {
+    Builder->setBinding("replacementRoot",
+                        DynTypedNode::create(ReplacementRoot));
+    if (CommaLHS)
+      Builder->setBinding("commaLHS", DynTypedNode::create(*CommaLHS));
+    return true;
+  };
 
   while (true) {
     auto Parents = Finder->getASTContext().getParents(*Current);
@@ -131,8 +152,7 @@ AST_MATCHER(CallExpr, hasBitCastReplacementContext) {
       return false;
 
     if (const auto *ParentExpr = Parents[0].get<Expr>()) {
-      if (isa<ExprWithCleanups, ImplicitCastExpr, MaterializeTemporaryExpr,
-              CXXBindTemporaryExpr, ParenExpr>(ParentExpr)) {
+      if (IsTransparentReplacementParent(ParentExpr)) {
         Current = ParentExpr;
         continue;
       }
@@ -140,11 +160,8 @@ AST_MATCHER(CallExpr, hasBitCastReplacementContext) {
       if (const auto *Cast = dyn_cast<CastExpr>(ParentExpr)) {
         if (Cast->getCastKind() != CK_ToVoid)
           return false;
-
-        if (!DiscardedComma) {
-          Builder->setBinding("replacementRoot", DynTypedNode::create(*Cast));
-          return true;
-        }
+        if (!SawDiscardedCommaRHS)
+          return BindReplacementContext(*Cast, nullptr);
 
         Current = Cast;
         continue;
@@ -153,15 +170,16 @@ AST_MATCHER(CallExpr, hasBitCastReplacementContext) {
       const auto *Comma = dyn_cast<BinaryOperator>(ParentExpr);
       if (!Comma || Comma->getOpcode() != BO_Comma)
         return false;
-      if (Comma->getLHS() == Current) {
-        Builder->setBinding("replacementRoot", DynTypedNode::create(Node));
-        Builder->setBinding("discardedComma", DynTypedNode::create(*Comma));
-        return true;
-      }
+      if (Comma->getLHS() == Current)
+        return BindReplacementContext(Node, Comma);
       if (Comma->getRHS() != Current)
         return false;
 
-      DiscardedComma = Comma;
+      // A memcpy on the right-hand side of `,` is safe only if the enclosing
+      // comma expression is itself discarded, so keep walking from the comma
+      // node. Inject `(void)` only if that comma expression later becomes the
+      // left-hand side of another comma.
+      SawDiscardedCommaRHS = true;
       Current = Comma;
       continue;
     }
@@ -170,11 +188,7 @@ AST_MATCHER(CallExpr, hasBitCastReplacementContext) {
     if (!ParentStmt || !isStatementBody(Current, ParentStmt))
       return false;
 
-    Builder->setBinding("replacementRoot", DynTypedNode::create(Node));
-    if (DiscardedComma)
-      Builder->setBinding("discardedComma",
-                          DynTypedNode::create(*DiscardedComma));
-    return true;
+    return BindReplacementContext(Node, nullptr);
   }
 }
 
@@ -241,8 +255,7 @@ void UseBitCastCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *DstExpr = Result.Nodes.getNodeAs<Expr>("dstExpr");
   const auto *SrcExpr = Result.Nodes.getNodeAs<Expr>("srcExpr");
   const auto *ReplacementRoot = Result.Nodes.getNodeAs<Expr>("replacementRoot");
-  const auto *DiscardedComma =
-      Result.Nodes.getNodeAs<BinaryOperator>("discardedComma");
+  const auto *CommaLHS = Result.Nodes.getNodeAs<BinaryOperator>("commaLHS");
   assert(MemcpyCall);
   assert(DstExpr);
   assert(SrcExpr);
@@ -261,7 +274,7 @@ void UseBitCastCheck::check(const MatchFinder::MatchResult &Result) {
   const std::string DstTypeName = DstType.getAsString(Policy);
   const std::string Replacement =
       [&](const llvm::Twine &Assignment) -> std::string {
-    if (DiscardedComma)
+    if (CommaLHS)
       return ("(void)(" + Assignment + ")").str();
     return Assignment.str();
   }(llvm::Twine(DstText) + " = std::bit_cast<" + DstTypeName + ">(" + SrcText +
