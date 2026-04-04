@@ -29,7 +29,6 @@ static bool cores_match(const ArchSpec::Core core1, const ArchSpec::Core core2,
 namespace lldb_private {
 
 struct CoreDefinition {
-  ByteOrder default_byte_order;
   uint32_t addr_byte_size;
   uint32_t min_opcode_byte_size;
   uint32_t max_opcode_byte_size;
@@ -42,212 +41,130 @@ struct CoreDefinition {
 
 // This core information can be looked using the ArchSpec::Core as the index
 static constexpr const CoreDefinition g_core_definitions[] = {
-    {eByteOrderLittle, 4, 2, 4, llvm::Triple::arm, ArchSpec::eCore_arm_generic,
-     "arm"},
-    {eByteOrderLittle, 4, 2, 4, llvm::Triple::arm, ArchSpec::eCore_arm_armv4,
-     "armv4"},
-    {eByteOrderLittle, 4, 2, 4, llvm::Triple::arm, ArchSpec::eCore_arm_armv4t,
-     "armv4t"},
-    {eByteOrderLittle, 4, 2, 4, llvm::Triple::arm, ArchSpec::eCore_arm_armv5,
-     "armv5"},
-    {eByteOrderLittle, 4, 2, 4, llvm::Triple::arm, ArchSpec::eCore_arm_armv5e,
-     "armv5e"},
-    {eByteOrderLittle, 4, 2, 4, llvm::Triple::arm, ArchSpec::eCore_arm_armv5t,
-     "armv5t"},
-    {eByteOrderLittle, 4, 2, 4, llvm::Triple::arm, ArchSpec::eCore_arm_armv6,
-     "armv6"},
-    {eByteOrderLittle, 4, 2, 4, llvm::Triple::arm, ArchSpec::eCore_arm_armv6m,
-     "armv6m"},
-    {eByteOrderLittle, 4, 2, 4, llvm::Triple::arm, ArchSpec::eCore_arm_armv7,
-     "armv7"},
-    {eByteOrderLittle, 4, 2, 4, llvm::Triple::arm, ArchSpec::eCore_arm_armv7a,
-     "armv7a"},
-    {eByteOrderLittle, 4, 2, 4, llvm::Triple::arm, ArchSpec::eCore_arm_armv7l,
-     "armv7l"},
-    {eByteOrderLittle, 4, 2, 4, llvm::Triple::arm, ArchSpec::eCore_arm_armv7f,
-     "armv7f"},
-    {eByteOrderLittle, 4, 2, 4, llvm::Triple::arm, ArchSpec::eCore_arm_armv7s,
-     "armv7s"},
-    {eByteOrderLittle, 4, 2, 4, llvm::Triple::arm, ArchSpec::eCore_arm_armv7k,
-     "armv7k"},
-    {eByteOrderLittle, 4, 2, 4, llvm::Triple::arm, ArchSpec::eCore_arm_armv7m,
-     "armv7m"},
-    {eByteOrderLittle, 4, 2, 4, llvm::Triple::arm, ArchSpec::eCore_arm_armv7em,
-     "armv7em"},
-    {eByteOrderLittle, 4, 2, 4, llvm::Triple::arm, ArchSpec::eCore_arm_xscale,
-     "xscale"},
-    {eByteOrderLittle, 4, 2, 4, llvm::Triple::thumb, ArchSpec::eCore_thumb,
-     "thumb"},
-    {eByteOrderLittle, 4, 2, 4, llvm::Triple::thumb, ArchSpec::eCore_thumbv4t,
-     "thumbv4t"},
-    {eByteOrderLittle, 4, 2, 4, llvm::Triple::thumb, ArchSpec::eCore_thumbv5,
-     "thumbv5"},
-    {eByteOrderLittle, 4, 2, 4, llvm::Triple::thumb, ArchSpec::eCore_thumbv5e,
-     "thumbv5e"},
-    {eByteOrderLittle, 4, 2, 4, llvm::Triple::thumb, ArchSpec::eCore_thumbv6,
-     "thumbv6"},
-    {eByteOrderLittle, 4, 2, 4, llvm::Triple::thumb, ArchSpec::eCore_thumbv6m,
-     "thumbv6m"},
-    {eByteOrderLittle, 4, 2, 4, llvm::Triple::thumb, ArchSpec::eCore_thumbv7,
-     "thumbv7"},
-    {eByteOrderLittle, 4, 2, 4, llvm::Triple::thumb, ArchSpec::eCore_thumbv7s,
-     "thumbv7s"},
-    {eByteOrderLittle, 4, 2, 4, llvm::Triple::thumb, ArchSpec::eCore_thumbv7k,
-     "thumbv7k"},
-    {eByteOrderLittle, 4, 2, 4, llvm::Triple::thumb, ArchSpec::eCore_thumbv7f,
-     "thumbv7f"},
-    {eByteOrderLittle, 4, 2, 4, llvm::Triple::thumb, ArchSpec::eCore_thumbv7m,
-     "thumbv7m"},
-    {eByteOrderLittle, 4, 2, 4, llvm::Triple::thumb, ArchSpec::eCore_thumbv7em,
-     "thumbv7em"},
-    {eByteOrderLittle, 8, 4, 4, llvm::Triple::aarch64,
-     ArchSpec::eCore_arm_arm64, "arm64"},
-    {eByteOrderLittle, 8, 4, 4, llvm::Triple::aarch64,
-     ArchSpec::eCore_arm_armv8, "armv8"},
-    {eByteOrderLittle, 8, 4, 4, llvm::Triple::aarch64,
-     ArchSpec::eCore_arm_armv8a, "armv8a"},
-    {eByteOrderLittle, 4, 2, 4, llvm::Triple::arm, ArchSpec::eCore_arm_armv8l,
-     "armv8l"},
-    {eByteOrderLittle, 8, 4, 4, llvm::Triple::aarch64,
-     ArchSpec::eCore_arm_arm64e, "arm64e"},
-    {eByteOrderLittle, 4, 4, 4, llvm::Triple::aarch64_32,
-     ArchSpec::eCore_arm_arm64_32, "arm64_32"},
-    {eByteOrderLittle, 8, 4, 4, llvm::Triple::aarch64,
-     ArchSpec::eCore_arm_aarch64, "aarch64"},
+    {4, 2, 4, llvm::Triple::arm, ArchSpec::eCore_arm_generic, "arm"},
+    {4, 2, 4, llvm::Triple::arm, ArchSpec::eCore_arm_armv4, "armv4"},
+    {4, 2, 4, llvm::Triple::arm, ArchSpec::eCore_arm_armv4t, "armv4t"},
+    {4, 2, 4, llvm::Triple::arm, ArchSpec::eCore_arm_armv5, "armv5"},
+    {4, 2, 4, llvm::Triple::arm, ArchSpec::eCore_arm_armv5e, "armv5e"},
+    {4, 2, 4, llvm::Triple::arm, ArchSpec::eCore_arm_armv5t, "armv5t"},
+    {4, 2, 4, llvm::Triple::arm, ArchSpec::eCore_arm_armv6, "armv6"},
+    {4, 2, 4, llvm::Triple::arm, ArchSpec::eCore_arm_armv6m, "armv6m"},
+    {4, 2, 4, llvm::Triple::arm, ArchSpec::eCore_arm_armv7, "armv7"},
+    {4, 2, 4, llvm::Triple::arm, ArchSpec::eCore_arm_armv7a, "armv7a"},
+    {4, 2, 4, llvm::Triple::arm, ArchSpec::eCore_arm_armv7l, "armv7l"},
+    {4, 2, 4, llvm::Triple::arm, ArchSpec::eCore_arm_armv7f, "armv7f"},
+    {4, 2, 4, llvm::Triple::arm, ArchSpec::eCore_arm_armv7s, "armv7s"},
+    {4, 2, 4, llvm::Triple::arm, ArchSpec::eCore_arm_armv7k, "armv7k"},
+    {4, 2, 4, llvm::Triple::arm, ArchSpec::eCore_arm_armv7m, "armv7m"},
+    {4, 2, 4, llvm::Triple::arm, ArchSpec::eCore_arm_armv7em, "armv7em"},
+    {4, 2, 4, llvm::Triple::arm, ArchSpec::eCore_arm_xscale, "xscale"},
+    {4, 2, 4, llvm::Triple::thumb, ArchSpec::eCore_thumb, "thumb"},
+    {4, 2, 4, llvm::Triple::thumb, ArchSpec::eCore_thumbv4t, "thumbv4t"},
+    {4, 2, 4, llvm::Triple::thumb, ArchSpec::eCore_thumbv5, "thumbv5"},
+    {4, 2, 4, llvm::Triple::thumb, ArchSpec::eCore_thumbv5e, "thumbv5e"},
+    {4, 2, 4, llvm::Triple::thumb, ArchSpec::eCore_thumbv6, "thumbv6"},
+    {4, 2, 4, llvm::Triple::thumb, ArchSpec::eCore_thumbv6m, "thumbv6m"},
+    {4, 2, 4, llvm::Triple::thumb, ArchSpec::eCore_thumbv7, "thumbv7"},
+    {4, 2, 4, llvm::Triple::thumb, ArchSpec::eCore_thumbv7s, "thumbv7s"},
+    {4, 2, 4, llvm::Triple::thumb, ArchSpec::eCore_thumbv7k, "thumbv7k"},
+    {4, 2, 4, llvm::Triple::thumb, ArchSpec::eCore_thumbv7f, "thumbv7f"},
+    {4, 2, 4, llvm::Triple::thumb, ArchSpec::eCore_thumbv7m, "thumbv7m"},
+    {4, 2, 4, llvm::Triple::thumb, ArchSpec::eCore_thumbv7em, "thumbv7em"},
+    {8, 4, 4, llvm::Triple::aarch64, ArchSpec::eCore_arm_arm64, "arm64"},
+    {8, 4, 4, llvm::Triple::aarch64, ArchSpec::eCore_arm_armv8, "armv8"},
+    {8, 4, 4, llvm::Triple::aarch64, ArchSpec::eCore_arm_armv8a, "armv8a"},
+    {4, 2, 4, llvm::Triple::arm, ArchSpec::eCore_arm_armv8l, "armv8l"},
+    {8, 4, 4, llvm::Triple::aarch64, ArchSpec::eCore_arm_arm64e, "arm64e"},
+    {4, 4, 4, llvm::Triple::aarch64_32, ArchSpec::eCore_arm_arm64_32,
+     "arm64_32"},
+    {8, 4, 4, llvm::Triple::aarch64, ArchSpec::eCore_arm_aarch64, "aarch64"},
 
     // mips32, mips32r2, mips32r3, mips32r5, mips32r6
-    {eByteOrderBig, 4, 2, 4, llvm::Triple::mips, ArchSpec::eCore_mips32,
-     "mips"},
-    {eByteOrderBig, 4, 2, 4, llvm::Triple::mips, ArchSpec::eCore_mips32r2,
-     "mipsr2"},
-    {eByteOrderBig, 4, 2, 4, llvm::Triple::mips, ArchSpec::eCore_mips32r3,
-     "mipsr3"},
-    {eByteOrderBig, 4, 2, 4, llvm::Triple::mips, ArchSpec::eCore_mips32r5,
-     "mipsr5"},
-    {eByteOrderBig, 4, 2, 4, llvm::Triple::mips, ArchSpec::eCore_mips32r6,
-     "mipsr6"},
-    {eByteOrderLittle, 4, 2, 4, llvm::Triple::mipsel, ArchSpec::eCore_mips32el,
-     "mipsel"},
-    {eByteOrderLittle, 4, 2, 4, llvm::Triple::mipsel,
-     ArchSpec::eCore_mips32r2el, "mipsr2el"},
-    {eByteOrderLittle, 4, 2, 4, llvm::Triple::mipsel,
-     ArchSpec::eCore_mips32r3el, "mipsr3el"},
-    {eByteOrderLittle, 4, 2, 4, llvm::Triple::mipsel,
-     ArchSpec::eCore_mips32r5el, "mipsr5el"},
-    {eByteOrderLittle, 4, 2, 4, llvm::Triple::mipsel,
-     ArchSpec::eCore_mips32r6el, "mipsr6el"},
+    {4, 2, 4, llvm::Triple::mips, ArchSpec::eCore_mips32, "mips"},
+    {4, 2, 4, llvm::Triple::mips, ArchSpec::eCore_mips32r2, "mipsr2"},
+    {4, 2, 4, llvm::Triple::mips, ArchSpec::eCore_mips32r3, "mipsr3"},
+    {4, 2, 4, llvm::Triple::mips, ArchSpec::eCore_mips32r5, "mipsr5"},
+    {4, 2, 4, llvm::Triple::mips, ArchSpec::eCore_mips32r6, "mipsr6"},
+    {4, 2, 4, llvm::Triple::mipsel, ArchSpec::eCore_mips32el, "mipsel"},
+    {4, 2, 4, llvm::Triple::mipsel, ArchSpec::eCore_mips32r2el, "mipsr2el"},
+    {4, 2, 4, llvm::Triple::mipsel, ArchSpec::eCore_mips32r3el, "mipsr3el"},
+    {4, 2, 4, llvm::Triple::mipsel, ArchSpec::eCore_mips32r5el, "mipsr5el"},
+    {4, 2, 4, llvm::Triple::mipsel, ArchSpec::eCore_mips32r6el, "mipsr6el"},
 
     // mips64, mips64r2, mips64r3, mips64r5, mips64r6
-    {eByteOrderBig, 8, 2, 4, llvm::Triple::mips64, ArchSpec::eCore_mips64,
-     "mips64"},
-    {eByteOrderBig, 8, 2, 4, llvm::Triple::mips64, ArchSpec::eCore_mips64r2,
-     "mips64r2"},
-    {eByteOrderBig, 8, 2, 4, llvm::Triple::mips64, ArchSpec::eCore_mips64r3,
-     "mips64r3"},
-    {eByteOrderBig, 8, 2, 4, llvm::Triple::mips64, ArchSpec::eCore_mips64r5,
-     "mips64r5"},
-    {eByteOrderBig, 8, 2, 4, llvm::Triple::mips64, ArchSpec::eCore_mips64r6,
-     "mips64r6"},
-    {eByteOrderLittle, 8, 2, 4, llvm::Triple::mips64el,
-     ArchSpec::eCore_mips64el, "mips64el"},
-    {eByteOrderLittle, 8, 2, 4, llvm::Triple::mips64el,
-     ArchSpec::eCore_mips64r2el, "mips64r2el"},
-    {eByteOrderLittle, 8, 2, 4, llvm::Triple::mips64el,
-     ArchSpec::eCore_mips64r3el, "mips64r3el"},
-    {eByteOrderLittle, 8, 2, 4, llvm::Triple::mips64el,
-     ArchSpec::eCore_mips64r5el, "mips64r5el"},
-    {eByteOrderLittle, 8, 2, 4, llvm::Triple::mips64el,
-     ArchSpec::eCore_mips64r6el, "mips64r6el"},
+    {8, 2, 4, llvm::Triple::mips64, ArchSpec::eCore_mips64, "mips64"},
+    {8, 2, 4, llvm::Triple::mips64, ArchSpec::eCore_mips64r2, "mips64r2"},
+    {8, 2, 4, llvm::Triple::mips64, ArchSpec::eCore_mips64r3, "mips64r3"},
+    {8, 2, 4, llvm::Triple::mips64, ArchSpec::eCore_mips64r5, "mips64r5"},
+    {8, 2, 4, llvm::Triple::mips64, ArchSpec::eCore_mips64r6, "mips64r6"},
+    {8, 2, 4, llvm::Triple::mips64el, ArchSpec::eCore_mips64el, "mips64el"},
+    {8, 2, 4, llvm::Triple::mips64el, ArchSpec::eCore_mips64r2el, "mips64r2el"},
+    {8, 2, 4, llvm::Triple::mips64el, ArchSpec::eCore_mips64r3el, "mips64r3el"},
+    {8, 2, 4, llvm::Triple::mips64el, ArchSpec::eCore_mips64r5el, "mips64r5el"},
+    {8, 2, 4, llvm::Triple::mips64el, ArchSpec::eCore_mips64r6el, "mips64r6el"},
 
     // MSP430
-    {eByteOrderLittle, 2, 2, 4, llvm::Triple::msp430, ArchSpec::eCore_msp430,
-     "msp430"},
+    {2, 2, 4, llvm::Triple::msp430, ArchSpec::eCore_msp430, "msp430"},
 
-    {eByteOrderBig, 4, 4, 4, llvm::Triple::ppc, ArchSpec::eCore_ppc_generic,
-     "powerpc"},
-    {eByteOrderBig, 4, 4, 4, llvm::Triple::ppc, ArchSpec::eCore_ppc_ppc601,
-     "ppc601"},
-    {eByteOrderBig, 4, 4, 4, llvm::Triple::ppc, ArchSpec::eCore_ppc_ppc602,
-     "ppc602"},
-    {eByteOrderBig, 4, 4, 4, llvm::Triple::ppc, ArchSpec::eCore_ppc_ppc603,
-     "ppc603"},
-    {eByteOrderBig, 4, 4, 4, llvm::Triple::ppc, ArchSpec::eCore_ppc_ppc603e,
-     "ppc603e"},
-    {eByteOrderBig, 4, 4, 4, llvm::Triple::ppc, ArchSpec::eCore_ppc_ppc603ev,
-     "ppc603ev"},
-    {eByteOrderBig, 4, 4, 4, llvm::Triple::ppc, ArchSpec::eCore_ppc_ppc604,
-     "ppc604"},
-    {eByteOrderBig, 4, 4, 4, llvm::Triple::ppc, ArchSpec::eCore_ppc_ppc604e,
-     "ppc604e"},
-    {eByteOrderBig, 4, 4, 4, llvm::Triple::ppc, ArchSpec::eCore_ppc_ppc620,
-     "ppc620"},
-    {eByteOrderBig, 4, 4, 4, llvm::Triple::ppc, ArchSpec::eCore_ppc_ppc750,
-     "ppc750"},
-    {eByteOrderBig, 4, 4, 4, llvm::Triple::ppc, ArchSpec::eCore_ppc_ppc7400,
-     "ppc7400"},
-    {eByteOrderBig, 4, 4, 4, llvm::Triple::ppc, ArchSpec::eCore_ppc_ppc7450,
-     "ppc7450"},
-    {eByteOrderBig, 4, 4, 4, llvm::Triple::ppc, ArchSpec::eCore_ppc_ppc970,
-     "ppc970"},
+    {4, 4, 4, llvm::Triple::ppc, ArchSpec::eCore_ppc_generic, "powerpc"},
+    {4, 4, 4, llvm::Triple::ppc, ArchSpec::eCore_ppc_ppc601, "ppc601"},
+    {4, 4, 4, llvm::Triple::ppc, ArchSpec::eCore_ppc_ppc602, "ppc602"},
+    {4, 4, 4, llvm::Triple::ppc, ArchSpec::eCore_ppc_ppc603, "ppc603"},
+    {4, 4, 4, llvm::Triple::ppc, ArchSpec::eCore_ppc_ppc603e, "ppc603e"},
+    {4, 4, 4, llvm::Triple::ppc, ArchSpec::eCore_ppc_ppc603ev, "ppc603ev"},
+    {4, 4, 4, llvm::Triple::ppc, ArchSpec::eCore_ppc_ppc604, "ppc604"},
+    {4, 4, 4, llvm::Triple::ppc, ArchSpec::eCore_ppc_ppc604e, "ppc604e"},
+    {4, 4, 4, llvm::Triple::ppc, ArchSpec::eCore_ppc_ppc620, "ppc620"},
+    {4, 4, 4, llvm::Triple::ppc, ArchSpec::eCore_ppc_ppc750, "ppc750"},
+    {4, 4, 4, llvm::Triple::ppc, ArchSpec::eCore_ppc_ppc7400, "ppc7400"},
+    {4, 4, 4, llvm::Triple::ppc, ArchSpec::eCore_ppc_ppc7450, "ppc7450"},
+    {4, 4, 4, llvm::Triple::ppc, ArchSpec::eCore_ppc_ppc970, "ppc970"},
 
-    {eByteOrderLittle, 8, 4, 4, llvm::Triple::ppc64le,
-     ArchSpec::eCore_ppc64le_generic, "powerpc64le"},
-    {eByteOrderBig, 8, 4, 4, llvm::Triple::ppc64, ArchSpec::eCore_ppc64_generic,
-     "powerpc64"},
-    {eByteOrderBig, 8, 4, 4, llvm::Triple::ppc64,
-     ArchSpec::eCore_ppc64_ppc970_64, "ppc970-64"},
+    {8, 4, 4, llvm::Triple::ppc64le, ArchSpec::eCore_ppc64le_generic,
+     "powerpc64le"},
+    {8, 4, 4, llvm::Triple::ppc64, ArchSpec::eCore_ppc64_generic, "powerpc64"},
+    {8, 4, 4, llvm::Triple::ppc64, ArchSpec::eCore_ppc64_ppc970_64,
+     "ppc970-64"},
 
-    {eByteOrderBig, 8, 2, 6, llvm::Triple::systemz,
-     ArchSpec::eCore_s390x_generic, "s390x"},
+    {8, 2, 6, llvm::Triple::systemz, ArchSpec::eCore_s390x_generic, "s390x"},
 
-    {eByteOrderLittle, 4, 4, 4, llvm::Triple::sparc,
-     ArchSpec::eCore_sparc_generic, "sparc"},
-    {eByteOrderLittle, 8, 4, 4, llvm::Triple::sparcv9,
-     ArchSpec::eCore_sparc9_generic, "sparcv9"},
+    {4, 4, 4, llvm::Triple::sparc, ArchSpec::eCore_sparc_generic, "sparc"},
+    {8, 4, 4, llvm::Triple::sparcv9, ArchSpec::eCore_sparc9_generic, "sparcv9"},
 
-    {eByteOrderLittle, 4, 1, 15, llvm::Triple::x86, ArchSpec::eCore_x86_32_i386,
-     "i386"},
-    {eByteOrderLittle, 4, 1, 15, llvm::Triple::x86, ArchSpec::eCore_x86_32_i486,
-     "i486"},
-    {eByteOrderLittle, 4, 1, 15, llvm::Triple::x86,
-     ArchSpec::eCore_x86_32_i486sx, "i486sx"},
-    {eByteOrderLittle, 4, 1, 15, llvm::Triple::x86, ArchSpec::eCore_x86_32_i686,
-     "i686"},
+    {4, 1, 15, llvm::Triple::x86, ArchSpec::eCore_x86_32_i386, "i386"},
+    {4, 1, 15, llvm::Triple::x86, ArchSpec::eCore_x86_32_i486, "i486"},
+    {4, 1, 15, llvm::Triple::x86, ArchSpec::eCore_x86_32_i486sx, "i486sx"},
+    {4, 1, 15, llvm::Triple::x86, ArchSpec::eCore_x86_32_i686, "i686"},
 
-    {eByteOrderLittle, 8, 1, 15, llvm::Triple::x86_64,
-     ArchSpec::eCore_x86_64_x86_64, "x86_64"},
-    {eByteOrderLittle, 8, 1, 15, llvm::Triple::x86_64,
-     ArchSpec::eCore_x86_64_x86_64h, "x86_64h"},
-    {eByteOrderLittle, 8, 1, 15, llvm::Triple::x86_64,
-     ArchSpec::eCore_x86_64_amd64, "amd64"},
+    {8, 1, 15, llvm::Triple::x86_64, ArchSpec::eCore_x86_64_x86_64, "x86_64"},
+    {8, 1, 15, llvm::Triple::x86_64, ArchSpec::eCore_x86_64_x86_64h, "x86_64h"},
+    {8, 1, 15, llvm::Triple::x86_64, ArchSpec::eCore_x86_64_amd64, "amd64"},
 
-    {eByteOrderLittle, 4, 4, 4, llvm::Triple::hexagon,
-     ArchSpec::eCore_hexagon_generic, "hexagon"},
-    {eByteOrderLittle, 4, 4, 4, llvm::Triple::hexagon,
-     ArchSpec::eCore_hexagon_hexagonv4, "hexagonv4"},
-    {eByteOrderLittle, 4, 4, 4, llvm::Triple::hexagon,
-     ArchSpec::eCore_hexagon_hexagonv5, "hexagonv5"},
+    {4, 4, 4, llvm::Triple::hexagon, ArchSpec::eCore_hexagon_generic,
+     "hexagon"},
+    {4, 4, 4, llvm::Triple::hexagon, ArchSpec::eCore_hexagon_hexagonv4,
+     "hexagonv4"},
+    {4, 4, 4, llvm::Triple::hexagon, ArchSpec::eCore_hexagon_hexagonv5,
+     "hexagonv5"},
 
-    {eByteOrderLittle, 4, 2, 8, llvm::Triple::riscv32, ArchSpec::eCore_riscv32,
-     "riscv32"},
-    {eByteOrderLittle, 8, 2, 8, llvm::Triple::riscv64, ArchSpec::eCore_riscv64,
-     "riscv64"},
+    {4, 2, 8, llvm::Triple::riscv32, ArchSpec::eCore_riscv32, "riscv32"},
+    {8, 2, 8, llvm::Triple::riscv64, ArchSpec::eCore_riscv64, "riscv64"},
 
-    {eByteOrderLittle, 4, 4, 4, llvm::Triple::loongarch32,
-     ArchSpec::eCore_loongarch32, "loongarch32"},
-    {eByteOrderLittle, 8, 4, 4, llvm::Triple::loongarch64,
-     ArchSpec::eCore_loongarch64, "loongarch64"},
+    {4, 4, 4, llvm::Triple::loongarch32, ArchSpec::eCore_loongarch32,
+     "loongarch32"},
+    {8, 4, 4, llvm::Triple::loongarch64, ArchSpec::eCore_loongarch64,
+     "loongarch64"},
 
-    {eByteOrderLittle, 4, 4, 4, llvm::Triple::UnknownArch,
-     ArchSpec::eCore_uknownMach32, "unknown-mach-32"},
-    {eByteOrderLittle, 8, 4, 4, llvm::Triple::UnknownArch,
-     ArchSpec::eCore_uknownMach64, "unknown-mach-64"},
-    {eByteOrderLittle, 4, 2, 4, llvm::Triple::arc, ArchSpec::eCore_arc, "arc"},
+    {4, 4, 4, llvm::Triple::UnknownArch, ArchSpec::eCore_uknownMach32,
+     "unknown-mach-32"},
+    {8, 4, 4, llvm::Triple::UnknownArch, ArchSpec::eCore_uknownMach64,
+     "unknown-mach-64"},
 
-    {eByteOrderLittle, 2, 2, 4, llvm::Triple::avr, ArchSpec::eCore_avr, "avr"},
+    {4, 2, 4, llvm::Triple::arc, ArchSpec::eCore_arc, "arc"},
 
-    {eByteOrderLittle, 4, 1, 4, llvm::Triple::wasm32, ArchSpec::eCore_wasm32,
-     "wasm32"},
+    {2, 2, 4, llvm::Triple::avr, ArchSpec::eCore_avr, "avr"},
+
+    {4, 1, 4, llvm::Triple::wasm32, ArchSpec::eCore_wasm32, "wasm32"},
 };
 
 // Ensure that we have an entry in the g_core_definitions for each core. If you
@@ -694,8 +611,15 @@ uint32_t ArchSpec::GetAddressByteSize() const {
 
 ByteOrder ArchSpec::GetDefaultEndian() const {
   const CoreDefinition *core_def = FindCoreDefinition(m_core);
-  if (core_def)
-    return core_def->default_byte_order;
+  if (core_def) {
+    // These two are special, see commit 9e6cffc9 for context. They map to
+    // Triple::UnknownArch, which is big endian, but we want them to be little.
+    if (m_core == eCore_uknownMach32 || m_core == eCore_uknownMach64)
+      return eByteOrderLittle;
+    assert(m_triple.getArch() == core_def->machine &&
+           "Triple and Core are out of sync");
+    return m_triple.isLittleEndian() ? eByteOrderLittle : eByteOrderBig;
+  }
   return eByteOrderInvalid;
 }
 
@@ -1055,7 +979,7 @@ void ArchSpec::UpdateCore() {
     // Set the byte order to the default byte order for an architecture. This
     // can be modified if needed for cases when cores handle both big and
     // little endian
-    m_byte_order = core_def->default_byte_order;
+    m_byte_order = GetDefaultEndian();
   } else {
     Clear();
   }
@@ -1065,16 +989,13 @@ void ArchSpec::UpdateCore() {
 // Helper methods.
 
 void ArchSpec::CoreUpdated(bool update_triple) {
-  const CoreDefinition *core_def = FindCoreDefinition(m_core);
-  if (core_def) {
-    if (update_triple)
+  if (update_triple) {
+    if (const CoreDefinition *core_def = FindCoreDefinition(m_core))
       m_triple = llvm::Triple(core_def->name, "unknown", "unknown");
-    m_byte_order = core_def->default_byte_order;
-  } else {
-    if (update_triple)
+    else
       m_triple = llvm::Triple();
-    m_byte_order = eByteOrderInvalid;
   }
+  m_byte_order = GetDefaultEndian();
 }
 
 //===----------------------------------------------------------------------===//
