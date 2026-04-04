@@ -1228,9 +1228,6 @@ bool DependenceInfo::strongSIVtest(const SCEVAddRecExpr *Src,
   if (!isDependenceTestEnabled(DependenceTestType::StrongSIV))
     return false;
 
-  if (!Src->hasNoSignedWrap() || !Dst->hasNoSignedWrap())
-    return false;
-
   const SCEV *Coeff = Src->getStepRecurrence(*SE);
   assert(Coeff == Dst->getStepRecurrence(*SE) &&
          "Expecting same coefficient in Strong SIV test");
@@ -1368,9 +1365,6 @@ bool DependenceInfo::weakCrossingSIVtest(const SCEVAddRecExpr *Src,
                                          unsigned Level,
                                          FullDependence &Result) const {
   if (!isDependenceTestEnabled(DependenceTestType::WeakCrossingSIV))
-    return false;
-
-  if (!Src->hasNoSignedWrap() || !Dst->hasNoSignedWrap())
     return false;
 
   const SCEV *Coeff = Src->getStepRecurrence(*SE);
@@ -1635,9 +1629,6 @@ bool DependenceInfo::exactSIVtest(const SCEVAddRecExpr *Src,
   assert(0 < Level && Level <= CommonLevels && "Level out of range");
   Level--;
 
-  if (!Src->hasNoSignedWrap() || !Dst->hasNoSignedWrap())
-    return false;
-
   const SCEV *Delta = minusSCEVNoSignedOverflow(DstConst, SrcConst, *SE);
   if (!Delta)
     return false;
@@ -1779,9 +1770,6 @@ bool DependenceInfo::weakZeroSIVtestImpl(const SCEVAddRecExpr *AR,
                                          FullDependence &Result) const {
   const SCEV *ARCoeff = AR->getStepRecurrence(*SE);
   const SCEV *ARConst = AR->getStart();
-
-  if (!AR->hasNoSignedWrap())
-    return false;
 
   if (Const == ARConst && SE->isKnownNonZero(ARCoeff)) {
     if (Level < CommonLevels) {
@@ -2067,7 +2055,9 @@ bool DependenceInfo::testSIV(const SCEV *Src, const SCEV *Dst, unsigned &Level,
   LLVM_DEBUG(dbgs() << "    dst = " << *Dst << "\n");
   const SCEVAddRecExpr *SrcAddRec = dyn_cast<SCEVAddRecExpr>(Src);
   const SCEVAddRecExpr *DstAddRec = dyn_cast<SCEVAddRecExpr>(Dst);
-  if (SrcAddRec && DstAddRec) {
+  bool SrcAnalyzable = SrcAddRec != nullptr && SrcAddRec->hasNoSignedWrap();
+  bool DstAnalyzable = DstAddRec != nullptr && DstAddRec->hasNoSignedWrap();
+  if (SrcAnalyzable && DstAnalyzable) {
     const SCEV *SrcCoeff = SrcAddRec->getStepRecurrence(*SE);
     const SCEV *DstCoeff = DstAddRec->getStepRecurrence(*SE);
     const Loop *CurSrcLoop = SrcAddRec->getLoop();
@@ -2084,17 +2074,18 @@ bool DependenceInfo::testSIV(const SCEV *Src, const SCEV *Dst, unsigned &Level,
       disproven = weakCrossingSIVtest(SrcAddRec, DstAddRec, Level, Result);
     return disproven || exactSIVtest(SrcAddRec, DstAddRec, Level, Result);
   }
-  if (SrcAddRec) {
+  if (SrcAnalyzable && DstAddRec == nullptr) {
     const Loop *CurSrcLoop = SrcAddRec->getLoop();
     Level = mapSrcLoop(CurSrcLoop);
     return weakZeroDstSIVtest(SrcAddRec, Dst, Level, Result);
   }
-  if (DstAddRec) {
+  if (DstAnalyzable && SrcAddRec == nullptr) {
     const Loop *CurDstLoop = DstAddRec->getLoop();
     Level = mapDstLoop(CurDstLoop);
     return weakZeroSrcSIVtest(Src, DstAddRec, Level, Result);
   }
-  llvm_unreachable("SIV test expected at least one AddRec");
+  assert(SrcAddRec != nullptr ||
+         DstAddRec != nullptr && "SIV test expected at least one AddRec");
   return false;
 }
 
