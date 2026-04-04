@@ -183,7 +183,12 @@ bool SampleProfileMatcher::functionHasProfile(const FunctionId &IRFuncName,
 }
 
 bool SampleProfileMatcher::isProfileUnused(const FunctionId &ProfileFuncName) {
-  return SymbolMap->find(ProfileFuncName) == SymbolMap->end();
+  // In post-link, the profiled function may have been optimized away from the
+  // module. Check if the function name exists in the pseudo_probe descriptors.
+  return (SymbolMap->find(ProfileFuncName) == SymbolMap->end()) &&
+         (LTOPhase == ThinOrFullLTOPhase::ThinLTOPreLink ||
+          !ProfileFuncName.isStringRef() ||
+          (ProbeManager->getDesc(ProfileFuncName.stringRef()) == nullptr));
 }
 
 bool SampleProfileMatcher::functionMatchesProfile(
@@ -419,7 +424,7 @@ void SampleProfileMatcher::runOnFunction(Function &F) {
 
   // The matching result will be saved to IRToProfileLocationMap, create a
   // new map for each function.
-  auto &IRToProfileLocationMap = getIRToProfileLocationMap(F);
+  auto &IRToProfileLocationMap = getIRToProfileLocationMap(*FSForMatching);
   runStaleProfileMatching(F, IRAnchors, ProfileAnchors, IRToProfileLocationMap,
                           RunCFGMatching, RunCGMatching);
   // Find and update callsite match states after matching.
@@ -990,7 +995,12 @@ void SampleProfileMatcher::UpdateWithSalvagedProfiles() {
     // We need to remove the old entry to avoid duplicating the function
     // processing.
     SymbolMap->erase(FuncName);
-    SymbolMap->emplace(I.second, I.first);
+    [[maybe_unused]] auto Ret = SymbolMap->emplace(I.second, I.first);
+    LLVM_DEBUG({
+      if (!Ret.second)
+        dbgs() << "Profile Function " << I.second
+               << " has already been matched to another IR function.\n";
+    });
   }
 
   // With extbinary profile format, initial profile loading only reads profile

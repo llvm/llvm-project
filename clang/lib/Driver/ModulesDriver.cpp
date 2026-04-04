@@ -1231,11 +1231,11 @@ createClangModulePrecompileJob(Compilation &C, const Command &ImportingJob,
   Action *PA = C.MakeAction<PrecompileJobAction>(IA, types::ID::TY_ModuleFile);
   PA->propagateOffloadInfo(&ImportingJob.getSource());
 
-  auto &TC = ImportingJob.getCreator().getToolChain();
-  auto &TCArgs = C.getArgsForToolChain(&TC, PA->getOffloadingArch(),
-                                       PA->getOffloadingDeviceKind());
+  const auto &TC = ImportingJob.getCreator().getToolChain();
+  const auto &TCArgs = C.getArgsForToolChain(&TC, PA->getOffloadingArch(),
+                                             PA->getOffloadingDeviceKind());
 
-  auto BuildArgs = MD.getBuildArguments();
+  const auto &BuildArgs = MD.getBuildArguments();
   ArgStringList JobArgs;
   JobArgs.reserve(BuildArgs.size());
   for (const auto &Arg : BuildArgs)
@@ -1412,8 +1412,7 @@ pruneUnusedStdlibModuleJobs(CompilationGraph &Graph,
         llvm::map_range(llvm::depth_first(cast<CGNode>(PrunableJobNodeRoot)),
                         llvm::CastTo<JobNode>);
     auto ReachableNonImageNodes = llvm::make_filter_range(
-        ReachableJobNodes, std::not_fn(llvm::IsaPred<ImageJobNode>));
-
+        ReachableJobNodes, [](auto *N) { return !llvm::isa<ImageJobNode>(N); });
     PrunableJobNodes.insert_range(ReachableNonImageNodes);
   }
 

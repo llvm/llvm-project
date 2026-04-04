@@ -447,7 +447,8 @@ bool TargetInstrInfo::getStackSlotRange(const TargetRegisterClass *RC,
 void TargetInstrInfo::reMaterialize(MachineBasicBlock &MBB,
                                     MachineBasicBlock::iterator I,
                                     Register DestReg, unsigned SubIdx,
-                                    const MachineInstr &Orig) const {
+                                    const MachineInstr &Orig,
+                                    LaneBitmask UsedLanes) const {
   MachineInstr *MI = MBB.getParent()->CloneMachineInstr(&Orig);
   MI->substituteRegister(MI->getOperand(0).getReg(), DestReg, SubIdx, TRI);
   MBB.insert(I, MI);

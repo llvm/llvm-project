@@ -729,6 +729,13 @@ static void SetPointerAuthOptionsForArm64e(LangOptions &lang_opts) {
   lang_opts.PointerAuthIntrinsics = true;
   lang_opts.PointerAuthCalls = true;
   lang_opts.PointerAuthReturns = true;
+  lang_opts.PointerAuthAuthTraps = true;
+  lang_opts.PointerAuthIndirectGotos = true;
+  lang_opts.PointerAuthVTPtrAddressDiscrimination = true;
+  lang_opts.PointerAuthVTPtrTypeDiscrimination = true;
+  lang_opts.PointerAuthObjcIsa = true;
+  lang_opts.PointerAuthObjcClassROPointers = true;
+  lang_opts.PointerAuthObjcInterfaceSel = true;
 }
 
 ClangExpressionParser::ClangExpressionParser(

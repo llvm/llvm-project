@@ -465,7 +465,7 @@ void PyVectorType::bindDerived(ClassTy &c) {
 
 PyVectorType
 PyVectorType::getChecked(std::vector<int64_t> shape, PyType &elementType,
-                         std::optional<nb::list> scalable,
+                         std::optional<nb::sequence> scalable,
                          std::optional<std::vector<int64_t>> scalableDims,
                          DefaultingPyLocation loc) {
   if (scalable && scalableDims) {
@@ -476,11 +476,11 @@ PyVectorType::getChecked(std::vector<int64_t> shape, PyType &elementType,
   PyMlirContext::ErrorCapture errors(loc->getContext());
   MlirType type;
   if (scalable) {
-    if (scalable->size() != shape.size())
+    if (nb::len(*scalable) != shape.size())
       throw nb::value_error("Expected len(scalable) == len(shape).");
 
     std::vector<char> scalableDimFlags;
-    scalableDimFlags.reserve(scalable->size());
+    scalableDimFlags.reserve(nb::len(*scalable));
     for (const nb::handle &h : *scalable) {
       scalableDimFlags.push_back(nb::cast<bool>(h) ? 1 : 0);
     }
@@ -507,7 +507,7 @@ PyVectorType::getChecked(std::vector<int64_t> shape, PyType &elementType,
 }
 
 PyVectorType PyVectorType::get(std::vector<int64_t> shape, PyType &elementType,
-                               std::optional<nb::list> scalable,
+                               std::optional<nb::sequence> scalable,
                                std::optional<std::vector<int64_t>> scalableDims,
                                DefaultingPyMlirContext context) {
   if (scalable && scalableDims) {
@@ -518,11 +518,11 @@ PyVectorType PyVectorType::get(std::vector<int64_t> shape, PyType &elementType,
   PyMlirContext::ErrorCapture errors(context->getRef());
   MlirType type;
   if (scalable) {
-    if (scalable->size() != shape.size())
+    if (nb::len(*scalable) != shape.size())
       throw nb::value_error("Expected len(scalable) == len(shape).");
 
     std::vector<char> scalableDimFlags;
-    scalableDimFlags.reserve(scalable->size());
+    scalableDimFlags.reserve(nb::len(*scalable));
     for (const nb::handle &h : *scalable) {
       scalableDimFlags.push_back(nb::cast<bool>(h) ? 1 : 0);
     }
@@ -790,7 +790,7 @@ void PyFunctionType::bindDerived(ClassTy &c) {
       "Gets a FunctionType from a list of input and result types");
   c.def_prop_ro(
       "inputs",
-      [](PyFunctionType &self) {
+      [](PyFunctionType &self) -> nb::typed<nb::list, PyType> {
         MlirType t = self;
         nb::list types;
         for (intptr_t i = 0, e = mlirFunctionTypeGetNumInputs(self); i < e;
@@ -802,7 +802,7 @@ void PyFunctionType::bindDerived(ClassTy &c) {
       "Returns the list of input types in the FunctionType.");
   c.def_prop_ro(
       "results",
-      [](PyFunctionType &self) {
+      [](PyFunctionType &self) -> nb::typed<nb::list, PyType> {
         nb::list types;
         for (intptr_t i = 0, e = mlirFunctionTypeGetNumResults(self); i < e;
              ++i) {

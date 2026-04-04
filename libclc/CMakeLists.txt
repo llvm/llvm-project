@@ -48,7 +48,7 @@ if( LIBCLC_STANDALONE_BUILD OR CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DI
 
   message( STATUS "libclc LLVM version: ${LLVM_PACKAGE_VERSION}" )
 
-  foreach( tool IN ITEMS llvm-link llvm-dis opt )
+  foreach( tool IN ITEMS llvm-link opt )
     find_program( LLVM_TOOL_${tool} ${tool} PATHS ${LLVM_TOOLS_BINARY_DIR} NO_DEFAULT_PATH )
     set( ${tool}_exe ${LLVM_TOOL_${tool}} )
     set( ${tool}_target )
@@ -73,7 +73,6 @@ else()
   endif()
 
   get_host_tool_path( llvm-link LLVM_LINK llvm-link_exe llvm-link_target )
-  get_host_tool_path( llvm-dis LLVM_DIS llvm-dis_exe llvm-dis_target )
   get_host_tool_path( opt OPT opt_exe opt_target )
 
   # Setup the paths where libclc runtimes should be stored. By default, in an
@@ -95,7 +94,6 @@ if( NOT LIBCLC_USE_SPIRV_BACKEND )
   else()
     find_program( LLVM_SPIRV llvm-spirv HINTS ${LLVM_TOOLS_BINARY_DIR} )
     set( llvm-spirv_exe "${LLVM_SPIRV}" )
-    set( llvm-spirv_target )
   endif()
 endif()
 
@@ -191,7 +189,8 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
     list(APPEND target_extra_defines CLC_SPIRV)
     set(opt_flags)
   elseif(ARCH STREQUAL clspv OR ARCH STREQUAL clspv64)
-    list(APPEND target_compile_flags -Wno-unknown-assumption)
+    list(APPEND target_compile_flags -Wno-unknown-assumption
+                                     -U__opencl_c_int64)
     list(APPEND target_extra_defines CLC_CLSPV)
   elseif(ARCH STREQUAL amdgcn)
     list(APPEND target_compile_flags "SHELL:-Xclang -mcode-object-version=none")

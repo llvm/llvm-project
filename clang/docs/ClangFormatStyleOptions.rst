@@ -5799,6 +5799,11 @@ the configuration (without a prefix: ``Auto``).
   clang-format skips the comment and the next line. Otherwise, clang-format
   skips lines containing a matched token.
 
+  .. note::
+
+   This option does not apply to ``IntegerLiteralSeparator`` and
+   ``NumericLiteralCase``.
+
   .. code-block:: c++
 
      // OneLineFormatOffRegex: ^(// NOLINT|logger$)
@@ -6825,6 +6830,16 @@ the configuration (without a prefix: ``Auto``).
 
      true:                                  false:
      Foo::Foo() : a(a) {}                   Foo::Foo(): a(a) {}
+
+.. _SpaceBeforeEnumUnderlyingTypeColon:
+
+**SpaceBeforeEnumUnderlyingTypeColon** (``Boolean``) :versionbadge:`clang-format 23` :ref:`¶ <SpaceBeforeEnumUnderlyingTypeColon>`
+  If ``false``, spaces will be removed before enum underlying type colon.
+
+  .. code-block:: c++
+
+     true:                                  false:
+     enum E : int {}                        enum E: int {}
 
 .. _SpaceBeforeInheritanceColon:
 

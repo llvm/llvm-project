@@ -76,8 +76,9 @@ namespace mlir {
 namespace python {
 namespace MLIR_BINDINGS_PYTHON_DOMAIN {
 
-MlirBlock createBlock(const nb::sequence &pyArgTypes,
-                      const std::optional<nb::sequence> &pyArgLocs) {
+MlirBlock createBlock(
+    const nb::typed<nb::sequence, PyType> &pyArgTypes,
+    const std::optional<nb::typed<nb::sequence, PyLocation>> &pyArgLocs) {
   std::vector<MlirType> argTypes;
   argTypes.reserve(nb::len(pyArgTypes));
   for (nb::handle pyType : pyArgTypes)
@@ -189,25 +190,6 @@ nb::object PyBlock::getCapsule() {
 // Collections.
 //------------------------------------------------------------------------------
 
-nb::typed<nb::object, PyRegion> PyRegionIterator::dunderNext() {
-  operation->checkValid();
-  if (nextIndex >= mlirOperationGetNumRegions(operation->get())) {
-    PyErr_SetNone(PyExc_StopIteration);
-    // python functions should return NULL after setting any exception
-    return nb::object();
-  }
-  MlirRegion region = mlirOperationGetRegion(operation->get(), nextIndex++);
-  return nb::cast(PyRegion(operation, region));
-}
-
-void PyRegionIterator::bind(nb::module_ &m) {
-  nb::class_<PyRegionIterator>(m, "RegionIterator")
-      .def("__iter__", &PyRegionIterator::dunderIter,
-           "Returns an iterator over the regions in the operation.")
-      .def("__next__", &PyRegionIterator::dunderNext,
-           "Returns the next region in the iteration.");
-}
-
 PyRegionList::PyRegionList(PyOperationRef operation, intptr_t startIndex,
                            intptr_t length, intptr_t step)
     : Sliceable(startIndex,
@@ -215,16 +197,6 @@ PyRegionList::PyRegionList(PyOperationRef operation, intptr_t startIndex,
                              : length,
                 step),
       operation(std::move(operation)) {}
-
-PyRegionIterator PyRegionList::dunderIter() {
-  operation->checkValid();
-  return PyRegionIterator(operation, startIndex);
-}
-
-void PyRegionList::bindDerived(ClassTy &c) {
-  c.def("__iter__", &PyRegionList::dunderIter,
-        "Returns an iterator over the regions in the sequence.");
-}
 
 intptr_t PyRegionList::getRawNumElements() {
   operation->checkValid();
@@ -796,7 +768,7 @@ nb::str PyDiagnostic::getMessage() {
   return nb::cast<nb::str>(fileObject.attr("getvalue")());
 }
 
-nb::tuple PyDiagnostic::getNotes() {
+nb::typed<nb::tuple, PyDiagnostic> PyDiagnostic::getNotes() {
   checkValid();
   if (materializedNotes)
     return *materializedNotes;
@@ -1471,11 +1443,12 @@ PyOpResultList PyOpResultList::slice(intptr_t startIndex, intptr_t length,
 // PyOpView
 //------------------------------------------------------------------------------
 
-static void populateResultTypes(std::string_view name, nb::list resultTypeList,
+static void populateResultTypes(std::string_view name,
+                                nb::sequence resultTypeList,
                                 const nb::object &resultSegmentSpecObj,
                                 std::vector<int32_t> &resultSegmentLengths,
                                 std::vector<PyType *> &resultTypes) {
-  resultTypes.reserve(resultTypeList.size());
+  resultTypes.reserve(nb::len(resultTypeList));
   if (resultSegmentSpecObj.is_none()) {
     // Non-variadic result unpacking.
     size_t index = 0;
@@ -1494,13 +1467,13 @@ static void populateResultTypes(std::string_view name, nb::list resultTypeList,
   } else {
     // Sized result unpacking.
     auto resultSegmentSpec = nb::cast<std::vector<int>>(resultSegmentSpecObj);
-    if (resultSegmentSpec.size() != resultTypeList.size()) {
+    if (resultSegmentSpec.size() != nb::len(resultTypeList)) {
       throw nb::value_error(
           join("Operation \"", name, "\" requires ", resultSegmentSpec.size(),
-               " result segments but was provided ", resultTypeList.size())
+               " result segments but was provided ", nb::len(resultTypeList))
               .c_str());
     }
-    resultSegmentLengths.reserve(resultTypeList.size());
+    resultSegmentLengths.reserve(nb::len(resultTypeList));
     for (size_t i = 0, e = resultSegmentSpec.size(); i < e; ++i) {
       int segmentSpec = resultSegmentSpec[i];
       if (segmentSpec == 1 || segmentSpec == 0) {
@@ -1591,10 +1564,10 @@ static MlirValue getOpResultOrValue(nb::handle operand) {
   throw nb::value_error("is not a Value");
 }
 
-nb::object PyOpView::buildGeneric(
+nb::typed<nb::object, PyOperation> PyOpView::buildGeneric(
     std::string_view name, std::tuple<int, bool> opRegionSpec,
     nb::object operandSegmentSpecObj, nb::object resultSegmentSpecObj,
-    std::optional<nb::list> resultTypeList, nb::list operandList,
+    std::optional<nb::sequence> resultTypeList, nb::sequence operandList,
     std::optional<nb::dict> attributes,
     std::optional<std::vector<PyBlock *>> successors,
     std::optional<int> regions, PyLocation &location,
@@ -1655,13 +1628,13 @@ nb::object PyOpView::buildGeneric(
   } else {
     // Sized operand unpacking.
     auto operandSegmentSpec = nb::cast<std::vector<int>>(operandSegmentSpecObj);
-    if (operandSegmentSpec.size() != operandList.size()) {
+    if (operandSegmentSpec.size() != nb::len(operandList)) {
       throw nb::value_error(
           join("Operation \"", name, "\" requires ", operandSegmentSpec.size(),
-               "operand segments but was provided ", operandList.size())
+               "operand segments but was provided ", nb::len(operandList))
               .c_str());
     }
-    operandSegmentLengths.reserve(operandList.size());
+    operandSegmentLengths.reserve(nb::len(operandList));
     for (size_t i = 0, e = operandSegmentSpec.size(); i < e; ++i) {
       int segmentSpec = operandSegmentSpec[i];
       if (segmentSpec == 1 || segmentSpec == 0) {
@@ -2489,7 +2462,7 @@ void PyOpAttributeMap::bind(nb::module_ &m) {
            "exist.")
       .def(
           "__iter__",
-          [](PyOpAttributeMap &self) {
+          [](PyOpAttributeMap &self) -> nb::typed<nb::iterator, nb::str> {
             nb::list keys;
             PyOpAttributeMap::forEachAttr(
                 self.operation->get(), [&](MlirStringRef name, MlirAttribute) {
@@ -2500,7 +2473,7 @@ void PyOpAttributeMap::bind(nb::module_ &m) {
           "Iterates over attribute names.")
       .def(
           "keys",
-          [](PyOpAttributeMap &self) {
+          [](PyOpAttributeMap &self) -> nb::typed<nb::list, nb::str> {
             nb::list out;
             PyOpAttributeMap::forEachAttr(
                 self.operation->get(), [&](MlirStringRef name, MlirAttribute) {
@@ -2511,7 +2484,7 @@ void PyOpAttributeMap::bind(nb::module_ &m) {
           "Returns a list of attribute names.")
       .def(
           "values",
-          [](PyOpAttributeMap &self) {
+          [](PyOpAttributeMap &self) -> nb::typed<nb::list, PyAttribute> {
             nb::list out;
             PyOpAttributeMap::forEachAttr(
                 self.operation->get(), [&](MlirStringRef, MlirAttribute attr) {
@@ -2523,7 +2496,9 @@ void PyOpAttributeMap::bind(nb::module_ &m) {
           "Returns a list of attribute values.")
       .def(
           "items",
-          [](PyOpAttributeMap &self) {
+          [](PyOpAttributeMap &self)
+              -> nb::typed<nb::list,
+                           nb::typed<nb::tuple, nb::str, PyAttribute>> {
             nb::list out;
             PyOpAttributeMap::forEachAttr(
                 self.operation->get(),
@@ -2540,10 +2515,10 @@ void PyOpAttributeMap::bind(nb::module_ &m) {
 
 void PyOpAdaptor::bind(nb::module_ &m) {
   nb::class_<PyOpAdaptor>(m, "OpAdaptor")
-      .def(nb::init<nb::list, PyOpAttributeMap>(),
+      .def(nb::init<nb::typed<nb::list, PyValue>, PyOpAttributeMap>(),
            "Creates an OpAdaptor with the given operands and attributes.",
            "operands"_a, "attributes"_a)
-      .def(nb::init<nb::list, PyOpView &>(),
+      .def(nb::init<nb::typed<nb::list, PyValue>, PyOpView &>(),
            "Creates an OpAdaptor with the given operands and operation view.",
            "operands"_a, "opview"_a)
       .def_prop_ro(
@@ -2608,7 +2583,6 @@ bool PyDynamicOpTrait::attach(const nb::object &opName,
 
   // To ensure that the same dynamic trait gets the same TypeID despite how many
   // times `attach` is called, we store it as an attribute on the target class.
-  constexpr const char *typeIDAttr = "_TYPE_ID";
   if (!nb::hasattr(target, typeIDAttr)) {
     nb::setattr(target, typeIDAttr,
                 nb::cast(PyTypeID(PyGlobals::get().allocateTypeID())));
@@ -2642,6 +2616,7 @@ bool PyDynamicOpTraits::IsTerminator::attach(const nb::object &opName,
 void PyDynamicOpTraits::IsTerminator::bind(nb::module_ &m) {
   nb::class_<PyDynamicOpTraits::IsTerminator, PyDynamicOpTrait> cls(
       m, "IsTerminatorTrait");
+  cls.attr(typeIDAttr) = PyTypeID(mlirDynamicOpTraitIsTerminatorGetTypeID());
   cls.attr("attach") = classmethod(
       [](const nb::object &cls, const nb::object &opName,
          DefaultingPyMlirContext context) {
@@ -2660,6 +2635,7 @@ bool PyDynamicOpTraits::NoTerminator::attach(const nb::object &opName,
 void PyDynamicOpTraits::NoTerminator::bind(nb::module_ &m) {
   nb::class_<PyDynamicOpTraits::NoTerminator, PyDynamicOpTrait> cls(
       m, "NoTerminatorTrait");
+  cls.attr(typeIDAttr) = PyTypeID(mlirDynamicOpTraitNoTerminatorGetTypeID());
   cls.attr("attach") = classmethod(
       [](const nb::object &cls, const nb::object &opName,
          DefaultingPyMlirContext context) {
@@ -3963,7 +3939,19 @@ void populateIRCore(nb::module_ &m) {
              Args:
                callback: A callable that takes an Operation and returns a WalkResult.
                walk_order: The order of traversal (PRE_ORDER or POST_ORDER).
-               op_class: If provided, only operations of this type are passed to the callback.)");
+               op_class: If provided, only operations of this type are passed to the callback.)")
+      .def(
+          "has_trait",
+          [](PyOperationBase &self, nb::type_object &traitCls) {
+            PyTypeID traitTypeID =
+                nb::cast<PyTypeID>(traitCls.attr(PyDynamicOpTrait::typeIDAttr));
+            MlirIdentifier opName =
+                mlirOperationGetName(self.getOperation().get());
+            return mlirOperationNameHasTrait(
+                mlirIdentifierStr(opName), traitTypeID.get(),
+                self.getOperation().getContext()->get());
+          },
+          "trait_cls"_a, "Checks if the operation has a given trait.");
 
   nb::class_<PyOperation, PyOperationBase>(m, "Operation")
       .def_static(
@@ -3971,7 +3959,8 @@ void populateIRCore(nb::module_ &m) {
           [](std::string_view name,
              std::optional<std::vector<PyType *>> results,
              std::optional<std::vector<PyValue *>> operands,
-             std::optional<nb::dict> attributes,
+             std::optional<nb::typed<nb::dict, nb::str, PyAttribute>>
+                 attributes,
              std::optional<std::vector<PyBlock *>> successors, int regions,
              const std::optional<PyLocation> &location,
              const nb::object &maybeIp,
@@ -4073,8 +4062,10 @@ void populateIRCore(nb::module_ &m) {
                  std::tuple<int, bool> opRegionSpec,
                  nb::object operandSegmentSpecObj,
                  nb::object resultSegmentSpecObj,
-                 std::optional<nb::list> resultTypeList, nb::list operandList,
-                 std::optional<nb::dict> attributes,
+                 std::optional<nb::sequence> resultTypeList,
+                 nb::sequence operandList,
+                 std::optional<nb::typed<nb::dict, nb::str, PyAttribute>>
+                     attributes,
                  std::optional<std::vector<PyBlock *>> successors,
                  std::optional<int> regions,
                  const std::optional<PyLocation> &location,
@@ -4120,8 +4111,9 @@ void populateIRCore(nb::module_ &m) {
   // ods_operand_segments/ods_result_segments as arguments to the constructor,
   // rather than to access them as attributes.
   opViewClass.attr("build_generic") = classmethod(
-      [](nb::handle cls, std::optional<nb::list> resultTypeList,
-         nb::list operandList, std::optional<nb::dict> attributes,
+      [](nb::handle cls, std::optional<nb::sequence> resultTypeList,
+         nb::sequence operandList,
+         std::optional<nb::typed<nb::dict, nb::str, PyAttribute>> attributes,
          std::optional<std::vector<PyBlock *>> successors,
          std::optional<int> regions, std::optional<PyLocation> location,
          const nb::object &maybeIp) {
@@ -4139,6 +4131,9 @@ void populateIRCore(nb::module_ &m) {
       "cls"_a, "results"_a = nb::none(), "operands"_a = nb::none(),
       "attributes"_a = nb::none(), "successors"_a = nb::none(),
       "regions"_a = nb::none(), "loc"_a = nb::none(), "ip"_a = nb::none(),
+      // clang-format off
+      nb::sig("def build_generic(cls, results: Sequence[Type] | None = None, operands: Sequence[Value] | None = None, attributes: dict[str, Attribute] | None = None, successors: Sequence[Block] | None = None, regions: int | None = None, loc: Location | None = None, ip: InsertionPoint | None = None) -> typing.Self"),
+      // clang-format on
       "Builds a specific, generated OpView based on class level attributes.");
   opViewClass.attr("parse") = classmethod(
       [](const nb::object &cls, const std::string &sourceStr,
@@ -4164,7 +4159,22 @@ void populateIRCore(nb::module_ &m) {
       },
       "cls"_a, "source"_a, nb::kw_only(), "source_name"_a = "",
       "context"_a = nb::none(),
+      // clang-format off
+      nb::sig("def parse(cls, source: str, *, source_name: str = '', context: Context | None = None) -> typing.Self"),
+      // clang-format on
       "Parses a specific, generated OpView based on class level attributes.");
+  opViewClass.attr("has_trait") = classmethod(
+      [](nb::object &self, nb::type_object &traitCls,
+         DefaultingPyMlirContext &context) {
+        PyTypeID traitTypeID =
+            nb::cast<PyTypeID>(traitCls.attr(PyDynamicOpTrait::typeIDAttr));
+        std::string opName = nb::cast<std::string>(self.attr("OPERATION_NAME"));
+        return mlirOperationNameHasTrait(
+            mlirStringRefCreate(opName.data(), opName.size()),
+            traitTypeID.get(), context->get());
+      },
+      "cls"_a, "trait_cls"_a, "context"_a = nb::none(),
+      "Checks if the operation has a given trait.");
 
   PyOpAdaptor::bind(m);
 
@@ -4262,8 +4272,9 @@ void populateIRCore(nb::module_ &m) {
           "Returns a forward-optimized sequence of operations.")
       .def_static(
           "create_at_start",
-          [](PyRegion &parent, const nb::sequence &pyArgTypes,
-             const std::optional<nb::sequence> &pyArgLocs) {
+          [](PyRegion &parent, nb::typed<nb::sequence, PyType> pyArgTypes,
+             const std::optional<nb::typed<nb::sequence, PyLocation>>
+                 &pyArgLocs) {
             parent.checkValid();
             MlirBlock block = createBlock(pyArgTypes, pyArgLocs);
             mlirRegionInsertOwnedBlock(parent, 0, block);
@@ -4291,7 +4302,8 @@ void populateIRCore(nb::module_ &m) {
       .def(
           "create_before",
           [](PyBlock &self, const nb::args &pyArgTypes,
-             const std::optional<nb::sequence> &pyArgLocs) {
+             const std::optional<nb::typed<nb::sequence, PyLocation>>
+                 &pyArgLocs) {
             self.checkValid();
             MlirBlock block =
                 createBlock(nb::cast<nb::sequence>(pyArgTypes), pyArgLocs);
@@ -4305,7 +4317,8 @@ void populateIRCore(nb::module_ &m) {
       .def(
           "create_after",
           [](PyBlock &self, const nb::args &pyArgTypes,
-             const std::optional<nb::sequence> &pyArgLocs) {
+             const std::optional<nb::typed<nb::sequence, PyLocation>>
+                 &pyArgLocs) {
             self.checkValid();
             MlirBlock block =
                 createBlock(nb::cast<nb::sequence>(pyArgTypes), pyArgLocs);
@@ -4844,12 +4857,12 @@ void populateIRCore(nb::module_ &m) {
           "Returns the string form of value as an operand (i.e., the ValueID).")
       .def_prop_ro(
           "type",
-          [](PyValue &self) -> nb::typed<nb::object, PyType> {
+          [](PyValue &self) {
             return PyType(self.getParentOperation()->getContext(),
                           mlirValueGetType(self.get()))
                 .maybeDownCast();
           },
-          "Returns the type of the value.")
+          "Returns the type of the value.", nb::sig("def type(self) -> _T"))
       .def(
           "set_type",
           [](PyValue &self, const PyType &type) {
@@ -5012,7 +5025,6 @@ void populateIRCore(nb::module_ &m) {
   PyOpOperands::bind(m);
   PyOpResultList::bind(m);
   PyOpSuccessors::bind(m);
-  PyRegionIterator::bind(m);
   PyRegionList::bind(m);
 
   // Debug bindings.

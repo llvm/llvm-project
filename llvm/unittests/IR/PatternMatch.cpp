@@ -635,6 +635,25 @@ TEST_F(PatternMatchTest, ZExtSExtSelf) {
   EXPECT_TRUE(m_ZExtOrSExtOrSelf(m_One()).match(One64S));
 }
 
+TEST_F(PatternMatchTest, IntFPConversions) {
+  LLVMContext &Ctx = IRB.getContext();
+
+  Value *One32 = IRB.getInt32(1);
+  Value *OneDouble = ConstantFP::get(IRB.getDoubleTy(), APFloat(1.0));
+  Value *OneDoubleU = IRB.CreateUIToFP(One32, Type::getDoubleTy(Ctx));
+  Value *OneDoubleS = IRB.CreateSIToFP(One32, Type::getDoubleTy(Ctx));
+  Value *One32U = IRB.CreateFPToUI(OneDouble, Type::getInt32Ty(Ctx));
+  Value *One32S = IRB.CreateFPToSI(OneDouble, Type::getInt32Ty(Ctx));
+
+  EXPECT_FALSE(m_IToFP(m_One()).match(One32));
+  EXPECT_TRUE(m_IToFP(m_One()).match(OneDoubleU));
+  EXPECT_TRUE(m_IToFP(m_One()).match(OneDoubleS));
+
+  EXPECT_FALSE(m_FPToI(m_FPOne()).match(OneDouble));
+  EXPECT_TRUE(m_FPToI(m_FPOne()).match(One32U));
+  EXPECT_TRUE(m_FPToI(m_FPOne()).match(One32S));
+}
+
 TEST_F(PatternMatchTest, BooleanMap) {
   Value *Alloca = IRB.CreateAlloca(IRB.getInt1Ty());
   Value *SelectCond = IRB.CreateLoad(IRB.getInt1Ty(), Alloca);
@@ -1735,6 +1754,12 @@ TEST_F(PatternMatchTest, VectorUndefFloat) {
   EXPECT_FALSE(match(VectorNaNUndef, m_Inf()));
   EXPECT_TRUE(match(VectorInfPoison, m_Inf()));
   EXPECT_FALSE(match(VectorNaNPoison, m_Inf()));
+
+  EXPECT_TRUE(match(ScalarPosInf, m_PosInf()));
+  EXPECT_FALSE(match(ScalarNegInf, m_PosInf()));
+
+  EXPECT_FALSE(match(ScalarPosInf, m_NegInf()));
+  EXPECT_TRUE(match(ScalarNegInf, m_NegInf()));
 
   EXPECT_FALSE(match(ScalarUndef, m_NonInf()));
   EXPECT_FALSE(match(VectorUndef, m_NonInf()));
