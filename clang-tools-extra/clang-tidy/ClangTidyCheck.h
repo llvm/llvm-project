@@ -497,10 +497,6 @@ protected:
     return Context->areDiagsSelfContained();
   }
   StringRef getID() const override { return CheckName; }
-
-  /// Returns true when this check instance is running under a deprecated
-  /// name and the user should be prompted to migrate to CanonicalName.
-  bool isDeprecatedAlias(StringRef CanonicalName) const;
 };
 
 /// Read a named option from the ``Context`` and parse it as a bool.

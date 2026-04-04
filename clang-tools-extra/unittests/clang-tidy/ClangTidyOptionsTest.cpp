@@ -1,6 +1,7 @@
 #include "ClangTidyOptions.h"
 #include "ClangTidyCheck.h"
 #include "ClangTidyDiagnosticConsumer.h"
+#include "utils/CheckUtils.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Testing/Annotations/Annotations.h"
@@ -298,9 +299,7 @@ TEST(ParseConfiguration, CollectDiags) {
 namespace {
 class TestCheck : public ClangTidyCheck {
 public:
-  TestCheck(ClangTidyContext *Context) : TestCheck("test", Context) {}
-  TestCheck(StringRef Name, ClangTidyContext *Context)
-      : ClangTidyCheck(Name, Context) {}
+  TestCheck(ClangTidyContext *Context) : ClangTidyCheck("test", Context) {}
 
   template <typename... Args> auto getLocal(Args &&... Arguments) {
     return Options.get(std::forward<Args>(Arguments)...);
@@ -318,10 +317,6 @@ public:
   template <typename IntType = int, typename... Args>
   auto getIntGlobal(Args &&... Arguments) {
     return Options.getLocalOrGlobal<IntType>(std::forward<Args>(Arguments)...);
-  }
-
-  bool usesDeprecatedAlias(StringRef CanonicalName) const {
-    return isDeprecatedAlias(CanonicalName);
   }
 };
 
@@ -365,67 +360,67 @@ TEST(CheckOptionsValidation, MissingOptions) {
   EXPECT_TRUE(DiagConsumer.take().empty());
 }
 
-TEST(CheckOptionsValidation, DeprecatedAliasHelper) {
+TEST(CheckOptionsValidation, DeprecatedAliasUtils) {
   ClangTidyOptions Options;
   Options.Checks = "performance-faster-string-find";
 
   ClangTidyContext Context(std::make_unique<DefaultOptionsProvider>(
       ClangTidyGlobalOptions(), Options));
-  TestCheck TestCheck("performance-faster-string-find", &Context);
 
-  EXPECT_TRUE(TestCheck.usesDeprecatedAlias(
-      "performance-prefer-single-char-overloads"));
+  EXPECT_TRUE(
+      utils::isDeprecatedAlias(Context, "performance-faster-string-find",
+                               "performance-prefer-single-char-overloads"));
 }
 
-TEST(CheckOptionsValidation, DeprecatedAliasHelperDisabledByCanonicalCheck) {
+TEST(CheckOptionsValidation, DeprecatedAliasUtilsDisabledByCanonicalCheck) {
   ClangTidyOptions Options;
   Options.Checks =
       "performance-faster-string-find,performance-prefer-single-char-overloads";
 
   ClangTidyContext Context(std::make_unique<DefaultOptionsProvider>(
       ClangTidyGlobalOptions(), Options));
-  TestCheck TestCheck("performance-faster-string-find", &Context);
 
-  EXPECT_FALSE(TestCheck.usesDeprecatedAlias(
-      "performance-prefer-single-char-overloads"));
+  EXPECT_FALSE(
+      utils::isDeprecatedAlias(Context, "performance-faster-string-find",
+                               "performance-prefer-single-char-overloads"));
 }
 
-TEST(CheckOptionsValidation, DeprecatedAliasHelperEnabledByWildcardAlias) {
+TEST(CheckOptionsValidation, DeprecatedAliasUtilsEnabledByWildcardAlias) {
   ClangTidyOptions Options;
   Options.Checks = "performance-faster*";
 
   ClangTidyContext Context(std::make_unique<DefaultOptionsProvider>(
       ClangTidyGlobalOptions(), Options));
-  TestCheck TestCheck("performance-faster-string-find", &Context);
 
-  EXPECT_TRUE(TestCheck.usesDeprecatedAlias(
-      "performance-prefer-single-char-overloads"));
+  EXPECT_TRUE(
+      utils::isDeprecatedAlias(Context, "performance-faster-string-find",
+                               "performance-prefer-single-char-overloads"));
 }
 
 TEST(CheckOptionsValidation,
-     DeprecatedAliasHelperDisabledByWildcardAliasAndCanonicalCheck) {
+     DeprecatedAliasUtilsDisabledByWildcardAliasAndCanonicalCheck) {
   ClangTidyOptions Options;
   Options.Checks =
       "performance-faster*,performance-prefer-single-char-overloads";
 
   ClangTidyContext Context(std::make_unique<DefaultOptionsProvider>(
       ClangTidyGlobalOptions(), Options));
-  TestCheck TestCheck("performance-faster-string-find", &Context);
 
-  EXPECT_FALSE(TestCheck.usesDeprecatedAlias(
-      "performance-prefer-single-char-overloads"));
+  EXPECT_FALSE(
+      utils::isDeprecatedAlias(Context, "performance-faster-string-find",
+                               "performance-prefer-single-char-overloads"));
 }
 
-TEST(CheckOptionsValidation, DeprecatedAliasHelperDisabledByWildcard) {
+TEST(CheckOptionsValidation, DeprecatedAliasUtilsDisabledByWildcard) {
   ClangTidyOptions Options;
   Options.Checks = "performance-*";
 
   ClangTidyContext Context(std::make_unique<DefaultOptionsProvider>(
       ClangTidyGlobalOptions(), Options));
-  TestCheck TestCheck("performance-faster-string-find", &Context);
 
-  EXPECT_FALSE(TestCheck.usesDeprecatedAlias(
-      "performance-prefer-single-char-overloads"));
+  EXPECT_FALSE(
+      utils::isDeprecatedAlias(Context, "performance-faster-string-find",
+                               "performance-prefer-single-char-overloads"));
 }
 
 TEST(CheckOptionsValidation, ValidIntOptions) {

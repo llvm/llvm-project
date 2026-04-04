@@ -46,11 +46,6 @@ void ClangTidyCheck::run(const ast_matchers::MatchFinder::MatchResult &Result) {
   check(Result);
 }
 
-bool ClangTidyCheck::isDeprecatedAlias(StringRef CanonicalName) const {
-  return Context->isCheckEnabled(CheckName) &&
-         !Context->isCheckEnabled(CanonicalName);
-}
-
 ClangTidyCheck::OptionsView::OptionsView(
     StringRef CheckName, const ClangTidyOptions::OptionMap &CheckOptions,
     ClangTidyContext *Context)
