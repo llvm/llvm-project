@@ -506,7 +506,8 @@ private:
     void setPIC() { IsPIC = true; }
 
     bool hadError() const { return State == IES_ERROR; }
-    SMLoc getLocForNegativeScaleError(StringRef ErrMsg, SMLoc DefaultLoc) const {
+    SMLoc getLocForNegativeScaleError(StringRef ErrMsg,
+                                      SMLoc DefaultLoc) const {
       return ErrMsg == "scale factor in address cannot be negative"
                  ? NegativeAdditiveTermLoc
                  : DefaultLoc;
@@ -752,13 +753,12 @@ private:
         State = IES_MINUS;
         // push minus operator if it is not a negate operator
         if (CurrState == IES_REGISTER || CurrState == IES_RPAREN ||
-            CurrState == IES_INTEGER  || CurrState == IES_RBRAC  ||
+            CurrState == IES_INTEGER || CurrState == IES_RBRAC ||
             CurrState == IES_OFFSET) {
           IC.pushOperator(IC_MINUS);
           NegativeAdditiveTerm = true;
           NegativeAdditiveTermLoc = MinusLoc;
-        }
-        else if (PrevState == IES_REGISTER && CurrState == IES_MULTIPLY) {
+        } else if (PrevState == IES_REGISTER && CurrState == IES_MULTIPLY) {
           // We have negate operator for Scale: it's illegal
           ErrMsg = "Scale can't be negative";
           return true;
@@ -2166,8 +2166,7 @@ bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
         return Error(Tok.getLoc(), "Unexpected identifier!");
       } else if (SM.onIdentifierExpr(Val, Identifier, Info, FieldInfo.Type,
                                      false, ErrMsg)) {
-        return Error(SM.getLocForNegativeScaleError(ErrMsg, IdentLoc),
-                     ErrMsg);
+        return Error(SM.getLocForNegativeScaleError(ErrMsg, IdentLoc), ErrMsg);
       }
       break;
     }
@@ -2192,18 +2191,15 @@ bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
           AsmTypeInfo Type;
           if (SM.onIdentifierExpr(Val, Identifier, Info, Type,
                                   isParsingMSInlineAsm(), ErrMsg))
-            return Error(SM.getLocForNegativeScaleError(ErrMsg, Loc),
-                         ErrMsg);
+            return Error(SM.getLocForNegativeScaleError(ErrMsg, Loc), ErrMsg);
           End = consumeToken();
         } else {
           if (SM.onInteger(IntVal, ErrMsg))
-            return Error(SM.getLocForNegativeScaleError(ErrMsg, Loc),
-                         ErrMsg);
+            return Error(SM.getLocForNegativeScaleError(ErrMsg, Loc), ErrMsg);
         }
       } else {
         if (SM.onInteger(IntVal, ErrMsg))
-          return Error(SM.getLocForNegativeScaleError(ErrMsg, Loc),
-                       ErrMsg);
+          return Error(SM.getLocForNegativeScaleError(ErrMsg, Loc), ErrMsg);
       }
       break;
     }
