@@ -2373,6 +2373,11 @@ void OMPClauseEnqueue::VisitOMPSizesClause(const OMPSizesClause *C) {
     Visitor->AddStmt(E);
 }
 
+void OMPClauseEnqueue::VisitOMPCountsClause(const OMPCountsClause *C) {
+  for (auto E : C->getCountsRefs())
+    Visitor->AddStmt(E);
+}
+
 void OMPClauseEnqueue::VisitOMPPermutationClause(
     const OMPPermutationClause *C) {
   for (auto E : C->getArgsRefs())
@@ -6342,6 +6347,8 @@ CXString clang_getCursorKindSpelling(enum CXCursorKind Kind) {
     return cxstring::createRef("OMPInterchangeDirective");
   case CXCursor_OMPFuseDirective:
     return cxstring::createRef("OMPFuseDirective");
+  case CXCursor_OMPSplitDirective:
+    return cxstring::createRef("OMPSplitDirective");
   case CXCursor_OMPForDirective:
     return cxstring::createRef("OMPForDirective");
   case CXCursor_OMPForSimdDirective:
