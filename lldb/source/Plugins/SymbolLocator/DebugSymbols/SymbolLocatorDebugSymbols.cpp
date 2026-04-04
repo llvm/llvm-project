@@ -401,7 +401,7 @@ static bool LookForDsymNextToExecutablePath(const ModuleSpec &mod_spec,
   FileSpec dsym_directory = exec_fspec;
   dsym_directory.RemoveLastPathComponent();
 
-  std::string dsym_filename = filename.AsCString();
+  std::string dsym_filename = filename.GetString();
   dsym_filename += ".dSYM";
   dsym_directory.AppendPathComponent(dsym_filename);
   dsym_directory.AppendPathComponent("Contents");
@@ -442,7 +442,7 @@ static bool LookForDsymNextToExecutablePath(const ModuleSpec &mod_spec,
   // See if we have a .dSYM.yaa next to this executable path.
   FileSpec dsym_yaa_fspec = exec_fspec;
   dsym_yaa_fspec.RemoveLastPathComponent();
-  std::string dsym_yaa_filename = filename.AsCString();
+  std::string dsym_yaa_filename = filename.GetString();
   dsym_yaa_filename += ".dSYM.yaa";
   dsym_yaa_fspec.AppendPathComponent(dsym_yaa_filename);
 

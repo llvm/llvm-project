@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "TableGenBackends.h"
+#include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
 #include <string>
@@ -133,7 +134,8 @@ void GenerateABILoweringPattern(llvm::StringRef OpName,
 void GenerateLLVMLoweringPattern(llvm::StringRef OpName,
                                  llvm::StringRef PatternName, bool IsRecursive,
                                  llvm::StringRef ExtraDecl,
-                                 const Record *CustomCtorRec) {
+                                 const Record *CustomCtorRec,
+                                 llvm::StringRef LLVMOp) {
   std::optional<CustomLoweringCtor> CustomCtor =
       parseCustomLoweringCtor(CustomCtorRec);
   std::string CodeBuffer;
@@ -177,9 +179,24 @@ void GenerateLLVMLoweringPattern(llvm::StringRef OpName,
 
   Code << "  }\n\n";
 
-  Code << "  mlir::LogicalResult matchAndRewrite(cir::" << OpName
-       << " op, OpAdaptor adaptor, mlir::ConversionPatternRewriter &rewriter) "
-          "const override;\n";
+  if (!LLVMOp.empty()) {
+    // Generate the matchAndRewrite body automatically.
+    Code
+        << "  mlir::LogicalResult matchAndRewrite(cir::" << OpName
+        << " op, OpAdaptor adaptor, mlir::ConversionPatternRewriter &rewriter) "
+           "const override {\n";
+    Code
+        << "    mlir::Type resTy = typeConverter->convertType(op.getType());\n";
+    Code << "    rewriter.replaceOpWithNewOp<mlir::LLVM::" << LLVMOp
+         << ">(op, resTy, adaptor.getOperands());\n";
+    Code << "    return mlir::success();\n";
+    Code << "  }\n";
+  } else {
+    Code
+        << "  mlir::LogicalResult matchAndRewrite(cir::" << OpName
+        << " op, OpAdaptor adaptor, mlir::ConversionPatternRewriter &rewriter) "
+           "const override;\n";
+  }
 
   if (!ExtraDecl.empty()) {
     Code << "\nprivate:\n";
@@ -208,8 +225,16 @@ void Generate(const Record *OpRecord) {
     llvm::StringRef ExtraDecl =
         OpRecord->getValueAsString("extraLLVMLoweringPatternDecl");
 
+    llvm::StringRef LLVMOp = OpRecord->getValueAsString("llvmOp");
+
+    if (!LLVMOp.empty() && CustomCtor)
+      PrintFatalError(OpRecord->getLoc(),
+                      "op '" + OpName +
+                          "' has both llvmOp and a custom lowering "
+                          "constructor, which is not supported");
+
     GenerateLLVMLoweringPattern(OpName, PatternName, IsRecursive, ExtraDecl,
-                                CustomCtor);
+                                CustomCtor, LLVMOp);
     // Only automatically register patterns that use the default constructor.
     // Patterns with a custom constructor must be manually registered by the
     // lowering pass.

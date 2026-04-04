@@ -395,8 +395,8 @@ void SCEV::print(raw_ostream &OS) const {
       OS << "nuw><";
     if (AR->hasNoSignedWrap())
       OS << "nsw><";
-    if (AR->hasNoSelfWrap() &&
-        !AR->getNoWrapFlags((NoWrapFlags)(FlagNUW | FlagNSW)))
+    if (AR->hasNoSelfWrap() && !AR->hasNoUnsignedWrap() &&
+        !AR->hasNoSignedWrap())
       OS << "nw><";
     AR->getLoop()->getHeader()->printAsOperand(OS, /*PrintType=*/false);
     OS << ">";
@@ -3299,7 +3299,7 @@ const SCEV *ScalarEvolution::getMulExpr(SmallVectorImpl<SCEVUse> &Ops,
           // maximum signed value. In all other cases signed overflow is
           // impossible.
           auto FlagsMask = SCEV::FlagNW;
-          if (hasFlags(AddRec->getNoWrapFlags(), SCEV::FlagNSW)) {
+          if (AddRec->hasNoSignedWrap()) {
             auto MinInt =
                 APInt::getSignedMinValue(getTypeSizeInBits(AddRec->getType()));
             if (getSignedRangeMin(AddRec) != MinInt)
