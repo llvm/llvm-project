@@ -19,6 +19,7 @@
 #include "llvm/DebugInfo/GSYM/GsymReaderV1.h"
 #include "llvm/DebugInfo/GSYM/GsymReaderV2.h"
 #include "llvm/DebugInfo/GSYM/Header.h"
+#include "llvm/DebugInfo/GSYM/HeaderV2.h"
 #include "llvm/DebugInfo/GSYM/InlineInfo.h"
 #include "llvm/DebugInfo/GSYM/OutputAggregator.h"
 #include "llvm/DebugInfo/GSYM/StringTable.h"
@@ -880,7 +881,8 @@ TEST(GSYMTest, TestLineTableEncodeErrors) {
   LT.clear();
 }
 
-static void TestHeaderEncodeError(const Header &H,
+template <typename HeaderT>
+static void TestHeaderEncodeError(const HeaderT &H,
                                   std::string ExpectedErrorMsg) {
   const llvm::endianness ByteOrder = llvm::endianness::little;
   SmallString<512> Str;
@@ -890,19 +892,16 @@ static void TestHeaderEncodeError(const Header &H,
   checkError(ExpectedErrorMsg, std::move(Err));
 }
 
+template <typename HeaderT>
 static void TestHeaderDecodeError(StringRef Bytes,
                                   std::string ExpectedErrorMsg) {
-  const llvm::endianness ByteOrder = llvm::endianness::little;
-  uint8_t AddressSize = 4;
-  DataExtractor Data(Bytes, ByteOrder == llvm::endianness::little, AddressSize);
-  llvm::Expected<Header> Decoded = Header::decode(Data);
-  // Make sure decoding fails.
+  DataExtractor Data(Bytes, /*IsLittleEndian=*/true, /*AddressSize=*/4);
+  llvm::Expected<HeaderT> Decoded = HeaderT::decode(Data);
   ASSERT_FALSE((bool)Decoded);
-  // Make sure decoded object is the same as the one we encoded.
   checkError(ExpectedErrorMsg, Decoded.takeError());
 }
 
-// Populate a GSYM header with valid values.
+// Populate a GSYM V1 header with valid values.
 static void InitHeader(Header &H) {
   H.Magic = GSYM_MAGIC;
   H.Version = Header::getVersion();
@@ -918,6 +917,16 @@ static void InitHeader(Header &H) {
     else
       H.UUID[i] = 0;
   }
+}
+
+// Populate a GSYM V2 header with valid values.
+static void InitHeaderV2(HeaderV2 &H) {
+  H.Magic = GSYM_MAGIC;
+  H.Version = HeaderV2::getVersion();
+  H.AddrOffSize = 4;
+  H.StrTableEncoding = StringTableEncoding::Default;
+  H.BaseAddress = 0x1000;
+  H.NumAddresses = 1;
 }
 
 TEST(GSYMTest, TestHeaderEncodeErrors) {
@@ -946,19 +955,76 @@ TEST(GSYMTest, TestHeaderDecodeErrors) {
   llvm::Error Err = H.encode(FW);
   ASSERT_FALSE(Err);
   FW.fixup32(12, offsetof(Header, Magic));
-  TestHeaderDecodeError(OutStrm.str(), "invalid GSYM magic 0x0000000c");
+  TestHeaderDecodeError<Header>(OutStrm.str(), "invalid GSYM magic 0x0000000c");
   FW.fixup32(GSYM_MAGIC, offsetof(Header, Magic));
   FW.fixup32(12, offsetof(Header, Version));
-  TestHeaderDecodeError(OutStrm.str(), "unsupported GSYM version 12");
+  TestHeaderDecodeError<Header>(OutStrm.str(), "unsupported GSYM version 12");
   FW.fixup32(Header::getVersion(), offsetof(Header, Version));
   FW.fixup32(12, offsetof(Header, AddrOffSize));
-  TestHeaderDecodeError(OutStrm.str(), "invalid address offset size 12");
+  TestHeaderDecodeError<Header>(OutStrm.str(),
+                                "invalid address offset size 12");
   FW.fixup32(4, offsetof(Header, AddrOffSize));
   FW.fixup32(128, offsetof(Header, UUIDSize));
-  TestHeaderDecodeError(OutStrm.str(), "invalid UUID size 128");
+  TestHeaderDecodeError<Header>(OutStrm.str(), "invalid UUID size 128");
 }
 
-static void TestHeaderEncodeDecode(const Header &H,
+TEST(GSYMTest, TestHeaderV2EncodeErrors) {
+  HeaderV2 H;
+  InitHeaderV2(H);
+  H.Magic = 12;
+  TestHeaderEncodeError(H, "invalid GSYM magic 0x0000000c");
+  InitHeaderV2(H);
+  H.Version = 12;
+  TestHeaderEncodeError(H, "unsupported GSYM version 12");
+  InitHeaderV2(H);
+  H.AddrOffSize = 12;
+  TestHeaderEncodeError(H, "invalid address offset size 12");
+  InitHeaderV2(H);
+  H.StrTableEncoding = static_cast<StringTableEncoding>(12);
+  TestHeaderEncodeError(H, "invalid string table encoding 12");
+}
+
+TEST(GSYMTest, TestHeaderV2DecodeErrors) {
+  const llvm::endianness ByteOrder = llvm::endianness::little;
+  // Encode a valid V2 header, then mutate raw bytes to test decode errors.
+  HeaderV2 H;
+  InitHeaderV2(H);
+  SmallString<512> Str;
+  raw_svector_ostream OutStrm(Str);
+  FileWriter FW(OutStrm, ByteOrder);
+  llvm::Error Err = H.encode(FW);
+  ASSERT_FALSE(Err);
+  // V2 header layout (little-endian):
+  //   offset 0: Magic (4 bytes)
+  //   offset 4: Version (2 bytes)
+  //   offset 6: AddrOffSize (1 byte)
+  //   offset 7: StrTableEncoding (1 byte)
+  //   offset 8: BaseAddress (8 bytes)
+  //   offset 16: NumAddresses (4 bytes)
+  std::string Bytes(OutStrm.str());
+  // Bad magic.
+  Bytes[0] = 0x0c;
+  Bytes[1] = 0;
+  Bytes[2] = 0;
+  Bytes[3] = 0;
+  TestHeaderDecodeError<HeaderV2>(Bytes, "invalid GSYM magic 0x0000000c");
+  // Restore magic, set bad version.
+  FW.fixup32(GSYM_MAGIC, 0);
+  Bytes = std::string(OutStrm.str());
+  Bytes[4] = 12;
+  Bytes[5] = 0;
+  TestHeaderDecodeError<HeaderV2>(Bytes, "unsupported GSYM version 12");
+  // Restore version, set bad AddrOffSize.
+  Bytes = std::string(OutStrm.str());
+  Bytes[6] = 12;
+  TestHeaderDecodeError<HeaderV2>(Bytes, "invalid address offset size 12");
+  // Test truncated data.
+  TestHeaderDecodeError<HeaderV2>(StringRef("short"),
+                                  "not enough data for a gsym::HeaderV2");
+}
+
+template <typename HeaderT>
+static void TestHeaderEncodeDecode(const HeaderT &H,
                                    llvm::endianness ByteOrder) {
   uint8_t AddressSize = 4;
   SmallString<512> Str;
@@ -968,7 +1034,7 @@ static void TestHeaderEncodeDecode(const Header &H,
   ASSERT_FALSE(Err);
   std::string Bytes(OutStrm.str());
   DataExtractor Data(Bytes, ByteOrder == llvm::endianness::little, AddressSize);
-  llvm::Expected<Header> Decoded = Header::decode(Data);
+  llvm::Expected<HeaderT> Decoded = HeaderT::decode(Data);
   // Make sure decoding succeeded.
   ASSERT_TRUE((bool)Decoded);
   EXPECT_EQ(H, Decoded.get());
@@ -979,10 +1045,17 @@ TEST(GSYMTest, TestHeaderEncodeDecode) {
   TestHeaderEncodeDecode(H, llvm::endianness::little);
   TestHeaderEncodeDecode(H, llvm::endianness::big);
 }
+TEST(GSYMTest, TestHeaderV2EncodeDecode) {
+  HeaderV2 H;
+  InitHeaderV2(H);
+  TestHeaderEncodeDecode(H, llvm::endianness::little);
+  TestHeaderEncodeDecode(H, llvm::endianness::big);
+}
 
-static void TestGsymCreatorV1EncodeError(llvm::endianness ByteOrder,
-                                         const GsymCreatorV1 &GC,
-                                         std::string ExpectedErrorMsg) {
+template <typename CreatorT>
+static void TestGsymCreatorEncodeErrorHelper(llvm::endianness ByteOrder,
+                                             const CreatorT &GC,
+                                             std::string ExpectedErrorMsg) {
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
   FileWriter FW(OutStrm, ByteOrder);
@@ -992,24 +1065,22 @@ static void TestGsymCreatorV1EncodeError(llvm::endianness ByteOrder,
   checkError(ExpectedErrorMsg, std::move(Err));
 }
 
-TEST(GSYMTest, TestGsymCreatorV1EncodeErrors) {
+template <typename CreatorT> static void TestGsymCreatorEncodeErrors() {
   const uint8_t ValidUUID[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13,
                                14, 15, 16};
-  const uint8_t InvalidUUID[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13,
-                                 14, 15, 16, 17, 18, 19, 20, 21};
-  // Verify we get an error when trying to encode an GsymCreatorV1 with no
+  // Verify we get an error when trying to encode a GsymCreator with no
   // function infos. We shouldn't be saving a GSYM file in this case since
   // there is nothing inside of it.
-  GsymCreatorV1 GC;
-  TestGsymCreatorV1EncodeError(llvm::endianness::little, GC,
-                               "no functions to encode");
+  CreatorT GC;
+  TestGsymCreatorEncodeErrorHelper(llvm::endianness::little, GC,
+                                   "no functions to encode");
   const uint64_t FuncAddr = 0x1000;
   const uint64_t FuncSize = 0x100;
   const uint32_t FuncName = GC.insertString("foo");
-  // Verify we get an error trying to encode a GsymCreatorV1 that isn't
+  // Verify we get an error trying to encode a GsymCreator that isn't
   // finalized.
   GC.addFunctionInfo(FunctionInfo(FuncAddr, FuncSize, FuncName));
-  TestGsymCreatorV1EncodeError(
+  TestGsymCreatorEncodeErrorHelper(
       llvm::endianness::little, GC,
       "GsymCreator wasn't finalized prior to encoding");
   std::string finalizeIssues;
@@ -1020,11 +1091,6 @@ TEST(GSYMTest, TestGsymCreatorV1EncodeErrors) {
   finalizeErr = GC.finalize(Agg);
   ASSERT_TRUE(bool(finalizeErr));
   checkError("already finalized", std::move(finalizeErr));
-  // Verify we get an error trying to encode a GsymCreatorV1 with a UUID that is
-  // too long.
-  GC.setUUID(InvalidUUID);
-  TestGsymCreatorV1EncodeError(llvm::endianness::little, GC,
-                               "invalid UUID size 21");
   GC.setUUID(ValidUUID);
   // Verify errors are propagated when we try to encoding an invalid line
   // table.
@@ -1032,8 +1098,9 @@ TEST(GSYMTest, TestGsymCreatorV1EncodeErrors) {
     FI.OptLineTable = LineTable(); // Invalid line table.
     return false; // Stop iterating
   });
-  TestGsymCreatorV1EncodeError(llvm::endianness::little, GC,
-                               "attempted to encode invalid LineTable object");
+  TestGsymCreatorEncodeErrorHelper(
+      llvm::endianness::little, GC,
+      "attempted to encode invalid LineTable object");
   // Verify errors are propagated when we try to encoding an invalid inline
   // info.
   GC.forEachFunctionInfo([](FunctionInfo &FI) -> bool {
@@ -1041,8 +1108,30 @@ TEST(GSYMTest, TestGsymCreatorV1EncodeErrors) {
     FI.Inline = InlineInfo(); // Invalid InlineInfo.
     return false; // Stop iterating
   });
-  TestGsymCreatorV1EncodeError(llvm::endianness::little, GC,
-                               "attempted to encode invalid InlineInfo object");
+  TestGsymCreatorEncodeErrorHelper(
+      llvm::endianness::little, GC,
+      "attempted to encode invalid InlineInfo object");
+}
+
+TEST(GSYMTest, TestGsymCreatorV1EncodeErrors) {
+  TestGsymCreatorEncodeErrors<GsymCreatorV1>();
+
+  // V1-specific: verify we get an error with a UUID that is too long.
+  // V2 stores UUID as a GlobalData entry with no size limit.
+  const uint8_t UUIDTooLong[] = {1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11,
+                                 12, 13, 14, 15, 16, 17, 18, 19, 20, 21};
+  GsymCreatorV1 GC;
+  GC.addFunctionInfo(FunctionInfo(0x1000, 0x100, GC.insertString("foo")));
+  OutputAggregator Null(nullptr);
+  llvm::Error Err = GC.finalize(Null);
+  ASSERT_FALSE(bool(Err));
+  GC.setUUID(UUIDTooLong);
+  TestGsymCreatorEncodeErrorHelper(llvm::endianness::little, GC,
+                                   "invalid UUID size 21");
+}
+
+TEST(GSYMTest, TestGsymCreatorV2EncodeErrors) {
+  TestGsymCreatorEncodeErrors<GsymCreatorV2>();
 }
 
 static void Compare(const GsymCreator &GC, const GsymReader &GR) {
@@ -1157,7 +1246,8 @@ static void VerifyFunctionInfoError(const GsymReader &GR, uint64_t Addr,
   checkError(ErrMessage, ExpFI.takeError());
 }
 
-template <typename CreatorT> static void TestGsymReaderImpl() {
+template <typename CreatorT>
+static void TestGsymReader(llvm::endianness ByteOrder) {
   uint8_t UUID[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16};
   CreatorT GC;
   GC.setUUID(UUID);
@@ -1167,7 +1257,6 @@ template <typename CreatorT> static void TestGsymReaderImpl() {
   constexpr uint64_t FuncSize = 0x10;
   const uint32_t Func1Name = GC.insertString("foo");
   const uint32_t Func2Name = GC.insertString("bar");
-  const auto ByteOrder = llvm::endianness::native;
   GC.addFunctionInfo(FunctionInfo(Func1Addr, FuncSize, Func1Name));
   GC.addFunctionInfo(FunctionInfo(Func2Addr, FuncSize, Func2Name));
   OutputAggregator Null(nullptr);
@@ -1199,10 +1288,17 @@ template <typename CreatorT> static void TestGsymReaderImpl() {
   }
 }
 
-TEST(GSYMTest, TestGsymReaderV1) { TestGsymReaderImpl<GsymCreatorV1>(); }
-TEST(GSYMTest, TestGsymReaderV2) { TestGsymReaderImpl<GsymCreatorV2>(); }
+TEST(GSYMTest, TestGsymReaderV1) {
+  TestGsymReader<GsymCreatorV1>(llvm::endianness::little);
+  TestGsymReader<GsymCreatorV1>(llvm::endianness::big);
+}
+TEST(GSYMTest, TestGsymReaderV2) {
+  TestGsymReader<GsymCreatorV2>(llvm::endianness::little);
+  TestGsymReader<GsymCreatorV2>(llvm::endianness::big);
+}
 
-template <typename CreatorT> static void TestGsymLookupsImpl() {
+template <typename CreatorT>
+static void TestGsymLookups(llvm::endianness ByteOrder) {
   // Test creating a GSYM file with a function that has a inline information.
   // Verify that lookups work correctly. Lookups do not decode the entire
   // FunctionInfo or InlineInfo, they only extract information needed for the
@@ -1210,7 +1306,6 @@ template <typename CreatorT> static void TestGsymLookupsImpl() {
   // symbolication.
   CreatorT GC;
   FunctionInfo FI(0x1000, 0x100, GC.insertString("main"));
-  const auto ByteOrder = llvm::endianness::native;
   FI.OptLineTable = LineTable();
   const uint32_t MainFileIndex = GC.insertFile("/tmp/main.c");
   const uint32_t FooFileIndex = GC.insertFile("/tmp/foo.h");
@@ -1302,8 +1397,14 @@ template <typename CreatorT> static void TestGsymLookupsImpl() {
     testing::ElementsAre(SourceLocation{"main", "/tmp", "main.c", 8, 32}));
 }
 
-TEST(GSYMTest, TestGsymLookups) { TestGsymLookupsImpl<GsymCreatorV1>(); }
-TEST(GSYMTest, TestGsymLookupsV2) { TestGsymLookupsImpl<GsymCreatorV2>(); }
+TEST(GSYMTest, TestGsymLookups) {
+  TestGsymLookups<GsymCreatorV1>(llvm::endianness::little);
+  TestGsymLookups<GsymCreatorV1>(llvm::endianness::big);
+}
+TEST(GSYMTest, TestGsymLookupsV2) {
+  TestGsymLookups<GsymCreatorV2>(llvm::endianness::little);
+  TestGsymLookups<GsymCreatorV2>(llvm::endianness::big);
+}
 
 TEST(GSYMTest, TestDWARFFunctionWithAddresses) {
   // Create a single compile unit with a single function and make sure it gets

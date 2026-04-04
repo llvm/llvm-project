@@ -42,9 +42,13 @@ llvm::Error HeaderV2::checkForError() const {
   if (AddrOffSize < 1 || AddrOffSize > 8)
     return createStringError(std::errc::invalid_argument,
                              "invalid address offset size %u", AddrOffSize);
-  switch (StrTableEncoding) {
-  case StringTableEncoding::Default:
+  uint8_t Encoding = static_cast<uint8_t>(StrTableEncoding);
+  switch (Encoding) {
+  case static_cast<uint8_t>(StringTableEncoding::Default):
     break;
+  default:
+    return createStringError(std::errc::invalid_argument,
+                             "invalid string table encoding %u", Encoding);
   }
   return Error::success();
 }
@@ -54,7 +58,7 @@ llvm::Expected<HeaderV2> HeaderV2::decode(DataExtractor &Data) {
   // The fixed portion of the HeaderV2 is 20 bytes:
   //   Magic(4) + Version(2) + AddrOffSize(1) + StrTableEncoding(1) +
   //   BaseAddress(8) + NumAddresses(4)
-  const uint64_t FixedHeaderSize = sizeof(HeaderV2);
+  const uint64_t FixedHeaderSize = HeaderV2::getEncodedSize();
   if (!Data.isValidOffsetForDataOfSize(Offset, FixedHeaderSize))
     return createStringError(std::errc::invalid_argument,
                              "not enough data for a gsym::HeaderV2");
