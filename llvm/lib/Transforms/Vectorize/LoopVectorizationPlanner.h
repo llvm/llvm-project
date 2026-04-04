@@ -26,6 +26,7 @@
 
 #include "VPlan.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Support/InstructionCost.h"
 
 namespace {
@@ -34,15 +35,16 @@ class GeneratedRTChecks;
 
 namespace llvm {
 
+class AssumptionCache;
 class LoopInfo;
 class DominatorTree;
 class LoopVectorizationLegality;
 class LoopVectorizationCostModel;
 class PredicatedScalarEvolution;
 class LoopVectorizeHints;
+class RecurrenceDescriptor;
 class LoopVersioning;
 class OptimizationRemarkEmitter;
-class TargetTransformInfo;
 class TargetLibraryInfo;
 class VPRecipeBuilder;
 struct VPRegisterUsage;
@@ -50,6 +52,29 @@ struct VFRange;
 
 extern cl::opt<bool> EnableVPlanNativePath;
 extern cl::opt<unsigned> ForceTargetInstructionCost;
+extern cl::opt<bool> PreferInLoopReductions;
+
+/// \return An upper bound for vscale based on TTI or the vscale_range
+/// attribute.
+std::optional<unsigned> getMaxVScale(const Function &F,
+                                     const TargetTransformInfo &TTI);
+
+/// Write a \p DebugMsg about vectorization to the debug output stream. If \p I
+/// is passed, the message relates to that particular instruction.
+#ifndef NDEBUG
+void debugVectorizationMessage(const StringRef Prefix, const StringRef DebugMsg,
+                               Instruction *I);
+#endif
+
+/// Reports an informative message: print \p Msg for debugging purposes as well
+/// as an optimization remark. Uses either \p I as location of the remark, or
+/// otherwise \p TheLoop. If \p DL is passed, use it as debug location for the
+/// remark. \p PassName is the name to use for the optimization remark.
+void reportVectorizationInfo(const char *PassName, const StringRef Msg,
+                             const StringRef ORETag,
+                             OptimizationRemarkEmitter *ORE,
+                             const Loop *TheLoop, Instruction *I = nullptr,
+                             DebugLoc DL = {});
 
 /// VPlan-based builder utility analogous to IRBuilder.
 class VPBuilder {
@@ -490,6 +515,125 @@ struct FixedScalableVFPair {
   bool hasVector() const { return FixedVF.isVector() || ScalableVF.isVector(); }
 };
 
+/// Holds state needed to make cost decisions before computing costs per-VF,
+/// including the maximum VFs.
+class VFSelectionContext {
+  /// \return True if maximizing vector bandwidth is enabled by the target or
+  /// user options, for the given register kind.
+  bool useMaxBandwidth(TargetTransformInfo::RegisterKind RegKind) const;
+
+  /// \return the maximized element count based on the targets vector
+  /// registers and the loop trip-count, but limited to a maximum safe VF.
+  ElementCount getMaximizedVFForTarget(unsigned MaxTripCount,
+                                       unsigned SmallestType,
+                                       unsigned WidestType,
+                                       ElementCount MaxSafeVF, unsigned UserIC,
+                                       bool FoldTailByMasking,
+                                       bool RequiresScalarEpilogue);
+
+  /// If \p VF * \p UserIC > MaxTripcount, clamps VF to the next lower VF
+  /// that results in VF * UserIC <= MaxTripCount.
+  ElementCount clampVFByMaxTripCount(ElementCount VF, unsigned MaxTripCount,
+                                     unsigned UserIC, bool FoldTailByMasking,
+                                     bool RequiresScalarEpilogue) const;
+
+  /// \return True if scalable vectorization is supported and enabled.
+  bool isScalableVectorizationAllowed();
+
+  /// \return The maximum legal scalable VF, based on the safe dependence
+  /// distance.
+  ElementCount getMaxLegalScalableVF(unsigned MaxSafeElements);
+
+  /// Initialize the vscale value used for cost tuning.
+  void initializeVScaleForTuning();
+
+  const TargetTransformInfo &TTI;
+  const LoopVectorizationLegality *Legal;
+  const Loop *TheLoop;
+  const Function &F;
+  OptimizationRemarkEmitter *ORE;
+  const LoopVectorizeHints *Hints;
+
+  /// Cached result of isScalableVectorizationAllowed.
+  std::optional<bool> IsScalableVectorizationAllowed;
+
+  /// The vscale value to tune the cost model for.
+  std::optional<unsigned> VScaleForTuning;
+
+  /// The highest VF possible for this loop, without using MaxBandwidth.
+  FixedScalableVFPair MaxPermissibleVFWithoutMaxBW;
+
+  /// All element types found in the loop.
+  SmallPtrSet<Type *, 16> ElementTypesInLoop;
+
+  /// Ephemeral values collected before cost modeling, reused by the cost
+  /// model's collectValuesToIgnore to avoid recomputation.
+  SmallPtrSet<const Value *, 16> EphemeralValues;
+
+  /// Maximum safe number of elements to be processed per vector iteration,
+  /// which do not prevent store-load forwarding and are safe with regard to the
+  /// memory dependencies. Set by computeFeasibleMaxVF.
+  std::optional<unsigned> MaxSafeElements;
+
+public:
+  const TTI::TargetCostKind CostKind;
+  const bool OptForSize;
+
+  VFSelectionContext(const TargetTransformInfo &TTI,
+                     const LoopVectorizationLegality *Legal,
+                     const Loop *TheLoop, const Function &F,
+                     OptimizationRemarkEmitter *ORE,
+                     const LoopVectorizeHints *Hints, bool OptForSize)
+      : TTI(TTI), Legal(Legal), TheLoop(TheLoop), F(F), ORE(ORE), Hints(Hints),
+        CostKind(F.hasMinSize() ? TTI::TCK_CodeSize : TTI::TCK_RecipThroughput),
+        OptForSize(OptForSize) {
+    initializeVScaleForTuning();
+  }
+
+  /// \return The vscale value to tune the cost model for.
+  std::optional<unsigned> getVScaleForTuning() const { return VScaleForTuning; }
+
+  /// \return True if register pressure should be considered for the given VF.
+  bool shouldConsiderRegPressureForVF(ElementCount VF) const;
+
+  /// \return True if scalable vectors are supported by the target or forced.
+  bool supportsScalableVectors() const;
+
+  /// Collect ephemeral values in the loop.
+  void collectEphemeralValues(AssumptionCache *AC);
+
+  /// Collect element types in the loop that need widening.
+  void collectElementTypesForWidening(
+      const SmallPtrSetImpl<const Value *> *ValuesToIgnore = nullptr);
+
+  /// \return The size (in bits) of the smallest and widest types in the code
+  /// that needs to be vectorized. We ignore values that remain scalar such as
+  /// 64 bit loop indices.
+  std::pair<unsigned, unsigned> getSmallestAndWidestTypes() const;
+
+  /// Compute the maximum feasible VF for both fixed and scalable
+  /// vectorization. Also sets MaxSafeElements.
+  FixedScalableVFPair computeFeasibleMaxVF(unsigned MaxTripCount,
+                                           ElementCount UserVF, unsigned UserIC,
+                                           bool FoldTailByMasking,
+                                           bool RequiresScalarEpilogue);
+
+  /// \return The ephemeral values collected by collectEphemeralValues.
+  const SmallPtrSetImpl<const Value *> &getEphemeralValues() const {
+    return EphemeralValues;
+  }
+
+  /// \return Maximum safe number of elements to be processed per vector
+  /// iteration, which do not prevent store-load forwarding and are safe with
+  /// regard to the memory dependencies. Set by computeFeasibleMaxVF.
+  std::optional<unsigned> getMaxSafeElements() const { return MaxSafeElements; }
+
+  /// Returns true if we should use strict in-order reductions for the given
+  /// RdxDesc. This is true if the IsOrdered flag of RdxDesc is set and we do
+  /// not allow reordering of FP operations.
+  bool useOrderedReductions(const RecurrenceDescriptor &RdxDesc) const;
+};
+
 /// Planner drives the vectorization process after having passed
 /// Legality checks.
 class LoopVectorizationPlanner {
@@ -513,6 +657,9 @@ class LoopVectorizationPlanner {
 
   /// The profitability analysis.
   LoopVectorizationCostModel &CM;
+
+  /// VF selection state independent of cost-modeling decisions.
+  VFSelectionContext &Config;
 
   /// The interleaved access analysis.
   InterleavedAccessInfo &IAI;
@@ -551,11 +698,11 @@ public:
   LoopVectorizationPlanner(
       Loop *L, LoopInfo *LI, DominatorTree *DT, const TargetLibraryInfo *TLI,
       const TargetTransformInfo &TTI, LoopVectorizationLegality *Legal,
-      LoopVectorizationCostModel &CM, InterleavedAccessInfo &IAI,
-      PredicatedScalarEvolution &PSE, const LoopVectorizeHints &Hints,
-      OptimizationRemarkEmitter *ORE)
+      LoopVectorizationCostModel &CM, VFSelectionContext &Config,
+      InterleavedAccessInfo &IAI, PredicatedScalarEvolution &PSE,
+      const LoopVectorizeHints &Hints, OptimizationRemarkEmitter *ORE)
       : OrigLoop(L), LI(LI), DT(DT), TLI(TLI), TTI(TTI), Legal(Legal), CM(CM),
-        IAI(IAI), PSE(PSE), Hints(Hints), ORE(ORE) {}
+        Config(Config), IAI(IAI), PSE(PSE), Hints(Hints), ORE(ORE) {}
 
   /// Build VPlans for the specified \p UserVF and \p UserIC if they are
   /// non-zero or all applicable candidate VFs otherwise. If vectorization and
