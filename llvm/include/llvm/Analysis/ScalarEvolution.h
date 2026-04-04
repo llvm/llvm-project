@@ -119,9 +119,8 @@ struct SCEVUseT : private PointerIntPair<SCEVPtrT, 2> {
   using Base = PointerIntPair<SCEVPtrT, 2>;
   using Base::getOpaqueValue;
   using Base::getPointer;
-  using Base::setFromOpaqueValue;
 
-  SCEVUseT() : Base() { setFromOpaqueValue(nullptr); }
+  SCEVUseT() : Base(nullptr, 0) {}
   SCEVUseT(SCEVPtrT S) : Base(S, 0) {}
   /// Construct with NoWrapFlags; only NUW/NSW are encoded, NW is dropped.
   SCEVUseT(SCEVPtrT S, SCEVNoWrapFlags Flags)
@@ -134,7 +133,7 @@ struct SCEVUseT : private PointerIntPair<SCEVPtrT, 2> {
   operator SCEVPtrT() const { return getPointer(); }
   SCEVPtrT operator->() const { return getPointer(); }
 
-  /// Returns true of the SCEVUse is canonical, i.e. no SCEVUse flags set in any
+  /// Returns true if the SCEVUse is canonical, i.e. no SCEVUse flags set in any
   /// operands.
   bool isCanonical() const { return getCanonical() == getOpaqueValue(); }
 
@@ -173,6 +172,10 @@ struct SCEVUseT : private PointerIntPair<SCEVPtrT, 2> {
 
   /// This method is used for debugging.
   void dump() const;
+
+private:
+  using Base::setFromOpaqueValue;
+  friend struct PointerLikeTypeTraits<SCEVUseT>;
 };
 
 /// Deduction guide for various SCEV subclass pointers.
