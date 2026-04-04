@@ -1218,15 +1218,28 @@ TEST(GSYMTest, TestGsymCreatorV18ByteAddrOffsets) {
   TestGsymCreatorAddrOffsetsImpl<GsymCreatorV1>(8, 8, 4, 4);
 }
 
-// V2 tests (AddrOffSize: 1/2/4/8, fixed AddrInfoOffSize=8, StrOffSize=8)
+// V2 tests (AddrOffSize rounds to power-of-2, fixed AddrInfoOffSize=8,
+// StrOffSize=8)
 TEST(GSYMTest, TestGsymCreatorV21ByteAddrOffsets) {
   TestGsymCreatorAddrOffsetsImpl<GsymCreatorV2>(1, 1, 8, 8);
 }
 TEST(GSYMTest, TestGsymCreatorV22ByteAddrOffsets) {
   TestGsymCreatorAddrOffsetsImpl<GsymCreatorV2>(2, 2, 8, 8);
 }
+TEST(GSYMTest, TestGsymCreatorV23ByteAddrOffsets) {
+  TestGsymCreatorAddrOffsetsImpl<GsymCreatorV2>(3, 4, 8, 8);
+}
 TEST(GSYMTest, TestGsymCreatorV24ByteAddrOffsets) {
   TestGsymCreatorAddrOffsetsImpl<GsymCreatorV2>(4, 4, 8, 8);
+}
+TEST(GSYMTest, TestGsymCreatorV25ByteAddrOffsets) {
+  TestGsymCreatorAddrOffsetsImpl<GsymCreatorV2>(5, 8, 8, 8);
+}
+TEST(GSYMTest, TestGsymCreatorV26ByteAddrOffsets) {
+  TestGsymCreatorAddrOffsetsImpl<GsymCreatorV2>(6, 8, 8, 8);
+}
+TEST(GSYMTest, TestGsymCreatorV27ByteAddrOffsets) {
+  TestGsymCreatorAddrOffsetsImpl<GsymCreatorV2>(7, 8, 8, 8);
 }
 TEST(GSYMTest, TestGsymCreatorV28ByteAddrOffsets) {
   TestGsymCreatorAddrOffsetsImpl<GsymCreatorV2>(8, 8, 8, 8);
@@ -1406,7 +1419,7 @@ TEST(GSYMTest, TestGsymLookupsV2) {
   TestGsymLookups<GsymCreatorV2>(llvm::endianness::big);
 }
 
-TEST(GSYMTest, TestDWARFFunctionWithAddresses) {
+template <typename CreatorT> static void TestDWARFFunctionWithAddresses() {
   // Create a single compile unit with a single function and make sure it gets
   // converted to DWARF correctly. The function's address range is in where
   // DW_AT_low_pc and DW_AT_high_pc are both addresses.
@@ -1463,7 +1476,7 @@ TEST(GSYMTest, TestDWARFFunctionWithAddresses) {
   ASSERT_TRUE(DwarfContext.get() != nullptr);
   auto &OS = llvm::nulls();
   OutputAggregator OSAgg(&OS);
-  GsymCreatorV1 GC;
+  CreatorT GC;
   DwarfTransformer DT(*DwarfContext, GC);
   const uint32_t ThreadCount = 1;
   ASSERT_THAT_ERROR(DT.convert(ThreadCount, OSAgg), Succeeded());
@@ -1472,19 +1485,30 @@ TEST(GSYMTest, TestDWARFFunctionWithAddresses) {
   raw_svector_ostream OutStrm(Str);
   const auto ByteOrder = llvm::endianness::native;
   FileWriter FW(OutStrm, ByteOrder);
+  FW.setStringOffsetSize(GC.getStringOffsetSize());
   ASSERT_THAT_ERROR(GC.encode(FW), Succeeded());
-  Expected<GsymReaderV1> GR = GsymReaderV1::copyBuffer(OutStrm.str());
+  // Auto-detects the GSYM version and create the corresponding GsymReader
+  auto GR = GsymReader::copyBuffer(OutStrm.str());
   ASSERT_THAT_EXPECTED(GR, Succeeded());
+  const GsymReader &Reader = **GR;
   // There should only be one function in our GSYM.
-  EXPECT_EQ(GR->getNumAddresses(), 1u);
-  auto ExpFI = GR->getFunctionInfo(0x1000);
+  EXPECT_EQ(Reader.getNumAddresses(), 1u);
+  auto ExpFI = Reader.getFunctionInfo(0x1000);
   ASSERT_THAT_EXPECTED(ExpFI, Succeeded());
   ASSERT_EQ(ExpFI->Range, AddressRange(0x1000, 0x2000));
   EXPECT_FALSE(ExpFI->OptLineTable.has_value());
   EXPECT_FALSE(ExpFI->Inline.has_value());
 }
 
-TEST(GSYMTest, TestDWARFFunctionWithAddressAndOffset) {
+TEST(GSYMTest, TestDWARFFunctionWithAddresses) {
+  TestDWARFFunctionWithAddresses<GsymCreatorV1>();
+}
+TEST(GSYMTest, TestDWARFFunctionWithAddressesV2) {
+  TestDWARFFunctionWithAddresses<GsymCreatorV2>();
+}
+
+template <typename CreatorT>
+static void TestDWARFFunctionWithAddressAndOffset() {
   // Create a single compile unit with a single function and make sure it gets
   // converted to DWARF correctly. The function's address range is in where
   // DW_AT_low_pc is an address and the DW_AT_high_pc is an offset.
@@ -1541,7 +1565,7 @@ TEST(GSYMTest, TestDWARFFunctionWithAddressAndOffset) {
   ASSERT_TRUE(DwarfContext.get() != nullptr);
   auto &OS = llvm::nulls();
   OutputAggregator OSAgg(&OS);
-  GsymCreatorV1 GC;
+  CreatorT GC;
   DwarfTransformer DT(*DwarfContext, GC);
   const uint32_t ThreadCount = 1;
   ASSERT_THAT_ERROR(DT.convert(ThreadCount, OSAgg), Succeeded());
@@ -1550,19 +1574,28 @@ TEST(GSYMTest, TestDWARFFunctionWithAddressAndOffset) {
   raw_svector_ostream OutStrm(Str);
   const auto ByteOrder = llvm::endianness::native;
   FileWriter FW(OutStrm, ByteOrder);
+  FW.setStringOffsetSize(GC.getStringOffsetSize());
   ASSERT_THAT_ERROR(GC.encode(FW), Succeeded());
-  Expected<GsymReaderV1> GR = GsymReaderV1::copyBuffer(OutStrm.str());
+  auto GR = GsymReader::copyBuffer(OutStrm.str());
   ASSERT_THAT_EXPECTED(GR, Succeeded());
+  const GsymReader &Reader = **GR;
   // There should only be one function in our GSYM.
-  EXPECT_EQ(GR->getNumAddresses(), 1u);
-  auto ExpFI = GR->getFunctionInfo(0x1000);
+  EXPECT_EQ(Reader.getNumAddresses(), 1u);
+  auto ExpFI = Reader.getFunctionInfo(0x1000);
   ASSERT_THAT_EXPECTED(ExpFI, Succeeded());
   ASSERT_EQ(ExpFI->Range, AddressRange(0x1000, 0x2000));
   EXPECT_FALSE(ExpFI->OptLineTable.has_value());
   EXPECT_FALSE(ExpFI->Inline.has_value());
 }
 
-TEST(GSYMTest, TestDWARFStructMethodNoMangled) {
+TEST(GSYMTest, TestDWARFFunctionWithAddressAndOffset) {
+  TestDWARFFunctionWithAddressAndOffset<GsymCreatorV1>();
+}
+TEST(GSYMTest, TestDWARFFunctionWithAddressAndOffsetV2) {
+  TestDWARFFunctionWithAddressAndOffset<GsymCreatorV2>();
+}
+
+template <typename CreatorT> static void TestDWARFStructMethodNoMangled() {
   // Sometimes the compiler will omit the mangled name in the DWARF for static
   // and member functions of classes and structs. This test verifies that the
   // fully qualified name of the method is computed and used as the string for
@@ -1649,7 +1682,7 @@ TEST(GSYMTest, TestDWARFStructMethodNoMangled) {
   ASSERT_TRUE(DwarfContext.get() != nullptr);
   auto &OS = llvm::nulls();
   OutputAggregator OSAgg(&OS);
-  GsymCreatorV1 GC;
+  CreatorT GC;
   DwarfTransformer DT(*DwarfContext, GC);
   const uint32_t ThreadCount = 1;
   ASSERT_THAT_ERROR(DT.convert(ThreadCount, OSAgg), Succeeded());
@@ -1658,21 +1691,30 @@ TEST(GSYMTest, TestDWARFStructMethodNoMangled) {
   raw_svector_ostream OutStrm(Str);
   const auto ByteOrder = llvm::endianness::native;
   FileWriter FW(OutStrm, ByteOrder);
+  FW.setStringOffsetSize(GC.getStringOffsetSize());
   ASSERT_THAT_ERROR(GC.encode(FW), Succeeded());
-  Expected<GsymReaderV1> GR = GsymReaderV1::copyBuffer(OutStrm.str());
+  auto GR = GsymReader::copyBuffer(OutStrm.str());
   ASSERT_THAT_EXPECTED(GR, Succeeded());
+  const GsymReader &Reader = **GR;
   // There should only be one function in our GSYM.
-  EXPECT_EQ(GR->getNumAddresses(), 1u);
-  auto ExpFI = GR->getFunctionInfo(0x1000);
+  EXPECT_EQ(Reader.getNumAddresses(), 1u);
+  auto ExpFI = Reader.getFunctionInfo(0x1000);
   ASSERT_THAT_EXPECTED(ExpFI, Succeeded());
   ASSERT_EQ(ExpFI->Range, AddressRange(0x1000, 0x2000));
   EXPECT_FALSE(ExpFI->OptLineTable.has_value());
   EXPECT_FALSE(ExpFI->Inline.has_value());
-  StringRef MethodName = GR->getString(ExpFI->Name);
+  StringRef MethodName = Reader.getString(ExpFI->Name);
   EXPECT_EQ(MethodName, "Foo::dump");
 }
 
-TEST(GSYMTest, TestDWARFTextRanges) {
+TEST(GSYMTest, TestDWARFStructMethodNoMangled) {
+  TestDWARFStructMethodNoMangled<GsymCreatorV1>();
+}
+TEST(GSYMTest, TestDWARFStructMethodNoMangledV2) {
+  TestDWARFStructMethodNoMangled<GsymCreatorV2>();
+}
+
+template <typename CreatorT> static void TestDWARFTextRanges() {
   // Linkers don't understand DWARF, they just like to concatenate and
   // relocate data within the DWARF sections. This means that if a function
   // gets dead stripped, and if those functions use an offset as the
@@ -1750,7 +1792,7 @@ TEST(GSYMTest, TestDWARFTextRanges) {
   ASSERT_TRUE(DwarfContext.get() != nullptr);
   auto &OS = llvm::nulls();
   OutputAggregator OSAgg(&OS);
-  GsymCreatorV1 GC;
+  CreatorT GC;
   DwarfTransformer DT(*DwarfContext, GC);
   // Only allow addresses between [0x1000 - 0x2000) to be linked into the
   // GSYM.
@@ -1764,25 +1806,31 @@ TEST(GSYMTest, TestDWARFTextRanges) {
   raw_svector_ostream OutStrm(Str);
   const auto ByteOrder = llvm::endianness::native;
   FileWriter FW(OutStrm, ByteOrder);
+  FW.setStringOffsetSize(GC.getStringOffsetSize());
   ASSERT_THAT_ERROR(GC.encode(FW), Succeeded());
-  Expected<GsymReaderV1> GR = GsymReaderV1::copyBuffer(OutStrm.str());
+  auto GR = GsymReader::copyBuffer(OutStrm.str());
   ASSERT_THAT_EXPECTED(GR, Succeeded());
+  const GsymReader &Reader = **GR;
   // There should only be one function in our GSYM.
-  EXPECT_EQ(GR->getNumAddresses(), 1u);
-  auto ExpFI = GR->getFunctionInfo(0x1000);
+  EXPECT_EQ(Reader.getNumAddresses(), 1u);
+  auto ExpFI = Reader.getFunctionInfo(0x1000);
   ASSERT_THAT_EXPECTED(ExpFI, Succeeded());
   ASSERT_EQ(ExpFI->Range, AddressRange(0x1000, 0x2000));
   EXPECT_FALSE(ExpFI->OptLineTable.has_value());
   EXPECT_FALSE(ExpFI->Inline.has_value());
-  StringRef MethodName = GR->getString(ExpFI->Name);
+  StringRef MethodName = Reader.getString(ExpFI->Name);
   EXPECT_EQ(MethodName, "main");
 }
 
-TEST(GSYMTest, TestEmptySymbolEndAddressOfTextRanges) {
+TEST(GSYMTest, TestDWARFTextRanges) { TestDWARFTextRanges<GsymCreatorV1>(); }
+TEST(GSYMTest, TestDWARFTextRangesV2) { TestDWARFTextRanges<GsymCreatorV2>(); }
+
+template <typename CreatorT>
+static void TestEmptySymbolEndAddressOfTextRanges() {
   // Test that if we have valid text ranges and we have a symbol with no size
   // as the last FunctionInfo entry that the size of the symbol gets set to the
   // end address of the text range.
-  GsymCreatorV1 GC;
+  CreatorT GC;
   AddressRanges TextRanges;
   TextRanges.insert(AddressRange(0x1000, 0x2000));
   GC.SetValidTextRanges(TextRanges);
@@ -1793,21 +1841,30 @@ TEST(GSYMTest, TestEmptySymbolEndAddressOfTextRanges) {
   raw_svector_ostream OutStrm(Str);
   const auto ByteOrder = llvm::endianness::native;
   FileWriter FW(OutStrm, ByteOrder);
+  FW.setStringOffsetSize(GC.getStringOffsetSize());
   ASSERT_THAT_ERROR(GC.encode(FW), Succeeded());
-  Expected<GsymReaderV1> GR = GsymReaderV1::copyBuffer(OutStrm.str());
+  auto GR = GsymReader::copyBuffer(OutStrm.str());
   ASSERT_THAT_EXPECTED(GR, Succeeded());
+  const GsymReader &Reader = **GR;
   // There should only be one function in our GSYM.
-  EXPECT_EQ(GR->getNumAddresses(), 1u);
-  auto ExpFI = GR->getFunctionInfo(0x1500);
+  EXPECT_EQ(Reader.getNumAddresses(), 1u);
+  auto ExpFI = Reader.getFunctionInfo(0x1500);
   ASSERT_THAT_EXPECTED(ExpFI, Succeeded());
   ASSERT_EQ(ExpFI->Range, AddressRange(0x1500, 0x2000));
   EXPECT_FALSE(ExpFI->OptLineTable.has_value());
   EXPECT_FALSE(ExpFI->Inline.has_value());
-  StringRef MethodName = GR->getString(ExpFI->Name);
+  StringRef MethodName = Reader.getString(ExpFI->Name);
   EXPECT_EQ(MethodName, "symbol");
 }
 
-TEST(GSYMTest, TestDWARFInlineInfo) {
+TEST(GSYMTest, TestEmptySymbolEndAddressOfTextRanges) {
+  TestEmptySymbolEndAddressOfTextRanges<GsymCreatorV1>();
+}
+TEST(GSYMTest, TestEmptySymbolEndAddressOfTextRangesV2) {
+  TestEmptySymbolEndAddressOfTextRanges<GsymCreatorV2>();
+}
+
+template <typename CreatorT> static void TestDWARFInlineInfo() {
   // Make sure we parse the line table and inline information correctly from
   // DWARF.
   StringRef yamldata = R"(
@@ -1954,7 +2011,7 @@ TEST(GSYMTest, TestDWARFInlineInfo) {
   ASSERT_TRUE(DwarfContext.get() != nullptr);
   auto &OS = llvm::nulls();
   OutputAggregator OSAgg(&OS);
-  GsymCreatorV1 GC;
+  CreatorT GC;
   DwarfTransformer DT(*DwarfContext, GC);
   const uint32_t ThreadCount = 1;
   ASSERT_THAT_ERROR(DT.convert(ThreadCount, OSAgg), Succeeded());
@@ -1963,57 +2020,61 @@ TEST(GSYMTest, TestDWARFInlineInfo) {
   raw_svector_ostream OutStrm(Str);
   const auto ByteOrder = llvm::endianness::native;
   FileWriter FW(OutStrm, ByteOrder);
+  FW.setStringOffsetSize(GC.getStringOffsetSize());
   ASSERT_THAT_ERROR(GC.encode(FW), Succeeded());
-  Expected<GsymReaderV1> GR = GsymReaderV1::copyBuffer(OutStrm.str());
+  auto GR = GsymReader::copyBuffer(OutStrm.str());
   ASSERT_THAT_EXPECTED(GR, Succeeded());
+  const GsymReader &Reader = **GR;
   // There should only be one function in our GSYM.
-  EXPECT_EQ(GR->getNumAddresses(), 1u);
-  auto ExpFI = GR->getFunctionInfo(0x1000);
+  EXPECT_EQ(Reader.getNumAddresses(), 1u);
+  auto ExpFI = Reader.getFunctionInfo(0x1000);
   ASSERT_THAT_EXPECTED(ExpFI, Succeeded());
   ASSERT_EQ(ExpFI->Range, AddressRange(0x1000, 0x2000));
   EXPECT_TRUE(ExpFI->OptLineTable.has_value());
   EXPECT_TRUE(ExpFI->Inline.has_value());
-  StringRef MethodName = GR->getString(ExpFI->Name);
+  StringRef MethodName = Reader.getString(ExpFI->Name);
   EXPECT_EQ(MethodName, "main");
 
     // Verify inline info is correct when doing lookups.
-  auto LR = GR->lookup(0x1000);
+  auto LR = Reader.lookup(0x1000);
   ASSERT_THAT_EXPECTED(LR, Succeeded());
   EXPECT_THAT(LR->Locations,
     testing::ElementsAre(SourceLocation{"main", "/tmp", "main.c", 10}));
-  LR = GR->lookup(0x1100-1);
+  LR = Reader.lookup(0x1100 - 1);
   ASSERT_THAT_EXPECTED(LR, Succeeded());
   EXPECT_THAT(LR->Locations,
     testing::ElementsAre(SourceLocation{"main", "/tmp", "main.c", 10, 255}));
 
-  LR = GR->lookup(0x1100);
+  LR = Reader.lookup(0x1100);
   ASSERT_THAT_EXPECTED(LR, Succeeded());
   EXPECT_THAT(LR->Locations,
     testing::ElementsAre(SourceLocation{"inline1", "/tmp", "inline.h", 20},
                          SourceLocation{"main", "/tmp", "main.c", 10, 256}));
-  LR = GR->lookup(0x1180-1);
+  LR = Reader.lookup(0x1180 - 1);
   ASSERT_THAT_EXPECTED(LR, Succeeded());
   EXPECT_THAT(LR->Locations,
     testing::ElementsAre(SourceLocation{"inline1", "/tmp", "inline.h", 20, 127},
                          SourceLocation{"main", "/tmp", "main.c", 10, 383}));
-  LR = GR->lookup(0x1180);
+  LR = Reader.lookup(0x1180);
   ASSERT_THAT_EXPECTED(LR, Succeeded());
   EXPECT_THAT(LR->Locations,
     testing::ElementsAre(SourceLocation{"inline1", "/tmp", "inline.h", 21, 128},
                          SourceLocation{"main", "/tmp", "main.c", 10, 384}));
-  LR = GR->lookup(0x1200-1);
+  LR = Reader.lookup(0x1200 - 1);
   ASSERT_THAT_EXPECTED(LR, Succeeded());
   EXPECT_THAT(LR->Locations,
     testing::ElementsAre(SourceLocation{"inline1", "/tmp", "inline.h", 21, 255},
                          SourceLocation{"main", "/tmp", "main.c", 10, 511}));
-  LR = GR->lookup(0x1200);
+  LR = Reader.lookup(0x1200);
   ASSERT_THAT_EXPECTED(LR, Succeeded());
   EXPECT_THAT(LR->Locations,
     testing::ElementsAre(SourceLocation{"main", "/tmp", "main.c", 11, 512}));
 }
 
+TEST(GSYMTest, TestDWARFInlineInfo) { TestDWARFInlineInfo<GsymCreatorV1>(); }
+TEST(GSYMTest, TestDWARFInlineInfoV2) { TestDWARFInlineInfo<GsymCreatorV2>(); }
 
-TEST(GSYMTest, TestDWARFNoLines) {
+template <typename CreatorT> static void TestDWARFNoLines() {
   // Check that if a DW_TAG_subprogram doesn't have line table entries that
   // we fall back and use the DW_AT_decl_file and DW_AT_decl_line to at least
   // point to the function definition. This DWARF file has 4 functions:
@@ -2215,7 +2276,7 @@ TEST(GSYMTest, TestDWARFNoLines) {
   ASSERT_TRUE(DwarfContext.get() != nullptr);
   auto &OS = llvm::nulls();
   OutputAggregator OSAgg(&OS);
-  GsymCreatorV1 GC;
+  CreatorT GC;
   DwarfTransformer DT(*DwarfContext, GC);
   const uint32_t ThreadCount = 1;
   ASSERT_THAT_ERROR(DT.convert(ThreadCount, OSAgg), Succeeded());
@@ -2224,17 +2285,19 @@ TEST(GSYMTest, TestDWARFNoLines) {
   raw_svector_ostream OutStrm(Str);
   const auto ByteOrder = llvm::endianness::native;
   FileWriter FW(OutStrm, ByteOrder);
+  FW.setStringOffsetSize(GC.getStringOffsetSize());
   ASSERT_THAT_ERROR(GC.encode(FW), Succeeded());
-  Expected<GsymReaderV1> GR = GsymReaderV1::copyBuffer(OutStrm.str());
+  auto GR = GsymReader::copyBuffer(OutStrm.str());
   ASSERT_THAT_EXPECTED(GR, Succeeded());
+  const GsymReader &Reader = **GR;
 
-  EXPECT_EQ(GR->getNumAddresses(), 4u);
+  EXPECT_EQ(Reader.getNumAddresses(), 4u);
 
-  auto ExpFI = GR->getFunctionInfo(0x1000);
+  auto ExpFI = Reader.getFunctionInfo(0x1000);
   ASSERT_THAT_EXPECTED(ExpFI, Succeeded());
   ASSERT_EQ(ExpFI->Range, AddressRange(0x1000, 0x2000));
   EXPECT_TRUE(ExpFI->OptLineTable);
-  StringRef MethodName = GR->getString(ExpFI->Name);
+  StringRef MethodName = Reader.getString(ExpFI->Name);
   EXPECT_EQ(MethodName, "lines_no_decl");
   // Make sure have two line table entries and that get the first line entry
   // correct.
@@ -2242,11 +2305,11 @@ TEST(GSYMTest, TestDWARFNoLines) {
   EXPECT_EQ(ExpFI->OptLineTable->first()->Addr, 0x1000u);
   EXPECT_EQ(ExpFI->OptLineTable->first()->Line, 11u);
 
-  ExpFI = GR->getFunctionInfo(0x2000);
+  ExpFI = Reader.getFunctionInfo(0x2000);
   ASSERT_THAT_EXPECTED(ExpFI, Succeeded());
   ASSERT_EQ(ExpFI->Range, AddressRange(0x2000, 0x3000));
   EXPECT_TRUE(ExpFI->OptLineTable);
-  MethodName = GR->getString(ExpFI->Name);
+  MethodName = Reader.getString(ExpFI->Name);
   EXPECT_EQ(MethodName, "lines_with_decl");
   // Make sure have two line table entries and that we don't use line 20
   // from the DW_AT_decl_file/line as a line table entry.
@@ -2254,19 +2317,19 @@ TEST(GSYMTest, TestDWARFNoLines) {
   EXPECT_EQ(ExpFI->OptLineTable->first()->Addr, 0x2000u);
   EXPECT_EQ(ExpFI->OptLineTable->first()->Line, 21u);
 
-  ExpFI = GR->getFunctionInfo(0x3000);
+  ExpFI = Reader.getFunctionInfo(0x3000);
   ASSERT_THAT_EXPECTED(ExpFI, Succeeded());
   ASSERT_EQ(ExpFI->Range, AddressRange(0x3000, 0x4000));
   // Make sure we have no line table.
   EXPECT_FALSE(ExpFI->OptLineTable.has_value());
-  MethodName = GR->getString(ExpFI->Name);
+  MethodName = Reader.getString(ExpFI->Name);
   EXPECT_EQ(MethodName, "no_lines_no_decl");
 
-  ExpFI = GR->getFunctionInfo(0x4000);
+  ExpFI = Reader.getFunctionInfo(0x4000);
   ASSERT_THAT_EXPECTED(ExpFI, Succeeded());
   ASSERT_EQ(ExpFI->Range, AddressRange(0x4000, 0x5000));
   EXPECT_TRUE(ExpFI->OptLineTable.has_value());
-  MethodName = GR->getString(ExpFI->Name);
+  MethodName = Reader.getString(ExpFI->Name);
   EXPECT_EQ(MethodName, "no_lines_with_decl");
   // Make sure we have one line table entry that uses the DW_AT_decl_file/line
   // as the one and only line entry.
@@ -2275,8 +2338,10 @@ TEST(GSYMTest, TestDWARFNoLines) {
   EXPECT_EQ(ExpFI->OptLineTable->first()->Line, 40u);
 }
 
+TEST(GSYMTest, TestDWARFNoLines) { TestDWARFNoLines<GsymCreatorV1>(); }
+TEST(GSYMTest, TestDWARFNoLinesV2) { TestDWARFNoLines<GsymCreatorV2>(); }
 
-TEST(GSYMTest, TestDWARFDeadStripAddr4) {
+template <typename CreatorT> static void TestDWARFDeadStripAddr4() {
   // Check that various techniques that compilers use for dead code stripping
   // work for 4 byte addresses. Make sure we keep the good functions and
   // strip any functions whose name starts with "stripped".
@@ -2395,7 +2460,7 @@ TEST(GSYMTest, TestDWARFDeadStripAddr4) {
   ASSERT_TRUE(DwarfContext.get() != nullptr);
   auto &OS = llvm::nulls();
   OutputAggregator OSAgg(&OS);
-  GsymCreatorV1 GC;
+  CreatorT GC;
   DwarfTransformer DT(*DwarfContext, GC);
   const uint32_t ThreadCount = 1;
   ASSERT_THAT_ERROR(DT.convert(ThreadCount, OSAgg), Succeeded());
@@ -2404,20 +2469,29 @@ TEST(GSYMTest, TestDWARFDeadStripAddr4) {
   raw_svector_ostream OutStrm(Str);
   const auto ByteOrder = llvm::endianness::native;
   FileWriter FW(OutStrm, ByteOrder);
+  FW.setStringOffsetSize(GC.getStringOffsetSize());
   ASSERT_THAT_ERROR(GC.encode(FW), Succeeded());
-  Expected<GsymReaderV1> GR = GsymReaderV1::copyBuffer(OutStrm.str());
+  auto GR = GsymReader::copyBuffer(OutStrm.str());
   ASSERT_THAT_EXPECTED(GR, Succeeded());
+  const GsymReader &Reader = **GR;
 
   // Test that the only function that made it was the "main" function.
-  EXPECT_EQ(GR->getNumAddresses(), 1u);
-  auto ExpFI = GR->getFunctionInfo(0x1000);
+  EXPECT_EQ(Reader.getNumAddresses(), 1u);
+  auto ExpFI = Reader.getFunctionInfo(0x1000);
   ASSERT_THAT_EXPECTED(ExpFI, Succeeded());
   ASSERT_EQ(ExpFI->Range, AddressRange(0x1000, 0x2000));
-  StringRef MethodName = GR->getString(ExpFI->Name);
+  StringRef MethodName = Reader.getString(ExpFI->Name);
   EXPECT_EQ(MethodName, "main");
 }
 
-TEST(GSYMTest, TestDWARFDeadStripAddr8) {
+TEST(GSYMTest, TestDWARFDeadStripAddr4) {
+  TestDWARFDeadStripAddr4<GsymCreatorV1>();
+}
+TEST(GSYMTest, TestDWARFDeadStripAddr4V2) {
+  TestDWARFDeadStripAddr4<GsymCreatorV2>();
+}
+
+template <typename CreatorT> static void TestDWARFDeadStripAddr8() {
   // Check that various techniques that compilers use for dead code stripping
   // work for 4 byte addresses. Make sure we keep the good functions and
   // strip any functions whose name starts with "stripped".
@@ -2536,7 +2610,7 @@ TEST(GSYMTest, TestDWARFDeadStripAddr8) {
   ASSERT_TRUE(DwarfContext.get() != nullptr);
   auto &OS = llvm::nulls();
   OutputAggregator OSAgg(&OS);
-  GsymCreatorV1 GC;
+  CreatorT GC;
   DwarfTransformer DT(*DwarfContext, GC);
   const uint32_t ThreadCount = 1;
   ASSERT_THAT_ERROR(DT.convert(ThreadCount, OSAgg), Succeeded());
@@ -2545,17 +2619,26 @@ TEST(GSYMTest, TestDWARFDeadStripAddr8) {
   raw_svector_ostream OutStrm(Str);
   const auto ByteOrder = llvm::endianness::native;
   FileWriter FW(OutStrm, ByteOrder);
+  FW.setStringOffsetSize(GC.getStringOffsetSize());
   ASSERT_THAT_ERROR(GC.encode(FW), Succeeded());
-  Expected<GsymReaderV1> GR = GsymReaderV1::copyBuffer(OutStrm.str());
+  auto GR = GsymReader::copyBuffer(OutStrm.str());
   ASSERT_THAT_EXPECTED(GR, Succeeded());
+  const GsymReader &Reader = **GR;
 
   // Test that the only function that made it was the "main" function.
-  EXPECT_EQ(GR->getNumAddresses(), 1u);
-  auto ExpFI = GR->getFunctionInfo(0x1000);
+  EXPECT_EQ(Reader.getNumAddresses(), 1u);
+  auto ExpFI = Reader.getFunctionInfo(0x1000);
   ASSERT_THAT_EXPECTED(ExpFI, Succeeded());
   ASSERT_EQ(ExpFI->Range, AddressRange(0x1000, 0x2000));
-  StringRef MethodName = GR->getString(ExpFI->Name);
+  StringRef MethodName = Reader.getString(ExpFI->Name);
   EXPECT_EQ(MethodName, "main");
+}
+
+TEST(GSYMTest, TestDWARFDeadStripAddr8) {
+  TestDWARFDeadStripAddr8<GsymCreatorV1>();
+}
+TEST(GSYMTest, TestDWARFDeadStripAddr8V2) {
+  TestDWARFDeadStripAddr8<GsymCreatorV2>();
 }
 
 template <typename CreatorT>
