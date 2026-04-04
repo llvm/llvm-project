@@ -412,6 +412,13 @@ KnownBits KnownBits::shl(const KnownBits &LHS, unsigned ShiftAmt, bool NUW,
   unsigned BitWidth = LHS.getBitWidth();
   KnownBits Known(BitWidth);
 
+  if (ShiftAmt >= BitWidth) {
+    Known.setAllZero();
+    if (NUW && NSW)
+      Known.makeNonNegative();
+    return Known;
+  }
+
   if (LHS.isUnknown()) {
     Known.Zero.setLowBits(ShiftAmt);
     if (NUW && NSW)
@@ -428,6 +435,11 @@ KnownBits KnownBits::shl(const KnownBits &LHS, unsigned ShiftAmt, bool NUW,
   }
   Known.Zero = LHS.Zero.ushl_ov(ShiftAmt, ShiftedOutZero);
   Known.Zero.setLowBits(std::min(ShiftAmt, BitWidth));
+  if (NSW && ShiftedOutZero && ShiftedOutOne) {
+    // mixed shifted out means this is always poison.
+    Known.setAllZero();
+    return Known;
+  }
 
   if (NSW) {
     if (NUW)
@@ -437,6 +449,9 @@ KnownBits KnownBits::shl(const KnownBits &LHS, unsigned ShiftAmt, bool NUW,
     else if (ShiftedOutOne)
       Known.makeNegative();
   }
+
+  if (Known.hasConflict())
+    Known.setAllZero();
 
   return Known;
 }
@@ -530,7 +545,6 @@ KnownBits KnownBits::lshr(const KnownBits &LHS, unsigned ShiftAmt) {
     return LHS;
 
   unsigned BitWidth = LHS.getBitWidth();
-
   if (ShiftAmt >= BitWidth) {
     KnownBits Known(BitWidth);
     Known.setAllZero();
@@ -594,11 +608,10 @@ KnownBits KnownBits::lshr(const KnownBits &LHS, const KnownBits &RHS,
 }
 
 KnownBits KnownBits::ashr(const KnownBits &LHS, unsigned ShiftAmt) {
-  unsigned BitWidth = LHS.getBitWidth();
-
   if (ShiftAmt == 0)
     return LHS;
 
+  unsigned BitWidth = LHS.getBitWidth();
   KnownBits Known(BitWidth);
 
   if (ShiftAmt >= BitWidth) {
