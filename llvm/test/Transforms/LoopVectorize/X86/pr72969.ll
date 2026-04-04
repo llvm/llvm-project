@@ -51,13 +51,12 @@ define void @test(ptr %p) {
 ; VEC:       vector.ph:
 ; VEC-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP4]], 8
 ; VEC-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP4]], [[N_MOD_VF]]
+; VEC-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = add i64 1, [[N_VEC]]
 ; VEC-NEXT:    [[DOTCAST:%.*]] = trunc i64 [[N_VEC]] to i16
 ; VEC-NEXT:    [[IND_END:%.*]] = add i16 1, [[DOTCAST]]
 ; VEC-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VEC:       vector.body:
 ; VEC-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; VEC-NEXT:    [[VEC_IND:%.*]] = phi <4 x i16> [ <i16 1, i16 2, i16 3, i16 4>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
-; VEC-NEXT:    [[STEP_ADD:%.*]] = add <4 x i16> [[VEC_IND]], splat (i16 4)
 ; VEC-NEXT:    [[TMP16:%.*]] = add i64 [[INDEX]], 1
 ; VEC-NEXT:    [[TMP17:%.*]] = add i64 [[INDEX]], 2
 ; VEC-NEXT:    [[TMP18:%.*]] = add i64 [[INDEX]], 3
@@ -90,13 +89,9 @@ define void @test(ptr %p) {
 ; VEC-NEXT:    store i64 0, ptr [[TMP37]], align 8
 ; VEC-NEXT:    store i64 0, ptr [[TMP38]], align 8
 ; VEC-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
-; VEC-NEXT:    [[VEC_IND_NEXT]] = add <4 x i16> [[STEP_ADD]], splat (i16 4)
 ; VEC-NEXT:    [[TMP30:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; VEC-NEXT:    br i1 [[TMP30]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; VEC:       middle.block:
-; VEC-NEXT:    [[TMP42:%.*]] = add <4 x i16> [[STEP_ADD]], splat (i16 1)
-; VEC-NEXT:    [[TMP28:%.*]] = zext <4 x i16> [[TMP42]] to <4 x i64>
-; VEC-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i64> [[TMP28]], i64 3
 ; VEC-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP4]], [[N_VEC]]
 ; VEC-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; VEC:       scalar.ph:
