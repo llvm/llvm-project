@@ -538,6 +538,7 @@ ComplexPairTy ComplexExprEmitter::EmitScalarToComplexCast(llvm::Value *Val,
 
 ComplexPairTy ComplexExprEmitter::EmitCast(CastKind CK, Expr *Op,
                                            QualType DestTy) {
+  DestTy = DestTy.getAtomicUnqualifiedType();
   switch (CK) {
   case CK_Dependent:
     llvm_unreachable("dependent cast kind in IR gen!");
@@ -1219,9 +1220,7 @@ LValue ComplexExprEmitter::EmitCompoundAssignLValue(
     ComplexPairTy (ComplexExprEmitter::*Func)(const BinOpInfo &), RValue &Val) {
   TestAndClearIgnoreReal();
   TestAndClearIgnoreImag();
-  QualType LHSTy = E->getLHS()->getType();
-  if (const AtomicType *AT = LHSTy->getAs<AtomicType>())
-    LHSTy = AT->getValueType();
+  QualType LHSTy = E->getLHS()->getType().getAtomicUnqualifiedType();
 
   BinOpInfo OpInfo;
   OpInfo.FPFeatures = E->getFPFeaturesInEffect(CGF.getLangOpts());
