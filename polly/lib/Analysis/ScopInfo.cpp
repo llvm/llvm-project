@@ -1635,7 +1635,6 @@ std::unique_ptr<Scop> Scop::makeScop(Region &R, ScalarEvolution &SE,
                                      LoopInfo &LI, DominatorTree &DT,
                                      ScopDetection::DetectionContext &DC,
                                      OptimizationRemarkEmitter &ORE, int ID) {
-  ;
   return std::unique_ptr<Scop>{new Scop(R, SE, LI, DT, DC, ORE, ID)};
 }
 
