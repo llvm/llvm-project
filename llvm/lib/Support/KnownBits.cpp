@@ -414,8 +414,6 @@ KnownBits KnownBits::shl(const KnownBits &LHS, unsigned ShiftAmt, bool NUW,
 
   if (ShiftAmt >= BitWidth) {
     Known.setAllZero();
-    if (NUW && NSW)
-      Known.makeNonNegative();
     return Known;
   }
 
@@ -434,7 +432,7 @@ KnownBits KnownBits::shl(const KnownBits &LHS, unsigned ShiftAmt, bool NUW,
     return Known;
   }
   Known.Zero = LHS.Zero.ushl_ov(ShiftAmt, ShiftedOutZero);
-  Known.Zero.setLowBits(std::min(ShiftAmt, BitWidth));
+  Known.Zero.setLowBits(ShiftAmt);
   if (NSW && ShiftedOutZero && ShiftedOutOne) {
     // mixed shifted out means this is always poison.
     Known.setAllZero();
