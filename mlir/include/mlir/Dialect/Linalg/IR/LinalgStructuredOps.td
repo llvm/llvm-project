@@ -551,6 +551,15 @@ def ElementwiseOp : LinalgStructuredBase_Op<"elementwise", [
     operation kind can be unary (e.g. max), binary (e.g. add) or ternary
     (e.g. select).
 
+    The optional `compute_element_type` attribute specifies the element type
+    used for the computation, allowing the operation to be evaluated at a
+    different precision than the input and result element types. If specified,
+    the input operands are converted to `compute_element_type` prior to
+    computation (e.g. upcasting from `f16` to `f32`). If the result element
+    type differs from`compute_element_type`, the computed value is converted
+    back to the result type. If `compute_element_type` is not provided then
+    input and output types must match.
+
     By default, all indexing maps are identities. In the case of default
     indexing map, all input and output shapes must match. The number of dims in
     each of the identity maps is equal to the rank of the output type.
@@ -589,7 +598,8 @@ def ElementwiseOp : LinalgStructuredBase_Op<"elementwise", [
       Variadic<AnyType>:$inputs,
       Variadic<AnyShaped>:$outputs,
       ElementwiseKindAttr:$kind,
-      DefaultValuedOptionalAttr<AffineMapArrayAttr, "{}">:$indexing_maps
+      DefaultValuedOptionalAttr<AffineMapArrayAttr, "{}">:$indexing_maps,
+      OptionalAttr<TypeAttr>:$compute_element_type
     );
 
   let results = (outs Variadic<AnyRankedTensor>:$result_tensors);
@@ -619,11 +629,22 @@ def ElementwiseOp : LinalgStructuredBase_Op<"elementwise", [
 
   let hasCustomAssemblyFormat = 1;
   let hasFolder = 1;
+  let hasVerifier = 1;
 
   let extraClassDeclaration = structuredOpsBaseDecls # [{
       /// Get the arity enum corresponding to the kind of op, e.g. if arg is
       /// `ElementwiseKind::add`, return `ElementwiseArityGroup::Binary`.
       static ElementwiseArityGroup getArityGroup(ElementwiseKind n);
+
+      /// Return the `compute_element_type` inferred from result type.
+      Type getDefaultComputeElementType();
+
+      /// Return user-defined or default `compute_element_type`.
+      Type getEffectiveComputeElementType();
+
+      /// Returns `true` if inputs and result types do not match
+      /// and therefore the user must provide the compute type.
+      bool needsUserDefinedComputeElementType();
 
       /// Both user-specified and default indexing map will always depend on
       /// the current Op instance.

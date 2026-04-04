@@ -163,3 +163,28 @@ func.func @ternary(%A : tensor<32x16xi1>, %B: tensor<8x16x32xf32>, %C : tensor<8
       outs(%D: tensor<8x16x32xf32>) -> tensor<8x16x32xf32>
   return %r : tensor<8x16x32xf32>
 }
+// -----
+// CHECK-DAG: #[[IDENTITY:.+]] = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
+//
+// CHECK: @unary_upcast_exp(%[[A:.+]]: tensor<8x16x32xf16>, %[[B:.+]]: tensor<8x16x32xf32>)
+// CHECK: linalg.generic
+// CHECK-SAME: indexing_maps = [#[[IDENTITY]], #[[IDENTITY]]]
+// CHECK-SAME: iterator_types = ["parallel", "parallel", "parallel"]
+//
+// CHECK-SAME: ins(%[[A]]
+// CHECK-SAME: outs(%[[B]]
+//
+// CHECK: ^{{.*}}(%[[IN:.+]]: f16, %[[OUT:.+]]: f32)
+// CHECK:   %[[EXT:.+]] = arith.extf %[[IN]] : f16 to f32
+// CHECK:   %[[EXP:.+]] = math.exp %[[EXT]] : f32
+// CHECK:   linalg.yield %[[EXP]] : f32
+//
+func.func @unary_upcast_exp(%A : tensor<8x16x32xf16>, %B : tensor<8x16x32xf32>) -> tensor<8x16x32xf32> {
+  %r = linalg.elementwise
+      kind = #linalg.elementwise_kind<exp>
+      compute_element_type = f32
+      ins(%A : tensor<8x16x32xf16>)
+      outs(%B : tensor<8x16x32xf32>)
+      -> tensor<8x16x32xf32>
+  return %r : tensor<8x16x32xf32>
+}

@@ -44,6 +44,7 @@
 #include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/InterleavedRange.h"
 #include "llvm/Support/LogicalResult.h"
@@ -4820,6 +4821,51 @@ ElementwiseOp::getDefaultIndexingMaps(unsigned numMaps, unsigned numDims,
   return SmallVector<AffineMap>(numMaps, map);
 }
 
+bool ElementwiseOp::needsUserDefinedComputeElementType() {
+  auto getElemType = [](Type t) { return getElementTypeOrSelf(t); };
+
+  auto inputs = getInputs();
+  Type resultElemType = getElemType(getOutputs().front().getType());
+
+  switch (inputs.size()) {
+  case 1: {
+    // One input, must match result element type.
+    Type inputElemType = getElemType(inputs.front().getType());
+    return inputElemType != resultElemType;
+  }
+
+  case 2: {
+    // Both inputs must match result element type.
+    Type lhsElemType = getElemType(inputs[0].getType());
+    Type rhsElemType = getElemType(inputs[1].getType());
+    return lhsElemType != resultElemType || rhsElemType != resultElemType;
+  }
+
+  case 3: {
+    // Second and third inputs must match result element type.
+    // The first operand may be control / predicate / mask.
+    Type secondElemType = getElemType(inputs[1].getType());
+    Type thirdElemType = getElemType(inputs[2].getType());
+    return secondElemType != resultElemType || thirdElemType != resultElemType;
+  }
+  }
+
+  llvm_unreachable("unknown elementwise arity");
+}
+
+Type ElementwiseOp::getDefaultComputeElementType() {
+  auto out = getOutputs().front();
+  if (auto shaped = llvm::dyn_cast<ShapedType>(out.getType()))
+    return shaped.getElementType();
+  return {};
+}
+
+Type ElementwiseOp::getEffectiveComputeElementType() {
+  if (auto attr = getComputeElementTypeAttr())
+    return attr.getValue();
+  return getDefaultComputeElementType();
+}
+
 ParseResult ElementwiseOp::parse(OpAsmParser &parser, OperationState &result) {
   // Expect e.g. `kind = #linalg.elemwise_kind<add>`
   Attribute attr;
@@ -4839,6 +4885,16 @@ ParseResult ElementwiseOp::parse(OpAsmParser &parser, OperationState &result) {
   }
   result.addAttribute(
       "kind", ElementwiseKindAttr::get(parser.getContext(), elemwiseKindVal));
+
+  // Parse the optional 'compute_element_type = <type>'.
+  if (succeeded(parser.parseOptionalKeyword("compute_element_type"))) {
+    if (parser.parseEqual())
+      return failure();
+    Type compType;
+    if (parser.parseType(compType))
+      return failure();
+    result.addAttribute("compute_element_type", TypeAttr::get(compType));
+  }
 
   // Parse optional `indexing_maps`
   SmallVector<Attribute, 3> indexingMapsAttr;
@@ -4896,8 +4952,16 @@ ParseResult ElementwiseOp::parse(OpAsmParser &parser, OperationState &result) {
 void ElementwiseOp::print(OpAsmPrinter &p) {
   p << " kind=";
   p.printAttribute(getKindAttr());
-  SmallVector<StringRef, 3> elidedAttrs = {"operandSegmentSizes", "kind",
-                                           "indexing_maps"};
+
+  // print `compute element type` only if it cannot be inferred unambiguously.
+  if (needsUserDefinedComputeElementType()) {
+    Type computeType = getEffectiveComputeElementType();
+    p << " compute_element_type=" << computeType;
+  }
+
+  SmallVector<StringRef, 4> elidedAttrs = {
+      "operandSegmentSizes", "kind", "compute_element_type", "indexing_maps"};
+
   unsigned arity =
       getArityGroupAsUInt(getArityGroupAndKind(getKind()).arityGroup);
   unsigned numDims = getResultRank();
@@ -4914,8 +4978,8 @@ void ElementwiseOp::print(OpAsmPrinter &p) {
                          elidedAttrs);
 }
 
-/// Implements the block region builder for the ElementwiseOp. This is called by
-/// 'fillStructuredOpRegion'.
+/// Implements the block region builder for the ElementwiseOp.
+/// This is called by 'fillStructuredOpRegion'.
 void ElementwiseOp::regionBuilder(
     ImplicitLocOpBuilder &b, Block &block, ArrayRef<NamedAttribute> attrs,
     function_ref<InFlightDiagnostic()> emitError) {
@@ -4947,14 +5011,70 @@ void ElementwiseOp::regionBuilder(
   SmallVector<Value> yields;
   Value result;
 
+  // Retreive or infer the `compute element type`.
+  Type resultType = block.getArguments().back().getType();
+  Type computeElementType;
+  for (NamedAttribute na : attrs) {
+    if (na.getName() == "compute_element_type") {
+      if (auto typeAttr = llvm::dyn_cast<TypeAttr>(na.getValue())) {
+        computeElementType = typeAttr.getValue();
+      } else {
+        emitError() << "expected TypeAttr for compute_element_type";
+        return;
+      }
+      break;
+    }
+  }
+  if (!computeElementType)
+    computeElementType = resultType; // inferred.
+
+  // Cast input value to dst type.
+  // Only same-kind casts are valid (float to float, int to int).
+  auto castToDstType = [&](Value v, Type dstType) -> Value {
+    Type srcType = v.getType();
+    if (srcType == dstType)
+      return v;
+
+    // Float -> Float
+    if (auto srcFloatType = dyn_cast<FloatType>(srcType)) {
+      if (auto dstFloatType = dyn_cast<FloatType>(dstType)) {
+        if (srcFloatType.getWidth() < dstFloatType.getWidth())
+          return arith::ExtFOp::create(b, b.getLoc(), dstType, v).getResult();
+        return arith::TruncFOp::create(b, b.getLoc(), dstType, v).getResult();
+      }
+    }
+
+    // Int -> Int
+    if (auto srcIntType = dyn_cast<IntegerType>(srcType)) {
+      if (auto dstIntType = dyn_cast<IntegerType>(dstType)) {
+        if (srcIntType.getWidth() < dstIntType.getWidth()) {
+          return srcIntType.isUnsigned()
+                     ? arith::ExtUIOp::create(b, b.getLoc(), dstType, v)
+                           .getResult()
+                     : arith::ExtSIOp::create(b, b.getLoc(), dstType, v)
+                           .getResult();
+        }
+        return arith::TruncIOp::create(b, b.getLoc(), dstType, v);
+      }
+    }
+
+    emitError() << "invalid cast from " << srcType << " to " << dstType
+                << " in linalg.elementwise";
+    return nullptr;
+  };
+
   if (arityGroup == ElementwiseArityGroup::Unary) {
-    result = helper.buildUnaryFn(kind.unaryFn, block.getArgument(0));
+    Value in0 = castToDstType(block.getArgument(0), computeElementType);
+    result = castToDstType(helper.buildUnaryFn(kind.unaryFn, in0), resultType);
 
   } else if (arityGroup == ElementwiseArityGroup::Binary) {
-    result = helper.buildBinaryFn(kind.binaryFn, block.getArgument(0),
-                                  block.getArgument(1));
+    Value in0 = castToDstType(block.getArgument(0), computeElementType);
+    Value in1 = castToDstType(block.getArgument(1), computeElementType);
+    result = castToDstType(helper.buildBinaryFn(kind.binaryFn, in0, in1),
+                           resultType);
 
   } else if (arityGroup == ElementwiseArityGroup::Ternary) {
+    // ternary op (select) should be type casted.
     result = helper.buildTernaryFn(kind.ternaryFn, block.getArgument(0),
                                    block.getArgument(1), block.getArgument(2));
 
@@ -4981,6 +5101,21 @@ void ElementwiseOp::getEffects(
 
 Speculation::Speculatability ElementwiseOp::getSpeculatability() {
   return getGenericSpeculatabilityImpl(cast<LinalgOp>(getOperation()));
+}
+
+LogicalResult ElementwiseOp::verify() {
+  auto attr = getComputeElementTypeAttr();
+  // test validity of `compute element type` if user-defined.
+  if (!attr)
+    return success();
+  Type computeType = attr.getValue();
+
+  // Must be a scalar element type.
+  if (!computeType.isIntOrFloat())
+    return emitOpError() << "compute_element_type must be an integer or "
+                            "floating-point type, got "
+                         << computeType;
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
