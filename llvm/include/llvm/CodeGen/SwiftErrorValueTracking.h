@@ -33,10 +33,10 @@ namespace llvm {
 
 class SwiftErrorValueTracking {
   // Some useful objects to reduce the number of function arguments needed.
-  MachineFunction *MF;
-  const Function *Fn;
-  const TargetLowering *TLI;
-  const TargetInstrInfo *TII;
+  MachineFunction *MF = nullptr;
+  const Function *Fn = nullptr;
+  const TargetLowering *TLI = nullptr;
+  const TargetInstrInfo *TII = nullptr;
 
   /// A map from swifterror value in a basic block to the virtual register it is
   /// currently represented by.
@@ -55,7 +55,7 @@ class SwiftErrorValueTracking {
       VRegDefUses;
 
   /// The swifterror argument of the current function.
-  const Value *SwiftErrorArg;
+  const Value *SwiftErrorArg = nullptr;
 
   using SwiftErrorValues = SmallVector<const Value*, 1>;
   /// A function can only have a single swifterror argument. And if it does
