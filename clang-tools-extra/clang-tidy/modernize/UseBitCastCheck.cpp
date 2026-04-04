@@ -121,27 +121,14 @@ static bool isStatementBody(const Stmt *Current, const Stmt *Parent) {
 
 namespace {
 
-// These states describe how to spell the replacement when only the memcpy call
-// is replaced. An existing `(void)` cast is preserved by parenthesizing the
-// assignment, while comma/discarded subexpressions need an injected `(void)`.
-enum class MemcpyReplacementForm {
-  None,
-  StatementBody,
-  PreserveOuterVoidCast,
-  InjectVoidCast,
-};
-
-} // namespace
-
-static MemcpyReplacementForm getMemcpyReplacementForm(const Expr *ExprNode,
-                                                      ASTContext &Context) {
-  const Stmt *Current = ExprNode;
-  MemcpyReplacementForm Kind = MemcpyReplacementForm::StatementBody;
+AST_MATCHER(CallExpr, hasBitCastReplacementContext) {
+  const Stmt *Current = &Node;
+  const BinaryOperator *DiscardedComma = nullptr;
 
   while (true) {
-    auto Parents = Context.getParents(*Current);
+    auto Parents = Finder->getASTContext().getParents(*Current);
     if (Parents.size() != 1)
-      return MemcpyReplacementForm::None;
+      return false;
 
     if (const auto *ParentExpr = Parents[0].get<Expr>()) {
       if (isa<ExprWithCleanups, ImplicitCastExpr, MaterializeTemporaryExpr,
@@ -150,37 +137,46 @@ static MemcpyReplacementForm getMemcpyReplacementForm(const Expr *ExprNode,
         continue;
       }
 
-      if (const auto *Cast = dyn_cast<CastExpr>(ParentExpr))
-        if (Cast->getCastKind() == CK_ToVoid)
-          return MemcpyReplacementForm::PreserveOuterVoidCast;
+      if (const auto *Cast = dyn_cast<CastExpr>(ParentExpr)) {
+        if (Cast->getCastKind() != CK_ToVoid)
+          return false;
 
-      if (const auto *Comma = dyn_cast<BinaryOperator>(ParentExpr)) {
-        if (Comma->getOpcode() != BO_Comma)
-          return MemcpyReplacementForm::None;
-        if (Comma->getLHS() == Current)
-          return MemcpyReplacementForm::InjectVoidCast;
-        if (Comma->getRHS() == Current) {
-          Current = Comma;
-          Kind = MemcpyReplacementForm::InjectVoidCast;
-          continue;
+        if (!DiscardedComma) {
+          Builder->setBinding("replacementRoot", DynTypedNode::create(*Cast));
+          Builder->setBinding("discardedVoidCast", DynTypedNode::create(*Cast));
+          return true;
         }
+
+        Current = Cast;
+        continue;
       }
 
-      return MemcpyReplacementForm::None;
+      const auto *Comma = dyn_cast<BinaryOperator>(ParentExpr);
+      if (!Comma || Comma->getOpcode() != BO_Comma)
+        return false;
+      if (Comma->getLHS() == Current) {
+        Builder->setBinding("replacementRoot", DynTypedNode::create(Node));
+        Builder->setBinding("discardedComma", DynTypedNode::create(*Comma));
+        return true;
+      }
+      if (Comma->getRHS() != Current)
+        return false;
+
+      DiscardedComma = Comma;
+      Current = Comma;
+      continue;
     }
 
     const auto *ParentStmt = Parents[0].get<Stmt>();
     if (!ParentStmt || !isStatementBody(Current, ParentStmt))
-      return MemcpyReplacementForm::None;
-    return Kind;
+      return false;
+
+    Builder->setBinding("replacementRoot", DynTypedNode::create(Node));
+    if (DiscardedComma)
+      Builder->setBinding("discardedComma",
+                          DynTypedNode::create(*DiscardedComma));
+    return true;
   }
-}
-
-namespace {
-
-AST_MATCHER(CallExpr, isDiscardedValueContext) {
-  return getMemcpyReplacementForm(&Node, Finder->getASTContext()) !=
-         MemcpyReplacementForm::None;
 }
 
 AST_MATCHER(CallExpr, isBitCastMemcpyCandidate) {
@@ -236,7 +232,7 @@ void UseBitCastCheck::registerPPCallbacks(const SourceManager &SM,
 void UseBitCastCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       callExpr(callee(functionDecl(hasName("::memcpy"))),
-               isDiscardedValueContext(), isBitCastMemcpyCandidate(),
+               hasBitCastReplacementContext(), isBitCastMemcpyCandidate(),
                unless(hasAncestor(expr(matchers::hasUnevaluatedContext()))))
           .bind("memcpy"),
       this);
@@ -246,9 +242,16 @@ void UseBitCastCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *MemcpyCall = Result.Nodes.getNodeAs<CallExpr>("memcpy");
   const auto *DstExpr = Result.Nodes.getNodeAs<Expr>("dstExpr");
   const auto *SrcExpr = Result.Nodes.getNodeAs<Expr>("srcExpr");
+  const auto *ReplacementRoot = Result.Nodes.getNodeAs<Expr>("replacementRoot");
+  const auto *DiscardedComma =
+      Result.Nodes.getNodeAs<BinaryOperator>("discardedComma");
+  const auto *DiscardedVoidCast =
+      Result.Nodes.getNodeAs<CastExpr>("discardedVoidCast");
   assert(MemcpyCall);
   assert(DstExpr);
   assert(SrcExpr);
+  assert(ReplacementRoot);
+  assert(!DiscardedVoidCast || ReplacementRoot == DiscardedVoidCast);
 
   const SourceManager &SM = *Result.SourceManager;
   const LangOptions &LangOpts = getLangOpts();
@@ -257,36 +260,22 @@ void UseBitCastCheck::check(const MatchFinder::MatchResult &Result) {
   if (DstText.empty() || SrcText.empty())
     return;
 
-  const MemcpyReplacementForm ReplacementForm =
-      getMemcpyReplacementForm(MemcpyCall, *Result.Context);
-  if (ReplacementForm == MemcpyReplacementForm::None)
-    return;
-
   const PrintingPolicy Policy(LangOpts);
   const QualType DstType =
       DstExpr->getType().getNonReferenceType().getUnqualifiedType();
   const std::string DstTypeName = DstType.getAsString(Policy);
   const std::string Replacement =
       [&](const llvm::Twine &Assignment) -> std::string {
-    switch (ReplacementForm) {
-    case MemcpyReplacementForm::StatementBody:
-      return Assignment.str();
-    case MemcpyReplacementForm::PreserveOuterVoidCast:
-      return ("(" + Assignment + ")").str();
-    case MemcpyReplacementForm::InjectVoidCast:
+    if (DiscardedComma)
       return ("(void)(" + Assignment + ")").str();
-    case MemcpyReplacementForm::None:
-      return {};
-    }
-
-    return {};
+    return Assignment.str();
   }(llvm::Twine(DstText) + " = std::bit_cast<" + DstTypeName + ">(" + SrcText +
                                          ")");
 
   const DiagnosticBuilder Diag =
       diag(MemcpyCall->getBeginLoc(),
            "use 'std::bit_cast' instead of 'memcpy' for type punning");
-  Diag << FixItHint::CreateReplacement(MemcpyCall->getSourceRange(),
+  Diag << FixItHint::CreateReplacement(ReplacementRoot->getSourceRange(),
                                        Replacement);
   Diag << IncludeInserter.createIncludeInsertion(
       SM.getFileID(MemcpyCall->getBeginLoc()), "<bit>");

@@ -136,7 +136,7 @@ void void_cast_case() {
   unsigned int dst;
   (void)std::memcpy(&dst, &src, sizeof(src));
   // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: use 'std::bit_cast' instead of 'memcpy' for type punning
-  // CHECK-FIXES: (void)(dst = std::bit_cast<unsigned int>(src));
+  // CHECK-FIXES: dst = std::bit_cast<unsigned int>(src);
 }
 
 void same_type_case() {
