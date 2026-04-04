@@ -195,16 +195,16 @@ New check aliases
   <clang-tidy/checks/portability/no-assembler>`. The `hicpp-no-assembler`
   name is kept as an alias.
 
+- Renamed :doc:`hicpp-signed-bitwise <clang-tidy/checks/hicpp/signed-bitwise>`
+  to :doc:`bugprone-signed-bitwise
+  <clang-tidy/checks/bugprone/signed-bitwise>`. The `hicpp-signed-bitwise`
+  name is kept as an alias.
+
 - Renamed :doc:`performance-faster-string-find
   <clang-tidy/checks/performance/faster-string-find>` to
   :doc:`performance-prefer-single-char-overloads
   <clang-tidy/checks/performance/prefer-single-char-overloads>`.
   The `performance-faster-string-find` name is kept as an alias.
-  
-- Renamed :doc:`hicpp-signed-bitwise <clang-tidy/checks/hicpp/signed-bitwise>`
-  to :doc:`bugprone-signed-bitwise
-  <clang-tidy/checks/bugprone/signed-bitwise>`. The `hicpp-signed-bitwise`
-  name is kept as an alias.
 
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
