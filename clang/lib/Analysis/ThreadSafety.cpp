@@ -637,7 +637,6 @@ public:
 
   void VisitDeclStmt(const DeclStmt *S);
   void VisitBinaryOperator(const BinaryOperator *BO);
-  void VisitCallExpr(const CallExpr *CE);
 };
 
 } // namespace
@@ -681,57 +680,6 @@ void VarMapBuilder::VisitBinaryOperator(const BinaryOperator *BO) {
       VMap->saveContext(BO, Ctx);
     }
   }
-}
-
-// Invalidates local variable definitions if variable escaped.
-void VarMapBuilder::VisitCallExpr(const CallExpr *CE) {
-  const FunctionDecl *FD = CE->getDirectCallee();
-  if (!FD)
-    return;
-
-  // Heuristic for likely-benign functions that pass by mutable reference. This
-  // is needed to avoid a slew of false positives due to mutable reference
-  // passing where the captured reference is usually passed on by-value.
-  if (const IdentifierInfo *II = FD->getIdentifier()) {
-    // Any kind of std::bind-like functions.
-    if (II->isStr("bind") || II->isStr("bind_front"))
-      return;
-  }
-
-  // Invalidate local variable definitions that are passed by non-const
-  // reference or non-const pointer.
-  for (unsigned Idx = 0; Idx < CE->getNumArgs(); ++Idx) {
-    if (Idx >= FD->getNumParams())
-      break;
-
-    const Expr *Arg = CE->getArg(Idx)->IgnoreParenImpCasts();
-    const ParmVarDecl *PVD = FD->getParamDecl(Idx);
-    QualType ParamType = PVD->getType();
-
-    // Potential reassignment if passed by non-const reference / pointer.
-    const ValueDecl *VDec = nullptr;
-    if (ParamType->isReferenceType() &&
-        !ParamType->getPointeeType().isConstQualified()) {
-      if (const auto *DRE = dyn_cast<DeclRefExpr>(Arg))
-        VDec = DRE->getDecl();
-    } else if (ParamType->isPointerType() &&
-               !ParamType->getPointeeType().isConstQualified()) {
-      Arg = Arg->IgnoreParenCasts();
-      if (const auto *UO = dyn_cast<UnaryOperator>(Arg)) {
-        if (UO->getOpcode() == UO_AddrOf) {
-          const Expr *SubE = UO->getSubExpr()->IgnoreParenCasts();
-          if (const auto *DRE = dyn_cast<DeclRefExpr>(SubE))
-            VDec = DRE->getDecl();
-        }
-      }
-    }
-
-    if (VDec)
-      Ctx = VMap->clearDefinition(VDec, Ctx);
-  }
-  // Save the context after the call where escaped variables' definitions (if
-  // they exist) are cleared.
-  VMap->saveContext(CE, Ctx);
 }
 
 // Computes the intersection of two contexts.  The intersection is the
