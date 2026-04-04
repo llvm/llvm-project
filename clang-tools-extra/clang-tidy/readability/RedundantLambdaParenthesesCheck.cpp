@@ -7,8 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "RedundantLambdaParenthesesCheck.h"
-#include "clang/AST/DeclTemplate.h"
-#include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Lexer.h"
 
 using namespace clang::ast_matchers;
