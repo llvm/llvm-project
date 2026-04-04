@@ -7,43 +7,56 @@
 //===----------------------------------------------------------------------===//
 
 #include "RedundantLambdaParenthesesCheck.h"
+#include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Lexer.h"
 
 using namespace clang::ast_matchers;
 
+namespace {
+
+AST_MATCHER(clang::LambdaExpr, hasNoParameters) {
+  return Node.getCallOperator()->getNumParams() == 0;
+}
+
+AST_MATCHER(clang::LambdaExpr, hasExplicitOrGenericParameters) {
+  return Node.hasExplicitParameters() || Node.isGenericLambda();
+}
+
+AST_MATCHER(clang::LambdaExpr, isGenericLambdaInCxx20OrLater) {
+  return !Node.isGenericLambda() ||
+         Finder->getASTContext().getLangOpts().CPlusPlus20;
+}
+
+} // namespace
+
 namespace clang::tidy::readability {
 
 void RedundantLambdaParenthesesCheck::registerMatchers(MatchFinder *Finder) {
-  Finder->addMatcher(lambdaExpr().bind("lambda"), this);
+  Finder->addMatcher(
+      lambdaExpr(hasExplicitOrGenericParameters(), hasNoParameters(),
+                 isGenericLambdaInCxx20OrLater())
+          .bind("lambda"),
+      this);
 }
 
 void RedundantLambdaParenthesesCheck::check(
     const MatchFinder::MatchResult &Result) {
   const auto *Lambda = Result.Nodes.getNodeAs<LambdaExpr>("lambda");
 
+
   if (Lambda->getBeginLoc().isMacroID())
-    return;
-
-  if (!Lambda->hasExplicitParameters() && !Lambda->isGenericLambda())
-    return;
-
-  if (Lambda->getCallOperator()->getNumParams() != 0)
-    return;
-
-  if (Lambda->isGenericLambda() && !getLangOpts().CPlusPlus20)
     return;
 
   const LangOptions &LangOpts = getLangOpts();
 
-  SourceLocation ScanFrom;
-  if (Lambda->isGenericLambda()) {
-    TemplateParameterList *TPL = Lambda->getTemplateParameterList();
-    ScanFrom = Lexer::getLocForEndOfToken(TPL->getRAngleLoc(), 0,
-                                          *Result.SourceManager, LangOpts);
-  } else {
-    ScanFrom = Lexer::getLocForEndOfToken(Lambda->getIntroducerRange().getEnd(),
-                                          0, *Result.SourceManager, LangOpts);
-  }
+  const SourceLocation ScanFrom =
+      Lambda->isGenericLambda()
+          ? Lexer::getLocForEndOfToken(
+                Lambda->getTemplateParameterList()->getRAngleLoc(), 0,
+                *Result.SourceManager, LangOpts)
+          : Lexer::getLocForEndOfToken(
+                Lambda->getIntroducerRange().getEnd(), 0,
+                *Result.SourceManager, LangOpts);
 
   Token Tok;
   if (Lexer::getRawToken(ScanFrom, Tok, *Result.SourceManager, LangOpts,
@@ -53,8 +66,8 @@ void RedundantLambdaParenthesesCheck::check(
   if (Tok.isNot(tok::l_paren))
     return;
 
-  SourceLocation LParenLoc = Tok.getLocation();
-  SourceLocation RParenLoc = Lexer::findLocationAfterToken(
+  const SourceLocation LParenLoc = Tok.getLocation();
+  const SourceLocation RParenLoc = Lexer::findLocationAfterToken(
       LParenLoc, tok::r_paren, *Result.SourceManager, LangOpts,
       /*SkipTrailingWhitespaceAndNewLine=*/false);
 
@@ -78,7 +91,7 @@ void RedundantLambdaParenthesesCheck::check(
       return;
   }
 
-  CharSourceRange ParenRange =
+  const CharSourceRange ParenRange =
       CharSourceRange::getCharRange(LParenLoc, RParenLoc);
 
   diag(LParenLoc, "redundant empty parameter list in lambda expression")
