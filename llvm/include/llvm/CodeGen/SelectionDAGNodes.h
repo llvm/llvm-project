@@ -692,6 +692,9 @@ private:
   /// Index in worklist of DAGCombiner, or negative if the node is not in the
   /// worklist. -1 = not in worklist; -2 = not in worklist, but has already been
   /// combined at least once.
+  ///
+  /// This field is also used to track the visited state in
+  /// ScheduleDAGSDNodes::BuildSchedUnits.
   int CombinerWorklistIndex = -1;
 
   uint32_t CFIType = 0;
