@@ -79,7 +79,7 @@ struct Mutating {
 
 void pointer_member_call_not_pointer_mutation() {
   Mutating *p = nullptr;
-  // CHECK-MESSAGES: warning: variable 'p' of type 'Mutating *' can be declared 'const'
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p' of type 'Mutating *' can be declared 'const'
   // CHECK-FIXES: Mutating *const p = nullptr;
   p->mutating_method();
 }
