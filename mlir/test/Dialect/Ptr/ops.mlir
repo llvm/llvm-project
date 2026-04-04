@@ -20,6 +20,17 @@ func.func @cast_ops(%mr: memref<f32, #ptr.generic_space>) -> memref<f32, #ptr.ge
   return %res : memref<f32, #ptr.generic_space>
 }
 
+/// Check int_to_ptr and ptr_to_int ops assembly.
+func.func @ptr_int_ops(%arg0: i64, %arg1: vector<10xi64>, %arg2: tensor<10xi64>) -> (i64, vector<10xi64>, tensor<10xi64>) {
+  %ptr = ptr.int_to_ptr %arg0 : i64 -> !ptr.ptr<#ptr.generic_space>
+  %res = ptr.ptr_to_int %ptr : !ptr.ptr<#ptr.generic_space> -> i64
+  %ptr_vec = ptr.int_to_ptr %arg1 : vector<10xi64> -> vector<10x!ptr.ptr<#ptr.generic_space>>
+  %res_vec = ptr.ptr_to_int %ptr_vec : vector<10x!ptr.ptr<#ptr.generic_space>> -> vector<10xi64>
+  %ptr_tensor = ptr.int_to_ptr %arg2 : tensor<10xi64> -> tensor<10x!ptr.ptr<#ptr.generic_space>>
+  %res_tensor = ptr.ptr_to_int %ptr_tensor : tensor<10x!ptr.ptr<#ptr.generic_space>> -> tensor<10xi64>
+  return %res, %res_vec, %res_tensor : i64, vector<10xi64>, tensor<10xi64>
+}
+
 /// Check load ops assembly.
 func.func @load_ops(%arg0: !ptr.ptr<#ptr.generic_space>) -> (f32, f32, f32, f32, f32, i64, i32) {
   %0 = ptr.load %arg0 : !ptr.ptr<#ptr.generic_space> -> f32
