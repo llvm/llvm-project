@@ -1331,6 +1331,137 @@ bool RISCVDAGToDAGISel::tryCVBitManipBSet(SDNode *Node) {
   return true;
 }
 
+// --------------------------------------------------------------------------
+// cv.insert: replace a contiguous bitfield in rd with low bits of rs1
+//
+// C idiom:  reg = (reg & ~(mask << offset)) | ((val & mask) << offset)
+//   where mask = (1 << width) - 1
+//
+// This is a two-input, multi-node DAG shape. The compiler can produce
+// several forms after DAG combining:
+//
+// Form 1 (most common, offset > 0):
+//   (or (and rd, ClearMask), (shl (and rs1, LowMask), Offset))
+//   where ClearMask = ~(LowMask << Offset)
+//
+// Form 2 (offset > 0, mask applied after shift):
+//   (or (and rd, ClearMask), (and (shl rs1, Offset), ShiftedMask))
+//   where ShiftedMask = LowMask << Offset
+//
+// Form 3 (offset = 0, no shift):
+//   (or (and rd, ClearMask), (and rs1, LowMask))
+//
+// Emit: CV_INSERT rd, rs1, IS3=width-1, IS2=offset
+//        (note: cv.insert semantics is Is3+1 bits, so we encode width-1)
+// --------------------------------------------------------------------------
+bool RISCVDAGToDAGISel::tryCVBitManipInsert(SDNode *Node) {
+  if (!Subtarget->hasVendorXCVbitmanip() || Subtarget->is64Bit())
+    return false;
+
+  assert(Node->getOpcode() == ISD::OR);
+  SDLoc DL(Node);
+
+  // Try both orderings of the OR operands since OR is commutative.
+  // One side must be (and rd, ClearMask), the other provides the value.
+  for (unsigned Swap = 0; Swap < 2; ++Swap) {
+    SDValue ClearSide = Node->getOperand(Swap);
+    SDValue ValueSide = Node->getOperand(1 - Swap);
+
+    // ClearSide must be (and rd, ClearMask)
+    if (ClearSide.getOpcode() != ISD::AND)
+      continue;
+
+    // Find the constant in the AND (could be on either side)
+    auto *ClearC = dyn_cast<ConstantSDNode>(ClearSide.getOperand(1));
+    SDValue RD = ClearSide.getOperand(0);
+    if (!ClearC) {
+      ClearC = dyn_cast<ConstantSDNode>(ClearSide.getOperand(0));
+      RD = ClearSide.getOperand(1);
+    }
+    if (!ClearC)
+      continue;
+
+    uint32_t ClearMask = ClearC->getZExtValue();
+    uint32_t FieldMask = ~ClearMask;
+
+    // FieldMask = ~ClearMask must be a shifted mask (the hole being filled)
+    if (FieldMask == 0 || !isShiftedMask_32(FieldMask))
+      continue;
+
+    unsigned Width = llvm::popcount(FieldMask);
+    unsigned Offset = llvm::countr_zero(FieldMask);
+
+    if (Width == 0 || Width > 32 || Offset > 31 || (Width + Offset) > 32)
+      continue;
+
+    uint32_t LowMask = (1u << Width) - 1;  // (1 << width) - 1
+    SDValue RS1;
+
+    // --- Form 1: (shl (and rs1, LowMask), Offset) ---
+    // This is the most common form from: ((val & mask) << offset)
+    if (ValueSide.getOpcode() == ISD::SHL) {
+      auto *ShiftC = dyn_cast<ConstantSDNode>(ValueSide.getOperand(1));
+      if (ShiftC && ShiftC->getZExtValue() == Offset) {
+        SDValue ShiftInput = ValueSide.getOperand(0);
+        if (ShiftInput.getOpcode() == ISD::AND) {
+          auto *MC = dyn_cast<ConstantSDNode>(ShiftInput.getOperand(1));
+          SDValue Base = ShiftInput.getOperand(0);
+          if (!MC) {
+            MC = dyn_cast<ConstantSDNode>(ShiftInput.getOperand(0));
+            Base = ShiftInput.getOperand(1);
+          }
+          if (MC && MC->getZExtValue() == LowMask)
+            RS1 = Base;
+        }
+      }
+    }
+
+    // --- Form 2: (and (shl rs1, Offset), ShiftedMask) ---
+    // This form appears when the compiler applies the mask after the shift.
+    if (!RS1 && ValueSide.getOpcode() == ISD::AND) {
+      auto *MC = dyn_cast<ConstantSDNode>(ValueSide.getOperand(1));
+      SDValue Inner = ValueSide.getOperand(0);
+      if (!MC) {
+        MC = dyn_cast<ConstantSDNode>(ValueSide.getOperand(0));
+        Inner = ValueSide.getOperand(1);
+      }
+      if (MC && MC->getZExtValue() == FieldMask &&
+          Inner.getOpcode() == ISD::SHL) {
+        auto *ShiftC = dyn_cast<ConstantSDNode>(Inner.getOperand(1));
+        if (ShiftC && ShiftC->getZExtValue() == Offset)
+          RS1 = Inner.getOperand(0);
+      }
+    }
+
+    // --- Form 3: (and rs1, LowMask) when Offset == 0 ---
+    // No shift needed: reg = (reg & ~mask) | (val & mask)
+    if (!RS1 && Offset == 0 && ValueSide.getOpcode() == ISD::AND) {
+      auto *MC = dyn_cast<ConstantSDNode>(ValueSide.getOperand(1));
+      SDValue Base = ValueSide.getOperand(0);
+      if (!MC) {
+        MC = dyn_cast<ConstantSDNode>(ValueSide.getOperand(0));
+        Base = ValueSide.getOperand(1);
+      }
+      if (MC && MC->getZExtValue() == LowMask)
+        RS1 = Base;
+    }
+
+    if (!RS1)
+      continue;
+
+    // Emit: CV_INSERT rd, rs1, IS3=width, IS2=offset
+    // rd is both input and output (tied operand)
+    SDValue IS3 = CurDAG->getTargetConstant(Width - 1, DL, MVT::i32);
+    SDValue IS2 = CurDAG->getTargetConstant(Offset, DL, MVT::i32);
+
+    SmallVector<SDValue, 4> Ops = {RD, RS1, IS3, IS2};
+    CurDAG->SelectNodeTo(Node, RISCV::CV_INSERT, MVT::i32, Ops);
+    return true;
+  }
+
+  return false;
+}
+
 void RISCVDAGToDAGISel::Select(SDNode *Node) {
   // If we have a custom node, we have already selected.
   if (Node->isMachineOpcode()) {
@@ -1731,6 +1862,9 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
   }
   case ISD::OR: {
     if (tryCVBitManipBSet(Node))
+      return;
+
+    if (tryCVBitManipInsert(Node))
       return;
 
     if (tryShrinkShlLogicImm(Node))

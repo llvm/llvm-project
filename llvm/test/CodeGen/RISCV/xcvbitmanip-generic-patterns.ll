@@ -292,6 +292,81 @@ define i32 @test_no_bset_noncontiguous(i32 %x) {
 }
 
 ;===----------------------------------------------------------------------===;
+; cv.insert — insert low bits of rs1 into a bitfield of rd
+; C idiom: reg = (reg & ~(mask << offset)) | ((val & mask) << offset)
+;===----------------------------------------------------------------------===;
+
+; Insert 3 bits at offset 4: (rd & ~(0x7<<4)) | ((rs1 & 0x7) << 4)
+define i32 @test_insert_3_4(i32 %rd, i32 %rs1) {
+; CHECK-LABEL: test_insert_3_4:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    cv.insert a0, a1, 2, 4
+; CHECK-NEXT:    ret
+  %clear = and i32 %rd, -113         ; 0xFFFFFF8F = ~(0x7 << 4)
+  %masked = and i32 %rs1, 7          ; 0x7 = (1 << 3) - 1
+  %shifted = shl i32 %masked, 4
+  %res = or i32 %clear, %shifted
+  ret i32 %res
+}
+
+; Insert 8 bits at offset 8: (rd & ~(0xFF<<8)) | ((rs1 & 0xFF) << 8)
+define i32 @test_insert_8_8(i32 %rd, i32 %rs1) {
+; CHECK-LABEL: test_insert_8_8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    cv.insert a0, a1, 7, 8
+; CHECK-NEXT:    ret
+  %clear = and i32 %rd, -65281       ; 0xFFFF00FF = ~(0xFF << 8)
+  %masked = and i32 %rs1, 255        ; 0xFF
+  %shifted = shl i32 %masked, 8
+  %res = or i32 %clear, %shifted
+  ret i32 %res
+}
+
+; Insert 1 bit at offset 15: (rd & ~(1<<15)) | ((rs1 & 1) << 15)
+define i32 @test_insert_1_15(i32 %rd, i32 %rs1) {
+; CHECK-LABEL: test_insert_1_15:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    cv.insert a0, a1, 0, 15
+; CHECK-NEXT:    ret
+  %clear = and i32 %rd, -32769       ; 0xFFFF7FFF = ~(1 << 15)
+  %masked = and i32 %rs1, 1
+  %shifted = shl i32 %masked, 15
+  %res = or i32 %clear, %shifted
+  ret i32 %res
+}
+
+; Insert 4 bits at offset 0 (no shift): (rd & ~0xF) | (rs1 & 0xF)
+define i32 @test_insert_4_0(i32 %rd, i32 %rs1) {
+; CHECK-LABEL: test_insert_4_0:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    cv.insert a0, a1, 3, 0
+; CHECK-NEXT:    ret
+  %clear = and i32 %rd, -16          ; 0xFFFFFFF0 = ~0xF
+  %masked = and i32 %rs1, 15         ; 0xF
+  %res = or i32 %clear, %masked
+  ret i32 %res
+}
+
+; Insert 16 bits at offset 16: the (and rd, 0xFFFF) clear mask gets folded
+; into a shift pair by the DAG combiner before ISel, preventing the insert
+; pattern from matching. This is a known limitation for width+offset=32 cases
+; where the clear mask happens to be a simple low mask.
+define i32 @test_insert_16_16(i32 %rd, i32 %rs1) {
+; CHECK-LABEL: test_insert_16_16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    slli a0, a0, 16
+; CHECK-NEXT:    srli a0, a0, 16
+; CHECK-NEXT:    slli a1, a1, 16
+; CHECK-NEXT:    or a0, a0, a1
+; CHECK-NEXT:    ret
+  %clear = and i32 %rd, 65535        ; 0x0000FFFF = ~(0xFFFF << 16)
+  %masked = and i32 %rs1, 65535      ; 0xFFFF
+  %shifted = shl i32 %masked, 16
+  %res = or i32 %clear, %shifted
+  ret i32 %res
+}
+
+;===----------------------------------------------------------------------===;
 ; Realistic embedded bitfield examples
 ;===----------------------------------------------------------------------===;
 
@@ -338,5 +413,33 @@ define i32 @test_set_enable_bits(i32 %reg) {
 ; CHECK-NEXT:    cv.bset a0, a0, 3, 8
 ; CHECK-NEXT:    ret
   %res = or i32 %reg, 3840   ; 0xF00 = 0xF << 8
+  ret i32 %res
+}
+
+; Write a 3-bit priority value into STATUS register bits [3:5]
+; Equivalent to: reg = (reg & ~(0x7 << 3)) | ((val & 0x7) << 3)
+define i32 @test_write_status_field(i32 %reg, i32 %val) {
+; CHECK-LABEL: test_write_status_field:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    cv.insert a0, a1, 2, 3
+; CHECK-NEXT:    ret
+  %clear = and i32 %reg, -57         ; 0xFFFFFFC7 = ~(0x7 << 3)
+  %masked = and i32 %val, 7
+  %shifted = shl i32 %masked, 3
+  %res = or i32 %clear, %shifted
+  ret i32 %res
+}
+
+; Write a byte into a register's second byte lane (bits [8:15])
+; Common pattern for MMIO register writes
+define i32 @test_write_byte_lane(i32 %reg, i32 %byte) {
+; CHECK-LABEL: test_write_byte_lane:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    cv.insert a0, a1, 7, 8
+; CHECK-NEXT:    ret
+  %clear = and i32 %reg, -65281      ; 0xFFFF00FF
+  %masked = and i32 %byte, 255
+  %shifted = shl i32 %masked, 8
+  %res = or i32 %clear, %shifted
   ret i32 %res
 }
