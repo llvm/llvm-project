@@ -4,22 +4,22 @@ int main() {
   // Basic cases - should warn
   auto a = []() { return 42; };
   // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: redundant empty parameter list in lambda expression [readability-redundant-lambda-parentheses]
-  // CHECK-FIXES: {{^}}  auto a = [] { return 42; };{{$}}
+  // CHECK-FIXES: auto a = [] { return 42; };
 
   auto b = [x = 1]() { return x; };
   // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: redundant empty parameter list in lambda expression [readability-redundant-lambda-parentheses]
-  // CHECK-FIXES: {{^}}  auto b = [x = 1] { return x; };{{$}}
+  // CHECK-FIXES: auto b = [x = 1] { return x; };
 
   // Lambda with no captures
   auto c = []() {};
   // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: redundant empty parameter list in lambda expression [readability-redundant-lambda-parentheses]
-  // CHECK-FIXES: {{^}}  auto c = [] {};{{$}}
+  // CHECK-FIXES: auto c = [] {};
 
   // Lambda inside a function call
   auto v = 1;
   auto call = [&v]() { return v; };
   // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: redundant empty parameter list in lambda expression [readability-redundant-lambda-parentheses]
-  // CHECK-FIXES: {{^}}  auto call = [&v] { return v; };{{$}}
+  // CHECK-FIXES: auto call = [&v] { return v; };
 
   // Should NOT warn - has parameters
   auto d = [](int x) { return x; };

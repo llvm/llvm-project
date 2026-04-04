@@ -4,32 +4,32 @@ int main() {
   // Basic cases - should warn
   auto a = []() { return 42; };
   // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: redundant empty parameter list in lambda expression [readability-redundant-lambda-parentheses]
-  // CHECK-FIXES: {{^}}  auto a = [] { return 42; };{{$}}
+  // CHECK-FIXES: auto a = [] { return 42; };
 
   // Specifier cases - should also warn in C++23
   auto b = []() mutable {};
   // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: redundant empty parameter list in lambda expression [readability-redundant-lambda-parentheses]
-  // CHECK-FIXES: {{^}}  auto b = [] mutable {};{{$}}
+  // CHECK-FIXES: auto b = [] mutable {};
 
   auto c = []() noexcept {};
   // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: redundant empty parameter list in lambda expression [readability-redundant-lambda-parentheses]
-  // CHECK-FIXES: {{^}}  auto c = [] noexcept {};{{$}}
+  // CHECK-FIXES: auto c = [] noexcept {};
 
   auto d = []() -> int { return 0; };
   // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: redundant empty parameter list in lambda expression [readability-redundant-lambda-parentheses]
-  // CHECK-FIXES: {{^}}  auto d = [] -> int { return 0; };{{$}}
+  // CHECK-FIXES: auto d = [] -> int { return 0; };
 
   auto e = []() mutable noexcept {};
   // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: redundant empty parameter list in lambda expression [readability-redundant-lambda-parentheses]
-  // CHECK-FIXES: {{^}}  auto e = [] mutable noexcept {};{{$}}
+  // CHECK-FIXES: auto e = [] mutable noexcept {};
 
   auto f = []() constexpr { return 42; };
   // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: redundant empty parameter list in lambda expression [readability-redundant-lambda-parentheses]
-  // CHECK-FIXES: {{^}}  auto f = [] constexpr { return 42; };{{$}}
+  // CHECK-FIXES: auto f = [] constexpr { return 42; };
 
   auto g = []() consteval { return 42; };
   // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: redundant empty parameter list in lambda expression [readability-redundant-lambda-parentheses]
-  // CHECK-FIXES: {{^}}  auto g = [] consteval { return 42; };{{$}}
+  // CHECK-FIXES: auto g = [] consteval { return 42; };
 
   // Should NOT warn - has parameters
   auto h = [](int x) { return x; };
