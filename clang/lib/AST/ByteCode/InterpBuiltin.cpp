@@ -4189,6 +4189,61 @@ static bool interp__builtin_ia32_gfni_mul(InterpState &S, CodePtr OpPC,
   return true;
 }
 
+/// Implements VNNI dot-product builtins (vpdpbusd, vpdpwssd, and their
+/// saturating variants). Unlike interp__builtin_elementwise_triop, this
+/// handles operands with different element types and counts: the accumulator
+/// (Arg0) has i32 elements, while the dot-product operands (Arg1, Arg2) have
+/// smaller element types (i8/u8 or i16).
+static bool interp__builtin_ia32_vpdpwssd(InterpState &S, CodePtr OpPC,
+                                           const CallExpr *Call,
+                                           bool IsDottingWord,
+                                           bool IsSaturating) {
+  const auto *SrcVecT = Call->getArg(0)->getType()->castAs<VectorType>();
+  const auto *OpAVecT = Call->getArg(1)->getType()->castAs<VectorType>();
+  const auto *OpBVecT = Call->getArg(2)->getType()->castAs<VectorType>();
+  PrimType SrcElemT = *S.getContext().classify(SrcVecT->getElementType());
+  PrimType OpAElemT = *S.getContext().classify(OpAVecT->getElementType());
+  PrimType OpBElemT = *S.getContext().classify(OpBVecT->getElementType());
+  unsigned NumElements = SrcVecT->getNumElements();
+  unsigned Iters = IsDottingWord ? 2 : 4;
+
+  const Pointer &OpBPtr = S.Stk.pop<Pointer>();
+  const Pointer &OpAPtr = S.Stk.pop<Pointer>();
+  const Pointer &SrcPtr = S.Stk.pop<Pointer>();
+  const Pointer &Dst = S.Stk.peek<Pointer>();
+
+  for (unsigned I = 0; I < NumElements; ++I) {
+    APSInt Acc;
+    INT_TYPE_SWITCH_NO_BOOL(SrcElemT, {
+      Acc = SrcPtr.elem<T>(I).toAPSInt();
+    });
+    if (IsSaturating)
+      Acc = Acc.sext(64);
+    for (unsigned J = 0; J < Iters; ++J) {
+      APSInt OpA, OpB;
+      INT_TYPE_SWITCH_NO_BOOL(OpAElemT, {
+        OpA = OpAPtr.elem<T>(Iters * I + J).toAPSInt();
+      });
+      INT_TYPE_SWITCH_NO_BOOL(OpBElemT, {
+        OpB = OpBPtr.elem<T>(Iters * I + J).toAPSInt();
+      });
+      if (IsDottingWord)
+        OpA = APSInt(OpA.sext(64), false);
+      else
+        OpA = APSInt(OpA.zext(64), true);
+      OpB = APSInt(OpB.sext(64), false);
+      Acc += APSInt((OpA * OpB).sext(64), false);
+    }
+    if (IsSaturating)
+      Acc = APSInt(Acc.truncSSat(32), false);
+    INT_TYPE_SWITCH_NO_BOOL(SrcElemT, {
+      Dst.elem<T>(I) = static_cast<T>(Acc);
+    });
+  }
+  Dst.initializeAllElements();
+  return true;
+}
+
 bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
                       uint32_t BuiltinID) {
   if (!S.getASTContext().BuiltinInfo.isConstantEvaluated(BuiltinID))
@@ -6052,73 +6107,46 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case X86::BI__builtin_ia32_vpdpwssd128:
   case X86::BI__builtin_ia32_vpdpwssd256:
   case X86::BI__builtin_ia32_vpdpwssd512:
-	// !IsByte, !IsSaturated
-	return interp__builtin_elementwise_triop(
-        S, OpPC, Call,
-        [](const APSInt &Source, const APSInt &A, const APSInt &B) {
-          APSInt DotProduct = Source;
-          unsigned Iters = 2;
-          unsigned Shift = 16;
-          for (unsigned J = 0; J < Iters; ++J) {
-            APSInt OpA = APSInt(APSInt(A.lshr(J * Shift).trunc(Shift)).sext(32), false);
-            APSInt OpB = APSInt(APSInt(B.lshr(J * Shift).trunc(Shift)).sext(32), false);
-			DotProduct += APSInt((OpA * OpB).sext(32), false);
-		  }
-          return DotProduct;
-        });
   case X86::BI__builtin_ia32_vpdpwssds128:
   case X86::BI__builtin_ia32_vpdpwssds256:
   case X86::BI__builtin_ia32_vpdpwssds512:
-	// !IsByte, IsSaturated
-	return interp__builtin_elementwise_triop(
-        S, OpPC, Call,
-        [](const APSInt &Source, const APSInt &A, const APSInt &B) {
-          APSInt DotProduct = APSInt(Source.sext(64), false);
-          unsigned Iters = 2;
-          unsigned Shift = 16;
-          for (unsigned J = 0; J < Iters; ++J) {
-            APSInt OpA = APSInt(APSInt(A.lshr(J * Shift).trunc(Shift)).sext(32), false);
-            APSInt OpB = APSInt(APSInt(B.lshr(J * Shift).trunc(Shift)).sext(32), false);
-			DotProduct += APSInt((OpA * OpB).sext(32), false);
-          }
-		  DotProduct = DotProduct.truncSSat(32);
-          return DotProduct;
-        });
   case X86::BI__builtin_ia32_vpdpbusds128:
   case X86::BI__builtin_ia32_vpdpbusds256:
   case X86::BI__builtin_ia32_vpdpbusds512:
-	// IsByte, IsSaturated
-	return interp__builtin_elementwise_triop(
-        S, OpPC, Call,
-        [](const APSInt &Source, const APSInt &A, const APSInt &B) {
-          APSInt DotProduct = APSInt(Source.sext(64), false);
-          unsigned Iters = 4;
-          unsigned Shift = 8;
-          for (unsigned J = 0; J < Iters; ++J) {
-            APSInt OpA = APSInt(APSInt(A.lshr(J * Shift).trunc(Shift)).zext(16), false);
-            APSInt OpB = APSInt(APSInt(B.lshr(J * Shift).trunc(Shift)).sext(16), false);
-			DotProduct += APSInt((OpA * OpB).sext(32), false);
-          }
-		  DotProduct = DotProduct.truncSSat(32);
-          return DotProduct;
-        });
   case X86::BI__builtin_ia32_vpdpbusd128:
   case X86::BI__builtin_ia32_vpdpbusd256:
   case X86::BI__builtin_ia32_vpdpbusd512: {
-	// IsByte, !IsSaturated
-	return interp__builtin_elementwise_triop(
-        S, OpPC, Call,
-        [](const APSInt &Source, const APSInt &A, const APSInt &B) {
-          APSInt DotProduct = Source;
-          unsigned Iters = 4;
-          unsigned Shift = 8;
-          for (unsigned J = 0; J < Iters; ++J) {
-            APSInt OpA = APSInt(APSInt(A.lshr(J * Shift).trunc(Shift)).zext(16), false);
-            APSInt OpB = APSInt(APSInt(B.lshr(J * Shift).trunc(Shift)).sext(16), false);
-			DotProduct += APSInt((OpA * OpB).sext(32), false);
-		  }
-          return DotProduct;
-        });
+    unsigned BuiltinID = Call->getBuiltinCallee();
+    bool IsDottingWord;
+    bool IsSaturating;
+    switch (BuiltinID) {
+    case X86::BI__builtin_ia32_vpdpwssd128:
+    case X86::BI__builtin_ia32_vpdpwssd256:
+    case X86::BI__builtin_ia32_vpdpwssd512:
+      IsDottingWord = true;
+      IsSaturating = false;
+      break;
+    case X86::BI__builtin_ia32_vpdpwssds128:
+    case X86::BI__builtin_ia32_vpdpwssds256:
+    case X86::BI__builtin_ia32_vpdpwssds512:
+      IsDottingWord = true;
+      IsSaturating = true;
+      break;
+    case X86::BI__builtin_ia32_vpdpbusds128:
+    case X86::BI__builtin_ia32_vpdpbusds256:
+    case X86::BI__builtin_ia32_vpdpbusds512:
+      IsDottingWord = false;
+      IsSaturating = true;
+      break;
+    case X86::BI__builtin_ia32_vpdpbusd128:
+    case X86::BI__builtin_ia32_vpdpbusd256:
+    case X86::BI__builtin_ia32_vpdpbusd512:
+      IsDottingWord = false;
+      IsSaturating = false;
+      break;
+    }
+    return interp__builtin_ia32_vpdpwssd(S, OpPC, Call, IsDottingWord,
+                                         IsSaturating);
   }
 
   default:
