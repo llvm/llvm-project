@@ -285,6 +285,7 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
     }
     break;
   }
+  //support for G_UREM
   case TargetOpcode::G_UREM: {
     KnownBits LHSKnown(Known.getBitWidth());
     KnownBits RHSKnown(Known.getBitWidth());
