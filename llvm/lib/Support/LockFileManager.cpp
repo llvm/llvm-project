@@ -183,15 +183,17 @@ Expected<bool> LockFileManager::tryLock() {
   }
 
   // Create a lock file that is unique to this instance.
-  UniqueLockFileName = LockFileName;
-  UniqueLockFileName += "-%%%%%%%%";
+  SmallString<128> UniqueLockFilePattern = LockFileName;
+  UniqueLockFilePattern += "-%%%%%%%%";
+
   int UniqueLockFileID;
 
   {
-    std::error_code EC = sys::fs::createUniqueFile(
-        UniqueLockFileName, UniqueLockFileID, UniqueLockFileName);
+    SmallString<128> UniquePath = UniqueLockFilePattern;
+    std::error_code EC =
+        sys::fs::createUniqueFile(UniquePath, UniqueLockFileID, UniquePath);
     if (EC == errc::no_such_file_or_directory) {
-      SmallString<128> Dir = sys::path::parent_path(UniqueLockFileName);
+      SmallString<128> Dir = sys::path::parent_path(UniqueLockFilePattern);
       if (!Dir.empty()) {
         if (std::error_code DirEC = sys::fs::create_directories(Dir))
           return createStringError(DirEC,
@@ -199,16 +201,15 @@ Expected<bool> LockFileManager::tryLock() {
       }
 
       // Retry creating lock file
-      UniqueLockFileName = LockFileName;
-      UniqueLockFileName += "-%%%%%%%%";
-
-      EC = sys::fs::createUniqueFile(UniqueLockFileName, UniqueLockFileID,
-                                     UniqueLockFileName);
+      UniquePath = UniqueLockFilePattern;
+      EC = sys::fs::createUniqueFile(UniquePath, UniqueLockFileID, UniquePath);
     }
 
     if (EC)
-      return createStringError(EC, "failed to create unique file " +
-                                       UniqueLockFileName);
+      return createStringError(EC,
+                               "failed to create unique file " + UniquePath);
+
+    UniqueLockFileName = UniquePath;
   }
 
   // Clean up the unique file on signal or scope exit.

@@ -657,7 +657,6 @@ struct AsyncModuleCompile : PPCallbacks {
       return;
     }
 
-    ModCache.prepareForGetLock(ModuleFileName);
     auto Lock = ModCache.getLock(ModuleFileName);
     bool Owned;
     llvm::Error LockErr = Lock->tryLock().moveInto(Owned);
