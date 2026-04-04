@@ -18,7 +18,7 @@
 # RUN:   -o 'settings set target.auto-load-scripts-for-modules SomeOtherModule=true' \
 # RUN:   -o 'target create %t/TestModule.out' 2>&1 | FileCheck %s --implicit-check-not=AUTOLOAD_SUCCESS
 
-# CHECK: warning: 'TestModule' contains a debug script. To run this script in this debug session
+# CHECK: warning: 'TestModule' contains an untrusted debug script. To run this script in this debug session
 
 #--- main.c
 int main() { return 0; }
