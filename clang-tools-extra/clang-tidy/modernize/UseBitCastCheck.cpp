@@ -197,11 +197,16 @@ AST_MATCHER(CallExpr, isBitCastMemcpyCandidate) {
   const QualType DstType = DstExpr->getType().getNonReferenceType();
   const QualType SrcType = SrcExpr->getType().getNonReferenceType();
 
-  return isBitCastableMemcpyObjectType(DstType, Context) &&
-         isBitCastableMemcpyObjectType(SrcType, Context) &&
-         canAssignBitCastResult(DstType) &&
-         !isSameUnqualifiedCanonicalType(SrcType, DstType) &&
-         isMatchingSizeOfExpression(Node.getArg(2), SrcType, DstType, Context);
+  if (!isBitCastableMemcpyObjectType(DstType, Context) ||
+      !isBitCastableMemcpyObjectType(SrcType, Context) ||
+      !canAssignBitCastResult(DstType) ||
+      isSameUnqualifiedCanonicalType(SrcType, DstType) ||
+      !isMatchingSizeOfExpression(Node.getArg(2), SrcType, DstType, Context))
+    return false;
+
+  Builder->setBinding("dstExpr", DynTypedNode::create(*DstExpr));
+  Builder->setBinding("srcExpr", DynTypedNode::create(*SrcExpr));
+  return true;
 }
 
 } // namespace
@@ -239,12 +244,11 @@ void UseBitCastCheck::registerMatchers(MatchFinder *Finder) {
 
 void UseBitCastCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *MemcpyCall = Result.Nodes.getNodeAs<CallExpr>("memcpy");
+  const auto *DstExpr = Result.Nodes.getNodeAs<Expr>("dstExpr");
+  const auto *SrcExpr = Result.Nodes.getNodeAs<Expr>("srcExpr");
   assert(MemcpyCall);
-
-  const auto *DstExpr = extractMemcpyObjectExpr(MemcpyCall->getArg(0));
-  const auto *SrcExpr = extractMemcpyObjectExpr(MemcpyCall->getArg(1));
-  if (!DstExpr || !SrcExpr)
-    return;
+  assert(DstExpr);
+  assert(SrcExpr);
 
   const SourceManager &SM = *Result.SourceManager;
   const LangOptions &LangOpts = getLangOpts();
