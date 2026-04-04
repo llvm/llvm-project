@@ -144,6 +144,10 @@ struct FindHostArray
     if (!IsHostArray(symbol)) {
       return nullptr;
     }
+    const Symbol &baseSymbol{x.base().GetFirstSymbol()};
+    if (IsDummy(baseSymbol) && IsCUDADeviceContext(&baseSymbol.owner())) {
+      return nullptr;
+    }
     if (IsAllocatableOrPointer(symbol)) {
       if (Result hostArray{(*this)(symbol)}) {
         return hostArray;
@@ -151,7 +155,6 @@ struct FindHostArray
     } else if (const auto *details{symbol.GetUltimate()
                        .detailsIf<semantics::ObjectEntityDetails>()}) {
       if (details->IsArray()) {
-        const Symbol &baseSymbol{x.base().GetFirstSymbol()};
         if (!IsHostArray(baseSymbol)) {
           return nullptr;
         }
