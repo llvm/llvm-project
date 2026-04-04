@@ -43,8 +43,10 @@
 #define LIBC_COPT_PRINTF_DISABLE_WIDE
 #endif
 
+// TODO: Make printf and our internal tools able to force the long double types
+// properly.
 // The 'long double' type is 8 bytes.
-#define LIBC_TYPES_LONG_DOUBLE_IS_FLOAT64
+// #define LIBC_TYPES_LONG_DOUBLE_IS_FLOAT64
 
 #include "shared/rpc.h"
 #include "shared/rpc_opcodes.h"
@@ -226,7 +228,7 @@ LIBC_INLINE static void handle_printf(rpc::Server::Port &port,
         writer.write(cur_section.raw_string);
       }
     }
-    buffer_size[lane] = writer.get_chars_written();
+    buffer_size[lane] = static_cast<int>(writer.get_chars_written());
   }
 
   // Receive any strings from the client and push them into a buffer.

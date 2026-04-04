@@ -328,8 +328,10 @@ template <> struct MappingTraits<MemberTypeInfo> {
 template <> struct MappingTraits<NamespaceInfo> {
   static void mapping(IO &IO, NamespaceInfo &I) {
     infoMapping(IO, I);
-    IO.mapOptional("ChildNamespaces", I.Children.Namespaces,
-                   OwningVec<Reference>());
+    std::vector<Reference> TempNamespaces;
+    for (const auto &N : I.Children.Namespaces)
+      TempNamespaces.push_back(N);
+    IO.mapOptional("ChildNamespaces", TempNamespaces, std::vector<Reference>());
     IO.mapOptional("ChildRecords", I.Children.Records, OwningVec<Reference>());
     IO.mapOptional("ChildFunctions", I.Children.Functions);
     IO.mapOptional("ChildEnums", I.Children.Enums);

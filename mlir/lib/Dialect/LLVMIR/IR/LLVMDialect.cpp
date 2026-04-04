@@ -3663,7 +3663,9 @@ LogicalResult AtomicRMWOp::verify() {
   if (getBinOp() == AtomicBinOp::fadd || getBinOp() == AtomicBinOp::fsub ||
       getBinOp() == AtomicBinOp::fmin || getBinOp() == AtomicBinOp::fmax ||
       getBinOp() == AtomicBinOp::fminimum ||
-      getBinOp() == AtomicBinOp::fmaximum) {
+      getBinOp() == AtomicBinOp::fmaximum ||
+      getBinOp() == AtomicBinOp::fminimumnum ||
+      getBinOp() == AtomicBinOp::fmaximumnum) {
     if (isCompatibleVectorType(valType)) {
       if (isScalableVectorType(valType))
         return emitOpError("expected LLVM IR fixed vector type");

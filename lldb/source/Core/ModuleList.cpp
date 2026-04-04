@@ -1373,26 +1373,31 @@ bool ModuleList::LoadScriptingResourceInTargetForModule(Module &module,
   if (!feedback_stream.Empty())
     debugger.ReportWarning(feedback_stream.GetString().str(), debugger.GetID());
 
+  const bool trusted = platform_sp->IsSymbolFileTrusted(module);
+
   for (const auto &[scripting_fspec, load_style] : file_specs) {
+    if (load_style == eLoadScriptFromSymFileFalse)
+      continue;
+
     if (!FileSystem::Instance().Exists(scripting_fspec))
       continue;
 
     switch (load_style) {
     case eLoadScriptFromSymFileFalse:
-      continue;
+      llvm_unreachable("case already handled");
     case eLoadScriptFromSymFileTrue:
       break;
     case eLoadScriptFromSymFileTrusted:
-      if (!platform_sp->IsSymbolFileTrusted(module))
-        continue;
-      break;
+      if (trusted)
+        break;
+      LLVM_FALLTHROUGH;
     case eLoadScriptFromSymFileWarn:
       debugger.ReportWarning(
           llvm::formatv(
               // clang-format off
-R"('{0}' contains a debug script. To run this script in this debug session:
+R"('{0}' contains {1} debug script. To run this script in this debug session:
 
-    command script import "{1}"
+    command script import "{2}"
 
 To run all discovered debug scripts in this session:
 
@@ -1400,10 +1405,11 @@ To run all discovered debug scripts in this session:
 )",
               // clang-format on
               module.GetFileSpec().GetFileNameStrippingExtension(),
+              trusted ? "a trusted" : "an untrusted",
               scripting_fspec.GetPath()),
           debugger.GetID());
 
-      return false;
+      continue;
     }
 
     LLDB_LOG(log, "Auto-loading {0}", scripting_fspec.GetPath());

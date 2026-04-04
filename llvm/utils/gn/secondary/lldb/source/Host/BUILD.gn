@@ -51,6 +51,7 @@ static_library("Host") {
     "common/UDPSocket.cpp",
     "common/XML.cpp",
     "common/ZipFileResolver.cpp",
+    "windows/WindowsFileAction.cpp",
   ]
 
   if (lldb_enable_libedit) {

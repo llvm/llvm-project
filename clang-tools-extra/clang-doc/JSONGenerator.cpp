@@ -493,13 +493,16 @@ static void serializeArray(const Container &Records, Object &Obj, StringRef Key,
   json::Value RecordsArray = Array();
   auto &RecordsArrayRef = *RecordsArray.getAsArray();
   RecordsArrayRef.reserve(Records.size());
-  for (size_t Index = 0; Index < Records.size(); ++Index) {
+  size_t Index = 0;
+  size_t Size = Records.size();
+  for (const auto &Item : Records) {
     json::Value ItemVal = Object();
     auto &ItemObj = *ItemVal.getAsObject();
-    SerializeInfo(Records[Index], ItemObj);
-    if (Index == Records.size() - 1)
+    SerializeInfo(Item, ItemObj);
+    if (Index == Size - 1)
       ItemObj[EndKey] = true;
     RecordsArrayRef.push_back(ItemVal);
+    ++Index;
   }
   Obj[Key] = RecordsArray;
   UpdateJson(Obj);

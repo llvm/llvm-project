@@ -256,8 +256,7 @@ bool CommunicationKDP::CheckForPacket(const uint8_t *src, size_t src_len,
     case ePacketTypeRequest | KDP_TERMINATION:
       // We got an exception request, so be sure to send an ACK
       {
-        PacketStreamType request_ack_packet(Stream::eBinary, m_addr_byte_size,
-                                            m_byte_order);
+        PacketStreamType request_ack_packet(Stream::eBinary, m_byte_order);
         // Set the reply but and make the ACK packet
         request_ack_packet.PutHex8(reply_command | ePacketTypeReply);
         request_ack_packet.PutHex8(packet.GetU8(&offset));
@@ -335,8 +334,7 @@ bool CommunicationKDP::CheckForPacket(const uint8_t *src, size_t src_len,
 bool CommunicationKDP::SendRequestConnect(uint16_t reply_port,
                                           uint16_t exc_port,
                                           const char *greeting) {
-  PacketStreamType request_packet(Stream::eBinary, m_addr_byte_size,
-                                  m_byte_order);
+  PacketStreamType request_packet(Stream::eBinary, m_byte_order);
   if (greeting == NULL)
     greeting = "";
 
@@ -365,8 +363,7 @@ void CommunicationKDP::ClearKDPSettings() {
 }
 
 bool CommunicationKDP::SendRequestReattach(uint16_t reply_port) {
-  PacketStreamType request_packet(Stream::eBinary, m_addr_byte_size,
-                                  m_byte_order);
+  PacketStreamType request_packet(Stream::eBinary, m_byte_order);
   const CommandType command = KDP_REATTACH;
   // Length is 8 bytes for the header plus 2 bytes for the reply UDP port
   const uint32_t command_length = 8 + 2;
@@ -399,8 +396,7 @@ uint32_t CommunicationKDP::GetFeatureFlags() {
 }
 
 bool CommunicationKDP::SendRequestVersion() {
-  PacketStreamType request_packet(Stream::eBinary, m_addr_byte_size,
-                                  m_byte_order);
+  PacketStreamType request_packet(Stream::eBinary, m_byte_order);
   const CommandType command = KDP_VERSION;
   const uint32_t command_length = 8;
   MakeRequestPacketHeader(command, request_packet, command_length);
@@ -485,8 +481,7 @@ lldb::addr_t CommunicationKDP::GetLoadAddress() {
 }
 
 bool CommunicationKDP::SendRequestHostInfo() {
-  PacketStreamType request_packet(Stream::eBinary, m_addr_byte_size,
-                                  m_byte_order);
+  PacketStreamType request_packet(Stream::eBinary, m_byte_order);
   const CommandType command = KDP_HOSTINFO;
   const uint32_t command_length = 8;
   MakeRequestPacketHeader(command, request_packet, command_length);
@@ -515,8 +510,7 @@ const char *CommunicationKDP::GetKernelVersion() {
 }
 
 bool CommunicationKDP::SendRequestKernelVersion() {
-  PacketStreamType request_packet(Stream::eBinary, m_addr_byte_size,
-                                  m_byte_order);
+  PacketStreamType request_packet(Stream::eBinary, m_byte_order);
   const CommandType command = KDP_KERNELVERSION;
   const uint32_t command_length = 8;
   MakeRequestPacketHeader(command, request_packet, command_length);
@@ -531,8 +525,7 @@ bool CommunicationKDP::SendRequestKernelVersion() {
 }
 
 bool CommunicationKDP::SendRequestDisconnect() {
-  PacketStreamType request_packet(Stream::eBinary, m_addr_byte_size,
-                                  m_byte_order);
+  PacketStreamType request_packet(Stream::eBinary, m_byte_order);
   const CommandType command = KDP_DISCONNECT;
   const uint32_t command_length = 8;
   MakeRequestPacketHeader(command, request_packet, command_length);
@@ -547,8 +540,7 @@ bool CommunicationKDP::SendRequestDisconnect() {
 uint32_t CommunicationKDP::SendRequestReadMemory(lldb::addr_t addr, void *dst,
                                                  uint32_t dst_len,
                                                  Status &error) {
-  PacketStreamType request_packet(Stream::eBinary, m_addr_byte_size,
-                                  m_byte_order);
+  PacketStreamType request_packet(Stream::eBinary, m_byte_order);
   bool use_64 = (GetVersion() >= 11);
   uint32_t command_addr_byte_size = use_64 ? 8 : 4;
   const CommandType command = use_64 ? KDP_READMEM64 : KDP_READMEM;
@@ -586,8 +578,7 @@ uint32_t CommunicationKDP::SendRequestWriteMemory(lldb::addr_t addr,
                                                   const void *src,
                                                   uint32_t src_len,
                                                   Status &error) {
-  PacketStreamType request_packet(Stream::eBinary, m_addr_byte_size,
-                                  m_byte_order);
+  PacketStreamType request_packet(Stream::eBinary, m_byte_order);
   bool use_64 = (GetVersion() >= 11);
   uint32_t command_addr_byte_size = use_64 ? 8 : 4;
   const CommandType command = use_64 ? KDP_WRITEMEM64 : KDP_WRITEMEM;
@@ -620,8 +611,7 @@ bool CommunicationKDP::SendRawRequest(
     const void *src,  // Raw packet payload bytes
     uint32_t src_len, // Raw packet payload length
     DataExtractor &reply_packet, Status &error) {
-  PacketStreamType request_packet(Stream::eBinary, m_addr_byte_size,
-                                  m_byte_order);
+  PacketStreamType request_packet(Stream::eBinary, m_byte_order);
   // Size is header + address size + uint32_t length
   const uint32_t command_length = 8 + src_len;
   const CommandType command = (CommandType)command_byte;
@@ -1169,8 +1159,7 @@ uint32_t CommunicationKDP::SendRequestReadRegisters(uint32_t cpu,
                                                     uint32_t flavor, void *dst,
                                                     uint32_t dst_len,
                                                     Status &error) {
-  PacketStreamType request_packet(Stream::eBinary, m_addr_byte_size,
-                                  m_byte_order);
+  PacketStreamType request_packet(Stream::eBinary, m_byte_order);
   const CommandType command = KDP_READREGS;
   // Size is header + 4 byte cpu and 4 byte flavor
   const uint32_t command_length = 8 + 4 + 4;
@@ -1212,8 +1201,7 @@ uint32_t CommunicationKDP::SendRequestWriteRegisters(uint32_t cpu,
                                                      const void *src,
                                                      uint32_t src_len,
                                                      Status &error) {
-  PacketStreamType request_packet(Stream::eBinary, m_addr_byte_size,
-                                  m_byte_order);
+  PacketStreamType request_packet(Stream::eBinary, m_byte_order);
   const CommandType command = KDP_WRITEREGS;
   // Size is header + 4 byte cpu and 4 byte flavor
   const uint32_t command_length = 8 + 4 + 4 + src_len;
@@ -1237,8 +1225,7 @@ uint32_t CommunicationKDP::SendRequestWriteRegisters(uint32_t cpu,
 }
 
 bool CommunicationKDP::SendRequestResume() {
-  PacketStreamType request_packet(Stream::eBinary, m_addr_byte_size,
-                                  m_byte_order);
+  PacketStreamType request_packet(Stream::eBinary, m_byte_order);
   const CommandType command = KDP_RESUMECPUS;
   const uint32_t command_length = 12;
   MakeRequestPacketHeader(command, request_packet, command_length);
@@ -1249,8 +1236,7 @@ bool CommunicationKDP::SendRequestResume() {
 }
 
 bool CommunicationKDP::SendRequestBreakpoint(bool set, addr_t addr) {
-  PacketStreamType request_packet(Stream::eBinary, m_addr_byte_size,
-                                  m_byte_order);
+  PacketStreamType request_packet(Stream::eBinary, m_byte_order);
   bool use_64 = (GetVersion() >= 11);
   uint32_t command_addr_byte_size = use_64 ? 8 : 4;
   const CommandType command =
@@ -1272,8 +1258,7 @@ bool CommunicationKDP::SendRequestBreakpoint(bool set, addr_t addr) {
 }
 
 bool CommunicationKDP::SendRequestSuspend() {
-  PacketStreamType request_packet(Stream::eBinary, m_addr_byte_size,
-                                  m_byte_order);
+  PacketStreamType request_packet(Stream::eBinary, m_byte_order);
   const CommandType command = KDP_SUSPEND;
   const uint32_t command_length = 8;
   MakeRequestPacketHeader(command, request_packet, command_length);

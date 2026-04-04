@@ -15,6 +15,7 @@
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInstrInfo.h"
+#include "llvm/MC/MCLFIRewriter.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCStreamer.h"
@@ -34,6 +35,25 @@ cl::opt<bool> FlagEnableRewriting("lfi-enable-rewriter",
 void initializeLFIMCStreamer(MCStreamer &Streamer, MCContext &Ctx,
                              const Triple &TheTriple) {
   assert(TheTriple.isLFI());
+
+  std::string Error;
+  const Target *TheTarget = TargetRegistry::lookupTarget(TheTriple, Error);
+
+  // Create the target-specific MCLFIRewriter.
+  assert(TheTarget != nullptr);
+  if (FlagEnableRewriting) {
+    auto MRI =
+        std::unique_ptr<MCRegisterInfo>(TheTarget->createMCRegInfo(TheTriple));
+    auto MII = std::unique_ptr<MCInstrInfo>(TheTarget->createMCInstrInfo());
+    Streamer.setLFIRewriter(std::unique_ptr<MCLFIRewriter>(
+        TheTarget->createMCLFIRewriter(Ctx, std::move(MRI), std::move(MII))));
+  }
+}
+
+void emitLFINoteSection(MCStreamer &Streamer, MCContext &Ctx) {
+  const Triple &TheTriple = Ctx.getTargetTriple();
+  assert(TheTriple.isLFI());
+
   const char *NoteName;
   const char *NoteArch;
   switch (TheTriple.getArch()) {
@@ -45,25 +65,12 @@ void initializeLFIMCStreamer(MCStreamer &Streamer, MCContext &Ctx,
     reportFatalUsageError("Unsupported architecture for LFI");
   }
 
-  std::string Error; // empty
-  const Target *TheTarget = TargetRegistry::lookupTarget(TheTriple, Error);
-
-  // Create the Target specific MCLFIRewriter.
-  assert(TheTarget != nullptr);
-  if (FlagEnableRewriting) {
-    TheTarget->createMCLFIRewriter(
-        Streamer,
-        std::unique_ptr<MCRegisterInfo>(TheTarget->createMCRegInfo(TheTriple)),
-        std::unique_ptr<MCInstrInfo>(TheTarget->createMCInstrInfo()));
-  }
-
   // Emit an ELF Note section in its own COMDAT group which identifies LFI
   // object files.
   MCSectionELF *Note = Ctx.getELFSection(NoteName, ELF::SHT_NOTE,
                                          ELF::SHF_ALLOC | ELF::SHF_GROUP, 0,
                                          NoteName, /*IsComdat=*/true);
 
-  Streamer.pushSection();
   Streamer.switchSection(Note);
   Streamer.emitIntValue(strlen(NoteNamespace) + 1, 4);
   Streamer.emitIntValue(strlen(NoteArch) + 1, 4);
@@ -74,7 +81,6 @@ void initializeLFIMCStreamer(MCStreamer &Streamer, MCContext &Ctx,
   Streamer.emitBytes(NoteArch);
   Streamer.emitIntValue(0, 1); // NUL terminator
   Streamer.emitValueToAlignment(Align(4));
-  Streamer.popSection();
 }
 
 } // namespace llvm

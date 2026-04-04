@@ -177,9 +177,13 @@ void CheckNamespaceInfo(NamespaceInfo *Expected, NamespaceInfo *Actual) {
 
   ASSERT_EQ(Expected->Children.Namespaces.size(),
             Actual->Children.Namespaces.size());
-  for (size_t Idx = 0; Idx < Actual->Children.Namespaces.size(); ++Idx)
-    CheckReference(Expected->Children.Namespaces[Idx],
-                   Actual->Children.Namespaces[Idx]);
+  auto ItExpected = Expected->Children.Namespaces.begin();
+  auto ItActual = Actual->Children.Namespaces.begin();
+  while (ItExpected != Expected->Children.Namespaces.end()) {
+    CheckReference(*ItExpected, *ItActual);
+    ++ItExpected;
+    ++ItActual;
+  }
 
   ASSERT_EQ(Expected->Children.Records.size(), Actual->Children.Records.size());
   for (size_t Idx = 0; Idx < Actual->Children.Records.size(); ++Idx)

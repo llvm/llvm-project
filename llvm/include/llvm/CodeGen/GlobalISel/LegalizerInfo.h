@@ -402,6 +402,11 @@ LLVM_ABI LegalizeMutation changeElementCountTo(unsigned TypeIdx,
 LLVM_ABI LegalizeMutation changeElementSizeTo(unsigned TypeIdx,
                                               unsigned FromTypeIdx);
 
+/// Change the scalar size or element size to have the same scalar size as the
+/// type \p NewTy. Unlike changeElementTo, this discards pointer types and only
+/// changes the size.
+LLVM_ABI LegalizeMutation changeElementSizeTo(unsigned TypeIdx, LLT NewTy);
+
 /// Widen the scalar type or vector element type for the given type index to the
 /// next power of 2.
 LLVM_ABI LegalizeMutation widenScalarOrEltToNextPow2(unsigned TypeIdx,
@@ -1048,7 +1053,7 @@ public:
     using namespace LegalizeMutations;
     return actionIf(LegalizeAction::WidenScalar,
                     scalarOrEltNarrowerThan(TypeIdx, Ty.getScalarSizeInBits()),
-                    changeElementTo(typeIdx(TypeIdx), Ty));
+                    changeElementSizeTo(typeIdx(TypeIdx), Ty));
   }
 
   /// Ensure the scalar or element is at least as wide as Ty.
@@ -1059,7 +1064,7 @@ public:
     return actionIf(LegalizeAction::WidenScalar,
                     all(Predicate, scalarOrEltNarrowerThan(
                                        TypeIdx, Ty.getScalarSizeInBits())),
-                    changeElementTo(typeIdx(TypeIdx), Ty));
+                    changeElementSizeTo(typeIdx(TypeIdx), Ty));
   }
 
   /// Ensure the vector size is at least as wide as VectorSize by promoting the
@@ -1078,7 +1083,8 @@ public:
           const LLT VecTy = Query.Types[TypeIdx];
           unsigned NumElts = VecTy.getNumElements();
           unsigned MinSize = VectorSize / NumElts;
-          LLT NewTy = LLT::fixed_vector(NumElts, LLT::scalar(MinSize));
+          LLT NewTy = LLT::fixed_vector(
+              NumElts, VecTy.getElementType().changeElementSize(MinSize));
           return std::make_pair(TypeIdx, NewTy);
         });
   }
@@ -1089,7 +1095,7 @@ public:
     using namespace LegalizeMutations;
     return actionIf(LegalizeAction::WidenScalar,
                     scalarNarrowerThan(TypeIdx, Ty.getSizeInBits()),
-                    changeTo(typeIdx(TypeIdx), Ty));
+                    changeElementSizeTo(typeIdx(TypeIdx), Ty));
   }
   LegalizeRuleSet &minScalar(bool Pred, unsigned TypeIdx, const LLT Ty) {
     if (!Pred)
@@ -1110,7 +1116,7 @@ public:
                  QueryTy.getSizeInBits() < Ty.getSizeInBits() &&
                  Predicate(Query);
         },
-        changeTo(typeIdx(TypeIdx), Ty));
+        changeElementSizeTo(typeIdx(TypeIdx), Ty));
   }
 
   /// Ensure the scalar is at most as wide as Ty.
@@ -1119,7 +1125,7 @@ public:
     using namespace LegalizeMutations;
     return actionIf(LegalizeAction::NarrowScalar,
                     scalarOrEltWiderThan(TypeIdx, Ty.getScalarSizeInBits()),
-                    changeElementTo(typeIdx(TypeIdx), Ty));
+                    changeElementSizeTo(typeIdx(TypeIdx), Ty));
   }
 
   /// Ensure the scalar is at most as wide as Ty.
@@ -1128,7 +1134,7 @@ public:
     using namespace LegalizeMutations;
     return actionIf(LegalizeAction::NarrowScalar,
                     scalarWiderThan(TypeIdx, Ty.getSizeInBits()),
-                    changeTo(typeIdx(TypeIdx), Ty));
+                    changeElementSizeTo(typeIdx(TypeIdx), Ty));
   }
 
   /// Conditionally limit the maximum size of the scalar.
@@ -1146,7 +1152,7 @@ public:
                  QueryTy.getSizeInBits() > Ty.getSizeInBits() &&
                  Predicate(Query);
         },
-        changeElementTo(typeIdx(TypeIdx), Ty));
+        changeElementSizeTo(typeIdx(TypeIdx), Ty));
   }
 
   /// Limit the range of scalar sizes to MinTy and MaxTy.
@@ -1211,9 +1217,8 @@ public:
                  Predicate(Query);
         },
         [=](const LegalityQuery &Query) {
-          LLT T = Query.Types[LargeTypeIdx];
-          if (T.isPointerVector())
-            T = T.changeElementType(LLT::scalar(T.getScalarSizeInBits()));
+          LLT T = Query.Types[TypeIdx].changeElementSize(
+              Query.Types[LargeTypeIdx].getScalarSizeInBits());
           return std::make_pair(TypeIdx, T);
         });
   }

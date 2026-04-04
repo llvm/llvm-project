@@ -358,6 +358,8 @@ Improvements to Clang's diagnostics
 - Improved ``-Wgnu-zero-variadic-macro-arguments`` to suggest using
   ``__VA_OPT__`` if the current language version supports it(#GH188624)
 
+- Clang now emits an error when implicitly casting a complex type to a built-in vector type. (#GH186805)
+
 Improvements to Clang's time-trace
 ----------------------------------
 

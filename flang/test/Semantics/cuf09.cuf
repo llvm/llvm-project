@@ -1,8 +1,14 @@
 ! RUN: %python %S/test_errors.py %s %flang_fc1
 module m
- integer :: m(100)
- integer, constant :: c(10)
- integer, parameter :: p(5) = [1,2,3,4,5]
+  integer :: m(100)
+  integer, constant :: c(10)
+  integer, parameter :: p(5) = [1,2,3,4,5]
+  type :: t1
+    integer, allocatable, unified :: m(:)
+  end type
+  type :: t2
+    integer :: m(10)
+  end type
  contains
   attributes(device) subroutine devsub
     !ERROR: Statement may not appear in device code
@@ -127,8 +133,12 @@ module m
 end
 
 program main
+  use m
   integer, device :: a_d(10 ,10)
   integer :: b(10, 10)
+  type(t1) :: t1d
+  type(t2) :: t2d
+  type(t2), unified :: t2unified
   !$cuf kernel do <<< *, * >>> ! ok
   do j = 1, 0
   end do
@@ -212,6 +222,14 @@ program main
         a_d(i,j) = b(i,j)
      enddo
   enddo
+
+  !$cuf kernel do <<<*, *>>>
+  do j = 1, 10
+    t1d%m(j) = j
+    !ERROR: Host array 'm' cannot be present in device context
+    t2d%m(j) = j
+    t2unified%m(j) = j ! ok. t2unified is unified
+  end do
 end
 
 subroutine host1()

@@ -6078,6 +6078,10 @@ KnownFPClass SelectionDAG::computeKnownFPClass(SDValue Op,
     }
     break;
   }
+  case ISD::SPLAT_VECTOR: {
+    Known = computeKnownFPClass(Op.getOperand(0), InterestedClasses, Depth + 1);
+    break;
+  }
   case ISD::BITCAST: {
     // FIXME: It should not be necessary to check for an elementwise bitcast.
     // If a bitcast is not elementwise between vector / scalar types,

@@ -45,9 +45,7 @@ void OptReductionPass::runOnOperation() {
   LDBG() << "\nOptimization Reduction pass: ";
 
   Tester test(testerName, testerArgs);
-
   Operation *topOp = this->getOperation();
-  Operation *topOpVariant = topOp->clone();
 
   PassManager passManager(topOp->getName());
   if (failed(parsePassPipeline(optPass, passManager))) {
@@ -60,6 +58,7 @@ void OptReductionPass::runOnOperation() {
     topOp->emitError() << "\nthe original input is not interested";
     return signalPassFailure();
   }
+  Operation *topOpVariant = topOp->clone();
 
   LogicalResult pipelineResult = passManager.run(topOpVariant);
   if (failed(pipelineResult)) {

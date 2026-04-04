@@ -28,14 +28,21 @@ namespace printf_core {
 template <WriteMode write_mode>
 LIBC_INLINE int convert_float_hex_exp(Writer<write_mode> *writer,
                                       const FormatSection &to_conv) {
+#ifdef LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
+  using LDBits = fputil::FPBits<double>;
+  using StorageType = LDBits::StorageType;
+#else
   using LDBits = fputil::FPBits<long double>;
   using StorageType = LDBits::StorageType;
+#endif // LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
 
   bool is_negative;
   int exponent;
   StorageType mantissa;
   bool is_inf_or_nan;
   uint32_t fraction_bits;
+
+#ifndef LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
   if (to_conv.length_modifier == LengthModifier::L) {
     fraction_bits = LDBits::FRACTION_LEN;
     LDBits::StorageType float_raw = to_conv.conv_val_raw;
@@ -44,7 +51,9 @@ LIBC_INLINE int convert_float_hex_exp(Writer<write_mode> *writer,
     exponent = float_bits.get_explicit_exponent();
     mantissa = float_bits.get_explicit_mantissa();
     is_inf_or_nan = float_bits.is_inf_or_nan();
-  } else {
+  } else
+#endif // !LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
+  {
     using LBits = fputil::FPBits<double>;
     fraction_bits = LBits::FRACTION_LEN;
     LBits::StorageType float_raw =

@@ -642,11 +642,12 @@ static const Value *stripPointerCastsAndOffsets(
     return V;
 
   // Even though we don't look through PHI nodes, we could be called on an
-  // instruction in an unreachable block, which may be on a cycle.
-  SmallPtrSet<const Value *, 4> Visited;
-
-  Visited.insert(V);
-  do {
+  // instruction in an unreachable block, which may be on a cycle. E.g.:
+  //   %gep = getelementptr inbounds nuw i8, ptr %gep, i64 32
+  //
+  // Bound against that case with a simple iteration counter. Practically, more
+  // than 10 iterations are almost never needed.
+  for (unsigned N = 0; N < 12; ++N) {
     Func(V);
     if (auto *GEP = dyn_cast<GEPOperator>(V)) {
       switch (StripKind) {
@@ -666,7 +667,11 @@ static const Value *stripPointerCastsAndOffsets(
           return V;
         break;
       }
-      V = GEP->getPointerOperand();
+      const Value *NewV = GEP->getPointerOperand();
+      // Quick exit for degenerate IR, which can happen in unreachable blocks.
+      if (NewV == V)
+        return V;
+      V = NewV;
     } else if (Operator::getOpcode(V) == Instruction::BitCast) {
       Value *NewV = cast<Operator>(V)->getOperand(0);
       if (!NewV->getType()->isPointerTy())
@@ -701,7 +706,7 @@ static const Value *stripPointerCastsAndOffsets(
       return V;
     }
     assert(V->getType()->isPointerTy() && "Unexpected operand type!");
-  } while (Visited.insert(V).second);
+  }
 
   return V;
 }

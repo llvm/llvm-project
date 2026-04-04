@@ -19,18 +19,12 @@ namespace sandboxir {
 
 std::optional<Type *> LoadStoreVec::canVectorize(ArrayRef<Instruction *> Bndl,
                                                  Scheduler &Sched) {
-  // TODO: Most of these checks are already implemented in LegalityAnalysis, we
-  // should reuse them.
-
   // Check if in the same BB.
-  auto *BB = cast<Instruction>(Bndl[0])->getParent();
-  if (any_of(drop_begin(Bndl),
-             [BB](auto *V) { return cast<Instruction>(V)->getParent() != BB; }))
+  if (LegalityAnalysis::differentBlock(Bndl))
     return std::nullopt;
 
   // Check if instructions repeat.
-  SmallPtrSet<Value *, 8> Unique(Bndl.begin(), Bndl.end());
-  if (Unique.size() != Bndl.size())
+  if (!LegalityAnalysis::areUnique(Bndl))
     return std::nullopt;
 
   // TODO: This is target-dependent.

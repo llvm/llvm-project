@@ -36,6 +36,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -1371,6 +1372,12 @@ inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
 inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
                                              const llvm::Twine &S) {
   DB.AddString(S.str());
+  return DB;
+}
+
+inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
+                                             std::string_view S) {
+  DB.AddString(S);
   return DB;
 }
 

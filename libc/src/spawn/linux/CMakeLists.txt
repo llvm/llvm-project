@@ -13,4 +13,5 @@ add_entrypoint_object(
     libc.src.__support.CPP.optional
     libc.src.__support.OSUtil.osutil
     libc.src.spawn.file_actions
+    libc.src.signal.linux.signal_utils
 )

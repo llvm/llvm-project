@@ -389,10 +389,9 @@ define <32 x i8> @interleave_v16i8(<16 x i8> %x, <16 x i8> %y) {
 ;
 ; ZIP-LABEL: interleave_v16i8:
 ; ZIP:       # %bb.0:
-; ZIP-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
-; ZIP-NEXT:    vmv1r.v v12, v9
 ; ZIP-NEXT:    li a0, 32
 ; ZIP-NEXT:    vsetvli zero, a0, e8, m2, ta, ma
+; ZIP-NEXT:    vmv1r.v v12, v9
 ; ZIP-NEXT:    ri.vzip2a.vv v10, v8, v12
 ; ZIP-NEXT:    vmv.v.v v8, v10
 ; ZIP-NEXT:    ret
@@ -422,10 +421,9 @@ define <32 x i16> @interleave_v16i16(<16 x i16> %x, <16 x i16> %y) {
 ;
 ; ZIP-LABEL: interleave_v16i16:
 ; ZIP:       # %bb.0:
-; ZIP-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
-; ZIP-NEXT:    vmv2r.v v16, v10
 ; ZIP-NEXT:    li a0, 32
 ; ZIP-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
+; ZIP-NEXT:    vmv2r.v v16, v10
 ; ZIP-NEXT:    ri.vzip2a.vv v12, v8, v16
 ; ZIP-NEXT:    vmv.v.v v8, v12
 ; ZIP-NEXT:    ret
@@ -456,10 +454,9 @@ define <32 x i32> @interleave_v16i32(<16 x i32> %x, <16 x i32> %y) {
 ;
 ; ZIP-LABEL: interleave_v16i32:
 ; ZIP:       # %bb.0:
-; ZIP-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
-; ZIP-NEXT:    vmv4r.v v24, v12
 ; ZIP-NEXT:    li a0, 32
 ; ZIP-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
+; ZIP-NEXT:    vmv4r.v v24, v12
 ; ZIP-NEXT:    ri.vzip2a.vv v16, v8, v24
 ; ZIP-NEXT:    vmv.v.v v8, v16
 ; ZIP-NEXT:    ret
@@ -470,11 +467,10 @@ define <32 x i32> @interleave_v16i32(<16 x i32> %x, <16 x i32> %y) {
 define <64 x i8> @interleave_v32i8(<32 x i8> %x, <32 x i8> %y) {
 ; V128-LABEL: interleave_v32i8:
 ; V128:       # %bb.0:
-; V128-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
-; V128-NEXT:    vmv2r.v v12, v10
-; V128-NEXT:    vmv2r.v v14, v8
 ; V128-NEXT:    li a0, 32
 ; V128-NEXT:    vsetvli zero, a0, e8, m2, ta, ma
+; V128-NEXT:    vmv2r.v v12, v10
+; V128-NEXT:    vmv2r.v v14, v8
 ; V128-NEXT:    vwaddu.vv v8, v14, v12
 ; V128-NEXT:    li a0, -1
 ; V128-NEXT:    vwmaccu.vx v8, a0, v12
@@ -492,10 +488,9 @@ define <64 x i8> @interleave_v32i8(<32 x i8> %x, <32 x i8> %y) {
 ;
 ; ZIP-LABEL: interleave_v32i8:
 ; ZIP:       # %bb.0:
-; ZIP-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
-; ZIP-NEXT:    vmv2r.v v16, v10
 ; ZIP-NEXT:    li a0, 64
 ; ZIP-NEXT:    vsetvli zero, a0, e8, m4, ta, ma
+; ZIP-NEXT:    vmv2r.v v16, v10
 ; ZIP-NEXT:    ri.vzip2a.vv v12, v8, v16
 ; ZIP-NEXT:    vmv.v.v v8, v12
 ; ZIP-NEXT:    ret
@@ -506,11 +501,10 @@ define <64 x i8> @interleave_v32i8(<32 x i8> %x, <32 x i8> %y) {
 define <64 x i16> @interleave_v32i16(<32 x i16> %x, <32 x i16> %y) {
 ; V128-LABEL: interleave_v32i16:
 ; V128:       # %bb.0:
-; V128-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
-; V128-NEXT:    vmv4r.v v16, v12
-; V128-NEXT:    vmv4r.v v20, v8
 ; V128-NEXT:    li a0, 32
 ; V128-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
+; V128-NEXT:    vmv4r.v v16, v12
+; V128-NEXT:    vmv4r.v v20, v8
 ; V128-NEXT:    vwaddu.vv v8, v20, v16
 ; V128-NEXT:    li a0, -1
 ; V128-NEXT:    vwmaccu.vx v8, a0, v16
@@ -518,11 +512,10 @@ define <64 x i16> @interleave_v32i16(<32 x i16> %x, <32 x i16> %y) {
 ;
 ; V512-LABEL: interleave_v32i16:
 ; V512:       # %bb.0:
-; V512-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
-; V512-NEXT:    vmv1r.v v10, v9
-; V512-NEXT:    vmv1r.v v11, v8
 ; V512-NEXT:    li a0, 32
 ; V512-NEXT:    vsetvli zero, a0, e16, m1, ta, ma
+; V512-NEXT:    vmv1r.v v10, v9
+; V512-NEXT:    vmv1r.v v11, v8
 ; V512-NEXT:    vwaddu.vv v8, v11, v10
 ; V512-NEXT:    li a0, -1
 ; V512-NEXT:    vwmaccu.vx v8, a0, v10
@@ -530,10 +523,9 @@ define <64 x i16> @interleave_v32i16(<32 x i16> %x, <32 x i16> %y) {
 ;
 ; ZIP-LABEL: interleave_v32i16:
 ; ZIP:       # %bb.0:
-; ZIP-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
-; ZIP-NEXT:    vmv4r.v v24, v12
 ; ZIP-NEXT:    li a0, 64
 ; ZIP-NEXT:    vsetvli zero, a0, e16, m8, ta, ma
+; ZIP-NEXT:    vmv4r.v v24, v12
 ; ZIP-NEXT:    ri.vzip2a.vv v16, v8, v24
 ; ZIP-NEXT:    vmv.v.v v8, v16
 ; ZIP-NEXT:    ret
@@ -583,11 +575,10 @@ define <64 x i32> @interleave_v32i32(<32 x i32> %x, <32 x i32> %y) {
 ;
 ; V512-LABEL: interleave_v32i32:
 ; V512:       # %bb.0:
-; V512-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
-; V512-NEXT:    vmv2r.v v12, v10
-; V512-NEXT:    vmv2r.v v14, v8
 ; V512-NEXT:    li a0, 32
 ; V512-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; V512-NEXT:    vmv2r.v v12, v10
+; V512-NEXT:    vmv2r.v v14, v8
 ; V512-NEXT:    vwaddu.vv v8, v14, v12
 ; V512-NEXT:    li a0, -1
 ; V512-NEXT:    vwmaccu.vx v8, a0, v12

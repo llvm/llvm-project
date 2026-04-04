@@ -234,7 +234,7 @@ public:
   ArrayRef<SCEVUse> operands() const { return ArrayRef(Operands, NumOperands); }
 
   NoWrapFlags getNoWrapFlags(NoWrapFlags Mask = NoWrapMask) const {
-    return (NoWrapFlags)(SubclassData & Mask);
+    return static_cast<NoWrapFlags>(SubclassData) & Mask;
   }
 
   bool hasNoUnsignedWrap() const {
@@ -274,7 +274,9 @@ public:
   }
 
   /// Set flags for a non-recurrence without clearing previously set flags.
-  void setNoWrapFlags(NoWrapFlags Flags) { SubclassData |= Flags; }
+  void setNoWrapFlags(NoWrapFlags Flags) {
+    SubclassData |= static_cast<unsigned short>(Flags);
+  }
 };
 
 /// This node represents an addition of some number of SCEVs.
@@ -402,9 +404,9 @@ public:
   /// For AddRec, either NUW or NSW implies NW. Keep track of this fact here
   /// to make it easier to propagate flags.
   void setNoWrapFlags(NoWrapFlags Flags) {
-    if (Flags & (FlagNUW | FlagNSW))
+    if (any(Flags & (FlagNUW | FlagNSW)))
       Flags = ScalarEvolution::setFlags(Flags, FlagNW);
-    SubclassData |= Flags;
+    SubclassData |= static_cast<unsigned short>(Flags);
   }
 
   /// Return the value of this chain of recurrences at the specified
@@ -453,7 +455,7 @@ protected:
       : SCEVCommutativeExpr(ID, T, O, N) {
     assert(isMinMaxType(T));
     // Min and max never overflow
-    setNoWrapFlags((NoWrapFlags)(FlagNUW | FlagNSW));
+    setNoWrapFlags(FlagNUW | FlagNSW);
   }
 
 public:
@@ -539,7 +541,9 @@ class SCEVSequentialMinMaxExpr : public SCEVNAryExpr {
   }
 
   /// Set flags for a non-recurrence without clearing previously set flags.
-  void setNoWrapFlags(NoWrapFlags Flags) { SubclassData |= Flags; }
+  void setNoWrapFlags(NoWrapFlags Flags) {
+    SubclassData |= static_cast<unsigned short>(Flags);
+  }
 
 protected:
   /// Note: Constructing subclasses via this constructor is allowed
@@ -548,7 +552,7 @@ protected:
       : SCEVNAryExpr(ID, T, O, N) {
     assert(isSequentialMinMaxType(T));
     // Min and max never overflow
-    setNoWrapFlags((NoWrapFlags)(FlagNUW | FlagNSW));
+    setNoWrapFlags(FlagNUW | FlagNSW);
   }
 
 public:
@@ -1045,6 +1049,15 @@ public:
 private:
   LoopToScevMapT &Map;
 };
+
+template <typename SCEVPtrT>
+inline SCEVNoWrapFlags
+SCEVUseT<SCEVPtrT>::getNoWrapFlags(SCEVNoWrapFlags Mask) const {
+  SCEVNoWrapFlags Flags = SCEVNoWrapFlags::FlagAnyWrap;
+  if (auto *NAry = dyn_cast<SCEVNAryExpr>(Base::getPointer()))
+    Flags = NAry->getNoWrapFlags();
+  return (Flags | getUseNoWrapFlags()) & Mask;
+}
 
 } // end namespace llvm
 

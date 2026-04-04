@@ -606,6 +606,7 @@ public:
 };
 
 #if !defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT64) &&                             \
+    !defined(LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE) &&                       \
     !defined(LIBC_COPT_FLOAT_TO_STR_NO_SPECIALIZE_LD)
 // --------------------------- LONG DOUBLE FUNCTIONS ---------------------------
 

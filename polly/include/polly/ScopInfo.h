@@ -1868,16 +1868,11 @@ private:
        ScopDetection::DetectionContext &DC, OptimizationRemarkEmitter &ORE,
        int ID);
 
-  //@}
-
   /// Return the access for the base ptr of @p MA if any.
   MemoryAccess *lookupBasePtrAccess(MemoryAccess *MA);
 
   /// Create an id for @p Param and store it in the ParameterIds map.
   void createParameterId(const SCEV *Param);
-
-  /// Build the Context of the Scop.
-  void buildContext();
 
   /// Add the bounds of the parameters to the context.
   void addParameterBounds();
@@ -1941,6 +1936,12 @@ public:
   Scop(const Scop &) = delete;
   Scop &operator=(const Scop &) = delete;
   ~Scop();
+
+  /// Factory pattern for creating a new (empty) SCoP.
+  static std::unique_ptr<Scop> makeScop(Region &R, ScalarEvolution &SE,
+                                        LoopInfo &LI, DominatorTree &DT,
+                                        ScopDetection::DetectionContext &DC,
+                                        OptimizationRemarkEmitter &ORE, int ID);
 
   /// Increment actual number of aliasing assumptions taken
   ///
@@ -2483,6 +2484,12 @@ public:
   ///           SCEVs known to not reference any loops in the SCoP can be
   ///           passed without a @p BB.
   /// @param NonNegative Flag to indicate the @p E has to be non-negative.
+  /// @param IsInsideDomain If true, assumptions only need to apply during the
+  ///                       execution of @p BB. That is, when we know that we
+  ///                       are in its domain. Must be false if the SCEV is
+  ///                       evaluated outside a ScopStmt, or for code that
+  ///                       computes the domain (since while doing that, we
+  ///                       don't know whether we are in the domain yet).
   ///
   /// Note that this function will always return a valid isl_pw_aff. However, if
   /// the translation of @p E was deemed to complex the SCoP is invalidated and
@@ -2490,7 +2497,8 @@ public:
   /// for complex cases without "error handling code" needed on the users side.
   PWACtx getPwAff(const SCEV *E, BasicBlock *BB = nullptr,
                   bool NonNegative = false,
-                  RecordedAssumptionsTy *RecordedAssumptions = nullptr);
+                  RecordedAssumptionsTy *RecordedAssumptions = nullptr,
+                  bool IsInsideDomain = true);
 
   /// Compute the isl representation for the SCEV @p E
   ///

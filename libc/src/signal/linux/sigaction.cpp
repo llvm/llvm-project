@@ -18,7 +18,7 @@ namespace LIBC_NAMESPACE_DECL {
 LLVM_LIBC_FUNCTION(int, sigaction,
                    (int signal, const struct sigaction *__restrict libc_new,
                     struct sigaction *__restrict libc_old)) {
-  ErrorOr<int> ret = do_sigaction(signal, libc_new, libc_old);
+  ErrorOr<int> ret = checked_sigaction(signal, libc_new, libc_old);
   if (ret)
     return ret.value();
 

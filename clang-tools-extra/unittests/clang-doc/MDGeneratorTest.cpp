@@ -28,8 +28,8 @@ TEST_F(MDGeneratorTest, emitNamespaceMD) {
   I.Name = "Namespace";
   I.Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
 
-  I.Children.Namespaces.emplace_back(EmptySID, "ChildNamespace",
-                                     InfoType::IT_namespace);
+  Reference NewNamespace(EmptySID, "ChildNamespace", InfoType::IT_namespace);
+  I.Children.Namespaces.push_back(NewNamespace);
   I.Children.Records.emplace_back(EmptySID, "ChildStruct", InfoType::IT_record);
   I.Children.Functions.emplace_back();
   I.Children.Functions.back().Name = "OneFunction";

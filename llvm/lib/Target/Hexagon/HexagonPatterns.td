@@ -3461,7 +3461,7 @@ def HexagonBARRIER: SDNode<"HexagonISD::BARRIER", SDTNone, [SDNPHasChain]>;
 def: Pat<(HexagonBARRIER), (Y2_barrier)>;
 
 def: Pat<(trap), (PS_crash)>;
-def: Pat<(debugtrap), (Y2_break)>;
+def: Pat<(debugtrap), (J2_trap0 0xDB)>;
 
 // Read cycle counter.
 def : Pat<(i64 (readcyclecounter)), (PS_readcr64 UPCYCLE)>;

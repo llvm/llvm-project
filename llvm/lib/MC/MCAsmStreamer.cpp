@@ -20,6 +20,7 @@
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstPrinter.h"
+#include "llvm/MC/MCLFI.h"
 #include "llvm/MC/MCLFIRewriter.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCObjectWriter.h"
@@ -2596,6 +2597,9 @@ void MCAsmStreamer::emitRawTextImpl(StringRef String) {
 }
 
 void MCAsmStreamer::finishImpl() {
+  if (getContext().getTargetTriple().isLFI())
+    emitLFINoteSection(*this, getContext());
+
   // If we are generating dwarf for assembly source files dump out the sections.
   if (getContext().getGenDwarfForAssembly())
     MCGenDwarfInfo::Emit(this);

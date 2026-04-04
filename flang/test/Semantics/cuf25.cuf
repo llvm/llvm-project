@@ -1,0 +1,14 @@
+! RUN: %python %S/test_errors.py %s %flang_fc1
+
+module m
+  type bar
+    integer, allocatable :: m(:)
+  end type
+contains
+  attributes(global) subroutine g1( a )
+    type(bar) :: a
+    i = threadIdx%x
+    a%m(i) = i
+    return
+  end subroutine
+end module m

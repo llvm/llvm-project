@@ -1,7 +1,7 @@
 // REQUIRES: system-solaris
 
-// Check that clang invokes the native ld.
+// Check that clang invokes the native ld, not whatever "ld" that happens to be in PATH
 
-// RUN: test -f /usr/gnu/bin/ld && env PATH=/usr/gnu/bin %clang -o %t.o %s
+// RUN: env PATH=%S/Inputs/fake_ld/ %clang -v -o %t.o %s
 
 int main() { return 0; }

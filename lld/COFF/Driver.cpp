@@ -2103,6 +2103,10 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   for (auto *arg : args.filtered(OPT_merge))
     parseMerge(arg->getValue());
 
+  // Handle /discard-section
+  for (auto *arg : args.filtered(OPT_discard_section))
+    config->discardSection.insert(arg->getValue());
+
   // Add default section merging rules after user rules. User rules take
   // precedence, but we will emit a warning if there is a conflict.
   parseMerge(".idata=.rdata");

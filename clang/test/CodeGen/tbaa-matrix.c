@@ -16,9 +16,9 @@ typedef int ix3x3_t __attribute__((matrix_type(3, 3)));
 // CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 8, !tbaa [[ANYPTR_TBAA5:![0-9]+]]
 // CHECK-NEXT:    store ptr [[B]], ptr [[B_ADDR]], align 8, !tbaa [[ANYPTR_TBAA5]]
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[A_ADDR]], align 8, !tbaa [[ANYPTR_TBAA5]]
-// CHECK-NEXT:    [[TMP1:%.*]] = load <25 x double>, ptr [[TMP0]], align 8, !tbaa [[CHAR_TBAA7:![0-9]+]]
+// CHECK-NEXT:    [[TMP1:%.*]] = load <25 x double>, ptr [[TMP0]], align 8, !tbaa [[DOUBLE_TBAA7:![0-9]+]]
 // CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[B_ADDR]], align 8, !tbaa [[ANYPTR_TBAA5]]
-// CHECK-NEXT:    store <25 x double> [[TMP1]], ptr [[TMP2]], align 8, !tbaa [[CHAR_TBAA7]]
+// CHECK-NEXT:    store <25 x double> [[TMP1]], ptr [[TMP2]], align 8, !tbaa [[DOUBLE_TBAA7]]
 // CHECK-NEXT:    ret void
 //
 void load_double_matrix(dx5x5_t *a, dx5x5_t *b) {
@@ -33,9 +33,9 @@ void load_double_matrix(dx5x5_t *a, dx5x5_t *b) {
 // CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 8, !tbaa [[ANYPTR_TBAA5]]
 // CHECK-NEXT:    store ptr [[B]], ptr [[B_ADDR]], align 8, !tbaa [[ANYPTR_TBAA5]]
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[A_ADDR]], align 8, !tbaa [[ANYPTR_TBAA5]]
-// CHECK-NEXT:    [[TMP1:%.*]] = load <6 x float>, ptr [[TMP0]], align 4, !tbaa [[CHAR_TBAA7]]
+// CHECK-NEXT:    [[TMP1:%.*]] = load <6 x float>, ptr [[TMP0]], align 4, !tbaa [[FLOAT_TBAA9:![0-9]+]]
 // CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[B_ADDR]], align 8, !tbaa [[ANYPTR_TBAA5]]
-// CHECK-NEXT:    store <6 x float> [[TMP1]], ptr [[TMP2]], align 4, !tbaa [[CHAR_TBAA7]]
+// CHECK-NEXT:    store <6 x float> [[TMP1]], ptr [[TMP2]], align 4, !tbaa [[FLOAT_TBAA9]]
 // CHECK-NEXT:    ret void
 //
 void load_float_matrix(fx2x3_t *a, fx2x3_t *b) {
@@ -50,9 +50,9 @@ void load_float_matrix(fx2x3_t *a, fx2x3_t *b) {
 // CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 8, !tbaa [[ANYPTR_TBAA5]]
 // CHECK-NEXT:    store ptr [[B]], ptr [[B_ADDR]], align 8, !tbaa [[ANYPTR_TBAA5]]
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[A_ADDR]], align 8, !tbaa [[ANYPTR_TBAA5]]
-// CHECK-NEXT:    [[TMP1:%.*]] = load <9 x i32>, ptr [[TMP0]], align 4, !tbaa [[CHAR_TBAA7]]
+// CHECK-NEXT:    [[TMP1:%.*]] = load <9 x i32>, ptr [[TMP0]], align 4, !tbaa [[INT_TBAA1:![0-9]+]]
 // CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[B_ADDR]], align 8, !tbaa [[ANYPTR_TBAA5]]
-// CHECK-NEXT:    store <9 x i32> [[TMP1]], ptr [[TMP2]], align 4, !tbaa [[CHAR_TBAA7]]
+// CHECK-NEXT:    store <9 x i32> [[TMP1]], ptr [[TMP2]], align 4, !tbaa [[INT_TBAA1]]
 // CHECK-NEXT:    ret void
 //
 void load_int_matrix(ix3x3_t *a, ix3x3_t *b) {
@@ -69,15 +69,15 @@ void load_int_matrix(ix3x3_t *a, ix3x3_t *b) {
 // CHECK-NEXT:    [[LOCAL:%.*]] = alloca [25 x double], align 8
 // CHECK-NEXT:    [[D:%.*]] = alloca double, align 8
 // CHECK-NEXT:    store ptr [[M]], ptr [[M_ADDR]], align 8, !tbaa [[ANYPTR_TBAA5]]
-// CHECK-NEXT:    store ptr [[S]], ptr [[S_ADDR]], align 8, !tbaa [[DOUBLEPTR_TBAA8:![0-9]+]]
+// CHECK-NEXT:    store ptr [[S]], ptr [[S_ADDR]], align 8, !tbaa [[DOUBLEPTR_TBAA11:![0-9]+]]
 // CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[LOCAL]]) #[[ATTR2:[0-9]+]]
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[M_ADDR]], align 8, !tbaa [[ANYPTR_TBAA5]]
-// CHECK-NEXT:    [[TMP1:%.*]] = load <25 x double>, ptr [[TMP0]], align 8, !tbaa [[CHAR_TBAA7]]
-// CHECK-NEXT:    store <25 x double> [[TMP1]], ptr [[LOCAL]], align 8, !tbaa [[CHAR_TBAA7]]
+// CHECK-NEXT:    [[TMP1:%.*]] = load <25 x double>, ptr [[TMP0]], align 8, !tbaa [[DOUBLE_TBAA7]]
+// CHECK-NEXT:    store <25 x double> [[TMP1]], ptr [[LOCAL]], align 8, !tbaa [[DOUBLE_TBAA7]]
 // CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[D]]) #[[ATTR2]]
-// CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[S_ADDR]], align 8, !tbaa [[DOUBLEPTR_TBAA8]]
-// CHECK-NEXT:    [[TMP3:%.*]] = load double, ptr [[TMP2]], align 8, !tbaa [[DOUBLE_TBAA10:![0-9]+]]
-// CHECK-NEXT:    store double [[TMP3]], ptr [[D]], align 8, !tbaa [[DOUBLE_TBAA10]]
+// CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[S_ADDR]], align 8, !tbaa [[DOUBLEPTR_TBAA11]]
+// CHECK-NEXT:    [[TMP3:%.*]] = load double, ptr [[TMP2]], align 8, !tbaa [[DOUBLE_TBAA7]]
+// CHECK-NEXT:    store double [[TMP3]], ptr [[D]], align 8, !tbaa [[DOUBLE_TBAA7]]
 // CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[D]]) #[[ATTR2]]
 // CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[LOCAL]]) #[[ATTR2]]
 // CHECK-NEXT:    ret void
@@ -99,9 +99,9 @@ typedef aliasing_int __attribute__((matrix_type(2, 2))) aim_t;
 // CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 8, !tbaa [[ANYPTR_TBAA5]]
 // CHECK-NEXT:    store ptr [[B]], ptr [[B_ADDR]], align 8, !tbaa [[ANYPTR_TBAA5]]
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[A_ADDR]], align 8, !tbaa [[ANYPTR_TBAA5]]
-// CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[TMP0]], align 4, !tbaa [[CHAR_TBAA7]]
+// CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[TMP0]], align 4, !tbaa [[INT_TBAA1]]
 // CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[B_ADDR]], align 8, !tbaa [[ANYPTR_TBAA5]]
-// CHECK-NEXT:    store <4 x i32> [[TMP1]], ptr [[TMP2]], align 4, !tbaa [[CHAR_TBAA7]]
+// CHECK-NEXT:    store <4 x i32> [[TMP1]], ptr [[TMP2]], align 4, !tbaa [[INT_TBAA1]]
 // CHECK-NEXT:    ret void
 //
 void load_may_alias_matrix(aim_t *a, aim_t *b) {
@@ -109,13 +109,16 @@ void load_may_alias_matrix(aim_t *a, aim_t *b) {
 }
 
 //.
-// CHECK: [[META3:![0-9]+]] = !{!"omnipotent char", [[META4:![0-9]+]], i64 0}
+// CHECK: [[INT_TBAA1]] = !{[[META2:![0-9]+]], [[META2]], i64 0}
+// CHECK: [[META2]] = !{!"int", [[META3:![0-9]+]], i64 0}
+// CHECK: [[META3]] = !{!"omnipotent char", [[META4:![0-9]+]], i64 0}
 // CHECK: [[META4]] = !{!"Simple C/C++ TBAA"}
 // CHECK: [[ANYPTR_TBAA5]] = !{[[META6:![0-9]+]], [[META6]], i64 0}
 // CHECK: [[META6]] = !{!"any pointer", [[META3]], i64 0}
-// CHECK: [[CHAR_TBAA7]] = !{[[META3]], [[META3]], i64 0}
-// CHECK: [[DOUBLEPTR_TBAA8]] = !{[[META9:![0-9]+]], [[META9]], i64 0}
-// CHECK: [[META9]] = !{!"p1 double", [[META6]], i64 0}
-// CHECK: [[DOUBLE_TBAA10]] = !{[[META11:![0-9]+]], [[META11]], i64 0}
-// CHECK: [[META11]] = !{!"double", [[META3]], i64 0}
+// CHECK: [[DOUBLE_TBAA7]] = !{[[META8:![0-9]+]], [[META8]], i64 0}
+// CHECK: [[META8]] = !{!"double", [[META3]], i64 0}
+// CHECK: [[FLOAT_TBAA9]] = !{[[META10:![0-9]+]], [[META10]], i64 0}
+// CHECK: [[META10]] = !{!"float", [[META3]], i64 0}
+// CHECK: [[DOUBLEPTR_TBAA11]] = !{[[META12:![0-9]+]], [[META12]], i64 0}
+// CHECK: [[META12]] = !{!"p1 double", [[META6]], i64 0}
 //.
