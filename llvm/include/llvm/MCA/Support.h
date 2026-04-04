@@ -98,7 +98,7 @@ LLVM_ABI void computeProcResourceMasks(const MCSchedModel &SM,
 
 #ifndef NDEBUG
 LLVM_ABI void dumpProcResourceMasks(const MCSchedModel &SM,
-                                    MutableArrayRef<uint64_t> Masks);
+                                    ArrayRef<uint64_t> Masks);
 #endif
 
 // Returns the index of the highest bit set. For resource masks, the position of

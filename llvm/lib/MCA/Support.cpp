@@ -71,8 +71,7 @@ void computeProcResourceMasks(const MCSchedModel &SM,
 }
 
 #ifndef NDEBUG
-void dumpProcResourceMasks(const MCSchedModel &SM,
-                           MutableArrayRef<uint64_t> Masks) {
+void dumpProcResourceMasks(const MCSchedModel &SM, ArrayRef<uint64_t> Masks) {
   dbgs() << "\nProcessor resource masks:\n";
   for (unsigned I = 0, E = SM.getNumProcResourceKinds(); I < E; ++I) {
     const MCProcResourceDesc &Desc = *SM.getProcResource(I);
