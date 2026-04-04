@@ -267,7 +267,7 @@ GetAndValidateInfo(const SymbolContext &sc) {
   if (demangled_name.empty())
     return llvm::createStringErrorV(
         "function '{0}' does not have a demangled name",
-        mangled.GetMangledName().GetStringRef());
+        mangled.GetMangledName());
 
   const std::optional<DemangledNameInfo> &info = mangled.GetDemangledInfo();
   if (!info)
