@@ -23,6 +23,7 @@
 #include "lldb/Utility/AnsiTerminal.h"
 #include "lldb/Utility/OptionDefinition.h"
 #include "lldb/Utility/StreamString.h"
+#include "lldb/lldb-defines.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ErrorExtras.h"
@@ -891,7 +892,7 @@ static Args ReconstituteArgsAfterParsing(llvm::ArrayRef<char *> parsed,
 
 /// Find the index of the given option in the arguments. If the option takes an
 /// argument, the second index is the index of the value in args. Otherwise, the
-/// second index is -1.
+/// second index is LLDB_INVALID_INDEX64.
 static std::pair<size_t, size_t>
 FindArgumentIndexForOption(const Args &args, const Option &long_option) {
   std::string short_opt = llvm::formatv("-{0}", char(long_option.val)).str();
@@ -901,7 +902,7 @@ FindArgumentIndexForOption(const Args &args, const Option &long_option) {
     llvm::StringRef arg = entry.value().ref();
     size_t idx = entry.index();
     if (long_option.definition->option_has_arg == OptionParser::eNoArgument)
-      return {idx, -1};
+      return {idx, LLDB_INVALID_INDEX64};
     size_t val_idx;
     if (arg == short_opt || arg.starts_with(long_opt))
       val_idx = idx + 1;
@@ -910,7 +911,7 @@ FindArgumentIndexForOption(const Args &args, const Option &long_option) {
     return {idx, val_idx};
   }
 
-  return {-1, -1};
+  return {LLDB_INVALID_INDEX64, LLDB_INVALID_INDEX64};
 }
 
 static std::string BuildShortOptions(const Option *long_options) {
@@ -1034,7 +1035,7 @@ llvm::Expected<Args> Options::ParseAlias(const Args &args,
     auto [idx, val_idx] = FindArgumentIndexForOption(args_copy, opt);
     std::string option_to_insert;
     if (option_arg) {
-      if (val_idx != size_t(-1) && val_idx < args_copy.size() && has_arg) {
+      if (val_idx != LLDB_INVALID_INDEX64 && val_idx < args_copy.size()) {
         bool arg_has_backtick = args_copy[val_idx].GetQuoteChar() == '`';
         if (arg_has_backtick)
           option_to_insert = "`";
@@ -1049,7 +1050,7 @@ llvm::Expected<Args> Options::ParseAlias(const Args &args,
     option_arg_vector->emplace_back(std::string(option_str.GetString()),
                                     has_arg, option_to_insert);
 
-    if (idx == size_t(-1))
+    if (idx == LLDB_INVALID_INDEX64)
       continue;
 
     if (!input_line.empty()) {
