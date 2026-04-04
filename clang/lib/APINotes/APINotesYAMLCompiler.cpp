@@ -162,11 +162,10 @@ enum class APIAvailability {
 };
 } // namespace
 
-/* TO_UPSTREAM(BoundsSafety) ON */
 namespace {
 struct BoundsSafetyNotes {
   BoundsSafetyInfo::BoundsSafetyKind Kind;
-  unsigned Level = 0;
+  std::optional<unsigned> Level;
   StringRef BoundsExpr = "";
 };
 } // namespace
@@ -187,7 +186,6 @@ template <> struct ScalarEnumerationTraits<BoundsSafetyInfo::BoundsSafetyKind> {
 };
 } // namespace yaml
 } // namespace llvm
-/* TO_UPSTREAM(BoundsSafety) OFF */
 
 namespace llvm {
 namespace yaml {
@@ -226,9 +224,7 @@ struct Param {
   std::optional<bool> Lifetimebound = false;
   std::optional<NullabilityKind> Nullability;
   std::optional<RetainCountConventionKind> RetainCountConvention;
-  /* TO_UPSTREAM(BoundsSafety) ON */
   std::optional<BoundsSafetyNotes> BoundsSafety;
-  /* TO_UPSTREAM(BoundsSafety) OFF */
   StringRef Type;
 };
 
@@ -280,21 +276,17 @@ template <> struct MappingTraits<Param> {
     IO.mapOptional("NoEscape", P.NoEscape);
     IO.mapOptional("Lifetimebound", P.Lifetimebound);
     IO.mapOptional("Type", P.Type, StringRef(""));
-    /* TO_UPSTREAM(BoundsSafety) ON */
     IO.mapOptional("BoundsSafety", P.BoundsSafety);
-    /* TO_UPSTREAM(BoundsSafety) OFF */
   }
 };
 
-/* TO_UPSTREAM(BoundsSafety) ON */
 template <> struct MappingTraits<BoundsSafetyNotes> {
   static void mapping(IO &IO, BoundsSafetyNotes &BS) {
     IO.mapRequired("Kind", BS.Kind);
     IO.mapRequired("BoundedBy", BS.BoundsExpr);
-    IO.mapOptional("Level", BS.Level, 0);
+    IO.mapOptional("Level", BS.Level);
   }
 };
-/* TO_UPSTREAM(BoundsSafety) OFF */
 } // namespace yaml
 } // namespace llvm
 
@@ -955,15 +947,14 @@ public:
       PI.setLifetimebound(P.Lifetimebound);
       PI.setType(std::string(P.Type));
       PI.setRetainCountConvention(P.RetainCountConvention);
-      /* TO_UPSTREAM(BoundsSafety) ON */
       if (P.BoundsSafety) {
         BoundsSafetyInfo BSI;
         BSI.setKindAudited(P.BoundsSafety->Kind);
-        BSI.setLevelAudited(P.BoundsSafety->Level);
+        if (P.BoundsSafety->Level)
+          BSI.setLevelAudited(*P.BoundsSafety->Level);
         BSI.ExternalBounds = P.BoundsSafety->BoundsExpr.str();
         PI.BoundsSafety = BSI;
       }
-      /* TO_UPSTREAM(BoundsSafety) OFF */
       if (static_cast<int>(OutInfo.Params.size()) <= P.Position)
         OutInfo.Params.resize(P.Position + 1);
       if (P.Position == -1)
@@ -1172,7 +1163,7 @@ public:
     if (Function.ReturnBoundsSafety) {
       BoundsSafetyInfo BSI;
       BSI.setKindAudited(Function.ReturnBoundsSafety->Kind);
-      BSI.setLevelAudited(Function.ReturnBoundsSafety->Level);
+      BSI.setLevelAudited(Function.ReturnBoundsSafety->Level.value_or(0));
       BSI.ExternalBounds = Function.ReturnBoundsSafety->BoundsExpr.str();
       FI.ReturnBoundsSafety = BSI;
     }
