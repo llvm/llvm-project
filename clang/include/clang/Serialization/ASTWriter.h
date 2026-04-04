@@ -734,8 +734,7 @@ public:
   /// the module but currently is merely a random 32-bit number.
   ASTFileSignature WriteAST(llvm::PointerUnion<Sema *, Preprocessor *> Subject,
                             StringRef OutputFile, Module *WritingModule,
-                            StringRef isysroot,
-                            bool ShouldCacheASTInMemory = false);
+                            StringRef isysroot);
 
   /// Emit a token.
   void AddToken(const Token &Tok, RecordDataImpl &Record);
@@ -1016,7 +1015,6 @@ class PCHGenerator : public SemaConsumer {
   llvm::BitstreamWriter Stream;
   ASTWriter Writer;
   bool AllowASTWithErrors;
-  bool ShouldCacheASTInMemory;
 
 protected:
   ASTWriter &getWriter() { return Writer; }
@@ -1038,7 +1036,6 @@ public:
                ArrayRef<std::shared_ptr<ModuleFileExtension>> Extensions,
                bool AllowASTWithErrors = false, bool IncludeTimestamps = true,
                bool BuildingImplicitModule = false,
-               bool ShouldCacheASTInMemory = false,
                bool GeneratingReducedBMI = false);
   ~PCHGenerator() override;
 
