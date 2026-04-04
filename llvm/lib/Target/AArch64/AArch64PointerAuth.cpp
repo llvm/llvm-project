@@ -63,13 +63,11 @@ static void emitPACSymOffsetIntoReg(const TargetInstrInfo &TII,
                                     MachineBasicBlock::iterator I, DebugLoc DL,
                                     MCSymbol *PACSym, Register Reg) {
   BuildMI(MBB, I, DL, TII.get(AArch64::ADRP), Reg)
-      .addSym(PACSym, AArch64II::MO_PAGE)
-      .setMIFlag(MachineInstr::FrameDestroy);
+      .addSym(PACSym, AArch64II::MO_PAGE);
   BuildMI(MBB, I, DL, TII.get(AArch64::ADDXri), Reg)
       .addReg(Reg)
       .addSym(PACSym, AArch64II::MO_PAGEOFF | AArch64II::MO_NC)
-      .addImm(0)
-      .setMIFlag(MachineInstr::FrameDestroy);
+      .addImm(0);
 }
 
 static void emitPACCFI(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
