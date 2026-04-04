@@ -1981,11 +1981,7 @@ Status CommandInterpreter::PreprocessToken(std::string &expr_str) {
   Status error;
   ExecutionContext exe_ctx(GetExecutionContext());
 
-  // Get a dummy target to allow for calculator mode while processing
-  // backticks. This also helps break the infinite loop caused when target is
-  // null.
-  Target *exe_target = exe_ctx.GetTargetPtr();
-  Target &target = exe_target ? *exe_target : m_debugger.GetDummyTarget();
+  Target &target = exe_ctx.GetTargetRef();
 
   ValueObjectSP expr_result_valobj_sp;
 

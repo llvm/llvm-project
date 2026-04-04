@@ -208,12 +208,10 @@ public:
   }
 
   /// Get the execution context representing the selected entities in the
-  /// selected target.
+  /// selected target, or the dummy target if no target is selected.
   ExecutionContext GetSelectedExecutionContext();
 
-  /// Similar to GetSelectedExecutionContext but returns a
-  /// ExecutionContextRef, and will hold the dummy target if no target is
-  /// currently selected.
+  /// Like GetSelectedExecutionContext but returns an ExecutionContextRef.
   ExecutionContextRef GetSelectedExecutionContextRef();
 
   /// Get accessor for the target list.

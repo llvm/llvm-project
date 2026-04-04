@@ -1294,9 +1294,7 @@ void Debugger::FlushStatusLine() {
 }
 
 ExecutionContext Debugger::GetSelectedExecutionContext() {
-  bool adopt_selected = true;
-  ExecutionContextRef exe_ctx_ref(GetSelectedTarget().get(), adopt_selected);
-  return ExecutionContext(exe_ctx_ref);
+  return ExecutionContext(GetSelectedExecutionContextRef());
 }
 
 ExecutionContextRef Debugger::GetSelectedExecutionContextRef() {

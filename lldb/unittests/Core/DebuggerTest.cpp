@@ -12,6 +12,7 @@
 #include "TestingSupport/TestUtilities.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
+#include "lldb/Target/ExecutionContext.h"
 #include "gtest/gtest.h"
 
 using namespace lldb;
@@ -47,6 +48,27 @@ TEST_F(DebuggerTest, TestSettings) {
   FormatEntity::Entry format("foo");
   EXPECT_TRUE(debugger_sp->SetStatuslineFormat(format));
   EXPECT_EQ(debugger_sp->GetStatuslineFormat().string, "foo");
+
+  Debugger::Destroy(debugger_sp);
+}
+
+TEST_F(DebuggerTest,
+       SelectedExecutionContextUsesDummyTargetWhenNoTargetSelected) {
+  DebuggerSP debugger_sp = Debugger::CreateInstance();
+
+  // No targets have been added, so no target is selected.
+  ASSERT_EQ(debugger_sp->GetSelectedTarget().get(), nullptr);
+
+  Target &dummy_target = debugger_sp->GetDummyTarget();
+
+  // GetSelectedExecutionContextRef should fall back to the dummy target.
+  ExecutionContextRef exe_ctx_ref =
+      debugger_sp->GetSelectedExecutionContextRef();
+  EXPECT_EQ(exe_ctx_ref.GetTargetSP().get(), &dummy_target);
+
+  // GetSelectedExecutionContext should also contain the dummy target.
+  ExecutionContext exe_ctx = debugger_sp->GetSelectedExecutionContext();
+  EXPECT_EQ(exe_ctx.GetTargetPtr(), &dummy_target);
 
   Debugger::Destroy(debugger_sp);
 }
