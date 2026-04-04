@@ -4775,8 +4775,10 @@ bool SelectionDAG::isKnownToBeAPowerOfTwo(SDValue Val,
     // If x != 0:
     //    x & -x -> non-zero pow2
     // so if we find the pattern return whether we know `x` is non-zero.
-    SDValue X;
-    if (sd_match(Val, m_And(m_Value(X), m_Neg(m_Deferred(X)))))
+    SDValue X, Z;
+    if (sd_match(Val, m_And(m_Value(X), m_Neg(m_Deferred(X)))) ||
+        (sd_match(Val, m_And(m_Value(X), m_Sub(m_Value(Z), m_Deferred(X)))) &&
+         MaskedVectorIsZero(Z, DemandedElts, Depth + 1)))
       return OrZero || isKnownNeverZero(X, DemandedElts, Depth);
     break;
   }
@@ -4803,10 +4805,10 @@ bool SelectionDAG::isKnownToBeAPowerOfTwo(SDValue Val,
                                   Depth + 1);
   }
 
-  case ISD::TRUNCATE: {
-    return (OrZero || isKnownNeverZero(Val, Depth)) &&
-           isKnownToBeAPowerOfTwo(Val.getOperand(0), OrZero, Depth + 1);
-  }
+  case ISD::TRUNCATE:
+    return (OrZero || isKnownNeverZero(Val, DemandedElts, Depth)) &&
+           isKnownToBeAPowerOfTwo(Val.getOperand(0), DemandedElts, OrZero,
+                                  Depth + 1);
 
   case ISD::ROTL:
   case ISD::ROTR:
