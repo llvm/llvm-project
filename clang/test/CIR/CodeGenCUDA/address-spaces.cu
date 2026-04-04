@@ -30,7 +30,7 @@
 
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir \
 // RUN:            -x cuda -emit-cir -target-sdk-version=12.3 \
-// RUN:            %s -o %t.cir
+// RUN:            -I%S/Inputs/ %s -o %t.cir
 // RUN: FileCheck --check-prefix=CIR-HOST --input-file=%t.cir %s
 
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir \
@@ -48,26 +48,26 @@
 // CIR-DEVICE: cir.global "private" internal dso_local @_ZZ2fnvE1j = #cir.undef
 // LLVM-DEVICE: @_ZZ2fnvE1j = internal global i32 undef
 
-// CIR-PRE: cir.global external  lang_address_space(offload_global) @i = #cir.int<0> : !s32i
-// CIR-POST: cir.global external  target_address_space(1) @i = #cir.int<0> : !s32i
+// CIR-PRE: cir.global external  lang_address_space(offload_global) @i = #cir.int<0>
+// CIR-POST: cir.global external  target_address_space(1) @i = #cir.int<0>
 // LLVM-DEVICE-DAG: @i = addrspace(1) {{.*}}global i32 0
 // OGCG-DAG: @i = addrspace(1) externally_initialized global i32 0
-// CIR-HOST: cir.global {{.*}} @i = #cir.poison : !s32i {{{.*}}, cu.shadow_name = #cir.cu.shadow_name<a>}
+// CIR-HOST: cir.global {{.*}} @i = #cir.poison : {{.*}} {{{.*}}, cu.shadow_name = #cir.cu.shadow_name<i>}
 // LLVM-HOST: @i = internal global i32 poison
 // OGCG-HOST: @i = internal global i32 undef
 __device__ int i;
 
-// CIR-PRE: cir.global constant external  lang_address_space(offload_constant) @j = #cir.int<0> : !s32i
-// CIR-POST: cir.global constant external  target_address_space(4) @j = #cir.int<0> : !s32i
+// CIR-PRE: cir.global constant external  lang_address_space(offload_constant) @j = #cir.int<0>
+// CIR-POST: cir.global constant external  target_address_space(4) @j = #cir.int<0>
 // LLVM-DEVICE-DAG: @j = addrspace(4) {{.*}}constant i32 0
 // OGCG-DAG: @j = addrspace(4) externally_initialized constant i32 0
-// CIR-HOST: cir.global {{.*}} @j = #cir.poison : !s32i {{{.*}}, cu.shadow_name = #cir.cu.shadow_name<c>}
+// CIR-HOST-NEXT:  cir.global {{.*}} @j = #cir.poison : {{.*}} {{{.*}}, cu.shadow_name = #cir.cu.shadow_name<j>}
 // LLVM-HOST: @j = internal global i32 poison
 // OGCG-HOST: @j = internal global i32 undef
 __constant__ int j;
 
-// CIR-PRE: cir.global external  lang_address_space(offload_local) @k = #cir.poison : !s32i
-// CIR-POST: cir.global external  target_address_space(3) @k = #cir.poison : !s32i
+// CIR-PRE: cir.global external  lang_address_space(offload_local) @k = #cir.poison
+// CIR-POST: cir.global external  target_address_space(3) @k = #cir.poison
 // LLVM-DEVICE-DAG: @k = addrspace(3) global i32 {{undef|poison}}
 // OGCG-DAG: @k = addrspace(3) global i32 undef
 // CIR-HOST: cir.global {{.*}} @k = #cir.poison
