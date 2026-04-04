@@ -6558,7 +6558,7 @@ libc_math_function(
 
 libc_math_function(
     name = "acospibf16",
-    additional_deps = [":__support_math_acosbf16"],
+    additional_deps = [":__support_math_acospibf16"],
 )
 
 libc_math_function(
