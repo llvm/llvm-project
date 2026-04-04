@@ -2567,6 +2567,26 @@ mlir::LogicalResult CIRToLLVMGetGlobalOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
+llvm::SmallVector<mlir::NamedAttribute>
+CIRToLLVMGlobalOpLowering::lowerGlobalAttributes(
+    cir::GlobalOp op, mlir::ConversionPatternRewriter &rewriter) const {
+  SmallVector<mlir::NamedAttribute> attributes;
+
+  if (mlir::StringAttr sectionAttr = op.getSectionAttr())
+    attributes.push_back(rewriter.getNamedAttr("section", sectionAttr));
+
+  mlir::LLVM::VisibilityAttr visibility = mlir::LLVM::VisibilityAttr::get(
+      getContext(), lowerCIRVisibilityToLLVMVisibility(
+                        op.getGlobalVisibilityAttr().getValue()));
+  attributes.push_back(rewriter.getNamedAttr("visibility_", visibility));
+
+  if (op->getAttr(CUDAExternallyInitializedAttr::getMnemonic()))
+    attributes.push_back(rewriter.getNamedAttr("externally_initialized",
+                                               rewriter.getUnitAttr()));
+
+  return attributes;
+}
+
 /// Replace CIR global with a region initialized LLVM global and update
 /// insertion point to the end of the initializer block.
 void CIRToLLVMGlobalOpLowering::setupRegionInitializedLLVMGlobalOp(
@@ -2590,7 +2610,9 @@ void CIRToLLVMGlobalOpLowering::setupRegionInitializedLLVMGlobalOp(
   const StringRef symbol = op.getSymName();
   mlir::SymbolRefAttr comdatAttr = getComdatAttr(op, rewriter);
 
-  SmallVector<mlir::NamedAttribute> attributes;
+  SmallVector<mlir::NamedAttribute> attributes =
+      lowerGlobalAttributes(op, rewriter);
+
   mlir::LLVM::GlobalOp newGlobalOp =
       rewriter.replaceOpWithNewOp<mlir::LLVM::GlobalOp>(
           op, llvmType, isConst, linkage, symbol, nullptr, alignment, addrSpace,
@@ -2651,14 +2673,8 @@ mlir::LogicalResult CIRToLLVMGlobalOpLowering::matchAndRewrite(
   const uint64_t alignment = op.getAlignment().value_or(0);
   const mlir::LLVM::Linkage linkage = convertLinkage(op.getLinkage());
   const StringRef symbol = op.getSymName();
-  SmallVector<mlir::NamedAttribute> attributes;
-
-  // Mark externally_initialized for __device__ and __constant__
-  if (auto extInit =
-          op->getAttr(CUDAExternallyInitializedAttr::getMnemonic())) {
-    attributes.push_back(rewriter.getNamedAttr("externally_initialized",
-                                               rewriter.getUnitAttr()));
-  }
+  SmallVector<mlir::NamedAttribute> attributes =
+      lowerGlobalAttributes(op, rewriter);
 
   if (init.has_value()) {
     if (mlir::isa<cir::FPAttr, cir::IntAttr, cir::BoolAttr>(init.value())) {
@@ -2689,13 +2705,10 @@ mlir::LogicalResult CIRToLLVMGlobalOpLowering::matchAndRewrite(
     }
   }
 
-  mlir::LLVM::Visibility visibility =
-      lowerCIRVisibilityToLLVMVisibility(op.getGlobalVisibility());
   mlir::SymbolRefAttr comdatAttr = getComdatAttr(op, rewriter);
-  auto newOp = rewriter.replaceOpWithNewOp<mlir::LLVM::GlobalOp>(
+  rewriter.replaceOpWithNewOp<mlir::LLVM::GlobalOp>(
       op, llvmType, isConst, linkage, symbol, init.value_or(mlir::Attribute()),
       alignment, addrSpace, isDsoLocal, isThreadLocal, comdatAttr, attributes);
-  newOp.setVisibility_(visibility);
 
   return mlir::success();
 }
