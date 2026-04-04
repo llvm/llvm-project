@@ -1078,10 +1078,7 @@ define i64 @wmaccsu_commute(i32 %a, i32 %b, i64 %c) nounwind {
 define i32 @macc_h00(i32 %rd, i16 %a, i16 %b) nounwind {
 ; CHECK-LABEL: macc_h00:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    sext.h a1, a1
-; CHECK-NEXT:    sext.h a2, a2
-; CHECK-NEXT:    mul a1, a1, a2
-; CHECK-NEXT:    add a0, a0, a1
+; CHECK-NEXT:    macc.h00 a0, a1, a2
 ; CHECK-NEXT:    ret
   %aext = sext i16 %a to i32
   %bext = sext i16 %b to i32
@@ -1093,10 +1090,7 @@ define i32 @macc_h00(i32 %rd, i16 %a, i16 %b) nounwind {
 define i32 @macc_h00_commute(i32 %rd, i16 %a, i16 %b) nounwind {
 ; CHECK-LABEL: macc_h00_commute:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    sext.h a1, a1
-; CHECK-NEXT:    sext.h a2, a2
-; CHECK-NEXT:    mul a1, a1, a2
-; CHECK-NEXT:    add a0, a1, a0
+; CHECK-NEXT:    macc.h00 a0, a1, a2
 ; CHECK-NEXT:    ret
   %aext = sext i16 %a to i32
   %bext = sext i16 %b to i32
@@ -1108,10 +1102,7 @@ define i32 @macc_h00_commute(i32 %rd, i16 %a, i16 %b) nounwind {
 define i32 @maccu_h00(i32 %rd, i16 %a, i16 %b) nounwind {
 ; CHECK-LABEL: maccu_h00:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    zext.h a1, a1
-; CHECK-NEXT:    zext.h a2, a2
-; CHECK-NEXT:    mul a1, a1, a2
-; CHECK-NEXT:    add a0, a0, a1
+; CHECK-NEXT:    maccu.h00 a0, a1, a2
 ; CHECK-NEXT:    ret
   %aext = zext i16 %a to i32
   %bext = zext i16 %b to i32
@@ -1123,10 +1114,7 @@ define i32 @maccu_h00(i32 %rd, i16 %a, i16 %b) nounwind {
 define i32 @maccu_h00_commute(i32 %rd, i16 %a, i16 %b) nounwind {
 ; CHECK-LABEL: maccu_h00_commute:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    zext.h a1, a1
-; CHECK-NEXT:    zext.h a2, a2
-; CHECK-NEXT:    mul a1, a1, a2
-; CHECK-NEXT:    add a0, a1, a0
+; CHECK-NEXT:    maccu.h00 a0, a1, a2
 ; CHECK-NEXT:    ret
   %aext = zext i16 %a to i32
   %bext = zext i16 %b to i32
@@ -1138,10 +1126,7 @@ define i32 @maccu_h00_commute(i32 %rd, i16 %a, i16 %b) nounwind {
 define i32 @maccsu_h00(i32 %rd, i16 %a, i16 %b) nounwind {
 ; CHECK-LABEL: maccsu_h00:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    sext.h a1, a1
-; CHECK-NEXT:    zext.h a2, a2
-; CHECK-NEXT:    mul a1, a1, a2
-; CHECK-NEXT:    add a0, a0, a1
+; CHECK-NEXT:    maccsu.h00 a0, a1, a2
 ; CHECK-NEXT:    ret
   %aext = sext i16 %a to i32
   %bext = zext i16 %b to i32
@@ -1153,10 +1138,7 @@ define i32 @maccsu_h00(i32 %rd, i16 %a, i16 %b) nounwind {
 define i32 @maccsu_h00_commute(i32 %rd, i16 %a, i16 %b) nounwind {
 ; CHECK-LABEL: maccsu_h00_commute:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    sext.h a1, a1
-; CHECK-NEXT:    zext.h a2, a2
-; CHECK-NEXT:    mul a1, a1, a2
-; CHECK-NEXT:    add a0, a1, a0
+; CHECK-NEXT:    maccsu.h00 a0, a1, a2
 ; CHECK-NEXT:    ret
   %aext = sext i16 %a to i32
   %bext = zext i16 %b to i32
@@ -1168,10 +1150,7 @@ define i32 @maccsu_h00_commute(i32 %rd, i16 %a, i16 %b) nounwind {
 define i32 @maccsu_h00_swap_operands(i32 %rd, i16 %a, i16 %b) nounwind {
 ; CHECK-LABEL: maccsu_h00_swap_operands:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    zext.h a1, a1
-; CHECK-NEXT:    sext.h a2, a2
-; CHECK-NEXT:    mul a1, a1, a2
-; CHECK-NEXT:    add a0, a0, a1
+; CHECK-NEXT:    maccsu.h00 a0, a2, a1
 ; CHECK-NEXT:    ret
   %aext = zext i16 %a to i32
   %bext = sext i16 %b to i32
@@ -1183,10 +1162,7 @@ define i32 @maccsu_h00_swap_operands(i32 %rd, i16 %a, i16 %b) nounwind {
 define i32 @maccsu_h00_swap_operands_commute(i32 %rd, i16 %a, i16 %b) nounwind {
 ; CHECK-LABEL: maccsu_h00_swap_operands_commute:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    zext.h a1, a1
-; CHECK-NEXT:    sext.h a2, a2
-; CHECK-NEXT:    mul a1, a1, a2
-; CHECK-NEXT:    add a0, a1, a0
+; CHECK-NEXT:    maccsu.h00 a0, a2, a1
 ; CHECK-NEXT:    ret
   %aext = zext i16 %a to i32
   %bext = sext i16 %b to i32
