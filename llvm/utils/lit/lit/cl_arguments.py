@@ -561,20 +561,13 @@ def _non_negative_float(arg):
 
 
 def _float(arg, kind, pred):
-    desc = "requires {} float, but found '{}'"
-    try:
-        f = float(arg)
-    except ValueError:
-        raise _error(desc, kind, arg)
-    if not pred(f):
-        raise _error(desc, kind, arg)
-def _float(arg, kind, pred):
     try:
         f = float(arg)
         if not pred(f):
-            raise ValueError()
+            raise argparse.ArgumentTypeError(f"requires {kind} float, but found '{arg}'")
     except ValueError:
-        raise argparse.ArgumentTypeError(f"requires {kind} float, but found '{arg}'")
+        raise argparse.ArgumentTypeError(
+                f"conversion error - requires {kind} float, but found '{arg}'")
     return f
 
 
