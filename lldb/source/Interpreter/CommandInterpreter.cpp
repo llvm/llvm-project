@@ -3196,15 +3196,15 @@ void CommandInterpreter::OutputHelpText(Stream &strm, llvm::StringRef word_text,
         word_end_pos == llvm::StringRef::npos ? text.size() : word_end_pos;
 
     if (fragment_size > chars_left && text.starts_with(' ')) {
-      // The fragment doesn't fit on the current line, but it starts with
-      // a space. Break the line at the beginning of the next word.
+      // The fragment does not fit on the current line, but begins with a space.
+      // Break the line at the beginning of the word contained in the fragment.
       text = text.drop_front(word_start_pos);
       start_new_line();
       continue;
     }
 
     // Print out the fragment. It fits on the current line or does not contain
-    // spaces where it could be broken.
+    // spaces where we could break the line.
     strm.PutCString(text.take_front(fragment_size));
     text = text.drop_front(fragment_size);
     chars_left = fragment_size > chars_left ? 0 : chars_left - fragment_size;
