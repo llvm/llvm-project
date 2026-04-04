@@ -436,6 +436,17 @@ struct ErrorGeneric : ErrorBase {
   void Print();
 };
 
+struct ErrorAssumeDereferenceable : ErrorBase {
+  AddressDescription addr_description;
+  uptr pc, bp, sp;
+  uptr dereferenceable_size;
+
+  ErrorAssumeDereferenceable() = default;  // (*)
+  ErrorAssumeDereferenceable(u32 tid, uptr pc, uptr bp, uptr sp, uptr addr,
+                             uptr dereferenceable_size);
+  void Print();
+};
+
 // clang-format off
 #define ASAN_FOR_EACH_ERROR_KIND(macro)                    \
   macro(DeadlySignal)                                      \
@@ -462,6 +473,7 @@ struct ErrorGeneric : ErrorBase {
   macro(BadParamsToCopyContiguousContainerAnnotations)     \
   macro(ODRViolation)                                      \
   macro(InvalidPointerPair)                                \
+  macro(AssumeDereferenceable)                             \
   macro(Generic)
 // clang-format on
 

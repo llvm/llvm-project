@@ -543,6 +543,18 @@ void ReportGenericError(uptr pc, uptr bp, uptr sp, uptr addr, bool is_write,
   in_report.ReportError(error);
 }
 
+void ReportAssumeDereferenceableError(uptr pc, uptr bp, uptr sp, uptr addr,
+                                      uptr dereferenceable_size, bool fatal) {
+  if (!fatal && SuppressErrorReport(pc))
+    return;
+  ENABLE_FRAME_POINTER;
+
+  ScopedInErrorReport in_report(fatal);
+  ErrorAssumeDereferenceable error(GetCurrentTidOrInvalid(), pc, bp, sp, addr,
+                                   dereferenceable_size);
+  in_report.ReportError(error);
+}
+
 }  // namespace __asan
 
 // --------------------------- Interface --------------------- {{{1
