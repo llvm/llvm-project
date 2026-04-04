@@ -4189,21 +4189,18 @@ static bool interp__builtin_ia32_gfni_mul(InterpState &S, CodePtr OpPC,
   return true;
 }
 
-/// Implements VNNI dot-product builtins (vpdpbusd, vpdpwssd, and their
-/// saturating variants). Unlike interp__builtin_elementwise_triop, this
-/// handles operands with different element types and counts: the accumulator
-/// (Arg0) has i32 elements, while the dot-product operands (Arg1, Arg2) have
-/// smaller element types (i8/u8 or i16).
-static bool interp__builtin_ia32_vpdpwssd(InterpState &S, CodePtr OpPC,
+static bool interp__builtin_ia32_vpdp(InterpState &S, CodePtr OpPC,
                                            const CallExpr *Call,
                                            bool IsDottingWord,
                                            bool IsSaturating) {
   const auto *SrcVecT = Call->getArg(0)->getType()->castAs<VectorType>();
   const auto *OpAVecT = Call->getArg(1)->getType()->castAs<VectorType>();
   const auto *OpBVecT = Call->getArg(2)->getType()->castAs<VectorType>();
+
   PrimType SrcElemT = *S.getContext().classify(SrcVecT->getElementType());
   PrimType OpAElemT = *S.getContext().classify(OpAVecT->getElementType());
   PrimType OpBElemT = *S.getContext().classify(OpBVecT->getElementType());
+
   unsigned NumElements = SrcVecT->getNumElements();
   unsigned Iters = IsDottingWord ? 2 : 4;
 
@@ -4217,25 +4214,28 @@ static bool interp__builtin_ia32_vpdpwssd(InterpState &S, CodePtr OpPC,
     INT_TYPE_SWITCH_NO_BOOL(SrcElemT, {
       Acc = SrcPtr.elem<T>(I).toAPSInt();
     });
-    if (IsSaturating)
+    if (IsSaturating) {
       Acc = Acc.sext(64);
+	}
     for (unsigned J = 0; J < Iters; ++J) {
       APSInt OpA, OpB;
       INT_TYPE_SWITCH_NO_BOOL(OpAElemT, {
-        OpA = OpAPtr.elem<T>(Iters * I + J).toAPSInt();
+        OpA = OpAPtr.elem<T>(Iters*I+J).toAPSInt();
       });
       INT_TYPE_SWITCH_NO_BOOL(OpBElemT, {
-        OpB = OpBPtr.elem<T>(Iters * I + J).toAPSInt();
+        OpB = OpBPtr.elem<T>(Iters*I+J).toAPSInt();
       });
-      if (IsDottingWord)
+      if (IsDottingWord) {
         OpA = APSInt(OpA.sext(64), false);
-      else
-        OpA = APSInt(OpA.zext(64), true);
+	  } else {
+		OpA = APSInt(OpA.zext(64), true);
+	  }
       OpB = APSInt(OpB.sext(64), false);
       Acc += APSInt((OpA * OpB).sext(64), false);
     }
-    if (IsSaturating)
+    if (IsSaturating) {
       Acc = APSInt(Acc.truncSSat(32), false);
+	}
     INT_TYPE_SWITCH_NO_BOOL(SrcElemT, {
       Dst.elem<T>(I) = static_cast<T>(Acc);
     });
@@ -6145,8 +6145,8 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
       IsSaturating = false;
       break;
     }
-    return interp__builtin_ia32_vpdpwssd(S, OpPC, Call, IsDottingWord,
-                                         IsSaturating);
+    return interp__builtin_ia32_vpdp(S, OpPC, Call, IsDottingWord,
+									 IsSaturating);
   }
 
   default:
