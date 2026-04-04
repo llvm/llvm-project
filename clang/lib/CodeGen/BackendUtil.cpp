@@ -809,13 +809,13 @@ static void addSanitizers(const Triple &TargetTriple,
     LFOpts.Mode = LowFatMode;
 
     if (LFOpts.Mode == LowFatSanitizerOptions::LowFatMode::Safe) {
-      // Safe: insert barrier + fake.use at PipelineStartEP to preserve loads
-      // through Dead Argument Elimination, then instrument at OptimizerLastEP.
-      LowFatSanitizerOptions BarrierOpts = LFOpts;
-      BarrierOpts.InternalBarrierOnly_ = true;
+      // Safe: instrument once at PipelineStartEP so early-inlined dead
+      // computations are still checked, then run the normal late pass again
+      // to catch optimizer-introduced accesses. The pass tags its own IR so
+      // the late run skips already-instrumented accesses.
       PB.registerPipelineStartEPCallback(
-          [BarrierOpts](ModulePassManager &MPM, OptimizationLevel) {
-            MPM.addPass(LowFatSanitizerPass(BarrierOpts));
+          [LFOpts](ModulePassManager &MPM, OptimizationLevel) {
+            MPM.addPass(LowFatSanitizerPass(LFOpts));
           });
     }
   }

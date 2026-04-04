@@ -18,14 +18,12 @@ struct LowFatSanitizerOptions {
 
   enum class LowFatMode {
     Fast,       /// instrument at OptimizerLastEP
-    Safe,       /// Barrier at PipelineStartEP + instrument at OptimizerLastEP
+    Safe,       /// instrument at PipelineStartEP and again at OptimizerLastEP
     RightAlign, /// Fast instrumentation + right-align allocations within class
                 /// slots to improve detection of right-side (overflow) OOB at
                 /// the cost of a blind spot on the left (underflow) side.
   };
   LowFatMode Mode = LowFatMode::Fast;
-
-  bool InternalBarrierOnly_ = false;
 };
 
 class LowFatSanitizerPass : public PassInfoMixin<LowFatSanitizerPass> {

@@ -78,6 +78,11 @@ private:
   bool instrumentMemoryRange(Instruction *I, Value *Ptr, Value *Size,
                              bool IsWrite);
   bool instrumentGEP(GetElementPtrInst *GEP);
+  bool shouldSkipInstruction(const Instruction *I) const;
+  void markInstrumented(Instruction *I);
+  void markNoSanitize(Instruction *I);
+  MDNode *getInstrumentedMetadata();
+  MDNode *getNoSanitizeMetadata();
 
   // Emit the OOB-check block given a pre-computed (Base, AllocSize, PtrInt).
   void emitOobCheck(IRBuilder<> &IRB, Value *PtrInt, Value *Base,
@@ -132,6 +137,9 @@ private:
   // Fixed absolute addresses for metadata tables (must match lf_rtl.cpp)
   static constexpr uint64_t kTablesBase   = 0x118000000000ULL;
   static constexpr uint64_t kTablesOffset = 0x1000000ULL;
+
+  MDNode *InstrumentedMD = nullptr;
+  MDNode *NoSanitizeMD = nullptr;
 };
 
 FunctionCallee LowFatSanitizer::getReportOobFn() {
@@ -343,11 +351,38 @@ void LowFatSanitizer::emitOobCheck(IRBuilder<> &IRB, Value *PtrInt, Value *Base,
 
   Instruction *OobTerm =
       SplitBlockAndInsertIfThen(IsOOB, InsertBefore, /*Unreachable=*/false);
+  markNoSanitize(OobTerm);
   IRBuilder<> OobIRB(OobTerm);
+  OobIRB.SetNoSanitizeMetadata();
   FunctionCallee OobFn = Options.Recover ? getWarnOobFn() : getReportOobFn();
   Type *I8Ty = Type::getInt8Ty(M.getContext());
   Value *IsWriteVal = ConstantInt::get(I8Ty, IsWrite ? 1 : 0);
   OobIRB.CreateCall(OobFn, {PtrInt, Base, AllocSize, IsWriteVal});
+}
+
+bool LowFatSanitizer::shouldSkipInstruction(const Instruction *I) const {
+  return I->hasMetadata(LLVMContext::MD_nosanitize) ||
+         I->getMetadata("lowfat.instrumented");
+}
+
+void LowFatSanitizer::markInstrumented(Instruction *I) {
+  I->setMetadata("lowfat.instrumented", getInstrumentedMetadata());
+}
+
+void LowFatSanitizer::markNoSanitize(Instruction *I) {
+  I->setMetadata(LLVMContext::MD_nosanitize, getNoSanitizeMetadata());
+}
+
+MDNode *LowFatSanitizer::getInstrumentedMetadata() {
+  if (!InstrumentedMD)
+    InstrumentedMD = MDNode::get(M.getContext(), {});
+  return InstrumentedMD;
+}
+
+MDNode *LowFatSanitizer::getNoSanitizeMetadata() {
+  if (!NoSanitizeMD)
+    NoSanitizeMD = MDNode::get(M.getContext(), {});
+  return NoSanitizeMD;
 }
 
 bool LowFatSanitizer::instrumentMemoryAccess(Instruction *I, Value *Ptr,
@@ -356,8 +391,10 @@ bool LowFatSanitizer::instrumentMemoryAccess(Instruction *I, Value *Ptr,
   if (AccessSize.isScalable())
     return false;
   uint64_t FixedAccessSize = AccessSize.getFixedValue();
+  markInstrumented(I);
 
   IRBuilder<> IRB(I);
+  IRB.SetNoSanitizeMetadata();
   Value *PtrInt = IRB.CreatePtrToInt(Ptr, IntptrTy);
 
   // 1. Get region index: (Ptr - RegionBase) >> RegionSizeLog
@@ -383,7 +420,9 @@ bool LowFatSanitizer::instrumentMemoryAccess(Instruction *I, Value *Ptr,
   }
 
   Instruction *ThenTerm = SplitBlockAndInsertIfThen(IsLowFat, I, false);
+  markNoSanitize(ThenTerm);
   IRBuilder<> ThenIRB(ThenTerm);
+  ThenIRB.SetNoSanitizeMetadata();
 
   bool IsWrite = isa<StoreInst>(I) || isa<AtomicRMWInst>(I) ||
                  isa<AtomicCmpXchgInst>(I);
@@ -414,7 +453,9 @@ bool LowFatSanitizer::instrumentMemoryAccess(Instruction *I, Value *Ptr,
 
 bool LowFatSanitizer::instrumentMemoryRange(Instruction *I, Value *Ptr,
                                              Value *Size, bool IsWrite) {
+  markInstrumented(I);
   IRBuilder<> IRB(I);
+  IRB.SetNoSanitizeMetadata();
   Value *PtrInt  = IRB.CreatePtrToInt(Ptr, IntptrTy);
   Value *SizeInt = IRB.CreateZExtOrTrunc(Size, IntptrTy);
 
@@ -436,7 +477,9 @@ bool LowFatSanitizer::instrumentMemoryRange(Instruction *I, Value *Ptr,
   }
 
   Instruction *ThenTerm = SplitBlockAndInsertIfThen(IsLowFat, I, false);
+  markNoSanitize(ThenTerm);
   IRBuilder<> ThenIRB(ThenTerm);
+  ThenIRB.SetNoSanitizeMetadata();
 
   if (!AllocSize64)
     AllocSize64 = loadFromFixedTable(ThenIRB, TablesBase + 0 * kTablesOffset,
@@ -482,8 +525,10 @@ bool LowFatSanitizer::instrumentGEP(GetElementPtrInst *GEP) {
   Instruction *InsertPt = GEP->getNextNode();
   if (!InsertPt)
     return false;
+  markInstrumented(GEP);
 
   IRBuilder<> IRB(InsertPt);
+  IRB.SetNoSanitizeMetadata();
 
   // SOURCE pointer — determines the allocation the GEP started from.
   Value *SrcPtr = GEP->getPointerOperand();
@@ -511,7 +556,9 @@ bool LowFatSanitizer::instrumentGEP(GetElementPtrInst *GEP) {
   }
 
   Instruction *ThenTerm = SplitBlockAndInsertIfThen(IsLowFat, InsertPt, false);
+  markNoSanitize(ThenTerm);
   IRBuilder<> ThenIRB(ThenTerm);
+  ThenIRB.SetNoSanitizeMetadata();
 
   if (!AllocSize64)
     AllocSize64 = loadFromFixedTable(ThenIRB, TablesBase + 0 * kTablesOffset,
@@ -540,6 +587,8 @@ bool LowFatSanitizer::instrumentFunction(Function &F) {
 
   for (auto &BB : F) {
     for (auto &I : BB) {
+      if (shouldSkipInstruction(&I))
+        continue;
       if (isa<LoadInst>(&I) || isa<StoreInst>(&I) || isa<AtomicRMWInst>(&I) ||
           isa<AtomicCmpXchgInst>(&I))
         ToInstrument.push_back(&I);
@@ -571,52 +620,8 @@ bool LowFatSanitizer::instrumentFunction(Function &F) {
 }
 
 bool LowFatSanitizer::run() {
-  LLVM_DEBUG(dbgs() << "[LowFat] run() Mode=" << (int)Options.Mode
-                   << " BarrierOnly=" << Options.InternalBarrierOnly_ << "\n");
+  LLVM_DEBUG(dbgs() << "[LowFat] run() Mode=" << (int)Options.Mode << "\n");
   LLVM_DEBUG(dbgs() << "[LowFat] Running on module: " << M.getName() << "\n");
-
-  // Safe mode: InternalBarrierOnly_ is set for the PipelineStartEP pass.
-  if (Options.InternalBarrierOnly_) {
-    LLVM_DEBUG(dbgs() << "[LowFat] Inserting barriers (Safe mode)\n");
-    bool Modified = false;
-    // Declare llvm.sideeffect and llvm.fake.use once for the module.
-    Function *SideEffectFn =
-        Intrinsic::getOrInsertDeclaration(&M, Intrinsic::sideeffect);
-    Function *FakeUseFn =
-        Intrinsic::getOrInsertDeclaration(&M, Intrinsic::fake_use);
-    for (Function &F : M) {
-      if (F.isDeclaration() || F.empty())
-        continue;
-
-      // Insert @llvm.sideeffect() at function entry to prevent FunctionAttrs
-      // from inferring memory(none) on callers, blocking call-level DCE.
-      IRBuilder<> IRB(&*F.getEntryBlock().getFirstInsertionPt());
-      IRB.CreateCall(SideEffectFn, {});
-      LLVM_DEBUG(dbgs() << "    [LowFat] Inserted sideeffect barrier in: "
-                       << F.getName() << "\n");
-
-      // Insert @llvm.fake.use(loaded_val) immediately after every load.
-      // Without this, Dead Argument Elimination (DAE) can prove that a
-      // function's return value is unused at all call sites and rewrite
-      //   ret %loaded_val  →  ret undef
-      // making the load itself dead, which is then DCE'd before the LowFat
-      // pass at OptimizerLastEP ever sees it.
-      SmallVector<LoadInst *, 8> Loads;
-      for (BasicBlock &BB : F)
-        for (Instruction &I : BB)
-          if (auto *LI = dyn_cast<LoadInst>(&I))
-            Loads.push_back(LI);
-      for (LoadInst *LI : Loads) {
-        IRBuilder<> LIRB(LI->getNextNode());
-        LIRB.CreateCall(FakeUseFn, {LI});
-        LLVM_DEBUG(dbgs() << "    [LowFat] Inserted fake.use for load in: "
-                         << F.getName() << "\n");
-      }
-
-      Modified = true;
-    }
-    return Modified;
-  }
 
   bool Modified = false;
   for (Function &F : M) {
@@ -628,7 +633,7 @@ bool LowFatSanitizer::run() {
   // Emit a module constructor that calls __lf_set_recover(Recover) so the
   // runtime interceptors (memset/memcpy/memmove) know whether to warn or abort.
   // This runs before main() via .init_array / __mod_init_func.
-  if (Options.Recover) {
+  if (Options.Recover && !M.getFunction("__lowfat_set_recover_ctor")) {
     LLVMContext &Ctx = M.getContext();
     FunctionType *SetRecoverTy =
         FunctionType::get(Type::getVoidTy(Ctx), {Type::getInt32Ty(Ctx)}, false);
@@ -651,7 +656,8 @@ bool LowFatSanitizer::run() {
   // Right-aligning places the object's right edge at the slot boundary,
   // making off-by-one overflows detectable at the cost of a left-side
   // blind spot of (class_size - requested_size) bytes.
-  if (Options.Mode == LowFatSanitizerOptions::LowFatMode::RightAlign) {
+  if (Options.Mode == LowFatSanitizerOptions::LowFatMode::RightAlign &&
+      !M.getFunction("__lowfat_set_right_align_ctor")) {
     LLVMContext &Ctx = M.getContext();
     FunctionType *SetRightAlignTy =
         FunctionType::get(Type::getVoidTy(Ctx), {Type::getInt32Ty(Ctx)}, false);
