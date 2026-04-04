@@ -71,8 +71,9 @@ void RedundantLambdaParenthesesCheck::check(
       return;
   }
 
-  const CharSourceRange ParenRange =
-      CharSourceRange::getCharRange(LParenLoc, Lexer::getLocForEndOfToken(RParenLoc, 0, *Result.SourceManager, LangOpts));
+  const CharSourceRange ParenRange = CharSourceRange::getCharRange(
+      LParenLoc, Lexer::getLocForEndOfToken(RParenLoc, 0, *Result.SourceManager,
+                                            LangOpts));
 
   diag(LParenLoc, "redundant empty parameter list in lambda expression")
       << FixItHint::CreateRemoval(ParenRange);
