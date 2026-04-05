@@ -481,6 +481,7 @@ public:
   /// Return true if the cast from integer to FP can be proven to be exact
   /// for all possible inputs (the conversion does not lose any precision).
   bool isKnownExactCastIntToFP(CastInst &I) const;
+  bool canBeCastedExactlyIntToFP(Value &V, Type *FPTy, bool IsSigned) const;
 
   OverflowResult computeOverflowForUnsignedMul(const Value *LHS,
                                                const Value *RHS,

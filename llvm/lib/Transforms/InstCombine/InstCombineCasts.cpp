@@ -2030,30 +2030,25 @@ static Type *getMinimumFPType(Value *V, bool PreferBFloat) {
   return V->getType();
 }
 
-bool InstCombiner::isKnownExactCastIntToFP(CastInst &I) const {
-  CastInst::CastOps Opcode = I.getOpcode();
-  assert((Opcode == CastInst::SIToFP || Opcode == CastInst::UIToFP) &&
-         "Unexpected cast");
-  Value *Src = I.getOperand(0);
-  Type *SrcTy = Src->getType();
-  Type *FPTy = I.getType();
-  bool IsSigned = Opcode == Instruction::SIToFP;
+bool InstCombiner::canBeCastedExactlyIntToFP(Value &V, Type *FPTy,
+                                             bool IsSigned) const {
+  Type *SrcTy = V.getType();
   int SrcSize = (int)SrcTy->getScalarSizeInBits() - IsSigned;
+  int DestNumSigBits = FPTy->getFPMantissaWidth();
 
   // Easy case - if the source integer type has less bits than the FP mantissa,
   // then the cast must be exact.
-  int DestNumSigBits = FPTy->getFPMantissaWidth();
   if (SrcSize <= DestNumSigBits)
     return true;
 
   // Cast from FP to integer and back to FP is independent of the intermediate
   // integer width because of poison on overflow.
   Value *F;
-  if (match(Src, m_FPToI(m_Value(F)))) {
+  if (match(&V, m_FPToI(m_Value(F)))) {
     // If this is uitofp (fptosi F), the source needs an extra bit to avoid
     // potential rounding of negative FP input values.
     int SrcNumSigBits = F->getType()->getFPMantissaWidth();
-    if (!IsSigned && match(Src, m_FPToSI(m_Value())))
+    if (!IsSigned && match(&V, m_FPToSI(m_Value())))
       SrcNumSigBits++;
 
     // [su]itofp (fpto[su]i F) --> exact if the source type has less or equal
@@ -2063,6 +2058,21 @@ bool InstCombiner::isKnownExactCastIntToFP(CastInst &I) const {
         SrcNumSigBits <= DestNumSigBits)
       return true;
   }
+
+  return false;
+}
+
+bool InstCombiner::isKnownExactCastIntToFP(CastInst &I) const {
+  CastInst::CastOps Opcode = I.getOpcode();
+  assert((Opcode == CastInst::SIToFP || Opcode == CastInst::UIToFP) &&
+         "Unexpected cast");
+  Value *Src = I.getOperand(0);
+  Type *SrcTy = Src->getType();
+  Type *FPTy = I.getType();
+  bool IsSigned = Opcode == Instruction::SIToFP;
+  int DestNumSigBits = FPTy->getFPMantissaWidth();
+  if (canBeCastedExactlyIntToFP(*Src, FPTy, IsSigned))
+    return true;
 
   // Try harder to find if the source integer type has less significant bits.
   // Compute number of sign bits or determine trailing zeros.
@@ -2102,6 +2112,17 @@ Instruction *InstCombinerImpl::visitFPTrunc(FPTruncInst &FPT) {
     Type *LHSMinType = getMinimumFPType(BO->getOperand(0), PreferBFloat);
     Type *RHSMinType = getMinimumFPType(BO->getOperand(1), PreferBFloat);
     unsigned OpWidth = BO->getType()->getFPMantissaWidth();
+
+    if (auto *FPCast = dyn_cast<CastInst>(BO->getOperand(0)))
+      if (isa<UIToFPInst>(FPCast) || isa<SIToFPInst>(FPCast))
+        if (isKnownExactCastIntToFP(*FPCast))
+          LHSMinType = Ty;
+
+    if (auto *FPCast = dyn_cast<CastInst>(BO->getOperand(1)))
+      if (isa<UIToFPInst>(FPCast) || isa<SIToFPInst>(FPCast))
+        if (isKnownExactCastIntToFP(*FPCast))
+          RHSMinType = Ty;
+
     unsigned LHSWidth = LHSMinType->getFPMantissaWidth();
     unsigned RHSWidth = RHSMinType->getFPMantissaWidth();
     unsigned SrcWidth = std::max(LHSWidth, RHSWidth);

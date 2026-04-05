@@ -6,9 +6,8 @@ define float @narrow_fdiv_sitofp(i64 %x) {
 ; CHECK-SAME: i64 [[X:%.*]]) {
 ; CHECK-NEXT:    [[MUL:%.*]] = mul i64 [[X]], 27611
 ; CHECK-NEXT:    [[TMP1:%.*]] = urem i64 [[MUL]], 74383
-; CHECK-NEXT:    [[CONV2:%.*]] = uitofp nneg i64 [[TMP1]] to double
-; CHECK-NEXT:    [[DIV3:%.*]] = fdiv double [[CONV2]], 7.438300e+04
-; CHECK-NEXT:    [[CONV4:%.*]] = fptrunc double [[DIV3]] to float
+; CHECK-NEXT:    [[TMP2:%.*]] = uitofp nneg i64 [[TMP1]] to float
+; CHECK-NEXT:    [[CONV4:%.*]] = fdiv float [[TMP2]], 7.438300e+04
 ; CHECK-NEXT:    ret float [[CONV4]]
 ;
   %mul = mul i64 %x, 27611
