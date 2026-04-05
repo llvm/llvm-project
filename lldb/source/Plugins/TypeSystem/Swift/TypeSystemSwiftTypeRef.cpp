@@ -1433,7 +1433,7 @@ TypeSystemSwiftTypeRef::GetTupleElement(lldb::opaque_compiler_type_t type,
       dem, type, exe_ctx);
   if (!node || node->getKind() != Node::Kind::Tuple)
     return {};
-  if (node->getNumChildren() < idx)
+  if (idx >= node->getNumChildren())
     return {};
   NodePointer child = node->getChild(idx);
   if (child->getNumChildren() != 1 &&
