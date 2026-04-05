@@ -16,9 +16,20 @@
 #include "../types.h"
 
 struct Iter : ForwardIterBase<Iter> {
-  int i;
+  int i = 0;
   constexpr Iter() = default;
   constexpr Iter(int ii) : i(ii) {}
+  constexpr int operator*() const { return i; }
+  constexpr Iter& operator++() {
+    ++i;
+    return *this;
+  }
+  constexpr Iter operator++(int) {
+    Iter tmp = *this;
+    ++*this;
+    return tmp;
+  }
+  friend constexpr bool operator==(const Iter& x, const Iter& y) { return x.i == y.i; }
 };
 
 constexpr bool test() {
@@ -26,34 +37,33 @@ constexpr bool test() {
   using SplitView = std::ranges::split_view<std::ranges::subrange<Iter>, std::ranges::subrange<Iter>>;
   using SplitIter = std::ranges::iterator_t<SplitView>;
 
+  SplitView sv{std::ranges::subrange<Iter>{Iter{5}, Iter{8}},
+               std::ranges::subrange<Iter>{Iter{8}, Iter{9}}};
+
   // const &
   {
-    SplitView sv;
-    const SplitIter it{sv, Iter{5}, {}};
+    const SplitIter it = sv.begin();
     std::same_as<Iter> decltype(auto) base = it.base();
     assert(base.i == 5);
   }
 
   // &
   {
-    SplitView sv;
-    SplitIter it{sv, Iter{5}, {}};
+    SplitIter it = sv.begin();
     std::same_as<Iter> decltype(auto) base = it.base();
     assert(base.i == 5);
   }
 
   // &&
   {
-    SplitView sv;
-    SplitIter it{sv, Iter{5}, {}};
+    SplitIter it = sv.begin();
     std::same_as<Iter> decltype(auto) base = std::move(it).base();
     assert(base.i == 5);
   }
 
   // const &&
   {
-    SplitView sv;
-    const SplitIter it{sv, Iter{5}, {}};
+    const SplitIter it = sv.begin();
     std::same_as<Iter> decltype(auto) base = std::move(it).base();
     assert(base.i == 5);
   }

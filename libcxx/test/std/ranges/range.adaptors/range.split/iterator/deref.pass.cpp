@@ -17,24 +17,32 @@
 #include "../types.h"
 
 struct Iter : ForwardIterBase<Iter> {
-  int i;
+  int i = 0;
   constexpr Iter() = default;
   constexpr Iter(int ii) : i(ii) {}
+  constexpr int operator*() const { return i; }
+  constexpr Iter& operator++() {
+    ++i;
+    return *this;
+  }
+  constexpr Iter operator++(int) {
+    Iter tmp = *this;
+    ++*this;
+    return tmp;
+  }
+  friend constexpr bool operator==(const Iter& x, const Iter& y) { return x.i == y.i; }
 };
 
 constexpr bool test() {
   using SplitView = std::ranges::split_view<std::ranges::subrange<Iter>, std::ranges::subrange<Iter>>;
   using SplitIter = std::ranges::iterator_t<SplitView>;
 
-  {
-    SplitView sv;
-    Iter current{5};
-    std::ranges::subrange next{Iter{6}, Iter{7}};
-    const SplitIter it{sv, current, next};
-    std::same_as<std::ranges::subrange<Iter>> decltype(auto) value = *it;
-    assert(value.begin().i == 5);
-    assert(value.end().i == 6);
-  }
+  SplitView sv{std::ranges::subrange<Iter>{Iter{5}, Iter{8}},
+               std::ranges::subrange<Iter>{Iter{7}, Iter{8}}};
+  const SplitIter it = sv.begin();
+  std::same_as<std::ranges::subrange<Iter>> decltype(auto) value = *it;
+  assert(value.begin().i == 5);
+  assert(value.end().i == 7);
 
   return true;
 }
