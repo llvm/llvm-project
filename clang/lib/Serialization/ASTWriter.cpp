@@ -5496,7 +5496,7 @@ time_t ASTWriter::getTimestampForOutput(time_t ModTime) const {
 ASTFileSignature
 ASTWriter::WriteAST(llvm::PointerUnion<Sema *, Preprocessor *> Subject,
                     StringRef OutputFile, Module *WritingModule,
-                    StringRef isysroot, bool ShouldCacheASTInMemory) {
+                    StringRef isysroot) {
   llvm::TimeTraceScope scope("WriteAST", OutputFile);
   WritingAST = true;
 
@@ -5523,12 +5523,6 @@ ASTWriter::WriteAST(llvm::PointerUnion<Sema *, Preprocessor *> Subject,
 
   WritingAST = false;
 
-  if (ShouldCacheASTInMemory) {
-    // Construct MemoryBuffer and update buffer manager.
-    ModCache.getInMemoryModuleCache().addBuiltPCM(
-        OutputFile, llvm::MemoryBuffer::getMemBufferCopy(
-                        StringRef(Buffer.begin(), Buffer.size())));
-  }
   return Signature;
 }
 

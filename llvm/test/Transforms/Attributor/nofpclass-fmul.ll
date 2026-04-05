@@ -910,3 +910,45 @@ define float @ret_fmul__not_inf__neg1.5(float nofpclass(inf) %x) {
   %mul = fmul float %x, -1.5
   ret float %mul
 }
+
+define float @ret_fmul__not_inf__fsub_floor_pat(float nofpclass(inf) %x, float %y) {
+; CHECK-LABEL: define nofpclass(inf) float @ret_fmul__not_inf__fsub_floor_pat(
+; CHECK-SAME: float nofpclass(inf) [[X:%.*]], float [[Y:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[FLOOR_Y:%.*]] = call float @llvm.floor.f32(float [[Y]]) #[[ATTR2]]
+; CHECK-NEXT:    [[Y_SUB_FLOOR_Y:%.*]] = fsub float [[Y]], [[FLOOR_Y]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[X]], [[Y_SUB_FLOOR_Y]]
+; CHECK-NEXT:    ret float [[MUL]]
+;
+  %floor.y = call float @llvm.floor.f32(float %y)
+  %y.sub.floor.y = fsub float %y, %floor.y
+  %mul = fmul float %x, %y.sub.floor.y
+  ret float %mul
+}
+
+define float @ret_fmul__not_inf__fsub_floor_pat_commute(float nofpclass(inf) %x, float %y) {
+; CHECK-LABEL: define nofpclass(inf) float @ret_fmul__not_inf__fsub_floor_pat_commute(
+; CHECK-SAME: float nofpclass(inf) [[X:%.*]], float [[Y:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[FLOOR_Y:%.*]] = call float @llvm.floor.f32(float [[Y]]) #[[ATTR2]]
+; CHECK-NEXT:    [[Y_SUB_FLOOR_Y:%.*]] = fsub float [[Y]], [[FLOOR_Y]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[Y_SUB_FLOOR_Y]], [[X]]
+; CHECK-NEXT:    ret float [[MUL]]
+;
+  %floor.y = call float @llvm.floor.f32(float %y)
+  %y.sub.floor.y = fsub float %y, %floor.y
+  %mul = fmul float %y.sub.floor.y, %x
+  ret float %mul
+}
+
+define float @ret_fmul__not_inf__fsub_floor_pat_wrong_floor_val(float nofpclass(inf) %x, float %y, float %z) {
+; CHECK-LABEL: define float @ret_fmul__not_inf__fsub_floor_pat_wrong_floor_val(
+; CHECK-SAME: float nofpclass(inf) [[X:%.*]], float [[Y:%.*]], float [[Z:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[FLOOR_Y:%.*]] = call float @llvm.floor.f32(float [[Z]]) #[[ATTR2]]
+; CHECK-NEXT:    [[Y_SUB_FLOOR_Y:%.*]] = fsub float [[Y]], [[FLOOR_Y]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[X]], [[Y_SUB_FLOOR_Y]]
+; CHECK-NEXT:    ret float [[MUL]]
+;
+  %floor.y = call float @llvm.floor.f32(float %z)
+  %y.sub.floor.y = fsub float %y, %floor.y
+  %mul = fmul float %x, %y.sub.floor.y
+  ret float %mul
+}

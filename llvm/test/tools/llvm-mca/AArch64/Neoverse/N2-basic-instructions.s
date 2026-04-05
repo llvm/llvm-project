@@ -779,7 +779,7 @@
 # CHECK-NEXT:  1      6     0.33    *                   ldr	d0, #1048572
 # CHECK-NEXT:  1      6     0.33    *                   ldr	q0, #-1048576
 # CHECK-NEXT:  1      4     0.33                  U     prfm	pldl1strm, #0
-# CHECK-NEXT:  1      4     0.33                  U     prfm	#22, #0
+# CHECK-NEXT:  1      4     0.33                  U     prfm	#25, #0
 # CHECK-NEXT:  3      5     0.67    *      *      U     stxrb	w18, w8, [sp]
 # CHECK-NEXT:  3      5     0.67    *      *      U     stxrh	w24, w15, [x16]
 # CHECK-NEXT:  3      5     0.67    *      *      U     stxr	w5, w6, [x17]
@@ -2043,7 +2043,7 @@
 # CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     ldr	d0, #1048572
 # CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     ldr	q0, #-1048576
 # CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     prfm	pldl1strm, #0
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     prfm	#22, #0
+# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     prfm	#25, #0
 # CHECK-NEXT:  -      -     0.50   0.50    -      -      -     0.33   0.83   0.83    -      -      -      -      -      -     stxrb	w18, w8, [sp]
 # CHECK-NEXT:  -      -     0.50   0.50    -      -      -     0.33   0.83   0.83    -      -      -      -      -      -     stxrh	w24, w15, [x16]
 # CHECK-NEXT:  -      -     0.50   0.50    -      -      -     0.33   0.83   0.83    -      -      -      -      -      -     stxr	w5, w6, [x17]

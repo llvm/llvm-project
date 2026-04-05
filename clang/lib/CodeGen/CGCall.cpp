@@ -2878,10 +2878,16 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
         CalleeInfo.getCalleeDecl().getDecl());
     // Do not annotate vector deleting destructors with dead_on_return as the
     // this pointer in that case points to an array which we cannot
-    // statically know the size of.
+    // statically know the size of. Also do not mark deleting destructors
+    // dead_on_return as then we might delete stores inside of a user-defined
+    // operator delete implementation if it gets inlined, which would be
+    // incorrect as the object's lifetime has already ended and the operator
+    // delete implementation is allowed to manipulate the underlying storage.
     if (DD &&
         CalleeInfo.getCalleeDecl().getDtorType() !=
             CXXDtorType::Dtor_VectorDeleting &&
+        CalleeInfo.getCalleeDecl().getDtorType() !=
+            CXXDtorType::Dtor_Deleting &&
         CodeGenOpts.StrictLifetimes) {
       const CXXRecordDecl *ClassDecl =
           dyn_cast<CXXRecordDecl>(DD->getDeclContext());
@@ -3103,6 +3109,11 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
   }
   assert(ArgNo == FI.arg_size());
 
+  // We can't see all potential arguments in a varargs declaration; treat them
+  // as if they can access memory.
+  if (!AttrOnCallSite && FI.isVariadic())
+    AddPotentialArgAccess();
+
   ArgNo = 0;
   if (AddedPotentialArgAccess && MemAttrForPtrArgs) {
     llvm::FunctionType *FunctionType = getTypes().GetFunctionType(FI);
@@ -3114,7 +3125,14 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
         unsigned FirstIRArg, NumIRArgs;
         std::tie(FirstIRArg, NumIRArgs) = IRFunctionArgs.getIRArgs(ArgNo);
         for (unsigned i = FirstIRArg; i < FirstIRArg + NumIRArgs; ++i) {
-          if (FunctionType->getParamType(i)->isPointerTy()) {
+          // The index may be out-of-bounds if the callee is a varargs
+          // function.
+          //
+          // FIXME: We can compute the types of varargs arguments without going
+          // through the function type, but the relevant code isn't exposed
+          // in a way that can be called from here.
+          if (i < FunctionType->getNumParams() &&
+              FunctionType->getParamType(i)->isPointerTy()) {
             ArgAttrs[i] =
                 ArgAttrs[i].addAttribute(getLLVMContext(), *MemAttrForPtrArgs);
           }

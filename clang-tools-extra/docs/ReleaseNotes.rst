@@ -275,6 +275,12 @@ Changes in existing checks
   - Add support for annotation of user-defined types as having the same
     moved-from semantics as standard smart pointers.
 
+- Improved :doc:`cppcoreguidelines-avoid-capturing-lambda-coroutines
+  <clang-tidy/checks/cppcoreguidelines/avoid-capturing-lambda-coroutines>`
+  check by adding the `AllowExplicitObjectParameters` option. When enabled,
+  lambda coroutines using C++23 deducing ``this`` (explicit object parameter)
+  are not flagged.
+
 - Improved :doc:`cppcoreguidelines-init-variables
   <clang-tidy/checks/cppcoreguidelines/init-variables>` check by ensuring that
   member pointers are correctly flagged as uninitialized.
@@ -423,9 +429,12 @@ Changes in existing checks
   it easier to see which specific enumerators need explicit initialization.
 
 - Improved :doc:`readability-identifier-naming
-  <clang-tidy/checks/readability/identifier-naming>` check by fixing a false
-  positive where function templates could be diagnosed as generic identifiers
-  when `DefaultCase` was enabled.
+  <clang-tidy/checks/readability/identifier-naming>` check by 
+
+  - Fixed incorrect naming style application to C++17 structured bindings.
+
+  - Fixed a false positive where function templates could be diagnosed as generic 
+    identifiers when `DefaultCase` was enabled.
 
 - Improved :doc:`readability-implicit-bool-conversion
   <clang-tidy/checks/readability/implicit-bool-conversion>` check:

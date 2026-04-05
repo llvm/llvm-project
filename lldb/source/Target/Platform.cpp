@@ -157,14 +157,19 @@ Status Platform::GetFileWithUUID(const FileSpec &platform_file,
   return Status();
 }
 
-FileSpecList Platform::LocateExecutableScriptingResourcesFromSafePaths(
+bool Platform::IsSymbolFileTrusted(Module &module) { return false; }
+
+llvm::SmallDenseMap<FileSpec, LoadScriptFromSymFile>
+Platform::LocateExecutableScriptingResourcesFromSafePaths(
     Stream &feedback_stream, FileSpec module_spec, const Target &target) {
   assert(module_spec);
   assert(target.GetDebugger().GetScriptInterpreter());
 
+  llvm::SmallDenseMap<FileSpec, LoadScriptFromSymFile> file_specs;
+
   // For now only Python scripts supported for auto-loading.
   if (target.GetDebugger().GetScriptLanguage() != eScriptLanguagePython)
-    return {};
+    return file_specs;
 
   ScriptInterpreter::SanitizedScriptingModuleName sanitized_name =
       target.GetDebugger()
@@ -172,7 +177,6 @@ FileSpecList Platform::LocateExecutableScriptingResourcesFromSafePaths(
           ->GetSanitizedScriptingModuleName(
               module_spec.GetFileNameStrippingExtension().GetStringRef());
 
-  FileSpecList file_list;
   FileSpecList paths = Debugger::GetSafeAutoLoadPaths();
 
   // Iterate in reverse so we consider the latest appended path first.
@@ -197,36 +201,40 @@ FileSpecList Platform::LocateExecutableScriptingResourcesFromSafePaths(
                                          orig_script_fspec, script_fspec);
 
     if (FileSystem::Instance().Exists(script_fspec))
-      file_list.Append(script_fspec);
+      file_specs.try_emplace(std::move(script_fspec),
+                             target.GetLoadScriptFromSymbolFile());
 
     // If we successfully found a directory in a safe auto-load path
     // stop looking at any other paths.
     break;
   }
 
-  return file_list;
+  return file_specs;
 }
 
-FileSpecList Platform::LocateExecutableScriptingResourcesForPlatform(
+llvm::SmallDenseMap<FileSpec, LoadScriptFromSymFile>
+Platform::LocateExecutableScriptingResourcesForPlatform(
     Target *target, Module &module, Stream &feedback_stream) {
-  return {};
+  llvm::SmallDenseMap<FileSpec, LoadScriptFromSymFile> empty;
+  return empty;
 }
 
-FileSpecList
+llvm::SmallDenseMap<FileSpec, LoadScriptFromSymFile>
 Platform::LocateExecutableScriptingResources(Target *target, Module &module,
                                              Stream &feedback_stream) {
+  llvm::SmallDenseMap<FileSpec, LoadScriptFromSymFile> empty;
   if (!target)
-    return {};
+    return empty;
 
   // Give derived platforms a chance to locate scripting resources.
-  if (FileSpecList fspecs = LocateExecutableScriptingResourcesForPlatform(
+  if (auto fspecs = LocateExecutableScriptingResourcesForPlatform(
           target, module, feedback_stream);
-      !fspecs.IsEmpty())
+      !fspecs.empty())
     return fspecs;
 
   const FileSpec &module_spec = module.GetFileSpec();
   if (!module_spec)
-    return {};
+    return empty;
 
   return LocateExecutableScriptingResourcesFromSafePaths(feedback_stream,
                                                          module_spec, *target);
@@ -1890,7 +1898,7 @@ uint32_t Platform::LoadImage(lldb_private::Process *process,
     // Only local file was specified. Install it to the current working
     // directory.
     FileSpec target_file = GetWorkingDirectory();
-    target_file.AppendPathComponent(local_file.GetFilename().AsCString());
+    target_file.AppendPathComponent(local_file.GetFilename());
     if (IsRemote() || local_file != target_file) {
       error = Install(local_file, target_file);
       if (error.Fail())

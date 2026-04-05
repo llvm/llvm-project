@@ -246,6 +246,13 @@ function(add_llvm_symbol_exports target_name export_file)
   set(LLVM_COMMON_DEPENDS ${LLVM_COMMON_DEPENDS} PARENT_SCOPE)
 endfunction(add_llvm_symbol_exports)
 
+function(llvm_set_macho_current_version target major)
+  set_target_properties(${target} PROPERTIES
+    MACHO_COMPATIBILITY_VERSION 1
+    MACHO_CURRENT_VERSION
+      ${major}.${LLVM_VERSION_MINOR}.${LLVM_VERSION_PATCH})
+endfunction()
+
 if (NOT DEFINED LLVM_LINKER_DETECTED AND NOT WIN32)
   # Detect what linker we have here.
   if(APPLE)
@@ -796,14 +803,28 @@ function(llvm_add_library name)
         )
     endif()
 
-    # Set SOVERSION on shared libraries that lack explicit SONAME
-    # specifier, on *nix systems that are not Darwin.
-    if(UNIX AND NOT APPLE AND NOT ARG_SONAME)
-      set_target_properties(${name}
-        PROPERTIES
-        # Since 18.1.0, the ABI version is indicated by the major and minor version.
-        SOVERSION ${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}${LLVM_VERSION_SUFFIX}
-        VERSION ${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}${LLVM_VERSION_SUFFIX})
+    if(NOT APPLE OR LLVM_VERSIONED_DYLIB_NAME_ON_DARWIN)
+      if(ARG_SONAME)
+        get_target_property(output_name ${name} OUTPUT_NAME)
+        if(${output_name} STREQUAL "output_name-NOTFOUND")
+          set(output_name ${name})
+        endif()
+        set(library_name ${output_name}-${LLVM_VERSION_MAJOR}${LLVM_VERSION_SUFFIX})
+        set(api_name ${output_name}-${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}.${LLVM_VERSION_PATCH}${LLVM_VERSION_SUFFIX})
+        set_target_properties(${name} PROPERTIES OUTPUT_NAME ${library_name})
+        if(UNIX AND NOT CYGWIN)
+          llvm_install_library_symlink(${api_name} ${library_name} SHARED
+            COMPONENT ${name})
+          llvm_install_library_symlink(${output_name} ${library_name} SHARED
+            COMPONENT ${name})
+        endif()
+      elseif(UNIX)
+        set_target_properties(${name}
+          PROPERTIES
+          # Since 18.1.0, the ABI version is indicated by the major and minor version.
+          SOVERSION ${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}${LLVM_VERSION_SUFFIX}
+          VERSION ${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}${LLVM_VERSION_SUFFIX})
+      endif()
     endif()
   endif()
 
@@ -816,24 +837,6 @@ function(llvm_add_library name)
 
     if (LLVM_EXPORTED_SYMBOL_FILE)
       add_llvm_symbol_exports( ${name} ${LLVM_EXPORTED_SYMBOL_FILE} )
-    endif()
-  endif()
-
-  if(ARG_SHARED)
-    if(NOT APPLE AND ARG_SONAME)
-      get_target_property(output_name ${name} OUTPUT_NAME)
-      if(${output_name} STREQUAL "output_name-NOTFOUND")
-        set(output_name ${name})
-      endif()
-      set(library_name ${output_name}-${LLVM_VERSION_MAJOR}${LLVM_VERSION_SUFFIX})
-      set(api_name ${output_name}-${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}.${LLVM_VERSION_PATCH}${LLVM_VERSION_SUFFIX})
-      set_target_properties(${name} PROPERTIES OUTPUT_NAME ${library_name})
-      if(UNIX AND NOT CYGWIN)
-        llvm_install_library_symlink(${api_name} ${library_name} SHARED
-          COMPONENT ${name})
-        llvm_install_library_symlink(${output_name} ${library_name} SHARED
-          COMPONENT ${name})
-      endif()
     endif()
   endif()
 

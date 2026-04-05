@@ -4390,15 +4390,28 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createReductionsGPU(
 
   Value *RL = Builder.CreatePointerBitCastOrAddrSpaceCast(ReductionList, PtrTy);
 
+  // NOTE: ReductionDataSize is passed as the reduce_data_size
+  // argument to __kmpc_nvptx_{parallel,teams}_reduce_nowait_v2, but
+  // the runtime implementations do not currently use it.  The teams
+  // runtime reads ReductionDataSize from KernelEnvironmentTy instead
+  // (set separately via TargetKernelDefaultAttrs).  It is computed
+  // here conservatively as max(element sizes) * N rather than the
+  // exact sum, which over-calculates the size for mixed reduction
+  // types but is harmless given the argument is unused.
+  // TODO: Consider dropping this computation if the runtime API is
+  // ever revised to remove the unused parameter.
   unsigned MaxDataSize = 0;
   SmallVector<Type *> ReductionTypeArgs;
   for (auto En : enumerate(ReductionInfos)) {
-    auto Size = M.getDataLayout().getTypeStoreSize(En.value().ElementType);
-    if (Size > MaxDataSize)
-      MaxDataSize = Size;
+    // Use ByRefElementType for by-ref reductions so that MaxDataSize matches
+    // the actual data size stored in the global reduction buffer, consistent
+    // with the ReductionsBufferTy struct used for GEP offsets below.
     Type *RedTypeArg = (!IsByRef.empty() && IsByRef[En.index()])
                            ? En.value().ByRefElementType
                            : En.value().ElementType;
+    auto Size = M.getDataLayout().getTypeStoreSize(RedTypeArg);
+    if (Size > MaxDataSize)
+      MaxDataSize = Size;
     ReductionTypeArgs.emplace_back(RedTypeArg);
   }
   Value *ReductionDataSize =
