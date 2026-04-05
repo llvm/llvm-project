@@ -28,7 +28,7 @@
 namespace clang::clangd {
 namespace {
 
-MATCHER_P(named, Name, "") { return arg.Name = Name; }
+MATCHER_P(named, Name, "") { return arg.Name == Name; }
 
 class GlobalScanningCounterProjectModules : public ProjectModules {
 public:
