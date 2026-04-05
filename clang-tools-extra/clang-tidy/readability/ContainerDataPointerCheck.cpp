@@ -38,8 +38,9 @@ void ContainerDataPointerCheck::registerMatchers(MatchFinder *Finder) {
       cxxRecordDecl(
           unless(matchers::matchesAnyListedRegexName(IgnoredContainers)),
           isSameOrDerivedFrom(
-              namedDecl(
-                  has(cxxMethodDecl(isPublic(), hasName("data")).bind("data")))
+              namedDecl(anyOf(has(cxxMethodDecl(isPublic(), hasName("c_str"))
+                                      .bind("c_str")),
+                              has(cxxMethodDecl(isPublic(), hasName("data")))))
                   .bind("container")))
           .bind("record");
 
@@ -91,6 +92,8 @@ void ContainerDataPointerCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *DCE = Result.Nodes.getNodeAs<Expr>(DerefContainerExprName);
   const auto *ACE = Result.Nodes.getNodeAs<Expr>(AddrOfContainerExprName);
 
+  const auto *CStrDecl = Result.Nodes.getNodeAs<CXXMethodDecl>("c_str");
+
   if (!UO || !CE)
     return;
 
@@ -98,6 +101,46 @@ void ContainerDataPointerCheck::check(const MatchFinder::MatchResult &Result) {
     CE = DCE;
   else if (ACE)
     CE = ACE;
+
+  SourceRange ReplacementRange = UO->getSourceRange();
+  bool UseCStr = false;
+  if (CStrDecl) {
+    auto Parents = Result.Context->getParents(*UO);
+
+    if (!Parents.empty()) {
+      if (const auto *VD = Parents[0].get<VarDecl>()) {
+        QualType VarType = VD->getType();
+        if (VarType->isPointerType()) {
+          QualType PointeeType = VarType->getPointeeType();
+          UseCStr = PointeeType.isConstQualified();
+        }
+      } else if (const auto *ICE = Parents[0].get<ImplicitCastExpr>()) {
+        QualType CastType = ICE->getType();
+        if (CastType->isPointerType()) {
+          QualType PointeeType = CastType->getPointeeType();
+          UseCStr = PointeeType.isConstQualified();
+        }
+      } else if (const auto *Cast = Parents[0].get<CastExpr>()) {
+        QualType CastType = Cast->getType();
+        if (CastType->isPointerType()) {
+          QualType PointeeType = CastType->getPointeeType();
+          UseCStr = PointeeType.isConstQualified();
+          if (UseCStr) {
+            // if it's a const cast, use the Cast range as replacement range
+            // e.g. (const char*)&s[0] -> s.c_str()
+            ReplacementRange = Cast->getSourceRange();
+          }
+        }
+      }
+    }
+
+    if (!UseCStr) {
+      QualType ContainerType = CE->getType();
+      if (ContainerType->isPointerType())
+        ContainerType = ContainerType->getPointeeType();
+      UseCStr = ContainerType.isConstQualified();
+    }
+  }
 
   const SourceRange SrcRange = CE->getSourceRange();
 
@@ -112,16 +155,18 @@ void ContainerDataPointerCheck::check(const MatchFinder::MatchResult &Result) {
   if (NeedsParens)
     ReplacementText = "(" + ReplacementText + ")";
 
-  if (CE->getType()->isPointerType())
-    ReplacementText += "->data()";
-  else
-    ReplacementText += ".data()";
+  ReplacementText += CE->getType()->isPointerType() ? "->" : ".";
+  ReplacementText += UseCStr ? "c_str()" : "data()";
 
+  llvm::StringRef Description = UseCStr
+                                    ? "'c_str' should be used for accessing "
+                                      "the data pointer instead of taking "
+                                      "the address of the 0-th element"
+                                    : "'data' should be used for accessing the "
+                                      "data pointer instead of taking "
+                                      "the address of the 0-th element";
   const FixItHint Hint =
-      FixItHint::CreateReplacement(UO->getSourceRange(), ReplacementText);
-  diag(UO->getBeginLoc(),
-       "'data' should be used for accessing the data pointer instead of taking "
-       "the address of the 0-th element")
-      << Hint;
+      FixItHint::CreateReplacement(ReplacementRange, ReplacementText);
+  diag(UO->getBeginLoc(), Description) << Hint;
 }
 } // namespace clang::tidy::readability
