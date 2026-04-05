@@ -1365,7 +1365,10 @@ def constant_fold_binop : GICombineRule<
 
 def constant_fold_fp_binop : GICombineRule<
   (defs root:$d, constantfp_matchinfo:$matchinfo),
-  (match (wip_match_opcode G_FADD, G_FSUB, G_FMUL, G_FDIV):$d,
+  (match (wip_match_opcode G_FADD, G_FSUB, G_FMUL, G_FDIV, G_FREM,
+                           G_FCOPYSIGN, G_FMINNUM, G_FMAXNUM,
+                           G_FMINIMUM, G_FMAXIMUM,
+                           G_FMINIMUMNUM, G_FMAXIMUMNUM):$d,
    [{ return Helper.matchConstantFoldFPBinOp(*${d}, ${matchinfo}); }]),
   (apply [{ Helper.replaceInstWithFConstant(*${d}, ${matchinfo}); }])>;
 
