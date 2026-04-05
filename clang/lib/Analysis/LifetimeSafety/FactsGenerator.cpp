@@ -94,8 +94,8 @@ static const Loan *createLoan(FactManager &FactMgr,
   return FactMgr.getLoanMgr().createLoan(Path, MTE);
 }
 
-static bool producesConditionalResult(const Expr *E) {
-  return !isa<CXXThrowExpr>(E->IgnoreParenImpCasts());
+static bool isThrowExpr(const Expr *E) {
+  return isa<CXXThrowExpr>(E->IgnoreParenImpCasts());
 }
 
 void FactsGenerator::run() {
@@ -404,22 +404,32 @@ void FactsGenerator::VisitBinaryOperator(const BinaryOperator *BO) {
   // TODO: Handle assignments involving dereference like `*p = q`.
 }
 
+void FactsGenerator::handleTernaryOperator(const ConditionalOperator *CO) {
+  const auto *Map = AC.getCFGStmtMap();
+  const Expr *TrueExpr = CO->getTrueExpr();
+  const Expr *FalseExpr = CO->getFalseExpr();
+  bool TBHasConditionResult =
+      Map->getBlock(TrueExpr)->hasNoReturnElement() || isThrowExpr(TrueExpr);
+  bool FBHasConditionResult =
+      Map->getBlock(FalseExpr)->hasNoReturnElement() || isThrowExpr(FalseExpr);
+  bool FirstFlow = true;
+  auto HandleFlow = [&](const Expr *E, bool HasNoReturn) {
+    if (HasNoReturn)
+      return;
+    if (FirstFlow) {
+      killAndFlowOrigin(*CO, *E);
+      FirstFlow = false;
+    } else {
+      flowOrigin(*CO, *E);
+    }
+  };
+  HandleFlow(TrueExpr, TBHasConditionResult);
+  HandleFlow(FalseExpr, FBHasConditionResult);
+}
+
 void FactsGenerator::VisitConditionalOperator(const ConditionalOperator *CO) {
   if (hasOrigins(CO)) {
-    // Merge origins from both branches of the conditional operator.
-    // We kill to clear the initial state and merge both origins into it.
-    const Expr *TrueExpr = CO->getTrueExpr();
-    const Expr *FalseExpr = CO->getFalseExpr();
-    bool Initialized = false;
-    for (const Expr *Branch : {TrueExpr, FalseExpr}) {
-      if (!producesConditionalResult(Branch))
-        continue;
-      if (!Initialized) {
-        killAndFlowOrigin(*CO, *Branch);
-        Initialized = true;
-      } else
-        flowOrigin(*CO, *Branch);
-    }
+    handleTernaryOperator(CO);
   }
 }
 
