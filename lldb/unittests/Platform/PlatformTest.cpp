@@ -695,6 +695,25 @@ TEST_F(PlatformLocateSafePathTest,
   FileSpec module_false_fspec = setup_module("ModuleFalse");
   m_target_sp->SetAutoLoadScriptsForModule("ModuleFalse",
                                            eLoadScriptFromSymFileFalse);
+
+  FileSpec module_true_fspec = setup_module("ModuleTrue");
+  m_target_sp->SetAutoLoadScriptsForModule("ModuleTrue",
+                                           eLoadScriptFromSymFileTrue);
+
+  FileSpec module_warn_fspec = setup_module("ModuleWarn");
+  m_target_sp->SetAutoLoadScriptsForModule("ModuleWarn",
+                                           eLoadScriptFromSymFileWarn);
+
+  FileSpec module_trusted_fspec = setup_module("ModuleTrusted");
+  m_target_sp->SetAutoLoadScriptsForModule("ModuleTrusted",
+                                           eLoadScriptFromSymFileTrusted);
+
+  FileSpec module_another_true_fspec = setup_module("ModuleAnotherTrue");
+  m_target_sp->SetAutoLoadScriptsForModule("ModuleAnotherTrue",
+                                           eLoadScriptFromSymFileTrue);
+
+  FileSpec module_default_fspec = setup_module("ModuleDefault");
+
   {
     StreamString ss;
     auto file_specs = Platform::LocateExecutableScriptingResourcesFromSafePaths(
@@ -706,9 +725,6 @@ TEST_F(PlatformLocateSafePathTest,
     EXPECT_EQ(file_specs[module_false_fspec], eLoadScriptFromSymFileFalse);
   }
 
-  FileSpec module_true_fspec = setup_module("ModuleTrue");
-  m_target_sp->SetAutoLoadScriptsForModule("ModuleTrue",
-                                           eLoadScriptFromSymFileTrue);
   {
     StreamString ss;
     auto file_specs = Platform::LocateExecutableScriptingResourcesFromSafePaths(
@@ -720,9 +736,6 @@ TEST_F(PlatformLocateSafePathTest,
     EXPECT_EQ(file_specs[module_true_fspec], eLoadScriptFromSymFileTrue);
   }
 
-  FileSpec module_warn_fspec = setup_module("ModuleWarn");
-  m_target_sp->SetAutoLoadScriptsForModule("ModuleWarn",
-                                           eLoadScriptFromSymFileWarn);
   {
     StreamString ss;
     auto file_specs = Platform::LocateExecutableScriptingResourcesFromSafePaths(
@@ -734,9 +747,6 @@ TEST_F(PlatformLocateSafePathTest,
     EXPECT_EQ(file_specs[module_warn_fspec], eLoadScriptFromSymFileWarn);
   }
 
-  FileSpec module_trusted_fspec = setup_module("ModuleTrusted");
-  m_target_sp->SetAutoLoadScriptsForModule("ModuleTrusted",
-                                           eLoadScriptFromSymFileTrusted);
   {
     StreamString ss;
     auto file_specs = Platform::LocateExecutableScriptingResourcesFromSafePaths(
@@ -748,9 +758,6 @@ TEST_F(PlatformLocateSafePathTest,
     EXPECT_EQ(file_specs[module_trusted_fspec], eLoadScriptFromSymFileTrusted);
   }
 
-  FileSpec module_another_true_fspec = setup_module("ModuleAnotherTrue");
-  m_target_sp->SetAutoLoadScriptsForModule("ModuleAnotherTrue",
-                                           eLoadScriptFromSymFileTrue);
   {
     StreamString ss;
     auto file_specs = Platform::LocateExecutableScriptingResourcesFromSafePaths(
@@ -763,7 +770,6 @@ TEST_F(PlatformLocateSafePathTest,
               eLoadScriptFromSymFileTrue);
   }
 
-  FileSpec module_default_fspec = setup_module("ModuleDefault");
   {
     StreamString ss;
     auto file_specs = Platform::LocateExecutableScriptingResourcesFromSafePaths(
