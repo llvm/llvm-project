@@ -22,7 +22,7 @@ define void @goo(ptr %r, ptr %p, ptr %q) nounwind {
 ; none-NEXT:    mulsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; none-NEXT:    addsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; none-NEXT:    cvttsd2si %xmm0, %ecx
-; none-NEXT:    cmpl %eax, %ecx
+; none-NEXT:    cmpl %ecx, %eax
 ; none-NEXT:    jge .LBB0_2
 ; none-NEXT:  # %bb.1: # %bb
 ; none-NEXT:    movabsq $4621425052621576602, %rax # imm = 0x402299999999999A

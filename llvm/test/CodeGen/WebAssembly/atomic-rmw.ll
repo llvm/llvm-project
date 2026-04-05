@@ -716,9 +716,9 @@ define i64 @cmpxchg_sext_i16_i64(ptr %p, i64 %exp, i64 %new) {
 ; 32->64 sext rmw gets selected as i32.atomic.rmw.cmpxchg, i64.extend_i32_s
 ; CHECK-LABEL: cmpxchg_sext_i32_i64:
 ; CHECK-NEXT: .functype cmpxchg_sext_i32_i64 (i32, i64, i64) -> (i64){{$}}
-; CHECK: i32.wrap_i64 $push1=, $1{{$}}
-; CHECK-NEXT: i32.wrap_i64 $push0=, $2{{$}}
-; CHECK-NEXT: i32.atomic.rmw.cmpxchg $push2=, 0($0), $pop1, $pop0{{$}}
+; CHECK: i32.wrap_i64 $push0=, $1{{$}}
+; CHECK-NEXT: i32.wrap_i64 $push1=, $2{{$}}
+; CHECK-NEXT: i32.atomic.rmw.cmpxchg $push2=, 0($0), $pop0, $pop1{{$}}
 ; CHECK-NEXT: i64.extend_i32_s $push3=, $pop2{{$}}
 ; CHECK-NEXT: return $pop3{{$}}
 define i64 @cmpxchg_sext_i32_i64(ptr %p, i64 %exp, i64 %new) {

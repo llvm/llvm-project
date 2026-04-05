@@ -17,11 +17,11 @@ define hidden void @accumulate8x2(ptr dead_on_unwind noalias writable sret(%stru
 ; CHECK-LABEL: accumulate8x2:
 ; CHECK: loop
 ; CHECK: v128.load64_zero
-; CHECK: i8x16.shuffle 1, 3, 5, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i8x16.shuffle 0, 2, 4, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 ; CHECK: i16x8.extend_low_i8x16_u
 ; CHECK: i32x4.extend_low_i16x8_u
 ; CHECK: i32x4.add
-; CHECK: i8x16.shuffle 0, 2, 4, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i8x16.shuffle 1, 3, 5, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 ; CHECK: i16x8.extend_low_i8x16_u
 ; CHECK: i32x4.extend_low_i16x8_u
 ; CHECK: i32x4.add
@@ -65,11 +65,7 @@ define hidden void @accumulate8x4(ptr dead_on_unwind noalias writable sret(%stru
 ; CHECK-LABEL: accumulate8x4
 ; CHECK: loop
 ; CHECK: v128.load
-; CHECK: i8x16.shuffle 3, 7, 11, 15, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-; CHECK: i16x8.extend_low_i8x16_u
-; CHECK: i32x4.extend_low_i16x8_u
-; CHECK: i32x4.add
-; CHECK: i8x16.shuffle 2, 6, 10, 14, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i8x16.shuffle 0, 4, 8, 12, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 ; CHECK: i16x8.extend_low_i8x16_u
 ; CHECK: i32x4.extend_low_i16x8_u
 ; CHECK: i32x4.add
@@ -77,7 +73,11 @@ define hidden void @accumulate8x4(ptr dead_on_unwind noalias writable sret(%stru
 ; CHECK: i16x8.extend_low_i8x16_u
 ; CHECK: i32x4.extend_low_i16x8_u
 ; CHECK: i32x4.add
-; CHECK: i8x16.shuffle 0, 4, 8, 12, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i8x16.shuffle 2, 6, 10, 14, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i16x8.extend_low_i8x16_u
+; CHECK: i32x4.extend_low_i16x8_u
+; CHECK: i32x4.add
+; CHECK: i8x16.shuffle 3, 7, 11, 15, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 ; CHECK: i16x8.extend_low_i8x16_u
 ; CHECK: i32x4.extend_low_i16x8_u
 ; CHECK: i32x4.add
@@ -137,10 +137,10 @@ define hidden void @accumulate16x2(ptr dead_on_unwind noalias writable sret(%str
 ; CHECK-LABEL: accumulate16x2
 ; CHECK: loop
 ; CHECK: v128.load
-; CHECK: i8x16.shuffle 2, 3, 6, 7, 10, 11, 14, 15, 0, 1, 0, 1, 0, 1, 0, 1
+; CHECK: i8x16.shuffle 0, 1, 4, 5, 8, 9, 12, 13, 0, 1, 0, 1, 0, 1, 0, 1
 ; CHECK: i32x4.extend_low_i16x8_u
 ; CHECK: i32x4.add
-; CHECK: i8x16.shuffle 0, 1, 4, 5, 8, 9, 12, 13, 0, 1, 0, 1, 0, 1, 0, 1
+; CHECK: i8x16.shuffle 2, 3, 6, 7, 10, 11, 14, 15, 0, 1, 0, 1, 0, 1, 0, 1
 ; CHECK: i32x4.extend_low_i16x8_u
 ; CHECK: i32x4.add
   %4 = load i32, ptr %0, align 4
@@ -184,16 +184,16 @@ define hidden void @accumulate16x4(ptr dead_on_unwind noalias writable sret(%str
 ; CHECK: loop
 ; CHECK: v128.load 0:p2align=1
 ; CHECK: v128.load 16:p2align=1
-; CHECK: i8x16.shuffle 6, 7, 14, 15, 22, 23, 30, 31, 0, 1, 0, 1, 0, 1, 0, 1
-; CHECK: i32x4.extend_low_i16x8_u
-; CHECK: i32x4.add
-; CHECK: i8x16.shuffle 4, 5, 12, 13, 20, 21, 28, 29, 0, 1, 0, 1, 0, 1, 0, 1
+; CHECK: i8x16.shuffle 0, 1, 8, 9, 16, 17, 24, 25, 0, 1, 0, 1, 0, 1, 0, 1
 ; CHECK: i32x4.extend_low_i16x8_u
 ; CHECK: i32x4.add
 ; CHECK: i8x16.shuffle 2, 3, 10, 11, 18, 19, 26, 27, 0, 1, 0, 1, 0, 1, 0, 1
 ; CHECK: i32x4.extend_low_i16x8_u
 ; CHECK: i32x4.add
-; CHECK: i8x16.shuffle 0, 1, 8, 9, 16, 17, 24, 25, 0, 1, 0, 1, 0, 1, 0, 1
+; CHECK: i8x16.shuffle 4, 5, 12, 13, 20, 21, 28, 29, 0, 1, 0, 1, 0, 1, 0, 1
+; CHECK: i32x4.extend_low_i16x8_u
+; CHECK: i32x4.add
+; CHECK: i8x16.shuffle 6, 7, 14, 15, 22, 23, 30, 31, 0, 1, 0, 1, 0, 1, 0, 1
 ; CHECK: i32x4.extend_low_i16x8_u
 ; CHECK: i32x4.add
   %4 = load i32, ptr %0, align 4
@@ -253,9 +253,9 @@ define hidden void @accumulate32x2(ptr dead_on_unwind noalias writable sret(%str
 ; CHECK: loop
 ; CHECK: v128.load 0:p2align=2
 ; CHECK: v128.load 16:p2align=2
-; CHECK: i8x16.shuffle 4, 5, 6, 7, 12, 13, 14, 15, 20, 21, 22, 23, 28, 29, 30, 31
-; CHECK: i32x4.add
 ; CHECK: i8x16.shuffle 0, 1, 2, 3, 8, 9, 10, 11, 16, 17, 18, 19, 24, 25, 26, 27
+; CHECK: i32x4.add
+; CHECK: i8x16.shuffle 4, 5, 6, 7, 12, 13, 14, 15, 20, 21, 22, 23, 28, 29, 30, 31
 ; CHECK: i32x4.add
   %4 = load i32, ptr %0, align 4
   %5 = icmp eq i32 %2, 0
@@ -295,22 +295,22 @@ define hidden void @accumulate32x4(ptr dead_on_unwind noalias writable sret(%str
 ; CHECK-LABEL: accumulate32x4
 ; CHECK: v128.load 0:p2align=2
 ; CHECK: v128.load 16:p2align=2
-; CHECK: i8x16.shuffle 12, 13, 14, 15, 28, 29, 30, 31, 0, 1, 2, 3, 0, 1, 2, 3
+; CHECK: i8x16.shuffle 0, 1, 2, 3, 16, 17, 18, 19, 0, 1, 2, 3, 0, 1, 2, 3
 ; CHECK: v128.load 32:p2align=2
 ; CHECK: v128.load 48:p2align=2
-; CHECK: i8x16.shuffle 0, 1, 2, 3, 0, 1, 2, 3, 12, 13, 14, 15, 28, 29, 30, 31
-; CHECK: i8x16.shuffle 0, 1, 2, 3, 4, 5, 6, 7, 24, 25, 26, 27, 28, 29, 30, 31
-; CHECK: i32x4.add
-; CHECK: i8x16.shuffle 8, 9, 10, 11, 24, 25, 26, 27, 0, 1, 2, 3, 0, 1, 2, 3
-; CHECK: i8x16.shuffle 0, 1, 2, 3, 0, 1, 2, 3, 8, 9, 10, 11, 24, 25, 26, 27
+; CHECK: i8x16.shuffle 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 16, 17, 18, 19
 ; CHECK: i8x16.shuffle 0, 1, 2, 3, 4, 5, 6, 7, 24, 25, 26, 27, 28, 29, 30, 31
 ; CHECK: i32x4.add
 ; CHECK: i8x16.shuffle 4, 5, 6, 7, 20, 21, 22, 23, 0, 1, 2, 3, 0, 1, 2, 3
 ; CHECK: i8x16.shuffle 0, 1, 2, 3, 0, 1, 2, 3, 4, 5, 6, 7, 20, 21, 22, 23
 ; CHECK: i8x16.shuffle 0, 1, 2, 3, 4, 5, 6, 7, 24, 25, 26, 27, 28, 29, 30, 31
 ; CHECK: i32x4.add
-; CHECK: i8x16.shuffle 0, 1, 2, 3, 16, 17, 18, 19, 0, 1, 2, 3, 0, 1, 2, 3
-; CHECK: i8x16.shuffle 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 16, 17, 18, 19
+; CHECK: i8x16.shuffle 8, 9, 10, 11, 24, 25, 26, 27, 0, 1, 2, 3, 0, 1, 2, 3
+; CHECK: i8x16.shuffle 0, 1, 2, 3, 0, 1, 2, 3, 8, 9, 10, 11, 24, 25, 26, 27
+; CHECK: i8x16.shuffle 0, 1, 2, 3, 4, 5, 6, 7, 24, 25, 26, 27, 28, 29, 30, 31
+; CHECK: i32x4.add
+; CHECK: i8x16.shuffle 12, 13, 14, 15, 28, 29, 30, 31, 0, 1, 2, 3, 0, 1, 2, 3
+; CHECK: i8x16.shuffle 0, 1, 2, 3, 0, 1, 2, 3, 12, 13, 14, 15, 28, 29, 30, 31
 ; CHECK: i8x16.shuffle 0, 1, 2, 3, 4, 5, 6, 7, 24, 25, 26, 27, 28, 29, 30, 31
 ; CHECK: i32x4.add
   %4 = load i32, ptr %0, align 4

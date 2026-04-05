@@ -274,19 +274,19 @@ define i1 @unordd(double %x, double %y) {
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get $push8=, 0
 ; CHECK-NEXT:    local.get $push7=, 0
-; CHECK-NEXT:    f64.ne $push4=, $pop8, $pop7
+; CHECK-NEXT:    f64.ne $push1=, $pop8, $pop7
 ; CHECK-NEXT:    local.get $push10=, 1
 ; CHECK-NEXT:    local.get $push9=, 1
-; CHECK-NEXT:    f64.ne $push3=, $pop10, $pop9
-; CHECK-NEXT:    i32.or $push5=, $pop4, $pop3
+; CHECK-NEXT:    f64.ne $push0=, $pop10, $pop9
+; CHECK-NEXT:    i32.or $push2=, $pop1, $pop0
 ; CHECK-NEXT:    local.get $push12=, 0
 ; CHECK-NEXT:    local.get $push11=, 0
-; CHECK-NEXT:    f64.eq $push1=, $pop12, $pop11
+; CHECK-NEXT:    f64.eq $push4=, $pop12, $pop11
 ; CHECK-NEXT:    local.get $push14=, 1
 ; CHECK-NEXT:    local.get $push13=, 1
-; CHECK-NEXT:    f64.eq $push0=, $pop14, $pop13
-; CHECK-NEXT:    i32.and $push2=, $pop1, $pop0
-; CHECK-NEXT:    i32.xor $push6=, $pop5, $pop2
+; CHECK-NEXT:    f64.eq $push3=, $pop14, $pop13
+; CHECK-NEXT:    i32.and $push5=, $pop4, $pop3
+; CHECK-NEXT:    i32.xor $push6=, $pop2, $pop5
 ; CHECK-NEXT:    return $pop6
  %a = fcmp uno double %x, %y
  %b = fcmp ord double %x, %y
@@ -300,19 +300,19 @@ define i1 @unordf(float %x, float %y) {
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get $push8=, 0
 ; CHECK-NEXT:    local.get $push7=, 0
-; CHECK-NEXT:    f32.ne $push4=, $pop8, $pop7
+; CHECK-NEXT:    f32.ne $push1=, $pop8, $pop7
 ; CHECK-NEXT:    local.get $push10=, 1
 ; CHECK-NEXT:    local.get $push9=, 1
-; CHECK-NEXT:    f32.ne $push3=, $pop10, $pop9
-; CHECK-NEXT:    i32.or $push5=, $pop4, $pop3
+; CHECK-NEXT:    f32.ne $push0=, $pop10, $pop9
+; CHECK-NEXT:    i32.or $push2=, $pop1, $pop0
 ; CHECK-NEXT:    local.get $push12=, 0
 ; CHECK-NEXT:    local.get $push11=, 0
-; CHECK-NEXT:    f32.eq $push1=, $pop12, $pop11
+; CHECK-NEXT:    f32.eq $push4=, $pop12, $pop11
 ; CHECK-NEXT:    local.get $push14=, 1
 ; CHECK-NEXT:    local.get $push13=, 1
-; CHECK-NEXT:    f32.eq $push0=, $pop14, $pop13
-; CHECK-NEXT:    i32.and $push2=, $pop1, $pop0
-; CHECK-NEXT:    i32.xor $push6=, $pop5, $pop2
+; CHECK-NEXT:    f32.eq $push3=, $pop14, $pop13
+; CHECK-NEXT:    i32.and $push5=, $pop4, $pop3
+; CHECK-NEXT:    i32.xor $push6=, $pop2, $pop5
 ; CHECK-NEXT:    return $pop6
  %a = fcmp uno float %x, %y
  %b = fcmp ord float %x, %y

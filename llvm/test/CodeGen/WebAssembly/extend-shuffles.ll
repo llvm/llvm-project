@@ -215,9 +215,9 @@ define <2 x i64> @multi_use_ext_v2i32(<4 x i32> %in) {
 ; SIMD128-LABEL: multi_use_ext_v2i32:
 ; SIMD128:         .functype multi_use_ext_v2i32 (v128) -> (v128)
 ; SIMD128-NEXT:  # %bb.0:
-; SIMD128-NEXT:    i64x2.extend_high_i32x4_u $push1=, $0
-; SIMD128-NEXT:    i64x2.extend_high_i32x4_s $push0=, $0
-; SIMD128-NEXT:    i64x2.add $push2=, $pop1, $pop0
+; SIMD128-NEXT:    i64x2.extend_high_i32x4_u $push0=, $0
+; SIMD128-NEXT:    i64x2.extend_high_i32x4_s $push1=, $0
+; SIMD128-NEXT:    i64x2.add $push2=, $pop0, $pop1
 ; SIMD128-NEXT:    return $pop2
  %shuffle = shufflevector <4 x i32> %in, <4 x i32> poison, <2 x i32> <i32 2, i32 3>
  %zext = zext <2 x i32> %shuffle to <2 x i64>

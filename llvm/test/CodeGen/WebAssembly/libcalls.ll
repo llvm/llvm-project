@@ -206,13 +206,13 @@ define i1 @unordd(double %x, double %y) {
 ; CHECK-LABEL: unordd:
 ; CHECK:         .functype unordd (f64, f64) -> (i32)
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    f64.ne $push4=, $0, $0
-; CHECK-NEXT:    f64.ne $push3=, $1, $1
-; CHECK-NEXT:    i32.or $push5=, $pop4, $pop3
-; CHECK-NEXT:    f64.eq $push1=, $0, $0
-; CHECK-NEXT:    f64.eq $push0=, $1, $1
-; CHECK-NEXT:    i32.and $push2=, $pop1, $pop0
-; CHECK-NEXT:    i32.xor $push6=, $pop5, $pop2
+; CHECK-NEXT:    f64.ne $push1=, $0, $0
+; CHECK-NEXT:    f64.ne $push0=, $1, $1
+; CHECK-NEXT:    i32.or $push2=, $pop1, $pop0
+; CHECK-NEXT:    f64.eq $push4=, $0, $0
+; CHECK-NEXT:    f64.eq $push3=, $1, $1
+; CHECK-NEXT:    i32.and $push5=, $pop4, $pop3
+; CHECK-NEXT:    i32.xor $push6=, $pop2, $pop5
 ; CHECK-NEXT:    return $pop6
  %a = fcmp uno double %x, %y
  %b = fcmp ord double %x, %y
@@ -224,13 +224,13 @@ define i1 @unordf(float %x, float %y) {
 ; CHECK-LABEL: unordf:
 ; CHECK:         .functype unordf (f32, f32) -> (i32)
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    f32.ne $push4=, $0, $0
-; CHECK-NEXT:    f32.ne $push3=, $1, $1
-; CHECK-NEXT:    i32.or $push5=, $pop4, $pop3
-; CHECK-NEXT:    f32.eq $push1=, $0, $0
-; CHECK-NEXT:    f32.eq $push0=, $1, $1
-; CHECK-NEXT:    i32.and $push2=, $pop1, $pop0
-; CHECK-NEXT:    i32.xor $push6=, $pop5, $pop2
+; CHECK-NEXT:    f32.ne $push1=, $0, $0
+; CHECK-NEXT:    f32.ne $push0=, $1, $1
+; CHECK-NEXT:    i32.or $push2=, $pop1, $pop0
+; CHECK-NEXT:    f32.eq $push4=, $0, $0
+; CHECK-NEXT:    f32.eq $push3=, $1, $1
+; CHECK-NEXT:    i32.and $push5=, $pop4, $pop3
+; CHECK-NEXT:    i32.xor $push6=, $pop2, $pop5
 ; CHECK-NEXT:    return $pop6
  %a = fcmp uno float %x, %y
  %b = fcmp ord float %x, %y

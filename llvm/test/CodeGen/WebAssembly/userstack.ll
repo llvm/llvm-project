@@ -56,11 +56,11 @@ define void @alloca3264() {
 ; CHECK-32-NEXT:    i32.const $push3=, 16
 ; CHECK-32-NEXT:    i32.sub $push5=, $pop2, $pop3
 ; CHECK-32-NEXT:    local.tee $push4=, 0, $pop5
-; CHECK-32-NEXT:    i64.const $push0=, 0
-; CHECK-32-NEXT:    i64.store 0($pop4), $pop0
+; CHECK-32-NEXT:    i32.const $push0=, 0
+; CHECK-32-NEXT:    i32.store 12($pop4), $pop0
 ; CHECK-32-NEXT:    local.get $push6=, 0
-; CHECK-32-NEXT:    i32.const $push1=, 0
-; CHECK-32-NEXT:    i32.store 12($pop6), $pop1
+; CHECK-32-NEXT:    i64.const $push1=, 0
+; CHECK-32-NEXT:    i64.store 0($pop6), $pop1
 ; CHECK-32-NEXT:    return
 ;
 ; CHECK-64-LABEL: alloca3264:
@@ -71,11 +71,11 @@ define void @alloca3264() {
 ; CHECK-64-NEXT:    i64.const $push3=, 16
 ; CHECK-64-NEXT:    i64.sub $push5=, $pop2, $pop3
 ; CHECK-64-NEXT:    local.tee $push4=, 0, $pop5
-; CHECK-64-NEXT:    i64.const $push0=, 0
-; CHECK-64-NEXT:    i64.store 0($pop4), $pop0
+; CHECK-64-NEXT:    i32.const $push0=, 0
+; CHECK-64-NEXT:    i32.store 12($pop4), $pop0
 ; CHECK-64-NEXT:    local.get $push6=, 0
-; CHECK-64-NEXT:    i32.const $push1=, 0
-; CHECK-64-NEXT:    i32.store 12($pop6), $pop1
+; CHECK-64-NEXT:    i64.const $push1=, 0
+; CHECK-64-NEXT:    i64.store 0($pop6), $pop1
 ; CHECK-64-NEXT:    return
  %r1 = alloca i32
  %r2 = alloca double
@@ -214,10 +214,10 @@ define void @allocarray_inbounds() {
 ; CHECK-32-NEXT:    global.set __stack_pointer, $pop7
 ; CHECK-32-NEXT:    local.get $push9=, 0
 ; CHECK-32-NEXT:    i32.const $push0=, 1
-; CHECK-32-NEXT:    i32.store 24($pop9), $pop0
+; CHECK-32-NEXT:    i32.store 12($pop9), $pop0
 ; CHECK-32-NEXT:    local.get $push10=, 0
 ; CHECK-32-NEXT:    i32.const $push6=, 1
-; CHECK-32-NEXT:    i32.store 12($pop10), $pop6
+; CHECK-32-NEXT:    i32.store 24($pop10), $pop6
 ; CHECK-32-NEXT:    i32.const $push1=, 0
 ; CHECK-32-NEXT:    call ext_func, $pop1
 ; CHECK-32-NEXT:    local.get $push11=, 0
@@ -237,10 +237,10 @@ define void @allocarray_inbounds() {
 ; CHECK-64-NEXT:    global.set __stack_pointer, $pop7
 ; CHECK-64-NEXT:    local.get $push9=, 0
 ; CHECK-64-NEXT:    i32.const $push0=, 1
-; CHECK-64-NEXT:    i32.store 24($pop9), $pop0
+; CHECK-64-NEXT:    i32.store 12($pop9), $pop0
 ; CHECK-64-NEXT:    local.get $push10=, 0
 ; CHECK-64-NEXT:    i32.const $push6=, 1
-; CHECK-64-NEXT:    i32.store 12($pop10), $pop6
+; CHECK-64-NEXT:    i32.store 24($pop10), $pop6
 ; CHECK-64-NEXT:    i64.const $push1=, 0
 ; CHECK-64-NEXT:    call ext_func, $pop1
 ; CHECK-64-NEXT:    local.get $push11=, 0
@@ -629,7 +629,7 @@ define void @copytoreg_fi(i1 %cond, ptr %b) {
 ; CHECK-32-NEXT:    i32.const $push4=, 1
 ; CHECK-32-NEXT:    i32.and $push7=, $pop8, $pop4
 ; CHECK-32-NEXT:    local.set 0, $pop7
-; CHECK-32-NEXT:  # %body
+; CHECK-32-NEXT:  .LBB11_1: # %body
 ; CHECK-32-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-32-NEXT:    loop # label0:
 ; CHECK-32-NEXT:    local.get $push9=, 2
@@ -657,7 +657,7 @@ define void @copytoreg_fi(i1 %cond, ptr %b) {
 ; CHECK-64-NEXT:    i32.const $push4=, 1
 ; CHECK-64-NEXT:    i32.and $push7=, $pop8, $pop4
 ; CHECK-64-NEXT:    local.set 0, $pop7
-; CHECK-64-NEXT:  # %body
+; CHECK-64-NEXT:  .LBB11_1: # %body
 ; CHECK-64-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-64-NEXT:    loop # label0:
 ; CHECK-64-NEXT:    local.get $push9=, 2

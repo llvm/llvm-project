@@ -628,9 +628,9 @@ define double @pairwise_add_v2f64(<2 x double> %arg) {
 ; SIMD128-LABEL: pairwise_add_v2f64:
 ; SIMD128:         .functype pairwise_add_v2f64 (v128) -> (f64)
 ; SIMD128-NEXT:  # %bb.0:
-; SIMD128-NEXT:    f64x2.extract_lane $push1=, $0, 0
-; SIMD128-NEXT:    f64x2.extract_lane $push0=, $0, 1
-; SIMD128-NEXT:    f64.add $push2=, $pop1, $pop0
+; SIMD128-NEXT:    f64x2.extract_lane $push0=, $0, 0
+; SIMD128-NEXT:    f64x2.extract_lane $push1=, $0, 1
+; SIMD128-NEXT:    f64.add $push2=, $pop0, $pop1
 ; SIMD128-NEXT:    return $pop2
   %res = tail call double @llvm.vector.reduce.fadd.v2f64(double -0.0, <2 x double> %arg)
   ret double%res
@@ -652,9 +652,9 @@ define float @pairwise_add_v4f32(<4 x float> %arg) {
 ; SIMD128-LABEL: pairwise_add_v4f32:
 ; SIMD128:         .functype pairwise_add_v4f32 (v128) -> (f32)
 ; SIMD128-NEXT:  # %bb.0:
-; SIMD128-NEXT:    f32x4.extract_lane $push1=, $0, 0
-; SIMD128-NEXT:    f32x4.extract_lane $push0=, $0, 1
-; SIMD128-NEXT:    f32.add $push2=, $pop1, $pop0
+; SIMD128-NEXT:    f32x4.extract_lane $push0=, $0, 0
+; SIMD128-NEXT:    f32x4.extract_lane $push1=, $0, 1
+; SIMD128-NEXT:    f32.add $push2=, $pop0, $pop1
 ; SIMD128-NEXT:    f32x4.extract_lane $push3=, $0, 2
 ; SIMD128-NEXT:    f32.add $push4=, $pop2, $pop3
 ; SIMD128-NEXT:    f32x4.extract_lane $push5=, $0, 3

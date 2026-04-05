@@ -9,9 +9,9 @@ define i1 @setcc_load(ptr %a, ptr %b) {
 ; CHECK-LABEL: setcc_load:
 ; CHECK:         .functype setcc_load (i32, i32) -> (i32)
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    v128.load $push1=, 0($0):p2align=0
-; CHECK-NEXT:    v128.load $push0=, 0($1):p2align=0
-; CHECK-NEXT:    i8x16.eq $push2=, $pop1, $pop0
+; CHECK-NEXT:    v128.load $push0=, 0($0):p2align=0
+; CHECK-NEXT:    v128.load $push1=, 0($1):p2align=0
+; CHECK-NEXT:    i8x16.eq $push2=, $pop0, $pop1
 ; CHECK-NEXT:    i8x16.all_true $push3=, $pop2
 ; CHECK-NEXT:    return $pop3
   %cmp_16 = call i32 @memcmp(ptr %a, ptr %b, i32 16)
@@ -24,12 +24,12 @@ define i1 @setcc_load_should_not_vectorize(ptr %a, ptr %b) noimplicitfloat {
 ; CHECK-LABEL: setcc_load_should_not_vectorize:
 ; CHECK:         .functype setcc_load_should_not_vectorize (i32, i32) -> (i32)
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    i64.load $push4=, 0($0):p2align=0
-; CHECK-NEXT:    i64.load $push3=, 0($1):p2align=0
-; CHECK-NEXT:    i64.xor $push5=, $pop4, $pop3
-; CHECK-NEXT:    i64.load $push1=, 8($0):p2align=0
-; CHECK-NEXT:    i64.load $push0=, 8($1):p2align=0
-; CHECK-NEXT:    i64.xor $push2=, $pop1, $pop0
+; CHECK-NEXT:    i64.load $push3=, 0($0):p2align=0
+; CHECK-NEXT:    i64.load $push4=, 0($1):p2align=0
+; CHECK-NEXT:    i64.xor $push5=, $pop3, $pop4
+; CHECK-NEXT:    i64.load $push0=, 8($0):p2align=0
+; CHECK-NEXT:    i64.load $push1=, 8($1):p2align=0
+; CHECK-NEXT:    i64.xor $push2=, $pop0, $pop1
 ; CHECK-NEXT:    i64.or $push6=, $pop5, $pop2
 ; CHECK-NEXT:    i64.eqz $push7=, $pop6
 ; CHECK-NEXT:    return $pop7
