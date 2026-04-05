@@ -922,7 +922,7 @@ Mangled SymbolContext::GetPossiblyInlinedFunctionName() const {
 
   // Sometimes an inline frame may not have mangling information,
   // but does have a valid name.
-  return Mangled{inline_info->GetName().AsCString()};
+  return Mangled{inline_info->GetName()};
 }
 
 //

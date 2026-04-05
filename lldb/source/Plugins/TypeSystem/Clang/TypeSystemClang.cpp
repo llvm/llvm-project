@@ -8602,7 +8602,7 @@ void TypeSystemClang::DumpFromSymbolFile(Stream &s,
       if (symbol_name != type->GetName().GetStringRef())
         continue;
 
-    s << type->GetName().AsCString() << "\n";
+    s << type->GetName() << "\n";
 
     CompilerType full_type = type->GetFullCompilerType();
     if (clang::TagDecl *tag_decl = GetAsTagDecl(full_type)) {

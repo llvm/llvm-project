@@ -611,7 +611,7 @@ void PlatformDarwinKernel::AddKextToMap(PlatformDarwinKernel *thisp,
 bool PlatformDarwinKernel::KextHasdSYMSibling(
     const FileSpec &kext_bundle_filepath) {
   FileSpec dsym_fspec = kext_bundle_filepath;
-  std::string filename = dsym_fspec.GetFilename().AsCString();
+  std::string filename = dsym_fspec.GetFilename().GetString();
   filename += ".dSYM";
   dsym_fspec.SetFilename(filename);
   if (FileSystem::Instance().IsDirectory(dsym_fspec)) {
@@ -648,7 +648,7 @@ bool PlatformDarwinKernel::KextHasdSYMSibling(
 //    /dir/dir/mach.development.t7004.dSYM
 bool PlatformDarwinKernel::KernelHasdSYMSibling(const FileSpec &kernel_binary) {
   FileSpec kernel_dsym = kernel_binary;
-  std::string filename = kernel_binary.GetFilename().AsCString();
+  std::string filename = kernel_binary.GetFilename().GetString();
   filename += ".dSYM";
   kernel_dsym.SetFilename(filename);
   return FileSystem::Instance().IsDirectory(kernel_dsym);
