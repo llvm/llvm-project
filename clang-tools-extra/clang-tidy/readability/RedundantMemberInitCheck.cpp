@@ -103,10 +103,12 @@ void RedundantMemberInitCheck::check(const MatchFinder::MatchResult &Result) {
 
   if (const auto *Field = Result.Nodes.getNodeAs<FieldDecl>("field")) {
     const Expr *Init = Field->getInClassInitializer();
-    diag(Construct->getExprLoc(), "initializer for member %0 is redundant")
-        << Field
-        << FixItHint::CreateRemoval(getFullInitRangeInclWhitespaces(
-               Init->getSourceRange(), *Result.SourceManager, getLangOpts()));
+    auto Diag =
+        diag(Construct->getExprLoc(), "initializer for member %0 is redundant")
+        << Field;
+    if (!Init->getBeginLoc().isMacroID() && !Init->getEndLoc().isMacroID())
+      Diag << FixItHint::CreateRemoval(getFullInitRangeInclWhitespaces(
+          Init->getSourceRange(), *Result.SourceManager, getLangOpts()));
     return;
   }
 
