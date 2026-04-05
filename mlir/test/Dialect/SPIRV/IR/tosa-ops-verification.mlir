@@ -1940,3 +1940,187 @@ spirv.ARM.Graph @resize_bf16_input_output_element_type_must_be_bf16(%arg0: !spir
   %4 = spirv.Tosa.Resize mode = <Bilinear>, %arg0, %1, %2, %3 : !spirv.arm.tensor<1x48x33x63xbf16>, !spirv.arm.tensor<4xi32>, !spirv.arm.tensor<2xi32>, !spirv.arm.tensor<2xi32> -> !spirv.arm.tensor<1x753x297x63xf32>
   spirv.ARM.GraphOutputs %4 : !spirv.arm.tensor<1x753x297x63xf32>
 }
+
+//===----------------------------------------------------------------------===//
+// spirv.TOSA.Cast
+//===----------------------------------------------------------------------===//
+
+spirv.ARM.Graph @cast_input_output_shapes_not_matching(%arg0: !spirv.arm.tensor<2x3x4xi8>) -> (!spirv.arm.tensor<2x3x5xi32>) {
+  // expected-error @+1 {{op failed to verify that all of {input, output} have same shape}}
+  %0 = spirv.Tosa.Cast %arg0 : !spirv.arm.tensor<2x3x4xi8> -> !spirv.arm.tensor<2x3x5xi32>
+  spirv.ARM.GraphOutputs %0 : !spirv.arm.tensor<2x3x5xi32>
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.TOSA.Rescale
+//===----------------------------------------------------------------------===//
+
+spirv.ARM.Graph @rescale_input_output_shapes_not_matching(%arg0: !spirv.arm.tensor<2x3x4xi16>) -> (!spirv.arm.tensor<2x3x5xi16>) {
+  %1 = spirv.Constant dense<1> : !spirv.arm.tensor<1xi16>
+  %2 = spirv.Constant dense<0> : !spirv.arm.tensor<1xi8>
+  %3 = spirv.Constant dense<0> : !spirv.arm.tensor<1xi16>
+  %4 = spirv.Constant dense<0> : !spirv.arm.tensor<1xi16>
+  // expected-error @+1 {{op failed to verify that all of {input, output} have same shape}}
+  %5 = spirv.Tosa.Rescale scale32 = false, rounding_mode = <SingleRound>, per_channel = false, input_unsigned = false, output_unsigned = false, %arg0, %1, %2, %3, %4 : !spirv.arm.tensor<2x3x4xi16>, !spirv.arm.tensor<1xi16>, !spirv.arm.tensor<1xi8>, !spirv.arm.tensor<1xi16>, !spirv.arm.tensor<1xi16> -> !spirv.arm.tensor<2x3x5xi16>
+  spirv.ARM.GraphOutputs %5 : !spirv.arm.tensor<2x3x5xi16>
+}
+
+spirv.ARM.Graph @rescale_input_and_input_zp_element_types_not_matching(%arg0: !spirv.arm.tensor<2x3x4xi16>) -> (!spirv.arm.tensor<2x3x4xi16>) {
+  %1 = spirv.Constant dense<1> : !spirv.arm.tensor<1xi16>
+  %2 = spirv.Constant dense<0> : !spirv.arm.tensor<1xi8>
+  %3 = spirv.Constant dense<0> : !spirv.arm.tensor<1xi8>
+  %4 = spirv.Constant dense<0> : !spirv.arm.tensor<1xi16>
+  // expected-error @+1 {{op failed to verify that all of {input, input_zp} have same element type}}
+  %5 = spirv.Tosa.Rescale scale32 = false, rounding_mode = <SingleRound>, per_channel = false, input_unsigned = false, output_unsigned = false, %arg0, %1, %2, %3, %4 : !spirv.arm.tensor<2x3x4xi16>, !spirv.arm.tensor<1xi16>, !spirv.arm.tensor<1xi8>, !spirv.arm.tensor<1xi8>, !spirv.arm.tensor<1xi16> -> !spirv.arm.tensor<2x3x4xi16>
+  spirv.ARM.GraphOutputs %5 : !spirv.arm.tensor<2x3x4xi16>
+}
+
+spirv.ARM.Graph @rescale_output_and_output_zp_element_types_not_matching(%arg0: !spirv.arm.tensor<2x3x4xi16>) -> (!spirv.arm.tensor<2x3x4xi16>) {
+  %1 = spirv.Constant dense<1> : !spirv.arm.tensor<1xi16>
+  %2 = spirv.Constant dense<0> : !spirv.arm.tensor<1xi8>
+  %3 = spirv.Constant dense<0> : !spirv.arm.tensor<1xi16>
+  %4 = spirv.Constant dense<0> : !spirv.arm.tensor<1xi8>
+  // expected-error @+1 {{op failed to verify that all of {output, output_zp} have same element type}}
+  %5 = spirv.Tosa.Rescale scale32 = false, rounding_mode = <SingleRound>, per_channel = false, input_unsigned = false, output_unsigned = false, %arg0, %1, %2, %3, %4 : !spirv.arm.tensor<2x3x4xi16>, !spirv.arm.tensor<1xi16>, !spirv.arm.tensor<1xi8>, !spirv.arm.tensor<1xi16>, !spirv.arm.tensor<1xi8> -> !spirv.arm.tensor<2x3x4xi16>
+  spirv.ARM.GraphOutputs %5 : !spirv.arm.tensor<2x3x4xi16>
+}
+
+spirv.ARM.Graph @rescale_scale32_true_requires_i32_multiplier(%arg0: !spirv.arm.tensor<2x3x4xi16>) -> (!spirv.arm.tensor<2x3x4xi16>) {
+  %1 = spirv.Constant dense<1> : !spirv.arm.tensor<1xi16>
+  %2 = spirv.Constant dense<0> : !spirv.arm.tensor<1xi8>
+  %3 = spirv.Constant dense<0> : !spirv.arm.tensor<1xi16>
+  %4 = spirv.Constant dense<0> : !spirv.arm.tensor<1xi16>
+  // expected-error @+1 {{op failed to verify that multiplier must have element type i32 when scale32 is true, otherwise i16}}
+  %5 = spirv.Tosa.Rescale scale32 = true, rounding_mode = <SingleRound>, per_channel = false, input_unsigned = false, output_unsigned = false, %arg0, %1, %2, %3, %4 : !spirv.arm.tensor<2x3x4xi16>, !spirv.arm.tensor<1xi16>, !spirv.arm.tensor<1xi8>, !spirv.arm.tensor<1xi16>, !spirv.arm.tensor<1xi16> -> !spirv.arm.tensor<2x3x4xi16>
+  spirv.ARM.GraphOutputs %5 : !spirv.arm.tensor<2x3x4xi16>
+}
+
+spirv.ARM.Graph @rescale_scale32_false_requires_i16_multiplier(%arg0: !spirv.arm.tensor<2x3x4xi16>) -> (!spirv.arm.tensor<2x3x4xi16>) {
+  %1 = spirv.Constant dense<1> : !spirv.arm.tensor<1xi32>
+  %2 = spirv.Constant dense<0> : !spirv.arm.tensor<1xi8>
+  %3 = spirv.Constant dense<0> : !spirv.arm.tensor<1xi16>
+  %4 = spirv.Constant dense<0> : !spirv.arm.tensor<1xi16>
+  // expected-error @+1 {{op failed to verify that multiplier must have element type i32 when scale32 is true, otherwise i16}}
+  %5 = spirv.Tosa.Rescale scale32 = false, rounding_mode = <SingleRound>, per_channel = false, input_unsigned = false, output_unsigned = false, %arg0, %1, %2, %3, %4 : !spirv.arm.tensor<2x3x4xi16>, !spirv.arm.tensor<1xi32>, !spirv.arm.tensor<1xi8>, !spirv.arm.tensor<1xi16>, !spirv.arm.tensor<1xi16> -> !spirv.arm.tensor<2x3x4xi16>
+  spirv.ARM.GraphOutputs %5 : !spirv.arm.tensor<2x3x4xi16>
+}
+
+spirv.ARM.Graph @rescale_per_channel_true_requires_multiplier_length_rank_minus_one(%arg0: !spirv.arm.tensor<2x3x4xi16>) -> (!spirv.arm.tensor<2x3x4xi16>) {
+  %1 = spirv.Constant dense<[1]> : !spirv.arm.tensor<1xi16>
+  %2 = spirv.Constant dense<[0, 0]> : !spirv.arm.tensor<2xi8>
+  %3 = spirv.Constant dense<0> : !spirv.arm.tensor<1xi16>
+  %4 = spirv.Constant dense<0> : !spirv.arm.tensor<1xi16>
+  // expected-error @+1 {{op failed to verify that multiplier must have length rank(input) - 1 when per_channel is true, otherwise length 1}}
+  %5 = spirv.Tosa.Rescale scale32 = false, rounding_mode = <SingleRound>, per_channel = true, input_unsigned = false, output_unsigned = false, %arg0, %1, %2, %3, %4 : !spirv.arm.tensor<2x3x4xi16>, !spirv.arm.tensor<1xi16>, !spirv.arm.tensor<2xi8>, !spirv.arm.tensor<1xi16>, !spirv.arm.tensor<1xi16> -> !spirv.arm.tensor<2x3x4xi16>
+  spirv.ARM.GraphOutputs %5 : !spirv.arm.tensor<2x3x4xi16>
+}
+
+spirv.ARM.Graph @rescale_per_channel_true_requires_shift_length_rank_minus_one(%arg0: !spirv.arm.tensor<2x3x4xi16>) -> (!spirv.arm.tensor<2x3x4xi16>) {
+  %1 = spirv.Constant dense<[1, 1]> : !spirv.arm.tensor<2xi16>
+  %2 = spirv.Constant dense<[0]> : !spirv.arm.tensor<1xi8>
+  %3 = spirv.Constant dense<0> : !spirv.arm.tensor<1xi16>
+  %4 = spirv.Constant dense<0> : !spirv.arm.tensor<1xi16>
+  // expected-error @+1 {{op failed to verify that shift must have length rank(input) - 1 when per_channel is true, otherwise length 1}}
+  %5 = spirv.Tosa.Rescale scale32 = false, rounding_mode = <SingleRound>, per_channel = true, input_unsigned = false, output_unsigned = false, %arg0, %1, %2, %3, %4 : !spirv.arm.tensor<2x3x4xi16>, !spirv.arm.tensor<2xi16>, !spirv.arm.tensor<1xi8>, !spirv.arm.tensor<1xi16>, !spirv.arm.tensor<1xi16> -> !spirv.arm.tensor<2x3x4xi16>
+  spirv.ARM.GraphOutputs %5 : !spirv.arm.tensor<2x3x4xi16>
+}
+
+spirv.ARM.Graph @rescale_per_channel_false_requires_multiplier_length_one(%arg0: !spirv.arm.tensor<2x3x4xi16>) -> (!spirv.arm.tensor<2x3x4xi16>) {
+  %1 = spirv.Constant dense<[1, 1]> : !spirv.arm.tensor<2xi16>
+  %2 = spirv.Constant dense<[0]> : !spirv.arm.tensor<1xi8>
+  %3 = spirv.Constant dense<0> : !spirv.arm.tensor<1xi16>
+  %4 = spirv.Constant dense<0> : !spirv.arm.tensor<1xi16>
+  // expected-error @+1 {{op failed to verify that multiplier must have length rank(input) - 1 when per_channel is true, otherwise length 1}}
+  %5 = spirv.Tosa.Rescale scale32 = false, rounding_mode = <SingleRound>, per_channel = false, input_unsigned = false, output_unsigned = false, %arg0, %1, %2, %3, %4 : !spirv.arm.tensor<2x3x4xi16>, !spirv.arm.tensor<2xi16>, !spirv.arm.tensor<1xi8>, !spirv.arm.tensor<1xi16>, !spirv.arm.tensor<1xi16> -> !spirv.arm.tensor<2x3x4xi16>
+  spirv.ARM.GraphOutputs %5 : !spirv.arm.tensor<2x3x4xi16>
+}
+
+spirv.ARM.Graph @rescale_per_channel_false_requires_shift_length_one(%arg0: !spirv.arm.tensor<2x3x4xi16>) -> (!spirv.arm.tensor<2x3x4xi16>) {
+  %1 = spirv.Constant dense<[1]> : !spirv.arm.tensor<1xi16>
+  %2 = spirv.Constant dense<[0, 0]> : !spirv.arm.tensor<2xi8>
+  %3 = spirv.Constant dense<0> : !spirv.arm.tensor<1xi16>
+  %4 = spirv.Constant dense<0> : !spirv.arm.tensor<1xi16>
+  // expected-error @+1 {{op failed to verify that shift must have length rank(input) - 1 when per_channel is true, otherwise length 1}}
+  %5 = spirv.Tosa.Rescale scale32 = false, rounding_mode = <SingleRound>, per_channel = false, input_unsigned = false, output_unsigned = false, %arg0, %1, %2, %3, %4 : !spirv.arm.tensor<2x3x4xi16>, !spirv.arm.tensor<1xi16>, !spirv.arm.tensor<2xi8>, !spirv.arm.tensor<1xi16>, !spirv.arm.tensor<1xi16> -> !spirv.arm.tensor<2x3x4xi16>
+  spirv.ARM.GraphOutputs %5 : !spirv.arm.tensor<2x3x4xi16>
+}
+
+spirv.ARM.Graph @rescale_i8_input_requires_i8_i16_or_i32_output(%arg0: !spirv.arm.tensor<2x3x4xi8>) -> (!spirv.arm.tensor<2x3x4xi64>) {
+  %1 = spirv.Constant dense<1> : !spirv.arm.tensor<1xi16>
+  %2 = spirv.Constant dense<0> : !spirv.arm.tensor<1xi8>
+  %3 = spirv.Constant dense<0> : !spirv.arm.tensor<1xi8>
+  %4 = spirv.Constant dense<0> : !spirv.arm.tensor<1xi64>
+  // expected-error @+1 {{op failed to verify that if input has type 8-bit signless integer then output must have a type in [8-bit signless integer,16-bit signless integer,32-bit signless integer]}}
+  %5 = spirv.Tosa.Rescale scale32 = false, rounding_mode = <SingleRound>, per_channel = false, input_unsigned = false, output_unsigned = false, %arg0, %1, %2, %3, %4 : !spirv.arm.tensor<2x3x4xi8>, !spirv.arm.tensor<1xi16>, !spirv.arm.tensor<1xi8>, !spirv.arm.tensor<1xi8>, !spirv.arm.tensor<1xi64> -> !spirv.arm.tensor<2x3x4xi64>
+  spirv.ARM.GraphOutputs %5 : !spirv.arm.tensor<2x3x4xi64>
+}
+
+spirv.ARM.Graph @rescale_i16_input_requires_i8_i16_or_i32_output(%arg0: !spirv.arm.tensor<2x3x4xi16>) -> (!spirv.arm.tensor<2x3x4xi64>) {
+  %1 = spirv.Constant dense<1> : !spirv.arm.tensor<1xi16>
+  %2 = spirv.Constant dense<0> : !spirv.arm.tensor<1xi8>
+  %3 = spirv.Constant dense<0> : !spirv.arm.tensor<1xi16>
+  %4 = spirv.Constant dense<0> : !spirv.arm.tensor<1xi64>
+  // expected-error @+1 {{op failed to verify that if input has type 16-bit signless integer then output must have a type in [8-bit signless integer,16-bit signless integer,32-bit signless integer]}}
+  %5 = spirv.Tosa.Rescale scale32 = false, rounding_mode = <SingleRound>, per_channel = false, input_unsigned = false, output_unsigned = false, %arg0, %1, %2, %3, %4 : !spirv.arm.tensor<2x3x4xi16>, !spirv.arm.tensor<1xi16>, !spirv.arm.tensor<1xi8>, !spirv.arm.tensor<1xi16>, !spirv.arm.tensor<1xi64> -> !spirv.arm.tensor<2x3x4xi64>
+  spirv.ARM.GraphOutputs %5 : !spirv.arm.tensor<2x3x4xi64>
+}
+
+spirv.ARM.Graph @rescale_i32_input_requires_i8_i16_or_i32_output(%arg0: !spirv.arm.tensor<2x3x4xi32>) -> (!spirv.arm.tensor<2x3x4xi64>) {
+  %1 = spirv.Constant dense<1> : !spirv.arm.tensor<1xi16>
+  %2 = spirv.Constant dense<0> : !spirv.arm.tensor<1xi8>
+  %3 = spirv.Constant dense<0> : !spirv.arm.tensor<1xi32>
+  %4 = spirv.Constant dense<0> : !spirv.arm.tensor<1xi64>
+  // expected-error @+1 {{op failed to verify that if input has type 32-bit signless integer then output must have a type in [8-bit signless integer,16-bit signless integer,32-bit signless integer]}}
+  %5 = spirv.Tosa.Rescale scale32 = false, rounding_mode = <SingleRound>, per_channel = false, input_unsigned = false, output_unsigned = false, %arg0, %1, %2, %3, %4 : !spirv.arm.tensor<2x3x4xi32>, !spirv.arm.tensor<1xi16>, !spirv.arm.tensor<1xi8>, !spirv.arm.tensor<1xi32>, !spirv.arm.tensor<1xi64> -> !spirv.arm.tensor<2x3x4xi64>
+  spirv.ARM.GraphOutputs %5 : !spirv.arm.tensor<2x3x4xi64>
+}
+
+spirv.ARM.Graph @rescale_i64_input_requires_i8_i16_or_i32_output(%arg0: !spirv.arm.tensor<2x3x4xi64>) -> (!spirv.arm.tensor<2x3x4xi64>) {
+  %1 = spirv.Constant dense<1> : !spirv.arm.tensor<1xi16>
+  %2 = spirv.Constant dense<0> : !spirv.arm.tensor<1xi8>
+  %3 = spirv.Constant dense<0> : !spirv.arm.tensor<1xi64>
+  %4 = spirv.Constant dense<0> : !spirv.arm.tensor<1xi64>
+  // expected-error @+1 {{op failed to verify that if input has type 64-bit signless integer then output must have a type in [8-bit signless integer,16-bit signless integer,32-bit signless integer]}}
+  %5 = spirv.Tosa.Rescale scale32 = false, rounding_mode = <SingleRound>, per_channel = false, input_unsigned = false, output_unsigned = false, %arg0, %1, %2, %3, %4 : !spirv.arm.tensor<2x3x4xi64>, !spirv.arm.tensor<1xi16>, !spirv.arm.tensor<1xi8>, !spirv.arm.tensor<1xi64>, !spirv.arm.tensor<1xi64> -> !spirv.arm.tensor<2x3x4xi64>
+  spirv.ARM.GraphOutputs %5 : !spirv.arm.tensor<2x3x4xi64>
+}
+
+spirv.ARM.Graph @rescale_input_unsigned_true_requires_i8_or_i16_input(%arg0: !spirv.arm.tensor<2x3x4xi32>) -> (!spirv.arm.tensor<2x3x4xi16>) {
+  %1 = spirv.Constant dense<1> : !spirv.arm.tensor<1xi16>
+  %2 = spirv.Constant dense<0> : !spirv.arm.tensor<1xi8>
+  %3 = spirv.Constant dense<0> : !spirv.arm.tensor<1xi32>
+  %4 = spirv.Constant dense<0> : !spirv.arm.tensor<1xi16>
+  // expected-error @+1 {{op failed to verify that if input_unsigned is true then input must have a type in [8-bit signless integer,16-bit signless integer]}}
+  %5 = spirv.Tosa.Rescale scale32 = false, rounding_mode = <SingleRound>, per_channel = false, input_unsigned = true, output_unsigned = false, %arg0, %1, %2, %3, %4 : !spirv.arm.tensor<2x3x4xi32>, !spirv.arm.tensor<1xi16>, !spirv.arm.tensor<1xi8>, !spirv.arm.tensor<1xi32>, !spirv.arm.tensor<1xi16> -> !spirv.arm.tensor<2x3x4xi16>
+  spirv.ARM.GraphOutputs %5 : !spirv.arm.tensor<2x3x4xi16>
+}
+
+spirv.ARM.Graph @rescale_output_unsigned_true_requires_i8_or_i16_input(%arg0: !spirv.arm.tensor<2x3x4xi32>) -> (!spirv.arm.tensor<2x3x4xi16>) {
+  %1 = spirv.Constant dense<1> : !spirv.arm.tensor<1xi16>
+  %2 = spirv.Constant dense<0> : !spirv.arm.tensor<1xi8>
+  %3 = spirv.Constant dense<0> : !spirv.arm.tensor<1xi32>
+  %4 = spirv.Constant dense<0> : !spirv.arm.tensor<1xi16>
+  // expected-error @+1 {{op failed to verify that if output_unsigned is true then input must have a type in [8-bit signless integer,16-bit signless integer]}}
+  %5 = spirv.Tosa.Rescale scale32 = false, rounding_mode = <SingleRound>, per_channel = false, input_unsigned = false, output_unsigned = true, %arg0, %1, %2, %3, %4 : !spirv.arm.tensor<2x3x4xi32>, !spirv.arm.tensor<1xi16>, !spirv.arm.tensor<1xi8>, !spirv.arm.tensor<1xi32>, !spirv.arm.tensor<1xi16> -> !spirv.arm.tensor<2x3x4xi16>
+  spirv.ARM.GraphOutputs %5 : !spirv.arm.tensor<2x3x4xi16>
+}
+
+spirv.ARM.Graph @rescale_input_unsigned_true_requires_i8_or_i16_output(%arg0: !spirv.arm.tensor<2x3x4xi16>) -> (!spirv.arm.tensor<2x3x4xi32>) {
+  %1 = spirv.Constant dense<1> : !spirv.arm.tensor<1xi16>
+  %2 = spirv.Constant dense<0> : !spirv.arm.tensor<1xi8>
+  %3 = spirv.Constant dense<0> : !spirv.arm.tensor<1xi16>
+  %4 = spirv.Constant dense<0> : !spirv.arm.tensor<1xi32>
+  // expected-error @+1 {{op failed to verify that if input_unsigned is true then output must have a type in [8-bit signless integer,16-bit signless integer]}}
+  %5 = spirv.Tosa.Rescale scale32 = false, rounding_mode = <SingleRound>, per_channel = false, input_unsigned = true, output_unsigned = false, %arg0, %1, %2, %3, %4 : !spirv.arm.tensor<2x3x4xi16>, !spirv.arm.tensor<1xi16>, !spirv.arm.tensor<1xi8>, !spirv.arm.tensor<1xi16>, !spirv.arm.tensor<1xi32> -> !spirv.arm.tensor<2x3x4xi32>
+  spirv.ARM.GraphOutputs %5 : !spirv.arm.tensor<2x3x4xi32>
+}
+
+spirv.ARM.Graph @rescale_output_unsigned_true_requires_i8_or_i16_output(%arg0: !spirv.arm.tensor<2x3x4xi16>) -> (!spirv.arm.tensor<2x3x4xi32>) {
+  %1 = spirv.Constant dense<1> : !spirv.arm.tensor<1xi16>
+  %2 = spirv.Constant dense<0> : !spirv.arm.tensor<1xi8>
+  %3 = spirv.Constant dense<0> : !spirv.arm.tensor<1xi16>
+  %4 = spirv.Constant dense<0> : !spirv.arm.tensor<1xi32>
+  // expected-error @+1 {{op failed to verify that if output_unsigned is true then output must have a type in [8-bit signless integer,16-bit signless integer]}}
+  %5 = spirv.Tosa.Rescale scale32 = false, rounding_mode = <SingleRound>, per_channel = false, input_unsigned = false, output_unsigned = true, %arg0, %1, %2, %3, %4 : !spirv.arm.tensor<2x3x4xi16>, !spirv.arm.tensor<1xi16>, !spirv.arm.tensor<1xi8>, !spirv.arm.tensor<1xi16>, !spirv.arm.tensor<1xi32> -> !spirv.arm.tensor<2x3x4xi32>
+  spirv.ARM.GraphOutputs %5 : !spirv.arm.tensor<2x3x4xi32>
+}

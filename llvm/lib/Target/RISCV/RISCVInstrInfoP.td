@@ -18,25 +18,14 @@
 // Operand and SDNode transformation definitions.
 //===----------------------------------------------------------------------===//
 
-def simm10 : RISCVSImmOp<10>, ImmLeaf<XLenVT, "return isInt<10>(Imm);">;
-
-def SImm8UnsignedAsmOperand : SImmAsmOperand<8, "Unsigned"> {
-  let RenderMethod = "addSImm8UnsignedOperands";
+def SImm8PLI_BAsmOperand : SImmAsmOperand<8, "PLI_B"> {
+  let RenderMethod = "addSExtImmOperands<8>";
 }
-
-// (rdlo, rdhi) PPAIRE_DB (rs1plo, rs1phi, rs2plo, rs2phi)
-def SDT_RISCVPPairE_DB : SDTypeProfile<2, 4, [SDTCisVT<0, v4i8>,
-                                              SDTCisSameAs<0, 1>,
-                                              SDTCisSameAs<0, 2>,
-                                              SDTCisSameAs<0, 3>,
-                                              SDTCisSameAs<0, 4>,
-                                              SDTCisSameAs<0, 5>]>;
-def riscv_ppaire_db : RVSDNode<"PPAIRE_DB", SDT_RISCVPPairE_DB>;
 
 // A 8-bit signed immediate allowing range [-128, 255]
 // but represented as [-128, 127].
-def simm8_unsigned : RISCVOp {
-  let ParserMatchClass = SImm8UnsignedAsmOperand;
+def simm8_pli_b : RISCVOp {
+  let ParserMatchClass = SImm8PLI_BAsmOperand;
   let EncoderMethod = "getImmOpValue";
   let DecoderMethod = "decodeSImmOperand<8>";
   let OperandType = "OPERAND_SIMM8";
@@ -48,14 +37,14 @@ def simm8_unsigned : RISCVOp {
   }];
 }
 
-def SImm10UnsignedAsmOperand : SImmAsmOperand<10, "Unsigned"> {
-  let RenderMethod = "addSImm10UnsignedOperands";
+def SImm10PLUIAsmOperand : SImmAsmOperand<10, "PLUI"> {
+  let RenderMethod = "addSExtImmOperands<10>";
 }
 
 // A 10-bit signed immediate allowing range [-512, 1023]
 // but represented as [-512, 511].
-def simm10_unsigned : RISCVOp {
-  let ParserMatchClass = SImm10UnsignedAsmOperand;
+def simm10_plui : RISCVOp {
+  let ParserMatchClass = SImm10PLUIAsmOperand;
   let EncoderMethod = "getImmOpValue";
   let DecoderMethod = "decodeSImmOperand<10>";
   let OperandType = "OPERAND_SIMM10";
@@ -68,11 +57,11 @@ def simm10_unsigned : RISCVOp {
 }
 
 def SImm10PLI_HAsmOperand : SImmAsmOperand<10, "PLI_H"> {
-  let RenderMethod = "addSImm10UnsignedOperands";
+  let RenderMethod = "addSExtImmOperands<10>";
 }
 
 def SImm10PLI_WAsmOperand : SImmAsmOperand<10, "PLI_W"> {
-  let RenderMethod = "addSImm10UnsignedOperands";
+  let RenderMethod = "addSExtImmOperands<10>";
 }
 
 // A 10-bit signed immediate to be splatted to 16 bit elements allowing range
@@ -161,7 +150,7 @@ class PLI_i<bits<7> funct7, string opcodestr, DAGOperand imm>
 
 // Base for plui.h/w.
 class PLUI_i<bits<7> funct7, string opcodestr>
-    : RVPLoadImm_i<funct7, (ins simm10_unsigned:$imm10), opcodestr,
+    : RVPLoadImm_i<funct7, (ins simm10_plui:$imm10), opcodestr,
                    "$rd, $imm10"> {
   bits<10> imm10;
 
@@ -587,7 +576,7 @@ def PLI_H : PLI_i<0b1011000, "pli.h", simm10_pli_h>;
 let Predicates = [HasStdExtP, IsRV64] in
 def PLI_W : PLI_i<0b1011001, "pli.w", simm10_pli_w>;
 let Predicates = [HasStdExtP] in {
-  def PLI_B : RVPLoadImm_i<0b1011010, (ins simm8_unsigned:$imm8), "pli.b",
+  def PLI_B : RVPLoadImm_i<0b1011010, (ins simm8_pli_b:$imm8), "pli.b",
                            "$rd, $imm8"> {
     bits<8> imm8;
 
@@ -1298,7 +1287,7 @@ let Predicates = [HasStdExtP, IsRV32] in {
     let Inst{15}    = imm10{9};
   }
 
-  def PLI_DB : RVPPairLoadImm_i<0b0011010, (ins simm8_unsigned:$imm8), "pli.db",
+  def PLI_DB : RVPPairLoadImm_i<0b0011010, (ins simm8_pli_b:$imm8), "pli.db",
                                 "$rd, $imm8"> {
     bits<8> imm8;
 
@@ -1307,7 +1296,7 @@ let Predicates = [HasStdExtP, IsRV32] in {
     let Inst{15}    = 0b0;
   }
 
-  def PLUI_DH : RVPPairLoadImm_i<0b0111000, (ins simm10_unsigned:$imm10),
+  def PLUI_DH : RVPPairLoadImm_i<0b0111000, (ins simm10_plui:$imm10),
                                  "plui.dh", "$rd, $imm10"> {
     bits<10> imm10;
 
@@ -1742,13 +1731,17 @@ def riscv_mulhr : RVSDNode<"MULHR", SDTIntBinOp>;
 def riscv_mulhru : RVSDNode<"MULHRU", SDTIntBinOp>;
 def riscv_mulhrsu : RVSDNode<"MULHRSU", SDTIntBinOp>;
 
-def STD_RISCVPackedShift : SDTypeProfile<1, 2, [SDTCisVec<0>,
+def SDT_RISCVPackedShift : SDTypeProfile<1, 2, [SDTCisVec<0>,
                                                 SDTCisSameAs<0, 1>,
                                                 SDTCisVT<2, XLenVT>]>;
-def riscv_pshl : RVSDNode<"PSHL", STD_RISCVPackedShift>;
-def riscv_psrl : RVSDNode<"PSRL", STD_RISCVPackedShift>;
-def riscv_psra : RVSDNode<"PSRA", STD_RISCVPackedShift>;
-def riscv_psslai : RVSDNode<"PSSLAI", STD_RISCVPackedShift>;
+def riscv_pshl : RVSDNode<"PSHL", SDT_RISCVPackedShift>;
+def riscv_psrl : RVSDNode<"PSRL", SDT_RISCVPackedShift>;
+def riscv_psra : RVSDNode<"PSRA", SDT_RISCVPackedShift>;
+def riscv_psslai : RVSDNode<"PSSLAI", SDT_RISCVPackedShift>;
+
+// The immediate for these is the number of trailing ones in the max value.
+def riscv_sati : RVSDNode<"SATI", SDTIntBinOp>;
+def riscv_usati : RVSDNode<"USATI", SDTIntBinOp>;
 
 // Bitwise merge: res = (~op0 & op1) | (op0 & op2)
 def SDT_RISCVMERGE : SDTypeProfile<1, 3, [SDTCisInt<0>,
@@ -1756,6 +1749,21 @@ def SDT_RISCVMERGE : SDTypeProfile<1, 3, [SDTCisInt<0>,
                                           SDTCisSameAs<0, 2>,
                                           SDTCisSameAs<0, 3>]>;
 def riscv_merge : RVSDNode<"MERGE", SDT_RISCVMERGE>;
+
+// (rdlo, rdhi) PPAIRE_DB (rs1plo, rs1phi, rs2plo, rs2phi)
+def SDT_RISCVPPairE_DB : SDTypeProfile<2, 4, [SDTCisVT<0, v4i8>,
+                                              SDTCisSameAs<0, 1>,
+                                              SDTCisSameAs<0, 2>,
+                                              SDTCisSameAs<0, 3>,
+                                              SDTCisSameAs<0, 4>,
+                                              SDTCisSameAs<0, 5>]>;
+def riscv_ppaire_db : RVSDNode<"PPAIRE_DB", SDT_RISCVPPairE_DB>;
+
+// Add one to the immediate. Used by RISCVISD::SATI.
+def IncImm : SDNodeXForm<imm, [{
+    return CurDAG->getTargetConstant(N->getZExtValue() + 1, SDLoc(N),
+                                     N->getValueType(0));
+}]>;
 
 let Predicates = [HasStdExtP] in {
 
@@ -1788,10 +1796,12 @@ let Predicates = [HasStdExtP] in {
   // Basic 8-bit arithmetic patterns
   def : PatGprGpr<add, PADD_B, XLenVecI8VT>;
   def : PatGprGpr<sub, PSUB_B, XLenVecI8VT>;
+  def : PatGprSplatGpr<add, PADD_BS, XLenVecI8VT>;
 
   // Basic 16-bit arithmetic patterns
   def : PatGprGpr<add, PADD_H, XLenVecI16VT>;
   def : PatGprGpr<sub, PSUB_H, XLenVecI16VT>;
+  def : PatGprSplatGpr<add, PADD_HS, XLenVecI16VT>;
 
   // 8-bit bitwise operation patterns
   def : PatGprGpr<and, AND, XLenVecI8VT>;
@@ -1924,12 +1934,23 @@ let Predicates = [HasStdExtP] in {
 let Predicates = [HasStdExtP, IsRV32] in {
   def : PatGpr<bitreverse, REV_RV32>;
 
+  def : Pat<(XLenVT (riscv_sati GPR:$rs1, timm:$imm)),
+            (SATI_RV32 GPR:$rs1, (IncImm timm:$imm))>;
+  def : Pat<(XLenVT (riscv_usati GPR:$rs1, timm:$imm)),
+            (USATI_RV32 GPR:$rs1, timm:$imm)>;
+
   def : PatGprGpr<saddsat, SADD>;
   def : PatGprGpr<ssubsat, SSUB>;
   def : PatGprGpr<uaddsat, SADDU>;
   def : PatGprGpr<usubsat, SSUBU>;
   def : PatGprGpr<sshlsat, SSHA>;
+  def : PatGprGpr<ushlsat, SSHL>;
   def : PatGprUimmLog2XLen<sshlsat, SSLAI>;
+  // No SSLLI
+
+  // 32-bit averaging patterns
+  def : PatGprGpr<avgfloors, AADD, i32>;
+  def : PatGprGpr<avgflooru, AADDU, i32>;
 
   // Narrowing shift patterns (NSRL/NSRA)
   // Immediate shift amount patterns
@@ -1976,6 +1997,11 @@ let Predicates = [HasStdExtP, IsRV64] in {
 
   def : PatGpr<bitreverse, REV_RV64>;
 
+  def : Pat<(XLenVT (riscv_sati GPR:$rs1, timm:$imm)),
+            (SATI_RV64 GPR:$rs1, (IncImm timm:$imm))>;
+  def : Pat<(XLenVT (riscv_usati GPR:$rs1, timm:$imm)),
+            (USATI_RV64 GPR:$rs1, timm:$imm)>;
+
   // Match a pattern of 2 bytes being inserted into bits [31:16], with bits
   // bits [15:0] coming from a zero extended value, and bits [63:32] being
   // ignored. We can use ppaire.h with ppaire.b for bits [31:16]. If bits [15:0]
@@ -1990,6 +2016,7 @@ let Predicates = [HasStdExtP, IsRV64] in {
   // Basic 32-bit arithmetic patterns
   def : PatGprGpr<add, PADD_W, v2i32>;
   def : PatGprGpr<sub, PSUB_W, v2i32>;
+  def : PatGprSplatGpr<add, PADD_WS, v2i32>;
 
   // 32-bit bitwise operation patterns
   def : PatGprGpr<and, AND, v2i32>;

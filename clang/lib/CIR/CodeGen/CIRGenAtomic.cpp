@@ -1011,6 +1011,8 @@ RValue CIRGenFunction::emitAtomicExpr(AtomicExpr *e) {
   case AtomicExpr::AO__scoped_atomic_exchange_n:
   case AtomicExpr::AO__atomic_fetch_uinc:
   case AtomicExpr::AO__atomic_fetch_udec:
+  case AtomicExpr::AO__scoped_atomic_fetch_uinc:
+  case AtomicExpr::AO__scoped_atomic_fetch_udec:
     val1 = emitValToTemp(*this, e->getVal1());
     break;
   }

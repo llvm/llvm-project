@@ -96,6 +96,9 @@ def NVVM_Dialect : Dialect {
     /// nvvm.cluster_dim attributes.
     static StringRef getBlocksAreClustersAttrName() { return "nvvm.blocksareclusters"; }
 
+    /// Get the name of the attribute used to annotate managed global variables.
+    static StringRef getManagedAttrName() { return "nvvm.managed"; }
+
     /// Verify an attribute from this dialect on the argument at 'argIndex' for
     /// the region at 'regionIndex' on the given operation. Returns failure if
     /// the verification failed, success otherwise. This hook may optionally be
@@ -1589,7 +1592,7 @@ def NVVM_VoteSyncOp
 }
 
 def NVVM_SyncWarpOp :
-  NVVM_Op<"bar.warp.sync">,
+  NVVM_IntrOp<"bar.warp.sync">,
   Arguments<(ins I32:$mask)> {
   let summary = "Warp Barrier Synchronization Op";
   let description = [{
@@ -1618,9 +1621,6 @@ def NVVM_SyncWarpOp :
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-bar-warp-sync)
   }];
 
-  string llvmBuilder = [{
-      createIntrinsicCall(builder, llvm::Intrinsic::nvvm_bar_warp_sync, {$mask});
-  }];
   let assemblyFormat = "$mask attr-dict `:` type($mask)";
 }
 

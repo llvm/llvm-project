@@ -492,7 +492,9 @@ struct WgToSgVectorBroadcastOp
     if (!layout || !layout.isForWorkgroup())
       return failure();
 
-    SmallVector<int64_t> sgShape = getSgShapeAndCount(wgShape, layout).first;
+    SmallVector<int64_t> sgShape;
+    int count;
+    std::tie(sgShape, count) = getSgShapeAndCount(wgShape, layout);
     VectorType newResultType =
         VectorType::get(sgShape, resultType.getElementType());
 
@@ -500,11 +502,15 @@ struct WgToSgVectorBroadcastOp
       return failure();
 
     SmallVector<Value> newBroadcastOps;
-    for (auto operand : adaptor.getOperands().front()) {
-      auto newBroadcast = vector::BroadcastOp::create(rewriter, op.getLoc(),
-                                                      newResultType, operand);
+    auto distSource = adaptor.getOperands().front();
+    int numDistributions = count / distSource.size();
+    for (int i = 0; i < numDistributions; ++i) {
+      for (auto operand : distSource) {
+        auto newBroadcast = vector::BroadcastOp::create(rewriter, op.getLoc(),
+                                                        newResultType, operand);
 
-      newBroadcastOps.push_back(newBroadcast.getResult());
+        newBroadcastOps.push_back(newBroadcast.getResult());
+      }
     }
     rewriter.replaceOpWithMultiple(op, {newBroadcastOps});
     return success();
@@ -816,8 +822,12 @@ struct WgToSgArithConstantOp : public OpConversionPattern<arith::ConstantOp> {
       // Splat: single value for all subgroups
       Attribute singleVal = vecAttr.getSplatValue<Attribute>();
       auto sgAttr = DenseElementsAttr::get(newType, singleVal);
-      auto cstOp = arith::ConstantOp::create(rewriter, loc, newType, sgAttr);
-      rewriter.replaceOp(op, cstOp);
+      SmallVector<Value> newConstOps;
+      for (int i = 0; i < count; ++i) {
+        auto cstOp = arith::ConstantOp::create(rewriter, loc, newType, sgAttr);
+        newConstOps.push_back(cstOp);
+      }
+      rewriter.replaceOpWithMultiple(op, {newConstOps});
       return success();
     } else if (sgShape == wgShape) { // if the entire vector is shared by all
                                      // subgroups, don't distribute

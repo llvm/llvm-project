@@ -1437,9 +1437,15 @@ bool X86InstructionSelector::emitInsertSubreg(Register DstReg, Register SrcReg,
     return false;
   }
 
-  BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(X86::COPY))
-      .addReg(DstReg, RegState::DefineNoRead, SubIdx)
-      .addReg(SrcReg);
+  Register ImpDefReg = MRI.createVirtualRegister(DstRC);
+  BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(X86::IMPLICIT_DEF),
+          ImpDefReg);
+
+  BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(X86::INSERT_SUBREG),
+          DstReg)
+      .addReg(ImpDefReg)
+      .addReg(SrcReg)
+      .addImm(SubIdx);
 
   return true;
 }
