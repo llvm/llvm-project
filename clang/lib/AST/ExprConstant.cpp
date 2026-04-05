@@ -14634,6 +14634,86 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
       return false;
     return Success(R, E);
   }
+  case X86::BI__builtin_ia32_vpdpwssd128:
+  case X86::BI__builtin_ia32_vpdpwssd256:
+  case X86::BI__builtin_ia32_vpdpwssd512:
+  case X86::BI__builtin_ia32_vpdpwssds128:
+  case X86::BI__builtin_ia32_vpdpwssds256:
+  case X86::BI__builtin_ia32_vpdpwssds512:
+  case X86::BI__builtin_ia32_vpdpbusds128:
+  case X86::BI__builtin_ia32_vpdpbusds256:
+  case X86::BI__builtin_ia32_vpdpbusds512:
+  case X86::BI__builtin_ia32_vpdpbusd128:
+  case X86::BI__builtin_ia32_vpdpbusd256:
+  case X86::BI__builtin_ia32_vpdpbusd512: {
+    unsigned BuiltinID = E->getBuiltinCallee();
+    bool IsDottingWord = false;
+    bool IsSaturating = false;
+    switch (BuiltinID) {
+    case X86::BI__builtin_ia32_vpdpwssd128:
+    case X86::BI__builtin_ia32_vpdpwssd256:
+    case X86::BI__builtin_ia32_vpdpwssd512:
+      IsDottingWord = true;
+      IsSaturating = false;
+      break;
+    case X86::BI__builtin_ia32_vpdpwssds128:
+    case X86::BI__builtin_ia32_vpdpwssds256:
+    case X86::BI__builtin_ia32_vpdpwssds512:
+      IsDottingWord = true;
+      IsSaturating = true;
+      break;
+    case X86::BI__builtin_ia32_vpdpbusds128:
+    case X86::BI__builtin_ia32_vpdpbusds256:
+    case X86::BI__builtin_ia32_vpdpbusds512:
+      IsDottingWord = false;
+      IsSaturating = true;
+      break;
+    case X86::BI__builtin_ia32_vpdpbusd128:
+    case X86::BI__builtin_ia32_vpdpbusd256:
+    case X86::BI__builtin_ia32_vpdpbusd512:
+      IsDottingWord = false;
+      IsSaturating = false;
+      break;
+    }
+
+    APValue Source, OperandA, OperandB;
+    if (!EvaluateAsRValue(Info, E->getArg(0), Source) ||
+        !EvaluateAsRValue(Info, E->getArg(1), OperandA) ||
+        !EvaluateAsRValue(Info, E->getArg(2), OperandB)) {
+      return false;
+    }
+
+    unsigned NumElements = Source.getVectorLength();
+
+    SmallVector<APValue, 16> Result;
+    Result.reserve(NumElements);
+    unsigned Iters = IsDottingWord ? 2 : 4;
+    for (unsigned I = 0; I < NumElements; ++I) {
+      APSInt DotProduct = Source.getVectorElt(I).getInt();
+      DotProduct = DotProduct.sext(64);
+      for (unsigned J = 0; J < Iters; ++J) {
+        APSInt OpA;
+        if (IsDottingWord) {
+          OpA = APSInt(OperandA.getVectorElt(Iters * I + J).getInt().sext(64),
+                       false);
+        } else {
+          OpA = APSInt(OperandA.getVectorElt(Iters * I + J).getInt().zext(64),
+                       false);
+        }
+        APSInt OpB = APSInt(
+            OperandB.getVectorElt(Iters * I + J).getInt().sext(64), false);
+        DotProduct += OpA * OpB;
+      }
+      if (IsSaturating) {
+        DotProduct = APSInt(DotProduct.truncSSat(32), false);
+      } else {
+        DotProduct = APSInt(DotProduct.trunc(32), false);
+      }
+      Result.push_back(APValue(DotProduct));
+    }
+
+    return Success(APValue(Result.data(), Result.size()), E);
+  }
   }
 }
 
