@@ -33,9 +33,30 @@ getFullInitRangeInclWhitespaces(SourceRange Range, const SourceManager &SM,
       {PrevToken->getLocation(), Range.getEnd()}, SM, LangOpts);
 }
 
+namespace {
+// Matches a ``CXXConstructExpr`` whose written argument list (i.e. the
+// source text between the parentheses or braces) involves a macro.
+AST_MATCHER(CXXConstructExpr, initListContainsMacro) {
+  const SourceRange InitRange = Node.getParenOrBraceRange();
+  if (InitRange.isInvalid())
+    return false;
+  if (InitRange.getBegin().isMacroID() || InitRange.getEnd().isMacroID())
+    return true;
+  const ASTContext &Context = Finder->getASTContext();
+  const std::optional<Token> NextTok =
+      utils::lexer::findNextTokenSkippingComments(InitRange.getBegin(),
+                                                  Context.getSourceManager(),
+                                                  Context.getLangOpts());
+  if (!NextTok)
+    return true;
+  return NextTok->getLocation() != InitRange.getEnd();
+}
+} // namespace
+
 void RedundantMemberInitCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "IgnoreBaseInCopyConstructors",
                 IgnoreBaseInCopyConstructors);
+  Options.store(Opts, "IgnoreMacros", IgnoreMacros);
 }
 
 void RedundantMemberInitCheck::registerMatchers(MatchFinder *Finder) {
@@ -44,7 +65,11 @@ void RedundantMemberInitCheck::registerMatchers(MatchFinder *Finder) {
           argumentCountIs(0),
           hasDeclaration(cxxConstructorDecl(
               ofClass(cxxRecordDecl(unless(isTriviallyDefaultConstructible()))
-                          .bind("class")))))
+                          .bind("class")))),
+          IgnoreMacros
+              ? unless(initListContainsMacro())
+              : static_cast<ast_matchers::internal::Matcher<CXXConstructExpr>>(
+                    anything()))
           .bind("construct");
 
   auto HasUnionAsParent = hasParent(recordDecl(isUnion()));
