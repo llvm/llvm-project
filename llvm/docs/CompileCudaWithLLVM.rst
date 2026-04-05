@@ -55,7 +55,7 @@ brackets as described below:
 
 .. code-block:: console
 
-  $ clang++ axpy.cu -o axpy --cuda-gpu-arch=<GPU arch> \
+  $ clang++ axpy.cu -o axpy --offload-arch=<GPU arch> \
       -L<CUDA install path>/<lib64 or lib>             \
       -lcudart_static -ldl -lrt -pthread
   $ ./axpy
@@ -81,14 +81,15 @@ run your program.
 * ``<GPU arch>`` -- the `compute capability
   <https://developer.nvidia.com/cuda-gpus>`_ of your GPU. For example, if you
   want to run your program on a GPU with compute capability of 3.5, specify
-  ``--cuda-gpu-arch=sm_35``.
+  ``--offload-arch=sm_35``.
 
-  Note: You cannot pass ``compute_XX`` as an argument to ``--cuda-gpu-arch``;
+  Note: You cannot pass ``compute_XX`` as an argument to ``--offload-arch``;
   only ``sm_XX`` is currently supported.  However, clang always includes PTX in
-  its binaries, so e.g. a binary compiled with ``--cuda-gpu-arch=sm_30`` would be
+  its binaries, so e.g. a binary compiled with ``--offload-arch=sm_30`` would be
   forwards-compatible with e.g. ``sm_35`` GPUs.
 
-  You can pass ``--cuda-gpu-arch`` multiple times to compile for multiple archs.
+  You can pass ``--offload-arch`` multiple times to compile for multiple archs.
+  ``--cuda-gpu-arch`` is a legacy alias for ``--offload-arch``.
 
 The `-L` and `-l` flags only need to be passed when linking.  When compiling,
 you may also need to pass ``--cuda-path=/path/to/cuda`` if you didn't install
