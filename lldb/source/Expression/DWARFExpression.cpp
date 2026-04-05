@@ -1026,6 +1026,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     const DWARFExpression::Delegate *dwarf_cu,
     const lldb::RegisterKind reg_kind, const Value *initial_value_ptr,
     const Value *object_address_ptr) {
+  llvm::DataExtractor expr_data = opcodes.GetAsLLVM();
 
   if (opcodes.GetByteSize() == 0)
     return llvm::createStringError(
@@ -2250,7 +2251,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
 
     default:
       if (dwarf_cu) {
-        if (dwarf_cu->ParseVendorDWARFOpcode(opcode, opcodes, offset, reg_ctx,
+        if (dwarf_cu->ParseVendorDWARFOpcode(opcode, expr_data, offset, reg_ctx,
                                              reg_kind, stack)) {
           break;
         }
