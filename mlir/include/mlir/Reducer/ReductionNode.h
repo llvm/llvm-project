@@ -79,7 +79,7 @@ public:
   ArrayRef<ReductionNode *> getVariants() const { return variants; }
 
   /// Add a variant to Node's variants
-  void addVariant(ReductionNode * node) { variants.push_back(node); }
+  void addVariant(ReductionNode *node) { variants.push_back(node); }
 
   /// Split the ranges and generate new variants.
   ArrayRef<ReductionNode *> generateNewVariants();
