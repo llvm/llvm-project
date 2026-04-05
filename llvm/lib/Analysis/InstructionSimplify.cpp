@@ -5469,10 +5469,10 @@ static Value *simplifyExtractValueInst(Value *Agg, ArrayRef<unsigned> Idxs,
     // Based on the verifier, self-referential insertvalues are apparently
     // fine in unreachable blocks and they will cause this loop to run
     // infinitely. I am just adding a check to break out if it is the case.
-    auto *newIVI = dyn_cast<InsertValueInst>(IVI->getAggregateOperand());
-    if (IVI == newIVI)
+    auto *NewIVI = dyn_cast<InsertValueInst>(IVI->getAggregateOperand());
+    if (IVI == NewIVI)
       break;
-    IVI = newIVI;
+    IVI = NewIVI;
   }
 
   // Simplify umul_with_overflow where one operand is 1.
