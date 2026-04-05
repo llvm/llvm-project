@@ -12,7 +12,6 @@ namespace clang::tidy::utils {
 
 void ExceptionAnalyzer::ExceptionInfo::registerException(
     const Type *ExceptionType, const ThrowInfo &ThrowInfo) {
-  assert(ExceptionType != nullptr && "Only valid types are accepted");
   Behaviour = State::Throwing;
   ThrownExceptions.insert({ExceptionType, ThrowInfo});
 }
@@ -39,8 +38,6 @@ ExceptionAnalyzer::ExceptionInfo &ExceptionAnalyzer::ExceptionInfo::merge(
     Behaviour = State::Unknown;
 
   ContainsUnknown = ContainsUnknown || Other.ContainsUnknown;
-  if (!ThrowsUnknown && Other.ThrowsUnknown)
-    UnknownThrowInfo = Other.UnknownThrowInfo;
   ThrowsUnknown = ThrowsUnknown || Other.ThrowsUnknown;
   ThrownExceptions.insert_range(Other.ThrownExceptions);
   return *this;
@@ -434,6 +431,8 @@ ExceptionAnalyzer::ExceptionInfo::filterIgnoredExceptions(
   // Therefore this slightly hacky implementation is required.
   for (const auto &ThrownException : ThrownExceptions) {
     const Type *T = ThrownException.getFirst();
+    if (!T)
+      continue;
     if (const auto *TD = T->getAsTagDecl()) {
       if (TD->getDeclName().isIdentifier()) {
         if ((IgnoreBadAlloc &&
@@ -454,7 +453,6 @@ void ExceptionAnalyzer::ExceptionInfo::clear() {
   Behaviour = State::NotThrowing;
   ContainsUnknown = false;
   ThrowsUnknown = false;
-  UnknownThrowInfo = {};
   ThrownExceptions.clear();
 }
 
@@ -491,7 +489,7 @@ ExceptionAnalyzer::ExceptionInfo ExceptionAnalyzer::throwsException(
     // are not explicitly non-throwing and no throw was discovered.
     if (AssumeUnannotatedFunctionsAsThrowing &&
         Result.getBehaviour() == State::NotThrowing && canThrow(Func)) {
-      Result.registerUnknownException({Func->getLocation(), CallStack});
+      Result.registerException(nullptr, {Func->getLocation(), CallStack});
     }
 
     CallStack.erase(Func);
@@ -513,7 +511,7 @@ ExceptionAnalyzer::ExceptionInfo ExceptionAnalyzer::throwsException(
   if (AssumeMissingDefinitionsFunctionsAsThrowing &&
       Result.getBehaviour() == State::Unknown) {
     CallStack.insert({Func, CallLoc});
-    Result.registerUnknownException({Func->getLocation(), CallStack});
+    Result.registerException(nullptr, {Func->getLocation(), CallStack});
     CallStack.erase(Func);
   }
 
