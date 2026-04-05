@@ -62,6 +62,11 @@ jobs:
             libcpp: libstdc++6-riscv64-cross
             target_triple: riscv64-linux-gnu
             gcc_arch: riscv64-linux-gnu
+          - arch: ppc64le
+            libc: libc6-dev-ppc64el-cross
+            libcpp: libstdc++6-ppc64el-cross
+            target_triple: powerpc64le-linux-gnu
+            gcc_arch: powerpc64le-linux-gnu
 
     steps:
       - name: Checkout LLVM
