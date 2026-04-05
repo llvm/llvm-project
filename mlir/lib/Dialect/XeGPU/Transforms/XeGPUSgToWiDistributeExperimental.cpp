@@ -62,34 +62,6 @@ static Value castValueTo(ConversionPatternRewriter &rewriter,
   return newOp.getResult(0);
 }
 
-/// Checks if all XeGPU anchor ops and vector results have valid layouts.
-static LogicalResult verifyLayouts(Operation *root) {
-  auto walkResult = root->walk([&](Operation *nestedOp) -> WalkResult {
-    if (auto anchorOp = dyn_cast<xegpu::AnchorLayoutInterface>(nestedOp)) {
-      auto layout = anchorOp.getAnchorLayout();
-      if (!layout) {
-        nestedOp->emitError("expected anchor layout attribute on operation");
-        return WalkResult::interrupt();
-      }
-      return WalkResult::advance();
-    }
-    // For each vector result, check if the op contains a result layout
-    // attribute.
-    for (OpResult result : nestedOp->getResults()) {
-      if (isa<VectorType>(result.getType())) {
-        auto layout = xegpu::getDistributeLayoutAttr(result);
-        if (!layout) {
-          nestedOp->emitError(
-              "expected result layout attribute on vector result");
-          return WalkResult::interrupt();
-        }
-      }
-    }
-    return WalkResult::advance();
-  });
-  return walkResult.wasInterrupted() ? failure() : success();
-}
-
 /// A vector::MultiDimReductionOp at subgroup level in expected form if, it has
 /// exactly 1 reduction dimension, it had valid result layout attribute, and
 /// result type can be distributed to lanes using the layout.
@@ -98,6 +70,9 @@ static bool isValidSubgroupMultiReductionOp(vector::MultiDimReductionOp op) {
   // If no layout, not valid.
   if (!resLayout || !resLayout.isForSubgroup())
     return false;
+  // Scalar result (e.g., vector<32xf32> to f32) is valid.
+  if (op.getType().isIntOrFloat())
+    return op.getReductionDims().size() == 1;
   VectorType resTy = dyn_cast<VectorType>(op.getType());
   if (!resTy)
     return false;
@@ -600,7 +575,21 @@ struct SgToWiMultiDimReduction
             op, "only unit leading dimensions are supported for "
                 "multi_reduction with rank > 2");
     }
-    if (isReductionLaneLocal(op)) {
+    // Handle scalar result: full reduction of a distributed vector to a
+    // scalar. First do a local vector reduction, then cross-lane shuffles.
+    if (op.getType().isIntOrFloat()) {
+      auto reductionDim = reductionDims[0];
+      VectorType origSourceType = op.getSourceVectorType();
+      int64_t reductionDimSize = origSourceType.getShape()[reductionDim];
+      // Local reduction to scalar, then cross-lane butterfly shuffles.
+      result =
+          xegpu::subgroupReduction(op.getLoc(), rewriter, adaptor.getSource(),
+                                   op.getKind(), reductionDimSize);
+      // Combine with accumulator if present.
+      if (adaptor.getAcc())
+        result = vector::makeArithReduction(rewriter, op.getLoc(), op.getKind(),
+                                            result, adaptor.getAcc());
+    } else if (isReductionLaneLocal(op)) {
       auto resLayout = xegpu::getTemporaryLayout(op->getOpResult(0));
       VectorType resVecTy = dyn_cast<VectorType>(op.getType());
       auto resDistVecTyOrFailure =
@@ -1534,14 +1523,6 @@ void XeGPUSgToWiDistributeExperimentalPass::runOnOperation() {
     return;
   }
 
-  // Verify if all XeGPU anchor ops and vector ops have result layouts.
-  // TODO: This can be removed once the full layout refactoring is done.
-  if (failed(verifyLayouts(root))) {
-    LLVM_DEBUG(DBGS() << "XeGPUSgToWiDistributeExperimentalPass: layout "
-                         "verification failed\n");
-    signalPassFailure();
-    return;
-  }
   // Collect existing UnrealizedConversionCastOps. These must be preserved.
   llvm::SmallSetVector<UnrealizedConversionCastOp, 8> existingCasts;
   root->walk(

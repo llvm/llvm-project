@@ -1911,10 +1911,6 @@ protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
     Target &target = GetTarget();
 
-    uint32_t addr_byte_size = target.GetArchitecture().GetAddressByteSize();
-    result.GetOutputStream().SetAddressByteSize(addr_byte_size);
-    result.GetErrorStream().SetAddressByteSize(addr_byte_size);
-
     size_t num_dumped = 0;
     if (command.GetArgumentCount() == 0) {
       // Dump all headers for all modules images
@@ -2016,10 +2012,6 @@ protected:
         (m_options.m_prefer_mangled ? Mangled::ePreferMangled
                                     : Mangled::ePreferDemangled);
 
-    uint32_t addr_byte_size = target.GetArchitecture().GetAddressByteSize();
-    result.GetOutputStream().SetAddressByteSize(addr_byte_size);
-    result.GetErrorStream().SetAddressByteSize(addr_byte_size);
-
     if (command.GetArgumentCount() == 0) {
       // Dump all sections for all modules images
       const ModuleList &module_list = target.GetImages();
@@ -2110,10 +2102,6 @@ protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
     Target &target = GetTarget();
     uint32_t num_dumped = 0;
-
-    uint32_t addr_byte_size = target.GetArchitecture().GetAddressByteSize();
-    result.GetOutputStream().SetAddressByteSize(addr_byte_size);
-    result.GetErrorStream().SetAddressByteSize(addr_byte_size);
 
     if (command.GetArgumentCount() == 0) {
       // Dump all sections for all modules images
@@ -2339,10 +2327,6 @@ protected:
     Target &target = GetTarget();
     uint32_t num_dumped = 0;
 
-    uint32_t addr_byte_size = target.GetArchitecture().GetAddressByteSize();
-    result.GetOutputStream().SetAddressByteSize(addr_byte_size);
-    result.GetErrorStream().SetAddressByteSize(addr_byte_size);
-
     if (command.GetArgumentCount() == 0) {
       // Dump all sections for all modules images
       const ModuleList &target_modules = target.GetImages();
@@ -2421,10 +2405,6 @@ protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
     Target *target = m_exe_ctx.GetTargetPtr();
     uint32_t total_num_dumped = 0;
-
-    uint32_t addr_byte_size = target->GetArchitecture().GetAddressByteSize();
-    result.GetOutputStream().SetAddressByteSize(addr_byte_size);
-    result.GetErrorStream().SetAddressByteSize(addr_byte_size);
 
     if (command.GetArgumentCount() == 0) {
       result.AppendError("file option must be specified");
@@ -2568,10 +2548,6 @@ protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
     Target &target = GetTarget();
     uint32_t num_dumped = 0;
-
-    uint32_t addr_byte_size = target.GetArchitecture().GetAddressByteSize();
-    result.GetOutputStream().SetAddressByteSize(addr_byte_size);
-    result.GetErrorStream().SetAddressByteSize(addr_byte_size);
 
     StructuredData::Array separate_debug_info_lists_by_module;
     if (command.GetArgumentCount() == 0) {
@@ -3207,9 +3183,6 @@ protected:
     // "locker" object which might lock its contents below (through the
     // "module_list_ptr" variable).
     ModuleList module_list;
-    uint32_t addr_byte_size = target.GetArchitecture().GetAddressByteSize();
-    result.GetOutputStream().SetAddressByteSize(addr_byte_size);
-    result.GetErrorStream().SetAddressByteSize(addr_byte_size);
     // Dump all sections for all modules images
     Stream &strm = result.GetOutputStream();
 
@@ -4099,9 +4072,6 @@ protected:
     bool syntax_error = false;
     uint32_t i;
     uint32_t num_successful_lookups = 0;
-    uint32_t addr_byte_size = target.GetArchitecture().GetAddressByteSize();
-    result.GetOutputStream().SetAddressByteSize(addr_byte_size);
-    result.GetErrorStream().SetAddressByteSize(addr_byte_size);
     // Dump all sections for all modules images
 
     if (command.GetArgumentCount() == 0) {

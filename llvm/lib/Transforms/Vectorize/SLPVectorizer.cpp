@@ -18203,6 +18203,8 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
   // Reject vectorization if the vector code would produce more instructions
   // than the scalar code. The cost model may underestimate overhead from
   // shuffles, inserts, and extracts.
+  // FIXME: remove this as soon as correct fractional model is landed for all
+  // targets.
   if (SLPInstCountCheck && VectorizableTree.front()->getVectorFactor() == 2 &&
       SLPCostThreshold == 0) {
     unsigned NumScalar = getNumScalarInsts();

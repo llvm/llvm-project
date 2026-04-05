@@ -458,8 +458,10 @@ bool Serializer::shouldSerializeInfo(bool PublicOnly,
 //
 // See MakeAndInsertIntoParent().
 void Serializer::InsertChild(ScopeChildren &Scope, const NamespaceInfo &Info) {
-  Scope.Namespaces.emplace_back(Info.USR, Info.Name, InfoType::IT_namespace,
-                                Info.Name, getInfoRelativePath(Info.Namespace));
+  Reference *R = allocatePtr<Reference>(TransientArena, Info.USR, Info.Name,
+                                        InfoType::IT_namespace, Info.Name,
+                                        getInfoRelativePath(Info.Namespace));
+  Scope.Namespaces.push_back(*R);
 }
 
 void Serializer::InsertChild(ScopeChildren &Scope, const RecordInfo &Info) {
@@ -1013,8 +1015,7 @@ void Serializer::parseFriends(RecordInfo &RI, const CXXRecordDecl *D) {
     if (auto *FuncDecl = dyn_cast_or_null<FunctionDecl>(ActualDecl)) {
       FunctionInfo TempInfo;
       parseParameters(TempInfo, FuncDecl);
-      F.Params.emplace();
-      F.Params = std::move(TempInfo.Params);
+      F.Params = allocateArray<FieldTypeInfo>(TempInfo.Params, TransientArena);
       F.ReturnType = getTypeInfoForType(FuncDecl->getReturnType(),
                                         FuncDecl->getLangOpts());
     }

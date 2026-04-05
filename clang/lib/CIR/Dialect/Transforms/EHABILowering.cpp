@@ -200,8 +200,7 @@ void ItaniumEHLowering::ensureClangCallTerminate(mlir::Location loc) {
   auto funcOp =
       cir::FuncOp::create(builder, loc, "__clang_call_terminate", funcTy);
   funcOp.setLinkage(cir::GlobalLinkageKind::LinkOnceODRLinkage);
-  funcOp.setGlobalVisibilityAttr(
-      cir::VisibilityAttr::get(ctx, cir::VisibilityKind::Hidden));
+  funcOp.setGlobalVisibility(cir::VisibilityKind::Hidden);
 
   mlir::Block *entryBlock = funcOp.addEntryBlock();
   builder.setInsertionPointToStart(entryBlock);
@@ -318,6 +317,7 @@ void ItaniumEHLowering::lowerEhInitiate(
   builder.setInsertionPoint(initiateOp);
   auto inflightOp = cir::EhInflightOp::create(
       builder, initiateOp.getLoc(), /*cleanup=*/initiateOp.getCleanup(),
+      /*catch_all=*/false,
       /*catch_type_list=*/mlir::ArrayAttr{});
 
   ehTokenMap[rootToken] = {inflightOp.getExceptionPtr(),
@@ -412,6 +412,8 @@ void ItaniumEHLowering::lowerEhInitiate(
                 mlir::cast<cir::GlobalViewAttr>(attr).getSymbol());
           inflightOp.setCatchTypeListAttr(builder.getArrayAttr(typeSymbols));
         }
+        if (op.getDefaultIsCatchAll())
+          inflightOp.setCatchAllAttr(builder.getUnitAttr());
         // Only lower the dispatch once. A sibling initiate sharing the same
         // dispatch will still read its catch types (above), but the comparison
         // chain and branch replacement are only created the first time.

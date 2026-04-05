@@ -1309,8 +1309,8 @@ public:
     return false;
   }
 
-  /// Returns true if a scalar epilogue is not allowed due to optsize or a
-  /// loop hint annotation.
+  /// Returns true if a scalar epilogue is allowed (e.g.., not prevented by
+  /// optsize or a loop hint annotation).
   bool isScalarEpilogueAllowed() const {
     return ScalarEpilogueStatus == CM_ScalarEpilogueAllowed;
   }
