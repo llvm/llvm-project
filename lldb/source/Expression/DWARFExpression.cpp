@@ -1077,7 +1077,8 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
 
   while (opcodes.ValidOffset(offset)) {
     const lldb::offset_t op_offset = offset;
-    const uint8_t op = opcodes.GetU8(&offset);
+    const LocationAtom opcode =
+        static_cast<LocationAtom>(opcodes.GetU8(&offset));
 
     if (log && log->GetVerbose()) {
       size_t count = stack.size();
@@ -1090,18 +1091,17 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
         LLDB_LOGF(log, "  %s", new_value.GetData());
       }
       LLDB_LOGF(log, "0x%8.8" PRIx64 ": %s", op_offset,
-                DW_OP_value_to_name(op));
+                DW_OP_value_to_name(opcode));
     }
 
-    if (std::optional<unsigned> arity =
-            llvm::dwarf::OperationArity(static_cast<LocationAtom>(op))) {
+    if (std::optional<unsigned> arity = OperationArity(opcode)) {
       if (stack.size() < *arity)
         return llvm::createStringError(
             "%s needs at least %d stack entries (stack has %d entries)",
-            DW_OP_value_to_name(op), *arity, stack.size());
+            DW_OP_value_to_name(opcode), *arity, stack.size());
     }
 
-    switch (op) {
+    switch (opcode) {
     // The DW_OP_addr operation has a single operand that encodes a machine
     // address and whose size is the size of an address on the target machine.
     case DW_OP_addr:
@@ -1662,7 +1662,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     case DW_OP_lit29:
     case DW_OP_lit30:
     case DW_OP_lit31:
-      stack.push_back(to_generic(op - DW_OP_lit0));
+      stack.push_back(to_generic(opcode - DW_OP_lit0));
       break;
 
     // OPCODE: DW_OP_regN
@@ -1701,7 +1701,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     case DW_OP_reg30:
     case DW_OP_reg31: {
       dwarf4_location_description_kind = Register;
-      reg_num = op - DW_OP_reg0;
+      reg_num = opcode - DW_OP_reg0;
 
       if (llvm::Error err =
               ReadRegisterValueAsScalar(reg_ctx, reg_kind, reg_num, tmp))
@@ -1759,7 +1759,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     case DW_OP_breg29:
     case DW_OP_breg30:
     case DW_OP_breg31: {
-      reg_num = op - DW_OP_breg0;
+      reg_num = opcode - DW_OP_breg0;
       if (llvm::Error err =
               ReadRegisterValueAsScalar(reg_ctx, reg_kind, reg_num, tmp))
         return err;
@@ -2016,7 +2016,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
       if (!data) {
         LLDB_LOG(log, "Evaluate_DW_OP_implicit_value: could not be read data");
         return llvm::createStringError("could not evaluate %s",
-                                       DW_OP_value_to_name(op));
+                                       DW_OP_value_to_name(opcode));
       }
 
       Value result(data, len);
@@ -2027,7 +2027,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     case DW_OP_implicit_pointer: {
       dwarf4_location_description_kind = Implicit;
       return llvm::createStringError("could not evaluate %s",
-                                     DW_OP_value_to_name(op));
+                                     DW_OP_value_to_name(opcode));
     }
 
     // OPCODE: DW_OP_push_object_address
@@ -2168,7 +2168,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     case DW_OP_form_tls_address:
     case DW_OP_GNU_push_tls_address: {
       if (stack.size() < 1) {
-        if (op == DW_OP_form_tls_address)
+        if (opcode == DW_OP_form_tls_address)
           return llvm::createStringError(
               "DW_OP_form_tls_address needs an argument");
         else
@@ -2250,13 +2250,13 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
 
     default:
       if (dwarf_cu) {
-        if (dwarf_cu->ParseVendorDWARFOpcode(op, opcodes, offset, reg_ctx,
+        if (dwarf_cu->ParseVendorDWARFOpcode(opcode, opcodes, offset, reg_ctx,
                                              reg_kind, stack)) {
           break;
         }
       }
       return llvm::createStringErrorV("unhandled opcode {0} in DWARFExpression",
-                                      LocationAtom(op));
+                                      opcode);
     }
   }
 
