@@ -46,7 +46,7 @@ findConstToRemove(const VarDecl *VD, const MatchFinder::MatchResult &Result) {
       NameBeginLoc, SM, Result.Context->getLangOpts(), tok::semi);
 
   // Verify that there is no semicolon between ConstSearchStartLoc and
-  // NameBeginLoc This is to limit search area for our variable decl only
+  // NameBeginLoc. This is to limit search area for our variable decl only
   if (!PrevSemi.isInvalid() &&
       SM.isBeforeInTranslationUnit(ConstSearchStartLoc, PrevSemi))
     return std::nullopt;
