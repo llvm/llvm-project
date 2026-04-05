@@ -819,8 +819,8 @@ decodeBBAddrMapImpl(const ELFFile<ELFT> &EF,
     Content = DecompressedContentRef;
   }
 
-  DataExtractor Data(Content, EF.isLE(),
-                     sizeof(typename ELFFile<ELFT>::uintX_t));
+  constexpr unsigned AddressSize = sizeof(typename ELFFile<ELFT>::uintX_t);
+  DataExtractor Data(Content, EF.isLE());
   std::vector<BBAddrMap> FunctionEntries;
 
   DataExtractor::Cursor Cur(0);
@@ -830,7 +830,7 @@ decodeBBAddrMapImpl(const ELFFile<ELFT> &EF,
   // Helper lambda to extract the (possibly relocatable) address stored at Cur.
   auto ExtractAddress = [&]() -> Expected<uint64_t> {
     uint64_t RelocationOffsetInSection = Cur.tell();
-    uint64_t Address = Data.getAddress(Cur);
+    uint64_t Address = Data.getUnsigned(Cur, AddressSize);
     if (!Cur)
       return Cur.takeError();
     if (!IsRelocatable)
