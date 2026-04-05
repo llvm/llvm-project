@@ -69,7 +69,13 @@ class LinuxCoreTestCase(TestBase):
         )
         self.expect(
             "process status",
-            msg="Truncated pr_psargs should show truncation warning when process status is invoked.",
+            msg="Core args should not be shown at all when process status (without -v) is invoked.",
+            matching=False,
+            substrs=[core_arg_msg],
+        )
+        self.expect(
+            "process status -v",
+            msg="Truncated pr_psargs should show truncation warning when process status -v is invoked.",
             substrs=[core_arg_msg],
         )
 
@@ -85,7 +91,13 @@ class LinuxCoreTestCase(TestBase):
         )
         self.expect(
             "process status",
-            msg="Short pr_psargs should show the core args without truncation warning when process status is invoked.",
+            msg="Core args should not be shown at all when process status (without -v) is invoked.",
+            matching=False,
+            substrs=[core_arg_msg],
+        )
+        self.expect(
+            "process status -v",
+            msg="Short pr_psargs should show the core args without truncation warning when process status -v is invoked.",
             substrs=[core_arg_msg],
         )
 

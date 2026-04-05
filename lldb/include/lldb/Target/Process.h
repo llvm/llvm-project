@@ -1317,7 +1317,7 @@ public:
                 const EvaluateExpressionOptions &options,
                 DiagnosticManager &diagnostic_manager);
 
-  void GetStatus(Stream &ostrm);
+  void GetStatus(Stream &ostrm, bool is_verbose = false);
 
   size_t GetThreadStatus(Stream &ostrm, bool only_threads_with_stop_reason,
                          uint32_t start_frame, uint32_t num_frames,

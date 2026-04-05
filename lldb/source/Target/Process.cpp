@@ -5936,7 +5936,7 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
   return return_value;
 }
 
-void Process::GetStatus(Stream &strm) {
+void Process::GetStatus(Stream &strm, bool is_verbose) {
   const StateType state = GetState();
   if (StateIsStoppedState(state, false)) {
     if (state == eStateExited) {
@@ -5950,7 +5950,8 @@ void Process::GetStatus(Stream &strm) {
         strm.Printf("Connected to remote target.\n");
       else if (!IsLiveDebugSession()) {
         strm.Printf("Process %" PRIu64 " %s\n", GetID(), StateAsCString(state));
-        if (auto core_args = GetCoreFileArgs())
+        auto core_args = GetCoreFileArgs();
+        if (core_args && is_verbose)
           core_args->FormatAsMessage(strm);
       } else
         strm.Printf("Process %" PRIu64 " %s\n", GetID(), StateAsCString(state));
