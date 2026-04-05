@@ -4064,16 +4064,16 @@ TypeSystemSwiftTypeRef::GetBasicTypeFromAST(lldb::BasicType basic_type) {
     // FIXME: Not yet implemented.
     return {};
   case eBasicTypeInt:
-    n = createBuiltin("Int64");
-    break;
-  case eBasicTypeUnsignedInt:
-    n = createBuiltin("UInt64");
-    break;
-  case eBasicTypeLong:
     n = createBuiltin("Int32");
     break;
-  case eBasicTypeUnsignedLong:
+  case eBasicTypeUnsignedInt:
     n = createBuiltin("UInt32");
+    break;
+  case eBasicTypeLong:
+    n = createBuiltin("Int64");
+    break;
+  case eBasicTypeUnsignedLong:
+    n = createBuiltin("UInt64");
     break;
   case eBasicTypeLongLong:
     n = createBuiltin("Int64");
