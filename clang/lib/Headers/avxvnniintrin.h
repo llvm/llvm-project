@@ -43,6 +43,14 @@
 #define __DEFAULT_FN_ATTRS256 __attribute__((__always_inline__, __nodebug__, __target__("avxvnni"), __min_vector_width__(256)))
 #define __DEFAULT_FN_ATTRS128 __attribute__((__always_inline__, __nodebug__, __target__("avxvnni"), __min_vector_width__(128)))
 
+#if defined(__cplusplus) && (__cplusplus >= 201103L)
+#define __DEFAULT_FN_ATTRS256_CONSTEXPR __DEFAULT_FN_ATTRS256 constexpr
+#define __DEFAULT_FN_ATTRS128_CONSTEXPR __DEFAULT_FN_ATTRS128 constexpr
+#else
+#define __DEFAULT_FN_ATTRS256_CONSTEXPR __DEFAULT_FN_ATTRS256
+#define __DEFAULT_FN_ATTRS128_CONSTEXPR __DEFAULT_FN_ATTRS128
+#endif
+
 /// Multiply groups of 4 adjacent pairs of unsigned 8-bit integers in \a __A with
 /// corresponding signed 8-bit integers in \a __B, producing 4 intermediate signed
 /// 16-bit results. Sum these 4 results with the corresponding 32-bit integer
@@ -60,7 +68,7 @@
 ///    ENDFOR
 ///    DST[MAX:256] := 0
 /// \endcode
-static __inline__ __m256i __DEFAULT_FN_ATTRS256
+static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
 _mm256_dpbusd_avx_epi32(__m256i __S, __m256i __A, __m256i __B)
 {
   return (__m256i)__builtin_ia32_vpdpbusd256((__v8si)__S, (__v32qu)__A,
@@ -84,7 +92,7 @@ _mm256_dpbusd_avx_epi32(__m256i __S, __m256i __A, __m256i __B)
 ///    ENDFOR
 ///    DST[MAX:256] := 0
 /// \endcode
-static __inline__ __m256i __DEFAULT_FN_ATTRS256
+static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
 _mm256_dpbusds_avx_epi32(__m256i __S, __m256i __A, __m256i __B)
 {
   return (__m256i)__builtin_ia32_vpdpbusds256((__v8si)__S, (__v32qu)__A,
@@ -106,7 +114,7 @@ _mm256_dpbusds_avx_epi32(__m256i __S, __m256i __A, __m256i __B)
 ///    ENDFOR
 ///    DST[MAX:256] := 0
 /// \endcode
-static __inline__ __m256i __DEFAULT_FN_ATTRS256
+static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
 _mm256_dpwssd_avx_epi32(__m256i __S, __m256i __A, __m256i __B)
 {
   return (__m256i)__builtin_ia32_vpdpwssd256((__v8si)__S, (__v16hi)__A,
@@ -128,7 +136,7 @@ _mm256_dpwssd_avx_epi32(__m256i __S, __m256i __A, __m256i __B)
 ///    ENDFOR
 ///    DST[MAX:256] := 0
 /// \endcode
-static __inline__ __m256i __DEFAULT_FN_ATTRS256
+static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
 _mm256_dpwssds_avx_epi32(__m256i __S, __m256i __A, __m256i __B)
 {
   return (__m256i)__builtin_ia32_vpdpwssds256((__v8si)__S, (__v16hi)__A,
@@ -152,7 +160,7 @@ _mm256_dpwssds_avx_epi32(__m256i __S, __m256i __A, __m256i __B)
 ///    ENDFOR
 ///    DST[MAX:128] := 0
 /// \endcode
-static __inline__ __m128i __DEFAULT_FN_ATTRS128
+static __inline__ __m128i __DEFAULT_FN_ATTRS128_CONSTEXPR
 _mm_dpbusd_avx_epi32(__m128i __S, __m128i __A, __m128i __B)
 {
   return (__m128i)__builtin_ia32_vpdpbusd128((__v4si)__S, (__v16qu)__A,
@@ -176,7 +184,7 @@ _mm_dpbusd_avx_epi32(__m128i __S, __m128i __A, __m128i __B)
 ///    ENDFOR
 ///    DST[MAX:128] := 0
 /// \endcode
-static __inline__ __m128i __DEFAULT_FN_ATTRS128
+static __inline__ __m128i __DEFAULT_FN_ATTRS128_CONSTEXPR
 _mm_dpbusds_avx_epi32(__m128i __S, __m128i __A, __m128i __B)
 {
   return (__m128i)__builtin_ia32_vpdpbusds128((__v4si)__S, (__v16qu)__A,
@@ -198,7 +206,7 @@ _mm_dpbusds_avx_epi32(__m128i __S, __m128i __A, __m128i __B)
 ///    ENDFOR
 ///    DST[MAX:128] := 0
 /// \endcode
-static __inline__ __m128i __DEFAULT_FN_ATTRS128
+static __inline__ __m128i __DEFAULT_FN_ATTRS128_CONSTEXPR
 _mm_dpwssd_avx_epi32(__m128i __S, __m128i __A, __m128i __B)
 {
   return (__m128i)__builtin_ia32_vpdpwssd128((__v4si)__S, (__v8hi)__A,
@@ -220,7 +228,7 @@ _mm_dpwssd_avx_epi32(__m128i __S, __m128i __A, __m128i __B)
 ///    ENDFOR
 ///    DST[MAX:128] := 0
 /// \endcode
-static __inline__ __m128i __DEFAULT_FN_ATTRS128
+static __inline__ __m128i __DEFAULT_FN_ATTRS128_CONSTEXPR
 _mm_dpwssds_avx_epi32(__m128i __S, __m128i __A, __m128i __B)
 {
   return (__m128i)__builtin_ia32_vpdpwssds128((__v4si)__S, (__v8hi)__A,
