@@ -18,8 +18,9 @@
 
 # ERROR: error: {{.*}}: undefined symbol: ret32
 # ERROR: error: {{.*}}: undefined symbol: _bar
+# ERROR: error: {{.*}}: undefined symbol: _foo_tag
 .functype ret32 (f32) -> (i32)
-.tagtype __foo_exception i32
+.tagtype _foo_tag i32
 .globl _start
 _start:
   .functype _start () -> ()
@@ -29,7 +30,7 @@ _start:
   i32.const _bar@GOT
   drop
   i32.const 0
-  throw __foo_exception
+  throw _foo_tag
   end_function
 
 # CHECK:      Sections:
@@ -41,6 +42,7 @@ _start:
 # CHECK-NEXT:     TableAlignment:  0
 # CHECK-NEXT:     Needed:
 # CHECK-NEXT:       - {{.*}}.lib.so
-# CHECK:         Field:          __foo_exception
+#
+# CHECK:         Field:          _foo_tag
 # CHECK-NEXT:    Kind:            TAG
 # CHECK-NEXT:    SigIndex:        1

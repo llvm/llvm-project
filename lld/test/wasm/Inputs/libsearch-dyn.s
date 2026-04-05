@@ -1,4 +1,4 @@
-.globl _bar,_dynamic,__foo_exception
+.globl _bar,_dynamic,_foo_tag
 
 .section .data,"",@
 _bar:
@@ -7,6 +7,5 @@ _bar:
 _dynamic:
 .size _dynamic,4
 
-
-.tagtype __foo_exception i32
-__foo_exception:
+.tagtype _foo_tag i32
+_foo_tag:
