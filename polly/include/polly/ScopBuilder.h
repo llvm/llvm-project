@@ -161,8 +161,8 @@ class ScopBuilder final {
   /// Set @p IsInsideDomain to false when building the conditions that check
   /// whether @p BB is to be executed, since we are not in its domain yet.
   /// TestVal < UpperBound  OR  TestVal <= UpperBound
-  __isl_give isl_set *buildUnsignedConditionSets(
-      BasicBlock *BB, Value *Condition, __isl_keep isl_set *Domain,
+  isl::set buildUnsignedConditionSets(
+      BasicBlock *BB, Value *Condition, const isl::set &Domain,
       const SCEV *SCEV_TestVal, const SCEV *SCEV_UpperBound,
       DenseMap<BasicBlock *, isl::set> &InvalidDomainMap,
       bool IsStrictUpperBound, bool IsInsideDomain = true);
