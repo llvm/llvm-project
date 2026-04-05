@@ -15,6 +15,7 @@
 #include "CIRGenFunction.h"
 #include "CIRGenModule.h"
 #include "CIRGenValue.h"
+#include "TargetInfo.h"
 #include "mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Value.h"
@@ -35,36 +36,80 @@ using namespace clang;
 using namespace clang::CIRGen;
 using namespace cir;
 
-/// Get the address of a zero-sized field within a record. The resulting address
-/// doesn't necessarily have the right type.
+/// Get the address of a zero-sized field within a record. Zero-sized fields
+/// (e.g. empty bases with [[no_unique_address]]) don't appear in the CIR
+/// record layout, so we compute their address using the ASTContext field
+/// offset and byte-level pointer arithmetic instead of cir.get_member.
+static Address emitAddrOfZeroSizeField(CIRGenFunction &cgf, Address base,
+                                       const FieldDecl *field) {
+  CIRGenBuilderTy &builder = cgf.getBuilder();
+  CharUnits offset = cgf.getContext().toCharUnitsFromBits(
+      cgf.getContext().getFieldOffset(field));
+  mlir::Type fieldType = cgf.convertType(field->getType());
+
+  if (offset.isZero()) {
+    return Address(builder.createPtrBitcast(base.getPointer(), fieldType),
+                   base.getAlignment());
+  }
+
+  // Cast to byte pointer, stride by the field offset, then cast to the
+  // field pointer type (CIR pointers are typed, so we need explicit casts
+  // unlike OG's opaque-pointer GEP).
+  mlir::Location loc = cgf.getLoc(field->getLocation());
+  mlir::Value addr =
+      builder.createPtrBitcast(base.getPointer(), builder.getUInt8Ty());
+  addr = builder.createPtrStride(loc, addr,
+                                 builder.getUInt64(offset.getQuantity(), loc));
+  addr = builder.createPtrBitcast(addr, fieldType);
+  return Address(addr, base.getAlignment().alignmentAtOffset(offset));
+}
+
 Address CIRGenFunction::emitAddrOfFieldStorage(Address base,
                                                const FieldDecl *field,
                                                llvm::StringRef fieldName,
                                                unsigned fieldIndex) {
-  if (field->isZeroSize(getContext())) {
-    cgm.errorNYI(field->getSourceRange(),
-                 "emitAddrOfFieldStorage: zero-sized field");
-    return Address::invalid();
-  }
+  if (isEmptyFieldForLayout(getContext(), field))
+    return emitAddrOfZeroSizeField(*this, base, field);
 
   mlir::Location loc = getLoc(field->getLocation());
 
-  mlir::Type fieldType = convertType(field->getType());
-  auto fieldPtr = cir::PointerType::get(fieldType);
-  // For most cases fieldName is the same as field->getName() but for lambdas,
-  // which do not currently carry the name, so it can be passed down from the
-  // CaptureStmt.
-  cir::GetMemberOp memberAddr = builder.createGetMember(
-      loc, fieldPtr, base.getPointer(), fieldName, fieldIndex);
-
-  // Retrieve layout information, compute alignment and return the final
-  // address.
+  // Retrieve layout information for both type resolution and alignment.
   const RecordDecl *rec = field->getParent();
   const CIRGenRecordLayout &layout = cgm.getTypes().getCIRGenRecordLayout(rec);
   unsigned idx = layout.getCIRFieldNo(field);
+
+  // For potentially-overlapping fields (e.g. [[no_unique_address]]), the
+  // record stores the base subobject type (without tail padding) rather than
+  // the complete object type. Use the record's member type for get_member,
+  // then bitcast to the complete type for downstream use.
+  //
+  // For unions, all fields map to index 0, so we use the field's declared type
+  // directly instead of looking up the member type from the layout.
+  mlir::Type fieldType = convertType(field->getType());
+  auto fieldPtr = cir::PointerType::get(fieldType);
+  bool needsBitcast = false;
+
+  if (!rec->isUnion() && field->isPotentiallyOverlapping()) {
+    mlir::Type memberType = layout.getCIRType().getMembers()[idx];
+    fieldPtr = cir::PointerType::get(memberType);
+    needsBitcast = true;
+  }
+
+  // For most cases fieldName is the same as field->getName() but for lambdas,
+  // which do not currently carry the name, so it can be passed down from the
+  // CaptureStmt.
+  mlir::Value addr = builder.createGetMember(loc, fieldPtr, base.getPointer(),
+                                             fieldName, fieldIndex);
+
+  // If the field is potentially overlapping, the record member uses the base
+  // subobject type. Cast to the complete object pointer type expected by
+  // callers (analogous to OG's opaque pointer behavior).
+  if (needsBitcast)
+    addr = builder.createPtrBitcast(addr, fieldType);
+
   CharUnits offset = CharUnits::fromQuantity(
       layout.getCIRType().getElementOffset(cgm.getDataLayout().layout, idx));
-  return Address(memberAddr, base.getAlignment().alignmentAtOffset(offset));
+  return Address(addr, base.getAlignment().alignmentAtOffset(offset));
 }
 
 /// Given an expression of pointer type, try to
@@ -477,6 +522,15 @@ LValue CIRGenFunction::emitLValueForField(LValue base, const FieldDecl *field) {
   if (cgm.lambdaFieldToName.count(field))
     fieldName = cgm.lambdaFieldToName[field];
 
+  // Empty fields don't have entries in the record layout, so handle them
+  // separately. They just use the base address directly with the right type.
+  if (!rec->isUnion() && isEmptyFieldForLayout(getContext(), field)) {
+    addr = emitAddrOfZeroSizeField(*this, addr, field);
+    LValue lv = makeAddrLValue(addr, fieldType, fieldBaseInfo);
+    lv.getQuals().addCVRQualifiers(recordCVR);
+    return lv;
+  }
+
   if (rec->isUnion())
     fieldIndex = field->getFieldIndex();
   else {
@@ -527,12 +581,15 @@ LValue CIRGenFunction::emitLValueForFieldInitialization(
   if (!fieldType->isReferenceType())
     return emitLValueForField(base, field);
 
-  const CIRGenRecordLayout &layout =
-      cgm.getTypes().getCIRGenRecordLayout(field->getParent());
-  unsigned fieldIndex = layout.getCIRFieldNo(field);
-
-  Address v =
-      emitAddrOfFieldStorage(base.getAddress(), field, fieldName, fieldIndex);
+  Address v = base.getAddress();
+  if (isEmptyFieldForLayout(getContext(), field)) {
+    v = emitAddrOfZeroSizeField(*this, v, field);
+  } else {
+    const CIRGenRecordLayout &layout =
+        cgm.getTypes().getCIRGenRecordLayout(field->getParent());
+    unsigned fieldIndex = layout.getCIRFieldNo(field);
+    v = emitAddrOfFieldStorage(v, field, fieldName, fieldIndex);
+  }
 
   // Make sure that the address is pointing to the right type.
   mlir::Type memTy = convertTypeForMem(fieldType);
