@@ -6078,12 +6078,11 @@ static Expected<CoreNote> readCoreNote(DataExtractor Desc,
   // Each field is an Elf_Addr, except for filenames which are char* strings.
 
   CoreNote Ret;
-  const int Bytes = AddressSize;
 
   if (!Desc.isValidOffsetForDataOfSize(2, AddressSize))
     return createError("the note of size 0x" + Twine::utohexstr(Desc.size()) +
                        " is too short, expected at least 0x" +
-                       Twine::utohexstr(Bytes * 2));
+                       Twine::utohexstr(AddressSize * 2));
   if (Desc.getData().back() != 0)
     return createError("the note is not NUL terminated");
 
@@ -6091,14 +6090,15 @@ static Expected<CoreNote> readCoreNote(DataExtractor Desc,
   uint64_t FileCount = Desc.getUnsigned(&DescOffset, AddressSize);
   Ret.PageSize = Desc.getUnsigned(&DescOffset, AddressSize);
 
-  if (!Desc.isValidOffsetForDataOfSize(3 * FileCount * Bytes, AddressSize))
+  if (!Desc.isValidOffsetForDataOfSize(3 * FileCount * AddressSize,
+                                       AddressSize))
     return createError("unable to read file mappings (found " +
                        Twine(FileCount) + "): the note of size 0x" +
                        Twine::utohexstr(Desc.size()) + " is too short");
 
   uint64_t FilenamesOffset = 0;
   DataExtractor Filenames(
-      Desc.getData().drop_front(DescOffset + 3 * FileCount * Bytes),
+      Desc.getData().drop_front(DescOffset + 3 * FileCount * AddressSize),
       Desc.isLittleEndian());
 
   Ret.Mappings.resize(FileCount);
