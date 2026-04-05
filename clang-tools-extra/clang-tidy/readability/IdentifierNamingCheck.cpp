@@ -1303,6 +1303,10 @@ StyleKind IdentifierNamingCheck::findStyleKind(
       return SK_Function;
   }
 
+  if (isa<FunctionTemplateDecl, ClassTemplateDecl, VarTemplateDecl,
+          TypeAliasTemplateDecl>(D))
+    return SK_Invalid;
+
   if (isa<TemplateTypeParmDecl>(D)) {
     if (NamingStyles[SK_TypeTemplateParameter])
       return SK_TypeTemplateParameter;

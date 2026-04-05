@@ -270,10 +270,6 @@ public:
   }
 
   bool VisitNamedDecl(NamedDecl *Decl) {
-    if (isa<FunctionTemplateDecl, ClassTemplateDecl, VarTemplateDecl,
-            TypeAliasTemplateDecl>(Decl))
-      return true;
-
     const SourceRange UsageRange =
         DeclarationNameInfo(Decl->getDeclName(), Decl->getLocation())
             .getSourceRange();
