@@ -146,7 +146,7 @@ MaxArraySize("instcombine-maxarray-size", cl::init(1024),
 
 static cl::opt<unsigned> MaxAllocSiteRemovableUsers(
     "instcombine-max-allocsite-removable-users", cl::Hidden, cl::init(2048),
-    cl::desc("Maximum direct users before skipping alloc-site "
+    cl::desc("Maximum number of users to visit in alloc-site "
              "removability analysis"));
 
 namespace llvm {
@@ -3748,6 +3748,8 @@ isAllocSiteRemovable(Instruction *AI, SmallVectorImpl<Instruction *> &Users,
     Instruction *PI = Worklist.pop_back_val();
     for (User *U : PI->users()) {
       Instruction *I = cast<Instruction>(U);
+      if (Users.size() >= MaxAllocSiteRemovableUsers)
+        return std::nullopt;
       switch (I->getOpcode()) {
       default:
         // Give up the moment we see something we can't handle.
@@ -3902,7 +3904,6 @@ Instruction *InstCombinerImpl::visitAllocSite(Instruction &MI) {
   // register/unregister overhead; convert to WeakTrackingVH only when the
   // site is actually removable.
   SmallVector<Instruction *, 64> RawUsers;
-  SmallVector<WeakTrackingVH, 64> Users;
 
   // If we are removing an alloca with a dbg.declare, insert dbg.value calls
   // before each store.
@@ -3932,26 +3933,10 @@ Instruction *InstCombinerImpl::visitAllocSite(Instruction &MI) {
       F.hasFnAttribute(Attribute::SanitizeAddress))
     KnowInitUndef = false;
 
-  // Skip alloc sites with many direct users -- they are almost never removable
-  // and the transitive user walk in isAllocSiteRemovable is expensive.
-  {
-    unsigned DirectUserCount = 0;
-    for (auto UI = MI.user_begin(), UE = MI.user_end(); UI != UE; ++UI) {
-      if (++DirectUserCount > MaxAllocSiteRemovableUsers)
-        break;
-    }
-    if (DirectUserCount > MaxAllocSiteRemovableUsers)
-      return nullptr;
-  }
-
   auto Removable =
       isAllocSiteRemovable(&MI, RawUsers, TLI, KnowInitZero | KnowInitUndef);
   if (Removable) {
-    Users.reserve(RawUsers.size());
-    for (Instruction *I : RawUsers)
-      Users.emplace_back(I);
-  }
-  if (Removable) {
+    SmallVector<WeakTrackingVH, 64> Users(RawUsers.begin(), RawUsers.end());
     for (WeakTrackingVH &User : Users) {
       // Lowering all @llvm.objectsize and MTI calls first because they may use
       // a bitcast/GEP of the alloca we are removing.
