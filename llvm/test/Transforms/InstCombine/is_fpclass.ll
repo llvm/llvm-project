@@ -2616,6 +2616,24 @@ define i1 @test_class_is_posinf_noinf_src(float nofpclass(inf) %arg) {
   ret i1 %class
 }
 
+define i1 @test_fadd_no_nan_from_no_ninf(float nofpclass(nan ninf) %x, float nofpclass(nan ninf) %y) {
+; CHECK-LABEL: @test_fadd_no_nan_from_no_ninf(
+; CHECK-NEXT:    ret i1 false
+;
+  %add = fadd float %x, %y
+  %class = call i1 @llvm.is.fpclass.f32(float %add, i32 3)
+  ret i1 %class
+}
+
+define i1 @test_fadd_no_nan_from_no_pinf(float nofpclass(nan pinf) %x, float nofpclass(nan pinf) %y) {
+; CHECK-LABEL: @test_fadd_no_nan_from_no_pinf(
+; CHECK-NEXT:    ret i1 false
+;
+  %add = fadd float %x, %y
+  %class = call i1 @llvm.is.fpclass.f32(float %add, i32 3)
+  ret i1 %class
+}
+
 define i1 @test_class_is_subnormal_nosub_src(float nofpclass(sub) %arg) {
 ; CHECK-LABEL: @test_class_is_subnormal_nosub_src(
 ; CHECK-NEXT:    ret i1 false
