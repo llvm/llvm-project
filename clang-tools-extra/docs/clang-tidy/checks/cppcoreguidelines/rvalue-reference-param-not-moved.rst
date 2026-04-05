@@ -79,6 +79,18 @@ Options
       T other = std::forward<T>(t);
     }
 
+.. option:: AllowImplicitMove
+
+   If set to `true`, the check recognizes C++20 implicit move ``return param;``
+   where ``param`` is a rvalue reference parameter. This option only
+   takes effect when compiled with C++20 or later. Default is `false`.
+
+  .. code-block:: c++
+
+    A f(A&& a) {
+      return a; // no warning with AllowImplicitMove = true
+    }
+
 .. option:: MoveFunction
 
    Specify the function used for moving. Default is `::std::move`.
