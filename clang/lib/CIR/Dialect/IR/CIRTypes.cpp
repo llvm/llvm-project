@@ -427,6 +427,29 @@ RecordType::computeStructSize(const mlir::DataLayout &dataLayout) const {
   return recordSize;
 }
 
+unsigned
+RecordType::computeStructDataSize(const mlir::DataLayout &dataLayout) const {
+  assert(isComplete() && "Cannot get layout of incomplete records");
+
+  // Compute the data size (excluding tail padding) for this record type. For
+  // padded records, the last member is the tail padding array added by
+  // CIRGenRecordLayoutBuilder::appendPaddingBytes, so we exclude it. For
+  // non-padded records, data size equals the full struct size without
+  // alignment.
+  auto members = getMembers();
+  unsigned numMembers =
+      getPadded() && members.size() > 1 ? members.size() - 1 : members.size();
+  unsigned recordSize = 0;
+  for (unsigned i = 0; i < numMembers; ++i) {
+    mlir::Type ty = members[i];
+    const uint64_t tyAlign =
+        (getPacked() ? 1 : dataLayout.getTypeABIAlignment(ty));
+    recordSize = llvm::alignTo(recordSize, tyAlign);
+    recordSize += dataLayout.getTypeSize(ty);
+  }
+  return recordSize;
+}
+
 // We also compute the alignment as part of computeStructSize, but this is more
 // efficient. Ideally, we'd like to compute both at once and cache the result,
 // but that's implemented yet.
