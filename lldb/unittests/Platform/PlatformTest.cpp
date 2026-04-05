@@ -674,7 +674,10 @@ TEST_F(PlatformLocateSafePathTest,
 }
 
 TEST_F(PlatformLocateSafePathTest,
-       LocateScriptingResourcesFromSafePaths_AutoLoadModule_Multiple) {
+       LocateScriptingResourcesFromSafePaths_AutoLoadScriptsForModule) {
+  // Test that the LocateScriptingResourcesFromSafePaths API respects the
+  // target.auto-load-scripts-for-modules setting.
+
   m_target_sp->SetLoadScriptFromSymbolFile(eLoadScriptFromSymFileTrusted);
   TestingProperties::GetGlobalTestingProperties().AppendSafeAutoLoadPaths(
       FileSpec(m_tmp_root_dir));

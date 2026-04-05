@@ -546,7 +546,10 @@ TEST_F(
 }
 
 TEST_F(PlatformDarwinLocateTest,
-       LocateExecutableScriptingResourcesFromDSYM_AutoLoadModule_Multiple) {
+       LocateExecutableScriptingResourcesFromDSYM_AutoLoadScriptsForModule) {
+  // Test that the LocateExecutableScriptingResourcesFromDSYM API respects the
+  // target.auto-load-scripts-for-modules setting.
+
   m_target_sp->SetLoadScriptFromSymbolFile(eLoadScriptFromSymFileTrusted);
   TestingProperties::GetGlobalTestingProperties().AppendSafeAutoLoadPaths(
       FileSpec(m_tmp_root_dir));
