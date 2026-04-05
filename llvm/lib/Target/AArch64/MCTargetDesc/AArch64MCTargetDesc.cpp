@@ -505,14 +505,10 @@ static MCInstrAnalysis *createAArch64InstrAnalysis(const MCInstrInfo *Info) {
 }
 
 static MCLFIRewriter *
-createAArch64MCLFIRewriter(MCStreamer &S,
+createAArch64MCLFIRewriter(MCContext &Ctx,
                            std::unique_ptr<MCRegisterInfo> &&RegInfo,
                            std::unique_ptr<MCInstrInfo> &&InstInfo) {
-  auto RW = std::make_unique<AArch64MCLFIRewriter>(
-      S.getContext(), std::move(RegInfo), std::move(InstInfo));
-  auto *Ptr = RW.get();
-  S.setLFIRewriter(std::move(RW));
-  return Ptr;
+  return new AArch64MCLFIRewriter(Ctx, std::move(RegInfo), std::move(InstInfo));
 }
 
 // Force static initialization.
