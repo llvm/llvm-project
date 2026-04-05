@@ -22,6 +22,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/TargetFolder.h"
@@ -236,6 +237,37 @@ Constant *FoldBitCast(Constant *C, Type *DestTy, const DataLayout &DL) {
     if (NumDstElt < NumSrcElt && foldMixesPoisonBits(C, NumSrcElt, NumDstElt))
       return ConstantExpr::getBitCast(C, DestTy);
 
+    // The recursive call folds poison to undef/zero.
+    // Track which destination lanes are poison, so these can be restored.
+    Constant *OrigC = C;
+    SmallBitVector PoisonDstElts(NumDstElt);
+    if (NumDstElt < NumSrcElt) {
+      // A destination lane is poison iff all source elements in its group are
+      // poison. Mixed groups were already rejected above.
+      unsigned Ratio = NumSrcElt / NumDstElt;
+      for (unsigned i = 0; i != NumDstElt; ++i) {
+        bool AllPoison = true;
+        for (unsigned j = 0; j != Ratio; ++j) {
+          Constant *Src = C->getAggregateElement(i * Ratio + j);
+          if (!Src)
+            return ConstantExpr::getBitCast(OrigC, DestTy);
+          if (!isa<PoisonValue>(Src))
+            AllPoison = false;
+        }
+        PoisonDstElts[i] = AllPoison;
+      }
+    } else if (NumDstElt > NumSrcElt) {
+      // Destination elements are poison iff their source element is poison.
+      unsigned Ratio = NumDstElt / NumSrcElt;
+      for (unsigned i = 0; i != NumSrcElt; ++i) {
+        Constant *Src = C->getAggregateElement(i);
+        if (!Src)
+          return ConstantExpr::getBitCast(OrigC, DestTy);
+        if (isa<PoisonValue>(Src))
+          PoisonDstElts.set(i * Ratio, (i + 1) * Ratio);
+      }
+    }
+
     // Fold to a vector of integers with same size as the byte type.
     unsigned ByteWidth = DstEltTy->getPrimitiveSizeInBits();
     auto *DestIVTy = FixedVectorType::get(
@@ -243,8 +275,22 @@ Constant *FoldBitCast(Constant *C, Type *DestTy, const DataLayout &DL) {
     // Recursively handle this integer conversion, if possible.
     C = FoldBitCast(C, DestIVTy, DL);
 
-    // Finally, IR can handle this now that #elts line up.
-    return ConstantExpr::getBitCast(C, DestTy);
+    if (PoisonDstElts.none())
+      return ConstantExpr::getBitCast(C, DestTy);
+
+    // Restore poison lanes that the integer fold refined to undef/zero.
+    SmallVector<Constant *, 32> Elts;
+    for (unsigned i = 0; i != NumDstElt; ++i) {
+      if (PoisonDstElts[i]) {
+        Elts.push_back(PoisonValue::get(DstEltTy));
+      } else {
+        Constant *E = C->getAggregateElement(i);
+        if (!E)
+          return ConstantExpr::getBitCast(OrigC, DestTy);
+        Elts.push_back(ConstantExpr::getBitCast(E, DstEltTy));
+      }
+    }
+    return ConstantVector::get(Elts);
   }
 
   // Okay, we know the destination is integer, if the input is FP, convert
