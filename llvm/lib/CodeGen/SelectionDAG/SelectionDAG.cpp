@@ -6119,6 +6119,61 @@ KnownFPClass SelectionDAG::computeKnownFPClass(SDValue Op,
     Known = computeKnownFPClass(Op.getOperand(0), InterestedClasses, Depth + 1);
     break;
   }
+  case ISD::SINT_TO_FP:
+  case ISD::UINT_TO_FP: {
+    // Cannot produce nan
+    Known.knownNot(fcNan);
+
+    // Integers cannot be subnormal
+    Known.knownNot(fcSubnormal);
+
+    // sitofp and uitofp turn into +0.0 for zero.
+    Known.knownNot(fcNegZero);
+
+    // UIToFP is always non-negative regardless of known bits.
+    if (Opcode == ISD::UINT_TO_FP)
+      Known.signBitMustBeZero();
+
+    // Only compute known bits if we can learn something useful from them.
+    if (!(InterestedClasses & (fcPosZero | fcNormal | fcInf)))
+      break;
+
+    KnownBits IntKnown =
+        computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
+
+    // If the integer is non-zero, the result cannot be +0.0
+    if (IntKnown.isNonZero())
+      Known.knownNot(fcPosZero);
+
+    if (Opcode == ISD::SINT_TO_FP) {
+      // If the signed integer is known non-negative, the result is
+      // non-negative. If the signed integer is known negative, the result is
+      // negative.
+      if (IntKnown.isNonNegative())
+        Known.signBitMustBeZero();
+      else if (IntKnown.isNegative())
+        Known.signBitMustBeOne();
+    }
+
+    // Guard kept for ilogb()
+    if (InterestedClasses & fcInf) {
+      // Get width of largest magnitude integer known.
+      // This still works for a signed minimum value because the largest FP
+      // value is scaled by some fraction close to 2.0 (1.0 + 0.xxxx).
+      int IntSize = IntKnown.getBitWidth();
+      if (Opcode == ISD::UINT_TO_FP)
+        IntSize -= IntKnown.countMinLeadingZeros();
+      else if (Opcode == ISD::SINT_TO_FP)
+        IntSize -= IntKnown.countMinSignBits();
+
+      // If the exponent of the largest finite FP value can hold the largest
+      // integer, the result of the cast must be finite.
+      if (ilogb(APFloat::getLargest(VT.getScalarType().getFltSemantics())) >=
+          IntSize)
+        Known.knownNot(fcInf);
+    }
+    break;
+  }
   case ISD::BITCAST: {
     // FIXME: It should not be necessary to check for an elementwise bitcast.
     // If a bitcast is not elementwise between vector / scalar types,
