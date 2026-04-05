@@ -5,6 +5,9 @@ readability-redundant-const
 
 Detects redundant ``const`` specifiers on variable declarations.
 
+``constexpr`` variables are already implicitly ``const``, so adding an
+explicit ``const`` specifier is redundant.
+
 Examples:
 
 .. code-block:: c++
