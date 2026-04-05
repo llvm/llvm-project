@@ -5751,24 +5751,26 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
     // If there's a header mask, the backedge select will not be the find-last
     // select.
     VPValue *BackedgeVal = PhiR->getBackedgeValue();
-    VPValue *FindLastSelect = BackedgeVal;
-    if (HeaderMask && !match(BackedgeVal, m_Select(m_Specific(HeaderMask),
-                                                   m_VPValue(FindLastSelect),
-                                                   m_Specific(PhiR))))
+    auto *FindLastSelect = cast<VPSingleDefRecipe>(BackedgeVal);
+    if (HeaderMask &&
+        !match(BackedgeVal,
+               m_Select(m_Specific(HeaderMask),
+                        m_VPSingleDefRecipe(FindLastSelect), m_Specific(PhiR))))
       llvm_unreachable("expected header mask select");
 
-    // Get the IV from the find-last select of the reduction phi.
-    // The find-last select should be a select between the phi and the IV.
-    VPValue *Cond, *TrueVal, *FalseVal;
-    if (!match(FindLastSelect, m_Select(m_VPValue(Cond), m_VPValue(TrueVal),
-                                        m_VPValue(FalseVal))))
+    // Get the find-last expression from the find-last select of the reduction
+    // phi. The find-last select should be a select between the phi and the
+    // find-last expression.
+    VPValue *Cond, *FindLastExpression;
+    if (!match(FindLastSelect, m_Select(m_VPValue(Cond), m_Specific(PhiR),
+                                        m_VPValue(FindLastExpression))) &&
+        !match(FindLastSelect,
+               m_Select(m_VPValue(Cond), m_VPValue(FindLastExpression),
+                        m_Specific(PhiR))))
       continue;
 
-    // The non-phi operand of the select is the IV.
-    assert(is_contained(FindLastSelect->getDefiningRecipe()->operands(), PhiR));
-    VPValue *IV = TrueVal == PhiR ? FalseVal : TrueVal;
-
-    const SCEV *IVSCEV = vputils::getSCEVExprForVPValue(IV, PSE, &L);
+    const SCEV *IVSCEV =
+        vputils::getSCEVExprForVPValue(FindLastExpression, PSE, &L);
     const SCEV *Step;
     if (!match(IVSCEV, m_scev_AffineAddRec(m_SCEV(), m_SCEV(Step))))
       continue;
@@ -5833,7 +5835,7 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
 
       VPBuilder LoopBuilder(BackedgeVal->getDefiningRecipe());
       VPValue *AnyOfCond = Cond;
-      if (TrueVal == PhiR)
+      if (FindLastSelect->getOperand(1) == PhiR)
         AnyOfCond = LoopBuilder.createNot(Cond);
       VPValue *OrVal = LoopBuilder.createOr(AnyOfPhi, AnyOfCond);
       AnyOfPhi->setOperand(1, OrVal);
