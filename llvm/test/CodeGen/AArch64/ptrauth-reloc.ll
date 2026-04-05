@@ -113,7 +113,7 @@
 
 @g.weird_ref.da.0 = constant i64 ptrtoint (ptr inttoptr (i64 ptrtoint (ptr ptrauth (ptr getelementptr (i8, ptr @g, i64 16), i32 2) to i64) to ptr) to i64)
 
-; Swift generates inttoptr(add(ptrtoint(@global), offset)) inside ptrauth.
+; inttoptr(add(ptrtoint(@global), offset)) inside ptrauth.
 
 ; CHECK-ELF-LABEL:     .globl g.inttoptr_add.da.0
 ; CHECK-ELF-NEXT:      .p2align 3

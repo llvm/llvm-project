@@ -2680,7 +2680,7 @@ AArch64AsmPrinter::lowerConstantPtrAuth(const ConstantPtrAuth &CPA) {
   MCContext &Ctx = OutContext;
 
   // Figure out the base symbol and the addend, if any.
-  // LookThroughIntToPtr handles Swift patterns like:
+  // LookThroughIntToPtr is needed to handle patterns like:
   //   inttoptr (i64 add (i64 ptrtoint (ptr @global to i64), i64 2) to ptr)
   APInt Offset(64, 0);
   const Value *BaseGV = CPA.getPointer()->stripAndAccumulateConstantOffsets(
