@@ -5749,21 +5749,21 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
     // If there's a header mask, the backedge select will not be the find-last
     // select.
     VPValue *BackedgeVal = PhiR->getBackedgeValue();
-    VPValue *CondSelect = BackedgeVal;
-    if (HeaderMask &&
-        !match(BackedgeVal, m_Select(m_Specific(HeaderMask),
-                                     m_VPValue(CondSelect), m_Specific(PhiR))))
+    VPValue *FindLastSelect = BackedgeVal;
+    if (HeaderMask && !match(BackedgeVal, m_Select(m_Specific(HeaderMask),
+                                                   m_VPValue(FindLastSelect),
+                                                   m_Specific(PhiR))))
       llvm_unreachable("expected header mask select");
 
-    // Get the IV from the conditional select of the reduction phi.
-    // The conditional select should be a select between the phi and the IV.
+    // Get the IV from the find-last select of the reduction phi.
+    // The find-last select should be a select between the phi and the IV.
     VPValue *Cond, *TrueVal, *FalseVal;
-    if (!match(CondSelect, m_Select(m_VPValue(Cond), m_VPValue(TrueVal),
-                                    m_VPValue(FalseVal))))
+    if (!match(FindLastSelect, m_Select(m_VPValue(Cond), m_VPValue(TrueVal),
+                                        m_VPValue(FalseVal))))
       continue;
 
     // The non-phi operand of the select is the IV.
-    assert(is_contained(CondSelect->getDefiningRecipe()->operands(), PhiR));
+    assert(is_contained(FindLastSelect->getDefiningRecipe()->operands(), PhiR));
     VPValue *IV = TrueVal == PhiR ? FalseVal : TrueVal;
 
     const SCEV *IVSCEV = vputils::getSCEVExprForVPValue(IV, PSE, &L);
@@ -5855,7 +5855,8 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
 
     auto *NewPhiR = new VPReductionPHIRecipe(
         cast<PHINode>(PhiR->getUnderlyingInstr()), RecurKind::FindIV, *StartVPV,
-        *CondSelect, RdxUnordered{1}, {}, PhiR->hasUsesOutsideReductionChain());
+        *FindLastSelect, RdxUnordered{1}, {},
+        PhiR->hasUsesOutsideReductionChain());
     NewPhiR->insertBefore(PhiR);
     PhiR->replaceAllUsesWith(NewPhiR);
     PhiR->eraseFromParent();
