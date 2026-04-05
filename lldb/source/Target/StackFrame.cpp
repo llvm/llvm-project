@@ -541,39 +541,31 @@ ValueObjectSP StackFrame::DILGetValueForVariableExpressionPath(
     uint32_t options, lldb::VariableSP &var_sp, Status &error,
     lldb::DILMode mode) {
 
-  const bool check_ptr_vs_member =
-      (options & eExpressionPathOptionCheckPtrVsMember) != 0;
-  const bool no_fragile_ivar =
-      (options & eExpressionPathOptionsNoFragileObjcIvar) != 0;
-  const bool no_synth_child =
-      (options & eExpressionPathOptionsNoSyntheticChildren) != 0;
-
   // Lex the expression.
   auto lex_or_err = dil::DILLexer::Create(var_expr, mode);
   if (!lex_or_err) {
     error = Status::FromError(lex_or_err.takeError());
-    return ValueObjectConstResult::Create(nullptr, std::move(error));
+    return ValueObjectConstResult::Create(nullptr, error.Clone());
   }
 
   // Parse the expression.
-  auto tree_or_error = dil::DILParser::Parse(
-      var_expr, std::move(*lex_or_err), shared_from_this(), use_dynamic,
-      !no_synth_child, !no_fragile_ivar, check_ptr_vs_member);
+  auto tree_or_error =
+      dil::DILParser::Parse(var_expr, std::move(*lex_or_err),
+                            shared_from_this(), use_dynamic, options);
   if (!tree_or_error) {
     error = Status::FromError(tree_or_error.takeError());
-    return ValueObjectConstResult::Create(nullptr, std::move(error));
+    return ValueObjectConstResult::Create(nullptr, error.Clone());
   }
 
   // Evaluate the parsed expression.
   lldb::TargetSP target = this->CalculateTarget();
   dil::Interpreter interpreter(target, var_expr, shared_from_this(),
-                               use_dynamic, !no_synth_child, !no_fragile_ivar,
-                               check_ptr_vs_member);
+                               use_dynamic, options);
 
   auto valobj_or_error = interpreter.Evaluate(**tree_or_error);
   if (!valobj_or_error) {
     error = Status::FromError(valobj_or_error.takeError());
-    return ValueObjectConstResult::Create(nullptr, std::move(error));
+    return ValueObjectConstResult::Create(nullptr, error.Clone());
   }
 
   var_sp = (*valobj_or_error)->GetVariable();
@@ -1182,7 +1174,7 @@ llvm::Error StackFrame::GetFrameBaseValue(Scalar &frame_base) {
       if (!expr_value)
         m_frame_base_error = Status::FromError(expr_value.takeError());
       else
-        m_frame_base = expr_value->ResolveValue(&exe_ctx);
+        m_frame_base = expr_value->GetScalar();
     } else {
       m_frame_base_error =
           Status::FromErrorString("No function in symbol context.");

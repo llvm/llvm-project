@@ -57,9 +57,14 @@ private:
   OriginList *getOriginsList(const ValueDecl &D);
   OriginList *getOriginsList(const Expr &E);
 
+  bool hasOrigins(QualType QT) const;
+  bool hasOrigins(const Expr *E) const;
+
   void flow(OriginList *Dst, OriginList *Src, bool Kill);
 
   void handleAssignment(const Expr *LHSExpr, const Expr *RHSExpr);
+
+  void handlePointerArithmetic(const BinaryOperator *BO);
 
   void handleCXXCtorInitializer(const CXXCtorInitializer *CII);
 
