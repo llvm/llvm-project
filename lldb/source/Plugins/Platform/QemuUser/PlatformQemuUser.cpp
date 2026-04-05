@@ -8,6 +8,7 @@
 
 #include "Plugins/Platform/QemuUser/PlatformQemuUser.h"
 #include "Plugins/Process/gdb-remote/ProcessGDBRemote.h"
+#include "lldb/Core/Debugger.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/ProcessLaunchInfo.h"
@@ -89,13 +90,11 @@ void PlatformQemuUser::Terminate() {
 }
 
 void PlatformQemuUser::DebuggerInitialize(Debugger &debugger) {
-  if (!PluginManager::GetSettingForPlatformPlugin(debugger,
-                                                  GetPluginNameStatic())) {
-    PluginManager::CreateSettingForPlatformPlugin(
-        debugger, GetGlobalProperties().GetValueProperties(),
-        "Properties for the qemu-user platform plugin.",
-        /*is_global_property=*/true);
-  }
+  debugger.SetPropertiesAtPathIfNotExists(
+      g_platformqemuuser_properties_def.expected_path,
+      GetGlobalProperties().GetValueProperties(),
+      "Properties for the qemu-user platform plugin.",
+      /*is_global_property=*/true);
 }
 
 PlatformSP PlatformQemuUser::CreateInstance(bool force, const ArchSpec *arch) {

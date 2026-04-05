@@ -214,13 +214,11 @@ static PlatformDarwinKernelProperties &GetGlobalProperties() {
 
 void PlatformDarwinKernel::DebuggerInitialize(
     lldb_private::Debugger &debugger) {
-  if (!PluginManager::GetSettingForPlatformPlugin(
-          debugger, PlatformDarwinKernelProperties::GetSettingName())) {
-    const bool is_global_setting = true;
-    PluginManager::CreateSettingForPlatformPlugin(
-        debugger, GetGlobalProperties().GetValueProperties(),
-        "Properties for the PlatformDarwinKernel plug-in.", is_global_setting);
-  }
+  debugger.SetPropertiesAtPathIfNotExists(
+      g_platformdarwinkernel_properties.expected_path,
+      GetGlobalProperties().GetValueProperties(),
+      "Properties for the PlatformDarwinKernel plug-in.",
+      /*is_global_property=*/true);
 }
 
 /// Default Constructor

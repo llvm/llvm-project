@@ -78,6 +78,8 @@ struct TestingProperties : public Properties {
   bool GetInjectVarLocListError() const;
   static TestingProperties &GetGlobalTestingProperties();
 
+  static void AppendGlobalTestingPropertiesTo(Debugger &debugger);
+
   /// Overwrites the testing.safe-auto-load-paths settings.
   void SetSafeAutoLoadPaths(FileSpecList paths);
 

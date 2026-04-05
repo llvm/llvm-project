@@ -12,6 +12,7 @@
 
 #include "lldb/Target/Language.h"
 
+#include "lldb/Core/Debugger.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Interpreter/OptionValueProperties.h"
 #include "lldb/Symbol/SymbolFile.h"
@@ -36,6 +37,13 @@ enum {
 #define LLDB_PROPERTIES_language
 #include "TargetPropertiesEnum.inc"
 };
+
+void Language::AppendGlobalLanguagePropertiesTo(Debugger &debugger) {
+  debugger.SetPropertiesAtPathIfNotExists(
+      g_language_properties_def.expected_path,
+      GetGlobalLanguageProperties().GetValueProperties(), "Language settings.",
+      /*is_global_property=*/true);
+}
 
 LanguageProperties &Language::GetGlobalLanguageProperties() {
   static LanguageProperties g_settings;

@@ -1360,13 +1360,10 @@ void StructuredDataDarwinLog::DebuggerInitialize(Debugger &debugger) {
     // TODO log it once we setup structured data logging
   }
 
-  if (!PluginManager::GetSettingForPlatformPlugin(
-          debugger, StructuredDataDarwinLogProperties::GetSettingName())) {
-    const bool is_global_setting = true;
-    PluginManager::CreateSettingForStructuredDataPlugin(
-        debugger, GetGlobalProperties().GetValueProperties(),
-        "Properties for the darwin-log plug-in.", is_global_setting);
-  }
+  debugger.SetPropertiesAtPathIfNotExists(
+      g_darwinlog_properties_def.expected_path,
+      GetGlobalProperties().GetValueProperties(),
+      "Properties for the darwin-log plug-in.", /*is_global_property=*/true);
 }
 
 Status StructuredDataDarwinLog::FilterLaunchInfo(ProcessLaunchInfo &launch_info,

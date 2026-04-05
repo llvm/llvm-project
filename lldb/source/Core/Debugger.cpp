@@ -251,6 +251,13 @@ TestingProperties &TestingProperties::GetGlobalTestingProperties() {
   return g_testing_properties;
 }
 
+void TestingProperties::AppendGlobalTestingPropertiesTo(Debugger &debugger) {
+  debugger.SetPropertiesAtPathIfNotExists(
+      g_testing_properties_def.expected_path,
+      GetGlobalTestingProperties().GetValueProperties(),
+      "Testing-only settings.", /*is_global_property=*/true);
+}
+
 void TestingProperties::SetSafeAutoLoadPaths(FileSpecList paths) {
   const uint32_t idx = ePropertySafeAutoloadPaths;
   OptionValueFileSpecList *option_value =
@@ -1037,28 +1044,16 @@ Debugger::Debugger(lldb::LogOutputCallback log_callback, void *baton)
   // Initialize the debugger properties as early as possible as other parts of
   // LLDB will start querying them during construction.
   m_collection_sp->Initialize(g_debugger_properties_def);
-  m_collection_sp->AppendProperty(
-      "target", "Settings specify to debugging targets.", true,
-      Target::GetGlobalProperties().GetValueProperties());
-  m_collection_sp->AppendProperty(
-      "platform", "Platform settings.", true,
-      Platform::GetGlobalPlatformProperties().GetValueProperties());
-  m_collection_sp->AppendProperty(
-      "symbols", "Symbol lookup and cache settings.", true,
-      ModuleList::GetGlobalModuleListProperties().GetValueProperties());
-  m_collection_sp->AppendProperty(
-      LanguageProperties::GetSettingName(), "Language settings.", true,
-      Language::GetGlobalLanguageProperties().GetValueProperties());
-  if (m_command_interpreter_up) {
-    m_collection_sp->AppendProperty(
-        "interpreter",
-        "Settings specify to the debugger's command interpreter.", true,
-        m_command_interpreter_up->GetValueProperties());
-  }
+  Target::AppendGlobalPropertiesTo(*this);
+  Process::AppendGlobalPropertiesTo(*this);
+  Thread::AppendGlobalPropertiesTo(*this);
+  Platform::AppendGlobalPropertiesTo(*this);
+  ModuleList::AppendGlobalModuleListPropertiesTo(*this);
+  Language::AppendGlobalLanguagePropertiesTo(*this);
+  if (m_command_interpreter_up)
+    m_command_interpreter_up->AppendGlobalPropertiesTo(*this);
 #ifndef NDEBUG
-  m_collection_sp->AppendProperty(
-      "testing", "Testing-only settings.", /*is_global=*/true,
-      TestingProperties::GetGlobalTestingProperties().GetValueProperties());
+  TestingProperties::AppendGlobalTestingPropertiesTo(*this);
 #endif
 
   if (log_callback)

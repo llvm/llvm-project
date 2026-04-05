@@ -279,6 +279,8 @@ public:
 
   bool GetDebugUtilityExpression() const;
 
+  TargetExperimentalProperties &GetExperimentalProperties();
+
 private:
   std::optional<bool>
   GetExperimentalPropertyValue(size_t prop_idx,
@@ -731,6 +733,8 @@ public:
                                    Status *error_ptr = nullptr);
 
   // Settings accessors
+
+  static void AppendGlobalPropertiesTo(Debugger &debugger);
 
   static TargetProperties &GetGlobalProperties();
 

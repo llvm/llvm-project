@@ -274,6 +274,8 @@ public:
 
   static llvm::StringRef GetStaticBroadcasterClass();
 
+  void AppendGlobalPropertiesTo(Debugger &debugger) const;
+
   llvm::StringRef GetBroadcasterClass() const override {
     return GetStaticBroadcasterClass();
   }

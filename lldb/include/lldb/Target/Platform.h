@@ -89,6 +89,8 @@ public:
 
   static void Terminate();
 
+  static void AppendGlobalPropertiesTo(Debugger &debugger);
+
   static PlatformProperties &GetGlobalPlatformProperties();
 
   /// Get the native host platform plug-in.

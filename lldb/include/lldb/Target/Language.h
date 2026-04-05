@@ -453,6 +453,8 @@ public:
   static LanguageSet GetLanguagesSupportingTypeSystemsForExpressions();
   static LanguageSet GetLanguagesSupportingREPLs();
 
+  static void AppendGlobalLanguagePropertiesTo(Debugger &debugger);
+
   static LanguageProperties &GetGlobalLanguageProperties();
 
   // Given a mangled function name, calculates some alternative manglings since

@@ -9,6 +9,7 @@
 #include "JITLoaderGDB.h"
 #include "Plugins/ObjectFile/Mach-O/ObjectFileMachO.h"
 #include "lldb/Breakpoint/Breakpoint.h"
+#include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
@@ -154,13 +155,10 @@ JITLoaderGDB::~JITLoaderGDB() {
 }
 
 void JITLoaderGDB::DebuggerInitialize(Debugger &debugger) {
-  if (!PluginManager::GetSettingForJITLoaderPlugin(
-          debugger, PluginProperties::GetSettingName())) {
-    const bool is_global_setting = true;
-    PluginManager::CreateSettingForJITLoaderPlugin(
-        debugger, GetGlobalPluginProperties().GetValueProperties(),
-        "Properties for the JIT LoaderGDB plug-in.", is_global_setting);
-  }
+  debugger.SetPropertiesAtPathIfNotExists(
+      g_jitloadergdb_properties_def.expected_path,
+      GetGlobalPluginProperties().GetValueProperties(),
+      "Properties for the JIT LoaderGDB plug-in.", /*is_global_property=*/true);
 }
 
 void JITLoaderGDB::DidAttach() {
