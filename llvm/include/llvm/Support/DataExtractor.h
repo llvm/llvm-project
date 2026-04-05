@@ -90,13 +90,11 @@ public:
 
   // TODO: Deprecate.
   DataExtractor(StringRef Data, bool IsLittleEndian, uint8_t)
-      : Data(Data), IsLittleEndian(IsLittleEndian) {}
+      : DataExtractor(Data, IsLittleEndian) {}
 
   // TODO: Deprecate.
   DataExtractor(ArrayRef<uint8_t> Data, bool IsLittleEndian, uint8_t)
-      : Data(StringRef(reinterpret_cast<const char *>(Data.data()),
-                       Data.size())),
-        IsLittleEndian(IsLittleEndian) {}
+      : DataExtractor(Data, IsLittleEndian) {}
 
   /// Get the data pointed to by this extractor.
   StringRef getData() const { return Data; }
