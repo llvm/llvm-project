@@ -136,7 +136,7 @@ static void applyPatterns(Region &region,
         index == rangeToApply[rangeIndex].second)
       ++rangeIndex;
     if (rangeIndex < rangeToApply.size() &&
-        index > rangeToApply[rangeIndex].first)
+        index >= rangeToApply[rangeIndex].first)
       // `applyOpPatternsGreedily` with folding returns whether the op is
       // converted. Omit it because we don't have expectation this reduction
       // will be success or not.
