@@ -463,6 +463,7 @@ Miscellaneous Clang Crashes Fixed
 - Fixed a crash when ``decltype(__builtin_FUNCTION())`` is used as a template type argument. (#GH167433)
 - Fixed an assertion failure when parsing an invalid ``decltype`` specifier with missing parentheses or extra semicolons. (#GH188014)
 - Fixed a crash when explicitly casting a complex type to or from an atomic complex type. (#GH172208)
+- Fixed a crash when explicitly casting a scalar to an atomic complex. (#GH114885)
 
 OpenACC Specific Changes
 ------------------------
