@@ -24,9 +24,8 @@ findConstToRemove(const VarDecl *VD, const MatchFinder::MatchResult &Result) {
                                           ? VD->getQualifierLoc().getBeginLoc()
                                           : VD->getLocation();
 
-  const bool IsPointer = VD->getType()->isPointerType() ||
-                         VD->getType()->isNullPtrType() ||
-                         VD->getType()->isMemberPointerType();
+  const bool IsPointer =
+      VD->getType()->isPointerType() || VD->getType()->isMemberPointerType();
 
   // If the 'findPreviousTokenKind' below fails,
   // we know it is a pointer but cannot find the start token.
@@ -41,6 +40,15 @@ findConstToRemove(const VarDecl *VD, const MatchFinder::MatchResult &Result) {
                 NameBeginLoc, SM, Result.Context->getLangOpts(), tok::star);
 
   if (ConstSearchStartLoc.isInvalid())
+    return std::nullopt;
+
+  const SourceLocation PrevSemi = utils::lexer::findPreviousAnyTokenKind(
+      NameBeginLoc, SM, Result.Context->getLangOpts(), tok::semi);
+
+  // Verify that there is no semicolon between ConstSearchStartLoc and
+  // NameBeginLoc This is to limit search area for our variable decl only
+  if (!PrevSemi.isInvalid() &&
+      SM.isBeforeInTranslationUnit(ConstSearchStartLoc, PrevSemi))
     return std::nullopt;
 
   const CharSourceRange FileRange = Lexer::makeFileCharRange(
@@ -74,11 +82,9 @@ void RedundantConstCheck::check(const MatchFinder::MatchResult &Result) {
   if (!Tok)
     return;
 
-  const auto ConstRange =
-      CharSourceRange::getCharRange(Tok->getLocation(), Tok->getEndLoc());
   diag(Tok->getLocation(),
-       "redundant use of `const`; `constexpr` already implies `const`.")
-      << ConstRange << FixItHint::CreateRemoval(ConstRange);
+       "redundant use of 'const'; 'constexpr' already implies 'const'")
+      << FixItHint::CreateRemoval(Tok->getLocation());
 }
 
 bool RedundantConstCheck::isLanguageVersionSupported(
