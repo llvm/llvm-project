@@ -124,6 +124,8 @@ public:
     }
 
   public:
+    uint64_t getOffset() const { return Offset; }
+
     iterator &operator++() {
       Offset = Op.isError() ? Expr->Data.getData().size() : Op.EndOffset;
       Op.Error =
