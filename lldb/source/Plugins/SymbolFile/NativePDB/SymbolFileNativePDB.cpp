@@ -3109,13 +3109,13 @@ SymbolFileNativePDB::ResolveUdtDeclaration(PdbTypeSymId type_id) {
 
   auto it = m_udt_declarations.find(type_id.index);
   if (it == m_udt_declarations.end())
-    return llvm::createStringError("No UDT declaration found");
+    return llvm::createStringError("no UDT declaration found");
 
   llvm::StringRef file_name;
   if (it->second.IsIpiIndex) {
     CVType cvt = m_index->ipi().getType(it->second.FileNameIndex);
     if (cvt.kind() != LF_STRING_ID)
-      return llvm::createStringError("File name was not a LF_STRING_ID");
+      return llvm::createStringError("file name was not a LF_STRING_ID");
 
     StringIdRecord sid;
     if (auto err = TypeDeserializer::deserializeAs(cvt, sid))
