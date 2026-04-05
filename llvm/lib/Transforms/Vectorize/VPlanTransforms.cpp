@@ -5718,19 +5718,21 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
   ScalarEvolution &SE = *PSE.getSE();
   VPRegionBlock *VectorLoopRegion = Plan.getVectorLoopRegion();
 
-  // Helper lambda to check if the IV range excludes the sentinel value.
-  auto CheckSentinel = [&SE](const SCEV *IVSCEV, bool UseMax,
-                             bool Signed) -> std::optional<APInt> {
+  // Helper lambda to check if the IV range excludes the sentinel value. Try
+  // signed first, then unsigned. Return an excluded sentinel if found,
+  // otherwise return std::nullopt.
+  auto CheckSentinel = [&SE](const SCEV *IVSCEV,
+                             bool UseMax) -> std::optional<APSInt> {
     unsigned BW = IVSCEV->getType()->getScalarSizeInBits();
-    APInt Sentinel =
-        UseMax
-            ? (Signed ? APInt::getSignedMinValue(BW) : APInt::getMinValue(BW))
-            : (Signed ? APInt::getSignedMaxValue(BW) : APInt::getMaxValue(BW));
+    for (bool Signed : {true, false}) {
+      APSInt Sentinel = UseMax ? APSInt::getMinValue(BW, /*Unsigned=*/!Signed)
+                               : APSInt::getMaxValue(BW, /*Unsigned=*/!Signed);
 
-    ConstantRange IVRange =
-        Signed ? SE.getSignedRange(IVSCEV) : SE.getUnsignedRange(IVSCEV);
-    if (!IVRange.contains(Sentinel))
-      return Sentinel;
+      ConstantRange IVRange =
+          Signed ? SE.getSignedRange(IVSCEV) : SE.getUnsignedRange(IVSCEV);
+      if (!IVRange.contains(Sentinel))
+        return Sentinel;
+    }
     return std::nullopt;
   };
 
@@ -5778,13 +5780,8 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
     // Positive step means we need UMax/SMax to find the last IV value, and
     // UMin/SMin otherwise.
     bool UseMax = SE.isKnownPositive(Step);
-    bool UseSigned = true;
-    std::optional<APInt> SentinelVal =
-        CheckSentinel(IVSCEV, UseMax, /*IsSigned=*/true);
-    if (!SentinelVal) {
-      SentinelVal = CheckSentinel(IVSCEV, UseMax, /*IsSigned=*/false);
-      UseSigned = false;
-    }
+    std::optional<APSInt> SentinelVal = CheckSentinel(IVSCEV, UseMax);
+    bool UseSigned = SentinelVal && SentinelVal->isSigned();
 
     // If no sentinel was found, fall back to a boolean AnyOf reduction to track
     // if the condition was ever true. Requires the IV to not wrap, otherwise we
