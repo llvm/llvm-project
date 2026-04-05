@@ -2,7 +2,6 @@
 
 const int n1 = 20;
 
-// C23 constexpr
 constexpr const int p1 = 10;
 // CHECK-MESSAGES: [[@LINE-1]]:11: warning: redundant use of 'const'; 'constexpr' already implies 'const'
 // CHECK-FIXES: constexpr int p1 = 10;
