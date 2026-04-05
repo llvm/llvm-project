@@ -9,6 +9,7 @@
 
 #include "HexagonFrameLowering.h"
 #include "HexagonBlockRanges.h"
+#include "HexagonISelLowering.h"
 #include "HexagonInstrInfo.h"
 #include "HexagonMachineFunctionInfo.h"
 #include "HexagonRegisterInfo.h"
@@ -746,9 +747,29 @@ void HexagonFrameLowering::insertPrologueInBlock(MachineBasicBlock &MBB,
              .addExternalSymbol("__runtime_stack_check");
   } else if (NumBytes > 0) {
     assert(alignTo(NumBytes, 8) == NumBytes);
-    BuildMI(MBB, InsertPt, dl, HII.get(Hexagon::A2_addi), SP)
-      .addReg(SP)
-      .addImm(-int(NumBytes));
+    auto *TLI = HST.getTargetLowering();
+    bool NeedsProbing = TLI->hasInlineStackProbe(MF);
+    unsigned ProbeSize = 0;
+    if (NeedsProbing) {
+      Align StackAlign = getStackAlign();
+      ProbeSize = TLI->getStackProbeSize(MF, StackAlign);
+    }
+    if (NeedsProbing && NumBytes > ProbeSize) {
+      // Compute target SP in R28 (caller-saved scratch).
+      BuildMI(MBB, InsertPt, dl, HII.get(Hexagon::A2_addi), Hexagon::R28)
+          .addReg(SP)
+          .addImm(-int(NumBytes))
+          .setMIFlag(MachineInstr::FrameSetup);
+      // Emit pseudo to be expanded by inlineStackProbe().
+      BuildMI(MBB, InsertPt, dl, HII.get(Hexagon::PS_probed_stackalloc))
+          .addReg(Hexagon::R28)
+          .setMIFlag(MachineInstr::FrameSetup);
+    } else {
+      BuildMI(MBB, InsertPt, dl, HII.get(Hexagon::A2_addi), SP)
+          .addReg(SP)
+          .addImm(-int(NumBytes))
+          .setMIFlag(MachineInstr::FrameSetup);
+    }
   }
 }
 
@@ -892,7 +913,34 @@ void HexagonFrameLowering::insertAllocframe(MachineBasicBlock &MBB,
   DebugLoc dl = MBB.findDebugLoc(InsertPt);
   Register SP = HRI.getStackRegister();
 
-  if (NumBytes >= ALLOCFRAME_MAX) {
+  auto *TLI = HST.getTargetLowering();
+  bool NeedsProbing = TLI->hasInlineStackProbe(MF) && NumBytes > 0;
+  unsigned ProbeSize = 0;
+  if (NeedsProbing) {
+    Align StackAlign = getStackAlign();
+    ProbeSize = TLI->getStackProbeSize(MF, StackAlign);
+  }
+
+  if (NeedsProbing && NumBytes > ProbeSize) {
+    // Emit allocframe(#0) to save FP/LR only.
+    BuildMI(MBB, InsertPt, dl, HII.get(Hexagon::S2_allocframe))
+        .addDef(SP)
+        .addReg(SP)
+        .addImm(0)
+        .addMemOperand(MMO)
+        .setMIFlag(MachineInstr::FrameSetup);
+
+    // Compute target SP in R28 (caller-saved scratch).
+    BuildMI(MBB, InsertPt, dl, HII.get(Hexagon::A2_addi), Hexagon::R28)
+        .addReg(SP)
+        .addImm(-int(NumBytes))
+        .setMIFlag(MachineInstr::FrameSetup);
+
+    // Emit pseudo to be expanded by inlineStackProbe().
+    BuildMI(MBB, InsertPt, dl, HII.get(Hexagon::PS_probed_stackalloc))
+        .addReg(Hexagon::R28)
+        .setMIFlag(MachineInstr::FrameSetup);
+  } else if (NumBytes >= ALLOCFRAME_MAX) {
     // Emit allocframe(#0).
     BuildMI(MBB, InsertPt, dl, HII.get(Hexagon::S2_allocframe))
         .addDef(SP)
@@ -914,6 +962,98 @@ void HexagonFrameLowering::insertAllocframe(MachineBasicBlock &MBB,
         .addImm(NumBytes)
         .addMemOperand(MMO)
         .setMIFlag(MachineInstr::FrameSetup);
+  }
+}
+
+void HexagonFrameLowering::inlineStackProbe(
+    MachineFunction &MF, MachineBasicBlock &PrologueMBB) const {
+  // Collect PS_probed_stackalloc pseudos to expand. Collecting first avoids
+  // issues with modifying the block while iterating.
+  SmallVector<MachineInstr *, 2> ToReplace;
+  for (MachineInstr &MI : PrologueMBB)
+    if (MI.getOpcode() == Hexagon::PS_probed_stackalloc)
+      ToReplace.push_back(&MI);
+
+  auto &HST = MF.getSubtarget<HexagonSubtarget>();
+  auto &HII = *HST.getInstrInfo();
+  auto *TLI = HST.getTargetLowering();
+  Align StackAlign = getStackAlign();
+  unsigned ProbeSize = TLI->getStackProbeSize(MF, StackAlign);
+  MachineInstr::MIFlag Flags = MachineInstr::FrameSetup;
+
+  for (MachineInstr *MI : ToReplace) {
+    MachineBasicBlock::iterator MBBI = MI->getIterator();
+    DebugLoc DL = PrologueMBB.findDebugLoc(MBBI);
+    Register TargetReg = MI->getOperand(0).getReg();
+
+    // Split the block: everything after the pseudo goes into ExitMBB.
+    MachineBasicBlock *MBB = MI->getParent();
+    MachineFunction::iterator InsertPt = std::next(MBB->getIterator());
+    MachineBasicBlock *LoopMBB =
+        MF.CreateMachineBasicBlock(MBB->getBasicBlock());
+    MF.insert(InsertPt, LoopMBB);
+    MachineBasicBlock *ExitMBB =
+        MF.CreateMachineBasicBlock(MBB->getBasicBlock());
+    MF.insert(InsertPt, ExitMBB);
+
+    // Move everything after the pseudo into ExitMBB.
+    ExitMBB->splice(ExitMBB->end(), MBB, std::next(MBBI), MBB->end());
+    ExitMBB->transferSuccessorsAndUpdatePHIs(MBB);
+
+    // LoopMBB: probe each page by decrementing SP and storing zero.
+    // When NumBytes is not an exact multiple of ProbeSize the loop
+    // will overshoot by up to ProbeSize-1 bytes; the final r29 = r28
+    // in ExitMBB corrects SP to the true target.
+    //
+    // The store is placed before the compare+branch so that the
+    // packetizer can bundle them into a single VLIW packet.  All
+    // non-predicated instructions in a packet commit unconditionally,
+    // so the probe store executes on every iteration including the
+    // last (when the branch falls through).
+    //
+    //   r29 = add(r29, #-ProbeSize)
+    //   memw(r29+#0) = #0
+    //   p0 = cmp.gtu(r29, r28)
+    //   if (p0) jump LoopMBB
+    BuildMI(*LoopMBB, LoopMBB->end(), DL, HII.get(Hexagon::A2_addi),
+            Hexagon::R29)
+        .addReg(Hexagon::R29)
+        .addImm(-int(ProbeSize))
+        .setMIFlags(Flags);
+
+    BuildMI(*LoopMBB, LoopMBB->end(), DL, HII.get(Hexagon::S4_storeiri_io))
+        .addReg(Hexagon::R29)
+        .addImm(0)
+        .addImm(0)
+        .setMIFlags(Flags);
+
+    BuildMI(*LoopMBB, LoopMBB->end(), DL, HII.get(Hexagon::C2_cmpgtu),
+            Hexagon::P0)
+        .addReg(Hexagon::R29)
+        .addReg(TargetReg)
+        .setMIFlags(Flags);
+
+    BuildMI(*LoopMBB, LoopMBB->end(), DL, HII.get(Hexagon::J2_jumpt))
+        .addReg(Hexagon::P0)
+        .addMBB(LoopMBB)
+        .setMIFlags(Flags);
+
+    // ExitMBB: set final SP.
+    BuildMI(*ExitMBB, ExitMBB->begin(), DL, HII.get(Hexagon::A2_tfr),
+            Hexagon::R29)
+        .addReg(TargetReg)
+        .setMIFlags(Flags);
+
+    // Set up CFG edges.
+    MBB->addSuccessor(LoopMBB);
+    LoopMBB->addSuccessor(LoopMBB);
+    LoopMBB->addSuccessor(ExitMBB);
+
+    // Remove the pseudo.
+    MI->eraseFromParent();
+
+    // Recompute live-ins for the new blocks.
+    fullyRecomputeLiveIns({ExitMBB, LoopMBB});
   }
 }
 

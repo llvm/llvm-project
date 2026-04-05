@@ -113,6 +113,9 @@ public:
 
   void insertCFIInstructions(MachineFunction &MF) const;
 
+  void inlineStackProbe(MachineFunction &MF,
+                        MachineBasicBlock &PrologueMBB) const override;
+
 protected:
   bool hasFPImpl(const MachineFunction &MF) const override;
 
