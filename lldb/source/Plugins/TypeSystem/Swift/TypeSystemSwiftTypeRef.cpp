@@ -2019,7 +2019,7 @@ swift::Demangle::NodePointer TypeSystemSwiftTypeRef::GetNodeForPrintingImpl(
             NodePointer module = nullptr;
             if (node->getChild(0)->getNumChildren() > 1)
               module = node->getChild(0)->getChild(0);
-            if (module->getKind() != Node::Kind::Module)
+            if (!module || module->getKind() != Node::Kind::Module)
               break;
 
             canonical->addChild(module, dem);
