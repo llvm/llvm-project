@@ -26,11 +26,11 @@ class DWARFDataExtractorBase : public DataExtractor {
 
 public:
   DWARFDataExtractorBase(StringRef Data, bool IsLittleEndian,
-                         uint8_t AddressSize)
+                         unsigned AddressSize)
       : DataExtractor(Data, IsLittleEndian), AddressSize(AddressSize) {}
 
   DWARFDataExtractorBase(ArrayRef<uint8_t> Data, bool IsLittleEndian,
-                         uint8_t AddressSize)
+                         unsigned AddressSize)
       : DataExtractor(
             StringRef(reinterpret_cast<const char *>(Data.data()), Data.size()),
             IsLittleEndian),
@@ -42,10 +42,10 @@ public:
                       Other.getAddressSize()) {}
 
   /// Get the address size for this extractor.
-  uint8_t getAddressSize() const { return AddressSize; }
+  unsigned getAddressSize() const { return AddressSize; }
 
   /// Set the address size for this extractor.
-  void setAddressSize(uint8_t Size) { AddressSize = Size; }
+  void setAddressSize(unsigned Size) { AddressSize = Size; }
 
   //------------------------------------------------------------------
   /// Extract an pointer from \a *offset_ptr.
