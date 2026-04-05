@@ -5455,7 +5455,17 @@ static Value *simplifyExtractValueInst(Value *Agg, ArrayRef<unsigned> Idxs,
 
   // extractvalue x, (insertvalue y, elt, n), n -> elt
   unsigned NumIdxs = Idxs.size();
-  for (auto *IVI = dyn_cast<InsertValueInst>(Agg); IVI != nullptr;) {
+  SmallPtrSet<InsertValueInst *, 8> visitedSet;
+  for (auto *IVI = dyn_cast<InsertValueInst>(Agg); IVI != nullptr;
+       IVI = dyn_cast<InsertValueInst>(IVI->getAggregateOperand())) {
+    // Based on the verifier, self-referential insertvalues or cylic across
+    // many insertvalues are apparently fine in unreachable blocks and they
+    // will cause this loop to run infinitely. I am just adding a check to
+    // break out if it is the case.
+    if (!visitedSet.insert(IVI).second){
+      break;
+    }
+    
     ArrayRef<unsigned> InsertValueIdxs = IVI->getIndices();
     unsigned NumInsertValueIdxs = InsertValueIdxs.size();
     unsigned NumCommonIdxs = std::min(NumInsertValueIdxs, NumIdxs);
@@ -5465,14 +5475,6 @@ static Value *simplifyExtractValueInst(Value *Agg, ArrayRef<unsigned> Idxs,
         return IVI->getInsertedValueOperand();
       break;
     }
-
-    // Based on the verifier, self-referential insertvalues are apparently
-    // fine in unreachable blocks and they will cause this loop to run
-    // infinitely. I am just adding a check to break out if it is the case.
-    auto *NewIVI = dyn_cast<InsertValueInst>(IVI->getAggregateOperand());
-    if (IVI == NewIVI)
-      break;
-    IVI = NewIVI;
   }
 
   // Simplify umul_with_overflow where one operand is 1.
