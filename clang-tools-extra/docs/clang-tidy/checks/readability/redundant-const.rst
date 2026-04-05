@@ -44,6 +44,3 @@ The check also analyzes pointers:
    // Note that `constexpr` only makes the pointer const but not the pointee.
    // Thus, this usage is *not* redundant.
    constexpr const char* ok = "ok"; // OK
-
-
-Requires C++11 or C23.
