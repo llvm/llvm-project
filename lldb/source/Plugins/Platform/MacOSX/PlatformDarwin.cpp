@@ -1107,11 +1107,11 @@ ResolveSDKPathFromDebugInfo(lldb_private::Target *target) {
 
   ModuleSP exe_module_sp = target->GetExecutableModule();
   if (!exe_module_sp)
-    return llvm::createStringError("Failed to get module from target");
+    return llvm::createStringError("failed to get module from target");
 
   SymbolFile *sym_file = exe_module_sp->GetSymbolFile();
   if (!sym_file)
-    return llvm::createStringError("Failed to get symbol file from executable");
+    return llvm::createStringError("failed to get symbol file from executable");
 
   if (sym_file->GetNumCompileUnits() == 0)
     return llvm::createStringError(

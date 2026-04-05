@@ -1016,7 +1016,7 @@ CIRGenModule::getOrCreateCIRGlobal(StringRef mangledName, mlir::Type ty,
       if (const SectionAttr *sa = d->getAttr<SectionAttr>())
         gv.setSectionAttr(builder.getStringAttr(sa->getName()));
     }
-    gv.setGlobalVisibilityAttr(getGlobalVisibilityAttrFromDecl(d));
+    gv.setGlobalVisibility(getGlobalVisibilityAttrFromDecl(d).getValue());
 
     // Handle XCore specific ABI requirements.
     if (getTriple().getArch() == llvm::Triple::xcore)
@@ -2612,7 +2612,7 @@ void CIRGenModule::setFunctionAttributes(GlobalDecl globalDecl,
   // recompute it here. This is a minimal fix for now.
   if (!isLocalLinkage(getFunctionLinkage(globalDecl))) {
     const Decl *decl = globalDecl.getDecl();
-    func.setGlobalVisibilityAttr(getGlobalVisibilityAttrFromDecl(decl));
+    func.setGlobalVisibility(getGlobalVisibilityAttrFromDecl(decl).getValue());
   }
 
   // If we plan on emitting this inline builtin, we can't treat it as a builtin.

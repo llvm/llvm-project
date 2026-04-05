@@ -1547,6 +1547,10 @@ Error WasmObjectFile::parseExportSection(ReadContext &Ctx) {
                                               object_error::parse_failed);
       Info.Kind = wasm::WASM_SYMBOL_TYPE_TAG;
       Info.ElementIndex = Ex.Index;
+      if (isDefinedTagIndex(Ex.Index)) {
+        unsigned TagIndex = Ex.Index - NumImportedTags;
+        Signature = &Signatures[Tags[TagIndex].SigIndex];
+      }
       break;
     case wasm::WASM_EXTERNAL_MEMORY:
       break;

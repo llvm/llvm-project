@@ -1916,7 +1916,7 @@ public:
         SectionSP section_sp(m_section_list->FindSectionByID(n_sect));
         m_section_infos[n_sect].section_sp = section_sp;
         if (section_sp) {
-          m_section_infos[n_sect].vm_range.SetBaseAddress(
+          m_section_infos[n_sect].vm_range.SetRangeBase(
               section_sp->GetFileAddress());
           m_section_infos[n_sect].vm_range.SetByteSize(
               section_sp->GetByteSize());
@@ -1936,8 +1936,7 @@ public:
         // Symbol is in section.
         return m_section_infos[n_sect].section_sp;
       } else if (m_section_infos[n_sect].vm_range.GetByteSize() == 0 &&
-                 m_section_infos[n_sect].vm_range.GetBaseAddress() ==
-                     file_addr) {
+                 m_section_infos[n_sect].vm_range.GetRangeBase() == file_addr) {
         // Symbol is in section with zero size, but has the same start address
         // as the section. This can happen with linker symbols (symbols that
         // start with the letter 'l' or 'L'.
@@ -1951,7 +1950,7 @@ protected:
   struct SectionInfo {
     SectionInfo() : vm_range(), section_sp() {}
 
-    VMRange vm_range;
+    Range<addr_t, addr_t> vm_range;
     SectionSP section_sp;
   };
   SectionList *m_section_list;

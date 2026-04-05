@@ -18,6 +18,7 @@
 #include "mlir/Reducer/Tester.h"
 
 #include "llvm/Support/DebugLog.h"
+#include "llvm/Support/MemoryBuffer.h"
 
 namespace mlir {
 #define GEN_PASS_DEF_OPTREDUCTIONPASS
@@ -47,8 +48,21 @@ void OptReductionPass::runOnOperation() {
   Tester test(testerName, testerArgs);
   Operation *topOp = this->getOperation();
 
+  std::string pipelineStr = optPass;
+  if (pipelineStr.empty()) {
+    if (!optPassFile.empty()) {
+      auto fileOrErr = llvm::MemoryBuffer::getFile(optPassFile);
+      if (std::error_code ec = fileOrErr.getError()) {
+        topOp->emitError() << "Could not open pass pipeline file: "
+                           << optPassFile << " (" << ec.message() << ")";
+        return signalPassFailure();
+      }
+      pipelineStr = fileOrErr.get()->getBuffer().trim().str();
+    }
+  }
+
   PassManager passManager(topOp->getName());
-  if (failed(parsePassPipeline(optPass, passManager))) {
+  if (failed(parsePassPipeline(pipelineStr, passManager))) {
     topOp->emitError() << "\nfailed to parse pass pipeline";
     return signalPassFailure();
   }

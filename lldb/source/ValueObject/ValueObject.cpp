@@ -3044,7 +3044,7 @@ llvm::Expected<lldb::ValueObjectSP> ValueObject::CastDerivedToBaseType(
         "Underlying start & target types should be different");
 
   if (base_type_indices.empty())
-    return llvm::createStringError("Children sequence must be non-empty");
+    return llvm::createStringError("children sequence must be non-empty");
 
   // Both the starting & target types are valid for the cast, and the list of
   // base class indices is non-empty, so we can proceed with the cast.

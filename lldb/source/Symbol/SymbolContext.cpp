@@ -685,7 +685,7 @@ llvm::Error
 SymbolContext::GetAddressRangeFromHereToEndLine(uint32_t end_line,
                                                 AddressRange &range) {
   if (!line_entry.IsValid()) {
-    return llvm::createStringError("Symbol context has no line table.");
+    return llvm::createStringError("symbol context has no line table");
   }
 
   range = line_entry.range;

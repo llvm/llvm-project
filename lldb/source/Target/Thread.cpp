@@ -1624,7 +1624,7 @@ llvm::Error Thread::LoadScriptedFrameProvider(
     auto [last_desc, last_id] = m_provider_chain_ids.back();
     auto it = m_frame_providers.find(last_id);
     if (it == m_frame_providers.end())
-      return llvm::createStringError("Previous frame provider not found");
+      return llvm::createStringError("previous frame provider not found");
     SyntheticFrameProviderSP last_provider = it->second;
     StackFrameListSP last_provider_frames = last_provider->GetInputFrames();
     input_frames = std::make_shared<SyntheticStackFrameList>(

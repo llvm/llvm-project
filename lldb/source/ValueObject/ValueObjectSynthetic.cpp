@@ -20,6 +20,7 @@
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/ErrorExtras.h"
 #include <optional>
 
 namespace lldb_private {
@@ -364,20 +365,18 @@ ValueObjectSynthetic::GetIndexOfChildWithName(llvm::StringRef name_ref) {
       uint32_t max = index + 1;
       auto num_children = GetNumChildrenIgnoringErrors(max);
       if (index >= num_children)
-        return llvm::createStringError("Subscript index out of range: %zu",
-                                       index);
+        return llvm::createStringErrorV("subscript index out of range: {0}",
+                                        index);
     }
     std::lock_guard<std::mutex> guard(m_child_mutex);
     m_name_toindex[name.GetCString()] = index;
     return index;
   } else if (!found_index && m_synth_filter_up == nullptr) {
-    return llvm::createStringError("Type has no child named '%s'",
-                                   name.AsCString());
+    return llvm::createStringErrorV("type has no child named '{0}'", name);
   } else if (found_index)
     return *found_index;
 
-  return llvm::createStringError("Type has no child named '%s'",
-                                 name.AsCString());
+  return llvm::createStringErrorV("type has no child named '{0}'", name);
 }
 
 bool ValueObjectSynthetic::IsInScope() { return m_parent->IsInScope(); }

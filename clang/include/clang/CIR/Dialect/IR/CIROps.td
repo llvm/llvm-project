@@ -2827,9 +2827,9 @@ def CIR_GlobalOp : CIR_Op<"global", [
   // TODO: sym_visibility can possibly be represented by implementing the
   // necessary Symbol's interface in terms of linkage instead.
   let arguments = (ins SymbolNameAttr:$sym_name,
-                       DefaultValuedAttr<
-                        CIR_VisibilityAttr,
-                        "VisibilityKind::Default"
+                       DefaultValuedProp<
+                        EnumProp<CIR_VisibilityKind>,
+                        "cir::VisibilityKind::Default"
                        >:$global_visibility,
                        OptionalAttr<StrAttr>:$sym_visibility,
                        TypeAttr:$sym_type,
@@ -2851,7 +2851,7 @@ def CIR_GlobalOp : CIR_Op<"global", [
 
   let assemblyFormat = [{
     ($sym_visibility^)?
-    (custom<VisibilityAttr>($global_visibility)^)?
+    ($global_visibility^)?
     (`constant` $constant^)?
     $linkage
     (`comdat` $comdat^)?
@@ -3667,7 +3667,10 @@ def CIR_FuncOp : CIR_Op<"func", [
 
   let arguments = (ins
     SymbolNameAttr:$sym_name,
-    CIR_VisibilityAttr:$global_visibility,
+    DefaultValuedProp<
+      EnumProp<CIR_VisibilityKind>,
+      "cir::VisibilityKind::Default"
+    >:$global_visibility,
     TypeAttrOf<CIR_FuncType>:$function_type,
     UnitAttr:$builtin,
     UnitAttr:$coroutine,

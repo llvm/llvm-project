@@ -458,7 +458,7 @@ llvm::Error Host::OpenURL(llvm::StringRef url) {
       std::error_code(ENOTSUP, std::system_category()));
 #else  // !TARGET_OS_OSX
   if (url.empty())
-    return llvm::createStringError("Cannot open empty URL.");
+    return llvm::createStringError("cannot open empty URL");
 
   LLDB_LOG(GetLog(LLDBLog::Host), "Opening URL: {0}", url);
 

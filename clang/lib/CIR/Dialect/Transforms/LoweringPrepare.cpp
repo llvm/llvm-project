@@ -320,8 +320,7 @@ cir::GlobalOp LoweringPreparePass::buildRuntimeVariable(
         cir::GlobalLinkageKindAttr::get(builder.getContext(), linkage));
     mlir::SymbolTable::setSymbolVisibility(
         g, mlir::SymbolTable::Visibility::Private);
-    g.setGlobalVisibilityAttr(
-        cir::VisibilityAttr::get(builder.getContext(), visibility));
+    g.setGlobalVisibility(visibility);
   }
   return g;
 }

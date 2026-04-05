@@ -11,6 +11,7 @@
 
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/DataFormatters/TypeSynthetic.h"
+#include "llvm/Support/ErrorExtras.h"
 
 using namespace lldb;
 
@@ -169,8 +170,7 @@ lldb_private::formatters::MsvcStlSmartPointerSyntheticFrontEnd::
   if (name == "object" || name == "$$dereference$$")
     return 1;
 
-  return llvm::createStringError("Type has no child named '%s'",
-                                 name.AsCString());
+  return llvm::createStringErrorV("type has no child named '{0}'", name);
 }
 
 lldb_private::formatters::MsvcStlSmartPointerSyntheticFrontEnd::
@@ -270,8 +270,7 @@ lldb_private::formatters::MsvcStlUniquePtrSyntheticFrontEnd::
     return 1;
   if (name == "obj" || name == "object" || name == "$$dereference$$")
     return 2;
-  return llvm::createStringError("Type has no child named '%s'",
-                                 name.AsCString());
+  return llvm::createStringErrorV("type has no child named '{0}'", name);
 }
 
 lldb_private::SyntheticChildrenFrontEnd *

@@ -8315,8 +8315,7 @@ void CodeGenModule::EmitOMPThreadPrivateDecl(const OMPThreadPrivateDecl *D) {
     auto *VD = cast<VarDecl>(cast<DeclRefExpr>(RefExpr)->getDecl());
     bool PerformInit =
         VD->getAnyInitializer() &&
-        !VD->getAnyInitializer()->isConstantInitializer(getContext(),
-                                                        /*ForRef=*/false);
+        !VD->getAnyInitializer()->isConstantInitializer(getContext());
 
     Address Addr(GetAddrOfGlobalVar(VD),
                  getTypes().ConvertTypeForMem(VD->getType()),

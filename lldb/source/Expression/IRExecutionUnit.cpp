@@ -729,7 +729,7 @@ ResolveFunctionCallLabel(FunctionCallLabel &label,
   symbol_was_missing_weak = false;
 
   if (!sc.target_sp)
-    return llvm::createStringError("target not available.");
+    return llvm::createStringError("target not available");
 
   auto module_sp = sc.target_sp->GetImages().FindModule(label.module_id);
   if (!module_sp)

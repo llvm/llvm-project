@@ -2599,7 +2599,7 @@ Process::ReadModuleFromMemory(const FileSpec &file_spec,
             file_spec.GetPath().c_str());
   ModuleSP module_sp = std::make_shared<Module>(file_spec, ArchSpec());
   if (!module_sp)
-    return llvm::createStringError("Failed to allocate Module");
+    return llvm::createStringError("failed to allocate module");
 
   Status error;
   std::unique_ptr<Progress> progress_up;

@@ -2151,7 +2151,6 @@ void CIRToLLVMFuncOpLowering::lowerFuncAttributes(
     if (attr.getName() == mlir::SymbolTable::getSymbolAttrName() ||
         attr.getName() == func.getFunctionTypeAttrName() ||
         attr.getName() == getLinkageAttrNameString() ||
-        attr.getName() == func.getGlobalVisibilityAttrName() ||
         attr.getName() == func.getDsoLocalAttrName() ||
         attr.getName() == func.getInlineKindAttrName() ||
         attr.getName() == func.getSideEffectAttrName() ||
@@ -2329,8 +2328,8 @@ CIRToLLVMGlobalOpLowering::lowerGlobalAttributes(
     attributes.push_back(rewriter.getNamedAttr("section", sectionAttr));
 
   mlir::LLVM::VisibilityAttr visibility = mlir::LLVM::VisibilityAttr::get(
-      getContext(), lowerCIRVisibilityToLLVMVisibility(
-                        op.getGlobalVisibilityAttr().getValue()));
+      getContext(),
+      lowerCIRVisibilityToLLVMVisibility(op.getGlobalVisibility()));
   attributes.push_back(rewriter.getNamedAttr("visibility_", visibility));
 
   if (op->getAttr(CUDAExternallyInitializedAttr::getMnemonic()))

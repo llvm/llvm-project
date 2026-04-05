@@ -82,6 +82,21 @@ private:
   llvm::SmallPtrSet<const CFGBlock *, 8> Visited;
 };
 
+AST_MATCHER_P(Expr, hasParentIgnoringParenImpCasts,
+              ast_matchers::internal::Matcher<Expr>, InnerMatcher) {
+  const Expr *E = &Node;
+  do {
+    const DynTypedNodeList Parents = Finder->getASTContext().getParents(*E);
+    if (Parents.size() != 1)
+      return false;
+    E = Parents[0].get<Expr>();
+    if (!E)
+      return false;
+  } while (isa<ImplicitCastExpr, ParenExpr>(E));
+
+  return InnerMatcher.matches(*E, Finder, Builder);
+}
+
 } // namespace
 
 static auto getNameMatcher(llvm::ArrayRef<StringRef> InvalidationFunctions) {
@@ -401,9 +416,12 @@ void UseAfterMoveFinder::getDeclRefs(
       }
     };
 
-    auto DeclRefMatcher = declRefExpr(hasDeclaration(equalsNode(MovedVariable)),
-                                      unless(inDecltypeOrTemplateArg()))
-                              .bind("declref");
+    auto DeclRefMatcher =
+        declRefExpr(hasDeclaration(equalsNode(MovedVariable)),
+                    unless(inDecltypeOrTemplateArg()),
+                    unless(hasParentIgnoringParenImpCasts(
+                        memberExpr(hasDeclaration(cxxDestructorDecl())))))
+            .bind("declref");
 
     AddDeclRefs(match(traverse(TK_AsIs, findAll(DeclRefMatcher)), *S->getStmt(),
                       *Context));

@@ -12,7 +12,6 @@ namespace clang::tidy::utils {
 
 void ExceptionAnalyzer::ExceptionInfo::registerException(
     const Type *ExceptionType, const ThrowInfo &ThrowInfo) {
-  assert(ExceptionType != nullptr && "Only valid types are accepted");
   Behaviour = State::Throwing;
   ThrownExceptions.insert({ExceptionType, ThrowInfo});
 }
@@ -432,6 +431,8 @@ ExceptionAnalyzer::ExceptionInfo::filterIgnoredExceptions(
   // Therefore this slightly hacky implementation is required.
   for (const auto &ThrownException : ThrownExceptions) {
     const Type *T = ThrownException.getFirst();
+    if (!T)
+      continue;
     if (const auto *TD = T->getAsTagDecl()) {
       if (TD->getDeclName().isIdentifier()) {
         if ((IgnoreBadAlloc &&
@@ -484,13 +485,14 @@ ExceptionAnalyzer::ExceptionInfo ExceptionAnalyzer::throwsException(
       }
     }
 
-    CallStack.erase(Func);
     // Optionally treat unannotated functions as potentially throwing if they
     // are not explicitly non-throwing and no throw was discovered.
     if (AssumeUnannotatedFunctionsAsThrowing &&
         Result.getBehaviour() == State::NotThrowing && canThrow(Func)) {
-      Result.registerUnknownException();
+      Result.registerException(nullptr, {Func->getLocation(), CallStack});
     }
+
+    CallStack.erase(Func);
     return Result;
   }
 
@@ -507,8 +509,11 @@ ExceptionAnalyzer::ExceptionInfo ExceptionAnalyzer::throwsException(
   }
 
   if (AssumeMissingDefinitionsFunctionsAsThrowing &&
-      Result.getBehaviour() == State::Unknown)
-    Result.registerUnknownException();
+      Result.getBehaviour() == State::Unknown) {
+    CallStack.insert({Func, CallLoc});
+    Result.registerException(nullptr, {Func->getLocation(), CallStack});
+    CallStack.erase(Func);
+  }
 
   return Result;
 }

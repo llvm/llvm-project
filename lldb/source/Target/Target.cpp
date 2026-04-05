@@ -2601,7 +2601,7 @@ llvm::Expected<lldb::TypeSystemSP>
 Target::GetScratchTypeSystemForLanguage(lldb::LanguageType language,
                                         bool create_on_demand) {
   if (!m_valid)
-    return llvm::createStringError("Invalid Target");
+    return llvm::createStringError("invalid target");
 
   if (language == eLanguageTypeMipsAssembler // GNU AS and LLVM use it for all
                                              // assembly code
@@ -2805,7 +2805,7 @@ void Target::SetDefaultArchitecture(const ArchSpec &arch) {
 llvm::Error Target::SetLabel(llvm::StringRef label) {
   size_t n = LLDB_INVALID_INDEX32;
   if (llvm::to_integer(label, n))
-    return llvm::createStringError("Cannot use integer as target label.");
+    return llvm::createStringError("cannot use integer as target label");
   TargetList &targets = GetDebugger().GetTargetList();
   for (size_t i = 0; i < targets.GetNumTargets(); i++) {
     TargetSP target_sp = targets.GetTargetAtIndex(i);

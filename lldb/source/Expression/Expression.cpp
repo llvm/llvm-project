@@ -39,7 +39,7 @@ lldb_private::FunctionCallLabel::fromString(llvm::StringRef label) {
   label.split(components, ":", /*MaxSplit=*/4);
 
   if (components.size() != 5)
-    return llvm::createStringError("malformed function call label.");
+    return llvm::createStringError("malformed function call label");
 
   if (components[0] != FunctionCallLabelPrefix)
     return llvm::createStringErrorV(
@@ -53,12 +53,12 @@ lldb_private::FunctionCallLabel::fromString(llvm::StringRef label) {
 
   lldb::user_id_t module_id = 0;
   if (!llvm::to_integer(module_label, module_id))
-    return llvm::createStringErrorV("failed to parse module ID from '{0}'.",
+    return llvm::createStringErrorV("failed to parse module ID from '{0}'",
                                     module_label);
 
   lldb::user_id_t die_id;
   if (!llvm::to_integer(die_label, die_id))
-    return llvm::createStringErrorV("failed to parse symbol ID from '{0}'.",
+    return llvm::createStringErrorV("failed to parse symbol ID from '{0}'",
                                     die_label);
 
   return FunctionCallLabel{/*.discriminator=*/discriminator,

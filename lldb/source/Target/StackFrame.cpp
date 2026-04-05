@@ -1174,7 +1174,7 @@ llvm::Error StackFrame::GetFrameBaseValue(Scalar &frame_base) {
       if (!expr_value)
         m_frame_base_error = Status::FromError(expr_value.takeError());
       else
-        m_frame_base = expr_value->ResolveValue(&exe_ctx);
+        m_frame_base = expr_value->GetScalar();
     } else {
       m_frame_base_error =
           Status::FromErrorString("No function in symbol context.");

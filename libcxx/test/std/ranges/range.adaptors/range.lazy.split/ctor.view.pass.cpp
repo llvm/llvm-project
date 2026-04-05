@@ -20,18 +20,15 @@
 
 struct ViewWithCounting : std::ranges::view_base {
   int* times_copied = nullptr;
-  int* times_moved = nullptr;
+  int* times_moved  = nullptr;
 
   constexpr ViewWithCounting(int& copies_ctr, int& moves_ctr) : times_copied(&copies_ctr), times_moved(&moves_ctr) {}
 
   constexpr ViewWithCounting(const ViewWithCounting& rhs)
-    : times_copied(rhs.times_copied)
-    , times_moved(rhs.times_moved) {
+      : times_copied(rhs.times_copied), times_moved(rhs.times_moved) {
     ++(*times_copied);
   }
-  constexpr ViewWithCounting(ViewWithCounting&& rhs)
-    : times_copied(rhs.times_copied)
-    , times_moved(rhs.times_moved) {
+  constexpr ViewWithCounting(ViewWithCounting&& rhs) : times_copied(rhs.times_copied), times_moved(rhs.times_moved) {
     ++(*times_moved);
   }
 
@@ -39,14 +36,14 @@ struct ViewWithCounting : std::ranges::view_base {
   constexpr const char* end() const { return nullptr; }
 
   constexpr ViewWithCounting& operator=(const ViewWithCounting&) = default;
-  constexpr ViewWithCounting& operator=(ViewWithCounting&&) = default;
+  constexpr ViewWithCounting& operator=(ViewWithCounting&&)      = default;
   constexpr bool operator==(const ViewWithCounting&) const { return true; }
 };
 
 static_assert(std::ranges::forward_range<ViewWithCounting>);
 static_assert(std::ranges::view<ViewWithCounting>);
 
-using View = ViewWithCounting;
+using View    = ViewWithCounting;
 using Pattern = ViewWithCounting;
 
 // SFINAE tests.
@@ -58,7 +55,7 @@ static_assert(!test_convertible<std::ranges::lazy_split_view<View, Pattern>, Vie
 
 #else
 
-static_assert( test_convertible<std::ranges::lazy_split_view<View, Pattern>, View, Pattern>(),
+static_assert(test_convertible<std::ranges::lazy_split_view<View, Pattern>, View, Pattern>(),
               "This constructor must not be explicit");
 
 #endif // TEST_STD_VER >= 23
