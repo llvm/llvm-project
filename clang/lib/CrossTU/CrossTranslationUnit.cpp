@@ -679,7 +679,8 @@ parseInvocationList(StringRef FileContent, llvm::sys::path::Style PathStyle) {
 
   for (auto &NextMapping : *Mappings) {
     /// The keys should be strings, which represent a source-file path.
-    auto *Key = dyn_cast<llvm::yaml::ScalarNode>(NextMapping.getKey());
+    auto *Key =
+        dyn_cast_if_present<llvm::yaml::ScalarNode>(NextMapping.getKey());
     if (!Key)
       return llvm::make_error<IndexError>(
           index_error_code::invocation_list_wrong_format);
@@ -699,7 +700,8 @@ parseInvocationList(StringRef FileContent, llvm::sys::path::Style PathStyle) {
 
     /// The values should be sequences of strings, each representing a part of
     /// the invocation.
-    auto *Args = dyn_cast<llvm::yaml::SequenceNode>(NextMapping.getValue());
+    auto *Args =
+        dyn_cast_if_present<llvm::yaml::SequenceNode>(NextMapping.getValue());
     if (!Args)
       return llvm::make_error<IndexError>(
           index_error_code::invocation_list_wrong_format);
