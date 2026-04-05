@@ -632,6 +632,17 @@ define <2 x b64> @bitcast_constexpr_4b32_2b64_all_poison_group() {
   ret <2 x b64> %res
 }
 
+define <2 x b64> @bitcast_constexpr_4i32_2b64_all_poison_group() {
+; LE-LABEL: @bitcast_constexpr_4i32_2b64_all_poison_group(
+; LE-NEXT:    ret <2 x b64> <b64 poison, b64 12884901890>
+;
+; BE-LABEL: @bitcast_constexpr_4i32_2b64_all_poison_group(
+; BE-NEXT:    ret <2 x b64> <b64 poison, b64 8589934595>
+;
+  %res = bitcast <4 x i32> <i32 poison, i32 poison, i32 2, i32 3> to <2 x b64>
+  ret <2 x b64> %res
+}
+
 define <2 x i64> @bitcast_constexpr_4b32_2i64_poison() {
 ; LE-LABEL: @bitcast_constexpr_4b32_2i64_poison(
 ; LE-NEXT:    ret <2 x i64> <i64 4294967296, i64 12884901890>
