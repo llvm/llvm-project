@@ -1318,7 +1318,7 @@ def AMDGPU_GlobalLoadAsyncToLDSOp :
     * `$transferType`: type of data to be transferred. Must be 8, 32, 64 or 128 bit scalar
      or vector type.
     * `$mask`: optional per-thread mask. When false, the thread's LDS write
-      is suppressed. The global read still occurs for all threads regardless of mask.
+      is masked off. The global read still occurs for all threads regardless of mask.
 
     Note: only supported on gfx1250 and later.
 
