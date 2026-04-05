@@ -183,12 +183,10 @@ Expected<bool> LockFileManager::tryLock() {
   }
 
   // Create a lock file that is unique to this instance.
-  SmallString<128> UniqueLockFilePattern = LockFileName;
-  UniqueLockFilePattern += "-%%%%%%%%";
-
   int UniqueLockFileID;
-
   {
+    SmallString<128> UniqueLockFilePattern = LockFileName;
+    UniqueLockFilePattern += "-%%%%%%%%";
     SmallString<128> UniquePath = UniqueLockFilePattern;
     std::error_code EC =
         sys::fs::createUniqueFile(UniquePath, UniqueLockFileID, UniquePath);
