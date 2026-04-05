@@ -216,6 +216,23 @@ void IndirectGlobalAccessModel<fir::TypeDescOp>::getReferencedSymbols(
 }
 
 template <>
+void IndirectGlobalAccessModel<fir::UseStmtOp>::getReferencedSymbols(
+    mlir::Operation *op, llvm::SmallVectorImpl<mlir::SymbolRefAttr> &symbols,
+    mlir::SymbolTable *symbolTable) const {
+  auto useStmtOp = mlir::cast<fir::UseStmtOp>(op);
+  if (auto onlySymbols = useStmtOp.getOnlySymbols()) {
+    for (auto attr : *onlySymbols)
+      if (auto symRef = mlir::dyn_cast<mlir::SymbolRefAttr>(attr))
+        symbols.push_back(symRef);
+  }
+  if (auto renames = useStmtOp.getRenames()) {
+    for (auto attr : *renames)
+      if (auto renameAttr = mlir::dyn_cast<fir::UseRenameAttr>(attr))
+        symbols.push_back(renameAttr.getSymbol());
+  }
+}
+
+template <>
 bool OperationMoveModel<mlir::acc::LoopOp>::canMoveFromDescendant(
     mlir::Operation *op, mlir::Operation *descendant,
     mlir::Operation *candidate) const {

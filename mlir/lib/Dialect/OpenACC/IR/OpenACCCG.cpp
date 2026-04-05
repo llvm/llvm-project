@@ -218,6 +218,32 @@ void KernelEnvironmentOp::getCanonicalizationPatterns(
   results.add<RemoveEmptyKernelEnvironment>(context);
 }
 
+template <typename ComputeConstructT>
+KernelEnvironmentOp
+KernelEnvironmentOp::createAndPopulate(ComputeConstructT computeConstruct,
+                                       OpBuilder &builder) {
+  auto kernelEnvironment = KernelEnvironmentOp::create(
+      builder, computeConstruct->getLoc(),
+      computeConstruct.getDataClauseOperands(),
+      computeConstruct.getAsyncOperands(),
+      computeConstruct.getAsyncOperandsDeviceTypeAttr(),
+      computeConstruct.getAsyncOnlyAttr(), computeConstruct.getWaitOperands(),
+      computeConstruct.getWaitOperandsSegmentsAttr(),
+      computeConstruct.getWaitOperandsDeviceTypeAttr(),
+      computeConstruct.getHasWaitDevnumAttr(),
+      computeConstruct.getWaitOnlyAttr());
+  Block &block = kernelEnvironment.getRegion().emplaceBlock();
+  builder.setInsertionPointToStart(&block);
+  return kernelEnvironment;
+}
+
+template KernelEnvironmentOp
+KernelEnvironmentOp::createAndPopulate<ParallelOp>(ParallelOp, OpBuilder &);
+template KernelEnvironmentOp
+KernelEnvironmentOp::createAndPopulate<KernelsOp>(KernelsOp, OpBuilder &);
+template KernelEnvironmentOp
+KernelEnvironmentOp::createAndPopulate<SerialOp>(SerialOp, OpBuilder &);
+
 //===----------------------------------------------------------------------===//
 // FirstprivateMapInitialOp
 //===----------------------------------------------------------------------===//
@@ -429,6 +455,11 @@ BlockArgument ComputeRegionOp::gpuParWidth(gpu::Processor processor) {
 }
 
 LogicalResult ComputeRegionOp::verify() {
+  for (auto op : getLaunchArgs())
+    if (!op.getDefiningOp<acc::ParWidthOp>())
+      return emitOpError(
+          "launch arguments must be results of acc.par_width operations");
+
   unsigned expectedBlockArgs = getLaunchArgs().size() + getInputArgs().size();
   unsigned actualBlockArgs = getRegion().front().getNumArguments();
   if (expectedBlockArgs != actualBlockArgs)
@@ -505,9 +536,9 @@ ParseResult ComputeRegionOp::parse(OpAsmParser &parser,
   if (succeeded(parser.parseOptionalKeyword("launch"))) {
     if (parser.parseAssignmentList(regionArgs, launchOperands))
       return failure();
-    auto parWidthType = acc::ParWidthType::get(builder.getContext());
+    Type indexType = builder.getIndexType();
     for (size_t i = 0; i < regionArgs.size(); ++i)
-      types.push_back(parWidthType);
+      types.push_back(indexType);
   }
 
   if (succeeded(parser.parseOptionalKeyword("ins"))) {

@@ -295,6 +295,25 @@ bool RecordType::getPadded() const { return getImpl()->padded; }
 cir::RecordType::RecordKind RecordType::getKind() const {
   return getImpl()->kind;
 }
+bool RecordType::isABIConvertedRecord() const {
+  return getName() && getName().getValue().starts_with(abi_conversion_prefix);
+}
+
+mlir::StringAttr RecordType::getABIConvertedName() const {
+  assert(!isABIConvertedRecord());
+
+  return StringAttr::get(getContext(),
+                         abi_conversion_prefix + getName().getValue());
+}
+
+void RecordType::removeABIConversionNamePrefix() {
+  mlir::StringAttr recordName = getName();
+
+  if (recordName && recordName.getValue().starts_with(abi_conversion_prefix))
+    getImpl()->name = mlir::StringAttr::get(
+        recordName.getValue().drop_front(sizeof(abi_conversion_prefix) - 1),
+        recordName.getType());
+}
 
 void RecordType::complete(ArrayRef<Type> members, bool packed, bool padded) {
   assert(!cir::MissingFeatures::astRecordDeclAttr());
@@ -774,7 +793,8 @@ MethodType::getTypeSizeInBits(const mlir::DataLayout &dataLayout,
 uint64_t
 MethodType::getABIAlignment(const mlir::DataLayout &dataLayout,
                             mlir::DataLayoutEntryListRef params) const {
-  return dataLayout.getTypeSizeInBits(getMethodLayoutType(getContext()));
+  return cast<cir::RecordType>(getMethodLayoutType(getContext()))
+      .getABIAlignment(dataLayout, params);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1055,6 +1075,21 @@ void printAddressSpaceValue(mlir::AsmPrinter &p,
   }
 
   llvm_unreachable("unexpected address-space attribute kind");
+}
+
+mlir::OptionalParseResult
+parseGlobalAddressSpaceValue(mlir::AsmParser &p,
+                             mlir::ptr::MemorySpaceAttrInterface &attr) {
+
+  mlir::SMLoc loc = p.getCurrentLocation();
+  if (parseAddressSpaceValue(p, attr).failed())
+    return p.emitError(loc, "failed to parse Address Space Value for GlobalOp");
+  return mlir::success();
+}
+
+void printGlobalAddressSpaceValue(mlir::AsmPrinter &printer, cir::GlobalOp,
+                                  mlir::ptr::MemorySpaceAttrInterface attr) {
+  printAddressSpaceValue(printer, attr);
 }
 
 mlir::ptr::MemorySpaceAttrInterface cir::normalizeDefaultAddressSpace(

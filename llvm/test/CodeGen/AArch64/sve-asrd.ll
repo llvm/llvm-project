@@ -7,23 +7,18 @@ target triple = "aarch64-unknown-linux-gnu"
 define <16 x i16> @sdiv_by_one_v16i16(<16 x i16> %a) vscale_range(2,2) {
 ; CHECK-LABEL: sdiv_by_one_v16i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h
-; CHECK-NEXT:    adrp x8, .LCPI0_0
-; CHECK-NEXT:    add x8, x8, :lo12:.LCPI0_0
+; CHECK-NEXT:    mov z2.h, #1 // =0x1
 ; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
-; CHECK-NEXT:    ld1h { z2.h }, p0/z, [x8]
-; CHECK-NEXT:    sunpklo z0.s, z0.h
-; CHECK-NEXT:    sunpklo z1.s, z1.h
 ; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    sunpklo z3.s, z2.h
-; CHECK-NEXT:    ext z2.b, z2.b, z2.b, #16
+; CHECK-NEXT:    sunpklo z1.s, z1.h
+; CHECK-NEXT:    sunpklo z0.s, z0.h
 ; CHECK-NEXT:    sunpklo z2.s, z2.h
-; CHECK-NEXT:    sdiv z0.s, p0/m, z0.s, z3.s
 ; CHECK-NEXT:    sdiv z1.s, p0/m, z1.s, z2.s
+; CHECK-NEXT:    sdiv z0.s, p0/m, z0.s, z2.s
 ; CHECK-NEXT:    ptrue p0.h, vl8
-; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
 ; CHECK-NEXT:    uzp1 z1.h, z1.h, z1.h
+; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
 ; CHECK-NEXT:    splice z0.h, p0, z0.h, z1.h
 ; CHECK-NEXT:    movprfx z1, z0
 ; CHECK-NEXT:    ext z1.b, z1.b, z0.b, #16

@@ -45,6 +45,7 @@ class OptimizationRemarkEmitter;
 class TargetTransformInfo;
 class TargetLibraryInfo;
 class VPRecipeBuilder;
+struct VPRegisterUsage;
 struct VFRange;
 
 extern cl::opt<bool> EnableVPlanNativePath;
@@ -529,7 +530,7 @@ class LoopVectorizationPlanner {
   ///
   /// TODO: Move to VPlan::cost once the use of LoopVectorizationLegality has
   /// been retired.
-  InstructionCost cost(VPlan &Plan, ElementCount VF) const;
+  InstructionCost cost(VPlan &Plan, ElementCount VF, VPRegisterUsage *RU) const;
 
   /// Precompute costs for certain instructions using the legacy cost model. The
   /// function is used to bring up the VPlan-based cost model to initially avoid
@@ -574,18 +575,22 @@ public:
   /// Generate the IR code for the vectorized loop captured in VPlan \p BestPlan
   /// according to the best selected \p VF and  \p UF.
   ///
-  /// TODO: \p VectorizingEpilogue indicates if the executed VPlan is for the
-  /// epilogue vector loop. It should be removed once the re-use issue has been
+  /// TODO: \p EpilogueVecKind should be removed once the re-use issue has been
   /// fixed.
   ///
   /// Returns a mapping of SCEVs to their expanded IR values.
   /// Note that this is a temporary workaround needed due to the current
   /// epilogue handling.
-  DenseMap<const SCEV *, Value *> executePlan(ElementCount VF, unsigned UF,
-                                              VPlan &BestPlan,
-                                              InnerLoopVectorizer &LB,
-                                              DominatorTree *DT,
-                                              bool VectorizingEpilogue);
+  enum class EpilogueVectorizationKind {
+    None,     ///< Not part of epilogue vectorization.
+    MainLoop, ///< Vectorizing the main loop of epilogue vectorization.
+    Epilogue  ///< Vectorizing the epilogue loop.
+  };
+  DenseMap<const SCEV *, Value *>
+  executePlan(ElementCount VF, unsigned UF, VPlan &BestPlan,
+              InnerLoopVectorizer &LB, DominatorTree *DT,
+              EpilogueVectorizationKind EpilogueVecKind =
+                  EpilogueVectorizationKind::None);
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   void printPlans(raw_ostream &O);
@@ -608,8 +613,8 @@ public:
   /// \return The most profitable vectorization factor and the cost of that VF
   /// for vectorizing the epilogue. Returns VectorizationFactor::Disabled if
   /// epilogue vectorization is not supported for the loop.
-  VectorizationFactor
-  selectEpilogueVectorizationFactor(const ElementCount MainLoopVF, unsigned IC);
+  VectorizationFactor selectEpilogueVectorizationFactor(ElementCount MainLoopVF,
+                                                        unsigned IC);
 
   /// Emit remarks for recipes with invalid costs in the available VPlans.
   void emitInvalidCostRemarks(OptimizationRemarkEmitter *ORE);
@@ -618,6 +623,10 @@ public:
   /// based on its trip count.
   void addMinimumIterationCheck(VPlan &Plan, ElementCount VF, unsigned UF,
                                 ElementCount MinProfitableTripCount) const;
+
+  /// Attach the runtime checks of \p RTChecks to \p Plan.
+  void attachRuntimeChecks(VPlan &Plan, GeneratedRTChecks &RTChecks,
+                           bool HasBranchWeights) const;
 
   /// Update loop metadata and profile info for both the scalar remainder loop
   /// and \p VectorLoop, if it exists. Keeps all loop hints from the original
@@ -670,10 +679,6 @@ private:
   void addReductionResultComputation(VPlanPtr &Plan,
                                      VPRecipeBuilder &RecipeBuilder,
                                      ElementCount MinVF);
-
-  /// Attach the runtime checks of \p RTChecks to \p Plan.
-  void attachRuntimeChecks(VPlan &Plan, GeneratedRTChecks &RTChecks,
-                           bool HasBranchWeights) const;
 
 #ifndef NDEBUG
   /// \return The most profitable vectorization factor for the available VPlans

@@ -3,17 +3,19 @@
 ;
 ; CHECK:      remark: <unknown>:0:0: SCoP begins here.
 ; CHECK-NEXT: remark: <unknown>:0:0: Use user assumption: [M, N] -> {  : N <= 2147483647 - M }
-; CHECK-NEXT: remark: <unknown>:0:0: Use user assumption: [M, N] -> {  : -2147483648 - M <= N <= 2147483647 - M }
-; CHECK-NEXT: remark: <unknown>:0:0: Use user assumption: [M, N, Debug] -> {  : Debug = 0 and 0 < M <= 100 and -2147483648 - M <= N <= 2147483647 - M }
-; CHECK-NEXT: remark: <unknown>:0:0: Use user assumption: [M, N, Debug] -> {  : Debug = 0 and 0 < M <= 100 and 0 < N <= 2147483647 - M }
+; CHECK-NEXT: remark: <unknown>:0:0: Use user assumption: [N, M] -> { : M >= -2147483648 - N }
+; CHECK-NEXT: remark: <unknown>:0:0: Use user assumption: [N, M, Debug] -> { : Debug = 0 and M > 0 and -2147483648 - N <= M <= 100 }
+; CHECK-NEXT: remark: <unknown>:0:0: Use user assumption: [N, M, Debug] -> { : Debug = 0 and N > 0 and 0 < M <= 100 }
 ; CHECK-NEXT: remark: <unknown>:0:0: SCoP ends here.
 
 ; SCOP:      Context:
-; SCOP-NEXT: [N, M, Debug] -> { : Debug = 0 and N > 0 and 0 < M <= 2147483647 - N and M <= 100 }
+; SCOP-NEXT: [N, M, Debug] -> { : Debug = 0 and 0 < N <= 2147483647 and 0 < M <= 100 }
 ; SCOP:      Assumed Context:
 ; SCOP-NEXT: [N, M, Debug] -> {  :  }
 ; SCOP:      Invalid Context:
 ; SCOP-NEXT: [N, M, Debug] -> {  : false }
+; SCOP:      Defined Behavior Context:
+; SCOP-NEXT: [N, M, Debug] -> { : Debug = 0 and N > 0 and 0 < M <= 2147483647 - N and M <= 100 }
 ;
 ;    #include <stdio.h>
 ;

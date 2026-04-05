@@ -380,12 +380,12 @@ void AppleObjCRuntimeV1::UpdateISAToDescriptorMapIfNeeded() {
                     ClassDescriptorSP descriptor_sp(
                         new ClassDescriptorV1(isa, process_sp));
 
-                    if (log && log->GetVerbose())
-                      LLDB_LOGF(log,
-                                "AppleObjCRuntimeV1 added (ObjCISA)0x%" PRIx64
-                                " from _objc_debug_class_hash to "
-                                "isa->descriptor cache",
-                                isa);
+                    LLDB_LOGF_VERBOSE(
+                        log,
+                        "AppleObjCRuntimeV1 added (ObjCISA)0x%" PRIx64
+                        " from _objc_debug_class_hash to "
+                        "isa->descriptor cache",
+                        isa);
 
                     AddClass(isa, descriptor_sp);
                   }
@@ -403,13 +403,12 @@ void AppleObjCRuntimeV1::UpdateISAToDescriptorMapIfNeeded() {
                       ClassDescriptorSP descriptor_sp(
                           new ClassDescriptorV1(isa, process_sp));
 
-                      if (log && log->GetVerbose())
-                        LLDB_LOGF(
-                            log,
-                            "AppleObjCRuntimeV1 added (ObjCISA)0x%" PRIx64
-                            " from _objc_debug_class_hash to isa->descriptor "
-                            "cache",
-                            isa);
+                      LLDB_LOGF_VERBOSE(
+                          log,
+                          "AppleObjCRuntimeV1 added (ObjCISA)0x%" PRIx64
+                          " from _objc_debug_class_hash to isa->descriptor "
+                          "cache",
+                          isa);
 
                       AddClass(isa, descriptor_sp);
                     }

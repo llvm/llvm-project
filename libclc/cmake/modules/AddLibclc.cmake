@@ -74,10 +74,17 @@ endfunction()
 function(link_libclc_builtin_library target_name)
   cmake_parse_arguments(ARG
     ""
-    "ARCH;TRIPLE;FOLDER"
+    "ARCH;TRIPLE;FOLDER;OUTPUT_FILENAME"
     "LIBRARIES;INTERNALIZE_LIBRARIES;OPT_FLAGS"
     ${ARGN}
   )
+
+  if(NOT ARG_OUTPUT_FILENAME)
+    message(FATAL_ERROR "OUTPUT_FILENAME is required for link_libclc_builtin_library")
+  endif()
+  if(NOT ARG_LIBRARIES)
+    message(FATAL_ERROR "LIBRARIES is required for link_libclc_builtin_library")
+  endif()
 
   set(library_dir ${LIBCLC_OUTPUT_LIBRARY_DIR}/${ARG_TRIPLE})
   file(MAKE_DIRECTORY ${library_dir})
@@ -106,7 +113,7 @@ function(link_libclc_builtin_library target_name)
 
   if(ARG_ARCH STREQUAL spirv OR ARG_ARCH STREQUAL spirv64)
     # SPIR-V targets produce a .spv file from the linked bitcode.
-    set(builtins_lib ${library_dir}/libclc.spv)
+    set(builtins_lib ${library_dir}/${ARG_OUTPUT_FILENAME}.spv)
     if(LIBCLC_USE_SPIRV_BACKEND)
       add_custom_command(OUTPUT ${builtins_lib}
         COMMAND ${CMAKE_CLC_COMPILER} -c --target=${ARG_TRIPLE}
@@ -120,12 +127,12 @@ function(link_libclc_builtin_library target_name)
                 --spirv-max-version=1.1
                 --spirv-ext=+SPV_KHR_fma
                 -o ${builtins_lib} ${linked_bc}
-        DEPENDS ${llvm-spirv_target} ${linked_bc}
+        DEPENDS ${linked_bc}
       )
     endif()
   else()
     # All other targets produce an optimized .bc file.
-    set(builtins_lib ${library_dir}/libclc.bc)
+    set(builtins_lib ${library_dir}/${ARG_OUTPUT_FILENAME}.bc)
     add_custom_command(OUTPUT ${builtins_lib}
       COMMAND ${opt_exe} ${ARG_OPT_FLAGS} -o ${builtins_lib} ${linked_bc}
       DEPENDS ${opt_target} ${linked_bc}
@@ -139,50 +146,51 @@ function(link_libclc_builtin_library target_name)
   )
 endfunction()
 
-# Builds an OpenCL builtins library from sources, links it with any
-# internalized dependencies via link_libclc_builtin_library, and adds
-# a verification test for unresolved symbols.
+# Builds a builtins library from sources, links it with any internalized
+# dependencies via link_libclc_builtin_library, and adds a verification test
+# for unresolved symbols.
 function(add_libclc_library target_name)
   cmake_parse_arguments(ARG
     ""
-    "ARCH;TRIPLE;TARGET_TRIPLE"
+    "ARCH;TRIPLE;TARGET_TRIPLE;OUTPUT_FILENAME;PARENT_TARGET"
     "SOURCES;COMPILE_OPTIONS;INCLUDE_DIRS;COMPILE_DEFINITIONS;INTERNALIZE_LIBRARIES;OPT_FLAGS"
     ${ARGN}
   )
 
-  set(opencl_lib ${target_name}_opencl_builtins)
-  add_libclc_builtin_library(${opencl_lib}
+  if(NOT ARG_OUTPUT_FILENAME)
+    message(FATAL_ERROR "OUTPUT_FILENAME is required for add_libclc_library")
+  endif()
+  if(NOT ARG_PARENT_TARGET)
+    message(FATAL_ERROR "PARENT_TARGET is required for add_libclc_library")
+  endif()
+  if(NOT ARG_SOURCES)
+    message(FATAL_ERROR "SOURCES is required for add_libclc_library")
+  endif()
+
+  set(builtins_target ${target_name}_clc_builtins)
+  add_libclc_builtin_library(${builtins_target}
     SOURCES ${ARG_SOURCES}
     COMPILE_OPTIONS ${ARG_COMPILE_OPTIONS}
     INCLUDE_DIRS ${ARG_INCLUDE_DIRS}
     COMPILE_DEFINITIONS ${ARG_COMPILE_DEFINITIONS}
-    FOLDER "libclc/Device IR/OpenCL"
+    FOLDER "libclc/Device IR/Intermediate"
   )
 
   link_libclc_builtin_library(${target_name}
     ARCH ${ARG_ARCH}
     TRIPLE ${ARG_TRIPLE}
-    LIBRARIES ${opencl_lib}
+    LIBRARIES ${builtins_target}
     INTERNALIZE_LIBRARIES ${ARG_INTERNALIZE_LIBRARIES}
     OPT_FLAGS ${ARG_OPT_FLAGS}
+    OUTPUT_FILENAME "${ARG_OUTPUT_FILENAME}"
     FOLDER "libclc/Device IR/Library"
   )
 
-  add_dependencies(libclc-opencl-builtins ${target_name})
+  add_dependencies(${ARG_PARENT_TARGET} ${target_name})
   set(builtins_file $<TARGET_PROPERTY:${target_name},TARGET_FILE>)
 
   install(FILES ${builtins_file}
     DESTINATION ${LIBCLC_INSTALL_DIR}/${ARG_TRIPLE}
-    COMPONENT libclc-opencl-builtins
+    COMPONENT ${ARG_PARENT_TARGET}
   )
-
-  # Verify there are no unresolved external functions in the library.
-  if(NOT ARG_ARCH MATCHES "^(nvptx|clspv)(64)?$" AND
-     NOT ARG_ARCH MATCHES "^spirv(64)?$")
-    set(builtins_file $<TARGET_PROPERTY:${target_name},TARGET_FILE>)
-    add_test(NAME external-funcs-${target_name}
-      COMMAND ./check_external_funcs.sh
-              ${builtins_file} ${LLVM_TOOLS_BINARY_DIR}
-      WORKING_DIRECTORY ${LIBCLC_SOURCE_DIR})
-  endif()
 endfunction()

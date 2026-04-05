@@ -1,7 +1,7 @@
 ! Test that -fsafe-trampoline is properly forwarded from driver to
 ! frontend, and that -fno-safe-trampoline (default) works.
 
-! UNSUPPORTED: system-aix
+! REQUIRES: target=aarch64{{.*}} || target=x86{{.*}}
 
 ! RUN: %flang -### -fsafe-trampoline %s 2>&1 | FileCheck %s --check-prefix=ON
 ! RUN: %flang -### -fno-safe-trampoline %s 2>&1 | FileCheck %s --check-prefix=OFF

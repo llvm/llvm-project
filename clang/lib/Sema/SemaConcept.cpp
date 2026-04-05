@@ -488,6 +488,12 @@ class ConstraintSatisfactionChecker {
   ConceptDecl *ParentConcept = nullptr;
 
 private:
+  template <class Constraint>
+  UnsignedOrNone getOuterPackIndex(const Constraint &C) const {
+    return C.getPackSubstitutionIndex() ? C.getPackSubstitutionIndex()
+                                        : PackSubstitutionIndex;
+  }
+
   ExprResult
   EvaluateAtomicConstraint(const Expr *AtomicExpr,
                            const MultiLevelTemplateArgumentList &MLTAL);
@@ -798,14 +804,11 @@ ExprResult ConstraintSatisfactionChecker::Evaluate(
 
   unsigned Size = Satisfaction.Details.size();
   llvm::FoldingSetNodeID ID;
-  UnsignedOrNone OuterPackSubstIndex =
-      Constraint.getPackSubstitutionIndex()
-          ? Constraint.getPackSubstitutionIndex()
-          : PackSubstitutionIndex;
-
   ID.AddPointer(Constraint.getConstraintExpr());
-  ID.AddInteger(OuterPackSubstIndex.toInternalRepresentation());
-  HashParameterMapping(S, MLTAL, ID, OuterPackSubstIndex)
+  ID.AddInteger(
+      Constraint.getPackSubstitutionIndex().toInternalRepresentation());
+  ID.AddInteger(PackSubstitutionIndex.toInternalRepresentation());
+  HashParameterMapping(S, MLTAL, ID, getOuterPackIndex(Constraint))
       .VisitConstraint(Constraint);
 
   if (auto Iter = S.UnsubstitutedConstraintSatisfactionCache.find(ID);
@@ -1034,12 +1037,6 @@ ExprResult ConstraintSatisfactionChecker::Evaluate(
     const MultiLevelTemplateArgumentList &MLTAL) {
 
   const ConceptReference *ConceptId = Constraint.getConceptId();
-
-  UnsignedOrNone OuterPackSubstIndex =
-      Constraint.getPackSubstitutionIndex()
-          ? Constraint.getPackSubstitutionIndex()
-          : PackSubstitutionIndex;
-
   Sema::InstantiatingTemplate InstTemplate(
       S, ConceptId->getBeginLoc(),
       Sema::InstantiatingTemplate::ConstraintsCheck{},
@@ -1075,8 +1072,10 @@ ExprResult ConstraintSatisfactionChecker::Evaluate(
 
   llvm::FoldingSetNodeID ID;
   ID.AddPointer(Constraint.getConceptId());
-  ID.AddInteger(OuterPackSubstIndex.toInternalRepresentation());
-  HashParameterMapping(S, MLTAL, ID, OuterPackSubstIndex)
+  ID.AddInteger(
+      Constraint.getPackSubstitutionIndex().toInternalRepresentation());
+  ID.AddInteger(PackSubstitutionIndex.toInternalRepresentation());
+  HashParameterMapping(S, MLTAL, ID, getOuterPackIndex(Constraint))
       .VisitConstraint(Constraint);
 
   if (auto Iter = S.UnsubstitutedConstraintSatisfactionCache.find(ID);
@@ -1185,8 +1184,13 @@ static bool CheckConstraintSatisfaction(
     return false;
   }
 
-  if (TemplateArgsLists.isAnyArgInstantiationDependent(S.Context)) {
-    // No need to check satisfaction for dependent constraint expressions.
+  // In the general case, we can't check satisfaction if the arguments contain
+  // unsubstituted template parameters, even if they are purely syntactic,
+  // because they may still turn out to be invalid after substitution.
+  // This could be permitted in cases where this substitution will still be
+  // attempted later and diagnosed, such as function template specializations,
+  // but that's not the case for concept specializations.
+  if (TemplateArgsLists.isAnyArgInstantiationDependent()) {
     Satisfaction.IsSatisfied = true;
     return false;
   }
@@ -2575,7 +2579,15 @@ bool Sema::IsAtLeastAsConstrained(const NamedDecl *D1,
   }
 
   SubsumptionChecker SC(*this);
-  std::optional<bool> Subsumes = SC.Subsumes(D1, AC1, D2, AC2);
+  // Associated declarations are used as a cache key in the event they were
+  // normalized earlier during concept checking. However we cannot reuse these
+  // cached results if any of the template depths have been adjusted.
+  const NamedDecl *DeclAC1 = D1, *DeclAC2 = D2;
+  if (Depth2 > Depth1)
+    DeclAC1 = nullptr;
+  else if (Depth1 > Depth2)
+    DeclAC2 = nullptr;
+  std::optional<bool> Subsumes = SC.Subsumes(DeclAC1, AC1, DeclAC2, AC2);
   if (!Subsumes) {
     // Normalization failed
     return true;
