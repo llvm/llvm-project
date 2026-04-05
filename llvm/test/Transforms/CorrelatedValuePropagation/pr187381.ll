@@ -4,38 +4,24 @@
 define i32 @main() {
 ; CHECK-LABEL: define i32 @main() {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    br label %[[MPATH_PARENT_EXIT820:.*]]
-; CHECK:       [[LAND_RHS_I74_US_I:.*]]:
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[UNREACHABLE_BLOCK:.*]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertvalue [2 x i32] [[TMP0]], i32 0, 1
-; CHECK-NEXT:    [[PATH_COERCE_FCA_0_EXTRACT_I75_US_I:%.*]] = extractvalue [2 x i32] [[TMP0]], 0
-; CHECK-NEXT:    switch i8 0, label %[[MPATH_PARENT_EXIT820]] [
-; CHECK-NEXT:      i8 92, label %[[WHILE_BODY_US_I:.*]]
-; CHECK-NEXT:      i8 47, label %[[WHILE_BODY_US_I]]
-; CHECK-NEXT:    ]
-; CHECK:       [[WHILE_BODY_US_I]]:
-; CHECK-NEXT:    br i1 false, label %[[MPATH_PARENT_EXIT820]], label %[[LAND_RHS_I74_US_I]]
-; CHECK:       [[MPATH_PARENT_EXIT820]]:
-; CHECK-NEXT:    [[PATH_COERCE_FCA_0_EXTRACT_SINK_I814:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[PATH_COERCE_FCA_0_EXTRACT_I75_US_I]], %[[LAND_RHS_I74_US_I]] ], [ 0, %[[WHILE_BODY_US_I]] ]
+; CHECK-NEXT:    [[EXTRACT_VALUE:%.*]] = extractvalue [2 x i32] [[TMP0]], 0
+; CHECK-NEXT:    br label %[[EXIT]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[SINK_VALUE:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[EXTRACT_VALUE]], %[[UNREACHABLE_BLOCK]] ]
 ; CHECK-NEXT:    ret i32 0
 ;
 entry:
-  br label %mpath_parent.exit820
+  br label %exit
 
-land.rhs.i74.us.i:                                ; preds = %while.body.us.i
+unreachable.block:                                ; No predecessors!
   %0 = insertvalue [2 x i32] %0, i32 0, 1
-  %path.coerce.fca.0.extract.i75.us.i = extractvalue [2 x i32] %0, 0
-  switch i8 0, label %mpath_parent.exit820 [
-  i8 92, label %while.body.us.i
-  i8 47, label %while.body.us.i
-  ]
+  %extract.value = extractvalue [2 x i32] %0, 0
+  br label %exit
 
-while.body.us.i:                                  ; preds = %land.rhs.i74.us.i, %land.rhs.i74.us.i
-  br i1 false, label %mpath_parent.exit820, label %land.rhs.i74.us.i
-
-mpath_parent.exit820:                             ; preds = %entry, %land.rhs.i74.us.i, %while.body.us.i
-  %path.coerce.fca.0.extract.sink.i814 = phi i32  [ 0, %entry ], [ %path.coerce.fca.0.extract.i75.us.i, %land.rhs.i74.us.i ], [ 0, %while.body.us.i ]
+exit:                             ; preds = %unreachable.block, %entry
+  %sink.value = phi i32 [ 0, %entry ], [ %extract.value, %unreachable.block ]
   ret i32 0
-
-; uselistorder directives
-  uselistorder [2 x i32] %0, { 1, 0 }
 }
