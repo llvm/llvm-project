@@ -947,7 +947,7 @@ llvm::Expected<Args> Options::ParseAlias(const Args &args,
   Option *long_options = GetLongOptions();
 
   if (long_options == nullptr) {
-    return llvm::createStringError("Invalid long options");
+    return llvm::createStringError("invalid long options");
   }
 
   std::string short_options = BuildShortOptions(long_options);
@@ -972,7 +972,7 @@ llvm::Expected<Args> Options::ParseAlias(const Args &args,
       break;
 
     if (val == '?') {
-      return llvm::createStringError("Unknown or ambiguous option");
+      return llvm::createStringError("unknown or ambiguous option");
     }
 
     if (val == 0)
@@ -994,7 +994,7 @@ llvm::Expected<Args> Options::ParseAlias(const Args &args,
 
     // See if the option takes an argument, and see if one was supplied.
     if (long_options_index == -1) {
-      return llvm::createStringErrorV("Invalid option with value '{0}'.",
+      return llvm::createStringErrorV("invalid option with value '{0}'",
                                       char(val));
     }
 

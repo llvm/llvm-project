@@ -2256,7 +2256,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
           break;
         }
       }
-      return llvm::createStringErrorV("Unhandled opcode {0} in DWARFExpression",
+      return llvm::createStringErrorV("unhandled opcode {0} in DWARFExpression",
                                       LocationAtom(op));
     }
   }
