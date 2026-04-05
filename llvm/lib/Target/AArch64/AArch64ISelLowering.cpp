@@ -8610,6 +8610,8 @@ CCAssignFn *AArch64TargetLowering::CCAssignFnForCall(CallingConv::ID CC,
     [[fallthrough]];
   case CallingConv::C:
   case CallingConv::Fast:
+  case CallingConv::SPIR_FUNC:
+  case CallingConv::SPIR_KERNEL:
   case CallingConv::PreserveMost:
   case CallingConv::PreserveAll:
   case CallingConv::CXX_FAST_TLS:
