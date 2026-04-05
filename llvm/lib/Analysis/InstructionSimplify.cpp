@@ -5462,10 +5462,10 @@ static Value *simplifyExtractValueInst(Value *Agg, ArrayRef<unsigned> Idxs,
     // many insertvalues are apparently fine in unreachable blocks and they
     // will cause this loop to run infinitely. I am just adding a check to
     // break out if it is the case.
-    if (!visitedSet.insert(IVI).second){
+    if (!visitedSet.insert(IVI).second) {
       break;
     }
-    
+
     ArrayRef<unsigned> InsertValueIdxs = IVI->getIndices();
     unsigned NumInsertValueIdxs = InsertValueIdxs.size();
     unsigned NumCommonIdxs = std::min(NumInsertValueIdxs, NumIdxs);
