@@ -239,6 +239,8 @@ public:
 
   LoadScriptFromSymFile GetLoadScriptFromSymbolFile() const;
 
+  void SetLoadScriptFromSymbolFile(LoadScriptFromSymFile load_style);
+
   LoadCWDlldbinitFile GetLoadCWDlldbinitFile() const;
 
   Disassembler::HexImmediateStyle GetHexImmediateStyle() const;
@@ -279,10 +281,11 @@ public:
 
   bool GetDebugUtilityExpression() const;
 
-  OptionValueDictionary *GetAutoLoadScriptsForModules() const;
+  std::optional<LoadScriptFromSymFile>
+  GetAutoLoadScriptsForModule(llvm::StringRef module_name) const;
 
-  void SetAutoLoadScriptsForModules(llvm::StringRef module_name,
-                                    bool should_load);
+  void SetAutoLoadScriptsForModule(llvm::StringRef module_name,
+                                   LoadScriptFromSymFile load_style);
 
 private:
   std::optional<bool>

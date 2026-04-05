@@ -674,151 +674,105 @@ TEST_F(PlatformLocateSafePathTest,
 }
 
 TEST_F(PlatformLocateSafePathTest,
-       LocateScriptingResourcesFromSafePaths_AutoLoadModule_True) {
-  // When a module is in target.auto-load-scripts-for-modules with value 'true',
-  // its script should be returned in the auto-load list.
-
-  TestingProperties::GetGlobalTestingProperties().AppendSafeAutoLoadPaths(
-      FileSpec(m_tmp_root_dir));
-
-  FileSpec module_fspec(CreateFile("TestModule.o", m_tmp_root_dir));
-  ASSERT_TRUE(module_fspec);
-
-  llvm::SmallString<128> module_dir(m_tmp_root_dir);
-  llvm::sys::path::append(module_dir, "TestModule");
-  ASSERT_FALSE(llvm::sys::fs::create_directory(module_dir));
-
-  CreateFile("TestModule.py", module_dir);
-
-  m_target_sp->SetAutoLoadScriptsForModules("TestModule", true);
-
-  StreamString ss;
-  auto file_specs = Platform::LocateExecutableScriptingResourcesFromSafePaths(
-      ss, module_fspec, *m_target_sp);
-
-  EXPECT_EQ(file_specs.size(), 1u);
-
-  auto [fspec, load_style] = *file_specs.begin();
-
-  EXPECT_EQ(fspec.GetFilename(), "TestModule.py");
-  EXPECT_EQ(load_style, m_target_sp->GetLoadScriptFromSymbolFile());
-}
-
-TEST_F(PlatformLocateSafePathTest,
-       LocateScriptingResourcesFromSafePaths_AutoLoadModule_False) {
-  // When a module is in target.auto-load-scripts-for-modules with value
-  // 'false', its script can still appear in the located list.
-  // We could choose not to locate those scripts for modules which won't
-  // be loaded anyway, but currently we opted to returning the full list
-  // regardless of load-style.
-
-  TestingProperties::GetGlobalTestingProperties().AppendSafeAutoLoadPaths(
-      FileSpec(m_tmp_root_dir));
-
-  FileSpec module_fspec(CreateFile("TestModule.o", m_tmp_root_dir));
-  ASSERT_TRUE(module_fspec);
-
-  llvm::SmallString<128> module_dir(m_tmp_root_dir);
-  llvm::sys::path::append(module_dir, "TestModule");
-  ASSERT_FALSE(llvm::sys::fs::create_directory(module_dir));
-
-  CreateFile("TestModule.py", module_dir);
-
-  m_target_sp->SetAutoLoadScriptsForModules("TestModule", false);
-
-  StreamString ss;
-  auto file_specs = Platform::LocateExecutableScriptingResourcesFromSafePaths(
-      ss, module_fspec, *m_target_sp);
-
-  EXPECT_EQ(file_specs.size(), 1u);
-}
-
-TEST_F(PlatformLocateSafePathTest,
-       LocateScriptingResourcesFromSafePaths_AutoLoadModule_NotInDict) {
-  // When a module is NOT in the dictionary, its script should end up
-  // in the non-auto-load list (the existing behavior).
-
-  TestingProperties::GetGlobalTestingProperties().AppendSafeAutoLoadPaths(
-      FileSpec(m_tmp_root_dir));
-
-  FileSpec module_fspec(CreateFile("TestModule.o", m_tmp_root_dir));
-  ASSERT_TRUE(module_fspec);
-
-  llvm::SmallString<128> module_dir(m_tmp_root_dir);
-  llvm::sys::path::append(module_dir, "TestModule");
-  ASSERT_FALSE(llvm::sys::fs::create_directory(module_dir));
-
-  CreateFile("TestModule.py", module_dir);
-
-  // Set a different module in the dictionary; TestModule is not present.
-  m_target_sp->SetAutoLoadScriptsForModules("SomeOtherModule", true);
-
-  StreamString ss;
-  auto file_specs = Platform::LocateExecutableScriptingResourcesFromSafePaths(
-      ss, module_fspec, *m_target_sp);
-
-  EXPECT_EQ(file_specs.size(), 1u);
-
-  auto [fspec, load_style] = *file_specs.begin();
-
-  EXPECT_EQ(fspec.GetFilename(), "TestModule.py");
-  EXPECT_EQ(load_style, m_target_sp->GetLoadScriptFromSymbolFile());
-}
-
-TEST_F(PlatformLocateSafePathTest,
        LocateScriptingResourcesFromSafePaths_AutoLoadModule_Multiple) {
-  // When multiple modules are in target.auto-load-scripts-for-modules with
-  // value 'true', each module's script should be returned in its respective
-  // auto-load list.
-
+  m_target_sp->SetLoadScriptFromSymbolFile(eLoadScriptFromSymFileTrusted);
   TestingProperties::GetGlobalTestingProperties().AppendSafeAutoLoadPaths(
       FileSpec(m_tmp_root_dir));
 
-  // Set up ModuleA.
-  FileSpec module_a_fspec(CreateFile("ModuleA.o", m_tmp_root_dir));
-  ASSERT_TRUE(module_a_fspec);
+  auto setup_module = [this](llvm::StringRef module_name) {
+    FileSpec module_fspec(
+        CreateFile(llvm::formatv("{0}.o", module_name).str(), m_tmp_root_dir));
+    EXPECT_TRUE(module_fspec);
 
-  llvm::SmallString<128> module_a_dir(m_tmp_root_dir);
-  llvm::sys::path::append(module_a_dir, "ModuleA");
-  ASSERT_FALSE(llvm::sys::fs::create_directory(module_a_dir));
-  CreateFile("ModuleA.py", module_a_dir);
+    llvm::SmallString<128> module_dir(m_tmp_root_dir);
+    llvm::sys::path::append(module_dir, module_name);
+    EXPECT_TRUE(llvm::sys::fs::create_directory(module_dir));
+    CreateFile(llvm::formatv("{0}.py", module_name).str(), module_dir);
 
-  // Set up ModuleB.
-  FileSpec module_b_fspec(CreateFile("ModuleB.o", m_tmp_root_dir));
-  ASSERT_TRUE(module_b_fspec);
+    return module_fspec;
+  };
 
-  llvm::SmallString<128> module_b_dir(m_tmp_root_dir);
-  llvm::sys::path::append(module_b_dir, "ModuleB");
-  ASSERT_FALSE(llvm::sys::fs::create_directory(module_b_dir));
-  CreateFile("ModuleB.py", module_b_dir);
-
-  m_target_sp->SetAutoLoadScriptsForModules("ModuleA", true);
-  m_target_sp->SetAutoLoadScriptsForModules("ModuleB", true);
-
+  FileSpec module_false_fspec = setup_module("ModuleFalse");
+  m_target_sp->SetAutoLoadScriptsForModule("ModuleFalse",
+                                           eLoadScriptFromSymFileFalse);
   {
     StreamString ss;
     auto file_specs = Platform::LocateExecutableScriptingResourcesFromSafePaths(
-        ss, module_a_fspec, *m_target_sp);
+        ss, module_false_fspec, *m_target_sp);
 
-    EXPECT_EQ(file_specs.size(), 1u);
+    ASSERT_EQ(file_specs.size(), 1u);
+    ASSERT_TRUE(file_specs.contains(module_false_fspec));
 
-    auto [fspec, load_style] = *file_specs.begin();
-
-    EXPECT_EQ(fspec.GetFilename(), "ModuleA.py");
-    EXPECT_EQ(load_style, m_target_sp->GetLoadScriptFromSymbolFile());
+    EXPECT_EQ(file_specs[module_false_fspec], eLoadScriptFromSymFileFalse);
   }
 
+  FileSpec module_true_fspec = setup_module("ModuleTrue");
+  m_target_sp->SetAutoLoadScriptsForModule("ModuleTrue",
+                                           eLoadScriptFromSymFileTrue);
   {
     StreamString ss;
     auto file_specs = Platform::LocateExecutableScriptingResourcesFromSafePaths(
-        ss, module_b_fspec, *m_target_sp);
+        ss, module_true_fspec, *m_target_sp);
 
-    EXPECT_EQ(file_specs.size(), 1u);
+    ASSERT_EQ(file_specs.size(), 1u);
+    ASSERT_TRUE(file_specs.contains(module_true_fspec));
 
-    auto [fspec, load_style] = *file_specs.begin();
+    EXPECT_EQ(file_specs[module_true_fspec], eLoadScriptFromSymFileTrue);
+  }
 
-    EXPECT_EQ(fspec.GetFilename(), "ModuleB.py");
-    EXPECT_EQ(load_style, m_target_sp->GetLoadScriptFromSymbolFile());
+  FileSpec module_warn_fspec = setup_module("ModuleWarn");
+  m_target_sp->SetAutoLoadScriptsForModule("ModuleWarn",
+                                           eLoadScriptFromSymFileWarn);
+  {
+    StreamString ss;
+    auto file_specs = Platform::LocateExecutableScriptingResourcesFromSafePaths(
+        ss, module_warn_fspec, *m_target_sp);
+
+    ASSERT_EQ(file_specs.size(), 1u);
+    ASSERT_TRUE(file_specs.contains(module_warn_fspec));
+
+    EXPECT_EQ(file_specs[module_warn_fspec], eLoadScriptFromSymFileWarn);
+  }
+
+  FileSpec module_trusted_fspec = setup_module("ModuleTrusted");
+  m_target_sp->SetAutoLoadScriptsForModule("ModuleTrusted",
+                                           eLoadScriptFromSymFileTrusted);
+  {
+    StreamString ss;
+    auto file_specs = Platform::LocateExecutableScriptingResourcesFromSafePaths(
+        ss, module_trusted_fspec, *m_target_sp);
+
+    ASSERT_EQ(file_specs.size(), 1u);
+    ASSERT_TRUE(file_specs.contains(module_trusted_fspec));
+
+    EXPECT_EQ(file_specs[module_trusted_fspec], eLoadScriptFromSymFileTrusted);
+  }
+
+  FileSpec module_another_true_fspec = setup_module("ModuleAnotherTrue");
+  m_target_sp->SetAutoLoadScriptsForModule("ModuleAnotherTrue",
+                                           eLoadScriptFromSymFileTrue);
+  {
+    StreamString ss;
+    auto file_specs = Platform::LocateExecutableScriptingResourcesFromSafePaths(
+        ss, module_another_true_fspec, *m_target_sp);
+
+    ASSERT_EQ(file_specs.size(), 1u);
+    ASSERT_TRUE(file_specs.contains(module_another_true_fspec));
+
+    EXPECT_EQ(file_specs[module_another_true_fspec],
+              eLoadScriptFromSymFileTrue);
+  }
+
+  FileSpec module_default_fspec = setup_module("ModuleDefault");
+  {
+    StreamString ss;
+    auto file_specs = Platform::LocateExecutableScriptingResourcesFromSafePaths(
+        ss, module_default_fspec, *m_target_sp);
+
+    ASSERT_EQ(file_specs.size(), 1u);
+    ASSERT_TRUE(file_specs.contains(module_default_fspec));
+
+    EXPECT_EQ(file_specs[module_default_fspec], eLoadScriptFromSymFileTrusted);
   }
 }
 #endif // NDEBUG

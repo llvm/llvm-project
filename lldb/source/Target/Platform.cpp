@@ -167,17 +167,9 @@ Platform::GetScriptLoadStyleForModule(const FileSpec &module_fspec,
   LoadScriptFromSymFile default_load_style =
       target.GetLoadScriptFromSymbolFile();
 
-  OptionValueDictionary *names = target.GetAutoLoadScriptsForModules();
-  if (!names)
-    return default_load_style;
-
-  OptionValueSP value_sp =
-      names->GetValueForKey(module_fspec.GetFileNameStrippingExtension());
-  if (!value_sp)
-    return default_load_style;
-
-  return value_sp->GetValueAs<LoadScriptFromSymFile>().value_or(
-      default_load_style);
+  return target
+      .GetAutoLoadScriptsForModule(module_fspec.GetFileNameStrippingExtension())
+      .value_or(default_load_style);
 }
 
 llvm::SmallDenseMap<FileSpec, LoadScriptFromSymFile>
