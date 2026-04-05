@@ -863,6 +863,37 @@ define i1 @test_class_is_not_nan_nnan_src_strict(float %x) strictfp {
   ret i1 %class
 }
 
+; Fold to true when known classes are a strict subset of the mask
+; nnan ninf -> Known = fcFinite (504), Mask = ~fcNan (1020), Known ⊂ Mask
+define i1 @test_class_is_not_nan_nnan_ninf_src(float %x) {
+; CHECK-LABEL: @test_class_is_not_nan_nnan_ninf_src(
+; CHECK-NEXT:    ret i1 true
+;
+  %nnan_ninf = fadd nnan ninf float %x, 1.0
+  %class = call i1 @llvm.is.fpclass.f32(float %nnan_ninf, i32 1020)
+  ret i1 %class
+}
+
+; nnan ninf -> Known = fcFinite (504), Mask = ~fcInf (507), Known ⊂ Mask
+define i1 @test_class_is_not_inf_nnan_ninf_src(float %x) {
+; CHECK-LABEL: @test_class_is_not_inf_nnan_ninf_src(
+; CHECK-NEXT:    ret i1 true
+;
+  %nnan_ninf = fadd nnan ninf float %x, 1.0
+  %class = call i1 @llvm.is.fpclass.f32(float %nnan_ninf, i32 507)
+  ret i1 %class
+}
+
+; nnan ninf -> Known = fcFinite (504), Mask = fcAllFlags (1023), Known ⊂ Mask
+define i1 @test_class_all_nnan_ninf_src(float %x) {
+; CHECK-LABEL: @test_class_all_nnan_ninf_src(
+; CHECK-NEXT:    ret i1 true
+;
+  %nnan_ninf = fadd nnan ninf float %x, 1.0
+  %class = call i1 @llvm.is.fpclass.f32(float %nnan_ninf, i32 1023)
+  ret i1 %class
+}
+
 ; --------------------------------------------------------------------
 ; llvm.is.fpclass with ninf sources
 ; --------------------------------------------------------------------
