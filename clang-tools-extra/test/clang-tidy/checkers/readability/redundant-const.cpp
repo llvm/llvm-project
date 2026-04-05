@@ -27,6 +27,8 @@ constexpr const char* n4 = "hello";
 
 constexpr const auto n5 = "hello";
 
+constexpr const auto const n6 = "hello";
+
 constexpr const char* const p5 = "hello";
 // CHECK-MESSAGES: [[@LINE-1]]:23: warning: redundant use of 'const'; 'constexpr' already implies 'const'
 // CHECK-FIXES: constexpr const char* p5 = "hello";
@@ -36,7 +38,7 @@ const constexpr T p6 = {};
 // CHECK-MESSAGES: [[@LINE-1]]:1: warning: redundant use of 'const'; 'constexpr' already implies 'const'
 // CHECK-FIXES: constexpr T p6 = {};
 
-constexpr const int* n6 = p6<int*>;
+constexpr const int* n7 = p6<int*>;
 
 const constexpr double p7 = p6<double>;
 // CHECK-MESSAGES: [[@LINE-1]]:1: warning: redundant use of 'const'; 'constexpr' already implies 'const'
@@ -73,7 +75,7 @@ class Templated {
     int data[size];
 };
 
-constexpr Templated<int> n7{};
+constexpr Templated<int> n8{};
 
 template <int N>
 struct Templated2 {
@@ -83,7 +85,7 @@ struct Templated2 {
     int data[size];
 };
 
-static constexpr int n8[] = {0, 1, 4, 9, 16};
+static constexpr int n9[] = {0, 1, 4, 9, 16};
 
 constexpr const int p9[] = {0, 1, 4, 9, 16};
 // CHECK-MESSAGES: [[@LINE-1]]:11: warning: redundant use of 'const'; 'constexpr' already implies 'const'
@@ -95,11 +97,11 @@ const constexpr int p10 = square(10);
 // CHECK-MESSAGES: [[@LINE-1]]:1: warning: redundant use of 'const'; 'constexpr' already implies 'const'
 // CHECK-FIXES: constexpr int p10 = square(10);
 
-constexpr int n9 = square(5);
+constexpr int n10 = square(5);
 
-constexpr Foo** n10 = nullptr;
+constexpr Foo** n11 = nullptr;
 
-constexpr Foo* const* n11 = nullptr;
+constexpr Foo* const* n12 = nullptr;
 
 constexpr Foo* const* const p11 = nullptr;
 // CHECK-MESSAGES: [[@LINE-1]]:23: warning: redundant use of 'const'; 'constexpr' already implies 'const'
@@ -109,13 +111,13 @@ constexpr const Foo* const* const p12 = nullptr;
 // CHECK-MESSAGES: [[@LINE-1]]:29: warning: redundant use of 'const'; 'constexpr' already implies 'const'
 // CHECK-FIXES: constexpr const Foo* const* p12 = nullptr;
 
-constexpr const int (*n12)[10] = nullptr;
+constexpr const int (*n13)[10] = nullptr;
 
 constexpr const int (*const p13)[10] = nullptr;
 // CHECK-MESSAGES: [[@LINE-1]]:23: warning: redundant use of 'const'; 'constexpr' already implies 'const'
 // CHECK-FIXES: constexpr const int (*p13)[10] = nullptr;
 
-constexpr int (*n13)(int) = nullptr;
+constexpr int (*n14)(int) = nullptr;
 
 constexpr int (*const p14)(int) = nullptr;
 // CHECK-MESSAGES: [[@LINE-1]]:17: warning: redundant use of 'const'; 'constexpr' already implies 'const'
@@ -126,13 +128,13 @@ struct Bar {
     int sum() { return x + y; }
 };
 
-constexpr const int Bar::*n14 = &Bar::x;
+constexpr const int Bar::*n15 = &Bar::x;
 
 constexpr const int Bar::* const p15 = &Bar::x;
 // CHECK-MESSAGES: [[@LINE-1]]:28: warning: redundant use of 'const'; 'constexpr' already implies 'const'
 // CHECK-FIXES: constexpr const int Bar::* p15 = &Bar::x;
 
-constexpr int (Bar::*n15)() = &Bar::sum;
+constexpr int (Bar::*n16)() = &Bar::sum;
 
 constexpr int (Bar::* const p16)() = &Bar::sum;
 // CHECK-MESSAGES: [[@LINE-1]]:23: warning: redundant use of 'const'; 'constexpr' already implies 'const'
@@ -141,7 +143,7 @@ constexpr int (Bar::* const p16)() = &Bar::sum;
 #define CONSTEXPR constexpr
 #define CONST const
 
-CONSTEXPR Foo n16 = {};
+CONSTEXPR Foo n17 = {};
 
 CONSTEXPR const Foo p17 = {};
 // CHECK-MESSAGES: [[@LINE-1]]:11: warning: redundant use of 'const'; 'constexpr' already implies 'const'
@@ -151,14 +153,14 @@ const CONSTEXPR Foo p18 = {};
 // CHECK-MESSAGES: [[@LINE-1]]:1: warning: redundant use of 'const'; 'constexpr' already implies 'const'
 // CHECK-FIXES: CONSTEXPR Foo p18 = {};
 
-CONST constexpr Foo n17 = {};
-constexpr CONST Foo n18 = {};
+CONST constexpr Foo n18 = {};
+constexpr CONST Foo n19 = {};
 
 const Foo* n20 = nullptr;
 
 // OK for references
-constexpr const Foo& n19 = p18;
-constexpr const Foo*& n21 = n20;
+constexpr const Foo& n21 = p18;
+constexpr const Foo*& n22 = n20;
 
 constexpr const decltype(nullptr) p19 = nullptr;
 // CHECK-MESSAGES: [[@LINE-1]]:11: warning: redundant use of 'const'; 'constexpr' already implies 'const'
