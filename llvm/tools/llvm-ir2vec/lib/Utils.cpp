@@ -43,17 +43,21 @@ namespace llvm {
 
 namespace ir2vec {
 
-Error IR2VecTool::initializeVocabulary(StringRef VocabPath) {
+Expected<std::shared_ptr<Vocabulary>> loadVocabulary(StringRef VocabPath) {
   auto VocabOrErr = Vocabulary::fromFile(VocabPath);
   if (!VocabOrErr)
     return VocabOrErr.takeError();
 
-  Vocab = std::make_unique<Vocabulary>(std::move(*VocabOrErr));
+  auto V = std::make_shared<Vocabulary>(std::move(*VocabOrErr));
 
-  if (!Vocab->isValid())
+  if (!V->isValid())
     return createStringError(errc::invalid_argument,
                              "Failed to initialize IR2Vec vocabulary");
-  return Error::success();
+  return V;
+}
+
+void IR2VecTool::setVocabulary(std::shared_ptr<Vocabulary> V) {
+  Vocab = std::move(V);
 }
 
 TripletResult IR2VecTool::generateTriplets(const Function &F) const {

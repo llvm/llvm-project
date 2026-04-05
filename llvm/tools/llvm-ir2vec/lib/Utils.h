@@ -84,12 +84,15 @@ enum RelationType {
   ArgRelation = 2   ///< Instruction to operand relationship (ArgRelation + N)
 };
 
+/// Load an IR2Vec vocabulary from a JSON file on disk.
+Expected<std::shared_ptr<Vocabulary>> loadVocabulary(StringRef VocabPath);
+
 /// Helper class for collecting IR triplets and generating embeddings
 class IR2VecTool {
 private:
   Module &M;
   ModuleAnalysisManager MAM;
-  std::unique_ptr<Vocabulary> Vocab;
+  std::shared_ptr<Vocabulary> Vocab;
 
 public:
   explicit IR2VecTool(Module &M) : M(M) {}
@@ -98,8 +101,11 @@ public:
   Expected<std::unique_ptr<Embedder>>
   createIR2VecEmbedder(const Function &F, IR2VecKind Kind) const;
 
-  /// Initialize the IR2Vec vocabulary from the specified file path.
-  Error initializeVocabulary(StringRef VocabPath);
+  /// Load vocabulary from a shared pointer. This allows sharing the same
+  /// vocabulary instance across multiple IR2VecTool instances, which is useful
+  /// for generating embeddings for multiple functions without needing to reload
+  /// the vocabulary each time.
+  void setVocabulary(std::shared_ptr<Vocabulary> V);
 
   /// Generate triplets for a single function
   /// Returns a TripletResult with:
