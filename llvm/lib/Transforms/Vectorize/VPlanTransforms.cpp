@@ -5758,10 +5758,15 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
   // otherwise return null.
   auto CheckSentinel = [&SE](const SCEV *IVSCEV,
                              bool UseMax) -> std::optional<APSInt> {
+  // Helper lambda to check if the IV range excludes the sentinel value. Try
+  // signed first, then unsigned. Return an excluded sentinel if found,
+  // otherwise return std::nullopt.
+  auto CheckSentinel = [&SE](const SCEV *IVSCEV,
+                             bool UseMax) -> std::optional<APSInt> {
     unsigned BW = IVSCEV->getType()->getScalarSizeInBits();
     for (bool Signed : {true, false}) {
-      APSInt Sentinel = UseMax ? APSInt::getMinValue(BW, !Signed)
-                               : APSInt::getMaxValue(BW, !Signed);
+      APSInt Sentinel = UseMax ? APSInt::getMinValue(BW, /*Unsigned=*/!Signed)
+                               : APSInt::getMaxValue(BW, /*Unsigned=*/!Signed);
 
       ConstantRange IVRange =
           Signed ? SE.getSignedRange(IVSCEV) : SE.getUnsignedRange(IVSCEV);
@@ -5786,14 +5791,16 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
     // If there's a header mask, the backedge select will not be the find-last
     // select.
     VPValue *BackedgeVal = PhiR->getBackedgeValue();
-    VPValue *FindLastSelect = BackedgeVal;
-    if (HeaderMask && !match(BackedgeVal, m_Select(m_Specific(HeaderMask),
-                                                   m_VPValue(FindLastSelect),
-                                                   m_Specific(PhiR))))
+    auto *FindLastSelect = cast<VPSingleDefRecipe>(BackedgeVal);
+    if (HeaderMask &&
+        !match(BackedgeVal,
+               m_Select(m_Specific(HeaderMask),
+                        m_VPSingleDefRecipe(FindLastSelect), m_Specific(PhiR))))
       llvm_unreachable("expected header mask select");
 
-    // The conditional select of the reduction phi should be a select between
-    // the phi and an IV-based expression. Get that expression.
+    // Get the find-last expression from the find-last select of the reduction
+    // phi. The find-last select should be a select between the phi and the
+    // find-last expression.
     VPValue *Cond, *FindLastExpression;
     if (!match(FindLastSelect, m_Select(m_VPValue(Cond), m_Specific(PhiR),
                                         m_VPValue(FindLastExpression))) &&
@@ -5823,12 +5830,8 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
     // Positive step means we need UMax/SMax to find the last IV value, and
     // UMin/SMin otherwise.
     bool UseMax = SE.isKnownPositive(Step);
-    bool UseSigned;
-    std::optional<APSInt> SentinelVal;
-    if (auto Sentinel = CheckSentinel(IVSCEV, UseMax)) {
-      SentinelVal = *Sentinel;
-      UseSigned = Sentinel->isSigned();
-    }
+    std::optional<APSInt> SentinelVal = CheckSentinel(IVSCEV, UseMax);
+    bool UseSigned = SentinelVal && SentinelVal->isSigned();
 
     // Sinking the expression may enable or disable a sentinel (e.g., if the
     // expression is a multiply or divide by large constant, respectively).
@@ -5927,7 +5930,7 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
 
       VPBuilder LoopBuilder(BackedgeVal->getDefiningRecipe());
       VPValue *AnyOfCond = Cond;
-      if (OrigSelectR->getOperand(1) == PhiR)
+      if (FindLastSelect->getOperand(1) == PhiR)
         AnyOfCond = LoopBuilder.createNot(Cond);
       VPValue *OrVal = LoopBuilder.createOr(AnyOfPhi, AnyOfCond);
       AnyOfPhi->setOperand(1, OrVal);
