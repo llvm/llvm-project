@@ -12,12 +12,10 @@ Examples:
 
 .. code-block:: c++
 
-   // Finds:
    constexpr const int var = 10;  // redundant use of `const`
    // replaced by:
    constexpr int var = 10;
 
-   // Finds:
    constexpr const int arr[] = {}; // redundant use of `const`
    // replaced by:
    constexpr int arr[] = {};
@@ -29,17 +27,14 @@ The check also analyzes pointers:
 
 .. code-block:: c++
 
-   // Finds:
    constexpr int* const ptr = nullptr; // redundant use of `const`
    // replaced by:
    constexpr int* ptr = nullptr;
 
-   // Finds:
    constexpr int (*const func)(int) = nullptr; // redundant use of `const`
    // replaced by:
    constexpr int (*func)(int) = nullptr;
 
-   // Finds:
    constexpr const char* const greet = "hi"; // redundant use of `const`
    // replaced by:
    constexpr const char* greet = "hi";
