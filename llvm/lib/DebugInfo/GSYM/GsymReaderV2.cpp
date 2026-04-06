@@ -12,6 +12,7 @@
 #include <inttypes.h>
 #include <map>
 
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/DebugInfo/GSYM/GlobalData.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -205,11 +206,60 @@ uint64_t GsymReaderV2::getAddressInfoOffset(size_t Index) const {
          GlobalDataSections.at(GlobalInfoType::FunctionInfo).FileOffset;
 }
 
+static const char *getGlobalInfoTypeName(GlobalInfoType Type) {
+  switch (Type) {
+  case GlobalInfoType::EndOfList:
+    return "EndOfList";
+  case GlobalInfoType::AddrOffsets:
+    return "AddrOffsets";
+  case GlobalInfoType::AddrInfoOffsets:
+    return "AddrInfoOffsets";
+  case GlobalInfoType::StringTable:
+    return "StringTable";
+  case GlobalInfoType::FileTable:
+    return "FileTable";
+  case GlobalInfoType::FunctionInfo:
+    return "FunctionInfo";
+  case GlobalInfoType::UUID:
+    return "UUID";
+  }
+  return "Unknown";
+}
+
 void GsymReaderV2::dump(raw_ostream &OS) {
   const auto &Header = getHeader();
   OS << Header << "\n";
+
+  // Print GlobalData directory sorted by file offset.
+  std::vector<GlobalData> Sections;
+  for (const auto &[Type, GD] : GlobalDataSections)
+    Sections.push_back(GD);
+  llvm::sort(Sections, [](const GlobalData &A, const GlobalData &B) {
+    return A.FileOffset < B.FileOffset;
+  });
+  OS << "Global Data Directory:\n";
+  OS << "TYPE            FILE OFFSET 64      FILE SIZE 64\n";
+  OS << "=============== ==================  ==================\n";
+  for (const auto &GD : Sections) {
+    OS << format("%-15s ", getGlobalInfoTypeName(GD.Type))
+       << HEX64(GD.FileOffset) << "  " << HEX64(GD.FileSize) << "\n";
+  }
+  OS << "\n";
+
+  // Print UUID if present.
+  auto UUIDIt = GlobalDataSections.find(GlobalInfoType::UUID);
+  if (UUIDIt != GlobalDataSections.end()) {
+    const GlobalData &UUIDGD = UUIDIt->second;
+    const StringRef Buf = MemBuffer->getBuffer();
+    OS << "UUID:\n";
+    for (uint64_t I = 0; I < UUIDGD.FileSize; ++I)
+      OS << format_hex_no_prefix(
+          static_cast<uint8_t>(Buf[UUIDGD.FileOffset + I]), 2);
+    OS << "\n\n";
+  }
+
   OS << "Address Table:\n";
-  OS << "INDEX  OFFSET";
+  OS << "INDEX  OFFSET ";
   switch (getAddressOffsetSize()) {
   case 1:
     OS << "8 ";
@@ -227,8 +277,8 @@ void GsymReaderV2::dump(raw_ostream &OS) {
     OS << "??";
     break;
   }
-  OS << " (ADDRESS)\n";
-  OS << "====== =============================== \n";
+  OS << " (ADDRESS 64)\n";
+  OS << "====== ========================================\n";
   for (uint32_t I = 0; I < getNumAddresses(); ++I) {
     OS << format("[%4u] ", I);
     switch (getAddressOffsetSize()) {
@@ -250,14 +300,13 @@ void GsymReaderV2::dump(raw_ostream &OS) {
     OS << " (" << HEX64(*getAddress(I)) << ")\n";
   }
   OS << "\nAddress Info Offsets:\n";
-  OS << "INDEX  Offset\n";
-  OS << "====== ==========\n";
-  for (uint32_t I = 0; I < getNumAddresses(); ++I) {
-    OS << format("[%4u] ", I) << HEX32(getAddressInfoOffset(I)) << "\n";
-  }
+  OS << "INDEX  OFFSET 64 (FILE OFFSET 64)\n";
+  OS << "====== ========================================\n";
+  for (uint32_t I = 0; I < getNumAddresses(); ++I)
+    OS << format("[%4u] ", I) << HEX64(GsymReader::getAddressInfoOffset(I)) << " (" << HEX64(getAddressInfoOffset(I)) << ")\n";
   OS << "\nFiles:\n";
   OS << "INDEX  DIRECTORY  BASENAME   PATH\n";
-  OS << "====== ========== ========== ==============================\n";
+  OS << "====== ========== ========== ========================================\n";
   // Since we don't store the total number of files in the file table, loop
   // until we get a null entry which means the index is out of range.
   for (uint32_t I = 0;; ++I) {
