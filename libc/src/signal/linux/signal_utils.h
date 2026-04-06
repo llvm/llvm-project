@@ -133,7 +133,7 @@ private:
   LIBC_INLINE_VAR static RawRwLock abort_lock;
 
 public:
-  LIBC_INLINE constexpr SigAbortGuard(bool exclusive) : old_mask{} {
+  LIBC_INLINE SigAbortGuard(bool exclusive) : old_mask{} {
     RawRwLock::LockResult result = RawRwLock::LockResult::Success;
     do {
       if (exclusive)
