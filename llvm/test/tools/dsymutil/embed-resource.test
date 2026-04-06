@@ -61,5 +61,5 @@ BADEMBED: error: invalid --embed-resource argument 'noequals': expected <src-pat
 RUN: not dsymutil --embed-resource /tmp/a.py=../../etc/passwd file1 2>&1 | FileCheck --check-prefix=ESCAPE %s
 ESCAPE: error: invalid --embed-resource destination '../../etc/passwd': must be a relative path within the bundle
 
-RUN: not dsymutil --embed-resource /tmp/a.py=/etc/passwd file1 2>&1 | FileCheck --check-prefix=ABSOLUTE %s
-ABSOLUTE: error: invalid --embed-resource destination '/etc/passwd': must be a relative path within the bundle
+RUN: not dsymutil --embed-resource /tmp/a.py=%/t/absolute file1 2>&1 | FileCheck --check-prefix=ABSOLUTE %s
+ABSOLUTE: error: invalid --embed-resource destination '{{.*}}absolute': must be a relative path within the bundle
