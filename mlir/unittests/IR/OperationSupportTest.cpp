@@ -23,9 +23,9 @@ static Operation *createOp(MLIRContext *context, ArrayRef<Value> operands = {},
                            ArrayRef<Type> resultTypes = {},
                            unsigned int numRegions = 0) {
   context->allowUnregisteredDialects();
-  return Operation::create(UnknownLoc::get(context),
-                           OperationName("foo.bar", context), resultTypes,
-                           operands, NamedAttrList(), nullptr, {}, numRegions);
+  return Operation::create(
+      UnknownLoc::get(context), OperationName("foo.bar", context), resultTypes,
+      operands, NamedAttrList(), PropertyRef(), {}, numRegions);
 }
 
 namespace {
@@ -237,7 +237,7 @@ TEST(OperationFormatPrintTest, CanPrintNameAsPrefix) {
   Operation *op = Operation::create(
       NameLoc::get(StringAttr::get(&context, "my_named_loc")),
       OperationName("t.op", &context), builder.getIntegerType(16), {},
-      NamedAttrList(), nullptr, {}, 0);
+      NamedAttrList(), PropertyRef(), {}, 0);
 
   std::string str;
   OpPrintingFlags flags;

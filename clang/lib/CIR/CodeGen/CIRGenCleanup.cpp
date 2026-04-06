@@ -542,3 +542,18 @@ void CIRGenFunction::popCleanupBlocks(
     }
   }
 }
+
+/// Pops cleanup blocks until the given savepoint is reached, then add the
+/// cleanups from the given savepoint in the lifetime-extended cleanups stack.
+void CIRGenFunction::popCleanupBlocks(
+    EHScopeStack::stable_iterator oldCleanupStackDepth,
+    size_t oldLifetimeExtendedSize, ArrayRef<mlir::Value *> valuesToReload) {
+  popCleanupBlocks(oldCleanupStackDepth, valuesToReload);
+
+  // Promote deferred lifetime-extended cleanups onto the EH scope stack.
+  for (const LifetimeExtendedCleanupEntry &cleanup : llvm::make_range(
+           lifetimeExtendedCleanupStack.begin() + oldLifetimeExtendedSize,
+           lifetimeExtendedCleanupStack.end()))
+    pushLifetimeExtendedCleanupToEHStack(cleanup);
+  lifetimeExtendedCleanupStack.truncate(oldLifetimeExtendedSize);
+}

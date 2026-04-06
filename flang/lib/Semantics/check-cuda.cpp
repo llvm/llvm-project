@@ -115,6 +115,21 @@ struct DeviceExprChecker
   SemanticsContext &context_;
 };
 
+static bool IsHostArray(const Symbol &symbol) {
+  if (const auto *details{
+          symbol.GetUltimate().detailsIf<semantics::ObjectEntityDetails>()}) {
+    if (details->cudaDataAttr() &&
+        (*details->cudaDataAttr() == common::CUDADataAttr::Device ||
+            *details->cudaDataAttr() == common::CUDADataAttr::Constant ||
+            *details->cudaDataAttr() == common::CUDADataAttr::Managed ||
+            *details->cudaDataAttr() == common::CUDADataAttr::Shared ||
+            *details->cudaDataAttr() == common::CUDADataAttr::Unified)) {
+      return false;
+    }
+  }
+  return true;
+}
+
 struct FindHostArray
     : public evaluate::AnyTraverse<FindHostArray, const Symbol *> {
   using Result = const Symbol *;
@@ -123,9 +138,27 @@ struct FindHostArray
   using Base::operator();
   Result operator()(const evaluate::Component &x) const {
     const Symbol &symbol{x.GetLastSymbol()};
+    const Symbol &baseSymbol{x.base().GetFirstSymbol()};
+    if (symbol.IsFuncResult() || baseSymbol.IsFuncResult()) {
+      return nullptr;
+    }
+    if (!IsHostArray(symbol)) {
+      return nullptr;
+    }
+    if (IsDummy(baseSymbol) && IsCUDADeviceContext(&baseSymbol.owner())) {
+      return nullptr;
+    }
     if (IsAllocatableOrPointer(symbol)) {
       if (Result hostArray{(*this)(symbol)}) {
         return hostArray;
+      }
+    } else if (const auto *details{symbol.GetUltimate()
+                       .detailsIf<semantics::ObjectEntityDetails>()}) {
+      if (details->IsArray()) {
+        if (!IsHostArray(baseSymbol)) {
+          return nullptr;
+        }
+        return &symbol;
       }
     }
     return (*this)(x.base());

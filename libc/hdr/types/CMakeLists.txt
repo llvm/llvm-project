@@ -80,6 +80,14 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  siginfo_t
+  HDRS
+    siginfo_t.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.siginfo_t
+)
+
+add_proxy_header_library(
   struct_epoll_event
   HDRS
     struct_epoll_event.h

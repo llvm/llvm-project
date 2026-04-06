@@ -20,7 +20,6 @@ target triple = "x86_64-pc_linux"
 ;  }
 ;}
 
-; Function Attrs: nounwind uwtable
 define void @foo1(ptr noalias %in, ptr noalias %out, ptr noalias %trigger, ptr noalias %index) {
 ; AVX512-LABEL: @foo1(
 ; AVX512-NEXT:  entry:
