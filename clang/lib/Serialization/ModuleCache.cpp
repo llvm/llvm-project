@@ -108,7 +108,6 @@ class CrossProcessModuleCache : public ModuleCache {
 public:
   std::unique_ptr<llvm::AdvisoryLock>
   getLock(StringRef ModuleFilename) override {
-    auto BypassSandbox = llvm::sys::sandbox::scopedDisable();
     return std::make_unique<llvm::LockFileManager>(ModuleFilename);
   }
 
