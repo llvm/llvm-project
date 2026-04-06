@@ -9,9 +9,9 @@
 // This pass runs after instruction scheduling and employs code layout
 // optimizations for certain patterns.
 //
-// Option -aarch64-code-layout-opt is a bitmask enable for instruction pairs of:
-//   Bit 0 (0x1): Enable FCMP-FCSEL code layout optimization
-//   Bit 1 (0x2): Enable CMP/CMN-CSEL code layout optimization
+// Option -aarch64-code-layout-opt selects instruction pairs to optimize:
+//   fcmp-fcsel: Enable FCMP-FCSEL code layout optimization
+//   cmp-csel:   Enable CMP/CMN-CSEL code layout optimization
 //
 // The initial implementation induces function alignment to help optimize
 // code layout for the detected patterns.
@@ -32,16 +32,17 @@ using namespace llvm;
 #define DEBUG_TYPE "aarch64-code-layout-opt"
 #define AARCH64_CODE_LAYOUT_OPT_NAME "AArch64 Code Layout Optimization"
 
-// Bitmask option for code alignment optimization:
-//   Bit 0 (0x1): Enable FCMP-FCSEL code layout optimization (requires
-//                hasFuseFCmpFCSel)
-//   Bit 1 (0x2): Enable CMP-CSEL code layout optimization,
-//                32-bit only (requires hasFuseCmpCSel)
-static cl::opt<unsigned> EnableCodeAlignment(
-    "aarch64-code-layout-opt", cl::Hidden,
-    cl::desc("Enable code alignment optimization for instruction pairs "
-             "(bitmask: bit 0 = FCMP-FCSEL, bit 1 = CMP-CSEL)"),
-    cl::init(0));
+enum CodeLayoutOpt {
+  FcmpFcsel, // FCMP-FCSEL code layout optimization (requires hasFuseFCmpFCSel)
+  CmpCsel,   // CMP-CSEL code layout optimization (requires hasFuseCmpCSel)
+};
+
+static cl::bits<CodeLayoutOpt> EnableCodeAlignment(
+    "aarch64-code-layout-opt", cl::Hidden, cl::CommaSeparated,
+    cl::desc("Enable code alignment optimization for instruction pairs"),
+    cl::values(clEnumValN(FcmpFcsel, "fcmp-fcsel", "FCMP-FCSEL pair alignment"),
+               clEnumValN(CmpCsel, "cmp-csel",
+                          "CMP/CMN-CSEL pair alignment (32-bit)")));
 
 static cl::opt<unsigned> FunctionAlignBytes(
     "aarch64-code-layout-opt-align-functions", cl::Hidden,
@@ -150,7 +151,7 @@ static bool isQualifyingIntCompare(const MachineInstr &MI) {
 }
 
 bool AArch64CodeLayoutOpt::runOnMachineFunction(MachineFunction &MF) {
-  if (!EnableCodeAlignment)
+  if (!EnableCodeAlignment.getBits())
     return false;
 
   const Function &F = MF.getFunction();
@@ -161,9 +162,9 @@ bool AArch64CodeLayoutOpt::runOnMachineFunction(MachineFunction &MF) {
   const auto *Subtarget = &MF.getSubtarget<AArch64Subtarget>();
   TII = Subtarget->getInstrInfo();
 
-  const unsigned Mask = EnableCodeAlignment;
-  if (!((Mask & 0x1) && Subtarget->hasFuseFCmpFCSel()) &&
-      !((Mask & 0x2) && Subtarget->hasFuseCmpCSel()))
+  if (!((EnableCodeAlignment.isSet(FcmpFcsel)) &&
+        Subtarget->hasFuseFCmpFCSel()) &&
+      !((EnableCodeAlignment.isSet(CmpCsel)) && Subtarget->hasFuseCmpCSel()))
     return false;
 
   return optimizeForCodeLayout(MF);
@@ -177,8 +178,8 @@ bool AArch64CodeLayoutOpt::detectLayoutSensitivePattern(
   auto Instrs = instructionsWithoutDebug(MBB->begin(), MBB->end());
   auto End = MBB->instr_end();
 
-  // --- FCMP-FCSEL detection (bit 0) ---
-  if (EnableCodeAlignment & 0x1) {
+  // --- FCMP-FCSEL detection ---
+  if (EnableCodeAlignment.isSet(FcmpFcsel)) {
     if (llvm::any_of(Instrs, [End](MachineInstr &MI) {
           if (!isFloatingPointCompare(MI.getOpcode()))
             return false;
@@ -192,8 +193,8 @@ bool AArch64CodeLayoutOpt::detectLayoutSensitivePattern(
     }
   }
 
-  // --- CMP/CMN-CSEL detection (bit 1) ---
-  if (EnableCodeAlignment & 0x2) {
+  // --- CMP/CMN-CSEL detection ---
+  if (EnableCodeAlignment.isSet(CmpCsel)) {
     if (llvm::any_of(Instrs, [End](MachineInstr &MI) {
           if (!isQualifyingIntCompare(MI))
             return false;

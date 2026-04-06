@@ -1,5 +1,5 @@
 ; NOTE: Test cases for FCMP-FCSEL and CMP/CMN-CSEL code layout optimization
-; RUN: llc < %s -verify-machineinstrs -mtriple=aarch64-apple-darwin -mcpu=apple-m4 -aarch64-code-layout-opt=3 | FileCheck %s
+; RUN: llc < %s -verify-machineinstrs -mtriple=aarch64-apple-darwin -mcpu=apple-m4 -aarch64-code-layout-opt=fcmp-fcsel,cmp-csel | FileCheck %s
 
 ; Test coverage for optimizeForCodeLayout function:
 ; 1. Basic FCMP-FCSEL instruction pair detection and function alignment (single/double precision)
@@ -107,7 +107,7 @@ entry:
 }
 
 ;------------------------------------------------------------------------------
-; CMP/CMN-CSEL tests (bit 1 of -aarch64-code-layout-opt)
+; CMP/CMN-CSEL tests (cmp-csel flag of -aarch64-code-layout-opt)
 ;------------------------------------------------------------------------------
 
 ; Test 9: Basic CMP-CSEL instruction pair (integer register comparison)
