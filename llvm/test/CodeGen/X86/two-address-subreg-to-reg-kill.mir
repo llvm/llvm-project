@@ -54,4 +54,55 @@ body: |
     dead %2:gr32 = IMUL32rm %1, %0, 1, $noreg, 4, $noreg, implicit-def dead $eflags :: (load (s32) from `ptr undef`, align 4)
     dead %3:gr64 = SUBREG_TO_REG killed %1, %subreg.sub_32bit
     RET 0
+
+---
+# Positive case: COPY to a physical register is hoisted above IMUL32rm.
+name: copy_kill_hoist
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gr64 }
+  - { id: 1, class: gr32 }
+  - { id: 2, class: gr32 }
+liveins:
+  - { reg: '$rdi', virtual-reg: '%0' }
+  - { reg: '$esi', virtual-reg: '%1' }
+body: |
+  bb.0:
+    liveins: $rdi, $esi
+
+    ; CHECK-LABEL: name: copy_kill_hoist
+    ; CHECK: [[COPY1:%[0-9]+]]:gr32 = COPY killed $esi
+    ; CHECK-NEXT: dead $eax = COPY [[COPY1]]
+    ; CHECK: IMUL32rm
+    %0:gr64 = COPY killed $rdi
+    %1:gr32 = COPY killed $esi
+    dead %2:gr32 = IMUL32rm %1, %0, 1, $noreg, 4, $noreg, implicit-def dead $eflags :: (load (s32) from `ptr undef`, align 4)
+    dead $eax = COPY killed %1
+    RET 0
+
+---
+# Negative case: COPY with a vreg destination is not hoisted.
+name: copy_virtual_dst_no_hoist
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gr64 }
+  - { id: 1, class: gr32 }
+  - { id: 2, class: gr32 }
+  - { id: 3, class: gr32 }
+liveins:
+  - { reg: '$rdi', virtual-reg: '%0' }
+  - { reg: '$esi', virtual-reg: '%1' }
+body: |
+  bb.0:
+    liveins: $rdi, $esi
+
+    ; CHECK-LABEL: name: copy_virtual_dst_no_hoist
+    ; CHECK: MOV32rm
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gr32 = COPY
+    ; CHECK-NEXT: dead [[COPY2]]:gr32 = IMUL32rr [[COPY2]], %1, implicit-def dead $eflags
+    %0:gr64 = COPY killed $rdi
+    %1:gr32 = COPY killed $esi
+    dead %2:gr32 = IMUL32rm %1, %0, 1, $noreg, 4, $noreg, implicit-def dead $eflags :: (load (s32) from `ptr undef`, align 4)
+    dead %3:gr32 = COPY killed %1
+    RET 0
 ...
