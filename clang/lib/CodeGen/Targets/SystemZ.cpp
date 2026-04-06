@@ -847,7 +847,7 @@ ABIArgInfo ZOSXPLinkABIInfo::classifyReturnType(QualType RetTy,
     RetTy = EnumTy->getDecl()->getIntegerType();
 
   return (isPromotableIntegerTypeForABI(RetTy) ? ABIArgInfo::getExtend(RetTy)
-                                         : ABIArgInfo::getDirect());
+                                               : ABIArgInfo::getDirect());
 }
 
 ABIArgInfo ZOSXPLinkABIInfo::classifyArgumentType(QualType Ty, bool IsNamedArg,
@@ -895,30 +895,24 @@ ABIArgInfo ZOSXPLinkABIInfo::classifyArgumentType(QualType Ty, bool IsNamedArg,
   // If place available, complex like types will have their members
   // placed in FPRs.
   if (Ty->getAs<RecordType>() || Ty->isAnyComplexType() || CompTy.has_value()) {
-    if (isAggregateTypeForABI(Ty) || Ty->isAnyComplexType() ||
-        CompTy.has_value()) {
-      // Since an aggregate may end up in registers, pass the aggregate as
-      // array. This is usually beneficial since we avoid forcing the back-end
-      // to store the argument to memory.
-      uint64_t Bits = getContext().getTypeSize(Ty);
-      llvm::Type *CoerceTy;
+    // Since an aggregate may end up in registers, pass the aggregate as
+    // array. This is usually beneficial since we avoid forcing the back-end
+    // to store the argument to memory.
+    uint64_t Bits = getContext().getTypeSize(Ty);
+    llvm::Type *CoerceTy;
 
-      // Struct types up to 8 bytes are passed as integer type (which  will be
-      // properly aligned in the argument save area doubleword).
-      if (Bits <= GPRBits)
-        CoerceTy = llvm::IntegerType::get(getVMContext(), GPRBits);
-      // Larger types are passed as arrays, with the base type selected
-      // according to the required alignment in the save area.
-      else {
-        uint64_t NumRegs = llvm::alignTo(Bits, GPRBits) / GPRBits;
-        llvm::Type *RegTy = llvm::IntegerType::get(getVMContext(), GPRBits);
-        CoerceTy = llvm::ArrayType::get(RegTy, NumRegs);
-      }
-
-      return ABIArgInfo::getDirect(CoerceTy);
+    // Struct types up to 8 bytes are passed as integer type (which  will be
+    // properly aligned in the argument save area doubleword).
+    if (Bits <= GPRBits)
+      CoerceTy = llvm::IntegerType::get(getVMContext(), GPRBits);
+    // Larger types are passed as arrays, with the base type selected
+    // according to the required alignment in the save area.
+    else {
+      uint64_t NumRegs = llvm::alignTo(Bits, GPRBits) / GPRBits;
+      llvm::Type *RegTy = llvm::IntegerType::get(getVMContext(), GPRBits);
+      CoerceTy = llvm::ArrayType::get(RegTy, NumRegs);
     }
-
-    return ABIArgInfo::getDirect();
+    return ABIArgInfo::getDirect(CoerceTy);
   }
 
   // Non-structure compounds are passed indirectly, i.e. arrays.
