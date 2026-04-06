@@ -321,7 +321,9 @@ void GsymReaderV2::dump(raw_ostream &OS) {
     dump(OS, FE);
     OS << "\n";
   }
-  OS << "\n" << StrTab << "\n";
+  OS << "\n";
+  gsym::dump(OS, StrTab, 8);
+  OS << "\n";
 
   for (uint32_t I = 0; I < getNumAddresses(); ++I) {
     OS << "FunctionInfo @ " << HEX32(getAddressInfoOffset(I)) << ": ";

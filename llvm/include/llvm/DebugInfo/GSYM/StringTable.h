@@ -34,16 +34,32 @@ struct StringTable {
   void clear() { Data = StringRef(); }
 };
 
-inline raw_ostream &operator<<(raw_ostream &OS, const StringTable &S) {
+inline void dump(raw_ostream &OS, const StringTable &S,
+                 uint8_t StringOffsetSize) {
   OS << "String table:\n";
   gsym_strp_t Offset = 0;
   const size_t Size = S.Data.size();
   while (Offset < Size) {
     StringRef Str = S.getString(Offset);
-    OS << HEX64(Offset) << ": \"" << Str << "\"\n";
+    switch (StringOffsetSize) {
+    case 1:
+      OS << HEX8(Offset);
+      break;
+    case 2:
+      OS << HEX16(Offset);
+      break;
+    case 4:
+      OS << HEX32(Offset);
+      break;
+    case 8:
+      OS << HEX64(Offset);
+      break;
+    default:
+      OS << HEX64(Offset);
+    }
+    OS << ": \"" << Str << "\"\n";
     Offset += Str.size() + 1;
   }
-  return OS;
 }
 
 } // namespace gsym
