@@ -114,7 +114,6 @@ body:             |
     ; GFX1250-NEXT: $sgpr45 = S_MOV_B32 0
     ; GFX1250-NEXT: [[COPY1:%[0-9]+]]:vreg_64_align2 = COPY $sgpr44_sgpr45
     ; GFX1250-NEXT: [[GLOBAL_LOAD_DWORD1:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD [[COPY1]], 0, 0, implicit $exec, implicit $exec :: (load (s32), addrspace 1)
-    ; GFX1250-NEXT: KILL killed [[COPY]], killed [[COPY1]]
     ; GFX1250-NEXT: $sgpr44 = S_MOV_B32 1
     ; GFX1250-NEXT: S_ENDPGM 0, implicit [[GLOBAL_LOAD_DWORD]], implicit [[GLOBAL_LOAD_DWORD1]]
     ;

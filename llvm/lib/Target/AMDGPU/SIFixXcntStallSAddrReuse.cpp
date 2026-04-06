@@ -24,25 +24,12 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
 
 #define DEBUG_TYPE "si-fix-xcnt-stall-saddr-reuse"
 
 STATISTIC(NumConverted, "Number of SADDR loads converted to VADDR");
-
-static cl::opt<unsigned> SAddrRedefWindow(
-    "amdgpu-saddr-redef-window",
-    cl::desc("Maximum instructions to scan for saddr redefines "
-             "(0 = scan to end of block)"),
-    cl::init(0), cl::Hidden);
-
-static cl::opt<unsigned> AddrLivenessGroupSize(
-    "amdgpu-saddr-vaddr-liveness-group",
-    cl::desc("Maximum converted VADDRs kept simultaneously live, kill is "
-             "issued for each group"),
-    cl::init(16), cl::Hidden);
 
 namespace {
 
@@ -124,7 +111,6 @@ static bool isEligible(const MachineInstr &MI, const SIInstrInfo &TII,
 
 bool SIFixXcntStallSAddrReuse::sAddrRedefinedAfter(MachineInstr &MI,
                                                    Register SAddr) {
-  unsigned NumScanned = 0;
   MachineBasicBlock::iterator I = std::next(MI.getIterator());
   MachineBasicBlock::iterator E = MI.getParent()->end();
   for (; I != E; ++I) {
@@ -132,10 +118,6 @@ bool SIFixXcntStallSAddrReuse::sAddrRedefinedAfter(MachineInstr &MI,
       if (MO.isReg() && MO.isDef() && MO.getReg().isPhysical() &&
           TRI->regsOverlap(MO.getReg(), SAddr))
         return true;
-
-    if (!I->isMetaInstruction() && SAddrRedefWindow > 0 &&
-        ++NumScanned >= SAddrRedefWindow)
-      return false;
   }
   return false;
 }
@@ -264,24 +246,7 @@ MachineInstr *SIFixXcntStallSAddrReuse::convertToVAddr(MachineInstr &MI,
 }
 
 bool SIFixXcntStallSAddrReuse::processMBB(MachineBasicBlock &MBB) {
-  SmallVector<Register, 8> GroupRegs;
-  MachineInstr *GroupLast = nullptr;
   bool Changed = false;
-
-  auto FlushGroup = [&]() {
-    if (GroupLast && GroupRegs.size() > 1) {
-      auto KillMI =
-          BuildMI(MBB, std::next(GroupLast->getIterator()),
-                  GroupLast->getDebugLoc(), TII->get(TargetOpcode::KILL));
-      for (Register R : GroupRegs)
-        KillMI.addReg(R, RegState::Kill);
-      if (LIS) {
-        LIS->InsertMachineInstrInMaps(*KillMI);
-      }
-    }
-    GroupRegs.clear();
-    GroupLast = nullptr;
-  };
 
   for (MachineInstr &MI : llvm::make_early_inc_range(MBB)) {
     int SAddrIdx;
@@ -291,19 +256,10 @@ bool SIFixXcntStallSAddrReuse::processMBB(MachineBasicBlock &MBB) {
       continue;
 
     Register NewAddr;
-    MachineInstr *NewMI = convertToVAddr(MI, MBB, NewAddr);
-    if (NewMI) {
-      GroupRegs.push_back(NewAddr);
-      GroupLast = NewMI;
+    if (convertToVAddr(MI, MBB, NewAddr))
       Changed = true;
-
-      if (AddrLivenessGroupSize > 0 &&
-          GroupRegs.size() >= AddrLivenessGroupSize)
-        FlushGroup();
-    }
   }
 
-  FlushGroup();
   return Changed;
 }
 
