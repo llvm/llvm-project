@@ -1,13 +1,13 @@
 ; RUN: llc < %s -mtriple=nvptx64-nvidia-cuda | FileCheck %s
 ; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64-nvidia-cuda | %ptxas-verify %}
 
-;; When a module contains multiple CUs where one is DebugDirectiveOnly and
+;; When a module contains multiple CUs where one is DebugDirectivesOnly and
 ;; the rest are NoDebug, we would attempt to emit dwarf directives for the
 ;; NoDebug CUs leading to an assertion. This test verifies that we only emit
-;; dwarf directives for the DebugDirectiveOnly CU.
+;; dwarf directives for the DebugDirectivesOnly CU.
 
 define i32 @foo(i32 %a, i32 %b) !dbg !5 {
-
+; CHECK-LABEL: foo
 ; CHECK:     .loc    [[FILE:[0-9]+]] 26 0          // debug_directives_only.cu:26:0
 ; CHECK-NOT: .loc    [[FILE]]        26 0          // debug_directives_only.cu:26:0
 ; CHECK:     .loc    [[FILE]]        40 22         // debug_directives_only.cu:40:22
@@ -17,7 +17,7 @@ define i32 @foo(i32 %a, i32 %b) !dbg !5 {
 }
 
 define i32 @bar(i32 %a, i32 %b) !dbg !40 {
-
+; CHECK-LABEL: bar
 ; CHECK-NOT: .loc
 
   %add = add i32 %b, %a, !dbg !41
