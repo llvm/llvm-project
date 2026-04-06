@@ -639,11 +639,11 @@ define void @triple_nested_loop_mixed_access(ptr nocapture noundef %dst, ptr noc
 ; CHECK-NEXT:    [[WIDE_TRIP_COUNT68:%.*]] = zext i32 [[M]] to i64
 ; CHECK-NEXT:    [[WIDE_TRIP_COUNT60:%.*]] = zext i32 [[N]] to i64
 ; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext i32 [[O]] to i64
-; CHECK-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = mul i64 [[WIDE_TRIP_COUNT60]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = shl i64 [[TMP3]], 2
-; CHECK-NEXT:    [[TMP5:%.*]] = mul i64 [[WIDE_TRIP_COUNT]], [[TMP1]]
+; CHECK-NEXT:    [[TMP5:%.*]] = mul i64 [[WIDE_TRIP_COUNT]], [[WIDE_TRIP_COUNT60]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = shl i64 [[TMP5]], 2
-; CHECK-NEXT:    [[TMP7:%.*]] = mul i64 [[WIDE_TRIP_COUNT]], [[TMP1]]
+; CHECK-NEXT:    [[TMP7:%.*]] = mul i64 [[WIDE_TRIP_COUNT]], [[WIDE_TRIP_COUNT60]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = shl i64 [[TMP7]], 2
 ; CHECK-NEXT:    [[TMP9:%.*]] = shl nuw nsw i64 [[WIDE_TRIP_COUNT]], 2
 ; CHECK-NEXT:    br label [[OUTER_OUTER_LOOP:%.*]]
