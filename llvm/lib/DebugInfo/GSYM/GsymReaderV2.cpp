@@ -52,10 +52,10 @@ GsymReaderV2::create(std::unique_ptr<MemoryBuffer> &MB) {
 
 /// Helper to parse GlobalData entries from a GSYM V2 file.
 static llvm::Error
-parseGlobalDataEntries(DataExtractor &DE, uint64_t &Offset, uint64_t BufSize,
+parseGlobalDataEntries(DataExtractor &Data, uint64_t &Offset, uint64_t BufSize,
                        std::map<GlobalInfoType, GlobalData> &Sections) {
   while (Offset + sizeof(GlobalData) <= BufSize) {
-    auto GDOrErr = GlobalData::decode(DE, Offset);
+    auto GDOrErr = GlobalData::decode(Data, Offset);
     if (!GDOrErr)
       return GDOrErr.takeError();
     const GlobalData &GD = *GDOrErr;
@@ -107,9 +107,9 @@ llvm::Error GsymReaderV2::parse() {
 
   const bool IsLittleEndian = (Endian == llvm::endianness::little);
   // Read a correctly byte swapped header if we need to.
-  DataExtractor DE(Buf, IsLittleEndian, 8);
+  DataExtractor Data(Buf, IsLittleEndian, 8);
   if (SwappedHdr) {
-    auto ExpectedHdr = HeaderV2::decode(DE);
+    auto ExpectedHdr = HeaderV2::decode(Data);
     if (!ExpectedHdr)
       return ExpectedHdr.takeError();
     *SwappedHdr = *ExpectedHdr;
@@ -127,7 +127,7 @@ llvm::Error GsymReaderV2::parse() {
   // Parse GlobalData entries to find section locations.
   uint64_t Offset = HeaderV2::getEncodedSize();
   if (auto Err =
-          parseGlobalDataEntries(DE, Offset, BufSize, GlobalDataSections))
+          parseGlobalDataEntries(Data, Offset, BufSize, GlobalDataSections))
     return Err;
 
   for (auto Type :
@@ -160,34 +160,34 @@ llvm::Error GsymReaderV2::parse() {
   // AddrOffsets
   {
     uint64_t AddrOffsetsOff = AddrOffsetsGD.FileOffset;
-    if (auto Err = parseAddrOffsets(DE, AddrOffsetsOff, SwappedHdr != nullptr))
+    if (auto Err = parseAddrOffsets(Data, AddrOffsetsOff, SwappedHdr != nullptr))
       return Err;
   }
 
   // AddrInfoOffsets
   {
-    Expected<StringRef> Data = AddrInfoOffsetsGD.getStringRef(DE);
-    if (!Data)
-      return Data.takeError();
+    Expected<StringRef> Bytes = AddrInfoOffsetsGD.getStringRef(Data);
+    if (!Bytes)
+      return Bytes.takeError();
     // The above getStringRef() already returns the correct data range.
     // DataExtractor will ensure that accesses are within the range.
-    AddrInfoOffsetsData = DataExtractor(*Data, IsLittleEndian, 8);
+    AddrInfoOffsetsData = DataExtractor(*Bytes, IsLittleEndian, 8);
   }
 
   // String table
   {
-    Expected<StringRef> Data = StringTableGD.getStringRef(DE);
-    if (!Data)
-      return Data.takeError();
-    StrTab.Data = *Data;
+    Expected<StringRef> Bytes = StringTableGD.getStringRef(Data);
+    if (!Bytes)
+      return Bytes.takeError();
+    StrTab.Data = *Bytes;
   }
 
   // File table
   {
-    Expected<StringRef> Data = FileTableGD.getStringRef(DE);
-    if (!Data)
-      return Data.takeError();
-    DataExtractor FileTableDE(*Data, IsLittleEndian, 8);
+    Expected<StringRef> Bytes = FileTableGD.getStringRef(Data);
+    if (!Bytes)
+      return Bytes.takeError();
+    DataExtractor FileTableDE(*Bytes, IsLittleEndian, 8);
     uint64_t FTOffset = 0;
     if (auto Err = parseFileTable(FileTableDE, FTOffset))
       return Err;

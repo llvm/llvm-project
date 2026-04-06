@@ -380,20 +380,20 @@ protected:
 
   /// Parse address offsets from a DataExtractor into AddrOffsets.
   ///
-  /// \param DE DataExtractor over the buffer containing address offsets.
-  /// \param Offset The byte offset into DE where address offsets start.
+  /// \param Data DataExtractor over the buffer containing address offsets.
+  /// \param Offset The byte offset into Data where address offsets start.
   ///   Advanced past the address offsets on success.
   /// \param Swap True if byte swapping is needed.
   /// \returns Error on failure.
-  llvm::Error parseAddrOffsets(DataExtractor &DE, uint64_t &Offset, bool Swap);
+  llvm::Error parseAddrOffsets(DataExtractor &Data, uint64_t &Offset, bool Swap);
 
   /// Parse a file table from a DataExtractor into FileEntryData.
   ///
-  /// \param DE DataExtractor over the buffer containing the file table.
-  /// \param Offset The byte offset into DE where the file table starts
+  /// \param Data DataExtractor over the buffer containing the file table.
+  /// \param Offset The byte offset into Data where the file table starts
   ///   (at the NumFiles uint32_t). Advanced past the file table on success.
   /// \returns Error on failure.
-  llvm::Error parseFileTable(DataExtractor &DE, uint64_t &Offset);
+  llvm::Error parseFileTable(DataExtractor &Data, uint64_t &Offset);
 
   /// Given an address, find the correct function info data and function
   /// address.

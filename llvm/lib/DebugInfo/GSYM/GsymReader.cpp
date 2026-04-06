@@ -31,46 +31,46 @@ GsymReader::GsymReader(std::unique_ptr<MemoryBuffer> Buffer)
 
 GsymReader::GsymReader(GsymReader &&RHS) = default;
 
-llvm::Error GsymReader::parseAddrOffsets(DataExtractor &DE, uint64_t &Offset,
+llvm::Error GsymReader::parseAddrOffsets(DataExtractor &Data, uint64_t &Offset,
                                          bool Swap) {
   const uint8_t AddrOffSize = getAddressOffsetSize();
   const uint32_t NumAddrs = getNumAddresses();
   const size_t TotalBytes = NumAddrs * AddrOffSize;
   if (!Swap) {
-    StringRef Data = DE.getData();
-    if (Offset + TotalBytes > Data.size())
+    StringRef Bytes = Data.getData();
+    if (Offset + TotalBytes > Bytes.size())
       return createStringError(std::errc::invalid_argument,
                                "failed to read address table");
     AddrOffsets = ArrayRef<uint8_t>(
-        reinterpret_cast<const uint8_t *>(Data.data() + Offset), TotalBytes);
+        reinterpret_cast<const uint8_t *>(Bytes.data() + Offset), TotalBytes);
     Offset += TotalBytes;
     return Error::success();
   }
   SwappedAddrOffsets.resize(TotalBytes);
   switch (AddrOffSize) {
   case 1:
-    if (!DE.getU8(&Offset, SwappedAddrOffsets.data(), NumAddrs))
+    if (!Data.getU8(&Offset, SwappedAddrOffsets.data(), NumAddrs))
       return createStringError(std::errc::invalid_argument,
                                "failed to read address table");
     break;
   case 2:
-    if (!DE.getU16(&Offset,
-                   reinterpret_cast<uint16_t *>(SwappedAddrOffsets.data()),
-                   NumAddrs))
+    if (!Data.getU16(&Offset,
+                     reinterpret_cast<uint16_t *>(SwappedAddrOffsets.data()),
+                     NumAddrs))
       return createStringError(std::errc::invalid_argument,
                                "failed to read address table");
     break;
   case 4:
-    if (!DE.getU32(&Offset,
-                   reinterpret_cast<uint32_t *>(SwappedAddrOffsets.data()),
-                   NumAddrs))
+    if (!Data.getU32(&Offset,
+                     reinterpret_cast<uint32_t *>(SwappedAddrOffsets.data()),
+                     NumAddrs))
       return createStringError(std::errc::invalid_argument,
                                "failed to read address table");
     break;
   case 8:
-    if (!DE.getU64(&Offset,
-                   reinterpret_cast<uint64_t *>(SwappedAddrOffsets.data()),
-                   NumAddrs))
+    if (!Data.getU64(&Offset,
+                     reinterpret_cast<uint64_t *>(SwappedAddrOffsets.data()),
+                     NumAddrs))
       return createStringError(std::errc::invalid_argument,
                                "failed to read address table");
     break;
@@ -81,15 +81,15 @@ llvm::Error GsymReader::parseAddrOffsets(DataExtractor &DE, uint64_t &Offset,
 
 /// Check magic bytes and return the GSYM version from raw bytes.
 /// If magic bytes are invalid, return error.
-static Expected<uint16_t> checkMagicAndDetectVersion(StringRef Data) {
-  if (Data.size() < 6)
+static Expected<uint16_t> checkMagicAndDetectVersion(StringRef Bytes) {
+  if (Bytes.size() < 6)
     return createStringError(std::errc::invalid_argument,
                              "data too small to be a GSYM file");
   const bool IsHostLittleEndian =
       llvm::endianness::native == llvm::endianness::little;
-  DataExtractor DE(Data, IsHostLittleEndian, 4);
+  DataExtractor Data(Bytes, IsHostLittleEndian, 4);
   uint64_t Offset = 0;
-  uint32_t Magic = DE.getU32(&Offset);
+  uint32_t Magic = Data.getU32(&Offset);
   bool NeedSwap;
   if (Magic == GSYM_MAGIC)
     NeedSwap = false;
@@ -100,10 +100,10 @@ static Expected<uint16_t> checkMagicAndDetectVersion(StringRef Data) {
                              "not a GSYM file (bad magic)");
   if (NeedSwap) {
     // Re-create DataExtractor with swapped endianness to read version.
-    DE = DataExtractor(Data, !IsHostLittleEndian, 4);
+    Data = DataExtractor(Bytes, !IsHostLittleEndian, 4);
     Offset = 4;
   }
-  return DE.getU16(&Offset);
+  return Data.getU16(&Offset);
 }
 
 llvm::Expected<std::unique_ptr<GsymReader>>
@@ -199,18 +199,18 @@ GsymReader::getAddressIndex(const uint64_t Addr) const {
                            "address 0x%" PRIx64 " is not in GSYM", Addr);
 }
 
-llvm::Error GsymReader::parseFileTable(DataExtractor &DE, uint64_t &Offset) {
+llvm::Error GsymReader::parseFileTable(DataExtractor &Data, uint64_t &Offset) {
   const uint8_t StrpSize = getStringOffsetSize();
-  uint32_t NumFiles = DE.getU32(&Offset);
+  uint32_t NumFiles = Data.getU32(&Offset);
   uint64_t EntriesSize = static_cast<uint64_t>(NumFiles) * FileEntry::getEncodedSize(StrpSize);
-  StringRef Data = DE.getData();
-  if (Data.size() < Offset + EntriesSize)
+  StringRef Bytes = Data.getData();
+  if (Bytes.size() < Offset + EntriesSize)
     return createStringError(std::errc::invalid_argument,
                              "FileTable section too small for %u files",
                              NumFiles);
-  const bool IsLittleEndian = DE.isLittleEndian();
-  FileEntryData = DataExtractor(Data.substr(Offset, EntriesSize),
-                                IsLittleEndian, DE.getAddressSize());
+  const bool IsLittleEndian = Data.isLittleEndian();
+  FileEntryData = DataExtractor(Bytes.substr(Offset, EntriesSize),
+                                IsLittleEndian, Data.getAddressSize());
   FileEntryData.setStringOffsetSize(StrpSize);
   Offset += EntriesSize;
   return Error::success();

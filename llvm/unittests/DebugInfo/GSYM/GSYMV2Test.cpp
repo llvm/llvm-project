@@ -56,20 +56,20 @@ static Expected<SmallString<512>> encodeV2(const GsymCreatorV2 &GC,
 }
 
 /// Helper to decode the HeaderV2 from raw bytes.
-static Expected<HeaderV2> decodeHeaderV2(StringRef Data,
+static Expected<HeaderV2> decodeHeaderV2(StringRef Bytes,
                                          llvm::endianness ByteOrder) {
-  DataExtractor DE(Data, ByteOrder == llvm::endianness::little, 8);
-  return HeaderV2::decode(DE);
+  DataExtractor Data(Bytes, ByteOrder == llvm::endianness::little, 8);
+  return HeaderV2::decode(Data);
 }
 
 /// Helper to decode a GlobalData entry at a given offset.
-static GlobalData decodeGlobalDataEntry(StringRef Data, uint64_t &Offset,
+static GlobalData decodeGlobalDataEntry(StringRef Bytes, uint64_t &Offset,
                                         llvm::endianness ByteOrder) {
-  DataExtractor DE(Data, ByteOrder == llvm::endianness::little, 8);
+  DataExtractor Data(Bytes, ByteOrder == llvm::endianness::little, 8);
   GlobalData GD;
-  GD.Type = static_cast<GlobalInfoType>(DE.getU32(&Offset));
-  GD.FileOffset = DE.getU64(&Offset);
-  GD.FileSize = DE.getU64(&Offset);
+  GD.Type = static_cast<GlobalInfoType>(Data.getU32(&Offset));
+  GD.FileOffset = Data.getU64(&Offset);
+  GD.FileSize = Data.getU64(&Offset);
   return GD;
 }
 
@@ -239,7 +239,7 @@ TEST(GSYMV2Test, TestCreatorV2AddrInfoOffsetsPointToFunctionInfo) {
 
   auto Result = encodeV2(GC, llvm::endianness::little);
   ASSERT_THAT_EXPECTED(Result, Succeeded());
-  StringRef Data = *Result;
+  StringRef Bytes = *Result;
 
   constexpr uint8_t AddrInfoOffSize = HeaderV2::getAddressInfoOffsetSize();
 
@@ -247,9 +247,9 @@ TEST(GSYMV2Test, TestCreatorV2AddrInfoOffsetsPointToFunctionInfo) {
   uint64_t Offset = HeaderV2::getEncodedSize();
   uint64_t AIOffsetsOffset = 0;
   uint64_t FISize = 0;
-  while (Offset < Data.size()) {
+  while (Offset < Bytes.size()) {
     GlobalData GD =
-        decodeGlobalDataEntry(Data, Offset, llvm::endianness::little);
+        decodeGlobalDataEntry(Bytes, Offset, llvm::endianness::little);
     if (GD.Type == GlobalInfoType::AddrInfoOffsets) {
       AIOffsetsOffset = GD.FileOffset;
     } else if (GD.Type == GlobalInfoType::FunctionInfo) {
@@ -263,20 +263,20 @@ TEST(GSYMV2Test, TestCreatorV2AddrInfoOffsetsPointToFunctionInfo) {
 
   // Each AddrInfoOffset is relative to the FunctionInfo section and should
   // be within [0, FISize).
-  DataExtractor DE(Data, /*IsLittleEndian=*/true, 8);
+  DataExtractor Data(Bytes, /*IsLittleEndian=*/true, 8);
   uint64_t AIOffset = AIOffsetsOffset;
   for (uint32_t I = 0; I < 3; ++I) {
-    uint64_t RelOff = DE.getUnsigned(&AIOffset, AddrInfoOffSize);
+    uint64_t RelOff = Data.getUnsigned(&AIOffset, AddrInfoOffSize);
     EXPECT_LT(RelOff, FISize)
         << "AddrInfoOffset[" << I << "] beyond FunctionInfo section";
   }
 
   // Relative offsets should be strictly increasing (sorted functions).
   AIOffset = AIOffsetsOffset;
-  uint64_t PrevOff = DE.getUnsigned(&AIOffset, AddrInfoOffSize);
+  uint64_t PrevOff = Data.getUnsigned(&AIOffset, AddrInfoOffSize);
   EXPECT_EQ(PrevOff, 0u) << "First AddrInfoOffset should be 0";
   for (uint32_t I = 1; I < 3; ++I) {
-    uint64_t CurOff = DE.getUnsigned(&AIOffset, AddrInfoOffSize);
+    uint64_t CurOff = Data.getUnsigned(&AIOffset, AddrInfoOffSize);
     EXPECT_GT(CurOff, PrevOff)
         << "AddrInfoOffset[" << I << "] not strictly increasing";
     PrevOff = CurOff;
@@ -607,14 +607,14 @@ TEST(GSYMV2Test, TestReaderV2TruncatedFileTable) {
   // GlobalData entries start at offset 24 (after HeaderV2).
   // Each entry is 20 bytes: Type(4) + FileOffset(8) + FileSize(8).
   // We need to find the FileTable entry and modify its FileSize.
-  DataExtractor DE(StringRef(Bytes.data(), Bytes.size()),
-                   llvm::endianness::native == llvm::endianness::little, 8);
+  DataExtractor Data(StringRef(Bytes.data(), Bytes.size()),
+                     llvm::endianness::native == llvm::endianness::little, 8);
   uint64_t Offset = HeaderV2::getEncodedSize();
   while (Offset < Bytes.size()) {
     uint64_t EntryOffset = Offset;
-    uint32_t Type = DE.getU32(&Offset);
-    uint64_t FileOffset = DE.getU64(&Offset);
-    uint64_t FileSize = DE.getU64(&Offset);
+    uint32_t Type = Data.getU32(&Offset);
+    uint64_t FileOffset = Data.getU64(&Offset);
+    uint64_t FileSize = Data.getU64(&Offset);
     (void)FileOffset;
     (void)FileSize;
     if (Type == static_cast<uint32_t>(GlobalInfoType::FileTable)) {
