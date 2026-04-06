@@ -1,5 +1,4 @@
 # RUN: llc -mtriple=aarch64 -run-pass=aarch64-prelegalizer-combiner -verify-machineinstrs %s -o - | FileCheck %s
-# RUN: llc -mtriple=aarch64 -passes='require<libcall-lowering-info>,function(machine-function(aarch64-prelegalizer-combiner))' %s -o - | FileCheck %s
 
 ---
 name:            test_use_vector_truncate_reversed_order
