@@ -98,6 +98,9 @@ static bool isValidSubgroupMultiReductionOp(vector::MultiDimReductionOp op) {
   // If no layout, not valid.
   if (!resLayout || !resLayout.isForSubgroup())
     return false;
+  // Scalar result (e.g., vector<32xf32> to f32) is valid.
+  if (op.getType().isIntOrFloat())
+    return op.getReductionDims().size() == 1;
   VectorType resTy = dyn_cast<VectorType>(op.getType());
   if (!resTy)
     return false;
@@ -600,7 +603,21 @@ struct SgToWiMultiDimReduction
             op, "only unit leading dimensions are supported for "
                 "multi_reduction with rank > 2");
     }
-    if (isReductionLaneLocal(op)) {
+    // Handle scalar result: full reduction of a distributed vector to a
+    // scalar. First do a local vector reduction, then cross-lane shuffles.
+    if (op.getType().isIntOrFloat()) {
+      auto reductionDim = reductionDims[0];
+      VectorType origSourceType = op.getSourceVectorType();
+      int64_t reductionDimSize = origSourceType.getShape()[reductionDim];
+      // Local reduction to scalar, then cross-lane butterfly shuffles.
+      result =
+          xegpu::subgroupReduction(op.getLoc(), rewriter, adaptor.getSource(),
+                                   op.getKind(), reductionDimSize);
+      // Combine with accumulator if present.
+      if (adaptor.getAcc())
+        result = vector::makeArithReduction(rewriter, op.getLoc(), op.getKind(),
+                                            result, adaptor.getAcc());
+    } else if (isReductionLaneLocal(op)) {
       auto resLayout = xegpu::getTemporaryLayout(op->getOpResult(0));
       VectorType resVecTy = dyn_cast<VectorType>(op.getType());
       auto resDistVecTyOrFailure =
