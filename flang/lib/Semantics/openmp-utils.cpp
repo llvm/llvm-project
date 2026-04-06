@@ -850,17 +850,24 @@ std::pair<WithReason<int64_t>, bool> GetAffectedNestDepthWithReason(
       dir, llvm::omp::Clause::OMPC_ordered, version)};
 
   if (allowsCollapse || allowsOrdered) {
-    auto [count, reason]{GetArgumentValueWithReason(
+    auto [ccount, creason]{GetArgumentValueWithReason(
         spec, llvm::omp::Clause::OMPC_collapse, version)};
-    auto [vo, ro]{GetArgumentValueWithReason(
+    auto [ocount, oreason]{GetArgumentValueWithReason(
         spec, llvm::omp::Clause::OMPC_ordered, version)};
-    if (vo) {
-      if (!count || *count < *vo) {
-        count = vo;
-        reason = std::move(ro);
-      }
+    // Ignore invalid arguments.
+    if (ccount <= 0) {
+      ccount = std::nullopt;
+      creason = Reason();
     }
-    return {{count, std::move(reason)}, true};
+    if (ocount <= 0) {
+      ocount = std::nullopt;
+      oreason = Reason();
+    }
+    if (ccount < ocount) {
+      // `ocount` cannot be std::nullopt here (C++ std guarantee).
+      return {{ocount.value_or(1), std::move(oreason)}, true};
+    }
+    return {{ccount.value_or(1), std::move(creason)}, true};
   }
 
   if (IsLoopTransforming(dir)) {
