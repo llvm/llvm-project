@@ -484,7 +484,7 @@ unreachable:                                      ; preds = %rethrow
 ; try_table (catch_all_ref 0)'s caught exception is stored in local 2
 ; CHECK:     local.set  2
 ; CHECK:     block
-; catch_all 0 dispatches to %terminate.i
+; catch_all 0 dispatches to %terminate.i (the 'call _ZSt9terminatev' instruction).
 ; CHECK:       try_table    (catch_all 0)
 ; CHECK:         block     exnref
 ; CHECK:           block
