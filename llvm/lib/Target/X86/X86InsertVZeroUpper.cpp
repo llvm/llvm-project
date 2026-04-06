@@ -39,7 +39,7 @@
 
 using namespace llvm;
 
-#define DEBUG_TYPE "x86-insert-vzero-upper"
+#define DEBUG_TYPE "x86-insert-vzeroupper"
 
 static cl::opt<bool>
     UseVZeroUpper("x86-use-vzeroupper", cl::Hidden,
