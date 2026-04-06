@@ -457,8 +457,12 @@ public:
   /// module depends.
   llvm::SmallSetVector<Module *, 2> Imports;
 
-  /// Profile designators enforced on this module's declaration (P3589R2).
-  SmallVector<std::string, 4> EnforcedProfileDesignators;
+  /// Profile enforcements on this module's declaration (P3589R2).
+  struct EnforcedProfile {
+    std::string ProfileName;
+    std::string Designator;
+  };
+  SmallVector<EnforcedProfile, 0> EnforcedProfileDesignators;
 
   /// The set of top-level modules that affected the compilation of this module,
   /// but were not imported.

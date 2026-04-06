@@ -6572,11 +6572,16 @@ llvm::Error ASTReader::ReadSubmoduleBlock(ModuleFile &F,
     case SUBMODULE_ENFORCED_PROFILES: {
       unsigned Idx = 0;
       while (Idx < Record.size()) {
-        unsigned Len = Record[Idx++];
+        unsigned NameLen = Record[Idx++];
+        std::string Name(Record.begin() + Idx,
+                         Record.begin() + Idx + NameLen);
+        Idx += NameLen;
+        unsigned DesigLen = Record[Idx++];
         std::string Desig(Record.begin() + Idx,
-                          Record.begin() + Idx + Len);
-        Idx += Len;
-        CurrentModule->EnforcedProfileDesignators.push_back(std::move(Desig));
+                          Record.begin() + Idx + DesigLen);
+        Idx += DesigLen;
+        CurrentModule->EnforcedProfileDesignators.push_back(
+            {std::move(Name), std::move(Desig)});
       }
       break;
     }

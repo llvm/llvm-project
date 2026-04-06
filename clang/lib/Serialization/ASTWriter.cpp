@@ -3259,9 +3259,11 @@ void ASTWriter::WriteSubmodules(Module *WritingModule, ASTContext *Context) {
     // Emit enforced profile designators (P3589R2).
     if (!Mod->EnforcedProfileDesignators.empty()) {
       RecordData Record;
-      for (const auto &Desig : Mod->EnforcedProfileDesignators) {
-        Record.push_back(Desig.size());
-        Record.append(Desig.begin(), Desig.end());
+      for (const auto &EP : Mod->EnforcedProfileDesignators) {
+        Record.push_back(EP.ProfileName.size());
+        Record.append(EP.ProfileName.begin(), EP.ProfileName.end());
+        Record.push_back(EP.Designator.size());
+        Record.append(EP.Designator.begin(), EP.Designator.end());
       }
       Stream.EmitRecord(SUBMODULE_ENFORCED_PROFILES, Record);
     }

@@ -5496,7 +5496,7 @@ static void handleProfilesEnforceAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
       // empty-declarations is visible to require.
       if (auto *M = S.getCurrentModule())
         if (M->isHeaderUnit())
-          M->EnforcedProfileDesignators.push_back(Desig.str());
+          M->EnforcedProfileDesignators.push_back({Name.str(), Desig.str()});
 
       Names.push_back(Name);
       Designators.push_back(Desig);

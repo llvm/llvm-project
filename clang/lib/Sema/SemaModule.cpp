@@ -478,7 +478,7 @@ Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
 
         if (IsNew && (MDK == ModuleDeclKind::Interface ||
                       MDK == ModuleDeclKind::PartitionInterface))
-          Mod->EnforcedProfileDesignators.push_back(Desig.str());
+          Mod->EnforcedProfileDesignators.push_back({Name.str(), Desig.str()});
       }
     }
   }
@@ -495,12 +495,10 @@ Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
   // P3589R2 [decl.attr.enforce]p4: propagate interface's enforced profiles to
   // implementation unit.
   if (Interface) {
-    for (const auto &Desig : Interface->EnforcedProfileDesignators) {
-      std::string Name = Desig;
-      if (auto Paren = Name.find('('); Paren != std::string::npos)
-        Name = Name.substr(0, Paren);
-      if (!isProfileEnforced(Name))
-        EnforcedProfiles.push_back({Name, Desig, ModuleLoc});
+    for (const auto &EP : Interface->EnforcedProfileDesignators) {
+      if (!isProfileEnforced(EP.ProfileName))
+        EnforcedProfiles.push_back(
+            {EP.ProfileName, EP.Designator, ModuleLoc});
     }
   }
 
@@ -1659,13 +1657,11 @@ void Sema::ActOnModuleImportAttrs(Decl *D,
       if (!checkStringLiteralArgumentAttr(AL, 0, Desig))
         continue;
 
-      bool Found = false;
-      for (const auto &Enforced : ImportedMod->EnforcedProfileDesignators) {
-        if (Enforced == Desig) {
-          Found = true;
-          break;
-        }
-      }
+      bool Found = llvm::any_of(
+          ImportedMod->EnforcedProfileDesignators,
+          [&](const Module::EnforcedProfile &EP) {
+            return EP.Designator == Desig;
+          });
 
       if (!Found)
         Diag(AL.getLoc(), diag::err_profiles_require_not_enforced) << Desig;
