@@ -1,4 +1,6 @@
 // RUN: %clang_cc1 -fopenacc -triple x86_64-linux-gnu -Wno-openacc-self-if-potential-conflict -emit-cir -fclangir -triple x86_64-linux-pc %s -o - | FileCheck %s
+// RUN: %clang_cc1 -fopenacc -triple x86_64-linux-gnu -Wno-openacc-self-if-potential-conflict -emit-llvm %s -o %t.ll
+// RUN: FileCheck --check-prefix=OGCG --input-file=%t.ll %s
 
 struct HasOps {
   operator float();
@@ -7,6 +9,7 @@ struct HasOps {
   int operator++(int);
 };
 
+// OGCG: define {{.*}} void @_Z3useiif6HasOps(i32 {{.*}}, i32 {{.*}}, float {{.*}})
 void use(int x, int v, float f, HasOps ops) {
   // CHECK: cir.func{{.*}}(%[[X_ARG:.*]]: !s32i{{.*}}, %[[V_ARG:.*]]: !s32i{{.*}}, %[[F_ARG:.*]]: !cir.float{{.*}}){{.*}}, %[[OPS_ARG:.*]]: !rec_HasOps{{.*}}) {{.*}}{
   // CHECK-NEXT: %[[X_ALLOCA:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["x", init]

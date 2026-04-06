@@ -1,4 +1,6 @@
 // RUN: %clang_cc1 -fopenacc -triple x86_64-linux-gnu -Wno-openacc-self-if-potential-conflict -emit-cir -fclangir -triple x86_64-linux-pc %s -o - | FileCheck %s
+// RUN: %clang_cc1 -fopenacc -triple x86_64-linux-gnu -Wno-openacc-self-if-potential-conflict -emit-llvm %s -o %t.ll
+// RUN: FileCheck --check-prefix=OGCG --input-file=%t.ll %s
 
 extern "C" bool condition(int x, unsigned int y, float f);
 extern "C" double do_thing(float f);
@@ -7,6 +9,7 @@ struct ConvertsToScalar {
   operator float();
 };
 
+// OGCG: define {{.*}} void @_Z3useijf16ConvertsToScalar(i32 {{.*}}, i32 {{.*}}, float {{.*}})
 void use(int x, unsigned int y, float f, ConvertsToScalar cts) {
   // CHECK: cir.func{{.*}}(%[[X_ARG:.*]]: !s32i{{.*}}, %[[Y_ARG:.*]]: !u32i{{.*}}, %[[F_ARG:.*]]: !cir.float{{.*}}){{.*}}, %[[CTS_ARG:.*]]: !rec_ConvertsToScalar{{.*}}) {{.*}}{
   // CHECK-NEXT: %[[X_ALLOC:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["x", init]
