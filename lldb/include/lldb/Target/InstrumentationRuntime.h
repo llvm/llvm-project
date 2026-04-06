@@ -97,10 +97,6 @@ public:
 
   virtual bool Enable();
 
-  /// Called when the user runs
-  /// `plugin enable instrumentation-runtime.<name>`
-  ///
-  /// \returns true iff on success
   virtual bool Disable();
 
   virtual lldb::ThreadCollectionSP
