@@ -439,8 +439,8 @@ attributes #5 = { convergent nounwind "llvm.assume"="omp_no_openmp,ompx_spmd_ame
 ; CHECK: attributes #[[ATTR1:[0-9]+]] = { alwaysinline }
 ; CHECK: attributes #[[ATTR2:[0-9]+]] = { convergent "frame-pointer"="all" "llvm.assume"="omp_no_openmp,ompx_spmd_amenable" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="sm_53" "target-features"="+ptx32,+sm_53" }
 ; CHECK: attributes #[[ATTR3:[0-9]+]] = { convergent nounwind willreturn memory(read) "frame-pointer"="all" "llvm.assume"="ompx_spmd_amenable" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="sm_53" "target-features"="+ptx32,+sm_53" }
-; CHECK: attributes #[[ATTR4:[0-9]+]] = { nosync nounwind allocsize(0) }
-; CHECK: attributes #[[ATTR5:[0-9]+]] = { nosync nounwind }
+; CHECK: attributes #[[ATTR4:[0-9]+]] = { nosync nounwind allockind("alloc,uninitialized") allocsize(0) "alloc-family"="__kmpc_alloc_shared" }
+; CHECK: attributes #[[ATTR5:[0-9]+]] = { nosync nounwind allockind("free") "alloc-family"="__kmpc_alloc_shared" }
 ; CHECK: attributes #[[ATTR6]] = { nounwind }
 ; CHECK: attributes #[[ATTR7:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: readwrite) }
 ; CHECK: attributes #[[ATTR8:[0-9]+]] = { convergent nounwind }
@@ -451,8 +451,8 @@ attributes #5 = { convergent nounwind "llvm.assume"="omp_no_openmp,ompx_spmd_ame
 ; CHECK-DISABLED: attributes #[[ATTR1:[0-9]+]] = { alwaysinline }
 ; CHECK-DISABLED: attributes #[[ATTR2:[0-9]+]] = { convergent "frame-pointer"="all" "llvm.assume"="omp_no_openmp,ompx_spmd_amenable" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="sm_53" "target-features"="+ptx32,+sm_53" }
 ; CHECK-DISABLED: attributes #[[ATTR3:[0-9]+]] = { convergent nounwind willreturn memory(read) "frame-pointer"="all" "llvm.assume"="ompx_spmd_amenable" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="sm_53" "target-features"="+ptx32,+sm_53" }
-; CHECK-DISABLED: attributes #[[ATTR4:[0-9]+]] = { nosync nounwind allocsize(0) }
-; CHECK-DISABLED: attributes #[[ATTR5:[0-9]+]] = { nosync nounwind }
+; CHECK-DISABLED: attributes #[[ATTR4:[0-9]+]] = { nosync nounwind allockind("alloc,uninitialized") allocsize(0) "alloc-family"="__kmpc_alloc_shared" }
+; CHECK-DISABLED: attributes #[[ATTR5:[0-9]+]] = { nosync nounwind allockind("free") "alloc-family"="__kmpc_alloc_shared" }
 ; CHECK-DISABLED: attributes #[[ATTR6]] = { nounwind }
 ; CHECK-DISABLED: attributes #[[ATTR7:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: readwrite) }
 ; CHECK-DISABLED: attributes #[[ATTR8:[0-9]+]] = { convergent nounwind }

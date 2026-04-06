@@ -27,6 +27,15 @@
 namespace clang {
 namespace doc {
 
+// Thread local arenas usable in each thread pool
+thread_local llvm::BumpPtrAllocator TransientArena;
+thread_local llvm::BumpPtrAllocator PersistentArena;
+
+ConcurrentStringPool &getGlobalStringPool() {
+  static ConcurrentStringPool GlobalPool;
+  return GlobalPool;
+}
+
 CommentKind stringToCommentKind(llvm::StringRef KindStr) {
   static const llvm::StringMap<CommentKind> KindMap = {
       {"FullComment", CommentKind::CK_FullComment},
@@ -105,6 +114,23 @@ static int getChildIndexIfExists(OwningVec<T> &Children, T &ChildToMerge) {
       return I;
   }
   return -1;
+}
+
+template <typename T>
+static void reduceChildren(llvm::simple_ilist<T> &Children,
+                           llvm::simple_ilist<T> &&ChildrenToMerge) {
+  while (!ChildrenToMerge.empty()) {
+    T *ChildToMerge = &ChildrenToMerge.front();
+    ChildrenToMerge.pop_front();
+
+    auto It = llvm::find_if(
+        Children, [&](const T &C) { return C.USR == ChildToMerge->USR; });
+    if (It == Children.end()) {
+      Children.push_back(*ChildToMerge);
+    } else {
+      It->merge(std::move(*ChildToMerge));
+    }
+  }
 }
 
 template <typename T>
@@ -207,26 +233,26 @@ calculateRelativeFilePath(const InfoType &Type, const StringRef &Path,
   return llvm::sys::path::relative_path(FilePath);
 }
 
-llvm::SmallString<64>
-Reference::getRelativeFilePath(const StringRef &CurrentPath) const {
-  return calculateRelativeFilePath(RefType, Path, Name, CurrentPath);
+StringRef Reference::getRelativeFilePath(const StringRef &CurrentPath) const {
+  return internString(
+      calculateRelativeFilePath(RefType, Path, Name, CurrentPath));
 }
 
-llvm::SmallString<16> Reference::getFileBaseName() const {
+StringRef Reference::getFileBaseName() const {
   if (RefType == InfoType::IT_namespace)
-    return llvm::SmallString<16>("index");
+    return "index";
 
   return Name;
 }
 
-llvm::SmallString<64>
-Info::getRelativeFilePath(const StringRef &CurrentPath) const {
-  return calculateRelativeFilePath(IT, Path, extractName(), CurrentPath);
+StringRef Info::getRelativeFilePath(const StringRef &CurrentPath) const {
+  return internString(
+      calculateRelativeFilePath(IT, Path, extractName(), CurrentPath));
 }
 
-llvm::SmallString<16> Info::getFileBaseName() const {
+StringRef Info::getFileBaseName() const {
   if (IT == InfoType::IT_namespace)
-    return llvm::SmallString<16>("index");
+    return "index";
 
   return extractName();
 }
@@ -406,7 +432,7 @@ BaseRecordInfo::BaseRecordInfo(SymbolID USR, StringRef Name, StringRef Path,
     : RecordInfo(USR, Name, Path), Access(Access), IsVirtual(IsVirtual),
       IsParent(IsParent) {}
 
-llvm::SmallString<16> Info::extractName() const {
+StringRef Info::extractName() const {
   if (!Name.empty())
     return Name;
 
@@ -417,37 +443,30 @@ llvm::SmallString<16> Info::extractName() const {
     // namespace, which would conflict with the hard-coded global namespace name
     // below.)
     if (Name == "GlobalNamespace" && Namespace.empty())
-      return llvm::SmallString<16>("@GlobalNamespace");
+      return "@GlobalNamespace";
     // The case of anonymous namespaces is taken care of in serialization,
     // so here we can safely assume an unnamed namespace is the global
     // one.
-    return llvm::SmallString<16>("GlobalNamespace");
+    return "GlobalNamespace";
   case InfoType::IT_record:
-    return llvm::SmallString<16>("@nonymous_record_" +
-                                 toHex(llvm::toStringRef(USR)));
+    return internString("@nonymous_record_" + toHex(llvm::toStringRef(USR)));
   case InfoType::IT_enum:
-    return llvm::SmallString<16>("@nonymous_enum_" +
-                                 toHex(llvm::toStringRef(USR)));
+    return internString("@nonymous_enum_" + toHex(llvm::toStringRef(USR)));
   case InfoType::IT_typedef:
-    return llvm::SmallString<16>("@nonymous_typedef_" +
-                                 toHex(llvm::toStringRef(USR)));
+    return internString("@nonymous_typedef_" + toHex(llvm::toStringRef(USR)));
   case InfoType::IT_function:
-    return llvm::SmallString<16>("@nonymous_function_" +
-                                 toHex(llvm::toStringRef(USR)));
+    return internString("@nonymous_function_" + toHex(llvm::toStringRef(USR)));
   case InfoType::IT_concept:
-    return llvm::SmallString<16>("@nonymous_concept_" +
-                                 toHex(llvm::toStringRef(USR)));
+    return internString("@nonymous_concept_" + toHex(llvm::toStringRef(USR)));
   case InfoType::IT_variable:
-    return llvm::SmallString<16>("@nonymous_variable_" +
-                                 toHex(llvm::toStringRef(USR)));
+    return internString("@nonymous_variable_" + toHex(llvm::toStringRef(USR)));
   case InfoType::IT_friend:
-    return llvm::SmallString<16>("@nonymous_friend_" +
-                                 toHex(llvm::toStringRef(USR)));
+    return internString("@nonymous_friend_" + toHex(llvm::toStringRef(USR)));
   case InfoType::IT_default:
-    return llvm::SmallString<16>("@nonymous_" + toHex(llvm::toStringRef(USR)));
+    return internString("@nonymous_" + toHex(llvm::toStringRef(USR)));
   }
   llvm_unreachable("Invalid InfoType.");
-  return llvm::SmallString<16>("");
+  return "";
 }
 
 // Order is based on the Name attribute: case insensitive order
@@ -508,7 +527,7 @@ ClangDocContext::ClangDocContext(tooling::ExecutionContext *ECtx,
 }
 
 void ScopeChildren::sort() {
-  llvm::sort(Namespaces);
+  Namespaces.sort();
   llvm::sort(Records);
   llvm::sort(Functions);
   llvm::sort(Enums);

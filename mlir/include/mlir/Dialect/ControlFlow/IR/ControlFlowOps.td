@@ -65,7 +65,8 @@ def AssertOp : CF_Op<"assert",
 //===----------------------------------------------------------------------===//
 
 def BranchOp : CF_Op<"br", [
-    DeclareOpInterfaceMethods<BranchOpInterface, ["getSuccessorForOperands"]>,
+    DeclareOpInterfaceMethods<BranchOpInterface,
+    ["getSuccessorForOperands", "getSuccessorForwardOperands"]>,
     Pure, Terminator
   ]> {
   let summary = "Branch operation";
@@ -114,8 +115,8 @@ def BranchOp : CF_Op<"br", [
 
 def CondBranchOp
     : CF_Op<"cond_br", [AttrSizedOperandSegments,
-                        DeclareOpInterfaceMethods<
-                            BranchOpInterface, ["getSuccessorForOperands"]>,
+                        DeclareOpInterfaceMethods<BranchOpInterface,
+                        ["getSuccessorForOperands", "getSuccessorForwardOperands"]>,
                         WeightedBranchOpInterface, Pure, Terminator]> {
   let summary = "Conditional branch operation";
   let description = [{
@@ -241,7 +242,8 @@ def CondBranchOp
 
 def SwitchOp : CF_Op<"switch",
     [AttrSizedOperandSegments,
-     DeclareOpInterfaceMethods<BranchOpInterface, ["getSuccessorForOperands"]>,
+     DeclareOpInterfaceMethods<BranchOpInterface,
+     ["getSuccessorForOperands", "getSuccessorForwardOperands"]>,
      Pure, Terminator]> {
   let summary = "Switch operation";
   let description = [{

@@ -93,7 +93,7 @@ cir.func @test_catch_all() {
 //
 // Landing pad with catch_all (no cleanup, no typed catches).
 // CHECK:       ^[[UNWIND]]:
-// CHECK:         %[[EXN:.*]], %[[TID:.*]] = cir.eh.inflight_exception
+// CHECK:         %[[EXN:.*]], %[[TID:.*]] = cir.eh.inflight_exception catch_all
 // CHECK:         cir.br ^[[DISPATCH:bb[0-9]+]](%[[EXN]], %[[TID]] : !cir.ptr<!void>, !u32i)
 //
 // Dispatch replaced with direct branch to catch-all handler.
@@ -209,7 +209,7 @@ cir.func @test_multiple_typed_and_catch_all() {
 //
 // Landing pad with typed catches AND catch-all.
 // CHECK:       ^[[UNWIND]]:
-// CHECK:         %[[EXN:.*]], %[[TID:.*]] = cir.eh.inflight_exception [@_ZTISt9exception, @_ZTIi]
+// CHECK:         %[[EXN:.*]], %[[TID:.*]] = cir.eh.inflight_exception catch_all [@_ZTISt9exception, @_ZTIi]
 // CHECK:         cir.br ^[[CMP1_BLOCK:bb[0-9]+]](%[[EXN]], %[[TID]] : !cir.ptr<!void>, !u32i)
 //
 // Dispatch: branch to comparison chain.
@@ -298,14 +298,14 @@ cir.func @test_catch_with_cleanup() {
 // CHECK:         cir.call @dtor
 // CHECK:         cir.br ^[[RETURN:bb[0-9]+]]
 //
-// Ctor unwind: landing pad without cleanup.
+// Ctor unwind: landing pad without cleanup, with catch_all.
 // CHECK:       ^[[CTOR_UNWIND]]:
-// CHECK:         %[[E1:.*]], %[[T1:.*]] = cir.eh.inflight_exception
+// CHECK:         %[[E1:.*]], %[[T1:.*]] = cir.eh.inflight_exception catch_all
 // CHECK:         cir.br ^[[DISPATCH:bb[0-9]+]](%[[E1]], %[[T1]] : !cir.ptr<!void>, !u32i)
 //
-// doSomething unwind: landing pad with cleanup.
+// doSomething unwind: landing pad with cleanup and catch_all.
 // CHECK:       ^[[DO_UNWIND]]:
-// CHECK:         %[[E2:.*]], %[[T2:.*]] = cir.eh.inflight_exception cleanup
+// CHECK:         %[[E2:.*]], %[[T2:.*]] = cir.eh.inflight_exception cleanup catch_all
 // CHECK:         cir.br ^[[CLEANUP:bb[0-9]+]](%[[E2]], %[[T2]] : !cir.ptr<!void>, !u32i)
 //
 // EH cleanup: begin_cleanup and end_cleanup are REMOVED, dtor call stays.
@@ -467,9 +467,9 @@ cir.func no_inline dso_local @test_catch_with_cleanup_no_ctor() personality(@__g
 // CHECK:       ^[[NORMAL]]:
 // CHECK:         cir.call @dtor
 //
-// Unwind: initiate cleanup → inflight_exception cleanup with std::exception type.
+// Unwind: initiate cleanup → inflight_exception cleanup catch_all with std::exception type.
 // CHECK:       ^[[UNWIND]]:
-// CHECK:         %[[EXN:.*]], %[[TID:.*]] = cir.eh.inflight_exception cleanup [@_ZTISt9exception]
+// CHECK:         %[[EXN:.*]], %[[TID:.*]] = cir.eh.inflight_exception cleanup catch_all [@_ZTISt9exception]
 // CHECK:         cir.br ^[[CLEANUP:bb[0-9]+]](%[[EXN]], %[[TID]] : !cir.ptr<!void>, !u32i)
 //
 // Cleanup: begin_cleanup/end_cleanup removed, destructor call stays.
