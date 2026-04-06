@@ -725,13 +725,11 @@ static MCInstrAnalysis *createX86MCInstrAnalysis(const MCInstrInfo *Info) {
 }
 
 static MCLFIRewriter *
-createX86MCLFIRewriter(MCStreamer &S, std::unique_ptr<MCRegisterInfo> &&RegInfo,
+createX86MCLFIRewriter(MCContext &Ctx,
+                       std::unique_ptr<MCRegisterInfo> &&RegInfo,
                        std::unique_ptr<MCInstrInfo> &&InstInfo) {
-  auto RW = std::make_unique<X86::X86MCLFIRewriter>(
-      S.getContext(), std::move(RegInfo), std::move(InstInfo));
-  auto *Ptr = RW.get();
-  S.setLFIRewriter(std::move(RW));
-  return Ptr;
+  return new X86::X86MCLFIRewriter(Ctx, std::move(RegInfo),
+                                   std::move(InstInfo));
 }
 
 // Force static initialization.
