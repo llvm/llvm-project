@@ -2190,7 +2190,8 @@ static bool RequiresFollowChildWorkaround(const Process &process) {
 lldb::thread_result_t Debugger::DefaultEventHandler() {
   ListenerSP listener_sp(GetListener());
   llvm::StringRef broadcaster_class_target(Target::GetStaticBroadcasterClass());
-  llvm::StringRef broadcaster_class_process(Process::GetStaticBroadcasterClass());
+  llvm::StringRef broadcaster_class_process(
+      Process::GetStaticBroadcasterClass());
   llvm::StringRef broadcaster_class_thread(Thread::GetStaticBroadcasterClass());
   BroadcastEventSpec target_event_spec(broadcaster_class_target,
                                        Target::eBroadcastBitBreakpointChanged);
