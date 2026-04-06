@@ -202,9 +202,9 @@ AnyValue Library::executePrintf(ArrayRef<AnyValue> Args) {
     case 'o':
     case 'x':
     case 'X':
-    case 'b':
-    case 'B':
     case 'c': {
+      // FIXME: The format specifiers "b" and "B" are not implemented here
+      // since currently MSVC doesn't support it.
       std::string HostFmt = CleanChunk + "ll" + Specifier;
       OS << format(HostFmt.c_str(), static_cast<unsigned long long>(
                                         Arg.asInteger().getZExtValue()));
@@ -244,7 +244,8 @@ AnyValue Library::executePrintf(ArrayRef<AnyValue> Args) {
       break;
     }
     default:
-      Executor.reportImmediateUB("Unknown format specifier in printf.");
+      Executor.reportImmediateUB(
+          "Unknown or unsupported format specifier in printf.");
       return AnyValue::poison();
     }
   }
