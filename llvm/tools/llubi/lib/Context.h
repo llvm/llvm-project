@@ -287,7 +287,7 @@ public:
   bool initGlobalValues();
   /// Execute the function \p F with arguments \p Args, and store the return
   /// value in \p RetVal if the function is not void. The exit information is
-  /// store in \p ExitInfo.
+  /// stored in \p ExitInfo.
   /// Returns true if the function executed successfully without calls to
   /// exit()/abort()/terminate(). False indicates an error occurred during
   /// execution.

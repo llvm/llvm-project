@@ -31,13 +31,12 @@ class Library {
 
   AnyValue executeMalloc(StringRef Name, Type *Type, ArrayRef<AnyValue> Args);
   AnyValue executeCalloc(StringRef Name, Type *Type, ArrayRef<AnyValue> Args);
-  AnyValue executeFree(StringRef Name, Type *Type, ArrayRef<AnyValue> Args);
-  AnyValue executePuts(StringRef Name, Type *Type, ArrayRef<AnyValue> Args);
-  AnyValue executePrintf(StringRef Name, Type *Type, ArrayRef<AnyValue> Args);
-  AnyValue executeExit(StringRef Name, Type *Type, ArrayRef<AnyValue> Args);
-  AnyValue executeAbort(StringRef Name, Type *Type, ArrayRef<AnyValue> Args);
-  AnyValue executeTerminate(StringRef Name, Type *Type,
-                            ArrayRef<AnyValue> Args);
+  AnyValue executeFree(ArrayRef<AnyValue> Args);
+  AnyValue executePuts(ArrayRef<AnyValue> Args);
+  AnyValue executePrintf(ArrayRef<AnyValue> Args);
+  AnyValue executeExit(ArrayRef<AnyValue> Args);
+  AnyValue executeAbort();
+  AnyValue executeTerminate();
 
 public:
   Library(Context &Ctx, EventHandler &Handler, const DataLayout &DL,

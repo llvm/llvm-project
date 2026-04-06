@@ -104,9 +104,7 @@ AnyValue Library::executeCalloc(StringRef Name, Type *Type,
   return Ctx.deriveFromMemoryObject(Obj);
 }
 
-AnyValue Library::executeFree([[maybe_unused]] StringRef Name,
-                              [[maybe_unused]] Type *Type,
-                              ArrayRef<AnyValue> Args) {
+AnyValue Library::executeFree(ArrayRef<AnyValue> Args) {
   const auto &PtrVal = Args[0];
 
   auto &Ptr = PtrVal.asPointer();
@@ -123,9 +121,7 @@ AnyValue Library::executeFree([[maybe_unused]] StringRef Name,
   return AnyValue();
 }
 
-AnyValue Library::executePuts([[maybe_unused]] StringRef Name,
-                              [[maybe_unused]] Type *Type,
-                              ArrayRef<AnyValue> Args) {
+AnyValue Library::executePuts(ArrayRef<AnyValue> Args) {
   const auto &PtrVal = Args[0];
 
   const auto StrOpt = readStringFromMemory(PtrVal.asPointer());
@@ -136,9 +132,7 @@ AnyValue Library::executePuts([[maybe_unused]] StringRef Name,
   return AnyValue(APInt(32, 1));
 }
 
-AnyValue Library::executePrintf([[maybe_unused]] StringRef Name,
-                                [[maybe_unused]] Type *Type,
-                                ArrayRef<AnyValue> Args) {
+AnyValue Library::executePrintf(ArrayRef<AnyValue> Args) {
   const auto &FormatPtrVal = Args[0];
 
   const auto FormatStrOpt = readStringFromMemory(FormatPtrVal.asPointer());
@@ -260,9 +254,7 @@ AnyValue Library::executePrintf([[maybe_unused]] StringRef Name,
   return AnyValue(APInt(32, Output.size()));
 }
 
-AnyValue Library::executeExit([[maybe_unused]] StringRef Name,
-                              [[maybe_unused]] Type *Type,
-                              ArrayRef<AnyValue> Args) {
+AnyValue Library::executeExit(ArrayRef<AnyValue> Args) {
   const auto &RetCodeVal = Args[0];
 
   Executor.requestProgramExit(ProgramExitInfo::ProgramExitKind::Exited,
@@ -270,16 +262,12 @@ AnyValue Library::executeExit([[maybe_unused]] StringRef Name,
   return AnyValue();
 }
 
-AnyValue Library::executeAbort([[maybe_unused]] StringRef Name,
-                               [[maybe_unused]] Type *Type,
-                               [[maybe_unused]] ArrayRef<AnyValue> Args) {
+AnyValue Library::executeAbort() {
   Executor.requestProgramExit(ProgramExitInfo::ProgramExitKind::Aborted);
   return AnyValue();
 }
 
-AnyValue Library::executeTerminate([[maybe_unused]] StringRef Name,
-                                   [[maybe_unused]] Type *Type,
-                                   [[maybe_unused]] ArrayRef<AnyValue> Args) {
+AnyValue Library::executeTerminate() {
   Executor.requestProgramExit(ProgramExitInfo::ProgramExitKind::Terminated);
   return AnyValue();
 }
@@ -306,22 +294,22 @@ std::optional<AnyValue> Library::executeLibcall(LibFunc LF, StringRef Name,
   case LibFunc_free:
   case LibFunc_ZdaPv:
   case LibFunc_ZdlPv:
-    return executeFree(Name, Type, Args);
+    return executeFree(Args);
 
   case LibFunc_puts:
-    return executePuts(Name, Type, Args);
+    return executePuts(Args);
 
   case LibFunc_printf:
-    return executePrintf(Name, Type, Args);
+    return executePrintf(Args);
 
   case LibFunc_exit:
-    return executeExit(Name, Type, Args);
+    return executeExit(Args);
 
   case LibFunc_abort:
-    return executeAbort(Name, Type, Args);
+    return executeAbort();
 
   case LibFunc_terminate:
-    return executeTerminate(Name, Type, Args);
+    return executeTerminate();
 
   default:
     return std::nullopt;
