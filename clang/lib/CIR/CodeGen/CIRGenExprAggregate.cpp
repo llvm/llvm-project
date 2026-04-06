@@ -1090,8 +1090,35 @@ void AggExprEmitter::visitCXXParenListOrInitListExpr(
   LValue destLV = cgf.makeAddrLValue(dest.getAddress(), e->getType());
 
   if (record->isUnion()) {
-    cgf.cgm.errorNYI(e->getSourceRange(),
-                     "visitCXXParenListOrInitListExpr union type");
+    // Only initialize one field of a union. The field itself is
+    // specified by the initializer list.
+    if (!initializedFieldInUnion) {
+      // Empty union; we have nothing to do.
+
+      // Make sure that it's really an empty and not a failure of
+      // semantic analysis.
+      assert(llvm::all_of(record->fields(),
+                          [](const FieldDecl *f) {
+                            return f->isUnnamedBitField() ||
+                                   f->isAnonymousStructOrUnion();
+                          }) &&
+             "Only unnamed bitfields or anonymous class allowed");
+      return;
+    }
+
+    // FIXME: volatility
+    FieldDecl *initedField = initializedFieldInUnion;
+
+    LValue fieldLV = cgf.emitLValueForFieldInitialization(
+        destLV, initedField, initedField->getName());
+
+    if (numInitElements) {
+      // Store the initializer into the field
+      emitInitializationToLValue(args[0], fieldLV);
+    } else {
+      // Default-initialize to null.
+      emitNullInitializationToLValue(loc, fieldLV);
+    }
     return;
   }
 

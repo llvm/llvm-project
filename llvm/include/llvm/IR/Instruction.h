@@ -78,6 +78,7 @@ public:
       : iterator_adaptor_base<succ_iterator, op_iterator,
                               std::random_access_iterator_tag, BasicBlock *,
                               ptrdiff_t, BasicBlock *, BasicBlock *> {
+    succ_iterator() = default;
     explicit succ_iterator(op_iterator I) : iterator_adaptor_base(I) {}
 
     BasicBlock *operator*() const { return cast<BasicBlock>(*I); }
@@ -92,6 +93,7 @@ public:
                               std::random_access_iterator_tag,
                               const BasicBlock *, ptrdiff_t, const BasicBlock *,
                               const BasicBlock *> {
+    const_succ_iterator() = default;
     explicit const_succ_iterator(const_op_iterator I)
         : iterator_adaptor_base(I) {}
 
@@ -103,6 +105,10 @@ public:
 
 private:
   DebugLoc DbgLoc;                         // 'dbg' Metadata cache.
+
+  friend class Value;
+  /// Index of first metadata attachment in context, or zero.
+  unsigned MetadataIndex = 0;
 
   /// Relative order of this instruction in its parent basic block. Used for
   /// O(1) local dominance checks between instructions.
@@ -433,7 +439,7 @@ public:
   //===--------------------------------------------------------------------===//
 
   /// Return true if this instruction has any metadata attached to it.
-  bool hasMetadata() const { return DbgLoc || Value::hasMetadata(); }
+  bool hasMetadata() const { return DbgLoc || MetadataIndex != 0; }
 
   // Return true if this instruction contains loop metadata other than
   // a debug location
@@ -441,7 +447,7 @@ public:
 
   /// Return true if this instruction has metadata attached to it other than a
   /// debug location.
-  bool hasMetadataOtherThanDebugLoc() const { return Value::hasMetadata(); }
+  bool hasMetadataOtherThanDebugLoc() const { return MetadataIndex != 0; }
 
   /// Return true if this instruction has the given type of metadata attached.
   bool hasMetadata(unsigned KindID) const {
@@ -459,7 +465,8 @@ public:
     // Handle 'dbg' as a special case since it is not stored in the hash table.
     if (KindID == LLVMContext::MD_dbg)
       return DbgLoc.getAsMDNode();
-    return Value::getMetadata(KindID);
+    return hasMetadataOtherThanDebugLoc() ? Value::getMetadataImpl(KindID)
+                                          : nullptr;
   }
 
   /// Get the metadata of given kind attached to this Instruction.

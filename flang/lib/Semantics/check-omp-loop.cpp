@@ -373,15 +373,6 @@ void OmpStructureChecker::Enter(const parser::OpenMPLoopConstruct &x) {
   }
 
   if (beginName.v == llvm::omp::Directive::OMPD_do) {
-    // 2.7.1 do-clause -> private-clause |
-    //                    firstprivate-clause |
-    //                    lastprivate-clause |
-    //                    linear-clause |
-    //                    reduction-clause |
-    //                    schedule-clause |
-    //                    collapse-clause |
-    //                    ordered-clause
-
     // nesting check
     HasInvalidWorksharingNesting(beginName, llvm::omp::nestedWorkshareErrSet);
   }

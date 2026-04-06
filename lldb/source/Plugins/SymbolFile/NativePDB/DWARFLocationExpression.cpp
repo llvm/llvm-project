@@ -118,7 +118,7 @@ static DWARFExpression MakeLocationExpressionInternal(lldb::ModuleSP module,
     return DWARFExpression();
 
   RegisterKind register_kind = eRegisterKindDWARF;
-  StreamBuffer<32> stream(Stream::eBinary, address_size, byte_order);
+  StreamBuffer<32> stream(Stream::eBinary, byte_order);
 
   if (!writer(stream, register_kind))
     return DWARFExpression();
@@ -245,8 +245,9 @@ DWARFExpression lldb_private::npdb::MakeGlobalLocationExpression(
         if (!section_ptr)
           return false;
 
+        const ArchSpec &arch = module->GetArchitecture();
         stream.PutMaxHex64(section_ptr->GetFileAddress() + offset,
-                           stream.GetAddressByteSize(), stream.GetByteOrder());
+                           arch.GetAddressByteSize(), arch.GetByteOrder());
 
         return true;
       });

@@ -1334,9 +1334,10 @@ DynamicSection<ELFT>::computeContents() {
       addInt(DT_AARCH64_PAC_PLT, 0);
 
     if (hasMemtag(ctx)) {
-      addInt(DT_AARCH64_MEMTAG_MODE, ctx.arg.androidMemtagMode == NT_MEMTAG_LEVEL_ASYNC);
-      addInt(DT_AARCH64_MEMTAG_HEAP, ctx.arg.androidMemtagHeap);
-      addInt(DT_AARCH64_MEMTAG_STACK, ctx.arg.androidMemtagStack);
+      addInt(DT_AARCH64_MEMTAG_MODE,
+             ctx.arg.memtagMode == NT_MEMTAG_LEVEL_ASYNC);
+      addInt(DT_AARCH64_MEMTAG_HEAP, ctx.arg.memtagHeap);
+      addInt(DT_AARCH64_MEMTAG_STACK, ctx.arg.memtagStack);
       if (ctx.mainPart->memtagGlobalDescriptors->isNeeded()) {
         addInSec(DT_AARCH64_MEMTAG_GLOBALS,
                  *ctx.mainPart->memtagGlobalDescriptors);
@@ -3808,6 +3809,26 @@ template <class ELFT> void elf::splitSections(Ctx &ctx) {
       else if (auto *eh = dyn_cast<EhInputSection>(sec))
         eh->split<ELFT>();
     }
+
+    // For non-section Defined symbols in merge sections, pre-resolve the piece
+    // index to avoid potentially repeated binary search (MarkLive, RelocScan,
+    // includeInSymtab). Encode each non-section Defined symbol's value as
+    // ((pieceIdx + 1) << mergeValueShift) | intraPieceOffset.
+    auto resolve = [](Defined *d) {
+      auto *ms = dyn_cast_or_null<MergeInputSection>(d->section);
+      if (!ms || d->isSection())
+        return;
+      SectionPiece &piece = ms->getSectionPiece(d->value);
+      uint32_t idx = &piece - ms->pieces.data();
+      uint64_t off = d->value - piece.inputOff;
+      d->value = ((uint64_t)(idx + 1) << mergeValueShift) | off;
+    };
+    for (Symbol *sym : file->getLocalSymbols())
+      if (auto *d = dyn_cast<Defined>(sym))
+        resolve(d);
+    for (Symbol *sym : file->getGlobalSymbols())
+      if (auto *d = dyn_cast<Defined>(sym); d && d->file == file)
+        resolve(d);
   });
 }
 
@@ -4299,7 +4320,7 @@ static bool needsInterpSection(Ctx &ctx) {
 
 bool elf::hasMemtag(Ctx &ctx) {
   return ctx.arg.emachine == EM_AARCH64 &&
-         ctx.arg.androidMemtagMode != ELF::NT_MEMTAG_LEVEL_NONE;
+         ctx.arg.memtagMode != ELF::NT_MEMTAG_LEVEL_NONE;
 }
 
 // Fully static executables don't support MTE globals at this point in time, as
@@ -4327,12 +4348,12 @@ void MemtagAndroidNote::writeTo(uint8_t *buf) {
   buf += 12 + alignTo(sizeof(kMemtagAndroidNoteName), 4);
 
   uint32_t value = 0;
-  value |= ctx.arg.androidMemtagMode;
-  if (ctx.arg.androidMemtagHeap)
+  value |= ctx.arg.memtagMode;
+  if (ctx.arg.memtagHeap)
     value |= ELF::NT_MEMTAG_HEAP;
   // Note, MTE stack is an ABI break. Attempting to run an MTE stack-enabled
   // binary on Android 11 or 12 will result in a checkfail in the loader.
-  if (ctx.arg.androidMemtagStack)
+  if (ctx.arg.memtagStack)
     value |= ELF::NT_MEMTAG_STACK;
   write32(ctx, buf, value); // note value
 }
@@ -4527,8 +4548,10 @@ template <class ELFT> void elf::createSyntheticSections(Ctx &ctx) {
     part.dynamic = std::make_unique<DynamicSection<ELFT>>(ctx);
 
     if (hasMemtag(ctx)) {
-      part.memtagAndroidNote = std::make_unique<MemtagAndroidNote>(ctx);
-      add(*part.memtagAndroidNote);
+      if (ctx.arg.memtagAndroidNote) {
+        part.memtagAndroidNote = std::make_unique<MemtagAndroidNote>(ctx);
+        add(*part.memtagAndroidNote);
+      }
       if (canHaveMemtagGlobals(ctx)) {
         part.memtagGlobalDescriptors =
             std::make_unique<MemtagGlobalDescriptors>(ctx);
@@ -4541,7 +4564,7 @@ template <class ELFT> void elf::createSyntheticSections(Ctx &ctx) {
           ctx, relaDynName, threadCount);
     else
       part.relaDyn = std::make_unique<RelocationSection<ELFT>>(
-          ctx, relaDynName, ctx.arg.zCombreloc, threadCount);
+          ctx, relaDynName, /*combreloc=*/true, threadCount);
 
     if (ctx.hasDynsym) {
       add(*part.dynSymTab);

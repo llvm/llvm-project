@@ -25,6 +25,7 @@
 #include "lldb/Utility/Stream.h"
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/ErrorExtras.h"
 
 #include <cassert>
 #include <memory>
@@ -146,8 +147,7 @@ ValueObjectRegisterSet::GetIndexOfChildWithName(llvm::StringRef name) {
     if (reg_info != nullptr)
       return reg_info->kinds[eRegisterKindLLDB];
   }
-  return llvm::createStringError("Type has no child named '%s'",
-                                 name.str().c_str());
+  return llvm::createStringErrorV("type has no child named '{0}'", name);
 }
 
 #pragma mark -

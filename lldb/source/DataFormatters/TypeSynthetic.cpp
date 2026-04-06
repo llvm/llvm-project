@@ -21,6 +21,7 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/StreamString.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/ErrorExtras.h"
 #include <cstdint>
 
 using namespace lldb;
@@ -70,8 +71,7 @@ TypeFilterImpl::FrontEnd::GetIndexOfChildWithName(ConstString name) {
       }
     }
   }
-  return llvm::createStringError("Type has no child named '%s'",
-                                 name.AsCString());
+  return llvm::createStringErrorV("type has no child named '{0}'", name);
 }
 
 std::string TypeFilterImpl::GetDescription() {
@@ -225,8 +225,7 @@ bool ScriptedSyntheticChildren::FrontEnd::MightHaveChildren() {
 llvm::Expected<size_t>
 ScriptedSyntheticChildren::FrontEnd::GetIndexOfChildWithName(ConstString name) {
   if (!m_wrapper_sp || m_interpreter == nullptr)
-    return llvm::createStringError("Type has no child named '%s'",
-                                   name.AsCString());
+    return llvm::createStringErrorV("type has no child named '{0}'", name);
   return m_interpreter->GetIndexOfChildWithName(m_wrapper_sp,
                                                 name.GetCString());
 }
@@ -293,10 +292,33 @@ lldb::ChildCacheState BytecodeSyntheticChildren::FrontEnd::Update() {
     return ChildCacheState::eRefetch;
   }
 
+  std::optional<ChildCacheState> can_reuse = std::nullopt;
+  const FormatterBytecode::DataStackElement &top = data.back();
+  if (auto *u = std::get_if<uint64_t>(&top))
+    if (*u == 0 || *u == 1)
+      can_reuse = static_cast<ChildCacheState>(*u);
+  if (auto *i = std::get_if<int64_t>(&top))
+    if (*i == 0 || *i == 1)
+      can_reuse = static_cast<ChildCacheState>(*i);
+
+  if (can_reuse) {
+    data.pop_back();
+    LLDB_LOG(
+        GetLog(LLDBLog::DataFormatters),
+        "Bytecode formatter can reuse @update: {0} (type: `{1}`, name: `{2}`)",
+        can_reuse ? "true" : "false", m_backend.GetDisplayTypeName(),
+        m_backend.GetName());
+  } else {
+    LLDB_LOG(GetLog(LLDBLog::DataFormatters),
+             "Bytecode formatter did not return a valid reuse response from "
+             "@update (type: `{1}`, name: `{2}`)",
+             m_backend.GetDisplayTypeName(), m_backend.GetName());
+  }
+
   if (data.size() > 0)
     m_self = std::move(data);
 
-  return ChildCacheState::eRefetch;
+  return can_reuse.value_or(ChildCacheState::eRefetch);
 }
 
 llvm::Expected<uint32_t>

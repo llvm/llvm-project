@@ -126,8 +126,10 @@ bool VPRecipeBase::mayReadFromMemory() const {
                 ->onlyWritesMemory();
   case VPWidenIntrinsicSC:
     return cast<VPWidenIntrinsicRecipe>(this)->mayReadFromMemory();
+  case VPCanonicalIVPHISC:
   case VPBranchOnMaskSC:
   case VPDerivedIVSC:
+  case VPCurrentIterationPHISC:
   case VPFirstOrderRecurrencePHISC:
   case VPReductionPHISC:
   case VPPredInstPHISC:
@@ -165,6 +167,7 @@ bool VPRecipeBase::mayHaveSideEffects() const {
     return cast<VPExpressionRecipe>(this)->mayHaveSideEffects();
   case VPActiveLaneMaskPHISC:
   case VPDerivedIVSC:
+  case VPCurrentIterationPHISC:
   case VPFirstOrderRecurrencePHISC:
   case VPReductionPHISC:
   case VPPredInstPHISC:
@@ -1326,7 +1329,8 @@ void VPInstruction::execute(VPTransformState &State) {
 }
 
 bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
-  if (Instruction::isBinaryOp(getOpcode()) || Instruction::isCast(getOpcode()))
+  if (Instruction::isBinaryOp(getOpcode()) ||
+      Instruction::isUnaryOp(getOpcode()) || Instruction::isCast(getOpcode()))
     return false;
   switch (getOpcode()) {
   case Instruction::GetElementPtr:
@@ -1635,9 +1639,11 @@ void VPPhi::execute(VPTransformState &State) {
   PHINode *NewPhi = State.Builder.CreatePHI(
       State.TypeAnalysis.inferScalarType(this), 2, getName());
   unsigned NumIncoming = getNumIncoming();
-  if (getParent() != getParent()->getPlan()->getScalarPreheader()) {
-    // TODO: Fixup all incoming values of header phis once recipes defining them
-    // are introduced.
+  // Detect header phis: the parent block dominates its second incoming block
+  // (the latch). Those IR incoming values have not been generated yet and need
+  // to be added after they have been executed.
+  if (NumIncoming == 2 &&
+      State.VPDT.dominates(getParent(), getIncomingBlock(1))) {
     NumIncoming = 1;
   }
   for (unsigned Idx = 0; Idx != NumIncoming; ++Idx) {
@@ -2602,8 +2608,6 @@ void VPScalarIVStepsRecipe::execute(VPTransformState &State) {
                                /*ImplicitTrunc=*/true)
             : ConstantFP::get(BaseIVTy, Lane);
     Value *StartIdx = Builder.CreateBinOp(AddOp, StartIdx0, LaneValue);
-    // The step returned by `createStepForVF` is a runtime-evaluated value
-    // when VF is scalable. Otherwise, it should be folded into a Constant.
     assert((State.VF.isScalable() || isa<Constant>(StartIdx)) &&
            "Expected StartIdx to be folded to a constant when VF is not "
            "scalable");
@@ -4567,7 +4571,8 @@ void VPWidenCanonicalIVRecipe::execute(VPTransformState &State) {
   Value *VStart = VF.isScalar()
                       ? CanonicalIV
                       : Builder.CreateVectorSplat(VF, CanonicalIV, "broadcast");
-  Value *VStep = createStepForVF(Builder, STy, VF, getUnrollPart(*this));
+  Value *VStep = Builder.CreateElementCount(
+      STy, VF.multiplyCoefficientBy(getUnrollPart(*this)));
   if (VF.isVector()) {
     VStep = Builder.CreateVectorSplat(VF, VStep);
     VStep =

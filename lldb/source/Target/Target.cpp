@@ -582,7 +582,7 @@ Target::CreateAddressInModuleBreakpoint(lldb::addr_t file_addr, bool internal,
       std::make_shared<SearchFilterForUnconstrainedSearches>(
           shared_from_this());
   BreakpointResolverSP resolver_sp =
-      std::make_shared<BreakpointResolverAddress>(nullptr, file_addr,
+      std::make_shared<BreakpointResolverAddress>(nullptr, Address(file_addr),
                                                   file_spec);
   return CreateBreakpoint(filter_sp, resolver_sp, internal, request_hardware,
                           false);
@@ -923,7 +923,7 @@ void Target::ApplyNameToBreakpoints(BreakpointName &bp_name) {
 void Target::GetBreakpointNames(std::vector<std::string> &names) {
   names.clear();
   for (const auto& bp_name_entry : m_breakpoint_names) {
-    names.push_back(bp_name_entry.first.AsCString());
+    names.push_back(bp_name_entry.first.GetString());
   }
   llvm::sort(names);
 }
@@ -1542,19 +1542,6 @@ Module *Target::GetExecutableModulePointer() {
   return GetExecutableModule().get();
 }
 
-static void LoadScriptingResourceForModule(const ModuleSP &module_sp,
-                                           Target *target) {
-  Status error;
-  if (module_sp && !module_sp->LoadScriptingResourceInTarget(target, error)) {
-    if (error.AsCString())
-      target->GetDebugger().GetAsyncErrorStream()->Printf(
-          "unable to load scripting data for module %s - error reported was "
-          "%s\n",
-          module_sp->GetFileSpec().GetFileNameStrippingExtension().GetCString(),
-          error.AsCString());
-  }
-}
-
 void Target::ClearModules(bool delete_locations) {
   ModulesDidUnload(m_images, delete_locations);
   m_section_load_history.Clear();
@@ -1857,9 +1844,13 @@ void Target::ModulesDidLoad(ModuleList &module_list) {
 
   const size_t num_images = module_list.GetSize();
   if (m_valid && num_images) {
+    std::list<Status> errors;
+    module_list.LoadScriptingResourcesInTarget(this, errors);
+    for (const auto &err : errors)
+      GetDebugger().GetAsyncErrorStream()->PutCString(err.AsCString());
+
     for (size_t idx = 0; idx < num_images; ++idx) {
       ModuleSP module_sp(module_list.GetModuleAtIndex(idx));
-      LoadScriptingResourceForModule(module_sp, this);
       LoadTypeSummariesForModule(module_sp);
       LoadFormattersForModule(module_sp);
     }
@@ -2610,7 +2601,7 @@ llvm::Expected<lldb::TypeSystemSP>
 Target::GetScratchTypeSystemForLanguage(lldb::LanguageType language,
                                         bool create_on_demand) {
   if (!m_valid)
-    return llvm::createStringError("Invalid Target");
+    return llvm::createStringError("invalid target");
 
   if (language == eLanguageTypeMipsAssembler // GNU AS and LLVM use it for all
                                              // assembly code
@@ -2637,9 +2628,10 @@ Target::GetScratchTypeSystemForLanguage(lldb::LanguageType language,
 CompilerType Target::GetRegisterType(const std::string &name,
                                      const lldb_private::RegisterFlags &flags,
                                      uint32_t byte_size) {
-  RegisterTypeBuilderSP provider = PluginManager::GetRegisterTypeBuilder(*this);
-  assert(provider);
-  return provider->GetRegisterType(name, flags, byte_size);
+  if (!m_register_type_builder_sp)
+    m_register_type_builder_sp = PluginManager::GetRegisterTypeBuilder(*this);
+  assert(m_register_type_builder_sp);
+  return m_register_type_builder_sp->GetRegisterType(name, flags, byte_size);
 }
 
 std::vector<lldb::TypeSystemSP>
@@ -2813,7 +2805,7 @@ void Target::SetDefaultArchitecture(const ArchSpec &arch) {
 llvm::Error Target::SetLabel(llvm::StringRef label) {
   size_t n = LLDB_INVALID_INDEX32;
   if (llvm::to_integer(label, n))
-    return llvm::createStringError("Cannot use integer as target label.");
+    return llvm::createStringError("cannot use integer as target label");
   TargetList &targets = GetDebugger().GetTargetList();
   for (size_t i = 0; i < targets.GetNumTargets(); i++) {
     TargetSP target_sp = targets.GetTargetAtIndex(i);
@@ -2896,9 +2888,19 @@ ExpressionResults Target::EvaluateExpression(
     result_valobj_sp = persistent_var_sp->GetValueObject();
     execution_results = eExpressionCompleted;
   } else {
+    // If this expression is being evaluated from inside a frame provider,
+    // force single-thread execution. Resuming all threads while a provider
+    // is mid-construction could cause unwanted process state changes.
+    EvaluateExpressionOptions effective_options = options;
+    if (ThreadSP thread_sp = exe_ctx.GetThreadSP()) {
+      if (thread_sp->IsAnyProviderActive()) {
+        effective_options.SetStopOthers(true);
+        effective_options.SetTryAllThreads(false);
+      }
+    }
     llvm::StringRef prefix = GetExpressionPrefixContents();
     execution_results =
-        UserExpression::Evaluate(exe_ctx, options, expr, prefix,
+        UserExpression::Evaluate(exe_ctx, effective_options, expr, prefix,
                                  result_valobj_sp, fixed_expression, ctx_obj);
   }
 
@@ -3854,8 +3856,19 @@ void Target::FinalizeFileActions(ProcessLaunchInfo &info) {
       }
 
       if (default_to_use_pty) {
-        llvm::Error Err = info.SetUpPtyRedirection();
-        LLDB_LOG_ERROR(log, std::move(Err), "SetUpPtyRedirection failed: {0}");
+#ifdef _WIN32
+        if (info.GetFlags().Test(eLaunchFlagUsePipes)) {
+          llvm::Error Err = info.SetUpPipeRedirection();
+          LLDB_LOG_ERROR(log, std::move(Err),
+                         "SetUpPipeRedirection failed: {0}");
+        } else {
+#endif
+          llvm::Error Err = info.SetUpPtyRedirection();
+          LLDB_LOG_ERROR(log, std::move(Err),
+                         "SetUpPtyRedirection failed: {0}");
+#ifdef _WIN32
+        }
+#endif
       }
     }
   }
@@ -4357,6 +4370,12 @@ static constexpr OptionEnumValueElement g_load_script_from_sym_file_values[] = {
         eLoadScriptFromSymFileWarn,
         "warn",
         "Warn about debug scripts inside symbol files but do not load them.",
+    },
+    {
+        eLoadScriptFromSymFileTrusted,
+        "trusted",
+        "Load debug scripts inside trusted symbol files, and warn about "
+        "scripts from untrusted symbol files.",
     },
 };
 

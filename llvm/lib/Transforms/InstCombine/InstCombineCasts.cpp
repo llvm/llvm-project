@@ -1086,6 +1086,28 @@ Instruction *InstCombinerImpl::visitTrunc(TruncInst &Trunc) {
 
   Value *A, *B;
   Constant *C;
+
+  // trunc(u/smin(zext(a) + zext(b), MAX)) --> uadd.sat(a, b)
+  if (match(Src,
+            m_OneUse(m_CombineOr(
+                m_UMin(m_OneUse(m_Add(m_ZExt(m_Value(A)), m_ZExt(m_Value(B)))),
+                       m_SpecificInt(APInt::getMaxValue(DestWidth))),
+                m_SMin(m_OneUse(m_Add(m_ZExt(m_Value(A)), m_ZExt(m_Value(B)))),
+                       m_SpecificInt(APInt::getMaxValue(DestWidth)))))) &&
+      A->getType() == DestTy && B->getType() == DestTy) {
+    return replaceInstUsesWith(
+        Trunc, Builder.CreateBinaryIntrinsic(Intrinsic::uadd_sat, A, B));
+  }
+
+  // trunc(smax(zext(a) - zext(b), 0)) --> usub.sat(a, b)
+  if (match(Src, m_OneUse(m_SMax(
+                     m_OneUse(m_Sub(m_ZExt(m_Value(A)), m_ZExt(m_Value(B)))),
+                     m_Zero()))) &&
+      A->getType() == DestTy && B->getType() == DestTy) {
+    return replaceInstUsesWith(
+        Trunc, Builder.CreateBinaryIntrinsic(Intrinsic::usub_sat, A, B));
+  }
+
   if (match(Src, m_LShr(m_SExt(m_Value(A)), m_Constant(C)))) {
     unsigned AWidth = A->getType()->getScalarSizeInBits();
     unsigned MaxShiftAmt = SrcWidth - std::max(DestWidth, AWidth);
@@ -2008,9 +2030,7 @@ static Type *getMinimumFPType(Value *V, bool PreferBFloat) {
   return V->getType();
 }
 
-/// Return true if the cast from integer to FP can be proven to be exact for all
-/// possible inputs (the conversion does not lose any precision).
-static bool isKnownExactCastIntToFP(CastInst &I, InstCombinerImpl &IC) {
+bool InstCombiner::isKnownExactCastIntToFP(CastInst &I) const {
   CastInst::CastOps Opcode = I.getOpcode();
   assert((Opcode == CastInst::SIToFP || Opcode == CastInst::UIToFP) &&
          "Unexpected cast");
@@ -2044,15 +2064,22 @@ static bool isKnownExactCastIntToFP(CastInst &I, InstCombinerImpl &IC) {
       return true;
   }
 
-  // TODO:
   // Try harder to find if the source integer type has less significant bits.
-  // For example, compute number of sign bits.
-  KnownBits SrcKnown = IC.computeKnownBits(Src, &I);
+  // Compute number of sign bits or determine trailing zeros.
+  KnownBits SrcKnown = computeKnownBits(Src, &I);
   int SigBits = (int)SrcTy->getScalarSizeInBits() -
                 SrcKnown.countMinLeadingZeros() -
                 SrcKnown.countMinTrailingZeros();
   if (SigBits <= DestNumSigBits)
     return true;
+
+  // For sitofp, the sign maps to the FP sign bit, so only magnitude bits
+  // (BitWidth - NumSignBits) consume mantissa.
+  if (IsSigned) {
+    SigBits = (int)SrcTy->getScalarSizeInBits() - ComputeNumSignBits(Src, &I);
+    if (SigBits <= DestNumSigBits)
+      return true;
+  }
 
   return false;
 }
@@ -2238,7 +2265,7 @@ Instruction *InstCombinerImpl::visitFPTrunc(FPTruncInst &FPT) {
   Value *Src = FPT.getOperand(0);
   if (isa<SIToFPInst>(Src) || isa<UIToFPInst>(Src)) {
     auto *FPCast = cast<CastInst>(Src);
-    if (isKnownExactCastIntToFP(*FPCast, *this))
+    if (isKnownExactCastIntToFP(*FPCast))
       return CastInst::Create(FPCast->getOpcode(), FPCast->getOperand(0), Ty);
   }
 
@@ -2252,7 +2279,7 @@ Instruction *InstCombinerImpl::visitFPExt(CastInst &FPExt) {
   Value *Src = FPExt.getOperand(0);
   if (isa<SIToFPInst>(Src) || isa<UIToFPInst>(Src)) {
     auto *FPCast = cast<CastInst>(Src);
-    if (isKnownExactCastIntToFP(*FPCast, *this))
+    if (isKnownExactCastIntToFP(*FPCast))
       return CastInst::Create(FPCast->getOpcode(), FPCast->getOperand(0), Ty);
   }
 
@@ -2279,7 +2306,7 @@ Instruction *InstCombinerImpl::foldItoFPtoI(CastInst &FI) {
 
   // This means this is also safe for a signed input and unsigned output, since
   // a negative input would lead to undefined behavior.
-  if (!isKnownExactCastIntToFP(*OpI, *this)) {
+  if (!isKnownExactCastIntToFP(*OpI)) {
     // The first cast may not round exactly based on the source integer width
     // and FP width, but the overflow UB rules can still allow this to fold.
     // If the destination type is narrow, that means the intermediate FP value

@@ -610,6 +610,13 @@ Value MemorySlotPromoter::promoteInBlock(Block *block, Value reachingDef) {
           promoteInRegion(region, reachingDef);
         }
 
+        // TODO: Currently we have to invalidate the dominance information of
+        // the regions of the operation because finalizePromotion may move their
+        // content. We might want to support moving dominance information
+        // accross regions as this can be detected.
+        for (Region &region : op->getRegions())
+          dominance.invalidate(&region);
+
         builder.setInsertionPointAfter(op);
         reachingDef = promotableRegionOp.finalizePromotion(
             slot, reachingDef, hasValueStores, reachingAtBlockEnd, builder);
@@ -874,6 +881,10 @@ void MemorySlotPromoter::removeUnusedItems() {
   for (Operation *toEraseOp : toErase)
     toEraseOp->erase();
 
+  // First, erase all successor operands that feed into unused merge point
+  // block arguments. This must be done before erasing the block arguments
+  // themselves because an unused merge point argument may be used to
+  // populate another unused merge point argument via a branch operation.
   for (BlockArgument arg : mergePointArgsUnused) {
     Block *mergePoint = arg.getOwner();
     for (BlockOperand &use : mergePoint->getUses()) {
@@ -882,6 +893,12 @@ void MemorySlotPromoter::removeUnusedItems() {
           branch.getSuccessorOperands(use.getOperandNumber());
       succOperands.erase(arg.getArgNumber());
     }
+  }
+
+  // Now that all successor operands feeding unused args have been removed,
+  // erase the block arguments themselves.
+  for (BlockArgument arg : mergePointArgsUnused) {
+    Block *mergePoint = arg.getOwner();
     mergePoint->eraseArgument(mergePoint->getNumArguments() - 1);
   }
 }

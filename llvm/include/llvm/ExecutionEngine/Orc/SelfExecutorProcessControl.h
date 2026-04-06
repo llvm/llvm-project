@@ -50,6 +50,8 @@ public:
                         IncomingWFRHandler OnComplete,
                         ArrayRef<char> ArgBuffer) override;
 
+  Expected<std::unique_ptr<DylibManager>> createDefaultDylibMgr() override;
+
   Error disconnect() override;
 
 private:
@@ -74,7 +76,6 @@ private:
   std::unique_ptr<UnwindInfoManager> UnwindInfoMgr;
 #endif // __APPLE__
   InProcessMemoryAccess IPMA;
-  InProcessDylibManager IPDM;
 };
 
 } // namespace llvm::orc
