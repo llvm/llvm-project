@@ -13003,6 +13003,27 @@ void Sema::CheckImplicitConversion(Expr *E, QualType T, SourceLocation CC,
   else if (auto *DictionaryLiteral = dyn_cast<ObjCDictionaryLiteral>(E))
     ObjC().checkDictionaryLiteral(QualType(Target, 0), DictionaryLiteral);
 
+  // Strip complex types.
+  if (isa<ComplexType>(Source)) {
+    if (!isa<ComplexType>(Target)) {
+      if (SourceMgr.isInSystemMacro(CC) || Target->isBooleanType())
+        return;
+
+      if (!getLangOpts().CPlusPlus && Target->isVectorType()) {
+        return DiagnoseImpCast(*this, E, T, CC,
+                               diag::err_impcast_incompatible_type);
+      }
+
+      return DiagnoseImpCast(*this, E, T, CC,
+                             getLangOpts().CPlusPlus
+                                 ? diag::err_impcast_complex_scalar
+                                 : diag::warn_impcast_complex_scalar);
+    }
+
+    Source = cast<ComplexType>(Source)->getElementType().getTypePtr();
+    Target = cast<ComplexType>(Target)->getElementType().getTypePtr();
+  }
+
   // Strip vector types.
   if (isa<VectorType>(Source)) {
     if (Target->isSveVLSBuiltinType() &&
@@ -13064,22 +13085,6 @@ void Sema::CheckImplicitConversion(Expr *E, QualType T, SourceLocation CC,
   }
   if (const auto *MatTy = dyn_cast<ConstantMatrixType>(Target))
     Target = MatTy->getElementType().getTypePtr();
-
-  // Strip complex types.
-  if (isa<ComplexType>(Source)) {
-    if (!isa<ComplexType>(Target)) {
-      if (SourceMgr.isInSystemMacro(CC) || Target->isBooleanType())
-        return;
-
-      return DiagnoseImpCast(*this, E, T, CC,
-                             getLangOpts().CPlusPlus
-                                 ? diag::err_impcast_complex_scalar
-                                 : diag::warn_impcast_complex_scalar);
-    }
-
-    Source = cast<ComplexType>(Source)->getElementType().getTypePtr();
-    Target = cast<ComplexType>(Target)->getElementType().getTypePtr();
-  }
 
   const BuiltinType *SourceBT = dyn_cast<BuiltinType>(Source);
   const BuiltinType *TargetBT = dyn_cast<BuiltinType>(Target);

@@ -475,6 +475,37 @@ static Value *emitHlslClamp(CodeGenFunction &CGF, const CallExpr *E,
   return Clamp;
 }
 
+static Value *emitGetDimensions(CodeGenFunction &CGF, const CallExpr *E,
+                                unsigned IntrinsicID, unsigned NumRetComps,
+                                bool HasLod) {
+  Value *Handle = CGF.EmitScalarExpr(E->getArg(0));
+
+  SmallVector<Value *> Args{Handle};
+  if (HasLod)
+    Args.push_back(CGF.EmitScalarExpr(E->getArg(1)));
+
+  Value *DimValue =
+      CGF.Builder.CreateIntrinsic(IntrinsicID, {Handle->getType()}, Args);
+
+  Value *LastStore = nullptr;
+  unsigned ArgIndex = HasLod ? 2 : 1;
+  for (unsigned i = 0; i < NumRetComps; ++i) {
+    const Expr *Arg = E->getArg(ArgIndex++);
+    LValue DimOut = CGF.EmitLValue(Arg);
+    Value *Elem = DimValue;
+    if (NumRetComps > 1)
+      Elem = CGF.Builder.CreateExtractElement(DimValue, i);
+
+    // Handle float casting if needed
+    if (Arg->getType()->isFloatingType())
+      Elem = CGF.Builder.CreateUIToFP(
+          Elem, llvm::Type::getFloatTy(CGF.getLLVMContext()));
+
+    LastStore = CGF.Builder.CreateStore(Elem, DimOut.getAddress());
+  }
+  return LastStore;
+}
+
 Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
                                             const CallExpr *E,
                                             ReturnValueSlot ReturnValue) {
@@ -882,15 +913,21 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
         RetTy, CGM.getHLSLRuntime().getNonUniformResourceIndexIntrinsic(),
         ArrayRef<Value *>{IndexOp});
   }
-  case Builtin::BI__builtin_hlsl_resource_getdimensions_x: {
-    Value *Handle = EmitScalarExpr(E->getArg(0));
-    LValue Dim = EmitLValue(E->getArg(1));
-    llvm::Type *RetTy = llvm::Type::getInt32Ty(getLLVMContext());
-    Value *DimValue = Builder.CreateIntrinsic(
-        RetTy, CGM.getHLSLRuntime().getGetDimensionsXIntrinsic(),
-        ArrayRef<Value *>{Handle});
-    return Builder.CreateStore(DimValue, Dim.getAddress());
-  }
+  case Builtin::BI__builtin_hlsl_resource_getdimensions_x:
+  case Builtin::BI__builtin_hlsl_resource_getdimensions_x_float:
+    return emitGetDimensions(*this, E,
+                             CGM.getHLSLRuntime().getGetDimensionsXIntrinsic(),
+                             1, /*HasLod=*/false);
+  case Builtin::BI__builtin_hlsl_resource_getdimensions_xy:
+  case Builtin::BI__builtin_hlsl_resource_getdimensions_xy_float:
+    return emitGetDimensions(*this, E,
+                             CGM.getHLSLRuntime().getGetDimensionsXYIntrinsic(),
+                             2, /*HasLod=*/false);
+  case Builtin::BI__builtin_hlsl_resource_getdimensions_levels_xy:
+  case Builtin::BI__builtin_hlsl_resource_getdimensions_levels_xy_float:
+    return emitGetDimensions(
+        *this, E, CGM.getHLSLRuntime().getGetDimensionsLevelsXYIntrinsic(), 3,
+        /*HasLod=*/true);
   case Builtin::BI__builtin_hlsl_resource_getstride: {
     LValue Stride = EmitLValue(E->getArg(1));
     return emitBufferStride(this, E->getArg(0), Stride);

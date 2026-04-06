@@ -1402,17 +1402,6 @@ bool DependenceInfo::weakCrossingSIVtest(const SCEVAddRecExpr *Src,
   if (!ConstDelta)
     return false;
 
-  // We're certain that ConstCoeff > 0; therefore,
-  // if Delta < 0, then no dependence.
-  LLVM_DEBUG(dbgs() << "\t    Delta = " << *Delta << "\n");
-  LLVM_DEBUG(dbgs() << "\t    ConstCoeff = " << *ConstCoeff << "\n");
-  if (SE->isKnownNegative(Delta)) {
-    // No dependence, Delta < 0
-    ++WeakCrossingSIVindependence;
-    ++WeakCrossingSIVsuccesses;
-    return true;
-  }
-
   ConstantRange SrcRange = SE->getSignedRange(Src);
   ConstantRange DstRange = SE->getSignedRange(Dst);
   LLVM_DEBUG(dbgs() << "\t    SrcRange = " << SrcRange << "\n");
@@ -2000,8 +1989,8 @@ bool DependenceInfo::testSIV(const SCEV *Src, const SCEV *Dst, unsigned &Level,
     Level = mapDstLoop(CurDstLoop);
     return weakZeroSrcSIVtest(Src, DstAddRec, Level, Result);
   }
-  assert(SrcAddRec != nullptr ||
-         DstAddRec != nullptr && "SIV test expected at least one AddRec");
+  assert((SrcAddRec != nullptr || DstAddRec != nullptr) &&
+         "SIV test expected at least one AddRec");
   return false;
 }
 
@@ -2093,8 +2082,9 @@ bool DependenceInfo::accumulateCoefficientsGCD(const SCEV *Expr,
 /// Compute \p RunningGCD and return the start value of the innermost
 /// \p SCEVAddRecExpr. In order to calculate the return value we do not
 /// return immediately if it is proved that \p RunningGCD = 1.
-const SCEV *analyzeCoefficientsForGCD(const SCEV *Coefficients,
-                                      APInt &RunningGCD, ScalarEvolution *SE) {
+static const SCEV *analyzeCoefficientsForGCD(const SCEV *Coefficients,
+                                             APInt &RunningGCD,
+                                             ScalarEvolution *SE) {
   while (const SCEVAddRecExpr *AddRec =
              dyn_cast<SCEVAddRecExpr>(Coefficients)) {
     const SCEV *Coeff = AddRec->getStepRecurrence(*SE);

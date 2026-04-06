@@ -247,8 +247,8 @@ protected:
   };
 
   struct LCNoteEntry {
-    LCNoteEntry(uint32_t addr_byte_size, lldb::ByteOrder byte_order)
-        : payload(lldb_private::Stream::eBinary, addr_byte_size, byte_order) {}
+    explicit LCNoteEntry(lldb::ByteOrder byte_order)
+        : payload(lldb_private::Stream::eBinary, byte_order) {}
 
     std::string name;
     lldb::addr_t payload_file_offset = 0;

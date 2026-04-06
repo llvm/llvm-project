@@ -4775,8 +4775,10 @@ bool SelectionDAG::isKnownToBeAPowerOfTwo(SDValue Val,
     // If x != 0:
     //    x & -x -> non-zero pow2
     // so if we find the pattern return whether we know `x` is non-zero.
-    SDValue X;
-    if (sd_match(Val, m_And(m_Value(X), m_Neg(m_Deferred(X)))))
+    SDValue X, Z;
+    if (sd_match(Val, m_And(m_Value(X), m_Neg(m_Deferred(X)))) ||
+        (sd_match(Val, m_And(m_Value(X), m_Sub(m_Value(Z), m_Deferred(X)))) &&
+         MaskedVectorIsZero(Z, DemandedElts, Depth + 1)))
       return OrZero || isKnownNeverZero(X, DemandedElts, Depth);
     break;
   }
@@ -4803,10 +4805,10 @@ bool SelectionDAG::isKnownToBeAPowerOfTwo(SDValue Val,
                                   Depth + 1);
   }
 
-  case ISD::TRUNCATE: {
-    return (OrZero || isKnownNeverZero(Val, Depth)) &&
-           isKnownToBeAPowerOfTwo(Val.getOperand(0), OrZero, Depth + 1);
-  }
+  case ISD::TRUNCATE:
+    return (OrZero || isKnownNeverZero(Val, DemandedElts, Depth)) &&
+           isKnownToBeAPowerOfTwo(Val.getOperand(0), DemandedElts, OrZero,
+                                  Depth + 1);
 
   case ISD::ROTL:
   case ISD::ROTR:
@@ -6076,6 +6078,10 @@ KnownFPClass SelectionDAG::computeKnownFPClass(SDValue Op,
     }
     break;
   }
+  case ISD::SPLAT_VECTOR: {
+    Known = computeKnownFPClass(Op.getOperand(0), InterestedClasses, Depth + 1);
+    break;
+  }
   case ISD::BITCAST: {
     // FIXME: It should not be necessary to check for an elementwise bitcast.
     // If a bitcast is not elementwise between vector / scalar types,
@@ -6092,6 +6098,12 @@ KnownFPClass SelectionDAG::computeKnownFPClass(SDValue Op,
 
     KnownBits Bits = computeKnownBits(Op, DemandedElts, Depth + 1);
     Known = KnownFPClass::bitcast(VT.getFltSemantics(), Bits);
+    break;
+  }
+  case ISD::FABS: {
+    Known = computeKnownFPClass(Op.getOperand(0), DemandedElts,
+                                InterestedClasses, Depth + 1);
+    Known.fabs();
     break;
   }
   default:
