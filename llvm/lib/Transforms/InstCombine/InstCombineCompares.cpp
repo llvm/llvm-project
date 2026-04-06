@@ -8820,9 +8820,9 @@ static Instruction *foldFCmpWithFloorAndCeil(FCmpInst &I,
       break;
 
     KnownFPClass Known = computeKnownFPClass(
-        RHS, fcAllFlags, IC.getSimplifyQuery().getWithInstruction(&I));
+        RHS, fcNan | fcInf, IC.getSimplifyQuery().getWithInstruction(&I));
 
-    if ((Known.KnownFPClasses & (fcNan | fcInf)) != 0)
+    if (!Known.isKnownNeverInfOrNaN())
       break;
 
     Value *TruncX = IC.Builder.CreateUnaryIntrinsic(Intrinsic::trunc, RHS);
