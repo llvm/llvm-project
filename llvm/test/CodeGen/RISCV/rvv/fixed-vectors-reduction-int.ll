@@ -6058,3 +6058,298 @@ define i64 @vreduce_mul_v64i64(ptr %x) nounwind {
   %red = call i64 @llvm.vector.reduce.mul.v64i64(<64 x i64> %v)
   ret i64 %red
 }
+
+define i64 @vreduce_mul_v32i64_vscale4(ptr %x) nounwind vscale_range(4,1024) {
+; RV32-LABEL: vreduce_mul_v32i64_vscale4:
+; RV32:       # %bb.0:
+; RV32-NEXT:    li a1, 32
+; RV32-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
+; RV32-NEXT:    vle64.v v8, (a0)
+; RV32-NEXT:    vslidedown.vi v16, v8, 16
+; RV32-NEXT:    vmul.vv v8, v8, v16
+; RV32-NEXT:    vslidedown.vi v16, v8, 8
+; RV32-NEXT:    vmul.vv v8, v8, v16
+; RV32-NEXT:    vslidedown.vi v16, v8, 4
+; RV32-NEXT:    vmul.vv v8, v8, v16
+; RV32-NEXT:    vslidedown.vi v16, v8, 2
+; RV32-NEXT:    vmul.vv v8, v8, v16
+; RV32-NEXT:    vrgather.vi v16, v8, 1
+; RV32-NEXT:    vmul.vv v8, v8, v16
+; RV32-NEXT:    vmv.x.s a0, v8
+; RV32-NEXT:    vsetivli zero, 1, e64, m8, ta, ma
+; RV32-NEXT:    vsrl.vx v8, v8, a1
+; RV32-NEXT:    vmv.x.s a1, v8
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: vreduce_mul_v32i64_vscale4:
+; RV64:       # %bb.0:
+; RV64-NEXT:    li a1, 32
+; RV64-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
+; RV64-NEXT:    vle64.v v8, (a0)
+; RV64-NEXT:    vslidedown.vi v16, v8, 16
+; RV64-NEXT:    vmul.vv v8, v8, v16
+; RV64-NEXT:    vslidedown.vi v16, v8, 8
+; RV64-NEXT:    vmul.vv v8, v8, v16
+; RV64-NEXT:    vslidedown.vi v16, v8, 4
+; RV64-NEXT:    vmul.vv v8, v8, v16
+; RV64-NEXT:    vslidedown.vi v16, v8, 2
+; RV64-NEXT:    vmul.vv v8, v8, v16
+; RV64-NEXT:    vrgather.vi v16, v8, 1
+; RV64-NEXT:    vmul.vv v8, v8, v16
+; RV64-NEXT:    vmv.x.s a0, v8
+; RV64-NEXT:    ret
+  %v = load <32 x i64>, ptr %x
+  %red = call i64 @llvm.vector.reduce.mul.v32i64(<32 x i64> %v)
+  ret i64 %red
+}
+
+define i64 @vreduce_mul_v32i64_vscale8(ptr %x) nounwind vscale_range(8,1024) {
+; RV32-LABEL: vreduce_mul_v32i64_vscale8:
+; RV32:       # %bb.0:
+; RV32-NEXT:    li a1, 32
+; RV32-NEXT:    vsetvli zero, a1, e64, m4, ta, ma
+; RV32-NEXT:    vle64.v v8, (a0)
+; RV32-NEXT:    vslidedown.vi v12, v8, 16
+; RV32-NEXT:    vmul.vv v8, v8, v12
+; RV32-NEXT:    vslidedown.vi v12, v8, 8
+; RV32-NEXT:    vmul.vv v8, v8, v12
+; RV32-NEXT:    vslidedown.vi v12, v8, 4
+; RV32-NEXT:    vmul.vv v8, v8, v12
+; RV32-NEXT:    vslidedown.vi v12, v8, 2
+; RV32-NEXT:    vmul.vv v8, v8, v12
+; RV32-NEXT:    vrgather.vi v12, v8, 1
+; RV32-NEXT:    vmul.vv v8, v8, v12
+; RV32-NEXT:    vmv.x.s a0, v8
+; RV32-NEXT:    vsetivli zero, 1, e64, m4, ta, ma
+; RV32-NEXT:    vsrl.vx v8, v8, a1
+; RV32-NEXT:    vmv.x.s a1, v8
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: vreduce_mul_v32i64_vscale8:
+; RV64:       # %bb.0:
+; RV64-NEXT:    li a1, 32
+; RV64-NEXT:    vsetvli zero, a1, e64, m4, ta, ma
+; RV64-NEXT:    vle64.v v8, (a0)
+; RV64-NEXT:    vslidedown.vi v12, v8, 16
+; RV64-NEXT:    vmul.vv v8, v8, v12
+; RV64-NEXT:    vslidedown.vi v12, v8, 8
+; RV64-NEXT:    vmul.vv v8, v8, v12
+; RV64-NEXT:    vslidedown.vi v12, v8, 4
+; RV64-NEXT:    vmul.vv v8, v8, v12
+; RV64-NEXT:    vslidedown.vi v12, v8, 2
+; RV64-NEXT:    vmul.vv v8, v8, v12
+; RV64-NEXT:    vrgather.vi v12, v8, 1
+; RV64-NEXT:    vmul.vv v8, v8, v12
+; RV64-NEXT:    vmv.x.s a0, v8
+; RV64-NEXT:    ret
+  %v = load <32 x i64>, ptr %x
+  %red = call i64 @llvm.vector.reduce.mul.v32i64(<32 x i64> %v)
+  ret i64 %red
+}
+
+define i64 @vreduce_mul_v32i64_vscale16(ptr %x) nounwind vscale_range(16,1024) {
+; RV32-LABEL: vreduce_mul_v32i64_vscale16:
+; RV32:       # %bb.0:
+; RV32-NEXT:    li a1, 32
+; RV32-NEXT:    vsetvli zero, a1, e64, m2, ta, ma
+; RV32-NEXT:    vle64.v v8, (a0)
+; RV32-NEXT:    vslidedown.vi v10, v8, 16
+; RV32-NEXT:    vmul.vv v8, v8, v10
+; RV32-NEXT:    vslidedown.vi v10, v8, 8
+; RV32-NEXT:    vmul.vv v8, v8, v10
+; RV32-NEXT:    vslidedown.vi v10, v8, 4
+; RV32-NEXT:    vmul.vv v8, v8, v10
+; RV32-NEXT:    vslidedown.vi v10, v8, 2
+; RV32-NEXT:    vmul.vv v8, v8, v10
+; RV32-NEXT:    vrgather.vi v10, v8, 1
+; RV32-NEXT:    vmul.vv v8, v8, v10
+; RV32-NEXT:    vmv.x.s a0, v8
+; RV32-NEXT:    vsetivli zero, 1, e64, m2, ta, ma
+; RV32-NEXT:    vsrl.vx v8, v8, a1
+; RV32-NEXT:    vmv.x.s a1, v8
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: vreduce_mul_v32i64_vscale16:
+; RV64:       # %bb.0:
+; RV64-NEXT:    li a1, 32
+; RV64-NEXT:    vsetvli zero, a1, e64, m2, ta, ma
+; RV64-NEXT:    vle64.v v8, (a0)
+; RV64-NEXT:    vslidedown.vi v10, v8, 16
+; RV64-NEXT:    vmul.vv v8, v8, v10
+; RV64-NEXT:    vslidedown.vi v10, v8, 8
+; RV64-NEXT:    vmul.vv v8, v8, v10
+; RV64-NEXT:    vslidedown.vi v10, v8, 4
+; RV64-NEXT:    vmul.vv v8, v8, v10
+; RV64-NEXT:    vslidedown.vi v10, v8, 2
+; RV64-NEXT:    vmul.vv v8, v8, v10
+; RV64-NEXT:    vrgather.vi v10, v8, 1
+; RV64-NEXT:    vmul.vv v8, v8, v10
+; RV64-NEXT:    vmv.x.s a0, v8
+; RV64-NEXT:    ret
+  %v = load <32 x i64>, ptr %x
+  %red = call i64 @llvm.vector.reduce.mul.v32i64(<32 x i64> %v)
+  ret i64 %red
+}
+
+define i64 @vreduce_mul_v32i64_vscale4_exact(ptr %x) nounwind vscale_range(4,4) {
+; RV32-LABEL: vreduce_mul_v32i64_vscale4_exact:
+; RV32:       # %bb.0:
+; RV32-NEXT:    vl8re64.v v8, (a0)
+; RV32-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
+; RV32-NEXT:    vmv1r.v v16, v12
+; RV32-NEXT:    vmv1r.v v17, v13
+; RV32-NEXT:    vmv1r.v v18, v14
+; RV32-NEXT:    vmv1r.v v19, v15
+; RV32-NEXT:    vmul.vv v8, v8, v16
+; RV32-NEXT:    vmv1r.v v16, v10
+; RV32-NEXT:    vmv1r.v v17, v11
+; RV32-NEXT:    vmul.vv v8, v8, v16
+; RV32-NEXT:    li a1, 32
+; RV32-NEXT:    vmv1r.v v16, v9
+; RV32-NEXT:    vmul.vv v8, v8, v16
+; RV32-NEXT:    vsetivli zero, 4, e64, m1, ta, ma
+; RV32-NEXT:    vslidedown.vi v16, v8, 2
+; RV32-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
+; RV32-NEXT:    vmul.vv v8, v8, v16
+; RV32-NEXT:    vrgather.vi v16, v8, 1
+; RV32-NEXT:    vmul.vv v8, v8, v16
+; RV32-NEXT:    vmv.x.s a0, v8
+; RV32-NEXT:    vsetivli zero, 1, e64, m8, ta, ma
+; RV32-NEXT:    vsrl.vx v8, v8, a1
+; RV32-NEXT:    vmv.x.s a1, v8
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: vreduce_mul_v32i64_vscale4_exact:
+; RV64:       # %bb.0:
+; RV64-NEXT:    vl8re64.v v8, (a0)
+; RV64-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
+; RV64-NEXT:    vmv1r.v v16, v12
+; RV64-NEXT:    vmv1r.v v17, v13
+; RV64-NEXT:    vmv1r.v v18, v14
+; RV64-NEXT:    vmv1r.v v19, v15
+; RV64-NEXT:    vmul.vv v8, v8, v16
+; RV64-NEXT:    vmv1r.v v16, v10
+; RV64-NEXT:    vmv1r.v v17, v11
+; RV64-NEXT:    vmul.vv v8, v8, v16
+; RV64-NEXT:    vmv1r.v v16, v9
+; RV64-NEXT:    vmul.vv v8, v8, v16
+; RV64-NEXT:    vsetivli zero, 4, e64, m1, ta, ma
+; RV64-NEXT:    vslidedown.vi v16, v8, 2
+; RV64-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
+; RV64-NEXT:    vmul.vv v8, v8, v16
+; RV64-NEXT:    vrgather.vi v16, v8, 1
+; RV64-NEXT:    vmul.vv v8, v8, v16
+; RV64-NEXT:    vmv.x.s a0, v8
+; RV64-NEXT:    ret
+  %v = load <32 x i64>, ptr %x
+  %red = call i64 @llvm.vector.reduce.mul.v32i64(<32 x i64> %v)
+  ret i64 %red
+}
+
+define i64 @vreduce_mul_v32i64_vscale8_exact(ptr %x) nounwind vscale_range(8,8) {
+; RV32-LABEL: vreduce_mul_v32i64_vscale8_exact:
+; RV32:       # %bb.0:
+; RV32-NEXT:    vl4re64.v v8, (a0)
+; RV32-NEXT:    vsetvli a0, zero, e64, m4, ta, ma
+; RV32-NEXT:    vmv1r.v v12, v10
+; RV32-NEXT:    vmv1r.v v13, v11
+; RV32-NEXT:    vmul.vv v8, v8, v12
+; RV32-NEXT:    li a1, 32
+; RV32-NEXT:    vmv1r.v v12, v9
+; RV32-NEXT:    vmul.vv v8, v8, v12
+; RV32-NEXT:    vsetivli zero, 8, e64, m1, ta, ma
+; RV32-NEXT:    vslidedown.vi v12, v8, 4
+; RV32-NEXT:    vsetvli a0, zero, e64, m4, ta, ma
+; RV32-NEXT:    vmul.vv v8, v8, v12
+; RV32-NEXT:    vsetivli zero, 8, e64, m1, ta, ma
+; RV32-NEXT:    vslidedown.vi v12, v8, 2
+; RV32-NEXT:    vsetvli a0, zero, e64, m4, ta, ma
+; RV32-NEXT:    vmul.vv v8, v8, v12
+; RV32-NEXT:    vrgather.vi v12, v8, 1
+; RV32-NEXT:    vmul.vv v8, v8, v12
+; RV32-NEXT:    vmv.x.s a0, v8
+; RV32-NEXT:    vsetivli zero, 1, e64, m4, ta, ma
+; RV32-NEXT:    vsrl.vx v8, v8, a1
+; RV32-NEXT:    vmv.x.s a1, v8
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: vreduce_mul_v32i64_vscale8_exact:
+; RV64:       # %bb.0:
+; RV64-NEXT:    vl4re64.v v8, (a0)
+; RV64-NEXT:    vsetvli a0, zero, e64, m4, ta, ma
+; RV64-NEXT:    vmv1r.v v12, v10
+; RV64-NEXT:    vmv1r.v v13, v11
+; RV64-NEXT:    vmul.vv v8, v8, v12
+; RV64-NEXT:    vmv1r.v v12, v9
+; RV64-NEXT:    vmul.vv v8, v8, v12
+; RV64-NEXT:    vsetivli zero, 8, e64, m1, ta, ma
+; RV64-NEXT:    vslidedown.vi v12, v8, 4
+; RV64-NEXT:    vsetvli a0, zero, e64, m4, ta, ma
+; RV64-NEXT:    vmul.vv v8, v8, v12
+; RV64-NEXT:    vsetivli zero, 8, e64, m1, ta, ma
+; RV64-NEXT:    vslidedown.vi v12, v8, 2
+; RV64-NEXT:    vsetvli a0, zero, e64, m4, ta, ma
+; RV64-NEXT:    vmul.vv v8, v8, v12
+; RV64-NEXT:    vrgather.vi v12, v8, 1
+; RV64-NEXT:    vmul.vv v8, v8, v12
+; RV64-NEXT:    vmv.x.s a0, v8
+; RV64-NEXT:    ret
+  %v = load <32 x i64>, ptr %x
+  %red = call i64 @llvm.vector.reduce.mul.v32i64(<32 x i64> %v)
+  ret i64 %red
+}
+
+define i64 @vreduce_mul_v32i64_vscale16_exact(ptr %x) nounwind vscale_range(16,16) {
+; RV32-LABEL: vreduce_mul_v32i64_vscale16_exact:
+; RV32:       # %bb.0:
+; RV32-NEXT:    vl2re64.v v8, (a0)
+; RV32-NEXT:    li a1, 32
+; RV32-NEXT:    vsetvli a0, zero, e64, m2, ta, ma
+; RV32-NEXT:    vmv1r.v v10, v9
+; RV32-NEXT:    vmul.vv v8, v8, v10
+; RV32-NEXT:    vsetivli zero, 16, e64, m1, ta, ma
+; RV32-NEXT:    vslidedown.vi v10, v8, 8
+; RV32-NEXT:    vsetvli a0, zero, e64, m2, ta, ma
+; RV32-NEXT:    vmul.vv v8, v8, v10
+; RV32-NEXT:    vsetivli zero, 16, e64, m1, ta, ma
+; RV32-NEXT:    vslidedown.vi v10, v8, 4
+; RV32-NEXT:    vsetvli a0, zero, e64, m2, ta, ma
+; RV32-NEXT:    vmul.vv v8, v8, v10
+; RV32-NEXT:    vsetivli zero, 16, e64, m1, ta, ma
+; RV32-NEXT:    vslidedown.vi v10, v8, 2
+; RV32-NEXT:    vsetvli a0, zero, e64, m2, ta, ma
+; RV32-NEXT:    vmul.vv v8, v8, v10
+; RV32-NEXT:    vrgather.vi v10, v8, 1
+; RV32-NEXT:    vmul.vv v8, v8, v10
+; RV32-NEXT:    vmv.x.s a0, v8
+; RV32-NEXT:    vsetivli zero, 1, e64, m2, ta, ma
+; RV32-NEXT:    vsrl.vx v8, v8, a1
+; RV32-NEXT:    vmv.x.s a1, v8
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: vreduce_mul_v32i64_vscale16_exact:
+; RV64:       # %bb.0:
+; RV64-NEXT:    vl2re64.v v8, (a0)
+; RV64-NEXT:    vsetvli a0, zero, e64, m2, ta, ma
+; RV64-NEXT:    vmv1r.v v10, v9
+; RV64-NEXT:    vmul.vv v8, v8, v10
+; RV64-NEXT:    vsetivli zero, 16, e64, m1, ta, ma
+; RV64-NEXT:    vslidedown.vi v10, v8, 8
+; RV64-NEXT:    vsetvli a0, zero, e64, m2, ta, ma
+; RV64-NEXT:    vmul.vv v8, v8, v10
+; RV64-NEXT:    vsetivli zero, 16, e64, m1, ta, ma
+; RV64-NEXT:    vslidedown.vi v10, v8, 4
+; RV64-NEXT:    vsetvli a0, zero, e64, m2, ta, ma
+; RV64-NEXT:    vmul.vv v8, v8, v10
+; RV64-NEXT:    vsetivli zero, 16, e64, m1, ta, ma
+; RV64-NEXT:    vslidedown.vi v10, v8, 2
+; RV64-NEXT:    vsetvli a0, zero, e64, m2, ta, ma
+; RV64-NEXT:    vmul.vv v8, v8, v10
+; RV64-NEXT:    vrgather.vi v10, v8, 1
+; RV64-NEXT:    vmul.vv v8, v8, v10
+; RV64-NEXT:    vmv.x.s a0, v8
+; RV64-NEXT:    ret
+  %v = load <32 x i64>, ptr %x
+  %red = call i64 @llvm.vector.reduce.mul.v32i64(<32 x i64> %v)
+  ret i64 %red
+}
