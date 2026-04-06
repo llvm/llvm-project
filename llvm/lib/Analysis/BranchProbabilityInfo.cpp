@@ -170,93 +170,18 @@ public:
                  PostDominatorTree *PDT);
 
 private:
-  // Data structure to track SCCs for handling irreducible loops.
-  class SccInfo {
-    // Enum of types to classify basic blocks in SCC. Basic block belonging to
-    // SCC is 'Inner' until it is either 'Header' or 'Exiting'. Note that a
-    // basic block can be 'Header' and 'Exiting' at the same time.
-    enum SccBlockType {
-      Inner = 0x0,
-      Header = 0x1,
-      Exiting = 0x2,
-    };
-    // Map of basic blocks to SCC IDs they belong to. If basic block doesn't
-    // belong to any SCC it is not in the map.
-    using SccMap = DenseMap<const BasicBlock *, int>;
-    // Each basic block in SCC is attributed with one or several types from
-    // SccBlockType. Map value has uint32_t type (instead of SccBlockType)
-    // since basic block may be for example "Header" and "Exiting" at the same
-    // time and we need to be able to keep more than one value from
-    // SccBlockType.
-    using SccBlockTypeMap = DenseMap<const BasicBlock *, uint32_t>;
-    // Vector containing classification of basic blocks for all  SCCs where i'th
-    // vector element corresponds to SCC with ID equal to i.
-    using SccBlockTypeMaps = std::vector<SccBlockTypeMap>;
-
-    SccMap SccNums;
-    SccBlockTypeMaps SccBlocks;
-
-  public:
-    explicit SccInfo(const Function &F);
-
-    /// If \p BB belongs to some SCC then ID of that SCC is returned, otherwise
-    /// -1 is returned. If \p BB belongs to more than one SCC at the same time
-    /// result is undefined.
-    int getSCCNum(const BasicBlock *BB) const;
-    /// Returns true if \p BB is a 'header' block in SCC with \p SccNum ID,
-    /// false otherwise.
-    bool isSCCHeader(const BasicBlock *BB, int SccNum) const {
-      return getSccBlockType(BB, SccNum) & Header;
-    }
-    /// Returns true if \p BB is an 'exiting' block in SCC with \p SccNum ID,
-    /// false otherwise.
-    bool isSCCExitingBlock(const BasicBlock *BB, int SccNum) const {
-      return getSccBlockType(BB, SccNum) & Exiting;
-    }
-    /// Fills in \p Enters vector with all such blocks that don't belong to
-    /// SCC with \p SccNum ID but there is an edge to a block belonging to the
-    /// SCC.
-    void getSccEnterBlocks(int SccNum,
-                           SmallVectorImpl<BasicBlock *> &Enters) const;
-    /// Fills in \p Exits vector with all such blocks that don't belong to
-    /// SCC with \p SccNum ID but there is an edge from a block belonging to the
-    /// SCC.
-    void getSccExitBlocks(int SccNum,
-                          SmallVectorImpl<BasicBlock *> &Exits) const;
-
-  private:
-    /// Returns \p BB's type according to classification given by SccBlockType
-    /// enum. Please note that \p BB must belong to SSC with \p SccNum ID.
-    uint32_t getSccBlockType(const BasicBlock *BB, int SccNum) const;
-    /// Calculates \p BB's type and stores it in internal data structures for
-    /// future use. Please note that \p BB must belong to SSC with \p SccNum ID.
-    void calculateSccBlockType(const BasicBlock *BB, int SccNum);
-  };
-
-  /// Pair of Loop and SCC ID number. Used to unify handling of normal and
-  /// SCC based loop representations.
-  using LoopData = std::pair<CycleRef, int>;
   /// Helper class to keep basic block along with its loop data information.
   class LoopBlock {
   public:
-    explicit LoopBlock(const BasicBlock *BB, const CycleInfo &CI,
-                       const SccInfo &SccI);
+    explicit LoopBlock(const BasicBlock *BB, const CycleInfo &CI) : BB(BB), C(CI.getCycle(BB)) {}
 
     const BasicBlock *getBlock() const { return BB; }
     BasicBlock *getBlock() { return const_cast<BasicBlock *>(BB); }
-    LoopData getLoopData() const { return LD; }
-    CycleRef getCycle() const { return LD.first; }
-    int getSccNum() const { return LD.second; }
-
-    bool belongsToLoop() const { return getCycle() || getSccNum() != -1; }
-    bool belongsToSameLoop(const LoopBlock &LB) const {
-      return (LB.getCycle() && getCycle() == LB.getCycle()) ||
-             (LB.getSccNum() != -1 && getSccNum() == LB.getSccNum());
-    }
+    CycleRef getCycle() const { return C; }
 
   private:
     const BasicBlock *const BB = nullptr;
-    LoopData LD = {CycleRef(), -1};
+    CycleRef C = CycleRef();
   };
 
   // Pair of LoopBlocks representing an edge from first to second block.
@@ -264,7 +189,7 @@ private:
 
   /// Helper to construct LoopBlock for \p BB.
   LoopBlock getLoopBlock(const BasicBlock *BB) const {
-    return LoopBlock(BB, *CI, *SccI);
+    return LoopBlock(BB, *CI);
   }
 
   /// Returns true if destination block belongs to some loop and source block is
@@ -278,24 +203,18 @@ private:
   /// Returns true if \p Edge is either enters to or exits from some loop, false
   /// in all other cases.
   bool isLoopEnteringExitingEdge(const LoopEdge &Edge) const;
-  /// Returns true if source and destination blocks belongs to the same loop and
-  /// destination block is loop header.
-  bool isLoopBackEdge(const LoopEdge &Edge) const;
   // Fills in \p Enters vector with all "enter" blocks to a loop \LB belongs to.
   void getLoopEnterBlocks(const LoopBlock &LB,
                           SmallVectorImpl<BasicBlock *> &Enters) const;
-  // Fills in \p Exits vector with all "exit" blocks from a loop \LB belongs to.
-  void getLoopExitBlocks(const LoopBlock &LB,
-                         SmallVectorImpl<BasicBlock *> &Exits) const;
 
   /// Returns estimated weight for \p BB. std::nullopt if \p BB has no estimated
   /// weight.
   std::optional<uint32_t> getEstimatedBlockWeight(const BasicBlock *BB) const;
 
   /// Returns estimated weight to enter \p L. In other words it is weight of
-  /// loop's header block not scaled by trip count. Returns std::nullopt if \p L
+  /// loop's header block not scaled by trip count. Returns std::nullopt if \p C
   /// has no no estimated weight.
-  std::optional<uint32_t> getEstimatedLoopWeight(const LoopData &L) const;
+  std::optional<uint32_t> getEstimatedLoopWeight(CycleRef C) const;
 
   /// Return estimated weight for \p Edge. Returns std::nullopt if estimated
   /// weight is unknown.
@@ -343,131 +262,21 @@ private:
 
   const CycleInfo *CI = nullptr;
 
-  /// Keeps information about all SCCs in a function.
-  std::unique_ptr<const SccInfo> SccI;
-
   /// Keeps mapping of a basic block to its estimated weight.
   SmallDenseMap<const BasicBlock *, uint32_t> EstimatedBlockWeight;
 
   /// Keeps mapping of a loop to estimated weight to enter the loop.
-  SmallDenseMap<LoopData, uint32_t> EstimatedLoopWeight;
+  SmallDenseMap<CycleRef, uint32_t> EstimatedLoopWeight;
 };
-
-BPIConstruction::SccInfo::SccInfo(const Function &F) {
-  // Record SCC numbers of blocks in the CFG to identify irreducible loops.
-  // FIXME: We could only calculate this if the CFG is known to be irreducible
-  // (perhaps cache this info in CycleInfo if we can easily calculate it
-  // there?).
-  int SccNum = 0;
-  for (scc_iterator<const Function *> It = scc_begin(&F); !It.isAtEnd();
-       ++It, ++SccNum) {
-    // Ignore single-block SCCs since they either aren't loops or LoopInfo will
-    // catch them.
-    const std::vector<const BasicBlock *> &Scc = *It;
-    if (Scc.size() == 1)
-      continue;
-
-    LLVM_DEBUG(dbgs() << "BPI: SCC " << SccNum << ":");
-    for (const auto *BB : Scc) {
-      LLVM_DEBUG(dbgs() << " " << BB->getName());
-      SccNums[BB] = SccNum;
-      calculateSccBlockType(BB, SccNum);
-    }
-    LLVM_DEBUG(dbgs() << "\n");
-  }
-}
-
-int BPIConstruction::SccInfo::getSCCNum(const BasicBlock *BB) const {
-  auto SccIt = SccNums.find(BB);
-  if (SccIt == SccNums.end())
-    return -1;
-  return SccIt->second;
-}
-
-void BPIConstruction::SccInfo::getSccEnterBlocks(
-    int SccNum, SmallVectorImpl<BasicBlock *> &Enters) const {
-
-  for (auto MapIt : SccBlocks[SccNum]) {
-    const auto *BB = MapIt.first;
-    if (isSCCHeader(BB, SccNum))
-      for (const auto *Pred : predecessors(BB))
-        if (getSCCNum(Pred) != SccNum)
-          Enters.push_back(const_cast<BasicBlock *>(BB));
-  }
-}
-
-void BPIConstruction::SccInfo::getSccExitBlocks(
-    int SccNum, SmallVectorImpl<BasicBlock *> &Exits) const {
-  for (auto MapIt : SccBlocks[SccNum]) {
-    const auto *BB = MapIt.first;
-    if (isSCCExitingBlock(BB, SccNum))
-      for (const auto *Succ : successors(BB))
-        if (getSCCNum(Succ) != SccNum)
-          Exits.push_back(const_cast<BasicBlock *>(Succ));
-  }
-}
-
-uint32_t BPIConstruction::SccInfo::getSccBlockType(const BasicBlock *BB,
-                                                   int SccNum) const {
-  assert(getSCCNum(BB) == SccNum);
-
-  assert(SccBlocks.size() > static_cast<unsigned>(SccNum) && "Unknown SCC");
-  const auto &SccBlockTypes = SccBlocks[SccNum];
-
-  auto It = SccBlockTypes.find(BB);
-  if (It != SccBlockTypes.end()) {
-    return It->second;
-  }
-  return Inner;
-}
-
-void BPIConstruction::SccInfo::calculateSccBlockType(const BasicBlock *BB,
-                                                     int SccNum) {
-  assert(getSCCNum(BB) == SccNum);
-  uint32_t BlockType = Inner;
-
-  if (llvm::any_of(predecessors(BB), [&](const BasicBlock *Pred) {
-        // Consider any block that is an entry point to the SCC as
-        // a header.
-        return getSCCNum(Pred) != SccNum;
-      }))
-    BlockType |= Header;
-
-  if (llvm::any_of(successors(BB), [&](const BasicBlock *Succ) {
-        return getSCCNum(Succ) != SccNum;
-      }))
-    BlockType |= Exiting;
-
-  // Lazily compute the set of headers for a given SCC and cache the results
-  // in the SccHeaderMap.
-  if (SccBlocks.size() <= static_cast<unsigned>(SccNum))
-    SccBlocks.resize(SccNum + 1);
-  auto &SccBlockTypes = SccBlocks[SccNum];
-
-  if (BlockType != Inner) {
-    bool IsInserted;
-    std::tie(std::ignore, IsInserted) =
-        SccBlockTypes.insert(std::make_pair(BB, BlockType));
-    assert(IsInserted && "Duplicated block in SCC");
-  }
-}
-
-BPIConstruction::LoopBlock::LoopBlock(const BasicBlock *BB, const CycleInfo &CI,
-                                      const SccInfo &SccI)
-    : BB(BB) {
-  LD.first = CI.getCycle(BB);
-  LD.second = -1;
-}
 
 bool BPIConstruction::isLoopEnteringEdge(const LoopEdge &Edge) const {
   const auto &SrcBlock = Edge.first;
   const auto &DstBlock = Edge.second;
-  return (DstBlock.getCycle() &&
-          (!SrcBlock.getCycle() ||
-           !CI->contains(DstBlock.getCycle(), SrcBlock.getCycle()))) ||
-         // Assume that SCCs can't be nested.
-         (DstBlock.getSccNum() != -1 &&
-          SrcBlock.getSccNum() != DstBlock.getSccNum());
+  if (!DstBlock.getCycle()) // Edge into no-cycle is not entering.
+    return false;
+  if (!SrcBlock.getCycle()) // Edge from no-cycle into cycle is entering.
+    return true;
+  return !CI->contains(DstBlock.getCycle(), SrcBlock.getCycle());
 }
 
 bool BPIConstruction::isLoopExitingEdge(const LoopEdge &Edge) const {
@@ -478,37 +287,13 @@ bool BPIConstruction::isLoopEnteringExitingEdge(const LoopEdge &Edge) const {
   return isLoopEnteringEdge(Edge) || isLoopExitingEdge(Edge);
 }
 
-bool BPIConstruction::isLoopBackEdge(const LoopEdge &Edge) const {
-  const auto &SrcBlock = Edge.first;
-  const auto &DstBlock = Edge.second;
-  return SrcBlock.belongsToSameLoop(DstBlock) &&
-         ((DstBlock.getCycle() &&
-           CI->isEntry(DstBlock.getCycle(), DstBlock.getBlock())) ||
-          (DstBlock.getSccNum() != -1 &&
-           SccI->isSCCHeader(DstBlock.getBlock(), DstBlock.getSccNum())));
-}
-
 void BPIConstruction::getLoopEnterBlocks(
     const LoopBlock &LB, SmallVectorImpl<BasicBlock *> &Enters) const {
-  if (CycleRef C = LB.getCycle()) {
-    for (BasicBlock *Entry : CI->getEntries(C))
-      for (const auto *Pred : predecessors(Entry))
-        if (!CI->contains(C, Pred))
-          Enters.push_back(const_cast<BasicBlock *>(Pred));
-  } else {
-    assert(LB.getSccNum() != -1 && "LB doesn't belong to any loop?");
-    SccI->getSccEnterBlocks(LB.getSccNum(), Enters);
-  }
-}
-
-void BPIConstruction::getLoopExitBlocks(
-    const LoopBlock &LB, SmallVectorImpl<BasicBlock *> &Exits) const {
-  if (CycleRef C = LB.getCycle()) {
-    CI->getExitBlocks(C, Exits);
-  } else {
-    assert(LB.getSccNum() != -1 && "LB doesn't belong to any loop?");
-    SccI->getSccExitBlocks(LB.getSccNum(), Exits);
-  }
+  CycleRef C = LB.getCycle();
+  for (BasicBlock *Entry : CI->getEntries(C))
+    for (const auto *Pred : predecessors(Entry))
+      if (!CI->contains(C, Pred))
+        Enters.push_back(const_cast<BasicBlock *>(Pred));
 }
 
 // Propagate existing explicit probabilities from either profile data or
@@ -795,8 +580,8 @@ BPIConstruction::getEstimatedBlockWeight(const BasicBlock *BB) const {
 }
 
 std::optional<uint32_t>
-BPIConstruction::getEstimatedLoopWeight(const LoopData &L) const {
-  auto WeightIt = EstimatedLoopWeight.find(L);
+BPIConstruction::getEstimatedLoopWeight(CycleRef C) const {
+  auto WeightIt = EstimatedLoopWeight.find(C);
   if (WeightIt == EstimatedLoopWeight.end())
     return std::nullopt;
   return WeightIt->second;
@@ -807,7 +592,7 @@ BPIConstruction::getEstimatedEdgeWeight(const LoopEdge &Edge) const {
   // For edges entering a loop take weight of a loop rather than an individual
   // block in the loop.
   return isLoopEnteringEdge(Edge)
-             ? getEstimatedLoopWeight(Edge.second.getLoopData())
+             ? getEstimatedLoopWeight(Edge.second.getCycle())
              : getEstimatedBlockWeight(Edge.second.getBlock());
 }
 
@@ -852,7 +637,7 @@ bool BPIConstruction::updateEstimatedBlockWeight(
     LoopBlock PredLoop = getLoopBlock(PredBlock);
     // Add affected block/loop to a working list.
     if (isLoopExitingEdge({PredLoop, LoopBB})) {
-      if (!EstimatedLoopWeight.count(PredLoop.getLoopData()))
+      if (!EstimatedLoopWeight.count(PredLoop.getCycle()))
         LoopWorkList.push_back(PredLoop);
     } else if (!EstimatedBlockWeight.count(PredBlock))
       BlockWorkList.push_back(PredBlock);
@@ -950,7 +735,7 @@ void BPIConstruction::estimateBlockWeights(const Function &F, DominatorTree *DT,
                                            PostDominatorTree *PDT) {
   SmallVector<BasicBlock *, 8> BlockWorkList;
   SmallVector<LoopBlock, 8> LoopWorkList;
-  SmallDenseMap<LoopData, SmallVector<BasicBlock *, 4>> LoopExitBlocks;
+  SmallDenseMap<CycleRef, SmallVector<BasicBlock *, 4>> LoopExitBlocks;
 
   // By doing RPO we make sure that all predecessors already have weights
   // calculated before visiting theirs successors.
@@ -969,14 +754,14 @@ void BPIConstruction::estimateBlockWeights(const Function &F, DominatorTree *DT,
   do {
     while (!LoopWorkList.empty()) {
       const LoopBlock LoopBB = LoopWorkList.pop_back_val();
-      const LoopData LD = LoopBB.getLoopData();
-      if (EstimatedLoopWeight.count(LD))
+      CycleRef C = LoopBB.getCycle();
+      if (EstimatedLoopWeight.count(C))
         continue;
 
-      auto Res = LoopExitBlocks.try_emplace(LD);
+      auto Res = LoopExitBlocks.try_emplace(C);
       SmallVectorImpl<BasicBlock *> &Exits = Res.first->second;
       if (Res.second)
-        getLoopExitBlocks(LoopBB, Exits);
+        CI->getExitBlocks(C, Exits);
       auto LoopWeight = getMaxEstimatedEdgeWeight(
           LoopBB, make_range(Exits.begin(), Exits.end()));
 
@@ -985,7 +770,7 @@ void BPIConstruction::estimateBlockWeights(const Function &F, DominatorTree *DT,
         if (LoopWeight <= static_cast<uint32_t>(BlockExecWeight::UNREACHABLE))
           LoopWeight = static_cast<uint32_t>(BlockExecWeight::LOWEST_NON_ZERO);
 
-        EstimatedLoopWeight.insert({LD, *LoopWeight});
+        EstimatedLoopWeight.insert({C, *LoopWeight});
         // Add all blocks entering the loop into working list.
         getLoopEnterBlocks(LoopBB, BlockWorkList);
       }
@@ -1229,8 +1014,6 @@ void BPIConstruction::calculate(const Function &F, const CycleInfo &CycleI,
                                 const TargetLibraryInfo *TLI, DominatorTree *DT,
                                 PostDominatorTree *PDT) {
   CI = &CycleI;
-
-  SccI = std::make_unique<SccInfo>(F);
 
   std::unique_ptr<DominatorTree> DTPtr;
   std::unique_ptr<PostDominatorTree> PDTPtr;
