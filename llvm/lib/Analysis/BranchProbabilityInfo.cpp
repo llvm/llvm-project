@@ -16,7 +16,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/ConstantFolding.h"
-#include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/CycleAnalysis.h"
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/IR/Attributes.h"
@@ -61,7 +61,7 @@ static cl::opt<std::string> PrintBranchProbFuncName(
 
 INITIALIZE_PASS_BEGIN(BranchProbabilityInfoWrapperPass, "branch-prob",
                       "Branch Probability Analysis", false, true)
-INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(CycleInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(PostDominatorTreeWrapperPass)
@@ -165,7 +165,7 @@ namespace {
 class BPIConstruction {
 public:
   BPIConstruction(BranchProbabilityInfo &BPI) : BPI(BPI) {}
-  void calculate(const Function &F, const LoopInfo &LI,
+  void calculate(const Function &F, const CycleInfo &CI,
                  const TargetLibraryInfo *TLI, DominatorTree *DT,
                  PostDominatorTree *PDT);
 
@@ -235,28 +235,28 @@ private:
 
   /// Pair of Loop and SCC ID number. Used to unify handling of normal and
   /// SCC based loop representations.
-  using LoopData = std::pair<Loop *, int>;
+  using LoopData = std::pair<CycleRef, int>;
   /// Helper class to keep basic block along with its loop data information.
   class LoopBlock {
   public:
-    explicit LoopBlock(const BasicBlock *BB, const LoopInfo &LI,
+    explicit LoopBlock(const BasicBlock *BB, const CycleInfo &CI,
                        const SccInfo &SccI);
 
     const BasicBlock *getBlock() const { return BB; }
     BasicBlock *getBlock() { return const_cast<BasicBlock *>(BB); }
     LoopData getLoopData() const { return LD; }
-    Loop *getLoop() const { return LD.first; }
+    CycleRef getCycle() const { return LD.first; }
     int getSccNum() const { return LD.second; }
 
-    bool belongsToLoop() const { return getLoop() || getSccNum() != -1; }
+    bool belongsToLoop() const { return getCycle() || getSccNum() != -1; }
     bool belongsToSameLoop(const LoopBlock &LB) const {
-      return (LB.getLoop() && getLoop() == LB.getLoop()) ||
+      return (LB.getCycle() && getCycle() == LB.getCycle()) ||
              (LB.getSccNum() != -1 && getSccNum() == LB.getSccNum());
     }
 
   private:
     const BasicBlock *const BB = nullptr;
-    LoopData LD = {nullptr, -1};
+    LoopData LD = {CycleRef(), -1};
   };
 
   // Pair of LoopBlocks representing an edge from first to second block.
@@ -264,7 +264,7 @@ private:
 
   /// Helper to construct LoopBlock for \p BB.
   LoopBlock getLoopBlock(const BasicBlock *BB) const {
-    return LoopBlock(BB, *LI, *SccI);
+    return LoopBlock(BB, *CI, *SccI);
   }
 
   /// Returns true if destination block belongs to some loop and source block is
@@ -341,7 +341,7 @@ private:
 
   BranchProbabilityInfo &BPI;
 
-  const LoopInfo *LI = nullptr;
+  const CycleInfo *CI = nullptr;
 
   /// Keeps information about all SCCs in a function.
   std::unique_ptr<const SccInfo> SccI;
@@ -356,7 +356,8 @@ private:
 BPIConstruction::SccInfo::SccInfo(const Function &F) {
   // Record SCC numbers of blocks in the CFG to identify irreducible loops.
   // FIXME: We could only calculate this if the CFG is known to be irreducible
-  // (perhaps cache this info in LoopInfo if we can easily calculate it there?).
+  // (perhaps cache this info in CycleInfo if we can easily calculate it
+  // there?).
   int SccNum = 0;
   for (scc_iterator<const Function *> It = scc_begin(&F); !It.isAtEnd();
        ++It, ++SccNum) {
@@ -451,20 +452,19 @@ void BPIConstruction::SccInfo::calculateSccBlockType(const BasicBlock *BB,
   }
 }
 
-BPIConstruction::LoopBlock::LoopBlock(const BasicBlock *BB, const LoopInfo &LI,
+BPIConstruction::LoopBlock::LoopBlock(const BasicBlock *BB, const CycleInfo &CI,
                                       const SccInfo &SccI)
     : BB(BB) {
-  LD.first = LI.getLoopFor(BB);
-  if (!LD.first) {
-    LD.second = SccI.getSCCNum(BB);
-  }
+  LD.first = CI.getCycle(BB);
+  LD.second = -1;
 }
 
 bool BPIConstruction::isLoopEnteringEdge(const LoopEdge &Edge) const {
   const auto &SrcBlock = Edge.first;
   const auto &DstBlock = Edge.second;
-  return (DstBlock.getLoop() &&
-          !DstBlock.getLoop()->contains(SrcBlock.getLoop())) ||
+  return (DstBlock.getCycle() &&
+          (!SrcBlock.getCycle() ||
+           !CI->contains(DstBlock.getCycle(), SrcBlock.getCycle()))) ||
          // Assume that SCCs can't be nested.
          (DstBlock.getSccNum() != -1 &&
           SrcBlock.getSccNum() != DstBlock.getSccNum());
@@ -482,17 +482,19 @@ bool BPIConstruction::isLoopBackEdge(const LoopEdge &Edge) const {
   const auto &SrcBlock = Edge.first;
   const auto &DstBlock = Edge.second;
   return SrcBlock.belongsToSameLoop(DstBlock) &&
-         ((DstBlock.getLoop() &&
-           DstBlock.getLoop()->getHeader() == DstBlock.getBlock()) ||
+         ((DstBlock.getCycle() &&
+           CI->isEntry(DstBlock.getCycle(), DstBlock.getBlock())) ||
           (DstBlock.getSccNum() != -1 &&
            SccI->isSCCHeader(DstBlock.getBlock(), DstBlock.getSccNum())));
 }
 
 void BPIConstruction::getLoopEnterBlocks(
     const LoopBlock &LB, SmallVectorImpl<BasicBlock *> &Enters) const {
-  if (LB.getLoop()) {
-    auto *Header = LB.getLoop()->getHeader();
-    Enters.append(pred_begin(Header), pred_end(Header));
+  if (CycleRef C = LB.getCycle()) {
+    for (BasicBlock *Entry : CI->getEntries(C))
+      for (const auto *Pred : predecessors(Entry))
+        if (!CI->contains(C, Pred))
+          Enters.push_back(const_cast<BasicBlock *>(Pred));
   } else {
     assert(LB.getSccNum() != -1 && "LB doesn't belong to any loop?");
     SccI->getSccEnterBlocks(LB.getSccNum(), Enters);
@@ -501,8 +503,8 @@ void BPIConstruction::getLoopEnterBlocks(
 
 void BPIConstruction::getLoopExitBlocks(
     const LoopBlock &LB, SmallVectorImpl<BasicBlock *> &Exits) const {
-  if (LB.getLoop()) {
-    LB.getLoop()->getExitBlocks(Exits);
+  if (CycleRef C = LB.getCycle()) {
+    CI->getExitBlocks(C, Exits);
   } else {
     assert(LB.getSccNum() != -1 && "LB doesn't belong to any loop?");
     SccI->getSccExitBlocks(LB.getSccNum(), Exits);
@@ -679,12 +681,12 @@ bool BPIConstruction::calcPointerHeuristics(const BasicBlock *BB) {
   }
 }
 
-// Compute the unlikely successors to the block BB in the loop L, specifically
+// Compute the unlikely successors to the block BB in the cycle C, specifically
 // those that are unlikely because this is a loop, and add them to the
 // UnlikelyBlocks set.
 static void
-computeUnlikelySuccessors(const BasicBlock *BB, Loop *L,
-                          SmallPtrSetImpl<const BasicBlock*> &UnlikelyBlocks) {
+computeUnlikelySuccessors(const BasicBlock *BB, const CycleInfo &CI, CycleRef C,
+                          SmallPtrSetImpl<const BasicBlock *> &UnlikelyBlocks) {
   // Sometimes in a loop we have a branch whose condition is made false by
   // taking it. This is typically something like
   //  int n = 0;
@@ -711,30 +713,30 @@ computeUnlikelySuccessors(const BasicBlock *BB, Loop *L,
     return;
 
   // Check if the branch is based on an instruction compared with a constant
-  CmpInst *CI = dyn_cast<CmpInst>(BI->getCondition());
-  if (!CI || !isa<Instruction>(CI->getOperand(0)) ||
-      !isa<Constant>(CI->getOperand(1)))
+  CmpInst *Cmp = dyn_cast<CmpInst>(BI->getCondition());
+  if (!Cmp || !isa<Instruction>(Cmp->getOperand(0)) ||
+      !isa<Constant>(Cmp->getOperand(1)))
     return;
 
   // Either the instruction must be a PHI, or a chain of operations involving
   // constants that ends in a PHI which we can then collapse into a single value
   // if the PHI value is known.
-  Instruction *CmpLHS = dyn_cast<Instruction>(CI->getOperand(0));
+  Instruction *CmpLHS = dyn_cast<Instruction>(Cmp->getOperand(0));
   PHINode *CmpPHI = dyn_cast<PHINode>(CmpLHS);
-  Constant *CmpConst = dyn_cast<Constant>(CI->getOperand(1));
+  Constant *CmpConst = dyn_cast<Constant>(Cmp->getOperand(1));
   // Collect the instructions until we hit a PHI
   SmallVector<BinaryOperator *, 1> InstChain;
   while (!CmpPHI && CmpLHS && isa<BinaryOperator>(CmpLHS) &&
          isa<Constant>(CmpLHS->getOperand(1))) {
     // Stop if the chain extends outside of the loop
-    if (!L->contains(CmpLHS))
+    if (!CI.contains(C, CmpLHS->getParent()))
       return;
     InstChain.push_back(cast<BinaryOperator>(CmpLHS));
     CmpLHS = dyn_cast<Instruction>(CmpLHS->getOperand(0));
     if (CmpLHS)
       CmpPHI = dyn_cast<PHINode>(CmpLHS);
   }
-  if (!CmpPHI || !L->contains(CmpPHI))
+  if (!CmpPHI || !CI.contains(C, CmpPHI->getParent()))
     return;
 
   // Trace the phi node to find all values that come from successors of BB
@@ -746,7 +748,7 @@ computeUnlikelySuccessors(const BasicBlock *BB, Loop *L,
     PHINode *P = WorkList.pop_back_val();
     for (BasicBlock *B : P->blocks()) {
       // Skip blocks that aren't part of the loop
-      if (!L->contains(B))
+      if (!CI.contains(C, B))
         continue;
       Value *V = P->getIncomingValueForBlock(B);
       // If the source is a PHI add it to the work list if we haven't
@@ -774,7 +776,7 @@ computeUnlikelySuccessors(const BasicBlock *BB, Loop *L,
         continue;
       // Now constant-evaluate the compare
       Constant *Result = ConstantFoldCompareInstOperands(
-          CI->getPredicate(), CmpLHSConst, CmpConst, DL);
+          Cmp->getPredicate(), CmpLHSConst, CmpConst, DL);
       // If the result means we don't branch to the block then that block is
       // unlikely.
       if (Result && ((Result->isNullValue() && B == BI->getSuccessor(0)) ||
@@ -1022,8 +1024,8 @@ bool BPIConstruction::calcEstimatedHeuristics(const BasicBlock *BB) {
 
   SmallPtrSet<const BasicBlock *, 8> UnlikelyBlocks;
   uint32_t TC = LBH_TAKEN_WEIGHT / LBH_NONTAKEN_WEIGHT;
-  if (LoopBB.getLoop())
-    computeUnlikelySuccessors(BB, LoopBB.getLoop(), UnlikelyBlocks);
+  if (LoopBB.getCycle())
+    computeUnlikelySuccessors(BB, *CI, LoopBB.getCycle(), UnlikelyBlocks);
 
   // Changed to 'true' if at least one successor has estimated weight.
   bool FoundEstimatedWeight = false;
@@ -1046,7 +1048,7 @@ bool BPIConstruction::calcEstimatedHeuristics(const BasicBlock *BB) {
           Weight.value_or(static_cast<uint32_t>(BlockExecWeight::DEFAULT)) /
               TC);
     }
-    bool IsUnlikelyEdge = LoopBB.getLoop() && UnlikelyBlocks.contains(SuccBB);
+    bool IsUnlikelyEdge = LoopBB.getCycle() && UnlikelyBlocks.contains(SuccBB);
     if (IsUnlikelyEdge &&
         // Avoid adjustment of ZERO weight since it should remain unchanged.
         Weight != static_cast<uint32_t>(BlockExecWeight::ZERO)) {
@@ -1223,10 +1225,10 @@ bool BPIConstruction::calcFloatingPointHeuristics(const BasicBlock *BB) {
   }
   return true;
 }
-void BPIConstruction::calculate(const Function &F, const LoopInfo &LoopI,
+void BPIConstruction::calculate(const Function &F, const CycleInfo &CycleI,
                                 const TargetLibraryInfo *TLI, DominatorTree *DT,
                                 PostDominatorTree *PDT) {
-  LI = &LoopI;
+  CI = &CycleI;
 
   SccI = std::make_unique<SccInfo>(F);
 
@@ -1435,7 +1437,8 @@ void BranchProbabilityInfo::eraseBlock(const BasicBlock *BB) {
     EdgeStarts[BB->getNumber()] = 0;
 }
 
-void BranchProbabilityInfo::calculate(const Function &F, const LoopInfo &LoopI,
+void BranchProbabilityInfo::calculate(const Function &F,
+                                      const CycleInfo &CycleI,
                                       const TargetLibraryInfo *TLI,
                                       DominatorTree *DT,
                                       PostDominatorTree *PDT) {
@@ -1445,7 +1448,7 @@ void BranchProbabilityInfo::calculate(const Function &F, const LoopInfo &LoopI,
   BlockNumberEpoch = F.getBlockNumberEpoch();
   Probs.clear();
   EdgeStarts.clear();
-  BPIConstruction(*this).calculate(F, LoopI, TLI, DT, PDT);
+  BPIConstruction(*this).calculate(F, CycleI, TLI, DT, PDT);
 
   if (PrintBranchProb && (PrintBranchProbFuncName.empty() ||
                           F.getName() == PrintBranchProbFuncName)) {
@@ -1459,7 +1462,7 @@ void BranchProbabilityInfoWrapperPass::getAnalysisUsage(
   // asserts that DT is also present so if we don't make sure that we have DT
   // here, that assert will trigger.
   AU.addRequired<DominatorTreeWrapperPass>();
-  AU.addRequired<LoopInfoWrapperPass>();
+  AU.addRequired<CycleInfoWrapperPass>();
   AU.addRequired<TargetLibraryInfoWrapperPass>();
   AU.addRequired<DominatorTreeWrapperPass>();
   AU.addRequired<PostDominatorTreeWrapperPass>();
@@ -1467,13 +1470,13 @@ void BranchProbabilityInfoWrapperPass::getAnalysisUsage(
 }
 
 bool BranchProbabilityInfoWrapperPass::runOnFunction(Function &F) {
-  const LoopInfo &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
+  const CycleInfo &CI = getAnalysis<CycleInfoWrapperPass>().getResult();
   const TargetLibraryInfo &TLI =
       getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
   DominatorTree &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
   PostDominatorTree &PDT =
       getAnalysis<PostDominatorTreeWrapperPass>().getPostDomTree();
-  BPI.calculate(F, LI, &TLI, &DT, &PDT);
+  BPI.calculate(F, CI, &TLI, &DT, &PDT);
   return false;
 }
 
@@ -1485,12 +1488,12 @@ void BranchProbabilityInfoWrapperPass::print(raw_ostream &OS,
 AnalysisKey BranchProbabilityAnalysis::Key;
 BranchProbabilityInfo
 BranchProbabilityAnalysis::run(Function &F, FunctionAnalysisManager &AM) {
-  auto &LI = AM.getResult<LoopAnalysis>(F);
+  auto &CI = AM.getResult<CycleAnalysis>(F);
   auto &TLI = AM.getResult<TargetLibraryAnalysis>(F);
   auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
   auto &PDT = AM.getResult<PostDominatorTreeAnalysis>(F);
   BranchProbabilityInfo BPI;
-  BPI.calculate(F, LI, &TLI, &DT, &PDT);
+  BPI.calculate(F, CI, &TLI, &DT, &PDT);
   return BPI;
 }
 

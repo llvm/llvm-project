@@ -28,9 +28,10 @@
 ; CHECK-NEXT:      Lower Garbage Collection Instructions
 ; CHECK-NEXT:      Shadow Stack GC Lowering
 ; CHECK-NEXT:      Remove unreachable blocks from the CFG
-; CHECK-NEXT:      Natural Loop Information
+; CHECK-NEXT:      Cycle Info Analysis
 ; CHECK-NEXT:      Post-Dominator Tree Construction
 ; CHECK-NEXT:      Branch Probability Analysis
+; CHECK-NEXT:      Natural Loop Information
 ; CHECK-NEXT:      Block Frequency Analysis
 ; CHECK-NEXT:      Constant Hoisting
 ; CHECK-NEXT:      Replace intrinsics with calls to vector library
@@ -49,6 +50,7 @@
 ; CHECK-NEXT:      Complex Deinterleaving Pass
 ; CHECK-NEXT:      Interleaved Access Pass
 ; CHECK-NEXT:      Type Promotion
+; CHECK-NEXT:      Cycle Info Analysis
 ; CHECK-NEXT:      Post-Dominator Tree Construction
 ; CHECK-NEXT:      Branch Probability Analysis
 ; CHECK-NEXT:      Block Frequency Analysis
@@ -58,14 +60,15 @@
 ; CHECK-NEXT:      Merge internal globals
 ; CHECK-NEXT:      Natural Loop Information
 ; CHECK-NEXT:      Scalar Evolution Analysis
+; CHECK-NEXT:      Cycle Info Analysis
 ; CHECK-NEXT:      Lazy Branch Probability Analysis
 ; CHECK-NEXT:      Lazy Block Frequency Analysis
 ; CHECK-NEXT:      Optimization Remark Emitter
 ; CHECK-NEXT:      Hardware Loop Insertion
 ; CHECK-NEXT:      Loop Pass Manager
 ; CHECK-NEXT:        Transform predicated vector loops to use MVE tail predication
-; CHECK-NEXT:      A No-Op Barrier Pass
-; CHECK-NEXT:      FunctionPass Manager
+; CHECK-NEXT:    A No-Op Barrier Pass
+; CHECK-NEXT:    FunctionPass Manager
 ; CHECK-NEXT:      Prepare inline asm insts
 ; CHECK-NEXT:      Safe Stack instrumentation pass
 ; CHECK-NEXT:      Insert stack protectors
@@ -73,11 +76,12 @@
 ; CHECK-NEXT:      Dominator Tree Construction
 ; CHECK-NEXT:      Basic Alias Analysis (stateless AA impl)
 ; CHECK-NEXT:      Function Alias Analysis Results
-; CHECK-NEXT:      Natural Loop Information
+; CHECK-NEXT:      Cycle Info Analysis
 ; CHECK-NEXT:      Post-Dominator Tree Construction
 ; CHECK-NEXT:      Branch Probability Analysis
 ; CHECK-NEXT:      Assignment Tracking Analysis
 ; CHECK-NEXT:      Lazy Branch Probability Analysis
+; CHECK-NEXT:      Natural Loop Information
 ; CHECK-NEXT:      Lazy Block Frequency Analysis
 ; CHECK-NEXT:      ARM Instruction Selection
 ; CHECK-NEXT:      Finalize ISel and expand pseudo-instructions
@@ -108,7 +112,7 @@
 ; CHECK-NEXT:      Modulo Software Pipelining
 ; CHECK-NEXT:      MachineDominator Tree Construction
 ; CHECK-NEXT:      Machine Natural Loop Construction
-; CHECK-NEXT:      MVE TailPred and VPT Optimisation Pass
+; CHECK-NEXT:      ARM MVE TailPred and VPT Optimisation Pass
 ; CHECK-NEXT:      ARM MLA / MLS expansion pass
 ; CHECK-NEXT:      MachineDominator Tree Construction
 ; CHECK-NEXT:      ARM pre- register allocation load / store optimization pass

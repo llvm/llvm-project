@@ -54,8 +54,9 @@
 ; CHECK-O-NEXT: Running analysis: OuterAnalysisManagerProxy
 ; CHECK-O-NEXT: Running analysis: BlockFrequencyAnalysis on foo
 ; CHECK-O-NEXT: Running analysis: BranchProbabilityAnalysis on foo
-; CHECK-O-NEXT: Running analysis: LoopAnalysis on foo
+; CHECK-O-NEXT: Running analysis: CycleAnalysis on foo
 ; CHECK-O-NEXT: Running analysis: PostDominatorTreeAnalysis on foo
+; CHECK-O-NEXT: Running analysis: LoopAnalysis on foo
 ; CHECK-O-NEXT: Running pass: SimplifyCFGPass on foo
 ; CHECK-O-NEXT: Running pass: PGOForceFunctionAttrsPass
 ; CHECK-O-NEXT: Running pass: AlwaysInlinerPass
@@ -131,7 +132,6 @@
 ; CHECK-O-NEXT: Running pass: ADCEPass
 ; CHECK-O23-NEXT: Running pass: MemCpyOptPass
 ; CHECK-O23-NEXT: Running pass: DSEPass
-; CHECK-O23-NEXT: Running analysis: CycleAnalysis
 ; CHECK-O23-NEXT: Running pass: MoveAutoInitPass on foo
 ; CHECK-O23-NEXT: Running pass: LoopSimplifyPass
 ; CHECK-O23-NEXT: Running pass: LCSSAPass

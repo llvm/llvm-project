@@ -36,6 +36,7 @@
 ; CHECK-NEXT:       Dominator Tree Construction
 ; CHECK-NEXT:       Natural Loop Information
 ; CHECK-NEXT:       Canonicalize natural loops
+; CHECK-NEXT:       Cycle Info Analysis
 ; CHECK-NEXT:       Lazy Branch Probability Analysis
 ; CHECK-NEXT:       Lazy Block Frequency Analysis
 ; CHECK-NEXT:       Optimization Remark Emitter
@@ -52,9 +53,10 @@
 ; CHECK-NEXT:       Lower Garbage Collection Instructions
 ; CHECK-NEXT:       Shadow Stack GC Lowering
 ; CHECK-NEXT:       Remove unreachable blocks from the CFG
-; CHECK-NEXT:       Natural Loop Information
+; CHECK-NEXT:       Cycle Info Analysis
 ; CHECK-NEXT:       Post-Dominator Tree Construction
 ; CHECK-NEXT:       Branch Probability Analysis
+; CHECK-NEXT:       Natural Loop Information
 ; CHECK-NEXT:       Block Frequency Analysis
 ; CHECK-NEXT:       Constant Hoisting
 ; CHECK-NEXT:       Replace intrinsics with calls to vector library
@@ -66,6 +68,7 @@
 ; CHECK-NEXT:       Scalarize Masked Memory Intrinsics
 ; CHECK-NEXT:       Expand reduction intrinsics
 ; CHECK-NEXT:       Natural Loop Information
+; CHECK-NEXT:       Cycle Info Analysis
 ; CHECK-NEXT:       Post-Dominator Tree Construction
 ; CHECK-NEXT:       Branch Probability Analysis
 ; CHECK-NEXT:       Block Frequency Analysis
@@ -95,6 +98,7 @@
 ; CHECK-NEXT:       Interleaved Access Pass
 ; CHECK-NEXT:       Natural Loop Information
 ; CHECK-NEXT:       Type Promotion
+; CHECK-NEXT:       Cycle Info Analysis
 ; CHECK-NEXT:       Post-Dominator Tree Construction
 ; CHECK-NEXT:       Branch Probability Analysis
 ; CHECK-NEXT:       Block Frequency Analysis
@@ -112,7 +116,7 @@
 ; CHECK-NEXT:       Module Verifier
 ; CHECK-NEXT:       Analysis containing CSE Info
 ; CHECK-NEXT:       Dominator Tree Construction
-; CHECK-NEXT:       Natural Loop Information
+; CHECK-NEXT:       Cycle Info Analysis
 ; CHECK-NEXT:       Post-Dominator Tree Construction
 ; CHECK-NEXT:       Branch Probability Analysis
 ; CHECK-NEXT:       Basic Alias Analysis (stateless AA impl)
@@ -127,6 +131,7 @@
 ; CHECK-NEXT:       RegBankSelect
 ; CHECK-NEXT:       Analysis for ComputingKnownBits
 ; CHECK-NEXT:       Lazy Branch Probability Analysis
+; CHECK-NEXT:       Natural Loop Information
 ; CHECK-NEXT:       Lazy Block Frequency Analysis
 ; CHECK-NEXT:       InstructionSelect
 ; CHECK-NEXT:       ResetMachineFunction
