@@ -1064,7 +1064,7 @@ Interpreter::Visit(const BitFieldExtractionNode &node) {
     std::string message = llvm::formatv(
         "bitfield range {0}:{1} is not valid for \"({2}) {3}\"", first_index,
         last_index, base->GetTypeName().AsCString("<invalid type>"),
-        base->GetName().AsCString());
+        base->GetName().GetStringRef());
     return llvm::make_error<DILDiagnosticError>(m_expr, message,
                                                 node.GetLocation());
   }

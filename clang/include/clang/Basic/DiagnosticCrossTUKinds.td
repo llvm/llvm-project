@@ -41,7 +41,7 @@ def err_ctu_import_failure: Error<
 
 def remark_ctu_import_threshold_reached: Remark<
   "reached a the CTU-import threshold before trying to import definition">,
-  InGroup<CrossTU>;
+  InGroup<CrossTURemarks>;
 
 def warn_ctu_incompat_lang : Warning<
   "imported AST from '%0' had been generated for a different language, "
