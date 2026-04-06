@@ -10,8 +10,8 @@
 #include "llvm/DebugInfo/GSYM/FileWriter.h"
 #include "llvm/DebugInfo/GSYM/GsymCreator.h"
 #include "llvm/DebugInfo/GSYM/GsymReader.h"
-#include "llvm/DebugInfo/GSYM/LineTable.h"
 #include "llvm/DebugInfo/GSYM/InlineInfo.h"
+#include "llvm/DebugInfo/GSYM/LineTable.h"
 #include "llvm/Support/DataExtractor.h"
 #include <optional>
 

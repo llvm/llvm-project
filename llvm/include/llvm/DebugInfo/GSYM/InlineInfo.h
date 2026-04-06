@@ -60,7 +60,7 @@ class GsymReader;
 ///
 struct InlineInfo {
 
-  gsym_strp_t Name = 0;     ///< String table offset in the string table.
+  gsym_strp_t Name = 0;  ///< String table offset in the string table.
   uint32_t CallFile = 0; ///< 1 based file index in the file table.
   uint32_t CallLine = 0; ///< Source line number.
   AddressRanges Ranges;

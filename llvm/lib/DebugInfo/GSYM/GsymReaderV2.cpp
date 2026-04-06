@@ -153,15 +153,16 @@ llvm::Error GsymReaderV2::parse() {
     return createStringError(std::errc::invalid_argument,
                              "AddrOffsets section size mismatch");
 
-  if (AddrInfoOffsetsGD.FileSize !=
-      static_cast<uint64_t>(Hdr->NumAddresses) * HeaderV2::getAddressInfoOffsetSize())
+  if (AddrInfoOffsetsGD.FileSize != static_cast<uint64_t>(Hdr->NumAddresses) *
+                                        HeaderV2::getAddressInfoOffsetSize())
     return createStringError(std::errc::invalid_argument,
                              "AddrInfoOffsets section size mismatch");
 
   // AddrOffsets
   {
     uint64_t AddrOffsetsOff = AddrOffsetsGD.FileOffset;
-    if (auto Err = parseAddrOffsets(Data, AddrOffsetsOff, SwappedHdr != nullptr))
+    if (auto Err =
+            parseAddrOffsets(Data, AddrOffsetsOff, SwappedHdr != nullptr))
       return Err;
   }
 
@@ -303,10 +304,12 @@ void GsymReaderV2::dump(raw_ostream &OS) {
   OS << "INDEX  OFFSET 64 (FILE OFFSET 64)\n";
   OS << "====== ========================================\n";
   for (uint32_t I = 0; I < getNumAddresses(); ++I)
-    OS << format("[%4u] ", I) << HEX64(GsymReader::getAddressInfoOffset(I)) << " (" << HEX64(getAddressInfoOffset(I)) << ")\n";
+    OS << format("[%4u] ", I) << HEX64(GsymReader::getAddressInfoOffset(I))
+       << " (" << HEX64(getAddressInfoOffset(I)) << ")\n";
   OS << "\nFiles:\n";
   OS << "INDEX  DIRECTORY  BASENAME   PATH\n";
-  OS << "====== ========== ========== ========================================\n";
+  OS << "====== ========== ========== "
+        "========================================\n";
   // Since we don't store the total number of files in the file table, loop
   // until we get a null entry which means the index is out of range.
   for (uint32_t I = 0;; ++I) {

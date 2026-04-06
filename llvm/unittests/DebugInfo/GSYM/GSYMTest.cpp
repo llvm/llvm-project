@@ -89,8 +89,7 @@ TEST(GSYMTest, TestFileEntry) {
   EXPECT_EQ(R.first->second, Index2);
 }
 
-template <typename StrpT>
-static void TestFunctionInfoImpl(StrpT NameOffset) {
+template <typename StrpT> static void TestFunctionInfoImpl(StrpT NameOffset) {
   // Test GSYM FunctionInfo structs and functionality.
   FunctionInfo invalid;
   EXPECT_FALSE(invalid.isValid());
@@ -205,8 +204,7 @@ static void TestFunctionInfoDecodeError(llvm::endianness ByteOrder,
   checkError(ExpectedErrorMsg, Decoded.takeError());
 }
 
-template <typename StrpT>
-static void TestFunctionInfoDecodeErrors() {
+template <typename StrpT> static void TestFunctionInfoDecodeErrors() {
   // Test decoding FunctionInfo objects that ensure we report an appropriate
   // error message.
   const llvm::endianness ByteOrder = llvm::endianness::little;
@@ -219,19 +217,23 @@ static void TestFunctionInfoDecodeErrors() {
   constexpr uint64_t NameOff = 4;
   constexpr uint64_t PostNameOff = NameOff + sizeof(StrpT);
   constexpr uint64_t PostInfoTypeOff = PostNameOff + 4;
-  auto Hex = [](uint64_t V) {
-    return llvm::formatv("0x{0:x-8}", V).str();
-  };
+  auto Hex = [](uint64_t V) { return llvm::formatv("0x{0:x-8}", V).str(); };
   TestFunctionInfoDecodeError<StrpT>(ByteOrder, OutStrm.str(), BaseAddr,
-      "0x00000000: missing FunctionInfo Size");
+                                     "0x00000000: missing FunctionInfo Size");
   FW.writeU32(0x100); // Function size.
   TestFunctionInfoDecodeError<StrpT>(ByteOrder, OutStrm.str(), BaseAddr,
-      Hex(NameOff) + ": missing FunctionInfo Name");
+                                     Hex(NameOff) +
+                                         ": missing FunctionInfo Name");
   // Write out an invalid Name string table offset of zero.
   switch (sizeof(StrpT)) {
-  case 4: FW.writeU32(0); break;
-  case 8: FW.writeU64(0); break;
-  default: FAIL() << "unsupported StrpT size: " << sizeof(StrpT);
+  case 4:
+    FW.writeU32(0);
+    break;
+  case 8:
+    FW.writeU64(0);
+    break;
+  default:
+    FAIL() << "unsupported StrpT size: " << sizeof(StrpT);
   }
   TestFunctionInfoDecodeError<StrpT>(
       ByteOrder, OutStrm.str(), BaseAddr,
@@ -239,16 +241,19 @@ static void TestFunctionInfoDecodeErrors() {
   // Modify the Name to be 0x00000001, which is a valid value.
   // fixup32 works for both sizes in little-endian (sets low 4 bytes).
   FW.fixup32(0x00000001, NameOff);
-  TestFunctionInfoDecodeError<StrpT>(ByteOrder, OutStrm.str(), BaseAddr,
+  TestFunctionInfoDecodeError<StrpT>(
+      ByteOrder, OutStrm.str(), BaseAddr,
       Hex(PostNameOff) + ": missing FunctionInfo InfoType value");
   auto FixupOffset = FW.tell();
   FW.writeU32(1); // InfoType::LineTableInfo.
-  TestFunctionInfoDecodeError<StrpT>(ByteOrder, OutStrm.str(), BaseAddr,
+  TestFunctionInfoDecodeError<StrpT>(
+      ByteOrder, OutStrm.str(), BaseAddr,
       Hex(PostInfoTypeOff) + ": missing FunctionInfo InfoType length");
   FW.fixup32(7, FixupOffset); // Write an invalid InfoType enumeration value
   FW.writeU32(0); // LineTableInfo InfoType data length.
   TestFunctionInfoDecodeError<StrpT>(ByteOrder, OutStrm.str(), BaseAddr,
-      Hex(PostNameOff) + ": unsupported InfoType 7");
+                                     Hex(PostNameOff) +
+                                         ": unsupported InfoType 7");
 }
 
 TEST(GSYMTest, TestFunctionInfoDecodeErrors) {
@@ -269,8 +274,7 @@ static void TestFunctionInfoEncodeError(llvm::endianness ByteOrder,
   checkError(ExpectedErrorMsg, ExpectedOffset.takeError());
 }
 
-template <typename StrpT>
-static void TestFunctionInfoEncodeErrors() {
+template <typename StrpT> static void TestFunctionInfoEncodeErrors() {
   const uint64_t FuncAddr = 0x1000;
   const uint64_t FuncSize = 0x100;
   const StrpT InvalidName = 0;
@@ -336,22 +340,21 @@ static void AddLines(uint64_t FuncAddr, uint32_t FileIdx, FunctionInfo &FI) {
     FI.OptLineTable->push(Line2);
 }
 
-template<typename StrpT>
+template <typename StrpT>
 static void AddInline(uint64_t FuncAddr, uint64_t FuncSize, FunctionInfo &FI,
                       StrpT InlineName) {
-    FI.Inline = InlineInfo();
-    FI.Inline->Ranges.insert(AddressRange(FuncAddr, FuncAddr + FuncSize));
-    InlineInfo Inline1;
-    Inline1.Ranges.insert(AddressRange(FuncAddr + 0x10, FuncAddr + 0x30));
-    Inline1.Name = InlineName;
-    Inline1.CallFile = 1;
-    Inline1.CallLine = 11;
-    FI.Inline->Children.push_back(Inline1);
+  FI.Inline = InlineInfo();
+  FI.Inline->Ranges.insert(AddressRange(FuncAddr, FuncAddr + FuncSize));
+  InlineInfo Inline1;
+  Inline1.Ranges.insert(AddressRange(FuncAddr + 0x10, FuncAddr + 0x30));
+  Inline1.Name = InlineName;
+  Inline1.CallFile = 1;
+  Inline1.CallLine = 11;
+  FI.Inline->Children.push_back(Inline1);
 }
 
 template <typename StrpT>
-static void TestFunctionInfoEncoding(StrpT FuncName,
-                                     StrpT InlineName) {
+static void TestFunctionInfoEncoding(StrpT FuncName, StrpT InlineName) {
   constexpr uint64_t FuncAddr = 0x1000;
   constexpr uint64_t FuncSize = 0x100;
   constexpr uint32_t FileIdx = 1;
@@ -440,8 +443,7 @@ static void TestInlineInfoEncodeError(llvm::endianness ByteOrder,
 }
 
 template <typename StrpT>
-static void TestInlineInfoImpl(StrpT Name1, StrpT Name2,
-                               StrpT Name3) {
+static void TestInlineInfoImpl(StrpT Name1, StrpT Name2, StrpT Name3) {
   // Test InlineInfo structs.
   InlineInfo II;
   EXPECT_FALSE(II.isValid());
@@ -544,8 +546,7 @@ TEST(GSYMTest, TestInlineInfo) {
   TestInlineInfoImpl<uint64_t>(0x1'0000'0001, 0x1'0000'0002, 0x1'0000'0003);
 }
 
-template <typename StrpT>
-static void TestInlineInfoEncodeErrors() {
+template <typename StrpT> static void TestInlineInfoEncodeErrors() {
   // Test InlineInfo encoding errors.
 
   // Test that we get an error when trying to encode an InlineInfo object
@@ -584,8 +585,7 @@ TEST(GSYMTest, TestInlineInfoEncodeErrors) {
   TestInlineInfoEncodeErrors<uint64_t>();
 }
 
-template <typename StrpT>
-static void TestInlineInfoDecodeErrors() {
+template <typename StrpT> static void TestInlineInfoDecodeErrors() {
   // Test decoding InlineInfo objects that ensure we report an appropriate
   // error message.
   const llvm::endianness ByteOrder = llvm::endianness::little;
@@ -599,28 +599,35 @@ static void TestInlineInfoDecodeErrors() {
   constexpr uint64_t NameOff = ChildrenOff + 1;
   constexpr uint64_t PostNameOff = NameOff + sizeof(StrpT);
   constexpr uint64_t PostCallFileOff = PostNameOff + 1; // CallFile is ULEB(0)
-  auto Hex = [](uint64_t V) {
-    return llvm::formatv("0x{0:x-8}", V).str();
-  };
-  TestInlineInfoDecodeError<StrpT>(ByteOrder, OutStrm.str(), BaseAddr,
+  auto Hex = [](uint64_t V) { return llvm::formatv("0x{0:x-8}", V).str(); };
+  TestInlineInfoDecodeError<StrpT>(
+      ByteOrder, OutStrm.str(), BaseAddr,
       "0x00000000: missing InlineInfo address ranges data");
   AddressRanges Ranges;
   Ranges.insert({BaseAddr, BaseAddr+0x100});
   encodeRanges(Ranges, FW, BaseAddr);
-  TestInlineInfoDecodeError<StrpT>(ByteOrder, OutStrm.str(), BaseAddr,
+  TestInlineInfoDecodeError<StrpT>(
+      ByteOrder, OutStrm.str(), BaseAddr,
       Hex(ChildrenOff) + ": missing InlineInfo uint8_t indicating children");
   FW.writeU8(0);
   TestInlineInfoDecodeError<StrpT>(ByteOrder, OutStrm.str(), BaseAddr,
-      Hex(NameOff) + ": missing InlineInfo name");
+                                   Hex(NameOff) + ": missing InlineInfo name");
   switch (sizeof(StrpT)) {
-  case 4: FW.writeU32(0); break;
-  case 8: FW.writeU64(0); break;
-  default: FAIL() << "unsupported StrpT size: " << sizeof(StrpT);
+  case 4:
+    FW.writeU32(0);
+    break;
+  case 8:
+    FW.writeU64(0);
+    break;
+  default:
+    FAIL() << "unsupported StrpT size: " << sizeof(StrpT);
   }
-  TestInlineInfoDecodeError<StrpT>(ByteOrder, OutStrm.str(), BaseAddr,
+  TestInlineInfoDecodeError<StrpT>(
+      ByteOrder, OutStrm.str(), BaseAddr,
       Hex(PostNameOff) + ": missing ULEB128 for InlineInfo call file");
   FW.writeU8(0);
-  TestInlineInfoDecodeError<StrpT>(ByteOrder, OutStrm.str(), BaseAddr,
+  TestInlineInfoDecodeError<StrpT>(
+      ByteOrder, OutStrm.str(), BaseAddr,
       Hex(PostCallFileOff) + ": missing ULEB128 for InlineInfo call line");
 }
 
@@ -2891,13 +2898,17 @@ static void TestGsymSegmenting(uint64_t SegmentSize) {
   ASSERT_TRUE(GC4000.get() != nullptr);
   ASSERT_TRUE(GCNull.get() == nullptr);
   // Encode and decode the GsymReader for each segment and verify they succeed.
-  Expected<std::unique_ptr<GsymReader>> GR1000 = FinalizeEncodeAndDecode(*GC1000.get());
+  Expected<std::unique_ptr<GsymReader>> GR1000 =
+      FinalizeEncodeAndDecode(*GC1000.get());
   ASSERT_THAT_EXPECTED(GR1000, Succeeded());
-  Expected<std::unique_ptr<GsymReader>> GR2000 = FinalizeEncodeAndDecode(*GC2000.get());
+  Expected<std::unique_ptr<GsymReader>> GR2000 =
+      FinalizeEncodeAndDecode(*GC2000.get());
   ASSERT_THAT_EXPECTED(GR2000, Succeeded());
-  Expected<std::unique_ptr<GsymReader>> GR3000 = FinalizeEncodeAndDecode(*GC3000.get());
+  Expected<std::unique_ptr<GsymReader>> GR3000 =
+      FinalizeEncodeAndDecode(*GC3000.get());
   ASSERT_THAT_EXPECTED(GR3000, Succeeded());
-  Expected<std::unique_ptr<GsymReader>> GR4000 = FinalizeEncodeAndDecode(*GC4000.get());
+  Expected<std::unique_ptr<GsymReader>> GR4000 =
+      FinalizeEncodeAndDecode(*GC4000.get());
   ASSERT_THAT_EXPECTED(GR4000, Succeeded());
 
   // Verify that all lookups match the range [0x1000-0x1030) when doing lookups
@@ -3045,13 +3056,17 @@ static void TestGsymSegmentingNoBase(uint64_t SegmentSize) {
   ASSERT_TRUE(GC4000.get() != nullptr);
   ASSERT_TRUE(GCNull.get() == nullptr);
   // Encode and decode the GsymReader for each segment and verify they succeed.
-  Expected<std::unique_ptr<GsymReader>> GR1000 = FinalizeEncodeAndDecode(*GC1000.get());
+  Expected<std::unique_ptr<GsymReader>> GR1000 =
+      FinalizeEncodeAndDecode(*GC1000.get());
   ASSERT_THAT_EXPECTED(GR1000, Succeeded());
-  Expected<std::unique_ptr<GsymReader>> GR2000 = FinalizeEncodeAndDecode(*GC2000.get());
+  Expected<std::unique_ptr<GsymReader>> GR2000 =
+      FinalizeEncodeAndDecode(*GC2000.get());
   ASSERT_THAT_EXPECTED(GR2000, Succeeded());
-  Expected<std::unique_ptr<GsymReader>> GR3000 = FinalizeEncodeAndDecode(*GC3000.get());
+  Expected<std::unique_ptr<GsymReader>> GR3000 =
+      FinalizeEncodeAndDecode(*GC3000.get());
   ASSERT_THAT_EXPECTED(GR3000, Succeeded());
-  Expected<std::unique_ptr<GsymReader>> GR4000 = FinalizeEncodeAndDecode(*GC4000.get());
+  Expected<std::unique_ptr<GsymReader>> GR4000 =
+      FinalizeEncodeAndDecode(*GC4000.get());
   ASSERT_THAT_EXPECTED(GR4000, Succeeded());
 
   // Verify that all lookups match the range [0x1000-0x1030) when doing lookups

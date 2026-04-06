@@ -61,8 +61,9 @@ template <> struct DenseMapInfo<gsym::FileEntry> {
     return gsym::FileEntry(key, key);
   }
   static unsigned getHashValue(const gsym::FileEntry &Val) {
-    return llvm::hash_combine(DenseMapInfo<gsym::gsym_strp_t>::getHashValue(Val.Dir),
-                              DenseMapInfo<gsym::gsym_strp_t>::getHashValue(Val.Base));
+    return llvm::hash_combine(
+        DenseMapInfo<gsym::gsym_strp_t>::getHashValue(Val.Dir),
+        DenseMapInfo<gsym::gsym_strp_t>::getHashValue(Val.Base));
   }
   static bool isEqual(const gsym::FileEntry &LHS, const gsym::FileEntry &RHS) {
     return LHS == RHS;

@@ -202,7 +202,8 @@ GsymReader::getAddressIndex(const uint64_t Addr) const {
 llvm::Error GsymReader::parseFileTable(DataExtractor &Data, uint64_t &Offset) {
   const uint8_t StrpSize = getStringOffsetSize();
   uint32_t NumFiles = Data.getU32(&Offset);
-  uint64_t EntriesSize = static_cast<uint64_t>(NumFiles) * FileEntry::getEncodedSize(StrpSize);
+  uint64_t EntriesSize =
+      static_cast<uint64_t>(NumFiles) * FileEntry::getEncodedSize(StrpSize);
   StringRef Bytes = Data.getData();
   if (Bytes.size() < Offset + EntriesSize)
     return createStringError(std::errc::invalid_argument,

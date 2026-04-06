@@ -33,10 +33,11 @@ namespace gsym {
 /// GsymReader is used to read GSYM data from a file or buffer.
 ///
 /// This class is optimized for very quick lookups when the endianness matches
-/// the host system. The header and the address table are designed to be mmap'ed as
-/// read only into memory and used without any parsing needed. If the endianness
-/// doesn't match, we swap the byte order of the address table into a separate buffer for efficient binary
-/// search. All the other data are parsed on demand with the correct endianness.
+/// the host system. The header and the address table are designed to be mmap'ed
+/// as read only into memory and used without any parsing needed. If the
+/// endianness doesn't match, we swap the byte order of the address table into a
+/// separate buffer for efficient binary search. All the other data are parsed
+/// on demand with the correct endianness.
 ///
 /// GsymReader objects must use one of the static functions to create an
 /// instance: GsymReader::openFile(...) and GsymReader::copyBuffer(...).
@@ -385,7 +386,8 @@ protected:
   ///   Advanced past the address offsets on success.
   /// \param Swap True if byte swapping is needed.
   /// \returns Error on failure.
-  llvm::Error parseAddrOffsets(DataExtractor &Data, uint64_t &Offset, bool Swap);
+  llvm::Error parseAddrOffsets(DataExtractor &Data, uint64_t &Offset,
+                               bool Swap);
 
   /// Parse a file table from a DataExtractor into FileEntryData.
   ///

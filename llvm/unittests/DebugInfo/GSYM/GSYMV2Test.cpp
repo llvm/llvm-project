@@ -151,7 +151,8 @@ static void TestV2HeaderAndGlobalData(llvm::endianness ByteOrder,
       break;
     case GlobalInfoType::AddrInfoOffsets:
       EXPECT_EQ(GD.FileSize,
-                ExpectedNumAddresses * (uint64_t)HeaderV2::getAddressInfoOffsetSize());
+                ExpectedNumAddresses *
+                    (uint64_t)HeaderV2::getAddressInfoOffsetSize());
       EXPECT_GT(GD.FileOffset, 0u);
       FoundAddrInfoOffsets = true;
       break;
