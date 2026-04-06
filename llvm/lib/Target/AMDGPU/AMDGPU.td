@@ -1040,10 +1040,10 @@ defm NoDataDepHazard : AMDGPUSubtargetFeature<"no-data-dep-hazard",
   /*GenPredicate=*/0
 >;
 
-// Allocate 1536 VGPRs for wave32 and 768 VGPRs for wave64
+// 1536 physical VGPRs for wave32 and 768 VGPRs for wave64
 // with allocation granularity 24 for wave32 and 12 for wave64
-defm 1_5xVGPRs : AMDGPUSubtargetFeature<"allocate1_5xvgprs",
-  "Has 50% more physical VGPRs and 50% larger allocation granule",
+defm 1536VGPRs : AMDGPUSubtargetFeature<"1536-physical-vgprs",
+  "Has 1536 physical VGPRs per SIMD",
   /*GenPredicate=*/0
 >;
 
@@ -1919,12 +1919,12 @@ def FeatureISAVersion11_0_Common : FeatureSet<
 
 def FeatureISAVersion11_0_0 : FeatureSet<
   !listconcat(FeatureISAVersion11_0_Common.Features,
-    [Feature1_5xVGPRs,
+    [Feature1536VGPRs,
      FeatureUserSGPRInit16Bug])>;
 
 def FeatureISAVersion11_0_1 : FeatureSet<
   !listconcat(FeatureISAVersion11_0_Common.Features,
-    [Feature1_5xVGPRs])>;
+    [Feature1536VGPRs])>;
 
 def FeatureISAVersion11_0_2 : FeatureSet<
   !listconcat(FeatureISAVersion11_0_Common.Features,
@@ -1949,7 +1949,7 @@ def FeatureISAVersion11_5_0 : FeatureSet<
 
 def FeatureISAVersion11_5_1 : FeatureSet<
   !listconcat(FeatureISAVersion11_5_Common.Features,
-    [Feature1_5xVGPRs,
+    [Feature1536VGPRs,
      FeaturePointSampleAccel])>;
 
 def FeatureISAVersion11_5_2 : FeatureSet<
@@ -2013,7 +2013,7 @@ def FeatureISAVersion12 : FeatureSet<
    FeatureScalarDwordx3Loads,
    FeatureDPPSrc1SGPR,
    FeatureMaxHardClauseLength32,
-   Feature1_5xVGPRs,
+   Feature1536VGPRs,
    FeatureMemoryAtomicFAddF32DenormalSupport,
    FeatureBVHDualAndBVH8Insts,
    FeatureWaitsBeforeSystemScopeStores,
@@ -2180,7 +2180,7 @@ def FeatureISAVersion13 : FeatureSet<
    FeatureTanhInsts,
    FeatureTensorCvtLutInsts,
    FeatureTransposeLoadF4F6Insts,
-   Feature1_5xVGPRs,
+   Feature1536VGPRs,
    FeatureBF16TransInsts,
    FeatureBF16ConversionInsts,
    FeatureBF16PackedInsts,

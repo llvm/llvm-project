@@ -1306,19 +1306,27 @@ void CIRGenFunction::emitCXXConstructorCall(const clang::CXXConstructorDecl *d,
                                             bool delegating,
                                             AggValueSlot thisAVS,
                                             const clang::CXXConstructExpr *e) {
-  CallArgList args;
   Address thisAddr = thisAVS.getAddress();
   QualType thisType = d->getThisType();
   mlir::Value thisPtr = thisAddr.getPointer();
 
   assert(!cir::MissingFeatures::addressSpace());
 
-  args.add(RValue::get(thisPtr), thisType);
+  // If this is a trivial constructor, just emit what's needed. If this is a
+  // union copy constructor, we must emit a memcpy, because the AST does not
+  // model that copy.
+  if (d->isMemcpyEquivalentSpecialMember(getContext())) {
+    assert(e->getNumArgs() == 1 && "unexpected argcount for trivial ctor");
+    const Expr *arg = e->getArg(0);
+    LValue src = emitLValue(arg);
+    CanQualType destTy = getContext().getCanonicalTagType(d->getParent());
+    LValue dest = makeAddrLValue(thisAddr, destTy);
+    emitAggregateCopy(dest, src, src.getType(), thisAVS.mayOverlap());
+    return;
+  }
 
-  // In LLVM Codegen: If this is a trivial constructor, just emit what's needed.
-  // If this is a union copy constructor, we must emit a memcpy, because the AST
-  // does not model that copy.
-  assert(!cir::MissingFeatures::isMemcpyEquivalentSpecialMember());
+  CallArgList args;
+  args.add(RValue::get(thisPtr), thisType);
 
   const FunctionProtoType *fpt = d->getType()->castAs<FunctionProtoType>();
 
@@ -1344,7 +1352,8 @@ void CIRGenFunction::emitCXXConstructorCall(
   // ctor call into trivial initialization.
   assert(!cir::MissingFeatures::isTrivialCtorOrDtor());
 
-  assert(!cir::MissingFeatures::isMemcpyEquivalentSpecialMember());
+  // Note: memcpy-equivalent special members are handled in the
+  // emitCXXConstructorCall overload that takes a CXXConstructExpr.
 
   bool passPrototypeArgs = true;
 

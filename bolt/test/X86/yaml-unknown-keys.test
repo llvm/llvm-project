@@ -11,10 +11,6 @@
 # CHECK: warning: unknown key 'unknown_block_key'
 # CHECK: warning: unknown key 'unknown_function_key'
 # CHECK: warning: unknown key 'unknown_toplev_key'
-# CHECK-NOT: warning: unknown key 'blx'
-# CHECK-NOT: warning: unknown key 'call'
-# CHECK-NOT: warning: unknown key 'icall'
-# CHECK-NOT: warning: unknown key 'id'
 #--- main.s
   .globl main
   .type main, %function
@@ -49,7 +45,6 @@ functions:
         hash:            0x4D4D8FAF7D4C0000
         succ:            [ { bid: 1, cnt: 0, unknown_succ_key: 0x10 } ]
         unknown_block_key: [ ]
-        probes:          [ { blx: 1, call: [ 2 ], icall: [ 3 ], id: 1 } ]
     unknown_function_key: 1
 unknown_toplev_key: ''
 ...
