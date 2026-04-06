@@ -107,9 +107,9 @@ public:
   createIR2VecEmbedder(const Function &F, IR2VecKind Kind) const;
 
   /// Sets the vocabulary for this tool instance.
-  /// This allows sharing the same vocabulary instance across multiple IR2VecTool
-  /// instances, which is useful for generating embeddings for multiple functions
-  /// without needing to reload the vocabulary each time.
+  /// This allows sharing the same vocabulary instance across multiple
+  /// IR2VecTool instances, which is useful for generating embeddings for
+  /// multiple functions without needing to reload the vocabulary each time.
   Error setVocabulary(std::shared_ptr<Vocabulary> V);
 
   /// Generate triplets for a single function

@@ -65,10 +65,9 @@ private:
   IR2VecKind OutputEmbeddingMode;
 
 public:
-
   /// \note
-  /// In the currently exposed API, the vocabulary is set once at construction and there is no
-  /// public interface to call this again. Callers should treat
+  /// In the currently exposed API, the vocabulary is set once at construction
+  /// and there is no public interface to call this again. Callers should treat
   /// the vocabulary as immutable for the lifetime of the tool instance.
   PyIR2VecTool(const std::string &Filename, IR2VecKind Mode, PyVocab &Vocab) {
     if (!Vocab.getVocab())
