@@ -5807,14 +5807,15 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
 
     // Check if FindLastExpression is a simple expression of a widened IV. If
     // so, we can track the underlying IV instead and sink the expression.
-    auto *SinkExpressionIV = getExpressionIV(FindLastExpression);
+    auto *IVOfExpressionToSink = getExpressionIV(FindLastExpression);
     const SCEV *IVSCEV = vputils::getSCEVExprForVPValue(
-        SinkExpressionIV ? SinkExpressionIV : FindLastExpression, PSE, &L);
+        IVOfExpressionToSink ? IVOfExpressionToSink : FindLastExpression, PSE,
+        &L);
     const SCEV *Step;
     if (!match(IVSCEV, m_scev_AffineAddRec(m_SCEV(), m_SCEV(Step)))) {
       assert(!match(vputils::getSCEVExprForVPValue(FindLastExpression, PSE, &L),
                     m_scev_AffineAddRec(m_SCEV(), m_SCEV())) &&
-             "SinkExpressionIV not being an AddRec must imply "
+             "IVOfExpressionToSink not being an AddRec must imply "
              "FindLastExpression not being an AddRec.");
       continue;
     }
@@ -5834,20 +5835,21 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
     // also prevent vectorizing using a sentinel (e.g., if the expression is a
     // multiply or divide by large constant, respectively), which also makes
     // sinking undesirable.
-    if (SinkExpressionIV) {
+    if (IVOfExpressionToSink) {
       const SCEV *FindLastExpressionSCEV =
           vputils::getSCEVExprForVPValue(FindLastExpression, PSE, &L);
       if (match(FindLastExpressionSCEV,
                 m_scev_AffineAddRec(m_SCEV(), m_SCEV(Step)))) {
         bool NewUseMax = SE.isKnownPositive(Step);
-        if (auto Sentinel = CheckSentinel(FindLastExpressionSCEV, NewUseMax)) {
+        if (auto NewSentinel =
+                CheckSentinel(FindLastExpressionSCEV, NewUseMax)) {
           // The original expression already has a sentinel, so prefer not
           // sinking to keep epilogue vectorization possible.
-          SentinelVal = *Sentinel;
-          UseSigned = Sentinel->isSigned();
+          SentinelVal = *NewSentinel;
+          UseSigned = NewSentinel->isSigned();
           UseMax = NewUseMax;
           IVSCEV = FindLastExpressionSCEV;
-          SinkExpressionIV = nullptr;
+          IVOfExpressionToSink = nullptr;
         }
       }
     }
@@ -5871,19 +5873,19 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
 
     // If IV is an expression to sink, create a new select that tracks the
     // underlying IV directly and update the backedge value.
-    auto *OrigSelectR = FindLastSelect->getDefiningRecipe();
-    if (SinkExpressionIV) {
-      VPBuilder LoopBuilder(OrigSelectR);
-      DebugLoc DL = OrigSelectR->getDebugLoc();
-      VPValue *SelectCond = OrigSelectR->getOperand(0);
-      if (OrigSelectR->getOperand(1) == PhiR) {
-        FindLastSelect =
-            LoopBuilder.createSelect(SelectCond, PhiR, SinkExpressionIV, DL);
+    if (IVOfExpressionToSink) {
+      auto *OrigFindLastSelectR = FindLastSelect->getDefiningRecipe();
+      VPBuilder LoopBuilder(OrigFindLastSelectR);
+      DebugLoc DL = OrigFindLastSelectR->getDebugLoc();
+      VPValue *SelectCond = OrigFindLastSelectR->getOperand(0);
+      if (OrigFindLastSelectR->getOperand(1) == PhiR) {
+        FindLastSelect = LoopBuilder.createSelect(SelectCond, PhiR,
+                                                  IVOfExpressionToSink, DL);
       } else {
-        assert(OrigSelectR->getOperand(2) == PhiR &&
+        assert(OrigFindLastSelectR->getOperand(2) == PhiR &&
                "PhiR expected as operand 1 or 2");
-        FindLastSelect =
-            LoopBuilder.createSelect(SelectCond, SinkExpressionIV, PhiR, DL);
+        FindLastSelect = LoopBuilder.createSelect(
+            SelectCond, IVOfExpressionToSink, PhiR, DL);
       }
     }
 
@@ -5898,11 +5900,12 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
     VPValue *ReducedIV = MiddleBuilder.createNaryOp(
         VPInstruction::ComputeReductionResult, FindLastSelect, Flags, ExitDL);
 
-    // If IV was an expression, sink the expression to the middle block.
+    // If IVOfExpressionToSink is an expression to sink, sink it now.
     VPValue *VectorRegionExitingVal = ReducedIV;
-    if (SinkExpressionIV)
-      VectorRegionExitingVal = cloneBinOpForScalarIV(
-          cast<VPWidenRecipe>(FindLastExpression), ReducedIV, SinkExpressionIV);
+    if (IVOfExpressionToSink)
+      VectorRegionExitingVal =
+          cloneBinOpForScalarIV(cast<VPWidenRecipe>(FindLastExpression),
+                                ReducedIV, IVOfExpressionToSink);
 
     VPValue *NewRdxResult;
     VPValue *StartVPV = PhiR->getStartValue();
