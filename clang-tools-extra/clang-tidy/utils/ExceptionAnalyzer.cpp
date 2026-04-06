@@ -330,6 +330,12 @@ static bool canThrow(const FunctionDecl *Func) {
   if (!FunProto)
     return true;
 
+  // An unresolved exception spec means the function is a defaulted or
+  // uninstantiated special member that has never been called. It cannot
+  // propagate exceptions to any caller, so non-throwing.
+  if (isUnresolvedExceptionSpec(FunProto->getExceptionSpecType()))
+    return false;
+
   switch (FunProto->canThrow()) {
   case CT_Cannot:
     return false;
@@ -499,6 +505,9 @@ ExceptionAnalyzer::ExceptionInfo ExceptionAnalyzer::throwsException(
   auto Result = ExceptionInfo::createUnknown();
 
   if (const auto *FPT = Func->getType()->getAs<FunctionProtoType>()) {
+    if (isUnresolvedExceptionSpec(FPT->getExceptionSpecType()))
+      return ExceptionInfo::createNonThrowing();
+
     for (const QualType &Ex : FPT->exceptions()) {
       CallStack.insert({Func, CallLoc});
       Result.registerException(
