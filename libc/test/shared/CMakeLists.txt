@@ -288,6 +288,8 @@ add_fp_unittest(
     libc.src.__support.str_to_integer
 )
 
+# FIXME: The LLVM libc full build does not support 'system' yet.
+if(NOT LLVM_LIBC_FULL_BUILD)
 add_libc_test(
   shared_rpc_test
   UNIT_TEST_ONLY
@@ -301,3 +303,4 @@ add_libc_test(
     libc.src.stdio.printf_core.writer
     libc.src.__support.arg_list
 )
+endif()
