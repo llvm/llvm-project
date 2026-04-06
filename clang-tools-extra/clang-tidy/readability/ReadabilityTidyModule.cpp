@@ -66,6 +66,7 @@
 #include "UppercaseLiteralSuffixCheck.h"
 #include "UseAnyOfAllOfCheck.h"
 #include "UseConcisePreprocessorDirectivesCheck.h"
+#include "UseRethrowCheck.h"
 #include "UseStdMinMaxCheck.h"
 
 namespace clang::tidy {
@@ -191,6 +192,7 @@ public:
         "readability-use-anyofallof");
     CheckFactories.registerCheck<UseConcisePreprocessorDirectivesCheck>(
         "readability-use-concise-preprocessor-directives");
+    CheckFactories.registerCheck<UseRethrowCheck>("readability-use-rethrow");
     CheckFactories.registerCheck<UseStdMinMaxCheck>(
         "readability-use-std-min-max");
   }
