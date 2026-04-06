@@ -2297,6 +2297,50 @@ define float @fadd_known_positive_daz(float nofpclass(ninf nsub nnorm) %arg0, fl
   ret float %add
 }
 
+define float @test_fadd_no_nan_from_no_ninf(float nofpclass(nan ninf) %x, float nofpclass(nan ninf) %y) {
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; CHECK-LABEL: define nofpclass(nan) float @test_fadd_no_nan_from_no_ninf
+; CHECK-SAME: (float nofpclass(nan ninf) [[X:%.*]], float nofpclass(nan ninf) [[Y:%.*]]) #[[ATTR:[0-9]+]] {
+; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[X]], [[Y]]
+; CHECK-NEXT:    ret float [[ADD]]
+;
+  %add = fadd float %x, %y
+  ret float %add
+}
+
+define float @test_fadd_no_nan_from_no_pinf(float nofpclass(nan pinf) %x, float nofpclass(nan pinf) %y) {
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; CHECK-LABEL: define nofpclass(nan) float @test_fadd_no_nan_from_no_pinf
+; CHECK-SAME: (float nofpclass(nan pinf) [[X:%.*]], float nofpclass(nan pinf) [[Y:%.*]]) #[[ATTR:[0-9]+]] {
+; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[X]], [[Y]]
+; CHECK-NEXT:    ret float [[ADD]]
+;
+  %add = fadd float %x, %y
+  ret float %add
+}
+
+define float @test_fadd_may_nan_from_no_pinf_no_ninf(float nofpclass(nan pinf) %x, float nofpclass(nan ninf) %y) {
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; CHECK-LABEL: define float @test_fadd_may_nan_from_no_pinf_no_ninf
+; CHECK-SAME: (float nofpclass(nan pinf) [[X:%.*]], float nofpclass(nan ninf) [[Y:%.*]]) #[[ATTR:[0-9]+]] {
+; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[X]], [[Y]]
+; CHECK-NEXT:    ret float [[ADD]]
+;
+  %add = fadd float %x, %y
+  ret float %add
+}
+
+define float @test_fadd_may_nan_from_no_ninf_no_pinf(float nofpclass(nan ninf) %x, float nofpclass(nan pinf) %y) {
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; CHECK-LABEL: define float @test_fadd_may_nan_from_no_ninf_no_pinf
+; CHECK-SAME: (float nofpclass(nan ninf) [[X:%.*]], float nofpclass(nan pinf) [[Y:%.*]]) #[[ATTR:[0-9]+]] {
+; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[X]], [[Y]]
+; CHECK-NEXT:    ret float [[ADD]]
+;
+  %add = fadd float %x, %y
+  ret float %add
+}
+
 define float @fadd_known_positive_nzero_lhs(float nofpclass(ninf nsub nnorm nzero) %arg0, float nofpclass(ninf nsub nnorm) %arg1) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @fadd_known_positive_nzero_lhs
