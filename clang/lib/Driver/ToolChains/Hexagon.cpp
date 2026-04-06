@@ -273,7 +273,8 @@ constructHexagonLinkArgs(Compilation &C, const JobAction &JA,
   //----------------------------------------------------------------------------
   bool IsStatic = Args.hasArg(options::OPT_static);
   bool IsShared = Args.hasArg(options::OPT_shared);
-  bool IsPIE = Args.hasArg(options::OPT_pie);
+  bool IsPIE = Args.hasFlag(options::OPT_pie, options::OPT_no_pie,
+                            HTC.isPIEDefault(Args));
   bool IncStdLib = !Args.hasArg(options::OPT_nostdlib);
   bool IncStartFiles = !Args.hasArg(options::OPT_nostartfiles);
   bool IncDefLibs = !Args.hasArg(options::OPT_nodefaultlibs);
@@ -323,7 +324,7 @@ constructHexagonLinkArgs(Compilation &C, const JobAction &JA,
   if (IsStatic)
     CmdArgs.push_back("-static");
 
-  if (IsPIE && !IsShared)
+  if (IsPIE && !IsShared && !Args.hasArg(options::OPT_r))
     CmdArgs.push_back("-pie");
 
   if (auto G = toolchains::HexagonToolChain::getSmallDataThreshold(Args))

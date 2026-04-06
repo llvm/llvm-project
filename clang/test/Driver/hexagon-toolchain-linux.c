@@ -149,3 +149,34 @@
 // CHECK013-NOT:  "-lgcc_eh"
 // CHECK013-NOT:  "-lgcc_s"
 // CHECK013-NOT:  "-lunwind"
+
+// -----------------------------------------------------------------------------
+// PIE is the default for linux-musl
+// -----------------------------------------------------------------------------
+// RUN: %clang -### --target=hexagon-unknown-linux-musl \
+// RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
+// RUN:   -mcpu=hexagonv60 \
+// RUN:   --sysroot=%S/Inputs/basic_linux_libcxx_tree %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-PIE-DEFAULT %s
+// CHECK-PIE-DEFAULT:      "-pie"
+
+// RUN: %clang -### --target=hexagon-unknown-linux-musl \
+// RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
+// RUN:   -mcpu=hexagonv60 \
+// RUN:   --sysroot=%S/Inputs/basic_linux_libcxx_tree -no-pie %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-NO-PIE %s
+// CHECK-NO-PIE-NOT:  "-pie"
+
+// RUN: %clang -### --target=hexagon-unknown-linux-musl \
+// RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
+// RUN:   -mcpu=hexagonv60 \
+// RUN:   --sysroot=%S/Inputs/basic_linux_libcxx_tree -shared %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-PIE-SHARED %s
+// CHECK-PIE-SHARED-NOT:  "-pie"
+
+// RUN: %clang -### --target=hexagon-unknown-linux-musl \
+// RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
+// RUN:   -mcpu=hexagonv60 \
+// RUN:   --sysroot=%S/Inputs/basic_linux_libcxx_tree -r %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-PIE-RELOCATABLE %s
+// CHECK-PIE-RELOCATABLE-NOT:  "-pie"
