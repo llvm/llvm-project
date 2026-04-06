@@ -245,7 +245,7 @@ private:
     else if (!sc.function && !sc.symbol)
       m_s << module_name << "`(none)";
     else
-      m_s << module_name << "`" << sc.GetFunctionName().AsCString();
+      m_s << module_name << "`" << sc.GetFunctionName();
   }
 
   void DumpFunctionCallTree(const TraceDumper::FunctionCall &function_call) {
