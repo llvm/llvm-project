@@ -57,3 +57,4 @@ body:             |
 # CHECK: successors: %bb.1
 # CHECK: bb.1.succ:
 # CHECK: RET64
+
