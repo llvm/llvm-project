@@ -1802,8 +1802,8 @@ define amdgpu_kernel void @const_value_i64(ptr addrspace(1) %out) {
 ; GFX1132GISEL-LABEL: const_value_i64:
 ; GFX1132GISEL:       ; %bb.0: ; %entry
 ; GFX1132GISEL-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GFX1132GISEL-NEXT:    v_mov_b32_e32 v0, 0x7b
-; GFX1132GISEL-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v2, 0
+; GFX1132GISEL-NEXT:    v_dual_mov_b32 v0, 0x7b :: v_dual_mov_b32 v1, 0
+; GFX1132GISEL-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1132GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1132GISEL-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
 ; GFX1132GISEL-NEXT:    s_endpgm
