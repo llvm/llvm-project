@@ -873,6 +873,11 @@ ABIArgInfo ZOSXPLinkABIInfo::classifyArgumentType(QualType Ty, bool IsNamedArg,
   if (IsNamedArg) {
     if (Ty->isComplexType()) {
       auto AI = ABIArgInfo::getDirect(CGT.ConvertType(Ty));
+
+      // Complex types must be preserved as opaque structs per XPLINK ABI.
+      // Without this, flattening would incorrectly split { float, float } into
+      // separate FP registers, breaking ABI compliance.
+      // Example: _Complex float pass_complex_float(_Complex float arg) { return arg; }
       AI.setCanBeFlattened(false);
       return AI;
     }
@@ -881,6 +886,11 @@ ABIArgInfo ZOSXPLinkABIInfo::classifyArgumentType(QualType Ty, bool IsNamedArg,
       llvm::Type *FPTy = CGT.ConvertType(*CompTy);
       llvm::Type *CoerceTy = llvm::StructType::get(FPTy, FPTy);
       auto AI = ABIArgInfo::getDirect(CoerceTy);
+
+      // Preserve { float, float } signature for complex-like structs per XPLINK ABI.
+      // Flattening would incorrectly decompose into separate FP registers.
+      // Example: struct complexlike_float { float re, im; };
+      //          struct complexlike_float pass_complexlike_float2(struct complexlike_float arg) { return arg; }
       AI.setCanBeFlattened(false);
       return AI;
     }
