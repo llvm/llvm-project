@@ -32,7 +32,7 @@ template <typename T> class TempVector {
   size_t capacity = 0;
 
 public:
-  ~TempVector() { free(data_); }
+  ~TempVector() { ::free(data_); }
 
   void push_back(const T &value) {
     if (current == capacity)
@@ -57,7 +57,7 @@ public:
 private:
   void grow() {
     size_t new_capacity = capacity ? capacity * 2 : 1;
-    void *new_data = realloc(data_, new_capacity * sizeof(T));
+    void *new_data = ::realloc(data_, new_capacity * sizeof(T));
     data_ = static_cast<T *>(new_data);
     capacity = new_capacity;
   }
@@ -65,13 +65,13 @@ private:
 
 struct TempStorage {
   char *alloc(size_t size) {
-    storage.push_back(reinterpret_cast<char *>(malloc(size)));
+    storage.push_back(reinterpret_cast<char *>(::malloc(size)));
     return storage.back();
   }
 
   ~TempStorage() {
     for (char *ptr : storage)
-      free(ptr);
+      ::free(ptr);
   }
 
   TempVector<char *> storage;
@@ -106,7 +106,7 @@ template <bool packed> struct StructArgList {
     if (ptr >= end)
       return T(-1);
     T val;
-    memcpy(&val, ptr, sizeof(T));
+    ::memcpy(&val, ptr, sizeof(T));
     ptr =
         reinterpret_cast<void *>(reinterpret_cast<uintptr_t>(ptr) + sizeof(T));
     return val;
@@ -233,7 +233,7 @@ template <typename ArgProvider> struct MicroParser {
     case 'g':
     case 'G': {
       double d = args.template next_var<double>();
-      memcpy(&specifier.raw_value, &d, sizeof(double));
+      ::memcpy(&specifier.raw_value, &d, sizeof(double));
       break;
     }
     case 'p':
@@ -302,10 +302,10 @@ template <typename T>
 inline int fprintf_with_stars(FILE *file, const char *fmt, int num_stars,
                               int *star_vals, T val) {
   if (num_stars == 2)
-    return fprintf(file, fmt, star_vals[0], star_vals[1], val);
+    return ::fprintf(file, fmt, star_vals[0], star_vals[1], val);
   if (num_stars == 1)
-    return fprintf(file, fmt, star_vals[0], val);
-  return fprintf(file, fmt, val);
+    return ::fprintf(file, fmt, star_vals[0], val);
+  return ::fprintf(file, fmt, val);
 }
 
 // Walks a printf format string using the MicroParser and emits output in
@@ -332,14 +332,14 @@ inline int print_format(FILE *file, const char *fmt, StructArgList<packed> args,
     size_t end = parser.pos();
 
     if (start > prev)
-      ret += fwrite_unlocked(fmt + prev, 1, start - prev, file);
+      ret += ::fwrite_unlocked(fmt + prev, 1, start - prev, file);
 
     // Null-terminated copy of the specifier substring for fprintf. Use a
     // stack buffer for the common case; heap-allocate only for overlong specs.
     size_t len = end - start;
     char local_buf[32];
     char *buf = len < sizeof(local_buf) ? local_buf : new char[len + 1];
-    memcpy(buf, fmt + start, len);
+    ::memcpy(buf, fmt + start, len);
     buf[len] = '\0';
 
     switch (spec.conv_name) {
@@ -367,7 +367,7 @@ inline int print_format(FILE *file, const char *fmt, StructArgList<packed> args,
     case 'g':
     case 'G': {
       double d;
-      memcpy(&d, &spec.raw_value, sizeof(double));
+      ::memcpy(&d, &spec.raw_value, sizeof(double));
       if (spec.is_long)
         ret += fprintf_with_stars(file, buf, num_stars, star_vals,
                                   static_cast<long double>(d));
@@ -391,7 +391,7 @@ inline int print_format(FILE *file, const char *fmt, StructArgList<packed> args,
   }
 
   if (parser.pos() > prev)
-    ret += fwrite_unlocked(fmt + prev, 1, parser.pos() - prev, file);
+    ret += ::fwrite_unlocked(fmt + prev, 1, parser.pos() - prev, file);
 
   return ret;
 }
@@ -491,11 +491,11 @@ inline void handle_printf(Server::Port &port, TempStorage &temp_storage) {
       continue;
 
     StructArgList<packed> printf_args(args[lane], args_sizes[lane]);
-    flockfile(files[lane]);
+    ::flockfile(files[lane]);
     results[lane] = print_format<packed>(
         files[lane], reinterpret_cast<const char *>(format[lane]), printf_args,
         copied_strs[lane]);
-    funlockfile(files[lane]);
+    ::funlockfile(files[lane]);
   }
 
   // Send the final return value and signal completion by setting the string
@@ -530,12 +530,12 @@ inline RPCStatus handle_port_impl(Server::Port &port) {
     port.recv_n(strs, sizes,
                 [&](uint64_t size) { return temp_storage.alloc(size); });
     port.send([&](Buffer *buffer, uint32_t id) {
-      flockfile(files[id]);
-      buffer->data[0] = fwrite_unlocked(strs[id], 1, sizes[id], files[id]);
+      ::flockfile(files[id]);
+      buffer->data[0] = ::fwrite_unlocked(strs[id], 1, sizes[id], files[id]);
       if (port.get_opcode() == LIBC_WRITE_TO_STDOUT_NEWLINE &&
           buffer->data[0] == sizes[id])
-        buffer->data[0] += fwrite_unlocked("\n", 1, 1, files[id]);
-      funlockfile(files[id]);
+        buffer->data[0] += ::fwrite_unlocked("\n", 1, 1, files[id]);
+      ::funlockfile(files[id]);
     });
     break;
   }
@@ -545,11 +545,11 @@ inline RPCStatus handle_port_impl(Server::Port &port) {
     port.recv([&](Buffer *buffer, uint32_t id) {
       data[id] = temp_storage.alloc(buffer->data[0]);
       sizes[id] =
-          fread(data[id], 1, buffer->data[0], to_stream(buffer->data[1]));
+          ::fread(data[id], 1, buffer->data[0], to_stream(buffer->data[1]));
     });
     port.send_n(data, sizes);
     port.send([&](Buffer *buffer, uint32_t id) {
-      memcpy(buffer->data, &sizes[id], sizeof(uint64_t));
+      ::memcpy(buffer->data, &sizes[id], sizeof(uint64_t));
     });
     break;
   }
@@ -572,8 +572,8 @@ inline RPCStatus handle_port_impl(Server::Port &port) {
     port.recv_n(paths, sizes,
                 [&](uint64_t size) { return temp_storage.alloc(size); });
     port.recv_and_send([&](Buffer *buffer, uint32_t id) {
-      FILE *file = fopen(reinterpret_cast<char *>(paths[id]),
-                         reinterpret_cast<char *>(buffer->data));
+      FILE *file = ::fopen(reinterpret_cast<char *>(paths[id]),
+                           reinterpret_cast<char *>(buffer->data));
       buffer->data[0] = reinterpret_cast<uintptr_t>(file);
     });
     break;
@@ -589,15 +589,15 @@ inline RPCStatus handle_port_impl(Server::Port &port) {
     port.recv_and_send([](Buffer *, uint32_t) {});
     port.recv([](Buffer *buffer, uint32_t) {
       int status = 0;
-      memcpy(&status, buffer->data, sizeof(int));
-      quick_exit(status);
+      ::memcpy(&status, buffer->data, sizeof(int));
+      ::quick_exit(status);
     });
     break;
   }
   case LIBC_ABORT: {
     port.recv_and_send([](Buffer *, uint32_t) {});
     port.recv([](Buffer *, uint32_t) {});
-    abort();
+    ::abort();
     break;
   }
   case LIBC_HOST_CALL: {
@@ -618,45 +618,46 @@ inline RPCStatus handle_port_impl(Server::Port &port) {
   }
   case LIBC_FEOF: {
     port.recv_and_send([](Buffer *buffer, uint32_t) {
-      buffer->data[0] = feof(to_stream(buffer->data[0]));
+      buffer->data[0] = ::feof(to_stream(buffer->data[0]));
     });
     break;
   }
   case LIBC_FERROR: {
     port.recv_and_send([](Buffer *buffer, uint32_t) {
-      buffer->data[0] = ferror(to_stream(buffer->data[0]));
+      buffer->data[0] = ::ferror(to_stream(buffer->data[0]));
     });
     break;
   }
   case LIBC_CLEARERR: {
-    port.recv_and_send(
-        [](Buffer *buffer, uint32_t) { clearerr(to_stream(buffer->data[0])); });
+    port.recv_and_send([](Buffer *buffer, uint32_t) {
+      ::clearerr(to_stream(buffer->data[0]));
+    });
     break;
   }
   case LIBC_FSEEK: {
     port.recv_and_send([](Buffer *buffer, uint32_t) {
-      buffer->data[0] =
-          fseek(to_stream(buffer->data[0]), static_cast<long>(buffer->data[1]),
-                static_cast<int>(buffer->data[2]));
+      buffer->data[0] = ::fseek(to_stream(buffer->data[0]),
+                                static_cast<long>(buffer->data[1]),
+                                static_cast<int>(buffer->data[2]));
     });
     break;
   }
   case LIBC_FTELL: {
     port.recv_and_send([](Buffer *buffer, uint32_t) {
-      buffer->data[0] = ftell(to_stream(buffer->data[0]));
+      buffer->data[0] = ::ftell(to_stream(buffer->data[0]));
     });
     break;
   }
   case LIBC_FFLUSH: {
     port.recv_and_send([](Buffer *buffer, uint32_t) {
-      buffer->data[0] = fflush(to_stream(buffer->data[0]));
+      buffer->data[0] = ::fflush(to_stream(buffer->data[0]));
     });
     break;
   }
   case LIBC_UNGETC: {
     port.recv_and_send([](Buffer *buffer, uint32_t) {
-      buffer->data[0] =
-          ungetc(static_cast<int>(buffer->data[0]), to_stream(buffer->data[1]));
+      buffer->data[0] = ::ungetc(static_cast<int>(buffer->data[0]),
+                                 to_stream(buffer->data[1]));
     });
     break;
   }
@@ -679,7 +680,7 @@ inline RPCStatus handle_port_impl(Server::Port &port) {
                 [&](uint64_t size) { return temp_storage.alloc(size); });
     port.send([&](Buffer *buffer, uint32_t id) {
       buffer->data[0] = static_cast<uint64_t>(
-          remove(reinterpret_cast<const char *>(args[id])));
+          ::remove(reinterpret_cast<const char *>(args[id])));
     });
     break;
   }
@@ -694,8 +695,8 @@ inline RPCStatus handle_port_impl(Server::Port &port) {
                 [&](uint64_t size) { return temp_storage.alloc(size); });
     port.send([&](Buffer *buffer, uint32_t id) {
       buffer->data[0] = static_cast<uint64_t>(
-          rename(reinterpret_cast<const char *>(oldpath[id]),
-                 reinterpret_cast<const char *>(newpath[id])));
+          ::rename(reinterpret_cast<const char *>(oldpath[id]),
+                   reinterpret_cast<const char *>(newpath[id])));
     });
     break;
   }
@@ -706,7 +707,7 @@ inline RPCStatus handle_port_impl(Server::Port &port) {
                 [&](uint64_t size) { return temp_storage.alloc(size); });
     port.send([&](Buffer *buffer, uint32_t id) {
       buffer->data[0] = static_cast<uint64_t>(
-          system(reinterpret_cast<const char *>(args[id])));
+          ::system(reinterpret_cast<const char *>(args[id])));
     });
     break;
   }
