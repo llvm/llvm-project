@@ -5305,7 +5305,8 @@ void TargetProperties::SetAutoLoadScriptsForModule(
     return;
 
   dict->SetValueForKey(module_name,
-                       std::make_shared<OptionValueEnumeration>(g_load_script_from_sym_file_values, load_style));
+                       std::make_shared<OptionValueEnumeration>(
+                           g_load_script_from_sym_file_values, load_style));
 }
 
 // Target::TargetEventData
