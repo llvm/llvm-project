@@ -3927,7 +3927,53 @@ _HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_radians)
 float4 radians(float4);
 
 //===----------------------------------------------------------------------===//
-// GroupMemoryBarrierbuiltins
+// AllMemoryBarrier builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn void AllMemoryBarrier(void)
+/// \brief Blocks execution of all threads in a group until all memory
+/// accesses have been completed.
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_all_memory_barrier)
+__attribute__((convergent)) void AllMemoryBarrier(void);
+
+//===----------------------------------------------------------------------===//
+// AllMemoryBarrierWithGroupSync builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn void AllMemoryBarrierWithGroupSync(void)
+/// \brief Blocks execution of all threads in a group until all memory
+/// accesses have been completed and all threads in the group have reached this
+/// call.
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_all_memory_barrier_with_group_sync)
+__attribute__((convergent)) void AllMemoryBarrierWithGroupSync(void);
+
+//===----------------------------------------------------------------------===//
+// DeviceMemoryBarrier builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn void DeviceMemoryBarrier(void)
+/// \brief Blocks execution of all threads in a group until all device memory
+/// accesses have been completed.
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_device_memory_barrier)
+__attribute__((convergent)) void DeviceMemoryBarrier(void);
+
+//===----------------------------------------------------------------------===//
+// DeviceMemoryBarrierWithGroupSync builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn void DeviceMemoryBarrierWithGroupSync(void)
+/// \brief Blocks execution of all threads in a group until all device memory
+/// accesses have been completed and all threads in the group have reached this
+/// call.
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_device_memory_barrier_with_group_sync)
+__attribute__((convergent)) void DeviceMemoryBarrierWithGroupSync(void);
+
+//===----------------------------------------------------------------------===//
+// GroupMemoryBarrier builtins
 //===----------------------------------------------------------------------===//
 
 /// \fn void GroupMemoryBarrier(void)
