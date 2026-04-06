@@ -76,6 +76,7 @@ parseGlobalDataEntries(DataExtractor &DE, uint64_t &Offset, uint64_t BufSize,
                            "GlobalData array not terminated by EndOfList");
 }
 
+/// For V2 file layout, see HeaderV2.h
 llvm::Error GsymReaderV2::parse() {
   const StringRef Buf = MemBuffer->getBuffer();
   const uint64_t BufSize = Buf.size();

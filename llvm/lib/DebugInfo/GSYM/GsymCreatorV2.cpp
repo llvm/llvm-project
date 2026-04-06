@@ -36,6 +36,7 @@ uint64_t GsymCreatorV2::calculateHeaderAndTableSize() const {
   return Size;
 }
 
+/// For V2 file layout, see HeaderV2.h
 llvm::Error GsymCreatorV2::encode(FileWriter &O) const {
   std::lock_guard<std::mutex> Guard(Mutex);
   std::optional<uint64_t> BaseAddr;

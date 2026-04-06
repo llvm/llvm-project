@@ -88,11 +88,11 @@ struct Header {
   /// Return the version of this header.
   static constexpr uint32_t getVersion() { return 1; }
 
-  /// Return the size in bytes of string table offsets.
-  static constexpr uint8_t getStringOffsetByteSize() { return 4; }
-
   /// Return the size in bytes of address info offsets.
   static constexpr uint8_t getAddressInfoOffsetByteSize() { return 4; }
+
+  /// Return the size in bytes of string table offsets.
+  static constexpr uint8_t getStringOffsetByteSize() { return 4; }
 
   /// Check if a header is valid and return an error if anything is wrong.
   ///

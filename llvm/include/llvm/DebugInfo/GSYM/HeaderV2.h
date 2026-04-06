@@ -36,19 +36,6 @@ enum class StringTableEncoding : uint8_t {
 /// the first bytes in a section when GSYM is contained in a section of an
 /// executable file (ELF, mach-o, COFF).
 ///
-/// The V2 file layout is:
-///
-///   [HeaderV2 - 24 bytes fixed]
-///   [GlobalData entries - array of 20-byte entries, terminated by EndOfList]
-///   [... data sections at arbitrary file offsets, zero-padded for alignment]
-///
-/// Each GlobalData entry (see GlobalData.h) describes a section by its type,
-/// file offset, and size. The sections can appear in any order in the file
-/// since each GlobalData entry contains an absolute file offset. The
-/// GlobalData array is terminated by an entry with type EndOfList and all
-/// other fields set to zero. See GlobalInfoType (in GlobalData.h) for all
-/// section types.
-///
 /// The header structure is encoded exactly as it appears in the structure
 /// definition with no gaps between members. Alignment should not change from
 /// system to system as the members are laid out so that they will align the
@@ -57,9 +44,19 @@ enum class StringTableEncoding : uint8_t {
 /// When endianness of the system loading a GSYM file matches, the file can
 /// be mmap'ed in and a pointer to the header can be cast to the first bytes
 /// of the file (stand alone GSYM file) or section data (GSYM in a section).
-/// The trailing GlobalData array can also be mmap'ed directly as each entry
-/// is naturally aligned at 24 bytes. When endianness is swapped, the
-/// HeaderV2::decode() function should be used to decode the header.
+/// When endianness is swapped, HeaderV2::decode() is used to read the header.
+///
+/// The V2 file layout is:
+///   [HeaderV2 - 20 bytes fixed]
+///   [GlobalData entries - array of 20-byte entries, terminated by EndOfList]
+///   [Data sections at arbitrary file offsets, zero-padded for alignment]
+///
+/// Each GlobalData entry (see GlobalData.h) describes a section by its type,
+/// file offset, and file size. The sections can appear in any order in the file
+/// since each GlobalData entry contains an absolute file offset. The
+/// GlobalData array is terminated by an entry with type EndOfList and all
+/// other fields set to zero. See GlobalInfoType (in GlobalData.h) for all
+/// section types.
 struct HeaderV2 {
   /// The magic bytes should be set to GSYM_MAGIC. This helps detect if a file
   /// is a GSYM file by scanning the first 4 bytes of a file or section.
@@ -81,11 +78,6 @@ struct HeaderV2 {
   /// The number of addresses stored in the address offsets table and the
   /// address info offsets table.
   uint32_t NumAddresses;
-  /// The GlobalData array immediately follows the header at offset
-  /// sizeof(HeaderV2). Each GlobalData entry describes a section in the GSYM
-  /// file (e.g. AddrOffsets, FunctionInfo, UUID, StringTable). The array is
-  /// terminated by an entry with Type set to EndOfList and all other fields
-  /// set to zero. See GlobalData.h for details.
 
   /// Return the version of this header.
   static constexpr uint32_t getVersion() { return 2; }
@@ -94,11 +86,11 @@ struct HeaderV2 {
   /// Note: this may differ from sizeof(HeaderV2) due to struct padding.
   static constexpr uint64_t getEncodedSize() { return 20; }
 
-  /// Return the size in bytes of string table offsets.
-  static constexpr uint8_t getStringOffsetByteSize() { return 8; }
-
   /// Return the size in bytes of address info offsets.
   static constexpr uint8_t getAddressInfoOffsetByteSize() { return 8; }
+
+  /// Return the size in bytes of string table offsets.
+  static constexpr uint8_t getStringOffsetByteSize() { return 8; }
 
   /// Check if a header is valid and return an error if anything is wrong.
   ///
@@ -109,9 +101,6 @@ struct HeaderV2 {
   ///   - check magic value
   ///   - check that version number is supported
   ///   - check that the address offset size is supported
-  ///   - check that the address info offset size is supported
-  ///   - check that the strp size is supported
-  ///   - check that the padding field is zero
   ///   - check that the string table encoding is supported
   ///
   /// \returns An error if anything is wrong in the header, or Error::success()
