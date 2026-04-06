@@ -10,7 +10,7 @@
 ; RUN: llc -debugger-tune=gdb -dwarf-version=3 -filetype=obj -o %t.o < %s
 ; RUN: llvm-dwarfdump -debug-info %t.o | FileCheck %s --check-prefixes=CHECK,CHECK-TYPE
 
-; For dwarf-version=2 tests, see debug-info-enum-dwarf2.ll
+; This file is also used by the dwarf-version=2 tests in debug-info-enum-dwarf2.ll.
 
 @x0 = global i8 0, align 1, !dbg !0
 @x1 = global i8 0, align 1, !dbg !46
