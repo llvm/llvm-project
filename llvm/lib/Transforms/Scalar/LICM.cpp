@@ -1222,8 +1222,8 @@ bool llvm::canSinkOrHoistInst(Instruction &I, AAResults *AA, DominatorTree *DT,
                         Flags, ORE);
   } else if (CallInst *CI = dyn_cast<CallInst>(&I)) {
     // Don't sink calls which can throw.
-    // Hoisting is fine if there aren't side effect between the throwing function and the preheader
-    // This is checked by the caller
+    // Hoisting if there aren't side effect between the call and the preheader
+    // This must be checked by the caller
     if (Flags.getIsSink() && CI->mayThrow())
       return false;
 
