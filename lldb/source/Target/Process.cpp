@@ -6272,7 +6272,7 @@ bool Process::SetInstrumentationRuntimeEnabled(InstrumentationRuntimeType irt,
 
   if (auto instrumentation_runtime = GetInstrumentationRuntime(irt)) {
     // This process already has an instance of this plugin so just
-    // enable/disable it
+    // enable/disable it.
     if (enabled)
       return instrumentation_runtime->Enable();
     return instrumentation_runtime->Disable();
