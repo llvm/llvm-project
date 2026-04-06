@@ -1589,39 +1589,39 @@ TEST_F(AArch64SelectionDAGTest, KnownNeverZeroFloat_DAZ) {
 
   SDValue PosZeroF32 =
       DAG->getConstantFP(APFloat::getZero(FltSemantics), Loc, MVT::f32);
-  EXPECT_FALSE(DAG->isKnownNeverZeroFloat(PosZeroF32));
+  EXPECT_FALSE(DAG->isKnownNeverLogicalZero(PosZeroF32));
   SDValue NegZeroF32 = DAG->getConstantFP(
       APFloat::getZero(FltSemantics, /*Negative=*/true), Loc, MVT::f32);
-  EXPECT_FALSE(DAG->isKnownNeverZeroFloat(NegZeroF32));
+  EXPECT_FALSE(DAG->isKnownNeverLogicalZero(NegZeroF32));
 
   SDValue PosDenormalF32 =
       DAG->getConstantFP(APFloat::getSmallest(FltSemantics), Loc, MVT::f32);
-  EXPECT_FALSE(DAG->isKnownNeverZeroFloat(PosDenormalF32));
+  EXPECT_FALSE(DAG->isKnownNeverLogicalZero(PosDenormalF32));
   SDValue NegDenormalF32 = DAG->getConstantFP(
       APFloat::getSmallest(FltSemantics, /*Negative=*/true), Loc, MVT::f32);
-  EXPECT_FALSE(DAG->isKnownNeverZeroFloat(NegDenormalF32));
+  EXPECT_FALSE(DAG->isKnownNeverLogicalZero(NegDenormalF32));
 
   SDValue PosNormalF32 = DAG->getConstantFP(
       APFloat::getSmallestNormalized(FltSemantics), Loc, MVT::f32);
-  EXPECT_TRUE(DAG->isKnownNeverZeroFloat(PosNormalF32));
+  EXPECT_TRUE(DAG->isKnownNeverLogicalZero(PosNormalF32));
   SDValue NegNormalF32 = DAG->getConstantFP(
       APFloat::getSmallestNormalized(FltSemantics, /*Negative=*/true), Loc,
       MVT::f32);
-  EXPECT_TRUE(DAG->isKnownNeverZeroFloat(NegNormalF32));
+  EXPECT_TRUE(DAG->isKnownNeverLogicalZero(NegNormalF32));
 
   SDValue PosInfF32 =
       DAG->getConstantFP(APFloat::getInf(FltSemantics), Loc, MVT::f32);
-  EXPECT_TRUE(DAG->isKnownNeverZeroFloat(PosInfF32));
+  EXPECT_TRUE(DAG->isKnownNeverLogicalZero(PosInfF32));
   SDValue NegInfF32 = DAG->getConstantFP(
       APFloat::getInf(FltSemantics, /*Negative=*/true), Loc, MVT::f32);
-  EXPECT_TRUE(DAG->isKnownNeverZeroFloat(NegInfF32));
+  EXPECT_TRUE(DAG->isKnownNeverLogicalZero(NegInfF32));
 
   SDValue PosNaNF32 =
       DAG->getConstantFP(APFloat::getNaN(FltSemantics), Loc, MVT::f32);
-  EXPECT_TRUE(DAG->isKnownNeverZeroFloat(PosNaNF32));
+  EXPECT_TRUE(DAG->isKnownNeverLogicalZero(PosNaNF32));
   SDValue NegNaNF32 = DAG->getConstantFP(
       APFloat::getNaN(FltSemantics, /*Negative=*/true), Loc, MVT::f32);
-  EXPECT_TRUE(DAG->isKnownNeverZeroFloat(NegNaNF32));
+  EXPECT_TRUE(DAG->isKnownNeverLogicalZero(NegNaNF32));
 }
 
 TEST_F(AArch64SelectionDAGTest, KnownFPClass_Bitcast) {

@@ -1845,8 +1845,8 @@ def relaxed_pmin :
           (CurDAG->isKnownNeverNaN(N->getOperand(1)) &&
            CurDAG->isKnownNeverNaN(N->getOperand(2)))) &&
          (N->getFlags().hasNoSignedZeros() ||
-          CurDAG->isKnownNeverZeroFloat(N->getOperand(1)) ||
-          CurDAG->isKnownNeverZeroFloat(N->getOperand(2)));
+          CurDAG->isKnownNeverLogicalZero(N->getOperand(1)) ||
+          CurDAG->isKnownNeverLogicalZero(N->getOperand(2)));
 }]>;
 
 def relaxed_pmax :
@@ -1855,8 +1855,8 @@ def relaxed_pmax :
           ((CurDAG->isKnownNeverNaN(N->getOperand(1))) &&
            CurDAG->isKnownNeverNaN(N->getOperand(2)))) &&
          (N->getFlags().hasNoSignedZeros() ||
-          CurDAG->isKnownNeverZeroFloat(N->getOperand(1)) ||
-          CurDAG->isKnownNeverZeroFloat(N->getOperand(2)));
+          CurDAG->isKnownNeverLogicalZero(N->getOperand(1)) ||
+          CurDAG->isKnownNeverLogicalZero(N->getOperand(2)));
 }]>;
 
 let Predicates = [HasRelaxedSIMD] in {

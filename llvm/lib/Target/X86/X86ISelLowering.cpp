@@ -29922,8 +29922,8 @@ static SDValue LowerFMINIMUM_FMAXIMUM(SDValue Op, const X86Subtarget &Subtarget,
   bool IsXNeverNaN = DAG.isKnownNeverNaN(X);
   bool IsYNeverNaN = DAG.isKnownNeverNaN(Y);
   bool IgnoreSignedZero = Op->getFlags().hasNoSignedZeros() ||
-                          DAG.isKnownNeverZeroFloat(X) ||
-                          DAG.isKnownNeverZeroFloat(Y);
+                          DAG.isKnownNeverLogicalZero(X) ||
+                          DAG.isKnownNeverLogicalZero(Y);
   bool ShouldHandleZeros = true;
   SDValue NewX = X;
   SDValue NewY = Y;
@@ -48393,8 +48393,8 @@ static SDValue combineSelectToMinMax(SelectionDAG &DAG,
   case ISD::SETOLE:
     // Converting this to a min would handle comparisons between positive
     // and negative zero incorrectly.
-    if (!N->getFlags().hasNoSignedZeros() && !DAG.isKnownNeverZeroFloat(LHS) &&
-        !DAG.isKnownNeverZeroFloat(RHS))
+    if (!N->getFlags().hasNoSignedZeros() &&
+        !DAG.isKnownNeverLogicalZero(LHS) && !DAG.isKnownNeverLogicalZero(RHS))
       break;
     Opcode = X86ISD::FMIN;
     break;
@@ -48410,8 +48410,8 @@ static SDValue combineSelectToMinMax(SelectionDAG &DAG,
   case ISD::SETOGE:
     // Converting this to a max would handle comparisons between positive
     // and negative zero incorrectly.
-    if (!N->getFlags().hasNoSignedZeros() && !DAG.isKnownNeverZeroFloat(LHS) &&
-        !DAG.isKnownNeverZeroFloat(RHS))
+    if (!N->getFlags().hasNoSignedZeros() &&
+        !DAG.isKnownNeverLogicalZero(LHS) && !DAG.isKnownNeverLogicalZero(RHS))
       break;
     Opcode = X86ISD::FMAX;
     break;
