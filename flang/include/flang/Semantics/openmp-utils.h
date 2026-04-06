@@ -54,7 +54,7 @@ const Scope &GetScopingUnit(const Scope &scope);
 const Scope &GetProgramUnit(const Scope &scope);
 
 template <typename T> struct WithSource {
-  template <//
+  template < //
       typename U = std::remove_reference_t<T>,
       typename = std::enable_if_t<std::is_default_constructible_v<U>>>
   WithSource() : value(), source() {}
