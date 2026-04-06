@@ -153,7 +153,7 @@ llvm::Error GsymReaderV2::parse() {
                              "AddrOffsets section size mismatch");
 
   if (AddrInfoOffsetsGD.FileSize !=
-      static_cast<uint64_t>(Hdr->NumAddresses) * HeaderV2::getAddressInfoOffsetByteSize())
+      static_cast<uint64_t>(Hdr->NumAddresses) * HeaderV2::getAddressInfoOffsetSize())
     return createStringError(std::errc::invalid_argument,
                              "AddrInfoOffsets section size mismatch");
 
@@ -210,7 +210,7 @@ void GsymReaderV2::dump(raw_ostream &OS) {
   OS << Header << "\n";
   OS << "Address Table:\n";
   OS << "INDEX  OFFSET";
-  switch (getAddressOffsetByteSize()) {
+  switch (getAddressOffsetSize()) {
   case 1:
     OS << "8 ";
     break;
@@ -231,7 +231,7 @@ void GsymReaderV2::dump(raw_ostream &OS) {
   OS << "====== =============================== \n";
   for (uint32_t I = 0; I < getNumAddresses(); ++I) {
     OS << format("[%4u] ", I);
-    switch (getAddressOffsetByteSize()) {
+    switch (getAddressOffsetSize()) {
     case 1:
       OS << HEX8(getAddrOffsets<uint8_t>()[I]);
       break;

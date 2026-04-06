@@ -17,13 +17,15 @@ namespace gsym {
 
 class GsymCreatorV1 : public GsymCreator {
   uint64_t calculateHeaderAndTableSize() const override;
-  std::unique_ptr<GsymCreator> createNew(bool Quiet) const override;
+  std::unique_ptr<GsymCreator> createNew(bool Quiet) const override {
+    return std::make_unique<GsymCreatorV1>(Quiet);
+  }
 
 public:
   GsymCreatorV1(bool Quiet = false) : GsymCreator(Quiet) {}
 
   uint8_t getStringOffsetSize() const override {
-    return Header::getStringOffsetByteSize();
+    return Header::getStringOffsetSize();
   }
   LLVM_ABI llvm::Error encode(FileWriter &O) const override;
 };

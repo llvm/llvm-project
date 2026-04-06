@@ -45,11 +45,11 @@ public:
   // Header accessors
   uint64_t getBaseAddress() const override { return getHeader().BaseAddress; }
   uint64_t getNumAddresses() const override { return getHeader().NumAddresses; }
-  uint64_t getAddressOffsetByteSize() const override {
+  uint8_t getAddressOffsetSize() const override {
     return getHeader().AddrOffSize;
   }
-  uint64_t getAddressInfoOffsetByteSize() const override { return 8; }
-  uint64_t getStringOffsetByteSize() const override { return 8; }
+  uint8_t getAddressInfoOffsetSize() const override { return 8; }
+  uint8_t getStringOffsetSize() const override { return 8; }
 
   // GlobalData accessors
   uint64_t getAddressInfoOffset(size_t Index) const override;

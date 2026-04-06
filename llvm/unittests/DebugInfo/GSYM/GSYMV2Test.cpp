@@ -151,7 +151,7 @@ static void TestV2HeaderAndGlobalData(llvm::endianness ByteOrder,
       break;
     case GlobalInfoType::AddrInfoOffsets:
       EXPECT_EQ(GD.FileSize,
-                ExpectedNumAddresses * (uint64_t)HeaderV2::getAddressInfoOffsetByteSize());
+                ExpectedNumAddresses * (uint64_t)HeaderV2::getAddressInfoOffsetSize());
       EXPECT_GT(GD.FileOffset, 0u);
       FoundAddrInfoOffsets = true;
       break;
@@ -241,7 +241,7 @@ TEST(GSYMV2Test, TestCreatorV2AddrInfoOffsetsPointToFunctionInfo) {
   ASSERT_THAT_EXPECTED(Result, Succeeded());
   StringRef Data = *Result;
 
-  constexpr uint8_t AddrInfoOffSize = HeaderV2::getAddressInfoOffsetByteSize();
+  constexpr uint8_t AddrInfoOffSize = HeaderV2::getAddressInfoOffsetSize();
 
   // Find the AddrInfoOffsets and FunctionInfo sections from GlobalData.
   uint64_t Offset = HeaderV2::getEncodedSize();
@@ -364,9 +364,9 @@ TEST(GSYMV2Test, TestCreatorV2SectionAlignment) {
           << "AddrOffsets not aligned to " << (unsigned)Hdr.AddrOffSize;
       break;
     case GlobalInfoType::AddrInfoOffsets:
-      EXPECT_EQ(GD.FileOffset % HeaderV2::getAddressInfoOffsetByteSize(), 0u)
+      EXPECT_EQ(GD.FileOffset % HeaderV2::getAddressInfoOffsetSize(), 0u)
           << "AddrInfoOffsets not aligned to "
-          << (unsigned)HeaderV2::getAddressInfoOffsetByteSize();
+          << (unsigned)HeaderV2::getAddressInfoOffsetSize();
       break;
     case GlobalInfoType::FileTable:
       EXPECT_EQ(GD.FileOffset % 4, 0u) << "FileTable not 4-byte aligned";
@@ -407,8 +407,8 @@ static SmallString<512> buildMinimalV2Binary(uint64_t BaseAddr,
   constexpr uint64_t NumGlobalEntries = 6;
   constexpr uint64_t GlobalDataSize = NumGlobalEntries * 20;
   constexpr uint8_t AddrOffSize = 1;
-  constexpr uint8_t AddrInfoOffSize = HeaderV2::getAddressInfoOffsetByteSize();
-  constexpr uint8_t StrpSize = HeaderV2::getStringOffsetByteSize();
+  constexpr uint8_t AddrInfoOffSize = HeaderV2::getAddressInfoOffsetSize();
+  constexpr uint8_t StrpSize = HeaderV2::getStringOffsetSize();
   constexpr uint32_t NumAddresses = 1;
 
   // Layout sections sequentially after header + GlobalData.
@@ -450,7 +450,7 @@ static SmallString<512> buildMinimalV2Binary(uint64_t BaseAddr,
   {
     raw_svector_ostream FIOS(FIBuf);
     FileWriter FIFW(FIOS, llvm::endianness::native);
-    FIFW.setStringOffsetSize(HeaderV2::getStringOffsetByteSize());
+    FIFW.setStringOffsetSize(HeaderV2::getStringOffsetSize());
     FunctionInfo FI(BaseAddr, FuncSize,
                     /*Name=*/1); // "main" at strtab offset 1
     auto OffOrErr = FI.encode(FIFW);

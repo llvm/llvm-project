@@ -33,7 +33,7 @@ GsymReader::GsymReader(GsymReader &&RHS) = default;
 
 llvm::Error GsymReader::parseAddrOffsets(DataExtractor &DE, uint64_t &Offset,
                                          bool Swap) {
-  const uint8_t AddrOffSize = getAddressOffsetByteSize();
+  const uint8_t AddrOffSize = getAddressOffsetSize();
   const uint32_t NumAddrs = getNumAddresses();
   const size_t TotalBytes = NumAddrs * AddrOffSize;
   if (!Swap) {
@@ -159,7 +159,7 @@ GsymReader::copyBuffer(StringRef Bytes) {
 }
 
 std::optional<uint64_t> GsymReader::getAddress(size_t Index) const {
-  switch (getAddressOffsetByteSize()) {
+  switch (getAddressOffsetSize()) {
   case 1: return addressForIndex<uint8_t>(Index);
   case 2: return addressForIndex<uint16_t>(Index);
   case 4: return addressForIndex<uint32_t>(Index);
@@ -174,7 +174,7 @@ GsymReader::getAddressIndex(const uint64_t Addr) const {
   if (Addr >= BaseAddr) {
     const uint64_t AddrOffset = Addr - BaseAddr;
     std::optional<uint64_t> AddrOffsetIndex;
-    switch (getAddressOffsetByteSize()) {
+    switch (getAddressOffsetSize()) {
     case 1:
       AddrOffsetIndex = getAddressOffsetIndex<uint8_t>(AddrOffset);
       break;
@@ -189,8 +189,8 @@ GsymReader::getAddressIndex(const uint64_t Addr) const {
       break;
     default:
       return createStringError(std::errc::invalid_argument,
-                               "unsupported address offset size %" PRIu64,
-                               getAddressOffsetByteSize());
+                               "unsupported address offset size %u",
+                               getAddressOffsetSize());
     }
     if (AddrOffsetIndex)
       return *AddrOffsetIndex;
@@ -200,9 +200,9 @@ GsymReader::getAddressIndex(const uint64_t Addr) const {
 }
 
 llvm::Error GsymReader::parseFileTable(DataExtractor &DE, uint64_t &Offset) {
-  const uint8_t StrpSize = getStringOffsetByteSize();
+  const uint8_t StrpSize = getStringOffsetSize();
   uint32_t NumFiles = DE.getU32(&Offset);
-  uint64_t EntriesSize = static_cast<uint64_t>(NumFiles) * 2 * StrpSize;
+  uint64_t EntriesSize = static_cast<uint64_t>(NumFiles) * FileEntry::getEncodedSize(StrpSize);
   StringRef Data = DE.getData();
   if (Data.size() < Offset + EntriesSize)
     return createStringError(std::errc::invalid_argument,
@@ -217,8 +217,8 @@ llvm::Error GsymReader::parseFileTable(DataExtractor &DE, uint64_t &Offset) {
 }
 
 uint64_t GsymReader::getAddressInfoOffset(size_t Index) const {
-  uint64_t Offset = Index * getAddressInfoOffsetByteSize();
-  return AddrInfoOffsetsData.getUnsigned(&Offset, getAddressInfoOffsetByteSize());
+  uint64_t Offset = Index * getAddressInfoOffsetSize();
+  return AddrInfoOffsetsData.getUnsigned(&Offset, getAddressInfoOffsetSize());
 }
 
 llvm::Expected<DataExtractor>
@@ -289,7 +289,7 @@ GsymReader::getFunctionInfoDataAtIndex(uint64_t AddrIdx,
 llvm::Expected<FunctionInfo> GsymReader::getFunctionInfo(uint64_t Addr) const {
   uint64_t FuncStartAddr = 0;
   if (auto ExpectedData = getFunctionInfoDataForAddress(Addr, FuncStartAddr)) {
-    ExpectedData->setStringOffsetSize(getStringOffsetByteSize());
+    ExpectedData->setStringOffsetSize(getStringOffsetSize());
     return FunctionInfo::decode(*ExpectedData, FuncStartAddr);
   } else
     return ExpectedData.takeError();
@@ -299,7 +299,7 @@ llvm::Expected<FunctionInfo>
 GsymReader::getFunctionInfoAtIndex(uint64_t Idx) const {
   uint64_t FuncStartAddr = 0;
   if (auto ExpectedData = getFunctionInfoDataAtIndex(Idx, FuncStartAddr)) {
-    ExpectedData->setStringOffsetSize(getStringOffsetByteSize());
+    ExpectedData->setStringOffsetSize(getStringOffsetSize());
     return FunctionInfo::decode(*ExpectedData, FuncStartAddr);
   } else
     return ExpectedData.takeError();
@@ -310,7 +310,7 @@ GsymReader::lookup(uint64_t Addr,
                    std::optional<DataExtractor> *MergedFunctionsData) const {
   uint64_t FuncStartAddr = 0;
   if (auto ExpectedData = getFunctionInfoDataForAddress(Addr, FuncStartAddr)) {
-    ExpectedData->setStringOffsetSize(getStringOffsetByteSize());
+    ExpectedData->setStringOffsetSize(getStringOffsetSize());
     return FunctionInfo::lookup(*ExpectedData, *this, FuncStartAddr, Addr,
                                 MergedFunctionsData);
   } else
@@ -340,7 +340,7 @@ GsymReader::lookupAll(uint64_t Addr) const {
 
     // Process each merged function data.
     for (DataExtractor &MergedData : *ExpectedMergedFuncExtractors) {
-      MergedData.setStringOffsetSize(getStringOffsetByteSize());
+      MergedData.setStringOffsetSize(getStringOffsetSize());
       if (auto FI = FunctionInfo::lookup(MergedData, *this,
                                          MainResult->FuncRange.start(), Addr)) {
         Results.push_back(std::move(*FI));

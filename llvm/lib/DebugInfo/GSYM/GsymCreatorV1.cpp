@@ -14,10 +14,6 @@
 using namespace llvm;
 using namespace gsym;
 
-std::unique_ptr<GsymCreator> GsymCreatorV1::createNew(bool Quiet) const {
-  return std::make_unique<GsymCreatorV1>(Quiet);
-}
-
 uint64_t GsymCreatorV1::calculateHeaderAndTableSize() const {
   uint64_t Size = sizeof(Header);
   const size_t NumFuncs = Funcs.size();

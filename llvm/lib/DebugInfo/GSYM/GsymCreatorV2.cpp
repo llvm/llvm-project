@@ -16,10 +16,6 @@
 using namespace llvm;
 using namespace gsym;
 
-std::unique_ptr<GsymCreator> GsymCreatorV2::createNew(bool Quiet) const {
-  return std::make_unique<GsymCreatorV2>(Quiet);
-}
-
 uint64_t GsymCreatorV2::calculateHeaderAndTableSize() const {
   const uint64_t HeaderSize = HeaderV2::getEncodedSize();
   const size_t NumFuncs = Funcs.size();
@@ -27,8 +23,8 @@ uint64_t GsymCreatorV2::calculateHeaderAndTableSize() const {
   uint64_t Size = HeaderSize + NumEntries * 20;
   Size = llvm::alignTo(Size, getAddressOffsetSize());
   Size += NumFuncs * getAddressOffsetSize();
-  Size = llvm::alignTo(Size, HeaderV2::getAddressInfoOffsetByteSize());
-  Size += NumFuncs * HeaderV2::getAddressInfoOffsetByteSize();
+  Size = llvm::alignTo(Size, HeaderV2::getAddressInfoOffsetSize());
+  Size += NumFuncs * HeaderV2::getAddressInfoOffsetSize();
   Size = llvm::alignTo(Size, 4);
   Size += 4 + Files.size() * FileEntry::getEncodedSize(getStringOffsetSize());
   Size += StrTab.getSize();

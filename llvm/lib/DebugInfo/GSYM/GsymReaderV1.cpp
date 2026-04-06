@@ -140,7 +140,7 @@ void GsymReaderV1::dump(raw_ostream &OS) {
   OS << "Address Table:\n";
   OS << "INDEX  OFFSET";
 
-  switch (getAddressOffsetByteSize()) {
+  switch (getAddressOffsetSize()) {
   case 1:
     OS << "8 ";
     break;
@@ -161,7 +161,7 @@ void GsymReaderV1::dump(raw_ostream &OS) {
   OS << "====== =============================== \n";
   for (uint32_t I = 0; I < getNumAddresses(); ++I) {
     OS << format("[%4u] ", I);
-    switch (getAddressOffsetByteSize()) {
+    switch (getAddressOffsetSize()) {
     case 1:
       OS << HEX8(getAddrOffsets<uint8_t>()[I]);
       break;

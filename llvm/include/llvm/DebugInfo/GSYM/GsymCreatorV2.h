@@ -18,13 +18,15 @@ namespace gsym {
 /// GsymCreatorV2 emits GSYM V2 data with a GlobalData-based section layout.
 class GsymCreatorV2 : public GsymCreator {
   uint64_t calculateHeaderAndTableSize() const override;
-  std::unique_ptr<GsymCreator> createNew(bool Quiet) const override;
+  std::unique_ptr<GsymCreator> createNew(bool Quiet) const override {
+    return std::make_unique<GsymCreatorV2>(Quiet);
+  }
 
 public:
   GsymCreatorV2(bool Quiet = false) : GsymCreator(Quiet) {}
 
   uint8_t getStringOffsetSize() const override {
-    return HeaderV2::getStringOffsetByteSize();
+    return HeaderV2::getStringOffsetSize();
   }
   LLVM_ABI llvm::Error encode(FileWriter &O) const override;
 };

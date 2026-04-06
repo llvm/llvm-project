@@ -6,7 +6,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/GSYM/GsymCreator.h"
-#include "llvm/DebugInfo/GSYM/CallSiteInfo.h"
 #include "llvm/DebugInfo/GSYM/FileWriter.h"
 #include "llvm/DebugInfo/GSYM/Header.h"
 #include "llvm/DebugInfo/GSYM/LineTable.h"
@@ -548,4 +547,3 @@ GsymCreator::createSegment(uint64_t SegmentSize, size_t &FuncIdx) const {
   }
   return std::move(GC);
 }
-

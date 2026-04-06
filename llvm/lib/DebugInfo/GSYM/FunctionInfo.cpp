@@ -10,8 +10,8 @@
 #include "llvm/DebugInfo/GSYM/FileWriter.h"
 #include "llvm/DebugInfo/GSYM/GsymCreator.h"
 #include "llvm/DebugInfo/GSYM/GsymReader.h"
-#include "llvm/DebugInfo/GSYM/InlineInfo.h"
 #include "llvm/DebugInfo/GSYM/LineTable.h"
+#include "llvm/DebugInfo/GSYM/InlineInfo.h"
 #include "llvm/Support/DataExtractor.h"
 #include <optional>
 
@@ -306,7 +306,7 @@ FunctionInfo::lookup(DataExtractor &Data, const GsymReader &GR,
         InlineInfoData = InfoData;
         break;
 
-      case InfoType::CallSiteInfo: {
+      case InfoType::CallSiteInfo:
         if (auto CSIC = CallSiteInfoCollection::decode(InfoData)) {
           // Find matching call site based on relative offset
           for (const auto &CS : CSIC->CallSites) {
@@ -323,7 +323,6 @@ FunctionInfo::lookup(DataExtractor &Data, const GsymReader &GR,
           return CSIC.takeError();
         }
         break;
-      }
 
       default:
         break;
@@ -360,8 +359,8 @@ FunctionInfo::lookup(DataExtractor &Data, const GsymReader &GR,
   // We have inline information. Try to augment the lookup result with this
   // data.
   InlineInfoData->setStringOffsetSize(Data.getStringOffsetSize());
-  llvm::Error Err =
-      InlineInfo::lookup(GR, *InlineInfoData, FuncAddr, Addr, LR.Locations);
+  llvm::Error Err = InlineInfo::lookup(GR, *InlineInfoData, FuncAddr, Addr,
+                                       LR.Locations);
   if (Err)
     return std::move(Err);
   return LR;

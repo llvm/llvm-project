@@ -87,10 +87,10 @@ struct HeaderV2 {
   static constexpr uint64_t getEncodedSize() { return 20; }
 
   /// Return the size in bytes of address info offsets.
-  static constexpr uint8_t getAddressInfoOffsetByteSize() { return 8; }
+  static constexpr uint8_t getAddressInfoOffsetSize() { return 8; }
 
   /// Return the size in bytes of string table offsets.
-  static constexpr uint8_t getStringOffsetByteSize() { return 8; }
+  static constexpr uint8_t getStringOffsetSize() { return 8; }
 
   /// Check if a header is valid and return an error if anything is wrong.
   ///

@@ -75,14 +75,6 @@ struct GlobalData {
   /// available.
   LLVM_ABI llvm::Expected<StringRef>
   getStringRef(DataExtractor &GsymData) const;
-
-  /// Get the bytes for this GlobalData section from a GSYM data stream.
-  ///
-  /// \param GsymData The binary stream to read from.
-  /// \returns The bytes for this section or an error if the data is not fully
-  /// available.
-  LLVM_ABI llvm::Expected<llvm::ArrayRef<uint8_t>>
-  getBytes(DataExtractor &GsymData) const;
 };
 
 } // namespace gsym

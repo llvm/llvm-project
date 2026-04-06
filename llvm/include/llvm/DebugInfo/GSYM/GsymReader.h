@@ -64,13 +64,13 @@ public:
   virtual uint64_t getNumAddresses() const = 0;
 
   /// Get the address offset byte size for this GSYM file.
-  virtual uint64_t getAddressOffsetByteSize() const = 0;
+  virtual uint8_t getAddressOffsetSize() const = 0;
 
   /// Get the address info offset byte size for this GSYM file.
-  virtual uint64_t getAddressInfoOffsetByteSize() const = 0;
+  virtual uint8_t getAddressInfoOffsetSize() const = 0;
 
   /// Get the string offset byte size for this GSYM file.
-  virtual uint64_t getStringOffsetByteSize() const = 0;
+  virtual uint8_t getStringOffsetSize() const = 0;
 
   /// Construct a GsymReader from a file on disk.
   ///

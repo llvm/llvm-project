@@ -1250,9 +1250,9 @@ static void TestEncodeDecode(const GsymCreator &GC, llvm::endianness ByteOrder,
   ASSERT_TRUE(bool(GR));
   EXPECT_EQ((*GR)->getBaseAddress(), ExpBaseAddress);
   EXPECT_EQ((*GR)->getNumAddresses(), ExpNumAddresses);
-  EXPECT_EQ((*GR)->getAddressOffsetByteSize(), ExpAddrOffSize);
-  EXPECT_EQ((*GR)->getAddressInfoOffsetByteSize(), ExpAddrInfoOffSize);
-  EXPECT_EQ((*GR)->getStringOffsetByteSize(), ExpStrOffSize);
+  EXPECT_EQ((*GR)->getAddressOffsetSize(), ExpAddrOffSize);
+  EXPECT_EQ((*GR)->getAddressInfoOffsetSize(), ExpAddrInfoOffSize);
+  EXPECT_EQ((*GR)->getStringOffsetSize(), ExpStrOffSize);
   Compare(GC, **GR);
 }
 
