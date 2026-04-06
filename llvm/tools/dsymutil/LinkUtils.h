@@ -88,6 +88,9 @@ struct LinkOptions {
   /// The Resources directory in the .dSYM bundle.
   std::optional<std::string> ResourceDir;
 
+  /// Resources to embed in the dSYM bundle's Contents/Resources/ directory.
+  std::vector<std::pair<std::string, std::string>> EmbedResources;
+
   /// Virtual File System.
   llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS =
       vfs::getRealFileSystem();
