@@ -14,7 +14,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/IR/DialectInterface.h"
+#include "mlir/IR/IRMapping.h"
+#include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Reducer/Passes.h"
 #include "mlir/Reducer/ReductionNode.h"
 #include "mlir/Reducer/ReductionPatternInterface.h"
@@ -24,6 +27,9 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/DebugLog.h"
+
+#define DEBUG_TYPE "reduction-tree"
 
 namespace mlir {
 #define GEN_PASS_DEF_REDUCTIONTREEPASS
@@ -184,6 +190,112 @@ static LogicalResult eraseAllOpsInRegion(ModuleOp module, Region &region,
   return failure();
 }
 
+// Returns the first branching terminator (cond_br, switch, etc.) found in the
+// region.
+static Operation *getBranchTerminatorInRegion(Region &region) {
+  for (Block &block : region.getBlocks()) {
+    if (block.getNumSuccessors() > 1)
+      return block.getTerminator();
+  }
+  return {};
+}
+
+/// Reduces the control flow in a region by iteratively forcing branching
+/// terminators to point to a single successor. It evaluates each potential
+/// branch path and commits the reduction that results in the smallest
+/// "interesting" module.
+static LogicalResult eraseRedundantBlocksInRegion(ModuleOp module,
+                                                  Region &region,
+                                                  const Tester &test) {
+  std::pair<Tester::Interestingness, size_t> initStatus =
+      test.isInteresting(module);
+
+  // While exploring the reduction tree, we always branch from an interesting
+  // node. Thus the root node must be interesting.
+  if (initStatus.first != Tester::Interestingness::True)
+    return module.emitWarning() << "uninterested module will not be reduced";
+  llvm::SpecificBumpPtrAllocator<ReductionNode> allocator;
+
+  // We set the simplification level to Aggressive to enable block merging.
+  GreedyRewriteConfig config;
+  config.setRegionSimplificationLevel(GreedySimplifyRegionLevel::Aggressive);
+  config.setUseTopDownTraversal(true);
+
+  // Populate canonicalization patterns for cf ops. When all targets of a
+  // 'cf.cond_br' or 'cf.switch' point to the same block, they will be
+  // canonicalized into a 'cf.br'.
+  auto context = region.getContext();
+  RewritePatternSet patterns(context);
+  cf::BranchOp::getCanonicalizationPatterns(patterns, context);
+  cf::CondBranchOp::getCanonicalizationPatterns(patterns, context);
+  cf::SwitchOp::getCanonicalizationPatterns(patterns, context);
+  FrozenRewritePatternSet fPatterns = std::move(patterns);
+
+  ReductionNode *smallestNode = nullptr;
+  mlir::OpBuilder b(context);
+  while (Operation *branchTerminator = getBranchTerminatorInRegion(region)) {
+    size_t numSuccessor = branchTerminator->getNumSuccessors();
+    std::vector<ReductionNode::Range> ranges{
+        {0, std::distance(region.op_begin(), region.op_end())}};
+    // Iterate through each successor of the branching terminator to try
+    // reducing the control flow to a single-path execution.
+    int branchIdx = -1;
+    for (int i = 0, e = numSuccessor; i < e; ++i) {
+      // We allocate memory on the heap because the object will be assigned to
+      // 'smallestNode'.
+      ReductionNode *root = allocator.Allocate();
+      new (root) ReductionNode(nullptr, ranges, allocator);
+      mlir::IRMapping mapper;
+      if (failed(root->initialize(module, region, mapper)))
+        llvm_unreachable("unexpected initialization failure");
+      Operation *tergetTerminator = mapper.lookup(branchTerminator);
+      Block *selectedBlock = tergetTerminator->getSuccessor(i);
+      auto branchOp = cast<BranchOpInterface>(tergetTerminator);
+      ValueRange selectedBlockOperands =
+          branchOp.getSuccessorForwardOperands(selectedBlock);
+      b.setInsertionPointAfter(tergetTerminator);
+      cf::BranchOp::create(b, tergetTerminator->getLoc(), selectedBlock,
+                           selectedBlockOperands);
+      tergetTerminator->erase();
+
+      // Apply canonicalization patterns to collapse the now-redundant branches
+      (void)applyPatternsGreedily(root->getRegion().getParentOp(), fPatterns,
+                                  config);
+      root->update(test.isInteresting(root->getModule()));
+
+      // Track the smallest "interesting" version of the IR found so far.
+      if (root->isInteresting() == Tester::Interestingness::True &&
+          (smallestNode == nullptr ||
+           root->getSize() < smallestNode->getSize())) {
+        smallestNode = root;
+        branchIdx = i;
+      }
+    }
+
+    // If an interesting reduced branch was found, commit the change to the
+    // original region and re-apply patterns for a final cleanup.
+    if (branchIdx != -1) {
+      Block *selectedBlock = branchTerminator->getSuccessor(branchIdx);
+      auto branchOp = cast<BranchOpInterface>(branchTerminator);
+      ValueRange selectedBlockOperands =
+          branchOp.getSuccessorForwardOperands(selectedBlock);
+      b.setInsertionPointAfter(branchTerminator);
+      cf::BranchOp::create(b, branchTerminator->getLoc(), selectedBlock,
+                           selectedBlockOperands);
+      branchTerminator->erase();
+      (void)applyPatternsGreedily(region.getParentOp(), fPatterns, config);
+    }
+  }
+
+  // If no branching terminators were found (skipping the while loop),
+  // there might still be opportunities for linear block merging or
+  // We apply patterns here as a final cleanup to ensure the region is fully
+  // simplified.
+  if (smallestNode == nullptr)
+    (void)applyPatternsGreedily(region.getParentOp(), fPatterns, config);
+  return success();
+}
+
 template <typename IteratorType>
 static LogicalResult findOptimal(ModuleOp module, Region &region,
                                  const FrozenRewritePatternSet &patterns,
@@ -195,6 +307,8 @@ static LogicalResult findOptimal(ModuleOp module, Region &region,
   // region.
   if (succeeded(eraseAllOpsInRegion(module, region, test)))
     return success();
+
+  (void)eraseRedundantBlocksInRegion(module, region, test);
 
   // In the second phase, we don't apply any patterns so that we only select the
   // range of operations to keep to the module stay interesting.
