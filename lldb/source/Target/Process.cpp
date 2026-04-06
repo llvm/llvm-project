@@ -6302,7 +6302,7 @@ bool Process::SetInstrumentationRuntimeEnabled(InstrumentationRuntimeType irt,
     return false;
 
   m_instrumentation_runtimes[irt] = new_plugin;
-  return new_plugin->Enable(); // Now try to enable it
+  return new_plugin->Enable();
 }
 
 bool Process::GetModuleSpec(const FileSpec &module_file_spec,
