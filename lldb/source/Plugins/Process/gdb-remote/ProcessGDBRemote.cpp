@@ -3115,8 +3115,7 @@ size_t ProcessGDBRemote::DoWriteMemory(addr_t addr, const void *buf,
   MemoryRegionInfo region;
   Status region_status = GetMemoryRegionInfo(addr, region);
 
-  bool is_flash =
-      region_status.Success() && region.GetFlash() == MemoryRegionInfo::eYes;
+  bool is_flash = region_status.Success() && region.GetFlash() == eLazyBoolYes;
 
   if (is_flash) {
     if (!m_allow_flash_writes) {

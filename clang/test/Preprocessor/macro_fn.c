@@ -60,7 +60,7 @@ one_dot()   /* empty first argument, elided ... */
     SomeComplicatedStuff((desc), ##__VA_ARGS__)
 
 #ifndef VARIADIC_MACRO_ARGS_REMOVE_COMMA
-/* expected-warning@-3 {{token pasting of ',' and __VA_ARGS__ is a GNU extension}} */
+/* expected-warning@-3 {{token pasting of ',' and '__VA_ARGS__' is a GNU extension}} */
 #endif
 
 NSAssert(somecond, somedesc)

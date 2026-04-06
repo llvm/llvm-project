@@ -196,7 +196,8 @@ PlatformDarwin::PutFile(const lldb_private::FileSpec &source,
   return PlatformPOSIX::PutFile(source, destination, uid, gid);
 }
 
-FileSpecList PlatformDarwin::LocateExecutableScriptingResourcesFromDSYM(
+llvm::SmallDenseMap<FileSpec, LoadScriptFromSymFile>
+PlatformDarwin::LocateExecutableScriptingResourcesFromDSYM(
     Stream &feedback_stream, FileSpec module_spec, const Target &target,
     const FileSpec &symfile_spec) {
 
@@ -204,7 +205,7 @@ FileSpecList PlatformDarwin::LocateExecutableScriptingResourcesFromDSYM(
          "Trying to locate scripting resources but no ScriptInterpreter is "
          "available.");
 
-  FileSpecList file_list;
+  llvm::SmallDenseMap<FileSpec, LoadScriptFromSymFile> file_specs;
   while (module_spec.GetFilename()) {
     ScriptInterpreter::SanitizedScriptingModuleName sanitized_name =
         target.GetDebugger()
@@ -234,7 +235,8 @@ FileSpecList PlatformDarwin::LocateExecutableScriptingResourcesFromDSYM(
                                          orig_script_fspec, script_fspec);
 
     if (FileSystem::Instance().Exists(script_fspec)) {
-      file_list.Append(script_fspec);
+      file_specs.try_emplace(std::move(script_fspec),
+                             target.GetLoadScriptFromSymbolFile());
       break;
     }
 
@@ -248,17 +250,19 @@ FileSpecList PlatformDarwin::LocateExecutableScriptingResourcesFromDSYM(
     module_spec.SetFilename(filename_no_extension);
   }
 
-  return file_list;
+  return file_specs;
 }
 
-FileSpecList PlatformDarwin::LocateExecutableScriptingResourcesForPlatform(
+llvm::SmallDenseMap<FileSpec, LoadScriptFromSymFile>
+PlatformDarwin::LocateExecutableScriptingResourcesForPlatform(
     Target *target, Module &module, Stream &feedback_stream) {
+  llvm::SmallDenseMap<FileSpec, LoadScriptFromSymFile> empty;
   if (!target)
-    return {};
+    return empty;
 
   // For now only Python scripts supported for auto-loading.
   if (target->GetDebugger().GetScriptLanguage() != eScriptLanguagePython)
-    return {};
+    return empty;
 
   // NB some extensions might be meaningful and should not be stripped -
   // "this.binary.file"
@@ -270,15 +274,15 @@ FileSpecList PlatformDarwin::LocateExecutableScriptingResourcesForPlatform(
   const FileSpec &module_spec = module.GetFileSpec();
 
   if (!module_spec)
-    return {};
+    return empty;
 
   SymbolFile *symfile = module.GetSymbolFile();
   if (!symfile)
-    return {};
+    return empty;
 
   ObjectFile *objfile = symfile->GetObjectFile();
   if (!objfile)
-    return {};
+    return empty;
 
   const FileSpec &symfile_spec = objfile->GetFileSpec();
   if (symfile_spec &&
@@ -288,7 +292,7 @@ FileSpecList PlatformDarwin::LocateExecutableScriptingResourcesForPlatform(
     return LocateExecutableScriptingResourcesFromDSYM(
         feedback_stream, module_spec, *target, symfile_spec);
 
-  return {};
+  return empty;
 }
 
 Status PlatformDarwin::ResolveSymbolFile(Target &target,
@@ -862,18 +866,30 @@ FileSpec PlatformDarwin::GetSDKDirectoryForModules(XcodeSDK::Type sdk_type) {
   return FindSDKInXcodeForModules(sdk_type, sdks_spec);
 }
 
+// Discovering the correct version and build can help us
+// identify the most likely SDK directory when looking for
+// files.
+//
+// The directory name can be one of many formats, such as
+//     10.0 (21R329) universal
+//     17.0 (23A200) arm64e
+//     17.0 (20A352)
+//     Watch4,2 10.0 (21R329)
 std::tuple<llvm::VersionTuple, llvm::StringRef>
 PlatformDarwin::ParseVersionBuildDir(llvm::StringRef dir) {
   llvm::StringRef build;
-  llvm::StringRef version_str;
-  llvm::StringRef build_str;
-  std::tie(version_str, build_str) = dir.split(' ');
   llvm::VersionTuple version;
-  if (!version.tryParse(version_str) ||
-      build_str.empty()) {
-    if (build_str.consume_front("(")) {
-      size_t pos = build_str.find(')');
-      build = build_str.slice(0, pos);
+
+  llvm::SmallVector<llvm::StringRef> parts;
+  dir.split(parts, ' ');
+  for (llvm::StringRef part : parts) {
+    // Look for an OS version number, eg "17.0"
+    if (isdigit(part[0]))
+      version.tryParse(part);
+    // Look for a build number, eg "(20A352)"
+    if (part.consume_front("(")) {
+      size_t pos = part.find(')');
+      build = part.slice(0, pos);
     }
   }
 

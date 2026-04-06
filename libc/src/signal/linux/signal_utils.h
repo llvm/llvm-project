@@ -9,16 +9,22 @@
 #ifndef LLVM_LIBC_SRC_SIGNAL_LINUX_SIGNAL_UTILS_H
 #define LLVM_LIBC_SRC_SIGNAL_LINUX_SIGNAL_UTILS_H
 
+#include "hdr/signal_macros.h"
+#include "hdr/types/siginfo_t.h"
 #include "hdr/types/sigset_t.h"
+#include "hdr/types/size_t.h"
+#include "hdr/types/struct_sigaction.h"
+#include "src/__support/OSUtil/linux/vdso.h"
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
+#include "src/__support/error_or.h"
 #include "src/__support/macros/config.h"
 
-#include <signal.h> // sigaction
-#include <stddef.h>
-#include <sys/syscall.h>          // For syscall numbers.
+#include <sys/syscall.h> // For syscall numbers.
 
 namespace LIBC_NAMESPACE_DECL {
+
+extern "C" void __restore_rt();
 
 // The POSIX definition of struct sigaction and the sigaction data structure
 // expected by the rt_sigaction syscall differ in their definition. So, we
@@ -105,6 +111,31 @@ LIBC_INLINE int block_all_signals(sigset_t &set) {
 LIBC_INLINE int restore_signals(const sigset_t &set) {
   return LIBC_NAMESPACE::syscall_impl<int>(SYS_rt_sigprocmask, SIG_SETMASK,
                                            &set, nullptr, sizeof(sigset_t));
+}
+
+LIBC_INLINE ErrorOr<int>
+do_sigaction(int signal, const struct sigaction *__restrict libc_new,
+             struct sigaction *__restrict libc_old) {
+  vdso::TypedSymbol<vdso::VDSOSym::RTSigReturn> rt_sigreturn;
+  KernelSigaction kernel_new;
+  if (libc_new) {
+    kernel_new = *libc_new;
+    if (!(kernel_new.sa_flags & SA_RESTORER)) {
+      kernel_new.sa_flags |= SA_RESTORER;
+      kernel_new.sa_restorer = rt_sigreturn ? rt_sigreturn : __restore_rt;
+    }
+  }
+
+  KernelSigaction kernel_old;
+  int ret = LIBC_NAMESPACE::syscall_impl<int>(
+      SYS_rt_sigaction, signal, libc_new ? &kernel_new : nullptr,
+      libc_old ? &kernel_old : nullptr, sizeof(sigset_t));
+  if (ret)
+    return Error(-ret);
+
+  if (libc_old)
+    *libc_old = kernel_old;
+  return 0;
 }
 
 } // namespace LIBC_NAMESPACE_DECL

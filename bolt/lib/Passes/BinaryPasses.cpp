@@ -555,10 +555,10 @@ Error FixupBranches::runOnFunctions(BinaryContext &BC) {
 }
 
 Error PopulateOutputFunctions::runOnFunctions(BinaryContext &BC) {
-  BinaryFunctionListType &OutputFunctions = BC.getOutputBinaryFunctions();
+  assert(BC.getOutputBinaryFunctions().empty() &&
+         "Output function list already initialized");
 
-  assert(OutputFunctions.empty() && "Output function list already initialized");
-
+  BinaryFunctionListType OutputFunctions;
   OutputFunctions.reserve(BC.getBinaryFunctions().size() +
                           BC.getInjectedBinaryFunctions().size());
   llvm::transform(llvm::make_second_range(BC.getBinaryFunctions()),
@@ -585,6 +585,8 @@ Error PopulateOutputFunctions::runOnFunctions(BinaryContext &BC) {
         OutputFunctions.begin(), OutputFunctions.end(),
         [](const BinaryFunction *A) { return !A->hasValidIndex(); });
   }
+
+  BC.updateOutputBinaryFunctions(std::move(OutputFunctions));
 
   return Error::success();
 }

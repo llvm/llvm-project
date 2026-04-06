@@ -655,7 +655,7 @@ protected:
         return;
       }
 
-      Address address(addr, nullptr);
+      Address address(addr);
       bytes_read = target->ReadMemory(address, data_sp->GetBytes(),
                                       data_sp->GetByteSize(), error, true);
       if (bytes_read == 0) {
@@ -703,8 +703,8 @@ protected:
         std::string buffer;
         buffer.resize(item_byte_size + 1, 0);
         Status error;
-        size_t read = target->ReadCStringFromMemory(data_addr, &buffer[0],
-                                                    item_byte_size + 1, error);
+        size_t read = target->ReadCStringFromMemory(
+            Address(data_addr), &buffer[0], item_byte_size + 1, error);
         if (error.Fail()) {
           result.AppendErrorWithFormat(
               "failed to read memory from 0x%" PRIx64 ".\n", addr);
@@ -1688,11 +1688,11 @@ protected:
         range_info.GetRange().GetRangeEnd(), range_info.GetReadable(),
         range_info.GetWritable(), range_info.GetExecutable(), name ? " " : "",
         name, section_name ? " " : "", section_name);
-    MemoryRegionInfo::OptionalBool memory_tagged = range_info.GetMemoryTagged();
-    if (memory_tagged == MemoryRegionInfo::OptionalBool::eYes)
+    LazyBool memory_tagged = range_info.GetMemoryTagged();
+    if (memory_tagged == eLazyBoolYes)
       result.AppendMessage("memory tagging: enabled");
-    MemoryRegionInfo::OptionalBool is_shadow_stack = range_info.IsShadowStack();
-    if (is_shadow_stack == MemoryRegionInfo::OptionalBool::eYes)
+    LazyBool is_shadow_stack = range_info.IsShadowStack();
+    if (is_shadow_stack == eLazyBoolYes)
       result.AppendMessage("shadow stack: yes");
 
     const std::optional<std::vector<addr_t>> &dirty_page_list =

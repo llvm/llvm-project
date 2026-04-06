@@ -11,7 +11,7 @@ int main() {
   int a = 16;
   int b = 8;
 
-  for (int i = 1; i < 1000000; i++) {
+  for (int i = 1; i < 100000000; i++) {
     add(a, b);
     minus(a, b);
     multiple(a, b);

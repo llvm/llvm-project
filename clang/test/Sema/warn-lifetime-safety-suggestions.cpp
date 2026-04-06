@@ -439,3 +439,17 @@ struct MemberArrayReturn {
 };
 
 } // namespace array
+
+namespace track_origins_for_lifetimebound_record_type {
+
+struct S {
+  View view;
+};
+
+S getS(const MyObj &obj [[clang::lifetimebound]]);
+
+S forward(const MyObj &obj) { // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}
+  return getS(obj);           // expected-note {{param returned here}}
+}
+
+} // namespace track_origins_for_lifetimebound_record_type

@@ -2653,6 +2653,7 @@ def Tosa_CastToBlockScaledOp : Tosa_InferShapedTypeOp<"cast_to_block_scaled", [P
     Extension<[Tosa_EXT_BF16, Tosa_EXT_MXFP]>
   ];
 
+  let hasCanonicalizer = 1;
   let hasVerifier = 1;
   let hasCustomAssemblyFormat = 1;
 }

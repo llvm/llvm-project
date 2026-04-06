@@ -322,8 +322,9 @@ public:
 
   bool isVectorShiftByScalarCheap(Type *Ty) const override;
 
-  unsigned getStoreMinimumVF(unsigned VF, Type *ScalarMemTy,
-                             Type *ScalarValTy) const override;
+  unsigned getStoreMinimumVF(unsigned VF, Type *ScalarMemTy, Type *ScalarValTy,
+                             Align Alignment,
+                             unsigned AddrSpace) const override;
 
   bool useFastCCForInternalCall(Function &F) const override;
 

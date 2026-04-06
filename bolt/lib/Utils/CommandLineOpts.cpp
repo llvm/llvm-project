@@ -92,6 +92,13 @@ llvm::cl::opt<bool> ForcePatch(
                    "execution follows only the new/optimized code."),
     llvm::cl::Hidden, llvm::cl::cat(BoltCategory));
 
+llvm::cl::opt<bool> CloneAtOrigin(
+    "clone-at-origin",
+    llvm::cl::desc("create clones of functions at their original addresses "
+                   "instead of patching entry points. The clone code will "
+                   "have its references to relocated functions updated."),
+    llvm::cl::Hidden, llvm::cl::cat(BoltCategory));
+
 cl::opt<bool> RemoveSymtab("remove-symtab", cl::desc("Remove .symtab section"),
                            cl::cat(BoltCategory));
 

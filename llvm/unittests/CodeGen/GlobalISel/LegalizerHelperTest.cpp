@@ -576,7 +576,7 @@ TEST_F(AArch64GISelMITest, WidenBitCountingCTLZ) {
   CHECK: [[Zext:%[0-9]+]]:_(s16) = G_ZEXT [[Trunc]]
   CHECK: [[Ctlz:%[0-9]+]]:_(s16) = G_CTLZ [[Zext]]
   CHECK: [[Cst8:%[0-9]+]]:_(s16) = G_CONSTANT i16 8
-  CHECK: [[Sub:%[0-9]+]]:_(s16) = G_SUB [[Ctlz]]:_, [[Cst8]]:_
+  CHECK: [[Sub:%[0-9]+]]:_(s16) = nuw G_SUB [[Ctlz]]:_, [[Cst8]]:_
   CHECK: [[Trunc:%[0-9]+]]:_(s8) = G_TRUNC [[Sub]]
   )";
 

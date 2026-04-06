@@ -144,6 +144,7 @@ set(riscv_files
 
 set(spirv_files
   __clang_spirv_builtins.h
+  __clang_spirv_libdevice_declares.h
   )
 
 set(systemz_files
@@ -505,6 +506,7 @@ if(RISCV IN_LIST LLVM_TARGETS_TO_BUILD)
 endif()
 
 # Generate HLSL intrinsic overloads
+file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/hlsl")
 clang_generate_header(-gen-hlsl-alias-intrinsics HLSLIntrinsics.td
                       hlsl/hlsl_alias_intrinsics_gen.inc)
 clang_generate_header(-gen-hlsl-inline-intrinsics HLSLIntrinsics.td

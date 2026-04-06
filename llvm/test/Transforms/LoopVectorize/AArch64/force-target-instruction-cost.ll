@@ -13,11 +13,9 @@ define double @test_reduction_costs() {
 ; COMMON:       [[VECTOR_PH]]:
 ; COMMON-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; COMMON:       [[VECTOR_BODY]]:
-; COMMON-NEXT:    [[VEC_PHI:%.*]] = phi double [ 0.000000e+00, %[[VECTOR_PH]] ], [ [[TMP0:%.*]], %[[VECTOR_BODY]] ]
-; COMMON-NEXT:    [[VEC_PHI1:%.*]] = phi double [ 0.000000e+00, %[[VECTOR_PH]] ], [ [[TMP1:%.*]], %[[VECTOR_BODY]] ]
-; COMMON-NEXT:    [[TMP0]] = call double @llvm.vector.reduce.fadd.v2f64(double [[VEC_PHI]], <2 x double> splat (double 3.000000e+00))
-; COMMON-NEXT:    [[TMP1]] = call double @llvm.vector.reduce.fadd.v2f64(double [[VEC_PHI1]], <2 x double> splat (double 9.000000e+00))
-; COMMON-NEXT:    br i1 true, label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; COMMON-NEXT:    [[TMP0:%.*]] = call double @llvm.vector.reduce.fadd.v2f64(double 0.000000e+00, <2 x double> splat (double 3.000000e+00))
+; COMMON-NEXT:    [[TMP1:%.*]] = call double @llvm.vector.reduce.fadd.v2f64(double 0.000000e+00, <2 x double> splat (double 9.000000e+00))
+; COMMON-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
 ; COMMON:       [[MIDDLE_BLOCK]]:
 ; COMMON-NEXT:    br label %[[EXIT:.*]]
 ; COMMON:       [[EXIT]]:
@@ -607,10 +605,8 @@ define void @forced_scalar_instr(ptr %gep.dst) {
 ; COMMON-NEXT:    [[TMP2:%.*]] = extractelement <4 x i1> [[TMP1]], i32 0
 ; COMMON-NEXT:    br i1 [[TMP2]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; COMMON:       [[PRED_STORE_IF]]:
-; COMMON-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 0
-; COMMON-NEXT:    [[TMP4:%.*]] = add i32 [[TMP0]], 0
-; COMMON-NEXT:    [[TMP5:%.*]] = getelementptr i32, ptr [[GEP_DST]], i64 [[TMP3]]
-; COMMON-NEXT:    [[TMP6:%.*]] = or i32 [[TMP4]], 1
+; COMMON-NEXT:    [[TMP5:%.*]] = getelementptr i32, ptr [[GEP_DST]], i64 [[INDEX]]
+; COMMON-NEXT:    [[TMP6:%.*]] = or i32 [[TMP0]], 1
 ; COMMON-NEXT:    store i32 [[TMP6]], ptr [[TMP5]], align 4
 ; COMMON-NEXT:    br label %[[PRED_STORE_CONTINUE]]
 ; COMMON:       [[PRED_STORE_CONTINUE]]:
