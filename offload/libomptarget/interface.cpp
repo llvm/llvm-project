@@ -473,23 +473,22 @@ EXTERN int __tgt_target_kernel(ident_t *Loc, int64_t DeviceId, int32_t NumTeams,
 /// Activates the record replay mechanism.
 /// \param DeviceId The device identifier to execute the target region.
 /// \param MemorySize The number of bytes to be (pre-)allocated
-///                   by the bump allocator
+///                   by the record replay allocator.
 /// /param IsRecord Activates the record replay mechanism in
-///                 'record' mode or 'replay' mode.
+///                 'record' or 'replay' mode.
 /// /param SaveOutput Store the device memory after kernel
-///                   execution on persistent storage
+///                   execution on persistent storage.
 EXTERN int __tgt_activate_record_replay(int64_t DeviceId, uint64_t MemorySize,
                                         void *VAddr, bool IsRecord,
-                                        bool SaveOutput,
-                                        uint64_t &ReqPtrArgOffset) {
+                                        bool SaveOutput) {
   assert(PM && "Runtime not initialized");
   OMPT_IF_BUILT(ReturnAddressSetterRAII RA(__builtin_return_address(0)));
   auto DeviceOrErr = PM->getDevice(DeviceId);
   if (!DeviceOrErr)
     FATAL_MESSAGE(DeviceId, "%s", toString(DeviceOrErr.takeError()).c_str());
 
-  [[maybe_unused]] int Rc = target_activate_rr(
-      *DeviceOrErr, MemorySize, VAddr, IsRecord, SaveOutput, ReqPtrArgOffset);
+  [[maybe_unused]] int Rc =
+      target_activate_rr(*DeviceOrErr, MemorySize, VAddr, IsRecord, SaveOutput);
   assert(Rc == OFFLOAD_SUCCESS &&
          "__tgt_activate_record_replay unexpected failure!");
   return OMP_TGT_SUCCESS;

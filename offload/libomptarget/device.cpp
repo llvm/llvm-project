@@ -97,11 +97,9 @@ llvm::Error DeviceTy::init() {
     if (OMPX_RecordDevice != RTLDeviceID)
       return llvm::Error::success();
 
-    uint64_t ReqPtrArgOffset;
-    Ret =
-        RTL->initialize_record_replay(RTLDeviceID, OMPX_RecordMemSize, nullptr,
-                                      /*IsRecord=*/true, /*IsNative=*/true,
-                                      OMPX_ReplaySaveOutput, ReqPtrArgOffset);
+    Ret = RTL->initialize_record_replay(
+        RTLDeviceID, OMPX_RecordMemSize, nullptr,
+        /*IsRecord=*/true, /*IsNative=*/true, OMPX_ReplaySaveOutput);
     if (Ret != OFFLOAD_SUCCESS)
       return error::createOffloadError(error::ErrorCode::BACKEND_FAILURE,
                                        "failed to initialize RR in device %d\n",

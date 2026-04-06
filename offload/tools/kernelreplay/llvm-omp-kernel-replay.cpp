@@ -131,9 +131,8 @@ int main(int argc, char **argv) {
 
   __tgt_register_lib(&Desc);
 
-  uint64_t ReqPtrArgOffset = 0;
   int Rc = __tgt_activate_record_replay(DeviceId, VAllocSize, VAllocAddr, false,
-                                        VerifyOpt, ReqPtrArgOffset);
+                                        VerifyOpt);
 
   if (Rc != OMP_TGT_SUCCESS) {
     report_fatal_error("Cannot activate record replay\n");
@@ -152,18 +151,6 @@ int main(int argc, char **argv) {
   std::memcpy(RecordedData,
               const_cast<char *>(DeviceMemoryMB.get()->getBuffer().data()),
               DeviceMemoryMB.get()->getBufferSize());
-
-  // If necessary, adjust pointer arguments.
-  if (ReqPtrArgOffset) {
-    for (auto *&Arg : TgtArgs) {
-      auto ArgInt = uintptr_t(Arg);
-      // Try to find pointer arguments.
-      if (ArgInt < uintptr_t(VAllocAddr) ||
-          ArgInt >= uintptr_t(VAllocAddr) + VAllocSize)
-        continue;
-      Arg = reinterpret_cast<void *>(ArgInt - ReqPtrArgOffset);
-    }
-  }
 
   __tgt_target_kernel_replay(
       /*Loc=*/nullptr, DeviceId, KernelEntry.Address, (char *)RecordedData,

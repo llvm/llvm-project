@@ -27,8 +27,7 @@ extern int target(ident_t *Loc, DeviceTy &Device, void *HostPtr,
                   KernelArgsTy &KernelArgs, AsyncInfoTy &AsyncInfo);
 
 extern int target_activate_rr(DeviceTy &Device, uint64_t MemorySize,
-                              void *ReqAddr, bool isRecord, bool SaveOutput,
-                              uint64_t &ReqPtrArgOffset);
+                              void *ReqAddr, bool IsRecord, bool SaveOutput);
 
 extern int target_replay(ident_t *Loc, DeviceTy &Device, void *HostPtr,
                          void *DeviceMemory, int64_t DeviceMemorySize,

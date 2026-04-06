@@ -2379,11 +2379,10 @@ int target(ident_t *Loc, DeviceTy &Device, void *HostPtr,
 /// and informing the record-replayer of whether to store the output
 /// in some file.
 int target_activate_rr(DeviceTy &Device, uint64_t MemorySize, void *VAddr,
-                       bool IsRecord, bool SaveOutput,
-                       uint64_t &ReqPtrArgOffset) {
-  return Device.RTL->initialize_record_replay(
-      Device.DeviceID, MemorySize, VAddr, IsRecord, /*IsNative=*/true,
-      SaveOutput, ReqPtrArgOffset);
+                       bool IsRecord, bool SaveOutput) {
+  return Device.RTL->initialize_record_replay(Device.DeviceID, MemorySize,
+                                              VAddr, IsRecord,
+                                              /*IsNative=*/true, SaveOutput);
 }
 
 /// Executes a kernel using pre-recorded information for loading to

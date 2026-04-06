@@ -1463,9 +1463,11 @@ int32_t GenericPluginTy::is_data_exchangable(int32_t SrcDeviceId,
   return isDataExchangable(SrcDeviceId, DstDeviceId);
 }
 
-int32_t GenericPluginTy::initialize_record_replay(
-    int32_t DeviceId, int64_t MemorySize, void *VAddr, bool IsRecord,
-    bool IsNative, bool SaveOutput, uint64_t &ReqPtrArgOffset) {
+int32_t GenericPluginTy::initialize_record_replay(int32_t DeviceId,
+                                                  int64_t MemorySize,
+                                                  void *VAddr, bool IsRecord,
+                                                  bool IsNative,
+                                                  bool SaveOutput) {
   GenericDeviceTy &Device = getDevice(DeviceId);
 
   if (auto Err = Device.initRecordReplay(MemorySize, VAddr, IsRecord, IsNative,
