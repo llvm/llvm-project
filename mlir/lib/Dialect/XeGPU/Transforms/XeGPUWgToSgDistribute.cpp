@@ -1354,7 +1354,7 @@ struct WgToSgMultiDimReductionOp
     SmallVector<int> slmSgLayout(sgLayout.begin(), sgLayout.end());
     for (int dim : reductionDims) {
       slmShape[dim] = sgLayout[dim];
-      slmSgData[dim] = sgLayout[dim];
+      slmSgData[dim] = 1;
     }
     xegpu::LayoutAttr slmStoreLayout =
         xegpu::LayoutAttr::get(rewriter.getContext(), slmSgLayout, slmSgData);
