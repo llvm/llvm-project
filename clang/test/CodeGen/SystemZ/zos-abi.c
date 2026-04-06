@@ -58,32 +58,32 @@ vector unsigned int pass_vector(vector unsigned int arg) { return arg; };
 
 struct SingleVec { vector unsigned int v; };
 struct SingleVec pass_SingleVec_agg(struct SingleVec arg) { return arg; };
-// CHECK-ZVEC-LABEL: define inreg [2 x i64] @pass_SingleVec_agg([2 x i64] inreg %{{.*}})
+// CHECK-ZVEC-LABEL: define [2 x i64] @pass_SingleVec_agg([2 x i64] %{{.*}})
 #endif
 
 // Complex types
 
 _Complex float pass_complex_float(_Complex float arg) { return arg; }
-// CHECK-LABEL: define { float, float } @pass_complex_float({ float, float } inreg %{{.*}})
+// CHECK-LABEL: define { float, float } @pass_complex_float({ float, float } %{{.*}})
 
 _Complex double pass_complex_double(_Complex double arg) { return arg; }
-// CHECK-LABEL: define { double, double } @pass_complex_double({ double, double } inreg %{{.*}})
+// CHECK-LABEL: define { double, double } @pass_complex_double({ double, double } %{{.*}})
 
 _Complex long double pass_complex_longdouble(_Complex long double arg) { return arg; }
-// CHECK-LABEL: define { fp128, fp128 } @pass_complex_longdouble({ fp128, fp128 } inreg %{{.*}})
+// CHECK-LABEL: define { fp128, fp128 } @pass_complex_longdouble({ fp128, fp128 } %{{.*}})
 
 // Verify that the following are complex-like types
 struct complexlike_float { float re, im; };
 struct complexlike_float pass_complexlike_float2(struct complexlike_float arg) { return arg; }
-// CHECK-LABEL: define %struct.complexlike_float @pass_complexlike_float2({ float, float } inreg %{{.*}})
+// CHECK-LABEL: define %struct.complexlike_float @pass_complexlike_float2({ float, float } %{{.*}})
 
 struct complexlike_double { double re, im; };
 struct complexlike_double pass_complexlike_double(struct complexlike_double arg) { return arg; }
-// CHECK-LABEL: define %struct.complexlike_double @pass_complexlike_double({ double, double } inreg %{{.*}})
+// CHECK-LABEL: define %struct.complexlike_double @pass_complexlike_double({ double, double } %{{.*}})
 
 struct complexlike_longdouble { long double re, im; };
 struct complexlike_longdouble pass_complexlike_longdouble(struct complexlike_longdouble arg) { return arg; }
-// CHECK-LABEL: define %struct.complexlike_longdouble @pass_complexlike_longdouble({ fp128, fp128 } inreg %{{.*}})
+// CHECK-LABEL: define %struct.complexlike_longdouble @pass_complexlike_longdouble({ fp128, fp128 } %{{.*}})
 
 struct single_element_float { float f; };
 struct complexlike_struct {
@@ -91,7 +91,7 @@ struct complexlike_struct {
   struct single_element_float y;
 };
 struct complexlike_struct pass_complexlike_struct(struct complexlike_struct arg) { return arg; }
-// CHECK-LABEL: define %struct.complexlike_struct @pass_complexlike_struct({ float, float } inreg %{{.*}})
+// CHECK-LABEL: define %struct.complexlike_struct @pass_complexlike_struct({ float, float } %{{.*}})
 
 struct single_element_float_arr {
   unsigned int :0;
@@ -102,7 +102,7 @@ struct complexlike_struct2 {
   struct single_element_float_arr y;
 };
 struct complexlike_struct2 pass_complexlike_struct2(struct complexlike_struct2 arg) { return arg; }
-// CHECK-LABEL: define inreg [1 x i64] @pass_complexlike_struct2(i64 inreg %{{.*}})
+// CHECK-LABEL: define [1 x i64] @pass_complexlike_struct2(i64 %{{.*}})
 
 struct float_and_empties {
   struct S {} s;
@@ -114,7 +114,7 @@ struct complexlike_struct3 {
   struct float_and_empties y;
 };
 struct complexlike_struct3 pass_complexlike_struct3(struct complexlike_struct3 arg) { return arg; }
-// CHECK-LABEL: define inreg [1 x i64] @pass_complexlike_struct3(i64 inreg %{{.*}})
+// CHECK-LABEL: define [1 x i64] @pass_complexlike_struct3(i64 %{{.*}})
 
 union two_float_union { float a; float b; };
 struct complexlike_struct_with_union {
@@ -122,14 +122,14 @@ struct complexlike_struct_with_union {
   union two_float_union b;
 };
 struct complexlike_struct_with_union pass_complexlike_struct_with_union(struct complexlike_struct_with_union arg) { return arg; }
-// CHECK-LABEL: struct.complexlike_struct_with_union @pass_complexlike_struct_with_union({ float, float } inreg %{{.*}})
+// CHECK-LABEL: struct.complexlike_struct_with_union @pass_complexlike_struct_with_union({ float, float } %{{.*}})
 
 // structures with one field as complex type are not considered complex types.
 struct single_complex_struct {
   _Complex float f;
 };
 struct single_complex_struct pass_single_complex_struct(struct single_complex_struct arg) {return arg; }
-// CHECK-LABEL: define inreg [1 x i64] @pass_single_complex_struct(i64 inreg %{{.*}})
+// CHECK-LABEL: define [1 x i64] @pass_single_complex_struct(i64 %{{.*}})
 
 // Structures with extra padding are not considered complex types.
 struct complexlike_float_padded1 {
@@ -137,14 +137,14 @@ struct complexlike_float_padded1 {
   float y __attribute__((aligned(8)));
 };
 struct complexlike_float_padded1 pass_complexlike_float_padded1(struct complexlike_float_padded1 arg) { return arg; }
-// CHECK-LABEL: define inreg [2 x i64] @pass_complexlike_float_padded1([2 x i64] inreg %{{.*}})
+// CHECK-LABEL: define [2 x i64] @pass_complexlike_float_padded1([2 x i64] %{{.*}})
 
 struct complexlike_float_padded2 {
   float x;
   float y;
 } __attribute__((aligned(16)));
 struct complexlike_float_padded2 pass_complexlike_float_padded2(struct complexlike_float_padded2 arg) { return arg; }
-// CHECK-LABEL: define inreg [2 x i64] @pass_complexlike_float_padded2([2 x i64] inreg %{{.*}})
+// CHECK-LABEL: define [2 x i64] @pass_complexlike_float_padded2([2 x i64] %{{.*}})
 
 
 struct single_padded_struct {
@@ -156,7 +156,7 @@ struct complexlike_float_padded3 {
   struct single_padded_struct y;
 };
 struct complexlike_float_padded3 pass_complexlike_float_padded3(struct complexlike_float_padded3 arg) { return arg; }
-// CHECK-LABEL: define inreg [2 x i64] @pass_complexlike_float_padded3([2 x i64] inreg %{{.*}})
+// CHECK-LABEL: define [2 x i64] @pass_complexlike_float_padded3([2 x i64] %{{.*}})
 
 struct multi_element_float_arr { float f[2]; };
 struct complexlike_struct4 {
@@ -164,7 +164,7 @@ struct complexlike_struct4 {
   struct multi_element_float_arr y;
 };
 struct complexlike_struct4 pass_complexlike_struct4(struct complexlike_struct4 arg) { return arg; }
-// CHECK-LABEL: define inreg [2 x i64] @pass_complexlike_struct4([2 x i64] inreg %{{.*}})
+// CHECK-LABEL: define [2 x i64] @pass_complexlike_struct4([2 x i64] %{{.*}})
 
 typedef double align32_double __attribute__((aligned(32)));
 struct complexlike_double_padded {
@@ -172,7 +172,7 @@ struct complexlike_double_padded {
   double y;
 };
 struct complexlike_double_padded pass_complexlike_double_padded(struct complexlike_double_padded arg) { return arg; }
-// CHECK-LABEL: define void @pass_complexlike_double_padded(ptr {{.*}} sret(%struct.complexlike_double_padded) align 32 %{{.*}}, [4 x i64] inreg %{{.*}})
+// CHECK-LABEL: define void @pass_complexlike_double_padded(ptr {{.*}} sret(%struct.complexlike_double_padded) align 32 %{{.*}}, [4 x i64] %{{.*}})
 
 struct complexlike_double_padded2  {
   __attribute__((aligned(256))) align32_double x; // attribute on both type and typedef
@@ -180,80 +180,80 @@ struct complexlike_double_padded2  {
 };
 
 struct complexlike_double_padded2 pass_complexlike_double_padded2(struct complexlike_double_padded2 arg) { return arg; }
-// CHECK-LABEL: define void @pass_complexlike_double_padded2(ptr {{.*}} sret(%struct.complexlike_double_padded2) align 256 %{{.*}}, [32 x i64] inreg %{{.*}})
+// CHECK-LABEL: define void @pass_complexlike_double_padded2(ptr {{.*}} sret(%struct.complexlike_double_padded2) align 256 %{{.*}}, [32 x i64] %{{.*}})
 
 struct complexlike_double_padded3 {
   __attribute__((aligned(32))) double x; // attribute on type only
   double y;
 };
 struct complexlike_double_padded3 pass_complexlike_double_padded3(struct complexlike_double_padded3 arg) { return arg; }
-// CHECK-LABEL: define void @pass_complexlike_double_padded3(ptr {{.*}} sret(%struct.complexlike_double_padded3) align 32 %{{.*}}, [4 x i64] inreg %{{.*}})
+// CHECK-LABEL: define void @pass_complexlike_double_padded3(ptr {{.*}} sret(%struct.complexlike_double_padded3) align 32 %{{.*}}, [4 x i64] %{{.*}})
 
 
 // Aggregate types
 
 struct agg_1byte { char a[1]; };
 struct agg_1byte pass_agg_1byte(struct agg_1byte arg) { return arg; }
-// CHECK-LABEL: define inreg [1 x i64] @pass_agg_1byte(i64 inreg %{{.*}})
+// CHECK-LABEL: define [1 x i64] @pass_agg_1byte(i64 %{{.*}})
 
 struct agg_2byte { char a[2]; };
 struct agg_2byte pass_agg_2byte(struct agg_2byte arg) { return arg; }
-// CHECK-LABEL: define inreg [1 x i64] @pass_agg_2byte(i64 inreg %{{.*}})
+// CHECK-LABEL: define [1 x i64] @pass_agg_2byte(i64 %{{.*}})
 
 struct agg_3byte { char a[3]; };
 struct agg_3byte pass_agg_3byte(struct agg_3byte arg) { return arg; }
-// CHECK-LABEL: define inreg [1 x i64] @pass_agg_3byte(i64 inreg %{{.*}})
+// CHECK-LABEL: define [1 x i64] @pass_agg_3byte(i64 %{{.*}})
 
 struct agg_4byte { char a[4]; };
 struct agg_4byte pass_agg_4byte(struct agg_4byte arg) { return arg; }
-// CHECK-LABEL: define inreg [1 x i64] @pass_agg_4byte(i64 inreg %{{.*}})
+// CHECK-LABEL: define [1 x i64] @pass_agg_4byte(i64 %{{.*}})
 
 struct agg_5byte { char a[5]; };
 struct agg_5byte pass_agg_5byte(struct agg_5byte arg) { return arg; }
-// CHECK-LABEL: define inreg [1 x i64] @pass_agg_5byte(i64 inreg %{{.*}})
+// CHECK-LABEL: define [1 x i64] @pass_agg_5byte(i64 %{{.*}})
 
 struct agg_6byte { char a[6]; };
 struct agg_6byte pass_agg_6byte(struct agg_6byte arg) { return arg; }
-// CHECK-LABEL: define inreg [1 x i64] @pass_agg_6byte(i64 inreg %{{.*}})
+// CHECK-LABEL: define [1 x i64] @pass_agg_6byte(i64 %{{.*}})
 
 struct agg_7byte { char a[7]; };
 struct agg_7byte pass_agg_7byte(struct agg_7byte arg) { return arg; }
-// CHECK-LABEL: define inreg [1 x i64] @pass_agg_7byte(i64 inreg %{{.*}})
+// CHECK-LABEL: define [1 x i64] @pass_agg_7byte(i64 %{{.*}})
 
 struct agg_8byte { char a[8]; };
 struct agg_8byte pass_agg_8byte(struct agg_8byte arg) { return arg; }
-// CHECK-LABEL: define inreg [1 x i64] @pass_agg_8byte(i64 inreg %{{.*}})
+// CHECK-LABEL: define [1 x i64] @pass_agg_8byte(i64 %{{.*}})
 
 struct agg_9byte { char a[9]; };
 struct agg_9byte pass_agg_9byte(struct agg_9byte arg) { return arg; }
-// CHECK-LABEL: define inreg [2 x i64] @pass_agg_9byte([2 x i64] inreg %{{.*}})
+// CHECK-LABEL: define [2 x i64] @pass_agg_9byte([2 x i64] %{{.*}})
 
 struct agg_16byte { char a[16]; };
 struct agg_16byte pass_agg_16byte(struct agg_16byte arg) { return arg; }
-// CHECK-LABEL: define inreg [2 x i64] @pass_agg_16byte([2 x i64] inreg %{{.*}})
+// CHECK-LABEL: define [2 x i64] @pass_agg_16byte([2 x i64] %{{.*}})
 
 struct agg_24byte { char a[24]; };
 struct agg_24byte pass_agg_24byte(struct agg_24byte arg) { return arg; }
-// CHECK-LABEL: define inreg [3 x i64] @pass_agg_24byte([3 x i64] inreg %{{.*}})
+// CHECK-LABEL: define [3 x i64] @pass_agg_24byte([3 x i64] %{{.*}})
 
 struct agg_25byte { char a[25]; };
 struct agg_25byte pass_agg_25byte(struct agg_25byte arg) { return arg; }
-// CHECK-LABEL: define void @pass_agg_25byte(ptr dead_on_unwind noalias writable sret{{.*}} align 1 %{{.*}}, [4 x i64] inreg %{{.*}})
+// CHECK-LABEL: define void @pass_agg_25byte(ptr dead_on_unwind noalias writable sret{{.*}} align 1 %{{.*}}, [4 x i64] %{{.*}})
 
 // Check that a float-like aggregate type is really passed as aggregate
 struct agg_float { float a; };
 struct agg_float pass_agg_float(struct agg_float arg) { return arg; }
-// CHECK-LABEL: define inreg [1 x i64] @pass_agg_float(i64 inreg %{{.*}})
+// CHECK-LABEL: define [1 x i64] @pass_agg_float(i64 %{{.*}})
 
 // Verify that the following are *not* float-like aggregate types
 
 struct agg_nofloat2 { float a; int b; };
 struct agg_nofloat2 pass_agg_nofloat2(struct agg_nofloat2 arg) { return arg; }
-// CHECK-LABEL: define inreg [1 x i64] @pass_agg_nofloat2(i64 inreg %{{.*}})
+// CHECK-LABEL: define [1 x i64] @pass_agg_nofloat2(i64 %{{.*}})
 
 struct agg_nofloat3 { float a; int : 0; };
 struct agg_nofloat3 pass_agg_nofloat3(struct agg_nofloat3 arg) { return arg; }
-// CHECK-LABEL: define inreg [1 x i64] @pass_agg_nofloat3(i64 inreg %{{.*}})
+// CHECK-LABEL: define [1 x i64] @pass_agg_nofloat3(i64 %{{.*}})
 
 char * pass_pointer(char * arg) { return arg; }
 // CHECK-LABEL: define ptr @pass_pointer(ptr %{{.*}})
@@ -299,22 +299,22 @@ struct normal_struct {
 };
 
 struct complexlike_union1 pass_complexlike_union1(struct complexlike_union1 arg) { return arg; }
-// CHECK-LABEL: define %struct.complexlike_union1 @pass_complexlike_union1({ float, float } inreg %{{.*}})
+// CHECK-LABEL: define %struct.complexlike_union1 @pass_complexlike_union1({ float, float } %{{.*}})
 
 struct complexlike_union2 pass_complexlike_union2(struct complexlike_union2 arg) { return arg; }
-// CHECK-LABEL: define %struct.complexlike_union2 @pass_complexlike_union2({ float, float } inreg %{{.*}})
+// CHECK-LABEL: define %struct.complexlike_union2 @pass_complexlike_union2({ float, float } %{{.*}})
 
 struct complexlike_union3 pass_complexlike_union3(struct complexlike_union3 arg) { return arg; }
-// CHECK-LABEL: define %struct.complexlike_union3 @pass_complexlike_union3({ float, float } inreg %{{.*}})
+// CHECK-LABEL: define %struct.complexlike_union3 @pass_complexlike_union3({ float, float } %{{.*}})
 
 union u1 pass_union1(union u1 arg) { return arg; }
-// CHECK-LABEL: define inreg [1 x i64] @pass_union1(i64 inreg %{{.*}})
+// CHECK-LABEL: define [1 x i64] @pass_union1(i64 %{{.*}})
 
 union u2 pass_union2(union u2 arg) { return arg; }
-// CHECK-LABEL: define inreg [1 x i64] @pass_union2(i64 inreg %{{.*}})
+// CHECK-LABEL: define [1 x i64] @pass_union2(i64 %{{.*}})
 
 struct normal_struct pass_normal_struct(struct normal_struct arg) { return arg; }
-// CHECK-LABEL: define inreg [1 x i64] @pass_normal_struct(i64 inreg %{{.*}})
+// CHECK-LABEL: define [1 x i64] @pass_normal_struct(i64 %{{.*}})
 
 // ============================================================================
 // Complex-like struct using nested typedefs with alignment attributes
@@ -335,7 +335,7 @@ struct S_A {
 struct S_A pass_S_A(struct S_A arg) { return arg; }
 // CHECK-LABEL: define void @pass_S_A(
 // CHECK-SAME: ptr {{.*}} sret(%struct.S_A) align 32
-// CHECK-SAME: [4 x i64] inreg
+// CHECK-SAME: [4 x i64] 
 // CHECK: ret void
 
 // ============================================================================
@@ -353,7 +353,7 @@ struct S_B {
 struct S_B pass_S_B(struct S_B arg) { return arg; }
 // CHECK-LABEL: define void @pass_S_B(
 // CHECK-SAME: ptr {{.*}} sret(%struct.S_B) align 32
-// CHECK-SAME: [8 x i64] inreg
+// CHECK-SAME: [8 x i64] 
 // CHECK: ret void
 
 // ============================================================================
@@ -372,7 +372,7 @@ struct S_C {
 struct S_C pass_S_C(struct S_C arg) { return arg; }
 // CHECK-LABEL: define void @pass_S_C(
 // CHECK-SAME: ptr {{.*}} sret(%struct.S_C) align 32
-// CHECK-SAME: [4 x i64] inreg
+// CHECK-SAME: [4 x i64] 
 // CHECK: ret void
 
 // ============================================================================
@@ -392,7 +392,7 @@ struct S_D {
 struct S_D pass_S_D(struct S_D arg) { return arg; }
 // CHECK-LABEL: define void @pass_S_D(
 // CHECK-SAME: ptr {{.*}} sret(%struct.S_D) align 32
-// CHECK-SAME: [8 x i64] inreg
+// CHECK-SAME: [8 x i64] 
 // CHECK: ret void
 
 // ============================================================================
@@ -410,5 +410,5 @@ struct S_E {
 
 struct S_E pass_S_E(struct S_E arg) { return arg; }
 // CHECK-LABEL: define %struct.S_E @pass_S_E(
-// CHECK-SAME:{ double, double } inreg %{{.*}})
+// CHECK-SAME:{ double, double } %{{.*}})
 // CHECK: ret %struct.S_E

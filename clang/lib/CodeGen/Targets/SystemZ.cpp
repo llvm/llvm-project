@@ -557,10 +557,9 @@ class ZOSXPLinkABIInfo : public ABIInfo {
 public:
   ZOSXPLinkABIInfo(CodeGenTypes &CGT, bool HV) : ABIInfo(CGT), HasVector(HV) {}
 
-  bool isPromotableIntegerType(QualType Ty) const;
+  bool isPromotableIntegerTypeForABI(QualType Ty) const;
   bool isCompoundType(QualType Ty) const;
   bool isVectorArgumentType(QualType Ty) const;
-  bool isFPArgumentType(QualType Ty) const;
   QualType getSingleElementType(QualType Ty) const;
   unsigned getMaxAlignFromTypeDefs(QualType Ty) const;
   std::optional<QualType> getFPTypeOfComplexLikeType(QualType Ty) const;
@@ -603,14 +602,18 @@ public:
 
 // Return true if the ABI requires Ty to be passed sign- or zero-
 // extended to 64 bits.
-bool ZOSXPLinkABIInfo::isPromotableIntegerType(QualType Ty) const {
+bool ZOSXPLinkABIInfo::isPromotableIntegerTypeForABI(QualType Ty) const {
   // Treat an enum type as its underlying type.
   if (const EnumType *EnumTy = Ty->getAs<EnumType>())
     Ty = EnumTy->getDecl()->getIntegerType();
 
   // Promotable integer types are required to be promoted by the ABI.
-  if (getContext().isPromotableIntegerType(Ty))
+  if (ABIInfo::isPromotableIntegerTypeForABI(Ty))
     return true;
+
+  if (const auto *EIT = Ty->getAs<BitIntType>())
+    if (EIT->getNumBits() < 64)
+      return true;
 
   // In addition to the usual promotable integer types, we also need to
   // extend all 32-bit types, since the ABI requires promotion to 64 bits.
@@ -634,20 +637,6 @@ bool ZOSXPLinkABIInfo::isCompoundType(QualType Ty) const {
 bool ZOSXPLinkABIInfo::isVectorArgumentType(QualType Ty) const {
   return (HasVector && Ty->isVectorType() &&
           getContext().getTypeSize(Ty) <= 128);
-}
-
-bool ZOSXPLinkABIInfo::isFPArgumentType(QualType Ty) const {
-  if (const BuiltinType *BT = Ty->getAs<BuiltinType>())
-    switch (BT->getKind()) {
-    case BuiltinType::Float:
-    case BuiltinType::Double:
-    case BuiltinType::LongDouble:
-      return true;
-    default:
-      return false;
-    }
-
-  return false;
 }
 
 QualType ZOSXPLinkABIInfo::getSingleElementType(QualType Ty) const {
@@ -787,7 +776,6 @@ ZOSXPLinkABIInfo::getFPTypeOfComplexLikeType(QualType Ty) const {
         return std::nullopt;
 
       Count++;
-      fprintf(stderr, "Count increased to %d\n", Count);
     }
 
     if (Count == 2) {
@@ -848,7 +836,7 @@ ABIArgInfo ZOSXPLinkABIInfo::classifyReturnType(QualType RetTy,
       // and 3.
       llvm::Type *CoerceTy = llvm::IntegerType::get(getVMContext(), GPRBits);
       CoerceTy = llvm::ArrayType::get(CoerceTy, NumElements);
-      return ABIArgInfo::getDirectInReg(CoerceTy);
+      return ABIArgInfo::getDirect(CoerceTy);
     } else
       return getNaturalAlignIndirect(RetTy,
                                      getDataLayout().getAllocaAddrSpace());
@@ -858,7 +846,7 @@ ABIArgInfo ZOSXPLinkABIInfo::classifyReturnType(QualType RetTy,
   if (const EnumType *EnumTy = RetTy->getAs<EnumType>())
     RetTy = EnumTy->getDecl()->getIntegerType();
 
-  return (isPromotableIntegerType(RetTy) ? ABIArgInfo::getExtend(RetTy)
+  return (isPromotableIntegerTypeForABI(RetTy) ? ABIArgInfo::getExtend(RetTy)
                                          : ABIArgInfo::getDirect());
 }
 
@@ -871,7 +859,7 @@ ABIArgInfo ZOSXPLinkABIInfo::classifyArgumentType(QualType Ty, bool IsNamedArg,
                                    RAA == CGCXXABI::RAA_DirectInMemory);
 
   // Integers and enums are extended to full register width.
-  if (isPromotableIntegerType(Ty))
+  if (isPromotableIntegerTypeForABI(Ty))
     return ABIArgInfo::getExtend(Ty);
 
   // For non-C calling conventions, compound types passed by address copy.
@@ -884,7 +872,7 @@ ABIArgInfo ZOSXPLinkABIInfo::classifyArgumentType(QualType Ty, bool IsNamedArg,
   auto CompTy = getFPTypeOfComplexLikeType(Ty);
   if (IsNamedArg) {
     if (Ty->isComplexType()) {
-      auto AI = ABIArgInfo::getDirectInReg(CGT.ConvertType(Ty));
+      auto AI = ABIArgInfo::getDirect(CGT.ConvertType(Ty));
       AI.setCanBeFlattened(false);
       return AI;
     }
@@ -892,7 +880,7 @@ ABIArgInfo ZOSXPLinkABIInfo::classifyArgumentType(QualType Ty, bool IsNamedArg,
     if (CompTy.has_value()) {
       llvm::Type *FPTy = CGT.ConvertType(*CompTy);
       llvm::Type *CoerceTy = llvm::StructType::get(FPTy, FPTy);
-      auto AI = ABIArgInfo::getDirectInReg(CoerceTy);
+      auto AI = ABIArgInfo::getDirect(CoerceTy);
       AI.setCanBeFlattened(false);
       return AI;
     }
@@ -927,10 +915,10 @@ ABIArgInfo ZOSXPLinkABIInfo::classifyArgumentType(QualType Ty, bool IsNamedArg,
         CoerceTy = llvm::ArrayType::get(RegTy, NumRegs);
       }
 
-      return ABIArgInfo::getDirectInReg(CoerceTy);
+      return ABIArgInfo::getDirect(CoerceTy);
     }
 
-    return ABIArgInfo::getDirectInReg();
+    return ABIArgInfo::getDirect();
   }
 
   // Non-structure compounds are passed indirectly, i.e. arrays.
