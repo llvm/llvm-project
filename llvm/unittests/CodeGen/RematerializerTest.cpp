@@ -80,8 +80,7 @@ public:
     MAM.registerPass([&] { return MachineModuleAnalysis(*MMI); });
   }
 
-  bool parseMIRAndInit(StringRef MIRCode, StringRef FunName,
-                       bool SupportRollback) {
+  bool parseMIRAndInit(StringRef MIRCode, StringRef FunName) {
     SMDiagnostic Diagnostic;
     std::unique_ptr<MemoryBuffer> MBuffer = MemoryBuffer::getMemBuffer(MIRCode);
     MIR = createMIRParser(std::move(MBuffer), Context);
@@ -122,7 +121,7 @@ public:
     }
 
     Remater = std::make_unique<Rematerializer>(*MF, *Regions, LIS);
-    Remater->analyze(SupportRollback);
+    Remater->analyze();
     return true;
   }
 
@@ -197,10 +196,11 @@ body:             |
     S_ENDPGM 0
 ...
 )";
-  ASSERT_TRUE(
-      parseMIRAndInit(MIR, "TreeRematRollback", /*SupportRollback=*/true));
+  ASSERT_TRUE(parseMIRAndInit(MIR, "TreeRematRollback"));
   Rematerializer &Remater = getRematerializer();
   Rematerializer::DependencyReuseInfo DRI;
+  Rollbacker Rollbacker;
+  Remater.addListener(&Rollbacker);
 
   // MBB/Region indices.
   const unsigned MBB0 = 0, MBB1 = 1;
@@ -218,15 +218,16 @@ body:             |
     Remater.rematerializeToRegion(/*RootIdx=*/Add23, /*UseRegion=*/MBB1, DRI);
     Remater.updateLiveIntervals();
 
-    // None of the original registers have any users, but they still are in the
-    // MIR because we enabled rollback support.
+    // None of the original registers have any users left.
     EXPECT_NO_USERS(Cst0);
     EXPECT_NO_USERS(Cst1);
     EXPECT_NO_USERS(Add01);
     EXPECT_NO_USERS(Cst3);
     EXPECT_NO_USERS(Add23);
 
-    // Copies of all MIs were inserted into the second MBB.
+    // Copies of all MIs were inserted into the second MBB. Original registers
+    // were deleted.
+    RegionSizes[MBB0] -= 5;
     RegionSizes[MBB1] += 5;
     ASSERT_REGION_SIZES(RegionSizes);
     NumRegs += 5;
@@ -234,7 +235,8 @@ body:             |
   }
 
   // After rollback all rematerializations are removed from the MIR.
-  Remater.rollbackRematsOf(Add23);
+  Rollbacker.rollback(Remater);
+  RegionSizes[MBB0] += 5;
   RegionSizes[MBB1] -= 5;
   ASSERT_REGION_SIZES(RegionSizes);
 
@@ -253,6 +255,7 @@ body:             |
     EXPECT_NO_USERS(Add23);
 
     // Only immediate dependencies are copied to the second MBB.
+    RegionSizes[MBB0] -= 3;
     RegionSizes[MBB1] += 3;
     ASSERT_REGION_SIZES(RegionSizes);
     NumRegs += 3;
@@ -260,7 +263,8 @@ body:             |
   }
 
   // After rollback all rematerializations are removed from the MIR.
-  Remater.rollbackRematsOf(Add23);
+  Rollbacker.rollback(Remater);
+  RegionSizes[MBB0] += 3;
   RegionSizes[MBB1] -= 3;
   ASSERT_REGION_SIZES(RegionSizes);
 
@@ -302,21 +306,15 @@ body:             |
     EXPECT_NO_USERS(Add23);
     EXPECT_NUM_USERS(RematAdd23, 1);
 
+    RegionSizes[MBB0] -= 3;
     RegionSizes[MBB1] += 3;
     ASSERT_REGION_SIZES(RegionSizes);
     NumRegs += 3;
     ASSERT_EQ(Remater.getNumRegs(), NumRegs);
   }
 
-  // This time don't rollback; commit the rematerializations. This finally
-  // deletes unused registers in the first block. However the number of
-  // registers tracked by the rematerializer doesn't change.
+  // This time don't rollback.
   Remater.updateLiveIntervals();
-  Remater.commitRematerializations();
-  RegionSizes[MBB0] -= 3;
-  ASSERT_REGION_SIZES(RegionSizes);
-  ASSERT_EQ(Remater.getNumRegs(), NumRegs);
-
   EXPECT_TRUE(getMF().verify());
 }
 
@@ -345,8 +343,7 @@ body:             |
     S_ENDPGM 0
 ...
 )";
-  ASSERT_TRUE(
-      parseMIRAndInit(MIR, "MultiRegionsRemat", /*SupportRollback=*/false));
+  ASSERT_TRUE(parseMIRAndInit(MIR, "MultiRegionsRemat"));
   Rematerializer &Remater = getRematerializer();
   Rematerializer::DependencyReuseInfo DRI;
 
@@ -416,7 +413,7 @@ body:             |
     S_ENDPGM 0
 ...
 )";
-  ASSERT_TRUE(parseMIRAndInit(MIR, "MultiStep", /*SupportRollback=*/false));
+  ASSERT_TRUE(parseMIRAndInit(MIR, "MultiStep"));
   Rematerializer &Remater = getRematerializer();
   Rematerializer::DependencyReuseInfo DRI;
 
@@ -497,7 +494,7 @@ body:             |
     S_ENDPGM 0
 ...
 )";
-  ASSERT_TRUE(parseMIRAndInit(MIR, "EmptyRegion", /*SupportRollback=*/false));
+  ASSERT_TRUE(parseMIRAndInit(MIR, "EmptyRegion"));
   Rematerializer &Remater = getRematerializer();
   Rematerializer::DependencyReuseInfo DRI;
 
@@ -566,7 +563,7 @@ body:             |
     S_ENDPGM 0
 ...
 )";
-  ASSERT_TRUE(parseMIRAndInit(MIR, "SubReg", /*SupportRollback=*/false));
+  ASSERT_TRUE(parseMIRAndInit(MIR, "SubReg"));
   Rematerializer &Remater = getRematerializer();
   Rematerializer::DependencyReuseInfo DRI;
 
@@ -590,5 +587,165 @@ body:             |
                /*NumUsers=*/1);
 
   Remater.updateLiveIntervals();
+  EXPECT_TRUE(getMF().verify());
+}
+
+/// Checks that rollback works as expected when the rollback listener is added
+/// mid-rematerializations.
+TEST_F(RematerializerTest, Rollback) {
+  StringRef MIR = R"(
+name:            Rollback
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+body:             |
+  bb.0:
+    %0:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 0, implicit $exec, implicit $mode
+    %1:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 1, implicit $exec, implicit $mode
+
+  bb.1:
+    S_NOP 0, implicit %0, implicit %1
+
+  bb.2:
+    S_NOP 0, implicit %0, implicit %1
+    S_ENDPGM 0
+)";
+  ASSERT_TRUE(parseMIRAndInit(MIR, "Rollback"));
+  Rematerializer &Remater = getRematerializer();
+  Rematerializer::DependencyReuseInfo DRI;
+
+  // MBB/Region indices.
+  const unsigned MBB0 = 0, MBB1 = 1, MBB2 = 2;
+  SmallVector<unsigned, 4> RegionSizes{2, 1, 1};
+  ASSERT_REGION_SIZES(RegionSizes);
+
+  // Indices of rematerializable registers.
+  unsigned NumRegs = 0;
+  const RegisterIdx Cst0 = NumRegs++, Cst1 = NumRegs++;
+  ASSERT_EQ(Remater.getNumRegs(), NumRegs);
+
+  // Rematerialize %0 to MBB1, taking one user from the original register.
+  RegisterIdx RematCst0MBB1 = Remater.rematerializeToRegion(Cst0, MBB1, DRI);
+  RegionSizes[MBB1] += 1;
+  ASSERT_REGION_SIZES(RegionSizes);
+  NumRegs += 1;
+  ASSERT_EQ(Remater.getNumRegs(), NumRegs);
+
+  Rollbacker Rollback;
+  Remater.addListener(&Rollback);
+
+  // Rematerialize %0 to MBB2 amd %1 to MBB1/MBB2; each rematerialization ends
+  // up with a single user and both original registers are deleted.
+  RegisterIdx RematCst0MBB2 =
+      Remater.rematerializeToRegion(Cst0, MBB2, DRI.clear());
+  RegisterIdx RematCst1MBB1 =
+      Remater.rematerializeToRegion(Cst1, MBB1, DRI.clear());
+  RegisterIdx RematCst1MBB2 =
+      Remater.rematerializeToRegion(Cst1, MBB2, DRI.clear());
+
+  RegionSizes[MBB0] -= 2;
+  RegionSizes[MBB1] += 1;
+  RegionSizes[MBB2] += 2;
+  ASSERT_REGION_SIZES(RegionSizes);
+  NumRegs += 3;
+  ASSERT_EQ(Remater.getNumRegs(), NumRegs);
+
+  EXPECT_NO_USERS(Cst0);
+  EXPECT_NO_USERS(Cst1);
+  EXPECT_NUM_USERS(RematCst0MBB1, 1);
+  EXPECT_NUM_USERS(RematCst0MBB2, 1);
+  EXPECT_NUM_USERS(RematCst1MBB1, 1);
+  EXPECT_NUM_USERS(RematCst1MBB2, 1);
+
+  // Rollback all changes since the rollbacker was added. The first
+  // rematerialization of %0 to MBB1 happened before so it is not rolled back.
+  // However %0 is re-created because it was deleted after.
+  Rollback.rollback(Remater);
+
+  RegionSizes[MBB0] += 2;
+  RegionSizes[MBB1] -= 1;
+  RegionSizes[MBB2] -= 2;
+  ASSERT_REGION_SIZES(RegionSizes);
+  ASSERT_EQ(Remater.getNumRegs(), NumRegs);
+
+  EXPECT_NUM_USERS(Cst0, 1);
+  EXPECT_NUM_USERS(Cst1, 2);
+  EXPECT_NUM_USERS(RematCst0MBB1, 1);
+  EXPECT_NO_USERS(RematCst0MBB2);
+  EXPECT_NO_USERS(RematCst1MBB1);
+  EXPECT_NO_USERS(RematCst1MBB2);
+
+  EXPECT_TRUE(getMF().verify());
+}
+
+/// Checks that rollback re-creates MIs at correct positions when the order of
+/// register deletions forces the re-creation logic to iterate through multiple
+/// deleted registers' respective insert position to find a valid one.
+TEST_F(RematerializerTest, RollbackInvalidInsertPos) {
+  StringRef MIR = R"(
+name:            RollbackInvalidInsertPos
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+body:             |
+  bb.0:
+    %0:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 0, implicit $exec, implicit $mode
+    %1:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 1, implicit $exec, implicit $mode
+    %2:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 2, implicit $exec, implicit $mode
+    %3:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 3, implicit $exec, implicit $mode
+
+  bb.1:
+    S_NOP 0, implicit %0, implicit %1, implicit %2, implicit %3
+    S_ENDPGM 0
+)";
+  ASSERT_TRUE(parseMIRAndInit(MIR, "RollbackInvalidInsertPos"));
+  Rematerializer &Remater = getRematerializer();
+  Rematerializer::DependencyReuseInfo DRI;
+  Rollbacker Rollback;
+  Remater.addListener(&Rollback);
+
+  // MBB/Region indices.
+  const unsigned MBB0 = 0, MBB1 = 1;
+  SmallVector<unsigned, 4> RegionSizes{4, 1};
+  ASSERT_REGION_SIZES(RegionSizes);
+
+  // Indices of rematerializable registers.
+  const RegisterIdx Cst0 = 0, Cst1 = 1, Cst2 = 2, Cst3 = 3;
+
+  // Rematerialize %0 to MBB1, deleting the original register
+  Remater.rematerializeToRegion(Cst0, MBB1, DRI);
+  RegionSizes[MBB0] -= 1;
+  RegionSizes[MBB1] += 1;
+  ASSERT_REGION_SIZES(RegionSizes);
+
+  // Rematerialize %1 to MBB1, deleting the original register
+  Remater.rematerializeToRegion(Cst1, MBB1, DRI.clear());
+  RegionSizes[MBB0] -= 1;
+  RegionSizes[MBB1] += 1;
+  ASSERT_REGION_SIZES(RegionSizes);
+
+  // Rematerialize %2 to MBB1, deleting the original register
+  Remater.rematerializeToRegion(Cst2, MBB1, DRI.clear());
+  RegionSizes[MBB0] -= 1;
+  RegionSizes[MBB1] += 1;
+  ASSERT_REGION_SIZES(RegionSizes);
+
+  // Now rollback and check for correct instruction order in the original
+  // defining region. The asserts on region sizes ensure that all original
+  // registers were indeed deleted and will be re-created in the original
+  // region.
+  Rollback.rollback(Remater);
+  RegionSizes[MBB0] += 3;
+  RegionSizes[MBB1] -= 3;
+  ASSERT_REGION_SIZES(RegionSizes);
+
+  MachineInstr &DefCst0 = *Remater.getReg(Cst0).DefMI;
+  MachineInstr &DefCst1 = *Remater.getReg(Cst1).DefMI;
+  MachineInstr &DefCst2 = *Remater.getReg(Cst2).DefMI;
+  MachineInstr &DefCst3 = *Remater.getReg(Cst3).DefMI;
+  EXPECT_EQ(std::next(DefCst0.getIterator()), DefCst1.getIterator());
+  EXPECT_EQ(std::next(DefCst1.getIterator()), DefCst2.getIterator());
+  EXPECT_EQ(std::next(DefCst2.getIterator()), DefCst3.getIterator());
+
   EXPECT_TRUE(getMF().verify());
 }
