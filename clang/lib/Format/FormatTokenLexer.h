@@ -140,11 +140,17 @@ private:
   llvm::Regex MacroBlockBeginRegex;
   llvm::Regex MacroBlockEndRegex;
 
+  // The next line is a Verilog protected block that should not be split into
+  // tokens. Set at the 'pragma protect' line. Cleared at the next line.
+  bool VerilogProtectedBlock;
+
   // Targets that may appear inside a C# attribute.
   static const llvm::StringSet<> CSharpAttributeTargets;
 
+  /// Handle Verilog opaque protected stuff.
+  bool readVerilogProtected(FormatToken &Tok);
   /// Handle Verilog-specific tokens.
-  bool readRawTokenVerilogSpecific(Token &Tok);
+  bool readRawTokenVerilogSpecific(FormatToken &Tok);
 
   void readRawToken(FormatToken &Tok);
 
