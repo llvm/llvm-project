@@ -249,22 +249,20 @@ static const unsigned MaxPHINumOperands = 128;
 SmallVector<Value *, 4>
 getNonTriviallyVectorizableIntrinsicCallOperand(Value *V) {
 
-  SmallVector<Value *, 4> Operands;
-  auto *CI = dyn_cast<CallInst>(V);
-
-  if (!CI || isAssumeLikeIntrinsic(CI))
+  auto *II = dyn_cast<IntrinsicInst>(V);
+  if (!II || isAssumeLikeIntrinsic(II))
     return {};
-  Intrinsic::ID ID = CI->getIntrinsicID();
-  // Only consider intrinsic calls.
-  // FIXME: We may want to relax this condition in future.
-  if (ID == Intrinsic::not_intrinsic || isTriviallyVectorizable(ID))
+
+  if (isTriviallyVectorizable(II->getIntrinsicID()))
     return {};
 
   // Skip memory intrinsics (e.g., masked.load, masked.gather etc.)
-  if (!SLPReVec && CI->getType()->isVectorTy())
+  if (!SLPReVec && II->getType()->isVectorTy())
     return {};
 
-  for (Value *ArgOp : CI->args()) {
+  // FIXME: Add non-instructions operands to the list.
+  SmallVector<Value *, 4> Operands;
+  for (Value *ArgOp : II->args()) {
     if (auto *I = dyn_cast<Instruction>(ArgOp)) {
       Operands.emplace_back(I);
     }
@@ -25298,6 +25296,9 @@ bool SLPVectorizerPass::runImpl(Function &F, ScalarEvolution *SE_,
     // Vectorize trees that end at reductions.
     Changed |= vectorizeChainsInBlock(BB, R);
 
+    // Vectorize non-trivially-vectorizable intrinsic.
+    Changed |= vectorizeIntrinsicSeedsInBlock(BB, R);
+
     // Vectorize the index computations of getelementptr instructions. This
     // is primarily intended to catch gather-like idioms ending at
     // non-consecutive loads.
@@ -29507,13 +29508,21 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
       PostProcessCmps.insert(cast<CmpInst>(&*It));
   }
 
+  return Changed;
+}
+
+bool SLPVectorizerPass::vectorizeIntrinsicSeedsInBlock(BasicBlock *BB,
+                                                       BoUpSLP &R) {
+  bool Changed = false;
   // Collect operands of non-trivially vectorizable intrinsic calls (e.g.,
   // llvm.amdgcn.exp2) and group by intrinsic ID, so their operands can be
   // vectorized independently.
   // FIXME: Extend for all non-vectorized functions.
-  SmallMapVector<std::pair<Intrinsic::ID, unsigned>, SmallVector<Value *, 4>, 4>
-      OpcodeGroups;
-
+  SmallMapVector<std::pair<Intrinsic::ID, unsigned>, // (ID, OpIndex)
+                 SmallMapVector<unsigned,            // Opcode
+                                SmallVector<Value *, 4>, 4>,
+                 4>
+      IntrinsicSeedOps;
   for (Instruction &I : *BB) {
     if (R.isDeleted(&I))
       continue;
@@ -29521,14 +29530,24 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
         getNonTriviallyVectorizableIntrinsicCallOperand(&I);
     if (!Ops.empty()) {
       Intrinsic::ID ID = cast<CallInst>(&I)->getIntrinsicID();
-      for (Value *Op : Ops)
-        if (auto *OpI = dyn_cast<Instruction>(Op))
-          OpcodeGroups[{ID, OpI->getOpcode()}].push_back(Op);
+      for (auto [OpIdx, Op] : enumerate(Ops)) {
+        if (auto *OpI = dyn_cast<Instruction>(Op)) {
+          IntrinsicSeedOps[{ID, OpIdx}][OpI->getOpcode()].push_back(Op);
+        }
+      }
     }
   }
-  for (auto &[_, OpGroup] : OpcodeGroups)
-    Changed |= tryToVectorizeList(OpGroup, R);
 
+  for (auto &[_, OpcodeMap] : IntrinsicSeedOps)
+    for (auto &[_, Group] : OpcodeMap) {
+      // Don't include instructions that were deleted by previous
+      // vectorization.
+      auto Candidates = make_filter_range(Group, [&](Value *V) {
+        auto *I = dyn_cast<Instruction>(V);
+        return I && !R.isDeleted(I);
+      });
+      Changed |= tryToVectorizeList(SmallVector<Value *, 4>(Candidates), R);
+    }
   return Changed;
 }
 
