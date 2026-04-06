@@ -2499,7 +2499,7 @@ bool PluginManager::SetInstrumentationRuntimePluginEnabled(llvm::StringRef name,
     return false;
   auto instrumentation_ty = type_cb();
 
-  // Notify all alive processes to enable/disable the plugin
+  // Notify all alive processes to enable/disable the plugin.
   bool success = true;
   for (size_t di = 0; di < Debugger::GetNumDebuggers(); ++di) {
     DebuggerSP debugger_sp = Debugger::GetDebuggerAtIndex(di);
