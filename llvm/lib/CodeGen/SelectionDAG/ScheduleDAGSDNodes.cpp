@@ -329,9 +329,7 @@ void ScheduleDAGSDNodes::BuildSchedUnits() {
   unsigned NumNodes = 0;
   for (SDNode &NI : DAG->allnodes()) {
     NI.setNodeId(-1);
-    // We re-use CominerWorklistIndex as to indicate whether we visited the
-    // node before. Initialize to zero.
-    NI.setCombinerWorklistIndex(0);
+    NI.setSchedulerWorklistVisited(false);
     ++NumNodes;
   }
 
@@ -346,7 +344,7 @@ void ScheduleDAGSDNodes::BuildSchedUnits() {
   SmallVector<SDNode*, 64> Worklist;
   SmallPtrSet<SDNode*, 32> Visited;
   Worklist.push_back(DAG->getRoot().getNode());
-  DAG->getRoot().getNode()->setCombinerWorklistIndex(1);
+  DAG->getRoot().getNode()->setSchedulerWorklistVisited(true);
 
   SmallVector<SUnit*, 8> CallSUnits;
   while (!Worklist.empty()) {
@@ -354,9 +352,9 @@ void ScheduleDAGSDNodes::BuildSchedUnits() {
 
     // Add all operands to the worklist unless they've already been added.
     for (const SDValue &Op : NI->op_values()) {
-      if (Op.getNode()->getCombinerWorklistIndex() != 0)
+      if (Op.getNode()->getSchedulerWorklistVisited())
         continue;
-      Op.getNode()->setCombinerWorklistIndex(1);
+      Op.getNode()->setSchedulerWorklistVisited(true);
       Worklist.push_back(Op.getNode());
     }
 
