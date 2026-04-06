@@ -590,6 +590,77 @@ body:             |
   EXPECT_TRUE(getMF().verify());
 }
 
+/// The rematerializer had a bug where re-creating the interval of a
+/// non-rematerializable super-register defined over multiple MIs, some of which
+/// defining entirely dead subregisters, could cause a crash when changing the
+/// order of sub-definitions (for example during scheduling) because the
+/// re-created interval could end up with multiple connected components, which
+/// is illegal. The solution is to split separate components of the interval in
+/// such cases.
+TEST_F(RematerializerTest, SplitSubRegDeadDef) {
+  StringRef MIR = R"(
+name:            SplitSubRegDeadDef
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+body:             |
+  bb.0:
+    undef %0.sub0:vreg_64 = IMPLICIT_DEF
+    %0.sub1:vreg_64 = IMPLICIT_DEF
+    %1:vgpr_32 = V_ADD_U32_e32 %0.sub0, %0.sub0, implicit $exec
+    
+  bb.1:
+    S_NOP 0, implicit %1
+    S_ENDPGM 0
+...
+)";
+  ASSERT_TRUE(parseMIRAndInit(MIR, "SplitSubRegDeadDef"));
+  LiveIntervals &LIS = MFAM.getResult<LiveIntervalsAnalysis>(*MF);
+
+  // Replicates the scheduler's effect on LIS on an intra-block move of MI.
+  auto MoveMIAndAdjustLiveness = [&](MachineInstr &MI) {
+    LIS.handleMove(MI);
+    const MachineRegisterInfo &MRI = MF->getRegInfo();
+    const TargetRegisterInfo &TRI = *MF->getSubtarget().getRegisterInfo();
+    RegisterOperands RegOpers;
+    RegOpers.collect(MI, TRI, MRI, true, /*IgnoreDead=*/false);
+    SlotIndex Sub1Slot = LIS.getInstructionIndex(MI).getRegSlot();
+    RegOpers.adjustLaneLiveness(LIS, MRI, Sub1Slot, &MI);
+  };
+
+  MachineBasicBlock &MBB0 = *MF->getBlockNumbered(0);
+  MachineInstr &Sub0Def = *MBB0.begin();
+  MachineInstr &Sub1Def = *MBB0.begin()->getNextNode();
+
+  // Flip %0's subdefinition order. After the move, the definitions look like:
+  // undef %0.sub1:vreg_64 = IMPLICIT_DEF
+  // undef %0.sub0:vreg_64 = IMPLICIT_DEF
+  MBB0.splice(Sub0Def.getIterator(), &MBB0, Sub1Def.getIterator());
+  MoveMIAndAdjustLiveness(Sub1Def);
+
+  // Rematerialize %1 to bb.1. This triggers a live-interval update of %0 when
+  // calling Remater.updateLiveIntervals(), during which its interval is split.
+  Rematerializer &Remater = getRematerializer();
+  Rematerializer::DependencyReuseInfo DRI;
+  const unsigned MBB1 = 1;
+  const RegisterIdx Add = 0;
+  Remater.rematerializeToRegion(Add, MBB1, DRI);
+  Remater.updateLiveIntervals();
+
+  // If we didn't split %0 before, its definitions would now look like:
+  // dead undef %0.sub1:vreg_64 = IMPLICIT_DEF
+  // undef %0.sub0:vreg_64 = IMPLICIT_DEF
+  //
+  // Trying to flip back %0's definition order then triggers an
+  // error in LIS.handleMove because its live interval is made up of multiple
+  // connected components.
+  ASSERT_NE(Sub0Def.getOperand(0).getReg(), Sub1Def.getOperand(0).getReg());
+  MBB0.splice(MBB0.end(), &MBB0, Sub1Def.getIterator());
+  MoveMIAndAdjustLiveness(Sub1Def);
+
+  EXPECT_TRUE(getMF().verify());
+}
+
 /// Checks that rollback works as expected when the rollback listener is added
 /// mid-rematerializations.
 TEST_F(RematerializerTest, Rollback) {
