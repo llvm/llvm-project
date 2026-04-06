@@ -414,6 +414,11 @@ public:
   LLVM_ABI const SCEV *evaluateAtIteration(const SCEV *It,
                                            ScalarEvolution &SE) const;
 
+  /// Return the value of the chain of recurrences of \p AR at the specified
+  /// iteration number, using the use-specific flags if possible.
+  LLVM_ABI static SCEVUse evaluateAtIteration(SCEVUse AR, const SCEV *It,
+                                              ScalarEvolution &SE);
+
   /// Return the value of this chain of recurrences at the specified iteration
   /// number. Takes an explicit list of operands to represent an AddRec.
   LLVM_ABI static const SCEV *evaluateAtIteration(ArrayRef<SCEVUse> Operands,

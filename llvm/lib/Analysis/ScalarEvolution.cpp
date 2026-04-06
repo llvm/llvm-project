@@ -1077,6 +1077,20 @@ const SCEV *SCEVAddRecExpr::evaluateAtIteration(const SCEV *It,
   return evaluateAtIteration(operands(), It, SE);
 }
 
+SCEVUse SCEVAddRecExpr::evaluateAtIteration(SCEVUse ARU, const SCEV *It,
+                                            ScalarEvolution &SE) {
+  auto *AR = cast<SCEVAddRecExpr>(ARU);
+  const SCEV *Result = evaluateAtIteration(AR->operands(), It, SE);
+
+  // Preserve use-specific NUW if the closed-form result is an SCEVAddExpr. The
+  // flag is valid only valid if the start is also known to not wrap.
+  SCEVNoWrapFlags UseFlags = ARU.getUseNoWrapFlags();
+  if (UseFlags != SCEVNoWrapFlags::FlagAnyWrap && AR->isAffine() &&
+      isa<SCEVAddExpr>(Result) && isa<SCEVUnknown>(AR->getStart()))
+    return SE.getUseWithFlags(Result, UseFlags);
+  return Result;
+}
+
 const SCEV *SCEVAddRecExpr::evaluateAtIteration(ArrayRef<SCEVUse> Operands,
                                                 const SCEV *It,
                                                 ScalarEvolution &SE) {
@@ -3051,7 +3065,7 @@ SCEVUse ScalarEvolution::getAddExpr(SmallVectorImpl<SCEVUse> &Ops,
 
       // If all of the other operands were loop invariant, we are done.
       if (Ops.size() == 1)
-        return SCEVUse(NewRec, UseFlags);
+        return getUseWithFlags(NewRec, UseFlags);
 
       // Otherwise, add the folded AddRec by the non-invariant parts.
       for (unsigned i = 0;; ++i)
@@ -10361,8 +10375,13 @@ SCEVUse ScalarEvolution::computeSCEVAtScope(SCEVUse V, const Loop *L) {
       if (BackedgeTakenCount == getCouldNotCompute())
         return AddRec;
 
-      // Then, evaluate the AddRec.
-      return AddRec->evaluateAtIteration(BackedgeTakenCount, *this);
+      // Then, evaluate the AddRec. Preserve the use-specific flags from the
+      // original V if the AddRec was not folded above.
+      SCEVNoWrapFlags UseFlags = AddRec == V.getPointer()
+                                     ? V.getUseNoWrapFlags()
+                                     : SCEVNoWrapFlags::FlagAnyWrap;
+      return SCEVAddRecExpr::evaluateAtIteration(SCEVUse(AddRec, UseFlags),
+                                                 BackedgeTakenCount, *this);
     }
 
     return AddRec;
