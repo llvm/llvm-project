@@ -3339,6 +3339,9 @@ bool PPCInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     MI.removeOperand(0);
     return true;
   }
+  case PPC::LWAT_CSNE_PSEUDO:
+  case PPC::LDAT_CSNE_PSEUDO:
+    return expandAMOCSNEPseudo(MI);
   }
   return false;
 }
@@ -5891,4 +5894,61 @@ bool PPCInstrInfo::areMemAccessesTriviallyDisjoint(
     }
   }
   return false;
+}
+
+// Expands LWAT_CSNE_PSEUDO/LDAT_CSNE_PSEUDO post register allocation.
+// lwat/ldat FC=16 requires 3 consecutive registers. X3/X4/X5 are
+// hardcoded post-RA to satisfy this constraint without a dedicated
+// register class.
+bool PPCInstrInfo::expandAMOCSNEPseudo(MachineInstr &MI) const {
+  MachineBasicBlock &MBB = *MI.getParent();
+  DebugLoc DL = MI.getDebugLoc();
+  bool IsLDAT = MI.getOpcode() == PPC::LDAT_CSNE_PSEUDO;
+
+  Register DstReg = MI.getOperand(0).getReg();
+  Register PtrReg = MI.getOperand(1).getReg();
+  Register CmpReg = MI.getOperand(2).getReg();
+  Register NewReg = MI.getOperand(3).getReg();
+
+  const TargetRegisterInfo *TRI = &getRegisterInfo();
+  Register CmpReg64 = CmpReg;
+  Register NewReg64 = NewReg;
+  if (!IsLDAT) {
+    CmpReg64 =
+        TRI->getMatchingSuperReg(CmpReg, PPC::sub_32, &PPC::G8RCRegClass);
+    NewReg64 =
+        TRI->getMatchingSuperReg(NewReg, PPC::sub_32, &PPC::G8RCRegClass);
+  }
+  if (CmpReg64 != PPC::X4)
+    BuildMI(MBB, MI, DL, get(PPC::OR8), PPC::X4)
+        .addReg(CmpReg64)
+        .addReg(CmpReg64);
+  if (NewReg64 != PPC::X5)
+    BuildMI(MBB, MI, DL, get(PPC::OR8), PPC::X5)
+        .addReg(NewReg64)
+        .addReg(NewReg64);
+
+  Register ScratchReg = PtrReg;
+  if (PtrReg == PPC::X3 || PtrReg == PPC::X4 || PtrReg == PPC::X5) {
+    RegScavenger RS;
+    RS.enterBasicBlockEnd(MBB);
+    RS.backward(std::next(MI.getIterator()));
+    ScratchReg = RS.scavengeRegisterBackwards(
+        PPC::G8RCRegClass, MI.getIterator(), false, 0, false);
+    BuildMI(MBB, MI, DL, get(PPC::OR8), ScratchReg)
+        .addReg(PtrReg)
+        .addReg(PtrReg);
+  }
+
+  BuildMI(MBB, MI, DL, get(IsLDAT ? PPC::LDAT_CSNE : PPC::LWAT_CSNE), PPC::X3)
+      .addReg(ScratchReg)
+      .addImm(16);
+
+  if (DstReg != (IsLDAT ? PPC::X3 : PPC::R3)) {
+    BuildMI(MBB, MI, DL, get(IsLDAT ? PPC::OR8 : PPC::OR), DstReg)
+        .addReg(IsLDAT ? PPC::X3 : PPC::R3)
+        .addReg(IsLDAT ? PPC::X3 : PPC::R3);
+  }
+  MI.eraseFromParent();
+  return true;
 }
