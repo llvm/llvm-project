@@ -97,7 +97,7 @@ struct ConditionalExprLookahead {
 // R1001 primary ->
 //         literal-constant | designator | array-constructor |
 //         structure-constructor | function-reference | type-param-inquiry |
-//         type-param-name | ( expr )
+//         type-param-name | ( expr ) | conditional-expr
 // type-param-inquiry is parsed as a structure component, except for
 // substring%KIND/LEN
 constexpr auto primary{instrumented("primary"_en_US,

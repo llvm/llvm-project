@@ -206,6 +206,27 @@ subroutine error_derived_type_mismatch(flag)
   t1 = (flag ? t1 : t2)
 end subroutine
 
+! Error: derived type vs intrinsic type mismatch
+subroutine error_derived_vs_intrinsic(flag)
+  type :: my_type
+    integer :: i
+  end type
+
+  logical :: flag
+  type(my_type) :: t
+  integer :: i
+  real :: r
+
+  !ERROR: All values in conditional expression must have the same type and kind; have my_type and INTEGER(4)
+  t = (flag ? t : i)
+
+  !ERROR: All values in conditional expression must have the same type and kind; have INTEGER(4) and my_type
+  t = (flag ? i : t)
+
+  !ERROR: All values in conditional expression must have the same type and kind; have my_type and REAL(4)
+  t = (flag ? t : r)
+end subroutine
+
 ! Error: array rank mismatch
 subroutine error_array_rank_mismatch(flag)
   logical :: flag
@@ -330,7 +351,7 @@ subroutine error_polymorphic(flag)
   logical :: flag
   class(base_t), allocatable :: poly1, poly2, result
 
-  !ERROR: Conditional expressions with polymorphic types (CLASS) are not yet supported
+  !ERROR: not yet implemented: Conditional expressions with polymorphic types (CLASS) are not yet supported
   result = (flag ? poly1 : poly2)
 end subroutine
 

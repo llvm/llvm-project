@@ -3935,7 +3935,7 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::ConditionalExpr &x) {
   }
   if (thenCat == TypeCategory::Derived &&
       (thenType->IsPolymorphic() || elseType->IsPolymorphic())) {
-    Say("Conditional expressions with polymorphic types (CLASS) are not yet supported"_err_en_US);
+    Say("Conditional expressions with polymorphic types (CLASS) are not yet supported"_todo_en_US);
     return std::nullopt;
   }
   if (thenCat == TypeCategory::Derived &&
@@ -5253,7 +5253,7 @@ std::optional<ActualArgument> ArgumentAnalyzer::AnalyzeExpr(
       std::holds_alternative<parser::ConditionalExpr>(expr.u)) {
     // Check parse tree before analysis to avoid wasted work
     context_.SayAt(expr.source,
-        "Conditional expressions are not yet supported as actual arguments"_err_en_US);
+        "Conditional expressions are not yet supported as actual arguments"_todo_en_US);
     return std::nullopt;
   } else if (MaybeExpr argExpr{AnalyzeExprOrWholeAssumedSizeArray(expr)}) {
     if (isProcedureCall_ || !IsProcedureDesignator(*argExpr)) {

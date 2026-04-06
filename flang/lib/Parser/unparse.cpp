@@ -901,12 +901,14 @@ public:
   void Unparse(const Expr::EQV &x) { Walk(x.t, ".EQV."); }
   void Unparse(const Expr::NEQV &x) { Walk(x.t, ".NEQV."); }
   void Unparse(const ConditionalExpr &x) { // F2023 R1002
+    // Note: chained conditionals produce extra parentheses due to recursive
+    // else-expr unparsing; the result is still valid.
     Put("( ");
     Walk(std::get<0>(x.t)); // scalar-logical-expr
     Put(" ? ");
     Walk(std::get<1>(x.t)); // then-expr
     Put(" : ");
-    Walk(std::get<2>(x.t)); // else-expr (recursive for chained conditionals)
+    Walk(std::get<2>(x.t)); // else-expr
     Put(" )");
   }
   void Unparse(const Expr::ComplexConstructor &x) {
