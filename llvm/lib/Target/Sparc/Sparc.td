@@ -20,6 +20,30 @@ include "llvm/TableGen/SearchableTable.td"
 // SPARC Subtarget features.
 //
 
+// Some words about SPARC ISA versions and feature levels:
+// - V7: The first public version, used in some early Sun 4 models. Lacks integer
+//       multiply and divide in hardware, and doesn't have a formal memory model,
+//       though in practice the few multiprocessor machines that do exist
+//       are sequentially consistent.
+// - V8: Adds hardware multiply and divide, and formally defines TSO and PSO
+//       memory models. Most 32-bit chips currently used are of this version.
+// - V9: Adds 64-bit capability and RMO memory model, aside from new instructions.
+//       Note that unlike most other architectures, instructions that operate
+//       on 64-bit registers (e.g casx) are still available even in 32-bit ILP32
+//       mode - the G/O registers are always 64-bit regardless of runtime bitness.
+//       To let compilers take advantage of this feature, Sun defined an extension
+//       to the 32-bit ABI called V8+. It's still possible, though, to compile for
+//       V9 ISA level while not emitting any of the 64-bit instructions, that is
+//       why -mv8plus is defined separately from the usual -mcpu flags.
+//       (OTOH, the combination of `-mcpu=v8 -mv8plus` is effectively a no-op)
+//
+// As for memory models, the ordering from weakest to strongest is as follows:
+// (weaker) RMO -> PSO -> TSO -> SC (stronger)
+// Those are defined in such a way that code compiled for a weaker model will
+// run fine on processors that only implements a stronger model.
+// This is the route that we take in LLVM; compile for RMO when targeting v9,
+// and PSO when targeting v7/v8.
+
 def FeatureSoftMulDiv
   : SubtargetFeature<"soft-mul-div", "UseSoftMulDiv", "true",
                      "Use software emulation for integer multiply and divide">;
