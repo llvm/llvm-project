@@ -232,6 +232,6 @@ NB_MODULE(ir2vec, m) {
          const std::string &vocabPath) {
         return std::make_unique<PyIR2VecTool>(filename, mode, vocabPath);
       },
-      nb::arg("filename"), nb::arg("mode") = IR2VecKind::Symbolic,
+      nb::arg("filename"), nb::arg("mode"),
       nb::arg("vocabPath"), nb::rv_policy::take_ownership);
 }
