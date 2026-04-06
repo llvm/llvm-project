@@ -23,6 +23,9 @@ namespace NVVM {
 
 // Struct to store and check compatibility of SM versions.
 struct NVVMCheckSMVersion {
+  static constexpr char kArchAcceleratedSuffix = 'a';
+  static constexpr char kFamilySpecificSuffix = 'f';
+
   // List of supported full SM versions.
   // This is used to check compatibility with a target SM version.
   // The full SM version is encoded as SM * 10 + ArchSuffixOffset where:
@@ -60,8 +63,8 @@ struct NVVMCheckSMVersion {
   // Parses an SM version string and returns an equivalent full SM version
   // integer.
   static unsigned getTargetFullSmVersionFromStr(StringRef smVersionString) {
-    bool isAA = smVersionString.back() == 'a';
-    bool isFS = smVersionString.back() == 'f';
+    bool isAA = smVersionString.back() == kArchAcceleratedSuffix;
+    bool isFS = smVersionString.back() == kFamilySpecificSuffix;
 
     unsigned smVersion;
     smVersionString.drop_front(3)
