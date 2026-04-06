@@ -10360,9 +10360,95 @@ ConstantRange llvm::computeConstantRange(const Value *V, bool ForSigned,
   unsigned BitWidth = V->getType()->getScalarSizeInBits();
   InstrInfoQuery IIQ(UseInstrInfo);
   ConstantRange CR = ConstantRange::getFull(BitWidth);
-  if (auto *BO = dyn_cast<BinaryOperator>(V))
+  if (auto *BO = dyn_cast<BinaryOperator>(V)) {
     CR = getRangeForBinOp(*BO, IIQ, ForSigned);
-  else if (auto *II = dyn_cast<IntrinsicInst>(V))
+    // For these opcodes, recurse into operands to get a tighter range than
+    // getRangeForBinOp can produce with constant-only operand matching.
+    switch (BO->getOpcode()) {
+    case Instruction::UDiv: {
+      ConstantRange LHS =
+          computeConstantRange(BO->getOperand(0), /*ForSigned=*/false,
+                               UseInstrInfo, AC, CtxI, DT, Depth + 1);
+      ConstantRange RHS =
+          computeConstantRange(BO->getOperand(1), /*ForSigned=*/false,
+                               UseInstrInfo, AC, CtxI, DT, Depth + 1);
+      CR = CR.intersectWith(LHS.udiv(RHS));
+      break;
+    }
+    case Instruction::SDiv: {
+      ConstantRange LHS =
+          computeConstantRange(BO->getOperand(0), /*ForSigned=*/true,
+                               UseInstrInfo, AC, CtxI, DT, Depth + 1);
+      ConstantRange RHS =
+          computeConstantRange(BO->getOperand(1), /*ForSigned=*/true,
+                               UseInstrInfo, AC, CtxI, DT, Depth + 1);
+      CR = CR.intersectWith(LHS.sdiv(RHS));
+      break;
+    }
+    case Instruction::URem: {
+      ConstantRange LHS =
+          computeConstantRange(BO->getOperand(0), /*ForSigned=*/false,
+                               UseInstrInfo, AC, CtxI, DT, Depth + 1);
+      ConstantRange RHS =
+          computeConstantRange(BO->getOperand(1), /*ForSigned=*/false,
+                               UseInstrInfo, AC, CtxI, DT, Depth + 1);
+      CR = CR.intersectWith(LHS.urem(RHS));
+      break;
+    }
+    case Instruction::SRem: {
+      ConstantRange LHS =
+          computeConstantRange(BO->getOperand(0), /*ForSigned=*/true,
+                               UseInstrInfo, AC, CtxI, DT, Depth + 1);
+      ConstantRange RHS =
+          computeConstantRange(BO->getOperand(1), /*ForSigned=*/true,
+                               UseInstrInfo, AC, CtxI, DT, Depth + 1);
+      CR = CR.intersectWith(LHS.srem(RHS));
+      break;
+    }
+    case Instruction::Mul: {
+      ConstantRange LHS =
+          computeConstantRange(BO->getOperand(0), /*ForSigned=*/false,
+                               UseInstrInfo, AC, CtxI, DT, Depth + 1);
+      ConstantRange RHS =
+          computeConstantRange(BO->getOperand(1), /*ForSigned=*/false,
+                               UseInstrInfo, AC, CtxI, DT, Depth + 1);
+      CR = CR.intersectWith(LHS.multiply(RHS));
+      break;
+    }
+    case Instruction::Add: {
+      ConstantRange LHS = computeConstantRange(
+          BO->getOperand(0), ForSigned, UseInstrInfo, AC, CtxI, DT, Depth + 1);
+      ConstantRange RHS = computeConstantRange(
+          BO->getOperand(1), ForSigned, UseInstrInfo, AC, CtxI, DT, Depth + 1);
+      unsigned NoWrapKind =
+          cast<OverflowingBinaryOperator>(BO)->getNoWrapKind();
+      ConstantRange::PreferredRangeType RangeType =
+          ForSigned ? ConstantRange::Signed : ConstantRange::Unsigned;
+      ConstantRange Res = NoWrapKind
+                              ? LHS.addWithNoWrap(RHS, NoWrapKind, RangeType)
+                              : LHS.add(RHS);
+      CR = CR.intersectWith(Res);
+      break;
+    }
+    case Instruction::Sub: {
+      ConstantRange LHS = computeConstantRange(
+          BO->getOperand(0), ForSigned, UseInstrInfo, AC, CtxI, DT, Depth + 1);
+      ConstantRange RHS = computeConstantRange(
+          BO->getOperand(1), ForSigned, UseInstrInfo, AC, CtxI, DT, Depth + 1);
+      unsigned NoWrapKind =
+          cast<OverflowingBinaryOperator>(BO)->getNoWrapKind();
+      ConstantRange::PreferredRangeType RangeType =
+          ForSigned ? ConstantRange::Signed : ConstantRange::Unsigned;
+      ConstantRange Res = NoWrapKind
+                              ? LHS.subWithNoWrap(RHS, NoWrapKind, RangeType)
+                              : LHS.sub(RHS);
+      CR = CR.intersectWith(Res);
+      break;
+    }
+    default:
+      break;
+    }
+  } else if (auto *II = dyn_cast<IntrinsicInst>(V))
     CR = getRangeForIntrinsic(*II, UseInstrInfo);
   else if (auto *SI = dyn_cast<SelectInst>(V)) {
     ConstantRange CRTrue = computeConstantRange(
@@ -10371,6 +10457,10 @@ ConstantRange llvm::computeConstantRange(const Value *V, bool ForSigned,
         SI->getFalseValue(), ForSigned, UseInstrInfo, AC, CtxI, DT, Depth + 1);
     CR = CRTrue.unionWith(CRFalse);
     CR = CR.intersectWith(getRangeForSelectPattern(*SI, IIQ));
+  } else if (auto *TI = dyn_cast<TruncInst>(V)) {
+    ConstantRange SrcCR = computeConstantRange(
+        TI->getOperand(0), ForSigned, UseInstrInfo, AC, CtxI, DT, Depth + 1);
+    CR = SrcCR.truncate(BitWidth, TI->getNoWrapKind());
   } else if (isa<FPToUIInst>(V) || isa<FPToSIInst>(V))
     CR = getRangeForFPToI(cast<Instruction>(V));
   else if (const auto *A = dyn_cast<Argument>(V))
@@ -10404,9 +10494,8 @@ ConstantRange llvm::computeConstantRange(const Value *V, bool ForSigned,
       // Currently we just use information from comparisons.
       if (!Cmp || Cmp->getOperand(0) != V)
         continue;
-      // TODO: Set "ForSigned" parameter via Cmp->isSigned()?
       ConstantRange RHS =
-          computeConstantRange(Cmp->getOperand(1), /* ForSigned */ false,
+          computeConstantRange(Cmp->getOperand(1), Cmp->isSigned(),
                                UseInstrInfo, AC, I, DT, Depth + 1);
       CR = CR.intersectWith(
           ConstantRange::makeAllowedICmpRegion(Cmp->getPredicate(), RHS));

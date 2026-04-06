@@ -949,11 +949,7 @@ define i1 @not_mul_of_pow2(i32 %x, i8 %y) {
 
 define i1 @not_mul_of_pow2_commute(i32 %x, i32 %y) {
 ; CHECK-LABEL: @not_mul_of_pow2_commute(
-; CHECK-NEXT:    [[X30:%.*]] = and i32 [[X:%.*]], 12
-; CHECK-NEXT:    [[Y8:%.*]] = and i32 [[Y:%.*]], 255
-; CHECK-NEXT:    [[M:%.*]] = mul nuw nsw i32 [[Y8]], [[X30]]
-; CHECK-NEXT:    [[R:%.*]] = icmp samesign ugt i32 [[M]], 3060
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %x30 = and i32 %x, 12
   %y8 = and i32 %y, 255
