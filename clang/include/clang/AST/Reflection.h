@@ -10,16 +10,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-
 #ifndef LLVM_CLANG_AST_REFLECTION_H
 #define LLVM_CLANG_AST_REFLECTION_H
 namespace clang {
 
 // TODO(Reflection): Add support for Template, Namespace and DeclRefExpr.
-enum class ReflectionKind {
-  Type
-};
+enum class ReflectionKind { Type };
 
-}
+} // namespace clang
 
 #endif

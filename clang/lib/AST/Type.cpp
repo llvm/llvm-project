@@ -3119,7 +3119,7 @@ bool Type::isLiteralType(const ASTContext &Ctx) const {
   // -- std::meta::info is a scalar type
   // C++26 [basic.types]p10:
   // -- a scalar type is a literal type
-  if(isMetaInfoType())
+  if (isMetaInfoType())
     return true;
 
   // We treat _Atomic T as a literal type if T is a literal type.
