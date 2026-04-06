@@ -187,9 +187,9 @@ Expected<bool> LockFileManager::tryLock() {
   {
     SmallString<128> UniqueLockFilePattern = LockFileName;
     UniqueLockFilePattern += "-%%%%%%%%";
-    SmallString<128> UniquePath = UniqueLockFilePattern;
-    std::error_code EC =
-        sys::fs::createUniqueFile(UniquePath, UniqueLockFileID, UniquePath);
+    SmallString<128> UniquePath;
+    std::error_code EC = sys::fs::createUniqueFile(
+        UniqueLockFilePattern, UniqueLockFileID, UniquePath);
     if (EC == errc::no_such_file_or_directory) {
       SmallString<128> Dir = sys::path::parent_path(UniqueLockFilePattern);
       if (!Dir.empty()) {
@@ -199,8 +199,8 @@ Expected<bool> LockFileManager::tryLock() {
       }
 
       // Retry creating lock file
-      UniquePath = UniqueLockFilePattern;
-      EC = sys::fs::createUniqueFile(UniquePath, UniqueLockFileID, UniquePath);
+      EC = sys::fs::createUniqueFile(UniqueLockFilePattern, UniqueLockFileID,
+                                     UniquePath);
     }
 
     if (EC)
