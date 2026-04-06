@@ -374,18 +374,21 @@ const DeclRefExpr *WebAssemblyTargetCodeGenInfo::findDeclRefExprForVarDown(
   if (!Parent)
     return nullptr;
 
-  // Find down every assignment of V
-  // FIXME we need to stop before the expression where V is used
+  // Find down every assignment of V.
+  // Standalone expression statements appear as Expr nodes directly under the
+  // CompoundStmt, so cast each child to Expr (if possible) and check for
+  // a BinaryOperator assignment.
   const BinaryOperator *A = nullptr;
   for (const Stmt *Child : Parent->children()) {
-    if (const auto *BO = dyn_cast_or_null<BinaryOperator>(Child)) {
-      if (!BO->isAssignmentOp())
-        continue;
-      auto *LHS = llvm::dyn_cast<DeclRefExpr>(BO->getLHS());
-      if (LHS && LHS->getDecl() == V) {
-        A = BO;
-      }
-    }
+    const auto *BO = dyn_cast_or_null<BinaryOperator>(Child);
+    if (!BO)
+      if (const auto *E = dyn_cast_or_null<Expr>(Child))
+        BO = dyn_cast<BinaryOperator>(E->IgnoreParenCasts());
+    if (!BO || !BO->isAssignmentOp())
+      continue;
+    auto *LHS = llvm::dyn_cast<DeclRefExpr>(BO->getLHS());
+    if (LHS && LHS->getDecl() == V)
+      A = BO;
   }
 
   // We have an assignment of the Var, recurse in it
@@ -398,20 +401,19 @@ const DeclRefExpr *WebAssemblyTargetCodeGenInfo::findDeclRefExprForVarDown(
 
 const DeclRefExpr *WebAssemblyTargetCodeGenInfo::findDeclRefExprForVarUp(
     const Expr *E, const VarDecl *V, ASTContext &Ctx) const {
-  const clang::Stmt *cur = E;
-  while (cur) {
-    auto parents = Ctx.getParentMapContext().getParents(*cur);
+  // Use a DynTypedNode to walk parents, since a Stmt may be parented by a Decl
+  // (e.g. a VarDecl initializer) and get<Stmt>() would return nullptr there.
+  auto cur = clang::DynTypedNode::create(*E);
+  while (true) {
+    auto parents = Ctx.getParentMapContext().getParents(cur);
     if (parents.empty())
       break;
-    const clang::Stmt *parentStmt = parents[0].get<clang::Stmt>();
-    if (!parentStmt)
-      break;
-    if (const auto *CS = dyn_cast<clang::CompoundStmt>(parentStmt)) {
+    cur = parents[0];
+    if (const auto *CS = cur.get<clang::CompoundStmt>()) {
       const DeclRefExpr *DRE = findDeclRefExprForVarDown(CS, V, Ctx);
       if (DRE)
         return DRE;
     }
-    cur = parentStmt;
   }
   return nullptr;
 }

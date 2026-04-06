@@ -2670,6 +2670,27 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
   case CK_BlockPointerToObjCPointerCast:
   case CK_AnyPointerToBlockPointerCast:
   case CK_BitCast: {
+    // For WebAssembly, intercept function pointer bitcasts to a type with a
+    // different number of arguments and generate a thunk instead.  This is
+    // necessary because WebAssembly enforces strict call-site/callee signature
+    // matching at runtime.  The fix is gated on -fwasm-fix-function-bitcasts
+    // and only triggers when the source expression can be statically traced
+    // back to a concrete function declaration.
+    if (CGF.CGM.getTriple().isWasm() &&
+        CGF.CGM.getLangOpts().WasmFixFunctionBitcasts &&
+        DestTy->isFunctionPointerType()) {
+      if (const DeclRefExpr *DRE =
+              CGF.CGM.getTargetCodeGenInfo().getWasmFunctionDeclRefExpr(
+                  E, CGF.CGM.getContext())) {
+        llvm::Value *V = EmitLValue(DRE).getPointer(CGF);
+        llvm::Function *Thunk =
+            CGF.CGM.getTargetCodeGenInfo().getOrCreateWasmFunctionPointerThunk(
+                CGF.CGM, V, DRE->getDecl()->getType(), DestTy);
+        if (Thunk)
+          return Thunk;
+      }
+    }
+
     Value *Src = Visit(E);
     llvm::Type *SrcTy = Src->getType();
     llvm::Type *DstTy = ConvertType(DestTy);
