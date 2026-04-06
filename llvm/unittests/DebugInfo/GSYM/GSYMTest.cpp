@@ -61,8 +61,8 @@ TEST(GSYMTest, TestFileEntry) {
   EXPECT_EQ(empty1.Base, 0u);
   // Verify 64-bit values can be stored and retrieved
   FileEntry large(0x1'0000'0001, 0x2'0000'0002);
-  EXPECT_EQ(large.Dir, 0x1'0000'0001);
-  EXPECT_EQ(large.Base, 0x2'0000'0002);
+  EXPECT_EQ(large.Dir, 0x1'0000'0001ull);
+  EXPECT_EQ(large.Base, 0x2'0000'0002ull);
   // Verify equality operator works
   FileEntry a1(10, 30);
   FileEntry a2(10, 30);
