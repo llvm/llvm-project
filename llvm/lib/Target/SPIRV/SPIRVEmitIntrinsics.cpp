@@ -1662,7 +1662,11 @@ Instruction *SPIRVEmitIntrinsics::visitCallInst(CallInst &Call) {
     return &Call;
 
   LLVMContext &Ctx = CurrF->getContext();
-
+  // TODO: this does not retain elementtype info for memory constraints, which
+  //       in turn means that we lower them into pointers to i8, rather than
+  //       pointers to elementtype; this can be fixed during reverse translation
+  //       but we should correct it here, possibly by tweaking the function
+  //       type to take TypedPointerType args.
   Constant *TyC = UndefValue::get(SPIRV::getOriginalFunctionType(Call));
   MDString *ConstraintString =
       MDString::get(Ctx, SPIRV::getOriginalAsmConstraints(Call));

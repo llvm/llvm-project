@@ -604,7 +604,8 @@ static std::string fixMultiOutputConstraintString(StringRef Constraints) {
   SplitString(Constraints, Tmp, ",");
   std::string SafeConstraints("=r,");
   for (unsigned I = 0u; I != Tmp.size() - 1; ++I) {
-    if (Tmp[I].starts_with('=') && isalnum(Tmp[I][1]))
+    if (Tmp[I].starts_with('=') &&
+        (Tmp[I][1] == '&' || isalnum(Tmp[I][1])))
       continue;
     SafeConstraints.append(Tmp[I]).append({','});
   }
@@ -668,10 +669,11 @@ bool SPIRVPrepareFunctions::removeAggregateTypesFromCalls(Function *F) {
 
     std::string Constraints;
     if (auto *ASM = dyn_cast<InlineAsm>(CB->getCalledOperand())) {
-      Constraints = fixMultiOutputConstraintString(ASM->getConstraintString());
+      Constraints = ASM->getConstraintString();
 
       CB->setCalledOperand(InlineAsm::get(
-          NewFnTy, ASM->getAsmString(), Constraints, ASM->hasSideEffects(),
+          NewFnTy, ASM->getAsmString(),
+          fixMultiOutputConstraintString(Constraints), ASM->hasSideEffects(),
           ASM->isAlignStack(), ASM->getDialect(), ASM->canThrow()));
     }
 

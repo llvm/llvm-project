@@ -672,8 +672,7 @@ collectInlineAsmInstrOperands(MachineInstr *MI,
     if (MO.isReg() && MO.isDef()) {
       if (!Ops)
         return MO.getReg();
-      else
-        DefReg = MO.getReg();
+      DefReg = MO.getReg();
     } else if (Ops) {
       Ops->push_back(Idx);
     }
@@ -756,22 +755,26 @@ insertInlineAsmProcess(MachineFunction &MF, SPIRVGlobalRegistry *GR,
     for (unsigned IntrIdx = 3; IntrIdx < I1->getNumOperands(); ++IntrIdx)
       AsmCall.addUse(I1->getOperand(IntrIdx).getReg());
 
-    // IRTranslator gets a bit confused when lowering inline ASM with multiple,
-    // outputs (which we have to spoof as single i32 return), and inserts a
-    // spurious COPY & TRUNC as registers are assumed to be i64; we have to
-    // clean that up here to prevent an erroneous cast on a struct to get
-    // lowered into SPIR-V
-    if (FTy->getReturnType()->isStructTy()) {
-      MachineInstr &Copy = *++I2->getIterator();
-      MachineInstr &Trunc = *++Copy.getIterator();
-
-      assert(Copy.isCopy() && Trunc.getOpcode() == TargetOpcode::G_TRUNC &&
-             "Unexpected successors to inline ASM with multiple outputs!");
-
-      Register TruncReg = Trunc.defs().begin()->getReg();
-      MRI.replaceRegWith(TruncReg, DefReg);
-      invalidateAndEraseMI(GR, &Trunc);
-      invalidateAndEraseMI(GR, &Copy);
+    // IRTranslator gets a bit confused when lowering inline ASM with outputs
+    // and inserts a spurious COPY & TRUNC as registers are assumed to be i64;
+    // we have to clean that up here to prevent erroneous trunc casts either on
+    // a struct (for multiple outputs) or same width integers to get lowered
+    // into SPIR-V
+    if (MRI.hasOneUse(DefReg)) {
+      MachineInstr &CopyMI = *MRI.use_instr_begin(DefReg);
+      if (CopyMI.getOpcode() == TargetOpcode::COPY) {
+        Register CopyDst = CopyMI.getOperand(0).getReg();
+        if (MRI.hasOneUse(CopyDst)) {
+          MachineInstr &TruncMI = *MRI.use_instr_begin(CopyDst);
+          if (TruncMI.getOpcode() == TargetOpcode::G_TRUNC) {
+            MRI.setType(DefReg, GR->getRegType(RetType));
+            Register TruncReg = TruncMI.defs().begin()->getReg();
+            MRI.replaceRegWith(TruncReg, DefReg);
+            invalidateAndEraseMI(GR, &TruncMI);
+            invalidateAndEraseMI(GR, &CopyMI);
+          }
+        }
+      }
     }
   }
   for (MachineInstr *MI : ToProcess)
