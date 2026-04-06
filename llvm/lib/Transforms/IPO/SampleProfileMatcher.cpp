@@ -234,10 +234,12 @@ SampleProfileMatcher::longestCommonSequence(const AnchorList &AnchorList1,
 void SampleProfileMatcher::matchNonCallsiteLocs(
     const LocToLocMap &MatchedAnchors, const AnchorMap &IRAnchors,
     LocToLocMap &IRToProfileLocationMap) {
-  auto InsertMatching = [&](const LineLocation &From, const LineLocation &To) {
+  auto UpdateMatching = [&](const LineLocation &From, const LineLocation &To) {
     // Skip the unchanged location mapping to save memory.
     if (From != To)
-      IRToProfileLocationMap.insert({From, To});
+      IRToProfileLocationMap.insert_or_assign(From, To);
+    else
+      IRToProfileLocationMap.erase(From);
   };
 
   // Use function's beginning location as the initial anchor.
@@ -250,7 +252,7 @@ void SampleProfileMatcher::matchNonCallsiteLocs(
     auto R = MatchedAnchors.find(Loc);
     if (R != MatchedAnchors.end()) {
       const auto &Candidate = R->second;
-      InsertMatching(Loc, Candidate);
+      UpdateMatching(Loc, Candidate);
       LLVM_DEBUG(dbgs() << "Callsite with callee:" << IR.second.stringRef()
                         << " is matched from " << Loc << " to " << Candidate
                         << "\n");
@@ -258,14 +260,14 @@ void SampleProfileMatcher::matchNonCallsiteLocs(
 
       // Match backwards for non-anchor locations.
       // The locations in LastMatchedNonAnchors have been matched forwards
-      // based on the previous anchor, spilt it evenly and overwrite the
+      // based on the previous anchor, split it evenly and overwrite the
       // second half based on the current anchor.
       for (size_t I = (LastMatchedNonAnchors.size() + 1) / 2;
            I < LastMatchedNonAnchors.size(); I++) {
         const auto &L = LastMatchedNonAnchors[I];
         uint32_t CandidateLineOffset = L.LineOffset + LocationDelta;
         LineLocation Candidate(CandidateLineOffset, L.Discriminator);
-        InsertMatching(L, Candidate);
+        UpdateMatching(L, Candidate);
         LLVM_DEBUG(dbgs() << "Location is rematched backwards from " << L
                           << " to " << Candidate << "\n");
       }
@@ -278,7 +280,7 @@ void SampleProfileMatcher::matchNonCallsiteLocs(
     if (!IsMatchedAnchor) {
       uint32_t CandidateLineOffset = Loc.LineOffset + LocationDelta;
       LineLocation Candidate(CandidateLineOffset, Loc.Discriminator);
-      InsertMatching(Loc, Candidate);
+      UpdateMatching(Loc, Candidate);
       LLVM_DEBUG(dbgs() << "Location is matched from " << Loc << " to "
                         << Candidate << "\n");
       LastMatchedNonAnchors.emplace_back(Loc);
