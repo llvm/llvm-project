@@ -1580,7 +1580,6 @@ template <typename CreatorT> static void TestDWARFFunctionWithAddresses() {
   FileWriter FW(OutStrm, ByteOrder);
   FW.setStringOffsetSize(GC.getStringOffsetSize());
   ASSERT_THAT_ERROR(GC.encode(FW), Succeeded());
-  // Auto-detects the GSYM version and create the corresponding GsymReader
   auto GROrErr = GsymReader::copyBuffer(OutStrm.str());
   ASSERT_THAT_EXPECTED(GROrErr, Succeeded());
   const std::unique_ptr<GsymReader> &GR = *GROrErr;
@@ -2133,7 +2132,7 @@ template <typename CreatorT> static void TestDWARFInlineInfo() {
   ASSERT_THAT_EXPECTED(LR, Succeeded());
   EXPECT_THAT(LR->Locations,
     testing::ElementsAre(SourceLocation{"main", "/tmp", "main.c", 10}));
-  LR = GR->lookup(0x1100 - 1);
+  LR = GR->lookup(0x1100-1);
   ASSERT_THAT_EXPECTED(LR, Succeeded());
   EXPECT_THAT(LR->Locations,
     testing::ElementsAre(SourceLocation{"main", "/tmp", "main.c", 10, 255}));
@@ -2143,7 +2142,7 @@ template <typename CreatorT> static void TestDWARFInlineInfo() {
   EXPECT_THAT(LR->Locations,
     testing::ElementsAre(SourceLocation{"inline1", "/tmp", "inline.h", 20},
                          SourceLocation{"main", "/tmp", "main.c", 10, 256}));
-  LR = GR->lookup(0x1180 - 1);
+  LR = GR->lookup(0x1180-1);
   ASSERT_THAT_EXPECTED(LR, Succeeded());
   EXPECT_THAT(LR->Locations,
     testing::ElementsAre(SourceLocation{"inline1", "/tmp", "inline.h", 20, 127},
@@ -2153,7 +2152,7 @@ template <typename CreatorT> static void TestDWARFInlineInfo() {
   EXPECT_THAT(LR->Locations,
     testing::ElementsAre(SourceLocation{"inline1", "/tmp", "inline.h", 21, 128},
                          SourceLocation{"main", "/tmp", "main.c", 10, 384}));
-  LR = GR->lookup(0x1200 - 1);
+  LR = GR->lookup(0x1200-1);
   ASSERT_THAT_EXPECTED(LR, Succeeded());
   EXPECT_THAT(LR->Locations,
     testing::ElementsAre(SourceLocation{"inline1", "/tmp", "inline.h", 21, 255},
@@ -2764,8 +2763,7 @@ TEST(GSYMTest, TestGsymCreatorV2MultipleSymbolsWithNoSize) {
   TestGsymCreatorMultipleSymbolsWithNoSizeImpl<GsymCreatorV2>(1, 8, 8);
 }
 
-// Helper function to quickly create a FunctionInfo in a GsymCreatorV1 for
-// testing.
+// Helper function to quickly create a FunctionInfo in a GsymCreator for testing.
 static void AddFunctionInfo(GsymCreator &GC, const char *FuncName,
                             uint64_t FuncAddr, const char *SourcePath,
                             const char *HeaderPath) {
@@ -2805,8 +2803,8 @@ static void AddFunctionInfo(GsymCreator &GC, const char *FuncName,
   GC.addFunctionInfo(std::move(FI));
 }
 
-// Finalize a GsymCreatorV1, encode it and decode it and return the error or
-// GsymReaderV1 that was successfully decoded.
+// Finalize a GsymCreator, encode it and decode it and return the error or
+// GsymReader that was successfully decoded.
 static Expected<std::unique_ptr<GsymReader>>
 FinalizeEncodeAndDecode(GsymCreator &GC) {
   OutputAggregator Null(nullptr);
@@ -2842,11 +2840,11 @@ static void TestGsymSegmenting(uint64_t SegmentSize) {
   const std::unique_ptr<GsymReader> &GR = *GROrErr;
 
   // Create segmented GSYM files where each file contains 1 function. We will
-  // then test doing lookups on the full GSYM file and then test doing lookups
-  // on the GsymReader objects for each segment to ensure we get the exact same
-  // information. So after all of the code below we will have GsymReader objects
-  // that each contain one function. We name the creators and readers to match
-  // the one and only address they contain.
+  // then test doing lookups on the "GR", or the full GSYM file and then test
+  // doing lookups on the GsymReader objects for each segment to ensure we get
+  // the exact same information. So after all of the code below we will have
+  // GsymReader objects that each contain one function. We name the creators
+  // and readers to match the one and only address they contain.
   // GC1000 and GR1000 are for [0x1000-0x1030)
   // GC2000 and GR2000 are for [0x2000-0x2030)
   // GC3000 and GR3000 are for [0x3000-0x3030)
@@ -2882,7 +2880,7 @@ static void TestGsymSegmenting(uint64_t SegmentSize) {
       GC.createSegment(SegmentSize, FuncIdx);
   ASSERT_THAT_EXPECTED(GC4000, Succeeded());
   ASSERT_EQ(FuncIdx, (size_t)4);
-  // When there are no function infos left to encode we expect to get no error
+  // When there are no function infos left to encode we expect to get  no error
   // and get a NULL GsymCreator in the return value from createSegment.
   llvm::Expected<std::unique_ptr<GsymCreator>> GCNull =
       GC.createSegment(SegmentSize, FuncIdx);
@@ -2893,60 +2891,83 @@ static void TestGsymSegmenting(uint64_t SegmentSize) {
   ASSERT_TRUE(GC4000.get() != nullptr);
   ASSERT_TRUE(GCNull.get() == nullptr);
   // Encode and decode the GsymReader for each segment and verify they succeed.
-  auto GR1000 = FinalizeEncodeAndDecode(*GC1000.get());
+  Expected<std::unique_ptr<GsymReader>> GR1000 = FinalizeEncodeAndDecode(*GC1000.get());
   ASSERT_THAT_EXPECTED(GR1000, Succeeded());
-  auto GR2000 = FinalizeEncodeAndDecode(*GC2000.get());
+  Expected<std::unique_ptr<GsymReader>> GR2000 = FinalizeEncodeAndDecode(*GC2000.get());
   ASSERT_THAT_EXPECTED(GR2000, Succeeded());
-  auto GR3000 = FinalizeEncodeAndDecode(*GC3000.get());
+  Expected<std::unique_ptr<GsymReader>> GR3000 = FinalizeEncodeAndDecode(*GC3000.get());
   ASSERT_THAT_EXPECTED(GR3000, Succeeded());
-  auto GR4000 = FinalizeEncodeAndDecode(*GC4000.get());
+  Expected<std::unique_ptr<GsymReader>> GR4000 = FinalizeEncodeAndDecode(*GC4000.get());
   ASSERT_THAT_EXPECTED(GR4000, Succeeded());
 
   // Verify that all lookups match the range [0x1000-0x1030) when doing lookups
   // in the GsymReader that contains all functions and from the segmented
   // GsymReader in GR1000.
   for (uint64_t Addr = 0x1000; Addr < 0x1030; ++Addr) {
+    // Lookup in the main GsymReader that contains all function infos
     auto MainLR = GR->lookup(Addr);
     ASSERT_THAT_EXPECTED(MainLR, Succeeded());
     auto SegmentLR = (*GR1000)->lookup(Addr);
     ASSERT_THAT_EXPECTED(SegmentLR, Succeeded());
+    // Make sure the lookup results match.
     EXPECT_EQ(MainLR.get(), SegmentLR.get());
+    // Make sure that the lookups on the functions that are not in the segment
+    // fail as expected.
     ASSERT_THAT_EXPECTED((*GR1000)->lookup(0x2000), Failed());
     ASSERT_THAT_EXPECTED((*GR1000)->lookup(0x3000), Failed());
     ASSERT_THAT_EXPECTED((*GR1000)->lookup(0x4000), Failed());
   }
 
-  // Verify that all lookups match the range [0x2000-0x2030).
+  // Verify that all lookups match the range [0x2000-0x2030) when doing lookups
+  // in the GsymReader that contains all functions and from the segmented
+  // GsymReader in GR2000.
   for (uint64_t Addr = 0x2000; Addr < 0x2030; ++Addr) {
+    // Lookup in the main GsymReader that contains all function infos
     auto MainLR = GR->lookup(Addr);
     ASSERT_THAT_EXPECTED(MainLR, Succeeded());
     auto SegmentLR = (*GR2000)->lookup(Addr);
     ASSERT_THAT_EXPECTED(SegmentLR, Succeeded());
+    // Make sure the lookup results match.
     EXPECT_EQ(MainLR.get(), SegmentLR.get());
+    // Make sure that the lookups on the functions that are not in the segment
+    // fail as expected.
     ASSERT_THAT_EXPECTED((*GR2000)->lookup(0x1000), Failed());
     ASSERT_THAT_EXPECTED((*GR2000)->lookup(0x3000), Failed());
     ASSERT_THAT_EXPECTED((*GR2000)->lookup(0x4000), Failed());
   }
 
-  // Verify that all lookups match the range [0x3000-0x3030).
+  // Verify that all lookups match the range [0x3000-0x3030) when doing lookups
+  // in the GsymReader that contains all functions and from the segmented
+  // GsymReader in GR3000.
   for (uint64_t Addr = 0x3000; Addr < 0x3030; ++Addr) {
+    // Lookup in the main GsymReader that contains all function infos
     auto MainLR = GR->lookup(Addr);
     ASSERT_THAT_EXPECTED(MainLR, Succeeded());
     auto SegmentLR = (*GR3000)->lookup(Addr);
     ASSERT_THAT_EXPECTED(SegmentLR, Succeeded());
+    // Make sure the lookup results match.
     EXPECT_EQ(MainLR.get(), SegmentLR.get());
+    // Make sure that the lookups on the functions that are not in the segment
+    // fail as expected.
     ASSERT_THAT_EXPECTED((*GR3000)->lookup(0x1000), Failed());
     ASSERT_THAT_EXPECTED((*GR3000)->lookup(0x2000), Failed());
     ASSERT_THAT_EXPECTED((*GR3000)->lookup(0x4000), Failed());
   }
 
-  // Verify that all lookups match the range [0x4000-0x4030).
+  // Verify that all lookups match the range [0x4000-0x4030) when doing lookups
+  // in the GsymReader that contains all functions and from the segmented
+  // GsymReader in GR4000.
   for (uint64_t Addr = 0x4000; Addr < 0x4030; ++Addr) {
+    // Lookup in the main GsymReader that contains all function infos
     auto MainLR = GR->lookup(Addr);
     ASSERT_THAT_EXPECTED(MainLR, Succeeded());
+    // Lookup in the GsymReader for that contains 0x4000
     auto SegmentLR = (*GR4000)->lookup(Addr);
     ASSERT_THAT_EXPECTED(SegmentLR, Succeeded());
+    // Make sure the lookup results match.
     EXPECT_EQ(MainLR.get(), SegmentLR.get());
+    // Make sure that the lookups on the functions that are not in the segment
+    // fail as expected.
     ASSERT_THAT_EXPECTED((*GR4000)->lookup(0x1000), Failed());
     ASSERT_THAT_EXPECTED((*GR4000)->lookup(0x2000), Failed());
     ASSERT_THAT_EXPECTED((*GR4000)->lookup(0x3000), Failed());
@@ -2972,14 +2993,29 @@ static void TestGsymSegmentingNoBase(uint64_t SegmentSize) {
   ASSERT_THAT_EXPECTED(GROrErr, Succeeded());
   const std::unique_ptr<GsymReader> &GR = *GROrErr;
 
-  // Create segmented GSYM files where each file contains 1 function.
+  // Create segmented GSYM files where each file contains 1 function. We will
+  // then test doing lookups on the "GR", or the full GSYM file and then test
+  // doing lookups on the GsymReader objects for each segment to ensure we get
+  // the exact same information. So after all of the code below we will have
+  // GsymReader objects that each contain one function. We name the creators
+  // and readers to match the one and only address they contain.
+  // GC1000 and GR1000 are for [0x1000-0x1030)
+  // GC2000 and GR2000 are for [0x2000-0x2030)
+  // GC3000 and GR3000 are for [0x3000-0x3030)
+  // GC4000 and GR4000 are for [0x4000-0x4030)
+
+  // Create the segments and verify that FuncIdx, an in/out parameter, gets
+  // updated as expected.
   size_t FuncIdx = 0;
+  // Make sure we get an error if the segment size is too small to encode a
+  // single function info.
   llvm::Expected<std::unique_ptr<GsymCreator>> GCError =
       GC.createSegment(57, FuncIdx);
   ASSERT_FALSE((bool)GCError);
   checkError("a segment size of 57 is to small to fit any function infos, "
-             "specify a larger value",
-             GCError.takeError());
+             "specify a larger value", GCError.takeError());
+  // Make sure that the function index didn't get incremented when we didn't
+  // encode any values into the segmented GsymCreator.
   ASSERT_EQ(FuncIdx, (size_t)0);
 
   llvm::Expected<std::unique_ptr<GsymCreator>> GC1000 =
@@ -2998,6 +3034,8 @@ static void TestGsymSegmentingNoBase(uint64_t SegmentSize) {
       GC.createSegment(SegmentSize, FuncIdx);
   ASSERT_THAT_EXPECTED(GC4000, Succeeded());
   ASSERT_EQ(FuncIdx, (size_t)4);
+  // When there are no function infos left to encode we expect to get  no error
+  // and get a NULL GsymCreator in the return value from createSegment.
   llvm::Expected<std::unique_ptr<GsymCreator>> GCNull =
       GC.createSegment(SegmentSize, FuncIdx);
   ASSERT_THAT_EXPECTED(GCNull, Succeeded());
@@ -3006,55 +3044,84 @@ static void TestGsymSegmentingNoBase(uint64_t SegmentSize) {
   ASSERT_TRUE(GC3000.get() != nullptr);
   ASSERT_TRUE(GC4000.get() != nullptr);
   ASSERT_TRUE(GCNull.get() == nullptr);
-
-  auto GR1000 = FinalizeEncodeAndDecode(*GC1000.get());
+  // Encode and decode the GsymReader for each segment and verify they succeed.
+  Expected<std::unique_ptr<GsymReader>> GR1000 = FinalizeEncodeAndDecode(*GC1000.get());
   ASSERT_THAT_EXPECTED(GR1000, Succeeded());
-  auto GR2000 = FinalizeEncodeAndDecode(*GC2000.get());
+  Expected<std::unique_ptr<GsymReader>> GR2000 = FinalizeEncodeAndDecode(*GC2000.get());
   ASSERT_THAT_EXPECTED(GR2000, Succeeded());
-  auto GR3000 = FinalizeEncodeAndDecode(*GC3000.get());
+  Expected<std::unique_ptr<GsymReader>> GR3000 = FinalizeEncodeAndDecode(*GC3000.get());
   ASSERT_THAT_EXPECTED(GR3000, Succeeded());
-  auto GR4000 = FinalizeEncodeAndDecode(*GC4000.get());
+  Expected<std::unique_ptr<GsymReader>> GR4000 = FinalizeEncodeAndDecode(*GC4000.get());
   ASSERT_THAT_EXPECTED(GR4000, Succeeded());
 
+  // Verify that all lookups match the range [0x1000-0x1030) when doing lookups
+  // in the GsymReader that contains all functions and from the segmented
+  // GsymReader in GR1000.
   for (uint64_t Addr = 0x1000; Addr < 0x1030; ++Addr) {
+    // Lookup in the main GsymReader that contains all function infos
     auto MainLR = GR->lookup(Addr);
     ASSERT_THAT_EXPECTED(MainLR, Succeeded());
     auto SegmentLR = (*GR1000)->lookup(Addr);
     ASSERT_THAT_EXPECTED(SegmentLR, Succeeded());
+    // Make sure the lookup results match.
     EXPECT_EQ(MainLR.get(), SegmentLR.get());
+    // Make sure that the lookups on the functions that are not in the segment
+    // fail as expected.
     ASSERT_THAT_EXPECTED((*GR1000)->lookup(0x2000), Failed());
     ASSERT_THAT_EXPECTED((*GR1000)->lookup(0x3000), Failed());
     ASSERT_THAT_EXPECTED((*GR1000)->lookup(0x4000), Failed());
   }
 
+  // Verify that all lookups match the range [0x2000-0x2030) when doing lookups
+  // in the GsymReader that contains all functions and from the segmented
+  // GsymReader in GR2000.
   for (uint64_t Addr = 0x2000; Addr < 0x2030; ++Addr) {
+    // Lookup in the main GsymReader that contains all function infos
     auto MainLR = GR->lookup(Addr);
     ASSERT_THAT_EXPECTED(MainLR, Succeeded());
     auto SegmentLR = (*GR2000)->lookup(Addr);
     ASSERT_THAT_EXPECTED(SegmentLR, Succeeded());
+    // Make sure the lookup results match.
     EXPECT_EQ(MainLR.get(), SegmentLR.get());
+    // Make sure that the lookups on the functions that are not in the segment
+    // fail as expected.
     ASSERT_THAT_EXPECTED((*GR2000)->lookup(0x1000), Failed());
     ASSERT_THAT_EXPECTED((*GR2000)->lookup(0x3000), Failed());
     ASSERT_THAT_EXPECTED((*GR2000)->lookup(0x4000), Failed());
   }
 
+  // Verify that all lookups match the range [0x3000-0x3030) when doing lookups
+  // in the GsymReader that contains all functions and from the segmented
+  // GsymReader in GR3000.
   for (uint64_t Addr = 0x3000; Addr < 0x3030; ++Addr) {
+    // Lookup in the main GsymReader that contains all function infos
     auto MainLR = GR->lookup(Addr);
     ASSERT_THAT_EXPECTED(MainLR, Succeeded());
     auto SegmentLR = (*GR3000)->lookup(Addr);
     ASSERT_THAT_EXPECTED(SegmentLR, Succeeded());
+    // Make sure the lookup results match.
     EXPECT_EQ(MainLR.get(), SegmentLR.get());
+    // Make sure that the lookups on the functions that are not in the segment
+    // fail as expected.
     ASSERT_THAT_EXPECTED((*GR3000)->lookup(0x1000), Failed());
     ASSERT_THAT_EXPECTED((*GR3000)->lookup(0x2000), Failed());
     ASSERT_THAT_EXPECTED((*GR3000)->lookup(0x4000), Failed());
   }
 
+  // Verify that all lookups match the range [0x4000-0x4030) when doing lookups
+  // in the GsymReader that contains all functions and from the segmented
+  // GsymReader in GR4000.
   for (uint64_t Addr = 0x4000; Addr < 0x4030; ++Addr) {
+    // Lookup in the main GsymReader that contains all function infos
     auto MainLR = GR->lookup(Addr);
     ASSERT_THAT_EXPECTED(MainLR, Succeeded());
+    // Lookup in the GsymReader for that contains 0x4000
     auto SegmentLR = (*GR4000)->lookup(Addr);
     ASSERT_THAT_EXPECTED(SegmentLR, Succeeded());
+    // Make sure the lookup results match.
     EXPECT_EQ(MainLR.get(), SegmentLR.get());
+    // Make sure that the lookups on the functions that are not in the segment
+    // fail as expected.
     ASSERT_THAT_EXPECTED((*GR4000)->lookup(0x1000), Failed());
     ASSERT_THAT_EXPECTED((*GR4000)->lookup(0x2000), Failed());
     ASSERT_THAT_EXPECTED((*GR4000)->lookup(0x3000), Failed());
