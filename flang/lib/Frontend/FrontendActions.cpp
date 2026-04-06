@@ -1046,8 +1046,8 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
   llvm::ModulePassManager mpm;
   // The module summary should be emitted by default for regular LTO
   // except for ld64 targets.
-  bool emitSummary =
-      opts.PrepareForFullLTO && (triple.getVendor() != llvm::Triple::Apple);
+  bool emitSummary = (opts.PrepareForFullLTO || opts.PrepareForThinLTO) &&
+                     (triple.getVendor() != llvm::Triple::Apple);
   if (opts.PrepareForFatLTO)
     mpm = pb.buildFatLTODefaultPipeline(level, opts.PrepareForThinLTO,
                                         emitSummary);
@@ -1060,23 +1060,17 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
 
   if (action == BackendActionTy::Backend_EmitBC ||
       action == BackendActionTy::Backend_EmitLL || opts.PrepareForFatLTO) {
-    if (opts.PrepareForThinLTO) {
-      // TODO: ThinLTO module summary support is yet to be enabled.
-      if (action == BackendActionTy::Backend_EmitBC)
-        mpm.addPass(llvm::BitcodeWriterPass(os));
-      else if (action == BackendActionTy::Backend_EmitLL)
-        mpm.addPass(llvm::PrintModulePass(os));
-    } else {
+    if (!opts.PrepareForThinLTO)
       if (emitSummary && !llvmModule->getModuleFlag("ThinLTO"))
         llvmModule->addModuleFlag(llvm::Module::Error, "ThinLTO", uint32_t(0));
-      if (action == BackendActionTy::Backend_EmitBC)
-        mpm.addPass(llvm::BitcodeWriterPass(
-            os, /*ShouldPreserveUseListOrder=*/false, emitSummary));
-      else if (action == BackendActionTy::Backend_EmitLL)
-        mpm.addPass(llvm::PrintModulePass(os, /*Banner=*/"",
-                                          /*ShouldPreserveUseListOrder=*/false,
+
+    if (action == BackendActionTy::Backend_EmitBC)
+      mpm.addPass(llvm::BitcodeWriterPass(os, /*ShouldPreserveUseListOrder=*/false,
                                           emitSummary));
-    }
+    else if (action == BackendActionTy::Backend_EmitLL)
+      mpm.addPass(llvm::PrintModulePass(os, /*Banner=*/"",
+                                        /*ShouldPreserveUseListOrder=*/false,
+                                        emitSummary));
   }
 
   // FIXME: This should eventually be replaced by a first-class driver option.

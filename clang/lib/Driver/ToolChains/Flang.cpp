@@ -276,9 +276,6 @@ void Flang::addLTOOptions(const ArgList &Args, ArgStringList &CmdArgs) const {
   if (LTOMode == LTOK_Full)
     CmdArgs.push_back("-flto=full");
   else if (LTOMode == LTOK_Thin) {
-    Diags.Report(
-        Diags.getCustomDiagID(DiagnosticsEngine::Warning,
-                              "the option '-flto=thin' is a work in progress"));
     CmdArgs.push_back("-flto=thin");
   }
   Args.addAllArgs(CmdArgs, {options::OPT_ffat_lto_objects,
