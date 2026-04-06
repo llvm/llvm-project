@@ -1,5 +1,9 @@
 # RUN: llc -O0 -run-pass=aarch64-prelegalizer-combiner -global-isel %s -o - | FileCheck %s
+# RUN: llc -O0 -passes='require<libcall-lowering-info>,function(machine-function(aarch64-prelegalizer-combiner))' -global-isel %s -o - | FileCheck %s
 # RUN: llc -O0 -run-pass=aarch64-prelegalizer-combiner -global-isel %s -o - \
+# RUN:   -debug-only=aarch64-prelegalizer-combiner,gi-combiner 2>&1 >/dev/null \
+# RUN:   | FileCheck %s --check-prefix=CHECK-WORKLIST
+# RUN: llc -O0 -passes='require<libcall-lowering-info>,function(machine-function(aarch64-prelegalizer-combiner))' -global-isel %s -o - \
 # RUN:   -debug-only=aarch64-prelegalizer-combiner,gi-combiner 2>&1 >/dev/null \
 # RUN:   | FileCheck %s --check-prefix=CHECK-WORKLIST
 
