@@ -76,6 +76,20 @@ void use_static_decl() {
 // LLVM:   ret void
 }
 
+void use_static_decl() {
+  static int x = 42;
+  static int *p = &x;
+}
+
+// CIR-DAG: cir.global "private" internal dso_local @_ZZ15use_static_declvE1p = #cir.global_view<@_ZZ15use_static_declvE1x> : !cir.ptr<!s32i>
+// CIR-DAG: cir.global "private" internal dso_local @_ZZ15use_static_declvE1x = #cir.int<42> : !s32i
+
+// LLVM-DAG: @_ZZ15use_static_declvE1p = internal global ptr @_ZZ15use_static_declvE1x
+// LLVM-DAG: @_ZZ15use_static_declvE1x = internal global i32 42
+
+// OGCG-DAG: @_ZZ15use_static_declvE1x = internal global i32 42
+// OGCG-DAG: @_ZZ15use_static_declvE1p = internal global ptr @_ZZ15use_static_declvE1x
+
 class A {
 public:
   A();
