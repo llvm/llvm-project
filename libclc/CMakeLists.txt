@@ -39,7 +39,7 @@ set(LIBCLC_TARGET ${LLVM_RUNTIMES_TARGET})
 if(NOT LIBCLC_TARGET)
   message(FATAL_ERROR "libclc target is empty\n")
 endif()
-if(NOT ${LIBCLC_TARGET} IN_LIST LIBCLC_TARGETS_ALL)
+if(NOT "${LIBCLC_TARGET}" IN_LIST LIBCLC_TARGETS_ALL)
   message(FATAL_ERROR "Unknown libclc target: ${LIBCLC_TARGET}\n"
     "Valid targets are: ${LIBCLC_TARGETS_ALL}\n")
 endif()
