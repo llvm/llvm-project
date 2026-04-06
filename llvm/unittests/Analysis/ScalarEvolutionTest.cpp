@@ -1520,7 +1520,7 @@ TEST_F(ScalarEvolutionsTest, MatchURem) {
   runWithSE(*M, "test", [&](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
     for (auto *N : {"rem1", "rem2", "rem3", "rem5"}) {
       auto *URemI = getInstructionByName(F, N);
-      auto *S = SE.getSCEV(URemI);
+      SCEVUse S = SE.getSCEV(URemI);
       const SCEV *LHS, *RHS;
       EXPECT_TRUE(match(S, m_scev_URem(m_SCEV(LHS), m_SCEV(RHS), SE)));
       EXPECT_EQ(LHS, SE.getSCEV(URemI->getOperand(0)));
@@ -1533,7 +1533,7 @@ TEST_F(ScalarEvolutionsTest, MatchURem) {
     // match results are extended to the size of the input expression.
     auto *Ext = getInstructionByName(F, "ext");
     auto *URem1 = getInstructionByName(F, "rem4");
-    auto *S = SE.getSCEV(Ext);
+    SCEVUse S = SE.getSCEV(Ext);
     const SCEV *LHS, *RHS;
     EXPECT_TRUE(match(S, m_scev_URem(m_SCEV(LHS), m_SCEV(RHS), SE)));
     EXPECT_NE(LHS, SE.getSCEV(URem1->getOperand(0)));
@@ -1660,11 +1660,11 @@ TEST_F(ScalarEvolutionsTest, ForgetValueWithOverflowInst) {
     auto *ExtractValue = getInstructionByName(F, "extractvalue");
     auto *IV = getInstructionByName(F, "iv");
 
-    auto *ExtractValueScev = SE.getSCEV(ExtractValue);
+    SCEVUse ExtractValueScev = SE.getSCEV(ExtractValue);
     EXPECT_NE(ExtractValueScev, nullptr);
 
     SE.forgetValue(IV);
-    auto *ExtractValueScevForgotten = SE.getExistingSCEV(ExtractValue);
+    SCEVUse ExtractValueScevForgotten = SE.getExistingSCEV(ExtractValue);
     EXPECT_EQ(ExtractValueScevForgotten, nullptr);
   });
 }

@@ -1652,7 +1652,7 @@ bool InductionDescriptor::isInductionPHI(
     return false;
 
   // Check that the PHI is consecutive.
-  const SCEV *PhiScev = Expr ? Expr : SE->getSCEV(Phi);
+  const SCEV *PhiScev = Expr ? Expr : SE->getSCEV(Phi).getPointer();
   const SCEV *Step;
 
   // FIXME: We are currently matching the specific loop TheLoop; if it doesn't
