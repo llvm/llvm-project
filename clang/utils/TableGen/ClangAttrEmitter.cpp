@@ -1469,25 +1469,57 @@ namespace {
   };
 
   class WrappedAttr : public SimpleArgument {
+    std::string AttrType; // C++ class name for the wrapped attr
+
   public:
     WrappedAttr(const Record &Arg, StringRef Attr)
-        : SimpleArgument(Arg, Attr, "Attr *") {}
+        : SimpleArgument(Arg, Attr,
+                         (Arg.getValueAsString("AttrType") + " *").str()),
+          AttrType(Arg.getValueAsString("AttrType")) {}
+
+    void writeAccessors(raw_ostream &OS) const override {
+      OS << "  " << getType() << " get" << getUpperName() << "() const {\n";
+      OS << "    return " << getLowerName() << ";\n";
+      OS << "  }\n";
+      OS << "  void set" << getUpperName() << "(" << getType() << " V) {\n";
+      OS << "    " << getLowerName() << " = V;\n";
+      OS << "  }";
+    }
 
     void writePCHReadDecls(raw_ostream &OS) const override {
-      OS << "    Attr *" << getLowerName() << " = Record.readAttr();";
+      OS << "    " << getType() << " " << getLowerName() << " = cast_or_null<"
+         << AttrType << ">(Record.readAttr());";
     }
 
     void writePCHWrite(raw_ostream &OS) const override {
       OS << "    AddAttr(SA->get" << getUpperName() << "());";
     }
 
+    std::string getIsOmitted() const override {
+      if (isOptional())
+        return "!get" + getUpperName().str() + "()";
+      return "false";
+    }
+
+    void writeValue(raw_ostream &OS) const override {}
+
     void writeDump(raw_ostream &OS) const override {}
 
     void writeDumpChildren(raw_ostream &OS) const override {
-      OS << "    Visit(SA->get" << getUpperName() << "());\n";
+      if (isOptional()) {
+        OS << "    if (auto *W = SA->get" << getUpperName() << "())\n";
+        OS << "      Visit(W);\n";
+      } else {
+        OS << "    Visit(SA->get" << getUpperName() << "());\n";
+      }
     }
 
-    void writeHasChildren(raw_ostream &OS) const override { OS << "true"; }
+    void writeHasChildren(raw_ostream &OS) const override {
+      if (isOptional())
+        OS << "SA->get" << getUpperName() << "() != nullptr";
+      else
+        OS << "true";
+    }
   };
 
   } // end anonymous namespace

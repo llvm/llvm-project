@@ -2954,14 +2954,15 @@ DiagnoseHLSLAvailability::FindAvailabilityAttr(const Decl *D) {
   // environment.
   for (const auto *A : D->attrs()) {
     if (const auto *Avail = dyn_cast<AvailabilityAttr>(A)) {
-      StringRef AttrPlatform = Avail->getPlatform()->getName();
+      const AvailabilityAttr *EffectiveAvail = Avail->getEffectiveAttr();
+      StringRef AttrPlatform = EffectiveAvail->getPlatform()->getName();
       StringRef TargetPlatform =
           SemaRef.getASTContext().getTargetInfo().getPlatformName();
 
       // Match the platform name.
       if (AttrPlatform == TargetPlatform) {
         // Find the best matching attribute for this environment
-        if (HasMatchingEnvironmentOrNone(Avail))
+        if (HasMatchingEnvironmentOrNone(EffectiveAvail))
           return Avail;
         PartialMatch = Avail;
       }
