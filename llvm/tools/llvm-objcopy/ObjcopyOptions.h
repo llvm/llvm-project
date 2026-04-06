@@ -57,7 +57,8 @@ parseStripOptions(ArrayRef<const char *> ArgsArr,
 // print the help messege and exit. ErrorCallback is used to handle recoverable
 // errors. An Error returned by the callback aborts the parsing and is then
 // returned by this function.
-Expected<DriverConfig>
+Error runExtractBundleEntry(SmallVector<StringRef, 256> args);
+Expected<SmallVector<StringRef, 256>>
 parseExtractBundleEntryOptions(ArrayRef<const char *> ArgsArr);
 } // namespace objcopy
 } // namespace llvm

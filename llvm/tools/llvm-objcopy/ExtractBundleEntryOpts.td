@@ -21,9 +21,9 @@ def help : Flag<["--"], "help">,
                     "\t<file_uri>        ::== \"file://\" <extract_file><range_specifier>\n" 
                     "\t<memory_uri>      ::== \"memory://\"<process_id><range_specifier>\n" 
                     "\t<range_specifier> ::== [ \"#\" | \"?\" ]\"offset=\"<number>\"&size=\"<number>\n" 
-                    "\textract_file    ::== URI_ENCODED_OS_FILE_PATH\n" 
-                    "\tprocess_id      ::== DECIMAL_NUMBER\n" 
-                    "\tnumber          ::== DECIMAL_NUMBER\n" 
+                    "\t<extract_file>    ::== URI_ENCODED_OS_FILE_PATH\n" 
+                    "\t<process_id>      ::== DECIMAL_NUMBER\n" 
+                    "\t<number>          ::== DECIMAL_NUMBER\n" 
                     "\nExample: file://dir1/dir2/hello_world#offset=133&size=14472 \n" 
                     " memory://1234#offset=0x20000&size=3000\n">;
 def h : Flag<["-"], "h">, Alias<help>;

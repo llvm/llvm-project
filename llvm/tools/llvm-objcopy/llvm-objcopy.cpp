@@ -80,9 +80,16 @@ static Expected<DriverConfig> getDriverConfig(ArrayRef<const char *> Args) {
   if (Is("install-name-tool") || Is("install_name_tool"))
     return parseInstallNameToolOptions(Args);
 
-  if (Is("llvm-extract-bundle-entry"))
-    return parseExtractBundleEntryOptions(Args);
-
+  if (Is("llvm-extract-bundle-entry")) {
+    Expected<SmallVector<StringRef, 256>> ArgsOrErr =
+        parseExtractBundleEntryOptions(Args);
+    if (!ArgsOrErr)
+      return ArgsOrErr.takeError();
+    Error Err = llvm::objcopy::runExtractBundleEntry(*ArgsOrErr);
+    if (Err)
+      return Err;
+    std::exit(0);
+  }
   return parseObjcopyOptions(Args, reportWarning);
 }
 

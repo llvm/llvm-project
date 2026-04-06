@@ -1717,7 +1717,7 @@ objcopy::parseStripOptions(ArrayRef<const char *> RawArgsArr,
   return std::move(DC);
 }
 
-Error runExtractBundleEntry(SmallVector<StringRef, 256> args) {
+Error llvm::objcopy::runExtractBundleEntry(SmallVector<StringRef, 256> args) {
   for (StringRef Input : args)
     if (Error Err = object::extractOffloadBundleByURI(Input))
       return Err;
@@ -1725,7 +1725,7 @@ Error runExtractBundleEntry(SmallVector<StringRef, 256> args) {
   return Error::success();
 }
 
-Expected<DriverConfig>
+Expected<SmallVector<StringRef, 256>>
 objcopy::parseExtractBundleEntryOptions(ArrayRef<const char *> ArgsArr) {
   ExtractBundleEntryOptTable T;
   unsigned MissingArgumentIndex, MissingArgumentCount;
@@ -1759,8 +1759,5 @@ objcopy::parseExtractBundleEntryOptions(ArrayRef<const char *> ArgsArr) {
     Arguments.push_back(Arg->getValue());
   assert(!Arguments.empty());
 
-  if (Error Err = runExtractBundleEntry(Arguments))
-    return std::move(Err);
-
-  return std::move(DC);
+  return Arguments;
 }
