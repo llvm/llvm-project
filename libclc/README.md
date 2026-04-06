@@ -27,7 +27,7 @@ more targets is welcome.
 
 ## Configure, build, and install
 
-libclc as built as part of an LLVM runtimes build.
+libclc is built as part of an LLVM runtimes build.
 
 Select the targets to build with `LLVM_RUNTIME_TARGETS`, and enable libclc for
 each selected target with the matching
