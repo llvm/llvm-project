@@ -563,36 +563,36 @@ TEST_F(PlatformDarwinLocateTest,
         llvm::formatv("{0}.o", module_name).str(), m_tmp_dsym_dwarf_dir));
     EXPECT_TRUE(dsym_module_fpec);
 
-    CreateFile(llvm::formatv("{0}.py", module_name).str(),
-               m_tmp_dsym_python_dir);
+    FileSpec script_fspec(CreateFile(llvm::formatv("{0}.py", module_name).str(),
+                                     m_tmp_dsym_python_dir));
 
-    return std::pair{module_fspec, dsym_module_fpec};
+    return std::pair{script_fspec, dsym_module_fpec};
   };
 
-  auto [module_false_fspec, dsym_module_false_fspec] =
+  auto [script_false_fspec, dsym_module_false_fspec] =
       setup_module("ModuleFalse");
   m_target_sp->SetAutoLoadScriptsForModule("ModuleFalse",
                                            eLoadScriptFromSymFileFalse);
 
-  auto [module_true_fspec, dsym_module_true_fspec] = setup_module("ModuleTrue");
+  auto [script_true_fspec, dsym_module_true_fspec] = setup_module("ModuleTrue");
   m_target_sp->SetAutoLoadScriptsForModule("ModuleTrue",
                                            eLoadScriptFromSymFileTrue);
 
-  auto [module_warn_fspec, dsym_module_warn_fspec] = setup_module("ModuleWarn");
+  auto [script_warn_fspec, dsym_module_warn_fspec] = setup_module("ModuleWarn");
   m_target_sp->SetAutoLoadScriptsForModule("ModuleWarn",
                                            eLoadScriptFromSymFileWarn);
 
-  auto [module_trusted_fspec, dsym_module_trusted_fspec] =
+  auto [script_trusted_fspec, dsym_module_trusted_fspec] =
       setup_module("ModuleTrusted");
   m_target_sp->SetAutoLoadScriptsForModule("ModuleTrusted",
                                            eLoadScriptFromSymFileTrusted);
 
-  auto [module_another_true_fspec, dsym_module_another_true_fspec] =
+  auto [script_another_true_fspec, dsym_module_another_true_fspec] =
       setup_module("ModuleAnotherTrue");
   m_target_sp->SetAutoLoadScriptsForModule("ModuleAnotherTrue",
                                            eLoadScriptFromSymFileTrue);
 
-  auto [module_default_fspec, dsym_module_default_fspec] =
+  auto [script_default_fspec, dsym_module_default_fspec] =
       setup_module("ModuleDefault");
 
   {
@@ -600,12 +600,12 @@ TEST_F(PlatformDarwinLocateTest,
     auto fspecs =
         std::static_pointer_cast<PlatformDarwin>(m_platform_sp)
             ->LocateExecutableScriptingResourcesFromDSYM(
-                ss, module_false_fspec, *m_target_sp, dsym_module_false_fspec);
+                ss, script_false_fspec, *m_target_sp, dsym_module_false_fspec);
 
     ASSERT_EQ(fspecs.size(), 1u);
-    ASSERT_TRUE(fspecs.contains(module_false_fspec));
+    ASSERT_TRUE(fspecs.contains(script_false_fspec));
 
-    EXPECT_EQ(fspecs[module_false_fspec], eLoadScriptFromSymFileFalse);
+    EXPECT_EQ(fspecs[script_false_fspec], eLoadScriptFromSymFileFalse);
   }
 
   {
@@ -613,12 +613,12 @@ TEST_F(PlatformDarwinLocateTest,
     auto fspecs =
         std::static_pointer_cast<PlatformDarwin>(m_platform_sp)
             ->LocateExecutableScriptingResourcesFromDSYM(
-                ss, module_true_fspec, *m_target_sp, dsym_module_true_fspec);
+                ss, script_true_fspec, *m_target_sp, dsym_module_true_fspec);
 
     ASSERT_EQ(fspecs.size(), 1u);
-    ASSERT_TRUE(fspecs.contains(module_true_fspec));
+    ASSERT_TRUE(fspecs.contains(script_true_fspec));
 
-    EXPECT_EQ(fspecs[module_true_fspec], eLoadScriptFromSymFileTrue);
+    EXPECT_EQ(fspecs[script_true_fspec], eLoadScriptFromSymFileTrue);
   }
 
   {
@@ -626,49 +626,51 @@ TEST_F(PlatformDarwinLocateTest,
     auto fspecs =
         std::static_pointer_cast<PlatformDarwin>(m_platform_sp)
             ->LocateExecutableScriptingResourcesFromDSYM(
-                ss, module_warn_fspec, *m_target_sp, dsym_module_warn_fspec);
+                ss, script_warn_fspec, *m_target_sp, dsym_module_warn_fspec);
 
     ASSERT_EQ(fspecs.size(), 1u);
-    ASSERT_TRUE(fspecs.contains(module_warn_fspec));
+    ASSERT_TRUE(fspecs.contains(script_warn_fspec));
 
-    EXPECT_EQ(fspecs[module_warn_fspec], eLoadScriptFromSymFileWarn);
+    EXPECT_EQ(fspecs[script_warn_fspec], eLoadScriptFromSymFileWarn);
   }
 
   {
     StreamString ss;
     auto fspecs = std::static_pointer_cast<PlatformDarwin>(m_platform_sp)
                       ->LocateExecutableScriptingResourcesFromDSYM(
-                          ss, module_trusted_fspec, *m_target_sp,
+                          ss, script_trusted_fspec, *m_target_sp,
                           dsym_module_trusted_fspec);
 
     ASSERT_EQ(fspecs.size(), 1u);
-    ASSERT_TRUE(fspecs.contains(module_trusted_fspec));
+    ASSERT_TRUE(fspecs.contains(script_trusted_fspec));
 
-    EXPECT_EQ(fspecs[module_trusted_fspec], eLoadScriptFromSymFileTrusted);
+    EXPECT_EQ(fspecs[script_trusted_fspec], eLoadScriptFromSymFileTrusted);
   }
 
   {
     StreamString ss;
     auto fspecs = std::static_pointer_cast<PlatformDarwin>(m_platform_sp)
                       ->LocateExecutableScriptingResourcesFromDSYM(
-                          ss, module_another_true_fspec, *m_target_sp,
+                          ss, script_another_true_fspec, *m_target_sp,
                           dsym_module_another_true_fspec);
 
     ASSERT_EQ(fspecs.size(), 1u);
-    ASSERT_TRUE(fspecs.contains(module_another_true_fspec));
+    ASSERT_TRUE(fspecs.contains(script_another_true_fspec));
 
-    EXPECT_EQ(fspecs[module_another_true_fspec], eLoadScriptFromSymFileTrue);
+    EXPECT_EQ(fspecs[script_another_true_fspec], eLoadScriptFromSymFileTrue);
   }
 
   {
     StreamString ss;
-    auto file_specs = Platform::LocateExecutableScriptingResourcesFromSafePaths(
-        ss, module_default_fspec, *m_target_sp);
+    auto fspecs = std::static_pointer_cast<PlatformDarwin>(m_platform_sp)
+                      ->LocateExecutableScriptingResourcesFromDSYM(
+                          ss, script_default_fspec, *m_target_sp,
+                          dsym_module_default_fspec);
 
-    ASSERT_EQ(file_specs.size(), 1u);
-    ASSERT_TRUE(file_specs.contains(module_default_fspec));
+    ASSERT_EQ(fspecs.size(), 1u);
+    ASSERT_TRUE(fspecs.contains(script_default_fspec));
 
-    EXPECT_EQ(file_specs[module_default_fspec], eLoadScriptFromSymFileTrusted);
+    EXPECT_EQ(fspecs[script_default_fspec], eLoadScriptFromSymFileTrusted);
   }
 }
 
