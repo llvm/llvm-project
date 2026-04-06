@@ -32,17 +32,17 @@ using namespace llvm::cas;
 namespace {
 
 /// Read a little-endian uint32 from Data, or 0 if not enough bytes.
-static uint32_t readU32(const uint8_t *Data, size_t Size, size_t Offset) {
-  if (Offset + 4 > Size)
+static uint32_t readU32(ArrayRef<uint8_t> Data, size_t Offset) {
+  if (Offset + sizeof(uint32_t) > Data.size())
     return 0;
-  return support::endian::read32le(Data + Offset);
+  return support::endian::read32le(Data.data() + Offset);
 }
 
 /// Read a little-endian uint16 from Data, or 0 if not enough bytes.
-static uint16_t readU16(const uint8_t *Data, size_t Size, size_t Offset) {
-  if (Offset + 2 > Size)
+static uint16_t readU16(ArrayRef<uint8_t> Data, size_t Offset) {
+  if (Offset + sizeof(uint16_t) > Data.size())
     return 0;
-  return support::endian::read16le(Data + Offset);
+  return support::endian::read16le(Data.data() + Offset);
 }
 
 /// Find the versioned subdirectory (v1.N) inside the CAS root.
@@ -101,7 +101,7 @@ static bool writeFileBytes(StringRef Path, ArrayRef<char> Buf) {
 }
 
 /// Create a CAS database and store some baseline objects.
-/// Returns the ObjectRefs for stored objects via LeafRef.
+/// Returns true on success, populating CAS and AC via output parameters.
 static bool createAndPopulateCAS(StringRef TmpDir,
                                  std::unique_ptr<ObjectStore> &CAS,
                                  std::unique_ptr<ActionCache> &AC) {
@@ -151,15 +151,14 @@ static bool createAndPopulateCAS(StringRef TmpDir,
 }
 
 /// Apply byte-level mutations to a file.
-static void applyByteMutations(StringRef Path, const uint8_t *Data,
-                               size_t Size) {
+static void applyByteMutations(StringRef Path, ArrayRef<uint8_t> Data) {
   SmallVector<char> Buf;
   if (!readFileBytes(Path, Buf) || Buf.empty())
     return;
 
   // Parse as 7-byte chunks: [offset(4)][op(1)][value(1)][unused(1)]
-  for (size_t I = 0; I + 6 <= Size; I += 7) {
-    uint32_t Offset = readU32(Data, Size, I) % Buf.size();
+  for (size_t I = 0; I + 6 <= Data.size(); I += 7) {
+    uint32_t Offset = readU32(Data, I) % Buf.size();
     uint8_t Op = Data[I + 4] % 3;
     uint8_t Value = Data[I + 5];
     switch (Op) {
@@ -183,7 +182,8 @@ static void truncateFile(StringRef Path, uint8_t Fraction) {
   if (!readFileBytes(Path, Buf) || Buf.empty())
     return;
   // Fraction is 0-255, map to 0-100% of file size.
-  size_t NewSize = (size_t)((uint64_t)Buf.size() * Fraction / 255);
+  size_t NewSize =
+      static_cast<size_t>(static_cast<uint64_t>(Buf.size()) * Fraction / 255);
   // Don't zero out the size.
   if (NewSize == 0)
     NewSize = 1;
@@ -192,12 +192,11 @@ static void truncateFile(StringRef Path, uint8_t Fraction) {
 }
 
 /// Append garbage bytes to a file.
-static void appendGarbage(StringRef Path, const uint8_t *Data, size_t Size) {
+static void appendGarbage(StringRef Path, ArrayRef<uint8_t> Data) {
   SmallVector<char> Buf;
   if (!readFileBytes(Path, Buf))
     return;
-  Buf.append(reinterpret_cast<const char *>(Data),
-             reinterpret_cast<const char *>(Data + Size));
+  Buf.append(Data.begin(), Data.end());
   writeFileBytes(Path, Buf);
 }
 
@@ -207,14 +206,13 @@ static void zeroRange(StringRef Path, uint32_t Offset, uint16_t Length) {
   if (!readFileBytes(Path, Buf) || Buf.empty())
     return;
   size_t Start = Offset % Buf.size();
-  size_t End = std::min(Start + (size_t)Length, Buf.size());
+  size_t End = std::min(Start + static_cast<size_t>(Length), Buf.size());
   std::memset(Buf.data() + Start, 0, End - Start);
   writeFileBytes(Path, Buf);
 }
 
 /// Corrupt standalone files (obj.*, leaf.*, leaf+0.*).
-static void corruptStandaloneFiles(StringRef SubDir, const uint8_t *Data,
-                                   size_t Size) {
+static void corruptStandaloneFiles(StringRef SubDir, ArrayRef<uint8_t> Data) {
   SmallVector<std::string> StandaloneFiles;
   collectFilesWithPrefix(SubDir, "obj.", StandaloneFiles);
   collectFilesWithPrefix(SubDir, "leaf.", StandaloneFiles);
@@ -223,10 +221,10 @@ static void corruptStandaloneFiles(StringRef SubDir, const uint8_t *Data,
   if (StandaloneFiles.empty())
     return;
 
-  for (size_t I = 0; I < Size && !StandaloneFiles.empty(); I += 3) {
+  for (size_t I = 0; I < Data.size() && !StandaloneFiles.empty(); I += 3) {
     size_t FileIdx = Data[I] % StandaloneFiles.size();
-    uint8_t Action = (I + 1 < Size) ? Data[I + 1] % 4 : 0;
-    uint8_t Param = (I + 2 < Size) ? Data[I + 2] : 128;
+    uint8_t Action = (I + 1 < Data.size()) ? Data[I + 1] % 4 : 0;
+    uint8_t Param = (I + 2 < Data.size()) ? Data[I + 2] : 128;
 
     StringRef FilePath = StandaloneFiles[FileIdx];
     switch (Action) {
@@ -237,9 +235,10 @@ static void corruptStandaloneFiles(StringRef SubDir, const uint8_t *Data,
       truncateFile(FilePath, Param);
       break;
     case 2: // Corrupt bytes
-      if (I + 3 < Size)
-        applyByteMutations(FilePath, Data + I + 3,
-                           std::min(Size - I - 3, (size_t)21));
+      if (I + 3 < Data.size())
+        applyByteMutations(
+            FilePath, Data.slice(I + 3, std::min(Data.size() - I - 3,
+                                                 static_cast<size_t>(21))));
       break;
     case 3: // Zero out beginning
       zeroRange(FilePath, 0, Param);
@@ -308,53 +307,53 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
     return 0;
 
   // Step 5: Apply corruption based on mode selector (first byte).
-  uint8_t Mode = Data[0] % 6;
-  const uint8_t *Rest = Data + 1;
-  size_t RestSize = Size - 1;
+  ArrayRef<uint8_t> Input(Data, Size);
+  uint8_t Mode = Input[0] % 6;
+  ArrayRef<uint8_t> Rest = Input.drop_front(1);
 
   switch (Mode) {
   case 0: { // Byte-level mutations
-    if (RestSize < 1)
+    if (Rest.empty())
       break;
     std::string Target = selectTargetFile(SubDir, Rest[0]);
-    if (RestSize > 1)
-      applyByteMutations(Target, Rest + 1, RestSize - 1);
+    if (Rest.size() > 1)
+      applyByteMutations(Target, Rest.drop_front(1));
     break;
   }
   case 1: { // File truncation
-    if (RestSize < 2)
+    if (Rest.size() < 2)
       break;
     std::string Target = selectTargetFile(SubDir, Rest[0]);
     truncateFile(Target, Rest[1]);
     break;
   }
   case 2: { // Append garbage
-    if (RestSize < 1)
+    if (Rest.empty())
       break;
     std::string Target = selectTargetFile(SubDir, Rest[0]);
-    if (RestSize > 1)
-      appendGarbage(Target, Rest + 1, RestSize - 1);
+    if (Rest.size() > 1)
+      appendGarbage(Target, Rest.drop_front(1));
     break;
   }
   case 3: { // Zero out a range
-    if (RestSize < 7)
+    if (Rest.size() < 7)
       break;
     std::string Target = selectTargetFile(SubDir, Rest[0]);
-    uint32_t Offset = readU32(Rest, RestSize, 1);
-    uint16_t Length = readU16(Rest, RestSize, 5);
+    uint32_t Offset = readU32(Rest, 1);
+    uint16_t Length = readU16(Rest, 5);
     zeroRange(Target, Offset, Length);
     break;
   }
   case 4: { // Standalone file corruption
-    corruptStandaloneFiles(SubDir, Rest, RestSize);
+    corruptStandaloneFiles(SubDir, Rest);
     break;
   }
   case 5: { // Combined: byte mutations + exercise CAS
-    if (RestSize < 1)
+    if (Rest.empty())
       break;
     std::string Target = selectTargetFile(SubDir, Rest[0]);
-    if (RestSize > 1)
-      applyByteMutations(Target, Rest + 1, RestSize - 1);
+    if (Rest.size() > 1)
+      applyByteMutations(Target, Rest.drop_front(1));
     break;
   }
   }

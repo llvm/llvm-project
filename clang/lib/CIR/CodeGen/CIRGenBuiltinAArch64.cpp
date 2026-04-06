@@ -139,10 +139,9 @@ static cir::VectorType getNeonType(CIRGenFunction *cgf, NeonTypeFlags typeFlags,
     return cir::VectorType::get(cgf->uInt16Ty, v1Ty ? 1 : (4 << isQuad));
   case NeonTypeFlags::Float16:
     if (hasLegalHalfType)
-      cgf->getCIRGenModule().errorNYI(loc, std::string("NEON type: Float16"));
-    else
-      cgf->getCIRGenModule().errorNYI(loc, std::string("NEON type: Float16"));
-    [[fallthrough]];
+      return cir::VectorType::get(cgf->getCIRGenModule().fP16Ty,
+                                  v1Ty ? 1 : (4 << isQuad));
+    return cir::VectorType::get(cgf->uInt16Ty, v1Ty ? 1 : (4 << isQuad));
   case NeonTypeFlags::Int32:
     return cir::VectorType::get(typeFlags.isUnsigned() ? cgf->uInt32Ty
                                                        : cgf->sInt32Ty,
@@ -183,8 +182,8 @@ static mlir::Value emitNeonSplat(CIRGenBuilderTy &builder, mlir::Location loc,
 }
 
 /// Build a constant shift amount vector of `vecTy` to shift a vector
-/// Here `shitfVal` is a constant integer that will be splated into a
-/// a const vector of `vecTy` which is the return of this function
+/// Here `shitfVal` is a constant integer that will be broadcast into a
+/// a const vector of `vecTy` which is the return value of this function
 static mlir::Value emitNeonShiftVector(CIRGenBuilderTy &builder,
                                        mlir::Value shiftVal,
                                        cir::VectorType vecTy,
@@ -2219,7 +2218,9 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
   case NEON::BI__builtin_neon_vduph_lane_bf16: {
     return cir::VecExtractOp::create(builder, loc, ops[0], ops[1]);
   }
-  case NEON::BI__builtin_neon_vduph_lane_f16:
+  case NEON::BI__builtin_neon_vduph_lane_f16: {
+    return cir::VecExtractOp::create(builder, loc, ops[0], ops[1]);
+  }
   case NEON::BI__builtin_neon_vgetq_lane_bf16:
     cgm.errorNYI(expr->getSourceRange(),
                  std::string("unimplemented AArch64 builtin call: ") +
@@ -2228,7 +2229,9 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
   case NEON::BI__builtin_neon_vduph_laneq_bf16: {
     return cir::VecExtractOp::create(builder, loc, ops[0], ops[1]);
   }
-  case NEON::BI__builtin_neon_vduph_laneq_f16:
+  case NEON::BI__builtin_neon_vduph_laneq_f16: {
+    return cir::VecExtractOp::create(builder, loc, ops[0], ops[1]);
+  }
   case NEON::BI__builtin_neon_vcvt_bf16_f32:
   case NEON::BI__builtin_neon_vcvtq_low_bf16_f32:
   case NEON::BI__builtin_neon_vcvtq_high_bf16_f32:
