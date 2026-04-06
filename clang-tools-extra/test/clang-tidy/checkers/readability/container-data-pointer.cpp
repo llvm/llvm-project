@@ -43,7 +43,7 @@ void h() {
 
   f((const char*)&((s).operator[]((z))));
   // CHECK-MESSAGES-CLASSIC: :[[@LINE-1]]:18: warning: 'c_str' should be used for accessing the data pointer instead of taking the address of the 0-th element [readability-container-data-pointer]
-  // CHECK-FIXES-CLASSIC: f(s.c_str());
+  // CHECK-FIXES-CLASSIC: f((const char*)s.c_str());
   // CHECK-MESSAGES-WITH-CONFIG-NOT: :[[@LINE-3]]:18: warning: 'c_str' should be used for accessing the data pointer instead of taking the address of the 0-th element [readability-container-data-pointer]
 
   const std::string cs;

@@ -102,7 +102,6 @@ void ContainerDataPointerCheck::check(const MatchFinder::MatchResult &Result) {
   else if (ACE)
     CE = ACE;
 
-  SourceRange ReplacementRange = UO->getSourceRange();
   bool UseCStr = false;
   if (CStrDecl) {
     auto Parents = Result.Context->getParents(*UO);
@@ -114,22 +113,11 @@ void ContainerDataPointerCheck::check(const MatchFinder::MatchResult &Result) {
           QualType PointeeType = VarType->getPointeeType();
           UseCStr = PointeeType.isConstQualified();
         }
-      } else if (const auto *ICE = Parents[0].get<ImplicitCastExpr>()) {
-        QualType CastType = ICE->getType();
-        if (CastType->isPointerType()) {
-          QualType PointeeType = CastType->getPointeeType();
-          UseCStr = PointeeType.isConstQualified();
-        }
       } else if (const auto *Cast = Parents[0].get<CastExpr>()) {
         QualType CastType = Cast->getType();
         if (CastType->isPointerType()) {
           QualType PointeeType = CastType->getPointeeType();
           UseCStr = PointeeType.isConstQualified();
-          if (UseCStr) {
-            // if it's a const cast, use the Cast range as replacement range
-            // e.g. (const char*)&s[0] -> s.c_str()
-            ReplacementRange = Cast->getSourceRange();
-          }
         }
       }
     }
@@ -159,7 +147,7 @@ void ContainerDataPointerCheck::check(const MatchFinder::MatchResult &Result) {
   ReplacementText += UseCStr ? "c_str()" : "data()";
 
   const FixItHint Hint =
-      FixItHint::CreateReplacement(ReplacementRange, ReplacementText);
+      FixItHint::CreateReplacement(UO->getSourceRange(), ReplacementText);
   diag(UO->getBeginLoc(),
        "'%select{data|c_str}0' should be used for accessing the data pointer "
        "instead of taking the address of the 0-th element")
