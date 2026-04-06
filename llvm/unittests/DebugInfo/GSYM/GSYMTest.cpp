@@ -228,10 +228,11 @@ static void TestFunctionInfoDecodeErrors() {
   TestFunctionInfoDecodeError<StrpT>(ByteOrder, OutStrm.str(), BaseAddr,
       Hex(NameOff) + ": missing FunctionInfo Name");
   // Write out an invalid Name string table offset of zero.
-  if constexpr (sizeof(StrpT) == 4)
-    FW.writeU32(0);
-  else
-    FW.writeU64(0);
+  switch (sizeof(StrpT)) {
+  case 4: FW.writeU32(0); break;
+  case 8: FW.writeU64(0); break;
+  default: FAIL() << "unsupported StrpT size: " << sizeof(StrpT);
+  }
   TestFunctionInfoDecodeError<StrpT>(
       ByteOrder, OutStrm.str(), BaseAddr,
       Hex(NameOff) + ": invalid FunctionInfo Name value 0x0");
@@ -611,10 +612,11 @@ static void TestInlineInfoDecodeErrors() {
   FW.writeU8(0);
   TestInlineInfoDecodeError<StrpT>(ByteOrder, OutStrm.str(), BaseAddr,
       Hex(NameOff) + ": missing InlineInfo name");
-  if constexpr (sizeof(StrpT) == 4)
-    FW.writeU32(0);
-  else
-    FW.writeU64(0);
+  switch (sizeof(StrpT)) {
+  case 4: FW.writeU32(0); break;
+  case 8: FW.writeU64(0); break;
+  default: FAIL() << "unsupported StrpT size: " << sizeof(StrpT);
+  }
   TestInlineInfoDecodeError<StrpT>(ByteOrder, OutStrm.str(), BaseAddr,
       Hex(PostNameOff) + ": missing ULEB128 for InlineInfo call file");
   FW.writeU8(0);
@@ -1450,52 +1452,52 @@ static void TestGsymLookups(llvm::endianness ByteOrder) {
   ASSERT_FALSE((bool)Err);
   auto GROrErr = GsymReader::copyBuffer(OutStrm.str());
   ASSERT_TRUE(bool(GROrErr));
-  const GsymReader &GR = **GROrErr;
+  const std::unique_ptr<GsymReader> &GR = *GROrErr;
 
   // Verify inline info is correct when doing lookups.
-  auto LR = GR.lookup(0x1000);
+  auto LR = GR->lookup(0x1000);
   ASSERT_THAT_EXPECTED(LR, Succeeded());
   EXPECT_THAT(LR->Locations,
     testing::ElementsAre(SourceLocation{"main", "/tmp", "main.c", 5}));
-  LR = GR.lookup(0x100F);
+  LR = GR->lookup(0x100F);
   ASSERT_THAT_EXPECTED(LR, Succeeded());
   EXPECT_THAT(LR->Locations,
     testing::ElementsAre(SourceLocation{"main", "/tmp", "main.c", 5, 15}));
 
-  LR = GR.lookup(0x1010);
+  LR = GR->lookup(0x1010);
   ASSERT_THAT_EXPECTED(LR, Succeeded());
 
   EXPECT_THAT(LR->Locations,
     testing::ElementsAre(SourceLocation{"inline1", "/tmp", "foo.h", 10},
                          SourceLocation{"main", "/tmp", "main.c", 6, 16}));
 
-  LR = GR.lookup(0x1012);
+  LR = GR->lookup(0x1012);
   ASSERT_THAT_EXPECTED(LR, Succeeded());
   EXPECT_THAT(LR->Locations,
     testing::ElementsAre(SourceLocation{"inline2", "/tmp", "foo.h", 20},
                          SourceLocation{"inline1", "/tmp", "foo.h", 33, 2},
                          SourceLocation{"main", "/tmp", "main.c", 6, 18}));
 
-  LR = GR.lookup(0x1014);
+  LR = GR->lookup(0x1014);
   ASSERT_THAT_EXPECTED(LR, Succeeded());
   EXPECT_THAT(LR->Locations,
     testing::ElementsAre(SourceLocation{"inline1", "/tmp", "foo.h", 11, 4},
                          SourceLocation{"main", "/tmp", "main.c", 6, 20}));
 
-  LR = GR.lookup(0x1016);
+  LR = GR->lookup(0x1016);
   ASSERT_THAT_EXPECTED(LR, Succeeded());
   EXPECT_THAT(LR->Locations,
     testing::ElementsAre(SourceLocation{"inline3", "/tmp", "foo.h", 30},
                          SourceLocation{"inline1", "/tmp", "foo.h", 35, 6},
                          SourceLocation{"main", "/tmp", "main.c", 6, 22}));
 
-  LR = GR.lookup(0x1018);
+  LR = GR->lookup(0x1018);
   ASSERT_THAT_EXPECTED(LR, Succeeded());
   EXPECT_THAT(LR->Locations,
     testing::ElementsAre(SourceLocation{"inline1", "/tmp", "foo.h", 12, 8},
                          SourceLocation{"main", "/tmp", "main.c", 6, 24}));
 
-  LR = GR.lookup(0x1020);
+  LR = GR->lookup(0x1020);
   ASSERT_THAT_EXPECTED(LR, Succeeded());
   EXPECT_THAT(LR->Locations,
     testing::ElementsAre(SourceLocation{"main", "/tmp", "main.c", 8, 32}));
@@ -1579,12 +1581,12 @@ template <typename CreatorT> static void TestDWARFFunctionWithAddresses() {
   FW.setStringOffsetSize(GC.getStringOffsetSize());
   ASSERT_THAT_ERROR(GC.encode(FW), Succeeded());
   // Auto-detects the GSYM version and create the corresponding GsymReader
-  auto GR = GsymReader::copyBuffer(OutStrm.str());
-  ASSERT_THAT_EXPECTED(GR, Succeeded());
-  const GsymReader &Reader = **GR;
+  auto GROrErr = GsymReader::copyBuffer(OutStrm.str());
+  ASSERT_THAT_EXPECTED(GROrErr, Succeeded());
+  const std::unique_ptr<GsymReader> &GR = *GROrErr;
   // There should only be one function in our GSYM.
-  EXPECT_EQ(Reader.getNumAddresses(), 1u);
-  auto ExpFI = Reader.getFunctionInfo(0x1000);
+  EXPECT_EQ(GR->getNumAddresses(), 1u);
+  auto ExpFI = GR->getFunctionInfo(0x1000);
   ASSERT_THAT_EXPECTED(ExpFI, Succeeded());
   ASSERT_EQ(ExpFI->Range, AddressRange(0x1000, 0x2000));
   EXPECT_FALSE(ExpFI->OptLineTable.has_value());
@@ -1667,12 +1669,12 @@ static void TestDWARFFunctionWithAddressAndOffset() {
   FileWriter FW(OutStrm, ByteOrder);
   FW.setStringOffsetSize(GC.getStringOffsetSize());
   ASSERT_THAT_ERROR(GC.encode(FW), Succeeded());
-  auto GR = GsymReader::copyBuffer(OutStrm.str());
-  ASSERT_THAT_EXPECTED(GR, Succeeded());
-  const GsymReader &Reader = **GR;
+  auto GROrErr = GsymReader::copyBuffer(OutStrm.str());
+  ASSERT_THAT_EXPECTED(GROrErr, Succeeded());
+  const std::unique_ptr<GsymReader> &GR = *GROrErr;
   // There should only be one function in our GSYM.
-  EXPECT_EQ(Reader.getNumAddresses(), 1u);
-  auto ExpFI = Reader.getFunctionInfo(0x1000);
+  EXPECT_EQ(GR->getNumAddresses(), 1u);
+  auto ExpFI = GR->getFunctionInfo(0x1000);
   ASSERT_THAT_EXPECTED(ExpFI, Succeeded());
   ASSERT_EQ(ExpFI->Range, AddressRange(0x1000, 0x2000));
   EXPECT_FALSE(ExpFI->OptLineTable.has_value());
@@ -1784,17 +1786,17 @@ template <typename CreatorT> static void TestDWARFStructMethodNoMangled() {
   FileWriter FW(OutStrm, ByteOrder);
   FW.setStringOffsetSize(GC.getStringOffsetSize());
   ASSERT_THAT_ERROR(GC.encode(FW), Succeeded());
-  auto GR = GsymReader::copyBuffer(OutStrm.str());
-  ASSERT_THAT_EXPECTED(GR, Succeeded());
-  const GsymReader &Reader = **GR;
+  auto GROrErr = GsymReader::copyBuffer(OutStrm.str());
+  ASSERT_THAT_EXPECTED(GROrErr, Succeeded());
+  const std::unique_ptr<GsymReader> &GR = *GROrErr;
   // There should only be one function in our GSYM.
-  EXPECT_EQ(Reader.getNumAddresses(), 1u);
-  auto ExpFI = Reader.getFunctionInfo(0x1000);
+  EXPECT_EQ(GR->getNumAddresses(), 1u);
+  auto ExpFI = GR->getFunctionInfo(0x1000);
   ASSERT_THAT_EXPECTED(ExpFI, Succeeded());
   ASSERT_EQ(ExpFI->Range, AddressRange(0x1000, 0x2000));
   EXPECT_FALSE(ExpFI->OptLineTable.has_value());
   EXPECT_FALSE(ExpFI->Inline.has_value());
-  StringRef MethodName = Reader.getString(ExpFI->Name);
+  StringRef MethodName = GR->getString(ExpFI->Name);
   EXPECT_EQ(MethodName, "Foo::dump");
 }
 
@@ -1899,17 +1901,17 @@ template <typename CreatorT> static void TestDWARFTextRanges() {
   FileWriter FW(OutStrm, ByteOrder);
   FW.setStringOffsetSize(GC.getStringOffsetSize());
   ASSERT_THAT_ERROR(GC.encode(FW), Succeeded());
-  auto GR = GsymReader::copyBuffer(OutStrm.str());
-  ASSERT_THAT_EXPECTED(GR, Succeeded());
-  const GsymReader &Reader = **GR;
+  auto GROrErr = GsymReader::copyBuffer(OutStrm.str());
+  ASSERT_THAT_EXPECTED(GROrErr, Succeeded());
+  const std::unique_ptr<GsymReader> &GR = *GROrErr;
   // There should only be one function in our GSYM.
-  EXPECT_EQ(Reader.getNumAddresses(), 1u);
-  auto ExpFI = Reader.getFunctionInfo(0x1000);
+  EXPECT_EQ(GR->getNumAddresses(), 1u);
+  auto ExpFI = GR->getFunctionInfo(0x1000);
   ASSERT_THAT_EXPECTED(ExpFI, Succeeded());
   ASSERT_EQ(ExpFI->Range, AddressRange(0x1000, 0x2000));
   EXPECT_FALSE(ExpFI->OptLineTable.has_value());
   EXPECT_FALSE(ExpFI->Inline.has_value());
-  StringRef MethodName = Reader.getString(ExpFI->Name);
+  StringRef MethodName = GR->getString(ExpFI->Name);
   EXPECT_EQ(MethodName, "main");
 }
 
@@ -1934,17 +1936,17 @@ static void TestEmptySymbolEndAddressOfTextRanges() {
   FileWriter FW(OutStrm, ByteOrder);
   FW.setStringOffsetSize(GC.getStringOffsetSize());
   ASSERT_THAT_ERROR(GC.encode(FW), Succeeded());
-  auto GR = GsymReader::copyBuffer(OutStrm.str());
-  ASSERT_THAT_EXPECTED(GR, Succeeded());
-  const GsymReader &Reader = **GR;
+  auto GROrErr = GsymReader::copyBuffer(OutStrm.str());
+  ASSERT_THAT_EXPECTED(GROrErr, Succeeded());
+  const std::unique_ptr<GsymReader> &GR = *GROrErr;
   // There should only be one function in our GSYM.
-  EXPECT_EQ(Reader.getNumAddresses(), 1u);
-  auto ExpFI = Reader.getFunctionInfo(0x1500);
+  EXPECT_EQ(GR->getNumAddresses(), 1u);
+  auto ExpFI = GR->getFunctionInfo(0x1500);
   ASSERT_THAT_EXPECTED(ExpFI, Succeeded());
   ASSERT_EQ(ExpFI->Range, AddressRange(0x1500, 0x2000));
   EXPECT_FALSE(ExpFI->OptLineTable.has_value());
   EXPECT_FALSE(ExpFI->Inline.has_value());
-  StringRef MethodName = Reader.getString(ExpFI->Name);
+  StringRef MethodName = GR->getString(ExpFI->Name);
   EXPECT_EQ(MethodName, "symbol");
 }
 
@@ -2113,50 +2115,50 @@ template <typename CreatorT> static void TestDWARFInlineInfo() {
   FileWriter FW(OutStrm, ByteOrder);
   FW.setStringOffsetSize(GC.getStringOffsetSize());
   ASSERT_THAT_ERROR(GC.encode(FW), Succeeded());
-  auto GR = GsymReader::copyBuffer(OutStrm.str());
-  ASSERT_THAT_EXPECTED(GR, Succeeded());
-  const GsymReader &Reader = **GR;
+  auto GROrErr = GsymReader::copyBuffer(OutStrm.str());
+  ASSERT_THAT_EXPECTED(GROrErr, Succeeded());
+  const std::unique_ptr<GsymReader> &GR = *GROrErr;
   // There should only be one function in our GSYM.
-  EXPECT_EQ(Reader.getNumAddresses(), 1u);
-  auto ExpFI = Reader.getFunctionInfo(0x1000);
+  EXPECT_EQ(GR->getNumAddresses(), 1u);
+  auto ExpFI = GR->getFunctionInfo(0x1000);
   ASSERT_THAT_EXPECTED(ExpFI, Succeeded());
   ASSERT_EQ(ExpFI->Range, AddressRange(0x1000, 0x2000));
   EXPECT_TRUE(ExpFI->OptLineTable.has_value());
   EXPECT_TRUE(ExpFI->Inline.has_value());
-  StringRef MethodName = Reader.getString(ExpFI->Name);
+  StringRef MethodName = GR->getString(ExpFI->Name);
   EXPECT_EQ(MethodName, "main");
 
     // Verify inline info is correct when doing lookups.
-  auto LR = Reader.lookup(0x1000);
+  auto LR = GR->lookup(0x1000);
   ASSERT_THAT_EXPECTED(LR, Succeeded());
   EXPECT_THAT(LR->Locations,
     testing::ElementsAre(SourceLocation{"main", "/tmp", "main.c", 10}));
-  LR = Reader.lookup(0x1100 - 1);
+  LR = GR->lookup(0x1100 - 1);
   ASSERT_THAT_EXPECTED(LR, Succeeded());
   EXPECT_THAT(LR->Locations,
     testing::ElementsAre(SourceLocation{"main", "/tmp", "main.c", 10, 255}));
 
-  LR = Reader.lookup(0x1100);
+  LR = GR->lookup(0x1100);
   ASSERT_THAT_EXPECTED(LR, Succeeded());
   EXPECT_THAT(LR->Locations,
     testing::ElementsAre(SourceLocation{"inline1", "/tmp", "inline.h", 20},
                          SourceLocation{"main", "/tmp", "main.c", 10, 256}));
-  LR = Reader.lookup(0x1180 - 1);
+  LR = GR->lookup(0x1180 - 1);
   ASSERT_THAT_EXPECTED(LR, Succeeded());
   EXPECT_THAT(LR->Locations,
     testing::ElementsAre(SourceLocation{"inline1", "/tmp", "inline.h", 20, 127},
                          SourceLocation{"main", "/tmp", "main.c", 10, 383}));
-  LR = Reader.lookup(0x1180);
+  LR = GR->lookup(0x1180);
   ASSERT_THAT_EXPECTED(LR, Succeeded());
   EXPECT_THAT(LR->Locations,
     testing::ElementsAre(SourceLocation{"inline1", "/tmp", "inline.h", 21, 128},
                          SourceLocation{"main", "/tmp", "main.c", 10, 384}));
-  LR = Reader.lookup(0x1200 - 1);
+  LR = GR->lookup(0x1200 - 1);
   ASSERT_THAT_EXPECTED(LR, Succeeded());
   EXPECT_THAT(LR->Locations,
     testing::ElementsAre(SourceLocation{"inline1", "/tmp", "inline.h", 21, 255},
                          SourceLocation{"main", "/tmp", "main.c", 10, 511}));
-  LR = Reader.lookup(0x1200);
+  LR = GR->lookup(0x1200);
   ASSERT_THAT_EXPECTED(LR, Succeeded());
   EXPECT_THAT(LR->Locations,
     testing::ElementsAre(SourceLocation{"main", "/tmp", "main.c", 11, 512}));
@@ -2378,17 +2380,17 @@ template <typename CreatorT> static void TestDWARFNoLines() {
   FileWriter FW(OutStrm, ByteOrder);
   FW.setStringOffsetSize(GC.getStringOffsetSize());
   ASSERT_THAT_ERROR(GC.encode(FW), Succeeded());
-  auto GR = GsymReader::copyBuffer(OutStrm.str());
-  ASSERT_THAT_EXPECTED(GR, Succeeded());
-  const GsymReader &Reader = **GR;
+  auto GROrErr = GsymReader::copyBuffer(OutStrm.str());
+  ASSERT_THAT_EXPECTED(GROrErr, Succeeded());
+  const std::unique_ptr<GsymReader> &GR = *GROrErr;
 
-  EXPECT_EQ(Reader.getNumAddresses(), 4u);
+  EXPECT_EQ(GR->getNumAddresses(), 4u);
 
-  auto ExpFI = Reader.getFunctionInfo(0x1000);
+  auto ExpFI = GR->getFunctionInfo(0x1000);
   ASSERT_THAT_EXPECTED(ExpFI, Succeeded());
   ASSERT_EQ(ExpFI->Range, AddressRange(0x1000, 0x2000));
   EXPECT_TRUE(ExpFI->OptLineTable);
-  StringRef MethodName = Reader.getString(ExpFI->Name);
+  StringRef MethodName = GR->getString(ExpFI->Name);
   EXPECT_EQ(MethodName, "lines_no_decl");
   // Make sure have two line table entries and that get the first line entry
   // correct.
@@ -2396,11 +2398,11 @@ template <typename CreatorT> static void TestDWARFNoLines() {
   EXPECT_EQ(ExpFI->OptLineTable->first()->Addr, 0x1000u);
   EXPECT_EQ(ExpFI->OptLineTable->first()->Line, 11u);
 
-  ExpFI = Reader.getFunctionInfo(0x2000);
+  ExpFI = GR->getFunctionInfo(0x2000);
   ASSERT_THAT_EXPECTED(ExpFI, Succeeded());
   ASSERT_EQ(ExpFI->Range, AddressRange(0x2000, 0x3000));
   EXPECT_TRUE(ExpFI->OptLineTable);
-  MethodName = Reader.getString(ExpFI->Name);
+  MethodName = GR->getString(ExpFI->Name);
   EXPECT_EQ(MethodName, "lines_with_decl");
   // Make sure have two line table entries and that we don't use line 20
   // from the DW_AT_decl_file/line as a line table entry.
@@ -2408,19 +2410,19 @@ template <typename CreatorT> static void TestDWARFNoLines() {
   EXPECT_EQ(ExpFI->OptLineTable->first()->Addr, 0x2000u);
   EXPECT_EQ(ExpFI->OptLineTable->first()->Line, 21u);
 
-  ExpFI = Reader.getFunctionInfo(0x3000);
+  ExpFI = GR->getFunctionInfo(0x3000);
   ASSERT_THAT_EXPECTED(ExpFI, Succeeded());
   ASSERT_EQ(ExpFI->Range, AddressRange(0x3000, 0x4000));
   // Make sure we have no line table.
   EXPECT_FALSE(ExpFI->OptLineTable.has_value());
-  MethodName = Reader.getString(ExpFI->Name);
+  MethodName = GR->getString(ExpFI->Name);
   EXPECT_EQ(MethodName, "no_lines_no_decl");
 
-  ExpFI = Reader.getFunctionInfo(0x4000);
+  ExpFI = GR->getFunctionInfo(0x4000);
   ASSERT_THAT_EXPECTED(ExpFI, Succeeded());
   ASSERT_EQ(ExpFI->Range, AddressRange(0x4000, 0x5000));
   EXPECT_TRUE(ExpFI->OptLineTable.has_value());
-  MethodName = Reader.getString(ExpFI->Name);
+  MethodName = GR->getString(ExpFI->Name);
   EXPECT_EQ(MethodName, "no_lines_with_decl");
   // Make sure we have one line table entry that uses the DW_AT_decl_file/line
   // as the one and only line entry.
@@ -2562,16 +2564,16 @@ template <typename CreatorT> static void TestDWARFDeadStripAddr4() {
   FileWriter FW(OutStrm, ByteOrder);
   FW.setStringOffsetSize(GC.getStringOffsetSize());
   ASSERT_THAT_ERROR(GC.encode(FW), Succeeded());
-  auto GR = GsymReader::copyBuffer(OutStrm.str());
-  ASSERT_THAT_EXPECTED(GR, Succeeded());
-  const GsymReader &Reader = **GR;
+  auto GROrErr = GsymReader::copyBuffer(OutStrm.str());
+  ASSERT_THAT_EXPECTED(GROrErr, Succeeded());
+  const std::unique_ptr<GsymReader> &GR = *GROrErr;
 
   // Test that the only function that made it was the "main" function.
-  EXPECT_EQ(Reader.getNumAddresses(), 1u);
-  auto ExpFI = Reader.getFunctionInfo(0x1000);
+  EXPECT_EQ(GR->getNumAddresses(), 1u);
+  auto ExpFI = GR->getFunctionInfo(0x1000);
   ASSERT_THAT_EXPECTED(ExpFI, Succeeded());
   ASSERT_EQ(ExpFI->Range, AddressRange(0x1000, 0x2000));
-  StringRef MethodName = Reader.getString(ExpFI->Name);
+  StringRef MethodName = GR->getString(ExpFI->Name);
   EXPECT_EQ(MethodName, "main");
 }
 
@@ -2712,16 +2714,16 @@ template <typename CreatorT> static void TestDWARFDeadStripAddr8() {
   FileWriter FW(OutStrm, ByteOrder);
   FW.setStringOffsetSize(GC.getStringOffsetSize());
   ASSERT_THAT_ERROR(GC.encode(FW), Succeeded());
-  auto GR = GsymReader::copyBuffer(OutStrm.str());
-  ASSERT_THAT_EXPECTED(GR, Succeeded());
-  const GsymReader &Reader = **GR;
+  auto GROrErr = GsymReader::copyBuffer(OutStrm.str());
+  ASSERT_THAT_EXPECTED(GROrErr, Succeeded());
+  const std::unique_ptr<GsymReader> &GR = *GROrErr;
 
   // Test that the only function that made it was the "main" function.
-  EXPECT_EQ(Reader.getNumAddresses(), 1u);
-  auto ExpFI = Reader.getFunctionInfo(0x1000);
+  EXPECT_EQ(GR->getNumAddresses(), 1u);
+  auto ExpFI = GR->getFunctionInfo(0x1000);
   ASSERT_THAT_EXPECTED(ExpFI, Succeeded());
   ASSERT_EQ(ExpFI->Range, AddressRange(0x1000, 0x2000));
-  StringRef MethodName = Reader.getString(ExpFI->Name);
+  StringRef MethodName = GR->getString(ExpFI->Name);
   EXPECT_EQ(MethodName, "main");
 }
 
@@ -2835,9 +2837,9 @@ static void TestGsymSegmenting(uint64_t SegmentSize) {
   AddFunctionInfo(GC, "foo", 0x2000, "/tmp/foo.c", "/tmp/foo.h");
   AddFunctionInfo(GC, "bar", 0x3000, "/tmp/bar.c", "/tmp/bar.h");
   AddFunctionInfo(GC, "baz", 0x4000, "/tmp/baz.c", "/tmp/baz.h");
-  auto GR = FinalizeEncodeAndDecode(GC);
-  ASSERT_THAT_EXPECTED(GR, Succeeded());
-  const GsymReader &FullReader = **GR;
+  auto GROrErr = FinalizeEncodeAndDecode(GC);
+  ASSERT_THAT_EXPECTED(GROrErr, Succeeded());
+  const std::unique_ptr<GsymReader> &GR = *GROrErr;
 
   // Create segmented GSYM files where each file contains 1 function. We will
   // then test doing lookups on the full GSYM file and then test doing lookups
@@ -2904,7 +2906,7 @@ static void TestGsymSegmenting(uint64_t SegmentSize) {
   // in the GsymReader that contains all functions and from the segmented
   // GsymReader in GR1000.
   for (uint64_t Addr = 0x1000; Addr < 0x1030; ++Addr) {
-    auto MainLR = FullReader.lookup(Addr);
+    auto MainLR = GR->lookup(Addr);
     ASSERT_THAT_EXPECTED(MainLR, Succeeded());
     auto SegmentLR = (*GR1000)->lookup(Addr);
     ASSERT_THAT_EXPECTED(SegmentLR, Succeeded());
@@ -2916,7 +2918,7 @@ static void TestGsymSegmenting(uint64_t SegmentSize) {
 
   // Verify that all lookups match the range [0x2000-0x2030).
   for (uint64_t Addr = 0x2000; Addr < 0x2030; ++Addr) {
-    auto MainLR = FullReader.lookup(Addr);
+    auto MainLR = GR->lookup(Addr);
     ASSERT_THAT_EXPECTED(MainLR, Succeeded());
     auto SegmentLR = (*GR2000)->lookup(Addr);
     ASSERT_THAT_EXPECTED(SegmentLR, Succeeded());
@@ -2928,7 +2930,7 @@ static void TestGsymSegmenting(uint64_t SegmentSize) {
 
   // Verify that all lookups match the range [0x3000-0x3030).
   for (uint64_t Addr = 0x3000; Addr < 0x3030; ++Addr) {
-    auto MainLR = FullReader.lookup(Addr);
+    auto MainLR = GR->lookup(Addr);
     ASSERT_THAT_EXPECTED(MainLR, Succeeded());
     auto SegmentLR = (*GR3000)->lookup(Addr);
     ASSERT_THAT_EXPECTED(SegmentLR, Succeeded());
@@ -2940,7 +2942,7 @@ static void TestGsymSegmenting(uint64_t SegmentSize) {
 
   // Verify that all lookups match the range [0x4000-0x4030).
   for (uint64_t Addr = 0x4000; Addr < 0x4030; ++Addr) {
-    auto MainLR = FullReader.lookup(Addr);
+    auto MainLR = GR->lookup(Addr);
     ASSERT_THAT_EXPECTED(MainLR, Succeeded());
     auto SegmentLR = (*GR4000)->lookup(Addr);
     ASSERT_THAT_EXPECTED(SegmentLR, Succeeded());
@@ -2966,9 +2968,9 @@ static void TestGsymSegmentingNoBase(uint64_t SegmentSize) {
   AddFunctionInfo(GC, "foo", 0x2000, "/tmp/foo.c", "/tmp/foo.h");
   AddFunctionInfo(GC, "bar", 0x3000, "/tmp/bar.c", "/tmp/bar.h");
   AddFunctionInfo(GC, "baz", 0x4000, "/tmp/baz.c", "/tmp/baz.h");
-  auto GR = FinalizeEncodeAndDecode(GC);
-  ASSERT_THAT_EXPECTED(GR, Succeeded());
-  const GsymReader &FullReader = **GR;
+  auto GROrErr = FinalizeEncodeAndDecode(GC);
+  ASSERT_THAT_EXPECTED(GROrErr, Succeeded());
+  const std::unique_ptr<GsymReader> &GR = *GROrErr;
 
   // Create segmented GSYM files where each file contains 1 function.
   size_t FuncIdx = 0;
@@ -3015,7 +3017,7 @@ static void TestGsymSegmentingNoBase(uint64_t SegmentSize) {
   ASSERT_THAT_EXPECTED(GR4000, Succeeded());
 
   for (uint64_t Addr = 0x1000; Addr < 0x1030; ++Addr) {
-    auto MainLR = FullReader.lookup(Addr);
+    auto MainLR = GR->lookup(Addr);
     ASSERT_THAT_EXPECTED(MainLR, Succeeded());
     auto SegmentLR = (*GR1000)->lookup(Addr);
     ASSERT_THAT_EXPECTED(SegmentLR, Succeeded());
@@ -3026,7 +3028,7 @@ static void TestGsymSegmentingNoBase(uint64_t SegmentSize) {
   }
 
   for (uint64_t Addr = 0x2000; Addr < 0x2030; ++Addr) {
-    auto MainLR = FullReader.lookup(Addr);
+    auto MainLR = GR->lookup(Addr);
     ASSERT_THAT_EXPECTED(MainLR, Succeeded());
     auto SegmentLR = (*GR2000)->lookup(Addr);
     ASSERT_THAT_EXPECTED(SegmentLR, Succeeded());
@@ -3037,7 +3039,7 @@ static void TestGsymSegmentingNoBase(uint64_t SegmentSize) {
   }
 
   for (uint64_t Addr = 0x3000; Addr < 0x3030; ++Addr) {
-    auto MainLR = FullReader.lookup(Addr);
+    auto MainLR = GR->lookup(Addr);
     ASSERT_THAT_EXPECTED(MainLR, Succeeded());
     auto SegmentLR = (*GR3000)->lookup(Addr);
     ASSERT_THAT_EXPECTED(SegmentLR, Succeeded());
@@ -3048,7 +3050,7 @@ static void TestGsymSegmentingNoBase(uint64_t SegmentSize) {
   }
 
   for (uint64_t Addr = 0x4000; Addr < 0x4030; ++Addr) {
-    auto MainLR = FullReader.lookup(Addr);
+    auto MainLR = GR->lookup(Addr);
     ASSERT_THAT_EXPECTED(MainLR, Succeeded());
     auto SegmentLR = (*GR4000)->lookup(Addr);
     ASSERT_THAT_EXPECTED(SegmentLR, Succeeded());
@@ -3309,17 +3311,17 @@ template <typename CreatorT> static void TestDWARFInlineRangeScopes() {
   FileWriter FW(OutStrm, ByteOrder);
   FW.setStringOffsetSize(GC.getStringOffsetSize());
   ASSERT_THAT_ERROR(GC.encode(FW), Succeeded());
-  auto GR = GsymReader::copyBuffer(OutStrm.str());
-  ASSERT_THAT_EXPECTED(GR, Succeeded());
-  const GsymReader &Reader = **GR;
+  auto GROrErr = GsymReader::copyBuffer(OutStrm.str());
+  ASSERT_THAT_EXPECTED(GROrErr, Succeeded());
+  const std::unique_ptr<GsymReader> &GR = *GROrErr;
   // There should only be one function in our GSYM.
-  EXPECT_EQ(Reader.getNumAddresses(), 1u);
-  auto ExpFI = Reader.getFunctionInfo(0x1000);
+  EXPECT_EQ(GR->getNumAddresses(), 1u);
+  auto ExpFI = GR->getFunctionInfo(0x1000);
   ASSERT_THAT_EXPECTED(ExpFI, Succeeded());
   ASSERT_EQ(ExpFI->Range, AddressRange(0x1000, 0x2000));
   EXPECT_TRUE(ExpFI->OptLineTable.has_value());
   EXPECT_TRUE(ExpFI->Inline.has_value());
-  StringRef FuncName = Reader.getString(ExpFI->Name);
+  StringRef FuncName = GR->getString(ExpFI->Name);
   EXPECT_EQ(FuncName, "foo");
   std::vector<std::string> ExpectedLogErrors = {
     "error: inlined function DIE at 0x0000002a has a range [0x0000000000000fff "
@@ -3338,7 +3340,7 @@ template <typename CreatorT> static void TestDWARFInlineRangeScopes() {
   // we have only 1 inline function inside of this, even though the DWARF
   // contains two. One of the inline functions in "foo" is invalid, so we must
   // only end up with 1.
-  StringRef InlineFuncName = Reader.getString(ExpFI->Inline->Name);
+  StringRef InlineFuncName = GR->getString(ExpFI->Inline->Name);
   EXPECT_EQ(InlineFuncName, "foo");
   EXPECT_EQ(ExpFI->Inline->CallFile, 0u);
   EXPECT_EQ(ExpFI->Inline->CallLine, 0u);
@@ -3349,7 +3351,7 @@ template <typename CreatorT> static void TestDWARFInlineRangeScopes() {
   // DWARF, but one has an address range which isn't contained in any ranges
   // from "foo", so only 1 inline function be parsed.
   InlineInfo &Inline1 = ExpFI->Inline->Children[0];
-  StringRef Inline1Name = Reader.getString(Inline1.Name);
+  StringRef Inline1Name = GR->getString(Inline1.Name);
   EXPECT_EQ(Inline1Name, "valid1");
   EXPECT_EQ(Inline1.CallFile, 1u);
   EXPECT_EQ(Inline1.CallLine, 11u);
@@ -3360,7 +3362,7 @@ template <typename CreatorT> static void TestDWARFInlineRangeScopes() {
   // DWARF, but one has an address range which isn't contained in any ranges
   // from "valid1", so only 1 inline function be parsed.
   InlineInfo &Inline2 = Inline1.Children[0];
-  StringRef Inline2Name = Reader.getString(Inline2.Name);
+  StringRef Inline2Name = GR->getString(Inline2.Name);
   EXPECT_EQ(Inline2Name, "valid2");
   EXPECT_EQ(Inline2.CallFile, 1u);
   EXPECT_EQ(Inline2.CallLine, 13u);
@@ -3546,17 +3548,17 @@ template <typename CreatorT> static void TestDWARFEmptyInline() {
   FileWriter FW(OutStrm, ByteOrder);
   FW.setStringOffsetSize(GC.getStringOffsetSize());
   ASSERT_THAT_ERROR(GC.encode(FW), Succeeded());
-  auto GR = GsymReader::copyBuffer(OutStrm.str());
-  ASSERT_THAT_EXPECTED(GR, Succeeded());
-  const GsymReader &Reader = **GR;
+  auto GROrErr = GsymReader::copyBuffer(OutStrm.str());
+  ASSERT_THAT_EXPECTED(GROrErr, Succeeded());
+  const std::unique_ptr<GsymReader> &GR = *GROrErr;
   // There should only be one function in our GSYM.
-  EXPECT_EQ(Reader.getNumAddresses(), 1u);
-  auto ExpFI = Reader.getFunctionInfo(0x1000);
+  EXPECT_EQ(GR->getNumAddresses(), 1u);
+  auto ExpFI = GR->getFunctionInfo(0x1000);
   ASSERT_THAT_EXPECTED(ExpFI, Succeeded());
   ASSERT_EQ(ExpFI->Range, AddressRange(0x1000, 0x1050));
   EXPECT_TRUE(ExpFI->OptLineTable.has_value());
   EXPECT_FALSE(ExpFI->Inline.has_value());
-  StringRef FuncName = Reader.getString(ExpFI->Name);
+  StringRef FuncName = GR->getString(ExpFI->Name);
   EXPECT_EQ(FuncName, "foo");
   std::vector<std::string> ExpectedLogErrors = {
     "error: inlined function DIE at 0x0000002a has a range [0x0000000000001100"
@@ -3790,27 +3792,27 @@ template <typename CreatorT> static void TestFinalizeForLineTables() {
   FileWriter FW(OutStrm, ByteOrder);
   FW.setStringOffsetSize(GC.getStringOffsetSize());
   ASSERT_THAT_ERROR(GC.encode(FW), Succeeded());
-  auto GR = GsymReader::copyBuffer(OutStrm.str());
-  ASSERT_THAT_EXPECTED(GR, Succeeded());
-  const GsymReader &Reader = **GR;
+  auto GROrErr = GsymReader::copyBuffer(OutStrm.str());
+  ASSERT_THAT_EXPECTED(GROrErr, Succeeded());
+  const std::unique_ptr<GsymReader> &GR = *GROrErr;
   // There should only be two functions in our GSYM.
-  EXPECT_EQ(Reader.getNumAddresses(), 2u);
+  EXPECT_EQ(GR->getNumAddresses(), 2u);
   // Verify "foo" is present and has a line table
-  auto ExpFI = Reader.getFunctionInfo(0x1000);
+  auto ExpFI = GR->getFunctionInfo(0x1000);
   ASSERT_THAT_EXPECTED(ExpFI, Succeeded());
   ASSERT_EQ(ExpFI->Range, AddressRange(0x1000, 0x1050));
   EXPECT_TRUE(ExpFI->OptLineTable.has_value());
   EXPECT_FALSE(ExpFI->Inline.has_value());
-  StringRef FuncName = Reader.getString(ExpFI->Name);
+  StringRef FuncName = GR->getString(ExpFI->Name);
   EXPECT_EQ(FuncName, "foo");
 
   // Verify "foo" is present and has a line table
-  auto ExpFI2 = Reader.getFunctionInfo(0x2000);
+  auto ExpFI2 = GR->getFunctionInfo(0x2000);
   ASSERT_THAT_EXPECTED(ExpFI2, Succeeded());
   ASSERT_EQ(ExpFI2->Range, AddressRange(0x2000, 0x2050));
   EXPECT_TRUE(ExpFI2->OptLineTable.has_value());
   EXPECT_FALSE(ExpFI2->Inline.has_value());
-  StringRef FuncName2 = Reader.getString(ExpFI2->Name);
+  StringRef FuncName2 = GR->getString(ExpFI2->Name);
   EXPECT_EQ(FuncName2, "bar");
 }
 
@@ -4078,27 +4080,27 @@ template <typename CreatorT> static void TestRangeWarnings() {
   FileWriter FW(OutStrm, ByteOrder);
   FW.setStringOffsetSize(GC.getStringOffsetSize());
   ASSERT_THAT_ERROR(GC.encode(FW), Succeeded());
-  auto GR = GsymReader::copyBuffer(OutStrm.str());
-  ASSERT_THAT_EXPECTED(GR, Succeeded());
-  const GsymReader &Reader = **GR;
+  auto GROrErr = GsymReader::copyBuffer(OutStrm.str());
+  ASSERT_THAT_EXPECTED(GROrErr, Succeeded());
+  const std::unique_ptr<GsymReader> &GR = *GROrErr;
   // There should be two functions in our GSYM.
-  EXPECT_EQ(Reader.getNumAddresses(), 2u);
+  EXPECT_EQ(GR->getNumAddresses(), 2u);
   // Verify "foo" is present and has a line table
-  auto ExpFI = Reader.getFunctionInfo(0x1000);
+  auto ExpFI = GR->getFunctionInfo(0x1000);
   ASSERT_THAT_EXPECTED(ExpFI, Succeeded());
   ASSERT_EQ(ExpFI->Range, AddressRange(0x1000, 0x1050));
   EXPECT_TRUE(ExpFI->OptLineTable.has_value());
   EXPECT_TRUE(ExpFI->Inline.has_value());
-  StringRef FuncName = Reader.getString(ExpFI->Name);
+  StringRef FuncName = GR->getString(ExpFI->Name);
   EXPECT_EQ(FuncName, "foo");
 
   // Verify "foo" is present and has a line table
-  auto ExpFI2 = Reader.getFunctionInfo(0x2000);
+  auto ExpFI2 = GR->getFunctionInfo(0x2000);
   ASSERT_THAT_EXPECTED(ExpFI2, Succeeded());
   ASSERT_EQ(ExpFI2->Range, AddressRange(0x2000, 0x2050));
   EXPECT_TRUE(ExpFI2->OptLineTable.has_value());
   EXPECT_TRUE(ExpFI2->Inline.has_value());
-  StringRef FuncName2 = Reader.getString(ExpFI2->Name);
+  StringRef FuncName2 = GR->getString(ExpFI2->Name);
   EXPECT_EQ(FuncName2, "foo");
 
   // Make sure we don't see spurious errors in the output:
@@ -4285,18 +4287,18 @@ template <typename CreatorT> static void TestEmptyRangeWarnings() {
   FileWriter FW(OutStrm, ByteOrder);
   FW.setStringOffsetSize(GC.getStringOffsetSize());
   ASSERT_THAT_ERROR(GC.encode(FW), Succeeded());
-  auto GR = GsymReader::copyBuffer(OutStrm.str());
-  ASSERT_THAT_EXPECTED(GR, Succeeded());
-  const GsymReader &Reader = **GR;
+  auto GROrErr = GsymReader::copyBuffer(OutStrm.str());
+  ASSERT_THAT_EXPECTED(GROrErr, Succeeded());
+  const std::unique_ptr<GsymReader> &GR = *GROrErr;
   // There should be one function in our GSYM.
-  EXPECT_EQ(Reader.getNumAddresses(), 1u);
+  EXPECT_EQ(GR->getNumAddresses(), 1u);
   // Verify "foo" is present and has a line table and no inline info.
-  auto ExpFI = Reader.getFunctionInfo(0x1000);
+  auto ExpFI = GR->getFunctionInfo(0x1000);
   ASSERT_THAT_EXPECTED(ExpFI, Succeeded());
   ASSERT_EQ(ExpFI->Range, AddressRange(0x1000, 0x1050));
   EXPECT_TRUE(ExpFI->OptLineTable.has_value());
   EXPECT_FALSE(ExpFI->Inline.has_value());
-  StringRef FuncName = Reader.getString(ExpFI->Name);
+  StringRef FuncName = GR->getString(ExpFI->Name);
   EXPECT_EQ(FuncName, "foo");
 
   // Make sure we don't see spurious errors in the output:
@@ -4445,18 +4447,18 @@ template <typename CreatorT> static void TestEmptyLinkageName() {
   FileWriter FW(OutStrm, ByteOrder);
   FW.setStringOffsetSize(GC.getStringOffsetSize());
   ASSERT_THAT_ERROR(GC.encode(FW), Succeeded());
-  auto GR = GsymReader::copyBuffer(OutStrm.str());
-  ASSERT_THAT_EXPECTED(GR, Succeeded());
-  const GsymReader &Reader = **GR;
+  auto GROrErr = GsymReader::copyBuffer(OutStrm.str());
+  ASSERT_THAT_EXPECTED(GROrErr, Succeeded());
+  const std::unique_ptr<GsymReader> &GR = *GROrErr;
   // There should be one function in our GSYM.
-  EXPECT_EQ(Reader.getNumAddresses(), 1u);
+  EXPECT_EQ(GR->getNumAddresses(), 1u);
   // Verify "foo" is present and has a line table and no inline info.
-  auto ExpFI = Reader.getFunctionInfo(0x1000);
+  auto ExpFI = GR->getFunctionInfo(0x1000);
   ASSERT_THAT_EXPECTED(ExpFI, Succeeded());
   ASSERT_EQ(ExpFI->Range, AddressRange(0x1000, 0x1050));
   EXPECT_TRUE(ExpFI->OptLineTable.has_value());
   EXPECT_FALSE(ExpFI->Inline.has_value());
-  StringRef FuncName = Reader.getString(ExpFI->Name);
+  StringRef FuncName = GR->getString(ExpFI->Name);
   EXPECT_EQ(FuncName, "foo");
 
   // Make sure we don't see spurious errors in the output:
@@ -4613,18 +4615,18 @@ template <typename CreatorT> static void TestLineTablesWithEmptyRanges() {
   FileWriter FW(OutStrm, ByteOrder);
   FW.setStringOffsetSize(GC.getStringOffsetSize());
   ASSERT_THAT_ERROR(GC.encode(FW), Succeeded());
-  auto GR = GsymReader::copyBuffer(OutStrm.str());
-  ASSERT_THAT_EXPECTED(GR, Succeeded());
-  const GsymReader &Reader = **GR;
+  auto GROrErr = GsymReader::copyBuffer(OutStrm.str());
+  ASSERT_THAT_EXPECTED(GROrErr, Succeeded());
+  const std::unique_ptr<GsymReader> &GR = *GROrErr;
   // There should be one function in our GSYM.
-  EXPECT_EQ(Reader.getNumAddresses(), 1u);
+  EXPECT_EQ(GR->getNumAddresses(), 1u);
   // Verify "foo" is present and has a line table and no inline info.
-  auto ExpFI = Reader.getFunctionInfo(0x1000);
+  auto ExpFI = GR->getFunctionInfo(0x1000);
   ASSERT_THAT_EXPECTED(ExpFI, Succeeded());
   ASSERT_EQ(ExpFI->Range, AddressRange(0x1000, 0x1050));
   EXPECT_TRUE(ExpFI->OptLineTable.has_value());
   EXPECT_FALSE(ExpFI->Inline.has_value());
-  StringRef FuncName = Reader.getString(ExpFI->Name);
+  StringRef FuncName = GR->getString(ExpFI->Name);
   EXPECT_EQ(FuncName, "foo");
 
   // Make sure we don't see spurious errors in the output:
@@ -4633,7 +4635,7 @@ template <typename CreatorT> static void TestLineTablesWithEmptyRanges() {
   // Make sure that when we lookup address 0x1010, that we get the entry that
   // matches line 12, the second line entry that also has the address of
   // 0x1010.
-  auto LR = Reader.lookup(0x1010);
+  auto LR = GR->lookup(0x1010);
   ASSERT_THAT_EXPECTED(LR, Succeeded());
   SourceLocation src_loc = {"foo", "/tmp", "main.cpp", 12, 16};
   EXPECT_THAT(LR->Locations, testing::ElementsAre(src_loc));
@@ -4942,16 +4944,16 @@ template <typename CreatorT> static void TestHandlingOfInvalidFileIndexes() {
   FileWriter FW(OutStrm, ByteOrder);
   FW.setStringOffsetSize(GC.getStringOffsetSize());
   ASSERT_THAT_ERROR(GC.encode(FW), Succeeded());
-  auto GR = GsymReader::copyBuffer(OutStrm.str());
-  ASSERT_THAT_EXPECTED(GR, Succeeded());
-  const GsymReader &Reader = **GR;
+  auto GROrErr = GsymReader::copyBuffer(OutStrm.str());
+  ASSERT_THAT_EXPECTED(GROrErr, Succeeded());
+  const std::unique_ptr<GsymReader> &GR = *GROrErr;
   // There should be one function in our GSYM.
-  EXPECT_EQ(Reader.getNumAddresses(), 3u);
+  EXPECT_EQ(GR->getNumAddresses(), 3u);
   // Verify "foo" is present and has a line table and no inline info.
-  auto ExpFI = Reader.getFunctionInfo(0x1000);
+  auto ExpFI = GR->getFunctionInfo(0x1000);
   ASSERT_THAT_EXPECTED(ExpFI, Succeeded());
   ASSERT_EQ(ExpFI->Range, AddressRange(0x1000, 0x1050));
-  StringRef FuncName = Reader.getString(ExpFI->Name);
+  StringRef FuncName = GR->getString(ExpFI->Name);
   EXPECT_EQ(FuncName, "foo");
 
   EXPECT_TRUE(ExpFI->OptLineTable.has_value());
@@ -4963,13 +4965,13 @@ template <typename CreatorT> static void TestHandlingOfInvalidFileIndexes() {
   // Make sure that we only have one inline function, not two. We remove one of
   // the inline functions because it has an invalid DW_AT_call_file attribute.
   ASSERT_EQ(ExpFI->Inline->Children.size(), 1u);
-  StringRef InlineName = Reader.getString(ExpFI->Inline->Children[0].Name);
+  StringRef InlineName = GR->getString(ExpFI->Inline->Children[0].Name);
   EXPECT_EQ(InlineName, "inline_with_valid_call_file");
 
-  ExpFI = Reader.getFunctionInfo(0x0000000000002000);
+  ExpFI = GR->getFunctionInfo(0x0000000000002000);
   ASSERT_THAT_EXPECTED(ExpFI, Succeeded());
   ASSERT_EQ(ExpFI->Range, AddressRange(0x2000, 0x2050));
-  FuncName = Reader.getString(ExpFI->Name);
+  FuncName = GR->getString(ExpFI->Name);
   EXPECT_EQ(FuncName, "func_with_valid_decl_file");
   EXPECT_FALSE(ExpFI->Inline.has_value());
   // Make sure we only have 1 entry in the line table which indicates we were
@@ -4977,10 +4979,10 @@ template <typename CreatorT> static void TestHandlingOfInvalidFileIndexes() {
   EXPECT_TRUE(ExpFI->OptLineTable.has_value());
   ASSERT_EQ(ExpFI->OptLineTable->size(), 1u);
 
-  ExpFI = Reader.getFunctionInfo(0x0000000000003000);
+  ExpFI = GR->getFunctionInfo(0x0000000000003000);
   ASSERT_THAT_EXPECTED(ExpFI, Succeeded());
   ASSERT_EQ(ExpFI->Range, AddressRange(0x3000, 0x3050));
-  FuncName = Reader.getString(ExpFI->Name);
+  FuncName = GR->getString(ExpFI->Name);
   EXPECT_EQ(FuncName, "func_with_invalid_decl_file");
   EXPECT_FALSE(ExpFI->Inline.has_value());
   // Make sure we only no line table because there are no line entries in the
@@ -5167,26 +5169,26 @@ static void TestLookupsOfOverlappingAndUnequalRanges() {
   FileWriter FW(OutStrm, ByteOrder);
   FW.setStringOffsetSize(GC.getStringOffsetSize());
   ASSERT_THAT_ERROR(GC.encode(FW), Succeeded());
-  auto GR = GsymReader::copyBuffer(OutStrm.str());
-  ASSERT_THAT_EXPECTED(GR, Succeeded());
-  GsymReader &Reader = **GR;
+  auto GROrErr = GsymReader::copyBuffer(OutStrm.str());
+  ASSERT_THAT_EXPECTED(GROrErr, Succeeded());
+  std::unique_ptr<GsymReader> &GR = *GROrErr;
   // There should be two functions in our GSYM.
-  EXPECT_EQ(Reader.getNumAddresses(), 2u);
+  EXPECT_EQ(GR->getNumAddresses(), 2u);
   // Verify "foo" is correctly looked up for each of its addresses.
   for (uint64_t Addr = 0x1000; Addr < 0x1050; ++Addr) {
-    auto ExpFI = Reader.getFunctionInfo(Addr);
+    auto ExpFI = GR->getFunctionInfo(Addr);
     ASSERT_THAT_EXPECTED(ExpFI, Succeeded());
     ASSERT_EQ(ExpFI->Range, AddressRange(0x1000, 0x1050));
-    StringRef FuncName = Reader.getString(ExpFI->Name);
+    StringRef FuncName = GR->getString(ExpFI->Name);
     EXPECT_EQ(FuncName, "foo");
   }
 
   // Verify "bar" is correctly looked up for each of its addresses.
   for (uint64_t Addr = 0x1050; Addr < 0x1100; ++Addr) {
-    auto ExpFI = Reader.getFunctionInfo(Addr);
+    auto ExpFI = GR->getFunctionInfo(Addr);
     ASSERT_THAT_EXPECTED(ExpFI, Succeeded());
     ASSERT_EQ(ExpFI->Range, AddressRange(0x1000, 0x1100));
-    StringRef FuncName = Reader.getString(ExpFI->Name);
+    StringRef FuncName = GR->getString(ExpFI->Name);
     EXPECT_EQ(FuncName, "bar");
   }
 
@@ -5198,7 +5200,7 @@ static void TestLookupsOfOverlappingAndUnequalRanges() {
 
   SmallString<512> DumpStr;
   raw_svector_ostream DumpStrm(DumpStr);
-  Reader.dump(DumpStrm);
+  GR->dump(DumpStrm);
 
   // Make sure we see both "foo" and "bar" in the output of an entire GSYM
   // dump. Prior to this fix we would two "foo" entries.
