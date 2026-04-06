@@ -85,7 +85,7 @@ Note you can use the `DESTDIR` Makefile variable to do staged installs.
 DESTDIR=/path/for/staged/install ninja install
 ```
 
-## Run test
+## Run tests
 ```
 ninja check-libclc-<target-triple>
 ```
