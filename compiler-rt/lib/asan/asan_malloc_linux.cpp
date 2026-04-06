@@ -87,7 +87,6 @@ INTERCEPTOR(void, free_aligned_sized, void* ptr, uptr alignment, uptr size) {
 INTERCEPTOR(void*, __linux_vec_malloc, uptr size) {
   if (DlsymAlloc::Use())
     return DlsymAlloc::Allocate(size, 16);
-  AsanInitFromRtl();
   GET_STACK_TRACE_MALLOC;
   return asan_vec_malloc(size, &stack);
 }
@@ -95,7 +94,6 @@ INTERCEPTOR(void*, __linux_vec_malloc, uptr size) {
 INTERCEPTOR(void*, __linux_vec_calloc, uptr nmemb, uptr size) {
   if (DlsymAlloc::Use())
     return DlsymAlloc::Callocate(nmemb, size, 16);
-  AsanInitFromRtl();
   GET_STACK_TRACE_MALLOC;
   return asan_vec_calloc(nmemb, size, &stack);
 }
@@ -121,14 +119,6 @@ INTERCEPTOR(void*, vec_calloc, uptr nmemb, uptr size) {
     return DlsymAlloc::Callocate(nmemb, size, 16);
   GET_STACK_TRACE_MALLOC;
   return asan_vec_calloc(nmemb, size, &stack);
-}
-
-// Unlike realloc, vec_realloc must return memory aligned to 16 bytes.
-INTERCEPTOR(void*, vec_realloc, void* ptr, uptr size) {
-  if (DlsymAlloc::Use() || DlsymAlloc::PointerIsMine(ptr))
-    return DlsymAlloc::Realloc(ptr, size, 16);
-  GET_STACK_TRACE_MALLOC;
-  return asan_vec_realloc(ptr, size, &stack);
 }
 #  endif
 

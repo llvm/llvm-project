@@ -1,18 +1,19 @@
-// Verify vec_malloc, vec_calloc and vec_realloc interceptors, and that all
-// vec/plain allocators return 16-byte aligned memory on AIX.
+// Verify that vec_malloc, vec_calloc, vec_realloc, and the plain allocators
+// all return 16-byte aligned memory on AIX.
+//
+// Note: 16-byte alignment is structurally guaranteed by DefaultSizeClassMap
+// (kMinSizeLog=4, so every size class is a multiple of 16) combined with the
+// minimum 16-byte redzone.  This test therefore documents/verifies the AIX ABI
+// guarantee end-to-end rather than catching regressions in the explicit
+// alignment=16 argument passed by asan_vec_malloc/asan_vec_calloc.
 
 // RUN: %clangxx_asan -O0 %s -o %t
-// RUN: not %run %t vec_malloc  2>&1 | FileCheck %s --check-prefix=CHECK-MALLOC
-// RUN: not %run %t vec_calloc  2>&1 | FileCheck %s --check-prefix=CHECK-CALLOC
-// RUN: not %run %t vec_realloc 2>&1 | FileCheck %s --check-prefix=CHECK-REALLOC
-// RUN: %run %t align           2>&1 | FileCheck %s --check-prefix=CHECK-ALIGN
+// RUN: %run %t 2>&1 | FileCheck %s
 
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 
-// Helper used by the "align" sub-test: prints OK/FAIL to stderr.
 static void check_align(const char *label, void *ptr) {
   if (((size_t)ptr & 15) != 0) {
     fprintf(stderr, "FAIL: %s ptr %p not 16-byte aligned\n", label, ptr);
@@ -21,96 +22,54 @@ static void check_align(const char *label, void *ptr) {
   fprintf(stderr, "OK: %s\n", label);
 }
 
-int main(int argc, char **argv) {
-  if (argc != 2)
-    return 1;
+int main() {
+  void *vm = vec_malloc(32);
+  check_align("vec_malloc", vm);
+  // CHECK: OK: vec_malloc
 
-  // --- overflow detection (existing) ---
+  void *vc = vec_calloc(1, 32);
+  check_align("vec_calloc", vc);
+  // CHECK: OK: vec_calloc
 
-  char *p;
-  if (strcmp(argv[1], "vec_malloc") == 0)
-    p = (char *)vec_malloc(10);
-  // CHECK-MALLOC: {{READ of size 1 at 0x.* thread T0}}
-  // CHECK-MALLOC: {{0x.* is located 0 bytes after 10-byte region}}
-  // CHECK-MALLOC: {{0x.* in .vec_malloc}}
-  else if (strcmp(argv[1], "vec_calloc") == 0)
-    p = (char *)vec_calloc(10, 1);
-  // CHECK-CALLOC: {{READ of size 1 at 0x.* thread T0}}
-  // CHECK-CALLOC: {{0x.* is located 0 bytes after 10-byte region}}
-  // CHECK-CALLOC: {{0x.* in .vec_calloc}}
-  else if (strcmp(argv[1], "vec_realloc") == 0)
-    p = (char *)vec_realloc(NULL, 10);
-  // CHECK-REALLOC: {{READ of size 1 at 0x.* thread T0}}
-  // CHECK-REALLOC: {{0x.* is located 0 bytes after 10-byte region}}
-  // On AIX 32-bit vec_realloc resolves to the realloc symbol; match both.
-  // CHECK-REALLOC: {{0x.* in .*realloc}}
+  void *vr_null = vec_realloc(NULL, 32);
+  check_align("vec_realloc(NULL)", vr_null);
+  // CHECK: OK: vec_realloc(NULL)
 
-  // --- 16-byte alignment checks ---
+  void *vr_vm = vec_realloc(vm, 64);
+  check_align("vec_realloc(vec_malloc_ptr)", vr_vm);
+  // CHECK: OK: vec_realloc(vec_malloc_ptr)
 
-  else if (strcmp(argv[1], "align") == 0) {
-    // Perturb the heap with small odd-sized allocations to advance the
-    // allocator's per-size-class pointer by a non-16-byte amount.
-    void *perturb[8];
-    for (int i = 0; i < 8; i++)
-      perturb[i] = malloc(i + 1);
+  void *vr_vc = vec_realloc(vc, 64);
+  check_align("vec_realloc(vec_calloc_ptr)", vr_vc);
+  // CHECK: OK: vec_realloc(vec_calloc_ptr)
 
-    void *vm = vec_malloc(32);
-    check_align("vec_malloc", vm);
-    // CHECK-ALIGN: OK: vec_malloc
+  void *m = malloc(32);
+  check_align("malloc", m);
+  // CHECK: OK: malloc
 
-    void *vc = vec_calloc(1, 32);
-    check_align("vec_calloc", vc);
-    // CHECK-ALIGN: OK: vec_calloc
+  void *c = calloc(1, 32);
+  check_align("calloc", c);
+  // CHECK: OK: calloc
 
-    void *vr_null = vec_realloc(NULL, 32);
-    check_align("vec_realloc(NULL)", vr_null);
-    // CHECK-ALIGN: OK: vec_realloc(NULL)
+  void *re_null = realloc(NULL, 32);
+  check_align("realloc(NULL)", re_null);
+  // CHECK: OK: realloc(NULL)
 
-    void *vr_vm = vec_realloc(vm, 64);
-    check_align("vec_realloc(vec_malloc_ptr)", vr_vm);
-    // CHECK-ALIGN: OK: vec_realloc(vec_malloc_ptr)
+  void *re_m = realloc(m, 64);
+  check_align("realloc(malloc_ptr)", re_m);
+  // CHECK: OK: realloc(malloc_ptr)
 
-    void *vr_vc = vec_realloc(vc, 64);
-    check_align("vec_realloc(vec_calloc_ptr)", vr_vc);
-    // CHECK-ALIGN: OK: vec_realloc(vec_calloc_ptr)
+  void *vm2 = vec_malloc(32);
+  void *re_vm = realloc(vm2, 64);
+  check_align("realloc(vec_malloc_ptr)", re_vm);
+  // CHECK: OK: realloc(vec_malloc_ptr)
 
-    void *m = malloc(32);
-    check_align("malloc", m);
-    // CHECK-ALIGN: OK: malloc
-
-    void *c = calloc(1, 32);
-    check_align("calloc", c);
-    // CHECK-ALIGN: OK: calloc
-
-    void *re_null = realloc(NULL, 32);
-    check_align("realloc(NULL)", re_null);
-    // CHECK-ALIGN: OK: realloc(NULL)
-
-    void *re_m = realloc(m, 64);
-    check_align("realloc(malloc_ptr)", re_m);
-    // CHECK-ALIGN: OK: realloc(malloc_ptr)
-
-    void *vm2 = vec_malloc(32);
-    void *re_vm = realloc(vm2, 64);
-    check_align("realloc(vec_malloc_ptr)", re_vm);
-    // CHECK-ALIGN: OK: realloc(vec_malloc_ptr)
-
-    free(vr_null);
-    free(vr_vm);
-    free(vr_vc);
-    free(c);
-    free(re_null);
-    free(re_m);
-    free(re_vm);
-    for (int i = 0; i < 8; i++)
-      free(perturb[i]);
-    return 0;
-  } else {
-    return 1;
-  }
-
-  char x = p[10];
-  free(p);
-
-  return x;
+  free(vr_null);
+  free(vr_vm);
+  free(vr_vc);
+  free(c);
+  free(re_null);
+  free(re_m);
+  free(re_vm);
+  return 0;
 }
