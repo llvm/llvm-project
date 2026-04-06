@@ -78,10 +78,8 @@ DisassemblerSP Disassembler::FindPlugin(const ArchSpec &arch,
         return disasm_sp;
     }
   } else {
-    for (uint32_t idx = 0;
-         (create_callback = PluginManager::GetDisassemblerCreateCallbackAtIndex(
-              idx)) != nullptr;
-         ++idx) {
+    for (auto create_callback :
+         PluginManager::GetDisassemblerCreateCallbacks()) {
       if (auto disasm_sp = create_callback(arch, flavor, cpu, features))
         return disasm_sp;
     }
@@ -415,7 +413,7 @@ VariableAnnotator::AnnotateStructured(Instruction &inst) {
 
     const Declaration &decl = v->GetDeclaration();
     if (decl.GetFile()) {
-      decl_file = decl.GetFile().GetFilename().AsCString();
+      decl_file = decl.GetFile().GetFilename().GetString();
       if (decl.GetLine() > 0)
         decl_line = decl.GetLine();
     }

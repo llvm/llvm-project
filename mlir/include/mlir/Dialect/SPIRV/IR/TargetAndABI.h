@@ -109,6 +109,9 @@ DenseI32ArrayAttr lookupLocalWorkGroupSize(Operation *op);
 /// "Table 46. Required Limits" of the Vulkan spec.
 ResourceLimitsAttr getDefaultResourceLimits(MLIRContext *context);
 
+/// Returns the attribute name for specifying loop control.
+StringRef getLoopControlAttrName();
+
 /// Returns the attribute name for specifying SPIR-V target environment.
 StringRef getTargetEnvAttrName();
 

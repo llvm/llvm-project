@@ -23,22 +23,6 @@ namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
 LIBC_INLINE float asinpif(float x) {
-#ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
-  constexpr size_t N_EXCEPTS = 5;
-  constexpr fputil::ExceptValues<float, N_EXCEPTS> ASINPIF_EXCEPTS = {
-      {// (inputs, RZ output, RU offset, RD offset, RN offset)
-       // x = 0x1.e768f6p-122, asinpif(x) = 0x1.364b7ap-123 (RZ)
-       {0x02F3B47B, 0x021B25BD, 1, 0, 0},
-       // x = 0x1.e768f6p-24, asinpif(x) = 0x1.364b7ap-25 (RZ)
-       {0x33F3B47B, 0x331B25BD, 1, 0, 1},
-       // x = 0x1.dddb4ep-19, asinpif(x) = 0x1.303686p-20 (RZ)
-       {0x366EEDA7, 0x35981B43, 1, 0, 1},
-       // x = -0x1.dddb4ep-19, asinpif(x) = -0x1.303686p-20 (RZ)
-       {0xB66EEDA7, 0xB5981B43, 0, 1, 1},
-       // x = -0x1.e768f6p-24, asinpif(x) = -0x1.364b7ap-25 (RZ)
-       {0xB3F3B47B, 0xB31B25BD, 0, 1, 1}}};
-#endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
-
   using FPBits = fputil::FPBits<float>;
 
   FPBits xbits(x);
@@ -60,12 +44,6 @@ LIBC_INLINE float asinpif(float x) {
     fputil::set_errno_if_required(EDOM);
     return FPBits::quiet_nan().get_val();
   }
-
-#ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
-  auto r = ASINPIF_EXCEPTS.lookup(xbits.uintval());
-  if (LIBC_UNLIKELY(r.has_value()))
-    return r.value();
-#endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
   // if |x| <= 0.5:
   //   asinpi(x) = x * (c0 + x^2 * P1(x^2))

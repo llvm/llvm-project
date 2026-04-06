@@ -64,7 +64,7 @@ class LongJmpPass : public BinaryFunctionPass {
   uint32_t NumSharedStubs{0};
 
   /// The shortest distance for any branch instruction on AArch64.
-  static constexpr size_t ShortestJumpBits = 16;
+  static constexpr size_t ShortestJumpBits = 11;
   static constexpr size_t ShortestJumpSpan = 1ULL << (ShortestJumpBits - 1);
 
   /// The longest single-instruction branch.
