@@ -196,9 +196,9 @@ static void TestFunctionInfoDecodeError(llvm::endianness ByteOrder,
                                         const uint64_t BaseAddr,
                                         std::string ExpectedErrorMsg) {
   uint8_t AddressSize = 4;
-  DataExtractor DE(Bytes, ByteOrder == llvm::endianness::little, AddressSize);
-  DE.setStringOffsetSize(sizeof(StrpT));
-  llvm::Expected<FunctionInfo> Decoded = FunctionInfo::decode(DE, BaseAddr);
+  DataExtractor Data(Bytes, ByteOrder == llvm::endianness::little, AddressSize);
+  Data.setStringOffsetSize(sizeof(StrpT));
+  llvm::Expected<FunctionInfo> Decoded = FunctionInfo::decode(Data, BaseAddr);
   // Make sure decoding fails.
   ASSERT_FALSE((bool)Decoded);
   // Make sure decoded object is the same as the one we encoded.
@@ -315,10 +315,10 @@ static void TestFunctionInfoEncodeDecode(llvm::endianness ByteOrder,
   ASSERT_EQ(ExpectedOffset.get(), 0ULL);
   std::string Bytes(OutStrm.str());
   uint8_t AddressSize = 4;
-  DataExtractor DE(Bytes, ByteOrder == llvm::endianness::little, AddressSize);
-  DE.setStringOffsetSize(sizeof(StrpT));
+  DataExtractor Data(Bytes, ByteOrder == llvm::endianness::little, AddressSize);
+  Data.setStringOffsetSize(sizeof(StrpT));
   llvm::Expected<FunctionInfo> Decoded =
-      FunctionInfo::decode(DE, FI.Range.start());
+      FunctionInfo::decode(Data, FI.Range.start());
   // Make sure decoding succeeded.
   ASSERT_TRUE((bool)Decoded);
   // Make sure decoded object is the same as the one we encoded.
@@ -401,9 +401,9 @@ static void TestInlineInfoEncodeDecode(llvm::endianness ByteOrder,
   ASSERT_FALSE(Err);
   std::string Bytes(OutStrm.str());
   uint8_t AddressSize = 4;
-  DataExtractor DE(Bytes, ByteOrder == llvm::endianness::little, AddressSize);
-  DE.setStringOffsetSize(sizeof(StrpT));
-  llvm::Expected<InlineInfo> Decoded = InlineInfo::decode(DE, BaseAddr);
+  DataExtractor Data(Bytes, ByteOrder == llvm::endianness::little, AddressSize);
+  Data.setStringOffsetSize(sizeof(StrpT));
+  llvm::Expected<InlineInfo> Decoded = InlineInfo::decode(Data, BaseAddr);
   // Make sure decoding succeeded.
   ASSERT_TRUE((bool)Decoded);
   // Make sure decoded object is the same as the one we encoded.
@@ -415,9 +415,9 @@ static void TestInlineInfoDecodeError(llvm::endianness ByteOrder,
                                       StringRef Bytes, const uint64_t BaseAddr,
                                       std::string ExpectedErrorMsg) {
   uint8_t AddressSize = 4;
-  DataExtractor DE(Bytes, ByteOrder == llvm::endianness::little, AddressSize);
-  DE.setStringOffsetSize(sizeof(StrpT));
-  llvm::Expected<InlineInfo> Decoded = InlineInfo::decode(DE, BaseAddr);
+  DataExtractor Data(Bytes, ByteOrder == llvm::endianness::little, AddressSize);
+  Data.setStringOffsetSize(sizeof(StrpT));
+  llvm::Expected<InlineInfo> Decoded = InlineInfo::decode(Data, BaseAddr);
   // Make sure decoding fails.
   ASSERT_FALSE((bool)Decoded);
   // Make sure decoded object is the same as the one we encoded.
@@ -5443,10 +5443,10 @@ TEST(GSYMTest, TestFunctionInfoLargeNameOffset) {
   ASSERT_THAT_EXPECTED(EncResult, Succeeded());
 
   // Decode.
-  DataExtractor DE(StringRef(Buf.data(), Buf.size()), /*IsLittleEndian=*/true,
-                   8);
-  DE.setStringOffsetSize(8);
-  auto DecResult = FunctionInfo::decode(DE, BaseAddr);
+  DataExtractor Data(StringRef(Buf.data(), Buf.size()), /*IsLittleEndian=*/true,
+                     8);
+  Data.setStringOffsetSize(8);
+  auto DecResult = FunctionInfo::decode(Data, BaseAddr);
   ASSERT_THAT_EXPECTED(DecResult, Succeeded());
 
   EXPECT_EQ(DecResult->Name, LargeName);
@@ -5473,10 +5473,10 @@ TEST(GSYMTest, TestInlineInfoLargeNameOffset) {
   ASSERT_FALSE(bool(EncErr));
 
   // Decode.
-  DataExtractor DE(StringRef(Buf.data(), Buf.size()), /*IsLittleEndian=*/true,
-                   8);
-  DE.setStringOffsetSize(8);
-  auto DecResult = InlineInfo::decode(DE, BaseAddr);
+  DataExtractor Data(StringRef(Buf.data(), Buf.size()), /*IsLittleEndian=*/true,
+                     8);
+  Data.setStringOffsetSize(8);
+  auto DecResult = InlineInfo::decode(Data, BaseAddr);
   ASSERT_THAT_EXPECTED(DecResult, Succeeded());
 
   EXPECT_EQ(DecResult->Name, LargeName);
@@ -5505,11 +5505,11 @@ TEST(GSYMTest, TestCallSiteInfoLargeMatchRegex) {
   ASSERT_FALSE(bool(EncErr));
 
   // Decode.
-  DataExtractor DE(StringRef(Buf.data(), Buf.size()), /*IsLittleEndian=*/true,
-                   8);
-  DE.setStringOffsetSize(8);
+  DataExtractor Data(StringRef(Buf.data(), Buf.size()), /*IsLittleEndian=*/true,
+                     8);
+  Data.setStringOffsetSize(8);
   uint64_t Offset = 0;
-  auto DecResult = CallSiteInfo::decode(DE, Offset);
+  auto DecResult = CallSiteInfo::decode(Data, Offset);
   ASSERT_THAT_EXPECTED(DecResult, Succeeded());
 
   EXPECT_EQ(DecResult->ReturnOffset, 0x10u);
@@ -5538,10 +5538,10 @@ TEST(GSYMTest, TestCallSiteInfoCollectionLargeMatchRegex) {
   ASSERT_FALSE(bool(EncErr));
 
   // Decode.
-  DataExtractor DE(StringRef(Buf.data(), Buf.size()), /*IsLittleEndian=*/true,
-                   8);
-  DE.setStringOffsetSize(8);
-  auto DecResult = CallSiteInfoCollection::decode(DE);
+  DataExtractor Data(StringRef(Buf.data(), Buf.size()), /*IsLittleEndian=*/true,
+                     8);
+  Data.setStringOffsetSize(8);
+  auto DecResult = CallSiteInfoCollection::decode(Data);
   ASSERT_THAT_EXPECTED(DecResult, Succeeded());
 
   ASSERT_EQ(DecResult->CallSites.size(), 1u);
@@ -5581,10 +5581,10 @@ TEST(GSYMTest, TestFunctionInfoAllFieldsLargeOffsets) {
   ASSERT_THAT_EXPECTED(EncResult, Succeeded());
 
   // Decode.
-  DataExtractor DE(StringRef(Buf.data(), Buf.size()), /*IsLittleEndian=*/true,
-                   8);
-  DE.setStringOffsetSize(8);
-  auto DecResult = FunctionInfo::decode(DE, BaseAddr);
+  DataExtractor Data(StringRef(Buf.data(), Buf.size()), /*IsLittleEndian=*/true,
+                     8);
+  Data.setStringOffsetSize(8);
+  auto DecResult = FunctionInfo::decode(Data, BaseAddr);
   ASSERT_THAT_EXPECTED(DecResult, Succeeded());
 
   EXPECT_EQ(DecResult->Name, LargeFuncName);
@@ -5615,10 +5615,10 @@ TEST(GSYMTest, TestMergedFunctionsInfoLargeOffsets) {
   ASSERT_FALSE(bool(EncErr));
 
   // Decode.
-  DataExtractor DE(StringRef(Buf.data(), Buf.size()), /*IsLittleEndian=*/true,
-                   8);
-  DE.setStringOffsetSize(8);
-  auto DecResult = MergedFunctionsInfo::decode(DE, BaseAddr);
+  DataExtractor Data(StringRef(Buf.data(), Buf.size()), /*IsLittleEndian=*/true,
+                     8);
+  Data.setStringOffsetSize(8);
+  auto DecResult = MergedFunctionsInfo::decode(Data, BaseAddr);
   ASSERT_THAT_EXPECTED(DecResult, Succeeded());
 
   ASSERT_EQ(DecResult->MergedFunctions.size(), 2u);
