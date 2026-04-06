@@ -92,6 +92,11 @@ class IR2VecTool {
 private:
   Module &M;
   ModuleAnalysisManager MAM;
+
+  /// \note The API around vocab object is not thread-safe.
+  /// Specifically, calling setVocabulary() on an instance while
+  /// another thread reading the Vocab object with the same instance
+  /// can cause a data race on this internal shared_ptr<Vocabulary> member.
   std::shared_ptr<Vocabulary> Vocab;
 
 public:
@@ -101,10 +106,10 @@ public:
   Expected<std::unique_ptr<Embedder>>
   createIR2VecEmbedder(const Function &F, IR2VecKind Kind) const;
 
-  /// Load vocabulary from a shared pointer. This allows sharing the same
-  /// vocabulary instance across multiple IR2VecTool instances, which is useful
-  /// for generating embeddings for multiple functions without needing to reload
-  /// the vocabulary each time.
+  /// Sets the vocabulary for this tool instance.
+  /// This allows sharing the same vocabulary instance across multiple IR2VecTool
+  /// instances, which is useful for generating embeddings for multiple functions
+  /// without needing to reload the vocabulary each time.
   Error setVocabulary(std::shared_ptr<Vocabulary> V);
 
   /// Generate triplets for a single function

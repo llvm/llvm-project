@@ -65,6 +65,11 @@ private:
   IR2VecKind OutputEmbeddingMode;
 
 public:
+
+  /// \note
+  /// In the currently exposed API, the vocabulary is set once at construction and there is no
+  /// public interface to call this again. Callers should treat
+  /// the vocabulary as immutable for the lifetime of the tool instance.
   PyIR2VecTool(const std::string &Filename, IR2VecKind Mode, PyVocab &Vocab) {
     if (!Vocab.getVocab())
       throw nb::value_error("Vocabulary object is not initialized");
@@ -77,6 +82,7 @@ public:
     Ctx = std::make_unique<LLVMContext>();
     M = getLLVMIR(Filename, *Ctx);
     Tool = std::make_unique<IR2VecTool>(*M);
+
     if (auto Err = Tool->setVocabulary(Vocab.getVocab()))
       throw nb::value_error(toString(std::move(Err)).c_str());
   }
