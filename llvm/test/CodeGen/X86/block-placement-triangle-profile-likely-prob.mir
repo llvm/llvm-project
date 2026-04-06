@@ -49,4 +49,11 @@ body:             |
 ...
 
 # CHECK: name: main
-# CHECK: bb.0.entry
+# CHECK: bb.0.entry:
+# CHECK: successors: %bb.1
+# CHECK-SAME: %bb.2
+# CHECK: JCC_1 %bb.1
+# CHECK: bb.2.pred:
+# CHECK: successors: %bb.1
+# CHECK: bb.1.succ:
+# CHECK: RET64
