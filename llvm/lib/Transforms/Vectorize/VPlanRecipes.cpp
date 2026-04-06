@@ -1373,6 +1373,10 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
   case VPInstruction::VScale:
   case VPInstruction::Unpack:
     return false;
+  case Instruction::Call:
+    return !cast<Function>(
+                cast<VPIRValue>(getOperand(getNumOperands() - 1))->getValue())
+                ->doesNotAccessMemory();
   default:
     return true;
   }
