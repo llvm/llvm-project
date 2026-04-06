@@ -406,12 +406,13 @@ void FactsGenerator::VisitBinaryOperator(const BinaryOperator *BO) {
 
 void FactsGenerator::handleTernaryOperator(const ConditionalOperator *CO) {
   const auto *Map = AC.getCFGStmtMap();
+
   const Expr *TrueExpr = CO->getTrueExpr();
   const Expr *FalseExpr = CO->getFalseExpr();
-  bool TBHasConditionResult =
-      Map->getBlock(TrueExpr)->hasNoReturnElement() || isThrowExpr(TrueExpr);
-  bool FBHasConditionResult =
-      Map->getBlock(FalseExpr)->hasNoReturnElement() || isThrowExpr(FalseExpr);
+
+  bool TBIsSinking = Map->getBlock(TrueExpr)->isInevitablySinking();
+  bool FBIsSinking = Map->getBlock(FalseExpr)->isInevitablySinking();
+
   bool FirstFlow = true;
   auto HandleFlow = [&](const Expr *E, bool HasNoReturn) {
     if (HasNoReturn)
@@ -419,12 +420,11 @@ void FactsGenerator::handleTernaryOperator(const ConditionalOperator *CO) {
     if (FirstFlow) {
       killAndFlowOrigin(*CO, *E);
       FirstFlow = false;
-    } else {
+    } else
       flowOrigin(*CO, *E);
-    }
   };
-  HandleFlow(TrueExpr, TBHasConditionResult);
-  HandleFlow(FalseExpr, FBHasConditionResult);
+  HandleFlow(TrueExpr, TBIsSinking);
+  HandleFlow(FalseExpr, FBIsSinking);
 }
 
 void FactsGenerator::VisitConditionalOperator(const ConditionalOperator *CO) {
