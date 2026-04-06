@@ -821,9 +821,12 @@ public:
       AtomicOrderingBitfieldElementT<VolatileField::NextBit>;
   using OperationField = BinOpBitfieldElement<AtomicOrderingField::NextBit>;
   using AlignmentField = AlignmentBitfieldElementT<OperationField::NextBit>;
-  static_assert(Bitfield::areContiguous<VolatileField, AtomicOrderingField,
-                                        OperationField, AlignmentField>(),
-                "Bitfields must be contiguous");
+  using ElementwiseField = BoolBitfieldElementT<AlignmentField::NextBit>;
+  static_assert(
+      Bitfield::areContiguous<VolatileField, AtomicOrderingField,
+                              OperationField, AlignmentField,
+                              ElementwiseField>(),
+      "Bitfields must be contiguous");
 
   BinOp getOperation() const { return getSubclassData<OperationField>(); }
 
@@ -868,10 +871,10 @@ public:
   void setVolatile(bool V) { setSubclassData<VolatileField>(V); }
 
   /// Return true if this RMW has elementwise vector semantics.
-  bool isElementwise() const { return Elementwise; }
+  bool isElementwise() const { return getSubclassData<ElementwiseField>(); }
 
   /// Specify whether this RMW has elementwise vector semantics.
-  void setElementwise(bool V) { Elementwise = V; }
+  void setElementwise(bool V) { setSubclassData<ElementwiseField>(V); }
 
   /// Transparently provide more efficient getOperand methods.
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
@@ -939,9 +942,6 @@ private:
   /// room in SubClassData for everything, so synchronization scope ID gets its
   /// own field.
   SyncScope::ID SSID;
-
-  /// Whether this instruction uses per-lane vector atomic semantics.
-  bool Elementwise = false;
 };
 
 template <>
