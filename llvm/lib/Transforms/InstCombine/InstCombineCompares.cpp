@@ -8815,14 +8815,14 @@ static Instruction *foldFCmpWithFloorAndCeil(FCmpInst &I,
   case FCmpInst::FCMP_ONE: {
     // fcmp oeq/one floor(x), x => fcmp oeq/one trunc(x), x
     // fcmp oeq/one ceil(x), x  => fcmp oeq/one trunc(x), x
-    // if x is known not to be NaN or Inf
+    // if x is known not to be Inf
     if (!FloorX && !CeilX)
       break;
 
     KnownFPClass Known = computeKnownFPClass(
-        RHS, fcNan | fcInf, IC.getSimplifyQuery().getWithInstruction(&I));
+        RHS, fcInf, IC.getSimplifyQuery().getWithInstruction(&I));
 
-    if (!Known.isKnownNeverInfOrNaN())
+    if (!Known.isKnownNeverInfinity())
       break;
 
     Value *TruncX = IC.Builder.CreateUnaryIntrinsic(Intrinsic::trunc, RHS);
