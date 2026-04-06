@@ -5069,31 +5069,28 @@ bool Parser::ParseProfileName(std::string &Name) {
 
 bool Parser::ParseNonCommaBalancedToken(std::string &Spelling) {
   if (Tok.isOneOf(tok::l_paren, tok::l_square, tok::l_brace)) {
-    tok::TokenKind Open = Tok.getKind();
-    tok::TokenKind Close = Open == tok::l_paren    ? tok::r_paren
-                           : Open == tok::l_square  ? tok::r_square
-                                                    : tok::r_brace;
+    tok::TokenKind Close = Tok.is(tok::l_paren)   ? tok::r_paren
+                           : Tok.is(tok::l_square) ? tok::r_square
+                                                   : tok::r_brace;
     Spelling = PP.getSpelling(Tok);
-    ConsumeAnyToken();
-    unsigned Depth = 1;
-    while (Depth > 0 && !Tok.is(tok::eof)) {
-      if (Tok.is(Open))
-        ++Depth;
-      else if (Tok.is(Close))
-        --Depth;
-      if (Depth > 0) {
-        Spelling += " ";
-        Spelling += PP.getSpelling(Tok);
-        ConsumeAnyToken();
-      }
-    }
-    if (Tok.is(tok::eof)) {
+    if (Tok.is(tok::l_paren))
+      ConsumeParen();
+    else if (Tok.is(tok::l_square))
+      ConsumeBracket();
+    else
+      ConsumeBrace();
+
+    CachedTokens Toks;
+    if (!ConsumeAndStoreUntil(Close, Toks, /*StopAtSemi=*/false,
+                              /*ConsumeFinalToken=*/true)) {
       Diag(Tok, diag::err_expected) << Close;
       return true;
     }
-    Spelling += " ";
-    Spelling += PP.getSpelling(Tok);
-    ConsumeAnyToken();
+
+    for (const auto &T : Toks) {
+      Spelling += " ";
+      Spelling += PP.getSpelling(T);
+    }
     return false;
   }
 

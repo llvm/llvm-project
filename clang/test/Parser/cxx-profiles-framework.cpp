@@ -16,6 +16,9 @@
 // Nested balanced groups in arguments
 [[profiles::enforce(nested(config: (a b)))]];
 
+// Mixed bracket types in balanced groups
+[[profiles::enforce(mixed(config: (a [b] c)))]];
+
 // Bare non-operator-non-punctuator token arguments
 [[profiles::enforce(bare1(3))]];
 

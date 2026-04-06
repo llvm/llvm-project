@@ -2974,7 +2974,7 @@ static bool mergeDeclAttribute(Sema &S, NamedDecl *D,
     NewAttr = S.HLSL().mergeVkConstantIdAttr(D, *CI, CI->getId());
   else if (const auto *SA = dyn_cast<HLSLShaderAttr>(Attr))
     NewAttr = S.HLSL().mergeShaderAttr(D, *SA, SA->getType());
-  else if (isa<SuppressAttr>(Attr))
+  else if (isa<SuppressAttr>(Attr) || isa<ProfilesSuppressAttr>(Attr))
     // Do nothing. Each redeclaration should be suppressed separately.
     NewAttr = nullptr;
   else if (const auto *RD = dyn_cast<OpenACCRoutineDeclAttr>(Attr))

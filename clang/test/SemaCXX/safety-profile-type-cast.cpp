@@ -218,3 +218,12 @@ void template_suppress_boundary(T x) {
 void instantiate_suppress_boundary() {
   template_suppress_boundary(0); // expected-note {{in instantiation of function template specialization 'template_suppress_boundary<int>' requested here}}
 }
+
+// Suppress on forward declaration does not propagate to definition.
+// no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+[[profiles::suppress(test::type_cast)]]
+void suppress_fwd_only();
+
+void suppress_fwd_only() {
+  int *p = reinterpret_cast<int*>(0); // expected-error {{'reinterpret_cast' is unsafe under profile 'test::type_cast'}}
+}
