@@ -231,7 +231,7 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
   // this model, but it is uniformly spread across all the functions in the SCC
   // and eventually they all become too large to inline, rather than
   // incrementally maknig a single function grow in a super linear fashion.
-  SmallVector<std::pair<CallBase *, int>, 16> Calls;
+  SmallVector<CallBase *, 16> Calls;
 
   // Populate the initial list of calls in this SCC.
   for (auto &N : InitialC) {
@@ -246,7 +246,7 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
       if (auto *CB = dyn_cast<CallBase>(&I))
         if (Function *Callee = CB->getCalledFunction()) {
           if (!Callee->isDeclaration())
-            Calls.push_back({CB, -1});
+            Calls.push_back(CB);
           else if (!isa<IntrinsicInst>(I)) {
             using namespace ore;
             setInlineRemark(*CB, "unavailable definition");
@@ -269,12 +269,6 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
   if (Calls.empty())
     return PreservedAnalyses::all();
 
-  // When inlining a callee produces new call sites, we want to keep track of
-  // the fact that they were inlined from the callee.  This allows us to avoid
-  // infinite inlining in some obscure cases.  To represent this, we use an
-  // index into the InlineHistory vector.
-  SmallVector<std::pair<Function *, int>, 16> InlineHistory;
-
   // Track a set vector of inlined callees so that we can augment the caller
   // with all of their edges in the call graph before pruning out the ones that
   // got simplified away.
@@ -295,7 +289,7 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
     // have the same caller, so we first set up some shared infrastructure for
     // this caller. We also do any pruning we can at this layer on the caller
     // alone.
-    Function &F = *Calls[I].first->getCaller();
+    Function &F = *Calls[I]->getCaller();
     LazyCallGraph::Node &N = *CG.lookup(F);
     if (CG.lookupSCC(N) != C)
       continue;
@@ -312,29 +306,17 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
     // We bail out as soon as the caller has to change so we can update the
     // call graph and prepare the context of that new caller.
     bool DidInline = false;
-    for (; I < (int)Calls.size() && Calls[I].first->getCaller() == &F; ++I) {
-      auto &P = Calls[I];
-      CallBase *CB = P.first;
-      const int InlineHistoryID = P.second;
+    for (; I < (int)Calls.size() && Calls[I]->getCaller() == &F; ++I) {
+      CallBase *CB = Calls[I];
       Function &Callee = *CB->getCalledFunction();
-
-      if (InlineHistoryID != -1 &&
-          inlineHistoryIncludes(&Callee, InlineHistoryID, InlineHistory)) {
-        LLVM_DEBUG(dbgs() << "Skipping inlining due to history: " << F.getName()
-                          << " -> " << Callee.getName() << "\n");
-        setInlineRemark(*CB, "recursive");
-        // Set noinline so that we don't forget this decision across CGSCC
-        // iterations.
-        CB->setIsNoInline();
-        continue;
-      }
 
       // Check if this inlining may repeat breaking an SCC apart that has
       // already been split once before. In that case, inlining here may
       // trigger infinite inlining, much like is prevented within the inliner
       // itself by the InlineHistory above, but spread across CGSCC iterations
       // and thus hidden from the full inline history.
-      LazyCallGraph::SCC *CalleeSCC = CG.lookupSCC(*CG.lookup(Callee));
+      LazyCallGraph::Node &CalleeN = *CG.lookup(Callee);
+      LazyCallGraph::SCC *CalleeSCC = CG.lookupSCC(CalleeN);
       if (CalleeSCC == C && UR.InlinedInternalEdges.count({&N, C})) {
         LLVM_DEBUG(dbgs() << "Skipping inlining internal SCC edge from a node "
                              "previously split out of this SCC by inlining: "
@@ -367,9 +349,20 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
           &FAM.getResult<BlockFrequencyAnalysis>(*(CB->getCaller())),
           &FAM.getResult<BlockFrequencyAnalysis>(Callee));
 
+      // For compile time reasons we try to only track inline history for the
+      // calls where it may actually prevent inlining, which is inlining through
+      // an SCC. This can happen if the callee is in a non-trivial SCC/RefSCC,
+      // or if an inlined call site was an indirect call, which can be
+      // devirtualized to call any target by replacing the indirectly called
+      // function with a function pointer referenced by the caller. The indirect
+      // call case is handled within InlineFunction.
+      bool TrackInlineHistory =
+          CalleeSCC->size() != 1 || CalleeSCC->getOuterRefSCC().size() != 1;
+
       InlineResult IR = InlineFunction(
           *CB, IFI, /*MergeAttributes=*/true,
-          &FAM.getResult<AAManager>(*CB->getCaller()), true, nullptr,
+          &FAM.getResult<AAManager>(*CB->getCaller()), /*InsertLifetime=*/true,
+          TrackInlineHistory, nullptr,
           &FAM.getResult<OptimizationRemarkEmitterAnalysis>(*CB->getCaller()));
       if (!IR.isSuccess()) {
         Advice->recordUnsuccessfulInlining(IR);
@@ -388,9 +381,6 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
 
       // Add any new callsites to defined functions to the worklist.
       if (!IFI.InlinedCallSites.empty()) {
-        int NewHistoryID = InlineHistory.size();
-        InlineHistory.push_back({&Callee, InlineHistoryID});
-
         for (CallBase *ICB : reverse(IFI.InlinedCallSites)) {
           Function *NewCallee = ICB->getCalledFunction();
           assert(!(NewCallee && NewCallee->isIntrinsic()) &&
@@ -405,7 +395,7 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
           }
           if (NewCallee) {
             if (!NewCallee->isDeclaration()) {
-              Calls.push_back({ICB, NewHistoryID});
+              Calls.push_back(ICB);
               // Continually inlining through an SCC can result in huge compile
               // times and bloated code since we arbitrarily stop at some point
               // when the inliner decides it's not profitable to inline anymore.
@@ -437,12 +427,11 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
       if (Callee.isDiscardableIfUnused() && Callee.hasZeroLiveUses() &&
           !CG.isLibFunction(Callee)) {
         if (Callee.hasLocalLinkage() || !Callee.hasComdat()) {
-          Calls.erase(
-              std::remove_if(Calls.begin() + I + 1, Calls.end(),
-                             [&](const std::pair<CallBase *, int> &Call) {
-                               return Call.first->getCaller() == &Callee;
-                             }),
-              Calls.end());
+          Calls.erase(std::remove_if(Calls.begin() + I + 1, Calls.end(),
+                                     [&](const CallBase *CB) {
+                                       return CB->getCaller() == &Callee;
+                                     }),
+                      Calls.end());
 
           // Report inlining decision BEFORE deleting function contents, so we
           // can still access e.g. the DebugLoc
