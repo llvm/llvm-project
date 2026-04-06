@@ -8,7 +8,7 @@
 /// \file
 /// Convert FLAT global SADDR memory ops to VADDR when the physical SGPR
 /// address pair is redefined later in the block. This avoids s_wait_xcnt
-/// stalls from XNACK replay of loads that share a reused SGPR pair.
+/// stalls from XNACK replay hazards on reused SGPR pairs.
 ///
 /// Runs after SGPR RA and before VGPR RA.
 //===----------------------------------------------------------------------===//
@@ -97,7 +97,6 @@ SIFixXcntStallSAddrReusePass::run(MachineFunction &MF,
   return PA;
 }
 
-/// Return true if \p MI is a FLAT global op with a physical SGPR saddr.
 static bool isEligible(const MachineInstr &MI, const SIInstrInfo &TII,
                        const SIRegisterInfo &TRI,
                        const MachineRegisterInfo &MRI, int &SAddrIdx) {
@@ -123,8 +122,8 @@ bool SIFixXcntStallSAddrReuse::sAddrRedefinedAfter(MachineInstr &MI,
 }
 
 MachineInstr *SIFixXcntStallSAddrReuse::convertToVAddr(MachineInstr &MI,
-                                              MachineBasicBlock &MBB,
-                                              Register &NewAddrReg) {
+                                                       MachineBasicBlock &MBB,
+                                                       Register &NewAddrReg) {
   unsigned Opc = MI.getOpcode();
   int NewOpc = AMDGPU::getGlobalVaddrOp(Opc);
   if (NewOpc < 0)
@@ -158,7 +157,8 @@ MachineInstr *SIFixXcntStallSAddrReuse::convertToVAddr(MachineInstr &MI,
   Register NewVAddr = MRI->createVirtualRegister(TRI->getVGPR64Class());
 
   if (VAddrIsZero) {
-    auto Copy = BuildMI(MBB, MI, DL, TII->get(AMDGPU::COPY), NewVAddr).addReg(SAddrReg);
+    auto Copy =
+        BuildMI(MBB, MI, DL, TII->get(AMDGPU::COPY), NewVAddr).addReg(SAddrReg);
     if (LIS)
       LIS->InsertMachineInstrInMaps(*Copy);
   } else {
@@ -166,7 +166,8 @@ MachineInstr *SIFixXcntStallSAddrReuse::convertToVAddr(MachineInstr &MI,
     MCRegister Hi = TRI->getSubReg(SAddrReg, AMDGPU::sub1);
 
     Register TmpVAddr = MRI->createVirtualRegister(&AMDGPU::VGPR_32RegClass);
-    auto CopyVAddr = BuildMI(MBB, MI, DL, TII->get(AMDGPU::COPY), TmpVAddr).add(VAddr);
+    auto CopyVAddr =
+        BuildMI(MBB, MI, DL, TII->get(AMDGPU::COPY), TmpVAddr).add(VAddr);
     if (LIS) {
       LIS->InsertMachineInstrInMaps(*CopyVAddr);
       LIS->createAndComputeVirtRegInterval(TmpVAddr);
@@ -174,8 +175,8 @@ MachineInstr *SIFixXcntStallSAddrReuse::convertToVAddr(MachineInstr &MI,
 
     Register HiExt = MRI->createVirtualRegister(&AMDGPU::VGPR_32RegClass);
     auto Ashr = BuildMI(MBB, MI, DL, TII->get(AMDGPU::V_ASHRREV_I32_e64), HiExt)
-        .addImm(31)
-        .addReg(TmpVAddr);
+                    .addImm(31)
+                    .addReg(TmpVAddr);
     if (LIS)
       LIS->InsertMachineInstrInMaps(*Ashr);
 
