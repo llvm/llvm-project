@@ -20,6 +20,8 @@
 #include "clang/Tooling/Execution.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/ilist_node.h"
+#include "llvm/ADT/simple_ilist.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Mutex.h"
 #include "llvm/Support/StringSaver.h"
@@ -49,6 +51,8 @@ private:
 
 ConcurrentStringPool &getGlobalStringPool();
 
+extern thread_local llvm::BumpPtrAllocator TransientArena;
+
 inline StringRef internString(const Twine &T) {
   if (T.isTriviallyEmpty())
     return StringRef();
@@ -65,6 +69,16 @@ inline StringRef internString(const Twine &T) {
   if (S.empty())
     return StringRef();
   return getGlobalStringPool().intern(S);
+}
+
+template <typename T>
+inline llvm::ArrayRef<T> allocateArray(llvm::ArrayRef<T> V,
+                                       llvm::BumpPtrAllocator &Alloc) {
+  if (V.empty())
+    return llvm::ArrayRef<T>();
+  T *Allocated = (T *)Alloc.Allocate<T>(V.size());
+  std::uninitialized_move(V.begin(), V.end(), Allocated);
+  return llvm::ArrayRef<T>(Allocated, V.size());
 }
 
 // An abstraction for owned pointers. Initially mapped to OwnedPtr,
@@ -92,6 +106,11 @@ template <typename T> using OwningPtrArray = std::vector<OwnedPtr<T>>;
 template <typename T, typename... Args>
 OwnedPtr<T> allocatePtr(Args &&...args) {
   return std::make_unique<T>(std::forward<Args>(args)...);
+}
+
+template <typename T, typename... Args>
+T *allocatePtr(llvm::BumpPtrAllocator &Alloc, Args &&...args) {
+  return new (Alloc.Allocate<T>()) T(std::forward<Args>(args)...);
 }
 
 // A helper function to access the underlying pointer from an owned pointer,
@@ -146,7 +165,7 @@ CommentKind stringToCommentKind(llvm::StringRef KindStr);
 llvm::StringRef commentKindToString(CommentKind Kind);
 
 // A representation of a parsed comment.
-struct CommentInfo {
+struct CommentInfo : public llvm::ilist_node<CommentInfo> {
   CommentInfo() = default;
   CommentInfo(CommentInfo &Other) = delete;
   CommentInfo(CommentInfo &&Other) = default;
@@ -167,11 +186,10 @@ struct CommentInfo {
   StringRef ParamName;       // Parameter name (for (T)ParamCommand).
   StringRef CloseName;       // Closing tag name (for VerbatimBlock).
   StringRef Text;            // Text of the comment.
-  llvm::SmallVector<StringRef, 4>
-      AttrKeys; // List of attribute keys (for HTML).
-  llvm::SmallVector<StringRef, 4>
+  llvm::ArrayRef<StringRef> AttrKeys; // List of attribute keys (for HTML).
+  llvm::ArrayRef<StringRef>
       AttrValues; // List of attribute values for each key (for HTML).
-  llvm::SmallVector<StringRef, 4>
+  llvm::ArrayRef<StringRef>
       Args; // List of arguments to commands (for InlineCommand).
   CommentKind Kind = CommentKind::
       CK_Unknown; // Kind of comment (FullComment, ParagraphComment,
@@ -185,7 +203,7 @@ struct CommentInfo {
                             // (for (T)ParamCommand).
 };
 
-struct Reference {
+struct Reference : public llvm::ilist_node<Reference> {
   // This variant (that takes no qualified name parameter) uses the Name as the
   // QualName (very useful in unit tests to reduce verbosity). This can't use an
   // empty string to indicate the default because we need to accept the empty
@@ -261,7 +279,7 @@ struct ScopeChildren {
   //
   // Namespaces are not syntactically valid as children of records, but making
   // this general for all possible container types reduces code complexity.
-  OwningVec<Reference> Namespaces;
+  llvm::simple_ilist<Reference> Namespaces;
   OwningVec<Reference> Records;
   OwningVec<FunctionInfo> Functions;
   OwningVec<EnumInfo> Enums;
@@ -377,7 +395,7 @@ struct MemberTypeInfo : public FieldTypeInfo {
   bool IsStatic = false;
 };
 
-struct Location {
+struct Location : public llvm::ilist_node<Location> {
   Location(int StartLineNumber = 0, int EndLineNumber = 0,
            StringRef Filename = StringRef(), bool IsFileInRootDir = false)
       : Filename(internString(Filename)), StartLineNumber(StartLineNumber),
@@ -498,7 +516,7 @@ struct SymbolInfo : public Info {
   bool IsStatic = false;
 };
 
-struct FriendInfo : SymbolInfo {
+struct FriendInfo : public SymbolInfo, public llvm::ilist_node<FriendInfo> {
   FriendInfo() : SymbolInfo(InfoType::IT_friend) {}
   FriendInfo(SymbolID USR) : SymbolInfo(InfoType::IT_friend, USR) {}
   FriendInfo(const InfoType IT, const SymbolID &USR,
@@ -510,11 +528,11 @@ struct FriendInfo : SymbolInfo {
   Reference Ref;
   std::optional<TemplateInfo> Template;
   std::optional<TypeInfo> ReturnType;
-  std::optional<SmallVector<FieldTypeInfo, 4>> Params;
+  llvm::ArrayRef<FieldTypeInfo> Params;
   bool IsClass = false;
 };
 
-struct VarInfo : SymbolInfo {
+struct VarInfo : public SymbolInfo, public llvm::ilist_node<VarInfo> {
   VarInfo() : SymbolInfo(InfoType::IT_variable) {}
   explicit VarInfo(SymbolID USR) : SymbolInfo(InfoType::IT_variable, USR) {}
 
@@ -525,7 +543,7 @@ struct VarInfo : SymbolInfo {
 
 // TODO: Expand to allow for documenting templating and default args.
 // Info for functions.
-struct FunctionInfo : public SymbolInfo {
+struct FunctionInfo : public SymbolInfo, public llvm::ilist_node<FunctionInfo> {
   FunctionInfo(SymbolID USR = SymbolID())
       : SymbolInfo(InfoType::IT_function, USR) {}
 
@@ -586,7 +604,7 @@ struct RecordInfo : public SymbolInfo {
 };
 
 // Info for typedef and using statements.
-struct TypedefInfo : public SymbolInfo {
+struct TypedefInfo : public SymbolInfo, public llvm::ilist_node<TypedefInfo> {
   TypedefInfo(SymbolID USR = SymbolID())
       : SymbolInfo(InfoType::IT_typedef, USR) {}
 
@@ -650,7 +668,7 @@ struct EnumValueInfo {
 
 // TODO: Expand to allow for documenting templating.
 // Info for types.
-struct EnumInfo : public SymbolInfo {
+struct EnumInfo : public SymbolInfo, public llvm::ilist_node<EnumInfo> {
   EnumInfo() : SymbolInfo(InfoType::IT_enum) {}
   EnumInfo(SymbolID USR) : SymbolInfo(InfoType::IT_enum, USR) {}
 
@@ -667,7 +685,7 @@ struct EnumInfo : public SymbolInfo {
   llvm::SmallVector<EnumValueInfo, 4> Members; // List of enum members.
 };
 
-struct ConceptInfo : public SymbolInfo {
+struct ConceptInfo : public SymbolInfo, public llvm::ilist_node<ConceptInfo> {
   ConceptInfo() : SymbolInfo(InfoType::IT_concept) {}
   ConceptInfo(SymbolID USR) : SymbolInfo(InfoType::IT_concept, USR) {}
 
@@ -738,6 +756,32 @@ struct ClangDocContext {
   bool PublicOnly; // Indicates if only public declarations are documented.
   bool FTimeTrace; // Indicates if ftime trace is turned on
 };
+
+// Ensure arena allocated types remain safe to allocate in the arena.
+// Only trivially destructible types are safe, so enforce that at compile-time.
+static_assert(std::is_trivially_destructible_v<ConstraintInfo>);
+static_assert(std::is_trivially_destructible_v<FieldTypeInfo>);
+static_assert(std::is_trivially_destructible_v<Location>);
+static_assert(std::is_trivially_destructible_v<Reference>);
+static_assert(std::is_trivially_destructible_v<TemplateParamInfo>);
+static_assert(std::is_trivially_destructible_v<TypeInfo>);
+
+// FIXME: These types need to be trivially destructible for arena allocation.
+static_assert(!std::is_trivially_destructible_v<CommentInfo>);
+static_assert(!std::is_trivially_destructible_v<ConceptInfo>);
+static_assert(!std::is_trivially_destructible_v<EnumInfo>);
+static_assert(!std::is_trivially_destructible_v<FriendInfo>);
+static_assert(!std::is_trivially_destructible_v<FunctionInfo>);
+static_assert(!std::is_trivially_destructible_v<Info>);
+static_assert(!std::is_trivially_destructible_v<MemberTypeInfo>);
+static_assert(!std::is_trivially_destructible_v<NamespaceInfo>);
+static_assert(!std::is_trivially_destructible_v<RecordInfo>);
+static_assert(!std::is_trivially_destructible_v<ScopeChildren>);
+static_assert(!std::is_trivially_destructible_v<SymbolInfo>);
+static_assert(!std::is_trivially_destructible_v<TemplateInfo>);
+static_assert(!std::is_trivially_destructible_v<TemplateSpecializationInfo>);
+static_assert(!std::is_trivially_destructible_v<TypedefInfo>);
+static_assert(!std::is_trivially_destructible_v<VarInfo>);
 
 } // namespace doc
 } // namespace clang

@@ -27,6 +27,10 @@
 namespace clang {
 namespace doc {
 
+// Thread local arenas usable in each thread pool
+thread_local llvm::BumpPtrAllocator TransientArena;
+thread_local llvm::BumpPtrAllocator PersistentArena;
+
 ConcurrentStringPool &getGlobalStringPool() {
   static ConcurrentStringPool GlobalPool;
   return GlobalPool;
@@ -110,6 +114,23 @@ static int getChildIndexIfExists(OwningVec<T> &Children, T &ChildToMerge) {
       return I;
   }
   return -1;
+}
+
+template <typename T>
+static void reduceChildren(llvm::simple_ilist<T> &Children,
+                           llvm::simple_ilist<T> &&ChildrenToMerge) {
+  while (!ChildrenToMerge.empty()) {
+    T *ChildToMerge = &ChildrenToMerge.front();
+    ChildrenToMerge.pop_front();
+
+    auto It = llvm::find_if(
+        Children, [&](const T &C) { return C.USR == ChildToMerge->USR; });
+    if (It == Children.end()) {
+      Children.push_back(*ChildToMerge);
+    } else {
+      It->merge(std::move(*ChildToMerge));
+    }
+  }
 }
 
 template <typename T>
@@ -506,7 +527,7 @@ ClangDocContext::ClangDocContext(tooling::ExecutionContext *ECtx,
 }
 
 void ScopeChildren::sort() {
-  llvm::sort(Namespaces);
+  Namespaces.sort();
   llvm::sort(Records);
   llvm::sort(Functions);
   llvm::sort(Enums);

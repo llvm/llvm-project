@@ -8781,26 +8781,6 @@ extern const internal::VariadicDynCastAllOfMatcher<Stmt,
                                                    OMPTargetUpdateDirective>
     ompTargetUpdateDirective;
 
-/// Matches any ``#pragma omp split`` executable directive.
-///
-/// Given
-///
-/// \code
-///   #pragma omp split counts(2, omp_fill)
-///   for (int i = 0; i < n; ++i) {}
-/// \endcode
-///
-/// ``ompSplitDirective()`` matches the split directive.
-extern const internal::VariadicDynCastAllOfMatcher<Stmt, OMPSplitDirective>
-    ompSplitDirective;
-
-/// Matches OpenMP ``counts`` clause used by ``#pragma omp split``.
-///
-/// Given ``#pragma omp split counts(1, 2, omp_fill)``, ``ompCountsClause()``
-/// matches the ``counts`` clause node.
-extern const internal::VariadicDynCastAllOfMatcher<OMPClause, OMPCountsClause>
-    ompCountsClause;
-
 /// Matches OpenMP ``default`` clause.
 ///
 /// Given

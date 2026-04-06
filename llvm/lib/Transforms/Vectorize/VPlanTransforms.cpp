@@ -2165,7 +2165,7 @@ static bool tryToReplaceALMWithWideALM(VPlan &Plan, ElementCount VF,
     }
   }
 
-  assert(all_of(Phis, [](VPActiveLaneMaskPHIRecipe *Phi) { return Phi; }) &&
+  assert(all_of(Phis, not_equal_to(nullptr)) &&
          "Expected one VPActiveLaneMaskPHIRecipe for each unroll part");
 
   auto *EntryALM = cast<VPInstruction>(Phis[0]->getStartValue());
@@ -4393,6 +4393,12 @@ tryToMatchAndCreateExtendedReduction(VPReductionRecipe *Red, VPCostContext &Ctx,
   Type *RedTy = Ctx.Types.inferScalarType(Red);
   VPValue *VecOp = Red->getVecOp();
 
+  // For partial reductions, the decision has already been made at the point of
+  // transforming reductions -> partial reductions for a given plan, based on
+  // the cost-model.
+  if (Red->isPartialReduction())
+    return new VPExpressionRecipe(cast<VPWidenCastRecipe>(VecOp), Red);
+
   // Clamp the range if using extended-reduction is profitable.
   auto IsExtendedRedValidAndClampRange =
       [&](unsigned Opcode, Instruction::CastOps ExtOpc, Type *SrcTy) -> bool {
@@ -4406,23 +4412,13 @@ tryToMatchAndCreateExtendedReduction(VPReductionRecipe *Red, VPCostContext &Ctx,
               cast<VPWidenCastRecipe>(VecOp)->computeCost(VF, Ctx);
           InstructionCost RedCost = Red->computeCost(VF, Ctx);
 
-          if (Red->isPartialReduction()) {
-            TargetTransformInfo::PartialReductionExtendKind ExtKind =
-                TargetTransformInfo::getPartialReductionExtendKind(ExtOpc);
-            // FIXME: Move partial reduction creation, costing and clamping
-            // here from LoopVectorize.cpp.
-            ExtRedCost = Ctx.TTI.getPartialReductionCost(
-                Opcode, SrcTy, nullptr, RedTy, VF, ExtKind,
-                llvm::TargetTransformInfo::PR_None, std::nullopt, Ctx.CostKind,
-                RedTy->isFloatingPointTy()
-                    ? std::optional{Red->getFastMathFlags()}
-                    : std::nullopt);
-          } else if (!RedTy->isFloatingPointTy()) {
-            // TTI::getExtendedReductionCost only supports integer types.
-            ExtRedCost = Ctx.TTI.getExtendedReductionCost(
-                Opcode, ExtOpc == Instruction::CastOps::ZExt, RedTy, SrcVecTy,
-                Red->getFastMathFlags(), CostKind);
-          }
+          // TTI::getExtendedReductionCost for in-loop reductions
+          // only supports integer types.
+          if (RedTy->isFloatingPointTy())
+            return false;
+          ExtRedCost = Ctx.TTI.getExtendedReductionCost(
+              Opcode, ExtOpc == Instruction::CastOps::ZExt, RedTy, SrcVecTy,
+              Red->getFastMathFlags(), CostKind);
           return ExtRedCost.isValid() && ExtRedCost < ExtCost + RedCost;
         },
         Range);
@@ -4466,42 +4462,29 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
           VPWidenCastRecipe *OuterExt) -> bool {
     return LoopVectorizationPlanner::getDecisionAndClampRange(
         [&](ElementCount VF) {
+          // For partial reductions, the decision has already been made at the
+          // point of transforming reductions -> partial reductions for a given
+          // plan, based on the cost-model.
+          if (Red->isPartialReduction())
+            return true;
+
           TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
           Type *SrcTy =
               Ext0 ? Ctx.Types.inferScalarType(Ext0->getOperand(0)) : RedTy;
           InstructionCost MulAccCost;
 
-          if (Red->isPartialReduction()) {
-            Type *SrcTy2 =
-                Ext1 ? Ctx.Types.inferScalarType(Ext1->getOperand(0)) : nullptr;
-            // FIXME: Move partial reduction creation, costing and clamping
-            // here from LoopVectorize.cpp.
-            MulAccCost = Ctx.TTI.getPartialReductionCost(
-                Opcode, SrcTy, SrcTy2, RedTy, VF,
-                Ext0 ? TargetTransformInfo::getPartialReductionExtendKind(
-                           Ext0->getOpcode())
-                     : TargetTransformInfo::PR_None,
-                Ext1 ? TargetTransformInfo::getPartialReductionExtendKind(
-                           Ext1->getOpcode())
-                     : TargetTransformInfo::PR_None,
-                Mul->getOpcode(), CostKind,
-                RedTy->isFloatingPointTy()
-                    ? std::optional{Red->getFastMathFlags()}
-                    : std::nullopt);
-          } else {
-            // Only partial reductions support mixed or floating-point extends
-            // at the moment.
-            if (Ext0 && Ext1 &&
-                (Ext0->getOpcode() != Ext1->getOpcode() ||
-                 Ext0->getOpcode() == Instruction::CastOps::FPExt))
-              return false;
+          // Only partial reductions support mixed or floating-point extends at
+          // the moment.
+          if (Ext0 && Ext1 &&
+              (Ext0->getOpcode() != Ext1->getOpcode() ||
+               Ext0->getOpcode() == Instruction::CastOps::FPExt))
+            return false;
 
-            bool IsZExt =
-                !Ext0 || Ext0->getOpcode() == Instruction::CastOps::ZExt;
-            auto *SrcVecTy = cast<VectorType>(toVectorTy(SrcTy, VF));
-            MulAccCost = Ctx.TTI.getMulAccReductionCost(IsZExt, Opcode, RedTy,
-                                                        SrcVecTy, CostKind);
-          }
+          bool IsZExt =
+              !Ext0 || Ext0->getOpcode() == Instruction::CastOps::ZExt;
+          auto *SrcVecTy = cast<VectorType>(toVectorTy(SrcTy, VF));
+          MulAccCost = Ctx.TTI.getMulAccReductionCost(IsZExt, Opcode, RedTy,
+                                                      SrcVecTy, CostKind);
 
           InstructionCost MulCost = Mul->computeCost(VF, Ctx);
           InstructionCost RedCost = Red->computeCost(VF, Ctx);
@@ -5735,19 +5718,21 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
   ScalarEvolution &SE = *PSE.getSE();
   VPRegionBlock *VectorLoopRegion = Plan.getVectorLoopRegion();
 
-  // Helper lambda to check if the IV range excludes the sentinel value.
-  auto CheckSentinel = [&SE](const SCEV *IVSCEV, bool UseMax,
-                             bool Signed) -> std::optional<APInt> {
+  // Helper lambda to check if the IV range excludes the sentinel value. Try
+  // signed first, then unsigned. Return an excluded sentinel if found,
+  // otherwise return std::nullopt.
+  auto CheckSentinel = [&SE](const SCEV *IVSCEV,
+                             bool UseMax) -> std::optional<APSInt> {
     unsigned BW = IVSCEV->getType()->getScalarSizeInBits();
-    APInt Sentinel =
-        UseMax
-            ? (Signed ? APInt::getSignedMinValue(BW) : APInt::getMinValue(BW))
-            : (Signed ? APInt::getSignedMaxValue(BW) : APInt::getMaxValue(BW));
+    for (bool Signed : {true, false}) {
+      APSInt Sentinel = UseMax ? APSInt::getMinValue(BW, /*Unsigned=*/!Signed)
+                               : APSInt::getMaxValue(BW, /*Unsigned=*/!Signed);
 
-    ConstantRange IVRange =
-        Signed ? SE.getSignedRange(IVSCEV) : SE.getUnsignedRange(IVSCEV);
-    if (!IVRange.contains(Sentinel))
-      return Sentinel;
+      ConstantRange IVRange =
+          Signed ? SE.getSignedRange(IVSCEV) : SE.getUnsignedRange(IVSCEV);
+      if (!IVRange.contains(Sentinel))
+        return Sentinel;
+    }
     return std::nullopt;
   };
 
@@ -5766,24 +5751,26 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
     // If there's a header mask, the backedge select will not be the find-last
     // select.
     VPValue *BackedgeVal = PhiR->getBackedgeValue();
-    VPValue *CondSelect = BackedgeVal;
+    auto *FindLastSelect = cast<VPSingleDefRecipe>(BackedgeVal);
     if (HeaderMask &&
-        !match(BackedgeVal, m_Select(m_Specific(HeaderMask),
-                                     m_VPValue(CondSelect), m_Specific(PhiR))))
+        !match(BackedgeVal,
+               m_Select(m_Specific(HeaderMask),
+                        m_VPSingleDefRecipe(FindLastSelect), m_Specific(PhiR))))
       llvm_unreachable("expected header mask select");
 
-    // Get the IV from the conditional select of the reduction phi.
-    // The conditional select should be a select between the phi and the IV.
-    VPValue *Cond, *TrueVal, *FalseVal;
-    if (!match(CondSelect, m_Select(m_VPValue(Cond), m_VPValue(TrueVal),
-                                    m_VPValue(FalseVal))))
+    // Get the find-last expression from the find-last select of the reduction
+    // phi. The find-last select should be a select between the phi and the
+    // find-last expression.
+    VPValue *Cond, *FindLastExpression;
+    if (!match(FindLastSelect, m_Select(m_VPValue(Cond), m_Specific(PhiR),
+                                        m_VPValue(FindLastExpression))) &&
+        !match(FindLastSelect,
+               m_Select(m_VPValue(Cond), m_VPValue(FindLastExpression),
+                        m_Specific(PhiR))))
       continue;
 
-    // The non-phi operand of the select is the IV.
-    assert(is_contained(CondSelect->getDefiningRecipe()->operands(), PhiR));
-    VPValue *IV = TrueVal == PhiR ? FalseVal : TrueVal;
-
-    const SCEV *IVSCEV = vputils::getSCEVExprForVPValue(IV, PSE, &L);
+    const SCEV *IVSCEV =
+        vputils::getSCEVExprForVPValue(FindLastExpression, PSE, &L);
     const SCEV *Step;
     if (!match(IVSCEV, m_scev_AffineAddRec(m_SCEV(), m_SCEV(Step))))
       continue;
@@ -5795,13 +5782,8 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
     // Positive step means we need UMax/SMax to find the last IV value, and
     // UMin/SMin otherwise.
     bool UseMax = SE.isKnownPositive(Step);
-    bool UseSigned = true;
-    std::optional<APInt> SentinelVal =
-        CheckSentinel(IVSCEV, UseMax, /*IsSigned=*/true);
-    if (!SentinelVal) {
-      SentinelVal = CheckSentinel(IVSCEV, UseMax, /*IsSigned=*/false);
-      UseSigned = false;
-    }
+    std::optional<APSInt> SentinelVal = CheckSentinel(IVSCEV, UseMax);
+    bool UseSigned = SentinelVal && SentinelVal->isSigned();
 
     // If no sentinel was found, fall back to a boolean AnyOf reduction to track
     // if the condition was ever true. Requires the IV to not wrap, otherwise we
@@ -5853,7 +5835,7 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
 
       VPBuilder LoopBuilder(BackedgeVal->getDefiningRecipe());
       VPValue *AnyOfCond = Cond;
-      if (TrueVal == PhiR)
+      if (FindLastSelect->getOperand(1) == PhiR)
         AnyOfCond = LoopBuilder.createNot(Cond);
       VPValue *OrVal = LoopBuilder.createOr(AnyOfPhi, AnyOfCond);
       AnyOfPhi->setOperand(1, OrVal);
@@ -5872,7 +5854,8 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
 
     auto *NewPhiR = new VPReductionPHIRecipe(
         cast<PHINode>(PhiR->getUnderlyingInstr()), RecurKind::FindIV, *StartVPV,
-        *CondSelect, RdxUnordered{1}, {}, PhiR->hasUsesOutsideReductionChain());
+        *FindLastSelect, RdxUnordered{1}, {},
+        PhiR->hasUsesOutsideReductionChain());
     NewPhiR->insertBefore(PhiR);
     PhiR->replaceAllUsesWith(NewPhiR);
     PhiR->eraseFromParent();
@@ -6067,12 +6050,11 @@ static void transformToPartialReduction(const VPPartialReductionChain &Chain,
       [&NewResult](VPUser &U, unsigned Idx) { return &U != NewResult; });
 }
 
-/// Check if a partial reduction chain is is supported by the target (i.e. does
-/// not have an invalid cost) for the given VF range. Clamps the range and
-/// returns true if profitable for any VF.
-static bool isValidPartialReduction(const VPPartialReductionChain &Chain,
-                                    Type *PhiType, VPCostContext &CostCtx,
-                                    VFRange &Range) {
+/// Returns the cost of a link in a partial-reduction chain for a given VF.
+static InstructionCost
+getPartialReductionLinkCost(VPCostContext &CostCtx,
+                            const VPPartialReductionChain &Link,
+                            ElementCount VF) {
   auto GetExtInfo = [&CostCtx](VPWidenCastRecipe *Ext)
       -> std::pair<Type *, TargetTransformInfo::PartialReductionExtendKind> {
     if (!Ext)
@@ -6082,7 +6064,8 @@ static bool isValidPartialReduction(const VPPartialReductionChain &Chain,
         static_cast<Instruction::CastOps>(Ext->getOpcode()));
     return {ExtOpType, ExtKind};
   };
-  ExtendedReductionOperand ExtendedOp = Chain.ExtendedOp;
+
+  const ExtendedReductionOperand &ExtendedOp = Link.ExtendedOp;
   VPWidenCastRecipe *ExtendA = ExtendedOp.CastRecipes[0];
   VPWidenCastRecipe *ExtendB = ExtendedOp.CastRecipes[1];
 
@@ -6091,38 +6074,35 @@ static bool isValidPartialReduction(const VPPartialReductionChain &Chain,
   std::tie(ExtOpTypeA, ExtKindA) = GetExtInfo(ExtendA);
   std::tie(ExtOpTypeB, ExtKindB) = GetExtInfo(ExtendB);
 
+  std::optional<unsigned> BinOpc;
+  if (ExtendedOp.BinOp && ExtendedOp.BinOp != Link.ReductionBinOp)
+    BinOpc = ExtendedOp.BinOp->getOpcode();
+
   // If ExtendB is nullptr but there's a separate BinOp, the second operand
   // was a constant that can use the same extend kind as the first.
-  if (!ExtendB && ExtendedOp.BinOp &&
-      ExtendedOp.BinOp != Chain.ReductionBinOp) {
+  if (!ExtendB && BinOpc) {
     const APInt *Const = nullptr;
     for (VPValue *Op : ExtendedOp.BinOp->operands()) {
       if (match(Op, m_APInt(Const)))
         break;
     }
     if (!Const || !canConstantBeExtended(Const, ExtOpTypeA, ExtKindA))
-      return false;
+      return InstructionCost::getInvalid();
     ExtOpTypeB = ExtOpTypeA;
     ExtKindB = ExtKindA;
   }
 
-  std::optional<unsigned> BinOpc;
-  if (ExtendedOp.BinOp && ExtendedOp.BinOp != Chain.ReductionBinOp)
-    BinOpc = ExtendedOp.BinOp->getOpcode();
+  Type *RdxType = CostCtx.Types.inferScalarType(Link.ReductionBinOp);
+  std::optional<llvm::FastMathFlags> Flags;
+  if (RdxType->isFloatingPointTy())
+    Flags = Link.ReductionBinOp->getFastMathFlags();
 
-  VPWidenRecipe *WidenRecipe = Chain.ReductionBinOp;
-  return LoopVectorizationPlanner::getDecisionAndClampRange(
-      [&](ElementCount VF) {
-        return CostCtx.TTI
-            .getPartialReductionCost(
-                WidenRecipe->getOpcode(), ExtOpTypeA, ExtOpTypeB, PhiType, VF,
-                ExtKindA, ExtKindB, BinOpc, CostCtx.CostKind,
-                PhiType->isFloatingPointTy()
-                    ? std::optional{WidenRecipe->getFastMathFlags()}
-                    : std::nullopt)
-            .isValid();
-      },
-      Range);
+  unsigned Opcode = Link.RK == RecurKind::Sub
+                        ? (unsigned)Instruction::Add
+                        : Link.ReductionBinOp->getOpcode();
+  return CostCtx.TTI.getPartialReductionCost(Opcode, ExtOpTypeA, ExtOpTypeB,
+                                             RdxType, VF, ExtKindA, ExtKindB,
+                                             BinOpc, CostCtx.CostKind, Flags);
 }
 
 static TTI::PartialReductionExtendKind
@@ -6228,7 +6208,7 @@ getScaledReductions(VPReductionPHIRecipe *RedPhiR, VPCostContext &CostCtx,
   VPValue *ExitValue = RdxResult->getOperand(0);
   match(ExitValue, m_Select(m_VPValue(), m_VPValue(ExitValue), m_VPValue()));
 
-  SmallVector<VPPartialReductionChain> Chains;
+  SmallVector<VPPartialReductionChain> Chain;
   RecurKind RK = RedPhiR->getRecurrenceKind();
   Type *PhiType = CostCtx.Types.inferScalarType(RedPhiR);
   TypeSize PHISize = PhiType->getPrimitiveSizeInBits();
@@ -6260,20 +6240,20 @@ getScaledReductions(VPReductionPHIRecipe *RedPhiR, VPCostContext &CostCtx,
     if (!PHISize.hasKnownScalarFactor(ExtSrcSize))
       return std::nullopt;
 
-    VPPartialReductionChain Chain(
+    // Check if a partial reduction chain is supported by the target (i.e. does
+    // not have an invalid cost) for the given VF range. Clamps the range and
+    // returns true if feasible for any VF.
+    VPPartialReductionChain Link(
         {UpdateR, *ExtendedOp,
          static_cast<unsigned>(PHISize.getKnownScalarFactor(ExtSrcSize)), RK});
-    if (!isValidPartialReduction(Chain, PhiType, CostCtx, Range))
-      return std::nullopt;
-
-    Chains.push_back(Chain);
+    Chain.push_back(Link);
     CurrentValue = PrevValue;
   }
 
-  // The chains were collected by traversing backwards from the exit value.
+  // The chain links were collected by traversing backwards from the exit value.
   // Reverse the chains so they are in program order.
-  std::reverse(Chains.begin(), Chains.end());
-  return Chains;
+  std::reverse(Chain.begin(), Chain.end());
+  return Chain;
 }
 } // namespace
 
@@ -6317,6 +6297,30 @@ void VPlanTransforms::createPartialReductions(VPlan &Plan,
     });
   };
 
+  auto IsProfitablePartialReductionChainForVF =
+      [&](ArrayRef<VPPartialReductionChain> Chain, ElementCount VF) -> bool {
+    InstructionCost PartialCost = 0, RegularCost = 0;
+
+    // The chain is a profitable partial reduction chain if the cost of handling
+    // the entire chain is cheaper when using partial reductions than when
+    // handling the entire chain using regular reductions.
+    for (const VPPartialReductionChain &Link : Chain) {
+      const ExtendedReductionOperand &ExtendedOp = Link.ExtendedOp;
+      InstructionCost LinkCost = getPartialReductionLinkCost(CostCtx, Link, VF);
+      if (!LinkCost.isValid())
+        return false;
+
+      PartialCost += LinkCost;
+      RegularCost += Link.ReductionBinOp->computeCost(VF, CostCtx);
+      if (ExtendedOp.BinOp && ExtendedOp.BinOp != Link.ReductionBinOp)
+        RegularCost += ExtendedOp.BinOp->computeCost(VF, CostCtx);
+      for (VPWidenCastRecipe *Extend : ExtendedOp.CastRecipes)
+        if (Extend)
+          RegularCost += Extend->computeCost(VF, CostCtx);
+    }
+    return PartialCost.isValid() && PartialCost <= RegularCost;
+  };
+
   // Validate chains: check that extends are only used by partial reductions,
   // and that reduction bin ops are only used by other partial reductions with
   // matching scale factors, are outside the loop region or the select
@@ -6355,6 +6359,14 @@ void VPlanTransforms::createPartialReductions(VPlan &Plan,
         }
       }
     }
+
+    // Clear the chain if it is not profitable.
+    if (!LoopVectorizationPlanner::getDecisionAndClampRange(
+            [&, &Chains = Chains](ElementCount VF) {
+              return IsProfitablePartialReductionChainForVF(Chains, VF);
+            },
+            Range))
+      Chains.clear();
   }
 
   for (auto &[Phi, Chains] : ChainsByPhi)

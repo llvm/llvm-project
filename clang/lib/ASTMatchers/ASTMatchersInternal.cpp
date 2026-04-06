@@ -1139,10 +1139,6 @@ const internal::VariadicDynCastAllOfMatcher<Stmt, OMPExecutableDirective>
     ompExecutableDirective;
 const internal::VariadicDynCastAllOfMatcher<Stmt, OMPTargetUpdateDirective>
     ompTargetUpdateDirective;
-const internal::VariadicDynCastAllOfMatcher<Stmt, OMPSplitDirective>
-    ompSplitDirective;
-const internal::VariadicDynCastAllOfMatcher<OMPClause, OMPCountsClause>
-    ompCountsClause;
 const internal::VariadicDynCastAllOfMatcher<OMPClause, OMPDefaultClause>
     ompDefaultClause;
 const internal::VariadicDynCastAllOfMatcher<OMPClause, OMPFromClause>
