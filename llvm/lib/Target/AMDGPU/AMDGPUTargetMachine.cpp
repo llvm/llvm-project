@@ -1816,8 +1816,6 @@ bool GCNPassConfig::addRegAssignAndRewriteFast() {
   // Equivalent of PEI for SGPRs.
   addPass(&SILowerSGPRSpillsLegacyID);
 
-  addPass(&SIFixXcntStallSAddrReuseLegacyID);
-
   // To Allocate wwm registers used in whole quad mode operations (for shaders).
   addPass(&SIPreAllocateWWMRegsLegacyID);
 
@@ -1826,6 +1824,8 @@ bool GCNPassConfig::addRegAssignAndRewriteFast() {
 
   addPass(&SILowerWWMCopiesLegacyID);
   addPass(&AMDGPUReserveWWMRegsLegacyID);
+
+  addPass(&SIFixXcntStallSAddrReuseLegacyID);
 
   // For allocating per-thread VGPRs.
   addPass(createVGPRAllocPass(false));
@@ -1855,8 +1855,6 @@ bool GCNPassConfig::addRegAssignAndRewriteOptimized() {
   // Equivalent of PEI for SGPRs.
   addPass(&SILowerSGPRSpillsLegacyID);
 
-  addPass(&SIFixXcntStallSAddrReuseLegacyID);
-
   // To Allocate wwm registers used in whole quad mode operations (for shaders).
   addPass(&SIPreAllocateWWMRegsLegacyID);
 
@@ -1865,6 +1863,8 @@ bool GCNPassConfig::addRegAssignAndRewriteOptimized() {
   addPass(&SILowerWWMCopiesLegacyID);
   addPass(createVirtRegRewriter(false));
   addPass(&AMDGPUReserveWWMRegsLegacyID);
+
+  addPass(&SIFixXcntStallSAddrReuseLegacyID);
 
   // For allocating per-thread VGPRs.
   addPass(createVGPRAllocPass(true));
@@ -2461,8 +2461,6 @@ Error AMDGPUCodeGenPassBuilder::addRegAssignmentFast(
   // Equivalent of PEI for SGPRs.
   addMachineFunctionPass(SILowerSGPRSpillsPass(), PMW);
 
-  addMachineFunctionPass(SIFixXcntStallSAddrReusePass(), PMW);
-
   // To Allocate wwm registers used in whole quad mode operations (for shaders).
   addMachineFunctionPass(SIPreAllocateWWMRegsPass(), PMW);
 
@@ -2475,6 +2473,8 @@ Error AMDGPUCodeGenPassBuilder::addRegAssignmentFast(
 
   addMachineFunctionPass(SILowerWWMCopiesPass(), PMW);
   addMachineFunctionPass(AMDGPUReserveWWMRegsPass(), PMW);
+
+  addMachineFunctionPass(SIFixXcntStallSAddrReusePass(), PMW);
 
   // VGPR allocation - default to fast at -O0.
   if (VGPRRegAllocNPM == RegAllocType::Greedy)
@@ -2557,8 +2557,6 @@ Error AMDGPUCodeGenPassBuilder::addRegAssignmentOptimized(
   // Equivalent of PEI for SGPRs.
   addMachineFunctionPass(SILowerSGPRSpillsPass(), PMW);
 
-  addMachineFunctionPass(SIFixXcntStallSAddrReusePass(), PMW);
-
   // To Allocate wwm registers used in whole quad mode operations (for shaders).
   addMachineFunctionPass(SIPreAllocateWWMRegsPass(), PMW);
 
@@ -2571,6 +2569,8 @@ Error AMDGPUCodeGenPassBuilder::addRegAssignmentOptimized(
   addMachineFunctionPass(SILowerWWMCopiesPass(), PMW);
   addMachineFunctionPass(VirtRegRewriterPass(false), PMW);
   addMachineFunctionPass(AMDGPUReserveWWMRegsPass(), PMW);
+
+  addMachineFunctionPass(SIFixXcntStallSAddrReusePass(), PMW);
 
   // VGPR allocation - default to greedy at -O1 and above.
   if (VGPRRegAllocNPM == RegAllocType::Fast)

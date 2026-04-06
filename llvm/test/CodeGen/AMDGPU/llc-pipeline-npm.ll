@@ -68,6 +68,7 @@
 ; GCN-O0-NEXT: regallocfast<filter=wwm;no-clear-vregs>
 ; GCN-O0-NEXT: si-lower-wwm-copies
 ; GCN-O0-NEXT: amdgpu-reserve-wwm-regs
+; GCN-O0-NEXT: si-fix-xcnt-stall-saddr-reuse
 ; GCN-O0-NEXT: regallocfast<filter=vgpr>
 ; GCN-O0-NEXT: si-fix-vgpr-copies
 ; GCN-O0-NEXT: remove-redundant-debug-values
@@ -216,6 +217,7 @@
 ; GCN-O2-NEXT: si-lower-wwm-copies
 ; GCN-O2-NEXT: virt-reg-rewriter<no-clear-vregs>
 ; GCN-O2-NEXT: amdgpu-reserve-wwm-regs
+; GCN-O2-NEXT: si-fix-xcnt-stall-saddr-reuse
 ; GCN-O2-NEXT: greedy<vgpr>
 ; GCN-O2-NEXT: amdgpu-nsa-reassign
 ; GCN-O2-NEXT: amdgpu-rewrite-agpr-copy-mfma
@@ -385,6 +387,7 @@
 ; GCN-O3-NEXT: si-lower-wwm-copies
 ; GCN-O3-NEXT: virt-reg-rewriter<no-clear-vregs>
 ; GCN-O3-NEXT: amdgpu-reserve-wwm-regs
+; GCN-O3-NEXT: si-fix-xcnt-stall-saddr-reuse
 ; GCN-O3-NEXT: greedy<vgpr>
 ; GCN-O3-NEXT: amdgpu-nsa-reassign
 ; GCN-O3-NEXT: amdgpu-rewrite-agpr-copy-mfma

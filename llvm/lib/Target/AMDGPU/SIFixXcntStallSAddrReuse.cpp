@@ -20,6 +20,7 @@
 #include "SIInstrInfo.h"
 #include "SIRegisterInfo.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/InitializePasses.h"
@@ -49,13 +50,15 @@ class SIFixXcntStallSAddrReuse {
   const SIInstrInfo *TII = nullptr;
   const SIRegisterInfo *TRI = nullptr;
   MachineRegisterInfo *MRI = nullptr;
+  LiveIntervals *LIS = nullptr;
 
   bool sAddrRedefinedAfter(MachineInstr &MI, Register SAddr);
-  bool convertToVAddr(MachineInstr &MI, MachineBasicBlock &MBB,
-                      Register &NewAddrReg);
+  MachineInstr *convertToVAddr(MachineInstr &MI, MachineBasicBlock &MBB,
+                               Register &NewAddrReg);
   bool processMBB(MachineBasicBlock &MBB);
 
 public:
+  SIFixXcntStallSAddrReuse(LiveIntervals *LIS = nullptr) : LIS(LIS) {}
   bool run(MachineFunction &MF);
 };
 
@@ -67,7 +70,9 @@ public:
   bool runOnMachineFunction(MachineFunction &MF) override {
     if (!MF.getSubtarget<GCNSubtarget>().hasWaitXcnt())
       return false;
-    return SIFixXcntStallSAddrReuse().run(MF);
+    auto *LISWrapper = getAnalysisIfAvailable<llvm::LiveIntervalsWrapperPass>();
+    llvm::LiveIntervals *LIS = LISWrapper ? &LISWrapper->getLIS() : nullptr;
+    return SIFixXcntStallSAddrReuse(LIS).run(MF);
   }
 
   StringRef getPassName() const override {
@@ -75,7 +80,7 @@ public:
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesCFG();
+    AU.setPreservesAll();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 };
@@ -95,10 +100,13 @@ SIFixXcntStallSAddrReusePass::run(MachineFunction &MF,
                                   MachineFunctionAnalysisManager &MFAM) {
   if (!MF.getSubtarget<GCNSubtarget>().hasWaitXcnt())
     return PreservedAnalyses::all();
-  if (!SIFixXcntStallSAddrReuse().run(MF))
+  auto *LIS = MFAM.getCachedResult<llvm::LiveIntervalsAnalysis>(MF);
+  if (!SIFixXcntStallSAddrReuse(LIS).run(MF))
     return PreservedAnalyses::all();
   auto PA = getMachineFunctionPassPreservedAnalyses();
   PA.preserveSet<CFGAnalyses>();
+  if (LIS)
+    PA.preserve<llvm::LiveIntervalsAnalysis>();
   return PA;
 }
 
@@ -132,20 +140,20 @@ bool SIFixXcntStallSAddrReuse::sAddrRedefinedAfter(MachineInstr &MI,
   return false;
 }
 
-bool SIFixXcntStallSAddrReuse::convertToVAddr(MachineInstr &MI,
+MachineInstr *SIFixXcntStallSAddrReuse::convertToVAddr(MachineInstr &MI,
                                               MachineBasicBlock &MBB,
                                               Register &NewAddrReg) {
   unsigned Opc = MI.getOpcode();
   int NewOpc = AMDGPU::getGlobalVaddrOp(Opc);
   if (NewOpc < 0)
-    return false;
+    return nullptr;
   if (AMDGPU::getNamedOperandIdx(NewOpc, AMDGPU::OpName::vaddr) < 0)
-    return false;
+    return nullptr;
 
   // VADDR form does not support scale_offset.
   int CPolIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::cpol);
   if (CPolIdx >= 0 && (MI.getOperand(CPolIdx).getImm() & AMDGPU::CPol::SCAL))
-    return false;
+    return nullptr;
 
   int OldSAddrIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::saddr);
   int OldVAddrIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::vaddr);
@@ -168,30 +176,47 @@ bool SIFixXcntStallSAddrReuse::convertToVAddr(MachineInstr &MI,
   Register NewVAddr = MRI->createVirtualRegister(TRI->getVGPR64Class());
 
   if (VAddrIsZero) {
-    BuildMI(MBB, MI, DL, TII->get(AMDGPU::COPY), NewVAddr).addReg(SAddrReg);
+    auto Copy = BuildMI(MBB, MI, DL, TII->get(AMDGPU::COPY), NewVAddr).addReg(SAddrReg);
+    if (LIS)
+      LIS->InsertMachineInstrInMaps(*Copy);
   } else {
     MCRegister Lo = TRI->getSubReg(SAddrReg, AMDGPU::sub0);
     MCRegister Hi = TRI->getSubReg(SAddrReg, AMDGPU::sub1);
 
+    Register TmpVAddr = MRI->createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+    auto CopyVAddr = BuildMI(MBB, MI, DL, TII->get(AMDGPU::COPY), TmpVAddr).add(VAddr);
+    if (LIS) {
+      LIS->InsertMachineInstrInMaps(*CopyVAddr);
+      LIS->createAndComputeVirtRegInterval(TmpVAddr);
+    }
+
     Register HiExt = MRI->createVirtualRegister(&AMDGPU::VGPR_32RegClass);
-    BuildMI(MBB, MI, DL, TII->get(AMDGPU::V_ASHRREV_I32_e64), HiExt)
+    auto Ashr = BuildMI(MBB, MI, DL, TII->get(AMDGPU::V_ASHRREV_I32_e64), HiExt)
         .addImm(31)
-        .addReg(OldVAddrReg);
+        .addReg(TmpVAddr);
+    if (LIS)
+      LIS->InsertMachineInstrInMaps(*Ashr);
 
     Register LoV = MRI->createVirtualRegister(&AMDGPU::VGPR_32RegClass);
     Register HiV = MRI->createVirtualRegister(&AMDGPU::VGPR_32RegClass);
-    BuildMI(MBB, MI, DL, TII->get(AMDGPU::COPY), LoV).addReg(Lo);
-    BuildMI(MBB, MI, DL, TII->get(AMDGPU::COPY), HiV).addReg(Hi);
+    auto CopyLo = BuildMI(MBB, MI, DL, TII->get(AMDGPU::COPY), LoV).addReg(Lo);
+    auto CopyHi = BuildMI(MBB, MI, DL, TII->get(AMDGPU::COPY), HiV).addReg(Hi);
+    if (LIS) {
+      LIS->InsertMachineInstrInMaps(*CopyLo);
+      LIS->InsertMachineInstrInMaps(*CopyHi);
+    }
 
     MCRegister VCC = TRI->getVCC();
     auto AddLo =
         BuildMI(MBB, MI, DL, TII->get(AMDGPU::V_ADD_CO_U32_e64), NewVAddr)
             .addDef(VCC)
             .addReg(LoV)
-            .addReg(OldVAddrReg)
+            .addReg(TmpVAddr)
             .addImm(0);
     AddLo->getOperand(0).setSubReg(AMDGPU::sub0);
     AddLo->getOperand(0).setIsUndef(true);
+    if (LIS)
+      LIS->InsertMachineInstrInMaps(*AddLo);
 
     auto AddHi =
         BuildMI(MBB, MI, DL, TII->get(AMDGPU::V_ADDC_U32_e64), NewVAddr)
@@ -201,16 +226,41 @@ bool SIFixXcntStallSAddrReuse::convertToVAddr(MachineInstr &MI,
             .addReg(VCC, RegState::Kill)
             .addImm(0);
     AddHi->getOperand(0).setSubReg(AMDGPU::sub1);
+    if (LIS)
+      LIS->InsertMachineInstrInMaps(*AddHi);
+
+    if (LIS) {
+      LIS->createAndComputeVirtRegInterval(HiExt);
+      LIS->createAndComputeVirtRegInterval(LoV);
+      LIS->createAndComputeVirtRegInterval(HiV);
+    }
   }
 
-  MI.setDesc(TII->get(NewOpc));
-  VAddr.setReg(NewVAddr);
-  MI.removeOperand(OldSAddrIdx);
+  if (LIS)
+    LIS->createAndComputeVirtRegInterval(NewVAddr);
 
-  LLVM_DEBUG(dbgs() << "  Converted: " << MI);
+  MachineInstrBuilder MIB = BuildMI(MBB, MI, DL, TII->get(NewOpc));
+  for (unsigned i = 0; i < MI.getNumOperands(); ++i) {
+    if (i == (unsigned)OldSAddrIdx)
+      continue;
+    if (i == (unsigned)OldVAddrIdx) {
+      MIB.addReg(NewVAddr);
+    } else {
+      MIB.add(MI.getOperand(i));
+    }
+  }
+
+  MIB.cloneMemRefs(MI);
+
+  if (LIS) {
+    LIS->ReplaceMachineInstrInMaps(MI, *MIB);
+  }
+
+  LLVM_DEBUG(dbgs() << "  Converted: " << *MIB);
+  MI.eraseFromParent();
   NewAddrReg = NewVAddr;
   ++NumConverted;
-  return true;
+  return MIB.getInstr();
 }
 
 bool SIFixXcntStallSAddrReuse::processMBB(MachineBasicBlock &MBB) {
@@ -225,12 +275,15 @@ bool SIFixXcntStallSAddrReuse::processMBB(MachineBasicBlock &MBB) {
                   GroupLast->getDebugLoc(), TII->get(TargetOpcode::KILL));
       for (Register R : GroupRegs)
         KillMI.addReg(R, RegState::Kill);
+      if (LIS) {
+        LIS->InsertMachineInstrInMaps(*KillMI);
+      }
     }
     GroupRegs.clear();
     GroupLast = nullptr;
   };
 
-  for (MachineInstr &MI : MBB) {
+  for (MachineInstr &MI : llvm::make_early_inc_range(MBB)) {
     int SAddrIdx;
     if (!isEligible(MI, *TII, *TRI, *MRI, SAddrIdx))
       continue;
@@ -238,9 +291,10 @@ bool SIFixXcntStallSAddrReuse::processMBB(MachineBasicBlock &MBB) {
       continue;
 
     Register NewAddr;
-    if (convertToVAddr(MI, MBB, NewAddr)) {
+    MachineInstr *NewMI = convertToVAddr(MI, MBB, NewAddr);
+    if (NewMI) {
       GroupRegs.push_back(NewAddr);
-      GroupLast = &MI;
+      GroupLast = NewMI;
       Changed = true;
 
       if (AddrLivenessGroupSize > 0 &&

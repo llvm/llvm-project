@@ -14,7 +14,7 @@ body:             |
     ; GFX1250-NEXT: {{  $}}
     ; GFX1250-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; GFX1250-NEXT: [[COPY:%[0-9]+]]:vreg_64_align2 = COPY $sgpr44_sgpr45
-    ; GFX1250-NEXT: [[GLOBAL_LOAD_DWORD:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD [[COPY]], 0, 0, implicit $exec :: (load (s32), addrspace 1)
+    ; GFX1250-NEXT: [[GLOBAL_LOAD_DWORD:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD [[COPY]], 0, 0, implicit $exec, implicit $exec :: (load (s32), addrspace 1)
     ; GFX1250-NEXT: $sgpr44 = S_MOV_B32 0
     ; GFX1250-NEXT: S_ENDPGM 0, implicit [[GLOBAL_LOAD_DWORD]]
     ;
@@ -44,7 +44,7 @@ body:             |
     ; GFX1250-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; GFX1250-NEXT: [[DEF1:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; GFX1250-NEXT: [[COPY:%[0-9]+]]:vreg_64_align2 = COPY $sgpr44_sgpr45
-    ; GFX1250-NEXT: GLOBAL_STORE_DWORD [[COPY]], [[DEF1]], 0, 0, implicit $exec :: (store (s32), addrspace 1)
+    ; GFX1250-NEXT: GLOBAL_STORE_DWORD [[COPY]], [[DEF1]], 0, 0, implicit $exec, implicit $exec :: (store (s32), addrspace 1)
     ; GFX1250-NEXT: $sgpr44 = S_MOV_B32 0
     ; GFX1250-NEXT: S_ENDPGM 0
     ;
@@ -74,12 +74,13 @@ body:             |
     ; GFX1250: liveins: $sgpr44_sgpr45, $vgpr10
     ; GFX1250-NEXT: {{  $}}
     ; GFX1250-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr10
-    ; GFX1250-NEXT: [[V_ASHRREV_I32_e64_:%[0-9]+]]:vgpr_32 = V_ASHRREV_I32_e64 31, [[COPY]], implicit $exec
-    ; GFX1250-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $sgpr44
-    ; GFX1250-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $sgpr45
-    ; GFX1250-NEXT: undef %2.sub0:vreg_64_align2, $vcc_lo = V_ADD_CO_U32_e64 [[COPY1]], [[COPY]], 0, implicit $exec
-    ; GFX1250-NEXT: %2.sub1:vreg_64_align2, dead $vcc_lo = V_ADDC_U32_e64 [[COPY2]], [[V_ASHRREV_I32_e64_]], killed $vcc_lo, 0, implicit $exec
-    ; GFX1250-NEXT: [[GLOBAL_LOAD_DWORD:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD %2, 0, 0, implicit $exec :: (load (s32), addrspace 1)
+    ; GFX1250-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[COPY]]
+    ; GFX1250-NEXT: [[V_ASHRREV_I32_e64_:%[0-9]+]]:vgpr_32 = V_ASHRREV_I32_e64 31, [[COPY1]], implicit $exec
+    ; GFX1250-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $sgpr44
+    ; GFX1250-NEXT: [[COPY3:%[0-9]+]]:vgpr_32 = COPY $sgpr45
+    ; GFX1250-NEXT: undef %2.sub0:vreg_64_align2, $vcc_lo = V_ADD_CO_U32_e64 [[COPY2]], [[COPY1]], 0, implicit $exec
+    ; GFX1250-NEXT: %2.sub1:vreg_64_align2, dead $vcc_lo = V_ADDC_U32_e64 [[COPY3]], [[V_ASHRREV_I32_e64_]], killed $vcc_lo, 0, implicit $exec
+    ; GFX1250-NEXT: [[GLOBAL_LOAD_DWORD:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD %2, 0, 0, implicit $exec, implicit $exec :: (load (s32), addrspace 1)
     ; GFX1250-NEXT: $sgpr44 = S_MOV_B32 0
     ; GFX1250-NEXT: S_ENDPGM 0, implicit [[GLOBAL_LOAD_DWORD]]
     ;
@@ -108,11 +109,11 @@ body:             |
     ; GFX1250-NEXT: {{  $}}
     ; GFX1250-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; GFX1250-NEXT: [[COPY:%[0-9]+]]:vreg_64_align2 = COPY $sgpr44_sgpr45
-    ; GFX1250-NEXT: [[GLOBAL_LOAD_DWORD:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD [[COPY]], 0, 0, implicit $exec :: (load (s32), addrspace 1)
+    ; GFX1250-NEXT: [[GLOBAL_LOAD_DWORD:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD [[COPY]], 0, 0, implicit $exec, implicit $exec :: (load (s32), addrspace 1)
     ; GFX1250-NEXT: $sgpr44 = S_MOV_B32 0
     ; GFX1250-NEXT: $sgpr45 = S_MOV_B32 0
     ; GFX1250-NEXT: [[COPY1:%[0-9]+]]:vreg_64_align2 = COPY $sgpr44_sgpr45
-    ; GFX1250-NEXT: [[GLOBAL_LOAD_DWORD1:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD [[COPY1]], 0, 0, implicit $exec :: (load (s32), addrspace 1)
+    ; GFX1250-NEXT: [[GLOBAL_LOAD_DWORD1:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD [[COPY1]], 0, 0, implicit $exec, implicit $exec :: (load (s32), addrspace 1)
     ; GFX1250-NEXT: KILL killed [[COPY]], killed [[COPY1]]
     ; GFX1250-NEXT: $sgpr44 = S_MOV_B32 1
     ; GFX1250-NEXT: S_ENDPGM 0, implicit [[GLOBAL_LOAD_DWORD]], implicit [[GLOBAL_LOAD_DWORD1]]
