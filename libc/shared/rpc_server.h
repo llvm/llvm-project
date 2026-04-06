@@ -26,33 +26,31 @@ namespace rpc {
 
 // Minimal replacement for 'std::vector' that works for trivial types.
 template <typename T> class TempVector {
-  T *data_;
-  size_t current;
-  size_t capacity;
+  T *data_ = nullptr;
+  size_t current = 0;
+  size_t capacity = 0;
 
 public:
-  inline TempVector() : data_(nullptr), current(0), capacity(0) {}
+  ~TempVector() { free(data_); }
 
-  inline ~TempVector() { free(data_); }
-
-  inline void push_back(const T &value) {
+  void push_back(const T &value) {
     if (current == capacity)
       grow();
     data_[current++] = value;
   }
 
-  inline void pop_back() { --current; }
+  void pop_back() { --current; }
 
-  inline bool empty() const { return current == 0; }
+  bool empty() const { return current == 0; }
 
-  inline size_t size() const { return current; }
+  size_t size() const { return current; }
 
-  inline T &operator[](size_t index) { return data_[index]; }
+  T &operator[](size_t index) { return data_[index]; }
 
-  inline T &back() { return data_[current - 1]; }
+  T &back() { return data_[current - 1]; }
 
 private:
-  inline void grow() {
+  void grow() {
     size_t new_capacity = capacity ? capacity * 2 : 1;
     void *new_data = realloc(data_, new_capacity * sizeof(T));
     data_ = static_cast<T *>(new_data);
@@ -61,12 +59,12 @@ private:
 };
 
 struct TempStorage {
-  inline char *alloc(size_t size) {
+  char *alloc(size_t size) {
     storage.push_back(reinterpret_cast<char *>(malloc(size)));
     return storage.back();
   }
 
-  inline ~TempStorage() {
+  ~TempStorage() {
     for (size_t i = 0; i < storage.size(); ++i)
       free(storage[i]);
   }
@@ -84,7 +82,7 @@ template <bool packed> struct DummyArgList {
     return T(count);
   }
 
-  inline size_t read_count() const { return count; }
+  size_t read_count() const { return count; }
 };
 
 // Reads variadic arguments from a pre-built byte buffer.
@@ -92,7 +90,7 @@ template <bool packed> struct StructArgList {
   void *ptr;
   void *end;
 
-  inline StructArgList() = default;
+  StructArgList() = default;
   inline StructArgList(void *ptr, size_t size)
       : ptr(ptr), end(static_cast<unsigned char *>(ptr) + size) {}
 
