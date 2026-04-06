@@ -368,13 +368,23 @@ int GetNamedMappingFd(const char *name, uptr size, int *flags) {
       internal_open(shmname, O_RDWR | O_CREAT | O_TRUNC | o_cloexec, S_IRWXU));
   CHECK_GE(fd, 0);
   int res = internal_ftruncate(fd, size);
-#if !defined(O_CLOEXEC)
+  int reserrno;
+  if (internal_iserror(res, &reserrno)) {
+    internal_close(fd);
+    return -1;
+  }
+#  if !defined(O_CLOEXEC)
   res = fcntl(fd, F_SETFD, FD_CLOEXEC);
-  CHECK_EQ(0, res);
-#endif
-  CHECK_EQ(0, res);
+  if (internal_iserror(res, &reserrno)) {
+    internal_close(fd);
+    return -1;
+  }
+#  endif
   res = internal_unlink(shmname);
-  CHECK_EQ(0, res);
+  if (internal_iserror(res, &reserrno)) {
+    internal_close(fd);
+    return -1;
+  }
   *flags &= ~(MAP_ANON | MAP_ANONYMOUS);
   return fd;
 }
