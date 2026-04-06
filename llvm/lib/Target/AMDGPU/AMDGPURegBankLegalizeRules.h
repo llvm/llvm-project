@@ -351,7 +351,8 @@ enum LoweringMethodID {
   DynStackAlloc,
   DeletePrefetch,
   LowerSetRounding,
-  LowerGetRounding
+  LowerGetRounding,
+  BitReplicateToVALU
 };
 
 enum FastRulesTypes {
