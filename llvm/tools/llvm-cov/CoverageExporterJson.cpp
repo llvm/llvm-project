@@ -137,7 +137,7 @@ json::Array gatherTestVectors(coverage::MCDCRecord &Record,
                       {"result", renderCondState(Record.getTVResult(tv))},
                       {"conditions", std::move(TVConditions)}}));
   }
-    if (ShowNonExecutedVectors) {
+  if (ShowNonExecutedVectors) {
     for (unsigned tv = 0; tv < Record.getNumNotExecutedTestVectors(); tv++) {
       json::Array TVConditions;
       for (unsigned c = 0; c < NumConditions; c++)

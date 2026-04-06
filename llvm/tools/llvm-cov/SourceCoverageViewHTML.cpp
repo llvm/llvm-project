@@ -1152,8 +1152,7 @@ void SourceCoverageViewHTML::renderBranchView(raw_ostream &OS, BranchView &BRV,
 
 void SourceCoverageViewHTML::renderMCDCView(raw_ostream &OS, MCDCView &MRV,
                                             unsigned ViewDepth) {
-  const bool ShowNonExecutedVectors =
-      getOptions().ShowMCDCNonExecutedVectors;
+  const bool ShowNonExecutedVectors = getOptions().ShowMCDCNonExecutedVectors;
 
   for (auto &Record : MRV.Records) {
     OS << BeginExpansionDiv;

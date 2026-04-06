@@ -337,8 +337,7 @@ void SourceCoverageViewText::renderBranchView(raw_ostream &OS, BranchView &BRV,
 
 void SourceCoverageViewText::renderMCDCView(raw_ostream &OS, MCDCView &MRV,
                                             unsigned ViewDepth) {
-  const bool ShowNonExecutedVectors =
-      getOptions().ShowMCDCNonExecutedVectors;
+  const bool ShowNonExecutedVectors = getOptions().ShowMCDCNonExecutedVectors;
 
   for (auto &Record : MRV.Records) {
     renderLinePrefix(OS, ViewDepth);
