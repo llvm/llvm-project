@@ -5207,10 +5207,6 @@ bool Parser::ParseProfilesAttributeArgs(IdentifierInfo *AttrName,
   };
 
   if (AttrName->isStr("enforce")) {
-    if (!Tok.is(tok::l_paren)) {
-      Diag(Tok, diag::err_profiles_expected_lparen) << "enforce";
-      return true;
-    }
     ConsumeParen();
 
     SmallVector<std::string, 4> Names, Designators;
@@ -5242,10 +5238,6 @@ bool Parser::ParseProfilesAttributeArgs(IdentifierInfo *AttrName,
   }
 
   if (AttrName->isStr("suppress")) {
-    if (!Tok.is(tok::l_paren)) {
-      Diag(Tok, diag::err_profiles_expected_lparen) << "suppress";
-      return true;
-    }
     ConsumeParen();
 
     std::string ProfileName;
@@ -5342,10 +5334,6 @@ bool Parser::ParseProfilesAttributeArgs(IdentifierInfo *AttrName,
   }
 
   if (AttrName->isStr("require")) {
-    if (!Tok.is(tok::l_paren)) {
-      Diag(Tok, diag::err_profiles_expected_lparen) << "require";
-      return true;
-    }
     ConsumeParen();
 
     std::string Name, Designator;
