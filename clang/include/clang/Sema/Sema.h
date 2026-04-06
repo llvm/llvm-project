@@ -1051,6 +1051,8 @@ public:
 
   bool isProfileEnforced(StringRef ProfileName) const;
   const ProfileEnforcement *getProfileEnforcement(StringRef ProfileName) const;
+  bool addProfileEnforcement(StringRef Name, StringRef Designator,
+                             SourceLocation Loc);
 
   void pushProfileSuppression(StringRef ProfileName, StringRef RuleName);
   void popProfileSuppressions(unsigned Count);

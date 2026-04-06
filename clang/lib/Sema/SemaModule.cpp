@@ -472,19 +472,12 @@ Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
             !checkStringLiteralArgumentAttr(AL, I * 2 + 1, Desig))
           continue;
 
-        if (const auto *Existing = getProfileEnforcement(Name)) {
-          if (Existing->CanonicalDesignator != Desig) {
-            Diag(AL.getLoc(), diag::err_profiles_enforce_mismatch) << Name;
-            Diag(Existing->EnforceLoc, diag::note_previous_attribute);
-            continue;
-          }
+        bool IsNew = !isProfileEnforced(Name);
+        if (!addProfileEnforcement(Name, Desig, AL.getLoc()))
           continue;
-        }
 
-        EnforcedProfiles.push_back({Name.str(), Desig.str(), AL.getLoc()});
-
-        if (MDK == ModuleDeclKind::Interface ||
-            MDK == ModuleDeclKind::PartitionInterface)
+        if (IsNew && (MDK == ModuleDeclKind::Interface ||
+                      MDK == ModuleDeclKind::PartitionInterface))
           Mod->EnforcedProfileDesignators.push_back(Desig.str());
       }
     }

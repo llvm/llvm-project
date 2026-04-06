@@ -5487,25 +5487,20 @@ static void handleProfilesEnforceAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
         !S.checkStringLiteralArgumentAttr(AL, I * 2 + 1, Desig))
       return;
 
-    if (const auto *Existing = S.getProfileEnforcement(Name)) {
-      if (Existing->CanonicalDesignator != Desig) {
-        S.Diag(AL.getLoc(), diag::err_profiles_enforce_mismatch) << Name;
-        S.Diag(Existing->EnforceLoc, diag::note_previous_attribute);
-        return;
-      }
-      continue;
+    bool IsNew = !S.isProfileEnforced(Name);
+    if (!S.addProfileEnforcement(Name, Desig, AL.getLoc()))
+      return;
+
+    if (IsNew) {
+      // P3589R2 [decl.attr.require]p2: for header units, enforce from
+      // empty-declarations is visible to require.
+      if (auto *M = S.getCurrentModule())
+        if (M->isHeaderUnit())
+          M->EnforcedProfileDesignators.push_back(Desig.str());
+
+      Names.push_back(Name);
+      Designators.push_back(Desig);
     }
-
-    S.EnforcedProfiles.push_back({Name.str(), Desig.str(), AL.getLoc()});
-
-    // P3589R2 [decl.attr.require]p2: for header units, enforce from
-    // empty-declarations is visible to require.
-    if (auto *M = S.getCurrentModule())
-      if (M->isHeaderUnit())
-        M->EnforcedProfileDesignators.push_back(Desig.str());
-
-    Names.push_back(Name);
-    Designators.push_back(Desig);
   }
 
   D->addAttr(::new (S.Context)

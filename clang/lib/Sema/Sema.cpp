@@ -2996,6 +2996,20 @@ Sema::getProfileEnforcement(StringRef ProfileName) const {
   return nullptr;
 }
 
+bool Sema::addProfileEnforcement(StringRef Name, StringRef Designator,
+                                 SourceLocation Loc) {
+  if (const auto *Existing = getProfileEnforcement(Name)) {
+    if (Existing->CanonicalDesignator != Designator) {
+      Diag(Loc, diag::err_profiles_enforce_mismatch) << Name;
+      Diag(Existing->EnforceLoc, diag::note_previous_attribute);
+      return false;
+    }
+    return true;
+  }
+  EnforcedProfiles.push_back({Name.str(), Designator.str(), Loc});
+  return true;
+}
+
 void Sema::pushProfileSuppression(StringRef ProfileName, StringRef RuleName) {
   ProfileSuppressStack.push_back(
       {ProfileName.str(), RuleName.str()});
