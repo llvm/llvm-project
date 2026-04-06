@@ -96,74 +96,75 @@ protected:
   ///
   /// The serializer receives a \c const reference to \c MyAnalysisResult
   /// directly and the \c Add wrapper handles the downcast from \c
-  /// AnalysisResult internally.
-  /// 2. \c llvm::Registry only stores nullary factories — there is no way
-  ///    to pass constructor arguments when a registry entry is instantiated.
-  ///    This forces the \c ConcreteEntry subclass + function-local statics
-  ///    pattern: the statics capture the serializer/deserializer at
-  ///    registration time, and \c ConcreteEntry's default constructor reads
-  ///    them back when the registry later invokes the factory.
+  /// AnalysisResult internally via virtual dispatch.
   ///
   /// \tparam FormatT Phantom type is needed to disambiguate \c llvm::Registry
   ///   instantiations. \c llvm::Registry is keyed on the \c Entry type,
   ///   so two formats sharing the same serializer/deserializer signatures
   ///   would collide on the same registry without this parameter.
   template <class FormatT, class SerializerFn, class DeserializerFn>
-  class AnalysisResultRegistryGenerator {
+  class AnalysisResultRegistryGenerator;
+
+  template <class FormatT, class SerRet, class... SerArgs, class DesRet,
+            class... DesArgs>
+  class AnalysisResultRegistryGenerator<
+      FormatT, llvm::function_ref<SerRet(const AnalysisResult &, SerArgs...)>,
+      llvm::function_ref<DesRet(DesArgs...)>> {
+
+    using DeserializerFn = llvm::function_ref<DesRet(DesArgs...)>;
+
   public:
-    /// Base type stored in \c llvm::Registry<Entry>. Each registered
-    /// analysis produces a subclass (\c ConcreteEntry) whose default
-    /// constructor populates these fields.
-    struct Entry {
-      explicit Entry(SerializerFn Serialize, DeserializerFn Deserialize)
-          : Serialize(Serialize), Deserialize(Deserialize) {}
-      /// \c instantiate() creates a \c ConcreteEntry but returns it as
-      /// \c unique_ptr<Entry>; deleting the derived object through the
-      /// base pointer requires a virtual destructor to avoid UB.
-      virtual ~Entry() = default;
-      SerializerFn Serialize;
-      DeserializerFn Deserialize;
+    /// Abstract base type stored in \c llvm::Registry<Codec>.
+    /// Subclasses override \c serialize() and \c deserialize() to
+    /// dispatch to the plugin's concrete functions.
+    ///
+    /// There is one \c Codec type (and one \c llvm::Registry<Codec>) per
+    /// format. All analysis-specific \c ConcreteCodec<AnalysisResultT>
+    /// subclasses for a given format register into that single registry. The \c
+    /// FormatT phantom type parameter on the enclosing class ensures that
+    /// different formats produce distinct \c Codec types and thus separate
+    /// registries.
+    struct Codec {
+      virtual ~Codec() = default;
+      virtual SerRet serialize(const AnalysisResult &, SerArgs...) const = 0;
+      virtual DesRet deserialize(DesArgs...) const = 0;
+    };
+
+    /// Per-\c AnalysisResultT subclass of \c Codec. The \c serialize()
+    /// override performs the downcast from \c AnalysisResult to
+    /// \c AnalysisResultT.
+    template <class AnalysisResultT> struct ConcreteCodec final : Codec {
+      using TypedSerializerFn =
+          llvm::function_ref<SerRet(const AnalysisResultT &, SerArgs...)>;
+
+      /// The plugin's serializer and deserializer are stored as \c static
+      /// \c inline members because \c llvm::Registry instantiates entries
+      /// via a zero-argument constructor so there is no way to pass them
+      /// as constructor arguments. The \c Add constructor writes these
+      /// members before registration, and the virtual methods read them
+      /// on invocation. \c inline avoids the need for separate out-of-line
+      /// definitions that a bare \c static member in a class template
+      /// would require.
+      static inline TypedSerializerFn SavedSerialize;
+      static inline DeserializerFn SavedDeserialize;
+
+      SerRet serialize(const AnalysisResult &Base,
+                       SerArgs... args) const override {
+        return SavedSerialize(static_cast<const AnalysisResultT &>(Base),
+                              args...);
+      }
+
+      DesRet deserialize(DesArgs... args) const override {
+        return SavedDeserialize(args...);
+      }
     };
 
     template <class AnalysisResultT> struct Add {
-      /// This class provides a wrap method that mediates the type conversion of
-      /// the value to be serialized. A plugin author writes a serializer that
-      /// take a concrete \c AnalysisResultT for serialization. However, the
-      /// registry stores a \c function_ref<...(const AnalysisResult &, ...)>
-      /// because the use site that invokes serialization is unaware of the
-      /// concrete subtype \c AnalysisResultT; it only knows that it has an
-      /// `AnalysisResult` value that needs to be serialized. The wrapper
-      /// function below bridges this mismatch by performing a `static_cast`
-      /// from `AnalysisResult` to `AnalysisResultT`. This conversion can only
-      /// happen at the two places where we know the concrete `AnalysisResultT`:
-      /// first is this struct which receives the concrete type as a template
-      /// parameter; second is the user's serialization function itself, but
-      /// that would require the user to cast explicitly.
-      template <class> struct SerializerAdapter;
-      template <class R, class... Args>
-      struct SerializerAdapter<
-          llvm::function_ref<R(const AnalysisResult &, Args...)>> {
-
-        /// The function-pointer type the plugin author actually writes.
-        using TypedFnPtr = R (*)(const AnalysisResultT &, Args...);
-
-        /// Holds the plugin's typed function pointer so that \c wrap() can
-        /// call it. \c static \c inline gives it program lifetime,
-        /// independent of any single \c Add instance.
-        static inline TypedFnPtr Saved = nullptr;
-
-        /// Accepts the base \c AnalysisResult reference from the use site,
-        /// downcasts to the concrete type, and forwards to the plugin's typed
-        /// serializer stored in \c Saved.
-        static R wrap(const AnalysisResult &Base, Args... args) {
-          return Saved(static_cast<const AnalysisResultT &>(Base), args...);
-        }
-      };
-      using SA = SerializerAdapter<SerializerFn>;
-
       /// Takes the plugin's typed serializer and the deserializer, and
-      /// inserts them into \c llvm::Registry<Entry>.
-      Add(typename SA::TypedFnPtr TypedSerialize, DeserializerFn Deserialize) {
+      /// inserts them into \c llvm::Registry<Codec>.
+      Add(typename ConcreteCodec<AnalysisResultT>::TypedSerializerFn
+              TypedSerialize,
+          DeserializerFn Deserialize) {
         /// Per-\c AnalysisResultT guard: each template instantiation gets
         /// its own \c static \c bool, so double-registration of the same
         /// analysis is caught even across translation units.
@@ -174,11 +175,8 @@ protected:
         }
         Registered = true;
 
-        SA::Saved = TypedSerialize;
-
-        struct ConcreteEntry : Entry {
-          ConcreteEntry() : Entry(SA::wrap, Deserialize) {}
-        };
+        ConcreteCodec<AnalysisResultT>::SavedSerialize = TypedSerialize;
+        ConcreteCodec<AnalysisResultT>::SavedDeserialize = Deserialize;
 
         /// \c llvm::Registry stores the name as a \c StringRef, so the
         /// underlying string must be kept alive with a static declaration.
@@ -186,23 +184,21 @@ protected:
             AnalysisResultT::analysisName().str().str();
 
         /// This performs the actual registration. It appends a factory for \c
-        /// ConcreteEntry to the global \c llvm::Registry<Entry> list. \c static
+        /// ConcreteCodec to the global \c llvm::Registry<Codec>. \c static
         /// ensures the `Registry::Add` object lives for the entire program,
-        /// keeping its entry and node alive in the registry's linked list.
-        [[maybe_unused]] static
-            typename llvm::Registry<Entry>::template Add<ConcreteEntry>
-                RegisterUsingCtorSideEffect(NameStr, "");
+        /// keeping its codec and node alive in the registry's linked list.
+        [[maybe_unused]] static typename llvm::Registry<Codec>::template Add<
+            ConcreteCodec<AnalysisResultT>> RegisterUsingCtorSideEffect(NameStr,
+                                                                        "");
       }
     };
 
-    /// Looks up the serializer/deserializer pair for \p Name by walking the
-    /// registry list.
-    static llvm::Expected<std::pair<SerializerFn, DeserializerFn>>
+    /// Looks up the codec for \p Name by walking the registry list.
+    static llvm::Expected<std::unique_ptr<Codec>>
     instantiate(const AnalysisName &Name) {
-      for (const auto &E : llvm::Registry<Entry>::entries()) {
+      for (const auto &E : llvm::Registry<Codec>::entries()) {
         if (E.getName() == Name.str()) {
-          auto Entry = E.instantiate();
-          return std::make_pair(Entry->Serialize, Entry->Deserialize);
+          return E.instantiate();
         }
       }
       return ErrorBuilder::create(std::errc::invalid_argument,

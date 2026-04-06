@@ -221,7 +221,7 @@ namespace llvm {
 extern template class CLANG_TEMPLATE_ABI
     Registry<clang::ssaf::JSONFormat::FormatInfo>;
 extern template class CLANG_TEMPLATE_ABI
-    Registry<clang::ssaf::JSONFormat::AnalysisResultRegistry::Entry>;
+    Registry<clang::ssaf::JSONFormat::AnalysisResultRegistry::Codec>;
 } // namespace llvm
 
 #endif // LLVM_CLANG_SCALABLESTATICANALYSISFRAMEWORK_CORE_SERIALIZATION_JSONFORMAT_H

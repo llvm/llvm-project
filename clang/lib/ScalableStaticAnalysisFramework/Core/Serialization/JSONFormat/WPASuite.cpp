@@ -28,9 +28,9 @@ JSONFormat::analysisResultMapEntryFromJSON(const Object &Entry) const {
 
   AnalysisName Name = analysisNameFromJSON(*OptName);
 
-  auto ExpectedFns = AnalysisResultRegistry::instantiate(Name);
-  if (!ExpectedFns) {
-    return ExpectedFns.takeError();
+  auto ExpectedCodec = AnalysisResultRegistry::instantiate(Name);
+  if (!ExpectedCodec) {
+    return ExpectedCodec.takeError();
   }
 
   const Object *ResultObj = Entry.getObject("result");
@@ -41,8 +41,8 @@ JSONFormat::analysisResultMapEntryFromJSON(const Object &Entry) const {
         .build();
   }
 
-  auto Deserialize = ExpectedFns->second;
-  auto ExpectedResult = Deserialize(*ResultObj, &entityIdFromJSONObject);
+  auto ExpectedResult =
+      (*ExpectedCodec)->deserialize(*ResultObj, &entityIdFromJSONObject);
   if (!ExpectedResult) {
     return ExpectedResult.takeError();
   }
@@ -53,16 +53,14 @@ JSONFormat::analysisResultMapEntryFromJSON(const Object &Entry) const {
 llvm::Expected<Object> JSONFormat::analysisResultMapEntryToJSON(
     const AnalysisName &Name,
     const std::unique_ptr<AnalysisResult> &Result) const {
-  auto ExpectedFns = AnalysisResultRegistry::instantiate(Name);
-  if (!ExpectedFns) {
-    return ExpectedFns.takeError();
+  auto ExpectedCodec = AnalysisResultRegistry::instantiate(Name);
+  if (!ExpectedCodec) {
+    return ExpectedCodec.takeError();
   }
-
-  auto Serialize = ExpectedFns->first;
 
   Object Entry;
   Entry["analysis_name"] = analysisNameToJSON(Name);
-  Entry["result"] = Serialize(*Result, &entityIdToJSONObject);
+  Entry["result"] = (*ExpectedCodec)->serialize(*Result, &entityIdToJSONObject);
   return Entry;
 }
 
