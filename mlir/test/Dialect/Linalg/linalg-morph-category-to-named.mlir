@@ -37,6 +37,30 @@ func.func @elementwise_binary(%arg0: tensor<?x?xf32>,
 
 // -----
 
+#elt_map_in = affine_map<(d0, d1) -> (d1, d0)>
+#elt_map_out = affine_map<(d0, d1) -> (d0, d1)>
+
+// This stays as `linalg.elementwise` because named elementwise ops do not
+// support user-defined indexing maps.
+func.func @elementwise_non_default_maps(%arg0: tensor<?x?xf32>,
+    %arg1: tensor<?x?xf32>) -> tensor<?x?xf32> {
+  %0 = linalg.elementwise
+      kind = #linalg.elementwise_kind<exp>
+      indexing_maps = [#elt_map_in, #elt_map_out]
+      ins(%arg0 : tensor<?x?xf32>)
+      outs(%arg1 : tensor<?x?xf32>) -> tensor<?x?xf32>
+  return %0 : tensor<?x?xf32>
+}
+
+// CHECK-DAG: #[[$ELT_MAP_IN:.+]] = affine_map<(d0, d1) -> (d1, d0)>
+// CHECK-DAG: #[[$ELT_MAP_OUT:.+]] = affine_map<(d0, d1) -> (d0, d1)>
+// CHECK-LABEL: @elementwise_non_default_maps
+// CHECK: linalg.elementwise
+// CHECK-SAME: indexing_maps = [#[[$ELT_MAP_IN]], #[[$ELT_MAP_OUT]]]
+// CHECK-NOT: linalg.exp
+
+// -----
+
 #map_a = affine_map<(d0, d1, d2) -> (d0, d2)>
 #map_b = affine_map<(d0, d1, d2) -> (d2, d1)>
 #map_c = affine_map<(d0, d1, d2) -> (d0, d1)>

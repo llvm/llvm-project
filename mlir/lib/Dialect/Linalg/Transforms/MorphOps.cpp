@@ -53,6 +53,7 @@ void LinalgMorphOpsPass::runOnOperation() {
     opts.emitCategoryOps = genericToCategory;
     populateLinalgGenericOpsSpecializationPatterns(patterns, opts);
   }
+
   if (categoryToNamed)
     populateLinalgCategoryToNamedPatterns(patterns);
   if (failed(applyPatternsGreedily(getOperation(), std::move(patterns))))

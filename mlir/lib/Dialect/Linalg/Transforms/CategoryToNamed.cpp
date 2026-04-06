@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements rewriting those linalg category ops that can be
+// This file implements rewriting the subset of linalg category ops that can be
 // represented by named ops, e.g. `linalg.elementwise<exp>` to `linalg.exp` or
 // `linalg.contract` to `linalg.matmul`.
 //
@@ -25,30 +25,71 @@ using namespace mlir::linalg;
 
 namespace {
 
+enum class IndexMatchResult { Match = 0, Transposed, Mismatch };
+
+static IndexMatchResult matchOperandMap(AffineMap map, unsigned rowDimIdx,
+                                        unsigned expectedPosOfRowDim,
+                                        unsigned expectedPosOfColDim) {
+  auto exprOfRowDim = map.getResults()[rowDimIdx];
+  auto exprOfColDim = map.getResults()[rowDimIdx + 1];
+
+  if (exprOfRowDim.getKind() != AffineExprKind::DimId ||
+      exprOfColDim.getKind() != AffineExprKind::DimId)
+    return IndexMatchResult::Mismatch;
+
+  auto posRowDim = cast<AffineDimExpr>(exprOfRowDim).getPosition();
+  auto posColDim = cast<AffineDimExpr>(exprOfColDim).getPosition();
+
+  if (expectedPosOfRowDim == posRowDim && expectedPosOfColDim == posColDim)
+    return IndexMatchResult::Match;
+  if (expectedPosOfRowDim == posColDim && expectedPosOfColDim == posRowDim)
+    return IndexMatchResult::Transposed;
+  return IndexMatchResult::Mismatch;
+}
+
 template <typename NamedOpTy>
-static FailureOr<LinalgOp> replaceElementwiseOp(ElementwiseOp op,
-                                                PatternRewriter &rewriter) {
+static LogicalResult replaceElementwiseOp(ElementwiseOp op,
+                                          PatternRewriter &rewriter) {
+  unsigned numMaps = op.getNumDpsInputs() + op.getNumDpsInits();
+  SmallVector<AffineMap> defaultMaps = ElementwiseOp::getDefaultIndexingMaps(
+      numMaps, op.getResultRank(), op.getContext());
+  if (!llvm::equal(op.getIndexingMapsArray(), defaultMaps))
+    return rewriter.notifyMatchFailure(
+        op, "named elementwise ops require default indexing maps");
+
+  auto namedOp =
+      NamedOpTy::create(rewriter, op.getLoc(), op.getDpsInputs(),
+                        op.getDpsInits(), ArrayRef<NamedAttribute>{});
+  rewriter.replaceOp(op, namedOp->getResults());
+  return success();
+}
+
+template <typename NamedOpTy>
+static LogicalResult replaceContractOp(ContractOp op, PatternRewriter &rewriter,
+                                       ArrayRef<AffineMap> indexingMaps) {
   SmallVector<NamedAttribute> attrs;
-  attrs.push_back(rewriter.getNamedAttr("indexing_maps", op.getIndexingMaps()));
+  if (op.getCast() == TypeFn::cast_unsigned) {
+    attrs.push_back(rewriter.getNamedAttr(
+        "cast", TypeFnAttr::get(rewriter.getContext(), op.getCast())));
+  }
+
+  SmallVector<Attribute> indexingMapsAttrVal =
+      llvm::map_to_vector(indexingMaps, [](AffineMap map) -> Attribute {
+        return AffineMapAttr::get(map);
+      });
+  auto indexingMapsAttr = rewriter.getArrayAttr(indexingMapsAttrVal);
+  if (!NamedOpTy::isDefaultIndexingMaps(indexingMapsAttr)) {
+    attrs.push_back(rewriter.getNamedAttr("indexing_maps", indexingMapsAttr));
+  }
 
   auto namedOp = NamedOpTy::create(rewriter, op.getLoc(), op.getDpsInputs(),
                                    op.getDpsInits(), attrs);
-
-  {
-    ScopedDiagnosticHandler handler(op.getContext(), [](Diagnostic &) {});
-    if (failed(verify(namedOp.getOperation()))) {
-      rewriter.eraseOp(namedOp);
-      return rewriter.notifyMatchFailure(
-          op, "elementwise op does not satisfy named op constraints");
-    }
-  }
-
   rewriter.replaceOp(op, namedOp->getResults());
-  return cast<LinalgOp>(namedOp.getOperation());
+  return success();
 }
 
-static FailureOr<LinalgOp> specializeElementwiseOp(ElementwiseOp op,
-                                                   PatternRewriter &rewriter) {
+static LogicalResult specializeElementwiseOp(ElementwiseOp op,
+                                             PatternRewriter &rewriter) {
   switch (op.getKind()) {
   case ElementwiseKind::select:
     return replaceElementwiseOp<SelectOp>(op, rewriter);
@@ -68,6 +109,8 @@ static FailureOr<LinalgOp> specializeElementwiseOp(ElementwiseOp op,
     return replaceElementwiseOp<MinOp>(op, rewriter);
   case ElementwiseKind::max_unsigned:
   case ElementwiseKind::min_unsigned:
+    // There are no named unsigned max/min ops yet, so these category ops
+    // cannot currently be represented as named ops.
     break;
   case ElementwiseKind::powf:
     return replaceElementwiseOp<PowFOp>(op, rewriter);
@@ -105,13 +148,89 @@ static FailureOr<LinalgOp> specializeElementwiseOp(ElementwiseOp op,
   });
 }
 
+static LogicalResult specializeContractOp(ContractOp op,
+                                          PatternRewriter &rewriter) {
+  if (op.getNumDpsInputs() != 2 || op.getNumDpsInits() != 1)
+    return failure();
+
+  // Named matmul-like ops only admit permutation-style indexing maps.
+  auto indexingMaps = op.getIndexingMapsArray();
+  if (llvm::any_of(indexingMaps,
+                   [](AffineMap map) { return !map.isProjectedPermutation(); }))
+    return failure();
+
+  // Restrict the contraction to the matmul family shape: one M, one N, one K,
+  // plus an optional prefix of batch dimensions.
+  auto res = inferContractionDims(op);
+  if (failed(res))
+    return failure();
+  auto dims = *res;
+  if (dims.m.size() != 1 || dims.n.size() != 1 || dims.k.size() != 1)
+    return failure();
+
+  if (llvm::any_of(indexingMaps, [&dims](AffineMap map) {
+        return map.getResults().size() !=
+               dims.batch.size() + 2 /* any two of {m, n, k} */;
+      }))
+    return failure();
+
+  auto numBatchDims = dims.batch.size();
+  if (indexingMaps[0].getNumDims() != numBatchDims + 3)
+    return failure();
+
+  // Batch dimensions must stay in canonical order for named batch_matmul.
+  if (numBatchDims && llvm::any_of(indexingMaps, [numBatchDims](AffineMap map) {
+        for (unsigned i = 0; i < numBatchDims; ++i) {
+          auto expr = map.getResults()[i];
+          if (expr.getKind() != AffineExprKind::DimId ||
+              cast<AffineDimExpr>(expr).getPosition() != i)
+            return true;
+        }
+        return false;
+      }))
+    return failure();
+
+  auto a = matchOperandMap(indexingMaps[0], numBatchDims, dims.m[0], dims.k[0]);
+  auto b = matchOperandMap(indexingMaps[1], numBatchDims, dims.k[0], dims.n[0]);
+  auto c = matchOperandMap(indexingMaps[2], numBatchDims, dims.m[0], dims.n[0]);
+  if (llvm::is_contained({a, b, c}, IndexMatchResult::Mismatch))
+    return failure();
+
+  auto *ctx = op.getContext();
+  unsigned numLoopDims = numBatchDims + 3;
+  unsigned mIdx = numBatchDims;
+  unsigned nIdx = mIdx + 1;
+  unsigned kIdx = mIdx + 2;
+
+  // Rebuild indexing maps in the named op's canonical loop order while
+  // preserving legal operand transpositions.
+  auto makeMap = [&](IndexMatchResult match, unsigned rowIdx, unsigned colIdx) {
+    SmallVector<unsigned> tensorDims;
+    for (unsigned i = 0; i < numBatchDims; ++i)
+      tensorDims.push_back(i);
+    if (match == IndexMatchResult::Transposed)
+      llvm::append_values(tensorDims, colIdx, rowIdx);
+    else
+      llvm::append_values(tensorDims, rowIdx, colIdx);
+    return AffineMap::getMultiDimMapWithTargets(numLoopDims, tensorDims, ctx);
+  };
+
+  auto mapA = makeMap(a, mIdx, kIdx);
+  auto mapB = makeMap(b, kIdx, nIdx);
+  auto mapC = makeMap(c, mIdx, nIdx);
+  SmallVector<AffineMap, 3> namedOpMaps = {mapA, mapB, mapC};
+
+  if (numBatchDims)
+    return replaceContractOp<BatchMatmulOp>(op, rewriter, namedOpMaps);
+  return replaceContractOp<MatmulOp>(op, rewriter, namedOpMaps);
+}
+
 struct ElementwiseToNamedPattern : public OpRewritePattern<ElementwiseOp> {
   using OpRewritePattern<ElementwiseOp>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(ElementwiseOp op,
                                 PatternRewriter &rewriter) const override {
-    return succeeded(specializeElementwiseOp(op, rewriter)) ? success()
-                                                            : failure();
+    return specializeElementwiseOp(op, rewriter);
   }
 };
 
@@ -120,34 +239,7 @@ struct ContractToNamedPattern : public OpRewritePattern<ContractOp> {
 
   LogicalResult matchAndRewrite(ContractOp op,
                                 PatternRewriter &rewriter) const override {
-    // Route through a cloned generic op so we can reuse the existing
-    // contraction-to-named specialization without mutating the original op
-    // on unsuccessful matches.
-    auto *clonedOp = rewriter.clone(*op.getOperation());
-    auto clonedLinalgOp = cast<LinalgOp>(clonedOp);
-
-    FailureOr<GenericOp> genericOp =
-        generalizeNamedOp(rewriter, clonedLinalgOp);
-    if (failed(genericOp)) {
-      rewriter.eraseOp(clonedOp);
-      return failure();
-    }
-
-    GenericOpSpecializationOptions options;
-    FailureOr<LinalgOp> namedOp =
-        specializeGenericOp(rewriter, *genericOp, options);
-    if (failed(namedOp)) {
-      rewriter.eraseOp(*genericOp);
-      return failure();
-    }
-
-    if (op->getNumResults() == 0) {
-      rewriter.eraseOp(op);
-      return success();
-    }
-
-    rewriter.replaceOp(op, (*namedOp)->getResults());
-    return success();
+    return specializeContractOp(op, rewriter);
   }
 };
 
