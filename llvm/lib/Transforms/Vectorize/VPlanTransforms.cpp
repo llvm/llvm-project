@@ -5755,11 +5755,6 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
 
   // Helper lambda to check if the IV range excludes the sentinel value. Try
   // signed first, then unsigned. Return an excluded sentinel if found,
-  // otherwise return null.
-  auto CheckSentinel = [&SE](const SCEV *IVSCEV,
-                             bool UseMax) -> std::optional<APSInt> {
-  // Helper lambda to check if the IV range excludes the sentinel value. Try
-  // signed first, then unsigned. Return an excluded sentinel if found,
   // otherwise return std::nullopt.
   auto CheckSentinel = [&SE](const SCEV *IVSCEV,
                              bool UseMax) -> std::optional<APSInt> {
@@ -5833,23 +5828,23 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
     std::optional<APSInt> SentinelVal = CheckSentinel(IVSCEV, UseMax);
     bool UseSigned = SentinelVal && SentinelVal->isSigned();
 
-    // Sinking the expression may enable or disable a sentinel (e.g., if the
-    // expression is a multiply or divide by large constant, respectively).
-    // Avoid sinking if it disables a sentinel.
-    if (!SentinelVal && SinkExpressionIV) {
-      // If we weren't able to use a sentinel with SinkExpressionIV, try if it
-      // is possible with FindLastExpression.
+    // Sinking an expression will disable epilogue vectorization. Only use it,
+    // if FindLastExpression cannot be vectorized via a sentinel. Sinking may
+    // also prevent vectorizing using a sentinel (e.g., if the expression is a
+    // multiply or divide by large constant, respectively), which also makes
+    // sinking undesirable.
+    if (SinkExpressionIV) {
       const SCEV *FindLastExpressionSCEV =
           vputils::getSCEVExprForVPValue(FindLastExpression, PSE, &L);
       if (match(FindLastExpressionSCEV,
                 m_scev_AffineAddRec(m_SCEV(), m_SCEV(Step)))) {
         bool NewUseMax = SE.isKnownPositive(Step);
         if (auto Sentinel = CheckSentinel(FindLastExpressionSCEV, NewUseMax)) {
+          // The original expression already has a sentinel, so prefer not
+          // sinking to keep epilogue vectorization possible.
           SentinelVal = *Sentinel;
           UseSigned = Sentinel->isSigned();
           UseMax = NewUseMax;
-          // We can use the sentinel value with the original expression, reset
-          // IVSCEV and clear SinkExpressionIV.
           IVSCEV = FindLastExpressionSCEV;
           SinkExpressionIV = nullptr;
         }
@@ -5878,16 +5873,16 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
     auto *OrigSelectR = FindLastSelect->getDefiningRecipe();
     if (SinkExpressionIV) {
       VPBuilder LoopBuilder(OrigSelectR);
-      auto DL = OrigSelectR->getDebugLoc();
-      VPValue *Cond = OrigSelectR->getOperand(0);
+      DebugLoc DL = OrigSelectR->getDebugLoc();
+      VPValue *SelectCond = OrigSelectR->getOperand(0);
       if (OrigSelectR->getOperand(1) == PhiR) {
         FindLastSelect =
-            LoopBuilder.createSelect(Cond, PhiR, SinkExpressionIV, DL);
+            LoopBuilder.createSelect(SelectCond, PhiR, SinkExpressionIV, DL);
       } else {
         assert(OrigSelectR->getOperand(2) == PhiR &&
                "PhiR expected as operand 1 or 2");
         FindLastSelect =
-            LoopBuilder.createSelect(Cond, SinkExpressionIV, PhiR, DL);
+            LoopBuilder.createSelect(SelectCond, SinkExpressionIV, PhiR, DL);
       }
     }
 
