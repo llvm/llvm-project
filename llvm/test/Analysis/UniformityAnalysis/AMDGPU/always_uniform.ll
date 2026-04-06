@@ -228,4 +228,4 @@ declare i32 @llvm.amdgcn.cluster.workgroup.max.flat.id()
 
 attributes #0 = { nounwind readnone }
 attributes #1 = { nounwind readnone convergent }
-attributes #2 = { "amdgpu-flat-work-group-size"="1,1" }
+attributes #2 = { "amdgpu-flat-work-group-size"="1,1" "amdgpu-no-wwm" }
