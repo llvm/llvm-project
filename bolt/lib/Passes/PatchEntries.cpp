@@ -41,17 +41,25 @@ Error PatchEntries::runOnFunctions(BinaryContext &BC) {
       if (BF.isFolded())
         return false;
 
+      // Skip functions that already have clones at origin.
+      if (BF.hasCloneAtOrigin())
+        return false;
+
       // Patching is always needed if explicitly requested.
       if (BF.needsPatch())
         return true;
 
-      return !BC.shouldEmit(BF) && !BF.hasExternalRefRelocations();
+      return !BF.isPseudo() && !BC.shouldEmit(BF) &&
+             !BF.hasExternalRefRelocations();
     };
 
     if (!llvm::any_of(llvm::make_second_range(BC.getBinaryFunctions()),
                       needsPatching))
       return Error::success();
   }
+
+  assert(!opts::UseOldText &&
+         "Cannot patch entries while overwriting original .text");
 
   if (opts::Verbosity >= 1)
     BC.outs() << "BOLT-INFO: patching entries in original code\n";
@@ -69,6 +77,10 @@ Error PatchEntries::runOnFunctions(BinaryContext &BC) {
 
     // Patch original code only for functions that will be emitted.
     if (!BC.shouldEmit(Function))
+      continue;
+
+    // Skip functions that already have clones at origin.
+    if (Function.hasCloneAtOrigin())
       continue;
 
     // Check if we can skip patching the function.

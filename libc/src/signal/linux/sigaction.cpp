@@ -8,7 +8,6 @@
 
 #include "src/signal/sigaction.h"
 
-#include "hdr/types/sigset_t.h"
 #include "src/__support/common.h"
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
@@ -16,35 +15,15 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-// TOOD: Some architectures will have their signal trampoline functions in the
-// vdso, use those when available.
-
-extern "C" void __restore_rt();
-
 LLVM_LIBC_FUNCTION(int, sigaction,
                    (int signal, const struct sigaction *__restrict libc_new,
                     struct sigaction *__restrict libc_old)) {
-  KernelSigaction kernel_new;
-  if (libc_new) {
-    kernel_new = *libc_new;
-    if (!(kernel_new.sa_flags & SA_RESTORER)) {
-      kernel_new.sa_flags |= SA_RESTORER;
-      kernel_new.sa_restorer = __restore_rt;
-    }
-  }
+  ErrorOr<int> ret = do_sigaction(signal, libc_new, libc_old);
+  if (ret)
+    return ret.value();
 
-  KernelSigaction kernel_old;
-  int ret = LIBC_NAMESPACE::syscall_impl<int>(
-      SYS_rt_sigaction, signal, libc_new ? &kernel_new : nullptr,
-      libc_old ? &kernel_old : nullptr, sizeof(sigset_t));
-  if (ret) {
-    libc_errno = -ret;
-    return -1;
-  }
-
-  if (libc_old)
-    *libc_old = kernel_old;
-  return 0;
+  libc_errno = ret.error();
+  return -1;
 }
 
 } // namespace LIBC_NAMESPACE_DECL

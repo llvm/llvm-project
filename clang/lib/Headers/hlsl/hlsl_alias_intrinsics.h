@@ -1236,6 +1236,60 @@ _HLSL_BUILTIN_ALIAS(__builtin_elementwise_floor)
 float4 floor(float4);
 
 //===----------------------------------------------------------------------===//
+// fused multiply-add builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn double fma(double a, double b, double c)
+/// \brief Returns the double-precision fused multiply-addition of a * b + c.
+/// \param a The first value in the fused multiply-addition.
+/// \param b The second value in the fused multiply-addition.
+/// \param c The third value in the fused multiply-addition.
+
+// double scalars and vectors
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_fma)
+double fma(double, double, double);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_fma)
+double2 fma(double2, double2, double2);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_fma)
+double3 fma(double3, double3, double3);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_fma)
+double4 fma(double4, double4, double4);
+
+// double matrices
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_fma)
+double1x1 fma(double1x1, double1x1, double1x1);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_fma)
+double1x2 fma(double1x2, double1x2, double1x2);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_fma)
+double1x3 fma(double1x3, double1x3, double1x3);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_fma)
+double1x4 fma(double1x4, double1x4, double1x4);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_fma)
+double2x1 fma(double2x1, double2x1, double2x1);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_fma)
+double2x2 fma(double2x2, double2x2, double2x2);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_fma)
+double2x3 fma(double2x3, double2x3, double2x3);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_fma)
+double2x4 fma(double2x4, double2x4, double2x4);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_fma)
+double3x1 fma(double3x1, double3x1, double3x1);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_fma)
+double3x2 fma(double3x2, double3x2, double3x2);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_fma)
+double3x3 fma(double3x3, double3x3, double3x3);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_fma)
+double3x4 fma(double3x4, double3x4, double3x4);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_fma)
+double4x1 fma(double4x1, double4x1, double4x1);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_fma)
+double4x2 fma(double4x2, double4x2, double4x2);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_fma)
+double4x3 fma(double4x3, double4x3, double4x3);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_fma)
+double4x4 fma(double4x4, double4x4, double4x4);
+
+//===----------------------------------------------------------------------===//
 // frac builtins
 //===----------------------------------------------------------------------===//
 
@@ -3642,6 +3696,105 @@ _HLSL_BUILTIN_ALIAS(__builtin_hlsl_quad_read_across_x)
 __attribute__((convergent)) double4 QuadReadAcrossX(double4);
 
 //===----------------------------------------------------------------------===//
+// QuadReadAcrossY builtins
+//===----------------------------------------------------------------------===//
+
+_HLSL_16BIT_AVAILABILITY_SHADERMODEL_DEFAULT()
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_quad_read_across_y)
+__attribute__((convergent)) half QuadReadAcrossY(half);
+_HLSL_16BIT_AVAILABILITY_SHADERMODEL_DEFAULT()
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_quad_read_across_y)
+__attribute__((convergent)) half2 QuadReadAcrossY(half2);
+_HLSL_16BIT_AVAILABILITY_SHADERMODEL_DEFAULT()
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_quad_read_across_y)
+__attribute__((convergent)) half3 QuadReadAcrossY(half3);
+_HLSL_16BIT_AVAILABILITY_SHADERMODEL_DEFAULT()
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_quad_read_across_y)
+__attribute__((convergent)) half4 QuadReadAcrossY(half4);
+
+#ifdef __HLSL_ENABLE_16_BIT
+_HLSL_16BIT_AVAILABILITY_SHADERMODEL_DEFAULT()
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_quad_read_across_y)
+__attribute__((convergent)) int16_t QuadReadAcrossY(int16_t);
+_HLSL_16BIT_AVAILABILITY_SHADERMODEL_DEFAULT()
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_quad_read_across_y)
+__attribute__((convergent)) int16_t2 QuadReadAcrossY(int16_t2);
+_HLSL_16BIT_AVAILABILITY_SHADERMODEL_DEFAULT()
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_quad_read_across_y)
+__attribute__((convergent)) int16_t3 QuadReadAcrossY(int16_t3);
+_HLSL_16BIT_AVAILABILITY_SHADERMODEL_DEFAULT()
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_quad_read_across_y)
+__attribute__((convergent)) int16_t4 QuadReadAcrossY(int16_t4);
+
+_HLSL_16BIT_AVAILABILITY_SHADERMODEL_DEFAULT()
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_quad_read_across_y)
+__attribute__((convergent)) uint16_t QuadReadAcrossY(uint16_t);
+_HLSL_16BIT_AVAILABILITY_SHADERMODEL_DEFAULT()
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_quad_read_across_y)
+__attribute__((convergent)) uint16_t2 QuadReadAcrossY(uint16_t2);
+_HLSL_16BIT_AVAILABILITY_SHADERMODEL_DEFAULT()
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_quad_read_across_y)
+__attribute__((convergent)) uint16_t3 QuadReadAcrossY(uint16_t3);
+_HLSL_16BIT_AVAILABILITY_SHADERMODEL_DEFAULT()
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_quad_read_across_y)
+__attribute__((convergent)) uint16_t4 QuadReadAcrossY(uint16_t4);
+#endif
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_quad_read_across_y)
+__attribute__((convergent)) int QuadReadAcrossY(int);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_quad_read_across_y)
+__attribute__((convergent)) int2 QuadReadAcrossY(int2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_quad_read_across_y)
+__attribute__((convergent)) int3 QuadReadAcrossY(int3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_quad_read_across_y)
+__attribute__((convergent)) int4 QuadReadAcrossY(int4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_quad_read_across_y)
+__attribute__((convergent)) uint QuadReadAcrossY(uint);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_quad_read_across_y)
+__attribute__((convergent)) uint2 QuadReadAcrossY(uint2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_quad_read_across_y)
+__attribute__((convergent)) uint3 QuadReadAcrossY(uint3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_quad_read_across_y)
+__attribute__((convergent)) uint4 QuadReadAcrossY(uint4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_quad_read_across_y)
+__attribute__((convergent)) int64_t QuadReadAcrossY(int64_t);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_quad_read_across_y)
+__attribute__((convergent)) int64_t2 QuadReadAcrossY(int64_t2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_quad_read_across_y)
+__attribute__((convergent)) int64_t3 QuadReadAcrossY(int64_t3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_quad_read_across_y)
+__attribute__((convergent)) int64_t4 QuadReadAcrossY(int64_t4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_quad_read_across_y)
+__attribute__((convergent)) uint64_t QuadReadAcrossY(uint64_t);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_quad_read_across_y)
+__attribute__((convergent)) uint64_t2 QuadReadAcrossY(uint64_t2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_quad_read_across_y)
+__attribute__((convergent)) uint64_t3 QuadReadAcrossY(uint64_t3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_quad_read_across_y)
+__attribute__((convergent)) uint64_t4 QuadReadAcrossY(uint64_t4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_quad_read_across_y)
+__attribute__((convergent)) float QuadReadAcrossY(float);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_quad_read_across_y)
+__attribute__((convergent)) float2 QuadReadAcrossY(float2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_quad_read_across_y)
+__attribute__((convergent)) float3 QuadReadAcrossY(float3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_quad_read_across_y)
+__attribute__((convergent)) float4 QuadReadAcrossY(float4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_quad_read_across_y)
+__attribute__((convergent)) double QuadReadAcrossY(double);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_quad_read_across_y)
+__attribute__((convergent)) double2 QuadReadAcrossY(double2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_quad_read_across_y)
+__attribute__((convergent)) double3 QuadReadAcrossY(double3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_quad_read_across_y)
+__attribute__((convergent)) double4 QuadReadAcrossY(double4);
+
+//===----------------------------------------------------------------------===//
 // sign builtins
 //===----------------------------------------------------------------------===//
 
@@ -3772,6 +3925,17 @@ _HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_radians)
 float3 radians(float3);
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_radians)
 float4 radians(float4);
+
+//===----------------------------------------------------------------------===//
+// GroupMemoryBarrierbuiltins
+//===----------------------------------------------------------------------===//
+
+/// \fn void GroupMemoryBarrier(void)
+/// \brief Blocks execution of all threads in a group until all group shared
+/// accesses have been completed.
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_group_memory_barrier)
+__attribute__((convergent)) void GroupMemoryBarrier(void);
 
 //===----------------------------------------------------------------------===//
 // GroupMemoryBarrierWithGroupSync builtins

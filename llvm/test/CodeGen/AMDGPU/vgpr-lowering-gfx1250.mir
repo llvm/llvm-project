@@ -244,7 +244,7 @@ body:             |
     ; GCN-NEXT: s_set_vgpr_msb 0xb55
     ; ASM-SAME:                                         ;  msbs: dst=1 src0=1 src1=1 src2=1
     ; GCN-NEXT: v_wmma_f32_16x16x32_bf16 v[14:21] /*v[270:277]*/, v[26:33] /*v[282:289]*/, v[34:41] /*v[290:297]*/, v[14:21] /*v[270:277]*/
-    early-clobber $vgpr270_vgpr271_vgpr272_vgpr273_vgpr274_vgpr275_vgpr276_vgpr277 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr 8, undef $vgpr282_vgpr283_vgpr284_vgpr285_vgpr286_vgpr287_vgpr288_vgpr289, 8, undef $vgpr290_vgpr291_vgpr292_vgpr293_vgpr294_vgpr295_vgpr296_vgpr297, 8, killed undef $vgpr270_vgpr271_vgpr272_vgpr273_vgpr274_vgpr275_vgpr276_vgpr277, 0, 0, 0, 0, implicit $exec
+    early-clobber $vgpr270_vgpr271_vgpr272_vgpr273_vgpr274_vgpr275_vgpr276_vgpr277 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr undef $vgpr282_vgpr283_vgpr284_vgpr285_vgpr286_vgpr287_vgpr288_vgpr289, undef $vgpr290_vgpr291_vgpr292_vgpr293_vgpr294_vgpr295_vgpr296_vgpr297, 8, killed undef $vgpr270_vgpr271_vgpr272_vgpr273_vgpr274_vgpr275_vgpr276_vgpr277, 0, 0, 0, 0, implicit $exec
 
     ; ASM: NumVgprs: 1024
 
@@ -1009,4 +1009,37 @@ body:             |
     ; ASM-SAME:                                         ;  msbs: dst=0 src0=0 src1=0 src2=0
 
     ; ASM: NumVgprs: 514
+...
+
+# ASM-LABEL: {{^}}redundant_xcnt:
+# DIS-LABEL: <redundant_xcnt>:
+---
+name: redundant_xcnt
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; ASM: %bb.0:
+
+    liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $vgpr256, $vgpr257
+
+    ; GCN-NEXT: global_load_b32 v5, v[0:1], off
+    $vgpr5 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec
+
+    ; GCN-NEXT: global_load_b32 v5, v[2:3], off
+    $vgpr5 = GLOBAL_LOAD_DWORD $vgpr2_vgpr3, 0, 0, implicit $exec
+
+    S_WAIT_XCNT 1
+
+    ; GCN-NEXT: s_set_vgpr_msb 4
+    ; ASM-SAME:                                         ;  msbs: dst=0 src0=0 src1=1 src2=0
+    ; GCN-NEXT: v_add_f32_e32 v0, 1, v0 /*v256*/
+    $vgpr0 = V_ADD_F32_e32 1, $vgpr256, implicit $mode, implicit $exec
+
+    S_WAIT_XCNT 0
+
+    ; GCN-NEXT: v_add_f32_e32 v2, 1, v1 /*v257*/
+    $vgpr2 = V_ADD_F32_e32 1, $vgpr257, implicit $mode, implicit $exec
+
+    ; GCN-NEXT: s_set_vgpr_msb 0x400
+    ; ASM-SAME:                                         ;  msbs: dst=0 src0=0 src1=0 src2=0
 ...

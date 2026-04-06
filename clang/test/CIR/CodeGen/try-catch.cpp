@@ -1116,3 +1116,249 @@ void call_function_inside_try_catch_with_aggregate_exception_type() {
 // OGCG:   %[[TMP_EXCEPTION_INFO:.*]] = insertvalue { ptr, i32 } poison, ptr %[[TMP_EXCEPTION]], 0
 // OGCG:   %[[EXCEPTION_INFO:.*]] = insertvalue { ptr, i32 } %[[TMP_EXCEPTION_INFO]], i32 %[[TMP_EH_TYPE_ID]], 1
 // OGCG:   resume { ptr, i32 } %[[EXCEPTION_INFO]]
+
+struct Record {
+  int x;
+  int y;
+};
+
+void call_function_inside_try_catch_with_ref_ptr_of_record_exception_type() {
+  try {
+    division();
+  } catch (Record *&ref_ptr) {
+  }
+}
+
+// CIR: cir.func {{.*}} @_Z68call_function_inside_try_catch_with_ref_ptr_of_record_exception_typev(){{.*}} personality(@__gxx_personality_v0) {
+// CIR:   %[[E_ADDR:.*]] = cir.alloca !cir.ptr<!cir.ptr<!rec_Record>>, !cir.ptr<!cir.ptr<!cir.ptr<!rec_Record>>>, ["ref_ptr", const]
+// CIR:   %[[EXN_BYREF_TMP:.*]] = cir.alloca !cir.ptr<!rec_Record>, !cir.ptr<!cir.ptr<!rec_Record>>, ["exn.byref.tmp"]
+// CIR:   cir.try {
+// CIR:     %[[CALL:.*]] = cir.call @_Z8divisionv() : () -> (!s32i {llvm.noundef})
+// CIR:     cir.yield
+// CIR:   } catch [type #cir.global_view<@_ZTIP6Record> : !cir.ptr<!u8i>] (%[[EH_TOKEN:.*]]: !cir.eh_token {{.*}}) {
+// CIR:     %[[CATCH_TOKEN:.*]], %[[EXN_PTR:.*]] = cir.begin_catch %[[EH_TOKEN]] : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!cir.ptr<!rec_Record>>)
+// CIR:     cir.cleanup.scope {
+// CIR:       %[[EXN_PTR_REC_PTR:.*]] = cir.cast bitcast %[[EXN_PTR]] : !cir.ptr<!cir.ptr<!rec_Record>> -> !cir.ptr<!rec_Record>
+// CIR:       cir.store {{.*}} %[[EXN_PTR_REC_PTR]], %[[EXN_BYREF_TMP]] : !cir.ptr<!rec_Record>, !cir.ptr<!cir.ptr<!rec_Record>>
+// CIR:       cir.store {{.*}} %[[EXN_BYREF_TMP]], %[[E_ADDR]] : !cir.ptr<!cir.ptr<!rec_Record>>, !cir.ptr<!cir.ptr<!cir.ptr<!rec_Record>>>
+// CIR:       cir.yield
+// CIR:     } cleanup all {
+// CIR:       cir.end_catch %[[CATCH_TOKEN]] : !cir.catch_token
+// CIR:       cir.yield
+// CIR:     }
+// CIR:     cir.yield
+// CIR:   } unwind (%{{.*}}: !cir.eh_token {{.*}}) {
+// CIR:     cir.resume %{{.*}} : !cir.eh_token
+// CIR:   }
+// CIR: }
+
+// LLVM: define {{.*}} void @_Z68call_function_inside_try_catch_with_ref_ptr_of_record_exception_typev() {{.*}} personality ptr @__gxx_personality_v0
+// LLVM:   %[[E_ADDR:.*]] = alloca ptr
+// LLVM:   %[[EXN_BYREF_TMP:.*]] = alloca ptr
+// LLVM:   br label %[[TRY_SCOPE:.*]]
+// LLVM: [[TRY_SCOPE]]:
+// LLVM:   br label %[[TRY_BEGIN:.*]]
+// LLVM: [[TRY_BEGIN]]:
+// LLVM:   invoke noundef i32 @_Z8divisionv()
+// LLVM:           to label %[[INVOKE_CONT:.*]] unwind label %[[LANDING_PAD:.*]]
+// LLVM: [[INVOKE_CONT:.*]]:
+// LLVM:   br label %[[TRY_CONT:.*]]
+// LLVM: [[LANDING_PAD]]:
+// LLVM:   %[[LP:.*]] = landingpad { ptr, i32 }
+// LLVM:           catch ptr @_ZTIP6Record
+// LLVM:   %[[EXN_OBJ:.*]] = extractvalue { ptr, i32 } %[[LP]], 0
+// LLVM:   %[[EH_SELECTOR_VAL:.*]] = extractvalue { ptr, i32 } %[[LP]], 1
+// LLVM:   br label %[[CATCH:.*]]
+// LLVM: [[CATCH]]:
+// LLVM:   %[[EXN_OBJ_PHI:.*]] = phi ptr [ %[[EXN_OBJ:.*]], %[[LANDING_PAD:.*]] ]
+// LLVM:   %[[EH_SELECTOR_PHI:.*]] = phi i32 [ %[[EH_SELECTOR_VAL:.*]], %[[LANDING_PAD:.*]] ]
+// LLVM:   br label %[[DISPATCH:.*]]
+// LLVM: [[DISPATCH]]:
+// LLVM:   %[[EXN_OBJ_PHI1:.*]] = phi ptr [ %[[EXN_OBJ_PHI:.*]], %[[CATCH:.*]] ]
+// LLVM:   %[[EH_SELECTOR_PHI1:.*]] = phi i32 [ %[[EH_SELECTOR_PHI:.*]], %[[CATCH:.*]] ]
+// LLVM:   %[[EH_TYPE_ID:.*]] = call i32 @llvm.eh.typeid.for.p0(ptr @_ZTIP6Record)
+// LLVM:   %[[TYPE_ID_EQ:.*]] = icmp eq i32 %[[EH_SELECTOR_PHI1]], %[[EH_TYPE_ID]]
+// LLVM:   br i1 %[[TYPE_ID_EQ]], label %[[BEGIN_CATCH:.*]], label %[[RESUME:.*]]
+// LLVM: [[BEGIN_CATCH]]:
+// LLVM:   %[[EXN_OBJ_PHI2:.*]] = phi ptr [ %[[EXN_OBJ_PHI1:.*]], %[[DISPATCH:.*]] ]
+// LLVM:   %[[EH_SELECTOR_PHI2:.*]] = phi i32 [ %[[EH_SELECTOR_PHI1:.*]], %[[DISPATCH:.*]] ]
+// LLVM:   %[[TOKEN:.*]] = call ptr @__cxa_begin_catch(ptr %[[EXN_OBJ_PHI2]])
+// LLVM:   br label %[[CATCH_BODY:.*]]
+// LLVM: [[CATCH_BODY]]:
+// LLVM:   store ptr %[[TOKEN]], ptr %[[EXN_BYREF_TMP]], align 8
+// LLVM:   store ptr %[[EXN_BYREF_TMP]], ptr %[[E_ADDR]], align 8
+// LLVM:   br label %[[END_CATCH:.*]]
+// LLVM: [[END_CATCH]]:
+// LLVM:   call void @__cxa_end_catch()
+// LLVM:   br label %[[END_DISPATCH:.*]]
+// LLVM: [[END_DISPATCH]]:
+// LLVM:   br label %[[END_TRY:.*]]
+// LLVM: [[END_TRY]]:
+// LLVM:   br label %[[TRY_CONT:.*]]
+// LLVM: [[RESUME]]:
+// LLVM:   %[[EXN_OBJ_PHI3:.*]] = phi ptr [ %[[EXN_OBJ_PHI1:.*]], %[[DISPATCH:.*]] ]
+// LLVM:   %[[EH_SELECTOR_PHI3:.*]] = phi i32 [ %[[EH_SELECTOR_PHI1:.*]], %[[DISPATCH:.*]] ]
+// LLVM:   %[[TMP_EXCEPTION_INFO:.*]] = insertvalue { ptr, i32 } poison, ptr %[[EXN_OBJ_PHI3]], 0
+// LLVM:   %[[EXCEPTION_INFO:.*]] = insertvalue { ptr, i32 } %[[TMP_EXCEPTION_INFO]], i32 %[[EH_SELECTOR_PHI3]], 1
+// LLVM:   resume { ptr, i32 } %[[EXCEPTION_INFO]]
+// LLVM: [[TRY_CONT]]:
+// LLVM:   br label %[[DONE:.*]]
+// LLVM: [[DONE]]:
+// LLVM:   ret void
+
+// OGCG: define {{.*}} void @_Z68call_function_inside_try_catch_with_ref_ptr_of_record_exception_typev() {{.*}} personality ptr @__gxx_personality_v0
+// OGCG:   %[[EXCEPTION_ADDR:.*]] = alloca ptr, align 8
+// OGCG:   %[[EH_TYPE_ID_ADDR:.*]] = alloca i32, align 4
+// OGCG:   %[[E_ADDR:.*]] = alloca ptr, align 8
+// OGCG:   %[[EXN_BYREF_TMP:.*]] = alloca ptr, align 8
+// OGCG:   %[[CALL:.*]] = invoke noundef i32 @_Z8divisionv()
+// OGCG:          to label %[[INVOKE_NORMAL:.*]] unwind label %[[INVOKE_UNWIND:.*]]
+// OGCG: [[INVOKE_NORMAL]]:
+// OGCG:   br label %[[TRY_CONT:.*]]
+// OGCG: [[INVOKE_UNWIND]]:
+// OGCG:   %[[LANDING_PAD:.*]] = landingpad { ptr, i32 }
+// OGCG:           catch ptr @_ZTIP6Record
+// OGCG:   %[[EXCEPTION:.*]] = extractvalue { ptr, i32 } %[[LANDING_PAD]], 0
+// OGCG:   store ptr %[[EXCEPTION]], ptr %[[EXCEPTION_ADDR]], align 8
+// OGCG:   %[[EH_TYPE_ID:.*]] = extractvalue { ptr, i32 } %[[LANDING_PAD]], 1
+// OGCG:   store i32 %[[EH_TYPE_ID]], ptr %[[EH_TYPE_ID_ADDR]], align 4
+// OGCG:   br label %[[CATCH_DISPATCH:.*]]
+// OGCG: [[CATCH_DISPATCH]]:
+// OGCG:   %[[TMP_EH_TYPE_ID:.*]] = load i32, ptr %ehselector.slot, align 4
+// OGCG:   %[[EH_TYPE_ID:.*]] = call i32 @llvm.eh.typeid.for.p0(ptr @_ZTIP6Record)
+// OGCG:   %[[TYPE_ID_EQ:.*]] = icmp eq i32 %[[TMP_EH_TYPE_ID]], %[[EH_TYPE_ID]]
+// OGCG:   br i1 %[[TYPE_ID_EQ]], label %[[CATCH_EXCEPTION:.*]], label %[[EH_RESUME:.*]]
+// OGCG: [[CATCH_EXCEPTION]]:
+// OGCG:   %[[TMP_EXCEPTION:.*]] = load ptr, ptr %[[EXCEPTION_ADDR]], align 8
+// OGCG:   %[[BEGIN_CATCH:.*]] = call ptr @__cxa_begin_catch(ptr %[[TMP_EXCEPTION]])
+// OGCG:   store ptr %[[BEGIN_CATCH]], ptr %[[EXN_BYREF_TMP]], align 8
+// OGCG:   store ptr %[[EXN_BYREF_TMP]], ptr %[[E_ADDR]], align 8
+// OGCG:   call void @__cxa_end_catch()
+// OGCG:   br label %[[TRY_CONT]]
+// OGCG: [[TRY_CONT]]:
+// OGCG:   ret void
+// OGCG: [[EH_RESUME]]:
+// OGCG:   %[[TMP_EXCEPTION:.*]] = load ptr, ptr %[[EXCEPTION_ADDR]], align 8
+// OGCG:   %[[TMP_EH_TYPE_ID:.*]] = load i32, ptr %[[EH_TYPE_ID_ADDR]], align 4
+// OGCG:   %[[TMP_EXCEPTION_INFO:.*]] = insertvalue { ptr, i32 } poison, ptr %[[TMP_EXCEPTION]], 0
+// OGCG:   %[[EXCEPTION_INFO:.*]] = insertvalue { ptr, i32 } %[[TMP_EXCEPTION_INFO]], i32 %[[TMP_EH_TYPE_ID]], 1
+// OGCG:   resume { ptr, i32 } %[[EXCEPTION_INFO]]
+
+void call_function_inside_try_catch_with_exception_member_ptr_type() {
+  try {
+    division();
+  } catch (int Record::*memberPtr) {
+  }
+}
+
+// CIR: cir.func {{.*}} @_Z61call_function_inside_try_catch_with_exception_member_ptr_typev(){{.*}} personality(@__gxx_personality_v0) {
+// CIR: cir.scope {
+// CIR:   %[[E_ADDR:.*]] = cir.alloca !s64i, !cir.ptr<!s64i>, ["memberPtr"]
+// CIR:   cir.try {
+// CIR:     %[[CALL:.*]] = cir.call @_Z8divisionv() : () -> (!s32i {llvm.noundef})
+// CIR:     cir.yield
+// CIR:   } catch [type #cir.global_view<@_ZTIM6Recordi> : !cir.ptr<!u8i>] (%{{.*}}: !cir.eh_token {{.*}} {
+// CIR:     %[[CATCH_TOKEN:.*]], %[[EXN_PTR:.*]] = cir.begin_catch %{{.*}} : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!s64i>)
+// CIR:     cir.cleanup.scope {
+// CIR:       %[[TMP:.*]] = cir.load {{.*}} %[[EXN_PTR]] : !cir.ptr<!s64i>, !s64i
+// CIR:       cir.store {{.*}} %[[TMP]], %[[E_ADDR]] : !s64i, !cir.ptr<!s64i>
+// CIR:       cir.yield
+// CIR:     } cleanup all {
+// CIR:       cir.end_catch %[[CATCH_TOKEN]] : !cir.catch_token
+// CIR:       cir.yield
+// CIR:     }
+// CIR:     cir.yield
+// CIR:   } unwind (%{{.*}}: !cir.eh_token {{.*}} {
+// CIR:     cir.resume %{{.*}} : !cir.eh_token
+// CIR:   }
+// CIR: }
+
+// LLVM: define {{.*}} void @_Z61call_function_inside_try_catch_with_exception_member_ptr_typev() {{.*}} personality ptr @__gxx_personality_v0
+// LLVM:   br label %[[TRY_SCOPE:.*]]
+// LLVM: [[TRY_SCOPE]]:
+// LLVM:   br label %[[TRY_BEGIN:.*]]
+// LLVM: [[TRY_BEGIN]]:
+// LLVM:   %[[CALL:.*]] = invoke noundef i32 @_Z8divisionv()
+// LLVM:           to label %[[INVOKE_CONT:.*]] unwind label %[[LANDING_PAD:.*]]
+// LLVM: [[INVOKE_CONT]]:
+// LLVM:   br label %[[TRY_CONT:.*]]
+// LLVM: [[LANDING_PAD]]:
+// LLVM:   %[[LP:.*]] = landingpad { ptr, i32 }
+// LLVM:           catch ptr @_ZTIM6Recordi
+// LLVM:   %[[EXN_OBJ:.*]] = extractvalue { ptr, i32 } %[[LP]], 0
+// LLVM:   %[[EH_SELECTOR_VAL:.*]] = extractvalue { ptr, i32 } %[[LP]], 1
+// LLVM:   br label %[[CATCH:.*]]
+// LLVM: [[CATCH]]:
+// LLVM:   %[[EXN_OBJ_PHI:.*]] = phi ptr [ %[[EXN_OBJ:.*]], %[[LANDING_PAD:.*]] ]
+// LLVM:   %[[EH_SELECTOR_PHI:.*]] = phi i32 [ %[[EH_SELECTOR_VAL:.*]], %[[LANDING_PAD:.*]] ]
+// LLVM:   br label %[[DISPATCH:.*]]
+// LLVM: [[DISPATCH]]:
+// LLVM:   %[[EXN_OBJ_PHI1:.*]] = phi ptr [ %[[EXN_OBJ_PHI:.*]], %[[CATCH:.*]] ]
+// LLVM:   %[[EH_SELECTOR_PHI1:.*]] = phi i32 [ %[[EH_SELECTOR_PHI:.*]], %[[CATCH:.*]] ]
+// LLVM:   %[[EH_TYPE_ID:.*]] = call i32 @llvm.eh.typeid.for.p0(ptr @_ZTIM6Recordi)
+// LLVM:   %[[TYPE_ID_EQ:.*]] = icmp eq i32 %[[EH_SELECTOR_PHI1]], %[[EH_TYPE_ID]]
+// LLVM:   br i1 %[[TYPE_ID_EQ]], label %[[BEGIN_CATCH:.*]], label %[[RESUME:.*]]
+// LLVM: [[BEGIN_CATCH]]:
+// LLVM:   %[[EXN_OBJ_PHI2:.*]] = phi ptr [ %[[EXN_OBJ_PHI1:.*]], %[[DISPATCH:.*]] ]
+// LLVM:   %[[EH_SELECTOR_PHI2:.*]] = phi i32 [ %[[EH_SELECTOR_PHI1:.*]], %[[DISPATCH:.*]] ]
+// LLVM:   %[[TOKEN:.*]] = call ptr @__cxa_begin_catch(ptr %[[EXN_OBJ_PHI2]])
+// LLVM:   br label %[[CATCH_BODY:.*]]
+// LLVM: [[CATCH_BODY]]:
+// LLVM:   %[[LOAD:.*]] = load i64, ptr %[[TOKEN]], align 8
+// LLVM:   store i64 %[[LOAD]], ptr {{.*}}, align 8
+// LLVM:   br label %[[END_CATCH:.*]]
+// LLVM: [[END_CATCH]]:
+// LLVM:   call void @__cxa_end_catch()
+// LLVM:   br label %[[END_DISPATCH:.*]]
+// LLVM: [[END_DISPATCH]]:
+// LLVM:   br label %[[END_TRY:.*]]
+// LLVM: [[END_TRY]]:
+// LLVM:   br label %[[TRY_CONT:.*]]
+// LLVM: [[RESUME]]:
+// LLVM:   %[[EXN_OBJ_PHI3:.*]] = phi ptr [ %[[EXN_OBJ_PHI1:.*]], %[[DISPATCH:.*]] ]
+// LLVM:   %[[EH_SELECTOR_PHI3:.*]] = phi i32 [ %[[EH_SELECTOR_PHI1:.*]], %[[DISPATCH:.*]] ]
+// LLVM:   %[[TMP_EXCEPTION_INFO:.*]] = insertvalue { ptr, i32 } poison, ptr %[[EXN_OBJ_PHI3]], 0
+// LLVM:   %[[EXCEPTION_INFO:.*]] = insertvalue { ptr, i32 } %[[TMP_EXCEPTION_INFO]], i32 %[[EH_SELECTOR_PHI3]], 1
+// LLVM:   resume { ptr, i32 } %[[EXCEPTION_INFO]]
+// LLVM: [[TRY_CONT]]:
+// LLVM:   br label %[[DONE:.*]]
+// LLVM: [[DONE]]:
+// LLVM:   ret void
+
+// OGCG: define {{.*}} void @_Z61call_function_inside_try_catch_with_exception_member_ptr_typev() {{.*}} personality ptr @__gxx_personality_v0
+// OGCG:   %[[EXCEPTION_ADDR:.*]] = alloca ptr, align 8
+// OGCG:   %[[EH_TYPE_ID_ADDR:.*]] = alloca i32, align 4
+// OGCG:   %[[E_ADDR:.*]] = alloca i64, align 8
+// OGCG:   %[[CALL:.*]] = invoke noundef i32 @_Z8divisionv()
+// OGCG:           to label %[[INVOKE_NORMAL:.*]] unwind label %[[INVOKE_UNWIND:.*]]
+// OGCG: [[INVOKE_NORMAL]]:
+// OGCG:   br label %[[TRY_CONT:.*]]
+// OGCG: [[INVOKE_UNWIND]]:
+// OGCG:   %[[LANDING_PAD:.*]] = landingpad { ptr, i32 }
+// OGCG:           catch ptr @_ZTIM6Recordi
+// OGCG:   %[[EXCEPTION:.*]] = extractvalue { ptr, i32 } %[[LANDING_PAD]], 0
+// OGCG:   store ptr %[[EXCEPTION]], ptr %[[EXCEPTION_ADDR]], align 8
+// OGCG:   %[[EH_TYPE_ID:.*]] = extractvalue { ptr, i32 } %[[LANDING_PAD]], 1
+// OGCG:   store i32 %[[EH_TYPE_ID]], ptr %[[EH_TYPE_ID_ADDR]], align 4
+// OGCG:   br label %[[CATCH_DISPATCH:.*]]
+// OGCG: [[CATCH_DISPATCH]]:
+// OGCG:   %[[TMP_EH_TYPE_ID:.*]] = load i32, ptr %[[EH_TYPE_ID_ADDR]], align 4
+// OGCG:   %[[EH_TYPE_ID:.*]] = call i32 @llvm.eh.typeid.for.p0(ptr @_ZTIM6Recordi)
+// OGCG:   %[[TYPE_ID_EQ:.*]] = icmp eq i32 %[[TMP_EH_TYPE_ID]], %[[EH_TYPE_ID]]
+// OGCG:   br i1 %[[TYPE_ID_EQ]], label %[[CATCH_EXCEPTION:.*]], label %[[EH_RESUME:.*]]
+// OGCG: [[CATCH_EXCEPTION]]:
+// OGCG:   %[[TMP_EXCEPTION:.*]] = load ptr, ptr %[[EXCEPTION_ADDR]], align 8
+// OGCG:   %[[BEGIN_CATCH:.*]] = call ptr @__cxa_begin_catch(ptr %[[TMP_EXCEPTION]])
+// OGCG:   %[[TMP_BEGIN_CATCH:.*]] = load i64, ptr %[[BEGIN_CATCH]], align 8
+// OGCG:   store i64 %[[TMP_BEGIN_CATCH]], ptr %[[E_ADDR]], align 8
+// OGCG:   call void @__cxa_end_catch()
+// OGCG:   br label %[[TRY_CONT]]
+// OGCG: [[TRY_CONT]]:
+// OGCG:   ret void
+// OGCG: [[EH_RESUME]]:
+// OGCG:   %[[TMP_EXCEPTION:.*]] = load ptr, ptr %[[EXCEPTION_ADDR]], align 8
+// OGCG:   %[[TMP_EH_TYPE_ID:.*]] = load i32, ptr %[[EH_TYPE_ID_ADDR]], align 4
+// OGCG:   %[[TMP_EXCEPTION_INFO:.*]] = insertvalue { ptr, i32 } poison, ptr %[[TMP_EXCEPTION]], 0
+// OGCG:   %[[EXCEPTION_INFO:.*]] = insertvalue { ptr, i32 } %[[TMP_EXCEPTION_INFO]], i32 %[[TMP_EH_TYPE_ID]], 1
+// OGCG:   resume { ptr, i32 } %[[EXCEPTION_INFO]]
+

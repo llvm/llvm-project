@@ -77,8 +77,14 @@ public:
   // that has no associated Document, and the result of getEmptyNode(), which
   // does have an associated document.
   bool isEmpty() const { return !KindAndDoc || getKind() == Type::Empty; }
-  Type getKind() const { return KindAndDoc->Kind; }
-  Document *getDocument() const { return KindAndDoc->Doc; }
+  Type getKind() const {
+    assert(KindAndDoc);
+    return KindAndDoc->Kind;
+  }
+  Document *getDocument() const {
+    assert(KindAndDoc);
+    return KindAndDoc->Doc;
+  }
 
   int64_t &getInt() {
     assert(getKind() == Type::Int);
@@ -152,17 +158,20 @@ public:
     return *reinterpret_cast<MapDocNode *>(this);
   }
 
-  /// Comparison operator, used for map keys.
+  /// Comparison operator, used for map keys. Compares by value, so nodes
+  /// from different Documents with the same kind and value are ordered
+  /// consistently. Only supports scalar types; Array and Map nodes should
+  /// not be used as map keys.
   friend bool operator<(const DocNode &Lhs, const DocNode &Rhs) {
-    // This has to cope with one or both of the nodes being default-constructed,
-    // such that KindAndDoc is not set.
+    // Cope with default-constructed nodes where KindAndDoc is not set:
+    // isEmpty() returns true both for default-constructed nodes and for
+    // nodes returned by getEmptyNode().
     if (Rhs.isEmpty())
       return false;
-    if (Lhs.KindAndDoc != Rhs.KindAndDoc) {
-      if (Lhs.isEmpty())
-        return true;
+    if (Lhs.isEmpty())
+      return true;
+    if (Lhs.getKind() != Rhs.getKind())
       return (unsigned)Lhs.getKind() < (unsigned)Rhs.getKind();
-    }
     switch (Lhs.getKind()) {
     case Type::Int:
       return Lhs.Int < Rhs.Int;
@@ -178,14 +187,15 @@ public:
     case Type::Binary:
       return Lhs.Raw < Rhs.Raw;
     default:
-      llvm_unreachable("bad map key type");
+      assert(false && "bad map key type");
+      return false;
     }
   }
 
-  /// Equality operator
-  friend bool operator==(const DocNode &Lhs, const DocNode &Rhs) {
-    return !(Lhs < Rhs) && !(Rhs < Lhs);
-  }
+  /// Equality operator. Supports all node types including Array and Map,
+  /// comparing recursively by value. Works correctly for nodes from
+  /// different Documents.
+  LLVM_ABI friend bool operator==(const DocNode &Lhs, const DocNode &Rhs);
 
   /// Inequality operator
   friend bool operator!=(const DocNode &Lhs, const DocNode &Rhs) {
@@ -222,6 +232,9 @@ private:
   LLVM_ABI void convertToArray();
   LLVM_ABI void convertToMap();
 };
+
+/// Namespace-scope declaration for the out-of-line friend operator==.
+LLVM_ABI bool operator==(const DocNode &Lhs, const DocNode &Rhs);
 
 /// A DocNode that is a map.
 class MapDocNode : public DocNode {
@@ -402,6 +415,12 @@ public:
     N.Array = Arrays.back().get();
     return N.getArray();
   }
+
+  /// Deep copy a DocNode from any Document into this Document. The returned
+  /// node is owned by this Document and is independent of the source node's
+  /// Document. Strings are copied so the source Document's lifetime does not
+  /// need to extend beyond this call.
+  LLVM_ABI DocNode copyNode(DocNode Src);
 
   /// Read a document from a binary msgpack blob, merging into anything already
   /// in the Document. The blob data must remain valid for the lifetime of this

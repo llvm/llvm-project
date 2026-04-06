@@ -3553,3 +3553,14 @@ func.func @truncf_neg_inf_to_finite_only_no_fold() -> f4E2M1FN {
   return %result : f4E2M1FN
 }
 
+// -----
+
+// CHECK-LABEL: @convertf_fold_f8
+//       CHECK:   %[[C:.*]] = arith.constant 2.000000e+00 : f8E5M2
+//       CHECK:   return %[[C]]
+func.func @convertf_fold_f8() -> f8E5M2 {
+  %c = arith.constant 2.0 : f8E4M3FN
+  %result = arith.convertf %c : f8E4M3FN to f8E5M2
+  return %result : f8E5M2
+}
+

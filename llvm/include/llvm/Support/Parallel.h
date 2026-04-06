@@ -17,6 +17,7 @@
 #include "llvm/Support/Threading.h"
 
 #include <algorithm>
+#include <atomic>
 #include <condition_variable>
 #include <functional>
 #include <mutex>
@@ -58,31 +59,30 @@ inline size_t getThreadCount() { return 1; }
 
 namespace detail {
 class Latch {
-  uint32_t Count;
+  std::atomic<uint32_t> Count;
   mutable std::mutex Mutex;
   mutable std::condition_variable Cond;
 
 public:
   explicit Latch(uint32_t Count = 0) : Count(Count) {}
-  ~Latch() {
-    // Ensure at least that sync() was called.
-    assert(Count == 0);
-  }
+  ~Latch() { assert(Count.load(std::memory_order_relaxed) == 0); }
 
-  void inc() {
-    std::lock_guard<std::mutex> lock(Mutex);
-    ++Count;
-  }
+  void inc() { Count.fetch_add(1, std::memory_order_relaxed); }
 
+  // dec() must hold Mutex so that sync() cannot observe Count==0 and
+  // destroy the Latch while dec() is still running.
   void dec() {
     std::lock_guard<std::mutex> lock(Mutex);
-    if (--Count == 0)
+    // fetch_sub returns the previous value; == 1 means Count is now 0.
+    if (Count.fetch_sub(1, std::memory_order_acq_rel) == 1)
       Cond.notify_all();
   }
 
+  uint32_t getCount() const { return Count.load(std::memory_order_acquire); }
+
   void sync() const {
     std::unique_lock<std::mutex> lock(Mutex);
-    Cond.wait(lock, [&] { return Count == 0; });
+    Cond.wait(lock, [&] { return Count.load(std::memory_order_relaxed) == 0; });
   }
 };
 } // namespace detail
@@ -96,11 +96,7 @@ public:
   LLVM_ABI ~TaskGroup();
 
   // Spawn a task, but does not wait for it to finish.
-  // Tasks marked with \p Sequential will be executed
-  // exactly in the order which they were spawned.
   LLVM_ABI void spawn(std::function<void()> f);
-
-  void sync() const { L.sync(); }
 
   bool isParallel() const { return Parallel; }
 };

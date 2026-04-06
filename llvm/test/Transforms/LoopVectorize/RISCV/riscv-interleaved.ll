@@ -5,8 +5,8 @@
 
 ; CHECK-LABEL: foo
 ; CHECK: LV: IC is 2
-; CHECK: %{{.*}} = add <8 x i32> %{{.*}}, splat (i32 8)
 ; CHECK: %{{.*}} = add {{.*}}, 16
+; CHECK: %{{.*}} = add <8 x i32> %{{.*}}, splat (i32 8)
 
 ; Function Attrs: nofree norecurse nosync nounwind writeonly
 define void @foo(i32 signext %n, ptr nocapture %A) #0 {

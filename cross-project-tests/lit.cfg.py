@@ -92,7 +92,13 @@ if is_msvc:
 # use_clang() and use_lld() respectively, so set them to "", if needed.
 if not hasattr(config, "clang_src_dir"):
     config.clang_src_dir = ""
-llvm_config.use_clang(required=("clang" in config.llvm_enabled_projects))
+# Facebook T92898286
+should_test_bolt = get_required_attr(config, "llvm_test_bolt")
+if should_test_bolt:
+    llvm_config.use_clang(required=("clang" in config.llvm_enabled_projects), additional_flags=["--post-link-optimize"])
+else:
+    llvm_config.use_clang(required=("clang" in config.llvm_enabled_projects))
+# End Facebook T92898286
 
 if not hasattr(config, "lld_src_dir"):
     config.lld_src_dir = ""
@@ -357,6 +363,19 @@ def set_apple_lldb_pre_1000_feature():
 # platform and the installed gdb version.
 dwarf_version_string = get_clang_default_dwarf_version_string(config.host_triple)
 gdb_version_string = get_gdb_version_string()
+
+if gdb_version_string:
+    config.available_features.add("has-gdb")
+    print(
+        f"Found GDB version '{gdb_version_string}'",
+        file=sys.stderr,
+    )
+else:
+    print(
+        "No GDB found on host. Skipping tests that require GDB.",
+        file=sys.stderr,
+    )
+
 if dwarf_version_string and gdb_version_string:
     if int(dwarf_version_string) >= 5:
         try:
@@ -388,3 +407,9 @@ llvm_config.feature_config([("--build-mode", {"Debug|RelWithDebInfo": "debug-inf
 # Allow 'REQUIRES: XXX-registered-target' in tests.
 for arch in config.targets_to_build:
     config.available_features.add(arch.lower() + "-registered-target")
+
+# Facebook T92898286
+# Ensure the user's PYTHONPATH is included.
+if "PYTHONPATH" in os.environ:
+    config.environment["PYTHONPATH"] = os.environ["PYTHONPATH"]
+# End Facebook T92898286

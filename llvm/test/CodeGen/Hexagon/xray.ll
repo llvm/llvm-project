@@ -8,11 +8,15 @@ define i32 @foo() nounwind noinline uwtable "function-instrument"="xray-always" 
 ; CHECK:         nop
 ; CHECK:         nop
 ; CHECK:         nop
+; CHECK:         nop
+; CHECK:         nop
 ; CHECK:       .Ltmp
 ; CHECK-SAME:  [[#l]]:
   ret i32 0
 ; CHECK-LABEL: .Lxray_sled_1:
 ; CHECK:       jump .Ltmp[[#l:]]
+; CHECK:         nop
+; CHECK:         nop
 ; CHECK:         nop
 ; CHECK:         nop
 ; CHECK:         nop

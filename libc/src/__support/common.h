@@ -37,7 +37,9 @@
 // clang-format on
 #define LLVM_LIBC_EMPTY
 
+#define GET_NOTHING(...) 0
 #define GET_SECOND(first, second, ...) second
+#define GET_FIFTH(first, second, third, fourth, fifth, ...) fifth
 #define EXPAND_THEN_SECOND(name) GET_SECOND(name, LLVM_LIBC_EMPTY)
 
 #define LLVM_LIBC_ATTR(name) EXPAND_THEN_SECOND(LLVM_LIBC_FUNCTION_ATTR_##name)
@@ -48,25 +50,33 @@
 // symbol.  Moreover, a C symbol `func` in macOS is mangled as `_func`.
 #if defined(LIBC_COPT_PUBLIC_PACKAGING) && !defined(LIBC_COMPILER_IS_MSVC)
 #ifndef __APPLE__
-#define LLVM_LIBC_FUNCTION_IMPL(type, name, arglist)                           \
+#define LLVM_LIBC_FUNCTION_IMPL_4(type, name, arglist, c_alias)                \
   LLVM_LIBC_ATTR(name)                                                         \
   LLVM_LIBC_FUNCTION_ATTR decltype(LIBC_NAMESPACE::name)                       \
-      __##name##_impl__ asm(#name);                                            \
-  decltype(LIBC_NAMESPACE::name) name [[gnu::alias(#name)]];                   \
+      __##name##_impl__ asm(c_alias);                                          \
+  decltype(LIBC_NAMESPACE::name) name [[gnu::alias(c_alias)]];                 \
   type __##name##_impl__ arglist
 #else // __APPLE__
-#define LLVM_LIBC_FUNCTION_IMPL(type, name, arglist)                           \
+#define LLVM_LIBC_FUNCTION_IMPL_4(type, name, arglist, c_alias)                \
   LLVM_LIBC_ATTR(name)                                                         \
-  LLVM_LIBC_FUNCTION_ATTR decltype(LIBC_NAMESPACE::name) name asm("_" #name);  \
+  LLVM_LIBC_FUNCTION_ATTR decltype(LIBC_NAMESPACE::name) name asm(             \
+      "_" c_alias);                                                            \
   type name arglist
 #endif // __APPLE__
+
 #else  // LIBC_COPT_PUBLIC_PACKAGING
-#define LLVM_LIBC_FUNCTION_IMPL(type, name, arglist) type name arglist
+#define LLVM_LIBC_FUNCTION_IMPL_4(type, name, arglist, c_alias)                \
+  type name arglist
 #endif // LIBC_COPT_PUBLIC_PACKAGING
 
-// This extra layer of macro allows `name` to be a macro to rename a function.
-#define LLVM_LIBC_FUNCTION(type, name, arglist)                                \
-  LLVM_LIBC_FUNCTION_IMPL(type, name, arglist)
+#define LLVM_LIBC_FUNCTION_IMPL_3(type, name, arglist)                         \
+  LLVM_LIBC_FUNCTION_IMPL_4(type, name, arglist, #name)
+
+// LLVM_LIBC_FUNCTION(type, name, arglist) is equivalent to
+// LLVM_LIBC_FUNCTION(type, name, arglist, #name)
+#define LLVM_LIBC_FUNCTION(...)                                                \
+  GET_FIFTH(__VA_ARGS__, LLVM_LIBC_FUNCTION_IMPL_4, LLVM_LIBC_FUNCTION_IMPL_3, \
+            GET_NOTHING)(__VA_ARGS__)
 
 // At the moment, [[gnu::alias()]] is not supported on MacOS, and it is needed
 // to cleanly export and alias the C++ symbol `LIBC_NAMESPACE::func` with the C

@@ -19,6 +19,15 @@ using namespace llvm::jitlink;
 namespace llvm {
 namespace orc {
 
+const EPCGenericJITLinkMemoryManager::SymbolNames
+    EPCGenericJITLinkMemoryManager::orc_rt_SimpleNativeMemoryMapSPSSymbols = {
+        "orc_rt_SimpleNativeMemoryMap_Instance",
+        "orc_rt_SimpleNativeMemoryMap_reserve_sps_wrapper",
+        "orc_rt_SimpleNativeMemoryMap_initialize_sps_wrapper",
+        "orc_rt_SimpleNativeMemoryMap_deinitializeMultiple_sps_wrapper",
+        "orc_rt_SimpleNativeMemoryMap_releaseMultiple_sps_wrapper",
+};
+
 class EPCGenericJITLinkMemoryManager::InFlightAlloc
     : public jitlink::JITLinkMemoryManager::InFlightAlloc {
 public:
@@ -114,6 +123,11 @@ EPCGenericJITLinkMemoryManager::Create(JITDylib &JD, SymbolNames SNs) {
     return Err;
   return std::make_unique<EPCGenericJITLinkMemoryManager>(
       ES.getExecutorProcessControl(), SAs);
+}
+
+Expected<std::unique_ptr<EPCGenericJITLinkMemoryManager>>
+EPCGenericJITLinkMemoryManager::Create(ExecutionSession &ES, SymbolNames SNs) {
+  return Create(ES.getBootstrapJITDylib(), std::move(SNs));
 }
 
 void EPCGenericJITLinkMemoryManager::allocate(const JITLinkDylib *JD,

@@ -54,6 +54,7 @@ ErrorOr<off_t> linux_file_seek(File *f, off_t offset, int whence) {
 }
 
 int linux_file_close(File *f) {
+  File::remove_file(f);
   auto *lf = reinterpret_cast<LinuxFile *>(f);
   int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_close, lf->get_fd());
   if (ret < 0) {
@@ -119,6 +120,7 @@ ErrorOr<File *> openfile(const char *path, const char *mode) {
       LinuxFile(fd, buffer, File::DEFAULT_BUFFER_SIZE, _IOFBF, true, modeflags);
   if (!ac)
     return Error(ENOMEM);
+  File::add_file(file);
   return file;
 }
 
@@ -168,10 +170,12 @@ ErrorOr<LinuxFile *> create_file_from_fd(int fd, const char *mode) {
   if (!ac) {
     return Error(ENOMEM);
   }
+  File::add_file(file);
   if (do_seek) {
     auto result = file->seek(0, SEEK_END);
     if (!result.has_value()) {
-      free(file);
+      File::remove_file(file);
+      delete file;
       return Error(result.error());
     }
   }

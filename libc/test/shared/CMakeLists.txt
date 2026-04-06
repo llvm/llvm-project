@@ -16,10 +16,12 @@ add_fp_unittest(
     libc.src.__support.math.acospif
     libc.src.__support.math.acospif16
     libc.src.__support.math.asin
+    libc.src.__support.math.asinbf16
     libc.src.__support.math.asinf
     libc.src.__support.math.asinf16
     libc.src.__support.math.asinhf
     libc.src.__support.math.asinhf16
+    libc.src.__support.math.asinpi
     libc.src.__support.math.asinpif
     libc.src.__support.math.asinpif16
     libc.src.__support.math.atan
@@ -80,6 +82,7 @@ add_fp_unittest(
     libc.src.__support.math.dsqrtl
     libc.src.__support.math.exp10m1f
     libc.src.__support.math.exp10m1f16
+    libc.src.__support.math.erfcf16
     libc.src.__support.math.erff
     libc.src.__support.math.erff16
     libc.src.__support.math.exp
@@ -264,5 +267,12 @@ add_fp_unittest(
   SRCS
     shared_math_constexpr_test.cpp
   DEPENDS
-    .shared_math_test
+    libc.src.__support.math.asinbf16
+    libc.src.__support.math.ceil
+    libc.src.__support.math.ceilbf16
+    libc.src.__support.math.ceilf
+    libc.src.__support.math.ceilf128
+    libc.src.__support.math.ceilf16
+    libc.src.__support.math.ceill
+    libc.src.__support.math.log
 )

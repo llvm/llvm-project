@@ -46,6 +46,9 @@ C++ Specific Potentially Breaking Changes
 - Clang now more aggressively optimizes away stores to objects after they are
   dead. This behavior can be disabled with ``-fno-lifetime-dse``.
 
+- Clang now correctly rejects ``export`` declarations in module implementation
+  partitions. (#GH107602)
+
 ABI Changes in This Version
 ---------------------------
 
@@ -148,6 +151,17 @@ C23 Feature Support
 ^^^^^^^^^^^^^^^^^^^
 - Clang now allows C23 ``constexpr`` struct member access through the dot operator in constant expressions. (#GH178349)
 
+Objective-C Language Changes
+-----------------------------
+
+- Clang now emits Objective-C number, array, and dictionary literals as
+  compile-time constant data structures rather than runtime ``objc_msgSend``
+  calls on targets whose runtime supports constant literal classes. The
+  feature can be disabled altogether with ``-fno-objc-constant-literals``,
+  or selectively per literal kind with ``-fno-constant-nsnumber-literals``,
+  ``-fno-constant-nsarray-literals``, and
+  ``-fno-constant-nsdictionary-literals``.
+
 Non-comprehensive list of changes in this release
 -------------------------------------------------
 
@@ -169,6 +183,8 @@ Non-comprehensive list of changes in this release
 
 - Added header ``endian.h`` which contains byte order helpers specified in POSIX
 
+- Added #pragma loop licm(disable) for llvm.loop.licm.disable metadata
+
 New Compiler Flags
 ------------------
 - New option ``-fms-anonymous-structs`` / ``-fno-ms-anonymous-structs`` added
@@ -186,6 +202,14 @@ New Compiler Flags
 - New ``-cl`` option ``/d2guardnochecks`` added to match MSVC. When Windows
   Control Flow Guard (CFG) is enabled by other options, it will instruct Clang
   to emit the CFG metadata, but disable adding checks.
+
+- New option ``-fdiagnostics-show-inlining-chain`` added to show inlining chain
+  notes for ``[[gnu::warning]]`` and ``[[gnu::error]]`` diagnostics. When a
+  function with these attributes is called from an inlined context, Clang can
+  now show which functions were inlined to reach the call. When debug info is
+  available (``-gline-directives-only`` (implicitly enabled at ``-g1``) or
+  higher), accurate source locations are used; otherwise, a heuristic fallback
+  is used with a note suggesting how to enable debug info for better accuracy.
 
 Deprecated Compiler Flags
 -------------------------
@@ -231,7 +255,10 @@ Attribute Changes in Clang
 Improvements to Clang's diagnostics
 -----------------------------------
 - ``-Wunused-but-set-variable`` now diagnoses file-scope variables with
-  internal linkage (``static`` storage class) that are assigned but never used. (#GH148361)
+  internal linkage (``static`` storage class) that are assigned but never used.
+  This new coverage is added under the subgroup ``-Wunused-but-set-global``,
+  allowing it to be disabled independently with ``-Wno-unused-but-set-global``.
+  (#GH148361)
 
 - Added ``-Wlifetime-safety`` to enable lifetime safety analysis,
   a CFG-based intra-procedural analysis that detects use-after-free and related
@@ -323,6 +350,9 @@ Improvements to Clang's diagnostics
   ``-Wunused-private-field`` no longer emits a warning for annotated private
   fields.
 
+- Improved ``-Wgnu-zero-variadic-macro-arguments`` to suggest using
+  ``__VA_OPT__`` if the current language version supports it(#GH188624)
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -353,6 +383,7 @@ Bug Fixes in This Version
 - Fixed a crash when normalizing constraints involving concept template parameters whose index coincided with non-concept template parameters in the same parameter mapping.
 - Fixed a crash caused by accessing dependent diagnostics of a non-dependent context.
 - Fixed a crash when substituting into a non-type template parameter that has a type containing an undeduced placeholder type.
+- Fixed several crashes and improved diagnostics when a multidimensional subscript operator is applied to a built-in type. (#GH187800)
 - Correctly diagnosing and no longer crashing when ``export module foo``
   (without a semicolon) are the final tokens in a module file. (#GH187771)
 - Fixed a crash in duplicate attribute checking caused by comparing constant arguments with different integer signedness. (#GH188259)
@@ -399,7 +430,6 @@ Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 - Fixed a bug where explicit nullability property attributes were not stored in AST nodes in Objective-C. (#GH179703)
 - Fixed a crash when parsing Doxygen ``@param`` commands attached to invalid declarations or non-function entities. (#GH182737)
-- Fixed a assertion when __block is used on global variables in C mode. (#GH183974)
 
 Miscellaneous Bug Fixes
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -421,6 +451,7 @@ Miscellaneous Clang Crashes Fixed
 - Fixed a crash when evaluating ``__is_bitwise_cloneable`` on invalid record types. (#GH183707)
 - Fixed an assertion failure when casting a function pointer with a target with a non-default program address space. (#GH186210)
 - Fixed a crash when ``decltype(__builtin_FUNCTION())`` is used as a template type argument. (#GH167433)
+- Fixed an assertion failure when parsing an invalid ``decltype`` specifier with missing parentheses or extra semicolons. (#GH188014)
 
 OpenACC Specific Changes
 ------------------------
@@ -430,7 +461,10 @@ Target Specific Changes
 
 AMDGPU Support
 ^^^^^^^^^^^^^^
-
+- Introduced a new target specific builtin ``__builtin_amdgcn_processor_is``,
+  a late / deferred query for the current target processor.
+- Introduced a new target specific builtin ``__builtin_amdgcn_is_invocable``,
+  a late / deferred query for the availability of target specific builtins.
 - Initial support for gfx1310
 
 NVPTX Support
@@ -563,8 +597,8 @@ Python Binding Changes
   ``CodeCompletionResults.results`` should be changed to directly use
   ``CodeCompletionResults``: it nows supports ``__len__`` and ``__getitem__``,
   so it can be used the same as ``CodeCompletionResults.results``.
-- Added a new helper method ``get_version`` to the class ``Config`` to read the
-  version string of the libclang in use.
+- Added a new helper method ``get_clang_version`` to the class ``Config`` to
+  read the version string of the libclang in use.
 
 OpenMP Support
 --------------

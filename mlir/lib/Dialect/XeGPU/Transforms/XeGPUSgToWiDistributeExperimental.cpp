@@ -14,6 +14,7 @@
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/Dialect/XeGPU/Transforms/Passes.h"
 #include "mlir/Dialect/XeGPU/Transforms/Transforms.h"
+#include "mlir/Dialect/XeGPU/Transforms/XeGPULayoutImpl.h"
 #include "mlir/Dialect/XeGPU/Utils/XeGPUUtils.h"
 #include "mlir/Dialect/XeGPU/uArch/IntelGpuXe2.h"
 #include "mlir/IR/Builders.h"
@@ -588,6 +589,17 @@ struct SgToWiMultiDimReduction
     assert(reductionDims.size() == 1 &&
            "Expecting single reduction dimension for subgroup multi "
            "reduction op");
+    // For rank > 2, ensure leading dimensions are unit.
+    VectorType sourceType = op.getSourceVectorType();
+    int64_t rank = sourceType.getRank();
+    if (rank > 2) {
+      ArrayRef<int64_t> shape = sourceType.getShape();
+      if (llvm::any_of(shape.take_front(rank - 2),
+                       [](int64_t d) { return d != 1; }))
+        return rewriter.notifyMatchFailure(
+            op, "only unit leading dimensions are supported for "
+                "multi_reduction with rank > 2");
+    }
     if (isReductionLaneLocal(op)) {
       auto resLayout = xegpu::getTemporaryLayout(op->getOpResult(0));
       VectorType resVecTy = dyn_cast<VectorType>(op.getType());
@@ -683,6 +695,173 @@ struct SgToWiLoadMatrix : public OpConversionPattern<xegpu::LoadMatrixOp> {
         ValueRange(newCoords), newConstOffsetsAttr, op.getSubgroupBlockIoAttr(),
         xegpu::DistributeLayoutAttr{});
     rewriter.replaceOp(op, newOp.getResult());
+    return success();
+  }
+};
+
+/// Distributes a subgroup-level vector.transpose op to workitem-level.
+struct SgToWiVectorTranspose : public OpConversionPattern<vector::TransposeOp> {
+  using OpConversionPattern<vector::TransposeOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(vector::TransposeOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    xegpu::DistributeLayoutAttr sourceLayout =
+        xegpu::getTemporaryLayout(op->getOpOperand(0));
+    xegpu::DistributeLayoutAttr resultLayout =
+        xegpu::getTemporaryLayout(op->getOpResult(0));
+    if (!sourceLayout || !resultLayout)
+      return rewriter.notifyMatchFailure(
+          op, "the source or result vector of the transpose op lacks layout "
+              "attribute");
+    ArrayRef<int64_t> perm = op.getPermutation();
+    // Result layout must be a transpose of source layout.
+    if (!resultLayout.isTransposeOf(sourceLayout, perm,
+                                    xegpu::LayoutKind::Lane))
+      return rewriter.notifyMatchFailure(
+          op, "the source or result vector layouts must be transposes of "
+              "each other");
+    FailureOr<VectorType> distributedResultTypeOrFailure =
+        getDistVecTypeBasedOnLaneLayout(resultLayout, op.getResultVectorType());
+    if (failed(distributedResultTypeOrFailure))
+      return rewriter.notifyMatchFailure(
+          op, "Failed to distribute the result vector type in "
+              "vector::Transpose op");
+    auto newOp = vector::TransposeOp::create(rewriter, op.getLoc(),
+                                             adaptor.getVector(), perm);
+    rewriter.replaceOp(op, castValueTo(rewriter, newOp.getResult(),
+                                       distributedResultTypeOrFailure.value()));
+    return success();
+  }
+};
+
+/// Distributes a subgroup-level vector.bitcast op to workitem-level.
+/// Bitcast only impacts the innermost dimension of the source/result vectors.
+struct SgToWiVectorBitcast : public OpConversionPattern<vector::BitCastOp> {
+  using OpConversionPattern<vector::BitCastOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(vector::BitCastOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    xegpu::DistributeLayoutAttr resultLayout =
+        xegpu::getTemporaryLayout(op->getOpResult(0));
+    if (!resultLayout)
+      return rewriter.notifyMatchFailure(
+          op, "result vector of the bitcast op lacks layout attribute");
+    FailureOr<VectorType> distributedResultTypeOrFailure =
+        getDistVecTypeBasedOnLaneLayout(resultLayout, op.getResultVectorType());
+    if (failed(distributedResultTypeOrFailure))
+      return rewriter.notifyMatchFailure(
+          op, "Failed to distribute the result vector type in "
+              "vector::BitCast op");
+    auto newOp = vector::BitCastOp::create(
+        rewriter, op.getLoc(), distributedResultTypeOrFailure.value(),
+        adaptor.getSource());
+    rewriter.replaceOp(op, newOp.getResult());
+    return success();
+  }
+};
+
+/// Distributes a subgroup-level vector.create_mask or vector.constant_mask op
+/// to workitem-level. Uses `computeDistributedCoords()` to obtain the
+/// coordinates each workitem owns, then compares each coordinate against the
+/// original mask bounds using `arith.cmpi slt`. The per-element boolean
+/// results are assembled into the distributed mask vector.
+///
+/// For multi-dimensional masks, the element is in-bounds when ALL dimensions
+/// satisfy `coord[i] < bound[i]`.
+///
+/// Example (1D):
+///   layout = #xegpu.layout<lane_layout = [16], lane_data = [1]>
+///   %mask = vector.create_mask %m0 : vector<16xi1>
+/// For lane k, computeDistributedCoords gives coord = [k], so:
+///   %in_bounds = arith.cmpi slt, %coord, %m0  →  i1
+///   %mask = vector.broadcast %in_bounds : i1 to vector<1xi1>
+///
+/// Example (2D):
+///   layout = #xegpu.layout<lane_layout = [8, 2], lane_data = [1, 1]>
+///   %mask = vector.create_mask %m0, %m1 : vector<8x4xi1>
+/// Each WI owns a 1x2 slice. computeDistributedCoords returns 2 coords:
+///   [[r0, c0], [r0, c1]]
+/// For each coord: in_bounds = (r < m0) && (c < m1)
+///   %mask = vector.from_elements %bit0, %bit1 : vector<1x2xi1>
+template <typename OpType,
+          typename = std::enable_if_t<llvm::is_one_of<
+              OpType, vector::CreateMaskOp, vector::ConstantMaskOp>::value>>
+struct SgToWiCreateMask : public OpConversionPattern<OpType> {
+  using OpConversionPattern<OpType>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(OpType op, typename OpType::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    xegpu::DistributeLayoutAttr layout =
+        xegpu::getTemporaryLayout(op->getOpResult(0));
+    if (!layout || !layout.isForSubgroup())
+      return rewriter.notifyMatchFailure(
+          op, "operation result does not have subgroup distribute layout");
+
+    VectorType origType = op.getType();
+    FailureOr<VectorType> distTypeOrFailure =
+        getDistVecTypeBasedOnLaneLayout(layout, origType);
+    if (failed(distTypeOrFailure))
+      return rewriter.notifyMatchFailure(
+          op, "unable to compute workitem vector type from the layout");
+
+    VectorType distType = distTypeOrFailure.value();
+    Location loc = op.getLoc();
+
+    // Materialize the original mask bounds as Values.
+    SmallVector<Value> origBounds;
+    if constexpr (std::is_same_v<OpType, vector::CreateMaskOp>) {
+      origBounds.append(op.getOperands().begin(), op.getOperands().end());
+    } else {
+      auto dimSizes = op.getMaskDimSizesAttr().asArrayRef();
+      for (auto dimSize : dimSizes)
+        origBounds.push_back(
+            arith::ConstantIndexOp::create(rewriter, loc, dimSize).getResult());
+    }
+
+    ArrayRef<int64_t> origShape = origType.getShape();
+
+    // Use computeDistributedCoords to get the coordinates each WI owns.
+    Value laneId = gpu::LaneIdOp::create(rewriter, loc, rewriter.getIndexType(),
+                                         /*upperBound=*/mlir::IntegerAttr());
+    auto maybeCoordsVec =
+        layout.computeDistributedCoords(rewriter, loc, laneId, origShape);
+    if (failed(maybeCoordsVec))
+      return rewriter.notifyMatchFailure(
+          op, "failed to compute distributed coordinates from layout");
+
+    SmallVector<SmallVector<Value>> coordsVec = maybeCoordsVec.value();
+    int64_t numElements = distType.getNumElements();
+    assert(static_cast<int64_t>(coordsVec.size()) == numElements &&
+           "number of coordinate sets must match number of distributed "
+           "elements");
+
+    // For each element, compare all coordinates against bounds.
+    Value trueVal =
+        arith::ConstantIntOp::create(rewriter, loc, /*value=*/1, /*width=*/1);
+    SmallVector<Value> maskBits;
+    for (auto &coords : coordsVec) {
+      Value inBounds = trueVal;
+      for (size_t i = 0; i < coords.size(); ++i) {
+        Value cmp = arith::CmpIOp::create(
+            rewriter, loc, arith::CmpIPredicate::slt, coords[i], origBounds[i]);
+        inBounds = arith::AndIOp::create(rewriter, loc, inBounds, cmp);
+      }
+      maskBits.push_back(inBounds);
+    }
+
+    // Build the distributed mask vector.
+    Value result;
+    if (numElements == 1) {
+      result =
+          vector::BroadcastOp::create(rewriter, loc, distType, maskBits[0]);
+    } else {
+      result =
+          vector::FromElementsOp::create(rewriter, loc, distType, maskBits);
+    }
+    rewriter.replaceOp(op, result);
     return success();
   }
 };
@@ -842,6 +1021,70 @@ struct SgToWiStoreScatter : public OpConversionPattern<xegpu::StoreScatterOp> {
   }
 };
 
+/// Distribute a vector::StepOp to workitem-level.
+/// The layout must have exactly 1 effective lane dimension.
+/// We completely resolve the vector::StepOp by computing the lane_data-sized
+/// subranges.
+struct SgToWiVectorStep : public OpConversionPattern<vector::StepOp> {
+  using OpConversionPattern<vector::StepOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(vector::StepOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    xegpu::DistributeLayoutAttr resultLayout =
+        xegpu::getTemporaryLayout(op->getResult(0));
+    if (!resultLayout || !resultLayout.isForSubgroup())
+      return rewriter.notifyMatchFailure(
+          op, "the result vector of the step op lacks subgroup layout");
+
+    auto loc = op.getLoc();
+    auto stepResultVecTy = op.getResult().getType();
+    auto wiShapeOrFailure =
+        xegpu::getDistVecTypeBasedOnLaneLayout(resultLayout, stepResultVecTy);
+    if (failed(wiShapeOrFailure))
+      return rewriter.notifyMatchFailure(
+          op, "unable to compute workitem vector type from the layout");
+    VectorType newVecTy = wiShapeOrFailure.value();
+
+    Value laneId = gpu::LaneIdOp::create(rewriter, loc, rewriter.getIndexType(),
+                                         /*upperBound=*/mlir::IntegerAttr());
+    auto laneDataBlockCoords = resultLayout.computeDistributedCoords(
+        rewriter, loc, laneId, stepResultVecTy.getShape());
+    if (failed(laneDataBlockCoords))
+      return rewriter.notifyMatchFailure(
+          op, "failed to compute lane data block coordinates");
+
+    auto laneDataBlockCoordsVec = laneDataBlockCoords.value();
+    auto laneDataBlockLength = resultLayout.getEffectiveLaneDataAsInt()[0];
+    assert(static_cast<int64_t>(laneDataBlockCoordsVec.size()) ==
+           newVecTy.getNumElements() / laneDataBlockLength);
+    SmallVector<Value> stepVals;
+    // For each lane_data block, reconstruct its sub-range
+    // from the range of SG-level vector.step.Example: vector.step
+    // {slice<layout<lane_layout=[2,4,2], lane_data=[1,2,1]>, dims=[0,2]>} :
+    // vector<16xindex>
+    // Each logical lane holds 4 elements as 2 blocks of 2 elements each.
+    // The blocks are round-robin distributed, so logical lane id 0
+    // holds values [0,1, 8,9].
+    for (auto &laneDataBlockCoords : laneDataBlockCoordsVec) {
+      auto laneDataBlockStartCoord = laneDataBlockCoords[0];
+      stepVals.push_back(laneDataBlockStartCoord);
+      for (int i = 1; i < laneDataBlockLength; ++i) {
+        auto offset = arith::ConstantIndexOp::create(rewriter, loc, i);
+        stepVals.push_back(arith::AddIOp::create(
+            rewriter, loc, laneDataBlockStartCoord, offset));
+      }
+    }
+    assert(static_cast<int64_t>(stepVals.size()) == newVecTy.getNumElements() &&
+           "Expecting the number of step values to match the number of "
+           "elements in the vector");
+    auto stepOpVal =
+        vector::FromElementsOp::create(rewriter, loc, newVecTy, stepVals);
+    rewriter.replaceOp(op, stepOpVal);
+    return success();
+  }
+};
+
 /// Distributes a subgroup-level vector.extract op to workitem-level. Only
 /// handles sub-vector extraction (result is VectorType, not scalar).
 struct SgToWiVectorExtract : public OpConversionPattern<vector::ExtractOp> {
@@ -872,6 +1115,33 @@ struct SgToWiVectorExtract : public OpConversionPattern<vector::ExtractOp> {
     auto newOp = vector::ExtractOp::create(
         rewriter, op.getLoc(), adaptor.getSource(), op.getMixedPosition());
     rewriter.replaceOp(op, newOp.getResult());
+    return success();
+  }
+};
+
+/// This pattern distributes a subgroup-level ShapeCast op to workitem-level.
+struct SgToWiVectorShapeCast : public OpConversionPattern<vector::ShapeCastOp> {
+  using OpConversionPattern<vector::ShapeCastOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(vector::ShapeCastOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    xegpu::DistributeLayoutAttr resultLayout =
+        xegpu::getTemporaryLayout(op->getOpResult(0));
+    if (!resultLayout || !resultLayout.isForSubgroup())
+      return rewriter.notifyMatchFailure(
+          op, "the result vector of the shape_cast op lacks subgroup layout");
+
+    auto resultDistTypeOrFailure = xegpu::getDistVecTypeBasedOnLaneLayout(
+        resultLayout, op.getResultVectorType());
+    if (failed(resultDistTypeOrFailure))
+      return rewriter.notifyMatchFailure(
+          op, "failed to get distributed vector type for result");
+
+    Value source = adaptor.getSource();
+    auto newShapeCast = vector::ShapeCastOp::create(
+        rewriter, op.getLoc(), resultDistTypeOrFailure.value(), source);
+    rewriter.replaceOp(op, newShapeCast);
     return success();
   }
 };
@@ -964,6 +1234,125 @@ struct SgToWiVectorExtractStridedSlice
         ArrayAttr::get(rewriter.getContext(), updatedSizes),
         ArrayAttr::get(rewriter.getContext(), updatedStrides));
     rewriter.replaceOp(op, newOp.getResult());
+    return success();
+  }
+};
+
+/// This pattern distributes a subgroup-level `vector.broadcast` op to
+/// workitem-level. The pattern supports three cases:
+///
+/// 1) Broadcast a low-rank vector to high-rank vector: The low-rank input
+///    vector must have a slice layout of the result. If the distributed source
+///    and target vector types are identical, this lowers to a no-op; otherwise,
+///    it remains a broadcast but operates on distributed vectors.
+///
+/// 2) Broadcast a same-rank vector with identical layouts for source and
+///    target: The source vector must have unit dimensions, and lane_data must
+///    be unit size for those unit dims. This always lowers to a no-op.
+///
+/// 3) Broadcast a scalar with no layout: This always lowers to a broadcast
+///    from scalar to distributed result type.
+///
+/// Example 1 (low-rank to high-rank broadcast):
+/// ```
+///   %0 = "some_op"() {layout_result_0 =
+///     #xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>,
+///     dims = [0]>} : () -> vector<16xf16>
+///   %1 = vector.broadcast %0 {layout_result_0 =
+///     #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}
+///     : vector<16xf16> to vector<16x16xf16>
+/// ```
+/// is distributed to:
+/// ```
+///   %0 = "some_op"() : () -> vector<1xf16>
+///   %1 = vector.broadcast %0 : vector<1xf16> to vector<16x1xf16>
+/// ```
+///
+/// Example 2 (same-rank broadcast, no-op):
+/// ```
+///   %0 = "some_op"() {layout_result_0 =
+///     #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}
+///     : () -> vector<16x1xf16>
+///   %1 = vector.broadcast %0 {layout_result_0 =
+///     #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}
+///     : vector<16x1xf16> to vector<16x16xf16>
+/// ```
+/// is distributed to (no-op, source already matches distributed result type):
+/// ```
+///   %0 = "some_op"() : () -> vector<16x1xf16>
+///   // broadcast is eliminated, %0 is used directly
+/// ```
+///
+/// Example 3 (scalar to vector broadcast):
+/// ```
+///   %0 = "some_op"() : () -> f16
+///   %1 = vector.broadcast %0 {layout_result_0 =
+///     #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}
+///     : f16 to vector<16x16xf16>
+/// ```
+/// is distributed to:
+/// ```
+///   %0 = "some_op"() : f16
+///   %1 = vector.broadcast %0 : f16 to vector<16x1xf16>
+/// ```
+struct SgToWiBroadcast : public OpConversionPattern<vector::BroadcastOp> {
+  using OpConversionPattern<vector::BroadcastOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(vector::BroadcastOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    xegpu::DistributeLayoutAttr resultLayout =
+        xegpu::getTemporaryLayout(cast<OpResult>(op.getResult()));
+    if (!resultLayout || !resultLayout.isForSubgroup())
+      return rewriter.notifyMatchFailure(
+          op, "result does not have subgroup distribute layout");
+
+    VectorType destType = op.getResultVectorType();
+    VectorType sourceType = dyn_cast<VectorType>(op.getSourceType());
+
+    xegpu::DistributeLayoutAttr sourceLayout =
+        xegpu::getTemporaryLayout(op->getOpOperand(0));
+
+    if (sourceType) {
+      int64_t rankDiff = destType.getRank() - sourceType.getRank();
+      if (rankDiff > 0) {
+        // Case 1: Low-rank to high-rank broadcast.
+        if (!sourceLayout || !sourceLayout.isSliceOf(resultLayout))
+          op.emitWarning(
+              "broadcast source layout must be a slice of result layout");
+      } else if (rankDiff == 0) {
+        // Case 2: Same-rank broadcast.
+        auto broadcastUnitDimsSet = op.computeBroadcastedUnitDims();
+        SmallVector<int64_t> broadcastUnitDims(broadcastUnitDimsSet.begin(),
+                                               broadcastUnitDimsSet.end());
+        assert(sourceLayout.isEqualTo(
+                   sourceLayout.setUnitDimData(broadcastUnitDims)) &&
+               "The sg_data for unit dimensions should be set as 1");
+        sourceLayout = sourceLayout.setUnitDimLayout(broadcastUnitDims);
+      }
+    } else {
+      // Case 3: Scalar to vector broadcast.
+      if (sourceLayout)
+        return rewriter.notifyMatchFailure(
+            op, "broadcast from scalar must not have a layout attribute");
+    }
+
+    auto destDistType =
+        xegpu::getDistVecTypeBasedOnLaneLayout(resultLayout, destType);
+    if (failed(destDistType))
+      return rewriter.notifyMatchFailure(
+          op, "failed to distribute the result vector type");
+
+    Value source = adaptor.getSource();
+    // If the adapted source already matches the dest dist type, it's a no-op.
+    if (source.getType() == destDistType.value()) {
+      rewriter.replaceOp(op, source);
+      return success();
+    }
+
+    auto newOp = vector::BroadcastOp::create(rewriter, op.getLoc(),
+                                             destDistType.value(), source);
+    rewriter.replaceOp(op, newOp);
     return success();
   }
 };
@@ -1108,14 +1497,21 @@ struct SgToWiConvertLayout
                   ConversionPatternRewriter &rewriter) const override {
     auto inputLayout = op.getInputLayoutAttr();
     auto targetLayout = op.getTargetLayoutAttr();
-    auto resShape = cast<VectorType>(op.getResult().getType()).getShape();
-    SmallVector<int64_t> resShapeVec(resShape.begin(), resShape.end());
+    Type valType = op.getResult().getType();
 
+    if (valType.isIntOrFloat()) {
+      rewriter.replaceOp(op, op.getSource());
+      return success();
+    }
+
+    auto resShape = cast<VectorType>(valType).getShape();
+    SmallVector<int64_t> resShapeVec(resShape.begin(), resShape.end());
     if (!inputLayout.isCompatibleWith(targetLayout, resShapeVec,
                                       xegpu::LayoutKind::Lane)) {
       return rewriter.notifyMatchFailure(
           op, "lowering incompatible convert_layout not yet supported");
     }
+
     rewriter.replaceOp(op, adaptor.getSource());
     return success();
   }
@@ -1131,9 +1527,15 @@ struct XeGPUSgToWiDistributeExperimentalPass
 
 void XeGPUSgToWiDistributeExperimentalPass::runOnOperation() {
 
+  // Recover temporary operand layouts for usage in patterns.
+  Operation *root = getOperation();
+  if (!xegpu::recoverTemporaryLayouts(root)) {
+    signalPassFailure();
+    return;
+  }
+
   // Verify if all XeGPU anchor ops and vector ops have result layouts.
   // TODO: This can be removed once the full layout refactoring is done.
-  Operation *root = getOperation();
   if (failed(verifyLayouts(root))) {
     LLVM_DEBUG(DBGS() << "XeGPUSgToWiDistributeExperimentalPass: layout "
                          "verification failed\n");
@@ -1322,6 +1724,12 @@ void xegpu::populateXeGPUSgToWiDistributeTypeConversionAndLegality(
       [=](vector::MultiDimReductionOp op) -> bool {
         return !isValidSubgroupMultiReductionOp(op);
       });
+  target.addDynamicallyLegalOp<vector::CreateMaskOp, vector::ConstantMaskOp,
+                               vector::TransposeOp, vector::BitCastOp,
+                               vector::ShapeCastOp, vector::StepOp,
+                               vector::BroadcastOp>([=](Operation *op) -> bool {
+    return !xegpu::getTemporaryLayout(op->getOpResult(0));
+  });
   target.addDynamicallyLegalOp<vector::ExtractOp>(
       [=](vector::ExtractOp op) -> bool {
         if (!isa<VectorType>(op.getType()))
@@ -1346,6 +1754,10 @@ void xegpu::populateXeGPUSgToWiDistributeTypeConversionAndLegality(
                SgToWiLoadGather, SgToWiStoreScatter, SgToWiVectorReduction,
                SgToWiMultiDimReduction, SgToWiVectorExtract, SgToWiVectorInsert,
                SgToWiVectorExtractStridedSlice, SgToWiVectorInsertStridedSlice,
-               SgToWiLoadMatrix, SgToWiStoreMatrix, SgToWiConvertLayout>(
-      typeConverter, patterns.getContext());
+               SgToWiLoadMatrix, SgToWiStoreMatrix, SgToWiConvertLayout,
+               SgToWiVectorTranspose, SgToWiVectorBitcast, SgToWiVectorStep,
+               SgToWiVectorShapeCast, SgToWiBroadcast,
+               SgToWiCreateMask<vector::CreateMaskOp>,
+               SgToWiCreateMask<vector::ConstantMaskOp>>(typeConverter,
+                                                         patterns.getContext());
 }
