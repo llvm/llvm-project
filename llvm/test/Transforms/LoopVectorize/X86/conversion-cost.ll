@@ -4,7 +4,7 @@
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.8.0"
 
-define void @conversion_cost1(i32 %n, ptr nocapture %A, ptr nocapture %B) nounwind uwtable ssp {
+define void @conversion_cost1(i32 %n, ptr nocapture %A, ptr nocapture %B) {
 ; CHECK-LABEL: @conversion_cost1(
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i32 [[N:%.*]], 3
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[ITER_CHECK:%.*]], label [[DOT_CRIT_EDGE:%.*]]
@@ -95,7 +95,7 @@ define void @conversion_cost1(i32 %n, ptr nocapture %A, ptr nocapture %B) nounwi
   ret void
 }
 
-define void @conversion_cost2(i32 %n, ptr nocapture %A, ptr nocapture %B) nounwind uwtable ssp {
+define void @conversion_cost2(i32 %n, ptr nocapture %A, ptr nocapture %B) {
 ; CHECK-LABEL: @conversion_cost2(
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i32 [[N:%.*]], 9
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[DOTLR_PH_PREHEADER:%.*]], label [[DOT_CRIT_EDGE:%.*]]

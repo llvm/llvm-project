@@ -1711,8 +1711,7 @@ void CodeGenFunction::VolatilizeTryBlocks(
       }
     }
   }
-  const llvm::Instruction *TI = BB->getTerminator();
-  if (TI) {
+  if (const llvm::Instruction *TI = BB->getTerminatorOrNull()) {
     unsigned N = TI->getNumSuccessors();
     for (unsigned I = 0; I < N; I++)
       VolatilizeTryBlocks(TI->getSuccessor(I), V);

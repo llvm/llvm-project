@@ -411,30 +411,24 @@ def : PRFM<"pld", 0b00, "l2",  0b01, "keep", 0b0>;
 def : PRFM<"pld", 0b00, "l2",  0b01, "strm", 0b1>;
 def : PRFM<"pld", 0b00, "l3",  0b10, "keep", 0b0>;
 def : PRFM<"pld", 0b00, "l3",  0b10, "strm", 0b1>;
-let Requires = [{ {AArch64::FeaturePRFM_SLC} }] in {
 def : PRFM<"pld", 0b00, "slc", 0b11, "keep", 0b0>;
 def : PRFM<"pld", 0b00, "slc", 0b11, "strm", 0b1>;
-}
 def : PRFM<"pli", 0b01, "l1",  0b00, "keep", 0b0>;
 def : PRFM<"pli", 0b01, "l1",  0b00, "strm", 0b1>;
 def : PRFM<"pli", 0b01, "l2",  0b01, "keep", 0b0>;
 def : PRFM<"pli", 0b01, "l2",  0b01, "strm", 0b1>;
 def : PRFM<"pli", 0b01, "l3",  0b10, "keep", 0b0>;
 def : PRFM<"pli", 0b01, "l3",  0b10, "strm", 0b1>;
-let Requires = [{ {AArch64::FeaturePRFM_SLC} }] in {
 def : PRFM<"pli", 0b01, "slc", 0b11, "keep", 0b0>;
 def : PRFM<"pli", 0b01, "slc", 0b11, "strm", 0b1>;
-}
 def : PRFM<"pst", 0b10, "l1",  0b00, "keep", 0b0>;
 def : PRFM<"pst", 0b10, "l1",  0b00, "strm", 0b1>;
 def : PRFM<"pst", 0b10, "l2",  0b01, "keep", 0b0>;
 def : PRFM<"pst", 0b10, "l2",  0b01, "strm", 0b1>;
 def : PRFM<"pst", 0b10, "l3",  0b10, "keep", 0b0>;
 def : PRFM<"pst", 0b10, "l3",  0b10, "strm", 0b1>;
-let Requires = [{ {AArch64::FeaturePRFM_SLC} }] in {
 def : PRFM<"pst", 0b10, "slc", 0b11, "keep", 0b0>;
 def : PRFM<"pst", 0b10, "slc", 0b11, "strm", 0b1>;
-}
 def : PRFM<"ir",  0b11, "",    0b00, "",     0b0>;
 
 //===----------------------------------------------------------------------===//
@@ -886,14 +880,17 @@ class TLBIEntry<string name, bits<3> op1, bits<4> crm, bits<3> op2, bit nxs,
   : TLBICommon<name, op1, crm, op2, nxs, reguse>;
 
 class TLBIPEntry<string name, bits<3> op1, bits<4> crm, bits<3> op2, bit nxs,
-                RegValue reguse>
-  : TLBICommon<name, op1, crm, op2, nxs, reguse>;
+                 RegValue reguse>
+  : TLBICommon<name, op1, crm, op2, nxs, reguse> {
+  // TLBIP insns matching regex below allow either FEAT_D128 or FEAT_TLBID.
+  bit AllowWithTLBID = !match(name, ".*E[12][IO]S.*");
+}
 
-multiclass TLBITableBase {
+multiclass TLBITableBase<list<string> fields> {
   def NAME # Table : GenericTable {
     let FilterClass = NAME # "Entry";
     let CppTypeName = NAME;
-    let Fields = ["Name", "Encoding", "RegUse", "RequiresStr"];
+    let Fields = fields;
     string TypeOf_RegUse = "SysAliasRegUse";
     let PrimaryKey = ["Encoding"];
     let PrimaryKeyName = "lookup" # NAME # "ByEncoding";
@@ -904,8 +901,10 @@ multiclass TLBITableBase {
   }
 }
 
-defm TLBI  : TLBITableBase;
-defm TLBIP : TLBITableBase;
+defm TLBI : TLBITableBase<
+    ["Name", "Encoding", "RegUse", "RequiresStr"]>;
+defm TLBIP : TLBITableBase<
+    ["Name", "Encoding", "RegUse", "RequiresStr", "AllowWithTLBID"]>;
 
 class TLBI<string name, bits<3> op1, bits<4> crm, bits<3> op2,
            RegValue reguse, bit hasTLBIP = 0> {
@@ -961,10 +960,9 @@ foreach I = TLBIBase in {
   }
 
   if I.HasTLBIP then {
-    let Requires = ["AArch64::FeatureD128"] in {
-      def : TLBIPEntry<I.Name, I.Op1, I.CRm, I.Op2, 0, I.RegUse>;
-      def : TLBIPEntry<!strconcat(I.Name, "nXS"), I.Op1, I.CRm, I.Op2, 1, I.RegUse>;
-    }
+    def : TLBIPEntry<I.Name, I.Op1, I.CRm, I.Op2, 0, I.RegUse>;
+    def : TLBIPEntry<!strconcat(I.Name, "nXS"), I.Op1, I.CRm, I.Op2, 1,
+                     I.RegUse>;
   }
 }
 
@@ -1029,14 +1027,13 @@ foreach I = TLBIRMI in {
   }
 
   if I.HasTLBIP then {
-    let Requires = ["AArch64::FeatureD128"] in {
-      def : TLBIPEntry<I.Name, I.Op1, I.CRm, I.Op2, 0, I.RegUse>;
-      def : TLBIPEntry<!strconcat(I.Name, "nXS"), I.Op1, I.CRm, I.Op2, 1, I.RegUse>;
-    }
+    def : TLBIPEntry<I.Name, I.Op1, I.CRm, I.Op2, 0, I.RegUse>;
+    def : TLBIPEntry<!strconcat(I.Name, "nXS"), I.Op1, I.CRm, I.Op2, 1,
+                     I.RegUse>;
   }
 }
 
-// Armv9-A Realm Management Extension TLBI Instructions
+// Armv9-A Realm Management Extension TLBI Instructions.
 defvar TLBIRME = [
   //    name        op1    CRm     op2    reguse
   TLBI<"RPAOS",     0b110, 0b0100, 0b011, REG_REQUIRED>,

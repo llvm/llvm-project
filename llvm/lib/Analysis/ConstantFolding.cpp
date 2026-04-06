@@ -1357,7 +1357,8 @@ static ConstantFP *flushDenormalConstant(Type *Ty, const APFloat &APF,
 static DenormalMode getInstrDenormalMode(const Instruction *CtxI, Type *Ty) {
   if (!CtxI || !CtxI->getParent() || !CtxI->getFunction())
     return DenormalMode::getDynamic();
-  return CtxI->getFunction()->getDenormalMode(Ty->getFltSemantics());
+  return CtxI->getFunction()->getDenormalMode(
+      Ty->getScalarType()->getFltSemantics());
 }
 
 static ConstantFP *flushDenormalConstantFP(ConstantFP *CFP,
