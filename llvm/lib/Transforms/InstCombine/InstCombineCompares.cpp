@@ -5802,7 +5802,7 @@ Instruction *InstCombinerImpl::foldICmpWithMinMax(Instruction &I,
 
 /// Match and fold patterns like:
 ///   icmp eq/ne X, min(max(X, Lo), Hi)
-/// which represents a range check and can be repsented as a ConstantRange.
+/// which represents a range check and can be represented as a ConstantRange.
 ///
 /// For icmp eq, build ConstantRange [Lo, Hi + 1) and convert to:
 ///   (X - Lo) u< (Hi + 1 - Lo)
@@ -8862,6 +8862,62 @@ static Instruction *foldFCmpWithFloorAndCeil(FCmpInst &I,
   return nullptr;
 }
 
+template <Intrinsic::ID IID> static Value *matchRoundDiff(Value *Sub) {
+  Value *X = nullptr;
+  if (match(Sub, m_FSub(m_Value(X), m_Intrinsic<IID>(m_Specific(X)))) ||
+      match(Sub, m_FSub(m_Intrinsic<IID>(m_Value(X)), m_Specific(X))))
+    return X;
+  return nullptr;
+}
+
+static Value *matchFract(Value *Sub) {
+  if (Value *X = matchRoundDiff<Intrinsic::floor>(Sub))
+    return X;
+  if (Value *X = matchRoundDiff<Intrinsic::ceil>(Sub))
+    return X;
+  return nullptr;
+}
+
+static Instruction *foldFCmpWithFSubFloorAndCeilEqZero(FCmpInst &I,
+                                                       InstCombinerImpl &IC) {
+  FCmpInst::Predicate Pred = I.getPredicate();
+  if (Pred != FCmpInst::FCMP_OEQ && Pred != FCmpInst::FCMP_ONE)
+    return nullptr;
+
+  Value *Fract;
+  // Extract:
+  //   fcmp pred Fract, 0.0
+  // or
+  //   fcmp pred 0.0, Fract
+  if (match(I.getOperand(1), m_AnyZeroFP()))
+    Fract = I.getOperand(0);
+  else if (match(I.getOperand(0), m_AnyZeroFP()))
+    Fract = I.getOperand(1);
+  else
+    return nullptr;
+
+  Value *X = matchFract(Fract);
+  if (!X)
+    return nullptr;
+
+  KnownFPClass Known = computeKnownFPClass(
+      X, fcAllFlags, IC.getSimplifyQuery().getWithInstruction(&I));
+  if ((Known.KnownFPClasses & (fcNan | fcInf)) != 0)
+    return nullptr;
+
+  // x - floor(x) == 0.0  =>  trunc(x) == x
+  // x - floor(x) != 0.0  =>  trunc(x) != x
+  // floor(x) - x == 0.0  =>  trunc(x) == x
+  // floor(x) - x != 0.0  =>  trunc(x) != x
+  // x - ceil(x)  == 0.0  =>  trunc(x) == x
+  // x - ceil(x)  != 0.0  =>  trunc(x) != x
+  // ceil(x) - x  == 0.0  =>  trunc(x) == x
+  // ceil(x) - x  != 0.0  =>  trunc(x) != x
+  // This is valid for finite, non-NaN x.
+  Value *TruncX = IC.Builder.CreateUnaryIntrinsic(Intrinsic::trunc, X);
+  return new FCmpInst(Pred, TruncX, X);
+}
+
 /// Returns true if a select that implements a min/max is redundant and
 /// select result can be replaced with its non-constant operand, e.g.,
 ///   select ( (si/ui-to-fp A) <= C ), C, (si/ui-to-fp A)
@@ -9102,6 +9158,9 @@ Instruction *InstCombinerImpl::visitFCmpInst(FCmpInst &I) {
     return R;
 
   if (Instruction *R = foldFCmpWithFloorAndCeil(I, *this))
+    return R;
+
+  if (Instruction *R = foldFCmpWithFSubFloorAndCeilEqZero(I, *this))
     return R;
 
   if (Instruction *R = foldCmpSelectOfConstants(I))
