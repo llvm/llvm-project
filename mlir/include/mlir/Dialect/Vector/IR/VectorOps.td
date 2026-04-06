@@ -2057,24 +2057,29 @@ def Vector_MaskedStoreOp :
   ];
 }
 
+def Vector_AtLeastOneIntegerVec : Variadic<VectorOfNonZeroRankOf<[AnyInteger, Index]>> {
+  let minSize = 1;
+}
+
 def Vector_GatherOp :
   Vector_Op<"gather", [
     DeclareOpInterfaceMethods<MaskableOpInterface>,
     DeclareOpInterfaceMethods<MemorySpaceCastConsumerOpInterface>,
     DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getShapeForUnroll"]>,
-    DeclareOpInterfaceMethods<AlignmentAttrOpInterface>
+    DeclareOpInterfaceMethods<AlignmentAttrOpInterface>,
+    AttrSizedOperandSegments
   ]>,
     Arguments<(ins Arg<TensorOrMemRef<[AnyType]>, "", [MemRead]>:$base,
                Variadic<Index>:$offsets,
-               VectorOfNonZeroRankOf<[AnyInteger, Index]>:$indices,
+               Vector_AtLeastOneIntegerVec:$indices,
                VectorOfNonZeroRankOf<[I1]>:$mask,
                AnyVectorOfNonZeroRank:$pass_thru,
                OptionalAttr<IntValidAlignment<I64Attr>>: $alignment)>,
     Results<(outs AnyVectorOfNonZeroRank:$result)> {
 
   let summary = [{
-    Gathers elements from memory or ranked tensor into a vector as defined by an
-    index vector and a mask vector.
+    Gathers elements from memory or ranked tensor into a vector as defined by
+    index vectors and a mask vector.
   }];
 
   let description = [{
@@ -2083,17 +2088,18 @@ def Vector_GatherOp :
     on the values of an n-D mask vector.
 
     If a mask bit is set, the corresponding result element is taken from `base`
-    at an index defined by k indices and n-D `index_vec`. Otherwise, the element
-    is taken from the pass-through vector. As an example, suppose that `base` is
-    3-D and the result is 2-D:
+    at an index defined by k indices and the values in r (for gather rank) n-D
+    `index_vec`s. Otherwise, the element is taken from the pass-through vector.
+    As an example, suppose that `base` is 3-D and the result is 2-D,
+    where we have r=2 index vectors:
 
     ```mlir
     func.func @gather_3D_to_2D(
         %base: memref<?x10x?xf32>, %ofs_0: index, %ofs_1: index, %ofs_2: index,
-        %indices: vector<2x3xi32>, %mask: vector<2x3xi1>,
-        %fall_thru: vector<2x3xf32>) -> vector<2x3xf32> {
+        %indices0: vector<2x3xi32>, %indices1: vector<2x3xi32>,
+        %mask: vector<2x3xi1>, %fall_thru: vector<2x3xf32>) -> vector<2x3xf32> {
             %result = vector.gather %base[%ofs_0, %ofs_1, %ofs_2]
-                                   [%indices], %mask, %fall_thru : [...]
+                                   [%indices0, %indices1], %mask, %fall_thru : [...]
             return %result : vector<2x3xf32>
     }
     ```
@@ -2101,10 +2107,10 @@ def Vector_GatherOp :
     The indexing semantics are then,
 
     ```
-    result[i,j] := if mask[i,j] then base[i0, i1, i2 + indices[i,j]]
+    result[i,j] := if mask[i,j] then base[i0, i1 + indices0[i, j], i2 + indices1[i, j]]
                    else pass_thru[i,j]
     ```
-    The index into `base` only varies in the innermost ((k-1)-th) dimension.
+    The index into `base` only varies in the r innermost ((k-r)-th) dimensions.
 
     If a mask bit is set and the corresponding index is out-of-bounds for the
     given base, the behavior is undefined. If a mask bit is not set, the value
@@ -2114,6 +2120,16 @@ def Vector_GatherOp :
     The gather operation can be used directly where applicable, or can be used
     during progressively lowering to bring other memory operations closer to
     hardware ISA support for a gather.
+
+    If the type of the memref offsets is potentially larger than the type of the
+    gather indices, it is assumed that the final `r` strides of the memref can be
+    truncated to the index type such that the linear gather index can be computed
+    without signed overflow (i.e. the truncated stride sign-extends back to the
+    original value). If an extension to the offset type is needed, the gather
+    indices are interpreted as signed integers.
+
+    Similarly, if the gather indices are wider than the memref offset type,
+    they must be losslessly truncatable to that type.
 
     An optional `alignment` attribute allows to specify the byte alignment of the
     gather operation. It must be a positive power of 2. The operation must access
@@ -2127,37 +2143,43 @@ def Vector_GatherOp :
     %0 = vector.gather %base[%c0][%v], %mask, %pass_thru
        : memref<?xf32>, vector<2x16xi32>, vector<2x16xi1>, vector<2x16xf32> into vector<2x16xf32>
 
-    // 2-D memref gathered to 1-D vector.
-    %1 = vector.gather %base[%i, %j][%v], %mask, %pass_thru
-       : memref<16x16xf32>, vector<16xi32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
+    // 2-D memref gathered to 1-D vector along two dimensions. The single
+    // index type is shared across all index vectors.
+    %1 = vector.gather %base[%i, %j][%v0, %v1], %mask, %pass_thru
+       : memref<16x16xf32>, vector<16xi32>, vector<16xi1>,
+         vector<16xf32> into vector<16xf32>
     ```
   }];
 
   let extraClassDeclaration = [{
     ShapedType getBaseType() { return getBase().getType(); }
-    VectorType getIndexVectorType() { return getIndices().getType(); }
+    VectorType getIndexVectorType() {
+      return cast<VectorType>(getIndices().front().getType());
+    }
     VectorType getMaskVectorType() { return getMask().getType(); }
     VectorType getPassThruVectorType() { return getPassThru().getType(); }
     VectorType getVectorType() { return getResult().getType(); }
   }];
 
-  let assemblyFormat =
-    "$base `[` $offsets `]` `[` $indices `]` `,` "
-    "$mask `,` $pass_thru attr-dict `:` type($base) `,` "
-    "type($indices)  `,` type($mask) `,` type($pass_thru) "
-    "`into` type($result)";
+  let assemblyFormat = [{
+    $base `[` $offsets `]` `[` $indices `]` `,`
+    $mask `,` $pass_thru attr-dict `:` type($base) `,`
+    custom<SameTypeVariadicOperands>(ref($indices), type($indices)) `,`
+    type($mask) `,` type($pass_thru) `into` type($result)
+  }];
   let hasCanonicalizer = 1;
   let hasVerifier = 1;
 
   let builders = [
     OpBuilder<(ins "VectorType":$resultType,
                    "Value":$base,
-                   "ValueRange":$indices,
-                   "Value":$index_vec,
+                   "ValueRange":$offsets,
+                   "ValueRange":$index_vecs,
                    "Value":$mask,
                    "Value":$passthrough,
                    CArg<"llvm::MaybeAlign", "llvm::MaybeAlign()">:$alignment), [{
-      return build($_builder, $_state, resultType, base, indices, index_vec, mask, passthrough,
+      return build($_builder, $_state, resultType, base, offsets, index_vecs,
+                   mask, passthrough,
                    alignment.has_value() ? $_builder.getI64IntegerAttr(alignment->value()) :
                                     nullptr);
     }]>
@@ -2167,10 +2189,11 @@ def Vector_GatherOp :
 def Vector_ScatterOp
     : Vector_Op<"scatter",
                 [DeclareOpInterfaceMethods<MemorySpaceCastConsumerOpInterface>,
-                 DeclareOpInterfaceMethods<AlignmentAttrOpInterface>]>,
+                 DeclareOpInterfaceMethods<AlignmentAttrOpInterface>,
+                 AttrSizedOperandSegments]>,
       Arguments<(ins Arg<TensorOrMemRef<[AnyType]>, "", [MemWrite]>:$base,
           Variadic<Index>:$offsets,
-          VectorOfNonZeroRankOf<[AnyInteger, Index]>:$indices,
+          Vector_AtLeastOneIntegerVec:$indices,
           VectorOfNonZeroRankOf<[I1]>:$mask,
           AnyVectorOfNonZeroRank:$valueToStore,
           OptionalAttr<IntValidAlignment<I64Attr>>:$alignment)>,
@@ -2183,12 +2206,20 @@ def Vector_ScatterOp
 
   let description = [{
     The scatter operation stores elements from a n-D vector into memory or ranked tensor as
-    defined by a base with indices and an additional n-D index vector, but
-    only if the corresponding bit in a n-D mask vector is set. Otherwise, no
-    action is taken for that element. Informally the semantics are:
+    defined by a base with indices and an additional r (the scatter rank) n-D index
+    vectors, but only if the corresponding bit in a n-D mask vector is set.
+    Otherwise, no action is taken for that element. Informally the semantics are:
     ```
-    if (mask[0]) base[index[0]] = value[0]
-    if (mask[1]) base[index[1]] = value[1]
+    if (mask[0, ..., 0]) {
+      base[offsets[0], ...,
+        offsets[k - r] + indices[0][0, 0, ... 0],
+        ...
+        offsets[k - 1] + indices[r - 1][0, 0, ... 0]] = value[0, 0 ..., 0]
+    }
+    if (mask[0, ..., 1]) {
+      base[offsets[0],
+        ...,
+        offsets[k - 1] + indices[r - 1][0, 0, ... 1]] = value[9, 0, ..., 1]
     etc.
     ```
 
@@ -2208,6 +2239,16 @@ def Vector_ScatterOp
     correspond to those of the `llvm.masked.scatter`
     [intrinsic](https://llvm.org/docs/LangRef.html#llvm-masked-scatter-intrinsics).
 
+    If the type of the memref offsets is potentially larger than the type of the
+    scatter indices, it is assumed that the final `r` strides of the memref can be
+    truncated to the index type such that the linear scatter index can be computed
+    without signed overflow (i.e. the truncated stride sign-extends back to the
+    original value). If an extension to the offset type is needed, the scatter
+    indices are interpreted as signed integers.
+
+    Similarly, if the scatter indices are wider than the memref offset type,
+    they must be losslessly truncatable to that type.
+
     An optional `alignment` attribute allows to specify the byte alignment of the
     scatter operation. It must be a positive power of 2. The operation must access
     memory at an address aligned to this boundary. Violating this requirement
@@ -2219,31 +2260,37 @@ def Vector_ScatterOp
     vector.scatter %base[%c0][%v], %mask, %value
         : memref<?xf32>, vector<16xi32>, vector<16xi1>, vector<16xf32>
 
-    vector.scatter %base[%i, %j][%v], %mask, %value
+    // The single index type is shared across all index vectors.
+    vector.scatter %base[%i, %j][%v0, %v1], %mask, %value
         : memref<16x16xf32>, vector<16xi32>, vector<16xi1>, vector<16xf32>
     ```
   }];
 
   let extraClassDeclaration = [{
     ShapedType getBaseType() { return getBase().getType(); }
-    VectorType getIndexVectorType() { return getIndices().getType(); }
+    VectorType getIndexVectorType() {
+      return cast<VectorType>(getIndices().front().getType());
+    }
     VectorType getMaskVectorType() { return getMask().getType(); }
     VectorType getVectorType() { return getValueToStore().getType(); }
   }];
 
-  let assemblyFormat = "$base `[` $offsets `]` `[` $indices `]` `,` "
-                       "$mask `,` $valueToStore attr-dict `:` type($base) `,` "
-                       "type($indices)  `,` type($mask) `,` "
-                       "type($valueToStore) (`->` type($result)^)?";
+  let assemblyFormat = [{
+    $base `[` $offsets `]` `[` $indices `]` `,`
+    $mask `,` $valueToStore attr-dict `:` type($base) `,`
+    custom<SameTypeVariadicOperands>(ref($indices), type($indices)) `,`
+    type($mask) `,` type($valueToStore) (`->` type($result)^)?
+  }];
   let hasCanonicalizer = 1;
   let hasVerifier = 1;
 
   let builders = [OpBuilder<
-      (ins "Type":$resultType, "Value":$base, "ValueRange":$indices,
-          "Value":$index_vec, "Value":$mask, "Value":$valueToStore,
+      (ins "Type":$resultType, "Value":$base, "ValueRange":$offsets,
+          "ValueRange":$index_vecs, "Value":$mask, "Value":$valueToStore,
           CArg<"llvm::MaybeAlign", "llvm::MaybeAlign()">:$alignment),
       [{
-      return build($_builder, $_state, resultType, base, indices, index_vec, mask, valueToStore,
+      return build($_builder, $_state, resultType, base, offsets, index_vecs,
+                   mask, valueToStore,
                    alignment.has_value() ? $_builder.getI64IntegerAttr(alignment->value()) :
                                     nullptr);
     }]>];
@@ -2551,7 +2598,7 @@ def Vector_TypeCastOp :
 }
 
 def Vector_ConstantMaskOp :
-  Vector_Op<"constant_mask", [Pure, 
+  Vector_Op<"constant_mask", [Pure,
    DeclareOpInterfaceMethods<VectorUnrollOpInterface>
    ]>,
     Arguments<(ins DenseI64ArrayAttr:$mask_dim_sizes)>,
@@ -2611,7 +2658,7 @@ def Vector_ConstantMaskOp :
 }
 
 def Vector_CreateMaskOp :
-  Vector_Op<"create_mask", [Pure, 
+  Vector_Op<"create_mask", [Pure,
    DeclareOpInterfaceMethods<VectorUnrollOpInterface>
    ]>,
     Arguments<(ins Variadic<Index>:$mask_dim_sizes)>,

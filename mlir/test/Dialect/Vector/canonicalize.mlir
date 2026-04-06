@@ -4280,6 +4280,45 @@ func.func @scatter_tensor_all_false(%base: tensor<16xf32>,
 
 // -----
 
+// CHECK-LABEL: func @fold_broadcast_index_into_gather_offset(
+//  CHECK-SAME:   %[[BASE:[a-z0-9]+]]: memref<?x?xf32>, %[[OFF0:[a-z0-9]+]]: index,
+//  CHECK-SAME:   %[[OFF1:[a-z0-9]+]]: index, %[[SCALAR:[a-z0-9]+]]: index,
+//  CHECK-SAME:   %[[IDX1:[a-z0-9]+]]: vector<4xindex>, %[[MASK:[a-z0-9]+]]: vector<4xi1>,
+//  CHECK-SAME:   %[[PT:[a-z0-9]+]]: vector<4xf32>)
+//       CHECK:   %[[NEW_OFF:.*]] = arith.addi %[[OFF0]], %[[SCALAR]] : index
+//       CHECK:   %[[RES:.*]] = vector.gather %[[BASE]][%[[NEW_OFF]], %[[OFF1]]] [%[[IDX1]]], %[[MASK]], %[[PT]] : memref<?x?xf32>, vector<4xindex>, vector<4xi1>, vector<4xf32> into vector<4xf32>
+//       CHECK:   return %[[RES]] : vector<4xf32>
+func.func @fold_broadcast_index_into_gather_offset(
+    %base: memref<?x?xf32>, %off0: index, %off1: index,
+    %scalar: index, %idx1: vector<4xindex>,
+    %mask: vector<4xi1>, %pass_thru: vector<4xf32>) -> vector<4xf32> {
+  %bcast = vector.broadcast %scalar : index to vector<4xindex>
+  %0 = vector.gather %base[%off0, %off1][%bcast, %idx1], %mask, %pass_thru
+    : memref<?x?xf32>, vector<4xindex>, vector<4xi1>, vector<4xf32> into vector<4xf32>
+  return %0 : vector<4xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @fold_broadcast_index_into_scatter_offset(
+//  CHECK-SAME:   %[[BASE:[a-z0-9]+]]: memref<?x?xf32>, %[[OFF0:[a-z0-9]+]]: index,
+//  CHECK-SAME:   %[[OFF1:[a-z0-9]+]]: index, %[[SCALAR:[a-z0-9]+]]: index,
+//  CHECK-SAME:   %[[IDX1:[a-z0-9]+]]: vector<4xindex>, %[[MASK:[a-z0-9]+]]: vector<4xi1>,
+//  CHECK-SAME:   %[[VAL:[a-z0-9]+]]: vector<4xf32>)
+//       CHECK:   %[[NEW_OFF:.*]] = arith.addi %[[OFF0]], %[[SCALAR]] : index
+//       CHECK:   vector.scatter %[[BASE]][%[[NEW_OFF]], %[[OFF1]]] [%[[IDX1]]], %[[MASK]], %[[VAL]] : memref<?x?xf32>, vector<4xindex>, vector<4xi1>, vector<4xf32>
+func.func @fold_broadcast_index_into_scatter_offset(
+    %base: memref<?x?xf32>, %off0: index, %off1: index,
+    %scalar: index, %idx1: vector<4xindex>,
+    %mask: vector<4xi1>, %value: vector<4xf32>) {
+  %bcast = vector.broadcast %scalar : index to vector<4xindex>
+  vector.scatter %base[%off0, %off1][%bcast, %idx1], %mask, %value
+    : memref<?x?xf32>, vector<4xindex>, vector<4xi1>, vector<4xf32>
+  return
+}
+
+// -----
+
 // CHECK-LABEL: @fold_extract_constant_indices
 //   CHECK-SAME:   %[[ARG:.*]]: vector<32x1xi32>) -> i32 {
 //        CHECK:   %[[RES:.*]] = vector.extract %[[ARG]][0, 0] : i32 from vector<32x1xi32>

@@ -6361,20 +6361,56 @@ MaskedStoreOp::bubbleDownCasts(OpBuilder &builder) {
 // GatherOp
 //===----------------------------------------------------------------------===//
 
+/// Custom printer for a variadic operand list where all operands share the
+/// same type. Prints the type once regardless of operand count.
+static void printSameTypeVariadicOperands(OpAsmPrinter &p, Operation *op,
+                                          OperandRange operands,
+                                          TypeRange types) {
+  assert(!types.empty() && "expected at least one operand type");
+  p << types.front();
+}
+
+/// Custom parser for a variadic operand list where all operands share the
+/// same type. Parses a single type and replicates it for each operand.
+static ParseResult parseSameTypeVariadicOperands(
+    OpAsmParser &parser,
+    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &operands,
+    SmallVectorImpl<Type> &types) {
+  Type type;
+  if (parser.parseType(type))
+    return failure();
+  types.assign(operands.size(), type);
+  return success();
+}
+
 LogicalResult GatherOp::verify() {
-  VectorType indVType = getIndexVectorType();
-  VectorType maskVType = getMaskVectorType();
-  VectorType resVType = getVectorType();
   ShapedType baseType = getBaseType();
 
   if (!llvm::isa<MemRefType, RankedTensorType>(baseType))
     return emitOpError("requires base to be a memref or ranked tensor type");
+
+  if (getIndices().empty())
+    return emitOpError("requires at least one index vector");
+
+  VectorType indVType = getIndexVectorType();
+  VectorType maskVType = getMaskVectorType();
+  VectorType resVType = getVectorType();
 
   if (failed(
           verifyElementTypesMatch(*this, baseType, resVType, "base", "result")))
     return failure();
   if (llvm::size(getOffsets()) != baseType.getRank())
     return emitOpError("requires ") << baseType.getRank() << " indices";
+
+  for (Value idx : getIndices()) {
+    if (cast<VectorType>(idx.getType()) != indVType)
+      return emitOpError("all index vectors must have the same type");
+  }
+
+  if (static_cast<int64_t>(getIndices().size()) > baseType.getRank())
+    return emitOpError("number of index vectors (")
+           << getIndices().size() << ") exceeds base rank ("
+           << baseType.getRank() << ")";
   if (resVType.getShape() != indVType.getShape())
     return emitOpError("expected result dim to match indices dim");
   if (resVType.getShape() != maskVType.getShape())
@@ -6449,7 +6485,10 @@ public:
     if (!isa<MemRefType>(op.getBase().getType()))
       return rewriter.notifyMatchFailure(op, "base must be of memref type");
 
-    if (failed(isZeroBasedContiguousSeq(op.getIndices())))
+    if (op.getIndices().size() != 1)
+      return rewriter.notifyMatchFailure(op, "expected single index vector");
+
+    if (failed(isZeroBasedContiguousSeq(op.getIndices().front())))
       return failure();
 
     rewriter.replaceOpWithNewOp<MaskedLoadOp>(op, op.getType(), op.getBase(),
@@ -6458,11 +6497,54 @@ public:
     return success();
   }
 };
+
+/// Fold `gather %m[%o0, %o1, ..., %oK-R, ... %oK][splat(%i0), ..., %iR]`
+/// into `gather %m[%o0, %o1, ..., %oK-R + %i0, ..., %oK][%i1, ..., %iR]`.
+/// The 1-D case (one index vector) is intentionally skipped: dropping the
+/// only index vector would leave the gather without one, which is invalid.
+struct FoldBroadcastIndexIntoGatherOffset final : OpRewritePattern<GatherOp> {
+  using Base::Base;
+  LogicalResult matchAndRewrite(GatherOp op,
+                                PatternRewriter &rewriter) const override {
+    ValueRange indices = op.getIndices();
+    if (indices.size() < 2)
+      return rewriter.notifyMatchFailure(
+          op, "can't fold broadcast into 1-D gather");
+
+    auto bcast = indices.front().getDefiningOp<BroadcastOp>();
+    if (!bcast || !bcast.getSource().getType().isIntOrIndex())
+      return rewriter.notifyMatchFailure(op,
+                                         "first index isn't a splat scalar");
+
+    Value scalar = bcast.getSource();
+    Location loc = op.getLoc();
+
+    if (!scalar.getType().isIndex())
+      scalar = arith::IndexCastOp::create(rewriter, loc,
+                                          rewriter.getIndexType(), scalar);
+
+    unsigned k = op.getBaseType().getRank();
+    unsigned r = indices.size();
+    unsigned offsetIdx = k - r;
+
+    SmallVector<Value> newOffsets(op.getOffsets());
+    newOffsets[offsetIdx] =
+        arith::AddIOp::create(rewriter, loc, newOffsets[offsetIdx], scalar);
+
+    ValueRange newIndices = indices.drop_front();
+
+    rewriter.replaceOpWithNewOp<GatherOp>(
+        op, op.getVectorType(), op.getBase(), newOffsets, newIndices,
+        op.getMask(), op.getPassThru(), op.getAlignmentAttr());
+    return success();
+  }
+};
 } // namespace
 
 void GatherOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                            MLIRContext *context) {
-  results.add<GatherFolder, FoldContiguousGather>(context);
+  results.add<GatherFolder, FoldContiguousGather,
+              FoldBroadcastIndexIntoGatherOffset>(context);
 }
 
 FailureOr<std::optional<SmallVector<Value>>>
@@ -6476,19 +6558,33 @@ GatherOp::bubbleDownCasts(OpBuilder &builder) {
 //===----------------------------------------------------------------------===//
 
 LogicalResult ScatterOp::verify() {
-  VectorType indVType = getIndexVectorType();
-  VectorType maskVType = getMaskVectorType();
-  VectorType valueVType = getVectorType();
   ShapedType baseType = getBaseType();
 
   if (!llvm::isa<MemRefType, RankedTensorType>(baseType))
     return emitOpError("requires base to be a memref or ranked tensor type");
+
+  if (getIndices().empty())
+    return emitOpError("requires at least one index vector");
+
+  VectorType indVType = getIndexVectorType();
+  VectorType maskVType = getMaskVectorType();
+  VectorType valueVType = getVectorType();
 
   if (failed(verifyElementTypesMatch(*this, baseType, valueVType, "base",
                                      "valueToStore")))
     return failure();
   if (llvm::size(getOffsets()) != baseType.getRank())
     return emitOpError("requires ") << baseType.getRank() << " indices";
+
+  for (Value idx : getIndices()) {
+    if (cast<VectorType>(idx.getType()) != indVType)
+      return emitOpError("all index vectors must have the same type");
+  }
+
+  if (static_cast<int64_t>(getIndices().size()) > baseType.getRank())
+    return emitOpError("number of index vectors (")
+           << getIndices().size() << ") exceeds base rank ("
+           << baseType.getRank() << ")";
   if (valueVType.getShape() != indVType.getShape())
     return emitOpError("expected valueToStore dim to match indices dim");
   if (valueVType.getShape() != maskVType.getShape())
@@ -6541,7 +6637,10 @@ public:
     if (!isa<MemRefType>(op.getBase().getType()))
       return failure();
 
-    if (failed(isZeroBasedContiguousSeq(op.getIndices())))
+    if (op.getIndices().size() != 1)
+      return rewriter.notifyMatchFailure(op, "expected single index vector");
+
+    if (failed(isZeroBasedContiguousSeq(op.getIndices().front())))
       return failure();
 
     rewriter.replaceOpWithNewOp<MaskedStoreOp>(
@@ -6549,11 +6648,54 @@ public:
     return success();
   }
 };
+
+/// Fold `scatter %v, %m[%o0, ..., %oK-R, ... %oK][splat(%i0), ..., %iR]`
+/// into `scatter %v, %m[%o0, %o1, ..., %oK-R + %i0, ..., %oK][%i1, ..., %iR]`.
+/// The 1-D case (one index vector) is intentionally skipped: dropping the
+/// only index vector would leave the scatter without one, which is invalid.
+struct FoldBroadcastIndexIntoScatterOffset final : OpRewritePattern<ScatterOp> {
+  using Base::Base;
+  LogicalResult matchAndRewrite(ScatterOp op,
+                                PatternRewriter &rewriter) const override {
+    ValueRange indices = op.getIndices();
+    if (indices.size() < 2)
+      return rewriter.notifyMatchFailure(
+          op, "can't fold broadcast into 1-D scatter");
+
+    auto bcast = indices.front().getDefiningOp<BroadcastOp>();
+    if (!bcast || !bcast.getSource().getType().isIntOrIndex())
+      return rewriter.notifyMatchFailure(op,
+                                         "first index isn't a splat scalar");
+
+    Value scalar = bcast.getSource();
+    Location loc = op.getLoc();
+
+    if (!scalar.getType().isIndex())
+      scalar = arith::IndexCastOp::create(rewriter, loc,
+                                          rewriter.getIndexType(), scalar);
+
+    unsigned k = op.getBaseType().getRank();
+    unsigned r = indices.size();
+    unsigned offsetIdx = k - r;
+
+    SmallVector<Value> newOffsets(op.getOffsets());
+    newOffsets[offsetIdx] =
+        arith::AddIOp::create(rewriter, loc, newOffsets[offsetIdx], scalar);
+
+    ValueRange newIndices = indices.drop_front();
+
+    rewriter.replaceOpWithNewOp<ScatterOp>(
+        op, op->getResultTypes(), op.getBase(), newOffsets, newIndices,
+        op.getMask(), op.getValueToStore(), op.getAlignmentAttr());
+    return success();
+  }
+};
 } // namespace
 
 void ScatterOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                             MLIRContext *context) {
-  results.add<ScatterFolder, FoldContiguousScatter>(context);
+  results.add<ScatterFolder, FoldContiguousScatter,
+              FoldBroadcastIndexIntoScatterOffset>(context);
 }
 
 FailureOr<std::optional<SmallVector<Value>>>

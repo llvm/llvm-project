@@ -131,30 +131,75 @@ static LogicalResult isMemRefTypeSupported(MemRefType memRefType,
   return success();
 }
 
-// Add an index vector component to a base pointer.
+// Add a sequence of index vectors componentwise to a base pointer, using the
+// strides from the given memref. The index vectors are linearized:
+//   index = sum(strides.take_back(len(indices)) * indices)
 static Value getIndexedPtrs(ConversionPatternRewriter &rewriter, Location loc,
                             const LLVMTypeConverter &typeConverter,
                             MemRefType memRefType, Value llvmMemref, Value base,
-                            Value index, VectorType vectorType) {
+                            ValueRange indices, VectorType vectorType) {
   assert(succeeded(isMemRefTypeSupported(memRefType, typeConverter)) &&
          "unsupported memref type");
   assert(vectorType.getRank() == 1 && "expected a 1-d vector type");
-  auto pType = MemRefDescriptor(llvmMemref).getElementPtrType();
+
+  unsigned rank = memRefType.getRank();
+  MemRefDescriptor desc(llvmMemref);
+
+  int64_t numElems = vectorType.getDimSize(0);
+  bool isScalable = vectorType.getScalableDims()[0];
+  SmallVector<int32_t> zeroMask(numElems, 0);
+  Value i32Zero = LLVM::ConstantOp::create(rewriter, loc, rewriter.getI32Type(),
+                                           rewriter.getI32IntegerAttr(0));
+
+  Value linearized;
+  auto idxElemType =
+      cast<VectorType>(indices.front().getType()).getElementType();
+  auto idxVecType = LLVM::getVectorType(idxElemType, numElems, isScalable);
+  unsigned r = indices.size();
+  for (auto [idx, stride] : llvm::zip_equal(
+           indices, llvm::map_range(llvm::seq(rank - r, rank), [&](unsigned d) {
+             return desc.stride(rewriter, loc, d);
+           }))) {
+
+    Value castStride = stride;
+    if (stride.getType() != idxElemType) {
+      unsigned strideBits = cast<IntegerType>(stride.getType()).getWidth();
+      unsigned idxBits = cast<IntegerType>(idxElemType).getWidth();
+      if (strideBits > idxBits) {
+        castStride = LLVM::TruncOp::create(rewriter, loc, idxElemType, stride,
+                                           LLVM::IntegerOverflowFlags::nsw);
+      } else {
+        castStride = LLVM::SExtOp::create(rewriter, loc, idxElemType, stride);
+      }
+    }
+    Value strideVec = [&]() {
+      Value poison = LLVM::PoisonOp::create(rewriter, loc, idxVecType);
+      Value inserted = LLVM::InsertElementOp::create(rewriter, loc, poison,
+                                                     castStride, i32Zero);
+      return LLVM::ShuffleVectorOp::create(rewriter, loc, inserted, poison,
+                                           zeroMask);
+    }();
+    Value contribution = LLVM::MulOp::create(rewriter, loc, idx, strideVec);
+    linearized = linearized ? LLVM::AddOp::create(rewriter, loc, linearized,
+                                                  contribution)
+                            : contribution;
+  }
+
+  auto pType = desc.getElementPtrType();
   auto ptrsType =
       LLVM::getVectorType(pType, vectorType.getDimSize(0),
                           /*isScalable=*/vectorType.getScalableDims()[0]);
   return LLVM::GEPOp::create(
       rewriter, loc, ptrsType,
-      typeConverter.convertType(memRefType.getElementType()), base, index);
+      typeConverter.convertType(memRefType.getElementType()), base, linearized);
 }
 
-/// Convert `foldResult` into a Value. Integer attribute is converted to
-/// an LLVM constant op.
+/// Convert `foldResult` into a Value, using `llvm.mlir.constant` if needed.
 static Value getAsLLVMValue(OpBuilder &builder, Location loc,
                             OpFoldResult foldResult) {
   if (auto attr = dyn_cast<Attribute>(foldResult)) {
-    auto intAttr = cast<IntegerAttr>(attr);
-    return LLVM::ConstantOp::create(builder, loc, intAttr).getResult();
+    return LLVM::ConstantOp::create(builder, loc, cast<TypedAttr>(attr))
+        .getResult();
   }
 
   return cast<Value>(foldResult);

@@ -867,6 +867,26 @@ func.func @gather_and_scatter_multi_dims(%base: memref<?xf32>, %v: vector<2x16xi
   return %0 : vector<2x16xf32>
 }
 
+// CHECK-LABEL: @gather_multi_index
+func.func @gather_multi_index(%base: memref<?x?x?xf32>, %v0: vector<4xi32>,
+    %v1: vector<4xi32>, %mask: vector<4xi1>, %pass_thru: vector<4xf32>) -> vector<4xf32> {
+  %c0 = arith.constant 0 : index
+  // CHECK: vector.gather %{{.*}}[%{{.*}}, %{{.*}}, %{{.*}}] [%{{.*}}, %{{.*}}], %{{.*}}, %{{.*}} : memref<?x?x?xf32>, vector<4xi32>, vector<4xi1>, vector<4xf32> into vector<4xf32>
+  %0 = vector.gather %base[%c0, %c0, %c0][%v0, %v1], %mask, %pass_thru
+    : memref<?x?x?xf32>, vector<4xi32>, vector<4xi1>, vector<4xf32> into vector<4xf32>
+  return %0 : vector<4xf32>
+}
+
+// CHECK-LABEL: @scatter_multi_index
+func.func @scatter_multi_index(%base: memref<?x?xf32>, %v0: vector<4xi32>,
+    %v1: vector<4xi32>, %mask: vector<4xi1>, %value: vector<4xf32>) {
+  %c0 = arith.constant 0 : index
+  // CHECK: vector.scatter %{{.*}}[%{{.*}}, %{{.*}}] [%{{.*}}, %{{.*}}], %{{.*}}, %{{.*}} : memref<?x?xf32>, vector<4xi32>, vector<4xi1>, vector<4xf32>
+  vector.scatter %base[%c0, %c0][%v0, %v1], %mask, %value
+    : memref<?x?xf32>, vector<4xi32>, vector<4xi1>, vector<4xf32>
+  return
+}
+
 // CHECK-LABEL: @gather_on_tensor
 func.func @gather_on_tensor(%base: tensor<?xf32>, %v: vector<16xi32>, %mask: vector<16xi1>, %pass_thru: vector<16xf32>) -> vector<16xf32> {
   %c0 = arith.constant 0 : index
