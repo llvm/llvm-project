@@ -1436,6 +1436,8 @@ static SmallBitVector gatherFileIDs(StringRef SourceFile,
 /// Return the ID of the file where the definition of the function is located.
 static std::optional<unsigned>
 findMainViewFileID(const FunctionRecord &Function) {
+  if (Function.CountedRegions.empty())
+    return std::nullopt;
   SmallBitVector IsNotExpandedFile(Function.Filenames.size(), true);
   for (const auto &CR : Function.CountedRegions)
     if (CR.Kind == CounterMappingRegion::ExpansionRegion)
