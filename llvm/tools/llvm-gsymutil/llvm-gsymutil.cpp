@@ -9,7 +9,6 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/DebugInfo/DIContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
-#include "llvm/DebugInfo/GSYM/CallSiteInfo.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/MachOUniversal.h"
@@ -49,9 +48,7 @@
 #include "llvm/DebugInfo/GSYM/Header.h"
 #include "llvm/DebugInfo/GSYM/HeaderV2.h"
 #include "llvm/DebugInfo/GSYM/InlineInfo.h"
-#include "llvm/DebugInfo/GSYM/LineTable.h"
 #include "llvm/DebugInfo/GSYM/LookupResult.h"
-#include "llvm/DebugInfo/GSYM/MergedFunctionsInfo.h"
 #include "llvm/DebugInfo/GSYM/ObjectFileTransformer.h"
 #include "llvm/DebugInfo/GSYM/OutputAggregator.h"
 

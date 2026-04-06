@@ -120,7 +120,7 @@ llvm::Error GsymReaderV2::parse() {
 
   // Detect errors in the header and report any that are found. If we make it
   // past this without errors, we know we have a good magic value, a supported
-  // version number, verified address offset size and a valid UUID size.
+  // version number, verified address offset size and string table encoding.
   if (Error Err = Hdr->checkForError())
     return Err;
 
