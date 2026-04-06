@@ -1750,8 +1750,7 @@ inline APFloat maximumnum(const APFloat &A, const APFloat &B) {
 
 /// Implement IEEE 754-2019 exp functions
 LLVM_READONLY
-inline APFloat exp(const APFloat &X,
-                   RoundingMode RM = APFloat::rmNearestTiesToEven);
+APFloat exp(const APFloat &X, RoundingMode RM = APFloat::rmNearestTiesToEven);
 
 inline raw_ostream &operator<<(raw_ostream &OS, const APFloat &V) {
   V.print(OS);
