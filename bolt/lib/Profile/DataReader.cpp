@@ -834,8 +834,7 @@ ErrorOr<StringRef> DataReader::parseString(char EndChar, bool EndNl) {
   size_t StringEnd = 0;
   do {
     StringEnd = ParsingBuf.find_first_of(EndChars, StringEnd);
-    if (StringEnd == StringRef::npos ||
-        (StringEnd == 0 && ParsingBuf[StringEnd] != '\\')) {
+    if (StringEnd == StringRef::npos) {
       reportError("malformed field");
       return make_error_code(llvm::errc::io_error);
     }
