@@ -910,7 +910,7 @@ AArch64PreLegalizerCombinerPass::AArch64PreLegalizerCombinerPass()
     : RuleConfig(
           std::make_unique<AArch64PreLegalizerCombinerImplRuleConfig>()) {
   if (!RuleConfig->parseCommandLineOption())
-    report_fatal_error("Invalid rule identifier");
+    reportFatalUsageError("invalid rule identifier");
 }
 
 AArch64PreLegalizerCombinerPass::AArch64PreLegalizerCombinerPass(
