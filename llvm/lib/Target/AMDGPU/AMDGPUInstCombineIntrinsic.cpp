@@ -1433,7 +1433,7 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     if (AccRange.isFullSet())
       return nullptr;
 
-    // TODO: Can raise upper bound by inspecting first argument.
+    // TODO: Can raise lower bound by inspecting first argument.
     ConstantRange MbcntRange(APInt(32, 0), APInt(32, 32 + 1));
     ConstantRange ComputedRange = AccRange.add(MbcntRange);
     if (ComputedRange.isFullSet())
