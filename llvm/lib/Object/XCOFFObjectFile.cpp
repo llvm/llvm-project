@@ -822,9 +822,8 @@ XCOFFObjectFile::getSectionByType(XCOFF::SectionTypeFlags SectType,
           if (!SectionTypeName.empty())
             return createStringError("multiple '" + SectionTypeName.str() +
                                      "' sections found in XCOFF object");
-          return createStringError(
-              "multiple XCOFF sections have type flag 0x" +
-              Twine::utohexstr(SectType));
+          return createStringError("multiple XCOFF sections have type flag 0x" +
+                                   Twine::utohexstr(SectType));
         }
         Result.p = reinterpret_cast<uintptr_t>(&Sec);
       }
