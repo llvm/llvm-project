@@ -2492,7 +2492,7 @@ bool PluginManager::SetInstrumentationRuntimePluginEnabled(llvm::StringRef name,
   if (!GetInstrumentationRuntimeInstances().SetInstanceEnabled(name, enable))
     return false;
 
-  // Find the `InstrumentationRuntimeType` from the plugin name
+  // Find the `InstrumentationRuntimeType` from the plugin name.
   auto type_cb = GetInstrumentationRuntimeInstances().GetTypeCallbackForName(
       name, /*enabled_only=*/false);
   if (!type_cb)
