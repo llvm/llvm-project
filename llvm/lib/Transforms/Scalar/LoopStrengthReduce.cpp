@@ -1371,12 +1371,11 @@ static unsigned getSetupCost(const SCEV *Reg, unsigned Depth,
   if (isa<SCEVUnknown>(Reg))
     return 1;
   if (const auto *C = dyn_cast<SCEVConstant>(Reg)) {
-    if (C->getValue()->isZero()) {
-      if (TTI.getIntImmCost(C->getAPInt(), C->getType(),
-                            TargetTransformInfo::TCK_RecipThroughput) ==
-          TargetTransformInfo::TCC_Free)
-        return 0;
-    }
+    if (C->getValue()->isZero() &&
+        (TTI.getIntImmCost(C->getAPInt(), C->getType(),
+                           TargetTransformInfo::TCK_RecipThroughput) ==
+         TargetTransformInfo::TCC_Free))
+      return 0;
     return 1;
   }
   if (Depth == 0)
