@@ -12,6 +12,7 @@
 #include "Symbols.h"
 #include "SyntheticSections.h"
 #include "Target.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/Support/ELFAttributes.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/RISCVAttributeParser.h"
@@ -890,10 +891,52 @@ void elf::initSymbolAnchors(Ctx &ctx) {
   }
 }
 
+struct RISCVRelaxCapability {
+  bool rvc = false; // C or Zca: enables c.j / c.jal relaxation
+  bool valid = false;
+};
+
+class RISCVRelaxCapabilityManager {
+  // Maps ISA string (after "$x" prefix) to its computed capabilities.
+  StringMap<RISCVRelaxCapability> cache;
+
+public:
+  RISCVRelaxCapability get(Ctx &ctx, const InputSection &sec,
+                           const Relocation &relaxReloc) {
+    const Symbol *sym = relaxReloc.sym;
+    if (sym && sym->getName().size() > 2 && sym->getName().starts_with("$x")) {
+      StringRef isaStr = sym->getName().drop_front(2);
+      auto [it, inserted] = cache.try_emplace(isaStr);
+      if (inserted) {
+        if (auto maybeInfo = RISCVISAInfo::parseNormalizedArchString(isaStr)) {
+          it->second = {/*rvc=*/(*maybeInfo)->hasExtension("c") ||
+                            (*maybeInfo)->hasExtension("zca"),
+                        /*valid=*/true};
+        } else {
+          // Warn once per unique unparseable ISA string; the EF_RISCV_RVC
+          // fallback below then handles subsequent lookups.
+          Warn(ctx) << sec.file << ": R_RISCV_RELAX ISA mapping symbol '"
+                    << sym->getName() << "' has an unparseable ISA string: "
+                    << llvm::toString(maybeInfo.takeError())
+                    << "; falling back to EF_RISCV_RVC";
+        }
+      }
+      if (it->second.valid)
+        return it->second;
+    }
+    // Fall back to the file-level EF_RISCV_RV flag.
+    return {/*rvc=*/static_cast<bool>(getEFlags(ctx, sec.file) & EF_RISCV_RVC),
+            /*valid=*/true};
+  }
+};
+
 // Relax R_RISCV_CALL/R_RISCV_CALL_PLT auipc+jalr to c.j, c.jal, or jal.
 static void relaxCall(Ctx &ctx, const InputSection &sec, size_t i, uint64_t loc,
-                      Relocation &r, uint32_t &remove) {
-  const bool rvc = getEFlags(ctx, sec.file) & EF_RISCV_RVC;
+                      Relocation &r, uint32_t &remove,
+                      const Relocation &relaxReloc,
+                      RISCVRelaxCapabilityManager &capMgr) {
+  const RISCVRelaxCapability cap = capMgr.get(ctx, sec, relaxReloc);
+  const bool rvc = cap.rvc;
   const Symbol &sym = *r.sym;
   const uint64_t insnPair = read64le(sec.content().data() + r.offset);
   const uint32_t rd = extractBits(insnPair, 32 + 11, 32 + 7);
@@ -993,7 +1036,8 @@ static void relaxHi20Lo12(Ctx &ctx, const InputSection &sec, size_t i,
   }
 }
 
-static bool relax(Ctx &ctx, int pass, InputSection &sec) {
+static bool relax(Ctx &ctx, int pass, InputSection &sec,
+                  RISCVRelaxCapabilityManager &capMgr) {
   const uint64_t secAddr = sec.getVA();
   const MutableArrayRef<Relocation> relocs = sec.relocs();
   auto &aux = *sec.relaxAux;
@@ -1032,7 +1076,7 @@ static bool relax(Ctx &ctx, int pass, InputSection &sec) {
       // `cur-delta`.
       if (relaxable(relocs, i)) {
         remove = pass < 4 ? 6 : cur - delta;
-        relaxCall(ctx, sec, i, loc, r, remove);
+        relaxCall(ctx, sec, i, loc, r, remove, relocs[i + 1], capMgr);
       }
       break;
     case R_RISCV_TPREL_HI20:
@@ -1108,12 +1152,13 @@ bool RISCV::relaxOnce(int pass) const {
 
   SmallVector<InputSection *, 0> storage;
   bool changed = false;
+  RISCVRelaxCapabilityManager capMgr;
   for (OutputSection *osec : ctx.outputSections) {
     if (!(osec->flags & SHF_EXECINSTR))
       continue;
     for (InputSection *sec : getInputSections(*osec, storage))
       if (sec->relaxAux)
-        changed |= relax(ctx, pass, *sec);
+        changed |= relax(ctx, pass, *sec, capMgr);
   }
   return changed;
 }
