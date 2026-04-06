@@ -228,6 +228,13 @@ void suppress_fwd_only() {
   int *p = reinterpret_cast<int*>(0); // expected-error {{'reinterpret_cast' is unsafe under profile 'test::type_cast'}}
 }
 
+// Suppress on field NSDMI in non-template class: suppression must be
+// effective during late-parsing of the in-class initializer.
+struct FieldSuppressNonTemplate {
+  // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+  [[profiles::suppress(test::type_cast)]] int *p = reinterpret_cast<int*>(0);
+};
+
 // Suppress on field NSDMI in class template: suppression must carry through
 // when the in-class initializer is instantiated.
 template <typename T>
