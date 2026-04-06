@@ -6471,10 +6471,8 @@ cc_library(
     ]),
     hdrs = glob(["include/llvm/Testing/Support/*.h"]),
     copts = llvm_copts,
-    features = ["-layering_check"],
     deps = [
         ":Support",
-        ":config",
         "//third-party/unittest:gmock",
         "//third-party/unittest:gtest",
     ],
