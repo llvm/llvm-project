@@ -158,15 +158,11 @@ void ContainerDataPointerCheck::check(const MatchFinder::MatchResult &Result) {
   ReplacementText += CE->getType()->isPointerType() ? "->" : ".";
   ReplacementText += UseCStr ? "c_str()" : "data()";
 
-  llvm::StringRef Description = UseCStr
-                                    ? "'c_str' should be used for accessing "
-                                      "the data pointer instead of taking "
-                                      "the address of the 0-th element"
-                                    : "'data' should be used for accessing the "
-                                      "data pointer instead of taking "
-                                      "the address of the 0-th element";
   const FixItHint Hint =
       FixItHint::CreateReplacement(ReplacementRange, ReplacementText);
-  diag(UO->getBeginLoc(), Description) << Hint;
+  diag(UO->getBeginLoc(),
+       "'%select{data|c_str}0' should be used for accessing the data pointer "
+       "instead of taking the address of the 0-th element")
+      << UseCStr << Hint;
 }
 } // namespace clang::tidy::readability
