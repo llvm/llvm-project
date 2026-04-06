@@ -14,7 +14,7 @@
 ; metadata and the unroller successfully unrolls the resulting loops, each
 ; unroll remark carries the correct loop-kind qualifier.
 ;
-; Pipeline: loop-vectorize → loop-unroll (with forced unroll count).
+; Pipeline: loop-vectorize -> loop-unroll (with forced unroll count).
 ; Epilogue vectorization is forced to exercise all four loop categories:
 ;
 ;   1. plain loop         – not touched by the vectorizer
@@ -46,7 +46,7 @@ exit:
   ret void
 }
 
-;--- vectorizable_loop: vectorized with epilogue → 3 unrolled sub-loops ------
+;--- vectorizable_loop: vectorized with epilogue -> 3 unrolled sub-loops ------
 
 ; CHECK-DAG: remark: test.cpp:10:1: unrolled vectorized loop by a factor of 2
 ; CHECK-DAG: remark: test.cpp:10:1: unrolled remainder loop by a factor of 2

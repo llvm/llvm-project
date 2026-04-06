@@ -13,7 +13,7 @@
 ; the surviving unroll hints reach WarnMissedTransforms, which emits a
 ; distinct "not unrolled" warning for each loop-kind qualifier.
 ;
-; Pipeline: loop-vectorize → loop-unroll → transform-warning.
+; Pipeline: loop-vectorize -> loop-unroll -> transform-warning.
 ; Epilogue vectorization is forced to exercise all four loop categories:
 ;
 ;   1. plain loop         – not touched by the vectorizer

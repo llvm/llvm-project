@@ -836,17 +836,11 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
   bool IsScalarRemainder =
       getBooleanLoopAttribute(L, "llvm.loop.vectorize.scalar_remainder");
 
-  // Four-way classification:
-  //   vector_body && scalar_remainder →  vectorized remainder loop
-  //   !vector_body && scalar_remainder → scalar remainder after vectorization
-  //   vector_body && !scalar_remainder → main vectorized loop
-  //   neither                          → plain loop
-  std::string LoopKind = "";
+  Twine LoopKind = "";
   if (IsVectorBody)
-    LoopKind += "vectorized ";
+    LoopKind.concat("vectorized ");
   if (IsScalarRemainder)
-    LoopKind += "remainder ";
-  LoopKind += "loop";
+    LoopKind.concat("remainder ");
 
   // Report the unrolling decision.
   if (CompletelyUnroll) {
@@ -854,11 +848,10 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
                       << " with trip count " << ULO.Count << "!\n");
     if (ORE)
       ORE->emit([&]() {
-        OptimizationRemark Diag(DEBUG_TYPE, "FullyUnrolled", L->getStartLoc(),
-                                L->getHeader());
-        Diag << "completely unrolled " << LoopKind << " with ";
-        Diag << NV("UnrollCount", ULO.Count) << " iterations";
-        return Diag;
+        return OptimizationRemark(DEBUG_TYPE, "FullyUnrolled", L->getStartLoc(),
+                                  L->getHeader())
+               << "completely unrolled " << LoopKind.str() << "loop with "
+               << NV("UnrollCount", ULO.Count) << " iterations";
       });
   } else {
     LLVM_DEBUG({
@@ -875,8 +868,8 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
       ORE->emit([&]() {
         OptimizationRemark Diag(DEBUG_TYPE, "PartialUnrolled", L->getStartLoc(),
                                 L->getHeader());
-        Diag << "unrolled " << LoopKind << " by a factor of ";
-        Diag << NV("UnrollCount", ULO.Count);
+        Diag << "unrolled " << LoopKind.str() << "loop by a factor of "
+             << NV("UnrollCount", ULO.Count);
         if (ULO.Runtime)
           Diag << " with run-time trip count"
                << (ULO.UnrollRemainder ? " (remainder unrolled)" : "");
