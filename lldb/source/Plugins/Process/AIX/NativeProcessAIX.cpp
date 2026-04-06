@@ -86,7 +86,7 @@ NativeProcessAIX::Manager::Launch(ProcessLaunchInfo &launch_info,
 
   ProcessInstanceInfo Info;
   if (!Host::GetProcessInfo(pid, Info)) {
-    return llvm::make_error<StringError>("Cannot get process architectrue",
+    return llvm::make_error<StringError>("Cannot get process architecture",
                                          llvm::inconvertibleErrorCode());
   }
 

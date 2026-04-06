@@ -94,7 +94,7 @@ public:
   }
 };
 #endif
-} // namespace
+}
 
 #ifndef _WIN32
 // Watch for signals
@@ -138,8 +138,9 @@ llvm::Error handle_attach(GDBRemoteCommunicationServerLLGS &gdb_server,
   const long int pid = strtol(attach_target.c_str(), &end_p, 10);
 
   // We'll call it a match if the entire argument is consumed.
-  if (end_p && static_cast<size_t>(end_p - attach_target.c_str()) ==
-                   attach_target.size())
+  if (end_p &&
+      static_cast<size_t>(end_p - attach_target.c_str()) ==
+          attach_target.size())
     return handle_attach_to_pid(gdb_server, static_cast<lldb::pid_t>(pid));
   return handle_attach_to_process_name(gdb_server, attach_target);
 }
