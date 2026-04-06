@@ -77,7 +77,8 @@ public:
     Ctx = std::make_unique<LLVMContext>();
     M = getLLVMIR(Filename, *Ctx);
     Tool = std::make_unique<IR2VecTool>(*M);
-    Tool->setVocabulary(Vocab.getVocab());
+    if (auto Err = Tool->setVocabulary(Vocab.getVocab()))
+      throw nb::value_error(toString(std::move(Err)).c_str());
   }
 
   nb::list getFuncNames() {
@@ -257,6 +258,6 @@ NB_MODULE(ir2vec, m) {
       [](const std::string &filename, IR2VecKind mode, PyVocab &vocab) {
         return std::make_unique<PyIR2VecTool>(filename, mode, vocab);
       },
-      nb::arg("filename"), nb::arg("mode"), nb::arg("vocabPath"),
+      nb::arg("filename"), nb::arg("mode"), nb::arg("vocab"),
       nb::rv_policy::take_ownership);
 }

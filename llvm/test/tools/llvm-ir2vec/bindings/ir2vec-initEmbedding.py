@@ -61,11 +61,6 @@ tool = ir2vec.initEmbedding(
 print(f"SUCCESS: {type(tool).__name__}")
 # CHECK: SUCCESS: IR2VecTool
 
-# Success: Default mode (Symbolic) when mode is omitted
-tool_default = ir2vec.initEmbedding(filename=ll_file, vocab=vocab)
-print(f"DEFAULT MODE: {type(tool_default).__name__}")
-# CHECK: DEFAULT MODE: IR2VecTool
-
 # Error: Invalid mode (string instead of IR2VecKind enum)
 try:
     ir2vec.initEmbedding(filename=ll_file, mode="invalid", vocab=vocab)

@@ -105,7 +105,7 @@ public:
   /// vocabulary instance across multiple IR2VecTool instances, which is useful
   /// for generating embeddings for multiple functions without needing to reload
   /// the vocabulary each time.
-  void setVocabulary(std::shared_ptr<Vocabulary> V);
+  Error setVocabulary(std::shared_ptr<Vocabulary> V);
 
   /// Generate triplets for a single function
   /// Returns a TripletResult with:
