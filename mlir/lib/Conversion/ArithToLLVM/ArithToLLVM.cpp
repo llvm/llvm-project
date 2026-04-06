@@ -279,8 +279,8 @@ struct ConvertFOpLowering : public ConvertOpToLLVMPattern<arith::ConvertFOp> {
 
     // Only bf16 <-> f16 conversions are supported. There is currently no other
     // pair of FP types that are valid LLVM types.
-    auto srcType = getElementTypeOrSelf(op.getIn().getType());
-    auto dstType = getElementTypeOrSelf(op.getType());
+    [[maybe_unused]] auto srcType = getElementTypeOrSelf(op.getIn().getType());
+    [[maybe_unused]] auto dstType = getElementTypeOrSelf(op.getType());
     assert((srcType.isBF16() && dstType.isF16()) ||
            (srcType.isF16() && dstType.isBF16()) &&
                "only bf16 <-> f16 conversions are supported");
@@ -364,6 +364,14 @@ LogicalResult IndexCastOpLowering<OpTy, ExtCastTy>::matchAndRewrite(
   unsigned sourceBits = sourceElementType.getIntOrFloatBitWidth();
 
   if (targetBits == sourceBits) {
+    rewriter.replaceOp(op, adaptor.getIn());
+    return success();
+  }
+
+  // Memref index_cast is a no-op at the LLVM level since LLVM uses opaque
+  // pointers and memrefs of different integer/index element types all convert
+  // to the same LLVM struct type.
+  if (isa<MemRefType>(op.getIn().getType())) {
     rewriter.replaceOp(op, adaptor.getIn());
     return success();
   }
@@ -652,7 +660,9 @@ struct ArithToLLVMConversionPass
 namespace {
 /// Implement the interface to convert MemRef to LLVM.
 struct ArithToLLVMDialectInterface : public ConvertToLLVMPatternInterface {
-  using ConvertToLLVMPatternInterface::ConvertToLLVMPatternInterface;
+  ArithToLLVMDialectInterface(Dialect *dialect)
+      : ConvertToLLVMPatternInterface(dialect) {}
+
   void loadDependentDialects(MLIRContext *context) const final {
     context->loadDialect<LLVM::LLVMDialect>();
   }

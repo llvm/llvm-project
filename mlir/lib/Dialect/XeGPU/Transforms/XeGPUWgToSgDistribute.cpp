@@ -492,7 +492,9 @@ struct WgToSgVectorBroadcastOp
     if (!layout || !layout.isForWorkgroup())
       return failure();
 
-    SmallVector<int64_t> sgShape = getSgShapeAndCount(wgShape, layout).first;
+    SmallVector<int64_t> sgShape;
+    int count;
+    std::tie(sgShape, count) = getSgShapeAndCount(wgShape, layout);
     VectorType newResultType =
         VectorType::get(sgShape, resultType.getElementType());
 
@@ -500,11 +502,15 @@ struct WgToSgVectorBroadcastOp
       return failure();
 
     SmallVector<Value> newBroadcastOps;
-    for (auto operand : adaptor.getOperands().front()) {
-      auto newBroadcast = vector::BroadcastOp::create(rewriter, op.getLoc(),
-                                                      newResultType, operand);
+    auto distSource = adaptor.getOperands().front();
+    int numDistributions = count / distSource.size();
+    for (int i = 0; i < numDistributions; ++i) {
+      for (auto operand : distSource) {
+        auto newBroadcast = vector::BroadcastOp::create(rewriter, op.getLoc(),
+                                                        newResultType, operand);
 
-      newBroadcastOps.push_back(newBroadcast.getResult());
+        newBroadcastOps.push_back(newBroadcast.getResult());
+      }
     }
     rewriter.replaceOpWithMultiple(op, {newBroadcastOps});
     return success();
@@ -599,9 +605,6 @@ struct WgToSgConvertLayoutOp
   matchAndRewrite(xegpu::ConvertLayoutOp op, OneToNOpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     Location loc = op.getLoc();
-
-    VectorType resultType = op.getResult().getType();
-    ArrayRef<int64_t> wgShape = resultType.getShape();
     auto inputLayout = op.getInputLayout();
     auto targetLayout = op.getTargetLayout();
 
@@ -610,6 +613,16 @@ struct WgToSgConvertLayoutOp
       return rewriter.notifyMatchFailure(
           op, "Input and target layouts must have subgroup layout");
 
+    Type resultType = op.getResult().getType();
+    if (resultType.isIntOrFloat()) {
+      rewriter.replaceOp(op, op.getSource());
+      assert(!inputLayout.dropSgLayoutAndData() &&
+             !targetLayout.dropSgLayoutAndData() &&
+             "unexpected layout attributes for scalar type");
+      return success();
+    }
+
+    ArrayRef<int64_t> wgShape = cast<VectorType>(resultType).getShape();
     SmallVector<int64_t> inputSgLayout =
         inputLayout.getEffectiveSgLayoutAsInt();
     SmallVector<int64_t> inputSgData = inputLayout.getEffectiveSgDataAsInt();
@@ -809,8 +822,12 @@ struct WgToSgArithConstantOp : public OpConversionPattern<arith::ConstantOp> {
       // Splat: single value for all subgroups
       Attribute singleVal = vecAttr.getSplatValue<Attribute>();
       auto sgAttr = DenseElementsAttr::get(newType, singleVal);
-      auto cstOp = arith::ConstantOp::create(rewriter, loc, newType, sgAttr);
-      rewriter.replaceOp(op, cstOp);
+      SmallVector<Value> newConstOps;
+      for (int i = 0; i < count; ++i) {
+        auto cstOp = arith::ConstantOp::create(rewriter, loc, newType, sgAttr);
+        newConstOps.push_back(cstOp);
+      }
+      rewriter.replaceOpWithMultiple(op, {newConstOps});
       return success();
     } else if (sgShape == wgShape) { // if the entire vector is shared by all
                                      // subgroups, don't distribute
@@ -1233,13 +1250,13 @@ struct WgToSgMultiDimReductionOp
     Location loc = op.getLoc();
 
     VectorType srcType = op.getSourceVectorType();
-    VectorType dstType = dyn_cast<VectorType>(op.getResult().getType());
-    if (!dstType)
-      return failure();
+    Type resultTy = op.getResult().getType();
+    VectorType dstVecType = dyn_cast<VectorType>(resultTy);
+    bool isScalarResult = !dstVecType;
 
     auto originalSrcShape = srcType.getShape();
-    auto originalDstShape = dstType.getShape();
     int srcVecRank = originalSrcShape.size();
+    Type elemTy = srcType.getElementType();
 
     xegpu::DistributeLayoutAttr layout =
         xegpu::getTemporaryLayout(dyn_cast<OpResult>(op.getResult()));
@@ -1258,25 +1275,33 @@ struct WgToSgMultiDimReductionOp
       return rewriter.notifyMatchFailure(
           op, "Reduction should have SliceAttr layout");
 
-    Type elemTy = dstType.getElementType();
-
-    // Step 1: perform local subgroup reductions with ZERO accumulator
+    // Step 1: perform local subgroup reductions with neutral accumulator
     SmallVector<Value> localReductions;
-    SmallVector<int64_t> sgDstShape =
-        getSgShapeAndCount(originalDstShape, layout).first;
     auto sgSrcs = adaptor.getSource();
     auto sgSrcType = dyn_cast<VectorType>(sgSrcs.front().getType());
     SmallVector<int64_t> sgSrcShape(sgSrcType.getShape().begin(),
                                     sgSrcType.getShape().end());
 
-    VectorType newDstType = VectorType::get(sgDstShape, elemTy);
+    // Determine the SG-level destination type.
+    // For scalar results (all dims reduced), the sg result is also scalar.
+    // For vector results, compute the sg destination shape from layout.
+    Type sgDstType;
+    if (dstVecType) {
+      auto originalDstShape = dstVecType.getShape();
+      SmallVector<int64_t> sgDstShape =
+          getSgShapeAndCount(originalDstShape, layout).first;
+      sgDstType = VectorType::get(sgDstShape, elemTy);
+    } else {
+      sgDstType = elemTy;
+    }
+
     for (auto sgSrc : sgSrcs) {
-      // Create ZERO accumulator for local reduction
-      auto neutralLocalAcc = xegpu::createReductionNeutralValue(
-          rewriter, loc, newDstType, op.getKind());
-      // Local reduction with ZERO accumulator
+      // Create neutral accumulator for local reduction
+      Value neutralLocalAcc = xegpu::createReductionNeutralValue(
+          rewriter, loc, sgDstType, op.getKind());
+      // Local reduction with neutral accumulator
       auto localReduce = vector::MultiDimReductionOp::create(
-          rewriter, loc, newDstType, op.getKind(), sgSrc, neutralLocalAcc,
+          rewriter, loc, sgDstType, op.getKind(), sgSrc, neutralLocalAcc,
           reductionDims);
       localReductions.push_back(localReduce.getResult());
     }
@@ -1310,8 +1335,15 @@ struct WgToSgMultiDimReductionOp
     for (int64_t dim : reductionDims)
       slmStoreDataShape[dim] = 1;
     VectorType slmStoreDataType = VectorType::get(slmStoreDataShape, elemTy);
-    Value slmStoreData = vector::ShapeCastOp::create(
-        rewriter, loc, slmStoreDataType, localReductions[0]);
+    Value slmStoreData;
+    if (isScalarResult) {
+      // Scalar result: broadcast scalar to vector<1x...x1> for SLM store
+      slmStoreData = vector::BroadcastOp::create(
+          rewriter, loc, slmStoreDataType, localReductions[0]);
+    } else {
+      slmStoreData = vector::ShapeCastOp::create(
+          rewriter, loc, slmStoreDataType, localReductions[0]);
+    }
 
     SmallVector<int64_t> slmShape(originalSrcShape.begin(),
                                   originalSrcShape.end());
@@ -1393,12 +1425,12 @@ struct WgToSgMultiDimReductionOp
         rewriter, loc, slmLoadType, memDesc.getResult(), slmLoadOffsets,
         /*layout=*/nullptr);
 
-    // Step 6: Perform final reduction with ZERO accumulator
-    auto neutralFinalAcc = xegpu::createReductionNeutralValue(
-        rewriter, loc, newDstType, op.getKind());
+    // Step 6: Perform final reduction with neutral accumulator
+    Value neutralFinalAcc = xegpu::createReductionNeutralValue(
+        rewriter, loc, sgDstType, op.getKind());
 
     auto finalReduce = vector::MultiDimReductionOp::create(
-        rewriter, loc, newDstType, op.getKind(), slmLoadOp.getResult(),
+        rewriter, loc, sgDstType, op.getKind(), slmLoadOp.getResult(),
         neutralFinalAcc, reductionDims);
 
     // Step 7: Add the original accumulator at the end

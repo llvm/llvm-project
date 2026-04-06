@@ -660,7 +660,7 @@ APInt APInt::getSplat(unsigned NewLen, const APInt &V) {
 
 unsigned APInt::countLeadingZerosSlowCase() const {
   unsigned Count = 0;
-  for (int i = getNumWords()-1; i >= 0; --i) {
+  for (int i = getNumWords() - 1; i >= 0; --i) {
     uint64_t V = U.pVal[i];
     if (V == 0)
       Count += APINT_BITS_PER_WORD;
@@ -727,6 +727,16 @@ unsigned APInt::countPopulationSlowCase() const {
   return Count;
 }
 
+bool APInt::isPowerOf2SlowCase() const {
+  unsigned Count = 0;
+  for (unsigned i = 0; i < getNumWords(); ++i) {
+    Count += llvm::popcount(U.pVal[i]);
+    if (Count > 1)
+      return false;
+  }
+  return Count == 1;
+}
+
 bool APInt::intersectsSlowCase(const APInt &RHS) const {
   for (unsigned i = 0, e = getNumWords(); i != e; ++i)
     if ((U.pVal[i] & RHS.U.pVal[i]) != 0)
@@ -766,33 +776,43 @@ APInt APInt::byteSwap() const {
 }
 
 APInt APInt::reverseBits() const {
-  switch (BitWidth) {
-  case 64:
-    return APInt(BitWidth, llvm::reverseBits<uint64_t>(U.VAL));
-  case 32:
-    return APInt(BitWidth, llvm::reverseBits<uint32_t>(U.VAL));
-  case 16:
-    return APInt(BitWidth, llvm::reverseBits<uint16_t>(U.VAL));
-  case 8:
-    return APInt(BitWidth, llvm::reverseBits<uint8_t>(U.VAL));
-  case 0:
-    return *this;
-  default:
-    break;
+  if (isSingleWord()) {
+    switch (BitWidth) {
+    case 64:
+      return APInt(BitWidth, llvm::reverseBits<uint64_t>(U.VAL));
+    case 32:
+      return APInt(BitWidth, llvm::reverseBits<uint32_t>(U.VAL));
+    case 16:
+      return APInt(BitWidth, llvm::reverseBits<uint16_t>(U.VAL));
+    case 8:
+      return APInt(BitWidth, llvm::reverseBits<uint8_t>(U.VAL));
+    case 1: // fallthrough
+    case 0:
+      return *this;
+    default:
+      return APInt(BitWidth,
+                   llvm::reverseBits<uint64_t>(U.VAL) >> (64 - BitWidth));
+    }
   }
 
-  APInt Val(*this);
-  APInt Reversed(BitWidth, 0);
-  unsigned S = BitWidth;
-
-  for (; Val != 0; Val.lshrInPlace(1)) {
-    Reversed <<= 1;
-    Reversed |= Val[0];
-    --S;
+  APInt Result(BitWidth, 0);
+  unsigned NumWords = getNumWords();
+  unsigned ExcessBits = NumWords * APINT_BITS_PER_WORD - BitWidth;
+  if (ExcessBits == 0) {
+    // Fast path. No cross-word shift needed.
+    for (unsigned I = 0; I < NumWords; ++I)
+      Result.U.pVal[I] = llvm::reverseBits<uint64_t>(U.pVal[NumWords - 1 - I]);
+    return Result;
   }
-
-  Reversed <<= S;
-  return Reversed;
+  // Holds reversed bits of the previous (more significant) word.
+  uint64_t PrevRev = llvm::reverseBits<uint64_t>(U.pVal[NumWords - 1]);
+  for (unsigned I = 0; I < NumWords - 1; ++I) {
+    uint64_t CurrRev = llvm::reverseBits<uint64_t>(U.pVal[NumWords - 2 - I]);
+    Result.U.pVal[I] = (PrevRev >> ExcessBits) | (CurrRev << (64 - ExcessBits));
+    PrevRev = CurrRev;
+  }
+  Result.U.pVal[NumWords - 1] = PrevRev >> ExcessBits;
+  return Result;
 }
 
 APInt llvm::APIntOps::GreatestCommonDivisor(APInt A, APInt B) {
@@ -1705,6 +1725,12 @@ APInt APInt::urem(const APInt &RHS) const {
   if (lhsWords == 1)
     // All high words are zero, just use native remainder
     return APInt(BitWidth, U.pVal[0] % RHS.U.pVal[0]);
+  if (RHS.isPowerOf2()) {
+    // X % 2^w ===> X & (2^w - 1)
+    APInt Result(*this);
+    Result.clearBits(RHS.logBase2(), BitWidth);
+    return Result;
+  }
 
   // We have to compute it the hard way. Invoke the Knuth divide algorithm.
   APInt Remainder(BitWidth, 0);
@@ -1737,6 +1763,9 @@ uint64_t APInt::urem(uint64_t RHS) const {
   if (lhsWords == 1)
     // All high words are zero, just use native remainder
     return U.pVal[0] % RHS;
+  if (llvm::isPowerOf2_64(RHS))
+    // X % 2^w ===> X & (2^w - 1)
+    return U.pVal[0] & (RHS - 1);
 
   // We have to compute it the hard way. Invoke the Knuth divide algorithm.
   uint64_t Remainder;

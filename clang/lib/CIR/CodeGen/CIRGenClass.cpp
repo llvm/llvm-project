@@ -185,6 +185,25 @@ struct CallBaseDtor final : EHScopeStack::Cleanup {
   }
 };
 
+/// If the delegating constructor's body throws after the delegated-to
+/// constructor completes, destroy the object (mirrors CGClass.cpp's
+/// CallDelegatingCtorDtor).
+struct CallDelegatingCtorDtor final : EHScopeStack::Cleanup {
+  const CXXDestructorDecl *dtor;
+  Address addr;
+  CXXDtorType type;
+
+  CallDelegatingCtorDtor(const CXXDestructorDecl *dtor, Address addr,
+                         CXXDtorType type)
+      : dtor(dtor), addr(addr), type(type) {}
+
+  void emit(CIRGenFunction &cgf, Flags flags) override {
+    QualType thisTy = dtor->getFunctionObjectParameterType();
+    cgf.emitCXXDestructorCall(dtor, type, /*forVirtualBase=*/false,
+                              /*delegating=*/true, addr, thisTy);
+  }
+};
+
 /// A visitor which checks whether an initializer uses 'this' in a
 /// way which requires the vtable to be properly set.
 struct DynamicThisUseChecker
@@ -1110,9 +1129,10 @@ void CIRGenFunction::emitDelegatingCXXConstructorCall(
 
   const CXXRecordDecl *classDecl = ctor->getParent();
   if (cgm.getLangOpts().Exceptions && !classDecl->hasTrivialDestructor()) {
-    cgm.errorNYI(ctor->getSourceRange(),
-                 "emitDelegatingCXXConstructorCall: exception");
-    return;
+    CXXDtorType dtorType =
+        curGD.getCtorType() == Ctor_Complete ? Dtor_Complete : Dtor_Base;
+    ehStack.pushCleanup<CallDelegatingCtorDtor>(
+        EHCleanup, classDecl->getDestructor(), thisPtr, dtorType);
   }
 }
 
@@ -1286,19 +1306,27 @@ void CIRGenFunction::emitCXXConstructorCall(const clang::CXXConstructorDecl *d,
                                             bool delegating,
                                             AggValueSlot thisAVS,
                                             const clang::CXXConstructExpr *e) {
-  CallArgList args;
   Address thisAddr = thisAVS.getAddress();
   QualType thisType = d->getThisType();
   mlir::Value thisPtr = thisAddr.getPointer();
 
   assert(!cir::MissingFeatures::addressSpace());
 
-  args.add(RValue::get(thisPtr), thisType);
+  // If this is a trivial constructor, just emit what's needed. If this is a
+  // union copy constructor, we must emit a memcpy, because the AST does not
+  // model that copy.
+  if (d->isMemcpyEquivalentSpecialMember(getContext())) {
+    assert(e->getNumArgs() == 1 && "unexpected argcount for trivial ctor");
+    const Expr *arg = e->getArg(0);
+    LValue src = emitLValue(arg);
+    CanQualType destTy = getContext().getCanonicalTagType(d->getParent());
+    LValue dest = makeAddrLValue(thisAddr, destTy);
+    emitAggregateCopy(dest, src, src.getType(), thisAVS.mayOverlap());
+    return;
+  }
 
-  // In LLVM Codegen: If this is a trivial constructor, just emit what's needed.
-  // If this is a union copy constructor, we must emit a memcpy, because the AST
-  // does not model that copy.
-  assert(!cir::MissingFeatures::isMemcpyEquivalentSpecialMember());
+  CallArgList args;
+  args.add(RValue::get(thisPtr), thisType);
 
   const FunctionProtoType *fpt = d->getType()->castAs<FunctionProtoType>();
 
@@ -1324,7 +1352,8 @@ void CIRGenFunction::emitCXXConstructorCall(
   // ctor call into trivial initialization.
   assert(!cir::MissingFeatures::isTrivialCtorOrDtor());
 
-  assert(!cir::MissingFeatures::isMemcpyEquivalentSpecialMember());
+  // Note: memcpy-equivalent special members are handled in the
+  // emitCXXConstructorCall overload that takes a CXXConstructExpr.
 
   bool passPrototypeArgs = true;
 

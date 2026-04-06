@@ -253,10 +253,9 @@ define <16 x i8> @vmaxu_vx_v16i8_unmasked(<16 x i8> %va, i8 %b, i32 zeroext %evl
 define <256 x i8> @vmaxu_vx_v258i8(<256 x i8> %va, i8 %b, <256 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vmaxu_vx_v258i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
-; CHECK-NEXT:    vmv1r.v v24, v0
 ; CHECK-NEXT:    li a3, 128
 ; CHECK-NEXT:    vsetvli zero, a3, e8, m8, ta, ma
+; CHECK-NEXT:    vmv1r.v v24, v0
 ; CHECK-NEXT:    vlm.v v0, (a1)
 ; CHECK-NEXT:    addi a1, a2, -128
 ; CHECK-NEXT:    sltu a4, a2, a1

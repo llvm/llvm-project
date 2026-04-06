@@ -1883,6 +1883,8 @@ def : CompressPat<(QC_E_XORAI GPRNoX0:$rd, simm12_lo:$imm),
 let isCompressOnly = true, Predicates = [HasVendorXqciac, IsRV32] in {
 def : CompressPat<(QC_MULIADD GPRC:$rd, GPRC:$rs1, uimm5:$imm5),
                   (QC_C_MULIADD GPRC:$rd, GPRC:$rs1, uimm5:$imm5)>;
+def : CompressPat<(QC_SHLADD GPRC:$rd, GPRC:$rs1, GPRC:$rd, 4),
+                  (QC_C_MULIADD GPRC:$rd, GPRC:$rs1, 16)>;
 } // isCompressOnly = true, Predicates = [HasVendorXqciac, IsRV32]
 
 let isCompressOnly = true, Predicates = [HasVendorXqciac, HasStdExtZba, IsRV32] in {

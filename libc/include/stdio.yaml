@@ -10,10 +10,12 @@ macros:
   - macro_name: stderr
     macro_value: stderr
 types:
+  - type_name: rsize_t
   - type_name: size_t
   - type_name: off_t
   - type_name: cookie_io_functions_t
   - type_name: FILE
+  - type_name: errno_t
 enums: []
 objects:
   - object_name: stdin

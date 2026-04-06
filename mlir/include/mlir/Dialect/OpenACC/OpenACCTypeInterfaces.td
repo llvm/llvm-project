@@ -356,6 +356,26 @@ def OpenACC_MappableTypeInterface : TypeInterface<"MappableType"> {
     >,
     InterfaceMethod<
       /*description=*/[{
+        Produces a `VariableInfo` for a host variable. This enables passing
+        language-specific metadata (that is not captured in the type system)
+        to recipe code-generation helpers such as `generatePrivateInit`,
+        `generateCopy`, and `generatePrivateDestroy`.
+
+        The `var` is the host variable from which to extract information.
+        Implementations may use `getDefiningOp()` on this value.
+
+        The default implementation returns a null `VariableInfo`.
+      }],
+      /*retTy=*/"::mlir::acc::VariableInfoAttr",
+      /*methodName=*/"genPrivateVariableInfo",
+      /*args=*/(ins "::mlir::TypedValue<::mlir::acc::MappableType>":$var),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return ::mlir::acc::VariableInfoAttr();
+      }]
+    >,
+    InterfaceMethod<
+      /*description=*/[{
         Generates the operations that would be normally placed in a recipe's
         init region. It inserts at the builder's current location.
         It can be used either to directly "inline" the init region
@@ -367,6 +387,10 @@ def OpenACC_MappableTypeInterface : TypeInterface<"MappableType"> {
         slice of the private variable needs allocation.
         The `initVal` can be empty - it is primarily needed for reductions
         to ensure the variable is also initialized with appropriate value.
+
+        The `varInfo` carries language-specific metadata about the original
+        host variable (produced by `genPrivateVariableInfo`). Implementations
+        can `dyn_cast` to their language-specific subclass.
 
         The `needsDestroy` out-parameter is set by implementations to indicate
         that destruction code must be generated after the returned private
@@ -387,6 +411,7 @@ def OpenACC_MappableTypeInterface : TypeInterface<"MappableType"> {
                     "::llvm::StringRef":$varName,
                     "::mlir::ValueRange":$extents,
                     "::mlir::Value":$initVal,
+                    "::mlir::acc::VariableInfoAttr":$varInfo,
                     "bool &":$needsDestroy),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
@@ -395,6 +420,12 @@ def OpenACC_MappableTypeInterface : TypeInterface<"MappableType"> {
     >,
     InterfaceMethod<
       /*description=*/[{
+        Generates copy operations from one mappable variable to another.
+        Typically used to implement firstprivate initialization.
+
+        The `varInfo` carries language-specific metadata about the original
+        host variable (produced by `genPrivateVariableInfo`). Implementations
+        can `dyn_cast` to their language-specific subclass.
       }],
       /*retTy=*/"bool",
       /*methodName=*/"generateCopy",
@@ -402,7 +433,8 @@ def OpenACC_MappableTypeInterface : TypeInterface<"MappableType"> {
                     "::mlir::Location":$loc,
                     "::mlir::TypedValue<::mlir::acc::MappableType>":$from,
                     "::mlir::TypedValue<::mlir::acc::MappableType>":$to,
-                    "::mlir::ValueRange":$bounds),
+                    "::mlir::ValueRange":$bounds,
+                    "::mlir::acc::VariableInfoAttr":$varInfo),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
         return false;
@@ -438,7 +470,11 @@ def OpenACC_MappableTypeInterface : TypeInterface<"MappableType"> {
         this function should be a no-op and return `true`.
 
         The `bounds` must be passed when only a section of the variable was
-        privatized. 
+        privatized.
+
+        The `varInfo` carries language-specific metadata about the original
+        host variable (produced by `genPrivateVariableInfo`). Implementations
+        can `dyn_cast` to their language-specific subclass.
 
         Returns true if destruction was successfully generated or deemed not
         necessary, false otherwise.
@@ -448,7 +484,8 @@ def OpenACC_MappableTypeInterface : TypeInterface<"MappableType"> {
       /*args=*/(ins "::mlir::OpBuilder &":$builder,
                     "::mlir::Location":$loc,
                     "::mlir::Value":$privatized,
-                    "::mlir::ValueRange":$extents),
+                    "::mlir::ValueRange":$extents,
+                    "::mlir::acc::VariableInfoAttr":$varInfo),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
         return true;

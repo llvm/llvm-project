@@ -7,41 +7,51 @@ ll_file = sys.argv[1]
 vocab_path = sys.argv[2]
 
 # Success case
-tool = ir2vec.initEmbedding(filename=ll_file, mode="sym", vocabPath=vocab_path)
+tool = ir2vec.initEmbedding(
+    filename=ll_file, mode=ir2vec.IR2VecKind.Symbolic, vocabPath=vocab_path
+)
 print(f"SUCCESS: {type(tool).__name__}")
 # CHECK: SUCCESS: IR2VecTool
 
 # Error: Invalid mode
 try:
     ir2vec.initEmbedding(filename=ll_file, mode="invalid", vocabPath=vocab_path)
-except ValueError:
+except TypeError:
     print("ERROR: Invalid mode")
 # CHECK: ERROR: Invalid mode
 
 # Error: Empty vocab path
 try:
-    ir2vec.initEmbedding(filename=ll_file, mode="sym", vocabPath="")
+    ir2vec.initEmbedding(
+        filename=ll_file, mode=ir2vec.IR2VecKind.Symbolic, vocabPath=""
+    )
 except ValueError:
     print("ERROR: Empty vocab path")
 # CHECK: ERROR: Empty vocab path
 
 # Error: Invalid file
 try:
-    ir2vec.initEmbedding(filename="/bad.ll", mode="sym", vocabPath=vocab_path)
+    ir2vec.initEmbedding(
+        filename="/bad.ll", mode=ir2vec.IR2VecKind.Symbolic, vocabPath=vocab_path
+    )
 except ValueError:
     print("ERROR: Invalid file")
 # CHECK: ERROR: Invalid file
 
 # Error: Empty filename
 try:
-    ir2vec.initEmbedding(filename="", mode="sym", vocabPath=vocab_path)
+    ir2vec.initEmbedding(
+        filename="", mode=ir2vec.IR2VecKind.Symbolic, vocabPath=vocab_path
+    )
 except ValueError:
     print("ERROR: Empty filename")
 # CHECK: ERROR: Empty filename
 
 # Error: Invalid vocab file
 try:
-    ir2vec.initEmbedding(filename=ll_file, mode="sym", vocabPath="/bad.json")
+    ir2vec.initEmbedding(
+        filename=ll_file, mode=ir2vec.IR2VecKind.Symbolic, vocabPath="/bad.json"
+    )
 except ValueError:
     print("ERROR: Invalid vocab")
 # CHECK: ERROR: Invalid vocab
@@ -54,7 +64,9 @@ with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
     f.write("{ this is not valid json }")
     bad_vocab = f.name
 try:
-    ir2vec.initEmbedding(filename=ll_file, mode="sym", vocabPath=bad_vocab)
+    ir2vec.initEmbedding(
+        filename=ll_file, mode=ir2vec.IR2VecKind.Symbolic, vocabPath=bad_vocab
+    )
 except ValueError:
     print("ERROR: Invalid vocab file")
 finally:

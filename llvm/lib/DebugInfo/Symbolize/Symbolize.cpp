@@ -13,7 +13,6 @@
 #include "llvm/DebugInfo/Symbolize/Symbolize.h"
 
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/ScopeExit.h"
 #include "llvm/DebugInfo/BTF/BTFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/GSYM/GsymContext.h"
@@ -58,14 +57,9 @@ LLVMSymbolizer::getXCOFFSectionAddress(StringRef ModulePath,
                                        XCOFF::SectionTypeFlags SectionTypeFlag,
                                        StringRef SectionTypeName) {
   // Check the cache first.
-  auto &FlagMap = XCOFFSectionBaseCache[ModulePath];
-  auto [It, Inserted] = FlagMap.try_emplace(SectionTypeFlag, uint64_t(0));
-  if (!Inserted)
-    return It->second;
-
-  // On any error below, remove the tentative cache entry so a future call
-  // can retry rather than returning a stale zero.
-  auto Cleanup = llvm::make_scope_exit([&] { FlagMap.erase(It); });
+  auto &Entry = XCOFFSectionBaseCache[ModulePath][SectionTypeFlag];
+  if (Entry != 0)
+    return Entry;
 
   Expected<ObjectFile *> ObjOrErr =
       getOrCreateObject(ModulePath.str(), Opts.DefaultArch);
@@ -86,10 +80,8 @@ LLVMSymbolizer::getXCOFFSectionAddress(StringRef ModulePath,
     return createStringError("no '" + SectionTypeName +
                              "' section found in XCOFF object");
 
-  uint64_t SectionBase = SectionRef(DRI, XCOFFObj).getAddress();
-  It->second = SectionBase;
-  Cleanup.release();
-  return SectionBase;
+  Entry = SectionRef(DRI, XCOFFObj).getAddress();
+  return Entry;
 }
 
 template <typename T>
