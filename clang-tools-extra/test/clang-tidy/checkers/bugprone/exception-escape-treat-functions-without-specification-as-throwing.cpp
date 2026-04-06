@@ -71,6 +71,15 @@ struct S {
   Member m;
 };
 
+template <typename T>
+struct TmplNoexcept {
+  void method() noexcept(noexcept(T())) {}
+};
+
+void instantiate_tmpl_noexcept() {
+  TmplNoexcept<int> t;
+}
+
 void explicit_throw() { throw 1; }
 void calls_explicit_throw() noexcept {
   // CHECK-MESSAGES-ALL: :[[@LINE-1]]:6: warning: an exception may be thrown in function 'calls_explicit_throw' which should not throw exceptions
