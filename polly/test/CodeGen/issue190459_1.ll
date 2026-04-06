@@ -3,6 +3,7 @@
 ; https://github.com/llvm/llvm-project/issues/190459
 ; Avoid a crash due to comparing integers with different widths
 
+; "i1 false" is the result of the comparison with the fixed width
 ; CHECK: br i1 false, label %polly.preload.exec, label %polly.preload.merge
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
