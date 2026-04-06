@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CIRGenBuilder.h"
+#include "CIRGenConstantEmitter.h"
 #include "CIRGenFunction.h"
 #include "CIRGenValue.h"
 #include "mlir/IR/Builders.h"
@@ -303,7 +304,19 @@ public:
                      "AggExprEmitter: VisitSubstNonTypeTemplateParmExpr");
   }
   void VisitConstantExpr(ConstantExpr *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(), "AggExprEmitter: VisitConstantExpr");
+    ensureDest(cgf.getLoc(e->getSourceRange()), e->getType());
+
+    if (mlir::Attribute result = ConstantEmitter(cgf).tryEmitConstantExpr(e)) {
+      mlir::Value resultVal = cgf.getBuilder().getConstant(
+          cgf.getLoc(e->getSourceRange()), mlir::cast<mlir::TypedAttr>(result));
+      LValue destLVal = cgf.makeAddrLValue(dest.getAddress(), e->getType());
+      cgf.emitStoreThroughLValue(RValue::get(resultVal), destLVal);
+      return;
+    }
+
+    // It isn't clear that it is possible to get to here,  but this branch is
+    // present in classic codegen, so we leave it here too.
+    return Visit(e->getSubExpr());
   }
   void VisitMemberExpr(MemberExpr *e) { emitAggLoadOfLValue(e); }
   void VisitUnaryDeref(UnaryOperator *e) { emitAggLoadOfLValue(e); }
