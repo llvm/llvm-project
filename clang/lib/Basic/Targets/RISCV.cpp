@@ -326,7 +326,7 @@ void RISCVTargetInfo::getTargetDefines(const LangOptions &Opts,
   for (llvm::StringRef Ext : UniqueExtensions) {
     if (Ext == "64bit")
       continue;
-    Builder.defineMacro("__riscv_v_intrinsic_" + Twine(Ext));
+    Builder.defineMacro("__riscv_intrinsic_" + Twine(Ext));
   }
 
   // Define macros for intrinsics that are not explicitly listed in
@@ -334,7 +334,7 @@ void RISCVTargetInfo::getTargetDefines(const LangOptions &Opts,
   const char *ImplicitList[] = {"v",      "zve32x", "zve32f",
                                 "zve64x", "zve64f", "zve64d"};
   for (const auto *Ext : ImplicitList)
-    Builder.defineMacro(Twine("__riscv_v_intrinsic_") + Ext);
+    Builder.defineMacro(Twine("__riscv_intrinsic_") + Ext);
 
   // Define macros for scalar RISC-V extensions that have builtins.
   // These indicate toolchain support for scalar intrinsics.
@@ -359,12 +359,12 @@ void RISCVTargetInfo::getTargetDefines(const LangOptions &Opts,
   };
 
   // Vector crypto composite extensions
-  DefineSuperExt("__riscv_v_intrinsic_", "zvkn", {"zvkned", "zvknhb", "zvkb"});
-  DefineSuperExt("__riscv_v_intrinsic_", "zvknc", {"zvkn", "zvbc"});
-  DefineSuperExt("__riscv_v_intrinsic_", "zvkng", {"zvkn", "zvkg"});
-  DefineSuperExt("__riscv_v_intrinsic_", "zvks", {"zvksed", "zvksh", "zvkb"});
-  DefineSuperExt("__riscv_v_intrinsic_", "zvksc", {"zvks", "zvbc"});
-  DefineSuperExt("__riscv_v_intrinsic_", "zvksg", {"zvks", "zvkg"});
+  DefineSuperExt("__riscv_intrinsic_", "zvkn", {"zvkned", "zvknhb", "zvkb"});
+  DefineSuperExt("__riscv_intrinsic_", "zvknc", {"zvkn", "zvbc"});
+  DefineSuperExt("__riscv_intrinsic_", "zvkng", {"zvkn", "zvkg"});
+  DefineSuperExt("__riscv_intrinsic_", "zvks", {"zvksed", "zvksh", "zvkb"});
+  DefineSuperExt("__riscv_intrinsic_", "zvksc", {"zvks", "zvbc"});
+  DefineSuperExt("__riscv_intrinsic_", "zvksg", {"zvks", "zvkg"});
 
   // Scalar crypto composite extensions
   DefineSuperExt("__riscv_intrinsic_", "zkn", {"zbkb", "zbkc", "zbkx", "zkne", "zknd", "zknh"});
