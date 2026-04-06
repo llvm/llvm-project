@@ -23034,6 +23034,15 @@ SDValue X86TargetLowering::LowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const {
   MVT VT = Op.getSimpleValueType();
   MVT SVT = In.getSimpleValueType();
 
+  if (!IsStrict && VT == MVT::f16 &&
+      (In.getOpcode() == ISD::FNEG || In.getOpcode() == ISD::FABS)) {
+    SDValue Inner = In.getOperand(0);
+    if (Inner.getOpcode() == ISD::FP_EXTEND &&
+        Inner.getOperand(0).getValueType() == MVT::f16) {
+      return DAG.getNode(In.getOpcode(), DL, MVT::f16, Inner.getOperand(0));
+    }
+  }
+
   if (SVT == MVT::f128 || (VT == MVT::f16 && SVT == MVT::f80))
     return SDValue();
 
