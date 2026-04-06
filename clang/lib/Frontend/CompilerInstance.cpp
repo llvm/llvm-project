@@ -112,6 +112,17 @@ void CompilerInstance::setTarget(TargetInfo *Value) { Target = Value; }
 void CompilerInstance::setAuxTarget(TargetInfo *Value) { AuxTarget = Value; }
 
 bool CompilerInstance::createTarget() {
+
+  // Validate Vulkan environment for SPIRV. 
+  llvm::Triple Triple(getInvocation().getTargetOpts().Triple);
+  if (Triple.getArch() == llvm::Triple::spirv) {
+    if (Triple.getOS() != llvm::Triple::Vulkan ||
+        Triple.getVulkanVersion() == llvm::VersionTuple(0)) {
+      getDiagnostics().Report(diag::err_spirv_requires_vulkan) << Triple.str();
+      return false;
+    }
+  }
+
   // Create the target instance.
   setTarget(TargetInfo::CreateTargetInfo(getDiagnostics(),
                                          getInvocation().getTargetOpts()));
