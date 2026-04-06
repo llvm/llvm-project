@@ -23,6 +23,7 @@
 #endif
 
 namespace rpc {
+namespace internal {
 
 // Minimal replacement for 'std::vector' that works for trivial types.
 template <typename T> class TempVector {
@@ -49,6 +50,10 @@ public:
 
   T &back() { return data_[current - 1]; }
 
+  T *begin() const { return data_; }
+
+  T *end() const { return data_ + current; }
+
 private:
   void grow() {
     size_t new_capacity = capacity ? capacity * 2 : 1;
@@ -65,8 +70,8 @@ struct TempStorage {
   }
 
   ~TempStorage() {
-    for (size_t i = 0; i < storage.size(); ++i)
-      free(storage[i]);
+    for (char *ptr : storage)
+      free(ptr);
   }
 
   TempVector<char *> storage;
@@ -758,16 +763,17 @@ inline RPCStatus handle_port_impl(Server::Port &port) {
 
   return RPC_SUCCESS;
 }
+} // namespace internal
 
 // Handles any opcode generated from the 'libc' client code.
 inline RPCStatus handle_libc_opcodes(Server::Port &port, uint32_t num_lanes) {
   switch (num_lanes) {
   case 1:
-    return handle_port_impl<1>(port);
+    return internal::handle_port_impl<1>(port);
   case 32:
-    return handle_port_impl<32>(port);
+    return internal::handle_port_impl<32>(port);
   case 64:
-    return handle_port_impl<64>(port);
+    return internal::handle_port_impl<64>(port);
   default:
     return RPC_ERROR;
   }
