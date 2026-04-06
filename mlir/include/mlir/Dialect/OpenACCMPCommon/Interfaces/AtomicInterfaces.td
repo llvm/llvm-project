@@ -459,13 +459,28 @@ def AtomicCompareOpInterface : OpInterface<"AtomicCompareOpInterface"> {
               }
             }
             break;
+          } else if (opName == "fir.cmpc") {
+            foundComparison = true;
+            auto predAttr = op.getAttrOfType<mlir::IntegerAttr>("predicate");
+            if (predAttr) {
+              auto predName = mlir::arith::stringifyCmpFPredicate(
+                  static_cast<mlir::arith::CmpFPredicate>(predAttr.getInt()));
+              if (predName != "oeq") {
+                return $_op.emitError(
+                  "unsupported comparison operator '")
+                  << predName
+                  << "' in atomic compare region for complex type, "
+                     "only 'oeq' is supported";
+              }
+            }
+            break;
           }
         }
 
         if (!foundComparison)
           return $_op.emitError(
             "atomic compare region must contain a comparison operation "
-            "(arith.cmpi or llvm.icmp)");
+            "(arith.cmpi, arith.cmpf, llvm.icmp, llvm.fcmp, or fir.cmpc)");
 
         return mlir::success();
       }]

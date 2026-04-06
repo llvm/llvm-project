@@ -1,5 +1,3 @@
-! REQUIRES: openmp_runtime
-
 ! This test checks lowering of atomic compare constructs.
 ! RUN: bbc %openmp_flags -fopenmp-version=51 -emit-hlfir %s -o - | FileCheck %s
 ! RUN: %flang_fc1 -emit-hlfir %openmp_flags -fopenmp-version=51 %s -o - | FileCheck %s
@@ -42,6 +40,27 @@ end
 ! CHECK:         }
 subroutine atomic_compare_float_eq(x, e, d)
   real :: x, e, d
+  !$omp atomic compare
+  if (x .eq. e) x = d
+end
+
+! CHECK-LABEL: func.func @_QPatomic_compare_complex_eq(
+! CHECK-SAME:    %[[X:.*]]: !fir.ref<complex<f32>> {fir.bindc_name = "x"},
+! CHECK-SAME:    %[[E:.*]]: !fir.ref<complex<f32>> {fir.bindc_name = "e"},
+! CHECK-SAME:    %[[D:.*]]: !fir.ref<complex<f32>> {fir.bindc_name = "d"})
+! CHECK:         %[[D_DECL:.*]]:2 = hlfir.declare %[[D]] {{.*}}
+! CHECK:         %[[E_DECL:.*]]:2 = hlfir.declare %[[E]] {{.*}}
+! CHECK:         %[[X_DECL:.*]]:2 = hlfir.declare %[[X]] {{.*}}
+! CHECK:         %[[EVAL:.*]] = fir.load %[[E_DECL]]#0 : !fir.ref<complex<f32>>
+! CHECK:         omp.atomic.compare memory_order(relaxed) %[[X_DECL]]#0 : !fir.ref<complex<f32>> {
+! CHECK:         ^bb0(%[[XVAL:.*]]: complex<f32>):
+! CHECK:           %[[CMP:.*]] = fir.cmpc "oeq", %[[XVAL]], %[[EVAL]] {fastmath = #arith.fastmath<contract>} : complex<f32>
+! CHECK:           %[[DVAL:.*]] = fir.load %[[D_DECL]]#0 : !fir.ref<complex<f32>>
+! CHECK:           %[[SEL:.*]] = arith.select %[[CMP]], %[[DVAL]], %[[XVAL]] : complex<f32>
+! CHECK:           omp.yield(%[[SEL]] : complex<f32>)
+! CHECK:         }
+subroutine atomic_compare_complex_eq(x, e, d)
+  complex :: x, e, d
   !$omp atomic compare
   if (x .eq. e) x = d
 end

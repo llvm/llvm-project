@@ -614,8 +614,13 @@ void Fortran::lower::omp::lowerAtomic(
       auto pred = lower::translateFloatRelational(relOpr);
       cmpResult = mlir::arith::CmpFOp::create(builder, loc, pred, blockArg,
                                               expectedVal);
+    } else if (fir::isa_complex(elemTypeOfX)) {
+      auto pred = lower::translateFloatRelational(relOpr);
+      cmpResult =
+          fir::CmpcOp::create(builder, loc, pred, blockArg, expectedVal);
     } else {
-      llvm_unreachable("unsupported type for atomic compare");
+      mlir::emitError(loc, "unsupported type for atomic compare");
+      return;
     }
 
     // Check for presence of Assignment (x = d) and wether it is being invoked
