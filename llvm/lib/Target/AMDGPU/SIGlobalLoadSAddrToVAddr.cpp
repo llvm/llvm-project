@@ -5,11 +5,12 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-/// \file Convert global SADDR memory ops to VADDR when the SGPR address is
-/// overwritten soon after, avoiding s_wait_xcnt hazards from replay of loads
-/// that share a scratch SGPR pair. Runs after SGPR RA and SILowerSGPRSpills.
-//
+/// \file
+/// Convert FLAT global SADDR memory ops to VADDR when the physical SGPR
+/// address pair is redefined later in the block. This avoids s_wait_xcnt
+/// stalls from XNACK replay of loads that share a reused SGPR pair.
+///
+/// Runs after SGPR RA / SILowerSGPRSpills and before VGPR RA.
 //===----------------------------------------------------------------------===//
 
 #include "SIGlobalLoadSAddrToVAddr.h"
@@ -18,6 +19,7 @@
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIInstrInfo.h"
 #include "SIRegisterInfo.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/InitializePasses.h"
@@ -27,14 +29,18 @@ using namespace llvm;
 
 #define DEBUG_TYPE "si-global-load-saddr-to-vaddr"
 
-static cl::opt<unsigned> SAddrToVAddrWindow(
-    "amdgpu-global-load-saddr-to-vaddr-window",
-    cl::desc("Instruction window to scan for saddr redefinition"), cl::init(4),
-    cl::Hidden);
+STATISTIC(NumConverted, "Number of SADDR loads converted to VADDR");
 
-static cl::opt<unsigned> SAddrToVAddrKillGroupSize(
-    "amdgpu-global-load-saddr-to-vaddr-kill-group-size",
-    cl::desc("Max converted loads per KILL group"), cl::init(16), cl::Hidden);
+static cl::opt<unsigned> SAddrRedefWindow(
+    "amdgpu-saddr-redef-window",
+    cl::desc("Max non-meta instructions to scan for saddr redef "
+             "(0 = scan to end of block)"),
+    cl::init(0), cl::Hidden);
+
+static cl::opt<unsigned> AddrLivenessGroupSize(
+    "amdgpu-saddr-vaddr-liveness-group",
+    cl::desc("Max converted VADDR addresses kept simultaneously live"),
+    cl::init(16), cl::Hidden);
 
 namespace {
 
@@ -43,9 +49,9 @@ class SIGlobalLoadSAddrToVAddr {
   const SIRegisterInfo *TRI = nullptr;
   MachineRegisterInfo *MRI = nullptr;
 
+  bool sAddrRedefinedAfter(MachineInstr &MI, Register SAddr);
   bool convertToVAddr(MachineInstr &MI, MachineBasicBlock &MBB,
                       Register &NewAddrReg);
-  bool isSAddrRedefinedInWindow(MachineInstr &MI, Register SAddr);
   bool processMBB(MachineBasicBlock &MBB);
 
 public:
@@ -55,14 +61,12 @@ public:
 class SIGlobalLoadSAddrToVAddrLegacy : public MachineFunctionPass {
 public:
   static char ID;
-
   SIGlobalLoadSAddrToVAddrLegacy() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override {
     if (!MF.getSubtarget<GCNSubtarget>().hasWaitXcnt())
       return false;
-    SIGlobalLoadSAddrToVAddr Impl;
-    return Impl.run(MF);
+    return SIGlobalLoadSAddrToVAddr().run(MF);
   }
 
   StringRef getPassName() const override {
@@ -90,49 +94,41 @@ SIGlobalLoadSAddrToVAddrPass::run(MachineFunction &MF,
                                   MachineFunctionAnalysisManager &MFAM) {
   if (!MF.getSubtarget<GCNSubtarget>().hasWaitXcnt())
     return PreservedAnalyses::all();
-  SIGlobalLoadSAddrToVAddr Impl;
-  if (!Impl.run(MF))
+  if (!SIGlobalLoadSAddrToVAddr().run(MF))
     return PreservedAnalyses::all();
   auto PA = getMachineFunctionPassPreservedAnalyses();
   PA.preserveSet<CFGAnalyses>();
   return PA;
 }
 
-bool SIGlobalLoadSAddrToVAddr::isSAddrRedefinedInWindow(MachineInstr &MI,
-                                                        Register SAddr) {
-  unsigned NumScanned = 0;
-  auto I = std::next(MI.getIterator());
-  auto E = MI.getParent()->end();
-  for (; I != E; ++I) {
-    if (I->isMetaInstruction())
-      continue;
-
-    ++NumScanned;
-
-    for (const MachineOperand &MO : I->operands()) {
-      if (MO.isReg() && MO.isDef() && MO.getReg().isPhysical() &&
-          TRI->regsOverlap(MO.getReg(), SAddr))
-        return true;
-    }
-
-    if (NumScanned >= SAddrToVAddrWindow)
-      return false;
-  }
-  return false;
-}
-
-static bool isGlobalWithPhysSAddr(const MachineInstr &MI,
-                                  const SIInstrInfo &TII,
-                                  const SIRegisterInfo &TRI,
-                                  const MachineRegisterInfo &MRI,
-                                  int &SAddrIdx) {
-  unsigned Opc = MI.getOpcode();
-  SAddrIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::saddr);
+/// Return true if \p MI is a FLAT global op with a physical SGPR saddr.
+static bool isEligible(const MachineInstr &MI, const SIInstrInfo &TII,
+                       const SIRegisterInfo &TRI,
+                       const MachineRegisterInfo &MRI, int &SAddrIdx) {
+  SAddrIdx = AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::saddr);
   if (SAddrIdx < 0 || !TII.isFLATGlobal(MI))
     return false;
   const MachineOperand &SAddr = MI.getOperand(SAddrIdx);
   return SAddr.isReg() && SAddr.getReg().isPhysical() &&
          TRI.isSGPRReg(MRI, SAddr.getReg());
+}
+
+bool SIGlobalLoadSAddrToVAddr::sAddrRedefinedAfter(MachineInstr &MI,
+                                                   Register SAddr) {
+  unsigned NumScanned = 0;
+  MachineBasicBlock::iterator I = std::next(MI.getIterator());
+  MachineBasicBlock::iterator E = MI.getParent()->end();
+  for (; I != E; ++I) {
+    for (const MachineOperand &MO : I->operands())
+      if (MO.isReg() && MO.isDef() && MO.getReg().isPhysical() &&
+          TRI->regsOverlap(MO.getReg(), SAddr))
+        return true;
+
+    if (!I->isMetaInstruction() && SAddrRedefWindow > 0 &&
+        ++NumScanned >= SAddrRedefWindow)
+      return false;
+  }
+  return false;
 }
 
 bool SIGlobalLoadSAddrToVAddr::convertToVAddr(MachineInstr &MI,
@@ -142,9 +138,12 @@ bool SIGlobalLoadSAddrToVAddr::convertToVAddr(MachineInstr &MI,
   int NewOpc = AMDGPU::getGlobalVaddrOp(Opc);
   if (NewOpc < 0)
     return false;
+  if (AMDGPU::getNamedOperandIdx(NewOpc, AMDGPU::OpName::vaddr) < 0)
+    return false;
 
-  int NewVAddrIdx = AMDGPU::getNamedOperandIdx(NewOpc, AMDGPU::OpName::vaddr);
-  if (NewVAddrIdx < 0)
+  // VADDR form does not support scale_offset.
+  int CPolIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::cpol);
+  if (CPolIdx >= 0 && (MI.getOperand(CPolIdx).getImm() & AMDGPU::CPol::SCAL))
     return false;
 
   int OldSAddrIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::saddr);
@@ -159,12 +158,10 @@ bool SIGlobalLoadSAddrToVAddr::convertToVAddr(MachineInstr &MI,
 
   bool VAddrIsZero = false;
   if (OldVAddrReg.isVirtual()) {
-    MachineInstr *VAddrDef = MRI->getVRegDef(OldVAddrReg);
-    if (VAddrDef &&
-        (VAddrDef->isImplicitDef() ||
-         (VAddrDef->isMoveImmediate() && VAddrDef->getOperand(1).isImm() &&
-          VAddrDef->getOperand(1).getImm() == 0)))
-      VAddrIsZero = true;
+    if (auto *Def = MRI->getVRegDef(OldVAddrReg))
+      VAddrIsZero = Def->isImplicitDef() ||
+                    (Def->isMoveImmediate() && Def->getOperand(1).isImm() &&
+                     Def->getOperand(1).getImm() == 0);
   }
 
   Register NewVAddr = MRI->createVirtualRegister(TRI->getVGPR64Class());
@@ -172,29 +169,24 @@ bool SIGlobalLoadSAddrToVAddr::convertToVAddr(MachineInstr &MI,
   if (VAddrIsZero) {
     BuildMI(MBB, MI, DL, TII->get(AMDGPU::COPY), NewVAddr).addReg(SAddrReg);
   } else {
-    assert(OldVAddrReg.isVirtual() &&
-           TRI->getRegSizeInBits(*MRI->getRegClass(OldVAddrReg)) == 32 &&
-           "Non-zero vaddr path expects a 32-bit VGPR operand");
+    MCRegister Lo = TRI->getSubReg(SAddrReg, AMDGPU::sub0);
+    MCRegister Hi = TRI->getSubReg(SAddrReg, AMDGPU::sub1);
 
-    MCRegister SAddrLoPhys = TRI->getSubReg(SAddrReg, AMDGPU::sub0);
-    MCRegister SAddrHiPhys = TRI->getSubReg(SAddrReg, AMDGPU::sub1);
-
-    Register VAddrHiExt = MRI->createVirtualRegister(&AMDGPU::VGPR_32RegClass);
-    BuildMI(MBB, MI, DL, TII->get(AMDGPU::V_ASHRREV_I32_e64), VAddrHiExt)
+    Register HiExt = MRI->createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+    BuildMI(MBB, MI, DL, TII->get(AMDGPU::V_ASHRREV_I32_e64), HiExt)
         .addImm(31)
         .addReg(OldVAddrReg);
 
-    Register SAddrLo = MRI->createVirtualRegister(&AMDGPU::VGPR_32RegClass);
-    Register SAddrHi = MRI->createVirtualRegister(&AMDGPU::VGPR_32RegClass);
-    BuildMI(MBB, MI, DL, TII->get(AMDGPU::COPY), SAddrLo).addReg(SAddrLoPhys);
-    BuildMI(MBB, MI, DL, TII->get(AMDGPU::COPY), SAddrHi).addReg(SAddrHiPhys);
+    Register LoV = MRI->createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+    Register HiV = MRI->createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+    BuildMI(MBB, MI, DL, TII->get(AMDGPU::COPY), LoV).addReg(Lo);
+    BuildMI(MBB, MI, DL, TII->get(AMDGPU::COPY), HiV).addReg(Hi);
 
     MCRegister VCC = TRI->getVCC();
-
     auto AddLo =
         BuildMI(MBB, MI, DL, TII->get(AMDGPU::V_ADD_CO_U32_e64), NewVAddr)
             .addDef(VCC)
-            .addReg(SAddrLo)
+            .addReg(LoV)
             .addReg(OldVAddrReg)
             .addImm(0);
     AddLo->getOperand(0).setSubReg(AMDGPU::sub0);
@@ -203,8 +195,8 @@ bool SIGlobalLoadSAddrToVAddr::convertToVAddr(MachineInstr &MI,
     auto AddHi =
         BuildMI(MBB, MI, DL, TII->get(AMDGPU::V_ADDC_U32_e64), NewVAddr)
             .addDef(VCC, RegState::Dead)
-            .addReg(SAddrHi)
-            .addReg(VAddrHiExt)
+            .addReg(HiV)
+            .addReg(HiExt)
             .addReg(VCC, RegState::Kill)
             .addImm(0);
     AddHi->getOperand(0).setSubReg(AMDGPU::sub1);
@@ -214,8 +206,9 @@ bool SIGlobalLoadSAddrToVAddr::convertToVAddr(MachineInstr &MI,
   VAddr.setReg(NewVAddr);
   MI.removeOperand(OldSAddrIdx);
 
-  LLVM_DEBUG(dbgs() << "  Converted to VADDR: " << MI);
+  LLVM_DEBUG(dbgs() << "  Converted: " << MI);
   NewAddrReg = NewVAddr;
+  ++NumConverted;
   return true;
 }
 
@@ -224,12 +217,11 @@ bool SIGlobalLoadSAddrToVAddr::processMBB(MachineBasicBlock &MBB) {
   MachineInstr *GroupLast = nullptr;
   bool Changed = false;
 
-  // KILL extends address VGPR liveness to prevent RA reuse within a group.
   auto FlushGroup = [&]() {
     if (GroupLast && GroupRegs.size() > 1) {
-      auto InsertPt = std::next(GroupLast->getIterator());
-      auto KillMI = BuildMI(MBB, InsertPt, GroupLast->getDebugLoc(),
-                            TII->get(TargetOpcode::KILL));
+      auto KillMI =
+          BuildMI(MBB, std::next(GroupLast->getIterator()),
+                  GroupLast->getDebugLoc(), TII->get(TargetOpcode::KILL));
       for (Register R : GroupRegs)
         KillMI.addReg(R, RegState::Kill);
     }
@@ -239,20 +231,19 @@ bool SIGlobalLoadSAddrToVAddr::processMBB(MachineBasicBlock &MBB) {
 
   for (MachineInstr &MI : MBB) {
     int SAddrIdx;
-    if (!isGlobalWithPhysSAddr(MI, *TII, *TRI, *MRI, SAddrIdx))
+    if (!isEligible(MI, *TII, *TRI, *MRI, SAddrIdx))
       continue;
-    if (!isSAddrRedefinedInWindow(MI, MI.getOperand(SAddrIdx).getReg()))
+    if (!sAddrRedefinedAfter(MI, MI.getOperand(SAddrIdx).getReg()))
       continue;
 
-    LLVM_DEBUG(dbgs() << "  SAddr redef in window: " << MI);
     Register NewAddr;
     if (convertToVAddr(MI, MBB, NewAddr)) {
       GroupRegs.push_back(NewAddr);
       GroupLast = &MI;
       Changed = true;
 
-      if (SAddrToVAddrKillGroupSize > 0 &&
-          GroupRegs.size() >= SAddrToVAddrKillGroupSize)
+      if (AddrLivenessGroupSize > 0 &&
+          GroupRegs.size() >= AddrLivenessGroupSize)
         FlushGroup();
     }
   }
@@ -270,6 +261,5 @@ bool SIGlobalLoadSAddrToVAddr::run(MachineFunction &MF) {
   bool Changed = false;
   for (MachineBasicBlock &MBB : MF)
     Changed |= processMBB(MBB);
-
   return Changed;
 }
