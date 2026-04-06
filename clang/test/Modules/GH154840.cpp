@@ -1,7 +1,3 @@
-/// Due to module bypass workaround for non-darwin platforms, relative and absolute path do not match after bypass.
-/// See: https://github.com/llvm/llvm-project/issues/130795
-// XFAIL: !system-darwin
-
 // RUN: rm -rf %t
 // RUN: mkdir -p %t
 // RUN: split-file %s %t
