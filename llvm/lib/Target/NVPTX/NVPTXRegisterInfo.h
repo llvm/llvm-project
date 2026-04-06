@@ -23,7 +23,7 @@
 namespace llvm {
 class NVPTXRegisterInfo : public NVPTXGenRegisterInfo {
 private:
-  // Hold Strings that can be free'd all together with NVPTXRegisterInfo
+  // Hold Strings that can be freed all together with NVPTXRegisterInfo
   BumpPtrAllocator StrAlloc;
   UniqueStringSaver StrPool;
   // State for debug register mapping that can be mutated even through a const

@@ -46,7 +46,7 @@
 #include <string>
 #include <vector>
 
-// The ptx syntax and format is very different from that usually seem in a .s
+// The ptx syntax and format is very different from that usually seen in a .s
 // file,
 // therefore we are not able to use the MCAsmStreamer interface here.
 //
