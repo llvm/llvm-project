@@ -5087,11 +5087,13 @@ bool Parser::ParseNonCommaBalancedToken(std::string &Spelling) {
         ConsumeAnyToken();
       }
     }
-    if (Tok.is(Close)) {
-      Spelling += " ";
-      Spelling += PP.getSpelling(Tok);
-      ConsumeAnyToken();
+    if (Tok.is(tok::eof)) {
+      Diag(Tok, diag::err_expected) << Close;
+      return true;
     }
+    Spelling += " ";
+    Spelling += PP.getSpelling(Tok);
+    ConsumeAnyToken();
     return false;
   }
 
