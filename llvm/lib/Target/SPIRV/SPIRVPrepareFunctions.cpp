@@ -604,8 +604,7 @@ static std::string fixMultiOutputConstraintString(StringRef Constraints) {
   SplitString(Constraints, Tmp, ",");
   std::string SafeConstraints("=r,");
   for (unsigned I = 0u; I != Tmp.size() - 1; ++I) {
-    if (Tmp[I].starts_with('=') &&
-        (Tmp[I][1] == '&' || isalnum(Tmp[I][1])))
+    if (Tmp[I].starts_with('=') && (Tmp[I][1] == '&' || isalnum(Tmp[I][1])))
       continue;
     SafeConstraints.append(Tmp[I]).append({','});
   }
