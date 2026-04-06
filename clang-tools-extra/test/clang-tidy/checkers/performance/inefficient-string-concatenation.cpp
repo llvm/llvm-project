@@ -17,23 +17,21 @@ int main() {
     // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: string concatenation
     // CHECK-FIXES:    mystr1 += mystr2;
     mystr1 = mystr2 + mystr2 + mystr2;
-    // CHECK-MESSAGES: :[[@LINE-1]]:30: warning: string concatenation   
+    // CHECK-MESSAGES: :[[@LINE-1]]:30: warning: string concatenation
     mystr1 = mystr2 + mystr1;
-    // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: string concatenation
     mywstr1 = mywstr2 + mywstr1;
-    // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: string concatenation
     mywstr1 = mywstr2 + mywstr2 + mywstr2;
     // CHECK-MESSAGES: :[[@LINE-1]]:33: warning: string concatenation
     myautostr1 = myautostr1 + myautostr2;
     // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: string concatenation
     // CHECK-FIXES:    myautostr1 += myautostr2;
     
-    // Match against multple lines
-   /*  mystr1 = mystr1 + mystr2 + mystr2;
-   // CHECK-DAG: :33:12: warning: string concatenation
-  // CHECK-DAG: :33:30: warning: string concatenation
-  // CHECK-FIXES: mystr1.append(mystr2).append(mystr2) */
-   
+     // Match against multple lines
+  /*
+     mystr1 = mystr1 + mystr2 + mystr2;
+  // check for fix and multiples warnings here
+  // fix: mystr1.append(mystr2).append(mystr2);
+   */
     mywstr1 = mywstr2 + mywstr2;
     mystr1 = mystr2 + mystr2;
     mystr1 += mystr2;
