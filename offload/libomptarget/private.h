@@ -33,7 +33,8 @@ extern int target_replay(ident_t *Loc, DeviceTy &Device, void *HostPtr,
                          void *DeviceMemory, int64_t DeviceMemorySize,
                          void **TgtArgs, ptrdiff_t *TgtOffsets, int32_t NumArgs,
                          int32_t NumTeams, int32_t ThreadLimit,
-                         uint64_t LoopTripCount, AsyncInfoTy &AsyncInfo);
+                         uint32_t SharedMemorySize, uint64_t LoopTripCount,
+                         AsyncInfoTy &AsyncInfo);
 
 extern void handleTargetOutcome(bool Success, ident_t *Loc);
 

@@ -63,12 +63,12 @@ RecordReplayTy::registerInstance(StringRef KernelName, uint32_t NumTeams,
 void *RecordReplayTy::allocate(uint64_t Size) {
   assert(StartAddr && "Expected memory has been pre-allocated");
   constexpr int Alignment = 16;
-  // Assumes alignment is a power of 2.
+  // Assume alignment is a power of 2.
   int64_t AlignedSize = (Size + (Alignment - 1)) & (~(Alignment - 1));
+
   std::lock_guard<std::mutex> LG(AllocationLock);
   void *Alloc = (char *)StartAddr + CurrentSize;
   CurrentSize += AlignedSize;
-  ODBG(OLDT_Alloc) << "Memory Allocator return " << Alloc;
   return Alloc;
 }
 
@@ -87,9 +87,7 @@ Expected<RecordReplayTy::HandleTy> RecordReplayTy::recordPrologue(
   if (isReplaying() || !First)
     return Handle;
 
-  if (auto Err =
-          recordDescriptorImpl(Kernel, Instance, KernelArgs, LaunchParams,
-                               NumTeams, NumThreads, SharedMemorySize))
+  if (auto Err = recordDescImpl(Kernel, Instance, KernelArgs, LaunchParams))
     return Err;
 
   if (auto Err = recordPrologueImpl(Kernel, Instance, KernelArgs, LaunchParams))
@@ -129,17 +127,16 @@ Error NativeRecordReplayTy::recordEpilogueImpl(const GenericKernelTy &Kernel,
   return recordSnapshot(SnapshotFilename);
 }
 
-Error NativeRecordReplayTy::recordDescriptorImpl(
+Error NativeRecordReplayTy::recordDescImpl(
     const GenericKernelTy &Kernel, const InstanceTy &Instance,
-    const KernelArgsTy &KernelArgs, const KernelLaunchParamsTy &LaunchParams,
-    uint32_t NumTeams[3], uint32_t NumThreads[3], uint32_t SharedMemorySize) {
+    const KernelArgsTy &KernelArgs, const KernelLaunchParamsTy &LaunchParams) {
   json::Object JsonKernelInfo;
   JsonKernelInfo["Name"] = Kernel.getName();
   JsonKernelInfo["NumArgs"] = KernelArgs.NumArgs;
-  JsonKernelInfo["NumTeamsClause"] = NumTeams[0];
-  JsonKernelInfo["ThreadLimitClause"] = NumThreads[0];
+  JsonKernelInfo["NumTeamsClause"] = Instance.NumTeams;
+  JsonKernelInfo["ThreadLimitClause"] = Instance.NumThreads;
+  JsonKernelInfo["SharedMemorySize"] = Instance.SharedMemorySize;
   JsonKernelInfo["LoopTripCount"] = KernelArgs.Tripcount;
-  JsonKernelInfo["DeviceMemorySize"] = CurrentSize;
   JsonKernelInfo["DeviceId"] = Device.getDeviceId();
   JsonKernelInfo["VAllocAddr"] = (intptr_t)StartAddr;
   JsonKernelInfo["VAllocSize"] = TotalSize;
@@ -165,17 +162,22 @@ Error NativeRecordReplayTy::recordDescriptorImpl(
 }
 
 Error NativeRecordReplayTy::recordSnapshot(StringRef Filename) {
+  // Another thread may be allocating memory.
+  AllocationLock.lock();
+  uint64_t RecordSize = CurrentSize;
+  AllocationLock.unlock();
+
   ErrorOr<std::unique_ptr<WritableMemoryBuffer>> DeviceMemoryMB =
-      WritableMemoryBuffer::getNewUninitMemBuffer(CurrentSize);
+      WritableMemoryBuffer::getNewUninitMemBuffer(RecordSize);
   if (!DeviceMemoryMB)
     return Plugin::error(ErrorCode::UNKNOWN,
                          "creating MemoryBuffer for device memory");
 
   if (auto Err = Device.dataRetrieve(DeviceMemoryMB.get()->getBufferStart(),
-                                     StartAddr, CurrentSize, nullptr))
+                                     StartAddr, RecordSize, nullptr))
     return Err;
 
-  StringRef DeviceMemory(DeviceMemoryMB.get()->getBufferStart(), CurrentSize);
+  StringRef DeviceMemory(DeviceMemoryMB.get()->getBufferStart(), RecordSize);
   std::error_code EC;
   raw_fd_ostream OS(Filename, EC);
   if (EC)

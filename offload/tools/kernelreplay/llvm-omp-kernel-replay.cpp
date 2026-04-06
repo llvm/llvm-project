@@ -42,11 +42,11 @@ static cl::opt<bool> SaveOutputOpt(
     cl::desc("Save the device memory output of the replayed kernel execution."),
     cl::init(false), cl::cat(ReplayOptions));
 
-static cl::opt<unsigned> NumTeamsOpt("num-teams",
+static cl::opt<uint32_t> NumTeamsOpt("num-teams",
                                      cl::desc("Set the number of teams."),
                                      cl::init(0), cl::cat(ReplayOptions));
 
-static cl::opt<unsigned> NumThreadsOpt("num-threads",
+static cl::opt<uint32_t> NumThreadsOpt("num-threads",
                                        cl::desc("Set the number of threads."),
                                        cl::init(0), cl::cat(ReplayOptions));
 
@@ -69,11 +69,13 @@ int main(int argc, char **argv) {
 
   auto NumTeamsJson =
       JsonKernelInfo->getAsObject()->getInteger("NumTeamsClause");
-  unsigned NumTeams = (NumTeamsOpt > 0 ? NumTeamsOpt : NumTeamsJson.value());
+  uint32_t NumTeams = (NumTeamsOpt > 0 ? NumTeamsOpt : NumTeamsJson.value());
   auto NumThreadsJson =
       JsonKernelInfo->getAsObject()->getInteger("ThreadLimitClause");
-  unsigned NumThreads =
+  uint32_t NumThreads =
       (NumThreadsOpt > 0 ? NumThreadsOpt : NumThreadsJson.value());
+  uint32_t SharedMemorySize =
+      JsonKernelInfo->getAsObject()->getInteger("SharedMemorySize").value();
   // TODO: Print a warning if number of teams/threads is explicitly set in the
   // kernel info but overridden through command line options.
   auto LoopTripCount =
@@ -156,7 +158,7 @@ int main(int argc, char **argv) {
       /*Loc=*/nullptr, DeviceId, KernelEntry.Address, (char *)RecordedData,
       DeviceMemoryMB.get()->getBufferSize(), TgtArgs.data(),
       TgtArgOffsets.data(), NumArgs.value(), NumTeams, NumThreads,
-      LoopTripCount.value());
+      SharedMemorySize, LoopTripCount.value());
 
   if (VerifyOpt) {
     ErrorOr<std::unique_ptr<MemoryBuffer>> OriginalOutputMB =

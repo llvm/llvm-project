@@ -2391,8 +2391,8 @@ int target_activate_rr(DeviceTy &Device, uint64_t MemorySize, void *VAddr,
 int target_replay(ident_t *Loc, DeviceTy &Device, void *HostPtr,
                   void *DeviceMemory, int64_t DeviceMemorySize, void **TgtArgs,
                   ptrdiff_t *TgtOffsets, int32_t NumArgs, int32_t NumTeams,
-                  int32_t ThreadLimit, uint64_t LoopTripCount,
-                  AsyncInfoTy &AsyncInfo) {
+                  int32_t ThreadLimit, uint32_t SharedMemorySize,
+                  uint64_t LoopTripCount, AsyncInfoTy &AsyncInfo) {
   int32_t DeviceId = Device.DeviceID;
   TableMap *TM = getTableMap(HostPtr);
   // Fail if the table map fails to find the target kernel pointer for the
@@ -2435,6 +2435,7 @@ int target_replay(ident_t *Loc, DeviceTy &Device, void *HostPtr,
   KernelArgs.ThreadLimit[0] = ThreadLimit;
   KernelArgs.ThreadLimit[1] = 1;
   KernelArgs.ThreadLimit[2] = 1;
+  KernelArgs.DynCGroupMem = SharedMemorySize;
 
   int Ret = Device.launchKernel(TgtEntryPtr, TgtArgs, TgtOffsets, KernelArgs,
                                 AsyncInfo);

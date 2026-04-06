@@ -516,6 +516,7 @@ EXTERN int __tgt_target_kernel_replay(ident_t *Loc, int64_t DeviceId,
                                       int64_t DeviceMemorySize, void **TgtArgs,
                                       ptrdiff_t *TgtOffsets, int32_t NumArgs,
                                       int32_t NumTeams, int32_t ThreadLimit,
+                                      uint32_t SharedMemorySize,
                                       uint64_t LoopTripCount) {
   assert(PM && "Runtime not initialized");
   OMPT_IF_BUILT(ReturnAddressSetterRAII RA(__builtin_return_address(0)));
@@ -533,9 +534,10 @@ EXTERN int __tgt_target_kernel_replay(ident_t *Loc, int64_t DeviceId,
                     /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
 
   AsyncInfoTy AsyncInfo(*DeviceOrErr);
-  int Rc = target_replay(Loc, *DeviceOrErr, HostPtr, DeviceMemory,
-                         DeviceMemorySize, TgtArgs, TgtOffsets, NumArgs,
-                         NumTeams, ThreadLimit, LoopTripCount, AsyncInfo);
+  int Rc =
+      target_replay(Loc, *DeviceOrErr, HostPtr, DeviceMemory, DeviceMemorySize,
+                    TgtArgs, TgtOffsets, NumArgs, NumTeams, ThreadLimit,
+                    SharedMemorySize, LoopTripCount, AsyncInfo);
   if (Rc == OFFLOAD_SUCCESS)
     Rc = AsyncInfo.synchronize();
   handleTargetOutcome(Rc == OFFLOAD_SUCCESS, Loc);

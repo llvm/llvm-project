@@ -90,10 +90,10 @@ llvm::Error DeviceTy::init() {
   BoolEnvar OMPX_RecordKernel("LIBOMPTARGET_RECORD", false);
   if (OMPX_RecordKernel) {
     // Enables saving the device memory kernel output post execution if set.
-    BoolEnvar OMPX_ReplaySaveOutput("LIBOMPTARGET_RR_SAVE_OUTPUT", false);
-    Int64Envar OMPX_RecordMemSize("LIBOMPTARGET_RR_MEM_SIZE",
+    BoolEnvar OMPX_ReplaySaveOutput("LIBOMPTARGET_RECORD_OUTPUT", false);
+    Int64Envar OMPX_RecordMemSize("LIBOMPTARGET_RECORD_MEMSIZE",
                                   8 * 1024 * 1024 * 1024ULL);
-    Int32Envar OMPX_RecordDevice("LIBOMPTARGET_RR_DEVICE", 0);
+    Int32Envar OMPX_RecordDevice("LIBOMPTARGET_RECORD_DEVICE", 0);
     if (OMPX_RecordDevice != RTLDeviceID)
       return llvm::Error::success();
 

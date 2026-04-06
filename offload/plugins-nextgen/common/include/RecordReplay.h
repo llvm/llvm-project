@@ -148,15 +148,18 @@ public:
     GlobalEntries.emplace_back(GlobalEntryTy{Name, Size, Addr});
   }
 
-  /// Record the prologue and return the handle. This phase can include the
-  /// recording of memory snapshot, the record descriptor and the globals.
+  /// Register a record replay instance, record the prologue data if necessary,
+  /// and return the instance's handle. The prologue is the phase just before
+  /// executing the kernel. This phase can include the recording of memory
+  /// snapshot, the record descriptor and the globals. When replaying, only the
+  /// instance is registered.
   Expected<HandleTy>
   recordPrologue(const GenericKernelTy &Kernel, const KernelArgsTy &KernelArgs,
                  const KernelLaunchParamsTy &LaunchParams, uint32_t NumTeams[3],
                  uint32_t NumThreads[3], uint32_t SharedMemorySize);
 
-  /// Record the epilogue, which can include the memory snapshot when recording
-  /// or replaying.
+  /// Record the epilogue if necessary, which can include the memory snapshot
+  /// when recording or replaying.
   Error recordEpilogue(const GenericKernelTy &Kernel, HandleTy Handle);
 
   /// Allocates device memory from the record replay space.
@@ -169,21 +172,21 @@ private:
   registerInstance(StringRef KernelName, uint32_t NumTeams, uint32_t NumThreads,
                    uint32_t SharedMemorySize);
 
-  /// The interface that should be provided by kernel record replay
-  /// implementations.
+  /// Record the prologue data.
   virtual Error
   recordPrologueImpl(const GenericKernelTy &Kernel, const InstanceTy &Instance,
                      const KernelArgsTy &KernelArgs,
                      const KernelLaunchParamsTy &LaunchParams) = 0;
+
+  /// Record the epilogue data.
   virtual Error recordEpilogueImpl(const GenericKernelTy &Kernel,
                                    const InstanceTy &Instance) = 0;
-  virtual Error recordDescriptorImpl(const GenericKernelTy &Kernel,
-                                     const InstanceTy &Instance,
-                                     const KernelArgsTy &KernelArgs,
-                                     const KernelLaunchParamsTy &LaunchParams,
-                                     uint32_t NumTeams[3],
-                                     uint32_t NumThreads[3],
-                                     uint32_t SharedMemorySize) = 0;
+
+  /// Record the descriptor of the kernel.
+  virtual Error recordDescImpl(const GenericKernelTy &Kernel,
+                               const InstanceTy &Instance,
+                               const KernelArgsTy &KernelArgs,
+                               const KernelLaunchParamsTy &LaunchParams) = 0;
 };
 
 /// The native kernel record replay support.
@@ -199,20 +202,18 @@ private:
                            const KernelLaunchParamsTy &LaunchParams) override;
   Error recordEpilogueImpl(const GenericKernelTy &Kernel,
                            const InstanceTy &Instance) override;
-  Error recordDescriptorImpl(const GenericKernelTy &Kernel,
-                             const InstanceTy &Instance,
-                             const KernelArgsTy &KernelArgs,
-                             const KernelLaunchParamsTy &LaunchParams,
-                             uint32_t NumTeams[3], uint32_t NumThreads[3],
-                             uint32_t SharedMemorySize) override;
+  Error recordDescImpl(const GenericKernelTy &Kernel,
+                       const InstanceTy &Instance,
+                       const KernelArgsTy &KernelArgs,
+                       const KernelLaunchParamsTy &LaunchParams) override;
 
-  /// Record a memory snapshot on a file.
+  /// Record a memory snapshot to a file.
   Error recordSnapshot(StringRef Filename);
 
-  /// Record the globals on a file.
+  /// Record the globals to a file.
   Error recordGlobals(StringRef Filename);
 
-  /// Record the device image on a file.
+  /// Record the device image to a file.
   Error recordImage(const GenericKernelTy &Kernel, StringRef Filename);
 };
 

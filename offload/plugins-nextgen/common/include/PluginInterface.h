@@ -1226,6 +1226,7 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
     if (RecordReplay)
       return Plugin::error(error::ErrorCode::INVALID_ARGUMENT,
                            "RR already initialized");
+    // Other formats could be supported in the future.
     if (!IsNative)
       return Plugin::error(error::ErrorCode::UNSUPPORTED,
                            "non-native RR not available");
@@ -1235,7 +1236,6 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
                                           : RecordReplayTy::StatusTy::Replaying;
 
     RecordReplay = new NativeRecordReplayTy(Status, SaveOutput, *this);
-
     return RecordReplay->init(Size, VAddr);
   }
 
