@@ -554,6 +554,44 @@ MaybeExpr MakeEvaluateExpr(const parser::OmpStylizedInstance &inp) {
       instance.u);
 }
 
+bool IsLoopTransforming(llvm::omp::Directive dir) {
+  switch (dir) {
+  // TODO case llvm::omp::Directive::OMPD_flatten:
+  case llvm::omp::Directive::OMPD_fuse:
+  case llvm::omp::Directive::OMPD_interchange:
+  case llvm::omp::Directive::OMPD_nothing:
+  case llvm::omp::Directive::OMPD_reverse:
+  // TODO case llvm::omp::Directive::OMPD_split:
+  case llvm::omp::Directive::OMPD_stripe:
+  case llvm::omp::Directive::OMPD_tile:
+  case llvm::omp::Directive::OMPD_unroll:
+    return true;
+  default:
+    return false;
+  }
+}
+
+bool IsFullUnroll(const parser::OmpDirectiveSpecification &spec) {
+  if (spec.DirId() == llvm::omp::Directive::OMPD_unroll) {
+    return !parser::omp::FindClause(spec, llvm::omp::Clause::OMPC_partial);
+  }
+  return false;
+}
+
+static bool IsTransformableLoop(const parser::OmpDirectiveSpecification &spec) {
+  return !IsFullUnroll(spec) && IsLoopTransforming(spec.DirId());
+}
+
+static bool IsTransformableLoop(const parser::ExecutionPartConstruct &epc) {
+  if (auto *loop{parser::Unwrap<parser::DoConstruct>(epc)}) {
+    return loop->IsDoNormal();
+  }
+  if (auto *omp{parser::Unwrap<parser::OpenMPLoopConstruct>(epc)}) {
+    return IsTransformableLoop(omp->BeginDir());
+  }
+  return false;
+}
+
 static const auto MsgNotValidAffectedLoop{
     "%s is not a valid affected loop"_because_en_US};
 static const auto MsgClauseAbsentAssume{
@@ -636,33 +674,6 @@ WithReason<int64_t> GetNumArgumentsWithReason(
     }
   }
   return {};
-}
-
-bool IsLoopTransforming(llvm::omp::Directive dir) {
-  switch (dir) {
-  // TODO case llvm::omp::Directive::OMPD_flatten:
-  case llvm::omp::Directive::OMPD_fuse:
-  case llvm::omp::Directive::OMPD_interchange:
-  case llvm::omp::Directive::OMPD_nothing:
-  case llvm::omp::Directive::OMPD_reverse:
-  // TODO case llvm::omp::Directive::OMPD_split:
-  case llvm::omp::Directive::OMPD_stripe:
-  case llvm::omp::Directive::OMPD_tile:
-  case llvm::omp::Directive::OMPD_unroll:
-    return true;
-  default:
-    return false;
-  }
-}
-
-bool IsFullUnroll(const parser::OpenMPLoopConstruct &x) {
-  const parser::OmpDirectiveSpecification &beginSpec{x.BeginDir()};
-
-  if (beginSpec.DirName().v == llvm::omp::Directive::OMPD_unroll) {
-    return parser::omp::FindClause(
-               beginSpec, llvm::omp::Clause::OMPC_partial) == nullptr;
-  }
-  return false;
 }
 
 namespace {
@@ -810,27 +821,6 @@ bool IsTransparentInterveningCode(const parser::ExecutionPartConstruct &x) {
   // Tolerate compiler directives in perfect nests.
   return parser::Unwrap<parser::CompilerDirective>(x) ||
       parser::Unwrap<parser::ContinueStmt>(x);
-}
-
-bool IsTransformableLoop(const parser::DoConstruct &loop) {
-  return loop.IsDoNormal();
-}
-
-bool IsTransformableLoop(const parser::OpenMPLoopConstruct &omp) {
-  if (IsFullUnroll(omp)) {
-    return false;
-  }
-  return IsLoopTransforming(omp.BeginDir().DirId());
-}
-
-bool IsTransformableLoop(const parser::ExecutionPartConstruct &epc) {
-  if (auto *loop{parser::Unwrap<parser::DoConstruct>(epc)}) {
-    return IsTransformableLoop(*loop);
-  }
-  if (auto *omp{parser::Unwrap<parser::OpenMPLoopConstruct>(epc)}) {
-    return IsTransformableLoop(*omp);
-  }
-  return false;
 }
 
 template <typename T,
@@ -1057,7 +1047,7 @@ LoopSequence::LoopSequence(
 std::unique_ptr<LoopSequence::Construct> LoopSequence::createConstructEntry(
     const parser::ExecutionPartConstruct &code) {
   if (auto *loop{parser::Unwrap<parser::DoConstruct>(code)}) {
-    if (allowAllLoops_ || IsTransformableLoop(*loop)) {
+    if (allowAllLoops_ || IsTransformableLoop(code)) {
       auto &body{std::get<parser::Block>(loop->t)};
       return std::make_unique<Construct>(body, &code);
     }
@@ -1126,7 +1116,7 @@ WithReason<int64_t> LoopSequence::calculateLength() const {
   }
 
   // TODO: Handle split, apply.
-  if (IsFullUnroll(omp)) {
+  if (IsFullUnroll(beginSpec)) {
     return {};
   }
 
@@ -1250,10 +1240,10 @@ LoopSequence::Depth LoopSequence::calculateDepths() const {
   auto &omp{DEREF(parser::Unwrap<parser::OpenMPLoopConstruct>(*entry_->owner))};
   const parser::OmpDirectiveSpecification &beginSpec{omp.BeginDir()};
   llvm::omp::Directive dir{beginSpec.DirId()};
-  bool isFullUnroll{IsFullUnroll(omp)};
+  bool isFullUnroll{IsFullUnroll(beginSpec)};
 
   // Check full unroll separately.
-  if (!isFullUnroll && !IsTransformableLoop(omp)) {
+  if (!isFullUnroll && !IsTransformableLoop(beginSpec)) {
     Reason reason;
     reason.Say(beginSpec.DirName().source,
         "This construct is not a DO-loop or a loop-nest-generating construct"_because_en_US);
@@ -1368,10 +1358,11 @@ static Reason WhyNotWellFormed(
   Reason reason;
   parser::CharBlock source{*parser::GetSource(badCode)};
   if (auto *omp{parser::Unwrap<parser::OpenMPLoopConstruct>(badCode)}) {
-    if (IsFullUnroll(*omp)) {
+    const parser::OmpDirectiveSpecification &beginSpec{omp->BeginDir()};
+    if (IsFullUnroll(beginSpec)) {
       reason.Say(source, MsgConstructDoesNotResult, "Fully unrolled loop",
           isSequence ? "a loop nest or a loop sequence" : "a loop nest");
-    } else if (!IsLoopTransforming(omp->BeginDir().DirId())) {
+    } else if (!IsLoopTransforming(beginSpec.DirId())) {
       reason.Say(source,
           "Only loop-transforming constructs are allowed inside loop constructs"_because_en_US);
     }
