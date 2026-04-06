@@ -54,7 +54,7 @@ std::optional<Type *> LoadStoreVec::canVectorize(ArrayRef<Instruction *> Bndl,
 }
 
 void LoadStoreVec::tryEraseDeadInstrs(ArrayRef<Instruction *> Stores,
-                                      ArrayRef<Instruction *> Loads) {
+                                      ArrayRef<Value *> Operands) {
   SmallPtrSet<Instruction *, 8> DeadCandidates;
   for (auto *SI : Stores) {
     if (auto *PtrI =
@@ -62,11 +62,13 @@ void LoadStoreVec::tryEraseDeadInstrs(ArrayRef<Instruction *> Stores,
       DeadCandidates.insert(PtrI);
     SI->eraseFromParent();
   }
-  for (auto *LI : Loads) {
-    if (auto *PtrI =
-            dyn_cast<Instruction>(cast<LoadInst>(LI)->getPointerOperand()))
-      DeadCandidates.insert(PtrI);
-    cast<LoadInst>(LI)->eraseFromParent();
+  for (auto *Op : Operands) {
+    if (auto *LI = dyn_cast<LoadInst>(Op)) {
+      if (auto *PtrI =
+              dyn_cast<Instruction>(cast<LoadInst>(LI)->getPointerOperand()))
+        DeadCandidates.insert(PtrI);
+      cast<LoadInst>(LI)->eraseFromParent();
+    }
   }
   for (auto *PtrI : DeadCandidates)
     if (!PtrI->hasNUsesOrMore(1))
@@ -114,9 +116,9 @@ bool LoadStoreVec::runOnRegion(Region &Rgn, const Analyses &A) {
     return false;
 
   Value *VecOp = nullptr;
-  SmallVector<Instruction *, 8> Loads;
   if (AllLoads) {
     // TODO: Try to avoid the extra copy to an instruction vector.
+    SmallVector<Instruction *, 8> Loads;
     Loads.reserve(Operands.size());
     for (Value *Op : Operands)
       Loads.push_back(cast<Instruction>(Op));
@@ -166,7 +168,7 @@ bool LoadStoreVec::runOnRegion(Region &Rgn, const Analyses &A) {
   auto StWhereIt = std::next(VecUtils::getLowest(Bndl)->getIterator());
   StoreInst::create(VecOp, StPtr, StAlign, StWhereIt, Ctx);
 
-  tryEraseDeadInstrs(Bndl, Loads);
+  tryEraseDeadInstrs(Bndl, Operands);
   return true;
 }
 
