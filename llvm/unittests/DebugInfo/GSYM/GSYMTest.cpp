@@ -25,6 +25,7 @@
 #include "llvm/DebugInfo/GSYM/StringTable.h"
 #include "llvm/ObjectYAML/DWARFEmitter.h"
 #include "llvm/Support/DataExtractor.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Testing/Support/Error.h"
 
 #include "gtest/gtest.h"
@@ -58,6 +59,10 @@ TEST(GSYMTest, TestFileEntry) {
   FileEntry empty2;
   EXPECT_EQ(empty1.Dir, 0u);
   EXPECT_EQ(empty1.Base, 0u);
+  // Verify 64-bit values can be stored and retrieved
+  FileEntry large(0x1'0000'0001, 0x2'0000'0002);
+  EXPECT_EQ(large.Dir, 0x1'0000'0001);
+  EXPECT_EQ(large.Base, 0x2'0000'0002);
   // Verify equality operator works
   FileEntry a1(10, 30);
   FileEntry a2(10, 30);
@@ -84,7 +89,8 @@ TEST(GSYMTest, TestFileEntry) {
   EXPECT_EQ(R.first->second, Index2);
 }
 
-TEST(GSYMTest, TestFunctionInfo) {
+template <typename StrpT>
+static void TestFunctionInfoImpl(StrpT NameOffset) {
   // Test GSYM FunctionInfo structs and functionality.
   FunctionInfo invalid;
   EXPECT_FALSE(invalid.isValid());
@@ -92,13 +98,13 @@ TEST(GSYMTest, TestFunctionInfo) {
   const uint64_t StartAddr = 0x1000;
   const uint64_t EndAddr = 0x1100;
   const uint64_t Size = EndAddr - StartAddr;
-  const uint32_t NameOffset = 30;
   FunctionInfo FI(StartAddr, Size, NameOffset);
   EXPECT_TRUE(FI.isValid());
   EXPECT_FALSE(FI.hasRichInfo());
   EXPECT_EQ(FI.startAddress(), StartAddr);
   EXPECT_EQ(FI.endAddress(), EndAddr);
   EXPECT_EQ(FI.size(), Size);
+  EXPECT_EQ(FI.Name, NameOffset);
   const uint32_t FileIdx = 1;
   const uint32_t Line = 12;
   FI.OptLineTable = LineTable();
@@ -123,7 +129,7 @@ TEST(GSYMTest, TestFunctionInfo) {
   EXPECT_NE(B, A2);
   // Make sure things are not equal if they only differ by name.
   B = A2;
-  B.Name = 60;
+  B.Name = NameOffset + 30;
   EXPECT_NE(B, A2);
   // Check < operator.
   // Check less than where address differs.
@@ -179,12 +185,19 @@ TEST(GSYMTest, TestFunctionInfo) {
   EXPECT_LT(FIWithLines, FIWithLinesWithHigherAddress);
 }
 
+TEST(GSYMTest, TestFunctionInfo) {
+  TestFunctionInfoImpl<uint32_t>(30);
+  TestFunctionInfoImpl<uint64_t>(0x100000030);
+}
+
+template <typename StrpT>
 static void TestFunctionInfoDecodeError(llvm::endianness ByteOrder,
                                         StringRef Bytes,
                                         const uint64_t BaseAddr,
                                         std::string ExpectedErrorMsg) {
   uint8_t AddressSize = 4;
   DataExtractor DE(Bytes, ByteOrder == llvm::endianness::little, AddressSize);
+  DE.setStringOffsetSize(sizeof(StrpT));
   llvm::Expected<FunctionInfo> Decoded = FunctionInfo::decode(DE, BaseAddr);
   // Make sure decoding fails.
   ASSERT_FALSE((bool)Decoded);
@@ -192,56 +205,77 @@ static void TestFunctionInfoDecodeError(llvm::endianness ByteOrder,
   checkError(ExpectedErrorMsg, Decoded.takeError());
 }
 
-TEST(GSYMTest, TestFunctionInfoDecodeErrors) {
+template <typename StrpT>
+static void TestFunctionInfoDecodeErrors() {
   // Test decoding FunctionInfo objects that ensure we report an appropriate
   // error message.
   const llvm::endianness ByteOrder = llvm::endianness::little;
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
   FileWriter FW(OutStrm, ByteOrder);
+  FW.setStringOffsetSize(sizeof(StrpT));
   const uint64_t BaseAddr = 0x100;
-  TestFunctionInfoDecodeError(ByteOrder, OutStrm.str(), BaseAddr,
+  // FunctionInfo layout: Size(4) + Name(sizeof(StrpT)) + InfoType(4) + ...
+  constexpr uint64_t NameOff = 4;
+  constexpr uint64_t PostNameOff = NameOff + sizeof(StrpT);
+  constexpr uint64_t PostInfoTypeOff = PostNameOff + 4;
+  auto Hex = [](uint64_t V) {
+    return llvm::formatv("0x{0:x-8}", V).str();
+  };
+  TestFunctionInfoDecodeError<StrpT>(ByteOrder, OutStrm.str(), BaseAddr,
       "0x00000000: missing FunctionInfo Size");
   FW.writeU32(0x100); // Function size.
-  TestFunctionInfoDecodeError(ByteOrder, OutStrm.str(), BaseAddr,
-      "0x00000004: missing FunctionInfo Name");
+  TestFunctionInfoDecodeError<StrpT>(ByteOrder, OutStrm.str(), BaseAddr,
+      Hex(NameOff) + ": missing FunctionInfo Name");
   // Write out an invalid Name string table offset of zero.
-  FW.writeU32(0);
-  TestFunctionInfoDecodeError(
+  if constexpr (sizeof(StrpT) == 4)
+    FW.writeU32(0);
+  else
+    FW.writeU64(0);
+  TestFunctionInfoDecodeError<StrpT>(
       ByteOrder, OutStrm.str(), BaseAddr,
-      "0x00000004: invalid FunctionInfo Name value 0x0");
+      Hex(NameOff) + ": invalid FunctionInfo Name value 0x0");
   // Modify the Name to be 0x00000001, which is a valid value.
-  FW.fixup32(0x00000001, 4);
-  TestFunctionInfoDecodeError(ByteOrder, OutStrm.str(), BaseAddr,
-      "0x00000008: missing FunctionInfo InfoType value");
+  // fixup32 works for both sizes in little-endian (sets low 4 bytes).
+  FW.fixup32(0x00000001, NameOff);
+  TestFunctionInfoDecodeError<StrpT>(ByteOrder, OutStrm.str(), BaseAddr,
+      Hex(PostNameOff) + ": missing FunctionInfo InfoType value");
   auto FixupOffset = FW.tell();
   FW.writeU32(1); // InfoType::LineTableInfo.
-  TestFunctionInfoDecodeError(ByteOrder, OutStrm.str(), BaseAddr,
-      "0x0000000c: missing FunctionInfo InfoType length");
+  TestFunctionInfoDecodeError<StrpT>(ByteOrder, OutStrm.str(), BaseAddr,
+      Hex(PostInfoTypeOff) + ": missing FunctionInfo InfoType length");
   FW.fixup32(7, FixupOffset); // Write an invalid InfoType enumeration value
   FW.writeU32(0); // LineTableInfo InfoType data length.
-  TestFunctionInfoDecodeError(ByteOrder, OutStrm.str(), BaseAddr,
-                              "0x00000008: unsupported InfoType 7");
+  TestFunctionInfoDecodeError<StrpT>(ByteOrder, OutStrm.str(), BaseAddr,
+      Hex(PostNameOff) + ": unsupported InfoType 7");
 }
 
+TEST(GSYMTest, TestFunctionInfoDecodeErrors) {
+  TestFunctionInfoDecodeErrors<uint32_t>();
+  TestFunctionInfoDecodeErrors<uint64_t>();
+}
+
+template <typename StrpT>
 static void TestFunctionInfoEncodeError(llvm::endianness ByteOrder,
                                         const FunctionInfo &FI,
                                         std::string ExpectedErrorMsg) {
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
   FileWriter FW(OutStrm, ByteOrder);
+  FW.setStringOffsetSize(sizeof(StrpT));
   Expected<uint64_t> ExpectedOffset = FI.encode(FW);
   ASSERT_FALSE(ExpectedOffset);
   checkError(ExpectedErrorMsg, ExpectedOffset.takeError());
 }
 
-TEST(GSYMTest, TestFunctionInfoEncodeErrors) {
+template <typename StrpT>
+static void TestFunctionInfoEncodeErrors() {
   const uint64_t FuncAddr = 0x1000;
   const uint64_t FuncSize = 0x100;
-  const uint32_t InvalidName = 0;
-  const uint32_t ValidName = 1;
+  const StrpT InvalidName = 0;
+  const StrpT ValidName = 1;
   FunctionInfo InvalidNameFI(FuncAddr, FuncSize, InvalidName);
-  TestFunctionInfoEncodeError(
+  TestFunctionInfoEncodeError<StrpT>(
       llvm::endianness::little, InvalidNameFI,
       "attempted to encode invalid FunctionInfo object");
 
@@ -249,23 +283,32 @@ TEST(GSYMTest, TestFunctionInfoEncodeErrors) {
   // Empty line tables are not valid. Verify if the encoding of anything
   // in our line table fails, that we see get the error propagated.
   InvalidLineTableFI.OptLineTable = LineTable();
-  TestFunctionInfoEncodeError(llvm::endianness::little, InvalidLineTableFI,
-                              "attempted to encode invalid LineTable object");
+  TestFunctionInfoEncodeError<StrpT>(
+      llvm::endianness::little, InvalidLineTableFI,
+      "attempted to encode invalid LineTable object");
 
   FunctionInfo InvalidInlineInfoFI(FuncAddr, FuncSize, ValidName);
   // Empty line tables are not valid. Verify if the encoding of anything
   // in our line table fails, that we see get the error propagated.
   InvalidInlineInfoFI.Inline = InlineInfo();
-  TestFunctionInfoEncodeError(llvm::endianness::little, InvalidInlineInfoFI,
-                              "attempted to encode invalid InlineInfo object");
+  TestFunctionInfoEncodeError<StrpT>(
+      llvm::endianness::little, InvalidInlineInfoFI,
+      "attempted to encode invalid InlineInfo object");
 }
 
+TEST(GSYMTest, TestFunctionInfoEncodeErrors) {
+  TestFunctionInfoEncodeErrors<uint32_t>();
+  TestFunctionInfoEncodeErrors<uint64_t>();
+}
+
+template <typename StrpT>
 static void TestFunctionInfoEncodeDecode(llvm::endianness ByteOrder,
                                          const FunctionInfo &FI) {
   // Test encoding and decoding FunctionInfo objects.
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
   FileWriter FW(OutStrm, ByteOrder);
+  FW.setStringOffsetSize(sizeof(StrpT));
   llvm::Expected<uint64_t> ExpectedOffset = FI.encode(FW);
   ASSERT_TRUE(bool(ExpectedOffset));
   // Verify we got the encoded offset back from the encode function.
@@ -273,6 +316,7 @@ static void TestFunctionInfoEncodeDecode(llvm::endianness ByteOrder,
   std::string Bytes(OutStrm.str());
   uint8_t AddressSize = 4;
   DataExtractor DE(Bytes, ByteOrder == llvm::endianness::little, AddressSize);
+  DE.setStringOffsetSize(sizeof(StrpT));
   llvm::Expected<FunctionInfo> Decoded =
       FunctionInfo::decode(DE, FI.Range.start());
   // Make sure decoding succeeded.
@@ -291,64 +335,74 @@ static void AddLines(uint64_t FuncAddr, uint32_t FileIdx, FunctionInfo &FI) {
     FI.OptLineTable->push(Line2);
 }
 
-
-static void AddInline(uint64_t FuncAddr, uint64_t FuncSize, FunctionInfo &FI) {
+template<typename StrpT>
+static void AddInline(uint64_t FuncAddr, uint64_t FuncSize, FunctionInfo &FI,
+                      StrpT InlineName) {
     FI.Inline = InlineInfo();
     FI.Inline->Ranges.insert(AddressRange(FuncAddr, FuncAddr + FuncSize));
     InlineInfo Inline1;
     Inline1.Ranges.insert(AddressRange(FuncAddr + 0x10, FuncAddr + 0x30));
-    Inline1.Name = 1;
+    Inline1.Name = InlineName;
     Inline1.CallFile = 1;
     Inline1.CallLine = 11;
     FI.Inline->Children.push_back(Inline1);
 }
 
-TEST(GSYMTest, TestFunctionInfoEncoding) {
+template <typename StrpT>
+static void TestFunctionInfoEncoding(StrpT FuncName,
+                                     StrpT InlineName) {
   constexpr uint64_t FuncAddr = 0x1000;
   constexpr uint64_t FuncSize = 0x100;
-  constexpr uint32_t FuncName = 1;
   constexpr uint32_t FileIdx = 1;
   // Make sure that we can encode and decode a FunctionInfo with no line table
   // or inline info.
   FunctionInfo FI(FuncAddr, FuncSize, FuncName);
-  TestFunctionInfoEncodeDecode(llvm::endianness::little, FI);
-  TestFunctionInfoEncodeDecode(llvm::endianness::big, FI);
+  TestFunctionInfoEncodeDecode<StrpT>(llvm::endianness::little, FI);
+  TestFunctionInfoEncodeDecode<StrpT>(llvm::endianness::big, FI);
 
   // Make sure that we can encode and decode a FunctionInfo with a line table
   // and no inline info.
   FunctionInfo FILines(FuncAddr, FuncSize, FuncName);
   AddLines(FuncAddr, FileIdx, FILines);
-  TestFunctionInfoEncodeDecode(llvm::endianness::little, FILines);
-  TestFunctionInfoEncodeDecode(llvm::endianness::big, FILines);
+  TestFunctionInfoEncodeDecode<StrpT>(llvm::endianness::little, FILines);
+  TestFunctionInfoEncodeDecode<StrpT>(llvm::endianness::big, FILines);
 
   // Make sure that we can encode and decode a FunctionInfo with no line table
   // and with inline info.
   FunctionInfo FIInline(FuncAddr, FuncSize, FuncName);
-  AddInline(FuncAddr, FuncSize, FIInline);
-  TestFunctionInfoEncodeDecode(llvm::endianness::little, FIInline);
-  TestFunctionInfoEncodeDecode(llvm::endianness::big, FIInline);
+  AddInline(FuncAddr, FuncSize, FIInline, InlineName);
+  TestFunctionInfoEncodeDecode<StrpT>(llvm::endianness::little, FIInline);
+  TestFunctionInfoEncodeDecode<StrpT>(llvm::endianness::big, FIInline);
 
   // Make sure that we can encode and decode a FunctionInfo with no line table
   // and with inline info.
   FunctionInfo FIBoth(FuncAddr, FuncSize, FuncName);
   AddLines(FuncAddr, FileIdx, FIBoth);
-  AddInline(FuncAddr, FuncSize, FIBoth);
-  TestFunctionInfoEncodeDecode(llvm::endianness::little, FIBoth);
-  TestFunctionInfoEncodeDecode(llvm::endianness::big, FIBoth);
+  AddInline(FuncAddr, FuncSize, FIBoth, InlineName);
+  TestFunctionInfoEncodeDecode<StrpT>(llvm::endianness::little, FIBoth);
+  TestFunctionInfoEncodeDecode<StrpT>(llvm::endianness::big, FIBoth);
 }
 
+TEST(GSYMTest, TestFunctionInfoEncoding) {
+  TestFunctionInfoEncoding<uint32_t>(1, 1);
+  TestFunctionInfoEncoding<uint64_t>(0x1'0000'0001, 0x1'0000'0002);
+}
+
+template <typename StrpT>
 static void TestInlineInfoEncodeDecode(llvm::endianness ByteOrder,
                                        const InlineInfo &Inline) {
   // Test encoding and decoding InlineInfo objects
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
   FileWriter FW(OutStrm, ByteOrder);
+  FW.setStringOffsetSize(sizeof(StrpT));
   const uint64_t BaseAddr = Inline.Ranges[0].start();
   llvm::Error Err = Inline.encode(FW, BaseAddr);
   ASSERT_FALSE(Err);
   std::string Bytes(OutStrm.str());
   uint8_t AddressSize = 4;
   DataExtractor DE(Bytes, ByteOrder == llvm::endianness::little, AddressSize);
+  DE.setStringOffsetSize(sizeof(StrpT));
   llvm::Expected<InlineInfo> Decoded = InlineInfo::decode(DE, BaseAddr);
   // Make sure decoding succeeded.
   ASSERT_TRUE((bool)Decoded);
@@ -356,11 +410,13 @@ static void TestInlineInfoEncodeDecode(llvm::endianness ByteOrder,
   EXPECT_EQ(Inline, Decoded.get());
 }
 
+template <typename StrpT>
 static void TestInlineInfoDecodeError(llvm::endianness ByteOrder,
                                       StringRef Bytes, const uint64_t BaseAddr,
                                       std::string ExpectedErrorMsg) {
   uint8_t AddressSize = 4;
   DataExtractor DE(Bytes, ByteOrder == llvm::endianness::little, AddressSize);
+  DE.setStringOffsetSize(sizeof(StrpT));
   llvm::Expected<InlineInfo> Decoded = InlineInfo::decode(DE, BaseAddr);
   // Make sure decoding fails.
   ASSERT_FALSE((bool)Decoded);
@@ -368,19 +424,23 @@ static void TestInlineInfoDecodeError(llvm::endianness ByteOrder,
   checkError(ExpectedErrorMsg, Decoded.takeError());
 }
 
+template <typename StrpT>
 static void TestInlineInfoEncodeError(llvm::endianness ByteOrder,
                                       const InlineInfo &Inline,
                                       std::string ExpectedErrorMsg) {
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
   FileWriter FW(OutStrm, ByteOrder);
+  FW.setStringOffsetSize(sizeof(StrpT));
   const uint64_t BaseAddr =
       Inline.Ranges.empty() ? 0 : Inline.Ranges[0].start();
   llvm::Error Err = Inline.encode(FW, BaseAddr);
   checkError(ExpectedErrorMsg, std::move(Err));
 }
 
-TEST(GSYMTest, TestInlineInfo) {
+template <typename StrpT>
+static void TestInlineInfoImpl(StrpT Name1, StrpT Name2,
+                               StrpT Name3) {
   // Test InlineInfo structs.
   InlineInfo II;
   EXPECT_FALSE(II.isValid());
@@ -400,24 +460,24 @@ TEST(GSYMTest, TestInlineInfo) {
   // Variable    Range and values
   // =========== ====================================================
   // Root        [0x100-0x200) (no name, file, or line)
-  // Inline1       [0x150-0x160) Name = 1, File = 1, Line = 11
-  // Inline1Sub1     [0x152-0x155) Name = 2, File = 2, Line = 22
-  // Inline1Sub2     [0x157-0x158) Name = 3, File = 3, Line = 33
+  // Inline1       [0x150-0x160) Name = Name1, File = 1, Line = 11
+  // Inline1Sub1     [0x152-0x155) Name = Name2, File = 2, Line = 22
+  // Inline1Sub2     [0x157-0x158) Name = Name3, File = 3, Line = 33
   InlineInfo Root;
   Root.Ranges.insert(AddressRange(0x100, 0x200));
   InlineInfo Inline1;
   Inline1.Ranges.insert(AddressRange(0x150, 0x160));
-  Inline1.Name = 1;
+  Inline1.Name = Name1;
   Inline1.CallFile = 1;
   Inline1.CallLine = 11;
   InlineInfo Inline1Sub1;
   Inline1Sub1.Ranges.insert(AddressRange(0x152, 0x155));
-  Inline1Sub1.Name = 2;
+  Inline1Sub1.Name = Name2;
   Inline1Sub1.CallFile = 2;
   Inline1Sub1.CallLine = 22;
   InlineInfo Inline1Sub2;
   Inline1Sub2.Ranges.insert(AddressRange(0x157, 0x158));
-  Inline1Sub2.Name = 3;
+  Inline1Sub2.Name = Name3;
   Inline1Sub2.CallFile = 3;
   Inline1Sub2.CallLine = 33;
   Inline1.Children.push_back(Inline1Sub1);
@@ -474,27 +534,35 @@ TEST(GSYMTest, TestInlineInfo) {
   ASSERT_EQ(*InlineInfos->at(1), Inline1);
 
   // Test encoding and decoding InlineInfo objects
-  TestInlineInfoEncodeDecode(llvm::endianness::little, Root);
-  TestInlineInfoEncodeDecode(llvm::endianness::big, Root);
+  TestInlineInfoEncodeDecode<StrpT>(llvm::endianness::little, Root);
+  TestInlineInfoEncodeDecode<StrpT>(llvm::endianness::big, Root);
 }
 
-TEST(GSYMTest, TestInlineInfoEncodeErrors) {
+TEST(GSYMTest, TestInlineInfo) {
+  TestInlineInfoImpl<uint32_t>(1, 2, 3);
+  TestInlineInfoImpl<uint64_t>(0x1'0000'0001, 0x1'0000'0002, 0x1'0000'0003);
+}
+
+template <typename StrpT>
+static void TestInlineInfoEncodeErrors() {
   // Test InlineInfo encoding errors.
 
   // Test that we get an error when trying to encode an InlineInfo object
   // that has no ranges.
   InlineInfo Empty;
   std::string EmptyErr("attempted to encode invalid InlineInfo object");
-  TestInlineInfoEncodeError(llvm::endianness::little, Empty, EmptyErr);
-  TestInlineInfoEncodeError(llvm::endianness::big, Empty, EmptyErr);
+  TestInlineInfoEncodeError<StrpT>(llvm::endianness::little, Empty, EmptyErr);
+  TestInlineInfoEncodeError<StrpT>(llvm::endianness::big, Empty, EmptyErr);
 
   // Verify that we get an error trying to encode an InlineInfo object that has
   // a child InlineInfo that has no ranges.
   InlineInfo ContainsEmpty;
   ContainsEmpty.Ranges.insert({0x100, 0x200});
   ContainsEmpty.Children.push_back(Empty);
-  TestInlineInfoEncodeError(llvm::endianness::little, ContainsEmpty, EmptyErr);
-  TestInlineInfoEncodeError(llvm::endianness::big, ContainsEmpty, EmptyErr);
+  TestInlineInfoEncodeError<StrpT>(llvm::endianness::little, ContainsEmpty,
+                                   EmptyErr);
+  TestInlineInfoEncodeError<StrpT>(llvm::endianness::big, ContainsEmpty,
+                                   EmptyErr);
 
   // Verify that we get an error trying to encode an InlineInfo object that has
   // a child whose address range is not contained in the parent address range.
@@ -504,36 +572,59 @@ TEST(GSYMTest, TestInlineInfoEncodeErrors) {
   InlineInfo ChildNotContainedChild;
   ChildNotContainedChild.Ranges.insert({0x200, 0x300});
   ChildNotContained.Children.push_back(ChildNotContainedChild);
-  TestInlineInfoEncodeError(llvm::endianness::little, ChildNotContained,
-                            ChildNotContainedErr);
-  TestInlineInfoEncodeError(llvm::endianness::big, ChildNotContained,
-                            ChildNotContainedErr);
+  TestInlineInfoEncodeError<StrpT>(llvm::endianness::little, ChildNotContained,
+                                   ChildNotContainedErr);
+  TestInlineInfoEncodeError<StrpT>(llvm::endianness::big, ChildNotContained,
+                                   ChildNotContainedErr);
 }
 
-TEST(GSYMTest, TestInlineInfoDecodeErrors) {
+TEST(GSYMTest, TestInlineInfoEncodeErrors) {
+  TestInlineInfoEncodeErrors<uint32_t>();
+  TestInlineInfoEncodeErrors<uint64_t>();
+}
+
+template <typename StrpT>
+static void TestInlineInfoDecodeErrors() {
   // Test decoding InlineInfo objects that ensure we report an appropriate
   // error message.
   const llvm::endianness ByteOrder = llvm::endianness::little;
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
   FileWriter FW(OutStrm, ByteOrder);
+  FW.setStringOffsetSize(sizeof(StrpT));
   const uint64_t BaseAddr = 0x100;
-  TestInlineInfoDecodeError(ByteOrder, OutStrm.str(), BaseAddr,
+  // InlineInfo layout: Ranges(4) + HasChildren(1) + Name(sizeof(StrpT)) + ...
+  constexpr uint64_t ChildrenOff = 4; // After encoded ranges
+  constexpr uint64_t NameOff = ChildrenOff + 1;
+  constexpr uint64_t PostNameOff = NameOff + sizeof(StrpT);
+  constexpr uint64_t PostCallFileOff = PostNameOff + 1; // CallFile is ULEB(0)
+  auto Hex = [](uint64_t V) {
+    return llvm::formatv("0x{0:x-8}", V).str();
+  };
+  TestInlineInfoDecodeError<StrpT>(ByteOrder, OutStrm.str(), BaseAddr,
       "0x00000000: missing InlineInfo address ranges data");
   AddressRanges Ranges;
   Ranges.insert({BaseAddr, BaseAddr+0x100});
   encodeRanges(Ranges, FW, BaseAddr);
-  TestInlineInfoDecodeError(ByteOrder, OutStrm.str(), BaseAddr,
-      "0x00000004: missing InlineInfo uint8_t indicating children");
+  TestInlineInfoDecodeError<StrpT>(ByteOrder, OutStrm.str(), BaseAddr,
+      Hex(ChildrenOff) + ": missing InlineInfo uint8_t indicating children");
   FW.writeU8(0);
-  TestInlineInfoDecodeError(ByteOrder, OutStrm.str(), BaseAddr,
-                            "0x00000005: missing InlineInfo name");
-  FW.writeU32(0);
-  TestInlineInfoDecodeError(ByteOrder, OutStrm.str(), BaseAddr,
-      "0x00000009: missing ULEB128 for InlineInfo call file");
+  TestInlineInfoDecodeError<StrpT>(ByteOrder, OutStrm.str(), BaseAddr,
+      Hex(NameOff) + ": missing InlineInfo name");
+  if constexpr (sizeof(StrpT) == 4)
+    FW.writeU32(0);
+  else
+    FW.writeU64(0);
+  TestInlineInfoDecodeError<StrpT>(ByteOrder, OutStrm.str(), BaseAddr,
+      Hex(PostNameOff) + ": missing ULEB128 for InlineInfo call file");
   FW.writeU8(0);
-  TestInlineInfoDecodeError(ByteOrder, OutStrm.str(), BaseAddr,
-      "0x0000000a: missing ULEB128 for InlineInfo call line");
+  TestInlineInfoDecodeError<StrpT>(ByteOrder, OutStrm.str(), BaseAddr,
+      Hex(PostCallFileOff) + ": missing ULEB128 for InlineInfo call line");
+}
+
+TEST(GSYMTest, TestInlineInfoDecodeErrors) {
+  TestInlineInfoDecodeErrors<uint32_t>();
+  TestInlineInfoDecodeErrors<uint64_t>();
 }
 
 TEST(GSYMTest, TestLineEntry) {
