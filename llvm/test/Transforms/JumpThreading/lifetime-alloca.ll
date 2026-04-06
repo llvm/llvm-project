@@ -5,10 +5,19 @@
 ; used by a lifetime intrinsic, which would violate the requirement that
 ; lifetime markers only operate on allocas.
 
-define void @widget(i1 %arg) {
-; CHECK-LABEL: @widget(
-; CHECK-NOT: phi ptr
-; CHECK-NOT: call void @llvm.lifetime
+define void @widget_dropped(i1 %arg) {
+; CHECK-LABEL: @widget_dropped(
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    br i1 [[ARG:%.*]], label [[BB3:%.*]], label [[BB2:%.*]]
+; CHECK:       bb2:
+; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [4 x [4 x i32]], align 8
+; CHECK-NEXT:    br label [[BB4:%.*]]
+; CHECK:       bb3:
+; CHECK-NEXT:    call void @dummy()
+; CHECK-NEXT:    br label [[BB4]]
+; CHECK:       bb4:
+; CHECK-NEXT:    ret void
+;
 bb:
   br i1 %arg, label %bb1, label %bb2
 
@@ -18,6 +27,41 @@ bb1:
 
 bb2:
   %alloca = alloca [4 x [4 x i32]], align 8
+  br i1 %arg, label %bb3, label %bb4
+
+bb3:
+  br label %bb4
+
+bb4:
+  call void @llvm.lifetime.start.p0(ptr %alloca)
+  call void @llvm.lifetime.end.p0(ptr %alloca)
+  ret void
+}
+
+; Because the alloca is in the entry block, it dominates all threaded blocks.
+; No PHI node is required, and the lifetime markers can be safely preserved.
+define void @widget_preserved(i1 %arg) {
+; CHECK-LABEL: @widget_preserved(
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [4 x [4 x i32]], align 8
+; CHECK-NEXT:    br i1 [[ARG:%.*]], label [[BB3:%.*]], label [[BB4:%.*]]
+; CHECK:       bb3:
+; CHECK-NEXT:    call void @dummy()
+; CHECK-NEXT:    br label [[BB4]]
+; CHECK:       bb4:
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[ALLOCA]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[ALLOCA]])
+; CHECK-NEXT:    ret void
+;
+bb:
+  %alloca = alloca [4 x [4 x i32]], align 8
+  br i1 %arg, label %bb1, label %bb2
+
+bb1:
+  call void @dummy()
+  br label %bb2
+
+bb2:
   br i1 %arg, label %bb3, label %bb4
 
 bb3:

@@ -1978,15 +1978,32 @@ void JumpThreadingPass::updateSSA(BasicBlock *BB, BasicBlock *NewBB,
   for (Instruction &I : *BB) {
     // Scan all uses of this instruction to see if it is used outside of its
     // block, and if so, record them in UsesToRename.
+
+    SmallVector<Instruction *> LifetimeMarkers;
+    bool HasNonDominatedLifetimeMarker = false;
     for (Use &U : I.uses()) {
       Instruction *User = cast<Instruction>(U.getUser());
-      if (PHINode *UserPN = dyn_cast<PHINode>(User)) {
-        if (UserPN->getIncomingBlock(U) == BB)
+      if (isa<AllocaInst>(&I) && User->isLifetimeStartOrEnd()) {
+        // If any lifetime marker for the alloca is no longer dominated by the
+        // alloca after jump threading, we will remove all lifetime markers.
+        // This avoids inserting PHI nodes for lifetime markers, which is
+        // invalid.
+        DominatorTree &DT = DTU->getDomTree();
+        if (!DT.dominates(&I, User))
+          HasNonDominatedLifetimeMarker = true;
+        LifetimeMarkers.push_back(User);
+      } else {
+        if (PHINode *UserPN = dyn_cast<PHINode>(User)) {
+          if (UserPN->getIncomingBlock(U) == BB)
+            continue;
+        } else if (User->getParent() == BB)
           continue;
-      } else if (User->getParent() == BB)
-        continue;
-
-      UsesToRename.push_back(&U);
+        UsesToRename.push_back(&U);
+      }
+    }
+    if (HasNonDominatedLifetimeMarker) {
+      for (Instruction *User : LifetimeMarkers)
+        User->eraseFromParent();
     }
 
     // Find debug values outside of the block
@@ -1999,33 +2016,6 @@ void JumpThreadingPass::updateSSA(BasicBlock *BB, BasicBlock *NewBB,
     if (UsesToRename.empty() && DbgVariableRecords.empty())
       continue;
     LLVM_DEBUG(dbgs() << "JT: Renaming non-local uses of: " << I << "\n");
-
-    if (isa<AllocaInst>(&I)) {
-      // If any lifetime marker for the alloca is no longer dominated by the
-      // alloca after jump threading, remove all lifetime markers. This avoids
-      // inserting PHI nodes for lifetime markers, which is invalid.
-      DominatorTree &DT = DTU->getDomTree();
-      bool HasNonDominatedLifetimeMarker = false;
-      SmallVector<Instruction *> LifetimeMarkers;
-      for (User *U : I.users()) {
-        auto *UserI = cast<Instruction>(U);
-        if (UserI->isLifetimeStartOrEnd()) {
-          if (!DT.dominates(&I, UserI))
-            HasNonDominatedLifetimeMarker = true;
-          LifetimeMarkers.push_back(UserI);
-        }
-      }
-      if (HasNonDominatedLifetimeMarker) {
-        // Remove all uses of lifetime markers from UsesToRename before
-        // erasing them. This prevents SSAUpdater from attempting to
-        // rewrite uses of instructions that have been deleted.
-        llvm::erase_if(UsesToRename, [](Use *U) {
-          return cast<Instruction>(U->getUser())->isLifetimeStartOrEnd();
-        });
-        for (Instruction *UserI : LifetimeMarkers)
-          UserI->eraseFromParent();
-      }
-    }
 
     // We found a use of I outside of BB.  Rename all uses of I that are outside
     // its block to be uses of the appropriate PHI node etc.  See ValuesInBlocks
