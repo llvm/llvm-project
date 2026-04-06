@@ -197,8 +197,7 @@ namespace RVVAndes {
 #include "clang/Basic/riscv_andes_vector_builtins.inc"
 #undef GET_RISCVV_BUILTIN_STR_TABLE
 
-static constexpr std::array<Builtin::Info, NumRVVAndesBuiltins> BuiltinInfos =
-    {
+static constexpr std::array<Builtin::Info, NumRVVAndesBuiltins> BuiltinInfos = {
 #define GET_RISCVV_BUILTIN_INFOS
 #include "clang/Basic/riscv_andes_vector_builtins.inc"
 #undef GET_RISCVV_BUILTIN_INFOS
@@ -367,8 +366,10 @@ void RISCVTargetInfo::getTargetDefines(const LangOptions &Opts,
   DefineSuperExt("__riscv_intrinsic_", "zvksg", {"zvks", "zvkg"});
 
   // Scalar crypto composite extensions
-  DefineSuperExt("__riscv_intrinsic_", "zkn", {"zbkb", "zbkc", "zbkx", "zkne", "zknd", "zknh"});
-  DefineSuperExt("__riscv_intrinsic_", "zks", {"zbkb", "zbkc", "zbkx", "zksed", "zksh"});
+  DefineSuperExt("__riscv_intrinsic_", "zkn",
+                 {"zbkb", "zbkc", "zbkx", "zkne", "zknd", "zknh"});
+  DefineSuperExt("__riscv_intrinsic_", "zks",
+                 {"zbkb", "zbkc", "zbkx", "zksed", "zksh"});
 
   auto VScale = getVScaleRange(Opts, ArmStreamingKind::NotStreaming);
   if (VScale && VScale->first && VScale->first == VScale->second)
