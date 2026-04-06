@@ -330,9 +330,9 @@ static bool canThrow(const FunctionDecl *Func) {
   if (!FunProto)
     return true;
 
-  // An unresolved exception spec means the function is a defaulted or
-  // uninstantiated special member that has never been called. It cannot
-  // propagate exceptions to any caller, so non-throwing.
+  // Clang evaluates unresolved exception specs before generating any call to
+  // the function, so these functions cannot appear at a call site and cannot
+  // throw.
   if (isUnresolvedExceptionSpec(FunProto->getExceptionSpecType()))
     return false;
 
