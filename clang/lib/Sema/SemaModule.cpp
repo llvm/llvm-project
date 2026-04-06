@@ -461,26 +461,14 @@ Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
   TU->setLocalOwningModule(Mod);
 
   // Process [[profiles::enforce]] on the module-declaration.
-  for (const auto &AL : Attrs) {
-    if (AL.getKind() == ParsedAttr::AT_ProfilesEnforce) {
-      if (!AL.checkAtLeastNumArgs(*this, 2))
-        continue;
-      unsigned NumDesignators = AL.getNumArgs() / 2;
-      for (unsigned I = 0; I < NumDesignators; ++I) {
-        StringRef Name, Desig;
-        if (!checkStringLiteralArgumentAttr(AL, I * 2, Name) ||
-            !checkStringLiteralArgumentAttr(AL, I * 2 + 1, Desig))
-          continue;
-
-        bool IsNew = !isProfileEnforced(Name);
-        if (!addProfileEnforcement(Name, Desig, AL.getLoc()))
-          continue;
-
-        if (IsNew && (MDK == ModuleDeclKind::Interface ||
-                      MDK == ModuleDeclKind::PartitionInterface))
-          Mod->EnforcedProfileDesignators.push_back({Name.str(), Desig.str()});
-      }
-    }
+  {
+    Module *ExportMod = (MDK == ModuleDeclKind::Interface ||
+                         MDK == ModuleDeclKind::PartitionInterface)
+                            ? Mod
+                            : nullptr;
+    for (const auto &AL : Attrs)
+      if (AL.getKind() == ParsedAttr::AT_ProfilesEnforce)
+        processProfilesEnforceAttr(AL, ExportMod, nullptr, nullptr);
   }
 
   // We are in the module purview, but before any other (non import)

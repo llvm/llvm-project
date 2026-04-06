@@ -5452,9 +5452,6 @@ static void handleSuppressAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 }
 
 static void handleProfilesEnforceAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
-  if (!AL.checkAtLeastNumArgs(S, 2))
-    return;
-
   if (!isa<EmptyDecl>(D)) {
     S.Diag(AL.getLoc(), diag::err_profiles_enforce_not_empty_decl);
     return;
@@ -5478,30 +5475,16 @@ static void handleProfilesEnforceAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     }
   }
 
-  // Args are interleaved: name0, desig0, name1, desig1, ...
-  unsigned NumDesignators = AL.getNumArgs() / 2;
+  // P3589R2 [decl.attr.require]p2: for header units, enforce from
+  // empty-declarations is visible to require.
+  Module *Mod = nullptr;
+  if (auto *M = S.getCurrentModule())
+    if (M->isHeaderUnit())
+      Mod = M;
+
   SmallVector<StringRef, 4> Names, Designators;
-  for (unsigned I = 0; I < NumDesignators; ++I) {
-    StringRef Name, Desig;
-    if (!S.checkStringLiteralArgumentAttr(AL, I * 2, Name) ||
-        !S.checkStringLiteralArgumentAttr(AL, I * 2 + 1, Desig))
-      return;
-
-    bool IsNew = !S.isProfileEnforced(Name);
-    if (!S.addProfileEnforcement(Name, Desig, AL.getLoc()))
-      return;
-
-    if (IsNew) {
-      // P3589R2 [decl.attr.require]p2: for header units, enforce from
-      // empty-declarations is visible to require.
-      if (auto *M = S.getCurrentModule())
-        if (M->isHeaderUnit())
-          M->EnforcedProfileDesignators.push_back({Name.str(), Desig.str()});
-
-      Names.push_back(Name);
-      Designators.push_back(Desig);
-    }
-  }
+  if (!S.processProfilesEnforceAttr(AL, Mod, &Names, &Designators))
+    return;
 
   D->addAttr(::new (S.Context)
                  ProfilesEnforceAttr(S.Context, AL, Names.data(), Names.size(),

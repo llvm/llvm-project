@@ -3010,6 +3010,36 @@ bool Sema::addProfileEnforcement(StringRef Name, StringRef Designator,
   return true;
 }
 
+bool Sema::processProfilesEnforceAttr(
+    const ParsedAttr &AL, Module *Mod,
+    SmallVectorImpl<StringRef> *NewNames,
+    SmallVectorImpl<StringRef> *NewDesignators) {
+  if (!AL.checkAtLeastNumArgs(*this, 2))
+    return false;
+
+  unsigned NumDesignators = AL.getNumArgs() / 2;
+  for (unsigned I = 0; I < NumDesignators; ++I) {
+    StringRef Name, Desig;
+    if (!checkStringLiteralArgumentAttr(AL, I * 2, Name) ||
+        !checkStringLiteralArgumentAttr(AL, I * 2 + 1, Desig))
+      continue;
+
+    bool IsNew = !isProfileEnforced(Name);
+    if (!addProfileEnforcement(Name, Desig, AL.getLoc()))
+      continue;
+
+    if (IsNew) {
+      if (Mod)
+        Mod->EnforcedProfileDesignators.push_back({Name.str(), Desig.str()});
+      if (NewNames)
+        NewNames->push_back(Name);
+      if (NewDesignators)
+        NewDesignators->push_back(Desig);
+    }
+  }
+  return true;
+}
+
 ProfilesSuppressAttr *Sema::makeProfilesSuppressAttr(const ParsedAttr &AL) {
   StringRef ProfileName;
   if (!checkStringLiteralArgumentAttr(AL, 0, ProfileName))
