@@ -312,6 +312,7 @@ SPIRVSerializer::moduleToObject(llvm::Module &llvmModule) {
   Opts.push_back(triple.str());
   Opts.push_back(std::to_string(optLevel));
 
+  // Translate the LLVM module to SPIR-V binary using LLVM's SPIR-V Backend API.
   bool success =
       SPIRVTranslateModule(&llvmModule, serializedSPIRVBinary, ErrMsg,
                            getDefaultSPIRVExtensions(), Opts);
@@ -331,7 +332,7 @@ SPIRVSerializer::moduleToObject(llvm::Module &llvmModule) {
   // Return SPIRV binary if the compilation target is `assembly`. Optimization
   // and SPIR-V extensions are enabled for SPIR-V binary output in both paths
   // (assembly and binary) as of now. SPIR-V binary
-  // is generated directly using the SPIR-V backends `SPIRVTranslate` API.
+  // is generated directly using the SPIR-V backends `SPIRVTranslateModule` API.
   if (targetOptions.getCompilationTarget() ==
       gpu::CompilationTarget::Assembly) {
 #define DEBUG_TYPE "serialize-to-isa"
