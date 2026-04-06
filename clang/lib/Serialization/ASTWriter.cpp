@@ -3085,6 +3085,12 @@ void ASTWriter::WriteSubmodules(Module *WritingModule, ASTContext *Context) {
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob));    // Macro name
   unsigned ExportAsAbbrev = Stream.EmitAbbrev(std::move(Abbrev));
 
+  Abbrev = std::make_shared<BitCodeAbbrev>();
+  Abbrev->Add(BitCodeAbbrevOp(SUBMODULE_ENFORCED_PROFILES));
+  Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // Profile name length
+  Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob));    // Name + Designator
+  unsigned EnforcedProfilesAbbrev = Stream.EmitAbbrev(std::move(Abbrev));
+
   // Write the submodule metadata block.
   RecordData::value_type Record[] = {
       getNumberOfModules(WritingModule),
@@ -3257,15 +3263,11 @@ void ASTWriter::WriteSubmodules(Module *WritingModule, ASTContext *Context) {
     }
 
     // Emit enforced profile designators (P3589R2).
-    if (!Mod->EnforcedProfileDesignators.empty()) {
-      RecordData Record;
-      for (const auto &EP : Mod->EnforcedProfileDesignators) {
-        Record.push_back(EP.ProfileName.size());
-        Record.append(EP.ProfileName.begin(), EP.ProfileName.end());
-        Record.push_back(EP.Designator.size());
-        Record.append(EP.Designator.begin(), EP.Designator.end());
-      }
-      Stream.EmitRecord(SUBMODULE_ENFORCED_PROFILES, Record);
+    for (const auto &EP : Mod->EnforcedProfileDesignators) {
+      RecordData::value_type Record[] = {SUBMODULE_ENFORCED_PROFILES,
+                                         EP.ProfileName.size()};
+      Stream.EmitRecordWithBlob(EnforcedProfilesAbbrev, Record,
+                                EP.ProfileName + EP.Designator);
     }
 
     // Queue up the submodules of this module.
