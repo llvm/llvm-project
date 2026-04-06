@@ -977,6 +977,8 @@ def MemsetTransposedArgs : DiagGroup<"memset-transposed-args">;
 def DynamicClassMemaccess : DiagGroup<"dynamic-class-memaccess">;
 def NonTrivialMemcall : DiagGroup<"nontrivial-memcall">;
 def NonTrivialMemaccess : DiagGroup<"nontrivial-memaccess", [NonTrivialMemcall]>;
+def NonportableIncludePath : DiagGroup<"nonportable-include-path">;
+def NonportableSystemIncludePath : DiagGroup<"nonportable-system-include-path">;
 def SuspiciousBzero : DiagGroup<"suspicious-bzero">;
 def SuspiciousMemaccess : DiagGroup<"suspicious-memaccess",
   [SizeofPointerMemaccess, DynamicClassMemaccess,
