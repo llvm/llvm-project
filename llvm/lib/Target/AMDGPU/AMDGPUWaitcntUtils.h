@@ -1,4 +1,4 @@
-//===- SIInsertWaitcnts.h - Insert Wait Instructions ------------*- C++ -*-===//
+//===- AMDGPUWaitcntUtils.h -------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_TARGET_AMDGPU_SIINSERTWAITCNTS_H
-#define LLVM_LIB_TARGET_AMDGPU_SIINSERTWAITCNTS_H
+#ifndef LLVM_LIB_TARGET_AMDGPU_AMDGPUWAITCNTUTILS_H
+#define LLVM_LIB_TARGET_AMDGPU_AMDGPUWAITCNTUTILS_H
 
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/StringExtras.h"
@@ -169,5 +169,4 @@ unsigned encodeStorecntDscnt(const IsaVersion &Version, const Waitcnt &Decoded);
 
 } // namespace llvm
 
-#endif // LLVM_LIB_TARGET_AMDGPU_SIINSERTWAITCNTS_H
-
+#endif // LLVM_LIB_TARGET_AMDGPU_AMDGPUWAITCNTUTILS_H
