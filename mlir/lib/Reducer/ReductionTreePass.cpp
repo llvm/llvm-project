@@ -59,10 +59,83 @@ static void applyPatterns(Region &region,
       opsInRange.push_back(&op.value());
   }
 
-  // `applyOpPatternsGreedily` with folding may erase the ops so we can't do the
-  // pattern matching in above iteration. Besides, erase op not-in-range may end
-  // up in invalid module, so `applyOpPatternsGreedily` with folding should come
-  // before that transform.
+  if (eraseOpNotInRange) {
+
+    // clang-format off
+    LLVM_DEBUG(
+      LDBG() << "before erase ops not in ranges, keep the ranges:";
+      for (ReductionNode::Range range : rangeToKeep) {
+        LDBG() << "[" << range.first << " " << range.second << ")";
+      } 
+      LDBG() << "region:\n" << region;
+    );
+    // clang-format on
+
+    // The map uses the results of the operations as keys, while the values
+    // represent the remaining user count for each result. We iterate through
+    // `opsNotInRange` to update this map; if a key's value remains greater than
+    // zero, it indicates that materialization is required for that specific
+    // value.
+    DenseMap<Value, int64_t> valueToMaterializationMap;
+
+    for (Operation *op : opsNotInRange) {
+      if (op->hasTrait<mlir::OpTrait::IsTerminator>())
+        continue;
+
+      for (Value result : op->getResults())
+        valueToMaterializationMap[result] = result.getNumUses();
+
+      // Use a set to store all operands to prevent the map value from being
+      // decremented multiple times if an operation uses the same operand more
+      // than once.
+      SmallPtrSet<Value, 4> operandSet(op->getOperands().begin(),
+                                       op->getOperands().end());
+      for (Value operand : operandSet)
+        // If an `operand` is a key in the map, it indicates that the operand
+        // was defined within `opsNotInRange`.
+        if (valueToMaterializationMap.contains(operand))
+          --valueToMaterializationMap[operand];
+    }
+
+    SmallVector<Type, 4> materializationTypes;
+    SmallVector<Value, 4> valueNeedMaterialization;
+    for (auto mapValue : valueToMaterializationMap) {
+      // If a key in the map has a value greater than zero, it indicates that
+      // there are still operations in the remaining IR using this key.
+      // Therefore, we should materialize it.
+      if (mapValue.second > 0) {
+        materializationTypes.push_back(mapValue.first.getType());
+        valueNeedMaterialization.push_back(mapValue.first);
+      }
+    }
+
+    if (!materializationTypes.empty()) {
+      OpBuilder b(region.getContext());
+      b.setInsertionPointToStart(&region.front());
+      auto castOp = UnrealizedConversionCastOp::create(
+          b, b.getUnknownLoc(), materializationTypes, {});
+      for (auto [src, res] :
+           llvm::zip_equal(valueNeedMaterialization, castOp.getResults())) {
+        src.replaceAllUsesWith(res);
+      }
+    }
+
+    for (Operation *op : opsNotInRange) {
+      if (op->hasTrait<mlir::OpTrait::IsTerminator>())
+        continue;
+      op->dropAllUses();
+      op->erase();
+    }
+    LDBG() << "after erase ops not in ranges:\n" << region;
+  }
+
+  // After removing `opsNotInRange`, we apply `applyOpPatternsGreedily` both to
+  // run specific patterns and to eliminate operations that have no users. The
+  // reason we do not directly delete all userless operations is that some may
+  // be `interesting` ops. Therefore, we utilize `applyOpPatternsGreedily` here
+  // instead. It is essential to further eliminate redundant operations here;
+  // otherwise, the reduction will fail if the size of the deleted ops is
+  // smaller than the newly introduced `unrealized_conversion_cast`.
   for (Operation *op : opsInRange) {
     // `applyOpPatternsGreedily` with folding returns whether the op is
     // converted. Omit it because we don't have expectation this reduction will
@@ -71,12 +144,6 @@ static void applyPatterns(Region &region,
                                   GreedyRewriteConfig().setStrictness(
                                       GreedyRewriteStrictness::ExistingOps));
   }
-
-  if (eraseOpNotInRange)
-    for (Operation *op : opsNotInRange) {
-      op->dropAllUses();
-      op->erase();
-    }
 }
 
 /// We will apply the reducer patterns to the operations in the ranges specified

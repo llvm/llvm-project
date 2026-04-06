@@ -123,3 +123,34 @@ func.func @switch_reduction(%arg0: i32, %arg1: memref<2xf32>, %arg2: memref<2xf3
   return
 }
 // CHECK-NEXT:  "test.op_crash"(%[[ARG1]], %[[ARG2]])
+
+// -----
+
+// CHECK-LABEL: func @materialization
+//  CHECK-SAME:   %[[ARG0:.*]]: i32
+func.func @materialization(%arg0: i32) -> (i32) {
+  %0 = "test.op_crash_long" (%arg0, %arg0, %arg0) : (i32, i32, i32) -> i32
+  %1 = arith.addi %0, %0 : i32
+  %2 = arith.addi %1, %1 : i32
+  return %2 : i32
+}
+// CHECK-NEXT: %[[CAST:.*]] = builtin.unrealized_conversion_cast to i32
+// CHECK-NEXT: %{{.*}} = "test.op_crash_short"() : () -> i32
+// CHECK-NEXT: return %[[CAST]] : i32
+
+// -----
+
+// In this case, when the add operation was replaced by an unrealized_conversion_cast,
+// the file size actually increased, leading to a failure in materialization.
+
+// CHECK-LABEL: func @no_materialization
+//  CHECK-SAME:   %[[ARG0:.*]]: i32
+func.func @no_materialization(%arg0: i32) -> (i32) {
+  %0 = "test.op_crash_long" (%arg0, %arg0, %arg0) : (i32, i32, i32) -> i32
+  %1 = arith.addi %0, %0 : i32
+  return %1 : i32
+}
+// CHECK-NEXT: %[[CRASH:.*]] = "test.op_crash_short"() : () -> i32
+// CHECK-NEXT: %[[ADDI:.*]] = arith.addi %[[CRASH]], %[[CRASH]] : i32
+// CHECK-NEXT:  return %[[ADDI]] : i32
+
