@@ -6281,7 +6281,7 @@ bool Process::SetInstrumentationRuntimeEnabled(InstrumentationRuntimeType irt,
   // There's no instance of this plugin for this process.
 
   if (!enabled)
-    return true; // nothing to do
+    return true;
 
   // We need to make an instance of this plugin for this process.
   // This could happen because `plugin disable instrumentation-runtime.*`
