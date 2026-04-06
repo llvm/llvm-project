@@ -955,6 +955,26 @@ def : ThreeOp_i32_Pats<and, or, V_AND_OR_B32_e64>;
 def : ThreeOp_i32_Pats<or, or, V_OR3_B32_e64>;
 def : ThreeOp_i32_Pats<xor, add, V_XAD_U32_e64>;
 
+class ThreeOp_v2i32_Pats <SDPatternOperator op1, SDPatternOperator op2, Instruction inst> : GCNPat <
+  // This matches (op2 (op1 v2i32:$src0, v2i32:$src1), v2i32:$src2) with conditions.
+  (ThreeOpFrag<op1, op2> v2i32:$src0, v2i32:$src1, v2i32:$src2),
+  (REG_SEQUENCE VReg_64,
+    (inst
+      (i32 (EXTRACT_SUBREG $src0, sub0)),
+      (i32 (EXTRACT_SUBREG $src1, sub0)),
+      (i32 (EXTRACT_SUBREG $src2, sub0))
+    ), sub0,
+    (inst
+      (i32 (EXTRACT_SUBREG $src0, sub1)),
+      (i32 (EXTRACT_SUBREG $src1, sub1)),
+      (i32 (EXTRACT_SUBREG $src2, sub1))
+    ), sub1
+  )
+>;
+
+def : ThreeOp_v2i32_Pats<and, or, V_AND_OR_B32_e64>;
+def : ThreeOp_v2i32_Pats<or, or, V_OR3_B32_e64>;
+
 let SubtargetPredicate = HasMadU32Inst, AddedComplexity = 10 in
   def : ThreeOp_i32_Pats<mul, add, V_MAD_U32_e64>;
 
