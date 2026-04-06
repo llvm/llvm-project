@@ -5,7 +5,9 @@
 # symbol from the tool's address space at load time.
 
 add_llvm_library(SSAFExamplePlugin MODULE BUILDTREE_ONLY
-  ExamplePlugin.cpp
+  TagsAnalysis.cpp
+  PairsAnalysis.cpp
+  TagsPairsAnalysis.cpp
   PLUGIN_TOOL clang-ssaf-format
   )
 
