@@ -5253,32 +5253,62 @@ bool Parser::ParseProfilesAttributeArgs(IdentifierInfo *AttrName,
     std::string Justification, Rule;
     SmallVector<std::string, 4> RawArgs;
 
-    if (TryConsumeToken(tok::comma)) {
-      if (ParseProfileArgumentList(RawArgs)) {
-        SkipToRParen();
+    auto ParseStringLiteralValue = [&](std::string &Out) -> bool {
+      SmallVector<Token, 1> StringToks;
+      do {
+        StringToks.push_back(Tok);
+        ConsumeStringToken();
+      } while (tok::isStringLiteral(Tok.getKind()));
+      StringLiteralParser Literal(StringToks, PP);
+      if (Literal.hadError)
         return true;
-      }
+      Out = Literal.GetString().str();
+      return false;
+    };
 
-      for (const auto &Arg : RawArgs) {
-        StringRef ArgRef(Arg);
-        if (ArgRef.starts_with("justification : ")) {
-          StringRef JustVal = ArgRef.substr(strlen("justification : "));
-          // P3589R2 [decl.attr.suppress]p2: justification must be a
-          // string-literal. Check the spelling recorded by the parser.
-          if (!JustVal.starts_with("\"") && !JustVal.starts_with("L\"") &&
-              !JustVal.starts_with("u\"") && !JustVal.starts_with("U\"") &&
-              !JustVal.starts_with("u8\"")) {
-            Diag(AttrNameLoc,
-                 diag::err_profiles_suppress_justification_not_string);
+    while (TryConsumeToken(tok::comma)) {
+      if (Tok.is(tok::identifier) && NextToken().is(tok::colon)) {
+        IdentifierInfo *KeyII = Tok.getIdentifierInfo();
+        ConsumeToken();
+        ConsumeToken();
+
+        if (KeyII->isStr("justification")) {
+          if (!tok::isStringLiteral(Tok.getKind())) {
+            Diag(Tok, diag::err_profiles_suppress_justification_not_string);
             SkipToRParen();
             return true;
           }
-          Justification = JustVal.str();
-        } else if (ArgRef.starts_with("rule : ")) {
-          Rule = ArgRef.substr(strlen("rule : ")).str();
-          if (Rule.size() >= 2 && Rule.front() == '"' && Rule.back() == '"')
-            Rule = Rule.substr(1, Rule.size() - 2);
+          if (ParseStringLiteralValue(Justification)) {
+            SkipToRParen();
+            return true;
+          }
+        } else if (KeyII->isStr("rule")) {
+          if (tok::isStringLiteral(Tok.getKind())) {
+            if (ParseStringLiteralValue(Rule)) {
+              SkipToRParen();
+              return true;
+            }
+          } else {
+            if (ParseNonCommaBalancedToken(Rule)) {
+              SkipToRParen();
+              return true;
+            }
+          }
+        } else {
+          std::string Value;
+          if (ParseNonCommaBalancedToken(Value)) {
+            SkipToRParen();
+            return true;
+          }
+          RawArgs.push_back(KeyII->getName().str() + " : " + Value);
         }
+      } else {
+        std::string Spelling;
+        if (ParseNonOperatorNonPunctuatorToken(Spelling)) {
+          SkipToRParen();
+          return true;
+        }
+        RawArgs.push_back(std::move(Spelling));
       }
     }
 
