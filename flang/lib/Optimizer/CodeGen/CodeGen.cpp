@@ -223,7 +223,8 @@ struct AddrOfOpConversion : public fir::FIROpConversion<fir::AddrOfOp> {
     if (auto g = mod.template lookupSymbol<mlir::LLVM::GlobalOp>(sym))
       return g.getAddrSpace();
     if (auto g = mod.template lookupSymbol<fir::GlobalOp>(sym))
-      return getCUFAddrSpace(g);
+      if (auto as = getCUFAddrSpace(g))
+        return *as;
     return fallback;
   }
 
