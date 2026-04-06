@@ -152,11 +152,6 @@ private:
   /// a vectorization chain.
   bool vectorizeChainsInBlock(BasicBlock *BB, slpvectorizer::BoUpSLP &R);
 
-  /// Tries to vectorize non-trivially-vectorizable intrinsic calls operands in
-  /// the block.
-  bool vectorizeIntrinsicSeedsInBlock(BasicBlock *BB,
-                                      slpvectorizer::BoUpSLP &R);
-
   std::optional<bool> vectorizeStoreChain(ArrayRef<Value *> Chain,
                                           slpvectorizer::BoUpSLP &R,
                                           unsigned Idx, unsigned MinVF,
