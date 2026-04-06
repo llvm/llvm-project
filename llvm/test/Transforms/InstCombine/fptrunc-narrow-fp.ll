@@ -18,3 +18,38 @@ define float @narrow_fdiv_sitofp(i64 %x) {
   %conv4 = fptrunc double %div3 to float
   ret float %conv4
 }
+
+define float @fdiv_narrow_urem_within_float_range(i64 %x) {
+; CHECK-LABEL: define float @fdiv_narrow_urem_within_float_range(
+; CHECK-SAME: i64 [[X:%.*]]) {
+; CHECK-NEXT:    [[MUL:%.*]] = mul i64 [[X]], 27611
+; CHECK-NEXT:    [[TMP1:%.*]] = urem i64 [[MUL]], 74383
+; CHECK-NEXT:    [[TMP2:%.*]] = uitofp nneg i64 [[TMP1]] to float
+; CHECK-NEXT:    [[CONV4:%.*]] = fdiv float [[TMP2]], 7.438300e+04
+; CHECK-NEXT:    ret float [[CONV4]]
+;
+  %mul = mul i64 %x, 27611
+  %1 = urem i64 %mul,74383
+  %conv = sitofp i64 %1 to double
+  %div3 = fdiv double %conv, 7.438300e+04
+  %conv4 = fptrunc double %div3 to float
+  ret float %conv4
+}
+
+define float @fdiv_narrow_urem_outside_float_range(i64 %x) {
+; CHECK-LABEL: define float @fdiv_narrow_urem_outside_float_range(
+; CHECK-SAME: i64 [[X:%.*]]) {
+; CHECK-NEXT:    [[MUL:%.*]] = mul i64 [[X]], 27611
+; CHECK-NEXT:    [[TMP1:%.*]] = urem i64 [[MUL]], 33342355
+; CHECK-NEXT:    [[CONV:%.*]] = uitofp nneg i64 [[TMP1]] to double
+; CHECK-NEXT:    [[DIV3:%.*]] = fdiv double [[CONV]], 7.438300e+04
+; CHECK-NEXT:    [[CONV4:%.*]] = fptrunc double [[DIV3]] to float
+; CHECK-NEXT:    ret float [[CONV4]]
+;
+  %mul = mul i64 %x, 27611
+  %1 = urem i64 %mul, 33342355
+  %conv = sitofp i64 %1 to double
+  %div3 = fdiv double %conv, 7.438300e+04
+  %conv4 = fptrunc double %div3 to float
+  ret float %conv4
+}
