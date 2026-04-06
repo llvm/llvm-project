@@ -73,7 +73,7 @@ ObjectFile *ObjectFileAIXCore::CreateInstance(const lldb::ModuleSP &module_sp,
           extractor_sp = std::make_shared<lldb_private::DataExtractor>(data_sp);
       }
 
-      //assert(data_sp);
+      assert(extractor_sp && extractor_sp->HasData());
 
       // Update the data to contain the entire file if it doesn't already
       if (extractor_sp->GetByteSize() < length) {
@@ -82,12 +82,16 @@ ObjectFile *ObjectFileAIXCore::CreateInstance(const lldb::ModuleSP &module_sp,
               return nullptr;
           data_offset = 0;
           mapped_writable = true;
+          extractor_sp = std::make_shared<lldb_private::DataExtractor>(data_sp);
       }
 
       // If we didn't map the data as writable take ownership of the buffer.
       if (!mapped_writable) {
-          DataBufferSP data_sp = std::make_shared<DataBufferHeap>(data_sp->GetBytes(),
-                  data_sp->GetByteSize());
+          llvm::ArrayRef<uint8_t> data_array = extractor_sp->GetData();
+          DataBufferSP new_buffer = std::make_shared<DataBufferHeap>(
+              data_array.data(),
+              data_array.size());
+          extractor_sp = std::make_shared<lldb_private::DataExtractor>(new_buffer);
           data_offset = 0;
       }
 
