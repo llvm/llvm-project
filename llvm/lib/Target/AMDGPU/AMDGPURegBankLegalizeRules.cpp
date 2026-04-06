@@ -1706,6 +1706,10 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
 
   addRulesForIOpcs({amdgcn_wqm_demote}).Any({{}, {{}, {IntrId, Vcc}}});
 
+  addRulesForIOpcs({amdgcn_inverse_ballot})
+      .Any({{DivS1, _, S32}, {{Vcc}, {IntrId, SgprB32_ReadFirstLane}}})
+      .Any({{DivS1, _, S64}, {{Vcc}, {IntrId, SgprB64_ReadFirstLane}}});
+
   addRulesForIOpcs({amdgcn_live_mask, amdgcn_ps_live})
       .Any({{DivS1}, {{Vcc}, {}}});
 
