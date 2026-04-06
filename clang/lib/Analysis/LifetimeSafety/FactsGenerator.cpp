@@ -94,10 +94,6 @@ static const Loan *createLoan(FactManager &FactMgr,
   return FactMgr.getLoanMgr().createLoan(Path, MTE);
 }
 
-static bool isThrowExpr(const Expr *E) {
-  return isa<CXXThrowExpr>(E->IgnoreParenImpCasts());
-}
-
 void FactsGenerator::run() {
   llvm::TimeTraceScope TimeProfile("FactGenerator");
   const CFG &Cfg = *AC.getCFG();
