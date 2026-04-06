@@ -5168,7 +5168,7 @@ bool Parser::ParseProfileDesignator(std::string &Name,
   }
 
   if (!Tok.is(tok::r_paren)) {
-    Diag(Tok, diag::err_profiles_expected_rparen) << "enforce";
+    Diag(Tok, diag::err_expected) << tok::r_paren;
     return true;
   }
   Designator += ")";
