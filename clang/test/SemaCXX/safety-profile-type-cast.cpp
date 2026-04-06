@@ -186,3 +186,35 @@ void test_selective_suppress() {
     int *p = reinterpret_cast<int*>(0); // expected-error {{'reinterpret_cast' is unsafe under profile 'test::type_cast'}}
   }
 }
+
+// Suppress on compound statement inside template: suppression must be
+// effective during instantiation, not just during parsing.
+template <typename T>
+void template_suppress_stmt(T x) {
+  // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+  [[profiles::suppress(test::type_cast)]] {
+    auto *p = reinterpret_cast<int*>(x);
+  }
+}
+void instantiate_suppress_stmt() { template_suppress_stmt(0); }
+
+// Suppress on variable declaration inside template.
+template <typename T>
+void template_suppress_var(T x) {
+  // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+  [[profiles::suppress(test::type_cast)]] auto *p = reinterpret_cast<int*>(x);
+}
+void instantiate_suppress_var() { template_suppress_var(0); }
+
+// Suppress ends at statement boundary inside template.
+template <typename T>
+void template_suppress_boundary(T x) {
+  // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+  [[profiles::suppress(test::type_cast)]] {
+    auto *p = reinterpret_cast<int*>(x);
+  }
+  auto *q = reinterpret_cast<int*>(x); // expected-error {{'reinterpret_cast' is unsafe under profile 'test::type_cast'}}
+}
+void instantiate_suppress_boundary() {
+  template_suppress_boundary(0); // expected-note {{in instantiation of function template specialization 'template_suppress_boundary<int>' requested here}}
+}

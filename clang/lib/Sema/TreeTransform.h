@@ -8311,7 +8311,23 @@ template <typename Derived>
 StmtResult
 TreeTransform<Derived>::TransformAttributedStmt(AttributedStmt *S,
                                                 StmtDiscardKind SDK) {
+  // P3589R2: Push profile suppressions BEFORE transforming the sub-statement
+  // so that profile violation checks during template instantiation see them.
+  unsigned ProfileSuppressCount = 0;
+  if (getSema().getLangOpts().Profiles) {
+    for (const auto *A : S->getAttrs()) {
+      if (const auto *PSA = dyn_cast<ProfilesSuppressAttr>(A)) {
+        getSema().pushProfileSuppression(PSA->getProfileName(),
+                                         PSA->getRule());
+        ++ProfileSuppressCount;
+      }
+    }
+  }
+
   StmtResult SubStmt = getDerived().TransformStmt(S->getSubStmt(), SDK);
+
+  getSema().popProfileSuppressions(ProfileSuppressCount);
+
   if (SubStmt.isInvalid())
     return StmtError();
 
@@ -8649,7 +8665,20 @@ TreeTransform<Derived>::TransformDeclStmt(DeclStmt *S) {
   SmallVector<Decl *, 4> Decls;
   LambdaScopeInfo *LSI = getSema().getCurLambda();
   for (auto *D : S->decls()) {
+    // P3589R2: Push profile suppressions from decl attrs so that
+    // initializer checks during template instantiation see them.
+    unsigned ProfileSuppressCount = 0;
+    if (getSema().getLangOpts().Profiles) {
+      for (const auto *A : D->specific_attrs<ProfilesSuppressAttr>()) {
+        getSema().pushProfileSuppression(A->getProfileName(), A->getRule());
+        ++ProfileSuppressCount;
+      }
+    }
+
     Decl *Transformed = getDerived().TransformDefinition(D->getLocation(), D);
+
+    getSema().popProfileSuppressions(ProfileSuppressCount);
+
     if (!Transformed)
       return StmtError();
 
