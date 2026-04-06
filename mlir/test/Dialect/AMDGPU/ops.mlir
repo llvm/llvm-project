@@ -682,10 +682,11 @@ func.func @gather_to_lds_0d(%mem1 : memref<f16>, %smem1 : memref<f16, #gpu.addre
 }
 
 // CHECK-LABEL: func @global_load_async_to_lds
-func.func @global_load_async_to_lds(%idx1 : index, %idx2 : index, %mem1 : memref<32xf32, #gpu.address_space<global>>, %mem2 : memref<32x32xf32, #gpu.address_space<global>>, %smem1 : memref<32xf32, #gpu.address_space<workgroup>>, %smem2 : memref<32x32xf32, #gpu.address_space<workgroup>>) {
+func.func @global_load_async_to_lds(%idx1 : index, %idx2 : index, %mem1 : memref<32xf32, #gpu.address_space<global>>, %mem2 : memref<32x32xf32, #gpu.address_space<global>>, %smem1 : memref<32xf32, #gpu.address_space<workgroup>>, %smem2 : memref<32x32xf32, #gpu.address_space<workgroup>>, %mask : i1) {
   // CHECK: amdgpu.global_load_async_to_lds %{{.*}}[%{{.*}}, %{{.*}}], %{{.*}}[%{{.*}}, %{{.*}}]
   // CHECK: amdgpu.global_load_async_to_lds %{{.*}}[%{{.*}}], %{{.*}}[%{{.*}}, %{{.*}}]
   // CHECK: amdgpu.global_load_async_to_lds %{{.*}}[%{{.*}}, %{{.*}}], %{{.*}}[%{{.*}}, %{{.*}}]
+  // CHECK: amdgpu.global_load_async_to_lds %{{.*}}[%{{.*}}], %{{.*}}[%{{.*}}], %{{.*}}
   amdgpu.global_load_async_to_lds %mem2[%idx1, %idx2], %smem2[%idx1, %idx2]
     : f32, memref<32x32xf32, #gpu.address_space<global>>,
       memref<32x32xf32, #gpu.address_space<workgroup>>
@@ -694,6 +695,9 @@ func.func @global_load_async_to_lds(%idx1 : index, %idx2 : index, %mem1 : memref
       memref<32x32xf32, #gpu.address_space<workgroup>>
   amdgpu.global_load_async_to_lds %mem2[%idx1, %idx2], %smem2[%idx1, %idx2]
     : vector<2xf32>, memref<32x32xf32, #gpu.address_space<global>>,
+      memref<32x32xf32, #gpu.address_space<workgroup>>
+  amdgpu.global_load_async_to_lds %mem2[%idx1, %idx2], %smem2[%idx1, %idx2], %mask
+    : f32, memref<32x32xf32, #gpu.address_space<global>>,
       memref<32x32xf32, #gpu.address_space<workgroup>>
   func.return
 }
