@@ -89,6 +89,10 @@ DESTDIR=/path/for/staged/install ninja install
 ```
 ninja check-libclc-<target-triple>
 ```
+or
+```
+ninja -C runtimes/runtimes-<target-triple>-bins check-libclc
+```
 
 ## Out-of-tree build
 
