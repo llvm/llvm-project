@@ -10,7 +10,7 @@ define ptr @unknown_start_inbounds(ptr %p, i64 %n) {
 ; CHECK-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[LOOP]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[N]], -1
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[P]], i64 [[TMP0]]
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr nuw i8, ptr [[P]], i64 [[TMP0]]
 ; CHECK-NEXT:    ret ptr [[SCEVGEP]]
 ;
 entry:
@@ -38,7 +38,7 @@ define ptr @unknown_start_nonneg_step(ptr %p, i64 %n, i32 %s) {
 ; CHECK-NEXT:    [[STEP:%.*]] = zext i32 [[S]] to i64
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[N]], -1
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], [[STEP]]
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[P]], i64 [[TMP1]]
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr nuw i8, ptr [[P]], i64 [[TMP1]]
 ; CHECK-NEXT:    ret ptr [[SCEVGEP]]
 ;
 entry:
