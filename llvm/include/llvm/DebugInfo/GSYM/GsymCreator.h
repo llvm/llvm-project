@@ -319,8 +319,6 @@ public:
   virtual ~GsymCreator() = default;
 
   /// Get the size in bytes needed for encoding string offsets.
-  ///
-  /// \returns The size in bytes of each string table offset.
   virtual uint8_t getStringOffsetSize() const = 0;
 
   /// Save a GSYM file to a stand alone file.

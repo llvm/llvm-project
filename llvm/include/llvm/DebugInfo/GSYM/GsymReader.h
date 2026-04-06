@@ -33,13 +33,10 @@ namespace gsym {
 /// GsymReader is used to read GSYM data from a file or buffer.
 ///
 /// This class is optimized for very quick lookups when the endianness matches
-/// the host system. The header, address table, address info offsets, and file
-/// table is designed to be mmap'ed as read only into memory and used without
-/// any parsing needed. If the endianness doesn't match, we swap these objects
-/// and tables into version-specific SwappedData and then point the ArrayRefs
-/// to the swapped internal data.
-///
-/// This base class contains all shared state and logic.
+/// the host system. The header and the address table are designed to be mmap'ed as
+/// read only into memory and used without any parsing needed. If the endianness
+/// doesn't match, we swap the byte order of the address table into a separate buffer for efficient binary
+/// lookup. All the other data are parsed on demand with the correct endianness.
 ///
 /// GsymReader objects must use one of the static functions to create an
 /// instance: GsymReader::openFile(...) and GsymReader::copyBuffer(...).
@@ -78,8 +75,8 @@ public:
   /// Construct a GsymReader from a file on disk.
   ///
   /// \param Path The file path the GSYM file to read.
-  /// \returns An expected unique_ptr to a GsymReader or an error object that
-  /// indicates reason for failing to read the GSYM.
+  /// \returns An expected GsymReader that contains the object or an error
+  /// object that indicates reason for failing to read the GSYM.
   LLVM_ABI static llvm::Expected<std::unique_ptr<GsymReader>>
   openFile(StringRef Path);
 
@@ -87,8 +84,8 @@ public:
   ///
   /// \param Bytes A set of bytes that will be copied and owned by the
   /// returned object on success.
-  /// \returns An expected unique_ptr to a GsymReader or an error object that
-  /// indicates reason for failing to read the GSYM.
+  /// \returns An expected GsymReader that contains the object or an error
+  /// object that indicates reason for failing to read the GSYM.
   LLVM_ABI static llvm::Expected<std::unique_ptr<GsymReader>>
   copyBuffer(StringRef Bytes);
 
@@ -172,7 +169,17 @@ public:
   /// \param Index An index into the file table.
   /// \returns An optional FileInfo that will be valid if the file index is
   /// valid, or std::nullopt if the file index is out of bounds,
-  std::optional<FileEntry> getFile(uint32_t Index) const;
+  std::optional<FileEntry> getFile(uint32_t Index) const {
+    uint64_t EntrySize =
+        FileEntry::getEncodedSize(FileEntryData.getStringOffsetSize());
+    uint64_t Offset = Index * EntrySize;
+    if (!FileEntryData.isValidOffsetForDataOfSize(Offset, EntrySize))
+      return std::nullopt;
+    FileEntry FE;
+    FE.Dir = FileEntryData.getStringOffset(&Offset);
+    FE.Base = FileEntryData.getStringOffset(&Offset);
+    return FE;
+  }
 
   /// Dump the entire Gsym data contained in this object.
   ///
@@ -275,6 +282,7 @@ public:
   LLVM_ABI std::optional<uint64_t> getAddress(size_t Index) const;
 
 protected:
+
   /// Get an appropriate address info offsets array.
   ///
   /// The address table in the GSYM file is stored as array of 1, 2, 4 or 8

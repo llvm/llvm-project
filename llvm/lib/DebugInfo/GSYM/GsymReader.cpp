@@ -221,17 +221,6 @@ uint64_t GsymReader::getAddressInfoOffset(size_t Index) const {
   return AddrInfoOffsetsData.getUnsigned(&Offset, getAddressInfoOffsetByteSize());
 }
 
-std::optional<FileEntry> GsymReader::getFile(uint32_t Index) const {
-  uint64_t EntrySize = 2 * FileEntryData.getStringOffsetSize();
-  uint64_t Offset = Index * EntrySize;
-  if (!FileEntryData.isValidOffsetForDataOfSize(Offset, EntrySize))
-    return std::nullopt;
-  FileEntry FE;
-  FE.Dir = FileEntryData.getStringOffset(&Offset);
-  FE.Base = FileEntryData.getStringOffset(&Offset);
-  return FE;
-}
-
 llvm::Expected<DataExtractor>
 GsymReader::getFunctionInfoDataForAddress(uint64_t Addr,
                                           uint64_t &FuncStartAddr) const {
