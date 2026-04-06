@@ -82,19 +82,19 @@ namespace {
 
 // BEGIN SWIFT
 static constexpr OptionEnumValueElement g_swift_module_loading_mode_enums[] = {
-  {eSwiftModuleLoadingModePreferInterface, "prefer-interface",
-    "Prefer loading Swift modules via their .swiftinterface file, but fall back "
-    " to the .swiftmodule if it is missing."},
-  {eSwiftModuleLoadingModePreferSerialized, "prefer-serialized",
-    "Prefer loading Swift module via their .swiftmodule file if present, but "
-    "fall back to the .swiftinterface if it is missing or invalid (default)."},
-  {eSwiftModuleLoadingModeOnlyInterface, "only-interface",
-    "Only load Swift modules via their .swiftinterface file - ignore "
-    ".swiftmodule files."},
-  {eSwiftModuleLoadingModeOnlySerialized, "only-serialized",
-    "Only load Swift modules via their .swiftmodule file - ignore "
-    ".swiftinterface files."} };
-
+    {eSwiftModuleLoadingModePreferInterface, "prefer-interface",
+     "Prefer loading Swift modules via their .swiftinterface file, but fall "
+     "back "
+     " to the .swiftmodule if it is missing."},
+    {eSwiftModuleLoadingModePreferSerialized, "prefer-serialized",
+     "Prefer loading Swift module via their .swiftmodule file if present, but "
+     "fall back to the .swiftinterface if it is missing or invalid (default)."},
+    {eSwiftModuleLoadingModeOnlyInterface, "only-interface",
+     "Only load Swift modules via their .swiftinterface file - ignore "
+     ".swiftmodule files."},
+    {eSwiftModuleLoadingModeOnlySerialized, "only-serialized",
+     "Only load Swift modules via their .swiftmodule file - ignore "
+     ".swiftinterface files."}};
 
 static constexpr OptionEnumValueElement g_enable_swift_cxx_interop_values[] = {
     {llvm::to_underlying(AutoBool::Auto), "auto",
@@ -147,7 +147,7 @@ ModuleListProperties::ModuleListProperties() {
     lldbassert(success);
   }
   // END SWIFT
-  
+
   path.clear();
   if (llvm::sys::path::cache_directory(path)) {
     llvm::sys::path::append(path, "lldb");
@@ -248,7 +248,8 @@ SwiftModuleLoadingMode ModuleListProperties::GetSwiftModuleLoadingMode() const {
                g_modulelist_properties[idx].default_uint_value));
 }
 
-bool ModuleListProperties::SetSwiftModuleLoadingMode(SwiftModuleLoadingMode mode) {
+bool ModuleListProperties::SetSwiftModuleLoadingMode(
+    SwiftModuleLoadingMode mode) {
   const uint32_t idx = ePropertySwiftModuleLoadingMode;
   return SetPropertyAtIndex(idx, mode);
 }
@@ -288,20 +289,19 @@ uint64_t ModuleListProperties::GetSwiftMetadataCacheExpirationDays() {
       idx, g_modulelist_properties[idx].default_uint_value);
 }
 
-
 AutoBool ModuleListProperties::GetSwiftEnableCxxInterop() const {
   const uint32_t idx = ePropertySwiftEnableCxxInterop;
 
   return GetPropertyAtIndexAs<AutoBool>(
-      idx, static_cast<AutoBool>(
-               g_modulelist_properties[idx].default_uint_value));
+      idx,
+      static_cast<AutoBool>(g_modulelist_properties[idx].default_uint_value));
 }
 
 AutoBool ModuleListProperties::GetSwiftEnableFullDwarfDebugging() const {
   const uint32_t idx = ePropertySwiftEnableFullDwarfDebugging;
   return GetPropertyAtIndexAs<AutoBool>(
-      idx, static_cast<AutoBool>(
-               g_modulelist_properties[idx].default_uint_value));
+      idx,
+      static_cast<AutoBool>(g_modulelist_properties[idx].default_uint_value));
 }
 
 bool ModuleListProperties::GetSwiftEnableASTContext() const {
@@ -1349,10 +1349,9 @@ struct SharedModuleListInfo {
   ModuleListProperties module_list_properties;
   std::mutex shared_lock;
 };
-}
+} // namespace
 
-static SharedModuleListInfo &GetSharedModuleListInfo()
-{
+static SharedModuleListInfo &GetSharedModuleListInfo() {
   static SharedModuleListInfo *g_shared_module_list_info = nullptr;
   static llvm::once_flag g_once_flag;
   llvm::call_once(g_once_flag, []() {
@@ -1502,9 +1501,8 @@ ModuleList::GetSharedModule(const ModuleSpec &module_spec, ModuleSP &module_sp,
     if (uuid_ptr && *uuid_ptr != module_sp->GetUUID()) {
       module_sp.reset();
     } else {
-      if (module_sp->GetObjectFile() &&
-          module_sp->GetObjectFile()->GetType() ==
-              ObjectFile::eTypeStubLibrary) {
+      if (module_sp->GetObjectFile() && module_sp->GetObjectFile()->GetType() ==
+                                            ObjectFile::eTypeStubLibrary) {
         module_sp.reset();
       } else {
         if (did_create_ptr) {
@@ -1779,7 +1777,7 @@ FindCASConfiguration(const ModuleSP &module_sp) {
       if (cas_config)
         break;
     }
-  }    
+  }
   return cas_config;
 }
 
@@ -1838,8 +1836,7 @@ ModuleList::GetOrCreateCAS(const ModuleSP &module_sp) {
   return ModuleList::CAS{cas_config, cas->first, cas->second};
 }
 
-bool ModuleList::IsCASID(const ModuleSP &module_sp,
-                         llvm::StringRef id) {
+bool ModuleList::IsCASID(const ModuleSP &module_sp, llvm::StringRef id) {
   auto cas = GetOrCreateCAS(module_sp);
   if (!cas) {
     consumeError(cas.takeError());
@@ -1853,7 +1850,6 @@ bool ModuleList::IsCASID(const ModuleSP &module_sp,
   }
   return true;
 }
-
 
 llvm::Expected<bool> ModuleList::GetSharedModuleFromCAS(
     llvm::StringRef cas_id, llvm::StringRef name_for_diagnostics,
@@ -1954,7 +1950,7 @@ bool ModuleList::LoadScriptingResourceInTargetForModule(Module &module,
     case eLoadScriptFromSymFileWarn:
       debugger.ReportWarning(
           llvm::formatv(
-      // clang-format off
+              // clang-format off
 R"('{0}' contains a debug script. To run this script in this debug session:
 
     command script import "{1}"
@@ -1963,7 +1959,7 @@ To run all discovered debug scripts in this session:
 
     settings set target.load-script-from-symbol-file true
 )",
-      // clang-format on
+              // clang-format on
               module.GetFileSpec().GetFileNameStrippingExtension(),
               scripting_fspec.GetPath()),
           debugger.GetID());
@@ -2049,7 +2045,6 @@ bool ModuleList::AnyOf(
 
   return false;
 }
-
 
 void ModuleList::Swap(ModuleList &other) {
   // scoped_lock locks both mutexes at once.
