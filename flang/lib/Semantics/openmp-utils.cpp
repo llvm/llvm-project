@@ -756,8 +756,7 @@ WithReason<int64_t> GetHeightWithReason(
     } else {
       Reason reason;
       reason.Say(spec.DirName().source, MsgClauseAbsentAssume,
-          GetUpperName(llvm::omp::Clause::OMPC_depth, version),
-          "a depth of 2");
+          GetUpperName(llvm::omp::Clause::OMPC_depth, version), "a depth of 2");
       return {-1, std::move(reason)};
     }
   case llvm::omp::Directive::OMPD_fuse:
