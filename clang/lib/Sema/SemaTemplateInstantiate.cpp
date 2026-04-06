@@ -3842,8 +3842,20 @@ bool Sema::InstantiateInClassInitializer(
   ActOnStartCXXInClassMemberInitializer();
   CXXThisScopeRAII ThisScope(*this, Instantiation->getParent(), Qualifiers());
 
+  // P3589R2: Push profile suppressions from the pattern field so that
+  // profile checks during NSDMI instantiation see them.
+  unsigned ProfileSuppressCount = 0;
+  if (getLangOpts().Profiles) {
+    for (const auto *A : Pattern->specific_attrs<ProfilesSuppressAttr>()) {
+      pushProfileSuppression(A->getProfileName(), A->getRule());
+      ++ProfileSuppressCount;
+    }
+  }
+
   ExprResult NewInit = SubstInitializer(OldInit, TemplateArgs,
                                         /*CXXDirectInit=*/false);
+
+  popProfileSuppressions(ProfileSuppressCount);
   Expr *Init = NewInit.get();
   assert((!Init || !isa<ParenListExpr>(Init)) && "call-style init in class");
   ActOnFinishCXXInClassMemberInitializer(

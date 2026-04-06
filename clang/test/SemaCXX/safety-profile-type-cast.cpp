@@ -227,3 +227,45 @@ void suppress_fwd_only();
 void suppress_fwd_only() {
   int *p = reinterpret_cast<int*>(0); // expected-error {{'reinterpret_cast' is unsafe under profile 'test::type_cast'}}
 }
+
+// Suppress on field NSDMI in class template: suppression must carry through
+// when the in-class initializer is instantiated.
+template <typename T>
+struct FieldSuppressTemplate {
+  // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+  [[profiles::suppress(test::type_cast)]] T *p = reinterpret_cast<T*>(0);
+};
+FieldSuppressTemplate<int> field_suppress_inst;
+
+// Without suppress on field, the NSDMI violation fires during instantiation.
+template <typename T>
+struct FieldNoSuppressTemplate { // #FieldNoSuppressTemplate
+  T *p = reinterpret_cast<T*>(0); // expected-error {{'reinterpret_cast' is unsafe under profile 'test::type_cast'}} \
+                                  // expected-note@#FieldNoSuppressTemplate {{in instantiation of default member initializer 'FieldNoSuppressTemplate<int>::p' requested here}}
+};
+FieldNoSuppressTemplate<int> field_no_suppress_inst; // expected-note {{in evaluation of exception specification for 'FieldNoSuppressTemplate<int>::FieldNoSuppressTemplate' needed here}}
+
+// Profile violations fire in constexpr functions. Use a guarded path so the
+// function can still produce a constant expression (avoiding the unrelated
+// "constexpr function never produces a constant expression" error).
+constexpr int *constexpr_cast(bool b) {
+  if (b)
+    return reinterpret_cast<int*>(0); // expected-error {{'reinterpret_cast' is unsafe under profile 'test::type_cast'}}
+  return nullptr;
+}
+
+// Profile violations fire in consteval functions.
+consteval int *consteval_cast(bool b) {
+  if (b)
+    return reinterpret_cast<int*>(0); // expected-error {{'reinterpret_cast' is unsafe under profile 'test::type_cast'}}
+  return nullptr;
+}
+
+// Suppress works inside constexpr functions.
+constexpr int *constexpr_suppress_cast(bool b) {
+  if (b) {
+    // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+    [[profiles::suppress(test::type_cast)]] return reinterpret_cast<int*>(0);
+  }
+  return nullptr;
+}
