@@ -89,7 +89,7 @@ Error DatabaseFile::addTable(TableHandle Table) {
 }
 
 std::optional<TableHandle> DatabaseFile::findTable(StringRef Name) {
-  int64_t RootTableOffset = H->RootTableOffset.load();
+  uint64_t RootTableOffset = H->RootTableOffset.load();
   if (!RootTableOffset)
     return std::nullopt;
 
@@ -113,6 +113,11 @@ Error DatabaseFile::validate(MappedFileRegion &Region) {
   if (H->Version != getVersion())
     return createStringError(std::errc::invalid_argument,
                              "database: wrong version");
+
+  if (H->RootTableOffset < 0 ||
+      static_cast<uint64_t>(H->RootTableOffset) > Region.size())
+    return createStringError(std::errc::invalid_argument,
+                             "database: root table offset out of bound");
 
   auto *MFH = reinterpret_cast<MappedFileRegionArena::Header *>(Region.data() +
                                                                 sizeof(Header));
