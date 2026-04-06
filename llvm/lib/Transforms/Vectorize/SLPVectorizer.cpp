@@ -12829,6 +12829,12 @@ bool BoUpSLP::areAllUsersVectorized(
          });
 }
 
+static InstructionCost canConvertToFMA(ArrayRef<Value *> VL,
+                                       const InstructionsState &S,
+                                       DominatorTree &DT, const DataLayout &DL,
+                                       TargetTransformInfo &TTI,
+                                       const TargetLibraryInfo &TLI);
+
 unsigned BoUpSLP::getNumScalarInsts() const {
   unsigned Count = 0;
   for (const std::unique_ptr<TreeEntry> &Ptr : VectorizableTree) {
@@ -12836,22 +12842,70 @@ unsigned BoUpSLP::getNumScalarInsts() const {
     if (DeletedNodes.contains(&TE))
       continue;
     if (TE.isGather() || TransformedToGatherNodes.contains(&TE)) {
-      // Count instruction scalars in gathers — they exist in the scalar
+      // Count extractelement scalars in gathers — they exist in the scalar
       // code regardless of vectorization. ExtractElement instructions
       // become free when the vector input is used directly.
       for (Value *V : TE.Scalars)
-        if (isa<Instruction>(V))
+        if (isa<ExtractElementInst>(V))
           ++Count;
       continue;
     }
+    // CombinedVectorize entries (e.g. the fmul child of an FMulAdd, or the
+    // cmp child of a MinMax select) are absorbed into the parent on both
+    // scalar and vector sides. The backend fuses fadd+fmul → fma and
+    // select+cmp → smin/smax even for scalar code, so skip to avoid
+    // double-counting.
+    if (TE.State == TreeEntry::CombinedVectorize)
+      continue;
     // Each vectorize entry represents a bundle of scalar instructions.
     // Count per-entry without cross-entry deduplication, since shared
     // scalars across entries still represent separate work in scalar code.
     for (Value *V : TE.Scalars) {
-      auto *I = dyn_cast<Instruction>(V);
-      if (!I || (TE.hasCopyableElements() && TE.isCopyableElement(V)))
+      if (!isa<Instruction>(V) ||
+          (TE.hasCopyableElements() && TE.isCopyableElement(V)))
         continue;
       ++Count;
+      // Calculate calls/divs/rems twice, they may cost higher, so better to
+      // include their count twice to mimic slightly real cost here.
+      auto *I = dyn_cast<Instruction>(V);
+      if (I && (isa<CallInst>(I) || I->isIntDivRem() || I->isFPDivRem()))
+        ++Count;
+    }
+    // Even when the whole node is not combined, individual scalar
+    // instructions may be fused by the backend. Each fused pair (e.g.
+    // fadd+fmul → fma, select+cmp → smin/smax) becomes a single scalar
+    // instruction, absorbing the operand instruction. Subtract 1 for each
+    // such match to avoid over-counting the scalar side.
+    if (TE.CombinedOp == TreeEntry::NotCombinedOp && TE.hasState()) {
+      unsigned Opcode = TE.getOpcode();
+      if (Opcode == Instruction::Select) {
+        for (Value *V : TE.Scalars) {
+          if (TE.hasCopyableElements() && TE.isCopyableElement(V))
+            continue;
+          auto *SI = dyn_cast<SelectInst>(V);
+          if (!SI)
+            continue;
+          auto [ID, _] = canConvertToMinOrMaxIntrinsic({V});
+          if (ID != Intrinsic::not_intrinsic) {
+            assert(Count > 0 && "Underflow in scalar inst count (minmax)");
+            --Count;
+          }
+        }
+      } else if (Opcode == Instruction::FAdd || Opcode == Instruction::FSub) {
+        for (Value *V : TE.Scalars) {
+          if (TE.hasCopyableElements() && TE.isCopyableElement(V))
+            continue;
+          auto *I = dyn_cast<Instruction>(V);
+          if (!I || (TE.isAltShuffle() && I->getOpcode() != Instruction::FAdd &&
+                     I->getOpcode() != Instruction::FSub))
+            continue;
+          if (canConvertToFMA(I, InstructionsState(I, I), *DT, *DL, *TTI, *TLI)
+                  .isValid()) {
+            assert(Count > 0 && "Underflow in scalar inst count (fma)");
+            --Count;
+          }
+        }
+      }
     }
   }
   return Count;
@@ -12898,7 +12952,7 @@ unsigned BoUpSLP::getNumVectorInsts() const {
             GatherExtractSourceVecs.insert(EE->getVectorOperand());
       } else {
         for (Value *V : TE.Scalars) {
-          if (!isConstant(V) && !isa<PoisonValue>(V))
+          if (!isConstant(V))
             ++Count;
         }
       }
@@ -18206,7 +18260,10 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
   // FIXME: remove this as soon as correct fractional model is landed for all
   // targets.
   if (SLPInstCountCheck && VectorizableTree.front()->getVectorFactor() == 2 &&
-      SLPCostThreshold == 0) {
+      SLPCostThreshold == 0 &&
+      (!SLPReVec ||
+       !isa<VectorType>(
+           VectorizableTree.front()->Scalars.front()->getType()))) {
     unsigned NumScalar = getNumScalarInsts();
     unsigned NumVector = getNumVectorInsts();
     LLVM_DEBUG(dbgs() << "SLP: Inst count check: vector=" << NumVector
