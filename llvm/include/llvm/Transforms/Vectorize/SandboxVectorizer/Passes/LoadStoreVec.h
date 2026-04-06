@@ -36,7 +36,7 @@ class LoadStoreVec final : public RegionPass {
                                      Scheduler &Sched);
 
   void tryEraseDeadInstrs(ArrayRef<Instruction *> Stores,
-                          ArrayRef<Instruction *> Loads);
+                          ArrayRef<Value *> Operands);
 
 public:
   LoadStoreVec() : RegionPass("load-store-vec") {}
