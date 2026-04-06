@@ -8579,6 +8579,18 @@ pointing to precise locations of the call site in the source.
       dontcall(); // No Warning
     sizeof(dontcall()); // No Warning
   }
+
+When the call occurs through inlined functions, the
+``-fdiagnostics-show-inlining-chain`` option can be used to show the
+inlining chain that led to the call. This helps identify which call site
+triggered the diagnostic when the attributed function is called from
+multiple locations through inline functions.
+
+When enabled, this option automatically uses debug info for accurate source
+locations if available (``-gline-directives-only`` (implicitly enabled at
+``-g1``) or higher), or falls back to a heuristic based on metadata tracking.
+When falling back, a note is emitted suggesting ``-gline-directives-only`` for
+more accurate locations.
   }];
 }
 
@@ -8972,6 +8984,29 @@ like follows:
 
 This variable will be lowered into a module-level variable, with the `Input`
 storage class, and the `BuiltIn 26` decoration.
+
+The full documentation for this inline SPIR-V attribute can be found here:
+https://github.com/microsoft/hlsl-specs/blob/main/proposals/0011-inline-spirv.md
+  }];
+}
+
+def HLSLVkExtBuiltinOutputDocs : Documentation {
+  let Category = DocCatVariable;
+  let Content = [{
+Vulkan shaders have `Output` builtins. Those variables are externally
+visible to the driver/pipeline, but each copy is private to the current
+lane.
+
+Those builtins can be declared using the `[[vk::ext_builtin_output]]`
+attribute like follows:
+
+.. code-block:: c++
+
+  [[vk::ext_builtin_output(/* Position */ 0)]]
+  static float4 position;
+
+This variable will be lowered into a module-level variable, with the `Output`
+storage class, and the `BuiltIn 0` decoration.
 
 The full documentation for this inline SPIR-V attribute can be found here:
 https://github.com/microsoft/hlsl-specs/blob/main/proposals/0011-inline-spirv.md

@@ -28,7 +28,28 @@
 using namespace clang;
 using namespace clang::interp;
 
-static bool RetValue(InterpState &S, CodePtr &Pt) {
+#if __has_cpp_attribute(clang::musttail)
+#define MUSTTAIL [[clang::musttail]]
+#elif __has_cpp_attribute(msvc::musttail)
+#define MUSTTAIL [[msvc::musttail]]
+#elif __has_attribute(musttail)
+#define MUSTTAIL __attribute__((musttail))
+#endif
+
+// On MSVC, musttail does not guarantee tail calls in debug mode.
+// We disable it on MSVC generally since it doesn't seem to be able
+// to handle the way we use tailcalls.
+// PPC can't tail-call external calls, which is a problem for InterpNext.
+#if defined(_MSC_VER) || defined(__powerpc__) || !defined(MUSTTAIL) ||         \
+    defined(__i386__) || defined(__sparc__)
+#undef MUSTTAIL
+#define MUSTTAIL
+#define USE_TAILCALLS 0
+#else
+#define USE_TAILCALLS 1
+#endif
+
+PRESERVE_NONE static bool RetValue(InterpState &S, CodePtr &Ptr) {
   llvm::report_fatal_error("Interpreter cannot return values");
 }
 
@@ -54,76 +75,6 @@ static bool Jf(InterpState &S, CodePtr &PC, int32_t Offset) {
   }
   return S.noteStep(PC);
 }
-
-// https://github.com/llvm/llvm-project/issues/102513
-#if defined(_MSC_VER) && !defined(__clang__) && !defined(NDEBUG)
-#pragma optimize("", off)
-#endif
-// FIXME: We have the large switch over all opcodes here again, and in
-// Interpret().
-static bool BCP(InterpState &S, CodePtr &RealPC, int32_t Offset, PrimType PT) {
-  [[maybe_unused]] CodePtr PCBefore = RealPC;
-  size_t StackSizeBefore = S.Stk.size();
-
-  auto SpeculativeInterp = [&S, RealPC]() -> bool {
-    const InterpFrame *StartFrame = S.Current;
-    CodePtr PC = RealPC;
-
-    for (;;) {
-      auto Op = PC.read<Opcode>();
-      if (Op == OP_EndSpeculation)
-        return true;
-      CodePtr OpPC = PC;
-
-      switch (Op) {
-#define GET_INTERP
-#include "Opcodes.inc"
-#undef GET_INTERP
-      }
-    }
-    llvm_unreachable("We didn't see an EndSpeculation op?");
-  };
-
-  if (SpeculativeInterp()) {
-    if (PT == PT_Ptr) {
-      const auto &Ptr = S.Stk.pop<Pointer>();
-      assert(S.Stk.size() == StackSizeBefore);
-      S.Stk.push<Integral<32, true>>(
-          Integral<32, true>::from(CheckBCPResult(S, Ptr)));
-    } else {
-      // Pop the result from the stack and return success.
-      TYPE_SWITCH(PT, S.Stk.pop<T>(););
-      assert(S.Stk.size() == StackSizeBefore);
-      S.Stk.push<Integral<32, true>>(Integral<32, true>::from(1));
-    }
-  } else {
-    if (!S.inConstantContext())
-      return Invalid(S, RealPC);
-
-    S.Stk.clearTo(StackSizeBefore);
-    S.Stk.push<Integral<32, true>>(Integral<32, true>::from(0));
-  }
-
-  // RealPC should not have been modified.
-  assert(*RealPC == *PCBefore);
-
-  // Jump to end label. This is a little tricker than just RealPC += Offset
-  // because our usual jump instructions don't have any arguments, to the offset
-  // we get is a little too much and we need to subtract the size of the
-  // bool and PrimType arguments again.
-  int32_t ParamSize = align(sizeof(PrimType));
-  assert(Offset >= ParamSize);
-  RealPC += Offset - ParamSize;
-
-  [[maybe_unused]] CodePtr PCCopy = RealPC;
-  assert(PCCopy.read<Opcode>() == OP_EndSpeculation);
-
-  return true;
-}
-// https://github.com/llvm/llvm-project/issues/102513
-#if defined(_MSC_VER) && !defined(__clang__) && !defined(NDEBUG)
-#pragma optimize("", on)
-#endif
 
 static void diagnoseMissingInitializer(InterpState &S, CodePtr OpPC,
                                        const ValueDecl *VD) {
@@ -258,6 +209,9 @@ static bool CheckGlobal(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
 
 namespace clang {
 namespace interp {
+PRESERVE_NONE static bool BCP(InterpState &S, CodePtr &RealPC, int32_t Offset,
+                              PrimType PT);
+
 static void popArg(InterpState &S, const Expr *Arg) {
   PrimType Ty = S.getContext().classify(Arg).value_or(PT_Ptr);
   TYPE_SWITCH(Ty, S.Stk.discard<T>());
@@ -298,6 +252,11 @@ void cleanupAfterFunctionCall(InterpState &S, CodePtr OpPC,
   // at the end.
   for (const Function::ParamDescriptor &PDesc : Func->args_reverse())
     TYPE_SWITCH(PDesc.T, S.Stk.discard<T>());
+
+  if (Func->hasThisPointer() && !Func->isThisPointerExplicit())
+    S.Stk.discard<Pointer>();
+  if (Func->hasRVO())
+    S.Stk.discard<Pointer>();
 }
 
 bool isConstexprUnknown(const Pointer &P) {
@@ -923,9 +882,9 @@ bool CheckStore(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
 }
 
 static bool CheckInvoke(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
-  if (!CheckLive(S, OpPC, Ptr, AK_MemberCall))
-    return false;
-  if (!Ptr.isDummy()) {
+  if (!Ptr.isDummy() && !isConstexprUnknown(Ptr)) {
+    if (!CheckLive(S, OpPC, Ptr, AK_MemberCall))
+      return false;
     if (!CheckExtern(S, OpPC, Ptr))
       return false;
     if (!CheckRange(S, OpPC, Ptr, AK_MemberCall))
@@ -1656,19 +1615,20 @@ bool CallVar(InterpState &S, CodePtr OpPC, const Function *Func,
   if (!CheckCallDepth(S, OpPC))
     return false;
 
-  auto NewFrame = std::make_unique<InterpFrame>(S, Func, OpPC, VarArgSize);
+  auto Memory = new char[InterpFrame::allocSize(Func)];
+  auto NewFrame = new (Memory) InterpFrame(S, Func, OpPC, VarArgSize);
   InterpFrame *FrameBefore = S.Current;
-  S.Current = NewFrame.get();
+  S.Current = NewFrame;
 
   // Note that we cannot assert(CallResult.hasValue()) here since
   // Ret() above only sets the APValue if the curent frame doesn't
   // have a caller set.
   if (Interpret(S)) {
-    NewFrame.release(); // Frame was delete'd already.
     assert(S.Current == FrameBefore);
     return true;
   }
 
+  InterpFrame::free(NewFrame);
   // Interpreting the function failed somehow. Reset to
   // previous state.
   S.Current = FrameBefore;
@@ -1739,9 +1699,10 @@ bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
   if (!CheckCallDepth(S, OpPC))
     return cleanup();
 
-  auto NewFrame = std::make_unique<InterpFrame>(S, Func, OpPC, VarArgSize);
+  auto Memory = new char[InterpFrame::allocSize(Func)];
+  auto NewFrame = new (Memory) InterpFrame(S, Func, OpPC, VarArgSize);
   InterpFrame *FrameBefore = S.Current;
-  S.Current = NewFrame.get();
+  S.Current = NewFrame;
 
   InterpStateCCOverride CCOverride(S, Func->isImmediate());
   // Note that we cannot assert(CallResult.hasValue()) here since
@@ -1753,18 +1714,18 @@ bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
     S.InitializingBlocks.pop_back();
 
   if (!Success) {
+    InterpFrame::free(NewFrame);
     // Interpreting the function failed somehow. Reset to
     // previous state.
     S.Current = FrameBefore;
     return false;
   }
 
-  NewFrame.release(); // Frame was delete'd already.
   assert(S.Current == FrameBefore);
   return true;
 }
 
-static bool GetDynamicDecl(InterpState &S, CodePtr OpPC, Pointer TypePtr,
+static bool getDynamicDecl(InterpState &S, CodePtr OpPC, Pointer TypePtr,
                            const CXXRecordDecl *&DynamicDecl) {
   TypePtr = TypePtr.stripBaseCasts();
 
@@ -1790,7 +1751,7 @@ static bool GetDynamicDecl(InterpState &S, CodePtr OpPC, Pointer TypePtr,
   } else {
     DynamicDecl = DynamicType->getAsCXXRecordDecl();
   }
-  return true;
+  return DynamicDecl != nullptr;
 }
 
 bool CallVirt(InterpState &S, CodePtr OpPC, const Function *Func,
@@ -1803,7 +1764,7 @@ bool CallVirt(InterpState &S, CodePtr OpPC, const Function *Func,
   const FunctionDecl *Callee = Func->getDecl();
 
   const CXXRecordDecl *DynamicDecl = nullptr;
-  if (!GetDynamicDecl(S, OpPC, ThisPtr, DynamicDecl))
+  if (!getDynamicDecl(S, OpPC, ThisPtr, DynamicDecl))
     return false;
   assert(DynamicDecl);
 
@@ -2575,38 +2536,156 @@ bool CastMemberPtrDerivedPop(InterpState &S, CodePtr OpPC, int32_t Off,
   return castBackMemberPointer(S, Ptr, Off, BaseDecl);
 }
 
-// https://github.com/llvm/llvm-project/issues/102513
-#if defined(_MSC_VER) && !defined(__clang__) && !defined(NDEBUG)
-#pragma optimize("", off)
+// FIXME: Would be nice to generate this instead of hardcoding it here.
+constexpr bool OpReturns(Opcode Op) {
+  return Op == OP_RetVoid || Op == OP_RetValue || Op == OP_NoRet ||
+         Op == OP_RetSint8 || Op == OP_RetUint8 || Op == OP_RetSint16 ||
+         Op == OP_RetUint16 || Op == OP_RetSint32 || Op == OP_RetUint32 ||
+         Op == OP_RetSint64 || Op == OP_RetUint64 || Op == OP_RetIntAP ||
+         Op == OP_RetIntAPS || Op == OP_RetBool || Op == OP_RetFixedPoint ||
+         Op == OP_RetPtr || Op == OP_RetMemberPtr || Op == OP_RetFloat ||
+         Op == OP_EndSpeculation;
+}
+
+#if USE_TAILCALLS
+PRESERVE_NONE static bool InterpNext(InterpState &S, CodePtr &PC);
 #endif
+
+// The dispatcher functions read the opcode arguments from the
+// bytecode and call the implementation function.
+#define GET_INTERPFN_DISPATCHERS
+#include "Opcodes.inc"
+#undef GET_INTERPFN_DISPATCHERS
+
+using InterpFn = bool (*)(InterpState &, CodePtr &PC) PRESERVE_NONE;
+// Array of the dispatcher functions defined above.
+const InterpFn InterpFunctions[] = {
+#define GET_INTERPFN_LIST
+#include "Opcodes.inc"
+#undef GET_INTERPFN_LIST
+};
+
+#if USE_TAILCALLS
+// Read the next opcode and call the dispatcher function.
+PRESERVE_NONE static bool InterpNext(InterpState &S, CodePtr &PC) {
+  auto Op = PC.read<Opcode>();
+  auto Fn = InterpFunctions[Op];
+  MUSTTAIL return Fn(S, PC);
+}
+#endif
+
 bool Interpret(InterpState &S) {
   // The current stack frame when we started Interpret().
   // This is being used by the ops to determine wheter
   // to return from this function and thus terminate
   // interpretation.
-  const InterpFrame *StartFrame = S.Current;
   assert(!S.Current->isRoot());
   CodePtr PC = S.Current->getPC();
 
-  // Empty program.
-  if (!PC)
-    return true;
-
-  for (;;) {
+#if USE_TAILCALLS
+  return InterpNext(S, PC);
+#else
+  while (true) {
     auto Op = PC.read<Opcode>();
-    CodePtr OpPC = PC;
+    auto Fn = InterpFunctions[Op];
 
-    switch (Op) {
-#define GET_INTERP
-#include "Opcodes.inc"
-#undef GET_INTERP
-    }
+    if (!Fn(S, PC))
+      return false;
+    if (OpReturns(Op))
+      break;
   }
-}
-// https://github.com/llvm/llvm-project/issues/102513
-#if defined(_MSC_VER) && !defined(__clang__) && !defined(NDEBUG)
-#pragma optimize("", on)
+  return true;
 #endif
+}
+
+/// This is used to implement speculative execution via __builtin_constant_p
+/// when we generate bytecode.
+///
+/// The setup here is that we use the same tailcall mechanism for speculative
+/// evaluation that we use for the regular one.
+/// Since each speculative execution ends with an EndSpeculation opcode,
+/// that one does NOT call InterpNext() but simply returns true.
+/// This way, we return back to this function when we see an EndSpeculation,
+/// OR (of course), when we encounter an error and one of the opcodes
+/// returns false.
+PRESERVE_NONE static bool BCP(InterpState &S, CodePtr &RealPC, int32_t Offset,
+                              PrimType PT) {
+  [[maybe_unused]] CodePtr PCBefore = RealPC;
+  size_t StackSizeBefore = S.Stk.size();
+
+  // Speculation depth must be at least 1 here, since we must have
+  // passed a StartSpeculation op before.
+#ifndef NDEBUG
+  [[maybe_unused]] unsigned DepthBefore = S.SpeculationDepth;
+  assert(DepthBefore >= 1);
+#endif
+
+  CodePtr PC = RealPC;
+  auto SpeculativeInterp = [&S, &PC]() -> bool {
+    // Ignore diagnostics during speculative execution.
+    PushIgnoreDiags(S, PC);
+    auto _ = llvm::scope_exit([&]() { PopIgnoreDiags(S, PC); });
+
+#if USE_TAILCALLS
+    auto Op = PC.read<Opcode>();
+    auto Fn = InterpFunctions[Op];
+    return Fn(S, PC);
+#else
+    while (true) {
+      auto Op = PC.read<Opcode>();
+      auto Fn = InterpFunctions[Op];
+
+      if (!Fn(S, PC))
+        return false;
+      if (OpReturns(Op))
+        break;
+    }
+    return true;
+#endif
+  };
+
+  if (SpeculativeInterp()) {
+    // Speculation must've ended naturally via a EndSpeculation opcode.
+    assert(S.SpeculationDepth == DepthBefore - 1);
+    if (PT == PT_Ptr) {
+      const auto &Ptr = S.Stk.pop<Pointer>();
+      assert(S.Stk.size() == StackSizeBefore);
+      S.Stk.push<Integral<32, true>>(
+          Integral<32, true>::from(CheckBCPResult(S, Ptr)));
+    } else {
+      // Pop the result from the stack and return success.
+      TYPE_SWITCH(PT, S.Stk.discard<T>(););
+      assert(S.Stk.size() == StackSizeBefore);
+      S.Stk.push<Integral<32, true>>(Integral<32, true>::from(1));
+    }
+  } else {
+    // End the speculation manually since we didn't call EndSpeculation
+    // naturally.
+    EndSpeculation(S, RealPC);
+
+    if (!S.inConstantContext())
+      return Invalid(S, RealPC);
+
+    S.Stk.clearTo(StackSizeBefore);
+    S.Stk.push<Integral<32, true>>(Integral<32, true>::from(0));
+  }
+
+  // RealPC should not have been modified.
+  assert(*RealPC == *PCBefore);
+
+  // We have already evaluated this speculation's EndSpeculation opcode.
+  assert(S.SpeculationDepth == DepthBefore - 1);
+
+  // Jump to end label. This is a little tricker than just RealPC += Offset
+  // because our usual jump instructions don't have any arguments, to the offset
+  // we get is a little too much and we need to subtract the size of the
+  // bool and PrimType arguments again.
+  int32_t ParamSize = align(sizeof(PrimType));
+  assert(Offset >= ParamSize);
+  RealPC += Offset - ParamSize;
+
+  return true;
+}
 
 } // namespace interp
 } // namespace clang

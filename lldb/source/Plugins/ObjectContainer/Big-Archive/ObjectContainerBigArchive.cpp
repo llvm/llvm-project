@@ -451,19 +451,16 @@ ObjectFileSP ObjectContainerBigArchive::GetObjectFile(const FileSpec *file) {
   return ObjectFileSP();
 }
 
-size_t ObjectContainerBigArchive::GetModuleSpecifications(
+ModuleSpecList ObjectContainerBigArchive::GetModuleSpecifications(
     const lldb_private::FileSpec &file, lldb::DataExtractorSP &extractor_sp,
-    lldb::offset_t data_offset, lldb::offset_t file_offset,
-    lldb::offset_t file_size, lldb_private::ModuleSpecList &specs) {
+    lldb::offset_t file_offset, lldb::offset_t file_size) {
 
   // We have data, which means this is the first 512 bytes of the file Check to
   // see if the magic bytes match and if they do, read the entire table of
   // contents for the archive and cache it
-
   if (!file || !extractor_sp || !ObjectContainerBigArchive::MagicBytesMatch(*extractor_sp))
-    return 0;
+    return {};
 
-  const size_t initial_count = specs.GetSize();
   llvm::sys::TimePoint<> file_mod_time = FileSystem::Instance().GetModificationTime(file);
   Archive::shared_ptr archive_sp(
       Archive::FindCachedArchive(file, ArchSpec(), file_mod_time, file_offset));
@@ -479,6 +476,7 @@ size_t ObjectContainerBigArchive::GetModuleSpecifications(
     }
   }
 
+  ModuleSpecList specs;
   if (archive_sp) {
     const size_t num_objects = archive_sp->GetNumObjects();
     for (size_t idx = 0; idx < num_objects; ++idx) {
@@ -486,29 +484,30 @@ size_t ObjectContainerBigArchive::GetModuleSpecifications(
       if (object) {
         const lldb::offset_t object_file_offset =
             file_offset + object->file_offset;
-        if (object->file_offset < file_size && file_size > object_file_offset) {
-          if (ObjectFile::GetModuleSpecifications(
-                  file, object_file_offset, file_size - object_file_offset,
-                  specs)) {
-            ModuleSpec &spec =
-                specs.GetModuleSpecRefAtIndex(specs.GetSize() - 1);
+       if (object->file_offset < file_size && file_size > object_file_offset) {
+          ModuleSpecList object_specs =
+              ObjectFile::GetModuleSpecifications(
+                  file, object_file_offset, file_size - object_file_offset);
+          if (object_specs.GetSize() > 0) {
+            ModuleSpec &spec = object_specs.GetModuleSpecRefAtIndex(
+                object_specs.GetSize() - 1);
             llvm::sys::TimePoint<> object_mod_time(
                 std::chrono::seconds(object->modification_time));
             spec.GetObjectName() = object->ar_name;
             spec.SetObjectOffset(object_file_offset);
             spec.SetObjectSize(file_size - object_file_offset);
             spec.GetObjectModificationTime() = object_mod_time;
+            specs.Append(spec);
           }
         }
       }
     }
   }
   const size_t end_count = specs.GetSize();
-  size_t num_specs_added = end_count - initial_count;
-  if (set_archive_arch && num_specs_added > 0) {
+  if (set_archive_arch && specs.GetSize() > 0) {
     // The archive was created but we didn't have an architecture so we need to
     // set it
-    for (size_t i = initial_count; i < end_count; ++i) {
+    for (size_t i = 0; i < end_count; ++i) {
       ModuleSpec module_spec;
       if (specs.GetModuleSpecAtIndex(i, module_spec)) {
         if (module_spec.GetArchitecture().IsValid()) {
@@ -518,5 +517,5 @@ size_t ObjectContainerBigArchive::GetModuleSpecifications(
       }
     }
   }
-  return num_specs_added;
+  return specs;
 }

@@ -106,12 +106,11 @@ ObjectFile *ObjectFileAIXCore::CreateMemoryInstance(
   return nullptr;
 }
 
-size_t ObjectFileAIXCore::GetModuleSpecifications(
+ModuleSpecList ObjectFileAIXCore::GetModuleSpecifications(
     const lldb_private::FileSpec &file, lldb::DataExtractorSP &extractor_sp,
-    lldb::offset_t data_offset, lldb::offset_t file_offset,
-    lldb::offset_t length, lldb_private::ModuleSpecList &specs) {
-  const size_t initial_count = specs.GetSize();
+    lldb::offset_t file_offset, lldb::offset_t length) {
 
+  ModuleSpecList specs;
   if (ObjectFileAIXCore::MagicBytesMatch(extractor_sp, 0, extractor_sp->GetByteSize())) {
     // Need new ArchType???
     ArchSpec arch_spec = ArchSpec(eArchTypeXCOFF, XCOFF::TCPU_PPC64, LLDB_INVALID_CPUTYPE);
@@ -119,7 +118,7 @@ size_t ObjectFileAIXCore::GetModuleSpecifications(
     spec.GetArchitecture().SetArchitecture(eArchTypeXCOFF, XCOFF::TCPU_PPC64, LLDB_INVALID_CPUTYPE, llvm::Triple::AIX);
     specs.Append(spec);
   }
-  return specs.GetSize() - initial_count;
+  return specs;
 }
 
 static bool AIXCoreHeaderCheckFromMagic(uint32_t magic) {

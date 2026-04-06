@@ -4,7 +4,7 @@
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.8.0"
 
-define void @conversion_cost1(i32 %n, ptr nocapture %A, ptr nocapture %B) nounwind uwtable ssp {
+define void @conversion_cost1(i32 %n, ptr nocapture %A, ptr nocapture %B) {
 ; CHECK-LABEL: @conversion_cost1(
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i32 [[N:%.*]], 3
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[ITER_CHECK:%.*]], label [[DOT_CRIT_EDGE:%.*]]
@@ -35,7 +35,6 @@ define void @conversion_cost1(i32 %n, ptr nocapture %A, ptr nocapture %B) nounwi
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP3]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[DOT_CRIT_EDGE_LOOPEXIT:%.*]], label [[VEC_EPILOG_ITER_CHECK:%.*]]
 ; CHECK:       vec.epilog.iter.check:
-; CHECK-NEXT:    [[IND_END5:%.*]] = add i64 3, [[N_VEC]]
 ; CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_MOD_VF]], 4
 ; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label [[VEC_EPILOG_SCALAR_PH]], label [[VEC_EPILOG_PH]], !prof [[PROF3:![0-9]+]]
 ; CHECK:       vec.epilog.ph:
@@ -63,7 +62,7 @@ define void @conversion_cost1(i32 %n, ptr nocapture %A, ptr nocapture %B) nounwi
 ; CHECK-NEXT:    [[CMP_N12:%.*]] = icmp eq i64 [[TMP3]], [[N_VEC3]]
 ; CHECK-NEXT:    br i1 [[CMP_N12]], label [[DOT_CRIT_EDGE_LOOPEXIT]], label [[VEC_EPILOG_SCALAR_PH]]
 ; CHECK:       vec.epilog.scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL6:%.*]] = phi i64 [ [[IND_END4]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[IND_END5]], [[VEC_EPILOG_ITER_CHECK]] ], [ 3, [[ITER_CHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL6:%.*]] = phi i64 [ [[IND_END4]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[IND_END]], [[VEC_EPILOG_ITER_CHECK]] ], [ 3, [[ITER_CHECK]] ]
 ; CHECK-NEXT:    br label [[DOTLR_PH:%.*]]
 ; CHECK:       .lr.ph:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[DOTLR_PH]] ], [ [[BC_RESUME_VAL6]], [[VEC_EPILOG_SCALAR_PH]] ]
@@ -96,7 +95,7 @@ define void @conversion_cost1(i32 %n, ptr nocapture %A, ptr nocapture %B) nounwi
   ret void
 }
 
-define void @conversion_cost2(i32 %n, ptr nocapture %A, ptr nocapture %B) nounwind uwtable ssp {
+define void @conversion_cost2(i32 %n, ptr nocapture %A, ptr nocapture %B) {
 ; CHECK-LABEL: @conversion_cost2(
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i32 [[N:%.*]], 9
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[DOTLR_PH_PREHEADER:%.*]], label [[DOT_CRIT_EDGE:%.*]]

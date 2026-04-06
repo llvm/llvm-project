@@ -1006,10 +1006,10 @@ Status NativeProcessAIX::GetMemoryRegionInfo(lldb::addr_t load_addr,
       range_info.GetRange().SetRangeBase(load_addr);
       range_info.GetRange().SetByteSize(
           proc_entry_info.GetRange().GetRangeBase() - load_addr);
-      range_info.SetReadable(MemoryRegionInfo::OptionalBool::eNo);
-      range_info.SetWritable(MemoryRegionInfo::OptionalBool::eNo);
-      range_info.SetExecutable(MemoryRegionInfo::OptionalBool::eNo);
-      range_info.SetMapped(MemoryRegionInfo::OptionalBool::eNo);
+      range_info.SetReadable(eLazyBoolNo);
+      range_info.SetWritable(eLazyBoolNo);
+      range_info.SetExecutable(eLazyBoolNo);
+      range_info.SetMapped(eLazyBoolNo);
 
       return error;
     } else if (proc_entry_info.GetRange().Contains(load_addr)) {
@@ -1027,10 +1027,10 @@ Status NativeProcessAIX::GetMemoryRegionInfo(lldb::addr_t load_addr,
   // load address and the end of the memory as size.
   range_info.GetRange().SetRangeBase(load_addr);
   range_info.GetRange().SetRangeEnd(LLDB_INVALID_ADDRESS);
-  range_info.SetReadable(MemoryRegionInfo::OptionalBool::eNo);
-  range_info.SetWritable(MemoryRegionInfo::OptionalBool::eNo);
-  range_info.SetExecutable(MemoryRegionInfo::OptionalBool::eNo);
-  range_info.SetMapped(MemoryRegionInfo::OptionalBool::eNo);
+  range_info.SetReadable(eLazyBoolNo);
+  range_info.SetWritable(eLazyBoolNo);
+  range_info.SetExecutable(eLazyBoolNo);
+  range_info.SetMapped(eLazyBoolNo);
   return error;
 }
 
@@ -1049,30 +1049,30 @@ bool ParseAIXMapRegions(const char *aix_map, AIXMapCallback const &callback) {
     lldb::addr_t end_address = start_address + entry->pr_size; 
     region.GetRange().SetRangeBase(start_address);
     region.GetRange().SetRangeEnd(end_address);
-    region.SetMapped(MemoryRegionInfo::OptionalBool::eYes);
+    region.SetMapped(eLazyBoolYes);
     perm_flag = entry->pr_mflags;
     
     if(perm_flag & MA_READ)
-        region.SetReadable(MemoryRegionInfo::OptionalBool::eYes);
+        region.SetReadable(eLazyBoolYes);
     else
-        region.SetReadable(MemoryRegionInfo::OptionalBool::eNo);
+        region.SetReadable(eLazyBoolNo);
 
    if(perm_flag & MA_WRITE)
-        region.SetWritable(MemoryRegionInfo::OptionalBool::eYes);
+        region.SetWritable(eLazyBoolYes);
    else
-        region.SetWritable(MemoryRegionInfo::OptionalBool::eNo);
+        region.SetWritable(eLazyBoolNo);
 
    if(perm_flag & MA_EXEC)
-       region.SetExecutable(MemoryRegionInfo::OptionalBool::eYes);
+       region.SetExecutable(eLazyBoolYes);
    else
-       region.SetExecutable(MemoryRegionInfo::OptionalBool::eNo);
+       region.SetExecutable(eLazyBoolNo);
 
    if((perm_flag & MA_SLIBTEXT) || (perm_flag & MA_SLIBDATA))
-       region.SetShared(MemoryRegionInfo::OptionalBool::eYes);
+       region.SetShared(eLazyBoolYes);
    else if ((perm_flag & MA_PLIBTEXT) || (perm_flag & MA_PLIBDATA))
-       region.SetShared(MemoryRegionInfo::OptionalBool::eNo);
+       region.SetShared(eLazyBoolNo);
    else 
-       region.SetShared(MemoryRegionInfo::OptionalBool::eDontKnow);
+       region.SetShared(eLazyBoolDontKnow);
 
    if(o_name)
         region.SetName(o_name);
@@ -1152,8 +1152,8 @@ llvm::Expected<uint64_t>
 NativeProcessAIX::Syscall(llvm::ArrayRef<uint64_t> args) {
   PopulateMemoryRegionCache();
   auto region_it = llvm::find_if(m_mem_region_cache, [](const auto &pair) {
-    return pair.first.GetExecutable() == MemoryRegionInfo::eYes &&
-        pair.first.GetShared() != MemoryRegionInfo::eYes;
+    return pair.first.GetExecutable() == eLazyBoolYes &&
+        pair.first.GetShared() != eLazyBoolYes;
   });
   if (region_it == m_mem_region_cache.end())
     return llvm::createStringError(llvm::inconvertibleErrorCode(),

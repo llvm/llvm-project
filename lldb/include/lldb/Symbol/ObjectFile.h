@@ -174,17 +174,15 @@ public:
                                        lldb::addr_t header_addr,
                                        lldb::WritableDataBufferSP file_data_sp);
 
-  static size_t
+  static ModuleSpecList
   GetModuleSpecifications(const FileSpec &file, lldb::offset_t file_offset,
-                          lldb::offset_t file_size, ModuleSpecList &specs,
+                          lldb::offset_t file_size,
                           lldb::DataExtractorSP = lldb::DataExtractorSP());
 
-  static size_t GetModuleSpecifications(const lldb_private::FileSpec &file,
-                                        lldb::DataExtractorSP &extractor_sp,
-                                        lldb::offset_t data_offset,
-                                        lldb::offset_t file_offset,
-                                        lldb::offset_t file_size,
-                                        lldb_private::ModuleSpecList &specs);
+  static ModuleSpecList
+  GetModuleSpecifications(const lldb_private::FileSpec &file,
+                          lldb::DataExtractorSP &extractor_sp,
+                          lldb::offset_t file_offset, lldb::offset_t file_size);
   static bool IsObjectFile(lldb_private::FileSpec file_spec);
   /// Split a path into a file path with object name.
   ///

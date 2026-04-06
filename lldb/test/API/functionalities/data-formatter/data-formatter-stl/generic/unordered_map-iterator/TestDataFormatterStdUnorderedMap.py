@@ -9,6 +9,8 @@ from lldbsuite.test import lldbutil
 
 
 class StdUnorderedMapDataFormatterTestCase(TestBase):
+    SHARED_BUILD_TESTCASE = False
+
     def check_ptr_or_ref(self, var_name: str):
         var = self.frame().FindVariable(var_name)
         self.assertTrue(var)

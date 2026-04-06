@@ -3288,4 +3288,25 @@ def GPU_SubgroupBroadcastOp : GPU_Op<"subgroup_broadcast",
   let hasVerifier = 1;
 }
 
+def GPU_BallotOp : GPU_Op<"ballot", [NoMemoryEffect]>,
+    Arguments<(ins I1:$predicate)>,
+    Results<(outs AnySignlessInteger:$result)> {
+  let summary = "Collects predicate values from all threads in a subgroup.";
+  let description = [{
+    The `ballot` op performs a ballot operation across all threads in a subgroup.
+    Each thread contributes its predicate value as a single bit. The result is an
+    integer where the Nth bit is set iff the Nth thread's predicate is true.
+
+    The result type must be a signless integer type. The exact supported widths
+    are target-dependent. Common GPU targets support i32 and i64.
+
+    Example:
+    ```mlir
+    %0 = gpu.ballot %pred : i32
+    %1 = gpu.ballot %pred : i64
+    ```
+  }];
+  let assemblyFormat = "$predicate attr-dict `:` type($result)";
+}
+
 #endif // GPU_OPS
