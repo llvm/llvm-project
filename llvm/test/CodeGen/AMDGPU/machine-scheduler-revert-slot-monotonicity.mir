@@ -1,0 +1,738 @@
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx908 -run-pass=machine-scheduler -o /dev/null %s
+# Verify that modifyRegionSchedule does not leave non-monotonic SlotIndexes
+# when reverting a schedule. This used to crash with "register isn't live"
+# in GCNDownwardRPTracker::advanceBeforeNext().
+---
+name:            _ZN2ck27kernel_gemm_xdl_cshuffle_v3INS_28GridwiseGemm_xdl_cshuffle_v3INS_13tensor_layout4gemm11ColumnMajorENS3_8RowMajorES5_ttfttNS_16tensor_operation12element_wise11PassThroughES8_S8_LNS6_6device18GemmSpecializationE7ELi256ELi128ELi128ELi64ELi4ELi4ELi32ELi32ELi2ELi2ENS_8SequenceIJLi16ELi16ELi1EEEENSB_IJLi0ELi2ELi1EEEESD_Li1ELi8ELi4ELb0ELi0ESC_SD_SD_Li1ELi8ELi4ELb0ELi0ELi1ELi1ENSB_IJLi1ELi16ELi1ELi16EEEELi4ELNS_26BlockGemmPipelineSchedulerE0ELNS_24BlockGemmPipelineVersionE4EttLb0ELb0ELb0EEELb1ELNS_25InMemoryDataOperationEnumE1ELi1ELNS_10TailNumberE0EEEvNT_8ArgumentE
+alignment:       4
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+noPhis:          true
+isSSA:           false
+noVRegs:         false
+hasFakeUses:     false
+callsEHReturn:   false
+callsUnwindInit: false
+hasEHContTarget: false
+hasEHScopes:     false
+hasEHFunclets:   false
+isOutlined:      false
+debugInstrRef:   false
+failsVerification: false
+tracksDebugUserValues: false
+registers:
+  - { id: 0, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 1, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 2, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 3, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 4, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 5, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 6, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 7, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 8, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 9, class: sreg_64_xexec, preferred-register: '', flags: [  ] }
+  - { id: 10, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 11, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 12, class: sreg_64, preferred-register: '', flags: [  ] }
+  - { id: 13, class: sreg_64_xexec, preferred-register: '$vcc', flags: [  ] }
+  - { id: 14, class: sreg_64_xexec, preferred-register: '$vcc', flags: [  ] }
+  - { id: 15, class: sreg_64, preferred-register: '', flags: [  ] }
+  - { id: 16, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 17, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 18, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 19, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 20, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 21, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 22, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 23, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 24, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 25, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 26, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 27, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 28, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 29, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 30, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 31, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 32, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 33, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 34, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 35, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 36, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 37, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 38, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 39, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 40, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 41, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 42, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 43, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 44, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 45, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 46, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 47, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 48, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 49, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 50, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 51, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 52, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 53, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 54, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 55, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 56, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 57, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 58, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 59, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 60, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 61, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 62, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 63, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 64, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 65, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 66, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 67, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 68, class: vreg_1, preferred-register: '', flags: [  ] }
+  - { id: 69, class: vreg_1, preferred-register: '', flags: [  ] }
+  - { id: 70, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 71, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 72, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 73, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 74, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 75, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 76, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 77, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 78, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 79, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 80, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 81, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 82, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 83, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 84, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 85, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 86, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 87, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 88, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 89, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 90, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 91, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 92, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 93, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 94, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 95, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 96, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 97, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 98, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 99, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 100, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 101, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 102, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 103, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 104, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 105, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 106, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 107, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 108, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 109, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 110, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 111, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 112, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 113, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 114, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 115, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 116, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 117, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 118, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 119, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 120, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 121, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 122, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 123, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 124, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 125, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 126, class: sgpr_128, preferred-register: '', flags: [  ] }
+  - { id: 127, class: sgpr_64, preferred-register: '', flags: [  ] }
+  - { id: 128, class: sgpr_64, preferred-register: '', flags: [  ] }
+  - { id: 129, class: sgpr_64, preferred-register: '', flags: [  ] }
+  - { id: 130, class: sgpr_64, preferred-register: '', flags: [  ] }
+  - { id: 131, class: sgpr_64, preferred-register: '', flags: [  ] }
+  - { id: 132, class: sgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 133, class: sgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 134, class: sgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 135, class: sgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 136, class: sreg_64, preferred-register: '', flags: [  ] }
+  - { id: 137, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 138, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 139, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 140, class: sgpr_256, preferred-register: '', flags: [  ] }
+  - { id: 141, class: sreg_64_xexec, preferred-register: '', flags: [  ] }
+  - { id: 142, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 143, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 144, class: sreg_64, preferred-register: '', flags: [  ] }
+  - { id: 145, class: sreg_64, preferred-register: '', flags: [  ] }
+  - { id: 146, class: av_512, preferred-register: '', flags: [  ] }
+  - { id: 147, class: av_512, preferred-register: '', flags: [  ] }
+  - { id: 148, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 149, class: areg_512, preferred-register: '', flags: [  ] }
+  - { id: 150, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 151, class: av_32, preferred-register: '', flags: [  ] }
+  - { id: 152, class: areg_512, preferred-register: '', flags: [  ] }
+  - { id: 153, class: areg_512, preferred-register: '', flags: [  ] }
+  - { id: 154, class: av_32, preferred-register: '', flags: [  ] }
+  - { id: 155, class: av_32, preferred-register: '', flags: [  ] }
+  - { id: 156, class: areg_512, preferred-register: '', flags: [  ] }
+  - { id: 157, class: sreg_64, preferred-register: '', flags: [  ] }
+  - { id: 158, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 159, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 160, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 161, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 162, class: areg_512, preferred-register: '', flags: [  ] }
+  - { id: 163, class: av_32, preferred-register: '', flags: [  ] }
+  - { id: 164, class: areg_512, preferred-register: '', flags: [  ] }
+  - { id: 165, class: av_32, preferred-register: '', flags: [  ] }
+  - { id: 166, class: av_32, preferred-register: '', flags: [  ] }
+  - { id: 167, class: areg_512, preferred-register: '', flags: [  ] }
+  - { id: 168, class: av_32, preferred-register: '', flags: [  ] }
+  - { id: 169, class: areg_512, preferred-register: '', flags: [  ] }
+  - { id: 170, class: av_32, preferred-register: '', flags: [  ] }
+  - { id: 171, class: av_32, preferred-register: '', flags: [  ] }
+  - { id: 172, class: areg_512, preferred-register: '', flags: [  ] }
+  - { id: 173, class: av_32, preferred-register: '', flags: [  ] }
+  - { id: 174, class: av_32, preferred-register: '', flags: [  ] }
+  - { id: 175, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 176, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 177, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 178, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 179, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 180, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 181, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 182, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 183, class: sreg_64, preferred-register: '', flags: [  ] }
+  - { id: 184, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 185, class: vreg_64, preferred-register: '', flags: [  ] }
+  - { id: 186, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 187, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 188, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 189, class: sreg_64, preferred-register: '', flags: [  ] }
+  - { id: 190, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 191, class: vreg_64, preferred-register: '', flags: [  ] }
+  - { id: 192, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 193, class: vreg_64, preferred-register: '', flags: [  ] }
+  - { id: 194, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 195, class: sreg_64_xexec, preferred-register: '', flags: [  ] }
+  - { id: 196, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 197, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 198, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 199, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 200, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 201, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 202, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 203, class: vreg_64, preferred-register: '', flags: [  ] }
+  - { id: 204, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 205, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 206, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 207, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 208, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 209, class: vreg_64, preferred-register: '', flags: [  ] }
+  - { id: 210, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 211, class: vreg_64, preferred-register: '', flags: [  ] }
+  - { id: 212, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 213, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 214, class: sreg_64, preferred-register: '', flags: [  ] }
+  - { id: 215, class: vreg_64, preferred-register: '', flags: [  ] }
+  - { id: 216, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 217, class: vreg_64, preferred-register: '', flags: [  ] }
+  - { id: 218, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 219, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 220, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 221, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 222, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 223, class: sreg_64, preferred-register: '', flags: [  ] }
+  - { id: 224, class: vreg_64, preferred-register: '', flags: [  ] }
+  - { id: 225, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 226, class: sreg_64, preferred-register: '$vcc', flags: [  ] }
+  - { id: 227, class: sgpr_128, preferred-register: '', flags: [  ] }
+  - { id: 228, class: vreg_128, preferred-register: '', flags: [  ] }
+  - { id: 229, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 230, class: vreg_128, preferred-register: '', flags: [  ] }
+  - { id: 231, class: vreg_128, preferred-register: '', flags: [  ] }
+  - { id: 232, class: vreg_128, preferred-register: '', flags: [  ] }
+  - { id: 233, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 234, class: vreg_128, preferred-register: '', flags: [  ] }
+  - { id: 235, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 236, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 237, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 238, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 239, class: sreg_64_xexec, preferred-register: '', flags: [  ] }
+  - { id: 240, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 241, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 242, class: vreg_64, preferred-register: '', flags: [  ] }
+  - { id: 243, class: sreg_64, preferred-register: '$vcc', flags: [  ] }
+  - { id: 244, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 245, class: areg_512, preferred-register: '', flags: [  ] }
+  - { id: 246, class: av_32, preferred-register: '', flags: [  ] }
+  - { id: 247, class: av_32, preferred-register: '', flags: [  ] }
+  - { id: 248, class: sreg_64, preferred-register: '', flags: [  ] }
+  - { id: 249, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 250, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 251, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 252, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 253, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 254, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 255, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 256, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 257, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 258, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 259, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 260, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 261, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 262, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 263, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 264, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 265, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 266, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 267, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 268, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 269, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 270, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 271, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 272, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 273, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 274, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 275, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 276, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 277, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 278, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 279, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 280, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 281, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 282, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 283, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 284, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 285, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 286, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 287, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 288, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 289, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 290, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 291, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 292, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 293, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 294, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 295, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 296, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 297, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 298, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 299, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 300, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 301, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 302, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 303, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 304, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 305, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 306, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 307, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 308, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 309, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 310, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 311, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 312, class: sreg_64_xexec, preferred-register: '', flags: [  ] }
+  - { id: 313, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 314, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 315, class: sreg_64_xexec, preferred-register: '', flags: [  ] }
+  - { id: 316, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 317, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 318, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 319, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 320, class: vreg_64, preferred-register: '', flags: [  ] }
+  - { id: 321, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 322, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 323, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 324, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 325, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 326, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 327, class: vreg_64, preferred-register: '', flags: [  ] }
+  - { id: 328, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 329, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 330, class: vreg_96, preferred-register: '', flags: [  ] }
+  - { id: 331, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 332, class: vreg_64, preferred-register: '', flags: [  ] }
+  - { id: 333, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 334, class: sreg_64_xexec, preferred-register: '$vcc', flags: [  ] }
+  - { id: 335, class: sreg_64, preferred-register: '', flags: [  ] }
+  - { id: 336, class: sreg_64, preferred-register: '', flags: [  ] }
+  - { id: 337, class: sreg_64, preferred-register: '', flags: [  ] }
+  - { id: 338, class: sreg_64, preferred-register: '', flags: [  ] }
+  - { id: 339, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 340, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 341, class: vreg_1, preferred-register: '', flags: [  ] }
+  - { id: 342, class: vreg_1, preferred-register: '', flags: [  ] }
+  - { id: 343, class: sreg_64, preferred-register: '', flags: [  ] }
+  - { id: 344, class: sreg_64, preferred-register: '', flags: [  ] }
+  - { id: 345, class: agpr_32, preferred-register: '', flags: [  ] }
+  - { id: 346, class: agpr_32, preferred-register: '', flags: [  ] }
+  - { id: 347, class: agpr_32, preferred-register: '', flags: [  ] }
+  - { id: 348, class: agpr_32, preferred-register: '', flags: [  ] }
+  - { id: 349, class: agpr_32, preferred-register: '', flags: [  ] }
+  - { id: 350, class: agpr_32, preferred-register: '', flags: [  ] }
+  - { id: 351, class: agpr_32, preferred-register: '', flags: [  ] }
+  - { id: 352, class: agpr_32, preferred-register: '', flags: [  ] }
+  - { id: 353, class: agpr_32, preferred-register: '', flags: [  ] }
+  - { id: 354, class: agpr_32, preferred-register: '', flags: [  ] }
+  - { id: 355, class: agpr_32, preferred-register: '', flags: [  ] }
+  - { id: 356, class: agpr_32, preferred-register: '', flags: [  ] }
+  - { id: 357, class: agpr_32, preferred-register: '', flags: [  ] }
+  - { id: 358, class: agpr_32, preferred-register: '', flags: [  ] }
+  - { id: 359, class: agpr_32, preferred-register: '', flags: [  ] }
+  - { id: 360, class: agpr_32, preferred-register: '', flags: [  ] }
+  - { id: 361, class: agpr_32, preferred-register: '', flags: [  ] }
+  - { id: 362, class: agpr_32, preferred-register: '', flags: [  ] }
+  - { id: 363, class: agpr_32, preferred-register: '', flags: [  ] }
+  - { id: 364, class: agpr_32, preferred-register: '', flags: [  ] }
+  - { id: 365, class: agpr_32, preferred-register: '', flags: [  ] }
+  - { id: 366, class: agpr_32, preferred-register: '', flags: [  ] }
+  - { id: 367, class: agpr_32, preferred-register: '', flags: [  ] }
+  - { id: 368, class: agpr_32, preferred-register: '', flags: [  ] }
+  - { id: 369, class: agpr_32, preferred-register: '', flags: [  ] }
+  - { id: 370, class: agpr_32, preferred-register: '', flags: [  ] }
+  - { id: 371, class: agpr_32, preferred-register: '', flags: [  ] }
+  - { id: 372, class: agpr_32, preferred-register: '', flags: [  ] }
+  - { id: 373, class: agpr_32, preferred-register: '', flags: [  ] }
+  - { id: 374, class: agpr_32, preferred-register: '', flags: [  ] }
+  - { id: 375, class: agpr_32, preferred-register: '', flags: [  ] }
+  - { id: 376, class: agpr_32, preferred-register: '', flags: [  ] }
+  - { id: 377, class: agpr_32, preferred-register: '', flags: [  ] }
+  - { id: 378, class: agpr_32, preferred-register: '', flags: [  ] }
+  - { id: 379, class: agpr_32, preferred-register: '', flags: [  ] }
+  - { id: 380, class: agpr_32, preferred-register: '', flags: [  ] }
+  - { id: 381, class: agpr_32, preferred-register: '', flags: [  ] }
+  - { id: 382, class: agpr_32, preferred-register: '', flags: [  ] }
+  - { id: 383, class: agpr_32, preferred-register: '', flags: [  ] }
+  - { id: 384, class: agpr_32, preferred-register: '', flags: [  ] }
+  - { id: 385, class: agpr_32, preferred-register: '', flags: [  ] }
+  - { id: 386, class: agpr_32, preferred-register: '', flags: [  ] }
+  - { id: 387, class: agpr_32, preferred-register: '', flags: [  ] }
+  - { id: 388, class: agpr_32, preferred-register: '', flags: [  ] }
+  - { id: 389, class: agpr_32, preferred-register: '', flags: [  ] }
+  - { id: 390, class: agpr_32, preferred-register: '', flags: [  ] }
+  - { id: 391, class: agpr_32, preferred-register: '', flags: [  ] }
+  - { id: 392, class: agpr_32, preferred-register: '', flags: [  ] }
+  - { id: 393, class: agpr_32, preferred-register: '', flags: [  ] }
+  - { id: 394, class: agpr_32, preferred-register: '', flags: [  ] }
+  - { id: 395, class: agpr_32, preferred-register: '', flags: [  ] }
+  - { id: 396, class: agpr_32, preferred-register: '', flags: [  ] }
+  - { id: 397, class: agpr_32, preferred-register: '', flags: [  ] }
+  - { id: 398, class: agpr_32, preferred-register: '', flags: [  ] }
+  - { id: 399, class: agpr_32, preferred-register: '', flags: [  ] }
+  - { id: 400, class: agpr_32, preferred-register: '', flags: [  ] }
+  - { id: 401, class: agpr_32, preferred-register: '', flags: [  ] }
+  - { id: 402, class: agpr_32, preferred-register: '', flags: [  ] }
+  - { id: 403, class: agpr_32, preferred-register: '', flags: [  ] }
+  - { id: 404, class: agpr_32, preferred-register: '', flags: [  ] }
+  - { id: 405, class: agpr_32, preferred-register: '', flags: [  ] }
+  - { id: 406, class: agpr_32, preferred-register: '', flags: [  ] }
+  - { id: 407, class: agpr_32, preferred-register: '', flags: [  ] }
+  - { id: 408, class: agpr_32, preferred-register: '', flags: [  ] }
+  - { id: 409, class: sreg_64_xexec, preferred-register: '', flags: [  ] }
+  - { id: 410, class: sreg_64_xexec, preferred-register: '', flags: [  ] }
+  - { id: 411, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 412, class: sreg_64, preferred-register: '', flags: [  ] }
+  - { id: 413, class: sreg_64, preferred-register: '', flags: [  ] }
+  - { id: 414, class: agpr_32, preferred-register: '', flags: [  ] }
+  - { id: 415, class: agpr_32, preferred-register: '', flags: [  ] }
+  - { id: 416, class: agpr_32, preferred-register: '', flags: [  ] }
+  - { id: 417, class: agpr_32, preferred-register: '', flags: [  ] }
+  - { id: 418, class: agpr_32, preferred-register: '', flags: [  ] }
+  - { id: 419, class: agpr_32, preferred-register: '', flags: [  ] }
+  - { id: 420, class: agpr_32, preferred-register: '', flags: [  ] }
+  - { id: 421, class: agpr_32, preferred-register: '', flags: [  ] }
+  - { id: 422, class: agpr_32, preferred-register: '', flags: [  ] }
+  - { id: 423, class: agpr_32, preferred-register: '', flags: [  ] }
+  - { id: 424, class: agpr_32, preferred-register: '', flags: [  ] }
+  - { id: 425, class: agpr_32, preferred-register: '', flags: [  ] }
+  - { id: 426, class: agpr_32, preferred-register: '', flags: [  ] }
+  - { id: 427, class: agpr_32, preferred-register: '', flags: [  ] }
+  - { id: 428, class: agpr_32, preferred-register: '', flags: [  ] }
+  - { id: 429, class: agpr_32, preferred-register: '', flags: [  ] }
+  - { id: 430, class: agpr_32, preferred-register: '', flags: [  ] }
+  - { id: 431, class: agpr_32, preferred-register: '', flags: [  ] }
+  - { id: 432, class: agpr_32, preferred-register: '', flags: [  ] }
+  - { id: 433, class: agpr_32, preferred-register: '', flags: [  ] }
+  - { id: 434, class: agpr_32, preferred-register: '', flags: [  ] }
+  - { id: 435, class: agpr_32, preferred-register: '', flags: [  ] }
+  - { id: 436, class: agpr_32, preferred-register: '', flags: [  ] }
+  - { id: 437, class: agpr_32, preferred-register: '', flags: [  ] }
+  - { id: 438, class: agpr_32, preferred-register: '', flags: [  ] }
+  - { id: 439, class: agpr_32, preferred-register: '', flags: [  ] }
+  - { id: 440, class: agpr_32, preferred-register: '', flags: [  ] }
+  - { id: 441, class: agpr_32, preferred-register: '', flags: [  ] }
+  - { id: 442, class: agpr_32, preferred-register: '', flags: [  ] }
+  - { id: 443, class: agpr_32, preferred-register: '', flags: [  ] }
+  - { id: 444, class: agpr_32, preferred-register: '', flags: [  ] }
+  - { id: 445, class: agpr_32, preferred-register: '', flags: [  ] }
+  - { id: 446, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 447, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 448, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 449, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 450, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 451, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 452, class: vgpr_32, preferred-register: '', flags: [  ] }
+liveins:
+  - { reg: '$vgpr0', virtual-reg: '%123' }
+  - { reg: '$sgpr8_sgpr9', virtual-reg: '%129' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    1
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  functionContext: ''
+  maxCallFrameSize: 4294967295
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  hasTailCall:     false
+  isCalleeSavedInfoValid: false
+  localFrameSize:  0
+fixedStack:      []
+stack:           []
+entry_values:    []
+callSites:       []
+debugValueSubstitutions: []
+constants:       []
+machineFunctionInfo:
+  explicitKernArgSize: 40
+  maxKernArgAlign: 8
+  ldsSize:         0
+  gdsSize:         0
+  dynLDSAlign:     1
+  isEntryFunction: true
+  isChainFunction: false
+  memoryBound:     false
+  waveLimiter:     false
+  hasSpilledSGPRs: false
+  hasSpilledVGPRs: false
+  numWaveDispatchSGPRs: 0
+  scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
+  frameOffsetReg:  '$fp_reg'
+  stackPtrOffsetReg: '$sgpr32'
+  bytesInStackArgArea: 0
+  returnsVoid:     true
+  argumentInfo:
+    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
+    dispatchPtr:     { reg: '$sgpr4_sgpr5' }
+    queuePtr:        { reg: '$sgpr6_sgpr7' }
+    kernargSegmentPtr: { reg: '$sgpr8_sgpr9' }
+    dispatchID:      { reg: '$sgpr10_sgpr11' }
+    flatScratchInit: { reg: '$sgpr12_sgpr13' }
+    workGroupIDX:    { reg: '$sgpr14' }
+    workGroupIDY:    { reg: '$sgpr15' }
+    workGroupIDZ:    { reg: '$sgpr16' }
+    privateSegmentWaveByteOffset: { reg: '$sgpr17' }
+    workItemIDX:     { reg: '$vgpr0' }
+    workItemIDY:     { reg: '$vgpr1' }
+    workItemIDZ:     { reg: '$vgpr2' }
+  psInputAddr:     0
+  psInputEnable:   0
+  maxMemoryClusterDWords: 8
+  mode:
+    ieee:            true
+    dx10-clamp:      true
+    fp32-input-denormals: true
+    fp32-output-denormals: true
+    fp64-fp16-input-denormals: true
+    fp64-fp16-output-denormals: true
+  highBitsOf32BitAddress: 0
+  vgprForAGPRCopy: '$vgpr63'
+  sgprForEXECCopy: '$sgpr100_sgpr101'
+  longBranchReservedReg: ''
+  hasInitWholeWave: false
+  dynamicVGPRBlockSize: 0
+  scratchReservedForDynamicVGPRs: 0
+  numKernargPreloadSGPRs: 0
+  isWholeWaveFunction: false
+body:             |
+  bb.0:
+    successors: %bb.1(0x80000000)
+    liveins: $vgpr0, $sgpr8_sgpr9
+  
+    %129:sgpr_64(p4) = COPY $sgpr8_sgpr9
+    %411:vgpr_32 = COPY $vgpr0
+    early-clobber %140:sgpr_256 = S_LOAD_DWORDX8_IMM_ec %129(p4), 0, 0 :: (dereferenceable invariant load (s256) from `ptr addrspace(3) null`, addrspace 4)
+    %141:sreg_64_xexec = S_LOAD_DWORDX2_IMM %129(p4), 32, 0 :: (dereferenceable invariant load (s64) from `ptr addrspace(3) null` + 32, addrspace 4)
+    S_BITCMP1_B32 %140.sub7, 0, implicit-def $scc
+    %9:sreg_64_xexec = S_CSELECT_B64 -1, 0, implicit killed $scc
+    undef %330.sub1:vreg_96 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
+    undef %162.sub15:areg_512 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
+    %162.sub14:areg_512 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
+    %162.sub13:areg_512 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
+    %162.sub12:areg_512 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
+    %162.sub11:areg_512 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
+    %162.sub10:areg_512 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
+    %162.sub9:areg_512 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
+    %162.sub8:areg_512 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
+    %162.sub7:areg_512 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
+    %162.sub6:areg_512 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
+    %162.sub5:areg_512 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
+    %162.sub4:areg_512 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
+    %162.sub3:areg_512 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
+    %162.sub2:areg_512 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
+    %162.sub1:areg_512 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
+    %162.sub0:areg_512 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
+    undef %149.sub15:areg_512 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
+    %149.sub14:areg_512 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
+    %149.sub13:areg_512 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
+    %149.sub12:areg_512 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
+    %149.sub11:areg_512 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
+    %149.sub10:areg_512 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
+    %149.sub9:areg_512 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
+    %149.sub8:areg_512 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
+    %149.sub7:areg_512 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
+    %149.sub6:areg_512 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
+    %149.sub5:areg_512 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
+    %149.sub4:areg_512 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
+    %149.sub3:areg_512 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
+    %149.sub2:areg_512 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
+    %149.sub1:areg_512 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
+    %149.sub0:areg_512 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
+    %413:sreg_64 = S_MOV_B64 0
+    undef %227.sub0:sgpr_128 = S_MOV_B32 0
+    %227.sub1:sgpr_128 = COPY %227.sub0
+    %159:vgpr_32 = COPY %140.sub6
+    %161:vgpr_32 = COPY %141.sub1
+    %319:vgpr_32 = V_MOV_B32_e32 65535, implicit $exec
+    %184:vgpr_32 = COPY %140.sub3
+    %192:vgpr_32 = COPY %140.sub4
+    %193:vreg_64 = COPY %227.sub0_sub1
+    %202:vgpr_32 = V_MOV_B32_e32 84148480, implicit $exec
+    undef %217.sub0:vreg_64 = V_MOV_B32_e32 65537, implicit $exec
+    %217.sub1:vreg_64 = COPY %217.sub0
+    %210:vgpr_32 = COPY %141.sub0
+    %216:vgpr_32 = COPY %140.sub5
+    %310:vgpr_32 = V_MOV_B32_e32 4294901760, implicit $exec
+    %227.sub1:sgpr_128 = COPY %227.sub0
+    %227.sub2:sgpr_128 = COPY %227.sub0
+    %227.sub3:sgpr_128 = COPY %227.sub0
+    %229:vgpr_32 = COPY %140.sub2
+    %233:vgpr_32 = COPY %140.sub0
+    %235:vgpr_32 = COPY %140.sub1
+    %248:sreg_64 = S_AND_B64 $exec, -1, implicit-def dead $scc
+    %409:sreg_64_xexec = S_MOV_B64 0
+    %410:sreg_64_xexec = S_MOV_B64 0
+    %412:sreg_64 = S_MOV_B64 0
+    undef %228.sub1:vreg_128 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
+    undef %230.sub2:vreg_128 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
+    undef %234.sub1:vreg_128 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
+    undef %232.sub0:vreg_128 = COPY %330.sub1
+    %232.sub3:vreg_128 = COPY %330.sub1
+    undef %231.sub0:vreg_128 = COPY %330.sub1
+    %231.sub3:vreg_128 = COPY %330.sub1
+  
+  bb.1:
+    successors: %bb.2(0x04000000), %bb.1(0x7c000000)
+  
+    undef %146.sub15:av_512 = COPY %162.sub15
+    %146.sub14:av_512 = COPY %162.sub14
+    %146.sub13:av_512 = COPY %162.sub13
+    %146.sub12:av_512 = COPY %162.sub12
+    %146.sub11:av_512 = COPY %162.sub11
+    %146.sub10:av_512 = COPY %162.sub10
+    %146.sub9:av_512 = COPY %162.sub9
+    %146.sub8:av_512 = COPY %162.sub8
+    %146.sub7:av_512 = COPY %162.sub7
+    %146.sub6:av_512 = COPY %162.sub6
+    %146.sub5:av_512 = COPY %162.sub5
+    %146.sub4:av_512 = COPY %162.sub4
+    %146.sub3:av_512 = COPY %162.sub3
+    %146.sub2:av_512 = COPY %162.sub2
+    %146.sub1:av_512 = COPY %162.sub1
+    %146.sub0:av_512 = COPY %162.sub0
+    undef %147.sub15:av_512 = COPY %149.sub15
+    %147.sub14:av_512 = COPY %149.sub14
+    %147.sub13:av_512 = COPY %149.sub13
+    %147.sub12:av_512 = COPY %149.sub12
+    %147.sub11:av_512 = COPY %149.sub11
+    %147.sub10:av_512 = COPY %149.sub10
+    %147.sub9:av_512 = COPY %149.sub9
+    %147.sub8:av_512 = COPY %149.sub8
+    %147.sub7:av_512 = COPY %149.sub7
+    %147.sub6:av_512 = COPY %149.sub6
+    %147.sub5:av_512 = COPY %149.sub5
+    %147.sub4:av_512 = COPY %149.sub4
+    %147.sub3:av_512 = COPY %149.sub3
+    %147.sub2:av_512 = COPY %149.sub2
+    %147.sub1:av_512 = COPY %149.sub1
+    %147.sub0:av_512 = COPY %149.sub0
+    %149:areg_512 = COPY %147
+    %149:areg_512 = V_MFMA_F32_32X32X4BF16_mac_e64 %330.sub1, %330.sub1, %149, 0, 0, 0, implicit $mode, implicit $exec
+    %162:areg_512 = COPY %146
+    %162:areg_512 = V_MFMA_F32_32X32X4BF16_mac_e64 %330.sub1, %330.sub1, %162, 0, 0, 0, implicit $mode, implicit $exec
+    %158:vgpr_32 = DS_READ_B32_gfx9 %159, 0, 0, implicit $exec :: (load (s32) from `ptr addrspace(3) null`, addrspace 3)
+    %160:vgpr_32 = DS_READ_B32_gfx9 %161, 0, 0, implicit $exec :: (load (s32) from `ptr addrspace(3) null`, addrspace 3)
+    %162:areg_512 = V_MFMA_F32_32X32X4BF16_mac_e64 %158, %330.sub1, %162, 0, 0, 0, implicit $mode, implicit $exec
+    %162:areg_512 = V_MFMA_F32_32X32X4BF16_mac_e64 %330.sub1, %330.sub1, %162, 0, 0, 0, implicit $mode, implicit $exec
+    %162:areg_512 = V_MFMA_F32_32X32X4BF16_mac_e64 %160, %330.sub1, %162, 0, 0, 0, implicit $mode, implicit $exec
+    %162:areg_512 = V_MFMA_F32_32X32X4BF16_mac_e64 %330.sub1, %330.sub1, %162, 0, 0, 0, implicit $mode, implicit $exec
+    %162:areg_512 = V_MFMA_F32_32X32X4BF16_mac_e64 %330.sub1, %330.sub1, %162, 0, 0, 0, implicit $mode, implicit $exec
+    dead %335:sreg_64 = S_AND_B64 %413, $exec, implicit-def $scc
+    %176:sreg_32 = S_CSELECT_B32 65537, 0, implicit killed $scc
+    %178:sreg_32 = S_LSHR_B32 %176, 16, implicit-def dead $scc
+    undef %327.sub1:vreg_64 = V_BFI_B32_e64 %319, 0, %228.sub1, implicit $exec
+    %327.sub0:vreg_64 = COPY %178, implicit $exec
+    DS_WRITE_B64_gfx9 %184, %327, 0, 0, implicit $exec :: (store (s64) into `ptr addrspace(3) null`, addrspace 3)
+    %326:vgpr_32 = V_AND_B32_e32 %176, %319, implicit $exec
+    %330.sub0:vreg_96 = V_LSHL_OR_B32_e64 %230.sub2, 16, %326, implicit $exec
+    DS_WRITE_B64_gfx9 %330.sub1, %330.sub0_sub1, 0, 0, implicit $exec :: (store (s64) into `ptr addrspace(3) null`, addrspace 3)
+    DS_WRITE_B64_gfx9 %192, %193, 0, 0, implicit $exec :: (store (s64) into `ptr addrspace(3) null`, addrspace 3)
+    %194:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, %231.sub0, %410, implicit $exec
+    undef %209.sub0:vreg_64 = V_PERM_B32_e64 1, %194, %202, implicit $exec
+    %313:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, %232.sub3, %9, implicit $exec
+    %316:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, %232.sub0, %9, implicit $exec
+    %209.sub1:vreg_64 = V_AND_B32_e32 65535, %316, implicit $exec
+    DS_WRITE_B64_gfx9 %330.sub1, %209, 0, 0, implicit $exec :: (store (s64) into `ptr addrspace(3) null`, addrspace 3)
+    DS_WRITE_B64_gfx9 %210, %193, 0, 0, implicit $exec :: (store (s64) into `ptr addrspace(3) null`, addrspace 3)
+    %330.sub2:vreg_96 = V_LSHLREV_B32_e32 16, %234.sub1, implicit $exec
+    DS_WRITE_B64_gfx9 %330.sub1, %330.sub1_sub2, 0, 0, implicit $exec :: (store (s64) into `ptr addrspace(3) null`, addrspace 3)
+    DS_WRITE_B64_gfx9 %216, %217, 0, 0, implicit $exec :: (store (s64) into `ptr addrspace(3) null`, addrspace 3)
+    dead %338:sreg_64 = S_AND_B64 %412, $exec, implicit-def $scc
+    %218:sreg_32 = S_CSELECT_B32 65537, 0, implicit killed $scc
+    %311:vgpr_32 = V_LSHRREV_B32_e32 16, %231.sub3, implicit $exec
+    undef %320.sub0:vreg_64 = V_AND_OR_B32_e64 %218, %310, %311, implicit $exec
+    %320.sub1:vreg_64 = V_LSHRREV_B32_e32 16, %313, implicit $exec
+    DS_WRITE_B64_gfx9 %330.sub1, %320, 0, 0, implicit $exec :: (store (s64) into `ptr addrspace(3) null`, addrspace 3)
+    %410:sreg_64_xexec = V_CMP_GT_I32_e64 0, %411, implicit $exec
+    %228:vreg_128 = BUFFER_LOAD_DWORDX4_OFFEN %229, %227, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128) from `ptr addrspace(8) null`, addrspace 8)
+    %230:vreg_128 = BUFFER_LOAD_DWORDX4_OFFSET %227, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128) from `ptr addrspace(8) null`, addrspace 8)
+    %231:vreg_128 = BUFFER_LOAD_DWORDX4_OFFSET %227, 0, 1, 0, 0, implicit $exec :: (dereferenceable load (s128) from `ptr addrspace(8) null`, addrspace 8)
+    %232:vreg_128 = BUFFER_LOAD_DWORDX4_OFFEN %233, %227, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128) from `ptr addrspace(8) null`, addrspace 8)
+    %234:vreg_128 = BUFFER_LOAD_DWORDX4_OFFEN %235, %227, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128) from `ptr addrspace(8) null`, addrspace 8)
+    %237:vgpr_32 = V_ADD_U32_e32 64, %411, implicit $exec
+    SCHED_GROUP_BARRIER 1, 1, 0
+    SCHED_GROUP_BARRIER 1, 1, 0
+    SCHED_GROUP_BARRIER 1, 1, 0
+    SCHED_GROUP_BARRIER 512, 1, 0
+    SCHED_GROUP_BARRIER 8, 1, 0
+    SCHED_BARRIER 0
+    undef %242.sub0:vreg_64 = V_CNDMASK_B32_e64 0, 0, 0, %217.sub0, %409, implicit $exec
+    %242.sub1:vreg_64 = COPY %242.sub0
+    DS_WRITE_B64_gfx9 %330.sub1, %242, 0, 0, implicit $exec :: (store (s64) into `ptr addrspace(3) null`, addrspace 3)
+    %409:sreg_64_xexec = V_CMP_GT_I32_e64 0, %237, implicit $exec
+    %411:vgpr_32 = V_ADD_U32_e32 1, %411, implicit $exec
+    %162:areg_512 = V_MFMA_F32_32X32X4BF16_mac_e64 %330.sub1, %330.sub1, %162, 0, 0, 0, implicit $mode, implicit $exec
+    %412:sreg_64 = S_MOV_B64 -1
+    $vcc = COPY %248
+    %413:sreg_64 = COPY %9
+    S_CBRANCH_VCCNZ %bb.1, implicit killed $vcc
+    S_BRANCH %bb.2
+  
+  bb.2:
+    S_ENDPGM 0
+...
