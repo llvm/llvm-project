@@ -46,7 +46,7 @@ cmake -S "${MONOREPO_ROOT}"/llvm -B "${BUILD_DIR}" \
       -D CMAKE_DISABLE_PRECOMPILE_HEADERS=ON \
       -D MLIR_ENABLE_BINDINGS_PYTHON=ON \
       -D RUNTIMES_amdgcn-amd-amdhsa-llvm_LLVM_ENABLE_RUNTIMES=libclc \
-      -D LLVM_RUNTIME_TARGETS="amdgcn-amd-amdhsa-llvm" \
+      -D LLVM_RUNTIME_TARGETS="default;amdgcn-amd-amdhsa-llvm" \
       -D CMAKE_EXE_LINKER_FLAGS="/MANIFEST:NO" \
       -D CMAKE_MODULE_LINKER_FLAGS="/MANIFEST:NO" \
       -D CMAKE_SHARED_LINKER_FLAGS="/MANIFEST:NO" \

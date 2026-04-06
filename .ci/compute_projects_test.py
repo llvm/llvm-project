@@ -265,7 +265,7 @@ class TestComputeProjects(unittest.TestCase):
         )
         self.assertEqual(env_variables["projects_to_build"], "clang;llvm")
         self.assertEqual(env_variables["project_check_targets"], "")
-        self.assertEqual(env_variables["runtimes_to_build"], "libclc")
+        self.assertEqual(env_variables["runtimes_to_build"], "")
         self.assertEqual(
             env_variables["runtimes_check_targets"],
             "check-libclc-amdgcn-amd-amdhsa-llvm",
@@ -306,7 +306,7 @@ class TestComputeProjects(unittest.TestCase):
         )
         self.assertEqual(
             env_variables["runtimes_to_build"],
-            "compiler-rt;flang-rt;libc;libclc;libcxx;libcxxabi;libunwind",
+            "compiler-rt;flang-rt;libc;libcxx;libcxxabi;libunwind",
         )
         self.assertEqual(
             env_variables["runtimes_check_targets"],
@@ -331,7 +331,7 @@ class TestComputeProjects(unittest.TestCase):
         )
         self.assertEqual(
             env_variables["runtimes_to_build"],
-            "compiler-rt;libclc",
+            "compiler-rt",
         )
         self.assertEqual(
             env_variables["runtimes_check_targets"],
@@ -380,7 +380,7 @@ class TestComputeProjects(unittest.TestCase):
         )
         self.assertEqual(
             env_variables["runtimes_to_build"],
-            "compiler-rt;flang-rt;libc;libclc;libcxx;libcxxabi;libunwind",
+            "compiler-rt;flang-rt;libc;libcxx;libcxxabi;libunwind",
         )
         self.assertEqual(
             env_variables["runtimes_check_targets"],
@@ -415,7 +415,7 @@ class TestComputeProjects(unittest.TestCase):
         )
         self.assertEqual(
             env_variables["runtimes_to_build"],
-            "compiler-rt;flang-rt;libc;libclc;libcxx;libcxxabi;libunwind",
+            "compiler-rt;flang-rt;libc;libcxx;libcxxabi;libunwind",
         )
         self.assertEqual(
             env_variables["runtimes_check_targets"],

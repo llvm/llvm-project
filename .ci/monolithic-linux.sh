@@ -57,7 +57,7 @@ cmake -S "${MONOREPO_ROOT}"/llvm -B "${BUILD_DIR}" \
       -D CMAKE_DISABLE_PRECOMPILE_HEADERS=ON \
       -D LIBCXX_CXX_ABI=libcxxabi \
       -D RUNTIMES_amdgcn-amd-amdhsa-llvm_LLVM_ENABLE_RUNTIMES=libclc \
-      -D LLVM_RUNTIME_TARGETS="amdgcn-amd-amdhsa-llvm" \
+      -D LLVM_RUNTIME_TARGETS="default;amdgcn-amd-amdhsa-llvm" \
       -D MLIR_ENABLE_BINDINGS_PYTHON=ON \
       -D LLDB_ENABLE_PYTHON=ON \
       -D LLDB_ENFORCE_STRICT_TEST_REQUIREMENTS=ON \
