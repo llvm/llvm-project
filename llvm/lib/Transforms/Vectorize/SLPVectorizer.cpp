@@ -26162,7 +26162,7 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
     }
   }
 
-  Type *ScalarTy = getValueType(VL[0]);
+  Type *ScalarTy = getValueType(VL[0], /*LookThroughCmp=*/true);
   unsigned Sz = R.getVectorElementSize(I0);
   unsigned MinVF = R.getMinVF(Sz);
   unsigned MaxVF = std::max<unsigned>(
@@ -29064,7 +29064,8 @@ bool SLPVectorizerPass::vectorizeCmpInsts(iterator_range<ItT> CmpInsts,
 
   SmallVector<Value *> Vals;
   for (Instruction *V : CmpInsts)
-    if (!R.isDeleted(V) && isValidElementType(getValueType(V)))
+    if (!R.isDeleted(V) &&
+        isValidElementType(getValueType(V, /*LookThroughCmp=*/true)))
       Vals.push_back(V);
   if (Vals.size() <= 1)
     return Changed;
