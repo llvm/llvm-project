@@ -10278,7 +10278,7 @@ TEST(APFloatTest, exp) {
   EXPECT_EQ(1.0, llvm::exp(APFloat::getSmallest(APFloat::IEEEdouble(), false))
                      .convertToDouble());
   // exp(-1)
-  EXPECT_EQ(0x1.78b56362cef38p-2, llvm::exp(APFloat(-1.0f)).convertToDouble());
+  EXPECT_EQ(0x1.78b56362cef38p-2, llvm::exp(APFloat(-1.0)).convertToDouble());
 }
 
 } // namespace
