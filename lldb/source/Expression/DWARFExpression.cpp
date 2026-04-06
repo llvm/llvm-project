@@ -1778,7 +1778,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
               ReadRegisterValueAsScalar(reg_ctx, reg_kind, reg_num, tmp))
         return err;
 
-      int64_t breg_offset = op->getRawOperand(0);
+      int64_t breg_offset = op->getRawOperand(1);
       tmp.GetScalar() += (uint64_t)breg_offset;
       tmp.ClearContext();
       stack.push_back(tmp);
@@ -2006,6 +2006,8 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     case DW_OP_implicit_value: {
       dwarf4_location_description_kind = Implicit;
 
+      // The second operand is a sequence of bytes of the length specified by
+      // the first operand. LLVM represents it as an offset to that sequence.
       const uint64_t block_size = op->getRawOperand(0);
       uint64_t block_offset = op->getRawOperand(1);
 
@@ -2237,6 +2239,10 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
 
     case DW_OP_GNU_entry_value:
     case DW_OP_entry_value: {
+      // Technically, DW_OP_entry_value has two operands, but LLVM represents
+      // it as a single-operand operation (bug?). We can deal with this: the
+      // second operand immediately follows the first, but have to be careful
+      // when advancing the iterator, see the comment below.
       const uint64_t block_size = op->getRawOperand(0);
       uint64_t block_offset = op->getEndOffset();
 
@@ -2253,6 +2259,8 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
             "could not evaluate DW_OP_entry_value: %s",
             llvm::toString(std::move(err)).c_str());
 
+      // We can't use `operator++` here because the iterator currently points
+      // to the second operand. See the comment above.
       op = op.skipBytes(block_size);
       continue;
     }
@@ -2270,6 +2278,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
           // but we can't use it directly because the only available mutating
           // method of `iterator` (not counting `operator++`) is `skipBytes()`.
           // So we calculate the offset and pass it to `skipBytes()`.
+          assert(offset >= op->getEndOffset());
           uint64_t offset_to_next_op = offset - op->getEndOffset();
           op = op.skipBytes(offset_to_next_op);
           continue;
