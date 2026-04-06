@@ -131,6 +131,8 @@ def ROCDL_Dialect : Dialect {
     static constexpr unsigned kGlobalMemoryAddressSpace = 1;
     /// The address space value that represents shared memory.
     static constexpr unsigned kSharedMemoryAddressSpace = 3;
+    /// The address space value that represents constant memory.
+    static constexpr unsigned kConstantMemoryAddressSpace = 4;
     /// The address space value that represents private memory.
     static constexpr unsigned kPrivateMemoryAddressSpace = 5;
   }];

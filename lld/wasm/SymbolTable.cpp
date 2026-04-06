@@ -352,6 +352,44 @@ static void reportFunctionSignatureMismatch(StringRef symName,
                                   isError);
 }
 
+Symbol *SymbolTable::addSharedTag(StringRef name, uint32_t flags,
+                                  InputFile *file, const WasmSignature *sig) {
+  LLVM_DEBUG(dbgs() << "addSharedTag: " << name << " [" << toString(*sig)
+                    << "]\n");
+  Symbol *s;
+  bool wasInserted;
+  std::tie(s, wasInserted) = insert(name, file);
+
+  auto replaceSym = [&](Symbol *sym) {
+    replaceSymbol<SharedTagSymbol>(sym, name, flags, file, sig);
+  };
+
+  // same as addSharedFunction, but this is in its own function
+  if (wasInserted || s->isLazy()) {
+    replaceSym(s);
+    return s;
+  }
+
+  auto *existingTag = dyn_cast<TagSymbol>(s);
+  if (!existingTag) {
+    reportTypeError(s, file, WASM_SYMBOL_TYPE_TAG);
+    return s;
+  }
+
+  if (s->isDefined()) {
+    return s;
+  }
+
+  // undefined existing sym
+  const WasmSignature *oldSig = existingTag->signature;
+  if (oldSig && sig && *oldSig != *sig)
+    error("Tag signature mismatch: " + name + "\n>>> defined as " +
+          toString(*oldSig) + " in " + toString(existingTag->getFile()) +
+          "\n>>> defined as " + toString(*sig) + " in " + toString(file));
+  replaceSym(s);
+  return s;
+}
+
 Symbol *SymbolTable::addSharedFunction(StringRef name, uint32_t flags,
                                        InputFile *file,
                                        const WasmSignature *sig) {

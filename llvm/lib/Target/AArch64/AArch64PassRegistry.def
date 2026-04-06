@@ -38,4 +38,6 @@ MACHINE_FUNCTION_PASS("aarch64-mi-peephole-opt", AArch64MIPeepholeOptPass())
 MACHINE_FUNCTION_PASS("aarch64-post-coalescer", AArch64PostCoalescerPass())
 MACHINE_FUNCTION_PASS("aarch64-ptrauth", AArch64PointerAuthPass())
 MACHINE_FUNCTION_PASS("aarch64-simd-scalar", AArch64AdvSIMDScalarPass())
+MACHINE_FUNCTION_PASS("aarch64-O0-prelegalizer-combiner",
+                      AArch64O0PreLegalizerCombinerPass())
 #undef MACHINE_FUNCTION_PASS

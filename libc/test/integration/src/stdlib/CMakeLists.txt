@@ -16,3 +16,26 @@ add_integration_test(
     FRANCE=Paris
     GERMANY=Berlin
 )
+
+if(${LIBC_TARGET_OS} STREQUAL "linux")
+  add_integration_test(
+    abort_test
+    SUITE
+      stdlib-integration-tests
+    SRCS
+      abort_test.cpp
+    DEPENDS
+      libc.include.signal
+      libc.include.sys_wait
+      libc.include.unistd
+      libc.src.signal.signal
+      libc.src.stdlib._Exit
+      libc.src.stdlib.abort
+      libc.src.sys.wait.waitpid
+      libc.src.unistd.close
+      libc.src.unistd.fork
+      libc.src.unistd.pipe
+      libc.src.unistd.read
+      libc.src.unistd.write
+  )
+endif()

@@ -5138,6 +5138,36 @@ def HLSLResourceGetDimensionsX : LangBuiltin<"HLSL_LANG"> {
   let Prototype = "void(__hlsl_resource_t, uint32_t&)";
 }
 
+def HLSLResourceGetDimensionsXY : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_resource_getdimensions_xy"];
+  let Attributes = [NoThrow];
+  let Prototype = "void(__hlsl_resource_t, uint32_t&, uint32_t&)";
+}
+
+def HLSLResourceGetDimensionsLevelsXY : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_resource_getdimensions_levels_xy"];
+  let Attributes = [NoThrow];
+  let Prototype = "void(__hlsl_resource_t, uint32_t, uint32_t&, uint32_t&, uint32_t&)";
+}
+
+def HLSLResourceGetDimensionsXFloat : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_resource_getdimensions_x_float"];
+  let Attributes = [NoThrow];
+  let Prototype = "void(__hlsl_resource_t, float&)";
+}
+
+def HLSLResourceGetDimensionsXYFloat : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_resource_getdimensions_xy_float"];
+  let Attributes = [NoThrow];
+  let Prototype = "void(__hlsl_resource_t, float&, float&)";
+}
+
+def HLSLResourceGetDimensionsLevelsXYFloat : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_resource_getdimensions_levels_xy_float"];
+  let Attributes = [NoThrow];
+  let Prototype = "void(__hlsl_resource_t, uint32_t, float&, float&, float&)";
+}
+
 def HLSLResourceGetStride : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_resource_getstride"];
   let Attributes = [NoThrow];

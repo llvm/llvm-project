@@ -296,6 +296,11 @@ public:
                                                   FileSpec module_spec,
                                                   const Target &target);
 
+  /// Returns true if the module's symbol file (e.g. a dSYM bundle) is
+  /// code-signed with a trusted signature. Used to decide whether to
+  /// auto-loaded scripts.
+  virtual bool IsSymbolFileTrusted(Module &module);
+
   /// \param[in] module_spec
   ///     The ModuleSpec of a binary to find.
   ///
