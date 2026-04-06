@@ -89,7 +89,7 @@ Error DatabaseFile::addTable(TableHandle Table) {
 }
 
 std::optional<TableHandle> DatabaseFile::findTable(StringRef Name) {
-  uint64_t RootTableOffset = H->RootTableOffset.load();
+  int64_t RootTableOffset = H->RootTableOffset.load();
   if (!RootTableOffset)
     return std::nullopt;
 
