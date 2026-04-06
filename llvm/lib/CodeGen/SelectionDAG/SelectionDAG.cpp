@@ -6325,8 +6325,10 @@ bool SelectionDAG::isKnownNeverZeroFloat(SDValue Op, unsigned Depth) const {
 bool SelectionDAG::isKnownNeverZeroFloat(SDValue Op, const APInt &DemandedElts,
                                          unsigned Depth) const {
   assert(!DemandedElts.isZero() && "No demanded elements");
-  KnownFPClass Known = computeKnownFPClass(Op, DemandedElts, fcZero, Depth);
-  return Known.isKnownNeverZero();
+  EVT VT = Op.getValueType();
+  KnownFPClass Known =
+      computeKnownFPClass(Op, DemandedElts, fcZero | fcSubnormal, Depth);
+  return Known.isKnownNeverLogicalZero(getDenormalMode(VT));
 }
 
 bool SelectionDAG::isKnownNeverZero(SDValue Op, unsigned Depth) const {
