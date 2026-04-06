@@ -482,8 +482,8 @@ unsigned VPInstruction::getNumOperandsForOpcode() const {
   case VPInstruction::WideIVStep:
   case VPInstruction::CalculateTripCountMinusVF:
     return 2;
-  case Instruction::Select:
   case Instruction::InsertElement:
+  case Instruction::Select:
   case VPInstruction::ActiveLaneMask:
   case VPInstruction::ReductionStartVector:
     return 3;
@@ -574,7 +574,8 @@ Value *VPInstruction::generate(VPTransformState &State) {
     return Builder.CreateExtractElement(Vec, Idx, Name);
   }
   case Instruction::InsertElement: {
-    Value *Vec = State.get(getOperand(0));
+    assert(State.VF.isVector() && "Can only insert elements into vectors");
+    Value *Vec = State.get(getOperand(0), /*IsScalar=*/false);
     Value *Elt = State.get(getOperand(1), /*IsScalar=*/true);
     Value *Idx = State.get(getOperand(2), /*IsScalar=*/true);
     return Builder.CreateInsertElement(Vec, Elt, Idx, Name);
@@ -1397,7 +1398,7 @@ bool VPInstruction::usesFirstLaneOnly(const VPValue *Op) const {
   case Instruction::ExtractElement:
     return Op == getOperand(1);
   case Instruction::InsertElement:
-    return Op != getOperand(0);
+    return Op == getOperand(1) || Op == getOperand(2);
   case Instruction::PHI:
     return true;
   case Instruction::FCmp:
@@ -2600,13 +2601,12 @@ void VPScalarIVStepsRecipe::execute(VPTransformState &State) {
   bool FirstLaneOnly = vputils::onlyFirstLaneUsed(this);
   // Compute the scalar steps and save the results in State.
 
-  unsigned StartLane = 0;
   unsigned EndLane = FirstLaneOnly ? 1 : State.VF.getKnownMinValue();
   assert(!State.Lane && "replicate regions must be dissolved before ::execute");
   Value *StartIdx0 = getStartIndex() ? State.get(getStartIndex(), true)
                                      : Constant::getNullValue(BaseIVTy);
 
-  for (unsigned Lane = StartLane; Lane < EndLane; ++Lane) {
+  for (unsigned Lane = 0; Lane < EndLane; ++Lane) {
     // It is okay if the induction variable type cannot hold the lane number,
     // we expect truncation in this case.
     Constant *LaneValue =
@@ -3316,9 +3316,9 @@ static void scalarizeInstruction(const Instruction *Instr,
 
 void VPReplicateRecipe::execute(VPTransformState &State) {
   assert(!State.Lane && "replicate regions must be dissolved before ::execute");
-  Instruction *UI = getUnderlyingInstr();
   assert(IsSingleScalar && "VPReplicateRecipes outside replicate regions "
                            "must have already been unrolled");
+  Instruction *UI = getUnderlyingInstr();
   scalarizeInstruction(UI, this, VPLane(0), State);
 }
 

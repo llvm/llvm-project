@@ -493,8 +493,6 @@ VPIRBasicBlock *VPIRBasicBlock::clone() {
 void VPBasicBlock::execute(VPTransformState *State) {
   assert(!State->Lane &&
          "replicate regions must be dissolved before ::execute");
-  BasicBlock *NewBB = State->CFG.PrevBB; // Reuse it if possible.
-
   if (VPBlockUtils::isHeader(this, State->VPDT)) {
     // Create and register the new vector loop.
     Loop *PrevParentLoop = State->CurrentParentLoop;
@@ -509,7 +507,7 @@ void VPBasicBlock::execute(VPTransformState *State) {
   }
 
   // 1. Create an IR basic block.
-  NewBB = createEmptyBasicBlock(*State);
+  BasicBlock *NewBB = createEmptyBasicBlock(*State);
 
   State->Builder.SetInsertPoint(NewBB);
   // Temporarily terminate with unreachable until CFG is rewired.

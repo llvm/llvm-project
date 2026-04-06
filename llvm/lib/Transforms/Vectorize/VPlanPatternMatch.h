@@ -454,6 +454,12 @@ m_ExtractElement(const Op0_t &Op0, const Op1_t &Op1) {
   return m_VPInstruction<Instruction::ExtractElement>(Op0, Op1);
 }
 
+template <typename Op0_t, typename Op1_t, typename Op2_t>
+inline VPInstruction_match<Instruction::InsertElement, Op0_t, Op1_t, Op2_t>
+m_InsertElement(const Op0_t &Op0, const Op1_t &Op1, const Op2_t &Op2) {
+  return m_VPInstruction<Instruction::InsertElement>(Op0, Op1, Op2);
+}
+
 template <typename Op0_t, typename Op1_t>
 inline VPInstruction_match<VPInstruction::ExtractLane, Op0_t, Op1_t>
 m_ExtractLane(const Op0_t &Op0, const Op1_t &Op1) {
