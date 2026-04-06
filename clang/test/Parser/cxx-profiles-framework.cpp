@@ -16,8 +16,14 @@
 // Nested balanced groups in arguments
 [[profiles::enforce(nested(config: (a b)))]];
 
-// Bare token arguments
-[[profiles::enforce(bare(3))]];
+// Bare non-operator-non-punctuator token arguments
+[[profiles::enforce(bare1(3))]];
+
+// Bare string literal argument
+[[profiles::enforce(bare2("hello"))]];
+
+// Bare identifier argument
+[[profiles::enforce(bare3(abc))]];
 
 // ===================================================================
 // Valid suppress forms
@@ -61,3 +67,12 @@ void deep_name();
 
 // suppress with empty parens: parse error
 [[profiles::suppress()]]; // expected-error {{expected profile name}}
+
+// Bare argument cannot be an operator (suppress uses profile-argument-list
+// directly after comma, avoiding cascading errors from nested designator parens)
+[[profiles::suppress(std::type, +)]] // expected-error {{invalid token in profile argument}}
+void suppress_bare_operator();
+
+// Bare argument cannot be a balanced group
+[[profiles::suppress(std::type, (a b))]] // expected-error {{invalid token in profile argument}}
+void suppress_bare_group();

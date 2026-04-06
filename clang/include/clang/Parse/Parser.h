@@ -2286,6 +2286,7 @@ private:
                                   SmallVectorImpl<std::string> &Designators);
   bool ParseProfileArgumentList(SmallVectorImpl<std::string> &Args);
   bool ParseNonCommaBalancedToken(std::string &Spelling);
+  bool ParseNonOperatorNonPunctuatorToken(std::string &Spelling);
 
   void MaybeParseCXX11Attributes(Declarator &D) {
     if (isAllowedCXX11AttributeSpecifier()) {

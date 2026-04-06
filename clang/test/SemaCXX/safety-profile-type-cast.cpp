@@ -26,6 +26,20 @@ void test_suppress_stmt() {
 void test_suppress_stmt_with_rule() {
   // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
   [[profiles::suppress(test::type_cast, rule: "reinterpret_cast")]] {
+    int *p = reinterpret_cast<int*>(0);
+  }
+}
+
+void test_suppress_stmt_with_bare_rule() {
+  // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+  [[profiles::suppress(test::type_cast, rule: reinterpret_cast)]] {
+    int *p = reinterpret_cast<int*>(0);
+  }
+}
+
+void test_suppress_stmt_with_nonmatching_rule() {
+  // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+  [[profiles::suppress(test::type_cast, rule: "static_cast")]] {
     int *p = reinterpret_cast<int*>(0); // expected-error {{'reinterpret_cast' is unsafe under profile 'test::type_cast'}}
   }
 }

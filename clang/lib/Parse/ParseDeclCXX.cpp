@@ -5104,6 +5104,18 @@ bool Parser::ParseNonCommaBalancedToken(std::string &Spelling) {
   return false;
 }
 
+bool Parser::ParseNonOperatorNonPunctuatorToken(std::string &Spelling) {
+  // P3589R2 [dcl.attr.profiles]: A bare profile-argument is a
+  // non-operator-non-punctuator-token.
+  if (tok::getPunctuatorSpelling(Tok.getKind()) || Tok.is(tok::eof)) {
+    Diag(Tok, diag::err_profiles_invalid_argument_token);
+    return true;
+  }
+  Spelling = PP.getSpelling(Tok);
+  ConsumeAnyToken();
+  return false;
+}
+
 bool Parser::ParseProfileArgumentList(SmallVectorImpl<std::string> &Args) {
   while (true) {
     if (Tok.is(tok::identifier) && NextToken().is(tok::colon)) {
@@ -5117,7 +5129,7 @@ bool Parser::ParseProfileArgumentList(SmallVectorImpl<std::string> &Args) {
       Args.push_back(Key + " : " + Value);
     } else {
       std::string Spelling;
-      if (ParseNonCommaBalancedToken(Spelling))
+      if (ParseNonOperatorNonPunctuatorToken(Spelling))
         return true;
       Args.push_back(std::move(Spelling));
     }
@@ -5262,8 +5274,11 @@ bool Parser::ParseProfilesAttributeArgs(IdentifierInfo *AttrName,
             return true;
           }
           Justification = JustVal.str();
-        } else if (ArgRef.starts_with("rule : "))
+        } else if (ArgRef.starts_with("rule : ")) {
           Rule = ArgRef.substr(strlen("rule : ")).str();
+          if (Rule.size() >= 2 && Rule.front() == '"' && Rule.back() == '"')
+            Rule = Rule.substr(1, Rule.size() - 2);
+        }
       }
     }
 
