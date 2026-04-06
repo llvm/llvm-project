@@ -162,10 +162,13 @@ void ExecutableFileMemoryManager::updateSection(
 
     // Register the new section under a unique name to avoid name collision with
     // sections in the input file.
+    unsigned Flags = BinarySection::getFlags(IsReadOnly, IsCode, true);
+    // Preserve SHF_X86_64_LARGE for large code model sections.
+    if (BinaryContext::isLargeCodeSection(SectionName))
+      Flags |= ELF::SHF_X86_64_LARGE;
     BinarySection &NewSection = BC.registerOrUpdateSection(
         UsePrefix ? NewSecPrefix + SectionName : SectionName, ELF::SHT_PROGBITS,
-        BinarySection::getFlags(IsReadOnly, IsCode, true), Contents, Size,
-        Alignment);
+        Flags, Contents, Size, Alignment);
     if (UsePrefix)
       NewSection.setOutputName(SectionName);
     Section = &NewSection;
