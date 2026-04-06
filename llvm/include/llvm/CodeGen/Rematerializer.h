@@ -527,7 +527,12 @@ private:
     unsigned DefRegion;
     /// Original dependencies.
     SmallVector<Rematerializer::Reg::Dependency, 2> Dependencies;
-    /// Position to re-insert the defining MI before in case of rollback.
+    /// Position to re-create the register before in case of rollback. This
+    /// becomes invalid if it originally points to an MI that is deleted later
+    /// as a consequence of other rematerializations. In such cases \ref
+    /// NextRegIdx is guaranteed to be an actual register index from which the
+    /// rollback logic will determine a valid insert position before which to
+    /// re-create this register.
     MachineBasicBlock::iterator InsertPos;
     /// If \ref InsertPos points to an MI defining a rematerializable register,
     /// stores its index. Otherwise equals \ref Rematerializer::NoReg.
