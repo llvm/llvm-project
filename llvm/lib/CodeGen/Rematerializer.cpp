@@ -94,27 +94,26 @@ Rematerializer::rematerializeToPos(RegisterIdx RootIdx, unsigned UseRegion,
   assert(!DRI.DependencyMap.contains(RootIdx));
   LLVM_DEBUG(dbgs() << "Rematerializing " << printID(RootIdx) << '\n');
 
-  std::function<RegisterIdx(RegisterIdx)> Remat = [&](RegisterIdx RegIdx) {
-    SmallVector<Reg::Dependency, 2> NewDeps;
-    // Copy all dependencies because recursive rematerialization of dependencies
-    // may invalidate references to the backing vector of registers.
-    SmallVector<Reg::Dependency, 2> OldDeps(getReg(RegIdx).Dependencies);
-    for (const Reg::Dependency &Dep : OldDeps) {
-      // Recursively rematerialize required dependencies at the same position as
-      // the root. Registers form a DAG so the recursion is guaranteed to
-      // terminate.
-      auto RematIdx = DRI.DependencyMap.find(Dep.RegIdx);
-      if (RematIdx == DRI.DependencyMap.end())
-        NewDeps.emplace_back(Dep.MOIdx, Remat(Dep.RegIdx));
-      else
-        NewDeps.emplace_back(Dep.MOIdx, DRI.DependencyMap.at(Dep.RegIdx));
-    }
-    RegisterIdx NewIdx =
-        rematerializeReg(RegIdx, UseRegion, InsertPos, std::move(NewDeps));
-    DRI.DependencyMap.insert({RegIdx, NewIdx});
-    return NewIdx;
-  };
-  return Remat(RootIdx);
+  SmallVector<Reg::Dependency, 2> NewDeps;
+  // Copy all dependencies because recursive rematerialization of dependencies
+  // may invalidate references to the backing vector of registers.
+  SmallVector<Reg::Dependency, 2> OldDeps(getReg(RootIdx).Dependencies);
+  for (const Reg::Dependency &Dep : OldDeps) {
+    // Recursively rematerialize required dependencies at the same position as
+    // the root. Registers form a DAG so the recursion is guaranteed to
+    // terminate.
+    auto RematIdx = DRI.DependencyMap.find(Dep.RegIdx);
+    RegisterIdx NewDepRegIdx;
+    if (RematIdx == DRI.DependencyMap.end())
+      NewDepRegIdx = rematerializeToPos(Dep.RegIdx, UseRegion, InsertPos, DRI);
+    else
+      NewDepRegIdx = RematIdx->second;
+    NewDeps.emplace_back(Dep.MOIdx, NewDepRegIdx);
+  }
+  RegisterIdx NewIdx =
+      rematerializeReg(RootIdx, UseRegion, InsertPos, std::move(NewDeps));
+  DRI.DependencyMap.insert({RootIdx, NewIdx});
+  return NewIdx;
 }
 
 void Rematerializer::transferUser(RegisterIdx FromRegIdx, RegisterIdx ToRegIdx,
