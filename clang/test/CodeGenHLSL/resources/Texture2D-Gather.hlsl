@@ -1,11 +1,11 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -emit-llvm -disable-llvm-passes -finclude-default-header -o - %s | llvm-cxxfilt | FileCheck %s --check-prefixes=CHECK,DXIL
 // RUN: %clang_cc1 -triple spirv-vulkan-library -x hlsl -emit-llvm -disable-llvm-passes -finclude-default-header -o - %s | llvm-cxxfilt | FileCheck %s --check-prefixes=CHECK,SPIRV
 
-// DXIL: %"class.hlsl::Texture2D" = type { target("dx.Texture", <4 x float>, 0, 0, 0, 2) }
+// DXIL: %"class.hlsl::Texture2D" = type { target("dx.Texture", <4 x float>, 0, 0, 0, 2), %"struct.hlsl::Texture2D<>::mips_type" }
 // DXIL: %"class.hlsl::SamplerState" = type { target("dx.Sampler", 0) }
 // DXIL: %"class.hlsl::SamplerComparisonState" = type { target("dx.Sampler", 0) }
 
-// SPIRV: %"class.hlsl::Texture2D" = type { target("spirv.Image", float, 1, 2, 0, 0, 1, 0) }
+// SPIRV: %"class.hlsl::Texture2D" = type { target("spirv.Image", float, 1, 2, 0, 0, 1, 0), %"struct.hlsl::Texture2D<>::mips_type" }
 // SPIRV: %"class.hlsl::SamplerState" = type { target("spirv.Sampler") }
 // SPIRV: %"class.hlsl::SamplerComparisonState" = type { target("spirv.Sampler") }
 

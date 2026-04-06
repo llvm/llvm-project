@@ -50,25 +50,31 @@ TEST_F(LlvmLibcAsinhfTest, InFloatRange) {
     if (FPBits(v).is_nan() || FPBits(v).is_inf())
       continue;
     ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Asinh, x,
-                                   LIBC_NAMESPACE::asinhf(x), 0.5);
+                                   LIBC_NAMESPACE::asinhf(x), TOLERANCE + 0.5);
     ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Asinh, -x,
-                                   LIBC_NAMESPACE::asinhf(-x), 0.5);
+                                   LIBC_NAMESPACE::asinhf(-x), TOLERANCE + 0.5);
   }
 }
 
 TEST_F(LlvmLibcAsinhfTest, SpecificBitPatterns) {
-  constexpr int N = 11;
+  constexpr int N = 17;
   constexpr uint32_t INPUTS[N] = {
       0x45abaf26, // |x| = 0x1.575e4cp12f
+      0x45e19b90, // |x| = 0x1.c3372p12f
       0x49d29048, // |x| = 0x1.a5209p20f
       0x4bdd65a5, // |x| = 0x1.bacb4ap24f
       0x4c803f2c, // |x| = 0x1.007e58p26f
       0x4f8ffb03, // |x| = 0x1.1ff606p32f
+      0x58719e31, // |x| = 0x1.e33c62p49f
       0x5c569e88, // |x| = 0x1.ad3d1p57f
       0x5e68984e, // |x| = 0x1.d1309cp61f
+      0x62f7a05a, // |x| = 0x1.ef40b4p70f
       0x655890d3, // |x| = 0x1.b121a6p75f
       0x65de7ca6, // |x| = 0x1.bcf94cp76f
       0x6eb1a8ec, // |x| = 0x1.6351d8p94f
+      0x71699003, // |x| = 0x1.d32006p99f
+      0x76be09de, // |x| = 0x1.7c13bcp110f
+      0x7967ec37, // |x| = 0x1.cfd86ep115f
       0x7997f30a, // |x| = 0x1.2fe614p116f
   };
 

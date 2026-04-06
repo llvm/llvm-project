@@ -705,8 +705,9 @@ void ClangExpressionDeclMap::FindExternalVisibleDecls(
     if (!namespace_map)
       return;
 
-    LLDB_LOGV(log, "  CEDM::FEVD Inspecting (NamespaceMap*){0:x} ({1} entries)",
-              namespace_map.get(), namespace_map->size());
+    LLDB_LOG_VERBOSE(
+        log, "  CEDM::FEVD Inspecting (NamespaceMap*){0:x} ({1} entries)",
+        namespace_map.get(), namespace_map->size());
 
     for (ClangASTImporter::NamespaceMapItem &n : *namespace_map) {
       LLDB_LOG(log, "  CEDM::FEVD Searching namespace {0} in module {1}",
@@ -1471,7 +1472,7 @@ void ClangExpressionDeclMap::FindExternalVisibleDecls(
 
     if (data_symbol) {
       std::string warning("got name from symbols: ");
-      warning.append(name.AsCString());
+      warning.append(name.GetStringRef());
       const unsigned diag_id =
           m_ast_context->getDiagnostics().getCustomDiagID(
               clang::DiagnosticsEngine::Level::Warning, "%0");
@@ -1824,7 +1825,8 @@ void ClangExpressionDeclMap::AddOneFunction(NameSearchContext &context,
     Type *function_type = function->GetType();
 
     const auto lang = function->GetCompileUnit()->GetLanguage();
-    const auto name = function->GetMangled().GetMangledName().AsCString();
+    const llvm::StringRef name =
+        function->GetMangled().GetMangledName().GetStringRef();
     const bool extern_c =
         (Language::LanguageIsC(lang) && !Mangled::IsMangledName(name)) ||
         (Language::LanguageIsObjC(lang) &&

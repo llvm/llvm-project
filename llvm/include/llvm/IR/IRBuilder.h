@@ -542,6 +542,24 @@ public:
   // Type creation methods
   //===--------------------------------------------------------------------===//
 
+  /// Fetch the type representing an 8-bit byte.
+  ByteType *getByte8Ty() { return Type::getByte8Ty(Context); }
+
+  /// Fetch the type representing a 16-bit byte.
+  ByteType *getByte16Ty() { return Type::getByte16Ty(Context); }
+
+  /// Fetch the type representing a 32-bit byte.
+  ByteType *getByte32Ty() { return Type::getByte32Ty(Context); }
+
+  /// Fetch the type representing a 64-bit byte.
+  ByteType *getByte64Ty() { return Type::getByte64Ty(Context); }
+
+  /// Fetch the type representing a 128-bit byte.
+  ByteType *getByte128Ty() { return Type::getByte128Ty(Context); }
+
+  /// Fetch the type representing an N-bit byte.
+  ByteType *getByteNTy(unsigned N) { return Type::getByteNTy(Context, N); }
+
   /// Fetch the type representing a single bit
   IntegerType *getInt1Ty() {
     return Type::getInt1Ty(Context);
@@ -603,6 +621,12 @@ public:
   /// Fetch the type representing a pointer.
   PointerType *getPtrTy(unsigned AddrSpace = 0) {
     return PointerType::get(Context, AddrSpace);
+  }
+
+  /// Fetch the type of a byte with size at least as big as that of a
+  /// pointer in the given address space.
+  ByteType *getBytePtrTy(const DataLayout &DL, unsigned AddrSpace = 0) {
+    return DL.getBytePtrType(Context, AddrSpace);
   }
 
   /// Fetch the type of an integer with size at least as big as that of a
@@ -1176,17 +1200,16 @@ public:
     return Insert(ReturnInst::Create(Context, V));
   }
 
-  /// Create a sequence of N insertvalue instructions,
-  /// with one Value from the retVals array each, that build a aggregate
-  /// return value one value at a time, and a ret instruction to return
-  /// the resulting aggregate value.
+  /// Create a sequence of N insertvalue instructions, with one Value from the
+  /// RetVals array each, that build a aggregate return value one value at a
+  /// time, and a ret instruction to return the resulting aggregate value.
   ///
   /// This is a convenience function for code that uses aggregate return values
   /// as a vehicle for having multiple return values.
-  ReturnInst *CreateAggregateRet(Value *const *retVals, unsigned N) {
+  ReturnInst *CreateAggregateRet(ArrayRef<Value *> RetVals) {
     Value *V = PoisonValue::get(getCurrentFunctionReturnType());
-    for (unsigned i = 0; i != N; ++i)
-      V = CreateInsertValue(V, retVals[i], i, "mrv");
+    for (size_t i = 0, N = RetVals.size(); i != N; ++i)
+      V = CreateInsertValue(V, RetVals[i], i, "mrv");
     return Insert(ReturnInst::Create(Context, V));
   }
 

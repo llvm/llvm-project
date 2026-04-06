@@ -1540,7 +1540,6 @@ namespace {
 /// generated files back into the link.
 class CGThinBackend : public ThinBackendProc {
 protected:
-  AddStreamFn AddStream;
   DenseSet<GlobalValue::GUID> CfiFunctionDefs;
   DenseSet<GlobalValue::GUID> CfiFunctionDecls;
   bool ShouldEmitIndexFiles;
@@ -1549,12 +1548,10 @@ public:
   CGThinBackend(
       const Config &Conf, ModuleSummaryIndex &CombinedIndex,
       const DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries,
-      AddStreamFn AddStream, lto::IndexWriteCallback OnWrite,
-      bool ShouldEmitIndexFiles, bool ShouldEmitImportsFiles,
-      ThreadPoolStrategy ThinLTOParallelism)
+      lto::IndexWriteCallback OnWrite, bool ShouldEmitIndexFiles,
+      bool ShouldEmitImportsFiles, ThreadPoolStrategy ThinLTOParallelism)
       : ThinBackendProc(Conf, CombinedIndex, ModuleToDefinedGVSummaries,
                         OnWrite, ShouldEmitImportsFiles, ThinLTOParallelism),
-        AddStream(std::move(AddStream)),
         ShouldEmitIndexFiles(ShouldEmitIndexFiles) {
     auto &Defs = CombinedIndex.cfiFunctionDefs();
     CfiFunctionDefs.insert_range(Defs.guids());
@@ -1567,6 +1564,9 @@ public:
 /// an in-process thread when invoked for each task.
 class InProcessThinBackend : public CGThinBackend {
 protected:
+  // Callback used to add generated native object files to the link by code
+  // generating directly into the returned output stream.
+  AddStreamFn AddStream;
   FileCache Cache;
 
 public:
@@ -1576,10 +1576,10 @@ public:
       const DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries,
       AddStreamFn AddStream, FileCache Cache, lto::IndexWriteCallback OnWrite,
       bool ShouldEmitIndexFiles, bool ShouldEmitImportsFiles)
-      : CGThinBackend(Conf, CombinedIndex, ModuleToDefinedGVSummaries,
-                      AddStream, OnWrite, ShouldEmitIndexFiles,
-                      ShouldEmitImportsFiles, ThinLTOParallelism),
-        Cache(std::move(Cache)) {}
+      : CGThinBackend(Conf, CombinedIndex, ModuleToDefinedGVSummaries, OnWrite,
+                      ShouldEmitIndexFiles, ShouldEmitImportsFiles,
+                      ThinLTOParallelism),
+        AddStream(std::move(AddStream)), Cache(std::move(Cache)) {}
 
   virtual Error runThinLTOBackendThread(
       AddStreamFn AddStream, FileCache Cache, unsigned Task, BitcodeModule BM,
@@ -2374,25 +2374,29 @@ class OutOfProcessThinBackend : public CGThinBackend {
   // Cache
   FileCache Cache;
 
+  // Callback to add a pre-existing native object buffer to the link.
+  AddBufferFn AddBuffer;
+
 public:
   OutOfProcessThinBackend(
       const Config &Conf, ModuleSummaryIndex &CombinedIndex,
       ThreadPoolStrategy ThinLTOParallelism,
       const DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries,
-      AddStreamFn AddStream, FileCache CacheFn, lto::IndexWriteCallback OnWrite,
+      FileCache CacheFn, lto::IndexWriteCallback OnWrite,
       bool ShouldEmitIndexFiles, bool ShouldEmitImportsFiles,
       StringRef LinkerOutputFile, StringRef Distributor,
       ArrayRef<StringRef> DistributorArgs, StringRef RemoteCompiler,
       ArrayRef<StringRef> RemoteCompilerPrependArgs,
-      ArrayRef<StringRef> RemoteCompilerArgs, bool SaveTemps)
-      : CGThinBackend(Conf, CombinedIndex, ModuleToDefinedGVSummaries,
-                      AddStream, OnWrite, ShouldEmitIndexFiles,
-                      ShouldEmitImportsFiles, ThinLTOParallelism),
+      ArrayRef<StringRef> RemoteCompilerArgs, bool SaveTemps,
+      AddBufferFn AddBuffer)
+      : CGThinBackend(Conf, CombinedIndex, ModuleToDefinedGVSummaries, OnWrite,
+                      ShouldEmitIndexFiles, ShouldEmitImportsFiles,
+                      ThinLTOParallelism),
         LinkerOutputFile(LinkerOutputFile), DistributorPath(Distributor),
         DistributorArgs(DistributorArgs), RemoteCompiler(RemoteCompiler),
         RemoteCompilerPrependArgs(RemoteCompilerPrependArgs),
         RemoteCompilerArgs(RemoteCompilerArgs), SaveTemps(SaveTemps),
-        Cache(std::move(CacheFn)) {}
+        Cache(std::move(CacheFn)), AddBuffer(std::move(AddBuffer)) {}
 
   void setup(unsigned ThinLTONumTasks, unsigned ThinLTOTaskOffset,
              llvm::Triple Triple) override {
@@ -2723,11 +2727,12 @@ public:
                   Job.NativeObjectPath + ": " + EC.message(),
               inconvertibleErrorCode());
 
-        MemoryBufferRef ObjFileMbRef = ObjFileMbOrErr->get()->getMemBufferRef();
         if (Cache.isValid()) {
           // Cache hits are taken care of earlier. At this point, we could only
           // have cache misses.
           assert(Job.CacheAddStream);
+          MemoryBufferRef ObjFileMbRef =
+              ObjFileMbOrErr->get()->getMemBufferRef();
           // Obtain a file stream for a storing a cache entry.
           auto CachedFileStreamOrErr =
               Job.CacheAddStream(Job.Task, Job.ModuleID);
@@ -2743,13 +2748,7 @@ public:
           if (Error Err = CacheStream.commit())
             return Err;
         } else {
-          auto StreamOrErr = AddStream(Job.Task, Job.ModuleID);
-          if (Error Err = StreamOrErr.takeError())
-            report_fatal_error(std::move(Err));
-          auto &Stream = *StreamOrErr->get();
-          *Stream.OS << ObjFileMbRef.getBuffer();
-          if (Error Err = Stream.commit())
-            report_fatal_error(std::move(Err));
+          AddBuffer(Job.Task, Job.ModuleID, std::move(*ObjFileMbOrErr));
         }
       }
     }
@@ -2764,17 +2763,18 @@ ThinBackend lto::createOutOfProcessThinBackend(
     StringRef LinkerOutputFile, StringRef Distributor,
     ArrayRef<StringRef> DistributorArgs, StringRef RemoteCompiler,
     ArrayRef<StringRef> RemoteCompilerPrependArgs,
-    ArrayRef<StringRef> RemoteCompilerArgs, bool SaveTemps) {
+    ArrayRef<StringRef> RemoteCompilerArgs, bool SaveTemps,
+    AddBufferFn AddBuffer) {
   auto Func =
       [=](const Config &Conf, ModuleSummaryIndex &CombinedIndex,
           const DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries,
-          AddStreamFn AddStream, FileCache Cache) {
+          AddStreamFn, FileCache Cache) {
         return std::make_unique<OutOfProcessThinBackend>(
-            Conf, CombinedIndex, Parallelism, ModuleToDefinedGVSummaries,
-            AddStream, Cache, OnWrite, ShouldEmitIndexFiles,
-            ShouldEmitImportsFiles, LinkerOutputFile, Distributor,
-            DistributorArgs, RemoteCompiler, RemoteCompilerPrependArgs,
-            RemoteCompilerArgs, SaveTemps);
+            Conf, CombinedIndex, Parallelism, ModuleToDefinedGVSummaries, Cache,
+            OnWrite, ShouldEmitIndexFiles, ShouldEmitImportsFiles,
+            LinkerOutputFile, Distributor, DistributorArgs, RemoteCompiler,
+            RemoteCompilerPrependArgs, RemoteCompilerArgs, SaveTemps,
+            AddBuffer);
       };
   return ThinBackend(Func, Parallelism);
 }

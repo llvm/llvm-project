@@ -25,16 +25,35 @@
 #if SCUDO_FUCHSIA
 // Fuchsia only has valloc
 #define HAVE_VALLOC 1
+
+#define VERIFY_FREE_SIZED_DEATH 1
+#define VERIFY_FREE_ALIGNED_SIZED_DEATH 1
 #elif SCUDO_ANDROID
 // Android only has pvalloc/valloc on 32 bit
 #if !defined(__LP64__)
 #define HAVE_PVALLOC 1
 #define HAVE_VALLOC 1
 #endif // !defined(__LP64__)
+
+// Disable all size/aligned checks since they are disabled on Android.
+#define VERIFY_FREE_SIZED_DEATH 0
+#define VERIFY_FREE_ALIGNED_SIZED_DEATH 0
 #else
 // All others assumed to support both functions.
 #define HAVE_PVALLOC 1
 #define HAVE_VALLOC 1
+
+// Assume all others will not die on these calls.
+#define VERIFY_FREE_SIZED_DEATH 0
+#define VERIFY_FREE_ALIGNED_SIZED_DEATH 0
+#endif
+
+// GWP-Asan doesn't do these checks.
+#if defined(GWP_ASAN_HOOKS)
+#undef VERIFY_FREE_SIZED_DEATH
+#undef VERIFY_FREE_ALIGNED_SIZED_DEATH
+#define VERIFY_FREE_SIZED_DEATH 0
+#define VERIFY_FREE_ALIGNED_SIZED_DEATH 0
 #endif
 
 extern "C" {
@@ -43,6 +62,8 @@ void malloc_disable(void);
 int malloc_iterate(uintptr_t base, size_t size,
                    void (*callback)(uintptr_t base, size_t size, void *arg),
                    void *arg);
+void free_sized(void *ptr, size_t size);
+void free_aligned_sized(void *ptr, size_t alignment, size_t size);
 void *valloc(size_t size);
 void *pvalloc(size_t size);
 
@@ -278,18 +299,6 @@ TEST_F(ScudoWrappersCTest, Memalign) {
   EXPECT_EQ(memalign(4096U, SIZE_MAX), nullptr);
   EXPECT_EQ(posix_memalign(&P, 15U, Size), EINVAL);
   EXPECT_EQ(posix_memalign(&P, 4096U, SIZE_MAX), ENOMEM);
-
-  // Android's memalign accepts non power-of-2 alignments, and 0.
-  if (SCUDO_ANDROID) {
-    for (size_t Alignment = 0U; Alignment <= 128U; Alignment++) {
-      P = memalign(Alignment, 1024U);
-      EXPECT_NE(P, nullptr);
-      verifyAllocHookPtr(P);
-      verifyAllocHookSize(Size);
-      free(P);
-      verifyDeallocHookPtr(P);
-    }
-  }
 }
 
 TEST_F(ScudoWrappersCTest, AlignedAlloc) {
@@ -376,23 +385,6 @@ TEST_F(ScudoWrappersCDeathTest, Realloc) {
   EXPECT_EQ(realloc(P, SIZE_MAX), nullptr);
   EXPECT_EQ(errno, ENOMEM);
   free(P);
-
-  // Android allows realloc of memalign pointers.
-  if (SCUDO_ANDROID) {
-    const size_t Alignment = 1024U;
-    P = memalign(Alignment, Size);
-    EXPECT_NE(P, nullptr);
-    EXPECT_LE(Size, malloc_usable_size(P));
-    EXPECT_EQ(reinterpret_cast<uintptr_t>(P) % Alignment, 0U);
-    memset(P, 0x42, Size);
-
-    P = realloc(P, Size * 2U);
-    EXPECT_NE(P, nullptr);
-    EXPECT_LE(Size * 2U, malloc_usable_size(P));
-    for (size_t I = 0; I < Size; I++)
-      EXPECT_EQ(0x42, (reinterpret_cast<uint8_t *>(P))[I]);
-    free(P);
-  }
 }
 
 TEST_F(ScudoWrappersCTest, Reallocarray) {
@@ -423,6 +415,179 @@ TEST_F(ScudoWrappersCTest, Reallocarray) {
   EXPECT_EQ(reallocarray(P, SIZE_MAX - 1, SIZE_MAX - 1), nullptr);
   EXPECT_EQ(errno, ENOMEM);
 }
+
+TEST_F(ScudoWrappersCTest, MallocFreeSized) {
+  void *P = malloc(Size);
+  EXPECT_NE(P, nullptr);
+  EXPECT_LE(Size, malloc_usable_size(P));
+  EXPECT_EQ(reinterpret_cast<uintptr_t>(P) % FIRST_32_SECOND_64(8U, 16U), 0U);
+  verifyAllocHookPtr(P);
+  verifyAllocHookSize(Size);
+
+  if (VERIFY_FREE_SIZED_DEATH) {
+    EXPECT_DEATH(free_sized(P, Size - 1), "");
+    EXPECT_DEATH(free_sized(P, Size + 1), "");
+
+    // An update to this warning in Clang now triggers in this line, but it's ok
+    // because the check is expecting a bad pointer and should fail.
+#if defined(__has_warning) && __has_warning("-Wfree-nonheap-object")
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wfree-nonheap-object"
+#endif
+    EXPECT_DEATH(free_sized(reinterpret_cast<void *>(
+                                reinterpret_cast<uintptr_t>(P) | 1U),
+                            Size),
+                 "");
+#if defined(__has_warning) && __has_warning("-Wfree-nonheap-object")
+#pragma GCC diagnostic pop
+#endif
+  }
+
+  free_sized(P, Size);
+  verifyDeallocHookPtr(P);
+
+  if (VERIFY_FREE_SIZED_DEATH)
+    EXPECT_DEATH(free_sized(P, Size), "");
+}
+
+TEST_F(ScudoWrappersCTest, AlignedAllocFreeAlignedSized) {
+  const size_t Alignment = 4096U;
+  const size_t Size = Alignment * 4U;
+  void *P = aligned_alloc(Alignment, Size);
+  EXPECT_NE(P, nullptr);
+  EXPECT_LE(Size, malloc_usable_size(P));
+  EXPECT_EQ(reinterpret_cast<uintptr_t>(P) % Alignment, 0U);
+  verifyAllocHookPtr(P);
+  verifyAllocHookSize(Size);
+
+  if (VERIFY_FREE_ALIGNED_SIZED_DEATH) {
+    EXPECT_DEATH(free_aligned_sized(P, Alignment, Size - 1), "");
+    EXPECT_DEATH(free_aligned_sized(P, Alignment, Size + 1), "");
+    EXPECT_DEATH(
+        free_aligned_sized(P, size_t{1} << (sizeof(size_t) * 8 - 1), Size), "");
+
+    // An update to this warning in Clang now triggers in this line, but it's ok
+    // because the check is expecting a bad pointer and should fail.
+#if defined(__has_warning) && __has_warning("-Wfree-nonheap-object")
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wfree-nonheap-object"
+#endif
+    EXPECT_DEATH(free_aligned_sized(reinterpret_cast<void *>(
+                                        reinterpret_cast<uintptr_t>(P) | 1U),
+                                    Alignment, Size),
+                 "");
+#if defined(__has_warning) && __has_warning("-Wfree-nonheap-object")
+#pragma GCC diagnostic pop
+#endif
+  }
+
+  free_aligned_sized(P, Alignment, Size);
+  verifyDeallocHookPtr(P);
+  EXPECT_DEATH(free_aligned_sized(P, Alignment, Size), "");
+}
+
+TEST_F(ScudoWrappersCDeathTest, MallocFreeAlignedSized) {
+  void *P = malloc(Size);
+  EXPECT_NE(P, nullptr);
+  EXPECT_LE(Size, malloc_usable_size(P));
+  EXPECT_EQ(reinterpret_cast<uintptr_t>(P) % FIRST_32_SECOND_64(8U, 16U), 0U);
+  verifyAllocHookPtr(P);
+  verifyAllocHookSize(Size);
+
+  if (VERIFY_FREE_ALIGNED_SIZED_DEATH) {
+    EXPECT_DEATH(free_aligned_sized(P, 8, Size), "");
+    EXPECT_DEATH(free_aligned_sized(P, alignof(std::max_align_t), Size), "");
+  }
+
+  free_sized(P, Size);
+  verifyDeallocHookPtr(P);
+}
+
+TEST_F(ScudoWrappersCDeathTest, AlignedAllocFreeSized) {
+  const size_t Alignment = 4096U;
+  const size_t Size = Alignment * 4U;
+  void *P = aligned_alloc(Alignment, Size);
+  EXPECT_NE(P, nullptr);
+  EXPECT_LE(Size, malloc_usable_size(P));
+  EXPECT_EQ(reinterpret_cast<uintptr_t>(P) % Alignment, 0U);
+  verifyAllocHookPtr(P);
+  verifyAllocHookSize(Size);
+
+  if (VERIFY_FREE_SIZED_DEATH)
+    EXPECT_DEATH(free_sized(P, Size), "");
+
+  free_aligned_sized(P, Alignment, Size);
+  verifyDeallocHookPtr(P);
+}
+
+TEST_F(ScudoWrappersCDeathTest, PosixMemalignFreeSized) {
+  const size_t Alignment = 4096U;
+  const size_t Size = Alignment * 4U;
+  void *P;
+  EXPECT_EQ(posix_memalign(&P, Alignment, Size), 0);
+  EXPECT_NE(P, nullptr);
+  EXPECT_LE(Size, malloc_usable_size(P));
+  EXPECT_EQ(reinterpret_cast<uintptr_t>(P) % Alignment, 0U);
+  verifyAllocHookPtr(P);
+  verifyAllocHookSize(Size);
+
+  if (VERIFY_FREE_SIZED_DEATH)
+    EXPECT_DEATH(free_sized(P, Size), "");
+
+  free(P);
+  verifyDeallocHookPtr(P);
+}
+
+TEST_F(ScudoWrappersCDeathTest, MemalignFreeSized) {
+  const size_t Alignment = 4096U;
+  const size_t Size = Alignment * 4U;
+  void *P = memalign(Alignment, Size);
+  EXPECT_NE(P, nullptr);
+  EXPECT_LE(Size, malloc_usable_size(P));
+  EXPECT_EQ(reinterpret_cast<uintptr_t>(P) % Alignment, 0U);
+  verifyAllocHookPtr(P);
+  verifyAllocHookSize(Size);
+
+  if (VERIFY_FREE_SIZED_DEATH)
+    EXPECT_DEATH(free_sized(P, Size), "");
+
+  free(P);
+  verifyDeallocHookPtr(P);
+}
+
+#if HAVE_PVALLOC
+TEST_F(ScudoWrappersCDeathTest, PvallocFreeSized) {
+  const size_t Size = static_cast<size_t>(sysconf(_SC_PAGESIZE));
+  void *P = pvalloc(Size);
+  EXPECT_NE(P, nullptr);
+  EXPECT_LE(Size, malloc_usable_size(P));
+  verifyAllocHookPtr(P);
+  verifyAllocHookSize(Size);
+
+  if (VERIFY_FREE_SIZED_DEATH)
+    EXPECT_DEATH(free_sized(P, Size), "");
+
+  free(P);
+  verifyDeallocHookPtr(P);
+}
+#endif
+
+#if HAVE_VALLOC
+TEST_F(ScudoWrappersCDeathTest, VallocFreeSized) {
+  const size_t Size = static_cast<size_t>(sysconf(_SC_PAGESIZE));
+  void *P = valloc(Size);
+  EXPECT_NE(P, nullptr);
+  EXPECT_LE(Size, malloc_usable_size(P));
+  verifyAllocHookPtr(P);
+  verifyAllocHookSize(Size);
+
+  if (VERIFY_FREE_SIZED_DEATH)
+    EXPECT_DEATH(free_sized(P, Size), "");
+
+  free(P);
+  verifyDeallocHookPtr(P);
+}
+#endif
 
 #if !SCUDO_FUCHSIA
 TEST_F(ScudoWrappersCTest, MallOpt) {

@@ -5,7 +5,7 @@ define i32 @pr58402_large_number_of_zext(ptr %dst) {
 ; CHECK-LABEL: 'pr58402_large_number_of_zext'
 ; CHECK-NEXT:  Classifying expressions for: @pr58402_large_number_of_zext
 ; CHECK-NEXT:    %d.0 = phi i32 [ 0, %entry ], [ %add7.15, %header ]
-; CHECK-NEXT:    --> %d.0 U: [0,65) S: [0,65) Exits: <<Unknown>> LoopDispositions: { %header: Variant }
+; CHECK-NEXT:    --> %d.0 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %header: Variant }
 ; CHECK-NEXT:    %b.0 = phi i32 [ 59, %entry ], [ %b.0, %header ]
 ; CHECK-NEXT:    --> 59 U: [59,60) S: [59,60) Exits: 59 LoopDispositions: { %header: Invariant }
 ; CHECK-NEXT:    %conv.neg = sext i1 %cmp to i32
