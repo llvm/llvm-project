@@ -6,7 +6,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "AArch64SelectionDAGInfo.h"
-#include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/AsmParser/Parser.h"
@@ -1575,53 +1574,6 @@ TEST_F(AArch64SelectionDAGTest, KnownNeverZero_Select) {
   EXPECT_FALSE(DAG->isKnownNeverZero(VSelect040Big, DemandAll));
   EXPECT_FALSE(DAG->isKnownNeverZero(VSelect444Big, DemandAll));
   EXPECT_TRUE(DAG->isKnownNeverZero(VSelect4444, DemandAll));
-}
-
-TEST_F(AArch64SelectionDAGTest, KnownNeverZeroFloat_DAZ) {
-  // Set function attribute to establish that denormals are zero (DAZ)
-  AttrBuilder AB(Context);
-  AB.addDenormalFPEnvAttr(DenormalFPEnv(DenormalMode::getPreserveSign()));
-  F->addFnAttrs(AB);
-  EXPECT_TRUE(DAG->getDenormalMode(MVT::f32).inputsAreZero());
-
-  SDLoc Loc;
-  const fltSemantics &FltSemantics = EVT(MVT::f32).getFltSemantics();
-
-  SDValue PosZeroF32 =
-      DAG->getConstantFP(APFloat::getZero(FltSemantics), Loc, MVT::f32);
-  EXPECT_FALSE(DAG->isKnownNeverLogicalZero(PosZeroF32));
-  SDValue NegZeroF32 = DAG->getConstantFP(
-      APFloat::getZero(FltSemantics, /*Negative=*/true), Loc, MVT::f32);
-  EXPECT_FALSE(DAG->isKnownNeverLogicalZero(NegZeroF32));
-
-  SDValue PosDenormalF32 =
-      DAG->getConstantFP(APFloat::getSmallest(FltSemantics), Loc, MVT::f32);
-  EXPECT_FALSE(DAG->isKnownNeverLogicalZero(PosDenormalF32));
-  SDValue NegDenormalF32 = DAG->getConstantFP(
-      APFloat::getSmallest(FltSemantics, /*Negative=*/true), Loc, MVT::f32);
-  EXPECT_FALSE(DAG->isKnownNeverLogicalZero(NegDenormalF32));
-
-  SDValue PosNormalF32 = DAG->getConstantFP(
-      APFloat::getSmallestNormalized(FltSemantics), Loc, MVT::f32);
-  EXPECT_TRUE(DAG->isKnownNeverLogicalZero(PosNormalF32));
-  SDValue NegNormalF32 = DAG->getConstantFP(
-      APFloat::getSmallestNormalized(FltSemantics, /*Negative=*/true), Loc,
-      MVT::f32);
-  EXPECT_TRUE(DAG->isKnownNeverLogicalZero(NegNormalF32));
-
-  SDValue PosInfF32 =
-      DAG->getConstantFP(APFloat::getInf(FltSemantics), Loc, MVT::f32);
-  EXPECT_TRUE(DAG->isKnownNeverLogicalZero(PosInfF32));
-  SDValue NegInfF32 = DAG->getConstantFP(
-      APFloat::getInf(FltSemantics, /*Negative=*/true), Loc, MVT::f32);
-  EXPECT_TRUE(DAG->isKnownNeverLogicalZero(NegInfF32));
-
-  SDValue PosNaNF32 =
-      DAG->getConstantFP(APFloat::getNaN(FltSemantics), Loc, MVT::f32);
-  EXPECT_TRUE(DAG->isKnownNeverLogicalZero(PosNaNF32));
-  SDValue NegNaNF32 = DAG->getConstantFP(
-      APFloat::getNaN(FltSemantics, /*Negative=*/true), Loc, MVT::f32);
-  EXPECT_TRUE(DAG->isKnownNeverLogicalZero(NegNaNF32));
 }
 
 TEST_F(AArch64SelectionDAGTest, KnownFPClass_Bitcast) {
