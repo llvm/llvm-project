@@ -312,6 +312,7 @@ def : SourceOfDivergence<int_amdgcn_struct_ptr_buffer_atomic_cmpswap>;
 def : SourceOfDivergence<int_amdgcn_struct_ptr_buffer_atomic_cond_sub_u32>;
 def : SourceOfDivergence<int_amdgcn_ps_live>;
 def : SourceOfDivergence<int_amdgcn_live_mask>;
+def : SourceOfDivergence<int_amdgcn_wqm_vote>;
 def : SourceOfDivergence<int_amdgcn_ds_swizzle>;
 def : SourceOfDivergence<int_amdgcn_ds_ordered_add>;
 def : SourceOfDivergence<int_amdgcn_ds_ordered_swap>;
