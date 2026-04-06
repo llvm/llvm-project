@@ -13,6 +13,7 @@
 #include "llvm/DebugInfo/Symbolize/Symbolize.h"
 
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/DebugInfo/BTF/BTFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/GSYM/GsymContext.h"
@@ -58,9 +59,13 @@ LLVMSymbolizer::getXCOFFSectionAddress(StringRef ModulePath,
                                        StringRef SectionTypeName) {
   // Check the cache first.
   auto &FlagMap = XCOFFSectionBaseCache[ModulePath];
-  auto CachedIt = FlagMap.find(SectionTypeFlag);
-  if (CachedIt != FlagMap.end())
-    return CachedIt->second;
+  auto [It, Inserted] = FlagMap.try_emplace(SectionTypeFlag, uint64_t(0));
+  if (!Inserted)
+    return It->second;
+
+  // On any error below, remove the tentative cache entry so a future call
+  // can retry rather than returning a stale zero.
+  auto Cleanup = llvm::make_scope_exit([&] { FlagMap.erase(It); });
 
   Expected<ObjectFile *> ObjOrErr =
       getOrCreateObject(ModulePath.str(), Opts.DefaultArch);
@@ -72,19 +77,18 @@ LLVMSymbolizer::getXCOFFSectionAddress(StringRef ModulePath,
     return createStringError(
         "section type syntax is only supported for XCOFF objects");
 
-  Expected<DataRefImpl> DRIOrErr = XCOFFObj->getSectionByType(SectionTypeFlag);
-  if (!DRIOrErr) {
-    consumeError(DRIOrErr.takeError());
-    return createStringError("multiple '" + SectionTypeName +
-                             "' sections found in XCOFF object");
-  }
+  Expected<DataRefImpl> DRIOrErr =
+      XCOFFObj->getSectionByType(SectionTypeFlag, SectionTypeName);
+  if (!DRIOrErr)
+    return DRIOrErr.takeError();
   DataRefImpl DRI = *DRIOrErr;
   if (DRI.p == 0)
     return createStringError("no '" + SectionTypeName +
                              "' section found in XCOFF object");
 
   uint64_t SectionBase = SectionRef(DRI, XCOFFObj).getAddress();
-  FlagMap[SectionTypeFlag] = SectionBase;
+  It->second = SectionBase;
+  Cleanup.release();
   return SectionBase;
 }
 

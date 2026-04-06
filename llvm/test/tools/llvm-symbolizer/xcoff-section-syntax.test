@@ -23,55 +23,33 @@
 
 # INVALID-TYPE: error: '([[TYPE]])(+0x10)': unknown or unsupported section type "[[TYPE]]" in section-relative address
 
-## Test missing '+' sign.
+## Test offsets that do not start with '+': missing '+', empty, negative hex,
+## negative decimal. All produce the "must start with '+'" error.
 # RUN: llvm-symbolizer --obj=%t.xcoff '(TEXT)(0x10)' 2>&1 | \
-# RUN:   FileCheck %s --check-prefix=NO-PLUS
-
-# NO-PLUS: error: '(TEXT)(0x10)': section-relative offset "0x10" must start with '+'
-
-## Test empty offset value.
+# RUN:   FileCheck %s --check-prefix=NO-PLUS -DOFFSET=0x10
 # RUN: llvm-symbolizer --obj=%t.xcoff '(TEXT)()' 2>&1 | \
-# RUN:   FileCheck %s --check-prefix=EMPTY-OFFSET
-
-# EMPTY-OFFSET: error: '(TEXT)()': section-relative offset "" must start with '+'
-
-## Test negative offset.
+# RUN:   FileCheck %s --check-prefix=NO-PLUS -DOFFSET=
 # RUN: llvm-symbolizer --obj=%t.xcoff '(TEXT)(-0x10)' 2>&1 | \
-# RUN:   FileCheck %s --check-prefix=NEG-OFFSET
-
-# NEG-OFFSET: error: '(TEXT)(-0x10)': section-relative offset "-0x10" must start with '+'
-
-## Test negative decimal offset.
+# RUN:   FileCheck %s --check-prefix=NO-PLUS -DOFFSET=-0x10
 # RUN: llvm-symbolizer --obj=%t.xcoff '(TEXT)(-10)' 2>&1 | \
-# RUN:   FileCheck %s --check-prefix=NEG-OFFSET-DEC
+# RUN:   FileCheck %s --check-prefix=NO-PLUS -DOFFSET=-10
 
-# NEG-OFFSET-DEC: error: '(TEXT)(-10)': section-relative offset "-10" must start with '+'
+# NO-PLUS: error: section-relative offset "[[OFFSET]]" must start with '+'
 
-## Test offset with '+' followed by '-'.
+## Test invalid offset values: '+' followed by '-', non-hex suffix, missing
+## leading zero before 'x', non-hex character in hex literal, non-numeric.
 # RUN: llvm-symbolizer --obj=%t.xcoff '(TEXT)(+-0x10)' 2>&1 | \
-# RUN:   FileCheck %s --check-prefix=PLUS-NEG
-
-# PLUS-NEG: error: '(TEXT)(+-0x10)': invalid offset "+-0x10" in section-relative address
-
-## Test invalid offset: decimal digits followed by non-decimal hex characters,
-## e.g. 123abc. getAsInteger with base 0 requires the whole string to be valid,
-## so this is rejected.
+# RUN:   FileCheck %s --check-prefix=INVALID-OFFSET -DOFFSET=+-0x10
 # RUN: llvm-symbolizer --obj=%t.xcoff '(TEXT)(+123abc)' 2>&1 | \
-# RUN:   FileCheck %s --check-prefix=INVALID-OFFSET-HEXSUFFIX
-
-# INVALID-OFFSET-HEXSUFFIX: error: '(TEXT)(+123abc)': invalid offset "+123abc" in section-relative address
-
-## Test invalid offset: hex prefix 'x' without leading '0', e.g. xabc.
+# RUN:   FileCheck %s --check-prefix=INVALID-OFFSET -DOFFSET=+123abc
 # RUN: llvm-symbolizer --obj=%t.xcoff '(TEXT)(+xabc)' 2>&1 | \
-# RUN:   FileCheck %s --check-prefix=INVALID-OFFSET-MISSINGZERO
-
-# INVALID-OFFSET-MISSINGZERO: error: '(TEXT)(+xabc)': invalid offset "+xabc" in section-relative address
-
-## Test invalid offset: hex value with non-hex letter, e.g. 0xdefg.
+# RUN:   FileCheck %s --check-prefix=INVALID-OFFSET -DOFFSET=+xabc
 # RUN: llvm-symbolizer --obj=%t.xcoff '(TEXT)(+0xdefg)' 2>&1 | \
-# RUN:   FileCheck %s --check-prefix=INVALID-OFFSET-NONHEX
+# RUN:   FileCheck %s --check-prefix=INVALID-OFFSET -DOFFSET=+0xdefg
+# RUN: llvm-symbolizer --obj=%t.xcoff '(TEXT)(+xyz)' 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=INVALID-OFFSET -DOFFSET=+xyz
 
-# INVALID-OFFSET-NONHEX: error: '(TEXT)(+0xdefg)': invalid offset "+0xdefg" in section-relative address
+# INVALID-OFFSET: error: invalid offset "[[OFFSET]]" in section-relative address
 
 ## Test that a leading-zero value is treated as octal by getAsInteger(0,...).
 ## +010 is octal 8, so TEXT_BASE(0x100) + 8 = 0x108 = .bar.
@@ -81,12 +59,6 @@
 # RUN:   FileCheck %s --check-prefix=OCTAL
 
 # OCTAL: .bar
-
-## Test invalid offset value.
-# RUN: llvm-symbolizer --obj=%t.xcoff '(TEXT)(+xyz)' 2>&1 | \
-# RUN:   FileCheck %s --check-prefix=INVALID-OFFSET
-
-# INVALID-OFFSET: error: '(TEXT)(+xyz)': invalid offset "+xyz" in section-relative address
 
 ## Test error: section type not found (DATA section doesn't exist).
 # RUN: yaml2obj %s --docnum=2 -o %t.nodata.xcoff

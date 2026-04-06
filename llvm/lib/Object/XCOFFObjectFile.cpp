@@ -811,15 +811,21 @@ Expected<DataRefImpl> XCOFFObjectFile::getSectionByNum(int16_t Num) const {
 }
 
 Expected<DataRefImpl>
-XCOFFObjectFile::getSectionByType(XCOFF::SectionTypeFlags SectType) const {
+XCOFFObjectFile::getSectionByType(XCOFF::SectionTypeFlags SectType,
+                                  StringRef SectionTypeName) const {
   DataRefImpl Result;
   Result.p = 0;
   auto FindSection = [&](const auto &Sections) -> Error {
     for (const auto &Sec : Sections) {
       if (Sec.getSectionType() == SectType) {
-        if (Result.p != 0)
-          return createStringError("multiple XCOFF sections have type flag 0x" +
-                                   Twine::utohexstr(SectType));
+        if (Result.p != 0) {
+          if (!SectionTypeName.empty())
+            return createStringError("multiple '" + SectionTypeName.str() +
+                                     "' sections found in XCOFF object");
+          return createStringError(
+              "multiple XCOFF sections have type flag 0x" +
+              Twine::utohexstr(SectType));
+        }
         Result.p = reinterpret_cast<uintptr_t>(&Sec);
       }
     }
