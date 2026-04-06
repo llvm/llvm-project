@@ -968,7 +968,8 @@ Error OnDiskGraphDB::validate(bool Deep, HashingFuncT Hasher) const {
         return formatError("data record offset is not aligned");
 
       // Validate the layout flags before getFromDataPool calls getTotalSize().
-      auto HeaderData = DataPool.get(D.Offset, sizeof(DataRecordHandle::Header));
+      auto HeaderData =
+          DataPool.get(D.Offset, sizeof(DataRecordHandle::Header));
       if (!HeaderData)
         return formatError(toString(HeaderData.takeError()));
       auto LF = DataRecordHandle::get(HeaderData->data()).getLayoutFlags();

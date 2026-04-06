@@ -348,9 +348,10 @@ Error MappedFileRegionArena::initializeHeader(uint64_t HeaderOffset) {
   uint64_t ExistingValue = 0;
   if (!H->BumpPtr.compare_exchange_strong(ExistingValue, HeaderEndOffset))
     if (ExistingValue < HeaderEndOffset)
-      return createStringError(make_error_code(std::errc::protocol_error),
-                               "arena bump pointer is corrupt: 0x" +
-                                   utohexstr(ExistingValue, /*LowerCase=*/true));
+      return createStringError(
+          make_error_code(std::errc::protocol_error),
+          "arena bump pointer is corrupt: 0x" +
+              utohexstr(ExistingValue, /*LowerCase=*/true));
   if (Logger)
     Logger->logMappedFileRegionArenaCreate(Path, *FD, data(), capacity(),
                                            size());
