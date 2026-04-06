@@ -23,6 +23,7 @@
 #include "llvm/Analysis/DomConditionCache.h"
 #include "llvm/Analysis/EphemeralValuesCache.h"
 #include "llvm/Analysis/InstructionSimplify.h"
+#include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
@@ -2933,11 +2934,28 @@ InlineResult CallAnalyzer::analyze() {
   auto CAI = CandidateCall.arg_begin();
   for (Argument &FAI : F.args()) {
     assert(CAI != CandidateCall.arg_end());
-    SimplifiedValues[&FAI] = *CAI;
-    if (isa<Constant>(*CAI))
+    Value *CallerArg = *CAI;
+
+    // Simple store-to-load forwarding of arguments in the caller.
+    // This can greatly reduce the function cost via early returns.
+    if (auto *LI = dyn_cast<LoadInst>(CallerArg)) {
+      BasicBlock::iterator ScanFrom = LI->getIterator();
+      if (Value *Loaded =
+              FindAvailableLoadedValue(LI, LI->getParent(), ScanFrom, 0)) {
+        if (auto *C = dyn_cast<Constant>(Loaded)) {
+          if (C->getType() == LI->getType())
+            CallerArg = C;
+          else if (C->isNullValue())
+            CallerArg = Constant::getNullValue(LI->getType());
+        }
+      }
+    }
+
+    SimplifiedValues[&FAI] = CallerArg;
+    if (isa<Constant>(CallerArg))
       ++NumConstantArgs;
 
-    Value *PtrArg = *CAI;
+    Value *PtrArg = CallerArg;
     if (ConstantInt *C = stripAndComputeInBoundsConstantOffsets(PtrArg)) {
       ConstantOffsetPtrs[&FAI] = std::make_pair(PtrArg, C->getValue());
 
