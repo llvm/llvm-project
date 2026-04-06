@@ -1580,13 +1580,8 @@ Status Process::EnableBreakpointSiteByID(lldb::user_id_t break_id) {
   return error;
 }
 
-lldb::break_id_t
-Process::CreateBreakpointSite(const BreakpointLocationSP &constituent,
-                              bool use_hardware) {
-  addr_t load_addr = LLDB_INVALID_ADDRESS;
-
-  bool show_error = true;
-  switch (GetState()) {
+static bool ShouldShowError(Process &process) {
+  switch (process.GetState()) {
   case eStateInvalid:
   case eStateUnloaded:
   case eStateConnected:
@@ -1594,17 +1589,23 @@ Process::CreateBreakpointSite(const BreakpointLocationSP &constituent,
   case eStateLaunching:
   case eStateDetached:
   case eStateExited:
-    show_error = false;
-    break;
-
+    return false;
   case eStateStopped:
   case eStateRunning:
   case eStateStepping:
   case eStateCrashed:
   case eStateSuspended:
-    show_error = IsAlive();
-    break;
+    return process.IsAlive();
   }
+  llvm_unreachable("unhandled process state");
+}
+
+lldb::break_id_t
+Process::CreateBreakpointSite(const BreakpointLocationSP &constituent,
+                              bool use_hardware) {
+  addr_t load_addr = LLDB_INVALID_ADDRESS;
+
+  bool show_error = ShouldShowError(*this);
 
   // Reset the IsIndirect flag here, in case the location changes from pointing
   // to a indirect symbol to a regular symbol.
@@ -2598,7 +2599,7 @@ Process::ReadModuleFromMemory(const FileSpec &file_spec,
             file_spec.GetPath().c_str());
   ModuleSP module_sp = std::make_shared<Module>(file_spec, ArchSpec());
   if (!module_sp)
-    return llvm::createStringError("Failed to allocate Module");
+    return llvm::createStringError("failed to allocate module");
 
   Status error;
   std::unique_ptr<Progress> progress_up;

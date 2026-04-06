@@ -720,9 +720,11 @@ llvm::Error addReference(NamespaceInfo *I, Reference &&R, FieldId F) {
   case FieldId::F_namespace:
     I->Namespace.emplace_back(std::move(R));
     return llvm::Error::success();
-  case FieldId::F_child_namespace:
-    I->Children.Namespaces.emplace_back(std::move(R));
+  case FieldId::F_child_namespace: {
+    Reference *NewR = allocatePtr<Reference>(TransientArena, std::move(R));
+    I->Children.Namespaces.push_back(*NewR);
     return llvm::Error::success();
+  }
   case FieldId::F_child_record:
     I->Children.Records.emplace_back(std::move(R));
     return llvm::Error::success();

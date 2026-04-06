@@ -275,6 +275,8 @@ Changes in existing checks
   - Add support for annotation of user-defined types as having the same
     moved-from semantics as standard smart pointers.
 
+  - Do not report explicit call to destructor after move as an invalid use.
+
 - Improved :doc:`cppcoreguidelines-avoid-capturing-lambda-coroutines
   <clang-tidy/checks/cppcoreguidelines/avoid-capturing-lambda-coroutines>`
   check by adding the `AllowExplicitObjectParameters` option. When enabled,
@@ -288,6 +290,11 @@ Changes in existing checks
 - Improved :doc:`cppcoreguidelines-missing-std-forward
   <clang-tidy/checks/cppcoreguidelines/missing-std-forward>` check by fixing
   a false positive for constrained template parameters.
+
+- Improved :doc:`cppcoreguidelines-pro-type-member-init
+  <clang-tidy/checks/cppcoreguidelines/pro-type-member-init>` check by fixing
+  a false positive when a base class has a forward declaration before its
+  definition.
 
 - Improved :doc:`cppcoreguidelines-pro-type-vararg
   <clang-tidy/checks/cppcoreguidelines/pro-type-vararg>` check by no longer
