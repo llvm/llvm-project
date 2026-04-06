@@ -183,8 +183,8 @@ static mlir::Value emitNeonSplat(CIRGenBuilderTy &builder, mlir::Location loc,
 }
 
 /// Build a constant shift amount vector of `vecTy` to shift a vector
-/// Here `shitfVal` is a constant integer that will be splated into a
-/// a const vector of `vecTy` which is the return of this function
+/// Here `shitfVal` is a constant integer that will be broadcast into a
+/// a const vector of `vecTy` which is the return value of this function
 static mlir::Value emitNeonShiftVector(CIRGenBuilderTy &builder,
                                        mlir::Value shiftVal,
                                        cir::VectorType vecTy,

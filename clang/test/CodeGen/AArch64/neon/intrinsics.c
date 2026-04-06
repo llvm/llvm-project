@@ -1476,6 +1476,7 @@ poly16x8_t test_vmull_high_p8(poly8x16_t a, poly8x16_t b) {
 
 //===------------------------------------------------------===//
 // 2.1.3.1.1. Vector Shift Left
+// https://arm-software.github.io/acle/neon_intrinsics/advsimd.html#vector-shift-left
 //===------------------------------------------------------===//
 
 // ALL-LABEL: test_vshld_n_s64
