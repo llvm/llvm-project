@@ -345,31 +345,6 @@ func.func @insert_slice_of_insert_slice_dynamic(
 
 // -----
 
-// CHECK-LABEL: func.func @forward_concat_insert_slice_dest
-// CHECK-SAME: (%[[ARG0:.*]]: tensor<4xf32>)
-func.func @forward_concat_insert_slice_dest(%arg0: tensor<4xf32>)
-    -> tensor<8xf32> {
-  %cst = arith.constant 1.000000e+00 : f32
-  %small = tensor.empty() : tensor<4xf32>
-  %fill = linalg.fill ins(%cst : f32) outs(%small : tensor<4xf32>)
-      -> tensor<4xf32>
-  %init = tensor.empty() : tensor<8xf32>
-  %insert0 = tensor.insert_slice %fill into %init[0] [4] [1]
-      : tensor<4xf32> into tensor<8xf32>
-  %insert1 = tensor.insert_slice %arg0 into %insert0[4] [4] [1]
-      : tensor<4xf32> into tensor<8xf32>
-  return %insert1 : tensor<8xf32>
-}
-// CHECK-DAG: %[[CST:.*]] = arith.constant 1.000000e+00 : f32
-// CHECK: %[[INIT:.*]] = tensor.empty() : tensor<8xf32>
-// CHECK: %[[SLICE:.*]] = tensor.extract_slice %[[INIT]][0] [4] [1] : tensor<8xf32> to tensor<4xf32>
-// CHECK: %[[FILL:.*]] = linalg.fill ins(%[[CST]] : f32) outs(%[[SLICE]] : tensor<4xf32>) -> tensor<4xf32>
-// CHECK: %[[INSERT0:.*]] = tensor.insert_slice %[[FILL]] into %[[INIT]][0] [4] [1] : tensor<4xf32> into tensor<8xf32>
-// CHECK: %[[INSERT1:.*]] = tensor.insert_slice %[[ARG0]] into %[[INSERT0]][4] [4] [1] : tensor<4xf32> into tensor<8xf32>
-// CHECK: return %[[INSERT1]] : tensor<8xf32>
-
-// -----
-
 // Here the sizes are the same and the folding occurs properly.
 //       CHECK: #[[$map:.*]] = affine_map<()[s0] -> (s0 * 2)>
 // CHECK-LABEL: func @insert_slice_of_insert_slice_dynamic(

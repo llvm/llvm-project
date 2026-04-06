@@ -1,0 +1,22 @@
+! RUN: %python %S/test_errors.py %s %flang_fc1
+
+module m
+  type bar
+    integer, allocatable :: m(:)
+  end type
+  type r1
+    real :: origin(3)
+  end type r1
+contains
+  attributes(global) subroutine g1( a )
+    type(bar) :: a
+    i = threadIdx%x
+    a%m(i) = i
+    return
+  end subroutine
+  attributes(device) function rayConstructor(origin, dir) result(r)
+    real :: origin(3), dir(3)
+    type(r1) :: r
+    r%origin = origin
+  end function
+end module m

@@ -80,8 +80,8 @@ public:
   Dest as() const {
     static_assert(std::is_pointer_v<Dest>,
                   "PropertyRef::as<T>() requires T to be a pointer type");
-    using RawType = std::remove_cv_t<std::remove_pointer_t<Dest>>;
-    assert((typeID == TypeID::get<RawType>()) &&
+    assert((typeID ==
+            TypeID::get<std::remove_cv_t<std::remove_pointer_t<Dest>>>()) &&
            "Property type mismatch: TypeID does not match requested type");
     return static_cast<Dest>(data);
   }

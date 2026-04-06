@@ -369,15 +369,23 @@ add_header_library(
     libc.src.__support.macros.properties.types
 )
 
-add_header_library(
-  libc_assert
-  HDRS
-    libc_assert.h
-  DEPENDS
-    .integer_to_string
-    libc.src.__support.OSUtil.osutil
-    libc.src.__support.macros.optimization
-)
+if(LIBC_COPT_USE_C_ASSERT OR NOT LLVM_LIBC_FULL_BUILD)
+  add_header_library(
+    libc_assert
+    HDRS
+      libc_assert.h
+  )
+else()
+  add_header_library(
+    libc_assert
+    HDRS
+      libc_assert.h
+    DEPENDS
+      .integer_to_string
+      libc.src.__support.OSUtil.osutil
+      libc.src.__support.macros.optimization
+  )
+endif()
 
 add_header_library(
   hash
