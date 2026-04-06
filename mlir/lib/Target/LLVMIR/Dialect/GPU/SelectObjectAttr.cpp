@@ -215,6 +215,9 @@ public:
   // Get the kernel launch callee.
   FunctionCallee getClusterKernelLaunchFn();
 
+  // Get the extended kernel launch callee (cooperative and/or cluster).
+  FunctionCallee getKernelLaunchExFn();
+
   // Get the module function callee.
   FunctionCallee getModuleFunctionFn();
 
@@ -308,6 +311,20 @@ llvm::FunctionCallee llvm::LaunchKernel::getClusterKernelLaunchFn() {
           ArrayRef<Type *>({ptrTy, intPtrTy, intPtrTy, intPtrTy, intPtrTy,
                             intPtrTy, intPtrTy, intPtrTy, intPtrTy, intPtrTy,
                             i32Ty, ptrTy, ptrTy, ptrTy}),
+          false));
+}
+
+llvm::FunctionCallee llvm::LaunchKernel::getKernelLaunchExFn() {
+  // mgpuLaunchKernelEx(function, gridX, gridY, gridZ, blockX, blockY, blockZ,
+  //   smem, stream, params, extra,
+  //   clusterX, clusterY, clusterZ, cooperative)
+  return module.getOrInsertFunction(
+      "mgpuLaunchKernelEx",
+      FunctionType::get(
+          voidTy,
+          ArrayRef<Type *>({ptrTy, intPtrTy, intPtrTy, intPtrTy, intPtrTy,
+                            intPtrTy, intPtrTy, i32Ty, ptrTy, ptrTy, ptrTy,
+                            intPtrTy, intPtrTy, intPtrTy, i32Ty}),
           false));
 }
 
@@ -452,15 +469,24 @@ llvm::LaunchKernel::createKernelLaunch(mlir::gpu::LaunchFuncOp op,
   // Create the launch call.
   Value *nullPtr = ConstantPointerNull::get(ptrTy);
 
-  // Launch kernel with clusters if cluster size is specified.
-  if (op.hasClusterSize()) {
-    mlir::gpu::KernelDim3 cluster = op.getClusterSizeOperandValues();
-    Value *cx = llvmValue(cluster.x), *cy = llvmValue(cluster.y),
-          *cz = llvmValue(cluster.z);
+  // Use mgpuLaunchKernelEx when cooperative or cluster launch is requested.
+  if (op.getCooperative() || op.hasClusterSize()) {
+    Value *cx = ConstantInt::get(intPtrTy, 0);
+    Value *cy = ConstantInt::get(intPtrTy, 0);
+    Value *cz = ConstantInt::get(intPtrTy, 0);
+    if (op.hasClusterSize()) {
+      mlir::gpu::KernelDim3 cluster = op.getClusterSizeOperandValues();
+      cx = llvmValue(cluster.x);
+      cy = llvmValue(cluster.y);
+      cz = llvmValue(cluster.z);
+    }
+    Value *cooperativeFlag =
+        ConstantInt::get(i32Ty, op.getCooperative() ? 1 : 0);
     builder.CreateCall(
-        getClusterKernelLaunchFn(),
-        ArrayRef<Value *>({moduleFunction, cx, cy, cz, gx, gy, gz, bx, by, bz,
-                           dynamicMemorySize, stream, argArray, nullPtr}));
+        getKernelLaunchExFn(),
+        ArrayRef<Value *>({moduleFunction, gx, gy, gz, bx, by, bz,
+                           dynamicMemorySize, stream, argArray, nullPtr,
+                           cx, cy, cz, cooperativeFlag}));
   } else {
     builder.CreateCall(getKernelLaunchFn(),
                        ArrayRef<Value *>({moduleFunction, gx, gy, gz, bx, by,
