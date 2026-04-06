@@ -5969,6 +5969,52 @@ const SCEV *ScalarEvolution::createAddRecFromPHI(PHINode *PN) {
   assert(ValueExprMap.find_as(PN) == ValueExprMap.end() &&
          "PHI node already processed?");
 
+  // May encounter single-block loops where the back-edge
+  // value flows through a select guarded by the exit condition.
+  // On the back-edge that condition has a known value, so we can look
+  // through the select to expose the recurrence.
+  if (auto *SI = dyn_cast<SelectInst>(BEValueV)) {
+    Value *Cond = SI->getCondition();
+    if (BasicBlock *Latch = L->getLoopLatch()) {
+      if (auto *BI = dyn_cast<BranchInst>(Latch->getTerminator())) {
+        if (BI->isConditional()) {
+          Value *BrCond = BI->getCondition();
+          bool ExitOnTrue = !L->contains(BI->getSuccessor(0));
+
+          // Figure out which truth value of Cond forces an exit.
+          bool CondTrueImpliesExit = false;
+          bool CondFalseImpliesExit = false;
+
+          if (Cond == BrCond) {
+            CondTrueImpliesExit = ExitOnTrue;
+            CondFalseImpliesExit = !ExitOnTrue;
+          } else if (match(Cond, m_Not(m_Specific(BrCond)))) {
+            CondTrueImpliesExit = !ExitOnTrue;
+            CondFalseImpliesExit = ExitOnTrue;
+          } else if (ExitOnTrue) {
+            // BrCond = Cond | Other, so Cond == true forces exit.
+            Value *Other;
+            if (match(BrCond, m_c_LogicalOr(m_Specific(Cond), m_Value(Other))))
+              CondTrueImpliesExit = true;
+          } else {
+            // BrCond = Cond & Other, so Cond == false forces exit.
+            Value *Other;
+            if (match(BrCond, m_c_LogicalAnd(m_Specific(Cond), m_Value(Other))))
+              CondFalseImpliesExit = true;
+          }
+
+          if (CondTrueImpliesExit) {
+            // On the back-edge Cond is false, so select yields the false arm.
+            BEValueV = SI->getFalseValue();
+          } else if (CondFalseImpliesExit) {
+            // On the back-edge Cond is true, so select yields the true arm.
+            BEValueV = SI->getTrueValue();
+          }
+        }
+      }
+    }
+  }
+
   // First, try to find AddRec expression without creating a fictituos symbolic
   // value for PN.
   if (auto *S = createSimpleAffineAddRec(PN, BEValueV, StartValueV))
