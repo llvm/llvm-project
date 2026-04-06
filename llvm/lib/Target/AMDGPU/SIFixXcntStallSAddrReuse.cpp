@@ -1,4 +1,4 @@
-//===- SIGlobalLoadSAddrToVAddr.cpp - SADDR global loads to VADDR ---------===//
+//===- SIFixXcntStallSAddrReuse.cpp - Fix xcnt stalls from SADDR reuse ----===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,10 +10,10 @@
 /// address pair is redefined later in the block. This avoids s_wait_xcnt
 /// stalls from XNACK replay of loads that share a reused SGPR pair.
 ///
-/// Runs after SGPR RA / SILowerSGPRSpills and before VGPR RA.
+/// Runs after SGPR RA and before VGPR RA.
 //===----------------------------------------------------------------------===//
 
-#include "SIGlobalLoadSAddrToVAddr.h"
+#include "SIFixXcntStallSAddrReuse.h"
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
@@ -27,24 +27,25 @@
 
 using namespace llvm;
 
-#define DEBUG_TYPE "si-global-load-saddr-to-vaddr"
+#define DEBUG_TYPE "si-fix-xcnt-stall-saddr-reuse"
 
 STATISTIC(NumConverted, "Number of SADDR loads converted to VADDR");
 
 static cl::opt<unsigned> SAddrRedefWindow(
     "amdgpu-saddr-redef-window",
-    cl::desc("Max non-meta instructions to scan for saddr redef "
+    cl::desc("Maximum instructions to scan for saddr redefines "
              "(0 = scan to end of block)"),
     cl::init(0), cl::Hidden);
 
 static cl::opt<unsigned> AddrLivenessGroupSize(
     "amdgpu-saddr-vaddr-liveness-group",
-    cl::desc("Max converted VADDR addresses kept simultaneously live"),
+    cl::desc("Maximum converted VADDRs kept simultaneously live, kill is "
+             "issued for each group"),
     cl::init(16), cl::Hidden);
 
 namespace {
 
-class SIGlobalLoadSAddrToVAddr {
+class SIFixXcntStallSAddrReuse {
   const SIInstrInfo *TII = nullptr;
   const SIRegisterInfo *TRI = nullptr;
   MachineRegisterInfo *MRI = nullptr;
@@ -58,19 +59,19 @@ public:
   bool run(MachineFunction &MF);
 };
 
-class SIGlobalLoadSAddrToVAddrLegacy : public MachineFunctionPass {
+class SIFixXcntStallSAddrReuseLegacy : public MachineFunctionPass {
 public:
   static char ID;
-  SIGlobalLoadSAddrToVAddrLegacy() : MachineFunctionPass(ID) {}
+  SIFixXcntStallSAddrReuseLegacy() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override {
     if (!MF.getSubtarget<GCNSubtarget>().hasWaitXcnt())
       return false;
-    return SIGlobalLoadSAddrToVAddr().run(MF);
+    return SIFixXcntStallSAddrReuse().run(MF);
   }
 
   StringRef getPassName() const override {
-    return "SI Global Load SAddr to VAddr";
+    return "SI Fix Xcnt Stall SAddr Reuse";
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -81,20 +82,20 @@ public:
 
 } // end anonymous namespace
 
-char SIGlobalLoadSAddrToVAddrLegacy::ID = 0;
+char SIFixXcntStallSAddrReuseLegacy::ID = 0;
 
-INITIALIZE_PASS(SIGlobalLoadSAddrToVAddrLegacy, DEBUG_TYPE,
-                "SI Global Load SAddr to VAddr", false, false)
+INITIALIZE_PASS(SIFixXcntStallSAddrReuseLegacy, DEBUG_TYPE,
+                "SI Fix Xcnt Stall SAddr Reuse", false, false)
 
-char &llvm::SIGlobalLoadSAddrToVAddrLegacyID =
-    SIGlobalLoadSAddrToVAddrLegacy::ID;
+char &llvm::SIFixXcntStallSAddrReuseLegacyID =
+    SIFixXcntStallSAddrReuseLegacy::ID;
 
 PreservedAnalyses
-SIGlobalLoadSAddrToVAddrPass::run(MachineFunction &MF,
+SIFixXcntStallSAddrReusePass::run(MachineFunction &MF,
                                   MachineFunctionAnalysisManager &MFAM) {
   if (!MF.getSubtarget<GCNSubtarget>().hasWaitXcnt())
     return PreservedAnalyses::all();
-  if (!SIGlobalLoadSAddrToVAddr().run(MF))
+  if (!SIFixXcntStallSAddrReuse().run(MF))
     return PreservedAnalyses::all();
   auto PA = getMachineFunctionPassPreservedAnalyses();
   PA.preserveSet<CFGAnalyses>();
@@ -113,7 +114,7 @@ static bool isEligible(const MachineInstr &MI, const SIInstrInfo &TII,
          TRI.isSGPRReg(MRI, SAddr.getReg());
 }
 
-bool SIGlobalLoadSAddrToVAddr::sAddrRedefinedAfter(MachineInstr &MI,
+bool SIFixXcntStallSAddrReuse::sAddrRedefinedAfter(MachineInstr &MI,
                                                    Register SAddr) {
   unsigned NumScanned = 0;
   MachineBasicBlock::iterator I = std::next(MI.getIterator());
@@ -131,7 +132,7 @@ bool SIGlobalLoadSAddrToVAddr::sAddrRedefinedAfter(MachineInstr &MI,
   return false;
 }
 
-bool SIGlobalLoadSAddrToVAddr::convertToVAddr(MachineInstr &MI,
+bool SIFixXcntStallSAddrReuse::convertToVAddr(MachineInstr &MI,
                                               MachineBasicBlock &MBB,
                                               Register &NewAddrReg) {
   unsigned Opc = MI.getOpcode();
@@ -212,7 +213,7 @@ bool SIGlobalLoadSAddrToVAddr::convertToVAddr(MachineInstr &MI,
   return true;
 }
 
-bool SIGlobalLoadSAddrToVAddr::processMBB(MachineBasicBlock &MBB) {
+bool SIFixXcntStallSAddrReuse::processMBB(MachineBasicBlock &MBB) {
   SmallVector<Register, 8> GroupRegs;
   MachineInstr *GroupLast = nullptr;
   bool Changed = false;
@@ -252,7 +253,7 @@ bool SIGlobalLoadSAddrToVAddr::processMBB(MachineBasicBlock &MBB) {
   return Changed;
 }
 
-bool SIGlobalLoadSAddrToVAddr::run(MachineFunction &MF) {
+bool SIFixXcntStallSAddrReuse::run(MachineFunction &MF) {
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   TII = ST.getInstrInfo();
   TRI = ST.getRegisterInfo();

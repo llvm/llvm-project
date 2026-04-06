@@ -1,4 +1,4 @@
-//===- SIGlobalLoadSAddrToVAddr.h -------------------------------*- C++ -*-===//
+//===- SIFixXcntStallSAddrReuse.h -------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,15 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_TARGET_AMDGPU_SIGLOBALLOADSADDRTOVADDR_H
-#define LLVM_LIB_TARGET_AMDGPU_SIGLOBALLOADSADDRTOVADDR_H
+#ifndef LLVM_LIB_TARGET_AMDGPU_SIFIXXCNTSTALLSADDRREUSE_H
+#define LLVM_LIB_TARGET_AMDGPU_SIFIXXCNTSTALLSADDRREUSE_H
 
 #include "llvm/CodeGen/MachinePassManager.h"
 
 namespace llvm {
 
-class SIGlobalLoadSAddrToVAddrPass
-    : public PassInfoMixin<SIGlobalLoadSAddrToVAddrPass> {
+class SIFixXcntStallSAddrReusePass
+    : public PassInfoMixin<SIFixXcntStallSAddrReusePass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
@@ -22,4 +22,4 @@ public:
 
 } // namespace llvm
 
-#endif // LLVM_LIB_TARGET_AMDGPU_SIGLOBALLOADSADDRTOVADDR_H
+#endif // LLVM_LIB_TARGET_AMDGPU_SIFIXXCNTSTALLSADDRREUSE_H
