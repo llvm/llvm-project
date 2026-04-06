@@ -83,12 +83,19 @@ bool AMDGPUResourceUsageAnalysisWrapperPass::runOnMachineFunction(
   uint32_t AssumedStackSizeForDynamicSizeObjects =
       clAssumedStackSizeForDynamicSizeObjects;
   uint32_t AssumedStackSizeForExternalCall = clAssumedStackSizeForExternalCall;
+  // At -O0 with ASan, external callbacks (e.g. __asan_load) are not inlined
+  // and need stack space reserved.
+  bool AsanNeedsStack =
+      TM.getOptLevel() == CodeGenOptLevel::None &&
+      MF.getFunction().hasFnAttribute(Attribute::SanitizeAddress);
   if (AMDGPU::getAMDHSACodeObjectVersion(*MF.getFunction().getParent()) >=
           AMDGPU::AMDHSA_COV5 ||
       STI.getTargetTriple().getOS() == Triple::AMDPAL) {
-    if (!clAssumedStackSizeForDynamicSizeObjects.getNumOccurrences())
+    if (!clAssumedStackSizeForDynamicSizeObjects.getNumOccurrences() &&
+        !AsanNeedsStack)
       AssumedStackSizeForDynamicSizeObjects = 0;
-    if (!clAssumedStackSizeForExternalCall.getNumOccurrences())
+    if (!clAssumedStackSizeForExternalCall.getNumOccurrences() &&
+        !AsanNeedsStack)
       AssumedStackSizeForExternalCall = 0;
   }
 
@@ -110,12 +117,19 @@ AMDGPUResourceUsageAnalysis::run(MachineFunction &MF,
   uint32_t AssumedStackSizeForDynamicSizeObjects =
       clAssumedStackSizeForDynamicSizeObjects;
   uint32_t AssumedStackSizeForExternalCall = clAssumedStackSizeForExternalCall;
+  // At -O0 with ASan, external callbacks (e.g. __asan_load) are not inlined
+  // and need stack space reserved.
+  bool AsanNeedsStack =
+      TM.getOptLevel() == CodeGenOptLevel::None &&
+      MF.getFunction().hasFnAttribute(Attribute::SanitizeAddress);
   if (AMDGPU::getAMDHSACodeObjectVersion(*MF.getFunction().getParent()) >=
           AMDGPU::AMDHSA_COV5 ||
       STI.getTargetTriple().getOS() == Triple::AMDPAL) {
-    if (!clAssumedStackSizeForDynamicSizeObjects.getNumOccurrences())
+    if (!clAssumedStackSizeForDynamicSizeObjects.getNumOccurrences() &&
+        !AsanNeedsStack)
       AssumedStackSizeForDynamicSizeObjects = 0;
-    if (!clAssumedStackSizeForExternalCall.getNumOccurrences())
+    if (!clAssumedStackSizeForExternalCall.getNumOccurrences() &&
+        !AsanNeedsStack)
       AssumedStackSizeForExternalCall = 0;
   }
 
