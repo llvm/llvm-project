@@ -399,7 +399,9 @@ Error getDefaultOnDiskCASPath(SmallVectorImpl<char> &Path);
 /// user.
 llvm::Expected<std::string> getDefaultOnDiskCASPath();
 
-/// Create ObjectStore from a string identifier.
+class ActionCache;
+
+/// Create ObjectStore and ActionCache from a string identifier.
 /// Currently the string identifier is using URL scheme with following supported
 /// schemes:
 ///  * InMemory CAS: mem://
@@ -414,14 +416,14 @@ llvm::Expected<std::string> getDefaultOnDiskCASPath();
 /// on-disk directory that the plugin should use, otherwise the default
 /// OnDiskCAS location will be used.
 /// FIXME: Need to implement proper URL encoding scheme that allows "%".
-Expected<std::shared_ptr<ObjectStore>> createCASFromIdentifier(StringRef Path);
+Expected<std::pair<std::shared_ptr<ObjectStore>, std::shared_ptr<ActionCache>>>
+createCASFromIdentifier(StringRef Path);
 
 /// Register a URL scheme to CAS Identifier.
-using ObjectStoreCreateFuncTy =
-    Expected<std::shared_ptr<ObjectStore>>(const Twine &);
+using ObjectStoreCreateFuncTy = Expected<
+    std::pair<std::shared_ptr<ObjectStore>, std::shared_ptr<ActionCache>>>(
+    const Twine &);
 void registerCASURLScheme(StringRef Prefix, ObjectStoreCreateFuncTy *Func);
-
-class ActionCache;
 
 /// Create \c ObjectStore and \c ActionCache instances using the plugin
 /// interface.
