@@ -2774,8 +2774,27 @@ static void markBuffersAsDontNeed(Ctx &ctx, bool skipLinkedOutput) {
 template <class ELFT>
 void LinkerDriver::compileBitcodeFiles(bool skipLinkedOutput) {
   llvm::TimeTraceScope timeScope("LTO");
+
+  // Collect the bitcode library functions that are not safe to call because
+  // they were not yet brought in the link. (Such symbols are lazy.)
+  llvm::BumpPtrAllocator alloc;
+  llvm::StringSaver saver(alloc);
+  SmallVector<StringRef> bitcodeLibFuncs;
+  if (!ctx.bitcodeFiles.empty()) {
+    // Triple must be captured before the bitcode is moved into the compiler.
+    // Note that the below assumes that the set of possible libfuncs is roughly
+    // equivalent for all bitcode translation units.
+    llvm::Triple tt =
+        llvm::Triple(ctx.bitcodeFiles.front()->obj->getTargetTriple());
+    for (StringRef libFunc : lto::LTO::getLibFuncSymbols(tt, saver))
+      if (Symbol *sym = ctx.symtab->find(libFunc);
+          sym && sym->isLazy() && isa<BitcodeFile>(sym->file))
+        bitcodeLibFuncs.push_back(libFunc);
+  }
+
   // Compile bitcode files and replace bitcode symbols.
   lto.reset(new BitcodeCompiler(ctx));
+  lto->setBitcodeLibFuncs(bitcodeLibFuncs);
   for (BitcodeFile *file : ctx.bitcodeFiles)
     lto->add(*file);
 
