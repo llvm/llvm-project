@@ -5517,7 +5517,7 @@ static SDValue compressShuffleOfShuffles(ShuffleVectorSDNode *SVN,
     NewMask[Idx] = OrigLane;
   }
 
-  MVT VT = SVN->getSimpleValueType(0);
+  EVT VT = SVN->getValueType(0);
   SDLoc DL(SVN);
 
   return DAG.getVectorShuffle(VT, DL, V1->getOperand(0), V2->getOperand(0),
