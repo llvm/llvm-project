@@ -9170,11 +9170,11 @@ define <2 x half> @v_test_nnan_input_fmed3_r_i_i_v2f16_maximum_minimum(<2 x half
 ; GFX11-GISEL-FAKE16-NEXT:    v_cmp_o_f16_e32 vcc_lo, 2.0, v0
 ; GFX11-GISEL-FAKE16-NEXT:    v_lshrrev_b32_e32 v3, 16, v1
 ; GFX11-GISEL-FAKE16-NEXT:    v_cndmask_b32_e32 v0, 0x7e00, v1, vcc_lo
-; GFX11-GISEL-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-GISEL-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX11-GISEL-FAKE16-NEXT:    v_cmp_o_f16_e32 vcc_lo, 2.0, v2
-; GFX11-GISEL-FAKE16-NEXT:    v_and_b32_e32 v2, 0xffff, v0
-; GFX11-GISEL-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX11-GISEL-FAKE16-NEXT:    v_cndmask_b32_e32 v1, 0x7e00, v3, vcc_lo
+; GFX11-GISEL-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX11-GISEL-FAKE16-NEXT:    v_and_b32_e32 v2, 0xffff, v0
 ; GFX11-GISEL-FAKE16-NEXT:    v_cmp_o_f16_e32 vcc_lo, 4.0, v0
 ; GFX11-GISEL-FAKE16-NEXT:    v_lshl_or_b32 v2, v1, 16, v2
 ; GFX11-GISEL-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
@@ -9182,9 +9182,9 @@ define <2 x half> @v_test_nnan_input_fmed3_r_i_i_v2f16_maximum_minimum(<2 x half
 ; GFX11-GISEL-FAKE16-NEXT:    v_lshrrev_b32_e32 v3, 16, v2
 ; GFX11-GISEL-FAKE16-NEXT:    v_cndmask_b32_e32 v0, 0x7e00, v2, vcc_lo
 ; GFX11-GISEL-FAKE16-NEXT:    v_cmp_o_f16_e32 vcc_lo, 4.0, v1
-; GFX11-GISEL-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_4)
-; GFX11-GISEL-FAKE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX11-GISEL-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX11-GISEL-FAKE16-NEXT:    v_cndmask_b32_e32 v1, 0x7e00, v3, vcc_lo
+; GFX11-GISEL-FAKE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX11-GISEL-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-GISEL-FAKE16-NEXT:    v_lshl_or_b32 v0, v1, 16, v0
 ; GFX11-GISEL-FAKE16-NEXT:    s_setpc_b64 s[30:31]
@@ -9433,14 +9433,11 @@ define double @v_test_nnan_input_fmed3_r_i_i_f64_maximum_minimum(double %a) {
 ; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX11-GISEL-NEXT:    v_max_f64 v[2:3], v[0:1], 2.0
 ; GFX11-GISEL-NEXT:    v_cmp_o_f64_e32 vcc_lo, 2.0, v[0:1]
-; GFX11-GISEL-NEXT:    v_cndmask_b32_e32 v0, 0, v2, vcc_lo
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0x7ff80000, v3, vcc_lo
+; GFX11-GISEL-NEXT:    v_dual_cndmask_b32 v0, 0, v2 :: v_dual_cndmask_b32 v1, 0x7ff80000, v3
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX11-GISEL-NEXT:    v_min_f64 v[2:3], v[0:1], 4.0
 ; GFX11-GISEL-NEXT:    v_cmp_o_f64_e32 vcc_lo, 4.0, v[0:1]
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX11-GISEL-NEXT:    v_cndmask_b32_e32 v0, 0, v2, vcc_lo
-; GFX11-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0x7ff80000, v3, vcc_lo
+; GFX11-GISEL-NEXT:    v_dual_cndmask_b32 v0, 0, v2 :: v_dual_cndmask_b32 v1, 0x7ff80000, v3
 ; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %a.add = fadd nnan double %a, 1.0
   %max = call double @llvm.maximum.f64(double %a.add, double 2.0)
