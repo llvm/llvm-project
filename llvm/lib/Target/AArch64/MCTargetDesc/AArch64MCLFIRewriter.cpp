@@ -163,6 +163,8 @@ void AArch64MCLFIRewriter::rewriteTPWrite(const MCInst &Inst, MCStreamer &Out,
   emitInst(Store, Out, STI);
 }
 
+// NOTE: when adding new rewrites, the size estimates in
+// AArch64InstrInfo::getLFIInstSizeInBytes must be updated to match.
 void AArch64MCLFIRewriter::doRewriteInst(const MCInst &Inst, MCStreamer &Out,
                                          const MCSubtargetInfo &STI) {
   // Reserved register modification is an error.
