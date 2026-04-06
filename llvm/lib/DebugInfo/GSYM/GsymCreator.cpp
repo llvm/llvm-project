@@ -79,6 +79,12 @@ llvm::Error GsymCreator::save(StringRef Path, llvm::endianness ByteOrder,
   return encode(O);
 }
 
+llvm::Error GsymCreator::loadCallSitesFromYAML(StringRef YAMLFile) {
+  // Use the loader to load call site information from the YAML file.
+  CallSiteInfoLoader Loader(*this, Funcs);
+  return Loader.loadYAML(YAMLFile);
+}
+
 void GsymCreator::prepareMergedFunctions(OutputAggregator &Out) {
   // Nothing to do if we have less than 2 functions.
   if (Funcs.size() < 2)
@@ -338,6 +344,16 @@ std::optional<uint64_t> GsymCreator::getBaseAddress() const {
   return getFirstFunctionAddress();
 }
 
+uint64_t GsymCreator::getMaxAddressOffset() const {
+  switch (getAddressOffsetSize()) {
+    case 1: return UINT8_MAX;
+    case 2: return UINT16_MAX;
+    case 4: return UINT32_MAX;
+    case 8: return UINT64_MAX;
+  }
+  llvm_unreachable("invalid address offset");
+}
+
 uint8_t GsymCreator::getAddressOffsetSize() const {
   const std::optional<uint64_t> BaseAddress = getBaseAddress();
   const std::optional<uint64_t> LastFuncAddr = getLastFunctionAddress();
@@ -352,20 +368,6 @@ uint8_t GsymCreator::getAddressOffsetSize() const {
     return 8;
   }
   return 1;
-}
-
-uint64_t GsymCreator::getMaxAddressOffset() const {
-  switch (getAddressOffsetSize()) {
-  case 1:
-    return UINT8_MAX;
-  case 2:
-    return UINT16_MAX;
-  case 4:
-    return UINT32_MAX;
-  case 8:
-    return UINT64_MAX;
-  }
-  llvm_unreachable("invalid address offset");
 }
 
 llvm::Error
@@ -547,7 +549,3 @@ GsymCreator::createSegment(uint64_t SegmentSize, size_t &FuncIdx) const {
   return std::move(GC);
 }
 
-llvm::Error GsymCreator::loadCallSitesFromYAML(StringRef YAMLFile) {
-  CallSiteInfoLoader Loader(*this, Funcs);
-  return Loader.loadYAML(YAMLFile);
-}

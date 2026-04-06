@@ -20,10 +20,6 @@ std::unique_ptr<GsymCreator> GsymCreatorV2::createNew(bool Quiet) const {
   return std::make_unique<GsymCreatorV2>(Quiet);
 }
 
-uint8_t GsymCreatorV2::getStringOffsetSize() const {
-  return HeaderV2::getStringOffsetByteSize();
-}
-
 uint64_t GsymCreatorV2::calculateHeaderAndTableSize() const {
   const uint64_t HeaderSize = HeaderV2::getEncodedSize();
   const size_t NumFuncs = Funcs.size();

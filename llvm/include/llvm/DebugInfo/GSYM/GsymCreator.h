@@ -56,10 +56,6 @@ class OutputAggregator;
 ///
 /// Once the object has been finalized, it can be saved to a file or section.
 ///
-/// This base class contains all shared state and logic. Subclasses
-/// (GsymCreatorV1, GsymCreatorV2) implement version-specific encoding via
-/// encode() and calculateHeaderAndTableSize().
-///
 /// ENCODING
 ///
 /// GSYM files are designed to be memory mapped into a process as shared, read
@@ -194,33 +190,7 @@ protected:
   /// file.
   uint64_t getMaxAddressOffset() const;
 
-  /// Validate that the creator is ready for encoding.
-  ///
-  /// Checks that functions exist, the creator is finalized, the function count
-  /// fits in 32 bits, and the base address is valid.
-  ///
-  /// \param[out] BaseAddr Set to the base address on success.
-  /// \returns An error if validation fails, or Error::success().
-  llvm::Error validateForEncoding(std::optional<uint64_t> &BaseAddr) const;
-
-  /// Write the address offsets table to the output stream.
-  ///
-  /// \param O The file writer to write to.
-  /// \param AddrOffSize The byte width of each address offset.
-  /// \param BaseAddr The base address to subtract from each function address.
-  void encodeAddrOffsets(FileWriter &O, uint8_t AddrOffSize,
-                         uint64_t BaseAddr) const;
-
-  /// Write the file table to the output stream.
-  ///
-  /// \param O The file writer to write to.
-  /// \returns An error if the file table is too large, or Error::success().
-  llvm::Error encodeFileTable(FileWriter &O) const;
-
   /// Calculate the byte size of the GSYM header and tables sizes.
-  ///
-  /// Version-specific because V1 and V2 have different header and table
-  /// layouts.
   ///
   /// This is used to help split GSYM files into segments.
   ///
@@ -314,6 +284,29 @@ protected:
   void setIsSegment() {
     IsSegment = true;
   }
+
+  /// Validate that the creator is ready for encoding.
+  ///
+  /// Checks that functions exist, the creator is finalized, the function count
+  /// fits in 32 bits, and the base address is valid.
+  ///
+  /// \param[out] BaseAddr Set to the base address on success.
+  /// \returns An error if validation fails, or Error::success().
+  llvm::Error validateForEncoding(std::optional<uint64_t> &BaseAddr) const;
+
+  /// Write the address offsets table to the output stream.
+  ///
+  /// \param O The file writer to write to.
+  /// \param AddrOffSize The byte width of each address offset.
+  /// \param BaseAddr The base address to subtract from each function address.
+  void encodeAddrOffsets(FileWriter &O, uint8_t AddrOffSize,
+                         uint64_t BaseAddr) const;
+
+  /// Write the file table to the output stream.
+  ///
+  /// \param O The file writer to write to.
+  /// \returns An error if the file table is too large, or Error::success().
+  llvm::Error encodeFileTable(FileWriter &O) const;
 
   /// Create a new empty creator of the same version.
   ///

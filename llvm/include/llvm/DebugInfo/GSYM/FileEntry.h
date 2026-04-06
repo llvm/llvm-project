@@ -34,7 +34,7 @@ struct FileEntry {
   FileEntry(gsym_strp_t D, gsym_strp_t B) : Dir(D), Base(B) {}
 
   /// Returns the on-disk encoded size of a FileEntry for the given string
-  /// offset size. Each FileEntry has two string offsets (Dir and Base).
+  /// offset size. It's different from sizeof(FileEntry) because of padding.
   static constexpr uint64_t getEncodedSize(uint8_t StringOffsetSize) {
     return 2 * StringOffsetSize;
   }
@@ -53,16 +53,16 @@ struct FileEntry {
 
 template <> struct DenseMapInfo<gsym::FileEntry> {
   static inline gsym::FileEntry getEmptyKey() {
-    uint64_t key = DenseMapInfo<uint64_t>::getEmptyKey();
+    gsym::gsym_strp_t key = DenseMapInfo<gsym::gsym_strp_t>::getEmptyKey();
     return gsym::FileEntry(key, key);
   }
   static inline gsym::FileEntry getTombstoneKey() {
-    uint64_t key = DenseMapInfo<uint64_t>::getTombstoneKey();
+    gsym::gsym_strp_t key = DenseMapInfo<gsym::gsym_strp_t>::getTombstoneKey();
     return gsym::FileEntry(key, key);
   }
   static unsigned getHashValue(const gsym::FileEntry &Val) {
-    return llvm::hash_combine(DenseMapInfo<uint64_t>::getHashValue(Val.Dir),
-                              DenseMapInfo<uint64_t>::getHashValue(Val.Base));
+    return llvm::hash_combine(DenseMapInfo<gsym::gsym_strp_t>::getHashValue(Val.Dir),
+                              DenseMapInfo<gsym::gsym_strp_t>::getHashValue(Val.Base));
   }
   static bool isEqual(const gsym::FileEntry &LHS, const gsym::FileEntry &RHS) {
     return LHS == RHS;
