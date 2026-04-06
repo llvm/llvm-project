@@ -723,7 +723,7 @@ template <typename CHAR> bool FormatValidator<CHAR>::Check() {
       check_w();
       break;
     case TokenKind::AT:
-      // F202X data-edit-desc -> AT (no w allowed)
+      // F2023 data-edit-desc -> AT (no w allowed)
       hasDataEditDesc = true;
       check_r();
       NextToken();

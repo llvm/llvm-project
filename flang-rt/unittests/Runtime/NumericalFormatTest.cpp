@@ -1019,7 +1019,7 @@ TEST(IOApiTests, ConfusingMinimization) {
       << "expected ' 65504. ', got '" << got << '\''; // not 65500.!
 }
 
-// Test AT edit descriptor (F202X) - trims trailing blanks on output
+// Test AT edit descriptor (F2023) - trims trailing blanks on output
 TEST(IOApiTests, ATEditDescriptorOutput) {
   // Helper to test AT formatted output
   auto testAT = [](const char *format, const char *input, std::size_t inputLen,
