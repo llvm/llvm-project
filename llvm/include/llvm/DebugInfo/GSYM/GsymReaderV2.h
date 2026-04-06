@@ -26,12 +26,9 @@ class GsymReaderV2 : public GsymReader {
   llvm::Error parse();
 
   const HeaderV2 *Hdr = nullptr;
+  std::unique_ptr<HeaderV2> SwappedHdr;
   /// Parsed GlobalData section descriptors, keyed by type.
   std::map<GlobalInfoType, GlobalData> GlobalDataSections;
-  struct SwappedData {
-    HeaderV2 Hdr;
-  };
-  std::unique_ptr<SwappedData> Swap;
 
   LLVM_ABI static llvm::Expected<GsymReaderV2>
   create(std::unique_ptr<MemoryBuffer> &MemBuffer);

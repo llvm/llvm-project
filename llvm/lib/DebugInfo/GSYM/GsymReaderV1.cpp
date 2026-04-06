@@ -68,7 +68,7 @@ llvm::Error GsymReaderV1::parse() {
     // This is a GSYM file, but not native endianness.
     Endian =
         sys::IsBigEndianHost ? llvm::endianness::little : llvm::endianness::big;
-    Swap.reset(new SwappedData);
+    SwappedHdr = std::make_unique<Header>();
     break;
   default:
     return createStringError(std::errc::invalid_argument, "not a GSYM file");
@@ -76,13 +76,13 @@ llvm::Error GsymReaderV1::parse() {
 
   bool DataIsLittleEndian = HostByteOrder != llvm::endianness::little;
   // Read a correctly byte swapped header if we need to.
-  if (Swap) {
+  if (SwappedHdr) {
     DataExtractor Data(MemBuffer->getBuffer(), DataIsLittleEndian, 4);
     if (auto ExpectedHdr = Header::decode(Data))
-      Swap->Hdr = ExpectedHdr.get();
+      *SwappedHdr = ExpectedHdr.get();
     else
       return ExpectedHdr.takeError();
-    Hdr = &Swap->Hdr;
+    Hdr = SwappedHdr.get();
   }
 
   // Detect errors in the header and report any that are found. If we make it
@@ -94,7 +94,7 @@ llvm::Error GsymReaderV1::parse() {
   // Parse AddrOffsets.
   DataExtractor Data(MemBuffer->getBuffer(), DataIsLittleEndian, 4);
   uint64_t Offset = alignTo(sizeof(Header), Hdr->AddrOffSize);
-  if (auto Err = parseAddrOffsets(Data, Offset, Swap != nullptr))
+  if (auto Err = parseAddrOffsets(Data, Offset, SwappedHdr != nullptr))
     return Err;
 
   // Parse AddrInfoOffsets.

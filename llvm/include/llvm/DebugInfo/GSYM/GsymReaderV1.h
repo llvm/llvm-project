@@ -23,10 +23,7 @@ class GsymReaderV1 : public GsymReader {
   llvm::Error parse();
 
   const Header *Hdr = nullptr;
-  struct SwappedData {
-    Header Hdr;
-  };
-  std::unique_ptr<SwappedData> Swap;
+  std::unique_ptr<Header> SwappedHdr;
 
   LLVM_ABI static llvm::Expected<GsymReaderV1>
   create(std::unique_ptr<MemoryBuffer> &MemBuffer);

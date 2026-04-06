@@ -36,7 +36,7 @@ namespace gsym {
 /// the host system. The header and the address table are designed to be mmap'ed as
 /// read only into memory and used without any parsing needed. If the endianness
 /// doesn't match, we swap the byte order of the address table into a separate buffer for efficient binary
-/// lookup. All the other data are parsed on demand with the correct endianness.
+/// search. All the other data are parsed on demand with the correct endianness.
 ///
 /// GsymReader objects must use one of the static functions to create an
 /// instance: GsymReader::openFile(...) and GsymReader::copyBuffer(...).
@@ -388,10 +388,6 @@ protected:
   llvm::Error parseAddrOffsets(DataExtractor &DE, uint64_t &Offset, bool Swap);
 
   /// Parse a file table from a DataExtractor into FileEntryData.
-  ///
-  /// Reads the NumFiles count, validates the data size, and initializes
-  /// FileEntryData to point at the file entries. The string offset size
-  /// is determined by getStringOffsetByteSize().
   ///
   /// \param DE DataExtractor over the buffer containing the file table.
   /// \param Offset The byte offset into DE where the file table starts
