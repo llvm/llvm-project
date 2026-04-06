@@ -5716,7 +5716,8 @@ void VPlanTransforms::addExitUsersForFirstOrderRecurrences(VPlan &Plan,
 /// value. Returns the widened IV if found, nullptr otherwise.
 static VPWidenIntOrFpInductionRecipe *getExpressionIV(VPValue *V) {
   auto *BinOp = dyn_cast<VPWidenRecipe>(V);
-  if (!BinOp || !Instruction::isBinaryOp(BinOp->getOpcode()))
+  if (!BinOp || !Instruction::isBinaryOp(BinOp->getOpcode()) ||
+      Instruction::isIntDivRem(BinOp->getOpcode()))
     return nullptr;
 
   VPValue *WidenIVCandidate = BinOp->getOperand(0);
