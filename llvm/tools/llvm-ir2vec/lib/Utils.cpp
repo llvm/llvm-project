@@ -59,10 +59,12 @@ Expected<std::shared_ptr<Vocabulary>> loadVocabulary(StringRef VocabPath) {
 Error IR2VecTool::setVocabulary(std::shared_ptr<Vocabulary> V) {
   if (!V)
     return createStringError(errc::invalid_argument,
-                             "Null pointer provided for vocabulary. Will not set IR2VecTool vocabulary.");
+                             "Null pointer provided for vocabulary. Will not "
+                             "set IR2VecTool vocabulary.");
   if (!V->isValid())
-    return createStringError(errc::invalid_argument,
-                             "Vocabulary is not valid. Will not set IR2VecTool vocabulary.");
+    return createStringError(
+        errc::invalid_argument,
+        "Vocabulary is not valid. Will not set IR2VecTool vocabulary.");
   Vocab = std::move(V);
   return Error::success();
 }
