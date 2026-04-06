@@ -1769,17 +1769,6 @@ public:
                                                      EndLoc);
   }
 
-  OMPClause *RebuildOMPCountsClause(ArrayRef<Expr *> Counts,
-                                    SourceLocation StartLoc,
-                                    SourceLocation LParenLoc,
-                                    SourceLocation EndLoc,
-                                    std::optional<unsigned> FillIdx,
-                                    SourceLocation FillLoc) {
-    unsigned FillCount = FillIdx ? 1 : 0;
-    return getSema().OpenMP().ActOnOpenMPCountsClause(
-        Counts, StartLoc, LParenLoc, EndLoc, FillIdx, FillLoc, FillCount);
-  }
-
   /// Build a new OpenMP 'permutation' clause.
   OMPClause *RebuildOMPPermutationClause(ArrayRef<Expr *> PermExprs,
                                          SourceLocation StartLoc,
@@ -9772,17 +9761,6 @@ StmtResult TreeTransform<Derived>::TransformOMPInterchangeDirective(
 
 template <typename Derived>
 StmtResult
-TreeTransform<Derived>::TransformOMPSplitDirective(OMPSplitDirective *D) {
-  DeclarationNameInfo DirName;
-  getDerived().getSema().OpenMP().StartOpenMPDSABlock(
-      D->getDirectiveKind(), DirName, nullptr, D->getBeginLoc());
-  StmtResult Res = getDerived().TransformOMPExecutableDirective(D);
-  getDerived().getSema().OpenMP().EndOpenMPDSABlock(Res.get());
-  return Res;
-}
-
-template <typename Derived>
-StmtResult
 TreeTransform<Derived>::TransformOMPFuseDirective(OMPFuseDirective *D) {
   DeclarationNameInfo DirName;
   getDerived().getSema().OpenMP().StartOpenMPDSABlock(
@@ -10635,28 +10613,6 @@ OMPClause *TreeTransform<Derived>::TransformOMPSizesClause(OMPSizesClause *C) {
     return C;
   return RebuildOMPSizesClause(TransformedSizes, C->getBeginLoc(),
                                C->getLParenLoc(), C->getEndLoc());
-}
-
-template <typename Derived>
-OMPClause *
-TreeTransform<Derived>::TransformOMPCountsClause(OMPCountsClause *C) {
-  SmallVector<Expr *, 4> TransformedCounts;
-  TransformedCounts.reserve(C->getNumCounts());
-  for (Expr *E : C->getCountsRefs()) {
-    if (!E) {
-      TransformedCounts.push_back(nullptr);
-      continue;
-    }
-
-    ExprResult T = getDerived().TransformExpr(E);
-    if (T.isInvalid())
-      return nullptr;
-    TransformedCounts.push_back(T.get());
-  }
-
-  return RebuildOMPCountsClause(TransformedCounts, C->getBeginLoc(),
-                                C->getLParenLoc(), C->getEndLoc(),
-                                C->getOmpFillIndex(), C->getOmpFillLoc());
 }
 
 template <typename Derived>

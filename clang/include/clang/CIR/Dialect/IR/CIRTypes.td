@@ -762,6 +762,13 @@ def CIR_RecordType : CIR_Type<"Record", "record", [
     // a conflict in RecordStorage because two types will have the same hash.
     void removeABIConversionNamePrefix();
 
+    bool isSized() const {
+      return isComplete();
+    }
+
+    /// Returns the data size (excluding tail padding) for struct types.
+    unsigned computeStructDataSize(const mlir::DataLayout &dataLayout) const;
+
   private:
 
     static constexpr char abi_conversion_prefix[] = "__post_abi_";

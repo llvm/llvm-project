@@ -2827,9 +2827,9 @@ def CIR_GlobalOp : CIR_Op<"global", [
   // TODO: sym_visibility can possibly be represented by implementing the
   // necessary Symbol's interface in terms of linkage instead.
   let arguments = (ins SymbolNameAttr:$sym_name,
-                       DefaultValuedAttr<
-                        CIR_VisibilityAttr,
-                        "VisibilityKind::Default"
+                       DefaultValuedProp<
+                        EnumProp<CIR_VisibilityKind>,
+                        "cir::VisibilityKind::Default"
                        >:$global_visibility,
                        OptionalAttr<StrAttr>:$sym_visibility,
                        TypeAttr:$sym_type,
@@ -2851,7 +2851,7 @@ def CIR_GlobalOp : CIR_Op<"global", [
 
   let assemblyFormat = [{
     ($sym_visibility^)?
-    (`` $global_visibility^)?
+    ($global_visibility^)?
     (`constant` $constant^)?
     $linkage
     (`comdat` $comdat^)?
@@ -3667,7 +3667,10 @@ def CIR_FuncOp : CIR_Op<"func", [
 
   let arguments = (ins
     SymbolNameAttr:$sym_name,
-    CIR_VisibilityAttr:$global_visibility,
+    DefaultValuedProp<
+      EnumProp<CIR_VisibilityKind>,
+      "cir::VisibilityKind::Default"
+    >:$global_visibility,
     TypeAttrOf<CIR_FuncType>:$function_type,
     UnitAttr:$builtin,
     UnitAttr:$coroutine,
@@ -4146,21 +4149,32 @@ def CIR_CopyOp : CIR_Op<"copy",[
 
     The `volatile` keyword indicates that the operation is volatile.
 
+    The `skip_tail_padding` keyword indicates that only the data bytes should
+    be copied, excluding any tail padding. This is used when copying
+    potentially-overlapping subobjects where the tail padding might be occupied
+    by other objects (e.g. fields marked with `[[no_unique_address]]`). This
+    is only valid when the pointee type is a record type.
+
     Examples:
 
     ```mlir
       // Copying contents from one record to another:
       cir.copy %0 to %1 : !cir.ptr<!record_ty>
+
+      // Copying without tail padding (for overlapping subobjects):
+      cir.copy %0 to %1 skip_tail_padding : !cir.ptr<!record_ty>
     ```
   }];
 
   let arguments = (ins
       Arg<CIR_PointerType, "", [MemWrite]>:$dst,
       Arg<CIR_PointerType, "", [MemRead]>:$src,
-      UnitAttr:$is_volatile
+      UnitAttr:$is_volatile,
+      UnitAttr:$skip_tail_padding
   );
 
   let assemblyFormat = [{$src `to` $dst (`volatile` $is_volatile^)?
+                        (`skip_tail_padding` $skip_tail_padding^)?
                         attr-dict `:` qualified(type($dst))
   }];
   let hasVerifier = 1;
@@ -4169,10 +4183,15 @@ def CIR_CopyOp : CIR_Op<"copy",[
     /// Returns the pointer type being copied.
     cir::PointerType getType() { return getSrc().getType(); }
 
-    /// Returns the number of bytes to be copied.
-    unsigned getLength(const mlir::DataLayout &dt) {
-      return dt.getTypeSize(getType().getPointee());
-    }    
+    /// Returns the number of bytes to be copied. When skip_tail_padding is
+    /// set, returns the data size (excluding tail padding) of the pointee
+    /// record type. Otherwise returns the full type size.
+    unsigned getCopySizeInBytes(const mlir::DataLayout &dl) {
+      if (getSkipTailPadding())
+        return mlir::cast<cir::RecordType>(getType().getPointee())
+            .computeStructDataSize(dl);
+      return dl.getTypeSize(getType().getPointee());
+    }
   }];
 }
 
@@ -6330,7 +6349,7 @@ def CIR_TanOp : CIR_UnaryFPToFPBuiltinOp<"tan", "TanOp"> {
   }];
 }
 
-def CIR_TruncOp : CIR_UnaryFPToFPBuiltinOp<"trunc", "TruncOp"> {
+def CIR_TruncOp : CIR_UnaryFPToFPBuiltinOp<"trunc", "FTruncOp"> {
   let summary = "Truncates floating-point value to integer";
   let description = [{
     `cir.trunc` truncates a floating-point operand to an integer value
@@ -6379,7 +6398,7 @@ def CIR_AbsOp : CIR_Op<"abs", [Pure, SameOperandsAndResultType]> {
   let assemblyFormat = "$src ( `min_is_poison` $min_is_poison^ )? `:` type($src) attr-dict";
 }
 
-def CIR_FloorOp : CIR_UnaryFPToFPBuiltinOp<"floor", "FloorOp"> {
+def CIR_FloorOp : CIR_UnaryFPToFPBuiltinOp<"floor", "FFloorOp"> {
   let summary = "Computes the floating-point floor value";
   let description = [{
     `cir.floor` computes the floor of a floating-point operand and returns
@@ -6481,6 +6500,8 @@ def CIR_FMaxNumOp : CIR_BinaryFPToFPBuiltinOp<"fmaxnum", "MaxNumOp"> {
     `cir.fmaxnum` returns the larger of its two operands. If one operand is
     NaN, the other operand is returned.
   }];
+  // Needs custom lowering for FastmathFlags::nsz.
+  let llvmOp = "";
 }
 
 def CIR_FMaximumOp : CIR_BinaryFPToFPBuiltinOp<"fmaximum", "MaximumOp"> {
@@ -6497,6 +6518,8 @@ def CIR_FMinNumOp : CIR_BinaryFPToFPBuiltinOp<"fminnum", "MinNumOp"> {
     `cir.fminnum` returns the smaller of its two operands. If one operand is
     NaN, the other operand is returned.
   }];
+  // Needs custom lowering for FastmathFlags::nsz.
+  let llvmOp = "";
 }
 
 def CIR_FMinimumOp : CIR_BinaryFPToFPBuiltinOp<"fminimum", "MinimumOp"> {
@@ -6908,20 +6931,29 @@ def CIR_EhInflightOp : CIR_Op<"eh.inflight_exception"> {
     This helps CIR to pass down more accurate information for LLVM lowering
     to landingpads.
 
+    The `catch_all` attribute indicates that a catch-all handler exists for
+    the exception being dispatched. When lowered to LLVM IR, this results in
+    a `catch ptr null` clause on the landing pad. When `catch_all` is present
+    alongside typed catches, the landing pad will contain both the typed catch
+    clauses and a trailing `catch ptr null`.
+
     Example:
 
     ```mlir
     %exception_ptr, %type_id = cir.eh.inflight_exception
     %exception_ptr, %type_id = cir.eh.inflight_exception [@_ZTIi, @_ZTIPKc]
     %exception_ptr, %type_id = cir.eh.inflight_exception cleanup
+    %exception_ptr, %type_id = cir.eh.inflight_exception catch_all [@_ZTIi]
     ``
   }];
 
   let arguments = (ins UnitAttr:$cleanup,
+                       UnitAttr:$catch_all,
                        OptionalAttr<FlatSymbolRefArrayAttr>:$catch_type_list);
   let results = (outs CIR_VoidPtrType:$exception_ptr, CIR_UInt32:$type_id);
   let assemblyFormat = [{
     (`cleanup` $cleanup^)?
+    (`catch_all` $catch_all^)?
     ($catch_type_list^)?
     attr-dict
   }];

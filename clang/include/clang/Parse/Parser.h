@@ -6812,9 +6812,6 @@ private:
   /// Parses the 'sizes' clause of a '#pragma omp tile' directive.
   OMPClause *ParseOpenMPSizesClause();
 
-  /// Parses the 'counts' clause of a '#pragma omp split' directive.
-  OMPClause *ParseOpenMPCountsClause();
-
   /// Parses the 'permutation' clause of a '#pragma omp interchange' directive.
   OMPClause *ParseOpenMPPermutationClause();
 
