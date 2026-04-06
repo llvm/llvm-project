@@ -280,7 +280,8 @@ bool AArch64RedundantCopyEliminationImpl::knownRegValInBlock(
   return false;
 }
 
-bool AArch64RedundantCopyEliminationImpl::optimizeBlock(MachineBasicBlock *MBB) {
+bool AArch64RedundantCopyEliminationImpl::optimizeBlock(
+    MachineBasicBlock *MBB) {
   // Check if the current basic block has a single predecessor.
   if (MBB->pred_size() != 1)
     return false;
