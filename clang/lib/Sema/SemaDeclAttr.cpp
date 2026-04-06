@@ -5513,26 +5513,8 @@ static void handleProfilesSuppressDeclAttr(Sema &S, Decl *D,
   if (!AL.checkAtLeastNumArgs(S, 1))
     return;
 
-  StringRef ProfileName;
-  if (!S.checkStringLiteralArgumentAttr(AL, 0, ProfileName))
-    return;
-
-  StringRef Justification, Rule;
-  if (AL.getNumArgs() >= 2)
-    S.checkStringLiteralArgumentAttr(AL, 1, Justification);
-  if (AL.getNumArgs() >= 3)
-    S.checkStringLiteralArgumentAttr(AL, 2, Rule);
-
-  SmallVector<StringRef, 4> RawArgs;
-  for (unsigned I = 3; I < AL.getNumArgs(); ++I) {
-    StringRef Arg;
-    if (S.checkStringLiteralArgumentAttr(AL, I, Arg))
-      RawArgs.push_back(Arg);
-  }
-
-  D->addAttr(::new (S.Context) ProfilesSuppressAttr(
-      S.Context, AL, ProfileName, Justification, Rule, RawArgs.data(),
-      RawArgs.size()));
+  if (auto *A = S.makeProfilesSuppressAttr(AL))
+    D->addAttr(A);
 }
 
 static void handleLifetimeCategoryAttr(Sema &S, Decl *D, const ParsedAttr &AL) {

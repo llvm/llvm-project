@@ -3010,6 +3010,29 @@ bool Sema::addProfileEnforcement(StringRef Name, StringRef Designator,
   return true;
 }
 
+ProfilesSuppressAttr *Sema::makeProfilesSuppressAttr(const ParsedAttr &AL) {
+  StringRef ProfileName;
+  if (!checkStringLiteralArgumentAttr(AL, 0, ProfileName))
+    return nullptr;
+
+  StringRef Justification, Rule;
+  if (AL.getNumArgs() >= 2)
+    checkStringLiteralArgumentAttr(AL, 1, Justification);
+  if (AL.getNumArgs() >= 3)
+    checkStringLiteralArgumentAttr(AL, 2, Rule);
+
+  SmallVector<StringRef, 4> RawArgs;
+  for (unsigned I = 3; I < AL.getNumArgs(); ++I) {
+    StringRef Arg;
+    if (checkStringLiteralArgumentAttr(AL, I, Arg))
+      RawArgs.push_back(Arg);
+  }
+
+  return ::new (Context) ProfilesSuppressAttr(
+      Context, AL, ProfileName, Justification, Rule, RawArgs.data(),
+      RawArgs.size());
+}
+
 void Sema::pushProfileSuppression(StringRef ProfileName, StringRef RuleName) {
   ProfileSuppressStack.push_back(
       {ProfileName.str(), RuleName.str()});

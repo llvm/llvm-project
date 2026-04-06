@@ -77,26 +77,7 @@ static Attr *handleProfilesSuppressStmtAttr(Sema &S, Stmt *St,
   if (!A.checkAtLeastNumArgs(S, 1))
     return nullptr;
 
-  StringRef ProfileName;
-  if (!S.checkStringLiteralArgumentAttr(A, 0, ProfileName))
-    return nullptr;
-
-  StringRef Justification, Rule;
-  if (A.getNumArgs() >= 2)
-    S.checkStringLiteralArgumentAttr(A, 1, Justification);
-  if (A.getNumArgs() >= 3)
-    S.checkStringLiteralArgumentAttr(A, 2, Rule);
-
-  SmallVector<StringRef, 4> RawArgs;
-  for (unsigned I = 3; I < A.getNumArgs(); ++I) {
-    StringRef Arg;
-    if (S.checkStringLiteralArgumentAttr(A, I, Arg))
-      RawArgs.push_back(Arg);
-  }
-
-  return ::new (S.Context) ProfilesSuppressAttr(
-      S.Context, A, ProfileName, Justification, Rule, RawArgs.data(),
-      RawArgs.size());
+  return S.makeProfilesSuppressAttr(A);
 }
 
 static Attr *handleLoopHintAttr(Sema &S, Stmt *St, const ParsedAttr &A,
