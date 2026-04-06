@@ -108,15 +108,15 @@ void ContainerDataPointerCheck::check(const MatchFinder::MatchResult &Result) {
 
     if (!Parents.empty()) {
       if (const auto *VD = Parents[0].get<VarDecl>()) {
-        QualType VarType = VD->getType();
+        const QualType VarType = VD->getType();
         if (VarType->isPointerType()) {
-          QualType PointeeType = VarType->getPointeeType();
+          const QualType PointeeType = VarType->getPointeeType();
           UseCStr = PointeeType.isConstQualified();
         }
       } else if (const auto *Cast = Parents[0].get<CastExpr>()) {
-        QualType CastType = Cast->getType();
+        const QualType CastType = Cast->getType();
         if (CastType->isPointerType()) {
-          QualType PointeeType = CastType->getPointeeType();
+          const QualType PointeeType = CastType->getPointeeType();
           UseCStr = PointeeType.isConstQualified();
         }
       }
