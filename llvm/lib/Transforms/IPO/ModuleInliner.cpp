@@ -144,7 +144,7 @@ PreservedAnalyses ModuleInlinerPass::run(Module &M,
       if (auto *CB = dyn_cast<CallBase>(&I)) {
         if (Function *Callee = CB->getCalledFunction()) {
           if (!Callee->isDeclaration())
-            Calls->push(CB);
+            Calls->push({CB, -1});
           else if (!isa<IntrinsicInst>(I)) {
             using namespace ore;
             setInlineRemark(*CB, "unavailable definition");
@@ -166,10 +166,16 @@ PreservedAnalyses ModuleInlinerPass::run(Module &M,
   }
   for (auto &[CB, Target] : ICPCandidates) {
     if (auto *DirectCB = promoteCallWithIfThenElse(*CB, *Target, CtxProf))
-      Calls->push(DirectCB);
+      Calls->push({DirectCB, -1});
   }
   if (Calls->empty())
     return PreservedAnalyses::all();
+
+  // When inlining a callee produces new call sites, we want to keep track of
+  // the fact that they were inlined from the callee.  This allows us to avoid
+  // infinite inlining in some obscure cases.  To represent this, we use an
+  // index into the InlineHistory vector.
+  SmallVector<std::pair<Function *, int>, 16> InlineHistory;
 
   // Track the dead functions to delete once finished with inlining calls. We
   // defer deleting these to make it easier to handle the call graph updates.
@@ -177,7 +183,9 @@ PreservedAnalyses ModuleInlinerPass::run(Module &M,
 
   // Loop forward over all of the calls.
   while (!Calls->empty()) {
-    CallBase *CB = Calls->pop();
+    auto P = Calls->pop();
+    CallBase *CB = P.first;
+    const int InlineHistoryID = P.second;
     Function &F = *CB->getCaller();
     Function &Callee = *CB->getCalledFunction();
 
@@ -189,6 +197,12 @@ PreservedAnalyses ModuleInlinerPass::run(Module &M,
     auto GetAssumptionCache = [&](Function &F) -> AssumptionCache & {
       return FAM.getResult<AssumptionAnalysis>(F);
     };
+
+    if (InlineHistoryID != -1 &&
+        inlineHistoryIncludes(&Callee, InlineHistoryID, InlineHistory)) {
+      setInlineRemark(*CB, "recursive");
+      continue;
+    }
 
     auto Advice = Advisor.getAdvice(*CB, /*OnlyMandatory*/ false);
     // Check whether we want to inline this callsite.
@@ -220,6 +234,9 @@ PreservedAnalyses ModuleInlinerPass::run(Module &M,
 
     // Add any new callsites to defined functions to the worklist.
     if (!IFI.InlinedCallSites.empty()) {
+      int NewHistoryID = InlineHistory.size();
+      InlineHistory.push_back({&Callee, InlineHistoryID});
+
       for (CallBase *ICB : reverse(IFI.InlinedCallSites)) {
         Function *NewCallee = ICB->getCalledFunction();
         if (!NewCallee) {
@@ -234,7 +251,7 @@ PreservedAnalyses ModuleInlinerPass::run(Module &M,
         }
         if (NewCallee)
           if (!NewCallee->isDeclaration())
-            Calls->push(ICB);
+            Calls->push({ICB, NewHistoryID});
       }
     }
 
@@ -249,8 +266,9 @@ PreservedAnalyses ModuleInlinerPass::run(Module &M,
       Callee.removeDeadConstantUsers();
       // if (Callee.use_empty() && !CG.isLibFunction(Callee)) {
       if (Callee.use_empty() && !isKnownLibFunction(Callee, GetTLI(Callee))) {
-        Calls->erase_if(
-            [&](const CallBase *CB) { return CB->getCaller() == &Callee; });
+        Calls->erase_if([&](const std::pair<CallBase *, int> &Call) {
+          return Call.first->getCaller() == &Callee;
+        });
 
         // Report inlining decision BEFORE deleting function contents, so we
         // can still access e.g. the DebugLoc
