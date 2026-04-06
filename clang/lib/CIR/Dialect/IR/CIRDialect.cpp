@@ -2856,6 +2856,11 @@ LogicalResult cir::CopyOp::verify() {
   if (getSrc() == getDst())
     return emitError() << "source and destination are the same";
 
+  if (getSkipTailPadding() &&
+      !mlir::isa<cir::RecordType>(getType().getPointee()))
+    return emitError()
+           << "skip_tail_padding is only valid for record pointee types";
+
   return mlir::success();
 }
 
