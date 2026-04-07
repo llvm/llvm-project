@@ -15095,14 +15095,6 @@ public:
   /// concepts. Substituting into normalized concepts can be extremely expensive
   /// due to the redundancy of template parameters. This cache is intended for
   /// use by TemplateInstantiator to avoid redundant semantic checking.
-  ///
-  /// NOTE: Cached results may lose TypeLoc fidelity, such as SourceLocations.
-  /// As such, this is only applied to concepts and valid template arguments,
-  /// where non-type information from TypeLoc is less critical for subsequent
-  /// checking.
-  ///
-  /// FIXME: Clang should learn to avoid duplicate instantiations more broadly
-  /// for performance.
   llvm::DenseMap<llvm::FoldingSetNodeID, TemplateArgumentLoc>
       *CurrentCachedTemplateArgs = nullptr;
 
