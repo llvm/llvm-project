@@ -10,8 +10,10 @@
 #include "llvm/Frontend/OpenMP/OMPDeviceConstants.h"
 #include "llvm/Frontend/OpenMP/OMPIRBuilder.h"
 #include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/DebugProgramInstruction.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
@@ -7198,6 +7200,25 @@ TEST_F(OpenMPIRBuilderTest, DebugRecordLoc) {
     DIB.insertDeclare(OutlinedFn->getArg(1), Var2, DIB.createExpression(), Loc,
                       Builder.GetInsertPoint());
 
+    // One DbgVariableRecord with multiple location operands: fixup cannot pick
+    // a single anchor block, so locations should be poisoned.
+    DIType *IntDbgTy = DIB.createBasicType("int", 32, dwarf::DW_ATE_signed);
+    DILocalVariable *VarMulti = DIB.createAutoVariable(
+        SP, "multi_loc", SP->getFile(), /*LineNo=*/4, IntDbgTy);
+    Value *C0 = ConstantInt::get(Builder.getInt32Ty(), 0);
+    Value *C1 = ConstantInt::get(Builder.getInt32Ty(), 1);
+    SmallVector<ValueAsMetadata *, 2> ArgVMs = {ValueAsMetadata::get(C0),
+                                                ValueAsMetadata::get(C1)};
+    DIArgList *ArgList = DIArgList::get(Ctx, ArgVMs);
+    DIExpression *MultiExpr = DIExpression::get(
+        Ctx, {dwarf::DW_OP_LLVM_arg, 0, dwarf::DW_OP_LLVM_arg, 1,
+              dwarf::DW_OP_plus, dwarf::DW_OP_stack_value});
+    auto *MultiDVR =
+        new DbgVariableRecord(ArgList, VarMulti, MultiExpr, Loc.get(),
+                              DbgVariableRecord::LocationType::Value);
+    Builder.GetInsertBlock()->insertDbgRecordBefore(MultiDVR,
+                                                    Builder.GetInsertPoint());
+
     return Builder.saveIP();
   };
 
@@ -7229,9 +7250,16 @@ TEST_F(OpenMPIRBuilderTest, DebugRecordLoc) {
   // Check outlined function
   EXPECT_FALSE(verifyModule(*M, &errs()));
   EXPECT_NE(OutlinedFn, nullptr);
+  unsigned MultiLocPoisoned = 0;
   for (Instruction &I : instructions(OutlinedFn)) {
     for (DbgVariableRecord &DVR : filterDbgVars(I.getDbgRecordRange())) {
-      EXPECT_EQ(DVR.getNumVariableLocationOps(), 1u);
+      if (DVR.getNumVariableLocationOps() != 1u) {
+        ASSERT_EQ(DVR.getNumVariableLocationOps(), 2u);
+        EXPECT_TRUE(isa<PoisonValue>(DVR.getVariableLocationOp(0u)));
+        EXPECT_TRUE(isa<PoisonValue>(DVR.getVariableLocationOp(1u)));
+        ++MultiLocPoisoned;
+        continue;
+      }
       auto Loc = DVR.getVariableLocationOp(0u);
       if (Instruction *LocInst = dyn_cast<Instruction>(Loc))
         EXPECT_EQ(DVR.getParent(), LocInst->getParent());
@@ -7239,6 +7267,7 @@ TEST_F(OpenMPIRBuilderTest, DebugRecordLoc) {
         EXPECT_EQ(DVR.getParent(), &(OutlinedFn->getEntryBlock()));
     }
   }
+  EXPECT_EQ(MultiLocPoisoned, 1u);
 }
 
 TEST_F(OpenMPIRBuilderTest, CreateTask) {

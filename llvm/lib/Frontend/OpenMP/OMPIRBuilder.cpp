@@ -8367,8 +8367,10 @@ static void FixupDebugInfoForOutlinedFunction(
 
   SmallVector<DbgVariableRecord *, 4> DVRsToDelete;
   auto MoveDebugRecordToCorrectBlock = [&](DbgVariableRecord *DVR) {
-    if (DVR->getNumVariableLocationOps() != 1u)
+    if (DVR->getNumVariableLocationOps() != 1u) {
+      DVR->setKillLocation();
       return;
+    }
     Value *Loc = DVR->getVariableLocationOp(0u);
     BasicBlock *CurBB = DVR->getParent();
     BasicBlock *RequiredBB = nullptr;
