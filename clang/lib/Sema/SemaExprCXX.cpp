@@ -5777,12 +5777,13 @@ static bool ConvertForConditional(Sema &Self, ExprResult &E, QualType T) {
 // extension.
 static bool isValidVectorForConditionalCondition(ASTContext &Ctx,
                                                  QualType CondTy) {
-  bool IsSVEVectorType = CondTy->isSveVLSBuiltinType();
-  if (!CondTy->isVectorType() && !CondTy->isExtVectorType() && !IsSVEVectorType)
+  bool IsSizelessVectorType = CondTy->isVLSBuiltinType();
+  if (!CondTy->isVectorType() && !CondTy->isExtVectorType() &&
+      !IsSizelessVectorType)
     return false;
   const QualType EltTy =
-      IsSVEVectorType
-          ? cast<BuiltinType>(CondTy.getCanonicalType())->getSveEltType(Ctx)
+      IsSizelessVectorType
+          ? CondTy->getSizelessVectorEltType(Ctx)
           : cast<VectorType>(CondTy.getCanonicalType())->getElementType();
   assert(!EltTy->isEnumeralType() && "Vectors cant be enum types");
   return EltTy->isIntegralType(Ctx);

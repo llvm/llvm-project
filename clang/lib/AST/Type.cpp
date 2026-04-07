@@ -2092,7 +2092,8 @@ bool Type::hasIntegerRepresentation() const {
   }
   if (CanonicalType->isRVVVLSBuiltinType()) {
     const auto *VT = cast<BuiltinType>(CanonicalType);
-    return (VT->getKind() >= BuiltinType::RvvInt8mf8 &&
+    return VT->isRVVBool() ||
+           (VT->getKind() >= BuiltinType::RvvInt8mf8 &&
             VT->getKind() <= BuiltinType::RvvUint64m8);
   }
 
@@ -2275,8 +2276,18 @@ bool Type::isSignedIntegerOrEnumerationType() const {
 bool Type::hasSignedIntegerRepresentation() const {
   if (const auto *VT = dyn_cast<VectorType>(CanonicalType))
     return VT->getElementType()->isSignedIntegerOrEnumerationType();
-  else
-    return isSignedIntegerOrEnumerationType();
+  if (const auto *BT = dyn_cast<BuiltinType>(CanonicalType)) {
+    switch (BT->getKind()) {
+#define RVV_VECTOR_TYPE_INT(Name, Id, SingletonId, NumEls, ElBits, NF,         \
+                            IsSigned)                                          \
+    case BuiltinType::Id:                                                      \
+      return IsSigned;
+#include "clang/Basic/RISCVVTypes.def"
+    default:
+      break;
+    }
+  }
+  return isSignedIntegerOrEnumerationType();
 }
 
 /// isUnsignedIntegerType - Return true if this is an integer type that is
@@ -2335,6 +2346,17 @@ bool Type::hasUnsignedIntegerRepresentation() const {
     const auto *VT = cast<BuiltinType>(CanonicalType);
     return VT->getKind() >= BuiltinType::SveUint8 &&
            VT->getKind() <= BuiltinType::SveUint64;
+  }
+  if (const auto *BT = dyn_cast<BuiltinType>(CanonicalType)) {
+    switch (BT->getKind()) {
+#define RVV_VECTOR_TYPE_INT(Name, Id, SingletonId, NumEls, ElBits, NF,         \
+                            IsSigned)                                          \
+    case BuiltinType::Id:                                                      \
+      return !IsSigned;
+#include "clang/Basic/RISCVVTypes.def"
+    default:
+      break;
+    }
   }
   return isUnsignedIntegerOrEnumerationType();
 }

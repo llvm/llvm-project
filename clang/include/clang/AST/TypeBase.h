@@ -2506,6 +2506,11 @@ public:
   /// RVV vector or mask.
   bool isRVVVLSBuiltinType() const;
 
+  /// Determines if this is either an SVE or RVV sizeless builtin type.
+  bool isVLSBuiltinType() const {
+    return isSveVLSBuiltinType() || isRVVVLSBuiltinType();
+  }
+
   /// Returns the representative type for the element of an RVV builtin type.
   /// This is used to represent fixed-length RVV vectors created with the
   /// 'riscv_rvv_vector_bits' type attribute as VectorType.
@@ -3291,6 +3296,12 @@ public:
   bool isSVEBool() const { return getKind() == Kind::SveBool; }
 
   bool isSVECount() const { return getKind() == Kind::SveCount; }
+
+  bool isRVVBool() const {
+    return getKind() >= Kind::RvvBool1 && getKind() <= Kind::RvvBool64;
+  }
+
+  bool isSizelessVectorBool() const { return isSVEBool() || isRVVBool(); }
 
   /// Determines whether the given kind corresponds to a placeholder type.
   static bool isPlaceholderTypeKind(Kind K) {
@@ -8825,7 +8836,7 @@ inline bool Type::isConstantMatrixBoolType() const {
 }
 
 inline bool Type::isSubscriptableVectorType() const {
-  return isVectorType() || isSveVLSBuiltinType();
+  return isVectorType() || isVLSBuiltinType();
 }
 
 inline bool Type::isMatrixType() const {
