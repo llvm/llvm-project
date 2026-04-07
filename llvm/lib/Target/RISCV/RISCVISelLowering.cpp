@@ -6558,10 +6558,8 @@ SDValue RISCVTargetLowering::lowerVECTOR_SHUFFLE(SDValue Op,
     // Prefer vzip2a or vzip if available.
     // TODO: Extend to matching ri.vzip2b or vzip if EvenSrc and OddSrc allow.
     if (Subtarget.hasStdExtZvzip() && isLegalVTForZvzip(VT, Subtarget, *this)) {
-      EvenV = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VT, DAG.getUNDEF(VT),
-                          EvenV, DAG.getVectorIdxConstant(0, DL));
-      OddV = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VT, DAG.getUNDEF(VT), OddV,
-                         DAG.getVectorIdxConstant(0, DL));
+      EvenV = DAG.getInsertSubvector(DL, DAG.getUNDEF(VT), EvenV, 0);
+      OddV = DAG.getInsertSubvector(DL, DAG.getUNDEF(VT), OddV, 0);
       return lowerZvzipVZIP(EvenV, OddV, DL, DAG, Subtarget, /*Part=*/0);
     }
     if (Subtarget.hasVendorXRivosVizip()) {
