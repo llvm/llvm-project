@@ -12054,12 +12054,16 @@ bool ScalarEvolution::isBasicBlockEntryGuardedByCond(const BasicBlock *BB,
   if (ProveViaPredecessorChain(PredBB, BB, MaxChainVisits))
     return true;
   if (MergeBlock) {
+    // MergeBlock dominates BB. If every predecessor of MergeBlock proves the
+    // condition, then BB is guarded by the condition.
     MaxChainVisits = 128;
     auto ProveMergeBlockPredecessor = [&](const BasicBlock *Pred) {
       return ProveViaPredecessorChain(Pred, MergeBlock, MaxChainVisits);
     };
-    if (all_of(predecessors(MergeBlock), ProveMergeBlockPredecessor))
-      return true;
+    const Loop *MergeBlockLoop = LI.getLoopFor(MergeBlock);
+    if (!MergeBlockLoop || ContainingLoop == MergeBlockLoop)
+      if (all_of(predecessors(MergeBlock), ProveMergeBlockPredecessor))
+        return true;
   }
 
   // Check conditions due to any @llvm.assume intrinsics.

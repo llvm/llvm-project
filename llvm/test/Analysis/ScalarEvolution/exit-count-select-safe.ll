@@ -443,7 +443,7 @@ define i32 @computeSCEVAtScope(i32 %d.0) {
 ; CHECK-NEXT:    %inc3 = add nsw i32 %e.1, 1
 ; CHECK-NEXT:    --> {(1 + %d.0),+,1}<nw><%for.cond> U: full-set S: full-set Exits: 1 LoopDispositions: { %for.cond: Computable, %while.cond: Variant }
 ; CHECK-NEXT:    %f.1 = phi i32 [ %inc8, %for.body5 ], [ 0, %for.cond4.preheader ]
-; CHECK-NEXT:    --> {0,+,1}<%for.cond4> U: full-set S: full-set Exits: 0 LoopDispositions: { %for.cond4: Computable, %while.cond: Variant }
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%for.cond4> U: [0,1) S: [0,1) Exits: 0 LoopDispositions: { %for.cond4: Computable, %while.cond: Variant }
 ; CHECK-NEXT:    %inc8 = add i32 %f.1, 1
 ; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%for.cond4> U: [1,2) S: [1,2) Exits: 1 LoopDispositions: { %for.cond4: Computable, %while.cond: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @computeSCEVAtScope
