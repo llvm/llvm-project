@@ -291,6 +291,14 @@ TEST_F(DefinitionBlockSeparatorTest, Always) {
                "struct E {};",
                Style);
 
+  verifyFormat("// NOLINTBEGIN\n"
+              "int x = 1;\n"
+              "int y = 2;\n"
+              "// NOLINTEND\n"
+              "\n"
+              "void some_function() {}\n",
+              Style);
+
   std::string Prefix = "namespace {\n";
   std::string Infix = "\n"
                       "// Enum test1\n"

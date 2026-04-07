@@ -147,7 +147,8 @@ void DefinitionBlockSeparator::separateBlocks(
         return false;
 
       if (const auto *Tok = OperateLine->First;
-          Tok->is(tok::comment) && !isClangFormatOn(Tok->TokenText)) {
+          Tok->is(tok::comment) && !isClangFormatOn(Tok->TokenText) &&
+          !isNoLintEnd(Tok->TokenText)) {
         return true;
       }
 
