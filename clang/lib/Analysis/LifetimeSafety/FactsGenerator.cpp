@@ -103,6 +103,7 @@ void FactsGenerator::run() {
   for (const CFGBlock *Block : *AC.getAnalysis<PostOrderCFGView>()) {
     CurrentBlockFacts.clear();
     EscapesInCurrentBlock.clear();
+    CurrentBlock = Block;
     if (Block == &Cfg.getEntry())
       CurrentBlockFacts.append(PlaceholderLoanFacts.begin(),
                                PlaceholderLoanFacts.end());
@@ -401,18 +402,42 @@ void FactsGenerator::VisitBinaryOperator(const BinaryOperator *BO) {
 }
 
 void FactsGenerator::handleTernaryOperator(const ConditionalOperator *CO) {
-  const auto *Map = AC.getCFGStmtMap();
-  const auto *const COBlock = Map->getBlock(CO);
+  const Expr *TrueExpr = CO->getTrueExpr()->IgnoreParenImpCasts();
+  const Expr *FalseExpr = CO->getFalseExpr()->IgnoreParenImpCasts();
 
-  const Expr *TrueExpr = CO->getTrueExpr();
-  const Expr *FalseExpr = CO->getFalseExpr();
+  const auto Preds = CurrentBlock->preds();
+  auto PredHasStmt = [](const CFGBlock::AdjacentBlock &Pred, const Stmt *S) {
+    return llvm::any_of(*Pred, [S](const CFGElement &Elt) {
+      if (auto CS = Elt.getAs<CFGStmt>()) {
+        // S->dump();
+        // CS->getStmt()->dump();
+        return CS->getStmt() == S;
+      }
+      return false;
+    });
+  };
 
-  COBlock->dump();
-  const auto *TI = COBlock->succ_begin();
-  const auto *FI = TI + 1;
+  bool TBHasEdge = true;
+  bool FBHasEdge = true;
 
-  bool TBHasEdge = TI->getReachableBlock() != nullptr;
-  bool FBHasEdge = FI->getReachableBlock() != nullptr;
+  // CurrentBlock->dump();
+  switch (CurrentBlock->pred_size()) {
+  case 0:
+    return;
+  case 1:
+    TBHasEdge = PredHasStmt(*Preds.begin(), TrueExpr);
+    FBHasEdge = !TBHasEdge;
+    break;
+  case 2: {
+    const auto *It = Preds.begin();
+    TBHasEdge = It->isReachable();
+    FBHasEdge = (++It)->isReachable();
+    break;
+  }
+  default:
+    llvm_unreachable("expected at most 2 successors");
+    return;
+  }
 
   bool FirstFlow = true;
   auto HandleFlow = [&](const Expr *E, bool HasAnEdge) {
