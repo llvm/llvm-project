@@ -1105,17 +1105,6 @@ static bool selectCopy(MachineInstr &I, const TargetInstrInfo &TII,
     return selectCopy(I, TII, MRI, TRI, RBI);
   }
 
-  // Remove degenerate cases that fail MachineVerifier:
-  //
-  // %0:gpr32all = COPY %1.sub_32:gpr32all
-  //
-  // In this case we can simply use gpr32all without sub_32, so remove
-  // sub-register.
-  MachineOperand &MO = I.getOperand(1);
-  if (RBI.getSizeInBits(MO.getReg(), MRI, TRI) == 32 &&
-      MO.getSubReg() == AArch64::sub_32)
-    I.getOperand(1).setSubReg(0);
-
   I.setDesc(TII.get(AArch64::COPY));
   return true;
 }
