@@ -362,11 +362,14 @@ extern "C" MLIR_CUDA_WRAPPERS_EXPORT void mgpuSetDefaultDevice(int32_t device) {
 
 #if (CUDA_VERSION >= 12000)
 
-extern "C" MLIR_CUDA_WRAPPERS_EXPORT void mgpuLaunchKernelEx(
-    CUfunction function, intptr_t gridX, intptr_t gridY, intptr_t gridZ,
-    intptr_t blockX, intptr_t blockY, intptr_t blockZ, int32_t smem,
-    CUstream stream, void **params, void **extra, intptr_t clusterX,
-    intptr_t clusterY, intptr_t clusterZ, int32_t cooperative) {
+// Cooperative launch entry point, optionally with a cluster. Pass
+// `clusterX/Y/Z = 0` to launch cooperatively without a cluster.
+extern "C" MLIR_CUDA_WRAPPERS_EXPORT void
+mgpuLaunchKernelEx(CUfunction function, intptr_t gridX, intptr_t gridY,
+                   intptr_t gridZ, intptr_t blockX, intptr_t blockY,
+                   intptr_t blockZ, int32_t smem, CUstream stream,
+                   void **params, void **extra, intptr_t clusterX,
+                   intptr_t clusterY, intptr_t clusterZ, int32_t cooperative) {
   ScopedContext scopedContext;
   if (smem > 0) {
     int32_t maxShmem = 0;

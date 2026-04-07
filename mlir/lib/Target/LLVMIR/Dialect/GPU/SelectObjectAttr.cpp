@@ -469,8 +469,11 @@ llvm::LaunchKernel::createKernelLaunch(mlir::gpu::LaunchFuncOp op,
   // Create the launch call.
   Value *nullPtr = ConstantPointerNull::get(ptrTy);
 
-  // Use mgpuLaunchKernelEx when cooperative or cluster launch is requested.
-  if (op.getCooperative() || op.hasClusterSize()) {
+  // Cooperative launches go through mgpuLaunchKernelEx, which also handles
+  // an optional cluster. Cluster-only (non-cooperative) launches keep their
+  // existing path through mgpuLaunchClusterKernel. Plain launches go through
+  // mgpuLaunchKernel.
+  if (op.getCooperative()) {
     Value *cx = ConstantInt::get(intPtrTy, 0);
     Value *cy = ConstantInt::get(intPtrTy, 0);
     Value *cz = ConstantInt::get(intPtrTy, 0);
@@ -480,13 +483,20 @@ llvm::LaunchKernel::createKernelLaunch(mlir::gpu::LaunchFuncOp op,
       cy = llvmValue(cluster.y);
       cz = llvmValue(cluster.z);
     }
-    Value *cooperativeFlag =
-        ConstantInt::get(i32Ty, op.getCooperative() ? 1 : 0);
+    Value *cooperativeFlag = ConstantInt::get(i32Ty, 1);
     builder.CreateCall(
         getKernelLaunchExFn(),
         ArrayRef<Value *>({moduleFunction, gx, gy, gz, bx, by, bz,
-                           dynamicMemorySize, stream, argArray, nullPtr,
-                           cx, cy, cz, cooperativeFlag}));
+                           dynamicMemorySize, stream, argArray, nullPtr, cx, cy,
+                           cz, cooperativeFlag}));
+  } else if (op.hasClusterSize()) {
+    mlir::gpu::KernelDim3 cluster = op.getClusterSizeOperandValues();
+    Value *cx = llvmValue(cluster.x), *cy = llvmValue(cluster.y),
+          *cz = llvmValue(cluster.z);
+    builder.CreateCall(
+        getClusterKernelLaunchFn(),
+        ArrayRef<Value *>({moduleFunction, cx, cy, cz, gx, gy, gz, bx, by, bz,
+                           dynamicMemorySize, stream, argArray, nullPtr}));
   } else {
     builder.CreateCall(getKernelLaunchFn(),
                        ArrayRef<Value *>({moduleFunction, gx, gy, gz, bx, by,
