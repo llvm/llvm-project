@@ -155,7 +155,6 @@ class CVT_PS_S_FT<string opstr, RegisterOperand DstRC, RegisterOperand SrcRC,
   let isCommutable = IsComm;
 }
 
-let mayRaiseFPException = 1, Uses = [FCR31] in
 multiclass ABSS_M<string opstr,
                   SDPatternOperator OpNode= null_frag> {
   def _D32 : MMRel, ABSS_FT<opstr, AFGR64Opnd, AFGR64Opnd, OpNode>,
@@ -748,20 +747,20 @@ let AdditionalPredicates = [NotInMicroMips, HasMadd4], mayRaiseFPException = 1, 
 }
 
 let AdditionalPredicates = [HasMadd4, NotInMicroMips], mayRaiseFPException = 1, Uses = [FCR31] in {
-  def NMADD_S : MMRel, NMADDS_FT<"nmadd.s", FGR32Opnd, any_fadd>,
+  def NMADD_S : MMRel, NMADDS_FT<"nmadd.s", FGR32Opnd>,
                 MADDS_FM<6, 0>, INSN_MIPS4_32R2_NOT_32R6_64R6;
-  def NMSUB_S : MMRel, NMADDS_FT<"nmsub.s", FGR32Opnd, any_fsub>,
+  def NMSUB_S : MMRel, NMADDS_FT<"nmsub.s", FGR32Opnd>,
                 MADDS_FM<7, 0>, INSN_MIPS4_32R2_NOT_32R6_64R6;
 
-  def NMADD_D32 : MMRel, NMADDS_FT<"nmadd.d", AFGR64Opnd, any_fadd>,
+  def NMADD_D32 : MMRel, NMADDS_FT<"nmadd.d", AFGR64Opnd>,
                   MADDS_FM<6, 1>, INSN_MIPS4_32R2_NOT_32R6_64R6, FGR_32;
-  def NMSUB_D32 : MMRel, NMADDS_FT<"nmsub.d", AFGR64Opnd, any_fsub>,
+  def NMSUB_D32 : MMRel, NMADDS_FT<"nmsub.d", AFGR64Opnd>,
                   MADDS_FM<7, 1>, INSN_MIPS4_32R2_NOT_32R6_64R6, FGR_32;
 
   let DecoderNamespace = "MipsFP64" in {
-    def NMADD_D64 : NMADDS_FT<"nmadd.d", FGR64Opnd, any_fadd>,
+    def NMADD_D64 : NMADDS_FT<"nmadd.d", FGR64Opnd>,
                     MADDS_FM<6, 1>, INSN_MIPS4_32R2_NOT_32R6_64R6, FGR_64;
-    def NMSUB_D64 : NMADDS_FT<"nmsub.d", FGR64Opnd, any_fsub>,
+    def NMSUB_D64 : NMADDS_FT<"nmsub.d", FGR64Opnd>,
                     MADDS_FM<7, 1>, INSN_MIPS4_32R2_NOT_32R6_64R6, FGR_64;
   }
 }
