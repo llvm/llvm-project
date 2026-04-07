@@ -2827,9 +2827,9 @@ def CIR_GlobalOp : CIR_Op<"global", [
   // TODO: sym_visibility can possibly be represented by implementing the
   // necessary Symbol's interface in terms of linkage instead.
   let arguments = (ins SymbolNameAttr:$sym_name,
-                       DefaultValuedAttr<
-                        CIR_VisibilityAttr,
-                        "VisibilityKind::Default"
+                       DefaultValuedProp<
+                        EnumProp<CIR_VisibilityKind>,
+                        "cir::VisibilityKind::Default"
                        >:$global_visibility,
                        OptionalAttr<StrAttr>:$sym_visibility,
                        TypeAttr:$sym_type,
@@ -2837,9 +2837,9 @@ def CIR_GlobalOp : CIR_Op<"global", [
                        OptionalAttr<MemorySpaceAttrInterface>:$addr_space,
                        OptionalAttr<CIR_TLSModel>:$tls_model,
                        OptionalAttr<AnyAttr>:$initial_value,
-                       UnitAttr:$comdat,
-                       UnitAttr:$constant,
-                       UnitAttr:$dso_local,
+                       UnitProp:$comdat,
+                       UnitProp:$constant,
+                       UnitProp:$dso_local,
                        OptionalAttr<CIR_StaticLocalGuardAttr>:$static_local_guard,
                        OptionalAttr<I64Attr>:$alignment,
                        OptionalAttr<ASTVarDeclInterface>:$ast,
@@ -2851,7 +2851,7 @@ def CIR_GlobalOp : CIR_Op<"global", [
 
   let assemblyFormat = [{
     ($sym_visibility^)?
-    (custom<VisibilityAttr>($global_visibility)^)?
+    ($global_visibility^)?
     (`constant` $constant^)?
     $linkage
     (`comdat` $comdat^)?
@@ -3667,7 +3667,10 @@ def CIR_FuncOp : CIR_Op<"func", [
 
   let arguments = (ins
     SymbolNameAttr:$sym_name,
-    CIR_VisibilityAttr:$global_visibility,
+    DefaultValuedProp<
+      EnumProp<CIR_VisibilityKind>,
+      "cir::VisibilityKind::Default"
+    >:$global_visibility,
     TypeAttrOf<CIR_FuncType>:$function_type,
     UnitAttr:$builtin,
     UnitAttr:$coroutine,
@@ -4146,21 +4149,32 @@ def CIR_CopyOp : CIR_Op<"copy",[
 
     The `volatile` keyword indicates that the operation is volatile.
 
+    The `skip_tail_padding` keyword indicates that only the data bytes should
+    be copied, excluding any tail padding. This is used when copying
+    potentially-overlapping subobjects where the tail padding might be occupied
+    by other objects (e.g. fields marked with `[[no_unique_address]]`). This
+    is only valid when the pointee type is a record type.
+
     Examples:
 
     ```mlir
       // Copying contents from one record to another:
       cir.copy %0 to %1 : !cir.ptr<!record_ty>
+
+      // Copying without tail padding (for overlapping subobjects):
+      cir.copy %0 to %1 skip_tail_padding : !cir.ptr<!record_ty>
     ```
   }];
 
   let arguments = (ins
       Arg<CIR_PointerType, "", [MemWrite]>:$dst,
       Arg<CIR_PointerType, "", [MemRead]>:$src,
-      UnitAttr:$is_volatile
+      UnitAttr:$is_volatile,
+      UnitAttr:$skip_tail_padding
   );
 
   let assemblyFormat = [{$src `to` $dst (`volatile` $is_volatile^)?
+                        (`skip_tail_padding` $skip_tail_padding^)?
                         attr-dict `:` qualified(type($dst))
   }];
   let hasVerifier = 1;
@@ -4169,10 +4183,15 @@ def CIR_CopyOp : CIR_Op<"copy",[
     /// Returns the pointer type being copied.
     cir::PointerType getType() { return getSrc().getType(); }
 
-    /// Returns the number of bytes to be copied.
-    unsigned getLength(const mlir::DataLayout &dt) {
-      return dt.getTypeSize(getType().getPointee());
-    }    
+    /// Returns the number of bytes to be copied. When skip_tail_padding is
+    /// set, returns the data size (excluding tail padding) of the pointee
+    /// record type. Otherwise returns the full type size.
+    unsigned getCopySizeInBytes(const mlir::DataLayout &dl) {
+      if (getSkipTailPadding())
+        return mlir::cast<cir::RecordType>(getType().getPointee())
+            .computeStructDataSize(dl);
+      return dl.getTypeSize(getType().getPointee());
+    }
   }];
 }
 

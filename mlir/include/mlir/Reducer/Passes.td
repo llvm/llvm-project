@@ -40,6 +40,8 @@ def OptReductionPass : Pass<"opt-reduction-pass"> {
   let options = [
     Option<"optPass", "opt-pass", "std::string", /* default */"",
            "The optimization passes used for reduction, e.g., symbol-dce">,
+    Option<"optPassFile", "opt-pass-file", "std::string", /* default */"",
+           "The file path containing the optimization pipeline definition">,
   ] # CommonReductionPassOptions.options;
 }
 

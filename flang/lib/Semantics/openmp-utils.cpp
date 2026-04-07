@@ -883,8 +883,8 @@ std::pair<WithReason<int64_t>, bool> GetAffectedNestDepthWithReason(
         return {{num, std::move(reason)}, true};
       }
       // PERMUTATION not specified, assume PERMUTATION(2, 1).
-      std::string name{parser::omp::GetUpperName(
-          llvm::omp::Clause::OMPC_permutation, version)};
+      std::string name{
+          GetUpperName(llvm::omp::Clause::OMPC_permutation, version)};
       Reason reason;
       reason.Say(
           spec.source, MsgClauseAbsentAssume, name, "a permutation (2, 1)");
@@ -904,8 +904,7 @@ std::pair<WithReason<int64_t>, bool> GetAffectedNestDepthWithReason(
             spec, llvm::omp::Clause::OMPC_depth, version)};
         return {{count, std::move(reason)}, true};
       }
-      std::string name{
-          parser::omp::GetUpperName(llvm::omp::Clause::OMPC_depth, version)};
+      std::string name{GetUpperName(llvm::omp::Clause::OMPC_depth, version)};
       Reason reason;
       reason.Say(spec.source, MsgClauseAbsentAssume, name, "a value of 1");
       return {{1, std::move(reason)}, true};
@@ -939,8 +938,8 @@ WithReason<std::pair<int64_t, int64_t>> GetAffectedLoopRangeWithReason(
       if (!first || !count || *first <= 0 || *count <= 0) {
         return {};
       }
-      std::string name{parser::omp::GetUpperName(
-          llvm::omp::Clause::OMPC_looprange, version)};
+      std::string name{
+          GetUpperName(llvm::omp::Clause::OMPC_looprange, version)};
       Reason reason;
       reason.Say(clause->source,
           "%s clause was specified with a count of %" PRId64
