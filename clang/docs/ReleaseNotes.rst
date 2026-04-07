@@ -469,6 +469,7 @@ Miscellaneous Clang Crashes Fixed
 - Fixed a crash when explicitly casting a complex type to or from an atomic complex type. (#GH172208)
 - Fixed a crash when explicitly casting a scalar to an atomic complex. (#GH114885)
 - Fixed an assertion failure when parsing an invalid out-of-line enum definition with template parameters. (#GH187909)
+- Fixed an assertion failure on invalid template template parameter during typo correction. (#GH183983)
 
 OpenACC Specific Changes
 ------------------------
