@@ -3386,7 +3386,6 @@ TaskloopOp TaskloopContextOp::getLoopOp() {
                      [](mlir::Operation &op) { return isa<TaskloopOp>(op); }));
 }
 
-
 LogicalResult TaskloopContextOp::verify() {
   if (getAllocateVars().size() != getAllocatorVars().size())
     return emitError(
