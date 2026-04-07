@@ -526,9 +526,9 @@ TEST(VerifierTest, AtomicRMWIntVector) {
   std::string Error;
   raw_string_ostream ErrorOS(Error);
   EXPECT_TRUE(verifyFunction(*F, &ErrorOS));
-  EXPECT_TRUE(StringRef(Error).starts_with(
-      "atomicrmw add operand must have integer or "
-      "fixed vector of integer type!"))
+  EXPECT_TRUE(
+      StringRef(Error).starts_with("atomicrmw add operand must have integer or "
+                                   "fixed vector of integer type!"))
       << Error;
 }
 
