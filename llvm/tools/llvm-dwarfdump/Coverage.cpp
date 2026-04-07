@@ -67,7 +67,7 @@ convertFileIndices(DenseSet<SourceLocation> Lines,
       [[maybe_unused]] bool ValidIndex = LineTable->getFileNameByIndex(
           L.first, "", DILineInfoSpecifier::FileLineInfoKind::RelativeFilePath,
           Name);
-      assert(ValidIndex && "File index should always be valid");
+      assert(ValidIndex && "File index was not valid for its own line table");
 
       auto NameIt = FileNameMap.find(Name);
       if (NameIt != FileNameMap.end()) {
@@ -90,7 +90,7 @@ convertFileIndices(DenseSet<SourceLocation> Lines,
 /// computed by intersecting the variable's location ranges and the containing
 /// scope's address ranges.
 static DenseSet<SourceLocation>
-computeVariableCoverage(DWARFDie VariableDie,
+computeVariableCoverage(DWARFDie VariableDIE,
                         const DWARFDebugLine::LineTable *const LineTable,
                         DenseMap<uint16_t, uint16_t> &FileIndexMap,
                         StringMap<uint16_t> &FileNameMap) {
@@ -98,7 +98,7 @@ computeVariableCoverage(DWARFDie VariableDie,
   // present (but containing an empty set) if ranges were found but contained no
   // source locations, in order to distinguish the two cases.
 
-  auto Locations = VariableDie.getLocations(DW_AT_location);
+  auto Locations = VariableDIE.getLocations(DW_AT_location);
   std::optional<DenseSet<SourceLocation>> Lines;
   if (Locations) {
     for (const auto &L : Locations.get()) {
@@ -117,7 +117,7 @@ computeVariableCoverage(DWARFDie VariableDie,
 
   // DW_AT_location attribute may contain overly broad address ranges, or none
   // at all, so we also consider the parent scope's address ranges if present.
-  auto ParentRanges = VariableDie.getParent().getAddressRanges();
+  auto ParentRanges = VariableDIE.getParent().getAddressRanges();
   std::optional<DenseSet<SourceLocation>> ParentLines;
   if (ParentRanges) {
     ParentLines = DenseSet<SourceLocation>();
@@ -130,7 +130,7 @@ computeVariableCoverage(DWARFDie VariableDie,
   if (!Lines && ParentLines)
     Lines = ParentLines;
   else if (ParentLines)
-    llvm::set_intersect(*Lines, *ParentLines);
+    set_intersect(*Lines, *ParentLines);
 
   if (!Lines)
     return {};
@@ -140,11 +140,12 @@ computeVariableCoverage(DWARFDie VariableDie,
 }
 
 /// Adds source locations to the line set that are within an inlined subroutine.
-static void getInlinedLines(DWARFDie Die, DenseSet<SourceLocation> &Lines,
+static void getInlinedLines(DWARFDie SubroutineDIE,
+                            DenseSet<SourceLocation> &Lines,
                             const DWARFDebugLine::LineTable *const LineTable) {
-  for (const auto &ChildDie : Die.children()) {
-    if (ChildDie.getTag() == DW_TAG_inlined_subroutine) {
-      auto Ranges = ChildDie.getAddressRanges();
+  for (const auto &ChildDIE : SubroutineDIE.children()) {
+    if (ChildDIE.getTag() == DW_TAG_inlined_subroutine) {
+      auto Ranges = ChildDIE.getAddressRanges();
       if (Ranges) {
         for (const auto &R : Ranges.get())
           addLines(LineTable, Lines, R);
@@ -152,18 +153,18 @@ static void getInlinedLines(DWARFDie Die, DenseSet<SourceLocation> &Lines,
         consumeError(Ranges.takeError());
       }
     } else {
-      getInlinedLines(ChildDie, Lines, LineTable);
+      getInlinedLines(ChildDIE, Lines, LineTable);
     }
   }
 }
 
 /// Returns the set of source lines present in the line table for a subroutine.
 static DenseSet<SourceLocation>
-computeSubroutineCoverage(DWARFDie SubroutineDie,
+computeSubroutineCoverage(DWARFDie SubroutineDIE,
                           const DWARFDebugLine::LineTable *const LineTable,
                           DenseMap<uint16_t, uint16_t> &FileIndexMap,
                           StringMap<uint16_t> &FileNameMap) {
-  auto Ranges = SubroutineDie.getAddressRanges();
+  auto Ranges = SubroutineDIE.getAddressRanges();
   DenseSet<SourceLocation> Lines;
   if (Ranges) {
     for (const auto &R : Ranges.get())
@@ -174,15 +175,15 @@ computeSubroutineCoverage(DWARFDie SubroutineDie,
 
   // Exclude lines from any subroutines inlined into this one.
   DenseSet<SourceLocation> InlinedLines;
-  getInlinedLines(SubroutineDie, InlinedLines, LineTable);
-  llvm::set_subtract(Lines, InlinedLines);
+  getInlinedLines(SubroutineDIE, InlinedLines, LineTable);
+  set_subtract(Lines, InlinedLines);
 
   return convertFileIndices(Lines, LineTable, FileIndexMap, FileNameMap);
 }
 
-static const SmallVector<DWARFDie> getParentSubroutines(DWARFDie Die) {
+static const SmallVector<DWARFDie> getParentSubroutines(DWARFDie DIE) {
   SmallVector<DWARFDie> Parents;
-  DWARFDie Parent = Die;
+  DWARFDie Parent = DIE;
   do {
     if (Parent.getTag() == DW_TAG_subprogram) {
       Parents.push_back(Parent);
@@ -233,17 +234,17 @@ struct VarCoverage {
 typedef std::multimap<VarKey, VarCoverage, std::less<>> VarMap;
 typedef std::map<VarKey, DenseSet<SourceLocation>, std::less<>> BaselineVarMap;
 
-static std::optional<const VarKey> getVarKey(DWARFDie VariableDie,
-                                             DWARFDie SubroutineDie) {
-  const auto *const VariableName = VariableDie.getName(DINameKind::LinkageName);
-  const auto DieFile = VariableDie.getDeclFile(
+static std::optional<const VarKey> getVarKey(DWARFDie VariableDIE,
+                                             DWARFDie SubroutineDIE) {
+  const auto *const VariableName = VariableDIE.getName(DINameKind::LinkageName);
+  const auto DeclFile = VariableDIE.getDeclFile(
       DILineInfoSpecifier::FileLineInfoKind::RelativeFilePath);
   const auto *const SubroutineName =
-      SubroutineDie.getName(DINameKind::LinkageName);
+      SubroutineDIE.getName(DINameKind::LinkageName);
   if (!VariableName || !SubroutineName)
     return std::nullopt;
-  return VarKey{SubroutineName, VariableName, DieFile,
-                VariableDie.getDeclLine()};
+  return VarKey{SubroutineName, VariableName, DeclFile,
+                VariableDIE.getDeclLine()};
 }
 
 static void displayParents(SmallVector<DWARFDie> Parents, raw_ostream &OS) {
@@ -273,7 +274,9 @@ static void displayVariableCoverage(const VarKey &Key, const VarCoverage &Var,
     displayParents(Var.Parents, OS);
   OS << "\t";
   WithColor(OS, HighlightColor::String) << Key.Name;
-  OS << "\t" << Key.DeclFile << ":" << Key.DeclLine;
+  OS << "\t";
+  if (!Key.DeclFile.empty())
+    OS << Key.DeclFile << ":" << Key.DeclLine;
   OS << "\t" << format("%.3g", ((float)Var.Cov / Var.Instances));
   if (Var.BaselineCov)
     OS << "\t" << format("%.3g", ((float)Var.BaselineCov / Var.Instances))
@@ -301,24 +304,24 @@ bool dwarfdump::showVariableCoverage(ObjectFile &Obj, DWARFContext &DICtx,
       const auto *const LT = BaselineCtx->getLineTableForUnit(U.get());
       DenseMap<uint16_t, uint16_t> FileIndexMap;
       for (const auto &Entry : U->dies()) {
-        DWARFDie VariableDie = {U.get(), &Entry};
-        if (VariableDie.getTag() != DW_TAG_variable &&
-            VariableDie.getTag() != DW_TAG_formal_parameter)
+        DWARFDie VariableDIE = {U.get(), &Entry};
+        if (VariableDIE.getTag() != DW_TAG_variable &&
+            VariableDIE.getTag() != DW_TAG_formal_parameter)
           continue;
 
-        const auto Parents = getParentSubroutines(VariableDie);
+        const auto Parents = getParentSubroutines(VariableDIE);
         if (!Parents.size())
           continue;
-        const auto SubroutineDie = Parents.front();
-        auto Key = getVarKey(VariableDie, SubroutineDie);
+        const auto SubroutineDIE = Parents.front();
+        auto Key = getVarKey(VariableDIE, SubroutineDIE);
         if (!Key)
           continue;
 
         auto Cov =
-            computeVariableCoverage(VariableDie, LT, FileIndexMap, FileNameMap);
+            computeVariableCoverage(VariableDIE, LT, FileIndexMap, FileNameMap);
         const auto SubroutineCov = computeSubroutineCoverage(
-            SubroutineDie, LT, FileIndexMap, FileNameMap);
-        llvm::set_intersect(Cov, SubroutineCov);
+            SubroutineDIE, LT, FileIndexMap, FileNameMap);
+        set_intersect(Cov, SubroutineCov);
 
         auto Result = BaselineVars.insert({*Key, Cov});
         if (!Result.second)
@@ -333,24 +336,24 @@ bool dwarfdump::showVariableCoverage(ObjectFile &Obj, DWARFContext &DICtx,
     const auto *const LT = DICtx.getLineTableForUnit(U.get());
     DenseMap<uint16_t, uint16_t> FileIndexMap;
     for (const auto &Entry : U->dies()) {
-      DWARFDie VariableDie = {U.get(), &Entry};
-      if (VariableDie.getTag() != DW_TAG_variable &&
-          VariableDie.getTag() != DW_TAG_formal_parameter)
+      DWARFDie VariableDIE = {U.get(), &Entry};
+      if (VariableDIE.getTag() != DW_TAG_variable &&
+          VariableDIE.getTag() != DW_TAG_formal_parameter)
         continue;
 
-      const auto Parents = getParentSubroutines(VariableDie);
+      const auto Parents = getParentSubroutines(VariableDIE);
       if (!Parents.size())
         continue;
-      const auto SubroutineDie = Parents.front();
-      auto Key = getVarKey(VariableDie, SubroutineDie);
+      const auto SubroutineDIE = Parents.front();
+      auto Key = getVarKey(VariableDIE, SubroutineDIE);
       if (!Key)
         continue;
 
       auto Cov =
-          computeVariableCoverage(VariableDie, LT, FileIndexMap, FileNameMap);
+          computeVariableCoverage(VariableDIE, LT, FileIndexMap, FileNameMap);
       const auto SubroutineCov = computeSubroutineCoverage(
-          SubroutineDie, LT, FileIndexMap, FileNameMap);
-      llvm::set_intersect(Cov, SubroutineCov);
+          SubroutineDIE, LT, FileIndexMap, FileNameMap);
+      set_intersect(Cov, SubroutineCov);
 
       VarCoverage VarCov = {Parents, Cov.size(), 0, 0, 0, 1, false};
 
