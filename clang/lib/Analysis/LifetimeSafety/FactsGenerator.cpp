@@ -402,15 +402,13 @@ void FactsGenerator::VisitBinaryOperator(const BinaryOperator *BO) {
 }
 
 void FactsGenerator::handleTernaryOperator(const ConditionalOperator *CO) {
-  const Expr *TrueExpr = CO->getTrueExpr()->IgnoreParenImpCasts();
-  const Expr *FalseExpr = CO->getFalseExpr()->IgnoreParenImpCasts();
+  const Expr *TrueExpr = CO->getTrueExpr();
+  const Expr *FalseExpr = CO->getFalseExpr();
 
   const auto Preds = CurrentBlock->preds();
   auto PredHasStmt = [](const CFGBlock::AdjacentBlock &Pred, const Stmt *S) {
     return llvm::any_of(*Pred, [S](const CFGElement &Elt) {
       if (auto CS = Elt.getAs<CFGStmt>()) {
-        // S->dump();
-        // CS->getStmt()->dump();
         return CS->getStmt() == S;
       }
       return false;
@@ -420,12 +418,11 @@ void FactsGenerator::handleTernaryOperator(const ConditionalOperator *CO) {
   bool TBHasEdge = true;
   bool FBHasEdge = true;
 
-  // CurrentBlock->dump();
   switch (CurrentBlock->pred_size()) {
   case 0:
     return;
   case 1:
-    TBHasEdge = PredHasStmt(*Preds.begin(), TrueExpr);
+    TBHasEdge = PredHasStmt(*Preds.begin(), TrueExpr->IgnoreParenImpCasts());
     FBHasEdge = !TBHasEdge;
     break;
   case 2: {
