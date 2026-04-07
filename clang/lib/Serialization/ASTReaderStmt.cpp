@@ -1462,15 +1462,16 @@ void ASTStmtReader::VisitGenericSelectionExpr(GenericSelectionExpr *E) {
   E->DefaultLoc = readSourceLocation();
   E->RParenLoc = readSourceLocation();
 
+  // During serialization, either one more Stmt or one more
+  // TypeSourceInfo was encoded to account for the predicate
+  // (whether it was an expression or a type).
   Stmt **Stmts = E->getTrailingObjects<Stmt *>();
-  // Add 1 to account for the controlling expression which is the first
-  // expression in the trailing array of Stmt *. This is not needed for
-  // the trailing array of TypeSourceInfo *.
-  for (unsigned I = 0, N = NumAssocs + 1; I < N; ++I)
+  for (unsigned I = 0, N = NumAssocs + (E->IsExprPredicate ? 1 : 0); I < N; ++I)
     Stmts[I] = Record.readSubExpr();
 
   TypeSourceInfo **TSIs = E->getTrailingObjects<TypeSourceInfo *>();
-  for (unsigned I = 0, N = NumAssocs; I < N; ++I)
+  for (unsigned I = 0, N = NumAssocs + (!E->IsExprPredicate ? 1 : 0); I < N;
+       ++I)
     TSIs[I] = readTypeSourceInfo();
 }
 

@@ -103,7 +103,7 @@ static FailureOr<MemRefType> getFatRawBufferTypeLike(MemRefType source,
 
 LogicalResult FatRawBufferCastOp::inferReturnTypes(
     MLIRContext *context, std::optional<Location> location, ValueRange operands,
-    DictionaryAttr attributes, OpaqueProperties properties, RegionRange regions,
+    DictionaryAttr attributes, PropertyRef properties, RegionRange regions,
     SmallVectorImpl<Type> &inferredReturnTypes) {
   Adaptor adaptor(operands, attributes, properties, regions);
   auto sourceType =
@@ -944,6 +944,37 @@ void GatherToLDSOp::getCanonicalizationPatterns(RewritePatternSet &results,
 }
 
 //===----------------------------------------------------------------------===//
+// GlobalLoadAsyncToLDSOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult GlobalLoadAsyncToLDSOp::verify() {
+  MemRefType srcType = cast<MemRefType>(getSrc().getType());
+  MemRefType dstType = cast<MemRefType>(getDst().getType());
+
+  if (srcType.getElementType() != dstType.getElementType())
+    return emitOpError("source and destination element types must match");
+
+  Type transferType = getTransferType();
+  int transferSize;
+  if (auto vectorTransfer = dyn_cast<VectorType>(transferType)) {
+    transferSize = vectorTransfer.getNumElements() *
+                   vectorTransfer.getElementTypeBitWidth();
+  } else {
+    transferSize = transferType.getIntOrFloatBitWidth();
+  }
+  if (!llvm::is_contained({8, 32, 64, 128}, transferSize))
+    return emitOpError("transfer type size must be 8, 32, 64, or 128 bits");
+
+  if (!hasGlobalMemorySpace(srcType.getMemorySpace()))
+    return emitOpError("source memory address space must be global");
+
+  if (!hasWorkgroupMemorySpace(dstType.getMemorySpace()))
+    return emitOpError("destination memory address space must be Workgroup");
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // TransposeLoadOp
 //===----------------------------------------------------------------------===//
 
@@ -1300,6 +1331,46 @@ LogicalResult DsAsyncBarrierArriveOp::verify() {
 
 LogicalResult DsBarrierArriveOp::verify() {
   return verifyDsBarrierOpCommon(*this);
+}
+
+//===----------------------------------------------------------------------===//
+// GlobalPrefetchOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult GlobalPrefetchOp::verify() {
+  auto src = cast<MemRefType>(getSrc().getType());
+
+  Attribute memSpace = src.getMemorySpace();
+  if (!memSpace)
+    return this->emitOpError("the source must have address space attribute");
+  if (!hasGlobalMemorySpace(memSpace))
+    return this->emitOpError("the source must reside in global address space");
+
+  ArrayRef<int64_t> srcShape = src.getShape();
+  const size_t numIndices = getIndices().size();
+  if (srcShape.size() != numIndices)
+    return this->emitOpError(
+        "the number of indices must match the source shape size");
+
+  const TemporalHint temporalHint = getTemporalHint();
+  const bool isSpeculative = getSpeculative();
+
+  // Note that temporal hints are shared between load, store,
+  // prefetch, etc. instructions. However, some instructions
+  // operate only with a subset of hints according to the ISA
+  // documentation. In case of global prefetch, non-temporal (NT)
+  // and last-use (LU) hints are not used. The extra bits of encoding
+  // are used to encode speculative or non-speculative instruction behavior
+  if (llvm::is_contained({TemporalHint::NT, TemporalHint::LU}, temporalHint))
+    return this->emitOpError("does not support NT and LU modes");
+
+  if (llvm::is_contained(
+          {TemporalHint::NT_RT, TemporalHint::RT_NT, TemporalHint::NT_HT},
+          temporalHint) &&
+      !isSpeculative) {
+    return this->emitOpError("operates only in the speculative mode");
+  }
+  return success();
 }
 
 #define GET_OP_CLASSES

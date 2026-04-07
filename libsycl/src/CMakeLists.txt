@@ -17,6 +17,7 @@ function(add_sycl_rt_library LIB_TARGET_NAME LIB_OBJ_NAME LIB_OUTPUT_NAME)
   add_dependencies(${LIB_OBJ_NAME}
     sycl-headers
     LLVMOffload
+    LLVMObject
   )
 
   target_include_directories(${LIB_OBJ_NAME}
@@ -24,6 +25,7 @@ function(add_sycl_rt_library LIB_TARGET_NAME LIB_OBJ_NAME LIB_OUTPUT_NAME)
       ${CMAKE_CURRENT_SOURCE_DIR}
       ${LIBSYCL_BUILD_INCLUDE_DIR}
       $<TARGET_PROPERTY:LLVMOffload,INTERFACE_INCLUDE_DIRECTORIES>
+      ${LLVM_MAIN_INCLUDE_DIR}
   )
 
   set_target_properties(${LIB_TARGET_NAME}
@@ -68,6 +70,7 @@ function(add_sycl_rt_library LIB_TARGET_NAME LIB_OBJ_NAME LIB_OUTPUT_NAME)
       ${CMAKE_DL_LIBS}
       ${CMAKE_THREAD_LIBS_INIT}
       LLVMOffload
+      LLVMObject
   )
 
   set_target_properties(${LIB_TARGET_NAME}
@@ -93,6 +96,7 @@ set(LIBSYCL_SOURCES
     "detail/device_impl.cpp"
     "detail/global_objects.cpp"
     "detail/platform_impl.cpp"
+    "detail/program_manager.cpp"
     "detail/queue_impl.cpp"
     "detail/offload/offload_utils.cpp"
     "detail/offload/offload_topology.cpp"

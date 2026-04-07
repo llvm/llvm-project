@@ -232,6 +232,35 @@ void OmpStructureChecker::CheckSIMDNest(const parser::OpenMPConstruct &c) {
   }
 }
 
+void OmpStructureChecker::CheckRectangularNest(
+    const parser::OmpDirectiveSpecification &spec, const LoopSequence &nest) {
+  unsigned version{context_.langOptions().OpenMPVersion};
+  auto depth{GetRectangularNestDepthWithReason(spec, version)};
+  if (!depth || *depth.value == 0) {
+    return;
+  }
+
+  int64_t height{0};
+  std::vector<const LoopSequence *> outer;
+  for (const LoopSequence *n{&nest}; n;) {
+    if (n->owner()) {
+      WithReason<bool> rect{n->isRectangular(outer)};
+      if (!rect.value.value_or(true)) {
+        auto &msg{context_.Say(spec.DirName().source,
+            "This construct requires a rectangular loop nest, but the associated nest is not"_err_en_US)};
+        depth.reason.AttachTo(msg);
+        rect.reason.AttachTo(msg);
+      }
+      outer.push_back(n);
+    }
+    height += n->height().value.value_or(1);
+    if (height >= *depth.value) {
+      break;
+    }
+    n = n->children().empty() ? nullptr : &n->children().front();
+  }
+}
+
 void OmpStructureChecker::CheckNestedConstruct(
     const parser::OpenMPLoopConstruct &x) {
   const parser::OmpDirectiveSpecification &beginSpec{x.BeginDir()};
@@ -267,7 +296,6 @@ void OmpStructureChecker::CheckNestedConstruct(
   }
 
   LoopSequence sequence(body, version, true);
-
   auto assoc{llvm::omp::getDirectiveAssociation(dir)};
   auto needRange{GetAffectedLoopRangeWithReason(beginSpec, version)};
   auto haveLength{sequence.length()};
@@ -312,6 +340,8 @@ void OmpStructureChecker::CheckNestedConstruct(
             perfectTxt, *needDepth.value, perfectTxt, *haveDepth.value)};
         haveDepth.reason.AttachTo(msg);
         needDepth.reason.AttachTo(msg);
+      } else {
+        CheckRectangularNest(beginSpec, sequence);
       }
     }
 
@@ -373,15 +403,6 @@ void OmpStructureChecker::Enter(const parser::OpenMPLoopConstruct &x) {
   }
 
   if (beginName.v == llvm::omp::Directive::OMPD_do) {
-    // 2.7.1 do-clause -> private-clause |
-    //                    firstprivate-clause |
-    //                    lastprivate-clause |
-    //                    linear-clause |
-    //                    reduction-clause |
-    //                    schedule-clause |
-    //                    collapse-clause |
-    //                    ordered-clause
-
     // nesting check
     HasInvalidWorksharingNesting(beginName, llvm::omp::nestedWorkshareErrSet);
   }

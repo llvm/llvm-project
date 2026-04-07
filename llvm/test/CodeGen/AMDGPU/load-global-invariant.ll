@@ -7,6 +7,9 @@
 define amdgpu_kernel void @load_constant_v3i64(ptr addrspace(1) %dst, ptr addrspace(4) %src) #0 {
 ; CHECK-LABEL: load_constant_v3i64:
 ; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x8
 ; CHECK-NEXT:    v_mov_b32_e32 v4, 0
 ; CHECK-NEXT:    s_load_dwordx2 s[4:5], s[8:9], 0x0
 ; CHECK-NEXT:    s_load_dwordx2 s[6:7], s[8:9], 0x8
@@ -32,7 +35,11 @@ define amdgpu_kernel void @load_constant_v3i64(ptr addrspace(1) %dst, ptr addrsp
 define amdgpu_kernel void @load_global_v3i64(ptr addrspace(1) %dst, ptr addrspace(1) %src) #0 {
 ; CHECK-LABEL: load_global_v3i64:
 ; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x8
 ; CHECK-NEXT:    v_mov_b32_e32 v6, 0
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; CHECK-NEXT:    s_load_dwordx2 s[2:3], s[8:9], 0x8
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
@@ -50,6 +57,9 @@ define amdgpu_kernel void @load_global_v3i64(ptr addrspace(1) %dst, ptr addrspac
 define amdgpu_kernel void @load_global_v3i64_invariant(ptr addrspace(1) %dst, ptr addrspace(1) %src) #0 {
 ; CHECK-LABEL: load_global_v3i64_invariant:
 ; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x8
 ; CHECK-NEXT:    v_mov_b32_e32 v4, 0
 ; CHECK-NEXT:    s_load_dwordx2 s[4:5], s[8:9], 0x0
 ; CHECK-NEXT:    s_load_dwordx2 s[6:7], s[8:9], 0x8

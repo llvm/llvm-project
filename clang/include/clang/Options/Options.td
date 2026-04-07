@@ -1768,10 +1768,10 @@ defm gnu_inline_asm : BoolFOption<"gnu-inline-asm",
   PosFlag<SetTrue>>;
 
 def fno_profile_sample_use : Flag<["-"], "fno-profile-sample-use">, Group<f_Group>,
-    Visibility<[ClangOption, CLOption]>;
+    Visibility<[ClangOption, CLOption, FlangOption, FC1Option]>;
 def fprofile_sample_use_EQ : Joined<["-"], "fprofile-sample-use=">,
     Group<f_Group>,
-    Visibility<[ClangOption, CLOption, CC1Option]>,
+    Visibility<[ClangOption, CLOption, CC1Option, FlangOption, FC1Option]>,
     HelpText<"Enable sample-based profile guided optimizations">,
     MarshallingInfoString<CodeGenOpts<"SampleProfileFile">>;
 def fprofile_sample_accurate : Flag<["-"], "fprofile-sample-accurate">,
@@ -2236,6 +2236,13 @@ defm diagnostics_show_note_include_stack : BoolFOption<"diagnostics-show-note-in
     DiagnosticOpts<"ShowNoteIncludeStack">, DefaultFalse,
     PosFlag<SetTrue, [], [ClangOption], "Display include stacks for diagnostic notes">,
     NegFlag<SetFalse>, BothFlags<[], [ClangOption, CC1Option]>>;
+defm diagnostics_show_inlining_chain
+    : BoolFOption<"diagnostics-show-inlining-chain",
+                  CodeGenOpts<"ShowInliningChain">, DefaultFalse,
+                  PosFlag<SetTrue, [], [ClangOption, CC1Option],
+                          "Show inlining chain notes for "
+                          "[[gnu::warning/error]] diagnostics">,
+                  NegFlag<SetFalse, [], [ClangOption, CC1Option]>>;
 def fdiagnostics_format_EQ : Joined<["-"], "fdiagnostics-format=">, Group<f_clang_Group>;
 def fdiagnostics_show_category_EQ : Joined<["-"], "fdiagnostics-show-category=">, Group<f_clang_Group>;
 def fdiagnostics_show_template_tree : Flag<["-"], "fdiagnostics-show-template-tree">,
@@ -5673,9 +5680,13 @@ def mno_bti_at_return_twice : Flag<["-"], "mno-bti-at-return-twice">,
   HelpText<"Do not add a BTI instruction after a setjmp or other"
            " return-twice construct (Arm/AArch64 only)">;
 
-foreach i = {1-31} in
+foreach i = {1-7,9-15,18,20-28} in
   def ffixed_x#i : Flag<["-"], "ffixed-x"#i>, Group<m_Group>,
     HelpText<"Reserve the x"#i#" register (AArch64/RISC-V only)">;
+
+foreach i = {8,16,17,19,29-31} in
+  def ffixed_x#i : Flag<["-"], "ffixed-x"#i>, Group<m_Group>,
+    HelpText<"Reserve the x"#i#" register (RISC-V only)">;
 
 def mlr_for_calls_only : Flag<["-"], "mlr-for-calls-only">, Group<m_aarch64_Features_Group>,
   HelpText<"Do not allocate the LR register for general purpose usage, only for calls. (AArch64 only)">;
@@ -6000,10 +6011,13 @@ def mrelax_all : Flag<["-"], "mrelax-all">, Group<m_Group>,
   MarshallingInfoFlag<CodeGenOpts<"RelaxAll">>;
 def mincremental_linker_compatible : Flag<["-"], "mincremental-linker-compatible">, Group<m_Group>,
   Visibility<[ClangOption, CC1Option, CC1AsOption]>,
+  Default<"T.isDefaultIncrementalLinkerCompatibleByDefault()">,
   HelpText<"(integrated-as) Emit an object file which can be used with an incremental linker">,
   MarshallingInfoFlag<CodeGenOpts<"IncrementalLinkerCompatible">>;
 def mno_incremental_linker_compatible : Flag<["-"], "mno-incremental-linker-compatible">, Group<m_Group>,
-  HelpText<"(integrated-as) Emit an object file which cannot be used with an incremental linker">;
+  Visibility<[ClangOption, CC1Option, CC1AsOption]>,
+  HelpText<"(integrated-as) Emit an object file which cannot be used with an incremental linker">,
+  MarshallingInfoNegativeFlag<CodeGenOpts<"IncrementalLinkerCompatible">>;
 def mrtd : Flag<["-"], "mrtd">, Group<m_Group>,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Make StdCall calling convention the default">;

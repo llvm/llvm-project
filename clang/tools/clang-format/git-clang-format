@@ -58,6 +58,11 @@ The following git-config settings set the default of the corresponding option:
   clangFormat.commit
   clangFormat.extensions
   clangFormat.style
+
+When running inside a pre-commit CI environment (i.e., no commits are given
+on the command line and the PRE_COMMIT_FROM_REF and PRE_COMMIT_TO_REF
+environment variables are set), the diff range is taken from those variables
+and --diff is implied.
 """
 
 # Name of the temporary index file in which save the output of clang-format.
@@ -222,6 +227,16 @@ def main():
         help="if specified, only consider differences in these files",
     )
     opts = p.parse_args(argv)
+
+    # When no commits are given explicitly and the pre-commit CI framework's
+    # environment variables are set, use them to define the diff range.
+    if not opts.args and not dash_dash:
+        from_ref = os.environ.get('PRE_COMMIT_FROM_REF')
+        to_ref = os.environ.get('PRE_COMMIT_TO_REF')
+        if from_ref and to_ref:
+            opts.args = [from_ref, to_ref]
+            if not opts.diff and not opts.diffstat:
+                opts.diff = True
 
     opts.verbose -= opts.quiet
     del opts.quiet

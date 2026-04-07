@@ -140,7 +140,8 @@ def DICompileUnitAttr : DialectAttribute<(attr
   EnumClassFlag<"DINameTableKind", "getNameTableKind()">:$_rawNameTableKind,
   LocalVar<"DINameTableKind",
            "(DINameTableKind)_rawNameTableKind">:$nameTableKind,
-  OptionalAttribute<"StringAttr">:$splitDebugFilename
+  OptionalAttribute<"StringAttr">:$splitDebugFilename,
+  OptionalArrayRef<"DINodeAttr">:$importedEntities
 )>;
 
 //===----------------------------------------------------------------------===//

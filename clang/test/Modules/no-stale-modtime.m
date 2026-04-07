@@ -23,8 +23,7 @@
 // RUN:     -I %t -fsyntax-only %t/main.m -Rmodule-build -verify
 
 //--- b.h
-@import l;
-@import r;
+@import l; @import r;
 
 //--- l.h
 @import t; // fromt l

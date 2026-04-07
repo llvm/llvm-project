@@ -1272,7 +1272,7 @@ static bool callingConvSupported(CallingConv::ID CallConv) {
          CallConv == CallingConv::PreserveAll ||
          CallConv == CallingConv::CXX_FAST_TLS ||
          CallConv == CallingConv::WASM_EmscriptenInvoke ||
-         CallConv == CallingConv::Swift;
+         CallConv == CallingConv::Swift || CallConv == CallingConv::SwiftTail;
 }
 
 SDValue
@@ -1359,12 +1359,14 @@ WebAssemblyTargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   bool HasSwiftSelfArg = false;
   bool HasSwiftErrorArg = false;
+  bool HasSwiftAsyncArg = false;
   unsigned NumFixedArgs = 0;
   for (unsigned I = 0; I < Outs.size(); ++I) {
     const ISD::OutputArg &Out = Outs[I];
     SDValue &OutVal = OutVals[I];
     HasSwiftSelfArg |= Out.Flags.isSwiftSelf();
     HasSwiftErrorArg |= Out.Flags.isSwiftError();
+    HasSwiftAsyncArg |= Out.Flags.isSwiftAsync();
     if (Out.Flags.isNest())
       fail(DL, DAG, "WebAssembly hasn't implemented nest arguments");
     if (Out.Flags.isInAlloca())
@@ -1395,11 +1397,11 @@ WebAssemblyTargetLowering::LowerCall(CallLoweringInfo &CLI,
   bool IsVarArg = CLI.IsVarArg;
   auto PtrVT = getPointerTy(Layout);
 
-  // For swiftcc, emit additional swiftself and swifterror arguments
-  // if there aren't. These additional arguments are also added for callee
-  // signature They are necessary to match callee and caller signature for
-  // indirect call.
-  if (CallConv == CallingConv::Swift) {
+  // For swiftcc and swifttailcc, emit additional swiftself, swifterror, and
+  // (for swifttailcc) swiftasync arguments if there aren't. These additional
+  // arguments are also added for callee signature. They are necessary to match
+  // callee and caller signature for indirect call.
+  if (CallConv == CallingConv::Swift || CallConv == CallingConv::SwiftTail) {
     Type *PtrTy = PointerType::getUnqual(*DAG.getContext());
     if (!HasSwiftSelfArg) {
       NumFixedArgs++;
@@ -1414,6 +1416,15 @@ WebAssemblyTargetLowering::LowerCall(CallLoweringInfo &CLI,
       NumFixedArgs++;
       ISD::ArgFlagsTy Flags;
       Flags.setSwiftError();
+      ISD::OutputArg Arg(Flags, PtrVT, EVT(PtrVT), PtrTy, 0, 0);
+      CLI.Outs.push_back(Arg);
+      SDValue ArgVal = DAG.getUNDEF(PtrVT);
+      CLI.OutVals.push_back(ArgVal);
+    }
+    if (CallConv == CallingConv::SwiftTail && !HasSwiftAsyncArg) {
+      NumFixedArgs++;
+      ISD::ArgFlagsTy Flags;
+      Flags.setSwiftAsync();
       ISD::OutputArg Arg(Flags, PtrVT, EVT(PtrVT), PtrTy, 0, 0);
       CLI.Outs.push_back(Arg);
       SDValue ArgVal = DAG.getUNDEF(PtrVT);
@@ -1614,9 +1625,11 @@ SDValue WebAssemblyTargetLowering::LowerFormalArguments(
 
   bool HasSwiftErrorArg = false;
   bool HasSwiftSelfArg = false;
+  bool HasSwiftAsyncArg = false;
   for (const ISD::InputArg &In : Ins) {
     HasSwiftSelfArg |= In.Flags.isSwiftSelf();
     HasSwiftErrorArg |= In.Flags.isSwiftError();
+    HasSwiftAsyncArg |= In.Flags.isSwiftAsync();
     if (In.Flags.isInAlloca())
       fail(DL, DAG, "WebAssembly hasn't implemented inalloca arguments");
     if (In.Flags.isNest())
@@ -1636,16 +1649,19 @@ SDValue WebAssemblyTargetLowering::LowerFormalArguments(
     MFI->addParam(In.VT);
   }
 
-  // For swiftcc, emit additional swiftself and swifterror arguments
-  // if there aren't. These additional arguments are also added for callee
-  // signature They are necessary to match callee and caller signature for
-  // indirect call.
+  // For swiftcc and swifttailcc, emit additional swiftself, swifterror, and
+  // (for swifttailcc) swiftasync arguments if there aren't. These additional
+  // arguments are also added for callee signature. They are necessary to match
+  // callee and caller signature for indirect call.
   auto PtrVT = getPointerTy(MF.getDataLayout());
-  if (CallConv == CallingConv::Swift) {
+  if (CallConv == CallingConv::Swift || CallConv == CallingConv::SwiftTail) {
     if (!HasSwiftSelfArg) {
       MFI->addParam(PtrVT);
     }
     if (!HasSwiftErrorArg) {
+      MFI->addParam(PtrVT);
+    }
+    if (CallConv == CallingConv::SwiftTail && !HasSwiftAsyncArg) {
       MFI->addParam(PtrVT);
     }
   }
@@ -2992,6 +3008,29 @@ performVectorExtendCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
   assert(N->getOpcode() == ISD::SIGN_EXTEND ||
          N->getOpcode() == ISD::ZERO_EXTEND);
 
+  EVT ResVT = N->getValueType(0);
+  bool IsSext = N->getOpcode() == ISD::SIGN_EXTEND;
+  SDLoc DL(N);
+
+  if (ResVT == MVT::v16i32 && N->getOperand(0)->getValueType(0) == MVT::v16i8) {
+    // Use a tree of extend low/high to split and extend the input in two
+    // layers to avoid doing several shuffles and even more extends.
+    unsigned LowOp =
+        IsSext ? WebAssemblyISD::EXTEND_LOW_S : WebAssemblyISD::EXTEND_LOW_U;
+    unsigned HighOp =
+        IsSext ? WebAssemblyISD::EXTEND_HIGH_S : WebAssemblyISD::EXTEND_HIGH_U;
+    SDValue Input = N->getOperand(0);
+    SDValue LowHalf = DAG.getNode(LowOp, DL, MVT::v8i16, Input);
+    SDValue HighHalf = DAG.getNode(HighOp, DL, MVT::v8i16, Input);
+    SDValue Subvectors[] = {
+        DAG.getNode(LowOp, DL, MVT::v4i32, LowHalf),
+        DAG.getNode(HighOp, DL, MVT::v4i32, LowHalf),
+        DAG.getNode(LowOp, DL, MVT::v4i32, HighHalf),
+        DAG.getNode(HighOp, DL, MVT::v4i32, HighHalf),
+    };
+    return DAG.getNode(ISD::CONCAT_VECTORS, DL, ResVT, Subvectors);
+  }
+
   // Combine ({s,z}ext (extract_subvector src, i)) into a widening operation if
   // possible before the extract_subvector can be expanded.
   auto Extract = N->getOperand(0);
@@ -3005,7 +3044,6 @@ performVectorExtendCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
 
   // Only v8i8, v4i16, and v2i32 extracts can be widened, and only if the
   // extracted subvector is the low or high half of its source.
-  EVT ResVT = N->getValueType(0);
   if (ResVT == MVT::v8i16) {
     if (Extract.getValueType() != MVT::v8i8 ||
         Source.getValueType() != MVT::v16i8 || (Index != 0 && Index != 8))
@@ -3022,7 +3060,6 @@ performVectorExtendCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
     return SDValue();
   }
 
-  bool IsSext = N->getOpcode() == ISD::SIGN_EXTEND;
   bool IsLow = Index == 0;
 
   unsigned Op = IsSext ? (IsLow ? WebAssemblyISD::EXTEND_LOW_S
@@ -3030,7 +3067,7 @@ performVectorExtendCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
                        : (IsLow ? WebAssemblyISD::EXTEND_LOW_U
                                 : WebAssemblyISD::EXTEND_HIGH_U);
 
-  return DAG.getNode(Op, SDLoc(N), ResVT, Source);
+  return DAG.getNode(Op, DL, ResVT, Source);
 }
 
 static SDValue
@@ -3787,7 +3824,7 @@ static SDValue performShiftCombine(SDNode *N,
     if (ShiftAmt.uge(MaxValidShift))
       return SDValue();
 
-    APInt MulAmt = APInt(BitWidth, 1).shl(ShiftAmt);
+    APInt MulAmt = APInt::getOneBitSet(BitWidth, ShiftAmt.getZExtValue());
     MulConsts.push_back(DAG.getConstant(MulAmt, DL, FromVT.getScalarType(),
                                         /*isTarget=*/false, /*isOpaque=*/true));
   }
