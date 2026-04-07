@@ -483,32 +483,6 @@ mfloat8x16_t test_vrev16q_mf8(mfloat8x16_t a) {
   return vrev16q_mf8(a);
 }
 
-// CHECK-LABEL: define dso_local <8 x i8> @test_vbsl_mf8(
-// CHECK-SAME: <8 x i8> noundef [[V1:%.*]], <8 x i8> [[V2:%.*]], <8 x i8> [[V3:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[VBSL_I:%.*]] = and <8 x i8> [[V1]], [[V2]]
-// CHECK-NEXT:    [[TMP0:%.*]] = xor <8 x i8> [[V1]], splat (i8 -1)
-// CHECK-NEXT:    [[VBSL1_I:%.*]] = and <8 x i8> [[TMP0]], [[V3]]
-// CHECK-NEXT:    [[VBSL2_I:%.*]] = or <8 x i8> [[VBSL_I]], [[VBSL1_I]]
-// CHECK-NEXT:    ret <8 x i8> [[VBSL2_I]]
-//
-mfloat8x8_t test_vbsl_mf8(uint8x8_t v1, mfloat8x8_t v2, mfloat8x8_t v3) {
-  return vbsl_mf8(v1, v2, v3);
-}
-
-// CHECK-LABEL: define dso_local <16 x i8> @test_vbslq_mf8(
-// CHECK-SAME: <16 x i8> noundef [[V1:%.*]], <16 x i8> [[V2:%.*]], <16 x i8> [[V3:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[VBSL_I:%.*]] = and <16 x i8> [[V1]], [[V2]]
-// CHECK-NEXT:    [[TMP0:%.*]] = xor <16 x i8> [[V1]], splat (i8 -1)
-// CHECK-NEXT:    [[VBSL1_I:%.*]] = and <16 x i8> [[TMP0]], [[V3]]
-// CHECK-NEXT:    [[VBSL2_I:%.*]] = or <16 x i8> [[VBSL_I]], [[VBSL1_I]]
-// CHECK-NEXT:    ret <16 x i8> [[VBSL2_I]]
-//
-mfloat8x16_t test_vbslq_mf8(uint8x16_t v1, mfloat8x16_t v2, mfloat8x16_t v3) {
-  return vbslq_mf8(v1, v2, v3);
-}
-
 // CHECK-LABEL: define dso_local %struct.mfloat8x8x2_t @test_vtrn_mf8(
 // CHECK-SAME: <8 x i8> [[A:%.*]], <8 x i8> [[B:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]

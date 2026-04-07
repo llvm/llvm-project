@@ -1705,3 +1705,776 @@ uint64x1_t test_vshl_n_u64(uint64x1_t a) {
 // LLVM:    ret <1 x i64> [[VSHL_N]]
  return vshl_n_u64(a, 1);
 }
+
+//===------------------------------------------------------===//
+// 2.1.8.5 Bitwise select 
+// https://arm-software.github.io/acle/neon_intrinsics/advsimd.html#markdown-toc-bitwise-select
+//===------------------------------------------------------===//
+
+// LLVM-LABEL: @test_vbsl_s8(
+// CIR-LABEL: @vbsl_s8(
+int8x8_t test_vbsl_s8(uint8x8_t v1, int8x8_t v2, int8x8_t v3) {
+  // CIR: [[MASK_PTR:%.*]] = cir.cast bitcast %{{.*}} : !cir.ptr<!cir.vector<8 x !u8i>> -> !cir.ptr<!cir.vector<8 x !s8i>>
+  // CIR: [[AND:%.*]] = cir.and %{{.*}}, %{{.*}} : !cir.vector<8 x !s8i>
+  // CIR: [[NOT:%.*]] = cir.not %{{.*}} : !cir.vector<8 x !s8i>
+  // CIR: [[AND2:%.*]] = cir.and [[NOT]], %{{.*}} : !cir.vector<8 x !s8i>
+  // CIR: [[RES:%.*]] = cir.or [[AND]], [[AND2]] : !cir.vector<8 x !s8i>
+
+  // LLVM-SAME: <8 x i8> {{.*}} [[V1:%.*]], <8 x i8> {{.*}} [[V2:%.*]], <8 x i8> {{.*}} [[V3:%.*]]) {{.*}} {
+  // LLVM:      [[VBSL_I:%.*]] = and <8 x i8> [[V1]], [[V2]]
+  // LLVM: [[TMP0:%.*]] = xor <8 x i8> [[V1]], splat (i8 -1)
+  // LLVM: [[VBSL1_I:%.*]] = and <8 x i8> [[TMP0]], [[V3]]
+  // LLVM: [[VBSL2_I:%.*]] = or <8 x i8> [[VBSL_I]], [[VBSL1_I]]
+  // LLVM: ret <8 x i8> [[VBSL2_I]]
+  return vbsl_s8(v1, v2, v3);
+}
+  
+// LLVM-LABEL: @test_vbslq_s8(
+// CIR-LABEL: @vbslq_s8(
+int8x16_t test_vbslq_s8(uint8x16_t v1, int8x16_t v2, int8x16_t v3) {
+  // CIR: cir.cast bitcast %{{.*}} : !cir.ptr<!cir.vector<16 x !u8i>> -> !cir.ptr<!cir.vector<16 x !s8i>>
+  // CIR: [[AND:%.*]] = cir.and %{{.*}}, %{{.*}} : !cir.vector<16 x !s8i>
+  // CIR: [[NOT:%.*]] = cir.not %{{.*}} : !cir.vector<16 x !s8i>
+  // CIR: [[AND2:%.*]] = cir.and [[NOT]], %{{.*}} : !cir.vector<16 x !s8i>
+  // CIR: cir.or [[AND]], [[AND2]] : !cir.vector<16 x !s8i>
+
+  // LLVM-SAME: <16 x i8> {{.*}} [[V1:%.*]], <16 x i8> {{.*}} [[V2:%.*]], <16 x i8> {{.*}} [[V3:%.*]]) {{.*}} {
+  // LLVM:      [[VBSL_I:%.*]] = and <16 x i8> [[V1]], [[V2]]
+  // LLVM: [[TMP0:%.*]] = xor <16 x i8> [[V1]], splat (i8 -1)
+  // LLVM: [[VBSL1_I:%.*]] = and <16 x i8> [[TMP0]], [[V3]]
+  // LLVM: [[VBSL2_I:%.*]] = or <16 x i8> [[VBSL_I]], [[VBSL1_I]]
+  // LLVM: ret <16 x i8> [[VBSL2_I]]
+  return vbslq_s8(v1, v2, v3);
+}
+
+// LLVM-LABEL: @test_vbsl_s16(
+// CIR-LABEL: @vbsl_s16(
+int8x8_t test_vbsl_s16(uint16x4_t v1, int16x4_t v2, int16x4_t v3) {
+  // CIR: cir.cast bitcast %{{.*}} : !cir.ptr<!cir.vector<4 x !u16i>> -> !cir.ptr<!cir.vector<8 x !s8i>>
+  // CIR: cir.cast bitcast %{{.*}} : !cir.ptr<!cir.vector<4 x !s16i>> -> !cir.ptr<!cir.vector<8 x !s8i>>
+  // CIR: cir.cast bitcast %{{.*}} : !cir.ptr<!cir.vector<4 x !s16i>> -> !cir.ptr<!cir.vector<8 x !s8i>>
+  // CIR: [[MASK:%.*]] = cir.cast bitcast %{{.*}} : !cir.vector<8 x !s8i> -> !cir.vector<4 x !s16i>
+  // CIR: [[VAL1:%.*]] = cir.cast bitcast %{{.*}} : !cir.vector<8 x !s8i> -> !cir.vector<4 x !s16i>
+  // CIR: [[VAL2:%.*]] = cir.cast bitcast %{{.*}} : !cir.vector<8 x !s8i> -> !cir.vector<4 x !s16i>
+  // CIR: [[AND:%.*]] = cir.and [[MASK]], [[VAL1]] : !cir.vector<4 x !s16i>
+  // CIR: [[NOT:%.*]] = cir.not [[MASK]] : !cir.vector<4 x !s16i>
+  // CIR: [[AND2:%.*]] = cir.and [[NOT]], [[VAL2]] : !cir.vector<4 x !s16i>
+  // CIR: [[RES:%.*]] = cir.or [[AND]], [[AND2]] : !cir.vector<4 x !s16i>
+
+  // LLVM-SAME: <4 x i16> {{.*}} [[V1:%.*]], <4 x i16> {{.*}} [[V2:%.*]], <4 x i16> {{.*}} [[V3:%.*]]) {{.*}} {
+  // LLVM:      [[TMP0:%.*]] = bitcast <4 x i16> [[V1]] to <8 x i8>
+  // LLVM: [[TMP1:%.*]] = bitcast <4 x i16> [[V2]] to <8 x i8>
+  // LLVM: [[TMP2:%.*]] = bitcast <4 x i16> [[V3]] to <8 x i8>
+  // LLVM: [[VBSL_I:%.*]] = bitcast <8 x i8> [[TMP0]] to <4 x i16>
+  // LLVM: [[VBSL1_I:%.*]] = bitcast <8 x i8> [[TMP1]] to <4 x i16>
+  // LLVM: [[VBSL2_I:%.*]] = bitcast <8 x i8> [[TMP2]] to <4 x i16>
+  // LLVM: [[VBSL3_I:%.*]] = and <4 x i16> [[VBSL_I]], [[VBSL1_I]]
+  // LLVM: [[TMP3:%.*]] = xor <4 x i16> [[VBSL_I]], splat (i16 -1)
+  // LLVM: [[VBSL4_I:%.*]] = and <4 x i16> [[TMP3]], [[VBSL2_I]]
+  // LLVM: [[VBSL5_I:%.*]] = or <4 x i16> [[VBSL3_I]], [[VBSL4_I]]
+  // LLVM: [[TMP4:%.*]] = bitcast <4 x i16> [[VBSL5_I]] to <8 x i8>
+  // LLVM: ret <8 x i8> [[TMP4]]
+  return (int8x8_t)vbsl_s16(v1, v2, v3);
+}
+
+// LLVM-LABEL: @test_vbslq_s16(
+// CIR-LABEL: @vbslq_s16(
+int16x8_t test_vbslq_s16(uint16x8_t v1, int16x8_t v2, int16x8_t v3) {
+  // CIR: cir.cast bitcast %{{.*}} : !cir.ptr<!cir.vector<8 x !u16i>> -> !cir.ptr<!cir.vector<16 x !s8i>>
+  // CIR: cir.cast bitcast %{{.*}} : !cir.ptr<!cir.vector<8 x !s16i>> -> !cir.ptr<!cir.vector<16 x !s8i>>
+  // CIR: cir.cast bitcast %{{.*}} : !cir.ptr<!cir.vector<8 x !s16i>> -> !cir.ptr<!cir.vector<16 x !s8i>>
+  // CIR: [[MASK:%.*]] = cir.cast bitcast %{{.*}} : !cir.vector<16 x !s8i> -> !cir.vector<8 x !s16i>
+  // CIR: [[VAL1:%.*]] = cir.cast bitcast %{{.*}} : !cir.vector<16 x !s8i> -> !cir.vector<8 x !s16i>
+  // CIR: [[VAL2:%.*]] = cir.cast bitcast %{{.*}} : !cir.vector<16 x !s8i> -> !cir.vector<8 x !s16i>
+  // CIR: [[AND:%.*]] = cir.and [[MASK]], [[VAL1]] : !cir.vector<8 x !s16i>
+  // CIR: [[NOT:%.*]] = cir.not [[MASK]] : !cir.vector<8 x !s16i>
+  // CIR: [[AND2:%.*]] = cir.and [[NOT]], [[VAL2]] : !cir.vector<8 x !s16i>
+  // CIR: [[RES:%.*]] = cir.or [[AND]], [[AND2]] : !cir.vector<8 x !s16i>
+
+  // LLVM-SAME: <8 x i16> {{.*}} [[V1:%.*]], <8 x i16> {{.*}} [[V2:%.*]], <8 x i16> {{.*}} [[V3:%.*]]) {{.*}} {
+  // LLVM:      [[TMP0:%.*]] = bitcast <8 x i16> [[V1]] to <16 x i8>
+  // LLVM: [[TMP1:%.*]] = bitcast <8 x i16> [[V2]] to <16 x i8>
+  // LLVM: [[TMP2:%.*]] = bitcast <8 x i16> [[V3]] to <16 x i8>
+  // LLVM: [[VBSL_I:%.*]] = bitcast <16 x i8> [[TMP0]] to <8 x i16>
+  // LLVM: [[VBSL1_I:%.*]] = bitcast <16 x i8> [[TMP1]] to <8 x i16>
+  // LLVM: [[VBSL2_I:%.*]] = bitcast <16 x i8> [[TMP2]] to <8 x i16>
+  // LLVM: [[VBSL3_I:%.*]] = and <8 x i16> [[VBSL_I]], [[VBSL1_I]]
+  // LLVM: [[TMP3:%.*]] = xor <8 x i16> [[VBSL_I]], splat (i16 -1)
+  // LLVM: [[VBSL4_I:%.*]] = and <8 x i16> [[TMP3]], [[VBSL2_I]]
+  // LLVM: [[VBSL5_I:%.*]] = or <8 x i16> [[VBSL3_I]], [[VBSL4_I]]
+  // LLVM: ret <8 x i16> [[VBSL5_I]]
+  return vbslq_s16(v1, v2, v3);
+}
+
+// LLVM-LABEL: @test_vbsl_s32(
+// CIR-LABEL: @vbsl_s32(
+int32x2_t test_vbsl_s32(uint32x2_t v1, int32x2_t v2, int32x2_t v3) {
+  // CIR: cir.cast bitcast %{{.*}} : !cir.ptr<!cir.vector<2 x !u32i>> -> !cir.ptr<!cir.vector<8 x !s8i>>
+  // CIR: cir.cast bitcast %{{.*}} : !cir.ptr<!cir.vector<2 x !s32i>> -> !cir.ptr<!cir.vector<8 x !s8i>>
+  // CIR: cir.cast bitcast %{{.*}} : !cir.ptr<!cir.vector<2 x !s32i>> -> !cir.ptr<!cir.vector<8 x !s8i>>
+  // CIR: [[MASK:%.*]] = cir.cast bitcast %{{.*}} : !cir.vector<8 x !s8i> -> !cir.vector<2 x !s32i>
+  // CIR: [[VAL1:%.*]] = cir.cast bitcast %{{.*}} : !cir.vector<8 x !s8i> -> !cir.vector<2 x !s32i>
+  // CIR: [[VAL2:%.*]] = cir.cast bitcast %{{.*}} : !cir.vector<8 x !s8i> -> !cir.vector<2 x !s32i>
+  // CIR: [[AND:%.*]] = cir.and [[MASK]], [[VAL1]] : !cir.vector<2 x !s32i>
+  // CIR: [[NOT:%.*]] = cir.not [[MASK]] : !cir.vector<2 x !s32i>
+  // CIR: [[AND2:%.*]] = cir.and [[NOT]], [[VAL2]] : !cir.vector<2 x !s32i>
+  // CIR: [[RES:%.*]] = cir.or [[AND]], [[AND2]] : !cir.vector<2 x !s32i>
+
+  // LLVM-SAME: <2 x i32> {{.*}} [[V1:%.*]], <2 x i32> {{.*}} [[V2:%.*]], <2 x i32> {{.*}} [[V3:%.*]]) {{.*}} {
+  // LLVM:      [[TMP0:%.*]] = bitcast <2 x i32> [[V1]] to <8 x i8>
+  // LLVM: [[TMP1:%.*]] = bitcast <2 x i32> [[V2]] to <8 x i8>
+  // LLVM: [[TMP2:%.*]] = bitcast <2 x i32> [[V3]] to <8 x i8>
+  // LLVM: [[VBSL_I:%.*]] = bitcast <8 x i8> [[TMP0]] to <2 x i32>
+  // LLVM: [[VBSL1_I:%.*]] = bitcast <8 x i8> [[TMP1]] to <2 x i32>
+  // LLVM: [[VBSL2_I:%.*]] = bitcast <8 x i8> [[TMP2]] to <2 x i32>
+  // LLVM: [[VBSL3_I:%.*]] = and <2 x i32> [[VBSL_I]], [[VBSL1_I]]
+  // LLVM: [[TMP3:%.*]] = xor <2 x i32> [[VBSL_I]], splat (i32 -1)
+  // LLVM: [[VBSL4_I:%.*]] = and <2 x i32> [[TMP3]], [[VBSL2_I]]
+  // LLVM: [[VBSL5_I:%.*]] = or <2 x i32> [[VBSL3_I]], [[VBSL4_I]]
+  // LLVM: ret <2 x i32> [[VBSL5_I]]
+  return vbsl_s32(v1, v2, v3);
+}
+
+// LLVM-LABEL: @test_vbslq_s32(
+// CIR-LABEL: @vbslq_s32(
+int32x4_t test_vbslq_s32(uint32x4_t v1, int32x4_t v2, int32x4_t v3) {
+  // CIR: cir.cast bitcast %{{.*}} : !cir.ptr<!cir.vector<4 x !u32i>> -> !cir.ptr<!cir.vector<16 x !s8i>>
+  // CIR: cir.cast bitcast %{{.*}} : !cir.ptr<!cir.vector<4 x !s32i>> -> !cir.ptr<!cir.vector<16 x !s8i>>
+  // CIR: cir.cast bitcast %{{.*}} : !cir.ptr<!cir.vector<4 x !s32i>> -> !cir.ptr<!cir.vector<16 x !s8i>>
+  // CIR: [[MASK:%.*]] = cir.cast bitcast %{{.*}} : !cir.vector<16 x !s8i> -> !cir.vector<4 x !s32i>
+  // CIR: [[VAL1:%.*]] = cir.cast bitcast %{{.*}} : !cir.vector<16 x !s8i> -> !cir.vector<4 x !s32i>
+  // CIR: [[VAL2:%.*]] = cir.cast bitcast %{{.*}} : !cir.vector<16 x !s8i> -> !cir.vector<4 x !s32i>
+  // CIR: [[AND:%.*]] = cir.and [[MASK]], [[VAL1]] : !cir.vector<4 x !s32i>
+  // CIR: [[NOT:%.*]] = cir.not [[MASK]] : !cir.vector<4 x !s32i>
+  // CIR: [[AND2:%.*]] = cir.and [[NOT]], [[VAL2]] : !cir.vector<4 x !s32i>
+  // CIR: [[RES:%.*]] = cir.or [[AND]], [[AND2]] : !cir.vector<4 x !s32i>
+
+  // LLVM-SAME: <4 x i32> {{.*}} [[V1:%.*]], <4 x i32> {{.*}} [[V2:%.*]], <4 x i32> {{.*}} [[V3:%.*]]) {{.*}} {
+  // LLVM:      [[TMP0:%.*]] = bitcast <4 x i32> [[V1]] to <16 x i8>
+  // LLVM: [[TMP1:%.*]] = bitcast <4 x i32> [[V2]] to <16 x i8>
+  // LLVM: [[TMP2:%.*]] = bitcast <4 x i32> [[V3]] to <16 x i8>
+  // LLVM: [[VBSL_I:%.*]] = bitcast <16 x i8> [[TMP0]] to <4 x i32>
+  // LLVM: [[VBSL1_I:%.*]] = bitcast <16 x i8> [[TMP1]] to <4 x i32>
+  // LLVM: [[VBSL2_I:%.*]] = bitcast <16 x i8> [[TMP2]] to <4 x i32>
+  // LLVM: [[VBSL3_I:%.*]] = and <4 x i32> [[VBSL_I]], [[VBSL1_I]]
+  // LLVM: [[TMP3:%.*]] = xor <4 x i32> [[VBSL_I]], splat (i32 -1)
+  // LLVM: [[VBSL4_I:%.*]] = and <4 x i32> [[TMP3]], [[VBSL2_I]]
+  // LLVM: [[VBSL5_I:%.*]] = or <4 x i32> [[VBSL3_I]], [[VBSL4_I]]
+  // LLVM: ret <4 x i32> [[VBSL5_I]]
+  return vbslq_s32(v1, v2, v3);
+}
+
+// LLVM-LABEL: @test_vbsl_s64(
+// CIR-LABEL: @vbsl_s64(
+int64x1_t test_vbsl_s64(uint64x1_t v1, int64x1_t v2, int64x1_t v3) {
+  // CIR: cir.cast bitcast %{{.*}} : !cir.ptr<!cir.vector<1 x !u64i>> -> !cir.ptr<!cir.vector<8 x !s8i>>
+  // CIR: cir.cast bitcast %{{.*}} : !cir.ptr<!cir.vector<1 x !s64i>> -> !cir.ptr<!cir.vector<8 x !s8i>>
+  // CIR: cir.cast bitcast %{{.*}} : !cir.ptr<!cir.vector<1 x !s64i>> -> !cir.ptr<!cir.vector<8 x !s8i>>
+  // CIR: [[MASK:%.*]] = cir.cast bitcast %{{.*}} : !cir.vector<8 x !s8i> -> !cir.vector<1 x !s64i>
+  // CIR: [[VAL1:%.*]] = cir.cast bitcast %{{.*}} : !cir.vector<8 x !s8i> -> !cir.vector<1 x !s64i>
+  // CIR: [[VAL2:%.*]] = cir.cast bitcast %{{.*}} : !cir.vector<8 x !s8i> -> !cir.vector<1 x !s64i>
+  // CIR: [[AND:%.*]] = cir.and [[MASK]], [[VAL1]] : !cir.vector<1 x !s64i>
+  // CIR: [[NOT:%.*]] = cir.not [[MASK]] : !cir.vector<1 x !s64i>
+  // CIR: [[AND2:%.*]] = cir.and [[NOT]], [[VAL2]] : !cir.vector<1 x !s64i>
+  // CIR: [[RES:%.*]] = cir.or [[AND]], [[AND2]] : !cir.vector<1 x !s64i>
+
+  // LLVM-SAME: <1 x i64> {{.*}} [[V1:%.*]], <1 x i64> {{.*}} [[V2:%.*]], <1 x i64> {{.*}} [[V3:%.*]]) {{.*}} {
+  // LLVM:      [[TMP0:%.*]] = bitcast <1 x i64> [[V1]] to <8 x i8>
+  // LLVM: [[TMP1:%.*]] = bitcast <1 x i64> [[V2]] to <8 x i8>
+  // LLVM: [[TMP2:%.*]] = bitcast <1 x i64> [[V3]] to <8 x i8>
+  // LLVM: [[VBSL_I:%.*]] = bitcast <8 x i8> [[TMP0]] to <1 x i64>
+  // LLVM: [[VBSL1_I:%.*]] = bitcast <8 x i8> [[TMP1]] to <1 x i64>
+  // LLVM: [[VBSL2_I:%.*]] = bitcast <8 x i8> [[TMP2]] to <1 x i64>
+  // LLVM: [[VBSL3_I:%.*]] = and <1 x i64> [[VBSL_I]], [[VBSL1_I]]
+  // LLVM: [[TMP3:%.*]] = xor <1 x i64> [[VBSL_I]], splat (i64 -1)
+  // LLVM: [[VBSL4_I:%.*]] = and <1 x i64> [[TMP3]], [[VBSL2_I]]
+  // LLVM: [[VBSL5_I:%.*]] = or <1 x i64> [[VBSL3_I]], [[VBSL4_I]]
+  // LLVM: ret <1 x i64> [[VBSL5_I]]
+  return vbsl_s64(v1, v2, v3);
+}
+
+// LLVM-LABEL: @test_vbslq_s64(
+// CIR-LABEL: @vbslq_s64(
+int64x2_t test_vbslq_s64(uint64x2_t v1, int64x2_t v2, int64x2_t v3) {
+  // CIR: cir.cast bitcast %{{.*}} : !cir.ptr<!cir.vector<2 x !u64i>> -> !cir.ptr<!cir.vector<16 x !s8i>>
+  // CIR: cir.cast bitcast %{{.*}} : !cir.ptr<!cir.vector<2 x !s64i>> -> !cir.ptr<!cir.vector<16 x !s8i>>
+  // CIR: cir.cast bitcast %{{.*}} : !cir.ptr<!cir.vector<2 x !s64i>> -> !cir.ptr<!cir.vector<16 x !s8i>>
+  // CIR: [[MASK:%.*]] = cir.cast bitcast %{{.*}} : !cir.vector<16 x !s8i> -> !cir.vector<2 x !s64i>
+  // CIR: [[VAL1:%.*]] = cir.cast bitcast %{{.*}} : !cir.vector<16 x !s8i> -> !cir.vector<2 x !s64i>
+  // CIR: [[VAL2:%.*]] = cir.cast bitcast %{{.*}} : !cir.vector<16 x !s8i> -> !cir.vector<2 x !s64i>
+  // CIR: [[AND:%.*]] = cir.and [[MASK]], [[VAL1]] : !cir.vector<2 x !s64i>
+  // CIR: [[NOT:%.*]] = cir.not [[MASK]] : !cir.vector<2 x !s64i>
+  // CIR: [[AND2:%.*]] = cir.and [[NOT]], [[VAL2]] : !cir.vector<2 x !s64i>
+  // CIR: [[RES:%.*]] = cir.or [[AND]], [[AND2]] : !cir.vector<2 x !s64i>
+
+  // LLVM-SAME: <2 x i64> {{.*}} [[V1:%.*]], <2 x i64> {{.*}} [[V2:%.*]], <2 x i64> {{.*}} [[V3:%.*]]) {{.*}} {
+  // LLVM:      [[TMP0:%.*]] = bitcast <2 x i64> [[V1]] to <16 x i8>
+  // LLVM: [[TMP1:%.*]] = bitcast <2 x i64> [[V2]] to <16 x i8>
+  // LLVM: [[TMP2:%.*]] = bitcast <2 x i64> [[V3]] to <16 x i8>
+  // LLVM: [[VBSL_I:%.*]] = bitcast <16 x i8> [[TMP0]] to <2 x i64>
+  // LLVM: [[VBSL1_I:%.*]] = bitcast <16 x i8> [[TMP1]] to <2 x i64>
+  // LLVM: [[VBSL2_I:%.*]] = bitcast <16 x i8> [[TMP2]] to <2 x i64>
+  // LLVM: [[VBSL3_I:%.*]] = and <2 x i64> [[VBSL_I]], [[VBSL1_I]]
+  // LLVM: [[TMP3:%.*]] = xor <2 x i64> [[VBSL_I]], splat (i64 -1)
+  // LLVM: [[VBSL4_I:%.*]] = and <2 x i64> [[TMP3]], [[VBSL2_I]]
+  // LLVM: [[VBSL5_I:%.*]] = or <2 x i64> [[VBSL3_I]], [[VBSL4_I]]
+  // LLVM: ret <2 x i64> [[VBSL5_I]]
+  return vbslq_s64(v1, v2, v3);
+}
+
+// LLVM-LABEL: @test_vbsl_u8(
+// CIR-LABEL: @vbsl_u8(
+uint8x8_t test_vbsl_u8(uint8x8_t v1, uint8x8_t v2, uint8x8_t v3) {
+  // CIR: cir.cast bitcast %{{.*}} : !cir.ptr<!cir.vector<8 x !u8i>> -> !cir.ptr<!cir.vector<8 x !s8i>>
+  // CIR: cir.cast bitcast %{{.*}} : !cir.ptr<!cir.vector<8 x !u8i>> -> !cir.ptr<!cir.vector<8 x !s8i>>
+  // CIR: cir.cast bitcast %{{.*}} : !cir.ptr<!cir.vector<8 x !u8i>> -> !cir.ptr<!cir.vector<8 x !s8i>>
+  // CIR: [[MASK:%.*]] = cir.cast bitcast %{{.*}} : !cir.vector<8 x !s8i> -> !cir.vector<8 x !u8i>
+  // CIR: [[VAL1:%.*]] = cir.cast bitcast %{{.*}} : !cir.vector<8 x !s8i> -> !cir.vector<8 x !u8i>
+  // CIR: [[VAL2:%.*]] = cir.cast bitcast %{{.*}} : !cir.vector<8 x !s8i> -> !cir.vector<8 x !u8i>
+  // CIR: [[AND:%.*]] = cir.and [[MASK]], [[VAL1]] : !cir.vector<8 x !u8i>
+  // CIR: [[NOT:%.*]] = cir.not [[MASK]] : !cir.vector<8 x !u8i>
+  // CIR: [[AND2:%.*]] = cir.and [[NOT]], [[VAL2]] : !cir.vector<8 x !u8i>
+  // CIR: [[RES:%.*]] = cir.or [[AND]], [[AND2]] : !cir.vector<8 x !u8i>
+
+  // LLVM-SAME: <8 x i8> {{.*}} [[V1:%.*]], <8 x i8> {{.*}} [[V2:%.*]], <8 x i8> {{.*}} [[V3:%.*]]) {{.*}} {
+  // LLVM:      [[VBSL_I:%.*]] = and <8 x i8> [[V1]], [[V2]]
+  // LLVM: [[TMP0:%.*]] = xor <8 x i8> [[V1]], splat (i8 -1)
+  // LLVM: [[VBSL1_I:%.*]] = and <8 x i8> [[TMP0]], [[V3]]
+  // LLVM: [[VBSL2_I:%.*]] = or <8 x i8> [[VBSL_I]], [[VBSL1_I]]
+  // LLVM: ret <8 x i8> [[VBSL2_I]]
+  return vbsl_u8(v1, v2, v3);
+}
+
+// LLVM-LABEL: @test_vbslq_u8(
+// CIR-LABEL: @vbslq_u8(
+uint8x16_t test_vbslq_u8(uint8x16_t v1, uint8x16_t v2, uint8x16_t v3) {
+  // CIR: cir.cast bitcast %{{.*}} : !cir.ptr<!cir.vector<16 x !u8i>> -> !cir.ptr<!cir.vector<16 x !s8i>>
+  // CIR: cir.cast bitcast %{{.*}} : !cir.ptr<!cir.vector<16 x !u8i>> -> !cir.ptr<!cir.vector<16 x !s8i>>
+  // CIR: cir.cast bitcast %{{.*}} : !cir.ptr<!cir.vector<16 x !u8i>> -> !cir.ptr<!cir.vector<16 x !s8i>>
+  // CIR: [[MASK:%.*]] = cir.cast bitcast %{{.*}} : !cir.vector<16 x !s8i> -> !cir.vector<16 x !u8i>
+  // CIR: [[VAL1:%.*]] = cir.cast bitcast %{{.*}} : !cir.vector<16 x !s8i> -> !cir.vector<16 x !u8i>
+  // CIR: [[VAL2:%.*]] = cir.cast bitcast %{{.*}} : !cir.vector<16 x !s8i> -> !cir.vector<16 x !u8i>
+  // CIR: [[AND:%.*]] = cir.and [[MASK]], [[VAL1]] : !cir.vector<16 x !u8i>
+  // CIR: [[NOT:%.*]] = cir.not [[MASK]] : !cir.vector<16 x !u8i>
+  // CIR: [[AND2:%.*]] = cir.and [[NOT]], [[VAL2]] : !cir.vector<16 x !u8i>
+  // CIR: [[RES:%.*]] = cir.or [[AND]], [[AND2]] : !cir.vector<16 x !u8i>
+
+  // LLVM-SAME: <16 x i8> {{.*}} [[V1:%.*]], <16 x i8> {{.*}} [[V2:%.*]], <16 x i8> {{.*}} [[V3:%.*]]) {{.*}} {
+  // LLVM:      [[VBSL_I:%.*]] = and <16 x i8> [[V1]], [[V2]]
+  // LLVM: [[TMP0:%.*]] = xor <16 x i8> [[V1]], splat (i8 -1)
+  // LLVM: [[VBSL1_I:%.*]] = and <16 x i8> [[TMP0]], [[V3]]
+  // LLVM: [[VBSL2_I:%.*]] = or <16 x i8> [[VBSL_I]], [[VBSL1_I]]
+  // LLVM: ret <16 x i8> [[VBSL2_I]]
+  return vbslq_u8(v1, v2, v3);
+}
+
+// LLVM-LABEL: @test_vbsl_u16(
+// CIR-LABEL: @vbsl_u16(
+uint16x4_t test_vbsl_u16(uint16x4_t v1, uint16x4_t v2, uint16x4_t v3) {
+  // CIR: cir.cast bitcast %{{.*}} : !cir.ptr<!cir.vector<4 x !u16i>> -> !cir.ptr<!cir.vector<8 x !s8i>>
+  // CIR: cir.cast bitcast %{{.*}} : !cir.ptr<!cir.vector<4 x !u16i>> -> !cir.ptr<!cir.vector<8 x !s8i>>
+  // CIR: cir.cast bitcast %{{.*}} : !cir.ptr<!cir.vector<4 x !u16i>> -> !cir.ptr<!cir.vector<8 x !s8i>>
+  // CIR: [[MASK:%.*]] = cir.cast bitcast %{{.*}} : !cir.vector<8 x !s8i> -> !cir.vector<4 x !u16i>
+  // CIR: [[VAL1:%.*]] = cir.cast bitcast %{{.*}} : !cir.vector<8 x !s8i> -> !cir.vector<4 x !u16i>
+  // CIR: [[VAL2:%.*]] = cir.cast bitcast %{{.*}} : !cir.vector<8 x !s8i> -> !cir.vector<4 x !u16i>
+  // CIR: [[AND:%.*]] = cir.and [[MASK]], [[VAL1]] : !cir.vector<4 x !u16i>
+  // CIR: [[NOT:%.*]] = cir.not [[MASK]] : !cir.vector<4 x !u16i>
+  // CIR: [[AND2:%.*]] = cir.and [[NOT]], [[VAL2]] : !cir.vector<4 x !u16i>
+  // CIR: [[RES:%.*]] = cir.or [[AND]], [[AND2]] : !cir.vector<4 x !u16i>
+
+  // LLVM-SAME: <4 x i16> {{.*}} [[V1:%.*]], <4 x i16> {{.*}} [[V2:%.*]], <4 x i16> {{.*}} [[V3:%.*]]) {{.*}} {
+  // LLVM:      [[TMP0:%.*]] = bitcast <4 x i16> [[V1]] to <8 x i8>
+  // LLVM: [[TMP1:%.*]] = bitcast <4 x i16> [[V2]] to <8 x i8>
+  // LLVM: [[TMP2:%.*]] = bitcast <4 x i16> [[V3]] to <8 x i8>
+  // LLVM: [[VBSL_I:%.*]] = bitcast <8 x i8> [[TMP0]] to <4 x i16>
+  // LLVM: [[VBSL1_I:%.*]] = bitcast <8 x i8> [[TMP1]] to <4 x i16>
+  // LLVM: [[VBSL2_I:%.*]] = bitcast <8 x i8> [[TMP2]] to <4 x i16>
+  // LLVM: [[VBSL3_I:%.*]] = and <4 x i16> [[VBSL_I]], [[VBSL1_I]]
+  // LLVM: [[TMP3:%.*]] = xor <4 x i16> [[VBSL_I]], splat (i16 -1)
+  // LLVM: [[VBSL4_I:%.*]] = and <4 x i16> [[TMP3]], [[VBSL2_I]]
+  // LLVM: [[VBSL5_I:%.*]] = or <4 x i16> [[VBSL3_I]], [[VBSL4_I]]
+  // LLVM: ret <4 x i16> [[VBSL5_I]]
+  return vbsl_u16(v1, v2, v3);
+}
+
+// LLVM-LABEL: @test_vbslq_u16(
+// CIR-LABEL: @vbslq_u16(
+uint16x8_t test_vbslq_u16(uint16x8_t v1, uint16x8_t v2, uint16x8_t v3) {
+  // CIR: cir.cast bitcast %{{.*}} : !cir.ptr<!cir.vector<8 x !u16i>> -> !cir.ptr<!cir.vector<16 x !s8i>>
+  // CIR: cir.cast bitcast %{{.*}} : !cir.ptr<!cir.vector<8 x !u16i>> -> !cir.ptr<!cir.vector<16 x !s8i>>
+  // CIR: cir.cast bitcast %{{.*}} : !cir.ptr<!cir.vector<8 x !u16i>> -> !cir.ptr<!cir.vector<16 x !s8i>>
+  // CIR: [[MASK:%.*]] = cir.cast bitcast %{{.*}} : !cir.vector<16 x !s8i> -> !cir.vector<8 x !u16i>
+  // CIR: [[VAL1:%.*]] = cir.cast bitcast %{{.*}} : !cir.vector<16 x !s8i> -> !cir.vector<8 x !u16i>
+  // CIR: [[VAL2:%.*]] = cir.cast bitcast %{{.*}} : !cir.vector<16 x !s8i> -> !cir.vector<8 x !u16i>
+  // CIR: [[AND:%.*]] = cir.and [[MASK]], [[VAL1]] : !cir.vector<8 x !u16i>
+  // CIR: [[NOT:%.*]] = cir.not [[MASK]] : !cir.vector<8 x !u16i>
+  // CIR: [[AND2:%.*]] = cir.and [[NOT]], [[VAL2]] : !cir.vector<8 x !u16i>
+  // CIR: [[RES:%.*]] = cir.or [[AND]], [[AND2]] : !cir.vector<8 x !u16i>
+
+  // LLVM-SAME: <8 x i16> {{.*}} [[V1:%.*]], <8 x i16> {{.*}} [[V2:%.*]], <8 x i16> {{.*}} [[V3:%.*]]) {{.*}} {
+  // LLVM:      [[TMP0:%.*]] = bitcast <8 x i16> [[V1]] to <16 x i8>
+  // LLVM: [[TMP1:%.*]] = bitcast <8 x i16> [[V2]] to <16 x i8>
+  // LLVM: [[TMP2:%.*]] = bitcast <8 x i16> [[V3]] to <16 x i8>
+  // LLVM: [[VBSL_I:%.*]] = bitcast <16 x i8> [[TMP0]] to <8 x i16>
+  // LLVM: [[VBSL1_I:%.*]] = bitcast <16 x i8> [[TMP1]] to <8 x i16>
+  // LLVM: [[VBSL2_I:%.*]] = bitcast <16 x i8> [[TMP2]] to <8 x i16>
+  // LLVM: [[VBSL3_I:%.*]] = and <8 x i16> [[VBSL_I]], [[VBSL1_I]]
+  // LLVM: [[TMP3:%.*]] = xor <8 x i16> [[VBSL_I]], splat (i16 -1)
+  // LLVM: [[VBSL4_I:%.*]] = and <8 x i16> [[TMP3]], [[VBSL2_I]]
+  // LLVM: [[VBSL5_I:%.*]] = or <8 x i16> [[VBSL3_I]], [[VBSL4_I]]
+  // LLVM: ret <8 x i16> [[VBSL5_I]]
+  return vbslq_u16(v1, v2, v3);
+}
+
+// LLVM-LABEL: @test_vbsl_u32(
+// CIR-LABEL: @vbsl_u32(
+uint32x2_t test_vbsl_u32(uint32x2_t v1, uint32x2_t v2, uint32x2_t v3) {
+  // CIR: cir.cast bitcast %{{.*}} : !cir.ptr<!cir.vector<2 x !u32i>> -> !cir.ptr<!cir.vector<8 x !s8i>>
+  // CIR: cir.cast bitcast %{{.*}} : !cir.ptr<!cir.vector<2 x !u32i>> -> !cir.ptr<!cir.vector<8 x !s8i>>
+  // CIR: cir.cast bitcast %{{.*}} : !cir.ptr<!cir.vector<2 x !u32i>> -> !cir.ptr<!cir.vector<8 x !s8i>>
+  // CIR: [[MASK:%.*]] = cir.cast bitcast %{{.*}} : !cir.vector<8 x !s8i> -> !cir.vector<2 x !u32i>
+  // CIR: [[VAL1:%.*]] = cir.cast bitcast %{{.*}} : !cir.vector<8 x !s8i> -> !cir.vector<2 x !u32i>
+  // CIR: [[VAL2:%.*]] = cir.cast bitcast %{{.*}} : !cir.vector<8 x !s8i> -> !cir.vector<2 x !u32i>
+  // CIR: [[AND:%.*]] = cir.and [[MASK]], [[VAL1]] : !cir.vector<2 x !u32i>
+  // CIR: [[NOT:%.*]] = cir.not [[MASK]] : !cir.vector<2 x !u32i>
+  // CIR: [[AND2:%.*]] = cir.and [[NOT]], [[VAL2]] : !cir.vector<2 x !u32i>
+  // CIR: [[RES:%.*]] = cir.or [[AND]], [[AND2]] : !cir.vector<2 x !u32i>
+
+  // LLVM-SAME: <2 x i32> {{.*}} [[V1:%.*]], <2 x i32> {{.*}} [[V2:%.*]], <2 x i32> {{.*}} [[V3:%.*]]) {{.*}} {
+  // LLVM:      [[TMP0:%.*]] = bitcast <2 x i32> [[V1]] to <8 x i8>
+  // LLVM: [[TMP1:%.*]] = bitcast <2 x i32> [[V2]] to <8 x i8>
+  // LLVM: [[TMP2:%.*]] = bitcast <2 x i32> [[V3]] to <8 x i8>
+  // LLVM: [[VBSL_I:%.*]] = bitcast <8 x i8> [[TMP0]] to <2 x i32>
+  // LLVM: [[VBSL1_I:%.*]] = bitcast <8 x i8> [[TMP1]] to <2 x i32>
+  // LLVM: [[VBSL2_I:%.*]] = bitcast <8 x i8> [[TMP2]] to <2 x i32>
+  // LLVM: [[VBSL3_I:%.*]] = and <2 x i32> [[VBSL_I]], [[VBSL1_I]]
+  // LLVM: [[TMP3:%.*]] = xor <2 x i32> [[VBSL_I]], splat (i32 -1)
+  // LLVM: [[VBSL4_I:%.*]] = and <2 x i32> [[TMP3]], [[VBSL2_I]]
+  // LLVM: [[VBSL5_I:%.*]] = or <2 x i32> [[VBSL3_I]], [[VBSL4_I]]
+  // LLVM: ret <2 x i32> [[VBSL5_I]]
+  return vbsl_u32(v1, v2, v3);
+}
+
+// LLVM-LABEL: @test_vbslq_u32(
+// CIR-LABEL: @vbslq_u32(
+uint32x4_t test_vbslq_u32(uint32x4_t v1, uint32x4_t v2, uint32x4_t v3) {
+  // CIR: cir.cast bitcast %{{.*}} : !cir.ptr<!cir.vector<4 x !u32i>> -> !cir.ptr<!cir.vector<16 x !s8i>>
+  // CIR: cir.cast bitcast %{{.*}} : !cir.ptr<!cir.vector<4 x !u32i>> -> !cir.ptr<!cir.vector<16 x !s8i>>
+  // CIR: cir.cast bitcast %{{.*}} : !cir.ptr<!cir.vector<4 x !u32i>> -> !cir.ptr<!cir.vector<16 x !s8i>>
+  // CIR: [[MASK:%.*]] = cir.cast bitcast %{{.*}} : !cir.vector<16 x !s8i> -> !cir.vector<4 x !u32i>
+  // CIR: [[VAL1:%.*]] = cir.cast bitcast %{{.*}} : !cir.vector<16 x !s8i> -> !cir.vector<4 x !u32i>
+  // CIR: [[VAL2:%.*]] = cir.cast bitcast %{{.*}} : !cir.vector<16 x !s8i> -> !cir.vector<4 x !u32i>
+  // CIR: [[AND:%.*]] = cir.and [[MASK]], [[VAL1]] : !cir.vector<4 x !u32i>
+  // CIR: [[NOT:%.*]] = cir.not [[MASK]] : !cir.vector<4 x !u32i>
+  // CIR: [[AND2:%.*]] = cir.and [[NOT]], [[VAL2]] : !cir.vector<4 x !u32i>
+  // CIR: [[RES:%.*]] = cir.or [[AND]], [[AND2]] : !cir.vector<4 x !u32i>
+
+  // LLVM-SAME: <4 x i32> {{.*}} [[V1:%.*]], <4 x i32> {{.*}} [[V2:%.*]], <4 x i32> {{.*}} [[V3:%.*]]) {{.*}} {
+  // LLVM:      [[TMP0:%.*]] = bitcast <4 x i32> [[V1]] to <16 x i8>
+  // LLVM: [[TMP1:%.*]] = bitcast <4 x i32> [[V2]] to <16 x i8>
+  // LLVM: [[TMP2:%.*]] = bitcast <4 x i32> [[V3]] to <16 x i8>
+  // LLVM: [[VBSL_I:%.*]] = bitcast <16 x i8> [[TMP0]] to <4 x i32>
+  // LLVM: [[VBSL1_I:%.*]] = bitcast <16 x i8> [[TMP1]] to <4 x i32>
+  // LLVM: [[VBSL2_I:%.*]] = bitcast <16 x i8> [[TMP2]] to <4 x i32>
+  // LLVM: [[VBSL3_I:%.*]] = and <4 x i32> [[VBSL_I]], [[VBSL1_I]]
+  // LLVM: [[TMP3:%.*]] = xor <4 x i32> [[VBSL_I]], splat (i32 -1)
+  // LLVM: [[VBSL4_I:%.*]] = and <4 x i32> [[TMP3]], [[VBSL2_I]]
+  // LLVM: [[VBSL5_I:%.*]] = or <4 x i32> [[VBSL3_I]], [[VBSL4_I]]
+  // LLVM: ret <4 x i32> [[VBSL5_I]]
+  return vbslq_u32(v1, v2, v3);
+}
+
+
+// LLVM-LABEL: @test_vbsl_u64(
+// CIR-LABEL: @vbsl_u64(
+uint64x1_t test_vbsl_u64(uint64x1_t v1, uint64x1_t v2, uint64x1_t v3) {
+  // CIR: cir.cast bitcast %{{.*}} : !cir.ptr<!cir.vector<1 x !u64i>> -> !cir.ptr<!cir.vector<8 x !s8i>>
+  // CIR: cir.cast bitcast %{{.*}} : !cir.ptr<!cir.vector<1 x !u64i>> -> !cir.ptr<!cir.vector<8 x !s8i>>
+  // CIR: cir.cast bitcast %{{.*}} : !cir.ptr<!cir.vector<1 x !u64i>> -> !cir.ptr<!cir.vector<8 x !s8i>>
+  // CIR: [[MASK:%.*]] = cir.cast bitcast %{{.*}} : !cir.vector<8 x !s8i> -> !cir.vector<1 x !u64i>
+  // CIR: [[VAL1:%.*]] = cir.cast bitcast %{{.*}} : !cir.vector<8 x !s8i> -> !cir.vector<1 x !u64i>
+  // CIR: [[VAL2:%.*]] = cir.cast bitcast %{{.*}} : !cir.vector<8 x !s8i> -> !cir.vector<1 x !u64i>
+  // CIR: [[AND:%.*]] = cir.and [[MASK]], [[VAL1]] : !cir.vector<1 x !u64i>
+  // CIR: [[NOT:%.*]] = cir.not [[MASK]] : !cir.vector<1 x !u64i>
+  // CIR: [[AND2:%.*]] = cir.and [[NOT]], [[VAL2]] : !cir.vector<1 x !u64i>
+  // CIR: [[RES:%.*]] = cir.or [[AND]], [[AND2]] : !cir.vector<1 x !u64i>
+
+  // LLVM-SAME: <1 x i64> {{.*}} [[V1:%.*]], <1 x i64> {{.*}} [[V2:%.*]], <1 x i64> {{.*}} [[V3:%.*]]) {{.*}} {
+  // LLVM:      [[TMP0:%.*]] = bitcast <1 x i64> [[V1]] to <8 x i8>
+  // LLVM: [[TMP1:%.*]] = bitcast <1 x i64> [[V2]] to <8 x i8>
+  // LLVM: [[TMP2:%.*]] = bitcast <1 x i64> [[V3]] to <8 x i8>
+  // LLVM: [[VBSL_I:%.*]] = bitcast <8 x i8> [[TMP0]] to <1 x i64>
+  // LLVM: [[VBSL1_I:%.*]] = bitcast <8 x i8> [[TMP1]] to <1 x i64>
+  // LLVM: [[VBSL2_I:%.*]] = bitcast <8 x i8> [[TMP2]] to <1 x i64>
+  // LLVM: [[VBSL3_I:%.*]] = and <1 x i64> [[VBSL_I]], [[VBSL1_I]]
+  // LLVM: [[TMP3:%.*]] = xor <1 x i64> [[VBSL_I]], splat (i64 -1)
+  // LLVM: [[VBSL4_I:%.*]] = and <1 x i64> [[TMP3]], [[VBSL2_I]]
+  // LLVM: [[VBSL5_I:%.*]] = or <1 x i64> [[VBSL3_I]], [[VBSL4_I]]
+  // LLVM: ret <1 x i64> [[VBSL5_I]]
+  return vbsl_u64(v1, v2, v3);
+}
+
+// LLVM-LABEL: @test_vbslq_u64(
+// CIR-LABEL: @vbslq_u64(
+uint64x2_t test_vbslq_u64(uint64x2_t v1, uint64x2_t v2, uint64x2_t v3) {
+  // CIR: cir.cast bitcast %{{.*}} : !cir.ptr<!cir.vector<2 x !u64i>> -> !cir.ptr<!cir.vector<16 x !s8i>>
+  // CIR: cir.cast bitcast %{{.*}} : !cir.ptr<!cir.vector<2 x !u64i>> -> !cir.ptr<!cir.vector<16 x !s8i>>
+  // CIR: cir.cast bitcast %{{.*}} : !cir.ptr<!cir.vector<2 x !u64i>> -> !cir.ptr<!cir.vector<16 x !s8i>>
+  // CIR: [[MASK:%.*]] = cir.cast bitcast %{{.*}} : !cir.vector<16 x !s8i> -> !cir.vector<2 x !u64i>
+  // CIR: [[VAL1:%.*]] = cir.cast bitcast %{{.*}} : !cir.vector<16 x !s8i> -> !cir.vector<2 x !u64i>
+  // CIR: [[VAL2:%.*]] = cir.cast bitcast %{{.*}} : !cir.vector<16 x !s8i> -> !cir.vector<2 x !u64i>
+  // CIR: [[AND:%.*]] = cir.and [[MASK]], [[VAL1]] : !cir.vector<2 x !u64i>
+  // CIR: [[NOT:%.*]] = cir.not [[MASK]] : !cir.vector<2 x !u64i>
+  // CIR: [[AND2:%.*]] = cir.and [[NOT]], [[VAL2]] : !cir.vector<2 x !u64i>
+  // CIR: [[RES:%.*]] = cir.or [[AND]], [[AND2]] : !cir.vector<2 x !u64i>
+
+  // LLVM-SAME: <2 x i64> {{.*}} [[V1:%.*]], <2 x i64> {{.*}} [[V2:%.*]], <2 x i64> {{.*}} [[V3:%.*]]) {{.*}} {
+  // LLVM:      [[TMP0:%.*]] = bitcast <2 x i64> [[V1]] to <16 x i8>
+  // LLVM: [[TMP1:%.*]] = bitcast <2 x i64> [[V2]] to <16 x i8>
+  // LLVM: [[TMP2:%.*]] = bitcast <2 x i64> [[V3]] to <16 x i8>
+  // LLVM: [[VBSL_I:%.*]] = bitcast <16 x i8> [[TMP0]] to <2 x i64>
+  // LLVM: [[VBSL1_I:%.*]] = bitcast <16 x i8> [[TMP1]] to <2 x i64>
+  // LLVM: [[VBSL2_I:%.*]] = bitcast <16 x i8> [[TMP2]] to <2 x i64>
+  // LLVM: [[VBSL3_I:%.*]] = and <2 x i64> [[VBSL_I]], [[VBSL1_I]]
+  // LLVM: [[TMP3:%.*]] = xor <2 x i64> [[VBSL_I]], splat (i64 -1)
+  // LLVM: [[VBSL4_I:%.*]] = and <2 x i64> [[TMP3]], [[VBSL2_I]]
+  // LLVM: [[VBSL5_I:%.*]] = or <2 x i64> [[VBSL3_I]], [[VBSL4_I]]
+  // LLVM: ret <2 x i64> [[VBSL5_I]]
+  return vbslq_u64(v1, v2, v3);
+}
+
+// LLVM-LABEL: @test_vbsl_f32(
+// CIR-LABEL: @vbsl_f32(
+float32x2_t test_vbsl_f32(uint32x2_t v1, float32x2_t v2, float32x2_t v3) {
+  // CIR: cir.cast bitcast %{{.*}} : !cir.ptr<!cir.vector<2 x !u32i>> -> !cir.ptr<!cir.vector<8 x !s8i>>
+  // CIR: cir.cast bitcast %{{.*}} : !cir.ptr<!cir.vector<2 x !cir.float>> -> !cir.ptr<!cir.vector<8 x !s8i>>
+  // CIR: cir.cast bitcast %{{.*}} : !cir.ptr<!cir.vector<2 x !cir.float>> -> !cir.ptr<!cir.vector<8 x !s8i>>
+  // CIR: [[MASK:%.*]] = cir.cast bitcast %{{.*}} : !cir.vector<8 x !s8i> -> !cir.vector<2 x !s32i>
+  // CIR: [[VAL1:%.*]] = cir.cast bitcast %{{.*}} : !cir.vector<8 x !s8i> -> !cir.vector<2 x !s32i>
+  // CIR: [[VAL2:%.*]] = cir.cast bitcast %{{.*}} : !cir.vector<8 x !s8i> -> !cir.vector<2 x !s32i>
+  // CIR: [[AND:%.*]] = cir.and [[MASK]], [[VAL1]] : !cir.vector<2 x !s32i>
+  // CIR: [[NOT:%.*]] = cir.not [[MASK]] : !cir.vector<2 x !s32i>
+  // CIR: [[AND2:%.*]] = cir.and [[NOT]], [[VAL2]] : !cir.vector<2 x !s32i>
+  // CIR: [[OR:%.*]] = cir.or [[AND]], [[AND2]] : !cir.vector<2 x !s32i>
+  // CIR: cir.cast bitcast [[OR]] : !cir.vector<2 x !s32i> -> !cir.vector<2 x !cir.float>
+
+  // LLVM-SAME: <2 x i32> {{.*}} [[V1:%.*]], <2 x float> {{.*}} [[V2:%.*]], <2 x float> {{.*}} [[V3:%.*]]) {{.*}} {
+  // LLVM:      [[TMP0:%.*]] = bitcast <2 x float> [[V2]] to <2 x i32>
+  // LLVM: [[TMP1:%.*]] = bitcast <2 x float> [[V3]] to <2 x i32>
+  // LLVM: [[TMP2:%.*]] = bitcast <2 x i32> [[V1]] to <8 x i8>
+  // LLVM: [[TMP3:%.*]] = bitcast <2 x i32> [[TMP0]] to <8 x i8>
+  // LLVM: [[TMP4:%.*]] = bitcast <2 x i32> [[TMP1]] to <8 x i8>
+  // LLVM: [[VBSL_I:%.*]] = bitcast <8 x i8> [[TMP2]] to <2 x i32>
+  // LLVM: [[VBSL1_I:%.*]] = bitcast <8 x i8> [[TMP3]] to <2 x i32>
+  // LLVM: [[VBSL2_I:%.*]] = bitcast <8 x i8> [[TMP4]] to <2 x i32>
+  // LLVM: [[VBSL3_I:%.*]] = and <2 x i32> [[VBSL_I]], [[VBSL1_I]]
+  // LLVM: [[TMP5:%.*]] = xor <2 x i32> [[VBSL_I]], splat (i32 -1)
+  // LLVM: [[VBSL4_I:%.*]] = and <2 x i32> [[TMP5]], [[VBSL2_I]]
+  // LLVM: [[VBSL5_I:%.*]] = or <2 x i32> [[VBSL3_I]], [[VBSL4_I]]
+  // LLVM: [[TMP6:%.*]] = bitcast <2 x i32> [[VBSL5_I]] to <2 x float>
+  // LLVM: ret <2 x float> [[TMP6]]
+  return vbsl_f32(v1, v2, v3);
+}
+
+// LLVM-LABEL: @test_vbslq_f32(
+// CIR-LABEL: @vbslq_f32(
+float32x4_t test_vbslq_f32(uint32x4_t v1, float32x4_t v2, float32x4_t v3) {
+  // CIR: cir.cast bitcast %{{.*}} : !cir.ptr<!cir.vector<4 x !u32i>> -> !cir.ptr<!cir.vector<16 x !s8i>>
+  // CIR: cir.cast bitcast %{{.*}} : !cir.ptr<!cir.vector<4 x !cir.float>> -> !cir.ptr<!cir.vector<16 x !s8i>>
+  // CIR: cir.cast bitcast %{{.*}} : !cir.ptr<!cir.vector<4 x !cir.float>> -> !cir.ptr<!cir.vector<16 x !s8i>>
+  // CIR: [[MASK:%.*]] = cir.cast bitcast %{{.*}} : !cir.vector<16 x !s8i> -> !cir.vector<4 x !s32i>
+  // CIR: [[VAL1:%.*]] = cir.cast bitcast %{{.*}} : !cir.vector<16 x !s8i> -> !cir.vector<4 x !s32i>
+  // CIR: [[VAL2:%.*]] = cir.cast bitcast %{{.*}} : !cir.vector<16 x !s8i> -> !cir.vector<4 x !s32i>
+  // CIR: [[AND:%.*]] = cir.and [[MASK]], [[VAL1]] : !cir.vector<4 x !s32i>
+  // CIR: [[NOT:%.*]] = cir.not [[MASK]] : !cir.vector<4 x !s32i>
+  // CIR: [[AND2:%.*]] = cir.and [[NOT]], [[VAL2]] : !cir.vector<4 x !s32i>
+  // CIR: [[OR:%.*]] = cir.or [[AND]], [[AND2]] : !cir.vector<4 x !s32i>
+  // CIR: cir.cast bitcast [[OR]] : !cir.vector<4 x !s32i> -> !cir.vector<4 x !cir.float>
+
+  // LLVM-SAME: <4 x i32> {{.*}} [[V1:%.*]], <4 x float> {{.*}} [[V2:%.*]], <4 x float> {{.*}} [[V3:%.*]]) {{.*}} {
+  // LLVM:      [[TMP0:%.*]] = bitcast <4 x float> [[V2]] to <4 x i32>
+  // LLVM: [[TMP1:%.*]] = bitcast <4 x float> [[V3]] to <4 x i32>
+  // LLVM: [[TMP2:%.*]] = bitcast <4 x i32> [[V1]] to <16 x i8>
+  // LLVM: [[TMP3:%.*]] = bitcast <4 x i32> [[TMP0]] to <16 x i8>
+  // LLVM: [[TMP4:%.*]] = bitcast <4 x i32> [[TMP1]] to <16 x i8>
+  // LLVM: [[VBSL_I:%.*]] = bitcast <16 x i8> [[TMP2]] to <4 x i32>
+  // LLVM: [[VBSL1_I:%.*]] = bitcast <16 x i8> [[TMP3]] to <4 x i32>
+  // LLVM: [[VBSL2_I:%.*]] = bitcast <16 x i8> [[TMP4]] to <4 x i32>
+  // LLVM: [[VBSL3_I:%.*]] = and <4 x i32> [[VBSL_I]], [[VBSL1_I]]
+  // LLVM: [[TMP5:%.*]] = xor <4 x i32> [[VBSL_I]], splat (i32 -1)
+  // LLVM: [[VBSL4_I:%.*]] = and <4 x i32> [[TMP5]], [[VBSL2_I]]
+  // LLVM: [[VBSL5_I:%.*]] = or <4 x i32> [[VBSL3_I]], [[VBSL4_I]]
+  // LLVM: [[TMP6:%.*]] = bitcast <4 x i32> [[VBSL5_I]] to <4 x float>
+  // LLVM: ret <4 x float> [[TMP6]]
+  return vbslq_f32(v1, v2, v3);
+}
+
+// LLVM-LABEL: @test_vbsl_p8(
+// CIR-LABEL: @vbsl_p8(
+poly8x8_t test_vbsl_p8(uint8x8_t v1, poly8x8_t v2, poly8x8_t v3) {
+  // CIR: cir.cast bitcast %{{.*}} : !cir.ptr<!cir.vector<8 x !u8i>> -> !cir.ptr<!cir.vector<8 x !s8i>>
+  // CIR: cir.cast bitcast %{{.*}} : !cir.ptr<!cir.vector<8 x !u8i>> -> !cir.ptr<!cir.vector<8 x !s8i>>
+  // CIR: cir.cast bitcast %{{.*}} : !cir.ptr<!cir.vector<8 x !u8i>> -> !cir.ptr<!cir.vector<8 x !s8i>>
+  // CIR: [[AND:%.*]] = cir.and %{{.*}}, %{{.*}} : !cir.vector<8 x !s8i>
+  // CIR: [[NOT:%.*]] = cir.not %{{.*}} : !cir.vector<8 x !s8i>
+  // CIR: [[AND2:%.*]] = cir.and [[NOT]], %{{.*}} : !cir.vector<8 x !s8i>
+  // CIR: [[RES:%.*]] = cir.or [[AND]], [[AND2]] : !cir.vector<8 x !s8i>
+
+  // LLVM-SAME: <8 x i8> {{.*}} [[V1:%.*]], <8 x i8> {{.*}} [[V2:%.*]], <8 x i8> {{.*}} [[V3:%.*]]) {{.*}} {
+  // LLVM:      [[VBSL_I:%.*]] = and <8 x i8> [[V1]], [[V2]]
+  // LLVM: [[TMP0:%.*]] = xor <8 x i8> [[V1]], splat (i8 -1)
+  // LLVM: [[VBSL1_I:%.*]] = and <8 x i8> [[TMP0]], [[V3]]
+  // LLVM: [[VBSL2_I:%.*]] = or <8 x i8> [[VBSL_I]], [[VBSL1_I]]
+  // LLVM: ret <8 x i8> [[VBSL2_I]]
+  return vbsl_p8(v1, v2, v3);
+}
+
+// LLVM-LABEL: @test_vbslq_p8(
+// CIR-LABEL: @vbslq_p8(
+poly8x16_t test_vbslq_p8(uint8x16_t v1, poly8x16_t v2, poly8x16_t v3) {
+  // CIR: cir.cast bitcast %{{.*}} : !cir.ptr<!cir.vector<16 x !u8i>> -> !cir.ptr<!cir.vector<16 x !s8i>>
+  // CIR: cir.cast bitcast %{{.*}} : !cir.ptr<!cir.vector<16 x !u8i>> -> !cir.ptr<!cir.vector<16 x !s8i>>
+  // CIR: cir.cast bitcast %{{.*}} : !cir.ptr<!cir.vector<16 x !u8i>> -> !cir.ptr<!cir.vector<16 x !s8i>>
+  // CIR: [[AND:%.*]] = cir.and %{{.*}}, %{{.*}} : !cir.vector<16 x !s8i>
+  // CIR: [[NOT:%.*]] = cir.not %{{.*}} : !cir.vector<16 x !s8i>
+  // CIR: [[AND2:%.*]] = cir.and [[NOT]], %{{.*}} : !cir.vector<16 x !s8i>
+  // CIR: [[RES:%.*]] = cir.or [[AND]], [[AND2]] : !cir.vector<16 x !s8i>
+
+  // LLVM-SAME: <16 x i8> {{.*}} [[V1:%.*]], <16 x i8> {{.*}} [[V2:%.*]], <16 x i8> {{.*}} [[V3:%.*]]) {{.*}} {
+  // LLVM:      [[VBSL_I:%.*]] = and <16 x i8> [[V1]], [[V2]]
+  // LLVM: [[TMP0:%.*]] = xor <16 x i8> [[V1]], splat (i8 -1)
+  // LLVM: [[VBSL1_I:%.*]] = and <16 x i8> [[TMP0]], [[V3]]
+  // LLVM: [[VBSL2_I:%.*]] = or <16 x i8> [[VBSL_I]], [[VBSL1_I]]
+  // LLVM: ret <16 x i8> [[VBSL2_I]]
+  return vbslq_p8(v1, v2, v3);
+}
+
+// LLVM-LABEL: @test_vbsl_p16(
+// CIR-LABEL: @vbsl_p16(
+poly16x4_t test_vbsl_p16(uint16x4_t v1, poly16x4_t v2, poly16x4_t v3) {
+  // CIR: cir.cast bitcast %{{.*}} : !cir.ptr<!cir.vector<4 x !u16i>> -> !cir.ptr<!cir.vector<8 x !s8i>>
+  // CIR: cir.cast bitcast %{{.*}} : !cir.ptr<!cir.vector<4 x !u16i>> -> !cir.ptr<!cir.vector<8 x !s8i>>
+  // CIR: cir.cast bitcast %{{.*}} : !cir.ptr<!cir.vector<4 x !u16i>> -> !cir.ptr<!cir.vector<8 x !s8i>>
+  // CIR: [[MASK:%.*]] = cir.cast bitcast %{{.*}} : !cir.vector<8 x !s8i> -> !cir.vector<4 x !s16i>
+  // CIR: [[VAL1:%.*]] = cir.cast bitcast %{{.*}} : !cir.vector<8 x !s8i> -> !cir.vector<4 x !s16i>
+  // CIR: [[VAL2:%.*]] = cir.cast bitcast %{{.*}} : !cir.vector<8 x !s8i> -> !cir.vector<4 x !s16i>
+  // CIR: [[AND:%.*]] = cir.and [[MASK]], [[VAL1]] : !cir.vector<4 x !s16i>
+  // CIR: [[NOT:%.*]] = cir.not [[MASK]] : !cir.vector<4 x !s16i>
+  // CIR: [[AND2:%.*]] = cir.and [[NOT]], [[VAL2]] : !cir.vector<4 x !s16i>
+  // CIR: [[RES:%.*]] = cir.or [[AND]], [[AND2]] : !cir.vector<4 x !s16i>
+
+  // LLVM-SAME: <4 x i16> {{.*}} [[V1:%.*]], <4 x i16> {{.*}} [[V2:%.*]], <4 x i16> {{.*}} [[V3:%.*]]) {{.*}} {
+  // LLVM:      [[TMP0:%.*]] = bitcast <4 x i16> [[V1]] to <8 x i8>
+  // LLVM: [[TMP1:%.*]] = bitcast <4 x i16> [[V2]] to <8 x i8>
+  // LLVM: [[TMP2:%.*]] = bitcast <4 x i16> [[V3]] to <8 x i8>
+  // LLVM: [[VBSL_I:%.*]] = bitcast <8 x i8> [[TMP0]] to <4 x i16>
+  // LLVM: [[VBSL1_I:%.*]] = bitcast <8 x i8> [[TMP1]] to <4 x i16>
+  // LLVM: [[VBSL2_I:%.*]] = bitcast <8 x i8> [[TMP2]] to <4 x i16>
+  // LLVM: [[VBSL3_I:%.*]] = and <4 x i16> [[VBSL_I]], [[VBSL1_I]]
+  // LLVM: [[TMP3:%.*]] = xor <4 x i16> [[VBSL_I]], splat (i16 -1)
+  // LLVM: [[VBSL4_I:%.*]] = and <4 x i16> [[TMP3]], [[VBSL2_I]]
+  // LLVM: [[VBSL5_I:%.*]] = or <4 x i16> [[VBSL3_I]], [[VBSL4_I]]
+  // LLVM: ret <4 x i16> [[VBSL5_I]]
+  return vbsl_p16(v1, v2, v3);
+}
+
+// LLVM-LABEL: @test_vbslq_p16(
+// CIR-LABEL: @vbslq_p16(
+poly16x8_t test_vbslq_p16(uint16x8_t v1, poly16x8_t v2, poly16x8_t v3) {
+  // CIR: cir.cast bitcast %{{.*}} : !cir.ptr<!cir.vector<8 x !u16i>> -> !cir.ptr<!cir.vector<16 x !s8i>>
+  // CIR: cir.cast bitcast %{{.*}} : !cir.ptr<!cir.vector<8 x !u16i>> -> !cir.ptr<!cir.vector<16 x !s8i>>
+  // CIR: cir.cast bitcast %{{.*}} : !cir.ptr<!cir.vector<8 x !u16i>> -> !cir.ptr<!cir.vector<16 x !s8i>>
+  // CIR: [[MASK:%.*]] = cir.cast bitcast %{{.*}} : !cir.vector<16 x !s8i> -> !cir.vector<8 x !s16i>
+  // CIR: [[VAL1:%.*]] = cir.cast bitcast %{{.*}} : !cir.vector<16 x !s8i> -> !cir.vector<8 x !s16i>
+  // CIR: [[VAL2:%.*]] = cir.cast bitcast %{{.*}} : !cir.vector<16 x !s8i> -> !cir.vector<8 x !s16i>
+  // CIR: [[AND:%.*]] = cir.and [[MASK]], [[VAL1]] : !cir.vector<8 x !s16i>
+  // CIR: [[NOT:%.*]] = cir.not [[MASK]] : !cir.vector<8 x !s16i>
+  // CIR: [[AND2:%.*]] = cir.and [[NOT]], [[VAL2]] : !cir.vector<8 x !s16i>
+  // CIR: [[RES:%.*]] = cir.or [[AND]], [[AND2]] : !cir.vector<8 x !s16i>
+
+  // LLVM-SAME: <8 x i16> {{.*}} [[V1:%.*]], <8 x i16> {{.*}} [[V2:%.*]], <8 x i16> {{.*}} [[V3:%.*]]) {{.*}} {
+  // LLVM:      [[TMP0:%.*]] = bitcast <8 x i16> [[V1]] to <16 x i8>
+  // LLVM: [[TMP1:%.*]] = bitcast <8 x i16> [[V2]] to <16 x i8>
+  // LLVM: [[TMP2:%.*]] = bitcast <8 x i16> [[V3]] to <16 x i8>
+  // LLVM: [[VBSL_I:%.*]] = bitcast <16 x i8> [[TMP0]] to <8 x i16>
+  // LLVM: [[VBSL1_I:%.*]] = bitcast <16 x i8> [[TMP1]] to <8 x i16>
+  // LLVM: [[VBSL2_I:%.*]] = bitcast <16 x i8> [[TMP2]] to <8 x i16>
+  // LLVM: [[VBSL3_I:%.*]] = and <8 x i16> [[VBSL_I]], [[VBSL1_I]]
+  // LLVM: [[TMP3:%.*]] = xor <8 x i16> [[VBSL_I]], splat (i16 -1)
+  // LLVM: [[VBSL4_I:%.*]] = and <8 x i16> [[TMP3]], [[VBSL2_I]]
+  // LLVM: [[VBSL5_I:%.*]] = or <8 x i16> [[VBSL3_I]], [[VBSL4_I]]
+  // LLVM: ret <8 x i16> [[VBSL5_I]]
+  return vbslq_p16(v1, v2, v3);
+}
+
+// LLVM-LABEL: @test_vbsl_p64(
+// CIR-LABEL: @vbsl_p64(
+poly64x1_t test_vbsl_p64(poly64x1_t v1, poly64x1_t v2, poly64x1_t v3) {
+  // CIR: cir.cast bitcast %{{.*}} : !cir.ptr<!cir.vector<1 x !u64i>> -> !cir.ptr<!cir.vector<8 x !s8i>>
+  // CIR: cir.cast bitcast %{{.*}} : !cir.ptr<!cir.vector<1 x !u64i>> -> !cir.ptr<!cir.vector<8 x !s8i>>
+  // CIR: cir.cast bitcast %{{.*}} : !cir.ptr<!cir.vector<1 x !u64i>> -> !cir.ptr<!cir.vector<8 x !s8i>>
+  // CIR: [[MASK:%.*]] = cir.cast bitcast %{{.*}} : !cir.vector<8 x !s8i> -> !cir.vector<1 x !s64i>
+  // CIR: [[VAL1:%.*]] = cir.cast bitcast %{{.*}} : !cir.vector<8 x !s8i> -> !cir.vector<1 x !s64i>
+  // CIR: [[VAL2:%.*]] = cir.cast bitcast %{{.*}} : !cir.vector<8 x !s8i> -> !cir.vector<1 x !s64i>
+  // CIR: [[AND:%.*]] = cir.and [[MASK]], [[VAL1]] : !cir.vector<1 x !s64i>
+  // CIR: [[NOT:%.*]] = cir.not [[MASK]] : !cir.vector<1 x !s64i>
+  // CIR: [[AND2:%.*]] = cir.and [[NOT]], [[VAL2]] : !cir.vector<1 x !s64i>
+  // CIR: [[RES:%.*]] = cir.or [[AND]], [[AND2]] : !cir.vector<1 x !s64i>
+
+  // LLVM-SAME: <1 x i64> {{.*}} [[V1:%.*]], <1 x i64> {{.*}} [[V2:%.*]], <1 x i64> {{.*}} [[V3:%.*]]) {{.*}} {
+  // LLVM:      [[TMP0:%.*]] = bitcast <1 x i64> [[V1]] to <8 x i8>
+  // LLVM: [[TMP1:%.*]] = bitcast <1 x i64> [[V2]] to <8 x i8>
+  // LLVM: [[TMP2:%.*]] = bitcast <1 x i64> [[V3]] to <8 x i8>
+  // LLVM: [[VBSL_I:%.*]] = bitcast <8 x i8> [[TMP0]] to <1 x i64>
+  // LLVM: [[VBSL1_I:%.*]] = bitcast <8 x i8> [[TMP1]] to <1 x i64>
+  // LLVM: [[VBSL2_I:%.*]] = bitcast <8 x i8> [[TMP2]] to <1 x i64>
+  // LLVM: [[VBSL3_I:%.*]] = and <1 x i64> [[VBSL_I]], [[VBSL1_I]]
+  // LLVM: [[TMP3:%.*]] = xor <1 x i64> [[VBSL_I]], splat (i64 -1)
+  // LLVM: [[VBSL4_I:%.*]] = and <1 x i64> [[TMP3]], [[VBSL2_I]]
+  // LLVM: [[VBSL5_I:%.*]] = or <1 x i64> [[VBSL3_I]], [[VBSL4_I]]
+  // LLVM: ret <1 x i64> [[VBSL5_I]]
+  return vbsl_p64(v1, v2, v3);
+}
+
+// LLVM-LABEL: @test_vbslq_p64(
+// CIR-LABEL: @vbslq_p64(
+poly64x2_t test_vbslq_p64(poly64x2_t v1, poly64x2_t v2, poly64x2_t v3) {
+  // CIR: cir.cast bitcast %{{.*}} : !cir.ptr<!cir.vector<2 x !u64i>> -> !cir.ptr<!cir.vector<16 x !s8i>>
+  // CIR: cir.cast bitcast %{{.*}} : !cir.ptr<!cir.vector<2 x !u64i>> -> !cir.ptr<!cir.vector<16 x !s8i>>
+  // CIR: cir.cast bitcast %{{.*}} : !cir.ptr<!cir.vector<2 x !u64i>> -> !cir.ptr<!cir.vector<16 x !s8i>>
+  // CIR: [[MASK:%.*]] = cir.cast bitcast %{{.*}} : !cir.vector<16 x !s8i> -> !cir.vector<2 x !s64i>
+  // CIR: [[VAL1:%.*]] = cir.cast bitcast %{{.*}} : !cir.vector<16 x !s8i> -> !cir.vector<2 x !s64i>
+  // CIR: [[VAL2:%.*]] = cir.cast bitcast %{{.*}} : !cir.vector<16 x !s8i> -> !cir.vector<2 x !s64i>
+  // CIR: [[AND:%.*]] = cir.and [[MASK]], [[VAL1]] : !cir.vector<2 x !s64i>
+  // CIR: [[NOT:%.*]] = cir.not [[MASK]] : !cir.vector<2 x !s64i>
+  // CIR: [[AND2:%.*]] = cir.and [[NOT]], [[VAL2]] : !cir.vector<2 x !s64i>
+  // CIR: [[RES:%.*]] = cir.or [[AND]], [[AND2]] : !cir.vector<2 x !s64i>
+
+  // LLVM-SAME: <2 x i64> {{.*}} [[V1:%.*]], <2 x i64> {{.*}} [[V2:%.*]], <2 x i64> {{.*}} [[V3:%.*]]) {{.*}} {
+  // LLVM:      [[TMP0:%.*]] = bitcast <2 x i64> [[V1]] to <16 x i8>
+  // LLVM: [[TMP1:%.*]] = bitcast <2 x i64> [[V2]] to <16 x i8>
+  // LLVM: [[TMP2:%.*]] = bitcast <2 x i64> [[V3]] to <16 x i8>
+  // LLVM: [[VBSL_I:%.*]] = bitcast <16 x i8> [[TMP0]] to <2 x i64>
+  // LLVM: [[VBSL1_I:%.*]] = bitcast <16 x i8> [[TMP1]] to <2 x i64>
+  // LLVM: [[VBSL2_I:%.*]] = bitcast <16 x i8> [[TMP2]] to <2 x i64>
+  // LLVM: [[VBSL3_I:%.*]] = and <2 x i64> [[VBSL_I]], [[VBSL1_I]]
+  // LLVM: [[TMP3:%.*]] = xor <2 x i64> [[VBSL_I]], splat (i64 -1)
+  // LLVM: [[VBSL4_I:%.*]] = and <2 x i64> [[TMP3]], [[VBSL2_I]]
+  // LLVM: [[VBSL5_I:%.*]] = or <2 x i64> [[VBSL3_I]], [[VBSL4_I]]
+  // LLVM: ret <2 x i64> [[VBSL5_I]]
+  return vbslq_p64(v1, v2, v3);
+}
+
+// LLVM-LABEL: @test_vbsl_f64(
+// CIR-LABEL: @vbsl_f64(
+float64x1_t test_vbsl_f64(uint64x1_t v1, float64x1_t v2, float64x1_t v3) {
+  // CIR: cir.cast bitcast %{{.*}} : !cir.ptr<!cir.vector<1 x !u64i>> -> !cir.ptr<!cir.vector<8 x !s8i>>
+  // CIR: cir.cast bitcast %{{.*}} : !cir.ptr<!cir.vector<1 x !cir.double>> -> !cir.ptr<!cir.vector<8 x !s8i>>
+  // CIR: cir.cast bitcast %{{.*}} : !cir.ptr<!cir.vector<1 x !cir.double>> -> !cir.ptr<!cir.vector<8 x !s8i>>
+  // CIR: [[MASK:%.*]] = cir.cast bitcast %{{.*}} : !cir.vector<8 x !s8i> -> !cir.vector<1 x !s64i>
+  // CIR: [[VAL1:%.*]] = cir.cast bitcast %{{.*}} : !cir.vector<8 x !s8i> -> !cir.vector<1 x !s64i>
+  // CIR: [[VAL2:%.*]] = cir.cast bitcast %{{.*}} : !cir.vector<8 x !s8i> -> !cir.vector<1 x !s64i>
+  // CIR: [[AND:%.*]] = cir.and [[MASK]], [[VAL1]] : !cir.vector<1 x !s64i>
+  // CIR: [[NOT:%.*]] = cir.not [[MASK]] : !cir.vector<1 x !s64i>
+  // CIR: [[AND2:%.*]] = cir.and [[NOT]], [[VAL2]] : !cir.vector<1 x !s64i>
+  // CIR: [[OR:%.*]] = cir.or [[AND]], [[AND2]] : !cir.vector<1 x !s64i>
+  // CIR: cir.cast bitcast [[OR]] : !cir.vector<1 x !s64i> -> !cir.vector<1 x !cir.double>
+
+  // LLVM-SAME: <1 x i64> {{.*}} [[V1:%.*]], <1 x double> {{.*}} [[V2:%.*]], <1 x double> {{.*}} [[V3:%.*]]) {{.*}} {
+  // LLVM:      [[TMP0:%.*]] = bitcast <1 x double> [[V2]] to i64
+  // LLVM: [[TMP1:%.*]] = insertelement <1 x i64> undef, i64 [[TMP0]], i32 0
+  // LLVM: [[TMP2:%.*]] = bitcast <1 x double> [[V3]] to i64
+  // LLVM: [[TMP3:%.*]] = insertelement <1 x i64> undef, i64 [[TMP2]], i32 0
+  // LLVM: [[TMP4:%.*]] = bitcast <1 x i64> [[V1]] to <8 x i8>
+  // LLVM: [[TMP5:%.*]] = bitcast <1 x i64> [[TMP1]] to <8 x i8>
+  // LLVM: [[TMP6:%.*]] = bitcast <1 x i64> [[TMP3]] to <8 x i8>
+  // LLVM: [[VBSL_I:%.*]] = bitcast <8 x i8> [[TMP4]] to <1 x i64>
+  // LLVM: [[VBSL1_I:%.*]] = bitcast <8 x i8> [[TMP5]] to <1 x i64>
+  // LLVM: [[VBSL2_I:%.*]] = bitcast <8 x i8> [[TMP6]] to <1 x i64>
+  // LLVM: [[VBSL3_I:%.*]] = and <1 x i64> [[VBSL_I]], [[VBSL1_I]]
+  // LLVM: [[TMP7:%.*]] = xor <1 x i64> [[VBSL_I]], splat (i64 -1)
+  // LLVM: [[VBSL4_I:%.*]] = and <1 x i64> [[TMP7]], [[VBSL2_I]]
+  // LLVM: [[VBSL5_I:%.*]] = or <1 x i64> [[VBSL3_I]], [[VBSL4_I]]
+  // LLVM: [[TMP8:%.*]] = bitcast <1 x i64> [[VBSL5_I]] to <1 x double>
+  // LLVM: ret <1 x double> [[TMP8]]
+  return vbsl_f64(v1, v2, v3);
+}
+
+// LLVM-LABEL: @test_vbslq_f64(
+// CIR-LABEL: @vbslq_f64(
+float64x2_t test_vbslq_f64(uint64x2_t v1, float64x2_t v2, float64x2_t v3) {
+  // CIR: cir.cast bitcast %{{.*}} : !cir.ptr<!cir.vector<2 x !u64i>> -> !cir.ptr<!cir.vector<16 x !s8i>>
+  // CIR: cir.cast bitcast %{{.*}} : !cir.ptr<!cir.vector<2 x !cir.double>> -> !cir.ptr<!cir.vector<16 x !s8i>>
+  // CIR: cir.cast bitcast %{{.*}} : !cir.ptr<!cir.vector<2 x !cir.double>> -> !cir.ptr<!cir.vector<16 x !s8i>>
+  // CIR: [[MASK:%.*]] = cir.cast bitcast %{{.*}} : !cir.vector<16 x !s8i> -> !cir.vector<2 x !s64i>
+  // CIR: [[VAL1:%.*]] = cir.cast bitcast %{{.*}} : !cir.vector<16 x !s8i> -> !cir.vector<2 x !s64i>
+  // CIR: [[VAL2:%.*]] = cir.cast bitcast %{{.*}} : !cir.vector<16 x !s8i> -> !cir.vector<2 x !s64i>
+  // CIR: [[AND:%.*]] = cir.and [[MASK]], [[VAL1]] : !cir.vector<2 x !s64i>
+  // CIR: [[NOT:%.*]] = cir.not [[MASK]] : !cir.vector<2 x !s64i>
+  // CIR: [[AND2:%.*]] = cir.and [[NOT]], [[VAL2]] : !cir.vector<2 x !s64i>
+  // CIR: [[OR:%.*]] = cir.or [[AND]], [[AND2]] : !cir.vector<2 x !s64i>
+  // CIR: cir.cast bitcast [[OR]] : !cir.vector<2 x !s64i> -> !cir.vector<2 x !cir.double>
+
+  // LLVM-SAME: <2 x i64> {{.*}} [[V1:%.*]], <2 x double> {{.*}} [[V2:%.*]], <2 x double> {{.*}} [[V3:%.*]]) {{.*}} {
+  // LLVM:      [[TMP0:%.*]] = bitcast <2 x double> [[V2]] to <2 x i64>
+  // LLVM: [[TMP1:%.*]] = bitcast <2 x double> [[V3]] to <2 x i64>
+  // LLVM: [[TMP2:%.*]] = bitcast <2 x i64> [[V1]] to <16 x i8>
+  // LLVM: [[TMP3:%.*]] = bitcast <2 x i64> [[TMP0]] to <16 x i8>
+  // LLVM: [[TMP4:%.*]] = bitcast <2 x i64> [[TMP1]] to <16 x i8>
+  // LLVM: [[VBSL_I:%.*]] = bitcast <16 x i8> [[TMP2]] to <2 x i64>
+  // LLVM: [[VBSL1_I:%.*]] = bitcast <16 x i8> [[TMP3]] to <2 x i64>
+  // LLVM: [[VBSL2_I:%.*]] = bitcast <16 x i8> [[TMP4]] to <2 x i64>
+  // LLVM: [[VBSL3_I:%.*]] = and <2 x i64> [[VBSL_I]], [[VBSL1_I]]
+  // LLVM: [[TMP5:%.*]] = xor <2 x i64> [[VBSL_I]], splat (i64 -1)
+  // LLVM: [[VBSL4_I:%.*]] = and <2 x i64> [[TMP5]], [[VBSL2_I]]
+  // LLVM: [[VBSL5_I:%.*]] = or <2 x i64> [[VBSL3_I]], [[VBSL4_I]]
+  // LLVM: [[TMP6:%.*]] = bitcast <2 x i64> [[VBSL5_I]] to <2 x double>
+  // LLVM: ret <2 x double> [[TMP6]]
+  return vbslq_f64(v1, v2, v3);
+}
+
+// LLVM-LABEL: @test_vbsl_mf8(
+// CIR-LABEL: @vbsl_mf8(
+mfloat8x8_t test_vbsl_mf8(uint8x8_t v1, mfloat8x8_t v2, mfloat8x8_t v3) {
+  // CIR: cir.cast bitcast %{{.*}} : !cir.ptr<!cir.vector<8 x !u8i>> -> !cir.ptr<!cir.vector<8 x !s8i>>
+  // CIR: cir.cast bitcast %{{.*}} : !cir.ptr<!cir.vector<8 x !u8i>> -> !cir.ptr<!cir.vector<8 x !s8i>>
+  // CIR: cir.cast bitcast %{{.*}} : !cir.ptr<!cir.vector<8 x !u8i>> -> !cir.ptr<!cir.vector<8 x !s8i>>
+  // CIR: [[MASK:%.*]] = cir.cast bitcast %{{.*}} : !cir.vector<8 x !s8i> -> !cir.vector<8 x !u8i>
+  // CIR: [[VAL1:%.*]] = cir.cast bitcast %{{.*}} : !cir.vector<8 x !s8i> -> !cir.vector<8 x !u8i>
+  // CIR: [[VAL2:%.*]] = cir.cast bitcast %{{.*}} : !cir.vector<8 x !s8i> -> !cir.vector<8 x !u8i>
+  // CIR: [[AND:%.*]] = cir.and [[MASK]], [[VAL1]] : !cir.vector<8 x !u8i>
+  // CIR: [[NOT:%.*]] = cir.not [[MASK]] : !cir.vector<8 x !u8i>
+  // CIR: [[AND2:%.*]] = cir.and [[NOT]], [[VAL2]] : !cir.vector<8 x !u8i>
+  // CIR: [[RES:%.*]] = cir.or [[AND]], [[AND2]] : !cir.vector<8 x !u8i>
+
+  // LLVM-SAME: <8 x i8> {{.*}} [[V1:%.*]], <8 x i8> [[V2:%.*]], <8 x i8> [[V3:%.*]]) {{.*}} {
+  // LLVM:      [[VBSL_I:%.*]] = and <8 x i8> [[V1]], [[V2]]
+  // LLVM: [[TMP0:%.*]] = xor <8 x i8> [[V1]], splat (i8 -1)
+  // LLVM: [[VBSL1_I:%.*]] = and <8 x i8> [[TMP0]], [[V3]]
+  // LLVM: [[VBSL2_I:%.*]] = or <8 x i8> [[VBSL_I]], [[VBSL1_I]]
+  // LLVM: ret <8 x i8> [[VBSL2_I]]
+  return vbsl_mf8(v1, v2, v3);
+}  
+
+// LLVM-LABEL: @test_vbslq_mf8(
+// CIR-LABEL: @vbslq_mf8(
+mfloat8x16_t test_vbslq_mf8(uint8x16_t v1, mfloat8x16_t v2, mfloat8x16_t v3) {
+  // CIR: cir.cast bitcast %{{.*}} : !cir.ptr<!cir.vector<16 x !u8i>> -> !cir.ptr<!cir.vector<16 x !s8i>>
+  // CIR: cir.cast bitcast %{{.*}} : !cir.ptr<!cir.vector<16 x !u8i>> -> !cir.ptr<!cir.vector<16 x !s8i>>
+  // CIR: cir.cast bitcast %{{.*}} : !cir.ptr<!cir.vector<16 x !u8i>> -> !cir.ptr<!cir.vector<16 x !s8i>>
+  // CIR: [[MASK:%.*]] = cir.cast bitcast %{{.*}} : !cir.vector<16 x !s8i> -> !cir.vector<16 x !u8i>
+  // CIR: [[VAL1:%.*]] = cir.cast bitcast %{{.*}} : !cir.vector<16 x !s8i> -> !cir.vector<16 x !u8i>
+  // CIR: [[VAL2:%.*]] = cir.cast bitcast %{{.*}} : !cir.vector<16 x !s8i> -> !cir.vector<16 x !u8i>
+  // CIR: [[AND:%.*]] = cir.and [[MASK]], [[VAL1]] : !cir.vector<16 x !u8i>
+  // CIR: [[NOT:%.*]] = cir.not [[MASK]] : !cir.vector<16 x !u8i>
+  // CIR: [[AND2:%.*]] = cir.and [[NOT]], [[VAL2]] : !cir.vector<16 x !u8i>
+  // CIR: [[RES:%.*]] = cir.or [[AND]], [[AND2]] : !cir.vector<16 x !u8i>
+
+  // LLVM-SAME: <16 x i8> {{.*}} [[V1:%.*]], <16 x i8> [[V2:%.*]], <16 x i8> [[V3:%.*]]) {{.*}} {
+  // LLVM:      [[VBSL_I:%.*]] = and <16 x i8> [[V1]], [[V2]]
+  // LLVM: [[TMP0:%.*]] = xor <16 x i8> [[V1]], splat (i8 -1)
+  // LLVM: [[VBSL1_I:%.*]] = and <16 x i8> [[TMP0]], [[V3]]
+  // LLVM: [[VBSL2_I:%.*]] = or <16 x i8> [[VBSL_I]], [[VBSL1_I]]
+  // LLVM: ret <16 x i8> [[VBSL2_I]]
+  return vbslq_mf8(v1, v2, v3);
+}
