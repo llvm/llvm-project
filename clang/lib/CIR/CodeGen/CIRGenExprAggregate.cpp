@@ -1244,16 +1244,21 @@ void CIRGenFunction::emitAggregateCopy(LValue dest, LValue src, QualType ty,
 
   assert(!cir::MissingFeatures::aggValueSlotVolatile());
 
-  // NOTE(cir): original codegen would normally convert destPtr and srcPtr to
-  // i8* since memcpy operates on bytes. We don't need that in CIR because
-  // cir.copy will operate on any CIR pointer that points to a sized type.
-
   // Don't do any of the memmove_collectable tests if GC isn't set.
   if (cgm.getLangOpts().getGC() != LangOptions::NonGC)
     cgm.errorNYI("emitAggregateCopy: GC");
 
-  [[maybe_unused]] cir::CopyOp copyOp =
-      builder.createCopy(destPtr.getPointer(), srcPtr.getPointer(), isVolatile);
+  // If the data size (excluding tail padding) differs from the full type size,
+  // use skip_tail_padding to avoid clobbering tail padding that may be occupied
+  // by other objects (e.g. fields marked with [[no_unique_address]]).
+  CharUnits dataSize = typeInfo.Width;
+  bool skipTailPadding =
+      mayOverlap && dataSize != getContext().getTypeSizeInChars(ty);
+  // NOTE(cir): original codegen would normally convert destPtr and srcPtr to
+  // i8* since memcpy operates on bytes. We don't need that in CIR because
+  // cir.copy will operate on any CIR pointer that points to a sized type.
+  builder.createCopy(destPtr.getPointer(), srcPtr.getPointer(), isVolatile,
+                     skipTailPadding);
 
   assert(!cir::MissingFeatures::opTBAA());
 }
