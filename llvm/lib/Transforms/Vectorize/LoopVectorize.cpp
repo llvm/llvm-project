@@ -4271,9 +4271,26 @@ static bool hasUnsupportedHeaderPhiRecipe(VPlan &Plan) {
         if (auto *WidenInd = dyn_cast<VPWidenIntOrFpInductionRecipe>(&R))
           return !WidenInd->getPHINode();
         auto *RedPhi = dyn_cast<VPReductionPHIRecipe>(&R);
-        return RedPhi && (RecurrenceDescriptor::isFindLastRecurrenceKind(
-                              RedPhi->getRecurrenceKind()) ||
-                          !RedPhi->getUnderlyingValue());
+        if (!RedPhi)
+          return false;
+        if (RecurrenceDescriptor::isFindLastRecurrenceKind(
+                RedPhi->getRecurrenceKind()) ||
+            !RedPhi->getUnderlyingValue())
+          return true;
+        // FindIV reductions with sunk expressions are not yet supported for
+        // epilogue vectorization: the resume value from the main loop is in
+        // expression domain (e.g., mul(ReducedIV, 3)), but the epilogue tracks
+        // raw IV values. A sunk expression is identified by a non-VPInstruction
+        // user of ComputeReductionResult.
+        if (RecurrenceDescriptor::isFindIVRecurrenceKind(
+                RedPhi->getRecurrenceKind())) {
+          auto *RdxResult = vputils::findComputeReductionResult(RedPhi);
+          assert(RdxResult &&
+                 "FindIV reduction must have ComputeReductionResult");
+          return any_of(RdxResult->users(),
+                        [](VPUser *U) { return !isa<VPInstruction>(U); });
+        }
+        return false;
       });
 }
 

@@ -36,6 +36,8 @@ MACHINE_FUNCTION_PASS("aarch64-jump-tables", AArch64CompressJumpTablesPass())
 MACHINE_FUNCTION_PASS("aarch64-ldst-opt", AArch64LoadStoreOptPass())
 MACHINE_FUNCTION_PASS("aarch64-mi-peephole-opt", AArch64MIPeepholeOptPass())
 MACHINE_FUNCTION_PASS("aarch64-post-coalescer", AArch64PostCoalescerPass())
+MACHINE_FUNCTION_PASS("aarch64-prelegalizer-combiner",
+                      AArch64PreLegalizerCombinerPass())
 MACHINE_FUNCTION_PASS("aarch64-ptrauth", AArch64PointerAuthPass())
 MACHINE_FUNCTION_PASS("aarch64-simd-scalar", AArch64AdvSIMDScalarPass())
 MACHINE_FUNCTION_PASS("aarch64-O0-prelegalizer-combiner",
