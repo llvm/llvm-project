@@ -849,27 +849,44 @@ void CIRGenFunction::emitConstructorBody(FunctionArgList &args) {
   Stmt *body = ctor->getBody(definition);
   assert(definition == ctor && "emitting wrong constructor body");
 
-  if (isa_and_nonnull<CXXTryStmt>(body)) {
-    cgm.errorNYI(ctor->getSourceRange(), "emitConstructorBody: try body");
-    return;
-  }
+  bool isTryBody = isa_and_nonnull<CXXTryStmt>(body);
 
-  assert(!cir::MissingFeatures::incrementProfileCounter());
-  assert(!cir::MissingFeatures::runCleanupsScope());
+  // A type that handles the emission of the constructor body, that can be
+  // called directly for cases where we don't have a try-body, or passed to
+  // emitCXXTryStmt.
+  struct ctorTryBodyEmitter final : cxxTryBodyEmitter {
+    const CXXConstructorDecl *ctor = nullptr;
+    CXXCtorType ctorType;
+    FunctionArgList &args;
+    Stmt *emitterBody = nullptr;
+    ctorTryBodyEmitter(const CXXConstructorDecl *ctor, CXXCtorType ctorType,
+                       FunctionArgList &args, bool isTryBody, Stmt *b)
+        : ctor(ctor), ctorType(ctorType), args(args),
+          emitterBody(isTryBody ? cast<CXXTryStmt>(b)->getTryBlock() : b) {}
+    ~ctorTryBodyEmitter() override = default;
 
-  // TODO: in restricted cases, we can emit the vbase initializers of a
-  // complete ctor and then delegate to the base ctor.
+    mlir::LogicalResult operator()(CIRGenFunction &cgf) override {
+      assert(!cir::MissingFeatures::incrementProfileCounter());
+      assert(!cir::MissingFeatures::runCleanupsScope());
 
-  // Emit the constructor prologue, i.e. the base and member initializers.
-  emitCtorPrologue(ctor, ctorType, args);
+      //// TODO: in restricted cases, we can emit the vbase initializers of a
+      //// complete ctor and then delegate to the base ctor.
 
-  // TODO(cir): propagate this result via mlir::logical result. Just unreachable
-  // now just to have it handled.
-  if (mlir::failed(emitStmt(body, true))) {
+      cgf.emitCtorPrologue(ctor, ctorType, args);
+      return cgf.emitStmt(emitterBody, /*useCurrentScope=*/true);
+    }
+  };
+
+  ctorTryBodyEmitter emitter{ctor, ctorType, args, isTryBody, body};
+  mlir::LogicalResult bodyRes =
+      isTryBody ? emitCXXTryStmt(*cast<CXXTryStmt>(body), emitter)
+                : emitter(*this);
+
+  // TODO(cir): propagate this result via mlir::logical result. Just
+  // unreachable now just to have it handled.
+  if (bodyRes.failed())
     cgm.errorNYI(ctor->getSourceRange(),
                  "emitConstructorBody: emit body statement failed.");
-    return;
-  }
 }
 
 /// Emits the body of the current destructor.
