@@ -35,11 +35,11 @@ body: |
     ; CHECK-NEXT: [[ARGUMENT_i32_:%[0-9]+]]:i32(s32) = ARGUMENT_i32 0, implicit $arguments
     ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[ARGUMENT_i32_]](s32)
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 255
-    ; CHECK-NEXT: [[AND:%[0-9]+]]:i32(s64) = G_AND [[ANYEXT]], [[C]]
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:i64(s64) = G_AND [[ANYEXT]], [[C]]
     ; CHECK-NEXT: RETURN [[AND]](s64), implicit-def $arguments
     %1:i32(s32) = ARGUMENT_i32 0, implicit $arguments
     %0:_(s8) = G_TRUNC %1(s32)
-    %2:i32(s64) = G_ZEXT %0(s8)
+    %2:i64(s64) = G_ZEXT %0(s8)
     RETURN %2(s64), implicit-def $arguments
 ...
 ---
@@ -76,11 +76,11 @@ body: |
     ; CHECK-NEXT: [[ARGUMENT_i32_:%[0-9]+]]:i32(s32) = ARGUMENT_i32 0, implicit $arguments
     ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[ARGUMENT_i32_]](s32)
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 65535
-    ; CHECK-NEXT: [[AND:%[0-9]+]]:i32(s64) = G_AND [[ANYEXT]], [[C]]
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:i64(s64) = G_AND [[ANYEXT]], [[C]]
     ; CHECK-NEXT: RETURN [[AND]](s64), implicit-def $arguments
     %1:i32(s32) = ARGUMENT_i32 0, implicit $arguments
     %0:_(s16) = G_TRUNC %1(s32)
-    %2:i32(s64) = G_ZEXT %0(s16)
+    %2:i64(s64) = G_ZEXT %0(s16)
     RETURN %2(s64), implicit-def $arguments
 ...
 ---
@@ -95,9 +95,9 @@ body: |
     ; CHECK: liveins: $arguments
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[ARGUMENT_i32_:%[0-9]+]]:i32(s32) = ARGUMENT_i32 0, implicit $arguments
-    ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:i32(s64) = G_ZEXT [[ARGUMENT_i32_]](s32)
+    ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:i64(s64) = G_ZEXT [[ARGUMENT_i32_]](s32)
     ; CHECK-NEXT: RETURN [[ZEXT]](s64), implicit-def $arguments
     %0:i32(s32) = ARGUMENT_i32 0, implicit $arguments
-    %1:i32(s64) = G_ZEXT %0(s32)
+    %1:i64(s64) = G_ZEXT %0(s32)
     RETURN %1(s64), implicit-def $arguments
 ...
