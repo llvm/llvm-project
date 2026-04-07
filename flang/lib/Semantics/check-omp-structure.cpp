@@ -1754,7 +1754,7 @@ static std::pair<const parser::AllocateStmt *, parser::CharBlock>
 getAllocateStmtAndSource(const parser::ExecutionPartConstruct *epc) {
   if (SourcedActionStmt as{GetActionStmt(epc)}) {
     using IndirectionAllocateStmt = common::Indirection<parser::AllocateStmt>;
-    if (auto *indirect{std::get_if<IndirectionAllocateStmt>(&as.stmt->u)}) {
+    if (auto *indirect{std::get_if<IndirectionAllocateStmt>(&as.stmt()->u)}) {
       return {&indirect->value(), as.source};
     }
   }
@@ -2258,11 +2258,11 @@ void OmpStructureChecker::Enter(const parser::OpenMPDispatchConstruct &x) {
   bool passChecks{false};
   omp::SourcedActionStmt action{omp::GetActionStmt(block)};
   if (const auto *assignStmt{
-          parser::Unwrap<parser::AssignmentStmt>(*action.stmt)}) {
+          parser::Unwrap<parser::AssignmentStmt>(*action.stmt())}) {
     if (parser::Unwrap<parser::FunctionReference>(assignStmt->t)) {
       passChecks = true;
     }
-  } else if (parser::Unwrap<parser::CallStmt>(*action.stmt)) {
+  } else if (parser::Unwrap<parser::CallStmt>(*action.stmt())) {
     passChecks = true;
   }
 
