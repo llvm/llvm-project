@@ -155,6 +155,7 @@ Status CommandObjectExpression::CommandOptions::SetOptionValue(
           option_arg.str().c_str());
     break;
   }
+
   case '\x01': {
     bool success;
     bool persist_result =
