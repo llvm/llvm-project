@@ -196,7 +196,12 @@ class Context {
       ValidBlockTargets;
   AnyValue getConstantValueImpl(Constant *C);
 
-  // TODO: errno and fpenv
+  // Floating-point environment
+  RoundingMode CurrentRoundingMode = RoundingMode::NearestTiesToEven;
+  fp::ExceptionBehavior CurrentExceptionBehavior =
+      fp::ExceptionBehavior::ebIgnore;
+
+  // TODO: errno
 
 public:
   explicit Context(Module &M);
@@ -282,6 +287,12 @@ public:
   /// error occurred during execution.
   bool runFunction(Function &F, ArrayRef<AnyValue> Args, AnyValue &RetVal,
                    EventHandler &Handler);
+
+  RoundingMode getCurrentRoundingMode() const;
+  fp::ExceptionBehavior getCurrentExceptionBehavior() const;
+  void setCurrentRoundingMode(RoundingMode RM);
+  void setCurrentExceptionBehavior(fp::ExceptionBehavior EB);
+  bool isDefaultFPEnv() const;
 
   bool getRandomBool();
   uint64_t getRandomUInt64();

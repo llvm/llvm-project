@@ -499,6 +499,26 @@ uint64_t Context::getEffectiveTypeStoreSize(Type *Ty) {
   return getEffectiveTypeSize(DL.getTypeStoreSize(Ty));
 }
 
+RoundingMode Context::getCurrentRoundingMode() const {
+  return CurrentRoundingMode;
+}
+
+fp::ExceptionBehavior Context::getCurrentExceptionBehavior() const {
+  return CurrentExceptionBehavior;
+}
+
+void Context::setCurrentRoundingMode(RoundingMode RM) {
+  CurrentRoundingMode = RM;
+}
+
+void Context::setCurrentExceptionBehavior(fp::ExceptionBehavior EB) {
+  CurrentExceptionBehavior = EB;
+}
+
+bool Context::isDefaultFPEnv() const {
+  return isDefaultFPEnvironment(CurrentExceptionBehavior, CurrentRoundingMode);
+}
+
 bool Context::getRandomBool() {
   // We use the lowest bit of the raw bits from RNG as the result:
   if (UndefBehavior == UndefValueBehavior::NonDeterministic)

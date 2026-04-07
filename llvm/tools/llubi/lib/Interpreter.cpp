@@ -68,8 +68,6 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
   const DataLayout &DL;
   std::list<Frame> CallStack;
   AnyValue None;
-  RoundingMode CurrentRoundingMode;
-  fp::ExceptionBehavior CurrentExceptionBehavior;
 
   const AnyValue &getValue(Value *V) {
     if (auto *C = dyn_cast<Constant>(V))
@@ -103,7 +101,7 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
     return Val;
   }
 
-  AnyValue handleFMFFlags(AnyValue Val, FastMathFlags FMF) {
+  AnyValue handleFMFFlags(AnyValue Val, FastMathFlags FMF, bool IsInput) {
     if (Val.isPoison())
       return AnyValue::poison();
 
@@ -111,7 +109,7 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
       std::vector<AnyValue> ResVec;
       ResVec.reserve(Val.asAggregate().size());
       for (const auto &A : Val.asAggregate())
-        ResVec.push_back(handleFMFFlags(A, FMF));
+        ResVec.push_back(handleFMFFlags(A, FMF, IsInput));
       return AnyValue(ResVec);
     }
 
@@ -120,7 +118,7 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
       return AnyValue::poison();
     if (FMF.noInfs() && APVal.isInfinity())
       return AnyValue::poison();
-    if (FMF.noSignedZeros() && APVal.isZero())
+    if (FMF.noSignedZeros() && APVal.isZero() && IsInput)
       return AnyValue(APFloat::getZero(
           APVal.getSemantics(), APVal.isNegative() ^ Ctx.getRandomBool()));
     return Val;
@@ -223,9 +221,13 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
       // operation is fneg. And fneg is specified as a bitwise operation which
       // only flips the sign bit of the input.
 
-      APFloat Result = ScalarFn(Operand.asFloat());
+      AnyValue ValidatedOperand = handleFMFFlags(Operand, FMF, true);
+      if (ValidatedOperand.isPoison())
+        return ValidatedOperand;
 
-      return handleFMFFlags(Result, FMF);
+      APFloat Result = ScalarFn(ValidatedOperand.asFloat());
+
+      return handleFMFFlags(Result, FMF, false);
     });
   }
 
@@ -267,31 +269,30 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
     FastMathFlags FMF = cast<FPMathOperator>(I).getFastMathFlags();
     DenormalMode DenormMode = getCurrentDenormalMode(I);
 
-    if (!isDefaultFPEnvironment(CurrentExceptionBehavior,
-                                CurrentRoundingMode)) {
-      Status = false;
+    if (!Ctx.isDefaultFPEnv())
       reportImmediateUB("Non-constrained floating-point operation assumes "
                         "default floating-point environment");
-    }
 
     visitBinOp(I, [&](const AnyValue &LHS, const AnyValue &RHS) -> AnyValue {
       if (LHS.isPoison() || RHS.isPoison())
         return AnyValue::poison();
 
-      if (auto ValidateRes = handleFMFFlags(LHS, FMF); ValidateRes.isPoison())
-        return ValidateRes;
-      if (auto ValidateRes = handleFMFFlags(RHS, FMF); ValidateRes.isPoison())
-        return ValidateRes;
+      AnyValue ValidatedLHS = handleFMFFlags(LHS, FMF, true);
+      AnyValue ValidatedRHS = handleFMFFlags(RHS, FMF, false);
+      if (ValidatedLHS.isPoison())
+        return ValidatedLHS;
+      if (ValidatedRHS.isPoison())
+        return ValidatedRHS;
 
       // Flush input denormals
-      APFloat FLHS = handleDenormal(LHS.asFloat(), DenormMode.Input);
-      APFloat FRHS = handleDenormal(RHS.asFloat(), DenormMode.Input);
+      APFloat FLHS = handleDenormal(ValidatedLHS.asFloat(), DenormMode.Input);
+      APFloat FRHS = handleDenormal(ValidatedRHS.asFloat(), DenormMode.Input);
 
       APFloat RawResult = ScalarFn(FLHS, FRHS);
 
       // Flush output denormals and handle fast-math flags.
       AnyValue FResult = handleFMFFlags(
-          handleDenormal(RawResult, DenormMode.Output, true), FMF);
+          handleDenormal(RawResult, DenormMode.Output, true), FMF, false);
 
       if (FResult.isPoison())
         return FResult;
@@ -322,7 +323,7 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
       if (isa<FPMathOperator>(PHI)) {
         FastMathFlags FMF = PHI->getFastMathFlags();
         if (FMF.any())
-          IncomingVal = handleFMFFlags(std::move(IncomingVal), FMF);
+          IncomingVal = handleFMFFlags(std::move(IncomingVal), FMF, true);
       }
 
       IncomingValues.emplace_back(PHI, IncomingVal);
@@ -427,17 +428,10 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
         I.getOperand(0)->getType()->getScalarType()->getFltSemantics());
   }
 
-  bool isDefaultFPEnv() {
-    return isDefaultFPEnvironment(CurrentExceptionBehavior,
-                                  CurrentRoundingMode);
-  }
-
 public:
   InstExecutor(Context &C, EventHandler &H, Function &F,
                ArrayRef<AnyValue> Args, AnyValue &RetVal)
-      : ExecutorBase(C, H), DL(Ctx.getDataLayout()),
-        CurrentRoundingMode(APFloat::rmNearestTiesToEven),
-        CurrentExceptionBehavior(fp::ebIgnore) {
+      : ExecutorBase(C, H), DL(Ctx.getDataLayout()) {
     CallStack.emplace_back(F, /*CallSite=*/nullptr, /*LastFrame=*/nullptr, Args,
                            RetVal, Ctx.getTLIImpl());
   }
@@ -862,12 +856,9 @@ public:
   void visitFPTruncInst(FPTruncInst &FPTrunc) { visitFPConvInst(FPTrunc); }
 
   void visitFPConvInst(Instruction &I) {
-    if (!isDefaultFPEnvironment(CurrentExceptionBehavior,
-                                CurrentRoundingMode)) {
-      Status = false;
+    if (!Ctx.isDefaultFPEnv())
       reportImmediateUB("Non-constrained floating-point operation assumes "
                         "default floating-point environment");
-    }
 
     const fltSemantics &DstSem =
         I.getType()->getScalarType()->getFltSemantics();
@@ -879,17 +870,18 @@ public:
       FastMathFlags FMF = cast<FPMathOperator>(I).getFastMathFlags();
       DenormalMode DenormMode = getCurrentDenormalMode(I);
 
-      APFloat FOperand = handleDenormal(Operand.asFloat(), DenormMode.Input);
+      auto ValidatedOperand = handleFMFFlags(Operand, FMF, true);
+      if (ValidatedOperand.isPoison())
+        return ValidatedOperand;
+
+      APFloat FOperand =
+          handleDenormal(ValidatedOperand.asFloat(), DenormMode.Input);
       APFloat SourceNaN = FOperand;
 
-      if (auto ValidateRes = handleFMFFlags(FOperand, FMF);
-          ValidateRes.isPoison())
-        return ValidateRes;
-
       bool LosesInfo;
-      FOperand.convert(DstSem, CurrentRoundingMode, &LosesInfo);
+      FOperand.convert(DstSem, Ctx.getCurrentRoundingMode(), &LosesInfo);
 
-      if (auto ValidateRes = handleFMFFlags(FOperand, FMF);
+      if (auto ValidateRes = handleFMFFlags(FOperand, FMF, false);
           ValidateRes.isPoison())
         return ValidateRes;
 
@@ -950,7 +942,7 @@ public:
       APFloat Res(DstSem);
 
       Res.convertFromAPInt(Operand.asInteger(), /*IsSigned=*/IsSigned,
-                           CurrentRoundingMode);
+                           Ctx.getCurrentRoundingMode());
 
       return AnyValue(Res);
     });
@@ -1030,9 +1022,11 @@ public:
       if (LHS.isPoison() || RHS.isPoison())
         return AnyValue::poison();
 
-      if (auto ValidateRes = handleFMFFlags(LHS, FMF); ValidateRes.isPoison())
+      if (auto ValidateRes = handleFMFFlags(LHS, FMF, true);
+          ValidateRes.isPoison())
         return ValidateRes;
-      if (auto ValidateRes = handleFMFFlags(RHS, FMF); ValidateRes.isPoison())
+      if (auto ValidateRes = handleFMFFlags(RHS, FMF, true);
+          ValidateRes.isPoison())
         return ValidateRes;
 
       APFloat FLHS = handleDenormal(LHS.asFloat(), DenormMode.Input);
@@ -1083,7 +1077,7 @@ public:
     // Handle fast-math flags
     if (auto *FPMO = dyn_cast<FPMathOperator>(&SI)) {
       if (FastMathFlags FMF = FPMO->getFastMathFlags(); FMF.any())
-        Res = handleFMFFlags(std::move(Res), FMF);
+        Res = handleFMFFlags(std::move(Res), FMF, true);
     }
 
     setResult(SI, std::move(Res));
