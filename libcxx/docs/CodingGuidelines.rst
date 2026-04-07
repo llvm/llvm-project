@@ -225,3 +225,18 @@ after the function they are measuring, with a few transformations to help filter
 When multiple benchmarks measure the same function under different circumstances, we add context as a parenthesis
 after the function signature. For example, ``std::vector<bool>::ctor(Self&&, const allocator_type&) (equal allocators)``
 would be the allocator-aware move constructor for ``std::vector<bool>`` in the case of equal allocators.
+
+Pointer field protection
+========================
+
+To improve the effectiveness of Clang's `pointer field protection
+<https://clang.llvm.org/docs/StructureProtection.html>`_ feature, commonly
+used vocabulary types, or internal base classes or fields thereof,
+with pointer fields are marked with the ``_LIBCPP_PFP`` attribute, to
+give Clang permission to use PFP to protect their pointer fields. Newly
+added vocabulary types and their internal base classes or fields should
+be marked with this attribute if they contain pointer fields.
+
+For the time being, PFP is an experimental feature, so our criteria for
+marking types with ``_LIBCPP_PFP`` may change, and the annotations are
+added on a best-effort basis.
