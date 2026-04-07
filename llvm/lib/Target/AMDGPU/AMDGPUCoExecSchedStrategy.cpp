@@ -375,8 +375,7 @@ void CandidateHeuristics::sortHWUIResources() {
 
 unsigned CandidateHeuristics::getStructuralStallCycles(SchedBoundary &Zone,
                                                        SUnit *SU) {
-  // Only implemented for top-down scheduling currently.
-  if (!Zone.isTop() || !SU)
+  if (!SU)
     return 0;
 
   MachineInstr *MI = SU->getInstr();
@@ -411,6 +410,10 @@ unsigned CandidateHeuristics::getStructuralStallCycles(SchedBoundary &Zone,
 bool CandidateHeuristics::tryEffectiveStall(
     GenericSchedulerBase::SchedCandidate &TryCand,
     GenericSchedulerBase::SchedCandidate &Cand, SchedBoundary &Zone) {
+  // Only implemented for top-down scheduling
+  if (!Zone.isTop())
+    return 0;
+
   auto getBufferFullStalls = [this, &Zone](SUnit *SU) -> unsigned {
     InstructionFlavor Flavor = classifyFlavor(
         *SU->getInstr(), *static_cast<const SIInstrInfo *>(DAG->TII));
@@ -419,8 +422,6 @@ bool CandidateHeuristics::tryEffectiveStall(
     if (HWUI->getBufferSize() <= 1)
       return 0;
 
-    // getBufferAvailableCycle assumes top-down scheduling.
-    assert(Zone.isTop());
     unsigned CurrCycle = Zone.getCurrCycle();
     unsigned BufferReadyCycle = HWUI->getBufferAvailableCycle(CurrCycle);
     if (BufferReadyCycle <= CurrCycle)
@@ -431,29 +432,30 @@ bool CandidateHeuristics::tryEffectiveStall(
 
   unsigned CurrCycle = Zone.getCurrCycle();
 
-  auto getFenceStalls = [this, &CurrCycle](SUnit *SU) -> unsigned {
+  auto getFenceStalls = [this, &CurrCycle, &Zone](SUnit *SU) -> unsigned {
     InstructionFlavor Flavor = classifyFlavor(
         *SU->getInstr(), *static_cast<const SIInstrInfo *>(DAG->TII));
 
-    if (Flavor != InstructionFlavor::Fence)
+    bool IsTop = Zone.isTop();
+    if ((Flavor != InstructionFlavor::Fence && IsTop) || (Flavor != InstructionFlavor::DS && !IsTop))
       return 0;
 
-    HardwareUnitInfo *FenceHWUI = getHWUIFromFlavor(Flavor);
-    HardwareUnitInfo *DSHWUI = getHWUIFromFlavor(InstructionFlavor::DS);
+    HardwareUnitInfo *ConsumerHWUI = getHWUIFromFlavor(Flavor);
+    HardwareUnitInfo *ProducerHWUI = getHWUIFromFlavor(IsTop ? InstructionFlavor::DS : InstructionFlavor::Fence);
 
-    SUnit *LastDS = DSHWUI->getLastScheduledSU();
-    if (!LastDS)
+    SUnit *LastProducer = ProducerHWUI->getLastScheduledSU();
+    if (!LastProducer)
       return 0;
 
-    SUnit *LastFence = FenceHWUI->getLastScheduledSU();
-    unsigned LastFenceCycle = LastFence ? LastFence->TopReadyCycle : 0;
-    unsigned LastDSCycle = LastDS->TopReadyCycle;
+    SUnit *LastConsumer = ConsumerHWUI->getLastScheduledSU();
+    unsigned LastConsumerCycle = LastConsumer ? LastConsumer->TopReadyCycle : 0;
+    unsigned LastProducerCycle = LastProducer->TopReadyCycle;
 
-    if (LastDSCycle < LastFenceCycle)
+    if (LastProducerCycle < LastConsumerCycle)
       return 0;
 
-    unsigned LastDSFinish = LastDSCycle + getHWUICyclesForSU(LastDS);
-    return LastDSFinish <= CurrCycle ? 0 : LastDSFinish - CurrCycle;
+    unsigned FenceStallFinish = LastProducerCycle + getHWUICyclesForSU(IsTop ? LastProducer : SU);
+    return FenceStallFinish <= CurrCycle ? 0 : FenceStallFinish - CurrCycle;
   };
 
   // Treat stalls as a single scheduling cost for the current cycle.
@@ -909,7 +911,7 @@ bool AMDGPUCoExecSchedStrategy::tryCandidateCoexec(SchedCandidate &Cand,
                   Cand, RegMax, TRI, DAG->MF))
     return TryCand.Reason != NoCand;
 
-  if (SameBoundary) {
+  if (SameBoundary) {  
     // Fall through to original instruction order.
     if ((Zone->isTop() && TryCand.SU->NodeNum < Cand.SU->NodeNum) ||
         (!Zone->isTop() && TryCand.SU->NodeNum > Cand.SU->NodeNum)) {
