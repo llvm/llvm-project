@@ -16,6 +16,8 @@
 #include "llvm/DebugInfo/PDB/Native/PDBFileBuilder.h"
 #include "llvm/DebugInfo/PDB/Native/SymbolStream.h"
 #include "llvm/Support/BinaryByteStream.h"
+#include <memory>
+#include <cstring>
 
 #include "gtest/gtest.h"
 
@@ -24,6 +26,15 @@ using namespace llvm::pdb;
 
 namespace {
 struct PublicSym {
+  PublicSym(StringRef N, uint16_t Seg, uint32_t Off)
+      : NameData(new char[N.size()]), Name(NameData.get(), N.size()),
+        Segment(Seg), Offset(Off) {
+    // Store the name without null terminator on the heap to help catch issues
+    // with code assuming there is a null terminator.
+    memcpy(NameData.get(), N.data(), N.size());
+  }
+
+  std::unique_ptr<char[]> NameData;
   llvm::StringRef Name;
   uint16_t Segment;
   uint32_t Offset;
