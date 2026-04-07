@@ -81,6 +81,9 @@ public:
   lldb::addr_t FixCodeAddress(lldb::addr_t pc) override;
   lldb::addr_t FixDataAddress(lldb::addr_t pc) override;
 
+  // If the Permission Overlay Extension is present, use the protection key
+  // to look up overlay permissions in por_el0 and apply them to the original
+  // permissions.
   virtual std::optional<MemoryPermissions>
   GetMemoryPermissions(lldb_private::RegisterContext &reg_ctx,
                        unsigned protection_key,

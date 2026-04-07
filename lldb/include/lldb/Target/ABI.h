@@ -163,14 +163,16 @@ public:
     uint32_t effective;
   };
 
-  /// Get the permissions being overlayed for a given memory key, and the
-  /// resulting permissions after applying the overlay. Typically the protection
-  /// key is used to look up in some architecture specific set of permissions.
-  /// On AArch64, this is the POR register, used by the Permission Overlay
-  /// Extension.
+  /// Get the effective memory permissions that result when the permissions
+  /// referred to by a protection key are applied to the original permissions.
   ///
-  /// Returns std::nullopt if the current target does not have such an overlay
-  /// system, or if the protection key is not valid.
+  /// This is intended for architectures that have some sort of permission
+  /// overlay system. Where the protection key is used to look up a set of
+  /// permissions that modifies the original permissions.
+  ///
+  /// \returns the overlay permissions (that the protection key refers to) and
+  ///   the effective permissions. If the target does not have an overlay
+  ///   system, or it does and the protection key is invalid, returns nullopt.
   virtual std::optional<MemoryPermissions>
   GetMemoryPermissions(lldb_private::RegisterContext &reg_ctx,
                        unsigned protection_key, uint32_t original_permissions) {
