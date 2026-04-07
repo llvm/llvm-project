@@ -85,4 +85,12 @@ int main() {
   // CHECK-MESSAGES-CXX23: :[[@LINE-1]]:14: warning: redundant empty parameter list in lambda expression [readability-redundant-lambda-parentheses]
   // CHECK-FIXES-CXX23:   auto o = [] consteval { return 42; };
 #endif
+
+  // Should NOT warn - attribute after parens
+  auto p = []() [[]] {};
+
+  // Should warn - attribute before parens
+  auto q = [] [[]] () {};
+  // CHECK-MESSAGES: :[[@LINE-1]]:20: warning: redundant empty parameter list in lambda expression [readability-redundant-lambda-parentheses]
+  // CHECK-FIXES:   auto q = [] {{\[\[}}{{\]\]}} {};
 }
