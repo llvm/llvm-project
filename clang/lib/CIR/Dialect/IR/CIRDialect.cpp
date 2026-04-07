@@ -307,6 +307,12 @@ template <typename Op> static LogicalResult verifyArrayCtorDtor(Op op) {
     return op.emitOpError("block argument must be a !cir.ptr type");
 
   if (op.getNumElements()) {
+    auto recTy = mlir::dyn_cast<cir::RecordType>(pointeeTy);
+    if (!recTy)
+      return op.emitOpError(
+          "when 'num_elements' is present, 'addr' must be a pointer to a "
+          "!cir.record type");
+
     if (expectedEltPtrTy != ptrTy)
       return op.emitOpError("when 'num_elements' is present, 'addr' type must "
                             "match the block argument type");
@@ -320,6 +326,11 @@ template <typename Op> static LogicalResult verifyArrayCtorDtor(Op op) {
     mlir::Type innerEltTy = arrayTy.getElementType();
     while (auto nested = mlir::dyn_cast<cir::ArrayType>(innerEltTy))
       innerEltTy = nested.getElementType();
+
+    auto recTy = mlir::dyn_cast<cir::RecordType>(innerEltTy);
+    if (!recTy)
+      return op.emitOpError(
+          "the block argument type must be a pointer to a !cir.record type");
 
     if (expectedEltPtrTy.getPointee() != innerEltTy)
       return op.emitOpError(

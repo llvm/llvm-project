@@ -1,5 +1,23 @@
 // RUN: cir-opt %s -verify-diagnostics -split-input-file
 
+
+!u8i = !cir.int<u, 8>
+!u64i = !cir.int<u, 64>
+!rec_S = !cir.record<struct "S" padded {!u8i}>
+
+module {
+  cir.func dso_local @bad_static_array_ctor_with_num_elements(%p: !cir.ptr<!cir.array<!rec_S x 10>>, %n: !u64i) {
+    // expected-error@+1 {{'cir.array.ctor' op when 'num_elements' is present, 'addr' must be a pointer to a !cir.record type}}
+    cir.array.ctor %p, %n : !cir.ptr<!cir.array<!rec_S x 10>>, !u64i {
+    ^bb0(%e: !cir.ptr<!cir.array<!rec_S x 10>>):
+      cir.yield
+    }
+    cir.return
+  }
+}
+
+// -----
+
 !u8i = !cir.int<u, 8>
 !u64i = !cir.int<u, 64>
 !rec_S = !cir.record<struct "S" padded {!u8i}>
@@ -13,6 +31,26 @@ module {
     cir.array.ctor %p : !cir.ptr<!rec_S> {
     ^bb0(%e: !cir.ptr<!rec_S>):
       cir.call @_ZN1SC1Ev(%e) : (!cir.ptr<!rec_S>) -> ()
+      cir.yield
+    }
+    cir.return
+  }
+}
+
+// -----
+
+!u8i = !cir.int<u, 8>
+!rec_S = !cir.record<struct "S" padded {!u8i}>
+
+module {
+  cir.func private @construct_int(!cir.ptr<!u8i>)
+
+  // Static form: addr must be a pointer to an array type.
+  cir.func @bad_static_array_not_record_ctor(%p: !cir.ptr<!cir.array<!u8i x 4>>) {
+    // expected-error@+1 {{'cir.array.ctor' op the block argument type must be a pointer to a !cir.record type}}
+    cir.array.ctor %p : !cir.ptr<!cir.array<!u8i x 4>> {
+    ^bb0(%e: !cir.ptr<!u8i>):
+      cir.call @construct_int(%e) : (!cir.ptr<!u8i>) -> ()
       cir.yield
     }
     cir.return
@@ -65,6 +103,23 @@ module {
 // -----
 
 !u8i = !cir.int<u, 8>
+!u64i = !cir.int<u, 64>
+!rec_S = !cir.record<struct "S" padded {!u8i}>
+
+module {
+  cir.func dso_local @bad_static_array_dtor_with_num_elements(%p: !cir.ptr<!cir.array<!rec_S x 10>>, %n: !u64i) {
+    // expected-error@+1 {{'cir.array.dtor' op when 'num_elements' is present, 'addr' must be a pointer to a !cir.record type}}
+    cir.array.dtor %p, %n : !cir.ptr<!cir.array<!rec_S x 10>>, !u64i {
+    ^bb0(%e: !cir.ptr<!cir.array<!rec_S x 10>>):
+      cir.yield
+    }
+    cir.return
+  }
+}
+
+// -----
+
+!u8i = !cir.int<u, 8>
 !rec_S = !cir.record<struct "S" padded {!u8i}>
 
 module {
@@ -74,6 +129,26 @@ module {
     // expected-error@+1 {{'cir.array.dtor' op when 'num_elements' is absent, 'addr' must be a pointer to a !cir.array type}}
     cir.array.dtor %p : !cir.ptr<!rec_S> {
     ^bb0(%e: !cir.ptr<!rec_S>):
+      cir.yield
+    }
+    cir.return
+  }
+}
+
+// -----
+
+!u8i = !cir.int<u, 8>
+!rec_S = !cir.record<struct "S" padded {!u8i}>
+
+module {
+  cir.func private @destroy_int(!cir.ptr<!u8i>)
+
+  // Static form: addr must be a pointer to an array type.
+  cir.func @bad_static_array_not_record_dtor(%p: !cir.ptr<!cir.array<!u8i x 4>>) {
+    // expected-error@+1 {{'cir.array.dtor' op the block argument type must be a pointer to a !cir.record type}}
+    cir.array.dtor %p : !cir.ptr<!cir.array<!u8i x 4>> {
+    ^bb0(%e: !cir.ptr<!u8i>):
+      cir.call @destroy_int(%e) : (!cir.ptr<!u8i>) -> ()
       cir.yield
     }
     cir.return
