@@ -634,7 +634,7 @@ LogicalResult DistinctObjectsOp::verify() {
 LogicalResult DistinctObjectsOp::inferReturnTypes(
     MLIRContext * /*context*/, std::optional<Location> /*location*/,
     ValueRange operands, DictionaryAttr /*attributes*/,
-    OpaqueProperties /*properties*/, RegionRange /*regions*/,
+    PropertyRef /*properties*/, RegionRange /*regions*/,
     SmallVectorImpl<Type> &inferredReturnTypes) {
   llvm::copy(operands.getTypes(), std::back_inserter(inferredReturnTypes));
   return success();
@@ -2331,6 +2331,24 @@ public:
     SmallVector<OpFoldResult> sizes = op.getConstifiedMixedSizes();
     SmallVector<OpFoldResult> strides = op.getConstifiedMixedStrides();
 
+    // If the offset is a negative constant, we can't fold it because the
+    // resulting memref type would be invalid. In that case, we keep the
+    // original offset.
+    if (auto cst = getConstantIntValue(offsets[0]))
+      if (*cst < 0)
+        offsets[0] = op.getMixedOffsets()[0];
+
+    // If the size is a negative constant, we can't fold it because the
+    // resulting memref type would be invalid. In that case, we keep the
+    // original size.
+    for (auto it : llvm::zip(op.getMixedSizes(), sizes)) {
+      auto &srcSizeOfr = std::get<0>(it);
+      auto &sizeOfr = std::get<1>(it);
+      if (auto cst = getConstantIntValue(sizeOfr))
+        if (*cst < 0)
+          sizeOfr = srcSizeOfr;
+    }
+
     // TODO: Using counting comparison instead of direct comparison because
     // getMixedValues (and therefore ReinterpretCastOp::getMixed...) returns
     // IntegerAttrs, while constifyIndexValues (and therefore
@@ -2339,21 +2357,6 @@ public:
         llvm::count_if(llvm::concat<OpFoldResult>(offsets, sizes, strides),
                        [](OpFoldResult ofr) { return isa<Attribute>(ofr); }))
       return failure();
-
-    // Do not fold if the offset is a negative constant; ViewLikeInterface
-    // verifies that static offsets are non-negative.
-    if (auto cst = getConstantIntValue(offsets[0]))
-      if (*cst < 0)
-        return rewriter.notifyMatchFailure(
-            op, "negative constant offset is invalid");
-
-    // Do not fold if any size is a negative constant; MemRefType::get asserts
-    // non-negative static sizes.
-    for (OpFoldResult sizeOfr : sizes)
-      if (auto cst = getConstantIntValue(sizeOfr))
-        if (*cst < 0)
-          return rewriter.notifyMatchFailure(
-              op, "negative constant size is invalid");
 
     auto newReinterpretCast = ReinterpretCastOp::create(
         rewriter, op->getLoc(), op.getSource(), offsets[0], sizes, strides);
