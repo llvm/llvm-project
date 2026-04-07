@@ -115,6 +115,9 @@ runServer(plugin::GenericDeviceTy &Device, void *Buffer,
   if (Status == rpc::RPC_UNHANDLED_OPCODE)
     Status = LIBC_NAMESPACE::shared::handle_libc_opcodes(*Port, NumLanes);
 
+  if (Status == rpc::RPC_UNHANDLED_OPCODE)
+    Status = LIBC_NAMESPACE::shared::handleEmissaryOpcodes(*Port, NumLanes);
+
 #ifdef OFFLOAD_HAS_FLANG_RT
   if (Status == rpc::RPC_UNHANDLED_OPCODE)
     Status = static_cast<rpc::RPCStatus>(
