@@ -704,7 +704,7 @@ protected:
                 options.SetVariableFormatDisplayLanguage(
                     valobj_sp->GetPreferredDisplayLanguage());
                 options.SetRootValueObjectName(
-                    var_sp ? var_sp->GetName().AsCString() : nullptr);
+                    var_sp ? var_sp->GetName().AsCString(nullptr) : nullptr);
                 if (llvm::Error error =
                         valobj_sp->Dump(result.GetOutputStream(), options))
                   result.AppendError(toString(std::move(error)));
@@ -728,7 +728,8 @@ protected:
             options.SetFormat(m_option_format.GetFormat());
             options.SetVariableFormatDisplayLanguage(
                 rec_value_sp->GetPreferredDisplayLanguage());
-            options.SetRootValueObjectName(rec_value_sp->GetName().AsCString());
+            options.SetRootValueObjectName(
+                rec_value_sp->GetName().AsCString(nullptr));
             if (llvm::Error error =
                     rec_value_sp->Dump(result.GetOutputStream(), options))
               result.AppendError(toString(std::move(error)));

@@ -1557,8 +1557,7 @@ bool ValueObject::DumpPrintableRepresentation(
         str = GetSummaryAsCString();
       else if (val_obj_display == eValueObjectRepresentationStyleSummary) {
         if (!CanProvideValue()) {
-          strm.Printf("%s @ %s", GetTypeName().AsCString(),
-                      GetLocationAsCString());
+          strm.Format("{0} @ {1}", GetTypeName(), GetLocationAsCString());
           str = strm.GetString();
         } else
           str = GetValueAsCString();

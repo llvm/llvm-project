@@ -219,7 +219,7 @@ const char *SBValue::GetObjectDescription() {
     llvm::consumeError(str.takeError());
     return nullptr;
   }
-  return ConstString(*str).AsCString();
+  return ConstString(*str).AsCString(nullptr);
 }
 
 SBType SBValue::GetType() {

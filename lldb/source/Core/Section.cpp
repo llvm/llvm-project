@@ -317,10 +317,10 @@ void Section::DumpName(llvm::raw_ostream &s) const {
 
     if (m_obj_file) {
       const FileSpec &file_spec = m_obj_file->GetFileSpec();
-      name = file_spec.GetFilename().AsCString();
+      name = file_spec.GetFilename().AsCString(nullptr);
     }
     if ((!name || !name[0]) && module_sp)
-      name = module_sp->GetFileSpec().GetFilename().AsCString();
+      name = module_sp->GetFileSpec().GetFilename().AsCString(nullptr);
     if (name && name[0])
       s << name << '.';
   }

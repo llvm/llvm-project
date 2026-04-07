@@ -1616,7 +1616,7 @@ bool CommandObjectTypeSummaryAdd::AddSummary(ConstString type_name,
   }
 
   if (match_type == eFormatterMatchCallback) {
-    const char *function_name = type_name.AsCString();
+    const char *function_name = type_name.AsCString(nullptr);
     ScriptInterpreter *interpreter = GetDebugger().GetScriptInterpreter();
     if (interpreter && !interpreter->CheckObjectExists(function_name)) {
       *error = Status::FromErrorStringWithFormat(
@@ -2262,10 +2262,10 @@ bool CommandObjectTypeSynthAdd::AddSynth(ConstString type_name,
     if (category->AnyMatches(candidate_type, eFormatCategoryItemFilter,
                              false)) {
       if (error)
-        *error = Status::FromErrorStringWithFormat(
-            "cannot add synthetic for type %s when "
+        *error = Status::FromErrorStringWithFormatv(
+            "cannot add synthetic for type {0} when "
             "filter is defined in same category!",
-            type_name.AsCString());
+            type_name);
       return false;
     }
   }
@@ -2281,7 +2281,7 @@ bool CommandObjectTypeSynthAdd::AddSynth(ConstString type_name,
   }
 
   if (match_type == eFormatterMatchCallback) {
-    const char *function_name = type_name.AsCString();
+    const char *function_name = type_name.AsCString(nullptr);
     ScriptInterpreter *interpreter = GetDebugger().GetScriptInterpreter();
     if (interpreter && !interpreter->CheckObjectExists(function_name)) {
       *error = Status::FromErrorStringWithFormat(
@@ -2404,11 +2404,11 @@ private:
       if (category->AnyMatches(candidate_type, eFormatCategoryItemSynth,
                                false)) {
         if (error)
-          *error = Status::FromErrorStringWithFormat(
-              "cannot add filter for type %s when "
+          *error = Status::FromErrorStringWithFormatv(
+              "cannot add filter for type {0} when "
               "synthetic is defined in same "
               "category!",
-              type_name.AsCString());
+              type_name);
         return false;
       }
     }

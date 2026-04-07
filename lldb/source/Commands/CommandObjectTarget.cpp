@@ -3612,10 +3612,10 @@ protected:
       if (!func_unwinders_sp)
         continue;
 
-      result.GetOutputStream().Printf(
-          "UNWIND PLANS for %s`%s (start addr 0x%" PRIx64 ")\n",
-          sc.module_sp->GetPlatformFileSpec().GetFilename().AsCString(),
-          funcname.AsCString(), start_addr);
+      result.GetOutputStream().Format(
+          "UNWIND PLANS for {0}`{1} (start addr {2:x})\n",
+          sc.module_sp->GetPlatformFileSpec().GetFilename(), funcname,
+          start_addr);
 
       Args args;
       target->GetUserSpecifiedTrapHandlerNames(args);
@@ -3644,20 +3644,20 @@ protected:
 
       if (std::shared_ptr<const UnwindPlan> plan_sp =
               func_unwinders_sp->GetUnwindPlanAtNonCallSite(*target, *thread)) {
-        result.GetOutputStream().Printf(
-            "Asynchronous (not restricted to call-sites) UnwindPlan is '%s'\n",
-            plan_sp->GetSourceName().AsCString());
+        result.GetOutputStream().Format(
+            "Asynchronous (not restricted to call-sites) UnwindPlan is '{0}'\n",
+            plan_sp->GetSourceName());
       }
       if (std::shared_ptr<const UnwindPlan> plan_sp =
               func_unwinders_sp->GetUnwindPlanAtCallSite(*target, *thread)) {
-        result.GetOutputStream().Printf(
-            "Synchronous (restricted to call-sites) UnwindPlan is '%s'\n",
-            plan_sp->GetSourceName().AsCString());
+        result.GetOutputStream().Format(
+            "Synchronous (restricted to call-sites) UnwindPlan is '{0}'\n",
+            plan_sp->GetSourceName());
       }
       if (std::shared_ptr<const UnwindPlan> plan_sp =
               func_unwinders_sp->GetUnwindPlanFastUnwind(*target, *thread)) {
-        result.GetOutputStream().Printf("Fast UnwindPlan is '%s'\n",
-                                        plan_sp->GetSourceName().AsCString());
+        result.GetOutputStream().Format("Fast UnwindPlan is '{0}'\n",
+                                        plan_sp->GetSourceName());
       }
 
       result.GetOutputStream().Printf("\n");
