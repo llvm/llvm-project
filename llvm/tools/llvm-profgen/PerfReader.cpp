@@ -1348,9 +1348,10 @@ void PerfScriptReader::warnIfBranchTargetMismatch() {
   // Collect unique branch source and target addresses from LBR samples,
   // then check what percentage don't match known instructions in the binary.
 
-  std::unordered_set<uint64_t> SampleBranches;
-  std::unordered_set<uint64_t> SampleIndirectTargets;
-  std::unordered_set<uint64_t> SampleTargets;
+  uint64_t MismatchedBranches = 0;
+  uint64_t MismatchedIndirectTargets = 0;
+  uint64_t MismatchedTargets = 0;
+  uint64_t TotalSamples = 0;
 
   for (const auto &Item : AggregatedSamples) {
     const PerfSample *Sample = Item.first.getPtr();
@@ -1359,43 +1360,34 @@ void PerfScriptReader::warnIfBranchTargetMismatch() {
       uint64_t Target = LBR.Target;
       if (Source == ExternalAddr || Target == ExternalAddr)
         continue;
-      SampleBranches.insert(Source);
-      if (Binary->addressIsIndirectBranch(Source))
-        SampleIndirectTargets.insert(Target);
-      else
-        SampleTargets.insert(Target);
+      TotalSamples++;
+
+      // Validate Branch sources are Call/Branch/Indirect Branch
+      if (!Binary->addressIsTransfer(Source))
+        MismatchedBranches++;
+
+      // Validate Indirect Branch targets landed in code. This may over estimate
+      // the vaid targets only because there's no good way to determine jump
+      // table targets
+      if (Binary->addressIsIndirectBranch(Source)) {
+        if (!Binary->addressIsCode(Target))
+          MismatchedIndirectTargets++;
+      } else if (!Binary->addressIsBranchTarget(Target) &&
+                 !Binary->findFuncRangeForStartAddr(Target))
+        MismatchedTargets++;
     }
   }
 
-  auto CheckMismatch = [&](StringRef Kind,
-                           const std::unordered_set<uint64_t> &SampleAddrs,
-                           auto IsValidAddr) {
-    if (SampleAddrs.empty())
-      return;
-    uint64_t Mismatched = 0;
-    for (uint64_t Addr : SampleAddrs) {
-      if (!IsValidAddr(Addr))
-        Mismatched++;
-    }
-    double MismatchPct =
-        static_cast<double>(Mismatched) / SampleAddrs.size() * 100;
-    if (Mismatched) {
-      WithColor::warning()
-          << format("%.2f", MismatchPct) << "% of sampled " << Kind
-          << " addresses (" << Mismatched << "/" << SampleAddrs.size()
-          << ") do not match the binary, likely due to problematic raw samples or mismatch in binary.\n";
-    }
-  };
-
-  CheckMismatch("branch", SampleBranches, [&](uint64_t Addr) {
-    return Binary->addressIsTransfer(Addr);
-  });
-  CheckMismatch("target", SampleTargets, [&](uint64_t Addr) {
-    return Binary->addressIsBranchTarget(Addr) || Binary->findFuncRangeForStartAddr(Addr);
-  });
-  CheckMismatch("indirect branch target", SampleIndirectTargets, [&](uint64_t Addr) {
-    return Binary->addressIsCode(Addr);
-  });
+  emitWarningSummary(MismatchedBranches, TotalSamples,
+                     "of branches do not match the binary, likely due to "
+                     "problematic raw samples or mismatch in binary.");
+  emitWarningSummary(MismatchedTargets, TotalSamples,
+                     "of branch targets do not match the binary, likely due to "
+                     "problematic raw samples or mismatch in binary.");
+  emitWarningSummary(
+      MismatchedIndirectTargets, TotalSamples,
+      "of indirect branch targets do not match the binary, likely due to "
+      "problematic raw samples or mismatch in binary.");
 }
 
 void PerfScriptReader::parsePerfTraces() {
