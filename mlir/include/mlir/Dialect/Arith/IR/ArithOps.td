@@ -81,11 +81,11 @@ class Arith_FloatUnaryOp<string mnemonic, list<Trait> traits = []> :
 class Arith_FloatBinaryOp<string mnemonic, list<Trait> traits = []> :
     Arith_BinaryOp<mnemonic,
       !listconcat([Pure, DeclareOpInterfaceMethods<ArithFastMathInterface>],
-                  traits)>,
-    Arguments<(ins FloatLike:$lhs, FloatLike:$rhs,
+                  traits)> {
+  let arguments = (ins FloatLike:$lhs, FloatLike:$rhs,
       DefaultValuedAttr<
-        Arith_FastMathAttr, "::mlir::arith::FastMathFlags::none">:$fastmath)>,
-    Results<(outs FloatLike:$result)> {
+        Arith_FastMathAttr, "::mlir::arith::FastMathFlags::none">:$fastmath);
+  let results = (outs FloatLike:$result);
   let assemblyFormat = [{ $lhs `,` $rhs (`fastmath` `` $fastmath^)?
                           attr-dict `:` type($result) }];
 }
@@ -94,15 +94,13 @@ class Arith_FloatBinaryOp<string mnemonic, list<Trait> traits = []> :
 // mode.
 class Arith_FloatBinaryOpWithRoundingMode<string mnemonic,
                                           list<Trait> traits = []> :
-    Arith_BinaryOp<mnemonic,
-      !listconcat([Pure, DeclareOpInterfaceMethods<ArithFastMathInterface>,
-                   DeclareOpInterfaceMethods<ArithRoundingModeInterface>],
-                  traits)>,
-    Arguments<(ins FloatLike:$lhs, FloatLike:$rhs,
+    Arith_FloatBinaryOp<mnemonic,
+      !listconcat([DeclareOpInterfaceMethods<ArithRoundingModeInterface>],
+                  traits)> {
+  let arguments = (ins FloatLike:$lhs, FloatLike:$rhs,
       DefaultValuedAttr<
         Arith_FastMathAttr, "::mlir::arith::FastMathFlags::none">:$fastmath,
-      OptionalAttr<Arith_RoundingModeAttr>:$roundingmode)>,
-    Results<(outs FloatLike:$result)> {
+      OptionalAttr<Arith_RoundingModeAttr>:$roundingmode);
   let builders = [
     OpBuilder<(ins "Value":$lhs, "Value":$rhs,
       CArg<"::mlir::arith::FastMathFlags",
@@ -1005,7 +1003,8 @@ def Arith_AddFOp : Arith_FloatBinaryOpWithRoundingMode<"addf", [Commutative]> {
     floating point tensor.
 
     If the value cannot be exactly represented, it is rounded using the
-    provided rounding mode or the default one if no rounding mode is provided.
+    provided rounding mode or, if no rounding mode is provided, according to
+    the default LLVM floating-point environment.
 
     Example:
 
@@ -1039,7 +1038,8 @@ def Arith_SubFOp : Arith_FloatBinaryOpWithRoundingMode<"subf"> {
     floating point tensor.
 
     If the value cannot be exactly represented, it is rounded using the
-    provided rounding mode or the default one if no rounding mode is provided.
+    provided rounding mode or, if no rounding mode is provided, according to
+    the default LLVM floating-point environment.
 
     Example:
 
@@ -1193,7 +1193,8 @@ def Arith_MulFOp : Arith_FloatBinaryOpWithRoundingMode<"mulf", [Commutative]> {
     floating point tensor.
 
     If the value cannot be exactly represented, it is rounded using the
-    provided rounding mode or the default one if no rounding mode is provided.
+    provided rounding mode or, if no rounding mode is provided, according to
+    the default LLVM floating-point environment.
 
     Example:
 
@@ -1228,7 +1229,8 @@ def Arith_DivFOp : Arith_FloatBinaryOpWithRoundingMode<"divf"> {
     floating point tensor.
 
     If the value cannot be exactly represented, it is rounded using the
-    provided rounding mode or the default one if no rounding mode is provided.
+    provided rounding mode or, if no rounding mode is provided, according to
+    the default LLVM floating-point environment.
 
     Example:
 
@@ -1255,7 +1257,8 @@ def Arith_RemFOp : Arith_FloatBinaryOpWithRoundingMode<"remf"> {
     The remainder has the same sign as the dividend (lhs operand).
 
     If the value cannot be exactly represented, it is rounded using the
-    provided rounding mode or the default one if no rounding mode is provided.
+    provided rounding mode or, if no rounding mode is provided, according to
+    the default LLVM floating-point environment.
   }];
   let hasFolder = 1;
 }
@@ -1490,9 +1493,11 @@ def Arith_TruncFOp :
   let description = [{
     Truncate a floating-point value to a smaller floating-point-typed value.
     The destination type must be strictly narrower than the source type.
-    If the value cannot be exactly represented, it is rounded using the
-    provided rounding mode or the default one if no rounding mode is provided.
     When operating on vectors, casts elementwise.
+
+    If the value cannot be exactly represented, it is rounded using the
+    provided rounding mode or, if no rounding mode is provided, according to
+    the default LLVM floating-point environment.
   }];
   let builders = [
     OpBuilder<(ins "Type":$out, "Value":$in), [{
@@ -1531,9 +1536,11 @@ def Arith_ConvertFOp :
     be represented by `arith.extf` or `arith.truncf`.
 
     The source and destination element types must be different and must have
-    the same bitwidth. If the value cannot be exactly represented, it is
-    rounded using the provided rounding mode or the default one if no rounding
-    mode is provided. When operating on vectors, casts elementwise.
+    the same bitwidth. When operating on vectors, casts elementwise.
+
+    If the value cannot be exactly represented, it is rounded using the
+    provided rounding mode or, if no rounding mode is provided, according to
+    the default LLVM floating-point environment.
   }];
 
   let hasFolder = 1;
