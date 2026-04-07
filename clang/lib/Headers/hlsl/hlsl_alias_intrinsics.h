@@ -62,15 +62,6 @@ int16_t3 abs(int16_t3);
 _HLSL_16BIT_AVAILABILITY_SHADERMODEL_DEFAULT()
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
 int16_t4 abs(int16_t4);
-
-_HLSL_16BIT_AVAILABILITY_SHADERMODEL_DEFAULT()
-constexpr uint16_t abs(uint16_t V) { return V; }
-_HLSL_16BIT_AVAILABILITY_SHADERMODEL_DEFAULT()
-constexpr uint16_t2 abs(uint16_t2 V) { return V; }
-_HLSL_16BIT_AVAILABILITY_SHADERMODEL_DEFAULT()
-constexpr uint16_t3 abs(uint16_t3 V) { return V; }
-_HLSL_16BIT_AVAILABILITY_SHADERMODEL_DEFAULT()
-constexpr uint16_t4 abs(uint16_t4 V) { return V; }
 #endif
 
 _HLSL_16BIT_AVAILABILITY_SHADERMODEL_DEFAULT()
@@ -95,11 +86,6 @@ int3 abs(int3);
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
 int4 abs(int4);
 
-constexpr uint abs(uint V) { return V; }
-constexpr uint2 abs(uint2 V) { return V; }
-constexpr uint3 abs(uint3 V) { return V; }
-constexpr uint4 abs(uint4 V) { return V; }
-
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
 float abs(float);
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
@@ -117,11 +103,6 @@ _HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
 int64_t3 abs(int64_t3);
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
 int64_t4 abs(int64_t4);
-
-constexpr uint64_t abs(uint64_t V) { return V; }
-constexpr uint64_t2 abs(uint64_t2 V) { return V; }
-constexpr uint64_t3 abs(uint64_t3 V) { return V; }
-constexpr uint64_t4 abs(uint64_t4 V) { return V; }
 
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
 double abs(double);
@@ -1947,6 +1928,29 @@ _HLSL_BUILTIN_ALIAS(__builtin_hlsl_normalize)
 float3 normalize(float3);
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_normalize)
 float4 normalize(float4);
+
+//===----------------------------------------------------------------------===//
+// NonUniformResourceIndex builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn uint NonUniformResourceIndex(uint I)
+/// \brief A compiler hint to indicate that a resource index varies across
+/// threads within a wave (i.e., it is non-uniform).
+/// \param I [in] Resource array index
+///
+/// The return value is the \a I parameter.
+///
+/// When indexing into an array of shader resources (e.g., textures, buffers),
+/// some GPU hardware and drivers require the compiler to know whether the index
+/// is uniform (same for all threads) or non-uniform (varies per thread).
+///
+/// Using NonUniformResourceIndex explicitly marks an index as non-uniform,
+/// disabling certain assumptions or optimizations that could lead to incorrect
+/// behavior when dynamically accessing resource arrays with non-uniform
+/// indices.
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_resource_nonuniformindex)
+uint NonUniformResourceIndex(uint);
 
 //===----------------------------------------------------------------------===//
 // or builtins

@@ -1959,6 +1959,13 @@ let Predicates = [HasStdExtP, IsRV32] in {
   def : Pat<(i32 (add GPR:$rd, (mul_oneuse sexti16:$rs1, zexti16:$rs2))),
             (MACCSU_H00 GPR:$rd, sexti16:$rs1, zexti16:$rs2)>;
 
+  def : Pat<(i32 (add GPR:$rd, (binop_oneuse<mulhs> GPR:$rs1, GPR:$rs2))),
+            (MHACC GPR:$rd, GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(i32 (add GPR:$rd, (binop_oneuse<mulhu> GPR:$rs1, GPR:$rs2))),
+            (MHACCU GPR:$rd, GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(i32 (add GPR:$rd, (binop_oneuse<riscv_mulhsu> GPR:$rs1, GPR:$rs2))),
+            (MHACCSU GPR:$rd, GPR:$rs1, GPR:$rs2)>;
+
   // Narrowing shift patterns (NSRL/NSRA)
   // Immediate shift amount patterns
   def : Pat<(riscv_nsrl GPR:$lo, GPR:$hi, uimm6:$shamt),
