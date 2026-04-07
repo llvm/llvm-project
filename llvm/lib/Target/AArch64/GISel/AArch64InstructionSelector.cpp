@@ -1024,6 +1024,7 @@ static bool selectCopy(MachineInstr &I, const TargetInstrInfo &TII,
                        const RegisterBankInfo &RBI) {
   Register DstReg = I.getOperand(0).getReg();
   Register SrcReg = I.getOperand(1).getReg();
+  Register SubSrcReg = I.getOperand(1).getSubReg();
   const RegisterBank &DstRegBank = *RBI.getRegBank(DstReg, MRI, TRI);
   const RegisterBank &SrcRegBank = *RBI.getRegBank(SrcReg, MRI, TRI);
 
@@ -1060,9 +1061,11 @@ static bool selectCopy(MachineInstr &I, const TargetInstrInfo &TII,
       MachineIRBuilder MIB(I);
       auto Copy = MIB.buildCopy({DstTempRC}, {SrcReg});
       copySubReg(I, MRI, RBI, Copy.getReg(0), DstRC, SubReg);
-    } else if (SrcSize > DstSize) {
+    } else if (SrcSize > DstSize &&
+               (!SubSrcReg || DstSize != TRI.getSubRegIdxSize(SubSrcReg))) {
       // If the source register is bigger than the destination we need to
-      // perform a subregister copy.
+      // perform a subregister copy, unless there is already a sub-register of a
+      // correct size present.
       const TargetRegisterClass *SubRegRC =
           getMinClassForRegBank(SrcRegBank, DstSize, /* GetAllRegSet */ true);
       getSubRegForClass(SubRegRC, TRI, SubReg);
