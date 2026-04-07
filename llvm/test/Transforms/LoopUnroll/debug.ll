@@ -570,8 +570,8 @@ exit:
 ; CHECK:UNROLLING loop %for.body by 8 with run-time trip count!
 ;
 ; With a low partial threshold, the runtime unroll count is reduced below 2
-; and no unrolling occurs, but a misleading "Runtime unrolling with count"
-; message is still printed.
+; and no unrolling occurs. Verify we don't print a misleading
+; "Runtime unrolling with count" message.
 ;
 ; RUNTIME-NOPROFIT-LABEL:Loop Unroll: F[runtime_unroll_simple] Loop %for.body (depth=1)
 ; RUNTIME-NOPROFIT-NEXT:Loop Size = 6
@@ -583,8 +583,8 @@ exit:
 ; RUNTIME-NOPROFIT-NEXT: Trying loop peeling...
 ; RUNTIME-NOPROFIT-NEXT: Trying partial unroll...
 ; RUNTIME-NOPROFIT-NEXT: Trying runtime unroll...
-; RUNTIME-NOPROFIT-NEXT:  Runtime unrolling with count: 1
-; RUNTIME-NOPROFIT-NEXT: Not unrolling: no viable strategy found.
+; RUNTIME-NOPROFIT-NOT:  Runtime unrolling with count:
+; RUNTIME-NOPROFIT: Not unrolling: no viable strategy found.
 
 define i32 @runtime_unroll_simple(ptr %A, i32 %n) {
 entry:
