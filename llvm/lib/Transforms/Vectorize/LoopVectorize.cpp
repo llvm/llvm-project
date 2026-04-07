@@ -7303,16 +7303,16 @@ LoopVectorizationPlanner::computeBestVF() {
                         !cast<VPWidenMemoryRecipe>(&R)->isConsecutive();
                });
              });
-  assert(
-      (BestFactor.Width == LegacyVF.Width || BestPlan.hasEarlyExit() ||
-       !Legal->getLAI()->getSymbolicStrides().empty() || UsesEVLGatherScatter ||
-       planContainsDifferentCompares(BestPlan, CostCtx, OrigLoop,
-                                     BestFactor.Width) ||
-       planContainsAdditionalSimplifications(BestPlan, CostCtx, OrigLoop,
-                                             BestFactor.Width) ||
-       planContainsAdditionalSimplifications(
-           getPlanFor(LegacyVF.Width), CostCtx, OrigLoop, LegacyVF.Width)) &&
-      " VPlan cost model and legacy cost model disagreed");
+  assert((BestFactor.Width == LegacyVF.Width || BestPlan.hasEarlyExit() ||
+          !Legal->getLAI()->getSymbolicStrides().empty() ||
+          UsesEVLGatherScatter ||
+          planContainsDifferentCompares(BestPlan, CostCtx, OrigLoop,
+                                        BestFactor.Width) ||
+          planContainsAdditionalSimplifications(BestPlan, CostCtx, OrigLoop,
+                                                BestFactor.Width) ||
+          planContainsAdditionalSimplifications(
+              getPlanFor(LegacyVF.Width), CostCtx, OrigLoop, LegacyVF.Width)) &&
+         " VPlan cost model and legacy cost model disagreed");
   assert((BestFactor.Width.isScalar() || BestFactor.ScalarCost > 0) &&
          "when vectorizing, the scalar cost must be computed.");
 #endif
