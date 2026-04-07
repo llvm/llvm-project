@@ -9203,10 +9203,10 @@ int LLParser::parseAtomicRMW(Instruction *&Inst, PerFunctionState &PFS) {
                                " operand must be a floating point type");
     }
   } else {
-    if (!ScalarTy->isIntegerTy()) {
+    if (!ScalarTy->isIntOrIntVectorTy()) {
       return error(ValLoc, "atomicrmw " +
                                AtomicRMWInst::getOperationName(Operation) +
-                               " operand must be an integer");
+                               " operand must be an integer type");
     }
   }
 
