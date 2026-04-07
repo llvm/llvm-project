@@ -141,6 +141,7 @@ public:
   virtual void onProgramExit(const ProgramExitInfo &ExitInfo) {}
   virtual bool onPrint(StringRef Msg) {
     outs() << Msg;
+    outs().flush();
     return true;
   }
 };

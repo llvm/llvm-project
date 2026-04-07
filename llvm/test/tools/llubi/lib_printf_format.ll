@@ -62,20 +62,20 @@ entry:
 ; CHECK-NEXT:   store [6 x i8] c"N=%d\0A\00", ptr %fmt_n_out, align 1
 ; CHECK-NEXT:   %n_count = alloca i32, align 4 => ptr 0xA0 [n_count]
 ; CHECK-NEXT:   store i32 0, ptr %n_count, align 4
+; CHECK-NEXT: Ints: 42, -42, 255, 377, ff, FF, 00042
 ; CHECK-NEXT:   %0 = call i32 (ptr, ...) @printf(ptr %fmt_int, i32 42, i32 -42, i32 255, i32 255, i32 255, i32 255, i32 42) => i32 39
+; CHECK-NEXT: Lengths: 123456789, 987654321, 100, 50, A
 ; CHECK-NEXT:   %1 = call i32 (ptr, ...) @printf(ptr %fmt_len, i64 123456789, i64 987654321, i32 100, i32 50, i32 65) => i32 42
+; CHECK-NEXT: Str: llubi, Ptr: 0x70
 ; CHECK-NEXT:   %2 = call i32 (ptr, ...) @printf(ptr %fmt_str_ptr, ptr %dummy_str, ptr %dummy_str) => i32 22
+; CHECK-NEXT: Percent: 100%
 ; CHECK-NEXT:   %3 = call i32 (ptr, ...) @printf(ptr %fmt_pct, i32 100) => i32 14
+; CHECK-NEXT: Floats: 3.141590, 3.141590e+00, 3.14159
 ; CHECK-NEXT:   %4 = call i32 (ptr, ...) @printf(ptr %fmt_float, double 3.141590e+00, double 3.141590e+00, double 3.141590e+00) => i32 40
+; CHECK-NEXT: Count: Done
 ; CHECK-NEXT:   %5 = call i32 (ptr, ...) @printf(ptr %fmt_n, ptr %n_count) => i32 12
 ; CHECK-NEXT:   %n_loaded = load i32, ptr %n_count, align 4 => i32 7
+; CHECK-NEXT: N=7
 ; CHECK-NEXT:   %6 = call i32 (ptr, ...) @printf(ptr %fmt_n_out, i32 %n_loaded) => i32 4
 ; CHECK-NEXT:   ret i32 0
 ; CHECK-NEXT: Exiting function: main
-; CHECK-NEXT: Ints: 42, -42, 255, 377, ff, FF, 00042
-; CHECK-NEXT: Lengths: 123456789, 987654321, 100, 50, A
-; CHECK-NEXT: Str: llubi, Ptr: 0x70
-; CHECK-NEXT: Percent: 100%
-; CHECK-NEXT: Floats: 3.141590, 3.141590e+00, 3.14159
-; CHECK-NEXT: Count: Done
-; CHECK-NEXT: N=7

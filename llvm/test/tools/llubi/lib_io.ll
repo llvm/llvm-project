@@ -24,13 +24,13 @@ entry:
 ; CHECK: Entering function: main
 ; CHECK-NEXT:   %puts.str = alloca [13 x i8], align 1 => ptr 0x8 [puts.str]
 ; CHECK-NEXT:   store [13 x i8] c"Hello, puts!\00", ptr %puts.str, align 1
+; CHECK-NEXT: Hello, puts!
 ; CHECK-NEXT:   %0 = call i32 @puts(ptr %puts.str) => i32 1
 ; CHECK-NEXT:   %fmt.str = alloca [18 x i8], align 1 => ptr 0x15 [fmt.str]
 ; CHECK-NEXT:   store [18 x i8] c"Int: %d, Str: %s\0A\00", ptr %fmt.str, align 1
 ; CHECK-NEXT:   %arg.str = alloca [5 x i8], align 1 => ptr 0x27 [arg.str]
 ; CHECK-NEXT:   store [5 x i8] c"test\00", ptr %arg.str, align 1
+; CHECK-NEXT: Int: 42, Str: test
 ; CHECK-NEXT:   %1 = call i32 (ptr, ...) @printf(ptr %fmt.str, i32 42, ptr %arg.str) => i32 19
 ; CHECK-NEXT:   ret i32 0
 ; CHECK-NEXT: Exiting function: main
-; CHECK-NEXT: Hello, puts!
-; CHECK-NEXT: Int: 42, Str: test
