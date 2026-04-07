@@ -54,6 +54,7 @@
 #include <cassert>
 #include <cstddef>
 #include <cstdio>
+#include <functional>
 
 namespace llvm {
 class raw_ostream;
@@ -135,6 +136,8 @@ public:
   static size_t GetNumDebuggers();
 
   static lldb::DebuggerSP GetDebuggerAtIndex(size_t index);
+
+  static void ForEachDebugger(std::function<void(lldb::DebuggerSP)> callback);
 
   static bool FormatDisassemblerAddress(const FormatEntity::Entry *format,
                                         const SymbolContext *sc,

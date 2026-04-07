@@ -1603,6 +1603,16 @@ lldb::DebuggerSP Debugger::GetDebuggerAtIndex(size_t index) {
   return nullptr;
 }
 
+void Debugger::ForEachDebugger(std::function<void(DebuggerSP)> callback) {
+  std::lock_guard<std::mutex> guard(GetDebuggerListMutex());
+  if (!g_debugger_list_ptr)
+    return;
+  for (const auto &debugger_sp : *g_debugger_list_ptr) {
+    if (debugger_sp)
+      callback(debugger_sp);
+  }
+}
+
 DebuggerSP Debugger::FindDebuggerWithID(lldb::user_id_t id) {
   std::lock_guard<std::mutex> guard(GetDebuggerListMutex());
   if (!g_debugger_list_ptr)

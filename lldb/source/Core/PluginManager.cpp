@@ -2502,15 +2502,20 @@ bool PluginManager::SetInstrumentationRuntimePluginEnabled(llvm::StringRef name,
 
   // Notify all alive processes to enable/disable the plugin.
   bool failed = false;
-  for (size_t di = 0; di < Debugger::GetNumDebuggers(); ++di) {
-    DebuggerSP debugger_sp = Debugger::GetDebuggerAtIndex(di);
+  // FIXME: This is a hack. We can't call
+  // `Process::SetInstrumentationRuntimeEnabled()` while
+  // `Debugger::ForEachDebugger()` holds a its lock because runtime activation/
+  // deactivation might indirectly try to acquire the same lock and cause
+  // deadlock. To avoid this we make a copy of the list of debuggers while
+  // holding the lock and then release the lock and iterate over the copy.
+  // The right fix here is for Debugger to use a `std::recursive_mutex`.
+  llvm::SmallVector<DebuggerSP, 1> debuggers;
+  Debugger::ForEachDebugger(
+      [&](DebuggerSP debugger_sp) { debuggers.emplace_back(debugger_sp); });
+  for (const auto &debugger_sp : debuggers) {
     if (!debugger_sp)
       continue;
-    TargetList &target_list = debugger_sp->GetTargetList();
-    for (size_t ti = 0; ti < target_list.GetNumTargets(); ++ti) {
-      TargetSP target_sp = target_list.GetTargetAtIndex(ti);
-      if (!target_sp)
-        continue;
+    for (const auto &target_sp : debugger_sp->GetTargetList().Targets()) {
       ProcessSP process_sp = target_sp->GetProcessSP();
       if (!process_sp || !process_sp->IsAlive())
         continue;
