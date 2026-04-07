@@ -94,7 +94,7 @@ llvm.func @_QPtest(%arg0: !llvm.ptr {fir.bindc_name = "arg", llvm.noalias, llvm.
 // CHECK:         br label %[[VAL_38:.*]]
 // CHECK:       omp_loop.preheader:                               ; preds = %[[VAL_37]]
 // CHECK:         %[[VAL_39:.*]] = sub i64 %[[VAL_28]], %[[VAL_26]]
-// CHECK:         %[[VAL_40:.*]] = sdiv i64 %[[VAL_39]], 1
+// CHECK:         %[[VAL_40:.*]] = sdiv i64 %[[VAL_39]], %[[VAL_30]]
 // CHECK:         %[[VAL_41:.*]] = add i64 %[[VAL_40]], 1
 // CHECK:         %[[VAL_42:.*]] = trunc i64 %[[VAL_41]] to i32
 // CHECK:         %[[VAL_43:.*]] = trunc i64 %[[VAL_26]] to i32
@@ -228,7 +228,7 @@ llvm.func @_QPtest2(%arg0: !llvm.ptr {fir.bindc_name = "arg", llvm.noalias, llvm
 // CHECK:         br label %[[VAL_108:.*]]
 // CHECK:       omp_loop.preheader:                               ; preds = %[[VAL_107]]
 // CHECK:         %[[VAL_109:.*]] = sub i64 %[[VAL_98]], %[[VAL_96]]
-// CHECK:         %[[VAL_110:.*]] = sdiv i64 %[[VAL_109]], 1
+// CHECK:         %[[VAL_110:.*]] = sdiv i64 %[[VAL_109]], %[[VAL_100]]
 // CHECK:         %[[VAL_111:.*]] = add i64 %[[VAL_110]], 1
 // CHECK:         %[[VAL_112:.*]] = trunc i64 %[[VAL_111]] to i32
 // CHECK:         %[[VAL_113:.*]] = trunc i64 %[[VAL_96]] to i32
@@ -353,7 +353,7 @@ llvm.func @_QPtest3(%arg0: !llvm.ptr {fir.bindc_name = "arg", llvm.noalias, llvm
 // CHECK:         br label %[[VAL_174:.*]]
 // CHECK:       omp_loop.preheader:                               ; preds = %[[VAL_173]]
 // CHECK:         %[[VAL_175:.*]] = sub i64 %[[VAL_164]], %[[VAL_162]]
-// CHECK:         %[[VAL_176:.*]] = sdiv i64 %[[VAL_175]], 1
+// CHECK:         %[[VAL_176:.*]] = sdiv i64 %[[VAL_175]], %[[VAL_166]]
 // CHECK:         %[[VAL_177:.*]] = add i64 %[[VAL_176]], 1
 // CHECK:         %[[VAL_178:.*]] = trunc i64 %[[VAL_177]] to i32
 // CHECK:         %[[VAL_179:.*]] = trunc i64 %[[VAL_162]] to i32

@@ -42,9 +42,11 @@ llvm.func @_QPtest() {
 // CHECK: %[[task_lb:.*]] = load i64, ptr %[[gep_task_lb]], align 4
 // CHECK: %[[gep_task_ub:.*]] = getelementptr { i64, i64, i64, ptr }, ptr %[[VAL_1]], i32 0, i32 1
 // CHECK: %[[task_ub:.*]] = load i64, ptr %gep_ub.val, align 4
+// CHECK: %[[gep_task_step:.*]] = getelementptr { i64, i64, i64, ptr }, ptr %[[VAL_1]], i32 0, i32 2
+// CHECK: %[[task_step:.*]] = load i64, ptr %[[gep_task_step]], align 4
 
 // CHECK: %[[VAL_3:.*]] = sub i64 %[[task_ub]], %[[task_lb]]
-// CHECK: %[[VAL_4:.*]] = sdiv i64 %[[VAL_3]], 1
+// CHECK: %[[VAL_4:.*]] = sdiv i64 %[[VAL_3]], %[[task_step]]
 // CHECK: %[[trip_cnt:.*]] = add i64 %[[VAL_4]], 1
 // CHECK: %[[VAL_6:.*]] = trunc i64 %[[task_lb]] to i32
 
@@ -92,9 +94,11 @@ llvm.func @_QPtest2() {
 // CHECK: %[[task_lb:.*]] = load i64, ptr %[[gep_task_lb]], align 4
 // CHECK: %[[gep_task_ub:.*]] = getelementptr { i64, i64, i64, ptr }, ptr %[[VAL_1]], i32 0, i32 1
 // CHECK: %[[task_ub:.*]] = load i64, ptr %gep_ub.val, align 4
+// CHECK: %[[gep_task_step:.*]] = getelementptr { i64, i64, i64, ptr }, ptr %[[VAL_1]], i32 0, i32 2
+// CHECK: %[[task_step:.*]] = load i64, ptr %[[gep_task_step]], align 4
 
 // CHECK: %[[VAL_3:.*]] = sub i64 %[[task_ub]], %[[task_lb]]
-// CHECK: %[[VAL_4:.*]] = sdiv i64 %[[VAL_3]], 1
+// CHECK: %[[VAL_4:.*]] = sdiv i64 %[[VAL_3]], %[[task_step]]
 // CHECK: %[[trip_cnt:.*]] = add i64 %[[VAL_4]], 1
 // CHECK: %[[VAL_6:.*]] = trunc i64 %[[task_lb]] to i32
 
@@ -147,9 +151,11 @@ llvm.func @_QPtest3() {
 // CHECK: %[[task_lb:.*]] = load i64, ptr %[[gep_task_lb]], align 4
 // CHECK: %[[gep_task_ub:.*]] = getelementptr { i64, i64, i64, ptr }, ptr %[[VAL_1]], i32 0, i32 1
 // CHECK: %[[task_ub:.*]] = load i64, ptr %[[gep_task_ub]], align 4
+// CHECK: %[[gep_task_step:.*]] = getelementptr { i64, i64, i64, ptr }, ptr %[[VAL_1]], i32 0, i32 2
+// CHECK: %[[task_step:.*]] = load i64, ptr %[[gep_task_step]], align 4
 
 // CHECK: %[[VAL_3:.*]] = sub i64 %[[task_ub]], %[[task_lb]]
-// CHECK: %[[VAL_4:.*]] = sdiv i64 %[[VAL_3]], 1
+// CHECK: %[[VAL_4:.*]] = sdiv i64 %[[VAL_3]], %[[task_step]]
 // CHECK: %[[trip_cnt:.*]] = add i64 %[[VAL_4]], 1
 // CHECK: %[[VAL_5:.*]] = trunc i64 %[[trip_cnt]] to i32
 // CHECK: %6 = trunc i64 %[[task_lb]] to i32
@@ -202,9 +208,11 @@ llvm.func @_QPtest4() {
 // CHECK: %[[task_lb:.*]] = load i64, ptr %[[gep_task_lb]], align 4
 // CHECK: %[[gep_task_ub:.*]] = getelementptr { i64, i64, i64, ptr }, ptr %[[VAL_1]], i32 0, i32 1
 // CHECK: %[[task_ub:.*]] = load i64, ptr %[[gep_task_ub]], align 4
+// CHECK: %[[gep_task_step:.*]] = getelementptr { i64, i64, i64, ptr }, ptr %[[VAL_1]], i32 0, i32 2
+// CHECK: %[[task_step:.*]] = load i64, ptr %[[gep_task_step]], align 4
 
 // CHECK: %[[VAL_3:.*]] = sub i64 %[[task_ub]], %[[task_lb]]
-// CHECK: %[[VAL_4:.*]] = sdiv i64 %[[VAL_3]], 1
+// CHECK: %[[VAL_4:.*]] = sdiv i64 %[[VAL_3]], %[[task_step]]
 // CHECK: %[[trip_cnt:.*]] = add i64 %[[VAL_4]], 1
 // CHECK: %[[VAL_5:.*]] = trunc i64 %[[trip_cnt]] to i32
 // CHECK: %6 = trunc i64 %[[task_lb]] to i32
@@ -259,9 +267,11 @@ llvm.func @_QPtest5() {
 // CHECK: %[[task_lb:.*]] = load i64, ptr %[[gep_task_lb]], align 4
 // CHECK: %[[gep_task_ub:.*]] = getelementptr { i64, i64, i64, ptr }, ptr %[[VAL_1]], i32 0, i32 1
 // CHECK: %[[task_ub:.*]] = load i64, ptr %[[gep_task_ub]], align 4
+// CHECK: %[[gep_task_step:.*]] = getelementptr { i64, i64, i64, ptr }, ptr %[[VAL_1]], i32 0, i32 2
+// CHECK: %[[task_step:.*]] = load i64, ptr %[[gep_task_step]], align 4
 
 // CHECK: %[[VAL_3:.*]] = sub i64 %[[task_ub]], %[[task_lb]]
-// CHECK: %[[VAL_4:.*]] = sdiv i64 %[[VAL_3]], 1
+// CHECK: %[[VAL_4:.*]] = sdiv i64 %[[VAL_3]], %[[task_step]]
 // CHECK: %[[trip_cnt:.*]] = add i64 %[[VAL_4]], 1
 // CHECK: %[[VAL_5:.*]] = trunc i64 %[[trip_cnt]] to i32
 // CHECK: %6 = trunc i64 %[[task_lb]] to i32
@@ -312,9 +322,11 @@ llvm.func @_QPtest6() {
 // CHECK: %[[task_lb:.*]] = load i64, ptr %[[gep_task_lb]], align 4
 // CHECK: %[[gep_task_ub:.*]] = getelementptr { i64, i64, i64, ptr }, ptr %[[VAL_1]], i32 0, i32 1
 // CHECK: %[[task_ub:.*]] = load i64, ptr %[[gep_task_ub]], align 4
+// CHECK: %[[gep_task_step:.*]] = getelementptr { i64, i64, i64, ptr }, ptr %[[VAL_1]], i32 0, i32 2
+// CHECK: %[[task_step:.*]] = load i64, ptr %[[gep_task_step]], align 4
 
 // CHECK: %[[VAL_3:.*]] = sub i64 %[[task_ub]], %[[task_lb]]
-// CHECK: %[[VAL_4:.*]] = sdiv i64 %[[VAL_3]], 1
+// CHECK: %[[VAL_4:.*]] = sdiv i64 %[[VAL_3]], %[[task_step]]
 // CHECK: %[[trip_cnt:.*]] = add i64 %[[VAL_4]], 1
 // CHECK: %[[VAL_5:.*]] = trunc i64 %[[trip_cnt]] to i32
 // CHECK: %6 = trunc i64 %[[task_lb]] to i32
