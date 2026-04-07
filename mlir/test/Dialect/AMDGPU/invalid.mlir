@@ -717,6 +717,15 @@ func.func @global_prefetch_wrong_address_space(%src: memref<64x64xf16, #gpu.addr
 
 // -----
 
+// GlobalPrefetchOp: WG scope operates only in the non-speculative mode
+func.func @global_prefetch_wrong_num_indices(%src: memref<64x64xf16, #gpu.address_space<global>>, %i: i64, %j: i64) {
+  // expected-error@+1 {{'amdgpu.global_prefetch' op does not support speculative prefetch in WGP scope}}
+  amdgpu.global_prefetch %src[%i, %j] RT WGP speculative : memref<64x64xf16, #gpu.address_space<global>>
+  func.return
+}
+
+// -----
+
 // GlobalPrefetchOp: number of indices must match source shape rank
 func.func @global_prefetch_wrong_num_indices(%src: memref<64x64xf16, #gpu.address_space<global>>, %i: i64) {
   // expected-error@+1 {{'amdgpu.global_prefetch' op the number of indices must match the source shape size}}
