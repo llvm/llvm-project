@@ -10,11 +10,11 @@
 
 // RUN: not llvm-mc -triple=amdgcn -mcpu=tahiti %s -filetype=null 2>&1 | FileCheck %s --check-prefixes=NOGCN,NOSICI,NOSI --implicit-check-not=error:
 // RUN: not llvm-mc -triple=amdgcn -mcpu=bonaire %s -filetype=null 2>&1 | FileCheck %s --check-prefixes=NOGCN,NOSICI,NOCI --implicit-check-not=error:
-// RUN: not llvm-mc -triple=amdgcn -mcpu=tonga %s -filetype=null 2>&1 | FileCheck %s --check-prefixes=NOGCN,NOGFX8PLUS,NOGFX89,NOVI --implicit-check-not=error:
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx900 %s -filetype=null 2>&1 | FileCheck %s --check-prefixes=NOGCN,NOGFX8PLUS,NOGFX89,NOGFX9 --implicit-check-not=error:
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1100 %s -filetype=null 2>&1 | FileCheck %s --check-prefixes=NOGCN,NOGFX8PLUS,NOGFX11 --implicit-check-not=error:
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1200 %s -filetype=null 2>&1 | FileCheck %s --check-prefixes=NOGCN,NOGFX8PLUS,NOGFX12 --implicit-check-not=error:
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1250 %s -mattr=+real-true16 -filetype=null 2>&1 | FileCheck %s --check-prefixes=NOGCN,NOGFX8PLUS,NOGFX1250 --implicit-check-not=error:
+// RUN: not llvm-mc -triple=amdgcn -mcpu=tonga %s -filetype=null 2>&1 | FileCheck %s --check-prefixes=NOGCN,NOGFX89,NOVI --implicit-check-not=error:
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx900 %s -filetype=null 2>&1 | FileCheck %s --check-prefixes=NOGCN,NOGFX89,NOGFX9 --implicit-check-not=error:
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1100 %s -filetype=null 2>&1 | FileCheck %s --check-prefixes=NOGCN,NOGFX11 --implicit-check-not=error:
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1200 %s -filetype=null 2>&1 | FileCheck %s --check-prefixes=NOGCN,NOGFX12 --implicit-check-not=error:
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1250 %s -mattr=+real-true16 -filetype=null 2>&1 | FileCheck %s --check-prefixes=NOGCN,NOGFX1250 --implicit-check-not=error:
 
 //---------------------------------------------------------------------------//
 // fp literal, expected fp operand
@@ -33,7 +33,11 @@ v_sqrt_f64 v[0:1], -4.0
 // SICI: v_sqrt_f64_e32 v[0:1], -4.0             ; encoding: [0xf7,0x68,0x00,0x7e]
 
 v_log_clamp_f32 v1, 0.5
-// NOGFX8PLUS: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// NOGFX11: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx1100): v_log_clamp_f32
+// NOGFX12: :[[@LINE-2]]:1: error: instruction not supported on this GPU (gfx1200): v_log_clamp_f32
+// NOGFX1250: :[[@LINE-3]]:1: error: instruction not supported on this GPU (gfx1250): v_log_clamp_f32
+// NOGFX9: :[[@LINE-4]]:1: error: instruction not supported on this GPU (gfx900): v_log_clamp_f32
+// NOVI: :[[@LINE-5]]:1: error: instruction not supported on this GPU (tonga): v_log_clamp_f32
 // SICI: v_log_clamp_f32_e32 v1, 0.5             ; encoding: [0xf0,0x4c,0x02,0x7e]
 
 v_trunc_f32 v0, 0.5
@@ -100,7 +104,6 @@ v_fract_f64 v[0:1], -3.1415
 // NOGFX89: :[[@LINE-7]]:1: warning: Can't encode literal as exact 64-bit floating-point operand. Low 32-bits will be set to zero
 // NOSICI: :[[@LINE-8]]:1: warning: Can't encode literal as exact 64-bit floating-point operand. Low 32-bits will be set to zero
 // SICI: v_fract_f64_e32 v[0:1], 0xc00921ca      ; encoding: [0xff,0x7c,0x00,0x7e,0xca,0x21,0x09,0xc0]
-// NOSICIVI: :[[@LINE-3]]:1: warning: Can't encode literal as exact 64-bit floating-point operand. Low 32-bits will be set to zero
 
 v_trunc_f32 v0, -3.1415
 // GFX11: v_trunc_f32_e32 v0, 0xc0490e56          ; encoding: [0xff,0x42,0x00,0x7e,0x56,0x0e,0x49,0xc0]
@@ -118,7 +121,6 @@ v_fract_f64 v[0:1], 100000000000000000000000.0
 // NOGFX89: :[[@LINE-7]]:1: warning: Can't encode literal as exact 64-bit floating-point operand. Low 32-bits will be set to zero
 // NOSICI: :[[@LINE-8]]:1: warning: Can't encode literal as exact 64-bit floating-point operand. Low 32-bits will be set to zero
 // SICI: v_fract_f64_e32 v[0:1], 0x44b52d02      ; encoding: [0xff,0x7c,0x00,0x7e,0x02,0x2d,0xb5,0x44]
-// NOSICIVI: :[[@LINE-3]]:1: warning: Can't encode literal as exact 64-bit floating-point operand. Low 32-bits will be set to zero
 
 v_trunc_f32 v0, 100000000000000000000000.0
 // GFX11: v_trunc_f32_e32 v0, 0x65a96816          ; encoding: [0xff,0x42,0x00,0x7e,0x16,0x68,0xa9,0x65]
@@ -148,7 +150,6 @@ v_fract_f64 v[0:1], 3.402823e+38
 // NOGFX89: :[[@LINE-7]]:1: warning: Can't encode literal as exact 64-bit floating-point operand. Low 32-bits will be set to zero
 // NOSICI: :[[@LINE-8]]:1: warning: Can't encode literal as exact 64-bit floating-point operand. Low 32-bits will be set to zero
 // SICI: v_fract_f64_e32 v[0:1], 0x47efffff      ; encoding: [0xff,0x7c,0x00,0x7e,0xff,0xff,0xef,0x47]
-// NOSICIVI: :[[@LINE-3]]:1: warning: Can't encode literal as exact 64-bit floating-point operand. Low 32-bits will be set to zero
 
 v_trunc_f32 v0, 3.402823e+38
 // GFX11: v_trunc_f32_e32 v0, 0x7f7ffffd          ; encoding: [0xff,0x42,0x00,0x7e,0xfd,0xff,0x7f,0x7f]
@@ -166,7 +167,6 @@ v_fract_f64 v[0:1], 2.3509886e-38
 // NOGFX89: :[[@LINE-7]]:1: warning: Can't encode literal as exact 64-bit floating-point operand. Low 32-bits will be set to zero
 // NOSICI: :[[@LINE-8]]:1: warning: Can't encode literal as exact 64-bit floating-point operand. Low 32-bits will be set to zero
 // SICI: v_fract_f64_e32 v[0:1], 0x381fffff      ; encoding: [0xff,0x7c,0x00,0x7e,0xff,0xff,0x1f,0x38]
-// NOSICIVI: :[[@LINE-3]]:1: warning: Can't encode literal as exact 64-bit floating-point operand. Low 32-bits will be set to zero
 
 v_trunc_f32 v0, 2.3509886e-38
 // GFX11: v_trunc_f32_e32 v0, 0xffffff            ; encoding: [0xff,0x42,0x00,0x7e,0xff,0xff,0xff,0x00]
@@ -184,7 +184,6 @@ v_fract_f64 v[0:1], 2.3509886e-70
 // NOGFX89: :[[@LINE-7]]:1: warning: Can't encode literal as exact 64-bit floating-point operand. Low 32-bits will be set to zero
 // NOSICI: :[[@LINE-8]]:1: warning: Can't encode literal as exact 64-bit floating-point operand. Low 32-bits will be set to zero
 // SICI: v_fract_f64_e32 v[0:1], 0x3179f623      ; encoding: [0xff,0x7c,0x00,0x7e,0x23,0xf6,0x79,0x31]
-// NOSICIVI: :[[@LINE-3]]:1: warning: Can't encode literal as exact 64-bit floating-point operand. Low 32-bits will be set to zero
 
 v_trunc_f32 v0, 2.3509886e-70
 // NOGCN: :[[@LINE-1]]:17: error: invalid operand for instruction
@@ -205,45 +204,53 @@ v_fract_f64_e32 v[0:1], lit(1.0)
 
 v_wmma_i32_16x16x16_iu8 v[8:15], v[0:3], v[4:7], 1.0
 // GFX11: v_wmma_i32_16x16x16_iu8 v[8:15], v[0:3], v[4:7], 1.0 ; encoding: [0x08,0x40,0x44,0xcc,0x00,0x09,0xca,0x1b]
-// NOGFX12: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
-// NOGFX1250: :[[@LINE-3]]:1: error: instruction not supported on this GPU
-// NOGFX89: :[[@LINE-4]]:1: error: instruction not supported on this GPU
-// NOSICI: :[[@LINE-5]]:1: error: instruction not supported on this GPU
+// NOCI: :[[@LINE-2]]:1: error: instruction not supported on this GPU (bonaire): v_wmma_i32_16x16x16_iu8
+// NOGFX12: :[[@LINE-3]]:1: error: operands are not valid for this GPU or mode
+// NOGFX1250: :[[@LINE-4]]:1: error: instruction not supported on this GPU (gfx1250): v_wmma_i32_16x16x16_iu8
+// NOGFX9: :[[@LINE-5]]:1: error: instruction not supported on this GPU (gfx900): v_wmma_i32_16x16x16_iu8
+// NOSI: :[[@LINE-6]]:1: error: instruction not supported on this GPU (tahiti): v_wmma_i32_16x16x16_iu8
+// NOVI: :[[@LINE-7]]:1: error: instruction not supported on this GPU (tonga): v_wmma_i32_16x16x16_iu8
 
 v_wmma_i32_16x16x16_iu8 v[8:15], v[0:3], v[4:7], lit(1.0)
-// NOGFX11: :[[@LINE-1]]:54: error: invalid operand for instruction
-// NOGFX12: :[[@LINE-2]]:54: error: invalid operand for instruction
-// NOGFX1250: :[[@LINE-3]]:1: error: instruction not supported on this GPU
-// NOGFX89: :[[@LINE-4]]:1: error: instruction not supported on this GPU
-// NOSICI: :[[@LINE-5]]:1: error: instruction not supported on this GPU
+// NOCI: :[[@LINE-1]]:1: error: instruction not supported on this GPU (bonaire): v_wmma_i32_16x16x16_iu8
+// NOGFX11: :[[@LINE-2]]:54: error: invalid operand for instruction
+// NOGFX12: :[[@LINE-3]]:54: error: invalid operand for instruction
+// NOGFX1250: :[[@LINE-4]]:1: error: instruction not supported on this GPU (gfx1250): v_wmma_i32_16x16x16_iu8
+// NOGFX9: :[[@LINE-5]]:1: error: instruction not supported on this GPU (gfx900): v_wmma_i32_16x16x16_iu8
+// NOSI: :[[@LINE-6]]:1: error: instruction not supported on this GPU (tahiti): v_wmma_i32_16x16x16_iu8
+// NOVI: :[[@LINE-7]]:1: error: instruction not supported on this GPU (tonga): v_wmma_i32_16x16x16_iu8
 
 v_cos_f16_e32 v5.l, 1.0
 // GFX11: v_cos_f16_e32 v5.l, 1.0                 ; encoding: [0xf2,0xc2,0x0a,0x7e]
-// GFX1250: v_cos_f16_e32 v5.l, 1.0                 ; encoding: [0xf2,0xc2,0x0a,0x7e]
-// NOGFX12: :[[@LINE-3]]:1: error: operands are not valid for this GPU or mode
+// GFX12XX: v_cos_f16_e32 v5.l, 1.0                 ; encoding: [0xf2,0xc2,0x0a,0x7e]
+// NOCI: :[[@LINE-3]]:1: error: instruction not supported on this GPU (bonaire): v_cos_f16
 // NOGFX89: :[[@LINE-4]]:1: error: operands are not valid for this GPU or mode
-// NOSICI: :[[@LINE-5]]:1: error: instruction not supported on this GPU
+// NOSI: :[[@LINE-5]]:1: error: instruction not supported on this GPU (tahiti): v_cos_f16
 
 v_cos_f16_e32 v5.l, lit(1.0)
 // GFX11: v_cos_f16_e32 v5.l, lit(0x3c00)         ; encoding: [0xff,0xc2,0x0a,0x7e,0x00,0x3c,0x00,0x00]
-// GFX1250: v_cos_f16_e32 v5.l, lit(0x3c00)         ; encoding: [0xff,0xc2,0x0a,0x7e,0x00,0x3c,0x00,0x00]
-// NOGFX12: :[[@LINE-3]]:1: error: operands are not valid for this GPU or mode
+// GFX12XX: v_cos_f16_e32 v5.l, lit(0x3c00)         ; encoding: [0xff,0xc2,0x0a,0x7e,0x00,0x3c,0x00,0x00]
+// NOCI: :[[@LINE-3]]:1: error: instruction not supported on this GPU (bonaire): v_cos_f16
 // NOGFX89: :[[@LINE-4]]:1: error: operands are not valid for this GPU or mode
-// NOSICI: :[[@LINE-5]]:1: error: instruction not supported on this GPU
+// NOSI: :[[@LINE-5]]:1: error: instruction not supported on this GPU (tahiti): v_cos_f16
 
 v_tanh_bf16 v5.l, 1.0
 // GFX1250: v_tanh_bf16_e32 v5.l, 1.0               ; encoding: [0xf2,0x94,0x0a,0x7e]
-// NOGFX11: :[[@LINE-2]]:1: error: instruction not supported on this GPU
-// NOGFX12: :[[@LINE-3]]:1: error: instruction not supported on this GPU
-// NOGFX89: :[[@LINE-4]]:1: error: instruction not supported on this GPU
-// NOSICI: :[[@LINE-5]]:1: error: instruction not supported on this GPU
+// NOCI: :[[@LINE-2]]:1: error: instruction not supported on this GPU (bonaire): v_tanh_bf16
+// NOGFX11: :[[@LINE-3]]:1: error: instruction not supported on this GPU (gfx1100): v_tanh_bf16
+// NOGFX12: :[[@LINE-4]]:1: error: instruction not supported on this GPU (gfx1200): v_tanh_bf16
+// NOGFX9: :[[@LINE-5]]:1: error: instruction not supported on this GPU (gfx900): v_tanh_bf16
+// NOSI: :[[@LINE-6]]:1: error: instruction not supported on this GPU (tahiti): v_tanh_bf16
+// NOVI: :[[@LINE-7]]:1: error: instruction not supported on this GPU (tonga): v_tanh_bf16
 
 v_tanh_bf16 v5.l, lit(1.0)
 // GFX1250: v_tanh_bf16_e32 v5.l, lit(0x3f80)       ; encoding: [0xff,0x94,0x0a,0x7e,0x80,0x3f,0x00,0x00]
-// NOGFX11: :[[@LINE-2]]:1: error: instruction not supported on this GPU
-// NOGFX12: :[[@LINE-3]]:1: error: instruction not supported on this GPU
-// NOGFX89: :[[@LINE-4]]:1: error: instruction not supported on this GPU
-// NOSICI: :[[@LINE-5]]:1: error: instruction not supported on this GPU
+// NOCI: :[[@LINE-2]]:1: error: instruction not supported on this GPU (bonaire): v_tanh_bf16
+// NOGFX11: :[[@LINE-3]]:1: error: instruction not supported on this GPU (gfx1100): v_tanh_bf16
+// NOGFX12: :[[@LINE-4]]:1: error: instruction not supported on this GPU (gfx1200): v_tanh_bf16
+// NOGFX9: :[[@LINE-5]]:1: error: instruction not supported on this GPU (gfx900): v_tanh_bf16
+// NOSI: :[[@LINE-6]]:1: error: instruction not supported on this GPU (tahiti): v_tanh_bf16
+// NOVI: :[[@LINE-7]]:1: error: instruction not supported on this GPU (tonga): v_tanh_bf16
 
 v_trunc_f32_e32 v0, 1.0
 // GFX11: v_trunc_f32_e32 v0, 1.0                 ; encoding: [0xf2,0x42,0x00,0x7e]
@@ -259,46 +266,58 @@ v_trunc_f32_e32 v0, lit(1.0)
 
 v_dot2_bf16_bf16 v5.l, v1, v2, 1.0
 // GFX11: v_dot2_bf16_bf16 v5.l, v1, v2, 1.0      ; encoding: [0x05,0x00,0x67,0xd6,0x01,0x05,0xca,0x03]
-// NOGFX12: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
-// NOGFX1250: :[[@LINE-3]]:1: error: instruction not supported on this GPU
-// NOGFX89: :[[@LINE-4]]:1: error: instruction not supported on this GPU
-// NOSICI: :[[@LINE-5]]:1: error: instruction not supported on this GPU
+// GFX12: v_dot2_bf16_bf16 v5.l, v1, v2, 1.0      ; encoding: [0x05,0x00,0x67,0xd6,0x01,0x05,0xca,0x03]
+// NOCI: :[[@LINE-3]]:1: error: instruction not supported on this GPU (bonaire): v_dot2_bf16_bf16
+// NOGFX1250: :[[@LINE-4]]:1: error: instruction not supported on this GPU (gfx1250): v_dot2_bf16_bf16
+// NOGFX9: :[[@LINE-5]]:1: error: instruction not supported on this GPU (gfx900): v_dot2_bf16_bf16
+// NOSI: :[[@LINE-6]]:1: error: instruction not supported on this GPU (tahiti): v_dot2_bf16_bf16
+// NOVI: :[[@LINE-7]]:1: error: instruction not supported on this GPU (tonga): v_dot2_bf16_bf16
 
 v_dot2_bf16_bf16 v5.l, v1, v2, lit(1.0)
 // GFX11: v_dot2_bf16_bf16 v5.l, v1, v2, lit(0x3f80) ; encoding: [0x05,0x00,0x67,0xd6,0x01,0x05,0xfe,0x03,0x80,0x3f,0x00,0x00]
-// NOGFX12: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
-// NOGFX1250: :[[@LINE-3]]:1: error: instruction not supported on this GPU
-// NOGFX89: :[[@LINE-4]]:1: error: instruction not supported on this GPU
-// NOSICI: :[[@LINE-5]]:1: error: instruction not supported on this GPU
+// GFX12: v_dot2_bf16_bf16 v5.l, v1, v2, lit(0x3f80) ; encoding: [0x05,0x00,0x67,0xd6,0x01,0x05,0xfe,0x03,0x80,0x3f,0x00,0x00]
+// NOCI: :[[@LINE-3]]:1: error: instruction not supported on this GPU (bonaire): v_dot2_bf16_bf16
+// NOGFX1250: :[[@LINE-4]]:1: error: instruction not supported on this GPU (gfx1250): v_dot2_bf16_bf16
+// NOGFX9: :[[@LINE-5]]:1: error: instruction not supported on this GPU (gfx900): v_dot2_bf16_bf16
+// NOSI: :[[@LINE-6]]:1: error: instruction not supported on this GPU (tahiti): v_dot2_bf16_bf16
+// NOVI: :[[@LINE-7]]:1: error: instruction not supported on this GPU (tonga): v_dot2_bf16_bf16
 
 v_dot2_f32_f16 v5, v1, 1.0, v2
 // GFX11: v_dot2_f32_f16 v5, v1, 1.0, v2          ; encoding: [0x05,0x40,0x13,0xcc,0x01,0xe5,0x09,0x1c]
 // GFX12: v_dot2_f32_f16 v5, v1, 1.0, v2          ; encoding: [0x05,0x40,0x13,0xcc,0x01,0xe5,0x09,0x1c]
-// NOGFX1250: :[[@LINE-3]]:1: error: instruction not supported on this GPU
-// NOGFX89: :[[@LINE-4]]:1: error: instruction not supported on this GPU
-// NOSICI: :[[@LINE-5]]:1: error: instruction not supported on this GPU
+// NOCI: :[[@LINE-3]]:1: error: instruction not supported on this GPU (bonaire): v_dot2_f32_f16
+// NOGFX1250: :[[@LINE-4]]:1: error: instruction not supported on this GPU (gfx1250): v_dot2_f32_f16
+// NOGFX9: :[[@LINE-5]]:1: error: instruction not supported on this GPU (gfx900): v_dot2_f32_f16
+// NOSI: :[[@LINE-6]]:1: error: instruction not supported on this GPU (tahiti): v_dot2_f32_f16
+// NOVI: :[[@LINE-7]]:1: error: instruction not supported on this GPU (tonga): v_dot2_f32_f16
 
 v_dot2_f32_f16 v5, v1, lit(1.0), v2
 // GFX11: v_dot2_f32_f16 v5, v1, lit(0x3c00), v2  ; encoding: [0x05,0x40,0x13,0xcc,0x01,0xff,0x09,0x1c,0x00,0x3c,0x00,0x00]
 // GFX12: v_dot2_f32_f16 v5, v1, lit(0x3c00), v2  ; encoding: [0x05,0x40,0x13,0xcc,0x01,0xff,0x09,0x1c,0x00,0x3c,0x00,0x00]
-// NOGFX1250: :[[@LINE-3]]:1: error: instruction not supported on this GPU
-// NOGFX89: :[[@LINE-4]]:1: error: instruction not supported on this GPU
-// NOSICI: :[[@LINE-5]]:1: error: instruction not supported on this GPU
+// NOCI: :[[@LINE-3]]:1: error: instruction not supported on this GPU (bonaire): v_dot2_f32_f16
+// NOGFX1250: :[[@LINE-4]]:1: error: instruction not supported on this GPU (gfx1250): v_dot2_f32_f16
+// NOGFX9: :[[@LINE-5]]:1: error: instruction not supported on this GPU (gfx900): v_dot2_f32_f16
+// NOSI: :[[@LINE-6]]:1: error: instruction not supported on this GPU (tahiti): v_dot2_f32_f16
+// NOVI: :[[@LINE-7]]:1: error: instruction not supported on this GPU (tonga): v_dot2_f32_f16
 
 v_cvt_pk_fp8_f16 v1.l, 1.0
 // GFX1250: v_cvt_pk_fp8_f16 v1.l, 0x3c00           ; encoding: [0x01,0x00,0x72,0xd7,0xff,0x00,0x01,0x02,0x00,0x3c,0x00,0x00]
-// NOGFX11: :[[@LINE-2]]:1: error: instruction not supported on this GPU
-// NOGFX12: :[[@LINE-3]]:1: error: instruction not supported on this GPU
-// NOGFX89: :[[@LINE-4]]:1: error: instruction not supported on this GPU
-// NOSICI: :[[@LINE-5]]:1: error: instruction not supported on this GPU
+// NOCI: :[[@LINE-2]]:1: error: instruction not supported on this GPU (bonaire): v_cvt_pk_fp8_f16
+// NOGFX11: :[[@LINE-3]]:1: error: instruction not supported on this GPU (gfx1100): v_cvt_pk_fp8_f16
+// NOGFX12: :[[@LINE-4]]:1: error: instruction not supported on this GPU (gfx1200): v_cvt_pk_fp8_f16
+// NOGFX9: :[[@LINE-5]]:1: error: instruction not supported on this GPU (gfx900): v_cvt_pk_fp8_f16
+// NOSI: :[[@LINE-6]]:1: error: instruction not supported on this GPU (tahiti): v_cvt_pk_fp8_f16
+// NOVI: :[[@LINE-7]]:1: error: instruction not supported on this GPU (tonga): v_cvt_pk_fp8_f16
 
 v_cvt_pk_fp8_f16 v1.l, lit(1.0)
 // GFX1250-ASM: v_cvt_pk_fp8_f16 v1.l, lit(0x3c00)      ; encoding: [0x01,0x00,0x72,0xd7,0xff,0x00,0x01,0x02,0x00,0x3c,0x00,0x00]
 // GFX1250-DIS: v_cvt_pk_fp8_f16 v1.l, 0x3c00           ; encoding: [0x01,0x00,0x72,0xd7,0xff,0x00,0x01,0x02,0x00,0x3c,0x00,0x00]
-// NOGFX11: :[[@LINE-3]]:1: error: instruction not supported on this GPU
-// NOGFX12: :[[@LINE-4]]:1: error: instruction not supported on this GPU
-// NOGFX89: :[[@LINE-5]]:1: error: instruction not supported on this GPU
-// NOSICI: :[[@LINE-6]]:1: error: instruction not supported on this GPU
+// NOCI: :[[@LINE-3]]:1: error: instruction not supported on this GPU (bonaire): v_cvt_pk_fp8_f16
+// NOGFX11: :[[@LINE-4]]:1: error: instruction not supported on this GPU (gfx1100): v_cvt_pk_fp8_f16
+// NOGFX12: :[[@LINE-5]]:1: error: instruction not supported on this GPU (gfx1200): v_cvt_pk_fp8_f16
+// NOGFX9: :[[@LINE-6]]:1: error: instruction not supported on this GPU (gfx900): v_cvt_pk_fp8_f16
+// NOSI: :[[@LINE-7]]:1: error: instruction not supported on this GPU (tahiti): v_cvt_pk_fp8_f16
+// NOVI: :[[@LINE-8]]:1: error: instruction not supported on this GPU (tonga): v_cvt_pk_fp8_f16
 
 //---------------------------------------------------------------------------//
 // fp literal, expected int operand
@@ -433,18 +452,21 @@ v_and_b32_e32 v0, 2.3509886e-70, v1
 
 v_not_b16 v5.l, 1.0
 // GFX11: v_not_b16_e32 v5.l, 1.0                 ; encoding: [0xf2,0xd2,0x0a,0x7e]
+// GFX12: v_not_b16_e32 v5.l, 1.0                 ; encoding: [0xf2,0xd2,0x0a,0x7e]
 // GFX1250-ASM: v_not_b16_e32 v5.l, 1.0                 ; encoding: [0xf2,0xd2,0x0a,0x7e]
 // GFX1250-DIS: v_not_b16_e32 v5.l, 0x3c00              ; encoding: [0xff,0xd2,0x0a,0x7e,0x00,0x3c,0x00,0x00]
-// NOGFX12: :[[@LINE-4]]:1: error: operands are not valid for this GPU or mode
-// NOGFX89: :[[@LINE-5]]:1: error: instruction not supported on this GPU
-// NOSICI: :[[@LINE-6]]:1: error: instruction not supported on this GPU
+// NOCI: :[[@LINE-5]]:1: error: instruction not supported on this GPU (bonaire): v_not_b16
+// NOGFX9: :[[@LINE-6]]:1: error: instruction not supported on this GPU (gfx900): v_not_b16
+// NOSI: :[[@LINE-7]]:1: error: instruction not supported on this GPU (tahiti): v_not_b16
+// NOVI: :[[@LINE-8]]:1: error: instruction not supported on this GPU (tonga): v_not_b16
 
 v_not_b16 v5.l, lit(1.0)
 // GFX11: v_not_b16_e32 v5.l, lit(0x3f800000)     ; encoding: [0xff,0xd2,0x0a,0x7e,0x00,0x00,0x80,0x3f]
-// GFX1250: v_not_b16_e32 v5.l, lit(0x3f800000)     ; encoding: [0xff,0xd2,0x0a,0x7e,0x00,0x00,0x80,0x3f]
-// NOGFX12: :[[@LINE-3]]:1: error: operands are not valid for this GPU or mode
-// NOGFX89: :[[@LINE-4]]:1: error: instruction not supported on this GPU
-// NOSICI: :[[@LINE-5]]:1: error: instruction not supported on this GPU
+// GFX12XX: v_not_b16_e32 v5.l, lit(0x3f800000)     ; encoding: [0xff,0xd2,0x0a,0x7e,0x00,0x00,0x80,0x3f]
+// NOCI: :[[@LINE-3]]:1: error: instruction not supported on this GPU (bonaire): v_not_b16
+// NOGFX9: :[[@LINE-4]]:1: error: instruction not supported on this GPU (gfx900): v_not_b16
+// NOSI: :[[@LINE-5]]:1: error: instruction not supported on this GPU (tahiti): v_not_b16
+// NOVI: :[[@LINE-6]]:1: error: instruction not supported on this GPU (tonga): v_not_b16
 
 v_and_b32_e32 v0, 1.0, v1
 // GFX11: v_and_b32_e32 v0, 1.0, v1               ; encoding: [0xf2,0x02,0x00,0x36]
@@ -462,29 +484,35 @@ v_pk_add_u16 v5, exec_lo, 1.0
 // GFX11: v_pk_add_u16 v5, exec_lo, 1.0           ; encoding: [0x05,0x40,0x0a,0xcc,0x7e,0xe4,0x01,0x1a]
 // GFX12XX: v_pk_add_u16 v5, exec_lo, 1.0           ; encoding: [0x05,0x40,0x0a,0xcc,0x7e,0xe4,0x01,0x1a]
 // GFX9: v_pk_add_u16 v5, exec_lo, 1.0           ; encoding: [0x05,0x40,0x8a,0xd3,0x7e,0xe4,0x01,0x18]
-// NOSICI: :[[@LINE-4]]:1: error: instruction not supported on this GPU
-// NOVI: :[[@LINE-5]]:1: error: instruction not supported on this GPU
+// NOCI: :[[@LINE-4]]:1: error: instruction not supported on this GPU (bonaire): v_pk_add_u16
+// NOSI: :[[@LINE-5]]:1: error: instruction not supported on this GPU (tahiti): v_pk_add_u16
+// NOVI: :[[@LINE-6]]:1: error: instruction not supported on this GPU (tonga): v_pk_add_u16
 
 v_pk_add_u16 v5, exec_lo, lit(1.0)
 // GFX11: v_pk_add_u16 v5, exec_lo, lit(0x3f800000) ; encoding: [0x05,0x40,0x0a,0xcc,0x7e,0xfe,0x01,0x1a,0x00,0x00,0x80,0x3f]
 // GFX12XX: v_pk_add_u16 v5, exec_lo, lit(0x3f800000) ; encoding: [0x05,0x40,0x0a,0xcc,0x7e,0xfe,0x01,0x1a,0x00,0x00,0x80,0x3f]
-// NOGFX9: :[[@LINE-3]]:31: error: invalid operand (violates constant bus restrictions)
-// NOSICI: :[[@LINE-4]]:1: error: instruction not supported on this GPU
-// NOVI: :[[@LINE-5]]:1: error: instruction not supported on this GPU
+// NOCI: :[[@LINE-3]]:1: error: instruction not supported on this GPU (bonaire): v_pk_add_u16
+// NOGFX9: :[[@LINE-4]]:31: error: invalid operand (violates constant bus restrictions)
+// NOSI: :[[@LINE-5]]:1: error: instruction not supported on this GPU (tahiti): v_pk_add_u16
+// NOVI: :[[@LINE-6]]:1: error: instruction not supported on this GPU (tonga): v_pk_add_u16
 
 v_perm_pk16_b6_u4 v[2:4], v4, v[4:5], 1.0
 // GFX1250: v_perm_pk16_b6_u4 v[2:4], v4, v[4:5], 1.0 ; encoding: [0x02,0x00,0x42,0xd6,0x04,0x09,0xca,0x03]
-// NOGFX11: :[[@LINE-2]]:1: error: instruction not supported on this GPU
-// NOGFX12: :[[@LINE-3]]:1: error: instruction not supported on this GPU
-// NOGFX89: :[[@LINE-4]]:1: error: instruction not supported on this GPU
-// NOSICI: :[[@LINE-5]]:1: error: instruction not supported on this GPU
+// NOCI: :[[@LINE-2]]:1: error: instruction not supported on this GPU (bonaire): v_perm_pk16_b6_u4
+// NOGFX11: :[[@LINE-3]]:1: error: instruction not supported on this GPU (gfx1100): v_perm_pk16_b6_u4
+// NOGFX12: :[[@LINE-4]]:1: error: instruction not supported on this GPU (gfx1200): v_perm_pk16_b6_u4
+// NOGFX9: :[[@LINE-5]]:1: error: instruction not supported on this GPU (gfx900): v_perm_pk16_b6_u4
+// NOSI: :[[@LINE-6]]:1: error: instruction not supported on this GPU (tahiti): v_perm_pk16_b6_u4
+// NOVI: :[[@LINE-7]]:1: error: instruction not supported on this GPU (tonga): v_perm_pk16_b6_u4
 
 v_perm_pk16_b6_u4 v[2:4], v4, v[4:5], lit(1.0)
 // GFX1250: v_perm_pk16_b6_u4 v[2:4], v4, v[4:5], lit(0x3f800000) ; encoding: [0x02,0x00,0x42,0xd6,0x04,0x09,0xfe,0x03,0x00,0x00,0x80,0x3f]
-// NOGFX11: :[[@LINE-2]]:1: error: instruction not supported on this GPU
-// NOGFX12: :[[@LINE-3]]:1: error: instruction not supported on this GPU
-// NOGFX89: :[[@LINE-4]]:1: error: instruction not supported on this GPU
-// NOSICI: :[[@LINE-5]]:1: error: instruction not supported on this GPU
+// NOCI: :[[@LINE-2]]:1: error: instruction not supported on this GPU (bonaire): v_perm_pk16_b6_u4
+// NOGFX11: :[[@LINE-3]]:1: error: instruction not supported on this GPU (gfx1100): v_perm_pk16_b6_u4
+// NOGFX12: :[[@LINE-4]]:1: error: instruction not supported on this GPU (gfx1200): v_perm_pk16_b6_u4
+// NOGFX9: :[[@LINE-5]]:1: error: instruction not supported on this GPU (gfx900): v_perm_pk16_b6_u4
+// NOSI: :[[@LINE-6]]:1: error: instruction not supported on this GPU (tahiti): v_perm_pk16_b6_u4
+// NOVI: :[[@LINE-7]]:1: error: instruction not supported on this GPU (tonga): v_perm_pk16_b6_u4
 
 //---------------------------------------------------------------------------//
 // int literal, expected fp operand
@@ -587,14 +615,12 @@ v_trunc_f32_e64 v0, 1234
 // GFX12XX: v_trunc_f32_e64 v0, 0x4d2               ; encoding: [0x00,0x00,0xa1,0xd5,0xff,0x00,0x01,0x02,0xd2,0x04,0x00,0x00]
 // NOGFX89: :[[@LINE-3]]:21: error: literal operands are not supported
 // NOSICI: :[[@LINE-4]]:21: error: literal operands are not supported
-// NOSICIVI: :[[@LINE-1]]:21: error: literal operands are not supported
 
 v_fract_f64_e64 v[0:1], 1234
 // GFX11: v_fract_f64_e64 v[0:1], 0x4d2           ; encoding: [0x00,0x00,0xbe,0xd5,0xff,0x00,0x01,0x02,0xd2,0x04,0x00,0x00]
 // GFX12XX: v_fract_f64_e64 v[0:1], 0x4d2           ; encoding: [0x00,0x00,0xbe,0xd5,0xff,0x00,0x01,0x02,0xd2,0x04,0x00,0x00]
 // NOGFX89: :[[@LINE-3]]:25: error: literal operands are not supported
 // NOSICI: :[[@LINE-4]]:25: error: literal operands are not supported
-// NOSICIVI: :[[@LINE-1]]:25: error: literal operands are not supported
 
 v_trunc_f32_e32 v0, -54321
 // GFX11: v_trunc_f32_e32 v0, 0xffff2bcf          ; encoding: [0xff,0x42,0x00,0x7e,0xcf,0x2b,0xff,0xff]
@@ -641,7 +667,6 @@ v_fract_f64_e32 v[0:1], 0x123456789abcdef0
 // NOGFX12: :[[@LINE-3]]:25: error: invalid operand for instruction
 // NOGFX89: :[[@LINE-4]]:25: error: invalid operand for instruction
 // NOSICI: :[[@LINE-5]]:25: error: invalid operand for instruction
-// NOSICIVI: :[[@LINE-1]]:25: error: invalid operand for instruction
 
 v_trunc_f32_e32 v0, 0xffffffffffffffff
 // GFX11: v_trunc_f32_e32 v0, -1                  ; encoding: [0xc1,0x42,0x00,0x7e]
@@ -657,45 +682,53 @@ v_fract_f64_e32 v[0:1], 0xffffffffffffffff
 
 v_wmma_i32_16x16x16_iu8 v[8:15], v[0:3], v[4:7], 1
 // GFX11: v_wmma_i32_16x16x16_iu8 v[8:15], v[0:3], v[4:7], 1 ; encoding: [0x08,0x40,0x44,0xcc,0x00,0x09,0x06,0x1a]
-// NOGFX12: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
-// NOGFX1250: :[[@LINE-3]]:1: error: instruction not supported on this GPU
-// NOGFX89: :[[@LINE-4]]:1: error: instruction not supported on this GPU
-// NOSICI: :[[@LINE-5]]:1: error: instruction not supported on this GPU
+// NOCI: :[[@LINE-2]]:1: error: instruction not supported on this GPU (bonaire): v_wmma_i32_16x16x16_iu8
+// NOGFX12: :[[@LINE-3]]:1: error: operands are not valid for this GPU or mode
+// NOGFX1250: :[[@LINE-4]]:1: error: instruction not supported on this GPU (gfx1250): v_wmma_i32_16x16x16_iu8
+// NOGFX9: :[[@LINE-5]]:1: error: instruction not supported on this GPU (gfx900): v_wmma_i32_16x16x16_iu8
+// NOSI: :[[@LINE-6]]:1: error: instruction not supported on this GPU (tahiti): v_wmma_i32_16x16x16_iu8
+// NOVI: :[[@LINE-7]]:1: error: instruction not supported on this GPU (tonga): v_wmma_i32_16x16x16_iu8
 
 v_wmma_i32_16x16x16_iu8 v[8:15], v[0:3], v[4:7], lit(1)
-// NOGFX11: :[[@LINE-1]]:54: error: invalid operand for instruction
-// NOGFX12: :[[@LINE-2]]:54: error: invalid operand for instruction
-// NOGFX1250: :[[@LINE-3]]:1: error: instruction not supported on this GPU
-// NOGFX89: :[[@LINE-4]]:1: error: instruction not supported on this GPU
-// NOSICI: :[[@LINE-5]]:1: error: instruction not supported on this GPU
+// NOCI: :[[@LINE-1]]:1: error: instruction not supported on this GPU (bonaire): v_wmma_i32_16x16x16_iu8
+// NOGFX11: :[[@LINE-2]]:54: error: invalid operand for instruction
+// NOGFX12: :[[@LINE-3]]:54: error: invalid operand for instruction
+// NOGFX1250: :[[@LINE-4]]:1: error: instruction not supported on this GPU (gfx1250): v_wmma_i32_16x16x16_iu8
+// NOGFX9: :[[@LINE-5]]:1: error: instruction not supported on this GPU (gfx900): v_wmma_i32_16x16x16_iu8
+// NOSI: :[[@LINE-6]]:1: error: instruction not supported on this GPU (tahiti): v_wmma_i32_16x16x16_iu8
+// NOVI: :[[@LINE-7]]:1: error: instruction not supported on this GPU (tonga): v_wmma_i32_16x16x16_iu8
 
 v_cos_f16_e32 v5.l, 1
 // GFX11: v_cos_f16_e32 v5.l, 1                   ; encoding: [0x81,0xc2,0x0a,0x7e]
-// GFX1250: v_cos_f16_e32 v5.l, 1                   ; encoding: [0x81,0xc2,0x0a,0x7e]
-// NOGFX12: :[[@LINE-3]]:1: error: operands are not valid for this GPU or mode
+// GFX12XX: v_cos_f16_e32 v5.l, 1                   ; encoding: [0x81,0xc2,0x0a,0x7e]
+// NOCI: :[[@LINE-3]]:1: error: instruction not supported on this GPU (bonaire): v_cos_f16
 // NOGFX89: :[[@LINE-4]]:1: error: operands are not valid for this GPU or mode
-// NOSICI: :[[@LINE-5]]:1: error: instruction not supported on this GPU
+// NOSI: :[[@LINE-5]]:1: error: instruction not supported on this GPU (tahiti): v_cos_f16
 
 v_cos_f16_e32 v5.l, lit(1)
 // GFX11: v_cos_f16_e32 v5.l, lit(0x1)            ; encoding: [0xff,0xc2,0x0a,0x7e,0x01,0x00,0x00,0x00]
-// GFX1250: v_cos_f16_e32 v5.l, lit(0x1)            ; encoding: [0xff,0xc2,0x0a,0x7e,0x01,0x00,0x00,0x00]
-// NOGFX12: :[[@LINE-3]]:1: error: operands are not valid for this GPU or mode
+// GFX12XX: v_cos_f16_e32 v5.l, lit(0x1)            ; encoding: [0xff,0xc2,0x0a,0x7e,0x01,0x00,0x00,0x00]
+// NOCI: :[[@LINE-3]]:1: error: instruction not supported on this GPU (bonaire): v_cos_f16
 // NOGFX89: :[[@LINE-4]]:1: error: operands are not valid for this GPU or mode
-// NOSICI: :[[@LINE-5]]:1: error: instruction not supported on this GPU
+// NOSI: :[[@LINE-5]]:1: error: instruction not supported on this GPU (tahiti): v_cos_f16
 
 v_tanh_bf16 v5.l, 1
 // GFX1250: v_tanh_bf16_e32 v5.l, 1                 ; encoding: [0x81,0x94,0x0a,0x7e]
-// NOGFX11: :[[@LINE-2]]:1: error: instruction not supported on this GPU
-// NOGFX12: :[[@LINE-3]]:1: error: instruction not supported on this GPU
-// NOGFX89: :[[@LINE-4]]:1: error: instruction not supported on this GPU
-// NOSICI: :[[@LINE-5]]:1: error: instruction not supported on this GPU
+// NOCI: :[[@LINE-2]]:1: error: instruction not supported on this GPU (bonaire): v_tanh_bf16
+// NOGFX11: :[[@LINE-3]]:1: error: instruction not supported on this GPU (gfx1100): v_tanh_bf16
+// NOGFX12: :[[@LINE-4]]:1: error: instruction not supported on this GPU (gfx1200): v_tanh_bf16
+// NOGFX9: :[[@LINE-5]]:1: error: instruction not supported on this GPU (gfx900): v_tanh_bf16
+// NOSI: :[[@LINE-6]]:1: error: instruction not supported on this GPU (tahiti): v_tanh_bf16
+// NOVI: :[[@LINE-7]]:1: error: instruction not supported on this GPU (tonga): v_tanh_bf16
 
 v_tanh_bf16 v5.l, lit(1)
 // GFX1250: v_tanh_bf16_e32 v5.l, lit(0x1)          ; encoding: [0xff,0x94,0x0a,0x7e,0x01,0x00,0x00,0x00]
-// NOGFX11: :[[@LINE-2]]:1: error: instruction not supported on this GPU
-// NOGFX12: :[[@LINE-3]]:1: error: instruction not supported on this GPU
-// NOGFX89: :[[@LINE-4]]:1: error: instruction not supported on this GPU
-// NOSICI: :[[@LINE-5]]:1: error: instruction not supported on this GPU
+// NOCI: :[[@LINE-2]]:1: error: instruction not supported on this GPU (bonaire): v_tanh_bf16
+// NOGFX11: :[[@LINE-3]]:1: error: instruction not supported on this GPU (gfx1100): v_tanh_bf16
+// NOGFX12: :[[@LINE-4]]:1: error: instruction not supported on this GPU (gfx1200): v_tanh_bf16
+// NOGFX9: :[[@LINE-5]]:1: error: instruction not supported on this GPU (gfx900): v_tanh_bf16
+// NOSI: :[[@LINE-6]]:1: error: instruction not supported on this GPU (tahiti): v_tanh_bf16
+// NOVI: :[[@LINE-7]]:1: error: instruction not supported on this GPU (tonga): v_tanh_bf16
 
 v_trunc_f32_e32 v0, 1
 // GFX11: v_trunc_f32_e32 v0, 1                   ; encoding: [0x81,0x42,0x00,0x7e]
@@ -711,46 +744,58 @@ v_trunc_f32_e32 v0, lit(1)
 
 v_dot2_bf16_bf16 v5.l, v1, v2, 1
 // GFX11: v_dot2_bf16_bf16 v5.l, v1, v2, 1        ; encoding: [0x05,0x00,0x67,0xd6,0x01,0x05,0x06,0x02]
-// NOGFX12: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
-// NOGFX1250: :[[@LINE-3]]:1: error: instruction not supported on this GPU
-// NOGFX89: :[[@LINE-4]]:1: error: instruction not supported on this GPU
-// NOSICI: :[[@LINE-5]]:1: error: instruction not supported on this GPU
+// GFX12: v_dot2_bf16_bf16 v5.l, v1, v2, 1        ; encoding: [0x05,0x00,0x67,0xd6,0x01,0x05,0x06,0x02]
+// NOCI: :[[@LINE-3]]:1: error: instruction not supported on this GPU (bonaire): v_dot2_bf16_bf16
+// NOGFX1250: :[[@LINE-4]]:1: error: instruction not supported on this GPU (gfx1250): v_dot2_bf16_bf16
+// NOGFX9: :[[@LINE-5]]:1: error: instruction not supported on this GPU (gfx900): v_dot2_bf16_bf16
+// NOSI: :[[@LINE-6]]:1: error: instruction not supported on this GPU (tahiti): v_dot2_bf16_bf16
+// NOVI: :[[@LINE-7]]:1: error: instruction not supported on this GPU (tonga): v_dot2_bf16_bf16
 
 v_dot2_bf16_bf16 v5.l, v1, v2, lit(1)
 // GFX11: v_dot2_bf16_bf16 v5.l, v1, v2, lit(0x1) ; encoding: [0x05,0x00,0x67,0xd6,0x01,0x05,0xfe,0x03,0x01,0x00,0x00,0x00]
-// NOGFX12: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
-// NOGFX1250: :[[@LINE-3]]:1: error: instruction not supported on this GPU
-// NOGFX89: :[[@LINE-4]]:1: error: instruction not supported on this GPU
-// NOSICI: :[[@LINE-5]]:1: error: instruction not supported on this GPU
+// GFX12: v_dot2_bf16_bf16 v5.l, v1, v2, lit(0x1) ; encoding: [0x05,0x00,0x67,0xd6,0x01,0x05,0xfe,0x03,0x01,0x00,0x00,0x00]
+// NOCI: :[[@LINE-3]]:1: error: instruction not supported on this GPU (bonaire): v_dot2_bf16_bf16
+// NOGFX1250: :[[@LINE-4]]:1: error: instruction not supported on this GPU (gfx1250): v_dot2_bf16_bf16
+// NOGFX9: :[[@LINE-5]]:1: error: instruction not supported on this GPU (gfx900): v_dot2_bf16_bf16
+// NOSI: :[[@LINE-6]]:1: error: instruction not supported on this GPU (tahiti): v_dot2_bf16_bf16
+// NOVI: :[[@LINE-7]]:1: error: instruction not supported on this GPU (tonga): v_dot2_bf16_bf16
 
 v_dot2_f32_f16 v5, v1, 1, v2
 // GFX11: v_dot2_f32_f16 v5, v1, 1, v2            ; encoding: [0x05,0x40,0x13,0xcc,0x01,0x03,0x09,0x1c]
 // GFX12: v_dot2_f32_f16 v5, v1, 1, v2            ; encoding: [0x05,0x40,0x13,0xcc,0x01,0x03,0x09,0x1c]
-// NOGFX1250: :[[@LINE-3]]:1: error: instruction not supported on this GPU
-// NOGFX89: :[[@LINE-4]]:1: error: instruction not supported on this GPU
-// NOSICI: :[[@LINE-5]]:1: error: instruction not supported on this GPU
+// NOCI: :[[@LINE-3]]:1: error: instruction not supported on this GPU (bonaire): v_dot2_f32_f16
+// NOGFX1250: :[[@LINE-4]]:1: error: instruction not supported on this GPU (gfx1250): v_dot2_f32_f16
+// NOGFX9: :[[@LINE-5]]:1: error: instruction not supported on this GPU (gfx900): v_dot2_f32_f16
+// NOSI: :[[@LINE-6]]:1: error: instruction not supported on this GPU (tahiti): v_dot2_f32_f16
+// NOVI: :[[@LINE-7]]:1: error: instruction not supported on this GPU (tonga): v_dot2_f32_f16
 
 v_dot2_f32_f16 v5, v1, lit(1), v2
 // GFX11: v_dot2_f32_f16 v5, v1, lit(0x1), v2     ; encoding: [0x05,0x40,0x13,0xcc,0x01,0xff,0x09,0x1c,0x01,0x00,0x00,0x00]
 // GFX12: v_dot2_f32_f16 v5, v1, lit(0x1), v2     ; encoding: [0x05,0x40,0x13,0xcc,0x01,0xff,0x09,0x1c,0x01,0x00,0x00,0x00]
-// NOGFX1250: :[[@LINE-3]]:1: error: instruction not supported on this GPU
-// NOGFX89: :[[@LINE-4]]:1: error: instruction not supported on this GPU
-// NOSICI: :[[@LINE-5]]:1: error: instruction not supported on this GPU
+// NOCI: :[[@LINE-3]]:1: error: instruction not supported on this GPU (bonaire): v_dot2_f32_f16
+// NOGFX1250: :[[@LINE-4]]:1: error: instruction not supported on this GPU (gfx1250): v_dot2_f32_f16
+// NOGFX9: :[[@LINE-5]]:1: error: instruction not supported on this GPU (gfx900): v_dot2_f32_f16
+// NOSI: :[[@LINE-6]]:1: error: instruction not supported on this GPU (tahiti): v_dot2_f32_f16
+// NOVI: :[[@LINE-7]]:1: error: instruction not supported on this GPU (tonga): v_dot2_f32_f16
 
 v_cvt_pk_fp8_f16 v1.l, 1
 // GFX1250: v_cvt_pk_fp8_f16 v1.l, 1                ; encoding: [0x01,0x00,0x72,0xd7,0xff,0x00,0x01,0x02,0x01,0x00,0x00,0x00]
-// NOGFX11: :[[@LINE-2]]:1: error: instruction not supported on this GPU
-// NOGFX12: :[[@LINE-3]]:1: error: instruction not supported on this GPU
-// NOGFX89: :[[@LINE-4]]:1: error: instruction not supported on this GPU
-// NOSICI: :[[@LINE-5]]:1: error: instruction not supported on this GPU
+// NOCI: :[[@LINE-2]]:1: error: instruction not supported on this GPU (bonaire): v_cvt_pk_fp8_f16
+// NOGFX11: :[[@LINE-3]]:1: error: instruction not supported on this GPU (gfx1100): v_cvt_pk_fp8_f16
+// NOGFX12: :[[@LINE-4]]:1: error: instruction not supported on this GPU (gfx1200): v_cvt_pk_fp8_f16
+// NOGFX9: :[[@LINE-5]]:1: error: instruction not supported on this GPU (gfx900): v_cvt_pk_fp8_f16
+// NOSI: :[[@LINE-6]]:1: error: instruction not supported on this GPU (tahiti): v_cvt_pk_fp8_f16
+// NOVI: :[[@LINE-7]]:1: error: instruction not supported on this GPU (tonga): v_cvt_pk_fp8_f16
 
 v_cvt_pk_fp8_f16 v1.l, lit(1)
 // GFX1250-ASM: v_cvt_pk_fp8_f16 v1.l, lit(0x1)         ; encoding: [0x01,0x00,0x72,0xd7,0xff,0x00,0x01,0x02,0x01,0x00,0x00,0x00]
 // GFX1250-DIS: v_cvt_pk_fp8_f16 v1.l, 1                ; encoding: [0x01,0x00,0x72,0xd7,0xff,0x00,0x01,0x02,0x01,0x00,0x00,0x00]
-// NOGFX11: :[[@LINE-3]]:1: error: instruction not supported on this GPU
-// NOGFX12: :[[@LINE-4]]:1: error: instruction not supported on this GPU
-// NOGFX89: :[[@LINE-5]]:1: error: instruction not supported on this GPU
-// NOSICI: :[[@LINE-6]]:1: error: instruction not supported on this GPU
+// NOCI: :[[@LINE-3]]:1: error: instruction not supported on this GPU (bonaire): v_cvt_pk_fp8_f16
+// NOGFX11: :[[@LINE-4]]:1: error: instruction not supported on this GPU (gfx1100): v_cvt_pk_fp8_f16
+// NOGFX12: :[[@LINE-5]]:1: error: instruction not supported on this GPU (gfx1200): v_cvt_pk_fp8_f16
+// NOGFX9: :[[@LINE-6]]:1: error: instruction not supported on this GPU (gfx900): v_cvt_pk_fp8_f16
+// NOSI: :[[@LINE-7]]:1: error: instruction not supported on this GPU (tahiti): v_cvt_pk_fp8_f16
+// NOVI: :[[@LINE-8]]:1: error: instruction not supported on this GPU (tonga): v_cvt_pk_fp8_f16
 
 //---------------------------------------------------------------------------//
 // int literal, expected int operand
@@ -819,7 +864,6 @@ v_and_b32_e64 v0, 1234, v1
 // GFX12XX: v_and_b32_e64 v0, 0x4d2, v1             ; encoding: [0x00,0x00,0x1b,0xd5,0xff,0x02,0x02,0x02,0xd2,0x04,0x00,0x00]
 // NOGFX89: :[[@LINE-3]]:19: error: literal operands are not supported
 // NOSICI: :[[@LINE-4]]:19: error: literal operands are not supported
-// NOSICIVI: :[[@LINE-1]]:19: error: literal operands are not supported
 
 s_mov_b64_e32 s[0:1], -54321
 // GFX11: s_mov_b64 s[0:1], 0xffff2bcf            ; encoding: [0xff,0x01,0x80,0xbe,0xcf,0x2b,0xff,0xff]
@@ -868,7 +912,6 @@ s_mov_b64_e32 s[0:1], 0x123456789abcdef0
 // NOGFX12: :[[@LINE-3]]:23: error: invalid operand for instruction
 // NOGFX89: :[[@LINE-4]]:23: error: invalid operand for instruction
 // NOSICI: :[[@LINE-5]]:23: error: invalid operand for instruction
-// NOSICIVI: :[[@LINE-1]]:23: error: invalid operand for instruction
 
 v_and_b32_e32 v0, 0x123456789abcdef0, v1
 // NOGCN: :[[@LINE-1]]:19: error: invalid operand for instruction
@@ -885,17 +928,19 @@ v_and_b32_e32 v0, 0xffffffffffffffff, v1
 
 v_not_b16 v5.l, 1
 // GFX11: v_not_b16_e32 v5.l, 1                   ; encoding: [0x81,0xd2,0x0a,0x7e]
-// GFX1250: v_not_b16_e32 v5.l, 1                   ; encoding: [0x81,0xd2,0x0a,0x7e]
-// NOGFX12: :[[@LINE-3]]:1: error: operands are not valid for this GPU or mode
-// NOGFX89: :[[@LINE-4]]:1: error: instruction not supported on this GPU
-// NOSICI: :[[@LINE-5]]:1: error: instruction not supported on this GPU
+// GFX12XX: v_not_b16_e32 v5.l, 1                   ; encoding: [0x81,0xd2,0x0a,0x7e]
+// NOCI: :[[@LINE-3]]:1: error: instruction not supported on this GPU (bonaire): v_not_b16
+// NOGFX9: :[[@LINE-4]]:1: error: instruction not supported on this GPU (gfx900): v_not_b16
+// NOSI: :[[@LINE-5]]:1: error: instruction not supported on this GPU (tahiti): v_not_b16
+// NOVI: :[[@LINE-6]]:1: error: instruction not supported on this GPU (tonga): v_not_b16
 
 v_not_b16 v5.l, lit(1)
 // GFX11: v_not_b16_e32 v5.l, lit(0x1)            ; encoding: [0xff,0xd2,0x0a,0x7e,0x01,0x00,0x00,0x00]
-// GFX1250: v_not_b16_e32 v5.l, lit(0x1)            ; encoding: [0xff,0xd2,0x0a,0x7e,0x01,0x00,0x00,0x00]
-// NOGFX12: :[[@LINE-3]]:1: error: operands are not valid for this GPU or mode
-// NOGFX89: :[[@LINE-4]]:1: error: instruction not supported on this GPU
-// NOSICI: :[[@LINE-5]]:1: error: instruction not supported on this GPU
+// GFX12XX: v_not_b16_e32 v5.l, lit(0x1)            ; encoding: [0xff,0xd2,0x0a,0x7e,0x01,0x00,0x00,0x00]
+// NOCI: :[[@LINE-3]]:1: error: instruction not supported on this GPU (bonaire): v_not_b16
+// NOGFX9: :[[@LINE-4]]:1: error: instruction not supported on this GPU (gfx900): v_not_b16
+// NOSI: :[[@LINE-5]]:1: error: instruction not supported on this GPU (tahiti): v_not_b16
+// NOVI: :[[@LINE-6]]:1: error: instruction not supported on this GPU (tonga): v_not_b16
 
 s_mov_b64 s[0:1], 1
 // GFX8PLUS: s_mov_b64 s[0:1], 1                     ; encoding: [0x81,0x01,0x80,0xbe]
@@ -925,29 +970,35 @@ v_pk_add_u16 v5, exec_lo, 1
 // GFX11: v_pk_add_u16 v5, exec_lo, 1             ; encoding: [0x05,0x40,0x0a,0xcc,0x7e,0x02,0x01,0x1a]
 // GFX12XX: v_pk_add_u16 v5, exec_lo, 1             ; encoding: [0x05,0x40,0x0a,0xcc,0x7e,0x02,0x01,0x1a]
 // GFX9: v_pk_add_u16 v5, exec_lo, 1             ; encoding: [0x05,0x40,0x8a,0xd3,0x7e,0x02,0x01,0x18]
-// NOSICI: :[[@LINE-4]]:1: error: instruction not supported on this GPU
-// NOVI: :[[@LINE-5]]:1: error: instruction not supported on this GPU
+// NOCI: :[[@LINE-4]]:1: error: instruction not supported on this GPU (bonaire): v_pk_add_u16
+// NOSI: :[[@LINE-5]]:1: error: instruction not supported on this GPU (tahiti): v_pk_add_u16
+// NOVI: :[[@LINE-6]]:1: error: instruction not supported on this GPU (tonga): v_pk_add_u16
 
 v_pk_add_u16 v5, exec_lo, lit(1)
 // GFX11: v_pk_add_u16 v5, exec_lo, lit(0x1)      ; encoding: [0x05,0x40,0x0a,0xcc,0x7e,0xfe,0x01,0x1a,0x01,0x00,0x00,0x00]
 // GFX12XX: v_pk_add_u16 v5, exec_lo, lit(0x1)      ; encoding: [0x05,0x40,0x0a,0xcc,0x7e,0xfe,0x01,0x1a,0x01,0x00,0x00,0x00]
-// NOGFX9: :[[@LINE-3]]:31: error: invalid operand (violates constant bus restrictions)
-// NOSICI: :[[@LINE-4]]:1: error: instruction not supported on this GPU
-// NOVI: :[[@LINE-5]]:1: error: instruction not supported on this GPU
+// NOCI: :[[@LINE-3]]:1: error: instruction not supported on this GPU (bonaire): v_pk_add_u16
+// NOGFX9: :[[@LINE-4]]:31: error: invalid operand (violates constant bus restrictions)
+// NOSI: :[[@LINE-5]]:1: error: instruction not supported on this GPU (tahiti): v_pk_add_u16
+// NOVI: :[[@LINE-6]]:1: error: instruction not supported on this GPU (tonga): v_pk_add_u16
 
 v_perm_pk16_b6_u4 v[2:4], v4, v[4:5], 1
 // GFX1250: v_perm_pk16_b6_u4 v[2:4], v4, v[4:5], 1 ; encoding: [0x02,0x00,0x42,0xd6,0x04,0x09,0x06,0x02]
-// NOGFX11: :[[@LINE-2]]:1: error: instruction not supported on this GPU
-// NOGFX12: :[[@LINE-3]]:1: error: instruction not supported on this GPU
-// NOGFX89: :[[@LINE-4]]:1: error: instruction not supported on this GPU
-// NOSICI: :[[@LINE-5]]:1: error: instruction not supported on this GPU
+// NOCI: :[[@LINE-2]]:1: error: instruction not supported on this GPU (bonaire): v_perm_pk16_b6_u4
+// NOGFX11: :[[@LINE-3]]:1: error: instruction not supported on this GPU (gfx1100): v_perm_pk16_b6_u4
+// NOGFX12: :[[@LINE-4]]:1: error: instruction not supported on this GPU (gfx1200): v_perm_pk16_b6_u4
+// NOGFX9: :[[@LINE-5]]:1: error: instruction not supported on this GPU (gfx900): v_perm_pk16_b6_u4
+// NOSI: :[[@LINE-6]]:1: error: instruction not supported on this GPU (tahiti): v_perm_pk16_b6_u4
+// NOVI: :[[@LINE-7]]:1: error: instruction not supported on this GPU (tonga): v_perm_pk16_b6_u4
 
 v_perm_pk16_b6_u4 v[2:4], v4, v[4:5], lit(1)
 // GFX1250: v_perm_pk16_b6_u4 v[2:4], v4, v[4:5], lit(0x1) ; encoding: [0x02,0x00,0x42,0xd6,0x04,0x09,0xfe,0x03,0x01,0x00,0x00,0x00]
-// NOGFX11: :[[@LINE-2]]:1: error: instruction not supported on this GPU
-// NOGFX12: :[[@LINE-3]]:1: error: instruction not supported on this GPU
-// NOGFX89: :[[@LINE-4]]:1: error: instruction not supported on this GPU
-// NOSICI: :[[@LINE-5]]:1: error: instruction not supported on this GPU
+// NOCI: :[[@LINE-2]]:1: error: instruction not supported on this GPU (bonaire): v_perm_pk16_b6_u4
+// NOGFX11: :[[@LINE-3]]:1: error: instruction not supported on this GPU (gfx1100): v_perm_pk16_b6_u4
+// NOGFX12: :[[@LINE-4]]:1: error: instruction not supported on this GPU (gfx1200): v_perm_pk16_b6_u4
+// NOGFX9: :[[@LINE-5]]:1: error: instruction not supported on this GPU (gfx900): v_perm_pk16_b6_u4
+// NOSI: :[[@LINE-6]]:1: error: instruction not supported on this GPU (tahiti): v_perm_pk16_b6_u4
+// NOVI: :[[@LINE-7]]:1: error: instruction not supported on this GPU (tonga): v_perm_pk16_b6_u4
 
 //---------------------------------------------------------------------------//
 // 1/(2*PI)
@@ -961,7 +1012,6 @@ v_fract_f64_e32 v[0:1], 0x3fc45f306dc9c882
 // GFX12XX: v_fract_f64_e32 v[0:1], 0.15915494309189532 ; encoding: [0xf8,0x7c,0x00,0x7e]
 // GFX89: v_fract_f64_e32 v[0:1], 0.15915494309189532 ; encoding: [0xf8,0x64,0x00,0x7e]
 // NOSICI: :[[@LINE-4]]:25: error: invalid operand for instruction
-// NOSICIVI: :[[@LINE-2]]:25: error: invalid operand for instruction
 
 v_trunc_f32_e32 v0, 0x3e22f983
 // GFX11: v_trunc_f32_e32 v0, 0.15915494          ; encoding: [0xf8,0x42,0x00,0x7e]
@@ -983,26 +1033,22 @@ v_fract_f64_e64 v[0:1], 0x3fc45f306dc9c882
 // GFX12XX: v_fract_f64_e64 v[0:1], 0.15915494309189532 ; encoding: [0x00,0x00,0xbe,0xd5,0xf8,0x00,0x01,0x02]
 // GFX89: v_fract_f64_e64 v[0:1], 0.15915494309189532 ; encoding: [0x00,0x00,0x72,0xd1,0xf8,0x00,0x00,0x00]
 // NOSICI: :[[@LINE-4]]:25: error: invalid operand for instruction
-// NOSICIVI: :[[@LINE-2]]:25: error: invalid operand for instruction
 
 v_trunc_f32_e64 v0, 0x3e22f983
 // GFX11: v_trunc_f32_e64 v0, 0.15915494          ; encoding: [0x00,0x00,0xa1,0xd5,0xf8,0x00,0x01,0x02]
 // GFX12XX: v_trunc_f32_e64 v0, 0.15915494          ; encoding: [0x00,0x00,0xa1,0xd5,0xf8,0x00,0x01,0x02]
 // GFX89: v_trunc_f32_e64 v0, 0.15915494          ; encoding: [0x00,0x00,0x5c,0xd1,0xf8,0x00,0x00,0x00]
 // NOSICI: :[[@LINE-4]]:21: error: literal operands are not supported
-// NOSICIVI: :[[@LINE-2]]:21: error: literal operands are not supported
 
 v_fract_f64_e64 v[0:1], 0x3e22f983
 // GFX11: v_fract_f64_e64 v[0:1], 0x3e22f983      ; encoding: [0x00,0x00,0xbe,0xd5,0xff,0x00,0x01,0x02,0x83,0xf9,0x22,0x3e]
 // GFX12XX: v_fract_f64_e64 v[0:1], 0x3e22f983      ; encoding: [0x00,0x00,0xbe,0xd5,0xff,0x00,0x01,0x02,0x83,0xf9,0x22,0x3e]
 // NOGFX89: :[[@LINE-3]]:25: error: literal operands are not supported
 // NOSICI: :[[@LINE-4]]:25: error: literal operands are not supported
-// NOSICIVI: :[[@LINE-1]]:25: error: literal operands are not supported
 
 s_mov_b64_e32 s[0:1], 0.159154943091895317852646485335
 // GFX8PLUS: s_mov_b64 s[0:1], 0.15915494309189532   ; encoding: [0xf8,0x01,0x80,0xbe]
 // NOSICI: :[[@LINE-2]]:23: error: invalid operand for instruction
-// NOSICIVI: :[[@LINE-2]]:23: error: invalid operand for instruction
 
 v_and_b32_e32 v0, 0.159154943091895317852646485335, v1
 // GFX11: v_and_b32_e32 v0, 0.15915494, v1        ; encoding: [0xf8,0x02,0x00,0x36]
@@ -1015,7 +1061,6 @@ v_and_b32_e64 v0, 0.159154943091895317852646485335, v1
 // GFX12XX: v_and_b32_e64 v0, 0.15915494, v1        ; encoding: [0x00,0x00,0x1b,0xd5,0xf8,0x02,0x02,0x02]
 // GFX89: v_and_b32_e64 v0, 0.15915494, v1        ; encoding: [0x00,0x00,0x13,0xd1,0xf8,0x02,0x02,0x00]
 // NOSICI: :[[@LINE-4]]:19: error: literal operands are not supported
-// NOSICIVI: :[[@LINE-2]]:19: error: literal operands are not supported
 
 v_fract_f64 v[0:1], 0.159154943091895317852646485335
 // GFX11: v_fract_f64_e32 v[0:1], 0.15915494309189532 ; encoding: [0xf8,0x7c,0x00,0x7e]
@@ -1023,7 +1068,6 @@ v_fract_f64 v[0:1], 0.159154943091895317852646485335
 // GFX89: v_fract_f64_e32 v[0:1], 0.15915494309189532 ; encoding: [0xf8,0x64,0x00,0x7e]
 // NOSICI: :[[@LINE-4]]:1: warning: Can't encode literal as exact 64-bit floating-point operand. Low 32-bits will be set to zero
 // SICI: v_fract_f64_e32 v[0:1], 0x3fc45f30      ; encoding: [0xff,0x7c,0x00,0x7e,0x30,0x5f,0xc4,0x3f]
-// NOSICIVI: :[[@LINE-3]]:1: warning: Can't encode literal as exact 64-bit floating-point operand. Low 32-bits will be set to zero
 
 v_trunc_f32 v0, 0.159154943091895317852646485335
 // GFX11: v_trunc_f32_e32 v0, 0.15915494          ; encoding: [0xf8,0x42,0x00,0x7e]
@@ -1065,7 +1109,6 @@ s_mov_b64 s[0:1], 0x101ffffffff
 // NOGFX12: :[[@LINE-3]]:19: error: invalid operand for instruction
 // NOGFX89: :[[@LINE-4]]:19: error: invalid operand for instruction
 // NOSICI: :[[@LINE-5]]:19: error: invalid operand for instruction
-// NOSICIVI: :[[@LINE-1]]:19: error: invalid operand for instruction
 
 s_mov_b64 s[0:1], 0x1000000001
 // GFX1250: s_mov_b64 s[0:1], 0x1000000001          ; encoding: [0xfe,0x01,0x80,0xbe,0x01,0x00,0x00,0x00,0x10,0x00,0x00,0x00]
@@ -1073,7 +1116,6 @@ s_mov_b64 s[0:1], 0x1000000001
 // NOGFX12: :[[@LINE-3]]:19: error: invalid operand for instruction
 // NOGFX89: :[[@LINE-4]]:19: error: invalid operand for instruction
 // NOSICI: :[[@LINE-5]]:19: error: invalid operand for instruction
-// NOSICIVI: :[[@LINE-1]]:19: error: invalid operand for instruction
 
 s_mov_b64 s[0:1], 0x1000000fff
 // GFX1250: s_mov_b64 s[0:1], 0x1000000fff          ; encoding: [0xfe,0x01,0x80,0xbe,0xff,0x0f,0x00,0x00,0x10,0x00,0x00,0x00]
@@ -1081,7 +1123,6 @@ s_mov_b64 s[0:1], 0x1000000fff
 // NOGFX12: :[[@LINE-3]]:19: error: invalid operand for instruction
 // NOGFX89: :[[@LINE-4]]:19: error: invalid operand for instruction
 // NOSICI: :[[@LINE-5]]:19: error: invalid operand for instruction
-// NOSICIVI: :[[@LINE-1]]:19: error: invalid operand for instruction
 
 v_trunc_f64 v[0:1], 0x1fffffffff0
 // GFX1250: v_trunc_f64_e32 v[0:1], 0x1fffffffff0   ; encoding: [0xfe,0x2e,0x00,0x7e,0xf0,0xff,0xff,0xff,0xff,0x01,0x00,0x00]
@@ -1089,7 +1130,7 @@ v_trunc_f64 v[0:1], 0x1fffffffff0
 // NOGFX11: :[[@LINE-3]]:21: error: invalid operand for instruction
 // NOGFX12: :[[@LINE-4]]:21: error: invalid operand for instruction
 // NOGFX89: :[[@LINE-5]]:21: error: invalid operand for instruction
-// NOSI: :[[@LINE-6]]:1: error: instruction not supported on this GPU
+// NOSI: :[[@LINE-6]]:1: error: instruction not supported on this GPU (tahiti): v_trunc_f64
 // NOCIVI: :[[@LINE-4]]:21: error: invalid operand for instruction
 
 v_trunc_f64 v[0:1], 0x100000001
@@ -1098,7 +1139,7 @@ v_trunc_f64 v[0:1], 0x100000001
 // NOGFX11: :[[@LINE-3]]:21: error: invalid operand for instruction
 // NOGFX12: :[[@LINE-4]]:21: error: invalid operand for instruction
 // NOGFX89: :[[@LINE-5]]:21: error: invalid operand for instruction
-// NOSI: :[[@LINE-6]]:1: error: instruction not supported on this GPU
+// NOSI: :[[@LINE-6]]:1: error: instruction not supported on this GPU (tahiti): v_trunc_f64
 // NOCIVI: :[[@LINE-4]]:21: error: invalid operand for instruction
 
 v_trunc_f64 v[0:1], 0x1fffffff000
@@ -1107,7 +1148,7 @@ v_trunc_f64 v[0:1], 0x1fffffff000
 // NOGFX11: :[[@LINE-3]]:21: error: invalid operand for instruction
 // NOGFX12: :[[@LINE-4]]:21: error: invalid operand for instruction
 // NOGFX89: :[[@LINE-5]]:21: error: invalid operand for instruction
-// NOSI: :[[@LINE-6]]:1: error: instruction not supported on this GPU
+// NOSI: :[[@LINE-6]]:1: error: instruction not supported on this GPU (tahiti): v_trunc_f64
 // NOCIVI: :[[@LINE-4]]:21: error: invalid operand for instruction
 
 //---------------------------------------------------------------------------//
@@ -1164,45 +1205,50 @@ s_and_b64 s[0:1], s[0:1], src_scc
 
 v_add_u16 v0, vccz, v0
 // GFX89: v_add_u16_e32 v0, src_vccz, v0          ; encoding: [0xfb,0x00,0x00,0x4c]
-// NOGFX11: :[[@LINE-2]]:1: error: instruction not supported on this GPU
-// NOGFX12: :[[@LINE-3]]:1: error: instruction not supported on this GPU
-// NOGFX1250: :[[@LINE-4]]:1: error: instruction not supported on this GPU
-// NOSICI: :[[@LINE-5]]:1: error: instruction not supported on this GPU
+// NOCI: :[[@LINE-2]]:1: error: instruction not supported on this GPU (bonaire): v_add_u16
+// NOGFX11: :[[@LINE-3]]:1: error: instruction not supported on this GPU (gfx1100): v_add_u16
+// NOGFX12: :[[@LINE-4]]:1: error: instruction not supported on this GPU (gfx1200): v_add_u16
+// NOGFX1250: :[[@LINE-5]]:1: error: instruction not supported on this GPU (gfx1250): v_add_u16
+// NOSI: :[[@LINE-6]]:1: error: instruction not supported on this GPU (tahiti): v_add_u16
 // NOSICIVI: :[[@LINE-2]]:1: error: instruction not supported on this GPU
 
 v_add_u16_sdwa v0, scc, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 // GFX9: v_add_u16_sdwa v0, src_scc, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD ; encoding: [0xf9,0x00,0x00,0x4c,0xfd,0x06,0x86,0x06]
-// NOGFX11: :[[@LINE-2]]:1: error: instruction not supported on this GPU
-// NOGFX12: :[[@LINE-3]]:1: error: instruction not supported on this GPU
-// NOGFX1250: :[[@LINE-4]]:1: error: instruction not supported on this GPU
-// NOSICI: :[[@LINE-5]]:1: error: instruction not supported on this GPU
-// NOVI: :[[@LINE-6]]:20: error: invalid operand for instruction
+// NOCI: :[[@LINE-2]]:1: error: instruction not supported on this GPU (bonaire): v_add_u16
+// NOGFX11: :[[@LINE-3]]:1: error: instruction not supported on this GPU (gfx1100): v_add_u16
+// NOGFX12: :[[@LINE-4]]:1: error: instruction not supported on this GPU (gfx1200): v_add_u16
+// NOGFX1250: :[[@LINE-5]]:1: error: instruction not supported on this GPU (gfx1250): v_add_u16
+// NOSI: :[[@LINE-6]]:1: error: instruction not supported on this GPU (tahiti): v_add_u16
+// NOVI: :[[@LINE-7]]:20: error: invalid operand for instruction
 // NOSICIVI: :[[@LINE-1]]:1: error: instruction not supported on this GPU
 
 v_add_u16_sdwa v0, v0, scc dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 // GFX9: v_add_u16_sdwa v0, v0, src_scc dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD ; encoding: [0xf9,0xfa,0x01,0x4c,0x00,0x06,0x06,0x86]
-// NOGFX11: :[[@LINE-2]]:1: error: instruction not supported on this GPU
-// NOGFX12: :[[@LINE-3]]:1: error: instruction not supported on this GPU
-// NOGFX1250: :[[@LINE-4]]:1: error: instruction not supported on this GPU
-// NOSICI: :[[@LINE-5]]:1: error: instruction not supported on this GPU
-// NOVI: :[[@LINE-6]]:24: error: invalid operand for instruction
+// NOCI: :[[@LINE-2]]:1: error: instruction not supported on this GPU (bonaire): v_add_u16
+// NOGFX11: :[[@LINE-3]]:1: error: instruction not supported on this GPU (gfx1100): v_add_u16
+// NOGFX12: :[[@LINE-4]]:1: error: instruction not supported on this GPU (gfx1200): v_add_u16
+// NOGFX1250: :[[@LINE-5]]:1: error: instruction not supported on this GPU (gfx1250): v_add_u16
+// NOSI: :[[@LINE-6]]:1: error: instruction not supported on this GPU (tahiti): v_add_u16
+// NOVI: :[[@LINE-7]]:24: error: invalid operand for instruction
 // NOSICIVI: :[[@LINE-1]]:1: error: instruction not supported on this GPU
 
 v_add_u32 v0, execz, v0
 // GFX9: v_add_u32_e32 v0, src_execz, v0         ; encoding: [0xfc,0x00,0x00,0x68]
-// NOGFX11: :[[@LINE-2]]:15: error: src_execz register not available on this GPU
-// NOGFX12: :[[@LINE-3]]:15: error: src_execz register not available on this GPU
-// NOGFX1250: :[[@LINE-4]]:15: error: src_execz register not available on this GPU
-// NOSICI: :[[@LINE-5]]:1: error: instruction not supported on this GPU
-// NOVI: :[[@LINE-6]]:1: error: operands are not valid for this GPU or mode
+// NOCI: :[[@LINE-2]]:1: error: instruction not supported on this GPU (bonaire): v_add_u32
+// NOGFX11: :[[@LINE-3]]:15: error: src_execz register not available on this GPU
+// NOGFX12: :[[@LINE-4]]:15: error: src_execz register not available on this GPU
+// NOGFX1250: :[[@LINE-5]]:15: error: src_execz register not available on this GPU
+// NOSI: :[[@LINE-6]]:1: error: instruction not supported on this GPU (tahiti): v_add_u32
+// NOVI: :[[@LINE-7]]:1: error: operands are not valid for this GPU or mode
 // NOSICIVI: :[[@LINE-1]]:1: error: instruction not supported on this GPU
 
 v_add_u32_e64 v0, scc, v0
 // GFX11: v_add_nc_u32_e64 v0, src_scc, v0        ; encoding: [0x00,0x00,0x25,0xd5,0xfd,0x00,0x02,0x02]
 // GFX12XX: v_add_nc_u32_e64 v0, src_scc, v0        ; encoding: [0x00,0x00,0x25,0xd5,0xfd,0x00,0x02,0x02]
 // GFX9: v_add_u32_e64 v0, src_scc, v0           ; encoding: [0x00,0x00,0x34,0xd1,0xfd,0x00,0x02,0x00]
-// NOSICI: :[[@LINE-4]]:1: error: instruction not supported on this GPU
-// NOVI: :[[@LINE-5]]:1: error: operands are not valid for this GPU or mode
+// NOCI: :[[@LINE-4]]:1: error: instruction not supported on this GPU (bonaire): v_add_u32
+// NOSI: :[[@LINE-5]]:1: error: instruction not supported on this GPU (tahiti): v_add_u32
+// NOVI: :[[@LINE-6]]:1: error: operands are not valid for this GPU or mode
 // NOSICIVI: :[[@LINE-1]]:1: error: instruction not supported on this GPU
 
 v_cmp_eq_i64 vcc, scc, v[0:1]
@@ -1214,10 +1260,11 @@ v_cmp_eq_i64 vcc, scc, v[0:1]
 
 v_max_f16 v0, execz, v0
 // GFX89: v_max_f16_e32 v0, src_execz, v0         ; encoding: [0xfc,0x00,0x00,0x5a]
-// NOGFX11: :[[@LINE-2]]:15: error: src_execz register not available on this GPU
-// NOGFX12: :[[@LINE-3]]:15: error: src_execz register not available on this GPU
-// NOGFX1250: :[[@LINE-4]]:15: error: src_execz register not available on this GPU
-// NOSICI: :[[@LINE-5]]:1: error: instruction not supported on this GPU
+// NOCI: :[[@LINE-2]]:1: error: instruction not supported on this GPU (bonaire): v_max_f16
+// NOGFX11: :[[@LINE-3]]:15: error: src_execz register not available on this GPU
+// NOGFX12: :[[@LINE-4]]:15: error: src_execz register not available on this GPU
+// NOGFX1250: :[[@LINE-5]]:15: error: src_execz register not available on this GPU
+// NOSI: :[[@LINE-6]]:1: error: instruction not supported on this GPU (tahiti): v_max_f16
 // NOSICIVI: :[[@LINE-2]]:1: error: instruction not supported on this GPU
 
 v_max_f32 v0, vccz, v0
@@ -1235,35 +1282,38 @@ v_max_f64 v[0:1], scc, v[0:1]
 
 v_pk_add_f16 v0, execz, v0
 // GFX9: v_pk_add_f16 v0, src_execz, v0          ; encoding: [0x00,0x40,0x8f,0xd3,0xfc,0x00,0x02,0x18]
-// NOGFX11: :[[@LINE-2]]:18: error: src_execz register not available on this GPU
-// NOGFX12: :[[@LINE-3]]:18: error: src_execz register not available on this GPU
-// NOGFX1250: :[[@LINE-4]]:18: error: src_execz register not available on this GPU
-// NOSICI: :[[@LINE-5]]:1: error: instruction not supported on this GPU
-// NOVI: :[[@LINE-6]]:1: error: instruction not supported on this GPU
+// NOCI: :[[@LINE-2]]:1: error: instruction not supported on this GPU (bonaire): v_pk_add_f16
+// NOGFX11: :[[@LINE-3]]:18: error: src_execz register not available on this GPU
+// NOGFX12: :[[@LINE-4]]:18: error: src_execz register not available on this GPU
+// NOGFX1250: :[[@LINE-5]]:18: error: src_execz register not available on this GPU
+// NOSI: :[[@LINE-6]]:1: error: instruction not supported on this GPU (tahiti): v_pk_add_f16
+// NOVI: :[[@LINE-7]]:1: error: instruction not supported on this GPU (tonga): v_pk_add_f16
 // NOSICIVI: :[[@LINE-1]]:1: error: instruction not supported on this GPU
 
 v_ceil_f16 v0, neg(vccz)
 // GFX89: v_ceil_f16_e64 v0, -src_vccz            ; encoding: [0x00,0x00,0x85,0xd1,0xfb,0x00,0x00,0x20]
-// NOGFX11: :[[@LINE-2]]:20: error: src_vccz register not available on this GPU
-// NOGFX12: :[[@LINE-3]]:20: error: src_vccz register not available on this GPU
-// NOGFX1250: :[[@LINE-4]]:20: error: src_vccz register not available on this GPU
-// NOSICI: :[[@LINE-5]]:1: error: instruction not supported on this GPU
+// NOCI: :[[@LINE-2]]:1: error: instruction not supported on this GPU (bonaire): v_ceil_f16
+// NOGFX11: :[[@LINE-3]]:20: error: src_vccz register not available on this GPU
+// NOGFX12: :[[@LINE-4]]:20: error: src_vccz register not available on this GPU
+// NOGFX1250: :[[@LINE-5]]:20: error: src_vccz register not available on this GPU
+// NOSI: :[[@LINE-6]]:1: error: instruction not supported on this GPU (tahiti): v_ceil_f16
 // NOSICIVI: :[[@LINE-2]]:1: error: instruction not supported on this GPU
 
 v_ceil_f16 v0, abs(scc)
-// GFX12: v_ceil_f16_e64 v0, |src_scc|            ; encoding: [0x00,0x01,0xdc,0xd5,0xfd,0x00,0x01,0x02]
 // GFX89: v_ceil_f16_e64 v0, |src_scc|            ; encoding: [0x00,0x01,0x85,0xd1,0xfd,0x00,0x00,0x00]
+// NOCI: :[[@LINE-2]]:1: error: instruction not supported on this GPU (bonaire): v_ceil_f16
 // NOGFX11: :[[@LINE-3]]:1: error: operands are not valid for this GPU or mode
-// NOGFX1250: :[[@LINE-4]]:1: error: operands are not valid for this GPU or mode
-// NOSICI: :[[@LINE-5]]:1: error: instruction not supported on this GPU
+// NOGFX12: :[[@LINE-4]]:1: error: operands are not valid for this GPU or mode
+// NOGFX1250: :[[@LINE-5]]:1: error: operands are not valid for this GPU or mode
+// NOSI: :[[@LINE-6]]:1: error: instruction not supported on this GPU (tahiti): v_ceil_f16
 // NOSICIVI: :[[@LINE-2]]:1: error: instruction not supported on this GPU
 
 v_ceil_f16 v0.l, abs(scc)
 // GFX11: v_ceil_f16_e64 v0.l, |src_scc|          ; encoding: [0x00,0x01,0xdc,0xd5,0xfd,0x00,0x01,0x02]
-// GFX1250: v_ceil_f16_e64 v0.l, |src_scc|          ; encoding: [0x00,0x01,0xdc,0xd5,0xfd,0x00,0x01,0x02]
-// NOGFX12: :[[@LINE-3]]:1: error: operands are not valid for this GPU or mode
+// GFX12XX: v_ceil_f16_e64 v0.l, |src_scc|          ; encoding: [0x00,0x01,0xdc,0xd5,0xfd,0x00,0x01,0x02]
+// NOCI: :[[@LINE-3]]:1: error: instruction not supported on this GPU (bonaire): v_ceil_f16
 // NOGFX89: :[[@LINE-4]]:1: error: operands are not valid for this GPU or mode
-// NOSICI: :[[@LINE-5]]:1: error: instruction not supported on this GPU
+// NOSI: :[[@LINE-5]]:1: error: instruction not supported on this GPU (tahiti): v_ceil_f16
 
 v_ceil_f64 v[5:6], |execz|
 // CI: v_ceil_f64_e64 v[5:6], |src_execz|      ; encoding: [0x05,0x01,0x30,0xd3,0xfc,0x00,0x00,0x00]
@@ -1271,7 +1321,7 @@ v_ceil_f64 v[5:6], |execz|
 // NOGFX11: :[[@LINE-3]]:21: error: src_execz register not available on this GPU
 // NOGFX12: :[[@LINE-4]]:21: error: src_execz register not available on this GPU
 // NOGFX1250: :[[@LINE-5]]:21: error: src_execz register not available on this GPU
-// NOSI: :[[@LINE-6]]:1: error: instruction not supported on this GPU
+// NOSI: :[[@LINE-6]]:1: error: instruction not supported on this GPU (tahiti): v_ceil_f64
 
 v_ceil_f64 v[5:6], -vcc
 // CI: v_ceil_f64_e64 v[5:6], -vcc             ; encoding: [0x05,0x00,0x30,0xd3,0x6a,0x00,0x00,0x20]
@@ -1279,7 +1329,7 @@ v_ceil_f64 v[5:6], -vcc
 // GFX12: v_ceil_f64_e64 v[5:6], -vcc             ; encoding: [0x05,0x00,0x98,0xd5,0x6a,0x00,0x01,0x22]
 // GFX89: v_ceil_f64_e64 v[5:6], -vcc             ; encoding: [0x05,0x00,0x58,0xd1,0x6a,0x00,0x00,0x20]
 // NOGFX1250: :[[@LINE-5]]:12: error: invalid operand for instruction
-// NOSI: :[[@LINE-6]]:1: error: instruction not supported on this GPU
+// NOSI: :[[@LINE-6]]:1: error: instruction not supported on this GPU (tahiti): v_ceil_f64
 
 v_ceil_f32 v0, -vccz
 // GFX89: v_ceil_f32_e64 v0, -src_vccz            ; encoding: [0x00,0x00,0x5d,0xd1,0xfb,0x00,0x00,0x20]
@@ -1297,20 +1347,22 @@ v_ceil_f32 v0, |execz|
 
 v_ceil_f16_sdwa v5, |vccz| dst_sel:DWORD dst_unused:UNUSED_PRESERVE
 // GFX9: v_ceil_f16_sdwa v5, |src_vccz| dst_sel:DWORD dst_unused:UNUSED_PRESERVE src0_sel:DWORD ; encoding: [0xf9,0x8a,0x0a,0x7e,0xfb,0x16,0xa6,0x00]
-// NOGFX11: :[[@LINE-2]]:1: error: sdwa variant of this instruction is not supported
-// NOGFX12: :[[@LINE-3]]:1: error: sdwa variant of this instruction is not supported
-// NOGFX1250: :[[@LINE-4]]:1: error: sdwa variant of this instruction is not supported
-// NOSICI: :[[@LINE-5]]:1: error: instruction not supported on this GPU
-// NOVI: :[[@LINE-6]]:22: error: invalid operand for instruction
+// NOCI: :[[@LINE-2]]:1: error: instruction not supported on this GPU (bonaire): v_ceil_f16
+// NOGFX11: :[[@LINE-3]]:1: error: sdwa variant of this instruction is not supported
+// NOGFX12: :[[@LINE-4]]:1: error: sdwa variant of this instruction is not supported
+// NOGFX1250: :[[@LINE-5]]:1: error: sdwa variant of this instruction is not supported
+// NOSI: :[[@LINE-6]]:1: error: instruction not supported on this GPU (tahiti): v_ceil_f16
+// NOVI: :[[@LINE-7]]:22: error: invalid operand for instruction
 // NOSICIVI: :[[@LINE-1]]:1: error: instruction not supported on this GPU
 
 v_ceil_f16_sdwa v5, -scc dst_sel:DWORD dst_unused:UNUSED_PRESERVE
 // GFX9: v_ceil_f16_sdwa v5, -src_scc dst_sel:DWORD dst_unused:UNUSED_PRESERVE src0_sel:DWORD ; encoding: [0xf9,0x8a,0x0a,0x7e,0xfd,0x16,0x96,0x00]
-// NOGFX11: :[[@LINE-2]]:1: error: sdwa variant of this instruction is not supported
-// NOGFX12: :[[@LINE-3]]:1: error: sdwa variant of this instruction is not supported
-// NOGFX1250: :[[@LINE-4]]:1: error: sdwa variant of this instruction is not supported
-// NOSICI: :[[@LINE-5]]:1: error: instruction not supported on this GPU
-// NOVI: :[[@LINE-6]]:22: error: invalid operand for instruction
+// NOCI: :[[@LINE-2]]:1: error: instruction not supported on this GPU (bonaire): v_ceil_f16
+// NOGFX11: :[[@LINE-3]]:1: error: sdwa variant of this instruction is not supported
+// NOGFX12: :[[@LINE-4]]:1: error: sdwa variant of this instruction is not supported
+// NOGFX1250: :[[@LINE-5]]:1: error: sdwa variant of this instruction is not supported
+// NOSI: :[[@LINE-6]]:1: error: instruction not supported on this GPU (tahiti): v_ceil_f16
+// NOVI: :[[@LINE-7]]:22: error: invalid operand for instruction
 // NOSICIVI: :[[@LINE-1]]:1: error: instruction not supported on this GPU
 
 v_ceil_f32_sdwa v5, vccz dst_sel:DWORD src0_sel:DWORD
@@ -1320,7 +1372,6 @@ v_ceil_f32_sdwa v5, vccz dst_sel:DWORD src0_sel:DWORD
 // NOGFX1250: :[[@LINE-4]]:1: error: sdwa variant of this instruction is not supported
 // NOSICI: :[[@LINE-5]]:1: error: sdwa variant of this instruction is not supported
 // NOVI: :[[@LINE-6]]:21: error: invalid operand for instruction
-// NOSICIVI: :[[@LINE-1]]:1: error: sdwa variant of this instruction is not supported
 
 v_ceil_f32_sdwa v5, |execz| dst_sel:DWORD src0_sel:DWORD
 // GFX9: v_ceil_f32_sdwa v5, |src_execz| dst_sel:DWORD dst_unused:UNUSED_PRESERVE src0_sel:DWORD ; encoding: [0xf9,0x3a,0x0a,0x7e,0xfc,0x16,0xa6,0x00]
@@ -1329,7 +1380,6 @@ v_ceil_f32_sdwa v5, |execz| dst_sel:DWORD src0_sel:DWORD
 // NOGFX1250: :[[@LINE-4]]:1: error: sdwa variant of this instruction is not supported
 // NOSICI: :[[@LINE-5]]:1: error: sdwa variant of this instruction is not supported
 // NOVI: :[[@LINE-6]]:22: error: invalid operand for instruction
-// NOSICIVI: :[[@LINE-1]]:1: error: sdwa variant of this instruction is not supported
 
 //---------------------------------------------------------------------------//
 // named inline values: shared_base, shared_limit, private_base, etc
@@ -1342,7 +1392,6 @@ buffer_atomic_add v0, off, s[0:3], src_shared_base offset:4095
 // NOGFX1250: :[[@LINE-4]]:1: error: operands are not valid for this GPU or mode
 // NOSICI: :[[@LINE-5]]:36: error: src_shared_base register not available on this GPU
 // NOVI: :[[@LINE-6]]:36: error: src_shared_base register not available on this GPU
-// NOSICIVI: :[[@LINE-1]]:36: error: src_shared_base register not available on this GPU
 
 s_add_i32 s0, src_shared_base, s0
 // GFX11: s_add_i32 s0, src_shared_base, s0       ; encoding: [0xeb,0x00,0x00,0x81]
@@ -1350,7 +1399,6 @@ s_add_i32 s0, src_shared_base, s0
 // GFX9: s_add_i32 s0, src_shared_base, s0       ; encoding: [0xeb,0x00,0x00,0x81]
 // NOSICI: :[[@LINE-4]]:15: error: src_shared_base register not available on this GPU
 // NOVI: :[[@LINE-5]]:15: error: src_shared_base register not available on this GPU
-// NOSICIVI: :[[@LINE-1]]:15: error: src_shared_base register not available on this GPU
 
 s_add_i32 s0, src_shared_limit, s0
 // GFX11: s_add_i32 s0, src_shared_limit, s0      ; encoding: [0xec,0x00,0x00,0x81]
@@ -1358,7 +1406,6 @@ s_add_i32 s0, src_shared_limit, s0
 // GFX9: s_add_i32 s0, src_shared_limit, s0      ; encoding: [0xec,0x00,0x00,0x81]
 // NOSICI: :[[@LINE-4]]:15: error: src_shared_limit register not available on this GPU
 // NOVI: :[[@LINE-5]]:15: error: src_shared_limit register not available on this GPU
-// NOSICIVI: :[[@LINE-1]]:15: error: src_shared_limit register not available on this GPU
 
 s_add_i32 s0, src_private_base, s0
 // GFX11: s_add_i32 s0, src_private_base, s0      ; encoding: [0xed,0x00,0x00,0x81]
@@ -1366,7 +1413,6 @@ s_add_i32 s0, src_private_base, s0
 // GFX9: s_add_i32 s0, src_private_base, s0      ; encoding: [0xed,0x00,0x00,0x81]
 // NOSICI: :[[@LINE-4]]:15: error: src_private_base register not available on this GPU
 // NOVI: :[[@LINE-5]]:15: error: src_private_base register not available on this GPU
-// NOSICIVI: :[[@LINE-1]]:15: error: src_private_base register not available on this GPU
 
 s_add_i32 s0, src_private_limit, s0
 // GFX11: s_add_i32 s0, src_private_limit, s0     ; encoding: [0xee,0x00,0x00,0x81]
@@ -1374,7 +1420,6 @@ s_add_i32 s0, src_private_limit, s0
 // GFX9: s_add_i32 s0, src_private_limit, s0     ; encoding: [0xee,0x00,0x00,0x81]
 // NOSICI: :[[@LINE-4]]:15: error: src_private_limit register not available on this GPU
 // NOVI: :[[@LINE-5]]:15: error: src_private_limit register not available on this GPU
-// NOSICIVI: :[[@LINE-1]]:15: error: src_private_limit register not available on this GPU
 
 s_add_i32 s0, src_pops_exiting_wave_id, s0
 // GFX9: s_add_i32 s0, src_pops_exiting_wave_id, s0 ; encoding: [0xef,0x00,0x00,0x81]
@@ -1383,7 +1428,6 @@ s_add_i32 s0, src_pops_exiting_wave_id, s0
 // NOGFX1250: :[[@LINE-4]]:15: error: src_pops_exiting_wave_id register not available on this GPU
 // NOSICI: :[[@LINE-5]]:15: error: src_pops_exiting_wave_id register not available on this GPU
 // NOVI: :[[@LINE-6]]:15: error: src_pops_exiting_wave_id register not available on this GPU
-// NOSICIVI: :[[@LINE-1]]:15: error: src_pops_exiting_wave_id register not available on this GPU
 
 s_and_b64 s[0:1], s[0:1], src_shared_base
 // GFX11: s_and_b64 s[0:1], s[0:1], src_shared_base ; encoding: [0x00,0xeb,0x80,0x8b]
@@ -1391,7 +1435,6 @@ s_and_b64 s[0:1], s[0:1], src_shared_base
 // GFX9: s_and_b64 s[0:1], s[0:1], src_shared_base ; encoding: [0x00,0xeb,0x80,0x86]
 // NOSICI: :[[@LINE-4]]:27: error: src_shared_base register not available on this GPU
 // NOVI: :[[@LINE-5]]:27: error: src_shared_base register not available on this GPU
-// NOSICIVI: :[[@LINE-1]]:27: error: src_shared_base register not available on this GPU
 
 s_and_b64 s[0:1], s[0:1], src_shared_limit
 // GFX11: s_and_b64 s[0:1], s[0:1], src_shared_limit ; encoding: [0x00,0xec,0x80,0x8b]
@@ -1399,7 +1442,6 @@ s_and_b64 s[0:1], s[0:1], src_shared_limit
 // GFX9: s_and_b64 s[0:1], s[0:1], src_shared_limit ; encoding: [0x00,0xec,0x80,0x86]
 // NOSICI: :[[@LINE-4]]:27: error: src_shared_limit register not available on this GPU
 // NOVI: :[[@LINE-5]]:27: error: src_shared_limit register not available on this GPU
-// NOSICIVI: :[[@LINE-1]]:27: error: src_shared_limit register not available on this GPU
 
 s_and_b64 s[0:1], s[0:1], src_private_base
 // GFX11: s_and_b64 s[0:1], s[0:1], src_private_base ; encoding: [0x00,0xed,0x80,0x8b]
@@ -1407,7 +1449,6 @@ s_and_b64 s[0:1], s[0:1], src_private_base
 // GFX9: s_and_b64 s[0:1], s[0:1], src_private_base ; encoding: [0x00,0xed,0x80,0x86]
 // NOSICI: :[[@LINE-4]]:27: error: src_private_base register not available on this GPU
 // NOVI: :[[@LINE-5]]:27: error: src_private_base register not available on this GPU
-// NOSICIVI: :[[@LINE-1]]:27: error: src_private_base register not available on this GPU
 
 s_and_b64 s[0:1], s[0:1], src_private_limit
 // GFX11: s_and_b64 s[0:1], s[0:1], src_private_limit ; encoding: [0x00,0xee,0x80,0x8b]
@@ -1415,7 +1456,6 @@ s_and_b64 s[0:1], s[0:1], src_private_limit
 // GFX9: s_and_b64 s[0:1], s[0:1], src_private_limit ; encoding: [0x00,0xee,0x80,0x86]
 // NOSICI: :[[@LINE-4]]:27: error: src_private_limit register not available on this GPU
 // NOVI: :[[@LINE-5]]:27: error: src_private_limit register not available on this GPU
-// NOSICIVI: :[[@LINE-1]]:27: error: src_private_limit register not available on this GPU
 
 s_and_b64 s[0:1], s[0:1], src_pops_exiting_wave_id
 // GFX9: s_and_b64 s[0:1], s[0:1], src_pops_exiting_wave_id ; encoding: [0x00,0xef,0x80,0x86]
@@ -1424,49 +1464,53 @@ s_and_b64 s[0:1], s[0:1], src_pops_exiting_wave_id
 // NOGFX1250: :[[@LINE-4]]:27: error: src_pops_exiting_wave_id register not available on this GPU
 // NOSICI: :[[@LINE-5]]:27: error: src_pops_exiting_wave_id register not available on this GPU
 // NOVI: :[[@LINE-6]]:27: error: src_pops_exiting_wave_id register not available on this GPU
-// NOSICIVI: :[[@LINE-1]]:27: error: src_pops_exiting_wave_id register not available on this GPU
 
 v_add_u16 v0, src_shared_base, v0
 // GFX9: v_add_u16_e32 v0, src_shared_base, v0   ; encoding: [0xeb,0x00,0x00,0x4c]
-// NOGFX11: :[[@LINE-2]]:1: error: instruction not supported on this GPU
-// NOGFX12: :[[@LINE-3]]:1: error: instruction not supported on this GPU
-// NOGFX1250: :[[@LINE-4]]:1: error: instruction not supported on this GPU
-// NOSICI: :[[@LINE-5]]:1: error: instruction not supported on this GPU
-// NOVI: :[[@LINE-6]]:15: error: src_shared_base register not available on this GPU
+// NOCI: :[[@LINE-2]]:1: error: instruction not supported on this GPU (bonaire): v_add_u16
+// NOGFX11: :[[@LINE-3]]:1: error: instruction not supported on this GPU (gfx1100): v_add_u16
+// NOGFX12: :[[@LINE-4]]:1: error: instruction not supported on this GPU (gfx1200): v_add_u16
+// NOGFX1250: :[[@LINE-5]]:1: error: instruction not supported on this GPU (gfx1250): v_add_u16
+// NOSI: :[[@LINE-6]]:1: error: instruction not supported on this GPU (tahiti): v_add_u16
+// NOVI: :[[@LINE-7]]:15: error: src_shared_base register not available on this GPU
 // NOSICIVI: :[[@LINE-1]]:1: error: instruction not supported on this GPU
 
 v_add_u16_sdwa v0, src_shared_base, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 // GFX9: v_add_u16_sdwa v0, src_shared_base, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD ; encoding: [0xf9,0x00,0x00,0x4c,0xeb,0x06,0x86,0x06]
-// NOGFX11: :[[@LINE-2]]:1: error: instruction not supported on this GPU
-// NOGFX12: :[[@LINE-3]]:1: error: instruction not supported on this GPU
-// NOGFX1250: :[[@LINE-4]]:1: error: instruction not supported on this GPU
-// NOSICI: :[[@LINE-5]]:1: error: instruction not supported on this GPU
-// NOVI: :[[@LINE-6]]:20: error: src_shared_base register not available on this GPU
+// NOCI: :[[@LINE-2]]:1: error: instruction not supported on this GPU (bonaire): v_add_u16
+// NOGFX11: :[[@LINE-3]]:1: error: instruction not supported on this GPU (gfx1100): v_add_u16
+// NOGFX12: :[[@LINE-4]]:1: error: instruction not supported on this GPU (gfx1200): v_add_u16
+// NOGFX1250: :[[@LINE-5]]:1: error: instruction not supported on this GPU (gfx1250): v_add_u16
+// NOSI: :[[@LINE-6]]:1: error: instruction not supported on this GPU (tahiti): v_add_u16
+// NOVI: :[[@LINE-7]]:20: error: src_shared_base register not available on this GPU
 // NOSICIVI: :[[@LINE-1]]:1: error: instruction not supported on this GPU
 
 v_add_u16_sdwa v0, v0, src_shared_base dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 // GFX9: v_add_u16_sdwa v0, v0, src_shared_base dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD ; encoding: [0xf9,0xd6,0x01,0x4c,0x00,0x06,0x06,0x86]
-// NOGFX11: :[[@LINE-2]]:1: error: instruction not supported on this GPU
-// NOGFX12: :[[@LINE-3]]:1: error: instruction not supported on this GPU
-// NOGFX1250: :[[@LINE-4]]:1: error: instruction not supported on this GPU
-// NOSICI: :[[@LINE-5]]:1: error: instruction not supported on this GPU
-// NOVI: :[[@LINE-6]]:24: error: src_shared_base register not available on this GPU
+// NOCI: :[[@LINE-2]]:1: error: instruction not supported on this GPU (bonaire): v_add_u16
+// NOGFX11: :[[@LINE-3]]:1: error: instruction not supported on this GPU (gfx1100): v_add_u16
+// NOGFX12: :[[@LINE-4]]:1: error: instruction not supported on this GPU (gfx1200): v_add_u16
+// NOGFX1250: :[[@LINE-5]]:1: error: instruction not supported on this GPU (gfx1250): v_add_u16
+// NOSI: :[[@LINE-6]]:1: error: instruction not supported on this GPU (tahiti): v_add_u16
+// NOVI: :[[@LINE-7]]:24: error: src_shared_base register not available on this GPU
 // NOSICIVI: :[[@LINE-1]]:1: error: instruction not supported on this GPU
 
 v_add_u32 v0, src_shared_base, v0
 // GFX11: v_add_nc_u32_e32 v0, src_shared_base, v0 ; encoding: [0xeb,0x00,0x00,0x4a]
 // GFX12XX: v_add_nc_u32_e32 v0, src_shared_base, v0 ; encoding: [0xeb,0x00,0x00,0x4a]
 // GFX9: v_add_u32_e32 v0, src_shared_base, v0   ; encoding: [0xeb,0x00,0x00,0x68]
-// NOSICI: :[[@LINE-4]]:1: error: instruction not supported on this GPU
-// NOVI: :[[@LINE-5]]:15: error: src_shared_base register not available on this GPU
+// NOCI: :[[@LINE-4]]:1: error: instruction not supported on this GPU (bonaire): v_add_u32
+// NOSI: :[[@LINE-5]]:1: error: instruction not supported on this GPU (tahiti): v_add_u32
+// NOVI: :[[@LINE-6]]:15: error: src_shared_base register not available on this GPU
 // NOSICIVI: :[[@LINE-1]]:1: error: instruction not supported on this GPU
 
 v_add_u32_e64 v0, src_shared_base, v0
 // GFX11: v_add_nc_u32_e64 v0, src_shared_base, v0 ; encoding: [0x00,0x00,0x25,0xd5,0xeb,0x00,0x02,0x02]
 // GFX12XX: v_add_nc_u32_e64 v0, src_shared_base, v0 ; encoding: [0x00,0x00,0x25,0xd5,0xeb,0x00,0x02,0x02]
 // GFX9: v_add_u32_e64 v0, src_shared_base, v0   ; encoding: [0x00,0x00,0x34,0xd1,0xeb,0x00,0x02,0x00]
-// NOSICI: :[[@LINE-4]]:1: error: instruction not supported on this GPU
-// NOVI: :[[@LINE-5]]:19: error: src_shared_base register not available on this GPU
+// NOCI: :[[@LINE-4]]:1: error: instruction not supported on this GPU (bonaire): v_add_u32
+// NOSI: :[[@LINE-5]]:1: error: instruction not supported on this GPU (tahiti): v_add_u32
+// NOVI: :[[@LINE-6]]:19: error: src_shared_base register not available on this GPU
 // NOSICIVI: :[[@LINE-1]]:1: error: instruction not supported on this GPU
 
 v_cmp_eq_i64 vcc, src_shared_base, v[0:1]
@@ -1476,23 +1520,23 @@ v_cmp_eq_i64 vcc, src_shared_base, v[0:1]
 // NOGFX1250: :[[@LINE-4]]:1: error: operands are not valid for this GPU or mode
 // NOSICI: :[[@LINE-5]]:19: error: src_shared_base register not available on this GPU
 // NOVI: :[[@LINE-6]]:19: error: src_shared_base register not available on this GPU
-// NOSICIVI: :[[@LINE-1]]:19: error: src_shared_base register not available on this GPU
 
 v_max_f16 v0, src_shared_base, v0
-// GFX12: v_max_num_f16_e32 v0, src_shared_base, v0 ; encoding: [0xeb,0x00,0x00,0x62]
 // GFX9: v_max_f16_e32 v0, src_shared_base, v0   ; encoding: [0xeb,0x00,0x00,0x5a]
+// NOCI: :[[@LINE-2]]:1: error: instruction not supported on this GPU (bonaire): v_max_f16
 // NOGFX11: :[[@LINE-3]]:1: error: operands are not valid for this GPU or mode
-// NOGFX1250: :[[@LINE-4]]:1: error: operands are not valid for this GPU or mode
-// NOSICI: :[[@LINE-5]]:1: error: instruction not supported on this GPU
-// NOVI: :[[@LINE-6]]:15: error: src_shared_base register not available on this GPU
+// NOGFX12: :[[@LINE-4]]:1: error: operands are not valid for this GPU or mode
+// NOGFX1250: :[[@LINE-5]]:1: error: operands are not valid for this GPU or mode
+// NOSI: :[[@LINE-6]]:1: error: instruction not supported on this GPU (tahiti): v_max_f16
+// NOVI: :[[@LINE-7]]:15: error: src_shared_base register not available on this GPU
 // NOSICIVI: :[[@LINE-1]]:1: error: instruction not supported on this GPU
 
 v_max_f16 v0.l, src_shared_base, v0.l
 // GFX11: v_max_f16_e32 v0.l, src_shared_base, v0.l ; encoding: [0xeb,0x00,0x00,0x72]
-// GFX1250: v_max_num_f16_e32 v0.l, src_shared_base, v0.l ; encoding: [0xeb,0x00,0x00,0x62]
-// NOGFX12: :[[@LINE-3]]:1: error: operands are not valid for this GPU or mode
+// GFX12XX: v_max_num_f16_e32 v0.l, src_shared_base, v0.l ; encoding: [0xeb,0x00,0x00,0x62]
+// NOCI: :[[@LINE-3]]:1: error: instruction not supported on this GPU (bonaire): v_max_f16
 // NOGFX9: :[[@LINE-4]]:1: error: operands are not valid for this GPU or mode
-// NOSICI: :[[@LINE-5]]:1: error: instruction not supported on this GPU
+// NOSI: :[[@LINE-5]]:1: error: instruction not supported on this GPU (tahiti): v_max_f16
 // NOVI: :[[@LINE-6]]:17: error: src_shared_base register not available on this GPU
 
 v_max_f32 v0, src_shared_base, v0
@@ -1501,7 +1545,6 @@ v_max_f32 v0, src_shared_base, v0
 // GFX9: v_max_f32_e32 v0, src_shared_base, v0   ; encoding: [0xeb,0x00,0x00,0x16]
 // NOSICI: :[[@LINE-4]]:15: error: src_shared_base register not available on this GPU
 // NOVI: :[[@LINE-5]]:15: error: src_shared_base register not available on this GPU
-// NOSICIVI: :[[@LINE-1]]:15: error: src_shared_base register not available on this GPU
 
 v_max_f64 v[0:1], src_shared_base, v[0:1]
 // GFX11: v_max_f64 v[0:1], src_shared_base, v[0:1] ; encoding: [0x00,0x00,0x2a,0xd7,0xeb,0x00,0x02,0x02]
@@ -1509,48 +1552,50 @@ v_max_f64 v[0:1], src_shared_base, v[0:1]
 // GFX9: v_max_f64 v[0:1], src_shared_base, v[0:1] ; encoding: [0x00,0x00,0x83,0xd2,0xeb,0x00,0x02,0x00]
 // NOSICI: :[[@LINE-4]]:19: error: src_shared_base register not available on this GPU
 // NOVI: :[[@LINE-5]]:19: error: src_shared_base register not available on this GPU
-// NOSICIVI: :[[@LINE-1]]:19: error: src_shared_base register not available on this GPU
 
 v_pk_add_f16 v0, src_shared_base, v0
 // GFX11: v_pk_add_f16 v0, src_shared_base, v0    ; encoding: [0x00,0x40,0x0f,0xcc,0xeb,0x00,0x02,0x1a]
 // GFX12XX: v_pk_add_f16 v0, src_shared_base, v0    ; encoding: [0x00,0x40,0x0f,0xcc,0xeb,0x00,0x02,0x1a]
 // GFX9: v_pk_add_f16 v0, src_shared_base, v0    ; encoding: [0x00,0x40,0x8f,0xd3,0xeb,0x00,0x02,0x18]
-// NOSICI: :[[@LINE-4]]:1: error: instruction not supported on this GPU
-// NOVI: :[[@LINE-5]]:1: error: instruction not supported on this GPU
+// NOCI: :[[@LINE-4]]:1: error: instruction not supported on this GPU (bonaire): v_pk_add_f16
+// NOSI: :[[@LINE-5]]:1: error: instruction not supported on this GPU (tahiti): v_pk_add_f16
+// NOVI: :[[@LINE-6]]:1: error: instruction not supported on this GPU (tonga): v_pk_add_f16
 // NOSICIVI: :[[@LINE-1]]:1: error: instruction not supported on this GPU
 
 v_ceil_f16 v0, neg(src_shared_base)
-// GFX12: v_ceil_f16_e64 v0, -src_shared_base     ; encoding: [0x00,0x00,0xdc,0xd5,0xeb,0x00,0x01,0x22]
 // GFX9: v_ceil_f16_e64 v0, -src_shared_base     ; encoding: [0x00,0x00,0x85,0xd1,0xeb,0x00,0x00,0x20]
+// NOCI: :[[@LINE-2]]:1: error: instruction not supported on this GPU (bonaire): v_ceil_f16
 // NOGFX11: :[[@LINE-3]]:1: error: operands are not valid for this GPU or mode
-// NOGFX1250: :[[@LINE-4]]:1: error: operands are not valid for this GPU or mode
-// NOSICI: :[[@LINE-5]]:1: error: instruction not supported on this GPU
-// NOVI: :[[@LINE-6]]:20: error: src_shared_base register not available on this GPU
+// NOGFX12: :[[@LINE-4]]:1: error: operands are not valid for this GPU or mode
+// NOGFX1250: :[[@LINE-5]]:1: error: operands are not valid for this GPU or mode
+// NOSI: :[[@LINE-6]]:1: error: instruction not supported on this GPU (tahiti): v_ceil_f16
+// NOVI: :[[@LINE-7]]:20: error: src_shared_base register not available on this GPU
 // NOSICIVI: :[[@LINE-1]]:1: error: instruction not supported on this GPU
 
 v_ceil_f16 v0.l, neg(src_shared_base)
 // GFX11: v_ceil_f16_e64 v0.l, -src_shared_base   ; encoding: [0x00,0x00,0xdc,0xd5,0xeb,0x00,0x01,0x22]
-// GFX1250: v_ceil_f16_e64 v0.l, -src_shared_base   ; encoding: [0x00,0x00,0xdc,0xd5,0xeb,0x00,0x01,0x22]
-// NOGFX12: :[[@LINE-3]]:1: error: operands are not valid for this GPU or mode
+// GFX12XX: v_ceil_f16_e64 v0.l, -src_shared_base   ; encoding: [0x00,0x00,0xdc,0xd5,0xeb,0x00,0x01,0x22]
+// NOCI: :[[@LINE-3]]:1: error: instruction not supported on this GPU (bonaire): v_ceil_f16
 // NOGFX9: :[[@LINE-4]]:1: error: operands are not valid for this GPU or mode
-// NOSICI: :[[@LINE-5]]:1: error: instruction not supported on this GPU
+// NOSI: :[[@LINE-5]]:1: error: instruction not supported on this GPU (tahiti): v_ceil_f16
 // NOVI: :[[@LINE-6]]:22: error: src_shared_base register not available on this GPU
 
 v_ceil_f16 v0, abs(src_shared_base)
-// GFX12: v_ceil_f16_e64 v0, |src_shared_base|    ; encoding: [0x00,0x01,0xdc,0xd5,0xeb,0x00,0x01,0x02]
 // GFX9: v_ceil_f16_e64 v0, |src_shared_base|    ; encoding: [0x00,0x01,0x85,0xd1,0xeb,0x00,0x00,0x00]
+// NOCI: :[[@LINE-2]]:1: error: instruction not supported on this GPU (bonaire): v_ceil_f16
 // NOGFX11: :[[@LINE-3]]:1: error: operands are not valid for this GPU or mode
-// NOGFX1250: :[[@LINE-4]]:1: error: operands are not valid for this GPU or mode
-// NOSICI: :[[@LINE-5]]:1: error: instruction not supported on this GPU
-// NOVI: :[[@LINE-6]]:20: error: src_shared_base register not available on this GPU
+// NOGFX12: :[[@LINE-4]]:1: error: operands are not valid for this GPU or mode
+// NOGFX1250: :[[@LINE-5]]:1: error: operands are not valid for this GPU or mode
+// NOSI: :[[@LINE-6]]:1: error: instruction not supported on this GPU (tahiti): v_ceil_f16
+// NOVI: :[[@LINE-7]]:20: error: src_shared_base register not available on this GPU
 // NOSICIVI: :[[@LINE-1]]:1: error: instruction not supported on this GPU
 
 v_ceil_f16 v0.l, abs(src_shared_base)
 // GFX11: v_ceil_f16_e64 v0.l, |src_shared_base|  ; encoding: [0x00,0x01,0xdc,0xd5,0xeb,0x00,0x01,0x02]
-// GFX1250: v_ceil_f16_e64 v0.l, |src_shared_base|  ; encoding: [0x00,0x01,0xdc,0xd5,0xeb,0x00,0x01,0x02]
-// NOGFX12: :[[@LINE-3]]:1: error: operands are not valid for this GPU or mode
+// GFX12XX: v_ceil_f16_e64 v0.l, |src_shared_base|  ; encoding: [0x00,0x01,0xdc,0xd5,0xeb,0x00,0x01,0x02]
+// NOCI: :[[@LINE-3]]:1: error: instruction not supported on this GPU (bonaire): v_ceil_f16
 // NOGFX9: :[[@LINE-4]]:1: error: operands are not valid for this GPU or mode
-// NOSICI: :[[@LINE-5]]:1: error: instruction not supported on this GPU
+// NOSI: :[[@LINE-5]]:1: error: instruction not supported on this GPU (tahiti): v_ceil_f16
 // NOVI: :[[@LINE-6]]:22: error: src_shared_base register not available on this GPU
 
 v_ceil_f64 v[5:6], |src_shared_base|
@@ -1559,9 +1604,8 @@ v_ceil_f64 v[5:6], |src_shared_base|
 // GFX9: v_ceil_f64_e64 v[5:6], |src_shared_base| ; encoding: [0x05,0x01,0x58,0xd1,0xeb,0x00,0x00,0x00]
 // NOCI: :[[@LINE-4]]:21: error: src_shared_base register not available on this GPU
 // NOGFX1250: :[[@LINE-5]]:12: error: invalid operand for instruction
-// NOSI: :[[@LINE-6]]:1: error: instruction not supported on this GPU
+// NOSI: :[[@LINE-6]]:1: error: instruction not supported on this GPU (tahiti): v_ceil_f64
 // NOVI: :[[@LINE-7]]:21: error: src_shared_base register not available on this GPU
-// NOCIVI: :[[@LINE-5]]:21: error: src_shared_base register not available on this GPU
 
 v_ceil_f64 v[5:6], -src_shared_base
 // GFX11: v_ceil_f64_e64 v[5:6], -src_shared_base ; encoding: [0x05,0x00,0x98,0xd5,0xeb,0x00,0x01,0x22]
@@ -1569,9 +1613,8 @@ v_ceil_f64 v[5:6], -src_shared_base
 // GFX9: v_ceil_f64_e64 v[5:6], -src_shared_base ; encoding: [0x05,0x00,0x58,0xd1,0xeb,0x00,0x00,0x20]
 // NOCI: :[[@LINE-4]]:21: error: src_shared_base register not available on this GPU
 // NOGFX1250: :[[@LINE-5]]:12: error: invalid operand for instruction
-// NOSI: :[[@LINE-6]]:1: error: instruction not supported on this GPU
+// NOSI: :[[@LINE-6]]:1: error: instruction not supported on this GPU (tahiti): v_ceil_f64
 // NOVI: :[[@LINE-7]]:21: error: src_shared_base register not available on this GPU
-// NOCIVI: :[[@LINE-5]]:21: error: src_shared_base register not available on this GPU
 
 v_ceil_f32 v0, -src_shared_base
 // GFX11: v_ceil_f32_e64 v0, -src_shared_base     ; encoding: [0x00,0x00,0xa2,0xd5,0xeb,0x00,0x01,0x22]
@@ -1579,7 +1622,6 @@ v_ceil_f32 v0, -src_shared_base
 // GFX9: v_ceil_f32_e64 v0, -src_shared_base     ; encoding: [0x00,0x00,0x5d,0xd1,0xeb,0x00,0x00,0x20]
 // NOSICI: :[[@LINE-4]]:17: error: src_shared_base register not available on this GPU
 // NOVI: :[[@LINE-5]]:17: error: src_shared_base register not available on this GPU
-// NOSICIVI: :[[@LINE-1]]:17: error: src_shared_base register not available on this GPU
 
 v_ceil_f32 v0, |src_shared_base|
 // GFX11: v_ceil_f32_e64 v0, |src_shared_base|    ; encoding: [0x00,0x01,0xa2,0xd5,0xeb,0x00,0x01,0x02]
@@ -1587,24 +1629,25 @@ v_ceil_f32 v0, |src_shared_base|
 // GFX9: v_ceil_f32_e64 v0, |src_shared_base|    ; encoding: [0x00,0x01,0x5d,0xd1,0xeb,0x00,0x00,0x00]
 // NOSICI: :[[@LINE-4]]:17: error: src_shared_base register not available on this GPU
 // NOVI: :[[@LINE-5]]:17: error: src_shared_base register not available on this GPU
-// NOSICIVI: :[[@LINE-1]]:17: error: src_shared_base register not available on this GPU
 
 v_ceil_f16_sdwa v5, |src_shared_base| dst_sel:DWORD dst_unused:UNUSED_PRESERVE
 // GFX9: v_ceil_f16_sdwa v5, |src_shared_base| dst_sel:DWORD dst_unused:UNUSED_PRESERVE src0_sel:DWORD ; encoding: [0xf9,0x8a,0x0a,0x7e,0xeb,0x16,0xa6,0x00]
-// NOGFX11: :[[@LINE-2]]:1: error: sdwa variant of this instruction is not supported
-// NOGFX12: :[[@LINE-3]]:1: error: sdwa variant of this instruction is not supported
-// NOGFX1250: :[[@LINE-4]]:1: error: sdwa variant of this instruction is not supported
-// NOSICI: :[[@LINE-5]]:1: error: instruction not supported on this GPU
-// NOVI: :[[@LINE-6]]:22: error: src_shared_base register not available on this GPU
+// NOCI: :[[@LINE-2]]:1: error: instruction not supported on this GPU (bonaire): v_ceil_f16
+// NOGFX11: :[[@LINE-3]]:1: error: sdwa variant of this instruction is not supported
+// NOGFX12: :[[@LINE-4]]:1: error: sdwa variant of this instruction is not supported
+// NOGFX1250: :[[@LINE-5]]:1: error: sdwa variant of this instruction is not supported
+// NOSI: :[[@LINE-6]]:1: error: instruction not supported on this GPU (tahiti): v_ceil_f16
+// NOVI: :[[@LINE-7]]:22: error: src_shared_base register not available on this GPU
 // NOSICIVI: :[[@LINE-1]]:1: error: instruction not supported on this GPU
 
 v_ceil_f16_sdwa v5, -src_shared_base dst_sel:DWORD dst_unused:UNUSED_PRESERVE
 // GFX9: v_ceil_f16_sdwa v5, -src_shared_base dst_sel:DWORD dst_unused:UNUSED_PRESERVE src0_sel:DWORD ; encoding: [0xf9,0x8a,0x0a,0x7e,0xeb,0x16,0x96,0x00]
-// NOGFX11: :[[@LINE-2]]:1: error: sdwa variant of this instruction is not supported
-// NOGFX12: :[[@LINE-3]]:1: error: sdwa variant of this instruction is not supported
-// NOGFX1250: :[[@LINE-4]]:1: error: sdwa variant of this instruction is not supported
-// NOSICI: :[[@LINE-5]]:1: error: instruction not supported on this GPU
-// NOVI: :[[@LINE-6]]:22: error: src_shared_base register not available on this GPU
+// NOCI: :[[@LINE-2]]:1: error: instruction not supported on this GPU (bonaire): v_ceil_f16
+// NOGFX11: :[[@LINE-3]]:1: error: sdwa variant of this instruction is not supported
+// NOGFX12: :[[@LINE-4]]:1: error: sdwa variant of this instruction is not supported
+// NOGFX1250: :[[@LINE-5]]:1: error: sdwa variant of this instruction is not supported
+// NOSI: :[[@LINE-6]]:1: error: instruction not supported on this GPU (tahiti): v_ceil_f16
+// NOVI: :[[@LINE-7]]:22: error: src_shared_base register not available on this GPU
 // NOSICIVI: :[[@LINE-1]]:1: error: instruction not supported on this GPU
 
 v_ceil_f32_sdwa v5, src_shared_base dst_sel:DWORD src0_sel:DWORD
@@ -1614,7 +1657,6 @@ v_ceil_f32_sdwa v5, src_shared_base dst_sel:DWORD src0_sel:DWORD
 // NOGFX1250: :[[@LINE-4]]:1: error: sdwa variant of this instruction is not supported
 // NOSICI: :[[@LINE-5]]:1: error: sdwa variant of this instruction is not supported
 // NOVI: :[[@LINE-6]]:21: error: src_shared_base register not available on this GPU
-// NOSICIVI: :[[@LINE-1]]:1: error: sdwa variant of this instruction is not supported
 
 v_ceil_f32_sdwa v5, |src_shared_base| dst_sel:DWORD src0_sel:DWORD
 // GFX9: v_ceil_f32_sdwa v5, |src_shared_base| dst_sel:DWORD dst_unused:UNUSED_PRESERVE src0_sel:DWORD ; encoding: [0xf9,0x3a,0x0a,0x7e,0xeb,0x16,0xa6,0x00]
@@ -1623,7 +1665,6 @@ v_ceil_f32_sdwa v5, |src_shared_base| dst_sel:DWORD src0_sel:DWORD
 // NOGFX1250: :[[@LINE-4]]:1: error: sdwa variant of this instruction is not supported
 // NOSICI: :[[@LINE-5]]:1: error: sdwa variant of this instruction is not supported
 // NOVI: :[[@LINE-6]]:22: error: src_shared_base register not available on this GPU
-// NOSICIVI: :[[@LINE-1]]:1: error: sdwa variant of this instruction is not supported
 
 //---------------------------------------------------------------------------//
 // named inline values compete with other scalars for constant bus access
@@ -1632,17 +1673,19 @@ v_ceil_f32_sdwa v5, |src_shared_base| dst_sel:DWORD src0_sel:DWORD
 v_add_u32 v0, private_base, s0
 // GFX11: v_add_nc_u32_e64 v0, src_private_base, s0 ; encoding: [0x00,0x00,0x25,0xd5,0xed,0x00,0x00,0x02]
 // GFX12XX: v_add_nc_u32_e64 v0, src_private_base, s0 ; encoding: [0x00,0x00,0x25,0xd5,0xed,0x00,0x00,0x02]
-// NOGFX9: :[[@LINE-3]]:29: error: invalid operand (violates constant bus restrictions)
-// NOSICI: :[[@LINE-4]]:1: error: instruction not supported on this GPU
-// NOVI: :[[@LINE-5]]:15: error: src_private_base register not available on this GPU
+// NOCI: :[[@LINE-3]]:1: error: instruction not supported on this GPU (bonaire): v_add_u32
+// NOGFX9: :[[@LINE-4]]:29: error: invalid operand (violates constant bus restrictions)
+// NOSI: :[[@LINE-5]]:1: error: instruction not supported on this GPU (tahiti): v_add_u32
+// NOVI: :[[@LINE-6]]:15: error: src_private_base register not available on this GPU
 // NOSICIVI: :[[@LINE-1]]:1: error: instruction not supported on this GPU
 
 v_add_u32 v0, scc, s0
 // GFX11: v_add_nc_u32_e64 v0, src_scc, s0        ; encoding: [0x00,0x00,0x25,0xd5,0xfd,0x00,0x00,0x02]
 // GFX12XX: v_add_nc_u32_e64 v0, src_scc, s0        ; encoding: [0x00,0x00,0x25,0xd5,0xfd,0x00,0x00,0x02]
-// NOGFX9: :[[@LINE-3]]:20: error: invalid operand (violates constant bus restrictions)
-// NOSICI: :[[@LINE-4]]:1: error: instruction not supported on this GPU
-// NOVI: :[[@LINE-5]]:1: error: operands are not valid for this GPU or mode
+// NOCI: :[[@LINE-3]]:1: error: instruction not supported on this GPU (bonaire): v_add_u32
+// NOGFX9: :[[@LINE-4]]:20: error: invalid operand (violates constant bus restrictions)
+// NOSI: :[[@LINE-5]]:1: error: instruction not supported on this GPU (tahiti): v_add_u32
+// NOVI: :[[@LINE-6]]:1: error: operands are not valid for this GPU or mode
 // NOSICIVI: :[[@LINE-1]]:1: error: instruction not supported on this GPU
 
 // v_div_fmas implicitly reads VCC
@@ -1652,7 +1695,6 @@ v_div_fmas_f32 v0, shared_base, v0, v1
 // NOGFX9: :[[@LINE-3]]:20: error: invalid operand (violates constant bus restrictions)
 // NOSICI: :[[@LINE-4]]:20: error: src_shared_base register not available on this GPU
 // NOVI: :[[@LINE-5]]:20: error: src_shared_base register not available on this GPU
-// NOSICIVI: :[[@LINE-1]]:20: error: src_shared_base register not available on this GPU
 
 // v_div_fmas implicitly reads VCC
 v_div_fmas_f32 v0, v0, shared_limit, v1
@@ -1661,7 +1703,6 @@ v_div_fmas_f32 v0, v0, shared_limit, v1
 // NOGFX9: :[[@LINE-3]]:24: error: invalid operand (violates constant bus restrictions)
 // NOSICI: :[[@LINE-4]]:24: error: src_shared_limit register not available on this GPU
 // NOVI: :[[@LINE-5]]:24: error: src_shared_limit register not available on this GPU
-// NOSICIVI: :[[@LINE-1]]:24: error: src_shared_limit register not available on this GPU
 
 // v_div_fmas implicitly reads VCC
 v_div_fmas_f32 v0, v0, v1, private_limit
@@ -1670,7 +1711,6 @@ v_div_fmas_f32 v0, v0, v1, private_limit
 // NOGFX9: :[[@LINE-3]]:28: error: invalid operand (violates constant bus restrictions)
 // NOSICI: :[[@LINE-4]]:28: error: src_private_limit register not available on this GPU
 // NOVI: :[[@LINE-5]]:28: error: src_private_limit register not available on this GPU
-// NOSICIVI: :[[@LINE-1]]:28: error: src_private_limit register not available on this GPU
 
 // v_div_fmas implicitly reads VCC
 v_div_fmas_f32 v0, execz, v0, v1
@@ -1679,7 +1719,6 @@ v_div_fmas_f32 v0, execz, v0, v1
 // NOGFX1250: :[[@LINE-3]]:20: error: src_execz register not available on this GPU
 // NOGFX89: :[[@LINE-4]]:20: error: invalid operand (violates constant bus restrictions)
 // NOSICI: :[[@LINE-5]]:20: error: invalid operand (violates constant bus restrictions)
-// NOSICIVI: :[[@LINE-1]]:20: error: invalid operand (violates constant bus restrictions)
 
 // v_div_fmas implicitly reads VCC
 v_div_fmas_f32 v0, v0, scc, v1
@@ -1687,7 +1726,6 @@ v_div_fmas_f32 v0, v0, scc, v1
 // GFX12XX: v_div_fmas_f32 v0, v0, src_scc, v1      ; encoding: [0x00,0x00,0x37,0xd6,0x00,0xfb,0x05,0x04]
 // NOGFX89: :[[@LINE-3]]:24: error: invalid operand (violates constant bus restrictions)
 // NOSICI: :[[@LINE-4]]:24: error: invalid operand (violates constant bus restrictions)
-// NOSICIVI: :[[@LINE-1]]:24: error: invalid operand (violates constant bus restrictions)
 
 // v_div_fmas implicitly reads VCC
 v_div_fmas_f32 v0, v0, v1, vccz
@@ -1696,97 +1734,95 @@ v_div_fmas_f32 v0, v0, v1, vccz
 // NOGFX1250: :[[@LINE-3]]:28: error: src_vccz register not available on this GPU
 // NOGFX89: :[[@LINE-4]]:28: error: invalid operand (violates constant bus restrictions)
 // NOSICI: :[[@LINE-5]]:28: error: invalid operand (violates constant bus restrictions)
-// NOSICIVI: :[[@LINE-1]]:28: error: invalid operand (violates constant bus restrictions)
 
 // v_addc_co_u32 implicitly reads VCC (VOP2)
 v_addc_co_u32 v0, vcc, shared_base, v0, vcc
-// NOGFX11: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-// NOGFX12: :[[@LINE-2]]:1: error: instruction not supported on this GPU
-// NOGFX1250: :[[@LINE-3]]:1: error: instruction not supported on this GPU
-// NOGFX9: :[[@LINE-4]]:24: error: invalid operand (violates constant bus restrictions)
-// NOSICI: :[[@LINE-5]]:1: error: instruction not supported on this GPU
-// NOVI: :[[@LINE-6]]:1: error: instruction not supported on this GPU
+// NOCI: :[[@LINE-1]]:1: error: instruction not supported on this GPU (bonaire): v_addc_co_u32
+// NOGFX11: :[[@LINE-2]]:1: error: instruction not supported on this GPU (gfx1100): v_addc_co_u32
+// NOGFX12: :[[@LINE-3]]:1: error: instruction not supported on this GPU (gfx1200): v_addc_co_u32
+// NOGFX1250: :[[@LINE-4]]:1: error: instruction not supported on this GPU (gfx1250): v_addc_co_u32
+// NOGFX9: :[[@LINE-5]]:24: error: invalid operand (violates constant bus restrictions)
+// NOSI: :[[@LINE-6]]:1: error: instruction not supported on this GPU (tahiti): v_addc_co_u32
+// NOVI: :[[@LINE-7]]:1: error: instruction not supported on this GPU (tonga): v_addc_co_u32
 // NOSICIVI: :[[@LINE-1]]:1: error: instruction not supported on this GPU
 
 v_madak_f32 v0, shared_base, v0, 0x11213141
-// NOGFX11: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-// NOGFX12: :[[@LINE-2]]:1: error: instruction not supported on this GPU
-// NOGFX1250: :[[@LINE-3]]:1: error: instruction not supported on this GPU
+// NOGFX11: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx1100): v_madak_f32
+// NOGFX12: :[[@LINE-2]]:1: error: instruction not supported on this GPU (gfx1200): v_madak_f32
+// NOGFX1250: :[[@LINE-3]]:1: error: instruction not supported on this GPU (gfx1250): v_madak_f32
 // NOGFX9: :[[@LINE-4]]:17: error: invalid operand (violates constant bus restrictions)
 // NOSICI: :[[@LINE-5]]:17: error: src_shared_base register not available on this GPU
 // NOVI: :[[@LINE-6]]:17: error: src_shared_base register not available on this GPU
-// NOSICIVI: :[[@LINE-1]]:17: error: src_shared_base register not available on this GPU
 
 v_madak_f32 v0, scc, v0, 0x11213141
-// NOGFX11: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-// NOGFX12: :[[@LINE-2]]:1: error: instruction not supported on this GPU
-// NOGFX1250: :[[@LINE-3]]:1: error: instruction not supported on this GPU
+// NOGFX11: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx1100): v_madak_f32
+// NOGFX12: :[[@LINE-2]]:1: error: instruction not supported on this GPU (gfx1200): v_madak_f32
+// NOGFX1250: :[[@LINE-3]]:1: error: instruction not supported on this GPU (gfx1250): v_madak_f32
 // NOGFX89: :[[@LINE-4]]:17: error: invalid operand (violates constant bus restrictions)
 // NOSICI: :[[@LINE-5]]:17: error: invalid operand (violates constant bus restrictions)
-// NOSICIVI: :[[@LINE-1]]:17: error: invalid operand (violates constant bus restrictions)
 
 v_madak_f32 v0, 0xff32ff, v0, 0x11213141
-// NOGFX11: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-// NOGFX12: :[[@LINE-2]]:1: error: instruction not supported on this GPU
-// NOGFX1250: :[[@LINE-3]]:1: error: instruction not supported on this GPU
+// NOGFX11: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx1100): v_madak_f32
+// NOGFX12: :[[@LINE-2]]:1: error: instruction not supported on this GPU (gfx1200): v_madak_f32
+// NOGFX1250: :[[@LINE-3]]:1: error: instruction not supported on this GPU (gfx1250): v_madak_f32
 // NOGFX89: :[[@LINE-4]]:31: error: only one unique literal operand is allowed
 // NOSICI: :[[@LINE-5]]:31: error: only one unique literal operand is allowed
-// NOSICIVI: :[[@LINE-1]]:31: error: only one unique literal operand is allowed
 
 v_madak_f32 v0, 0xff32ff, v0, 1
-// NOGFX11: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-// NOGFX12: :[[@LINE-2]]:1: error: instruction not supported on this GPU
-// NOGFX1250: :[[@LINE-3]]:1: error: instruction not supported on this GPU
+// NOGFX11: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx1100): v_madak_f32
+// NOGFX12: :[[@LINE-2]]:1: error: instruction not supported on this GPU (gfx1200): v_madak_f32
+// NOGFX1250: :[[@LINE-3]]:1: error: instruction not supported on this GPU (gfx1250): v_madak_f32
 // NOGFX89: :[[@LINE-4]]:31: error: only one unique literal operand is allowed
 // NOSICI: :[[@LINE-5]]:31: error: only one unique literal operand is allowed
-// NOSICIVI: :[[@LINE-1]]:31: error: only one unique literal operand is allowed
 
 v_madmk_f32 v0, 0xff32ff, 0x11213141, v0
-// NOGFX11: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-// NOGFX12: :[[@LINE-2]]:1: error: instruction not supported on this GPU
-// NOGFX1250: :[[@LINE-3]]:1: error: instruction not supported on this GPU
+// NOGFX11: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx1100): v_madmk_f32
+// NOGFX12: :[[@LINE-2]]:1: error: instruction not supported on this GPU (gfx1200): v_madmk_f32
+// NOGFX1250: :[[@LINE-3]]:1: error: instruction not supported on this GPU (gfx1250): v_madmk_f32
 // NOGFX89: :[[@LINE-4]]:27: error: only one unique literal operand is allowed
 // NOSICI: :[[@LINE-5]]:27: error: only one unique literal operand is allowed
-// NOSICIVI: :[[@LINE-1]]:27: error: only one unique literal operand is allowed
 
 v_madmk_f32 v0, 0xff32ff, -1, v0
-// NOGFX11: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-// NOGFX12: :[[@LINE-2]]:1: error: instruction not supported on this GPU
-// NOGFX1250: :[[@LINE-3]]:1: error: instruction not supported on this GPU
+// NOGFX11: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx1100): v_madmk_f32
+// NOGFX12: :[[@LINE-2]]:1: error: instruction not supported on this GPU (gfx1200): v_madmk_f32
+// NOGFX1250: :[[@LINE-3]]:1: error: instruction not supported on this GPU (gfx1250): v_madmk_f32
 // NOGFX89: :[[@LINE-4]]:27: error: only one unique literal operand is allowed
 // NOSICI: :[[@LINE-5]]:27: error: only one unique literal operand is allowed
-// NOSICIVI: :[[@LINE-1]]:27: error: only one unique literal operand is allowed
 
 v_madak_f16 v0, 0xff32, v0, 0x1122
-// NOGFX11: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-// NOGFX12: :[[@LINE-2]]:1: error: instruction not supported on this GPU
-// NOGFX1250: :[[@LINE-3]]:1: error: instruction not supported on this GPU
-// NOGFX89: :[[@LINE-4]]:29: error: only one unique literal operand is allowed
-// NOSICI: :[[@LINE-5]]:1: error: instruction not supported on this GPU
+// NOCI: :[[@LINE-1]]:1: error: instruction not supported on this GPU (bonaire): v_madak_f16
+// NOGFX11: :[[@LINE-2]]:1: error: instruction not supported on this GPU (gfx1100): v_madak_f16
+// NOGFX12: :[[@LINE-3]]:1: error: instruction not supported on this GPU (gfx1200): v_madak_f16
+// NOGFX1250: :[[@LINE-4]]:1: error: instruction not supported on this GPU (gfx1250): v_madak_f16
+// NOGFX89: :[[@LINE-5]]:29: error: only one unique literal operand is allowed
+// NOSI: :[[@LINE-6]]:1: error: instruction not supported on this GPU (tahiti): v_madak_f16
 // NOSICIVI: :[[@LINE-1]]:1: error: instruction not supported on this GPU
 
 v_madak_f16 v0, 0xff32, v0, 0
-// NOGFX11: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-// NOGFX12: :[[@LINE-2]]:1: error: instruction not supported on this GPU
-// NOGFX1250: :[[@LINE-3]]:1: error: instruction not supported on this GPU
-// NOGFX89: :[[@LINE-4]]:29: error: only one unique literal operand is allowed
-// NOSICI: :[[@LINE-5]]:1: error: instruction not supported on this GPU
+// NOCI: :[[@LINE-1]]:1: error: instruction not supported on this GPU (bonaire): v_madak_f16
+// NOGFX11: :[[@LINE-2]]:1: error: instruction not supported on this GPU (gfx1100): v_madak_f16
+// NOGFX12: :[[@LINE-3]]:1: error: instruction not supported on this GPU (gfx1200): v_madak_f16
+// NOGFX1250: :[[@LINE-4]]:1: error: instruction not supported on this GPU (gfx1250): v_madak_f16
+// NOGFX89: :[[@LINE-5]]:29: error: only one unique literal operand is allowed
+// NOSI: :[[@LINE-6]]:1: error: instruction not supported on this GPU (tahiti): v_madak_f16
 // NOSICIVI: :[[@LINE-1]]:1: error: instruction not supported on this GPU
 
 v_madmk_f16 v0, 0xff32, 0x1122, v0
-// NOGFX11: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-// NOGFX12: :[[@LINE-2]]:1: error: instruction not supported on this GPU
-// NOGFX1250: :[[@LINE-3]]:1: error: instruction not supported on this GPU
-// NOGFX89: :[[@LINE-4]]:25: error: only one unique literal operand is allowed
-// NOSICI: :[[@LINE-5]]:1: error: instruction not supported on this GPU
+// NOCI: :[[@LINE-1]]:1: error: instruction not supported on this GPU (bonaire): v_madmk_f16
+// NOGFX11: :[[@LINE-2]]:1: error: instruction not supported on this GPU (gfx1100): v_madmk_f16
+// NOGFX12: :[[@LINE-3]]:1: error: instruction not supported on this GPU (gfx1200): v_madmk_f16
+// NOGFX1250: :[[@LINE-4]]:1: error: instruction not supported on this GPU (gfx1250): v_madmk_f16
+// NOGFX89: :[[@LINE-5]]:25: error: only one unique literal operand is allowed
+// NOSI: :[[@LINE-6]]:1: error: instruction not supported on this GPU (tahiti): v_madmk_f16
 // NOSICIVI: :[[@LINE-1]]:1: error: instruction not supported on this GPU
 
 v_madmk_f16 v0, 0xff32, 1, v0
-// NOGFX11: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-// NOGFX12: :[[@LINE-2]]:1: error: instruction not supported on this GPU
-// NOGFX1250: :[[@LINE-3]]:1: error: instruction not supported on this GPU
-// NOGFX89: :[[@LINE-4]]:25: error: only one unique literal operand is allowed
-// NOSICI: :[[@LINE-5]]:1: error: instruction not supported on this GPU
+// NOCI: :[[@LINE-1]]:1: error: instruction not supported on this GPU (bonaire): v_madmk_f16
+// NOGFX11: :[[@LINE-2]]:1: error: instruction not supported on this GPU (gfx1100): v_madmk_f16
+// NOGFX12: :[[@LINE-3]]:1: error: instruction not supported on this GPU (gfx1200): v_madmk_f16
+// NOGFX1250: :[[@LINE-4]]:1: error: instruction not supported on this GPU (gfx1250): v_madmk_f16
+// NOGFX89: :[[@LINE-5]]:25: error: only one unique literal operand is allowed
+// NOSI: :[[@LINE-6]]:1: error: instruction not supported on this GPU (tahiti): v_madmk_f16
 // NOSICIVI: :[[@LINE-1]]:1: error: instruction not supported on this GPU
 
 v_cmp_eq_f32 s[0:1], private_base, private_limit
@@ -1796,7 +1832,6 @@ v_cmp_eq_f32 s[0:1], private_base, private_limit
 // NOGFX9: :[[@LINE-4]]:36: error: invalid operand (violates constant bus restrictions)
 // NOSICI: :[[@LINE-5]]:22: error: src_private_base register not available on this GPU
 // NOVI: :[[@LINE-6]]:22: error: src_private_base register not available on this GPU
-// NOSICIVI: :[[@LINE-1]]:22: error: src_private_base register not available on this GPU
 
 v_cmp_eq_f32 s[0:1], private_base, s0
 // NOGFX11: :[[@LINE-1]]:14: error: invalid operand for instruction
@@ -1805,7 +1840,6 @@ v_cmp_eq_f32 s[0:1], private_base, s0
 // NOGFX9: :[[@LINE-4]]:36: error: invalid operand (violates constant bus restrictions)
 // NOSICI: :[[@LINE-5]]:22: error: src_private_base register not available on this GPU
 // NOVI: :[[@LINE-6]]:22: error: src_private_base register not available on this GPU
-// NOSICIVI: :[[@LINE-1]]:22: error: src_private_base register not available on this GPU
 
 v_cmp_eq_f32 s[0:1], execz, s0
 // NOGFX11: :[[@LINE-1]]:22: error: src_execz register not available on this GPU
@@ -1813,23 +1847,24 @@ v_cmp_eq_f32 s[0:1], execz, s0
 // NOGFX1250: :[[@LINE-3]]:22: error: src_execz register not available on this GPU
 // NOGFX89: :[[@LINE-4]]:29: error: invalid operand (violates constant bus restrictions)
 // NOSICI: :[[@LINE-5]]:29: error: invalid operand (violates constant bus restrictions)
-// NOSICIVI: :[[@LINE-1]]:29: error: invalid operand (violates constant bus restrictions)
 
 v_pk_add_f16 v255, private_base, private_limit
 // GFX11: v_pk_add_f16 v255, src_private_base, src_private_limit ; encoding: [0xff,0x40,0x0f,0xcc,0xed,0xdc,0x01,0x1a]
 // GFX12XX: v_pk_add_f16 v255, src_private_base, src_private_limit ; encoding: [0xff,0x40,0x0f,0xcc,0xed,0xdc,0x01,0x1a]
-// NOGFX9: :[[@LINE-3]]:34: error: invalid operand (violates constant bus restrictions)
-// NOSICI: :[[@LINE-4]]:1: error: instruction not supported on this GPU
-// NOVI: :[[@LINE-5]]:1: error: instruction not supported on this GPU
+// NOCI: :[[@LINE-3]]:1: error: instruction not supported on this GPU (bonaire): v_pk_add_f16
+// NOGFX9: :[[@LINE-4]]:34: error: invalid operand (violates constant bus restrictions)
+// NOSI: :[[@LINE-5]]:1: error: instruction not supported on this GPU (tahiti): v_pk_add_f16
+// NOVI: :[[@LINE-6]]:1: error: instruction not supported on this GPU (tonga): v_pk_add_f16
 // NOSICIVI: :[[@LINE-1]]:1: error: instruction not supported on this GPU
 
 v_pk_add_f16 v255, vccz, execz
-// NOGFX11: :[[@LINE-1]]:20: error: src_vccz register not available on this GPU
-// NOGFX12: :[[@LINE-2]]:20: error: src_vccz register not available on this GPU
-// NOGFX1250: :[[@LINE-3]]:20: error: src_vccz register not available on this GPU
-// NOGFX9: :[[@LINE-4]]:26: error: invalid operand (violates constant bus restrictions)
-// NOSICI: :[[@LINE-5]]:1: error: instruction not supported on this GPU
-// NOVI: :[[@LINE-6]]:1: error: instruction not supported on this GPU
+// NOCI: :[[@LINE-1]]:1: error: instruction not supported on this GPU (bonaire): v_pk_add_f16
+// NOGFX11: :[[@LINE-2]]:20: error: src_vccz register not available on this GPU
+// NOGFX12: :[[@LINE-3]]:20: error: src_vccz register not available on this GPU
+// NOGFX1250: :[[@LINE-4]]:20: error: src_vccz register not available on this GPU
+// NOGFX9: :[[@LINE-5]]:26: error: invalid operand (violates constant bus restrictions)
+// NOSI: :[[@LINE-6]]:1: error: instruction not supported on this GPU (tahiti): v_pk_add_f16
+// NOVI: :[[@LINE-7]]:1: error: instruction not supported on this GPU (tonga): v_pk_add_f16
 // NOSICIVI: :[[@LINE-1]]:1: error: instruction not supported on this GPU
 
 //---------------------------------------------------------------------------//
@@ -1889,15 +1924,14 @@ v_sqrt_f32 v2, lit(v1)
 
 v_madak_f32 v4, lit(0x7e8), v8, lit(0x7e8)
 // GFX89: v_madak_f32 v4, lit(0x7e8), v8, lit(0x7e8) ; encoding: [0xff,0x10,0x08,0x30,0xe8,0x07,0x00,0x00]
-// NOGFX11: :[[@LINE-2]]:1: error: instruction not supported on this GPU
-// NOGFX12: :[[@LINE-3]]:1: error: instruction not supported on this GPU
-// NOGFX1250: :[[@LINE-4]]:1: error: instruction not supported on this GPU
+// NOGFX11: :[[@LINE-2]]:1: error: instruction not supported on this GPU (gfx1100): v_madak_f32
+// NOGFX12: :[[@LINE-3]]:1: error: instruction not supported on this GPU (gfx1200): v_madak_f32
+// NOGFX1250: :[[@LINE-4]]:1: error: instruction not supported on this GPU (gfx1250): v_madak_f32
 // SICI: v_madak_f32 v4, lit(0x7e8), v8, lit(0x7e8) ; encoding: [0xff,0x10,0x08,0x42,0xe8,0x07,0x00,0x00]
 
 v_madak_f32 v4, lit(lit(0x7e8)), v8, lit(0x7e8)
-// NOGFX11: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-// NOGFX12: :[[@LINE-2]]:1: error: instruction not supported on this GPU
-// NOGFX1250: :[[@LINE-3]]:1: error: instruction not supported on this GPU
+// NOGFX11: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx1100): v_madak_f32
+// NOGFX12: :[[@LINE-2]]:1: error: instruction not supported on this GPU (gfx1200): v_madak_f32
+// NOGFX1250: :[[@LINE-3]]:1: error: instruction not supported on this GPU (gfx1250): v_madak_f32
 // NOGFX89: :[[@LINE-4]]:24: error: not a valid operand.
 // NOSICI: :[[@LINE-5]]:24: error: not a valid operand.
-// NOSICIVI: :[[@LINE-1]]:24: error: not a valid operand.

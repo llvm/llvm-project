@@ -470,7 +470,7 @@ public:
       if (min_op_byte_size == max_op_byte_size) {
         // Fixed size instructions, just read that amount of data.
         if (!data.ValidOffsetForDataOfSize(data_offset, min_op_byte_size))
-          return false;
+          return 0;
 
         switch (min_op_byte_size) {
         case 1:

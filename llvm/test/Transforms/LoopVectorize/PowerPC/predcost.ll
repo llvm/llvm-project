@@ -3,7 +3,7 @@
 target datalayout = "e-m:e-Fn32-i64:64-n32:64-S128-v256:256:256-v512:512:512"
 target triple = "powerpc64le-unknown-linux-gnu"
 
-define dso_local void @_tc(ptr nocapture noundef %aaa, i64 noundef %bbb) local_unnamed_addr {
+define void @_tc(ptr nocapture noundef %aaa, i64 noundef %bbb) {
 ; CHECK-NOT: extractelement <16 x i1>
 entry:
   br label %for.body

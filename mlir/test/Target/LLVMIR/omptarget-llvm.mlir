@@ -635,6 +635,6 @@ module attributes {omp.target_triples = ["amdgcn-amd-amdhsa"]} {
   }
 }
 
-// CHECK: @.offload_sizes = private unnamed_addr constant [1 x i64] [i64 8]
-// CHECK: @.offload_maptypes = private unnamed_addr constant [1 x i64] [i64 288]
+// CHECK: @.offload_sizes = private unnamed_addr constant [2 x i64] [i64 8, i64 0]
+// CHECK: @.offload_maptypes = private unnamed_addr constant [2 x i64] [i64 288, i64 288]
 // CHECK-LABEL: define void @_QPomp_target_is_device_ptr

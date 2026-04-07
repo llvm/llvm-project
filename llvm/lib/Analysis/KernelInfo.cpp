@@ -330,7 +330,7 @@ void KernelInfo::updateForBB(const BasicBlock &BB, BlockFrequencyInfo &BFI,
   // TODO: Is AllowSynthetic what we want?
   std::optional<uint64_t> BlockProfileCount =
       BFI.getBlockProfileCount(&BB, /*AllowSynthetic=*/true);
-  for (const Instruction &I : BB.instructionsWithoutDebug()) {
+  for (const Instruction &I : BB) {
     auto HandleFloatingPointBytesMoved = [&]() {
       Type *Ty = I.getAccessType();
       if (!Ty || !Ty->isFPOrFPVectorTy())
@@ -353,6 +353,8 @@ void KernelInfo::updateForBB(const BasicBlock &BB, BlockFrequencyInfo &BFI,
       }
       remarkAlloca(ORE, F, *Alloca, StaticSize);
     } else if (const CallBase *Call = dyn_cast<CallBase>(&I)) {
+      if (isa<PseudoProbeInst>(Call))
+        continue;
       SmallString<40> CallKind;
       SmallString<40> RemarkKind;
       if (Call->isIndirectCall()) {

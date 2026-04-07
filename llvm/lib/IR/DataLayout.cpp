@@ -188,15 +188,10 @@ constexpr DataLayout::PrimitiveSpec DefaultFloatSpecs[] = {
     {64, Align::Constant<8>(), Align::Constant<8>()},    // f64:64:64
     {128, Align::Constant<16>(), Align::Constant<16>()}, // f128:128:128
 };
-constexpr DataLayout::PrimitiveSpec DefaultVectorSpecs[] = {
-    {64, Align::Constant<8>(), Align::Constant<8>()},    // v64:64:64
-    {128, Align::Constant<16>(), Align::Constant<16>()}, // v128:128:128
-};
 
 DataLayout::DataLayout()
     : IntSpecs(ArrayRef(DefaultIntSpecs)),
-      FloatSpecs(ArrayRef(DefaultFloatSpecs)),
-      VectorSpecs(ArrayRef(DefaultVectorSpecs)) {
+      FloatSpecs(ArrayRef(DefaultFloatSpecs)) {
   // Default pointer type specifications.
   setPointerSpec(0, 64, Align::Constant<8>(), Align::Constant<8>(), 64, false,
                  false, "");
@@ -212,6 +207,7 @@ DataLayout &DataLayout::operator=(const DataLayout &Other) {
   LayoutMap = nullptr;
   StringRepresentation = Other.StringRepresentation;
   BigEndian = Other.BigEndian;
+  VectorsAreElementAligned = Other.VectorsAreElementAligned;
   AllocaAddrSpace = Other.AllocaAddrSpace;
   ProgramAddrSpace = Other.ProgramAddrSpace;
   DefaultGlobalsAddrSpace = Other.DefaultGlobalsAddrSpace;
@@ -232,6 +228,7 @@ DataLayout &DataLayout::operator=(const DataLayout &Other) {
 bool DataLayout::operator==(const DataLayout &Other) const {
   // NOTE: StringRepresentation might differ, it is not canonicalized.
   return BigEndian == Other.BigEndian &&
+         VectorsAreElementAligned == Other.VectorsAreElementAligned &&
          AllocaAddrSpace == Other.AllocaAddrSpace &&
          ProgramAddrSpace == Other.ProgramAddrSpace &&
          DefaultGlobalsAddrSpace == Other.DefaultGlobalsAddrSpace &&
@@ -534,6 +531,11 @@ Error DataLayout::parseSpecification(
         return createStringError("address space 0 cannot be non-integral");
       NonIntegralAddressSpaces.push_back(AddrSpace);
     }
+    return Error::success();
+  }
+
+  if (Spec == "ve") {
+    VectorsAreElementAligned = true;
     return Error::success();
   }
 
@@ -872,6 +874,9 @@ Align DataLayout::getAlignment(Type *Ty, bool abi_or_pref) const {
     const Align Align = abi_or_pref ? StructABIAlignment : StructPrefAlignment;
     return std::max(Align, Layout->getAlignment());
   }
+  case Type::ByteTyID:
+    // The byte type has the same alignment as the equally sized integer type.
+    return getIntegerAlignment(Ty->getByteBitWidth(), abi_or_pref);
   case Type::IntegerTyID:
     return getIntegerAlignment(Ty->getIntegerBitWidth(), abi_or_pref);
   case Type::HalfTyID:
@@ -902,6 +907,9 @@ Align DataLayout::getAlignment(Type *Ty, bool abi_or_pref) const {
     auto I = lower_bound(VectorSpecs, BitWidth, LessPrimitiveBitWidth());
     if (I != VectorSpecs.end() && I->BitWidth == BitWidth)
       return abi_or_pref ? I->ABIAlign : I->PrefAlign;
+
+    if (vectorsAreElementAligned())
+      return getAlignment(cast<VectorType>(Ty)->getElementType(), abi_or_pref);
 
     // By default, use natural alignment for vector types. This is consistent
     // with what clang and llvm-gcc do.
@@ -981,6 +989,21 @@ Type *DataLayout::getIntPtrType(Type *Ty) const {
   if (VectorType *VecTy = dyn_cast<VectorType>(Ty))
     return VectorType::get(IntTy, VecTy);
   return IntTy;
+}
+
+ByteType *DataLayout::getBytePtrType(LLVMContext &C,
+                                     unsigned AddressSpace) const {
+  return ByteType::get(C, getPointerSizeInBits(AddressSpace));
+}
+
+Type *DataLayout::getBytePtrType(Type *Ty) const {
+  assert(Ty->isPtrOrPtrVectorTy() &&
+         "Expected a pointer or pointer vector type.");
+  unsigned NumBits = getPointerTypeSizeInBits(Ty);
+  ByteType *ByteTy = ByteType::get(Ty->getContext(), NumBits);
+  if (VectorType *VecTy = dyn_cast<VectorType>(Ty))
+    return VectorType::get(ByteTy, VecTy);
+  return ByteTy;
 }
 
 Type *DataLayout::getSmallestLegalIntType(LLVMContext &C, unsigned Width) const {

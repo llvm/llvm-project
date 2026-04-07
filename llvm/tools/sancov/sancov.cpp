@@ -29,6 +29,7 @@
 #include "llvm/Object/COFF.h"
 #include "llvm/Object/MachO.h"
 #include "llvm/Object/ObjectFile.h"
+#include "llvm/Object/XCOFFObjectFile.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/Option.h"
 #include "llvm/Support/Casting.h"
@@ -628,7 +629,12 @@ static bool isCoveragePointSymbol(StringRef Name) {
          // Mac has '___' prefix
          Name == "___sanitizer_cov" || Name == "___sanitizer_cov_with_check" ||
          Name == "___sanitizer_cov_trace_func_enter" ||
-         Name == "___sanitizer_cov_trace_pc_guard";
+         Name == "___sanitizer_cov_trace_pc_guard" ||
+         // Large Aarch64 binaries use thunks
+         Name == "__AArch64ADRPThunk___sanitizer_cov" ||
+         Name == "__AArch64ADRPThunk___sanitizer_cov_with_check" ||
+         Name == "__AArch64ADRPThunk___sanitizer_cov_trace_func_enter" ||
+         Name == "__AArch64ADRPThunk___sanitizer_cov_trace_pc_guard";
 }
 
 // Locate __sanitizer_cov* function addresses inside the stubs table on MachO.
@@ -690,8 +696,13 @@ findSanitizerCovFunctions(const object::ObjectFile &O) {
     failIfError(FlagsOrErr);
     uint32_t Flags = FlagsOrErr.get();
 
+    // XCOFF uses "." prefix for function entry point symbols.
+    StringRef EffectiveName =
+        (isa<object::XCOFFObjectFile>(&O) && Name.starts_with("."))
+            ? Name.drop_front(1)
+            : Name;
     if (!(Flags & object::BasicSymbolRef::SF_Undefined) &&
-        isCoveragePointSymbol(Name)) {
+        isCoveragePointSymbol(EffectiveName)) {
       Result.insert(Address);
     }
   }
@@ -810,7 +821,7 @@ static void getObjectCoveragePoints(const object::ObjectFile &O,
           MIA->evaluateBranch(Inst, SectionAddr + Index, Size, Target) &&
           SanCovAddrs.find(Target) != SanCovAddrs.end())
         Addrs->insert(CovPoint);
-      MIA->updateState(Inst, Addr);
+      MIA->updateState(Inst, STI.get(), Addr);
     }
   }
 }

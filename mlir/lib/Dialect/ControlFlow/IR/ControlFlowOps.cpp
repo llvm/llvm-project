@@ -86,7 +86,7 @@ LogicalResult AssertOp::canonicalize(AssertOp op, PatternRewriter &rewriter) {
   return failure();
 }
 
-// This side effect models "program termination". 
+// This side effect models "program termination".
 void AssertOp::getEffects(
     SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
         &effects) {
@@ -204,9 +204,83 @@ static LogicalResult simplifyPassThroughBr(BranchOp op,
   return success();
 }
 
+/// If all incoming values for a block argument from all predecessors are the
+/// same SSA value, replace uses of the block argument with that value. This
+/// allows the block argument to be removed by dead code elimination.
+///
+///   %c = arith.constant 0 : i32
+///   cf.br ^bb1(%c : i32)      // pred 1
+///   cf.br ^bb1(%c : i32)      // pred 2
+/// ^bb1(%arg0: i32):
+///   use(%arg0)
+/// ->
+/// ^bb1(%arg0: i32):
+///   use(%c)                   // %arg0 has no uses and can be removed
+///
+static LogicalResult simplifyUniformBlockArgs(Block *dest,
+                                              PatternRewriter &rewriter) {
+  if (dest->hasNoPredecessors() ||
+      llvm::hasSingleElement(dest->getPredecessors()))
+    return failure();
+
+  bool changed = false;
+  for (BlockArgument arg : dest->getArguments()) {
+    if (arg.use_empty())
+      continue;
+
+    Value commonValue;
+    for (Block *pred : dest->getPredecessors()) {
+      auto branch = dyn_cast<BranchOpInterface>(pred->getTerminator());
+      if (!branch) {
+        commonValue = Value();
+        break;
+      }
+
+      for (auto [i, succ] : llvm::enumerate(branch->getSuccessors())) {
+        if (succ != dest)
+          continue;
+
+        // Produced operands are modeled by BranchOpInterface as null Values.
+        Value val = branch.getSuccessorOperands(i)[arg.getArgNumber()];
+        if (commonValue && commonValue != val) {
+          commonValue = Value();
+          break;
+        }
+        commonValue = val;
+      }
+
+      if (!commonValue)
+        break;
+    }
+
+    if (commonValue && commonValue != arg) {
+      rewriter.replaceAllUsesWith(arg, commonValue);
+      changed = true;
+    }
+  }
+  return success(changed);
+}
+
+namespace {
+/// Replaces block arguments with a uniform incoming value across all
+/// predecessors, for any op implementing BranchOpInterface.
+struct SimplifyUniformBlockArguments
+    : public OpInterfaceRewritePattern<BranchOpInterface> {
+  using OpInterfaceRewritePattern::OpInterfaceRewritePattern;
+  LogicalResult matchAndRewrite(BranchOpInterface op,
+                                PatternRewriter &rewriter) const override {
+    bool changed = false;
+    for (Block *succ : op->getSuccessors())
+      changed |= succeeded(simplifyUniformBlockArgs(succ, rewriter));
+    return success(changed);
+  }
+};
+} // namespace
+
 LogicalResult BranchOp::canonicalize(BranchOp op, PatternRewriter &rewriter) {
   return success(succeeded(simplifyBrToBlockWithSinglePred(op, rewriter)) ||
-                 succeeded(simplifyPassThroughBr(op, rewriter)));
+                 succeeded(simplifyPassThroughBr(op, rewriter)) ||
+                 succeeded(simplifyUniformBlockArgs(op.getDest(), rewriter)));
 }
 
 void BranchOp::setDest(Block *block) { return setSuccessor(block); }
@@ -220,6 +294,12 @@ SuccessorOperands BranchOp::getSuccessorOperands(unsigned index) {
 
 Block *BranchOp::getSuccessorForOperands(ArrayRef<Attribute>) {
   return getDest();
+}
+
+ValueRange BranchOp::getSuccessorForwardOperands(Block *successor) {
+  if (successor == getDest())
+    return getDestOperands();
+  return {};
 }
 
 //===----------------------------------------------------------------------===//
@@ -492,7 +572,8 @@ void CondBranchOp::getCanonicalizationPatterns(RewritePatternSet &results,
   results.add<SimplifyConstCondBranchPred, SimplifyPassThroughCondBranch,
               SimplifyCondBranchIdenticalSuccessors,
               SimplifyCondBranchFromCondBranchOnSameCondition,
-              CondBranchTruthPropagation, DropUnreachableCondBranch>(context);
+              CondBranchTruthPropagation, DropUnreachableCondBranch,
+              SimplifyUniformBlockArguments>(context);
 }
 
 SuccessorOperands CondBranchOp::getSuccessorOperands(unsigned index) {
@@ -506,6 +587,14 @@ Block *CondBranchOp::getSuccessorForOperands(ArrayRef<Attribute> operands) {
           llvm::dyn_cast_or_null<IntegerAttr>(operands.front()))
     return condAttr.getValue().isOne() ? getTrueDest() : getFalseDest();
   return nullptr;
+}
+
+ValueRange CondBranchOp::getSuccessorForwardOperands(Block *successor) {
+  if (successor == getTrueDest())
+    return getTrueOperands();
+  else if (successor == getFalseDest())
+    return getFalseOperands();
+  return {};
 }
 
 //===----------------------------------------------------------------------===//
@@ -955,7 +1044,18 @@ void SwitchOp::getCanonicalizationPatterns(RewritePatternSet &results,
       .add(&simplifyConstSwitchValue)
       .add(&simplifyPassThroughSwitch)
       .add(&simplifySwitchFromSwitchOnSameCondition)
-      .add(&simplifySwitchFromDefaultSwitchOnSameCondition);
+      .add(&simplifySwitchFromDefaultSwitchOnSameCondition)
+      .add<SimplifyUniformBlockArguments>(context);
+}
+
+ValueRange SwitchOp::getSuccessorForwardOperands(Block *successor) {
+  if (successor == getDefaultDestination())
+    return getDefaultOperands();
+  SuccessorRange caseDests = getCaseDestinations();
+  auto it = llvm::find(caseDests, successor);
+  if (it == caseDests.end())
+    return {};
+  return getCaseOperands(std::distance(caseDests.begin(), it));
 }
 
 //===----------------------------------------------------------------------===//

@@ -61,6 +61,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Capacity.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Support/SaveAndRestore.h"
@@ -240,14 +241,59 @@ void Preprocessor::FinalizeForModelFile() {
 }
 
 void Preprocessor::DumpToken(const Token &Tok, bool DumpFlags) const {
-  llvm::errs() << tok::getTokenName(Tok.getKind());
+  std::string TokenStr;
+  llvm::raw_string_ostream OS(TokenStr);
 
-  if (!Tok.isAnnotation())
-    llvm::errs() << " '" << getSpelling(Tok) << "'";
+  // The alignment of 16 is chosen to comfortably fit most identifiers.
+  OS << llvm::formatv("{0,-16} ", tok::getTokenName(Tok.getKind()));
+
+  // Annotation tokens are just markers that don't have a spelling -- they
+  // indicate where something expanded.
+  if (!Tok.isAnnotation()) {
+    OS << "'";
+    // Escape string to prevent token spelling from spanning multiple lines.
+    OS.write_escaped(getSpelling(Tok));
+    OS << "'";
+  }
+
+  // The alignment of 48 (32 characters for the spelling + the 16 for
+  // the identifier name) fits most variable names, keywords and annotations.
+  llvm::errs() << llvm::formatv("{0,-48} ", OS.str());
 
   if (!DumpFlags) return;
 
-  llvm::errs() << "\t";
+  auto Loc = Tok.getLocation();
+  llvm::errs() << "Loc=<";
+  DumpLocation(Loc);
+  llvm::errs() << ">";
+
+  // If the token points directly to a file location (i.e. not a macro
+  // expansion), then add additional padding so that trailing markers
+  // align, provided the line/column numbers are reasonably sized.
+  //
+  // Otherwise, if it's a macro expansion, don't bother with alignment,
+  // as the line will include multiple locations and be very long.
+  //
+  // NOTE: To keep this stateless, it doesn't account for filename
+  // length, so when a header starts markers will be temporarily misaligned.
+  if (Loc.isFileID()) {
+    PresumedLoc PLoc = SourceMgr.getPresumedLoc(Loc);
+
+    if (!PLoc.isInvalid()) {
+      int LineWidth = llvm::utostr(PLoc.getLine()).size();
+      int ColumnWidth = llvm::utostr(PLoc.getColumn()).size();
+
+      // Reserve space for lines up to 9999 and columns up to 99,
+      // which is 4 + 2 = 6 characters in total.
+      const int ReservedSpace = 6;
+
+      int LeftSpace = ReservedSpace - LineWidth - ColumnWidth;
+      int Padding = std::max<int>(0, LeftSpace);
+
+      llvm::errs().indent(Padding);
+    }
+  }
+
   if (Tok.isAtStartOfLine())
     llvm::errs() << " [StartOfLine]";
   if (Tok.hasLeadingSpace())
@@ -256,13 +302,8 @@ void Preprocessor::DumpToken(const Token &Tok, bool DumpFlags) const {
     llvm::errs() << " [ExpandDisabled]";
   if (Tok.needsCleaning()) {
     const char *Start = SourceMgr.getCharacterData(Tok.getLocation());
-    llvm::errs() << " [UnClean='" << StringRef(Start, Tok.getLength())
-                 << "']";
+    llvm::errs() << " [UnClean='" << StringRef(Start, Tok.getLength()) << "']";
   }
-
-  llvm::errs() << "\tLoc=<";
-  DumpLocation(Tok.getLocation());
-  llvm::errs() << ">";
 }
 
 void Preprocessor::DumpLocation(SourceLocation Loc) const {
@@ -1250,6 +1291,36 @@ bool Preprocessor::LexModuleNameContinue(Token &Tok, SourceLocation UseLoc,
   }
 }
 
+bool Preprocessor::HandleModuleName(StringRef DirType, SourceLocation UseLoc,
+                                    Token &Tok,
+                                    SmallVectorImpl<IdentifierLoc> &Path,
+                                    SmallVectorImpl<Token> &DirToks,
+                                    bool AllowMacroExpansion,
+                                    bool IsPartition) {
+  bool LeadingSpace = Tok.hasLeadingSpace();
+  unsigned NumToksInDirective = DirToks.size();
+  if (LexModuleNameContinue(Tok, UseLoc, DirToks, Path, AllowMacroExpansion,
+                            IsPartition)) {
+    if (Tok.isNot(tok::eod))
+      CheckEndOfDirective(DirType,
+                          /*EnableMacros=*/false, &DirToks);
+    EnterModuleSuffixTokenStream(DirToks);
+    return true;
+  }
+
+  // Clean the module-name tokens and replace these tokens with
+  // annot_module_name.
+  DirToks.resize(NumToksInDirective);
+  ModuleNameLoc *NameLoc = ModuleNameLoc::Create(*this, Path);
+  DirToks.emplace_back();
+  DirToks.back().setKind(tok::annot_module_name);
+  DirToks.back().setAnnotationRange(NameLoc->getRange());
+  DirToks.back().setAnnotationValue(static_cast<void *>(NameLoc));
+  DirToks.back().setFlagValue(Token::LeadingSpace, LeadingSpace);
+  DirToks.push_back(Tok);
+  return false;
+}
+
 /// [cpp.pre]/p2:
 /// A preprocessing directive consists of a sequence of preprocessing tokens
 /// that satisfies the following constraints: At the start of translation phase
@@ -1410,7 +1481,9 @@ bool Preprocessor::LexAfterModuleImport(Token &Result) {
   SmallVector<Token, 32> Suffix;
   SmallVector<IdentifierLoc, 3> Path;
   Lex(Result);
-  if (LexModuleNameContinue(Result, ModuleImportLoc, Suffix, Path))
+  if (LexModuleNameContinue(Result, ModuleImportLoc, Suffix, Path,
+                            /*AllowMacroExpansion=*/true,
+                            /*IsPartition=*/false))
     return CollectPPImportSuffixAndEnterStream(Suffix);
 
   ModuleNameLoc *NameLoc = ModuleNameLoc::Create(*this, Path);

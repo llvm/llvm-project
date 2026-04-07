@@ -59,6 +59,14 @@ static void testTypeCreation(MlirContext ctx) {
       mlirTypeParseGet(ctx, mlirStringRefCreateFromCString(i32_4_text));
   // CHECK: !llvm.array<4 x i32>: 1
   fprintf(stderr, "%s: %d\n", i32_4_text, mlirTypeEqual(i32_4, i32_4_ref));
+  // CHECK: array_isa: 1
+  fprintf(stderr, "array_isa: %d\n", mlirTypeIsALLVMArrayType(i32_4));
+  // CHECK: array_element_type: 1
+  fprintf(stderr, "array_element_type: %d\n",
+          mlirTypeEqual(mlirLLVMArrayTypeGetElementType(i32_4), i32));
+  // CHECK: array_num_elements: 4
+  fprintf(stderr, "array_num_elements: %u\n",
+          mlirLLVMArrayTypeGetNumElements(i32_4));
 
   const char *i8_i32_i64_text = "!llvm.func<i8 (i32, i64)>";
   const MlirType i32_i64_arr[] = {i32, i64};
@@ -250,9 +258,9 @@ static void testDebugInfoAttributes(MlirContext ctx) {
       mlirStringAttrGet(ctx, mlirStringRefCreateFromCString("bar"));
 
   MlirAttribute none = mlirUnitAttrGet(ctx);
-  MlirAttribute id = mlirDisctinctAttrCreate(none);
-  MlirAttribute recId0 = mlirDisctinctAttrCreate(none);
-  MlirAttribute recId1 = mlirDisctinctAttrCreate(none);
+  MlirAttribute id = mlirDistinctAttrCreate(none);
+  MlirAttribute recId0 = mlirDistinctAttrCreate(none);
+  MlirAttribute recId1 = mlirDistinctAttrCreate(none);
 
   // CHECK: #llvm.di_null_type
   mlirAttributeDump(mlirLLVMDINullTypeAttrGet(ctx));
@@ -270,7 +278,8 @@ static void testDebugInfoAttributes(MlirContext ctx) {
 
   MlirAttribute compile_unit = mlirLLVMDICompileUnitAttrGet(
       ctx, id, LLVMDWARFSourceLanguageC99, file, foo, false,
-      MlirLLVMDIEmissionKindFull, MlirLLVMDINameTableKindDefault, bar);
+      MlirLLVMDIEmissionKindFull, false, MlirLLVMDINameTableKindDefault, bar, 0,
+      NULL);
 
   // CHECK: #llvm.di_compile_unit<{{.*}}>
   mlirAttributeDump(compile_unit);
@@ -303,12 +312,12 @@ static void testDebugInfoAttributes(MlirContext ctx) {
   // CHECK: #llvm.di_derived_type<{{.*}}>
   // CHECK-NOT: dwarfAddressSpace
   mlirAttributeDump(mlirLLVMDIDerivedTypeAttrGet(
-      ctx, 0, bar, di_type, 64, 8, 0, MLIR_CAPI_DWARF_ADDRESS_SPACE_NULL, 0,
-      di_type));
+      ctx, 0, bar, file, 1, compile_unit, di_type, 64, 8, 0,
+      MLIR_CAPI_DWARF_ADDRESS_SPACE_NULL, 0, di_type));
 
   // CHECK: #llvm.di_derived_type<{{.*}} dwarfAddressSpace = 3{{.*}}>
-  mlirAttributeDump(mlirLLVMDIDerivedTypeAttrGet(ctx, 0, bar, di_type, 64, 8, 0,
-                                                 3, 0, di_type));
+  mlirAttributeDump(mlirLLVMDIDerivedTypeAttrGet(
+      ctx, 0, bar, file, 1, compile_unit, di_type, 64, 8, 0, 3, 0, di_type));
 
   MlirAttribute subroutine_type =
       mlirLLVMDISubroutineTypeAttrGet(ctx, 0x0, 1, &di_type);

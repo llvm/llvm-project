@@ -76,6 +76,9 @@ add_mlir_translation_library(MLIRTargetLLVMIRImport
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Target/LLVMIR
 
+  DEPENDS
+  MLIRLLVMImportDialectInterfaceIncGen
+
   LINK_COMPONENTS
   Core
   IRReader

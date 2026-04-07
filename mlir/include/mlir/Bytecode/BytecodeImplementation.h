@@ -50,6 +50,9 @@ public:
   /// Emit an error to the reader.
   virtual InFlightDiagnostic emitError(const Twine &msg = {}) const = 0;
 
+  /// Emit a warning to the reader.
+  virtual InFlightDiagnostic emitWarning(const Twine &msg = {}) const = 0;
+
   /// Retrieve the dialect version by name if available.
   virtual FailureOr<const DialectVersion *>
   getDialectVersion(StringRef dialectName) const = 0;
@@ -418,81 +421,6 @@ public:
   }
 };
 
-//===----------------------------------------------------------------------===//
-// BytecodeDialectInterface
-//===----------------------------------------------------------------------===//
-
-class BytecodeDialectInterface
-    : public DialectInterface::Base<BytecodeDialectInterface> {
-public:
-  using Base::Base;
-
-  //===--------------------------------------------------------------------===//
-  // Reading
-  //===--------------------------------------------------------------------===//
-
-  /// Read an attribute belonging to this dialect from the given reader. This
-  /// method should return null in the case of failure. Optionally, the dialect
-  /// version can be accessed through the reader.
-  virtual Attribute readAttribute(DialectBytecodeReader &reader) const {
-    reader.emitError() << "dialect " << getDialect()->getNamespace()
-                       << " does not support reading attributes from bytecode";
-    return Attribute();
-  }
-
-  /// Read a type belonging to this dialect from the given reader. This method
-  /// should return null in the case of failure. Optionally, the dialect version
-  /// can be accessed thorugh the reader.
-  virtual Type readType(DialectBytecodeReader &reader) const {
-    reader.emitError() << "dialect " << getDialect()->getNamespace()
-                       << " does not support reading types from bytecode";
-    return Type();
-  }
-
-  //===--------------------------------------------------------------------===//
-  // Writing
-  //===--------------------------------------------------------------------===//
-
-  /// Write the given attribute, which belongs to this dialect, to the given
-  /// writer. This method may return failure to indicate that the given
-  /// attribute could not be encoded, in which case the textual format will be
-  /// used to encode this attribute instead.
-  virtual LogicalResult writeAttribute(Attribute attr,
-                                       DialectBytecodeWriter &writer) const {
-    return failure();
-  }
-
-  /// Write the given type, which belongs to this dialect, to the given writer.
-  /// This method may return failure to indicate that the given type could not
-  /// be encoded, in which case the textual format will be used to encode this
-  /// type instead.
-  virtual LogicalResult writeType(Type type,
-                                  DialectBytecodeWriter &writer) const {
-    return failure();
-  }
-
-  /// Write the version of this dialect to the given writer.
-  virtual void writeVersion(DialectBytecodeWriter &writer) const {}
-
-  // Read the version of this dialect from the provided reader and return it as
-  // a `unique_ptr` to a dialect version object.
-  virtual std::unique_ptr<DialectVersion>
-  readVersion(DialectBytecodeReader &reader) const {
-    reader.emitError("Dialect does not support versioning");
-    return nullptr;
-  }
-
-  /// Hook invoked after parsing completed, if a version directive was present
-  /// and included an entry for the current dialect. This hook offers the
-  /// opportunity to the dialect to visit the IR and upgrades constructs emitted
-  /// by the version of the dialect corresponding to the provided version.
-  virtual LogicalResult
-  upgradeFromVersion(Operation *topLevelOp,
-                     const DialectVersion &version) const {
-    return success();
-  }
-};
-
 /// Helper for resource handle reading that returns LogicalResult.
 template <typename T, typename... Ts>
 static LogicalResult readResourceHandle(DialectBytecodeReader &reader,
@@ -524,6 +452,38 @@ auto get(MLIRContext *context, Ts &&...params) {
   }
 }
 
+namespace detail {
+template <typename T, typename... Ts>
+using has_get_checked_method = decltype(T::getChecked(std::declval<Ts>()...));
+} // namespace detail
+
+/// Helper method analogous to `get`, but uses `getChecked` when available to
+/// allow graceful failure on invalid parameters instead of asserting.
+///
+/// Only the no-context form of `getChecked` is tried here. Types that expose
+/// `getChecked(emitError, params...)` without a leading `MLIRContext*` (e.g.
+/// MemRefType, VectorType, RankedTensorType) will use it for graceful failure.
+/// Everything else falls back to `get<T>()`.  We intentionally do NOT try
+/// `T::getChecked(emitError, context, params...)`: for types that only inherit
+/// the base `StorageUserBase::getChecked` template (e.g. ArrayAttr), that
+/// template instantiation requires a complete storage type which may not be
+/// available in the bytecode reading TU.
+template <typename T, typename... Ts>
+auto getChecked(function_ref<InFlightDiagnostic()> emitError,
+                MLIRContext *context, Ts &&...params) {
+  if constexpr (llvm::is_detected<detail::has_get_checked_method, T,
+                                  function_ref<InFlightDiagnostic()>,
+                                  Ts...>::value) {
+    (void)context;
+    return T::getChecked(emitError, std::forward<Ts>(params)...);
+  } else {
+    // Fall back to get() for types that don't define a no-context getChecked.
+    return get<T>(context, std::forward<Ts>(params)...);
+  }
+}
+
 } // namespace mlir
+
+#include "mlir/Bytecode/BytecodeDialectInterface.h.inc"
 
 #endif // MLIR_BYTECODE_BYTECODEIMPLEMENTATION_H
