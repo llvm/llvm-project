@@ -1030,7 +1030,8 @@ std::error_code setLastAccessAndModificationTime(int FD, TimePoint<> AccessTime,
 }
 
 std::error_code mapped_file_region::init(sys::fs::file_t OrigFileHandle,
-                                         uint64_t Offset, mapmode Mode) {
+                                         uint64_t Offset, mapmode Mode,
+                                         const char *Name) {
   this->Mode = Mode;
   if (OrigFileHandle == INVALID_HANDLE_VALUE)
     return make_error_code(errc::bad_file_descriptor);
@@ -1048,8 +1049,14 @@ std::error_code mapped_file_region::init(sys::fs::file_t OrigFileHandle,
     break;
   }
 
-  HANDLE FileMappingHandle = ::CreateFileMappingW(OrigFileHandle, 0, flprotect,
-                                                  Hi_32(Size), Lo_32(Size), 0);
+  SmallVector<wchar_t, 128> NameUTF16;
+  if (Name)
+    if (std::error_code EC = UTF8ToUTF16(Name, NameUTF16))
+      return EC;
+
+  HANDLE FileMappingHandle =
+      ::CreateFileMappingW(OrigFileHandle, 0, flprotect, Hi_32(Size),
+                           Lo_32(Size), Name ? c_str(NameUTF16) : 0);
   if (FileMappingHandle == NULL) {
     std::error_code ec = mapWindowsError(GetLastError());
     return ec;
@@ -1106,11 +1113,11 @@ std::error_code mapped_file_region::init(sys::fs::file_t OrigFileHandle,
 
 mapped_file_region::mapped_file_region(sys::fs::file_t fd, mapmode mode,
                                        size_t length, uint64_t offset,
-                                       std::error_code &ec)
+                                       std::error_code &ec, const char *name)
     : Size(length) {
   sandbox::violationIfEnabled();
 
-  ec = init(fd, offset, mode);
+  ec = init(fd, offset, mode, name);
   if (ec)
     copyFrom(mapped_file_region());
 }
