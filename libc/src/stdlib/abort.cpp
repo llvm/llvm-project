@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/stdlib/abort.h"
-#include "src/stdlib/linux/abort_utils.h"
+#include "src/stdlib/abort_utils.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
