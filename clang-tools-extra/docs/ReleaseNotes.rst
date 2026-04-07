@@ -350,6 +350,12 @@ Changes in existing checks
   <clang-tidy/checks/misc/unused-using-decls>` to not diagnose ``using``
   declarations as unused if they're exported from a module.
 
+- Improved :doc:`misc-use-internal-linkage
+  <clang-tidy/checks/misc/use-internal-linkage>` to not suggest giving
+  internal linkage to entities defined in C++ module interface units.
+  Because it only sees one file at a time, the check can't be sure
+  such entities aren't referenced in any other files of that module.
+
 - Improved :doc:`modernize-pass-by-value
   <clang-tidy/checks/modernize/pass-by-value>` check by adding `IgnoreMacros`
   option to suppress warnings in macros.
