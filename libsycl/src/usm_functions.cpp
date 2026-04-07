@@ -103,7 +103,7 @@ void *malloc(std::size_t numBytes, const device &syclDevice,
 
   void *Ptr{};
   auto Result = detail::callNoCheck(
-      olMemAlloc, detail::getSyclObjImpl(syclDevice)->getOLHandle(),
+      olMemAlloc, detail::getSyclObjImpl(syclDevice)->getHandle(),
       detail::getOlAllocType(kind), numBytes, &Ptr);
   return detail::isFailed(Result) ? nullptr : Ptr;
 }
