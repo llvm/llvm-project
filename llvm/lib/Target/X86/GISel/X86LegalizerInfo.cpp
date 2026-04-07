@@ -329,8 +329,7 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
       .widenScalarToNextPow2(1, /*Min*/ 32)
       .clampScalar(1, s32, sMaxScalar);
 
-  getActionDefinitionsBuilder({G_FRAME_INDEX, G_TARGET_GLOBAL_VALUE})
-      .legalFor({p0});
+  getActionDefinitionsBuilder(G_FRAME_INDEX).legalFor({p0});
 
   getActionDefinitionsBuilder(G_GLOBAL_VALUE).customFor({p0});
 
@@ -1010,11 +1009,16 @@ bool X86LegalizerInfo::legalizeGLOBAL_VALUE(MachineInstr &MI,
   LLT DstTy = MRI.getType(Dst);
   auto GVOpFlags = Subtarget.classifyGlobalReference(GV);
 
+  // For stub references (GOT/PLT), we need G_WRAPPER_RIP + load
   if (isGlobalStubReference(GVOpFlags)) {
     MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
     MachineFunction &MF = MIRBuilder.getMF();
 
-    auto StubAddr = MIRBuilder.buildTargetGlobalValue(DstTy, GV);
+    auto StubAddr = MRI.createGenericVirtualRegister(DstTy);
+    MIRBuilder.buildInstr(X86::G_WRAPPER_RIP)
+        .addDef(StubAddr)
+        .addGlobalAddress(GV);
+
     auto MMO = MF.getMachineMemOperand(MachinePointerInfo::getGOT(MF),
                                        MachineMemOperand::MOLoad, DstTy,
                                        Align(DstTy.getSizeInBytes()));

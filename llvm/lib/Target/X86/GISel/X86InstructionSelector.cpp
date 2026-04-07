@@ -626,7 +626,7 @@ static bool X86SelectAddress(MachineInstr &I, const X86TargetMachine &TM,
     break;
   }
   case TargetOpcode::G_GLOBAL_VALUE:
-  case TargetOpcode::G_TARGET_GLOBAL_VALUE: {
+  case X86::G_WRAPPER_RIP: {
     auto GV = I.getOperand(1).getGlobal();
     if (GV->isThreadLocal()) {
       return false; // TODO: we don't support TLS yet.
