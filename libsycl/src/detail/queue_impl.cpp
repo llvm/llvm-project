@@ -10,7 +10,6 @@
 
 #include <detail/device_impl.hpp>
 #include <detail/event_impl.hpp>
-#include <detail/program_manager.hpp>
 
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 
