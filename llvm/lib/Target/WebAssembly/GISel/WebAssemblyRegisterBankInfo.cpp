@@ -14,6 +14,7 @@
 #include "WebAssemblyRegisterBankInfo.h"
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
 #include "WebAssemblyRegisterInfo.h"
+#include "WebAssemblySubtarget.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 
@@ -66,6 +67,8 @@ WebAssemblyRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   unsigned Opc = MI.getOpcode();
   const MachineFunction &MF = *MI.getParent()->getParent();
   const MachineRegisterInfo &MRI = MF.getRegInfo();
+  const WebAssemblySubtarget &STI = MF.getSubtarget<WebAssemblySubtarget>();
+  const WebAssemblyRegisterInfo &TRI = *STI.getRegisterInfo();
 
   if ((Opc != TargetOpcode::COPY && !isPreISelGenericOpcode(Opc)) ||
       Opc == TargetOpcode::G_PHI) {
@@ -134,6 +137,29 @@ WebAssemblyRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     OperandsMapping =
         getOperandsMapping({&Op0IntValueMapping, &Op0IntValueMapping, nullptr});
     break;
+  case COPY: {
+    Register DstReg = MI.getOperand(0).getReg();
+    Register SrcReg = MI.getOperand(1).getReg();
+
+    const RegisterBank *DstRB = getRegBank(DstReg, MRI, TRI);
+    const RegisterBank *SrcRB = getRegBank(SrcReg, MRI, TRI);
+
+    if (!DstRB)
+      DstRB = SrcRB;
+    else if (!SrcRB)
+      SrcRB = DstRB;
+
+    assert(DstRB && SrcRB && "Both RegBank were nullptr");
+
+    if (DstRB != SrcRB) {
+      break; // for now, only allow no-op copies
+    }
+
+    return getInstructionMapping(
+        MappingID, /*Cost=*/1, &Op0IntValueMapping,
+        // We only care about the mapping of the destination for COPY.
+        1);
+  }
   }
 
   if (!OperandsMapping)
