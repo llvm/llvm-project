@@ -90,9 +90,6 @@ public:
   /// corresponding region.
   LogicalResult initialize(ModuleOp parentModule, Region &parentRegion);
 
-  LogicalResult initialize(ModuleOp parentModule, Region &parentRegion,
-                           IRMapping &mapper);
-
 private:
   /// A custom BFS iterator. The difference between
   /// llvm/ADT/BreadthFirstIterator.h is the graph we're exploring is dynamic.
