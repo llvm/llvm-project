@@ -2316,7 +2316,8 @@ bool Debugger::StartEventHandlerThread() {
     // function. We do this by listening to events for the
     // eBroadcastBitEventThreadIsListening from the m_sync_broadcaster
     ConstString full_name("lldb.debugger.event-handler");
-    ListenerSP listener_sp(Listener::MakeListener(full_name.AsCString()));
+    ListenerSP listener_sp(
+        Listener::MakeListener(full_name.AsCString(nullptr)));
     listener_sp->StartListeningForEvents(&m_sync_broadcaster,
                                          eBroadcastBitEventThreadIsListening);
 

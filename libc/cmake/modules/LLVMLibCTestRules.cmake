@@ -643,12 +643,6 @@ function(add_integration_test test_name)
                    libc.test.IntegrationTest.test
                    ${INTEGRATION_TEST_DEPENDS})
 
-  # Tests on the GPU require an external loader utility to launch the kernel.
-  if(TARGET libc.utils.gpu.loader)
-    add_dependencies(${fq_build_target_name} libc.utils.gpu.loader)
-    get_target_property(gpu_loader_exe libc.utils.gpu.loader "EXECUTABLE")
-  endif()
-
   # We have to use a separate var to store the command as a list because
   # the COMMAND option of `add_custom_target` cannot handle empty vars in the
   # command. For example, if INTEGRATION_TEST_ENV is empty, the actual
@@ -658,7 +652,6 @@ function(add_integration_test test_name)
   set(test_cmd
       ${INTEGRATION_TEST_ENV}
       $<$<BOOL:${LIBC_TARGET_ARCHITECTURE_IS_NVPTX}>:LIBOMPTARGET_STACK_SIZE=3072>
-      $<$<BOOL:${LIBC_TARGET_OS_IS_GPU}>:${gpu_loader_exe}>
       ${CMAKE_CROSSCOMPILING_EMULATOR}
       ${INTEGRATION_TEST_LOADER_ARGS}
       $<TARGET_FILE:${fq_build_target_name}> ${INTEGRATION_TEST_ARGS})
@@ -896,12 +889,6 @@ function(add_libc_hermetic test_name)
     )
   endif()
 
-  # Tests on the GPU require an external loader utility to launch the kernel.
-  if(TARGET libc.utils.gpu.loader)
-    add_dependencies(${fq_build_target_name} libc.utils.gpu.loader)
-    get_target_property(gpu_loader_exe libc.utils.gpu.loader "EXECUTABLE")
-  endif()
-
   if(NOT HERMETIC_TEST_NO_RUN_POSTBUILD)
     if (LIBC_TEST_CMD)
       # In the form of "<command> binary=@BINARY@", e.g. "qemu-system-arm -loader$<COMMA>file=@BINARY@"
@@ -910,7 +897,7 @@ function(add_libc_hermetic test_name)
     else()
       set(test_cmd ${HERMETIC_TEST_ENV}
         $<$<BOOL:${LIBC_TARGET_ARCHITECTURE_IS_NVPTX}>:LIBOMPTARGET_STACK_SIZE=3072>
-        $<$<BOOL:${LIBC_TARGET_OS_IS_GPU}>:${gpu_loader_exe}> ${CMAKE_CROSSCOMPILING_EMULATOR} ${HERMETIC_TEST_LOADER_ARGS}
+        ${CMAKE_CROSSCOMPILING_EMULATOR} ${HERMETIC_TEST_LOADER_ARGS}
         $<TARGET_FILE:${fq_build_target_name}> ${HERMETIC_TEST_ARGS})
     endif()
 

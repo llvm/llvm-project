@@ -3,8 +3,8 @@
 ## Non-section symbols and offset <= section_size are accepted, matching GNU ld.
 
 # RUN: llvm-mc %s -o %t.o -filetype=obj -triple=x86_64
-# RUN: not ld.lld %t.o -o /dev/null -shared 2>&1 | FileCheck %s -DPREFIX=error --implicit-check-not=error:
-# RUN: ld.lld %t.o -o /dev/null -shared --noinhibit-exec 2>&1 | FileCheck %s -DPREFIX=warning --implicit-check-not=warning:
+# RUN: not ld.lld --threads=1 %t.o -o /dev/null -shared 2>&1 | FileCheck %s -DPREFIX=error --implicit-check-not=error:
+# RUN: ld.lld --threads=1 %t.o -o /dev/null -shared --noinhibit-exec 2>&1 | FileCheck %s -DPREFIX=warning --implicit-check-not=warning:
 
 ## .foo is 8 bytes with entsize=8 (1 piece). .foo+8 (offset==size) is accepted.
 # CHECK:      [[PREFIX]]: {{.*}}:(.foo): offset 0x9 is outside the section

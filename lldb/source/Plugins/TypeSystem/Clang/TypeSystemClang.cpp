@@ -13,6 +13,7 @@
 #include "clang/Frontend/ASTConsumers.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/ErrorExtras.h"
 #include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/FormatVariadic.h"
 
@@ -7020,8 +7021,7 @@ TypeSystemClang::GetIndexOfChildWithName(lldb::opaque_compiler_type_t type,
       break;
     }
   }
-  return llvm::createStringError("Type has no child named '%s'",
-                                 name.str().c_str());
+  return llvm::createStringErrorV("type has no child named '{0}'", name);
 }
 
 CompilerType
@@ -8602,7 +8602,7 @@ void TypeSystemClang::DumpFromSymbolFile(Stream &s,
       if (symbol_name != type->GetName().GetStringRef())
         continue;
 
-    s << type->GetName().AsCString() << "\n";
+    s << type->GetName() << "\n";
 
     CompilerType full_type = type->GetFullCompilerType();
     if (clang::TagDecl *tag_decl = GetAsTagDecl(full_type)) {

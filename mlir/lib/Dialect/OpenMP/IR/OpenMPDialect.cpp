@@ -3360,6 +3360,31 @@ LogicalResult TaskgroupOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// TaskloopContextOp
+//===----------------------------------------------------------------------===//
+
+TaskloopOp TaskloopContextOp::getLoopOp() {
+  return cast<TaskloopOp>(
+      *llvm::find_if(getRegion().front(),
+                     [](mlir::Operation &op) { return isa<TaskloopOp>(op); }));
+}
+
+LogicalResult TaskloopContextOp::verifyRegions() {
+  Region &region = getRegion();
+  if (region.empty())
+    return emitOpError() << "expected non-empty region";
+
+  auto count = llvm::count_if(
+      region.front(), [](mlir::Operation &op) { return isa<TaskloopOp>(op); });
+  if (count != 1)
+    return emitOpError() << "expected exactly 1 TaskloopOp directly nested in "
+                            "the region, but "
+                         << count << " were found";
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // TaskloopOp
 //===----------------------------------------------------------------------===//
 
@@ -3380,7 +3405,15 @@ void TaskloopOp::build(OpBuilder &builder, OperationState &state,
       makeArrayAttr(ctx, clauses.reductionSyms), clauses.untied);
 }
 
+TaskloopContextOp TaskloopOp::getTaskloopContext() {
+  return dyn_cast<TaskloopContextOp>(getOperation()->getParentOp());
+}
+
 LogicalResult TaskloopOp::verify() {
+  TaskloopContextOp context = getTaskloopContext();
+  if (!context)
+    return emitOpError() << "expected to be nested in a taskloop context op";
+
   if (getAllocateVars().size() != getAllocatorVars().size())
     return emitError(
         "expected equal sizes for allocate and allocator variables");
