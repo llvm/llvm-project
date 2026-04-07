@@ -20280,7 +20280,7 @@ static SDValue performVSELECTCombine(SDNode *N, SelectionDAG &DAG) {
   return DAG.getNode(ISD::ADD, DL, VT, A, NewB);
 }
 
-// Fold (iC (select (src >u ((1 << C) - 1)), sext(src >s -1), trunc(src))) to
+// Fold (iN (select (src >u ((1 << N) - 1)), sext(src >s -1), trunc(src))) to
 // USATI. This pattern saturates a signed value to an unsigned N-bit range
 // [0, 2^N-1]:
 //   - If src < 0: result = 0
@@ -20321,9 +20321,9 @@ static SDValue foldSelectToUSATI(SDNode *N, SelectionDAG &DAG,
     return SDValue();
 
   // Check inner setcc: src > -1 (signed comparison)
-  if (InnerSetCC.getValueType() != MVT::i1 ||
-      !sd_match(InnerSetCC, m_SetCC(m_Specific(Src), m_AllOnes(),
-                                    m_SpecificCondCode(ISD::SETGT))))
+  if (!sd_match(InnerSetCC,
+                m_SpecificVT(MVT::i1, m_SetCC(m_Specific(Src), m_AllOnes(),
+                                              m_SpecificCondCode(ISD::SETGT)))))
     return SDValue();
 
   // FalseSrc may have been optimized from a truncate of a truncate. There may
