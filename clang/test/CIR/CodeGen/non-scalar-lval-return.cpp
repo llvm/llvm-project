@@ -32,7 +32,7 @@ extern "C" void use() {
   // LLVMCIR: %[[GET_STRUCT_CALL:.*]] = call %struct.Struct @getStruct(i32 noundef 0)
   // LLVMCIR: store %struct.Struct %[[GET_STRUCT_CALL]], ptr %[[TEMP_ALLOCA]]
   // OGCG: %[[GET_STRUCT_CALL_BEFORE:.*]] = call i32 @getStruct(i32 noundef 0)
-  // OGCG: %[[GET_STRUCT_CALL:.*]] = getelementptr{{.*}}%struct.Struct, ptr %[[TEMP_ALLOCA]]
+  // OGCG: %[[GET_STRUCT_CALL:.*]] = getelementptr{{.*}}%struct.Struct, ptr %[[TEMP_ALLOCA]], i32 0, i32 0
   // OGCG: store i32 %[[GET_STRUCT_CALL_BEFORE]], ptr %[[GET_STRUCT_CALL]]
   //
   // LLVM: %[[GET_MEMBER:.*]] = getelementptr {{.*}}%struct.Struct, ptr %[[TEMP_ALLOCA]], i32 0, i32 0
