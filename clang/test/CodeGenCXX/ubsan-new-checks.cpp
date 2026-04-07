@@ -140,7 +140,8 @@ S5 *func_15(const S5 *ptr) {
   // CHECK-LABEL: define {{.*}} @_Z7func_15PK2S5
   // CHECK:       and i64 %{{.*}}, 31, !nosanitize
   // CHECK:       icmp eq i64 %{{.*}}, 0, !nosanitize
-  // CHECK-NOT:   and i64
+  // CHECK:       and i64 %{{.*}}, 31, !nosanitize
+  // CHECK:       icmp eq i64 %{{.*}}, 0, !nosanitize
   // CHECK:       ret ptr
   return new S5(*ptr);
 }
