@@ -156,8 +156,8 @@ LoopStructure::parseLoopStructure(ScalarEvolution &SE, Loop &L,
     return std::nullopt;
   }
 
-  BranchInst *LatchBr = dyn_cast<BranchInst>(Latch->getTerminator());
-  if (!LatchBr || LatchBr->isUnconditional()) {
+  CondBrInst *LatchBr = dyn_cast<CondBrInst>(Latch->getTerminator());
+  if (!LatchBr) {
     FailureReason = "latch terminator not conditional branch";
     return std::nullopt;
   }
@@ -200,7 +200,7 @@ LoopStructure::parseLoopStructure(ScalarEvolution &SE, Loop &L,
   }
 
   auto HasNoSignedWrap = [&](const SCEVAddRecExpr *AR) {
-    if (AR->getNoWrapFlags(SCEV::FlagNSW))
+    if (AR->hasNoSignedWrap())
       return true;
 
     IntegerType *Ty = cast<IntegerType>(AR->getType());
@@ -222,7 +222,7 @@ LoopStructure::parseLoopStructure(ScalarEvolution &SE, Loop &L,
     }
 
     // We may have proved this when computing the sign extension above.
-    return AR->getNoWrapFlags(SCEV::FlagNSW) != SCEV::FlagAnyWrap;
+    return AR->hasNoSignedWrap();
   };
 
   // `ICI` is interpreted as taking the backedge if the *next* value of the
@@ -287,7 +287,7 @@ LoopStructure::parseLoopStructure(ScalarEvolution &SE, Loop &L,
         //     break;                       break;
         //   ...                          ...
         // }                            }
-        if (IndVarBase->getNoWrapFlags(SCEV::FlagNUW) &&
+        if (IndVarBase->hasNoUnsignedWrap() &&
             cannotBeMinInLoop(RightSCEV, &L, SE, /*Signed*/ false)) {
           Pred = ICmpInst::ICMP_UGT;
           RightSCEV =
@@ -351,7 +351,7 @@ LoopStructure::parseLoopStructure(ScalarEvolution &SE, Loop &L,
         //     break;                       break;
         //   ...                          ...
         // }                            }
-        if (IndVarBase->getNoWrapFlags(SCEV::FlagNUW) &&
+        if (IndVarBase->hasNoUnsignedWrap() &&
             cannotBeMaxInLoop(RightSCEV, &L, SE, /* Signed */ false)) {
           Pred = ICmpInst::ICMP_ULT;
           RightSCEV = SE.getAddExpr(RightSCEV, SE.getOne(RightSCEV->getType()));
@@ -603,7 +603,7 @@ LoopConstrainer::RewrittenRangeInfo LoopConstrainer::changeIterationSpaceEnd(
   RRI.PseudoExit = BasicBlock::Create(Ctx, Twine(LS.Tag) + ".pseudo.exit", &F,
                                       BBInsertLocation);
 
-  BranchInst *PreheaderJump = cast<BranchInst>(Preheader->getTerminator());
+  Instruction *PreheaderJump = Preheader->getTerminator();
   bool Increasing = LS.IndVarIncreasing;
   bool IsSignedPredicate = LS.IsSignedPredicate;
 
@@ -647,8 +647,8 @@ LoopConstrainer::RewrittenRangeInfo LoopConstrainer::changeIterationSpaceEnd(
   Value *IterationsLeft = B.CreateICmp(Pred, IndVarBase, LoopExitAt);
   B.CreateCondBr(IterationsLeft, RRI.PseudoExit, LS.LatchExit);
 
-  BranchInst *BranchToContinuation =
-      BranchInst::Create(ContinuationBlock, RRI.PseudoExit);
+  UncondBrInst *BranchToContinuation =
+      UncondBrInst::Create(ContinuationBlock, RRI.PseudoExit);
 
   // We emit PHI nodes into `RRI.PseudoExit' that compute the "latest" value of
   // each of the PHI nodes in the loop header.  This feeds into the initial
@@ -690,7 +690,7 @@ BasicBlock *LoopConstrainer::createPreheader(const LoopStructure &LS,
                                              BasicBlock *OldPreheader,
                                              const char *Tag) const {
   BasicBlock *Preheader = BasicBlock::Create(Ctx, Tag, &F, LS.Header);
-  BranchInst::Create(LS.Header, Preheader);
+  UncondBrInst::Create(LS.Header, Preheader);
 
   LS.Header->replacePhiUsesWith(OldPreheader, Preheader);
 

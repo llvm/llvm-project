@@ -28,6 +28,7 @@
 #include "clang/Lex/Preprocessor.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/APSInt.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -36,6 +37,7 @@
 #include <queue>
 #include <set>
 #include <sstream>
+#include <vector>
 
 using namespace clang;
 
@@ -1032,79 +1034,76 @@ hasUnsafeFormatOrSArg(ASTContext &Ctx, const CallExpr *Call,
 //  The notation `CoreName[str/wcs]` means a new name obtained from replace
 //  string "wcs" with "str" in `CoreName`.
 static bool isPredefinedUnsafeLibcFunc(const FunctionDecl &Node) {
-  static std::unique_ptr<std::set<StringRef>> PredefinedNames = nullptr;
-  if (!PredefinedNames)
-    PredefinedNames =
-        std::make_unique<std::set<StringRef>, std::set<StringRef>>({
-            // numeric conversion:
-            "atof",
-            "atoi",
-            "atol",
-            "atoll",
-            "strtol",
-            "strtoll",
-            "strtoul",
-            "strtoull",
-            "strtof",
-            "strtod",
-            "strtold",
-            "strtoimax",
-            "strtoumax",
-            // "strfromf",  "strfromd", "strfroml", // C23?
-            // string manipulation:
-            "strcpy",
-            "strncpy",
-            "strlcpy",
-            "strcat",
-            "strncat",
-            "strlcat",
-            "strxfrm",
-            "strdup",
-            "strndup",
-            // string examination:
-            "strlen",
-            "strnlen",
-            "strcmp",
-            "strncmp",
-            "stricmp",
-            "strcasecmp",
-            "strcoll",
-            "strchr",
-            "strrchr",
-            "strspn",
-            "strcspn",
-            "strpbrk",
-            "strstr",
-            "strtok",
-            // "mem-" functions
-            "memchr",
-            "wmemchr",
-            "memcmp",
-            "wmemcmp",
-            "memcpy",
-            "memccpy",
-            "mempcpy",
-            "wmemcpy",
-            "memmove",
-            "wmemmove",
-            "wmemset",
-            // IO:
-            "fread",
-            "fwrite",
-            "fgets",
-            "fgetws",
-            "gets",
-            "fputs",
-            "fputws",
-            "puts",
-            // others
-            "strerror_s",
-            "strerror_r",
-            "bcopy",
-            "bzero",
-            "bsearch",
-            "qsort",
-        });
+  static const std::set<StringRef> PredefinedNames = {
+      // numeric conversion:
+      "atof",
+      "atoi",
+      "atol",
+      "atoll",
+      "strtol",
+      "strtoll",
+      "strtoul",
+      "strtoull",
+      "strtof",
+      "strtod",
+      "strtold",
+      "strtoimax",
+      "strtoumax",
+      // "strfromf",  "strfromd", "strfroml", // C23?
+      // string manipulation:
+      "strcpy",
+      "strncpy",
+      "strlcpy",
+      "strcat",
+      "strncat",
+      "strlcat",
+      "strxfrm",
+      "strdup",
+      "strndup",
+      // string examination:
+      "strlen",
+      "strnlen",
+      "strcmp",
+      "strncmp",
+      "stricmp",
+      "strcasecmp",
+      "strcoll",
+      "strchr",
+      "strrchr",
+      "strspn",
+      "strcspn",
+      "strpbrk",
+      "strstr",
+      "strtok",
+      // "mem-" functions
+      "memchr",
+      "wmemchr",
+      "memcmp",
+      "wmemcmp",
+      "memcpy",
+      "memccpy",
+      "mempcpy",
+      "wmemcpy",
+      "memmove",
+      "wmemmove",
+      "wmemset",
+      // IO:
+      "fread",
+      "fwrite",
+      "fgets",
+      "fgetws",
+      "gets",
+      "fputs",
+      "fputws",
+      "puts",
+      // others
+      "strerror_s",
+      "strerror_r",
+      "bcopy",
+      "bzero",
+      "bsearch",
+      "qsort",
+  };
 
   auto *II = Node.getIdentifier();
 
@@ -1114,7 +1113,7 @@ static bool isPredefinedUnsafeLibcFunc(const FunctionDecl &Node) {
   StringRef Name = matchName(II->getName(), Node.getBuiltinID());
 
   // Match predefined names:
-  if (PredefinedNames->find(Name) != PredefinedNames->end())
+  if (PredefinedNames.count(Name))
     return true;
 
   std::string NameWCS = Name.str();
@@ -1126,7 +1125,7 @@ static bool isPredefinedUnsafeLibcFunc(const FunctionDecl &Node) {
     NameWCS[WcsPos++] = 'r';
     WcsPos = NameWCS.find("wcs", WcsPos);
   }
-  if (PredefinedNames->find(NameWCS) != PredefinedNames->end())
+  if (PredefinedNames.count(NameWCS))
     return true;
   // All `scanf` functions are unsafe (including `sscanf`, `vsscanf`, etc.. They
   // all should end with "scanf"):
@@ -2288,7 +2287,7 @@ public:
     auto *CE = dyn_cast<CallExpr>(S);
     if (!CE || !CE->getDirectCallee())
       return false;
-    const auto *FD = dyn_cast<FunctionDecl>(CE->getDirectCallee());
+    const FunctionDecl *FD = CE->getDirectCallee();
     if (!FD)
       return false;
 
@@ -2496,7 +2495,7 @@ public:
       const auto *UO = dyn_cast<UnaryOperator>(S);
       if (!UO || UO->getOpcode() != UO_Deref)
         return;
-      const auto *CE = dyn_cast<Expr>(UO->getSubExpr());
+      const Expr *CE = UO->getSubExpr();
       if (!CE)
         return;
       CE = CE->IgnoreParenImpCasts();
@@ -2945,7 +2944,38 @@ template <typename NodeTy> struct CompareNode {
   }
 };
 
-std::set<const Expr *> clang::findUnsafePointers(const FunctionDecl *FD) {
+// Populate `Stmts` with the body/initializer Stmt of `D`, if `D` is one of the
+// followings:
+//   VarDecl
+//   FieldDecl
+//   FunctionDecl
+//   BlockDecl
+//   ObjCMethodDecl
+static void populateStmtsForFindingGadgets(SmallVector<const Stmt *> &Stmts,
+                                           const Decl *D) {
+  auto AddStmt = [&Stmts](const Stmt *S) {
+    if (S)
+      Stmts.push_back(S);
+  };
+  if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
+    AddStmt(FD->getBody());
+    for (const auto *PD : FD->parameters())
+      if (PD->hasDefaultArg() && !PD->hasUninstantiatedDefaultArg())
+        AddStmt(PD->getDefaultArg());
+    if (const auto *CtorD = dyn_cast<CXXConstructorDecl>(FD))
+      llvm::append_range(
+          Stmts, llvm::map_range(CtorD->inits(),
+                                 std::mem_fn(&CXXCtorInitializer::getInit)));
+  } else if (isa<BlockDecl>(D) || isa<ObjCMethodDecl>(D)) {
+    AddStmt(D->getBody());
+  } else if (const auto *VD = dyn_cast<VarDecl>(D)) {
+    AddStmt(VD->getInit()); // FIXME: default arg for ParmVarDecl?
+  } else if (const auto *FD = dyn_cast<FieldDecl>(D)) {
+    AddStmt(FD->getInClassInitializer());
+  }
+}
+
+std::set<const Expr *> clang::findUnsafePointers(const Decl *D) {
   class MockReporter : public UnsafeBufferUsageHandler {
   public:
     MockReporter() {}
@@ -2984,9 +3014,13 @@ std::set<const Expr *> clang::findUnsafePointers(const FunctionDecl *FD) {
   WarningGadgetList WarningGadgets;
   DeclUseTracker Tracker;
   MockReporter IgnoreHandler;
+  ASTContext &Ctx = D->getASTContext();
+  SmallVector<const Stmt *> Stmts;
 
-  findGadgets(FD->getBody(), FD->getASTContext(), IgnoreHandler, false,
-              FixableGadgets, WarningGadgets, Tracker);
+  populateStmtsForFindingGadgets(Stmts, D);
+  for (auto *Stmt : Stmts)
+    findGadgets(Stmt, Ctx, IgnoreHandler, false, FixableGadgets, WarningGadgets,
+                Tracker);
 
   std::set<const Expr *> Result;
   for (auto &G : WarningGadgets) {
@@ -4676,9 +4710,6 @@ void clang::checkUnsafeBufferUsage(const Decl *D,
 #endif
 
   assert(D);
-
-  SmallVector<Stmt *> Stmts;
-
   if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
     // Consteval functions are free of UB by the spec, so we don't need to
     // visit them or produce diagnostics.
@@ -4700,24 +4731,18 @@ void clang::checkUnsafeBufferUsage(const Decl *D,
         break;
       }
     }
-
-    Stmts.push_back(FD->getBody());
-
-    if (const auto *ID = dyn_cast<CXXConstructorDecl>(D)) {
-      for (const CXXCtorInitializer *CI : ID->inits()) {
-        Stmts.push_back(CI->getInit());
-      }
-    }
-  } else if (isa<BlockDecl>(D) || isa<ObjCMethodDecl>(D)) {
-    Stmts.push_back(D->getBody());
   }
+
+  SmallVector<const Stmt *> Stmts;
+
+  populateStmtsForFindingGadgets(Stmts, D);
 
   assert(!Stmts.empty());
 
   FixableGadgetList FixableGadgets;
   WarningGadgetList WarningGadgets;
   DeclUseTracker Tracker;
-  for (Stmt *S : Stmts) {
+  for (const Stmt *S : Stmts) {
     findGadgets(S, D->getASTContext(), Handler, EmitSuggestions, FixableGadgets,
                 WarningGadgets, Tracker);
   }

@@ -1436,8 +1436,9 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
   setStackPointerRegisterToSaveRestore(isPPC64 ? PPC::X1 : PPC::R1);
 
   // We have target-specific dag combine patterns for the following nodes:
-  setTargetDAGCombine({ISD::AND, ISD::ADD, ISD::SHL, ISD::SRA, ISD::SRL,
-                       ISD::MUL, ISD::FMA, ISD::SINT_TO_FP, ISD::BUILD_VECTOR});
+  setTargetDAGCombine({ISD::AND, ISD::ADD, ISD::XOR, ISD::SHL, ISD::SRA,
+                       ISD::SRL, ISD::MUL, ISD::FMA, ISD::SINT_TO_FP,
+                       ISD::BUILD_VECTOR});
   if (Subtarget.hasFPCVT())
     setTargetDAGCombine(ISD::UINT_TO_FP);
   setTargetDAGCombine({ISD::LOAD, ISD::STORE, ISD::BR_CC});
@@ -1453,6 +1454,9 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
   if (Subtarget.useCRBits()) {
     setTargetDAGCombine({ISD::TRUNCATE, ISD::SETCC, ISD::SELECT_CC});
   }
+
+  if (Subtarget.hasP8Vector())
+    setTargetDAGCombine(ISD::BITCAST);
 
   // With 32 condition bits, we don't need to sink (and duplicate) compares
   // aggressively in CodeGenPrep.
@@ -8175,9 +8179,7 @@ SDValue PPCTargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const {
   // general, fsel-based lowering of select is a finite-math-only optimization.
   // For more information, see section F.3 of the 2.06 ISA specification.
   // With ISA 3.0
-  if (!Flags.hasNoInfs() ||
-      (!DAG.getTarget().Options.NoNaNsFPMath && !Flags.hasNoNaNs()) ||
-      ResVT == MVT::f128)
+  if (!Flags.hasNoInfs() || !Flags.hasNoNaNs() || ResVT == MVT::f128)
     return Op;
 
   // If the RHS of the comparison is a 0.0, we don't need to do the
@@ -11176,7 +11178,7 @@ SDValue PPCTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     return DAG.getMergeValues(RetOps, dl);
   }
 
-  case Intrinsic::ppc_mma_build_dmr: {
+  case Intrinsic::ppc_build_dmr: {
     SmallVector<SDValue, 8> Pairs;
     SmallVector<SDValue, 8> Chains;
     for (int i = 1; i < 9; i += 2) {
@@ -11360,14 +11362,38 @@ SDValue PPCTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     unsigned CmprOpc = OpVT == MVT::f128 ? PPC::XSTSTDCQP
                                          : (OpVT == MVT::f64 ? PPC::XSTSTDCDP
                                                              : PPC::XSTSTDCSP);
+    // Lower __builtin_ppc_test_data_class(value, mask) to XSTSTDC* instruction.
+    // The XSTSTDC* instructions test if a floating-point value matches any of
+    // the data classes specified in the mask, setting CR field bits
+    // accordingly. We need to extract the EQ bit (bit 2) from the CR field and
+    // convert it to an integer result (1 if match, 0 if no match).
+    //
+    // Note: Operands are swapped because XSTSTDC* expects (mask, value) but the
+    // intrinsic provides (value, mask) as Op.getOperand(1) and
+    // Op.getOperand(2).
+    SDValue TestDataClass =
+        SDValue(DAG.getMachineNode(CmprOpc, dl, MVT::i32,
+                                   {Op.getOperand(2), Op.getOperand(1)}),
+                0);
+    if (Subtarget.isISA3_1()) {
+      // ISA 3.1+: Use SETBC instruction to directly convert CR bit to integer.
+      // This is more efficient than the SELECT_CC approach used in earlier
+      // ISAs.
+      SDValue SubRegIdx = DAG.getTargetConstant(PPC::sub_eq, dl, MVT::i32);
+      SDValue CRBit =
+          SDValue(DAG.getMachineNode(TargetOpcode::EXTRACT_SUBREG, dl, MVT::i1,
+                                     TestDataClass, SubRegIdx),
+                  0);
+
+      return DAG.getNode(PPCISD::SETBC, dl, MVT::i32, CRBit);
+    }
+
+    // Pre-ISA 3.1: Use SELECT_CC to convert CR field to integer (1 or 0).
     return SDValue(
-        DAG.getMachineNode(
-            PPC::SELECT_CC_I4, dl, MVT::i32,
-            {SDValue(DAG.getMachineNode(CmprOpc, dl, MVT::i32, Op.getOperand(2),
-                                        Op.getOperand(1)),
-                     0),
-             DAG.getConstant(1, dl, MVT::i32), DAG.getConstant(0, dl, MVT::i32),
-             DAG.getTargetConstant(PPC::PRED_EQ, dl, MVT::i32)}),
+        DAG.getMachineNode(PPC::SELECT_CC_I4, dl, MVT::i32,
+                           {TestDataClass, DAG.getConstant(1, dl, MVT::i32),
+                            DAG.getConstant(0, dl, MVT::i32),
+                            DAG.getTargetConstant(PPC::PRED_EQ, dl, MVT::i32)}),
         0);
   }
   case Intrinsic::ppc_fnmsub: {
@@ -11505,6 +11531,49 @@ SDValue PPCTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   return Flags;
 }
 
+SDValue PPCTargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
+                                                  SelectionDAG &DAG) const {
+  unsigned IntrinsicID = Op.getConstantOperandVal(1);
+  SDLoc dl(Op);
+  switch (IntrinsicID) {
+  case Intrinsic::ppc_amo_lwat_csne:
+  case Intrinsic::ppc_amo_ldat_csne:
+    SDValue Chain = Op.getOperand(0);
+    SDValue Ptr = Op.getOperand(2);
+    SDValue CmpVal = Op.getOperand(3);
+    SDValue NewVal = Op.getOperand(4);
+
+    EVT VT = IntrinsicID == Intrinsic::ppc_amo_ldat_csne ? MVT::i64 : MVT::i32;
+    Type *Ty = VT.getTypeForEVT(*DAG.getContext());
+    Type *IntPtrTy = DAG.getDataLayout().getIntPtrType(*DAG.getContext());
+
+    TargetLowering::ArgListTy Args;
+    Args.emplace_back(DAG.getUNDEF(MVT::i64),
+                      Type::getInt64Ty(*DAG.getContext()));
+    Args.emplace_back(CmpVal, Ty);
+    Args.emplace_back(NewVal, Ty);
+    Args.emplace_back(Ptr, IntPtrTy);
+
+    // Lower to dummy call to use ABI for consecutive register allocation.
+    // Places return value, compare value, and new value in X3/X4/X5 as required
+    // by lwat/ldat FC=16, avoiding a new register class for 3 adjacent
+    // registers.
+    const char *SymName = IntrinsicID == Intrinsic::ppc_amo_ldat_csne
+                              ? "__ldat_csne_pseudo"
+                              : "__lwat_csne_pseudo";
+    SDValue Callee =
+        DAG.getExternalSymbol(SymName, getPointerTy(DAG.getDataLayout()));
+
+    TargetLowering::CallLoweringInfo CLI(DAG);
+    CLI.setDebugLoc(dl).setChain(Chain).setLibCallee(CallingConv::C, Ty, Callee,
+                                                     std::move(Args));
+
+    auto Result = LowerCallTo(CLI);
+    return DAG.getMergeValues({Result.first, Result.second}, dl);
+  }
+  return SDValue();
+}
+
 SDValue PPCTargetLowering::LowerINTRINSIC_VOID(SDValue Op,
                                                SelectionDAG &DAG) const {
   // SelectionDAGBuilder::visitTargetIntrinsic may insert one extra chain to
@@ -11529,8 +11598,10 @@ SDValue PPCTargetLowering::LowerINTRINSIC_VOID(SDValue Op,
             Op.getOperand(0)),
         0);
   }
-  case Intrinsic::ppc_mma_disassemble_dmr: {
-    return DAG.getStore(DAG.getEntryNode(), DL, Op.getOperand(ArgStart + 2),
+  case Intrinsic::ppc_disassemble_dmr: {
+    assert(ArgStart == 1 &&
+           "llvm.ppc.disassemble.dmr must carry a chain argument.");
+    return DAG.getStore(Op.getOperand(0), DL, Op.getOperand(ArgStart + 2),
                         Op.getOperand(ArgStart + 1), MachinePointerInfo());
   }
   case Intrinsic::ppc_amo_stwat:
@@ -12046,31 +12117,15 @@ SDValue PPCTargetLowering::LowerDMFVectorLoad(SDValue Op,
   }
 
   SDValue TF = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, LoadChains);
-  SDValue Lo =
-      DAG.getNode(PPCISD::INST512, dl, MVT::v512i1, Loads[0], Loads[1]);
-  SDValue LoSub = DAG.getTargetConstant(PPC::sub_wacc_lo, dl, MVT::i32);
-  SDValue Hi =
-      DAG.getNode(PPCISD::INST512HI, dl, MVT::v512i1, Loads[2], Loads[3]);
-  SDValue HiSub = DAG.getTargetConstant(PPC::sub_wacc_hi, dl, MVT::i32);
-  SDValue RC = DAG.getTargetConstant(PPC::DMRRCRegClassID, dl, MVT::i32);
-  const SDValue Ops[] = {RC, Lo, LoSub, Hi, HiSub};
-
-  SDValue Value =
-      SDValue(DAG.getMachineNode(PPC::REG_SEQUENCE, dl, MVT::v1024i1, Ops), 0);
+  SDValue Value = DMFInsert1024(Loads, dl, DAG);
 
   if (IsV1024i1) {
     return DAG.getMergeValues({Value, TF}, dl);
   }
 
   // Handle Loads for V2048i1 which represents a dmr pair.
-  SDValue DmrPValue;
-  SDValue Dmr1Lo =
-      DAG.getNode(PPCISD::INST512, dl, MVT::v512i1, Loads[4], Loads[5]);
-  SDValue Dmr1Hi =
-      DAG.getNode(PPCISD::INST512HI, dl, MVT::v512i1, Loads[6], Loads[7]);
-  const SDValue Dmr1Ops[] = {RC, Dmr1Lo, LoSub, Dmr1Hi, HiSub};
-  SDValue Dmr1Value = SDValue(
-      DAG.getMachineNode(PPC::REG_SEQUENCE, dl, MVT::v1024i1, Dmr1Ops), 0);
+  SmallVector<SDValue, 4> MoreLoads{Loads[4], Loads[5], Loads[6], Loads[7]};
+  SDValue Dmr1Value = DMFInsert1024(MoreLoads, dl, DAG);
 
   SDValue Dmr0Sub = DAG.getTargetConstant(PPC::sub_dmr0, dl, MVT::i32);
   SDValue Dmr1Sub = DAG.getTargetConstant(PPC::sub_dmr1, dl, MVT::i32);
@@ -12078,7 +12133,7 @@ SDValue PPCTargetLowering::LowerDMFVectorLoad(SDValue Op,
   SDValue DmrPRC = DAG.getTargetConstant(PPC::DMRpRCRegClassID, dl, MVT::i32);
   const SDValue DmrPOps[] = {DmrPRC, Value, Dmr0Sub, Dmr1Value, Dmr1Sub};
 
-  DmrPValue = SDValue(
+  SDValue DmrPValue = SDValue(
       DAG.getMachineNode(PPC::REG_SEQUENCE, dl, MVT::v2048i1, DmrPOps), 0);
 
   return DAG.getMergeValues({DmrPValue, TF}, dl);
@@ -12115,12 +12170,18 @@ SDValue PPCTargetLowering::LowerVectorLoad(SDValue Op,
     return Op;
 
   // Type v256i1 is used for pairs and v512i1 is used for accumulators.
-  // Here we create 2 or 4 v16i8 loads to load the pair or accumulator value in
-  // 2 or 4 vsx registers.
   assert((VT != MVT::v512i1 || Subtarget.hasMMA()) &&
          "Type unsupported without MMA");
   assert((VT != MVT::v256i1 || Subtarget.pairedVectorMemops()) &&
          "Type unsupported without paired vector support");
+
+  // For v256i1 on ISA Future, let the load go through to instruction selection
+  // where it will be matched to lxvp/plxvp by the instruction patterns.
+  if (VT == MVT::v256i1 && Subtarget.isISAFuture())
+    return Op;
+
+  // For other cases, create 2 or 4 v16i8 loads to load the pair or accumulator
+  // value in 2 or 4 vsx registers.
   Align Alignment = LN->getAlign();
   SmallVector<SDValue, 4> Loads;
   SmallVector<SDValue, 4> LoadChains;
@@ -12283,12 +12344,19 @@ SDValue PPCTargetLowering::LowerVectorStore(SDValue Op,
     return Op;
 
   // Type v256i1 is used for pairs and v512i1 is used for accumulators.
-  // Here we create 2 or 4 v16i8 stores to store the pair or accumulator
-  // underlying registers individually.
   assert((StoreVT != MVT::v512i1 || Subtarget.hasMMA()) &&
          "Type unsupported without MMA");
   assert((StoreVT != MVT::v256i1 || Subtarget.pairedVectorMemops()) &&
          "Type unsupported without paired vector support");
+
+  // For v256i1 on ISA Future, let the store go through to instruction selection
+  // where it will be matched to stxvp/pstxvp by the instruction patterns.
+  if (StoreVT == MVT::v256i1 && Subtarget.isISAFuture() &&
+      !DisableAutoPairedVecSt)
+    return Op;
+
+  // For other cases, create 2 or 4 v16i8 stores to store the pair or
+  // accumulator underlying registers individually.
   Align Alignment = SN->getAlign();
   SmallVector<SDValue, 4> Stores;
   unsigned NumVecs = 2;
@@ -12723,7 +12791,7 @@ SDValue PPCTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
 
   // For counter-based loop handling.
   case ISD::INTRINSIC_W_CHAIN:
-    return SDValue();
+    return LowerINTRINSIC_W_CHAIN(Op, DAG);
 
   case ISD::BITCAST:            return LowerBITCAST(Op, DAG);
 
@@ -15705,8 +15773,11 @@ SDValue convertTwoLoadsAndCmpToVCMPEQUB(SelectionDAG &DAG, SDNode *N,
     assert(Operand.getOpcode() == ISD::LOAD && "Must be LoadSDNode here.");
 
     auto *LoadNode = cast<LoadSDNode>(Operand);
-    return DAG.getLoad(MVT::v16i8, DL, LoadNode->getChain(),
-                       LoadNode->getBasePtr(), LoadNode->getMemOperand());
+    SDValue NewLoad =
+        DAG.getLoad(MVT::v16i8, DL, LoadNode->getChain(),
+                    LoadNode->getBasePtr(), LoadNode->getMemOperand());
+    DAG.ReplaceAllUsesOfValueWith(Operand.getValue(1), NewLoad.getValue(1));
+    return NewLoad;
   };
 
   // Following code transforms the DAG
@@ -17198,6 +17269,164 @@ static SDValue DAGCombineAddc(SDNode *N,
   return SDValue();
 }
 
+// Optimize zero-extension of setcc when the compared value is known to be 0
+// or 1.
+//
+// Pattern: zext(setcc(Value, 0, seteq/setne)) where Value is 0 or 1
+//   -> zext(xor(Value, 1))  for seteq
+//   -> zext(Value)          for setne
+//
+// This optimization avoids the i32 -> i1 -> i32/i64 conversion sequence
+// by keeping the value in its original i32 type throughout.
+//
+// Example:
+//   Before: zext(setcc(test_data_class(...), 0, seteq))
+//           // test_data_class returns 0 or 1 in i32
+//           // setcc converts i32 -> i1
+//           // zext converts i1 -> i64
+//   After:  zext(xor(test_data_class(...), 1))
+//           // Stays in i32, then extends to i64
+//
+// This is beneficial because:
+// 1. Eliminates the setcc instruction
+// 2. Avoids i32 -> i1 truncation
+// 3. Keeps computation in native integer width
+
+static SDValue combineZextSetccWithZero(SDNode *N, SelectionDAG &DAG) {
+  // Check if this is a zero_extend
+  if (N->getOpcode() != ISD::ZERO_EXTEND)
+    return SDValue();
+
+  SDValue Src = N->getOperand(0);
+
+  // Check if the source is a setcc
+  if (Src.getOpcode() != ISD::SETCC)
+    return SDValue();
+
+  SDValue LHS = Src.getOperand(0);
+  SDValue RHS = Src.getOperand(1);
+  ISD::CondCode CC = cast<CondCodeSDNode>(Src.getOperand(2))->get();
+
+  if (!isNullConstant(RHS) && !isNullConstant(LHS))
+    return SDValue();
+
+  SDValue NonNullConstant = isNullConstant(RHS) ? LHS : RHS;
+
+  auto isZeroOrOne = [=](SDValue &V) {
+    if (V.getOpcode() == ISD::INTRINSIC_WO_CHAIN &&
+        V.getConstantOperandVal(0) == Intrinsic::ppc_test_data_class)
+      return true;
+    return false;
+  };
+
+  if (!isZeroOrOne(NonNullConstant))
+    return SDValue();
+
+  // Check for pattern: zext(setcc (Value), 0, seteq)) or
+  // zext(setcc (Value), 0, setne))
+  if (CC == ISD::SETEQ || CC == ISD::SETNE) {
+    // Replace with: zext(xor(Value, 1)) for seteq
+    //           or: zext(Value)         for setne
+    // This keeps the value in i32 instead of converting to i1
+    SDLoc DL(N);
+    EVT VType = N->getValueType(0);
+    SDValue NewNonNullConstant = DAG.getZExtOrTrunc(NonNullConstant, DL, VType);
+
+    if (CC == ISD::SETNE)
+      return NewNonNullConstant;
+
+    SDValue One = DAG.getConstant(1, DL, VType);
+    return DAG.getNode(ISD::XOR, DL, VType, NewNonNullConstant, One);
+  }
+
+  return SDValue();
+}
+
+// Combine XOR patterns with SELECT_CC_I4/I8, for Example:
+// 1. XOR(SELECT_CC_I4(cond, 1, 0, cc), 1) -> SELECT_CC_I4(cond, 0, 1, cc)
+// 2. XOR(ZEXT(SELECT_CC_I4(cond, 1, 0, cc)), 1) -> SELECT_CC_I4/I8(cond, 0,
+// 1, cc))
+// 3. XOR(ANYEXT(SELECT_CC_I4(cond, 1, 0, cc)), 1) -> SELECT_CC_I4/I8(cond,
+// 0, 1, cc))
+// 4. etc
+static SDValue combineXorSelectCC(SDNode *N, SelectionDAG &DAG) {
+  assert(N->getOpcode() == ISD::XOR && "Expected XOR node");
+
+  EVT XorVT = N->getValueType(0);
+  if ((XorVT != MVT::i32 && XorVT != MVT::i64))
+    return SDValue();
+
+  SDValue LHS = N->getOperand(0);
+  SDValue RHS = N->getOperand(1);
+
+  // Check for XOR with constant 1
+  ConstantSDNode *XorConst = dyn_cast<ConstantSDNode>(RHS);
+  if (!XorConst || !XorConst->isOne()) {
+    XorConst = dyn_cast<ConstantSDNode>(LHS);
+    if (!XorConst || !XorConst->isOne())
+      return SDValue();
+    // Swap so LHS is the SELECT_CC_I4 (or extension) and RHS is the constant
+    std::swap(LHS, RHS);
+  }
+
+  // Check if LHS has only one use
+  if (!LHS.hasOneUse())
+    return SDValue();
+
+  // Handle extensions: ZEXT, ANYEXT
+  SDValue SelectNode = LHS;
+
+  if (LHS.getOpcode() == ISD::ZERO_EXTEND ||
+      LHS.getOpcode() == ISD::ANY_EXTEND) {
+    SelectNode = LHS.getOperand(0);
+
+    // Check if the extension input has only one use
+    if (!SelectNode.hasOneUse())
+      return SDValue();
+  }
+
+  // Check if SelectNode is a MachineSDNode with SELECT_CC_I4/I8 opcode
+  if (!SelectNode.isMachineOpcode())
+    return SDValue();
+
+  unsigned MachineOpc = SelectNode.getMachineOpcode();
+
+  // Handle both SELECT_CC_I4 and SELECT_CC_I8
+  if (MachineOpc != PPC::SELECT_CC_I4 && MachineOpc != PPC::SELECT_CC_I8)
+    return SDValue();
+
+  // SELECT_CC_I4 operands: (cond, true_val, false_val, bropc)
+  if (SelectNode.getNumOperands() != 4)
+    return SDValue();
+
+  ConstantSDNode *ConstOp1 = dyn_cast<ConstantSDNode>(SelectNode.getOperand(1));
+  ConstantSDNode *ConstOp2 = dyn_cast<ConstantSDNode>(SelectNode.getOperand(2));
+
+  if (!ConstOp1 || !ConstOp2)
+    return SDValue();
+
+  // Only optimize if operands are {0, 1} or {1, 0}
+  if (!((ConstOp1->isOne() && ConstOp2->isZero()) ||
+        (ConstOp1->isZero() && ConstOp2->isOne())))
+    return SDValue();
+
+  // Pattern matched! Create new SELECT_CC with swapped 0/1 operands to
+  // eliminate XOR. If original was SELECT_CC(cond, 1, 0, pred), create
+  // SELECT_CC(cond, 0, 1, pred). If original was SELECT_CC(cond, 0, 1, pred),
+  // create SELECT_CC(cond, 1, 0, pred).
+  SDLoc DL(N);
+  MachineOpc = (XorVT == MVT::i32) ? PPC::SELECT_CC_I4 : PPC::SELECT_CC_I8;
+
+  bool ConstOp1IsOne = ConstOp1->isOne();
+  return SDValue(
+      DAG.getMachineNode(MachineOpc, DL, XorVT,
+                         {SelectNode.getOperand(0),
+                          DAG.getConstant(ConstOp1IsOne ? 0 : 1, DL, XorVT),
+                          DAG.getConstant(ConstOp1IsOne ? 1 : 0, DL, XorVT),
+                          SelectNode.getOperand(3)}),
+      0);
+}
+
 SDValue PPCTargetLowering::PerformDAGCombine(SDNode *N,
                                              DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -17230,6 +17459,12 @@ SDValue PPCTargetLowering::PerformDAGCombine(SDNode *N,
     SDValue NarrowAnd = DAG.getNode(ISD::AND, dl, MVT::i32, NarrowOp, ConstOp);
     return DAG.getZExtOrTrunc(NarrowAnd, dl, N->getValueType(0));
   }
+  case ISD::XOR: {
+    // Optimize XOR(ISEL(1,0,CR), 1) -> ISEL(0,1,CR)
+    if (SDValue V = combineXorSelectCC(N, DAG))
+      return V;
+    break;
+  }
   case ISD::SHL:
     return combineSHL(N, DCI);
   case ISD::SRA:
@@ -17256,8 +17491,11 @@ SDValue PPCTargetLowering::PerformDAGCombine(SDNode *N,
         return N->getOperand(0);
     }
     break;
-  case ISD::SIGN_EXTEND:
   case ISD::ZERO_EXTEND:
+    if (SDValue RetV = combineZextSetccWithZero(N, DCI.DAG))
+      return RetV;
+    [[fallthrough]];
+  case ISD::SIGN_EXTEND:
   case ISD::ANY_EXTEND:
     return DAGCombineExtBoolTrunc(N, DCI);
   case ISD::TRUNCATE:
@@ -17991,6 +18229,9 @@ SDValue PPCTargetLowering::PerformDAGCombine(SDNode *N,
     return DAGCombineBuildVector(N, DCI);
   case PPCISD::ADDC:
     return DAGCombineAddc(N, DCI);
+
+  case ISD::BITCAST:
+    return DAGCombineBitcast(N, DCI);
   }
 
   return SDValue();
@@ -19100,7 +19341,6 @@ SDValue PPCTargetLowering::getNegatedExpression(SDValue Op, SelectionDAG &DAG,
     if (!Op.hasOneUse() || !isTypeLegal(VT))
       break;
 
-    const TargetOptions &Options = getTargetMachine().Options;
     SDValue N0 = Op.getOperand(0);
     SDValue N1 = Op.getOperand(1);
     SDValue N2 = Op.getOperand(2);
@@ -19117,7 +19357,7 @@ SDValue PPCTargetLowering::getNegatedExpression(SDValue Op, SelectionDAG &DAG,
     // (fneg (fnmsub a b c)) => (fnmsub a (fneg b) (fneg c))
     // These transformations may change sign of zeroes. For example,
     // -(-ab-(-c))=-0 while -(-(ab-c))=+0 when a=b=c=1.
-    if (Flags.hasNoSignedZeros() || Options.NoSignedZerosFPMath) {
+    if (Flags.hasNoSignedZeros()) {
       // Try and choose the cheaper one to negate.
       NegatibleCost N0Cost = NegatibleCost::Expensive;
       SDValue NegN0 = getNegatedExpression(N0, DAG, LegalOps, OptForSize,
@@ -19693,7 +19933,6 @@ SDValue PPCTargetLowering::combineFMALike(SDNode *N,
   SDNodeFlags Flags = N->getFlags();
   EVT VT = N->getValueType(0);
   SelectionDAG &DAG = DCI.DAG;
-  const TargetOptions &Options = getTargetMachine().Options;
   unsigned Opc = N->getOpcode();
   bool CodeSize = DAG.getMachineFunction().getFunction().hasOptSize();
   bool LegalOps = !DCI.isBeforeLegalizeOps();
@@ -19704,7 +19943,7 @@ SDValue PPCTargetLowering::combineFMALike(SDNode *N,
 
   // Allowing transformation to FNMSUB may change sign of zeroes when ab-c=0
   // since (fnmsub a b c)=-0 while c-ab=+0.
-  if (!Flags.hasNoSignedZeros() && !Options.NoSignedZerosFPMath)
+  if (!Flags.hasNoSignedZeros())
     return SDValue();
 
   // (fma (fneg a) b c) => (fnmsub a b c)
@@ -20431,4 +20670,77 @@ Value *PPCTargetLowering::emitMaskedAtomicCmpXchgIntrinsic(
 
 bool PPCTargetLowering::hasMultipleConditionRegisters(EVT VT) const {
   return Subtarget.useCRBits();
+}
+
+/// Shuffle masks for vectors of bits are not legal as such vectors are
+/// reserved for MMA/DM.
+bool PPCTargetLowering::isShuffleMaskLegal(ArrayRef<int> Mask, EVT VT) const {
+  if (VT.getScalarType() == MVT::i1)
+    return false;
+  return TargetLowering::isShuffleMaskLegal(Mask, VT);
+}
+
+// Optimize the following patterns using vbpermq/vbpermd:
+//   i16 = bitcast(v16i1 truncate(v16i8))
+//   i8  = bitcast(v8i1  truncate(v8i16))
+//   i8  = bitcast(v8i1  truncate(v8i8))
+SDValue PPCTargetLowering::DAGCombineBitcast(SDNode *N,
+                                             DAGCombinerInfo &DCI) const {
+  SDValue Op0 = N->getOperand(0);
+  if (Op0.getOpcode() != ISD::TRUNCATE)
+    return SDValue();
+  SDValue Src = Op0.getOperand(0);
+  EVT ResVT = N->getValueType(0);
+  EVT TruncResVT = Op0.getValueType();
+  EVT SrcVT = Src.getValueType();
+  SDLoc dl(N);
+  SelectionDAG &DAG = DCI.DAG;
+  bool IsLittleEndian = Subtarget.isLittleEndian();
+
+  if (ResVT != MVT::i16 && ResVT != MVT::i8)
+    return SDValue();
+  SDValue VBPerm =
+      GenerateVBPERM(DAG, dl, Src, SrcVT, TruncResVT, IsLittleEndian);
+  if (!VBPerm)
+    return SDValue();
+  SDValue ForExtract = DAG.getBitcast(MVT::v4i32, VBPerm);
+  SDValue Extracted =
+      DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, MVT::i32, ForExtract,
+                  DAG.getIntPtrConstant(IsLittleEndian ? 2 : 1, dl));
+  return DAG.getNode(ISD::TRUNCATE, dl, ResVT, Extracted);
+}
+
+SDValue PPCTargetLowering::GenerateVBPERM(SelectionDAG &DAG, SDLoc dl,
+                                          SDValue Src, EVT SrcVT, EVT ResVT,
+                                          bool IsLE) const {
+  bool IsV16i8 = (ResVT == MVT::v16i1 && SrcVT == MVT::v16i8);
+  bool IsV8i16 = (ResVT == MVT::v8i1 && SrcVT == MVT::v8i16);
+  bool IsV8i8 = (ResVT == MVT::v8i1 && SrcVT == MVT::v8i8);
+
+  if (!IsV16i8 && !IsV8i16 && !IsV8i8)
+    return SDValue();
+
+  if (IsV8i8) {
+    Src = DAG.getNode(ISD::INSERT_SUBVECTOR, dl, MVT::v16i8,
+                      DAG.getUNDEF(MVT::v16i8), Src,
+                      DAG.getIntPtrConstant(0, dl));
+  }
+  SmallVector<int, 16> BitIndices(16, 128);
+  unsigned NumElts = SrcVT.getVectorNumElements();
+  unsigned EltSize = SrcVT.getScalarType().getSizeInBits();
+  for (int Idx = 0, End = SrcVT.getVectorNumElements(); Idx < End; Idx++) {
+    BitIndices[Idx] = EltSize * (NumElts - Idx) - 1;
+    if (IsV8i8 && IsLE)
+      BitIndices[Idx] += 64;
+  }
+  if (!IsLE)
+    std::reverse(BitIndices.begin(), BitIndices.end());
+  SmallVector<SDValue, 16> BVOps;
+  for (auto Idx : BitIndices)
+    BVOps.push_back(DAG.getConstant(Idx, dl, MVT::i8));
+  SDValue VRB = DAG.getBuildVector(MVT::v16i8, dl, BVOps);
+  return DAG.getNode(
+      ISD::INTRINSIC_WO_CHAIN, dl, MVT::v16i8,
+      DAG.getConstant(Intrinsic::ppc_altivec_vbpermq, dl, MVT::i32),
+      DAG.getBitcast(MVT::v16i8, Src), VRB);
 }

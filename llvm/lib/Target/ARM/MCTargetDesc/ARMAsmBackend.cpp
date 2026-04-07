@@ -903,7 +903,7 @@ unsigned ARMAsmBackend::adjustFixupValue(const MCAssembler &Asm,
   }
   case ARM::fixup_bfcsel_else_target: {
     // If this is a fixup of a branch future's else target then it should be a
-    // constant MCExpr representing the distance between the branch targetted
+    // constant MCExpr representing the distance between the branch targeted
     // and the instruction after that same branch.
     Value = Target.getConstant();
 
@@ -1171,13 +1171,20 @@ enum CompactUnwindEncodings {
 uint64_t ARMAsmBackendDarwin::generateCompactUnwindEncoding(
     const MCDwarfFrameInfo *FI, const MCContext *Ctxt) const {
   DEBUG_WITH_TYPE("compact-unwind", llvm::dbgs() << "generateCU()\n");
+
   // Only armv7k uses CFI based unwinding.
   if (Subtype != MachO::CPU_SUBTYPE_ARM_V7K)
     return 0;
+
+  // Signal frames cannot be encoded in compact unwind.
+  if (FI->IsSignalFrame)
+    return CU::UNWIND_ARM_MODE_DWARF;
+
   // No .cfi directives means no frame.
   ArrayRef<MCCFIInstruction> Instrs = FI->Instructions;
   if (Instrs.empty())
     return 0;
+
   if (!isDarwinCanonicalPersonality(FI->Personality) &&
       !Ctxt->emitCompactUnwindNonCanonical())
     return CU::UNWIND_ARM_MODE_DWARF;
@@ -1220,7 +1227,7 @@ uint64_t ARMAsmBackendDarwin::generateCompactUnwindEncoding(
       // Ignore
       break;
     default:
-      // Directive not convertable to compact unwind, bail out.
+      // Directive not convertible to compact unwind, bail out.
       DEBUG_WITH_TYPE("compact-unwind",
                       llvm::dbgs()
                           << "CFI directive not compatible with compact "

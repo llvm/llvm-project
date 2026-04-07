@@ -439,6 +439,9 @@ bool SPIRVPrepareFunctions::substituteIntrinsicCalls(Function *F) {
       if (!CF || !CF->isIntrinsic())
         continue;
       auto *II = cast<IntrinsicInst>(Call);
+      if (Intrinsic::isTargetIntrinsic(II->getIntrinsicID()) &&
+          II->getCalledOperand()->getName().starts_with("llvm.spv"))
+        continue;
       switch (II->getIntrinsicID()) {
       case Intrinsic::memset:
       case Intrinsic::bswap:
@@ -667,6 +670,18 @@ bool SPIRVPrepareFunctions::runOnModule(Module &M) {
       ->resolveEnvFromModule(M);
 
   bool Changed = false;
+  if (M.functions().empty()) {
+    // If there are no functions, insert a service
+    // function so that the global/constant tracking intrinsics
+    // will be created. Without these intrinsics the generated SPIR-V
+    // will be empty. The service function itself is not emitted.
+    Function *SF = getOrCreateBackendServiceFunction(M);
+    BasicBlock *BB = BasicBlock::Create(M.getContext(), "entry", SF);
+    IRBuilder<> IRB(BB);
+    IRB.CreateRetVoid();
+    Changed = true;
+  }
+
   for (Function &F : M) {
     Changed |= substituteIntrinsicCalls(&F);
     Changed |= sortBlocks(F);

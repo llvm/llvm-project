@@ -234,8 +234,8 @@ static LogicalResult deserializeCacheControlDecoration(
     DenseMap<uint32_t, NamedAttrList> &decorations, ArrayRef<uint32_t> words,
     StringAttr symbol, StringRef decorationName, StringRef cacheControlKind) {
   if (words.size() != 4) {
-    return emitError(loc, "OpDecoration with ")
-           << decorationName << "needs a cache control integer literal and a "
+    return emitError(loc, "OpDecorate with ")
+           << decorationName << " needs a cache control integer literal and a "
            << cacheControlKind << " cache control literal";
   }
   unsigned cacheLevel = words[2];
@@ -285,6 +285,12 @@ LogicalResult spirv::Deserializer::processDecoration(ArrayRef<uint32_t> words) {
     break;
   case spirv::Decoration::DescriptorSet:
   case spirv::Decoration::Binding:
+  case spirv::Decoration::Location:
+  case spirv::Decoration::SpecId:
+  case spirv::Decoration::Index:
+  case spirv::Decoration::Offset:
+  case spirv::Decoration::XfbBuffer:
+  case spirv::Decoration::XfbStride:
     if (words.size() != 3) {
       return emitError(unknownLoc, "OpDecorate with ")
              << decorationName << " needs a single integer literal";
@@ -348,20 +354,10 @@ LogicalResult spirv::Deserializer::processDecoration(ArrayRef<uint32_t> words) {
   case spirv::Decoration::Patch:
   case spirv::Decoration::Coherent:
     if (words.size() != 2) {
-      return emitError(unknownLoc, "OpDecoration with ")
-             << decorationName << "needs a single target <id>";
+      return emitError(unknownLoc, "OpDecorate with ")
+             << decorationName << " needs a single target <id>";
     }
     decorations[words[0]].set(symbol, opBuilder.getUnitAttr());
-    break;
-  case spirv::Decoration::Location:
-  case spirv::Decoration::SpecId:
-  case spirv::Decoration::Index:
-    if (words.size() != 3) {
-      return emitError(unknownLoc, "OpDecoration with ")
-             << decorationName << "needs a single integer literal";
-    }
-    decorations[words[0]].set(
-        symbol, opBuilder.getI32IntegerAttr(static_cast<int32_t>(words[2])));
     break;
   case spirv::Decoration::CacheControlLoadINTEL: {
     LogicalResult res = deserializeCacheControlDecoration<
@@ -1154,6 +1150,8 @@ LogicalResult spirv::Deserializer::processType(spirv::Opcode opcode,
     return processFunctionType(operands);
   case spirv::Opcode::OpTypeImage:
     return processImageType(operands);
+  case spirv::Opcode::OpTypeSampler:
+    return processSamplerType(operands);
   case spirv::Opcode::OpTypeSampledImage:
     return processSampledImageType(operands);
   case spirv::Opcode::OpTypeRuntimeArray:
@@ -1635,6 +1633,15 @@ spirv::Deserializer::processSampledImageType(ArrayRef<uint32_t> operands) {
            << operands[1];
 
   typeMap[operands[0]] = spirv::SampledImageType::get(elementTy);
+  return success();
+}
+
+LogicalResult
+spirv::Deserializer::processSamplerType(ArrayRef<uint32_t> operands) {
+  if (operands.size() != 1)
+    return emitError(unknownLoc, "OpTypeSampler must have no parameters");
+
+  typeMap[operands[0]] = spirv::SamplerType::get(context);
   return success();
 }
 
@@ -2887,10 +2894,7 @@ LogicalResult spirv::Deserializer::wireUpBlockArgument() {
 LogicalResult spirv::Deserializer::splitSelectionHeader() {
   // Create a copy, so we can modify keys in the original.
   BlockMergeInfoMap blockMergeInfoCopy = blockMergeInfo;
-  for (auto it = blockMergeInfoCopy.begin(), e = blockMergeInfoCopy.end();
-       it != e; ++it) {
-    auto &[block, mergeInfo] = *it;
-
+  for (auto [block, mergeInfo] : blockMergeInfoCopy) {
     // Skip processing loop regions. For loop regions continueBlock is non-null.
     if (mergeInfo.continueBlock)
       continue;

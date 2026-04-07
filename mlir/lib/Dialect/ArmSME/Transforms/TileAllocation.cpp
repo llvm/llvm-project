@@ -343,7 +343,7 @@ struct LiveRange {
 /// Operations are numbered consecutively wihin blocks, and the blocks are
 /// topologically sorted (using forward edges). This function is only correct if
 /// all ArmSME have been converted to CF (which is asserted).
-DenseMap<Operation *, unsigned>
+FailureOr<DenseMap<Operation *, unsigned>>
 generateOperationNumbering(FunctionOpInterface function) {
   unsigned index = 0;
   SetVector<Block *> blocks =
@@ -352,15 +352,21 @@ generateOperationNumbering(FunctionOpInterface function) {
   for (Block *block : blocks) {
     index++; // We want block args to have their own number.
     for (Operation &op : block->getOperations()) {
-#ifndef NDEBUG
-      op.walk([&](ArmSMETileOpInterface nestedOp) {
-        assert(&op == nestedOp.getOperation() &&
-               "ArmSME tile allocation does not support nested regions");
-      });
-#endif
+      WalkResult walkResult =
+          op.walk([&](ArmSMETileOpInterface nestedOp) -> WalkResult {
+            if (&op != nestedOp.getOperation())
+              return WalkResult::interrupt();
+            return WalkResult::advance();
+          });
+      if (walkResult.wasInterrupted()) {
+        return op.emitError("ArmSME tile allocation requires flattened control "
+                            "flow; run -convert-scf-to-cf before this pass "
+                            "(e.g. via convert-arm-sme-to-llvm pipeline)");
+      }
       operationToIndexMap.try_emplace(&op, index++);
     }
   }
+
   return operationToIndexMap;
 }
 
@@ -809,7 +815,10 @@ LogicalResult mlir::arm_sme::allocateSMETiles(FunctionOpInterface function,
 
   // 2. Gather live ranges for each ArmSME tile within the function.
   Liveness liveness(function);
-  auto operationToIndexMap = generateOperationNumbering(function);
+  auto maybeOperationToIndexMap = generateOperationNumbering(function);
+  if (failed(maybeOperationToIndexMap))
+    return failure();
+  auto &operationToIndexMap = *maybeOperationToIndexMap;
   auto initialLiveRanges = gatherTileLiveRanges(
       operationToIndexMap, liveRangeAllocator, liveness, function);
   if (initialLiveRanges.empty())

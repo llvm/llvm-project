@@ -138,3 +138,27 @@ const OutOfLine &OutOfLine::get() const {
   // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:40-[[@LINE-2]]:40}:" {{\[\[}}clang::lifetimebound]]"
   return *this;
 }
+
+struct TrailingReturn {
+  TrailingReturn() {}
+  ~TrailingReturn() {}
+  MyObj data;
+
+  auto get_view() -> View {
+    // CHECK: :[[@LINE-1]]:18: warning: implicit this in intra-TU function should be marked
+    // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:18-[[@LINE-2]]:18}:" {{\[\[}}clang::lifetimebound]]"
+    return data;
+  }
+
+  auto get_view_const() const -> View {
+    // CHECK: :[[@LINE-1]]:30: warning: implicit this in intra-TU function should be marked
+    // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:30-[[@LINE-2]]:30}:" {{\[\[}}clang::lifetimebound]]"
+    return data;
+  }
+
+  auto get_ref() const -> const MyObj & {
+    // CHECK: :[[@LINE-1]]:23: warning: implicit this in intra-TU function should be marked
+    // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:23-[[@LINE-2]]:23}:" {{\[\[}}clang::lifetimebound]]"
+    return data;
+  }
+};

@@ -112,7 +112,7 @@ void ConcatOutputSection::addInput(ConcatInputSection *input) {
 //   the inputs and thunks vectors (both ordered by ascending address), which
 //   is simple and cheap.
 
-DenseMap<Symbol *, ThunkInfo> lld::macho::thunkMap;
+DenseMap<Symbol *, ThunkInfo, ThunkMapKeyInfo> lld::macho::thunkMap;
 
 // Determine whether we need thunks, which depends on the target arch -- RISC
 // (i.e., ARM) generally does because it has limited-range branch/call

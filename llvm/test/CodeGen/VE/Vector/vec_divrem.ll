@@ -10,18 +10,19 @@ define <4 x i8> @udiv_by_minus_one(<4 x i8> %x) {
 ; CHECK-NEXT:    and %s4, %s0, (56)0
 ; CHECK-NEXT:    and %s1, %s1, (56)0
 ; CHECK-NEXT:    and %s2, %s2, (56)0
-; CHECK-NEXT:    and %s3, %s3, (56)0
+; CHECK-NEXT:    and %s0, %s3, (56)0
+; CHECK-NEXT:    lea %s5, 255
+; CHECK-NEXT:    cmps.w.sx %s6, %s0, %s5
 ; CHECK-NEXT:    or %s0, 0, (0)1
-; CHECK-NEXT:    cmpu.w %s5, %s3, (56)0
 ; CHECK-NEXT:    or %s3, 0, (0)1
-; CHECK-NEXT:    cmov.w.eq %s3, (63)0, %s5
-; CHECK-NEXT:    cmpu.w %s5, %s2, (56)0
+; CHECK-NEXT:    cmov.w.eq %s3, (63)0, %s6
+; CHECK-NEXT:    cmps.w.sx %s6, %s2, %s5
 ; CHECK-NEXT:    or %s2, 0, (0)1
-; CHECK-NEXT:    cmov.w.eq %s2, (63)0, %s5
-; CHECK-NEXT:    cmpu.w %s5, %s1, (56)0
+; CHECK-NEXT:    cmov.w.eq %s2, (63)0, %s6
+; CHECK-NEXT:    cmps.w.sx %s6, %s1, %s5
 ; CHECK-NEXT:    or %s1, 0, (0)1
-; CHECK-NEXT:    cmov.w.eq %s1, (63)0, %s5
-; CHECK-NEXT:    cmpu.w %s4, %s4, (56)0
+; CHECK-NEXT:    cmov.w.eq %s1, (63)0, %s6
+; CHECK-NEXT:    cmps.w.sx %s4, %s4, %s5
 ; CHECK-NEXT:    cmov.w.eq %s0, (63)0, %s4
 ; CHECK-NEXT:    b.l.t (, %s10)
   %r = udiv <4 x i8> %x, <i8 255, i8 255, i8 255, i8 255>

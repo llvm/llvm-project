@@ -16,6 +16,7 @@
 #include "mlir/Dialect/Tosa/Transforms/Passes.h"
 
 #include <string>
+#include <type_traits>
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
@@ -26,6 +27,7 @@
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/FormatVariadic.h"
 
@@ -121,6 +123,17 @@ static LogicalResult checkConstantOperandAvgPool2d(Operation *op,
   return success();
 }
 
+static LogicalResult
+checkConstantOperandAvgPool2dAdaptive(Operation *op, const TargetEnv &env) {
+  if (!env.allows(Extension::dynamic) && isa<tosa::AvgPool2dAdaptiveOp>(op)) {
+    // Check 'input_zp' and 'output_zp'.
+    // Note: 'kernel', 'stride', and 'pad' (operands 3, 4, 5) are not checked
+    // as they are tosa.shape types.
+    return checkConstantOperands(op, {1, 2});
+  }
+  return success();
+}
+
 static LogicalResult checkConstantOperandNegate(Operation *op,
                                                 const TargetEnv &env) {
   if (!env.allows(Extension::dynamic) && isa<tosa::NegateOp>(op)) {
@@ -186,6 +199,7 @@ private:
         checkConstantOperandConvOps<tosa::TransposeConv2DOp>);
     constCheckers.emplace_back(checkConstantOperandMatMul);
     constCheckers.emplace_back(checkConstantOperandAvgPool2d);
+    constCheckers.emplace_back(checkConstantOperandAvgPool2dAdaptive);
     constCheckers.emplace_back(checkConstantOperandNegate);
     constCheckers.emplace_back(checkConstantOperandSilceShape);
   }
@@ -340,6 +354,45 @@ private:
         }
       }
     }
+    return success();
+  }
+
+  template <typename T>
+  static constexpr bool IsSupportedAdaptivePoolOp =
+      std::is_same_v<T, tosa::AvgPool2dAdaptiveOp>
+      // || std::is_same_v<T, tosa::MaxPool2dAdaptiveOp>
+      ;
+
+  template <typename T, typename std::enable_if<IsSupportedAdaptivePoolOp<T>,
+                                                int>::type = 0>
+  LogicalResult levelCheckAdaptivePool(Operation *op) {
+    auto poolOp = dyn_cast<T>(op);
+    if (!poolOp)
+      return success();
+
+    SmallVector<int64_t> kernelValues;
+    if (tosa::getConstShapeValues(poolOp.getKernel().getDefiningOp(),
+                                  kernelValues)) {
+      for (const auto k : kernelValues)
+        if (failed(levelCheckKernel(op, k, "kernel")))
+          return failure();
+    }
+
+    SmallVector<int64_t> strideValues;
+    if (tosa::getConstShapeValues(poolOp.getStride().getDefiningOp(),
+                                  strideValues)) {
+      for (const auto s : strideValues)
+        if (failed(levelCheckStride(op, s, "stride")))
+          return failure();
+    }
+
+    SmallVector<int64_t> padValues;
+    if (tosa::getConstShapeValues(poolOp.getPad().getDefiningOp(), padValues)) {
+      for (const auto p : padValues)
+        if (failed(levelCheckKernel(op, p, "pad")))
+          return failure();
+    }
+
     return success();
   }
 
@@ -754,6 +807,7 @@ LogicalResult TosaValidation::levelCheckRanksAndSizes(Operation *op) {
 
   // Tensor Operators
   CHECK_SIZES(AvgPool2d);
+  CHECK_SIZES(AvgPool2dAdaptive);
   CHECK_SIZES(Conv2D);
   CHECK_SIZES(Conv2DBlockScaled);
   CHECK_SIZES(Conv3D);
@@ -858,6 +912,7 @@ LogicalResult TosaValidation::applyLevelCheck(Operation *op) {
     return failure();
 
   if (failed(levelCheckPool<tosa::AvgPool2dOp>(op)) ||
+      failed(levelCheckAdaptivePool<tosa::AvgPool2dAdaptiveOp>(op)) ||
       failed(levelCheckConv<tosa::Conv2DOp>(op)) ||
       failed(levelCheckConv<tosa::Conv3DOp>(op)) ||
       failed(levelCheckConv<tosa::DepthwiseConv2DOp>(op)) ||
@@ -1214,6 +1269,50 @@ LogicalResult checkErrorIfPad(Operation *op) {
   return success();
 }
 
+LogicalResult checkErrorIfReshape(Operation *op) {
+  auto reshapeOp = dyn_cast<tosa::ReshapeOp>(op);
+  if (!reshapeOp)
+    return success();
+
+  SmallVector<int64_t> shapeValues;
+  if (!tosa::getConstShapeValues(reshapeOp.getShape().getDefiningOp(),
+                                 shapeValues))
+    return success();
+
+  if (llvm::is_contained(shapeValues, kInferableDimSize))
+    return op->emitOpError("shape input contains inferable dimension (")
+           << kInferableDimSize
+           << ") "
+              "which does not conform to the TOSA specification";
+
+  return success();
+}
+
+LogicalResult checkErrorIfSlice(Operation *op) {
+  auto sliceOp = dyn_cast<tosa::SliceOp>(op);
+  if (!sliceOp)
+    return success();
+
+  SmallVector<int64_t> startValues;
+  SmallVector<int64_t> sizeValues;
+  const bool hasStartValues = tosa::getConstShapeValues(
+      sliceOp.getStart().getDefiningOp(), startValues);
+  const bool hasSizeValues =
+      tosa::getConstShapeValues(sliceOp.getSize().getDefiningOp(), sizeValues);
+
+  if (hasStartValues && llvm::is_contained(startValues, kInferableDimSize))
+    return op->emitOpError("start input contains inferable dimension (")
+           << kInferableDimSize
+           << ") which does not conform to the TOSA specification";
+  if (hasSizeValues && llvm::is_contained(sizeValues, kInferableDimSize))
+    return op->emitOpError("size input contains inferable dimension (")
+           << kInferableDimSize
+           << ") which "
+              "does not conform to the TOSA specification";
+
+  return success();
+}
+
 static bool isOpIsolatedWithinRegion(Operation *op, Region *region) {
   return llvm::all_of(op->getOperands(), [&](auto operand) {
     Region *operandRegion = operand.getParentRegion();
@@ -1321,7 +1420,8 @@ LogicalResult checkErrorIfScatter(Operation *op) {
 LogicalResult TosaValidation::applyErrorIfCheck(Operation *op) {
   if (failed(checkErrorIfResize(op)) || failed(checkErrorIfMul(op)) ||
       failed(checkErrorIfTable(op)) || failed(checkErrorIfRescale(op)) ||
-      failed(checkErrorIfPad(op)) || failed(checkErrorIfCondIf(op)) ||
+      failed(checkErrorIfPad(op)) || failed(checkErrorIfReshape(op)) ||
+      failed(checkErrorIfSlice(op)) || failed(checkErrorIfCondIf(op)) ||
       failed(checkErrorIfWhileLoop(op)) || failed(checkErrorIfScatter(op)))
     return failure();
   return success();

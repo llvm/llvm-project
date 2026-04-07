@@ -169,7 +169,7 @@ def Builtin_DenseArray : Builtin_Attr<"DenseArray", "dense_array",
   let summary = "A dense array of integer or floating point elements.";
   let description = [{
     A dense array attribute is an attribute that represents a dense array of
-    primitive element types. Contrary to DenseIntOrFPElementsAttr this is a
+    primitive element types. Contrary to DenseTypedElementsAttr this is a
     flat unidimensional array which does not have a storage optimization for
     splat. This allows to expose the raw array through a C++ API as
     `ArrayRef<T>` for compatible types. The element type must be bool or an
@@ -231,37 +231,53 @@ def Builtin_DenseArray : Builtin_Attr<"DenseArray", "dense_array",
 }
 
 //===----------------------------------------------------------------------===//
-// DenseIntOrFPElementsAttr
+// DenseTypedElementsAttr
 //===----------------------------------------------------------------------===//
 
-def Builtin_DenseIntOrFPElementsAttr : Builtin_Attr<
-    "DenseIntOrFPElements", "dense_int_or_fp_elements", [ElementsAttrInterface],
+def Builtin_DenseTypedElementsAttr : Builtin_Attr<
+    "DenseTypedElements", "dense_typed_elements", [ElementsAttrInterface],
     "DenseElementsAttr"
   > {
   let summary = "An Attribute containing a dense multi-dimensional array of "
-                "integer or floating-point values";
+                "values";
   let description = [{
-    Syntax:
+    A dense elements attribute stores one or multiple elements of the same type.
+    The term "dense" refers to the fact that elements are not stored as
+    individual MLIR attributes, but in a raw buffer. The attribute provides a
+    covenience API to access elements in the form of MLIR attributes, but users
+    should avoid that API in performance-critical code and utilize APIs that
+    operate on raw bytes instead.
 
-    ```
-    tensor-literal ::= integer-literal | float-literal | bool-literal | [] | [tensor-literal (, tensor-literal)* ]
-    dense-intorfloat-elements-attribute ::= `dense` `<` tensor-literal `>` `:`
-                                            ( tensor-type | vector-type )
-    ```
+    The number of elements is determined by the `type` shaped type. (Unranked
+    shaped types are not supported.) The element type of the shaped type must
+    implement the `DenseElementType` interface. This type interface defines the
+    bitwidth of an element and provides a serializer/deserializer to/from MLIR
+    attributes.
 
-    A dense int-or-float elements attribute is an elements attribute containing
-    a densely packed vector or tensor of integer or floating-point values. The
-    element type of this attribute is required to be either an `IntegerType` or
-    a `FloatType`.
+    Storage format: Given an element bitwidth "w", element "i" starts at byte
+    offset "i * ceildiv(w, 8)". In other words, each element starts at a full
+    byte offset.
 
     Examples:
 
     ```
-    // A splat tensor of integer values.
+    // Literal-first syntax: A splat tensor of integer values.
     dense<10> : tensor<2xi32>
-    // A tensor of 2 float32 elements.
+
+    // Literal-first syntax: A tensor of 2 float32 elements.
     dense<[10.0, 11.0]> : tensor<2xf32>
+
+    // Type-first syntax: A splat tensor of integer values.
+    dense<tensor<2xi32> : 10 : i32>
+
+    // Type-first syntax: A tensor of 2 float32 elements.
+    dense<tensor<2xf32> : [10.0, 11.0]>
     ```
+
+    Note: The literal-first syntax is supported only for complex, float, index,
+    int element types. The parser/print have special casing for these types.
+    Dense element attributes with other element types must use the type-first
+    syntax.
   }];
   let parameters = (ins AttributeSelfTypeParameter<"", "ShapedType">:$type,
                         "ArrayRef<char>":$rawData);
@@ -704,6 +720,14 @@ def Builtin_IntegerAttr : Builtin_Attr<"Integer", "integer",
                                         "const APInt &":$value), [{
       if (type.isSignlessInteger(1))
         return BoolAttr::get(type.getContext(), value.getBoolValue());
+      // Validate that the APInt has the correct bit width for the given type.
+      if (auto intTy = ::llvm::dyn_cast<IntegerType>(type)) {
+        assert(value.getBitWidth() == intTy.getWidth() &&
+               "IntegerAttr::get: APInt bit width must match integer type width");
+      } else if (::llvm::isa<IndexType>(type)) {
+        assert(value.getBitWidth() == IndexType::kInternalStorageBitWidth &&
+               "IntegerAttr::get: APInt bit width must match IndexType internal storage bit width");
+      }
       return $_get(type.getContext(), type, value);
     }]>,
     AttrBuilder<(ins "const APSInt &":$value), [{

@@ -78,10 +78,8 @@ DisassemblerSP Disassembler::FindPlugin(const ArchSpec &arch,
         return disasm_sp;
     }
   } else {
-    for (uint32_t idx = 0;
-         (create_callback = PluginManager::GetDisassemblerCreateCallbackAtIndex(
-              idx)) != nullptr;
-         ++idx) {
+    for (auto create_callback :
+         PluginManager::GetDisassemblerCreateCallbacks()) {
       if (auto disasm_sp = create_callback(arch, flavor, cpu, features))
         return disasm_sp;
     }
@@ -389,7 +387,7 @@ VariableAnnotator::AnnotateStructured(Instruction &inst) {
     if (!v || v->IsArtificial())
       continue;
 
-    const char *nm = v->GetName().AsCString();
+    const char *nm = v->GetName().AsCString(nullptr);
     llvm::StringRef name = nm ? nm : "<anon>";
 
     DWARFExpressionList &exprs = v->LocationExpressionList();
@@ -415,13 +413,13 @@ VariableAnnotator::AnnotateStructured(Instruction &inst) {
 
     const Declaration &decl = v->GetDeclaration();
     if (decl.GetFile()) {
-      decl_file = decl.GetFile().GetFilename().AsCString();
+      decl_file = decl.GetFile().GetFilename().GetString();
       if (decl.GetLine() > 0)
         decl_line = decl.GetLine();
     }
 
     if (Type *type = v->GetType())
-      if (const char *type_str = type->GetName().AsCString())
+      if (const char *type_str = type->GetName().AsCString(nullptr))
         type_name = type_str;
 
     current_vars.try_emplace(
@@ -1357,6 +1355,37 @@ size_t Disassembler::AppendInstructions(Target &target, Address start,
 
   start = ResolveAddress(target, start);
 
+  // WebAssembly functions begin with local variable declarations that are part
+  // of the binary format but are not executable instructions. Skip past them
+  // so the disassembler doesn't try to decode non-instruction bytes.
+  if (m_arch.GetTriple().getArch() == llvm::Triple::wasm32 ||
+      m_arch.GetTriple().getArch() == llvm::Triple::wasm64) {
+    if (ModuleSP module_sp = start.GetModule()) {
+      SymbolContext sc;
+      module_sp->ResolveSymbolContextForAddress(start, eSymbolContextSymbol,
+                                                sc);
+      if (sc.symbol) {
+        if (uint32_t prologue_size = sc.symbol->GetPrologueByteSize()) {
+          const Address symbol_addr = sc.symbol->GetAddress();
+          const AddressRange prologue_range(symbol_addr, prologue_size);
+          if (prologue_range.Contains(start)) {
+            const addr_t prologue_offset = start.GetLoadAddress(&target) -
+                                           symbol_addr.GetLoadAddress(&target);
+            const addr_t skip = prologue_size - prologue_offset;
+
+            // Skip disassembling the prologue.
+            start.Slide(skip);
+
+            // If there is a limit in bytes, we need to update it so we don't
+            // disassemble past what would have been the end.
+            if (limit.kind == Limit::Bytes && limit.value > skip)
+              limit.value -= skip;
+          }
+        }
+      }
+    }
+  }
+
   addr_t byte_size = limit.value;
   if (limit.kind == Limit::Instructions)
     byte_size *= m_arch.GetMaximumOpcodeByteSize();
@@ -1371,7 +1400,7 @@ size_t Disassembler::AppendInstructions(Target &target, Address start,
 
   if (bytes_read == 0) {
     if (error_strm_ptr) {
-      if (const char *error_cstr = error.AsCString())
+      if (const char *error_cstr = error.AsCString(nullptr))
         error_strm_ptr->Printf("error: %s\n", error_cstr);
     }
     return 0;

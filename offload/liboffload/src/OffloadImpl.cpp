@@ -18,6 +18,7 @@
 #include "llvm/Support/FormatVariadic.h"
 #include <OffloadAPI.h>
 
+#include <cstdint>
 #include <mutex>
 
 // TODO: Some plugins expect to be linked into libomptarget which defines these
@@ -174,8 +175,8 @@ struct ol_event_impl_t {
                   ol_queue_handle_t Queue)
       : EventInfo(EventInfo), Device(Device), QueueId(Queue->Id), Queue(Queue) {
   }
-  // EventInfo may be null, in which case the event should be considered always
-  // complete
+  // Opaque backend-specific event state. This is expected to be non-null for
+  // backends that materialize real events.
   void *EventInfo;
   ol_device_handle_t Device;
   size_t QueueId;
@@ -275,13 +276,22 @@ constexpr ol_platform_backend_t pluginNameToBackend(StringRef Name) {
 #define PLUGIN_TARGET(Name) extern "C" GenericPluginTy *createPlugin_##Name();
 #include "Shared/Targets.def"
 
-Error initPlugins(OffloadContext &Context) {
-  // Attempt to create an instance of each supported plugin.
+Error initPlugins(OffloadContext &Context, const ol_init_args_t *InitArgs) {
+  SmallSet<ol_platform_backend_t, 0> Requested;
+  if (InitArgs && InitArgs->NumPlatforms > 0)
+    for (uint32_t I = 0; I < InitArgs->NumPlatforms; I++)
+      Requested.insert(InitArgs->Platforms[I]);
+
+  // Attempt to create an instance of each supported plugin, skipping
+  // unrequested backends. The host plugin is always created.
 #define PLUGIN_TARGET(Name)                                                    \
   do {                                                                         \
-    Context.Platforms.emplace_back(std::make_unique<ol_platform_impl_t>(       \
-        std::unique_ptr<GenericPluginTy>(createPlugin_##Name()),               \
-        pluginNameToBackend(#Name)));                                          \
+    auto Backend = pluginNameToBackend(#Name);                                 \
+    if (Requested.empty() || Backend == OL_PLATFORM_BACKEND_HOST ||            \
+        Requested.contains(Backend)) {                                         \
+      Context.Platforms.emplace_back(std::make_unique<ol_platform_impl_t>(     \
+          std::unique_ptr<GenericPluginTy>(createPlugin_##Name()), Backend));  \
+    }                                                                          \
   } while (false);
 #include "Shared/Targets.def"
 
@@ -299,7 +309,7 @@ Error initPlugins(OffloadContext &Context) {
   return Plugin::success();
 }
 
-Error olInit_impl() {
+Error olInit_impl(const ol_init_args_t *InitArgs) {
   std::lock_guard<std::mutex> Lock(OffloadContextValMutex);
 
   if (isOffloadInitialized()) {
@@ -307,10 +317,19 @@ Error olInit_impl() {
     return Plugin::success();
   }
 
+  if (InitArgs) {
+    if (InitArgs->Size < sizeof(ol_init_args_t))
+      return createOffloadError(ErrorCode::INVALID_SIZE,
+                                "ol_init_args_t Size field is too small");
+    if (InitArgs->NumPlatforms > 0 && !InitArgs->Platforms)
+      return createOffloadError(ErrorCode::INVALID_NULL_POINTER,
+                                "NumPlatforms > 0 but Platforms is null");
+  }
+
   // Use a temporary to ensure that entry points querying OffloadContextVal do
   // not get a partially initialized context
   auto *NewContext = new OffloadContext{};
-  Error InitResult = initPlugins(*NewContext);
+  Error InitResult = initPlugins(*NewContext, InitArgs);
   OffloadContextVal.store(NewContext);
   OffloadContext::get().RefCount++;
 
@@ -510,11 +529,11 @@ Error olGetDeviceInfoImplDetail(ol_device_handle_t Device,
 
     auto getField = [&](StringRef Name, uint32_t &Dest) {
       if (auto F = Entry->get(Name)) {
-        if (!std::holds_alternative<size_t>((*F)->Value))
+        if (!std::holds_alternative<uint64_t>((*F)->Value))
           return makeError(
               ErrorCode::BACKEND_FAILURE,
               "plugin returned incorrect type for dimensions element");
-        Dest = std::get<size_t>((*F)->Value);
+        Dest = std::get<uint64_t>((*F)->Value);
       } else
         return makeError(ErrorCode::BACKEND_FAILURE,
                          "plugin didn't provide all values for dimensions");
@@ -775,7 +794,8 @@ Error olWaitEvents_impl(ol_queue_handle_t Queue, ol_event_handle_t *Events,
       return Plugin::error(ErrorCode::INVALID_NULL_HANDLE,
                            "olWaitEvents asked to wait on a NULL event");
 
-    // Do nothing if the event is for this queue or the event is always complete
+    // Do nothing if the event is for this queue or the backend does not
+    // materialize event state for it.
     if (Event->QueueId == Queue->Id || !Event->EventInfo)
       continue;
 
@@ -820,13 +840,31 @@ Error olGetQueueInfoSize_impl(ol_queue_handle_t Queue, ol_queue_info_t PropName,
 }
 
 Error olSyncEvent_impl(ol_event_handle_t Event) {
-  // No event info means that this event was complete on creation
+  // Some backends do not materialize backend event state. Treat such events as
+  // trivially complete.
   if (!Event->EventInfo)
     return Plugin::success();
 
   if (auto Res = Event->Device->Device->syncEvent(Event->EventInfo))
     return Res;
 
+  return Error::success();
+}
+
+Error olGetEventElapsedTime_impl(ol_event_handle_t StartEvent,
+                                 ol_event_handle_t EndEvent,
+                                 float *ElapsedTime) {
+  if (StartEvent->Device != EndEvent->Device)
+    return createOffloadError(
+        ErrorCode::INVALID_DEVICE,
+        "StartEvent and EndEvent must belong to the same device");
+
+  auto ElapsedTimeOrErr = StartEvent->Device->Device->getEventElapsedTime(
+      StartEvent->EventInfo, EndEvent->EventInfo);
+  if (!ElapsedTimeOrErr)
+    return ElapsedTimeOrErr.takeError();
+
+  *ElapsedTime = *ElapsedTimeOrErr;
   return Error::success();
 }
 
@@ -848,7 +886,8 @@ Error olGetEventInfoImplDetail(ol_event_handle_t Event,
   case OL_EVENT_INFO_QUEUE:
     return Info.write<ol_queue_handle_t>(Queue);
   case OL_EVENT_INFO_IS_COMPLETE: {
-    // No event info means that this event was complete on creation
+    // Some backends do not materialize backend event state. Treat such events
+    // as trivially complete.
     if (!Event->EventInfo)
       return Info.write<bool>(true);
 
@@ -879,24 +918,24 @@ Error olGetEventInfoSize_impl(ol_event_handle_t Event, ol_event_info_t PropName,
 }
 
 Error olCreateEvent_impl(ol_queue_handle_t Queue, ol_event_handle_t *EventOut) {
-  auto Pending = Queue->Device->Device->hasPendingWork(Queue->AsyncInfo);
-  if (auto Err = Pending.takeError())
+  auto Event = std::make_unique<ol_event_impl_t>(nullptr, Queue->Device, Queue);
+
+  if (auto Err = Queue->Device->Device->createEvent(&Event->EventInfo))
     return Err;
 
-  *EventOut = new ol_event_impl_t(nullptr, Queue->Device, Queue);
-  if (!*Pending)
-    // Queue is empty, don't record an event and consider the event always
-    // complete
-    return Plugin::success();
+  if (auto Err = Queue->Device->Device->recordEvent(Event->EventInfo,
+                                                    Queue->AsyncInfo)) {
+    if (Event->EventInfo) {
+      if (auto DestroyErr =
+              Queue->Device->Device->destroyEvent(Event->EventInfo))
+        return joinErrors(std::move(Err), std::move(DestroyErr));
+    }
 
-  if (auto Res = Queue->Device->Device->createEvent(&(*EventOut)->EventInfo))
-    return Res;
+    return Err;
+  }
 
-  if (auto Res = Queue->Device->Device->recordEvent((*EventOut)->EventInfo,
-                                                    Queue->AsyncInfo))
-    return Res;
-
-  return Plugin::success();
+  *EventOut = Event.release();
+  return Error::success();
 }
 
 Error olMemcpy_impl(ol_queue_handle_t Queue, void *DstPtr,
@@ -1158,8 +1197,9 @@ Error olLaunchHostFunction_impl(ol_queue_handle_t Queue,
 }
 
 Error olMemRegister_impl(ol_device_handle_t Device, void *Ptr, size_t Size,
-                         ol_memory_register_flags_t flags, void **LockedPtr) {
-  Expected<void *> LockedPtrOrErr = Device->Device->dataLock(Ptr, Size);
+                         ol_memory_register_flags_t Flags, void **LockedPtr) {
+  Expected<void *> LockedPtrOrErr = Device->Device->registerMemory(
+      Ptr, Size, Flags & OL_MEMORY_REGISTER_FLAG_LOCK_MEMORY);
   if (!LockedPtrOrErr)
     return LockedPtrOrErr.takeError();
 
@@ -1168,8 +1208,10 @@ Error olMemRegister_impl(ol_device_handle_t Device, void *Ptr, size_t Size,
   return Error::success();
 }
 
-Error olMemUnregister_impl(ol_device_handle_t Device, void *Ptr) {
-  return Device->Device->dataUnlock(Ptr);
+Error olMemUnregister_impl(ol_device_handle_t Device, void *Ptr,
+                           ol_memory_register_flags_t Flags) {
+  return Device->Device->unregisterMemory(
+      Ptr, Flags & OL_MEMORY_REGISTER_FLAG_UNLOCK_MEMORY);
 }
 
 Error olQueryQueue_impl(ol_queue_handle_t Queue, bool *IsQueueWorkCompleted) {

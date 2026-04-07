@@ -130,27 +130,36 @@ ModuleSP DynamicLoaderDarwin::FindTargetModuleForImageInfo(
 
   if (!module_sp &&
       HostInfo::GetArchitecture().IsCompatibleMatch(target.GetArchitecture())) {
-    // When debugging on the host, we are most likely using the same shared
-    // cache as our inferior. The dylibs from the shared cache might not
-    // exist on the filesystem, so let's use the images in our own memory
-    // to create the modules.
-    // Check if the requested image is in our shared cache.
+
     SharedCacheImageInfo image_info;
+
+    // If we have a shared cache filepath and UUID, ask HostInfo
+    // if it can provide the SourceCacheImageInfo for the binary
+    // out of that shared cache.  Search by the Module's UUID if
+    // available, else the filepath.
     addr_t sc_base_addr;
     UUID sc_uuid;
     LazyBool using_sc;
     LazyBool private_sc;
     FileSpec sc_path;
+    std::optional<uint64_t> size;
     SymbolSharedCacheUse sc_mode = ModuleList::GetGlobalModuleListProperties()
                                        .GetSharedCacheBinaryLoading();
     if (GetSharedCacheInformation(sc_base_addr, sc_uuid, using_sc, private_sc,
-                                  sc_path) &&
-        sc_uuid)
+                                  sc_path, size) &&
+        sc_uuid) {
+      if (module_spec.GetUUID())
+        image_info = HostInfo::GetSharedCacheImageInfo(module_spec.GetUUID(),
+                                                       sc_uuid, sc_mode);
+
+      else
+        image_info = HostInfo::GetSharedCacheImageInfo(
+            module_spec.GetFileSpec().GetPathAsConstString(), sc_uuid, sc_mode);
+    } else {
+      // Fall back to looking lldb's own shared cache by filename
       image_info = HostInfo::GetSharedCacheImageInfo(
-          module_spec.GetFileSpec().GetPath(), sc_uuid, sc_mode);
-    else
-      image_info = HostInfo::GetSharedCacheImageInfo(
-          module_spec.GetFileSpec().GetPath(), sc_mode);
+          module_spec.GetFileSpec().GetPathAsConstString(), sc_mode);
+    }
 
     // If we found it and it has the correct UUID, let's proceed with
     // creating a module from the memory contents.
@@ -647,7 +656,7 @@ std::optional<lldb_private::Address> DynamicLoaderDarwin::GetStartAddress() {
   Log *log = GetLog(LLDBLog::DynamicLoader);
 
   auto log_err = [log](llvm::StringLiteral err_msg) -> std::nullopt_t {
-    LLDB_LOGV(log, "{}", err_msg);
+    LLDB_LOG_VERBOSE(log, "{}", err_msg);
     return std::nullopt;
   };
 
@@ -838,17 +847,14 @@ bool DynamicLoaderDarwin::AlwaysRelyOnEHUnwindInfo(SymbolContext &sym_ctx) {
 // Dump a Segment to the file handle provided.
 void DynamicLoaderDarwin::Segment::PutToLog(Log *log,
                                             lldb::addr_t slide) const {
-  if (log) {
-    if (slide == 0)
-      LLDB_LOGF(log, "\t\t%16s [0x%16.16" PRIx64 " - 0x%16.16" PRIx64 ")",
-                name.AsCString(""), vmaddr + slide, vmaddr + slide + vmsize);
-    else
-      LLDB_LOGF(log,
-                "\t\t%16s [0x%16.16" PRIx64 " - 0x%16.16" PRIx64
-                ") slide = 0x%" PRIx64,
-                name.AsCString(""), vmaddr + slide, vmaddr + slide + vmsize,
-                slide);
-  }
+  if (slide == 0)
+    LLDB_LOGF(log, "\t\t%16s [0x%16.16" PRIx64 " - 0x%16.16" PRIx64 ")",
+              name.AsCString(""), vmaddr + slide, vmaddr + slide + vmsize);
+  else
+    LLDB_LOGF(
+        log,
+        "\t\t%16s [0x%16.16" PRIx64 " - 0x%16.16" PRIx64 ") slide = 0x%" PRIx64,
+        name.AsCString(""), vmaddr + slide, vmaddr + slide + vmsize, slide);
 }
 
 lldb_private::ArchSpec DynamicLoaderDarwin::ImageInfo::GetArchitecture() const {
@@ -1031,7 +1037,8 @@ DynamicLoaderDarwin::GetStepThroughTrampolinePlan(Thread &thread,
               current_symbol->GetName().GetCString(),
               actual_symbol->GetName().GetCString(),
               target_addr.GetLoadAddress(target_sp.get()));
-          addresses.push_back(target_addr.GetLoadAddress(target_sp.get()));
+          addresses.push_back(
+              Address(target_addr.GetLoadAddress(target_sp.get())));
         }
       }
     }

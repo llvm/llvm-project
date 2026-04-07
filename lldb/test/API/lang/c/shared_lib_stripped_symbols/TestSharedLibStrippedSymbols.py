@@ -9,6 +9,8 @@ from lldbsuite.test import lldbutil
 
 
 class SharedLibStrippedTestCase(TestBase):
+    SHARED_BUILD_TESTCASE = False
+
     @expectedFailureAll(oslist=["windows"])
     # Sometimes fails with:
     # error: Couldn't allocate space for materialized struct: Couldn't malloc: address space is full
