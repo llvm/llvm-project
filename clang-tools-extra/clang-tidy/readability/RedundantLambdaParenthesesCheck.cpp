@@ -16,10 +16,8 @@ namespace clang::tidy::readability {
 namespace {
 
 AST_MATCHER(LambdaExpr, hasRedundantParens) {
-  return (Node.hasExplicitParameters() || Node.isGenericLambda()) &&
-         Node.getCallOperator()->getNumParams() == 0 &&
-         (!Node.isGenericLambda() ||
-          Finder->getASTContext().getLangOpts().CPlusPlus20);
+  return Node.hasExplicitParameters() &&
+         Node.getCallOperator()->getNumParams() == 0;
 }
 
 } // namespace
@@ -44,13 +42,18 @@ void RedundantLambdaParenthesesCheck::check(
   if (LParenLoc.isInvalid() || RParenLoc.isInvalid())
     return;
 
+  std::optional<Token> NextTok =
+      Lexer::findNextToken(RParenLoc, *Result.SourceManager, LangOpts);
+
+  // Attributes after '()' have different semantics depending on position.
+  if (NextTok && NextTok->is(tok::l_square))
+    return;
+
+  // requires clause after '()' means parens cannot be removed.
+  if (Lambda->getCallOperator()->getTrailingRequiresClause())
+    return;
+
   if (!LangOpts.CPlusPlus23) {
-    std::optional<Token> RParen =
-        Lexer::findNextToken(LParenLoc, *Result.SourceManager, LangOpts);
-    if (!RParen || RParen->isNot(tok::r_paren))
-      return;
-    std::optional<Token> NextTok = Lexer::findNextToken(
-        RParen->getLocation(), *Result.SourceManager, LangOpts);
     if (NextTok && NextTok->is(tok::raw_identifier)) {
       StringRef Id = NextTok->getRawIdentifier();
       if (Id == "constexpr" || Id == "consteval" || Id == "mutable" ||
