@@ -3487,19 +3487,14 @@ public:
       return success();
     }
 
-    // Check if elements from V1 / V2 are used.
+    // Replace V1 with poison if it is not used.
     int64_t leadingV1Size = op.getV1VectorType().getRank() > 0
                                 ? op.getV1VectorType().getDimSize(0)
                                 : 1;
     bool isV1Used = llvm::any_of(op.getMask(), [&](int64_t mask) {
       return mask != ShuffleOp::kPoisonIndex && mask < leadingV1Size;
     });
-    bool isV2Used = llvm::any_of(op.getMask(), [&](int64_t mask) {
-      return mask != ShuffleOp::kPoisonIndex && mask >= leadingV1Size;
-    });
-
-    // Replace V1 with poison if it is not used.
-    if (!isV1Used && !op.getV1().getDefiningOp<ub::PoisonOp>()) {
+    if (!isV1Used && !matchPattern(op.getV1(), ub::m_Poison())) {
       Value poison =
           ub::PoisonOp::create(rewriter, op.getLoc(), op.getV1VectorType());
       rewriter.modifyOpInPlace(op, [&]() { op.getV1Mutable().assign(poison); });
@@ -3507,7 +3502,10 @@ public:
     }
 
     // Replace V2 with poison if it is not used.
-    if (!isV2Used && !op.getV2().getDefiningOp<ub::PoisonOp>()) {
+    bool isV2Used = llvm::any_of(op.getMask(), [&](int64_t mask) {
+      return mask != ShuffleOp::kPoisonIndex && mask >= leadingV1Size;
+    });
+    if (!isV2Used && !matchPattern(op.getV2(), ub::m_Poison())) {
       Value poison =
           ub::PoisonOp::create(rewriter, op.getLoc(), op.getV2VectorType());
       rewriter.modifyOpInPlace(op, [&]() { op.getV2Mutable().assign(poison); });
