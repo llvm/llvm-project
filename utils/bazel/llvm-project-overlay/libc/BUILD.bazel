@@ -323,6 +323,20 @@ libc_support_library(
     ],
 )
 
+libc_support_library(
+    name = "__support_macros_macro_utils",
+    hdrs = ["src/__support/macros/macro-utils.h"],
+)
+
+libc_support_library(
+    name = "__support_macros_is_defined",
+    hdrs = ["src/__support/macros/is_defined.h"],
+    deps = [
+        ":__support_cpp_string_view",
+        ":__support_macros_macro_utils",
+    ],
+)
+
 ################################# Include Files ################################
 
 libc_support_library(
@@ -938,6 +952,7 @@ libc_support_library(
     deps = [
         ":__support_common",
         ":__support_macros_config",
+        ":__support_macros_macro_utils",
         ":__support_macros_properties_compiler",
         ":__support_macros_properties_os",
         ":func_aligned_alloc",
@@ -9313,6 +9328,7 @@ libc_support_library(
         ":__support_cpp_type_traits",
         ":__support_macros_attributes",
         ":__support_macros_config",
+        ":__support_macros_is_defined",
         ":__support_macros_optimization",
         ":__support_macros_properties_architectures",
         ":__support_macros_properties_compiler",
@@ -10501,6 +10517,7 @@ libc_support_library(
         ":__support_fputil_fp_bits",
         ":__support_libc_errno",
         ":__support_macros_config",
+        ":__support_macros_properties_types",
         ":__support_str_to_integer",
         ":errno",
         ":llvm_libc_macros_stdfix_macros",

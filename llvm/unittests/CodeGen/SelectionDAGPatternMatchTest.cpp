@@ -320,8 +320,8 @@ TEST_F(SelectionDAGPatternMatchTest, matchBinaryOp) {
   EXPECT_TRUE(sd_match(Add, m_c_BinOp(ISD::ADD, m_Value(), m_Value())));
   EXPECT_TRUE(sd_match(Add, m_Add(m_Value(), m_Value())));
   EXPECT_TRUE(sd_match(Add, m_AddLike(m_Value(), m_Value())));
-  EXPECT_TRUE(sd_match(
-      Mul, m_Mul(m_OneUse(m_Opc(ISD::SUB)), m_NUses<2>(m_Specific(Add)))));
+  EXPECT_TRUE(sd_match(Mul, m_Mul(m_OneUse(m_SpecificOpc(ISD::SUB)),
+                                  m_NUses<2>(m_Specific(Add)))));
   EXPECT_TRUE(
       sd_match(SFAdd, m_ChainedBinOp(ISD::STRICT_FADD, m_SpecificVT(Float32VT),
                                      m_SpecificVT(Float32VT))));
@@ -467,21 +467,25 @@ TEST_F(SelectionDAGPatternMatchTest, matchBinaryOp) {
 
   SDValue BindVal;
   // By default, it matches any of the results.
-  EXPECT_TRUE(
-      sd_match(PartsDiff, m_Sub(m_Opc(ISD::SMUL_LOHI), m_Opc(ISD::SMUL_LOHI))));
+  EXPECT_TRUE(sd_match(PartsDiff, m_Sub(m_SpecificOpc(ISD::SMUL_LOHI),
+                                        m_SpecificOpc(ISD::SMUL_LOHI))));
   // Matching a specific result.
-  EXPECT_TRUE(sd_match(PartsDiff, m_Sub(m_Opc(ISD::SMUL_LOHI),
-                                        m_Result<1>(m_Opc(ISD::SMUL_LOHI)))));
-  EXPECT_FALSE(sd_match(PartsDiff, m_Sub(m_Opc(ISD::SMUL_LOHI),
-                                         m_Result<0>(m_Opc(ISD::SMUL_LOHI)))));
+  EXPECT_TRUE(
+      sd_match(PartsDiff, m_Sub(m_SpecificOpc(ISD::SMUL_LOHI),
+                                m_Result<1>(m_SpecificOpc(ISD::SMUL_LOHI)))));
+  EXPECT_FALSE(
+      sd_match(PartsDiff, m_Sub(m_SpecificOpc(ISD::SMUL_LOHI),
+                                m_Result<0>(m_SpecificOpc(ISD::SMUL_LOHI)))));
 
   // Conditionally bind the value from a certain sub-pattern.
-  EXPECT_TRUE(sd_match(PartsDiff, m_Sub(m_Value(BindVal, m_Opc(ISD::SMUL_LOHI)),
-                                        m_Opc(ISD::SMUL_LOHI))));
+  EXPECT_TRUE(
+      sd_match(PartsDiff, m_Sub(m_Value(BindVal, m_SpecificOpc(ISD::SMUL_LOHI)),
+                                m_SpecificOpc(ISD::SMUL_LOHI))));
   EXPECT_EQ(BindVal, SMulLoHi);
   BindVal = SDValue();
-  EXPECT_FALSE(sd_match(PartsDiff, m_Sub(m_Value(BindVal, m_Opc(ISD::ADD)),
-                                         m_Opc(ISD::SMUL_LOHI))));
+  EXPECT_FALSE(
+      sd_match(PartsDiff, m_Sub(m_Value(BindVal, m_SpecificOpc(ISD::ADD)),
+                                m_SpecificOpc(ISD::SMUL_LOHI))));
   EXPECT_NE(BindVal, SMulLoHi);
 
   BindVal = SDValue();
@@ -894,10 +898,12 @@ TEST_F(SelectionDAGPatternMatchTest, patternCombinators) {
   SDValue Sub = DAG->getNode(ISD::SUB, DL, Int32VT, Add, Op0);
 
   using namespace SDPatternMatch;
+  EXPECT_TRUE(
+      sd_match(Sub, m_AnyOf(m_SpecificOpc(ISD::ADD), m_SpecificOpc(ISD::SUB),
+                            m_SpecificOpc(ISD::MUL))));
+  EXPECT_TRUE(sd_match(Add, m_AllOf(m_SpecificOpc(ISD::ADD), m_OneUse())));
   EXPECT_TRUE(sd_match(
-      Sub, m_AnyOf(m_Opc(ISD::ADD), m_Opc(ISD::SUB), m_Opc(ISD::MUL))));
-  EXPECT_TRUE(sd_match(Add, m_AllOf(m_Opc(ISD::ADD), m_OneUse())));
-  EXPECT_TRUE(sd_match(Add, m_NoneOf(m_Opc(ISD::SUB), m_Opc(ISD::MUL))));
+      Add, m_NoneOf(m_SpecificOpc(ISD::SUB), m_SpecificOpc(ISD::MUL))));
 }
 
 TEST_F(SelectionDAGPatternMatchTest, optionalResizing) {
@@ -1073,7 +1079,7 @@ TEST_F(SelectionDAGPatternMatchTest, matchContext) {
 
   using namespace SDPatternMatch;
   VPMatchContext VPCtx(DAG.get());
-  EXPECT_TRUE(sd_context_match(VPAdd, VPCtx, m_Opc(ISD::ADD)));
+  EXPECT_TRUE(sd_context_match(VPAdd, VPCtx, m_SpecificOpc(ISD::ADD)));
   EXPECT_TRUE(
       sd_context_match(VPAdd, VPCtx, m_Node(ISD::ADD, m_Value(), m_Value())));
   // VPMatchContext can't match pattern using explicit VP Opcode
@@ -1086,11 +1092,12 @@ TEST_F(SelectionDAGPatternMatchTest, matchContext) {
   EXPECT_TRUE(sd_context_match(VPAdd, VPCtx, m_Add(m_Value(), m_Value())));
   // VP_REDUCE_ADD doesn't have a based opcode, so we use a normal
   // sd_match before switching to VPMatchContext when checking VPAdd.
-  EXPECT_TRUE(sd_match(VPReduceAdd, m_Node(ISD::VP_REDUCE_ADD, m_Value(),
-                                           m_Context(VPCtx, m_Opc(ISD::ADD)),
-                                           m_Value(), m_Value())));
+  EXPECT_TRUE(
+      sd_match(VPReduceAdd, m_Node(ISD::VP_REDUCE_ADD, m_Value(),
+                                   m_Context(VPCtx, m_SpecificOpc(ISD::ADD)),
+                                   m_Value(), m_Value())));
   // non-vector predicated should match too
-  EXPECT_TRUE(sd_context_match(Add, VPCtx, m_Opc(ISD::ADD)));
+  EXPECT_TRUE(sd_context_match(Add, VPCtx, m_SpecificOpc(ISD::ADD)));
   EXPECT_TRUE(
       sd_context_match(Add, VPCtx, m_Node(ISD::ADD, m_Value(), m_Value())));
   EXPECT_FALSE(sd_context_match(
