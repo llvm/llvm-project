@@ -29,11 +29,10 @@ define i64 @g(i32 %i) nounwind {
 ; CHECK-NOT:         {{[^ ,]*}}, %esp
 ;
 ; The next adjustment of the stack is due to the alloca.
-; CHECK:      movl   %{{...}}, %esp
+; CHECK:      leal   -20(%edi), %esp
 ; CHECK-NOT:         {{[^ ,]*}}, %esp
 ;
 ; Next we set up the memset call.
-; CHECK:      subl   $20, %esp
 ; CHECK-NOT:         {{[^ ,]*}}, %esp
 ; CHECK:      pushl
 ; CHECK:      pushl

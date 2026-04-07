@@ -111,8 +111,7 @@ define zeroext i1 @smuloi128(i128 %v1, i128 %v2, ptr %res) {
 ; X86-NEXT:    imull %ebx, %ebp
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    mull %ebx
-; X86-NEXT:    movl %edx, %ecx
-; X86-NEXT:    addl %eax, %ecx
+; X86-NEXT:    leal (%edx,%eax), %ecx
 ; X86-NEXT:    addl %ebp, %ecx
 ; X86-NEXT:    addl %eax, %esi
 ; X86-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) ## 4-byte Spill
@@ -185,8 +184,7 @@ define zeroext i1 @smuloi128(i128 %v1, i128 %v2, ptr %res) {
 ; X86-NEXT:    imull %esi, %ebx
 ; X86-NEXT:    movl %esi, %eax
 ; X86-NEXT:    mull {{[0-9]+}}(%esp)
-; X86-NEXT:    movl %edx, %ebp
-; X86-NEXT:    addl %ebx, %ebp
+; X86-NEXT:    leal (%edx,%ebx), %ebp
 ; X86-NEXT:    addl %eax, %ebp
 ; X86-NEXT:    addl %eax, %ecx
 ; X86-NEXT:    adcl %edi, %ebp
@@ -222,8 +220,7 @@ define zeroext i1 @smuloi128(i128 %v1, i128 %v2, ptr %res) {
 ; X86-NEXT:    movl %esi, %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    mull %edx
-; X86-NEXT:    movl %edx, %esi
-; X86-NEXT:    addl %ebx, %esi
+; X86-NEXT:    leal (%edx,%ebx), %esi
 ; X86-NEXT:    addl %eax, %esi
 ; X86-NEXT:    addl %edi, %eax
 ; X86-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) ## 4-byte Spill
@@ -349,8 +346,7 @@ define zeroext i1 @smuloi256(i256 %v1, i256 %v2, ptr %res) {
 ; X64-NEXT:    imulq %rcx, %rsi
 ; X64-NEXT:    movq %r12, %rax
 ; X64-NEXT:    mulq %rcx
-; X64-NEXT:    movq %rdx, %r15
-; X64-NEXT:    addq %rax, %r15
+; X64-NEXT:    leaq (%rdx,%rax), %r15
 ; X64-NEXT:    addq %rsi, %r15
 ; X64-NEXT:    addq %rax, %r14
 ; X64-NEXT:    adcq %r8, %r15
@@ -418,8 +414,7 @@ define zeroext i1 @smuloi256(i256 %v1, i256 %v2, ptr %res) {
 ; X64-NEXT:    imulq %rdi, %r10
 ; X64-NEXT:    movq %rdi, %rax
 ; X64-NEXT:    mulq {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Folded Reload
-; X64-NEXT:    movq %rdx, %r11
-; X64-NEXT:    addq %r10, %r11
+; X64-NEXT:    leaq (%rdx,%r10), %r11
 ; X64-NEXT:    addq %rax, %r11
 ; X64-NEXT:    addq %rax, %r13
 ; X64-NEXT:    adcq %r9, %r11
@@ -452,8 +447,7 @@ define zeroext i1 @smuloi256(i256 %v1, i256 %v2, ptr %res) {
 ; X64-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdi ## 8-byte Reload
 ; X64-NEXT:    mulq %rdi
 ; X64-NEXT:    movq %rax, %r14
-; X64-NEXT:    movq %rdx, %r10
-; X64-NEXT:    addq %rcx, %r10
+; X64-NEXT:    leaq (%rdx,%rcx), %r10
 ; X64-NEXT:    addq %rax, %r10
 ; X64-NEXT:    addq %r9, %r14
 ; X64-NEXT:    adcq %rsi, %r10

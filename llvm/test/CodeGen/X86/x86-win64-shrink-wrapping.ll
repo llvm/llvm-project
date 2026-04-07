@@ -43,8 +43,7 @@ define i32 @loopInfoSaveOutsideLoop(i32 %cond, i32 %N) #0 {
 ; ENABLE-NEXT:    .seh_endepilogue
 ; ENABLE-NEXT:    retq
 ; ENABLE-NEXT:  .LBB0_5: # %if.else
-; ENABLE-NEXT:    movl %edx, %eax
-; ENABLE-NEXT:    addl %edx, %eax
+; ENABLE-NEXT:    leal (%rdx,%rdx), %eax
 ; ENABLE-NEXT:    .seh_startepilogue
 ; ENABLE-NEXT:    popq %rbx
 ; ENABLE-NEXT:    .seh_endepilogue
@@ -83,8 +82,7 @@ define i32 @loopInfoSaveOutsideLoop(i32 %cond, i32 %N) #0 {
 ; DISABLE-NEXT:    .seh_endepilogue
 ; DISABLE-NEXT:    retq
 ; DISABLE-NEXT:  .LBB0_5: # %if.else
-; DISABLE-NEXT:    movl %edx, %eax
-; DISABLE-NEXT:    addl %edx, %eax
+; DISABLE-NEXT:    leal (%rdx,%rdx), %eax
 ; DISABLE-NEXT:    .seh_startepilogue
 ; DISABLE-NEXT:    popq %rbx
 ; DISABLE-NEXT:    .seh_endepilogue

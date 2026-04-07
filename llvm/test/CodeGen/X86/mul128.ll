@@ -36,8 +36,7 @@ define i128 @foo(i128 %t, i128 %u) {
 ; X86-NEXT:    movl %edi, %eax
 ; X86-NEXT:    mull %ecx
 ; X86-NEXT:    movl %eax, (%esp) # 4-byte Spill
-; X86-NEXT:    movl %edx, %ebx
-; X86-NEXT:    addl %esi, %ebx
+; X86-NEXT:    leal (%edx,%esi), %ebx
 ; X86-NEXT:    movl 36(%ebp), %eax
 ; X86-NEXT:    imull %edi, %eax
 ; X86-NEXT:    addl %eax, %ebx

@@ -744,8 +744,7 @@ define float @caller_with_multiple_swifterror_values(ptr %error_ref, ptr %error_
 ; CHECK-APPLE-NEXT:    movb %al, (%r14)
 ; CHECK-APPLE-NEXT:  LBB7_2: ## %handler
 ; CHECK-APPLE-NEXT:    callq _free
-; CHECK-APPLE-NEXT:    movq %rsp, %rax
-; CHECK-APPLE-NEXT:    addq $-16, %rax
+; CHECK-APPLE-NEXT:    leaq -16(%rsp), %rax
 ; CHECK-APPLE-NEXT:    movq %rax, %rsp
 ; CHECK-APPLE-NEXT:    xorl %r12d, %r12d
 ; CHECK-APPLE-NEXT:    callq _foo

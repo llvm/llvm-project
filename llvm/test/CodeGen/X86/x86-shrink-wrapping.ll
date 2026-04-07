@@ -94,8 +94,7 @@ define i32 @freqSaveAndRestoreOutsideLoop(i32 %cond, i32 %N) {
 ; ENABLE-NEXT:    popq %rbx
 ; ENABLE-NEXT:    retq
 ; ENABLE-NEXT:  LBB1_4: ## %if.else
-; ENABLE-NEXT:    movl %esi, %eax
-; ENABLE-NEXT:    addl %esi, %eax
+; ENABLE-NEXT:    leal (%rsi,%rsi), %eax
 ; ENABLE-NEXT:    retq
 ;
 ; DISABLE-LABEL: freqSaveAndRestoreOutsideLoop:
@@ -125,8 +124,7 @@ define i32 @freqSaveAndRestoreOutsideLoop(i32 %cond, i32 %N) {
 ; DISABLE-NEXT:    popq %rbx
 ; DISABLE-NEXT:    retq
 ; DISABLE-NEXT:  LBB1_4: ## %if.else
-; DISABLE-NEXT:    movl %esi, %eax
-; DISABLE-NEXT:    addl %esi, %eax
+; DISABLE-NEXT:    leal (%rsi,%rsi), %eax
 ; DISABLE-NEXT:    popq %rbx
 ; DISABLE-NEXT:    retq
 entry:
@@ -272,8 +270,7 @@ define i32 @loopInfoSaveOutsideLoop(i32 %cond, i32 %N) {
 ; ENABLE-NEXT:    popq %rbx
 ; ENABLE-NEXT:    retq
 ; ENABLE-NEXT:  LBB3_4: ## %if.else
-; ENABLE-NEXT:    movl %esi, %eax
-; ENABLE-NEXT:    addl %esi, %eax
+; ENABLE-NEXT:    leal (%rsi,%rsi), %eax
 ; ENABLE-NEXT:    retq
 ;
 ; DISABLE-LABEL: loopInfoSaveOutsideLoop:
@@ -306,8 +303,7 @@ define i32 @loopInfoSaveOutsideLoop(i32 %cond, i32 %N) {
 ; DISABLE-NEXT:    popq %rbx
 ; DISABLE-NEXT:    retq
 ; DISABLE-NEXT:  LBB3_4: ## %if.else
-; DISABLE-NEXT:    movl %esi, %eax
-; DISABLE-NEXT:    addl %esi, %eax
+; DISABLE-NEXT:    leal (%rsi,%rsi), %eax
 ; DISABLE-NEXT:    popq %rbx
 ; DISABLE-NEXT:    retq
 entry:
@@ -369,8 +365,7 @@ define i32 @loopInfoRestoreOutsideLoop(i32 %cond, i32 %N) nounwind {
 ; ENABLE-NEXT:    popq %rbx
 ; ENABLE-NEXT:    retq
 ; ENABLE-NEXT:  LBB4_4: ## %if.else
-; ENABLE-NEXT:    movl %esi, %eax
-; ENABLE-NEXT:    addl %esi, %eax
+; ENABLE-NEXT:    leal (%rsi,%rsi), %eax
 ; ENABLE-NEXT:    retq
 ;
 ; DISABLE-LABEL: loopInfoRestoreOutsideLoop:
@@ -398,8 +393,7 @@ define i32 @loopInfoRestoreOutsideLoop(i32 %cond, i32 %N) nounwind {
 ; DISABLE-NEXT:    popq %rbx
 ; DISABLE-NEXT:    retq
 ; DISABLE-NEXT:  LBB4_4: ## %if.else
-; DISABLE-NEXT:    movl %esi, %eax
-; DISABLE-NEXT:    addl %esi, %eax
+; DISABLE-NEXT:    leal (%rsi,%rsi), %eax
 ; DISABLE-NEXT:    popq %rbx
 ; DISABLE-NEXT:    retq
 entry:
@@ -477,8 +471,7 @@ define i32 @inlineAsm(i32 %cond, i32 %N) {
 ; ENABLE-NEXT:    popq %rbx
 ; ENABLE-NEXT:    retq
 ; ENABLE-NEXT:  LBB6_4: ## %if.else
-; ENABLE-NEXT:    movl %esi, %eax
-; ENABLE-NEXT:    addl %esi, %eax
+; ENABLE-NEXT:    leal (%rsi,%rsi), %eax
 ; ENABLE-NEXT:    retq
 ;
 ; DISABLE-LABEL: inlineAsm:
@@ -509,8 +502,7 @@ define i32 @inlineAsm(i32 %cond, i32 %N) {
 ; DISABLE-NEXT:    popq %rbx
 ; DISABLE-NEXT:    retq
 ; DISABLE-NEXT:  LBB6_4: ## %if.else
-; DISABLE-NEXT:    movl %esi, %eax
-; DISABLE-NEXT:    addl %esi, %eax
+; DISABLE-NEXT:    leal (%rsi,%rsi), %eax
 ; DISABLE-NEXT:    popq %rbx
 ; DISABLE-NEXT:    retq
 entry:
@@ -817,8 +809,7 @@ define void @infiniteloop() {
 ; ENABLE-NEXT:    testb %al, %al
 ; ENABLE-NEXT:    jne LBB10_3
 ; ENABLE-NEXT:  ## %bb.1: ## %if.then
-; ENABLE-NEXT:    movq %rsp, %rax
-; ENABLE-NEXT:    addq $-16, %rax
+; ENABLE-NEXT:    leaq -{{[0-9]+}}(%rsp), %rax
 ; ENABLE-NEXT:    movq %rax, %rsp
 ; ENABLE-NEXT:    xorl %ecx, %ecx
 ; ENABLE-NEXT:    .p2align 4
@@ -849,8 +840,7 @@ define void @infiniteloop() {
 ; DISABLE-NEXT:    testb %al, %al
 ; DISABLE-NEXT:    jne LBB10_3
 ; DISABLE-NEXT:  ## %bb.1: ## %if.then
-; DISABLE-NEXT:    movq %rsp, %rax
-; DISABLE-NEXT:    addq $-16, %rax
+; DISABLE-NEXT:    leaq -{{[0-9]+}}(%rsp), %rax
 ; DISABLE-NEXT:    movq %rax, %rsp
 ; DISABLE-NEXT:    xorl %ecx, %ecx
 ; DISABLE-NEXT:    .p2align 4
@@ -900,8 +890,7 @@ define void @infiniteloop2() {
 ; ENABLE-NEXT:    testb %al, %al
 ; ENABLE-NEXT:    jne LBB11_5
 ; ENABLE-NEXT:  ## %bb.1: ## %if.then
-; ENABLE-NEXT:    movq %rsp, %rax
-; ENABLE-NEXT:    addq $-16, %rax
+; ENABLE-NEXT:    leaq -{{[0-9]+}}(%rsp), %rax
 ; ENABLE-NEXT:    movq %rax, %rsp
 ; ENABLE-NEXT:    xorl %ecx, %ecx
 ; ENABLE-NEXT:    jmp LBB11_2
@@ -947,8 +936,7 @@ define void @infiniteloop2() {
 ; DISABLE-NEXT:    testb %al, %al
 ; DISABLE-NEXT:    jne LBB11_5
 ; DISABLE-NEXT:  ## %bb.1: ## %if.then
-; DISABLE-NEXT:    movq %rsp, %rax
-; DISABLE-NEXT:    addq $-16, %rax
+; DISABLE-NEXT:    leaq -{{[0-9]+}}(%rsp), %rax
 ; DISABLE-NEXT:    movq %rax, %rsp
 ; DISABLE-NEXT:    xorl %ecx, %ecx
 ; DISABLE-NEXT:    jmp LBB11_2

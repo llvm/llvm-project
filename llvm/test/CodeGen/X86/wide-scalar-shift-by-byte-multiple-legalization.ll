@@ -3221,8 +3221,7 @@ define void @lshr_32bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; X86-NO-SHLD-NO-BMI2-SSE2-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-NO-SHLD-NO-BMI2-SSE2-NEXT:    movb %dh, %cl
 ; X86-NO-SHLD-NO-BMI2-SSE2-NEXT:    shrl %cl, %esi
-; X86-NO-SHLD-NO-BMI2-SSE2-NEXT:    movl %eax, %ebx
-; X86-NO-SHLD-NO-BMI2-SSE2-NEXT:    addl %eax, %ebx
+; X86-NO-SHLD-NO-BMI2-SSE2-NEXT:    leal (%eax,%eax), %ebx
 ; X86-NO-SHLD-NO-BMI2-SSE2-NEXT:    movl %edx, %ecx
 ; X86-NO-SHLD-NO-BMI2-SSE2-NEXT:    shll %cl, %ebx
 ; X86-NO-SHLD-NO-BMI2-SSE2-NEXT:    orl %esi, %ebx

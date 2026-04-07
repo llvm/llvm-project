@@ -120,6 +120,9 @@ class FixupLEAsImpl {
   MachineInstr *postRAConvertToLEA(MachineBasicBlock &MBB,
                                    MachineBasicBlock::iterator &MBBI) const;
 
+  /// Fold adjacent mov + LEA-able ALU operations into a single LEA.
+  bool foldCopyToLEA(MachineBasicBlock &MBB) const;
+
 public:
   FixupLEAsImpl(ProfileSummaryInfo *PSI, MachineBlockFrequencyInfo *MBFI)
       : PSI(PSI), MBFI(MBFI) {}
@@ -164,6 +167,8 @@ char FixupLEAsLegacy::ID = 0;
 
 INITIALIZE_PASS(FixupLEAsLegacy, FIXUPLEA_NAME, FIXUPLEA_DESC, false, false)
 
+static bool isSafeToConvertToLEA(const MachineInstr &MI, bool AllowSub);
+
 MachineInstr *
 FixupLEAsImpl::postRAConvertToLEA(MachineBasicBlock &MBB,
                                   MachineBasicBlock::iterator &MBBI) const {
@@ -187,36 +192,11 @@ FixupLEAsImpl::postRAConvertToLEA(MachineBasicBlock &MBB,
   }
   }
 
-  if (!MI.isConvertibleTo3Addr())
-    return nullptr;
-
-  switch (MI.getOpcode()) {
-  default:
+  if (!MI.isConvertibleTo3Addr() ||
+      !isSafeToConvertToLEA(MI, /*AllowSub=*/false))
     // Only convert instructions that we've verified are safe.
     return nullptr;
-  case X86::ADD64ri32:
-  case X86::ADD64ri32_DB:
-  case X86::ADD32ri:
-  case X86::ADD32ri_DB:
-    if (!MI.getOperand(2).isImm()) {
-      // convertToThreeAddress will call getImm()
-      // which requires isImm() to be true
-      return nullptr;
-    }
-    break;
-  case X86::SHL64ri:
-  case X86::SHL32ri:
-  case X86::INC64r:
-  case X86::INC32r:
-  case X86::DEC64r:
-  case X86::DEC32r:
-  case X86::ADD64rr:
-  case X86::ADD64rr_DB:
-  case X86::ADD32rr:
-  case X86::ADD32rr_DB:
-    // These instructions are all fine to convert.
-    break;
-  }
+
   return TII->convertToThreeAddress(MI, nullptr, nullptr);
 }
 
@@ -227,6 +207,37 @@ FunctionPass *llvm::createX86FixupLEAsLegacyPass() {
 static bool isLEA(unsigned Opcode) {
   return Opcode == X86::LEA32r || Opcode == X86::LEA64r ||
          Opcode == X86::LEA64_32r;
+}
+
+static bool isSafeToConvertToLEA(const MachineInstr &MI, bool AllowSub) {
+  switch (MI.getOpcode()) {
+  default:
+    return false;
+  case X86::SHL64ri:
+  case X86::SHL32ri:
+  case X86::INC64r:
+  case X86::INC32r:
+  case X86::DEC64r:
+  case X86::DEC32r:
+  case X86::ADD64rr:
+  case X86::ADD64rr_DB:
+  case X86::ADD32rr:
+  case X86::ADD32rr_DB:
+    return true;
+  case X86::ADD64ri32:
+  case X86::ADD64ri32_DB:
+  case X86::ADD32ri:
+  case X86::ADD32ri_DB:
+    return MI.getOperand(2).isImm();
+  case X86::SUB64ri32:
+  case X86::SUB32ri:
+    return AllowSub && MI.getOperand(2).isImm();
+  }
+}
+
+static bool isLEAableFromCopy(const MachineInstr &MI) {
+  return MI.isConvertibleTo3Addr() &&
+         isSafeToConvertToLEA(MI, /*AllowSub=*/true);
 }
 
 bool FixupLEAsImpl::runOnMachineFunction(MachineFunction &MF) {
@@ -244,6 +255,8 @@ bool FixupLEAsImpl::runOnMachineFunction(MachineFunction &MF) {
 
   LLVM_DEBUG(dbgs() << "Start X86FixupLEAs\n";);
   for (MachineBasicBlock &MBB : MF) {
+    foldCopyToLEA(MBB);
+
     // First pass. Try to remove or optimize existing LEAs.
     bool OptIncDecPerBB =
         OptIncDec || llvm::shouldOptimizeForSize(&MBB, PSI, MBFI);
@@ -271,6 +284,83 @@ bool FixupLEAsImpl::runOnMachineFunction(MachineFunction &MF) {
   LLVM_DEBUG(dbgs() << "End X86FixupLEAs\n";);
 
   return true;
+}
+
+bool FixupLEAsImpl::foldCopyToLEA(MachineBasicBlock &MBB) const {
+  MachineFunction &MF = *MBB.getParent();
+  bool Changed = false;
+
+  for (auto I = MBB.begin(); I != MBB.end();) {
+    MachineInstr &MI = *I;
+    if (!isLEAableFromCopy(MI)) {
+      ++I;
+      continue;
+    }
+
+    auto Prev = prev_nodbg(I, MBB.begin());
+    if (Prev == MBB.end()) {
+      ++I;
+      continue;
+    }
+
+    Register DstReg = MI.getOperand(0).getReg();
+    if ((Prev->getOpcode() != X86::MOV32rr &&
+         Prev->getOpcode() != X86::MOV64rr) ||
+        Prev->getOperand(0).getReg() != DstReg || !MI.getOperand(1).isReg() ||
+        MI.getOperand(1).getReg() != DstReg) {
+      ++I;
+      continue;
+    }
+
+    MachineInstr *TmpMI = MF.CloneMachineInstr(&MI);
+    MBB.insert(I, TmpMI);
+
+    Register SrcReg = Prev->getOperand(1).getReg();
+    SmallVector<MachineOperand *, 2> ReplacedOps;
+    for (MachineOperand &MO : TmpMI->operands()) {
+      if (!MO.isReg() || MO.isDef() || MO.getReg() != DstReg)
+        continue;
+      MO.setReg(SrcReg);
+      MO.setIsKill(false);
+      ReplacedOps.push_back(&MO);
+    }
+
+    if (ReplacedOps.empty()) {
+      MBB.erase(TmpMI);
+      ++I;
+      continue;
+    }
+
+    bool HasKillOnSrcReg = false;
+    for (MachineOperand &MO : TmpMI->operands()) {
+      if (&MO == ReplacedOps.back())
+        continue;
+      if (MO.isReg() && !MO.isDef() && MO.getReg() == SrcReg && MO.isKill()) {
+        HasKillOnSrcReg = true;
+        break;
+      }
+    }
+    if (Prev->getOperand(1).isKill() && !HasKillOnSrcReg)
+      ReplacedOps.back()->setIsKill(true);
+
+    MachineInstr *NewMI = TII->convertToThreeAddress(*TmpMI, nullptr, nullptr);
+    MBB.erase(TmpMI);
+    if (!NewMI) {
+      ++I;
+      continue;
+    }
+
+    ++NumLEAs;
+    Changed = true;
+    MBB.getParent()->substituteDebugValuesForInst(*Prev, *NewMI, 1);
+    MBB.getParent()->substituteDebugValuesForInst(MI, *NewMI, 1);
+
+    auto EraseMI = I++;
+    MBB.erase(Prev);
+    MBB.erase(EraseMI);
+  }
+
+  return Changed;
 }
 
 FixupLEAsImpl::RegUsageState

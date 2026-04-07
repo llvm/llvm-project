@@ -52,8 +52,7 @@ define void @func(...) nounwind {
 ; CHECK-X64-NEXT:    jmp LBB0_3
 ; CHECK-X64-NEXT:  LBB0_2: ## %entry
 ; CHECK-X64-NEXT:    movq 8(%rsp), %rax
-; CHECK-X64-NEXT:    movq %rax, %rcx
-; CHECK-X64-NEXT:    addq $8, %rcx
+; CHECK-X64-NEXT:    leaq 8(%rax), %rcx
 ; CHECK-X64-NEXT:    movq %rcx, 8(%rsp)
 ; CHECK-X64-NEXT:  LBB0_3: ## %entry
 ; CHECK-X64-NEXT:    movl (%rax), %r10d
@@ -68,8 +67,7 @@ define void @func(...) nounwind {
 ; CHECK-X64-NEXT:    jmp LBB0_6
 ; CHECK-X64-NEXT:  LBB0_5: ## %entry
 ; CHECK-X64-NEXT:    movq 8(%rsp), %rax
-; CHECK-X64-NEXT:    movq %rax, %rcx
-; CHECK-X64-NEXT:    addq $8, %rcx
+; CHECK-X64-NEXT:    leaq 8(%rax), %rcx
 ; CHECK-X64-NEXT:    movq %rcx, 8(%rsp)
 ; CHECK-X64-NEXT:  LBB0_6: ## %entry
 ; CHECK-X64-NEXT:    movl (%rax), %r11d
@@ -84,8 +82,7 @@ define void @func(...) nounwind {
 ; CHECK-X64-NEXT:    jmp LBB0_9
 ; CHECK-X64-NEXT:  LBB0_8: ## %entry
 ; CHECK-X64-NEXT:    movq 8(%rsp), %rax
-; CHECK-X64-NEXT:    movq %rax, %rcx
-; CHECK-X64-NEXT:    addq $8, %rcx
+; CHECK-X64-NEXT:    leaq 8(%rax), %rcx
 ; CHECK-X64-NEXT:    movq %rcx, 8(%rsp)
 ; CHECK-X64-NEXT:  LBB0_9: ## %entry
 ; CHECK-X64-NEXT:    movl (%rax), %r9d
@@ -118,8 +115,7 @@ define void @func(...) nounwind {
 ; CHECK-X64-NEXT:    jmp LBB0_15
 ; CHECK-X64-NEXT:  LBB0_14: ## %entry
 ; CHECK-X64-NEXT:    movq 32(%rsp), %rax
-; CHECK-X64-NEXT:    movq %rax, %rcx
-; CHECK-X64-NEXT:    addq $8, %rcx
+; CHECK-X64-NEXT:    leaq 8(%rax), %rcx
 ; CHECK-X64-NEXT:    movq %rcx, 32(%rsp)
 ; CHECK-X64-NEXT:  LBB0_15: ## %entry
 ; CHECK-X64-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
@@ -134,8 +130,7 @@ define void @func(...) nounwind {
 ; CHECK-X64-NEXT:    jmp LBB0_18
 ; CHECK-X64-NEXT:  LBB0_17: ## %entry
 ; CHECK-X64-NEXT:    movq 8(%rsp), %rax
-; CHECK-X64-NEXT:    movq %rax, %rcx
-; CHECK-X64-NEXT:    addq $8, %rcx
+; CHECK-X64-NEXT:    leaq 8(%rax), %rcx
 ; CHECK-X64-NEXT:    movq %rcx, 8(%rsp)
 ; CHECK-X64-NEXT:  LBB0_18: ## %entry
 ; CHECK-X64-NEXT:    movl (%rax), %r8d
@@ -174,8 +169,7 @@ define void @func(...) nounwind {
 ; CHECK-X64-NEXT:    jmp LBB0_27
 ; CHECK-X64-NEXT:  LBB0_26: ## %entry
 ; CHECK-X64-NEXT:    movq 32(%rsp), %rax
-; CHECK-X64-NEXT:    movq %rax, %rcx
-; CHECK-X64-NEXT:    addq $8, %rcx
+; CHECK-X64-NEXT:    leaq 8(%rax), %rcx
 ; CHECK-X64-NEXT:    movq %rcx, 32(%rsp)
 ; CHECK-X64-NEXT:  LBB0_27: ## %entry
 ; CHECK-X64-NEXT:    movq (%rax), %rcx
@@ -190,8 +184,7 @@ define void @func(...) nounwind {
 ; CHECK-X64-NEXT:    jmp LBB0_30
 ; CHECK-X64-NEXT:  LBB0_29: ## %entry
 ; CHECK-X64-NEXT:    movq 8(%rsp), %rax
-; CHECK-X64-NEXT:    movq %rax, %rdx
-; CHECK-X64-NEXT:    addq $8, %rdx
+; CHECK-X64-NEXT:    leaq 8(%rax), %rdx
 ; CHECK-X64-NEXT:    movq %rdx, 8(%rsp)
 ; CHECK-X64-NEXT:  LBB0_30: ## %entry
 ; CHECK-X64-NEXT:    movl (%rax), %edx
@@ -230,8 +223,7 @@ define void @func(...) nounwind {
 ; CHECK-X64-NEXT:    jmp LBB0_39
 ; CHECK-X64-NEXT:  LBB0_38: ## %entry
 ; CHECK-X64-NEXT:    movq 32(%rsp), %rax
-; CHECK-X64-NEXT:    movq %rax, %rsi
-; CHECK-X64-NEXT:    addq $8, %rsi
+; CHECK-X64-NEXT:    leaq 8(%rax), %rsi
 ; CHECK-X64-NEXT:    movq %rsi, 32(%rsp)
 ; CHECK-X64-NEXT:  LBB0_39: ## %entry
 ; CHECK-X64-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
@@ -246,8 +238,7 @@ define void @func(...) nounwind {
 ; CHECK-X64-NEXT:    jmp LBB0_42
 ; CHECK-X64-NEXT:  LBB0_41: ## %entry
 ; CHECK-X64-NEXT:    movq 8(%rsp), %rax
-; CHECK-X64-NEXT:    movq %rax, %rsi
-; CHECK-X64-NEXT:    addq $8, %rsi
+; CHECK-X64-NEXT:    leaq 8(%rax), %rsi
 ; CHECK-X64-NEXT:    movq %rsi, 8(%rsp)
 ; CHECK-X64-NEXT:  LBB0_42: ## %entry
 ; CHECK-X64-NEXT:    movl (%rax), %esi
@@ -311,8 +302,7 @@ define void @func(...) nounwind {
 ; CHECK-X32-NEXT:    jmp .LBB0_3
 ; CHECK-X32-NEXT:  .LBB0_2: # %entry
 ; CHECK-X32-NEXT:    movl 8(%esp), %eax
-; CHECK-X32-NEXT:    movl %eax, %ecx
-; CHECK-X32-NEXT:    addl $8, %ecx
+; CHECK-X32-NEXT:    leal 8(%rax), %ecx
 ; CHECK-X32-NEXT:    movl %ecx, 8(%esp)
 ; CHECK-X32-NEXT:  .LBB0_3: # %entry
 ; CHECK-X32-NEXT:    movl (%eax), %r10d
@@ -327,8 +317,7 @@ define void @func(...) nounwind {
 ; CHECK-X32-NEXT:    jmp .LBB0_6
 ; CHECK-X32-NEXT:  .LBB0_5: # %entry
 ; CHECK-X32-NEXT:    movl 8(%esp), %eax
-; CHECK-X32-NEXT:    movl %eax, %ecx
-; CHECK-X32-NEXT:    addl $8, %ecx
+; CHECK-X32-NEXT:    leal 8(%rax), %ecx
 ; CHECK-X32-NEXT:    movl %ecx, 8(%esp)
 ; CHECK-X32-NEXT:  .LBB0_6: # %entry
 ; CHECK-X32-NEXT:    movl (%eax), %r11d
@@ -343,8 +332,7 @@ define void @func(...) nounwind {
 ; CHECK-X32-NEXT:    jmp .LBB0_9
 ; CHECK-X32-NEXT:  .LBB0_8: # %entry
 ; CHECK-X32-NEXT:    movl 8(%esp), %eax
-; CHECK-X32-NEXT:    movl %eax, %ecx
-; CHECK-X32-NEXT:    addl $8, %ecx
+; CHECK-X32-NEXT:    leal 8(%rax), %ecx
 ; CHECK-X32-NEXT:    movl %ecx, 8(%esp)
 ; CHECK-X32-NEXT:  .LBB0_9: # %entry
 ; CHECK-X32-NEXT:    movl (%eax), %r9d
@@ -375,8 +363,7 @@ define void @func(...) nounwind {
 ; CHECK-X32-NEXT:    jmp .LBB0_15
 ; CHECK-X32-NEXT:  .LBB0_14: # %entry
 ; CHECK-X32-NEXT:    movl 24(%esp), %eax
-; CHECK-X32-NEXT:    movl %eax, %ecx
-; CHECK-X32-NEXT:    addl $8, %ecx
+; CHECK-X32-NEXT:    leal 8(%rax), %ecx
 ; CHECK-X32-NEXT:    movl %ecx, 24(%esp)
 ; CHECK-X32-NEXT:  .LBB0_15: # %entry
 ; CHECK-X32-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
@@ -391,8 +378,7 @@ define void @func(...) nounwind {
 ; CHECK-X32-NEXT:    jmp .LBB0_18
 ; CHECK-X32-NEXT:  .LBB0_17: # %entry
 ; CHECK-X32-NEXT:    movl 8(%esp), %eax
-; CHECK-X32-NEXT:    movl %eax, %ecx
-; CHECK-X32-NEXT:    addl $8, %ecx
+; CHECK-X32-NEXT:    leal 8(%rax), %ecx
 ; CHECK-X32-NEXT:    movl %ecx, 8(%esp)
 ; CHECK-X32-NEXT:  .LBB0_18: # %entry
 ; CHECK-X32-NEXT:    movl (%eax), %r8d
@@ -431,8 +417,7 @@ define void @func(...) nounwind {
 ; CHECK-X32-NEXT:    jmp .LBB0_27
 ; CHECK-X32-NEXT:  .LBB0_26: # %entry
 ; CHECK-X32-NEXT:    movl 24(%esp), %eax
-; CHECK-X32-NEXT:    movl %eax, %ecx
-; CHECK-X32-NEXT:    addl $8, %ecx
+; CHECK-X32-NEXT:    leal 8(%rax), %ecx
 ; CHECK-X32-NEXT:    movl %ecx, 24(%esp)
 ; CHECK-X32-NEXT:  .LBB0_27: # %entry
 ; CHECK-X32-NEXT:    movq (%eax), %rcx
@@ -447,8 +432,7 @@ define void @func(...) nounwind {
 ; CHECK-X32-NEXT:    jmp .LBB0_30
 ; CHECK-X32-NEXT:  .LBB0_29: # %entry
 ; CHECK-X32-NEXT:    movl 8(%esp), %eax
-; CHECK-X32-NEXT:    movl %eax, %edx
-; CHECK-X32-NEXT:    addl $8, %edx
+; CHECK-X32-NEXT:    leal 8(%rax), %edx
 ; CHECK-X32-NEXT:    movl %edx, 8(%esp)
 ; CHECK-X32-NEXT:  .LBB0_30: # %entry
 ; CHECK-X32-NEXT:    movl (%eax), %edx
@@ -487,8 +471,7 @@ define void @func(...) nounwind {
 ; CHECK-X32-NEXT:    jmp .LBB0_39
 ; CHECK-X32-NEXT:  .LBB0_38: # %entry
 ; CHECK-X32-NEXT:    movl 24(%esp), %eax
-; CHECK-X32-NEXT:    movl %eax, %esi
-; CHECK-X32-NEXT:    addl $8, %esi
+; CHECK-X32-NEXT:    leal 8(%rax), %esi
 ; CHECK-X32-NEXT:    movl %esi, 24(%esp)
 ; CHECK-X32-NEXT:  .LBB0_39: # %entry
 ; CHECK-X32-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
@@ -503,8 +486,7 @@ define void @func(...) nounwind {
 ; CHECK-X32-NEXT:    jmp .LBB0_42
 ; CHECK-X32-NEXT:  .LBB0_41: # %entry
 ; CHECK-X32-NEXT:    movl 8(%esp), %eax
-; CHECK-X32-NEXT:    movl %eax, %esi
-; CHECK-X32-NEXT:    addl $8, %esi
+; CHECK-X32-NEXT:    leal 8(%rax), %esi
 ; CHECK-X32-NEXT:    movl %esi, 8(%esp)
 ; CHECK-X32-NEXT:  .LBB0_42: # %entry
 ; CHECK-X32-NEXT:    movl (%eax), %esi
