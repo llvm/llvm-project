@@ -497,11 +497,10 @@ define <32 x i8> @interleave_v16i8(<16 x i8> %x, <16 x i8> %y) {
 ;
 ; ZVZIP-LABEL: interleave_v16i8:
 ; ZVZIP:       # %bb.0:
-; ZVZIP-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
-; ZVZIP-NEXT:    vmv1r.v v14, v9
-; ZVZIP-NEXT:    vmv1r.v v12, v8
 ; ZVZIP-NEXT:    li a0, 32
 ; ZVZIP-NEXT:    vsetvli zero, a0, e8, m2, ta, ma
+; ZVZIP-NEXT:    vmv1r.v v14, v9
+; ZVZIP-NEXT:    vmv1r.v v12, v8
 ; ZVZIP-NEXT:    vzip.vv v8, v12, v14
 ; ZVZIP-NEXT:    ret
   %a = shufflevector <16 x i8> %x, <16 x i8> %y, <32 x i32> <i32 0, i32 16, i32 1, i32 17, i32 2, i32 18, i32 3, i32 19, i32 4, i32 20, i32 5, i32 21, i32 6, i32 22, i32 7, i32 23, i32 8, i32 24, i32 9, i32 25, i32 10, i32 26, i32 11, i32 27, i32 12, i32 28, i32 13, i32 29, i32 14, i32 30, i32 15, i32 31>
@@ -539,11 +538,10 @@ define <32 x i16> @interleave_v16i16(<16 x i16> %x, <16 x i16> %y) {
 ;
 ; ZVZIP-LABEL: interleave_v16i16:
 ; ZVZIP:       # %bb.0:
-; ZVZIP-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
-; ZVZIP-NEXT:    vmv2r.v v20, v10
-; ZVZIP-NEXT:    vmv2r.v v16, v8
 ; ZVZIP-NEXT:    li a0, 32
 ; ZVZIP-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
+; ZVZIP-NEXT:    vmv2r.v v20, v10
+; ZVZIP-NEXT:    vmv2r.v v16, v8
 ; ZVZIP-NEXT:    vzip.vv v8, v16, v20
 ; ZVZIP-NEXT:    ret
   %a = shufflevector <16 x i16> %x, <16 x i16> %y, <32 x i32> <i32 0, i32 16, i32 1, i32 17, i32 2, i32 18, i32 3, i32 19, i32 4, i32 20, i32 5, i32 21, i32 6, i32 22, i32 7, i32 23, i32 8, i32 24, i32 9, i32 25, i32 10, i32 26, i32 11, i32 27, i32 12, i32 28, i32 13, i32 29, i32 14, i32 30, i32 15, i32 31>
@@ -626,11 +624,10 @@ define <64 x i8> @interleave_v32i8(<32 x i8> %x, <32 x i8> %y) {
 ;
 ; ZVZIP-LABEL: interleave_v32i8:
 ; ZVZIP:       # %bb.0:
-; ZVZIP-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
-; ZVZIP-NEXT:    vmv2r.v v20, v10
-; ZVZIP-NEXT:    vmv2r.v v16, v8
 ; ZVZIP-NEXT:    li a0, 64
 ; ZVZIP-NEXT:    vsetvli zero, a0, e8, m4, ta, ma
+; ZVZIP-NEXT:    vmv2r.v v20, v10
+; ZVZIP-NEXT:    vmv2r.v v16, v8
 ; ZVZIP-NEXT:    vzip.vv v8, v16, v20
 ; ZVZIP-NEXT:    ret
   %a = shufflevector <32 x i8> %x, <32 x i8> %y, <64 x i32> <i32 0, i32 32, i32 1, i32 33, i32 2, i32 34, i32 3, i32 35, i32 4, i32 36, i32 5, i32 37, i32 6, i32 38, i32 7, i32 39, i32 8, i32 40, i32 9, i32 41, i32 10, i32 42, i32 11, i32 43, i32 12, i32 44, i32 13, i32 45, i32 14, i32 46, i32 15, i32 47, i32 16, i32 48, i32 17, i32 49, i32 18, i32 50, i32 19, i32 51, i32 20, i32 52, i32 21, i32 53, i32 22, i32 54, i32 23, i32 55, i32 24, i32 56, i32 25, i32 57, i32 26, i32 58, i32 27, i32 59, i32 28, i32 60, i32 29, i32 61, i32 30, i32 62, i32 31, i32 63>
@@ -671,11 +668,10 @@ define <64 x i16> @interleave_v32i16(<32 x i16> %x, <32 x i16> %y) {
 ;
 ; ZVZIP-LABEL: interleave_v32i16:
 ; ZVZIP:       # %bb.0:
-; ZVZIP-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
-; ZVZIP-NEXT:    vmv4r.v v16, v12
-; ZVZIP-NEXT:    vmv4r.v v20, v8
 ; ZVZIP-NEXT:    li a0, 32
 ; ZVZIP-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
+; ZVZIP-NEXT:    vmv4r.v v16, v12
+; ZVZIP-NEXT:    vmv4r.v v20, v8
 ; ZVZIP-NEXT:    vwaddu.vv v8, v20, v16
 ; ZVZIP-NEXT:    li a0, -1
 ; ZVZIP-NEXT:    vwmaccu.vx v8, a0, v16
