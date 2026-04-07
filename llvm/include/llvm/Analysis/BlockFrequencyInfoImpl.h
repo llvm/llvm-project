@@ -1670,7 +1670,8 @@ template <class BT>
 void BlockFrequencyInfoImpl<BT>::verifyMatch(
     BlockFrequencyInfoImpl<BT> &Other) const {
   bool Match = true;
-  // Gather blocks for numbers so that we can print names.
+  // Gather blocks for numbers so that we can print names and determine whether
+  // they still exist.
   SmallVector<const BlockT *> Blocks;
   Blocks.resize(GraphTraits<const FunctionT *>::getMaxNumber(F));
   for (const auto &BB : *F)
@@ -1678,6 +1679,8 @@ void BlockFrequencyInfoImpl<BT>::verifyMatch(
 
   size_t MinSize = std::min(Nodes.size(), Other.Nodes.size());
   for (size_t i = 0; i < MinSize; ++i) {
+    if (!Blocks[i])
+      continue; // Block got deleted in the mean time, ignore.
     if (Nodes[i].isValid() != Other.Nodes[i].isValid()) {
       Match = false;
       dbgs() << "Block " << bfi_detail::getBlockName(Blocks[i])
