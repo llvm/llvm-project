@@ -2029,6 +2029,10 @@ cc_library(
         "include",
         "lib/DirectoryWatcher",
     ],
+    linkopts = select({
+        "@platforms//os:macos": ["-Wl,-framework,CoreServices"],
+        "//conditions:default": [],
+    }),
     deps = [
         "//llvm:Support",
     ],
