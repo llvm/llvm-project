@@ -969,19 +969,11 @@ std::pair<WithReason<int64_t>, bool> GetAffectedNestDepthWithReason(
     if (ocount <= 0) {
       ocount = std::nullopt;
       oreason = Reason();
-<<<<<<< users/kparzysz/e21-is-rectangular
     }
     if (ccount < ocount) {
       // `ocount` cannot be std::nullopt here (C++ std guarantee).
       return {{ocount.value_or(1), std::move(oreason)}, true};
     }
-=======
-    }
-    if (ccount < ocount) {
-      // `ocount` cannot be std::nullopt here (C++ std guarantee).
-      return {{ocount.value_or(1), std::move(oreason)}, true};
-    }
->>>>>>> main
     return {{ccount.value_or(1), std::move(creason)}, true};
   }
 
