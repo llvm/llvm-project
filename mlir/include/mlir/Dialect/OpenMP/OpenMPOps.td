@@ -1071,7 +1071,7 @@ def TaskloopOp : OpenMP_Op<"taskloop", traits = [
     RecursiveMemoryEffects, SingleBlock
   ], clauses = [
     // See taskloop.context, which generates the runtime calls and outlined
-    // task function
+    // task function.
   ], singleRegion = true> {
   let summary = "taskloop construct";
   let description = [{
