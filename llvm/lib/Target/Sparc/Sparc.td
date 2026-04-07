@@ -41,8 +41,8 @@ include "llvm/TableGen/SearchableTable.td"
 // (weaker) RMO -> PSO -> TSO -> SC (stronger)
 // Those are defined in such a way that code compiled for a weaker model will
 // run fine on processors that only implements a stronger model.
-// This is the route that we take in LLVM; compile for RMO when targeting v9,
-// and PSO when targeting v7/v8.
+// For simplcity, LLVM targets the weakest model available in a particular
+// ISA version: RMO for v9, and PSO for v7/v8.
 //
 // As for triples, Linux/BSD and Solaris follows different conventions:
 // Linux/BSD name | Solaris name | Meaning
@@ -50,7 +50,7 @@ include "llvm/TableGen/SearchableTable.td"
 // sparc-*-*      | sparc-*-*    | 32-bit SPARC
 // sparc64-*-*    | sparcv9-*-*  | 64-bit SPARC
 // Rather confusingly, Solaris calls the 64-bit triple "sparcv9".
-// LLVM accepts both sparc64- and sparcv9- forms for triples.
+// LLVM accepts both sparc64- and sparcv9- forms for 64-bit triples.
 
 def FeatureSoftMulDiv
   : SubtargetFeature<"soft-mul-div", "UseSoftMulDiv", "true",

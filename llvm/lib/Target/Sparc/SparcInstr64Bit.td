@@ -286,6 +286,48 @@ def : Pat<(store (i64 0), ADDRri:$dst), (STXri ADDRri:$dst, (i64 G0))>;
 // We reuse CMPICC SDNodes for compares, but use new BPXCC branch nodes for
 // 64-bit compares. See LowerBR_CC.
 
+let Predicates = [Is64Bit] in {
+
+let Uses = [ICC], cc = 0b10 in
+  defm BPX : IPredBranch<"%xcc", [(SPbpxcc bb:$imm19, imm:$cond)]>;
+
+// Conditional moves on %xcc.
+let Uses = [ICC], Constraints = "$f = $rd" in {
+let intcc = 1, cc = 0b10 in {
+def MOVXCCrr : F4_1<0b101100, (outs IntRegs:$rd),
+                      (ins IntRegs:$rs2, IntRegs:$f, CCOp:$cond),
+                      "mov$cond %xcc, $rs2, $rd",
+                      [(set i32:$rd,
+                       (SPselectxcc i32:$rs2, i32:$f, imm:$cond))]>;
+def MOVXCCri : F4_2<0b101100, (outs IntRegs:$rd),
+                      (ins i32imm:$simm11, IntRegs:$f, CCOp:$cond),
+                      "mov$cond %xcc, $simm11, $rd",
+                      [(set i32:$rd,
+                       (SPselectxcc simm11:$simm11, i32:$f, imm:$cond))]>;
+} // cc
+
+let intcc = 1, opf_cc = 0b10 in {
+def FMOVS_XCC : F4_3<0b110101, 0b000001, (outs FPRegs:$rd),
+                      (ins FPRegs:$rs2, FPRegs:$f, CCOp:$cond),
+                      "fmovs$cond %xcc, $rs2, $rd",
+                      [(set f32:$rd,
+                       (SPselectxcc f32:$rs2, f32:$f, imm:$cond))]>;
+def FMOVD_XCC : F4_3<0b110101, 0b000010, (outs DFPRegs:$rd),
+                      (ins DFPRegs:$rs2, DFPRegs:$f, CCOp:$cond),
+                      "fmovd$cond %xcc, $rs2, $rd",
+                      [(set f64:$rd,
+                       (SPselectxcc f64:$rs2, f64:$f, imm:$cond))]>;
+let Predicates = [Is64Bit, HasHardQuad] in
+def FMOVQ_XCC : F4_3<0b110101, 0b000011, (outs QFPRegs:$rd),
+                      (ins QFPRegs:$rs2, QFPRegs:$f, CCOp:$cond),
+                      "fmovq$cond %xcc, $rs2, $rd",
+                      [(set f128:$rd,
+                       (SPselectxcc f128:$rs2, f128:$f, imm:$cond))]>;
+} // opf_cc
+} // Uses, Constraints
+
+} // Predicates = [Is64Bit]
+
 // Branch On integer register with Prediction (BPr).
 let isBranch = 1, isTerminator = 1, hasDelaySlot = 1 in
 multiclass BranchOnReg<list<dag> CCPattern> {
@@ -339,68 +381,6 @@ let Predicates = [HasV9], Constraints = "$f = $rd" in {
                 [(set f128:$rd, (SPselectreg f128:$rs2, f128:$f, imm:$rcond, i64:$rs1))]>;
 }
 
-let Predicates = [Is64Bit] in {
-
-let Uses = [ICC], cc = 0b10 in
-  defm BPX : IPredBranch<"%xcc", [(SPbpxcc bb:$imm19, imm:$cond)]>;
-
-// Conditional moves on %xcc.
-let Uses = [ICC], Constraints = "$f = $rd" in {
-let intcc = 1, cc = 0b10 in {
-def MOVXCCrr : F4_1<0b101100, (outs IntRegs:$rd),
-                      (ins IntRegs:$rs2, IntRegs:$f, CCOp:$cond),
-                      "mov$cond %xcc, $rs2, $rd",
-                      [(set i32:$rd,
-                       (SPselectxcc i32:$rs2, i32:$f, imm:$cond))]>;
-def MOVXCCri : F4_2<0b101100, (outs IntRegs:$rd),
-                      (ins i32imm:$simm11, IntRegs:$f, CCOp:$cond),
-                      "mov$cond %xcc, $simm11, $rd",
-                      [(set i32:$rd,
-                       (SPselectxcc simm11:$simm11, i32:$f, imm:$cond))]>;
-} // cc
-
-let intcc = 1, opf_cc = 0b10 in {
-def FMOVS_XCC : F4_3<0b110101, 0b000001, (outs FPRegs:$rd),
-                      (ins FPRegs:$rs2, FPRegs:$f, CCOp:$cond),
-                      "fmovs$cond %xcc, $rs2, $rd",
-                      [(set f32:$rd,
-                       (SPselectxcc f32:$rs2, f32:$f, imm:$cond))]>;
-def FMOVD_XCC : F4_3<0b110101, 0b000010, (outs DFPRegs:$rd),
-                      (ins DFPRegs:$rs2, DFPRegs:$f, CCOp:$cond),
-                      "fmovd$cond %xcc, $rs2, $rd",
-                      [(set f64:$rd,
-                       (SPselectxcc f64:$rs2, f64:$f, imm:$cond))]>;
-let Predicates = [Is64Bit, HasHardQuad] in
-def FMOVQ_XCC : F4_3<0b110101, 0b000011, (outs QFPRegs:$rd),
-                      (ins QFPRegs:$rs2, QFPRegs:$f, CCOp:$cond),
-                      "fmovq$cond %xcc, $rs2, $rd",
-                      [(set f128:$rd,
-                       (SPselectxcc f128:$rs2, f128:$f, imm:$cond))]>;
-} // opf_cc
-} // Uses, Constraints
-
-def : Pat<(SPselectxcc i64:$t, i64:$f, imm:$cond),
-          (MOVXCCrr $t, $f, imm:$cond)>;
-def : Pat<(SPselectxcc (i64 simm11:$t), i64:$f, imm:$cond),
-          (MOVXCCri (as_i32imm $t), $f, imm:$cond)>;
-
-def : Pat<(SPselecticc i64:$t, i64:$f, imm:$cond),
-          (MOVICCrr $t, $f, imm:$cond)>;
-def : Pat<(SPselecticc (i64 simm11:$t), i64:$f, imm:$cond),
-          (MOVICCri (as_i32imm $t), $f, imm:$cond)>;
-
-def : Pat<(SPselectfcc i64:$t, i64:$f, imm:$cond),
-          (MOVFCCrr $t, $f, imm:$cond)>;
-def : Pat<(SPselectfcc (i64 simm11:$t), i64:$f, imm:$cond),
-          (MOVFCCri (as_i32imm $t), $f, imm:$cond)>;
-
-def : Pat<(SPselectreg i64:$t, i64:$f, imm:$rcond, i64:$rs1),
-          (MOVRrr $rs1, $t, $f, imm:$rcond)>;
-def : Pat<(SPselectreg (i64 simm10:$t), i64:$f, imm:$rcond, i64:$rs1),
-          (MOVRri $rs1, (as_i32imm $t), $f, imm:$rcond)>;
-
-} // Predicates = [Is64Bit]
-
 //===----------------------------------------------------------------------===//
 // 64-bit Floating Point Conversions.
 //===----------------------------------------------------------------------===//
@@ -436,6 +416,29 @@ def FQTOX : F3_3u<2, 0b110100, 0b010000011,
                  [(set DFPRegs:$rd, (SPftox QFPRegs:$rs2))]>;
 
 } // Predicates = [HasV9]
+
+// Conditional move patterns.
+let Predicates = [Is64Bit] in {
+def : Pat<(SPselectxcc i64:$t, i64:$f, imm:$cond),
+          (MOVXCCrr $t, $f, imm:$cond)>;
+def : Pat<(SPselectxcc (i64 simm11:$t), i64:$f, imm:$cond),
+          (MOVXCCri (as_i32imm $t), $f, imm:$cond)>;
+
+def : Pat<(SPselecticc i64:$t, i64:$f, imm:$cond),
+          (MOVICCrr $t, $f, imm:$cond)>;
+def : Pat<(SPselecticc (i64 simm11:$t), i64:$f, imm:$cond),
+          (MOVICCri (as_i32imm $t), $f, imm:$cond)>;
+
+def : Pat<(SPselectfcc i64:$t, i64:$f, imm:$cond),
+          (MOVFCCrr $t, $f, imm:$cond)>;
+def : Pat<(SPselectfcc (i64 simm11:$t), i64:$f, imm:$cond),
+          (MOVFCCri (as_i32imm $t), $f, imm:$cond)>;
+
+def : Pat<(SPselectreg i64:$t, i64:$f, imm:$rcond, i64:$rs1),
+          (MOVRrr $rs1, $t, $f, imm:$rcond)>;
+def : Pat<(SPselectreg (i64 simm10:$t), i64:$f, imm:$rcond, i64:$rs1),
+          (MOVRri $rs1, (as_i32imm $t), $f, imm:$rcond)>;
+} // Predicates = [Is64Bit]
 
 // ATOMICS.
 let Predicates = [HasV9], Constraints = "$swap = $rd" in {
