@@ -2586,14 +2586,16 @@ TEST_F(AlignmentTest, AlignWithLineBreaks) {
                  /*AcrossComments=*/false, /*AlignCompound=*/false,
                  /*AlignFunctionDeclarations=*/false,
                  /*AlignFunctionPointers=*/false,
-                 /*PadOperators=*/true}));
+                 /*PadOperators=*/true,
+                 /*IgnoreTrailingCommentLength=*/false}));
   EXPECT_EQ(Style.AlignConsecutiveDeclarations,
             FormatStyle::AlignConsecutiveStyle(
                 {/*Enabled=*/false, /*AcrossEmptyLines=*/false,
                  /*AcrossComments=*/false, /*AlignCompound=*/false,
                  /*AlignFunctionDeclarations=*/true,
                  /*AlignFunctionPointers=*/false,
-                 /*PadOperators=*/false}));
+                 /*PadOperators=*/false,
+                 /*IgnoreTrailingCommentLength=*/false}));
   verifyFormat("void foo() {\n"
                "  int myVar = 5;\n"
                "  double x = 3.14;\n"
