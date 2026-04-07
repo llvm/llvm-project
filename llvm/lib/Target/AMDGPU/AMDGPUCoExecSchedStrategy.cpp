@@ -967,6 +967,12 @@ bool AMDGPUCoExecSchedStrategy::tryCandidateCoexec(SchedCandidate &Cand,
     return TryCand.Reason != NoCand;
 
   if (SameBoundary) {
+    // Avoid serializing long latency dependence chains.
+    // For acyclic path limited loops, latency was already checked above.
+    if (!RegionPolicy.DisableLatencyHeuristic && TryCand.Policy.ReduceLatency &&
+        !Rem.IsAcyclicLatencyLimited && tryLatency(TryCand, Cand, *Zone))
+      return TryCand.Reason != NoCand;
+
     // Fall through to original instruction order.
     if ((Zone->isTop() && TryCand.SU->NodeNum < Cand.SU->NodeNum) ||
         (!Zone->isTop() && TryCand.SU->NodeNum > Cand.SU->NodeNum)) {
