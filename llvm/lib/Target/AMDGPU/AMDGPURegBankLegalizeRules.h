@@ -293,8 +293,7 @@ enum LoweringMethodID {
   ApplyINTRIN_IMAGE,
   SplitBitCount64To32,
   ExtrVecEltToSel,
-  ExtrVecEltTo32,
-  ApplyDefaultVOP
+  ExtrVecEltTo32
 };
 
 enum FastRulesTypes {

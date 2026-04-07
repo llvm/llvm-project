@@ -1171,10 +1171,13 @@ bool RegBankLegalizeHelper::lower(MachineInstr &MI,
     }));
     B.setInstrAndDebugLoc(MI);
     for (unsigned i = MI.getNumDefs(); i < MI.getNumOperands(); ++i) {
-      Register Reg = MI.getOperand(i).getReg();
+      MachineOperand &Op = MI.getOperand(i);
+      if (!Op.isReg())
+        continue;
+      Register Reg = Op.getReg();
       if (MRI.getRegBank(Reg) != VgprRB) {
         auto Copy = B.buildCopy({VgprRB, MRI.getType(Reg)}, Reg);
-        MI.getOperand(i).setReg(Copy.getReg(0));
+        Op.setReg(Copy.getReg(0));
       }
     }
     return true;
@@ -1254,29 +1257,6 @@ bool RegBankLegalizeHelper::lower(MachineInstr &MI,
     return lowerExtrVecEltToSel(MI);
   case ExtrVecEltTo32:
     return lowerExtrVecEltTo32(MI);
-  case ApplyDefaultVOP: {
-    MachineOperand &Def = MI.getOperand(0);
-    Register DefReg = Def.getReg();
-    if (MRI.getRegBankOrNull(DefReg) == SgprRB) {
-      LLT Ty = MRI.getType(DefReg);
-      Register NewVgprDst = MRI.createVirtualRegister({VgprRB, Ty});
-      Def.setReg(NewVgprDst);
-      B.setInsertPt(*MI.getParent(), std::next(MI.getIterator()));
-      AMDGPU::buildReadAnyLane(B, DefReg, NewVgprDst, RBI);
-    }
-    B.setInstr(MI);
-    for (unsigned i = MI.getNumDefs(); i < MI.getNumOperands(); ++i) {
-      MachineOperand &Op = MI.getOperand(i);
-      if (!Op.isReg())
-        continue;
-      Register Reg = Op.getReg();
-      if (MRI.getRegBank(Reg) != VgprRB) {
-        auto Copy = B.buildCopy({VgprRB, MRI.getType(Reg)}, Reg);
-        Op.setReg(Copy.getReg(0));
-      }
-    }
-    return true;
-  }
   }
 
   if (!WFI.SgprWaterfallOperandRegs.empty()) {

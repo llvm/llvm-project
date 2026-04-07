@@ -1842,6 +1842,6 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
        amdgcn_wmma_scale16_f32_16x16x128_f8f6f4, amdgcn_wmma_f32_32x16x128_f4,
        amdgcn_wmma_scale_f32_32x16x128_f4,
        amdgcn_wmma_scale16_f32_32x16x128_f4})
-      .Any({{}, {{}, {}, ApplyDefaultVOP}});
+      .Any({{}, {{}, {}, ApplyAllVgpr}});
 
 } // end initialize rules
