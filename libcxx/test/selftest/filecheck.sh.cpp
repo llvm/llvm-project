@@ -8,8 +8,8 @@
 
 // REQUIRES: has-filecheck
 
-// Make sure that we can use %{filecheck} to write tests when the `has-filecheck`
+// Make sure that we can use FileCheck to write tests when the `has-filecheck`
 // Lit feature is defined.
 
-// RUN: echo "hello world" | %{filecheck} %s
+// RUN: echo "hello world" | FileCheck %s
 // CHECK: hello world

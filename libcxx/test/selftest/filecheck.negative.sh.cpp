@@ -8,9 +8,9 @@
 
 // REQUIRES: has-filecheck
 
-// Make sure that %{filecheck} fails when it should fail. This ensure that %{filecheck}
+// Make sure that FileCheck fails when it should fail. This ensure that FileCheck
 // actually checks the content of the file.
 // XFAIL: *
 
-// RUN: echo "hello world" | %{filecheck} %s
+// RUN: echo "hello world" | FileCheck %s
 // CHECK: foobar

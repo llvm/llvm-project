@@ -296,17 +296,13 @@ features = [
             """,
         ),
     ),
-    # Whether a `FileCheck` executable is available. Note that we intend not to depend
-    # on how that executable has been installed: we can either use the LLVM FileCheck
-    # executable or the `filecheck` Python port of the same utility.
-    Feature(
-        name="has-filecheck",
-        when=lambda cfg: runScriptExitCode(cfg, ["filecheck --version"]) == 0,
-        actions=[AddSubstitution("%{filecheck}", "filecheck")],
-    ),
+    # Whether `FileCheck` and `split-file` executables are available.
     Feature(
         name="has-filecheck",
         when=lambda cfg: runScriptExitCode(cfg, ["FileCheck --version"]) == 0,
-        actions=[AddSubstitution("%{filecheck}", "FileCheck")],
+    ),
+    Feature(
+        name="has-splitfile",
+        when=lambda cfg: runScriptExitCode(cfg, ["split-file --version"]) == 0,
     ),
 ]

@@ -58,11 +58,8 @@ jobs:
         with:
           persist-credentials: false
       - name: ${{ matrix.config }}.${{ matrix.cxx }}
-        # TODO: install venv in the Docker image instead
         run: |
-          sudo apt-get update
-          sudo apt-get install -y python3.12-venv
-          python3 -m venv .venv
+          python3 -m venv --system-site-packages .venv
           source .venv/bin/activate
           pip install -r libcxx/test/requirements.txt
           libcxx/utils/ci/run-buildbot ${{ matrix.config }}
@@ -113,9 +110,7 @@ jobs:
           persist-credentials: false
       - name: ${{ matrix.config }}
         run: |
-          sudo apt-get update
-          sudo apt-get install -y python3.12-venv
-          python3 -m venv .venv
+          python3 -m venv --system-site-packages .venv
           source .venv/bin/activate
           pip install -r libcxx/test/requirements.txt
           libcxx/utils/ci/run-buildbot ${{ matrix.config }}
@@ -176,9 +171,7 @@ jobs:
           persist-credentials: false
       - name: ${{ matrix.config }}
         run: |
-          sudo apt-get update
-          sudo apt-get install -y python3.12-venv
-          python3 -m venv .venv
+          python3 -m venv --system-site-packages .venv
           source .venv/bin/activate
           pip install -r libcxx/test/requirements.txt
           libcxx/utils/ci/run-buildbot ${{ matrix.config }}
