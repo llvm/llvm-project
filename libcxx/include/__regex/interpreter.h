@@ -85,6 +85,7 @@ enum class __state : uint8_t {
   __match_icase_backref,
   __match_character_list,
   __match_no_character_list,
+  __match_simple_character_list,
   __marked_subexpression_begin,
   __marked_subexpression_end,
   __branch_n_to_m_matcher,
@@ -100,6 +101,7 @@ enum class __state : uint8_t {
 
 template <class _CharT>
 union __interpreter_info {
+  __interpreter_info() = default;
   __interpreter_info(__state __st) : __state_(__st) {}
   __interpreter_info(_CharT __c) : __char_(__c) {}
   __interpreter_info(uint8_t __int) : __int_(__int) {}
@@ -531,6 +533,20 @@ pair<bool, size_t> __exec_lookahead(
         __current += __len;
       } break;
 
+      case __match_simple_character_list: {
+        if (__current == __last)
+          return {false, __counter};
+
+        using _SetT = unsigned _BitInt(256);
+
+        _SetT __set;
+        __builtin_memcpy(&__set, __code + __current_pos, sizeof(_SetT));
+        __current_pos += sizeof(_SetT);
+        if (!(__set & (_SetT(1) << *__current)))
+          return {false, __counter};
+        ++__current;
+      } break;
+
       case __match_character_list:
       case __match_no_character_list: {
         if (__current == __last)
@@ -801,6 +817,59 @@ public:
   }
 
   void __push_bracket_expr(bool __negate, const __bracket_expr<_CharT, _Traits>& __expr) {
+    bool __has_digraph_range = false;
+    for (size_t __i = 1; __i < __expr.__ranges_.size(); __i += 2) {
+      if (__expr.__ranges_[__i] != '\0')
+        __has_digraph_range = true;
+    }
+
+    if constexpr (__is_same(_CharT, char)) {
+      if (!__has_digraph_range && __expr.__digraphs_.empty() && __expr.__equivalences_.empty()) {
+        using _SetT = unsigned _BitInt(256);
+
+        _SetT __set = 0;
+
+        if (__expr.__neg_mask_ != 0 || !__expr.__neg_chars_.empty()) {
+          for (size_t __i = 0; __i != 256; ++__i) {
+            if (__traits_.isctype(char(__i), __expr.__neg_mask_))
+              __set |= _SetT(1) << __i;
+          }
+          for (auto __c : __expr.__neg_chars_)
+            __set |= _SetT(1) << __c;
+          __set = ~__set;
+        }
+
+        for (auto __c : __expr.__chars_)
+          __set |= _SetT(1) << __c;
+
+        for (size_t __i = 0; __i != __expr.__ranges_.size(); __i += 4) {
+          for (char __j = __expr.__ranges_[__i]; __j != __expr.__ranges_[__i + 2]; ++__j)
+            __set |= _SetT(1) << __j;
+        }
+
+        if (__expr.__mask_ != 0) {
+          for (size_t __i = 0; __i != 256; ++__i) {
+            if (__traits_.isctype(char(__i), __expr.__mask_))
+              __set |= _SetT(1) << __i;
+          }
+        }
+
+        if (__negate)
+          __set = ~__set;
+
+        if (__builtin_popcountg(__set) == 1) {
+          __push_char_matcher(__builtin_ctzg(__set));
+          return;
+        }
+
+        push_back(__state::__match_simple_character_list);
+        __interpreter_info<_CharT> __buffer[sizeof(_SetT)];
+        __builtin_memcpy(__buffer, &__set, sizeof(_SetT));
+        append_range(__buffer);
+        return;
+      }
+    }
+
     push_back(__negate ? __state::__match_no_character_list : __state::__match_character_list);
 
     _CharT __buffer[std::max(sizeof(typename _Traits::char_class_type) / sizeof(_CharT), size_t(1))];

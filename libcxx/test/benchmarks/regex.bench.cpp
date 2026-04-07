@@ -59,4 +59,27 @@ static void BM_regex_run_any_matcher(benchmark::State& state) {
 }
 BENCHMARK(BM_regex_run_any_matcher);
 
+static void BM_regex_run_alphabet_matcher(benchmark::State& state) {
+  std::regex r("[a-zA-Z]*");
+  std::string input;
+  input.append(1 << 16, 'a');
+
+  for (auto _ : state) {
+    std::regex_search(input, r);
+  }
+}
+BENCHMARK(BM_regex_run_alphabet_matcher);
+
+static void BM_regex_run_mail_matcher(benchmark::State& state) {
+  std::regex r(
+      R"regex((?:(?:[^<>()\[\].,;:\s@"]+(?:\.[^<>()\[\].,;:\s@"]+)*)|".+")@(?:(?:[^<>()\[\].,;:\s@"]+\.)+[^<>()\[\].,;:\s@"]{2,}))regex");
+  std::string input;
+  input.append(1 << 8, 'a');
+
+  for (auto _ : state) {
+    std::regex_search(input, r);
+  }
+}
+BENCHMARK(BM_regex_run_mail_matcher);
+
 BENCHMARK_MAIN();
