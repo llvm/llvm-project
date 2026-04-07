@@ -44,29 +44,27 @@ static StringRef getImageName(const OffloadBinary &OB) {
   }
 }
 
-std::string Indent(uint64_t Level) { return std::string(Level * 2, ' '); }
-
 /// Print metadata from an OffloadBinary.
 static void printOffloadBinaryMetadata(const OffloadBinary &OB,
                                        uint64_t level) {
-  const std::string IndentStr = Indent(level);
-
-  outs() << IndentStr << left_justify("kind", 16) << getImageName(OB) << "\n";
-  outs() << IndentStr << left_justify("arch", 16) << OB.getArch() << "\n";
-  outs() << IndentStr << left_justify("triple", 16) << OB.getTriple() << "\n";
-  outs() << IndentStr << left_justify("producer", 16)
-         << getOffloadKindName(OB.getOffloadKind()) << "\n";
+  outs().indent(level * 2) << left_justify("kind", 16) << getImageName(OB)
+                           << "\n";
+  outs().indent(level * 2) << left_justify("arch", 16) << OB.getArch() << "\n";
+  outs().indent(level * 2) << left_justify("triple", 16) << OB.getTriple()
+                           << "\n";
+  outs().indent(level * 2) << left_justify("producer", 16)
+                           << getOffloadKindName(OB.getOffloadKind()) << "\n";
 
   StringRef InnerImage = OB.getImage();
-  outs() << IndentStr << left_justify("image size", 16) << InnerImage.size()
-         << " bytes\n";
+  outs().indent(level * 2) << left_justify("image size", 16)
+                           << InnerImage.size() << " bytes\n";
 }
 
 static void printBinary(const OffloadBinary &OB, uint64_t Index,
                         uint64_t Level = 0, std::string ParentIndex = "") {
-  outs() << "\n"
-         << Indent(Level) << "OFFLOADING IMAGE [" << ParentIndex << Index
-         << "]:\n";
+  outs() << "\n";
+  outs().indent(Level * 2) << "OFFLOADING IMAGE [" << ParentIndex << Index
+                           << "]:\n";
 
   printOffloadBinaryMetadata(OB, Level);
 
@@ -75,7 +73,7 @@ static void printBinary(const OffloadBinary &OB, uint64_t Index,
     return;
 
   MemoryBufferRef InnerBuffer(ImageData, "inner-offload-binary");
-  llvm::SmallVector<OffloadFile> InnerBinaries;
+  SmallVector<OffloadFile> InnerBinaries;
   auto Err = extractOffloadBinaries(InnerBuffer, InnerBinaries);
   if (Err) {
     reportWarning("failed to extract nested OffloadBinary: " +
@@ -87,8 +85,8 @@ static void printBinary(const OffloadBinary &OB, uint64_t Index,
          "An offload binary with a magic number should contain at least one "
          "binary");
 
-  outs() << Indent(Level) << left_justify("nested images", 16)
-         << InnerBinaries.size() << "\n";
+  outs().indent(Level * 2) << left_justify("nested images", 16)
+                           << InnerBinaries.size() << "\n";
 
   for (uint64_t I = 0, E = InnerBinaries.size(); I != E; ++I) {
     const OffloadBinary *InnerOB = InnerBinaries[I].getBinary();
