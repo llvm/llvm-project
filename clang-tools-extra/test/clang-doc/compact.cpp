@@ -5,6 +5,6 @@
 
 class Foo {};
 
-// CLASS: {"Contexts":[{"DocumentationFileName":"index","End":true,"Name":"Global Namespace","QualName":"GlobalNamespace","RelativePath":"{{.*}}","USR":"0000000000000000000000000000000000000000"}],"DocumentationFileName":"_ZTV3Foo","HasContexts":true,"InfoType":"record","IsTypedef":false,"Location":{"Filename":"/home/erick/code/llvm/clang-tools-extra/test/clang-doc/compact.cpp","LineNumber":6},"MangledName":"_ZTV3Foo","Name":"Foo","Namespace":["GlobalNamespace"],"Path":"GlobalNamespace","TagType":"class","USR":"{{([0-9A-F]{40})}}"}
+// CLASS: {"Contexts":[{"DocumentationFileName":"index","End":true,"Name":"Global Namespace","QualName":"GlobalNamespace","RelativePath":"{{.*}}","USR":"0000000000000000000000000000000000000000"}],"DocumentationFileName":"_ZTV3Foo","HasContexts":true,"InfoType":"record","IsTypedef":false,"Location":{"Filename":"{{.*}}compact.cpp","LineNumber":6},"MangledName":"_ZTV3Foo","Name":"Foo","Namespace":["GlobalNamespace"],"Path":"GlobalNamespace","TagType":"class","USR":"{{([0-9A-F]{40})}}"}
 
 // INDEX: {"Index":[{"Name":"GlobalNamespace","QualName":"GlobalNamespace","Type":"namespace","USR":"0000000000000000000000000000000000000000"}]}
