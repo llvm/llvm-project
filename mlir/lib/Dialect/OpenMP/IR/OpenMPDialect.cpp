@@ -3382,8 +3382,9 @@ void TaskloopContextOp::build(OpBuilder &builder, OperationState &state,
 
 TaskloopWrapperOp TaskloopContextOp::getLoopOp() {
   return cast<TaskloopWrapperOp>(
-      *llvm::find_if(getRegion().front(),
-                     [](mlir::Operation &op) { return isa<TaskloopWrapperOp>(op); }));
+      *llvm::find_if(getRegion().front(), [](mlir::Operation &op) {
+        return isa<TaskloopWrapperOp>(op);
+      }));
 }
 
 LogicalResult TaskloopContextOp::verify() {
