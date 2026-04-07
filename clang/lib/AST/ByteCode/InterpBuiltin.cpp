@@ -4447,44 +4447,45 @@ static bool interp__builtin_ia32_vpdp(InterpState &S, CodePtr OpPC,
   const auto *SrcVecT = Call->getArg(0)->getType()->castAs<VectorType>();
   const auto *OpAVecT = Call->getArg(1)->getType()->castAs<VectorType>();
   const auto *OpBVecT = Call->getArg(2)->getType()->castAs<VectorType>();
+  const auto *DstVecT = Call->getType()->castAs<VectorType>();
 
   assert(OpAVecT->getNumElements() == OpBVecT->getNumElements());
 
-  unsigned NumSrcElts = SrcVecT->getNumElements();
-  unsigned NumOperandElts = OpAVecT->getNumElements();
-  unsigned EltsPerLane = NumOperandElts / NumSrcElts;
+  unsigned NumSrcElems = SrcVecT->getNumElements();
+  unsigned NumOperandElems = OpAVecT->getNumElements();
+  unsigned ElemsPerLane = NumOperandElems / NumSrcElems;
 
   PrimType SrcElemT = *S.getContext().classify(SrcVecT->getElementType());
   PrimType OpAElemT = *S.getContext().classify(OpAVecT->getElementType());
   PrimType OpBElemT = *S.getContext().classify(OpBVecT->getElementType());
+  PrimType DstElemT = *S.getContext().classify(DstVecT->getElementType());
+
+  assert(SrcElemT == DstElemT);
 
   const Pointer &OpBPtr = S.Stk.pop<Pointer>();
   const Pointer &OpAPtr = S.Stk.pop<Pointer>();
   const Pointer &SrcPtr = S.Stk.pop<Pointer>();
   const Pointer &Dst = S.Stk.peek<Pointer>();
 
-  for (unsigned I = 0; I != NumSrcElts; ++I) {
+  for (unsigned I = 0; I != NumSrcElems; ++I) {
     APSInt Acc;
     INT_TYPE_SWITCH_NO_BOOL(SrcElemT, { Acc = SrcPtr.elem<T>(I).toAPSInt(); });
     Acc = Acc.sext(64);
-    for (unsigned J = 0; J != EltsPerLane; ++J) {
+    for (unsigned J = 0; J != ElemsPerLane; ++J) {
       APSInt OpA, OpB;
-      INT_TYPE_SWITCH_NO_BOOL(OpAElemT, {
-        OpA = OpAPtr.elem<T>(EltsPerLane * I + J).toAPSInt();
-        });
-      INT_TYPE_SWITCH_NO_BOOL(OpBElemT, {
-		OpB = OpBPtr.elem<T>(EltsPerLane * I + J).toAPSInt();
-		});
-	  OpA = APSInt(OpA.extend(64), false);
+      INT_TYPE_SWITCH_NO_BOOL(
+          OpAElemT, { OpA = OpAPtr.elem<T>(ElemsPerLane * I + J).toAPSInt(); });
+      INT_TYPE_SWITCH_NO_BOOL(
+          OpBElemT, { OpB = OpBPtr.elem<T>(ElemsPerLane * I + J).toAPSInt(); });
+      OpA = APSInt(OpA.extend(64), false);
       OpB = APSInt(OpB.extend(64), false);
       Acc += OpA * OpB;
     }
-    if (IsSaturating) {
+    if (IsSaturating)
       Acc = APSInt(Acc.truncSSat(32), false);
-    } else {
-	  Acc = APSInt(Acc.trunc(32), false);
-	}
-    INT_TYPE_SWITCH_NO_BOOL(SrcElemT,
+    else
+      Acc = APSInt(Acc.trunc(32), false);
+    INT_TYPE_SWITCH_NO_BOOL(DstElemT,
                             { Dst.elem<T>(I) = static_cast<T>(Acc); });
   }
   Dst.initializeAllElements();
