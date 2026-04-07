@@ -240,3 +240,31 @@ bb5: ; preds = %bb3, %bb2, %bb
   %i9 = insertvalue { i64, i64 } %i8, i64 %i6, 1
   ret { i64, i64 } %i9
 }
+
+define i32 @NotPropagatingPoisonToUndef(i8 %cond, i32 %x) {
+; NO_FWD-LABEL: @NotPropagatingPoisonToUndef(
+; NO_FWD-NEXT:  D:
+; NO_FWD-NEXT:    [[COND1:%.*]] = icmp eq i8 [[COND:%.*]], 1
+; NO_FWD-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[COND1]], i32 0, i32 [[X:%.*]]
+; NO_FWD-NEXT:    ret i32 [[SPEC_SELECT]]
+;
+; FWD-LABEL: @NotPropagatingPoisonToUndef(
+; FWD-NEXT:  D:
+; FWD-NEXT:    [[COND1:%.*]] = icmp eq i8 [[COND:%.*]], 1
+; FWD-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[COND1]], i32 0, i32 [[X:%.*]]
+; FWD-NEXT:    ret i32 [[SPEC_SELECT]]
+;
+  switch i8 %cond, label %A [
+  i8 0, label %B
+  i8 1, label %C
+  ]
+A:
+  br label %D
+B:
+  br label %D
+C:
+  br label %D
+D:
+  %y = phi i32 [ undef, %A ], [ %x, %B ], [ 0, %C ]
+  ret i32 %y
+}
