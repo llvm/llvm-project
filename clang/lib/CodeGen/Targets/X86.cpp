@@ -2869,9 +2869,6 @@ bool X86_64ABIInfo::passRegCallStructTypeDirectly(
     QualType Ty, SmallVectorImpl<llvm::Type *> &CoerceElts, unsigned &NeededInt,
     unsigned &NeededSSE, unsigned &MaxVectorWidth) const {
 
-  if (isEmptyRecord(getContext(), Ty, true))
-    return true;
-
   auto *RD =
       cast<RecordType>(Ty.getCanonicalType())->getDecl()->getDefinitionOrSelf();
   if (RD->hasFlexibleArrayMember())
@@ -2896,6 +2893,8 @@ bool X86_64ABIInfo::passRegCallStructTypeDirectly(
   for (const auto *FD : RD->fields()) {
     QualType MTy = FD->getType();
     if (MTy->isRecordType() && !MTy->isUnionType()) {
+      if (isEmptyRecord(getContext(), MTy, true))
+        continue;
       if (!passRegCallStructTypeDirectly(MTy, CoerceElts, NeededInt, NeededSSE,
                                          MaxVectorWidth))
         return false;
