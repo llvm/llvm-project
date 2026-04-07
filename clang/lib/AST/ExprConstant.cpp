@@ -12407,6 +12407,45 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     return Success(V, E);
   };
 
+  auto EvalVectorDotProduct = [&](bool IsSaturating) -> bool {
+    APValue Source, OperandA, OperandB;
+    if (!EvaluateAsRValue(Info, E->getArg(0), Source) ||
+        !EvaluateAsRValue(Info, E->getArg(1), OperandA) ||
+        !EvaluateAsRValue(Info, E->getArg(2), OperandB)) {
+      return false;
+    }
+
+    unsigned NumSrcElems = Source.getVectorLength();
+    unsigned NumOperandElems = OperandA.getVectorLength();
+    unsigned ElemsPerLane = NumOperandElems / NumSrcElems;
+
+    assert(OperandA.getVectorLength() == OperandB.getVectorLength());
+
+    SmallVector<APValue, 16> Result;
+    Result.reserve(NumSrcElems);
+    for (unsigned I = 0; I != NumSrcElems; ++I) {
+      APSInt DotProduct = Source.getVectorElt(I).getInt();
+      DotProduct = DotProduct.extend(64);
+      for (unsigned J = 0; J != ElemsPerLane; ++J) {
+        APSInt OpA = APSInt(
+            OperandA.getVectorElt(ElemsPerLane * I + J).getInt().extend(64),
+            false);
+        APSInt OpB = APSInt(
+            OperandB.getVectorElt(ElemsPerLane * I + J).getInt().extend(64),
+            false);
+        DotProduct += OpA * OpB;
+      }
+      if (IsSaturating) {
+        DotProduct = APSInt(DotProduct.truncSSat(32), false);
+      } else {
+        DotProduct = APSInt(DotProduct.trunc(32), false);
+      }
+      Result.push_back(APValue(DotProduct));
+    }
+
+    return Success(APValue(Result.data(), Result.size()), E);
+  };
+
   switch (E->getBuiltinCallee()) {
   default:
     return false;
@@ -14774,72 +14813,17 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
   case X86::BI__builtin_ia32_vpdpwssd128:
   case X86::BI__builtin_ia32_vpdpwssd256:
   case X86::BI__builtin_ia32_vpdpwssd512:
+  case X86::BI__builtin_ia32_vpdpbusd128:
+  case X86::BI__builtin_ia32_vpdpbusd256:
+  case X86::BI__builtin_ia32_vpdpbusd512:
+    return EvalVectorDotProduct(false);
   case X86::BI__builtin_ia32_vpdpwssds128:
   case X86::BI__builtin_ia32_vpdpwssds256:
   case X86::BI__builtin_ia32_vpdpwssds512:
   case X86::BI__builtin_ia32_vpdpbusds128:
   case X86::BI__builtin_ia32_vpdpbusds256:
   case X86::BI__builtin_ia32_vpdpbusds512:
-  case X86::BI__builtin_ia32_vpdpbusd128:
-  case X86::BI__builtin_ia32_vpdpbusd256:
-  case X86::BI__builtin_ia32_vpdpbusd512: {
-    unsigned BuiltinID = E->getBuiltinCallee();
-    bool IsSaturating = false;
-    switch (BuiltinID) {
-    case X86::BI__builtin_ia32_vpdpwssd128:
-    case X86::BI__builtin_ia32_vpdpwssd256:
-    case X86::BI__builtin_ia32_vpdpwssd512:
-    case X86::BI__builtin_ia32_vpdpbusd128:
-    case X86::BI__builtin_ia32_vpdpbusd256:
-    case X86::BI__builtin_ia32_vpdpbusd512:
-      IsSaturating = false;
-      break;
-    case X86::BI__builtin_ia32_vpdpwssds128:
-    case X86::BI__builtin_ia32_vpdpwssds256:
-    case X86::BI__builtin_ia32_vpdpwssds512:
-    case X86::BI__builtin_ia32_vpdpbusds128:
-    case X86::BI__builtin_ia32_vpdpbusds256:
-    case X86::BI__builtin_ia32_vpdpbusds512:
-      IsSaturating = true;
-      break;
-    }
-    APValue Source, OperandA, OperandB;
-    if (!EvaluateAsRValue(Info, E->getArg(0), Source) ||
-        !EvaluateAsRValue(Info, E->getArg(1), OperandA) ||
-        !EvaluateAsRValue(Info, E->getArg(2), OperandB)) {
-      return false;
-    }
-
-    unsigned NumSrcElts = Source.getVectorLength();
-    unsigned NumOperandElts = OperandA.getVectorLength();
-    unsigned EltsPerLane = NumOperandElts / NumSrcElts;
-
-    assert(OperandA.getVectorLength() == OperandB.getVectorLength());
-
-    SmallVector<APValue, 16> Result;
-    Result.reserve(NumSrcElts);
-    for (unsigned I = 0; I != NumSrcElts; ++I) {
-      APSInt DotProduct = Source.getVectorElt(I).getInt();
-      DotProduct = DotProduct.extend(64);
-      for (unsigned J = 0; J != EltsPerLane; ++J) {
-        APSInt OpA = APSInt(
-            OperandA.getVectorElt(EltsPerLane * I + J).getInt().extend(64),
-            false);
-        APSInt OpB = APSInt(
-            OperandB.getVectorElt(EltsPerLane * I + J).getInt().extend(64),
-            false);
-        DotProduct += OpA * OpB;
-      }
-      if (IsSaturating) {
-        DotProduct = APSInt(DotProduct.truncSSat(32), false);
-      } else {
-        DotProduct = APSInt(DotProduct.trunc(32), false);
-      }
-      Result.push_back(APValue(DotProduct));
-    }
-
-    return Success(APValue(Result.data(), Result.size()), E);
-  }
+    return EvalVectorDotProduct(true);
   }
 }
 
