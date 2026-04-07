@@ -65,7 +65,9 @@ struct PrintingPolicy {
 
     /// When printing an anonymous tag name, also print the location of that
     /// entity (e.g., "enum <anonymous at t.h:10:5>").
-    SourceLocation
+    SourceLocation,
+
+    CanonicalName,
   };
 
   /// Create a default printing policy for the specified language.
@@ -208,7 +210,7 @@ struct PrintingPolicy {
   unsigned ConstantArraySizeAsWritten : 1;
 
   LLVM_PREFERRED_TYPE(AnonymousTagMode)
-  unsigned AnonymousTagNameStyle : 1;
+  unsigned AnonymousTagNameStyle : 2;
 
   /// When true, suppress printing of the __strong lifetime qualifier in ARC.
   LLVM_PREFERRED_TYPE(bool)
