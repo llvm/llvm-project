@@ -408,7 +408,7 @@ CIRGenFunction::emitCoroutineBody(const CoroutineBodyStmt &s) {
     curCoro.data->currentAwaitKind = cir::AwaitKind::User;
 
     mlir::OpBuilder::InsertPoint userBody;
-    auto coroBod =
+    auto coroBodOp =
         cir::CoroBodyOp::create(builder, openCurlyLoc, /*scopeBuilder=*/
                                 [&](mlir::OpBuilder &b, mlir::Location loc) {
                                   userBody = b.saveInsertionPoint();
@@ -426,8 +426,8 @@ CIRGenFunction::emitCoroutineBody(const CoroutineBodyStmt &s) {
       }
     }
 
-    mlir::Block &coroBodyBlock = coroBod.getBodyRegion().back();
-    if (!coroBod.getBodyRegion().back().mightHaveTerminator()) {
+    mlir::Block &coroBodyBlock = coroBodOp.getBody().back();
+    if (!coroBodyBlock.mightHaveTerminator()) {
       mlir::OpBuilder::InsertionGuard guard(builder);
       builder.setInsertionPointToEnd(&coroBodyBlock);
       cir::YieldOp::create(builder, openCurlyLoc);

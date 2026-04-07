@@ -4180,7 +4180,7 @@ def CIR_CoroBodyOp : CIR_Op<"coro.body", [
     final suspend point of the coroutine.
   }];
 
-  let regions = (region AnyRegion:$bodyRegion);
+  let regions = (region AnyRegion:$body);
 
   let skipDefaultBuilders = 1;
 
@@ -4189,7 +4189,7 @@ def CIR_CoroBodyOp : CIR_Op<"coro.body", [
   ];
 
   let assemblyFormat = [{
-    $bodyRegion attr-dict
+    $body attr-dict
   }];
 
   let hasLLVMLowering = false;
@@ -4207,10 +4207,13 @@ def CIR_CoReturnOp : CIR_Op<"co_return", [
   let description = [{
     The `cir.co_return` operation models a coroutine return point inside a
     `cir.coro.body` region.
-    This operation is expected to appear only within a `cir.coro.body` region.
+    This operation is expected to appear only within a `cir.coro.body` region,
+    but it may be nested within other operations or regions inside that body.
   }];
 
-  let assemblyFormat = "attr-dict ";
+  let assemblyFormat = [{
+    attr-dict
+  }];
 
   let hasVerifier = 1;
 

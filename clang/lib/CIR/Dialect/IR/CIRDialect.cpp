@@ -2976,7 +2976,7 @@ void cir::CoroBodyOp::getSuccessorRegions(
     return;
   }
 
-  regions.push_back(RegionSuccessor(&getBodyRegion()));
+  regions.push_back(RegionSuccessor(&getBody()));
 }
 
 mlir::ValueRange
