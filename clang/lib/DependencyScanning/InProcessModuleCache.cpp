@@ -84,8 +84,6 @@ class InProcessModuleCache : public ModuleCache {
 public:
   InProcessModuleCache(ModuleCacheEntries &Entries) : Entries(Entries) {}
 
-  void prepareForGetLock(StringRef Filename) override {}
-
   std::unique_ptr<llvm::AdvisoryLock> getLock(StringRef Filename) override {
     auto &Entry = [&]() -> ModuleCacheEntry & {
       std::lock_guard<std::mutex> Lock(Entries.Mutex);
