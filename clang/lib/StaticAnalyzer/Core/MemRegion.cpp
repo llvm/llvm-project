@@ -1044,21 +1044,26 @@ const VarRegion *MemRegionManager::getVarRegion(const VarDecl *D,
   if (PVD) {
     unsigned Index = PVD->getFunctionScopeIndex();
     const StackFrameContext *SFC = LC->getStackFrame();
-    const Stmt *CallSite = SFC->getCallSite();
+    const Expr *CallSite = SFC->getCallSite();
     if (CallSite) {
-      const Decl *D = SFC->getDecl();
-      if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
-        if (Index < FD->param_size() && FD->parameters()[Index] == PVD)
-          return getSubRegion<ParamVarRegion>(cast<Expr>(CallSite), Index,
-                                              getStackArgumentsRegion(SFC));
-      } else if (const auto *BD = dyn_cast<BlockDecl>(D)) {
-        if (Index < BD->param_size() && BD->parameters()[Index] == PVD)
-          return getSubRegion<ParamVarRegion>(cast<Expr>(CallSite), Index,
-                                              getStackArgumentsRegion(SFC));
-      } else {
-        return getSubRegion<ParamVarRegion>(cast<Expr>(CallSite), Index,
+      const Decl *CalleeDecl = SFC->getDecl();
+      bool ValidParam = true;
+      if (const auto *FD = dyn_cast<FunctionDecl>(CalleeDecl)) {
+        ValidParam =
+            (Index < FD->param_size() && FD->getParamDecl(Index) == PVD);
+      } else if (const auto *BD = dyn_cast<BlockDecl>(CalleeDecl)) {
+        ValidParam =
+            (Index < BD->param_size() && BD->getParamDecl(Index) == PVD);
+      }
+
+      if (ValidParam) {
+        return getSubRegion<ParamVarRegion>(CallSite, Index,
                                             getStackArgumentsRegion(SFC));
       }
+      // FIXME: If ValidParam was false, this method would "fall through" and
+      // eventually return a NonParamVarRegion for this ParamVarDecl. That
+      // seems to be buggy, so I strongly suspect that ValidParam always ends
+      // up being true.
     }
   }
 

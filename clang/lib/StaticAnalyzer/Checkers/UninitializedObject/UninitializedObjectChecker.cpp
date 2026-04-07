@@ -172,7 +172,7 @@ void UninitializedObjectChecker::checkEndFunction(
     return;
 
   PathDiagnosticLocation LocUsedForUniqueing;
-  const Stmt *CallSite = Context.getStackFrame()->getCallSite();
+  const Expr *CallSite = Context.getStackFrame()->getCallSite();
   if (CallSite)
     LocUsedForUniqueing = PathDiagnosticLocation::createBegin(
         CallSite, Context.getSourceManager(), Node->getLocationContext());
