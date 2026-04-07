@@ -2420,7 +2420,7 @@ define <2 x i64> @bitcast_v4f32_to_v2i64(<2 x i64> %arg) {
 ; GCN-NEXT:    v_cmp_ge_u32_e32 vcc, v1, v4
 ; GCN-NEXT:    v_cndmask_b32_e32 v0, v0, v5, vcc
 ; GCN-NEXT:    v_mov_b32_e32 v1, 0
-; GCN-NEXT:  .LBB28_4:
+; GCN-NEXT:  .LBB28_4: ; %.split
 ; GCN-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GCN-NEXT:    v_or_b32_e32 v4, s11, v3
 ; GCN-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v4
@@ -2561,7 +2561,7 @@ define <2 x i64> @bitcast_v4f32_to_v2i64(<2 x i64> %arg) {
 ; GCN-NEXT:    v_cmp_ge_u32_e32 vcc, v4, v2
 ; GCN-NEXT:    v_cndmask_b32_e32 v4, v3, v5, vcc
 ; GCN-NEXT:    v_mov_b32_e32 v5, 0
-; GCN-NEXT:  .LBB28_8:
+; GCN-NEXT:  .LBB28_8: ; %.split.split
 ; GCN-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GCN-NEXT:    v_mov_b32_e32 v2, v4
 ; GCN-NEXT:    v_mov_b32_e32 v3, v5
@@ -2699,7 +2699,7 @@ define <2 x i64> @bitcast_v4f32_to_v2i64(<2 x i64> %arg) {
 ; VI-NEXT:    v_cmp_ge_u32_e32 vcc, v1, v4
 ; VI-NEXT:    v_cndmask_b32_e32 v0, v0, v5, vcc
 ; VI-NEXT:    v_mov_b32_e32 v1, 0
-; VI-NEXT:  .LBB28_4:
+; VI-NEXT:  .LBB28_4: ; %.split
 ; VI-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; VI-NEXT:    v_or_b32_e32 v4, s11, v3
 ; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v4
@@ -2826,7 +2826,7 @@ define <2 x i64> @bitcast_v4f32_to_v2i64(<2 x i64> %arg) {
 ; VI-NEXT:    v_cmp_ge_u32_e32 vcc, v4, v2
 ; VI-NEXT:    v_cndmask_b32_e32 v4, v3, v5, vcc
 ; VI-NEXT:    v_mov_b32_e32 v5, 0
-; VI-NEXT:  .LBB28_8:
+; VI-NEXT:  .LBB28_8: ; %.split.split
 ; VI-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; VI-NEXT:    v_mov_b32_e32 v2, v4
 ; VI-NEXT:    v_mov_b32_e32 v3, v5
@@ -2961,7 +2961,7 @@ define <2 x i64> @bitcast_v4f32_to_v2i64(<2 x i64> %arg) {
 ; GFX9-NEXT:    v_cmp_ge_u32_e32 vcc, v1, v4
 ; GFX9-NEXT:    v_cndmask_b32_e32 v0, v0, v5, vcc
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0
-; GFX9-NEXT:  .LBB28_4:
+; GFX9-NEXT:  .LBB28_4: ; %.split
 ; GFX9-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX9-NEXT:    v_or_b32_e32 v4, s11, v3
 ; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v4
@@ -3085,7 +3085,7 @@ define <2 x i64> @bitcast_v4f32_to_v2i64(<2 x i64> %arg) {
 ; GFX9-NEXT:    v_cmp_ge_u32_e32 vcc, v4, v2
 ; GFX9-NEXT:    v_cndmask_b32_e32 v4, v3, v5, vcc
 ; GFX9-NEXT:    v_mov_b32_e32 v5, 0
-; GFX9-NEXT:  .LBB28_8:
+; GFX9-NEXT:  .LBB28_8: ; %.split.split
 ; GFX9-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX9-NEXT:    v_mov_b32_e32 v2, v4
 ; GFX9-NEXT:    v_mov_b32_e32 v3, v5
@@ -3254,7 +3254,7 @@ define <2 x i64> @bitcast_v4f32_to_v2i64(<2 x i64> %arg) {
 ; GFX11-NEXT:    v_add_nc_u32_e32 v5, 1, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_cndmask_b32 v0, v0, v5
-; GFX11-NEXT:  .LBB28_4:
+; GFX11-NEXT:  .LBB28_4: ; %.split
 ; GFX11-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX11-NEXT:    v_or_b32_e32 v4, s7, v3
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
@@ -3412,7 +3412,7 @@ define <2 x i64> @bitcast_v4f32_to_v2i64(<2 x i64> %arg) {
 ; GFX11-NEXT:    v_add_nc_u32_e32 v5, 1, v3
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_dual_cndmask_b32 v4, v3, v5 :: v_dual_mov_b32 v5, 0
-; GFX11-NEXT:  .LBB28_8:
+; GFX11-NEXT:  .LBB28_8: ; %.split.split
 ; GFX11-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_dual_mov_b32 v2, v4 :: v_dual_mov_b32 v3, v5
@@ -8964,8 +8964,7 @@ define void @v_bitcast_v4bf16_to_f64(i32 %cond, ptr addrspace(1) %out, <4 x bflo
 ; GFX11-LABEL: v_bitcast_v4bf16_to_f64:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_mov_b32_e32 v5, 0
-; GFX11-NEXT:    v_mov_b32_e32 v6, 0
+; GFX11-NEXT:    v_dual_mov_b32 v5, 0 :: v_dual_mov_b32 v6, 0
 ; GFX11-NEXT:    s_mov_b32 s0, exec_lo
 ; GFX11-NEXT:    v_cmpx_eq_u32_e32 0, v0
 ; GFX11-NEXT:  ; %bb.1: ; %if
@@ -9056,8 +9055,7 @@ define void @v_bitcast_v4bf16_to_i64(i32 %cond, ptr addrspace(1) %out, <4 x bflo
 ; GFX11-LABEL: v_bitcast_v4bf16_to_i64:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_mov_b32_e32 v5, 0
-; GFX11-NEXT:    v_mov_b32_e32 v6, 0
+; GFX11-NEXT:    v_dual_mov_b32 v5, 0 :: v_dual_mov_b32 v6, 0
 ; GFX11-NEXT:    s_mov_b32 s0, exec_lo
 ; GFX11-NEXT:    v_cmpx_eq_u32_e32 0, v0
 ; GFX11-NEXT:  ; %bb.1: ; %if
