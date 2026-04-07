@@ -293,6 +293,7 @@ makeCommonInvocationForModuleBuild(CompilerInvocation CI) {
   // CAS: -MT must be preserved for cache key.
   if (!CI.getDependencyOutputOpts().Targets.empty())
     CI.getDependencyOutputOpts().Targets = {"-"};
+  CI.getDependencyOutputOpts().IncludeModuleFiles = MFDK_Direct;
 
   CI.getFrontendOpts().ProgramAction = frontend::GenerateModule;
   CI.getLangOpts().ModuleName.clear();
@@ -474,6 +475,7 @@ void ModuleDepCollector::applyDiscoveredDependencies(CompilerInvocation &CI) {
   CI.clearImplicitModuleBuildOptions();
   resetBenignCodeGenOptions(CI.getFrontendOpts().ProgramAction,
                             CI.getLangOpts(), CI.getCodeGenOpts());
+  CI.getDependencyOutputOpts().IncludeModuleFiles = MFDK_Direct;
 
   if (llvm::any_of(CI.getFrontendOpts().Inputs, needsModules)) {
     Preprocessor &PP = ScanInstance.getPreprocessor();

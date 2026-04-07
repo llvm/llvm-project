@@ -567,9 +567,11 @@ private:
   }
 
   bool sawDependency(StringRef Filename, bool FromModule, bool IsSystem,
-                     bool IsModuleFile, bool IsMissing) override {
+                     bool IsModuleFile, bool IsDirectModuleImport,
+                     bool IsMissing) override {
     bool sawIt = DependencyCollector::sawDependency(
-        Filename, FromModule, IsSystem, IsModuleFile, IsMissing);
+        Filename, FromModule, IsSystem, IsModuleFile, IsDirectModuleImport,
+        IsMissing);
     if (auto FE = SourceMgr->getFileManager().getOptionalFileRef(Filename)) {
       if (sawIt)
         Entries.insert(*FE);

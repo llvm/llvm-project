@@ -210,8 +210,8 @@ public:
   RewriteImportsListener(CompilerInstance &CI, std::shared_ptr<raw_ostream> Out)
       : CI(CI), Out(Out) {}
 
-  void visitModuleFile(StringRef Filename,
-                       serialization::ModuleKind Kind) override {
+  void visitModuleFile(StringRef Filename, serialization::ModuleKind Kind,
+                       bool DirectlyImported) override {
     auto File = CI.getFileManager().getOptionalFileRef(Filename);
     assert(File && "missing file for loaded module?");
 

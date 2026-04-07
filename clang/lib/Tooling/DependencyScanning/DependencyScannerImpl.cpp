@@ -135,8 +135,8 @@ public:
   }
 
   /// Update which module that is being actively traversed.
-  void visitModuleFile(StringRef Filename,
-                       serialization::ModuleKind Kind) override {
+  void visitModuleFile(StringRef Filename, serialization::ModuleKind Kind,
+                       bool DirectlyImported) override {
     // If the CurrentFile is not
     // considered stable, update any of it's transitive dependents.
     auto PrebuiltEntryIt = PrebuiltModulesASTMap.find(CurrentFile);
@@ -222,7 +222,8 @@ static bool visitPrebuiltModule(StringRef PrebuiltModuleFilename,
                                   PrebuiltModulesASTMap, Diags, StableDirs);
 
   Listener.visitModuleFile(PrebuiltModuleFilename,
-                           serialization::MK_ExplicitModule);
+                           serialization::MK_ExplicitModule,
+                           /*DirectlyImported=*/true);
   if (ASTReader::readASTFileControlBlock(
           PrebuiltModuleFilename, CI.getFileManager(), CI.getModuleCache(),
           CI.getPCHContainerReader(),
@@ -231,7 +232,8 @@ static bool visitPrebuiltModule(StringRef PrebuiltModuleFilename,
     return true;
 
   while (!Worklist.empty()) {
-    Listener.visitModuleFile(Worklist.back(), serialization::MK_ExplicitModule);
+    Listener.visitModuleFile(Worklist.back(), serialization::MK_ExplicitModule,
+                             /*DirectlyImported=*/false);
     if (ASTReader::readASTFileControlBlock(
             Worklist.pop_back_val(), CI.getFileManager(), CI.getModuleCache(),
             CI.getPCHContainerReader(),
@@ -355,17 +357,20 @@ public:
   }
 
   void maybeAddDependency(StringRef Filename, bool FromModule, bool IsSystem,
-                          bool IsModuleFile, bool IsMissing) override {
+                          bool IsModuleFile, bool IsDirectModuleImport,
+                          bool IsMissing) override {
     if (ReverseMapper.empty())
       return DependencyFileGenerator::maybeAddDependency(
-          Filename, FromModule, IsSystem, IsModuleFile, IsMissing);
+          Filename, FromModule, IsSystem, IsModuleFile, IsDirectModuleImport,
+          IsMissing);
 
     // We may get canonicalized paths if prefix headers/PCH are used, so make
     // sure to remap them back to original source paths.
     SmallString<256> New{Filename};
     ReverseMapper.mapInPlace(New);
     return DependencyFileGenerator::maybeAddDependency(
-        New, FromModule, IsSystem, IsModuleFile, IsMissing);
+        New, FromModule, IsSystem, IsModuleFile, IsDirectModuleImport,
+        IsMissing);
   }
 };
 
