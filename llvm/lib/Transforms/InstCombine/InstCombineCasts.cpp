@@ -3110,6 +3110,12 @@ static Instruction *foldSplatShuffleToMul(const ShuffleVectorInst &Shuf,
   // splat-vector bitcast form.
   if (!EltTy)
     return nullptr;
+
+  // It would be less beneficial when the dest type is so large that it needs to
+  // be legalized in the backend.
+  if (!Shuf.getDataLayout().fitsInLegalInteger(DstTy->getBitWidth()))
+    return nullptr;
+
   ArrayRef<int> Mask = Shuf.getShuffleMask();
 
   // Check if this is a splat-shuffle with a valid index
