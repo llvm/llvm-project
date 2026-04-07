@@ -1365,8 +1365,8 @@ struct GenericPluginTy {
   }
 
   /// Initialize the RPC doorbell if used by the target.
-  virtual Error initRPCDoorbell(uint64_t *&Value, uint64_t *&Mailbox,
-                                uint32_t &EventID) {
+  virtual Error initRPCDoorbell(GenericDeviceTy &Device, uint64_t *&Value,
+                                uint64_t *&Mailbox, uint32_t &EventID) {
     return Plugin::success();
   }
 

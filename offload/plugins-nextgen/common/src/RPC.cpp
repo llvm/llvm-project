@@ -223,8 +223,8 @@ Error RPCServerTy::initDevice(plugin::GenericDeviceTy &Device,
   // The doorbell is used by AMDGPU targets to let the server thread be
   // descheduled. It is optional and will be ignored if the fields are null.
   rpc::Doorbell Doorbell{};
-  if (auto Err = Device.Plugin.initRPCDoorbell(Doorbell.value, Doorbell.mailbox,
-                                               Doorbell.event_id))
+  if (auto Err = Device.Plugin.initRPCDoorbell(
+          Device, Doorbell.value, Doorbell.mailbox, Doorbell.event_id))
     return Err;
 
   auto *DoorbellPtr = reinterpret_cast<rpc::Doorbell *>(

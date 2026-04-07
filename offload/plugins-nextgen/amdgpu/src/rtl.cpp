@@ -3880,8 +3880,16 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
 
   /// Create an HSA signal for the RPC doorbell and return the fields needed
   /// for the GPU to fire interrupts that wake the server thread.
-  Error initRPCDoorbell(uint64_t *&Value, uint64_t *&Mailbox,
-                        uint32_t &EventID) override {
+  Error initRPCDoorbell(GenericDeviceTy &Device, uint64_t *&Value,
+                        uint64_t *&Mailbox, uint32_t &EventID) override {
+    // FIXME: The doorbell interrupting hardware does not seem to work on these
+    //        ISAs. This is potentially due to default PRIV settings, disable
+    //        doorbell support pending further investigation.
+    std::string Str = Device.getComputeUnitKind();
+    llvm::StringRef GfxName(Str);
+    if (GfxName.starts_with("gfx90") || GfxName.starts_with("gfx11"))
+      return Plugin::success();
+
     // Lazily initialize the RPC signal on first use so we don't leak an HSA
     // signal when no device uses RPC.
     {
