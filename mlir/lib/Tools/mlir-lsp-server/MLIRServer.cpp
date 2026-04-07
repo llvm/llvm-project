@@ -43,8 +43,8 @@ getLocationFromLoc(StringRef uriScheme, FileLineColLoc loc,
   SmallString<128> absPath;
   // Always make the path absolute. Skip paths that start with a separator:
   // prevents incorrect resolution of virtual paths used in tests on Windows.
-  if (!llvm::sys::path::is_absolute(filename) &&
-      !filename.starts_with("/") && !filename.starts_with("\\")) {
+  if (!llvm::sys::path::is_absolute(filename) && !filename.starts_with("/") &&
+      !filename.starts_with("\\")) {
     if (!workspaceRoot.empty())
       llvm::sys::path::append(absPath, workspaceRoot, filename);
     else
