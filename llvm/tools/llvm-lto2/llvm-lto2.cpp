@@ -26,7 +26,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/InitLLVM.h"
-#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/PluginLoader.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/Threading.h"
@@ -235,6 +234,19 @@ static cl::opt<bool>
     AllVtablesHaveTypeInfos("all-vtables-have-type-infos", cl::Hidden,
                             cl::desc("All vtables have type infos"));
 
+// Specifying a symbol here states that it is a library symbol that had a
+// definition in bitcode, but was not extracted. Such symbols cannot safely
+// be referenced, since they have already lost their opportunity to be defined.
+//
+// FIXME: Listing all bitcode libfunc symbols here is clunky. A higher-level way
+// to indicate which TUs made it into the link might be better, but this would
+// require more detailed tracking of the sources of constructs in the IR.
+// Alternatively, there may be some other data structure that could hold this
+// information.
+static cl::list<std::string> BitcodeLibFuncs(
+    "bitcode-libfuncs", cl::Hidden,
+    cl::desc("set of unextracted libfuncs implemented in bitcode"));
+
 static cl::opt<bool> TimeTrace("time-trace", cl::desc("Record time trace"));
 
 static cl::opt<unsigned> TimeTraceGranularity(
@@ -285,11 +297,7 @@ static int run(int argc, char **argv) {
 
   if (TimeTrace)
     timeTraceProfilerInitialize(TimeTraceGranularity, argv[0]);
-  llvm::scope_exit ShutdownScopeExit([]() {
-    // llvm_shutdown must be called before finalizing the time trace to
-    // ensure that time trace scopes from ManagedStatic destructors are
-    // flushed and recorded.
-    llvm::llvm_shutdown();
+  llvm::scope_exit TimeTraceScopeExit([]() {
     if (TimeTrace) {
       check(timeTraceProfilerWrite(TimeTraceFile, OutputFilename),
             "timeTraceProfilerWrite failed");
@@ -416,6 +424,24 @@ static int run(int argc, char **argv) {
   auto DTLTOCompilerArgsSV = llvm::to_vector<0>(llvm::map_range(
       DTLTOCompilerArgs, [](const std::string &S) { return StringRef(S); }));
 
+  auto AddStream =
+      [&](size_t Task,
+          const Twine &ModuleName) -> std::unique_ptr<CachedFileStream> {
+    std::string Path = OutputFilename + "." + utostr(Task);
+
+    std::error_code EC;
+    auto S = std::make_unique<raw_fd_ostream>(Path, EC, sys::fs::OF_None);
+    check(EC, Path);
+    return std::make_unique<CachedFileStream>(std::move(S), Path);
+  };
+
+  auto AddBuffer = [&](size_t Task, const Twine &ModuleName,
+                       std::unique_ptr<MemoryBuffer> MB) {
+    auto Stream = AddStream(Task, ModuleName);
+    *Stream->OS << MB->getBuffer();
+    check(Stream->commit(), "Failed to commit cache");
+  };
+
   ThinBackend Backend;
   if (ThinLTODistributedIndexes)
     Backend = createWriteIndexesThinBackend(llvm::hardware_concurrency(Threads),
@@ -430,7 +456,7 @@ static int run(int argc, char **argv) {
         llvm::heavyweight_hardware_concurrency(Threads),
         /*OnWrite=*/{}, ThinLTOEmitIndexes, ThinLTOEmitImports, OutputFilename,
         DTLTODistributor, DTLTODistributorArgsSV, DTLTOCompiler,
-        DTLTOCompilerPrependArgsSV, DTLTOCompilerArgsSV, SaveTemps);
+        DTLTOCompilerPrependArgsSV, DTLTOCompilerArgsSV, SaveTemps, AddBuffer);
   } else
     Backend = createInProcessThinBackend(
         llvm::heavyweight_hardware_concurrency(Threads),
@@ -501,23 +527,8 @@ static int run(int argc, char **argv) {
   if (HasErrors)
     return 1;
 
-  auto AddStream =
-      [&](size_t Task,
-          const Twine &ModuleName) -> std::unique_ptr<CachedFileStream> {
-    std::string Path = OutputFilename + "." + utostr(Task);
-
-    std::error_code EC;
-    auto S = std::make_unique<raw_fd_ostream>(Path, EC, sys::fs::OF_None);
-    check(EC, Path);
-    return std::make_unique<CachedFileStream>(std::move(S), Path);
-  };
-
-  auto AddBuffer = [&](size_t Task, const Twine &ModuleName,
-                       std::unique_ptr<MemoryBuffer> MB) {
-    auto Stream = AddStream(Task, ModuleName);
-    *Stream->OS << MB->getBuffer();
-    check(Stream->commit(), "Failed to commit cache");
-  };
+  Lto.setBitcodeLibFuncs(
+      SmallVector<StringRef>(BitcodeLibFuncs.begin(), BitcodeLibFuncs.end()));
 
   FileCache Cache;
   if (!CacheDir.empty())

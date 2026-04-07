@@ -18,6 +18,7 @@
 #define LLVM_TRANSFORMS_UTILS_CLONING_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/AssumptionCache.h"
@@ -87,6 +88,10 @@ struct ClonedCodeInfo {
   /// may be dangling, it is only intended to be used via isSimplified(), to
   /// check whether the main VMap mapping involves simplification or not.
   DenseMap<const Value *, const Value *> OrigVMap;
+
+  // Cloned calls that were originally an indirect call. They may be direct or
+  // indirect after cloning.
+  SmallPtrSet<const Value *, 4> OriginallyIndirectCalls;
 
   ClonedCodeInfo() = default;
 
@@ -225,11 +230,12 @@ LLVM_ABI void CloneFunctionBodyInto(
     ValueMaterializer *Materializer = nullptr,
     const MetadataPredicate *IdentityMD = nullptr);
 
-LLVM_ABI void CloneAndPruneIntoFromInst(
-    Function *NewFunc, const Function *OldFunc, const Instruction *StartingInst,
-    ValueToValueMapTy &VMap, bool ModuleLevelChanges,
-    SmallVectorImpl<ReturnInst *> &Returns, const char *NameSuffix = "",
-    ClonedCodeInfo *CodeInfo = nullptr);
+LLVM_ABI void
+CloneAndPruneIntoFromInst(Function *NewFunc, const Function *OldFunc,
+                          const Instruction *StartingInst,
+                          ValueToValueMapTy &VMap, bool ModuleLevelChanges,
+                          SmallVectorImpl<ReturnInst *> &Returns,
+                          const char *NameSuffix, ClonedCodeInfo &CodeInfo);
 
 /// This works exactly like CloneFunctionInto,
 /// except that it does some simple constant prop and DCE on the fly.  The
@@ -242,10 +248,11 @@ LLVM_ABI void CloneAndPruneIntoFromInst(
 /// If ModuleLevelChanges is false, VMap contains no non-identity GlobalValue
 /// mappings.
 ///
-LLVM_ABI void CloneAndPruneFunctionInto(
-    Function *NewFunc, const Function *OldFunc, ValueToValueMapTy &VMap,
-    bool ModuleLevelChanges, SmallVectorImpl<ReturnInst *> &Returns,
-    const char *NameSuffix = "", ClonedCodeInfo *CodeInfo = nullptr);
+LLVM_ABI void
+CloneAndPruneFunctionInto(Function *NewFunc, const Function *OldFunc,
+                          ValueToValueMapTy &VMap, bool ModuleLevelChanges,
+                          SmallVectorImpl<ReturnInst *> &Returns,
+                          const char *NameSuffix, ClonedCodeInfo &CodeInfo);
 
 /// This class captures the data input to the InlineFunction call, and records
 /// the auxiliary results produced by it.
@@ -311,6 +318,7 @@ LLVM_ABI void InlineFunctionImpl(CallBase &CB, InlineFunctionInfo &IFI,
                                  bool MergeAttributes = false,
                                  AAResults *CalleeAAR = nullptr,
                                  bool InsertLifetime = true,
+                                 bool TrackInlineHistory = false,
                                  Function *ForwardVarArgsTo = nullptr,
                                  OptimizationRemarkEmitter *ORE = nullptr);
 
@@ -340,6 +348,7 @@ LLVM_ABI InlineResult InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
                                      bool MergeAttributes = false,
                                      AAResults *CalleeAAR = nullptr,
                                      bool InsertLifetime = true,
+                                     bool TrackInlineHistory = false,
                                      Function *ForwardVarArgsTo = nullptr,
                                      OptimizationRemarkEmitter *ORE = nullptr);
 
@@ -352,6 +361,7 @@ LLVM_ABI InlineResult InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
                                      bool MergeAttributes = false,
                                      AAResults *CalleeAAR = nullptr,
                                      bool InsertLifetime = true,
+                                     bool TrackInlineHistory = false,
                                      Function *ForwardVarArgsTo = nullptr,
                                      OptimizationRemarkEmitter *ORE = nullptr);
 
@@ -433,14 +443,6 @@ LLVM_ABI void cloneAndAdaptNoAliasScopes(ArrayRef<MDNode *> NoAliasDeclScopes,
 LLVM_ABI void cloneAndAdaptNoAliasScopes(ArrayRef<MDNode *> NoAliasDeclScopes,
                                          Instruction *IStart, Instruction *IEnd,
                                          LLVMContext &Context, StringRef Ext);
-/// Check if Function F appears in the inline history chain.
-/// InlineHistory is a vector of (Function, ParentHistoryID) pairs.
-/// Returns true if F was already inlined in the chain leading to
-/// InlineHistoryID.
-LLVM_ABI bool
-inlineHistoryIncludes(Function *F, int InlineHistoryID,
-                      ArrayRef<std::pair<Function *, int>> InlineHistory);
-
 } // end namespace llvm
 
 #endif // LLVM_TRANSFORMS_UTILS_CLONING_H

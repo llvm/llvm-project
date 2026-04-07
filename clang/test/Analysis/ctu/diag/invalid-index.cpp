@@ -8,11 +8,8 @@
 // RUN:   -analyzer-config ctu-dir=%t \
 // RUN:   -verify %s
 
-// We expect an error in this file, but without a location.
-// expected-error-re@./invalid-index.cpp:*{{error parsing index file: '{{.+}}externalDefMap.txt' line: 1 '<USR-Length>:<USR> <File-Path>' format expected}}
-
 int foo(int);
 
 void test() {
-  foo(1);
+  foo(1); // expected-error-re{{error parsing index file: '{{.+}}externalDefMap.txt' line: 1 '<USR-Length>:<USR> <File-Path>' format expected}}
 }

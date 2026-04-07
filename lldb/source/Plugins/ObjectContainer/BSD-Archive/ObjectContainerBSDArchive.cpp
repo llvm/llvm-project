@@ -436,18 +436,15 @@ ObjectFileSP ObjectContainerBSDArchive::GetObjectFile(const FileSpec *file) {
 
 ModuleSpecList ObjectContainerBSDArchive::GetModuleSpecifications(
     const FileSpec &file, lldb::DataExtractorSP &extractor_sp,
-    lldb::offset_t data_offset, lldb::offset_t file_offset,
-    lldb::offset_t file_size) {
+    lldb::offset_t file_offset, lldb::offset_t file_size) {
 
   if (!file || !extractor_sp)
     return {};
 
-  DataExtractorSP data_extractor_sp =
-      extractor_sp->GetSubsetExtractorSP(data_offset);
   // We have data, which means this is the first 512 bytes of the file Check to
   // see if the magic bytes match and if they do, read the entire table of
   // contents for the archive and cache it
-  ArchiveType archive_type = MagicBytesMatch(*data_extractor_sp);
+  ArchiveType archive_type = MagicBytesMatch(*extractor_sp);
   if (archive_type == ArchiveType::Invalid)
     return {};
 
@@ -479,33 +476,38 @@ ModuleSpecList ObjectContainerBSDArchive::GetModuleSpecifications(
             continue;
           FileSpec child = GetChildFileSpecificationsFromThin(
               object->ar_name.GetStringRef(), file);
-          if (lldb_private::ObjectFile::GetModuleSpecifications(
-                  child, 0, object->file_size, specs)) {
-            ModuleSpec &spec =
-                specs.GetModuleSpecRefAtIndex(specs.GetSize() - 1);
+          ModuleSpecList object_specs =
+              lldb_private::ObjectFile::GetModuleSpecifications(
+                  child, 0, object->file_size);
+          if (object_specs.GetSize() > 0) {
+            ModuleSpec &spec = object_specs.GetModuleSpecRefAtIndex(
+                object_specs.GetSize() - 1);
             llvm::sys::TimePoint<> object_mod_time(
                 std::chrono::seconds(object->modification_time));
             spec.GetObjectName() = object->ar_name;
             spec.SetObjectOffset(0);
             spec.SetObjectSize(object->file_size);
             spec.GetObjectModificationTime() = object_mod_time;
+            specs.Append(spec);
           }
           continue;
         }
         const lldb::offset_t object_file_offset =
             file_offset + object->file_offset;
         if (object->file_offset < file_size && file_size > object_file_offset) {
-          if (lldb_private::ObjectFile::GetModuleSpecifications(
-                  file, object_file_offset, file_size - object_file_offset,
-                  specs)) {
-            ModuleSpec &spec =
-                specs.GetModuleSpecRefAtIndex(specs.GetSize() - 1);
+          ModuleSpecList object_specs =
+              lldb_private::ObjectFile::GetModuleSpecifications(
+                  file, object_file_offset, file_size - object_file_offset);
+          if (object_specs.GetSize() > 0) {
+            ModuleSpec &spec = object_specs.GetModuleSpecRefAtIndex(
+                object_specs.GetSize() - 1);
             llvm::sys::TimePoint<> object_mod_time(
                 std::chrono::seconds(object->modification_time));
             spec.GetObjectName() = object->ar_name;
             spec.SetObjectOffset(object_file_offset);
             spec.SetObjectSize(object->file_size);
             spec.GetObjectModificationTime() = object_mod_time;
+            specs.Append(spec);
           }
         }
       }

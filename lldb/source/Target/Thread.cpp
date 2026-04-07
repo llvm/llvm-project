@@ -1415,10 +1415,10 @@ ThreadPlanSP Thread::QueueThreadPlanForRunToAddress(bool abort_other_plans,
 }
 
 ThreadPlanSP Thread::QueueThreadPlanForStepUntil(
-    bool abort_other_plans, lldb::addr_t *address_list, size_t num_addresses,
+    bool abort_other_plans, llvm::ArrayRef<addr_t> address_list,
     bool stop_other_threads, uint32_t frame_idx, Status &status) {
-  ThreadPlanSP thread_plan_sp(new ThreadPlanStepUntil(
-      *this, address_list, num_addresses, stop_other_threads, frame_idx));
+  ThreadPlanSP thread_plan_sp = std::make_shared<ThreadPlanStepUntil>(
+      *this, address_list, stop_other_threads, frame_idx);
 
   status = QueueThreadPlan(thread_plan_sp, abort_other_plans);
   return thread_plan_sp;
@@ -1624,7 +1624,7 @@ llvm::Error Thread::LoadScriptedFrameProvider(
     auto [last_desc, last_id] = m_provider_chain_ids.back();
     auto it = m_frame_providers.find(last_id);
     if (it == m_frame_providers.end())
-      return llvm::createStringError("Previous frame provider not found");
+      return llvm::createStringError("previous frame provider not found");
     SyntheticFrameProviderSP last_provider = it->second;
     StackFrameListSP last_provider_frames = last_provider->GetInputFrames();
     input_frames = std::make_shared<SyntheticStackFrameList>(
@@ -1865,19 +1865,17 @@ Status Thread::JumpToLine(const FileSpec &file, uint32_t line,
   // Check if we got anything.
   if (candidates.empty()) {
     if (outside_function.empty()) {
-      return Status::FromErrorStringWithFormat(
-          "Cannot locate an address for %s:%i.", file.GetFilename().AsCString(),
-          line);
+      return Status::FromErrorStringWithFormatv(
+          "Cannot locate an address for {0}:{1}.", file.GetFilename(), line);
     } else if (outside_function.size() == 1) {
-      return Status::FromErrorStringWithFormat(
-          "%s:%i is outside the current function.",
-          file.GetFilename().AsCString(), line);
+      return Status::FromErrorStringWithFormatv(
+          "{0}:{1} is outside the current function.", file.GetFilename(), line);
     } else {
       StreamString sstr;
       DumpAddressList(sstr, outside_function, target);
-      return Status::FromErrorStringWithFormat(
-          "%s:%i has multiple candidate locations:\n%s",
-          file.GetFilename().AsCString(), line, sstr.GetData());
+      return Status::FromErrorStringWithFormatv(
+          "{0}:{1} has multiple candidate locations:\n{2}", file.GetFilename(),
+          line, sstr.GetData());
     }
   }
 
@@ -1885,9 +1883,10 @@ Status Thread::JumpToLine(const FileSpec &file, uint32_t line,
   Address dest = candidates[0];
   if (warnings && candidates.size() > 1) {
     StreamString sstr;
-    sstr.Printf("%s:%i appears multiple times in this function, selecting the "
-                "first location:\n",
-                file.GetFilename().AsCString(), line);
+    sstr.Format(
+        "{0}:{1} appears multiple times in this function, selecting the "
+        "first location:\n",
+        file.GetFilename(), line);
     DumpAddressList(sstr, candidates, target);
     *warnings = std::string(sstr.GetString());
   }

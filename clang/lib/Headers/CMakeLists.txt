@@ -144,6 +144,7 @@ set(riscv_files
 
 set(spirv_files
   __clang_spirv_builtins.h
+  __clang_spirv_libdevice_declares.h
   )
 
 set(systemz_files
@@ -803,6 +804,12 @@ install(
 
 install(
   FILES ${hlsl_subdir_files}
+  DESTINATION ${header_install_dir}/hlsl
+  ${EXCLUDE_HLSL}
+  COMPONENT hlsl-resource-headers)
+
+install(
+  FILES ${hlsl_generated_files}
   DESTINATION ${header_install_dir}/hlsl
   ${EXCLUDE_HLSL}
   COMPONENT hlsl-resource-headers)

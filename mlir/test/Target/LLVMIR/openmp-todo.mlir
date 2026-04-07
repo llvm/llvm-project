@@ -190,6 +190,36 @@ llvm.func @target_in_reduction(%x : !llvm.ptr) {
 
 // -----
 
+llvm.func @task_depend_iterator_modifier(%lb : i64, %ub : i64, %step : i64,
+                                 %addr : !llvm.ptr) {
+  %it = omp.iterator(%iv: i64) = (%lb to %ub step %step) {
+    omp.yield(%addr : !llvm.ptr)
+  } -> !omp.iterated<!llvm.ptr>
+  // expected-error@below {{not yet implemented: Unhandled clause depend with iterator modifier in omp.task operation}}
+  // expected-error@below {{LLVM Translation failed for operation: omp.task}}
+  omp.task depend(taskdependin -> %it : !omp.iterated<!llvm.ptr>) {
+    omp.terminator
+  }
+  llvm.return
+}
+
+// -----
+
+llvm.func @target_depend_iterator_modifier(%lb : i64, %ub : i64, %step : i64,
+                                   %addr : !llvm.ptr) {
+  %it = omp.iterator(%iv: i64) = (%lb to %ub step %step) {
+    omp.yield(%addr : !llvm.ptr)
+  } -> !omp.iterated<!llvm.ptr>
+  // expected-error@below {{not yet implemented: Unhandled clause depend with iterator modifier in omp.target operation}}
+  // expected-error@below {{LLVM Translation failed for operation: omp.target}}
+  omp.target depend(taskdependin -> %it : !omp.iterated<!llvm.ptr>) {
+    omp.terminator
+  }
+  llvm.return
+}
+
+// -----
+
 llvm.func @target_enter_data_depend(%x: !llvm.ptr) {
   // expected-error@below {{not yet implemented: Unhandled clause depend in omp.target_enter_data operation}}
   // expected-error@below {{LLVM Translation failed for operation: omp.target_enter_data}}

@@ -519,8 +519,7 @@ bool Sema::LookupTemplateName(LookupResult &Found, Scope *S, CXXScopeSpec &SS,
     // to correct any typos.
     DeclarationName Name = Found.getLookupName();
     Found.clear();
-    // Simple filter callback that, for keywords, only accepts the C++ *_cast
-    DefaultFilterCCC FilterCCC{};
+    QualifiedLookupValidatorCCC FilterCCC(!SS.isEmpty());
     FilterCCC.WantTypeSpecifiers = false;
     FilterCCC.WantExpressionKeywords = false;
     FilterCCC.WantRemainingKeywords = false;
@@ -1457,6 +1456,11 @@ QualType Sema::CheckNonTypeTemplateParameterType(QualType T,
   if (T->isVariablyModifiedType()) {
     Diag(Loc, diag::err_variably_modified_nontype_template_param)
       << T;
+    return QualType();
+  }
+
+  if (T->isBlockPointerType()) {
+    Diag(Loc, diag::err_template_nontype_parm_bad_type) << T;
     return QualType();
   }
 

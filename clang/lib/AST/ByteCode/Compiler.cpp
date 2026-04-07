@@ -2130,9 +2130,11 @@ bool Compiler<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
 
       bool BitField = FieldToInit->isBitField();
       if (BitField && Activate)
-        return this->emitInitBitFieldActivate(T, FieldToInit, E);
+        return this->emitInitBitFieldActivate(T, FieldToInit->Offset,
+                                              FieldToInit->bitWidth(), E);
       if (BitField)
-        return this->emitInitBitField(T, FieldToInit, E);
+        return this->emitInitBitField(T, FieldToInit->Offset,
+                                      FieldToInit->bitWidth(), E);
       if (Activate)
         return this->emitInitFieldActivate(T, FieldToInit->Offset, E);
       return this->emitInitField(T, FieldToInit->Offset, E);
@@ -3203,22 +3205,37 @@ bool Compiler<Emitter>::VisitExprWithCleanups(const ExprWithCleanups *E) {
 template <class Emitter>
 bool Compiler<Emitter>::VisitMaterializeTemporaryExpr(
     const MaterializeTemporaryExpr *E) {
-  const Expr *SubExpr = E->getSubExpr();
-
   if (Initializing) {
     // We already have a value, just initialize that.
-    return this->delegate(SubExpr);
+    return this->delegate(E->getSubExpr());
   }
   // If we don't end up using the materialized temporary anyway, don't
   // bother creating it.
   if (DiscardResult)
-    return this->discard(SubExpr);
+    return this->discard(E->getSubExpr());
+
+  SmallVector<const Expr *, 2> CommaLHSs;
+  SmallVector<SubobjectAdjustment, 2> Adjustments;
+  const Expr *Inner;
+  if (!Ctx.getLangOpts().CPlusPlus11)
+    Inner =
+        E->getSubExpr()->skipRValueSubobjectAdjustments(CommaLHSs, Adjustments);
+  else
+    Inner = E->getSubExpr();
+
+  // If we passed any comma operators, evaluate their LHSs.
+  for (const Expr *LHS : CommaLHSs) {
+    if (!this->discard(LHS))
+      return false;
+  }
+
+  // FIXME: Find a test case where Adjustments matters.
 
   // When we're initializing a global variable *or* the storage duration of
   // the temporary is explicitly static, create a global variable.
-  OptPrimType SubExprT = classify(SubExpr);
+  OptPrimType InnerT = classify(Inner);
   if (E->getStorageDuration() == SD_Static) {
-    UnsignedOrNone GlobalIndex = P.createGlobal(E);
+    UnsignedOrNone GlobalIndex = P.createGlobal(E, Inner->getType());
     if (!GlobalIndex)
       return false;
 
@@ -3226,20 +3243,20 @@ bool Compiler<Emitter>::VisitMaterializeTemporaryExpr(
         E->getLifetimeExtendedTemporaryDecl();
     assert(TempDecl);
 
-    if (SubExprT) {
-      if (!this->visit(SubExpr))
+    if (InnerT) {
+      if (!this->visit(Inner))
         return false;
-      if (!this->emitInitGlobalTemp(*SubExprT, *GlobalIndex, TempDecl, E))
+      if (!this->emitInitGlobalTemp(*InnerT, *GlobalIndex, TempDecl, E))
         return false;
       return this->emitGetPtrGlobal(*GlobalIndex, E);
     }
 
-    if (!this->checkLiteralType(SubExpr))
+    if (!this->checkLiteralType(Inner))
       return false;
     // Non-primitive values.
     if (!this->emitGetPtrGlobal(*GlobalIndex, E))
       return false;
-    if (!this->visitInitializer(SubExpr))
+    if (!this->visitInitializer(Inner))
       return false;
     return this->emitInitGlobalTempComp(TempDecl, E);
   }
@@ -3249,27 +3266,26 @@ bool Compiler<Emitter>::VisitMaterializeTemporaryExpr(
                            : ScopeKind::Block;
 
   // For everyhing else, use local variables.
-  if (SubExprT) {
-    bool IsConst = SubExpr->getType().isConstQualified();
-    bool IsVolatile = SubExpr->getType().isVolatileQualified();
+  if (InnerT) {
+    bool IsConst = Inner->getType().isConstQualified();
+    bool IsVolatile = Inner->getType().isVolatileQualified();
     unsigned LocalIndex =
-        allocateLocalPrimitive(E, *SubExprT, IsConst, IsVolatile, VarScope);
+        allocateLocalPrimitive(E, *InnerT, IsConst, IsVolatile, VarScope);
     if (!this->VarScope->LocalsAlwaysEnabled &&
         !this->emitEnableLocal(LocalIndex, E))
       return false;
 
-    if (!this->visit(SubExpr))
+    if (!this->visit(Inner))
       return false;
-    if (!this->emitSetLocal(*SubExprT, LocalIndex, E))
+    if (!this->emitSetLocal(*InnerT, LocalIndex, E))
       return false;
 
     return this->emitGetPtrLocal(LocalIndex, E);
   }
 
-  if (!this->checkLiteralType(SubExpr))
+  if (!this->checkLiteralType(Inner))
     return false;
 
-  const Expr *Inner = E->getSubExpr()->skipRValueSubobjectAdjustments();
   if (UnsignedOrNone LocalIndex =
           allocateLocal(E, Inner->getType(), VarScope)) {
     InitLinkScope<Emitter> ILS(this, InitLink::Temp(*LocalIndex));
@@ -3280,7 +3296,7 @@ bool Compiler<Emitter>::VisitMaterializeTemporaryExpr(
 
     if (!this->emitGetPtrLocal(*LocalIndex, E))
       return false;
-    return this->visitInitializer(SubExpr) && this->emitFinishInit(E);
+    return this->visitInitializer(Inner) && this->emitFinishInit(E);
   }
   return false;
 }
@@ -3321,7 +3337,7 @@ bool Compiler<Emitter>::VisitCompoundLiteralExpr(const CompoundLiteralExpr *E) {
     if (T && !E->isLValue())
       return this->delegate(Init);
 
-    UnsignedOrNone GlobalIndex = P.createGlobal(E);
+    UnsignedOrNone GlobalIndex = P.createGlobal(E, E->getType());
     if (!GlobalIndex)
       return false;
 
@@ -4212,6 +4228,21 @@ bool Compiler<Emitter>::VisitCXXTypeidExpr(const CXXTypeidExpr *E) {
 }
 
 template <class Emitter>
+bool Compiler<Emitter>::VisitObjCDictionaryLiteral(
+    const ObjCDictionaryLiteral *E) {
+  if (E->isExpressibleAsConstantInitializer())
+    return this->emitDummyPtr(E, E);
+  return this->emitError(E);
+}
+
+template <class Emitter>
+bool Compiler<Emitter>::VisitObjCArrayLiteral(const ObjCArrayLiteral *E) {
+  if (E->isExpressibleAsConstantInitializer())
+    return this->emitDummyPtr(E, E);
+  return this->emitError(E);
+}
+
+template <class Emitter>
 bool Compiler<Emitter>::VisitExpressionTraitExpr(const ExpressionTraitExpr *E) {
   assert(Ctx.getLangOpts().CPlusPlus);
   return this->emitConstBool(E->getValue(), E);
@@ -4630,6 +4661,9 @@ template <class Emitter> bool Compiler<Emitter>::visitAsLValue(const Expr *E) {
 }
 
 template <class Emitter> bool Compiler<Emitter>::visitBool(const Expr *E) {
+  OptionScope<Emitter> Scope(this, /*NewDiscardResult=*/false,
+                             /*NewInitializing=*/false, /*ToLValue=*/ToLValue);
+
   OptPrimType T = classify(E->getType());
   if (!T) {
     // Convert complex values to bool.
@@ -4959,15 +4993,14 @@ template <class Emitter>
 unsigned Compiler<Emitter>::allocateLocalPrimitive(DeclTy &&Src, PrimType Ty,
                                                    bool IsConst,
                                                    bool IsVolatile,
-                                                   ScopeKind SC,
-                                                   bool IsConstexprUnknown) {
+                                                   ScopeKind SC) {
   // FIXME: There are cases where Src.is<Expr*>() is wrong, e.g.
   //   (int){12} in C. Consider using Expr::isTemporaryObject() instead
   //   or isa<MaterializeTemporaryExpr>().
   Descriptor *D = P.createDescriptor(Src, Ty, nullptr, Descriptor::InlineDescMD,
                                      IsConst, isa<const Expr *>(Src),
                                      /*IsMutable=*/false, IsVolatile);
-  D->IsConstexprUnknown = IsConstexprUnknown;
+  D->IsConstexprUnknown = this->VariablesAreConstexprUnknown;
   Scope::Local Local = this->createLocal(D);
   if (auto *VD = dyn_cast_if_present<ValueDecl>(Src.dyn_cast<const Decl *>()))
     Locals.insert({VD, Local});
@@ -4977,8 +5010,7 @@ unsigned Compiler<Emitter>::allocateLocalPrimitive(DeclTy &&Src, PrimType Ty,
 
 template <class Emitter>
 UnsignedOrNone Compiler<Emitter>::allocateLocal(DeclTy &&Src, QualType Ty,
-                                                ScopeKind SC,
-                                                bool IsConstexprUnknown) {
+                                                ScopeKind SC) {
   const ValueDecl *Key = nullptr;
   const Expr *Init = nullptr;
   bool IsTemporary = false;
@@ -5000,7 +5032,7 @@ UnsignedOrNone Compiler<Emitter>::allocateLocal(DeclTy &&Src, QualType Ty,
       Init);
   if (!D)
     return std::nullopt;
-  D->IsConstexprUnknown = IsConstexprUnknown;
+  D->IsConstexprUnknown = this->VariablesAreConstexprUnknown;
 
   Scope::Local Local = this->createLocal(D);
   if (Key)
@@ -5103,11 +5135,9 @@ bool Compiler<Emitter>::visitExpr(const Expr *E, bool DestroyToplevelScope) {
 }
 
 template <class Emitter>
-VarCreationState Compiler<Emitter>::visitDecl(const VarDecl *VD,
-                                              bool IsConstexprUnknown) {
+VarCreationState Compiler<Emitter>::visitDecl(const VarDecl *VD) {
 
-  auto R = this->visitVarDecl(VD, VD->getInit(), /*Toplevel=*/true,
-                              IsConstexprUnknown);
+  auto R = this->visitVarDecl(VD, VD->getInit(), /*Toplevel=*/true);
 
   if (R.notCreated())
     return R;
@@ -5191,9 +5221,9 @@ bool Compiler<Emitter>::visitDeclAndReturn(const VarDecl *VD, const Expr *Init,
 }
 
 template <class Emitter>
-VarCreationState
-Compiler<Emitter>::visitVarDecl(const VarDecl *VD, const Expr *Init,
-                                bool Toplevel, bool IsConstexprUnknown) {
+VarCreationState Compiler<Emitter>::visitVarDecl(const VarDecl *VD,
+                                                 const Expr *Init,
+                                                 bool Toplevel) {
   // We don't know what to do with these, so just return false.
   if (VD->getType().isNull())
     return false;
@@ -5215,7 +5245,6 @@ Compiler<Emitter>::visitVarDecl(const VarDecl *VD, const Expr *Init,
     };
 
     DeclScope<Emitter> LocalScope(this, VD);
-
     UnsignedOrNone GlobalIndex = P.getGlobal(VD);
     if (GlobalIndex) {
       // The global was previously created but the initializer failed.
@@ -5257,10 +5286,9 @@ Compiler<Emitter>::visitVarDecl(const VarDecl *VD, const Expr *Init,
   if (VarT) {
     unsigned Offset = this->allocateLocalPrimitive(
         VD, *VarT, VD->getType().isConstQualified(),
-        VD->getType().isVolatileQualified(), ScopeKind::Block,
-        IsConstexprUnknown);
+        VD->getType().isVolatileQualified(), ScopeKind::Block);
 
-    if (!Init)
+    if (!Init || Init->getType()->isVoidType())
       return true;
 
     // If this is a toplevel declaration, create a scope for the
@@ -5276,8 +5304,8 @@ Compiler<Emitter>::visitVarDecl(const VarDecl *VD, const Expr *Init,
     return this->emitSetLocal(*VarT, Offset, VD);
   }
   // Local composite variables.
-  if (UnsignedOrNone Offset = this->allocateLocal(
-          VD, VD->getType(), ScopeKind::Block, IsConstexprUnknown)) {
+  if (UnsignedOrNone Offset =
+          this->allocateLocal(VD, VD->getType(), ScopeKind::Block)) {
     if (!Init)
       return true;
 
@@ -5361,7 +5389,8 @@ bool Compiler<Emitter>::visitAPValueInitializer(const APValue &Val,
       if (!this->visitAPValue(F, *PT, E))
         return false;
       if (RF->isBitField())
-        return this->emitInitBitFieldActivate(*PT, RF, E);
+        return this->emitInitBitFieldActivate(*PT, RF->Offset, RF->bitWidth(),
+                                              E);
       return this->emitInitFieldActivate(*PT, RF->Offset, E);
     }
 
@@ -6669,9 +6698,9 @@ bool Compiler<Emitter>::compileConstructor(const CXXConstructorDecl *Ctor) {
       if (!this->visit(InitExpr))
         return false;
 
-      bool BitField = F->isBitField();
-      if (BitField)
-        return this->emitInitThisBitField(*T, F, FieldOffset, InitExpr);
+      if (F->isBitField())
+        return this->emitInitThisBitField(*T, FieldOffset, F->bitWidth(),
+                                          InitExpr);
       return this->emitInitThisField(*T, FieldOffset, InitExpr);
     }
     // Non-primitive case. Get a pointer to the field-to-initialize
@@ -7462,8 +7491,10 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
   // Local variables.
   if (auto It = Locals.find(D); It != Locals.end()) {
     const unsigned Offset = It->second.Offset;
-    if (IsReference)
-      return this->emitGetLocal(classifyPrim(E), Offset, E);
+    if (IsReference) {
+      assert(classifyPrim(E) == PT_Ptr);
+      return this->emitGetRefLocal(Offset, E);
+    }
     return this->emitGetPtrLocal(Offset, E);
   }
   // Global variables.
@@ -7478,10 +7509,13 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
   }
 
   // In case we need to re-visit a declaration.
-  auto revisit = [&](const VarDecl *VD) -> bool {
+  auto revisit = [&](const VarDecl *VD,
+                     bool IsConstexprUnknown = true) -> bool {
+    llvm::SaveAndRestore CURS(this->VariablesAreConstexprUnknown,
+                              IsConstexprUnknown);
     if (!this->emitPushCC(VD->hasConstantInitialization(), E))
       return false;
-    auto VarState = this->visitDecl(VD, /*IsConstexprUnknown=*/true);
+    auto VarState = this->visitDecl(VD);
 
     if (!this->emitPopCC(E))
       return false;
@@ -7529,7 +7563,7 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
   if (!Ctx.getLangOpts().CPlusPlus) {
     if (VD->getAnyInitializer() && DeclType.isConstant(Ctx.getASTContext()) &&
         !VD->isWeak())
-      return revisit(VD);
+      return revisit(VD, /*IsConstexprUnknown=*/false);
     return this->emitDummyPtr(D, E);
   }
 
@@ -7563,11 +7597,14 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
   if (VD->isLocalVarDecl() && typeShouldBeVisited(DeclType) && VD->getInit() &&
       !VD->getInit()->isValueDependent()) {
     if (VD->evaluateValue()) {
+      bool IsConstexprUnknown = !DeclType.isConstant(Ctx.getASTContext()) &&
+                                !DeclType->isReferenceType();
       // Revisit the variable declaration, but make sure it's associated with a
       // different evaluation, so e.g. mutable reads don't work on it.
       EvalIDScope _(Ctx);
-      return revisit(VD);
-    }
+      return revisit(VD, IsConstexprUnknown);
+    } else if (Ctx.getLangOpts().CPlusPlus23 && IsReference)
+      return revisit(VD, /*IsConstexprUnknown=*/true);
 
     if (IsReference)
       return this->emitInvalidDeclRef(cast<DeclRefExpr>(E),

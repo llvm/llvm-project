@@ -564,8 +564,7 @@ ResolveRegisterOrRA(const llvm::Triple &triple,
 
 llvm::ArrayRef<uint8_t> SymbolFileBreakpad::SaveAsDWARF(postfix::Node &node) {
   ArchSpec arch = m_objfile_sp->GetArchitecture();
-  StreamString dwarf(Stream::eBinary, arch.GetAddressByteSize(),
-                     arch.GetByteOrder());
+  StreamString dwarf(Stream::eBinary, arch.GetByteOrder());
   ToDWARF(node, dwarf);
   uint8_t *saved = m_allocator.Allocate<uint8_t>(dwarf.GetSize());
   std::memcpy(saved, dwarf.GetData(), dwarf.GetSize());

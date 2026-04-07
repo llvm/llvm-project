@@ -10,7 +10,7 @@ char buffer[32] = "This is a largely unused buffer";
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    store i32 0, ptr [[RETVAL]], align 4
-// CHECK-NEXT:    call void @llvm.clear_cache(ptr @buffer, ptr getelementptr inbounds nuw (i8, ptr @buffer, i64 32))
+// CHECK-NEXT:    call void @llvm.clear_cache.p0(ptr @buffer, ptr getelementptr inbounds nuw (i8, ptr @buffer, i64 32))
 // CHECK-NEXT:    ret i32 0
 //
 int main(void) {
