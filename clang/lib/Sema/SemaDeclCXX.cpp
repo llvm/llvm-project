@@ -18238,6 +18238,20 @@ NamedDecl *Sema::ActOnFriendFunctionDecl(Scope *S, Declarator &D,
       DiagnoseUnexpandedParameterPack(SS, UPPC_FriendDeclaration))
     return nullptr;
 
+  bool IsEarlyRecovered = false;
+  if (D.isFunctionDefinition() && SS.isNotEmpty()) {
+    auto Kind = SS.getScopeRep().getKind();
+    if (Kind == NestedNameSpecifier::Kind::Global ||
+        Kind == NestedNameSpecifier::Kind::Namespace) {
+      if (D.getName().getKind() != UnqualifiedIdKind::IK_TemplateId) {
+        Diag(SS.getRange().getBegin(), diag::err_qualified_friend_def)
+            << SS.getScopeRep() << FixItHint::CreateRemoval(SS.getRange());
+        SS.clear();
+        IsEarlyRecovered = true;
+      }
+    }
+  }
+
   // The context we found the declaration in, or in which we should
   // create the declaration.
   DeclContext *DC;
@@ -18394,6 +18408,9 @@ NamedDecl *Sema::ActOnFriendFunctionDecl(Scope *S, Declarator &D,
     FakeDCScope.setEntity(DC);
     DCScope = &FakeDCScope;
   }
+
+  if (IsEarlyRecovered)
+    Previous.clear();
 
   bool AddToScope = true;
   NamedDecl *ND = ActOnFunctionDeclarator(DCScope, D, DC, TInfo, Previous,
