@@ -2093,6 +2093,16 @@ Instruction *InstCombinerImpl::foldICmpOrConstant(ICmpInst &Cmp,
 
   Value *OrOp0 = Or->getOperand(0), *OrOp1 = Or->getOperand(1);
 
+  // icmp eq/ne (or X, Y), 0 -> false/true if the OR is known non-zero (e.g. one
+  // operand is known non-zero at this point).
+  if (Cmp.isEquality() && C.isZero()) {
+    const SimplifyQuery Q = SQ.getWithInstruction(&Cmp);
+    if (isKnownNonZero(Or, Q))
+      return replaceInstUsesWith(
+          Cmp, Pred == ICmpInst::ICMP_EQ ? ConstantInt::getFalse(Cmp.getType())
+                                         : ConstantInt::getTrue(Cmp.getType()));
+  }
+
   // (icmp eq/ne (or disjoint x, C0), C1)
   //    -> (icmp eq/ne x, C0^C1)
   if (Cmp.isEquality() && match(OrOp1, m_ImmConstant()) &&
