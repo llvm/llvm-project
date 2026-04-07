@@ -6284,10 +6284,9 @@ Process::SetInstrumentationRuntimeEnabled(InstrumentationRuntimeType irt,
   if (!enabled)
     return llvm::Error::success();
 
-  // We need to make an instance of this plugin for this process.
-  // This could happen because `plugin disable instrumentation-runtime.*`
-  // was in `.lldbinit` and so the plugin was never created until the user asked
-  // to enable it now.
+  // The requested plugin was never instantiated for this process so we need
+  // to create an instance so we can activate it. This can happen if
+  // `plugin disable instrumentation-runtime.*` is executed (e.g. in .lldbinit).
 
   // Create the plugin by finding its create callback and calling it.
   lldb::InstrumentationRuntimeSP new_plugin = nullptr;

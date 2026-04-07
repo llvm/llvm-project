@@ -204,8 +204,8 @@ class BoundsSafetyTestSoftTrapPlugin(TestBase):
     @no_debug_info_test
     def test_call_minimal_disable_then_enable_plugin(self):
         """
-        Test starting with the plugin enabled on code built with
-        -fbounds-safety-soft-traps=call-minimal and then later disable the
+        Test starting with the plugin disabled on code built with
+        -fbounds-safety-soft-traps=call-minimal and then later enable the
         plugin
         """
         self.build(make_targets=["soft-trap-test-minimal"])
