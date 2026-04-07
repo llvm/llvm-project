@@ -26,6 +26,7 @@
 #ifndef MACHINE_FUNCTION_PASS
 #define MACHINE_FUNCTION_PASS(NAME, CREATE_PASS)
 #endif
+MACHINE_FUNCTION_PASS("aarch64-a57-fp-load-balancing", AArch64A57FPLoadBalancingPass())
 MACHINE_FUNCTION_PASS("aarch64-branch-targets", AArch64BranchTargetsPass())
 MACHINE_FUNCTION_PASS("aarch64-collect-loh", AArch64CollectLOHPass())
 MACHINE_FUNCTION_PASS("aarch64-condopt", AArch64ConditionOptimizerPass())

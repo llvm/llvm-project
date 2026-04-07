@@ -54,7 +54,7 @@ ModulePass *createAArch64LowerHomogeneousPrologEpilogPass();
 FunctionPass *createAArch64SIMDInstrOptPass();
 ModulePass *createAArch64PromoteConstantPass();
 FunctionPass *createAArch64ConditionOptimizerLegacyPass();
-FunctionPass *createAArch64A57FPLoadBalancing();
+FunctionPass *createAArch64A57FPLoadBalancingLegacyPass();
 FunctionPass *createAArch64A53Fix835769LegacyPass();
 FunctionPass *createFalkorHWPFFixPass();
 FunctionPass *createFalkorMarkStridedAccessesPass();
@@ -111,7 +111,7 @@ FunctionPass *createAArch64StackTaggingPreRAPass();
 ModulePass *createAArch64Arm64ECCallLoweringPass();
 
 void initializeAArch64A53Fix835769LegacyPass(PassRegistry &);
-void initializeAArch64A57FPLoadBalancingPass(PassRegistry&);
+void initializeAArch64A57FPLoadBalancingLegacyPass(PassRegistry &);
 void initializeAArch64AdvSIMDScalarLegacyPass(PassRegistry &);
 void initializeAArch64AsmPrinterPass(PassRegistry &);
 void initializeAArch64PointerAuthLegacyPass(PassRegistry &);
@@ -152,6 +152,13 @@ void initializeMachineSMEABIPass(PassRegistry &);
 void initializeAArch64SRLTDefineSuperRegsPass(PassRegistry &);
 void initializeSVEIntrinsicOptsPass(PassRegistry &);
 void initializeAArch64Arm64ECCallLoweringPass(PassRegistry &);
+
+class AArch64A57FPLoadBalancingPass
+    : public PassInfoMixin<AArch64A57FPLoadBalancingPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
 
 class AArch64LoadStoreOptPass : public PassInfoMixin<AArch64LoadStoreOptPass> {
 public:
