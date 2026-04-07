@@ -19,6 +19,7 @@
 #include "mlir/Tools/lsp-server-support/SourceMgrUtils.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Base64.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/LSP/Logging.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/SourceMgr.h"
@@ -42,6 +43,7 @@ getLocationFromLoc(StringRef uriScheme, FileLineColLoc loc,
   SmallString<128> absPath;
   if (!llvm::sys::path::is_absolute(filename) && !workspaceRoot.empty()) {
     llvm::sys::path::append(absPath, workspaceRoot, filename);
+    llvm::sys::fs::make_absolute(absPath);
     filename = absPath;
   }
 
