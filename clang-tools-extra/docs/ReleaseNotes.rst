@@ -408,6 +408,7 @@ Changes in existing checks
   <clang-tidy/checks/performance/trivially-destructible>` check by fixing
   false positives when a class is seen through both a header include and
   a C++20 module import.
+
 - Improved :doc:`readability-container-size-empty
   <clang-tidy/checks/readability/container-size-empty>` check:
 
