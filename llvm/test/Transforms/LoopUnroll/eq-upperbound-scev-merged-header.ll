@@ -14,31 +14,31 @@
 
 declare i32 @llvm.umin.i32(i32, i32)
 
-define void @test_merge_is_loop_header(i32 %0) {
+define void @test_merge_is_loop_header(i32 %x) {
 entry:
   %results = alloca i64, align 8
-  %trip.count = tail call i32 @llvm.umin.i32(i32 %0, i32 32)
+  %trip.count = tail call i32 @llvm.umin.i32(i32 %x, i32 32)
   %cmp0 = icmp eq i32 %trip.count, 0
   br i1 %cmp0, label %for.end, label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %i = phi i32 [ %inc, %for.body ], [ 0, %entry ]
   store i64 0, ptr %results, align 8
   %inc = add i32 %i, 1
   %cmp = icmp eq i32 %inc, %trip.count
   br i1 %cmp, label %for.body2, label %for.body
 
-for.cond:                                        ; preds = %for.body2
+for.cond:
   %inc2 = add nuw nsw i32 %i2, 1
   %cmp2 = icmp eq i32 %inc2, %trip.count
   br i1 %cmp2, label %for.end, label %for.body2, !llvm.loop !0
 
-for.body2:                                       ; preds = %for.cond, %for.body
+for.body2:
   %i2 = phi i32 [ %inc2, %for.cond ], [ 0, %for.body ]
   %tmp = load i64, ptr %results, align 8
   br label %for.cond
 
-for.end:                                        ; preds = %for.cond, %entry
+for.end:
   ret void
 }
 
