@@ -101,6 +101,9 @@ add_clang_library(clangSema
   SemaX86.cpp
   TypeLocBuilder.cpp
 
+  PRECOMPILE_HEADERS
+  [["clang/Sema/pch.h"]]
+
   DEPENDS
   ClangOpenCLBuiltinsImpl
   acc_gen
