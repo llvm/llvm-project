@@ -243,7 +243,7 @@ static const int MinScheduleRegionSize = 16;
 /// Maximum allowed number of operands in the PHI nodes.
 static const unsigned MaxPHINumOperands = 128;
 
-/// For instructions that are not trivially vectorizable, try to vectorize their
+/// For the non-trivially vectorizable intrinsics calls, try to vectorize their
 /// operands.
 /// FIXME: Extend for all non-vectorized functions.
 SmallVector<Value *, 4>
@@ -256,7 +256,7 @@ getNonTriviallyVectorizableIntrinsicCallOperand(Value *V) {
   if (isTriviallyVectorizable(II->getIntrinsicID()))
     return {};
 
-  // Skip memory intrinsics (e.g., masked.load, masked.gather etc.)
+  // Skip vector-returning intrinsics in non-revec mode.
   if (!SLPReVec && II->getType()->isVectorTy())
     return {};
 
