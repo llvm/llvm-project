@@ -138,13 +138,13 @@ struct FindHostArray
   using Base::operator();
   Result operator()(const evaluate::Component &x) const {
     const Symbol &symbol{x.GetLastSymbol()};
-    if (symbol.IsFuncResult()) {
+    const Symbol &baseSymbol{x.base().GetFirstSymbol()};
+    if (symbol.IsFuncResult() || baseSymbol.IsFuncResult()) {
       return nullptr;
     }
     if (!IsHostArray(symbol)) {
       return nullptr;
     }
-    const Symbol &baseSymbol{x.base().GetFirstSymbol()};
     if (IsDummy(baseSymbol) && IsCUDADeviceContext(&baseSymbol.owner())) {
       return nullptr;
     }
