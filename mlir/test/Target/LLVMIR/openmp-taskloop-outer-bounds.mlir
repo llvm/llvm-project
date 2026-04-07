@@ -3,7 +3,7 @@
 // Regression test: taskloop loop bounds defined outside omp.taskloop must not
 // leave the outlined loop body using the original function's casted step
 // value. The outlined loop preheader has to reload the task's step from the
-// task shareds structure.
+// task shared values structure.
 
 omp.private {type = private} @_QFtestEi_private_i32 : i32
 
