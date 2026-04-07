@@ -24,6 +24,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 
+#include <memory>
 #include <optional>
 #include <string>
 #include <tuple>
@@ -53,14 +54,30 @@ template <typename T> T &&AsRvalue(T &&t) { return std::move(t); }
 const Scope &GetScopingUnit(const Scope &scope);
 const Scope &GetProgramUnit(const Scope &scope);
 
+template <typename T> struct WithSource {
+  template < //
+      typename U = std::remove_reference_t<T>,
+      typename = std::enable_if_t<std::is_default_constructible_v<U>>>
+  WithSource() : value(), source() {}
+  WithSource(const WithSource<T> &) = default;
+  WithSource(WithSource<T> &&) = default;
+  WithSource(const T &t, parser::CharBlock s) : value(t), source(s) {}
+  WithSource(T &&t, parser::CharBlock s) : value(std::move(t)), source(s) {}
+  WithSource &operator=(const WithSource<T> &) = default;
+  WithSource &operator=(WithSource<T> &&) = default;
+
+  using value_type = T;
+  T value;
+  parser::CharBlock source;
+};
+
 // There is no consistent way to get the source of an ActionStmt, but there
 // is "source" in Statement<T>. This structure keeps the ActionStmt with the
 // extracted source for further use.
-struct SourcedActionStmt {
-  const parser::ActionStmt *stmt{nullptr};
-  parser::CharBlock source;
-
-  operator bool() const { return stmt != nullptr; }
+struct SourcedActionStmt : public WithSource<const parser::ActionStmt *> {
+  using WithSource<value_type>::WithSource;
+  value_type stmt() const { return value; }
+  operator bool() const { return stmt() != nullptr; }
 };
 
 SourcedActionStmt GetActionStmt(const parser::ExecutionPartConstruct *x);
@@ -113,6 +130,24 @@ bool IsPointerAssignment(const evaluate::Assignment &x);
 
 MaybeExpr MakeEvaluateExpr(const parser::OmpStylizedInstance &inp);
 
+bool IsLoopTransforming(llvm::omp::Directive dir);
+bool IsFullUnroll(const parser::OmpDirectiveSpecification &spec);
+
+struct LoopControl {
+  LoopControl(LoopControl &&x) = default;
+  LoopControl(const LoopControl &x) = default;
+  LoopControl(const parser::LoopControl::Bounds &x);
+  LoopControl(const parser::ConcurrentControl &x);
+
+  const Symbol *iv{nullptr};
+  WithSource<MaybeExpr> lbound, ubound, step;
+
+private:
+  static WithSource<MaybeExpr> fromParserExpr(const parser::Expr &x);
+};
+
+std::vector<LoopControl> GetLoopControls(const parser::DoConstruct &x);
+
 /// A representation of a "because" message.
 struct Reason {
   Reason() = default;
@@ -156,9 +191,6 @@ WithReason<int64_t> GetArgumentValueWithReason(
 WithReason<int64_t> GetNumArgumentsWithReason(
     const parser::OmpDirectiveSpecification &spec, llvm::omp::Clause clauseId,
     unsigned version);
-
-bool IsLoopTransforming(llvm::omp::Directive dir);
-bool IsFullUnroll(const parser::OpenMPLoopConstruct &x);
 
 // Return the depth of the affected nests:
 //   {affected-depth, reason, must-be-perfect-nest}.
@@ -205,6 +237,8 @@ struct LoopSequence {
 
   WithReason<bool> isWellFormedSequence() const;
   WithReason<bool> isWellFormedNest() const;
+
+  std::vector<LoopControl> getLoopControls() const;
 
 private:
   using Construct = ExecutionPartIterator::Construct;

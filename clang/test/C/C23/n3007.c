@@ -77,10 +77,10 @@ void test_arrary(void) {
 }
 
 void test_initializer_list(void) {
-  auto a = {};        // expected-error {{cannot use 'auto' with array in C}}
-  auto b = { 0 };     // expected-error {{cannot use 'auto' with array in C}}
-  auto c = { 1, };    // expected-error {{cannot use 'auto' with array in C}}
-  auto d = { 1 , 2 }; // expected-error {{cannot use 'auto' with array in C}}
+  auto a = {};        // expected-error {{cannot use 'auto' with initializer list in C}}
+  auto b = { 0 };     // expected-error {{cannot use 'auto' with initializer list in C}}
+  auto c = { 1, };    // expected-error {{cannot use 'auto' with initializer list in C}}
+  auto d = { 1 , 2 }; // expected-error {{cannot use 'auto' with initializer list in C}}
   auto e = (int [3]){ 1, 2, 3 };
 }
 
@@ -107,12 +107,11 @@ void test_misc(void) {
   auto something;                           // expected-error {{declaration of variable 'something' with deduced type 'auto' requires an initializer}}
   auto test_char = 'A';
   auto test_char_ptr = "test";
-  auto test_char_ptr2[] = "another test";   // expected-warning {{type inference of a declaration other than a plain identifier with optional trailing attributes is a Clang extension}}
+  auto test_char_ptr2[] = "another test";   // expected-error {{cannot use 'auto' with array in C}}
   auto auto_size = sizeof(auto);            // expected-error {{expected expression}}
 
   _Static_assert(_Generic(test_char, int : 1));
   _Static_assert(_Generic(test_char_ptr, char * : 1));
-  _Static_assert(_Generic(test_char_ptr2, char * : 1));
 }
 
 void test_no_integer_promotions(void) {

@@ -1184,11 +1184,9 @@ template <class ELFT> void elf::scanRelocations(Ctx &ctx) {
   // copy relocations, etc. Note that relocations for non-alloc sections are
   // directly processed by InputSection::relocateNonAlloc.
 
-  // Deterministic parallellism needs sorting relocations which is unsuitable
-  // for -z nocombreloc. MIPS and PPC64 use global states which are not suitable
-  // for parallelism.
-  bool serial = !ctx.arg.zCombreloc || ctx.arg.emachine == EM_MIPS ||
-                ctx.arg.emachine == EM_PPC64;
+  // MIPS modifies MipsGotSection during relocation scanning, which is not
+  // suitable for parallelism.
+  bool serial = ctx.arg.emachine == EM_MIPS;
   parallel::TaskGroup tg;
   auto outerFn = [&]() {
     for (ELFFileBase *f : ctx.objectFiles) {
