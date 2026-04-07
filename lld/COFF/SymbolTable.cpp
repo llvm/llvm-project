@@ -1190,6 +1190,8 @@ static StringRef exportSourceName(ExportSource s) {
     return "/export";
   case ExportSource::ModuleDefinition:
     return "/def";
+  case ExportSource::ExportAll:
+    return "/export-all-symbols";
   default:
     llvm_unreachable("unknown ExportSource");
   }

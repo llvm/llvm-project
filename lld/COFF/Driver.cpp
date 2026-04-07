@@ -1487,6 +1487,7 @@ void LinkerDriver::maybeExportMinGWSymbols(const opt::InputArgList &args) {
       Export e;
       e.name = def->getName();
       e.sym = def;
+      e.source = ExportSource::ExportAll;
       if (Chunk *c = def->getChunk())
         if (!(c->getOutputCharacteristics() & IMAGE_SCN_MEM_EXECUTE))
           e.data = true;
