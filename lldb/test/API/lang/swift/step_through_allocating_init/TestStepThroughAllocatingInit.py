@@ -33,8 +33,9 @@ class TestStepThroughAllocatingInit(lldbtest.TestBase):
         exe_name = "a.out"
         exe = self.getBuildArtifact(exe_name)
 
+        library_name = self.platformContext.getFullLibName("swiftCore")
         self.runCmd(
-            "settings set target.process.thread.step-avoid-libraries libswiftCore.dylib"
+            f"settings set target.process.thread.step-avoid-libraries {library_name}"
         )
 
         target, process, thread, breakpoint = lldbutil.run_to_source_breakpoint(self,
