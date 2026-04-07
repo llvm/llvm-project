@@ -329,16 +329,13 @@ bool AArch64A57FPLoadBalancingLegacy::runOnMachineFunction(
     MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
-
-  AArch64A57FPLoadBalancingImpl Impl;
-  return Impl.run(MF);
+  return AArch64A57FPLoadBalancingImpl().run(MF);
 }
 
 PreservedAnalyses
 AArch64A57FPLoadBalancingPass::run(MachineFunction &MF,
                                    MachineFunctionAnalysisManager &MFAM) {
-  AArch64A57FPLoadBalancingImpl Impl;
-  if (Impl.run(MF)) {
+  if (AArch64A57FPLoadBalancingImpl().run(MF)) {
     PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
     PA.preserveSet<CFGAnalyses>();
     return PA;
