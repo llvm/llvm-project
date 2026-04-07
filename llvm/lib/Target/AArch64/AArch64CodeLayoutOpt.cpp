@@ -162,9 +162,9 @@ bool AArch64CodeLayoutOpt::runOnMachineFunction(MachineFunction &MF) {
   const auto *Subtarget = &MF.getSubtarget<AArch64Subtarget>();
   TII = Subtarget->getInstrInfo();
 
-  if (!((EnableCodeAlignment.isSet(FcmpFcsel)) &&
+  if (!(EnableCodeAlignment.isSet(FcmpFcsel) &&
         Subtarget->hasFuseFCmpFCSel()) &&
-      !((EnableCodeAlignment.isSet(CmpCsel)) && Subtarget->hasFuseCmpCSel()))
+      !(EnableCodeAlignment.isSet(CmpCsel) && Subtarget->hasFuseCmpCSel()))
     return false;
 
   return optimizeForCodeLayout(MF);
