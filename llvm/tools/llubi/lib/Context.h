@@ -12,6 +12,7 @@
 #include "Value.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/IR/FPEnv.h"
 #include "llvm/IR/Module.h"
 #include <map>
 #include <random>
