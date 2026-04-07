@@ -20,15 +20,18 @@ llvm.func @_QPtest() {
   %c1_i32 = llvm.mlir.constant(1 :i32) : i32
   %c5_i32 = llvm.mlir.constant(5 : i32) : i32
   %c10_i32 = llvm.mlir.constant(10 : i32) : i32
-  omp.taskloop private(@_QFtestEa_firstprivate_i32 %3 -> %arg0, @_QFtestEi_private_i32 %1 -> %arg1 : !llvm.ptr, !llvm.ptr) {
-    omp.loop_nest (%arg2, %arg3) : i32 = (%c1_i32, %c1_i32) to (%c10_i32, %c5_i32) inclusive step (%c1_i32, %c1_i32) collapse(2) {
-      llvm.store %arg2, %arg1 : i32, !llvm.ptr
-      %10 = llvm.load %arg0 : !llvm.ptr -> i32
-      %11 = llvm.mlir.constant(1 : i32) : i32
-      %12 = llvm.add %10, %11 : i32
-      llvm.store %12, %arg0 : i32, !llvm.ptr
-      omp.yield
+  omp.taskloop.context {
+    omp.taskloop private(@_QFtestEa_firstprivate_i32 %3 -> %arg0, @_QFtestEi_private_i32 %1 -> %arg1 : !llvm.ptr, !llvm.ptr) {
+      omp.loop_nest (%arg2, %arg3) : i32 = (%c1_i32, %c1_i32) to (%c10_i32, %c5_i32) inclusive step (%c1_i32, %c1_i32) collapse(2) {
+        llvm.store %arg2, %arg1 : i32, !llvm.ptr
+        %10 = llvm.load %arg0 : !llvm.ptr -> i32
+        %11 = llvm.mlir.constant(1 : i32) : i32
+        %12 = llvm.add %10, %11 : i32
+        llvm.store %12, %arg0 : i32, !llvm.ptr
+        omp.yield
+      }
     }
+    omp.terminator
   }
   llvm.return
 }
@@ -42,9 +45,11 @@ llvm.func @_QPtest() {
 // CHECK: %[[task_lb:.*]] = load i64, ptr %[[gep_task_lb]], align 4
 // CHECK: %[[gep_task_ub:.*]] = getelementptr { i64, i64, i64, ptr }, ptr %[[VAL_1]], i32 0, i32 1
 // CHECK: %[[task_ub:.*]] = load i64, ptr %gep_ub.val, align 4
+// CHECK: %[[gep_task_step:.*]] = getelementptr { i64, i64, i64, ptr }, ptr %[[VAL_1]], i32 0, i32 2
+// CHECK: %[[task_step:.*]] = load i64, ptr %[[gep_task_step]], align 4
 
 // CHECK: %[[VAL_3:.*]] = sub i64 %[[task_ub]], %[[task_lb]]
-// CHECK: %[[VAL_4:.*]] = sdiv i64 %[[VAL_3]], 1
+// CHECK: %[[VAL_4:.*]] = sdiv i64 %[[VAL_3]], %[[task_step]]
 // CHECK: %[[trip_cnt:.*]] = add i64 %[[VAL_4]], 1
 // CHECK: %[[VAL_6:.*]] = trunc i64 %[[task_lb]] to i32
 
@@ -70,15 +75,18 @@ llvm.func @_QPtest2() {
   %c2_i32 = llvm.mlir.constant(2 : i32) : i32
   %c5_i32 = llvm.mlir.constant(5 : i32) : i32
   %c10_i32 = llvm.mlir.constant(10 : i32) : i32
-  omp.taskloop private(@_QFtestEa_firstprivate_i32 %3 -> %arg0, @_QFtestEi_private_i32 %1 -> %arg1 : !llvm.ptr, !llvm.ptr) {
-    omp.loop_nest (%arg2, %arg3, %arg4) : i32 = (%c1_i32, %c1_i32, %c2_i32) to (%c10_i32, %c5_i32, %c5_i32) inclusive step (%c1_i32, %c1_i32, %c1_i32) collapse(3) {
-      llvm.store %arg2, %arg1 : i32, !llvm.ptr
-      %10 = llvm.load %arg0 : !llvm.ptr -> i32
-      %11 = llvm.mlir.constant(1 : i32) : i32
-      %12 = llvm.add %10, %11 : i32
-      llvm.store %12, %arg0 : i32, !llvm.ptr
-      omp.yield
+  omp.taskloop.context {
+    omp.taskloop private(@_QFtestEa_firstprivate_i32 %3 -> %arg0, @_QFtestEi_private_i32 %1 -> %arg1 : !llvm.ptr, !llvm.ptr) {
+      omp.loop_nest (%arg2, %arg3, %arg4) : i32 = (%c1_i32, %c1_i32, %c2_i32) to (%c10_i32, %c5_i32, %c5_i32) inclusive step (%c1_i32, %c1_i32, %c1_i32) collapse(3) {
+        llvm.store %arg2, %arg1 : i32, !llvm.ptr
+        %10 = llvm.load %arg0 : !llvm.ptr -> i32
+        %11 = llvm.mlir.constant(1 : i32) : i32
+        %12 = llvm.add %10, %11 : i32
+        llvm.store %12, %arg0 : i32, !llvm.ptr
+        omp.yield
+      }
     }
+    omp.terminator
   }
   llvm.return
 }
@@ -92,9 +100,11 @@ llvm.func @_QPtest2() {
 // CHECK: %[[task_lb:.*]] = load i64, ptr %[[gep_task_lb]], align 4
 // CHECK: %[[gep_task_ub:.*]] = getelementptr { i64, i64, i64, ptr }, ptr %[[VAL_1]], i32 0, i32 1
 // CHECK: %[[task_ub:.*]] = load i64, ptr %gep_ub.val, align 4
+// CHECK: %[[gep_task_step:.*]] = getelementptr { i64, i64, i64, ptr }, ptr %[[VAL_1]], i32 0, i32 2
+// CHECK: %[[task_step:.*]] = load i64, ptr %[[gep_task_step]], align 4
 
 // CHECK: %[[VAL_3:.*]] = sub i64 %[[task_ub]], %[[task_lb]]
-// CHECK: %[[VAL_4:.*]] = sdiv i64 %[[VAL_3]], 1
+// CHECK: %[[VAL_4:.*]] = sdiv i64 %[[VAL_3]], %[[task_step]]
 // CHECK: %[[trip_cnt:.*]] = add i64 %[[VAL_4]], 1
 // CHECK: %[[VAL_6:.*]] = trunc i64 %[[task_lb]] to i32
 
@@ -125,15 +135,18 @@ llvm.func @_QPtest3() {
   %c5_i32 = llvm.mlir.constant(5 : i32) : i32
   %c10_i32 = llvm.mlir.constant(10 : i32) : i32
   %c20_i32 = llvm.mlir.constant(20 : i32) : i32
-  omp.taskloop private(@_QFtestEa_firstprivate_i32 %3 -> %arg0, @_QFtestEi_private_i32 %1 -> %arg1 : !llvm.ptr, !llvm.ptr) {
-    omp.loop_nest (%arg2, %arg3) : i32 = (%c10_i32, %c1_i32) to (%c20_i32, %c5_i32) inclusive step (%c1_i32, %c1_i32) collapse(2) {
-      llvm.store %arg2, %arg1 : i32, !llvm.ptr
-      %10 = llvm.load %arg0 : !llvm.ptr -> i32
-      %11 = llvm.mlir.constant(1 : i32) : i32
-      %12 = llvm.add %10, %11 : i32
-      llvm.store %12, %arg0 : i32, !llvm.ptr
-      omp.yield
+  omp.taskloop.context {
+    omp.taskloop private(@_QFtestEa_firstprivate_i32 %3 -> %arg0, @_QFtestEi_private_i32 %1 -> %arg1 : !llvm.ptr, !llvm.ptr) {
+      omp.loop_nest (%arg2, %arg3) : i32 = (%c10_i32, %c1_i32) to (%c20_i32, %c5_i32) inclusive step (%c1_i32, %c1_i32) collapse(2) {
+        llvm.store %arg2, %arg1 : i32, !llvm.ptr
+        %10 = llvm.load %arg0 : !llvm.ptr -> i32
+        %11 = llvm.mlir.constant(1 : i32) : i32
+        %12 = llvm.add %10, %11 : i32
+        llvm.store %12, %arg0 : i32, !llvm.ptr
+        omp.yield
+      }
     }
+    omp.terminator
   }
   llvm.return
 }
@@ -147,9 +160,11 @@ llvm.func @_QPtest3() {
 // CHECK: %[[task_lb:.*]] = load i64, ptr %[[gep_task_lb]], align 4
 // CHECK: %[[gep_task_ub:.*]] = getelementptr { i64, i64, i64, ptr }, ptr %[[VAL_1]], i32 0, i32 1
 // CHECK: %[[task_ub:.*]] = load i64, ptr %[[gep_task_ub]], align 4
+// CHECK: %[[gep_task_step:.*]] = getelementptr { i64, i64, i64, ptr }, ptr %[[VAL_1]], i32 0, i32 2
+// CHECK: %[[task_step:.*]] = load i64, ptr %[[gep_task_step]], align 4
 
 // CHECK: %[[VAL_3:.*]] = sub i64 %[[task_ub]], %[[task_lb]]
-// CHECK: %[[VAL_4:.*]] = sdiv i64 %[[VAL_3]], 1
+// CHECK: %[[VAL_4:.*]] = sdiv i64 %[[VAL_3]], %[[task_step]]
 // CHECK: %[[trip_cnt:.*]] = add i64 %[[VAL_4]], 1
 // CHECK: %[[VAL_5:.*]] = trunc i64 %[[trip_cnt]] to i32
 // CHECK: %6 = trunc i64 %[[task_lb]] to i32
@@ -180,15 +195,18 @@ llvm.func @_QPtest4() {
   %c5_i32 = llvm.mlir.constant(5 : i32) : i32
   %c10_i32 = llvm.mlir.constant(10 : i32) : i32
   %c15_i32 = llvm.mlir.constant(15 : i32) : i32
-  omp.taskloop private(@_QFtestEa_firstprivate_i32 %3 -> %arg0, @_QFtestEi_private_i32 %1 -> %arg1 : !llvm.ptr, !llvm.ptr) {
-    omp.loop_nest (%arg2, %arg3) : i32 = (%c2_i32, %c5_i32) to (%c10_i32, %c15_i32) inclusive step (%c2_i32, %c3_i32) collapse(2) {
-      llvm.store %arg2, %arg1 : i32, !llvm.ptr
-      %10 = llvm.load %arg0 : !llvm.ptr -> i32
-      %11 = llvm.mlir.constant(1 : i32) : i32
-      %12 = llvm.add %10, %11 : i32
-      llvm.store %12, %arg0 : i32, !llvm.ptr
-      omp.yield
+  omp.taskloop.context {
+    omp.taskloop private(@_QFtestEa_firstprivate_i32 %3 -> %arg0, @_QFtestEi_private_i32 %1 -> %arg1 : !llvm.ptr, !llvm.ptr) {
+      omp.loop_nest (%arg2, %arg3) : i32 = (%c2_i32, %c5_i32) to (%c10_i32, %c15_i32) inclusive step (%c2_i32, %c3_i32) collapse(2) {
+        llvm.store %arg2, %arg1 : i32, !llvm.ptr
+        %10 = llvm.load %arg0 : !llvm.ptr -> i32
+        %11 = llvm.mlir.constant(1 : i32) : i32
+        %12 = llvm.add %10, %11 : i32
+        llvm.store %12, %arg0 : i32, !llvm.ptr
+        omp.yield
+      }
     }
+    omp.terminator
   }
   llvm.return
 }
@@ -202,9 +220,11 @@ llvm.func @_QPtest4() {
 // CHECK: %[[task_lb:.*]] = load i64, ptr %[[gep_task_lb]], align 4
 // CHECK: %[[gep_task_ub:.*]] = getelementptr { i64, i64, i64, ptr }, ptr %[[VAL_1]], i32 0, i32 1
 // CHECK: %[[task_ub:.*]] = load i64, ptr %[[gep_task_ub]], align 4
+// CHECK: %[[gep_task_step:.*]] = getelementptr { i64, i64, i64, ptr }, ptr %[[VAL_1]], i32 0, i32 2
+// CHECK: %[[task_step:.*]] = load i64, ptr %[[gep_task_step]], align 4
 
 // CHECK: %[[VAL_3:.*]] = sub i64 %[[task_ub]], %[[task_lb]]
-// CHECK: %[[VAL_4:.*]] = sdiv i64 %[[VAL_3]], 1
+// CHECK: %[[VAL_4:.*]] = sdiv i64 %[[VAL_3]], %[[task_step]]
 // CHECK: %[[trip_cnt:.*]] = add i64 %[[VAL_4]], 1
 // CHECK: %[[VAL_5:.*]] = trunc i64 %[[trip_cnt]] to i32
 // CHECK: %6 = trunc i64 %[[task_lb]] to i32
@@ -237,15 +257,18 @@ llvm.func @_QPtest5() {
   %c5_i32 = llvm.mlir.constant(5 : i32) : i32
   %c10_i32 = llvm.mlir.constant(10 : i32) : i32
   %c15_i32 = llvm.mlir.constant(15 : i32) : i32
-  omp.taskloop private(@_QFtestEa_firstprivate_i32 %3 -> %arg0, @_QFtestEi_private_i32 %1 -> %arg1 : !llvm.ptr, !llvm.ptr) {
-    omp.loop_nest (%arg2, %arg3) : i32 = (%cneg2_i32, %c5_i32) to (%c10_i32, %c15_i32) inclusive step (%c2_i32, %c3_i32) collapse(2) {
-      llvm.store %arg2, %arg1 : i32, !llvm.ptr
-      %10 = llvm.load %arg0 : !llvm.ptr -> i32
-      %11 = llvm.mlir.constant(1 : i32) : i32
-      %12 = llvm.add %10, %11 : i32
-      llvm.store %12, %arg0 : i32, !llvm.ptr
-      omp.yield
+  omp.taskloop.context {
+    omp.taskloop private(@_QFtestEa_firstprivate_i32 %3 -> %arg0, @_QFtestEi_private_i32 %1 -> %arg1 : !llvm.ptr, !llvm.ptr) {
+      omp.loop_nest (%arg2, %arg3) : i32 = (%cneg2_i32, %c5_i32) to (%c10_i32, %c15_i32) inclusive step (%c2_i32, %c3_i32) collapse(2) {
+        llvm.store %arg2, %arg1 : i32, !llvm.ptr
+        %10 = llvm.load %arg0 : !llvm.ptr -> i32
+        %11 = llvm.mlir.constant(1 : i32) : i32
+        %12 = llvm.add %10, %11 : i32
+        llvm.store %12, %arg0 : i32, !llvm.ptr
+        omp.yield
+      }
     }
+    omp.terminator
   }
   llvm.return
 }
@@ -259,9 +282,11 @@ llvm.func @_QPtest5() {
 // CHECK: %[[task_lb:.*]] = load i64, ptr %[[gep_task_lb]], align 4
 // CHECK: %[[gep_task_ub:.*]] = getelementptr { i64, i64, i64, ptr }, ptr %[[VAL_1]], i32 0, i32 1
 // CHECK: %[[task_ub:.*]] = load i64, ptr %[[gep_task_ub]], align 4
+// CHECK: %[[gep_task_step:.*]] = getelementptr { i64, i64, i64, ptr }, ptr %[[VAL_1]], i32 0, i32 2
+// CHECK: %[[task_step:.*]] = load i64, ptr %[[gep_task_step]], align 4
 
 // CHECK: %[[VAL_3:.*]] = sub i64 %[[task_ub]], %[[task_lb]]
-// CHECK: %[[VAL_4:.*]] = sdiv i64 %[[VAL_3]], 1
+// CHECK: %[[VAL_4:.*]] = sdiv i64 %[[VAL_3]], %[[task_step]]
 // CHECK: %[[trip_cnt:.*]] = add i64 %[[VAL_4]], 1
 // CHECK: %[[VAL_5:.*]] = trunc i64 %[[trip_cnt]] to i32
 // CHECK: %6 = trunc i64 %[[task_lb]] to i32
@@ -290,15 +315,18 @@ llvm.func @_QPtest6() {
   %c1_i32 = llvm.mlir.constant(1 :i32) : i32
   %c5_i32 = llvm.mlir.constant(5 : i32) : i32
   %c10_i32 = llvm.mlir.constant(10 : i32) : i32
-  omp.taskloop private(@_QFtestEa_firstprivate_i32 %3 -> %arg0, @_QFtestEi_private_i32 %1 -> %arg1 : !llvm.ptr, !llvm.ptr) {
-    omp.loop_nest (%arg2, %arg3) : i32 = (%c10_i32, %c1_i32) to (%c5_i32, %c5_i32) inclusive step (%cneg1_i32, %c1_i32) collapse(2) {
-      llvm.store %arg2, %arg1 : i32, !llvm.ptr
-      %10 = llvm.load %arg0 : !llvm.ptr -> i32
-      %11 = llvm.mlir.constant(1 : i32) : i32
-      %12 = llvm.add %10, %11 : i32
-      llvm.store %12, %arg0 : i32, !llvm.ptr
-      omp.yield
+  omp.taskloop.context {
+    omp.taskloop private(@_QFtestEa_firstprivate_i32 %3 -> %arg0, @_QFtestEi_private_i32 %1 -> %arg1 : !llvm.ptr, !llvm.ptr) {
+      omp.loop_nest (%arg2, %arg3) : i32 = (%c10_i32, %c1_i32) to (%c5_i32, %c5_i32) inclusive step (%cneg1_i32, %c1_i32) collapse(2) {
+        llvm.store %arg2, %arg1 : i32, !llvm.ptr
+        %10 = llvm.load %arg0 : !llvm.ptr -> i32
+        %11 = llvm.mlir.constant(1 : i32) : i32
+        %12 = llvm.add %10, %11 : i32
+        llvm.store %12, %arg0 : i32, !llvm.ptr
+        omp.yield
+      }
     }
+    omp.terminator
   }
   llvm.return
 }
@@ -312,9 +340,11 @@ llvm.func @_QPtest6() {
 // CHECK: %[[task_lb:.*]] = load i64, ptr %[[gep_task_lb]], align 4
 // CHECK: %[[gep_task_ub:.*]] = getelementptr { i64, i64, i64, ptr }, ptr %[[VAL_1]], i32 0, i32 1
 // CHECK: %[[task_ub:.*]] = load i64, ptr %[[gep_task_ub]], align 4
+// CHECK: %[[gep_task_step:.*]] = getelementptr { i64, i64, i64, ptr }, ptr %[[VAL_1]], i32 0, i32 2
+// CHECK: %[[task_step:.*]] = load i64, ptr %[[gep_task_step]], align 4
 
 // CHECK: %[[VAL_3:.*]] = sub i64 %[[task_ub]], %[[task_lb]]
-// CHECK: %[[VAL_4:.*]] = sdiv i64 %[[VAL_3]], 1
+// CHECK: %[[VAL_4:.*]] = sdiv i64 %[[VAL_3]], %[[task_step]]
 // CHECK: %[[trip_cnt:.*]] = add i64 %[[VAL_4]], 1
 // CHECK: %[[VAL_5:.*]] = trunc i64 %[[trip_cnt]] to i32
 // CHECK: %6 = trunc i64 %[[task_lb]] to i32

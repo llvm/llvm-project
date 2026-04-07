@@ -421,6 +421,9 @@ static LogicalResult checkImplementationStatus(Operation &op) {
         checkDepend(op, result);
         checkNowait(op, result);
       })
+      .Case([&](omp::TaskloopContextOp op) {
+        // TODO: move clauses from TaskloopOp to here
+      })
       .Case([&](omp::TaskloopOp op) {
         checkAllocate(op, result);
         checkInReduction(op, result);
@@ -2852,12 +2855,35 @@ convertOmpTaskOp(omp::TaskOp taskOp, llvm::IRBuilderBase &builder,
   return success();
 }
 
+/// The correct entry point is convertOmpTaskloopContextOp. This gets called
+/// whilst lowering the body of the taskloop context (i.e. the task function).
+static LogicalResult
+convertOmpTaskloopOp(omp::TaskloopOp taskloopOp, llvm::IRBuilderBase &builder,
+                     LLVM::ModuleTranslation &moduleTranslation) {
+  mlir::Operation &opInst = *taskloopOp.getOperation();
+  if (failed(checkImplementationStatus(opInst)))
+    return failure();
+
+  // Recurse into the loop body.
+  auto continuationBlockOrError =
+      convertOmpOpRegions(taskloopOp.getRegion(), "omp.taskloop.region",
+                          builder, moduleTranslation);
+
+  if (failed(handleError(continuationBlockOrError, opInst)))
+    return failure();
+
+  builder.SetInsertPoint(continuationBlockOrError.get());
+  return success();
+}
+
 // Converts an OpenMP taskloop construct into LLVM IR using OpenMPIRBuilder.
 static LogicalResult
-convertOmpTaskloopOp(Operation &opInst, llvm::IRBuilderBase &builder,
-                     LLVM::ModuleTranslation &moduleTranslation) {
+convertOmpTaskloopContextOp(omp::TaskloopContextOp contextOp,
+                            llvm::IRBuilderBase &builder,
+                            LLVM::ModuleTranslation &moduleTranslation) {
   using InsertPointTy = llvm::OpenMPIRBuilder::InsertPointTy;
-  auto taskloopOp = cast<omp::TaskloopOp>(opInst);
+  mlir::Operation &opInst = *contextOp.getOperation();
+  omp::TaskloopOp taskloopOp = contextOp.getLoopOp();
   if (failed(checkImplementationStatus(opInst)))
     return failure();
 
@@ -3004,9 +3030,11 @@ convertOmpTaskloopOp(Operation &opInst, llvm::IRBuilderBase &builder,
       moduleTranslation.mapValue(blockArg, llvmPrivateVar);
     }
 
-    auto continuationBlockOrError =
-        convertOmpOpRegions(taskloopOp.getRegion(), "omp.taskloop.region",
-                            builder, moduleTranslation);
+    // Lower the contents of the taskloop context region: this is the body of
+    // the generated task, not the loop.
+    auto continuationBlockOrError = convertOmpOpRegions(
+        contextOp.getRegion(), "omp.taskloop.context.region", builder,
+        moduleTranslation);
 
     if (failed(handleError(continuationBlockOrError, opInst)))
       return llvm::make_error<PreviouslyReportedError>();
@@ -3094,9 +3122,10 @@ convertOmpTaskloopOp(Operation &opInst, llvm::IRBuilderBase &builder,
       // through a stack allocated structure.
     }
 
-    if (failed(copyFirstPrivateVars(
-            &opInst, builder, moduleTranslation, srcGEPs, destGEPs,
-            privateVarsInfo.privatizers, taskloopOp.getPrivateNeedsBarrier())))
+    if (failed(copyFirstPrivateVars(taskloopOp.getOperation(), builder,
+                                    moduleTranslation, srcGEPs, destGEPs,
+                                    privateVarsInfo.privatizers,
+                                    taskloopOp.getPrivateNeedsBarrier())))
       return llvm::make_error<PreviouslyReportedError>();
 
     return builder.saveIP();
@@ -7505,6 +7534,18 @@ LogicalResult OpenMPDialectLLVMIRTranslationInterface::convertOperation(
       isa_and_present<omp::LoopWrapperInterface>(op) &&
       !dyn_cast_if_present<omp::LoopWrapperInterface>(op->getParentOp());
 
+  // The TASKLOOP construct is implemented with an outer taskloop.context
+  // operation which is not a loop wrapper, containing an inner taskloop
+  // operation which is a loop wrapper. The stack frame should be pushed when
+  // translating the outer taskloop.context and popped when translating the
+  // inner taskloop which is a loop wrapper. We need access to the loop
+  // information in the outer taskloop context so we need to create it and pop
+  // it around the taskloop context not the inner loop wrapper.
+  if (isa<omp::TaskloopContextOp>(op))
+    isOutermostLoopWrapper = true;
+  else if (isa<omp::TaskloopOp>(op))
+    isOutermostLoopWrapper = false;
+
   if (isOutermostLoopWrapper)
     moduleTranslation.stackPush<OpenMPLoopInfoStackFrame>();
 
@@ -7602,7 +7643,10 @@ LogicalResult OpenMPDialectLLVMIRTranslationInterface::convertOperation(
             return convertOmpTaskOp(op, builder, moduleTranslation);
           })
           .Case([&](omp::TaskloopOp op) {
-            return convertOmpTaskloopOp(*op, builder, moduleTranslation);
+            return convertOmpTaskloopOp(op, builder, moduleTranslation);
+          })
+          .Case([&](omp::TaskloopContextOp op) {
+            return convertOmpTaskloopContextOp(op, builder, moduleTranslation);
           })
           .Case([&](omp::TaskgroupOp op) {
             return convertOmpTaskgroupOp(op, builder, moduleTranslation);

@@ -2005,7 +2005,7 @@ def AMDGPU_GlobalPrefetchOp :
     AMDGPU_Op<"global_prefetch", [MemoryEffects<[MemWrite, MemRead]>]>,
     Arguments<(ins AnyMemRef:$src,
                Variadic<I64>:$indices,
-               AMDGPU_TemporalHintAttr:$temporalHint,
+               AMDGPU_LoadTemporalHintAttr:$temporalHint,
                AMDGPU_CacheScopeAttr:$cacheScope,
                UnitAttr:$speculative)>,
     Results<(outs)> {
