@@ -1501,6 +1501,16 @@ protected:
       thread_sp->GetProcess()->DidFork(m_child_pid, m_child_tid);
   }
 
+  bool ShouldStopSynchronous(Event *event_ptr) override {
+    if (!m_performed_action) {
+      m_performed_action = true;
+      ThreadSP thread_sp(m_thread_wp.lock());
+      if (thread_sp)
+        thread_sp->GetProcess()->DidFork(m_child_pid, m_child_tid);
+    }
+    return false;
+  }
+
   bool m_performed_action = false;
 
 private:
@@ -1541,6 +1551,15 @@ protected:
     if (thread_sp)
       thread_sp->GetProcess()->DidVFork(m_child_pid, m_child_tid);
   }
+  bool ShouldStopSynchronous(Event *event_ptr) override {
+    if (!m_performed_action) {
+      m_performed_action = true;
+      ThreadSP thread_sp(m_thread_wp.lock());
+      if (thread_sp)
+        thread_sp->GetProcess()->DidVFork(m_child_pid, m_child_tid);
+    }
+    return false;
+  }
 
   bool m_performed_action = false;
 
@@ -1572,6 +1591,15 @@ protected:
     ThreadSP thread_sp(m_thread_wp.lock());
     if (thread_sp)
       thread_sp->GetProcess()->DidVForkDone();
+  }
+  bool ShouldStopSynchronous(Event *event_ptr) override {
+    if (!m_performed_action) {
+      m_performed_action = true;
+      ThreadSP thread_sp(m_thread_wp.lock());
+      if (thread_sp)
+        thread_sp->GetProcess()->DidVForkDone();
+    }
+    return false;
   }
 
   bool m_performed_action = false;
