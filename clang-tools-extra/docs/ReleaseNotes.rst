@@ -399,7 +399,6 @@ Changes in existing checks
 - Improved :doc:`performance-trivially-destructible
   <clang-tidy/checks/performance/trivially-destructible>` check by fixing
   false positives when a class is seen through both a header include and
-  a C++20 module import.
 - Improved :doc:`performance-prefer-single-char-overloads
   <clang-tidy/checks/performance/prefer-single-char-overloads>` check:
 
