@@ -1856,7 +1856,8 @@ void PreRARematStage::finalizeGCNRegion() {
   // target there is no point in trying to re-schedule further regions.
   if (!TargetOcc)
     return;
-  RegionReverts.emplace_back(RegionIdx, Unsched, PressureBefore);
+  RegionReverts.emplace_back(RegionIdx, Unsched, PressureBefore,
+                             ScheduleReverted);
   if (DAG.MinOccupancy < *TargetOcc) {
     REMAT_DEBUG(dbgs() << "Region " << RegionIdx
                        << " cannot meet occupancy target, interrupting "
@@ -1867,6 +1868,7 @@ void PreRARematStage::finalizeGCNRegion() {
 
 void GCNSchedStage::checkScheduling() {
   // Check the results of scheduling.
+  ScheduleReverted = false;
   PressureAfter = DAG.getRealRegPressure(RegionIdx);
 
   LLVM_DEBUG(dbgs() << "Pressure after scheduling: " << print(PressureAfter));
@@ -1931,7 +1933,8 @@ void GCNSchedStage::checkScheduling() {
 
   // Revert if this region's schedule would cause a drop in occupancy or
   // spilling.
-  if (shouldRevertScheduling(WavesAfter)) {
+  ScheduleReverted = shouldRevertScheduling(WavesAfter);
+  if (ScheduleReverted) {
     modifyRegionSchedule(RegionIdx, DAG.BB, Unsched);
     std::tie(DAG.RegionBegin, DAG.RegionEnd) = DAG.Regions[RegionIdx];
   } else {
@@ -2196,6 +2199,19 @@ void GCNSchedStage::modifyRegionSchedule(unsigned RegionIdx,
       if (NonDebugReordered)
         DAG.LIS->handleMove(*MI, true);
     } else {
+      // MI is already at the expected position. However, earlier splices in
+      // this loop may have changed neighboring slot indices, so this MI's
+      // slot index can become non-monotonic w.r.t. the physical MBB order.
+      // Only re-seat when monotonicity is actually violated to avoid
+      // unnecessary LiveInterval changes that could perturb scheduling.
+      if (!MI->isDebugInstr() && !MI->isBundled() &&
+          DAG.LIS->getSlotIndexes()->hasIndex(*MI)) {
+        SlotIndex MI_Idx = DAG.LIS->getInstructionIndex(*MI);
+        SlotIndex PrevIdx =
+            DAG.LIS->getSlotIndexes()->getIndexBefore(*MI);
+        if (PrevIdx >= MI_Idx)
+          DAG.LIS->handleMove(*MI, true);
+      }
       ++RegionEnd;
     }
     if (MI->isDebugInstr()) {
@@ -3155,10 +3171,13 @@ void PreRARematStage::finalizeGCNSchedStage() {
   }
 
   // Revert re-scheduling in all affected regions.
-  for (const auto &[RegionIdx, OrigMIOrder, MaxPressure] : RegionReverts) {
+  for (const auto &[RegionIdx, OrigMIOrder, MaxPressure, AlreadyReverted] :
+       RegionReverts) {
+    DAG.Pressure[RegionIdx] = MaxPressure;
+    if (AlreadyReverted)
+      continue;
     REMAT_DEBUG(dbgs() << "Reverting re-scheduling in region " << RegionIdx
                        << '\n');
-    DAG.Pressure[RegionIdx] = MaxPressure;
     modifyRegionSchedule(RegionIdx, RegionBB[RegionIdx], OrigMIOrder);
   }
 
