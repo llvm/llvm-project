@@ -6060,10 +6060,10 @@ bool ObjectFileMachO::SetLoadAddress(Target &target, lldb::addr_t value,
             CalculateSectionLoadAddressForMemoryImage(
                 value, mach_header_section, section_sp.get());
         if (section_load_addr != LLDB_INVALID_ADDRESS) {
-          LLDB_LOGF(log,
-                    "ObjectFileMachO::SetLoadAddress segment '{0}' load addr "
-                    "is {1:x}",
-                    section_sp->GetName(), section_load_addr);
+          LLDB_LOG(log,
+                   "ObjectFileMachO::SetLoadAddress segment '{0}' load addr is "
+                   "{1:x}",
+                   section_sp->GetName(), section_load_addr);
           if (target.SetSectionLoadAddress(section_sp, section_load_addr,
                                            warn_multiple))
             ++num_loaded_sections;
