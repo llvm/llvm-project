@@ -716,10 +716,20 @@ public:
     return *reinterpret_cast<T *>(BS.Pointee->rawData() + ReadOffset);
   }
 
+  bool isConstexprUnknown() const {
+    if (!isBlockPointer())
+      return false;
+    return getDeclDesc()->IsConstexprUnknown;
+  }
+
   /// Whether this block can be read from at all. This is only true for
   /// block pointers that point to a valid location inside that block.
   bool isDereferencable() const {
     if (!isBlockPointer())
+      return false;
+    if (isDummy())
+      return false;
+    if (isConstexprUnknown())
       return false;
     if (isPastEnd())
       return false;

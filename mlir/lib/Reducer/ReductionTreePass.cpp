@@ -156,7 +156,7 @@ static LogicalResult findOptimal(ModuleOp module, Region &region,
       test.isInteresting(module);
   if (initStatus.first != Tester::Interestingness::True)
     // If the module is not interesting, we can return failure
-    return module.emitWarning() << "uninterested module will not be reduced";
+    return module.emitError() << "uninterested module will not be reduced";
 
   // We separate the reduction process into 3 steps:
   // In the first step, we attempt to erase all operations within the

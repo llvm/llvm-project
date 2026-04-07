@@ -182,6 +182,10 @@ function(_get_compile_options_from_config output_var)
     libc_add_definition(config_options "LIBC_COPT_PRINTF_DISABLE_BITINT")
   endif()
 
+  if(LIBC_COPT_USE_C_ASSERT)
+    list(APPEND config_options "-DLIBC_COPT_USE_C_ASSERT")
+  endif()
+
   set(${output_var} ${config_options} PARENT_SCOPE)
 endfunction(_get_compile_options_from_config)
 
