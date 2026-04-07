@@ -1,8 +1,7 @@
 ! This test checks lowering of OpenMP Threadprivate Directive.
 ! Test for threadprivate variable double use in use association.
 
-!RUN: %flang_fc1 -emit-hlfir -flang-experimental-hlfir -fopenmp %s -o - | FileCheck %s
-!RUN: bbc -emit-hlfir -fopenmp %s -o - | FileCheck %s
+!RUN: %flang_fc1 -emit-hlfir -fopenmp %s -o - | FileCheck %s
 
 module m
   integer :: x

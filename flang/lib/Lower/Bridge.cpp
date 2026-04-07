@@ -529,17 +529,8 @@ public:
     // declarations are available with their final signatures.
     createBuilderOutsideOfFuncOpAndDo([&]() {
       for (Fortran::lower::pft::Program::Units &u : pft.getUnits()) {
-        Fortran::common::visit(
-            Fortran::common::visitors{
-                [&](Fortran::lower::pft::FunctionLikeUnit &f) {},
-                [&](Fortran::lower::pft::ModuleLikeUnit &m) {
-                  lowerModuleDeclScope(m);
-                },
-                [&](Fortran::lower::pft::BlockDataUnit &b) {},
-                [&](Fortran::lower::pft::CompilerDirectiveUnit &d) {},
-                [&](Fortran::lower::pft::OpenACCDirectiveUnit &d) {},
-            },
-            u);
+        if (auto *m = std::get_if<Fortran::lower::pft::ModuleLikeUnit>(&u))
+          lowerModuleDeclScope(*m);
       }
     });
 
