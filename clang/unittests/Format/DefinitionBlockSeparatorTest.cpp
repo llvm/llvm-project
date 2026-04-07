@@ -292,12 +292,12 @@ TEST_F(DefinitionBlockSeparatorTest, Always) {
                Style);
 
   verifyFormat("// NOLINTBEGIN\n"
-              "int x = 1;\n"
-              "int y = 2;\n"
-              "// NOLINTEND\n"
-              "\n"
-              "void some_function() {}\n",
-              Style);
+               "int x = 1;\n"
+               "int y = 2;\n"
+               "// NOLINTEND\n"
+               "\n"
+               "void some_function() {}\n",
+               Style);
 
   std::string Prefix = "namespace {\n";
   std::string Infix = "\n"

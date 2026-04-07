@@ -4768,24 +4768,11 @@ bool isClangFormatOff(StringRef Comment) {
   return isClangFormatOnOff(Comment, /*On=*/false);
 }
 
-static bool isNoLintBeginEnd(StringRef Comment, bool On) {
-  if (Comment == (On ? "/* NOLINTBEGIN */" : "/* NOLINTEND */"))
-    return true;
-
-  static const char NoLintBegin[] = "// NOLINTBEGIN";
-  static const char NoLintEnd[] = "// NOLINTEND";
-  const unsigned Size = (On ? sizeof NoLintBegin : sizeof NoLintEnd) - 1;
-
-  return Comment.starts_with(On ? NoLintBegin : NoLintEnd) &&
-         (Comment.size() == Size || Comment[Size] == ':');
-}
-
 bool isNoLintEnd(StringRef Comment) {
-  return isNoLintBeginEnd(Comment, /*On=*/false);
-}
-
-bool isNoLintBegin(StringRef Comment) {
-  return isNoLintBeginEnd(Comment, /*On=*/true);
+  static const char NoLintEnd[] = "// NOLINTEND";
+  const unsigned Size = sizeof NoLintEnd - 1;
+  return Comment.starts_with(NoLintEnd) &&
+         (Comment.size() == Size || Comment[Size] == '(');
 }
 
 } // namespace format
