@@ -18,9 +18,9 @@ subroutine test_taskloop(lb,ub,step,a)
   integer, allocatable :: a(:)
 
   !$omp taskloop shared(a)
-! CHECK:         omp.taskloop.context {
+! CHECK:         omp.taskloop.context private({{.*}}) {
 ! CHECK:           llvm.alloca
-! CHECK:           omp.taskloop private({{.*}}) {
+! CHECK:           omp.taskloop {
   do i = lb,ub,step
 ! CHECK-NOT:         llvm.alloca
     a(i) = i

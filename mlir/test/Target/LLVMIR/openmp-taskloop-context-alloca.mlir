@@ -14,10 +14,10 @@ llvm.func @_QPtest_taskloop(%arg0: !llvm.ptr) {
   %2 = llvm.mlir.constant(100 : i32) : i32
   %3 = llvm.mlir.constant(1 : i64) : i64
   %4 = llvm.alloca %3 x i32 : (i64) -> !llvm.ptr
-  omp.taskloop.context {
+  omp.taskloop.context private(@_QFtest_taskloopEi_private_i32 %4 -> %arg1 : !llvm.ptr) {
     // test where this alloca ends up
     %5 = llvm.alloca %1 x !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)> {alignment = 8 : i64} : (i32) -> !llvm.ptr
-    omp.taskloop private(@_QFtest_taskloopEi_private_i32 %4 -> %arg1 : !llvm.ptr) {
+    omp.taskloop {
       omp.loop_nest (%arg2) : i32 = (%1) to (%2) inclusive step (%1) {
         llvm.store %arg2, %arg1 : i32, !llvm.ptr
         "llvm.intr.memcpy"(%5, %arg0, %0) <{arg_attrs = [{llvm.align = 8 : i64}, {llvm.align = 8 : i64}, {}], isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()

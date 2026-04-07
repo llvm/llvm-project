@@ -22,8 +22,8 @@ llvm.func @_QPtest() {
   %a_val = llvm.load %3 : !llvm.ptr -> i32
   %c20 = llvm.mlir.constant(20 : i32) : i32
   %cmp = llvm.icmp "slt" %a_val, %c20 : i32
-  omp.taskloop.context {
-    omp.taskloop if(%cmp) private(@_QFtestEa_firstprivate_i32 %3 -> %arg0, @_QFtestEi_private_i32 %1 -> %arg1 : !llvm.ptr, !llvm.ptr) {
+  omp.taskloop.context if(%cmp) private(@_QFtestEa_firstprivate_i32 %3 -> %arg0, @_QFtestEi_private_i32 %1 -> %arg1 : !llvm.ptr, !llvm.ptr) {
+    omp.taskloop {
       omp.loop_nest (%arg2) : i32 = (%7) to (%8) inclusive step (%9) {
         llvm.store %arg2, %arg1 : i32, !llvm.ptr
         %10 = llvm.load %arg0 : !llvm.ptr -> i32

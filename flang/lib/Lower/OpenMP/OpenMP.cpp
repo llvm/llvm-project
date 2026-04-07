@@ -1840,7 +1840,7 @@ static void genTaskgroupClauses(
 static void genTaskloopClauses(
     lower::AbstractConverter &converter, semantics::SemanticsContext &semaCtx,
     lower::StatementContext &stmtCtx, const List<Clause> &clauses,
-    mlir::Location loc, mlir::omp::TaskloopOperands &clauseOps,
+    mlir::Location loc, mlir::omp::TaskloopContextOperands &clauseOps,
     llvm::SmallVectorImpl<const semantics::Symbol *> &reductionSyms,
     llvm::SmallVectorImpl<const semantics::Symbol *> &inReductionSyms) {
 
@@ -3265,7 +3265,7 @@ static mlir::omp::TaskloopContextOp genStandaloneTaskloop(
     lower::StatementContext &stmtCtx, semantics::SemanticsContext &semaCtx,
     lower::pft::Evaluation &eval, mlir::Location loc,
     const ConstructQueue &queue, ConstructQueue::const_iterator item) {
-  mlir::omp::TaskloopOperands taskloopClauseOps;
+  mlir::omp::TaskloopContextOperands taskloopClauseOps;
   llvm::SmallVector<const semantics::Symbol *> reductionSyms;
   llvm::SmallVector<const semantics::Symbol *> inReductionSyms;
 
@@ -3290,17 +3290,20 @@ static mlir::omp::TaskloopContextOp genStandaloneTaskloop(
   taskloopArgs.inReduction.vars = taskloopClauseOps.inReductionVars;
 
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
-  auto taskLoopContextOp =
-      mlir::omp::TaskloopContextOp::create(firOpBuilder, loc);
+  auto taskLoopContextOp = mlir::omp::TaskloopContextOp::create(
+      firOpBuilder, loc, taskloopClauseOps);
+  // Create entry block with arguments.
+  genEntryBlock(firOpBuilder, taskloopArgs, taskLoopContextOp.getRegion());
 
   mlir::OpBuilder::InsertionGuard guard(firOpBuilder);
-  firOpBuilder.createBlock(&taskLoopContextOp.getRegion());
   firOpBuilder.setInsertionPointToStart(&taskLoopContextOp.getRegion().front());
+  mlir::omp::TaskloopOperands wrapperClauseOps;
+  EntryBlockArgs wrapperEntryBlockArgs;
   auto taskLoopOp = genWrapperOp<mlir::omp::TaskloopOp>(
-      converter, loc, taskloopClauseOps, taskloopArgs);
+      converter, loc, wrapperClauseOps, wrapperEntryBlockArgs);
 
   genLoopNestOp(converter, symTable, semaCtx, eval, loc, queue, item,
-                loopNestClauseOps, iv, {{taskLoopOp, taskloopArgs}},
+                loopNestClauseOps, iv, {{taskLoopContextOp, taskloopArgs}},
                 llvm::omp::Directive::OMPD_taskloop, dsp);
 
   firOpBuilder.setInsertionPointAfter(taskLoopOp);
