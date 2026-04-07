@@ -79,19 +79,12 @@ struct RuntimeGlobalSymbolSpec {
 
   /// A byte size of 0 means use the process pointer size.
   uint8_t byte_size = 0;
-
-  uint64_t default_value = LLDB_INVALID_ADDRESS;
-
-  lldb::SymbolType sym_type = lldb::eSymbolTypeData;
 };
 
 struct RuntimeGlobalSymbolResult {
   uint64_t value = 0;
   bool success = false;
 };
-
-/// Constant used for SmallVector.
-static constexpr uint8_t kMaxResults = 12;
 } // namespace
 
 char AppleObjCRuntimeV2::ID = 0;
@@ -764,7 +757,7 @@ ExtractRuntimeGlobalSymbol(Process *process, ConstString name,
   if (!byte_size)
     byte_size = process->GetAddressByteSize();
   const Symbol *symbol =
-      module_sp->FindFirstSymbolWithNameAndType(name, sym_type);
+      module_sp->FindFirstSymbolWithNameAndType(name, lldb::eSymbolTypeData);
 
   if (!symbol || !symbol->ValueIsAddress()) {
     error = Status::FromErrorString("no symbol");
@@ -786,21 +779,21 @@ ExtractRuntimeGlobalSymbol(Process *process, ConstString name,
 
 // Batched version of ExtractRuntimeGlobalSymbol. Resolves symbols and reads
 // their values in a single batch using ReadUnsignedIntegersFromMemory.
-static llvm::SmallVector<RuntimeGlobalSymbolResult, kMaxResults>
+static llvm::SmallVector<RuntimeGlobalSymbolResult>
 ExtractRuntimeGlobalSymbolsBatched(
     Process *process, const ModuleSP &module_sp,
     llvm::ArrayRef<RuntimeGlobalSymbolSpec> specs) {
-  llvm::SmallVector<RuntimeGlobalSymbolResult, kMaxResults> results;
+  llvm::SmallVector<RuntimeGlobalSymbolResult> results;
   results.resize(specs.size());
 
+  RuntimeGlobalSymbolResult fail_value = {LLDB_INVALID_ADDRESS, false};
+
   if (!process || !module_sp) {
-    // Return all failures with default values.
-    for (size_t i = 0; i < specs.size(); ++i)
-      results[i] = {specs[i].default_value, false};
-    return results;
+    return llvm::SmallVector<RuntimeGlobalSymbolResult>{specs.size(),
+                                                        fail_value};
   }
 
-  const uint8_t default_byte_size = process->GetAddressByteSize();
+  const uint8_t ptr_size = process->GetAddressByteSize();
 
   // Phase 1: Resolve all symbols to addresses. Build a work list of entries
   // that need their values read in Phase 2.
@@ -809,29 +802,28 @@ ExtractRuntimeGlobalSymbolsBatched(
     lldb::addr_t addr;
     uint8_t byte_size;
   };
-  llvm::SmallVector<ReadEntry, kMaxResults> work_list;
-  for (size_t i = 0; i < specs.size(); ++i) {
-    const auto &spec = specs[i];
-    const uint8_t size = spec.byte_size ? spec.byte_size : default_byte_size;
-    const Symbol *symbol =
-        module_sp->FindFirstSymbolWithNameAndType(spec.name, spec.sym_type);
+  llvm::SmallVector<ReadEntry> work_list;
+  for (auto [i, spec] : llvm::enumerate(specs)) {
+    const uint8_t size = spec.byte_size ? spec.byte_size : ptr_size;
+    const Symbol *symbol = module_sp->FindFirstSymbolWithNameAndType(
+        spec.name, lldb::eSymbolTypeData);
 
     if (!symbol || !symbol->ValueIsAddress()) {
-      results[i] = {spec.default_value, false};
+      results[i] = fail_value;
       continue;
     }
 
     lldb::addr_t symbol_load_addr =
         symbol->GetAddressRef().GetLoadAddress(&process->GetTarget());
     if (symbol_load_addr == LLDB_INVALID_ADDRESS) {
-      results[i] = {spec.default_value, false};
+      results[i] = fail_value;
       continue;
     }
 
     if (!spec.read_value) {
       results[i] = {symbol_load_addr, true};
     } else {
-      results[i] = {spec.default_value, false};
+      results[i] = fail_value;
       work_list.push_back({i, symbol_load_addr, size});
     }
   }
@@ -845,7 +837,7 @@ ExtractRuntimeGlobalSymbolsBatched(
   for (size_t i = 0; i < work_list.size();) {
     const uint8_t byte_size = work_list[i].byte_size;
     size_t group_start = i;
-    llvm::SmallVector<lldb::addr_t, kMaxResults> addrs;
+    llvm::SmallVector<lldb::addr_t> addrs;
     while (i < work_list.size() && work_list[i].byte_size == byte_size)
       addrs.push_back(work_list[i++].addr);
 
