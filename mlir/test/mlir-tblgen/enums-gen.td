@@ -63,10 +63,22 @@ def MyBitEnum: I32BitEnumAttr<"MyBitEnum", "An example bit enum",
 // DECL:   b = 255,
 // DECL: };
 
+// DECL: ::std::optional<MyI8Enum> symbolizeMyI8Enum(uint8_t);
+
+// DECL: inline constexpr unsigned getMaxEnumValForMyI8Enum() {
+// DECL:   return 255;
+// DECL: }
+
 // DECL: enum class MyI16Enum : uint16_t {
 // DECL:   a = 65534,
 // DECL:   b = 65535,
 // DECL: };
+
+// DECL: ::std::optional<MyI16Enum> symbolizeMyI16Enum(uint16_t);
+
+// DECL: inline constexpr unsigned getMaxEnumValForMyI16Enum() {
+// DECL:   return 65535;
+// DECL: }
 
 // DEF-LABEL: std::string stringifyMyBitEnum
 // DEF: auto val = static_cast<uint32_t>
