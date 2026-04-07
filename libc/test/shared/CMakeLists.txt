@@ -288,9 +288,11 @@ add_fp_unittest(
     libc.src.__support.str_to_integer
 )
 
-if(NOT MSVC AND NOT LLVM_LIBC_FULL_BUILD)
-add_fp_unittest(
+# FIXME: The LLVM libc full build does not support 'system' yet.
+if(NOT LLVM_LIBC_FULL_BUILD)
+add_libc_test(
   shared_rpc_test
+  UNIT_TEST_ONLY
   SUITE
     libc-shared-tests
   SRCS
