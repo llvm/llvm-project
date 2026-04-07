@@ -479,6 +479,32 @@ void global_function(int PARAMETER_1, int const CONST_parameter) {
     }
 }
 
+struct Binding_holder {
+  int field_a;
+  int field_b;
+};
+
+Binding_holder GetHolder();
+
+void StructuredBindingTests() {
+    auto [BAD_Local_1, BAD_Local_2] = GetHolder();
+// CHECK-MESSAGES: :[[@LINE-1]]:11: warning: invalid case style for local variable 'BAD_Local_1'
+// CHECK-MESSAGES: :[[@LINE-2]]:24: warning: invalid case style for local variable 'BAD_Local_2'
+// CHECK-FIXES: auto [bad_local_1, bad_local_2] = GetHolder();
+
+    const auto [BAD_Const_1, BAD_Const_2] = GetHolder();
+// CHECK-MESSAGES: :[[@LINE-1]]:17: warning: invalid case style for local constant 'BAD_Const_1'
+// CHECK-MESSAGES: :[[@LINE-2]]:30: warning: invalid case style for local constant 'BAD_Const_2'
+// CHECK-FIXES: const auto [kBadConst1, kBadConst2] = GetHolder();
+
+    const auto &[BAD_ConstRef_1, BAD_ConstRef_2] = GetHolder();
+// CHECK-MESSAGES: :[[@LINE-1]]:18: warning: invalid case style for local constant 'BAD_ConstRef_1'
+// CHECK-MESSAGES: :[[@LINE-2]]:34: warning: invalid case style for local constant 'BAD_ConstRef_2'
+// CHECK-FIXES: const auto &[kBadConstRef1, kBadConstRef2] = GetHolder();
+
+    auto [good_local_1, good_local_2] = GetHolder();
+}
+
 template<typename ... TYPE_parameters>
 // CHECK-MESSAGES: :[[@LINE-1]]:23: warning: invalid case style for type template parameter 'TYPE_parameters'
 // CHECK-FIXES: template<typename ... typeParameters_t>

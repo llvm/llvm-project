@@ -595,7 +595,7 @@ void OmpStructureChecker::CheckAtomicVariable(
     return;
   }
 
-  evaluate::SymbolVector syms{evaluate::GetSymbolVector(dsgs.front())};
+  SymbolVector syms{evaluate::GetSymbolVector(dsgs.front())};
   if (syms.empty()) {
     return;
   }
