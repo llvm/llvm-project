@@ -278,26 +278,20 @@ static void eliminateCollapsedInnerLoops(LoopOp outerLoop,
     if (innerLoop.getBody().getNumArguments() != 1)
       return WalkResult::advance();
 
-    // Check if the inner loop's bounds match any of the outer loop's
-    // collapsed dimensions (by comparing the original lb/ub/step values).
     Value innerLB = innerLoop.getLowerbound()[0];
     Value innerUB = innerLoop.getUpperbound()[0];
     Value innerStep = innerLoop.getStep()[0];
 
     for (unsigned ivIdx = 0; ivIdx < numOuterIVs; ++ivIdx) {
-      Value outerLB = outerLoop.getLowerbound()[ivIdx];
-      Value outerUB = outerLoop.getUpperbound()[ivIdx];
-      Value outerStep = outerLoop.getStep()[ivIdx];
-
-      if (innerLB != outerLB || innerUB != outerUB || innerStep != outerStep)
+      if (innerLB != outerLoop.getLowerbound()[ivIdx] ||
+          innerUB != outerLoop.getUpperbound()[ivIdx] ||
+          innerStep != outerLoop.getStep()[ivIdx])
         continue;
 
-      // Match found — replace the inner loop's IV with the outer's.
       Value outerIV = outerLoop.getBody().getArgument(ivIdx);
-      Value innerIV = innerLoop.getBody().getArgument(0);
 
       IRMapping mapping;
-      mapping.map(innerIV, outerIV);
+      mapping.map(innerLoop.getBody().getArgument(0), outerIV);
 
       rewriter.setInsertionPoint(innerLoop);
       cloneACCRegionInto(&innerLoop.getRegion(), innerLoop->getBlock(),
