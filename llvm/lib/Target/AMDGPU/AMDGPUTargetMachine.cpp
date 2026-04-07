@@ -1839,6 +1839,8 @@ bool GCNPassConfig::addRegAssignAndRewriteOptimized() {
 
   addPass(createSGPRAllocPass(true));
 
+  addPass(&SIFixXcntStallSAddrReuseLegacyID);
+
   // Commit allocated register changes. This is mostly necessary because too
   // many things rely on the use lists of the physical registers, such as the
   // verifier. This is only necessary with allocators which use LiveIntervals,
@@ -1861,8 +1863,6 @@ bool GCNPassConfig::addRegAssignAndRewriteOptimized() {
   addPass(&SILowerWWMCopiesLegacyID);
   addPass(createVirtRegRewriter(false));
   addPass(&AMDGPUReserveWWMRegsLegacyID);
-
-  addPass(&SIFixXcntStallSAddrReuseLegacyID);
 
   // For allocating per-thread VGPRs.
   addPass(createVGPRAllocPass(true));
@@ -2539,6 +2539,8 @@ Error AMDGPUCodeGenPassBuilder::addRegAssignmentOptimized(
   else
     addMachineFunctionPass(RAGreedyPass({onlyAllocateSGPRs, "sgpr"}), PMW);
 
+  addMachineFunctionPass(SIFixXcntStallSAddrReusePass(), PMW);
+
   // Commit allocated register changes. This is mostly necessary because too
   // many things rely on the use lists of the physical registers, such as the
   // verifier. This is only necessary with allocators which use LiveIntervals,
@@ -2565,8 +2567,6 @@ Error AMDGPUCodeGenPassBuilder::addRegAssignmentOptimized(
   addMachineFunctionPass(SILowerWWMCopiesPass(), PMW);
   addMachineFunctionPass(VirtRegRewriterPass(false), PMW);
   addMachineFunctionPass(AMDGPUReserveWWMRegsPass(), PMW);
-
-  addMachineFunctionPass(SIFixXcntStallSAddrReusePass(), PMW);
 
   // VGPR allocation - default to greedy at -O1 and above.
   if (VGPRRegAllocNPM == RegAllocType::Fast)

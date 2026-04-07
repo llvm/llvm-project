@@ -16,6 +16,7 @@
 ; REGALLOC: -regalloc not supported with amdgcn. Use -sgpr-regalloc, -wwm-regalloc, and -vgpr-regalloc
 
 ; DEFAULT: Greedy Register Allocator
+; DEFAULT-NEXT: SI Fix Xcnt Stall SAddr Reuse
 ; DEFAULT-NEXT: Virtual Register Rewriter
 ; DEFAULT-NEXT: Stack Slot Coloring
 ; DEFAULT-NEXT: SI lower SGPR spill instructions
@@ -27,7 +28,6 @@
 ; DEFAULT-NEXT: SI Lower WWM Copies
 ; DEFAULT-NEXT: Virtual Register Rewriter
 ; DEFAULT-NEXT: AMDGPU Reserve WWM Registers
-; DEFAULT-NEXT: SI Fix Xcnt Stall SAddr Reuse
 ; DEFAULT-NEXT: Virtual Register Map
 ; DEFAULT-NEXT: Live Register Matrix
 ; DEFAULT-NEXT: Greedy Register Allocator
@@ -60,6 +60,7 @@
 ; BASIC-DEFAULT-NEXT: Virtual Register Map
 ; BASIC-DEFAULT-NEXT: Live Register Matrix
 ; BASIC-DEFAULT-NEXT: Basic Register Allocator
+; BASIC-DEFAULT-NEXT: SI Fix Xcnt Stall SAddr Reuse
 ; BASIC-DEFAULT-NEXT: Virtual Register Rewriter
 ; BASIC-DEFAULT-NEXT: Stack Slot Coloring
 ; BASIC-DEFAULT-NEXT: SI lower SGPR spill instructions
@@ -75,7 +76,6 @@
 ; BASIC-DEFAULT-NEXT: SI Lower WWM Copies
 ; BASIC-DEFAULT-NEXT: Virtual Register Rewriter
 ; BASIC-DEFAULT-NEXT: AMDGPU Reserve WWM Registers
-; BASIC-DEFAULT-NEXT: SI Fix Xcnt Stall SAddr Reuse
 ; BASIC-DEFAULT-NEXT: Virtual Register Map
 ; BASIC-DEFAULT-NEXT: Live Register Matrix
 ; BASIC-DEFAULT-NEXT: Greedy Register Allocator
@@ -88,6 +88,7 @@
 
 
 ; DEFAULT-BASIC: Greedy Register Allocator
+; DEFAULT-BASIC-NEXT: SI Fix Xcnt Stall SAddr Reuse
 ; DEFAULT-BASIC-NEXT: Virtual Register Rewriter
 ; DEFAULT-BASIC-NEXT: Stack Slot Coloring
 ; DEFAULT-BASIC-NEXT: SI lower SGPR spill instructions
@@ -99,7 +100,6 @@
 ; DEFAULT-BASIC-NEXT: SI Lower WWM Copies
 ; DEFAULT-BASIC-NEXT: Virtual Register Rewriter
 ; DEFAULT-BASIC-NEXT: AMDGPU Reserve WWM Registers
-; DEFAULT-BASIC-NEXT: SI Fix Xcnt Stall SAddr Reuse
 ; DEFAULT-BASIC-NEXT: Virtual Register Map
 ; DEFAULT-BASIC-NEXT: Live Register Matrix
 ; DEFAULT-BASIC-NEXT: Basic Register Allocator
@@ -118,6 +118,7 @@
 ; BASIC-BASIC-NEXT: Virtual Register Map
 ; BASIC-BASIC-NEXT: Live Register Matrix
 ; BASIC-BASIC-NEXT: Basic Register Allocator
+; BASIC-BASIC-NEXT: SI Fix Xcnt Stall SAddr Reuse
 ; BASIC-BASIC-NEXT: Virtual Register Rewriter
 ; BASIC-BASIC-NEXT: Stack Slot Coloring
 ; BASIC-BASIC-NEXT: SI lower SGPR spill instructions
@@ -129,7 +130,6 @@
 ; BASIC-BASIC-NEXT: SI Lower WWM Copies
 ; BASIC-BASIC-NEXT: Virtual Register Rewriter
 ; BASIC-BASIC-NEXT: AMDGPU Reserve WWM Registers
-; BASIC-BASIC-NEXT: SI Fix Xcnt Stall SAddr Reuse
 ; BASIC-BASIC-NEXT: Virtual Register Map
 ; BASIC-BASIC-NEXT: Live Register Matrix
 ; BASIC-BASIC-NEXT: Basic Register Allocator

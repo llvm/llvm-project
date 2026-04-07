@@ -243,10 +243,10 @@ define amdgpu_kernel void @copy_global(ptr addrspace(1) nocapture %d, ptr addrsp
 ; GFX1250-NEXT:    s_add_co_i32 s6, s6, -1
 ; GFX1250-NEXT:    s_add_nc_u64 s[2:3], s[2:3], 16
 ; GFX1250-NEXT:    s_cmp_lg_u32 s6, 0
-; GFX1250-NEXT:    ; kill: def $vgpr6_vgpr7 killed $sgpr0_sgpr1 killed $exec
-; GFX1250-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 16
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-NEXT:    global_store_b128 v[6:7], v[2:5], off
+; GFX1250-NEXT:    global_store_b128 v0, v[2:5], s[0:1]
+; GFX1250-NEXT:    s_wait_xcnt 0x0
+; GFX1250-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 16
 ; GFX1250-NEXT:    s_cbranch_scc1 .LBB1_2
 ; GFX1250-NEXT:  .LBB1_3: ; %for.end
 ; GFX1250-NEXT:    s_endpgm
@@ -362,20 +362,19 @@ define amdgpu_kernel void @copy_constant(ptr addrspace(1) nocapture %d, ptr addr
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:  .LBB2_2: ; %for.body
 ; GFX1250-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX1250-NEXT:    ; kill: def $vgpr2_vgpr3 killed $sgpr2_sgpr3 killed $exec
-; GFX1250-NEXT:    global_prefetch_b8 v[2:3], off offset:176 scope:SCOPE_SE
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[2:3] offset:176 scope:SCOPE_SE
 ; GFX1250-NEXT:    s_load_b128 s[8:11], s[2:3], 0x0 nv
 ; GFX1250-NEXT:    s_add_co_i32 s6, s6, -1
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    s_add_nc_u64 s[2:3], s[2:3], 16
 ; GFX1250-NEXT:    s_cmp_lg_u32 s6, 0
-; GFX1250-NEXT:    ; kill: def $vgpr6_vgpr7 killed $sgpr0_sgpr1 killed $exec
-; GFX1250-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 16
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_mov_b64_e32 v[2:3], s[8:9]
 ; GFX1250-NEXT:    v_mov_b64_e32 v[4:5], s[10:11]
-; GFX1250-NEXT:    global_store_b128 v[6:7], v[2:5], off
+; GFX1250-NEXT:    global_store_b128 v0, v[2:5], s[0:1]
+; GFX1250-NEXT:    s_wait_xcnt 0x0
+; GFX1250-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 16
 ; GFX1250-NEXT:    s_cbranch_scc1 .LBB2_2
 ; GFX1250-NEXT:  .LBB2_3: ; %for.end
 ; GFX1250-NEXT:    s_endpgm
