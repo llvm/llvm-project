@@ -666,14 +666,12 @@ public:
   lldb::SBBreakpoint BreakpointCreateByName(const char *symbol_name,
                                             const char *module_name = nullptr);
 
-  // This version uses name_type_mask = eFunctionNameTypeAuto, symbol_language =
-  // eLanguageTypeUnknown
+  // This version uses name_type_mask = eFunctionNameTypeAuto
   lldb::SBBreakpoint
   BreakpointCreateByName(const char *symbol_name,
                          const SBFileSpecList &module_list,
                          const SBFileSpecList &comp_unit_list);
 
-  // symbol_language = eLanguageTypeUnknown.
   lldb::SBBreakpoint BreakpointCreateByName(
       const char *symbol_name,
       uint32_t
