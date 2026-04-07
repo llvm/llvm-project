@@ -2177,9 +2177,28 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
   case NEON::BI__builtin_neon_vsubd_u64:
   case NEON::BI__builtin_neon_vqdmlalh_s16:
   case NEON::BI__builtin_neon_vqdmlslh_s16:
-  case NEON::BI__builtin_neon_vqshlud_n_s64:
+  case NEON::BI__builtin_neon_vqshlud_n_s64: {
+    cir::IntType intType = builder.getSInt64Ty();
+    std::optional<llvm::APSInt> amt =
+        expr->getArg(1)->getIntegerConstantExpr(getContext());
+    assert(amt && "Expected argument to be a constant");
+    ops[1] = builder.getSInt64(amt->getZExtValue(), loc);
+    return emitNeonCall(cgm, builder, {intType, intType}, ops,
+                        "aarch64.neon.sqshlu", convertType(expr->getType()),
+                        loc);
+  }
   case NEON::BI__builtin_neon_vqshld_n_u64:
-  case NEON::BI__builtin_neon_vqshld_n_s64:
+  case NEON::BI__builtin_neon_vqshld_n_s64: {
+    cir::IntType intType = builtinID == NEON::BI__builtin_neon_vqshld_n_u64
+                               ? builder.getUInt64Ty()
+                               : builder.getSInt64Ty();
+    llvm::StringRef intrinsicName =
+        builtinID == NEON::BI__builtin_neon_vqshld_n_u64 ? "aarch64.neon.uqshl"
+                                                         : "aarch64.neon.sqshl";
+    ops[1] = builder.createIntCast(ops[1], intType);
+    return emitNeonCall(cgm, builder, {intType, intType}, ops, intrinsicName,
+                        convertType(expr->getType()), loc);
+  }
   case NEON::BI__builtin_neon_vrshrd_n_u64:
   case NEON::BI__builtin_neon_vrshrd_n_s64:
   case NEON::BI__builtin_neon_vrsrad_n_u64:
