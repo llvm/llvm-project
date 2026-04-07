@@ -146,9 +146,9 @@ public:
     case ubi::ProgramExitInfo::ProgramExitKind::Terminated:
       errs() << "Program terminated.\n";
       return true;
-    default:
-      llvm_unreachable("Unknown ProgramExitKind");
     }
+
+    llvm_unreachable("Unknown ProgramExitKind");
   }
 
   void onUnrecognizedInstruction(Instruction &I) override {
@@ -272,9 +272,8 @@ int main(int argc, char **argv) {
     case ubi::ProgramExitInfo::ProgramExitKind::Exited:
       return static_cast<int>(ExitInfo.ExitCode & 0xFF);
     case ubi::ProgramExitInfo::ProgramExitKind::Aborted:
-      return 134;
     case ubi::ProgramExitInfo::ProgramExitKind::Terminated:
-      return 1;
+      return 134;
     default:
       llvm_unreachable("Unexpected returned kind for ProgramExited status");
     }

@@ -49,7 +49,6 @@ enum class UndefValueBehavior {
 
 struct ProgramExitInfo {
   enum class ProgramExitKind {
-    Invalid,
     // Program exited via a normal return
     Returned,
     // Program exited with an interpreter error (UB/Unsupported
@@ -63,10 +62,8 @@ struct ProgramExitInfo {
     Terminated,
   };
 
-  ProgramExitKind Kind = ProgramExitKind::Invalid;
-  uint64_t ExitCode = 0;
-
-  explicit operator bool() const { return Kind != ProgramExitKind::Invalid; }
+  ProgramExitKind Kind;
+  uint64_t ExitCode;
 
   bool isExitedByLibcall() const {
     return Kind == ProgramExitKind::Exited ||

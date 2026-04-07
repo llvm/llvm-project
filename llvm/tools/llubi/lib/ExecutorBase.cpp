@@ -29,18 +29,18 @@ Frame::Frame(Function &F, CallBase *CallSite, Frame *LastFrame,
 
 void ExecutorBase::reportImmediateUB(StringRef Msg) {
   // Check if we have already reported an immediate UB.
-  if (!Status)
+  if (isProgramExited())
     return;
-  Status = false;
+  requestProgramExit(ProgramExitInfo::ProgramExitKind::Failed);
   // TODO: Provide stack trace information.
   Handler.onImmediateUB(Msg);
 }
 
 void ExecutorBase::reportError(StringRef Msg) {
   // Check if we have already reported an error message.
-  if (!Status)
+  if (isProgramExited())
     return;
-  Status = false;
+  requestProgramExit(ProgramExitInfo::ProgramExitKind::Failed);
   Handler.onError(Msg);
 }
 
@@ -127,17 +127,15 @@ void ExecutorBase::store(const AnyValue &Ptr, Align Alignment,
 
 void ExecutorBase::requestProgramExit(ProgramExitInfo::ProgramExitKind Kind,
                                       uint64_t ExitCode) {
-  if (Kind == ProgramExitInfo::ProgramExitKind::Invalid)
-    llvm_unreachable("Invalid program exit kind");
-  Status = false;
-  ExitInfo.Kind = Kind;
-  ExitInfo.ExitCode = ExitCode;
-  Handler.onProgramExit(ExitInfo);
+  ExitInfo = ProgramExitInfo{Kind, ExitCode};
+  Handler.onProgramExit(*ExitInfo);
 }
 
-bool ExecutorBase::getExecutionStatus() const { return Status; }
+bool ExecutorBase::isProgramExited() const { return ExitInfo.has_value(); }
 
-ProgramExitInfo ExecutorBase::getExitInfo() const { return ExitInfo; }
+std::optional<ProgramExitInfo> ExecutorBase::getExitInfo() const {
+  return ExitInfo;
+}
 
 unsigned ExecutorBase::getIntSize() const {
   return CurrentFrame->TLI.getIntSize();

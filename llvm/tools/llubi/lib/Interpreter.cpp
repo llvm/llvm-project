@@ -78,7 +78,7 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
   }
 
   void setResult(Instruction &I, AnyValue V) {
-    if (getExecutionStatus())
+    if (!isProgramExited())
       if (!Handler.onInstructionExecuted(I, V))
         requestProgramExit(ProgramExitInfo::ProgramExitKind::Failed);
     CurrentFrame->ValueMap.insert_or_assign(&I, std::move(V));
@@ -270,7 +270,7 @@ public:
     if (auto *RV = RI.getReturnValue())
       CurrentFrame->RetVal = getValue(RV);
     CurrentFrame->State = FrameState::Exit;
-    if (getExecutionStatus())
+    if (!isProgramExited())
       if (!Handler.onInstructionExecuted(RI, None))
         requestProgramExit(ProgramExitInfo::ProgramExitKind::Failed);
   }
@@ -887,7 +887,7 @@ public:
     // TODO: track volatile stores
     // TODO: handle metadata
     store(Ptr, SI.getAlign(), Val, SI.getValueOperand()->getType());
-    if (getExecutionStatus())
+    if (!isProgramExited())
       if (!Handler.onInstructionExecuted(SI, AnyValue()))
         requestProgramExit(ProgramExitInfo::ProgramExitKind::Failed);
   }
@@ -981,10 +981,10 @@ public:
   /// This function implements the main interpreter loop.
   /// It handles function calls in a non-recursive manner to avoid stack
   /// overflows.
-  bool runMainLoop() {
+  ProgramExitInfo runMainLoop() {
     uint32_t MaxSteps = Ctx.getMaxSteps();
     uint32_t Steps = 0;
-    while (getExecutionStatus() && !CallStack.empty()) {
+    while (!isProgramExited() && !CallStack.empty()) {
       Frame &Top = CallStack.back();
       CurrentFrame = &Top;
       if (Top.State == FrameState::Entry) {
@@ -997,7 +997,7 @@ public:
 
       Top.State = FrameState::Running;
       // Interpreter loop inside a function
-      while (getExecutionStatus()) {
+      while (!isProgramExited()) {
         assert(Top.State == FrameState::Running &&
                "Expected to be in running state.");
         if (MaxSteps != 0 && Steps >= MaxSteps) {
@@ -1008,7 +1008,7 @@ public:
 
         Instruction &I = *Top.PC;
         visit(&I);
-        if (!getExecutionStatus())
+        if (isProgramExited())
           break;
 
         // A function call or return has occurred.
@@ -1022,7 +1022,7 @@ public:
           ++Top.PC;
       }
 
-      if (!getExecutionStatus())
+      if (isProgramExited())
         break;
 
       if (Top.State == FrameState::Exit) {
@@ -1038,17 +1038,16 @@ public:
                "Expected to enter a callee.");
       }
     }
-    if (getExecutionStatus())
-      ExitInfo.Kind = ProgramExitInfo::ProgramExitKind::Returned;
-    return getExecutionStatus();
+    if (!isProgramExited())
+      requestProgramExit(ProgramExitInfo::ProgramExitKind::Returned);
+    return *getExitInfo();
   }
 };
 
 ProgramExitInfo Context::runFunction(Function &F, ArrayRef<AnyValue> Args,
                                      AnyValue &RetVal, EventHandler &Handler) {
   InstExecutor Executor(*this, Handler, F, Args, RetVal);
-  Executor.runMainLoop();
-  return Executor.getExitInfo();
+  return Executor.runMainLoop();
 }
 
 } // namespace llvm::ubi

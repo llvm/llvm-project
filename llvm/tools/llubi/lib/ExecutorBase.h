@@ -15,6 +15,7 @@
 
 #include "Context.h"
 #include "Value.h"
+#include <optional>
 
 namespace llvm::ubi {
 
@@ -72,15 +73,10 @@ protected:
   Context &Ctx;
   EventHandler &Handler;
   Frame *CurrentFrame = nullptr;
-  ProgramExitInfo ExitInfo;
+  std::optional<ProgramExitInfo> ExitInfo;
 
-private:
-  // Used to indicate whether the interpreter should continue execution.
-  bool Status;
-
-protected:
   ExecutorBase(Context &C, EventHandler &H)
-      : Ctx(C), Handler(H), Status(true) {}
+      : Ctx(C), Handler(H), ExitInfo(std::nullopt) {}
   ~ExecutorBase() = default;
 
 public:
@@ -101,8 +97,8 @@ public:
   void requestProgramExit(ProgramExitInfo::ProgramExitKind Kind,
                           uint64_t ExitCode = 0);
 
-  bool getExecutionStatus() const;
-  ProgramExitInfo getExitInfo() const;
+  bool isProgramExited() const;
+  std::optional<ProgramExitInfo> getExitInfo() const;
 
   unsigned getIntSize() const;
 };
