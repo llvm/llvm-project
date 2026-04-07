@@ -1289,6 +1289,72 @@ Instruction output.
 
 *Operands:* :ref:`v<amdgpu_synid_v>`, :ref:`a<amdgpu_synid_a>`
 
+.. _amdgpu_synid_gfx950_vsrc0_1027ca:
+
+vsrc0
+-----
+
+Instruction input.
+
+*Size:* 1 dword.
+
+*Operands:* :ref:`a<amdgpu_synid_a>`
+
+.. _amdgpu_synid_gfx950_vsrc0_6802ce:
+
+vsrc0
+-----
+
+Instruction input.
+
+*Size:* 1 dword.
+
+*Operands:* :ref:`v<amdgpu_synid_v>`
+
+.. _amdgpu_synid_gfx950_vsrc0_14b47a:
+
+vsrc0
+-----
+
+Instruction input.
+
+*Size:* 1 dword.
+
+*Operands:* :ref:`v<amdgpu_synid_v>`, :ref:`s<amdgpu_synid_s>`, :ref:`flat_scratch<amdgpu_synid_flat_scratch>`, :ref:`xnack_mask<amdgpu_synid_xnack_mask>`, :ref:`vcc<amdgpu_synid_vcc>`, :ref:`ttmp<amdgpu_synid_ttmp>`, :ref:`m0<amdgpu_synid_m0>`, :ref:`exec<amdgpu_synid_exec>`, :ref:`vccz<amdgpu_synid_vccz>`, :ref:`execz<amdgpu_synid_execz>`, :ref:`scc<amdgpu_synid_scc>`, :ref:`fconst<amdgpu_synid_fconst>`
+
+.. _amdgpu_synid_gfx950_vsrc0_0f0007:
+
+vsrc0
+-----
+
+Instruction input.
+
+*Size:* 1 dword.
+
+*Operands:* :ref:`v<amdgpu_synid_v>`, :ref:`s<amdgpu_synid_s>`, :ref:`flat_scratch<amdgpu_synid_flat_scratch>`, :ref:`xnack_mask<amdgpu_synid_xnack_mask>`, :ref:`vcc<amdgpu_synid_vcc>`, :ref:`ttmp<amdgpu_synid_ttmp>`, :ref:`m0<amdgpu_synid_m0>`, :ref:`exec<amdgpu_synid_exec>`, :ref:`vccz<amdgpu_synid_vccz>`, :ref:`execz<amdgpu_synid_execz>`, :ref:`scc<amdgpu_synid_scc>`, :ref:`fconst<amdgpu_synid_fconst>`, :ref:`literal<amdgpu_synid_literal>`
+
+.. _amdgpu_synid_gfx950_vsrc0_fd235e:
+
+vsrc0
+-----
+
+Instruction input.
+
+*Size:* 2 dwords.
+
+*Operands:* :ref:`v<amdgpu_synid_v>`
+
+.. _amdgpu_synid_gfx950_vsrc0_e30a18:
+
+vsrc0
+-----
+
+Instruction input.
+
+*Size:* 2 dwords.
+
+*Operands:* :ref:`v<amdgpu_synid_v>`, :ref:`s<amdgpu_synid_s>`, :ref:`flat_scratch<amdgpu_synid_flat_scratch>`, :ref:`xnack_mask<amdgpu_synid_xnack_mask>`, :ref:`vcc<amdgpu_synid_vcc>`, :ref:`ttmp<amdgpu_synid_ttmp>`, :ref:`exec<amdgpu_synid_exec>`, :ref:`vccz<amdgpu_synid_vccz>`, :ref:`execz<amdgpu_synid_execz>`, :ref:`scc<amdgpu_synid_scc>`, :ref:`fconst<amdgpu_synid_fconst>`
+
 .. _amdgpu_synid_gfx950_vsrc1_6802ce:
 
 vsrc1
@@ -1299,6 +1365,17 @@ Instruction input.
 *Size:* 1 dword.
 
 *Operands:* :ref:`v<amdgpu_synid_v>`
+
+.. _amdgpu_synid_gfx950_vsrc1_14b47a:
+
+vsrc1
+-----
+
+Instruction input.
+
+*Size:* 1 dword.
+
+*Operands:* :ref:`v<amdgpu_synid_v>`, :ref:`s<amdgpu_synid_s>`, :ref:`flat_scratch<amdgpu_synid_flat_scratch>`, :ref:`xnack_mask<amdgpu_synid_xnack_mask>`, :ref:`vcc<amdgpu_synid_vcc>`, :ref:`ttmp<amdgpu_synid_ttmp>`, :ref:`m0<amdgpu_synid_m0>`, :ref:`exec<amdgpu_synid_exec>`, :ref:`vccz<amdgpu_synid_vccz>`, :ref:`execz<amdgpu_synid_execz>`, :ref:`scc<amdgpu_synid_scc>`, :ref:`fconst<amdgpu_synid_fconst>`
 
 .. _amdgpu_synid_gfx950_vsrc1_fd235e:
 
