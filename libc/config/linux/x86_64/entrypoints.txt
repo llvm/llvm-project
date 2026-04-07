@@ -1233,6 +1233,11 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.pthread.pthread_spin_lock
     libc.src.pthread.pthread_spin_trylock
     libc.src.pthread.pthread_spin_unlock
+
+    # semaphore.h entrypoints
+    libc.src.semaphore.sem_destroy
+    libc.src.semaphore.sem_getvalue
+    libc.src.semaphore.sem_init
     libc.src.pthread.pthread_self
     libc.src.pthread.pthread_setname_np
     libc.src.pthread.pthread_setspecific

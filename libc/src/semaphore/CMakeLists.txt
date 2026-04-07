@@ -1,0 +1,49 @@
+add_header_library(
+  posix_semaphore
+  HDRS
+    posix_semaphore.h
+  DEPENDS
+    libc.hdr.types.sem_t
+    libc.src.__support.CPP.atomic
+    libc.src.__support.threads.linux.futex_word_type
+)
+
+add_entrypoint_object(
+  sem_init
+  SRCS
+    sem_init.cpp
+  HDRS
+    sem_init.h
+  DEPENDS
+    .posix_semaphore
+    libc.hdr.errno_macros
+    libc.hdr.limits_macros
+    libc.include.semaphore
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  sem_destroy
+  SRCS
+    sem_destroy.cpp
+  HDRS
+    sem_destroy.h
+  DEPENDS
+    .posix_semaphore
+    libc.hdr.errno_macros
+    libc.include.semaphore
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  sem_getvalue
+  SRCS
+    sem_getvalue.cpp
+  HDRS
+    sem_getvalue.h
+  DEPENDS
+    .posix_semaphore
+    libc.hdr.errno_macros
+    libc.include.semaphore
+    libc.src.errno.errno
+)

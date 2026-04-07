@@ -1,0 +1,19 @@
+add_custom_target(libc_semaphore_unittests)
+
+add_libc_unittest(
+  semaphore_test
+  SUITE
+    libc_semaphore_unittests
+  SRCS
+    semaphore_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.include.limits
+    libc.include.semaphore
+    libc.src.errno.errno
+    libc.src.semaphore.sem_destroy
+    libc.src.semaphore.sem_getvalue
+    libc.src.semaphore.sem_init
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)

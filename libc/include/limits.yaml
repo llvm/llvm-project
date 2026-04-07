@@ -52,6 +52,8 @@ macros:
     macro_header: limits-macros.h
   - macro_name: ULLONG_MAX
     macro_header: limits-macros.h
+  - macro_name: SEM_VALUE_MAX
+    macro_header: limits-macros.h
   - macro_name: SCHAR_MIN
     macro_header: limits-macros.h
   - macro_name: UCHAR_MIN
