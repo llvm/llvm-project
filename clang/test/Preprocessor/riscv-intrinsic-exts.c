@@ -2,10 +2,20 @@
 // These macros indicate which extensions have intrinsics supported by the
 // toolchain, regardless of whether they are currently enabled via -march.
 
-// RUN: %clang_cc1 -triple riscv32 -E -dM %s -o - \
+// RUN: %clang_cc1 -triple riscv32 -target-feature +zihintntl -E -dM %s -o - \
 // RUN:   | FileCheck --check-prefix=CHECK-INTRINSIC-EXTS %s
-// RUN: %clang_cc1 -triple riscv64 -E -dM %s -o - \
+// RUN: %clang_cc1 -triple riscv64 -target-feature +zihintntl -E -dM %s -o - \
 // RUN:   | FileCheck --check-prefix=CHECK-INTRINSIC-EXTS %s
+
+#include <riscv_bitmanip.h>
+#include <riscv_corev_alu.h>
+#include <riscv_crypto.h>
+#include <riscv_mips.h>
+#include <riscv_nds.h>
+#include <riscv_ntlh.h>
+#include <riscv_vector.h>
+#include <andes_vector.h>
+#include <sifive_vector.h>
 
 // CHECK-INTRINSIC-EXTS: #define __riscv_intrinsic_v 1
 // CHECK-INTRINSIC-EXTS-NEXT: #define __riscv_intrinsic_xandesbfhcvt 1
@@ -39,7 +49,6 @@
 // CHECK-INTRINSIC-EXTS-NEXT: #define __riscv_intrinsic_zbkc 1
 // CHECK-INTRINSIC-EXTS-NEXT: #define __riscv_intrinsic_zbkx 1
 // CHECK-INTRINSIC-EXTS-NEXT: #define __riscv_intrinsic_zihintntl 1
-// CHECK-INTRINSIC-EXTS-NEXT: #define __riscv_intrinsic_zihintpause 1
 // CHECK-INTRINSIC-EXTS-NEXT: #define __riscv_intrinsic_zkn 1
 // CHECK-INTRINSIC-EXTS-NEXT: #define __riscv_intrinsic_zknd 1
 // CHECK-INTRINSIC-EXTS-NEXT: #define __riscv_intrinsic_zkne 1

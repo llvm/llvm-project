@@ -118,8 +118,7 @@ public:
 private:
   /// Create all intrinsics and add them to \p Out and SemaRecords.
   void createRVVIntrinsics(std::vector<std::unique_ptr<RVVIntrinsic>> &Out,
-                           std::vector<SemaRecord> *SemaRecords = nullptr,
-                           std::set<StringRef> *UniqueExtensions = nullptr);
+                           std::vector<SemaRecord> *SemaRecords = nullptr);
   /// Create all intrinsic records and SemaSignatureTable from SemaRecords.
   void createRVVIntrinsicRecords(std::vector<RVVIntrinsicRecord> &Out,
                                  SemaSignatureTable &SST,
@@ -432,6 +431,17 @@ void RVVEmitter::createHeader(raw_ostream &OS) {
 
   OS << "#pragma clang riscv intrinsic vector\n\n";
 
+  auto DefineIntrinsicMacro = [&](ArrayRef<const char *> Exts) {
+    for (const char *Ext : Exts)
+      OS << "#define __riscv_intrinsic_" << Ext << " 1\n";
+  };
+  DefineIntrinsicMacro(
+      {"v",        "zvabd",  "zvbb",    "zvbc",       "zvdot4a8i", "zve32f",
+       "zve32x",   "zve64d", "zve64f",  "zve64x",     "zvfbfa",    "zvfbfmin",
+       "zvfbfwma", "zvfh",   "zvfhmin", "zvfofp8min", "zvkb",      "zvkg",
+       "zvkn",     "zvknc",  "zvkned",  "zvkng",      "zvknha",    "zvknhb",
+       "zvks",     "zvksc",  "zvksed",  "zvksg",      "zvksh"});
+
   printHeaderCode(OS);
 
   auto printType = [&](auto T) {
@@ -505,8 +515,7 @@ void RVVEmitter::createHeader(raw_ostream &OS) {
 
 void RVVEmitter::createBuiltins(raw_ostream &OS) {
   std::vector<std::unique_ptr<RVVIntrinsic>> Defs;
-  std::set<StringRef> UniqueExtensions;
-  createRVVIntrinsics(Defs, nullptr, &UniqueExtensions);
+  createRVVIntrinsics(Defs);
 
   llvm::StringToOffsetTable Table;
   // Ensure offset zero is the empty string.
@@ -570,12 +579,6 @@ void RVVEmitter::createBuiltins(raw_ostream &OS) {
     OS << "HeaderDesc::NO_HEADER, ALL_LANGUAGES},\n";
   }
   OS << "#endif // GET_RISCVV_BUILTIN_INFOS\n\n";
-
-  // Collect all unique required extensions for vector intrinsics
-  OS << "#ifdef DECL_REQUIRED_EXTENSIONS\n";
-  for (const auto &UE : UniqueExtensions)
-    OS << "  \"" << UE << "\",\n";
-  OS << "#endif // DECL_REQUIRED_EXTENSIONS\n\n";
 }
 
 void RVVEmitter::createCodeGen(raw_ostream &OS) {
@@ -634,8 +637,7 @@ void RVVEmitter::createCodeGen(raw_ostream &OS) {
 
 void RVVEmitter::createRVVIntrinsics(
     std::vector<std::unique_ptr<RVVIntrinsic>> &Out,
-    std::vector<SemaRecord> *SemaRecords,
-    std::set<StringRef> *UniqueExtensions) {
+    std::vector<SemaRecord> *SemaRecords) {
   for (const Record *R : Records.getAllDerivedDefinitions("RVVBuiltin")) {
     StringRef Name = R->getValueAsString("Name");
     StringRef SuffixProto = R->getValueAsString("Suffix");
@@ -684,10 +686,6 @@ void RVVEmitter::createRVVIntrinsics(
     SmallVector<PrototypeDescriptor> SuffixDesc = parsePrototypes(SuffixProto);
     SmallVector<PrototypeDescriptor> OverloadedSuffixDesc =
         parsePrototypes(OverloadedSuffixProto);
-
-    if (UniqueExtensions)
-      UniqueExtensions->insert(RequiredFeatures.begin(),
-                               RequiredFeatures.end());
 
     // Compute Builtin types
     auto Prototype = RVVIntrinsic::computeBuiltinTypes(
