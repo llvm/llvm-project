@@ -26,9 +26,11 @@
 #include "PdbFPOProgramToDWARFExpression.h"
 #include <optional>
 
+// BEGIN SWIFT
 #if LLDB_ENABLE_SWIFT
 #include "swift/Demangling/Demangle.h"
-#endif
+#endif // LLDB_ENABLE_SWIFT
+// END SWIFT
 
 using namespace lldb;
 using namespace lldb_private;
@@ -106,6 +108,7 @@ GetIntegralTypeInfo(TypeIndex ti, TpiStream &tpi) {
       return std::move(err);
     return GetIntegralTypeInfo(er.UnderlyingType, tpi);
   }
+// BEGIN SWIFT
 #if LLDB_ENABLE_SWIFT
   // Swift integral types are structs.
   case LF_STRUCTURE:
@@ -146,7 +149,8 @@ GetIntegralTypeInfo(TypeIndex ti, TpiStream &tpi) {
     return llvm::make_error<llvm::StringError>(
         "Swift type is not an integral type", llvm::inconvertibleErrorCode());
   }
-#endif
+#endif // LLDB_ENABLE_SWIFT
+// END SWIFT
   default:
     return llvm::make_error<llvm::StringError>("Type is not integral",
                                                llvm::inconvertibleErrorCode());
