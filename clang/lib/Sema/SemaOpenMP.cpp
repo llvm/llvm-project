@@ -23301,6 +23301,21 @@ static void checkMappableExpressionList(
       continue;
     }
 
+    // OpenMP 6.0 [7.9.6, map Clause, Restrictions, p. 386]
+    // A device-local variable must not appear as a list item in a map clause.
+    if (VD && CKind == OMPC_map) {
+      if (std::optional<OMPDeclareTargetDeclAttr::MapTypeTy> Res =
+              OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(VD)) {
+        if (*Res == OMPDeclareTargetDeclAttr::MT_Local) {
+          if (NoDiagnose)
+            continue;
+          SemaRef.Diag(ELoc, diag::err_omp_device_local_in_clause)
+              << VD << getOpenMPClauseNameForDiag(CKind);
+          continue;
+        }
+      }
+    }
+
     // OpenMP 4.5 [2.15.5.1, map Clause, Restrictions, p.9]
     //  A list item cannot appear in both a map clause and a data-sharing
     //  attribute clause on the same construct.
