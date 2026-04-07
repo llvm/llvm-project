@@ -147,6 +147,6 @@ def MyI8Enum : I8Enum<"MyI8Enum", "Example I8 enum", [
   ]>;
 
 def MyI16Enum : I16Enum<"MyI16Enum", "Example I16 enum", [
-    I8EnumCase<"a", 65534>,
-    I8EnumCase<"b", 65535>
+    I16EnumCase<"a", 65534>,
+    I16EnumCase<"b", 65535>
   ]>;
