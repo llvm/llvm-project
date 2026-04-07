@@ -331,6 +331,29 @@ DICompositeTypeAttr::getRecSelf(DistinctAttr recId) {
 }
 
 //===----------------------------------------------------------------------===//
+// DICompileUnitAttr
+//===----------------------------------------------------------------------===//
+
+DIRecursiveTypeAttrInterface DICompileUnitAttr::withRecId(DistinctAttr recId) {
+  return DICompileUnitAttr::get(
+      getContext(), recId, getIsRecSelf(), getId(), getSourceLanguage(),
+      getFile(), getProducer(), getIsOptimized(), getEmissionKind(),
+      getIsDebugInfoForProfiling(), getNameTableKind(), getSplitDebugFilename(),
+      getImportedEntities());
+}
+
+DIRecursiveTypeAttrInterface DICompileUnitAttr::getRecSelf(DistinctAttr recId) {
+  MLIRContext *ctx = recId.getContext();
+  auto emptyStr = StringAttr::get(ctx, "");
+  return DICompileUnitAttr::get(
+      ctx, recId, /*isRecSelf=*/true, /*id=*/DistinctAttr{},
+      llvm::dwarf::DW_LANG_C89, DIFileAttr::get(ctx, "<rec>", ""), emptyStr,
+      /*isOptimized=*/false, DIEmissionKind::Full,
+      /*isDebugInfoForProfiling=*/false, DINameTableKind::Default, emptyStr,
+      /*importedEntities=*/{});
+}
+
+//===----------------------------------------------------------------------===//
 // DISubprogramAttr
 //===----------------------------------------------------------------------===//
 
