@@ -1036,12 +1036,7 @@ entry:
 define i3 @usati_i3_from_i64(i64 %x) {
 ; CHECK-LABEL: usati_i3_from_i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a1, 7
-; CHECK-NEXT:    bgeu a1, a0, .LBB87_2
-; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    srli a0, a0, 63
-; CHECK-NEXT:    addi a0, a0, -1
-; CHECK-NEXT:  .LBB87_2:
+; CHECK-NEXT:    usati a0, a0, 3
 ; CHECK-NEXT:    ret
   %cmp1 = icmp ugt i64 %x, 7
   %cmp2 = icmp sgt i64 %x, -1
@@ -1054,12 +1049,7 @@ define i3 @usati_i3_from_i64(i64 %x) {
 define i5 @usati_i5_from_i64(i64 %x) {
 ; CHECK-LABEL: usati_i5_from_i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a1, 31
-; CHECK-NEXT:    bgeu a1, a0, .LBB88_2
-; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    srli a0, a0, 63
-; CHECK-NEXT:    addi a0, a0, -1
-; CHECK-NEXT:  .LBB88_2:
+; CHECK-NEXT:    usati a0, a0, 5
 ; CHECK-NEXT:    ret
   %cmp1 = icmp ugt i64 %x, 31
   %cmp2 = icmp sgt i64 %x, -1
@@ -1072,12 +1062,7 @@ define i5 @usati_i5_from_i64(i64 %x) {
 define i7 @usati_i7_from_i64(i64 %x) {
 ; CHECK-LABEL: usati_i7_from_i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a1, 127
-; CHECK-NEXT:    bgeu a1, a0, .LBB89_2
-; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    srli a0, a0, 63
-; CHECK-NEXT:    addi a0, a0, -1
-; CHECK-NEXT:  .LBB89_2:
+; CHECK-NEXT:    usati a0, a0, 7
 ; CHECK-NEXT:    ret
   %cmp1 = icmp ugt i64 %x, 127
   %cmp2 = icmp sgt i64 %x, -1
@@ -1090,12 +1075,7 @@ define i7 @usati_i7_from_i64(i64 %x) {
 define i8 @usati_i8_from_i64(i64 %x) {
 ; CHECK-LABEL: usati_i8_from_i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a1, 255
-; CHECK-NEXT:    bgeu a1, a0, .LBB90_2
-; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    srli a0, a0, 63
-; CHECK-NEXT:    addi a0, a0, -1
-; CHECK-NEXT:  .LBB90_2:
+; CHECK-NEXT:    usati a0, a0, 8
 ; CHECK-NEXT:    ret
   %cmp1 = icmp ugt i64 %x, 255
   %cmp2 = icmp sgt i64 %x, -1
@@ -1108,12 +1088,7 @@ define i8 @usati_i8_from_i64(i64 %x) {
 define i10 @usati_i10_from_i64(i64 %x) {
 ; CHECK-LABEL: usati_i10_from_i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a1, 1023
-; CHECK-NEXT:    bgeu a1, a0, .LBB91_2
-; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    srli a0, a0, 63
-; CHECK-NEXT:    addi a0, a0, -1
-; CHECK-NEXT:  .LBB91_2:
+; CHECK-NEXT:    usati a0, a0, 10
 ; CHECK-NEXT:    ret
   %cmp1 = icmp ugt i64 %x, 1023
   %cmp2 = icmp sgt i64 %x, -1
@@ -1126,12 +1101,7 @@ define i10 @usati_i10_from_i64(i64 %x) {
 define i16 @usati_i16_from_i64(i64 %x) {
 ; CHECK-LABEL: usati_i16_from_i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    srli a1, a0, 16
-; CHECK-NEXT:    beqz a1, .LBB92_2
-; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    srli a0, a0, 63
-; CHECK-NEXT:    addi a0, a0, -1
-; CHECK-NEXT:  .LBB92_2:
+; CHECK-NEXT:    usati a0, a0, 16
 ; CHECK-NEXT:    ret
   %cmp1 = icmp ugt i64 %x, 65535
   %cmp2 = icmp sgt i64 %x, -1
@@ -1144,12 +1114,7 @@ define i16 @usati_i16_from_i64(i64 %x) {
 define i20 @usati_i20_from_i64(i64 %x) {
 ; CHECK-LABEL: usati_i20_from_i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    srli a1, a0, 20
-; CHECK-NEXT:    beqz a1, .LBB93_2
-; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    srli a0, a0, 63
-; CHECK-NEXT:    addi a0, a0, -1
-; CHECK-NEXT:  .LBB93_2:
+; CHECK-NEXT:    usati a0, a0, 20
 ; CHECK-NEXT:    ret
   %cmp1 = icmp ugt i64 %x, 1048575
   %cmp2 = icmp sgt i64 %x, -1
@@ -1162,12 +1127,7 @@ define i20 @usati_i20_from_i64(i64 %x) {
 define i32 @usati_i32_from_i64(i64 %x) {
 ; CHECK-LABEL: usati_i32_from_i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    srli a1, a0, 32
-; CHECK-NEXT:    beqz a1, .LBB94_2
-; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    srli a0, a0, 63
-; CHECK-NEXT:    addi a0, a0, -1
-; CHECK-NEXT:  .LBB94_2:
+; CHECK-NEXT:    usati a0, a0, 32
 ; CHECK-NEXT:    ret
   %cmp1 = icmp ugt i64 %x, 4294967295
   %cmp2 = icmp sgt i64 %x, -1
@@ -1180,12 +1140,7 @@ define i32 @usati_i32_from_i64(i64 %x) {
 define i40 @usati_i40_from_i64(i64 %x) {
 ; CHECK-LABEL: usati_i40_from_i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    srli a1, a0, 40
-; CHECK-NEXT:    beqz a1, .LBB95_2
-; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    srli a0, a0, 63
-; CHECK-NEXT:    addi a0, a0, -1
-; CHECK-NEXT:  .LBB95_2:
+; CHECK-NEXT:    usati a0, a0, 40
 ; CHECK-NEXT:    ret
   %cmp1 = icmp ugt i64 %x, 1099511627775
   %cmp2 = icmp sgt i64 %x, -1
@@ -1198,12 +1153,7 @@ define i40 @usati_i40_from_i64(i64 %x) {
 define i48 @usati_i48_from_i64(i64 %x) {
 ; CHECK-LABEL: usati_i48_from_i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    srli a1, a0, 48
-; CHECK-NEXT:    beqz a1, .LBB96_2
-; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    srli a0, a0, 63
-; CHECK-NEXT:    addi a0, a0, -1
-; CHECK-NEXT:  .LBB96_2:
+; CHECK-NEXT:    usati a0, a0, 48
 ; CHECK-NEXT:    ret
   %cmp1 = icmp ugt i64 %x, 281474976710655
   %cmp2 = icmp sgt i64 %x, -1
@@ -1216,12 +1166,7 @@ define i48 @usati_i48_from_i64(i64 %x) {
 define i56 @usati_i56_from_i64(i64 %x) {
 ; CHECK-LABEL: usati_i56_from_i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    srli a1, a0, 56
-; CHECK-NEXT:    beqz a1, .LBB97_2
-; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    srli a0, a0, 63
-; CHECK-NEXT:    addi a0, a0, -1
-; CHECK-NEXT:  .LBB97_2:
+; CHECK-NEXT:    usati a0, a0, 56
 ; CHECK-NEXT:    ret
   %cmp1 = icmp ugt i64 %x, 72057594037927935
   %cmp2 = icmp sgt i64 %x, -1
@@ -1234,11 +1179,7 @@ define i56 @usati_i56_from_i64(i64 %x) {
 define i63 @usati_i63_from_i64(i64 %x) {
 ; CHECK-LABEL: usati_i63_from_i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    bgez a0, .LBB98_2
-; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    srli a0, a0, 63
-; CHECK-NEXT:    addi a0, a0, -1
-; CHECK-NEXT:  .LBB98_2:
+; CHECK-NEXT:    usati a0, a0, 63
 ; CHECK-NEXT:    ret
   %cmp1 = icmp ugt i64 %x, 9223372036854775807
   %cmp2 = icmp sgt i64 %x, -1
@@ -1252,14 +1193,8 @@ define i63 @usati_i63_from_i64(i64 %x) {
 define i8 @usati_i8_from_i16(i16 %x) {
 ; CHECK-LABEL: usati_i8_from_i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    zext.h a1, a0
-; CHECK-NEXT:    li a2, 255
-; CHECK-NEXT:    bgeu a2, a1, .LBB99_2
-; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    slli a0, a0, 48
-; CHECK-NEXT:    srli a0, a0, 63
-; CHECK-NEXT:    addi a0, a0, -1
-; CHECK-NEXT:  .LBB99_2:
+; CHECK-NEXT:    sext.h a0, a0
+; CHECK-NEXT:    usati a0, a0, 8
 ; CHECK-NEXT:    ret
   %cmp1 = icmp ugt i16 %x, 255
   %cmp2 = icmp sgt i16 %x, -1
@@ -1272,13 +1207,8 @@ define i8 @usati_i8_from_i16(i16 %x) {
 define i8 @usati_i8_from_i32(i32 %x) {
 ; CHECK-LABEL: usati_i8_from_i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    sext.w a1, a0
-; CHECK-NEXT:    li a2, 255
-; CHECK-NEXT:    bgeu a2, a1, .LBB100_2
-; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    srliw a0, a0, 31
-; CHECK-NEXT:    addi a0, a0, -1
-; CHECK-NEXT:  .LBB100_2:
+; CHECK-NEXT:    sext.w a0, a0
+; CHECK-NEXT:    usati a0, a0, 8
 ; CHECK-NEXT:    ret
   %cmp1 = icmp ugt i32 %x, 255
   %cmp2 = icmp sgt i32 %x, -1
@@ -1291,12 +1221,8 @@ define i8 @usati_i8_from_i32(i32 %x) {
 define i16 @usati_i16_from_i32(i32 %x) {
 ; CHECK-LABEL: usati_i16_from_i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    srliw a1, a0, 16
-; CHECK-NEXT:    beqz a1, .LBB101_2
-; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    srliw a0, a0, 31
-; CHECK-NEXT:    addi a0, a0, -1
-; CHECK-NEXT:  .LBB101_2:
+; CHECK-NEXT:    sext.w a0, a0
+; CHECK-NEXT:    usati a0, a0, 16
 ; CHECK-NEXT:    ret
   %cmp1 = icmp ugt i32 %x, 65535
   %cmp2 = icmp sgt i32 %x, -1
@@ -1309,13 +1235,9 @@ define i16 @usati_i16_from_i32(i32 %x) {
 define i16 @usati_i16_from_i48(i48 %x) {
 ; CHECK-LABEL: usati_i16_from_i48:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    slli a1, a0, 16
-; CHECK-NEXT:    srli a2, a1, 32
-; CHECK-NEXT:    beqz a2, .LBB102_2
-; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    srli a0, a1, 63
-; CHECK-NEXT:    addi a0, a0, -1
-; CHECK-NEXT:  .LBB102_2:
+; CHECK-NEXT:    slli a0, a0, 16
+; CHECK-NEXT:    srai a0, a0, 16
+; CHECK-NEXT:    usati a0, a0, 16
 ; CHECK-NEXT:    ret
   %cmp1 = icmp ugt i48 %x, 65535
   %cmp2 = icmp sgt i48 %x, -1
@@ -1328,13 +1250,9 @@ define i16 @usati_i16_from_i48(i48 %x) {
 define i32 @usati_i32_from_i48(i48 %x) {
 ; CHECK-LABEL: usati_i32_from_i48:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    slli a1, a0, 16
-; CHECK-NEXT:    srli a2, a1, 48
-; CHECK-NEXT:    beqz a2, .LBB103_2
-; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    srli a0, a1, 63
-; CHECK-NEXT:    addi a0, a0, -1
-; CHECK-NEXT:  .LBB103_2:
+; CHECK-NEXT:    slli a0, a0, 16
+; CHECK-NEXT:    srai a0, a0, 16
+; CHECK-NEXT:    usati a0, a0, 32
 ; CHECK-NEXT:    ret
   %cmp1 = icmp ugt i48 %x, 4294967295
   %cmp2 = icmp sgt i48 %x, -1
