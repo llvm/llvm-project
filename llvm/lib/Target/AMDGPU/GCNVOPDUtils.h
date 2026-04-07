@@ -24,6 +24,12 @@ class SIInstrInfo;
 bool checkVOPDRegConstraints(const SIInstrInfo &TII,
                              const MachineInstr &FirstMI,
                              const MachineInstr &SecondMI, bool IsVOPD3);
+bool checkVOPDRegConstraintsSched(const SIInstrInfo &TII,
+                                  const MachineInstr &FirstMI,
+                                  const MachineInstr &SecondMI, bool IsVOPD3);
+bool checkVOPDRegConstraintsComb(const SIInstrInfo &TII,
+                                 const MachineInstr &FirstMI,
+                                 const MachineInstr &SecondMI, bool IsVOPD3);
 
 std::unique_ptr<ScheduleDAGMutation> createVOPDPairingMutation();
 

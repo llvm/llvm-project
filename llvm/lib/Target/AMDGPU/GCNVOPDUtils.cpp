@@ -34,6 +34,31 @@ using namespace llvm;
 
 #define DEBUG_TYPE "gcn-vopd-utils"
 
+// Check if register in src<SrcIdx> from MI<CompIdx> matches register class
+// constraints in corresponding VOPDOpc operand named src/vsrc<SrcIdx><CompIdx>.
+bool matchesVOPDOperandRC(Register SrcReg, unsigned CompIdx, unsigned SrcIdx,
+                          int VOPDOpc, const SIInstrInfo &TII) {
+  static const AMDGPU::OpName Src0X[] = {AMDGPU::OpName::src0X};
+  static const AMDGPU::OpName Src1X[] = {AMDGPU::OpName::vsrc1X};
+  static const AMDGPU::OpName Src2X[] = {AMDGPU::OpName::vsrc2X,
+                                         AMDGPU::OpName::src2X};
+  static const AMDGPU::OpName Src0Y[] = {AMDGPU::OpName::src0Y};
+  static const AMDGPU::OpName Src1Y[] = {AMDGPU::OpName::vsrc1Y};
+  static const AMDGPU::OpName Src2Y[] = {AMDGPU::OpName::vsrc2Y,
+                                         AMDGPU::OpName::src2Y};
+  static const ArrayRef<AMDGPU::OpName> SrcNames[2][3] = {
+      {Src0X, Src1X, Src2X}, {Src0Y, Src1Y, Src2Y}};
+
+  int Idx = -1;
+  for (AMDGPU::OpName Name : SrcNames[CompIdx][SrcIdx]) {
+    Idx = getNamedOperandIdx(VOPDOpc, Name);
+    if (Idx > 0)
+      break;
+  }
+
+  return TII.getRegClass(TII.get(VOPDOpc), Idx)->contains(SrcReg);
+}
+
 bool llvm::checkVOPDRegConstraints(const SIInstrInfo &TII,
                                    const MachineInstr &MIX,
                                    const MachineInstr &MIY, bool IsVOPD3) {
@@ -62,18 +87,10 @@ bool llvm::checkVOPDRegConstraints(const SIInstrInfo &TII,
   };
   SmallVector<Register> UniqueScalarRegs;
 
-  // MIX must not modify any registers used by MIY.
-  for (const auto &Use : MIY.uses())
-    if (Use.isReg() && MIX.modifiesRegister(Use.getReg(), TRI))
-      return false;
-
-  auto getVRegIdx = [&](unsigned OpcodeIdx, unsigned OperandIdx) {
-    const MachineInstr &MI = (OpcodeIdx == VOPD::X) ? MIX : MIY;
-    const MachineOperand &Operand = MI.getOperand(OperandIdx);
-    if (Operand.isReg() && TRI->isVectorRegister(MRI, Operand.getReg()))
-      return Operand.getReg();
-    return Register();
-  };
+  unsigned EncodingFamily = AMDGPU::getVOPDEncodingFamily(ST);
+  unsigned XOpc = AMDGPU::getVOPDOpcode(MIX.getOpcode(), IsVOPD3);
+  unsigned YOpc = AMDGPU::getVOPDOpcode(MIY.getOpcode(), IsVOPD3);
+  int VOPDOpc = AMDGPU::getVOPDFull(XOpc, YOpc, EncodingFamily, IsVOPD3);
 
   auto InstInfo = AMDGPU::getVOPDInstInfo(MIX.getDesc(), MIY.getDesc());
 
@@ -86,39 +103,50 @@ bool llvm::checkVOPDRegConstraints(const SIInstrInfo &TII,
         if (!is_contained(UniqueScalarRegs, Src0.getReg()))
           UniqueScalarRegs.push_back(Src0.getReg());
       }
+      if (!matchesVOPDOperandRC(Src0.getReg(), CompIdx, 0, VOPDOpc, TII))
+        return false;
     } else if (!TII.isInlineConstant(Src0)) {
       if (IsVOPD3)
         return false;
       addLiteral(Src0);
     }
 
+    // VOPD only. src1 for V_FMAMK_F32 and src2 for V_FMAAK_F32.
+    // VOP3 instructions don't set MandatoryLiteralIdx
     if (InstInfo[CompIdx].hasMandatoryLiteral()) {
-      if (IsVOPD3)
-        return false;
-
       auto CompOprIdx = InstInfo[CompIdx].getMandatoryLiteralCompOperandIndex();
       addLiteral(MI.getOperand(CompOprIdx));
     }
+
+    const MachineOperand *Src1 = TII.getNamedOperand(MI, AMDGPU::OpName::src1);
+    if (IsVOPD3 && Src1 && !Src1->isReg())
+      return false;
+    if (Src1 && Src1->isReg() &&
+        !matchesVOPDOperandRC(Src1->getReg(), CompIdx, 1, VOPDOpc, TII))
+      return false;
+
+    const MachineOperand *Src2 = TII.getNamedOperand(MI, AMDGPU::OpName::src2);
+
+    if (AMDGPU::hasNamedOperand(MI.getOpcode(), AMDGPU::OpName::bitop3)) {
+      // VOPD3 only, BITOP3 can be converted to DUAL_BITOP2 when src2 is zero.
+      if (!Src2->isImm() || Src2->getImm())
+        return false;
+    } else {
+      if (IsVOPD3 && Src2 && !Src2->isReg())
+        return false;
+      if (Src2 && Src2->isReg() &&
+          !matchesVOPDOperandRC(Src2->getReg(), CompIdx, 2, VOPDOpc, TII))
+        return false;
+    }
+
+    if (MI.getOpcode() == AMDGPU::V_CNDMASK_B32_e64) // VOPD3 only
+      UniqueScalarRegs.push_back(Src2->getReg());
+
+    // VOPD only. Affects V_CNDMASK_B32_e32.
     if (MI.getDesc().hasImplicitUseOfPhysReg(AMDGPU::VCC))
       UniqueScalarRegs.push_back(AMDGPU::VCC_LO);
 
     if (IsVOPD3) {
-      for (auto OpName : {AMDGPU::OpName::src1, AMDGPU::OpName::src2}) {
-        const MachineOperand *Src = TII.getNamedOperand(MI, OpName);
-        if (!Src)
-          continue;
-        if (OpName == AMDGPU::OpName::src2) {
-          if (AMDGPU::hasNamedOperand(MI.getOpcode(), AMDGPU::OpName::bitop3))
-            continue;
-          if (MI.getOpcode() == AMDGPU::V_CNDMASK_B32_e64) {
-            UniqueScalarRegs.push_back(Src->getReg());
-            continue;
-          }
-        }
-        if (!Src->isReg() || !TRI->isVGPR(MRI, Src->getReg()))
-          return false;
-      }
-
       for (auto OpName : {AMDGPU::OpName::clamp, AMDGPU::OpName::omod,
                           AMDGPU::OpName::op_sel}) {
         if (TII.hasModifiersSet(MI, OpName))
@@ -142,6 +170,14 @@ bool llvm::checkVOPDRegConstraints(const SIInstrInfo &TII,
   if ((UniqueLiterals.size() + UniqueScalarRegs.size()) > 2)
     return false;
 
+  auto getVRegIdx = [&](unsigned OpcodeIdx, unsigned OperandIdx) {
+    const MachineInstr &MI = (OpcodeIdx == VOPD::X) ? MIX : MIY;
+    const MachineOperand &Operand = MI.getOperand(OperandIdx);
+    if (Operand.isReg() && TRI->isVectorRegister(MRI, Operand.getReg()))
+      return Operand.getReg();
+    return Register();
+  };
+
   // On GFX1170+ if both OpX and OpY are V_MOV_B32 then OPY uses SRC2
   // source-cache.
   bool SkipSrc = (ST.hasGFX11_7Insts() || ST.hasGFX12Insts()) &&
@@ -149,30 +185,49 @@ bool llvm::checkVOPDRegConstraints(const SIInstrInfo &TII,
                  MIY.getOpcode() == AMDGPU::V_MOV_B32_e32;
   bool AllowSameVGPR = ST.hasGFX1250Insts();
 
+  // Check VGPR bank constraints for operand registers across both instructions.
   if (InstInfo.hasInvalidOperand(getVRegIdx, *TRI, SkipSrc, AllowSameVGPR,
                                  IsVOPD3))
     return false;
 
-  if (IsVOPD3) {
-    // BITOP3 can be converted to DUAL_BITOP2 only if src2 is zero.
-    // MIX check is only relevant to scheduling?
-    if (AMDGPU::hasNamedOperand(MIX.getOpcode(), AMDGPU::OpName::bitop3)) {
-      const MachineOperand &Src2 =
-          *TII.getNamedOperand(MIX, AMDGPU::OpName::src2);
-      if (!Src2.isImm() || Src2.getImm())
-        return false;
-    }
-    if (AMDGPU::hasNamedOperand(MIY.getOpcode(), AMDGPU::OpName::bitop3)) {
-      const MachineOperand &Src2 =
-          *TII.getNamedOperand(MIY, AMDGPU::OpName::src2);
-      if (!Src2.isImm() || Src2.getImm())
-        return false;
-    }
-  }
-
   LLVM_DEBUG(dbgs() << "VOPD Reg Constraints Passed\n\tX: " << MIX
                     << "\n\tY: " << MIY << "\n");
   return true;
+}
+
+bool checkRegDeppendancy(const MachineInstr &MIX, const MachineInstr &MIY) {
+  const GCNSubtarget &ST = MIX.getMF()->getSubtarget<GCNSubtarget>();
+  const SIRegisterInfo *TRI = dyn_cast<SIRegisterInfo>(ST.getRegisterInfo());
+  for (const auto &Use : MIY.uses()) {
+    if (Use.isReg() && MIX.modifiesRegister(Use.getReg(), TRI))
+      return false;
+  }
+  return true;
+}
+
+bool llvm::checkVOPDRegConstraintsSched(const SIInstrInfo &TII,
+                                        const MachineInstr &MIX,
+                                        const MachineInstr &MIY, bool IsVOPD3) {
+  if (!checkRegDeppendancy(MIX, MIY))
+    return false;
+
+  const GCNSubtarget &ST = MIX.getMF()->getSubtarget<GCNSubtarget>();
+  unsigned EncodingFamily = AMDGPU::getVOPDEncodingFamily(ST);
+  unsigned XOpc = AMDGPU::getVOPDOpcode(MIX.getOpcode(), IsVOPD3);
+  unsigned YOpc = AMDGPU::getVOPDOpcode(MIY.getOpcode(), IsVOPD3);
+  int VOPDOpc = AMDGPU::getVOPDFull(XOpc, YOpc, EncodingFamily, IsVOPD3);
+  if (VOPDOpc != -1)
+    return checkVOPDRegConstraints(TII, MIX, MIY, IsVOPD3);
+  return checkVOPDRegConstraints(TII, MIY, MIX, IsVOPD3);
+}
+
+bool llvm::checkVOPDRegConstraintsComb(const SIInstrInfo &TII,
+                                       const MachineInstr &MIX,
+                                       const MachineInstr &MIY, bool IsVOPD3) {
+  if (!checkRegDeppendancy(MIX, MIY))
+    return false;
+
+  return checkVOPDRegConstraints(TII, MIX, MIY, IsVOPD3);
 }
 
 /// Check if the instr pair, FirstMI and SecondMI, should be scheduled
@@ -212,7 +267,7 @@ static bool shouldScheduleVOPDAdjacent(const TargetInstrInfo &TII,
     }() && "Expected FirstMI to precede SecondMI");
 #endif
 
-    return checkVOPDRegConstraints(STII, *FirstMI, SecondMI, VOPD3);
+    return checkVOPDRegConstraintsSched(STII, *FirstMI, SecondMI, VOPD3);
   };
 
   return checkVOPD(false) || (ST.hasVOPD3() && checkVOPD(true));

@@ -162,7 +162,8 @@ public:
               AMDGPU::getCanBeVOPD(Opc2, EncodingFamily, VOPD3);
 
           if (FirstCanBeVOPD.X && SecondCanBeVOPD.Y &&
-              llvm::checkVOPDRegConstraints(*SII, *FirstMI, *SecondMI, VOPD3)) {
+              llvm::checkVOPDRegConstraintsComb(*SII, *FirstMI, *SecondMI,
+                                                VOPD3)) {
             CI = VOPDCombineInfo(FirstMI, SecondMI, VOPD3);
             return true;
           }
@@ -175,7 +176,8 @@ public:
             if (Use.isReg() && FirstMI->modifiesRegister(Use.getReg(), TRI))
               return false;
           if (FirstCanBeVOPD.Y && SecondCanBeVOPD.X &&
-              llvm::checkVOPDRegConstraints(*SII, *SecondMI, *FirstMI, VOPD3)) {
+              llvm::checkVOPDRegConstraintsComb(*SII, *SecondMI, *FirstMI,
+                                                VOPD3)) {
             CI = VOPDCombineInfo(SecondMI, FirstMI, VOPD3);
             return true;
           }
