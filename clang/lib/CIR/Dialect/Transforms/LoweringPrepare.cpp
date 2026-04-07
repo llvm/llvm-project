@@ -1480,7 +1480,7 @@ static void lowerArrayDtorCtorIntoLoop(cir::CIRBaseBuilderTy &builder,
             cloneRegionBodyInto(bodyBlock, prevElement);
           }
 
-          builder.createYield(loc);
+          cir::YieldOp::create(b, loc);
         });
   };
 
@@ -1490,7 +1490,7 @@ static void lowerArrayDtorCtorIntoLoop(cir::CIRBaseBuilderTy &builder,
         /*bodyBuilder=*/
         [&](mlir::OpBuilder &b, mlir::Location loc) {
           emitCtorDtorLoop();
-          builder.createYield(loc);
+          cir::YieldOp::create(b, loc);
         },
         /*cleanupBuilder=*/
         [&](mlir::OpBuilder &b, mlir::Location loc) {
@@ -1522,7 +1522,7 @@ static void lowerArrayDtorCtorIntoLoop(cir::CIRBaseBuilderTy &builder,
                     });
                 cir::YieldOp::create(builder, loc);
               });
-          builder.createYield(loc);
+          cir::YieldOp::create(b, loc);
         });
   } else {
     emitCtorDtorLoop();

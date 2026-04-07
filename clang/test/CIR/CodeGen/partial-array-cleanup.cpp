@@ -20,11 +20,9 @@ void test_partial_array_cleanup() {
 // CIR-BEFORE-LPP:       cir.array.ctor %[[ARRAY]] : !cir.ptr<!cir.array<!rec_S x 4>> {
 // CIR-BEFORE-LPP:       ^bb0(%[[CTOR_ARG:.*]]: !cir.ptr<!rec_S>):
 // CIR-BEFORE-LPP:         cir.call @_ZN1SC1Ev(%[[CTOR_ARG]]) : (!cir.ptr<!rec_S>{{.*}}) -> ()
-// CIR-BEFORE-LPP:         cir.yield
 // CIR-BEFORE-LPP:       } partial_dtor {
 // CIR-BEFORE-LPP:       ^bb0(%[[DTOR_ARG:.*]]: !cir.ptr<!rec_S>):
 // CIR-BEFORE-LPP:         cir.call @_ZN1SD1Ev(%[[DTOR_ARG]]){{.*}} : (!cir.ptr<!rec_S>{{.*}}) -> ()
-// CIR-BEFORE-LPP:         cir.yield
 // CIR-BEFORE-LPP:       }
 
 // CIR:     cir.func {{.*}} @_Z26test_partial_array_cleanupv()

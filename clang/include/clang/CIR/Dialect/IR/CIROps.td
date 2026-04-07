@@ -4574,7 +4574,9 @@ def CIR_TrapOp : CIR_Op<"trap", [Terminator]> {
 // ArrayCtor & ArrayDtor
 //===----------------------------------------------------------------------===//
 
-def CIR_ArrayCtor : CIR_Op<"array.ctor"> {
+def CIR_ArrayCtor : CIR_Op<"array.ctor", [
+  SingleBlockImplicitTerminator<"cir::YieldOp">
+]> {
   let summary = "Initialize array elements with C++ constructors";
   let description = [{
     Initialize each array element using the same C++ constructor. This
@@ -4604,25 +4606,21 @@ def CIR_ArrayCtor : CIR_Op<"array.ctor"> {
     cir.array.ctor(%0 : !cir.ptr<!cir.array<!rec_S x 42>>) {
       ^bb0(%arg0: !cir.ptr<!rec_S>):
         cir.call @some_ctor(%arg0) : (!cir.ptr<!rec_S>) -> ()
-        cir.yield
     }
 
     // Variable size without partial destructor:
     cir.array.ctor(%ptr, %n : !cir.ptr<!rec_S>, !u64i) {
       ^bb0(%arg0: !cir.ptr<!rec_S>):
         cir.call @some_ctor(%arg0) : (!cir.ptr<!rec_S>) -> ()
-        cir.yield
     }
 
     // Fixed size with partial destructor:
     cir.array.ctor(%0 : !cir.ptr<!cir.array<!rec_S x 42>>) {
       ^bb0(%arg0: !cir.ptr<!rec_S>):
         cir.call @some_ctor(%arg0) : (!cir.ptr<!rec_S>) -> ()
-        cir.yield
     } partial_dtor {
       ^bb0(%arg0: !cir.ptr<!rec_S>):
         cir.call @some_dtor(%arg0) : (!cir.ptr<!rec_S>) -> ()
-        cir.yield
     }
     ```
   }];
@@ -4633,7 +4631,12 @@ def CIR_ArrayCtor : CIR_Op<"array.ctor"> {
   );
 
   let regions = (region SizedRegion<1>:$body, AnyRegion:$partial_dtor);
-  let hasCustomAssemblyFormat = 1;
+  let assemblyFormat = [{
+    $addr (`,` $num_elements^)? `:` qualified(type($addr))
+    (`,` type($num_elements)^)? $body
+    (`partial_dtor` $partial_dtor^)?
+    attr-dict
+  }];
 
   let builders = [
     // Static form: addr is ptr<array<T x N>>, no num_elements.
@@ -4674,7 +4677,9 @@ def CIR_ArrayCtor : CIR_Op<"array.ctor"> {
   let hasLLVMLowering = false;
 }
 
-def CIR_ArrayDtor : CIR_Op<"array.dtor"> {
+def CIR_ArrayDtor : CIR_Op<"array.dtor", [
+  SingleBlockImplicitTerminator<"cir::YieldOp">
+]> {
   let summary = "Destroy array elements with C++ destructors";
   let description = [{
     Destroy each array element using the same C++ destructor. This operation
@@ -4697,14 +4702,12 @@ def CIR_ArrayDtor : CIR_Op<"array.dtor"> {
     cir.array.dtor %0 : !cir.ptr<!cir.array<!rec_S x 42>> {
       ^bb0(%arg0: !cir.ptr<!rec_S>):
         cir.call @_ZN1SD1Ev(%arg0) : (!cir.ptr<!rec_S>) -> ()
-        cir.yield
     }
 
     // Dynamic count (delete[] with destructor):
     cir.array.dtor %ptr, %n : !cir.ptr<!rec_S>, !u64i {
       ^bb0(%arg0: !cir.ptr<!rec_S>):
         cir.call @_ZN1SD1Ev(%arg0) : (!cir.ptr<!rec_S>) -> ()
-        cir.yield
     }
     ```
   }];
