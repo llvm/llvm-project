@@ -1361,6 +1361,8 @@ namespace {
                          const MultiLevelTemplateArgumentList &TemplateArgs)
         : inherited(SemaRef), TemplateArgs(TemplateArgs), Loc(Loc),
           BailOutOnIncomplete(false) {
+      if (!SemaRef.CurrentCachedTemplateArgs)
+        return;
       auto &V = TemplateArgsHashValue.emplace();
       for (auto &Level : TemplateArgs)
         for (auto &Arg : Level.Args)

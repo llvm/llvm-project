@@ -2179,6 +2179,8 @@ bool SubstituteParameterMappings::substitute(
   // FIXME: The BaseLoc will be used as the location of the pack expansion,
   // which is wrong.
   TemplateArgumentListInfo SubstArgs;
+  llvm::SaveAndRestore<decltype(SemaRef.CurrentCachedTemplateArgs)>
+      DoNotCacheDependentArgs(SemaRef.CurrentCachedTemplateArgs, nullptr);
   if (SemaRef.SubstTemplateArgumentsInParameterMapping(
           N.getParameterMapping(), N.getBeginLoc(), *MLTAL, SubstArgs))
     return true;
@@ -2247,6 +2249,8 @@ bool SubstituteParameterMappings::substitute(ConceptIdConstraint &CC) {
   // pack. The SourceLocation is necessary for the instantiation location.
   // FIXME: The BaseLoc will be used as the location of the pack expansion,
   // which is wrong.
+  llvm::SaveAndRestore<decltype(SemaRef.CurrentCachedTemplateArgs)>
+      DoNotCacheDependentArgs(SemaRef.CurrentCachedTemplateArgs, nullptr);
   const ASTTemplateArgumentListInfo *ArgsAsWritten =
       CSE->getTemplateArgsAsWritten();
   if (SemaRef.SubstTemplateArgumentsInParameterMapping(
