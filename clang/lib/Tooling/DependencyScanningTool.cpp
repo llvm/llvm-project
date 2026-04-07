@@ -605,9 +605,6 @@ bool CompilerInstanceWithContext::computeDependencies(
   if (!ModResult)
     return false;
 
-  // Check for errors that occurred as side effects during module loading
-  // (e.g., modulemap parsing errors like duplicate module definitions).
-  // loadModule may return a valid module even when such errors occur.
   if (CI.getDiagnostics().hasErrorOccurred())
     return false;
 

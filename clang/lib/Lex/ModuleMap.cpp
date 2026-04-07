@@ -1756,14 +1756,10 @@ void ModuleMapLoader::handleModuleDecl(const modulemap::ModuleDecl &MD) {
   if (Module *Existing = Map.lookupModuleQualified(ModuleName, ActiveModule)) {
     // We might see a (re)definition of a module that we already have a
     // definition for in four cases:
-    //  - If we loaded one definition from an AST file and we've just found the
-    //    corresponding definition in the same module map file, or
+    //  - If the module was loaded from an AST file and we've found its original
+    //  definition again (same source module map)
     bool LoadedFromASTFile = Existing->IsFromModuleFile;
     if (LoadedFromASTFile) {
-      // Only suppress the redefinition error if the existing module was defined
-      // in the same module map file we are currently parsing. If they come from
-      // different module map files, this is a genuine conflict that should be
-      // diagnosed.
       OptionalFileEntryRef ExistingModMapFile =
           Map.getContainingModuleMapFile(Existing);
       OptionalFileEntryRef CurrentModMapFile =
