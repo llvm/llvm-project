@@ -3096,7 +3096,7 @@ static Instruction *foldSplatShuffleToMul(const ShuffleVectorInst &Shuf,
   if (!Shuf.hasOneUse())
     return nullptr;
 
-  assert(isa<BitCastInst>(*Shuf.use_begin()) &&
+  assert(isa<BitCastInst>(*Shuf.user_begin()) &&
          "The sole user of shuf must be a bitcast");
 
   auto *ShufTy = dyn_cast<FixedVectorType>(Shuf.getType());
