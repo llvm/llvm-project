@@ -9550,6 +9550,16 @@ CXQualifiers clang_CXXMethod_getQualifiers(CXCursor C) {
   return Q;
 }
 
+unsigned clang_CXXMethod_isExplicitObjectMemberFunction(CXCursor C) {
+  if (!clang_isDeclaration(C.kind))
+    return 0;
+
+  const Decl *D = cxcursor::getCursorDecl(C);
+  const CXXMethodDecl *Method =
+      D ? dyn_cast_or_null<CXXMethodDecl>(D->getAsFunction()) : nullptr;
+  return (Method && Method->isExplicitObjectMemberFunction()) ? 1 : 0;
+}
+
 unsigned clang_CXXMethod_isDefaulted(CXCursor C) {
   if (!clang_isDeclaration(C.kind))
     return 0;

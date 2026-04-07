@@ -4910,8 +4910,19 @@ typedef struct {
  *
  * If the cursor does not refer to a C++ member function or member function
  * template, a zero-initialized CXQualifiers is returned.
+ *
+ * For explicit object member functions (C++23), this returns zero-initialized
+ * CXQualifiers. Use \c clang_CXXMethod_isExplicitObjectMemberFunction to
+ * distinguish explicit from implicit object member functions.
  */
 CINDEX_LINKAGE CXQualifiers clang_CXXMethod_getQualifiers(CXCursor C);
+
+/**
+ * Determine if a C++ member function or member function template is an
+ * explicit object member function (C++23).
+ */
+CINDEX_LINKAGE unsigned
+clang_CXXMethod_isExplicitObjectMemberFunction(CXCursor C);
 
 /**
  * Given a cursor that represents a template, determine

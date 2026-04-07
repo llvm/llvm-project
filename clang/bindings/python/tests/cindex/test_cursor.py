@@ -1,11 +1,11 @@
 from clang.cindex import (
     AvailabilityKind,
     BinaryOperator,
-    Qualifiers,
     Cursor,
     CursorKind,
     PrintingPolicy,
     PrintingPolicyProperty,
+    Qualifiers,
     StorageClass,
     TemplateArgumentKind,
     TranslationUnit,
@@ -255,6 +255,29 @@ class TestCursor(unittest.TestCase):
         self.assertTrue(q.Const)
         self.assertTrue(q.Volatile)
         self.assertTrue(q.Restrict)
+
+        # Explicit object member functions have no method qualifiers
+        source = """
+        struct S {
+            void explicit_const(this const S&);
+            void explicit_cv(this const volatile S&);
+        };
+        """
+        tu = get_tu(source, lang="cpp", flags=["-std=c++23"])
+        ec = get_cursor(tu, "explicit_const")
+        ecv = get_cursor(tu, "explicit_cv")
+        self.assertIsNotNone(ec)
+        self.assertIsNotNone(ecv)
+
+        q = ec.get_method_qualifiers()
+        self.assertFalse(q.Const)
+        self.assertFalse(q.Volatile)
+        self.assertFalse(q.Restrict)
+
+        q = ecv.get_method_qualifiers()
+        self.assertFalse(q.Const)
+        self.assertFalse(q.Volatile)
+        self.assertFalse(q.Restrict)
 
     def test_is_converting_constructor(self):
         """Ensure Cursor.is_converting_constructor works."""
@@ -567,6 +590,25 @@ class TestCursor(unittest.TestCase):
         self.assertTrue(foo.is_static_method())
         self.assertFalse(bar.is_static_method())
 
+    def test_is_explicit_object_member_function(self):
+        source = """
+            struct S {
+                void regular();
+                void explicit_obj(this const S&);
+                static void static_method();
+            };
+        """
+        tu = get_tu(source, lang="cpp", flags=["-std=c++23"])
+        regular = get_cursor(tu, "regular")
+        explicit_obj = get_cursor(tu, "explicit_obj")
+        static_method = get_cursor(tu, "static_method")
+        self.assertIsNotNone(regular)
+        self.assertIsNotNone(explicit_obj)
+        self.assertIsNotNone(static_method)
+        self.assertFalse(regular.is_explicit_object_member_function())
+        self.assertTrue(explicit_obj.is_explicit_object_member_function())
+        self.assertFalse(static_method.is_explicit_object_member_function())
+
     def test_is_pure_virtual_method(self):
         """Ensure Cursor.is_pure_virtual_method works."""
         source = "class X { virtual void foo() = 0; virtual void bar(); };"
@@ -636,7 +678,7 @@ class TestCursor(unittest.TestCase):
         template<typename T> constexpr T tmpl(T v) { return v; }
         template<typename T> T tmpl_nc(T v) { return v; }
         """
-        tu = get_tu(source, lang="cpp", flags=["--std=c++14"])
+        tu = get_tu(source, lang="cpp", flags=["-std=c++14"])
 
         x = get_cursor(tu, "x")
         y = get_cursor(tu, "y")

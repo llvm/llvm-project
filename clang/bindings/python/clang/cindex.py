@@ -1838,6 +1838,15 @@ class Cursor(Structure):
         return bool(conf.lib.clang_CXXMethod_isExplicit(self))
 
     @cursor_null_guard
+    def is_explicit_object_member_function(self) -> bool:
+        """Returns True if the cursor refers to a C++ member function with an
+        explicit object parameter (C++23).
+        """
+        return bool(
+            conf.lib.clang_CXXMethod_isExplicitObjectMemberFunction(self)
+        )
+
+    @cursor_null_guard
     def is_mutable_field(self) -> bool:
         """Returns True if the cursor refers to a C++ field that is declared
         'mutable'.
@@ -4337,6 +4346,7 @@ FUNCTION_LIST: list[LibFunc] = [
     ("clang_CXXMethod_isCopyAssignmentOperator", [Cursor], c_uint),
     ("clang_CXXMethod_isMoveAssignmentOperator", [Cursor], c_uint),
     ("clang_CXXMethod_isExplicit", [Cursor], c_uint),
+    ("clang_CXXMethod_isExplicitObjectMemberFunction", [Cursor], c_uint),
     ("clang_CXXMethod_isPureVirtual", [Cursor], c_uint),
     ("clang_CXXMethod_isStatic", [Cursor], c_uint),
     ("clang_CXXMethod_isVirtual", [Cursor], c_uint),

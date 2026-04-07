@@ -961,6 +961,8 @@ static void PrintCursor(CXCursor Cursor, const char *CommentSchemaFile) {
       if (Q.Restrict)
         printf(" (restrict)");
     }
+    if (clang_CXXMethod_isExplicitObjectMemberFunction(Cursor))
+      printf(" (explicit object)");
     if (clang_CXXMethod_isPureVirtual(Cursor))
       printf(" (pure)");
     if (clang_CXXMethod_isCopyAssignmentOperator(Cursor))
