@@ -18,6 +18,7 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Demangle/ItaniumDemangle.h"
+#include "llvm/Support/ErrorExtras.h"
 
 #include "lldb/Core/DemangledNameInfo.h"
 #include "lldb/Core/Mangled.h"
@@ -260,24 +261,24 @@ static llvm::Expected<std::pair<llvm::StringRef, DemangledNameInfo>>
 GetAndValidateInfo(const SymbolContext &sc) {
   Mangled mangled = sc.GetPossiblyInlinedFunctionName();
   if (!mangled)
-    return llvm::createStringError("Function does not have a mangled name.");
+    return llvm::createStringError("function does not have a mangled name");
 
   auto demangled_name = mangled.GetDemangledName().GetStringRef();
   if (demangled_name.empty())
-    return llvm::createStringError(
-        "Function '%s' does not have a demangled name.",
-        mangled.GetMangledName().AsCString(""));
+    return llvm::createStringErrorV(
+        "function '{0}' does not have a demangled name",
+        mangled.GetMangledName());
 
   const std::optional<DemangledNameInfo> &info = mangled.GetDemangledInfo();
   if (!info)
-    return llvm::createStringError(
-        "Function '%s' does not have demangled info.", demangled_name.data());
+    return llvm::createStringErrorV(
+        "function '{0}' does not have demangled info", demangled_name);
 
   // Function without a basename is nonsense.
   if (!info->hasBasename())
-    return llvm::createStringError(
-        "DemangledInfo for '%s does not have basename range.",
-        demangled_name.data());
+    return llvm::createStringErrorV(
+        "demangled info for '{0}' does not have a basename range",
+        demangled_name);
 
   return std::make_pair(demangled_name, *info);
 }
@@ -304,8 +305,8 @@ llvm::Expected<llvm::StringRef>
 CPlusPlusLanguage::GetDemangledTemplateArguments(
     llvm::StringRef demangled, const DemangledNameInfo &info) {
   if (!info.hasTemplateArguments())
-    return llvm::createStringError(
-        "Template arguments range for '%s' is invalid.", demangled.data());
+    return llvm::createStringErrorV(
+        "template arguments range for '{0}' is invalid", demangled);
 
   return demangled.slice(info.TemplateArgumentsRange.first,
                          info.TemplateArgumentsRange.second);
@@ -326,8 +327,8 @@ llvm::Expected<llvm::StringRef>
 CPlusPlusLanguage::GetDemangledReturnTypeLHS(llvm::StringRef demangled,
                                              const DemangledNameInfo &info) {
   if (info.ScopeRange.first >= demangled.size())
-    return llvm::createStringError(
-        "Scope range for '%s' LHS return type is invalid.", demangled.data());
+    return llvm::createStringErrorV(
+        "scope range for '{0}' LHS return type is invalid", demangled);
 
   return demangled.substr(0, info.ScopeRange.first);
 }
@@ -347,8 +348,8 @@ llvm::Expected<llvm::StringRef>
 CPlusPlusLanguage::GetDemangledFunctionQualifiers(
     llvm::StringRef demangled, const DemangledNameInfo &info) {
   if (!info.hasQualifiers())
-    return llvm::createStringError("Qualifiers range for '%s' is invalid.",
-                                   demangled.data());
+    return llvm::createStringErrorV("qualifiers range for '{0}' is invalid",
+                                    demangled);
 
   return demangled.slice(info.QualifiersRange.first,
                          info.QualifiersRange.second);
@@ -370,9 +371,8 @@ llvm::Expected<llvm::StringRef>
 CPlusPlusLanguage::GetDemangledReturnTypeRHS(llvm::StringRef demangled,
                                              const DemangledNameInfo &info) {
   if (info.QualifiersRange.first < info.ArgumentsRange.second)
-    return llvm::createStringError(
-        "Qualifiers range for '%s' RHS return type  is invalid.",
-        demangled.data());
+    return llvm::createStringErrorV(
+        "qualifiers range for '{0}' RHS return type is invalid", demangled);
 
   return demangled.slice(info.ArgumentsRange.second,
                          info.QualifiersRange.first);
@@ -393,8 +393,8 @@ llvm::Expected<llvm::StringRef>
 CPlusPlusLanguage::GetDemangledScope(llvm::StringRef demangled,
                                      const DemangledNameInfo &info) {
   if (!info.hasScope())
-    return llvm::createStringError("Scope range for '%s' is invalid.",
-                                   demangled.data());
+    return llvm::createStringErrorV("scope range for '{0}' is invalid",
+                                    demangled);
 
   return demangled.slice(info.ScopeRange.first, info.ScopeRange.second);
 }
@@ -414,8 +414,8 @@ llvm::Expected<llvm::StringRef>
 CPlusPlusLanguage::GetDemangledFunctionSuffix(llvm::StringRef demangled,
                                               const DemangledNameInfo &info) {
   if (!info.hasSuffix())
-    return llvm::createStringError("Suffix range for '%s' is invalid.",
-                                   demangled.data());
+    return llvm::createStringErrorV("suffix range for '{0}' is invalid",
+                                    demangled);
 
   return demangled.slice(info.SuffixRange.first, info.SuffixRange.second);
 }
@@ -435,8 +435,8 @@ llvm::Expected<llvm::StringRef>
 CPlusPlusLanguage::GetDemangledFunctionArguments(
     llvm::StringRef demangled, const DemangledNameInfo &info) {
   if (!info.hasArguments())
-    return llvm::createStringError(
-        "Function arguments range for '%s' is invalid.", demangled.data());
+    return llvm::createStringErrorV(
+        "function arguments range for '{0}' is invalid", demangled);
 
   return demangled.slice(info.ArgumentsRange.first, info.ArgumentsRange.second);
 }
@@ -2488,8 +2488,8 @@ protected:
 
   llvm::Expected<ConstString> substituteImpl(llvm::StringRef Mangled) {
     if (this->parse() == nullptr)
-      return llvm::createStringError(
-          llvm::formatv("Failed to substitute mangling in '{0}'", Mangled));
+      return llvm::createStringErrorV("failed to substitute mangling in '{0}'",
+                                      Mangled);
 
     if (!Substituted)
       return ConstString();
