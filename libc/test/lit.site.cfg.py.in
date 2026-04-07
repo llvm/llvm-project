@@ -8,11 +8,11 @@ config.llvm_tools_dir = lit_config.substitute(path(r"@LLVM_TOOLS_DIR@"))
 config.libc_src_root = path(r"@LIBC_SOURCE_DIR@")
 config.libc_obj_root = path(r"@LIBC_BUILD_DIR@")
 config.libc_test_cmd = "@LIBC_TEST_CMD@"
-config.libc_gpu_loader = path(r"@LIBC_GPU_LOADER_EXECUTABLE@")
+config.libc_crosscompiling_emulator = path(r"@CMAKE_CROSSCOMPILING_EMULATOR@")
 
-# If running GPU tests and no explicit test command is set, use the GPU loader.
-if not config.libc_test_cmd and config.libc_gpu_loader:
-    config.libc_test_cmd = config.libc_gpu_loader + " @BINARY@"
+# If no explicit test command is set, use the cross-compiling emulator.
+if not config.libc_test_cmd and config.libc_crosscompiling_emulator:
+    config.libc_test_cmd = config.libc_crosscompiling_emulator + " @BINARY@"
 
 # Add libc's utils directory to the path so we can import the test format.
 site.addsitedir(os.path.join(config.libc_src_root, "utils"))

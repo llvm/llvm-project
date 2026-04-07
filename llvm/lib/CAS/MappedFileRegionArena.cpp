@@ -228,6 +228,11 @@ Expected<MappedFileRegionArena> MappedFileRegionArena::create(
               ") does not match existing config (" + utostr(H.HeaderOffset) +
               ")");
 
+    if (H.Capacity < MinCapacity)
+      return createStringError(
+          std::make_error_code(std::errc::bad_file_descriptor),
+          "capacity inside the MappedFileRegionArena is too small");
+
     // If the capacity doesn't match, use the existing capacity instead.
     if (H.Capacity != Capacity)
       Capacity = H.Capacity;
@@ -255,7 +260,8 @@ Expected<MappedFileRegionArena> MappedFileRegionArena::create(
   }
 
   // Initialize the header.
-  Result.initializeHeader(HeaderOffset);
+  if (Error E = Result.initializeHeader(HeaderOffset))
+    return std::move(E);
 
   if (FileSize->Size < MinCapacity) {
     assert(MainFile->Locked == sys::fs::LockKind::Exclusive);
@@ -326,22 +332,30 @@ void MappedFileRegionArena::destroyImpl() {
     Logger->logMappedFileRegionArenaClose(Path);
 }
 
-void MappedFileRegionArena::initializeHeader(uint64_t HeaderOffset) {
-  assert(capacity() < (uint64_t)INT64_MAX && "capacity must fit in int64_t");
+Error MappedFileRegionArena::initializeHeader(uint64_t HeaderOffset) {
+  if (capacity() >= static_cast<uint64_t>(INT64_MAX))
+    return createStringError(make_error_code(std::errc::protocol_error),
+                             "arena capacity does not fit in int64_t");
   uint64_t HeaderEndOffset = HeaderOffset + sizeof(decltype(*H));
-  assert(HeaderEndOffset <= capacity() &&
-         "Expected end offset to be pre-allocated");
-  assert(isAligned(Align::Of<decltype(*H)>(), HeaderOffset) &&
-         "Expected end offset to be aligned");
+  if (HeaderEndOffset > capacity())
+    return createStringError(make_error_code(std::errc::protocol_error),
+                             "arena header extends past capacity");
+  if (!isAligned(Align::Of<decltype(*H)>(), HeaderOffset))
+    return createStringError(make_error_code(std::errc::protocol_error),
+                             "arena header offset is not aligned");
   H = reinterpret_cast<decltype(H)>(data() + HeaderOffset);
 
   uint64_t ExistingValue = 0;
   if (!H->BumpPtr.compare_exchange_strong(ExistingValue, HeaderEndOffset))
-    assert(ExistingValue >= HeaderEndOffset &&
-           "Expected 0, or past the end of the header itself");
+    if (ExistingValue < HeaderEndOffset)
+      return createStringError(
+          make_error_code(std::errc::protocol_error),
+          "arena bump pointer is corrupt: 0x" +
+              utohexstr(ExistingValue, /*LowerCase=*/true));
   if (Logger)
     Logger->logMappedFileRegionArenaCreate(Path, *FD, data(), capacity(),
                                            size());
+  return Error::success();
 }
 
 static Error createAllocatorOutOfSpaceError() {

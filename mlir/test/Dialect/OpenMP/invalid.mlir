@@ -1716,6 +1716,26 @@ func.func @omp_task_depend(%data_var: memref<i32>) {
 
 // -----
 
+func.func @omp_task_depend_iterated_no_vars(%data_var: memref<i32>) {
+  // expected-error @below {{op unexpected depend iterated values}}
+    "omp.task"() ({
+      "omp.terminator"() : () -> ()
+    }) {depend_iterated_kinds = [#omp<clause_task_depend(taskdependin)>], operandSegmentSizes = array<i32: 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0>} : () -> ()
+   "func.return"() : () -> ()
+}
+
+// -----
+
+func.func @omp_task_depend_iterated_mismatch(%it: !omp.iterated<!llvm.ptr>) {
+  // expected-error @below {{op expected as many depend iterated values as depend iterated variables}}
+    "omp.task"(%it) ({
+      "omp.terminator"() : () -> ()
+    }) {depend_iterated_kinds = [], operandSegmentSizes = array<i32: 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0>} : (!omp.iterated<!llvm.ptr>) -> ()
+   "func.return"() : () -> ()
+}
+
+// -----
+
 func.func @omp_task(%ptr: !llvm.ptr) {
   // expected-error @below {{op expected symbol reference @add_f32 to point to a reduction declaration}}
   omp.task in_reduction(@add_f32 %ptr -> %arg0 : !llvm.ptr) {
@@ -2274,7 +2294,7 @@ func.func @omp_target_enter_data(%map1: memref<?xi32>) {
 func.func @omp_target_enter_data_depend(%a: memref<?xi32>) {
   %0 = omp.map.info var_ptr(%a: memref<?xi32>, tensor<?xi32>) map_clauses(to) capture(ByRef) -> memref<?xi32>
   // expected-error @below {{op expected as many depend values as depend variables}}
-  omp.target_enter_data map_entries(%0: memref<?xi32> ) {operandSegmentSizes = array<i32: 1, 0, 0, 0>}
+  omp.target_enter_data map_entries(%0: memref<?xi32> ) {operandSegmentSizes = array<i32: 1, 0, 0, 0, 0>}
   return
 }
 
@@ -2292,7 +2312,7 @@ func.func @omp_target_exit_data(%map1: memref<?xi32>) {
 func.func @omp_target_exit_data_depend(%a: memref<?xi32>) {
   %0 = omp.map.info var_ptr(%a: memref<?xi32>, tensor<?xi32>) map_clauses(from) capture(ByRef) -> memref<?xi32>
   // expected-error @below {{op expected as many depend values as depend variables}}
-  omp.target_exit_data map_entries(%0: memref<?xi32> ) {operandSegmentSizes = array<i32: 1, 0, 0, 0>}
+  omp.target_exit_data map_entries(%0: memref<?xi32> ) {operandSegmentSizes = array<i32: 1, 0, 0, 0, 0>}
   return
 }
 
@@ -2373,7 +2393,7 @@ llvm.mlir.global internal @_QFsubEx() : i32
 func.func @omp_target_update_data_depend(%a: memref<?xi32>) {
   %0 = omp.map.info var_ptr(%a: memref<?xi32>, tensor<?xi32>) map_clauses(to) capture(ByRef) -> memref<?xi32>
   // expected-error @below {{op expected as many depend values as depend variables}}
-  omp.target_update map_entries(%0: memref<?xi32> ) {operandSegmentSizes = array<i32: 1, 0, 0, 0>}
+  omp.target_update map_entries(%0: memref<?xi32> ) {operandSegmentSizes = array<i32: 1, 0, 0, 0, 0>}
   return
 }
 
@@ -2475,7 +2495,7 @@ func.func @omp_target_depend(%data_var: memref<i32>) {
   // expected-error @below {{op expected as many depend values as depend variables}}
     "omp.target"(%data_var) ({
       "omp.terminator"() : () -> ()
-    }) {depend_kinds = [], operandSegmentSizes = array<i32: 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0>} : (memref<i32>) -> ()
+    }) {depend_kinds = [], operandSegmentSizes = array<i32: 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0>} : (memref<i32>) -> ()
    "func.return"() : () -> ()
 }
 
@@ -3165,6 +3185,81 @@ omp.declare_simd
 func.func @omp_declare_simd_branch() -> () {
   // expected-error @+1 {{'omp.declare_simd' op cannot have both 'inbranch' and 'notinbranch'}}
   omp.declare_simd inbranch notinbranch
+  return
+}
+
+// -----
+
+func.func @omp_wsloop_linear_ref(%lb : index, %ub : index, %step : index,
+                                  %data_var : memref<i32>, %linear_var : i32) {
+  // expected-error @+1 {{'omp.wsloop' op linear modifier 'ref' may only be specified on a declare simd directive}}
+  omp.wsloop linear(ref(%data_var : memref<i32> = %linear_var : i32)) {
+    omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
+      omp.yield
+    }
+  } {linear_var_types = [i32]}
+  return
+}
+
+// -----
+
+func.func @omp_wsloop_linear_uval(%lb : index, %ub : index, %step : index,
+                                    %data_var : memref<i32>, %linear_var : i32) {
+  // expected-error @+1 {{'omp.wsloop' op linear modifier 'uval' may only be specified on a declare simd directive}}
+  omp.wsloop linear(uval(%data_var : memref<i32> = %linear_var : i32)) {
+    omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
+      omp.yield
+    }
+  } {linear_var_types = [i32]}
+  return
+}
+
+// -----
+
+func.func @omp_simd_linear_ref(%lb : index, %ub : index, %step : index,
+                                %data_var : memref<i32>, %linear_var : i32) {
+  // expected-error @+1 {{'omp.simd' op linear modifier 'ref' may only be specified on a declare simd directive}}
+  omp.simd linear(ref(%data_var : memref<i32> = %linear_var : i32)) {
+    omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
+      omp.yield
+    }
+  } {linear_var_types = [i32]}
+  return
+}
+
+// -----
+
+func.func @omp_wsloop_linear_modifiers_mismatch(%lb : index, %ub : index, %step : index,
+                                                 %data_var : memref<i32>, %linear_var : i32) {
+  // expected-error @below {{'omp.wsloop' op expected as many linear modifiers as linear variables}}
+  "omp.wsloop"(%data_var, %linear_var) ({
+    omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
+      omp.yield
+    }
+  }) {linear_modifiers = [#omp<linear_modifier(val)>, #omp<linear_modifier(val)>],
+      operandSegmentSizes = array<i32: 0, 0, 1, 1, 0, 0, 0>} : (memref<i32>, i32) -> ()
+  return
+}
+
+// -----
+
+func.func @omp_simd_linear_modifiers_mismatch(%lb : index, %ub : index, %step : index,
+                                               %data_var : memref<i32>, %linear_var : i32) {
+  // expected-error @below {{'omp.simd' op expected as many linear modifiers as linear variables}}
+  "omp.simd"(%data_var, %linear_var) ({
+    omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
+      omp.yield
+    }
+  }) {linear_modifiers = [#omp<linear_modifier(val)>, #omp<linear_modifier(val)>],
+      operandSegmentSizes = array<i32: 0, 0, 1, 1, 0, 0, 0>} : (memref<i32>, i32) -> ()
+  return
+}
+
+// -----
+
+func.func @omp_declare_simd_linear_modifiers_mismatch(%iv : i32, %step : i32) {
+  // expected-error @below {{'omp.declare_simd' op expected as many linear modifiers as linear variables}}
+  "omp.declare_simd"(%iv, %step) <{linear_modifiers = [#omp<linear_modifier(val)>, #omp<linear_modifier(ref)>], operandSegmentSizes = array<i32: 0, 1, 1, 0>}> : (i32, i32) -> ()
   return
 }
 

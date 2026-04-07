@@ -307,7 +307,7 @@ bool ItaniumABIRuntime::GetDynamicTypeAndAddress(
     return false;
   Status error;
   const int64_t offset_to_top = target.ReadSignedIntegerFromMemory(
-      offset_to_top_location, addr_byte_size, INT64_MIN, error);
+      Address(offset_to_top_location), addr_byte_size, INT64_MIN, error);
 
   if (offset_to_top == INT64_MIN)
     return false;

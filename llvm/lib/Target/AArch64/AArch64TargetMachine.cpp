@@ -255,12 +255,12 @@ LLVMInitializeAArch64Target() {
   initializeAArch64DeadRegisterDefinitionsLegacyPass(PR);
   initializeAArch64ExpandPseudoLegacyPass(PR);
   initializeAArch64LoadStoreOptLegacyPass(PR);
-  initializeAArch64MIPeepholeOptPass(PR);
+  initializeAArch64MIPeepholeOptLegacyPass(PR);
   initializeAArch64SIMDInstrOptPass(PR);
-  initializeAArch64O0PreLegalizerCombinerPass(PR);
-  initializeAArch64PreLegalizerCombinerPass(PR);
-  initializeAArch64PointerAuthPass(PR);
-  initializeAArch64PostCoalescerPass(PR);
+  initializeAArch64O0PreLegalizerCombinerLegacyPass(PR);
+  initializeAArch64PreLegalizerCombinerLegacyPass(PR);
+  initializeAArch64PointerAuthLegacyPass(PR);
+  initializeAArch64PostCoalescerLegacyPass(PR);
   initializeAArch64PostLegalizerCombinerPass(PR);
   initializeAArch64PostLegalizerLoweringPass(PR);
   initializeAArch64PostSelectOptimizePass(PR);
@@ -812,7 +812,7 @@ void AArch64PassConfig::addMachineSSAOptimization() {
   TargetPassConfig::addMachineSSAOptimization();
 
   if (TM->getOptLevel() != CodeGenOptLevel::None)
-    addPass(createAArch64MIPeepholeOptPass());
+    addPass(createAArch64MIPeepholeOptLegacyPass());
 }
 
 bool AArch64PassConfig::addILPOpts() {
@@ -939,6 +939,9 @@ void AArch64PassConfig::addPostBBSections() {
 }
 
 void AArch64PassConfig::addPreEmitPass2() {
+  // Insert pseudo probe annotation for callsite profiling
+  addPass(createPseudoProbeInserter());
+
   // SVE bundles move prefixes with destructive operations. BLR_RVMARKER pseudo
   // instructions are lowered to bundles as well.
   addPass(createUnpackMachineBundlesLegacy(nullptr));

@@ -171,6 +171,8 @@ bool AArch64ExpandPseudoImpl::expandMOVImm(MachineBasicBlock &MBB,
 
     case AArch64::ORRWri:
     case AArch64::ORRXri:
+    case AArch64::ANDXri:
+    case AArch64::EORXri:
       if (I->Op1 == 0) {
         MIBS.push_back(BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(I->Opcode))
                            .add(MI.getOperand(0))
@@ -203,25 +205,6 @@ bool AArch64ExpandPseudoImpl::expandMOVImm(MachineBasicBlock &MBB,
               .addReg(DstReg)
               .addImm(I->Op2));
     } break;
-    case AArch64::ANDXri:
-    case AArch64::EORXri:
-      if (I->Op1 == 0) {
-        MIBS.push_back(BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(I->Opcode))
-                           .add(MI.getOperand(0))
-                           .addReg(BitSize == 32 ? AArch64::WZR : AArch64::XZR)
-                           .addImm(I->Op2));
-      } else {
-        Register DstReg = MI.getOperand(0).getReg();
-        bool DstIsDead = MI.getOperand(0).isDead();
-        MIBS.push_back(
-            BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(I->Opcode))
-                .addReg(DstReg, RegState::Define |
-                                    getDeadRegState(DstIsDead && LastItem) |
-                                    RenamableState)
-                .addReg(DstReg)
-                .addImm(I->Op2));
-      }
-      break;
     case AArch64::MOVNWi:
     case AArch64::MOVNXi:
     case AArch64::MOVZWi:
@@ -554,6 +537,9 @@ bool AArch64ExpandPseudoImpl::expand_DestructiveOp(
     //      ==> MOVPRFX Zd Zs; EXT_ZZI Zd, Zd, Zs, Imm
     std::tie(DOPIdx, SrcIdx, Src2Idx) = std::make_tuple(1, 1, 2);
     break;
+  case AArch64::DestructiveBinaryShImmUnpred:
+    std::tie(DOPIdx, SrcIdx, Src2Idx) = std::make_tuple(1, 2, 3);
+    break;
   default:
     llvm_unreachable("Unsupported Destructive Operand type");
   }
@@ -574,6 +560,7 @@ bool AArch64ExpandPseudoImpl::expand_DestructiveOp(
     break;
   case AArch64::DestructiveUnaryPassthru:
   case AArch64::DestructiveBinaryImm:
+  case AArch64::DestructiveBinaryShImmUnpred:
   case AArch64::Destructive2xRegImmUnpred:
     DOPRegIsUnique = true;
     break;
@@ -701,6 +688,7 @@ bool AArch64ExpandPseudoImpl::expand_DestructiveOp(
         .add(MI.getOperand(SrcIdx))
         .add(MI.getOperand(Src2Idx));
     break;
+  case AArch64::DestructiveBinaryShImmUnpred:
   case AArch64::Destructive2xRegImmUnpred:
     DOP.addReg(MI.getOperand(DOPIdx).getReg(), DOPRegState)
         .add(MI.getOperand(SrcIdx))
