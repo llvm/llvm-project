@@ -17189,6 +17189,10 @@ SDValue AArch64TargetLowering::LowerTRUNCATE(SDValue Op,
                                    !Subtarget->isNeonAvailable()))
     return LowerFixedLengthVectorTruncateToSVE(Op, DAG);
 
+  // We can select these directly.
+  if (VT.is64BitVector() && Op.getOperand(0).getValueType().is128BitVector())
+    return Op;
+
   return SDValue();
 }
 
