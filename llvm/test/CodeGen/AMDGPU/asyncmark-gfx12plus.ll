@@ -248,7 +248,6 @@ define amdgpu_kernel void @test_pipelined_loop_with_global(ptr addrspace(1) %foo
 ; GFX1250-NEXT:    ; asyncmark
 ; GFX1250-NEXT:    ; wait_asyncmark(2)
 ; GFX1250-NEXT:    s_wait_asynccnt 0x2
-; GFX1250-NEXT:    s_wait_asynccnt 0x2
 ; GFX1250-NEXT:    s_add_co_i32 s8, s8, 1
 ; GFX1250-NEXT:    s_add_co_i32 s9, s9, 4
 ; GFX1250-NEXT:    ds_load_b32 v9, v9
