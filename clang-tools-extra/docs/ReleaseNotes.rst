@@ -397,7 +397,6 @@ Changes in existing checks
   positives on trivially copyable types with a non-public copy constructor.
 
   <clang-tidy/checks/performance/trivially-destructible>` check by fixing
-  false positives when a class is seen through both a header include and
 - Improved :doc:`performance-prefer-single-char-overloads
   <clang-tidy/checks/performance/prefer-single-char-overloads>` check:
 
