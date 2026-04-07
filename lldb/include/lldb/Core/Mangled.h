@@ -74,7 +74,9 @@ public:
            GetDemangledName() == rhs.GetDemangledName();
   }
 
-  bool operator!=(const Mangled &rhs) const { return !(*this == rhs); }
+  bool operator!=(const Mangled &rhs) const {
+    return !(*this == rhs);
+  }
 
   /// Convert to bool operator.
   ///
