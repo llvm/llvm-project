@@ -22,6 +22,7 @@
 
 #include "mlir/ExecutionEngine/SparseTensor/MapRef.h"
 #include "mlir/ExecutionEngine/SparseTensor/Storage.h"
+#include "mlir/Support/Complex.h"
 
 #include <fstream>
 
@@ -35,6 +36,9 @@ struct is_complex final : public std::false_type {};
 
 template <typename T>
 struct is_complex<std::complex<T>> final : public std::true_type {};
+
+template <typename T>
+struct is_complex<mlir::NonFloatComplex<T>> final : public std::true_type {};
 
 /// Returns an element-value of non-complex type.  If `IsPattern` is true,
 /// then returns an arbitrary value.  If `IsPattern` is false, then

@@ -151,8 +151,8 @@ struct ImOpConversion : public ConvertOpToLLVMPattern<complex::ImOp> {
 };
 
 struct BinaryComplexOperands {
-  std::complex<Value> lhs;
-  std::complex<Value> rhs;
+  mlir::Complex<Value> lhs;
+  mlir::Complex<Value> rhs;
 };
 
 template <typename OpTy>

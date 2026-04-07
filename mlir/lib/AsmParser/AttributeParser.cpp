@@ -592,7 +592,7 @@ DenseElementsAttr TensorLiteralParser::getAttr(SMLoc loc, ShapedType type) {
     if (isComplex) {
       // If this is a complex, treat the parsed values as complex values.
       auto complexData = llvm::ArrayRef(
-          reinterpret_cast<std::complex<APInt> *>(intValues.data()),
+          reinterpret_cast<mlir::Complex<APInt> *>(intValues.data()),
           intValues.size() / 2);
       return DenseElementsAttr::get(type, complexData);
     }
@@ -606,7 +606,7 @@ DenseElementsAttr TensorLiteralParser::getAttr(SMLoc loc, ShapedType type) {
     if (isComplex) {
       // If this is a complex, treat the parsed values as complex values.
       auto complexData = llvm::ArrayRef(
-          reinterpret_cast<std::complex<APFloat> *>(floatValues.data()),
+          reinterpret_cast<mlir::Complex<APFloat> *>(floatValues.data()),
           floatValues.size() / 2);
       return DenseElementsAttr::get(type, complexData);
     }

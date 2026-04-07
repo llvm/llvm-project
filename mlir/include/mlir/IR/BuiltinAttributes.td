@@ -296,19 +296,19 @@ def Builtin_DenseTypedElementsAttr : Builtin_Attr<
       uint8_t, uint16_t, uint32_t, uint64_t,
       int8_t, int16_t, int32_t, int64_t,
       short, unsigned short, int, unsigned, long, unsigned long,
-      std::complex<uint8_t>, std::complex<uint16_t>, std::complex<uint32_t>,
-      std::complex<uint64_t>,
-      std::complex<int8_t>, std::complex<int16_t>, std::complex<int32_t>,
-      std::complex<int64_t>,
+      mlir::Complex<uint8_t>, mlir::Complex<uint16_t>, mlir::Complex<uint32_t>,
+      mlir::Complex<uint64_t>,
+      mlir::Complex<int8_t>, mlir::Complex<int16_t>, mlir::Complex<int32_t>,
+      mlir::Complex<int64_t>,
       // Float types.
-      float, double, std::complex<float>, std::complex<double>
+      float, double, mlir::Complex<float>, mlir::Complex<double>
     >;
     using NonContiguousIterableTypesT = std::tuple<
       Attribute,
       // Integer types.
-      APInt, bool, std::complex<APInt>,
+      APInt, bool, mlir::Complex<APInt>,
       // Float types.
-      APFloat, std::complex<APFloat>
+      APFloat, mlir::Complex<APFloat>
     >;
 
     /// Provide a `try_value_begin_impl` to enable iteration within
@@ -931,12 +931,12 @@ def Builtin_SparseElementsAttr : Builtin_Attr<
       APInt, bool, uint8_t, uint16_t, uint32_t, uint64_t,
       int8_t, int16_t, int32_t, int64_t,
       short, unsigned short, int, unsigned, long, unsigned long,
-      std::complex<APInt>, std::complex<uint8_t>, std::complex<uint16_t>,
-      std::complex<uint32_t>, std::complex<uint64_t>, std::complex<int8_t>,
-      std::complex<int16_t>, std::complex<int32_t>, std::complex<int64_t>,
+      mlir::Complex<APInt>, mlir::Complex<uint8_t>, mlir::Complex<uint16_t>,
+      mlir::Complex<uint32_t>, mlir::Complex<uint64_t>, mlir::Complex<int8_t>,
+      mlir::Complex<int16_t>, mlir::Complex<int32_t>, mlir::Complex<int64_t>,
       // Float types.
       APFloat, float, double,
-      std::complex<APFloat>, std::complex<float>, std::complex<double>,
+      mlir::Complex<APFloat>, mlir::Complex<float>, mlir::Complex<double>,
       // String types.
       StringRef
     >;
@@ -978,7 +978,7 @@ def Builtin_SparseElementsAttr : Builtin_Attr<
       return getZeroAPInt();
     }
     template <typename T>
-    std::enable_if_t<std::is_same<std::complex<APInt>, T>::value, T>
+    std::enable_if_t<std::is_same<mlir::Complex<APInt>, T>::value, T>
     getZeroValue() const {
       APInt intZero = getZeroAPInt();
       return {intZero, intZero};
@@ -990,7 +990,7 @@ def Builtin_SparseElementsAttr : Builtin_Attr<
       return getZeroAPFloat();
     }
     template <typename T>
-    std::enable_if_t<std::is_same<std::complex<APFloat>, T>::value, T>
+    std::enable_if_t<std::is_same<mlir::Complex<APFloat>, T>::value, T>
     getZeroValue() const {
       APFloat floatZero = getZeroAPFloat();
       return {floatZero, floatZero};
@@ -1002,8 +1002,8 @@ def Builtin_SparseElementsAttr : Builtin_Attr<
                          DenseElementsAttr::is_valid_cpp_fp_type<T>::value ||
                          std::is_same<T, StringRef>::value ||
                          (detail::is_complex_t<T>::value &&
-                          !llvm::is_one_of<T, std::complex<APInt>,
-                                           std::complex<APFloat>>::value),
+                          !llvm::is_one_of<T, mlir::Complex<APInt>,
+                                           mlir::Complex<APFloat>>::value),
                      T>
     getZeroValue() const {
       return T();
