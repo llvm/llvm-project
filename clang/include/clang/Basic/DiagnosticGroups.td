@@ -176,6 +176,9 @@ def NullConversion : DiagGroup<"null-conversion">;
 def ImplicitConversionFloatingPointToBool :
   DiagGroup<"implicit-conversion-floating-point-to-bool">;
 def ObjCLiteralConversion : DiagGroup<"objc-literal-conversion">;
+def NonportableIncludePathSeparator : DiagGroup<"nonportable-include-path-separator">;
+def NonportableIncludePath : DiagGroup<"nonportable-include-path",
+                                       [NonportableIncludePathSeparator]>;
 def MacroRedefined : DiagGroup<"macro-redefined">;
 def BuiltinMacroRedefined : DiagGroup<"builtin-macro-redefined">;
 def BuiltinRequiresHeader : DiagGroup<"builtin-requires-header">;
