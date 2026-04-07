@@ -3406,7 +3406,7 @@ void TaskloopOp::build(OpBuilder &builder, OperationState &state,
 }
 
 TaskloopContextOp TaskloopOp::getTaskloopContext() {
-  return getOperation()->getParentOfType<TaskloopContextOp>();
+  return dyn_cast<TaskloopContextOp>(getOperation()->getParentOp());
 }
 
 LogicalResult TaskloopOp::verify() {
