@@ -2856,7 +2856,7 @@ convertOmpTaskOp(omp::TaskOp taskOp, llvm::IRBuilderBase &builder,
 }
 
 /// The correct entry point is convertOmpTaskloopContextOp. This gets called
-/// whilst lowering the body of the taskloop context (i.e. the task function)
+/// whilst lowering the body of the taskloop context (i.e. the task function).
 static LogicalResult
 convertOmpTaskloopOp(omp::TaskloopOp taskloopOp, llvm::IRBuilderBase &builder,
                      LLVM::ModuleTranslation &moduleTranslation) {
@@ -2864,7 +2864,7 @@ convertOmpTaskloopOp(omp::TaskloopOp taskloopOp, llvm::IRBuilderBase &builder,
   if (failed(checkImplementationStatus(opInst)))
     return failure();
 
-  // Recurse into the loop body
+  // Recurse into the loop body.
   auto continuationBlockOrError =
       convertOmpOpRegions(taskloopOp.getRegion(), "omp.taskloop.region",
                           builder, moduleTranslation);
@@ -3135,7 +3135,6 @@ convertOmpTaskloopContextOp(omp::TaskloopContextOp contextOp,
 
   auto loopInfo = [&]() -> llvm::Expected<llvm::CanonicalLoopInfo *> {
     llvm::CanonicalLoopInfo *loopInfo = findCurrentLoopInfo(moduleTranslation);
-    assert(loopInfo && "Couldn't find loopInfo for taskloop");
     return loopInfo;
   };
 
