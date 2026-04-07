@@ -33,9 +33,14 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringExtras.h"
 
+#include <array>
 #include <cinttypes>
+#include <list>
+#include <memory>
 #include <optional>
+#include <set>
 #include <string>
 #include <tuple>
 #include <type_traits>
@@ -592,6 +597,44 @@ static bool IsTransformableLoop(const parser::ExecutionPartConstruct &epc) {
   return false;
 }
 
+LoopControl::LoopControl(const parser::LoopControl::Bounds &x) {
+  iv = x.Name().thing.symbol;
+  lbound = fromParserExpr(parser::UnwrapRef<parser::Expr>(x.Lower()));
+  ubound = fromParserExpr(parser::UnwrapRef<parser::Expr>(x.Upper()));
+  if (auto &inc{x.Step()}) {
+    step = fromParserExpr(parser::UnwrapRef<parser::Expr>(*inc));
+  }
+}
+
+LoopControl::LoopControl(const parser::ConcurrentControl &x) {
+  auto &[name, lower, upper, inc]{x.t};
+  iv = name.symbol;
+  lbound = fromParserExpr(parser::UnwrapRef<parser::Expr>(lower));
+  ubound = fromParserExpr(parser::UnwrapRef<parser::Expr>(upper));
+  if (inc) {
+    step = fromParserExpr(parser::UnwrapRef<parser::Expr>(inc));
+  }
+}
+
+WithSource<MaybeExpr> LoopControl::fromParserExpr(const parser::Expr &x) {
+  return WithSource<MaybeExpr>(GetEvaluateExpr(x), x.source);
+}
+
+std::vector<LoopControl> GetLoopControls(const parser::DoConstruct &x) {
+  std::vector<LoopControl> controls;
+  if (x.IsDoNormal()) {
+    const parser::LoopControl &control{*x.GetLoopControl()};
+    controls.emplace_back(std::get<parser::LoopControl::Bounds>(control.u));
+  } else if (x.IsDoConcurrent()) {
+    const parser::LoopControl &control{*x.GetLoopControl()};
+    auto &header{parser::UnwrapRef<parser::ConcurrentHeader>(control)};
+    for (auto &cc : std::get<std::list<parser::ConcurrentControl>>(header.t)) {
+      controls.emplace_back(cc);
+    }
+  }
+  return controls;
+}
+
 static const auto MsgNotValidAffectedLoop{
     "%s is not a valid affected loop"_because_en_US};
 static const auto MsgClauseAbsentAssume{
@@ -935,8 +978,6 @@ WithReason<std::pair<int64_t, int64_t>> GetAffectedLoopRangeWithReason(
       if (!first || !count || *first <= 0 || *count <= 0) {
         return {};
       }
-      std::string name{
-          GetUpperName(llvm::omp::Clause::OMPC_looprange, version)};
       Reason reason;
       reason.Say(clause->source,
           "%s clause was specified with a count of %" PRId64
@@ -1098,6 +1139,17 @@ void LoopSequence::createChildrenFromRange(
   }
 }
 
+std::vector<LoopControl> LoopSequence::getLoopControls() const {
+  if (!entry_->owner) {
+    return {};
+  }
+
+  if (auto *loop{parser::Unwrap<parser::DoConstruct>(*entry_->owner)}) {
+    return GetLoopControls(*loop);
+  }
+  return {};
+}
+
 void LoopSequence::precalculate() {
   // Calculate length before depths.
   length_ = calculateLength();
@@ -1210,8 +1262,8 @@ static Reason WhyNotWellFormed(
 
 LoopSequence::Depth LoopSequence::calculateDepths() const {
   // Get the length of the nested sequence. The invalidIC_ and opaqueIC_
-  // members do not count canonical loop nests, but there can only be one
-  // for depth to make sense.
+  // members do not include sibling canonical loop nests, but there can
+  // only be one for depth to make sense.
   WithReason<int64_t> nestedLength{getNestedLength()};
   // Get the depths of the code nested in this sequence (e.g. contained in
   // entry_), and use it as the basis for the depths of entry_->owner.
@@ -1303,7 +1355,7 @@ LoopSequence::Depth LoopSequence::calculateDepths() const {
           static_cast<int64_t>(num) + perfDepth};
     }
     // The SIZES clause is mandatory, if it's missing the result is unknown.
-    return {};
+    return Depth{};
   case llvm::omp::Directive::OMPD_unroll:
     if (isFullUnroll) {
       Reason reason;

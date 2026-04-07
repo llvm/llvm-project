@@ -24,6 +24,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 
+#include <memory>
 #include <optional>
 #include <string>
 #include <tuple>
@@ -132,6 +133,21 @@ MaybeExpr MakeEvaluateExpr(const parser::OmpStylizedInstance &inp);
 bool IsLoopTransforming(llvm::omp::Directive dir);
 bool IsFullUnroll(const parser::OmpDirectiveSpecification &spec);
 
+struct LoopControl {
+  LoopControl(LoopControl &&x) = default;
+  LoopControl(const LoopControl &x) = default;
+  LoopControl(const parser::LoopControl::Bounds &x);
+  LoopControl(const parser::ConcurrentControl &x);
+
+  const Symbol *iv{nullptr};
+  WithSource<MaybeExpr> lbound, ubound, step;
+
+private:
+  static WithSource<MaybeExpr> fromParserExpr(const parser::Expr &x);
+};
+
+std::vector<LoopControl> GetLoopControls(const parser::DoConstruct &x);
+
 /// A representation of a "because" message.
 struct Reason {
   Reason() = default;
@@ -221,6 +237,8 @@ struct LoopSequence {
 
   WithReason<bool> isWellFormedSequence() const;
   WithReason<bool> isWellFormedNest() const;
+
+  std::vector<LoopControl> getLoopControls() const;
 
 private:
   using Construct = ExecutionPartIterator::Construct;
