@@ -25,7 +25,7 @@
 #ifdef _MSC_VER // MSVC atomic support.
 #include <intrin.h>
 #define __scoped_atomic_load_n(src, ord, scp)                                  \
-  (decltype(*(src)))__iso_volatile_load32((const volatile int32_t *)(src))
+  __iso_volatile_load32((const volatile int32_t *)(src))
 #define __scoped_atomic_store_n(dst, src, ord, scp)                            \
   (sizeof(*(dst)) == 4                                                         \
        ? __iso_volatile_store32((volatile int32_t *)(dst), (__int32)(src))     \
@@ -34,10 +34,6 @@
   _InterlockedOr((volatile long *)(src), (long)(val))
 #define __scoped_atomic_fetch_and(src, val, ord, scp)                          \
   _InterlockedAnd((volatile long *)(src), (long)(val))
-#define __scoped_atomic_fetch_add(src, val, ord, scp)                          \
-  _InterlockedExchangeAdd64((volatile long long *)(src), (long long)(val))
-#define __scoped_atomic_fetch_sub(src, val, ord, scp)                          \
-  _InterlockedExchangeAdd64((volatile long long *)(src), -(long long)(val))
 #else // GNU atomic support.
 #define __scoped_atomic_load_n(src, ord, scp) __atomic_load_n(src, ord)
 #define __scoped_atomic_store_n(dst, src, ord, scp)                            \
@@ -154,6 +150,7 @@ template <bool Invert> struct Process {
 
   /// Ring the doorbell if the protocol was configured with one.
   RPC_ATTRS void notify(uint64_t lane_mask) const {
+#ifndef _MSC_VER
     if (!doorbell->value)
       return;
 
@@ -168,16 +165,19 @@ template <bool Invert> struct Process {
         signal_interrupt(event_id);
       }
     }
+#endif
   }
 
   /// Decrement the doorbell signal if the protocol is using one.
   RPC_ATTRS void finish(uint64_t lane_mask) const {
+#ifndef _MSC_VER
     if (!doorbell->value)
       return;
 
     if (rpc::is_first_lane(lane_mask))
       __scoped_atomic_fetch_sub(doorbell->value, 1UL, __ATOMIC_RELAXED,
                                 __MEMORY_SCOPE_SYSTEM);
+#endif
   }
 
   /// Retrieve the inbox state from memory shared between processes.
