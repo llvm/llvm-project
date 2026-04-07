@@ -17,5 +17,5 @@ entry:
 ; CHECK: Entering function: main
 ; CHECK-NEXT:   %ptr = call ptr @malloc(i64 4) => ptr 0x10 [ptr]
 ; CHECK-NEXT:   call void @free(ptr %ptr)
-; CHECK-NEXT: Immediate UB detected: freeing an invalid, unallocated, or already freed pointer.
+; CHECK-NEXT: Immediate UB detected: double-freeing a memory object.
 ; CHECK-NEXT: error: Execution of function 'main' failed.

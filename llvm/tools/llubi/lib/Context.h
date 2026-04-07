@@ -138,7 +138,7 @@ public:
   virtual bool onFunctionExit(Function &F, const AnyValue &RetVal) {
     return true;
   }
-  virtual bool onProgramExit(const ProgramExitInfo &ExitInfo) { return true; }
+  virtual void onProgramExit(const ProgramExitInfo &ExitInfo) {}
   virtual bool onPrint(StringRef Msg) {
     outs() << Msg;
     return true;
@@ -257,7 +257,7 @@ public:
   IntrusiveRefCntPtr<MemoryObject> allocate(uint64_t Size, uint64_t Align,
                                             StringRef Name, unsigned AS,
                                             MemInitKind InitKind);
-  bool free(const Pointer &Ptr);
+  bool free(const MemoryObject &Obj);
   /// Derive a pointer from a memory object with offset 0.
   /// Please use Pointer's interface for further manipulations.
   Pointer deriveFromMemoryObject(IntrusiveRefCntPtr<MemoryObject> Obj);

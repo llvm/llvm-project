@@ -456,15 +456,10 @@ IntrusiveRefCntPtr<MemoryObject> Context::allocate(uint64_t Size,
   return MemObj;
 }
 
-bool Context::free(const Pointer &Ptr) {
-  uint64_t Address = Ptr.address().getZExtValue();
-  MemoryObject *Obj = Ptr.getMemoryObject();
-
-  if (!Obj || Address != Obj->getAddress())
-    return false;
-
+bool Context::free(const MemoryObject &Obj) {
+  uint64_t Address = Obj.getAddress();
   auto It = MemoryObjects.find(Address);
-  if (It == MemoryObjects.end() || It->second.get() != Obj)
+  if (It == MemoryObjects.end() || It->second.get() != &Obj)
     return false;
 
   UsedMem -= std::max(It->second->getSize(), static_cast<uint64_t>(1));

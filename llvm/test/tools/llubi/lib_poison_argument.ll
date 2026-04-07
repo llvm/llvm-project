@@ -4,10 +4,10 @@
 declare i32 @puts(ptr)
 
 define i32 @main() {
-  %1 = call i32 @puts(ptr null)
+  %1 = call i32 @puts(ptr poison)
 
   ret i32 0
 }
 ; CHECK: Entering function: main
-; CHECK-NEXT: Immediate UB detected: Invalid memory access via a pointer with nullary provenance.
+; CHECK-NEXT: Immediate UB detected: Poison argument passed to a library call.
 ; CHECK-NEXT: error: Execution of function 'main' failed.

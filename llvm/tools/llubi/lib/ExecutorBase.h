@@ -97,7 +97,7 @@ public:
   void requestProgramExit(ProgramExitInfo::ProgramExitKind Kind,
                           uint64_t ExitCode = 0);
 
-  bool isProgramExited() const;
+  bool hasProgramExited() const;
   std::optional<ProgramExitInfo> getExitInfo() const;
 
   unsigned getIntSize() const;

@@ -131,21 +131,21 @@ public:
     return true;
   }
 
-  bool onProgramExit(const ubi::ProgramExitInfo &Info) override {
+  void onProgramExit(const ubi::ProgramExitInfo &Info) override {
     switch (Info.Kind) {
     case ubi::ProgramExitInfo::ProgramExitKind::Returned:
-      return true;
+      return;
     case ubi::ProgramExitInfo::ProgramExitKind::Failed:
-      return true;
+      return;
     case ubi::ProgramExitInfo::ProgramExitKind::Exited:
       errs() << "Program exited with code " << Info.ExitCode << '\n';
-      return true;
+      return;
     case ubi::ProgramExitInfo::ProgramExitKind::Aborted:
       errs() << "Program aborted.\n";
-      return true;
+      return;
     case ubi::ProgramExitInfo::ProgramExitKind::Terminated:
       errs() << "Program terminated.\n";
-      return true;
+      return;
     }
 
     llvm_unreachable("Unknown ProgramExitKind");
@@ -262,34 +262,31 @@ int main(int argc, char **argv) {
   ubi::AnyValue RetVal;
   ubi::ProgramExitInfo ExitInfo = Ctx.runFunction(
       *EntryFn, Args, RetVal, Verbose ? VerboseHandler : NoopHandler);
-  if (ExitInfo.Kind != ubi::ProgramExitInfo::ProgramExitKind::Returned) {
-    if (!ExitInfo.isExitedByLibcall()) {
-      WithColor::error() << "Execution of function '" << EntryFunc
-                         << "' failed.\n";
-      return 1;
+  switch (ExitInfo.Kind) {
+  case ubi::ProgramExitInfo::ProgramExitKind::Failed:
+    WithColor::error() << "Execution of function '" << EntryFunc
+                       << "' failed.\n";
+    return 1;
+  case ubi::ProgramExitInfo::ProgramExitKind::Aborted:
+  case ubi::ProgramExitInfo::ProgramExitKind::Terminated:
+    return 134;
+  case ubi::ProgramExitInfo::ProgramExitKind::Exited:
+    return static_cast<int>(ExitInfo.ExitCode & 0xFF);
+  case ubi::ProgramExitInfo::ProgramExitKind::Returned:
+    // If the function returns an integer, return that as the exit code.
+    if (EntryFn->getReturnType()->isIntegerTy()) {
+      assert(!RetVal.isNone() && "Expected a return value from entry function");
+      if (RetVal.isPoison()) {
+        WithColor::error() << "Execution of function '" << EntryFunc
+                           << "' resulted in poison return value.\n";
+        return 1;
+      }
+      APInt Result = RetVal.asInteger();
+      return (int)Result.extractBitsAsZExtValue(
+          std::min(Result.getBitWidth(), 8U), 0);
     }
-    switch (ExitInfo.Kind) {
-    case ubi::ProgramExitInfo::ProgramExitKind::Exited:
-      return static_cast<int>(ExitInfo.ExitCode & 0xFF);
-    case ubi::ProgramExitInfo::ProgramExitKind::Aborted:
-    case ubi::ProgramExitInfo::ProgramExitKind::Terminated:
-      return 134;
-    default:
-      llvm_unreachable("Unexpected returned kind for ProgramExited status");
-    }
+    return 0;
   }
 
-  // If the function returns an integer, return that as the exit code.
-  if (EntryFn->getReturnType()->isIntegerTy()) {
-    assert(!RetVal.isNone() && "Expected a return value from entry function");
-    if (RetVal.isPoison()) {
-      WithColor::error() << "Execution of function '" << EntryFunc
-                         << "' resulted in poison return value.\n";
-      return 1;
-    }
-    APInt Result = RetVal.asInteger();
-    return (int)Result.extractBitsAsZExtValue(
-        std::min(Result.getBitWidth(), 8U), 0);
-  }
-  return 0;
+  llvm_unreachable("Unknown ProgramExitKind");
 }

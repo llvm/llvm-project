@@ -29,7 +29,7 @@ Frame::Frame(Function &F, CallBase *CallSite, Frame *LastFrame,
 
 void ExecutorBase::reportImmediateUB(StringRef Msg) {
   // Check if we have already reported an immediate UB.
-  if (isProgramExited())
+  if (hasProgramExited())
     return;
   requestProgramExit(ProgramExitInfo::ProgramExitKind::Failed);
   // TODO: Provide stack trace information.
@@ -38,7 +38,7 @@ void ExecutorBase::reportImmediateUB(StringRef Msg) {
 
 void ExecutorBase::reportError(StringRef Msg) {
   // Check if we have already reported an error message.
-  if (isProgramExited())
+  if (hasProgramExited())
     return;
   requestProgramExit(ProgramExitInfo::ProgramExitKind::Failed);
   Handler.onError(Msg);
@@ -131,7 +131,7 @@ void ExecutorBase::requestProgramExit(ProgramExitInfo::ProgramExitKind Kind,
   Handler.onProgramExit(*ExitInfo);
 }
 
-bool ExecutorBase::isProgramExited() const { return ExitInfo.has_value(); }
+bool ExecutorBase::hasProgramExited() const { return ExitInfo.has_value(); }
 
 std::optional<ProgramExitInfo> ExecutorBase::getExitInfo() const {
   return ExitInfo;

@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Library.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/Support/Format.h"
@@ -67,13 +68,21 @@ AnyValue Library::executeMalloc(StringRef Name, Type *Type,
                                 ArrayRef<AnyValue> Args) {
   const auto &SizeVal = Args[0];
 
-  const uint64_t AllocSize = SizeVal.asInteger().getLimitedValue();
+  if (SizeVal.asInteger().getActiveBits() > 64) {
+    Executor.reportImmediateUB(
+        "malloc() with allocation size that overflows uint64_t.");
+    return AnyValue::poison();
+  }
+
+  const uint64_t AllocSize = SizeVal.asInteger().getZExtValue();
 
   const IntrusiveRefCntPtr<MemoryObject> Obj = Ctx.allocate(
       AllocSize, getMaxAlign(DL), Name, 0, MemInitKind::Uninitialized);
 
-  if (!Obj)
-    return AnyValue::getNullValue(Ctx, Type);
+  if (!Obj) {
+    Executor.reportError("Insufficient stack space.");
+    return AnyValue::poison();
+  }
 
   return Ctx.deriveFromMemoryObject(Obj);
 }
@@ -88,15 +97,20 @@ AnyValue Library::executeCalloc(StringRef Name, Type *Type,
 
   bool Overflow = false;
   const APInt AllocSize = Count.umul_ov(Size, Overflow);
-  if (Overflow)
-    return AnyValue::getNullValue(Ctx, Type);
+  if (Overflow) {
+    Executor.reportImmediateUB(
+        "calloc() with allocation size that overflows uint64_t.");
+    return AnyValue::poison();
+  }
 
   const IntrusiveRefCntPtr<MemoryObject> Obj =
       Ctx.allocate(AllocSize.getLimitedValue(), getMaxAlign(DL), Name, 0,
                    MemInitKind::Zeroed);
 
-  if (!Obj)
-    return AnyValue::getNullValue(Ctx, Type);
+  if (!Obj) {
+    Executor.reportError("Insufficient stack space.");
+    return AnyValue::poison();
+  }
 
   return Ctx.deriveFromMemoryObject(Obj);
 }
@@ -109,9 +123,26 @@ AnyValue Library::executeFree(ArrayRef<AnyValue> Args) {
   if (Ptr.address().isZero())
     return AnyValue();
 
-  if (!Ctx.free(Ptr)) {
+  MemoryObject *Obj = Ptr.getMemoryObject();
+  if (!Obj) {
+    Executor.reportImmediateUB("freeing a pointer with nullary provenance.");
+    return AnyValue::poison();
+  }
+
+  if (const uint64_t Address = Ptr.address().getZExtValue();
+      Address != Obj->getAddress()) {
     Executor.reportImmediateUB(
-        "freeing an invalid, unallocated, or already freed pointer.");
+        "freeing a pointer that does not point to the start of an allocation.");
+    return AnyValue::poison();
+  }
+
+  if (Obj->getState() == MemoryObjectState::Freed) {
+    Executor.reportImmediateUB("double-freeing a memory object.");
+    return AnyValue::poison();
+  }
+
+  if (!Ctx.free(*Obj)) {
+    Executor.reportImmediateUB("freeing an invalid pointer.");
     return AnyValue::poison();
   }
 
@@ -171,8 +202,8 @@ AnyValue Library::executePrintf(ArrayRef<AnyValue> Args) {
     char Specifier = FormatStr[I++];
     std::string CleanChunk = FormatStr.substr(Start, I - Start - 1);
     CleanChunk.erase(
-        std::remove_if(CleanChunk.begin(), CleanChunk.end(),
-                       [](char c) { return StringRef("hljzt").contains(c); }),
+        llvm::remove_if(CleanChunk,
+                        [](char C) { return StringRef("hljzt").contains(C); }),
         CleanChunk.end());
 
     if (ArgIndex >= Args.size()) {
@@ -245,6 +276,12 @@ AnyValue Library::executePrintf(ArrayRef<AnyValue> Args) {
           "Unknown or unsupported format specifier in printf.");
       return AnyValue::poison();
     }
+  }
+
+  if (ArgIndex < Args.size()) {
+    Executor.reportImmediateUB(
+        "Too many arguments provided for the format string.");
+    return AnyValue::poison();
   }
 
   OS.flush();

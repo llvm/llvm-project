@@ -78,7 +78,7 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
   }
 
   void setResult(Instruction &I, AnyValue V) {
-    if (!isProgramExited())
+    if (!hasProgramExited())
       if (!Handler.onInstructionExecuted(I, V))
         requestProgramExit(ProgramExitInfo::ProgramExitKind::Failed);
     CurrentFrame->ValueMap.insert_or_assign(&I, std::move(V));
@@ -270,9 +270,8 @@ public:
     if (auto *RV = RI.getReturnValue())
       CurrentFrame->RetVal = getValue(RV);
     CurrentFrame->State = FrameState::Exit;
-    if (!isProgramExited())
-      if (!Handler.onInstructionExecuted(RI, None))
-        requestProgramExit(ProgramExitInfo::ProgramExitKind::Failed);
+    if (!Handler.onInstructionExecuted(RI, None))
+      requestProgramExit(ProgramExitInfo::ProgramExitKind::Failed);
   }
 
   void visitUncondBrInst(UncondBrInst &BI) { jumpTo(BI, BI.getSuccessor()); }
@@ -887,7 +886,7 @@ public:
     // TODO: track volatile stores
     // TODO: handle metadata
     store(Ptr, SI.getAlign(), Val, SI.getValueOperand()->getType());
-    if (!isProgramExited())
+    if (!hasProgramExited())
       if (!Handler.onInstructionExecuted(SI, AnyValue()))
         requestProgramExit(ProgramExitInfo::ProgramExitKind::Failed);
   }
@@ -984,7 +983,7 @@ public:
   ProgramExitInfo runMainLoop() {
     uint32_t MaxSteps = Ctx.getMaxSteps();
     uint32_t Steps = 0;
-    while (!isProgramExited() && !CallStack.empty()) {
+    while (!hasProgramExited() && !CallStack.empty()) {
       Frame &Top = CallStack.back();
       CurrentFrame = &Top;
       if (Top.State == FrameState::Entry) {
@@ -997,7 +996,7 @@ public:
 
       Top.State = FrameState::Running;
       // Interpreter loop inside a function
-      while (!isProgramExited()) {
+      while (!hasProgramExited()) {
         assert(Top.State == FrameState::Running &&
                "Expected to be in running state.");
         if (MaxSteps != 0 && Steps >= MaxSteps) {
@@ -1008,7 +1007,7 @@ public:
 
         Instruction &I = *Top.PC;
         visit(&I);
-        if (isProgramExited())
+        if (hasProgramExited())
           break;
 
         // A function call or return has occurred.
@@ -1022,7 +1021,7 @@ public:
           ++Top.PC;
       }
 
-      if (isProgramExited())
+      if (hasProgramExited())
         break;
 
       if (Top.State == FrameState::Exit) {
@@ -1031,14 +1030,14 @@ public:
         Handler.onFunctionExit(Top.Func, Top.RetVal);
         // Free stack objects allocated in this frame.
         for (auto &Obj : Top.Allocas)
-          Ctx.free(Ctx.deriveFromMemoryObject(Obj));
+          Ctx.free(*Obj);
         CallStack.pop_back();
       } else {
         assert(Top.State == FrameState::Pending &&
                "Expected to enter a callee.");
       }
     }
-    if (!isProgramExited())
+    if (!hasProgramExited())
       requestProgramExit(ProgramExitInfo::ProgramExitKind::Returned);
     return *getExitInfo();
   }
