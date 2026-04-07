@@ -2412,15 +2412,13 @@ remapIndices(Function &Caller, BasicBlock *StartBB,
 // Updating the contextual profile after an inlining means, at a high level,
 // copying over the data of the callee, **intentionally without any value
 // scaling**, and copying over the callees of the inlined callee.
-llvm::InlineResult
-llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
-                     PGOContextualProfile &CtxProf, bool MergeAttributes,
-                     AAResults *CalleeAAR, bool InsertLifetime,
-                     bool TrackInlineHistory, Function *ForwardVarArgsTo,
-                     OptimizationRemarkEmitter *ORE) {
+llvm::InlineResult llvm::InlineFunction(
+    CallBase &CB, InlineFunctionInfo &IFI, PGOContextualProfile &CtxProf,
+    bool MergeAttributes, AAResults *CalleeAAR, bool InsertLifetime,
+    Function *ForwardVarArgsTo, OptimizationRemarkEmitter *ORE) {
   if (!CtxProf.isInSpecializedModule())
     return InlineFunction(CB, IFI, MergeAttributes, CalleeAAR, InsertLifetime,
-                          TrackInlineHistory, ForwardVarArgsTo, ORE);
+                          ForwardVarArgsTo, ORE);
 
   auto &Caller = *CB.getCaller();
   auto &Callee = *CB.getCalledFunction();
@@ -2438,7 +2436,7 @@ llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
   const auto NumCalleeCallsites = CtxProf.getNumCallsites(Callee);
 
   auto Ret = InlineFunction(CB, IFI, MergeAttributes, CalleeAAR, InsertLifetime,
-                            TrackInlineHistory, ForwardVarArgsTo, ORE);
+                            ForwardVarArgsTo, ORE);
   if (!Ret.isSuccess())
     return Ret;
 
@@ -2523,18 +2521,6 @@ llvm::InlineResult llvm::CanInlineCallSite(const CallBase &CB,
   if (!CalledFunc ||               // Can't inline external function or indirect
       CalledFunc->isDeclaration()) // call!
     return InlineResult::failure("external or indirect");
-
-  // Don't inline if we've already inlined this callee through this call site
-  // before to prevent infinite inlining through mutually recursive functions.
-  if (MDNode *InlineHistory = CB.getMetadata(LLVMContext::MD_inline_history)) {
-    for (const auto &Op : InlineHistory->operands()) {
-      if (auto *MD = dyn_cast_or_null<ValueAsMetadata>(Op)) {
-        if (MD->getValue() == CalledFunc) {
-          return InlineResult::failure("inline history");
-        }
-      }
-    }
-  }
 
   // The inliner does not know how to inline through calls with operand bundles
   // in general ...
@@ -2661,8 +2647,7 @@ llvm::InlineResult llvm::CanInlineCallSite(const CallBase &CB,
 /// function by one level.
 void llvm::InlineFunctionImpl(CallBase &CB, InlineFunctionInfo &IFI,
                               bool MergeAttributes, AAResults *CalleeAAR,
-                              bool InsertLifetime, bool TrackInlineHistory,
-                              Function *ForwardVarArgsTo,
+                              bool InsertLifetime, Function *ForwardVarArgsTo,
                               OptimizationRemarkEmitter *ORE) {
   BasicBlock *OrigBB = CB.getParent();
   Function *Caller = OrigBB->getParent();
@@ -2783,7 +2768,7 @@ void llvm::InlineFunctionImpl(CallBase &CB, InlineFunctionInfo &IFI,
     // happy with whatever the cloner can do.
     CloneAndPruneFunctionInto(Caller, CalledFunc, VMap,
                               /*ModuleLevelChanges=*/false, Returns, ".i",
-                              InlinedFunctionInfo);
+                              &InlinedFunctionInfo);
     // Remember the first block that is newly cloned over.
     FirstNewBlock = LastBlock; ++FirstNewBlock;
 
@@ -3284,35 +3269,6 @@ void llvm::InlineFunctionImpl(CallBase &CB, InlineFunctionInfo &IFI,
             IFI.InlinedCallSites.push_back(CB);
   }
 
-  for (CallBase *ICB : IFI.InlinedCallSites) {
-    // We only track inline history if requested, or if the inlined call site
-    // was originally an indirect call (it may have become a direct call
-    // during inlining).
-    if (TrackInlineHistory ||
-        InlinedFunctionInfo.OriginallyIndirectCalls.contains(ICB)) {
-      // !inline_history is {Callee, CB.inline_history, ICB.inline_history}.
-      // Metadata nodes may be null if the referenced function was erased from
-      // the module.
-      SmallVector<Metadata *, 4> History;
-      History.push_back(ValueAsMetadata::get(CalledFunc));
-      if (MDNode *CBHistory = CB.getMetadata(LLVMContext::MD_inline_history)) {
-        for (const auto &Op : CBHistory->operands()) {
-          if (Op)
-            History.push_back(Op.get());
-        }
-      }
-      if (MDNode *CBHistory =
-              ICB->getMetadata(LLVMContext::MD_inline_history)) {
-        for (const auto &Op : CBHistory->operands()) {
-          if (Op)
-            History.push_back(Op.get());
-        }
-      }
-      MDNode *NewHistory = MDNode::get(Caller->getContext(), History);
-      ICB->setMetadata(LLVMContext::MD_inline_history, NewHistory);
-    }
-  }
-
   // If we cloned in _exactly one_ basic block, and if that block ends in a
   // return instruction, we splice the body of the inlined callee directly into
   // the calling basic block.
@@ -3518,15 +3474,30 @@ void llvm::InlineFunctionImpl(CallBase &CB, InlineFunctionInfo &IFI,
     AttributeFuncs::mergeAttributesForInlining(*Caller, *CalledFunc);
 }
 
-llvm::InlineResult llvm::InlineFunction(
-    CallBase &CB, InlineFunctionInfo &IFI, bool MergeAttributes,
-    AAResults *CalleeAAR, bool InsertLifetime, bool TrackInlineHistory,
-    Function *ForwardVarArgsTo, OptimizationRemarkEmitter *ORE) {
+llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
+                                        bool MergeAttributes,
+                                        AAResults *CalleeAAR,
+                                        bool InsertLifetime,
+                                        Function *ForwardVarArgsTo,
+                                        OptimizationRemarkEmitter *ORE) {
   llvm::InlineResult Result = CanInlineCallSite(CB, IFI);
   if (Result.isSuccess()) {
     InlineFunctionImpl(CB, IFI, MergeAttributes, CalleeAAR, InsertLifetime,
-                       TrackInlineHistory, ForwardVarArgsTo, ORE);
+                       ForwardVarArgsTo, ORE);
   }
 
   return Result;
+}
+
+bool llvm::inlineHistoryIncludes(
+    Function *F, int InlineHistoryID,
+    ArrayRef<std::pair<Function *, int>> InlineHistory) {
+  while (InlineHistoryID != -1) {
+    assert(unsigned(InlineHistoryID) < InlineHistory.size() &&
+           "Invalid inline history ID");
+    if (InlineHistory[InlineHistoryID].first == F)
+      return true;
+    InlineHistoryID = InlineHistory[InlineHistoryID].second;
+  }
+  return false;
 }

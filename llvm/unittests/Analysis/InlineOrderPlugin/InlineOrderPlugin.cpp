@@ -12,29 +12,31 @@ using namespace llvm;
 
 namespace {
 
-class NoFooInlineOrder : public InlineOrder {
+class NoFooInlineOrder : public InlineOrder<std::pair<CallBase *, int>> {
 public:
   NoFooInlineOrder(FunctionAnalysisManager &FAM, const InlineParams &Params,
                    ModuleAnalysisManager &MAM, Module &M) {
     DefaultInlineOrder = getDefaultInlineOrder(FAM, Params, MAM, M);
   }
   size_t size() override { return DefaultInlineOrder->size(); }
-  void push(CallBase *Elt) override {
-    // We ignore callees named "foo"
-    if (Elt->getCalledFunction()->getName() == "foo") {
+  void push(const std::pair<CallBase *, int> &Elt) override {
+    // We ignore calles named "foo"
+    if (Elt.first->getCalledFunction()->getName() == "foo") {
       DefaultInlineOrder->push(Elt);
     }
   }
-  CallBase *pop() override { return DefaultInlineOrder->pop(); }
-  void erase_if(function_ref<bool(CallBase *)> Pred) override {
+  std::pair<CallBase *, int> pop() override {
+    return DefaultInlineOrder->pop();
+  }
+  void erase_if(function_ref<bool(std::pair<CallBase *, int>)> Pred) override {
     DefaultInlineOrder->erase_if(Pred);
   }
 
 private:
-  std::unique_ptr<InlineOrder> DefaultInlineOrder;
+  std::unique_ptr<InlineOrder<std::pair<CallBase *, int>>> DefaultInlineOrder;
 };
 
-std::unique_ptr<InlineOrder>
+std::unique_ptr<InlineOrder<std::pair<CallBase *, int>>>
 NoFooInlineOrderFactory(FunctionAnalysisManager &FAM,
                         const InlineParams &Params, ModuleAnalysisManager &MAM,
                         Module &M) {
