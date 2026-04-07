@@ -1042,13 +1042,11 @@ public:
   }
 };
 
-bool Context::runFunction(Function &F, ArrayRef<AnyValue> Args,
-                          AnyValue &RetVal, EventHandler &Handler,
-                          ProgramExitInfo &ExitInfo) {
+ProgramExitInfo Context::runFunction(Function &F, ArrayRef<AnyValue> Args,
+                                     AnyValue &RetVal, EventHandler &Handler) {
   InstExecutor Executor(*this, Handler, F, Args, RetVal);
-  bool Result = Executor.runMainLoop();
-  ExitInfo = Executor.getExitInfo();
-  return Result;
+  Executor.runMainLoop();
+  return Executor.getExitInfo();
 }
 
 } // namespace llvm::ubi

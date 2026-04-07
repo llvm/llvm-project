@@ -286,13 +286,15 @@ public:
   /// initialization).
   bool initGlobalValues();
   /// Execute the function \p F with arguments \p Args, and store the return
-  /// value in \p RetVal if the function is not void. The exit information is
-  /// stored in \p ExitInfo.
-  /// Returns true if the function executed successfully without calls to
-  /// exit()/abort()/terminate(). False indicates an error occurred during
-  /// execution.
-  bool runFunction(Function &F, ArrayRef<AnyValue> Args, AnyValue &RetVal,
-                   EventHandler &Handler, ProgramExitInfo &ExitInfo);
+  /// value in \p RetVal if the function is not void.
+  /// Returns a `ProgramExitInfo` indicating how the program finished:
+  /// Kind = Returned: The program executed successfully and returned normally.
+  /// Kind = Failed: The interpreter encountered an error and could not execute
+  /// the program.
+  /// Kind = Exited/Aborted/Terminated: The program ended via an
+  /// explicit call to `exit()`, `abort()`, or `terminate()`.
+  ProgramExitInfo runFunction(Function &F, ArrayRef<AnyValue> Args,
+                              AnyValue &RetVal, EventHandler &Handler);
 };
 
 } // namespace llvm::ubi

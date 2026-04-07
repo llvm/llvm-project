@@ -138,4 +138,8 @@ void ExecutorBase::requestProgramExit(ProgramExitInfo::ProgramExitKind Kind,
 bool ExecutorBase::getExecutionStatus() const { return Status; }
 
 ProgramExitInfo ExecutorBase::getExitInfo() const { return ExitInfo; }
+
+unsigned ExecutorBase::getIntSize() const {
+  return CurrentFrame->TLI.getIntSize();
+}
 } // namespace llvm::ubi

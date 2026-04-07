@@ -103,6 +103,8 @@ public:
 
   bool getExecutionStatus() const;
   ProgramExitInfo getExitInfo() const;
+
+  unsigned getIntSize() const;
 };
 
 } // namespace llvm::ubi

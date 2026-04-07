@@ -37,13 +37,12 @@ std::optional<std::string> Library::readStringFromMemory(const Pointer &Ptr) {
   }
 
   std::string Result;
-  const uint64_t Address = Ptr.address().getZExtValue();
+  const APInt &Address = Ptr.address();
   uint64_t Offset = 0;
 
   while (true) {
-    auto ValidOffset = Executor.verifyMemAccess(
-        *MO, APInt(DL.getPointerSizeInBits(0), Address + Offset), 1, Align(1),
-        false);
+    auto ValidOffset =
+        Executor.verifyMemAccess(*MO, Address + Offset, 1, Align(1), false);
     if (!ValidOffset)
       return std::nullopt;
 
@@ -69,10 +68,9 @@ AnyValue Library::executeMalloc(StringRef Name, Type *Type,
   const auto &SizeVal = Args[0];
 
   const uint64_t AllocSize = SizeVal.asInteger().getLimitedValue();
-  const uint64_t MaxAlign = getMaxAlign(DL);
 
-  const auto Obj =
-      Ctx.allocate(AllocSize, MaxAlign, Name, 0, MemInitKind::Uninitialized);
+  const IntrusiveRefCntPtr<MemoryObject> Obj = Ctx.allocate(
+      AllocSize, getMaxAlign(DL), Name, 0, MemInitKind::Uninitialized);
 
   if (!Obj)
     return AnyValue::getNullValue(Ctx, Type);
@@ -85,18 +83,17 @@ AnyValue Library::executeCalloc(StringRef Name, Type *Type,
   const auto &CountVal = Args[0];
   const auto &SizeVal = Args[1];
 
-  const uint64_t Count = CountVal.asInteger().getLimitedValue();
-  const uint64_t Size = SizeVal.asInteger().getLimitedValue();
+  const APInt &Count = CountVal.asInteger();
+  const APInt &Size = SizeVal.asInteger();
 
   bool Overflow = false;
-  const uint64_t AllocSize = SaturatingMultiply(Count, Size, &Overflow);
+  const APInt AllocSize = Count.umul_ov(Size, Overflow);
   if (Overflow)
     return AnyValue::getNullValue(Ctx, Type);
 
-  const uint64_t MaxAlign = getMaxAlign(DL);
-
-  const auto Obj =
-      Ctx.allocate(AllocSize, MaxAlign, Name, 0, MemInitKind::Zeroed);
+  const IntrusiveRefCntPtr<MemoryObject> Obj =
+      Ctx.allocate(AllocSize.getLimitedValue(), getMaxAlign(DL), Name, 0,
+                   MemInitKind::Zeroed);
 
   if (!Obj)
     return AnyValue::getNullValue(Ctx, Type);
@@ -129,7 +126,7 @@ AnyValue Library::executePuts(ArrayRef<AnyValue> Args) {
     return AnyValue::poison();
 
   Handler.onPrint(*StrOpt + "\n");
-  return AnyValue(APInt(32, 1));
+  return AnyValue(APInt(Executor.getIntSize(), 1));
 }
 
 AnyValue Library::executePrintf(ArrayRef<AnyValue> Args) {
@@ -252,7 +249,7 @@ AnyValue Library::executePrintf(ArrayRef<AnyValue> Args) {
 
   OS.flush();
   Handler.onPrint(Output);
-  return AnyValue(APInt(32, Output.size()));
+  return AnyValue(APInt(Executor.getIntSize(), Output.size()));
 }
 
 AnyValue Library::executeExit(ArrayRef<AnyValue> Args) {

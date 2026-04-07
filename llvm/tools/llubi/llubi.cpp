@@ -260,9 +260,9 @@ int main(int argc, char **argv) {
   ubi::EventHandler NoopHandler;
   VerboseEventHandler VerboseHandler;
   ubi::AnyValue RetVal;
-  ubi::ProgramExitInfo ExitInfo;
-  if (!Ctx.runFunction(*EntryFn, Args, RetVal,
-                       Verbose ? VerboseHandler : NoopHandler, ExitInfo)) {
+  ubi::ProgramExitInfo ExitInfo = Ctx.runFunction(
+      *EntryFn, Args, RetVal, Verbose ? VerboseHandler : NoopHandler);
+  if (ExitInfo.Kind != ubi::ProgramExitInfo::ProgramExitKind::Returned) {
     if (!ExitInfo.isExitedByLibcall()) {
       WithColor::error() << "Execution of function '" << EntryFunc
                          << "' failed.\n";
@@ -272,6 +272,7 @@ int main(int argc, char **argv) {
     case ubi::ProgramExitInfo::ProgramExitKind::Exited:
       return static_cast<int>(ExitInfo.ExitCode & 0xFF);
     case ubi::ProgramExitInfo::ProgramExitKind::Aborted:
+      return 134;
     case ubi::ProgramExitInfo::ProgramExitKind::Terminated:
       return 1;
     default:
