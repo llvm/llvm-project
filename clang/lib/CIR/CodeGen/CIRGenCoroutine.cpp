@@ -133,30 +133,28 @@ struct CallCoroDelete final : public EHScopeStack::Cleanup {
     }
 
     CIRGenBuilderTy &builder = cgf.getBuilder();
-    mlir::Location loc = cgf.getLoc(deallocate->getSourceRange());
     cir::CallOp coroFree = cgf.curCoro.data->lastCoroFree;
 
     if (!coroFree) {
       cgf.cgm.error(deallocate->getBeginLoc(),
-                    "Deallocation expressoin does not refer to coro.free");
+                    "Deallocation expression does not refer to coro.free");
       return;
     }
 
     builder.setInsertionPointAfter(coroFree);
-    cir::ConstantOp nullPtrCst = builder.getNullPtr(cgf.voidPtrTy, loc);
-    auto cmp = cir::CmpOp::create(builder, loc, cir::CmpOpKind::ne,
-                                  coroFree.getResult(), nullPtrCst);
+    mlir::Value isPtrNotNull = builder.createPtrIsNotNull(coroFree.getResult());
 
     llvm::SmallVector<mlir::Operation *> opsToMove;
-    mlir::Block *block = cmp->getBlock();
-    mlir::Block::iterator it(cmp);
+    builder.getInsertionBlock();
+    mlir::Block *block = builder.getInsertionBlock();
+    mlir::Block::iterator it(isPtrNotNull.getDefiningOp());
 
     for (++it; it != block->end(); ++it)
       opsToMove.push_back(&*it);
 
     auto ifOp =
         cir::IfOp::create(builder, cgf.getLoc(deallocate->getSourceRange()),
-                          cmp.getResult(), /*withElseRegion*/ false,
+                          isPtrNotNull, /*withElseRegion*/ false,
                           [&](mlir::OpBuilder &builder, mlir::Location loc) {
                             cir::YieldOp::create(builder, loc);
                           });
@@ -410,18 +408,29 @@ CIRGenFunction::emitCoroutineBody(const CoroutineBodyStmt &s) {
     curCoro.data->currentAwaitKind = cir::AwaitKind::User;
 
     mlir::OpBuilder::InsertPoint userBody;
-    cir::CoroBodyOp::create(builder, openCurlyLoc, /*scopeBuilder=*/
-                            [&](mlir::OpBuilder &b, mlir::Location loc) {
-                              userBody = b.saveInsertionPoint();
-                            });
+    auto coroBod =
+        cir::CoroBodyOp::create(builder, openCurlyLoc, /*scopeBuilder=*/
+                                [&](mlir::OpBuilder &b, mlir::Location loc) {
+                                  userBody = b.saveInsertionPoint();
+                                });
     {
       mlir::OpBuilder::InsertionGuard guard(builder);
       builder.restoreInsertionPoint(userBody);
       // FIXME(cir): wrap emitBodyAndFallthrough with try/catch bits.
-      if (s.getExceptionHandler())
+      if (s.getExceptionHandler()) {
         assert(!cir::MissingFeatures::coroutineExceptions());
-      if (emitBodyAndFallthrough(*this, s, s.getBody(), curLexScope).failed())
+        cgm.errorNYI("exceptions in coroutines are not yet supported in CIR");
+      }
+      if (emitBodyAndFallthrough(*this, s, s.getBody(), curLexScope).failed()) {
         return mlir::failure();
+      }
+    }
+
+    mlir::Block &coroBodyBlock = coroBod.getBodyRegion().back();
+    if (!coroBod.getBodyRegion().back().mightHaveTerminator()) {
+      mlir::OpBuilder::InsertionGuard guard(builder);
+      builder.setInsertionPointToEnd(&coroBodyBlock);
+      cir::YieldOp::create(builder, openCurlyLoc);
     }
 
     // Note that LLVM checks CanFallthrough by looking into the availability

@@ -762,3 +762,19 @@ folly::coro::Task<int> co_returns(int x) {
 // OGCG: coro.final:
 // OGCG: final.suspend:
 // OGCG: final.ready:
+
+folly::coro::Task<int> implicit_yield_terminator(int x) {
+  if (x < 0)
+    co_return -1;
+  else
+    co_return 2;
+}
+// CIR: cir.func coroutine {{.*}} @_Z25implicit_yield_terminatori
+// CIR:   cir.coro.body {
+// CIR:     cir.if %{{.*}} {
+// CIR:       cir.co_return
+// CIR:     } else {
+// CIR:       cir.co_return
+// CIR:     }
+// CIR:     cir.yield
+// CIR:   }

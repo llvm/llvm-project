@@ -954,9 +954,9 @@ def CIR_ConditionOp : CIR_Op<"condition", [
 //===----------------------------------------------------------------------===//
 
 defvar CIR_YieldableScopes = [
-  "ArrayCtor", "ArrayDtor", "AwaitOp", "CaseOp", "CleanupScopeOp", "DoWhileOp",
-  "ForOp", "GlobalOp", "IfOp", "ScopeOp", "SwitchOp", "TernaryOp", "TryOp",
-  "WhileOp"
+  "ArrayCtor", "ArrayDtor", "AwaitOp", "CaseOp", "CleanupScopeOp", "CoroBodyOp",
+  "DoWhileOp", "ForOp", "GlobalOp", "IfOp", "ScopeOp", "SwitchOp", "TernaryOp",
+  "TryOp", "WhileOp"
 ];
 
 def CIR_YieldOp : CIR_Op<"yield", [
@@ -4201,7 +4201,7 @@ def CIR_CoroBodyOp : CIR_Op<"coro.body", [
 //===----------------------------------------------------------------------===//
 
 def CIR_CoReturnOp : CIR_Op<"co_return", [
-  NoMemoryEffect, Pure, Terminator
+  ReturnLike, Pure, Terminator
 ]> {
   let summary = "Coroutine return operation";
   let description = [{
