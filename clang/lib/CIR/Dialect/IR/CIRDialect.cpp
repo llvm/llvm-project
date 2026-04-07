@@ -1745,9 +1745,8 @@ void cir::GlobalOp::build(
                         odsBuilder.getStringAttr(sym_name));
   odsState.addAttribute(getSymTypeAttrName(odsState.name),
                         mlir::TypeAttr::get(sym_type));
-  if (isConstant)
-    odsState.addAttribute(getConstantAttrName(odsState.name),
-                          odsBuilder.getUnitAttr());
+  auto &properties = odsState.getOrAddProperties<cir::GlobalOp::Properties>();
+  properties.setConstant(isConstant);
 
   addrSpace = normalizeDefaultAddressSpace(addrSpace);
   if (addrSpace)
@@ -2855,6 +2854,11 @@ LogicalResult cir::CopyOp::verify() {
 
   if (getSrc() == getDst())
     return emitError() << "source and destination are the same";
+
+  if (getSkipTailPadding() &&
+      !mlir::isa<cir::RecordType>(getType().getPointee()))
+    return emitError()
+           << "skip_tail_padding is only valid for record pointee types";
 
   return mlir::success();
 }

@@ -1,0 +1,18 @@
+REQUIRES: x86
+RUN: split-file %s %t.dir && cd %t.dir
+
+RUN: llvm-mc -filetype=obj -triple=x86_64-windows datasym.s -o datasym.obj
+
+RUN: lld-link -dll -noentry -out:test.dll datasym.obj -def:exports.def -lldmingw -export-all-symbols 2>&1 | FileCheck %s
+
+CHECK: warning: duplicate export: datasym first seen in /def, now in /export-all-symbols
+
+#--- datasym.s
+	.data
+	.globl	datasym
+datasym:
+	.long	42
+
+#--- exports.def
+EXPORTS
+datasym
