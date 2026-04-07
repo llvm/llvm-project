@@ -456,6 +456,7 @@ bool CandidateHeuristics::tryEffectiveStall(
     if (LastProducerCycle < LastConsumerCycle)
       return 0;
 
+    // Latency comes from DS regardless of bottom-up / top-down.
     unsigned FenceStallFinish =
         LastProducerCycle + getHWUICyclesForSU(IsTop ? LastProducer : SU);
     return FenceStallFinish <= CurrCycle ? 0 : FenceStallFinish - CurrCycle;
