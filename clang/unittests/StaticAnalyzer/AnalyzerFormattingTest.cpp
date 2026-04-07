@@ -70,6 +70,23 @@ TEST(PrintFormattedEntryTest, ExactFillWidth) {
                     "        A description");
 }
 
+// With wrapping after checker's name.
+// With initial pad.
+// Corner case, when checker's name length equal to EntryWidth.
+// This test matches how printFormattedEntry was called
+// in -analyzer-checker-help, which led to a formatting bug.
+TEST(PrintFormattedEntryTest, ExactFillWidthWithInitialPad) {
+  llvm::SmallString<256> Buffer;
+  runPrintFormattedEntry(/*EntryDescPair=*/{"Checkers", "A description"},
+                         /*InitialPad=*/2,
+                         /*EntryWidth=*/8,
+                         /*MinLineWidth=*/0,
+                         /*OutBuffer=*/Buffer);
+
+  EXPECT_EQ(Buffer, "  Checkers\n"
+                    "          A description");
+}
+
 // No wrapping after checker's name.
 // With initial pad.
 TEST(PrintFormattedEntryTest, WithInitialPadding) {
