@@ -50,6 +50,10 @@ using clang::doc::OutputFormatTy;
 static llvm::cl::extrahelp CommonHelp(CommonOptionsParser::HelpMessage);
 static llvm::cl::OptionCategory ClangDocCategory("clang-doc options");
 
+static llvm::cl::opt<bool>
+    CompactJSON("compact", llvm::cl::desc("Serialize JSON without whitespace."),
+                llvm::cl::cat(ClangDocCategory));
+
 static llvm::cl::opt<std::string>
     ProjectName("project-name", llvm::cl::desc("Name of project."),
                 llvm::cl::cat(ClangDocCategory));
@@ -309,7 +313,7 @@ Example usage for a project using a compile commands database:
         Executor->getExecutionContext(), ProjectName, PublicOnly, OutDirectory,
         SourceRoot, RepositoryUrl, RepositoryCodeLinePrefix, BaseDirectory,
         {UserStylesheets.begin(), UserStylesheets.end()}, Diags, FormatEnum,
-        FTimeTrace);
+        FTimeTrace, CompactJSON);
 
     if (Format == "html")
       ExitOnErr(getHtmlFiles(argv[0], CDCtx));

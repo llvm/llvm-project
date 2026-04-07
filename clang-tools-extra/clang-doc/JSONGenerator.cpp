@@ -907,7 +907,10 @@ Error JSONGenerator::serializeIndex(StringRef RootDir) {
   raw_fd_ostream RootOS(IndexFilePath, FileErr, sys::fs::OF_Text);
   if (FileErr)
     return createFileError("cannot open file " + IndexFilePath, FileErr);
-  RootOS << llvm::formatv("{0:2}", ObjVal);
+  if (CDCtx->CompactJSON)
+    RootOS << llvm::formatv("{0}", ObjVal);
+  else
+    RootOS << llvm::formatv("{0:2}", ObjVal);
   return Error::success();
 }
 
@@ -1010,7 +1013,10 @@ Error JSONGenerator::generateDocForInfo(Info *I, raw_ostream &OS,
   case InfoType::IT_default:
     return createStringError(inconvertibleErrorCode(), "unexpected info type");
   }
-  OS << llvm::formatv("{0:2}", llvm::json::Value(std::move(Obj)));
+  if (CDCtx.CompactJSON)
+    OS << llvm::formatv("{0}", llvm::json::Value(std::move(Obj)));
+  else
+    OS << llvm::formatv("{0:2}", llvm::json::Value(std::move(Obj)));
   return Error::success();
 }
 
