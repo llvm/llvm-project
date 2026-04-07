@@ -41,6 +41,7 @@
 #include "lldb/Utility/StructuredData.h"
 #include "lldb/Utility/Timeout.h"
 #include "lldb/lldb-public.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringRef.h"
 
 namespace lldb_private {
@@ -813,7 +814,7 @@ public:
   void ClearScriptedFrameProviderDescriptors();
 
   /// Get all scripted frame provider descriptors for this target.
-  const llvm::DenseMap<uint32_t, ScriptedFrameProviderDescriptor> &
+  const llvm::MapVector<uint32_t, ScriptedFrameProviderDescriptor> &
   GetScriptedFrameProviderDescriptors() const;
 
 protected:
@@ -1821,9 +1822,10 @@ protected:
   TypeSystemMap m_scratch_type_system_map;
 
   /// Map of scripted frame provider descriptors for this target.
-  /// Keys are the provider descriptors ids, values are the descriptors.
-  /// Used to initialize frame providers for new threads.
-  llvm::DenseMap<uint32_t, ScriptedFrameProviderDescriptor>
+  /// Keys are the provider descriptor IDs, values are the descriptors.
+  /// Insertion order is preserved so that equal-priority providers chain
+  /// in registration order.
+  llvm::MapVector<uint32_t, ScriptedFrameProviderDescriptor>
       m_frame_provider_descriptors;
   mutable std::recursive_mutex m_frame_provider_descriptors_mutex;
 
