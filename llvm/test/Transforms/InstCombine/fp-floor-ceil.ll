@@ -110,8 +110,8 @@ define i1 @x_floor_ogt_neg(float %x) {
 
 define i1 @x_floor_ueq_neg(float %x) {
 ; CHECK-LABEL: @x_floor_ueq_neg(
-; CHECK-NEXT:    [[X:%.*]] = call float @llvm.trunc.f32(float [[FLOOR:%.*]])
-; CHECK-NEXT:    [[RET:%.*]] = fcmp ueq float [[X]], [[FLOOR]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.trunc.f32(float [[X:%.*]])
+; CHECK-NEXT:    [[RET:%.*]] = fcmp ueq float [[TMP1]], [[X]]
 ; CHECK-NEXT:    ret i1 [[RET]]
 ;
   %floor = call float @llvm.floor.f32(float %x)
@@ -121,8 +121,8 @@ define i1 @x_floor_ueq_neg(float %x) {
 
 define i1 @x_floor_une_neg(float %x) {
 ; CHECK-LABEL: @x_floor_une_neg(
-; CHECK-NEXT:    [[X:%.*]] = call float @llvm.trunc.f32(float [[FLOOR:%.*]])
-; CHECK-NEXT:    [[RET:%.*]] = fcmp une float [[X]], [[FLOOR]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.trunc.f32(float [[X:%.*]])
+; CHECK-NEXT:    [[RET:%.*]] = fcmp une float [[TMP1]], [[X]]
 ; CHECK-NEXT:    ret i1 [[RET]]
 ;
   %floor = call float @llvm.floor.f32(float %x)
@@ -239,8 +239,8 @@ define i1 @x_ceil_olt_neg(float %x) {
 
 define i1 @x_ceil_oeq_neg(float %x) {
 ; CHECK-LABEL: @x_ceil_oeq_neg(
-; CHECK-NEXT:    [[X:%.*]] = call float @llvm.trunc.f32(float [[CEIL:%.*]])
-; CHECK-NEXT:    [[RET:%.*]] = fcmp oeq float [[X]], [[CEIL]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.trunc.f32(float [[X:%.*]])
+; CHECK-NEXT:    [[RET:%.*]] = fcmp oeq float [[TMP1]], [[X]]
 ; CHECK-NEXT:    ret i1 [[RET]]
 ;
   %ceil = call float @llvm.ceil.f32(float %x)
@@ -250,8 +250,8 @@ define i1 @x_ceil_oeq_neg(float %x) {
 
 define i1 @x_ceil_one_neg(float %x) {
 ; CHECK-LABEL: @x_ceil_one_neg(
-; CHECK-NEXT:    [[X:%.*]] = call float @llvm.trunc.f32(float [[CEIL:%.*]])
-; CHECK-NEXT:    [[RET:%.*]] = fcmp one float [[X]], [[CEIL]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.trunc.f32(float [[X:%.*]])
+; CHECK-NEXT:    [[RET:%.*]] = fcmp one float [[TMP1]], [[X]]
 ; CHECK-NEXT:    ret i1 [[RET]]
 ;
   %ceil = call float @llvm.ceil.f32(float %x)
