@@ -19630,6 +19630,8 @@ static bool isVariableCapturable(CapturingScopeInfo *CSI, ValueDecl *Var,
   }
 
   if (isa<BindingDecl>(Var)) {
+      if (Var->getDeclName() && !Var->isImplicit())
+          return true;
     if (!IsLambda || !S.getLangOpts().CPlusPlus) {
       if (Diagnose)
         diagnoseUncapturableValueReferenceOrBinding(S, Loc, Var);
@@ -19767,6 +19769,12 @@ static bool captureInLambda(LambdaScopeInfo *LSI, ValueDecl *Var,
     ByRef = (LSI->ImpCaptureStyle == LambdaScopeInfo::ImpCap_LambdaByref);
   }
 
+  if (auto* BD = dyn_cast<BindingDecl>(Var)) {
+    // For structured bindings, capture the individual element type,
+    // not the full decomposed type.
+    CaptureType = BD->getType();
+    DeclRefType = BD->getType();
+  }
   if (BuildAndDiagnose && S.Context.getTargetInfo().getTriple().isWasm() &&
       CaptureType.getNonReferenceType().isWebAssemblyReferenceType()) {
     S.Diag(Loc, diag::err_wasm_ca_reference) << 0;
@@ -20134,14 +20142,6 @@ bool Sema::tryCaptureVariable(
         // just break here. Similarly, global variables that are captured in a
         // target region should not be captured outside the scope of the region.
         if (RSI->CapRegionKind == CR_OpenMP) {
-          // FIXME: We should support capturing structured bindings in OpenMP.
-          if (isa<BindingDecl>(Var)) {
-            if (BuildAndDiagnose) {
-              Diag(ExprLoc, diag::err_capture_binding_openmp) << Var;
-              Diag(Var->getLocation(), diag::note_entity_declared_at) << Var;
-            }
-            return true;
-          }
           OpenMPClauseKind IsOpenMPPrivateDecl = OpenMP().isOpenMPPrivateDecl(
               Var, RSI->OpenMPLevel, RSI->OpenMPCaptureLevel);
           // If the variable is private (i.e. not captured) and has variably
