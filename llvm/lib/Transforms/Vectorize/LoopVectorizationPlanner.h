@@ -611,12 +611,12 @@ public:
   getDecisionAndClampRange(const std::function<bool(ElementCount)> &Predicate,
                            VFRange &Range);
 
-  /// \return The most profitable vectorization factor and the cost of that VF
-  /// for vectorizing the epilogue. Returns VectorizationFactor::Disabled if
-  /// epilogue vectorization is not supported for the loop.
-  VectorizationFactor selectEpilogueVectorizationFactor(VPlan &MainPlan,
-                                                        ElementCount MainLoopVF,
-                                                        unsigned IC);
+  /// \return A VPlan for the most profitable epilogue vectorization, with its
+  /// VF narrowed to the chosen factor. The returned plan is a duplicate.
+  /// Returns nullptr if epilogue vectorization is not supported or not
+  /// profitable for the loop.
+  std::unique_ptr<VPlan>
+  selectBestEpiloguePlan(VPlan &MainPlan, ElementCount MainLoopVF, unsigned IC);
 
   /// Emit remarks for recipes with invalid costs in the available VPlans.
   void emitInvalidCostRemarks(OptimizationRemarkEmitter *ORE);
