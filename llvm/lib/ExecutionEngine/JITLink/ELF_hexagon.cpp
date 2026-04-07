@@ -52,8 +52,11 @@ private:
       return hexagon::PCRel32;
     case ELF::R_HEX_B22_PCREL:
     case ELF::R_HEX_PLT_B22_PCREL:
-    // GD_PLT variants are mapped to plain branch edges since JITLink resolves
-    // all symbols directly. This does not handle TLS __tls_get_addr calls.
+    // PLT and GD_PLT variants are mapped to plain branch edges since JITLink
+    // resolves all symbols directly within contiguous JIT memory. When the
+    // GOT/PLT stubs builder is added (see TODO in link_ELF_hexagon), these
+    // should map to a distinct edge kind that triggers stub generation.
+    // GD_PLT does not handle TLS __tls_get_addr calls.
     case ELF::R_HEX_GD_PLT_B22_PCREL:
       return hexagon::B22_PCREL;
     case ELF::R_HEX_B15_PCREL:
@@ -71,10 +74,10 @@ private:
     case ELF::R_HEX_32_6_X:
       return hexagon::Word32_6_X;
     case ELF::R_HEX_B32_PCREL_X:
-    case ELF::R_HEX_GD_PLT_B32_PCREL_X: // See GD_PLT note above.
+    case ELF::R_HEX_GD_PLT_B32_PCREL_X: // See PLT/GD_PLT note above.
       return hexagon::B32_PCREL_X;
     case ELF::R_HEX_B22_PCREL_X:
-    case ELF::R_HEX_GD_PLT_B22_PCREL_X: // See GD_PLT note above.
+    case ELF::R_HEX_GD_PLT_B22_PCREL_X: // See PLT/GD_PLT note above.
       return hexagon::B22_PCREL_X;
     case ELF::R_HEX_B15_PCREL_X:
       return hexagon::B15_PCREL_X;
