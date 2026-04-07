@@ -21,7 +21,6 @@
 #include "lldb/Utility/RegisterValue.h"
 #include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/StreamString.h"
-#include "lldb/Utility/VMRange.h"
 
 #include "lldb/Host/Host.h"
 #include "lldb/Utility/Endian.h"
@@ -2256,7 +2255,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
           break;
         }
       }
-      return llvm::createStringErrorV("Unhandled opcode {0} in DWARFExpression",
+      return llvm::createStringErrorV("unhandled opcode {0} in DWARFExpression",
                                       LocationAtom(op));
     }
   }
