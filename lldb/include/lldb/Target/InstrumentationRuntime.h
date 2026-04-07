@@ -17,6 +17,7 @@
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-private.h"
 #include "lldb/lldb-types.h"
+#include "llvm/Support/Error.h"
 
 namespace lldb_private {
 
@@ -95,9 +96,9 @@ public:
 
   bool IsActive() const { return m_is_active; }
 
-  virtual bool Enable();
+  virtual llvm::Error Enable();
 
-  virtual bool Disable();
+  virtual llvm::Error Disable();
 
   virtual lldb::ThreadCollectionSP
   GetBacktracesFromExtendedStopInfo(StructuredData::ObjectSP info);

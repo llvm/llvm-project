@@ -21,6 +21,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/DynamicLibrary.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorExtras.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/raw_ostream.h"
@@ -2500,7 +2501,7 @@ bool PluginManager::SetInstrumentationRuntimePluginEnabled(llvm::StringRef name,
   auto instrumentation_ty = type_cb();
 
   // Notify all alive processes to enable/disable the plugin.
-  bool success = true;
+  bool failed = false;
   for (size_t di = 0; di < Debugger::GetNumDebuggers(); ++di) {
     DebuggerSP debugger_sp = Debugger::GetDebuggerAtIndex(di);
     if (!debugger_sp)
@@ -2513,12 +2514,12 @@ bool PluginManager::SetInstrumentationRuntimePluginEnabled(llvm::StringRef name,
       ProcessSP process_sp = target_sp->GetProcessSP();
       if (!process_sp || !process_sp->IsAlive())
         continue;
-      success &= process_sp->SetInstrumentationRuntimeEnabled(
-          instrumentation_ty, enable);
+      failed |= llvm::errorToBool(process_sp->SetInstrumentationRuntimeEnabled(
+          instrumentation_ty, enable));
     }
   }
 
-  return success;
+  return !failed;
 }
 
 llvm::SmallVector<RegisteredPluginInfo>

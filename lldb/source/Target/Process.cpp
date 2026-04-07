@@ -6266,8 +6266,9 @@ Process::GetInstrumentationRuntime(lldb::InstrumentationRuntimeType type) {
     return (*pos).second;
 }
 
-bool Process::SetInstrumentationRuntimeEnabled(InstrumentationRuntimeType irt,
-                                               bool enabled) {
+llvm::Error
+Process::SetInstrumentationRuntimeEnabled(InstrumentationRuntimeType irt,
+                                          bool enabled) {
   assert(IsAlive());
 
   if (auto instrumentation_runtime = GetInstrumentationRuntime(irt)) {
@@ -6281,7 +6282,7 @@ bool Process::SetInstrumentationRuntimeEnabled(InstrumentationRuntimeType irt,
   // There's no instance of this plugin for this process.
 
   if (!enabled)
-    return true;
+    return llvm::Error::success();
 
   // We need to make an instance of this plugin for this process.
   // This could happen because `plugin disable instrumentation-runtime.*`
@@ -6299,7 +6300,8 @@ bool Process::SetInstrumentationRuntimeEnabled(InstrumentationRuntimeType irt,
     break;
   }
   if (!new_plugin)
-    return false;
+    return llvm::createStringError(
+        "failed to create instrumentation runtime plugin");
 
   m_instrumentation_runtimes[irt] = new_plugin;
   return new_plugin->Enable();

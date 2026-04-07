@@ -59,16 +59,16 @@ void InstrumentationRuntime::ModulesDidLoad(
   });
 }
 
-bool InstrumentationRuntime::Enable() {
+llvm::Error InstrumentationRuntime::Enable() {
   if (IsActive())
-    return true;
+    return llvm::Error::success();
 
   // Fast path. During a previous time when the plugin was active the relevant
   // runtime module was found so we can just activate immediately.
   // FIXME: What if the module was unloaded via dlclose()?
   if (GetRuntimeModuleSP()) {
     Activate();
-    return true;
+    return llvm::Error::success();
   }
 
   // Slow path. The plugin has never found the relevant runtime module in the
@@ -85,14 +85,17 @@ bool InstrumentationRuntime::Enable() {
     // Give the plugin a chance to activate
     ModulesDidLoad(module_list);
   }
-  return true;
+  return llvm::Error::success();
 }
 
-bool InstrumentationRuntime::Disable() {
+llvm::Error InstrumentationRuntime::Disable() {
   if (IsActive())
     Deactivate();
 
-  return !IsActive();
+  if (IsActive())
+    return llvm::createStringError(
+        "failed to deactivate instrumentation runtime");
+  return llvm::Error::success();
 }
 
 lldb::ThreadCollectionSP

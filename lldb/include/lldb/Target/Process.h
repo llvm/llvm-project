@@ -2617,19 +2617,9 @@ void PruneThreadPlans();
   lldb::InstrumentationRuntimeSP
   GetInstrumentationRuntime(lldb::InstrumentationRuntimeType type);
 
-  /// Enable/Disable an instrumentation runtime plugin for this process.
-  /// If the plugging doesn't currently exist it will be created.
-  /// This is intended to be used by PluginManager to handle requests from
-  /// the user to enable/disable a instrumentation runtime plugin during a
-  /// debug session.
-  ///
-  /// \param irt - The type of instrumentation runtime plugin
-  /// \param enabled - If true try to enable the plugin, otherwise try to
-  /// disable it.
-  ///
-  /// \return true iff the plugin was successfully enabled/disabled.
-  bool SetInstrumentationRuntimeEnabled(lldb::InstrumentationRuntimeType irt,
-                                        bool enabled);
+  llvm::Error
+  SetInstrumentationRuntimeEnabled(lldb::InstrumentationRuntimeType irt,
+                                   bool enabled);
 
   /// Try to fetch the module specification for a module with the given file
   /// name and architecture. Process sub-classes have to override this method
