@@ -232,38 +232,36 @@ inline match_poison m_Poison() { return match_poison(); }
 inline bind_const_int m_ConstantInt(uint64_t &C) { return C; }
 
 /// Matching combinators
-template <typename LTy, typename RTy> struct match_combine_or {
-  LTy L;
-  RTy R;
+template <typename... Ty> struct match_combine_or {
+  std::tuple<Ty...> Ps;
 
-  match_combine_or(const LTy &Left, const RTy &Right) : L(Left), R(Right) {}
+  match_combine_or(const Ty &...Ps) : Ps(Ps...) {}
 
   template <typename ITy> bool match(ITy *V) const {
-    return L.match(V) || R.match(V);
+    return std::apply([V](auto &&...Ps) { return (Ps.match(V) || ...); }, Ps);
   }
 };
 
-template <typename LTy, typename RTy> struct match_combine_and {
-  LTy L;
-  RTy R;
+template <typename... Ty> struct match_combine_and {
+  std::tuple<Ty...> Ps;
 
-  match_combine_and(const LTy &Left, const RTy &Right) : L(Left), R(Right) {}
+  match_combine_and(const Ty &...Ps) : Ps(Ps...) {}
 
   template <typename ITy> bool match(ITy *V) const {
-    return L.match(V) && R.match(V);
+    return std::apply([V](auto &&...Ps) { return (Ps.match(V) && ...); }, Ps);
   }
 };
 
-/// Combine two pattern matchers matching L || R
-template <typename LTy, typename RTy>
-inline match_combine_or<LTy, RTy> m_CombineOr(const LTy &L, const RTy &R) {
-  return match_combine_or<LTy, RTy>(L, R);
+/// Combine two pattern matchers matching any of Ps patterns.
+template <typename... Ty>
+inline match_combine_or<Ty...> m_CombineOr(const Ty &...Ps) {
+  return {Ps...};
 }
 
-/// Combine two pattern matchers matching L && R
-template <typename LTy, typename RTy>
-inline match_combine_and<LTy, RTy> m_CombineAnd(const LTy &L, const RTy &R) {
-  return match_combine_and<LTy, RTy>(L, R);
+/// Combine two pattern matchers matching all of Ps patterns.
+template <typename... Ty>
+inline match_combine_and<Ty...> m_CombineAnd(const Ty &...Ps) {
+  return {Ps...};
 }
 
 /// Match a VPValue, capturing it if we match.
@@ -619,13 +617,8 @@ m_ZExtOrSelf(const Op0_t &Op0) {
   return m_CombineOr(m_ZExt(Op0), Op0);
 }
 
-template <typename Op0_t>
-inline match_combine_or<
-    match_combine_or<AllRecipe_match<Instruction::ZExt, Op0_t>,
-                     AllRecipe_match<Instruction::Trunc, Op0_t>>,
-    Op0_t>
-m_ZExtOrTruncOrSelf(const Op0_t &Op0) {
-  return m_CombineOr(m_CombineOr(m_ZExt(Op0), m_Trunc(Op0)), Op0);
+template <typename Op0_t> inline auto m_ZExtOrTruncOrSelf(const Op0_t &Op0) {
+  return m_CombineOr(m_ZExt(Op0), m_Trunc(Op0), Op0);
 }
 
 template <unsigned Opcode, typename Op0_t, typename Op1_t>
@@ -821,10 +814,8 @@ inline auto m_GetElementPtr(const Op0_t &Op0, const Op1_t &Op1) {
       Recipe_match<std::tuple<Op0_t, Op1_t>, Instruction::GetElementPtr,
                    /*Commutative*/ false, VPReplicateRecipe, VPWidenGEPRecipe>(
           Op0, Op1),
-      m_CombineOr(
-          VPInstruction_match<VPInstruction::PtrAdd, Op0_t, Op1_t>(Op0, Op1),
-          VPInstruction_match<VPInstruction::WidePtrAdd, Op0_t, Op1_t>(Op0,
-                                                                       Op1)));
+      VPInstruction_match<VPInstruction::PtrAdd, Op0_t, Op1_t>(Op0, Op1),
+      VPInstruction_match<VPInstruction::WidePtrAdd, Op0_t, Op1_t>(Op0, Op1));
 }
 
 template <typename Op0_t, typename Op1_t, typename Op2_t>
