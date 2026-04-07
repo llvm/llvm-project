@@ -239,10 +239,6 @@ struct LoopSequence {
   WithReason<bool> isWellFormedNest() const;
 
   std::vector<LoopControl> getLoopControls() const;
-  // Check if this loop's bounds are invariant in each of the `outer`
-  // constructs.
-  WithReason<bool> isRectangular(
-      const std::vector<const LoopSequence *> &outer) const;
 
 private:
   using Construct = ExecutionPartIterator::Construct;
