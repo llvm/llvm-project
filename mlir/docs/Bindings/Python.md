@@ -1180,6 +1180,29 @@ filled with `import`s from the generated files to enable `import
 mlir.dialects.<dialect-namespace>` in Python.
 
 
+#### Customizing Type Annotations
+
+The generated `__init__` methods include type annotations for operand and
+attribute arguments. Built-in mappings cover standard MLIR types and attributes,
+but dialects can extend them by adding definitions from
+[`PythonBindings.td`](https://github.com/llvm/llvm-project/blob/main/mlir/include/mlir/Bindings/Python/PythonBindings.td)
+to the same `.td` file passed to `mlir-tblgen -gen-python-op-bindings`:
+
+```tablegen
+include "mlir/Bindings/Python/PythonBindings.td"
+
+// Operand/result annotations: maps a C++ type from the ODS type constraint's
+// cppClassName to a Python type annotation, e.g.
+// `ir.Value` -> `ir.Value[my_dialect.MyTensorType]`.
+def : PythonTypeName<"::my_dialect::MyTensorType",
+                     "my_dialect.MyTensorType">;
+
+// Attribute annotations: maps a TableGen attribute def name to the Python
+// type accepted by its AttrBuilder, e.g.
+// `Union[Any, ir.Attribute]` -> `Union[my_dialect.MyValue, ir.Attribute]`.
+def : PythonAttrType<"MyCustomAttr", "my_dialect.MyValue">;
+```
+
 ### Attributes and Types
 
 Dialect attributes and types are provided in Python as subclasses of the
@@ -1307,12 +1330,12 @@ class MyInt(Dialect, name="myint"):
 
 class ConstantOp(MyInt.Operation, name="constant"):
     value: IntegerAttr
-    cst: Result[IntegerType[32]]
+    cst: Result[IntegerType[32]] = result(infer_type=True)
 
 class AddOp(MyInt.Operation, name="add"):
     lhs: Operand[IntegerType[32]]
     rhs: Operand[IntegerType[32]]
-    res: Result[IntegerType[32]]
+    res: Result[IntegerType[32]] = result(infer_type=True)
 
 # The code below requires an available MLIR context and location.
 

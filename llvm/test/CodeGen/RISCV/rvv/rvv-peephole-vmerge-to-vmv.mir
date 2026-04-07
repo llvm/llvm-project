@@ -77,7 +77,7 @@ body: |
     ; CHECK-NEXT: %pt:vr = COPY $v8
     ; CHECK-NEXT: %false:vrnov0 = COPY $v9
     ; CHECK-NEXT: %mask:vmv0 = COPY $v0
-    ; CHECK-NEXT: %true:vrnov0 = PseudoVADD_VV_M1_MASK %false, $noreg, $noreg, %mask, 4 /* vl */, 5 /* e32 */, 0 /* tu, mu */
+    ; CHECK-NEXT: %true:vrnov0 = PseudoVADD_VV_M1_MASK %false, $noreg, $noreg, %mask, 8 /* vl */, 5 /* e32 */, 0 /* tu, mu */
     ; CHECK-NEXT: %x:vr = PseudoVMV_V_V_M1 %pt, %true, 4 /* vl */, 5 /* e32 */, 0 /* tu, mu */
     %pt:vrnov0 = COPY $v8
     %false:vrnov0 = COPY $v9
@@ -200,10 +200,82 @@ body: |
     ; CHECK-NEXT: %pt:vr = COPY $v8
     ; CHECK-NEXT: %false:vrnov0 = COPY $v9
     ; CHECK-NEXT: %mask:vmv0 = COPY $v0
-    ; CHECK-NEXT: %true:vrnov0 = PseudoVADD_VV_M1_MASK %false, $noreg, $noreg, %mask, 1 /* vl */, 5 /* e32 */, 3 /* ta, ma */
+    ; CHECK-NEXT: %true:vrnov0 = PseudoVADD_VV_M1_MASK %false, $noreg, $noreg, %mask, 2 /* vl */, 5 /* e32 */, 3 /* ta, ma */
     ; CHECK-NEXT: [[PseudoVMV_V_V_M1_:%[0-9]+]]:vr = PseudoVMV_V_V_M1 %pt, %true, 1 /* vl */, 5 /* e32 */, 0 /* tu, mu */
     %pt:vrnov0 = COPY $v8
     %false:vrnov0 = COPY $v9
     %mask:vmv0 = COPY $v0
     %true:vrnov0 = PseudoVADD_VV_M1_MASK $noreg, $noreg, $noreg, %mask, 2, 5 /* e32 */, 3 /* ta, ma */
     %5:vrnov0 = PseudoVMERGE_VVM_M1 %pt, %false, %true, %mask, 1, 5 /* e32 */
+...
+---
+# Can convert because False == Passthru and True's tail policy is TU,
+# so True's tail lanes preserve passthru (= False = Passthru).
+name: same_mask_false_eq_passthru_true_tu
+body: |
+  bb.0:
+    liveins: $v8, $v0, $x8, $x9
+    ; CHECK-LABEL: name: same_mask_false_eq_passthru_true_tu
+    ; CHECK: liveins: $v8, $v0, $x8, $x9
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %false:vrnov0 = COPY $v8
+    ; CHECK-NEXT: %mask:vmv0 = COPY $v0
+    ; CHECK-NEXT: %avl1:gprnox0 = COPY $x8
+    ; CHECK-NEXT: %avl2:gprnox0 = COPY $x9
+    ; CHECK-NEXT: %true:vrnov0 = PseudoVADD_VV_M1_MASK %false, $noreg, $noreg, %mask, %avl1 /* vl */, 5 /* e32 */, 0 /* tu, mu */
+    ; CHECK-NEXT: [[PseudoVMV_V_V_M1_:%[0-9]+]]:vr = PseudoVMV_V_V_M1 %false, %true, %avl2 /* vl */, 5 /* e32 */, 0 /* tu, mu */
+    %false:vrnov0 = COPY $v8
+    %mask:vmv0 = COPY $v0
+    %avl1:gprnox0 = COPY $x8
+    %avl2:gprnox0 = COPY $x9
+    %true:vrnov0 = PseudoVADD_VV_M1_MASK %false, $noreg, $noreg, %mask, %avl1, 5 /* e32 */, 0 /* tu, mu */
+    %5:vrnov0 = PseudoVMERGE_VVM_M1 %false, %false, %true, %mask, %avl2, 5 /* e32 */
+...
+---
+# Shouldn't be converted because True's tail policy is TA, so tail lanes
+# past TrueVL could be agnostic, even though False == Passthru.
+name: same_mask_false_eq_passthru_true_ta
+body: |
+  bb.0:
+    liveins: $v8, $v0, $x8, $x9
+    ; CHECK-LABEL: name: same_mask_false_eq_passthru_true_ta
+    ; CHECK: liveins: $v8, $v0, $x8, $x9
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %false:vrnov0 = COPY $v8
+    ; CHECK-NEXT: %mask:vmv0 = COPY $v0
+    ; CHECK-NEXT: %avl1:gprnox0 = COPY $x8
+    ; CHECK-NEXT: %avl2:gprnox0 = COPY $x9
+    ; CHECK-NEXT: %true:vrnov0 = PseudoVADD_VV_M1_MASK %false, $noreg, $noreg, %mask, %avl1 /* vl */, 5 /* e32 */, 1 /* ta, mu */
+    ; CHECK-NEXT: [[PseudoVMERGE_VVM_M1_:%[0-9]+]]:vrnov0 = PseudoVMERGE_VVM_M1 %false, %false, %true, %mask, %avl2 /* vl */, 5 /* e32 */
+    %false:vrnov0 = COPY $v8
+    %mask:vmv0 = COPY $v0
+    %avl1:gprnox0 = COPY $x8
+    %avl2:gprnox0 = COPY $x9
+    %true:vrnov0 = PseudoVADD_VV_M1_MASK %false, $noreg, $noreg, %mask, %avl1, 5 /* e32 */, 1 /* ta, mu */
+    %5:vrnov0 = PseudoVMERGE_VVM_M1 %false, %false, %true, %mask, %avl2, 5 /* e32 */
+...
+---
+# Shouldn't be converted because False != Passthru, even though True's
+# tail policy is TU and MIVL could be > TrueVL.
+name: same_mask_false_ne_passthru_true_tu
+body: |
+  bb.0:
+    liveins: $v8, $v9, $v0, $x8, $x9
+    ; CHECK-LABEL: name: same_mask_false_ne_passthru_true_tu
+    ; CHECK: liveins: $v8, $v9, $v0, $x8, $x9
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %pt:vrnov0 = COPY $v8
+    ; CHECK-NEXT: %false:vrnov0 = COPY $v9
+    ; CHECK-NEXT: %mask:vmv0 = COPY $v0
+    ; CHECK-NEXT: %avl1:gprnox0 = COPY $x8
+    ; CHECK-NEXT: %avl2:gprnox0 = COPY $x9
+    ; CHECK-NEXT: %true:vrnov0 = PseudoVADD_VV_M1_MASK %false, $noreg, $noreg, %mask, %avl1 /* vl */, 5 /* e32 */, 0 /* tu, mu */
+    ; CHECK-NEXT: [[PseudoVMERGE_VVM_M1_:%[0-9]+]]:vrnov0 = PseudoVMERGE_VVM_M1 %pt, %false, %true, %mask, %avl2 /* vl */, 5 /* e32 */
+    %pt:vrnov0 = COPY $v8
+    %false:vrnov0 = COPY $v9
+    %mask:vmv0 = COPY $v0
+    %avl1:gprnox0 = COPY $x8
+    %avl2:gprnox0 = COPY $x9
+    %true:vrnov0 = PseudoVADD_VV_M1_MASK %false, $noreg, $noreg, %mask, %avl1, 5 /* e32 */, 0 /* tu, mu */
+    %5:vrnov0 = PseudoVMERGE_VVM_M1 %pt, %false, %true, %mask, %avl2, 5 /* e32 */
+...

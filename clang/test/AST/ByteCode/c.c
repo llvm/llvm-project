@@ -439,3 +439,13 @@ char *strcpy(char *restrict s1, const char *restrict s2);
 void strcpy_fn(char *x) {
   strcpy(x, (char*)&strcpy_fn);
 }
+
+/// strcpy on a non-integer pointer.
+void strcpyDouble(void) {
+  char buf[1];
+  const double test_buf[] = {'4', '2'};
+  __builtin_strcpy(buf, test_buf + 1); // all-error {{incompatible pointer types}}
+}
+
+int *iptr;
+void ignoredConditional(void) { *iptr = (((_Complex double)1.0 ? 2 : 3), a); } // all-warning {{left operand of comma operator has no effect}}

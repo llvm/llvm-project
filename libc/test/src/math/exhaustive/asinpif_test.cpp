@@ -12,7 +12,7 @@
 
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
-using LlvmLibcAsinfExhaustiveTest =
+using LlvmLibcAsinpifExhaustiveTest =
     LlvmLibcUnaryOpExhaustiveMathTest<float, mpfr::Operation::Asinpi,
                                       LIBC_NAMESPACE::asinpif>;
 
@@ -20,7 +20,7 @@ using LlvmLibcAsinfExhaustiveTest =
 static constexpr uint32_t POS_START = 0x0000'0000U;
 static constexpr uint32_t POS_STOP = 0x7f80'0000U;
 
-TEST_F(LlvmLibcAsinfExhaustiveTest, PostiveRange) {
+TEST_F(LlvmLibcAsinpifExhaustiveTest, PostiveRange) {
   test_full_range_all_roundings(POS_START, POS_STOP);
 }
 
@@ -28,6 +28,6 @@ TEST_F(LlvmLibcAsinfExhaustiveTest, PostiveRange) {
 static constexpr uint32_t NEG_START = 0xb000'0000U;
 static constexpr uint32_t NEG_STOP = 0xff80'0000U;
 
-TEST_F(LlvmLibcAsinfExhaustiveTest, NegativeRange) {
+TEST_F(LlvmLibcAsinpifExhaustiveTest, NegativeRange) {
   test_full_range_all_roundings(NEG_START, NEG_STOP);
 }

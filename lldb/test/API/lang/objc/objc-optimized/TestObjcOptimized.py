@@ -6,7 +6,6 @@ or 'self' variable was not properly read if the compiler
 optimized it into a register.
 """
 
-
 import lldb
 import re
 
@@ -57,10 +56,20 @@ class ObjcOptimizedTestCase(TestBase):
         if mo:
             desired_pointer = mo.group(0)
 
+        # Use FixAddress to strip top-byte metadata (PtrAuth tags, MTE tags).
+        process = self.dbg.GetSelectedTarget().GetProcess()
+        desired_addr = process.FixAddress(int(desired_pointer, 16))
+
         self.expect(
             "expression (self)",
-            substrs=[("(%s *) $1 = " % self.myclass), desired_pointer],
+            substrs=["(%s *) $1 = " % self.myclass],
         )
+        interp.HandleCommand("expression (self)", result)
+        expr_output = result.GetOutput()
+        mo = re.search("0x[0-9a-f]+", expr_output)
+        self.assertTrue(mo, "Expected a pointer in expression output")
+        expr_addr = process.FixAddress(int(mo.group(0), 16))
+        self.assertEqual(desired_addr, expr_addr)
 
         self.expect(
             "expression self->non_member",

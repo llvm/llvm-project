@@ -18,6 +18,16 @@ def FeatureFMA : SubtargetFeature<"fmaf",
   "Enable single precision FMA (not as fast as mul+add, but fused)"
 >;
 
+class SubtargetFeatureFlatOffsetBits <int Value> : SubtargetFeature<
+  "flat-offset-bits-" # Value,
+  "FlatOffsetBitWidth",
+  !cast<string>(Value),
+  "Number of bits for flat offset encoding"
+>;
+
+def FeatureFlatOffsetBits12 : SubtargetFeatureFlatOffsetBits<12>;
+def FeatureFlatOffsetBits24 : SubtargetFeatureFlatOffsetBits<24>;
+
 // Addressable local memory size is the maximum number of bytes of LDS that can
 // be allocated to a single workgroup.
 class SubtargetFeatureAddressableLocalMemorySize <int Value> : SubtargetFeature<

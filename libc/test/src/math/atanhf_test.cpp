@@ -10,10 +10,17 @@
 #include "hdr/math_macros.h"
 #include "hdr/stdint_proxy.h"
 #include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/macros/optimization.h"
 #include "src/math/atanhf.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
+
+#ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
+#define TOLERANCE 1
+#else
+#define TOLERANCE 0
+#endif // LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
 using LlvmLibcAtanhfTest = LIBC_NAMESPACE::testing::FPTest<float>;
 using LIBC_NAMESPACE::Sign;
@@ -99,9 +106,9 @@ TEST_F(LlvmLibcAtanhfTest, InFloatRange) {
   for (uint32_t i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
     float x = FPBits(v).get_val();
     ASSERT_MPFR_MATCH(mpfr::Operation::Atanh, x, LIBC_NAMESPACE::atanhf(x),
-                      0.5);
+                      TOLERANCE + 0.5);
     ASSERT_MPFR_MATCH(mpfr::Operation::Atanh, -x, LIBC_NAMESPACE::atanhf(-x),
-                      0.5);
+                      TOLERANCE + 0.5);
   }
 }
 

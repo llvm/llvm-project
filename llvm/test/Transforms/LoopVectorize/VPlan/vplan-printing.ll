@@ -6,7 +6,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 
 ; Tests for printing VPlans.
 
-define void @print_call_and_memory(i64 %n, ptr noalias %y, ptr noalias %x) nounwind uwtable {
+define void @print_call_and_memory(i64 %n, ptr noalias %y, ptr noalias %x) {
 ; CHECK-LABEL: VPlan for loop in 'print_call_and_memory'
 ; CHECK:  VPlan 'Initial VPlan for VF={4},UF>=1' {
 ; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
@@ -53,7 +53,7 @@ define void @print_call_and_memory(i64 %n, ptr noalias %y, ptr noalias %x) nounw
 ; CHECK-NEXT:    IR   %iv = phi i64 [ %iv.next, %for.body ], [ 0, %for.body.preheader ] (extra operand: vp<%bc.resume.val> from scalar.ph)
 ; CHECK-NEXT:    IR   %arrayidx = getelementptr inbounds float, ptr %y, i64 %iv
 ; CHECK-NEXT:    IR   %lv = load float, ptr %arrayidx, align 4
-; CHECK-NEXT:    IR   %call = tail call float @llvm.sqrt.f32(float %lv) #3
+; CHECK-NEXT:    IR   %call = tail call float @llvm.sqrt.f32(float %lv)
 ; CHECK-NEXT:    IR   %arrayidx2 = getelementptr inbounds float, ptr %x, i64 %iv
 ; CHECK-NEXT:    IR   store float %call, ptr %arrayidx2, align 4
 ; CHECK-NEXT:    IR   %iv.next = add i64 %iv, 1
@@ -80,7 +80,7 @@ for.end:                                          ; preds = %for.body, %entry
   ret void
 }
 
-define void @print_widen_gep_and_select(i64 %n, ptr noalias %y, ptr noalias %x, ptr %z) nounwind uwtable {
+define void @print_widen_gep_and_select(i64 %n, ptr noalias %y, ptr noalias %x, ptr %z) {
 ; CHECK-LABEL: VPlan for loop in 'print_widen_gep_and_select'
 ; CHECK:  VPlan 'Initial VPlan for VF={4},UF>=1' {
 ; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
@@ -1055,9 +1055,9 @@ define i16 @print_first_order_recurrence_and_result(ptr %ptr) {
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
+; CHECK-NEXT:    EMIT vp<%vector.recur.extract.for.phi> = extract-penultimate-element ir<%for.1.next>
 ; CHECK-NEXT:    EMIT vp<[[VP9:%[0-9]+]]> = extract-last-part ir<%for.1.next>
 ; CHECK-NEXT:    EMIT vp<%vector.recur.extract> = extract-last-lane vp<[[VP9]]>
-; CHECK-NEXT:    EMIT vp<%vector.recur.extract.for.phi> = extract-penultimate-element ir<%for.1.next>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<1000>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph

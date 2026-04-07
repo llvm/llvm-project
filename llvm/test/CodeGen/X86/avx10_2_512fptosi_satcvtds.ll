@@ -3,6 +3,24 @@
 ; RUN: llc < %s -mtriple=x86_64-linux -mattr=+avx10.2 | FileCheck %s --check-prefixes=CHECK,X64
 
 ; VCVTTPD2DQS
+define <8 x i24> @test_signed_v8i24_v8f64(<8 x double> %f) nounwind {
+; X86-LABEL: test_signed_v8i24_v8f64:
+; X86:       # %bb.0:
+; X86-NEXT:    vcvttpd2dqs %zmm0, %ymm0
+; X86-NEXT:    vpmaxsd {{\.?LCPI[0-9]+_[0-9]+}}{1to8}, %ymm0, %ymm0
+; X86-NEXT:    vpminsd {{\.?LCPI[0-9]+_[0-9]+}}{1to8}, %ymm0, %ymm0
+; X86-NEXT:    retl
+;
+; X64-LABEL: test_signed_v8i24_v8f64:
+; X64:       # %bb.0:
+; X64-NEXT:    vcvttpd2dqs %zmm0, %ymm0
+; X64-NEXT:    vpmaxsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm0, %ymm0
+; X64-NEXT:    vpminsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm0, %ymm0
+; X64-NEXT:    retq
+  %x = call  <8 x i24> @llvm.fptosi.sat.v8i24.v8f64(<8 x double> %f)
+  ret <8 x i24> %x
+}
+
 define <8 x i32> @test_signed_v8i32_v8f64(<8 x double> %f) nounwind {
 ; CHECK-LABEL: test_signed_v8i32_v8f64:
 ; CHECK:       # %bb.0:
@@ -13,6 +31,24 @@ define <8 x i32> @test_signed_v8i32_v8f64(<8 x double> %f) nounwind {
 }
 
 ; VCVTTPD2QQS
+define <8 x i48> @test_signed_v8i48_v8f64(<8 x double> %f) nounwind {
+; X86-LABEL: test_signed_v8i48_v8f64:
+; X86:       # %bb.0:
+; X86-NEXT:    vcvttpd2qqs %zmm0, %zmm0
+; X86-NEXT:    vpmaxsq {{\.?LCPI[0-9]+_[0-9]+}}{1to8}, %zmm0, %zmm0
+; X86-NEXT:    vpminsq {{\.?LCPI[0-9]+_[0-9]+}}{1to8}, %zmm0, %zmm0
+; X86-NEXT:    retl
+;
+; X64-LABEL: test_signed_v8i48_v8f64:
+; X64:       # %bb.0:
+; X64-NEXT:    vcvttpd2qqs %zmm0, %zmm0
+; X64-NEXT:    vpmaxsq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %zmm0
+; X64-NEXT:    vpminsq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %zmm0
+; X64-NEXT:    retq
+  %x = call <8 x i48> @llvm.fptosi.sat.v8i48.v8f64(<8 x double> %f)
+  ret <8 x i48> %x
+}
+
 define <8 x i64> @test_signed_v8i64_v8f64(<8 x double> %f) nounwind {
 ; CHECK-LABEL: test_signed_v8i64_v8f64:
 ; CHECK:       # %bb.0:
@@ -23,6 +59,22 @@ define <8 x i64> @test_signed_v8i64_v8f64(<8 x double> %f) nounwind {
 }
 
 ; VCVTTPD2UDQS
+define <8 x i24> @test_unsigned_v8i24_v8f64(<8 x double> %f) nounwind {
+; X86-LABEL: test_unsigned_v8i24_v8f64:
+; X86:       # %bb.0:
+; X86-NEXT:    vcvttpd2udqs %zmm0, %ymm0
+; X86-NEXT:    vpminud {{\.?LCPI[0-9]+_[0-9]+}}{1to8}, %ymm0, %ymm0
+; X86-NEXT:    retl
+;
+; X64-LABEL: test_unsigned_v8i24_v8f64:
+; X64:       # %bb.0:
+; X64-NEXT:    vcvttpd2udqs %zmm0, %ymm0
+; X64-NEXT:    vpminud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm0, %ymm0
+; X64-NEXT:    retq
+  %x = call  <8 x i24> @llvm.fptoui.sat.v8i24.v8f64(<8 x double> %f)
+ ret <8 x i24> %x
+}
+
 define <8 x i32> @test_unsigned_v8i32_v8f64(<8 x double> %f) nounwind {
 ; CHECK-LABEL: test_unsigned_v8i32_v8f64:
 ; CHECK:       # %bb.0:
@@ -33,6 +85,22 @@ define <8 x i32> @test_unsigned_v8i32_v8f64(<8 x double> %f) nounwind {
 }
 
 ; VCVTTPD2UQQS
+define <8 x i48> @test_unsigned_v8i48_v8f64(<8 x double> %f) nounwind {
+; X86-LABEL: test_unsigned_v8i48_v8f64:
+; X86:       # %bb.0:
+; X86-NEXT:    vcvttpd2uqqs %zmm0, %zmm0
+; X86-NEXT:    vpminuq {{\.?LCPI[0-9]+_[0-9]+}}{1to8}, %zmm0, %zmm0
+; X86-NEXT:    retl
+;
+; X64-LABEL: test_unsigned_v8i48_v8f64:
+; X64:       # %bb.0:
+; X64-NEXT:    vcvttpd2uqqs %zmm0, %zmm0
+; X64-NEXT:    vpminuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %zmm0
+; X64-NEXT:    retq
+  %x = call  <8 x i48> @llvm.fptoui.sat.v8i48.v8f64(<8 x double> %f)
+  ret <8 x i48> %x
+}
+
 define <8 x i64> @test_unsigned_v8i64_v8f64(<8 x double> %f) nounwind {
 ; CHECK-LABEL: test_unsigned_v8i64_v8f64:
 ; CHECK:       # %bb.0:
@@ -43,6 +111,24 @@ define <8 x i64> @test_unsigned_v8i64_v8f64(<8 x double> %f) nounwind {
 }
 
 ; VCVTTPS2DQS
+define <16 x i24> @test_signed_v16i24_v16f32(<16 x float> %f) nounwind {
+; X86-LABEL: test_signed_v16i24_v16f32:
+; X86:       # %bb.0:
+; X86-NEXT:    vcvttps2dqs %zmm0, %zmm0
+; X86-NEXT:    vpmaxsd {{\.?LCPI[0-9]+_[0-9]+}}{1to16}, %zmm0, %zmm0
+; X86-NEXT:    vpminsd {{\.?LCPI[0-9]+_[0-9]+}}{1to16}, %zmm0, %zmm0
+; X86-NEXT:    retl
+;
+; X64-LABEL: test_signed_v16i24_v16f32:
+; X64:       # %bb.0:
+; X64-NEXT:    vcvttps2dqs %zmm0, %zmm0
+; X64-NEXT:    vpmaxsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm0, %zmm0
+; X64-NEXT:    vpminsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm0, %zmm0
+; X64-NEXT:    retq
+  %x = call  <16 x i24> @llvm.fptosi.sat.v16i24.v16f32(<16 x float> %f)
+  ret <16 x i24> %x
+}
+
 define <16 x i32> @test_signed_v16i32_v16f32(<16 x float> %f) nounwind {
 ; CHECK-LABEL: test_signed_v16i32_v16f32:
 ; CHECK:       # %bb.0:
@@ -53,6 +139,22 @@ define <16 x i32> @test_signed_v16i32_v16f32(<16 x float> %f) nounwind {
 }
 
 ; VCVTTPS2UDQS
+define <16 x i24> @test_unsigned_v16i24_v16f32(<16 x float> %f) nounwind {
+; X86-LABEL: test_unsigned_v16i24_v16f32:
+; X86:       # %bb.0:
+; X86-NEXT:    vcvttps2udqs %zmm0, %zmm0
+; X86-NEXT:    vpminud {{\.?LCPI[0-9]+_[0-9]+}}{1to16}, %zmm0, %zmm0
+; X86-NEXT:    retl
+;
+; X64-LABEL: test_unsigned_v16i24_v16f32:
+; X64:       # %bb.0:
+; X64-NEXT:    vcvttps2udqs %zmm0, %zmm0
+; X64-NEXT:    vpminud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm0, %zmm0
+; X64-NEXT:    retq
+  %x = call  <16 x i24> @llvm.fptoui.sat.v16i24.v16f32(<16 x float> %f)
+  ret <16 x i24> %x
+}
+
 define <16 x i32> @test_unsigned_v16i32_v16f32(<16 x float> %f) nounwind {
 ; CHECK-LABEL: test_unsigned_v16i32_v16f32:
 ; CHECK:       # %bb.0:
@@ -61,7 +163,26 @@ define <16 x i32> @test_unsigned_v16i32_v16f32(<16 x float> %f) nounwind {
   %x = call  <16 x i32> @llvm.fptoui.sat.v16i32.v16f32(<16 x float> %f)
   ret <16 x i32> %x
 }
+
 ; VCVTTPS2QQS
+define <8 x i48> @test_signed_v8i48_v8f32(<8 x float> %f) nounwind {
+; X86-LABEL: test_signed_v8i48_v8f32:
+; X86:       # %bb.0:
+; X86-NEXT:    vcvttps2qqs %ymm0, %zmm0
+; X86-NEXT:    vpmaxsq {{\.?LCPI[0-9]+_[0-9]+}}{1to8}, %zmm0, %zmm0
+; X86-NEXT:    vpminsq {{\.?LCPI[0-9]+_[0-9]+}}{1to8}, %zmm0, %zmm0
+; X86-NEXT:    retl
+;
+; X64-LABEL: test_signed_v8i48_v8f32:
+; X64:       # %bb.0:
+; X64-NEXT:    vcvttps2qqs %ymm0, %zmm0
+; X64-NEXT:    vpmaxsq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %zmm0
+; X64-NEXT:    vpminsq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %zmm0
+; X64-NEXT:    retq
+  %x = call  <8 x i48> @llvm.fptosi.sat.v8i48.v8f32(<8 x float> %f)
+  ret <8 x i48> %x
+}
+
 define <8 x i64> @test_signed_v8i64_v8f32(<8 x float> %f) nounwind {
 ; CHECK-LABEL: test_signed_v8i64_v8f32:
 ; CHECK:       # %bb.0:
@@ -72,6 +193,22 @@ define <8 x i64> @test_signed_v8i64_v8f32(<8 x float> %f) nounwind {
 }
 
 ; VCVTTPS2UQQS
+define <8 x i48> @test_unsigned_v8i48_v8f32(<8 x float> %f) nounwind {
+; X86-LABEL: test_unsigned_v8i48_v8f32:
+; X86:       # %bb.0:
+; X86-NEXT:    vcvttps2uqqs %ymm0, %zmm0
+; X86-NEXT:    vpminuq {{\.?LCPI[0-9]+_[0-9]+}}{1to8}, %zmm0, %zmm0
+; X86-NEXT:    retl
+;
+; X64-LABEL: test_unsigned_v8i48_v8f32:
+; X64:       # %bb.0:
+; X64-NEXT:    vcvttps2uqqs %ymm0, %zmm0
+; X64-NEXT:    vpminuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %zmm0
+; X64-NEXT:    retq
+  %x = call  <8 x i48> @llvm.fptoui.sat.v8i48.v8f32(<8 x float> %f)
+  ret <8 x i48> %x
+}
+
 define <8 x i64> @test_unsigned_v8i64_v8f32(<8 x float> %f) nounwind {
 ; CHECK-LABEL: test_unsigned_v8i64_v8f32:
 ; CHECK:       # %bb.0:
@@ -80,6 +217,3 @@ define <8 x i64> @test_unsigned_v8i64_v8f32(<8 x float> %f) nounwind {
   %x = call  <8 x i64> @llvm.fptoui.sat.v8i64.v8f32(<8 x float> %f)
   ret <8 x i64> %x
 }
-;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; X64: {{.*}}
-; X86: {{.*}}

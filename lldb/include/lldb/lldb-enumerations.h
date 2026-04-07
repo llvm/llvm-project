@@ -132,6 +132,10 @@ FLAGS_ENUM(LaunchFlags){
                     ///< permissions but instead inherit them from its parent.
     eLaunchFlagMemoryTagging =
         (1u << 13), ///< Launch process with memory tagging explicitly enabled.
+    eLaunchFlagUsePipes =
+        (1u << 14), ///< Use anonymous pipes for stdio instead of a ConPTY on
+                    ///< Windows. Useful when terminal emulation is not needed
+                    ///< (e.g. lldb-dap internalConsole mode).
 };
 
 /// Thread Run Modes.
@@ -926,7 +930,8 @@ FLAGS_ENUM(TypeOptions){eTypeOptionNone = (0u),
                         eTypeOptionHideNames = (1u << 6),
                         eTypeOptionNonCacheable = (1u << 7),
                         eTypeOptionHideEmptyAggregates = (1u << 8),
-                        eTypeOptionFrontEndWantsDereference = (1u << 9)};
+                        eTypeOptionFrontEndWantsDereference = (1u << 9),
+                        eTypeOptionCustomSubscripting = (1u << 10)};
 
 /// This is the return value for frame comparisons.  If you are comparing frame
 /// A to frame B the following cases arise:

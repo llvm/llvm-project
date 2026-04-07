@@ -1405,6 +1405,8 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
     break;
   }
 
+  case Builtin::BIbzero:
+  case Builtin::BI__builtin_bzero:
   case Builtin::BImemcpy:
   case Builtin::BI__builtin_memcpy:
   case Builtin::BImemmove:
@@ -1416,6 +1418,13 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
     DiagID = diag::warn_fortify_source_overflow;
     SourceSize = ComputeExplicitObjectSizeArgument(TheCall->getNumArgs() - 1);
     DestinationSize = ComputeSizeArgument(0);
+    break;
+  }
+  case Builtin::BIbcopy:
+  case Builtin::BI__builtin_bcopy: {
+    DiagID = diag::warn_fortify_source_overflow;
+    SourceSize = ComputeExplicitObjectSizeArgument(TheCall->getNumArgs() - 1);
+    DestinationSize = ComputeSizeArgument(1);
     break;
   }
   case Builtin::BIsnprintf:
@@ -2178,9 +2187,10 @@ static bool
 checkMathBuiltinElementType(Sema &S, SourceLocation Loc, QualType ArgTy,
                             Sema::EltwiseBuiltinArgTyRestriction ArgTyRestr,
                             int ArgOrdinal) {
-  QualType EltTy = ArgTy;
-  if (auto *VecTy = EltTy->getAs<VectorType>())
-    EltTy = VecTy->getElementType();
+  clang::QualType EltTy =
+      ArgTy->isVectorType()   ? ArgTy->getAs<VectorType>()->getElementType()
+      : ArgTy->isMatrixType() ? ArgTy->getAs<MatrixType>()->getElementType()
+                              : ArgTy;
 
   switch (ArgTyRestr) {
   case Sema::EltwiseBuiltinArgTyRestriction::None:
@@ -2192,6 +2202,7 @@ checkMathBuiltinElementType(Sema &S, SourceLocation Loc, QualType ArgTy,
     break;
   case Sema::EltwiseBuiltinArgTyRestriction::FloatTy:
     if (!EltTy->isRealFloatingType()) {
+      // FIXME: make diagnostic's wording correct for matrices
       return S.Diag(Loc, diag::err_builtin_invalid_arg_type)
              << ArgOrdinal << /* scalar or vector */ 5 << /* no int */ 0
              << /* floating-point */ 1 << ArgTy;
@@ -3049,15 +3060,11 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     if (BuiltinSetjmp(TheCall))
       return ExprError();
     break;
-  case Builtin::BI__builtin_classify_type:
-    if (checkArgCount(TheCall, 1))
-      return true;
-    TheCall->setType(Context.IntTy);
-    break;
   case Builtin::BI__builtin_complex:
     if (BuiltinComplex(TheCall))
       return ExprError();
     break;
+  case Builtin::BI__builtin_classify_type:
   case Builtin::BI__builtin_constant_p: {
     if (checkArgCount(TheCall, 1))
       return true;
@@ -11301,6 +11308,8 @@ struct IntRange {
 
     if (const auto *VT = dyn_cast<VectorType>(T))
       T = VT->getElementType().getTypePtr();
+    if (const auto *MT = dyn_cast<ConstantMatrixType>(T))
+      T = MT->getElementType().getTypePtr();
     if (const auto *CT = dyn_cast<ComplexType>(T))
       T = CT->getElementType().getTypePtr();
     if (const auto *AT = dyn_cast<AtomicType>(T))
@@ -11350,6 +11359,8 @@ struct IntRange {
 
     if (const VectorType *VT = dyn_cast<VectorType>(T))
       T = VT->getElementType().getTypePtr();
+    if (const auto *MT = dyn_cast<ConstantMatrixType>(T))
+      T = MT->getElementType().getTypePtr();
     if (const ComplexType *CT = dyn_cast<ComplexType>(T))
       T = CT->getElementType().getTypePtr();
     if (const AtomicType *AT = dyn_cast<AtomicType>(T))
@@ -11843,6 +11854,13 @@ static bool IsSameFloatAfterCast(const APValue &value,
   if (value.isVector()) {
     for (unsigned i = 0, e = value.getVectorLength(); i != e; ++i)
       if (!IsSameFloatAfterCast(value.getVectorElt(i), Src, Tgt))
+        return false;
+    return true;
+  }
+
+  if (value.isMatrix()) {
+    for (unsigned i = 0, e = value.getMatrixNumElements(); i != e; ++i)
+      if (!IsSameFloatAfterCast(value.getMatrixElt(i), Src, Tgt))
         return false;
     return true;
   }
@@ -12994,6 +13012,27 @@ void Sema::CheckImplicitConversion(Expr *E, QualType T, SourceLocation CC,
   else if (auto *DictionaryLiteral = dyn_cast<ObjCDictionaryLiteral>(E))
     ObjC().checkDictionaryLiteral(QualType(Target, 0), DictionaryLiteral);
 
+  // Strip complex types.
+  if (isa<ComplexType>(Source)) {
+    if (!isa<ComplexType>(Target)) {
+      if (SourceMgr.isInSystemMacro(CC) || Target->isBooleanType())
+        return;
+
+      if (!getLangOpts().CPlusPlus && Target->isVectorType()) {
+        return DiagnoseImpCast(*this, E, T, CC,
+                               diag::err_impcast_incompatible_type);
+      }
+
+      return DiagnoseImpCast(*this, E, T, CC,
+                             getLangOpts().CPlusPlus
+                                 ? diag::err_impcast_complex_scalar
+                                 : diag::warn_impcast_complex_scalar);
+    }
+
+    Source = cast<ComplexType>(Source)->getElementType().getTypePtr();
+    Target = cast<ComplexType>(Target)->getElementType().getTypePtr();
+  }
+
   // Strip vector types.
   if (isa<VectorType>(Source)) {
     if (Target->isSveVLSBuiltinType() &&
@@ -13036,11 +13075,12 @@ void Sema::CheckImplicitConversion(Expr *E, QualType T, SourceLocation CC,
   if (const auto *VecTy = dyn_cast<VectorType>(Target))
     Target = VecTy->getElementType().getTypePtr();
 
+  // Strip matrix types.
   if (isa<ConstantMatrixType>(Source)) {
     if (Target->isScalarType())
       return DiagnoseImpCast(*this, E, T, CC, diag::warn_impcast_matrix_scalar);
 
-    if (getLangOpts().HLSL &&
+    if (getLangOpts().HLSL && isa<ConstantMatrixType>(Target) &&
         Target->castAs<ConstantMatrixType>()->getNumElementsFlattened() <
             Source->castAs<ConstantMatrixType>()->getNumElementsFlattened()) {
       // Diagnose Matrix truncation but don't return. We may also want to
@@ -13048,22 +13088,12 @@ void Sema::CheckImplicitConversion(Expr *E, QualType T, SourceLocation CC,
       DiagnoseImpCast(*this, E, T, CC,
                       diag::warn_hlsl_impcast_matrix_truncation);
     }
-  }
-  // Strip complex types.
-  if (isa<ComplexType>(Source)) {
-    if (!isa<ComplexType>(Target)) {
-      if (SourceMgr.isInSystemMacro(CC) || Target->isBooleanType())
-        return;
 
-      return DiagnoseImpCast(*this, E, T, CC,
-                             getLangOpts().CPlusPlus
-                                 ? diag::err_impcast_complex_scalar
-                                 : diag::warn_impcast_complex_scalar);
-    }
-
-    Source = cast<ComplexType>(Source)->getElementType().getTypePtr();
-    Target = cast<ComplexType>(Target)->getElementType().getTypePtr();
+    Source = cast<ConstantMatrixType>(Source)->getElementType().getTypePtr();
+    Target = cast<ConstantMatrixType>(Target)->getElementType().getTypePtr();
   }
+  if (const auto *MatTy = dyn_cast<ConstantMatrixType>(Target))
+    Target = MatTy->getElementType().getTypePtr();
 
   const BuiltinType *SourceBT = dyn_cast<BuiltinType>(Source);
   const BuiltinType *TargetBT = dyn_cast<BuiltinType>(Target);

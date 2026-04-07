@@ -77,7 +77,8 @@ TEST(LlvmLibcMkTime, InvalidSeconds) {
                       .tm_wday = 0,
                       .tm_yday = 0,
                       .tm_isdst = 0};
-    EXPECT_THAT(LIBC_NAMESPACE::mktime(&tm_data), Succeeds(60));
+    EXPECT_THAT(LIBC_NAMESPACE::mktime(&tm_data),
+                Succeeds(static_cast<time_t>(60)));
     EXPECT_TM_EQ((tm{.tm_sec = 0,
                      .tm_min = 1,
                      .tm_hour = 0,

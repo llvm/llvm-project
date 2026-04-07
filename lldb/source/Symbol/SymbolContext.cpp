@@ -685,7 +685,7 @@ llvm::Error
 SymbolContext::GetAddressRangeFromHereToEndLine(uint32_t end_line,
                                                 AddressRange &range) {
   if (!line_entry.IsValid()) {
-    return llvm::createStringError("Symbol context has no line table.");
+    return llvm::createStringError("symbol context has no line table");
   }
 
   range = line_entry.range;
@@ -922,7 +922,7 @@ Mangled SymbolContext::GetPossiblyInlinedFunctionName() const {
 
   // Sometimes an inline frame may not have mangling information,
   // but does have a valid name.
-  return Mangled{inline_info->GetName().AsCString()};
+  return Mangled{inline_info->GetName()};
 }
 
 //
@@ -1113,7 +1113,7 @@ bool SymbolContextSpecifier::AddressMatches(lldb::addr_t addr) {
   if (m_type & eAddressRangeSpecified) {
 
   } else {
-    Address match_address(addr, nullptr);
+    Address match_address(addr);
     SymbolContext sc;
     m_target_sp->GetImages().ResolveSymbolContextForAddress(
         match_address, eSymbolContextEverything, sc);

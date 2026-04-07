@@ -210,7 +210,7 @@ void D::y() {}
 
 // CIR-RTTI:  cir.globa{{.*}} @_ZTVN10__cxxabiv121__vmi_class_type_infoE : !cir.ptr<!cir.ptr<!u8i>>
 
-// CIR-RTTI:  cir.global{{.*}} @_ZTS1D = #cir.const_array<"1D" : !cir.array<!s8i x 2>> : !cir.array<!s8i x 2>
+// CIR-RTTI:  cir.global{{.*}} @_ZTS1D = #cir.const_array<"1D" : !cir.array<!s8i x 2>, trailing_zeros> : !cir.array<!s8i x 3>
 
 // CIR-RTTI:      cir.global{{.*}} @_ZTI1D = #cir.typeinfo<{
 // CIR-RTTI-SAME:   #cir.global_view<@_ZTVN10__cxxabiv121__vmi_class_type_infoE, [2 : i32]> : !cir.ptr<!u8i>,
@@ -224,7 +224,7 @@ void D::y() {}
 // CIR-RTTI: cir.global{{.*}} @_ZTV1A : !rec_anon_struct3
 
 // LLVM-RTTI: @_ZTVN10__cxxabiv121__vmi_class_type_infoE = external global ptr
-// LLVM-RTTI: @_ZTS1D = global [2 x i8] c"1D", align 1
+// LLVM-RTTI: @_ZTS1D = global [3 x i8] c"1D\00", align 1
 
 // LLVM-RTTI:      @_ZTI1D = constant { ptr, ptr, i32, i32, ptr, i64, ptr, i64 } {
 // LLVM-RTTI-SAME:   ptr getelementptr (i8, ptr @_ZTVN10__cxxabiv121__vmi_class_type_infoE, i64 16),
@@ -540,9 +540,9 @@ D::D() {}
 // OGCG-COMMON:   %[[THIS:.*]] = load ptr, ptr %[[THIS_ADDR]]
 // OGCG-COMMON:   %[[A_ADDR:.*]] = getelementptr inbounds i8, ptr %[[THIS]], i64 40
 // OGCG-COMMON:   call void @_ZN1AC2Ev(ptr {{.*}} %[[A_ADDR]])
-// OGCG-COMMON:   call void @_ZN1BC2Ev(ptr {{.*}} %[[THIS]], ptr {{.*}} getelementptr inbounds (ptr, ptr @_ZTT1D, i64 1))
+// OGCG-COMMON:   call void @_ZN1BC2Ev(ptr {{.*}} %[[THIS]], ptr {{.*}} getelementptr inbounds nuw (i8, ptr @_ZTT1D, i64 8))
 // OGCG-COMMON:   %[[C_ADDR:.*]] = getelementptr inbounds i8, ptr %[[THIS]], i64 16
-// OGCG-COMMON:   call void @_ZN1CC2Ev(ptr {{.*}} %[[C_ADDR]], ptr {{.*}} getelementptr inbounds (ptr, ptr @_ZTT1D, i64 3))
+// OGCG-COMMON:   call void @_ZN1CC2Ev(ptr {{.*}} %[[C_ADDR]], ptr {{.*}} getelementptr inbounds nuw (i8, ptr @_ZTT1D, i64 24))
 // OGCG-COMMON:   store ptr getelementptr inbounds inrange(-24, 16) ({ [5 x ptr], [4 x ptr], [4 x ptr] }, ptr @_ZTV1D, i32 0, i32 0, i32 3), ptr %[[THIS]]
 // OGCG-COMMON:   %[[A_ADDR:.*]] = getelementptr inbounds i8, ptr %[[THIS]], i64 40
 // OGCG-COMMON:   store ptr getelementptr inbounds inrange(-24, 8) ({ [5 x ptr], [4 x ptr], [4 x ptr] }, ptr @_ZTV1D, i32 0, i32 2, i32 3), ptr %[[A_ADDR]]

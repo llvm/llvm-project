@@ -15,7 +15,7 @@ contains
 end program test_proc_ptr
 
 ! Check that fun_ptr is declared with correct type
-! CHECK-DAG: ![[INT:.*]] = !DIBasicType(name: "integer", size: 32, encoding: DW_ATE_signed)
+! CHECK-DAG: ![[INT:.*]] = !DIBasicType(name: "integer(kind=4)", size: 32, encoding: DW_ATE_signed)
 ! CHECK-DAG: ![[PTR_INT:.*]] = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: ![[INT]], size: 64)
 
 ! Check that fun_ptr variable is a pointer to a subroutine type

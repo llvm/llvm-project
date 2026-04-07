@@ -56,7 +56,8 @@ enum InlineStrategy {
 enum LoadScriptFromSymFile {
   eLoadScriptFromSymFileTrue,
   eLoadScriptFromSymFileFalse,
-  eLoadScriptFromSymFileWarn
+  eLoadScriptFromSymFileWarn,
+  eLoadScriptFromSymFileTrusted,
 };
 
 enum LoadCWDlldbinitFile {
@@ -1115,10 +1116,9 @@ public:
       LoadDependentFiles load_dependent_files = eLoadDependentsDefault);
 
   bool LoadScriptingResources(std::list<Status> &errors,
-                              Stream &feedback_stream,
                               bool continue_on_error = true) {
-    return m_images.LoadScriptingResourcesInTarget(
-        this, errors, feedback_stream, continue_on_error);
+    return m_images.LoadScriptingResourcesInTarget(this, errors,
+                                                   continue_on_error);
   }
 
   /// Get accessor for the images for this process.
@@ -1842,6 +1842,8 @@ protected:
   /// more usefully in the Dummy target where you can't know exactly what
   /// signals you will have.
   llvm::StringMap<DummySignalValues> m_dummy_signals;
+
+  lldb::RegisterTypeBuilderSP m_register_type_builder_sp;
 
   static void ImageSearchPathsChanged(const PathMappingList &path_list,
                                       void *baton);

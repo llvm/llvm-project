@@ -152,6 +152,7 @@ mlir::LogicalResult CIRGenFunction::emitStmt(const Stmt *s,
   case Stmt::SEHExceptStmtClass:
   case Stmt::SEHFinallyStmtClass:
   case Stmt::MSDependentExistsStmtClass:
+  case Stmt::UnresolvedSYCLKernelCallStmtClass:
     llvm_unreachable("invalid statement class to emit generically");
   case Stmt::BreakStmtClass:
   case Stmt::NullStmtClass:
@@ -487,8 +488,8 @@ mlir::LogicalResult CIRGenFunction::emitLabelStmt(const clang::LabelStmt &s) {
 }
 
 // Add a terminating yield on a body region if no other terminators are used.
-static void terminateBody(CIRGenBuilderTy &builder, mlir::Region &r,
-                          mlir::Location loc) {
+void CIRGenFunction::terminateStructuredRegionBody(mlir::Region &r,
+                                                   mlir::Location loc) {
   if (r.empty())
     return;
 
@@ -978,7 +979,7 @@ CIRGenFunction::emitCXXForRangeStmt(const CXXForRangeStmt &s,
   if (res.failed())
     return res;
 
-  terminateBody(builder, forOp.getBody(), getLoc(s.getEndLoc()));
+  terminateStructuredRegionBody(forOp.getBody(), getLoc(s.getEndLoc()));
   return mlir::success();
 }
 
@@ -1050,7 +1051,7 @@ mlir::LogicalResult CIRGenFunction::emitForStmt(const ForStmt &s) {
   if (res.failed())
     return res;
 
-  terminateBody(builder, forOp.getBody(), getLoc(s.getEndLoc()));
+  terminateStructuredRegionBody(forOp.getBody(), getLoc(s.getEndLoc()));
   return mlir::success();
 }
 
@@ -1101,7 +1102,7 @@ mlir::LogicalResult CIRGenFunction::emitDoStmt(const DoStmt &s) {
   if (res.failed())
     return res;
 
-  terminateBody(builder, doWhileOp.getBody(), getLoc(s.getEndLoc()));
+  terminateStructuredRegionBody(doWhileOp.getBody(), getLoc(s.getEndLoc()));
   return mlir::success();
 }
 
@@ -1157,7 +1158,7 @@ mlir::LogicalResult CIRGenFunction::emitWhileStmt(const WhileStmt &s) {
   if (res.failed())
     return res;
 
-  terminateBody(builder, whileOp.getBody(), getLoc(s.getEndLoc()));
+  terminateStructuredRegionBody(whileOp.getBody(), getLoc(s.getEndLoc()));
   return mlir::success();
 }
 
@@ -1252,8 +1253,8 @@ mlir::LogicalResult CIRGenFunction::emitSwitchStmt(const clang::SwitchStmt &s) {
   llvm::SmallVector<CaseOp> cases;
   swop.collectCases(cases);
   for (auto caseOp : cases)
-    terminateBody(builder, caseOp.getCaseRegion(), caseOp.getLoc());
-  terminateBody(builder, swop.getBody(), swop.getLoc());
+    terminateStructuredRegionBody(caseOp.getCaseRegion(), caseOp.getLoc());
+  terminateStructuredRegionBody(swop.getBody(), swop.getLoc());
 
   swop.setAllEnumCasesCovered(s.isAllEnumCasesCovered());
 

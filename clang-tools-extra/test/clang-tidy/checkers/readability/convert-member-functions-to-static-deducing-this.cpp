@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy -std=c++23-or-later %s readability-convert-member-functions-to-static %t -- -- -isystem %clang_tidy_headers
+// RUN: %check_clang_tidy -std=c++23-or-later %s readability-convert-member-functions-to-static %t
 #include <string>
 
 namespace std{

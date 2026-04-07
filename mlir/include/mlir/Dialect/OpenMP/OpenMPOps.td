@@ -1665,9 +1665,9 @@ def OrderedRegionOp : OpenMP_Op<"ordered.region", clauses = [
 // 2.17.5 taskwait Construct
 //===----------------------------------------------------------------------===//
 
-def TaskwaitOp : OpenMP_Op<"taskwait", clauses = [
-    OpenMP_DependClause, OpenMP_NowaitClause
-  ]> {
+def TaskwaitOp
+    : OpenMP_Op<"taskwait", traits = [AttrSizedOperandSegments],
+                clauses = [OpenMP_DependClause, OpenMP_NowaitClause]> {
   let summary = "taskwait construct";
   let description = [{
     The taskwait construct specifies a wait on the completion of child tasks
@@ -2298,6 +2298,23 @@ def DeclareSimdOp
       ins CArg<"const DeclareSimdOperands &">:$clauses)>];
 
   let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// Affinity Entry Op
+//===----------------------------------------------------------------------===//
+
+def AffinityEntryOp : OpenMP_Op<"affinity_entry", [Pure]> {
+  let summary = "OpenMP affinity clause entry value";
+
+  let arguments = (ins OpenMP_PointerLikeType:$addr, IntLikeType:$len);
+
+  let results = (outs OpenMP_AffinityEntryType:$entry);
+
+  let assemblyFormat = [{
+    $addr `,` $len `:` `(` type($addr) `,` type($len) `)` `->`
+    qualified(type($entry)) attr-dict
+  }];
 }
 
 //===----------------------------------------------------------------------===//
