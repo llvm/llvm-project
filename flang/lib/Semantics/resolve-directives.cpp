@@ -947,6 +947,47 @@ public:
   void Post(const parser::EndLabel &endLabel) { CheckSourceLabel(endLabel.v); }
   void Post(const parser::EorLabel &eorLabel) { CheckSourceLabel(eorLabel.v); }
 
+  void ResolveOmpObjectsForMapClause(
+      Symbol::Flag mapFlag, const parser::OmpObjectList &objList) {
+    for (const auto &ompObj : objList.v) {
+      common::visit(
+          common::visitors{
+              [&](const parser::Designator &designator) {
+                if (const auto *name{
+                        parser::GetDesignatorNameIfDataRef(designator)}) {
+                  if (name->symbol) {
+                    name->symbol->set(mapFlag);
+                  }
+                }
+              },
+              [&](const auto &name) {},
+          },
+          ompObj.u);
+
+      ResolveOmpObject(ompObj, mapFlag);
+    }
+  }
+
+  void Post(const parser::OmpFromClause &x) {
+    const auto &ompObjList{*parser::omp::GetOmpObjectList(x)};
+    ResolveOmpObjectsForMapClause(Symbol::Flag::OmpMapFrom, ompObjList);
+  }
+
+  void Post(const parser::OmpToClause &x) {
+    // This is different from the parser::OmpFromClause case, as this to applies
+    // to both declare target to, and update to, so slightly different handling
+    // is required in that we must exit early to avoid applying extra symbol
+    // flags. This is reasonable for now, but if we wish to apply this
+    // resolution to declare target to (and likely enter in another function
+    // like this) we will have to extend the handling to act differently for
+    // declare target rather than simply return.
+    if (GetContext().directive == llvm::omp::Directive::OMPD_declare_target)
+      return;
+
+    const auto &ompObjList{*parser::omp::GetOmpObjectList(x)};
+    ResolveOmpObjectsForMapClause(Symbol::Flag::OmpMapTo, ompObjList);
+  }
+
   void Post(const parser::OmpMapClause &x) {
     unsigned version{context_.langOptions().OpenMPVersion};
     std::optional<Symbol::Flag> ompFlag;
