@@ -437,11 +437,13 @@ bool CandidateHeuristics::tryEffectiveStall(
         *SU->getInstr(), *static_cast<const SIInstrInfo *>(DAG->TII));
 
     bool IsTop = Zone.isTop();
-    if ((Flavor != InstructionFlavor::Fence && IsTop) || (Flavor != InstructionFlavor::DS && !IsTop))
+    if ((Flavor != InstructionFlavor::Fence && IsTop) ||
+        (Flavor != InstructionFlavor::DS && !IsTop))
       return 0;
 
     HardwareUnitInfo *ConsumerHWUI = getHWUIFromFlavor(Flavor);
-    HardwareUnitInfo *ProducerHWUI = getHWUIFromFlavor(IsTop ? InstructionFlavor::DS : InstructionFlavor::Fence);
+    HardwareUnitInfo *ProducerHWUI = getHWUIFromFlavor(
+        IsTop ? InstructionFlavor::DS : InstructionFlavor::Fence);
 
     SUnit *LastProducer = ProducerHWUI->getLastScheduledSU();
     if (!LastProducer)
@@ -454,7 +456,8 @@ bool CandidateHeuristics::tryEffectiveStall(
     if (LastProducerCycle < LastConsumerCycle)
       return 0;
 
-    unsigned FenceStallFinish = LastProducerCycle + getHWUICyclesForSU(IsTop ? LastProducer : SU);
+    unsigned FenceStallFinish =
+        LastProducerCycle + getHWUICyclesForSU(IsTop ? LastProducer : SU);
     return FenceStallFinish <= CurrCycle ? 0 : FenceStallFinish - CurrCycle;
   };
 
