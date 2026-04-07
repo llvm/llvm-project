@@ -93,4 +93,11 @@ int main() {
   auto q = [] [[]] () {};
   // CHECK-MESSAGES: :[[@LINE-1]]:20: warning: redundant empty parameter list in lambda expression [readability-redundant-lambda-parentheses]
   // CHECK-FIXES:   auto q = [] {{\[\[}}{{\]\]}} {};
+
+  // Should NOT warn - attribute both before and after parens
+  auto r = [] [[]] () [[]] {};
+
+  auto s = []() noexcept [[]] {};
+  // CHECK-MESSAGES-CXX23: :[[@LINE-1]]:14: warning: redundant empty parameter list in lambda expression [readability-redundant-lambda-parentheses]
+  // CHECK-FIXES-CXX23:   auto s = [] noexcept {{\[\[}}{{\]\]}} {};
 }
