@@ -1,6 +1,6 @@
 // RUN: rm -rf %t
 // RUN: mkdir %t
-// RUN: c-index-test -test-load-source all -comments-xml-schema=%S/../../bindings/xml/comment-xml-schema.rng %s -- -triple x86_64-apple-macosx26.0 > %t/out
+// RUN: c-index-test -test-load-source all -comments-xml-schema=%S/../../bindings/xml/comment-xml-schema.rng -target x86_64-apple-macosx26.0 %s > %t/out
 // RUN: FileCheck %s < %t/out
 
 // Ensure that XML we generate is not invalid.
