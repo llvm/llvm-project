@@ -5455,14 +5455,13 @@ static Value *simplifyExtractValueInst(Value *Agg, ArrayRef<unsigned> Idxs,
 
   // extractvalue x, (insertvalue y, elt, n), n -> elt
   unsigned NumIdxs = Idxs.size();
-  SmallPtrSet<InsertValueInst *, 8> visitedSet;
+  SmallPtrSet<InsertValueInst *, 8> VisitedSet;
   for (auto *IVI = dyn_cast<InsertValueInst>(Agg); IVI != nullptr;
        IVI = dyn_cast<InsertValueInst>(IVI->getAggregateOperand())) {
-    // Based on the verifier, self-referential insertvalues or cylic across
-    // many insertvalues are apparently fine in unreachable blocks and they
-    // will cause this loop to run infinitely. I am just adding a check to
-    // break out if it is the case.
-    if (!visitedSet.insert(IVI).second) {
+    // Based on the verifier, cycles across one or many insertvalues are
+    // apparently fine in unreachable blocks and cause this loop to run
+    // infinitely. I am just adding a check to break out if it is the case.
+    if (!VisitedSet.insert(IVI).second) {
       break;
     }
 
