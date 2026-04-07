@@ -4460,11 +4460,11 @@ static bool interp__builtin_ia32_vpdp(InterpState &S, CodePtr OpPC,
   const Pointer &SrcPtr = S.Stk.pop<Pointer>();
   const Pointer &Dst = S.Stk.peek<Pointer>();
 
-  for (unsigned I = 0; I < NumElements; ++I) {
+  for (unsigned I = 0; I != NumElements; ++I) {
     APSInt Acc;
     INT_TYPE_SWITCH_NO_BOOL(SrcElemT, { Acc = SrcPtr.elem<T>(I).toAPSInt(); });
     Acc = Acc.sext(64);
-    for (unsigned J = 0; J < Iters; ++J) {
+    for (unsigned J = 0; J != Iters; ++J) {
       APSInt OpA, OpB;
       INT_TYPE_SWITCH_NO_BOOL(
           OpAElemT, { OpA = OpAPtr.elem<T>(Iters * I + J).toAPSInt(); });
@@ -6563,36 +6563,26 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case X86::BI__builtin_ia32_vpdpbusd256:
   case X86::BI__builtin_ia32_vpdpbusd512: {
     unsigned BuiltinID = Call->getBuiltinCallee();
-    bool IsDottingWord;
-    bool IsSaturating;
     switch (BuiltinID) {
     case X86::BI__builtin_ia32_vpdpwssd128:
     case X86::BI__builtin_ia32_vpdpwssd256:
     case X86::BI__builtin_ia32_vpdpwssd512:
-      IsDottingWord = true;
-      IsSaturating = false;
-      break;
+      return interp__builtin_ia32_vpdp(S, OpPC, Call, true, false);
     case X86::BI__builtin_ia32_vpdpwssds128:
     case X86::BI__builtin_ia32_vpdpwssds256:
     case X86::BI__builtin_ia32_vpdpwssds512:
-      IsDottingWord = true;
-      IsSaturating = true;
-      break;
+      return interp__builtin_ia32_vpdp(S, OpPC, Call, true, true);
+
     case X86::BI__builtin_ia32_vpdpbusds128:
     case X86::BI__builtin_ia32_vpdpbusds256:
     case X86::BI__builtin_ia32_vpdpbusds512:
-      IsDottingWord = false;
-      IsSaturating = true;
-      break;
+      return interp__builtin_ia32_vpdp(S, OpPC, Call, false, true);
+
     case X86::BI__builtin_ia32_vpdpbusd128:
     case X86::BI__builtin_ia32_vpdpbusd256:
     case X86::BI__builtin_ia32_vpdpbusd512:
-      IsDottingWord = false;
-      IsSaturating = false;
-      break;
+      return interp__builtin_ia32_vpdp(S, OpPC, Call, false, false);
     }
-    return interp__builtin_ia32_vpdp(S, OpPC, Call, IsDottingWord,
-                                     IsSaturating);
   }
 
   default:
