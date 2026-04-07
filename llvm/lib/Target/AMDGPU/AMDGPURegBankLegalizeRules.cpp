@@ -1839,8 +1839,8 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
        amdgcn_wmma_f32_16x16x128_bf8_fp8, amdgcn_wmma_f32_16x16x128_bf8_bf8,
        amdgcn_wmma_i32_16x16x64_iu8, amdgcn_wmma_f32_16x16x128_f8f6f4,
        amdgcn_wmma_scale_f32_16x16x128_f8f6f4,
-       amdgcn_wmma_scale16_f32_16x16x128_f8f6f4,
-       amdgcn_wmma_f32_32x16x128_f4, amdgcn_wmma_scale_f32_32x16x128_f4,
+       amdgcn_wmma_scale16_f32_16x16x128_f8f6f4, amdgcn_wmma_f32_32x16x128_f4,
+       amdgcn_wmma_scale_f32_32x16x128_f4,
        amdgcn_wmma_scale16_f32_32x16x128_f4})
       .Any({{}, {{}, {}, ApplyDefaultVOP}});
 
