@@ -2429,7 +2429,7 @@ template <typename T> void use(T);
 void local_pointer() {
   Pointer<int> p;
   {
-    int v{};
+    int v;
     p = Pointer(v); // expected-warning {{object whose reference is captured does not live long enough}}
   }                 // expected-note {{destroyed here}}
   use(*p);          // expected-note {{later used here}}
@@ -2440,7 +2440,7 @@ void nested_local_pointer() {
   Pointer<Pointer<Bar>> pp;
   Pointer<Bar> p;
   {
-    Bar v{};
+    Bar v;
     p = Pointer(v);     // expected-warning {{object whose reference is captured does not live long enough}}
     pp = Pointer(p);
     ppp = Pointer(pp);
