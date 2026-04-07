@@ -12868,8 +12868,13 @@ unsigned BoUpSLP::getNumScalarInsts() const {
       // Calculate calls/divs/rems twice, they may cost higher, so better to
       // include their count twice to mimic slightly real cost here.
       auto *I = dyn_cast<Instruction>(V);
-      if (I && (isa<CallInst>(I) || I->isIntDivRem() || I->isFPDivRem()))
+      if (I && (I->isIntDivRem() || I->isFPDivRem()))
         ++Count;
+      if (auto *CI = dyn_cast<CallInst>(V)) {
+        Intrinsic::ID BaseID = getVectorIntrinsicIDForCall(CI, TLI);
+        if (!isTriviallyVectorizable(BaseID))
+          ++Count;
+      }
     }
     // Even when the whole node is not combined, individual scalar
     // instructions may be fused by the backend. Each fused pair (e.g.
@@ -12920,19 +12925,13 @@ unsigned BoUpSLP::getNumVectorInsts() const {
       continue;
     if (TE.State == TreeEntry::CombinedVectorize)
       continue;
-    if (TE.CombinedOp == TreeEntry::ReducedBitcast ||
-        TE.CombinedOp == TreeEntry::ReducedBitcastBSwap ||
-        TE.CombinedOp == TreeEntry::ReducedBitcastLoads ||
-        TE.CombinedOp == TreeEntry::ReducedBitcastBSwapLoads ||
-        TE.CombinedOp == TreeEntry::ReducedCmpBitcast)
-      continue;
     bool IsGatherOrTransformed =
         TE.isGather() || TransformedToGatherNodes.contains(&TE);
     if (IsGatherOrTransformed) {
       if (TE.hasState()) {
         if (const TreeEntry *E =
                 getSameValuesTreeEntry(TE.getMainOp(), TE.Scalars);
-            E && E->getVectorFactor() == TE.getVectorFactor())
+            E && E != &TE && E->getVectorFactor() == TE.getVectorFactor())
           continue;
         SmallVector<Value *> RevScalars(TE.Scalars.rbegin(), TE.Scalars.rend());
         if (const TreeEntry *E =
