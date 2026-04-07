@@ -242,9 +242,10 @@ bool ChainedASTReaderListener::needsSystemInputFileVisitation() {
 }
 
 void ChainedASTReaderListener::visitModuleFile(ModuleFileName Filename,
-                                               ModuleKind Kind) {
-  First->visitModuleFile(Filename, Kind);
-  Second->visitModuleFile(Filename, Kind);
+                                               ModuleKind Kind,
+                                               bool DirectlyImported) {
+  First->visitModuleFile(Filename, Kind, DirectlyImported);
+  Second->visitModuleFile(Filename, Kind, DirectlyImported);
 }
 
 bool ChainedASTReaderListener::visitInputFile(StringRef Filename,
@@ -3308,7 +3309,7 @@ ASTReader::ReadControlBlock(ModuleFile &F,
       }
 
       if (Listener)
-        Listener->visitModuleFile(F.FileName, F.Kind);
+        Listener->visitModuleFile(F.FileName, F.Kind, F.isDirectlyImported());
 
       if (Listener && Listener->needsInputFileVisitation()) {
         unsigned N = Listener->needsSystemInputFileVisitation() ? NumInputs

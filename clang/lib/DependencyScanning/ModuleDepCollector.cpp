@@ -279,6 +279,7 @@ makeCommonInvocationForModuleBuild(CompilerInvocation CI) {
   if (!CI.getDependencyOutputOpts().OutputFile.empty())
     CI.getDependencyOutputOpts().OutputFile = "-";
   CI.getDependencyOutputOpts().Targets.clear();
+  CI.getDependencyOutputOpts().IncludeModuleFiles = MFDK_Direct;
 
   CI.getFrontendOpts().ProgramAction = frontend::GenerateModule;
   CI.getLangOpts().ModuleName.clear();
@@ -440,6 +441,7 @@ void ModuleDepCollector::applyDiscoveredDependencies(CompilerInvocation &CI) {
   CI.clearImplicitModuleBuildOptions();
   resetBenignCodeGenOptions(CI.getFrontendOpts().ProgramAction,
                             CI.getLangOpts(), CI.getCodeGenOpts());
+  CI.getDependencyOutputOpts().IncludeModuleFiles = MFDK_Direct;
 
   if (llvm::any_of(CI.getFrontendOpts().Inputs, needsModules)) {
     Preprocessor &PP = ScanInstance.getPreprocessor();
