@@ -9,6 +9,14 @@
 
 ; CHECK-LABEL: f0:
 ; CHECK-NOT: = add(r
+; CHECK-DAG: memb(r0+#13)
+; CHECK-DAG: memb(r0+#14)
+; CHECK-DAG: memb(r0+#15)
+; CHECK-DAG: memb(r0+#16)
+; CHECK-DAG: memb(r0+#17)
+; CHECK-DAG: memb(r0+#18)
+; CHECK-DAG: memb(r0+#19)
+; CHECK-DAG: memb(r0+#20)
 
 define void @f0(ptr %base, i8 %a, i8 %b, i8 %c, i8 %d,
                 i8 %e, i8 %f, i8 %g, i8 %h) nounwind {
