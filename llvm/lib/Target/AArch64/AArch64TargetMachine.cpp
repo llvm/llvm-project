@@ -262,7 +262,7 @@ LLVMInitializeAArch64Target() {
   initializeAArch64PointerAuthLegacyPass(PR);
   initializeAArch64PostCoalescerLegacyPass(PR);
   initializeAArch64PostLegalizerCombinerPass(PR);
-  initializeAArch64PostLegalizerLoweringPass(PR);
+  initializeAArch64PostLegalizerLoweringLegacyPass(PR);
   initializeAArch64PostSelectOptimizePass(PR);
   initializeAArch64PromoteConstantPass(PR);
   initializeAArch64RedundantCopyEliminationPass(PR);
