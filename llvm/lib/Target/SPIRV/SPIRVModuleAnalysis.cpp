@@ -1085,8 +1085,7 @@ static void addOpTypeImageReqs(const MachineInstr &MI,
   assert(MI.getOperand(1).isReg());
   const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
   SPIRVTypeInst SampledTypeDef = MRI.getVRegDef(MI.getOperand(1).getReg());
-  if (SampledTypeDef && SampledTypeDef->getOpcode() == SPIRV::OpTypeInt &&
-      SampledTypeDef->getOperand(1).getImm() == 64) {
+  if (SampledTypeDef.isTypeIntN(64)) {
     Reqs.addCapability(SPIRV::Capability::Int64ImageEXT);
     Reqs.addExtension(SPIRV::Extension::SPV_EXT_shader_image_int64);
   }
