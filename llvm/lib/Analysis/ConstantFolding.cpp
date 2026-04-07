@@ -236,7 +236,7 @@ Constant *FoldBitCast(Constant *C, Type *DestTy, const DataLayout &DL) {
 
       // Shift Buffer & Masks to fit next SrcElt.
       if (!isLittleEndian) {
-        Buffer <<= SrcBitSize; 
+        Buffer <<= SrcBitSize;
         UndefMask <<= SrcBitSize;
         PoisonMask <<= SrcBitSize;
       }
