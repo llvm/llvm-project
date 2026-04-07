@@ -1745,9 +1745,8 @@ void cir::GlobalOp::build(
                         odsBuilder.getStringAttr(sym_name));
   odsState.addAttribute(getSymTypeAttrName(odsState.name),
                         mlir::TypeAttr::get(sym_type));
-  if (isConstant)
-    odsState.addAttribute(getConstantAttrName(odsState.name),
-                          odsBuilder.getUnitAttr());
+  auto &properties = odsState.getOrAddProperties<cir::GlobalOp::Properties>();
+  properties.setConstant(isConstant);
 
   addrSpace = normalizeDefaultAddressSpace(addrSpace);
   if (addrSpace)
