@@ -27,6 +27,10 @@ TEST_CONSTEXPR_OPERATOR_NEW void test_direct_call() {
   char ch = '*';
   assert(::operator new[](1, &ch) == &ch);
   assert(ch == '*');
+
+  // LWG4477: placement operator delete[] is a no-op and must be usable
+  // in constant expressions.
+  ::operator delete[](&ch, &ch);
 }
 
 #ifdef __cpp_lib_constexpr_new
