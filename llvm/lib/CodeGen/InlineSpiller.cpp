@@ -680,10 +680,36 @@ bool InlineSpiller::reMaterializeFor(LiveInterval &VirtReg, MachineInstr &MI) {
   // live interval; this happens if we rematted to all uses, and
   // then further split one of those live ranges.
   if (!DefMI) {
-    markValueUsed(&VirtReg, ParentVNI);
-    LLVM_DEBUG(dbgs() << "\tcannot remat missing def for " << UseIdx << '\t'
-                      << MI);
-    return false;
+    // Try to find the rematerializable definition by tracing through COPY
+    // chains.
+    MachineInstr *CurDef = MRI.getUniqueVRegDef(VirtReg.reg());
+    LLVM_DEBUG(dbgs() << "\ttracing COPY chain from "
+                      << printReg(VirtReg.reg(), &TRI) << ", initial def: "
+                      << (CurDef ? TII.getName(CurDef->getOpcode()) : "null")
+                      << "\n");
+    while (CurDef && CurDef->isCopy() && !CurDef->getOperand(0).getSubReg() &&
+           !CurDef->getOperand(1).getSubReg()) {
+      Register SrcReg = CurDef->getOperand(1).getReg();
+      if (!SrcReg.isVirtual())
+        break;
+      LLVM_DEBUG(dbgs() << "\t -> tracing through COPY to "
+                        << printReg(SrcReg, &TRI) << "\n");
+      CurDef = MRI.getUniqueVRegDef(SrcReg);
+      LLVM_DEBUG(dbgs() << "\t -> def: "
+                        << (CurDef ? TII.getName(CurDef->getOpcode()) : "null")
+                        << "\n");
+    }
+    if (CurDef && TII.isReMaterializable(*CurDef)) {
+      DefMI = CurDef;
+      LLVM_DEBUG(dbgs() << "\tFound remat possibility through COPY chain: "
+                        << *DefMI);
+    }
+    if (!DefMI) {
+      markValueUsed(&VirtReg, ParentVNI);
+      LLVM_DEBUG(dbgs() << "\tcannot remat missing def for " << UseIdx << '\t'
+                        << MI);
+      return false;
+    }
   }
 
   LiveRangeEdit::Remat RM(ParentVNI);
