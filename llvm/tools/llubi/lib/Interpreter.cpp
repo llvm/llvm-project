@@ -1038,6 +1038,8 @@ public:
                "Expected to enter a callee.");
       }
     }
+    if (getExecutionStatus())
+      ExitInfo.Kind = ProgramExitInfo::ProgramExitKind::Returned;
     return getExecutionStatus();
   }
 };
