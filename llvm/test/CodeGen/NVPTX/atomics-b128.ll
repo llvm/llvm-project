@@ -9,6 +9,11 @@
 
 target triple = "nvptx64-nvidia-cuda"
 
+define <8 x float> @test_add_v8f32(ptr %addr, <8 x float> %val) {
+  %old = atomicrmw fadd ptr %addr, <8 x float> %val release
+  ret <8 x float> %old
+}
+
 ;; Check that the first couple of error messages are correct.
 ; ERROR: error: unsupported atomicrmw xchg: target supports atomics up to 8 bytes, but this atomic accesses 16 bytes
 ; ERROR: error: unsupported atomicrmw xchg: target supports atomics up to 8 bytes, but this atomic accesses 16 bytes
