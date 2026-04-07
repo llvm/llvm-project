@@ -58,6 +58,16 @@ def MyBitEnum: I32BitEnumAttr<"MyBitEnum", "An example bit enum",
 // DECL:     return p << '"' << valueStr << '"';
 // DECL:   return p << valueStr;
 
+// DECL: enum class MyI8Enum : uint8_t {
+// DECL:   a = 254,
+// DECL:   b = 255,
+// DECL: };
+
+// DECL: enum class MyI16Enum : uint16_t {
+// DECL:   a = 65534,
+// DECL:   b = 65535,
+// DECL: };
+
 // DEF-LABEL: std::string stringifyMyBitEnum
 // DEF: auto val = static_cast<uint32_t>
 // DEF: if (val == 0) return "none";
@@ -130,3 +140,13 @@ def MyNonQuotedPrintBitEnum
 // DECL: inline ::llvm::raw_ostream &operator<<(::llvm::raw_ostream &p, ::MyNonQuotedPrintBitEnum value) {
 // DECL:   auto valueStr = stringifyEnum(value);
 // DECL-NEXT:   return p << valueStr;
+
+def MyI8Enum : I8Enum<"MyI8Enum", "Example I8 enum", [
+    I8EnumCase<"a", 254>,
+    I8EnumCase<"b", 255>
+  ]>;
+
+def MyI16Enum : I16Enum<"MyI16Enum", "Example I16 enum", [
+    I8EnumCase<"a", 65534>,
+    I8EnumCase<"b", 65535>
+  ]>;
