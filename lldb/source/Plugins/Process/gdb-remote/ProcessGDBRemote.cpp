@@ -4245,10 +4245,13 @@ StructuredData::ObjectSP ProcessGDBRemote::GetLoadedDynamicLibrariesInfos(
   return GetLoadedDynamicLibrariesInfos_sender(args_dict);
 }
 
-StructuredData::ObjectSP ProcessGDBRemote::GetLoadedDynamicLibrariesInfos() {
+StructuredData::ObjectSP ProcessGDBRemote::GetLoadedDynamicLibrariesInfos(
+    bool include_mh_and_load_commands) {
   StructuredData::ObjectSP args_dict(new StructuredData::Dictionary());
 
   args_dict->GetAsDictionary()->AddBooleanItem("fetch_all_solibs", true);
+  args_dict->GetAsDictionary()->AddBooleanItem("report_load_commands",
+                                               include_mh_and_load_commands);
 
   return GetLoadedDynamicLibrariesInfos_sender(args_dict);
 }

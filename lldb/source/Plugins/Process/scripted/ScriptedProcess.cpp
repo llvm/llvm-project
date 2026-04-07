@@ -420,7 +420,8 @@ bool ScriptedProcess::GetProcessInfo(ProcessInstanceInfo &info) {
 }
 
 lldb_private::StructuredData::ObjectSP
-ScriptedProcess::GetLoadedDynamicLibrariesInfos() {
+ScriptedProcess::GetLoadedDynamicLibrariesInfos(
+    bool include_mh_and_load_commands) {
   Status error;
   auto error_with_message = [&error](llvm::StringRef message) {
     return ScriptedInterface::ErrorWithMessage<bool>(LLVM_PRETTY_FUNCTION,

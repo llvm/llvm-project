@@ -1332,15 +1332,40 @@ public:
     return StructuredData::ObjectSP();
   }
 
-  // On macOS 10.12, tvOS 10, iOS 10, watchOS 3 and newer, debugserver can
-  // return the full list of loaded shared libraries without needing any input.
+  /// Retrieve a StructuredData dictionary about all of the binaries
+  /// loaded in the process at this time.
+  /// A Darwin target specific behavior, only supported by debugserver,
+  /// response will include load address, filepath, uuid, and may also
+  /// include the fully parsed mach header and load commands.
+  ///
+  /// \param [in] include_mh_and_load_commands
+  ///     Whether the remote stub should include the full details of
+  ///     the mach header and load commands in its reply.  This may
+  ///     cause the packet size to be quite large, so to avoid memory
+  ///     pressure in the remote stub, caller may choose not to fetch
+  ///     these for all binaries.
+  ///
+  /// \return
+  ///     A StructuredData object with the information that could be
+  ///     retrieved..
   virtual lldb_private::StructuredData::ObjectSP
-  GetLoadedDynamicLibrariesInfos() {
+  GetLoadedDynamicLibrariesInfos(bool include_mh_and_load_commands) {
     return StructuredData::ObjectSP();
   }
 
-  // On macOS 10.12, tvOS 10, iOS 10, watchOS 3 and newer, debugserver can
-  // return information about binaries given their load addresses.
+  /// Retrieve a StructuredData dictionary about the binaries at
+  /// the provided load addresses.
+  /// A Darwin target specific behavior, only supported by debugserver,
+  /// response will include load address, filepath, uuid, fully parsed
+  /// mach header and load commands.
+  ///
+  /// \param [in] load_addresses
+  ///     The virtual address of the start of binaries to fetch
+  ///     information.
+  ///
+  /// \return
+  ///     A StructuredData object with the information that could be
+  ///     retrieved..
   virtual lldb_private::StructuredData::ObjectSP GetLoadedDynamicLibrariesInfos(
       const std::vector<lldb::addr_t> &load_addresses) {
     return StructuredData::ObjectSP();

@@ -969,16 +969,16 @@ JSONGenerator::ObjectSP MachProcess::FormatDynamicLibrariesIntoJSON(
         new JSONGenerator::Dictionary());
     image_info_dict_sp->AddIntegerItem("load_address",
                                        image_infos[i].load_address);
-    // TODO: lldb currently rejects a response without this, but it
-    // is always zero from dyld.  It can be removed once we've had time
-    // for lldb's that require it to be present are obsolete.
-    image_info_dict_sp->AddIntegerItem("mod_date", 0);
-    image_info_dict_sp->AddStringItem("pathname", image_infos[i].filename);
 
+    // If we're not in `report_load_commands` mode, only send back
+    // the mach-o header load addresses; we will fetch the full
+    // binary information later in chunks.
     if (!report_load_commands) {
       image_infos_array_sp->AddItem(image_info_dict_sp);
       continue;
     }
+
+    image_info_dict_sp->AddStringItem("pathname", image_infos[i].filename);
 
     uuid_string_t uuidstr;
     uuid_unparse_upper(image_infos[i].macho_info.uuid, uuidstr);
@@ -1006,6 +1006,10 @@ JSONGenerator::ObjectSP MachProcess::FormatDynamicLibrariesIntoJSON(
         "filetype", image_infos[i].macho_info.mach_header.filetype);
     mach_header_dict_sp->AddIntegerItem ("flags", 
                          image_infos[i].macho_info.mach_header.flags);
+    mach_header_dict_sp->AddIntegerItem(
+        "sizeof_mh_and_loadcmds",
+        sizeof(mach_header_64) +
+            image_infos[i].macho_info.mach_header.sizeofcmds);
 
     //          DynamicLoaderMacOSX doesn't currently need these fields, so
     //          don't send them.
