@@ -20,7 +20,7 @@ subroutine test_taskloop(lb,ub,step,a)
   !$omp taskloop shared(a)
 ! CHECK:         omp.taskloop.context private({{.*}}) {
 ! CHECK:           llvm.alloca
-! CHECK:           omp.taskloop {
+! CHECK:           omp.taskloop.wrapper {
   do i = lb,ub,step
 ! CHECK-NOT:         llvm.alloca
     a(i) = i

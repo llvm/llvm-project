@@ -345,7 +345,7 @@ void DataSharingProcessor::insertLastPrivateCompare(mlir::Operation *op) {
     return;
 
   if (mlir::isa<mlir::omp::WsloopOp>(op) || mlir::isa<mlir::omp::SimdOp>(op) ||
-      mlir::isa<mlir::omp::TaskloopOp>(op)) {
+      mlir::isa<mlir::omp::TaskloopWrapperOp>(op)) {
     mlir::omp::LoopRelatedClauseOps result;
     llvm::SmallVector<const semantics::Symbol *> iv;
     collectLoopRelatedInfo(converter, converter.getCurrentLocation(), eval,

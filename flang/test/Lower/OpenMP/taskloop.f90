@@ -55,7 +55,7 @@
 ! CHECK:          %[[C10_I32:.*]] = arith.constant 10 : i32
 ! CHECK:          %[[C1_I32_0:.*]] = arith.constant 1 : i32
 ! CHECK:          omp.taskloop.context private(@[[RES_FIRSTPRIVATE]] %[[RES_VAL]]#0 -> %[[PRIV_RES:.*]], @[[I_PRIVATE]] %[[I_VAL]]#0 -> %[[PRIV_I:.*]] : !fir.ref<i32>, !fir.ref<i32>) {
-! CHECK:            omp.taskloop {
+! CHECK:            omp.taskloop.wrapper {
 ! CHECK:              omp.loop_nest (%[[ARG2:.*]]) : i32 = (%[[C1_I32]]) to (%[[C10_I32]]) inclusive step (%[[C1_I32_0]]) {
 ! CHECK:                %[[RES_DECL:.*]]:2 = hlfir.declare %[[PRIV_RES]] {uniq_name = "_QFomp_taskloopEres"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:                %[[I_DECL:.*]]:2 = hlfir.declare %[[PRIV_I]] {uniq_name = "_QFomp_taskloopEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
@@ -90,7 +90,7 @@ end subroutine omp_taskloop
 subroutine omp_taskloop_private
   integer :: res, i
 ! CHECK:           omp.taskloop.context private(@[[RES_PRIVATE_TEST2]] %[[DECL_RES]]#0 -> %[[ARG0:.*]], @[[I_PRIVATE_TEST2]] %[[DECL_I]]#0 -> %[[ARG1:.*]] : !fir.ref<i32>, !fir.ref<i32>) {
-! CHECK:             omp.taskloop {
+! CHECK:             omp.taskloop.wrapper {
 ! CHECK:               omp.loop_nest (%{{.*}}) : i32 = (%{{.*}}) to (%{{.*}}) inclusive step (%{{.*}}) {
 ! CHECK:                 %[[VAL1:.*]]:2 = hlfir.declare %[[ARG0]] {uniq_name = "_QFomp_taskloop_privateEres"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
   !$omp taskloop private(res)
@@ -120,7 +120,7 @@ subroutine taskloop_allocate()
    integer :: x
    ! CHECK:         omp.taskloop.context allocate(%{{.*}} : i64 -> %[[DECL_X]]#0 : !fir.ref<i32>) 
    ! CHECK-SAME:      private(@[[X_PRIVATE_TEST_ALLOCATE]] %[[DECL_X]]#0 -> %[[ARG0:.*]], @[[I_PRIVATE_TEST_ALLOCATE]] %[[DECL_I]]#0 -> %[[ARG1:.*]] : !fir.ref<i32>, !fir.ref<i32>) {
-   ! CHECK:           omp.taskloop {
+   ! CHECK:           omp.taskloop.wrapper {
    !$omp taskloop allocate(omp_high_bw_mem_alloc: x) private(x)
    do i = 1, 100
       ! CHECK: arith.addi
@@ -139,7 +139,7 @@ end subroutine taskloop_allocate
 ! CHECK:           %[[DECL_I:.*]]:2 = hlfir.declare %[[ALLOCA_I]] {uniq_name = "_QFtaskloop_finalEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 subroutine taskloop_final()
     ! CHECK:  omp.taskloop.context final(%true) private(@[[I_PRIVATE_FINAL]] %[[DECL_I]]#0 -> %[[ARG0:.*]] : !fir.ref<i32>) {
-    ! CHECK:    omp.taskloop {
+    ! CHECK:    omp.taskloop.wrapper {
    !$omp taskloop final(.true.)
    do i = 1, 100
       ! CHECK: fir.call @_QPfoo()
@@ -161,7 +161,7 @@ end subroutine
 subroutine omp_taskloop_if(bar)
    logical, intent(inout) :: bar
    !CHECK: omp.taskloop.context if(%[[VAL_BAR]]) private(@[[I_PRIVATE_IF_TEST1]] %[[DECL_I]]#0 -> %[[ARG1:.*]] : !fir.ref<i32>) {
-   !CHECK:   omp.taskloop {
+   !CHECK:   omp.taskloop.wrapper {
    !$omp taskloop if(bar)
    do i = 1, 10
       call foo()
@@ -176,7 +176,7 @@ end subroutine omp_taskloop_if
 ! CHECK-LABEL:  func.func @_QPtest_mergeable
 subroutine test_mergeable
   ! CHECK: omp.taskloop.context mergeable
-  ! CHECK:   omp.taskloop {
+  ! CHECK:   omp.taskloop.wrapper {
   !$omp taskloop mergeable
   do i = 1, 10
   end do
@@ -193,7 +193,7 @@ end subroutine test_mergeable
 subroutine test_priority(n)
    integer, intent(inout) :: n
    ! CHECK:  omp.taskloop.context priority(%[[LOAD_VAL]] : i32)
-   ! CHECK:    omp.taskloop {
+   ! CHECK:    omp.taskloop.wrapper {
    !$omp taskloop priority(n)
    do i = 1, 10
    end do
@@ -207,7 +207,7 @@ end subroutine test_priority
 ! CHECK-LABEL:  func.func @_QPomp_taskloop_untied
 subroutine omp_taskloop_untied()
   ! CHECK: omp.taskloop.context untied
-  ! CHECK:   omp.taskloop {
+  ! CHECK:   omp.taskloop.wrapper {
   !$omp taskloop untied
   do i = 1, 10
     call foo()
@@ -221,7 +221,7 @@ end subroutine
 
 subroutine omp_taskloop_nogroup()
   ! CHECK: omp.taskloop.context nogroup
-  ! CHECK:   omp.taskloop {
+  ! CHECK:   omp.taskloop.wrapper {
   !$omp taskloop nogroup
   do i = 1, 10
     call foo()
@@ -242,7 +242,7 @@ subroutine omp_taskloop_lastprivate()
    integer x
    x = 0
    ! CHECK:  omp.taskloop.context private(@[[LAST_PRIVATE_X]] %[[DECL_X]]#0 -> %[[ARG0]], @[[LAST_PRIVATE_I]] %[[DECL_I]]#0 -> %[[ARG1]] : !fir.ref<i32>, !fir.ref<i32>) {
-   ! CHECK:    omp.taskloop {
+   ! CHECK:    omp.taskloop.wrapper {
    !$omp taskloop lastprivate(x)
    do i = 1, 100
       ! CHECK: %[[DECL_ARG0:.*]]:2 = hlfir.declare %[[ARG0]] {uniq_name = "_QFomp_taskloop_lastprivateEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)

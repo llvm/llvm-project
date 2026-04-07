@@ -23,7 +23,7 @@ subroutine test()
     !$omp taskloop collapse(2)
     ! CHECK:      omp.taskloop.context
     ! CHECK-SAME:   private(@_QFtestEsum_firstprivate_i32 %[[DECLARE_SUM]]#0 -> %arg0, @_QFtestEi_private_i32 %[[DECLARE_I]]#0 -> %arg1, @_QFtestEj_private_i32 %[[DECLARE_J]]#0 -> %arg2 : !fir.ref<i32>, !fir.ref<i32>, !fir.ref<i32>)
-    ! CHECK:      omp.taskloop {
+    ! CHECK:      omp.taskloop.wrapper {
     ! CHECK-LABEL: omp.loop_nest
     ! CHECK-SAME:   (%[[IV1:.*]], %[[IV2:.*]]) : i32 = (%c1_i32, %c1_i32_1) to (%c10_i32, %c5_i32) inclusive step (%c1_i32_0, %c1_i32_2) collapse(2)
     do i = 1, 10

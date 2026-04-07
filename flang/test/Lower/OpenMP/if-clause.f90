@@ -1586,7 +1586,7 @@ program main
 
   ! CHECK:      omp.taskloop.context
   ! CHECK-NOT: if({{.*}})
-  ! CHECK:      omp.taskloop
+  ! CHECK:      omp.taskloop.wrapper
   !$omp taskloop
   do i = 1, 10
   end do
@@ -1594,7 +1594,7 @@ program main
 
   ! CHECK:      omp.taskloop.context
   ! CHECK-SAME: if({{.*}})
-  ! CHECK:      omp.taskloop
+  ! CHECK:      omp.taskloop.wrapper
   !$omp taskloop if(.true.)
   do i = 1, 10
   end do
@@ -1602,7 +1602,7 @@ program main
 
   ! CHECK:      omp.taskloop.context
   ! CHECK-SAME: if({{.*}})
-  ! CHECK:      omp.taskloop
+  ! CHECK:      omp.taskloop.wrapper
   !$omp taskloop if(taskloop: .true.)
   do i = 1, 10
   end do
