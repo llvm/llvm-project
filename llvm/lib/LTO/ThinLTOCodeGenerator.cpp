@@ -292,10 +292,8 @@ addUsedSymbolToPreservedGUID(const lto::InputFile &File,
                              DenseSet<GlobalValue::GUID> &PreservedGUID) {
   Triple TT(File.getTargetTriple());
   RTLIB::RuntimeLibcallsInfo Libcalls(TT);
-  TargetLibraryInfoImpl TLII(TT);
-  TargetLibraryInfo TLI(TLII);
   for (const auto &Sym : File.symbols())
-    if (Sym.isUsed() || Sym.isLibcall(TLI, Libcalls))
+    if (Sym.isUsed() || Sym.isLibcall(Libcalls))
       PreservedGUID.insert(
           GlobalValue::getGUIDAssumingExternalLinkage(Sym.getIRName()));
 }
