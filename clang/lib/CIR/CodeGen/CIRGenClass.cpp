@@ -784,8 +784,7 @@ void CIRGenFunction::emitCXXAggrConstructorCall(
     RunCleanupsScope scope(*this);
 
     bool needsPartialArrayCleanup =
-        getLangOpts().Exceptions &&
-        !ctor->getParent()->hasTrivialDestructor();
+        getLangOpts().Exceptions && !ctor->getParent()->hasTrivialDestructor();
 
     auto emitCtorBody = [&](mlir::OpBuilder &b, mlir::Location l) {
       mlir::BlockArgument arg =

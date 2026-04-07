@@ -1435,7 +1435,7 @@ static void lowerArrayDtorCtorIntoLoop(cir::CIRBaseBuilderTy &builder,
 
   // Clone the region body (ctor/dtor call and any setup ops like per-element
   // zero-init) into the loop, remapping the block argument to the current
-  // element pointer.  
+  // element pointer.
   auto cloneRegionBodyInto = [&](mlir::Block *srcBlock,
                                  mlir::Value replacement) {
     mlir::IRMapping map;
@@ -1495,8 +1495,8 @@ static void lowerArrayDtorCtorIntoLoop(cir::CIRBaseBuilderTy &builder,
         /*cleanupBuilder=*/
         [&](mlir::OpBuilder &b, mlir::Location loc) {
           auto cur = cir::LoadOp::create(b, loc, eltTy, tmpAddr);
-          auto cmp = cir::CmpOp::create(builder, loc, cir::CmpOpKind::ne,
-                                        cur, begin);
+          auto cmp =
+              cir::CmpOp::create(builder, loc, cir::CmpOpKind::ne, cur, begin);
           cir::IfOp::create(
               builder, loc, cmp, /*withElseRegion=*/false,
               [&](mlir::OpBuilder &b, mlir::Location loc) {
@@ -1504,20 +1504,18 @@ static void lowerArrayDtorCtorIntoLoop(cir::CIRBaseBuilderTy &builder,
                     loc,
                     /*condBuilder=*/
                     [&](mlir::OpBuilder &b, mlir::Location loc) {
-                      auto el =
-                          cir::LoadOp::create(b, loc, eltTy, tmpAddr);
+                      auto el = cir::LoadOp::create(b, loc, eltTy, tmpAddr);
                       auto neq = cir::CmpOp::create(
                           builder, loc, cir::CmpOpKind::ne, el, begin);
                       builder.createCondition(neq);
                     },
                     /*bodyBuilder=*/
                     [&](mlir::OpBuilder &b, mlir::Location loc) {
-                      auto el =
-                          cir::LoadOp::create(b, loc, eltTy, tmpAddr);
+                      auto el = cir::LoadOp::create(b, loc, eltTy, tmpAddr);
                       mlir::Value negOne =
                           builder.getSignedInt(loc, -1, sizeTypeSize);
-                      auto prev = cir::PtrStrideOp::create(
-                          builder, loc, eltTy, el, negOne);
+                      auto prev = cir::PtrStrideOp::create(builder, loc, eltTy,
+                                                           el, negOne);
                       builder.createStore(loc, prev, tmpAddr);
                       cloneRegionBodyInto(partialDtorBlock, prev);
                       builder.createYield(loc);

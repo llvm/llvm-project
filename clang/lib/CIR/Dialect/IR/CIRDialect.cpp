@@ -419,8 +419,7 @@ LogicalResult cir::ArrayCtor::verify() {
   if (!partialDtor.empty()) {
     mlir::Block &dtorBlock = partialDtor.front();
     if (dtorBlock.getNumArguments() != 1)
-      return emitOpError(
-          "partial_dtor must have exactly one block argument");
+      return emitOpError("partial_dtor must have exactly one block argument");
 
     auto bodyArgTy = getBody().front().getArgument(0).getType();
     if (dtorBlock.getArgument(0).getType() != bodyArgTy)
