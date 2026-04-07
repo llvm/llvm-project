@@ -1787,7 +1787,6 @@ compileModuleBehindLockOrRead(CompilerInstance &ImportingInstance,
       << ModuleFileName << Module->Name;
 
   auto &ModuleCache = ImportingInstance.getModuleCache();
-  ModuleCache.prepareForGetLock(ModuleFileName);
 
   while (true) {
     auto Lock = ModuleCache.getLock(ModuleFileName);
