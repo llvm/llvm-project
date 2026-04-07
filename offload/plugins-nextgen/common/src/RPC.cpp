@@ -174,7 +174,7 @@ runServer(plugin::GenericDeviceTy &Device, void *Buffer,
     Status = handleOffloadOpcodes(Device, *Port, NumLanes);
 
   if (Status == rpc::RPC_UNHANDLED_OPCODE)
-    Status = LIBC_NAMESPACE::shared::handle_libc_opcodes(*Port, NumLanes);
+    Status = rpc::handle_libc_opcodes(*Port, NumLanes);
 
 #ifdef OFFLOAD_HAS_FLANG_RT
   if (Status == rpc::RPC_UNHANDLED_OPCODE)

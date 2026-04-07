@@ -519,7 +519,7 @@ void SourceManager::File::CommonInitializerImpl(SupportFileNSP support_file_nsp,
           SymbolContextList sc_list;
           size_t num_matches =
               target_sp->GetImages().ResolveSymbolContextForFilePath(
-                  file_spec.GetFilename().AsCString(), 0, check_inlines,
+                  file_spec.GetFilename().AsCString(nullptr), 0, check_inlines,
                   SymbolContextItem(eSymbolContextModule |
                                     eSymbolContextCompUnit),
                   sc_list);
