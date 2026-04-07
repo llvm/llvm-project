@@ -1535,11 +1535,12 @@ bool PreRARematStage::initGCNSchedStage() {
   }
   const ScoredRemat::FreqInfo FreqInfo(MF, DAG);
   SmallVector<ScoredRemat, 8> Candidates(RematRegs.size());
-  SmallVector<unsigned> CandidateOrder, NewCandidateOrder;
+  SmallVector<unsigned> CandidateOrder;
   for (auto [I, Remat] : enumerate(RematRegs)) {
     ScoredRemat &Candidate = Candidates[I];
     Candidate.init(&Remat, FreqInfo, DAG);
-    if (Candidate.update(TargetRegions, RPTargets, FreqInfo, !TargetOcc))
+    Candidate.update(TargetRegions, RPTargets, FreqInfo, !TargetOcc);
+    if (!Candidate.hasNullScore())
       CandidateOrder.push_back(I);
   }
 
@@ -1649,18 +1650,22 @@ bool PreRARematStage::initGCNSchedStage() {
       break;
     }
 
-    // Update the score of remaining candidates.
-    NewCandidateOrder.clear();
+    // Update the score of remaining candidates and filter out those that have
+    // become useless from the vector. Candidates never become useful after
+    // having been useless for a round, so we can freely drop them without
+    // losing any future rematerialization opportunity.
+    unsigned NumUsefulCandidates = 0;
     for (unsigned CandIdx : CandidateOrder) {
       ScoredRemat &Candidate = Candidates[CandIdx];
-      if (Candidate.update(TargetRegions, RPTargets, FreqInfo, !TargetOcc))
-        NewCandidateOrder.push_back(CandIdx);
+      Candidate.update(TargetRegions, RPTargets, FreqInfo, !TargetOcc);
+      if (!Candidate.hasNullScore())
+        CandidateOrder[NumUsefulCandidates++] = CandIdx;
     }
-    if (NewCandidateOrder.empty()) {
+    if (NumUsefulCandidates == 0) {
       REMAT_DEBUG(dbgs() << "Stop on exhausted rematerialization candidates\n");
       break;
     }
-    CandidateOrder = std::move(NewCandidateOrder);
+    CandidateOrder.truncate(NumUsefulCandidates);
   }
 
   if (RescheduleRegions.none())
@@ -2991,7 +2996,7 @@ void PreRARematStage::ScoredRemat::init(RematReg *Remat, const FreqInfo &Freq,
   FreqDiff = DefOrMin - UseOrMax;
 }
 
-bool PreRARematStage::ScoredRemat::update(const BitVector &TargetRegions,
+void PreRARematStage::ScoredRemat::update(const BitVector &TargetRegions,
                                           ArrayRef<GCNRPTarget> RPTargets,
                                           const FreqInfo &FreqInfo,
                                           bool ReduceSpill) {
@@ -3022,7 +3027,6 @@ bool PreRARematStage::ScoredRemat::update(const BitVector &TargetRegions,
       MaxFreq = std::max(MaxFreq, Freq);
     }
   }
-  return !hasNullScore();
 }
 
 MachineInstr *

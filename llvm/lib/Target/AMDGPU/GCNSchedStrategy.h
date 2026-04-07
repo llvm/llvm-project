@@ -624,9 +624,8 @@ private:
                                 GCNScheduleDAGMILive &DAG) const;
 
     /// Updates the rematerialization's score w.r.t. the current \p RPTargets.
-    /// \p RegionFreq indicates the frequency of each region. Returns whether
-    /// the new score is null.
-    bool update(const BitVector &TargetRegions, ArrayRef<GCNRPTarget> RPTargets,
+    /// \p RegionFreq indicates the frequency of each region.
+    void update(const BitVector &TargetRegions, ArrayRef<GCNRPTarget> RPTargets,
                 const FreqInfo &Freq, bool ReduceSpill);
 
     /// Returns whether the current score is null, indicating the
@@ -634,7 +633,7 @@ private:
     bool hasNullScore() const { return !RegionImpact; }
 
     /// Compare score components of non-null scores pair-wise. Scores shouldn't
-    /// be null (as defined by \ref getNullScore).
+    /// be null (as defined by \ref hasNullScore).
     bool operator<(const ScoredRemat &O) const {
       assert(!hasNullScore() && "this has null score");
       assert(!O.hasNullScore() && "other has null score");
