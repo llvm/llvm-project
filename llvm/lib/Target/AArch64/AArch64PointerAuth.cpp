@@ -143,7 +143,9 @@ void AArch64PointerAuthImpl::authenticateLR(
     MachineFunction &MF, MachineBasicBlock::iterator MBBI) const {
   const AArch64FunctionInfo *MFnI = MF.getInfo<AArch64FunctionInfo>();
   bool UseBKey = MFnI->shouldSignWithBKey();
-  bool EmitAsyncCFI = MFnI->needsAsyncDwarfUnwindInfo(MF);
+  bool EmitAsyncCFI = MFnI->needsAsyncDwarfUnwindInfo(MF) ||
+                      (MFnI->needsDwarfUnwindInfo(MF) &&
+                       MF.getFunction().getUWTableKind() == UWTableKind::Async);
   bool NeedsWinCFI = MF.hasWinCFI();
 
   MachineBasicBlock &MBB = *MBBI->getParent();
