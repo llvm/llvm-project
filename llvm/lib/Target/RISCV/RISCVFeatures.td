@@ -1750,6 +1750,13 @@ def HasXAIFET : Predicate<"Subtarget->hasXAIFET()">,
                           AssemblerPredicate<(all_of FeatureVendorXAIFET),
                           "'XAIFET' (AI Foundry ET Extension)">;
 
+def FeatureVendorXCheriot
+    : RISCVExtension<1, 0, "CHERIoT extension",
+    [FeatureStdExtZca, FeatureStdExtE, FeatureStdExtM]>;
+def HasCheriot
+    : Predicate<"Subtarget->hasVendorXCheriot()">,
+      AssemblerPredicate<(all_of FeatureVendorXCheriot), "'XCheriot' (CHERIoT Extension)">;
+
 //===----------------------------------------------------------------------===//
 // LLVM specific features and extensions
 //===----------------------------------------------------------------------===//
