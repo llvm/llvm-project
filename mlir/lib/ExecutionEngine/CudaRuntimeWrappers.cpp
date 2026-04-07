@@ -362,14 +362,11 @@ extern "C" MLIR_CUDA_WRAPPERS_EXPORT void mgpuSetDefaultDevice(int32_t device) {
 
 #if (CUDA_VERSION >= 12000)
 
-// Cooperative launch entry point, optionally with a cluster. Pass
-// `clusterX/Y/Z = 0` to launch cooperatively without a cluster.
-extern "C" MLIR_CUDA_WRAPPERS_EXPORT void
-mgpuLaunchKernelEx(CUfunction function, intptr_t gridX, intptr_t gridY,
-                   intptr_t gridZ, intptr_t blockX, intptr_t blockY,
-                   intptr_t blockZ, int32_t smem, CUstream stream,
-                   void **params, void **extra, intptr_t clusterX,
-                   intptr_t clusterY, intptr_t clusterZ, int32_t cooperative) {
+extern "C" MLIR_CUDA_WRAPPERS_EXPORT void mgpuLaunchKernelCooperative(
+    CUfunction function, intptr_t gridX, intptr_t gridY, intptr_t gridZ,
+    intptr_t clusterX, intptr_t clusterY, intptr_t clusterZ, intptr_t blockX,
+    intptr_t blockY, intptr_t blockZ, int32_t smem, CUstream stream,
+    void **params, void **extra) {
   ScopedContext scopedContext;
   if (smem > 0) {
     int32_t maxShmem = 0;
@@ -416,21 +413,18 @@ mgpuLaunchKernelEx(CUfunction function, intptr_t gridX, intptr_t gridY,
     numAttrs++;
   }
 
-  if (cooperative) {
-    launchAttrs[numAttrs].id = CU_LAUNCH_ATTRIBUTE_COOPERATIVE;
-    launchAttrs[numAttrs].value.cooperative = 1;
-    numAttrs++;
-  }
+  launchAttrs[numAttrs].id = CU_LAUNCH_ATTRIBUTE_COOPERATIVE;
+  launchAttrs[numAttrs].value.cooperative = 1;
+  numAttrs++;
 
   config.numAttrs = numAttrs;
   config.attrs = launchAttrs;
 
-  debug_print("Launching kernel (cooperative=%d, cluster=%d),"
+  debug_print("Launching cooperative kernel (cluster=%d), "
               "grid=%ld,%ld,%ld, "
               "threads: %ld, %ld, %ld, "
               "smem: %dkb\n",
-              cooperative, hasCluster, gridX, gridY, gridZ, blockX, blockY,
-              blockZ, smem);
+              hasCluster, gridX, gridY, gridZ, blockX, blockY, blockZ, smem);
 
   CUDA_REPORT_IF_ERROR(cuLaunchKernelEx(&config, function, params, extra));
 }
