@@ -717,3 +717,67 @@ entry:
   ret i32 %trunc
 }
 
+define i8 @no_clamp_i32_to_i8_multiple_use_icmp(i32 %x, ptr %p) {
+; CHECK-LABEL: @no_clamp_i32_to_i8_multiple_use_icmp(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp ult i32 [[X:%.*]], 256
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp sgt i32 [[X]], 0
+; CHECK-NEXT:    [[SHR:%.*]] = sext i1 [[TMP0]] to i32
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[TOBOOL_NOT]], i32 [[X]], i32 [[SHR]]
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i32 [[COND]] to i8
+; CHECK-NEXT:    [[EXTRA_USE:%.*]] = sext i1 [[TOBOOL_NOT]] to i64
+; CHECK-NEXT:    store i64 [[EXTRA_USE]], ptr [[P:%.*]], align 8
+; CHECK-NEXT:    ret i8 [[TRUNC]]
+;
+entry:
+  %tobool.not = icmp ult i32 %x, 256
+  %0 = icmp sgt i32 %x, 0
+  %shr = sext i1 %0 to i32
+  %cond = select i1 %tobool.not, i32 %x, i32 %shr
+  %trunc = trunc i32 %cond to i8
+  %extra_use = sext i1 %tobool.not to i64
+  store i64 %extra_use, ptr %p, align 8
+  ret i8 %trunc
+}
+
+define i8 @no_clamp_i32_to_i8_multiple_use_select(i32 %x, ptr %p) {
+; CHECK-LABEL: @no_clamp_i32_to_i8_multiple_use_select(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp ult i32 [[X:%.*]], 256
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp sgt i32 [[X]], 0
+; CHECK-NEXT:    [[SHR:%.*]] = sext i1 [[TMP0]] to i32
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[TOBOOL_NOT]], i32 [[X]], i32 [[SHR]]
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i32 [[COND]] to i8
+; CHECK-NEXT:    [[EXTRA_USE:%.*]] = sext i32 [[COND]] to i64
+; CHECK-NEXT:    store i64 [[EXTRA_USE]], ptr [[P:%.*]], align 8
+; CHECK-NEXT:    ret i8 [[TRUNC]]
+;
+entry:
+  %tobool.not = icmp ult i32 %x, 256
+  %0 = icmp sgt i32 %x, 0
+  %shr = sext i1 %0 to i32
+  %cond = select i1 %tobool.not, i32 %x, i32 %shr
+  %trunc = trunc i32 %cond to i8
+  %extra_use = sext i32 %cond to i64
+  store i64 %extra_use, ptr %p, align 8
+  ret i8 %trunc
+}
+
+define <4 x i8> @no_clamp_i32_to_i8_vector(<4 x i32> %x) {
+; CHECK-LABEL: @no_clamp_i32_to_i8_vector(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp ult <4 x i32> [[X:%.*]], splat (i32 256)
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp sgt <4 x i32> [[X]], zeroinitializer
+; CHECK-NEXT:    [[SHR:%.*]] = sext <4 x i1> [[TMP0]] to <4 x i32>
+; CHECK-NEXT:    [[COND:%.*]] = select <4 x i1> [[TOBOOL_NOT]], <4 x i32> [[X]], <4 x i32> [[SHR]]
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc <4 x i32> [[COND]] to <4 x i8>
+; CHECK-NEXT:    ret <4 x i8> [[TRUNC]]
+;
+entry:
+  %tobool.not = icmp ult <4 x i32> %x, splat(i32 256)
+  %0 = icmp sgt <4 x i32> %x, zeroinitializer
+  %shr = sext <4 x i1> %0 to <4 x i32>
+  %cond = select <4 x i1> %tobool.not, <4 x i32> %x, <4 x i32> %shr
+  %trunc = trunc <4 x i32> %cond to <4 x i8>
+  ret <4 x i8> %trunc
+}
