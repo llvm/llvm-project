@@ -11,3 +11,13 @@ add_libc_test(
     libc.src.stdlib.exit
     libc.hdr.signal_macros
 )
+
+add_libc_test(
+  raw_rwlock_test
+  SUITE
+    libc-support-threads-tests
+  SRCS
+    raw_rwlock_test.cpp
+  DEPENDS
+    libc.src.__support.threads.raw_rwlock
+)

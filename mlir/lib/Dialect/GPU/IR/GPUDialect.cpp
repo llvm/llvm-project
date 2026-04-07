@@ -248,6 +248,19 @@ bool GPUDialect::hasWorkgroupMemoryAddressSpace(MemRefType type) {
   return isWorkgroupMemoryAddressSpace(memorySpace);
 }
 
+bool GPUDialect::isConstantMemoryAddressSpace(Attribute memorySpace) {
+  if (!memorySpace)
+    return false;
+  if (auto gpuAttr = llvm::dyn_cast<gpu::AddressSpaceAttr>(memorySpace))
+    return gpuAttr.getValue() == getConstantAddressSpace();
+  return false;
+}
+
+bool GPUDialect::hasConstantMemoryAddressSpace(MemRefType type) {
+  Attribute memorySpace = type.getMemorySpace();
+  return isConstantMemoryAddressSpace(memorySpace);
+}
+
 bool GPUDialect::isKernel(Operation *op) {
   UnitAttr isKernelAttr = op->getAttrOfType<UnitAttr>(getKernelFuncAttrName());
   return static_cast<bool>(isKernelAttr);

@@ -9,7 +9,6 @@
 @arr2 = external global [8 x i32], align 16
 @arr = external global [8 x [8 x i32]], align 16
 
-; Function Attrs: norecurse nounwind uwtable
 define void @foo(i32 %n) {
 entry:
   br label %for.body

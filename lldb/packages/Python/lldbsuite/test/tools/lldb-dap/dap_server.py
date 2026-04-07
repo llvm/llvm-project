@@ -5,7 +5,6 @@ from __future__ import annotations
 
 from typing import Protocol
 import argparse
-import binascii
 import dataclasses
 import enum
 import json
@@ -15,7 +14,6 @@ import pathlib
 import re
 import signal
 import socket
-import string
 import subprocess
 import sys
 import threading
@@ -126,16 +124,6 @@ class Breakpoint(TypedDict, total=False):
         return src.get("verified", False)
 
 
-def dump_dap_log(log_file: Optional[str]) -> None:
-    print("========= DEBUG ADAPTER PROTOCOL LOGS =========", file=sys.stderr)
-    if log_file is None:
-        print("no log file available", file=sys.stderr)
-    else:
-        with open(log_file, "r") as file:
-            print(file.read(), file=sys.stderr)
-    print("========= END =========", file=sys.stderr)
-
-
 class NotSupportedError(KeyError):
     """Raised if a feature is not supported due to its capabilities."""
 
@@ -216,11 +204,9 @@ class DebugCommunication(object):
         recv: BinaryIO,
         send: BinaryIO,
         init_commands: Optional[List[str]] = None,
-        log_file: Optional[str] = None,
         spawn_helper: Optional[SpawnHelperCallback] = None,
     ):
         self._log = Log()
-        self.log_file = log_file
         self.send = send
         self.recv = recv
         self.spawn_helper = spawn_helper
@@ -1656,8 +1642,6 @@ class DebugCommunication(object):
         self.send.close()
         if self._recv_thread.is_alive():
             self._recv_thread.join()
-        if self.log_file:
-            dump_dap_log(self.log_file)
 
     def request_setInstructionBreakpoints(self, memory_reference=[]):
         breakpoints = []
@@ -1681,6 +1665,7 @@ class DebugAdapterServer(DebugCommunication):
         *,
         executable: Optional[str] = None,
         connection: Optional[str] = None,
+        connection_timeout: Optional[stintr] = None,
         init_commands: Optional[list[str]] = None,
         log_file: Optional[str] = None,
         env: Optional[Dict[str, str]] = None,
@@ -1693,6 +1678,7 @@ class DebugAdapterServer(DebugCommunication):
             process, connection = DebugAdapterServer.launch(
                 executable=executable,
                 connection=connection,
+                connection_timeout=connection_timeout,
                 env=env,
                 log_file=log_file,
                 additional_args=additional_args,
@@ -1715,7 +1701,6 @@ class DebugAdapterServer(DebugCommunication):
                 s.makefile("rb"),
                 s.makefile("wb"),
                 init_commands,
-                log_file,
                 spawn_helper,
             )
             self.connection = connection
@@ -1724,7 +1709,6 @@ class DebugAdapterServer(DebugCommunication):
                 self.process.stdout,
                 self.process.stdin,
                 init_commands,
-                log_file,
                 spawn_helper,
             )
 

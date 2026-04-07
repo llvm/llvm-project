@@ -37,6 +37,14 @@ OriginList *FactsGenerator::getOriginsList(const Expr &E) {
   return FactMgr.getOriginMgr().getOrCreateList(&E);
 }
 
+bool FactsGenerator::hasOrigins(QualType QT) const {
+  return FactMgr.getOriginMgr().hasOrigins(QT);
+}
+
+bool FactsGenerator::hasOrigins(const Expr *E) const {
+  return FactMgr.getOriginMgr().hasOrigins(E);
+}
+
 /// Propagates origin information from Src to Dst through all levels of
 /// indirection, creating OriginFlowFacts at each level.
 ///
@@ -180,14 +188,13 @@ void FactsGenerator::VisitCXXConstructExpr(const CXXConstructExpr *CCE) {
     handleGSLPointerConstruction(CCE);
     return;
   }
-  // Implicit copy/move constructors of lambda closures lack
-  // [[clang::lifetimebound]], so `handleFunctionCall` cannot propagate origins.
-  // Handle them directly to keep the origin chain intact (e.g., `return
-  // lambda;` copies the closure).
-  if (const auto *RD = CCE->getType()->getAsCXXRecordDecl();
-      RD && RD->isLambda() &&
-      CCE->getConstructor()->isCopyOrMoveConstructor() &&
-      CCE->getNumArgs() == 1) {
+  // For defaulted (implicit or `= default`) copy/move constructors, propagate
+  // origins directly. User-defined copy/move constructors have opaque semantics
+  // and fall through to `handleFunctionCall`, where [[clang::lifetimebound]] is
+  // needed to propagate origins.
+  if (CCE->getConstructor()->isCopyOrMoveConstructor() &&
+      CCE->getConstructor()->isDefaulted() && CCE->getNumArgs() == 1 &&
+      hasOrigins(CCE->getType())) {
     const Expr *Arg = CCE->getArg(0);
     if (OriginList *ArgList = getRValueOrigins(Arg, getOriginsList(*Arg))) {
       flow(getOriginsList(*CCE), ArgList, /*Kill=*/true);
@@ -371,11 +378,22 @@ void FactsGenerator::handleAssignment(const Expr *LHSExpr,
   flow(LHSList->peelOuterOrigin(), RHSList, /*Kill=*/true);
 }
 
+void FactsGenerator::handlePointerArithmetic(const BinaryOperator *BO) {
+  if (Expr *RHS = BO->getRHS(); RHS->getType()->isPointerType()) {
+    killAndFlowOrigin(*BO, *RHS);
+    return;
+  }
+  Expr *LHS = BO->getLHS();
+  assert(LHS->getType()->isPointerType() &&
+         "Pointer arithmetic must have a pointer operand");
+  killAndFlowOrigin(*BO, *LHS);
+}
+
 void FactsGenerator::VisitBinaryOperator(const BinaryOperator *BO) {
-  // TODO: Handle pointer arithmetic (e.g., `p + 1` or `1 + p`) where the
-  // result should have the same loans as the pointer operand.
   if (BO->isCompoundAssignmentOp())
     return;
+  if (BO->getType()->isPointerType() && BO->isAdditiveOp())
+    handlePointerArithmetic(BO);
   handleUse(BO->getRHS());
   if (BO->isAssignmentOp())
     handleAssignment(BO->getLHS(), BO->getRHS());
@@ -396,8 +414,20 @@ void FactsGenerator::VisitCXXOperatorCallExpr(const CXXOperatorCallExpr *OCE) {
   // and are handled separately.
   if (OCE->getOperator() == OO_Equal && OCE->getNumArgs() == 2 &&
       hasOrigins(OCE->getArg(0)->getType())) {
-    handleAssignment(OCE->getArg(0), OCE->getArg(1));
-    return;
+    // Pointer-like types: assignment inherently propagates origins.
+    QualType LHSTy = OCE->getArg(0)->getType();
+    if (LHSTy->isPointerOrReferenceType() || isGslPointerType(LHSTy)) {
+      handleAssignment(OCE->getArg(0), OCE->getArg(1));
+      return;
+    }
+    // Other tracked types: only defaulted operator= propagates origins.
+    // User-defined operator= has opaque semantics, so don't handle them now.
+    if (const auto *MD =
+            dyn_cast_or_null<CXXMethodDecl>(OCE->getDirectCallee());
+        MD && MD->isDefaulted()) {
+      handleAssignment(OCE->getArg(0), OCE->getArg(1));
+      return;
+    }
   }
 
   ArrayRef Args = {OCE->getArgs(), OCE->getNumArgs()};
@@ -644,7 +674,7 @@ void FactsGenerator::handleFunctionCall(const Expr *Call,
   auto IsArgLifetimeBound = [FD](unsigned I) -> bool {
     const ParmVarDecl *PVD = nullptr;
     if (const auto *Method = dyn_cast<CXXMethodDecl>(FD);
-        Method && Method->isInstance()) {
+        Method && Method->isInstance() && !isa<CXXConstructorDecl>(FD)) {
       if (I == 0)
         // For the 'this' argument, the attribute is on the method itself.
         return implicitObjectParamIsLifetimeBound(Method) ||
@@ -686,9 +716,12 @@ void FactsGenerator::handleFunctionCall(const Expr *Call,
         ArgList = getRValueOrigins(Args[I], ArgList);
       }
       if (isGslOwnerType(Args[I]->getType())) {
-        // GSL construction creates a view that borrows from arguments.
-        // This implies flowing origins through the list structure.
-        flow(CallList, ArgList, KillSrc);
+        // The constructed gsl::Pointer borrows from the Owner's storage, not
+        // from what the Owner itself borrows, so only the outermost origin is
+        // needed.
+        CurrentBlockFacts.push_back(FactMgr.createFact<OriginFlowFact>(
+            CallList->getOuterOriginID(), ArgList->getOuterOriginID(),
+            KillSrc));
         KillSrc = false;
       }
     } else if (shouldTrackPointerImplicitObjectArg(I)) {

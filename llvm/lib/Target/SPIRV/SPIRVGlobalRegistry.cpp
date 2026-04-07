@@ -834,7 +834,14 @@ Register SPIRVGlobalRegistry::buildGlobalVariable(
     return ResVReg;
   }
 
-  auto MIB = MIRBuilder.buildInstr(SPIRV::OpVariable)
+  // Emit the OpVariable into the entry block to ensure the def dominates
+  // all uses across all MBBs.
+  MachineBasicBlock &EntryBB = MIRBuilder.getMF().front();
+  MachineIRBuilder GVBuilder(MIRBuilder.getState());
+  if (&GVBuilder.getMBB() != &EntryBB)
+    GVBuilder.setInsertPt(EntryBB, EntryBB.getFirstTerminator());
+
+  auto MIB = GVBuilder.buildInstr(SPIRV::OpVariable)
                  .addDef(ResVReg)
                  .addUse(getSPIRVTypeID(BaseType))
                  .addImm(static_cast<uint32_t>(Storage));

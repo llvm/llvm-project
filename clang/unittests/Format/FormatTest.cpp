@@ -80,6 +80,8 @@ TEST_F(FormatTest, NestedNameSpecifiers) {
   verifyFormat("static constexpr bool Bar = _Atomic(bar())::value;");
   verifyFormat("bool a = 2 < ::SomeFunction();");
   verifyFormat("ALWAYS_INLINE ::std::string getName();");
+  verifyFormat("template <typename T> auto mem = &T::member;",
+               "template <typename T> auto mem = &T :: member;");
   verifyFormat("some::string getName();");
 }
 
@@ -8433,6 +8435,52 @@ TEST_F(FormatTest, BreakConstructorInitializersAfterColon) {
       "  : public aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa,\n"
       "    public bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb {};",
       Style);
+
+  FormatStyle Tabbed = getLLVMStyle();
+  Tabbed.IndentWidth = 4;
+  Tabbed.TabWidth = 4;
+  Tabbed.UseTab = FormatStyle::UT_AlignWithSpaces;
+  Tabbed.BreakInheritanceList = FormatStyle::BILS_BeforeColon;
+  verifyFormat(
+      "class BeforeColonTabbed\n"
+      "    : public aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa,\n"
+      "      protected bbbbbbbbbbbbbbbbbb,\n"
+      "      private cccccccccccccccccccccc,\n"
+      "      dddddddddd {};",
+      Tabbed);
+  Tabbed.BreakInheritanceList = FormatStyle::BILS_BeforeComma;
+  verifyFormat(
+      "class BeforeCommaTabbed\n"
+      "    : public aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
+      "    , protected bbbbbbbbb\n"
+      "    , private cccccccccc\n"
+      "    , dddddddddd {};",
+      Tabbed);
+  Tabbed.BreakInheritanceList = FormatStyle::BILS_AfterColon;
+  verifyFormat(
+      "class AfterColonTabbed :\n"
+      "    public aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa,\n"
+      "    protected bbbbbbbbb,\n"
+      "    private cccccccccc,\n"
+      "    dddddddddd {};",
+      Tabbed);
+  Tabbed.BreakInheritanceList = FormatStyle::BILS_AfterComma;
+  verifyFormat("class AfterCommaTabbed : public aaaaaaaaa,\n"
+               "                         protected bbbbbbbbb,\n"
+               "                         private cccccccccc,\n"
+               "                         ddddddddd {};",
+               Tabbed);
+  verifyFormat(
+      "class SomeClass\n"
+      "    : public aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa,\n"
+      "      public bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb {};",
+      Tabbed);
+  Tabbed.ColumnLimit = 42;
+  verifyFormat("struct S {\n"
+               "\tclass Foo : public aaaaaaaaa,\n"
+               "\t            private bbbbbbbbb {};\n"
+               "};",
+               Tabbed);
 }
 
 TEST_F(FormatTest, BreakConstructorInitializersAfterComma) {
@@ -15563,6 +15611,12 @@ TEST_F(FormatTest, AllowShortRecordOnASingleLine) {
   verifyFormat("class foo {};\n"
                "class bar { int i; };",
                Style);
+  verifyFormat("namespace foo {\n"
+               "struct S {\n"
+               "} s;\n"
+               "} // namespace foo",
+               Style);
+
   Style.BreakBeforeBraces = FormatStyle::BS_Custom;
   Style.BraceWrapping.AfterClass = true;
   verifyFormat("class foo\n"
@@ -17016,6 +17070,19 @@ TEST_F(FormatTest, ConfigurableUseOfTab) {
                "\tvoid f() {\n"
                "\t\tsomeFunction(parameter1,\n"
                "\t\t             parameter2);\n"
+               "\t}\n"
+               "};",
+               Tab);
+  verifyFormat("aStreamObject << aaaaaaaaaaaaa\n"
+               "              << bbbbbbbbb;\n",
+               Tab);
+  verifyFormat("result = aaaaaaaaaaaaaaaaaaaaaaaa +\n"
+               "         bbbbbbbbbbbbbbbbbbbb;",
+               Tab);
+  verifyFormat("class C {\n"
+               "\tvoid foo() {\n"
+               "\t\taStreamObject << aaaaaaaaaaaaa\n"
+               "\t\t              << bbbbbbbbb;\n"
                "\t}\n"
                "};",
                Tab);
@@ -18495,6 +18562,16 @@ TEST_F(FormatTest, ConfigurableSpaceBeforeColon) {
                "}\n"
                "}",
                InvertedSpaceStyle);
+}
+
+TEST_F(FormatTest, EnumUnderlyingTypeColonSpacing) {
+  FormatStyle Style = getLLVMStyle();
+
+  Style.SpaceBeforeEnumUnderlyingTypeColon = true;
+  verifyFormat("enum A : int {};", Style);
+
+  Style.SpaceBeforeEnumUnderlyingTypeColon = false;
+  verifyFormat("enum A: int {};", Style);
 }
 
 TEST_F(FormatTest, ConfigurableSpaceAroundPointerQualifiers) {

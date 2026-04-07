@@ -748,6 +748,54 @@ func.func @vector_2d_reduction_with_fractional_subgroup_size(%arg0: memref<1024x
 
 // -----
 gpu.module @test {
+// CHECK-LABEL: func.func @vector_2d_reduction_scalar(
+// CHECK: %[[CST:.*]] = arith.constant {layout_result_0 = #xegpu.layout<lane_layout = [1], lane_data = [1]>} dense<true> : vector<1xi1>
+// CHECK: %[[IDX:.*]] = vector.step {layout_result_0 = #xegpu.layout<lane_layout = [1], lane_data = [1]>} : vector<1xindex>
+// CHECK: %[[LOAD:.*]] = xegpu.load %arg0[%[[IDX]]], %[[CST]] <{layout = #xegpu.layout<lane_layout = [1], lane_data = [1]>}> : memref<1024xf16>, vector<1xindex>, vector<1xi1> -> vector<1xf16>
+// CHECK: %[[SC:.*]] = vector.shape_cast %[[LOAD]] {layout_result_0 = #xegpu.layout<lane_layout = [1, 1, 1], lane_data = [1, 1, 1]>} : vector<1xf16> to vector<1x1x1xf16>
+// CHECK: %[[ACC:.*]] = arith.constant 0.000000e+00 : f16
+// CHECK: %[[RED:.*]] = vector.multi_reduction <add>, %[[SC]], %[[ACC]] {layout_result_0 = #xegpu.slice<#xegpu.layout<lane_layout = [1, 1, 1], lane_data = [1, 1, 1]>, dims = [0, 1, 2]>} [0, 1, 2] : vector<1x1x1xf16> to f16
+// CHECK: %[[MASK:.*]] = arith.constant true
+// CHECK: %[[OFF:.*]] = arith.constant 1 : index
+// CHECK: xegpu.store %[[RED]], %arg1[%[[OFF]]], %[[MASK]] : f16, memref<16xf16>, index, i1
+func.func @vector_2d_reduction_scalar(%arg0: memref<1024xf16>, %arg1: memref<16xf16>) {
+    %cst = arith.constant dense<true> : vector<1xi1>
+    %0 = vector.step : vector<1xindex>
+    %1 = xegpu.load %arg0[%0], %cst  : memref<1024xf16>, vector<1xindex>, vector<1xi1> -> vector<1xf16>
+    %2 = vector.shape_cast %1 : vector<1xf16> to vector<1x1x1xf16>
+    %cst_0 = arith.constant 0.000000e+00 : f16
+    %4 = vector.multi_reduction <add>, %2, %cst_0 [0, 1, 2] : vector<1x1x1xf16> to f16
+    %cst_2 = arith.constant true
+    %cst_3 = arith.constant 1 : index
+    xegpu.store %4, %arg1[%cst_3], %cst_2 : f16, memref<16xf16>, index, i1
+    return
+  }
+}
+
+// -----
+gpu.module @test {
+// CHECK-LABEL: func.func @vector_reduction_scalar(
+// CHECK: %[[CST:.*]] = arith.constant {layout_result_0 = #xegpu.layout<lane_layout = [16], lane_data = [1]>} dense<true> : vector<16xi1>
+// CHECK: %[[IDX:.*]] = vector.step {layout_result_0 = #xegpu.layout<lane_layout = [16], lane_data = [1]>} : vector<16xindex>
+// CHECK: %[[LOAD:.*]] = xegpu.load %arg0[%[[IDX]]], %[[CST]] <{layout = #xegpu.layout<lane_layout = [16], lane_data = [1]>}> : memref<1024xf16>, vector<16xindex>, vector<16xi1> -> vector<16xf16>
+// CHECK: %[[RED:.*]] = vector.reduction <add>, %[[LOAD]] {layout_result_0 = #xegpu.slice<#xegpu.layout<lane_layout = [16], lane_data = [1]>, dims = [0]>} : vector<16xf16> into f16
+// CHECK: %[[MASK:.*]] = arith.constant true
+// CHECK: %[[OFF:.*]] = arith.constant 1 : index
+// CHECK: xegpu.store %[[RED]], %arg1[%[[OFF]]], %[[MASK]] : f16, memref<16xf16>, index, i1
+func.func @vector_reduction_scalar(%arg0: memref<1024xf16>, %arg1: memref<16xf16>) {
+    %cst = arith.constant dense<true> : vector<16xi1>
+    %0 = vector.step : vector<16xindex>
+    %1 = xegpu.load %arg0[%0], %cst  : memref<1024xf16>, vector<16xindex>, vector<16xi1> -> vector<16xf16>
+    %4 = vector.reduction <add>, %1: vector<16xf16> into f16
+    %cst_2 = arith.constant true
+    %cst_3 = arith.constant 1 : index
+    xegpu.store %4, %arg1[%cst_3], %cst_2 : f16, memref<16xf16>, index, i1
+    return
+  }
+}
+
+// -----
+gpu.module @test {
 // CHECK-LABEL: func.func @vector_2d_reduction_with_fractional_subgroup_size_1x4(
 // CHECK: %[[CST:.*]] = arith.constant {layout_result_0 = #xegpu.layout<lane_layout = [4], lane_data = [1]>} dense<true> : vector<4xi1>
 // CHECK: %[[IDX:.*]] = vector.step {layout_result_0 = #xegpu.layout<lane_layout = [4], lane_data = [1]>} : vector<4xindex>
