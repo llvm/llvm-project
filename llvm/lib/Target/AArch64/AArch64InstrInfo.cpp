@@ -653,6 +653,21 @@ bool AArch64InstrInfo::reverseBranchCondition(
   return false;
 }
 
+int AArch64InstrInfo::getRelaxedBranchCondition(int CC) const {
+  switch (static_cast<AArch64CC::CondCode>(CC)) {
+  case AArch64CC::GT:
+    return AArch64CC::GE;
+  case AArch64CC::LT:
+    return AArch64CC::LE;
+  case AArch64CC::HI:
+    return AArch64CC::HS;
+  case AArch64CC::LO:
+    return AArch64CC::LS;
+  default:
+    return -1;
+  }
+}
+
 unsigned AArch64InstrInfo::removeBranch(MachineBasicBlock &MBB,
                                         int *BytesRemoved) const {
   MachineBasicBlock::iterator I = MBB.getLastNonDebugInstr();

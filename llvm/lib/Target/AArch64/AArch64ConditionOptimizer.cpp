@@ -309,30 +309,6 @@ static int getComplementOpc(int Opc) {
   }
 }
 
-// Changes form of comparison inclusive <-> exclusive.
-static AArch64CC::CondCode getAdjustedCmp(AArch64CC::CondCode Cmp) {
-  switch (Cmp) {
-  case AArch64CC::GT:
-    return AArch64CC::GE;
-  case AArch64CC::GE:
-    return AArch64CC::GT;
-  case AArch64CC::LT:
-    return AArch64CC::LE;
-  case AArch64CC::LE:
-    return AArch64CC::LT;
-  case AArch64CC::HI:
-    return AArch64CC::HS;
-  case AArch64CC::HS:
-    return AArch64CC::HI;
-  case AArch64CC::LO:
-    return AArch64CC::LS;
-  case AArch64CC::LS:
-    return AArch64CC::LO;
-  default:
-    llvm_unreachable("Unexpected condition code");
-  }
-}
-
 // Returns the adjusted immediate, opcode, and condition code for switching
 // between inclusive/exclusive forms (GT <-> GE, LT <-> LE).
 CmpInfo
@@ -371,7 +347,9 @@ AArch64ConditionOptimizerImpl::getAdjustedCmpInfo(MachineInstr *CmpMI,
     Opc = getComplementOpc(Opc);
   }
 
-  return {NewImm, Opc, getAdjustedCmp(Cmp)};
+  int RelaxedCC = TII->getRelaxedBranchCondition((int)Cmp);
+  assert(RelaxedCC != -1 && "Expected a strict condition code");
+  return {NewImm, Opc, (AArch64CC::CondCode)RelaxedCC};
 }
 
 // Modifies a comparison instruction's immediate and opcode.
