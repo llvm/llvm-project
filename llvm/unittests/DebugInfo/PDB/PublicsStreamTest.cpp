@@ -29,8 +29,9 @@ struct PublicSym {
   PublicSym(StringRef N, uint16_t Seg, uint32_t Off)
       : NameData(new char[N.size()]), Name(NameData.get(), N.size()),
         Segment(Seg), Offset(Off) {
-    // Store the name without null terminator on the heap to help catch issues
-    // with code assuming there is a null terminator.
+    // Store the name without null terminator on the heap to help catch
+    // out-of-bounds accesses with ASan in case Name.data() is used as a
+    // null-terminated string.
     memcpy(NameData.get(), N.data(), N.size());
   }
 
