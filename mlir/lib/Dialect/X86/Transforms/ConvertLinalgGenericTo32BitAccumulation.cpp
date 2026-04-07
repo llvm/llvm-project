@@ -27,20 +27,27 @@ namespace {
 // Example:
 // Input:
 // linalg.generic ins(tensor<16x32xbf>, tensor<32x48xbf16>)
-// outs(tensor<16x48xbf16) { 	arith.multf : bf16 	arith.addf : bf16 } - >
-// tensor<16x48xbf16>
+// outs(tensor<16x48xbf16) { 	
+// 	arith.multf : bf16 	
+// 	arith.addf : bf16 
+// } -> tensor<16x48xbf16>
 //
 // Output:
 // linalg.fill ins(f32) outs(tensor<16x48xf32>) -> tensor<16x48xf32>
 // linalg.generic ins(tensor<16x32xbf>, tensor<32x48xbf16>)
-// outs(tensor<16x48xf32) { 	%a = arith.extf %in : bf16 to f32 	%b = arith.extf
-// %in_2 : bf16 to f32 	%c = arith.mulf %a, %b : f32 	arith.addf %out, %c : f32 }
-// -> tensor<16x48xf32>
+// outs(tensor<16x48xf32) { 	
+// 	%a = arith.extf %in : bf16 to f32
+// 	%b = arith.extf %in_2 : bf16 to f32 	
+// 	%c = arith.mulf %a, %b : f32 	
+// 	arith.addf %out, %c : f32 
+// } -> tensor<16x48xf32>
 //
 // linalg.generic ins(tensor<16x48xf32>, tensor<16x48xbf16>)
-// outs(tensor<16x48xbf16>) { 	%a = arith.extf %in_2 : bf16 to f32 	%b =
-// arith.addf %in, %a : f32 	%c = arith.truncf %b : f32 to bf16 } ->
-// tensor<16x48xbf16>
+// outs(tensor<16x48xbf16>) { 	
+// 	%a = arith.extf %in_2 : bf16 to f32 	
+// 	%b = arith.addf %in, %a : f32 	
+// 	%c = arith.truncf %b : f32 to bf16 
+// } -> tensor<16x48xbf16>
 //
 struct ConvertLinalgGenericTo32BitAccumulation
     : public OpRewritePattern<linalg::GenericOp> {
