@@ -928,7 +928,7 @@ class arglistmatchshift<list<AMDGPUArg> arglist, int shift> {
   list<AMDGPUArg> ret =
     !foreach(arg, arglist,
              !if(!isa<LLVMMatchType>(arg.Type),
-                 AMDGPUArg<LLVMMatchType<!add(!cast<LLVMMatchType>(arg.Type).Number, shift)>,
+                 AMDGPUArg<LLVMMatchType<!add(!cast<LLVMMatchType>(arg.Type).OverloadIndex, shift)>,
                            arg.Name>,
                  arg));
 }
@@ -942,7 +942,7 @@ class arglistconcat<list<list<AMDGPUArg>> arglists, int shift = 0> {
              lhs,
              arglistmatchshift<rhs,
                                !add(shift, !foldl(0, lhs, a, b,
-                                                  !add(a, b.Type.isAny)))>.ret));
+                                                  !add(a, !isa<LLVMAnyType>(b.Type))))>.ret));
 }
 
 // Represent texture/image types / dimensionality.
@@ -1074,7 +1074,7 @@ class AMDGPUDimProfile<string opmod,
 
   int NumRetAndDataAnyTypes =
     !foldl(0, !listconcat(RetTypes, !foreach(arg, DataArgs, arg.Type)), a, b,
-           !add(a, b.isAny));
+           !add(a, !isa<LLVMAnyType>(b)));
 
   list<AMDGPUArg> AddrArgs =
     arglistconcat<[ExtraAddrArgs,
@@ -1087,12 +1087,12 @@ class AMDGPUDimProfile<string opmod,
   list<LLVMType> AddrTypes = !foreach(arg, AddrArgs, arg.Type);
   list<AMDGPUArg> AddrDefaultArgs =
     !foreach(arg, AddrArgs,
-             AMDGPUArg<!if(!or(arg.Type.isAny, !isa<LLVMMatchType>(arg.Type)),
+             AMDGPUArg<!if(!or(!isa<LLVMAnyType>(arg.Type), !isa<LLVMMatchType>(arg.Type)),
                            !if(IsSample, llvm_float_ty, llvm_i32_ty), arg.Type),
                        arg.Name>);
   list<AMDGPUArg> AddrA16Args =
     !foreach(arg, AddrArgs,
-             AMDGPUArg<!if(!or(arg.Type.isAny, !isa<LLVMMatchType>(arg.Type)),
+             AMDGPUArg<!if(!or(!isa<LLVMAnyType>(arg.Type), !isa<LLVMMatchType>(arg.Type)),
                            !if(IsSample, llvm_half_ty, llvm_i16_ty), arg.Type),
                        arg.Name>);
 }

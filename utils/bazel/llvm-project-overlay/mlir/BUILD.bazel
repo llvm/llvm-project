@@ -10671,6 +10671,7 @@ cc_library(
     deps = [
         ":Analysis",
         ":FuncDialect",
+        ":FunctionInterfaces",
         ":IR",
         ":LLVMDialect",
         ":OpenMPDialect",
@@ -14086,6 +14087,8 @@ cc_library(
     hdrs = glob(["include/mlir/Reducer/*.h"]),
     includes = ["include"],
     deps = [
+        ":ControlFlowDialect",
+        ":ControlFlowInterfaces",
         ":DialectReductionPatternInterfaceIncGen",
         ":IR",
         ":Pass",
