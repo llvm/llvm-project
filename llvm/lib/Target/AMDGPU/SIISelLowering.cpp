@@ -17442,6 +17442,10 @@ static ISD::CondCode tryReduceF64CompareToHiHalf(const ISD::CondCode CC,
       KnownFPClass::bitcast(VT.getFltSemantics(), LHSBits);
   const bool LHSMaybeNaN = !LHSFPClass.isKnownNeverNaN();
 
+  // Bail if LHS sign bit is not known to be zero.
+  if (!LHSBits.Zero.isSignBitSet())
+    return ISD::SETCC_INVALID;
+
   switch (CC) {
   default:
     break;
@@ -17450,10 +17454,6 @@ static ISD::CondCode tryReduceF64CompareToHiHalf(const ISD::CondCode CC,
   case ISD::SETUEQ:
   case ISD::SETONE:
   case ISD::SETUNE: {
-    // Bail if LHS sign bit may be set.
-    if (!LHSBits.Zero.isSignBitSet())
-      break;
-
     // OEQ should be false if either operand is NaN, so it suffices that at
     // least one operand is not NaN.
     if (CC == ISD::SETOEQ && LHSMaybeNaN && RHSMaybeNaN)
@@ -17492,10 +17492,6 @@ static ISD::CondCode tryReduceF64CompareToHiHalf(const ISD::CondCode CC,
   case ISD::SETGE:
   case ISD::SETOGE:
   case ISD::SETUGE: {
-    // Bail if LHS sign bit may be set.
-    if (!LHSBits.Zero.isSignBitSet())
-      break;
-
     // OLT should be false if either operand is NaN.
     // Since NaNs have maximum exponent and nonzero mantissa, false positives
     // are only possible if the RHS is NaN. (No issue with RHS == +inf since
@@ -17539,10 +17535,6 @@ static ISD::CondCode tryReduceF64CompareToHiHalf(const ISD::CondCode CC,
   case ISD::SETGT:
   case ISD::SETOGT:
   case ISD::SETUGT: {
-    // Bail if LHS sign bit may be set.
-    if (!LHSBits.Zero.isSignBitSet())
-      break;
-
     // OLE should be false if either operand is NaN, but this cannot be
     // ensured with a truncated comparison.
     if (CC == ISD::SETOLE && (LHSMaybeNaN || RHSMaybeNaN))
