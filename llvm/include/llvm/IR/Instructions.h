@@ -822,11 +822,10 @@ public:
   using OperationField = BinOpBitfieldElement<AtomicOrderingField::NextBit>;
   using AlignmentField = AlignmentBitfieldElementT<OperationField::NextBit>;
   using ElementwiseField = BoolBitfieldElementT<AlignmentField::NextBit>;
-  static_assert(
-      Bitfield::areContiguous<VolatileField, AtomicOrderingField,
-                              OperationField, AlignmentField,
-                              ElementwiseField>(),
-      "Bitfields must be contiguous");
+  static_assert(Bitfield::areContiguous<VolatileField, AtomicOrderingField,
+                                        OperationField, AlignmentField,
+                                        ElementwiseField>(),
+                "Bitfields must be contiguous");
 
   BinOp getOperation() const { return getSubclassData<OperationField>(); }
 
