@@ -108,30 +108,51 @@ define i32 @early_exit_live_out(ptr align 4 dereferenceable(4096) %p) {
 ;
 ; ZVE32X-LABEL: define i32 @early_exit_live_out(
 ; ZVE32X-SAME: ptr align 4 dereferenceable(4096) [[P:%.*]]) #[[ATTR0:[0-9]+]] {
-; ZVE32X-NEXT:  [[ENTRY:.*:]]
-; ZVE32X-NEXT:    br label %[[VECTOR_PH:.*]]
+; ZVE32X-NEXT:  [[ENTRY:.*]]:
+; ZVE32X-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
+; ZVE32X-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 2
+; ZVE32X-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1024, [[TMP1]]
+; ZVE32X-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; ZVE32X:       [[VECTOR_PH]]:
+; ZVE32X-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
+; ZVE32X-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 2
+; ZVE32X-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP3]]
+; ZVE32X-NEXT:    [[N_VEC:%.*]] = sub i64 1024, [[N_MOD_VF]]
 ; ZVE32X-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; ZVE32X:       [[VECTOR_BODY]]:
 ; ZVE32X-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY_INTERIM:.*]] ]
 ; ZVE32X-NEXT:    [[TMP4:%.*]] = getelementptr i32, ptr [[P]], i64 [[INDEX]]
-; ZVE32X-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i32>, ptr [[TMP4]], align 4
-; ZVE32X-NEXT:    [[TMP1:%.*]] = icmp ne <8 x i32> [[WIDE_LOAD]], zeroinitializer
-; ZVE32X-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
-; ZVE32X-NEXT:    [[TMP2:%.*]] = freeze <8 x i1> [[TMP1]]
-; ZVE32X-NEXT:    [[TMP7:%.*]] = call i1 @llvm.vector.reduce.or.v8i1(<8 x i1> [[TMP2]])
-; ZVE32X-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
+; ZVE32X-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i32>, ptr [[TMP4]], align 4
+; ZVE32X-NEXT:    [[TMP5:%.*]] = icmp ne <vscale x 4 x i32> [[WIDE_LOAD]], zeroinitializer
+; ZVE32X-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
+; ZVE32X-NEXT:    [[TMP6:%.*]] = freeze <vscale x 4 x i1> [[TMP5]]
+; ZVE32X-NEXT:    [[TMP7:%.*]] = call i1 @llvm.vector.reduce.or.nxv4i1(<vscale x 4 x i1> [[TMP6]])
+; ZVE32X-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; ZVE32X-NEXT:    br i1 [[TMP7]], label %[[VECTOR_EARLY_EXIT:.*]], label %[[VECTOR_BODY_INTERIM]]
 ; ZVE32X:       [[VECTOR_BODY_INTERIM]]:
-; ZVE32X-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; ZVE32X-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; ZVE32X:       [[MIDDLE_BLOCK]]:
-; ZVE32X-NEXT:    br label %[[EXIT:.*]]
+; ZVE32X-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1024, [[N_VEC]]
+; ZVE32X-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; ZVE32X:       [[VECTOR_EARLY_EXIT]]:
-; ZVE32X-NEXT:    [[FIRST_ACTIVE_LANE:%.*]] = call i32 @llvm.experimental.cttz.elts.i32.v8i1(<8 x i1> [[TMP1]], i1 false)
-; ZVE32X-NEXT:    [[TMP5:%.*]] = extractelement <8 x i32> [[WIDE_LOAD]], i32 [[FIRST_ACTIVE_LANE]]
+; ZVE32X-NEXT:    [[FIRST_ACTIVE_LANE:%.*]] = call i32 @llvm.experimental.cttz.elts.i32.nxv4i1(<vscale x 4 x i1> [[TMP5]], i1 false)
+; ZVE32X-NEXT:    [[TMP9:%.*]] = extractelement <vscale x 4 x i32> [[WIDE_LOAD]], i32 [[FIRST_ACTIVE_LANE]]
 ; ZVE32X-NEXT:    br label %[[EXIT]]
+; ZVE32X:       [[SCALAR_PH]]:
+; ZVE32X-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; ZVE32X-NEXT:    br label %[[LOOP_HEADER:.*]]
+; ZVE32X:       [[LOOP_HEADER]]:
+; ZVE32X-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LATCH:.*]] ]
+; ZVE32X-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[P]], i64 [[IV]]
+; ZVE32X-NEXT:    [[LD:%.*]] = load i32, ptr [[GEP]], align 4
+; ZVE32X-NEXT:    [[C:%.*]] = icmp eq i32 [[LD]], 0
+; ZVE32X-NEXT:    br i1 [[C]], label %[[LATCH]], label %[[EXIT]]
+; ZVE32X:       [[LATCH]]:
+; ZVE32X-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; ZVE32X-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], 1024
+; ZVE32X-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP_HEADER]], !llvm.loop [[LOOP3:![0-9]+]]
 ; ZVE32X:       [[EXIT]]:
-; ZVE32X-NEXT:    [[RET:%.*]] = phi i32 [ [[TMP5]], %[[VECTOR_EARLY_EXIT]] ], [ 0, %[[MIDDLE_BLOCK]] ]
+; ZVE32X-NEXT:    [[RET:%.*]] = phi i32 [ [[LD]], %[[LOOP_HEADER]] ], [ 0, %[[LATCH]] ], [ 0, %[[MIDDLE_BLOCK]] ], [ [[TMP9]], %[[VECTOR_EARLY_EXIT]] ]
 ; ZVE32X-NEXT:    ret i32 [[RET]]
 ;
 entry:
