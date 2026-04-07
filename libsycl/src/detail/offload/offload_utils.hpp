@@ -5,6 +5,12 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file contains the declaration of the helpers for libsycl vs liboffload
+/// communication and data conversion.
+///
+//===----------------------------------------------------------------------===//
 
 #ifndef _LIBSYCL_OFFLOAD_UTILS
 #define _LIBSYCL_OFFLOAD_UTILS

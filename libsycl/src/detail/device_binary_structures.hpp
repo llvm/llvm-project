@@ -5,6 +5,12 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file contains the declaration of the device images types and structures
+/// used for offloading.
+///
+//===----------------------------------------------------------------------===//
 
 #ifndef _LIBSYCL_DEVICE_BINARY_STRUCTURES
 #define _LIBSYCL_DEVICE_BINARY_STRUCTURES

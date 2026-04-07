@@ -5,6 +5,12 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file contains the declaration of the alloc enumeration that defines
+/// types of memory allocations supported by SYCL 2020.
+///
+//===----------------------------------------------------------------------===//
 
 #ifndef _LIBSYCL___IMPL_USM_ALLOC_TYPE_HPP
 #define _LIBSYCL___IMPL_USM_ALLOC_TYPE_HPP

@@ -5,6 +5,12 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file contains the declaration of device_type enumeration representing
+/// type of devices that SYCL 2020 support.
+///
+//===----------------------------------------------------------------------===//
 
 #ifndef _LIBSYCL___IMPL_INFO_DEVICE_TYPE_HPP
 #define _LIBSYCL___IMPL_INFO_DEVICE_TYPE_HPP

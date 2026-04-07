@@ -29,7 +29,7 @@ checkDeviceImageValidity(const __sycl_tgt_device_image &DeviceImage) {
          (DeviceImage.ImageFormat == llvm::object::IMG_SPIRV);
 }
 
-void ProgramManager::addImages(__sycl_tgt_bin_desc *FatbinDesc) {
+void ProgramAndKernelManager::registerFatBin(__sycl_tgt_bin_desc *FatbinDesc) {
   assert(FatbinDesc && "Device images descriptor can't be nullptr");
 
   if (!checkFatBinVersion(*FatbinDesc))
@@ -75,7 +75,8 @@ void ProgramManager::addImages(__sycl_tgt_bin_desc *FatbinDesc) {
   }
 }
 
-void ProgramManager::removeImages(__sycl_tgt_bin_desc *FatbinDesc) {
+void ProgramAndKernelManager::unregisterFatBin(
+    __sycl_tgt_bin_desc *FatbinDesc) {
   assert(FatbinDesc && "Device images descriptor can't be nullptr");
 
   if (!checkFatBinVersion(*FatbinDesc) || FatbinDesc->NumDeviceBinaries == 0)
@@ -116,9 +117,10 @@ static bool isImageTargetCompatible(const DeviceImageWrapper &Image,
          (BE == sycl::backend::level_zero);
 }
 
-DeviceImageWrapper *ProgramManager::getDeviceImage(std::string_view KernelName,
-                                                   const kernel_id &KernelID,
-                                                   DeviceImpl &Device) {
+DeviceImageWrapper *
+ProgramAndKernelManager::getDeviceImage(std::string_view KernelName,
+                                        const kernel_id &KernelID,
+                                        DeviceImpl &Device) {
   std::lock_guard<std::mutex> Guard(MImageCollectionMutex);
   auto [Begin, End] = MKernelIDToDevImageJIT.equal_range(KernelID);
   if (Begin != End) {
@@ -127,7 +129,7 @@ DeviceImageWrapper *ProgramManager::getDeviceImage(std::string_view KernelName,
     // olIsValidBinary for AOT binaries first.
     for (auto It = Begin; It != End; ++It) {
       if (isImageTargetCompatible(*It->second, Device)) {
-        callAndThrow(olIsValidBinary, Device.getHandle(),
+        callAndThrow(olIsValidBinary, Device.getOLHandle(),
                      It->second->getRawData().ImageStart, It->second->getSize(),
                      &IsValid);
         if (IsValid)
@@ -145,10 +147,12 @@ _LIBSYCL_END_NAMESPACE_SYCL
 
 extern "C" _LIBSYCL_EXPORT void
 __sycl_register_lib(sycl::detail::__sycl_tgt_bin_desc *FatbinDesc) {
-  sycl::detail::ProgramManager::getInstance().addImages(FatbinDesc);
+  sycl::detail::ProgramAndKernelManager::getInstance().registerFatBin(
+      FatbinDesc);
 }
 
 extern "C" _LIBSYCL_EXPORT void
 __sycl_unregister_lib(sycl::detail::__sycl_tgt_bin_desc *FatbinDesc) {
-  sycl::detail::ProgramManager::getInstance().removeImages(FatbinDesc);
+  sycl::detail::ProgramAndKernelManager::getInstance().unregisterFatBin(
+      FatbinDesc);
 }
