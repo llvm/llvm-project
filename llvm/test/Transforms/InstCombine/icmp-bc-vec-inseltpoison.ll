@@ -88,7 +88,11 @@ define i1 @test_i8_pattern_3(<4 x i8> %invec) {
 ; Make sure we don't try to fold if the compared-to constant isn't a splatted value
 define i1 @test_i8_nopattern(i8 %val) {
 ; CHECK-LABEL: @test_i8_nopattern(
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    [[INSVEC:%.*]] = insertelement <4 x i8> poison, i8 [[VAL:%.*]], i64 0
+; CHECK-NEXT:    [[VEC:%.*]] = shufflevector <4 x i8> [[INSVEC]], <4 x i8> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[CAST:%.*]] = bitcast <4 x i8> [[VEC]] to i32
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[CAST]], 1212696647
+; CHECK-NEXT:    ret i1 [[COND]]
 ;
   %insvec = insertelement <4 x i8> poison, i8 %val, i32 0
   %vec = shufflevector <4 x i8> %insvec, <4 x i8> poison, <4 x i32> zeroinitializer
@@ -113,9 +117,7 @@ define i1 @test_i8_ult_pattern(i8 %val) {
 define i1 @extending_shuffle_with_weird_types(<2 x i9> %v) {
 ; CHECK-LABEL: @extending_shuffle_with_weird_types(
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x i9> [[V:%.*]], i64 0
-; CHECK-NEXT:    [[TMP2:%.*]] = zext i9 [[TMP1]] to i27
-; CHECK-NEXT:    [[CAST:%.*]] = mul nuw i27 [[TMP2]], 262657
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i27 [[CAST]], 262657
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i9 [[TMP1]], 1
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %splat = shufflevector <2 x i9> %v, <2 x i9> poison, <3 x i32> zeroinitializer
