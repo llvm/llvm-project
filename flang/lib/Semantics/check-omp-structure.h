@@ -49,10 +49,6 @@ static const OmpDirectiveSet noWaitClauseNotAllowedSet{
 namespace Fortran::semantics {
 struct AnalyzedCondStmt;
 
-namespace omp {
-struct LoopSequence;
-}
-
 // Mapping from 'Symbol' to 'Source' to keep track of the variables
 // used in multiple clauses
 using SymbolSourceMap = std::multimap<const Symbol *, parser::CharBlock>;
