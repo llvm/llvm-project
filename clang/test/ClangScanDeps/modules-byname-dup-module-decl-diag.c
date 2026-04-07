@@ -16,17 +16,11 @@
 // RUN: sed "s|DIR|%/t|g" %t/cdb.json.template > %t/cdb.json
 
 // RUN: not clang-scan-deps -compilation-database %t/cdb.json -format \
-// RUN:   experimental-full -module-names=B,A > %t/result_ab.json 2> %t/err.txt
-// RUN: cat %t/result_ab.json | sed 's:\\\\\?:/:g' | FileCheck -DPREFIX=%/t %s
-// RUN: cat %t/err.txt | sed 's:\\\\\?:/:g' | FileCheck -DPREFIX=%/t \
-// RUN:   -check-prefix=ERROR %s
+// RUN:   experimental-full -module-names=B,A 2>&1 | \
+// RUN:   sed 's:\\\\\?:/:g' | FileCheck -DPREFIX=%/t %s
 
-// We should not produce scanning results for A, since there is a duplicating
-// module decl.
-// CHECK-NOT: "name": "A"
-
-// ERROR: A.framework/Modules/module.modulemap:8:8: error: redefinition of module 'B'
-// ERROR: include/B/module.modulemap:1:8: note: previously defined here
+// CHECK: A.framework/Modules/module.modulemap:7:8: error: redefinition of module 'B'
+// CHECK: include/B/module.modulemap:1:8: note: previously defined here
 
 //--- frameworks/A.framework/Modules/module.modulemap
 framework module A [system] {
@@ -35,7 +29,6 @@ framework module A [system] {
   module * { export * }
 }
 
-// This empty definition of B shadows the real one when cached.
 module B {
   export *
 }

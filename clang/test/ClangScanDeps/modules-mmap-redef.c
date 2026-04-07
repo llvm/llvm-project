@@ -5,12 +5,11 @@
 // RUN: sed "s|DIR|%/t|g" %t/cdb.json.template > %t/cdb.json
 
 // RUN: not clang-scan-deps -compilation-database %t/cdb.json -format \
-// RUN:   experimental-full -module-names=A > %t/result.json 2> %t/err.txt
-// RUN: cat %t/err.txt | sed 's:\\\\\?:/:g' | FileCheck -DPREFIX=%/t \
-// RUN:   -check-prefix=ERROR %s
+// RUN:   experimental-full -module-names=A 2>&1 | sed 's:\\\\\?:/:g' | \
+// RUN:   FileCheck -DPREFIX=%/t %s
 
-// ERROR: include/A/module.modulemap:9:8: error: redefinition of module 'A'
-// ERROR-NEXT: include/A/module.modulemap:1:8: note: previously defined here
+// CHECK: include/A/module.modulemap:9:8: error: redefinition of module 'A'
+// CHECK-NEXT: include/A/module.modulemap:1:8: note: previously defined here
 
 //--- include/A/module.modulemap
 module A {
