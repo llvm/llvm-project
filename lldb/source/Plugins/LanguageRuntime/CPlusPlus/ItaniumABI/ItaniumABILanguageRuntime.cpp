@@ -123,7 +123,7 @@ TypeAndOrName ItaniumABILanguageRuntime::GetTypeInfo(
                       ": static-type = '%s' has dynamic type: uid={0x%" PRIx64
                       "}, type-name='%s'\n",
                       in_value.GetPointerValue().address,
-                      in_value.GetTypeName().AsCString(), type_sp->GetID(),
+                      in_value.GetTypeName().AsCString(""), type_sp->GetID(),
                       type_sp->GetName().GetCString());
             type_info.SetTypeSP(type_sp);
           }
@@ -139,7 +139,7 @@ TypeAndOrName ItaniumABILanguageRuntime::GetTypeInfo(
                         ": static-type = '%s' has multiple matching dynamic "
                         "types: uid={0x%" PRIx64 "}, type-name='%s'\n",
                         in_value.GetPointerValue().address,
-                        in_value.GetTypeName().AsCString(), type_sp->GetID(),
+                        in_value.GetTypeName().AsCString(""), type_sp->GetID(),
                         type_sp->GetName().GetCString());
             }
           }
@@ -155,7 +155,7 @@ TypeAndOrName ItaniumABILanguageRuntime::GetTypeInfo(
                         "matching dynamic types, picking "
                         "this one: uid={0x%" PRIx64 "}, type-name='%s'\n",
                         in_value.GetPointerValue().address,
-                        in_value.GetTypeName().AsCString(), type_sp->GetID(),
+                        in_value.GetTypeName().AsCString(""), type_sp->GetID(),
                         type_sp->GetName().GetCString());
               type_info.SetTypeSP(type_sp);
             }
@@ -168,7 +168,7 @@ TypeAndOrName ItaniumABILanguageRuntime::GetTypeInfo(
                     ": static-type = '%s' has multiple matching dynamic "
                     "types, didn't find a C++ match\n",
                     in_value.GetPointerValue().address,
-                    in_value.GetTypeName().AsCString());
+                    in_value.GetTypeName().AsCString(""));
         }
       }
       if (type_info)

@@ -1142,7 +1142,7 @@ size_t Disassembler::AppendInstructions(Target &target, Address start,
 
   if (bytes_read == 0) {
     if (error_strm_ptr) {
-      if (const char *error_cstr = error.AsCString())
+      if (const char *error_cstr = error.AsCString(nullptr))
         error_strm_ptr->Printf("error: %s\n", error_cstr);
     }
     return 0;

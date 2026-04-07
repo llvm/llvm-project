@@ -512,10 +512,10 @@ bool AppleObjCDeclVendor::FinishDecl(clang::ObjCInterfaceDecl *interface_decl) {
     return false;
   };
 
-  LLDB_LOGF(log,
-            "[AppleObjCDeclVendor::FinishDecl] Finishing Objective-C "
-            "interface for %s",
-            descriptor->GetClassName().AsCString());
+  LLDB_LOG(log,
+           "[AppleObjCDeclVendor::FinishDecl] Finishing Objective-C interface "
+           "for {0}",
+           descriptor->GetClassName());
 
   if (!descriptor->Describe(superclass_func, instance_method_func,
                             class_method_func, ivar_func))
@@ -539,9 +539,8 @@ uint32_t AppleObjCDeclVendor::FindDecls(ConstString name, bool append,
   Log *log(
       GetLog(LLDBLog::Expressions)); // FIXME - a more appropriate log channel?
 
-  LLDB_LOGF(log, "AppleObjCDeclVendor::FindDecls ('%s', %s, %u, )",
-            (const char *)name.AsCString(), append ? "true" : "false",
-            max_matches);
+  LLDB_LOG(log, "AppleObjCDeclVendor::FindDecls ('{0}', {1}, {2}, )", name,
+           append ? "true" : "false", max_matches);
 
   if (!append)
     decls.clear();
@@ -594,6 +593,7 @@ uint32_t AppleObjCDeclVendor::FindDecls(ConstString name, bool append,
     // It's not.  If it exists, we have to put it into our ASTContext.
 
     ObjCLanguageRuntime::ObjCISA isa = m_runtime.GetISA(name);
+    LLDB_LOG(log, "AOCTV::FT Couldn't find {0} in the ASTContext", name);
 
     if (!isa) {
       LLDB_LOGF(log, "AOCTV::FT Couldn't find the isa");
