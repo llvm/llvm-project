@@ -2314,9 +2314,17 @@ enum CXCursorKind {
    * a concept declaration.
    */
   CXCursor_ConceptDecl = 604,
+  /**
+   * a C++ variable template declaration.
+   */
+  CXCursor_VarTemplate = 605,
+  /**
+   * a C++ variable template partial specialization.
+   */
+  CXCursor_VarTemplatePartialSpecialization = 606,
 
   CXCursor_FirstExtraDecl = CXCursor_ModuleImportDecl,
-  CXCursor_LastExtraDecl = CXCursor_ConceptDecl,
+  CXCursor_LastExtraDecl = CXCursor_VarTemplatePartialSpecialization,
 
   /**
    * A code completion overload candidate.
@@ -3214,11 +3222,11 @@ enum CXTemplateArgumentKind {
 };
 
 /**
- * Returns the number of template args of a function, struct, or class decl
- * representing a template specialization.
+ * Returns the number of template args of a function, struct, class, or
+ * variable decl representing a template specialization.
  *
- * If the argument cursor cannot be converted into a template function
- * declaration, -1 is returned.
+ * If the argument cursor does not represent a template specialization,
+ * -1 is returned.
  *
  * For example, for the following declaration and specialization:
  *   template <typename T, int kInt, bool kBool>
@@ -3228,14 +3236,24 @@ enum CXTemplateArgumentKind {
  *   void foo<float, -7, true>();
  *
  * The value 3 would be returned from this call.
+ *
+ * Parameter pack arguments are expanded. For example:
+ *   template <typename T, typename... Ts>
+ *   struct Bar {};
+ *
+ *   Bar<int, float, double> bar;
+ *
+ * The value 3 would be returned (not 2), and each argument is individually
+ * accessible via \c clang_Cursor_getTemplateArgumentKind and related APIs.
  */
 CINDEX_LINKAGE int clang_Cursor_getNumTemplateArguments(CXCursor C);
 
 /**
  * Retrieve the kind of the I'th template argument of the CXCursor C.
  *
- * If the argument CXCursor does not represent a FunctionDecl, StructDecl, or
- * ClassTemplatePartialSpecialization, an invalid template argument kind is
+ * If the argument CXCursor does not represent a FunctionDecl, CXXMethod,
+ * StructDecl, ClassDecl, ClassTemplatePartialSpecialization, VarDecl, or
+ * VarTemplatePartialSpecialization, an invalid template argument kind is
  * returned.
  *
  * For example, for the following declaration and specialization:
@@ -3253,11 +3271,13 @@ clang_Cursor_getTemplateArgumentKind(CXCursor C, unsigned I);
 
 /**
  * Retrieve a CXType representing the type of a TemplateArgument of a
- *  function decl representing a template specialization.
+ *  function, struct, class, or variable decl representing a template
+ *  specialization.
  *
- * If the argument CXCursor does not represent a FunctionDecl, StructDecl,
- * ClassDecl or ClassTemplatePartialSpecialization whose I'th template argument
- * has a kind of CXTemplateArgKind_Integral, an invalid type is returned.
+ * If the argument CXCursor does not represent a FunctionDecl, CXXMethod,
+ * StructDecl, ClassDecl, ClassTemplatePartialSpecialization, VarDecl, or
+ * VarTemplatePartialSpecialization whose I'th template argument has a kind of
+ * CXTemplateArgKind_Type, an invalid type is returned.
  *
  * For example, for the following declaration and specialization:
  *   template <typename T, int kInt, bool kBool>
@@ -3266,16 +3286,20 @@ clang_Cursor_getTemplateArgumentKind(CXCursor C, unsigned I);
  *   template <>
  *   void foo<float, -7, true>();
  *
- * If called with I = 0, "float", will be returned.
+ * If called with I = 0, "float" will be returned.
  * Invalid types will be returned for I == 1 or 2.
  */
 CINDEX_LINKAGE CXType clang_Cursor_getTemplateArgumentType(CXCursor C,
                                                            unsigned I);
 
 /**
- * Retrieve the type of an Integral TemplateArgument at a given index.
+ * Retrieve the type of a constant template argument at a given index.
  *
- * For example, for:
+ * If the argument CXCursor does not represent a FunctionDecl, CXXMethod,
+ * StructDecl, ClassDecl, ClassTemplatePartialSpecialization, VarDecl, or
+ * VarTemplatePartialSpecialization, an invalid type is returned.
+ *
+ * For example, for the following declaration and specialization:
  *   template <typename T, int N>
  *   void foo() {}
  *
@@ -3283,24 +3307,38 @@ CINDEX_LINKAGE CXType clang_Cursor_getTemplateArgumentType(CXCursor C,
  *   void foo<float, 42>();
  *
  * If called with I = 1, the type "int" will be returned (the type of the
- * integral argument 42). An invalid type is returned if the argument at
- * index I is not integral, or if the index is out of range.
+ * constant template argument 42). An invalid type is returned if the argument
+ * at the given index is not a constant template argument, or if the index is
+ * out of range.
+ *
+ * Note that this returns the type of the argument after conversion to the
+ * parameter type. For example:
+ *   template <short S>
+ *   void bar() {}
+ *
+ *   template <>
+ *   void bar<12>();
+ *
+ * If called with I = 0, "short" will be returned, not "int".
  *
  * \param C a cursor representing a template specialization.
  * \param I the zero-based index of the template argument.
  *
- * \returns the type of the integral template argument, or an invalid type.
+ * \returns the type of the constant template argument, or an invalid type.
  */
-CINDEX_LINKAGE CXType clang_Cursor_getTemplateArgumentIntegralType(CXCursor C,
+CINDEX_LINKAGE CXType clang_Cursor_getConstantTemplateArgumentType(CXCursor C,
                                                                    unsigned I);
 
 /**
- * Retrieve the value of an Integral TemplateArgument (of a function or class
- *  decl representing a template specialization) as a signed long long.
+ * Retrieve the value of an Integral TemplateArgument (of a function, struct,
+ *  class, or variable decl representing a template specialization) as a signed
+ *  long long.
  *
  * It is undefined to call this function on a CXCursor that does not represent a
- * FunctionDecl, StructDecl, ClassDecl or ClassTemplatePartialSpecialization
- * whose I'th template argument is not an integral value.
+ * FunctionDecl, CXXMethod, StructDecl, ClassDecl,
+ * ClassTemplatePartialSpecialization, VarDecl, or
+ * VarTemplatePartialSpecialization whose I'th template argument is
+ * not an integral value.
  *
  * For example, for the following declaration and specialization:
  *   template <typename T, int kInt, bool kBool>
@@ -3316,12 +3354,15 @@ CINDEX_LINKAGE long long clang_Cursor_getTemplateArgumentValue(CXCursor C,
                                                                unsigned I);
 
 /**
- * Retrieve the value of an Integral TemplateArgument (of a function or class
- *  decl representing a template specialization) as an unsigned long long.
+ * Retrieve the value of an Integral TemplateArgument (of a function, struct,
+ *  class, or variable decl representing a template specialization) as an
+ *  unsigned long long.
  *
  * It is undefined to call this function on a CXCursor that does not represent a
- * FunctionDecl, StructDecl, ClassDecl or ClassTemplatePartialSpecialization or
- * whose I'th template argument is not an integral value.
+ * FunctionDecl, CXXMethod, StructDecl, ClassDecl,
+ * ClassTemplatePartialSpecialization, VarDecl, or
+ * VarTemplatePartialSpecialization whose I'th template argument is
+ * not an integral value.
  *
  * For example, for the following declaration and specialization:
  *   template <typename T, int kInt, bool kBool>
@@ -3339,7 +3380,17 @@ clang_Cursor_getTemplateArgumentUnsignedValue(CXCursor C, unsigned I);
 /**
  * Retrieve the number of template parameters on a template declaration.
  *
- * \param C a cursor representing a class template or function template.
+ * A parameter pack counts as a single template parameter. Use
+ * \c clang_Cursor_isTemplateParameterPack to check whether a specific
+ * parameter is a pack.
+ *
+ * For example:
+ *   template <typename T, typename... Ts>
+ *   struct Foo {};
+ *
+ * The value 2 would be returned (T and Ts).
+ *
+ * \param C a cursor representing a class, function, or variable template.
  *
  * \returns the number of template parameters, or -1 if the cursor does not
  * represent a template.
@@ -3349,7 +3400,7 @@ CINDEX_LINKAGE int clang_Cursor_getNumTemplateParameters(CXCursor C);
 /**
  * Retrieve a template parameter at the given index.
  *
- * \param C a cursor representing a class template or function template.
+ * \param C a cursor representing a class, function, or variable template.
  * \param I the zero-based index of the template parameter.
  *
  * \returns a cursor for the template parameter, or a null cursor if the

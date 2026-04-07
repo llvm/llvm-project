@@ -463,7 +463,7 @@ LLVM_23 {
     clang_ModuleCache_pruneWithCallback;
     clang_Cursor_getNumTemplateParameters;
     clang_Cursor_getTemplateParameter;
-    clang_Cursor_getTemplateArgumentIntegralType;
+    clang_Cursor_getConstantTemplateArgumentType;
     clang_Cursor_isTemplateParameterPack;
 };
 

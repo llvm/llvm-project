@@ -1578,6 +1578,10 @@ class CursorKind(BaseEnumeration):
     FRIEND_DECL = 603
     # A concept declaration
     CONCEPT_DECL = 604
+    # A C++ variable template declaration
+    VAR_TEMPLATE = 605
+    # A C++ variable template partial specialization
+    VAR_TEMPLATE_PARTIAL_SPECIALIZATION = 606
 
     # A code completion overload candidate.
     OVERLOAD_CANDIDATE = 700
@@ -2281,24 +2285,32 @@ class Cursor(Structure):
         return conf.lib.clang_Cursor_getTemplateArgumentUnsignedValue(self, num)  # type: ignore [no-any-return]
 
     @cursor_null_guard
-    def get_template_argument_integral_type(self, num: int) -> Type:
-        """Returns the type of an integral template argument at the given index."""
+    def get_constant_template_argument_type(self, num: int) -> Type:
+        """Returns the type of a constant template argument at the given index.
+
+        Returns an invalid Type if the argument is not a constant template
+        argument, the index is out of range, or the cursor is not a template
+        specialization.
+        """
         return Type.from_result(
-            conf.lib.clang_Cursor_getTemplateArgumentIntegralType(self, num), self
+            conf.lib.clang_Cursor_getConstantTemplateArgumentType(self, num), self
         )
 
     @cursor_null_guard
     def get_num_template_parameters(self) -> int:
-        """Returns the number of template parameters, or -1 if not a template."""
+        """Returns the number of template parameters, or -1 if the cursor does
+        not represent a template.
+        """
         return conf.lib.clang_Cursor_getNumTemplateParameters(self)  # type: ignore [no-any-return]
 
     @cursor_null_guard
-    def get_template_parameter(self, num: int) -> Cursor:
-        """Returns the template parameter at the given index.
-
-        If the index is out of range, a null cursor is returned
+    def get_template_parameter(self, num: int) -> Cursor | None:
+        """Returns the template parameter at the given index, or None if the
+        index is out of range or the cursor is not a template.
         """
-        return conf.lib.clang_Cursor_getTemplateParameter(self, num)  # type: ignore [no-any-return]
+        return Cursor.from_cursor_result(
+            conf.lib.clang_Cursor_getTemplateParameter(self, num), self
+        )
 
     @cursor_null_guard
     def is_template_parameter_pack(self) -> bool:
@@ -4512,7 +4524,7 @@ FUNCTION_LIST: list[LibFunc] = [
     ("clang_Cursor_getTemplateArgumentType", [Cursor, c_uint], Type),
     ("clang_Cursor_getTemplateArgumentValue", [Cursor, c_uint], c_longlong),
     ("clang_Cursor_getTemplateArgumentUnsignedValue", [Cursor, c_uint], c_ulonglong),
-    ("clang_Cursor_getTemplateArgumentIntegralType", [Cursor, c_uint], Type),
+    ("clang_Cursor_getConstantTemplateArgumentType", [Cursor, c_uint], Type),
     ("clang_Cursor_getNumTemplateParameters", [Cursor], c_int),
     ("clang_Cursor_getTemplateParameter", [Cursor, c_uint], Cursor),
     ("clang_Cursor_isTemplateParameterPack", [Cursor], c_uint),
