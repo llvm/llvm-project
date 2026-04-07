@@ -1,6 +1,7 @@
 ## Test that dsymutil correctly copies pseudoprobe sections and segments
 
-# Example program
+# https://github.com/llvm/llvm-project/issues/190481
+# REQUIRES: host-byteorder-little-endian
 
 # RUN: rm -rf %t && mkdir -p %t
 # RUN: yaml2obj %s -o %t/main.o
