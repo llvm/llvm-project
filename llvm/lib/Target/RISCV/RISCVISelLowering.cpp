@@ -22378,16 +22378,18 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
       SDValue Src = Val.getOperand(0);
       MVT VecVT = Src.getSimpleValueType();
       // VecVT should be scalable and memory VT should match the element type.
-      if (!Store->isIndexed() && VecVT.isScalableVector() &&
-          MemVT == VecVT.getVectorElementType()) {
+      if (!Store->isIndexed() && Store->isSimple() &&
+          VecVT.isScalableVector() && MemVT == VecVT.getVectorElementType()) {
         SDLoc DL(N);
         MVT MaskVT = getMaskTypeFor(VecVT);
+        // Create a vector memory VT so allowsMisalignedMemoryAccesses will
+        // work correctly.
+        MemVT = EVT::getVectorVT(*DAG.getContext(), MemVT, 1);
         return DAG.getStoreVP(
             Store->getChain(), DL, Src, Store->getBasePtr(), Store->getOffset(),
             DAG.getConstant(1, DL, MaskVT),
             DAG.getConstant(1, DL, Subtarget.getXLenVT()), MemVT,
-            Store->getMemOperand(), Store->getAddressingMode(),
-            Store->isTruncatingStore(), /*IsCompress*/ false);
+            Store->getMemOperand(), Store->getAddressingMode());
       }
     }
 
