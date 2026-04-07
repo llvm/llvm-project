@@ -39,6 +39,18 @@
 ;     foo(o.x);
 ;   }
 ; }
+; 
+; void stack_realign_filter() {
+;   struct S o;
+;   __try {
+;     foo(o.x);
+;   } __except(([] [[msvc::forceinline]] () {
+;                 struct S __declspec(align(32)) p;
+;                 foo(p.x);
+;               }(), foo(o.x), 1)) {
+;     foo(o.x);
+;   }
+; }
 
 %struct.S = type { i32 }
 
@@ -380,6 +392,82 @@ entry:
   %x = getelementptr inbounds nuw %struct.S, ptr %o, i32 0, i32 0
   %4 = load i32, ptr %x, align 32
   call arm_aapcs_vfpcc void @foo(i32 noundef %4)
+  ret i32 1
+}
+
+%class.anon = type { i8 }
+
+define void @stack_realign_filter() #0 personality ptr @__C_specific_handler {
+; CHECK-LABEL: stack_realign_filter:
+; CHECK: push {r6, lr}
+; CHECK: mov r6, sp
+; CHECK: $Mstack_realign_filter$frame_escape_0 = 4
+; CHECK: bl foo
+entry:
+  %o = alloca %struct.S, align 4
+  %__exception_code = alloca i32, align 4
+  call void (...) @llvm.localescape(ptr %o)
+  %x = getelementptr inbounds nuw %struct.S, ptr %o, i32 0, i32 0
+  %0 = load i32, ptr %x, align 4
+  invoke void @foo(i32 noundef %0)
+          to label %invoke.cont unwind label %catch.dispatch
+
+catch.dispatch:                                   ; preds = %entry
+  %1 = catchswitch within none [label %__except.ret] unwind to caller
+
+__except.ret:                                     ; preds = %catch.dispatch
+  %2 = catchpad within %1 [ptr @"?filt$0@0@stack_realign_filter@@"]
+  catchret from %2 to label %__except
+
+__except:                                         ; preds = %__except.ret
+; CHECK: ldr r0, [r6, #4]
+; CHECK: bl foo
+  %3 = call i32 @llvm.eh.exceptioncode(token %2)
+  store i32 %3, ptr %__exception_code, align 4
+  %x1 = getelementptr inbounds nuw %struct.S, ptr %o, i32 0, i32 0
+  %4 = load i32, ptr %x1, align 4
+  call void @foo(i32 noundef %4)
+  br label %__try.cont
+
+__try.cont:                                       ; preds = %__except, %invoke.cont
+  ret void
+
+invoke.cont:                                      ; preds = %entry
+  br label %__try.cont
+}
+
+define internal arm_aapcs_vfpcc i32 @"?filt$0@0@stack_realign_filter@@"(ptr noundef %exception_pointers, ptr noundef %frame_pointer) #0 {
+; CHECK-LABEL: "?filt$0@0@stack_realign_filter@@":
+; CHECK: push.w {r11, lr}
+; CHECK: mov r11, sp
+; CHECK: bfc r4, #0, #5
+; CHECK-NOT: mov r6, sp
+; CHECK: ldr r0, [sp, #{{[0-9]+}}]
+; CHECK-NEXT: bl foo
+; CHECK: ldr r0, [r6, r{{.*}}]
+; CHECK-NEXT: bl foo
+entry:
+  %this.addr.i = alloca ptr, align 4
+  %p.i = alloca %struct.S, align 32
+  %frame_pointer.addr = alloca ptr, align 4
+  %exception_pointers.addr = alloca ptr, align 4
+  %0 = call ptr @llvm.eh.recoverfp(ptr @stack_realign_filter, ptr %frame_pointer)
+  %o = call ptr @llvm.localrecover(ptr @stack_realign_filter, ptr %0, i32 0)
+  %__exception_code = alloca i32, align 4
+  %ref.tmp = alloca %class.anon, align 1
+  store ptr %frame_pointer, ptr %frame_pointer.addr, align 4
+  store ptr %exception_pointers, ptr %exception_pointers.addr, align 4
+  %1 = getelementptr inbounds nuw { ptr, ptr }, ptr %exception_pointers, i32 0, i32 0
+  %2 = load ptr, ptr %1, align 4
+  %3 = load i32, ptr %2, align 4
+  store i32 %3, ptr %__exception_code, align 4
+  store ptr %ref.tmp, ptr %this.addr.i, align 4
+  %this1.i = load ptr, ptr %this.addr.i, align 4
+  %4 = load i32, ptr %p.i, align 32
+  call void @foo(i32 noundef %4)
+  %x = getelementptr inbounds nuw %struct.S, ptr %o, i32 0, i32 0
+  %5 = load i32, ptr %x, align 4
+  call void @foo(i32 noundef %5)
   ret i32 1
 }
 
