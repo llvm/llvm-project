@@ -91,6 +91,21 @@ void C::g(int x) {}
 
 } // namespace Test4
 
+namespace CovariantReturn {
+// Covariant return with virtual inheritance: return-adjusting thunks use a
+// null check for pointer returns (classic PerformReturnAdjustment).
+struct A {
+  virtual A *f();
+};
+struct B : virtual A {
+  virtual A *f();
+};
+struct C : B {
+  virtual C *f();
+};
+C *C::f() { return 0; }
+} // namespace CovariantReturn
+
 // In CIR, all globals are emitted before functions.
 
 // Test1 vtable: C's vtable references the thunk for B's entry.
@@ -183,6 +198,12 @@ void C::g(int x) {}
 // CIR:   cir.call @_ZN5Test41C1gEi(%[[T4_RESULT]], %[[T4_ARG]])
 // CIR:   cir.return
 
+// --- CovariantReturn: return adjustment with null check on pointer return ---
+
+// CIR-LABEL: cir.func {{.*}} @_ZTch0_v0_n32_N15CovariantReturn1C1fEv
+// CIR:       cir.call @_ZN15CovariantReturn1C1fEv
+// CIR:       cir.ternary
+
 // --- LLVM checks ---
 
 // LLVM: @_ZTVN5Test11CE = global { [3 x ptr], [3 x ptr] } {
@@ -231,6 +252,10 @@ void C::g(int x) {}
 // LLVM:   %[[L4_ARG:.*]] = load i32, ptr
 // LLVM:   call void @_ZN5Test41C1gEi(ptr{{.*}} %[[L4_ADJ]], i32{{.*}} %[[L4_ARG]])
 
+// LLVM-LABEL: define {{.*}} @_ZTch0_v0_n32_N15CovariantReturn1C1fEv
+// LLVM:       call {{.*}} @_ZN15CovariantReturn1C1fEv
+// LLVM:       phi ptr
+
 // --- OGCG checks ---
 
 // OGCG: @_ZTVN5Test11CE = unnamed_addr constant { [3 x ptr], [3 x ptr] } {
@@ -278,3 +303,7 @@ void C::g(int x) {}
 // OGCG:   %[[O4_ADJ:.*]] = getelementptr inbounds i8, ptr %[[O4_THIS]], i64 -8
 // OGCG:   %[[O4_ARG:.*]] = load i32, ptr
 // OGCG:   {{.*}}call void @_ZN5Test41C1gEi(ptr{{.*}} %[[O4_ADJ]], i32{{.*}} %[[O4_ARG]])
+
+// OGCG-LABEL: define {{.*}} @_ZTch0_v0_n32_N15CovariantReturn1C1fEv
+// OGCG:       {{.*}}call {{.*}} @_ZN15CovariantReturn1C1fEv
+// OGCG:       phi ptr

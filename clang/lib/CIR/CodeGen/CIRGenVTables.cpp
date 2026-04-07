@@ -559,26 +559,41 @@ uint64_t CIRGenVTables::getSecondaryVirtualPointerIndex(const CXXRecordDecl *rd,
 
 static RValue performReturnAdjustment(CIRGenFunction &cgf, QualType resultType,
                                       RValue rv, const ThunkInfo &thunk) {
-  // Emit the return adjustment.
+  // Emit the return adjustment.  For non-reference pointer returns, match
+  // classic codegen: skip the adjustment when the returned pointer is null.
   bool nullCheckValue = !resultType->isReferenceType();
-
   mlir::Value returnValue = rv.getValue();
-
-  if (nullCheckValue)
-    cgf.cgm.errorNYI(
-        "return adjustment with null check for non-reference types");
 
   const CXXRecordDecl *classDecl =
       resultType->getPointeeType()->getAsCXXRecordDecl();
   CharUnits classAlign = cgf.cgm.getClassPointerAlignment(classDecl);
   mlir::Type pointeeType = cgf.convertTypeForMem(resultType->getPointeeType());
-  returnValue = cgf.cgm.getCXXABI().performReturnAdjustment(
-      cgf, Address(returnValue, pointeeType, classAlign), classDecl,
-      thunk.Return);
+  CIRGenBuilderTy &builder = cgf.getBuilder();
+  mlir::Location loc = returnValue.getLoc();
 
-  if (nullCheckValue)
-    cgf.cgm.errorNYI(
-        "return adjustment with null check for non-reference types");
+  if (!nullCheckValue) {
+    returnValue = cgf.cgm.getCXXABI().performReturnAdjustment(
+        cgf, Address(returnValue, pointeeType, classAlign), classDecl,
+        thunk.Return);
+    return RValue::get(returnValue);
+  }
+
+  mlir::Value isNotNull = builder.createPtrIsNotNull(returnValue);
+  returnValue =
+      cir::TernaryOp::create(
+          builder, loc, isNotNull,
+          [&](mlir::OpBuilder &, mlir::Location) {
+            mlir::Value adjusted = cgf.cgm.getCXXABI().performReturnAdjustment(
+                cgf, Address(returnValue, pointeeType, classAlign), classDecl,
+                thunk.Return);
+            builder.createYield(loc, adjusted);
+          },
+          [&](mlir::OpBuilder &, mlir::Location) {
+            mlir::Value nullVal =
+                builder.getNullPtr(returnValue.getType(), loc).getResult();
+            builder.createYield(loc, nullVal);
+          })
+          .getResult();
 
   return RValue::get(returnValue);
 }
