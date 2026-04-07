@@ -870,10 +870,8 @@ BreakpointName *Target::FindBreakpointName(ConstString name, bool can_create,
   }
 
   if (!can_create) {
-    error = Status::FromErrorStringWithFormat(
-        "Breakpoint name \"%s\" doesn't exist and "
-        "can_create is false.",
-        name.AsCString());
+    error = Status::FromErrorStringWithFormatv(
+        "Breakpoint name \"{0}\" doesn't exist and can_create is false.", name);
     return nullptr;
   }
 
@@ -886,7 +884,7 @@ void Target::DeleteBreakpointName(ConstString name) {
   BreakpointNameList::iterator iter = m_breakpoint_names.find(name);
 
   if (iter != m_breakpoint_names.end()) {
-    const char *name_cstr = name.AsCString();
+    const char *name_cstr = name.AsCString(nullptr);
     m_breakpoint_names.erase(iter);
     for (auto bp_sp : m_breakpoint_list.Breakpoints())
       bp_sp->RemoveName(name_cstr);
@@ -895,7 +893,7 @@ void Target::DeleteBreakpointName(ConstString name) {
 
 void Target::RemoveNameFromBreakpoint(lldb::BreakpointSP &bp_sp,
                                       ConstString name) {
-  bp_sp->RemoveName(name.AsCString());
+  bp_sp->RemoveName(name.AsCString(nullptr));
 }
 
 void Target::ConfigureBreakpointName(
@@ -908,7 +906,8 @@ void Target::ConfigureBreakpointName(
 
 void Target::ApplyNameToBreakpoints(BreakpointName &bp_name) {
   llvm::Expected<std::vector<BreakpointSP>> expected_vector =
-      m_breakpoint_list.FindBreakpointsByName(bp_name.GetName().AsCString());
+      m_breakpoint_list.FindBreakpointsByName(
+          bp_name.GetName().AsCString(nullptr));
 
   if (!expected_vector) {
     LLDB_LOG(GetLog(LLDBLog::Breakpoints), "invalid breakpoint name: {}",
