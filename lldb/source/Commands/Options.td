@@ -1096,14 +1096,32 @@ let Command = "target stop hook add" in {
 }
 
 let Command = "thread backtrace" in {
-  def thread_backtrace_count : Option<"count", "c">, Group<1>, Arg<"Count">,
-  Desc<"How many frames to display (0 for all)">;
-  def thread_backtrace_start : Option<"start", "s">, Group<1>,
-  Arg<"FrameIndex">, Desc<"Frame in which to start the backtrace">;
-  def thread_backtrace_extended : Option<"extended", "e">, Group<1>,
-  Arg<"Boolean">, Desc<"Show the extended backtrace, if available">;
-  def thread_backtrace_unfiltered : Option<"unfiltered", "u">, Group<1>,
-  Desc<"Do not filter out frames according to installed frame recognizers">;
+  def thread_backtrace_count : Option<"count", "c">,
+                               Group<1>,
+                               Arg<"Count">,
+                               Desc<"How many frames to display (0 for all)">;
+  def thread_backtrace_start : Option<"start", "s">,
+                               Group<1>,
+                               Arg<"FrameIndex">,
+                               Desc<"Frame in which to ${s}tart the backtrace">;
+  def thread_backtrace_extended
+      : Option<"extended", "e">,
+        Group<1>,
+        Arg<"Boolean">,
+        Desc<"Show the ${e}xtended backtrace, if available">;
+  def thread_backtrace_unfiltered : Option<"unfiltered", "u">,
+                                    Group<1>,
+                                    Desc<"Do not filter out frames according "
+                                         "to installed frame recognizers">;
+  def thread_backtrace_provider
+      : Option<"provider", "p">,
+        Group<1>,
+        Arg<"FrameProviderIDRange">,
+        Desc<"Show backtrace from specific frame provider(s). "
+             "Use a single ID (e.g., '2') for one provider, "
+             "a range (e.g., '0-2', '0 to 2') for multiple, "
+             "or '*'/'all' to show every provider. "
+             "ID 0 is the base unwinder, 1+ are synthetic providers.">;
 }
 
 let Command = "thread step scope" in {

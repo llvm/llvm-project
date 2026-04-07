@@ -3832,7 +3832,7 @@ void Target::ClearScriptedFrameProviderDescriptors() {
       thread_sp->ClearScriptedFrameProvider();
 }
 
-const llvm::DenseMap<uint32_t, ScriptedFrameProviderDescriptor> &
+const llvm::MapVector<uint32_t, ScriptedFrameProviderDescriptor> &
 Target::GetScriptedFrameProviderDescriptors() const {
   std::lock_guard<std::recursive_mutex> guard(
       m_frame_provider_descriptors_mutex);
