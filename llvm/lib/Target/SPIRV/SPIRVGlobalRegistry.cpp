@@ -2214,7 +2214,7 @@ void SPIRVGlobalRegistry::buildMemAliasingOpDecorate(
       getOrAddMemAliasingINTELInst(MIRBuilder, AliasingListMD);
   if (!AliasList)
     return;
-  MIRBuilder.buildInstr(SPIRV::OpDecorate)
+  MIRBuilder.buildInstr(SPIRV::OpDecorateId)
       .addUse(Reg)
       .addImm(Dec)
       .addUse(AliasList->getOperand(0).getReg());
