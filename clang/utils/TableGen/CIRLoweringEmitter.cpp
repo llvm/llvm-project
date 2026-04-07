@@ -27,6 +27,9 @@ std::vector<std::string> CXXABILoweringPatternsList;
 std::vector<std::string> CXXABILoweringAttrAlwaysLegal;
 std::vector<std::string> LLVMLoweringPatterns;
 std::vector<std::string> LLVMLoweringPatternsList;
+std::string CIRAttrToValueVisitFunc;
+std::vector<std::string> CIRAttrToValueVisitorCaseTypes;
+std::vector<std::string> CIRAttrToValueVisitorDecls;
 
 struct CustomLoweringCtor {
   struct Param {
@@ -249,10 +252,47 @@ void GenerateCIREnumAttrs(const Record *Record) {
   // they never have an 'illegal' CXXABI type in them.
   CXXABILoweringAttrAlwaysLegal.push_back("cir::" + OpName);
 }
+
+void GenerateAttrToValueVisitor(const Record *Rec) {
+  const Record *DialectRec = Rec->getValueAsDef("dialect");
+  llvm::StringRef Ns = DialectRec->getValueAsString("cppNamespace");
+  Ns.consume_front("::");
+  std::string CppClassRef = Ns.str();
+  CppClassRef += "::";
+  CppClassRef += Rec->getValueAsString("cppClassName");
+
+  std::string CodeBuffer;
+  llvm::raw_string_ostream Code(CodeBuffer);
+  Code << "  mlir::Value visitCirAttr(" << CppClassRef << " attr);";
+  CIRAttrToValueVisitorDecls.push_back(std::move(CodeBuffer));
+  CIRAttrToValueVisitorCaseTypes.push_back(std::move(CppClassRef));
+}
+
+void GenerateAttrToValueVisitFunc() {
+  std::string CodeBuffer;
+  llvm::raw_string_ostream Code(CodeBuffer);
+  Code << "  mlir::Value visit(mlir::Attribute attr) {\n"
+       << "    return llvm::TypeSwitch<mlir::Attribute, mlir::Value>(attr)\n"
+       << "        .Case<\n              "
+       << llvm::join(CIRAttrToValueVisitorCaseTypes, ",\n              ")
+       << ">(\n"
+       << "            [&](auto attrT) { return visitCirAttr(attrT); })\n"
+       << "        .Default([this](mlir::Attribute attr) {\n"
+       << "          mlir::emitError(parentOp->getLoc(), \"unsupported CIR "
+          "attribute in LLVM constant lowering\")\n"
+       << "              << attr;\n"
+       << "          return mlir::Value();\n"
+       << "        });\n"
+       << "  }\n";
+  CIRAttrToValueVisitFunc = std::move(CodeBuffer);
+}
+
 void GenerateCIRAttrs(const Record *Record) {
   std::string OpName = GetOpCppClassName(Record);
   if (!Record->getValueAsBit("canHaveIllegalCXXABIType"))
     CXXABILoweringAttrAlwaysLegal.push_back("cir::" + OpName);
+  if (Record->getValueAsBit("hasAttrToValueLowering"))
+    GenerateAttrToValueVisitor(Record);
 }
 } // namespace
 
@@ -265,6 +305,12 @@ void clang::EmitCIRLowering(const llvm::RecordKeeper &RK,
     GenerateCIREnumAttrs(OpRecord);
   for (const auto *OpRecord : RK.getAllDerivedDefinitions("CIR_Attr"))
     GenerateCIRAttrs(OpRecord);
+  GenerateAttrToValueVisitFunc();
+
+  OS << "#ifdef GET_CIR_ATTR_TO_VALUE_VISITOR_DECLS\n"
+     << CIRAttrToValueVisitFunc << "\n"
+     << llvm::join(CIRAttrToValueVisitorDecls, "\n") << "\n"
+     << "#endif // GET_CIR_ATTR_TO_VALUE_VISITOR_DECLS\n\n";
 
   OS << "#ifdef GET_ABI_LOWERING_PATTERNS\n"
      << llvm::join(CXXABILoweringPatterns, "\n") << "#endif\n\n";
