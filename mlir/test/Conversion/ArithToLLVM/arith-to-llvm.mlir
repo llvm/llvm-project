@@ -451,17 +451,6 @@ func.func @experimental_constrained_divf(%arg0 : f64, %arg1 : f64) {
 
 // -----
 
-// CHECK-LABEL: experimental_constrained_remf
-func.func @experimental_constrained_remf(%arg0 : f64, %arg1 : f64) {
-// CHECK-NEXT: = llvm.intr.experimental.constrained.frem %arg0, %arg1 tonearest ignore
-  %0 = arith.remf %arg0, %arg1 to_nearest_even : f64
-// CHECK-NEXT: = llvm.intr.experimental.constrained.frem %arg0, %arg1 downward ignore
-  %1 = arith.remf %arg0, %arg1 downward : f64
-  return
-}
-
-// -----
-
 // Verify that fastmath flags are stripped when lowering to constrained
 // intrinsics (constrained FP and fastmath are contradictory).
 // CHECK-LABEL: constrained_addf_with_fastmath

@@ -170,13 +170,9 @@ using NegFOpLowering =
                                /*FailOnUnsupportedFP=*/true>;
 using OrIOpLowering = VectorConvertToLLVMPattern<arith::OrIOp, LLVM::OrOp>;
 using RemFOpLowering =
-    ConstrainedVectorConvertToLLVMPattern<arith::RemFOp, LLVM::FRemOp,
-                                          /*HasRoundingMode=*/false,
-                                          arith::AttrConvertFastMathToLLVM,
-                                          /*FailOnUnsupportedFP=*/true>;
-using ConstrainedRemFOpLowering = ConstrainedVectorConvertToLLVMPattern<
-    arith::RemFOp, LLVM::ConstrainedFRemIntr, /*HasRoundingMode=*/true,
-    arith::AttrConverterConstrainedFPToLLVM, /*FailOnUnsupportedFP=*/true>;
+    VectorConvertToLLVMPattern<arith::RemFOp, LLVM::FRemOp,
+                               arith::AttrConvertFastMathToLLVM,
+                               /*FailOnUnsupportedFP=*/true>;
 using RemSIOpLowering =
     VectorConvertToLLVMPattern<arith::RemSIOp, LLVM::SRemOp>;
 using RemUIOpLowering =
@@ -764,7 +760,6 @@ void mlir::arith::populateArithToLLVMConversionPatterns(
     NegFOpLowering,
     OrIOpLowering,
     RemFOpLowering,
-    ConstrainedRemFOpLowering,
     RemSIOpLowering,
     RemUIOpLowering,
     SelectOpLowering,

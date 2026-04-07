@@ -1244,10 +1244,8 @@ func.func @roundingmode(%arg0: f32, %arg1: f32) {
   %2 = arith.mulf %arg0, %arg1 upward : f32
 // CHECK: {{.*}} = arith.divf %arg0, %arg1 toward_zero : f32
   %3 = arith.divf %arg0, %arg1 toward_zero : f32
-// CHECK: {{.*}} = arith.remf %arg0, %arg1 to_nearest_away : f32
-  %4 = arith.remf %arg0, %arg1 to_nearest_away : f32
 // CHECK: {{.*}} = arith.addf %arg0, %arg1 to_nearest_even fastmath<fast> : f32
-  %5 = arith.addf %arg0, %arg1 to_nearest_even fastmath<fast> : f32
+  %4 = arith.addf %arg0, %arg1 to_nearest_even fastmath<fast> : f32
   return
 }
 

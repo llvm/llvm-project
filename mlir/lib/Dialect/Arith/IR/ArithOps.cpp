@@ -34,7 +34,7 @@
 using namespace mlir;
 using namespace mlir::arith;
 
-/// Default rounding mode according to IEEE-754.
+/// Default rounding mode according to default LLVM floating-point environment.
 static constexpr llvm::RoundingMode kDefaultRoundingMode =
     llvm::RoundingMode::NearestTiesToEven;
 
@@ -109,8 +109,10 @@ arith::CmpIPredicate arith::invertPredicate(arith::CmpIPredicate pred) {
 /// circular dependency with MLIRArithAttrToLLVMConversion and make arith depend
 /// on the LLVM dialect and on translation to LLVM.
 static llvm::RoundingMode
-convertArithRoundingModeToLLVMIR(RoundingMode roundingMode) {
-  switch (roundingMode) {
+convertArithRoundingModeToLLVMIR(std::optional<RoundingMode> roundingMode) {
+  if (!roundingMode)
+    return kDefaultRoundingMode;
+  switch (*roundingMode) {
   case RoundingMode::downward:
     return llvm::RoundingMode::TowardNegative;
   case RoundingMode::to_nearest_away:
@@ -1111,12 +1113,11 @@ OpFoldResult arith::AddFOp::fold(FoldAdaptor adaptor) {
   if (matchPattern(adaptor.getRhs(), m_NegZeroFloat()))
     return getLhs();
 
-  auto rm = getRoundingmodeAttr();
+  auto rm = getRoundingmode();
   return constFoldBinaryOp<FloatAttr>(
       adaptor.getOperands(), [rm](const APFloat &a, const APFloat &b) {
         APFloat result(a);
-        result.add(b, rm ? convertArithRoundingModeToLLVMIR(rm.getValue())
-                         : kDefaultRoundingMode);
+        result.add(b, convertArithRoundingModeToLLVMIR(rm));
         return result;
       });
 }
@@ -1130,12 +1131,11 @@ OpFoldResult arith::SubFOp::fold(FoldAdaptor adaptor) {
   if (matchPattern(adaptor.getRhs(), m_PosZeroFloat()))
     return getLhs();
 
-  auto rm = getRoundingmodeAttr();
+  auto rm = getRoundingmode();
   return constFoldBinaryOp<FloatAttr>(
       adaptor.getOperands(), [rm](const APFloat &a, const APFloat &b) {
         APFloat result(a);
-        result.subtract(b, rm ? convertArithRoundingModeToLLVMIR(rm.getValue())
-                              : kDefaultRoundingMode);
+        result.subtract(b, convertArithRoundingModeToLLVMIR(rm));
         return result;
       });
 }
@@ -1326,12 +1326,11 @@ OpFoldResult arith::MulFOp::fold(FoldAdaptor adaptor) {
       return getRhs();
   }
 
-  auto rm = getRoundingmodeAttr();
+  auto rm = getRoundingmode();
   return constFoldBinaryOp<FloatAttr>(
       adaptor.getOperands(), [rm](const APFloat &a, const APFloat &b) {
         APFloat result(a);
-        result.multiply(b, rm ? convertArithRoundingModeToLLVMIR(rm.getValue())
-                              : kDefaultRoundingMode);
+        result.multiply(b, convertArithRoundingModeToLLVMIR(rm));
         return result;
       });
 }
@@ -1350,12 +1349,11 @@ OpFoldResult arith::DivFOp::fold(FoldAdaptor adaptor) {
   if (matchPattern(adaptor.getRhs(), m_OneFloat()))
     return getLhs();
 
-  auto rm = getRoundingmodeAttr();
+  auto rm = getRoundingmode();
   return constFoldBinaryOp<FloatAttr>(
       adaptor.getOperands(), [rm](const APFloat &a, const APFloat &b) {
         APFloat result(a);
-        result.divide(b, rm ? convertArithRoundingModeToLLVMIR(rm.getValue())
-                            : kDefaultRoundingMode);
+        result.divide(b, convertArithRoundingModeToLLVMIR(rm));
         return result;
       });
 }
@@ -1710,10 +1708,8 @@ OpFoldResult arith::TruncFOp::fold(FoldAdaptor adaptor) {
   return constFoldCastOp<FloatAttr, FloatAttr>(
       adaptor.getOperands(), getType(),
       [this, &targetSemantics](const APFloat &a, bool &castStatus) {
-        RoundingMode roundingMode =
-            getRoundingmode().value_or(RoundingMode::to_nearest_even);
         llvm::RoundingMode llvmRoundingMode =
-            convertArithRoundingModeToLLVMIR(roundingMode);
+            convertArithRoundingModeToLLVMIR(getRoundingmode());
         FailureOr<APFloat> result =
             convertFloatValue(a, targetSemantics, llvmRoundingMode);
         if (failed(result)) {
@@ -1747,10 +1743,8 @@ OpFoldResult arith::ConvertFOp::fold(FoldAdaptor adaptor) {
   return constFoldCastOp<FloatAttr, FloatAttr>(
       adaptor.getOperands(), getType(),
       [this, &targetSemantics](const APFloat &a, bool &castStatus) {
-        RoundingMode roundingMode =
-            getRoundingmode().value_or(RoundingMode::to_nearest_even);
         llvm::RoundingMode llvmRoundingMode =
-            convertArithRoundingModeToLLVMIR(roundingMode);
+            convertArithRoundingModeToLLVMIR(getRoundingmode());
         FailureOr<APFloat> result =
             convertFloatValue(a, targetSemantics, llvmRoundingMode);
         if (failed(result)) {
