@@ -1,4 +1,4 @@
-# REQUIRES: x86
+# REQUIRES: target-x86
 
 # RUN: %clang_host -g -O0 %S/Inputs/main.c -o %t.out
 # RUN: %lldb -b -o "breakpoint set --name main" \
