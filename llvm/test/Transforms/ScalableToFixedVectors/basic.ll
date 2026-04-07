@@ -5,7 +5,7 @@
 define void @const_store(ptr %dst) vscale_range(2,4) {
 ; CHECK-LABEL: define void @const_store(
 ; CHECK-SAME: ptr [[DST:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    call void @llvm.vp.store.nxv4i32.p0(<vscale x 4 x i32> splat (i32 2), ptr [[DST]], <vscale x 4 x i1> splat (i1 true), i32 4)
+; CHECK-NEXT:    store <4 x i32> splat (i32 2), ptr [[DST]], align 16
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.vp.store.nxv4i32.p0(<vscale x 4 x i32> splat (i32 2), ptr %dst, <vscale x 4 x i1> splat (i1 true), i32 4)
@@ -16,8 +16,8 @@ define void @const_store(ptr %dst) vscale_range(2,4) {
 define void @load_store(ptr %src, ptr %dst) vscale_range(2,4) {
 ; CHECK-LABEL: define void @load_store(
 ; CHECK-SAME: ptr [[SRC:%.*]], ptr [[DST:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[LOAD:%.*]] = tail call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr [[SRC]], <vscale x 4 x i1> splat (i1 true), i32 4)
-; CHECK-NEXT:    call void @llvm.vp.store.nxv4i32.p0(<vscale x 4 x i32> [[LOAD]], ptr [[DST]], <vscale x 4 x i1> splat (i1 true), i32 4)
+; CHECK-NEXT:    [[LOAD:%.*]] = load <4 x i32>, ptr [[SRC]], align 16
+; CHECK-NEXT:    store <4 x i32> [[LOAD]], ptr [[DST]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %load = tail call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr %src, <vscale x 4 x i1> splat (i1 true), i32 4)
@@ -29,10 +29,10 @@ define void @load_store(ptr %src, ptr %dst) vscale_range(2,4) {
 define void @load_binop_store(ptr %src0, ptr %src1, ptr %dst) vscale_range(2,4) {
 ; CHECK-LABEL: define void @load_binop_store(
 ; CHECK-SAME: ptr [[SRC0:%.*]], ptr [[SRC1:%.*]], ptr [[DST:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[LOAD0:%.*]] = tail call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr [[SRC0]], <vscale x 4 x i1> splat (i1 true), i32 4)
-; CHECK-NEXT:    [[LOAD1:%.*]] = tail call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr [[SRC1]], <vscale x 4 x i1> splat (i1 true), i32 4)
-; CHECK-NEXT:    [[ADD:%.*]] = add <vscale x 4 x i32> [[LOAD0]], [[LOAD1]]
-; CHECK-NEXT:    call void @llvm.vp.store.nxv4i32.p0(<vscale x 4 x i32> [[ADD]], ptr [[DST]], <vscale x 4 x i1> splat (i1 true), i32 4)
+; CHECK-NEXT:    [[LOAD0:%.*]] = load <4 x i32>, ptr [[SRC0]], align 16
+; CHECK-NEXT:    [[LOAD1:%.*]] = load <4 x i32>, ptr [[SRC1]], align 16
+; CHECK-NEXT:    [[ADD:%.*]] = add <4 x i32> [[LOAD0]], [[LOAD1]]
+; CHECK-NEXT:    store <4 x i32> [[ADD]], ptr [[DST]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %load0 = tail call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr %src0, <vscale x 4 x i1> splat (i1 true), i32 4)
@@ -46,9 +46,9 @@ define void @load_binop_store(ptr %src0, ptr %src1, ptr %dst) vscale_range(2,4) 
 define void @binop_splat(ptr %src, ptr %dst) vscale_range(2,4) {
 ; CHECK-LABEL: define void @binop_splat(
 ; CHECK-SAME: ptr [[SRC:%.*]], ptr [[DST:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[LOAD:%.*]] = tail call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr [[SRC]], <vscale x 4 x i1> splat (i1 true), i32 4)
-; CHECK-NEXT:    [[ADD:%.*]] = add <vscale x 4 x i32> [[LOAD]], splat (i32 2)
-; CHECK-NEXT:    call void @llvm.vp.store.nxv4i32.p0(<vscale x 4 x i32> [[ADD]], ptr [[DST]], <vscale x 4 x i1> splat (i1 true), i32 4)
+; CHECK-NEXT:    [[LOAD:%.*]] = load <4 x i32>, ptr [[SRC]], align 16
+; CHECK-NEXT:    [[ADD:%.*]] = add <4 x i32> [[LOAD]], splat (i32 2)
+; CHECK-NEXT:    store <4 x i32> [[ADD]], ptr [[DST]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %load = tail call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr %src, <vscale x 4 x i1> splat (i1 true), i32 4)
@@ -61,8 +61,8 @@ define void @binop_splat(ptr %src, ptr %dst) vscale_range(2,4) {
 define void @vl_eq_minvscalevl(ptr %src, ptr %dst) vscale_range(2,4) {
 ; CHECK-LABEL: define void @vl_eq_minvscalevl(
 ; CHECK-SAME: ptr [[SRC:%.*]], ptr [[DST:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[LOAD:%.*]] = tail call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr [[SRC]], <vscale x 4 x i1> splat (i1 true), i32 8)
-; CHECK-NEXT:    call void @llvm.vp.store.nxv4i32.p0(<vscale x 4 x i32> [[LOAD]], ptr [[DST]], <vscale x 4 x i1> splat (i1 true), i32 8)
+; CHECK-NEXT:    [[LOAD:%.*]] = load <8 x i32>, ptr [[SRC]], align 32
+; CHECK-NEXT:    store <8 x i32> [[LOAD]], ptr [[DST]], align 32
 ; CHECK-NEXT:    ret void
 ;
   %load = tail call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr %src, <vscale x 4 x i1> splat (i1 true), i32 8)
@@ -160,8 +160,8 @@ define void @splat_non_const(i32 %SV, ptr %dst) vscale_range(2,4) {
 define void @no_vscale0(ptr %src, ptr %dst) {
 ; CHECK-LABEL: define void @no_vscale0(
 ; CHECK-SAME: ptr [[SRC:%.*]], ptr [[DST:%.*]]) {
-; CHECK-NEXT:    [[LOAD:%.*]] = tail call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr [[SRC]], <vscale x 4 x i1> splat (i1 true), i32 2)
-; CHECK-NEXT:    call void @llvm.vp.store.nxv4i32.p0(<vscale x 4 x i32> [[LOAD]], ptr [[DST]], <vscale x 4 x i1> splat (i1 true), i32 2)
+; CHECK-NEXT:    [[LOAD:%.*]] = load <2 x i32>, ptr [[SRC]], align 8
+; CHECK-NEXT:    store <2 x i32> [[LOAD]], ptr [[DST]], align 8
 ; CHECK-NEXT:    ret void
 ;
   %load = tail call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr %src, <vscale x 4 x i1> splat (i1 true), i32 2)
@@ -258,10 +258,10 @@ define void @fixed_vector(i32 %vl, ptr %src, ptr %dst) vscale_range(2,4) {
 define void @multiple_chains0(ptr %src, ptr %dst) vscale_range(2,4) {
 ; CHECK-LABEL: define void @multiple_chains0(
 ; CHECK-SAME: ptr [[SRC:%.*]], ptr [[DST:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[LOAD0:%.*]] = tail call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr [[SRC]], <vscale x 4 x i1> splat (i1 true), i32 4)
-; CHECK-NEXT:    call void @llvm.vp.store.nxv4i32.p0(<vscale x 4 x i32> [[LOAD0]], ptr [[DST]], <vscale x 4 x i1> splat (i1 true), i32 4)
-; CHECK-NEXT:    [[LOAD1:%.*]] = tail call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr [[SRC]], <vscale x 4 x i1> splat (i1 true), i32 4)
-; CHECK-NEXT:    call void @llvm.vp.store.nxv4i32.p0(<vscale x 4 x i32> [[LOAD1]], ptr [[DST]], <vscale x 4 x i1> splat (i1 true), i32 4)
+; CHECK-NEXT:    [[LOAD0:%.*]] = load <4 x i32>, ptr [[SRC]], align 16
+; CHECK-NEXT:    store <4 x i32> [[LOAD0]], ptr [[DST]], align 16
+; CHECK-NEXT:    [[LOAD1:%.*]] = load <4 x i32>, ptr [[SRC]], align 16
+; CHECK-NEXT:    store <4 x i32> [[LOAD1]], ptr [[DST]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %load0 = tail call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr %src, <vscale x 4 x i1> splat (i1 true), i32 4)
@@ -275,8 +275,8 @@ define void @multiple_chains0(ptr %src, ptr %dst) vscale_range(2,4) {
 define void @multiple_chains1(ptr %src, ptr %dst) vscale_range(2,4) {
 ; CHECK-LABEL: define void @multiple_chains1(
 ; CHECK-SAME: ptr [[SRC:%.*]], ptr [[DST:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[LOAD0:%.*]] = tail call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr [[SRC]], <vscale x 4 x i1> splat (i1 true), i32 4)
-; CHECK-NEXT:    call void @llvm.vp.store.nxv4i32.p0(<vscale x 4 x i32> [[LOAD0]], ptr [[DST]], <vscale x 4 x i1> splat (i1 true), i32 4)
+; CHECK-NEXT:    [[LOAD0:%.*]] = load <4 x i32>, ptr [[SRC]], align 16
+; CHECK-NEXT:    store <4 x i32> [[LOAD0]], ptr [[DST]], align 16
 ; CHECK-NEXT:    [[LOAD1:%.*]] = tail call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr [[SRC]], <vscale x 4 x i1> splat (i1 true), i32 16)
 ; CHECK-NEXT:    call void @llvm.vp.store.nxv4i32.p0(<vscale x 4 x i32> [[LOAD1]], ptr [[DST]], <vscale x 4 x i1> splat (i1 true), i32 4)
 ; CHECK-NEXT:    ret void
@@ -325,10 +325,10 @@ define void @not_supported_op(ptr %src0, ptr %src1, ptr %dst) vscale_range(2,4) 
 define void @flags_meta(ptr %src0, ptr %src1, ptr %dst) vscale_range(2,4) {
 ; CHECK-LABEL: define void @flags_meta(
 ; CHECK-SAME: ptr [[SRC0:%.*]], ptr [[SRC1:%.*]], ptr [[DST:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[LOAD0:%.*]] = tail call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr [[SRC0]], <vscale x 4 x i1> splat (i1 true), i32 4), !example [[META0:![0-9]+]]
-; CHECK-NEXT:    [[LOAD1:%.*]] = tail call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr [[SRC1]], <vscale x 4 x i1> splat (i1 true), i32 4)
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw <vscale x 4 x i32> [[LOAD0]], [[LOAD1]]
-; CHECK-NEXT:    call void @llvm.vp.store.nxv4i32.p0(<vscale x 4 x i32> [[ADD]], ptr align 4 [[DST]], <vscale x 4 x i1> splat (i1 true), i32 4)
+; CHECK-NEXT:    [[LOAD0:%.*]] = load <4 x i32>, ptr [[SRC0]], align 16, !example [[META0:![0-9]+]]
+; CHECK-NEXT:    [[LOAD1:%.*]] = load <4 x i32>, ptr [[SRC1]], align 16
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw <4 x i32> [[LOAD0]], [[LOAD1]]
+; CHECK-NEXT:    store <4 x i32> [[ADD]], ptr [[DST]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %load0 = tail call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr %src0, <vscale x 4 x i1> splat (i1 true), i32 4), !example !0
@@ -342,11 +342,11 @@ define void @flags_meta(ptr %src0, ptr %src1, ptr %dst) vscale_range(2,4) {
 define void @branched_chain0(ptr %src0, ptr %src1, ptr %dst) vscale_range(2,4) {
 ; CHECK-LABEL: define void @branched_chain0(
 ; CHECK-SAME: ptr [[SRC0:%.*]], ptr [[SRC1:%.*]], ptr [[DST:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[LOAD0:%.*]] = tail call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr [[SRC0]], <vscale x 4 x i1> splat (i1 true), i32 4)
-; CHECK-NEXT:    [[LOAD1:%.*]] = tail call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr [[SRC1]], <vscale x 4 x i1> splat (i1 true), i32 4)
-; CHECK-NEXT:    [[ADD:%.*]] = add <vscale x 4 x i32> [[LOAD0]], [[LOAD1]]
-; CHECK-NEXT:    call void @llvm.vp.store.nxv4i32.p0(<vscale x 4 x i32> [[LOAD1]], ptr [[DST]], <vscale x 4 x i1> splat (i1 true), i32 4)
-; CHECK-NEXT:    call void @llvm.vp.store.nxv4i32.p0(<vscale x 4 x i32> [[ADD]], ptr [[DST]], <vscale x 4 x i1> splat (i1 true), i32 4)
+; CHECK-NEXT:    [[LOAD0:%.*]] = load <4 x i32>, ptr [[SRC0]], align 16
+; CHECK-NEXT:    [[LOAD1:%.*]] = load <4 x i32>, ptr [[SRC1]], align 16
+; CHECK-NEXT:    [[ADD:%.*]] = add <4 x i32> [[LOAD0]], [[LOAD1]]
+; CHECK-NEXT:    store <4 x i32> [[LOAD1]], ptr [[DST]], align 16
+; CHECK-NEXT:    store <4 x i32> [[ADD]], ptr [[DST]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %load0 = tail call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr %src0, <vscale x 4 x i1> splat (i1 true), i32 4)
