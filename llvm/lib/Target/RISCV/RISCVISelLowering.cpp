@@ -9666,11 +9666,10 @@ static SDValue lowerSelectToBinOp(SDNode *N, SelectionDAG &DAG,
       if (auto *TrueC = dyn_cast<ConstantSDNode>(TrueV)) {
         // (select c, y, 0) -> (c * (y - 1)) + c
         int64_t MulImm = TrueC->getSExtValue();
-        if (MulImm != INT64_MIN)
-          MulImm--;
-        if (isInt<12>(MulImm) && Subtarget.hasVendorXqciac())
+        if (MulImm != INT64_MIN && isInt<12>(MulImm - 1) &&
+            Subtarget.hasVendorXqciac())
           return DAG.getNode(RISCVISD::QC_MULIADD, DL, VT, CondV, CondV,
-                             DAG.getTargetConstant(MulImm, DL, VT));
+                             DAG.getTargetConstant(MulImm - 1, DL, VT));
 
         // (select c, (1 << ShAmount) + 1, 0) -> (c << ShAmount) + c
         uint64_t TrueM1 = TrueC->getZExtValue() - 1;

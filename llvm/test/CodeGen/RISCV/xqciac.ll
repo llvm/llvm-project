@@ -682,3 +682,23 @@ define i32 @select8193(i1 zeroext %x) {
   %select = select i1 %x, i32 8193, i32 0
   ret i32 %select
 }
+
+
+define i32 @select_int64_min(i1 zeroext %x) {
+; RV32IM-LABEL: select_int64_min:
+; RV32IM:       # %bb.0:
+; RV32IM-NEXT:    li a0, 0
+; RV32IM-NEXT:    ret
+;
+; RV32IMXQCIAC-LABEL: select_int64_min:
+; RV32IMXQCIAC:       # %bb.0:
+; RV32IMXQCIAC-NEXT:    li a0, 0
+; RV32IMXQCIAC-NEXT:    ret
+;
+; RV32IZBAMXQCIAC-LABEL: select_int64_min:
+; RV32IZBAMXQCIAC:       # %bb.0:
+; RV32IZBAMXQCIAC-NEXT:    li a0, 0
+; RV32IZBAMXQCIAC-NEXT:    ret
+  %select = select i1 %x, i32 -9223372036854775808, i32 0
+  ret i32 %select
+}
