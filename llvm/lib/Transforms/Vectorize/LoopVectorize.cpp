@@ -7422,8 +7422,8 @@ static bool isEpilogueTailFoldingAllowed(const LoopVectorizationCostModel &CM,
     return false;
   }
 
-  // TF is not supported for some kinds of reductions that results in more
-  // overhead
+  // TF is not supported for some kinds of reductions that result in more
+  // overhead.
   bool HasReductions = !LVL.getReductionVars().empty();
   bool HasSelectCmpReductions =
       HasReductions &&
