@@ -5460,10 +5460,10 @@ static Value *simplifyExtractValueInst(Value *Agg, ArrayRef<unsigned> Idxs,
        IVI = dyn_cast<InsertValueInst>(IVI->getAggregateOperand())) {
     // Based on the verifier, cycles across one or many insertvalues are
     // apparently fine in unreachable blocks and cause this loop to run
-    // infinitely. I am just adding a check to break out if it is the case.
-    if (!VisitedSet.insert(IVI).second) {
+    // infinitely. This code checks if there is a cycle and breaks out
+    // of the loop.
+    if (!VisitedSet.insert(IVI).second)
       break;
-    }
 
     ArrayRef<unsigned> InsertValueIdxs = IVI->getIndices();
     unsigned NumInsertValueIdxs = InsertValueIdxs.size();
