@@ -3472,12 +3472,57 @@ public:
   }
 };
 
+/// Pattern to replace usused shuffle operands / results with poison.
+class FoldUnusedShuffleOperand final : public OpRewritePattern<ShuffleOp> {
+public:
+  using Base::Base;
+
+  LogicalResult matchAndRewrite(ShuffleOp op,
+                                PatternRewriter &rewriter) const override {
+    // Replace with poison if all mask elements are poison.
+    if (llvm::all_of(op.getMask(), [](int64_t mask) {
+          return mask == ShuffleOp::kPoisonIndex;
+        })) {
+      rewriter.replaceOpWithNewOp<ub::PoisonOp>(op, op.getType());
+      return success();
+    }
+
+    // Check if elements from V1 / V2 are used.
+    int64_t leadingV1Size = op.getV1VectorType().getRank() > 0
+                                ? op.getV1VectorType().getDimSize(0)
+                                : 1;
+    bool isV1Used = llvm::any_of(op.getMask(), [&](int64_t mask) {
+      return mask != ShuffleOp::kPoisonIndex && mask < leadingV1Size;
+    });
+    bool isV2Used = llvm::any_of(op.getMask(), [&](int64_t mask) {
+      return mask != ShuffleOp::kPoisonIndex && mask >= leadingV1Size;
+    });
+
+    // Replace V1 with poison if it is not used.
+    if (!isV1Used && !op.getV1().getDefiningOp<ub::PoisonOp>()) {
+      Value poison =
+          ub::PoisonOp::create(rewriter, op.getLoc(), op.getV1VectorType());
+      rewriter.modifyOpInPlace(op, [&]() { op.getV1Mutable().assign(poison); });
+      return success();
+    }
+
+    // Replace V2 with poison if it is not used.
+    if (!isV2Used && !op.getV2().getDefiningOp<ub::PoisonOp>()) {
+      Value poison =
+          ub::PoisonOp::create(rewriter, op.getLoc(), op.getV2VectorType());
+      rewriter.modifyOpInPlace(op, [&]() { op.getV2Mutable().assign(poison); });
+      return success();
+    }
+
+    return failure();
+  }
+};
 } // namespace
 
 void ShuffleOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                             MLIRContext *context) {
-  results.add<ShuffleSplat, ShuffleInterleave, Canonicalize0DShuffleOp>(
-      context);
+  results.add<ShuffleSplat, ShuffleInterleave, Canonicalize0DShuffleOp,
+              FoldUnusedShuffleOperand>(context);
 }
 
 //===----------------------------------------------------------------------===//
