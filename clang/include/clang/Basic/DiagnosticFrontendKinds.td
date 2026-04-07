@@ -94,6 +94,12 @@ def err_fe_backend_error_attr :
 def warn_fe_backend_warning_attr :
   Warning<"call to '%0' declared with 'warning' attribute: %1">, BackendInfo,
   InGroup<BackendWarningAttributes>;
+def note_fe_backend_in : Note<"called by function '%0'">, BackendInfo;
+def note_fe_backend_inlined : Note<"inlined by function '%0'">, BackendInfo;
+def note_fe_backend_inlining_debug_info
+    : Note<"use '-gline-directives-only' (implied by '-g1') or higher for "
+           "more accurate inlining chain locations">,
+      BackendInfo;
 def warn_toc_unsupported_type : Warning<"-mtocdata option is ignored "
   "for %0 because %1">, InGroup<BackendWarningAttributes>;
 
@@ -187,6 +193,16 @@ def err_verify_no_directives : Error<
     "no expected directives found: consider use of '%0-no-diagnostics'">;
 def err_verify_nonconst_addrspace : Error<
   "qualifier 'const' is needed for variables in address space '%0'">;
+def err_verify_message_partial_match : Error<
+  "diagnostic messages of '%0' severity not fully matched: %1">;
+def err_verify_directive_out_of_order : Error<
+  "all diagnostics were successfully matched, but out-of-order directives "
+  "were found: %0">;
+def err_verify_non_singular_match : Error<
+  "diagnostic verification mode disallows use of a diagnostic quantifier">;
+def err_verify_wildcard_loc : Error<
+  "diagnostic verification mode disallows use of a wildcard for diagnostic "
+  "location">;
 
 def note_fixit_applied : Note<"FIX-IT applied suggested code changes">;
 def note_fixit_in_macro : Note<
@@ -378,6 +394,29 @@ def warn_profile_data_misexpect : Warning<
   "annotation was correct on %0 of profiled executions">,
   BackendInfo, InGroup<MisExpect>;
 } // end of instrumentation issue category
+
+def warn_ssaf_extract_tu_summary_file_unknown_output_format :
+  Warning<"unknown output summary file format '%0' "
+  "specified by '--ssaf-tu-summary-file=%1'">,
+  InGroup<ScalableStaticAnalysisFramework>, DefaultError;
+
+def warn_ssaf_extract_tu_summary_file_unknown_format :
+  Warning<"failed to parse the value of '--ssaf-tu-summary-file=%0' "
+  "the value must follow the '<path>.<format>' pattern">,
+  InGroup<ScalableStaticAnalysisFramework>, DefaultError;
+
+def warn_ssaf_must_enable_summary_extractors :
+  Warning<"must enable some summary extractors using the "
+        "'--ssaf-extract-summaries=' option">,
+  InGroup<ScalableStaticAnalysisFramework>, DefaultError;
+
+def warn_ssaf_extract_summary_unknown_extractor_name :
+  Warning<"no summary extractor%s0 %plural{1:was|:were}0 registered with name: %1">,
+  InGroup<ScalableStaticAnalysisFramework>, DefaultError;
+
+def warn_ssaf_write_tu_summary_failed :
+  Warning<"failed to write TU summary to '%0': %1">,
+  InGroup<ScalableStaticAnalysisFramework>, DefaultError;
 
 def err_extract_api_ignores_file_not_found :
   Error<"file '%0' specified by '--extract-api-ignores=' not found">, DefaultFatal;

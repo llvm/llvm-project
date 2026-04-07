@@ -137,8 +137,6 @@ PreservedAnalyses BranchFolderPass::run(MachineFunction &MF,
         "ProfileSummaryAnalysis is required for BranchFoldingPass", false);
 
   auto &MBFI = MFAM.getResult<MachineBlockFrequencyAnalysis>(MF);
-  auto *MDT = MFAM.getCachedResult<MachineDominatorTreeAnalysis>(MF);
-  auto *MPDT = MFAM.getCachedResult<MachinePostDominatorTreeAnalysis>(MF);
   MBFIWrapper MBBFreqInfo(MBFI);
   BranchFolder Folder(EnableTailMerge, /*CommonHoist=*/true, MBBFreqInfo, MBPI,
                       PSI);
@@ -146,10 +144,6 @@ PreservedAnalyses BranchFolderPass::run(MachineFunction &MF,
                               MF.getSubtarget().getRegisterInfo()))
     return getMachineFunctionPassPreservedAnalyses();
 
-  if (MDT)
-    MDT->updateBlockNumbers();
-  if (MPDT)
-    MPDT->updateBlockNumbers();
   return PreservedAnalyses::all();
 }
 
@@ -205,10 +199,10 @@ void BranchFolder::RemoveDeadBlock(MachineBasicBlock *MBB) {
       MF->eraseAdditionalCallInfo(&MI);
 
   // Remove the block.
-  MF->erase(MBB);
-  EHScopeMembership.erase(MBB);
   if (MLI)
     MLI->removeBlock(MBB);
+  MF->erase(MBB);
+  EHScopeMembership.erase(MBB);
 }
 
 bool BranchFolder::OptimizeFunction(MachineFunction &MF,

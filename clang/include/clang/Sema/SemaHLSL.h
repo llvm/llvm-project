@@ -190,6 +190,7 @@ public:
   void handleSemanticAttr(Decl *D, const ParsedAttr &AL);
 
   void handleVkExtBuiltinInputAttr(Decl *D, const ParsedAttr &AL);
+  void handleVkExtBuiltinOutputAttr(Decl *D, const ParsedAttr &AL);
   void handleVkPushConstantAttr(Decl *D, const ParsedAttr &AL);
 
   bool CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall);
@@ -224,6 +225,13 @@ public:
                                 SourceLocation OpLoc,
                                 const IdentifierInfo *CompName,
                                 SourceLocation CompLoc);
+
+  uint32_t getNextImplicitBindingOrderID() {
+    return ImplicitBindingNextOrderID++;
+  }
+
+  bool initGlobalResourceDecl(VarDecl *VD);
+  bool initGlobalResourceArrayDecl(VarDecl *VD);
 
 private:
   // HLSL resource type attributes need to be processed all at once.
@@ -318,12 +326,7 @@ private:
       const Attr *A, llvm::Triple::EnvironmentType Stage, IOType CurrentIOType,
       std::initializer_list<SemanticStageInfo> AllowedStages);
 
-  uint32_t getNextImplicitBindingOrderID() {
-    return ImplicitBindingNextOrderID++;
-  }
-
-  bool initGlobalResourceDecl(VarDecl *VD);
-  bool initGlobalResourceArrayDecl(VarDecl *VD);
+  void handleGlobalStructOrArrayOfWithResources(VarDecl *VD);
 
   // Infer a common global binding info for an Expr
   //

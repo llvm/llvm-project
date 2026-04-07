@@ -13,10 +13,12 @@
 
 #define __CLC_FUNCTION __clc_sub_group_broadcast
 
-#define __CLC_BODY <clc/subgroup/clc_subgroup_broadcast.inc>
-#include <clc/integer/gentype.inc>
+#define __CLC_BODY "clc/subgroup/clc_subgroup_broadcast.inc"
+#include "clc/integer/gentype.inc"
 
-#define __CLC_BODY <clc/subgroup/clc_subgroup_broadcast.inc>
-#include <clc/math/gentype.inc>
+#define __CLC_BODY "clc/subgroup/clc_subgroup_broadcast.inc"
+#include "clc/math/gentype.inc"
+
+#undef __CLC_FUNCTION
 
 #endif // __CLC_SUBGROUP_CLC_SUB_GROUP_BROADCAST_H__

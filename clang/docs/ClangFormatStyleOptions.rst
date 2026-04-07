@@ -2727,7 +2727,7 @@ the configuration (without a prefix: ``Auto``).
   Possible values:
 
   * ``ABS_Always`` (in configuration: ``Always``)
-    Always break after attributes.
+    Always break after the last attribute of the group.
 
     .. code-block:: c++
 
@@ -2758,7 +2758,7 @@ the configuration (without a prefix: ``Auto``).
       }
 
   * ``ABS_Leave`` (in configuration: ``Leave``)
-    Leave the line breaking after attributes as is.
+    Leave the line breaking after the last attribute of the group as is.
 
     .. code-block:: c++
 
@@ -2784,8 +2784,24 @@ the configuration (without a prefix: ``Auto``).
         return;
       }
 
+  * ``ABS_LeaveAll`` (in configuration: ``LeaveAll``)
+    Same as ``Leave`` except that it applies to all attributes of the group.
+
+    .. code-block:: c++
+
+      [[deprecated("Don't use this version")]]
+      [[nodiscard]]
+      bool foo() {
+        return true;
+      }
+
+      [[deprecated("Don't use this version")]]
+      [[nodiscard]] bool bar() {
+        return true;
+      }
+
   * ``ABS_Never`` (in configuration: ``Never``)
-    Never break after attributes.
+    Never break after the last attribute of the group.
 
     .. code-block:: c++
 
@@ -5783,6 +5799,11 @@ the configuration (without a prefix: ``Auto``).
   clang-format skips the comment and the next line. Otherwise, clang-format
   skips lines containing a matched token.
 
+  .. note::
+
+   This option does not apply to ``IntegerLiteralSeparator`` and
+   ``NumericLiteralCase``.
+
   .. code-block:: c++
 
      // OneLineFormatOffRegex: ^(// NOLINT|logger$)
@@ -6809,6 +6830,16 @@ the configuration (without a prefix: ``Auto``).
 
      true:                                  false:
      Foo::Foo() : a(a) {}                   Foo::Foo(): a(a) {}
+
+.. _SpaceBeforeEnumUnderlyingTypeColon:
+
+**SpaceBeforeEnumUnderlyingTypeColon** (``Boolean``) :versionbadge:`clang-format 23` :ref:`¶ <SpaceBeforeEnumUnderlyingTypeColon>`
+  If ``false``, spaces will be removed before enum underlying type colon.
+
+  .. code-block:: c++
+
+     true:                                  false:
+     enum E : int {}                        enum E: int {}
 
 .. _SpaceBeforeInheritanceColon:
 

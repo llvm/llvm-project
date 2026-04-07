@@ -4,7 +4,6 @@
 // RUN: env LIBOMPTARGET_DEBUG=1 %libomptarget-run-generic 2>&1 \
 // RUN: | %fcheck-generic -check-prefix=DEBUG
 // REQUIRES: libomptarget-debug
-// XFAIL: intelgpu
 
 // The from on target_exit_data should result in a data-transfer of 4 bytes,
 // even if when "from" is honored, the ref-count hasn't gone down to 0.
