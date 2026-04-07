@@ -32,6 +32,7 @@
 #include "flang/Semantics/symbol.h"
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 
@@ -40,7 +41,6 @@
 #include <list>
 #include <memory>
 #include <optional>
-#include <set>
 #include <string>
 #include <tuple>
 #include <type_traits>
@@ -669,7 +669,7 @@ parser::Message &Reason::AttachTo(parser::Message &msg) {
 /// either directly, or via some kind of association.
 static SymbolVector SelectUsedSymbols(
     const SymbolVector &vars, const SomeExpr &expr) {
-  std::set<const Symbol *> uses;
+  llvm::DenseSet<const Symbol *> uses;
   for (SymbolRef s : evaluate::GetSymbolVector(expr)) {
     uses.insert(&s->GetUltimate());
   }
