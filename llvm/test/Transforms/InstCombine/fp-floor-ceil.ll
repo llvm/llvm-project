@@ -108,8 +108,41 @@ define i1 @x_floor_ogt_neg(float %x) {
   ret i1 %ret
 }
 
-define i1 @x_floor_ueq_neg(float %x) {
-; CHECK-LABEL: @x_floor_ueq_neg(
+define i1 @x_floor_oeq_to_trunc_oeq(float %x) {
+; CHECK-LABEL: @x_floor_oeq_to_trunc_oeq(
+; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.trunc.f32(float [[X:%.*]])
+; CHECK-NEXT:    [[RET:%.*]] = fcmp oeq float [[TMP1]], [[X]]
+; CHECK-NEXT:    ret i1 [[RET]]
+;
+  %ceil = call float @llvm.floor.f32(float %x)
+  %ret = fcmp oeq float %x, %ceil
+  ret i1 %ret
+}
+
+define i1 @x_floor_one_to_trunc_one(float %x) {
+; CHECK-LABEL: @x_floor_one_to_trunc_one(
+; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.trunc.f32(float [[X:%.*]])
+; CHECK-NEXT:    [[RET:%.*]] = fcmp one float [[TMP1]], [[X]]
+; CHECK-NEXT:    ret i1 [[RET]]
+;
+  %ceil = call float @llvm.floor.f32(float %x)
+  %ret = fcmp one float %x, %ceil
+  ret i1 %ret
+}
+
+define i1 @x_floor_ord_to_trunc_ord(float %x) {
+; CHECK-LABEL: @x_floor_ord_to_trunc_ord(
+; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.trunc.f32(float [[X:%.*]])
+; CHECK-NEXT:    [[RET:%.*]] = fcmp ord float [[TMP1]], [[X]]
+; CHECK-NEXT:    ret i1 [[RET]]
+;
+  %ceil = call float @llvm.floor.f32(float %x)
+  %ret = fcmp ord float %x, %ceil
+  ret i1 %ret
+}
+
+define i1 @x_floor_ueq_to_trunc_ueq(float %x) {
+; CHECK-LABEL: @x_floor_ueq_to_trunc_ueq(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.trunc.f32(float [[X:%.*]])
 ; CHECK-NEXT:    [[RET:%.*]] = fcmp ueq float [[TMP1]], [[X]]
 ; CHECK-NEXT:    ret i1 [[RET]]
@@ -119,14 +152,25 @@ define i1 @x_floor_ueq_neg(float %x) {
   ret i1 %ret
 }
 
-define i1 @x_floor_une_neg(float %x) {
-; CHECK-LABEL: @x_floor_une_neg(
+define i1 @x_floor_une_to_trunc_une(float %x) {
+; CHECK-LABEL: @x_floor_une_to_trunc_une(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.trunc.f32(float [[X:%.*]])
 ; CHECK-NEXT:    [[RET:%.*]] = fcmp une float [[TMP1]], [[X]]
 ; CHECK-NEXT:    ret i1 [[RET]]
 ;
   %floor = call float @llvm.floor.f32(float %x)
   %ret = fcmp une float %x, %floor
+  ret i1 %ret
+}
+
+define i1 @x_floor_uno_to_trunc_uno(float %x) {
+; CHECK-LABEL: @x_floor_uno_to_trunc_uno(
+; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.trunc.f32(float [[X:%.*]])
+; CHECK-NEXT:    [[RET:%.*]] = fcmp uno float [[TMP1]], [[X]]
+; CHECK-NEXT:    ret i1 [[RET]]
+;
+  %ceil = call float @llvm.floor.f32(float %x)
+  %ret = fcmp uno float %x, %ceil
   ret i1 %ret
 }
 
@@ -237,8 +281,8 @@ define i1 @x_ceil_olt_neg(float %x) {
   ret i1 %ret
 }
 
-define i1 @x_ceil_oeq_neg(float %x) {
-; CHECK-LABEL: @x_ceil_oeq_neg(
+define i1 @x_ceil_oeq_to_trunc_oeq(float %x) {
+; CHECK-LABEL: @x_ceil_oeq_to_trunc_oeq(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.trunc.f32(float [[X:%.*]])
 ; CHECK-NEXT:    [[RET:%.*]] = fcmp oeq float [[TMP1]], [[X]]
 ; CHECK-NEXT:    ret i1 [[RET]]
@@ -248,13 +292,57 @@ define i1 @x_ceil_oeq_neg(float %x) {
   ret i1 %ret
 }
 
-define i1 @x_ceil_one_neg(float %x) {
-; CHECK-LABEL: @x_ceil_one_neg(
+define i1 @x_ceil_one_to_trunc_one(float %x) {
+; CHECK-LABEL: @x_ceil_one_to_trunc_one(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.trunc.f32(float [[X:%.*]])
 ; CHECK-NEXT:    [[RET:%.*]] = fcmp one float [[TMP1]], [[X]]
 ; CHECK-NEXT:    ret i1 [[RET]]
 ;
   %ceil = call float @llvm.ceil.f32(float %x)
   %ret = fcmp one float %x, %ceil
+  ret i1 %ret
+}
+
+define i1 @x_ceil_ord_to_trunc_ord(float %x) {
+; CHECK-LABEL: @x_ceil_ord_to_trunc_ord(
+; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.trunc.f32(float [[X:%.*]])
+; CHECK-NEXT:    [[RET:%.*]] = fcmp ord float [[TMP1]], [[X]]
+; CHECK-NEXT:    ret i1 [[RET]]
+;
+  %ceil = call float @llvm.ceil.f32(float %x)
+  %ret = fcmp ord float %x, %ceil
+  ret i1 %ret
+}
+
+define i1 @x_ceil_ueq_to_trunc_ueq(float %x) {
+; CHECK-LABEL: @x_ceil_ueq_to_trunc_ueq(
+; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.trunc.f32(float [[X:%.*]])
+; CHECK-NEXT:    [[RET:%.*]] = fcmp ueq float [[TMP1]], [[X]]
+; CHECK-NEXT:    ret i1 [[RET]]
+;
+  %ceil = call float @llvm.ceil.f32(float %x)
+  %ret = fcmp ueq float %x, %ceil
+  ret i1 %ret
+}
+
+define i1 @x_ceil_une_to_trunc_une(float %x) {
+; CHECK-LABEL: @x_ceil_une_to_trunc_une(
+; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.trunc.f32(float [[X:%.*]])
+; CHECK-NEXT:    [[RET:%.*]] = fcmp une float [[TMP1]], [[X]]
+; CHECK-NEXT:    ret i1 [[RET]]
+;
+  %ceil = call float @llvm.ceil.f32(float %x)
+  %ret = fcmp une float %x, %ceil
+  ret i1 %ret
+}
+
+define i1 @x_ceil_uno_to_trunc_uno(float %x) {
+; CHECK-LABEL: @x_ceil_uno_to_trunc_uno(
+; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.trunc.f32(float [[X:%.*]])
+; CHECK-NEXT:    [[RET:%.*]] = fcmp uno float [[TMP1]], [[X]]
+; CHECK-NEXT:    ret i1 [[RET]]
+;
+  %ceil = call float @llvm.ceil.f32(float %x)
+  %ret = fcmp uno float %x, %ceil
   ret i1 %ret
 }
