@@ -21,7 +21,7 @@ def RequiresSMInterface: OpInterface<"RequiresSMInterface"> {
   let cppNamespace = "::mlir::NVVM";
   let methods = [
     InterfaceMethod<
-      "Get the SM version require by the op from the trait", 
+      "Get the SM version required by the op from the trait", 
       "mlir::NVVM::NVVMCheckSMVersion", "getRequiredMinSMVersion"
     >
   ];
