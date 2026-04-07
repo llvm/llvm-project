@@ -2570,6 +2570,7 @@ AvailabilityAttr *Sema::mergeAndInferAvailabilityAttr(
   return OrigAttr;
 }
 
+/// Returns true if the given availability attribute should be inferred, and
 /// adjusts the value of the attribute as necessary to facilitate that.
 static bool shouldInferAvailabilityAttribute(const ParsedAttr &AL,
                                              IdentifierInfo *&II,
