@@ -161,10 +161,10 @@ template <bool Invert> struct Process {
     if (rpc::is_first_lane(lane_mask)) {
       if (!__scoped_atomic_fetch_add(doorbell->value, 1UL, __ATOMIC_RELAXED,
                                      __MEMORY_SCOPE_SYSTEM)) {
-        __scoped_atomic_thread_fence(__ATOMIC_RELEASE, __MEMORY_SCOPE_SYSTEM);
         __scoped_atomic_store_n(doorbell->mailbox,
                                 static_cast<uint64_t>(doorbell->event_id),
                                 __ATOMIC_RELAXED, __MEMORY_SCOPE_SYSTEM);
+        __scoped_atomic_thread_fence(__ATOMIC_RELEASE, __MEMORY_SCOPE_SYSTEM);
         signal_interrupt(event_id);
       }
     }
