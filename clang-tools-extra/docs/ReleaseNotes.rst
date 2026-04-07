@@ -275,6 +275,8 @@ Changes in existing checks
   - Add support for annotation of user-defined types as having the same
     moved-from semantics as standard smart pointers.
 
+  - Do not report explicit call to destructor after move as an invalid use.
+
 - Improved :doc:`cppcoreguidelines-avoid-capturing-lambda-coroutines
   <clang-tidy/checks/cppcoreguidelines/avoid-capturing-lambda-coroutines>`
   check by adding the `AllowExplicitObjectParameters` option. When enabled,
