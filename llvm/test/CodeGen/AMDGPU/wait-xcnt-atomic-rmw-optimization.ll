@@ -1045,49 +1045,47 @@ define amdgpu_kernel void @atomic_rmw_in_loop(ptr addrspace(1) %ptr, i32 %n) {
 ; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x8 nv
 ; GFX1250-NEXT:    s_load_b64 s[2:3], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    s_load_b32 s1, s[4:5], 0x8 nv
-; GFX1250-NEXT:    ; implicit-def: $vgpr3 : SGPR spill to VGPR lane
+; GFX1250-NEXT:    ; implicit-def: $vgpr2 : SGPR spill to VGPR lane
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_writelane_b32 v3, s2, 0
-; GFX1250-NEXT:    v_writelane_b32 v3, s3, 1
+; GFX1250-NEXT:    v_writelane_b32 v2, s2, 0
+; GFX1250-NEXT:    v_writelane_b32 v2, s3, 1
 ; GFX1250-NEXT:    s_mov_b32 s0, 0
-; GFX1250-NEXT:    v_writelane_b32 v3, s1, 2
-; GFX1250-NEXT:    v_writelane_b32 v3, s0, 3
+; GFX1250-NEXT:    v_writelane_b32 v2, s1, 2
+; GFX1250-NEXT:    v_writelane_b32 v2, s0, 3
 ; GFX1250-NEXT:    s_or_saveexec_b32 s6, -1
-; GFX1250-NEXT:    scratch_store_b32 off, v3, off nv ; 4-byte Folded Spill
+; GFX1250-NEXT:    scratch_store_b32 off, v2, off nv ; 4-byte Folded Spill
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    s_mov_b32 exec_lo, s6
 ; GFX1250-NEXT:  .LBB17_1: ; %loop
 ; GFX1250-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX1250-NEXT:    s_or_saveexec_b32 s6, -1
-; GFX1250-NEXT:    scratch_load_b32 v3, off, off nv ; 4-byte Folded Reload
+; GFX1250-NEXT:    scratch_load_b32 v2, off, off nv ; 4-byte Folded Reload
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    s_mov_b32 exec_lo, s6
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-NEXT:    v_readlane_b32 s0, v3, 3
-; GFX1250-NEXT:    v_readlane_b32 s1, v3, 2
-; GFX1250-NEXT:    v_readlane_b32 s2, v3, 0
-; GFX1250-NEXT:    v_readlane_b32 s3, v3, 1
+; GFX1250-NEXT:    v_readlane_b32 s0, v2, 3
+; GFX1250-NEXT:    v_readlane_b32 s1, v2, 2
+; GFX1250-NEXT:    v_readlane_b32 s2, v2, 0
+; GFX1250-NEXT:    v_readlane_b32 s3, v2, 1
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
-; GFX1250-NEXT:    v_mov_b32_e32 v2, s0
-; GFX1250-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
+; GFX1250-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-NEXT:    global_wb scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    global_atomic_add_u32 v[0:1], v2, off scope:SCOPE_SYS
+; GFX1250-NEXT:    global_atomic_add_u32 v0, v1, s[2:3] scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-NEXT:    global_inv scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-NEXT:    v_mov_b32_e32 v2, s0
-; GFX1250-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
+; GFX1250-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-NEXT:    global_wb scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    global_atomic_add_u32 v[0:1], v2, off offset:4 scope:SCOPE_SYS
+; GFX1250-NEXT:    global_atomic_add_u32 v0, v1, s[2:3] offset:4 scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-NEXT:    global_inv scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
@@ -1098,9 +1096,9 @@ define amdgpu_kernel void @atomic_rmw_in_loop(ptr addrspace(1) %ptr, i32 %n) {
 ; GFX1250-NEXT:    s_mov_b32 s2, -1
 ; GFX1250-NEXT:    s_xor_b32 s1, s1, s2
 ; GFX1250-NEXT:    s_and_b32 vcc_lo, exec_lo, s1
-; GFX1250-NEXT:    v_writelane_b32 v3, s0, 3
+; GFX1250-NEXT:    v_writelane_b32 v2, s0, 3
 ; GFX1250-NEXT:    s_or_saveexec_b32 s6, -1
-; GFX1250-NEXT:    scratch_store_b32 off, v3, off nv ; 4-byte Folded Spill
+; GFX1250-NEXT:    scratch_store_b32 off, v2, off nv ; 4-byte Folded Spill
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    s_mov_b32 exec_lo, s6
 ; GFX1250-NEXT:    s_cbranch_vccnz .LBB17_1
@@ -1135,62 +1133,60 @@ define amdgpu_kernel void @atomic_rmw_with_branch(ptr addrspace(1) %ptr, i32 %co
 ; GFX1250-NEXT:    s_load_b32 s1, s[4:5], 0x8 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX1250-NEXT:    ; implicit-def: $vgpr3 : SGPR spill to VGPR lane
-; GFX1250-NEXT:    v_writelane_b32 v3, s4, 0
-; GFX1250-NEXT:    v_writelane_b32 v3, s5, 1
+; GFX1250-NEXT:    ; implicit-def: $vgpr2 : SGPR spill to VGPR lane
+; GFX1250-NEXT:    v_writelane_b32 v2, s4, 0
+; GFX1250-NEXT:    v_writelane_b32 v2, s5, 1
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
-; GFX1250-NEXT:    v_mov_b32_e32 v2, 1
-; GFX1250-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
+; GFX1250-NEXT:    v_mov_b32_e32 v1, 1
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-NEXT:    global_wb scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    global_atomic_add_u32 v[0:1], v2, off scope:SCOPE_SYS
+; GFX1250-NEXT:    global_atomic_add_u32 v0, v1, s[2:3] scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-NEXT:    global_inv scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-NEXT:    v_mov_b32_e32 v2, 2
-; GFX1250-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
+; GFX1250-NEXT:    v_mov_b32_e32 v1, 2
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-NEXT:    global_wb scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    global_atomic_add_u32 v[0:1], v2, off offset:4 scope:SCOPE_SYS
+; GFX1250-NEXT:    global_atomic_add_u32 v0, v1, s[2:3] offset:4 scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-NEXT:    global_inv scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_mov_b32 s0, -1
 ; GFX1250-NEXT:    s_mov_b32 s2, 0
 ; GFX1250-NEXT:    s_cmp_lg_u32 s1, s2
-; GFX1250-NEXT:    v_writelane_b32 v3, s0, 2
+; GFX1250-NEXT:    v_writelane_b32 v2, s0, 2
 ; GFX1250-NEXT:    s_mov_b32 s6, exec_lo
 ; GFX1250-NEXT:    s_mov_b32 exec_lo, -1
-; GFX1250-NEXT:    scratch_store_b32 off, v3, off nv ; 4-byte Folded Spill
+; GFX1250-NEXT:    scratch_store_b32 off, v2, off nv ; 4-byte Folded Spill
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    s_mov_b32 exec_lo, s6
 ; GFX1250-NEXT:    s_cbranch_scc1 .LBB18_3
 ; GFX1250-NEXT:  .LBB18_1: ; %Flow
 ; GFX1250-NEXT:    s_or_saveexec_b32 s6, -1
-; GFX1250-NEXT:    scratch_load_b32 v3, off, off nv ; 4-byte Folded Reload
+; GFX1250-NEXT:    scratch_load_b32 v2, off, off nv ; 4-byte Folded Reload
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    s_mov_b32 exec_lo, s6
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-NEXT:    v_readlane_b32 s0, v3, 2
+; GFX1250-NEXT:    v_readlane_b32 s0, v2, 2
 ; GFX1250-NEXT:    s_mov_b32 s1, -1
 ; GFX1250-NEXT:    s_xor_b32 s0, s0, s1
 ; GFX1250-NEXT:    s_and_b32 vcc_lo, exec_lo, s0
 ; GFX1250-NEXT:    s_cbranch_vccnz .LBB18_4
 ; GFX1250-NEXT:  ; %bb.2: ; %bb1
 ; GFX1250-NEXT:    s_or_saveexec_b32 s6, -1
-; GFX1250-NEXT:    scratch_load_b32 v3, off, off nv ; 4-byte Folded Reload
+; GFX1250-NEXT:    scratch_load_b32 v2, off, off nv ; 4-byte Folded Reload
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    s_mov_b32 exec_lo, s6
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-NEXT:    v_readlane_b32 s0, v3, 0
-; GFX1250-NEXT:    v_readlane_b32 s1, v3, 1
+; GFX1250-NEXT:    v_readlane_b32 s0, v2, 0
+; GFX1250-NEXT:    v_readlane_b32 s1, v2, 1
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, 3
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
@@ -1206,40 +1202,39 @@ define amdgpu_kernel void @atomic_rmw_with_branch(ptr addrspace(1) %ptr, i32 %co
 ; GFX1250-NEXT:    s_branch .LBB18_4
 ; GFX1250-NEXT:  .LBB18_3: ; %bb2
 ; GFX1250-NEXT:    s_or_saveexec_b32 s6, -1
-; GFX1250-NEXT:    scratch_load_b32 v3, off, off nv ; 4-byte Folded Reload
+; GFX1250-NEXT:    scratch_load_b32 v2, off, off nv ; 4-byte Folded Reload
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    s_mov_b32 exec_lo, s6
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-NEXT:    v_readlane_b32 s0, v3, 0
-; GFX1250-NEXT:    v_readlane_b32 s1, v3, 1
+; GFX1250-NEXT:    v_readlane_b32 s0, v2, 0
+; GFX1250-NEXT:    v_readlane_b32 s1, v2, 1
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
-; GFX1250-NEXT:    v_mov_b32_e32 v2, 4
-; GFX1250-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
+; GFX1250-NEXT:    v_mov_b32_e32 v1, 4
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-NEXT:    global_wb scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    global_atomic_add_u32 v[0:1], v2, off offset:12 scope:SCOPE_SYS
+; GFX1250-NEXT:    global_atomic_add_u32 v0, v1, s[0:1] offset:12 scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-NEXT:    global_inv scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_mov_b32 s0, 0
-; GFX1250-NEXT:    v_writelane_b32 v3, s0, 2
+; GFX1250-NEXT:    v_writelane_b32 v2, s0, 2
 ; GFX1250-NEXT:    s_or_saveexec_b32 s6, -1
-; GFX1250-NEXT:    scratch_store_b32 off, v3, off nv ; 4-byte Folded Spill
+; GFX1250-NEXT:    scratch_store_b32 off, v2, off nv ; 4-byte Folded Spill
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    s_mov_b32 exec_lo, s6
 ; GFX1250-NEXT:    s_branch .LBB18_1
 ; GFX1250-NEXT:  .LBB18_4: ; %merge
 ; GFX1250-NEXT:    s_or_saveexec_b32 s6, -1
-; GFX1250-NEXT:    scratch_load_b32 v3, off, off nv ; 4-byte Folded Reload
+; GFX1250-NEXT:    scratch_load_b32 v2, off, off nv ; 4-byte Folded Reload
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    s_mov_b32 exec_lo, s6
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-NEXT:    v_readlane_b32 s0, v3, 0
-; GFX1250-NEXT:    v_readlane_b32 s1, v3, 1
+; GFX1250-NEXT:    v_readlane_b32 s0, v2, 0
+; GFX1250-NEXT:    v_readlane_b32 s1, v2, 1
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, 5
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0

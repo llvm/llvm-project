@@ -39,7 +39,7 @@ class SIFixXcntStallSAddrReuse {
   MachineRegisterInfo *MRI = nullptr;
   LiveIntervals *LIS = nullptr;
 
-  bool sAddrRedefinedAfter(MachineInstr &MI, Register SAddr);
+  bool isSAddrRedefined(MachineInstr &MI, Register SAddr);
   MachineInstr *convertToVAddr(MachineInstr &MI, MachineBasicBlock &MBB,
                                Register &NewAddrReg);
   bool processMBB(MachineBasicBlock &MBB);
@@ -55,10 +55,12 @@ public:
   SIFixXcntStallSAddrReuseLegacy() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override {
+    if (skipFunction(MF.getFunction()))
+      return false;
     if (!MF.getSubtarget<GCNSubtarget>().hasWaitXcnt())
       return false;
-    auto *LISWrapper = getAnalysisIfAvailable<llvm::LiveIntervalsWrapperPass>();
-    llvm::LiveIntervals *LIS = LISWrapper ? &LISWrapper->getLIS() : nullptr;
+    auto *LISWrapper = getAnalysisIfAvailable<LiveIntervalsWrapperPass>();
+    LiveIntervals *LIS = LISWrapper ? &LISWrapper->getLIS() : nullptr;
     return SIFixXcntStallSAddrReuse(LIS).run(MF);
   }
 
@@ -100,25 +102,21 @@ SIFixXcntStallSAddrReusePass::run(MachineFunction &MF,
 static bool isEligible(const MachineInstr &MI, const SIInstrInfo &TII,
                        const SIRegisterInfo &TRI,
                        const MachineRegisterInfo &MRI, int &SAddrIdx) {
-  SAddrIdx = AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::saddr);
-  if (SAddrIdx < 0 || !TII.isFLATGlobal(MI))
+  if (!TII.isFLATGlobal(MI))
     return false;
-  const MachineOperand &SAddr = MI.getOperand(SAddrIdx);
-  return SAddr.isReg() && SAddr.getReg().isPhysical() &&
-         TRI.isSGPRReg(MRI, SAddr.getReg());
+  SAddrIdx = AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::saddr);
+  if (SAddrIdx < 0)
+    return false;
+  Register SAddr = MI.getOperand(SAddrIdx).getReg();
+  return SAddr.isPhysical() && TRI.isSGPRReg(MRI, SAddr);
 }
 
-bool SIFixXcntStallSAddrReuse::sAddrRedefinedAfter(MachineInstr &MI,
-                                                   Register SAddr) {
-  MachineBasicBlock::iterator I = std::next(MI.getIterator());
-  MachineBasicBlock::iterator E = MI.getParent()->end();
-  for (; I != E; ++I) {
-    for (const MachineOperand &MO : I->operands())
-      if (MO.isReg() && MO.isDef() && MO.getReg().isPhysical() &&
-          TRI->regsOverlap(MO.getReg(), SAddr))
-        return true;
-  }
-  return false;
+bool SIFixXcntStallSAddrReuse::isSAddrRedefined(MachineInstr &MI,
+                                                Register SAddr) {
+  return llvm::any_of(
+      instructionsWithoutDebug(std::next(MachineBasicBlock::iterator(MI)),
+                               MI.getParent()->end()),
+      [&](const MachineInstr &I) { return I.modifiesRegister(SAddr, TRI); });
 }
 
 MachineInstr *SIFixXcntStallSAddrReuse::convertToVAddr(MachineInstr &MI,
@@ -253,7 +251,7 @@ bool SIFixXcntStallSAddrReuse::processMBB(MachineBasicBlock &MBB) {
     int SAddrIdx;
     if (!isEligible(MI, *TII, *TRI, *MRI, SAddrIdx))
       continue;
-    if (!sAddrRedefinedAfter(MI, MI.getOperand(SAddrIdx).getReg()))
+    if (!isSAddrRedefined(MI, MI.getOperand(SAddrIdx).getReg()))
       continue;
 
     Register NewAddr;

@@ -68,7 +68,6 @@
 ; GCN-O0-NEXT: regallocfast<filter=wwm;no-clear-vregs>
 ; GCN-O0-NEXT: si-lower-wwm-copies
 ; GCN-O0-NEXT: amdgpu-reserve-wwm-regs
-; GCN-O0-NEXT: si-fix-xcnt-stall-saddr-reuse
 ; GCN-O0-NEXT: regallocfast<filter=vgpr>
 ; GCN-O0-NEXT: si-fix-vgpr-copies
 ; GCN-O0-NEXT: remove-redundant-debug-values

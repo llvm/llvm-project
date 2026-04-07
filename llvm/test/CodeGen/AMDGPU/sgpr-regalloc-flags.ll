@@ -47,7 +47,6 @@
 ; O0-NEXT: Fast Register Allocator
 ; O0-NEXT: SI Lower WWM Copies
 ; O0-NEXT: AMDGPU Reserve WWM Registers
-; O0-NEXT: SI Fix Xcnt Stall SAddr Reuse
 ; O0-NEXT: Fast Register Allocator
 ; O0-NEXT: SI Fix VGPR copies
 

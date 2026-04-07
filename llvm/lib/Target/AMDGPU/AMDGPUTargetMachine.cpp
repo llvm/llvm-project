@@ -1825,8 +1825,6 @@ bool GCNPassConfig::addRegAssignAndRewriteFast() {
   addPass(&SILowerWWMCopiesLegacyID);
   addPass(&AMDGPUReserveWWMRegsLegacyID);
 
-  addPass(&SIFixXcntStallSAddrReuseLegacyID);
-
   // For allocating per-thread VGPRs.
   addPass(createVGPRAllocPass(false));
 
@@ -2473,8 +2471,6 @@ Error AMDGPUCodeGenPassBuilder::addRegAssignmentFast(
 
   addMachineFunctionPass(SILowerWWMCopiesPass(), PMW);
   addMachineFunctionPass(AMDGPUReserveWWMRegsPass(), PMW);
-
-  addMachineFunctionPass(SIFixXcntStallSAddrReusePass(), PMW);
 
   // VGPR allocation - default to fast at -O0.
   if (VGPRRegAllocNPM == RegAllocType::Greedy)

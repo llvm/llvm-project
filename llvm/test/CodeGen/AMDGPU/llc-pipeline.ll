@@ -127,7 +127,6 @@
 ; GCN-O0-NEXT:        Fast Register Allocator
 ; GCN-O0-NEXT:        SI Lower WWM Copies
 ; GCN-O0-NEXT:        AMDGPU Reserve WWM Registers
-; GCN-O0-NEXT:        SI Fix Xcnt Stall SAddr Reuse
 ; GCN-O0-NEXT:        Fast Register Allocator
 ; GCN-O0-NEXT:        SI Fix VGPR copies
 ; GCN-O0-NEXT:        Remove Redundant DEBUG_VALUE analysis
