@@ -1868,16 +1868,11 @@ private:
        ScopDetection::DetectionContext &DC, OptimizationRemarkEmitter &ORE,
        int ID);
 
-  //@}
-
   /// Return the access for the base ptr of @p MA if any.
   MemoryAccess *lookupBasePtrAccess(MemoryAccess *MA);
 
   /// Create an id for @p Param and store it in the ParameterIds map.
   void createParameterId(const SCEV *Param);
-
-  /// Build the Context of the Scop.
-  void buildContext();
 
   /// Add the bounds of the parameters to the context.
   void addParameterBounds();
@@ -1941,6 +1936,12 @@ public:
   Scop(const Scop &) = delete;
   Scop &operator=(const Scop &) = delete;
   ~Scop();
+
+  /// Factory pattern for creating a new (empty) SCoP.
+  static std::unique_ptr<Scop> makeScop(Region &R, ScalarEvolution &SE,
+                                        LoopInfo &LI, DominatorTree &DT,
+                                        ScopDetection::DetectionContext &DC,
+                                        OptimizationRemarkEmitter &ORE, int ID);
 
   /// Increment actual number of aliasing assumptions taken
   ///
