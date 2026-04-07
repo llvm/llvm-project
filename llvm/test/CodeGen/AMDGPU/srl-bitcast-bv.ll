@@ -2,30 +2,20 @@
 ; RUN: llc -mtriple=amdgcn-- -mcpu=gfx950 < %s | FileCheck -check-prefix=GFX950 %s
 ; RUN: llc -mtriple=amdgcn-- -mcpu=gfx1250 < %s | FileCheck -check-prefix=GFX1250 %s
 
-; fold (srl (bitcast (build_vector e0, ..., eN)), N * eltsize) -> (zext eN)
-;
-; On targets with native i16, the generic (srl (shl x, c), c) -> and combine
-; does not fire because the i16 value goes through a v2i16 packing chain
-; rather than an any_extend. Without this fold, a lshl+lshr pair remains where
-; a single AND would suffice.
-
-define void @srl_bv_extract_last(ptr addrspace(1) %out, i16 %a, i16 %b, i16 %c, i16 %d) {
-; GFX950-LABEL: srl_bv_extract_last:
+define i64 @srl_bv_v4i16_extract_last(i16 %a, i16 %b, i16 %c, i16 %d) {
+; GFX950-LABEL: srl_bv_v4i16_extract_last:
 ; GFX950:       ; %bb.0:
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX950-NEXT:    v_and_b32_e32 v2, 0xffff, v5
-; GFX950-NEXT:    v_mov_b32_e32 v3, 0
-; GFX950-NEXT:    global_store_dwordx2 v[0:1], v[2:3], off
-; GFX950-NEXT:    s_waitcnt vmcnt(0)
+; GFX950-NEXT:    v_and_b32_e32 v0, 0xffff, v3
+; GFX950-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX1250-LABEL: srl_bv_extract_last:
+; GFX1250-LABEL: srl_bv_v4i16_extract_last:
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_and_b32_e32 v2, 0xffff, v5
-; GFX1250-NEXT:    v_mov_b32_e32 v3, 0
-; GFX1250-NEXT:    global_store_b64 v[0:1], v[2:3], off
+; GFX1250-NEXT:    v_and_b32_e32 v0, 0xffff, v3
+; GFX1250-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
   %bv0 = insertelement <4 x i16> poison, i16 %a, i32 0
   %bv1 = insertelement <4 x i16> %bv0, i16 %b, i32 1
@@ -33,32 +23,51 @@ define void @srl_bv_extract_last(ptr addrspace(1) %out, i16 %a, i16 %b, i16 %c, 
   %bv3 = insertelement <4 x i16> %bv2, i16 %d, i32 3
   %bc = bitcast <4 x i16> %bv3 to i64
   %srl = lshr i64 %bc, 48
-  store i64 %srl, ptr addrspace(1) %out
-  ret void
+  ret i64 %srl
 }
 
-; Negative test: shift amount is not (NumElts-1) * EltSize, fold does not fire.
-define void @srl_bv_not_last(ptr addrspace(1) %out, i16 %a, i16 %b, i16 %c, i16 %d) {
+define i64 @srl_bv_v2f32_extract_last(float %a, float %b) {
+; GFX950-LABEL: srl_bv_v2f32_extract_last:
+; GFX950:       ; %bb.0:
+; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-NEXT:    v_mov_b32_e32 v0, v1
+; GFX950-NEXT:    v_mov_b32_e32 v1, 0
+; GFX950-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1250-LABEL: srl_bv_v2f32_extract_last:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    v_dual_mov_b32 v0, v1 :: v_dual_mov_b32 v1, 0
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+  %bv0 = insertelement <2 x float> poison, float %a, i32 0
+  %bv1 = insertelement <2 x float> %bv0, float %b, i32 1
+  %bc = bitcast <2 x float> %bv1 to i64
+  %srl = lshr i64 %bc, 32
+  ret i64 %srl
+}
+
+; Negative test: shift amount is not (NumElts-1) * EltSize.
+define i64 @srl_bv_not_last(i16 %a, i16 %b, i16 %c, i16 %d) {
 ; GFX950-LABEL: srl_bv_not_last:
 ; GFX950:       ; %bb.0:
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX950-NEXT:    s_mov_b32 s0, 0x5040100
-; GFX950-NEXT:    v_perm_b32 v5, v5, v4, s0
-; GFX950-NEXT:    v_perm_b32 v4, v3, v2, s0
-; GFX950-NEXT:    v_lshrrev_b64 v[2:3], 16, v[4:5]
-; GFX950-NEXT:    global_store_dwordx2 v[0:1], v[2:3], off
-; GFX950-NEXT:    s_waitcnt vmcnt(0)
+; GFX950-NEXT:    v_perm_b32 v2, v3, v2, s0
+; GFX950-NEXT:    v_perm_b32 v0, v1, v0, s0
+; GFX950-NEXT:    v_alignbit_b32 v0, v2, v0, 16
+; GFX950-NEXT:    v_and_b32_e32 v1, 0xffff, v3
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1250-LABEL: srl_bv_not_last:
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_perm_b32 v5, v5, v4, 0x5040100
-; GFX1250-NEXT:    v_perm_b32 v4, v3, v2, 0x5040100
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-NEXT:    v_lshrrev_b64 v[2:3], 16, v[4:5]
-; GFX1250-NEXT:    global_store_b64 v[0:1], v[2:3], off
+; GFX1250-NEXT:    v_perm_b32 v2, v3, v2, 0x5040100
+; GFX1250-NEXT:    v_perm_b32 v0, v1, v0, 0x5040100
+; GFX1250-NEXT:    v_and_b32_e32 v1, 0xffff, v3
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX1250-NEXT:    v_alignbit_b32 v0, v2, v0, 16
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
   %bv0 = insertelement <4 x i16> poison, i16 %a, i32 0
   %bv1 = insertelement <4 x i16> %bv0, i16 %b, i32 1
@@ -66,6 +75,5 @@ define void @srl_bv_not_last(ptr addrspace(1) %out, i16 %a, i16 %b, i16 %c, i16 
   %bv3 = insertelement <4 x i16> %bv2, i16 %d, i32 3
   %bc = bitcast <4 x i16> %bv3 to i64
   %srl = lshr i64 %bc, 16
-  store i64 %srl, ptr addrspace(1) %out
-  ret void
+  ret i64 %srl
 }
