@@ -1654,10 +1654,8 @@ LValue CIRGenFunction::emitMemberExpr(const MemberExpr *e) {
     return lv;
   }
 
-  if (isa<FunctionDecl>(nd)) {
-    cgm.errorNYI(e->getSourceRange(), "emitMemberExpr: FunctionDecl");
-    return LValue();
-  }
+  if (const auto *fd = dyn_cast<FunctionDecl>(nd))
+    return emitFunctionDeclLValue(*this, e, fd);
 
   llvm_unreachable("Unhandled member declaration!");
 }
