@@ -218,7 +218,7 @@ Constant *FoldBitCast(Constant *C, Type *DestTy, const DataLayout &DL) {
   // For example: <4 x i24> to <3 x i32>.
   bool isLittleEndian = DL.isLittleEndian();
   unsigned SrcBitSize = SrcEltTy->getPrimitiveSizeInBits();
-  unsigned DstBitSize = DL.getTypeSizeInBits(DstEltTy);
+  unsigned DstBitSize = DstEltTy->getPrimitiveSizeInBits();
   SmallVector<Constant*, 32> Result;
   unsigned SrcElt = 0;
 
@@ -235,10 +235,11 @@ Constant *FoldBitCast(Constant *C, Type *DestTy, const DataLayout &DL) {
         return ConstantExpr::getBitCast(C, DestTy);
 
       // Shift Buffer & Masks to fit next SrcElt.
-      unsigned ShiftAmt = isLittleEndian ? 0 : SrcBitSize;
-      Buffer = Buffer.shl(ShiftAmt);
-      UndefMask = UndefMask.shl(ShiftAmt);
-      PoisonMask = PoisonMask.shl(ShiftAmt);
+      if (!isLittleEndian) {
+        Buffer <<= SrcBitSize; 
+        UndefMask <<= SrcBitSize;
+        PoisonMask <<= SrcBitSize;
+      }
 
       APInt SrcValue;
       unsigned BitPosition = isLittleEndian ? BufferBitSize : 0;
@@ -264,16 +265,16 @@ Constant *FoldBitCast(Constant *C, Type *DestTy, const DataLayout &DL) {
     while (BufferBitSize >= DstBitSize) {
       unsigned ShiftAmt = isLittleEndian ? 0 : BufferBitSize - DstBitSize;
       // Emit undef/poison, if all undef mask fragment bits are set.
-      if (UndefMask.lshr(ShiftAmt).trunc(DstBitSize).isAllOnes()) {
+      if (UndefMask.extractBits(DstBitSize, ShiftAmt).isAllOnes()) {
         // Push poison, if any bit in poison mask fragment is set.
-        if (!PoisonMask.lshr(ShiftAmt).trunc(DstBitSize).isZero()) {
+        if (!PoisonMask.extractBits(DstBitSize, ShiftAmt).isZero()) {
           Result.push_back(PoisonValue::get(DstEltTy));
         } else {
           Result.push_back(UndefValue::get(DstEltTy));
         }
       } else {
         // Create and push DstElt.
-        APInt Elt = Buffer.lshr(ShiftAmt).trunc(DstBitSize);
+        APInt Elt = Buffer.extractBits(DstBitSize, ShiftAmt);
         Result.push_back(ConstantInt::get(DstEltTy, Elt));
       }
 
