@@ -367,11 +367,6 @@ struct VPCostContext {
   /// Returns the OperandInfo for \p V, if it is a live-in.
   TargetTransformInfo::OperandValueInfo getOperandInfo(VPValue *V) const;
 
-  /// Return true if \p I is considered uniform-after-vectorization in the
-  /// legacy cost model for \p VF. Only used to check for additional VPlan
-  /// simplifications.
-  bool isLegacyUniformAfterVectorization(Instruction *I, ElementCount VF) const;
-
   /// Estimate the overhead of scalarizing a recipe with result type \p ResultTy
   /// and \p Operands with \p VF. This is a convenience wrapper for the
   /// type-based getScalarizationOverhead API. \p VIC provides context about
