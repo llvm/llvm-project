@@ -12054,8 +12054,9 @@ bool ScalarEvolution::isBasicBlockEntryGuardedByCond(const BasicBlock *BB,
   if (ProveViaPredecessorChain(PredBB, BB, MaxChainVisits))
     return true;
   if (MergeBlock) {
-    // MergeBlock dominates BB. If every predecessor of MergeBlock proves the
-    // condition, then BB is guarded by the condition.
+    // The Chain from MergeBlock to BB consists only of single-predecessor
+    // blocks. If MergeBlock is not in a different loop, and every predecessor
+    // of MergeBlock proves the condition, then BB is guarded by the condition.
     MaxChainVisits = 128;
     auto ProveMergeBlockPredecessor = [&](const BasicBlock *Pred) {
       return ProveViaPredecessorChain(Pred, MergeBlock, MaxChainVisits);
