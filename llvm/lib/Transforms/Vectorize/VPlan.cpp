@@ -857,8 +857,8 @@ void VPRegionBlock::dissolveToCFGLoop() {
   auto *CanIV = getCanonicalIV();
   if (CanIV->getNumUsers() > 0) {
     VPlan &Plan = *getPlan();
-    auto *Zero = Plan.getConstantInt(CanIV->getType(), 0);
-    auto DL = CanIV->getDebugLoc();
+    auto *Zero = Plan.getZero(CanIV->getType());
+    DebugLoc DL = CanIV->getDebugLoc();
     VPBuilder HeaderBuilder(Header, Header->begin());
     VPInstruction *CanIVInc = getOrCreateCanonicalIVIncrement();
     auto *ScalarR =
@@ -990,9 +990,9 @@ void VPlan::execute(VPTransformState *State) {
   if (hasEarlyExit()) {
     // Fix up LoopInfo for extra dispatch blocks when vectorizing loops with
     // early exits. For dispatch blocks, we need to find the smallest common
-    // loop of all successors. Note: we only need to update loop info for blocks
-    // after the middle block, but there is no easy way to get those at this
-    // point.
+    // loop of all successors that are in a loop. Note: we only need to update
+    // loop info for blocks after the middle block, but there is no easy way to
+    // get those at this point.
     for (VPBlockBase *VPB : reverse(RPOT)) {
       auto *VPBB = dyn_cast<VPBasicBlock>(VPB);
       if (!VPBB || isa<VPIRBasicBlock>(VPBB))
@@ -1002,11 +1002,18 @@ void VPlan::execute(VPTransformState *State) {
       if (!L || any_of(successors(BB),
                        [L](BasicBlock *Succ) { return L->contains(Succ); }))
         continue;
-      // Find the innermost loop containing all successors.
-      Loop *Target = State->LI->getLoopFor(*succ_begin(BB));
-      for (BasicBlock *Succ : drop_begin(successors(BB)))
-        Target = State->LI->getSmallestCommonLoop(Target,
-                                                  State->LI->getLoopFor(Succ));
+      // Find the innermost loop containing all successors that are in a loop.
+      // Successors not in any loop don't constrain the target loop.
+      Loop *Target = nullptr;
+      for (BasicBlock *Succ : successors(BB)) {
+        Loop *SuccLoop = State->LI->getLoopFor(Succ);
+        if (!SuccLoop)
+          continue;
+        if (!Target)
+          Target = SuccLoop;
+        else
+          Target = State->LI->getSmallestCommonLoop(Target, SuccLoop);
+      }
       State->LI->removeBlock(BB);
       if (Target)
         Target->addBasicBlockToLoop(BB, *State->LI);
@@ -1473,9 +1480,9 @@ void VPlanPrinter::dumpRegion(const VPRegionBlock *Region) {
 
 #endif
 
-/// Returns true if \p VPV is defined in a loop region or if there are no vector
-/// loop regions.
-static bool isDefinedInsideLoopRegion(const VPValue *VPV) {
+/// Returns true if there is a vector loop region and \p VPV is defined in a
+/// loop region.
+static bool isDefinedInsideLoopRegions(const VPValue *VPV) {
   if (isa<VPRegionValue>(VPV))
     return true;
   const VPRecipeBase *DefR = VPV->getDefiningRecipe();
@@ -1484,7 +1491,7 @@ static bool isDefinedInsideLoopRegion(const VPValue *VPV) {
 }
 
 bool VPValue::isDefinedOutsideLoopRegions() const {
-  return !isDefinedInsideLoopRegion(this);
+  return !isDefinedInsideLoopRegions(this);
 }
 void VPValue::replaceAllUsesWith(VPValue *New) {
   replaceUsesWithIf(New, [](VPUser &, unsigned) { return true; });

@@ -439,8 +439,9 @@ static void createLoopRegion(VPlan &Plan, VPBlockBase *HeaderVPB) {
   DebugLoc DL = DebugLoc::getUnknown();
   auto *OutermostHeaderVPBB = cast<VPBasicBlock>(
       Plan.getEntry()->getSuccessors()[1]->getSingleSuccessor());
+  VPPhi *OutermostVPPhi = nullptr;
   if (HeaderVPB == OutermostHeaderVPBB) {
-    auto *OutermostVPPhi = cast<VPPhi>(&OutermostHeaderVPBB->front());
+    OutermostVPPhi = cast<VPPhi>(&OutermostHeaderVPBB->front());
     CanIVTy = OutermostVPPhi->getOperand(0)->getLiveInIRValue()->getType();
     DL = OutermostVPPhi->getDebugLoc();
   }
@@ -466,8 +467,7 @@ static void createLoopRegion(VPlan &Plan, VPBlockBase *HeaderVPB) {
   R->setExiting(LatchVPBB);
 
   // Update canonical IV users for the outermost loop only.
-  if (HeaderVPB == OutermostHeaderVPBB) {
-    auto *OutermostVPPhi = cast<VPPhi>(&OutermostHeaderVPBB->front());
+  if (OutermostVPPhi) {
     OutermostVPPhi->replaceAllUsesWith(R->getCanonicalIV());
     OutermostVPPhi->eraseFromParent();
   }

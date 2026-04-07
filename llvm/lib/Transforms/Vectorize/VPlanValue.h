@@ -188,7 +188,7 @@ public:
       llvm::function_ref<bool(VPUser &U, unsigned Idx)> ShouldReplace);
 
   /// Returns the recipe defining this VPValue or nullptr if it is not defined
-  /// by a recipe, e.g. is a live-in.
+  /// by a recipe, i.e. is a live-in.
   VPRecipeBase *getDefiningRecipe();
   const VPRecipeBase *getDefiningRecipe() const;
 
