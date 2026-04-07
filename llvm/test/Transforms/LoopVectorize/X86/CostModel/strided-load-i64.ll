@@ -10,9 +10,9 @@ target triple = "x86_64-unknown-linux-gnu"
 define void @load_i64_stride2() {
 ;CHECK-LABEL: load_i64_stride2
 ;CHECK: Found an estimated cost of 1 for VF 1 For instruction:   %1 = load
-;CHECK: Found an estimated cost of 1 for VF 2 For instruction:   %1 = load
-;CHECK: Found an estimated cost of 1 for VF 4 For instruction:   %1 = load
-;CHECK: Found an estimated cost of 2 for VF 8 For instruction:   %1 = load
+;CHECK: Cost of 1 for VF 2: INTERLEAVE-GROUP with factor 2 at %1,
+;CHECK: Cost of 1 for VF 4: INTERLEAVE-GROUP with factor 2 at %1,
+;CHECK: Cost of 2 for VF 8: INTERLEAVE-GROUP with factor 2 at %1,
 entry:
   br label %for.body
 
@@ -34,9 +34,9 @@ for.end:                                          ; preds = %for.body
 define void @load_i64_stride3() {
 ;CHECK-LABEL: load_i64_stride3
 ;CHECK: Found an estimated cost of 1 for VF 1 For instruction:   %1 = load
-;CHECK: Found an estimated cost of 1 for VF 2 For instruction:   %1 = load
-;CHECK: Found an estimated cost of 2 for VF 4 For instruction:   %1 = load
-;CHECK: Found an estimated cost of 3 for VF 8 For instruction:   %1 = load
+;CHECK: Cost of 1 for VF 2: INTERLEAVE-GROUP with factor 3 at %1,
+;CHECK: Cost of 2 for VF 4: INTERLEAVE-GROUP with factor 3 at %1,
+;CHECK: Cost of 3 for VF 8: INTERLEAVE-GROUP with factor 3 at %1,
 entry:
   br label %for.body
 
@@ -58,9 +58,9 @@ for.end:                                          ; preds = %for.body
 define void @load_i64_stride4() {
 ;CHECK-LABEL: load_i64_stride4
 ;CHECK: Found an estimated cost of 1 for VF 1 For instruction:   %1 = load
-;CHECK: Found an estimated cost of 1 for VF 2 For instruction:   %1 = load
-;CHECK: Found an estimated cost of 2 for VF 4 For instruction:   %1 = load
-;CHECK: Found an estimated cost of 5 for VF 8 For instruction:   %1 = load
+;CHECK: Cost of 1 for VF 2: INTERLEAVE-GROUP with factor 4 at %1,
+;CHECK: Cost of 2 for VF 4: INTERLEAVE-GROUP with factor 4 at %1,
+;CHECK: Cost of 5 for VF 8: INTERLEAVE-GROUP with factor 4 at %1,
 entry:
   br label %for.body
 
