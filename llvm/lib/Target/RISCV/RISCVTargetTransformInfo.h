@@ -113,7 +113,9 @@ public:
 
   bool shouldExpandReduction(const IntrinsicInst *II) const override;
   bool supportsScalableVectors() const override {
-    return ST->hasVInstructions();
+    // VLEN=32 support is incomplete.
+    return ST->hasVInstructions() &&
+           (ST->getRealMinVLen() >= RISCV::RVVBitsPerBlock);
   }
   bool enableOrderedReductions() const override { return true; }
   bool enableScalableVectorization() const override {
@@ -122,8 +124,7 @@ public:
   bool preferPredicateOverEpilogue(TailFoldingInfo *TFI) const override {
     return ST->hasVInstructions();
   }
-  TailFoldingStyle
-  getPreferredTailFoldingStyle(bool IVUpdateMayOverflow) const override {
+  TailFoldingStyle getPreferredTailFoldingStyle() const override {
     return ST->hasVInstructions() ? TailFoldingStyle::DataWithEVL
                                   : TailFoldingStyle::None;
   }
@@ -139,7 +140,7 @@ public:
 
   bool preferAlternateOpcodeVectorization() const override;
 
-  bool preferEpilogueVectorization() const override {
+  bool preferEpilogueVectorization(ElementCount Iters) const override {
     // Epilogue vectorization is usually unprofitable - tail folding or
     // a smaller VF would have been better.  This a blunt hammer - we
     // should re-examine this once vectorization is better tuned.
@@ -358,20 +359,96 @@ public:
 
   bool isLegalMaskedCompressStore(Type *DataTy, Align Alignment) const override;
 
-  bool isVScaleKnownToBeAPowerOfTwo() const override {
-    return TLI->isVScaleKnownToBeAPowerOfTwo();
-  }
-
   /// \returns How the target needs this vector-predicated operation to be
   /// transformed.
   TargetTransformInfo::VPLegalization
   getVPLegalizationStrategy(const VPIntrinsic &PI) const override {
     using VPLegalization = TargetTransformInfo::VPLegalization;
+    static const Intrinsic::ID Supported[] = {
+        Intrinsic::experimental_vp_strided_load,
+        Intrinsic::experimental_vp_strided_store,
+        Intrinsic::experimental_vp_reverse,
+        Intrinsic::experimental_vp_splice,
+        Intrinsic::vp_abs,
+        Intrinsic::vp_add,
+        Intrinsic::vp_and,
+        Intrinsic::vp_ashr,
+        Intrinsic::vp_bitreverse,
+        Intrinsic::vp_bswap,
+        Intrinsic::vp_copysign,
+        Intrinsic::vp_cttz_elts,
+        Intrinsic::vp_fabs,
+        Intrinsic::vp_fadd,
+        Intrinsic::vp_fcmp,
+        Intrinsic::vp_fdiv,
+        Intrinsic::vp_fma,
+        Intrinsic::vp_fmul,
+        Intrinsic::vp_fmuladd,
+        Intrinsic::vp_fneg,
+        Intrinsic::vp_fpext,
+        Intrinsic::vp_fptosi,
+        Intrinsic::vp_fptoui,
+        Intrinsic::vp_fptrunc,
+        Intrinsic::vp_frem,
+        Intrinsic::vp_fshl,
+        Intrinsic::vp_fshr,
+        Intrinsic::vp_fsub,
+        Intrinsic::vp_gather,
+        Intrinsic::vp_icmp,
+        Intrinsic::vp_inttoptr,
+        Intrinsic::vp_is_fpclass,
+        Intrinsic::vp_load,
+        Intrinsic::vp_load_ff,
+        Intrinsic::vp_lshr,
+        Intrinsic::vp_merge,
+        Intrinsic::vp_mul,
+        Intrinsic::vp_or,
+        Intrinsic::vp_ptrtoint,
+        Intrinsic::vp_reduce_add,
+        Intrinsic::vp_reduce_and,
+        Intrinsic::vp_reduce_fadd,
+        Intrinsic::vp_reduce_fmax,
+        Intrinsic::vp_reduce_fmaximum,
+        Intrinsic::vp_reduce_fmin,
+        Intrinsic::vp_reduce_fminimum,
+        Intrinsic::vp_reduce_fmul,
+        Intrinsic::vp_reduce_mul,
+        Intrinsic::vp_reduce_or,
+        Intrinsic::vp_reduce_smax,
+        Intrinsic::vp_reduce_smin,
+        Intrinsic::vp_reduce_umax,
+        Intrinsic::vp_reduce_umin,
+        Intrinsic::vp_reduce_xor,
+        Intrinsic::vp_sadd_sat,
+        Intrinsic::vp_scatter,
+        Intrinsic::vp_sdiv,
+        Intrinsic::vp_select,
+        Intrinsic::vp_sext,
+        Intrinsic::vp_shl,
+        Intrinsic::vp_sitofp,
+        Intrinsic::vp_smax,
+        Intrinsic::vp_smin,
+        Intrinsic::vp_sqrt,
+        Intrinsic::vp_srem,
+        Intrinsic::vp_ssub_sat,
+        Intrinsic::vp_store,
+        Intrinsic::vp_sub,
+        Intrinsic::vp_trunc,
+        Intrinsic::vp_uadd_sat,
+        Intrinsic::vp_udiv,
+        Intrinsic::vp_uitofp,
+        Intrinsic::vp_umax,
+        Intrinsic::vp_umin,
+        Intrinsic::vp_urem,
+        Intrinsic::vp_usub_sat,
+        Intrinsic::vp_xor,
+        Intrinsic::vp_zext};
     if (!ST->hasVInstructions() ||
         (PI.getIntrinsicID() == Intrinsic::vp_reduce_mul &&
          cast<VectorType>(PI.getArgOperand(1)->getType())
                  ->getElementType()
-                 ->getIntegerBitWidth() != 1))
+                 ->getIntegerBitWidth() != 1) ||
+        !is_contained(Supported, PI.getIntrinsicID()))
       return VPLegalization(VPLegalization::Discard, VPLegalization::Convert);
     return VPLegalization(VPLegalization::Legal, VPLegalization::Legal);
   }
@@ -511,6 +588,9 @@ public:
   bool
   shouldCopyAttributeWhenOutliningFrom(const Function *Caller,
                                        const Attribute &Attr) const override;
+
+  std::optional<Instruction *>
+  instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const override;
 };
 
 } // end namespace llvm

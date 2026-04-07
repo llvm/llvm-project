@@ -90,7 +90,7 @@ computeVariableCoverage(DWARFContext &DICtx, DWARFDie VariableDIE,
   }
 
   if (!Lines && ParentLines)
-    Lines = ParentLines;
+    Lines = std::move(ParentLines);
   else if (ParentLines)
     llvm::set_intersect(*Lines, *ParentLines);
 

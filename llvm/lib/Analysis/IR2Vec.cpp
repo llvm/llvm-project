@@ -180,8 +180,9 @@ Embedding Embedder::computeEmbeddings(const BasicBlock &BB) const {
   Embedding BBVector(Dimension, 0);
 
   // We consider only the non-debug and non-pseudo instructions
-  for (const auto &I : BB.instructionsWithoutDebug())
-    BBVector += computeEmbeddings(I);
+  for (const auto &I : BB)
+    if (!I.isDebugOrPseudoInst())
+      BBVector += computeEmbeddings(I);
   return BBVector;
 }
 

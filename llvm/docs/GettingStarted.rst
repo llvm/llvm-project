@@ -174,7 +174,7 @@ Once llvm is installed, to configure a project for a stand-alone build, invoke C
 Notice that:
 
 * The stand-alone build needs to happen in a folder that is not the
-  original folder where LLVMN was built
+  original folder where LLVM was built
   (`$builddir!=$builddir_subproj`).
 * ``LLVM_ROOT`` should point to the prefix of your llvm installation,
   so for example, if llvm is installed into ``/usr/bin`` and
@@ -904,13 +904,13 @@ for a tool by typing ``tool_name -help``.  The following is a brief introduction
 to the most important tools.  More detailed information is in
 the `Command Guide <CommandGuide/index.html>`_.
 
-``bugpoint``
+``llvm-reduce``
 
-  ``bugpoint`` is used to debug optimization passes or code generation backends
+  ``llvm-reduce`` is used to debug optimization passes or code generation backends
   by narrowing down the given test case to the minimum number of passes and/or
   instructions that still cause a problem, whether it is a crash or
   miscompilation. See `<HowToSubmitABug.html>`_ for more information on using
-  ``bugpoint``.
+  ``llvm-reduce``.
 
 ``llvm-ar``
 

@@ -180,7 +180,7 @@ def int_amdgcn_cluster_workgroup_max_flat_id:
 
 def int_amdgcn_dispatch_ptr :
   DefaultAttrsIntrinsic<[LLVMQualPointerType<4>], [],
-  [Align<RetIndex, 4>, NoUndef<RetIndex>, NonNull<RetIndex>, IntrNoMem, IntrSpeculatable]>;
+  [Align<RetIndex, 4>, Dereferenceable<RetIndex, 64>, NoUndef<RetIndex>, NonNull<RetIndex>, IntrNoMem, IntrSpeculatable]>;
 
 def int_amdgcn_queue_ptr :
   ClangBuiltin<"__builtin_amdgcn_queue_ptr">,
@@ -928,7 +928,7 @@ class arglistmatchshift<list<AMDGPUArg> arglist, int shift> {
   list<AMDGPUArg> ret =
     !foreach(arg, arglist,
              !if(!isa<LLVMMatchType>(arg.Type),
-                 AMDGPUArg<LLVMMatchType<!add(!cast<LLVMMatchType>(arg.Type).Number, shift)>,
+                 AMDGPUArg<LLVMMatchType<!add(!cast<LLVMMatchType>(arg.Type).OverloadIndex, shift)>,
                            arg.Name>,
                  arg));
 }
@@ -942,7 +942,7 @@ class arglistconcat<list<list<AMDGPUArg>> arglists, int shift = 0> {
              lhs,
              arglistmatchshift<rhs,
                                !add(shift, !foldl(0, lhs, a, b,
-                                                  !add(a, b.Type.isAny)))>.ret));
+                                                  !add(a, !isa<LLVMAnyType>(b.Type))))>.ret));
 }
 
 // Represent texture/image types / dimensionality.
@@ -1074,7 +1074,7 @@ class AMDGPUDimProfile<string opmod,
 
   int NumRetAndDataAnyTypes =
     !foldl(0, !listconcat(RetTypes, !foreach(arg, DataArgs, arg.Type)), a, b,
-           !add(a, b.isAny));
+           !add(a, !isa<LLVMAnyType>(b)));
 
   list<AMDGPUArg> AddrArgs =
     arglistconcat<[ExtraAddrArgs,
@@ -1087,12 +1087,12 @@ class AMDGPUDimProfile<string opmod,
   list<LLVMType> AddrTypes = !foreach(arg, AddrArgs, arg.Type);
   list<AMDGPUArg> AddrDefaultArgs =
     !foreach(arg, AddrArgs,
-             AMDGPUArg<!if(!or(arg.Type.isAny, !isa<LLVMMatchType>(arg.Type)),
+             AMDGPUArg<!if(!or(!isa<LLVMAnyType>(arg.Type), !isa<LLVMMatchType>(arg.Type)),
                            !if(IsSample, llvm_float_ty, llvm_i32_ty), arg.Type),
                        arg.Name>);
   list<AMDGPUArg> AddrA16Args =
     !foreach(arg, AddrArgs,
-             AMDGPUArg<!if(!or(arg.Type.isAny, !isa<LLVMMatchType>(arg.Type)),
+             AMDGPUArg<!if(!or(!isa<LLVMAnyType>(arg.Type), !isa<LLVMMatchType>(arg.Type)),
                            !if(IsSample, llvm_half_ty, llvm_i16_ty), arg.Type),
                        arg.Name>);
 }
@@ -4015,38 +4015,19 @@ class AMDGPUWmmaIntrinsicModsAll<LLVMType AB, LLVMType CD> :
     [IntrNoMem, IntrConvergent, ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<4>>, IntrWillReturn, IntrNoCallback, IntrNoFree]
 >;
 
-class AMDGPUWmmaIntrinsicModsAllReuse<LLVMType AB, LLVMType CD> :
-  Intrinsic<
-    [CD], // %D
-    [
-      llvm_i1_ty,       // %A_mod: 0 -- none, 1 -- neg
-      AB,               // %A
-      llvm_i1_ty,       // %B_mod: 0 -- none, 1 -- neg
-      LLVMMatchType<1>, // %B
-      llvm_i16_ty,      // %C_mod: 0 -- none, 1 -- neg, 2 -- abs, 3 -- neg(abs)
-      LLVMMatchType<0>,               // %C
-      llvm_i1_ty,       // matrix_a_reuse
-      llvm_i1_ty,       // matrix_b_reuse
-    ],
-    [IntrNoMem, IntrConvergent, ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<4>>, ImmArg<ArgIndex<6>>, ImmArg<ArgIndex<7>>,
-     IntrWillReturn, IntrNoCallback, IntrNoFree]
->;
-
 // D and C are of different types.
-class AMDGPUWmmaIntrinsicModsAllDiff<LLVMType DstTy, LLVMType AB, LLVMType C> :
+class AMDGPUWmmaIntrinsicModsCDiff<LLVMType DstTy, LLVMType AB, LLVMType C> :
   Intrinsic<
     [DstTy],     // %D
     [
-      llvm_i1_ty,        // %A_mod: 0 -- none, 1 -- neg
       AB,                // %A
-      llvm_i1_ty,        // %B_mod: 0 -- none, 1 -- neg
       LLVMMatchType<1>,  // %B
       llvm_i16_ty,       // %C_mod: 0 -- none, 1 -- neg, 2 -- abs, 3 -- neg(abs)
       C,                 // %C
       llvm_i1_ty,        // matrix_a_reuse
       llvm_i1_ty,        // matrix_b_reuse
     ],
-    [IntrNoMem, IntrConvergent, ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<4>>, ImmArg<ArgIndex<6>>, ImmArg<ArgIndex<7>>,
+    [IntrNoMem, IntrConvergent, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<4>>, ImmArg<ArgIndex<5>>,
      IntrWillReturn, IntrNoCallback, IntrNoFree]
 >;
 
@@ -4111,12 +4092,12 @@ class AMDGPUWmmaScaleF4IntrinsicModsC<LLVMType scale_ty> :
 >;
 
 defset list<Intrinsic> AMDGPUWMMAIntrinsicsGFX1250 = {
-def int_amdgcn_wmma_f32_16x16x4_f32       : AMDGPUWmmaIntrinsicModsAllReuse<llvm_anyfloat_ty, llvm_anyfloat_ty>;
-def int_amdgcn_wmma_f32_16x16x32_bf16     : AMDGPUWmmaIntrinsicModsAllReuse<llvm_anyfloat_ty, llvm_anyfloat_ty>;
-def int_amdgcn_wmma_f32_16x16x32_f16      : AMDGPUWmmaIntrinsicModsAllReuse<llvm_anyfloat_ty, llvm_anyfloat_ty>;
-def int_amdgcn_wmma_f16_16x16x32_f16      : AMDGPUWmmaIntrinsicModsAllReuse<llvm_anyfloat_ty, llvm_anyfloat_ty>;
-def int_amdgcn_wmma_bf16_16x16x32_bf16    : AMDGPUWmmaIntrinsicModsAllReuse<llvm_anyfloat_ty, llvm_anyfloat_ty>;
-def int_amdgcn_wmma_bf16f32_16x16x32_bf16 : AMDGPUWmmaIntrinsicModsAllDiff<llvm_anyfloat_ty, llvm_anyfloat_ty, llvm_anyfloat_ty>;
+def int_amdgcn_wmma_f32_16x16x4_f32       : AMDGPUWmmaIntrinsicModsC<llvm_anyfloat_ty, llvm_anyfloat_ty>;
+def int_amdgcn_wmma_f32_16x16x32_bf16     : AMDGPUWmmaIntrinsicModsC<llvm_anyfloat_ty, llvm_anyfloat_ty>;
+def int_amdgcn_wmma_f32_16x16x32_f16      : AMDGPUWmmaIntrinsicModsC<llvm_anyfloat_ty, llvm_anyfloat_ty>;
+def int_amdgcn_wmma_f16_16x16x32_f16      : AMDGPUWmmaIntrinsicModsC<llvm_anyfloat_ty, llvm_anyfloat_ty>;
+def int_amdgcn_wmma_bf16_16x16x32_bf16    : AMDGPUWmmaIntrinsicModsC<llvm_anyfloat_ty, llvm_anyfloat_ty>;
+def int_amdgcn_wmma_bf16f32_16x16x32_bf16 : AMDGPUWmmaIntrinsicModsCDiff<llvm_anyfloat_ty, llvm_anyfloat_ty, llvm_anyfloat_ty>;
 def int_amdgcn_wmma_f32_16x16x64_fp8_fp8  : AMDGPUWmmaIntrinsicModsC<llvm_anyint_ty, llvm_anyfloat_ty>;
 def int_amdgcn_wmma_f32_16x16x64_fp8_bf8  : AMDGPUWmmaIntrinsicModsC<llvm_anyint_ty, llvm_anyfloat_ty>;
 def int_amdgcn_wmma_f32_16x16x64_bf8_fp8  : AMDGPUWmmaIntrinsicModsC<llvm_anyint_ty, llvm_anyfloat_ty>;
@@ -4194,41 +4175,24 @@ def int_amdgcn_swmmac_f16_16x16x128_bf8_bf8 : AMDGPUSWmmacIntrinsicIdxReuse<llvm
 def int_amdgcn_swmmac_i32_16x16x128_iu8     : AMDGPUSWmmacIntrinsicABIdxClamp<llvm_anyint_ty, llvm_anyint_ty, llvm_anyint_ty, llvm_anyint_ty>;
 }
 
-
 class AMDGPUTensorLoadStore:
   Intrinsic<
     [],
     [llvm_v4i32_ty, // D# group 0
      llvm_v8i32_ty, // D# group 1
-     llvm_v4i32_ty, // D# group 2
-     llvm_v4i32_ty, // D# group 3
+     llvm_v4i32_ty, // D# group 2: group 2 and 3 should be zero-initialized for D# up to 2D.
+     llvm_v4i32_ty, // D# group 3:
+     llvm_v8i32_ty, // D# group 4: reserved for future targets, use <8 x i32> zeroinitializer for now.
+                    //   This argument will be silently ignored.
      llvm_i32_ty],  // cachepolicy:
                     //   bits [0-2] = th
                     //   bits [3-4] = scope
-    [IntrInaccessibleMemOrArgMemOnly, ImmArg<ArgIndex<4>>, IntrWillReturn, IntrConvergent, IntrNoCallback, IntrNoFree],
+    [IntrInaccessibleMemOrArgMemOnly, ImmArg<ArgIndex<5>>, IntrWillReturn, IntrConvergent, IntrNoCallback, IntrNoFree],
     "", [SDNPMemOperand]
   >;
 
-class AMDGPUTensorLoadStoreD2:
-  Intrinsic<
-    [],
-    [llvm_v4i32_ty,  // D# group 0
-     llvm_v8i32_ty,  // D# group 1
-     llvm_i32_ty],   // cachepolicy:
-                     //   bits [0-2] = th
-                     //   bits [3-4] = scope
-    [IntrInaccessibleMemOrArgMemOnly, ImmArg<ArgIndex<2>>, IntrWillReturn, IntrConvergent, IntrNoCallback, IntrNoFree],
-    "", [SDNPMemOperand]
-  >;
-
-def int_amdgcn_tensor_load_to_lds :
-  ClangBuiltin<"__builtin_amdgcn_tensor_load_to_lds">, AMDGPUTensorLoadStore;
-def int_amdgcn_tensor_store_from_lds :
-  ClangBuiltin<"__builtin_amdgcn_tensor_store_from_lds">, AMDGPUTensorLoadStore;
-def int_amdgcn_tensor_load_to_lds_d2 :
-  ClangBuiltin<"__builtin_amdgcn_tensor_load_to_lds_d2">, AMDGPUTensorLoadStoreD2;
-def int_amdgcn_tensor_store_from_lds_d2 :
-  ClangBuiltin<"__builtin_amdgcn_tensor_store_from_lds_d2">, AMDGPUTensorLoadStoreD2;
+def int_amdgcn_tensor_load_to_lds    : ClangBuiltin<"__builtin_amdgcn_tensor_load_to_lds">, AMDGPUTensorLoadStore;
+def int_amdgcn_tensor_store_from_lds : ClangBuiltin<"__builtin_amdgcn_tensor_store_from_lds">, AMDGPUTensorLoadStore;
 
 class AMDGPUClusterLoad<LLVMType ptr_ty>:
   Intrinsic<

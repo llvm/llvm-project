@@ -35,6 +35,9 @@ class TestFrameVarDILBitFieldExtraction(TestBase):
         self.expect_var_path("value[0:enum_one]", value="3", type="int:2")
         self.expect_var_path("value[enum_one:0]", value="3", type="int:2")
 
+        # Test that old range syntax is now a binary subtraction
+        self.expect_var_path("value[6-1]", value="1", type="int:1")
+
         # Test array and pointer
         self.expect(
             "frame var 'int_arr[0:2]'",
@@ -62,9 +65,4 @@ class TestFrameVarDILBitFieldExtraction(TestBase):
             "frame var 'value[2.0:1]'",
             error=True,
             substrs=["bit index is not an integer"],
-        )
-        self.expect(
-            "frame var 'value[0-2]'",
-            error=True,
-            substrs=["use of '-' for bitfield range is deprecated; use ':' instead"],
         )

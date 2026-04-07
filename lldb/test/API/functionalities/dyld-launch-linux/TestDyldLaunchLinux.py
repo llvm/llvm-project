@@ -13,7 +13,6 @@ from lldbsuite.test import lldbutil
 class TestLinux64LaunchingViaDynamicLoader(TestBase):
     @skipIf(oslist=no_match(["linux"]))
     @no_debug_info_test
-    @skipIf(oslist=["linux"], archs=["arm$"])
     def test(self):
         self.build()
 

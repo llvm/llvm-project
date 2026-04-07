@@ -8,6 +8,7 @@
 
 #include "clang/Driver/ToolChain.h"
 #include "ToolChains/Arch/AArch64.h"
+#include "ToolChains/Arch/AMDGPU.h"
 #include "ToolChains/Arch/ARM.h"
 #include "ToolChains/Arch/RISCV.h"
 #include "ToolChains/Clang.h"
@@ -229,8 +230,6 @@ static void getAArch64MultilibFlags(const Driver &D,
       break;
     }
   }
-
-  processMultilibCustomFlags(Result, Args);
 }
 
 static void getARMMultilibFlags(const Driver &D, const llvm::Triple &Triple,
@@ -319,13 +318,12 @@ static void getARMMultilibFlags(const Driver &D, const llvm::Triple &Triple,
       break;
     }
   }
-
-  processMultilibCustomFlags(Result, Args);
 }
 
 static void getRISCVMultilibFlags(const Driver &D, const llvm::Triple &Triple,
                                   const llvm::opt::ArgList &Args,
-                                  Multilib::flags_list &Result) {
+                                  Multilib::flags_list &Result,
+                                  bool hasShadowCallStack) {
   std::string Arch = riscv::getRISCVArch(Args, Triple);
   // Canonicalize arch for easier matching
   auto ISAInfo = llvm::RISCVISAInfo::parseArchString(
@@ -334,6 +332,11 @@ static void getRISCVMultilibFlags(const Driver &D, const llvm::Triple &Triple,
     Result.push_back("-march=" + (*ISAInfo)->toString());
 
   Result.push_back(("-mabi=" + riscv::getRISCVABI(Args, Triple)).str());
+
+  if (hasShadowCallStack)
+    Result.push_back("-fsanitize=shadow-call-stack");
+  else
+    Result.push_back("-fno-sanitize=shadow-call-stack");
 }
 
 Multilib::flags_list
@@ -372,11 +375,14 @@ ToolChain::getMultilibFlags(const llvm::opt::ArgList &Args) const {
   case llvm::Triple::riscv64:
   case llvm::Triple::riscv32be:
   case llvm::Triple::riscv64be:
-    getRISCVMultilibFlags(D, Triple, Args, Result);
+    getRISCVMultilibFlags(D, Triple, Args, Result,
+                          getSanitizerArgs(Args).hasShadowCallStack());
     break;
   default:
     break;
   }
+
+  processMultilibCustomFlags(Result, Args);
 
   // Include fno-exceptions and fno-rtti
   // to improve multilib selection
@@ -1240,12 +1246,12 @@ std::string ToolChain::ComputeLLVMTriple(const ArgList &Args,
                                          types::ID InputType) const {
   switch (getTriple().getArch()) {
   default:
-    return getTripleString();
+    return getTripleString().str();
 
   case llvm::Triple::x86_64: {
     llvm::Triple Triple = getTriple();
     if (!Triple.isOSBinFormatMachO())
-      return getTripleString();
+      return getTripleString().str();
 
     if (Arg *A = Args.getLastArg(options::OPT_march_EQ)) {
       // x86_64h goes in the triple. Other -march options just use the
@@ -1271,11 +1277,10 @@ std::string ToolChain::ComputeLLVMTriple(const ArgList &Args,
     return Triple.getTriple();
   }
   case llvm::Triple::aarch64_32:
-    return getTripleString();
+    return getTripleString().str();
   case llvm::Triple::amdgcn: {
     llvm::Triple Triple = getTriple();
-    if (Args.getLastArgValue(options::OPT_mcpu_EQ) == "amdgcnspirv")
-      Triple.setArch(llvm::Triple::ArchType::spirv64);
+    tools::AMDGPU::setArchNameInTriple(getDriver(), Args, InputType, Triple);
     return Triple.getTriple();
   }
   case llvm::Triple::arm:
@@ -1406,6 +1411,31 @@ ToolChain::CXXStdlibType ToolChain::GetCXXStdlibType(const ArgList &Args) const{
   }
 
   return *cxxStdlibType;
+}
+
+ToolChain::CStdlibType ToolChain::GetCStdlibType(const ArgList &Args) const {
+  if (cStdlibType)
+    return *cStdlibType;
+
+  const Arg *A = Args.getLastArg(options::OPT_cstdlib_EQ);
+  StringRef LibName = A ? A->getValue() : "system";
+
+  if (LibName == "newlib")
+    cStdlibType = ToolChain::CST_Newlib;
+  else if (LibName == "picolibc")
+    cStdlibType = ToolChain::CST_Picolibc;
+  else if (LibName == "llvm-libc")
+    cStdlibType = ToolChain::CST_LLVMLibC;
+  else if (LibName == "system")
+    cStdlibType = ToolChain::CST_System;
+  else {
+    if (A)
+      getDriver().Diag(diag::err_drv_invalid_cstdlib_name)
+          << A->getAsString(Args);
+    cStdlibType = ToolChain::CST_System;
+  }
+
+  return *cStdlibType;
 }
 
 /// Utility function to add a system framework directory to CC1 arguments.
@@ -1732,10 +1762,15 @@ llvm::opt::DerivedArgList *ToolChain::TranslateOpenMPTargetArgs(
     // matches the current toolchain triple. If it is not present
     // at all, target and host share a toolchain.
     if (A->getOption().matches(options::OPT_m_Group)) {
-      // Pass code object version to device toolchain
-      // to correctly set metadata in intermediate files.
+      // Pass certain options to the device toolchain even when the triple
+      // differs from the host: code object version must be passed to correctly
+      // set metadata in intermediate files; linker version must be passed
+      // because the Darwin toolchain requires the host and device linker
+      // versions to match (the host version is cached in
+      // MachO::getLinkerVersion).
       if (SameTripleAsHost ||
-          A->getOption().matches(options::OPT_mcode_object_version_EQ))
+          A->getOption().matches(options::OPT_mcode_object_version_EQ) ||
+          A->getOption().matches(options::OPT_mlinker_version_EQ))
         DAL->append(A);
       else
         Modified = true;
@@ -1748,7 +1783,7 @@ llvm::opt::DerivedArgList *ToolChain::TranslateOpenMPTargetArgs(
         A->getOption().matches(options::OPT_Xopenmp_target);
 
     if (A->getOption().matches(options::OPT_Xopenmp_target_EQ)) {
-      llvm::Triple TT(getOpenMPTriple(A->getValue(0)));
+      llvm::Triple TT = normalizeOffloadTriple(A->getValue(0));
 
       // Passing device args: -Xopenmp-target=<triple> -opt=val.
       if (TT.getTriple() == getTripleString())

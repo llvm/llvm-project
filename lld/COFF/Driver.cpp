@@ -868,7 +868,7 @@ void LinkerDriver::addWinSysRootLibSearchPaths() {
   llvm::StringSet<> noDefaultLibs;
   for (auto &iter : ctx.config.noDefaultLibs)
     noDefaultLibs.insert(findLib(iter.first()).lower());
-  ctx.config.noDefaultLibs = noDefaultLibs;
+  ctx.config.noDefaultLibs = std::move(noDefaultLibs);
 }
 
 // Parses LIB environment which contains a list of search paths.
@@ -2102,6 +2102,10 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   // Handle /merge
   for (auto *arg : args.filtered(OPT_merge))
     parseMerge(arg->getValue());
+
+  // Handle /discard-section
+  for (auto *arg : args.filtered(OPT_discard_section))
+    config->discardSection.insert(arg->getValue());
 
   // Add default section merging rules after user rules. User rules take
   // precedence, but we will emit a warning if there is a conflict.

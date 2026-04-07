@@ -50,8 +50,11 @@ StringRef LinkerScript::getOutputSectionName(const InputSectionBase *s) const {
   // This is for --emit-relocs and -r. If .text.foo is emitted as .text.bar, we
   // want to emit .rela.text.foo as .rela.text.bar for consistency (this is not
   // technically required, but not doing it is odd). This code guarantees that.
-  if (auto *isec = dyn_cast<InputSection>(s)) {
-    if (InputSectionBase *rel = isec->getRelocatedSection()) {
+  if (LLVM_UNLIKELY(ctx.arg.copyRelocs)) {
+    InputSectionBase *rel = nullptr;
+    if (auto *isec = dyn_cast<InputSection>(s))
+      rel = isec->getRelocatedSection();
+    if (rel) {
       OutputSection *out = rel->getOutputSection();
       if (!out) {
         assert(ctx.arg.relocatable && (rel->flags & SHF_LINK_ORDER));
@@ -64,10 +67,9 @@ StringRef LinkerScript::getOutputSectionName(const InputSectionBase *s) const {
         return ss.save(".rela" + out->name);
       return ss.save(".rel" + out->name);
     }
+    if (ctx.arg.relocatable)
+      return s->name;
   }
-
-  if (ctx.arg.relocatable)
-    return s->name;
 
   // A BssSection created for a common symbol is identified as "COMMON" in
   // linker scripts. It should go to .bss section.
@@ -1021,32 +1023,36 @@ void LinkerScript::addOrphanSections() {
     }
   };
 
+  const bool copyRelocs = ctx.arg.copyRelocs;
+  const bool relocatable = ctx.arg.relocatable;
   size_t n = 0;
   for (InputSectionBase *isec : ctx.inputSections) {
     // Process InputSection and MergeInputSection.
     if (LLVM_LIKELY(isa<InputSection>(isec)))
       ctx.inputSections[n++] = isec;
 
-    // In -r links, SHF_LINK_ORDER sections are added while adding their parent
-    // sections because we need to know the parent's output section before we
-    // can select an output section for the SHF_LINK_ORDER section.
-    if (ctx.arg.relocatable && (isec->flags & SHF_LINK_ORDER))
-      continue;
+    if (LLVM_UNLIKELY(copyRelocs)) {
+      // In -r links, SHF_LINK_ORDER sections are added while adding their
+      // parent sections because we need to know the parent's output section
+      // before we can select an output section for the SHF_LINK_ORDER section.
+      if (relocatable && (isec->flags & SHF_LINK_ORDER))
+        continue;
 
-    if (auto *sec = dyn_cast<InputSection>(isec)) {
-      if (InputSectionBase *relocated = sec->getRelocatedSection()) {
-        // For --emit-relocs and -r, ensure the output section for .text.foo
-        // is created before the output section for .rela.text.foo.
-        add(relocated);
-        // EhInputSection sections are not added to ctx.inputSections. If we see
-        // .rela.eh_frame, ensure the output section for the synthetic
-        // EhFrameSection is created first.
-        if (auto *p = dyn_cast_or_null<InputSectionBase>(relocated->parent))
-          add(p);
-      }
+      if (auto *sec = dyn_cast<InputSection>(isec))
+        if (InputSectionBase *relocated = sec->getRelocatedSection()) {
+          // For --emit-relocs and -r, ensure the output section for .text.foo
+          // is created before the output section for .rela.text.foo.
+          add(relocated);
+          // EhInputSection sections are not added to ctx.inputSections. If we
+          // see .rela.eh_frame, ensure the output section for the synthetic
+          // EhFrameSection is created first.
+          if (auto *p = dyn_cast_or_null<InputSectionBase>(relocated->parent))
+            add(p);
+        }
     }
+
     add(isec);
-    if (ctx.arg.relocatable)
+    if (LLVM_UNLIKELY(relocatable))
       for (InputSectionBase *depSec : isec->dependentSections)
         if (depSec->flags & SHF_LINK_ORDER)
           add(depSec);

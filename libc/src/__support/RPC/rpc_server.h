@@ -37,8 +37,16 @@
 #define LIBC_COPT_PRINTF_DISABLE_INDEX_MODE
 #define LIBC_COPT_PRINTF_DISABLE_STRERROR
 
+// TODO: Remove this check once UTF-16 is supported. It may be necessary to add
+// additional targets for other systems that use UTF-16.
+#if defined(_WIN32)
+#define LIBC_COPT_PRINTF_DISABLE_WIDE
+#endif
+
+// TODO: Make printf and our internal tools able to force the long double types
+// properly.
 // The 'long double' type is 8 bytes.
-#define LIBC_TYPES_LONG_DOUBLE_IS_FLOAT64
+// #define LIBC_TYPES_LONG_DOUBLE_IS_FLOAT64
 
 #include "shared/rpc.h"
 #include "shared/rpc_opcodes.h"
@@ -220,7 +228,7 @@ LIBC_INLINE static void handle_printf(rpc::Server::Port &port,
         writer.write(cur_section.raw_string);
       }
     }
-    buffer_size[lane] = writer.get_chars_written();
+    buffer_size[lane] = static_cast<int>(writer.get_chars_written());
   }
 
   // Receive any strings from the client and push them into a buffer.
@@ -305,7 +313,7 @@ LIBC_INLINE static void handle_printf(rpc::Server::Port &port,
 }
 
 template <uint32_t num_lanes>
-LIBC_INLINE static rpc::Status handle_port_impl(rpc::Server::Port &port) {
+LIBC_INLINE static rpc::RPCStatus handle_port_impl(rpc::Server::Port &port) {
   TempStorage temp_storage;
 
   switch (port.get_opcode()) {
@@ -580,8 +588,8 @@ namespace LIBC_NAMESPACE_DECL {
 namespace rpc {
 
 // Handles any opcode generated from the 'libc' client code.
-LIBC_INLINE ::rpc::Status handle_libc_opcodes(::rpc::Server::Port &port,
-                                              uint32_t num_lanes) {
+LIBC_INLINE ::rpc::RPCStatus handle_libc_opcodes(::rpc::Server::Port &port,
+                                                 uint32_t num_lanes) {
   switch (num_lanes) {
   case 1:
     return internal::handle_port_impl<1>(port);

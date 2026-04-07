@@ -288,6 +288,9 @@ LogicalResult spirv::Deserializer::processDecoration(ArrayRef<uint32_t> words) {
   case spirv::Decoration::Location:
   case spirv::Decoration::SpecId:
   case spirv::Decoration::Index:
+  case spirv::Decoration::Offset:
+  case spirv::Decoration::XfbBuffer:
+  case spirv::Decoration::XfbStride:
     if (words.size() != 3) {
       return emitError(unknownLoc, "OpDecorate with ")
              << decorationName << " needs a single integer literal";
@@ -2880,10 +2883,7 @@ LogicalResult spirv::Deserializer::wireUpBlockArgument() {
 LogicalResult spirv::Deserializer::splitSelectionHeader() {
   // Create a copy, so we can modify keys in the original.
   BlockMergeInfoMap blockMergeInfoCopy = blockMergeInfo;
-  for (auto it = blockMergeInfoCopy.begin(), e = blockMergeInfoCopy.end();
-       it != e; ++it) {
-    auto &[block, mergeInfo] = *it;
-
+  for (auto [block, mergeInfo] : blockMergeInfoCopy) {
     // Skip processing loop regions. For loop regions continueBlock is non-null.
     if (mergeInfo.continueBlock)
       continue;

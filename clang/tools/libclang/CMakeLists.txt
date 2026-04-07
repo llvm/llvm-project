@@ -70,6 +70,7 @@ set(LIBS
   clangSema
   clangSerialization
   clangTooling
+  clangUnifiedSymbolResolution
 )
 
 if (HAVE_LIBDL)
@@ -120,7 +121,7 @@ if (MSVC AND ENABLE_SHARED AND ENABLE_STATIC)
   unset(ENABLE_STATIC)
 endif()
 
-if(MSVC)
+if(WIN32 AND NOT MINGW)
   set(output_name "libclang")
 else()
   set(output_name "clang")
@@ -169,11 +170,16 @@ if(ENABLE_SHARED)
       # implicitly be exported from libclang.
       target_compile_definitions(libclang PRIVATE CLANG_BUILD_STATIC)
   elseif(APPLE)
-    set(LIBCLANG_LINK_FLAGS " -Wl,-compatibility_version -Wl,1")
-    set(LIBCLANG_LINK_FLAGS "${LIBCLANG_LINK_FLAGS} -Wl,-current_version -Wl,${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}.${LLVM_VERSION_PATCH}")
-
-    set_property(TARGET libclang APPEND_STRING PROPERTY
-                 LINK_FLAGS ${LIBCLANG_LINK_FLAGS})
+    if(LLVM_VERSIONED_DYLIB_NAME_ON_DARWIN)
+      set_target_properties(libclang PROPERTIES
+        VERSION ${LIBCLANG_LIBRARY_VERSION}
+        ${LIBCLANG_SOVERSION_ARG})
+      if(LLVM_UNVERSIONED_LIBCLANG_ON_DARWIN)
+        set_property(TARGET libclang PROPERTY SOVERSION)
+        set_property(TARGET libclang PROPERTY VERSION)
+      endif()
+    endif()
+    llvm_set_macho_current_version(libclang ${LLVM_VERSION_MAJOR})
   else()
     set_target_properties(libclang
       PROPERTIES

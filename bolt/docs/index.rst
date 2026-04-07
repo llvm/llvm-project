@@ -250,6 +250,12 @@ contradict each other) you can use ``merge-fdata`` tool:
 Use ``combined.fdata`` for **Step 3** above to generate a universally
 optimized binary.
 
+Profile Formats
+---------------
+
+See `Profile Formats <profiles.md>`__ for comprehensive documentation of all
+profile formats accepted by BOLT: perf.data, fdata, YAML, and pre-aggregated.
+
 License
 -------
 

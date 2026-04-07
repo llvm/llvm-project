@@ -415,11 +415,12 @@ def warn_arm_interrupt_save_fp_without_vfp_unit : Warning<
    InGroup<DiagGroup<"arm-interrupt-save-fp-no-vfp-unit">>;
 def err_arm_interrupt_called : Error<
   "interrupt service routine cannot be called directly">;
-def warn_interrupt_signal_attribute_invalid : Warning<
-  "%select{MIPS|MSP430|RISC-V|AVR}0 '%select{interrupt|signal}1' "
-  "attribute only applies to functions that have "
-  "%select{no parameters|a 'void' return type}2">,
-  InGroup<IgnoredAttributes>;
+def warn_interrupt_signal_attribute_invalid
+    : Warning<"%select{MIPS|MSP430|RISC-V|AVR}0 '%select{interrupt|signal}1' "
+              "attribute only applies to functions that have "
+              "%select{no parameters|a 'void' return type}2">,
+      InGroup<IgnoredAttributes>,
+      LegacyStableIds<["warn_interrupt_attribute_invalid"]>;
 def warn_riscv_repeated_interrupt_attribute : Warning<
   "repeated RISC-V 'interrupt' attribute">, InGroup<IgnoredAttributes>;
 def note_riscv_repeated_interrupt_attribute : Note<
@@ -432,6 +433,9 @@ def warn_unused_variable : Warning<"unused variable %0">,
   InGroup<UnusedVariable>, DefaultIgnore;
 def warn_unused_but_set_variable : Warning<"variable %0 set but not used">,
   InGroup<UnusedButSetVariable>, DefaultIgnore;
+def warn_unused_but_set_global : Warning<"variable %0 set but not used">,
+                                 InGroup<UnusedButSetGlobal>,
+                                 DefaultIgnore;
 def warn_unused_local_typedef : Warning<
   "unused %select{typedef|type alias}0 %1">,
   InGroup<UnusedLocalTypedef>, DefaultIgnore;
@@ -2034,6 +2038,11 @@ def warn_wasm_dynamic_exception_spec_ignored : ExtWarn<
   "dynamic exception specifications with types are currently ignored in wasm">,
   InGroup<WebAssemblyExceptionSpec>;
 
+def err_mismatched_personality
+  : Error<"personality routine in declaration does not match previous declaration">;
+def err_attribute_personality_arg_not_function
+  : Error<"%0 argument is not a function">;
+
 // C++ access checking
 def err_class_redeclared_with_different_access : Error<
   "%0 redeclared with '%1' access">;
@@ -3268,6 +3277,11 @@ def warn_function_attribute_ignored_in_stmt : Warning<
   "use '%0' on statements">,
   InGroup<IgnoredAttributes>;
 
+def warn_stmt_attribute_ignored_in_function : Warning<
+  "attribute is ignored on this function as it only applies to statements; "
+  "use '%0' for functions">,
+  InGroup<IgnoredAttributes>;
+
 def err_musttail_needs_trivial_args : Error<
   "tail call requires that the return value, all parameters, and any "
   "temporaries created by the expression are trivially destructible">;
@@ -3629,6 +3643,12 @@ def err_invalid_collection_element : Error<
 def err_box_literal_collection : Error<
   "%select{string|character|boolean|numeric}0 literal must be prefixed by '@' "
   "in a collection">;
+def err_objc_literal_nonconstant_at_file_scope : Error<
+  "%select{an array|a dictionary|a numeric literal|a boxed expression|}0 "
+  "literal can only be used at file scope if %select{its contents are all "
+  "also constant literals|its contents are all also constant literals and "
+  "its keys are string literals|constant|constant}0">;
+
 def warn_objc_literal_comparison : Warning<
   "direct comparison of %select{an array literal|a dictionary literal|"
   "a numeric literal|a boxed expression|}0 has undefined behavior">,
@@ -3790,6 +3810,9 @@ def warn_dllimport_dropped_from_inline_function : Warning<
 def warn_nothrow_attribute_ignored : Warning<"'nothrow' attribute conflicts with"
   " exception specification; attribute ignored">,
   InGroup<IgnoredAttributes>;
+def warn_dllattr_ignored_exclusion_takes_precedence : Warning<
+  "%0 attribute ignored; %1 takes precedence">,
+  InGroup<IgnoredAttributes>;
 def warn_attribute_ignored_on_non_definition :
   Warning<"%0 attribute ignored on a non-definition declaration">,
   InGroup<IgnoredAttributes>;
@@ -3926,6 +3949,11 @@ def warn_dllexport_on_decl_ignored : Warning<
   InGroup<IgnoredAttributes>;
 def note_dllexport_on_decl : Note<
   "'dllexport' attribute on the declaration is ignored">;
+def warn_dllexport_inherited_ctor_unsupported : Warning<
+  "exporting inherited constructor is not yet supported; "
+  "'dllexport' ignored on inherited constructor with "
+  "%select{variadic arguments|callee-cleanup parameters}0">,
+  InGroup<IgnoredAttributes>;
 def warn_attribute_exclude_from_explicit_instantiation_local_class : Warning<
   "%0 attribute ignored on local class%select{| member}1">,
   InGroup<IgnoredAttributes>;
@@ -4004,6 +4032,9 @@ def err_attribute_vecreturn_only_vector_member : Error<
   "the vecreturn attribute can only be used on a class or structure with one member, which must be a vector">;
 def err_attribute_vecreturn_only_pod_record : Error<
   "the vecreturn attribute can only be used on a POD (plain old data) class or structure (i.e. no virtual functions)">;
+def err_attribute_pointer_field_protection_experimental
+    : Error<"this attribute is experimental and must be explicitly enabled "
+            "with flag -fexperimental-allow-pointer-field-protection-attr">;
 def err_sme_attr_mismatch : Error<
   "function declared %0 was previously declared %1, which has different SME function attributes">;
 def err_sme_call_in_non_sme_target : Error<
@@ -4109,6 +4140,63 @@ def note_cannot_use_trivial_abi_reason : Note<
   "it has a __weak field|it has a field of a non-trivial class type|"
   "it has an address-discriminated '__ptrauth' field}1">;
 
+// OverflowBehavior attribute
+def err_overflow_behavior_unknown_ident
+    : Error<"'%0' is not a valid argument to attribute %1, only 'wrap' and "
+            "'trap' are supported">;
+def err_overflow_behavior_non_integer_type
+    : Error<"%0 %select{attribute|specifier}2 cannot be applied to "
+            "non-integer type '%1'">;
+def err_conflicting_overflow_behaviors
+    : Error<"conflicting %select{'overflow_behavior' attributes|overflow "
+            "behavior specification; specifier specifies '%1' but attribute "
+            "specifies "
+            "'%2'}0 on the same type">;
+def err_incompatible_obt_kinds_assignment
+    : Error<"assigning to %0 from %1 with incompatible overflow behavior types "
+            "('%2' and '%3')">;
+def warn_overflow_behavior_attribute_disabled
+    : Warning<"%0 attribute is ignored because it is not enabled; pass "
+              "-Xclang -fexperimental-overflow-behavior-types">,
+      InGroup<OverflowBehaviorAttributeIgnored>;
+def warn_overflow_behavior_keyword_disabled
+    : Warning<"'%0' specifier is ignored because overflow behavior types are "
+              "not enabled; pass -Xclang "
+              "-fexperimental-overflow-behavior-types">,
+      InGroup<OverflowBehaviorAttributeIgnored>;
+def warn_impcast_overflow_behavior
+    : Warning<"implicit conversion from %0 to %1 discards overflow behavior">,
+      InGroup<ImplicitOverflowBehaviorConversion>,
+      DefaultIgnore;
+def warn_redundant_overflow_behaviors_mixed
+    : Warning<"redundant overflow behavior specification; both specifier and "
+              "attribute specify '%0'">,
+      InGroup<OverflowBehaviorAttributeIgnored>;
+def warn_impcast_overflow_behavior_assignment
+    : Warning<"implicit conversion from %0 to %1 during assignment discards "
+              "overflow behavior">,
+      InGroup<ImplicitOverflowBehaviorConversionAssignment>,
+      DefaultIgnore;
+def warn_impcast_overflow_behavior_assignment_pedantic
+    : Warning<"implicit conversion from %0 to %1 during assignment discards "
+              "overflow behavior">,
+      InGroup<ImplicitOverflowBehaviorConversionAssignmentPedantic>,
+      DefaultIgnore;
+def warn_impcast_overflow_behavior_pedantic
+    : Warning<"implicit conversion from %0 to %1 discards overflow behavior">,
+      InGroup<ImplicitOverflowBehaviorConversionPedantic>,
+      DefaultIgnore;
+def warn_obt_discarded_at_function_boundary
+    : Warning<"passing argument of type %0 to parameter of type %1 discards "
+              "overflow behavior at function boundary">,
+      InGroup<ImplicitOverflowBehaviorConversionAtFunctionBoundary>,
+      DefaultIgnore;
+def warn_obt_discarded_at_function_boundary_pedantic
+    : Warning<"passing argument of type %0 to parameter of type %1 discards "
+              "overflow behavior at function boundary">,
+      InGroup<ImplicitOverflowBehaviorConversionAtFunctionBoundaryPedantic>,
+      DefaultIgnore;
+
 // Availability attribute
 def warn_availability_unknown_platform : Warning<
   "unknown platform %0 in availability macro">, InGroup<Availability>;
@@ -4172,6 +4260,8 @@ def warn_at_available_unchecked_use : Warning<
 def warn_availability_invalid_os_version
     : Warning<"invalid %1 version '%0' in availability attribute">, InGroup<DiagGroup<"invalid-version-availability">>;
 def note_availability_invalid_os_version_adjusted: Note<"implicitly treating version as '%0'">;
+def err_availability_invalid_anyappleos_version
+    : Error<"invalid anyAppleOS version '%0' in availability attribute">;
 
 def warn_missing_sdksettings_for_availability_checking : Warning<
   "%0 availability is ignored without a valid 'SDKSettings.json' in the SDK">,
@@ -4252,6 +4342,10 @@ def warn_variable_requires_any_lock : Warning<
 def warn_var_deref_requires_any_lock : Warning<
   "%select{reading|writing}1 the value pointed to by %0 requires holding "
   "%select{any mutex|any mutex exclusively}1">,
+  InGroup<ThreadSafetyAnalysis>, DefaultIgnore;
+def warn_requires_any_of_locks : Warning<
+  "reading %select{variable|the value pointed to by}1 %0 requires holding "
+  "at least one of %2">,
   InGroup<ThreadSafetyAnalysis>, DefaultIgnore;
 def warn_fun_excludes_mutex : Warning<
   "cannot call function '%1' while %0 '%2' is held">,
@@ -4407,6 +4501,8 @@ def warn_impcast_float_result_precision : Warning<
 def warn_impcast_double_promotion : Warning<
   "implicit conversion increases floating-point precision: %0 to %1">,
   InGroup<DoublePromotion>, DefaultIgnore;
+def err_impcast_incompatible_type : Error<
+  "implicit conversion from %0 to incompatible type %1">;
 def warn_impcast_integer_sign : Warning<
   "implicit conversion changes signedness: %0 to %1">,
   InGroup<SignConversion>, DefaultIgnore;
@@ -5351,6 +5447,10 @@ def err_ovl_no_viable_subscript :
     Error<"no viable overloaded operator[] for type %0">;
 def err_ovl_no_oper :
     Error<"type %0 does not provide a %select{subscript|call}1 operator">;
+def err_ovl_builtin_subscript_expects_single_arg : Error<
+  "built-in subscript operator for type %0 expects exactly one argument">;
+def err_ms_property_subscript_expects_single_arg : Error<
+  "property subscript expects exactly one argument">;
 def err_ovl_unresolvable : Error<
   "reference to %select{overloaded|multiversioned}1 function could not be "
   "resolved; did you mean to call it%select{| with no arguments}0?">;
@@ -6099,7 +6199,7 @@ def note_template_declared_here : Note<
   "%1 declared here">;
 def err_template_expansion_into_fixed_list : Error<
   "pack expansion used as argument for non-pack parameter of %select{alias "
-  "template|concept}0">;
+  "template|concept|builtin template}0">;
 def note_parameter_type : Note<
   "parameter of type %0 is declared here">;
 
@@ -6236,6 +6336,8 @@ def warn_unavailable_def : Warning<
   InGroup<DeprecatedImplementations>, DefaultIgnore;
 def warn_deprecated_builtin : Warning<
   "builtin %0 is deprecated; use %1 instead">,
+  InGroup<DeprecatedBuiltins>;
+def warn_deprecated_builtin_no_suggestion : Warning<"builtin %0 is deprecated">,
   InGroup<DeprecatedBuiltins>;
 def err_unavailable : Error<"%0 is unavailable">;
 def err_property_method_unavailable :
@@ -6603,6 +6705,8 @@ def err_block_extern_cant_init : Error<
   "declaration of block scope identifier with linkage cannot have an initializer">;
 def warn_extern_init : Warning<"'extern' variable has an initializer">,
   InGroup<DiagGroup<"extern-initializer">>;
+def warn_hlsl_groupshared_init : Warning<"initializer of groupshared variable will be ignored">,
+  InGroup<DiagGroup<"groupshared-initializer">>, DefaultError;
 def err_variable_object_no_init : Error<
   "variable-sized object may not be initialized">;
 def err_excess_initializers : Error<
@@ -7342,7 +7446,8 @@ def err_illegal_decl_mempointer_in_nonclass
 def err_reference_to_void : Error<"cannot form a reference to 'void'">;
 def err_nonfunction_block_type : Error<
   "block pointer to non-function type is invalid">;
-def err_return_block_has_expr : Error<"void block should not return a value">;
+def err_return_block_has_expr : Error<
+  "void %select{block|lambda}0 should not return a value">;
 def err_block_return_missing_expr : Error<
   "non-void block should return a value">;
 def err_func_def_incomplete_result : Error<
@@ -9216,6 +9321,21 @@ def ext_typecheck_convert_discards_qualifiers : ExtWarn<
   "|%diff{casting $ to type $|casting between types}0,1}2"
   " discards qualifiers">,
   InGroup<IncompatiblePointerTypesDiscardsQualifiers>;
+def ext_typecheck_convert_discards_overflow_behavior
+    : ExtWarn<
+          "%select{%diff{assigning to $ from $|assigning to different types}0,1"
+          "|%diff{passing $ to parameter of type $|"
+          "passing to parameter of different type}0,1"
+          "|%diff{returning $ from a function with result type $|"
+          "returning from function with different return type}0,1"
+          "|%diff{converting $ to type $|converting between types}0,1"
+          "|%diff{initializing $ with an expression of type $|"
+          "initializing with expression of different type}0,1"
+          "|%diff{sending $ to parameter of type $|"
+          "sending to parameter of different type}0,1"
+          "|%diff{casting $ to type $|casting between types}0,1}2"
+          " discards overflow behavior">,
+      InGroup<IncompatiblePointerTypesDiscardsOverflowBehavior>;
 def err_typecheck_convert_discards_qualifiers : Error<
   "%select{%diff{assigning to $ from $|assigning to different types}0,1"
   "|%diff{passing $ to parameter of type $|"
@@ -9475,6 +9595,14 @@ def err_atomic_builtin_must_be_pointer_intfltptr : Error<
 def err_atomic_builtin_pointer_size : Error<
   "address argument to atomic builtin must be a pointer to 1,2,4,8 or 16 byte "
   "type (%0 invalid)">;
+def err_arm_atomic_store_with_stshh_bad_type : Error<
+  "address argument to '__arm_atomic_store_with_stshh' must be a pointer to an "
+  "8,16,32, or 64-bit integer type (%0 invalid)">;
+def err_arm_atomic_store_with_stshh_bad_value_type : Error<
+  "value argument to '__arm_atomic_store_with_stshh' must be %0; got %1">;
+def err_arm_atomic_store_with_stshh_bad_order : Error<
+  "memory order argument to '__arm_atomic_store_with_stshh' must be one of "
+  "__ATOMIC_RELAXED, __ATOMIC_RELEASE, or __ATOMIC_SEQ_CST">;
 def err_atomic_exclusive_builtin_pointer_size : Error<
   "address argument to load or store exclusive builtin must be a pointer to "
   // Because the range of legal sizes for load/store exclusive varies with the
@@ -9585,6 +9713,7 @@ def err_deleted_inherited_ctor_use : Error<
   "constructor inherited by %0 from base class %1 is implicitly deleted">;
 
 def note_called_by : Note<"called by %0">;
+def note_which_is_called_by : Note<"which is called by %0">;
 def err_kern_type_not_void_return : Error<
   "kernel function type %0 must have void return type">;
 def err_kern_is_nonstatic_method : Error<
@@ -10822,26 +10951,23 @@ def warn_dangling_reference_captured_by_unknown : Warning<
    "the full-expression">, InGroup<DanglingCapture>;
 
 // Diagnostics based on the Lifetime safety analysis.
-def warn_lifetime_safety_loan_expires_permissive : Warning<
+def warn_lifetime_safety_use_after_scope : Warning<
    "object whose reference is captured does not live long enough">,
-   InGroup<LifetimeSafetyPermissive>, DefaultIgnore;
-def warn_lifetime_safety_loan_expires_strict : Warning<
-   "object whose reference is captured may not live long enough">,
-   InGroup<LifetimeSafetyStrict>, DefaultIgnore;
-def warn_lifetime_safety_loan_expires_moved_strict : Warning<
+   InGroup<LifetimeSafetyUseAfterScope>, DefaultIgnore;
+def warn_lifetime_safety_use_after_scope_moved : Warning<
    "object whose reference is captured may not live long enough. "
    "This could be false positive as the storage may have been moved later">,
-   InGroup<LifetimeSafetyStrict>, DefaultIgnore;
+   InGroup<LifetimeSafetyUseAfterScopeMoved>, DefaultIgnore;
 
-def warn_lifetime_safety_return_stack_addr_permissive
+def warn_lifetime_safety_return_stack_addr
     : Warning<"address of stack memory is returned later">,
-      InGroup<LifetimeSafetyPermissive>,
+      InGroup<LifetimeSafetyReturnStackAddr>,
       DefaultIgnore;
-def warn_lifetime_safety_return_stack_addr_moved_strict
+def warn_lifetime_safety_return_stack_addr_moved
     : Warning<"address of stack memory may be returned later. "
       "This could be false positive as the storage may have been moved. "
       "Consider moving first and then aliasing later to resolve the issue">,
-      InGroup<LifetimeSafetyStrict>,
+      InGroup<LifetimeSafetyReturnStackAddrMoved>,
       DefaultIgnore;
 
 def warn_lifetime_safety_invalidation
@@ -10857,7 +10983,17 @@ def warn_lifetime_safety_dangling_field_moved
     : Warning<"address of stack memory escapes to a field. "
       "This could be a false positive as the storage may have been moved. "
       "Consider moving first and then aliasing later to resolve the issue">,
-      InGroup<LifetimeSafetyDanglingFieldStrict>,
+      InGroup<LifetimeSafetyDanglingFieldMoved>,
+      DefaultIgnore;
+def warn_lifetime_safety_dangling_global
+    : Warning<"address of stack memory escapes to global or static storage">,
+      InGroup<LifetimeSafetyDanglingGlobal>,
+      DefaultIgnore;
+def warn_lifetime_safety_dangling_global_moved
+    : Warning<"address of stack memory escapes to global or static storage. "
+      "This could be a false positive as the storage may have been moved. "
+      "Consider moving first and then aliasing later to resolve the issue">,
+      InGroup<LifetimeSafetyDanglingGlobalMoved>,
       DefaultIgnore;
 
 def note_lifetime_safety_used_here : Note<"later used here">;
@@ -10866,7 +11002,11 @@ def note_lifetime_safety_destroyed_here : Note<"destroyed here">;
 def note_lifetime_safety_returned_here : Note<"returned here">;
 def note_lifetime_safety_moved_here : Note<"potentially moved here">;
 def note_lifetime_safety_dangling_field_here: Note<"this field dangles">;
+def note_lifetime_safety_dangling_global_here: Note<"this global dangles">;
+def note_lifetime_safety_dangling_static_here: Note<"this static storage dangles">;
 def note_lifetime_safety_escapes_to_field_here: Note<"escapes to this field">;
+def note_lifetime_safety_escapes_to_global_here: Note<"escapes to this global storage">;
+def note_lifetime_safety_escapes_to_static_storage_here: Note<"escapes to this static storage">;
 
 def warn_lifetime_safety_intra_tu_param_suggestion
     : Warning<"parameter in intra-TU function should be marked "
@@ -12009,13 +12149,16 @@ def warn_omp_alignment_not_power_of_two : Warning<
   InGroup<OpenMPClauses>;
 def err_omp_invalid_target_decl : Error<
   "%0 used in declare target directive is not a variable or a function name">;
-def err_omp_declare_target_to_and_link : Error<
-  "%0 must not appear in both clauses 'to' and 'link'">;
+def err_omp_declare_target_var_in_both_clauses
+    : Error<"%0 must not appear in both clauses '%1' and '%2'">;
+def err_omp_declare_target_local_host_only
+    : Error<"'local' clause is incompatible with 'device_type(host)'; "
+            "local variables exist only on the device">;
 def warn_omp_not_in_target_context : Warning<
   "declaration is not declared in any declare target region">,
   InGroup<OpenMPTarget>;
-def err_omp_function_in_link_clause : Error<
-  "function name is not allowed in 'link' clause">;
+def err_omp_function_in_target_clause_list
+    : Error<"function name is not allowed in '%0' clause">;
 def err_omp_aligned_expected_array_or_ptr : Error<
   "argument of aligned clause should be array"
   "%select{ or pointer|, pointer, reference to array or reference to pointer}1"
@@ -12431,6 +12574,11 @@ def err_omp_declare_target_has_local_vars : Error<
 def warn_omp_declare_target_after_first_use : Warning<
   "declaration marked as declare target after first use, it may lead to incorrect results">,
   InGroup<OpenMPTarget>;
+def warn_omp_declare_target_local_not_implemented
+    : Warning<"'local' clause on 'declare_target' directive is not yet fully "
+              "implemented; "
+              "variable will be treated as 'enter'">,
+      InGroup<OpenMPTarget>;
 def err_omp_declare_variant_incompat_attributes : Error<
   "'#pragma omp declare variant' is not compatible with any target-specific attributes">;
 def warn_omp_declare_variant_score_not_constant
@@ -12550,6 +12698,10 @@ def err_omp_transparent_invalid_value : Error<"invalid value for transparent cla
   " expected one of: omp_not_impex, omp_import, omp_export, omp_impex">;
 def err_omp_transparent_invalid_type : Error<
   "transparent clause cannot be applied to type: %0">;
+def err_omp_num_teams_multi_expr_not_allowed
+    : Error<"only two expressions allowed in 'num_teams' clause">;
+def err_omp_num_teams_lower_bound_larger
+    : Error<"lower bound is greater than upper bound in 'num_teams' clause">;
 } // end of OpenMP category
 
 let CategoryName = "Related Result Type Issue" in {
@@ -12633,8 +12785,7 @@ def note_unreachable_entity : Note<
   "is not %select{visible|reachable|reachable|reachable|reachable|reachable}0">;
 def ext_module_import_in_extern_c : ExtWarn<
   "import of C++ module '%0' appears within extern \"C\" language linkage "
-  "specification">, DefaultError,
-  InGroup<DiagGroup<"module-import-in-extern-c">>;
+  "specification">, InGroup<DiagGroup<"module-import-in-extern-c">>;
 def err_module_import_not_at_top_level_fatal : Error<
   "import of module '%0' appears within %1">, DefaultFatal;
 def ext_module_import_not_at_top_level_noop : ExtWarn<
@@ -13142,6 +13293,9 @@ def err_builtin_invalid_arg_type: Error<
   "%plural{0:|: }3"
   "%plural{[0,3]:type|:types}1 (was %4)">;
 
+def err_builtin_requires_double_type: Error<
+  "%ordinal0 argument must be a scalar, vector, or matrix of double type (was %1)">;
+
 def err_bswapg_invalid_bit_width : Error<
   "_BitInt type %0 (%1 bits) must be a multiple of 16 bits for byte swapping">;
 
@@ -13251,19 +13405,24 @@ def warn_sycl_external_missing_on_first_decl : Warning<
 // SYCL kernel entry point diagnostics
 def err_sycl_entry_point_invalid : Error<
   "the %0 attribute cannot be applied to a %enum_select<InvalidSKEPReason>{"
-      "%NonStaticMemberFn{non-static member function}|"
       "%VariadicFn{variadic function}|"
       "%DeletedFn{deleted function}|"
       "%DefaultedFn{defaulted function}|"
+      "%Constructor{constructor}|"
+      "%Destructor{destructor}|"
+      "%Coroutine{coroutine}|"
       "%ConstexprFn{constexpr function}|"
       "%ConstevalFn{consteval function}|"
       "%NoreturnFn{function declared with the 'noreturn' attribute}|"
-      "%Coroutine{coroutine}|"
-      "%FunctionTryBlock{function defined with a function try block}"
+      "%FunctionTryBlock{function defined with a function try block}|"
+      "%ExplicitObjectFn{function with an explicit object parameter}|"
       "}1">;
 def err_sycl_entry_point_invalid_redeclaration : Error<
   "the %0 kernel name argument does not match prior"
   " declaration%diff{: $ vs $|}1,2">;
+def err_sycl_entry_point_invalid_this : Error<
+  "'this' cannot be%select{| implicitly}0 used in a potentially evaluated"
+  " expression in the body of a function declared with the %1 attribute">;
 def err_sycl_kernel_name_conflict : Error<
   "the %0 kernel name argument conflicts with a previous declaration">;
 def warn_sycl_kernel_name_not_a_class_type : Warning<
@@ -13279,6 +13438,18 @@ def err_sycl_entry_point_return_type : Error<
 def err_sycl_entry_point_deduced_return_type : Error<
   "the %0 attribute only applies to functions with a non-deduced 'void' return"
   " type">;
+def note_sycl_runtime_defect : Note<
+  "this indicates a problem with the SYCL runtime header files; please consider"
+  " reporting this to your SYCL runtime provider">;
+def note_sycl_kernel_launch_lookup_here : Note<
+  "in implicit call to 'sycl_kernel_launch' with template argument %0 required"
+  " here">;
+def note_sycl_kernel_launch_overload_resolution_here : Note<
+  "in implicit call to 'sycl_kernel_launch' with template argument %0 and"
+  " function arguments %1 required here">;
+def err_sycl_entry_point_device_use : Error<
+  "function %0 cannot be used in device code because it is declared with the"
+  " %1 attribute">;
 
 def warn_cuda_maxclusterrank_sm_90 : Warning<
   "maxclusterrank requires sm_90 or higher, CUDA arch provided: %0, ignoring "
@@ -13369,6 +13540,9 @@ def err_std_source_location_impl_malformed : Error<
 def err_std_initializer_list_malformed : Error<
   "%0 layout not recognized. Must be a non-polymorphic class type with no bases and two fields: a 'const E *' and either another 'const E *' or a 'std::size_t'">;
 
+def err_hlsl_builtin_resource_coordinate_dimension_mismatch : Error<
+  "builtin %0 resource coordinate dimension mismatch: expected %1, found %2">;
+
 // HLSL Diagnostics
 def err_hlsl_langstd_unimplemented : Error<"support for HLSL language version %0 is incomplete">;
 def err_hlsl_attr_unsupported_in_stage : Error<"attribute %0 is unsupported in '%1' shaders, requires %select{|one of the following: }2%3">;
@@ -13438,6 +13612,13 @@ def err_hlsl_rootsignature_entry: Error<
 def err_hlsl_operator_unsupported : Error<
   "the '%select{&|*|->}0' operator is unsupported in HLSL">;
 
+def warn_hlsl_groupshared_202x : Warning<
+  "support for groupshared parameter annotation not added until HLSL 202x">,
+  InGroup<HLSLAvailability>;
+def warn_hlsl_groupshared_inout : Warning<
+  "passing groupshared variable to a parameter annotated with inout. "
+  "See 'groupshared' parameter annotation added in 202x">,
+  InGroup<HLSLAvailability>;
 def err_hlsl_param_qualifier_mismatch :
   Error<"conflicting parameter qualifier %0 on parameter %1">;
 def err_hlsl_vector_compound_assignment_truncation : Error<
@@ -13513,12 +13694,18 @@ def err_hlsl_incomplete_resource_array_in_function_param: Error<
   "incomplete resource array in a function parameter">;
 def err_hlsl_assign_to_global_resource: Error<
   "assignment to global resource variable %0 is not allowed">;
+def warn_hlsl_assigning_local_resource_is_not_unique
+    : Warning<"assignment of %0 to local resource %1 is not to the same "
+              "unique global resource">,
+      InGroup<HLSLExplicitBinding>;
 
 def err_hlsl_push_constant_unique
     : Error<"cannot have more than one push constant block">;
 def err_hlsl_samplecmp_requires_float
     : Error<"'SampleCmp' and 'SampleCmpLevelZero' require resource to contain "
             "a floating point type">;
+def err_hlsl_gathercmp_invalid_component
+    : Error<"gatherCmp%select{Red|Green|Blue|Alpha}0 operations on the Vulkan target are not supported; only GatherCmp and GatherCmpRed are allowed">;
 
 // Layout randomization diagnostics.
 def err_non_designated_init_used : Error<
@@ -13938,8 +14125,53 @@ def note_acc_reduction_combiner_forming
 // AMDGCN builtins diagnostics
 def err_amdgcn_load_lds_size_invalid_value : Error<"invalid size value">;
 def note_amdgcn_load_lds_size_valid_value : Note<"size must be %select{1, 2, or 4|1, 2, 4, 12 or 16}0">;
+def err_amdgcn_processor_is_arg_not_literal
+    : Error<"the argument to __builtin_amdgcn_processor_is must be a string "
+            "literal">;
+def err_amdgcn_processor_is_arg_invalid_value
+    : Error<"the argument to __builtin_amdgcn_processor_is must be a valid "
+            "AMDGCN processor identifier; '%0' is not valid">;
+def note_amdgcn_processor_is_valid_options
+    : Note<"valid AMDGCN processor identifiers are: %0">;
+def err_amdgcn_is_invocable_arg_invalid_value
+    : Error<"the argument to __builtin_amdgcn_is_invocable must be either a "
+            "target agnostic builtin or an AMDGCN target specific builtin; '%0'"
+            " is not valid">;
+def err_amdgcn_predicate_type_is_not_constructible
+    : Error<"%0 has type __amdgpu_feature_predicate_t, which is not"
+            " constructible">;
+def err_amdgcn_predicate_type_needs_explicit_bool_cast
+    : Error<"%0 must be explicitly cast to %1; however, please note that this "
+            "is almost always an error and that it prevents the effective "
+            "guarding of target dependent code, and thus should be avoided">;
+def note_amdgcn_protected_by_predicate : Note<"jump enters statement controlled"
+                                              " by AMDGPU feature predicate">;
+def err_amdgcn_conflicting_is_processor_options
+    : Error<"conflicting check for AMDGCN processor %0 found in a scope already"
+            " controlled by a check for AMDGCN processor">;
+def note_amdgcn_previous_is_processor_guard
+    : Note<"predicate guard, with establishes the context, inserted here">;
+def warn_amdgcn_unguarded_asm_stmt
+    : Warning<"the '%0' ASM sequence might be invalid for some AMDGPU targets">,
+    InGroup<UnguardedBuiltinUsageAMDGPU>, DefaultIgnore;
+def note_amdgcn_unguarded_asm_silence
+  : Note<"enclose the '%0' ASM sequence in a scope controlled by a "
+         "__builtin_amdgcn_is_processor check to silence this warning">;
+def err_amdgcn_incompatible_builtin
+  : Error<"%0 cannot be invoked in the current context, as it requires the "
+          "'%1' feature(s)%select{|, which '%3' does not provide}2">;
+def warn_amdgcn_unguarded_builtin :
+  Warning<"%0 might be unavailable on some AMDGPU targets">,
+  InGroup<UnguardedBuiltinUsageAMDGPU>, DefaultIgnore;
+def note_amdgcn_unguarded_builtin_silence
+  : Note<"enclose %0 in a __builtin_amdgcn_is_invocable check to silence "
+         "this warning">;
 
 def err_amdgcn_coop_atomic_invalid_as : Error<"cooperative atomic requires a global or generic pointer">;
+
+def err_amdgcn_dmask_has_too_many_bits_set
+    : Error<"dmask argument cannot have more bits set than there are elements "
+            "in return type">;
 
 def warn_amdgpu_s_wait_event_mask_no_effect_target :
   Warning<"event mask has no effect for target">,

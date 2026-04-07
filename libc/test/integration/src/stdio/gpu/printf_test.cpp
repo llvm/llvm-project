@@ -16,7 +16,7 @@ using namespace LIBC_NAMESPACE;
 
 FILE *file = LIBC_NAMESPACE::fopen("testdata/test_data.txt", "w");
 
-TEST_MAIN(int argc, char **argv, char **envp) {
+TEST_MAIN(int, char **, char **) {
   ASSERT_TRUE(file && "failed to open file");
   // Check basic printing.
   int written = 0;

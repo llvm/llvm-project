@@ -144,14 +144,48 @@ static bool startsNextOperand(const FormatToken &Current) {
   return isAlignableBinaryOperator(Previous) && !Current.isTrailingComment();
 }
 
+// Returns the number of operands in the chain containing \c Op.
+// For example, `a && b && c` has 3 operands (and 2 operators).
+static unsigned getChainLength(const FormatToken &Op) {
+  const FormatToken *Last = &Op;
+  while (Last->NextOperator)
+    Last = Last->NextOperator;
+  return Last->OperatorIndex + 2;
+}
+
 // Returns \c true if \c Current is a binary operation that must break.
 static bool mustBreakBinaryOperation(const FormatToken &Current,
                                      const FormatStyle &Style) {
-  return Style.BreakBinaryOperations != FormatStyle::BBO_Never &&
-         Current.CanBreakBefore &&
-         (Style.BreakBeforeBinaryOperators == FormatStyle::BOS_None
-              ? startsNextOperand
-              : isAlignableBinaryOperator)(Current);
+  if (!Current.CanBreakBefore)
+    return false;
+
+  // Determine the operator token: when breaking after the operator,
+  // it is Current.Previous; when breaking before, it is Current itself.
+  bool BreakBefore = Style.BreakBeforeBinaryOperators != FormatStyle::BOS_None;
+  const FormatToken *OpToken = BreakBefore ? &Current : Current.Previous;
+
+  if (!OpToken)
+    return false;
+
+  // Check that this is an alignable binary operator.
+  if (BreakBefore) {
+    if (!isAlignableBinaryOperator(Current))
+      return false;
+  } else if (!startsNextOperand(Current)) {
+    return false;
+  }
+
+  // Look up per-operator rule or fall back to Default.
+  const auto OperatorBreakStyle =
+      Style.BreakBinaryOperations.getStyleForOperator(OpToken->Tok.getKind());
+  if (OperatorBreakStyle == FormatStyle::BBO_Never)
+    return false;
+
+  // Check MinChainLength: if the chain is too short, don't force a break.
+  const unsigned MinChain =
+      Style.BreakBinaryOperations.getMinChainLengthForOperator(
+          OpToken->Tok.getKind());
+  return MinChain == 0 || getChainLength(*OpToken) >= MinChain;
 }
 
 static bool opensProtoMessageField(const FormatToken &LessTok,
@@ -676,7 +710,8 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
         return false;
       if (Tok->is(TT_TemplateCloser)) {
         Tok = Tok->MatchingParen;
-        assert(Tok);
+        if (!Tok)
+          return false;
       }
       if (Tok->FirstAfterPPLine)
         return false;
@@ -1203,6 +1238,25 @@ unsigned ContinuationIndenter::addTokenOnNewLine(LineState &State,
     }
   }
 
+  switch (Style.BreakInheritanceList) {
+  case FormatStyle::BILS_BeforeColon:
+  case FormatStyle::BILS_AfterComma:
+    CurrentState.IsAligned = CurrentState.IsAligned ||
+                             Current.is(TT_InheritanceColon) ||
+                             Previous.is(TT_InheritanceComma);
+    break;
+  case FormatStyle::BILS_BeforeComma:
+    CurrentState.IsAligned =
+        CurrentState.IsAligned ||
+        Current.isOneOf(TT_InheritanceColon, TT_InheritanceComma);
+    break;
+  case FormatStyle::BILS_AfterColon:
+    CurrentState.IsAligned =
+        CurrentState.IsAligned ||
+        Previous.isOneOf(TT_InheritanceColon, TT_InheritanceComma);
+    break;
+  }
+
   if ((PreviousNonComment &&
        PreviousNonComment->isOneOf(tok::comma, tok::semi) &&
        !CurrentState.AvoidBinPacking) ||
@@ -1219,8 +1273,10 @@ unsigned ContinuationIndenter::addTokenOnNewLine(LineState &State,
       (PreviousNonComment && PreviousNonComment->is(tok::question))) {
     CurrentState.BreakBeforeParameter = true;
   }
-  if (Current.is(TT_BinaryOperator) && Current.CanBreakBefore)
+  if (Current.is(TT_BinaryOperator) && Current.CanBreakBefore) {
     CurrentState.BreakBeforeParameter = false;
+    CurrentState.IsAligned = true;
+  }
 
   if (!DryRun) {
     unsigned MaxEmptyLinesToKeep = Style.MaxEmptyLinesToKeep + 1;
@@ -2466,7 +2522,7 @@ unsigned ContinuationIndenter::handleEndOfLine(const FormatToken &Current,
       Strict = StrictPenalty <= Penalty;
       if (Strict) {
         Penalty = StrictPenalty;
-        State = StrictState;
+        State = std::move(StrictState);
       }
     }
     if (!DryRun) {

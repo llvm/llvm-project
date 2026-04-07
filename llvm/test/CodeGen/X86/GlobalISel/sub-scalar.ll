@@ -122,20 +122,13 @@ define i8 @test_sub_i8(i8 %arg1, i8 %arg2) {
 define i32 @test_sub_i1(i32 %arg1, i32 %arg2) {
 ; X64-LABEL: test_sub_i1:
 ; X64:       # %bb.0:
-; X64-NEXT:    cmpl %esi, %edi
-; X64-NEXT:    sete %al
-; X64-NEXT:    subb %al, %al
-; X64-NEXT:    movzbl %al, %eax
+; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    andl $1, %eax
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: test_sub_i1:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    cmpl %eax, {{[0-9]+}}(%esp)
-; X86-NEXT:    sete %al
-; X86-NEXT:    subb %al, %al
-; X86-NEXT:    movzbl %al, %eax
+; X86-NEXT:    xorl %eax, %eax
 ; X86-NEXT:    andl $1, %eax
 ; X86-NEXT:    retl
   %c = icmp eq i32 %arg1, %arg2

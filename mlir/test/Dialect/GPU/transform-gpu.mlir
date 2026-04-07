@@ -12,8 +12,8 @@ func.func @blocks_3d(%x: !type, %y: !type, %t: !type1d, %alpha : f32, %stream : 
   %c7 = arith.constant 7 : index
   %one = arith.constant 1 : index
 //      CHECK:   gpu.launch
-//      CHECK:   %[[BLKX:.*]] = gpu.block_id  x
-//      CHECK:   %[[BLKY:.*]] = gpu.block_id  y
+//      CHECK:   %[[BLKX:.*]] = gpu.block_id x
+//      CHECK:   %[[BLKY:.*]] = gpu.block_id y
 //      CHECK:   memref.load %[[ARGX]][%[[BLKX]], %[[BLKY]]]
 //      CHECK:   memref.load %[[ARGY]][%[[BLKX]], %[[BLKY]]]
   %name = gpu.launch async[%stream] blocks(%arg3, %arg4, %arg5) in (%arg9 = %one, %arg10 = %one, %arg11 = %one)
@@ -59,8 +59,8 @@ func.func @warpgroup_3d(%x: !type, %y: !type, %t: !type1d, %alpha : f32, %stream
   // CHECK-DAG: %[[C512:.*]] = arith.constant 512 : index
 
 //      CHECK:   gpu.launch
-//      CHECK:   %[[TIDX:.*]] = gpu.thread_id  x
-//      CHECK:   %[[TIDY:.*]] = gpu.thread_id  y
+//      CHECK:   %[[TIDX:.*]] = gpu.thread_id x
+//      CHECK:   %[[TIDY:.*]] = gpu.thread_id y
 //  CHECK-DAG:   %[[WG:.*]] = affine.apply #[[$MAP]]()[%[[TIDX]]]
 //  CHECK-DAG:   %[[CMPX:.*]] = arith.cmpi ult, %[[TIDX]], %[[C384]] : index
 //  CHECK-DAG:   %[[CMPY:.*]] = arith.cmpi ult, %[[TIDY]], %[[C1]] : index
@@ -112,8 +112,8 @@ func.func @warp_3d(%x: !type, %y: !type, %t: !type1d, %alpha : f32, %stream : !g
   // CHECK-DAG: %[[c64:.*]] = arith.constant 64 : index
 
 //      CHECK:   gpu.launch
-//      CHECK:   %[[TIDX:.*]] = gpu.thread_id  x
-//      CHECK:   %[[TIDY:.*]] = gpu.thread_id  y
+//      CHECK:   %[[TIDX:.*]] = gpu.thread_id x
+//      CHECK:   %[[TIDY:.*]] = gpu.thread_id y
 //  CHECK-DAG:   %[[W:.*]] = affine.apply #[[$MAP]]()[%[[TIDX]]]
 //  CHECK-DAG:   %[[CMPX:.*]] = arith.cmpi ult, %[[TIDX]], %[[C32]] : index
 //  CHECK-DAG:   %[[CMPY:.*]] = arith.cmpi ult, %[[TIDY]], %[[C3]] : index
@@ -162,8 +162,8 @@ func.func @threads_3d(%x: !type, %y: !type, %t: !type1d, %alpha : f32, %stream :
 //      CHECK:   %[[C9:.*]] = arith.constant 9 : index
 //      CHECK:   %[[C7:.*]] = arith.constant 7 : index
 //      CHECK:   gpu.launch async [%{{.*}}] blocks(%{{.*}}, %{{.*}}, %{{.*}}) in (%{{.*}} = %[[C1]], %{{.*}} = %[[C1]], %{{.*}} = %[[C1]]) threads(%{{.*}}, %{{.*}}, %{{.*}}) in (%{{.*}} = %[[C12]], %{{.*}} = %[[C9]], %{{.*}} = %[[C1]])
-//      CHECK:   %[[TIDX:.*]] = gpu.thread_id  x
-//      CHECK:   %[[TIDY:.*]] = gpu.thread_id  y
+//      CHECK:   %[[TIDX:.*]] = gpu.thread_id x
+//      CHECK:   %[[TIDY:.*]] = gpu.thread_id y
 //      CHECK:   arith.cmpi ult, %[[TIDX]], %[[C9]] : index
 //      CHECK:   arith.cmpi ult, %[[TIDY]], %[[C7]] : index
 //      CHECK:   memref.load %[[ARGX]][%[[TIDY]], %[[TIDX]]]
@@ -215,10 +215,10 @@ func.func @saxpy4d(%x: !type4d, %y: !type4d, %alpha : f32) -> !type4d {
 //      CHECK:   %[[C4:.*]] = arith.constant 4 : index
 //      CHECK:   %[[C1:.*]] = arith.constant 1 : index
 //      CHECK:   gpu.launch blocks(%{{.*}}, %{{.*}}, %{{.*}}) in (%{{.*}} = %[[C32]], %{{.*}} = %[[C64]], %{{.*}} = %[[C1]]) threads(%{{.*}}, %{{.*}}, %{{.*}}) in (%{{.*}} = %[[C32]], %{{.*}} = %[[C4]], %{{.*}} = %[[C1]])
-//      CHECK:   %[[BLKX:.*]] = gpu.block_id  x
-//      CHECK:   %[[BLKY:.*]] = gpu.block_id  y
-//      CHECK:   %[[TIDX:.*]] = gpu.thread_id  x
-//      CHECK:   %[[TIDY:.*]] = gpu.thread_id  y
+//      CHECK:   %[[BLKX:.*]] = gpu.block_id x
+//      CHECK:   %[[BLKY:.*]] = gpu.block_id y
+//      CHECK:   %[[TIDX:.*]] = gpu.thread_id x
+//      CHECK:   %[[TIDY:.*]] = gpu.thread_id y
 //      CHECK:   memref.load %[[ARGX]][%[[BLKX]], %[[BLKY]], %[[TIDY]], %[[TIDX]]]
 //      CHECK:   memref.load %[[ARGY]][%[[BLKX]], %[[BLKY]], %[[TIDY]], %[[TIDX]]]
   scf.forall (%i, %j) in (%c32, %c64) {
@@ -288,7 +288,7 @@ func.func @saxpy2d_singleloop(%x: !type, %y: !type, %stream : !gpu.async.token) 
   %name = gpu.launch async[%stream] blocks(%arg3, %arg4, %arg5) in (%arg9 = %one, %arg10 = %one, %arg11 = %one)
             threads(%arg6, %arg7, %arg8) in (%arg12 = %one, %arg13 = %one, %arg14 = %one)
   {
-//      CHECK:   %[[TIDX:.*]] = gpu.thread_id  x
+//      CHECK:   %[[TIDX:.*]] = gpu.thread_id x
 //      CHECK:   memref.load %[[ARGX]][%[[TIDX]], %[[TIDX]]]
 //      CHECK:   memref.load %[[ARGY]][%[[TIDX]], %[[TIDX]]]
     scf.forall (%i) in (%c32) {
@@ -322,7 +322,7 @@ func.func @saxpy3d_fold_id_z(%x: !type, %y: !type, %t: !type1d, %alpha : f32, %s
   %c9 = arith.constant 9 : index
   %c7 = arith.constant 7 : index
 //  CHECK: %[[C0:.+]] = arith.constant 0 : index
-//  CHECK-NOT:   gpu.thread_id  z
+//  CHECK-NOT:   gpu.thread_id z
   %name = gpu.launch async[%stream] blocks(%arg3, %arg4, %arg5) in (%arg9 = %one, %arg10 = %one, %arg11 = %one)
             threads(%arg6, %arg7, %arg8) in (%arg12 = %one, %arg13 = %one, %arg14 = %one)
   {
@@ -373,9 +373,9 @@ func.func @warpgroup_linear(%x: !type, %y: !type, %t: !type1d, %alpha : f32, %st
 // CHECK-DAG: %[[C8:.*]] = arith.constant 8 : index
 // CHECK-DAG: %[[C4:.*]] = arith.constant 4 : index
 
-// CHECK-DAG: %[[TIDX:.*]] = gpu.thread_id  x
-// CHECK-DAG: %[[TIDY:.*]] = gpu.thread_id  y
-// CHECK-DAG: %[[TIDZ:.*]] = gpu.thread_id  z
+// CHECK-DAG: %[[TIDX:.*]] = gpu.thread_id x
+// CHECK-DAG: %[[TIDY:.*]] = gpu.thread_id y
+// CHECK-DAG: %[[TIDZ:.*]] = gpu.thread_id z
 // CHECK-DAG: %[[WIDLIN:.*]] = affine.apply #[[$MAPWGLIN]]()[%[[TIDX]], %[[TIDY]], %[[TIDZ]]]
 // CHECK-DAG: %[[WIDX:.*]] = affine.apply #[[$MAPWGX]]()[%[[TIDX]], %[[TIDY]]]
 // CHECK-DAG: %[[WIDY:.*]] = affine.apply #[[$MAPWGY]]()[%[[TIDX]], %[[TIDY]], %[[TIDZ]]]
@@ -429,9 +429,9 @@ func.func @warp_linear(%x: !type, %y: !type, %t: !type1d, %alpha : f32, %stream 
 // CHECK-DAG: %[[C4:.*]] = arith.constant 4 : index
 // CHECK-DAG: %[[C192:.*]] = arith.constant 192 : index
 
-// CHECK-DAG: %[[TIDX:.*]] = gpu.thread_id  x
-// CHECK-DAG: %[[TIDY:.*]] = gpu.thread_id  y
-// CHECK-DAG: %[[TIDZ:.*]] = gpu.thread_id  z
+// CHECK-DAG: %[[TIDX:.*]] = gpu.thread_id x
+// CHECK-DAG: %[[TIDY:.*]] = gpu.thread_id y
+// CHECK-DAG: %[[TIDZ:.*]] = gpu.thread_id z
 // CHECK-DAG: %[[WIDLIN:.*]] = affine.apply #[[$MAPWLIN]]()[%[[TIDX]], %[[TIDY]], %[[TIDZ]]]
 // CHECK-DAG: %[[WIDX:.*]] = affine.apply #[[$MAPWX]]()[%[[TIDX]], %[[TIDY]], %[[TIDZ]]]
 // CHECK-DAG: %[[WIDY:.*]] = affine.apply #[[$MAPWY]]()[%[[TIDX]], %[[TIDY]], %[[TIDZ]]]
@@ -495,8 +495,8 @@ func.func @map_multi_level_linear(%x: !type, %y: !type, %t: !type1d, %alpha : f3
   %name = gpu.launch async[%stream] blocks(%arg3, %arg4, %arg5) in (%arg9 = %one, %arg10 = %one, %arg11 = %one)
             threads(%arg6, %arg7, %arg8) in (%arg12 = %one, %arg13 = %one, %arg14 = %one)
   {
-    // CHECK-DAG: %[[TIDX:.*]] = gpu.thread_id  x
-    // CHECK-DAG: %[[TIDY:.*]] = gpu.thread_id  y
+    // CHECK-DAG: %[[TIDX:.*]] = gpu.thread_id x
+    // CHECK-DAG: %[[TIDY:.*]] = gpu.thread_id y
     scf.forall (%i, %j) in (%c7, %c9) {
       %4 = memref.load %x[%i, %j] : !type
       %5 = memref.load %y[%i, %j] : !type
@@ -563,9 +563,9 @@ func.func @block_linear_existing_launch(
   // CHECK-DAG: %[[C12:.*]] = arith.constant 12 : index
   // CHECK-DAG: %[[C63:.*]] = arith.constant 63 : index
 //      CHECK:   gpu.launch async [{{.*}}] blocks({{.*}}) in (%{{.*}} = %[[C12]], %{{.*}} = %[[C9]], %{{.*}} = %[[C1]]) threads
-//  CHECK-DAG: %[[BIDX:.*]] = gpu.block_id  x
-//  CHECK-DAG: %[[BIDY:.*]] = gpu.block_id  y
-//  CHECK-DAG: %[[BIDZ:.*]] = gpu.block_id  z
+//  CHECK-DAG: %[[BIDX:.*]] = gpu.block_id x
+//  CHECK-DAG: %[[BIDY:.*]] = gpu.block_id y
+//  CHECK-DAG: %[[BIDZ:.*]] = gpu.block_id z
 //  CHECK-DAG: %[[BIDLIN:.*]] = affine.apply #[[$MAPBLIN]]()[%[[BIDX]], %[[BIDY]], %[[BIDZ]]]
 //  CHECK-DAG: %[[BLX:.*]] = affine.apply #[[$MAPBX]]()[%[[BIDX]], %[[BIDY]], %[[BIDZ]]]
 //  CHECK-DAG: %[[BLY:.*]] = affine.apply #[[$MAPBY]]()[%[[BIDX]], %[[BIDY]], %[[BIDZ]]]
@@ -617,9 +617,9 @@ func.func @block_linear_generate_launch(
   // CHECK-DAG: %[[C7:.*]] = arith.constant 7 : index
   // CHECK-DAG: %[[C9:.*]] = arith.constant 9 : index
 //      CHECK:   gpu.launch blocks({{.*}}) in (%{{.*}} = %[[C7]], %{{.*}} = %[[C9]], %{{.*}} = %[[C1]]) threads
-//  CHECK-DAG: %[[BIDX:.*]] = gpu.block_id  x
-//  CHECK-DAG: %[[BIDY:.*]] = gpu.block_id  y
-//  CHECK-DAG: %[[BIDZ:.*]] = gpu.block_id  z
+//  CHECK-DAG: %[[BIDX:.*]] = gpu.block_id x
+//  CHECK-DAG: %[[BIDY:.*]] = gpu.block_id y
+//  CHECK-DAG: %[[BIDZ:.*]] = gpu.block_id z
 //  CHECK-DAG: %[[BLX:.*]] = affine.apply #[[$MAPBX]]()[%[[BIDX]]]
 //  CHECK-DAG: %[[BLY:.*]] = affine.apply #[[$MAPBY]]()[%[[BIDX]], %[[BIDY]], %[[BIDZ]]]
 //      CHECK:   memref.load %[[ARGX]][%[[BLX]], %[[BLY]]]
@@ -659,14 +659,14 @@ func.func @simple_fill(%arg0: memref<128xf32>) -> memref<128xf32> {
 //       CHECK:   %[[C8:.*]] = arith.constant 8 : index
 //       CHECK:   gpu.launch
   scf.forall (%arg1) in (1) {
-//       CHECK:     %[[BIDX:.*]] = gpu.block_id  x
+//       CHECK:     %[[BIDX:.*]] = gpu.block_id x
 //       CHECK:     %[[BLX:.*]] = affine.apply #[[$MAPB]]()[%[[BIDX]]]
     %0 = affine.apply #map(%arg1)
     %subview = memref.subview %arg0[%0] [128] [1] : memref<128xf32> to memref<128xf32, strided<[1], offset: ?>>
     scf.forall (%arg2) in (4) {
-//       CHECK:     %[[TIDX:.*]] = gpu.thread_id  x
-//       CHECK:     %[[TIDY:.*]] = gpu.thread_id  y
-//       CHECK:     %[[TIDZ:.*]] = gpu.thread_id  z
+//       CHECK:     %[[TIDX:.*]] = gpu.thread_id x
+//       CHECK:     %[[TIDY:.*]] = gpu.thread_id y
+//       CHECK:     %[[TIDZ:.*]] = gpu.thread_id z
 //       CHECK:     %[[THX:.*]] = affine.apply #[[$MAPW]]()[%[[TIDX]], %[[TIDY]], %[[TIDZ]]]
 //   CHECK-NOT:     scf.if
 //       CHECK:       memref.subview %{{.*}}[%[[THX]]]
@@ -709,7 +709,7 @@ func.func @simple_fill(%arg0: memref<128x256xf32>) -> memref<128x256xf32> {
     //   CHECK:   %[[C6:.*]] = arith.constant 6 : index
     //   CHECK:   gpu.launch
   scf.forall (%arg1) in (1) {
-    //   CHECK:     %[[BIDX:.*]] = gpu.block_id  x
+    //   CHECK:     %[[BIDX:.*]] = gpu.block_id x
     //   CHECK:     %[[BLX:.*]] = affine.apply #[[$MAPB]]()[%[[BIDX]]]
     %0 = affine.apply #map(%arg1)
     %subview = memref.subview %arg0[%0, 0] [128, 256] [1, 1]
@@ -719,8 +719,8 @@ func.func @simple_fill(%arg0: memref<128x256xf32>) -> memref<128x256xf32> {
     // involving threadIdx.x/y by the map_nested_forall_to_threads
     // transformation. This results in a if (linear_thread_id < 6) conditional.
     scf.forall (%arg2, %arg3) in (2, 3) {
-      //       CHECK:     %[[TIDX:.*]] = gpu.thread_id  x
-      //       CHECK:     %[[TIDY:.*]] = gpu.thread_id  y
+      //       CHECK:     %[[TIDX:.*]] = gpu.thread_id x
+      //       CHECK:     %[[TIDY:.*]] = gpu.thread_id y
       //       CHECK:     %[[LID:.*]] = affine.apply #[[$MAPLANE]]()[%[[TIDX]], %[[TIDY]]]
       //       CHECK:     %[[COND:.*]] = arith.cmpi ult, %[[LID]], %[[C6]]
       //       CHECK:     scf.if %[[COND]]
@@ -777,7 +777,7 @@ func.func @simple_fill(%arg0: memref<128xf32>) -> memref<128xf32> {
 
 //       CHECK:   gpu.launch
   scf.forall (%arg1) in (1) {
-//       CHECK:     %[[BIDX:.*]] = gpu.block_id  x
+//       CHECK:     %[[BIDX:.*]] = gpu.block_id x
 //       CHECK:     %[[BLX:.*]] = affine.apply #[[$MAPB]]()[%[[BIDX]]]
     %0 = affine.apply #map(%arg1)
     %subview = memref.subview %arg0[%0] [128] [1] : memref<128xf32> to memref<128xf32, strided<[1], offset: ?>>
@@ -786,8 +786,8 @@ func.func @simple_fill(%arg0: memref<128xf32>) -> memref<128xf32> {
     // involving threadIdx.x/y by the map_nested_forall_to_threads
     // transformation. This results in a if (linear_thread_id < 6) conditional.
     scf.forall (%arg2, %arg3) in (2, 3) {
-      //       CHECK:     %[[TIDX:.*]] = gpu.thread_id  x
-      //       CHECK:     %[[TIDY:.*]] = gpu.thread_id  y
+      //       CHECK:     %[[TIDX:.*]] = gpu.thread_id x
+      //       CHECK:     %[[TIDY:.*]] = gpu.thread_id y
 
       //       CHECK:     %[[LIN_W:.*]] = affine.apply #[[$MAP_LIN_W]]()[%[[TIDX]], %[[TIDY]]]
       //
