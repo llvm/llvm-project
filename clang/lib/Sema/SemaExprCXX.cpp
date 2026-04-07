@@ -1604,8 +1604,8 @@ Sema::BuildCXXTypeConstructExpr(TypeSourceInfo *TInfo,
 
   // HLSL doesn't support constructors or c++ functional cast for structs
   if (getLangOpts().HLSL && Ty->isRecordType())
-    return ExprError(Diag(TyBeginLoc, diag::err_ovl_no_viable_function_in_init)
-                     << Ty << FullRange);
+    return ExprError(
+        Diag(TyBeginLoc, diag::err_hlsl_constructors_functional_cast));
 
   // C++ [expr.type.conv]p1:
   // If the expression list is a parenthesized single expression, the type

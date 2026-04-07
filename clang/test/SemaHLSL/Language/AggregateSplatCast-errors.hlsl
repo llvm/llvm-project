@@ -16,7 +16,7 @@ struct R {
 // Can't cast a union
 export void cantCast2() {
   R r = (R)1;
-  // expected-error@-1 {{too few initializers in list for type 'R' (expected 2 but found 1)}}
+  // expected-error@-1 {{no matching conversion for C-style cast from 'int' to 'R'}}
 }
 
 RWBuffer<float4> Buf;
@@ -24,7 +24,7 @@ RWBuffer<float4> Buf;
 // Can't cast an intangible type
 export void cantCast3() {
   Buf = (RWBuffer<float4>)1;
-  // expected-error@-1 {{no viable conversion from 'int' to 'hlsl::RWBuffer<vector<float, 4>>'}}
+  // expected-error@-1 {{no matching conversion for C-style cast from 'int' to 'RWBuffer<float4>' (aka 'RWBuffer<vector<float, 4>>')}}
 }
 
 export void cantCast4() {
@@ -39,5 +39,5 @@ struct X {
 
 export void cantCast5() {
   X x = (X)1;
-  // expected-error@-1 {{too few initializers in list for type 'X' (expected 2 but found 1)}}
+  // expected-error@-1 {{no matching conversion for C-style cast from 'int' to 'X'}}
 }

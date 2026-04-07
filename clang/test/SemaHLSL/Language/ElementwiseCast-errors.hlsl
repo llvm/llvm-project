@@ -18,11 +18,10 @@ struct R {
 export void cantCast4() {
   int2 A = {1,2};
   R r = R(A);
-  // expected-error@-1 {{no matching constructor for initialization of 'R'}}
-  // expected-error@-2 {{no viable conversion from 'float' to 'R}}
+  // expected-error@-1 {{HLSL doesn't support constructors or functional-style casts}}
   R r2;
   r2.A = 1;
   r2.F = 2.0;
   int2 B = (int2)r2;
-  // expected-error@-1 {{cannot convert 'R' to 'int2' (aka 'vector<int, 2>') without a conversion operator}}
+  // expected-error@-1 {{no matching conversion for C-style cast from 'R' to 'int2' (aka 'vector<int, 2>')}}
 }

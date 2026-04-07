@@ -4846,6 +4846,8 @@ static void TryConstructorOrParenListInitialization(
     Args[0] = ILE;
     // reset sequence as normal
     Sequence.setSequenceKind(InitializationSequence::NormalSequence);
+    // don't want the diagnostics to appear if list initialization fails.
+    Sema::TentativeAnalysisScope DisableDiag(S);
     TryListInitialization(S, Entity, Kind, ILE, Sequence,
                           /*TreatUnavailableAsInvalid=*/true);
     return;

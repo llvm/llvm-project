@@ -520,6 +520,8 @@ static bool tryDiagnoseOverloadedCast(Sema &S, CastType CT,
     break;
   case InitializationSequence::FK_ConstructorOverloadFailed:
   case InitializationSequence::FK_UserConversionOverloadFailed:
+    // HLSL list initialization must have failed as a constructor replacement
+  case InitializationSequence::FK_HLSLInitListFlatteningFailed:
     break;
   }
 
@@ -531,7 +533,9 @@ static bool tryDiagnoseOverloadedCast(Sema &S, CastType CT,
   switch (sequence.getFailedOverloadResult()) {
   case OR_Success: llvm_unreachable("successful failed overload");
   case OR_No_Viable_Function:
-    if (candidates.empty())
+    // hlsl doesn't currently support conversion operators, so
+    // produce the other diagnostic.
+    if (candidates.empty() && !S.getLangOpts().HLSL)
       msg = diag::err_ovl_no_conversion_in_cast;
     else
       msg = diag::err_ovl_no_viable_conversion_in_cast;
@@ -1944,9 +1948,7 @@ TryCastResult TryStaticImplicitCast(Sema &Self, ExprResult &SrcExpr,
   // being run a 2nd time during diagnoses.
   bool CStyle = (CCK == CheckedConversionKind::CStyleCast ||
                  CCK == CheckedConversionKind::FunctionalCast);
-  if (InitSeq.Failed() && (CStyle || !DestType->isReferenceType()) &&
-      InitSeq.getFailureKind() !=
-          InitializationSequence::FK_HLSLInitListFlatteningFailed)
+  if (InitSeq.Failed() && (CStyle || !DestType->isReferenceType()))
     return TC_NotApplicable;
 
   ExprResult Result = InitSeq.Perform(Self, Entity, InitKind, SrcExprRaw);

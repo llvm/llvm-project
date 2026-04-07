@@ -68,7 +68,7 @@ struct Fish {
 
   // expected-note@+1 {{'->' applied to return value of the operator->() declared here}}
   Fins operator ->() {
-    // expected-error@+1 {{no matching constructor for initialization of 'Fins'}}
+    // expected-error@+1 {{HLSL doesn't support constructors or functional-style casts}}
     return Fins();
   }
 };
