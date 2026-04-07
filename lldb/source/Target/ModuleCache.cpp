@@ -139,8 +139,8 @@ Status CreateHostSysRootModuleLink(const FileSpec &root_dir_spec,
     DecrementRefExistingModule(root_dir_spec, sysroot_module_path_spec);
   }
 
-  Status error = MakeDirectory(
-      FileSpec(sysroot_module_path_spec.GetDirectory().AsCString()));
+  Status error =
+      MakeDirectory(FileSpec(sysroot_module_path_spec.GetDirectory()));
   if (error.Fail())
     return error;
 
@@ -255,7 +255,8 @@ Status ModuleCache::Get(const FileSpec &root_dir_spec, const char *hostname,
   cached_module_spec.GetPlatformFileSpec() = module_spec.GetFileSpec();
 
   error = ModuleList::GetSharedModule(cached_module_spec, cached_module_sp,
-                                      nullptr, did_create_ptr);
+                                      nullptr, did_create_ptr,
+                                      /*invoke_locate_callback=*/false);
   if (error.Fail())
     return error;
 

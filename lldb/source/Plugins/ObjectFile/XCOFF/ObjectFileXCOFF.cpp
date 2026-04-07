@@ -66,7 +66,7 @@ ObjectFile *ObjectFileXCOFF::CreateInstance(const lldb::ModuleSP &module_sp,
     data_offset = 0;
     extractor_sp = std::make_shared<lldb_private::DataExtractor>(data_sp);
   }
-  if (!ObjectFileXCOFF::MagicBytesMatch(extractor_sp, data_offset, length))
+  if (!ObjectFileXCOFF::GetMagicBytes(extractor_sp, data_offset, length))
     return nullptr;
   // Update the data to contain the entire file if it doesn't already
   if (extractor_sp->GetByteSize() < length) {
@@ -126,53 +126,42 @@ ObjectFile *ObjectFileXCOFF::CreateMemoryInstance(
   return nullptr;
 }
 
-size_t ObjectFileXCOFF::GetModuleSpecifications(
+ModuleSpecList ObjectFileXCOFF::GetModuleSpecifications(
     const lldb_private::FileSpec &file, lldb::DataExtractorSP &extractor_sp,
-    lldb::offset_t data_offset, lldb::offset_t file_offset,
-    lldb::offset_t length, lldb_private::ModuleSpecList &specs) {
-  const size_t initial_count = specs.GetSize();
-
+    lldb::offset_t file_offset, lldb::offset_t length) {
   if (!extractor_sp || !extractor_sp->HasData())
-    return 0;
+    return {};
 
-  if (ObjectFileXCOFF::MagicBytesMatch(extractor_sp, 0,
-                                       extractor_sp->GetByteSize())) {
+  ModuleSpecList specs;
+  if (auto magic = ObjectFileXCOFF::GetMagicBytes(
+          extractor_sp, 0, extractor_sp->GetByteSize())) {
+    const uint32_t cpu_type =
+        (*magic == XCOFF::XCOFF64) ? XCOFF::TCPU_PPC64 : XCOFF::TCPU_PPC;
     ArchSpec arch_spec =
-        ArchSpec(eArchTypeXCOFF, XCOFF::TCPU_PPC64, LLDB_INVALID_CPUTYPE);
+        ArchSpec(eArchTypeXCOFF, cpu_type, LLDB_INVALID_CPUTYPE);
     ModuleSpec spec(file, arch_spec);
-    spec.GetArchitecture().SetArchitecture(eArchTypeXCOFF, XCOFF::TCPU_PPC64,
-                                           LLDB_INVALID_CPUTYPE,
-                                           llvm::Triple::AIX);
+    spec.GetArchitecture().SetArchitecture(
+        eArchTypeXCOFF, cpu_type, LLDB_INVALID_CPUTYPE, llvm::Triple::AIX);
     specs.Append(spec);
   }
-  return specs.GetSize() - initial_count;
+  return specs;
 }
 
-static uint32_t XCOFFHeaderSizeFromMagic(uint32_t magic) {
-  switch (magic) {
-  case XCOFF::XCOFF32:
-    return sizeof(struct llvm::object::XCOFFFileHeader32);
-    break;
-  case XCOFF::XCOFF64:
-    return sizeof(struct llvm::object::XCOFFFileHeader64);
-    break;
-
-  default:
-    break;
-  }
-  return 0;
-}
-
-bool ObjectFileXCOFF::MagicBytesMatch(DataExtractorSP &extractor_sp,
-                                      lldb::addr_t data_offset,
-                                      lldb::addr_t data_length) {
+std::optional<XCOFF::MagicNumber>
+ObjectFileXCOFF::GetMagicBytes(DataExtractorSP &extractor_sp,
+                               lldb::addr_t data_offset,
+                               lldb::addr_t data_length) {
   DataExtractorSP magic_extractor_sp =
       extractor_sp->GetSubsetExtractorSP(data_offset);
   // Need to set this as XCOFF is only compatible with Big Endian
   magic_extractor_sp->SetByteOrder(eByteOrderBig);
   lldb::offset_t offset = 0;
   uint16_t magic = magic_extractor_sp->GetU16(&offset);
-  return XCOFFHeaderSizeFromMagic(magic) != 0;
+  // Validating magic
+  if (magic == XCOFF::XCOFF64 || magic == XCOFF::XCOFF32)
+    return static_cast<llvm::XCOFF::MagicNumber>(magic);
+
+  return std::nullopt;
 }
 
 bool ObjectFileXCOFF::ParseHeader() {
@@ -370,9 +359,9 @@ void ObjectFileXCOFF::CreateSectionsWithBitness(
 void ObjectFileXCOFF::Dump(Stream *s) {}
 
 ArchSpec ObjectFileXCOFF::GetArchitecture() {
-  ArchSpec arch_spec =
-      ArchSpec(eArchTypeXCOFF, XCOFF::TCPU_PPC64, LLDB_INVALID_CPUTYPE);
-  return arch_spec;
+  const uint32_t cpu_type =
+      m_binary->is64Bit() ? XCOFF::TCPU_PPC64 : XCOFF::TCPU_PPC;
+  return (ArchSpec(eArchTypeXCOFF, cpu_type, LLDB_INVALID_CPUTYPE));
 }
 
 UUID ObjectFileXCOFF::GetUUID() { return UUID(); }

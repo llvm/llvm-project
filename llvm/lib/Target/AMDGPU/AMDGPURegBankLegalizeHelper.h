@@ -137,8 +137,11 @@ private:
   bool lowerSplitTo16(MachineInstr &MI);
   bool lowerSplitTo32Select(MachineInstr &MI);
   bool lowerSplitTo32SExtInReg(MachineInstr &MI);
+  bool lowerSplitBitCount64To32(MachineInstr &MI);
   bool lowerUnpackMinMax(MachineInstr &MI);
   bool lowerUnpackAExt(MachineInstr &MI);
+  bool lowerExtrVecEltToSel(MachineInstr &MI);
+  bool lowerExtrVecEltTo32(MachineInstr &MI);
   bool applyRegisterBanksINTRIN_IMAGE(MachineInstr &MI);
 };
 

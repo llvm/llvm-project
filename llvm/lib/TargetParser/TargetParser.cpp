@@ -249,10 +249,13 @@ static void fillAMDGCNFeatureMap(StringRef GPU, const Triple &T,
                                  StringMap<bool> &Features) {
   AMDGPU::GPUKind Kind = parseArchAMDGCN(GPU);
   switch (Kind) {
-  case GK_GFX1310:
   case GK_GFX1251:
   case GK_GFX1250:
   case GK_GFX12_5_GENERIC:
+    Features["swmmac-gfx1200-insts"] = true;
+    Features["swmmac-gfx1250-insts"] = true;
+    [[fallthrough]];
+  case GK_GFX1310:
     Features["ci-insts"] = true;
     Features["dot7-insts"] = true;
     Features["dot8-insts"] = true;
@@ -333,9 +336,12 @@ static void fillAMDGCNFeatureMap(StringRef GPU, const Triple &T,
     Features["cvt-pknorm-vop2-insts"] = true;
     Features["fp8-conversion-insts"] = true;
     Features["wmma-128b-insts"] = true;
+    Features["swmmac-gfx1200-insts"] = true;
     Features["atomic-fmin-fmax-global-f32"] = true;
     break;
   case GK_GFX1170:
+  case GK_GFX1171:
+  case GK_GFX1172:
     Features["ci-insts"] = true;
     Features["dot7-insts"] = true;
     Features["dot8-insts"] = true;
@@ -361,6 +367,7 @@ static void fillAMDGCNFeatureMap(StringRef GPU, const Triple &T,
     Features["dot11-insts"] = true;
     Features["fp8-conversion-insts"] = true;
     Features["wmma-128b-insts"] = true;
+    Features["swmmac-gfx1200-insts"] = true;
     Features["atomic-fmin-fmax-global-f32"] = true;
     break;
   case GK_GFX1153:

@@ -453,7 +453,7 @@ static Function *createCloneDeclaration(Function &OrigF, coro::Shape &Shape,
 
   Function *NewF =
       Function::Create(FnTy, GlobalValue::LinkageTypes::InternalLinkage,
-                       OrigF.getName() + Suffix);
+                       OrigF.getAddressSpace(), OrigF.getName() + Suffix);
 
   M->getFunctionList().insert(InsertBefore, NewF);
 
@@ -687,8 +687,7 @@ void coro::BaseCloner::replaceEntryBlock() {
   // exactly one predecessor, which we created when splitting out
   // AllocaSpillBlock to begin with.
   assert(Entry->hasOneUse());
-  auto BranchToEntry = cast<BranchInst>(Entry->user_back());
-  assert(BranchToEntry->isUnconditional());
+  auto BranchToEntry = cast<UncondBrInst>(Entry->user_back());
   Builder.SetInsertPoint(BranchToEntry);
   Builder.CreateUnreachable();
   BranchToEntry->eraseFromParent();
@@ -717,8 +716,7 @@ void coro::BaseCloner::replaceEntryBlock() {
              Shape.ABI == coro::ABI::RetconOnce) &&
             isa<CoroSuspendRetconInst>(ActiveSuspend)));
     auto *MappedCS = cast<AnyCoroSuspendInst>(VMap[ActiveSuspend]);
-    auto Branch = cast<BranchInst>(MappedCS->getNextNode());
-    assert(Branch->isUnconditional());
+    auto Branch = cast<UncondBrInst>(MappedCS->getNextNode());
     Builder.CreateBr(Branch->getSuccessor(0));
     break;
   }
@@ -820,10 +818,10 @@ static void updateScopeLine(Instruction *ActiveSuspend,
   // instructions are not in the same BB.
   // FIXME: remove this hardcoded number of tries.
   for (unsigned Repeat = 0; Repeat < 2; Repeat++) {
-    auto *Branch = dyn_cast_or_null<BranchInst>(Successor);
-    if (!Branch || !Branch->isUnconditional())
+    auto *Branch = dyn_cast_or_null<UncondBrInst>(Successor);
+    if (!Branch)
       break;
-    Successor = Branch->getSuccessor(0)->getFirstNonPHIOrDbg();
+    Successor = Branch->getSuccessor()->getFirstNonPHIOrDbg();
   }
 
   // Find the first successor of ActiveSuspend with a non-zero line location.
@@ -1102,10 +1100,9 @@ void coro::SwitchCloner::create() {
   // Clone the function
   coro::BaseCloner::create();
 
-  // Eliminate coro.free from the clones, replacing it with 'null' in cleanup,
-  // to suppress deallocation code.
-  coro::replaceCoroFree(cast<CoroIdInst>(VMap[Shape.CoroBegin->getId()]),
-                        /*Elide=*/FKind == coro::CloneKind::SwitchCleanup);
+  // Replacing coro.free with 'null' in cleanup to suppress deallocation code.
+  if (FKind == coro::CloneKind::SwitchCleanup)
+    elideCoroFree(NewFramePtr);
 }
 
 static void updateAsyncFuncPointerContextSize(coro::Shape &Shape) {
@@ -1165,10 +1162,9 @@ static void handleNoSuspendCoroutine(coro::Shape &Shape) {
   auto *CoroBegin = Shape.CoroBegin;
   switch (Shape.ABI) {
   case coro::ABI::Switch: {
-    auto SwitchId = Shape.getSwitchCoroId();
-    auto *AllocInst = SwitchId->getCoroAlloc();
-    coro::replaceCoroFree(SwitchId, /*Elide=*/AllocInst != nullptr);
-    if (AllocInst) {
+    if (auto *AllocInst = Shape.getSwitchCoroId()->getCoroAlloc()) {
+      coro::elideCoroFree(CoroBegin);
+
       IRBuilder<> Builder(AllocInst);
       // Create an alloca for a byte array of the frame size
       auto *FrameTy = ArrayType::get(Type::getInt8Ty(Builder.getContext()),
@@ -1307,7 +1303,7 @@ static bool simplifySuspendPoint(CoroSuspendInst *Suspend,
 
   // No longer need a call to coro.resume or coro.destroy.
   if (auto *Invoke = dyn_cast<InvokeInst>(CB)) {
-    BranchInst::Create(Invoke->getNormalDest(), Invoke->getIterator());
+    UncondBrInst::Create(Invoke->getNormalDest(), Invoke->getIterator());
   }
 
   // Grab the CalledValue from CB before erasing the CallInstr.
@@ -1425,8 +1421,8 @@ struct SwitchCoroutineSplitter {
 
     auto *NewFnTy = FunctionType::get(OrigFnTy->getReturnType(), NewParams,
                                       OrigFnTy->isVarArg());
-    Function *NoAllocF =
-        Function::Create(NewFnTy, F.getLinkage(), F.getName() + ".noalloc");
+    Function *NoAllocF = Function::Create(
+        NewFnTy, F.getLinkage(), F.getAddressSpace(), F.getName() + ".noalloc");
 
     ValueToValueMapTy VMap;
     unsigned int Idx = 0;
@@ -1443,9 +1439,8 @@ struct SwitchCoroutineSplitter {
     if (Shape.CoroBegin) {
       auto *NewCoroBegin =
           cast_if_present<CoroBeginInst>(VMap[Shape.CoroBegin]);
-      auto *NewCoroId = cast<CoroIdInst>(NewCoroBegin->getId());
-      coro::replaceCoroFree(NewCoroId, /*Elide=*/true);
-      coro::suppressCoroAllocs(NewCoroId);
+      coro::elideCoroFree(NewCoroBegin);
+      coro::suppressCoroAllocs(cast<CoroIdInst>(NewCoroBegin->getId()));
       NewCoroBegin->replaceAllUsesWith(NoAllocF->getArg(FrameIdx));
       NewCoroBegin->eraseFromParent();
     }
@@ -1563,7 +1558,7 @@ private:
           S->getNextNode(), ResumeBB->getName() + Twine(".landing"));
       Switch->addCase(IndexVal, ResumeBB);
 
-      cast<BranchInst>(SuspendBB->getTerminator())->setSuccessor(0, LandingBB);
+      cast<UncondBrInst>(SuspendBB->getTerminator())->setSuccessor(LandingBB);
       auto *PN = PHINode::Create(Builder.getInt8Ty(), 2, "");
       PN->insertBefore(LandingBB->begin());
       S->replaceAllUsesWith(PN);
@@ -1782,7 +1777,7 @@ void coro::AsyncABI::splitCoroutine(Function &F, coro::Shape &Shape,
     // point.
     auto *SuspendBB = Suspend->getParent();
     auto *NewSuspendBB = SuspendBB->splitBasicBlock(Suspend);
-    auto *Branch = cast<BranchInst>(SuspendBB->getTerminator());
+    auto *Branch = cast<UncondBrInst>(SuspendBB->getTerminator());
 
     // Place it before the first suspend.
     auto *ReturnBB =
@@ -1880,7 +1875,7 @@ void coro::AnyRetconABI::splitCoroutine(Function &F, coro::Shape &Shape,
     // the suspend point.
     auto SuspendBB = Suspend->getParent();
     auto NewSuspendBB = SuspendBB->splitBasicBlock(Suspend);
-    auto Branch = cast<BranchInst>(SuspendBB->getTerminator());
+    auto Branch = cast<UncondBrInst>(SuspendBB->getTerminator());
 
     // Create the unified return block.
     if (!ReturnBB) {

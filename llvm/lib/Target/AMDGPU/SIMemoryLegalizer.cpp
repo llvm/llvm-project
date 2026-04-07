@@ -27,6 +27,7 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
 #include "llvm/Support/AtomicOrdering.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/TargetParser/TargetParser.h"
 
 using namespace llvm;
@@ -90,6 +91,47 @@ enum class SIAtomicAddrSpace {
 
   LLVM_MARK_AS_BITMASK_ENUM(/* LargestFlag = */ ALL)
 };
+
+#ifndef NDEBUG
+static StringRef toString(SIAtomicScope S) {
+  switch (S) {
+  case SIAtomicScope::NONE:
+    return "none";
+  case SIAtomicScope::SINGLETHREAD:
+    return "singlethread";
+  case SIAtomicScope::WAVEFRONT:
+    return "wavefront";
+  case SIAtomicScope::WORKGROUP:
+    return "workgroup";
+  case SIAtomicScope::CLUSTER:
+    return "cluster";
+  case SIAtomicScope::AGENT:
+    return "agent";
+  case SIAtomicScope::SYSTEM:
+    return "system";
+  }
+  llvm_unreachable("unknown atomic scope");
+}
+
+static raw_ostream &operator<<(raw_ostream &OS, SIAtomicAddrSpace AS) {
+  if (AS == SIAtomicAddrSpace::NONE) {
+    OS << "none";
+    return OS;
+  }
+  ListSeparator LS("|");
+  if ((AS & SIAtomicAddrSpace::GLOBAL) != SIAtomicAddrSpace::NONE)
+    OS << LS << "global";
+  if ((AS & SIAtomicAddrSpace::LDS) != SIAtomicAddrSpace::NONE)
+    OS << LS << "lds";
+  if ((AS & SIAtomicAddrSpace::SCRATCH) != SIAtomicAddrSpace::NONE)
+    OS << LS << "scratch";
+  if ((AS & SIAtomicAddrSpace::GDS) != SIAtomicAddrSpace::NONE)
+    OS << LS << "gds";
+  if ((AS & SIAtomicAddrSpace::OTHER) != SIAtomicAddrSpace::NONE)
+    OS << LS << "other";
+  return OS;
+}
+#endif
 
 class SIMemOpInfo final {
 private:
@@ -2234,9 +2276,15 @@ bool SIMemoryLegalizer::expandLoad(const SIMemOpInfo &MOI,
                                    MachineBasicBlock::iterator &MI) {
   assert(MI->mayLoad() && !MI->mayStore());
 
+  LLVM_DEBUG(dbgs() << "Expanding load: " << *MI);
+
   bool Changed = false;
 
   if (MOI.isAtomic()) {
+    LLVM_DEBUG(dbgs() << "  Atomic: ordering=" << toIRString(MOI.getOrdering())
+                      << ", scope=" << toString(MOI.getScope())
+                      << ", ordering-AS=" << MOI.getOrderingAddrSpace()
+                      << ", instr-AS=" << MOI.getInstrAddrSpace() << "\n");
     const AtomicOrdering Order = MOI.getOrdering();
     if (Order == AtomicOrdering::Monotonic ||
         Order == AtomicOrdering::Acquire ||
@@ -2285,11 +2333,17 @@ bool SIMemoryLegalizer::expandStore(const SIMemOpInfo &MOI,
                                     MachineBasicBlock::iterator &MI) {
   assert(!MI->mayLoad() && MI->mayStore());
 
+  LLVM_DEBUG(dbgs() << "Expanding store: " << *MI);
+
   bool Changed = false;
   // FIXME: Necessary hack because iterator can lose track of the store.
   MachineInstr &StoreMI = *MI;
 
   if (MOI.isAtomic()) {
+    LLVM_DEBUG(dbgs() << "  Atomic: ordering=" << toIRString(MOI.getOrdering())
+                      << ", scope=" << toString(MOI.getScope())
+                      << ", ordering-AS=" << MOI.getOrderingAddrSpace()
+                      << ", instr-AS=" << MOI.getInstrAddrSpace() << "\n");
     if (MOI.getOrdering() == AtomicOrdering::Monotonic ||
         MOI.getOrdering() == AtomicOrdering::Release ||
         MOI.getOrdering() == AtomicOrdering::SequentiallyConsistent) {
@@ -2330,12 +2384,17 @@ bool SIMemoryLegalizer::expandAtomicFence(const SIMemOpInfo &MOI,
                                           MachineBasicBlock::iterator &MI) {
   assert(MI->getOpcode() == AMDGPU::ATOMIC_FENCE);
 
+  LLVM_DEBUG(dbgs() << "Expanding atomic fence: " << *MI);
+
   AtomicPseudoMIs.push_back(MI);
   bool Changed = false;
 
   const SIAtomicAddrSpace OrderingAddrSpace = MOI.getOrderingAddrSpace();
 
   if (MOI.isAtomic()) {
+    LLVM_DEBUG(dbgs() << "  Atomic: ordering=" << toIRString(MOI.getOrdering())
+                      << ", scope=" << toString(MOI.getScope())
+                      << ", ordering-AS=" << OrderingAddrSpace << "\n");
     const AtomicOrdering Order = MOI.getOrdering();
     if (Order == AtomicOrdering::Acquire) {
       // Acquire fences only need to wait on the previous atomic they pair with.
@@ -2380,10 +2439,18 @@ bool SIMemoryLegalizer::expandAtomicCmpxchgOrRmw(const SIMemOpInfo &MOI,
   MachineBasicBlock::iterator &MI) {
   assert(MI->mayLoad() && MI->mayStore());
 
+  LLVM_DEBUG(dbgs() << "Expanding atomic cmpxchg/rmw: " << *MI);
+
   bool Changed = false;
   MachineInstr &RMWMI = *MI;
 
   if (MOI.isAtomic()) {
+    LLVM_DEBUG(dbgs() << "  Atomic: ordering=" << toIRString(MOI.getOrdering())
+                      << ", failure-ordering="
+                      << toIRString(MOI.getFailureOrdering())
+                      << ", scope=" << toString(MOI.getScope())
+                      << ", ordering-AS=" << MOI.getOrderingAddrSpace()
+                      << ", instr-AS=" << MOI.getInstrAddrSpace() << "\n");
     const AtomicOrdering Order = MOI.getOrdering();
     if (Order == AtomicOrdering::Monotonic ||
         Order == AtomicOrdering::Acquire || Order == AtomicOrdering::Release ||
@@ -2428,6 +2495,8 @@ bool SIMemoryLegalizer::expandAtomicCmpxchgOrRmw(const SIMemOpInfo &MOI,
 bool SIMemoryLegalizer::expandLDSDMA(const SIMemOpInfo &MOI,
                                      MachineBasicBlock::iterator &MI) {
   assert(MI->mayLoad() && MI->mayStore());
+
+  LLVM_DEBUG(dbgs() << "Expanding LDS DMA: " << *MI);
 
   // The volatility or nontemporal-ness of the operation is a
   // function of the global memory, not the LDS.
@@ -2481,8 +2550,7 @@ bool SIMemoryLegalizer::run(MachineFunction &MF) {
               MO.setIsInternalRead(false);
         }
 
-        MI->eraseFromParent();
-        MI = II->getIterator();
+        MI = MI->eraseFromParent();
       }
 
       if (MI->getDesc().TSFlags & SIInstrFlags::maybeAtomic) {

@@ -301,6 +301,20 @@ public:
                                  MachineFunctionAnalysisManager &MFAM);
 };
 
+class UnpackMachineBundlesPass
+    : public PassInfoMixin<UnpackMachineBundlesPass> {
+
+public:
+  UnpackMachineBundlesPass(
+      std::function<bool(const MachineFunction &)> Ftor = nullptr)
+      : PredicateFtor(std::move(Ftor)) {}
+  PreservedAnalyses LLVM_ABI run(MachineFunction &MF,
+                                 MachineFunctionAnalysisManager &MFAM);
+
+private:
+  std::function<bool(const MachineFunction &)> PredicateFtor;
+};
+
 } // End llvm namespace
 
 #endif

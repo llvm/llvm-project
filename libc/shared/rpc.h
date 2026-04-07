@@ -20,10 +20,25 @@
 
 #include "rpc_util.h"
 
-namespace rpc {
-
 /// Use scoped atomic variants if they are available for the target.
 #if !__has_builtin(__scoped_atomic_load_n)
+#ifdef _MSC_VER // MSVC atomic support.
+#include <intrin.h>
+#define __scoped_atomic_load_n(src, ord, scp)                                  \
+  (decltype(*(src)))__iso_volatile_load32((const volatile int32_t *)(src))
+#define __scoped_atomic_store_n(dst, src, ord, scp)                            \
+  (sizeof(*(dst)) == 4                                                         \
+       ? __iso_volatile_store32((volatile int32_t *)(dst), (__int32)(src))     \
+       : __iso_volatile_store64((volatile int64_t *)(dst), (__int64)(src)))
+#define __scoped_atomic_fetch_or(src, val, ord, scp)                           \
+  _InterlockedOr((volatile long *)(src), (long)(val))
+#define __scoped_atomic_fetch_and(src, val, ord, scp)                          \
+  _InterlockedAnd((volatile long *)(src), (long)(val))
+#define __scoped_atomic_fetch_add(src, val, ord, scp)                          \
+  _InterlockedExchangeAdd64((volatile long long *)(src), (long long)(val))
+#define __scoped_atomic_fetch_sub(src, val, ord, scp)                          \
+  _InterlockedExchangeAdd64((volatile long long *)(src), -(long long)(val))
+#else // GNU atomic support.
 #define __scoped_atomic_load_n(src, ord, scp) __atomic_load_n(src, ord)
 #define __scoped_atomic_store_n(dst, src, ord, scp)                            \
   __atomic_store_n(dst, src, ord)
@@ -31,13 +46,24 @@ namespace rpc {
   __atomic_fetch_or(src, val, ord)
 #define __scoped_atomic_fetch_and(src, val, ord, scp)                          \
   __atomic_fetch_and(src, val, ord)
+#define __scoped_atomic_fetch_add(src, val, ord, scp)                          \
+  __atomic_fetch_add(src, val, ord)
+#define __scoped_atomic_fetch_sub(src, val, ord, scp)                          \
+  __atomic_fetch_sub(src, val, ord)
+#endif
 #endif
 #if !__has_builtin(__scoped_atomic_thread_fence)
+#ifdef _MSC_VER
+#define __scoped_atomic_thread_fence(ord, scp) _ReadWriteBarrier()
+#else
 #define __scoped_atomic_thread_fence(ord, scp) __atomic_thread_fence(ord)
 #endif
+#endif
+
+namespace rpc {
 
 /// Generic codes that can be used when implementing the server.
-enum Status {
+enum RPCStatus {
   RPC_SUCCESS = 0x0,
   RPC_ERROR = 0x1000,
   RPC_UNHANDLED_OPCODE = 0x1001,
@@ -49,6 +75,14 @@ struct Buffer {
 };
 static_assert(sizeof(Buffer) == 64, "Buffer size mismatch");
 
+/// A target specific struct containing a doorbell to wake the server-side
+/// thread.
+struct alignas(64) Doorbell {
+  uint64_t *value;
+  uint64_t *mailbox;
+  uint32_t event_id;
+};
+
 /// The information associated with a packet. This indicates which operations to
 /// perform and which threads are active in the slots.
 struct Header {
@@ -57,7 +91,9 @@ struct Header {
 };
 
 /// The maximum number of parallel ports that the RPC interface can support.
-constexpr static uint64_t MAX_PORT_COUNT = 4096;
+/// This should be greater than the expected hardware's occupancy to ensure the
+/// interface is non-blocking.
+constexpr static uint64_t MAX_PORT_COUNT = 16384;
 
 /// A common process used to synchronize communication between a client and a
 /// server. The process contains a read-only inbox and a write-only outbox used
@@ -80,6 +116,7 @@ template <bool Invert> struct Process {
   RPC_ATTRS ~Process() = default;
 
   const uint32_t port_count = 0;
+  Doorbell *const doorbell = nullptr;
   const uint32_t *const inbox = nullptr;
   uint32_t *const outbox = nullptr;
   Header *const header = nullptr;
@@ -89,8 +126,10 @@ template <bool Invert> struct Process {
   uint32_t lock[MAX_PORT_COUNT / NUM_BITS_IN_WORD] = {0};
 
   RPC_ATTRS Process(uint32_t port_count, void *buffer)
-      : port_count(port_count), inbox(reinterpret_cast<uint32_t *>(
-                                    advance(buffer, inbox_offset(port_count)))),
+      : port_count(port_count), doorbell(reinterpret_cast<Doorbell *>(
+                                    advance(buffer, doorbell_offset()))),
+        inbox(reinterpret_cast<uint32_t *>(
+            advance(buffer, inbox_offset(port_count)))),
         outbox(reinterpret_cast<uint32_t *>(
             advance(buffer, outbox_offset(port_count)))),
         header(reinterpret_cast<Header *>(
@@ -102,6 +141,7 @@ template <bool Invert> struct Process {
   /// representation in memory.
   ///
   /// struct Equivalent {
+  ///   Doorbell doorbell;
   ///   Atomic<uint32_t> primary[port_count];
   ///   Atomic<uint32_t> secondary[port_count];
   ///   Header header[port_count];
@@ -110,6 +150,34 @@ template <bool Invert> struct Process {
   RPC_ATTRS static constexpr uint64_t allocation_size(uint32_t port_count,
                                                       uint32_t lane_size) {
     return buffer_offset(port_count) + buffer_bytes(port_count, lane_size);
+  }
+
+  /// Ring the doorbell if the protocol was configured with one.
+  RPC_ATTRS void notify(uint64_t lane_mask) const {
+    if (!doorbell->value)
+      return;
+
+    uint32_t event_id = rpc::broadcast_value(lane_mask, doorbell->event_id);
+    if (rpc::is_first_lane(lane_mask)) {
+      if (!__scoped_atomic_fetch_add(doorbell->value, 1UL, __ATOMIC_RELAXED,
+                                     __MEMORY_SCOPE_SYSTEM)) {
+        __scoped_atomic_thread_fence(__ATOMIC_RELEASE, __MEMORY_SCOPE_SYSTEM);
+        __scoped_atomic_store_n(doorbell->mailbox,
+                                static_cast<uint64_t>(doorbell->event_id),
+                                __ATOMIC_RELAXED, __MEMORY_SCOPE_SYSTEM);
+        signal_interrupt(event_id);
+      }
+    }
+  }
+
+  /// Decrement the doorbell signal if the protocol is using one.
+  RPC_ATTRS void finish(uint64_t lane_mask) const {
+    if (!doorbell->value)
+      return;
+
+    if (rpc::is_first_lane(lane_mask))
+      __scoped_atomic_fetch_sub(doorbell->value, 1UL, __ATOMIC_RELAXED,
+                                __MEMORY_SCOPE_SYSTEM);
   }
 
   /// Retrieve the inbox state from memory shared between processes.
@@ -235,19 +303,23 @@ template <bool Invert> struct Process {
     return port_count * lane_size * sizeof(Buffer);
   }
 
+  /// The offset to the doorbell interface.
+  RPC_ATTRS static constexpr uint64_t doorbell_offset() { return 0; }
+
   /// Offset of the inbox in memory. This is the same as the outbox if inverted.
   RPC_ATTRS static constexpr uint64_t inbox_offset(uint32_t port_count) {
-    return Invert ? mailbox_bytes(port_count) : 0;
+    return sizeof(Doorbell) + (Invert ? mailbox_bytes(port_count) : 0);
   }
 
   /// Offset of the outbox in memory. This is the same as the inbox if inverted.
   RPC_ATTRS static constexpr uint64_t outbox_offset(uint32_t port_count) {
-    return Invert ? 0 : mailbox_bytes(port_count);
+    return sizeof(Doorbell) + (Invert ? 0 : mailbox_bytes(port_count));
   }
 
   /// Offset of the header containing the opcode and mask after the mailboxes.
   RPC_ATTRS static constexpr uint64_t header_offset(uint32_t port_count) {
-    return align_up(2 * mailbox_bytes(port_count), alignof(Header));
+    return align_up(sizeof(Doorbell) + 2 * mailbox_bytes(port_count),
+                    alignof(Header));
   }
 
   /// Offset of the buffer containing the packets after the inbox and outbox.
@@ -310,7 +382,7 @@ private:
 
   friend struct Client;
   friend struct Server;
-  friend class rpc::optional<Port<T>>;
+  friend struct rpc::optional<Port<T>>;
 
 public:
   template <typename U> RPC_ATTRS void recv(U use);
@@ -345,6 +417,8 @@ private:
     if (owns_buffer && T)
       out = process.invert_outbox(lane_mask, index, out);
     process.unlock(lane_mask, index);
+    if constexpr (!T)
+      process.finish(lane_mask);
   }
 
   Process<T> &process;
@@ -390,6 +464,10 @@ struct Server {
   RPC_ATTRS static constexpr uint64_t allocation_size(uint32_t lane_size,
                                                       uint32_t port_count) {
     return Process<true>::allocation_size(port_count, lane_size);
+  }
+
+  RPC_ATTRS static constexpr uint64_t doorbell_offset() {
+    return Process<true>::doorbell_offset();
   }
 
 private:
@@ -581,6 +659,8 @@ template <uint32_t opcode> RPC_ATTRS Client::Port Client::open() {
       process.header[index].mask = lane_mask;
     }
     rpc::sync_lane(lane_mask);
+
+    process.notify(lane_mask);
     return Port(process, lane_mask, rpc::get_num_lanes(), index, out);
   }
 }
@@ -626,6 +706,8 @@ Server::try_open(uint32_t lane_size, uint32_t start) {
 #undef __scoped_atomic_store_n
 #undef __scoped_atomic_fetch_or
 #undef __scoped_atomic_fetch_and
+#undef __scoped_atomic_fetch_add
+#undef __scoped_atomic_fetch_sub
 #endif
 #if !__has_builtin(__scoped_atomic_thread_fence)
 #undef __scoped_atomic_thread_fence

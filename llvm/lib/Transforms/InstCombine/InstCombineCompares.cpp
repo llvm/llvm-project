@@ -75,7 +75,7 @@ static bool subWithOverflow(APInt &Result, const APInt &In1, const APInt &In2,
 /// branch on sign bit comparison.
 static bool hasBranchUse(ICmpInst &I) {
   for (auto *U : I.users())
-    if (isa<BranchInst>(U))
+    if (isa<CondBrInst>(U))
       return true;
   return false;
 }
@@ -1419,7 +1419,7 @@ Instruction *InstCombinerImpl::foldICmpWithDominatingICmp(ICmpInst &Cmp) {
     return nullptr;
   };
 
-  for (BranchInst *BI : DC.conditionsFor(X)) {
+  for (CondBrInst *BI : DC.conditionsFor(X)) {
     CmpPredicate DomPred;
     const APInt *DomC;
     if (!match(BI->getCondition(),
@@ -6836,8 +6836,8 @@ static bool isChainSelectCmpBranch(const SelectInst *SI) {
   const BasicBlock *BB = SI->getParent();
   if (!BB)
     return false;
-  auto *BI = dyn_cast_or_null<BranchInst>(BB->getTerminator());
-  if (!BI || BI->getNumSuccessors() != 2)
+  auto *BI = dyn_cast_or_null<CondBrInst>(BB->getTerminator());
+  if (!BI)
     return false;
   auto *IC = dyn_cast<ICmpInst>(BI->getCondition());
   if (!IC || (IC->getOperand(0) != SI && IC->getOperand(1) != SI))
@@ -7847,6 +7847,11 @@ Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
     }
   }
 
+  // Fold icmp pred (select C1, TV1, FV1), (select C2, TV2, FV2)
+  // when all select arms are constants, via truth table.
+  if (Instruction *R = foldCmpSelectOfConstants(I))
+    return R;
+
   // In case of a comparison with two select instructions having the same
   // condition, check whether one of the resulting branches can be simplified.
   // If so, just compare the other branch and select the appropriate result.
@@ -8310,6 +8315,57 @@ Instruction *InstCombinerImpl::foldFCmpIntToFPConst(FCmpInst &I,
                       ConstantInt::get(LHSI->getOperand(0)->getType(), RHSInt));
 }
 
+/// Fold fcmp/icmp pred (select C1, TV1, FV1), (select C2, TV2, FV2)
+/// where all true/false values are constants that allow the compare to be
+/// constant-folded for every combination of C1 and C2.
+/// We compute a 4-entry truth table and use createLogicFromTable to
+/// synthesize a boolean expression of C1 and C2.
+Instruction *InstCombinerImpl::foldCmpSelectOfConstants(CmpInst &I) {
+  Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
+  Value *C1, *C2;
+  Constant *TV1, *FV1, *TV2, *FV2;
+
+  if (!match(Op0, m_Select(m_Value(C1), m_Constant(TV1), m_Constant(FV1))) ||
+      !match(Op1, m_Select(m_Value(C2), m_Constant(TV2), m_Constant(FV2))))
+    return nullptr;
+
+  if (I.getType() != C1->getType() || I.getType() != C2->getType())
+    return nullptr;
+
+  unsigned Pred = I.getPredicate();
+  const DataLayout &DL = I.getDataLayout();
+
+  Constant *Res00 = ConstantFoldCompareInstOperands(Pred, FV1, FV2, DL);
+  Constant *Res01 = ConstantFoldCompareInstOperands(Pred, FV1, TV2, DL);
+  Constant *Res10 = ConstantFoldCompareInstOperands(Pred, TV1, FV2, DL);
+  Constant *Res11 = ConstantFoldCompareInstOperands(Pred, TV1, TV2, DL);
+
+  if (!Res00 || !Res01 || !Res10 || !Res11)
+    return nullptr;
+
+  if ((!Res00->isNullValue() && !Res00->isAllOnesValue()) ||
+      (!Res01->isNullValue() && !Res01->isAllOnesValue()) ||
+      (!Res10->isNullValue() && !Res10->isAllOnesValue()) ||
+      (!Res11->isNullValue() && !Res11->isAllOnesValue()))
+    return nullptr;
+
+  std::bitset<4> Table;
+  if (!Res00->isNullValue())
+    Table.set(0);
+  if (!Res01->isNullValue())
+    Table.set(1);
+  if (!Res10->isNullValue())
+    Table.set(2);
+  if (!Res11->isNullValue())
+    Table.set(3);
+
+  Value *Res = createLogicFromTable(Table, C1, C2, Builder,
+                                    Op0->hasOneUse() && Op1->hasOneUse());
+  if (!Res)
+    return nullptr;
+  return replaceInstUsesWith(I, Res);
+}
+
 /// Fold (C / X) < 0.0 --> X < 0.0 if possible. Swap predicate if necessary.
 static Instruction *foldFCmpReciprocalAndZero(FCmpInst &I, Instruction *LHSI,
                                               Constant *RHSC) {
@@ -8673,6 +8729,36 @@ static Instruction *foldFCmpFSubIntoFCmp(FCmpInst &I, Instruction *LHSI,
         I.setHasNoNaNs(true);
       return &I;
     }
+    // fcmp `pred (C - Y), C` -> `fcmp swap(pred), Y, 0`
+    // where C and Y can't be arbitrary floating-point values.
+    // For example, with `C = 1.0f` and `Y = 0x1p-149`, `1.0f - Y` rounds back
+    // to `1.0f`, so the source compare is false while the rewritten compare is
+    // true.
+    // We need to make sure (C - Y) never rounds back to C
+    const APFloat *C;
+    Value *IntSrc;
+    if (match(RHSC, m_APFloat(C)) &&
+        match(LHSI, m_FSub(m_Specific(RHSC), m_IToFP(m_Value(IntSrc)))) &&
+        C->isNormal()) {
+      // Requirements on C and Y:
+      // 1. C is finite, nonzero, normal.
+      // 2. C shouldn't be too large, that is, ULP(C) <= 1.
+      // 3. Y must be the form of `[su]itofp`, so the finite nonzero result of Y
+      // must be integer-valued with an absolute value of at least 1;
+      // as long as the step size near C does not exceed 1,
+      // C - Y cannot be rounded back to C when Y != 0.
+      // 4. If Y = 0, `fcmp pred (C - 0), C` are equivalent to `fcmp swap(pred)
+      // 0, 0` for ordered and unordered predicates as long as C is finite and
+      // nonzero.
+      int MantissaWidth = LHSI->getType()->getFPMantissaWidth();
+      if (MantissaWidth != -1 && ilogb(*C) < MantissaWidth) {
+        Constant *ZeroC = ConstantFP::getZero(LHSI->getType());
+        I.setPredicate(I.getSwappedPredicate());
+        CI.replaceOperand(I, 0, Y);
+        CI.replaceOperand(I, 1, ZeroC);
+        return &I;
+      }
+    }
     break;
   }
 
@@ -8988,6 +9074,9 @@ Instruction *InstCombinerImpl::visitFCmpInst(FCmpInst &I) {
     return R;
 
   if (Instruction *R = foldFCmpWithFloorAndCeil(I, *this))
+    return R;
+
+  if (Instruction *R = foldCmpSelectOfConstants(I))
     return R;
 
   if (match(Op0, m_FNeg(m_Value(X)))) {

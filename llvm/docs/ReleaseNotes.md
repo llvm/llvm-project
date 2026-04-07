@@ -86,11 +86,36 @@ Changes to LLVM infrastructure
 * The ``Br`` opcode was split into two opcodes separating unconditional
   (``UncondBr``) and conditional (``CondBr``) branches.
 
+* ``BranchInst`` was deprecated in favor of ``UncondBrInst`` and ``CondBrInst``.
+
+* The operand order of ``CondBr`` instructions was adjusted to match the
+  successor order. This can cause subtle breakage when using ``getOperand`` or
+  ``setOperand`` to access successors.
+
+* The ``llvm::sys::fs`` link creation API has been refactored:
+
+  * ``create_link`` now tries to create a symbolic link first, falling back to a
+    hard link if that fails (previously it created a symlink on Unix and a hard
+    link on Windows).
+  * Added ``create_symlink``, which always creates a symbolic link. On windows
+    this may fail if symlink permissions are not available.
+  * Added ``readlink``, which reads the target of a symbolic link.
+
+* Bitcode libraries can now implement compiler-managed library functions
+  (libcalls) without causing incorrect API manipulation or undefined references
+  ([#177046](https://github.com/llvm/llvm-project/pull/125687)). Note that
+  there are still issues with invalid compiler reasoning about some functions
+  in bitcode, e.g. `malloc`. Not yet supported on MachO or when using
+  distributed ThinLTO. 
+
 Changes to building LLVM
 ------------------------
 
 Changes to TableGen
 -------------------
+
+* Outer let statements use ``ID{n-m}`` instead of ``ID<n-m>`` to be consistent
+  with inner let statements.
 
 Changes to Interprocedural Optimizations
 ----------------------------------------
@@ -103,6 +128,11 @@ Changes to the AArch64 Backend
 
 * The `sysp`, `mrrs`, and `msrr` instructions are now accepted without
   requiring the `+d128` feature gating.
+* Added a new internal option `-aarch64-emit-debug-tls-location` to allow the
+  emission of `DW_AT_location` for thread-local variables. This is currently
+  disabled by default to maintain compatibility with Binutils and LLVM older
+  toolchains that do not define the `R_AARCH64_TLS_DTPREL64` static relocation
+  type for TLS offsets.
 
 Changes to the AMDGPU Backend
 -----------------------------
@@ -149,7 +179,7 @@ Changes to the RISC-V Backend
 
 * `llvm-objdump` now has support for `--symbolize-operands` with RISC-V.
 * `-mcpu=spacemit-x100` was added.
-* Change P extension version to match the 019 draft specification. Encoded in `-march` as `0p19`.
+* Change P extension version to match the 0.21 draft specification.
 * Mnemonics for MOP/HINT-based instructions (`lpad`, `pause`, `ntl.*`, `c.ntl.*`,
   `sspush`, `sspopchk`, `ssrdp`, `c.sspush`, `c.sspopchk`) are now always
   available in the assembler and disassembler without requiring their respective
@@ -162,6 +192,8 @@ Changes to the RISC-V Backend
 * `-mcpu=xt-c910v2` and `-mcpu=xt-c920v2` were added.
 * Adds experimental assembler support for the 'Zvzip` (RISC-V Vector
   Reordering Structured Data) extension.
+* `-mcpu=sifive-x160` and `-mcpu=sifive-x180` were added.
+* Support for the experimental `XRivosVisni` vendor extension has been removed.
 
 Changes to the WebAssembly Backend
 ----------------------------------
@@ -190,6 +222,10 @@ Changes to the C API
 
 * Replaced opcode ``LLVMBr`` with ``LLVMUncondBr`` and ``LLVMCondBr``.
 
+* The operand order of ``CondBr`` instructions was adjusted to match the
+  successor order. This can cause subtle breakage when using ``LLVMGetOperand``
+  or ``LLVMSetOperand`` to access successors.
+
 Changes to the CodeGen infrastructure
 -------------------------------------
 
@@ -205,6 +241,7 @@ Changes to the LLVM tools
 * `llvm-objcopy` no longer corrupts the symbol table when `--update-section` is called for ELF files.
 * `FileCheck` option `-check-prefix` now accepts a comma-separated list of
   prefixes, making it an alias of the existing `-check-prefixes` option.
+* Add `-mtune` option to `llc`.
 
 Changes to LLDB
 ---------------
@@ -213,6 +250,9 @@ Changes to LLDB
 
 * ``SBTarget::GetDataByteSize()``, ``SBTarget::GetCodeByteSize()``, and ``SBSection::GetTargetByteSize()``
   have been deprecated. They always return 1, as before.
+* A new ``webinspector-wasm`` platform was added to list and attach to WebAssebly processes in Safari.
+* The default for `load-script-from-symbol-file` was changed from `warn` to `trusted`. This means that scripts from
+  code signed dSYM bundles are now loaded automatically, while untrusted bundles continue to produce a warning.
 
 ### FreeBSD
 
@@ -225,7 +265,7 @@ Changes to LLDB
 #### Kernel Debugging
 
 * The plugin that analyzes FreeBSD kernel core dump and live core has been renamed from `freebsd-kernel` to
- `freebsd-kernel-core`. Remote kernel debugging is still handled by the `gdb-remote` plugin. 
+ `freebsd-kernel-core`. Remote kernel debugging is still handled by the `gdb-remote` plugin.
 * Support for libfbsdvmcore has been removed. As a result, FreeBSD kernel dump debugging is now only
   available on FreeBSD hosts. Live kernel debugging through the GDB remote protocol is still available
   from any platform.
@@ -243,6 +283,15 @@ Changes to LLDB
 
 * On Arm Linux, the tpidruro register can now be read. Writing to this register is not supported.
 * Thread local variables are now supported on Arm Linux if the program being debugged is using glibc.
+* LLDB now supports AArch64 Linux systems that only have SME (as opposed to
+  SVE and SME). Prior to this version of LLDB, there was a bug that caused LLDB
+  to crash on startup on these systems
+  ([#138717](https://github.com/llvm/llvm-project/issues/138717)).
+  This affected LLDB versions from 18 up to and including 22. 17 and below are not affected.
+  If you are using such a system and cannot change LLDB version, or want to package
+  an affected version in a way that is compatible with these systems, the issue
+  contains details of backports that could be done to fix the affected versions.
+
 
 Changes to BOLT
 ---------------

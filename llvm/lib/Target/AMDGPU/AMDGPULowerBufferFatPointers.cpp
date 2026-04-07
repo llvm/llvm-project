@@ -645,7 +645,8 @@ bool StoreFatPtrsAsIntsAndExpandMemcpyVisitor::visitMemSetPatternInst(
     MemSetPatternInst &MSPI) {
   if (MSPI.getDestAddressSpace() != AMDGPUAS::BUFFER_FAT_POINTER)
     return false;
-  llvm::expandMemSetPatternAsLoop(&MSPI);
+  llvm::expandMemSetPatternAsLoop(
+      &MSPI, TM->getTargetTransformInfo(*MSPI.getFunction()));
   MSPI.eraseFromParent();
   return true;
 }
@@ -1770,6 +1771,18 @@ Value *SplitPtrStructs::handleMemoryInst(Instruction *I, Value *Arg, Value *Ptr,
     case AtomicRMWInst::FMinimum: {
       reportFatalUsageError(
           "atomic floating point fminimum not supported for "
+          "buffer resources and should've been expanded away");
+      break;
+    }
+    case AtomicRMWInst::FMaximumNum: {
+      reportFatalUsageError(
+          "atomic floating point fmaximumnum not supported for "
+          "buffer resources and should've been expanded away");
+      break;
+    }
+    case AtomicRMWInst::FMinimumNum: {
+      reportFatalUsageError(
+          "atomic floating point fminimumnum not supported for "
           "buffer resources and should've been expanded away");
       break;
     }

@@ -183,7 +183,7 @@ TEST(DomTreeUpdater, EagerUpdateReplaceEntryBB) {
   // Add a block as the new function entry BB. We also link it to BB0.
   BasicBlock *NewEntry =
       BasicBlock::Create(F->getContext(), "new_entry", F, BB0);
-  BranchInst::Create(BB0, NewEntry);
+  UncondBrInst::Create(BB0, NewEntry);
   EXPECT_EQ(F->begin()->getName(), NewEntry->getName());
   EXPECT_TRUE(&F->getEntryBlock() == NewEntry);
 
@@ -197,7 +197,7 @@ TEST(DomTreeUpdater, EagerUpdateReplaceEntryBB) {
   // CFG Change: remove new_edge -> bb0 and redirect to new_edge -> bb1.
   EXPECT_EQ(NewEntry->getTerminator()->getNumSuccessors(), 1u);
   NewEntry->getTerminator()->eraseFromParent();
-  BranchInst::Create(BB1, NewEntry);
+  UncondBrInst::Create(BB1, NewEntry);
   EXPECT_EQ(BB0->getTerminator()->getNumSuccessors(), 1u);
 
   // Update the DTU. At this point bb0 now has no predecessors but is still a
@@ -274,7 +274,7 @@ TEST(DomTreeUpdater, LazyUpdateDTBasicOperations) {
   // CFG Change: remove edge bb0 -> bb3 and one duplicate edge bb0 -> bb2.
   EXPECT_EQ(BB0->getTerminator()->getNumSuccessors(), 4u);
   BB0->getTerminator()->eraseFromParent();
-  BranchInst::Create(BB1, BB2, ConstantInt::getTrue(F->getContext()), BB0);
+  CondBrInst::Create(ConstantInt::getTrue(F->getContext()), BB1, BB2, BB0);
   EXPECT_EQ(BB0->getTerminator()->getNumSuccessors(), 2u);
 
   // Verify. Updates to DTU must be applied *after* all changes to the CFG
@@ -289,7 +289,7 @@ TEST(DomTreeUpdater, LazyUpdateDTBasicOperations) {
   // We don't defer this action because it can cause problems for other
   // transforms or analysis as it's part of the actual CFG. We only defer
   // updates to the DominatorTrees. This code will crash if it is placed before
-  // the BranchInst::Create() call above. After a deletion of a BasicBlock. Only
+  // the CondBrInst::Create() call above. After a deletion of a BasicBlock. Only
   // an explicit flush event can trigger the flushing of deleteBBs. Because some
   // passes using Lazy UpdateStrategy rely on this behavior.
 
@@ -372,7 +372,7 @@ TEST(DomTreeUpdater, LazyUpdateDTInheritedPreds) {
   // remove bb2.
   EXPECT_EQ(BB0->getTerminator()->getNumSuccessors(), 3u);
   BB0->getTerminator()->eraseFromParent();
-  BranchInst::Create(BB1, BB3, ConstantInt::getTrue(F->getContext()), BB0);
+  CondBrInst::Create(ConstantInt::getTrue(F->getContext()), BB1, BB3, BB0);
   EXPECT_EQ(BB0->getTerminator()->getNumSuccessors(), 2u);
 
   // Test callback utils.
@@ -401,7 +401,7 @@ TEST(DomTreeUpdater, LazyUpdateDTInheritedPreds) {
   // CFG Change: bb0 now only branches to bb3. We are preparing to remove bb1.
   EXPECT_EQ(BB0->getTerminator()->getNumSuccessors(), 2u);
   BB0->getTerminator()->eraseFromParent();
-  BranchInst::Create(BB3, BB0);
+  UncondBrInst::Create(BB3, BB0);
   EXPECT_EQ(BB0->getTerminator()->getNumSuccessors(), 1u);
 
   // Remove bb1 from F. This has to happen before the call to
@@ -486,7 +486,7 @@ TEST(DomTreeUpdater, LazyUpdateBasicOperations) {
   // CFG Change: remove edge bb0 -> bb3 and one duplicate edge bb0 -> bb2.
   EXPECT_EQ(BB0->getTerminator()->getNumSuccessors(), 4u);
   BB0->getTerminator()->eraseFromParent();
-  BranchInst::Create(BB1, BB2, ConstantInt::getTrue(F->getContext()), BB0);
+  CondBrInst::Create(ConstantInt::getTrue(F->getContext()), BB1, BB2, BB0);
   EXPECT_EQ(BB0->getTerminator()->getNumSuccessors(), 2u);
 
   // Deletion of a BasicBlock is an immediate event. We remove all uses to the
@@ -495,7 +495,7 @@ TEST(DomTreeUpdater, LazyUpdateBasicOperations) {
   // called. We don't defer this action because it can cause problems for other
   // transforms or analysis as it's part of the actual CFG. We only defer
   // updates to the DominatorTree. This code will crash if it is placed before
-  // the BranchInst::Create() call above.
+  // the CondBrInst::Create() call above.
   bool CallbackFlag = false;
   ASSERT_FALSE(isa<UnreachableInst>(BB3->getTerminator()));
   EXPECT_FALSE(DTU.isBBPendingDeletion(BB3));
@@ -553,7 +553,7 @@ TEST(DomTreeUpdater, LazyUpdateReplaceEntryBB) {
   // Add a block as the new function entry BB. We also link it to BB0.
   BasicBlock *NewEntry =
       BasicBlock::Create(F->getContext(), "new_entry", F, BB0);
-  BranchInst::Create(BB0, NewEntry);
+  UncondBrInst::Create(BB0, NewEntry);
   EXPECT_EQ(F->begin()->getName(), NewEntry->getName());
   EXPECT_TRUE(&F->getEntryBlock() == NewEntry);
 
@@ -570,7 +570,7 @@ TEST(DomTreeUpdater, LazyUpdateReplaceEntryBB) {
   // CFG Change: remove new_edge -> bb0 and redirect to new_edge -> bb1.
   EXPECT_EQ(NewEntry->getTerminator()->getNumSuccessors(), 1u);
   NewEntry->getTerminator()->eraseFromParent();
-  BranchInst::Create(BB1, NewEntry);
+  UncondBrInst::Create(BB1, NewEntry);
   EXPECT_EQ(BB0->getTerminator()->getNumSuccessors(), 1u);
 
   // Update the DTU. At this point bb0 now has no predecessors but is still a
@@ -756,7 +756,7 @@ TEST(DomTreeUpdater, LazyUpdateDeduplicationTest) {
   // CFG Change: remove bb0 -> bb1 and add back bb0 -> bb1.
   EXPECT_EQ(BB0->getTerminator()->getNumSuccessors(), 1u);
   BB0->getTerminator()->eraseFromParent();
-  BranchInst::Create(BB1, BB0);
+  UncondBrInst::Create(BB1, BB0);
   EXPECT_EQ(BB0->getTerminator()->getNumSuccessors(), 1u);
 
   // Update the DTU and simulate duplicates.
@@ -776,6 +776,7 @@ TEST(DomTreeUpdater, LazyUpdateDeduplicationTest) {
   // CFG Change: remove bb0 -> bb1.
   EXPECT_EQ(BB0->getTerminator()->getNumSuccessors(), 1u);
   BB0->getTerminator()->eraseFromParent();
+  new UnreachableInst(Context, BB0);
 
   // Update the DTU and simulate invalid updates.
   DTU.applyUpdatesPermissive({{DominatorTree::Delete, BB0, BB1},
@@ -786,7 +787,7 @@ TEST(DomTreeUpdater, LazyUpdateDeduplicationTest) {
   ASSERT_TRUE(DTU.hasPendingUpdates());
 
   // CFG Change: add bb0 -> bb2.
-  BranchInst::Create(BB2, BB0);
+  UncondBrInst::Create(BB2, BB0);
   EXPECT_EQ(BB0->getTerminator()->getNumSuccessors(), 1u);
   DTU.applyUpdates({{DominatorTree::Insert, BB0, BB2}});
   ASSERT_TRUE(DTU.getDomTree().verify());
