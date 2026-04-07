@@ -35,11 +35,15 @@
 // RUN:   -fmodules-cache-path=%t/cache7 %t/tu-excluded.c -fsyntax-only \
 // RUN:   -Wduplicate-header-ownership -verify
 
+// Test umbrella header in subdirectory claiming parent dir conflicts with
+// explicit header in parent dir.
+// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -I%t/parent-umbrella \
+// RUN:   -fmodules-cache-path=%t/cache8 %t/tu-parent-umbrella.c -fsyntax-only \
+// RUN:   -Wduplicate-header-ownership -verify
+
 //--- headers/a.h
-void a(void);
 
 //--- headers/b.h
-void b(void);
 
 //--- headers/module.modulemap
 module A {
@@ -72,7 +76,6 @@ module C {
 #include "d.h"
 
 //--- umbrella/d.h
-void d(void);
 
 //--- umbrella/module.modulemap
 module D {
@@ -90,7 +93,6 @@ module E {
 // expected-note@* {{header covered by umbrella for module 'D' here}}
 
 //--- umbrella-dir/sub/e.h
-void e(void);
 
 //--- umbrella-dir/module.modulemap
 module F {
@@ -108,7 +110,6 @@ module G {
 // expected-note@* {{header covered by umbrella for module 'F' here}}
 
 //--- same-module/sub/f.h
-void f(void);
 
 //--- same-module/module.modulemap
 module H {
@@ -121,7 +122,6 @@ module H {
 #include "sub/f.h"
 
 //--- excluded/sub/g.h
-void g(void);
 
 //--- excluded/module.modulemap
 module I {
@@ -136,3 +136,24 @@ module J {
 //--- tu-excluded.c
 // expected-no-diagnostics
 #include "sub/g.h"
+
+//--- parent-umbrella/umb.h
+//--- parent-umbrella/h.h
+//--- parent-umbrella/sub/s.h
+
+//--- parent-umbrella/sub/module.modulemap
+module Umb {
+  umbrella header "../umb.h"
+}
+
+//--- parent-umbrella/module.modulemap
+module K {
+  header "h.h"
+}
+
+//--- tu-parent-umbrella.c
+#include "sub/s.h"
+#include "h.h"
+// expected-warning@-1 {{header 'h.h' is owned by multiple modules}}
+// expected-note@* {{header owned by module 'K' here}}
+// expected-note@* {{header covered by umbrella for module 'Umb' here}}
