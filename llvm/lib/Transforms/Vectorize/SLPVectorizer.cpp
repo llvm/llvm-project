@@ -26055,7 +26055,7 @@ bool SLPVectorizerPass::vectorizeStores(
     unsigned GlobalMaxVF = 0;
     for (auto &CtxPtr : AllContexts)
       if (CtxPtr->initializeContext(R, *DL, *TTI, Visited))
-        GlobalMaxVF = std::max(GlobalMaxVF, AllContexts.back()->getMaxVF());
+        GlobalMaxVF = std::max(GlobalMaxVF, CtxPtr->getMaxVF());
       else
         CtxPtr.reset();
 
