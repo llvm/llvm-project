@@ -7,7 +7,7 @@
 # ===----------------------------------------------------------------------===##
 
 from libcxx.test.dsl import compilerMacros, sourceBuilds, hasCompileFlag, programSucceeds, runScriptExitCode
-from libcxx.test.dsl import Feature, AddCompileFlag, AddLinkFlag, AddSubstitution
+from libcxx.test.dsl import Feature, AddCompileFlag, AddLinkFlag
 import platform
 import sys
 
