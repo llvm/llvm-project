@@ -120,8 +120,7 @@ bool Fortran::lower::hasDoubleDescriptor(mlir::Value addr) {
     if (mlir::isa_and_nonnull<fir::AddrOfOp>(
             declareOp.getMemref().getDefiningOp())) {
       if (declareOp.getDataAttr() &&
-          (*declareOp.getDataAttr() == cuf::DataAttribute::Pinned ||
-           *declareOp.getDataAttr() == cuf::DataAttribute::Unified))
+          *declareOp.getDataAttr() == cuf::DataAttribute::Pinned)
         return false;
       return true;
     }
