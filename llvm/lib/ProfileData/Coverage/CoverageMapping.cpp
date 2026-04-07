@@ -426,11 +426,11 @@ class MCDCRecordProcessor : NextIDsBuilder, mcdc::TVIdxBuilder {
   /// Mapping of calculated MC/DC Independence Pairs for each condition.
   MCDCRecord::TVPairMap IndependencePairs;
 
-  /// Helper for sorting ExecVectors.
+  /// Helper for sorting ExecVectors / NotExecVectors.
   struct TVIdxTuple {
     MCDCRecord::CondState MCDCCond; /// True/False
     unsigned BIdx;                  /// Bitmap Index
-    unsigned Ord;                   /// Last position on ExecVectors
+    unsigned Ord;                   /// Last position in exec / not-exec TVs
 
     TVIdxTuple(MCDCRecord::CondState MCDCCond, unsigned BIdx, unsigned Ord)
         : MCDCCond(MCDCCond), BIdx(BIdx), Ord(Ord) {}
@@ -441,12 +441,14 @@ class MCDCRecordProcessor : NextIDsBuilder, mcdc::TVIdxBuilder {
     }
   };
 
-  // Indices for sorted TestVectors;
   std::vector<TVIdxTuple> ExecVectorIdxs;
+  std::vector<TVIdxTuple> NotExecVectorIdxs;
 
   /// Actual executed Test Vectors for the boolean expression, based on
   /// ExecutedTestVectorBitmap.
   MCDCRecord::TestVectors ExecVectors;
+  /// Never-executed test vectors
+  MCDCRecord::TestVectors NotExecVectors;
 
 #ifndef NDEBUG
   DenseSet<unsigned> TVIdxs;
@@ -486,17 +488,21 @@ private:
       assert(TVIdx < SavedNodes[ID].Width);
       assert(TVIdxs.insert(NextTVIdx).second && "Duplicate TVIdx");
 
-      if (!Bitmap[IsVersion11
-                      ? DecisionParams.BitmapIdx * CHAR_BIT + TV.getIndex()
-                      : DecisionParams.BitmapIdx - NumTestVectors + NextTVIdx])
-        continue;
-
-      ExecVectorIdxs.emplace_back(MCDCCond, NextTVIdx, ExecVectors.size());
-
-      // Copy the completed test vector to the vector of testvectors.
-      // The final value (T,F) is equal to the last non-dontcare state on the
-      // path (in a short-circuiting system).
-      ExecVectors.push_back({TV, MCDCCond});
+      bool Executed =
+          Bitmap[IsVersion11
+                     ? DecisionParams.BitmapIdx * CHAR_BIT + TV.getIndex()
+                     : DecisionParams.BitmapIdx - NumTestVectors + NextTVIdx];
+      if (Executed) {
+        ExecVectorIdxs.emplace_back(MCDCCond, NextTVIdx, ExecVectors.size());
+        // Copy the completed test vector to the vector of testvectors.
+        // The final value (T,F) is equal to the last non-dontcare state on the
+        // path (in a short-circuiting system).
+        ExecVectors.push_back({TV, MCDCCond});
+      } else {
+        NotExecVectorIdxs.emplace_back(MCDCCond, NextTVIdx,
+                                       NotExecVectors.size());
+        NotExecVectors.push_back({TV, MCDCCond});
+      }
     }
 
     // Reset back to DontCare.
@@ -505,7 +511,8 @@ private:
 
   /// Walk the bits in the bitmap.  A bit set to '1' indicates that the test
   /// vector at the corresponding index was executed during a test run.
-  void findExecutedTestVectors() {
+  /// Vectors with '0' bit are collected separately for UI.
+  void findTestVectors() {
     // Walk the binary decision diagram to enumerate all possible test vectors.
     // We start at the root node (ID == 0) with all values being DontCare.
     // `TVIdx` starts with 0 and is in the traversal.
@@ -516,10 +523,16 @@ private:
            "TVIdxs wasn't fulfilled");
 
     llvm::sort(ExecVectorIdxs);
-    MCDCRecord::TestVectors NewTestVectors;
+    MCDCRecord::TestVectors NewExec;
     for (const auto &IdxTuple : ExecVectorIdxs)
-      NewTestVectors.push_back(std::move(ExecVectors[IdxTuple.Ord]));
-    ExecVectors = std::move(NewTestVectors);
+      NewExec.push_back(std::move(ExecVectors[IdxTuple.Ord]));
+    ExecVectors = std::move(NewExec);
+
+    llvm::sort(NotExecVectorIdxs);
+    MCDCRecord::TestVectors NewNotExec;
+    for (const auto &IdxTuple : NotExecVectorIdxs)
+      NewNotExec.push_back(std::move(NotExecVectors[IdxTuple.Ord]));
+    NotExecVectors = std::move(NewNotExec);
   }
 
 public:
@@ -554,12 +567,13 @@ public:
       Folded[true][I] = B->Count.isZero();
     }
 
-    // Using Profile Bitmap from runtime, mark the executed test vectors.
-    findExecutedTestVectors();
+    // Using Profile Bitmap from runtime, mark the test vectors.
+    findTestVectors();
 
-    // Record Test vectors, executed vectors, and independence pairs.
-    return MCDCRecord(Region, std::move(ExecVectors), std::move(Folded),
-                      std::move(PosToID), std::move(CondLoc));
+    // Record executed vectors, not-executed vectors, and independence pairs.
+    return MCDCRecord(Region, std::move(ExecVectors), std::move(NotExecVectors),
+                      std::move(Folded), std::move(PosToID),
+                      std::move(CondLoc));
   }
 };
 
