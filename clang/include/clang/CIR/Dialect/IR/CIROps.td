@@ -520,7 +520,25 @@ def CIR_MemOrder : CIR_I32EnumAttr<
 
 def CIR_SyncScopeKind : CIR_I32EnumAttr<"SyncScopeKind", "sync scope kind", [
   I32EnumAttrCase<"SingleThread", 0, "single_thread">,
-  I32EnumAttrCase<"System", 1, "system">
+  I32EnumAttrCase<"System", 1, "system">,
+  I32EnumAttrCase<"Device", 2, "device">,
+  I32EnumAttrCase<"Workgroup", 3, "workgroup">,
+  I32EnumAttrCase<"Wavefront", 4, "wavefront">,
+  I32EnumAttrCase<"Cluster", 5, "cluster">,
+
+  // HIP sync scopes
+  I32EnumAttrCase<"HIPSingleThread", 6, "hip_single_thread">,
+  I32EnumAttrCase<"HIPSystem", 7, "hip_system">,
+  I32EnumAttrCase<"HIPAgent", 8, "hip_agent">,
+  I32EnumAttrCase<"HIPWorkgroup", 9, "hip_workgroup">,
+  I32EnumAttrCase<"HIPWavefront", 10, "hip_wavefront">,
+  I32EnumAttrCase<"HIPCluster", 11, "hip_cluster">,
+
+  // OpenCL sync scopes
+  I32EnumAttrCase<"OpenCLWorkGroup", 12, "opencl_work_group">,
+  I32EnumAttrCase<"OpenCLDevice", 13, "opencl_device">,
+  I32EnumAttrCase<"OpenCLAllSVMDevices", 14, "opencl_all_svm_devices">,
+  I32EnumAttrCase<"OpenCLSubGroup", 15, "opencl_sub_group">,
 ]>;
 
 //===----------------------------------------------------------------------===//
