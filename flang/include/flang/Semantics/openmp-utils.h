@@ -55,7 +55,11 @@ const Scope &GetScopingUnit(const Scope &scope);
 const Scope &GetProgramUnit(const Scope &scope);
 
 template <typename T> struct WithSource {
+<<<<<<< users/kparzysz/e21-is-rectangular
   template <//
+=======
+  template < //
+>>>>>>> main
       typename U = std::remove_reference_t<T>,
       typename = std::enable_if_t<std::is_default_constructible_v<U>>>
   WithSource() : value(), source() {}
@@ -192,8 +196,11 @@ WithReason<int64_t> GetArgumentValueWithReason(
 WithReason<int64_t> GetNumArgumentsWithReason(
     const parser::OmpDirectiveSpecification &spec, llvm::omp::Clause clauseId,
     unsigned version);
+<<<<<<< users/kparzysz/e21-is-rectangular
 WithReason<int64_t> GetHeightWithReason(
     const parser::OmpDirectiveSpecification &spec, unsigned version);
+=======
+>>>>>>> main
 
 // Return the depth of the affected nests:
 //   {affected-depth, reason, must-be-perfect-nest}.
@@ -247,10 +254,13 @@ struct LoopSequence {
   WithReason<bool> isWellFormedNest() const;
 
   std::vector<LoopControl> getLoopControls() const;
+<<<<<<< users/kparzysz/e21-is-rectangular
   // Check if this loop's bounds are invariant in each of the `outer`
   // constructs.
   WithReason<bool> isRectangular(
       const std::vector<const LoopSequence *> &outer) const;
+=======
+>>>>>>> main
 
 private:
   using Construct = ExecutionPartIterator::Construct;

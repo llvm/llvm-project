@@ -5627,7 +5627,9 @@ void Verifier::visitInlineHistoryMetadata(Instruction &I, MDNode *MD) {
     if (!Op)
       continue;
     Check(isa<ValueAsMetadata>(Op) &&
-              isa<Function>(cast<ValueAsMetadata>(Op)->getValue()),
+              isa<Function>(cast<ValueAsMetadata>(Op)
+                                ->getValue()
+                                ->stripPointerCastsAndAliases()),
           "!inline_history operands must be functions or null", MD);
   }
 }
