@@ -114,6 +114,11 @@ Improvements to clang-tidy
 New checks
 ^^^^^^^^^^
 
+- New :doc:`bugprone-assignment-in-selection-statement
+  <clang-tidy/checks/bugprone/assignment-in-selection-statement>` check.
+
+  Finds assignments within selection statements.
+
 - New :doc:`bugprone-unsafe-to-allow-exceptions
   <clang-tidy/checks/bugprone/unsafe-to-allow-exceptions>` check.
 
@@ -177,6 +182,10 @@ New checks
 
 New check aliases
 ^^^^^^^^^^^^^^^^^
+
+- New alias :doc:`cert-exp45-c <clang-tidy/checks/cert/exp45-c>`
+  to :doc:`bugprone-assignment-in-selection-statement
+  <clang-tidy/checks/bugprone/assignment-in-selection-statement>`.
 
 - Renamed :doc:`hicpp-exception-baseclass
   <clang-tidy/checks/hicpp/exception-baseclass>`
