@@ -9,6 +9,7 @@ define void @test_i8_arg(i8 %arg) {
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[ARGUMENT_i32_:%[0-9]+]]:i32(s32) = ARGUMENT_i32 0, implicit $arguments
   ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[ARGUMENT_i32_]](s32)
+  ; CHECK-NEXT:   RETURN implicit-def $arguments
   ret void
 }
 
@@ -20,6 +21,7 @@ define void @test_i8_zeroext_arg(i8 zeroext %arg) {
   ; CHECK-NEXT:   [[ARGUMENT_i32_:%[0-9]+]]:i32(s32) = ARGUMENT_i32 0, implicit $arguments
   ; CHECK-NEXT:   [[ASSERT_ZEXT:%[0-9]+]]:_(s32) = G_ASSERT_ZEXT [[ARGUMENT_i32_]], 8
   ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[ASSERT_ZEXT]](s32)
+  ; CHECK-NEXT:   RETURN implicit-def $arguments
   ret void
 }
 
@@ -31,6 +33,7 @@ define void @test_i8_signext_arg(i8 signext %arg) {
   ; CHECK-NEXT:   [[ARGUMENT_i32_:%[0-9]+]]:i32(s32) = ARGUMENT_i32 0, implicit $arguments
   ; CHECK-NEXT:   [[ASSERT_SEXT:%[0-9]+]]:_(s32) = G_ASSERT_SEXT [[ARGUMENT_i32_]], 8
   ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[ASSERT_SEXT]](s32)
+  ; CHECK-NEXT:   RETURN implicit-def $arguments
   ret void
 }
 
@@ -41,6 +44,7 @@ define void @test_i16_arg(i16 %arg) {
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[ARGUMENT_i32_:%[0-9]+]]:i32(s32) = ARGUMENT_i32 0, implicit $arguments
   ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[ARGUMENT_i32_]](s32)
+  ; CHECK-NEXT:   RETURN implicit-def $arguments
   ret void
 }
 
@@ -51,6 +55,7 @@ define void @test_i32_arg(i32 %arg) {
   ; CHECK-NEXT:   liveins: $arguments
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[ARGUMENT_i32_:%[0-9]+]]:i32(s32) = ARGUMENT_i32 0, implicit $arguments
+  ; CHECK-NEXT:   RETURN implicit-def $arguments
   ret void
 }
 
@@ -61,6 +66,7 @@ define void @test_i64_arg(i64 %arg) {
   ; CHECK-NEXT:   liveins: $arguments
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[ARGUMENT_i64_:%[0-9]+]]:i64(s64) = ARGUMENT_i64 0, implicit $arguments
+  ; CHECK-NEXT:   RETURN implicit-def $arguments
   ret void
 }
 
@@ -70,12 +76,14 @@ define void @test_ptr_arg(ptr %arg) {
   ; WASM32-NEXT:   liveins: $arguments
   ; WASM32-NEXT: {{  $}}
   ; WASM32-NEXT:   [[ARGUMENT_i32_:%[0-9]+]]:i32(p0) = ARGUMENT_i32 0, implicit $arguments
+  ; WASM32-NEXT:   RETURN implicit-def $arguments
   ;
   ; WASM64-LABEL: name: test_ptr_arg
   ; WASM64: bb.1 (%ir-block.0):
   ; WASM64-NEXT:   liveins: $arguments
   ; WASM64-NEXT: {{  $}}
   ; WASM64-NEXT:   [[ARGUMENT_i64_:%[0-9]+]]:i64(p0) = ARGUMENT_i64 0, implicit $arguments
+  ; WASM64-NEXT:   RETURN implicit-def $arguments
   ret void
 }
 
@@ -87,6 +95,7 @@ define void @test_i128_arg(i128 %arg) {
   ; CHECK-NEXT:   [[ARGUMENT_i64_:%[0-9]+]]:i64(s64) = ARGUMENT_i64 0, implicit $arguments
   ; CHECK-NEXT:   [[ARGUMENT_i64_1:%[0-9]+]]:i64(s64) = ARGUMENT_i64 1, implicit $arguments
   ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[ARGUMENT_i64_]](s64), [[ARGUMENT_i64_1]](s64)
+  ; CHECK-NEXT:   RETURN implicit-def $arguments
   ret void
 }
 
@@ -97,6 +106,7 @@ define void @test_f16_arg(half %arg) {
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[ARGUMENT_i32_:%[0-9]+]]:i32(s32) = ARGUMENT_i32 0, implicit $arguments
   ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[ARGUMENT_i32_]](s32)
+  ; CHECK-NEXT:   RETURN implicit-def $arguments
   ret void
 }
 
@@ -107,6 +117,7 @@ define void @test_f32_arg(float %arg) {
   ; CHECK-NEXT:   liveins: $arguments
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[ARGUMENT_f32_:%[0-9]+]]:f32(s32) = ARGUMENT_f32 0, implicit $arguments
+  ; CHECK-NEXT:   RETURN implicit-def $arguments
   ret void
 }
 
@@ -117,6 +128,7 @@ define void @test_f64_arg(double %arg) {
   ; CHECK-NEXT:   liveins: $arguments
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[ARGUMENT_f64_:%[0-9]+]]:f64(s64) = ARGUMENT_f64 0, implicit $arguments
+  ; CHECK-NEXT:   RETURN implicit-def $arguments
   ret void
 }
 
@@ -128,6 +140,7 @@ define void @test_f128_arg(fp128 %arg) {
   ; CHECK-NEXT:   [[ARGUMENT_i64_:%[0-9]+]]:i64(s64) = ARGUMENT_i64 0, implicit $arguments
   ; CHECK-NEXT:   [[ARGUMENT_i64_1:%[0-9]+]]:i64(s64) = ARGUMENT_i64 1, implicit $arguments
   ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[ARGUMENT_i64_]](s64), [[ARGUMENT_i64_1]](s64)
+  ; CHECK-NEXT:   RETURN implicit-def $arguments
   ret void
 }
 
@@ -138,6 +151,7 @@ define void @test_externref_arg(%externref %arg) {
   ; CHECK-NEXT:   liveins: $arguments
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[ARGUMENT_externref:%[0-9]+]]:externref(p10) = ARGUMENT_externref 0, implicit $arguments
+  ; CHECK-NEXT:   RETURN implicit-def $arguments
   ret void
 }
 
@@ -148,6 +162,7 @@ define void @test_funcref_arg(%funcref %arg) {
   ; CHECK-NEXT:   liveins: $arguments
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[ARGUMENT_funcref:%[0-9]+]]:funcref(p20) = ARGUMENT_funcref 0, implicit $arguments
+  ; CHECK-NEXT:   RETURN implicit-def $arguments
   ret void
 }
 
@@ -160,6 +175,7 @@ define void @test_multiple_args(ptr %arg1, float %arg2, i1 %arg3) {
   ; WASM32-NEXT:   [[ARGUMENT_f32_:%[0-9]+]]:f32(s32) = ARGUMENT_f32 1, implicit $arguments
   ; WASM32-NEXT:   [[ARGUMENT_i32_1:%[0-9]+]]:i32(s32) = ARGUMENT_i32 2, implicit $arguments
   ; WASM32-NEXT:   [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[ARGUMENT_i32_1]](s32)
+  ; WASM32-NEXT:   RETURN implicit-def $arguments
   ;
   ; WASM64-LABEL: name: test_multiple_args
   ; WASM64: bb.1 (%ir-block.0):
@@ -169,6 +185,7 @@ define void @test_multiple_args(ptr %arg1, float %arg2, i1 %arg3) {
   ; WASM64-NEXT:   [[ARGUMENT_f32_:%[0-9]+]]:f32(s32) = ARGUMENT_f32 1, implicit $arguments
   ; WASM64-NEXT:   [[ARGUMENT_i32_:%[0-9]+]]:i32(s32) = ARGUMENT_i32 2, implicit $arguments
   ; WASM64-NEXT:   [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[ARGUMENT_i32_]](s32)
+  ; WASM64-NEXT:   RETURN implicit-def $arguments
   ret void
 }
 
@@ -187,6 +204,7 @@ define void @test_array_arg([5 x i16] %arg) {
   ; CHECK-NEXT:   [[TRUNC3:%[0-9]+]]:_(s16) = G_TRUNC [[ARGUMENT_i32_3]](s32)
   ; CHECK-NEXT:   [[ARGUMENT_i32_4:%[0-9]+]]:i32(s32) = ARGUMENT_i32 4, implicit $arguments
   ; CHECK-NEXT:   [[TRUNC4:%[0-9]+]]:_(s16) = G_TRUNC [[ARGUMENT_i32_4]](s32)
+  ; CHECK-NEXT:   RETURN implicit-def $arguments
   ret void
 }
 
@@ -205,5 +223,6 @@ define void @test_struct_arg(%StructTy %arg) {
   ; CHECK-NEXT:   [[ARGUMENT_i32_2:%[0-9]+]]:i32(s32) = ARGUMENT_i32 3, implicit $arguments
   ; CHECK-NEXT:   [[TRUNC2:%[0-9]+]]:_(s1) = G_TRUNC [[ARGUMENT_i32_2]](s32)
   ; CHECK-NEXT:   [[ARGUMENT_f32_:%[0-9]+]]:f32(s32) = ARGUMENT_f32 4, implicit $arguments
+  ; CHECK-NEXT:   RETURN implicit-def $arguments
   ret void
 }
