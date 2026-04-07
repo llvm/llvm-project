@@ -325,7 +325,8 @@ bool AArch64A57FPLoadBalancingImpl::run(MachineFunction &MF) {
   return Changed;
 }
 
-bool AArch64A57FPLoadBalancingLegacy::runOnMachineFunction(MachineFunction &MF) {
+bool AArch64A57FPLoadBalancingLegacy::runOnMachineFunction(
+    MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
 
@@ -421,7 +422,7 @@ bool AArch64A57FPLoadBalancingImpl::runOnBasicBlock(MachineBasicBlock &MBB) {
 }
 
 Chain *AArch64A57FPLoadBalancingImpl::getAndEraseNext(Color PreferredColor,
-                                                      std::vector<Chain*> &L) {
+                                                      std::vector<Chain *> &L) {
   if (L.empty())
     return nullptr;
 
