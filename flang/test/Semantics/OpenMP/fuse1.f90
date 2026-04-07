@@ -10,6 +10,7 @@ subroutine f
   !ERROR: This construct requires a sequence of 2 loops, but the loop sequence has a length of 1
   !BECAUSE: LOOPRANGE clause was specified with a count of 2 starting at loop 1
   !$omp fuse looprange(1, 2)
+  !BECAUSE: LOOPRANGE clause was not specified, the entire loop sequence is assumed
   !$omp fuse
   do i = 1, 10
   end do

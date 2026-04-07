@@ -566,8 +566,7 @@ ConstString Mangled::GetBaseName() const {
   if (!demangled_name)
     return {};
 
-  const char *name_str = demangled_name.AsCString();
   const auto &range = demangled_info->BasenameRange;
   return ConstString(
-      llvm::StringRef(name_str + range.first, range.second - range.first));
+      demangled_name.GetStringRef().slice(range.first, range.second));
 }

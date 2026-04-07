@@ -57,6 +57,7 @@ class AtomicCmpXchgInst;
 class BasicBlock;
 class CatchPadInst;
 class CatchReturnInst;
+class CycleInfo;
 class DominatorTree;
 class FenceInst;
 class LoopInfo;
@@ -175,6 +176,7 @@ public:
 class LLVM_ABI EarliestEscapeAnalysis final : public CaptureAnalysis {
   DominatorTree &DT;
   const LoopInfo *LI;
+  const CycleInfo *CI;
 
   /// Map from identified local object to an instruction before which it does
   /// not escape (or nullptr if it never escapes) and the possible components
@@ -189,8 +191,9 @@ class LLVM_ABI EarliestEscapeAnalysis final : public CaptureAnalysis {
   DenseMap<Instruction *, TinyPtrVector<const Value *>> Inst2Obj;
 
 public:
-  EarliestEscapeAnalysis(DominatorTree &DT, const LoopInfo *LI = nullptr)
-      : DT(DT), LI(LI) {}
+  EarliestEscapeAnalysis(DominatorTree &DT, const LoopInfo *LI = nullptr,
+                         const CycleInfo *CI = nullptr)
+      : DT(DT), LI(LI), CI(CI) {}
 
   CaptureComponents getCapturesBefore(const Value *Object, const Instruction *I,
                                       bool OrAt) override;

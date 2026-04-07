@@ -37,6 +37,20 @@ add_header_library(
 )
 
 add_header_library(
+  raise
+  HDRS
+    raise.h
+  DEPENDS
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.hdr.signal_macros
+    libc.hdr.types.sigset_t
+    libc.include.sys_syscall
+)
+
+add_header_library(
   write
   HDRS
     write.h
@@ -60,5 +74,18 @@ add_header_library(
     libc.src.__support.macros.config
     libc.hdr.fcntl_macros
     libc.hdr.types.mode_t
+    libc.include.sys_syscall
+)
+
+add_header_library(
+  utimensat
+  HDRS
+    utimensat.h
+  DEPENDS
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.hdr.types.struct_timespec
     libc.include.sys_syscall
 )

@@ -43,14 +43,19 @@ template <typename Pattern> bool match(VPSingleDefRecipe *R, const Pattern &P) {
   return P.match(static_cast<const VPRecipeBase *>(R));
 }
 
-template <typename... Classes> struct class_match {
-  template <typename ITy> bool match(ITy *V) const {
-    return isa<Classes...>(V);
+/// A match-wrapper around isa.
+template <typename... To> struct match_isapred {
+  template <typename ArgTy> bool match(const ArgTy *V) const {
+    return isa<To...>(V);
   }
 };
 
+template <typename... To> inline match_isapred<To...> m_Isa() {
+  return match_isapred<To...>();
+}
+
 /// Match an arbitrary VPValue and ignore it.
-inline class_match<VPValue> m_VPValue() { return class_match<VPValue>(); }
+inline auto m_VPValue() { return m_Isa<VPValue>(); }
 
 template <typename Class> struct bind_ty {
   Class *&VR;
@@ -266,6 +271,11 @@ inline bind_ty<VPValue> m_VPValue(VPValue *&V) { return V; }
 
 /// Match a VPIRValue.
 inline bind_ty<VPIRValue> m_VPIRValue(VPIRValue *&V) { return V; }
+
+/// Match a VPSingleDefRecipe, capturing if we match.
+inline bind_ty<VPSingleDefRecipe> m_VPSingleDefRecipe(VPSingleDefRecipe *&V) {
+  return V;
+}
 
 /// Match a VPInstruction, capturing if we match.
 inline bind_ty<VPInstruction> m_VPInstruction(VPInstruction *&V) { return V; }
@@ -592,8 +602,14 @@ m_ZExtOrSExt(const Op0_t &Op0) {
   return m_CombineOr(m_ZExt(Op0), m_SExt(Op0));
 }
 
-template <typename Op0_t> inline auto m_AnyExtend(const Op0_t &Op0) {
-  return m_CombineOr(m_ZExtOrSExt(Op0), m_FPExt(Op0));
+/// A variant of m_Isa that also matches SubPattern.
+template <typename... To, typename SubPattern>
+inline auto m_Isa(const SubPattern &P) {
+  return m_CombineAnd(m_Isa<To...>(), P);
+}
+
+template <typename Op0_t> inline auto m_WidenAnyExtend(const Op0_t &Op0) {
+  return m_Isa<VPWidenCastRecipe>(m_CombineOr(m_ZExtOrSExt(Op0), m_FPExt(Op0)));
 }
 
 template <typename Op0_t>
@@ -855,7 +871,7 @@ inline auto m_c_LogicalOr(const Op0_t &Op0, const Op1_t &Op1) {
 
 inline auto m_CanonicalIV() {
   // TODO: Don't assume all region values are canonical IVs.
-  return class_match<VPRegionValue>();
+  return m_Isa<VPRegionValue>();
 }
 
 template <typename Op0_t, typename Op1_t, typename Op2_t>
@@ -1049,7 +1065,7 @@ m_Intrinsic(const T0 &Op0, const T1 &Op1, const T2 &Op2, const T3 &Op3) {
   return m_CombineAnd(m_Intrinsic<IntrID>(Op0, Op1, Op2), m_Argument<3>(Op3));
 }
 
-inline auto m_LiveIn() { return class_match<VPIRValue, VPSymbolicValue>(); }
+inline auto m_LiveIn() { return m_Isa<VPIRValue, VPSymbolicValue>(); }
 
 /// Match a GEP recipe (VPWidenGEPRecipe, VPInstruction, or VPReplicateRecipe)
 /// and bind the source element type and operands.

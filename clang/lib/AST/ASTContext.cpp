@@ -1426,7 +1426,12 @@ void ASTContext::InitBuiltinTypes(const TargetInfo &Target,
   }
 
   if (Target.getTriple().isAMDGPU() ||
-      (AuxTarget && AuxTarget->getTriple().isAMDGPU())) {
+      (Target.getTriple().isSPIRV() &&
+       Target.getTriple().getVendor() == llvm::Triple::AMD) ||
+      (AuxTarget &&
+       (AuxTarget->getTriple().isAMDGPU() ||
+        ((AuxTarget->getTriple().isSPIRV() &&
+          AuxTarget->getTriple().getVendor() == llvm::Triple::AMD))))) {
 #define AMDGPU_TYPE(Name, Id, SingletonId, Width, Align)                       \
   InitBuiltinType(SingletonId, BuiltinType::Id);
 #include "clang/Basic/AMDGPUTypes.def"
@@ -12739,6 +12744,10 @@ static QualType DecodeTypeFromStr(const char *&Str, const ASTContext &Context,
       Type = Context.AMDGPUBufferRsrcTy;
       break;
     }
+    case 'c': {
+      Type = Context.AMDGPUFeaturePredicateTy;
+      break;
+    }
     case 't': {
       Type = Context.AMDGPUTextureTy;
       break;
@@ -13366,10 +13375,7 @@ VTableContextBase *ASTContext::getVTableContext() {
     if (ABI.isMicrosoft())
       VTContext.reset(new MicrosoftVTableContext(*this));
     else {
-      auto ComponentLayout = getLangOpts().RelativeCXXABIVTables
-                                 ? ItaniumVTableContext::Relative
-                                 : ItaniumVTableContext::Pointer;
-      VTContext.reset(new ItaniumVTableContext(*this, ComponentLayout));
+      VTContext.reset(new ItaniumVTableContext(*this));
     }
   }
   return VTContext.get();

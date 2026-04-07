@@ -839,17 +839,17 @@ decodeFixedType(CIRGenFunction &cgf,
   // If the intrinsic expects unsigned integers, the signedness is corrected in
   // correctIntegerSignedness()
   case IITDescriptor::Integer:
-    return cir::IntType::get(context, descriptor.Integer_Width,
+    return cir::IntType::get(context, descriptor.IntegerWidth,
                              /*isSigned=*/true);
   case IITDescriptor::Vector: {
     mlir::Type elementType = decodeFixedType(cgf, infos, context);
-    unsigned numElements = descriptor.Vector_Width.getFixedValue();
+    unsigned numElements = descriptor.VectorWidth.getFixedValue();
     return cir::VectorType::get(elementType, numElements);
   }
   case IITDescriptor::Pointer: {
     mlir::Builder builder(context);
     auto addrSpace = cir::TargetAddressSpaceAttr::get(
-        context, descriptor.Pointer_AddressSpace);
+        context, descriptor.PointerAddressSpace);
     return cir::PointerType::get(cir::VoidType::get(context), addrSpace);
   }
   default:
@@ -2384,11 +2384,12 @@ emitTargetArchBuiltinExpr(CIRGenFunction *cgf, unsigned builtinID,
   case llvm::Triple::wasm32:
   case llvm::Triple::wasm64:
   case llvm::Triple::hexagon:
-  case llvm::Triple::riscv32:
-  case llvm::Triple::riscv64:
     // These are actually NYI, but that will be reported by emitBuiltinExpr.
     // At this point, we don't even know that the builtin is target-specific.
     return std::nullopt;
+  case llvm::Triple::riscv32:
+  case llvm::Triple::riscv64:
+    return cgf->emitRISCVBuiltinExpr(builtinID, e);
   default:
     return std::nullopt;
   }

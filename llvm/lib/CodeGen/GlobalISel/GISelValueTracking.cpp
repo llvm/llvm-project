@@ -299,7 +299,8 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
                          Depth + 1);
     computeKnownBitsImpl(MI.getOperand(2).getReg(), Known2, DemandedElts,
                          Depth + 1);
-    Known = KnownBits::sub(Known, Known2);
+    Known = KnownBits::sub(Known, Known2, MI.getFlag(MachineInstr::NoSWrap),
+                           MI.getFlag(MachineInstr::NoUWrap));
     break;
   }
   case TargetOpcode::G_XOR: {

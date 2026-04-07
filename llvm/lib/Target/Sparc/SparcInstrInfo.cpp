@@ -665,6 +665,22 @@ unsigned SparcInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
     return getInlineAsmLength(AsmStr, *MF->getTarget().getMCAsmInfo());
   }
 
+  if (MI.getOpcode() == SP::GETPCX) {
+    const TargetMachine &TM = MI.getParent()->getParent()->getTarget();
+    if (TM.isPositionIndependent())
+      return 16;
+    switch (TM.getCodeModel()) {
+    default:
+      llvm_unreachable("Unsupported absolute code model");
+    case CodeModel::Small:
+      return 8;
+    case CodeModel::Medium:
+      return 16;
+    case CodeModel::Large:
+      return 24;
+    }
+  }
+
   // If the instruction has a delay slot, be conservative and also include
   // it for sizing purposes. This is done so that the BranchRelaxation pass
   // will not mistakenly mark out-of-range branches as in-range.

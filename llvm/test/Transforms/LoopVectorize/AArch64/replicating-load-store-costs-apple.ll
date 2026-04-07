@@ -587,11 +587,7 @@ define double @test_scalarization_cost_for_load_of_address(ptr %src.0, ptr %src.
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi double [ 3.000000e+00, %[[VECTOR_PH]] ], [ [[TMP21:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 1
-; CHECK-NEXT:    [[GEP_0:%.*]] = getelementptr [[T:%.*]], ptr [[SRC_0]], i64 [[INDEX]]
-; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <6 x double>, ptr [[GEP_0]], align 8
+; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <6 x double>, ptr [[SRC_0]], align 8
 ; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <6 x double> [[WIDE_VEC]], <6 x double> poison, <2 x i32> <i32 0, i32 3>
 ; CHECK-NEXT:    [[STRIDED_VEC1:%.*]] = shufflevector <6 x double> [[WIDE_VEC]], <6 x double> poison, <2 x i32> <i32 1, i32 4>
 ; CHECK-NEXT:    [[STRIDED_VEC2:%.*]] = shufflevector <6 x double> [[WIDE_VEC]], <6 x double> poison, <2 x i32> <i32 2, i32 5>
@@ -600,12 +596,10 @@ define double @test_scalarization_cost_for_load_of_address(ptr %src.0, ptr %src.
 ; CHECK-NEXT:    [[TMP5:%.*]] = fmul <2 x double> [[STRIDED_VEC2]], splat (double 3.000000e+00)
 ; CHECK-NEXT:    [[TMP6:%.*]] = fadd <2 x double> [[TMP3]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = fadd <2 x double> [[TMP6]], [[TMP5]]
-; CHECK-NEXT:    [[GEP_SRC:%.*]] = getelementptr double, ptr [[SRC_1]], i64 [[INDEX]]
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x double>, ptr [[GEP_SRC]], align 8
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x double>, ptr [[SRC_1]], align 8
 ; CHECK-NEXT:    [[TMP9:%.*]] = fmul <2 x double> [[TMP7]], [[WIDE_LOAD]]
-; CHECK-NEXT:    [[GEP_SRC_2:%.*]] = getelementptr [[T_2:%.*]], ptr [[SRC_2]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr [[T_2]], ptr [[SRC_2]], i64 [[TMP1]]
-; CHECK-NEXT:    [[GEP_72:%.*]] = getelementptr i8, ptr [[GEP_SRC_2]], i64 72
+; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr [[T_2:%.*]], ptr [[SRC_2]], i64 1
+; CHECK-NEXT:    [[GEP_72:%.*]] = getelementptr i8, ptr [[SRC_2]], i64 72
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr [[TMP11]], i64 72
 ; CHECK-NEXT:    [[L_P_2:%.*]] = load ptr, ptr [[GEP_72]], align 8
 ; CHECK-NEXT:    [[TMP15:%.*]] = load ptr, ptr [[TMP13]], align 8
@@ -614,9 +608,8 @@ define double @test_scalarization_cost_for_load_of_address(ptr %src.0, ptr %src.
 ; CHECK-NEXT:    [[TMP18:%.*]] = insertelement <2 x double> poison, double [[LV]], i32 0
 ; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <2 x double> [[TMP18]], double [[TMP17]], i32 1
 ; CHECK-NEXT:    [[TMP20:%.*]] = fmul <2 x double> [[TMP9]], [[TMP19]]
-; CHECK-NEXT:    [[TMP21]] = call double @llvm.vector.reduce.fadd.v2f64(double [[VEC_PHI]], <2 x double> [[TMP20]])
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
-; CHECK-NEXT:    br i1 true, label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP21:![0-9]+]]
+; CHECK-NEXT:    [[TMP21:%.*]] = call double @llvm.vector.reduce.fadd.v2f64(double 3.000000e+00, <2 x double> [[TMP20]])
+; CHECK-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:

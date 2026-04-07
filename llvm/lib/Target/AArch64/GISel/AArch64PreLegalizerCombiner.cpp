@@ -26,7 +26,6 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/Instructions.h"
 
 #define GET_GICOMBINER_DEPS
@@ -733,8 +732,8 @@ protected:
 
 public:
   AArch64PreLegalizerCombinerImpl(
-      MachineFunction &MF, CombinerInfo &CInfo, const TargetPassConfig *TPC,
-      GISelValueTracking &VT, GISelCSEInfo *CSEInfo,
+      MachineFunction &MF, CombinerInfo &CInfo, GISelValueTracking &VT,
+      GISelCSEInfo *CSEInfo,
       const AArch64PreLegalizerCombinerImplRuleConfig &RuleConfig,
       const AArch64Subtarget &STI, const LibcallLoweringInfo &Libcalls,
       MachineDominatorTree *MDT, const LegalizerInfo *LI);
@@ -756,12 +755,12 @@ private:
 #undef GET_GICOMBINER_IMPL
 
 AArch64PreLegalizerCombinerImpl::AArch64PreLegalizerCombinerImpl(
-    MachineFunction &MF, CombinerInfo &CInfo, const TargetPassConfig *TPC,
-    GISelValueTracking &VT, GISelCSEInfo *CSEInfo,
+    MachineFunction &MF, CombinerInfo &CInfo, GISelValueTracking &VT,
+    GISelCSEInfo *CSEInfo,
     const AArch64PreLegalizerCombinerImplRuleConfig &RuleConfig,
     const AArch64Subtarget &STI, const LibcallLoweringInfo &Libcalls,
     MachineDominatorTree *MDT, const LegalizerInfo *LI)
-    : Combiner(MF, CInfo, TPC, &VT, CSEInfo),
+    : Combiner(MF, CInfo, &VT, CSEInfo),
       Helper(Observer, B, /*IsPreLegalize*/ true, &VT, MDT, LI),
       RuleConfig(RuleConfig), STI(STI), Libcalls(Libcalls),
 #define GET_GICOMBINER_CONSTRUCTOR_INITS
@@ -824,7 +823,6 @@ private:
 } // end anonymous namespace
 
 void AArch64PreLegalizerCombiner::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.addRequired<TargetPassConfig>();
   AU.setPreservesCFG();
   getSelectionDAGFallbackAnalysisUsage(AU);
   AU.addRequired<GISelValueTrackingAnalysisLegacy>();
@@ -846,12 +844,11 @@ AArch64PreLegalizerCombiner::AArch64PreLegalizerCombiner()
 bool AArch64PreLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
   if (MF.getProperties().hasFailedISel())
     return false;
-  auto &TPC = getAnalysis<TargetPassConfig>();
-
   // Enable CSE.
   GISelCSEAnalysisWrapper &Wrapper =
       getAnalysis<GISelCSEAnalysisWrapperPass>().getCSEWrapper();
-  auto *CSEInfo = &Wrapper.get(TPC.getCSEConfig());
+  auto *CSEInfo =
+      &Wrapper.get(getStandardCSEConfigForOpt(MF.getTarget().getOptLevel()));
 
   const AArch64Subtarget &ST = MF.getSubtarget<AArch64Subtarget>();
   const auto *LI = ST.getLegalizerInfo();
@@ -877,8 +874,8 @@ bool AArch64PreLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
   // This is the first Combiner, so the input IR might contain dead
   // instructions.
   CInfo.EnableFullDCE = true;
-  AArch64PreLegalizerCombinerImpl Impl(MF, CInfo, &TPC, *VT, CSEInfo,
-                                       RuleConfig, ST, Libcalls, MDT, LI);
+  AArch64PreLegalizerCombinerImpl Impl(MF, CInfo, *VT, CSEInfo, RuleConfig, ST,
+                                       Libcalls, MDT, LI);
   return Impl.combineMachineInstrs();
 }
 
@@ -886,7 +883,6 @@ char AArch64PreLegalizerCombiner::ID = 0;
 INITIALIZE_PASS_BEGIN(AArch64PreLegalizerCombiner, DEBUG_TYPE,
                       "Combine AArch64 machine instrs before legalization",
                       false, false)
-INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
 INITIALIZE_PASS_DEPENDENCY(GISelValueTrackingAnalysisLegacy)
 INITIALIZE_PASS_DEPENDENCY(GISelCSEAnalysisWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LibcallLoweringInfoWrapper)

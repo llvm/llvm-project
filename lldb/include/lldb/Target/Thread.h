@@ -16,6 +16,7 @@
 #include <vector>
 
 #include "lldb/Core/UserSettingsController.h"
+#include "lldb/Host/HostThread.h"
 #include "lldb/Target/ExecutionContextScope.h"
 #include "lldb/Target/RegisterCheckpoint.h"
 #include "lldb/Target/StackFrameList.h"
@@ -1004,7 +1005,7 @@ public:
                                  bool stop_other_threads, Status &status);
 
   virtual lldb::ThreadPlanSP QueueThreadPlanForStepUntil(
-      bool abort_other_plans, lldb::addr_t *address_list, size_t num_addresses,
+      bool abort_other_plans, llvm::ArrayRef<lldb::addr_t> address_list,
       bool stop_others, uint32_t frame_idx, Status &status);
 
   virtual lldb::ThreadPlanSP
@@ -1299,6 +1300,11 @@ public:
 
   lldb::StackFrameListSP GetStackFrameList();
 
+  /// Push/pop provider input frames for the current host thread.
+  /// Used by SyntheticStackFrameList to scope re-entrant frame lookups.
+  void PushProviderFrameList(lldb::StackFrameListSP frames);
+  void PopProviderFrameList();
+
   /// Get a frame list by its unique identifier.
   lldb::StackFrameListSP GetFrameListByIdentifier(lldb::frame_list_id_t id);
 
@@ -1314,6 +1320,9 @@ public:
   GetFrameProviders() const {
     return m_frame_providers;
   }
+
+  /// Returns true if any host thread is currently inside a provider.
+  bool IsAnyProviderActive();
 
 protected:
   friend class ThreadPlan;
@@ -1396,6 +1405,21 @@ protected:
       m_unwinder_frames_sp;                ///< The unwinder frame list (ID 0).
   lldb::StackFrameListSP m_curr_frames_sp; ///< The stack frames that get lazily
                                            ///populated after a thread stops.
+  /// Per-host-thread stack of active provider input frames. A provider
+  /// always operates on its parent StackFrameList — not the synthetic list
+  /// currently being constructed. While a provider is running, its parent
+  /// list is pushed here so that any code the provider executes that
+  /// fetches a StackFrameList (e.g. GetFrameAtIndex, EvaluateExpression)
+  /// transparently sees the parent list rather than the in-construction
+  /// list at the end of the provider chain.
+  ///
+  /// Keyed by host thread so the provider's own thread and the private state
+  /// thread get the parent list, while unrelated threads proceed normally.
+  /// ClearStackFrames() is also guarded: frame state is shared, so it must
+  /// not be torn down while any provider is mid-construction.
+  std::mutex m_provider_frames_mutex;
+  llvm::DenseMap<HostThread, std::vector<lldb::StackFrameListSP>>
+      m_active_frame_providers_by_thread;
   lldb::StackFrameListSP m_prev_frames_sp; ///< The previous stack frames from
                                            ///the last time this thread stopped.
   std::optional<lldb::addr_t>

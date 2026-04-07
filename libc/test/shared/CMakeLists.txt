@@ -16,10 +16,12 @@ add_fp_unittest(
     libc.src.__support.math.acospif
     libc.src.__support.math.acospif16
     libc.src.__support.math.asin
+    libc.src.__support.math.asinbf16
     libc.src.__support.math.asinf
     libc.src.__support.math.asinf16
     libc.src.__support.math.asinhf
     libc.src.__support.math.asinhf16
+    libc.src.__support.math.asinpi
     libc.src.__support.math.asinpif
     libc.src.__support.math.asinpif16
     libc.src.__support.math.atan
@@ -80,6 +82,7 @@ add_fp_unittest(
     libc.src.__support.math.dsqrtl
     libc.src.__support.math.exp10m1f
     libc.src.__support.math.exp10m1f16
+    libc.src.__support.math.erfcf16
     libc.src.__support.math.erff
     libc.src.__support.math.erff16
     libc.src.__support.math.exp
@@ -256,3 +259,46 @@ add_fp_unittest(
     libc.src.__support.math.tanpif
     libc.src.__support.math.tanpif16
 )
+
+add_fp_unittest(
+  shared_math_constexpr_test
+  SUITE
+    libc-shared-tests
+  SRCS
+    shared_math_constexpr_test.cpp
+  DEPENDS
+    libc.src.__support.math.asinbf16
+    libc.src.__support.math.ceil
+    libc.src.__support.math.ceilbf16
+    libc.src.__support.math.ceilf
+    libc.src.__support.math.ceilf128
+    libc.src.__support.math.ceilf16
+    libc.src.__support.math.ceill
+    libc.src.__support.math.log
+)
+
+add_fp_unittest(
+  shared_str_to_num_test
+  SUITE
+    libc-shared-tests
+  SRCS
+    shared_str_to_num_test.cpp
+  DEPENDS
+    libc.src.__support.str_to_float
+    libc.src.__support.str_to_integer
+)
+
+if(NOT MSVC AND NOT LLVM_LIBC_FULL_BUILD)
+add_fp_unittest(
+  shared_rpc_test
+  SUITE
+    libc-shared-tests
+  SRCS
+    shared_rpc_test.cpp
+  DEPENDS
+    libc.src.stdio.printf_core.converter
+    libc.src.stdio.printf_core.parser
+    libc.src.stdio.printf_core.writer
+    libc.src.__support.arg_list
+)
+endif()

@@ -427,10 +427,8 @@ bool vputils::isUniformAcrossVFsAndUFs(VPValue *V) {
                all_of(R->operands(), isUniformAcrossVFsAndUFs);
       })
       .Case([](const VPInstruction *VPI) {
-        return (VPI->isScalarCast() &&
-                isUniformAcrossVFsAndUFs(VPI->getOperand(0))) ||
-               (preservesUniformity(VPI->getOpcode()) &&
-                all_of(VPI->operands(), isUniformAcrossVFsAndUFs));
+        return preservesUniformity(VPI->getOpcode()) &&
+               all_of(VPI->operands(), isUniformAcrossVFsAndUFs);
       })
       .Case([](const VPWidenCastRecipe *R) {
         // A cast is uniform according to its operand.
@@ -467,29 +465,30 @@ unsigned vputils::getVFScaleFactor(VPRecipeBase *R) {
 }
 
 std::optional<VPValue *>
-vputils::getRecipesForUncountableExit(VPlan &Plan,
-                                      SmallVectorImpl<VPRecipeBase *> &Recipes,
-                                      SmallVectorImpl<VPRecipeBase *> &GEPs) {
-  // Given a VPlan like the following (just including the recipes contributing
-  // to loop control exiting here, not the actual work), we're looking to match
-  // the recipes contributing to the uncountable exit condition comparison
-  // (here, vp<%4>) back to either live-ins or the address nodes for the load
-  // used as part of the uncountable exit comparison so that we can copy them
-  // to a preheader and rotate the address in the loop to the next vector
-  // iteration.
+vputils::getRecipesForUncountableExit(SmallVectorImpl<VPInstruction *> &Recipes,
+                                      SmallVectorImpl<VPInstruction *> &GEPs,
+                                      VPBasicBlock *LatchVPBB) {
+  // Given a plain CFG VPlan loop with countable latch exiting block
+  // \p LatchVPBB, we're looking to match the recipes contributing to the
+  // uncountable exit condition comparison (here, vp<%4>) back to either
+  // live-ins or the address nodes for the load used as part of the uncountable
+  // exit comparison so that we can either move them within the loop, or copy
+  // them to the preheader depending on the chosen method for dealing with
+  // stores in uncountable exit loops.
   //
   // Currently, the address of the load is restricted to a GEP with 2 operands
   // and a live-in base address. This constraint may be relaxed later.
   //
   // VPlan ' for UF>=1' {
-  // Live-in vp<%0> = VF
-  // Live-in ir<64> = original trip-count
+  // Live-in vp<%0> = VF * UF
+  // Live-in vp<%1> = vector-trip-count
+  // Live-in ir<20> = original trip-count
   //
-  // entry:
-  // Successor(s): preheader, vector.ph
+  // ir-bb<entry>:
+  // Successor(s): scalar.ph, vector.ph
   //
   // vector.ph:
-  // Successor(s): vector loop
+  // Successor(s): for.body
   //
   // <x1> vector loop: {
   // vp<%2> = CANONICAL-IV
@@ -507,18 +506,19 @@ vputils::getRecipesForUncountableExit(VPlan &Plan,
   // Successor(s): early.exit, middle.block
   //
   // middle.block:
-  // Successor(s): preheader
+  // Successor(s): ir-bb<exit>, scalar.ph
   //
-  // preheader:
+  // ir-bb<exit>:
   // No successors
+  //
+  // scalar.ph:
   // }
 
   // Find the uncountable loop exit condition.
-  auto *Region = Plan.getVectorLoopRegion();
   VPValue *UncountableCondition = nullptr;
-  if (!match(Region->getExitingBasicBlock()->getTerminator(),
-             m_BranchOnTwoConds(m_AnyOf(m_VPValue(UncountableCondition)),
-                                m_VPValue())))
+  if (!match(LatchVPBB->getTerminator(),
+             m_BranchOnCond(m_c_BinaryOr(
+                 m_AnyOf(m_VPValue(UncountableCondition)), m_VPValue()))))
     return std::nullopt;
 
   SmallVector<VPValue *, 4> Worklist;
@@ -541,23 +541,31 @@ vputils::getRecipesForUncountableExit(VPlan &Plan,
     if (match(V, m_ICmp(m_VPValue(Op1), m_VPValue(Op2)))) {
       Worklist.push_back(Op1);
       Worklist.push_back(Op2);
-      Recipes.push_back(V->getDefiningRecipe());
-    } else if (auto *Load = dyn_cast<VPWidenLoadRecipe>(V)) {
-      // Reject masked loads for the time being; they make the exit condition
-      // more complex.
-      if (Load->isMasked())
+      Recipes.push_back(cast<VPInstruction>(V->getDefiningRecipe()));
+    } else if (match(V, m_VPInstruction<Instruction::Load>(m_VPValue(Op1)))) {
+      VPRecipeBase *GepR = Op1->getDefiningRecipe();
+      // Only matching base + single offset term for now.
+      if (GepR->getNumOperands() != 2)
         return std::nullopt;
-
-      VPValue *GEP = Load->getAddr();
-      if (!match(GEP, m_GetElementPtr(m_LiveIn(), m_VPValue())))
+      // Matching a GEP with a loop-invariant base ptr.
+      if (!match(GepR, m_VPInstruction<Instruction::GetElementPtr>(
+                           m_LiveIn(), m_VPValue())))
         return std::nullopt;
-
-      Recipes.push_back(Load);
-      Recipes.push_back(GEP->getDefiningRecipe());
-      GEPs.push_back(GEP->getDefiningRecipe());
+      Recipes.push_back(cast<VPInstruction>(V->getDefiningRecipe()));
+      Recipes.push_back(cast<VPInstruction>(GepR));
+      GEPs.push_back(cast<VPInstruction>(GepR));
+    } else if (match(V, m_VPInstruction<VPInstruction::MaskedCond>(
+                            m_VPValue(Op1)))) {
+      Worklist.push_back(Op1);
+      Recipes.push_back(cast<VPInstruction>(V->getDefiningRecipe()));
     } else
       return std::nullopt;
   }
+
+  // If we couldn't match anything, don't return the condition. It may be
+  // defined outside the loop.
+  if (Recipes.empty() || GEPs.empty())
+    return std::nullopt;
 
   return UncountableCondition;
 }
@@ -602,6 +610,27 @@ VPSingleDefRecipe *vputils::findHeaderMask(VPlan &Plan) {
     }
   }
   return HeaderMask;
+}
+
+SmallVector<VPBasicBlock *>
+VPBlockUtils::blocksInSingleSuccessorChainBetween(VPBasicBlock *FirstBB,
+                                                  VPBasicBlock *LastBB) {
+  assert(FirstBB->getParent() == LastBB->getParent() &&
+         "FirstBB and LastBB from different regions");
+#ifndef NDEBUG
+  bool InSingleSuccChain = false;
+  for (VPBlockBase *Succ = FirstBB; Succ; Succ = Succ->getSingleSuccessor())
+    InSingleSuccChain |= (Succ == LastBB);
+  assert(InSingleSuccChain &&
+         "LastBB unreachable from FirstBB in single-successor chain");
+#endif
+  auto Blocks = to_vector(
+      VPBlockUtils::blocksOnly<VPBasicBlock>(vp_depth_first_deep(FirstBB)));
+  auto *LastIt = find(Blocks, LastBB);
+  assert(LastIt != Blocks.end() &&
+         "LastBB unreachable from FirstBB in depth-first traversal");
+  Blocks.erase(std::next(LastIt), Blocks.end());
+  return Blocks;
 }
 
 bool VPBlockUtils::isHeader(const VPBlockBase *VPB,

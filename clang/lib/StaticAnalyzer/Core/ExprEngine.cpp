@@ -1131,7 +1131,7 @@ void ExprEngine::ProcessStmt(const Stmt *currStmt, ExplodedNode *Pred) {
     removeDead(Pred, CleanedStates, currStmt,
                                     Pred->getLocationContext());
   } else
-    CleanedStates.Add(Pred);
+    CleanedStates.insert(Pred);
 
   // Visit the statement.
   ExplodedNodeSet Dst;
@@ -1190,7 +1190,7 @@ void ExprEngine::ProcessInitializer(const CFGInitializer CFGInit,
       // But we still need to stop tracking the object under construction.
       State = finishObjectConstruction(State, BMI, LC);
       PostStore PS(Init, LC, /*Loc*/ nullptr, /*tag*/ nullptr);
-      Tmp.Add(Engine.makeNode(PS, State, Pred));
+      Tmp.insert(Engine.makeNode(PS, State, Pred));
     } else {
       const ValueDecl *Field;
       if (BMI->isIndirectMemberInitializer()) {
@@ -1245,7 +1245,7 @@ void ExprEngine::ProcessInitializer(const CFGInitializer CFGInit,
 
   ExplodedNodeSet Dst;
   for (ExplodedNode *Pred : Tmp)
-    Dst.Add(Engine.makeNode(PP, Pred->getState(), Pred));
+    Dst.insert(Engine.makeNode(PP, Pred->getState(), Pred));
   // Enqueue the new nodes onto the work list.
   Engine.enqueueStmtNodes(Dst, getCurrBlock(), currStmtIdx);
 }
@@ -1328,7 +1328,7 @@ void ExprEngine::ProcessNewAllocator(const CXXNewExpr *NE,
     const LocationContext *LCtx = Pred->getLocationContext();
     PostImplicitCall PP(NE->getOperatorNew(), NE->getBeginLoc(), LCtx,
                         getCFGElementRef());
-    Dst.Add(Engine.makeNode(PP, Pred->getState(), Pred));
+    Dst.insert(Engine.makeNode(PP, Pred->getState(), Pred));
   }
   Engine.enqueueStmtNodes(Dst, getCurrBlock(), currStmtIdx);
 }
@@ -2999,7 +2999,7 @@ void ExprEngine::processIndirectGoto(ExplodedNodeSet &Dst, const Expr *Tgt,
       // FIXME: If 'V' was a symbolic value, then record that on this execution
       // path it is equal to the address of the label leading to 'Succ'.
       BlockEdge BE(getCurrBlock(), Succ, Pred->getLocationContext());
-      Dst.Add(Engine.makeNode(BE, State, Pred));
+      Dst.insert(Engine.makeNode(BE, State, Pred));
     }
   }
 }
@@ -3082,9 +3082,23 @@ void ExprEngine::processEndOfFunction(ExplodedNode *Pred,
 ///  nodes by processing the 'effects' of a switch statement.
 void ExprEngine::processSwitch(const SwitchStmt *Switch, ExplodedNode *Pred,
                                ExplodedNodeSet &Dst) {
+  const ASTContext &ACtx = getContext();
+  const LocationContext *LCtx = Pred->getLocationContext();
   const Expr *Condition = Switch->getCond();
 
-  SwitchNodeBuilder Builder(Dst, *currBldrCtx);
+  // The block that is terminated by the switch statement.
+  const CFGBlock *SwitchBlock = getCurrBlock();
+  // Note that successors may be null if they are pruned as unreachable.
+  assert(SwitchBlock->succ_size() && "Switch must have at least one successor");
+  // The reversed iteration order is present since the beginning, when in 2008
+  // commit 80ebc1d1c95704b0ff0386b3a3cbc8b3ff960654 added support for handling
+  // switch statements. I don't see any advantage over regular forward
+  // iteration -- but switching the order would perturb the insertion order of
+  // the work list and therefore the analysis results.
+  llvm::iterator_range<CFGBlock::const_succ_reverse_iterator> CaseBlocks(
+      SwitchBlock->succ_rbegin() + 1, SwitchBlock->succ_rend());
+  const CFGBlock *DefaultBlock = *SwitchBlock->succ_rbegin();
+
   ExplodedNodeSet CheckersOutSet;
 
   getCheckerManager().runCheckersForBranchCondition(
@@ -3093,30 +3107,29 @@ void ExprEngine::processSwitch(const SwitchStmt *Switch, ExplodedNode *Pred,
   for (ExplodedNode *Node : CheckersOutSet) {
     ProgramStateRef State = Node->getState();
 
-    SVal CondV = State->getSVal(Condition, Node->getLocationContext());
+    SVal CondV = State->getSVal(Condition, LCtx);
     if (CondV.isUndef()) {
       // This can only happen if core.uninitialized.Branch is disabled.
       continue;
     }
-
     std::optional<NonLoc> CondNL = CondV.getAs<NonLoc>();
 
-    for (const CFGBlock *Block : Builder) {
+    for (const CFGBlock *CaseBlock : CaseBlocks) {
       // Successor may be pruned out during CFG construction.
-      if (!Block)
+      if (!CaseBlock)
         continue;
 
-      const CaseStmt *Case = cast<CaseStmt>(Block->getLabel());
+      const CaseStmt *Case = cast<CaseStmt>(CaseBlock->getLabel());
 
       // Evaluate the LHS of the case value.
-      llvm::APSInt V1 = Case->getLHS()->EvaluateKnownConstInt(getContext());
+      llvm::APSInt V1 = Case->getLHS()->EvaluateKnownConstInt(ACtx);
       assert(V1.getBitWidth() ==
              getContext().getIntWidth(Condition->getType()));
 
       // Get the RHS of the case, if it exists.
       llvm::APSInt V2;
       if (const Expr *E = Case->getRHS())
-        V2 = E->EvaluateKnownConstInt(getContext());
+        V2 = E->EvaluateKnownConstInt(ACtx);
       else
         V2 = V1;
 
@@ -3131,8 +3144,10 @@ void ExprEngine::processSwitch(const SwitchStmt *Switch, ExplodedNode *Pred,
         StateMatching = State;
       }
 
-      if (StateMatching)
-        Builder.generateCaseStmtNode(Block, StateMatching, Node);
+      if (StateMatching) {
+        BlockEdge BE(SwitchBlock, CaseBlock, LCtx);
+        Dst.insert(Engine.makeNode(BE, StateMatching, Node));
+      }
 
       // If _not_ entering the current case is infeasible, then we are done
       // with processing the paths through the current Node.
@@ -3140,6 +3155,10 @@ void ExprEngine::processSwitch(const SwitchStmt *Switch, ExplodedNode *Pred,
         break;
     }
     if (!State)
+      continue;
+
+    // The default block may be null if it is "optimized out" by CFG creation.
+    if (!DefaultBlock)
       continue;
 
     // If we have switch(enum value), the default branch is not
@@ -3154,7 +3173,8 @@ void ExprEngine::processSwitch(const SwitchStmt *Switch, ExplodedNode *Pred,
         continue;
     }
 
-    Builder.generateDefaultCaseNode(State, Node);
+    BlockEdge BE(SwitchBlock, DefaultBlock, LCtx);
+    Dst.insert(Engine.makeNode(BE, State, Node));
   }
 }
 

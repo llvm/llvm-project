@@ -2852,6 +2852,13 @@ InstructionCost ARMTTIImpl::getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
   return InstructionCost::getInvalid();
 }
 
+bool ARMTTIImpl::shouldConsiderVectorizationRegPressure() const {
+  // MVE only has 8 vector registers, so we should consider register pressure to
+  // avoid vectorizing when the cost of spills exceeds the gains from
+  // vectorization.
+  return ST->hasMVEIntegerOps();
+}
+
 bool ARMTTIImpl::hasArmWideBranch(bool Thumb) const {
   if (Thumb) {
     // B.W is available in any Thumb2-supporting target, and also in every
