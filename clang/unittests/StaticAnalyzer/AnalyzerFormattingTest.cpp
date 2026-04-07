@@ -105,7 +105,7 @@ TEST(PrintFormattedEntryTest, WrapDescription) {
 
 // No wrapping after checker's name.
 // With initial pad.
-// No wrapping in checker's descriptions (MinLineWdth = 0).
+// No wrapping in checker's descriptions (MinLineWidth = 0).
 TEST(PrintFormattedEntryTest, NoWrap) {
   llvm::SmallString<256> Buffer;
   llvm::StringRef Desc = "This is a very long description that will not be "
