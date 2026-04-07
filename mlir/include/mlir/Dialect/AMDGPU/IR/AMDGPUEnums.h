@@ -1,14 +1,15 @@
-//===- Utils.h - General AMDGPU utilities -----------------------*- C++ -*-===//
+//===- Utils.h - General AMDGPU Enums utilities -----------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#ifndef MLIR_DIALECT_AMDGPU_UTILS_UTILS_H_
-#define MLIR_DIALECT_AMDGPU_UTILS_UTILS_H_
+#ifndef MLIR_DIALECT_AMDGPU_UTILS_AMDGPU_ENUMS_H_
+#define MLIR_DIALECT_AMDGPU_UTILS_AMDGPU_ENUMS_H_
 
 #include "mlir/Dialect/AMDGPU/IR/AMDGPUDialect.h"
+#include "mlir/Dialect/AMDGPU/IR/AMDGPUEnums.h.inc"
 #include "llvm/ADT/STLExtras.h"
 
 namespace mlir::amdgpu {
