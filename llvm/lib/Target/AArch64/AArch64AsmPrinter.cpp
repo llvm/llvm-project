@@ -2680,13 +2680,9 @@ AArch64AsmPrinter::lowerConstantPtrAuth(const ConstantPtrAuth &CPA) {
   MCContext &Ctx = OutContext;
 
   // Figure out the base symbol and the addend, if any.
-  // LookThroughIntToPtr is needed to handle patterns like:
-  //   inttoptr (i64 add (i64 ptrtoint (ptr @global to i64), i64 2) to ptr)
   APInt Offset(64, 0);
   const Value *BaseGV = CPA.getPointer()->stripAndAccumulateConstantOffsets(
-      getDataLayout(), Offset, /*AllowNonInbounds=*/true,
-      /*AllowInvariantGroup=*/false, /*ExternalAnalysis=*/nullptr,
-      /*LookThroughIntToPtr=*/true);
+      getDataLayout(), Offset, /*AllowNonInbounds=*/true);
 
   auto *BaseGVB = dyn_cast<GlobalValue>(BaseGV);
 

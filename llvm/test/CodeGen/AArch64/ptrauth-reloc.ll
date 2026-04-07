@@ -113,20 +113,6 @@
 
 @g.weird_ref.da.0 = constant i64 ptrtoint (ptr inttoptr (i64 ptrtoint (ptr ptrauth (ptr getelementptr (i8, ptr @g, i64 16), i32 2) to i64) to ptr) to i64)
 
-; inttoptr(add(ptrtoint(@global), offset)) inside ptrauth.
-
-; CHECK-ELF-LABEL:     .globl g.inttoptr_add.da.0
-; CHECK-ELF-NEXT:      .p2align 3
-; CHECK-ELF-NEXT:    g.inttoptr_add.da.0:
-; CHECK-ELF-NEXT:      .xword (g+2)@AUTH(da,0)
-
-; CHECK-MACHO-LABEL:   .globl _g.inttoptr_add.da.0
-; CHECK-MACHO-NEXT:    .p2align 3
-; CHECK-MACHO-NEXT:  _g.inttoptr_add.da.0:
-; CHECK-MACHO-NEXT:    .quad (_g+2)@AUTH(da,0)
-
-@g.inttoptr_add.da.0 = constant ptr ptrauth (ptr inttoptr (i64 add (i64 ptrtoint (ptr @g to i64), i64 2) to ptr), i32 2)
-
 ; Null pointer inside ptrauth is valid (e.g. ptrauth-irelative.ll).
 
 ; CHECK-ELF-LABEL:     .globl g.null_ref.da.0
