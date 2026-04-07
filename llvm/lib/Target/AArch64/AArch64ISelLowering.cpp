@@ -31422,11 +31422,17 @@ bool AArch64TargetLowering::fallBackToDAGISel(const Instruction &Inst) const {
 
   // Checks to allow the use of SME instructions
   if (auto *Base = dyn_cast<CallBase>(&Inst)) {
-    auto CallAttrs = SMECallAttrs(*Base, &getRuntimeLibcallsInfo());
-    if (CallAttrs.requiresSMChange() || CallAttrs.requiresLazySave() ||
-        CallAttrs.requiresPreservingZT0() ||
-        CallAttrs.requiresPreservingAllZAState())
-      return true;
+    // Per-call SME attribute checks via SMECallAttrs are compile-time
+    // expensive, avoid for non-SME targets. We do the checks even if the
+    // target only has SVE, since streaming-mode changes might still be
+    // required.
+    if (Subtarget->hasSME() || Subtarget->hasSVE()) {
+      auto CallAttrs = SMECallAttrs(*Base, &getRuntimeLibcallsInfo());
+      if (CallAttrs.requiresSMChange() || CallAttrs.requiresLazySave() ||
+          CallAttrs.requiresPreservingZT0() ||
+          CallAttrs.requiresPreservingAllZAState())
+        return true;
+    }
   }
   return false;
 }
