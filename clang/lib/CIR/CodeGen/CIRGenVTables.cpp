@@ -758,8 +758,34 @@ void CIRGenFunction::emitCallAndReturnForThunk(cir::FuncOp callee,
 void CIRGenFunction::emitMustTailThunk(GlobalDecl gd,
                                        mlir::Value adjustedThisPtr,
                                        cir::FuncOp callee) {
-  assert(!cir::MissingFeatures::opCallMustTail());
-  cgm.errorNYI("musttail thunk");
+  // Forward all function arguments, replacing 'this' with the adjusted pointer.
+  // The call is marked musttail so varargs are forwarded correctly.
+  auto thunkFn = cast<cir::FuncOp>(curFn);
+  mlir::Block &entryBlock = thunkFn.getBody().front();
+  SmallVector<mlir::Value> args;
+  for (mlir::BlockArgument arg : entryBlock.getArguments())
+    args.push_back(arg);
+
+  // Replace the 'this' argument (first arg) with the adjusted pointer.
+  assert(!args.empty() && "thunk must have at least 'this' argument");
+  if (adjustedThisPtr.getType() != args[0].getType())
+    adjustedThisPtr = builder.createBitcast(adjustedThisPtr, args[0].getType());
+  args[0] = adjustedThisPtr;
+
+  mlir::Location loc = thunkFn.getLoc();
+  cir::FuncType calleeTy = callee.getFunctionType();
+  mlir::Type retTy = calleeTy.getReturnType();
+
+  cir::CallOp call = builder.createCallOp(loc, callee, args);
+  call->setAttr(cir::CIRDialect::getMustTailAttrName(),
+                mlir::UnitAttr::get(builder.getContext()));
+
+  if (isa<cir::VoidType>(retTy))
+    cir::ReturnOp::create(builder, loc);
+  else
+    cir::ReturnOp::create(builder, loc, call->getResult(0));
+
+  finishThunk();
 }
 
 void CIRGenFunction::generateThunk(cir::FuncOp fn,

@@ -106,6 +106,21 @@ struct C : B {
 C *C::f() { return 0; }
 } // namespace CovariantReturn
 
+namespace VarargThunk {
+// Variadic this-adjusting thunk.  On x86_64, the thunk forwards arguments
+// via musttail (classic codegen) or direct argument forwarding (CIR).
+struct A {
+  virtual void f(int x, ...);
+};
+struct B {
+  virtual void f(int x, ...);
+};
+struct C : A, B {
+  void f(int x, ...) override;
+};
+void C::f(int x, ...) {}
+} // namespace VarargThunk
+
 // In CIR, all globals are emitted before functions.
 
 // Test1 vtable: C's vtable references the thunk for B's entry.
@@ -204,6 +219,17 @@ C *C::f() { return 0; }
 // CIR:       cir.call @_ZN15CovariantReturn1C1fEv
 // CIR:       cir.ternary
 
+// --- VarargThunk: variadic this-adjusting thunk ---
+
+// CIR: cir.func {{.*}} @_ZThn8_N11VarargThunk1C1fEiz(%arg0: !cir.ptr<
+// CIR:   %[[VT_THIS:.*]] = cir.load
+// CIR:   %[[VT_CAST:.*]] = cir.cast bitcast %[[VT_THIS]] : !cir.ptr<{{.*}}> -> !cir.ptr<!u8i>
+// CIR:   %[[VT_OFFSET:.*]] = cir.const #cir.int<-8> : !s64i
+// CIR:   %[[VT_ADJUSTED:.*]] = cir.ptr_stride %[[VT_CAST]], %[[VT_OFFSET]] : (!cir.ptr<!u8i>, !s64i) -> !cir.ptr<!u8i>
+// CIR:   %[[VT_RESULT:.*]] = cir.cast bitcast %[[VT_ADJUSTED]] : !cir.ptr<!u8i> -> !cir.ptr<
+// CIR:   cir.call @_ZN11VarargThunk1C1fEiz(%[[VT_RESULT]], %arg1) musttail
+// CIR:   cir.return
+
 // --- LLVM checks ---
 
 // LLVM: @_ZTVN5Test11CE = global { [3 x ptr], [3 x ptr] } {
@@ -256,6 +282,10 @@ C *C::f() { return 0; }
 // LLVM:       call {{.*}} @_ZN15CovariantReturn1C1fEv
 // LLVM:       phi ptr
 
+// LLVM-LABEL: define {{.*}} void @_ZThn8_N11VarargThunk1C1fEiz(ptr{{.*}}, i32{{.*}}, ...)
+// LLVM:   getelementptr i8, ptr {{.*}}, i64 -8
+// LLVM:   musttail call void (ptr, i32, ...) @_ZN11VarargThunk1C1fEiz(ptr{{.*}}, i32{{.*}}, ...)
+
 // --- OGCG checks ---
 
 // OGCG: @_ZTVN5Test11CE = unnamed_addr constant { [3 x ptr], [3 x ptr] } {
@@ -307,3 +337,7 @@ C *C::f() { return 0; }
 // OGCG-LABEL: define {{.*}} @_ZTch0_v0_n32_N15CovariantReturn1C1fEv
 // OGCG:       {{.*}}call {{.*}} @_ZN15CovariantReturn1C1fEv
 // OGCG:       phi ptr
+
+// OGCG-LABEL: define {{.*}} void @_ZThn8_N11VarargThunk1C1fEiz(ptr{{.*}}, i32{{.*}}, ...)
+// OGCG:   getelementptr inbounds i8, ptr {{.*}}, i64 -8
+// OGCG:   musttail call void (ptr, i32, ...) @_ZN11VarargThunk1C1fEiz(ptr{{.*}}, i32{{.*}}, ...)
