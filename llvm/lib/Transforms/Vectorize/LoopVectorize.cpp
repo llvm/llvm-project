@@ -4380,7 +4380,7 @@ std::unique_ptr<VPlan> LoopVectorizationPlanner::selectBestEpiloguePlan(
         IC * estimateElementCount(MainLoopVF, CM.getVScaleForTuning())) {
       LLVM_DEBUG(dbgs() << "LEV: Forced epilogue VF results in dead epilogue "
                            "vector loop, skipping vectorizing epilogue.\n");
-      return Result;
+      return nullptr;
     }
 
     LLVM_DEBUG(dbgs() << "LEV: Epilogue vectorization factor is forced.\n");
@@ -7204,7 +7204,9 @@ LoopVectorizationPlanner::computeBestVF() {
         ElementCount::getFixed(EpilogueVectorizationForceVF);
     assert(*VPlans[0]->vectorFactors().begin() == EpilogueVF &&
            "expected first plan to be for the forced epilogue VF");
-    return {UserVF, 0, 0};
+    assert(*VPlans[1]->vectorFactors().begin() == UserVF &&
+           "expected second plan to be for the forced UserVF");
+    return {{UserVF, 0, 0}, &*VPlans[1]};
   }
 
   ElementCount ScalarVF = ElementCount::getFixed(1);
@@ -7218,7 +7220,6 @@ LoopVectorizationPlanner::computeBestVF() {
                             ? "Code Size and Latency\n"
                             : "Unknown\n"));
 
-  ElementCount ScalarVF = ElementCount::getFixed(1);
   assert(FirstPlan.hasVF(ScalarVF) &&
          "More than a single plan/VF w/o any plan having scalar VF");
 
