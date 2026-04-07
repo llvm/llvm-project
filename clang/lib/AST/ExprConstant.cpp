@@ -14789,7 +14789,7 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     case X86::BI__builtin_ia32_vpdpwssd128:
     case X86::BI__builtin_ia32_vpdpwssd256:
     case X86::BI__builtin_ia32_vpdpwssd512:
-	case X86::BI__builtin_ia32_vpdpbusd128:
+    case X86::BI__builtin_ia32_vpdpbusd128:
     case X86::BI__builtin_ia32_vpdpbusd256:
     case X86::BI__builtin_ia32_vpdpbusd512:
       IsSaturating = false;
@@ -14812,9 +14812,9 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
 
     unsigned NumSrcElts = Source.getVectorLength();
     unsigned NumOperandElts = OperandA.getVectorLength();
-	unsigned EltsPerLane = NumOperandElts / NumSrcElts;
+    unsigned EltsPerLane = NumOperandElts / NumSrcElts;
 
-	assert(OperandA.getVectorLength() == OperandB.getVectorLength());
+    assert(OperandA.getVectorLength() == OperandB.getVectorLength());
 
     SmallVector<APValue, 16> Result;
     Result.reserve(NumSrcElts);
@@ -14822,9 +14822,12 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
       APSInt DotProduct = Source.getVectorElt(I).getInt();
       DotProduct = DotProduct.extend(64);
       for (unsigned J = 0; J != EltsPerLane; ++J) {
-        APSInt OpA = APSInt(OperandA.getVectorElt(EltsPerLane * I + J).getInt().extend(64), false);
+        APSInt OpA = APSInt(
+            OperandA.getVectorElt(EltsPerLane * I + J).getInt().extend(64),
+            false);
         APSInt OpB = APSInt(
-            OperandB.getVectorElt(EltsPerLane * I + J).getInt().extend(64), false);
+            OperandB.getVectorElt(EltsPerLane * I + J).getInt().extend(64),
+            false);
         DotProduct += OpA * OpB;
       }
       if (IsSaturating) {

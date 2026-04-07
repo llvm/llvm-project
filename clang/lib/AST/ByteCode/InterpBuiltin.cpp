@@ -4442,8 +4442,7 @@ static bool interp__builtin_ia32_gfni_mul(InterpState &S, CodePtr OpPC,
 }
 
 static bool interp__builtin_ia32_vpdp(InterpState &S, CodePtr OpPC,
-                                      const CallExpr *Call,
-                                      bool IsSaturating) {
+                                      const CallExpr *Call, bool IsSaturating) {
   const auto *SrcVecT = Call->getArg(0)->getType()->castAs<VectorType>();
   const auto *OpAVecT = Call->getArg(1)->getType()->castAs<VectorType>();
   const auto *OpBVecT = Call->getArg(2)->getType()->castAs<VectorType>();
@@ -6557,34 +6556,17 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case X86::BI__builtin_ia32_vpdpwssd128:
   case X86::BI__builtin_ia32_vpdpwssd256:
   case X86::BI__builtin_ia32_vpdpwssd512:
+  case X86::BI__builtin_ia32_vpdpbusd128:
+  case X86::BI__builtin_ia32_vpdpbusd256:
+  case X86::BI__builtin_ia32_vpdpbusd512:
+    return interp__builtin_ia32_vpdp(S, OpPC, Call, false);
   case X86::BI__builtin_ia32_vpdpwssds128:
   case X86::BI__builtin_ia32_vpdpwssds256:
   case X86::BI__builtin_ia32_vpdpwssds512:
   case X86::BI__builtin_ia32_vpdpbusds128:
   case X86::BI__builtin_ia32_vpdpbusds256:
   case X86::BI__builtin_ia32_vpdpbusds512:
-  case X86::BI__builtin_ia32_vpdpbusd128:
-  case X86::BI__builtin_ia32_vpdpbusd256:
-  case X86::BI__builtin_ia32_vpdpbusd512: {
-    unsigned BuiltinID = Call->getBuiltinCallee();
-    switch (BuiltinID) {
-    case X86::BI__builtin_ia32_vpdpwssd128:
-    case X86::BI__builtin_ia32_vpdpwssd256:
-    case X86::BI__builtin_ia32_vpdpwssd512:
-	case X86::BI__builtin_ia32_vpdpbusd128:
-    case X86::BI__builtin_ia32_vpdpbusd256:
-    case X86::BI__builtin_ia32_vpdpbusd512:
-      return interp__builtin_ia32_vpdp(S, OpPC, Call, false);
-    case X86::BI__builtin_ia32_vpdpwssds128:
-    case X86::BI__builtin_ia32_vpdpwssds256:
-    case X86::BI__builtin_ia32_vpdpwssds512:
-	case X86::BI__builtin_ia32_vpdpbusds128:
-    case X86::BI__builtin_ia32_vpdpbusds256:
-    case X86::BI__builtin_ia32_vpdpbusds512:
-      return interp__builtin_ia32_vpdp(S, OpPC, Call, true);
-    }
-  }
-
+    return interp__builtin_ia32_vpdp(S, OpPC, Call, true);
   default:
     S.FFDiag(S.Current->getLocation(OpPC),
              diag::note_invalid_subexpr_in_const_expr)
