@@ -24,9 +24,10 @@
 		.num_sgpr 0
 		.named_barrier 0
 		.private_seg_size 0
-		.uses_vcc 0
-		.uses_flat_scratch 0
-		.has_dyn_sized_stack 0
+		.is_kernel
+		.uses_vcc
+		.uses_flat_scratch
+		.has_dyn_sized_stack
 		.bogus_field 42
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: unknown field '.bogus_field' in .amdgpu_resource_usage
 	.end_amdgpu_resource_usage

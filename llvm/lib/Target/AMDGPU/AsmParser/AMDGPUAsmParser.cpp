@@ -6749,9 +6749,10 @@ bool AMDGPUAsmParser::ParseDirectiveAMDGPULDS() {
 ///         .num_sgpr <int>
 ///         .named_barrier <int>
 ///         .private_seg_size <int>
-///         .uses_vcc <int>
-///         .uses_flat_scratch <int>
-///         .has_dyn_sized_stack <int>
+///         [.is_kernel]
+///         [.uses_vcc]
+///         [.uses_flat_scratch]
+///         [.has_dyn_sized_stack]
 ///       .end_amdgpu_resource_usage
 bool AMDGPUAsmParser::ParseDirectiveAMDGPUResourceUsage() {
   StringRef SymName;
@@ -6763,7 +6764,8 @@ bool AMDGPUAsmParser::ParseDirectiveAMDGPUResourceUsage() {
 
   uint32_t NumVGPR = 0, NumAGPR = 0, NumSGPR = 0;
   uint32_t NumNamedBarrier = 0, PrivateSegmentSize = 0;
-  uint32_t UsesVCC = 0, UsesFlatScratch = 0, HasDynSizedStack = 0;
+  bool IsKernel = false, UsesVCC = false, UsesFlatScratch = false,
+       HasDynSizedStack = false;
 
   while (true) {
     while (trySkipToken(AsmToken::EndOfStatement))
@@ -6779,36 +6781,43 @@ bool AMDGPUAsmParser::ParseDirectiveAMDGPUResourceUsage() {
     if (!Seen.insert(ID).second)
       return TokError("resource usage directives already declared");
 
-    int64_t Val;
-    if (getParser().parseAbsoluteExpression(Val))
-      return true;
-    if (Val < 0)
-      return TokError("value must be non-negative");
-
-    if (ID == ".num_vgpr")
-      NumVGPR = Val;
-    else if (ID == ".num_agpr")
-      NumAGPR = Val;
-    else if (ID == ".num_sgpr")
-      NumSGPR = Val;
-    else if (ID == ".named_barrier")
-      NumNamedBarrier = Val;
-    else if (ID == ".private_seg_size")
-      PrivateSegmentSize = Val;
+    // Boolean flags: if present then assume set, elided otherwise.
+    if (ID == ".is_kernel")
+      IsKernel = true;
     else if (ID == ".uses_vcc")
-      UsesVCC = Val;
+      UsesVCC = true;
     else if (ID == ".uses_flat_scratch")
-      UsesFlatScratch = Val;
+      UsesFlatScratch = true;
     else if (ID == ".has_dyn_sized_stack")
-      HasDynSizedStack = Val;
-    else
-      return TokError("unknown field '" + ID + "' in .amdgpu_resource_usage");
+      HasDynSizedStack = true;
+    else {
+      // Fields with int values.
+      int64_t Val;
+      if (getParser().parseAbsoluteExpression(Val))
+        return true;
+      if (Val < 0)
+        return TokError("value must be non-negative");
+
+      if (ID == ".num_vgpr")
+        NumVGPR = Val;
+      else if (ID == ".num_agpr")
+        NumAGPR = Val;
+      else if (ID == ".num_sgpr")
+        NumSGPR = Val;
+      else if (ID == ".named_barrier")
+        NumNamedBarrier = Val;
+      else if (ID == ".private_seg_size")
+        PrivateSegmentSize = Val;
+      else
+        return TokError("unknown field '" + ID + "' in .amdgpu_resource_usage");
+    }
   }
 
   uint32_t Flags = 0;
-  Flags |= (UsesVCC ? 1u : 0u) << 0;
-  Flags |= (UsesFlatScratch ? 1u : 0u) << 1;
-  Flags |= (HasDynSizedStack ? 1u : 0u) << 2;
+  Flags |= (IsKernel ? 1u : 0u) << 0;
+  Flags |= (UsesVCC ? 1u : 0u) << 1;
+  Flags |= (UsesFlatScratch ? 1u : 0u) << 2;
+  Flags |= (HasDynSizedStack ? 1u : 0u) << 3;
 
   getTargetStreamer().emitResourceUsageEntry(FnSym, NumVGPR, NumAGPR, NumSGPR,
                                              NumNamedBarrier,

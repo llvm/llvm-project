@@ -762,9 +762,10 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   // Emit per-function local resource usage into .AMDGPU.resource_usage section.
   {
     uint32_t Flags = 0;
-    Flags |= (ResourceUsage->UsesVCC ? 1u : 0u) << 0;
-    Flags |= (ResourceUsage->UsesFlatScratch ? 1u : 0u) << 1;
-    Flags |= (ResourceUsage->HasDynamicallySizedStack ? 1u : 0u) << 2;
+    Flags |= (AMDGPU::isKernel(MF.getFunction()) ? 1u : 0u) << 0;
+    Flags |= (ResourceUsage->UsesVCC ? 1u : 0u) << 1;
+    Flags |= (ResourceUsage->UsesFlatScratch ? 1u : 0u) << 2;
+    Flags |= (ResourceUsage->HasDynamicallySizedStack ? 1u : 0u) << 3;
 
     // Emit function local resource usage info. Does not contain any callee
     // propagated resource info.

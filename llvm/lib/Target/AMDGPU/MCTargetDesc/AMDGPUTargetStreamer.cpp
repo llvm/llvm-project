@@ -671,9 +671,14 @@ void AMDGPUTargetAsmStreamer::emitResourceUsageEntry(
   OS << "\t\t.num_sgpr " << NumSGPR << '\n';
   OS << "\t\t.named_barrier " << NumNamedBarrier << '\n';
   OS << "\t\t.private_seg_size " << PrivateSegmentSize << '\n';
-  OS << "\t\t.uses_vcc " << ((Flags >> 0) & 1) << '\n';
-  OS << "\t\t.uses_flat_scratch " << ((Flags >> 1) & 1) << '\n';
-  OS << "\t\t.has_dyn_sized_stack " << ((Flags >> 2) & 1) << '\n';
+  if ((Flags >> 0) & 1)
+    OS << "\t\t.is_kernel\n";
+  if ((Flags >> 1) & 1)
+    OS << "\t\t.uses_vcc\n";
+  if ((Flags >> 2) & 1)
+    OS << "\t\t.uses_flat_scratch\n";
+  if ((Flags >> 3) & 1)
+    OS << "\t\t.has_dyn_sized_stack\n";
   OS << "\t.end_amdgpu_resource_usage\n";
 }
 
@@ -709,9 +714,9 @@ void AMDGPUTargetELFStreamer::finish() {
       PrivateSegmentSize = (64 * 4) * ((1 << 15) - 1);
     else
       PrivateSegmentSize = (256 * 4) * ((1 << 13) - 1);
-    // Assumes all boolean flags set: uses_vcc | uses_flat_scratch |
-    // has_dyn_sized_stack.
-    uint32_t Flags = 0x7;
+    // Assumes all boolean flags set except is_kernel:
+    // is_kernel=0 | uses_vcc | uses_flat_scratch | has_dyn_sized_stack.
+    uint32_t Flags = 0xE;
 
     for (const MCSymbol &Sym : getStreamer().getAssembler().symbols()) {
       // Only emit conservative defaults for function with no resource usage

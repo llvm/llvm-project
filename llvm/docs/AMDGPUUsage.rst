@@ -2426,9 +2426,10 @@ callees' resource usage.
      .num_sgpr <i32>                        no        0 or 1                   Number of SGPRs used by the function (default: max addressable SGPRs)
      .named_barrier <i32>                   no        0 or 1                   Number of named barriers used by the function (default: 16)
      .private_seg_size <i32>                no        0 or 1                   Total stack size required for the function (default: max wave scratch size)
-     .uses_vcc <i1>                         no        0 or 1                   Boolean denoting whether vcc is used in the function (default: 1)
-     .uses_flat_scratch <i1>                no        0 or 1                   Boolean denoting whether flat scratch is used in the function (default: 1)
-     .has_dyn_sized_stack <i1>              no        0 or 1                   Boolean denoting whether stack in the function is dynamically sized (default: 1)
+     .is_kernel                             no        0 or 1                   When present, denotes the function is a kernel (default: absent)
+     .uses_vcc                              no        0 or 1                   When present, denotes vcc is used in the function (default: present)
+     .uses_flat_scratch                     no        0 or 1                   When present, denotes flat scratch is used in the function (default: present)
+     .has_dyn_sized_stack                   no        0 or 1                   When present, denotes stack in the function is dynamically sized (default: present)
      ====================================== ========= ======================== ===================================================================================================
 
 Function Resource Usage ELF Section
@@ -2451,9 +2452,10 @@ sizeof(flags)). The flags are packed as follows:
      ===========================    =======
      Function usage property        Bit
      ===========================    =======
-     uses_vcc                       0
-     uses_flat_scratch              1
-     has_dyn_sized_stack            2
+     is_kernel                      0
+     uses_vcc                       1
+     uses_flat_scratch              2
+     has_dyn_sized_stack            3
      ===========================    =======
 
 .. _amdgpu-elf-code-object:

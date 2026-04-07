@@ -31,9 +31,8 @@ quux:
 // ASM-NEXT: .num_sgpr 25
 // ASM-NEXT: .named_barrier 0
 // ASM-NEXT: .private_seg_size 16
-// ASM-NEXT: .uses_vcc 1
-// ASM-NEXT: .uses_flat_scratch 0
-// ASM-NEXT: .has_dyn_sized_stack 0
+// ASM-NEXT: .is_kernel
+// ASM-NEXT: .uses_vcc
 // ASM-NEXT: .end_amdgpu_resource_usage
 	.amdgpu_resource_usage bar
 		.num_vgpr 65
@@ -41,9 +40,8 @@ quux:
 		.num_sgpr 25
 		.named_barrier 0
 		.private_seg_size 16
-		.uses_vcc 1
-		.uses_flat_scratch 0
-		.has_dyn_sized_stack 0
+		.is_kernel
+		.uses_vcc
 	.end_amdgpu_resource_usage
 
 // ASM: .amdgpu_resource_usage foo
@@ -52,9 +50,8 @@ quux:
 // ASM-NEXT: .num_sgpr 8
 // ASM-NEXT: .named_barrier 2
 // ASM-NEXT: .private_seg_size 0
-// ASM-NEXT: .uses_vcc 0
-// ASM-NEXT: .uses_flat_scratch 1
-// ASM-NEXT: .has_dyn_sized_stack 1
+// ASM-NEXT: .uses_flat_scratch
+// ASM-NEXT: .has_dyn_sized_stack
 // ASM-NEXT: .end_amdgpu_resource_usage
 	.amdgpu_resource_usage foo
 		.num_vgpr 10
@@ -62,9 +59,8 @@ quux:
 		.num_sgpr 8
 		.named_barrier 2
 		.private_seg_size 0
-		.uses_vcc 0
-		.uses_flat_scratch 1
-		.has_dyn_sized_stack 1
+		.uses_flat_scratch
+		.has_dyn_sized_stack
 	.end_amdgpu_resource_usage
 
 // ASM: .amdgpu_resource_usage baz
@@ -73,9 +69,6 @@ quux:
 // ASM-NEXT: .num_sgpr 4
 // ASM-NEXT: .named_barrier 0
 // ASM-NEXT: .private_seg_size 0
-// ASM-NEXT: .uses_vcc 0
-// ASM-NEXT: .uses_flat_scratch 0
-// ASM-NEXT: .has_dyn_sized_stack 0
 // ASM-NEXT: .end_amdgpu_resource_usage
 	.amdgpu_resource_usage baz
 		.num_vgpr 2
@@ -83,9 +76,6 @@ quux:
 		.num_sgpr 4
 		.named_barrier 0
 		.private_seg_size 0
-		.uses_vcc 0
-		.uses_flat_scratch 0
-		.has_dyn_sized_stack 0
 	.end_amdgpu_resource_usage
 
 // ASM-NOT: .amdgpu_resource_usage quux

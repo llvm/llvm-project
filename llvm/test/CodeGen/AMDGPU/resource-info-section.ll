@@ -9,9 +9,6 @@
 ; ASM-NEXT: .num_sgpr 32
 ; ASM-NEXT: .named_barrier 0
 ; ASM-NEXT: .private_seg_size 0
-; ASM-NEXT: .uses_vcc 0
-; ASM-NEXT: .uses_flat_scratch 0
-; ASM-NEXT: .has_dyn_sized_stack 0
 ; ASM-NEXT: .end_amdgpu_resource_usage
 define void @leaf() {
   ret void
@@ -24,16 +21,28 @@ define void @leaf() {
 ; ASM-NEXT: .num_sgpr 32
 ; ASM-NEXT: .named_barrier 0
 ; ASM-NEXT: .private_seg_size 0
-; ASM-NEXT: .uses_vcc 1
-; ASM-NEXT: .uses_flat_scratch 0
-; ASM-NEXT: .has_dyn_sized_stack 0
+; ASM-NEXT: .uses_vcc
 ; ASM-NEXT: .end_amdgpu_resource_usage
 define void @use_vcc() {
   call void asm sideeffect "", "~{vcc}" ()
   ret void
 }
 
+; ASM-LABEL: {{^}}kern:
+; ASM: .amdgpu_resource_usage kern
+; ASM-NEXT: .num_vgpr 0
+; ASM-NEXT: .num_agpr 0
+; ASM-NEXT: .num_sgpr 0
+; ASM-NEXT: .named_barrier 0
+; ASM-NEXT: .private_seg_size 0
+; ASM-NEXT: .is_kernel
+; ASM-NEXT: .end_amdgpu_resource_usage
+define amdgpu_kernel void @kern() {
+  ret void
+}
+
 ; RELOC:      Relocation section '.rela.AMDGPU.resource_usage'
 ; RELOC:      0000000000000000 {{[0-9a-f]+}} R_AMDGPU_NONE {{[0-9a-f]+}} leaf + 0
 ; RELOC-NEXT: 0000000000000018 {{[0-9a-f]+}} R_AMDGPU_NONE {{[0-9a-f]+}} use_vcc + 0
+; RELOC-NEXT: 0000000000000030 {{[0-9a-f]+}} R_AMDGPU_NONE {{[0-9a-f]+}} kern + 0
 
