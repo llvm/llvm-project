@@ -6621,12 +6621,24 @@ defm SQDMULL  : SIMDThreeScalarMixedHS<0, 0b11010, "sqdmull",
 defm SQDMLAL  : SIMDThreeScalarMixedTiedHS<0, 0b10010, "sqdmlal">;
 defm SQDMLSL  : SIMDThreeScalarMixedTiedHS<0, 0b10110, "sqdmlsl">;
 
+def : Pat<(int_aarch64_neon_sqdmulls_scalar (i32 FPR32:$Rn),
+                                          (i32 FPR32:$Rm)),
+          (SQDMULLi32 FPR32:$Rn, FPR32:$Rm)>;
+
 def : Pat<(f64 (AArch64sqadd FPR64:$Rd,
                 (AArch64sqdmull FPR32:$Rn, FPR32:$Rm))),
           (SQDMLALi32 FPR64:$Rd, FPR32:$Rn, FPR32:$Rm)>;
 
+def : Pat<(i64 (int_aarch64_neon_sqadd (i64 FPR64:$Rd),
+                (int_aarch64_neon_sqdmulls_scalar FPR32:$Rn, FPR32:$Rm))),
+          (SQDMLALi32 FPR64:$Rd, FPR32:$Rn, FPR32:$Rm)>;
+
 def : Pat<(f64 (AArch64sqsub FPR64:$Rd,
                (AArch64sqdmull FPR32:$Rn, FPR32:$Rm))),
+          (SQDMLSLi32 FPR64:$Rd, FPR32:$Rn, FPR32:$Rm)>;
+
+def : Pat<(i64 (int_aarch64_neon_sqsub (i64 FPR64:$Rd),
+                (int_aarch64_neon_sqdmulls_scalar FPR32:$Rn, FPR32:$Rm))),
           (SQDMLSLi32 FPR64:$Rd, FPR32:$Rn, FPR32:$Rm)>;
 
 //===----------------------------------------------------------------------===//
@@ -9041,6 +9053,18 @@ def : Pat<(f64 (AArch64sqdmull FPR32:$Rn,
                                (f32 (bitconvert (i32 (vector_extract (v4i32 V128:$Vm),
                                                            VectorIndexS:$idx)))))),
           (SQDMULLv1i64_indexed FPR32:$Rn, V128:$Vm, VectorIndexS:$idx)>;
+
+def : Pat<(i64 (int_aarch64_neon_sqadd (i64 FPR64:$Rd),
+                (int_aarch64_neon_sqdmulls_scalar FPR32:$Rn,
+                                          (vector_extract (v4i32 V128:$Vm),
+                                                           VectorIndexS:$idx)))),
+          (SQDMLALv1i64_indexed FPR64:$Rd, FPR32:$Rn, V128:$Vm, VectorIndexS:$idx)>;
+
+def : Pat<(i64 (int_aarch64_neon_sqsub (i64 FPR64:$Rd),
+                (int_aarch64_neon_sqdmulls_scalar FPR32:$Rn,
+                                          (vector_extract (v4i32 V128:$Vm),
+                                                           VectorIndexS:$idx)))),
+          (SQDMLSLv1i64_indexed FPR64:$Rd, FPR32:$Rn, V128:$Vm, VectorIndexS:$idx)>;
 
 //----------------------------------------------------------------------------
 // AdvSIMD scalar shift instructions
