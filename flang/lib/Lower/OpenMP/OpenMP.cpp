@@ -3298,8 +3298,9 @@ static mlir::omp::TaskloopContextOp genStandaloneTaskloop(
   mlir::OpBuilder::InsertionGuard guard(firOpBuilder);
   firOpBuilder.setInsertionPointToStart(&taskLoopContextOp.getRegion().front());
   mlir::omp::TaskloopOperands wrapperClauseOps;
+  EntryBlockArgs wrapperEntryBlockArgs;
   auto taskLoopOp = genWrapperOp<mlir::omp::TaskloopOp>(
-      converter, loc, wrapperClauseOps, taskloopArgs);
+      converter, loc, wrapperClauseOps, wrapperEntryBlockArgs);
 
   genLoopNestOp(converter, symTable, semaCtx, eval, loc, queue, item,
                 loopNestClauseOps, iv, {{taskLoopContextOp, taskloopArgs}},
