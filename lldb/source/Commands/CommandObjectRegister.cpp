@@ -59,7 +59,6 @@ static size_t ComputeLongestRegisterName(RegisterContext *reg_ctx,
 
       name_right_align_at = std::max(name_right_align_at,
                                      GetNameSize(reg_info, use_primary_name));
-
     }
   }
 
