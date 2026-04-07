@@ -18,7 +18,7 @@ nop
 
 # An 8-byte symbol name, meaning it fits precisely in the COFF symbol table's
 # name field and will not be null terminated. It's followed by the symbol
-# address in little-endian: 33 (ascii '!'), meaning if the symbo hashing
+# address in little-endian: 33 (ascii '!'), meaning if the symbol hashing
 # assumes this name is null terminated, it will compute the same hash as for
 # the symbol below, putting them in the same bucket.
 .globl wWinMain
