@@ -2087,3 +2087,344 @@ func.func @test_() {
   }
   return
 }
+
+// -----
+// Test hoisting of fir.convert from nested scf.if regions inside a loop.
+// The two fir.convert ops inside separate scf.if blocks should be hoisted
+// before the scf.for, enabling downstream CSE to merge them.
+// CHECK-LABEL:   func.func @test_nested_hoist(
+// CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<!fir.array<10xf32>>)
+// CHECK-DAG:     %[[CST1:.*]] = arith.constant 1.000000e+00 : f32
+// CHECK-DAG:     %[[CST2:.*]] = arith.constant 2.000000e+00 : f32
+// CHECK:         %[[CONV1:.*]] = fir.convert %[[ARG0]] : (!fir.ref<!fir.array<10xf32>>) -> memref<10xf32>
+// CHECK:         %[[CONV2:.*]] = fir.convert %[[ARG0]] : (!fir.ref<!fir.array<10xf32>>) -> memref<10xf32>
+// CHECK:         scf.for %[[I:.*]] =
+// CHECK:           scf.if
+// CHECK-NOT:         fir.convert
+// CHECK:             memref.store %[[CST1]], %[[CONV1]][%[[I]]] : memref<10xf32>
+// CHECK:           scf.if
+// CHECK-NOT:         fir.convert
+// CHECK:             memref.store %[[CST2]], %[[CONV2]][%[[I]]] : memref<10xf32>
+// CHECK:         return
+func.func @test_nested_hoist(%arg0: !fir.ref<!fir.array<10xf32>>) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c5 = arith.constant 5 : index
+  %c10 = arith.constant 10 : index
+  %cst1 = arith.constant 1.000000e+00 : f32
+  %cst2 = arith.constant 2.000000e+00 : f32
+  scf.for %i = %c0 to %c10 step %c1 {
+    %cmp1 = arith.cmpi slt, %i, %c5 : index
+    scf.if %cmp1 {
+      %mem = fir.convert %arg0 : (!fir.ref<!fir.array<10xf32>>) -> memref<10xf32>
+      memref.store %cst1, %mem[%i] : memref<10xf32>
+    }
+    %cmp2 = arith.cmpi sge, %i, %c5 : index
+    scf.if %cmp2 {
+      %mem = fir.convert %arg0 : (!fir.ref<!fir.array<10xf32>>) -> memref<10xf32>
+      memref.store %cst2, %mem[%i] : memref<10xf32>
+    }
+  }
+  return
+}
+
+// -----
+// Test hoisting of fir.convert from deeply nested scf.if (scf.if inside
+// scf.if inside scf.for). The fir.convert should be hoisted before the loop.
+// CHECK-LABEL:   func.func @test_deeply_nested_hoist(
+// CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<!fir.array<10xf32>>)
+// CHECK:         %[[CONV:.*]] = fir.convert %[[ARG0]] : (!fir.ref<!fir.array<10xf32>>) -> memref<10xf32>
+// CHECK:         scf.for %[[I:.*]] =
+// CHECK:           scf.if
+// CHECK:             scf.if
+// CHECK-NOT:           fir.convert
+// CHECK:               memref.store %{{.*}}, %[[CONV]][%[[I]]] : memref<10xf32>
+// CHECK:         return
+func.func @test_deeply_nested_hoist(%arg0: !fir.ref<!fir.array<10xf32>>) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c3 = arith.constant 3 : index
+  %c5 = arith.constant 5 : index
+  %c10 = arith.constant 10 : index
+  %cst = arith.constant 1.000000e+00 : f32
+  scf.for %i = %c0 to %c10 step %c1 {
+    %cmp1 = arith.cmpi sgt, %i, %c3 : index
+    scf.if %cmp1 {
+      %cmp2 = arith.cmpi slt, %i, %c5 : index
+      scf.if %cmp2 {
+        %mem = fir.convert %arg0 : (!fir.ref<!fir.array<10xf32>>) -> memref<10xf32>
+        memref.store %cst, %mem[%i] : memref<10xf32>
+      }
+    }
+  }
+  return
+}
+
+// -----
+// Test that fir.convert fully invariant w.r.t. both loops is hoisted all the
+// way out (inner loop top-level LICM hoists it between the loops, then outer
+// loop top-level LICM hoists it before both loops).
+// CHECK-LABEL:   func.func @test_nested_loop_fully_invariant(
+// CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<!fir.array<100xf32>>)
+// CHECK:         %[[CONV:.*]] = fir.convert %[[ARG0]] : (!fir.ref<!fir.array<100xf32>>) -> memref<100xf32>
+// CHECK:         scf.for
+// CHECK:           scf.for %[[J:.*]] =
+// CHECK-NOT:         fir.convert
+// CHECK:             memref.store %{{.*}}, %[[CONV]][%[[J]]] : memref<100xf32>
+// CHECK:         return
+func.func @test_nested_loop_fully_invariant(%arg0: !fir.ref<!fir.array<100xf32>>) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
+  %cst = arith.constant 1.000000e+00 : f32
+  scf.for %i = %c0 to %c10 step %c1 {
+    scf.for %j = %c0 to %c10 step %c1 {
+      %mem = fir.convert %arg0 : (!fir.ref<!fir.array<100xf32>>) -> memref<100xf32>
+      memref.store %cst, %mem[%j] : memref<100xf32>
+    }
+  }
+  return
+}
+
+// -----
+// Test that fir.convert inside scf.if inside nested loops is hoisted all the
+// way out when it is fully invariant (nested LICM on inner loop hoists from
+// scf.if, then top-level LICM on each loop hoists further).
+// CHECK-LABEL:   func.func @test_nested_loop_with_if_fully_invariant(
+// CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<!fir.array<100xf32>>)
+// CHECK:         %[[CONV:.*]] = fir.convert %[[ARG0]] : (!fir.ref<!fir.array<100xf32>>) -> memref<100xf32>
+// CHECK:         scf.for
+// CHECK:           scf.for %[[J:.*]] =
+// CHECK:             scf.if
+// CHECK-NOT:           fir.convert
+// CHECK:               memref.store %{{.*}}, %[[CONV]][%[[J]]] : memref<100xf32>
+// CHECK:         return
+func.func @test_nested_loop_with_if_fully_invariant(%arg0: !fir.ref<!fir.array<100xf32>>) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c5 = arith.constant 5 : index
+  %c10 = arith.constant 10 : index
+  %cst = arith.constant 1.000000e+00 : f32
+  scf.for %i = %c0 to %c10 step %c1 {
+    scf.for %j = %c0 to %c10 step %c1 {
+      %cmp = arith.cmpi slt, %j, %c5 : index
+      scf.if %cmp {
+        %mem = fir.convert %arg0 : (!fir.ref<!fir.array<100xf32>>) -> memref<100xf32>
+        memref.store %cst, %mem[%j] : memref<100xf32>
+      }
+    }
+  }
+  return
+}
+
+// -----
+// Test that fir.convert using an outer-loop-variant value is hoisted from
+// scf.if to between the two loops (by inner loop's nested LICM), but NOT
+// further (because its operand %ptr depends on the outer loop induction var).
+// CHECK-LABEL:   func.func @test_nested_loop_outer_variant(
+// CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<!fir.array<100xf32>>)
+// CHECK:         scf.for %[[I:.*]] =
+// CHECK:           %[[PTR:.*]] = fir.coordinate_of %[[ARG0]], %[[I]]
+// CHECK:           %[[CONV:.*]] = fir.convert %[[PTR]] : (!fir.ref<f32>) -> memref<f32>
+// CHECK:           scf.for %[[J:.*]] =
+// CHECK:             scf.if
+// CHECK-NOT:           fir.convert
+// CHECK:               memref.store %{{.*}}, %[[CONV]][] : memref<f32>
+// CHECK:         return
+func.func @test_nested_loop_outer_variant(%arg0: !fir.ref<!fir.array<100xf32>>) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c5 = arith.constant 5 : index
+  %c10 = arith.constant 10 : index
+  %cst = arith.constant 1.000000e+00 : f32
+  scf.for %i = %c0 to %c10 step %c1 {
+    %ptr = fir.coordinate_of %arg0, %i : (!fir.ref<!fir.array<100xf32>>, index) -> !fir.ref<f32>
+    scf.for %j = %c0 to %c10 step %c1 {
+      %cmp = arith.cmpi slt, %j, %c5 : index
+      scf.if %cmp {
+        %mem = fir.convert %ptr : (!fir.ref<f32>) -> memref<f32>
+        memref.store %cst, %mem[] : memref<f32>
+      }
+    }
+  }
+  return
+}
+
+// -----
+// Test chained fir.convert ops across nested loop and scf.if boundaries.
+// %conv1 is inside the outer scf.if, %conv2 and %conv3 use the chain and are
+// inside scf.if inside an inner loop inside the outer scf.if.
+// All three should be hoisted before both loops via user-propagation:
+//   1. Inner loop nested LICM hoists %conv2, %conv3 from inner scf.if.
+//   2. Inner loop top-level LICM hoists them to the outer scf.if body.
+//   3. Outer loop nested LICM hoists %conv1 from outer scf.if; user
+//      propagation then hoists %conv2, %conv3 too.
+// CHECK-LABEL:   func.func @test_chained_converts(
+// CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<!fir.array<10xf32>>)
+// CHECK:         %[[C1:.*]] = fir.convert %[[ARG0]] : (!fir.ref<!fir.array<10xf32>>) -> memref<10xf32>
+// CHECK:         %[[C2:.*]] = fir.convert %[[C1]] : (memref<10xf32>) -> !fir.ref<!fir.array<10xf32>>
+// CHECK:         %[[C3:.*]] = fir.convert %[[C2]] : (!fir.ref<!fir.array<10xf32>>) -> memref<10xf32>
+// CHECK:         scf.for %{{.*}} =
+// CHECK:           scf.if
+// CHECK:             scf.for %[[J:.*]] =
+// CHECK:               scf.if
+// CHECK-NOT:             fir.convert
+// CHECK:                 memref.store %{{.*}}, %[[C3]][%[[J]]] : memref<10xf32>
+// CHECK:         return
+func.func @test_chained_converts(%arg0: !fir.ref<!fir.array<10xf32>>) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c5 = arith.constant 5 : index
+  %c10 = arith.constant 10 : index
+  %cst = arith.constant 1.000000e+00 : f32
+  scf.for %i = %c0 to %c10 step %c1 {
+    %cond1 = arith.cmpi slt, %i, %c5 : index
+    scf.if %cond1 {
+      %conv1 = fir.convert %arg0 : (!fir.ref<!fir.array<10xf32>>) -> memref<10xf32>
+      scf.for %j = %c0 to %c10 step %c1 {
+        %cond2 = arith.cmpi slt, %j, %c5 : index
+        scf.if %cond2 {
+          %conv2 = fir.convert %conv1 : (memref<10xf32>) -> !fir.ref<!fir.array<10xf32>>
+          %conv3 = fir.convert %conv2 : (!fir.ref<!fir.array<10xf32>>) -> memref<10xf32>
+          memref.store %cst, %conv3[%j] : memref<10xf32>
+        }
+      }
+    }
+  }
+  return
+}
+
+// -----
+// Test chained fir.convert ops across deeply nested scf.if regions within
+// a single loop. %conv1 feeds into both branches: one scf.if uses a chain
+// of two converts, the other has a further-nested scf.if with a three-deep
+// chain. All fir.convert ops should be hoisted before the loop.
+// CHECK-LABEL:   func.func @test_chained_deep_ifs(
+// CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<!fir.array<10xf32>>)
+// CHECK-DAG:     %[[CST1:.*]] = arith.constant 1.000000e+00 : f32
+// CHECK-DAG:     %[[CST2:.*]] = arith.constant 2.000000e+00 : f32
+// CHECK:         %[[C1:.*]] = fir.convert %[[ARG0]] : (!fir.ref<!fir.array<10xf32>>) -> memref<10xf32>
+// CHECK:         %[[C2A:.*]] = fir.convert %[[C1]] : (memref<10xf32>) -> !fir.ref<!fir.array<10xf32>>
+// CHECK:         %[[C3A:.*]] = fir.convert %[[C2A]] : (!fir.ref<!fir.array<10xf32>>) -> memref<10xf32>
+// CHECK:         %[[C2B:.*]] = fir.convert %[[C1]] : (memref<10xf32>) -> !fir.ref<!fir.array<10xf32>>
+// CHECK:         %[[C3B:.*]] = fir.convert %[[C2B]] : (!fir.ref<!fir.array<10xf32>>) -> memref<10xf32>
+// CHECK:         scf.for %[[I:.*]] =
+// CHECK:           scf.if
+// CHECK:             scf.if
+// CHECK-NOT:           fir.convert
+// CHECK:               memref.store %[[CST1]], %[[C3A]][%[[I]]] : memref<10xf32>
+// CHECK:             scf.if
+// CHECK:               scf.if
+// CHECK-NOT:             fir.convert
+// CHECK:                 memref.store %[[CST2]], %[[C3B]][%[[I]]] : memref<10xf32>
+// CHECK:         return
+func.func @test_chained_deep_ifs(%arg0: !fir.ref<!fir.array<10xf32>>) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c3 = arith.constant 3 : index
+  %c5 = arith.constant 5 : index
+  %c10 = arith.constant 10 : index
+  %cst1 = arith.constant 1.000000e+00 : f32
+  %cst2 = arith.constant 2.000000e+00 : f32
+  scf.for %i = %c0 to %c10 step %c1 {
+    %cond1 = arith.cmpi slt, %i, %c5 : index
+    scf.if %cond1 {
+      %conv1 = fir.convert %arg0 : (!fir.ref<!fir.array<10xf32>>) -> memref<10xf32>
+      %cond2 = arith.cmpi slt, %i, %c3 : index
+      scf.if %cond2 {
+        %conv2a = fir.convert %conv1 : (memref<10xf32>) -> !fir.ref<!fir.array<10xf32>>
+        %conv3a = fir.convert %conv2a : (!fir.ref<!fir.array<10xf32>>) -> memref<10xf32>
+        memref.store %cst1, %conv3a[%i] : memref<10xf32>
+      }
+      %cond3 = arith.cmpi sge, %i, %c3 : index
+      scf.if %cond3 {
+        %conv2b = fir.convert %conv1 : (memref<10xf32>) -> !fir.ref<!fir.array<10xf32>>
+        %cond4 = arith.cmpi slt, %i, %c5 : index
+        scf.if %cond4 {
+          %conv3b = fir.convert %conv2b : (!fir.ref<!fir.array<10xf32>>) -> memref<10xf32>
+          memref.store %cst2, %conv3b[%i] : memref<10xf32>
+        }
+      }
+    }
+  }
+  return
+}
+
+// -----
+// Test that canMoveOutOf prevents nested hoisting of fir.convert when its
+// operand is a data operand (private variable) of acc.loop, while
+// fir.convert of a non-data operand is still hoisted.
+// CHECK-LABEL:   func.func @test_acc_loop_nested_canMoveOutOf(
+// CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<!fir.array<10xf32>>)
+// CHECK:         acc.parallel combined(loop) {
+// CHECK:           %[[PRIV:.*]] = acc.private
+// The non-private fir.convert IS hoisted out of acc.loop:
+// CHECK:           %[[CVT_ARG:.*]] = fir.convert %[[ARG0]] : (!fir.ref<!fir.array<10xf32>>) -> memref<10xf32>
+// CHECK:           acc.loop{{.*}}private(%[[PRIV]] : !fir.ref<f32>)
+// CHECK:             scf.if
+// The private fir.convert is NOT hoisted (canMoveOutOf blocks it):
+// CHECK:               fir.convert %[[PRIV]] : (!fir.ref<f32>) -> !fir.ref<f32>
+// CHECK:               memref.store %{{.*}}, %[[CVT_ARG]]
+func.func @test_acc_loop_nested_canMoveOutOf(%arg0: !fir.ref<!fir.array<10xf32>>) {
+  %cst = arith.constant 1.000000e+00 : f32
+  %c10_i32 = arith.constant 10 : i32
+  %c5_i32 = arith.constant 5 : i32
+  %c1_i32 = arith.constant 1 : i32
+  %0 = fir.dummy_scope : !fir.dscope
+  %1 = fir.alloca f32 {bindc_name = "b", uniq_name = "_QFtestEb"}
+  %2 = fir.declare %1 {uniq_name = "_QFtestEb"} : (!fir.ref<f32>) -> !fir.ref<f32>
+  acc.parallel combined(loop) {
+    %priv = acc.private varPtr(%2 : !fir.ref<f32>) recipe(@privatization_ref_f32) -> !fir.ref<f32> {name = "b"}
+    acc.loop combined(parallel) private(%priv : !fir.ref<f32>) control(%arg1 : i32) = (%c1_i32 : i32) to (%c10_i32 : i32)  step (%c1_i32 : i32) {
+      %cond = arith.cmpi slt, %arg1, %c5_i32 : i32
+      scf.if %cond {
+        %cvt_priv = fir.convert %priv : (!fir.ref<f32>) -> !fir.ref<f32>
+        fir.store %cst to %cvt_priv : !fir.ref<f32>
+        %cvt_arg = fir.convert %arg0 : (!fir.ref<!fir.array<10xf32>>) -> memref<10xf32>
+        %idx = fir.convert %arg1 : (i32) -> index
+        memref.store %cst, %cvt_arg[%idx] : memref<10xf32>
+      }
+      acc.yield
+    } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
+    acc.yield
+  }
+  return
+}
+
+// -----
+// Test that canMoveFromDescendant prevents nested hoisting when the parent
+// of the loop is an omp.wsloop (LoopWrapperInterface), which disallows
+// moving operations from its descendants into it.
+// The fir.convert of %arg0 inside scf.if is loop-invariant but must NOT
+// be hoisted because canMoveFromDescendant(omp.wsloop, omp.loop_nest, ...)
+// returns false.
+// CHECK-LABEL:   func.func @test_omp_wsloop_nested_canMoveFromDescendant(
+// CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<!fir.array<10xf32>>)
+// CHECK:         omp.parallel
+// CHECK-NEXT:      omp.wsloop
+// CHECK-NEXT:        omp.loop_nest
+// CHECK:               scf.if
+// CHECK:                 fir.convert %[[ARG0]]
+func.func @test_omp_wsloop_nested_canMoveFromDescendant(%arg0: !fir.ref<!fir.array<10xf32>>) {
+  %cst = arith.constant 1.000000e+00 : f32
+  %c10_i32 = arith.constant 10 : i32
+  %c5_i32 = arith.constant 5 : i32
+  %c1_i32 = arith.constant 1 : i32
+  %alloca = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFtestEi"}
+  %decl_i = fir.declare %alloca {uniq_name = "_QFtestEi"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  omp.parallel {
+    omp.wsloop private(@_QFtestEi_private_i32 %decl_i -> %arg1 : !fir.ref<i32>) {
+      omp.loop_nest (%arg2) : i32 = (%c1_i32) to (%c10_i32) inclusive step (%c1_i32) {
+        %cond = arith.cmpi slt, %arg2, %c5_i32 : i32
+        scf.if %cond {
+          %cvt = fir.convert %arg0 : (!fir.ref<!fir.array<10xf32>>) -> memref<10xf32>
+          %idx = fir.convert %arg2 : (i32) -> index
+          memref.store %cst, %cvt[%idx] : memref<10xf32>
+        }
+        omp.yield
+      }
+    }
+    omp.terminator
+  }
+  return
+}
