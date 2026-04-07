@@ -1,3 +1,4 @@
+; REQUIRES: asserts
 ; RUN: opt -S < %s -p loop-vectorize -debug-only=loop-vectorize --disable-output \
 ; RUN: -tail-folding-policy=predicated-epilogue 2>&1 | FileCheck %s
 
