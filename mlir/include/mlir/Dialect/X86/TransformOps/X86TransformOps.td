@@ -82,5 +82,16 @@ def ApplyVectorContractToAMXDotProductPatternsOp : Op<Transform_Dialect,
   let assemblyFormat = "attr-dict";
 }
 
+def ApplyConvertLinalgGenericTo32BitAccumulationPatternsOp : Op<Transform_Dialect,
+    "apply_patterns.x86.convert_linalg_generic_to_32_bit_accumulation",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Collects pattern to convert a linalg.generic from low-precision (bf16/i8) to high-precision
+      accumulation (f32/i32) and finally tuncates the output back to original type.
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
+
 
 #endif // X86_TRANSFORM_OPS

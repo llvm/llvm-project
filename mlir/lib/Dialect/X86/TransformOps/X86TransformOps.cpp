@@ -52,6 +52,11 @@ void mlir::transform::ApplyVectorContractToAMXDotProductPatternsOp::
   x86::populateVectorContractToAMXDotProductPatterns(patterns);
 }
 
+void mlir::transform::ApplyConvertLinalgGenericTo32BitAccumulationPatternsOp::
+    populatePatterns(RewritePatternSet &patterns) {
+  x86::populateConvertLinalgGenericTo32BitAccumulationPatterns(patterns);
+}
+
 //===----------------------------------------------------------------------===//
 // Transform op registration
 //===----------------------------------------------------------------------===//

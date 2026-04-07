@@ -7,6 +7,7 @@ add_mlir_dialect_library(MLIRX86Transforms
   SinkVectorProducerOps.cpp
   ShuffleVectorFMAOps.cpp
   VectorContractToAMXDotProduct.cpp
+  ConvertLinalgGenericTo32BitAccumulation.cpp
 
   LINK_LIBS PUBLIC
   MLIRArithDialect

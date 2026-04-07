@@ -110,6 +110,14 @@ void populateShuffleVectorFMAOpsPatterns(RewritePatternSet &patterns);
 // Int8).
 void populateVectorContractToAMXDotProductPatterns(RewritePatternSet &patterns);
 
+// Rewrites a linalg.generic from low-precision (bf16/i8) to high-precision
+// accumulation (f32/i32).
+// Performs compute (mul + add) in higher precision, starting from a
+// zero-initialized accumulator. Then adds the original output and casts
+// (truncates) back to the original type.
+void populateConvertLinalgGenericTo32BitAccumulationPatterns(
+    RewritePatternSet &patterns);
+
 //===----------------------------------------------------------------------===//
 /// Helpers extracted from:
 ///   - clang/lib/Headers/avxintrin.h
