@@ -1097,13 +1097,6 @@ private:
     privateDataSharingAttributeObjects_.clear();
   }
 
-  /// Check that loops in the loop nest are perfectly nested, as well that lower
-  /// bound, upper bound, and step expressions do not use the iv
-  /// of a surrounding loop of the associated loops nest.
-  /// We do not support non-perfectly nested loops not non-rectangular loops yet
-  /// (both introduced in OpenMP 5.0)
-  void CheckPerfectNestAndRectangularLoop(const parser::OpenMPLoopConstruct &x);
-
   // Predetermined DSA rules
   void PrivatizeAssociatedLoopIndexAndCheckLoopLevel(
       const parser::OpenMPLoopConstruct &);
@@ -2062,9 +2055,6 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPLoopConstruct &x) {
     }
   }
 
-  // Must be done before iv privatization
-  CheckPerfectNestAndRectangularLoop(x);
-
   PrivatizeAssociatedLoopIndexAndCheckLoopLevel(x);
   ordCollapseLevel = GetNumAffectedLoopsFromLoopConstruct(x) + 1;
   return true;
@@ -2271,80 +2261,6 @@ void OmpAttributeVisitor::CollectNumAffectedLoopsFromClauses(
             std::get_if<parser::OmpClause::Permutation>(&clause.u)}) {
       levels.push_back(iclause->v.size());
       clauses.push_back(&clause);
-    }
-  }
-}
-
-void OmpAttributeVisitor::CheckPerfectNestAndRectangularLoop(
-    const parser::OpenMPLoopConstruct &x) {
-  auto &dirContext{GetContext()};
-  std::int64_t dirDepth{dirContext.associatedLoopLevel};
-  if (dirDepth <= 0)
-    return;
-
-  auto checkExprHasSymbols = [&](llvm::SmallVector<Symbol *> &ivs,
-                                 const parser::ScalarExpr *bound) {
-    if (ivs.empty())
-      return;
-    auto boundExpr{semantics::AnalyzeExpr(context_, *bound)};
-    if (!boundExpr)
-      return;
-    semantics::UnorderedSymbolSet boundSyms{
-        evaluate::CollectSymbols(*boundExpr)};
-    if (boundSyms.empty())
-      return;
-    for (Symbol *iv : ivs) {
-      if (boundSyms.count(*iv) != 0) {
-        // TODO: Point to occurence of iv in boundExpr, directiveSource as a
-        //       note
-        context_.Say(dirContext.directiveSource,
-            "Trip count must be computable and invariant"_err_en_US);
-      }
-    }
-  };
-
-  // Find the associated region by skipping nested loop-associated constructs
-  // such as loop transformations
-  for (auto &construct : std::get<parser::Block>(x.t)) {
-    if (const auto *innermostConstruct{parser::omp::GetOmpLoop(construct)}) {
-      CheckPerfectNestAndRectangularLoop(*innermostConstruct);
-    } else if (const auto *doConstruct{
-                   parser::omp::GetDoConstruct(construct)}) {
-
-      llvm::SmallVector<Symbol *> ivs;
-      int curLevel{0};
-      const auto *loop{doConstruct};
-      while (true) {
-        auto [iv, lb, ub, step] = GetLoopBounds(*loop);
-
-        if (lb)
-          checkExprHasSymbols(ivs, lb);
-        if (ub)
-          checkExprHasSymbols(ivs, ub);
-        if (step)
-          checkExprHasSymbols(ivs, step);
-        if (iv) {
-          if (auto *symbol{currScope().FindSymbol(iv->source)})
-            ivs.push_back(symbol);
-        }
-
-        // Stop after processing all affected loops
-        if (curLevel + 1 >= dirDepth)
-          break;
-
-        // Recurse into nested loop
-        const auto &block{std::get<parser::Block>(loop->t)};
-        if (block.empty()) {
-          break;
-        }
-
-        loop = GetDoConstructIf(block.front());
-        if (!loop) {
-          break;
-        }
-
-        ++curLevel;
-      }
     }
   }
 }

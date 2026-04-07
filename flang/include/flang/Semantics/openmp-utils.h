@@ -125,6 +125,7 @@ std::optional<bool> IsContiguous(
 std::vector<SomeExpr> GetTopLevelDesignators(const SomeExpr &expr);
 const SomeExpr *HasStorageOverlap(
     const SomeExpr &base, llvm::ArrayRef<SomeExpr> exprs);
+
 bool IsAssignment(const parser::ActionStmt *x);
 bool IsPointerAssignment(const evaluate::Assignment &x);
 
@@ -191,6 +192,8 @@ WithReason<int64_t> GetArgumentValueWithReason(
 WithReason<int64_t> GetNumArgumentsWithReason(
     const parser::OmpDirectiveSpecification &spec, llvm::omp::Clause clauseId,
     unsigned version);
+WithReason<int64_t> GetHeightWithReason(
+    const parser::OmpDirectiveSpecification &spec, unsigned version);
 
 // Return the depth of the affected nests:
 //   {affected-depth, reason, must-be-perfect-nest}.
@@ -200,6 +203,9 @@ std::pair<WithReason<int64_t>, bool> GetAffectedNestDepthWithReason(
 //   {first, count, reason}.
 // If the range is "the whole sequence", the return value will be {1, -1, ...}.
 WithReason<std::pair<int64_t, int64_t>> GetAffectedLoopRangeWithReason(
+    const parser::OmpDirectiveSpecification &spec, unsigned version);
+/// Return the depth in which all loops must be rectangular.
+WithReason<int64_t> GetRectangularNestDepthWithReason(
     const parser::OmpDirectiveSpecification &spec, unsigned version);
 
 // Count the required loop count from range. If count == -1, return -1,
@@ -232,13 +238,19 @@ struct LoopSequence {
 
   bool isNest() const { return length_.value == 1; }
   const WithReason<int64_t> &length() const { return length_; }
+  const WithReason<int64_t> &height() const { return height_; }
   const Depth &depth() const { return depth_; }
   const std::vector<LoopSequence> &children() const { return children_; }
+  const parser::ExecutionPartConstruct *owner() const { return entry_->owner; }
 
   WithReason<bool> isWellFormedSequence() const;
   WithReason<bool> isWellFormedNest() const;
 
   std::vector<LoopControl> getLoopControls() const;
+  // Check if this loop's bounds are invariant in each of the `outer`
+  // constructs.
+  WithReason<bool> isRectangular(
+      const std::vector<const LoopSequence *> &outer) const;
 
 private:
   using Construct = ExecutionPartIterator::Construct;
@@ -265,6 +277,7 @@ private:
   WithReason<int64_t> getNestedLength() const;
   Depth calculateDepths() const;
   Depth getNestedDepths() const;
+  WithReason<int64_t> calculateHeight() const;
 
   /// The construct that is not a loop or a loop-transforming construct,
   /// that is also not a valid intervening code. Unset if no such code is
@@ -282,6 +295,13 @@ private:
   WithReason<int64_t> length_;
   /// Precalculated depths. Only meaningful if the sequence is a nest.
   Depth depth_;
+  /// Precalculated height of the sequence. The height is the difference
+  /// in the nesting level between "this" and any of the children (should
+  /// be the same for each child). Intuitively it is the number of nested
+  /// loops that are added by this construct. If this->depth_ included
+  /// child->depth_ for some child, then
+  ///   height_ = this->depth_ - child->depth_
+  WithReason<int64_t> height_;
 
   // The core structure of the class:
   unsigned version_; // Needed for GetXyzWithReason
