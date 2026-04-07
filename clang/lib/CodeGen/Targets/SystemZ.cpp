@@ -738,23 +738,21 @@ ZOSXPLinkABIInfo::getFPTypeOfComplexLikeType(QualType Ty) const {
       if (Count >= 2)
         return std::nullopt;
 
+      // For the current ABI, a record can be treated as complex-like if no field
+      // requires an alignment stronger than a native complex type (2 * sizeof(T))
+      // and the record size is exactly 2 * sizeof(T). Under these constraints,
+      // per-field alignment cannot introduce internal or tail padding, and the
+      // layout is guaranteed to match two adjacent FP elements.
       unsigned MaxAlignOnDecl = FD->getMaxAlignment();
       QualType FT = FD->getType();
       QualType FTSingleTy = getSingleElementType(FT);
-      unsigned MaxAlign =
-          std::max(getMaxAlignFromTypeDefs(FTSingleTy), MaxAlignOnDecl);
+      unsigned ElemSize = getContext().getTypeSize(FTSingleTy);
+      if (MaxAlignOnDecl > 2 * ElemSize)
+        return std::nullopt;
 
-      // The first element of a complex type may have an alignment enforced
-      // that is less strict than twice its size, since that would be naturally
-      // enforced by any complex type anyways. The second element may have an
-      // alignment enforced that is less strict than its size.
-      if (Count == 0) {
-        if (MaxAlign > 2 * getContext().getTypeSize(FTSingleTy))
-          return std::nullopt;
-      } else if (Count == 1) {
-        if (MaxAlign > getContext().getTypeSize(FTSingleTy))
-          return std::nullopt;
-      }
+      unsigned StructSize = getContext().getTypeSize(Ty);
+      if (StructSize != 2 * ElemSize)
+        return std::nullopt;
 
       if (const BuiltinType *BT = FTSingleTy->getAs<BuiltinType>()) {
         switch (BT->getKind()) {
@@ -877,7 +875,8 @@ ABIArgInfo ZOSXPLinkABIInfo::classifyArgumentType(QualType Ty, bool IsNamedArg,
       // Complex types must be preserved as opaque structs per XPLINK ABI.
       // Without this, flattening would incorrectly split { float, float } into
       // separate FP registers, breaking ABI compliance.
-      // Example: _Complex float pass_complex_float(_Complex float arg) { return arg; }
+      // Example: _Complex float pass_complex_float(_Complex float arg) { return
+      // arg; }
       AI.setCanBeFlattened(false);
       return AI;
     }
@@ -887,10 +886,11 @@ ABIArgInfo ZOSXPLinkABIInfo::classifyArgumentType(QualType Ty, bool IsNamedArg,
       llvm::Type *CoerceTy = llvm::StructType::get(FPTy, FPTy);
       auto AI = ABIArgInfo::getDirect(CoerceTy);
 
-      // Preserve { float, float } signature for complex-like structs per XPLINK ABI.
-      // Flattening would incorrectly decompose into separate FP registers.
+      // Preserve { float, float } signature for complex-like structs per XPLINK
+      // ABI. Flattening would incorrectly decompose into separate FP registers.
       // Example: struct complexlike_float { float re, im; };
-      //          struct complexlike_float pass_complexlike_float2(struct complexlike_float arg) { return arg; }
+      //          struct complexlike_float pass_complexlike_float2(struct
+      //          complexlike_float arg) { return arg; }
       AI.setCanBeFlattened(false);
       return AI;
     }

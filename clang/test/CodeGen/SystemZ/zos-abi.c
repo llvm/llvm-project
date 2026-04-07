@@ -412,3 +412,53 @@ struct S_E pass_S_E(struct S_E arg) { return arg; }
 // CHECK-LABEL: define %struct.S_E @pass_S_E(
 // CHECK-SAME:{ double, double } %{{.*}})
 // CHECK: ret %struct.S_E
+
+
+// ============================================================================
+// Over-aligned second field introduces internal padding, so the record
+// cannot be treated as a complex-like `{ double, double }` and must be
+// returned indirectly with 16-byte alignment.
+// ============================================================================
+
+struct Bad1 {
+  double re;
+  double im __attribute__((aligned(16)));;
+};
+struct Bad1  pass_Bad1(struct Bad1 arg) { return arg; }
+// CHECK-LABEL: define void @pass_Bad1(ptr dead_on_unwind noalias writable sret({{.*}}) align 16 %agg.result, [4 x i64] %{{.*}})
+
+
+// ============================================================================
+// Stronger over-alignment on the second field further increases the required
+// alignment and argument size, forcing indirect return with 32-byte alignment.
+// ============================================================================
+
+struct Bad2 {
+  double re;
+  double im __attribute__((aligned(32)));;
+};
+struct Bad2  pass_Bad2(struct Bad2 arg) { return arg; }
+// CHECK-LABEL: define void @pass_Bad2(ptr dead_on_unwind noalias writable sret(%{{.*}}) align 32 %agg.result, [8 x i64] %{{.*}})
+
+// ============================================================================
+// Over-alignment on the first field prevents complex classification, but the
+// record still fits in registers and is returned directly as a plain aggregate.
+// ============================================================================
+struct Bad3 {
+  double re __attribute__((aligned(16)));
+  double im;
+};
+struct Bad3  pass_Bad3(struct Bad3 arg) { return arg; }
+// CHECK-LABEL: define %struct.Bad3 @pass_Bad3({ double, double } %{{.*}})
+
+
+// ============================================================================
+// Strong over-alignment on the first field raises the required alignment of the
+// whole record, forcing indirect return and disqualifying complex-like passing.
+// ============================================================================
+struct Bad4 {
+  double re __attribute__((aligned(32)));
+  double im;
+};
+struct Bad4  pass_Bad4(struct Bad4 arg) { return arg; }
+// CHECK-LABEL: define void @pass_Bad4(ptr dead_on_unwind noalias writable sret(%{{.*}}) align 32 %agg.result, [4 x i64] %{{.*}})
