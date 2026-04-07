@@ -3172,7 +3172,7 @@ define float @test_fminimum_snan(float %x) {
   ret float %1
 }
 
-define float @test_fmaximum_dnz(float %x) {
+define float @test_fmaximum_dnz(float %x) nounwind {
 ; SSE2-LABEL: test_fmaximum_dnz:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    maxss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
@@ -3191,13 +3191,11 @@ define float @test_fmaximum_dnz(float %x) {
 ; X86-LABEL: test_fmaximum_dnz:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %eax
-; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-NEXT:    vmaxss {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-NEXT:    vmovss %xmm0, (%esp)
 ; X86-NEXT:    flds (%esp)
 ; X86-NEXT:    popl %eax
-; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
   %denorm = bitcast i32 1 to float
   %1 = tail call nnan float @llvm.maximum.f32(float %denorm, float %x)
@@ -3253,7 +3251,6 @@ define float @test_fmaximum_daz(float %x) #0 {
 ; X86-LABEL: test_fmaximum_daz:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %eax
-; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-NEXT:    vmaxss {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm1
 ; X86-NEXT:    vorps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
@@ -3261,14 +3258,13 @@ define float @test_fmaximum_daz(float %x) #0 {
 ; X86-NEXT:    vmovss %xmm0, (%esp)
 ; X86-NEXT:    flds (%esp)
 ; X86-NEXT:    popl %eax
-; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
   %denorm = bitcast i32 1 to float
   %1 = tail call nnan float @llvm.maximum.f32(float %denorm, float %x)
   ret float %1
 }
 
-define float @test_fminimum_dnz(float %x) {
+define float @test_fminimum_dnz(float %x) nounwind {
 ; SSE2-LABEL: test_fminimum_dnz:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    minss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
@@ -3287,13 +3283,11 @@ define float @test_fminimum_dnz(float %x) {
 ; X86-LABEL: test_fminimum_dnz:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %eax
-; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-NEXT:    vminss {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-NEXT:    vmovss %xmm0, (%esp)
 ; X86-NEXT:    flds (%esp)
 ; X86-NEXT:    popl %eax
-; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
   %denorm = bitcast i32 1 to float
   %1 = tail call nnan float @llvm.minimum.f32(float %denorm, float %x)
@@ -3349,7 +3343,6 @@ define float @test_fminimum_daz(float %x) #0 {
 ; X86-LABEL: test_fminimum_daz:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %eax
-; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-NEXT:    vminss {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm1
 ; X86-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
@@ -3357,11 +3350,10 @@ define float @test_fminimum_daz(float %x) #0 {
 ; X86-NEXT:    vmovss %xmm0, (%esp)
 ; X86-NEXT:    flds (%esp)
 ; X86-NEXT:    popl %eax
-; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
   %denorm = bitcast i32 1 to float
   %1 = tail call nnan float @llvm.minimum.f32(float %denorm, float %x)
   ret float %1
 }
 
-attributes #0 = { denormal_fpenv(preservesign|preservesign) }
+attributes #0 = { nounwind denormal_fpenv(preservesign|preservesign) }
