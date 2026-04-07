@@ -40,6 +40,7 @@
 #include "lldb/Interpreter/Interfaces/ScriptedBreakpointInterface.h"
 #include "lldb/Interpreter/Interfaces/ScriptedStopHookInterface.h"
 #include "lldb/Interpreter/OptionGroupWatchpoint.h"
+#include "lldb/Interpreter/OptionValueEnumeration.h"
 #include "lldb/Interpreter/OptionValues.h"
 #include "lldb/Interpreter/Property.h"
 #include "lldb/Symbol/Function.h"
@@ -5104,6 +5105,12 @@ LoadScriptFromSymFile TargetProperties::GetLoadScriptFromSymbolFile() const {
                g_target_properties[idx].default_uint_value));
 }
 
+void TargetProperties::SetLoadScriptFromSymbolFile(
+    LoadScriptFromSymFile load_style) {
+  const uint32_t idx = ePropertyLoadScriptFromSymbolFile;
+  SetPropertyAtIndex(idx, load_style);
+}
+
 LoadCWDlldbinitFile TargetProperties::GetLoadCWDlldbinitFile() const {
   const uint32_t idx = ePropertyLoadCWDlldbinitFile;
   return GetPropertyAtIndexAs<LoadCWDlldbinitFile>(
@@ -5272,6 +5279,33 @@ bool TargetProperties::GetDebugUtilityExpression() const {
 void TargetProperties::SetDebugUtilityExpression(bool debug) {
   const uint32_t idx = ePropertyDebugUtilityExpression;
   SetPropertyAtIndex(idx, debug);
+}
+
+std::optional<LoadScriptFromSymFile>
+TargetProperties::GetAutoLoadScriptsForModule(
+    llvm::StringRef module_name) const {
+  auto *dict = m_collection_sp->GetPropertyAtIndexAsOptionValueDictionary(
+      ePropertyAutoLoadScriptsForModules);
+  if (!dict)
+    return std::nullopt;
+
+  OptionValueSP value_sp = dict->GetValueForKey(module_name);
+  if (!value_sp)
+    return std::nullopt;
+
+  return value_sp->GetValueAs<LoadScriptFromSymFile>();
+}
+
+void TargetProperties::SetAutoLoadScriptsForModule(
+    llvm::StringRef module_name, LoadScriptFromSymFile load_style) {
+  auto *dict = m_collection_sp->GetPropertyAtIndexAsOptionValueDictionary(
+      ePropertyAutoLoadScriptsForModules);
+  if (!dict)
+    return;
+
+  dict->SetValueForKey(module_name,
+                       std::make_shared<OptionValueEnumeration>(
+                           g_load_script_from_sym_file_values, load_style));
 }
 
 // Target::TargetEventData
