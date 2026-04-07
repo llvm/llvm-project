@@ -1584,6 +1584,7 @@ program main
   ! TASKLOOP
   ! ----------------------------------------------------------------------------
 
+  ! CHECK:      omp.taskloop.context
   ! CHECK:      omp.taskloop
   ! CHECK-NOT: if({{.*}})
   !$omp taskloop
@@ -1591,6 +1592,7 @@ program main
   end do
   !$omp end taskloop
 
+  ! CHECK:      omp.taskloop.context
   ! CHECK:      omp.taskloop
   ! CHECK-SAME: if({{.*}})
   !$omp taskloop if(.true.)
@@ -1598,6 +1600,7 @@ program main
   end do
   !$omp end taskloop
 
+  ! CHECK:      omp.taskloop.context
   ! CHECK:      omp.taskloop
   ! CHECK-SAME: if({{.*}})
   !$omp taskloop if(taskloop: .true.)

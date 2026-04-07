@@ -21,14 +21,17 @@ llvm.func @_QPtest(%arg0: !llvm.ptr {fir.bindc_name = "arg", llvm.noalias, llvm.
   %1 = llvm.mlir.constant(100 : i32) : i32
   %2 = llvm.mlir.constant(1 : i64) : i64
   %3 = llvm.alloca %2 x i32 {bindc_name = "i"} : (i64) -> !llvm.ptr
-  omp.taskloop private(@_QFtestEarg_firstprivate_i32 %arg0 -> %arg1, @_QFtestEi_private_i32 %3 -> %arg2 : !llvm.ptr, !llvm.ptr) {
-    omp.loop_nest (%arg3) : i32 = (%0) to (%1) inclusive step (%0) {
-      llvm.store %arg3, %arg2 : i32, !llvm.ptr
-      llvm.call @_QPbefore(%arg1) : (!llvm.ptr) -> ()
-      omp.cancellation_point cancellation_construct_type(taskgroup)
-      llvm.call @_QPafter(%arg1) : (!llvm.ptr) -> ()
-      omp.yield
+  omp.taskloop.context {
+    omp.taskloop private(@_QFtestEarg_firstprivate_i32 %arg0 -> %arg1, @_QFtestEi_private_i32 %3 -> %arg2 : !llvm.ptr, !llvm.ptr) {
+      omp.loop_nest (%arg3) : i32 = (%0) to (%1) inclusive step (%0) {
+        llvm.store %arg3, %arg2 : i32, !llvm.ptr
+        llvm.call @_QPbefore(%arg1) : (!llvm.ptr) -> ()
+        omp.cancellation_point cancellation_construct_type(taskgroup)
+        llvm.call @_QPafter(%arg1) : (!llvm.ptr) -> ()
+        omp.yield
+      }
     }
+    omp.terminator
   }
   llvm.return
 }
@@ -90,9 +93,11 @@ llvm.func @_QPtest(%arg0: !llvm.ptr {fir.bindc_name = "arg", llvm.noalias, llvm.
 // CHECK:       taskloop.body:                                    ; preds = %[[VAL_35:.*]]
 // CHECK:         %[[VAL_36:.*]] = getelementptr { i32 }, ptr %[[VAL_32]], i32 0, i32 0
 // CHECK:         br label %[[VAL_37:.*]]
-// CHECK:       omp.taskloop.region:                              ; preds = %[[VAL_34]]
+// CHECK:       omp.taskloop.context.region:                      ; preds = %[[VAL_34]]
+// CHECK:         br label %[[VAL_37_1:.*]]
+// CHECK:       omp.taskloop.region:                              ; preds = %[[VAL_37]]
 // CHECK:         br label %[[VAL_38:.*]]
-// CHECK:       omp_loop.preheader:                               ; preds = %[[VAL_37]]
+// CHECK:       omp_loop.preheader:                               ; preds = %[[VAL_37_1]]
 // CHECK:         %[[VAL_39:.*]] = sub i64 %[[VAL_28]], %[[VAL_26]]
 // CHECK:         %[[VAL_40:.*]] = sdiv i64 %[[VAL_39]], %[[VAL_30]]
 // CHECK:         %[[VAL_41:.*]] = add i64 %[[VAL_40]], 1
@@ -108,8 +113,10 @@ llvm.func @_QPtest(%arg0: !llvm.ptr {fir.bindc_name = "arg", llvm.noalias, llvm.
 // CHECK:       omp_loop.exit:                                    ; preds = %[[VAL_48]]
 // CHECK:         br label %[[OMP_LOOP_AFTER:omp_loop.after]]
 // CHECK:       omp_loop.after:                                   ; preds = %[[VAL_51]]
+// CHECK:         br label %[[CONT2:omp.region.cont2]]
+// CHECK:       omp.region.cont2:                                 ; preds = %[[OMP_LOOP_AFTER]]
 // CHECK:         br label %[[CONT:omp.region.cont]]
-// CHECK:       omp.region.cont:                                  ; preds = %[[FINI:.fini]], %[[OMP_LOOP_AFTER]]
+// CHECK:       omp.region.cont:                                  ; preds = %[[FINI:.fini]], %[[CONT2]]
 // CHECK:         call void @_dealloc(ptr %[[VAL_36]])
 // CHECK:         tail call void @free(ptr %[[VAL_32]])
 // CHECK:         br label %[[VAL_55:.*]]
@@ -131,7 +138,7 @@ llvm.func @_QPtest(%arg0: !llvm.ptr {fir.bindc_name = "arg", llvm.noalias, llvm.
 // CHECK:       omp.loop_nest.region.split:                       ; preds = %[[LOOP_REGION]]
 // CHECK:         call void @_QPafter(ptr %[[VAL_36]])
 // CHECK:         br label %[[VAL_64:.*]]
-// CHECK:       omp.region.cont2:                                 ; preds = %[[VAL_62]]
+// CHECK:       omp.region.cont3:                                 ; preds = %[[VAL_62]]
 // CHECK:         br label %[[VAL_45]]
 // CHECK:       omp_loop.inc:                                     ; preds = %[[VAL_64]]
 // CHECK:         %[[VAL_47]] = add nuw i32 %[[VAL_46]], 1
@@ -146,14 +153,17 @@ llvm.func @_QPtest2(%arg0: !llvm.ptr {fir.bindc_name = "arg", llvm.noalias, llvm
   %2 = llvm.mlir.constant(1 : i64) : i64
   %3 = llvm.alloca %2 x i32 {bindc_name = "i"} : (i64) -> !llvm.ptr
   omp.taskgroup {
-    omp.taskloop nogroup private(@_QFtestEarg_firstprivate_i32 %arg0 -> %arg1, @_QFtestEi_private_i32 %3 -> %arg2 : !llvm.ptr, !llvm.ptr) {
-      omp.loop_nest (%arg3) : i32 = (%0) to (%1) inclusive step (%0) {
-        llvm.store %arg3, %arg2 : i32, !llvm.ptr
-        llvm.call @_QPbefore(%arg1) : (!llvm.ptr) -> ()
-        omp.cancellation_point cancellation_construct_type(taskgroup)
-        llvm.call @_QPafter(%arg1) : (!llvm.ptr) -> ()
-        omp.yield
+    omp.taskloop.context {
+      omp.taskloop nogroup private(@_QFtestEarg_firstprivate_i32 %arg0 -> %arg1, @_QFtestEi_private_i32 %3 -> %arg2 : !llvm.ptr, !llvm.ptr) {
+        omp.loop_nest (%arg3) : i32 = (%0) to (%1) inclusive step (%0) {
+          llvm.store %arg3, %arg2 : i32, !llvm.ptr
+          llvm.call @_QPbefore(%arg1) : (!llvm.ptr) -> ()
+          omp.cancellation_point cancellation_construct_type(taskgroup)
+          llvm.call @_QPafter(%arg1) : (!llvm.ptr) -> ()
+          omp.yield
+        }
       }
+      omp.terminator
     }
     omp.terminator
   }
@@ -224,9 +234,11 @@ llvm.func @_QPtest2(%arg0: !llvm.ptr {fir.bindc_name = "arg", llvm.noalias, llvm
 // CHECK:       taskloop.body:                                    ; preds = %[[VAL_105:.*]]
 // CHECK:         %[[VAL_106:.*]] = getelementptr { i32 }, ptr %[[VAL_102]], i32 0, i32 0
 // CHECK:         br label %[[VAL_107:.*]]
-// CHECK:       omp.taskloop.region:                              ; preds = %[[VAL_104]]
+// CHECK:       omp.taskloop.context.region:                      ; preds = %[[VAL_104]]
+// CHECK:         br label %[[VAL_107_1:.*]]
+// CHECK:       omp.taskloop.region:                              ; preds = %[[VAL_107]]
 // CHECK:         br label %[[VAL_108:.*]]
-// CHECK:       omp_loop.preheader:                               ; preds = %[[VAL_107]]
+// CHECK:       omp_loop.preheader:                               ; preds = %[[VAL_107_1]]
 // CHECK:         %[[VAL_109:.*]] = sub i64 %[[VAL_98]], %[[VAL_96]]
 // CHECK:         %[[VAL_110:.*]] = sdiv i64 %[[VAL_109]], %[[VAL_100]]
 // CHECK:         %[[VAL_111:.*]] = add i64 %[[VAL_110]], 1
@@ -242,8 +254,10 @@ llvm.func @_QPtest2(%arg0: !llvm.ptr {fir.bindc_name = "arg", llvm.noalias, llvm
 // CHECK:       omp_loop.exit:                                    ; preds = %[[VAL_118]]
 // CHECK:         br label %[[VAL_122:.*]]
 // CHECK:       omp_loop.after:                                   ; preds = %[[VAL_121]]
+// CHECK:         br label %[[VAL_123_1:omp.region.cont3]]
+// CHECK:       omp.region.cont3:                                 ; preds = %[[VAL_122]]
 // CHECK:         br label %[[VAL_123:omp.region.cont2]]
-// CHECK:       omp.region.cont2:                                 ; preds = %[[VAL_124:.fini]], %[[VAL_122]]
+// CHECK:       omp.region.cont2:                                 ; preds = %[[VAL_124:.fini]], %[[VAL_123_1]]
 // CHECK:         call void @_dealloc(ptr %[[VAL_106]])
 // CHECK:         tail call void @free(ptr %[[VAL_102]])
 // CHECK:         br label %[[VAL_125:.*]]
@@ -265,7 +279,7 @@ llvm.func @_QPtest2(%arg0: !llvm.ptr {fir.bindc_name = "arg", llvm.noalias, llvm
 // CHECK:       omp.loop_nest.region.split:                       ; preds = %[[VAL_128]]
 // CHECK:         call void @_QPafter(ptr %[[VAL_106]])
 // CHECK:         br label %[[VAL_134:.*]]
-// CHECK:       omp.region.cont3:                                 ; preds = %[[VAL_132]]
+// CHECK:       omp.region.cont4:                                 ; preds = %[[VAL_132]]
 // CHECK:         br label %[[VAL_115]]
 // CHECK:       omp_loop.inc:                                     ; preds = %[[VAL_134]]
 // CHECK:         %[[VAL_117]] = add nuw i32 %[[VAL_116]], 1

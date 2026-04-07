@@ -25,6 +25,7 @@
 subroutine omp_taskloop_inreduction()
    integer x
    x = 0
+   ! CHECK:        omp.taskloop.context {
    ! CHECK:        omp.taskloop in_reduction(@[[ADD_RED_I32]] 
    ! CHECK:        %[[DECL_X]]#0 -> %[[ARG0:.*]] : !fir.ref<i32>) private(@[[PRIVATE_I]] %[[DECL_I]]#0 -> %[[ARG1:.*]] : !fir.ref<i32>) {
    ! CHECK:        %[[VAL_ARG1:.*]]:2 = hlfir.declare %[[ARG0]] 
