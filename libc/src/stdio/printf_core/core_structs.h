@@ -13,6 +13,9 @@
 
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/CPP/type_traits.h"
+#ifdef LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
+#include "src/__support/uint128.h"
+#endif // LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/stdio/printf_core/printf_config.h"
 
