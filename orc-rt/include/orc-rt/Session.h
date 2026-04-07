@@ -272,9 +272,12 @@ public:
 
   /// Initiate detach from the controller.
   ///
-  /// If attached, this will request disconnection from the controller and
-  /// then notify all Services via onDetach. The optional OnDetach callback
-  /// will be called once the detach is complete.
+  /// Signals that controller access is permanently unavailable and notifies
+  /// all Services via onDetach. If a controller is attached, this will
+  /// request disconnection first.
+  ///
+  /// The optional OnDetach callback will be called once the detach is
+  /// complete.
   ///
   /// If the Session is already detached or shut down, the callback (if
   /// provided) will be called immediately.
@@ -282,7 +285,17 @@ public:
 
   /// Initiate session shutdown.
   ///
-  /// Runs shutdown on registered resources in reverse order.
+  /// Shutdown proceeds through the following phases:
+  ///   1. Detach: If not already detached, disconnects the controller and
+  ///      notifies all Services via onDetach.
+  ///   2. Drain: Waits for all in-flight managed code calls to complete
+  ///      (via ManagedCodeCallsGroup).
+  ///   3. Shutdown services: Calls onShutdown on all Services in reverse
+  ///      order.
+  ///   4. Shutdown TaskDispatcher.
+  ///
+  /// The optional OnShutdown callback is called after step (3), before
+  /// the TaskDispatcher is shut down.
   void shutdown(OnShutdownFn OnShutdown = {});
 
   /// Initiate session shutdown and block until complete.
