@@ -1031,7 +1031,7 @@ public:
         Handler.onFunctionExit(Top.Func, Top.RetVal);
         // Free stack objects allocated in this frame.
         for (auto &Obj : Top.Allocas)
-          Ctx.free(Obj->getAddress());
+          Ctx.free(Ctx.deriveFromMemoryObject(Obj));
         CallStack.pop_back();
       } else {
         assert(Top.State == FrameState::Pending &&

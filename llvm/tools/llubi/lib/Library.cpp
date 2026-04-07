@@ -109,7 +109,7 @@ AnyValue Library::executeFree(ArrayRef<AnyValue> Args) {
   if (Ptr.address().isZero())
     return AnyValue();
 
-  if (!Ctx.free(Ptr.address().getZExtValue())) {
+  if (!Ctx.free(Ptr)) {
     Executor.reportImmediateUB(
         "freeing an invalid, unallocated, or already freed pointer.");
     return AnyValue::poison();
