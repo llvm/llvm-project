@@ -41,8 +41,12 @@ getLocationFromLoc(StringRef uriScheme, FileLineColLoc loc,
                    StringRef workspaceRoot) {
   StringRef filename = loc.getFilename();
   SmallString<128> absPath;
-  if (!llvm::sys::path::is_absolute(filename) && !workspaceRoot.empty()) {
-    llvm::sys::path::append(absPath, workspaceRoot, filename);
+  // Always make the path absolute.
+  if (!llvm::sys::path::is_absolute(filename)) {
+    if (!workspaceRoot.empty())
+      llvm::sys::path::append(absPath, workspaceRoot, filename);
+    else
+      absPath = filename;
     llvm::sys::fs::make_absolute(absPath);
     filename = absPath;
   }
