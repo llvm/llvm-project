@@ -640,7 +640,7 @@ bool WebAssemblyCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
       IndirectIdx = Info.Callee.getReg();
 
       auto PtrSize = CalleeType.getSizeInBits();
-      auto PtrIntLLT = LLT::scalar(PtrSize);
+      auto PtrIntLLT = LLT::integer(PtrSize);
 
       IndirectIdx = MIRBuilder.buildPtrToInt(PtrIntLLT, IndirectIdx).getReg(0);
     } else if (CalleeType.getAddressSpace() ==
@@ -650,7 +650,7 @@ bool WebAssemblyCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
 
       Type *PtrTy = PointerType::getUnqual(Ctx);
       LLT PtrLLT = getLLTForType(*PtrTy, DL);
-      auto PtrIntLLT = LLT::scalar(PtrLLT.getSizeInBits());
+      auto PtrIntLLT = LLT::integer(PtrLLT.getSizeInBits());
 
       IndirectIdx = MIRBuilder.buildConstant(PtrIntLLT, 0).getReg(0);
 
@@ -691,7 +691,7 @@ bool WebAssemblyCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
         Type *PtrTy = PointerType::getUnqual(Ctx);
         LLT PtrLLT = getLLTForType(*PtrTy, DL);
         auto PtrSize = PtrLLT.getSizeInBits();
-        auto PtrIntLLT = LLT::scalar(PtrSize);
+        auto PtrIntLLT = LLT::integer(PtrSize);
 
         IndirectIdx =
             MIRBuilder.buildGlobalValue(PtrLLT, Info.Callee.getGlobal())
@@ -786,7 +786,7 @@ bool WebAssemblyCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
           MachineMemOperand::MOStore | MachineMemOperand::MODereferenceable,
           MemSize, DstAlign);
 
-      const LLT SizeTy = LLT::scalar(PtrLLT.getSizeInBits());
+      const LLT SizeTy = LLT::integer(PtrLLT.getSizeInBits());
 
       auto SizeConst = MIRBuilder.buildConstant(SizeTy, MemSize);
       MIRBuilder.buildMemCpy(StackObjPtrVreg, Arg.Regs[0], SizeConst, *DstMMO,
@@ -898,7 +898,7 @@ bool WebAssemblyCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
 
   auto StackAddrSpace = DL.getAllocaAddrSpace();
   auto PtrLLT = LLT::pointer(StackAddrSpace, DL.getPointerSizeInBits(0));
-  auto SizeLLT = LLT::scalar(DL.getPointerSizeInBits(StackAddrSpace));
+  auto SizeLLT = LLT::integer(DL.getPointerSizeInBits(StackAddrSpace));
   auto *PtrRegClass = TLI.getRegClassFor(TLI.getPointerTy(DL, StackAddrSpace));
 
   if (Info.IsVarArg && NumBytes) {

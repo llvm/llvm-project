@@ -300,13 +300,13 @@ WebAssemblyInstructionSelector::selectAddrOperands(LLT AddrType,
 InstructionSelector::ComplexRendererFns
 WebAssemblyInstructionSelector::selectAddrOperands32(
     MachineOperand &Root) const {
-  return selectAddrOperands(LLT::scalar(32), WebAssembly::CONST_I32, Root);
+  return selectAddrOperands(LLT::integer(32), WebAssembly::CONST_I32, Root);
 }
 
 InstructionSelector::ComplexRendererFns
 WebAssemblyInstructionSelector::selectAddrOperands64(
     MachineOperand &Root) const {
-  return selectAddrOperands(LLT::scalar(64), WebAssembly::CONST_I64, Root);
+  return selectAddrOperands(LLT::integer(64), WebAssembly::CONST_I64, Root);
 }
 
 bool WebAssemblyInstructionSelector::selectCopy(

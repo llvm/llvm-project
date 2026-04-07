@@ -889,8 +889,8 @@ bool IRTranslator::emitJumpTableHeader(SwitchCG::JumpTable &JT,
   // This value may be smaller or larger than the target's pointer type, and
   // therefore require extension or truncating.
   auto *PtrIRTy = PointerType::getUnqual(SValue.getContext());
-  const LLT PtrScalarTy = LLT::scalar(DL->getTypeSizeInBits(PtrIRTy));
-  Sub = MIB.buildZExtOrTrunc(PtrScalarTy, Sub);
+  const LLT PtrIntTy = LLT::integer(DL->getTypeSizeInBits(PtrIRTy));
+  Sub = MIB.buildZExtOrTrunc(PtrIntTy, Sub);
 
   JT.Reg = Sub.getReg(0);
 
@@ -905,7 +905,7 @@ bool IRTranslator::emitJumpTableHeader(SwitchCG::JumpTable &JT,
   // largest case in the switch.
   auto Cst = getOrCreateVReg(
       *ConstantInt::get(SValue.getType(), JTH.Last - JTH.First));
-  Cst = MIB.buildZExtOrTrunc(PtrScalarTy, Cst).getReg(0);
+  Cst = MIB.buildZExtOrTrunc(PtrIntTy, Cst).getReg(0);
   auto Cmp = MIB.buildICmp(CmpInst::ICMP_UGT, LLT::integer(1), Sub, Cst);
 
   auto BrCond = MIB.buildBrCond(Cmp.getReg(0), *JT.Default);
@@ -1119,14 +1119,14 @@ void IRTranslator::emitBitTestHeader(SwitchCG::BitTestBlock &B,
   LLT MaskTy = SwitchOpTy;
   if (MaskTy.getSizeInBits() > PtrTy.getSizeInBits() ||
       !llvm::has_single_bit<uint32_t>(MaskTy.getSizeInBits()))
-    MaskTy = LLT::scalar(PtrTy.getSizeInBits());
+    MaskTy = LLT::integer(PtrTy.getSizeInBits());
   else {
     // Ensure that the type will fit the mask value.
     for (const SwitchCG::BitTestCase &Case : B.Cases) {
       if (!isUIntN(SwitchOpTy.getSizeInBits(), Case.Mask)) {
         // Switch table case range are encoded into series of masks.
         // Just use pointer type, it's guaranteed to fit.
-        MaskTy = LLT::scalar(PtrTy.getSizeInBits());
+        MaskTy = LLT::integer(PtrTy.getSizeInBits());
         break;
       }
     }
