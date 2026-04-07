@@ -33,13 +33,12 @@ TEST(raw_socket_streamTest, CLIENT_TO_SERVER_AND_SERVER_TO_CLIENT) {
     GTEST_SKIP();
 
   SmallString<100> SocketPath;
-  llvm::sys::fs::createUniquePath("client_server_comms-%%%%%%.sock", SocketPath,
-                                  true);
+  llvm::sys::fs::createUniquePath("llvm-%%%%%%%%.sock", SocketPath, true);
   auto Cleanup = llvm::scope_exit([&] { std::remove(SocketPath.c_str()); });
 
   Expected<ListeningSocket> MaybeServerListener =
       ListeningSocket::createUnix(SocketPath);
-  ASSERT_THAT_EXPECTED(MaybeServerListener, llvm::Succeeded());
+  ASSERT_THAT_EXPECTED(MaybeServerListener, llvm::Succeeded()) << SocketPath;
 
   ListeningSocket ServerListener = std::move(*MaybeServerListener);
 
@@ -73,13 +72,12 @@ TEST(raw_socket_streamTest, READ_WITH_TIMEOUT) {
     GTEST_SKIP();
 
   SmallString<100> SocketPath;
-  llvm::sys::fs::createUniquePath("read_with_timeout-%%%%%%.sock", SocketPath,
-                                  true);
+  llvm::sys::fs::createUniquePath("llvm-%%%%%%%%.sock", SocketPath, true);
   auto Cleanup = llvm::scope_exit([&] { std::remove(SocketPath.c_str()); });
 
   Expected<ListeningSocket> MaybeServerListener =
       ListeningSocket::createUnix(SocketPath);
-  ASSERT_THAT_EXPECTED(MaybeServerListener, llvm::Succeeded());
+  ASSERT_THAT_EXPECTED(MaybeServerListener, llvm::Succeeded()) << SocketPath;
   ListeningSocket ServerListener = std::move(*MaybeServerListener);
 
   Expected<std::unique_ptr<raw_socket_stream>> MaybeClient =
@@ -104,13 +102,12 @@ TEST(raw_socket_streamTest, ACCEPT_WITH_TIMEOUT) {
     GTEST_SKIP();
 
   SmallString<100> SocketPath;
-  llvm::sys::fs::createUniquePath("accept_with_timeout-%%%%%%.sock", SocketPath,
-                                  true);
+  llvm::sys::fs::createUniquePath("llvm-%%%%%%%%.sock", SocketPath, true);
   auto Cleanup = llvm::scope_exit([&] { std::remove(SocketPath.c_str()); });
 
   Expected<ListeningSocket> MaybeServerListener =
       ListeningSocket::createUnix(SocketPath);
-  ASSERT_THAT_EXPECTED(MaybeServerListener, llvm::Succeeded());
+  ASSERT_THAT_EXPECTED(MaybeServerListener, llvm::Succeeded()) << SocketPath;
   ListeningSocket ServerListener = std::move(*MaybeServerListener);
 
   Expected<std::unique_ptr<raw_socket_stream>> MaybeServer =
@@ -124,13 +121,12 @@ TEST(raw_socket_streamTest, ACCEPT_WITH_SHUTDOWN) {
     GTEST_SKIP();
 
   SmallString<100> SocketPath;
-  llvm::sys::fs::createUniquePath("accept_with_shutdown-%%%%%%.sock",
-                                  SocketPath, true);
+  llvm::sys::fs::createUniquePath("llvm-%%%%%%%%.sock", SocketPath, true);
   auto Cleanup = llvm::scope_exit([&] { std::remove(SocketPath.c_str()); });
 
   Expected<ListeningSocket> MaybeServerListener =
       ListeningSocket::createUnix(SocketPath);
-  ASSERT_THAT_EXPECTED(MaybeServerListener, llvm::Succeeded());
+  ASSERT_THAT_EXPECTED(MaybeServerListener, llvm::Succeeded()) << SocketPath;
   ListeningSocket ServerListener = std::move(*MaybeServerListener);
 
   // Create a separate thread to close the socket after a delay. Simulates a
