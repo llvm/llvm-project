@@ -210,6 +210,25 @@ gpu.module @test {
 }
 
 // -----
+#data_layout = #xegpu.layout<sg_layout = [1, 16], sg_data = [4, 16]>
+gpu.module @test {
+  // CHECK-LABEL: gpu.func @vector_reduction_preserve_round_robin_layout
+  gpu.func @vector_reduction_preserve_round_robin_layout(%arg0: memref<2048xf32, 1>) kernel {
+    // CHECK: %[[LOAD:.*]] = xegpu.load %arg0{{.*}} <{layout = #xegpu.layout<sg_layout = [1, 16], sg_data = [4, 16]>}> {{.*}} -> vector<8x256xf32>
+    // CHECK: %[[RED:.*]] = vector.multi_reduction <add>, %[[LOAD]], {{.*}} {layout_result_0 = #xegpu.slice<#xegpu.layout<sg_layout = [1, 16], sg_data = [4, 16]>, dims = [1]>} [1] : vector<8x256xf32> to vector<8xf32>
+    %offset = arith.constant dense<0> : vector<8x256xindex>
+    %offset2 = arith.constant dense<1024> : vector<8xindex>
+    %acc = arith.constant dense<0.000000e+00> : vector<8xf32>
+    %mask = arith.constant dense<true> : vector<8x256xi1>
+    %mask2 = arith.constant dense<true> : vector<8xi1>
+    %val = xegpu.load %arg0[%offset], %mask : memref<2048xf32, 1>, vector<8x256xindex>, vector<8x256xi1> -> vector<8x256xf32>
+    %reduce = vector.multi_reduction <add>, %val, %acc [1] : vector<8x256xf32> to vector<8xf32>
+    xegpu.store %reduce, %arg0[%offset2], %mask2 { layout = #xegpu.slice<#data_layout, dims = [1]> } : vector<8xf32>, memref<2048xf32, 1>, vector<8xindex>, vector<8xi1>
+    gpu.return
+  }
+}
+
+// -----
 gpu.module @test {
   // CHECK-LABEL: for_loop_dpas
   gpu.func @for_loop_dpas(%arg0: memref<2048x8192xf16>, %arg1: memref<8192x4096xf16>, %arg2: memref<2048x4096xf32>) kernel attributes {known_block_size = array<i32: 8, 1, 16>} {
