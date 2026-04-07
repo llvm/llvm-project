@@ -16,8 +16,8 @@
 #include "llvm/DebugInfo/PDB/Native/PDBFileBuilder.h"
 #include "llvm/DebugInfo/PDB/Native/SymbolStream.h"
 #include "llvm/Support/BinaryByteStream.h"
-#include <memory>
 #include <cstring>
+#include <memory>
 
 #include "gtest/gtest.h"
 
