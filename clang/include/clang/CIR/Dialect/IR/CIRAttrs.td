@@ -573,7 +573,11 @@ def CIR_DataMemberAttr : CIR_ValueLikeAttr<"DataMember", "data_member"> {
     }]>,
   ];
 
+<<<<<<< HEAD
   // This attribute gets lowered during CXXABILowering.
+=======
+  // This attribute gets lowered during CXXABILowering
+>>>>>>> fafe8e3f45cb ([CIR][NFC] Use tablegen to create CIRAttrToValue visitor declarations (#187607))
   let hasAttrToValueLowering = 0;
 
   let genVerifyDecl = 1;
