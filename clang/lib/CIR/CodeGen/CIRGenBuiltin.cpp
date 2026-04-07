@@ -1580,9 +1580,23 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     mlir::Value result = builder.createSelect(loc, isInf, signResult, zero);
     return RValue::get(result);
   }
-  case Builtin::BI__builtin_flt_rounds:
-  case Builtin::BI__builtin_set_flt_rounds:
-    return errorBuiltinNYI(*this, e, builtinID);
+  case Builtin::BI__builtin_flt_rounds: {
+    mlir::Location loc = getLoc(e->getExprLoc());
+    mlir::Type resultType = convertType(e->getType());
+    mlir::Value result =
+        builder.emitIntrinsicCallOp(loc, "get.rounding", resultType);
+    if (result.getType() != resultType)
+      result =
+          builder.createCast(loc, cir::CastKind::integral, result, resultType);
+    return RValue::get(result);
+  }
+  case Builtin::BI__builtin_set_flt_rounds: {
+    mlir::Location loc = getLoc(e->getExprLoc());
+    mlir::Value v = emitScalarExpr(e->getArg(0));
+    builder.emitIntrinsicCallOp(loc, "set.rounding", builder.getVoidTy(),
+                                mlir::ValueRange{v});
+    return RValue::get(nullptr);
+  }
   case Builtin::BI__builtin_fpclassify: {
     CIRGenFunction::CIRGenFPOptionsRAII fPOptsRAII(*this, e);
     mlir::Location loc = getLoc(e->getBeginLoc());
