@@ -3887,8 +3887,8 @@ define i64 @v_mul_284_add_82_i64(i64 %arg) {
 ; GFX900-LABEL: v_mul_284_add_82_i64:
 ; GFX900:       ; %bb.0:
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX900-NEXT:    v_mov_b32_e32 v3, 0x52
 ; GFX900-NEXT:    s_movk_i32 s6, 0x11c
+; GFX900-NEXT:    v_mov_b32_e32 v3, 0x52
 ; GFX900-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX900-NEXT:    v_mov_b32_e32 v2, v1
 ; GFX900-NEXT:    v_mad_u64_u32 v[0:1], s[4:5], v0, s6, v[3:4]
@@ -3898,8 +3898,8 @@ define i64 @v_mul_284_add_82_i64(i64 %arg) {
 ; GFX90A-LABEL: v_mul_284_add_82_i64:
 ; GFX90A:       ; %bb.0:
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX90A-NEXT:    v_mov_b32_e32 v4, 0x52
 ; GFX90A-NEXT:    s_movk_i32 s6, 0x11c
+; GFX90A-NEXT:    v_mov_b32_e32 v4, 0x52
 ; GFX90A-NEXT:    v_mov_b32_e32 v5, 0
 ; GFX90A-NEXT:    v_mov_b32_e32 v2, v1
 ; GFX90A-NEXT:    v_mad_u64_u32 v[0:1], s[4:5], v0, s6, v[4:5]
@@ -3970,8 +3970,8 @@ define i64 @v_mul_934584645_add_8234599_i64(i64 %arg) {
 ; GFX900-LABEL: v_mul_934584645_add_8234599_i64:
 ; GFX900:       ; %bb.0:
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX900-NEXT:    v_mov_b32_e32 v3, 0x7da667
 ; GFX900-NEXT:    s_mov_b32 s6, 0x37b4a145
+; GFX900-NEXT:    v_mov_b32_e32 v3, 0x7da667
 ; GFX900-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX900-NEXT:    v_mov_b32_e32 v2, v1
 ; GFX900-NEXT:    v_mad_u64_u32 v[0:1], s[4:5], v0, s6, v[3:4]
@@ -3981,8 +3981,8 @@ define i64 @v_mul_934584645_add_8234599_i64(i64 %arg) {
 ; GFX90A-LABEL: v_mul_934584645_add_8234599_i64:
 ; GFX90A:       ; %bb.0:
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX90A-NEXT:    v_mov_b32_e32 v4, 0x7da667
 ; GFX90A-NEXT:    s_mov_b32 s6, 0x37b4a145
+; GFX90A-NEXT:    v_mov_b32_e32 v4, 0x7da667
 ; GFX90A-NEXT:    v_mov_b32_e32 v5, 0
 ; GFX90A-NEXT:    v_mov_b32_e32 v2, v1
 ; GFX90A-NEXT:    v_mad_u64_u32 v[0:1], s[4:5], v0, s6, v[4:5]

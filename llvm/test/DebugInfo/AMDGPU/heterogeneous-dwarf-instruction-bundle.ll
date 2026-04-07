@@ -13,9 +13,9 @@ define amdgpu_kernel void @foo(ptr addrspace(1) noalias %arg_in_0, ptr addrspace
 ; CHECK-NEXT:    .cfi_undefined 16
 ; CHECK-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; CHECK-NEXT:    v_mov_b32_e32 v2, 0
-; CHECK-NEXT:    .loc 1 0 0 prologue_end ; gdb_simple.f95:0:0
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v1, 0
+; CHECK-NEXT:    .loc 1 0 0 prologue_end ; gdb_simple.f95:0:0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    ;DEBUG_VALUE: foo:i <- 2
 ; CHECK-NEXT:    s_clause 0x1
