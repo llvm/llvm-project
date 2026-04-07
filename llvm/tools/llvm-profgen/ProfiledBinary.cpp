@@ -11,6 +11,7 @@
 #include "MissingFrameInferrer.h"
 #include "Options.h"
 #include "ProfileGenerator.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/DebugInfo/PDB/IPDBSession.h"
 #include "llvm/DebugInfo/PDB/PDB.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolFunc.h"
@@ -245,6 +246,16 @@ void ProfiledBinary::load() {
 
   // Find the preferred load address for text sections.
   setPreferredTextSegmentAddresses(Obj);
+
+  // For shared libraries, read build ID to filter perfscript addresses
+  // in [buildid:]addr format. Main executables use empty FilterBuildID
+  // since their addresses have no buildid prefix.
+  StringRef FileName = llvm::sys::path::filename(Path);
+  if (FileName.ends_with(".so") || FileName.contains(".so.")) {
+    auto BID = object::getBuildID(Obj);
+    if (!BID.empty())
+      FilterBuildID = llvm::toHex(BID, /*LowerCase=*/true);
+  }
 
   // Load debug info of subprograms from DWARF section.
   // If path of debug info binary is specified, use the debug info from it,
