@@ -10,11 +10,6 @@ module m
     integer :: x
   end type
 contains
-  subroutine test_typeof_subscript(a)
-    integer :: a(10)
-    !ERROR: The data-ref in TYPEOF must not have subscripts
-    typeof(a(1)) :: b
-  end subroutine
 
   subroutine test_classof_intrinsic(a)
     integer :: a

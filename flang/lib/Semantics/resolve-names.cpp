@@ -6528,12 +6528,6 @@ bool DeclarationVisitor::ResolveTypeOfOrClassOf(
     const parser::DataRef &dataRef, bool isClassOf) {
   const char *specName{isClassOf ? "CLASSOF" : "TYPEOF"};
 
-  if (std::holds_alternative<common::Indirection<parser::ArrayElement>>(
-          dataRef.u)) {
-    Say(currStmtSource().value(),
-        "The data-ref in %s must not have subscripts"_err_en_US, specName);
-    return false;
-  }
   if (std::holds_alternative<common::Indirection<parser::CoindexedNamedObject>>(
           dataRef.u)) {
     Say(currStmtSource().value(),
@@ -6547,18 +6541,20 @@ bool DeclarationVisitor::ResolveTypeOfOrClassOf(
     return false;
   }
 
-  // C7115: data-ref shall be a data object, not a procedure or type name.
+  // data-ref shall be a data object, not a procedure or type name.
   const Symbol &ultimate{name->symbol->GetUltimate()};
   if (!ultimate.has<ObjectEntityDetails>() &&
       !ultimate.has<AssocEntityDetails>() && !ultimate.has<EntityDetails>()) {
-    Say(name->source, "'%s' in %s must be a data object"_err_en_US,
+    Say(currStmtSource().value(), "'%s' in %s must be a data object"_err_en_US,
         name->source, specName);
     return false;
   }
 
-  // C7114: data-ref shall not be a whole assumed-size array.
-  if (IsAssumedSizeArray(ultimate)) {
-    Say(name->source,
+  // data-ref shall not be a whole assumed-size array.
+  if (!std::holds_alternative<common::Indirection<parser::ArrayElement>>(
+          dataRef.u) &&
+      IsAssumedSizeArray(ultimate)) {
+    Say(currStmtSource().value(),
         "The data-ref in %s must not be a whole assumed-size array"_err_en_US,
         specName);
     return false;
@@ -6567,7 +6563,7 @@ bool DeclarationVisitor::ResolveTypeOfOrClassOf(
   // Get the declared type of the referenced object.
   const DeclTypeSpec *refType{ultimate.GetType()};
   if (!refType) {
-    Say(name->source,
+    Say(currStmtSource().value(),
         "Referenced object '%s' does not have a declared type"_err_en_US,
         name->source);
     return false;
