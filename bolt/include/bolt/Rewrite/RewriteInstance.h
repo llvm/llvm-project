@@ -187,9 +187,6 @@ private:
   /// performing final relaxation.
   void emitAndLink();
 
-  /// Link additional runtime code to support instrumentation.
-  void linkRuntime();
-
   /// Process metadata in sections before functions are discovered.
   void processSectionMetadata();
 
@@ -245,15 +242,29 @@ private:
   /// Return value for the symbol \p Name in the output.
   uint64_t getNewValueForSymbol(const StringRef Name);
 
+  /// ELF-specific part. TODO: refactor into new class.
+#define ELF_FUNCTION(TYPE, FUNC)                                               \
+  template <typename ELFT> TYPE FUNC(object::ELFObjectFile<ELFT> *Obj);        \
+  TYPE FUNC() {                                                                \
+    if (auto *ELF32LE = dyn_cast<object::ELF32LEObjectFile>(InputFile))        \
+      return FUNC(ELF32LE);                                                    \
+    if (auto *ELF64LE = dyn_cast<object::ELF64LEObjectFile>(InputFile))        \
+      return FUNC(ELF64LE);                                                    \
+    if (auto *ELF32BE = dyn_cast<object::ELF32BEObjectFile>(InputFile))        \
+      return FUNC(ELF32BE);                                                    \
+    auto *ELF64BE = cast<object::ELF64BEObjectFile>(InputFile);                \
+    return FUNC(ELF64BE);                                                      \
+  }
+
   /// Check for PT_GNU_RELRO segment presence, mark covered sections as
   /// (dynamically) read-only (written once), as specified in LSB Chapter 12:
   /// "segment which may be made read-only after relocations have been
   /// processed".
-  void markGnuRelroSections();
+  ELF_FUNCTION(void, markGnuRelroSections);
 
   /// Detect addresses and offsets available in the binary for allocating
   /// new sections.
-  Error discoverStorage();
+  ELF_FUNCTION(Error, discoverStorage);
 
   /// Adjust function sizes and set proper maximum size values after the whole
   /// symbol table has been processed.
@@ -272,7 +283,7 @@ private:
                          uint64_t &ExtractedValue) const;
 
   /// Rewrite non-allocatable sections with modifications.
-  void rewriteNoteSections();
+  ELF_FUNCTION(void, rewriteNoteSections);
 
   /// Write .eh_frame_hdr.
   void writeEHFrameHeader();
@@ -301,25 +312,11 @@ private:
   /// Disassemble riscv-specific .plt \p Section auxiliary function
   void disassemblePLTSectionRISCV(BinarySection &Section);
 
-  /// ELF-specific part. TODO: refactor into new class.
-#define ELF_FUNCTION(TYPE, FUNC)                                               \
-  template <typename ELFT> TYPE FUNC(object::ELFObjectFile<ELFT> *Obj);        \
-  TYPE FUNC() {                                                                \
-    if (auto *ELF32LE = dyn_cast<object::ELF32LEObjectFile>(InputFile))        \
-      return FUNC(ELF32LE);                                                    \
-    if (auto *ELF64LE = dyn_cast<object::ELF64LEObjectFile>(InputFile))        \
-      return FUNC(ELF64LE);                                                    \
-    if (auto *ELF32BE = dyn_cast<object::ELF32BEObjectFile>(InputFile))        \
-      return FUNC(ELF32BE);                                                    \
-    auto *ELF64BE = cast<object::ELF64BEObjectFile>(InputFile);                \
-    return FUNC(ELF64BE);                                                      \
-  }
-
   /// Update loadable segment information based on new sections.
   void updateSegmentInfo();
 
   /// Patch ELF book-keeping info.
-  void patchELFPHDRTable();
+  ELF_FUNCTION(void, patchELFPHDRTable);
 
   /// Create section header table.
   ELF_FUNCTION(void, patchELFSectionHeaderTable);
@@ -408,6 +405,9 @@ public:
 
   /// Return true if the section holds debug information.
   static bool isDebugSection(StringRef SectionName);
+
+  /// Return true if a debug section is compressed (by SHF_COMPRESSED flag).
+  static bool isCompressedDebugSection(const object::SectionRef &Section);
 
   /// Adds Debug section to overwrite.
   static void addToDebugSectionsToOverwrite(const char *Section) {
@@ -603,6 +603,8 @@ private:
 
   friend class RewriteInstanceDiff;
 };
+
+#undef ELF_FUNCTION
 
 MCPlusBuilder *createMCPlusBuilder(const Triple::ArchType Arch,
                                    const MCInstrAnalysis *Analysis,

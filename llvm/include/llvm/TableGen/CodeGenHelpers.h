@@ -33,6 +33,10 @@ public:
       OS << "#undef " << Name << "\n";
     OS << "\n";
   }
+
+  IfDefEmitter(const IfDefEmitter &) = delete;
+  IfDefEmitter &operator=(const IfDefEmitter &) = delete;
+
   ~IfDefEmitter() {
     OS << "\n";
     if (LateUndef)
@@ -53,6 +57,9 @@ protected:
       : Condition(Condition.str()), OS(OS) {
     OS << If << " " << Condition << "\n\n";
   }
+
+  IfGuardEmitterBase(const IfGuardEmitterBase &) = delete;
+  IfGuardEmitterBase &operator=(const IfGuardEmitterBase &) = delete;
 
   ~IfGuardEmitterBase() { OS << "\n#endif // " << Condition << "\n\n"; }
 
@@ -96,6 +103,10 @@ public:
     OS << "#ifndef " << Name << "\n"
        << "#define " << Name << "\n\n";
   }
+
+  IncludeGuardEmitter(const IncludeGuardEmitter &) = delete;
+  IncludeGuardEmitter &operator=(const IncludeGuardEmitter &) = delete;
+
   ~IncludeGuardEmitter() { OS << "\n#endif // " << Name << "\n\n"; }
 
 private:
@@ -108,11 +119,14 @@ private:
 // namespace scope.
 class NamespaceEmitter {
 public:
-  NamespaceEmitter(raw_ostream &OS, StringRef NameUntrimmed)
-      : Name(trim(NameUntrimmed).str()), OS(OS) {
+  NamespaceEmitter(raw_ostream &OS, const Twine &NameUntrimmed)
+      : Name(trim(NameUntrimmed.str()).str()), OS(OS) {
     if (!Name.empty())
       OS << "namespace " << Name << " {\n\n";
   }
+
+  NamespaceEmitter(const NamespaceEmitter &) = delete;
+  NamespaceEmitter &operator=(const NamespaceEmitter &) = delete;
 
   ~NamespaceEmitter() {
     if (!Name.empty())
@@ -140,6 +154,8 @@ private:
 class AnonNamespaceEmitter {
 public:
   AnonNamespaceEmitter(raw_ostream &OS) : OS(OS) { OS << "namespace {\n\n"; }
+  AnonNamespaceEmitter(const AnonNamespaceEmitter &) = delete;
+  AnonNamespaceEmitter &operator=(const AnonNamespaceEmitter &) = delete;
   ~AnonNamespaceEmitter() { OS << "} // namespace\n"; }
 
 private:

@@ -25,6 +25,7 @@
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Symbol/Type.h"
 #include "lldb/Symbol/Variable.h"
+#include "lldb/Target/ABI.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Language.h"
 #include "lldb/Target/LanguageRuntime.h"
@@ -1158,8 +1159,7 @@ llvm::Expected<llvm::APSInt> ValueObject::GetValueAsAPSInt() {
       !GetCompilerType().IsPointerType() &&
       !GetCompilerType().IsNullPtrType() &&
       !GetCompilerType().IsReferenceType() && !GetCompilerType().IsBoolean())
-    return llvm::make_error<llvm::StringError>(
-        "type cannot be converted to APSInt", llvm::inconvertibleErrorCode());
+    return llvm::createStringError("type cannot be converted to APSInt");
 
   if (CanProvideValue()) {
     Scalar scalar;
@@ -1167,15 +1167,12 @@ llvm::Expected<llvm::APSInt> ValueObject::GetValueAsAPSInt() {
       return scalar.GetAPSInt();
   }
 
-  return llvm::make_error<llvm::StringError>(
-      "error occurred; unable to convert to APSInt",
-      llvm::inconvertibleErrorCode());
+  return llvm::createStringError("error occurred; unable to convert to APSInt");
 }
 
 llvm::Expected<llvm::APFloat> ValueObject::GetValueAsAPFloat() {
   if (!HasFloatingRepresentation(GetCompilerType()))
-    return llvm::make_error<llvm::StringError>(
-        "type cannot be converted to APFloat", llvm::inconvertibleErrorCode());
+    return llvm::createStringError("type cannot be converted to APFloat");
 
   if (CanProvideValue()) {
     Scalar scalar;
@@ -1183,9 +1180,8 @@ llvm::Expected<llvm::APFloat> ValueObject::GetValueAsAPFloat() {
       return scalar.GetAPFloat();
   }
 
-  return llvm::make_error<llvm::StringError>(
-      "error occurred; unable to convert to APFloat",
-      llvm::inconvertibleErrorCode());
+  return llvm::createStringError(
+      "error occurred; unable to convert to APFloat");
 }
 
 llvm::Expected<bool> ValueObject::GetValueAsBool() {
@@ -1204,26 +1200,26 @@ llvm::Expected<bool> ValueObject::GetValueAsBool() {
   if (val_type.IsArrayType())
     return GetAddressOf().address != 0;
 
-  return llvm::make_error<llvm::StringError>("type cannot be converted to bool",
-                                             llvm::inconvertibleErrorCode());
+  return llvm::createStringError("type cannot be converted to bool");
 }
 
-void ValueObject::SetValueFromInteger(const llvm::APInt &value, Status &error) {
+void ValueObject::SetValueFromInteger(const llvm::APInt &value, Status &error,
+                                      bool can_update_var) {
   // Verify the current object is an integer object
   CompilerType val_type = GetCompilerType();
   if (!val_type.IsInteger() && !val_type.IsUnscopedEnumerationType() &&
       !HasFloatingRepresentation(val_type) && !val_type.IsPointerType() &&
       !val_type.IsScalarType()) {
     error =
-        Status::FromErrorString("current value object is not an integer objet");
+        Status::FromErrorString("current value object is not an scalar object");
     return;
   }
 
-  // Verify the current object is not actually associated with any program
-  // variable.
-  if (GetVariable()) {
+  // Verify, if current object is associated with a program variable, that
+  // we are allowing updating program variables in this case.
+  if (GetVariable() && !can_update_var) {
     error = Status::FromErrorString(
-        "current value object is not a temporary object");
+        "Not allowed to update program variables in this case.");
     return;
   }
 
@@ -1239,31 +1235,30 @@ void ValueObject::SetValueFromInteger(const llvm::APInt &value, Status &error) {
     return;
   }
 
-  lldb::DataExtractorSP data_sp;
-  data_sp->SetData(value.getRawData(), byte_size,
-                   target->GetArchitecture().GetByteOrder());
-  data_sp->SetAddressByteSize(
+  lldb::DataExtractorSP data_sp = std::make_shared<DataExtractor>(
+      reinterpret_cast<const void *>(value.getRawData()), byte_size,
+      target->GetArchitecture().GetByteOrder(),
       static_cast<uint8_t>(target->GetArchitecture().GetAddressByteSize()));
   SetData(*data_sp, error);
 }
 
 void ValueObject::SetValueFromInteger(lldb::ValueObjectSP new_val_sp,
-                                      Status &error) {
+                                      Status &error, bool can_update_var) {
   // Verify the current object is an integer object
   CompilerType val_type = GetCompilerType();
   if (!val_type.IsInteger() && !val_type.IsUnscopedEnumerationType() &&
       !HasFloatingRepresentation(val_type) && !val_type.IsPointerType() &&
       !val_type.IsScalarType()) {
     error =
-        Status::FromErrorString("current value object is not an integer objet");
+        Status::FromErrorString("current value object is not an scalar object");
     return;
   }
 
-  // Verify the current object is not actually associated with any program
-  // variable.
-  if (GetVariable()) {
+  // Verify, if current object is associated with a program variable, that
+  // we are allowing updating program variables in this case.
+  if (GetVariable() && !can_update_var) {
     error = Status::FromErrorString(
-        "current value object is not a temporary object");
+        "Not allowed to update program variables in this case.");
     return;
   }
 
@@ -1279,13 +1274,14 @@ void ValueObject::SetValueFromInteger(lldb::ValueObjectSP new_val_sp,
   if (new_val_type.IsInteger()) {
     auto value_or_err = new_val_sp->GetValueAsAPSInt();
     if (value_or_err)
-      SetValueFromInteger(*value_or_err, error);
+      SetValueFromInteger(*value_or_err, error, can_update_var);
     else
       error = Status::FromErrorString("error getting APSInt from new_val_sp");
   } else if (HasFloatingRepresentation(new_val_type)) {
     auto value_or_err = new_val_sp->GetValueAsAPFloat();
     if (value_or_err)
-      SetValueFromInteger(value_or_err->bitcastToAPInt(), error);
+      SetValueFromInteger(value_or_err->bitcastToAPInt(), error,
+                          can_update_var);
     else
       error = Status::FromErrorString("error getting APFloat from new_val_sp");
   } else if (new_val_type.IsPointerType()) {
@@ -1297,7 +1293,8 @@ void ValueObject::SetValueFromInteger(lldb::ValueObjectSP new_val_sp,
       if (auto temp = llvm::expectedToOptional(
               new_val_sp->GetCompilerType().GetBitSize(target.get())))
         num_bits = temp.value();
-      SetValueFromInteger(llvm::APInt(num_bits, int_val), error);
+      SetValueFromInteger(llvm::APInt(num_bits, int_val), error,
+                          can_update_var);
     } else
       error = Status::FromErrorString("error converting new_val_sp to integer");
   }
@@ -1631,6 +1628,16 @@ ValueObject::GetAddressOf(bool scalar_is_load_address) {
     return {LLDB_INVALID_ADDRESS, m_value.GetValueAddressType()};
   }
   llvm_unreachable("Unhandled value type!");
+}
+
+std::optional<addr_t> ValueObject::GetStrippedPointerValue(addr_t address) {
+  if (GetCompilerType().HasPointerAuthQualifier()) {
+    ExecutionContext exe_ctx(GetExecutionContextRef());
+    if (Process *process = exe_ctx.GetProcessPtr())
+      if (ABISP abi_sp = process->GetABI())
+        return abi_sp->FixCodeAddress(address);
+  }
+  return std::nullopt;
 }
 
 ValueObject::AddrAndType ValueObject::GetPointerValue() {
@@ -3016,9 +3023,8 @@ llvm::Expected<lldb::ValueObjectSP> ValueObject::CastDerivedToBaseType(
   // type of cast; otherwise return the shared pointer to the original
   // (unchanged) ValueObject.
   if (!type.IsPointerType() && !type.IsReferenceType())
-    return llvm::make_error<llvm::StringError>(
-        "Invalid target type: should be a pointer or a reference",
-        llvm::inconvertibleErrorCode());
+    return llvm::createStringError(
+        "Invalid target type: should be a pointer or a reference");
 
   CompilerType start_type = GetCompilerType();
   if (start_type.IsReferenceType())
@@ -3030,18 +3036,15 @@ llvm::Expected<lldb::ValueObjectSP> ValueObject::CastDerivedToBaseType(
       start_type.IsPointerType() ? start_type.GetPointeeType() : start_type;
 
   if (!target_record_type.IsRecordType() || !start_record_type.IsRecordType())
-    return llvm::make_error<llvm::StringError>(
-        "Underlying start & target types should be record types",
-        llvm::inconvertibleErrorCode());
+    return llvm::createStringError(
+        "Underlying start & target types should be record types");
 
   if (target_record_type.CompareTypes(start_record_type))
-    return llvm::make_error<llvm::StringError>(
-        "Underlying start & target types should be different",
-        llvm::inconvertibleErrorCode());
+    return llvm::createStringError(
+        "Underlying start & target types should be different");
 
   if (base_type_indices.empty())
-    return llvm::make_error<llvm::StringError>(
-        "Children sequence must be non-empty", llvm::inconvertibleErrorCode());
+    return llvm::createStringError("children sequence must be non-empty");
 
   // Both the starting & target types are valid for the cast, and the list of
   // base class indices is non-empty, so we can proceed with the cast.
@@ -3060,9 +3063,8 @@ llvm::Expected<lldb::ValueObjectSP> ValueObject::CastDerivedToBaseType(
   CompilerType inner_value_type = inner_value->GetCompilerType();
   if (type.IsPointerType()) {
     if (!inner_value_type.CompareTypes(type.GetPointeeType()))
-      return llvm::make_error<llvm::StringError>(
-          "casted value doesn't match the desired type",
-          llvm::inconvertibleErrorCode());
+      return llvm::createStringError(
+          "casted value doesn't match the desired type");
 
     uintptr_t addr = inner_value->GetLoadAddress();
     llvm::StringRef name = "";
@@ -3073,9 +3075,8 @@ llvm::Expected<lldb::ValueObjectSP> ValueObject::CastDerivedToBaseType(
 
   // At this point the target type should be a reference.
   if (!inner_value_type.CompareTypes(type.GetNonReferenceType()))
-    return llvm::make_error<llvm::StringError>(
-        "casted value doesn't match the desired type",
-        llvm::inconvertibleErrorCode());
+    return llvm::createStringError(
+        "casted value doesn't match the desired type");
 
   return lldb::ValueObjectSP(inner_value->Cast(type.GetNonReferenceType()));
 }
@@ -3086,9 +3087,8 @@ ValueObject::CastBaseToDerivedType(CompilerType type, uint64_t offset) {
   // type of cast; otherwise return the shared pointer to the original
   // (unchanged) ValueObject.
   if (!type.IsPointerType() && !type.IsReferenceType())
-    return llvm::make_error<llvm::StringError>(
-        "Invalid target type: should be a pointer or a reference",
-        llvm::inconvertibleErrorCode());
+    return llvm::createStringError(
+        "Invalid target type: should be a pointer or a reference");
 
   CompilerType start_type = GetCompilerType();
   if (start_type.IsReferenceType())
@@ -3100,25 +3100,22 @@ ValueObject::CastBaseToDerivedType(CompilerType type, uint64_t offset) {
       start_type.IsPointerType() ? start_type.GetPointeeType() : start_type;
 
   if (!target_record_type.IsRecordType() || !start_record_type.IsRecordType())
-    return llvm::make_error<llvm::StringError>(
-        "Underlying start & target types should be record types",
-        llvm::inconvertibleErrorCode());
+    return llvm::createStringError(
+        "Underlying start & target types should be record types");
 
   if (target_record_type.CompareTypes(start_record_type))
-    return llvm::make_error<llvm::StringError>(
-        "Underlying start & target types should be different",
-        llvm::inconvertibleErrorCode());
+    return llvm::createStringError(
+        "Underlying start & target types should be different");
 
   CompilerType virtual_base;
   if (target_record_type.IsVirtualBase(start_record_type, &virtual_base)) {
     if (!virtual_base.IsValid())
-      return llvm::make_error<llvm::StringError>(
-          "virtual base should be valid", llvm::inconvertibleErrorCode());
-    return llvm::make_error<llvm::StringError>(
+      return llvm::createStringError("virtual base should be valid");
+    return llvm::createStringError(
         llvm::Twine("cannot cast " + start_type.TypeDescription() + " to " +
                     type.TypeDescription() + " via virtual base " +
-                    virtual_base.TypeDescription()),
-        llvm::inconvertibleErrorCode());
+                    virtual_base.TypeDescription())
+            .str());
   }
 
   // Both the starting & target types are valid for the cast,  so we can
@@ -3188,12 +3185,14 @@ lldb::ValueObjectSP ValueObject::CastToBasicType(CompilerType type) {
   if (type.IsBoolean()) {
     if (!is_scalar || is_integer)
       return ValueObject::CreateValueObjectFromBool(
-          target, GetValueAsUnsigned(0) != 0, "result");
+          exe_ctx, type.GetTypeSystem().GetSharedPointer(),
+          GetValueAsUnsigned(0) != 0, "result");
     else if (is_scalar && is_float) {
       auto float_value_or_err = GetValueAsAPFloat();
       if (float_value_or_err)
         return ValueObject::CreateValueObjectFromBool(
-            target, !float_value_or_err->isZero(), "result");
+            exe_ctx, type.GetTypeSystem().GetSharedPointer(),
+            !float_value_or_err->isZero(), "result");
       else
         return ValueObjectConstResult::Create(
             exe_ctx.GetBestExecutionContextScope(),
@@ -3211,7 +3210,7 @@ lldb::ValueObjectSP ValueObject::CastToBasicType(CompilerType type) {
         // size.
         llvm::APSInt ext =
             int_value_or_err->extOrTrunc(type_byte_size * CHAR_BIT);
-        return ValueObject::CreateValueObjectFromAPInt(target, ext, type,
+        return ValueObject::CreateValueObjectFromAPInt(exe_ctx, ext, type,
                                                        "result");
       } else
         return ValueObjectConstResult::Create(
@@ -3236,7 +3235,7 @@ lldb::ValueObjectSP ValueObject::CastToBasicType(CompilerType type) {
               Status::FromErrorStringWithFormat(
                   "invalid type cast detected: %s",
                   llvm::toString(float_value_or_err.takeError()).c_str()));
-        return ValueObject::CreateValueObjectFromAPInt(target, integer, type,
+        return ValueObject::CreateValueObjectFromAPInt(exe_ctx, integer, type,
                                                        "result");
       }
     }
@@ -3251,7 +3250,7 @@ lldb::ValueObjectSP ValueObject::CastToBasicType(CompilerType type) {
         Scalar scalar_int(ext);
         llvm::APFloat f =
             scalar_int.CreateAPFloatFromAPSInt(type.GetBasicTypeEnumeration());
-        return ValueObject::CreateValueObjectFromAPFloat(target, f, type,
+        return ValueObject::CreateValueObjectFromAPFloat(exe_ctx, f, type,
                                                          "result");
       } else {
         return ValueObjectConstResult::Create(
@@ -3267,7 +3266,7 @@ lldb::ValueObjectSP ValueObject::CastToBasicType(CompilerType type) {
           Scalar scalar_int(*int_value_or_err);
           llvm::APFloat f = scalar_int.CreateAPFloatFromAPSInt(
               type.GetBasicTypeEnumeration());
-          return ValueObject::CreateValueObjectFromAPFloat(target, f, type,
+          return ValueObject::CreateValueObjectFromAPFloat(exe_ctx, f, type,
                                                            "result");
         } else {
           return ValueObjectConstResult::Create(
@@ -3283,7 +3282,7 @@ lldb::ValueObjectSP ValueObject::CastToBasicType(CompilerType type) {
           Scalar scalar_float(*float_value_or_err);
           llvm::APFloat f = scalar_float.CreateAPFloatFromAPFloat(
               type.GetBasicTypeEnumeration());
-          return ValueObject::CreateValueObjectFromAPFloat(target, f, type,
+          return ValueObject::CreateValueObjectFromAPFloat(exe_ctx, f, type,
                                                            "result");
         } else {
           return ValueObjectConstResult::Create(
@@ -3339,7 +3338,7 @@ lldb::ValueObjectSP ValueObject::CastToEnumType(CompilerType type) {
             Status::FromErrorStringWithFormat(
                 "invalid type cast detected: %s",
                 llvm::toString(value_or_err.takeError()).c_str()));
-      return ValueObject::CreateValueObjectFromAPInt(target, integer, type,
+      return ValueObject::CreateValueObjectFromAPInt(exe_ctx, integer, type,
                                                      "result");
     } else
       return ValueObjectConstResult::Create(
@@ -3350,7 +3349,7 @@ lldb::ValueObjectSP ValueObject::CastToEnumType(CompilerType type) {
     auto value_or_err = GetValueAsAPSInt();
     if (value_or_err) {
       llvm::APSInt ext = value_or_err->extOrTrunc(byte_size * CHAR_BIT);
-      return ValueObject::CreateValueObjectFromAPInt(target, ext, type,
+      return ValueObject::CreateValueObjectFromAPInt(exe_ctx, ext, type,
                                                      "result");
     } else
       return ValueObjectConstResult::Create(
@@ -3591,13 +3590,13 @@ lldb::ValueObjectSP ValueObject::CreateValueObjectFromData(
 }
 
 lldb::ValueObjectSP
-ValueObject::CreateValueObjectFromAPInt(lldb::TargetSP target,
+ValueObject::CreateValueObjectFromAPInt(const ExecutionContext &exe_ctx,
                                         const llvm::APInt &v, CompilerType type,
                                         llvm::StringRef name) {
-  ExecutionContext exe_ctx(target.get(), false);
-  uint64_t byte_size = 0;
-  if (auto temp = llvm::expectedToOptional(type.GetByteSize(target.get())))
-    byte_size = temp.value();
+  uint64_t byte_size =
+      llvm::expectedToOptional(
+          type.GetByteSize(exe_ctx.GetBestExecutionContextScope()))
+          .value_or(0);
   lldb::DataExtractorSP data_sp = std::make_shared<DataExtractor>(
       reinterpret_cast<const void *>(v.getRawData()), byte_size,
       exe_ctx.GetByteOrder(), exe_ctx.GetAddressByteSize());
@@ -3605,52 +3604,43 @@ ValueObject::CreateValueObjectFromAPInt(lldb::TargetSP target,
 }
 
 lldb::ValueObjectSP ValueObject::CreateValueObjectFromAPFloat(
-    lldb::TargetSP target, const llvm::APFloat &v, CompilerType type,
+    const ExecutionContext &exe_ctx, const llvm::APFloat &v, CompilerType type,
     llvm::StringRef name) {
-  return CreateValueObjectFromAPInt(target, v.bitcastToAPInt(), type, name);
+  return CreateValueObjectFromAPInt(exe_ctx, v.bitcastToAPInt(), type, name);
 }
 
-lldb::ValueObjectSP ValueObject::CreateValueObjectFromScalar(
-    lldb::TargetSP target, Scalar &s, CompilerType type, llvm::StringRef name) {
-  ExecutionContext exe_ctx(target.get(), false);
+lldb::ValueObjectSP
+ValueObject::CreateValueObjectFromScalar(const ExecutionContext &exe_ctx,
+                                         Scalar &s, CompilerType type,
+                                         llvm::StringRef name) {
   return ValueObjectConstResult::Create(exe_ctx.GetBestExecutionContextScope(),
                                         type, s, ConstString(name));
 }
 
 lldb::ValueObjectSP
-ValueObject::CreateValueObjectFromBool(lldb::TargetSP target, bool value,
+ValueObject::CreateValueObjectFromBool(const ExecutionContext &exe_ctx,
+                                       TypeSystemSP typesystem_sp, bool value,
                                        llvm::StringRef name) {
-  CompilerType target_type;
-  if (target) {
-    for (auto type_system_sp : target->GetScratchTypeSystems())
-      if (auto compiler_type =
-              type_system_sp->GetBasicTypeFromAST(lldb::eBasicTypeBool)) {
-        target_type = compiler_type;
-        break;
-      }
-  }
-  ExecutionContext exe_ctx(target.get(), false);
-  uint64_t byte_size = 0;
-  if (auto temp =
-          llvm::expectedToOptional(target_type.GetByteSize(target.get())))
-    byte_size = temp.value();
+  CompilerType type = typesystem_sp->GetBasicTypeFromAST(lldb::eBasicTypeBool);
+  ExecutionContextScope *exe_scope = exe_ctx.GetBestExecutionContextScope();
+  uint64_t byte_size =
+      llvm::expectedToOptional(type.GetByteSize(exe_scope)).value_or(0);
   lldb::DataExtractorSP data_sp = std::make_shared<DataExtractor>(
       reinterpret_cast<const void *>(&value), byte_size, exe_ctx.GetByteOrder(),
       exe_ctx.GetAddressByteSize());
-  return ValueObject::CreateValueObjectFromData(name, *data_sp, exe_ctx,
-                                                target_type);
+  return ValueObject::CreateValueObjectFromData(name, *data_sp, exe_ctx, type);
 }
 
 lldb::ValueObjectSP ValueObject::CreateValueObjectFromNullptr(
-    lldb::TargetSP target, CompilerType type, llvm::StringRef name) {
+    const ExecutionContext &exe_ctx, CompilerType type, llvm::StringRef name) {
   if (!type.IsNullPtrType()) {
     lldb::ValueObjectSP ret_val;
     return ret_val;
   }
   uintptr_t zero = 0;
-  ExecutionContext exe_ctx(target.get(), false);
   uint64_t byte_size = 0;
-  if (auto temp = llvm::expectedToOptional(type.GetByteSize(target.get())))
+  if (auto temp = llvm::expectedToOptional(
+          type.GetByteSize(exe_ctx.GetBestExecutionContextScope())))
     byte_size = temp.value();
   lldb::DataExtractorSP data_sp = std::make_shared<DataExtractor>(
       reinterpret_cast<const void *>(zero), byte_size, exe_ctx.GetByteOrder(),

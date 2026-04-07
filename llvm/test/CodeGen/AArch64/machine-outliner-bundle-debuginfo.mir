@@ -1,0 +1,113 @@
+# RUN: llc -mtriple=aarch64-- -run-pass=machine-outliner %s -o - | FileCheck %s
+# RUN: llc -mtriple=aarch64-- -run-pass=machine-outliner %s -o - | \
+# RUN:   llc -mtriple=aarch64-- -x mir -start-after=machine-outliner -filetype=null
+#
+# This test checks that the machine outliner properly clears debug locations
+# on instructions inside bundles.
+
+# CHECK: name: OUTLINED_FUNCTION_0
+# CHECK: body:
+# CHECK: BUNDLE
+# The bundled instructions should not have debug-location attached
+# CHECK-NEXT: $w8 = ADDWrr $w0, $w1{{$}}
+# CHECK-NEXT: $w9 = ADDWrr $w1, $w2{{$}}
+
+--- |
+  target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128-Fn32"
+  target triple = "aarch64--"
+
+  define void @foo() #0 !dbg !6 {
+    ret void
+  }
+
+  define void @bar() #0 !dbg !8 {
+    ret void
+  }
+
+  define void @baz() #0 !dbg !10 {
+    ret void
+  }
+
+  ; noinline and noredzone make functions safe to outline from
+  attributes #0 = { noinline noredzone nounwind }
+
+  !llvm.dbg.cu = !{!0}
+  !llvm.module.flags = !{!3, !4}
+
+  !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug)
+  !1 = !DIFile(filename: "test.c", directory: "/tmp")
+  !3 = !{i32 7, !"Dwarf Version", i32 4}
+  !4 = !{i32 2, !"Debug Info Version", i32 3}
+  !5 = !DISubroutineType(types: !2)
+  !2 = !{}
+  !6 = distinct !DISubprogram(name: "foo", scope: !1, file: !1, line: 1, type: !5, scopeLine: 1, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0)
+  !7 = !DILocation(line: 2, column: 1, scope: !6)
+  !8 = distinct !DISubprogram(name: "bar", scope: !1, file: !1, line: 10, type: !5, scopeLine: 10, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0)
+  !9 = !DILocation(line: 11, column: 1, scope: !8)
+  !10 = distinct !DISubprogram(name: "baz", scope: !1, file: !1, line: 20, type: !5, scopeLine: 20, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0)
+  !11 = !DILocation(line: 21, column: 1, scope: !10)
+
+...
+---
+name:            foo
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $w0, $w1, $w2
+    ; Bundle with debug locations on internal instructions
+    BUNDLE implicit-def $w8, implicit-def $w9, implicit $w0, implicit $w1, implicit $w2 {
+      $w8 = ADDWrr $w0, $w1, debug-location !7
+      $w9 = ADDWrr $w1, $w2, debug-location !7
+    }
+    ; Long sequence of identical instructions to ensure outlining
+    $w10 = ORRWri $wzr, 1
+    $w11 = ORRWri $wzr, 2
+    $w12 = ORRWri $wzr, 3
+    $w13 = ORRWri $wzr, 4
+    $w14 = ORRWri $wzr, 5
+    $w15 = ORRWri $wzr, 6
+    $w16 = ORRWri $wzr, 7
+    RET undef $lr
+...
+---
+name:            bar
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $w0, $w1, $w2
+    ; Same bundle with different debug location scope
+    BUNDLE implicit-def $w8, implicit-def $w9, implicit $w0, implicit $w1, implicit $w2 {
+      $w8 = ADDWrr $w0, $w1, debug-location !9
+      $w9 = ADDWrr $w1, $w2, debug-location !9
+    }
+    ; Exact same sequence
+    $w10 = ORRWri $wzr, 1
+    $w11 = ORRWri $wzr, 2
+    $w12 = ORRWri $wzr, 3
+    $w13 = ORRWri $wzr, 4
+    $w14 = ORRWri $wzr, 5
+    $w15 = ORRWri $wzr, 6
+    $w16 = ORRWri $wzr, 7
+    RET undef $lr
+...
+---
+name:            baz
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $w0, $w1, $w2
+    ; Same bundle with yet another debug location scope
+    BUNDLE implicit-def $w8, implicit-def $w9, implicit $w0, implicit $w1, implicit $w2 {
+      $w8 = ADDWrr $w0, $w1, debug-location !11
+      $w9 = ADDWrr $w1, $w2, debug-location !11
+    }
+    ; Exact same sequence
+    $w10 = ORRWri $wzr, 1
+    $w11 = ORRWri $wzr, 2
+    $w12 = ORRWri $wzr, 3
+    $w13 = ORRWri $wzr, 4
+    $w14 = ORRWri $wzr, 5
+    $w15 = ORRWri $wzr, 6
+    $w16 = ORRWri $wzr, 7
+    RET undef $lr
+...

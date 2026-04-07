@@ -1193,6 +1193,7 @@ static bool isExportedFromModuleInterfaceUnit(const NamedDecl *D) {
   case Decl::ModuleOwnershipKind::Unowned:
   case Decl::ModuleOwnershipKind::ReachableWhenImported:
   case Decl::ModuleOwnershipKind::ModulePrivate:
+  case Decl::ModuleOwnershipKind::VisiblePromoted:
     return false;
   case Decl::ModuleOwnershipKind::Visible:
   case Decl::ModuleOwnershipKind::VisibleWhenImported:
@@ -1800,7 +1801,8 @@ void NamedDecl::printNestedNameSpecifier(raw_ostream &OS,
       // suppress tag in name
       Copy.SuppressTagKeyword = true;
       Copy.SuppressTagKeywordInAnonNames = false;
-      Copy.AnonymousTagLocations = false;
+      Copy.AnonymousTagNameStyle =
+          llvm::to_underlying(PrintingPolicy::AnonymousTagMode::Plain);
       RD->printName(OS, Copy);
     } else if (const auto *FD = dyn_cast<FunctionDecl>(DC)) {
       const FunctionProtoType *FT = nullptr;
@@ -4960,6 +4962,30 @@ void TagDecl::setQualifierInfo(NestedNameSpecifierLoc QualifierLoc) {
   }
 }
 
+void TagDecl::printAnonymousTagDeclLocation(
+    llvm::raw_ostream &OS, const PrintingPolicy &Policy) const {
+  PresumedLoc PLoc =
+      getASTContext().getSourceManager().getPresumedLoc(getLocation());
+  if (!PLoc.isValid())
+    return;
+
+  OS << " at ";
+  StringRef File = PLoc.getFilename();
+  llvm::SmallString<1024> WrittenFile(File);
+  if (auto *Callbacks = Policy.Callbacks)
+    WrittenFile = Callbacks->remapPath(File);
+  // Fix inconsistent path separator created by
+  // clang::DirectoryLookup::LookupFile when the file path is relative
+  // path.
+  llvm::sys::path::Style Style =
+      llvm::sys::path::is_absolute(WrittenFile)
+          ? llvm::sys::path::Style::native
+          : (Policy.MSVCFormatting ? llvm::sys::path::Style::windows_backslash
+                                   : llvm::sys::path::Style::posix);
+  llvm::sys::path::native(WrittenFile, Style);
+  OS << WrittenFile << ':' << PLoc.getLine() << ':' << PLoc.getColumn();
+}
+
 void TagDecl::printAnonymousTagDecl(llvm::raw_ostream &OS,
                                     const PrintingPolicy &Policy) const {
   if (TypedefNameDecl *Typedef = getTypedefNameForAnonDecl()) {
@@ -4994,28 +5020,9 @@ void TagDecl::printAnonymousTagDecl(llvm::raw_ostream &OS,
   if (!SuppressTagKeywordInName)
     OS << ' ' << getKindName();
 
-  if (Policy.AnonymousTagLocations) {
-    PresumedLoc PLoc =
-        getASTContext().getSourceManager().getPresumedLoc(getLocation());
-    if (PLoc.isValid()) {
-      OS << " at ";
-      StringRef File = PLoc.getFilename();
-      llvm::SmallString<1024> WrittenFile(File);
-      if (auto *Callbacks = Policy.Callbacks)
-        WrittenFile = Callbacks->remapPath(File);
-      // Fix inconsistent path separator created by
-      // clang::DirectoryLookup::LookupFile when the file path is relative
-      // path.
-      llvm::sys::path::Style Style =
-          llvm::sys::path::is_absolute(WrittenFile)
-              ? llvm::sys::path::Style::native
-              : (Policy.MSVCFormatting
-                     ? llvm::sys::path::Style::windows_backslash
-                     : llvm::sys::path::Style::posix);
-      llvm::sys::path::native(WrittenFile, Style);
-      OS << WrittenFile << ':' << PLoc.getLine() << ':' << PLoc.getColumn();
-    }
-  }
+  if (Policy.AnonymousTagNameStyle ==
+      llvm::to_underlying(PrintingPolicy::AnonymousTagMode::SourceLocation))
+    printAnonymousTagDeclLocation(OS, Policy);
 
   OS << (Policy.MSVCFormatting ? '\'' : ')');
 }

@@ -415,8 +415,8 @@ define void @vnsrl_0_double(ptr %in, ptr %out) {
 ; ZIP:       # %bb.0: # %entry
 ; ZIP-NEXT:    vsetivli zero, 4, e64, m1, ta, ma
 ; ZIP-NEXT:    vle64.v v8, (a0)
-; ZIP-NEXT:    ri.vunzip2a.vv v10, v8, v9
 ; ZIP-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; ZIP-NEXT:    ri.vunzip2a.vv v10, v8, v9
 ; ZIP-NEXT:    vse64.v v10, (a1)
 ; ZIP-NEXT:    ret
 entry:
@@ -450,8 +450,8 @@ define void @vnsrl_64_double(ptr %in, ptr %out) {
 ; ZIP:       # %bb.0: # %entry
 ; ZIP-NEXT:    vsetivli zero, 4, e64, m1, ta, ma
 ; ZIP-NEXT:    vle64.v v8, (a0)
-; ZIP-NEXT:    ri.vunzip2b.vv v10, v8, v9
 ; ZIP-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; ZIP-NEXT:    ri.vunzip2b.vv v10, v8, v9
 ; ZIP-NEXT:    vse64.v v10, (a1)
 ; ZIP-NEXT:    ret
 entry:

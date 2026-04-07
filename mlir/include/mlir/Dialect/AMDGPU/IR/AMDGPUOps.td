@@ -663,20 +663,97 @@ def AMDGPU_DPPOp : AMDGPU_Op<"dpp",
                  DefaultValuedAttr<BoolAttr, "false">:$bound_ctrl)> {
   let summary = "AMDGPU DPP operation";
   let description = [{
-    This operation represents DPP functionality in a GPU program.
-     DPP provides the following operations:
-    - Full crossbar in a group of four (`quad_perm`)
-    - Wavefront shift left by one lane (`wave_shl`)
-    - Wavefront shift right by one lane (`wave_shr`)
-    - Wavefront rotate right by one lane (`wave_ror`)
-    - Wavefront rotate left by one lane (`wave_rol`)
-    - Row shift left by 1–15 lanes (`row_shl`)
-    - Row shift right by 1–15 lanes (`row_shr`)
-    - Row rotate right by 1–15 lanes (`row_ror`)
-    - Reverse within a row (`row_mirror`)
-    - Reverse within a half-row (`row_half_mirror`)
-    - Broadcast the 15th lane of each row to the next row (`row_bcast`)
-    - Broadcast lane 31 to rows 2 and 3 (`row_bcast`)
+    The `amdgpu.dpp` op performs a Data Parallel Primitives (DPP) lane
+    permutation on a source value within a wavefront. Each lane reads its
+    source data from another lane according to the permutation mode specified
+    by `kind`. DPP operates at dword (32-bit) granularity: sub-32-bit types
+    (e.g., f16, i16) are packed into an i32 during lowering, permuted, and
+    extracted back.
+
+    - Lanes are organized into rows of 16.
+    - A Wave64 wavefront has 4 rows of 16 lanes each: row 0 = lanes 0-15,
+      row 1 = lanes 16-31, row 2 = lanes 32-47, row 3 = lanes 48-63.
+    - Similarly, a Wave32 wavefront has two rows of 16 lanes each, organized
+      in the same fashion.
+    - Each row is divided into 4 banks of 4 consecutive lanes: bank 0 =
+      lanes 0-3, bank 1 = lanes 4-7, bank 2 = lanes 8-11, bank 3 =
+      lanes 12-15 (lane numbers shown for row 0; add 16/32/48 for other rows).
+
+    The `kind` attribute selects the permutation. Some modes require a
+    `permArgument`; others take no argument.
+
+    Quad permutation:
+    - `quad_perm([a, b, c, d])`: Full permute within each group of 4
+      consecutive lanes (a quad). Each element is in [0, 3] and selects which
+      lane within the quad to read from. Lane 4k+i reads from lane 4k+perm[i].
+      For example, `quad_perm([1, 0, 3, 2])` swaps adjacent pairs within
+      every quad.
+
+    Row shifts and rotates (operate within each 16-lane row independently):
+    - `row_shl(N)`: Shift left by N (1-15) within the row. Lane n reads from
+      lane (n % 16) + N in the same row. Lanes where the source index exceeds
+      15 are out of bounds (see `bound_ctrl`).
+    - `row_shr(N)`: Shift right by N (1-15) within the row. Lane n reads from
+      lane (n % 16) - N in the same row. Lanes where the source index is
+      negative are out of bounds.
+    - `row_ror(N)`: Rotate right by N (1-15) within the row. Lane n reads from
+      lane ((n % 16) - N) mod 16 in the same row. Always in bounds.
+
+    Wavefront shifts and rotates (not available on RDNA):
+    - `wave_shl`: Shift left by 1. Lane n reads from lane n + 1. The last lane
+      in the wavefront is out of bounds.
+    - `wave_shr`: Shift right by 1. Lane n reads from lane n - 1. Lane 0 is
+      out of bounds.
+    - `wave_rol`: Rotate left by 1. Lane n reads from lane (n + 1) mod W, where
+      W is the wavefront size.
+    - `wave_ror`: Rotate right by 1. Lane n reads from lane (n - 1) mod W, where
+      W is the wavefront size.
+
+    Row mirrors:
+    - `row_mirror`: Reverse lanes within each 16-lane row. Lane n reads from
+      lane 15 - (n % 16) within its row.
+    - `row_half_mirror`: Reverse within each 8-lane half-row. Lane n reads
+      from lane 7 - (n % 8) within its half-row.
+
+    Row broadcasts (not available on RDNA):
+    - `row_bcast_15`: Lane 15 of each row broadcasts to all lanes of the next
+      row. Lanes in row 0 are not affected (retain `old`).
+    - `row_bcast_31`: Lane 31 broadcasts to all lanes in rows 2 and 3.
+      Lanes in rows 0 and 1 are not affected (retain `old`).
+
+    Example:
+    ```mlir
+    // Swap adjacent pairs within each quad (lanes 0<->1, 2<->3, etc.)
+    %0 = amdgpu.dpp %old %src quad_perm( [1, 0, 3, 2] ) : i32
+
+    // Shift right by 1 lane within each 16-lane row.
+    // bound_ctrl=true -> lanes that would read past the row return 0.
+    // row_mask=0x5 (0b0101) -> only rows 0 and 2 apply the shift;
+    // rows 1 and 3 pass through %old unchanged.
+    %1 = amdgpu.dpp %old %src row_shr( 0x1 : i32 )
+      { row_mask = 0x5 : i32, bound_ctrl = true } : f32
+
+    // Rotate left across the full wavefront by 1 lane
+    %2 = amdgpu.dpp %old %src wave_rol : i32
+    ```
+
+    Operands:
+    * `$old`: Fallback value. Lanes that are masked off by `row_mask` /
+      `bank_mask` retain `old`. For lanes with an out-of-bounds source, behavior
+      depends on `bound_ctrl`.
+    * `$src`: Source value to be permuted across lanes.
+    * `$kind`: A `#amdgpu.dpp_perm` enum selecting the permutation mode.
+    * `$permArgument`: Mode-specific argument. Required for `quad_perm`
+      (array of 4 integers in [0, 3]) and `row_shl`/`row_shr`/`row_ror`
+      (integer in [1, 15]). Absent for all other modes.
+    * `$row_mask` (default 0xf): 4-bit mask controlling which rows write
+      results. Bit i enables row i (bit 0 = lanes 0-15, bit 1 = lanes
+      16-31, etc.). Disabled lanes retain `old`.
+    * `$bank_mask` (default 0xf): 4-bit mask controlling which banks write
+      results. Bit i enables bank i (bit 0 = lanes 0-3, 16-19, etc. across all rows).
+      Disabled lanes retain `old`.
+    * `$bound_ctrl` (default false): When false, out of bounds lanes retain
+      `old`. When true, out-of-bounds lanes receive zero.
   }];
   let results = (outs AnyType:$result);
   let assemblyFormat = [{
@@ -993,6 +1070,8 @@ def AMDGPU_WMMAOp :
     The `clamp` flag is used to saturate the output of type T to `numeric_limits<T>::max()`
     in case of overflow.
 
+    The `wave64`attribute indicates whether an op is designed for 64 threads wavefont.
+
     Example:
     ```mlir
       %0 = amdgpu.wmma 16x16x16 %matA * %matB + %matC : vector<8xf16>, vector<8xf16>, vector<8xf16>
@@ -1072,6 +1151,102 @@ def AMDGPU_SparseMFMAOp :
   let hasVerifier = 1;
 }
 
+// sparse_wmma (swmmac)
+def SWMMACSparseInTypes : AnyTypeOf<[
+    VectorOfLengthAndType<[4, 8, 16], [F16]>,
+    VectorOfLengthAndType<[4, 8, 16], [BF16]>,
+    VectorOfLengthAndType<[4, 8, 32], [I8]>,
+    VectorOfLengthAndType<[8, 16], [I<4>]>,
+    VectorOfLengthAndType<[4, 8, 16, 32], [F8E4M3FN, F8E5M2]>,
+    VectorOfLengthAndType<[4, 8, 16, 32], [F8E4M3FNUZ, F8E5M2FNUZ]>
+]>;
+
+def SWMMACDenseInTypes : AnyTypeOf<[
+    VectorOfLengthAndType<[8, 16, 32], [F16]>,
+    VectorOfLengthAndType<[8, 16, 32], [BF16]>,
+    VectorOfLengthAndType<[4, 8, 16, 64], [I8]>,
+    VectorOfLengthAndType<[8, 16, 32], [I<4>]>,
+    VectorOfLengthAndType<[4, 8, 16, 64], [F8E4M3FN, F8E5M2]>,
+    VectorOfLengthAndType<[4, 8, 16, 64], [F8E4M3FNUZ, F8E5M2FNUZ]>
+]>;
+
+def SWMMACOutTypes : AnyTypeOf<[
+    VectorOfLengthAndType<[4, 8, 16], [F32]>,
+    VectorOfLengthAndType<[4, 8], [F16]>,
+    VectorOfLengthAndType<[4, 8], [BF16]>,
+    VectorOfLengthAndType<[4, 8], [I32]>
+]>;
+
+def SWMMACIdxTypes : AnyTypeOf<[
+    FixedVectorOfLengthAndType<[4], [I8]>,
+]>;
+
+
+def AMDGPU_SparseWMMAOp :
+    AMDGPU_Op<"sparse_wmma", [AllTypesMatch<["destC", "destD"]>,
+                              Pure]>,
+    Arguments<(ins
+                   ConfinedAttr<I32Attr, [IntIsOneOf<[16]>]>:$m,
+                   ConfinedAttr<I32Attr, [IntIsOneOf<[16]>]>:$n,
+                   ConfinedAttr<I32Attr, [IntIsOneOf<[32, 64, 128]>]>:$k,
+                   SWMMACSparseInTypes:$sourceA,
+                   SWMMACDenseInTypes:$sourceB,
+                   SWMMACOutTypes:$destC,
+                   SWMMACIdxTypes:$sparseIdx,
+                   UnitAttr:$unsignedA,
+                   UnitAttr:$unsignedB,
+                   UnitAttr:$reuseA,
+                   UnitAttr:$reuseB,
+                   UnitAttr:$clamp,
+                   UnitAttr:$wave64)>,
+    Results<(outs SWMMACOutTypes: $destD)> {
+  let summary = "MLIR wrapper for CDNA sparse mfma (smfmac) instructions";
+  let description = [{
+    The `amdgpu.sparse_wmma` op is an MLIR wrapper around intrinsics for various
+    `swmmac` instructions in the AMDGPU architecture, which perform matrix
+    multiply-accumulate operations using 2:4 structured sparsity on matrix A
+    with dense matrices B, C, and D.
+
+    On gfx12, swmmac intrinsics support:
+      - M=N=16, K=32 and M=N=32, K=16 for f16, bf16, i8 and i4 sources
+      - M=N=16, K=64 for i4 sources
+
+    On gfx1250, swmmac intrinsics additionally support:
+      - M=N=16, K=64 for f16 and bf16 sources
+      - M=N=16, K=128 for f16, bf16 and i8 sources
+
+    The `sparseIdx` parameter contains packed indices identifying the positions
+    of non-zero elements in the 2:4 sparse matrix A. For 16-bit source data,
+    use `vector<4xi8>` (four 8-bit indices). For 8-bit source data, use
+    `vector<2xi16>` (two 16-bit indices).
+
+    `unsignedA` and `unsignedB` flag that the `int8` LLVM inputs are unsigned.
+
+    The `clamp` flag is used to saturate the output of type T to `numeric_limits<T>::max()`
+    in case of overflow.
+
+    Example:
+    ```mlir
+      %0 = amdgpu.sparse_wmma 16x16x32 %matA * %matB + %matC sparse(%idx : vector<4xi8>)
+        : vector<4xf16>, vector<8xf16>, vector<4xf32>
+
+      %1 = amdgpu.sparse_wmma 16x16x64 %matA * %matB + %matC sparse(%idx : vector<2xi16>)
+        : vector<8xi8>, vector<16xi8>, vector<4xi32>
+
+      %2 = amdgpu.sparse_wmma 16x16x64 %matA * %matB + %matC sparse(%idx : vector<2xi16>)
+        { unsignedA = 0 : i1, unsignedB = 1 : i1, clamp = 0 : i1 }
+        : vector<8xf8E4M3FNUZ>, vector<16xf8E4M3FNUZ>, vector<4xf32>
+    ```
+  }];
+  let assemblyFormat = [{
+    custom<MNKDimensionList>($m, $n, $k) $sourceA `*` $sourceB `+` $destC
+    `sparse` `(` $sparseIdx `:` type($sparseIdx) `)`
+    attr-dict
+    `:` type($sourceA) `,` type($sourceB) `,` type($destC)
+  }];
+  let hasVerifier = 1;
+}
+
 def AMDGPU_GatherToLDSOp :
     AMDGPU_Op<"gather_to_lds", [AttrSizedOperandSegments]>,
     Arguments<(ins
@@ -1118,6 +1293,55 @@ def AMDGPU_GatherToLDSOp :
   }];
   let hasVerifier = 1;
   let hasCanonicalizer = 1;
+}
+
+def AMDGPU_GlobalLoadAsyncToLDSOp :
+    AMDGPU_Op<"global_load_async_to_lds", [AttrSizedOperandSegments]>,
+    Arguments<(ins
+                   Arg<AnyMemRef, "global memory to load from", [MemRead]>:$src,
+                   Variadic<Index>:$srcIndices,
+                   Arg<AnyMemRef, "LDS memory to write to", [MemWrite]>:$dst,
+                   Variadic<Index>:$dstIndices,
+                   TypeAttr:$transferType,
+                   Optional<I1>: $mask
+                   )>,
+    Results<(outs)> {
+  let summary = "MLIR wrapper for async global load to lds instructions";
+  let description = [{
+    AMDGPU wrapper for `global.load.async.to.lds` instructions, which performs
+    asynchronous load of data from global memory into LDS while bypassing VGPRs.
+
+    * `$src`: global memory memref to read from (global addrspace only, no fat buffer).
+    * `$srcIndices`: indices into `$src` for this thread's global read location.
+    * `$dst`: LDS memref to write to (workgroup addrspace).
+    * `$dstIndices`: indices into `$dst` for this thread's LDS write location.
+    * `$transferType`: type of data to be transferred. Must be 8, 32, 64 or 128 bit scalar
+     or vector type.
+    * `$mask`: optional per-thread mask. When false, the thread's LDS write
+      is masked off. The global read still occurs for all threads regardless of mask.
+
+    Note: only supported on gfx1250 and later.
+
+    Examples:
+    ```mlir
+      amdgpu.global_load_async_to_lds %src[%i, %j], %dst[%k, %l]
+        : f32, memref<128x64xf32, #gpu.address_space<global>>,
+          memref<64x64xf32, #gpu.address_space<workgroup>>
+
+      amdgpu.global_load_async_to_lds %src[%i, %j], %dst[%k, %l]
+        : vector<4xf32>, memref<128x64xf32, #gpu.address_space<global>>,
+          memref<64x64xf32, #gpu.address_space<workgroup>>
+
+      amdgpu.global_load_async_to_lds %src[%i], %dst[%j]
+        : i8, memref<512xi8, #gpu.address_space<global>>,
+          memref<256xi8, #gpu.address_space<workgroup>>
+    ```
+  }];
+  let assemblyFormat = [{
+    $src `[` $srcIndices `]` `,` $dst `[` $dstIndices `]`  (`,` $mask^)?
+    attr-dict `:` $transferType `,` type($src) `,` type($dst)
+  }];
+  let hasVerifier = 1;
 }
 
 def AMDGPU_TransposeLoadOp :
@@ -1775,6 +1999,39 @@ def AMDGPU_DsBarrierStatePhaseParity :
   let assemblyFormat = [{
     $state attr-dict `:` type($state) `->` type($res)
   }];
+}
+
+def AMDGPU_GlobalPrefetchOp :
+    AMDGPU_Op<"global_prefetch", [MemoryEffects<[MemWrite, MemRead]>]>,
+    Arguments<(ins AnyMemRef:$src,
+               Variadic<I64>:$indices,
+               AMDGPU_TemporalHintAttr:$temporalHint,
+               AMDGPU_CacheScopeAttr:$cacheScope,
+               UnitAttr:$speculative)>,
+    Results<(outs)> {
+
+  let summary = "Prefetch data to caches.";
+  let description = [{
+    Prefetches a cache line to high-level caches using the aligned address of
+    the source `memref` and an offset provided by the indices of the element
+    containing the cache line. This provides temporal hints (e.g., regular
+    or high-priority). Note that out-of-bounds access is allowed in
+    speculative mode. The provided memref must be in the global address space
+    (`#gpu.address_space<global>` or 1).
+
+    This operation was introduced in gfx1250.
+
+    Example:
+    ```mlir
+    amdgpu.global_prefetch %src[%i, %j] RT SE speculative : memref<64x64xf16, #gpu.address_space<global>>
+    ```
+  }];
+
+  let assemblyFormat = [{
+    $src `[` $indices `]` $temporalHint $cacheScope (`speculative` $speculative^)? attr-dict `:` qualified(type($src))
+  }];
+
+  let hasVerifier = 1;
 }
 
 #endif // MLIR_DIALECT_AMDGPU_IR_AMDGPUOPS_TD

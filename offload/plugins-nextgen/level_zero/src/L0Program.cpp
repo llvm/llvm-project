@@ -60,9 +60,12 @@ Error L0ProgramTy::deinit() {
 Error L0ProgramBuilderTy::addModule(size_t Size, const uint8_t *Image,
                                     const std::string_view CommonBuildOptions,
                                     ze_module_format_t Format) {
-  const ze_module_constants_t SpecConstants =
-      LevelZeroPluginTy::getOptions().CommonSpecConstants.getModuleConstants();
   auto &l0Device = getL0Device();
+  const ze_module_constants_t SpecConstants =
+      l0Device.getPlugin()
+          .getOptions()
+          .CommonSpecConstants.getModuleConstants();
+
   std::string BuildOptions(CommonBuildOptions);
 
   bool IsLibModule =
@@ -80,16 +83,29 @@ Error L0ProgramBuilderTy::addModule(size_t Size, const uint8_t *Image,
   ModuleDesc.pInputModule = Image;
   ModuleDesc.pBuildFlags = BuildOptions.c_str();
   ModuleDesc.pConstants = &SpecConstants;
-  CALL_ZE_RET_ERROR(zeModuleCreate, l0Device.getZeContext(),
-                    l0Device.getZeDevice(), &ModuleDesc, &Module, &BuildLog);
+  Error CreateErrors = Error::success();
+  auto handleError = [&](Error Err) {
+    if (BuildLog)
+      zeModuleBuildLogDestroy(BuildLog);
+    CreateErrors = joinErrors(std::move(CreateErrors), std::move(Err));
+  };
+  CALL_ZE_HANDLE_ERROR(handleError, zeModuleCreate, l0Device.getZeContext(),
+                       l0Device.getZeDevice(), &ModuleDesc, &Module, &BuildLog);
+  if (CreateErrors)
+    return CreateErrors;
+
+  if (BuildLog)
+    zeModuleBuildLogDestroy(BuildLog);
 
   // Check if module link is required. We do not need this check for
   // library module.
   if (!RequiresModuleLink && !IsLibModule) {
     ze_module_properties_t Properties = {ZE_STRUCTURE_TYPE_MODULE_PROPERTIES,
                                          nullptr, 0};
-    CALL_ZE_RET_ERROR(zeModuleGetProperties, Module, &Properties);
-    RequiresModuleLink = Properties.flags & ZE_MODULE_PROPERTY_FLAG_IMPORTS;
+    ze_result_t RC;
+    CALL_ZE(RC, zeModuleGetProperties, Module, &Properties);
+    if (RC == ZE_RESULT_SUCCESS)
+      RequiresModuleLink = Properties.flags & ZE_MODULE_PROPERTY_FLAG_IMPORTS;
   }
   // For now, assume the first module contains libraries, globals.
   if (Modules.empty())
@@ -212,8 +228,76 @@ bool isValidOneOmpImage(StringRef Image, uint64_t &MajorVer,
 Error L0ProgramBuilderTy::buildModules(const std::string_view BuildOptions) {
   auto &l0Device = getL0Device();
   auto Image = getMemoryBuffer();
+
+  // Check if image is an inner OffloadBinary (nested format)
+  if (identify_magic(Image.getBuffer()) == file_magic::offload_binary) {
+    ODBG(OLDT_Module) << "Processing nested OffloadBinary image";
+
+    // Parse inner OffloadBinary
+    auto InnerBinariesOrErr = llvm::object::OffloadBinary::create(Image);
+    if (!InnerBinariesOrErr)
+      return Plugin::error(
+          ErrorCode::UNKNOWN, "Failed to parse inner OffloadBinary: %s",
+          llvm::toString(InnerBinariesOrErr.takeError()).c_str());
+
+    auto &InnerBinaries = *InnerBinariesOrErr;
+
+    // Should contain exactly one image
+    if (InnerBinaries.size() != 1)
+      return Plugin::error(ErrorCode::UNKNOWN,
+                           "Expected single inner OffloadBinary entry, got %zu",
+                           InnerBinaries.size());
+
+    const llvm::object::OffloadBinary *InnerBinary = InnerBinaries[0].get();
+    llvm::object::ImageKind ImageKind = InnerBinary->getImageKind();
+
+    // Extract image data from inner binary
+    llvm::StringRef ImageData = InnerBinary->getImage();
+    const uint8_t *ImgBegin =
+        reinterpret_cast<const uint8_t *>(ImageData.data());
+
+    // Read metadata from inner binary
+    llvm::StringRef Version = InnerBinary->getString("version");
+    llvm::StringRef CompileOpts = InnerBinary->getString("compile-opts");
+    llvm::StringRef LinkOpts = InnerBinary->getString("link-opts");
+
+    ODBG(OLDT_Module) << "Inner OffloadBinary metadata: version=" << Version
+                      << ", kind=" << ImageKind;
+
+    // Build options string combining BuildOptions with compile/link opts
+    std::string Options(BuildOptions);
+    if (!CompileOpts.empty() || !LinkOpts.empty()) {
+      if (!CompileOpts.empty())
+        Options += " " + CompileOpts.str();
+      if (!LinkOpts.empty())
+        Options += " " + LinkOpts.str();
+      replaceDriverOptsWithBackendOpts(l0Device, Options);
+      ODBG(OLDT_Module) << "Using compile options: " << CompileOpts
+                        << ", link options: " << LinkOpts;
+    }
+
+    // Determine module format based on image kind
+    ze_module_format_t ModuleFormat;
+    if (ImageKind == llvm::object::IMG_SPIRV) {
+      // SPIR-V intermediate language
+      ODBG(OLDT_Module) << "Loading SPIR-V module";
+      ModuleFormat = ZE_MODULE_FORMAT_IL_SPIRV;
+    } else if (ImageKind == llvm::object::IMG_Object) {
+      // Native binary format
+      ODBG(OLDT_Module) << "Loading native binary module";
+      ModuleFormat = ZE_MODULE_FORMAT_NATIVE;
+    } else {
+      return Plugin::error(ErrorCode::UNKNOWN,
+                           "Unsupported image kind %d in inner OffloadBinary",
+                           static_cast<int>(ImageKind));
+    }
+
+    // Load module into Level Zero
+    return addModule(ImageData.size(), ImgBegin, Options, ModuleFormat);
+  }
+
   if (identify_magic(Image.getBuffer()) == file_magic::spirv_object) {
-    // Handle legacy plain SPIR-V image.
+    ODBG(OLDT_Module) << "Processing raw SPIR-V image";
     const uint8_t *ImgBegin =
         reinterpret_cast<const uint8_t *>(Image.getBufferStart());
     return addModule(Image.getBufferSize(), ImgBegin, BuildOptions,
@@ -225,6 +309,7 @@ Error L0ProgramBuilderTy::buildModules(const std::string_view BuildOptions) {
     ODBG(OLDT_Module) << "Warning: image is not a valid oneAPI OpenMP image.";
     return Plugin::error(ErrorCode::UNKNOWN, "Invalid oneAPI OpenMP image");
   }
+  ODBG(OLDT_Module) << "Processing ELF-wrapped SPIR-V image";
 
   // Iterate over the images and pick the first one that fits.
   uint64_t ImageCount = 0;
@@ -471,8 +556,8 @@ Expected<void *> L0ProgramTy::getSymbolDeviceAddr(const char *CName) const {
     if (RC == ZE_RESULT_SUCCESS && DevicePtr)
       return DevicePtr;
   }
-  return Plugin::error(ErrorCode::INVALID_ARGUMENT,
-                       "Symbol '%s' not found on device", CName);
+  return Plugin::error(ErrorCode::NOT_FOUND, "symbol '%s' not found on device",
+                       CName);
 }
 
 Error L0ProgramTy::readGlobalVariable(const char *Name, size_t Size,

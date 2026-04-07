@@ -23,6 +23,7 @@
 #include "bolt/Core/MCPlusBuilder.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCDisassembler/MCDisassembler.h"
 #include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegister.h"
@@ -157,6 +158,7 @@ public:
 
   MCPhysReg getStackPointer() const override { return AArch64::SP; }
   MCPhysReg getFramePointer() const override { return AArch64::FP; }
+  MCPhysReg getFlagsReg() const override { return AArch64::NZCV; }
 
   bool isBreakpoint(const MCInst &Inst) const override {
     return Inst.getOpcode() == AArch64::BRK;
@@ -1237,6 +1239,19 @@ public:
     return true;
   }
 
+  BitVector getRegsUsedAsParams() const override {
+    BitVector Regs = BitVector(RegInfo->getNumRegs(), false);
+    Regs |= getAliases(AArch64::X0);
+    Regs |= getAliases(AArch64::X1);
+    Regs |= getAliases(AArch64::X2);
+    Regs |= getAliases(AArch64::X3);
+    Regs |= getAliases(AArch64::X4);
+    Regs |= getAliases(AArch64::X5);
+    Regs |= getAliases(AArch64::X6);
+    Regs |= getAliases(AArch64::X7);
+    return Regs;
+  }
+
   void getCalleeSavedRegs(BitVector &Regs) const override {
     Regs |= getAliases(AArch64::X18);
     Regs |= getAliases(AArch64::X19);
@@ -1251,6 +1266,88 @@ public:
     Regs |= getAliases(AArch64::X28);
     Regs |= getAliases(AArch64::LR);
     Regs |= getAliases(AArch64::FP);
+  }
+
+  void getDefaultLiveOut(BitVector &Regs) const override {
+    // According to the AArch64 ABI the return registers are X0 to X7,
+    // which happen to be the same as the parameter registers.
+    Regs |= getRegsUsedAsParams();
+  }
+
+  void getGPRegs(BitVector &Regs, bool IncludeAlias = true) const override {
+    if (IncludeAlias) {
+      Regs |= getAliases(AArch64::X0);
+      Regs |= getAliases(AArch64::X1);
+      Regs |= getAliases(AArch64::X2);
+      Regs |= getAliases(AArch64::X3);
+      Regs |= getAliases(AArch64::X4);
+      Regs |= getAliases(AArch64::X5);
+      Regs |= getAliases(AArch64::X6);
+      Regs |= getAliases(AArch64::X7);
+      Regs |= getAliases(AArch64::X8);
+      Regs |= getAliases(AArch64::X9);
+      Regs |= getAliases(AArch64::X10);
+      Regs |= getAliases(AArch64::X11);
+      Regs |= getAliases(AArch64::X12);
+      Regs |= getAliases(AArch64::X13);
+      Regs |= getAliases(AArch64::X14);
+      Regs |= getAliases(AArch64::X15);
+      Regs |= getAliases(AArch64::X16);
+      Regs |= getAliases(AArch64::X17);
+      Regs |= getAliases(AArch64::X18);
+      Regs |= getAliases(AArch64::X19);
+      Regs |= getAliases(AArch64::X20);
+      Regs |= getAliases(AArch64::X21);
+      Regs |= getAliases(AArch64::X22);
+      Regs |= getAliases(AArch64::X23);
+      Regs |= getAliases(AArch64::X24);
+      Regs |= getAliases(AArch64::X25);
+      Regs |= getAliases(AArch64::X26);
+      Regs |= getAliases(AArch64::X27);
+      Regs |= getAliases(AArch64::X28);
+      Regs |= getAliases(AArch64::LR);
+      Regs |= getAliases(AArch64::FP);
+      return;
+    }
+    Regs.set(AArch64::X0);
+    Regs.set(AArch64::X1);
+    Regs.set(AArch64::X2);
+    Regs.set(AArch64::X3);
+    Regs.set(AArch64::X4);
+    Regs.set(AArch64::X5);
+    Regs.set(AArch64::X6);
+    Regs.set(AArch64::X7);
+    Regs.set(AArch64::X8);
+    Regs.set(AArch64::X9);
+    Regs.set(AArch64::X10);
+    Regs.set(AArch64::X11);
+    Regs.set(AArch64::X12);
+    Regs.set(AArch64::X13);
+    Regs.set(AArch64::X14);
+    Regs.set(AArch64::X15);
+    Regs.set(AArch64::X16);
+    Regs.set(AArch64::X17);
+    Regs.set(AArch64::X18);
+    Regs.set(AArch64::X19);
+    Regs.set(AArch64::X20);
+    Regs.set(AArch64::X21);
+    Regs.set(AArch64::X22);
+    Regs.set(AArch64::X23);
+    Regs.set(AArch64::X24);
+    Regs.set(AArch64::X25);
+    Regs.set(AArch64::X26);
+    Regs.set(AArch64::X27);
+    Regs.set(AArch64::X28);
+    Regs.set(AArch64::LR);
+    Regs.set(AArch64::FP);
+  }
+
+  void removeNonScavengeableRegs(BitVector &Regs) const override {
+    BitVector ExclusionMask = getAliases(AArch64::LR);
+    ExclusionMask |= getAliases(AArch64::FP);
+    ExclusionMask |= getAliases(AArch64::X18); // platform register
+    ExclusionMask.flip();
+    Regs &= ExclusionMask;
   }
 
   const MCExpr *getTargetExprFor(MCInst &Inst, const MCExpr *Expr,
@@ -1782,6 +1879,46 @@ public:
     BC.createInstructionPatch(PLTFunction.getAddress(), NewPLTSeq);
   }
 
+  /// Decode entry instruction of \p Function without CFG. If it's a BTI
+  /// matching \p Call, do nothing. If it's a nop, patch it to a BTI. If it's
+  /// neither, emit an error.
+  void patchFunctionEntryForBTI(BinaryFunction &Function,
+                                MCInst &Call) override {
+    BinaryContext &BC = Function.getBinaryContext();
+    const uint64_t InstrAddr = Function.getAddress();
+    ErrorOr<ArrayRef<uint8_t>> FunctionData = Function.getData();
+    if (!FunctionData) {
+      errs() << "BOLT-ERROR: corresponding section is non-executable or "
+             << "empty for function " << Function.getPrintName();
+      exit(1);
+    }
+    // getInstruction writes this, its value doesn't matter here.
+    uint64_t InstrSize = 0;
+    MCInst FirstInst;
+    if (FunctionData->empty() ||
+        !BC.DisAsm->getInstruction(FirstInst, InstrSize, *FunctionData,
+                                   InstrAddr, nulls())) {
+      errs() << "BOLT-ERROR: unable to disassemble first instruction of "
+             << Function.getPrintName()
+             << formatv(" at address {0:x}\n", InstrAddr);
+      exit(1);
+    }
+    if (isCallCoveredByBTI(Call, FirstInst))
+      return;
+    if (!isNoop(FirstInst)) {
+      errs() << "BOLT-ERROR: Cannot add BTI to function without CFG "
+             << Function.getPrintName()
+             << ". Recompile the binary using -fpatchable-function-entry 1 to "
+                "include a nop at the entry";
+      exit(1);
+    }
+    InstructionListType NewEntry;
+    MCInst BTIInst;
+    createBTI(BTIInst, BTIKind::C);
+    NewEntry.push_back(BTIInst);
+    BC.createInstructionPatch(Function.getAddress(), NewEntry);
+  }
+
   void applyBTIFixupToSymbol(BinaryContext &BC, const MCSymbol *TargetSymbol,
                              MCInst &Call) override {
     BinaryFunction *TargetFunction = BC.getFunctionForSymbol(TargetSymbol);
@@ -1811,22 +1948,10 @@ public:
       patchPLTEntryForBTI(*TargetFunction, Call);
       return;
     }
-    if (TargetFunction && TargetFunction->isIgnored()) {
-      errs() << "BOLT-ERROR: Cannot add BTI landing pad to ignored function "
-             << TargetFunction->getPrintName() << "\n";
-      exit(1);
-    }
-    if (TargetFunction && !TargetFunction->hasCFG()) {
-      if (TargetFunction->hasInstructions()) {
-        auto FirstII = TargetFunction->instrs().begin();
-        MCInst FirstInst = FirstII->second;
-        if (isCallCoveredByBTI(Call, FirstInst))
-          return;
-      }
-      errs()
-          << "BOLT-ERROR: Cannot add BTI landing pad to function without CFG: "
-          << TargetFunction->getPrintName() << "\n";
-      exit(1);
+    if (TargetFunction &&
+        (TargetFunction->isIgnored() || !TargetFunction->hasCFG())) {
+      patchFunctionEntryForBTI(*TargetFunction, Call);
+      return;
     }
     if (!TargetBB)
       // No need to check TargetFunction for nullptr, because
@@ -2381,6 +2506,29 @@ public:
   bool mayStore(const MCInst &Inst) const override {
     return isStorePair(Inst) || isStoreReg(Inst) ||
            isAArch64ExclusiveStore(Inst);
+  }
+
+  bool isCleanRegXOR(const MCInst &Inst) const override {
+    switch (Inst.getOpcode()) {
+    case AArch64::EORXrs:
+    case AArch64::EORWrs:
+      return Inst.getOperand(1).getReg() == Inst.getOperand(2).getReg() &&
+             Inst.getOperand(3).getImm() == 0;
+    case AArch64::ORRXrs:
+      return Inst.getOperand(1).getReg() == AArch64::XZR &&
+             Inst.getOperand(2).getReg() == AArch64::XZR &&
+             Inst.getOperand(3).getImm() == 0;
+    case AArch64::ORRWrs:
+      return Inst.getOperand(1).getReg() == AArch64::WZR &&
+             Inst.getOperand(2).getReg() == AArch64::WZR &&
+             Inst.getOperand(3).getImm() == 0;
+    case AArch64::MOVZXi:
+    case AArch64::MOVZWi:
+      return Inst.getOperand(1).isImm() && Inst.getOperand(1).getImm() == 0 &&
+             Inst.getOperand(2).getImm() == 0;
+    default:
+      return false;
+    }
   }
 
   bool isStoreToStack(const MCInst &Inst) const {

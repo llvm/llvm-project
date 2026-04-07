@@ -9,6 +9,7 @@
 #include "LibCxx.h"
 
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
+
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/DataBufferHeap.h"
@@ -19,6 +20,7 @@
 #include "lldb/ValueObject/ValueObjectConstResult.h"
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-forward.h"
+#include "llvm/Support/ErrorExtras.h"
 #include <cstdint>
 #include <locale>
 #include <optional>
@@ -197,8 +199,6 @@ public:
 
   lldb::ChildCacheState Update() override;
 
-  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override;
-
 private:
   llvm::Expected<uint32_t>
   CalculateNumChildrenForOldCompressedPairLayout(ValueObject &pair);
@@ -277,7 +277,7 @@ llvm::Expected<uint32_t> lldb_private::formatters::
   auto [size_sp, is_compressed_pair] =
       GetValueOrOldCompressedPair(*m_tree, "__size_", "__pair3_");
   if (!size_sp)
-    return llvm::createStringError("Unexpected std::map layout");
+    return llvm::createStringError("unexpected std::map layout");
 
   if (is_compressed_pair)
     return CalculateNumChildrenForOldCompressedPairLayout(*size_sp);
@@ -390,16 +390,6 @@ lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::Update() {
   return lldb::ChildCacheState::eRefetch;
 }
 
-llvm::Expected<size_t> lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::
-    GetIndexOfChildWithName(ConstString name) {
-  auto optional_idx = formatters::ExtractIndexFromString(name.GetCString());
-  if (!optional_idx) {
-    return llvm::createStringError("Type has no child named '%s'",
-                                   name.AsCString());
-  }
-  return *optional_idx;
-}
-
 SyntheticChildrenFrontEnd *
 lldb_private::formatters::LibcxxStdMapSyntheticFrontEndCreator(
     CXXSyntheticChildren *, lldb::ValueObjectSP valobj_sp) {
@@ -494,8 +484,7 @@ llvm::Expected<size_t>
 lldb_private::formatters::LibCxxMapIteratorSyntheticFrontEnd::
     GetIndexOfChildWithName(ConstString name) {
   if (!m_pair_sp)
-    return llvm::createStringError("Type has no child named '%s'",
-                                   name.AsCString());
+    return llvm::createStringErrorV("type has no child named '{0}'", name);
 
   return m_pair_sp->GetIndexOfChildWithName(name);
 }

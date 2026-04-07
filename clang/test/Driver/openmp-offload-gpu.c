@@ -412,18 +412,19 @@
 // SHOULD-EXTRACT: clang-linker-wrapper{{.*}}"--should-extract=gfx906"
 
 //
-// Check ompdevice is linked.
+// Check that `-fprofile-generate` flags are forwarded to link in the runtime
+// only if present in the resource directory.
 //
-// RUN:   %clang -###  -fopenmp -fopenmp-targets=nvptx64 --offload-arch=sm_52 \
-// RUN:     --cuda-path=%S/Inputs/CUDA_102/usr/local/cuda \
-// RUN:     --libomptarget-nvptx-bc-path=%S/Inputs/libomptarget/libomptarget-nvptx-test.bc %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=OMPDEVICE %s
+// RUN:   %clang -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp \
+// RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
+// RUN:     --offload-arch=gfx906 -fprofile-generate -nogpulib -nogpuinc %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=PROFILE %s
 //
-// RUN:   %clang -###  -fopenmp -fopenmp-targets=amdgcn --offload-arch=gfx908 \
-// RUN:     --rocm-device-lib-path=%S/Inputs/rocm/amdgcn/bitcode %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=OMPDEVICE %s
+// PROFILE: clang-linker-wrapper{{.*}}--device-compiler=amdgcn-amd-amdhsa=-fprofile-generate
+// 
+// RUN:   %clang -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp \
+// RUN:     -resource-dir=%S/Inputs/resource_dir \
+// RUN:     --offload-arch=gfx906 -fprofile-generate -nogpulib -nogpuinc %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=NO-PROFILE %s
 //
-// RUN:   %clang -###  -fopenmp -fopenmp-targets=spirv64 \
-// RUN:     --libomptarget-spirv-bc-path=%S/Inputs/spirv-openmp/lib/libomptarget-spirv.bc %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=OMPDEVICE %s
-// OMPDEVICE: clang-linker-wrapper{{.*}}--device-linker{{.*}}-lompdevice
+// NO-PROFILE-NOT: --device-compiler=amdgcn-amd-amdhsa=-fprofile-generate

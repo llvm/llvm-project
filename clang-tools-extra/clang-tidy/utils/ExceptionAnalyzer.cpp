@@ -12,7 +12,6 @@ namespace clang::tidy::utils {
 
 void ExceptionAnalyzer::ExceptionInfo::registerException(
     const Type *ExceptionType, const ThrowInfo &ThrowInfo) {
-  assert(ExceptionType != nullptr && "Only valid types are accepted");
   Behaviour = State::Throwing;
   ThrownExceptions.insert({ExceptionType, ThrowInfo});
 }
@@ -357,7 +356,7 @@ static bool canThrow(const FunctionDecl *Func) {
 ExceptionAnalyzer::ExceptionInfo::Throwables
 ExceptionAnalyzer::ExceptionInfo::filterByCatch(const Type *HandlerTy,
                                                 const ASTContext &Context) {
-  llvm::SmallVector<const Type *, 8> TypesToDelete;
+  SmallVector<const Type *, 8> TypesToDelete;
   for (const auto &ThrownException : ThrownExceptions) {
     const Type *ExceptionTy = ThrownException.getFirst();
     const CanQualType ExceptionCanTy =
@@ -427,11 +426,13 @@ ExceptionAnalyzer::ExceptionInfo::filterByCatch(const Type *HandlerTy,
 ExceptionAnalyzer::ExceptionInfo &
 ExceptionAnalyzer::ExceptionInfo::filterIgnoredExceptions(
     const llvm::StringSet<> &IgnoredTypes, bool IgnoreBadAlloc) {
-  llvm::SmallVector<const Type *, 8> TypesToDelete;
+  SmallVector<const Type *, 8> TypesToDelete;
   // Note: Using a 'SmallSet' with 'llvm::remove_if()' is not possible.
   // Therefore this slightly hacky implementation is required.
   for (const auto &ThrownException : ThrownExceptions) {
     const Type *T = ThrownException.getFirst();
+    if (!T)
+      continue;
     if (const auto *TD = T->getAsTagDecl()) {
       if (TD->getDeclName().isIdentifier()) {
         if ((IgnoreBadAlloc &&
@@ -484,13 +485,14 @@ ExceptionAnalyzer::ExceptionInfo ExceptionAnalyzer::throwsException(
       }
     }
 
-    CallStack.erase(Func);
     // Optionally treat unannotated functions as potentially throwing if they
     // are not explicitly non-throwing and no throw was discovered.
     if (AssumeUnannotatedFunctionsAsThrowing &&
         Result.getBehaviour() == State::NotThrowing && canThrow(Func)) {
-      Result.registerUnknownException();
+      Result.registerException(nullptr, {Func->getLocation(), CallStack});
     }
+
+    CallStack.erase(Func);
     return Result;
   }
 
@@ -507,8 +509,11 @@ ExceptionAnalyzer::ExceptionInfo ExceptionAnalyzer::throwsException(
   }
 
   if (AssumeMissingDefinitionsFunctionsAsThrowing &&
-      Result.getBehaviour() == State::Unknown)
-    Result.registerUnknownException();
+      Result.getBehaviour() == State::Unknown) {
+    CallStack.insert({Func, CallLoc});
+    Result.registerException(nullptr, {Func->getLocation(), CallStack});
+    CallStack.erase(Func);
+  }
 
   return Result;
 }
@@ -534,11 +539,12 @@ ExceptionAnalyzer::throwsException(const Stmt *St,
       Results.registerException(
           ThrownExpr->getType()->getUnqualifiedDesugaredType(),
           {Throw->getBeginLoc(), CallStack});
-    } else
+    } else {
       // A rethrow of a caught exception happens which makes it possible
       // to throw all exception that are caught in the 'catch' clause of
       // the parent try-catch block.
       Results.registerExceptions(Caught);
+    }
   } else if (const auto *Try = dyn_cast<CXXTryStmt>(St)) {
     ExceptionInfo Uncaught =
         throwsException(Try->getTryBlock(), Caught, CallStack);
@@ -644,8 +650,9 @@ ExceptionAnalyzer::analyzeImpl(const FunctionDecl *Func) {
     // The results here might be relevant to different analysis passes
     // with different needs as well.
     FunctionCache.try_emplace(Func, ExceptionList);
-  } else
+  } else {
     ExceptionList = CacheEntry->getSecond();
+  }
 
   return ExceptionList;
 }

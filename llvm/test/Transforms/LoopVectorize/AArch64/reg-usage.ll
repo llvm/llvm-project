@@ -69,7 +69,7 @@ exit:
   ret void
 }
 
-define dso_local void @dotp_high_register_pressure(ptr %a, ptr %b, ptr %sum, i32 %n) #1 {
+define void @dotp_high_register_pressure(ptr %a, ptr %b, ptr %sum, i32 %n) #1 {
 ; CHECK-LABEL: LV: Checking a loop in 'dotp_high_register_pressure' from <stdin>
 ; CHECK:       LV(REG): VF = 16
 ; CHECK-NEXT:  LV(REG): Found max usage: 2 item

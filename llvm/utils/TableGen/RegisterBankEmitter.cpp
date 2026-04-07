@@ -406,6 +406,9 @@ void RegisterBankEmitter::run(raw_ostream &OS) {
     Banks.push_back(Bank);
   }
 
+  if (Banks.empty())
+    PrintFatalError("No register banks defined");
+
   // Warn about ambiguous MIR caused by register bank/class name clashes.
   Timer.startTimer("Warn ambiguous");
   for (const auto &Class : RegisterClassHierarchy.getRegClasses()) {

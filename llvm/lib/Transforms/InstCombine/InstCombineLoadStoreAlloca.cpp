@@ -210,7 +210,7 @@ static Instruction *simplifyAllocaArraySize(InstCombinerImpl &IC,
   }
 
   if (isa<UndefValue>(AI.getArraySize()))
-    return IC.replaceInstUsesWith(AI, Constant::getNullValue(AI.getType()));
+    return IC.replaceInstUsesWith(AI, PoisonValue::get(AI.getType()));
 
   // Ensure that the alloca array size argument has type equal to the offset
   // size of the alloca() pointer, which, in the tyical case, is intptr_t,
@@ -995,6 +995,15 @@ static Instruction *replaceGEPIdxWithZero(InstCombinerImpl &IC, Value *Ptr,
       NewGEPI->setOperand(Idx,
         ConstantInt::get(GEPI->getOperand(Idx)->getType(), 0));
       IC.InsertNewInstBefore(NewGEPI, GEPI->getIterator());
+      // If the memory instruction is guaranteed to execute whenever the GEP
+      // does, the dereference proves the index is unconditionally zero.
+      // Replace the GEP for all users so they all benefit.
+      if (GEPI->getParent() == MemI.getParent() &&
+          isGuaranteedToTransferExecutionToSuccessor(GEPI->getIterator(),
+                                                     MemI.getIterator())) {
+        IC.replaceInstUsesWith(*GEPI, NewGEPI);
+        IC.eraseInstFromFunction(*GEPI);
+      }
       return NewGEPI;
     }
   }
@@ -1174,6 +1183,37 @@ Instruction *InstCombinerImpl::visitLoadInst(LoadInst &LI) {
   if (!NullPointerIsDefined(LI.getFunction(), LI.getPointerAddressSpace()))
     if (Value *V = simplifyNonNullOperand(Op, /*HasDereferenceable=*/true))
       return replaceOperand(LI, 0, V);
+
+  // load(llvm.protected.field.ptr(ptr)) -> llvm.ptrauth.auth(load(ptr))
+  if (isa<PointerType>(LI.getType())) {
+    if (auto *II = dyn_cast<IntrinsicInst>(Op)) {
+      if (II->getIntrinsicID() == Intrinsic::protected_field_ptr) {
+        std::vector<OperandBundleDef> DSBundle;
+        if (auto Bundle =
+                II->getOperandBundle(LLVMContext::OB_deactivation_symbol))
+          DSBundle.push_back(OperandBundleDef(
+              "deactivation-symbol", cast<GlobalValue>(Bundle->Inputs[0])));
+
+        IRBuilderBase::InsertPointGuard Guard(Builder);
+        Builder.SetInsertPoint(&LI);
+
+        auto *NewLI = cast<LoadInst>(LI.clone());
+        NewLI->setOperand(0, II->getOperand(0));
+        Builder.Insert(NewLI);
+
+        Function *AuthIntr = Intrinsic::getOrInsertDeclaration(
+            F.getParent(), Intrinsic::ptrauth_auth, {});
+        auto *LIInt = Builder.CreatePtrToInt(NewLI, Builder.getInt64Ty());
+        Value *Auth = Builder.CreateCall(
+            AuthIntr,
+            {LIInt, Builder.getInt32(/*AArch64PACKey::DA*/ 2),
+             II->getOperand(1)},
+            DSBundle);
+        Auth = Builder.CreateIntToPtr(Auth, Builder.getPtrTy());
+        return replaceInstUsesWith(LI, Auth);
+      }
+    }
+  }
 
   return nullptr;
 }
@@ -1542,6 +1582,37 @@ Instruction *InstCombinerImpl::visitStoreInst(StoreInst &SI) {
     if (Value *V = simplifyNonNullOperand(Ptr, /*HasDereferenceable=*/true))
       return replaceOperand(SI, 1, V);
 
+  // store(ptr1, llvm.protected.field.ptr(ptr2)) ->
+  // store(llvm.ptrauth.sign(ptr1), ptr2)
+  if (isa<PointerType>(Val->getType())) {
+    if (auto *II = dyn_cast<IntrinsicInst>(Ptr)) {
+      if (II->getIntrinsicID() == Intrinsic::protected_field_ptr) {
+        std::vector<OperandBundleDef> DSBundle;
+        if (auto Bundle =
+                II->getOperandBundle(LLVMContext::OB_deactivation_symbol))
+          DSBundle.push_back(OperandBundleDef(
+              "deactivation-symbol", cast<GlobalValue>(Bundle->Inputs[0])));
+
+        IRBuilderBase::InsertPointGuard Guard(Builder);
+        Builder.SetInsertPoint(&SI);
+
+        Function *SignIntr = Intrinsic::getOrInsertDeclaration(
+            F.getParent(), Intrinsic::ptrauth_sign, {});
+        auto *ValInt = Builder.CreatePtrToInt(Val, Builder.getInt64Ty());
+        Value *Sign = Builder.CreateCall(
+            SignIntr,
+            {ValInt, Builder.getInt32(/*AArch64PACKey::DA*/ 2),
+             II->getOperand(1)},
+            DSBundle);
+        Sign = Builder.CreateIntToPtr(Sign, Builder.getPtrTy());
+
+        replaceOperand(SI, 0, Sign);
+        replaceOperand(SI, 1, II->getOperand(0));
+        return &SI;
+      }
+    }
+  }
+
   return nullptr;
 }
 
@@ -1571,10 +1642,9 @@ bool InstCombinerImpl::mergeStoreIntoSuccessor(StoreInst &SI) {
   if (StoreBB == DestBB || OtherBB == DestBB)
     return false;
 
-  // Verify that the other block ends in a branch and is not otherwise empty.
+  // Verify that the other block is not empty apart from the terminator.
   BasicBlock::iterator BBI(OtherBB->getTerminator());
-  BranchInst *OtherBr = dyn_cast<BranchInst>(BBI);
-  if (!OtherBr || BBI == OtherBB->begin())
+  if (BBI == OtherBB->begin())
     return false;
 
   auto OtherStoreIsMergeable = [&](StoreInst *OtherStore) -> bool {
@@ -1591,7 +1661,7 @@ bool InstCombinerImpl::mergeStoreIntoSuccessor(StoreInst &SI) {
   // If the other block ends in an unconditional branch, check for the 'if then
   // else' case. There is an instruction before the branch.
   StoreInst *OtherStore = nullptr;
-  if (OtherBr->isUnconditional()) {
+  if (isa<UncondBrInst>(BBI)) {
     --BBI;
     // Skip over debugging info and pseudo probes.
     while (BBI->isDebugOrPseudoInst()) {
@@ -1604,7 +1674,7 @@ bool InstCombinerImpl::mergeStoreIntoSuccessor(StoreInst &SI) {
     OtherStore = dyn_cast<StoreInst>(BBI);
     if (!OtherStoreIsMergeable(OtherStore))
       return false;
-  } else {
+  } else if (auto *OtherBr = dyn_cast<CondBrInst>(BBI)) {
     // Otherwise, the other block ended with a conditional branch. If one of the
     // destinations is StoreBB, then we have the if/then case.
     if (OtherBr->getSuccessor(0) != StoreBB &&
@@ -1634,7 +1704,8 @@ bool InstCombinerImpl::mergeStoreIntoSuccessor(StoreInst &SI) {
       if (I->mayReadFromMemory() || I->mayThrow() || I->mayWriteToMemory())
         return false;
     }
-  }
+  } else
+    return false;
 
   // Insert a PHI node now if we need it.
   Value *MergedVal = OtherStore->getValueOperand();

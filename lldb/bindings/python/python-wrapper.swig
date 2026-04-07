@@ -134,7 +134,7 @@ bool lldb_private::python::SWIGBridge::LLDBSwigPythonCallTypeScript(
 #endif
       ) {
     pfunc_impl = (PyObject *)(*pyfunct_wrapper);
-    if (pfunc_impl->ob_refcnt == 1) {
+    if (Py_REFCNT(pfunc_impl) == 1) {
       Py_XDECREF(pfunc_impl);
       pfunc_impl = NULL;
     }
@@ -588,58 +588,6 @@ void *lldb_private::python::LLDBSWIGPython_CastPyObjectToSBFrameList(PyObject *d
 
   int valid_cast = SWIG_ConvertPtr(data, (void **)&sb_ptr,
                                    SWIGTYPE_p_lldb__SBFrameList, 0);
-
-  if (valid_cast == -1)
-    return NULL;
-
-  return sb_ptr;
-}
-
-void *lldb_private::python::LLDBSWIGPython_CastPyObjectToSBFileSpec(PyObject *
-                                                                    data) {
-  lldb::SBFileSpec *sb_ptr = NULL;
-
-  int valid_cast = SWIG_ConvertPtr(data, (void **)&sb_ptr,
-                                   SWIGTYPE_p_lldb__SBFileSpec, 0);
-
-  if (valid_cast == -1)
-    return NULL;
-
-  return sb_ptr;
-}
-
-void *lldb_private::python::LLDBSWIGPython_CastPyObjectToSBModuleSpec(PyObject *
-                                                                      data) {
-  lldb::SBModuleSpec *sb_ptr = NULL;
-
-  int valid_cast = SWIG_ConvertPtr(data, (void **)&sb_ptr,
-                                   SWIGTYPE_p_lldb__SBModuleSpec, 0);
-
-  if (valid_cast == -1)
-    return NULL;
-
-  return sb_ptr;
-}
-
-void *lldb_private::python::LLDBSWIGPython_CastPyObjectToSBModule(PyObject *
-                                                                   data) {
-  lldb::SBModule *sb_ptr = NULL;
-
-  int valid_cast = SWIG_ConvertPtr(data, (void **)&sb_ptr,
-                                   SWIGTYPE_p_lldb__SBModule, 0);
-
-  if (valid_cast == -1)
-    return NULL;
-
-  return sb_ptr;
-}
-
-void *lldb_private::python::LLDBSWIGPython_CastPyObjectToSBFileSpecList(
-    PyObject *data) {
-  lldb::SBFileSpecList *sb_ptr = NULL;
-
-  int valid_cast = SWIG_ConvertPtr(data, (void **)&sb_ptr,
-                                   SWIGTYPE_p_lldb__SBFileSpecList, 0);
 
   if (valid_cast == -1)
     return NULL;

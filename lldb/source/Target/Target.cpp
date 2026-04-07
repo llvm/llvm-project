@@ -42,7 +42,6 @@
 #include "lldb/Interpreter/OptionGroupWatchpoint.h"
 #include "lldb/Interpreter/OptionValues.h"
 #include "lldb/Interpreter/Property.h"
-#include "lldb/Interpreter/ScriptInterpreter.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/Symbol.h"
@@ -583,7 +582,7 @@ Target::CreateAddressInModuleBreakpoint(lldb::addr_t file_addr, bool internal,
       std::make_shared<SearchFilterForUnconstrainedSearches>(
           shared_from_this());
   BreakpointResolverSP resolver_sp =
-      std::make_shared<BreakpointResolverAddress>(nullptr, file_addr,
+      std::make_shared<BreakpointResolverAddress>(nullptr, Address(file_addr),
                                                   file_spec);
   return CreateBreakpoint(filter_sp, resolver_sp, internal, request_hardware,
                           false);
@@ -924,7 +923,7 @@ void Target::ApplyNameToBreakpoints(BreakpointName &bp_name) {
 void Target::GetBreakpointNames(std::vector<std::string> &names) {
   names.clear();
   for (const auto& bp_name_entry : m_breakpoint_names) {
-    names.push_back(bp_name_entry.first.AsCString());
+    names.push_back(bp_name_entry.first.GetString());
   }
   llvm::sort(names);
 }
@@ -1543,24 +1542,6 @@ Module *Target::GetExecutableModulePointer() {
   return GetExecutableModule().get();
 }
 
-static void LoadScriptingResourceForModule(const ModuleSP &module_sp,
-                                           Target *target) {
-  Status error;
-  StreamString feedback_stream;
-  if (module_sp && !module_sp->LoadScriptingResourceInTarget(target, error,
-                                                             feedback_stream)) {
-    if (error.AsCString())
-      target->GetDebugger().GetAsyncErrorStream()->Printf(
-          "unable to load scripting data for module %s - error reported was "
-          "%s\n",
-          module_sp->GetFileSpec().GetFileNameStrippingExtension().GetCString(),
-          error.AsCString());
-  }
-  if (feedback_stream.GetSize())
-    target->GetDebugger().GetAsyncErrorStream()->Printf(
-        "%s\n", feedback_stream.GetData());
-}
-
 void Target::ClearModules(bool delete_locations) {
   ModulesDidUnload(m_images, delete_locations);
   m_section_load_history.Clear();
@@ -1863,9 +1844,13 @@ void Target::ModulesDidLoad(ModuleList &module_list) {
 
   const size_t num_images = module_list.GetSize();
   if (m_valid && num_images) {
+    std::list<Status> errors;
+    module_list.LoadScriptingResourcesInTarget(this, errors);
+    for (const auto &err : errors)
+      GetDebugger().GetAsyncErrorStream()->PutCString(err.AsCString());
+
     for (size_t idx = 0; idx < num_images; ++idx) {
       ModuleSP module_sp(module_list.GetModuleAtIndex(idx));
-      LoadScriptingResourceForModule(module_sp, this);
       LoadTypeSummariesForModule(module_sp);
       LoadFormattersForModule(module_sp);
     }
@@ -2616,11 +2601,12 @@ llvm::Expected<lldb::TypeSystemSP>
 Target::GetScratchTypeSystemForLanguage(lldb::LanguageType language,
                                         bool create_on_demand) {
   if (!m_valid)
-    return llvm::createStringError("Invalid Target");
+    return llvm::createStringError("invalid target");
 
   if (language == eLanguageTypeMipsAssembler // GNU AS and LLVM use it for all
                                              // assembly code
-      || language == eLanguageTypeUnknown) {
+      || language == eLanguageTypeAssembly ||
+      language == eLanguageTypeUnknown) {
     LanguageSet languages_for_expressions =
         Language::GetLanguagesSupportingTypeSystemsForExpressions();
 
@@ -2642,9 +2628,10 @@ Target::GetScratchTypeSystemForLanguage(lldb::LanguageType language,
 CompilerType Target::GetRegisterType(const std::string &name,
                                      const lldb_private::RegisterFlags &flags,
                                      uint32_t byte_size) {
-  RegisterTypeBuilderSP provider = PluginManager::GetRegisterTypeBuilder(*this);
-  assert(provider);
-  return provider->GetRegisterType(name, flags, byte_size);
+  if (!m_register_type_builder_sp)
+    m_register_type_builder_sp = PluginManager::GetRegisterTypeBuilder(*this);
+  assert(m_register_type_builder_sp);
+  return m_register_type_builder_sp->GetRegisterType(name, flags, byte_size);
 }
 
 std::vector<lldb::TypeSystemSP>
@@ -2818,16 +2805,13 @@ void Target::SetDefaultArchitecture(const ArchSpec &arch) {
 llvm::Error Target::SetLabel(llvm::StringRef label) {
   size_t n = LLDB_INVALID_INDEX32;
   if (llvm::to_integer(label, n))
-    return llvm::createStringError("Cannot use integer as target label.");
+    return llvm::createStringError("cannot use integer as target label");
   TargetList &targets = GetDebugger().GetTargetList();
   for (size_t i = 0; i < targets.GetNumTargets(); i++) {
     TargetSP target_sp = targets.GetTargetAtIndex(i);
     if (target_sp && target_sp->GetLabel() == label) {
-        return llvm::make_error<llvm::StringError>(
-            llvm::formatv(
-                "Cannot use label '{0}' since it's set in target #{1}.", label,
-                i),
-            llvm::inconvertibleErrorCode());
+      return llvm::createStringErrorV(
+          "Cannot use label '{0}' since it's set in target #{1}.", label, i);
     }
   }
 
@@ -2904,9 +2888,19 @@ ExpressionResults Target::EvaluateExpression(
     result_valobj_sp = persistent_var_sp->GetValueObject();
     execution_results = eExpressionCompleted;
   } else {
+    // If this expression is being evaluated from inside a frame provider,
+    // force single-thread execution. Resuming all threads while a provider
+    // is mid-construction could cause unwanted process state changes.
+    EvaluateExpressionOptions effective_options = options;
+    if (ThreadSP thread_sp = exe_ctx.GetThreadSP()) {
+      if (thread_sp->IsAnyProviderActive()) {
+        effective_options.SetStopOthers(true);
+        effective_options.SetTryAllThreads(false);
+      }
+    }
     llvm::StringRef prefix = GetExpressionPrefixContents();
     execution_results =
-        UserExpression::Evaluate(exe_ctx, options, expr, prefix,
+        UserExpression::Evaluate(exe_ctx, effective_options, expr, prefix,
                                  result_valobj_sp, fixed_expression, ctx_obj);
   }
 
@@ -3427,93 +3421,6 @@ void Target::SaveScriptedLaunchInfo(lldb_private::ProcessInfo &process_info) {
   }
 }
 
-Status
-Target::RegisterScriptedSymbolLocator(llvm::StringRef class_name,
-                                      StructuredData::DictionarySP args_sp) {
-  if (class_name.empty())
-    return Status::FromErrorString(
-        "class name must not be empty; use ClearScriptedSymbolLocator() to "
-        "unregister");
-
-  ScriptInterpreter *interpreter = GetDebugger().GetScriptInterpreter();
-  if (!interpreter)
-    return Status::FromErrorString("no script interpreter available");
-
-  auto interface_sp = interpreter->CreateScriptedSymbolLocatorInterface();
-  if (!interface_sp)
-    return Status::FromErrorString(
-        "failed to create scripted symbol locator interface");
-
-  ExecutionContext exe_ctx;
-  TargetSP target_sp(shared_from_this());
-  exe_ctx.SetTargetSP(target_sp);
-
-  auto obj_or_err =
-      interface_sp->CreatePluginObject(class_name, exe_ctx, args_sp);
-  if (!obj_or_err)
-    return Status::FromError(obj_or_err.takeError());
-
-  m_scripted_symbol_locator_metadata_sp =
-      std::make_shared<ScriptedMetadata>(class_name, args_sp);
-  m_scripted_symbol_locator_interface_sp = interface_sp;
-  m_scripted_source_file_cache.clear();
-
-  // Invalidate cached stack frames so the next backtrace re-resolves line
-  // entries through ApplyFileMappings, which will call our locator.
-  ProcessSP process_sp = GetProcessSP();
-  if (process_sp) {
-    ThreadList &thread_list = process_sp->GetThreadList();
-    for (uint32_t i = 0; i < thread_list.GetSize(false); i++) {
-      if (ThreadSP thread_sp = thread_list.GetThreadAtIndex(i, false))
-        thread_sp->ClearStackFrames();
-    }
-  }
-
-  return Status();
-}
-
-void Target::ClearScriptedSymbolLocator() {
-  m_scripted_symbol_locator_metadata_sp.reset();
-  m_scripted_symbol_locator_interface_sp.reset();
-  m_scripted_source_file_cache.clear();
-
-  // Invalidate cached stack frames so the next backtrace re-resolves line
-  // entries without the scripted locator.
-  ProcessSP process_sp = GetProcessSP();
-  if (process_sp) {
-    ThreadList &thread_list = process_sp->GetThreadList();
-    for (uint32_t i = 0; i < thread_list.GetSize(false); i++) {
-      if (ThreadSP thread_sp = thread_list.GetThreadAtIndex(i, false))
-        thread_sp->ClearStackFrames();
-    }
-  }
-}
-
-ScriptedSymbolLocatorInterfaceSP Target::GetScriptedSymbolLocatorInterface() {
-  return m_scripted_symbol_locator_interface_sp;
-}
-
-llvm::StringRef Target::GetScriptedSymbolLocatorClassName() const {
-  return m_scripted_symbol_locator_metadata_sp
-             ? m_scripted_symbol_locator_metadata_sp->GetClassName()
-             : "";
-}
-
-bool Target::LookupScriptedSourceFileCache(
-    llvm::StringRef key, std::optional<FileSpec> &result) const {
-  auto it = m_scripted_source_file_cache.find(key);
-  if (it != m_scripted_source_file_cache.end()) {
-    result = it->second;
-    return true;
-  }
-  return false;
-}
-
-void Target::InsertScriptedSourceFileCache(
-    llvm::StringRef key, const std::optional<FileSpec> &result) {
-  m_scripted_source_file_cache[key] = result;
-}
-
 Status Target::Launch(ProcessLaunchInfo &launch_info, Stream *stream) {
   m_stats.SetLaunchOrAttachTime();
   Status error;
@@ -3949,8 +3856,19 @@ void Target::FinalizeFileActions(ProcessLaunchInfo &info) {
       }
 
       if (default_to_use_pty) {
-        llvm::Error Err = info.SetUpPtyRedirection();
-        LLDB_LOG_ERROR(log, std::move(Err), "SetUpPtyRedirection failed: {0}");
+#ifdef _WIN32
+        if (info.GetFlags().Test(eLaunchFlagUsePipes)) {
+          llvm::Error Err = info.SetUpPipeRedirection();
+          LLDB_LOG_ERROR(log, std::move(Err),
+                         "SetUpPipeRedirection failed: {0}");
+        } else {
+#endif
+          llvm::Error Err = info.SetUpPtyRedirection();
+          LLDB_LOG_ERROR(log, std::move(Err),
+                         "SetUpPtyRedirection failed: {0}");
+#ifdef _WIN32
+        }
+#endif
       }
     }
   }
@@ -4452,6 +4370,12 @@ static constexpr OptionEnumValueElement g_load_script_from_sym_file_values[] = {
         eLoadScriptFromSymFileWarn,
         "warn",
         "Warn about debug scripts inside symbol files but do not load them.",
+    },
+    {
+        eLoadScriptFromSymFileTrusted,
+        "trusted",
+        "Load debug scripts inside trusted symbol files, and warn about "
+        "scripts from untrusted symbol files.",
     },
 };
 

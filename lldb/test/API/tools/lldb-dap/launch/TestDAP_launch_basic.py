@@ -12,9 +12,6 @@ class TestDAP_launch_basic(lldbdap_testcase.DAPTestCaseBase):
     environment, or anything else is specified.
     """
 
-    @expectedFailureWindows(
-        bugnumber="https://github.com/llvm/llvm-project/issues/137599"
-    )
     def test(self):
         program = self.getBuildArtifact("a.out")
         self.build_and_launch(program)

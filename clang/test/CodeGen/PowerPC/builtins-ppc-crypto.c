@@ -1,10 +1,10 @@
 // REQUIRES: powerpc-registered-target
-// RUN: %clang_cc1 -flax-vector-conversions=none -target-feature +altivec -triple powerpc64le-unknown-unknown \
-// RUN: -target-feature +crypto -target-feature +power8-vector \
+// RUN: %clang_cc1 -flax-vector-conversions=none -triple powerpc64le-unknown-unknown \
+// RUN: -target-feature +crypto -target-feature +power8-vector -target-feature +isa-v207-instructions \
 // RUN: -emit-llvm %s -o - | FileCheck %s
 
-// RUN: %clang_cc1 -flax-vector-conversions=none -target-feature +altivec -triple powerpc64-unknown-unknown \
-// RUN: -target-feature +crypto -target-feature +power8-vector \
+// RUN: %clang_cc1 -flax-vector-conversions=none -triple powerpc64-unknown-unknown \
+// RUN: -target-feature +crypto -target-feature +power8-vector -target-feature +isa-v207-instructions \
 // RUN: -emit-llvm %s -o - | FileCheck %s
 #include <altivec.h>
 #define B_INIT1 { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, \
