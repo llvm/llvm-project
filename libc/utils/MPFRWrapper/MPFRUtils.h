@@ -50,6 +50,7 @@ enum class Operation : int {
   Floor,
   Log,
   Log2,
+  Log2p1,
   Log10,
   Log10p1,
   Log1p,
