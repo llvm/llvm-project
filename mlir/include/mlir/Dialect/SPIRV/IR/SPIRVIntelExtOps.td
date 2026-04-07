@@ -252,8 +252,19 @@ def SPIRV_INTELControlBarrierWaitOp
 
 // -----
 
-def SPIRV_INTELMaskedGatherOp : SPIRV_IntelVendorOp<"MaskedGather", []> {
-  let summary = "See extension SPV_INTEL_masked_gather_scatter";
+def SPIRV_INTELMaskedGatherOp : SPIRV_IntelVendorOp<"MaskedGather",
+    [AllTypesMatch<["fill_empty", "result"]>,
+     TypesMatchWith<"pointee type of ptr_vector must match result element type",
+                    "ptr_vector", "result",
+                    "VectorType::get("
+                      "::llvm::cast<VectorType>($_self).getShape(), "
+                      "::llvm::cast<spirv::PointerType>("
+                        "::llvm::cast<VectorType>($_self).getElementType())"
+                      ".getPointeeType())">,
+     TypesMatchWith<"mask must be a vector of i1 matching result shape",
+                    "result", "mask",
+                    "getUnaryOpResultType($_self)">]> {
+  let summary = "Gather values from memory using a vector of pointers and a mask";
 
   let description = [{
     Reads values from a vector of pointers gathering them into a result
@@ -277,7 +288,7 @@ def SPIRV_INTELMaskedGatherOp : SPIRV_IntelVendorOp<"MaskedGather", []> {
 
     ```mlir
     %result = spirv.INTEL.MaskedGather %ptrs, %alignment, %mask, %fill
-              : !spirv.vecptr<4, !spirv.ptr<f32, CrossWorkgroup>>, i32,
+              : vector<4x!spirv.ptr<f32, CrossWorkgroup>>, i32,
                 vector<4xi1>, vector<4xf32> -> vector<4xf32>
     ```
   }];
@@ -290,9 +301,9 @@ def SPIRV_INTELMaskedGatherOp : SPIRV_IntelVendorOp<"MaskedGather", []> {
   ];
 
   let arguments = (ins
-    SPIRV_AnyVectorOfPointer:$ptr_vector,
+    SPIRV_VectorOf<SPIRV_AnyPtr>:$ptr_vector,
     SPIRV_Int32:$alignment,
-    SPIRV_Vector:$mask,
+    SPIRV_VectorOf<I1>:$mask,
     SPIRV_Vector:$fill_empty
   );
 
@@ -306,13 +317,23 @@ def SPIRV_INTELMaskedGatherOp : SPIRV_IntelVendorOp<"MaskedGather", []> {
       type($mask) `,` type($fill_empty) `->` type($result)
   }];
 
-  let hasVerifier = 1;
+  let hasVerifier = 0;
 }
 
 // -----
 
-def SPIRV_INTELMaskedScatterOp : SPIRV_IntelVendorOp<"MaskedScatter", []> {
-  let summary = "See extension SPV_INTEL_masked_gather_scatter";
+def SPIRV_INTELMaskedScatterOp : SPIRV_IntelVendorOp<"MaskedScatter",
+    [TypesMatchWith<"pointee type of ptr_vector must match input element type",
+                    "ptr_vector", "input_vector",
+                    "VectorType::get("
+                      "::llvm::cast<VectorType>($_self).getShape(), "
+                      "::llvm::cast<spirv::PointerType>("
+                        "::llvm::cast<VectorType>($_self).getElementType())"
+                      ".getPointeeType())">,
+     TypesMatchWith<"mask must be a vector of i1 matching input shape",
+                    "input_vector", "mask",
+                    "getUnaryOpResultType($_self)">]> {
+  let summary = "Scatter values to memory using a vector of pointers and a mask";
 
   let description = [{
     Writes values from a vector into memory locations pointed to by a
@@ -333,7 +354,7 @@ def SPIRV_INTELMaskedScatterOp : SPIRV_IntelVendorOp<"MaskedScatter", []> {
 
     ```mlir
     spirv.INTEL.MaskedScatter %ptrs, %alignment, %mask, %values
-              : !spirv.vecptr<4, !spirv.ptr<f32, CrossWorkgroup>>, i32,
+              : vector<4x!spirv.ptr<f32, CrossWorkgroup>>, i32,
                 vector<4xi1>, vector<4xf32>
     ```
   }];
@@ -346,9 +367,9 @@ def SPIRV_INTELMaskedScatterOp : SPIRV_IntelVendorOp<"MaskedScatter", []> {
   ];
 
   let arguments = (ins
-    SPIRV_AnyVectorOfPointer:$ptr_vector,
+    SPIRV_VectorOf<SPIRV_AnyPtr>:$ptr_vector,
     SPIRV_Int32:$alignment,
-    SPIRV_Vector:$mask,
+    SPIRV_VectorOf<I1>:$mask,
     SPIRV_Vector:$input_vector
   );
 
@@ -360,7 +381,7 @@ def SPIRV_INTELMaskedScatterOp : SPIRV_IntelVendorOp<"MaskedScatter", []> {
       type($mask) `,` type($input_vector)
   }];
 
-  let hasVerifier = 1;
+  let hasVerifier = 0;
 }
 
 // -----

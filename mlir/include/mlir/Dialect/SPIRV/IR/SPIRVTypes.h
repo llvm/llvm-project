@@ -14,6 +14,7 @@
 #define MLIR_DIALECT_SPIRV_IR_SPIRVTYPES_H_
 
 #include "mlir/Dialect/SPIRV/IR/SPIRVEnums.h"
+#include "mlir/IR/BuiltinTypeInterfaces.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/Location.h"
@@ -36,7 +37,6 @@ struct PointerTypeStorage;
 struct RuntimeArrayTypeStorage;
 struct SampledImageTypeStorage;
 struct StructTypeStorage;
-struct VectorOfPointerTypeStorage;
 
 } // namespace detail
 
@@ -173,8 +173,9 @@ public:
 };
 
 // SPIR-V pointer type
-class PointerType : public Type::TypeBase<PointerType, SPIRVType,
-                                          detail::PointerTypeStorage> {
+class PointerType
+    : public Type::TypeBase<PointerType, SPIRVType, detail::PointerTypeStorage,
+                            VectorElementTypeInterface::Trait> {
 public:
   using Base::Base;
 
@@ -514,25 +515,6 @@ public:
   ArrayRef<int64_t> getShape() const;
   bool hasRank() const { return !getShape().empty(); }
   operator ShapedType() const { return cast<ShapedType>(*this); }
-};
-
-/// SPIR-V vector of pointers type. Represents an OpTypeVector whose element
-/// type is an OpTypePointer. This is needed because MLIR's built-in VectorType
-/// does not support pointer element types. Used by the
-/// SPV_INTEL_masked_gather_scatter extension.
-class VectorOfPointerType
-    : public Type::TypeBase<VectorOfPointerType, CompositeType,
-                            detail::VectorOfPointerTypeStorage> {
-public:
-  using Base::Base;
-
-  static constexpr StringLiteral name = "spirv.vecptr";
-
-  static VectorOfPointerType get(PointerType elementType, unsigned numElements);
-
-  PointerType getElementType() const;
-
-  unsigned getNumElements() const;
 };
 
 } // namespace spirv
