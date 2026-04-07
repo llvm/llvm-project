@@ -432,7 +432,9 @@ bool GCNRPTarget::isSaveBeneficial(const GCNRegPressure &SaveRP) const {
     return true;
   if (SaveRP.getAGPRNum() != 0 && Excess.AGPR != 0)
     return true;
-  return UnifiedRF && SaveRP.getVGPRNum(true) != 0 && Excess.VGPR != 0;
+  if (UnifiedRF && Excess.VGPR != 0)
+    return SaveRP.getArchVGPRNum() != 0 || SaveRP.getAGPRNum() != 0;
+  return false;
 }
 
 unsigned GCNRPTarget::getNumRegsBenefit(const GCNRegPressure &SaveRP) const {
