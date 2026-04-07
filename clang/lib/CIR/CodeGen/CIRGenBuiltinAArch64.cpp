@@ -182,6 +182,31 @@ static mlir::Value emitNeonSplat(CIRGenBuilderTy &builder, mlir::Location loc,
   return builder.createVecShuffle(loc, v, shuffleMask);
 }
 
+/// Build a constant shift amount vector of `vecTy` to shift a vector
+/// Here `shitfVal` is a constant integer that will be splated into a
+/// a const vector of `vecTy` which is the return of this function
+static mlir::Value emitNeonShiftVector(CIRGenBuilderTy &builder,
+                                       mlir::Value shiftVal,
+                                       cir::VectorType vecTy,
+                                       mlir::Location loc) {
+  mlir::Type eltTy = vecTy.getElementType();
+  if (shiftVal.getType() != eltTy) {
+    shiftVal = builder.createIntCast(shiftVal, eltTy);
+  }
+  return cir::VecSplatOp::create(builder, loc, vecTy, shiftVal);
+}
+
+static mlir::Value emitCommonNeonShift(CIRGenBuilderTy &builder,
+                                       mlir::Location loc,
+                                       cir::VectorType resTy,
+                                       mlir::Value shifTgt,
+                                       mlir::Value shiftAmt, bool shiftLeft) {
+  shiftAmt = emitNeonShiftVector(builder, shiftAmt, resTy, loc);
+  return cir::ShiftOp::create(builder, loc, resTy,
+                              builder.createBitcast(shifTgt, resTy), shiftAmt,
+                              shiftLeft);
+}
+
 static mlir::Value emitCommonNeonBuiltinExpr(
     CIRGenFunction &cgf, unsigned builtinID, unsigned llvmIntrinsic,
     unsigned altLLVMIntrinsic, const char *nameHint, unsigned modifier,
@@ -413,8 +438,14 @@ static mlir::Value emitCommonNeonBuiltinExpr(
   case NEON::BI__builtin_neon_vsha512h2q_u64:
   case NEON::BI__builtin_neon_vsha512su0q_u64:
   case NEON::BI__builtin_neon_vsha512su1q_u64:
+    cgf.cgm.errorNYI(expr->getSourceRange(),
+                     std::string("unimplemented AArch64 builtin call: ") +
+                         ctx.BuiltinInfo.getName(builtinID));
+    return mlir::Value{};
   case NEON::BI__builtin_neon_vshl_n_v:
   case NEON::BI__builtin_neon_vshlq_n_v:
+    return emitCommonNeonShift(cgf.getBuilder(), loc, vTy, ops[0], ops[1],
+                               /*shiftLeft=*/true);
   case NEON::BI__builtin_neon_vshll_n_v:
   case NEON::BI__builtin_neon_vshrn_n_v:
   case NEON::BI__builtin_neon_vshr_n_v:
@@ -1961,7 +1992,6 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
   // defer to common code if it's been added to our special map.
   builtin = findARMVectorIntrinsicInMap(AArch64SIMDIntrinsicMap, builtinID,
                                         aarch64SIMDIntrinsicsProvenSorted);
-
   if (builtin)
     return emitCommonNeonBuiltinExpr(
         *this, builtin->BuiltinID, builtin->LLVMIntrinsic,
