@@ -113,6 +113,9 @@ bool IsPointerAssignment(const evaluate::Assignment &x);
 
 MaybeExpr MakeEvaluateExpr(const parser::OmpStylizedInstance &inp);
 
+bool IsLoopTransforming(llvm::omp::Directive dir);
+bool IsFullUnroll(const parser::OmpDirectiveSpecification &spec);
+
 /// A representation of a "because" message.
 struct Reason {
   Reason() = default;
@@ -156,9 +159,6 @@ WithReason<int64_t> GetArgumentValueWithReason(
 WithReason<int64_t> GetNumArgumentsWithReason(
     const parser::OmpDirectiveSpecification &spec, llvm::omp::Clause clauseId,
     unsigned version);
-
-bool IsLoopTransforming(llvm::omp::Directive dir);
-bool IsFullUnroll(const parser::OpenMPLoopConstruct &x);
 
 // Return the depth of the affected nests:
 //   {affected-depth, reason, must-be-perfect-nest}.
