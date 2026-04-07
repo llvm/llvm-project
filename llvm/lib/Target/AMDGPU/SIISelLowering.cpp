@@ -15756,13 +15756,13 @@ SDValue SITargetLowering::performMinMaxCombine(SDNode *N,
     // min(min(a, b), min(c, d)) -> min(min3(a, b, c), d)
     //
     // Defer when either inner op is a tree node with combinable children.
-    if (Op0.getOpcode() == Opc && Op0.hasOneUse() &&
-        Op1.getOpcode() == Opc && Op1.hasOneUse() &&
-        !IsTreeWithCombinableChildren(Op0) &&
+    if (Op0.getOpcode() == Opc && Op0.hasOneUse() && Op1.getOpcode() == Opc &&
+        Op1.hasOneUse() && !IsTreeWithCombinableChildren(Op0) &&
         !IsTreeWithCombinableChildren(Op1)) {
       SDLoc DL(N);
-      SDValue Inner = DAG.getNode(minMaxOpcToMin3Max3Opc(Opc), DL, VT, Op0.getOperand(0),
-                                  Op0.getOperand(1), Op1.getOperand(0));
+      SDValue Inner =
+          DAG.getNode(minMaxOpcToMin3Max3Opc(Opc), DL, VT, Op0.getOperand(0),
+                      Op0.getOperand(1), Op1.getOperand(0));
       return DAG.getNode(Opc, DL, VT, Inner, Op1.getOperand(1));
     }
 
