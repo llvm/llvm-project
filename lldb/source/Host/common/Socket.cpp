@@ -181,7 +181,7 @@ llvm::Error Socket::Initialize() {
   if (err == 0) {
     if (wsaData.wVersion < wVersion) {
       WSACleanup();
-      return llvm::createStringError("WSASock version is not expected.");
+      return llvm::createStringError("WSASock version is not expected");
     }
   } else {
     return llvm::errorCodeToError(llvm::mapWindowsError(::WSAGetLastError()));
@@ -247,7 +247,7 @@ Socket::CreatePair(std::optional<SocketProtocol> protocol) {
     return DomainSocket::CreatePair();
 #endif
   default:
-    return llvm::createStringError("Unsupported protocol");
+    return llvm::createStringError("unsupported protocol");
   }
 }
 
@@ -329,16 +329,13 @@ Status Socket::Read(void *buf, size_t &num_bytes) {
   } else
     num_bytes = bytes_received;
 
-  Log *log = GetLog(LLDBLog::Communication);
-  if (log) {
-    LLDB_LOGF(log,
-              "%p Socket::Read() (socket = %" PRIu64
-              ", src = %p, src_len = %" PRIu64 ", flags = 0) => %" PRIi64
-              " (error = %s)",
-              static_cast<void *>(this), static_cast<uint64_t>(m_socket), buf,
-              static_cast<uint64_t>(num_bytes),
-              static_cast<int64_t>(bytes_received), error.AsCString());
-  }
+  LLDB_LOGF(GetLog(LLDBLog::Communication),
+            "%p Socket::Read() (socket = %" PRIu64
+            ", src = %p, src_len = %" PRIu64 ", flags = 0) => %" PRIi64
+            " (error = %s)",
+            static_cast<void *>(this), static_cast<uint64_t>(m_socket), buf,
+            static_cast<uint64_t>(num_bytes),
+            static_cast<int64_t>(bytes_received), error.AsCString());
 
   return error;
 }
@@ -357,16 +354,13 @@ Status Socket::Write(const void *buf, size_t &num_bytes) {
   } else
     num_bytes = bytes_sent;
 
-  Log *log = GetLog(LLDBLog::Communication);
-  if (log) {
-    LLDB_LOGF(log,
-              "%p Socket::Write() (socket = %" PRIu64
-              ", src = %p, src_len = %" PRIu64 ", flags = 0) => %" PRIi64
-              " (error = %s)",
-              static_cast<void *>(this), static_cast<uint64_t>(m_socket), buf,
-              static_cast<uint64_t>(src_len), static_cast<int64_t>(bytes_sent),
-              error.AsCString());
-  }
+  LLDB_LOGF(GetLog(LLDBLog::Communication),
+            "%p Socket::Write() (socket = %" PRIu64
+            ", src = %p, src_len = %" PRIu64 ", flags = 0) => %" PRIi64
+            " (error = %s)",
+            static_cast<void *>(this), static_cast<uint64_t>(m_socket), buf,
+            static_cast<uint64_t>(src_len), static_cast<int64_t>(bytes_sent),
+            error.AsCString());
 
   return error;
 }

@@ -425,8 +425,7 @@ define void @test_sdiv_variant_dividend_induction(i64 %a, ptr noalias %c) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i1> [[TMP0]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP2]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; CHECK:       [[PRED_STORE_IF]]:
-; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i64, ptr [[C]], i64 [[TMP3]]
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i64, ptr [[C]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i64> [[TMP1]], i32 0
 ; CHECK-NEXT:    store i64 [[TMP5]], ptr [[TMP4]], align 4
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE]]

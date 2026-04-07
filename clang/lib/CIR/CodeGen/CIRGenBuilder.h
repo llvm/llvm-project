@@ -12,7 +12,9 @@
 #include "Address.h"
 #include "CIRGenRecordLayout.h"
 #include "CIRGenTypeCache.h"
+#include "mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.h"
 #include "mlir/IR/Attributes.h"
+#include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/Support/LLVM.h"
 #include "clang/CIR/Dialect/IR/CIRDataLayout.h"
@@ -395,6 +397,43 @@ public:
   }
   bool isInt(mlir::Type i) { return mlir::isa<cir::IntType>(i); }
 
+  cir::IntType getExtendedIntTy(cir::IntType ty, bool isSigned) {
+    switch (ty.getWidth()) {
+    case 8:
+      return isSigned ? typeCache.sInt16Ty : typeCache.uInt16Ty;
+    case 16:
+      return isSigned ? typeCache.sInt32Ty : typeCache.uInt32Ty;
+    case 32:
+      return isSigned ? typeCache.sInt64Ty : typeCache.uInt64Ty;
+    default:
+      llvm_unreachable("NYI");
+    }
+  }
+
+  cir::IntType getTruncatedIntTy(cir::IntType ty, bool isSigned) {
+    switch (ty.getWidth()) {
+    case 16:
+      return isSigned ? typeCache.sInt8Ty : typeCache.uInt8Ty;
+    case 32:
+      return isSigned ? typeCache.sInt16Ty : typeCache.uInt16Ty;
+    case 64:
+      return isSigned ? typeCache.sInt32Ty : typeCache.uInt32Ty;
+    default:
+      llvm_unreachable("NYI");
+    }
+  }
+
+  cir::VectorType
+  getExtendedOrTruncatedElementVectorType(cir::VectorType vt, bool isExtended,
+                                          bool isSigned = false) {
+    auto elementTy = mlir::dyn_cast_or_null<cir::IntType>(vt.getElementType());
+    assert(elementTy && "expected int vector");
+    return cir::VectorType::get(isExtended
+                                    ? getExtendedIntTy(elementTy, isSigned)
+                                    : getTruncatedIntTy(elementTy, isSigned),
+                                vt.getSize());
+  }
+
   // Fetch the type representing a pointer to unsigned int8 values.
   cir::PointerType getUInt8PtrTy() { return typeCache.uInt8PtrTy; }
 
@@ -420,16 +459,6 @@ public:
   }
   cir::ConstantOp getUInt64(uint64_t c, mlir::Location loc) {
     return getConstantInt(loc, getUInt64Ty(), c);
-  }
-
-  /// Create constant nullptr for pointer-to-data-member type ty.
-  cir::ConstantOp getNullDataMemberPtr(cir::DataMemberType ty,
-                                       mlir::Location loc) {
-    return cir::ConstantOp::create(*this, loc, getNullDataMemberAttr(ty));
-  }
-
-  cir::ConstantOp getNullMethodPtr(cir::MethodType ty, mlir::Location loc) {
-    return cir::ConstantOp::create(*this, loc, getNullMethodAttr(ty));
   }
 
   //===--------------------------------------------------------------------===//
@@ -689,13 +718,19 @@ public:
       int64_t offset, mlir::Type ty, cir::CIRDataLayout layout,
       llvm::SmallVectorImpl<int64_t> &indices);
 
+  // Convert high-level indices (e.g. from GlobalViewAttr) to byte offset.
+  uint64_t computeOffsetFromGlobalViewIndices(const cir::CIRDataLayout &layout,
+                                              mlir::Type ty,
+                                              llvm::ArrayRef<int64_t> indices);
+
   /// Creates a versioned global variable. If the symbol is already taken, an ID
   /// will be appended to the symbol. The returned global must always be queried
   /// for its name so it can be referenced correctly.
   [[nodiscard]] cir::GlobalOp
   createVersionedGlobal(mlir::ModuleOp module, mlir::Location loc,
                         mlir::StringRef name, mlir::Type type, bool isConstant,
-                        cir::GlobalLinkageKind linkage) {
+                        cir::GlobalLinkageKind linkage,
+                        mlir::ptr::MemorySpaceAttrInterface addrSpace = {}) {
     // Create a unique name if the given name is already taken.
     std::string uniqueName;
     if (unsigned version = globalsVersioning[name.str()]++)
@@ -703,7 +738,8 @@ public:
     else
       uniqueName = name.str();
 
-    return createGlobal(module, loc, uniqueName, type, isConstant, linkage);
+    return createGlobal(module, loc, uniqueName, type, isConstant, linkage,
+                        addrSpace);
   }
 
   cir::StackSaveOp createStackSave(mlir::Location loc, mlir::Type ty) {
@@ -712,6 +748,40 @@ public:
 
   cir::StackRestoreOp createStackRestore(mlir::Location loc, mlir::Value v) {
     return cir::StackRestoreOp::create(*this, loc, v);
+  }
+
+  cir::CmpThreeWayOp createThreeWayCmpTotalOrdering(
+      mlir::Location loc, mlir::Value lhs, mlir::Value rhs,
+      const llvm::APSInt &ltRes, const llvm::APSInt &eqRes,
+      const llvm::APSInt &gtRes, cir::CmpOrdering ordering) {
+    assert(ltRes.getBitWidth() == eqRes.getBitWidth() &&
+           ltRes.getBitWidth() == gtRes.getBitWidth() &&
+           "the three comparison results must have the same bit width");
+    assert((ordering == cir::CmpOrdering::Strong ||
+            ordering == cir::CmpOrdering::Weak) &&
+           "total ordering must be strong or weak");
+    cir::IntType cmpResultTy = getSIntNTy(ltRes.getBitWidth());
+    auto infoAttr = cir::CmpThreeWayInfoAttr::get(
+        getContext(), ordering, ltRes.getSExtValue(), eqRes.getSExtValue(),
+        gtRes.getSExtValue());
+    return cir::CmpThreeWayOp::create(*this, loc, cmpResultTy, lhs, rhs,
+                                      infoAttr);
+  }
+
+  cir::CmpThreeWayOp createThreeWayCmpPartialOrdering(
+      mlir::Location loc, mlir::Value lhs, mlir::Value rhs,
+      const llvm::APSInt &ltRes, const llvm::APSInt &eqRes,
+      const llvm::APSInt &gtRes, const llvm::APSInt &unorderedRes) {
+    assert(ltRes.getBitWidth() == eqRes.getBitWidth() &&
+           ltRes.getBitWidth() == gtRes.getBitWidth() &&
+           ltRes.getBitWidth() == unorderedRes.getBitWidth() &&
+           "the four comparison results must have the same bit width");
+    cir::IntType cmpResultTy = getSIntNTy(ltRes.getBitWidth());
+    auto infoAttr = cir::CmpThreeWayInfoAttr::get(
+        getContext(), ltRes.getSExtValue(), eqRes.getSExtValue(),
+        gtRes.getSExtValue(), unorderedRes.getSExtValue());
+    return cir::CmpThreeWayOp::create(*this, loc, cmpResultTy, lhs, rhs,
+                                      infoAttr);
   }
 
   mlir::Value createSetBitfield(mlir::Location loc, mlir::Type resultType,

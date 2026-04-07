@@ -234,15 +234,69 @@ KnownFPClass KnownFPClass::canonicalize(const KnownFPClass &KnownSrc,
   return Known;
 }
 
+KnownFPClass KnownFPClass::bitcast(const fltSemantics &FltSemantics,
+                                   const KnownBits &Bits) {
+  assert(FltSemantics.sizeInBits == Bits.getBitWidth() &&
+         "Bitcast operand has incorrect bit width");
+  KnownFPClass Known;
+
+  // Transfer information from the sign bit.
+  if (Bits.isNonNegative())
+    Known.signBitMustBeZero();
+  else if (Bits.isNegative())
+    Known.signBitMustBeOne();
+
+  if (APFloat::isIEEELikeFP(FltSemantics)) {
+    // IEEE floats are NaN when all bits of the exponent plus at least one of
+    // the fraction bits are 1. This means:
+    //   - If we assume unknown bits are 0 and the value is NaN, it will
+    //     always be NaN
+    //   - If we assume unknown bits are 1 and the value is not NaN, it can
+    //     never be NaN
+    // Note: They do not hold for x86_fp80 format.
+    if (APFloat(FltSemantics, Bits.One).isNaN())
+      Known.KnownFPClasses = fcNan;
+    else if (!APFloat(FltSemantics, ~Bits.Zero).isNaN())
+      Known.knownNot(fcNan);
+
+    // Build KnownBits representing Inf and check if it must be equal or
+    // unequal to this value.
+    auto InfKB =
+        KnownBits::makeConstant(APFloat::getInf(FltSemantics).bitcastToAPInt());
+    InfKB.Zero.clearSignBit();
+    if (const auto InfResult = KnownBits::eq(Bits, InfKB)) {
+      assert(!InfResult.value());
+      Known.knownNot(fcInf);
+    } else if (Bits == InfKB) {
+      Known.KnownFPClasses = fcInf;
+    }
+
+    // Build KnownBits representing Zero and check if it must be equal or
+    // unequal to this value.
+    auto ZeroKB = KnownBits::makeConstant(
+        APFloat::getZero(FltSemantics).bitcastToAPInt());
+    ZeroKB.Zero.clearSignBit();
+    if (const auto ZeroResult = KnownBits::eq(Bits, ZeroKB)) {
+      assert(!ZeroResult.value());
+      Known.knownNot(fcZero);
+    } else if (Bits == ZeroKB) {
+      Known.KnownFPClasses = fcZero;
+    }
+  }
+
+  return Known;
+}
+
 // Handle known sign bit and nan cases for fadd.
 static KnownFPClass fadd_impl(const KnownFPClass &KnownLHS,
                               const KnownFPClass &KnownRHS, DenormalMode Mode) {
   KnownFPClass Known;
 
-  // Adding positive and negative infinity produces NaN.
-  // TODO: Check sign of infinities.
+  // Adding positive and negative infinity produces NaN, but only if both
+  // opposite-sign infinity combinations are possible.
   if (KnownLHS.isKnownNeverNaN() && KnownRHS.isKnownNeverNaN() &&
-      (KnownLHS.isKnownNeverInfinity() || KnownRHS.isKnownNeverInfinity()))
+      (KnownLHS.isKnownNever(fcPosInf) || KnownRHS.isKnownNever(fcNegInf)) &&
+      (KnownLHS.isKnownNever(fcNegInf) || KnownRHS.isKnownNever(fcPosInf)))
     Known.knownNot(fcNan);
 
   if (KnownLHS.cannotBeOrderedLessThanZero() &&

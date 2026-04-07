@@ -333,6 +333,11 @@ static LogicalResult checkImplementationStatus(Operation &op) {
     if (!op.getDependVars().empty() || op.getDependKinds())
       result = todo("depend");
   };
+  auto checkDependIteratorModifier = [&todo](auto op, LogicalResult &result) {
+    if (!op.getDependIterated().empty() ||
+        (op.getDependIteratedKinds() && !op.getDependIteratedKinds()->empty()))
+      result = todo("depend with iterator modifier");
+  };
   auto checkHint = [](auto op, LogicalResult &) {
     if (op.getHint())
       op.emitWarning("hint clause discarded");
@@ -405,6 +410,7 @@ static LogicalResult checkImplementationStatus(Operation &op) {
       })
       .Case([&](omp::TaskOp op) {
         checkAllocate(op, result);
+        checkDependIteratorModifier(op, result);
         checkInReduction(op, result);
       })
       .Case([&](omp::TaskgroupOp op) {
@@ -439,6 +445,7 @@ static LogicalResult checkImplementationStatus(Operation &op) {
       .Case([&](omp::TargetOp op) {
         checkAllocate(op, result);
         checkBare(op, result);
+        checkDependIteratorModifier(op, result);
         checkInReduction(op, result);
         checkThreadLimit(op, result);
       })
@@ -1220,7 +1227,7 @@ setInsertPointForPossiblyEmptyBlock(llvm::IRBuilderBase &builder,
   if (block == nullptr)
     block = builder.GetInsertBlock();
 
-  if (block->empty() || block->getTerminator() == nullptr)
+  if (!block->hasTerminator())
     builder.SetInsertPoint(block);
   else
     builder.SetInsertPoint(block->getTerminator());
@@ -2129,11 +2136,10 @@ buildDependData(std::optional<ArrayAttr> dependKinds, OperandRange dependVars,
 /// if there is cancellation inside of the taskgroup body.
 /// The terminator will need to be fixed to branch to the correct block to
 /// cleanup the construct.
-static void
-pushCancelFinalizationCB(SmallVectorImpl<llvm::BranchInst *> &cancelTerminators,
-                         llvm::IRBuilderBase &llvmBuilder,
-                         llvm::OpenMPIRBuilder &ompBuilder, mlir::Operation *op,
-                         llvm::omp::Directive cancelDirective) {
+static void pushCancelFinalizationCB(
+    SmallVectorImpl<llvm::UncondBrInst *> &cancelTerminators,
+    llvm::IRBuilderBase &llvmBuilder, llvm::OpenMPIRBuilder &ompBuilder,
+    mlir::Operation *op, llvm::omp::Directive cancelDirective) {
   auto finiCB = [&](llvm::OpenMPIRBuilder::InsertPointTy ip) -> llvm::Error {
     llvm::IRBuilderBase::InsertPointGuard guard(llvmBuilder);
 
@@ -2160,16 +2166,13 @@ pushCancelFinalizationCB(SmallVectorImpl<llvm::BranchInst *> &cancelTerminators,
 /// is immediately before the continuation block. Now this finalization has
 /// been created we can fix the branch.
 static void
-popCancelFinalizationCB(const ArrayRef<llvm::BranchInst *> cancelTerminators,
+popCancelFinalizationCB(const ArrayRef<llvm::UncondBrInst *> cancelTerminators,
                         llvm::OpenMPIRBuilder &ompBuilder,
                         const llvm::OpenMPIRBuilder::InsertPointTy &afterIP) {
   ompBuilder.popFinalizationCB();
   llvm::BasicBlock *constructFini = afterIP.getBlock()->getSinglePredecessor();
-  for (llvm::BranchInst *cancelBranch : cancelTerminators) {
-    assert(cancelBranch->getNumSuccessors() == 1 &&
-           "cancel branch should have one target");
-    cancelBranch->setSuccessor(0, constructFini);
-  }
+  for (llvm::UncondBrInst *cancelBranch : cancelTerminators)
+    cancelBranch->setSuccessor(constructFini);
 }
 
 namespace {
@@ -2446,11 +2449,14 @@ convertIteratorRegion(llvm::Value *linearIV, IteratorInfo &iterInfo,
   return mlir::success();
 }
 
+using IteratorStoreEntryTy =
+    llvm::function_ref<void(llvm::Value *linearIV, mlir::omp::YieldOp yield)>;
+
 static mlir::LogicalResult
-fillAffinityIteratorLoop(mlir::omp::IteratorOp itersOp,
-                         llvm::IRBuilderBase &builder,
-                         mlir::LLVM::ModuleTranslation &moduleTranslation,
-                         llvm::Value *affinityList, IteratorInfo &iterInfo) {
+fillIteratorLoop(mlir::omp::IteratorOp itersOp, llvm::IRBuilderBase &builder,
+                 mlir::LLVM::ModuleTranslation &moduleTranslation,
+                 IteratorInfo &iterInfo, llvm::StringRef loopName,
+                 IteratorStoreEntryTy genStoreEntry) {
   mlir::Region &itersRegion = itersOp.getRegion();
   mlir::Block &iteratorRegionBlock = itersRegion.front();
 
@@ -2467,19 +2473,12 @@ fillAffinityIteratorLoop(mlir::omp::IteratorOp itersOp,
           "failed to convert iterator region", llvm::inconvertibleErrorCode());
     }
 
-    // Extract affinity entry from omp.yield and store into list[linearIV].
     auto yield =
         mlir::dyn_cast<mlir::omp::YieldOp>(iteratorRegionBlock.getTerminator());
     assert(yield && yield.getResults().size() == 1 &&
            "expect omp.yield in iterator region to have one result");
-    auto entryOp =
-        yield.getResults()[0].getDefiningOp<mlir::omp::AffinityEntryOp>();
-    assert(entryOp && "expect yield generate an affinity entry");
 
-    llvm::Value *addr = moduleTranslation.lookupValue(entryOp.getAddr());
-    llvm::Value *len = moduleTranslation.lookupValue(entryOp.getLen());
-    storeAffinityEntry(builder, *moduleTranslation.getOpenMPBuilder(),
-                       affinityList, linearIV, addr, len);
+    genStoreEntry(linearIV, yield);
 
     // Iterator-region block/value mappings are temporary for this conversion,
     // clear them to avoid stale entries in ModuleTranslation.
@@ -2490,8 +2489,7 @@ fillAffinityIteratorLoop(mlir::omp::IteratorOp itersOp,
 
   llvm::OpenMPIRBuilder::InsertPointOrErrorTy afterIP =
       moduleTranslation.getOpenMPBuilder()->createIteratorLoop(
-          loc, iterInfo.getTotalTrips(), bodyGen,
-          /*Name=*/"iterator");
+          loc, iterInfo.getTotalTrips(), bodyGen, loopName);
   if (failed(handleError(afterIP, *itersOp)))
     return failure();
 
@@ -2548,8 +2546,20 @@ buildAffinityData(mlir::omp::TaskOp &taskOp, llvm::IRBuilderBase &builder,
       assert(itersOp && "iterated value must be defined by omp.iterator");
       IteratorInfo iterInfo(itersOp, moduleTranslation, builder);
       llvm::Value *affList = allocateAffinityList(iterInfo.getTotalTrips());
-      if (failed(fillAffinityIteratorLoop(itersOp, builder, moduleTranslation,
-                                          affList, iterInfo)))
+      if (failed(fillIteratorLoop(
+              itersOp, builder, moduleTranslation, iterInfo, "iterator",
+              [&](llvm::Value *linearIV, mlir::omp::YieldOp yield) {
+                auto entryOp = yield.getResults()[0]
+                                   .getDefiningOp<mlir::omp::AffinityEntryOp>();
+                assert(entryOp && "expect yield produce an affinity entry");
+                llvm::Value *addr =
+                    moduleTranslation.lookupValue(entryOp.getAddr());
+                llvm::Value *len =
+                    moduleTranslation.lookupValue(entryOp.getLen());
+                storeAffinityEntry(builder,
+                                   *moduleTranslation.getOpenMPBuilder(),
+                                   affList, linearIV, addr, len);
+              })))
         return llvm::failure();
       ads.emplace_back(createAffinity(iterInfo.getTotalTrips(), affList));
     }
@@ -2811,7 +2821,7 @@ convertOmpTaskOp(omp::TaskOp taskOp, llvm::IRBuilderBase &builder,
   };
 
   llvm::OpenMPIRBuilder &ompBuilder = *moduleTranslation.getOpenMPBuilder();
-  SmallVector<llvm::BranchInst *> cancelTerminators;
+  SmallVector<llvm::UncondBrInst *> cancelTerminators;
   // The directive to match here is OMPD_taskgroup because it is the taskgroup
   // which is canceled. This is handled here because it is the task's cleanup
   // block which should be branched to.
@@ -3197,7 +3207,7 @@ convertOmpTaskloopOp(Operation &opInst, llvm::IRBuilderBase &builder,
     taskDupOrNull = taskDupCB;
 
   llvm::OpenMPIRBuilder &ompBuilder = *moduleTranslation.getOpenMPBuilder();
-  SmallVector<llvm::BranchInst *> cancelTerminators;
+  SmallVector<llvm::UncondBrInst *> cancelTerminators;
   // The directive to match here is OMPD_taskgroup because it is the
   // taskgroup which is canceled. This is handled here because it is the
   // task's cleanup block which should be branched to. It doesn't depend upon
@@ -3365,7 +3375,7 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
           ? llvm::omp::WorksharingLoopType::DistributeForStaticLoop
           : llvm::omp::WorksharingLoopType::ForStaticLoop;
 
-  SmallVector<llvm::BranchInst *> cancelTerminators;
+  SmallVector<llvm::UncondBrInst *> cancelTerminators;
   pushCancelFinalizationCB(cancelTerminators, builder, *ompBuilder, wsloopOp,
                            llvm::omp::Directive::OMPD_for);
 
@@ -6572,8 +6582,15 @@ static uint64_t getReductionDataSize(OpTy &op) {
 
     llvm::SmallVector<mlir::Type> members;
     members.reserve(reductions.size());
-    for (omp::DeclareReductionOp &red : reductions)
-      members.push_back(red.getType());
+    for (omp::DeclareReductionOp &red : reductions) {
+      // For by-ref reductions, use the actual element type rather than the
+      // pointer type so that the buffer size matches the access pattern in
+      // the copy/reduce callbacks generated by OMPIRBuilder.
+      if (red.getByrefElementType())
+        members.push_back(*red.getByrefElementType());
+      else
+        members.push_back(red.getType());
+    }
     Operation *opp = op.getOperation();
     auto structType = mlir::LLVM::LLVMStructType::getLiteral(
         opp->getContext(), members, /*isPacked=*/false);

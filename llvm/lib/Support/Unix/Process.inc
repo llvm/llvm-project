@@ -348,8 +348,11 @@ static bool terminalHasColors() {
   // ANSI color escape codes.
   if (const char *TermStr = std::getenv("TERM")) {
     return StringSwitch<bool>(TermStr)
+        .Case("alacritty", true)
         .Case("ansi", true)
         .Case("cygwin", true)
+        .Case("ghostty", true)
+        .Case("kitty", true)
         .Case("linux", true)
         .StartsWith("screen", true)
         .StartsWith("xterm", true)

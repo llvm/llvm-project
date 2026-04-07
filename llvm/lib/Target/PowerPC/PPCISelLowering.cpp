@@ -11596,7 +11596,9 @@ SDValue PPCTargetLowering::LowerINTRINSIC_VOID(SDValue Op,
         0);
   }
   case Intrinsic::ppc_disassemble_dmr: {
-    return DAG.getStore(DAG.getEntryNode(), DL, Op.getOperand(ArgStart + 2),
+    assert(ArgStart == 1 &&
+           "llvm.ppc.disassemble.dmr must carry a chain argument.");
+    return DAG.getStore(Op.getOperand(0), DL, Op.getOperand(ArgStart + 2),
                         Op.getOperand(ArgStart + 1), MachinePointerInfo());
   }
   case Intrinsic::ppc_amo_stwat:
@@ -15768,8 +15770,11 @@ SDValue convertTwoLoadsAndCmpToVCMPEQUB(SelectionDAG &DAG, SDNode *N,
     assert(Operand.getOpcode() == ISD::LOAD && "Must be LoadSDNode here.");
 
     auto *LoadNode = cast<LoadSDNode>(Operand);
-    return DAG.getLoad(MVT::v16i8, DL, LoadNode->getChain(),
-                       LoadNode->getBasePtr(), LoadNode->getMemOperand());
+    SDValue NewLoad =
+        DAG.getLoad(MVT::v16i8, DL, LoadNode->getChain(),
+                    LoadNode->getBasePtr(), LoadNode->getMemOperand());
+    DAG.ReplaceAllUsesOfValueWith(Operand.getValue(1), NewLoad.getValue(1));
+    return NewLoad;
   };
 
   // Following code transforms the DAG

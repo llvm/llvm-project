@@ -1509,7 +1509,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       }
     }
 
-    if (Subtarget->hasF16F32DOT()) {
+    if (Subtarget->hasF16F32DOT() || Subtarget->hasFP16FML()) {
       setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_FMLA, MVT::v2f32,
                                 MVT::v4f16, Legal);
       setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_FMLA, MVT::v4f32,
@@ -2039,7 +2039,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     }
 
     // Handle floating-point partial reduction
-    if (Subtarget->hasSVE2p1() || Subtarget->hasSME2()) {
+    if (Subtarget->hasSVE2() || Subtarget->hasSME()) {
       setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_FMLA, MVT::nxv4f32,
                                 MVT::nxv8f16, Legal);
       // We can use SVE2p1 fdot to emulate the fixed-length variant.
@@ -7104,7 +7104,8 @@ bool AArch64TargetLowering::isVectorLoadExtDesirable(SDValue ExtVal) const {
   // results in just one set of predicate unpacks at the start, instead of
   // multiple sets of vector unpacks after each load.
   if (auto *Ld = dyn_cast<MaskedLoadSDNode>(ExtVal->getOperand(0))) {
-    if (!isLoadExtLegalOrCustom(ISD::ZEXTLOAD, ExtVT, Ld->getValueType(0))) {
+    if (!isLoadLegalOrCustom(ExtVT, Ld->getValueType(0), Ld->getAlign(),
+                             Ld->getAddressSpace(), ISD::ZEXTLOAD, false)) {
       // Disable extending masked loads for fixed-width for now, since the code
       // quality doesn't look great.
       if (!ExtVT.isScalableVector())
@@ -14854,7 +14855,7 @@ static SDValue GeneratePerfectShuffle(unsigned ID, SDValue V1, SDValue V2,
   switch (OpNum) {
   default:
     llvm_unreachable("Unknown shuffle opcode!");
-  case OP_VREV:
+  case OP_VREV: {
     // VREV divides the vector in half and swaps within the half.
     if (VT.getVectorElementType() == MVT::i32 ||
         VT.getVectorElementType() == MVT::f32)
@@ -14864,9 +14865,14 @@ static SDValue GeneratePerfectShuffle(unsigned ID, SDValue V1, SDValue V2,
         VT.getVectorElementType() == MVT::f16 ||
         VT.getVectorElementType() == MVT::bf16)
       return DAG.getNode(AArch64ISD::REV32, DL, VT, OpLHS);
-    // vrev <4 x i8> -> REV16
-    assert(VT.getVectorElementType() == MVT::i8);
-    return DAG.getNode(AArch64ISD::REV16, DL, VT, OpLHS);
+    // vrev <4 x i8> -> BSWAP which is REV16
+    assert(VT == MVT::v8i8 || VT == MVT::v16i8);
+    EVT BSVT = VT == MVT::v8i8 ? MVT::v4i16 : MVT::v8i16;
+    return DAG.getNode(
+        AArch64ISD::NVCAST, DL, VT,
+        DAG.getNode(ISD::BSWAP, DL, BSVT,
+                    DAG.getNode(AArch64ISD::NVCAST, DL, BSVT, OpLHS)));
+  }
   case OP_VDUP0:
   case OP_VDUP1:
   case OP_VDUP2:
@@ -15278,8 +15284,15 @@ SDValue AArch64TargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
     return DAG.getNode(AArch64ISD::REV64, DL, V1.getValueType(), V1);
   if (isREVMask(ShuffleMask, EltSize, NumElts, 32))
     return DAG.getNode(AArch64ISD::REV32, DL, V1.getValueType(), V1);
-  if (isREVMask(ShuffleMask, EltSize, NumElts, 16))
-    return DAG.getNode(AArch64ISD::REV16, DL, V1.getValueType(), V1);
+  if (isREVMask(ShuffleMask, EltSize, NumElts, 16)) {
+    EVT VT = V1.getValueType();
+    assert(VT == MVT::v8i8 || VT == MVT::v16i8);
+    EVT BSVT = VT == MVT::v8i8 ? MVT::v4i16 : MVT::v8i16;
+    return DAG.getNode(
+        AArch64ISD::NVCAST, DL, VT,
+        DAG.getNode(ISD::BSWAP, DL, BSVT,
+                    DAG.getNode(AArch64ISD::NVCAST, DL, BSVT, V1)));
+  }
 
   if (((NumElts == 8 && EltSize == 16) || (NumElts == 16 && EltSize == 8)) &&
       ShuffleVectorInst::isReverseMask(ShuffleMask, ShuffleMask.size())) {
@@ -24698,23 +24711,27 @@ static SDValue performExtendCombine(SDNode *N,
       N->getOperand(0)->getOpcode() == ISD::SETCC)
     return performSignExtendSetCCCombine(N, DCI, DAG);
 
-  // If we see (any_extend (bswap ...)) with bswap returning an i16, we know
-  // that the top half of the result register must be unused, due to the
-  // any_extend. This means that we can replace this pattern with (rev16
-  // (any_extend ...)). This saves a machine instruction compared to (lsr (rev
-  // ...)), which is what this pattern would otherwise be lowered to.
-  // Only apply this optimisation if any_extend in original pattern to i32 or
-  // i64, because this type will become the input type to REV16 in the new
-  // pattern, so must be a legitimate REV16 input type.
+  // If we see ({any,zero}_extend (bswap ...)) with bswap returning an i16, we
+  // can replace this pattern with (rev16 ({any,zero}_extend ...)). This saves
+  // a machine instruction compared to (lsr (rev ...)) or (and (rev16 ..)),
+  // which is what this pattern would otherwise be lowered to.
+  // For any_extend: the top half of the result is unused, so rev16 is correct.
+  // For zero_extend: rev16 preserves the zero upper half when the input is
+  // zero-extended (e.g. from LDRHHui), because it swaps bytes within each
+  // 16-bit half independently.
+  // Only apply this optimisation if extending to i32 or i64, because this type
+  // will become the input type to REV16 in the new pattern, so must be a
+  // legitimate REV16 input type.
   SDValue Bswap = N->getOperand(0);
-  if (N->getOpcode() == ISD::ANY_EXTEND && Bswap.getOpcode() == ISD::BSWAP &&
-      Bswap.getValueType() == MVT::i16 &&
+  if ((N->getOpcode() == ISD::ANY_EXTEND ||
+       N->getOpcode() == ISD::ZERO_EXTEND) &&
+      Bswap.getOpcode() == ISD::BSWAP && Bswap.getValueType() == MVT::i16 &&
       (N->getValueType(0) == MVT::i32 || N->getValueType(0) == MVT::i64)) {
     SDLoc DL(N);
-    SDValue NewAnyExtend = DAG.getNode(ISD::ANY_EXTEND, DL, N->getValueType(0),
-                                       Bswap->getOperand(0));
+    SDValue NewExtend = DAG.getNode(N->getOpcode(), DL, N->getValueType(0),
+                                    Bswap->getOperand(0));
     return DAG.getNode(AArch64ISD::REV16, SDLoc(N), N->getValueType(0),
-                       NewAnyExtend);
+                       NewExtend);
   }
 
   if (SDValue R = performExtendDuplaneTruncCombine(N, DAG))

@@ -15,9 +15,11 @@
 #include "clc/math/clc_ldexp.h"
 #include "clc/math/clc_mad.h"
 #include "clc/math/clc_recip_fast.h"
+#include "clc/math/clc_rint.h"
 #include "clc/math/clc_sqrt_fast.h"
+#include "clc/math/math.h"
 #include "clc/relational/clc_isinf.h"
 #include "clc/relational/clc_signbit.h"
 
-#define __CLC_BODY <clc_ep.inc>
-#include <clc/math/gentype.inc>
+#define __CLC_BODY "clc_ep.inc"
+#include "clc/math/gentype.inc"

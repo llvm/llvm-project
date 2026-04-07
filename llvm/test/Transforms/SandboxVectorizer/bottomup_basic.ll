@@ -187,10 +187,9 @@ define float @scalars_with_external_uses_not_dead(ptr %ptr) {
 ; CHECK-LABEL: define float @scalars_with_external_uses_not_dead(
 ; CHECK-SAME: ptr [[PTR:%.*]]) {
 ; CHECK-NEXT:    [[PTR0:%.*]] = getelementptr float, ptr [[PTR]], i32 0
-; CHECK-NEXT:    [[PTR1:%.*]] = getelementptr float, ptr [[PTR]], i32 1
-; CHECK-NEXT:    [[LD0:%.*]] = load float, ptr [[PTR0]], align 4
-; CHECK-NEXT:    [[LD1:%.*]] = load float, ptr [[PTR1]], align 4
 ; CHECK-NEXT:    [[VECL:%.*]] = load <2 x float>, ptr [[PTR0]], align 4, !sandboxvec [[META5:![0-9]+]]
+; CHECK-NEXT:    [[LD0:%.*]] = extractelement <2 x float> [[VECL]], i32 0, !sandboxvec [[META5]]
+; CHECK-NEXT:    [[LD1:%.*]] = extractelement <2 x float> [[VECL]], i32 1, !sandboxvec [[META5]]
 ; CHECK-NEXT:    store <2 x float> [[VECL]], ptr [[PTR0]], align 4, !sandboxvec [[META5]]
 ; CHECK-NEXT:    [[USER:%.*]] = fneg float [[LD1]]
 ; CHECK-NEXT:    ret float [[LD0]]
@@ -198,10 +197,10 @@ define float @scalars_with_external_uses_not_dead(ptr %ptr) {
 ; REVERT-LABEL: define float @scalars_with_external_uses_not_dead(
 ; REVERT-SAME: ptr [[PTR:%.*]]) {
 ; REVERT-NEXT:    [[PTR0:%.*]] = getelementptr float, ptr [[PTR]], i32 0
-; REVERT-NEXT:    [[PTR1:%.*]] = getelementptr float, ptr [[PTR]], i32 1
-; REVERT-NEXT:    [[LD0:%.*]] = load float, ptr [[PTR0]], align 4
-; REVERT-NEXT:    [[LD1:%.*]] = load float, ptr [[PTR1]], align 4
-; REVERT-NEXT:    store float [[LD0]], ptr [[PTR0]], align 4, !sandboxvec [[META5:![0-9]+]]
+; REVERT-NEXT:    [[PTR1:%.*]] = getelementptr float, ptr [[PTR]], i32 1, !sandboxvec [[META5:![0-9]+]]
+; REVERT-NEXT:    [[LD0:%.*]] = load float, ptr [[PTR0]], align 4, !sandboxvec [[META5]]
+; REVERT-NEXT:    [[LD1:%.*]] = load float, ptr [[PTR1]], align 4, !sandboxvec [[META5]]
+; REVERT-NEXT:    store float [[LD0]], ptr [[PTR0]], align 4, !sandboxvec [[META5]]
 ; REVERT-NEXT:    store float [[LD1]], ptr [[PTR1]], align 4, !sandboxvec [[META5]]
 ; REVERT-NEXT:    [[USER:%.*]] = fneg float [[LD1]]
 ; REVERT-NEXT:    ret float [[LD0]]
@@ -513,8 +512,8 @@ define void @diamondWithConstantVector(ptr %ptr) {
 ; REVERT-NEXT:    [[GEPA1:%.*]] = getelementptr i32, ptr [[PTR]], i64 1, !sandboxvec [[META14:![0-9]+]]
 ; REVERT-NEXT:    [[GEPB0:%.*]] = getelementptr i32, ptr [[PTR]], i64 10
 ; REVERT-NEXT:    [[GEPB1:%.*]] = getelementptr i32, ptr [[PTR]], i64 11, !sandboxvec [[META15:![0-9]+]]
-; REVERT-NEXT:    [[ZEXT0:%.*]] = zext i16 0 to i32
-; REVERT-NEXT:    [[ZEXT1:%.*]] = zext i16 0 to i32
+; REVERT-NEXT:    [[ZEXT0:%.*]] = zext i16 0 to i32, !sandboxvec [[META14]]
+; REVERT-NEXT:    [[ZEXT1:%.*]] = zext i16 0 to i32, !sandboxvec [[META14]]
 ; REVERT-NEXT:    store i32 [[ZEXT0]], ptr [[GEPA0]], align 4, !sandboxvec [[META14]]
 ; REVERT-NEXT:    store i32 [[ZEXT1]], ptr [[GEPA1]], align 4, !sandboxvec [[META14]]
 ; REVERT-NEXT:    [[ORB0:%.*]] = or i32 0, [[ZEXT0]], !sandboxvec [[META15]]

@@ -116,6 +116,7 @@ enum UniformityLLTOpPredicateID {
   B160,
   B256,
   B512,
+  BRC,
 
   UniB32,
   UniB64,
@@ -222,6 +223,12 @@ enum RegBankLLTMappingApplyID {
 
   Sgpr32Trunc,
 
+  // Dst only modifiers: dst was assigned VGPR by RegBankSelect but the
+  // instruction result must be in SGPR. Replace dst with SGPR, then copy the
+  // result back to the original VGPR.
+  Sgpr32ToVgprDst,
+  Sgpr64ToVgprDst,
+
   // Src only modifiers: execute in waterfall loop if divergent
   Sgpr32_WF,
   SgprV4S32_WF,
@@ -233,6 +240,11 @@ enum RegBankLLTMappingApplyID {
   // Src only modifiers: for operands that must end up in M0. If divergent,
   // readfirstlane to SGPR. The result can then be copied to M0 in ISel.
   SgprB32_M0,
+
+  // Src only modifiers: operand must be SGPR, if in VGPR, insert readfirstlane
+  // to move to SGPR.
+  SgprB32_ReadFirstLane,
+  SgprB64_ReadFirstLane,
 
   // Src only modifiers: extends
   Sgpr32AExt,
@@ -279,7 +291,9 @@ enum LoweringMethodID {
   VerifyAllSgprGPHI,
   VerifyAllSgprOrVgprGPHI,
   ApplyINTRIN_IMAGE,
-  SplitBitCount64To32
+  SplitBitCount64To32,
+  ExtrVecEltToSel,
+  ExtrVecEltTo32
 };
 
 enum FastRulesTypes {
