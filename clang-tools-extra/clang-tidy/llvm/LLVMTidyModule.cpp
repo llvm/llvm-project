@@ -11,6 +11,7 @@
 #include "../readability/ElseAfterReturnCheck.h"
 #include "../readability/NamespaceCommentCheck.h"
 #include "../readability/QualifiedAutoCheck.h"
+#include "AvoidPassingAsRefCheck.h"
 #include "HeaderGuardCheck.h"
 #include "IncludeOrderCheck.h"
 #include "PreferIsaOrDynCastInConditionalsCheck.h"
@@ -29,6 +30,8 @@ namespace {
 class LLVMModule : public ClangTidyModule {
 public:
   void addCheckFactories(ClangTidyCheckFactories &CheckFactories) override {
+    CheckFactories.registerCheck<AvoidPassingAsRefCheck>(
+        "llvm-avoid-passing-as-ref");
     CheckFactories.registerCheck<readability::ElseAfterReturnCheck>(
         "llvm-else-after-return");
     CheckFactories.registerCheck<LLVMHeaderGuardCheck>("llvm-header-guard");

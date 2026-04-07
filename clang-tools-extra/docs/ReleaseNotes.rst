@@ -120,6 +120,12 @@ New checks
   Finds functions where throwing exceptions is unsafe but the function is still
   marked as potentially throwing.
 
+- New :doc:`llvm-avoid-passing-as-ref
+  <clang-tidy/checks/llvm/avoid-passing-as-ref>` check.
+
+  Flags function parameters of types that should be passed by value, but are
+  passed by reference.
+
 - New :doc:`llvm-type-switch-case-types
   <clang-tidy/checks/llvm/type-switch-case-types>` check.
 

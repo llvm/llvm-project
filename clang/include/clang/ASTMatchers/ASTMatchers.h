@@ -2939,6 +2939,43 @@ extern const internal::VariadicOperatorMatcherFunc<
     2, std::numeric_limits<unsigned>::max()>
     anyOf;
 
+/// Like \c anyOf, but accepts a runtime ArrayRef of matchers instead of
+/// compile-time variadic arguments.
+///
+/// This is useful when the set of matchers is built dynamically, e.g. from
+/// configuration options.
+///
+/// Example:
+/// \code
+///   std::vector<Matcher<Decl>> Matchers = {hasName("A"), hasName("B")};
+///   auto M = cxxRecordDecl(anyOfArrayRef(Matchers));
+/// \endcode
+/// is equivalent to:
+/// \code
+///   auto M = cxxRecordDecl(anyOf(hasName("A"), hasName("B")));
+/// \endcode
+///
+/// Usable as: Any Matcher
+template <typename T>
+internal::Matcher<T> anyOfArrayRef(ArrayRef<internal::Matcher<T>> Matchers) {
+  if (Matchers.size() == 1)
+    return Matchers[0];
+  std::vector<internal::DynTypedMatcher> DynMatchers(Matchers.begin(),
+                                                     Matchers.end());
+  return internal::DynTypedMatcher::constructVariadic(
+             internal::DynTypedMatcher::VO_AnyOf,
+             ASTNodeKind::getFromNodeKind<T>(), std::move(DynMatchers))
+      .template unconditionalConvertTo<T>();
+}
+
+/// Overload accepting a std::vector (avoids template argument deduction issues
+/// with implicit ArrayRef conversion).
+template <typename T>
+internal::Matcher<T>
+anyOfArrayRef(const std::vector<internal::Matcher<T>> &Matchers) {
+  return anyOfArrayRef(ArrayRef<internal::Matcher<T>>(Matchers));
+}
+
 /// Matches if all given matchers match.
 ///
 /// Usable as: Any Matcher
