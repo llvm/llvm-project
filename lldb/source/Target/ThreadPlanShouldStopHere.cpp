@@ -138,7 +138,6 @@ ThreadPlanSP ThreadPlanShouldStopHere::DefaultStepFromHereCallback(
 
   if (sc.line_entry.line == 0) {
     AddressRange range = sc.line_entry.range;
-
     bool just_step_out = false;
     if (sc.symbol) {
       ProcessSP process_sp(current_plan->GetThread().GetProcess());

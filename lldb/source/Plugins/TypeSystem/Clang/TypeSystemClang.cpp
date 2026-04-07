@@ -5420,6 +5420,7 @@ TypeSystemClang::GetNumChildren(lldb::opaque_compiler_type_t type,
             objc_class_type->getInterface();
 
         if (class_interface_decl) {
+
           clang::ObjCInterfaceDecl *superclass_interface_decl =
               class_interface_decl->getSuperClass();
           if (superclass_interface_decl) {
@@ -8273,7 +8274,6 @@ clang::ObjCMethodDecl *TypeSystemClang::AddMethodToObjCObjectType(
 
   if (class_interface_decl == nullptr)
     return nullptr;
-
   auto lldb_ast = type.GetTypeSystem<TypeSystemClang>();
   if (lldb_ast == nullptr)
     return nullptr;
@@ -8509,7 +8509,6 @@ bool TypeSystemClang::CompleteTagDeclarationDefinition(
 
       if (!cxx_record_decl->isCompleteDefinition())
         cxx_record_decl->completeDefinition();
-
       cxx_record_decl->setHasLoadedFieldsFromExternalStorage(true);
       cxx_record_decl->setHasExternalLexicalStorage(false);
       cxx_record_decl->setHasExternalVisibleStorage(false);
@@ -8971,7 +8970,7 @@ void TypeSystemClang::DumpTypeDescription(lldb::opaque_compiler_type_t type,
       if (!objc_class_type)
         break;
       clang::ObjCInterfaceDecl *class_interface_decl =
-          objc_class_type->getInterface();
+            objc_class_type->getInterface();
       if (!class_interface_decl)
         break;
       if (level == eDescriptionLevelVerbose)
@@ -9035,7 +9034,7 @@ void TypeSystemClang::DumpTypeDescription(lldb::opaque_compiler_type_t type,
     if (buf.size() > 0) {
       s.Write(buf.data(), buf.size());
     }
-  }
+}
 }
 
 void TypeSystemClang::DumpTypeName(const CompilerType &type) {
