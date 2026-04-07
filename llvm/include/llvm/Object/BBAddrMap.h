@@ -15,6 +15,7 @@
 #define LLVM_OBJECT_BBADDRMAP_H
 
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/BlockFrequency.h"
 #include "llvm/Support/BranchProbability.h"
 #include "llvm/Support/DataExtractor.h"
@@ -23,6 +24,8 @@
 
 namespace llvm {
 namespace object {
+
+inline constexpr StringLiteral BBAddrMapSectionName = ".llvm_bb_addr_map";
 
 // Struct representing the BBAddrMap for one function.
 struct BBAddrMap {
