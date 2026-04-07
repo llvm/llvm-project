@@ -4458,7 +4458,6 @@ static bool interp__builtin_ia32_vpdp(InterpState &S, CodePtr OpPC,
   PrimType OpAElemT = *S.getContext().classify(OpAVecT->getElementType());
   PrimType OpBElemT = *S.getContext().classify(OpBVecT->getElementType());
 
-
   const Pointer &OpBPtr = S.Stk.pop<Pointer>();
   const Pointer &OpAPtr = S.Stk.pop<Pointer>();
   const Pointer &SrcPtr = S.Stk.pop<Pointer>();
