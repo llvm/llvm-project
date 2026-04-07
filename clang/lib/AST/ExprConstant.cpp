@@ -14784,35 +14784,25 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
   case X86::BI__builtin_ia32_vpdpbusd256:
   case X86::BI__builtin_ia32_vpdpbusd512: {
     unsigned BuiltinID = E->getBuiltinCallee();
-    bool IsDottingWord = false;
     bool IsSaturating = false;
     switch (BuiltinID) {
     case X86::BI__builtin_ia32_vpdpwssd128:
     case X86::BI__builtin_ia32_vpdpwssd256:
     case X86::BI__builtin_ia32_vpdpwssd512:
-      IsDottingWord = true;
+	case X86::BI__builtin_ia32_vpdpbusd128:
+    case X86::BI__builtin_ia32_vpdpbusd256:
+    case X86::BI__builtin_ia32_vpdpbusd512:
       IsSaturating = false;
       break;
     case X86::BI__builtin_ia32_vpdpwssds128:
     case X86::BI__builtin_ia32_vpdpwssds256:
     case X86::BI__builtin_ia32_vpdpwssds512:
-      IsDottingWord = true;
-      IsSaturating = true;
-      break;
     case X86::BI__builtin_ia32_vpdpbusds128:
     case X86::BI__builtin_ia32_vpdpbusds256:
     case X86::BI__builtin_ia32_vpdpbusds512:
-      IsDottingWord = false;
       IsSaturating = true;
       break;
-    case X86::BI__builtin_ia32_vpdpbusd128:
-    case X86::BI__builtin_ia32_vpdpbusd256:
-    case X86::BI__builtin_ia32_vpdpbusd512:
-      IsDottingWord = false;
-      IsSaturating = false;
-      break;
     }
-
     APValue Source, OperandA, OperandB;
     if (!EvaluateAsRValue(Info, E->getArg(0), Source) ||
         !EvaluateAsRValue(Info, E->getArg(1), OperandA) ||
@@ -14820,25 +14810,21 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
       return false;
     }
 
-    unsigned NumElements = Source.getVectorLength();
+    unsigned NumSrcElts = Source.getVectorLength();
+    unsigned NumOperandElts = OperandA.getVectorLength();
+	unsigned EltsPerLane = NumOperandElts / NumSrcElts;
+
+	assert(OperandA.getVectorLength() == OperandB.getVectorLength());
 
     SmallVector<APValue, 16> Result;
-    Result.reserve(NumElements);
-    unsigned Iters = IsDottingWord ? 2 : 4;
-    for (unsigned I = 0; I < NumElements; ++I) {
+    Result.reserve(NumSrcElts);
+    for (unsigned I = 0; I != NumSrcElts; ++I) {
       APSInt DotProduct = Source.getVectorElt(I).getInt();
-      DotProduct = DotProduct.sext(64);
-      for (unsigned J = 0; J < Iters; ++J) {
-        APSInt OpA;
-        if (IsDottingWord) {
-          OpA = APSInt(OperandA.getVectorElt(Iters * I + J).getInt().sext(64),
-                       false);
-        } else {
-          OpA = APSInt(OperandA.getVectorElt(Iters * I + J).getInt().zext(64),
-                       false);
-        }
+      DotProduct = DotProduct.extend(64);
+      for (unsigned J = 0; J != EltsPerLane; ++J) {
+        APSInt OpA = APSInt(OperandA.getVectorElt(EltsPerLane * I + J).getInt().extend(64), false);
         APSInt OpB = APSInt(
-            OperandB.getVectorElt(Iters * I + J).getInt().sext(64), false);
+            OperandB.getVectorElt(EltsPerLane * I + J).getInt().extend(64), false);
         DotProduct += OpA * OpB;
       }
       if (IsSaturating) {
