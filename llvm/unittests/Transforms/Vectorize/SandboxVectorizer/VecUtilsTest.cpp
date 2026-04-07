@@ -791,3 +791,34 @@ bb0:
   EXPECT_EQ(Elms, Bndl);
   EXPECT_THAT(Lanes, testing::ElementsAre(0, 1, 5, 6, 8, 11));
 }
+
+TEST_F(VecUtilsTest, ToArrayRef) {
+  parseIR(R"IR(
+define void @foo(i8 %v0, i8 %v1, i8 %v2) {
+bb0:
+  %add0 = add i8 %v0, %v0
+  %add1 = add i8 %v1, %v1
+  %add2 = add i8 %v2, %v2
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto &BB = *F.begin();
+  auto It = BB.begin();
+  sandboxir::Instruction *I0 = &*It++;
+  sandboxir::Instruction *I1 = &*It++;
+  sandboxir::Instruction *I2 = &*It++;
+  SmallVector<sandboxir::Instruction *> Instrs({I0, I1, I2});
+
+  // Check ArrayRef<Instruction *> to ArrayRef<Value *>.
+  ArrayRef<sandboxir::Value *> Vals =
+      sandboxir::VecUtils::toArrayRef<sandboxir::Value *>(Instrs);
+  EXPECT_THAT(Vals, testing::ElementsAre(I0, I1, I2));
+
+  // Check ArrayRef<Value *> to ArrayRef<Instruction *>.
+  ArrayRef<sandboxir::Instruction *> NewInstrs =
+      sandboxir::VecUtils::toArrayRef<sandboxir::Instruction *>(Vals);
+  EXPECT_THAT(NewInstrs, testing::ElementsAre(I0, I1, I2));
+}

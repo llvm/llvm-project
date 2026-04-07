@@ -384,6 +384,16 @@ public:
     return make_range(Begin, End);
   }
 
+  /// Helps convert things like `ArrayRef<Instruction *>` to `ArrayRef<Value *>`
+  /// and vice versa. For example, given an `ArrayRef<Instruction *> Instrs`, we
+  /// can get an ArrayRef of values:
+  ///   `ArrayRef<Value *> Vals = VecUtils::toArrayRef<Value *>(Instrs);`
+  template <typename ToElmT, typename FromArrayRefT>
+  static ArrayRef<ToElmT> toArrayRef(FromArrayRefT From) {
+    return ArrayRef<ToElmT>(reinterpret_cast<const ToElmT *>(From.data()),
+                            From.size());
+  }
+
 #ifndef NDEBUG
   /// Helper dump function for debugging.
   LLVM_DUMP_METHOD static void dump(ArrayRef<Value *> Bndl);

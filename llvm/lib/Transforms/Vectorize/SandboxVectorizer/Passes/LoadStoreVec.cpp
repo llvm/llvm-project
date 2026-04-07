@@ -111,12 +111,8 @@ bool LoadStoreVec::runOnRegion(Region &Rgn, const Analyses &A) {
 
   Value *VecOp = nullptr;
   if (AllLoads) {
-    // TODO: Try to avoid the extra copy to an instruction vector.
-    SmallVector<Instruction *, 8> Loads;
-    Loads.reserve(Operands.size());
-    for (Value *Op : Operands)
-      Loads.push_back(cast<Instruction>(Op));
-
+    ArrayRef<Instruction *> Loads =
+        VecUtils::toArrayRef<Instruction *>(Operands);
     bool Consecutive = VecUtils::areConsecutive<LoadInst, Instruction>(
         Loads, A.getScalarEvolution(), *DL);
     if (!Consecutive)

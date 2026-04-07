@@ -241,12 +241,7 @@ const LegalityResult &LegalityAnalysis::canVectorize(ArrayRef<Value *> Bndl,
     return createLegalityResult<Pack>(*ReasonOpt);
 
   if (!SkipScheduling) {
-    // TODO: Try to remove the IBndl vector.
-    SmallVector<Instruction *, 8> IBndl;
-    IBndl.reserve(Bndl.size());
-    for (auto *V : Bndl)
-      IBndl.push_back(cast<Instruction>(V));
-    if (!Sched.trySchedule(IBndl))
+    if (!Sched.trySchedule(VecUtils::toArrayRef<Instruction *>(Bndl)))
       return createLegalityResult<Pack>(ResultReason::CantSchedule);
   }
 

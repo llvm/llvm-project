@@ -542,8 +542,7 @@ bool BottomUpVec::runOnRegion(Region &Rgn, const Analyses &A) {
                             F.getParent()->getDataLayout(), F.getContext(),
                             *IMaps);
 
-  // TODO: Refactor to remove the unnecessary copy to SeedSliceVals.
-  SmallVector<Value *> SeedSliceVals(SeedSlice.begin(), SeedSlice.end());
+  ArrayRef<Value *> SeedSliceVals = VecUtils::toArrayRef<Value *>(SeedSlice);
   // Try to vectorize starting from the seed slice. The returned value
   // is true if we found vectorizable code and generated some vector
   // code for it. It does not mean that the code is profitable.
