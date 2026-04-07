@@ -65,6 +65,9 @@ struct ProgramExitInfo {
   ProgramExitKind Kind;
   uint64_t ExitCode;
 
+  explicit ProgramExitInfo(ProgramExitKind Kind, uint64_t ExitCode)
+      : Kind(Kind), ExitCode(ExitCode) {}
+
   bool isExitedByLibcall() const {
     return Kind == ProgramExitKind::Exited ||
            Kind == ProgramExitKind::Aborted ||

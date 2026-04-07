@@ -127,7 +127,7 @@ void ExecutorBase::store(const AnyValue &Ptr, Align Alignment,
 
 void ExecutorBase::requestProgramExit(ProgramExitInfo::ProgramExitKind Kind,
                                       uint64_t ExitCode) {
-  ExitInfo = ProgramExitInfo{Kind, ExitCode};
+  ExitInfo.emplace(Kind, ExitCode);
   Handler.onProgramExit(*ExitInfo);
 }
 
