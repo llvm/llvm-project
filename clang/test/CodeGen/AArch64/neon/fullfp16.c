@@ -1,8 +1,8 @@
 // REQUIRES: aarch64-registered-target
 
-// RUN:                   %clang_cc1_cg_arm64_neon %sema_flags -target-feature +fullfp16           -emit-llvm  %s -disable-O0-optnone | opt -S -passes=mem2reg             | FileCheck %s --check-prefixes=ALL,LLVM
-// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_neon %sema_flags -target-feature +fullfp16 -fclangir -emit-llvm  %s -disable-O0-optnone | opt -S -passes=mem2reg,simplifycfg | FileCheck %s --check-prefixes=ALL,LLVM %}
-// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_neon %sema_flags -target-feature +fullfp16 -fclangir -emit-cir   %s -disable-O0-optnone |                                      FileCheck %s --check-prefixes=ALL,CIR %}
+// RUN:                   %clang_cc1_cg_arm64_neon -target-feature +fullfp16           -emit-llvm  %s -disable-O0-optnone | opt -S -passes=mem2reg             | FileCheck %s --check-prefixes=ALL,LLVM
+// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_neon -target-feature +fullfp16 -fclangir -emit-llvm  %s -disable-O0-optnone | opt -S -passes=mem2reg,simplifycfg | FileCheck %s --check-prefixes=ALL,LLVM %}
+// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_neon -target-feature +fullfp16 -fclangir -emit-cir   %s -disable-O0-optnone |                                      FileCheck %s --check-prefixes=ALL,CIR %}
 
 //=============================================================================
 // NOTES
