@@ -215,6 +215,14 @@ bool matchUniformityAndLLT(Register Reg, UniformityLLTOpPredicateID UniID,
         static_cast<const SIRegisterInfo *>(MRI.getTargetRegisterInfo());
     return TRI->getSGPRClassForBitWidth(MRI.getType(Reg).getSizeInBits());
   }
+  case BRC: {
+    // Check if there is SGPR and VGPR register class of same size as the LLT.
+    const SIRegisterInfo *TRI =
+        static_cast<const SIRegisterInfo *>(MRI.getTargetRegisterInfo());
+    unsigned LLTSize = MRI.getType(Reg).getSizeInBits();
+    return LLTSize >= 32 && TRI->getSGPRClassForBitWidth(LLTSize) &&
+           TRI->getVGPRClassForBitWidth(LLTSize);
+  }
   case _:
     return true;
   default:
@@ -669,6 +677,17 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{UniS16}, {{}, {}, VerifyAllSgprGPHI}})
       .Any({{UniBRC}, {{}, {}, VerifyAllSgprGPHI}})
       .Any({{DivBRC}, {{}, {}, VerifyAllSgprOrVgprGPHI}});
+
+  addRulesForGOpcs({G_EXTRACT_VECTOR_ELT})
+      .Any({{UniB32, UniBRC, UniS32}, {{SgprB32}, {SgprBRC, Sgpr32}}})
+      .Any({{DivB32, DivBRC, UniS32}, {{VgprB32}, {VgprBRC, Sgpr32}}})
+      .Any({{DivB32, BRC, DivS32},
+            {{VgprB32}, {VgprBRC, Vgpr32}, ExtrVecEltToSel}})
+      .Any({{UniB64, UniBRC, UniS32}, {{SgprB64}, {SgprBRC, Sgpr32}}})
+      .Any({{DivB64, DivBRC, UniS32},
+            {{VgprB64}, {VgprBRC, Sgpr32}, ExtrVecEltTo32}})
+      .Any({{DivB64, BRC, DivS32},
+            {{VgprB64}, {VgprBRC, Vgpr32}, ExtrVecEltToSel}});
 
   // LOAD       {Div}, {{VgprDst...}, {VgprSrc, ..., Sgpr_WF_RsrcIdx}}
   // LOAD       {Uni}, {{UniInVgprDst...}, {VgprSrc, ..., Sgpr_WF_RsrcIdx}}
@@ -1465,11 +1484,11 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{S32}, {{Sgpr32}, {}}})
       .Any({{S64}, {{Sgpr64}, {}}});
 
-  addRulesForIOpcs({amdgcn_s_memrealtime}, Standard)
+  addRulesForIOpcs({amdgcn_s_memrealtime, amdgcn_s_memtime}, Standard)
       .Uni(S64, {{Sgpr64}, {IntrId}});
 
   addRulesForIOpcs({amdgcn_groupstaticsize, amdgcn_pops_exiting_wave_id,
-                    amdgcn_reloc_constant},
+                    amdgcn_reloc_constant, amdgcn_s_get_waveid_in_workgroup},
                    Standard)
       .Uni(S32, {{Sgpr32}, {IntrId}});
 
@@ -1687,12 +1706,20 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
 
   addRulesForIOpcs({amdgcn_wqm_demote}).Any({{}, {{}, {IntrId, Vcc}}});
 
+  addRulesForIOpcs({amdgcn_inverse_ballot})
+      .Any({{DivS1, _, S32}, {{Vcc}, {IntrId, SgprB32_ReadFirstLane}}})
+      .Any({{DivS1, _, S64}, {{Vcc}, {IntrId, SgprB64_ReadFirstLane}}});
+
   addRulesForIOpcs({amdgcn_live_mask, amdgcn_ps_live})
       .Any({{DivS1}, {{Vcc}, {}}});
 
   addRulesForIOpcs({amdgcn_mov_dpp, amdgcn_mov_dpp8}, StandardB)
       .Div(B32, {{VgprB32}, {IntrId, VgprB32}})
       .Div(B64, {{VgprB64}, {IntrId, VgprB64}});
+
+  addRulesForIOpcs({amdgcn_update_dpp}, StandardB)
+      .Div(B32, {{VgprB32}, {IntrId, VgprB32, VgprB32}})
+      .Div(B64, {{VgprB64}, {IntrId, VgprB64, VgprB64}});
 
   addRulesForIOpcs({amdgcn_sin, amdgcn_cos}, Standard)
       .Div(S16, {{Vgpr16}, {IntrId, Vgpr16}})

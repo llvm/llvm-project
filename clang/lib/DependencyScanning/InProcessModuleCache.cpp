@@ -84,8 +84,6 @@ class InProcessModuleCache : public ModuleCache {
 public:
   InProcessModuleCache(ModuleCacheEntries &Entries) : Entries(Entries) {}
 
-  void prepareForGetLock(StringRef Filename) override {}
-
   std::unique_ptr<llvm::AdvisoryLock> getLock(StringRef Filename) override {
     auto &Entry = [&]() -> ModuleCacheEntry & {
       std::lock_guard<std::mutex> Lock(Entries.Mutex);
@@ -132,6 +130,15 @@ public:
   InMemoryModuleCache &getInMemoryModuleCache() override { return InMemory; }
   const InMemoryModuleCache &getInMemoryModuleCache() const override {
     return InMemory;
+  }
+
+  std::error_code write(StringRef Path, llvm::MemoryBufferRef Buffer) override {
+    // This is a compiler-internal input/output, let's bypass the sandbox.
+    auto BypassSandbox = llvm::sys::sandbox::scopedDisable();
+
+    // FIXME: This could use an in-memory cache to avoid IO, and only write to
+    // disk at the end of the scan.
+    return writeImpl(Path, Buffer);
   }
 
   Expected<std::unique_ptr<llvm::MemoryBuffer>>
