@@ -23,10 +23,10 @@ struct Base {
 struct HasThings : Base {
   FromCtor ct;
 
-  HasThings(const Ctor &c) try
-    : ct(c) {
-      side_effect();
-    } catch (...) {
+  HasThings(const Ctor &c)
+    try : ct(c) {
+    side_effect();
+  } catch (...) {
     side_effect2();
   }
 
