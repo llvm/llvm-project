@@ -396,7 +396,6 @@ Changes in existing checks
   <clang-tidy/checks/performance/move-const-arg>` check by avoiding false
   positives on trivially copyable types with a non-public copy constructor.
 
-  <clang-tidy/checks/performance/trivially-destructible>` check by fixing
 - Improved :doc:`performance-prefer-single-char-overloads
   <clang-tidy/checks/performance/prefer-single-char-overloads>` check:
 
