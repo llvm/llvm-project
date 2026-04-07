@@ -391,7 +391,9 @@ ParseFunctions(DataExtractor &data) {
 
   for (uint32_t i = 0; i < *function_count; ++i) {
     // llvm-objdump considers the ULEB with the function size to be part of the
-    // function. We can't do that here because that would not match the DWARF.
+    // function. We can't do that here because that would not match the DWARF,
+    // which considers the function to start with the local variable
+    // declarations (the header).
     llvm::Expected<uint32_t> function_size = GetULEB32(data, offset);
     if (!function_size)
       return function_size.takeError();
