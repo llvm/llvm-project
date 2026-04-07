@@ -14,4 +14,4 @@ Members:
       Value:          "none"
     Content:        10ff10ad
 
-# CHECK: warning: '[[FILENAME]]': failed to extract nested OffloadBinary:
+# CHECK: warning: '[[FILENAME]]': failed to extract nested OffloadBinary: Invalid data was encountered while parsing the file
