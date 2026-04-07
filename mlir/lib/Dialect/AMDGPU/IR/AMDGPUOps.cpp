@@ -103,7 +103,7 @@ static FailureOr<MemRefType> getFatRawBufferTypeLike(MemRefType source,
 
 LogicalResult FatRawBufferCastOp::inferReturnTypes(
     MLIRContext *context, std::optional<Location> location, ValueRange operands,
-    DictionaryAttr attributes, OpaqueProperties properties, RegionRange regions,
+    DictionaryAttr attributes, PropertyRef properties, RegionRange regions,
     SmallVectorImpl<Type> &inferredReturnTypes) {
   Adaptor adaptor(operands, attributes, properties, regions);
   auto sourceType =
@@ -941,6 +941,37 @@ struct FoldGatherToLDSOfCast final : OpRewritePattern<GatherToLDSOp> {
 void GatherToLDSOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                                 MLIRContext *context) {
   results.add<FoldGatherToLDSOfCast>(context);
+}
+
+//===----------------------------------------------------------------------===//
+// GlobalLoadAsyncToLDSOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult GlobalLoadAsyncToLDSOp::verify() {
+  MemRefType srcType = cast<MemRefType>(getSrc().getType());
+  MemRefType dstType = cast<MemRefType>(getDst().getType());
+
+  if (srcType.getElementType() != dstType.getElementType())
+    return emitOpError("source and destination element types must match");
+
+  Type transferType = getTransferType();
+  int transferSize;
+  if (auto vectorTransfer = dyn_cast<VectorType>(transferType)) {
+    transferSize = vectorTransfer.getNumElements() *
+                   vectorTransfer.getElementTypeBitWidth();
+  } else {
+    transferSize = transferType.getIntOrFloatBitWidth();
+  }
+  if (!llvm::is_contained({8, 32, 64, 128}, transferSize))
+    return emitOpError("transfer type size must be 8, 32, 64, or 128 bits");
+
+  if (!hasGlobalMemorySpace(srcType.getMemorySpace()))
+    return emitOpError("source memory address space must be global");
+
+  if (!hasWorkgroupMemorySpace(dstType.getMemorySpace()))
+    return emitOpError("destination memory address space must be Workgroup");
+
+  return success();
 }
 
 //===----------------------------------------------------------------------===//

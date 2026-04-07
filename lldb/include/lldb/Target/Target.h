@@ -56,7 +56,8 @@ enum InlineStrategy {
 enum LoadScriptFromSymFile {
   eLoadScriptFromSymFileTrue,
   eLoadScriptFromSymFileFalse,
-  eLoadScriptFromSymFileWarn
+  eLoadScriptFromSymFileWarn,
+  eLoadScriptFromSymFileTrusted,
 };
 
 enum LoadCWDlldbinitFile {
@@ -1841,6 +1842,8 @@ protected:
   /// more usefully in the Dummy target where you can't know exactly what
   /// signals you will have.
   llvm::StringMap<DummySignalValues> m_dummy_signals;
+
+  lldb::RegisterTypeBuilderSP m_register_type_builder_sp;
 
   static void ImageSearchPathsChanged(const PathMappingList &path_list,
                                       void *baton);

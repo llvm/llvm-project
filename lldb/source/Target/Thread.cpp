@@ -1415,10 +1415,10 @@ ThreadPlanSP Thread::QueueThreadPlanForRunToAddress(bool abort_other_plans,
 }
 
 ThreadPlanSP Thread::QueueThreadPlanForStepUntil(
-    bool abort_other_plans, lldb::addr_t *address_list, size_t num_addresses,
+    bool abort_other_plans, llvm::ArrayRef<addr_t> address_list,
     bool stop_other_threads, uint32_t frame_idx, Status &status) {
-  ThreadPlanSP thread_plan_sp(new ThreadPlanStepUntil(
-      *this, address_list, num_addresses, stop_other_threads, frame_idx));
+  ThreadPlanSP thread_plan_sp = std::make_shared<ThreadPlanStepUntil>(
+      *this, address_list, stop_other_threads, frame_idx);
 
   status = QueueThreadPlan(thread_plan_sp, abort_other_plans);
   return thread_plan_sp;
@@ -1624,7 +1624,7 @@ llvm::Error Thread::LoadScriptedFrameProvider(
     auto [last_desc, last_id] = m_provider_chain_ids.back();
     auto it = m_frame_providers.find(last_id);
     if (it == m_frame_providers.end())
-      return llvm::createStringError("Previous frame provider not found");
+      return llvm::createStringError("previous frame provider not found");
     SyntheticFrameProviderSP last_provider = it->second;
     StackFrameListSP last_provider_frames = last_provider->GetInputFrames();
     input_frames = std::make_shared<SyntheticStackFrameList>(

@@ -1580,13 +1580,8 @@ Status Process::EnableBreakpointSiteByID(lldb::user_id_t break_id) {
   return error;
 }
 
-lldb::break_id_t
-Process::CreateBreakpointSite(const BreakpointLocationSP &constituent,
-                              bool use_hardware) {
-  addr_t load_addr = LLDB_INVALID_ADDRESS;
-
-  bool show_error = true;
-  switch (GetState()) {
+static bool ShouldShowError(Process &process) {
+  switch (process.GetState()) {
   case eStateInvalid:
   case eStateUnloaded:
   case eStateConnected:
@@ -1594,17 +1589,23 @@ Process::CreateBreakpointSite(const BreakpointLocationSP &constituent,
   case eStateLaunching:
   case eStateDetached:
   case eStateExited:
-    show_error = false;
-    break;
-
+    return false;
   case eStateStopped:
   case eStateRunning:
   case eStateStepping:
   case eStateCrashed:
   case eStateSuspended:
-    show_error = IsAlive();
-    break;
+    return process.IsAlive();
   }
+  llvm_unreachable("unhandled process state");
+}
+
+lldb::break_id_t
+Process::CreateBreakpointSite(const BreakpointLocationSP &constituent,
+                              bool use_hardware) {
+  addr_t load_addr = LLDB_INVALID_ADDRESS;
+
+  bool show_error = ShouldShowError(*this);
 
   // Reset the IsIndirect flag here, in case the location changes from pointing
   // to a indirect symbol to a regular symbol.
@@ -2598,7 +2599,7 @@ Process::ReadModuleFromMemory(const FileSpec &file_spec,
             file_spec.GetPath().c_str());
   ModuleSP module_sp = std::make_shared<Module>(file_spec, ArchSpec());
   if (!module_sp)
-    return llvm::createStringError("Failed to allocate Module");
+    return llvm::createStringError("failed to allocate module");
 
   Status error;
   std::unique_ptr<Progress> progress_up;
@@ -2623,9 +2624,9 @@ bool Process::GetLoadAddressPermissions(lldb::addr_t load_addr,
   Status error(GetMemoryRegionInfo(load_addr, range_info));
   if (!error.Success())
     return false;
-  if (range_info.GetReadable() == MemoryRegionInfo::eDontKnow ||
-      range_info.GetWritable() == MemoryRegionInfo::eDontKnow ||
-      range_info.GetExecutable() == MemoryRegionInfo::eDontKnow) {
+  if (range_info.GetReadable() == eLazyBoolDontKnow ||
+      range_info.GetWritable() == eLazyBoolDontKnow ||
+      range_info.GetExecutable() == eLazyBoolDontKnow) {
     return false;
   }
   permissions = range_info.GetLLDBPermissions();
@@ -6374,7 +6375,7 @@ Status Process::GetMemoryRegions(lldb_private::MemoryRegionInfos &region_list) {
     // region, the last mappable region, will have non-address bits in its end
     // address.
     range_end = region_info.GetRange().GetRangeEnd();
-    if (region_info.GetMapped() == MemoryRegionInfo::eYes) {
+    if (region_info.GetMapped() == eLazyBoolYes) {
       region_list.push_back(std::move(region_info));
     }
   } while (
@@ -6795,7 +6796,7 @@ static void GetCoreFileSaveRangesDirtyOnly(Process &process,
     const bool try_dirty_pages = false;
     for (const auto &region : regions)
       if (stack_ends.count(region.GetRange().GetRangeEnd()) == 0 &&
-          region.GetWritable() == MemoryRegionInfo::eYes)
+          region.GetWritable() == eLazyBoolYes)
         AddRegion(region, try_dirty_pages, ranges);
   }
 }
@@ -6819,7 +6820,7 @@ static void GetCoreFileSaveRangesStackOnly(Process &process,
   for (const auto &region : regions) {
     // Save all the stack memory ranges not associated with a stack pointer.
     if (stack_ends.count(region.GetRange().GetRangeEnd()) == 0 &&
-        region.IsStackMemory() == MemoryRegionInfo::eYes)
+        region.IsStackMemory() == eLazyBoolYes)
       AddRegion(region, try_dirty_pages, ranges);
   }
 }

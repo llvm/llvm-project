@@ -237,6 +237,14 @@ add_header_macro(
 )
 
 add_header_macro(
+  cpio
+  ../libc/include/cpio.yaml
+  cpio.h
+  DEPENDS
+    .llvm_libc_common_h
+)
+
+add_header_macro(
   setjmp
   ../libc/include/setjmp.yaml
   setjmp.h
@@ -275,9 +283,13 @@ add_header_macro(
     .llvm-libc-types.ACTION
     .llvm-libc-types.ENTRY
     .llvm-libc-types.VISIT
+    .llvm-libc-types.posix_tnode
     .llvm-libc-types.__search_compare_t
     .llvm-libc-types.size_t
     .llvm-libc-types.struct_hsearch_data
+    .llvm-libc-types.__action_closure_fn_t
+    .llvm-libc-types.__action_fn_t
+    .llvm-libc-types.__free_fn_t
     .llvm_libc_common_h
 )
 

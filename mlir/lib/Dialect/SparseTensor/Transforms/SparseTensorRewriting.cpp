@@ -1008,7 +1008,7 @@ public:
 
     Value buffer =
         AllocTensorOp::create(rewriter, loc, bufferTp, dstDynSizes, Value(),
-                              /*sizeHint=*/nnz, Attribute())
+                              /*size_hint=*/nnz, Attribute())
             .getResult();
 
     // Implement the sparse2sparse reshape as follows:
