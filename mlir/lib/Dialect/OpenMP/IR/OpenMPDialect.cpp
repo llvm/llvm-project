@@ -3406,12 +3406,12 @@ void TaskloopOp::build(OpBuilder &builder, OperationState &state,
       makeArrayAttr(ctx, clauses.reductionSyms), clauses.untied);
 }
 
-TaskloopContextOp TaskloopOp::getContextOp() {
+TaskloopContextOp TaskloopOp::getTaskloopContext() {
   return getOperation()->getParentOfType<TaskloopContextOp>();
 }
 
 LogicalResult TaskloopOp::verify() {
-  TaskloopContextOp context = getContextOp();
+  TaskloopContextOp context = getTaskloopContext();
   if (!context)
     return emitOpError() << "expected to be nested in a taskloop context op";
 

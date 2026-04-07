@@ -1104,7 +1104,7 @@ def TaskloopOp : OpenMP_Op<"taskloop", traits = [
   }];
 
   let extraClassDeclaration = [{
-    TaskloopContextOp getContextOp();
+    TaskloopContextOp getTaskloopContext();
   }] # clausesExtraClassDeclaration;
 
   let hasVerifier = 1;
