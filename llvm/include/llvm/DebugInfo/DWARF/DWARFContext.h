@@ -473,6 +473,10 @@ private:
 
   void addLocalsForDie(DWARFCompileUnit *CU, DWARFDie Subprogram, DWARFDie Die,
                        std::vector<DILocal> &Result);
+
+  // Cache for the last computed full source file path
+  mutable std::string CachedFullSourcePath;
+  mutable uint64_t CachedAddressForPath = 0;
 };
 
 } // end namespace llvm

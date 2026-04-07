@@ -718,6 +718,35 @@ StringRef DWARFContext::getCompilationDirectory(uint64_t Address) {
     compDir = StringRef(unitForOffset->getCompilationDir());
   }
 
+  // Extract full source file path from line table
+  // Get the line table and extract the actual source file name to combine with compDir
+  if (const DWARFDebugLine::LineTable *LineTable = getLineTableForUnit(unitForOffset)) {
+    std::vector<uint32_t> RowVector;
+    if (LineTable->lookupAddressRange({Address, 0}, 1, RowVector) && !RowVector.empty()) {
+      const DWARFDebugLine::Row &Row = LineTable->Rows[RowVector[0]];
+      
+      // Get the file name from the line table
+      std::string FileName;
+      LineTable->getFileNameByIndex(Row.File, unitForOffset->getCompilationDir(),
+                                    DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath,
+                                    FileName);
+      
+      // If we already have absolute path, cache and return it
+      if (sys::path::is_absolute(FileName)) {
+        CachedFullSourcePath = FileName;
+        CachedAddressForPath = Address;
+        return StringRef(CachedFullSourcePath);
+      }
+      
+      // Combine compilation directory with relative file name and cache it
+      if (!compDir.empty() && compDir != "/") {
+        CachedFullSourcePath = std::string(compDir) + "/" + FileName;
+        CachedAddressForPath = Address;
+        return StringRef(CachedFullSourcePath);
+      }
+    }
+  }
+
   return compDir;
 }
 
