@@ -541,8 +541,10 @@ Improvements to Clang's diagnostics
 - Clang now errors when a function declaration aliases a variable or vice versa. (#GH195550)
 
 - Added ``-Wattribute-alias`` to diagnose type mismatches between an alias and its aliased function. (#GH195550)
-  
+
 - The diagnostics around ``__block`` now explain why a variable cannot be marked ``__block``. (#GH197213)
+
+- Extended ``-Wnonportable-include-path`` to warn about trailing whitespace and dots in ``#include`` paths. (#GH190610)
 
 Improvements to Clang's time-trace
 ----------------------------------

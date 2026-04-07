@@ -383,7 +383,7 @@ def pp_nonportable_system_path : NonportablePath, DefaultIgnore,
 
 class NonportablePathTrailing : Warning<
   "non-portable path to file '%0'; specified path contains trailing"
-  " %select{whitespace|dots}1">;
+  " %select{whitespace|dot}1">;
 def pp_nonportable_path_trailing : NonportablePathTrailing,
   InGroup<NonportableIncludePath>;
 def pp_nonportable_system_path_trailing : NonportablePathTrailing, DefaultIgnore,
