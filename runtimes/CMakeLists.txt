@@ -33,10 +33,11 @@ list(INSERT CMAKE_MODULE_PATH 0
   "${CMAKE_CURRENT_SOURCE_DIR}/../llvm/cmake/modules"
 )
 
-# We order libraries to mirror roughly how they are layered, except that compiler-rt can depend
-# on libc++, so we put it after.
+# We order libraries to mirror roughly how they are layered, except that
+# compiler-rt can depend on libc++, so we put it after. Offload can depend on
+# flang-rt so we order it before.
 set(LLVM_DEFAULT_RUNTIMES "libc;libunwind;libcxxabi;libcxx;compiler-rt;libclc;openmp;offload")
-set(LLVM_SUPPORTED_RUNTIMES "${LLVM_DEFAULT_RUNTIMES};llvm-libgcc;flang-rt;libsycl;orc-rt")
+set(LLVM_SUPPORTED_RUNTIMES "libc;libunwind;libcxxabi;libcxx;compiler-rt;libclc;openmp;flang-rt;offload;llvm-libgcc;libsycl;orc-rt")
 set(LLVM_ENABLE_RUNTIMES "" CACHE STRING
   "Semicolon-separated list of runtimes to build, or \"all\" (${LLVM_DEFAULT_RUNTIMES}). Supported runtimes are ${LLVM_SUPPORTED_RUNTIMES}.")
 if(LLVM_ENABLE_RUNTIMES STREQUAL "all" )
@@ -45,15 +46,17 @@ endif()
 include(SortSubset)
 sort_subset("${LLVM_SUPPORTED_RUNTIMES}" "${LLVM_ENABLE_RUNTIMES}" LLVM_ENABLE_RUNTIMES)
 foreach(proj ${LLVM_ENABLE_RUNTIMES})
-  set(proj_dir "${CMAKE_CURRENT_SOURCE_DIR}/../${proj}")
+  string(TOUPPER "${proj}" canon_name)
+  STRING(REGEX REPLACE "-" "_" canon_name ${canon_name})
+  if(NOT LLVM_EXTERNAL_${canon_name}_SOURCE_DIR)
+    set(LLVM_EXTERNAL_${canon_name}_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../${proj}")
+  endif()
+  set(proj_dir "${LLVM_EXTERNAL_${canon_name}_SOURCE_DIR}")
   if(IS_DIRECTORY ${proj_dir} AND EXISTS ${proj_dir}/CMakeLists.txt)
     list(APPEND runtimes ${proj_dir})
   else()
     message(FATAL_ERROR "LLVM_ENABLE_RUNTIMES requests ${proj} but directory not found: ${proj_dir}")
   endif()
-  string(TOUPPER "${proj}" canon_name)
-  STRING(REGEX REPLACE "-" "_" canon_name ${canon_name})
-  set(LLVM_EXTERNAL_${canon_name}_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../${proj}")
 endforeach()
 
 function(runtime_register_component name)
@@ -85,7 +88,8 @@ include(CheckLibraryExists)
 include(LLVMCheckCompilerLinkerFlag)
 include(CheckCCompilerFlag)
 include(CheckCXXCompilerFlag)
-
+include(GetToolchainDirs)
+include(ExtendPath)
 
 # Determine whether we are in the runtimes/runtimes-bins directory of a
 # bootstrap build.
@@ -188,7 +192,7 @@ if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
 endif()
 
 # The NVPTX target needs to override linking to pass compiler flag checks.
-if("${LLVM_RUNTIMES_TARGET}" MATCHES "^nvptx")
+if("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^nvptx")
   set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -flto -c")
 endif()
 
@@ -235,6 +239,36 @@ if(CMAKE_C_COMPILER_ID MATCHES "Clang")
     message(WARNING "Failed to execute `${print_target_triple}` to normalize target triple.")
   endif()
 endif()
+
+# Determine output and install paths based on LLVM_TARGET_TRIPLE
+if(LLVM_TREE_AVAILABLE)
+  # Despite Clang in the name, get_clang_resource_dir does not depend on Clang
+  # being added to the build. Flang uses the same resource dir as Clang.
+  include(GetClangResourceDir)
+  get_clang_resource_dir(RUNTIMES_OUTPUT_RESOURCE_DIR PREFIX "${LLVM_LIBRARY_OUTPUT_INTDIR}/..")
+  get_clang_resource_dir(RUNTIMES_INSTALL_RESOURCE_PATH_DEFAULT)
+else()
+  # For the install prefix, still use the resource dir assuming the compilers
+  # looking for it (Clang, Flang) will be installed there using the same prefix.
+  # This is to not have a difference between bootstrapping and default/standalone runtimes
+  # builds.
+  set(RUNTIMES_OUTPUT_RESOURCE_DIR "${CMAKE_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX}/clang/${LLVM_VERSION_MAJOR}")
+  set(RUNTIMES_INSTALL_RESOURCE_PATH_DEFAULT "lib${LLVM_LIBDIR_SUFFIX}/clang/${LLVM_VERSION_MAJOR}")
+endif()
+
+# Determine build and install paths. The output paths are absolute, but the
+# install dirs are relative to CMAKE_INSTALL_PREFIX to be resolved by CMake.
+get_toolchain_library_subdir(toolchain_lib_subdir)
+extend_path(RUNTIMES_OUTPUT_RESOURCE_LIB_DIR "${RUNTIMES_OUTPUT_RESOURCE_DIR}" "${toolchain_lib_subdir}")
+
+set(RUNTIMES_INSTALL_RESOURCE_PATH "${RUNTIMES_INSTALL_RESOURCE_PATH_DEFAULT}" CACHE PATH "Path to install headers, runtime libraries, and Fortran modules to (default: Clang resource dir)")
+extend_path(RUNTIMES_INSTALL_RESOURCE_LIB_PATH "${RUNTIMES_INSTALL_RESOURCE_PATH}" "${toolchain_lib_subdir}")
+
+cmake_path(NORMAL_PATH RUNTIMES_OUTPUT_RESOURCE_DIR)
+cmake_path(NORMAL_PATH RUNTIMES_INSTALL_RESOURCE_PATH)
+cmake_path(NORMAL_PATH RUNTIMES_OUTPUT_RESOURCE_LIB_DIR)
+cmake_path(NORMAL_PATH RUNTIMES_INSTALL_RESOURCE_LIB_PATH)
+
 
 option(LLVM_INCLUDE_TESTS "Generate build targets for the runtimes unit tests." ON)
 option(LLVM_INCLUDE_DOCS "Generate build targets for the runtimes documentation." ON)

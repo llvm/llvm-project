@@ -238,6 +238,7 @@ PUNCTUATOR(greatergreater,      ">>")
 PUNCTUATOR(greaterequal,        ">=")
 PUNCTUATOR(greatergreaterequal, ">>=")
 PUNCTUATOR(caret,               "^")
+PUNCTUATOR(caretcaret,          "^^")
 PUNCTUATOR(caretequal,          "^=")
 PUNCTUATOR(pipe,                "|")
 PUNCTUATOR(pipepipe,            "||")
@@ -355,6 +356,10 @@ KEYWORD(__func__                    , KEYALL)
 KEYWORD(__objc_yes                  , KEYALL)
 KEYWORD(__objc_no                   , KEYALL)
 KEYWORD(__ptrauth                   , KEYALL)
+
+// Overflow behavior types
+KEYWORD(__ob_wrap                   , KEYALL)
+KEYWORD(__ob_trap                   , KEYALL)
 
 // C2y
 UNARY_EXPR_OR_TYPE_TRAIT(_Countof, CountOf, KEYNOCXX)

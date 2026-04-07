@@ -8,7 +8,8 @@
 
 // This test appears to be flaky on x86_64-darwin buildbots.
 // UNSUPPORTED: darwin
-
+//// This test is also flaky on the powerpc based buildbots.
+// UNSUPPORTED: ppc
 #include <pthread.h>
 #include <stdlib.h>
 

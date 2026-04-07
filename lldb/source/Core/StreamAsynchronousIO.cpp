@@ -16,7 +16,7 @@ using namespace lldb_private;
 
 StreamAsynchronousIO::StreamAsynchronousIO(
     Debugger &debugger, StreamAsynchronousIO::ForSTDOUT for_stdout)
-    : Stream(0, 4, eByteOrderBig, debugger.GetUseColor()), m_debugger(debugger),
+    : Stream(0, eByteOrderBig, debugger.GetUseColor()), m_debugger(debugger),
       m_data(), m_for_stdout(for_stdout) {}
 
 StreamAsynchronousIO::~StreamAsynchronousIO() {

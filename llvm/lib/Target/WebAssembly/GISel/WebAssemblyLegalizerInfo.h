@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 /// \file
 /// This file declares the targeting of the Machinelegalizer class for
-/// WebAssembly
+/// WebAssembly.
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_LIB_TARGET_WEBASSEMBLY_GISEL_WEBASSEMBLYMACHINELEGALIZER_H
@@ -19,7 +19,7 @@ namespace llvm {
 
 class WebAssemblySubtarget;
 
-/// This class provides the information for the BPF target legalizer for
+/// This class provides the information for the WebAssembly target legalizer for
 /// GlobalISel.
 class WebAssemblyLegalizerInfo : public LegalizerInfo {
 public:

@@ -492,8 +492,8 @@ namespace llvm {
 
     bool isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const override;
 
-    bool getTgtMemIntrinsic(IntrinsicInfo &Info, const CallBase &I,
-                            MachineFunction &MF,
+    void getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
+                            const CallBase &I, MachineFunction &MF,
                             unsigned Intrinsic) const override;
 
     /// It returns EVT::Other if the type should be determined using generic
@@ -736,6 +736,7 @@ namespace llvm {
                        EVT VT, SDValue V1, SDValue V2) const;
     SDValue LowerINSERT_VECTOR_ELT(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerINTRINSIC_WO_CHAIN(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerINTRINSIC_VOID(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerBSWAP(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerATOMIC_CMP_SWAP(SDValue Op, SelectionDAG &DAG) const;
@@ -890,7 +891,8 @@ namespace llvm {
     SDValue getRecipEstimate(SDValue Operand, SelectionDAG &DAG, int Enabled,
                              int &RefinementSteps) const override;
     SDValue getSqrtInputTest(SDValue Operand, SelectionDAG &DAG,
-                             const DenormalMode &Mode) const override;
+                             const DenormalMode &Mode,
+                             SDNodeFlags Flags = {}) const override;
     SDValue getSqrtResultForDenormInput(SDValue Operand,
                                         SelectionDAG &DAG) const override;
     unsigned combineRepeatedFPDivisors() const override;

@@ -247,6 +247,42 @@ S_FASTLINK (0x1167)
 S_INLINEES (0x1168)
 ^^^^^^^^^^^^^^^^^^^
 
+S_REGREL32_INDIR (0x1171)
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This encodes a variable at the location ``*($Register + Offset) + OffsetInUdt``.
+It's equivalent to the following DWARF location expression:
+
+.. code::
+
+   DW_OP_breg{corresponding DWARF register} {Offset}
+   DW_OP_deref
+   DW_OP_plus_uconst {OffsetInUdt}
+
+It's used in C++ 17 structured bindings for example:
+
+.. code:: cpp
+
+   struct Foo { int a, b; };
+
+   void fn() {
+     Foo f = {1, 2};
+     //  ╰─ S_REGREL32{ reg = rsp, offset = 0 }
+     auto &[x, y] = f;
+     //     │  ╰─ S_REGREL32_INDIR{ reg = rsp, offset = 8, offset-in-udt = 4, type = int }
+     //     ╰─ S_REGREL32_INDIR{ reg = rsp, offset = 8, offset-in-udt = 0, type = int }
+   }
+
+The ``S_REGREL32_INDIR`` symbol for ``y`` from above looks like this:
+
+
+============  ============  ============  ========  ========
+Offset        Type          OffsetInUdt   Register  Name
+============  ============  ============  ========  ========
+``08000000``  ``74000000``  ``04000000``  ``4F01``  ``7900``
+8             int           4             RSP       "a"
+============  ============  ============  ========  ========
+
 .. _module_and_global_symbols:
 
 Symbols which can go in either/both of the module info stream & global stream

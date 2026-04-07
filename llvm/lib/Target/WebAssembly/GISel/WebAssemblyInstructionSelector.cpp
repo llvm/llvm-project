@@ -279,8 +279,7 @@ WebAssemblyInstructionSelector::selectAddrOperands(LLT AddrType,
       MachineIRBuilder B(RootDef);
 
       auto MIB = B.buildInstr(ConstOpc).addDef(Reg).addImm(0);
-      assert(constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI) &&
-             "Couldn't constrain registers for instruction");
+      constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);
       Addr.setReg(Reg);
     }
   }
@@ -568,8 +567,7 @@ bool WebAssemblyInstructionSelector::select(MachineInstr &I) {
     // eliminated) if possible by WebAssemblyFixBrTableDefaults.
     MIB.addMBB(*MBBs.begin());
 
-    assert(constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI) &&
-           "Couldn't constrain registers for instruction");
+    constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);
 
     I.eraseFromParent();
     return true;
@@ -581,8 +579,7 @@ bool WebAssemblyInstructionSelector::select(MachineInstr &I) {
     auto PointerWidth = MF.getDataLayout().getPointerSizeInBits();
     I.setDesc(TII.get(PointerWidth == 64 ? WebAssembly::ADD_I64
                                          : WebAssembly::ADD_I32));
-    assert(constrainSelectedInstRegOperands(I, TII, TRI, RBI) &&
-           "Couldn't constrain registers for instruction");
+    constrainSelectedInstRegOperands(I, TII, TRI, RBI);
 
     return true;
   }
@@ -592,8 +589,7 @@ bool WebAssemblyInstructionSelector::select(MachineInstr &I) {
 
     I.setDesc(TII.get(PointerWidth == 64 ? WebAssembly::COPY_I64
                                          : WebAssembly::COPY_I32));
-    assert(constrainSelectedInstRegOperands(I, TII, TRI, RBI) &&
-           "Couldn't constrain registers for instruction");
+    constrainSelectedInstRegOperands(I, TII, TRI, RBI);
 
     return true;
   }
@@ -603,8 +599,7 @@ bool WebAssemblyInstructionSelector::select(MachineInstr &I) {
 
     I.setDesc(TII.get(PointerWidth == 64 ? WebAssembly::COPY_I64
                                          : WebAssembly::COPY_I32));
-    assert(constrainSelectedInstRegOperands(I, TII, TRI, RBI) &&
-           "Couldn't constrain registers for instruction");
+    constrainSelectedInstRegOperands(I, TII, TRI, RBI);
 
     return true;
   }
@@ -613,8 +608,7 @@ bool WebAssemblyInstructionSelector::select(MachineInstr &I) {
            "G_PTRMASK selection fell-through with non-pointer?");
 
     I.setDesc(TII.get(PtrIsI64 ? WebAssembly::AND_I64 : WebAssembly::AND_I32));
-    assert(constrainSelectedInstRegOperands(I, TII, TRI, RBI) &&
-           "Couldn't constrain registers for instruction");
+    constrainSelectedInstRegOperands(I, TII, TRI, RBI);
 
     return true;
   }
@@ -623,8 +617,7 @@ bool WebAssemblyInstructionSelector::select(MachineInstr &I) {
 
     I.setDesc(
         TII.get(PtrIsI64 ? WebAssembly::COPY_I64 : WebAssembly::COPY_I32));
-    assert(constrainSelectedInstRegOperands(I, TII, TRI, RBI) &&
-           "Couldn't constrain registers for instruction");
+    constrainSelectedInstRegOperands(I, TII, TRI, RBI);
     return true;
   }
   case G_GLOBAL_VALUE: {
@@ -674,8 +667,7 @@ bool WebAssemblyInstructionSelector::select(MachineInstr &I) {
                 .addDef(I.getOperand(0).getReg())
                 .addReg(MemBase)
                 .addReg(Offset);
-        assert(constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI) &&
-               "Couldn't constrain registers for instruction");
+        constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);
 
         I.eraseFromParent();
         return true;
@@ -692,8 +684,7 @@ bool WebAssemblyInstructionSelector::select(MachineInstr &I) {
 
     I.setDesc(TII.get(NewOpc));
     I.getOperand(1).setTargetFlags(OperandFlags);
-    assert(constrainSelectedInstRegOperands(I, TII, TRI, RBI) &&
-           "Couldn't constrain registers for instruction");
+    constrainSelectedInstRegOperands(I, TII, TRI, RBI);
 
     return true;
   }
@@ -715,8 +706,7 @@ bool WebAssemblyInstructionSelector::select(MachineInstr &I) {
                                ->getVarargBufferVreg()) // value
                    .addMemOperand(NewMMO);
 
-    assert(constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI) &&
-           "Couldn't constrain registers for instruction");
+    constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);
 
     I.eraseFromParent();
 

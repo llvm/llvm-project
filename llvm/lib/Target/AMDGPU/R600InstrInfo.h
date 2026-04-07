@@ -326,7 +326,7 @@ public:
 
 namespace R600 {
 
-int getLDSNoRetOp(uint16_t Opcode);
+int32_t getLDSNoRetOp(uint32_t Opcode);
 
 } //End namespace AMDGPU
 

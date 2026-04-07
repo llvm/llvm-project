@@ -45,7 +45,7 @@ protected:
 
 public:
   WebAssemblyO0PreLegalizerCombinerImpl(
-      MachineFunction &MF, CombinerInfo &CInfo, const TargetPassConfig *TPC,
+      MachineFunction &MF, CombinerInfo &CInfo,
       GISelValueTracking &VT, GISelCSEInfo *CSEInfo,
       const WebAssemblyO0PreLegalizerCombinerImplRuleConfig &RuleConfig,
       const WebAssemblySubtarget &STI);
@@ -65,11 +65,11 @@ private:
 #undef GET_GICOMBINER_IMPL
 
 WebAssemblyO0PreLegalizerCombinerImpl::WebAssemblyO0PreLegalizerCombinerImpl(
-    MachineFunction &MF, CombinerInfo &CInfo, const TargetPassConfig *TPC,
+    MachineFunction &MF, CombinerInfo &CInfo,
     GISelValueTracking &VT, GISelCSEInfo *CSEInfo,
     const WebAssemblyO0PreLegalizerCombinerImplRuleConfig &RuleConfig,
     const WebAssemblySubtarget &STI)
-    : Combiner(MF, CInfo, TPC, &VT, CSEInfo),
+    : Combiner(MF, CInfo, &VT, CSEInfo),
       Helper(Observer, B, /*IsPreLegalize*/ true, &VT), RuleConfig(RuleConfig),
       STI(STI),
 #define GET_GICOMBINER_CONSTRUCTOR_INITS
@@ -120,8 +120,7 @@ bool WebAssemblyO0PreLegalizerCombiner::runOnMachineFunction(
     MachineFunction &MF) {
   if (MF.getProperties().hasFailedISel())
     return false;
-  auto &TPC = getAnalysis<TargetPassConfig>();
-
+    
   const Function &F = MF.getFunction();
   GISelValueTracking *VT =
       &getAnalysis<GISelValueTrackingAnalysisLegacy>().get(MF);
@@ -135,7 +134,7 @@ bool WebAssemblyO0PreLegalizerCombiner::runOnMachineFunction(
   // at the cost of possibly missing optimizations. See PR#94291 for details.
   CInfo.MaxIterations = 1;
 
-  WebAssemblyO0PreLegalizerCombinerImpl Impl(MF, CInfo, &TPC, *VT,
+  WebAssemblyO0PreLegalizerCombinerImpl Impl(MF, CInfo, *VT,
                                              /*CSEInfo*/ nullptr, RuleConfig,
                                              ST);
   return Impl.combineMachineInstrs();

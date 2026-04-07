@@ -31,6 +31,19 @@
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/Support/CommandLine.h"
+
+static llvm::cl::opt<bool> useAccReductionCombine(
+    "openacc-use-reduction-combine",
+    llvm::cl::desc("Whether to generate acc.reduction_combine. Does not "
+                   "control reduction for MIN/MAX and logical reductions."),
+    llvm::cl::init(false));
+
+static llvm::cl::opt<bool> useAccReductionCombineAll(
+    "openacc-use-reduction-combine-all",
+    llvm::cl::desc("Whether to generate acc.reduction_combine for all types "
+                   "and operators"),
+    llvm::cl::init(false));
 
 namespace fir::acc {
 
@@ -227,48 +240,53 @@ generateSeqTyAccBounds(fir::SequenceType seqType, mlir::Value var,
   fir::FirOpBuilder firBuilder(builder, var.getDefiningOp());
   mlir::Location loc = var.getLoc();
 
-  if (seqType.hasDynamicExtents() || seqType.hasUnknownShape()) {
-    if (auto boxAddr =
-            mlir::dyn_cast_if_present<fir::BoxAddrOp>(var.getDefiningOp())) {
-      mlir::Value box = boxAddr.getVal();
-      auto res =
-          hlfir::translateToExtendedValue(loc, firBuilder, hlfir::Entity(box));
-      fir::ExtendedValue exv = res.first;
-      mlir::Value boxRef = box;
-      if (auto boxPtr = mlir::cast<mlir::acc::MappableType>(box.getType())
-                            .getVarPtr(box)) {
-        boxRef = boxPtr;
+  // If [hl]fir.declare is visible, extract the bounds from the declaration's
+  // shape (if it is provided).
+  if (mlir::isa<hlfir::DeclareOp, fir::DeclareOp>(var.getDefiningOp())) {
+    mlir::Value zero =
+        firBuilder.createIntegerConstant(loc, builder.getIndexType(), 0);
+    mlir::Value one =
+        firBuilder.createIntegerConstant(loc, builder.getIndexType(), 1);
+
+    mlir::Value shape;
+    if (auto declareOp =
+            mlir::dyn_cast_if_present<fir::DeclareOp>(var.getDefiningOp()))
+      shape = declareOp.getShape();
+    else if (auto declareOp = mlir::dyn_cast_if_present<hlfir::DeclareOp>(
+                 var.getDefiningOp()))
+      shape = declareOp.getShape();
+
+    const bool strideIncludeLowerExtent = true;
+
+    llvm::SmallVector<mlir::Value> accBounds;
+    mlir::Operation *anyShapeOp = shape ? shape.getDefiningOp() : nullptr;
+    if (auto shapeOp = mlir::dyn_cast_if_present<fir::ShapeOp>(anyShapeOp)) {
+      mlir::Value cummulativeExtent = one;
+      for (auto extent : shapeOp.getExtents()) {
+        mlir::Value upperbound =
+            mlir::arith::SubIOp::create(builder, loc, extent, one);
+        mlir::Value stride = one;
+        if (strideIncludeLowerExtent) {
+          stride = cummulativeExtent;
+          cummulativeExtent = mlir::arith::MulIOp::create(
+              builder, loc, cummulativeExtent, extent);
+        }
+        auto accBound = mlir::acc::DataBoundsOp::create(
+            builder, loc, mlir::acc::DataBoundsType::get(builder.getContext()),
+            /*lowerbound=*/zero, /*upperbound=*/upperbound,
+            /*extent=*/extent, /*stride=*/stride, /*strideInBytes=*/false,
+            /*startIdx=*/one);
+        accBounds.push_back(accBound);
       }
-      // TODO: Handle Fortran optional.
-      const mlir::Value isPresent;
-      fir::factory::AddrAndBoundsInfo info(box, boxRef, isPresent,
-                                           box.getType());
-      return fir::factory::genBoundsOpsFromBox<mlir::acc::DataBoundsOp,
-                                               mlir::acc::DataBoundsType>(
-          firBuilder, loc, exv, info);
-    }
-
-    if (mlir::isa<hlfir::DeclareOp, fir::DeclareOp>(var.getDefiningOp())) {
-      mlir::Value zero =
-          firBuilder.createIntegerConstant(loc, builder.getIndexType(), 0);
-      mlir::Value one =
-          firBuilder.createIntegerConstant(loc, builder.getIndexType(), 1);
-
-      mlir::Value shape;
-      if (auto declareOp =
-              mlir::dyn_cast_if_present<fir::DeclareOp>(var.getDefiningOp()))
-        shape = declareOp.getShape();
-      else if (auto declareOp = mlir::dyn_cast_if_present<hlfir::DeclareOp>(
-                   var.getDefiningOp()))
-        shape = declareOp.getShape();
-
-      const bool strideIncludeLowerExtent = true;
-
-      llvm::SmallVector<mlir::Value> accBounds;
-      if (auto shapeOp =
-              mlir::dyn_cast_if_present<fir::ShapeOp>(shape.getDefiningOp())) {
-        mlir::Value cummulativeExtent = one;
-        for (auto extent : shapeOp.getExtents()) {
+    } else if (auto shapeShiftOp =
+                   mlir::dyn_cast_if_present<fir::ShapeShiftOp>(anyShapeOp)) {
+      mlir::Value lowerbound;
+      mlir::Value cummulativeExtent = one;
+      for (auto [idx, val] : llvm::enumerate(shapeShiftOp.getPairs())) {
+        if (idx % 2 == 0) {
+          lowerbound = val;
+        } else {
+          mlir::Value extent = val;
           mlir::Value upperbound =
               mlir::arith::SubIOp::create(builder, loc, extent, one);
           mlir::Value stride = one;
@@ -282,40 +300,48 @@ generateSeqTyAccBounds(fir::SequenceType seqType, mlir::Value var,
               mlir::acc::DataBoundsType::get(builder.getContext()),
               /*lowerbound=*/zero, /*upperbound=*/upperbound,
               /*extent=*/extent, /*stride=*/stride, /*strideInBytes=*/false,
-              /*startIdx=*/one);
+              /*startIdx=*/lowerbound);
           accBounds.push_back(accBound);
         }
-      } else if (auto shapeShiftOp =
-                     mlir::dyn_cast_if_present<fir::ShapeShiftOp>(
-                         shape.getDefiningOp())) {
-        mlir::Value lowerbound;
-        mlir::Value cummulativeExtent = one;
-        for (auto [idx, val] : llvm::enumerate(shapeShiftOp.getPairs())) {
-          if (idx % 2 == 0) {
-            lowerbound = val;
-          } else {
-            mlir::Value extent = val;
-            mlir::Value upperbound =
-                mlir::arith::SubIOp::create(builder, loc, extent, one);
-            mlir::Value stride = one;
-            if (strideIncludeLowerExtent) {
-              stride = cummulativeExtent;
-              cummulativeExtent = mlir::arith::MulIOp::create(
-                  builder, loc, cummulativeExtent, extent);
-            }
-            auto accBound = mlir::acc::DataBoundsOp::create(
-                builder, loc,
-                mlir::acc::DataBoundsType::get(builder.getContext()),
-                /*lowerbound=*/zero, /*upperbound=*/upperbound,
-                /*extent=*/extent, /*stride=*/stride, /*strideInBytes=*/false,
-                /*startIdx=*/lowerbound);
-            accBounds.push_back(accBound);
-          }
-        }
       }
+    }
 
-      if (!accBounds.empty())
-        return accBounds;
+    if (!accBounds.empty())
+      return accBounds;
+  }
+
+  if (seqType.hasDynamicExtents() || seqType.hasUnknownShape()) {
+    mlir::Value box;
+    bool mayBeOptional = false;
+    if (auto boxAddr =
+            mlir::dyn_cast_if_present<fir::BoxAddrOp>(var.getDefiningOp())) {
+      box = boxAddr.getVal();
+      // Since fir.box_addr already accesses the box, we do not care
+      // checking if it is optional.
+    } else if (mlir::isa<fir::BaseBoxType>(var.getType())) {
+      box = var;
+      mayBeOptional = fir::mayBeAbsentBox(box);
+    }
+
+    if (box) {
+      auto res =
+          hlfir::translateToExtendedValue(loc, firBuilder, hlfir::Entity(box));
+      fir::ExtendedValue exv = res.first;
+      mlir::Value boxRef = box;
+      if (auto boxPtr =
+              mlir::cast<mlir::acc::MappableType>(box.getType()).getVarPtr(box))
+        boxRef = boxPtr;
+
+      mlir::Value isPresent =
+          !mayBeOptional ? mlir::Value{}
+                         : fir::IsPresentOp::create(builder, loc,
+                                                    builder.getI1Type(), box);
+
+      fir::factory::AddrAndBoundsInfo info(box, boxRef, isPresent,
+                                           box.getType());
+      return fir::factory::genBoundsOpsFromBox<mlir::acc::DataBoundsOp,
+                                               mlir::acc::DataBoundsType>(
+          firBuilder, loc, exv, info);
     }
 
     assert(false && "array with unknown dimension expected to have descriptor");
@@ -516,6 +542,30 @@ template mlir::acc::VariableTypeCategory
 OpenACCMappableModel<fir::PointerType>::getTypeCategory(mlir::Type type,
                                                         mlir::Value var) const;
 
+template <typename Ty>
+mlir::acc::VariableInfoAttr OpenACCMappableModel<Ty>::genPrivateVariableInfo(
+    mlir::Type type, mlir::TypedValue<mlir::acc::MappableType> var) const {
+  hlfir::Entity entity{var};
+  return fir::OpenACCFortranVariableInfoAttr::get(var.getContext(),
+                                                  entity.mayBeOptional());
+}
+
+template mlir::acc::VariableInfoAttr
+OpenACCMappableModel<fir::BaseBoxType>::genPrivateVariableInfo(
+    mlir::Type type, mlir::TypedValue<mlir::acc::MappableType> var) const;
+
+template mlir::acc::VariableInfoAttr
+OpenACCMappableModel<fir::ReferenceType>::genPrivateVariableInfo(
+    mlir::Type type, mlir::TypedValue<mlir::acc::MappableType> var) const;
+
+template mlir::acc::VariableInfoAttr
+OpenACCMappableModel<fir::HeapType>::genPrivateVariableInfo(
+    mlir::Type type, mlir::TypedValue<mlir::acc::MappableType> var) const;
+
+template mlir::acc::VariableInfoAttr
+OpenACCMappableModel<fir::PointerType>::genPrivateVariableInfo(
+    mlir::Type type, mlir::TypedValue<mlir::acc::MappableType> var) const;
+
 static mlir::acc::VariableTypeCategory
 categorizePointee(mlir::Type pointer,
                   mlir::TypedValue<mlir::acc::PointerLikeType> varPtr,
@@ -691,7 +741,8 @@ template <typename Ty>
 mlir::Value OpenACCMappableModel<Ty>::generatePrivateInit(
     mlir::Type type, mlir::OpBuilder &mlirBuilder, mlir::Location loc,
     mlir::TypedValue<mlir::acc::MappableType> var, llvm::StringRef varName,
-    mlir::ValueRange bounds, mlir::Value initVal, bool &needsDestroy) const {
+    mlir::ValueRange bounds, mlir::Value initVal, mlir::acc::VariableInfoAttr,
+    bool &needsDestroy) const {
   mlir::ModuleOp mod = mlirBuilder.getInsertionBlock()
                            ->getParent()
                            ->getParentOfType<mlir::ModuleOp>();
@@ -874,31 +925,35 @@ template mlir::Value
 OpenACCMappableModel<fir::BaseBoxType>::generatePrivateInit(
     mlir::Type type, mlir::OpBuilder &builder, mlir::Location loc,
     mlir::TypedValue<mlir::acc::MappableType> var, llvm::StringRef varName,
-    mlir::ValueRange extents, mlir::Value initVal, bool &needsDestroy) const;
+    mlir::ValueRange extents, mlir::Value initVal,
+    mlir::acc::VariableInfoAttr varInfo, bool &needsDestroy) const;
 
 template mlir::Value
 OpenACCMappableModel<fir::ReferenceType>::generatePrivateInit(
     mlir::Type type, mlir::OpBuilder &builder, mlir::Location loc,
     mlir::TypedValue<mlir::acc::MappableType> var, llvm::StringRef varName,
-    mlir::ValueRange extents, mlir::Value initVal, bool &needsDestroy) const;
+    mlir::ValueRange extents, mlir::Value initVal,
+    mlir::acc::VariableInfoAttr varInfo, bool &needsDestroy) const;
 
 template mlir::Value OpenACCMappableModel<fir::HeapType>::generatePrivateInit(
     mlir::Type type, mlir::OpBuilder &builder, mlir::Location loc,
     mlir::TypedValue<mlir::acc::MappableType> var, llvm::StringRef varName,
-    mlir::ValueRange extents, mlir::Value initVal, bool &needsDestroy) const;
+    mlir::ValueRange extents, mlir::Value initVal,
+    mlir::acc::VariableInfoAttr varInfo, bool &needsDestroy) const;
 
 template mlir::Value
 OpenACCMappableModel<fir::PointerType>::generatePrivateInit(
     mlir::Type type, mlir::OpBuilder &builder, mlir::Location loc,
     mlir::TypedValue<mlir::acc::MappableType> var, llvm::StringRef varName,
-    mlir::ValueRange extents, mlir::Value initVal, bool &needsDestroy) const;
+    mlir::ValueRange extents, mlir::Value initVal,
+    mlir::acc::VariableInfoAttr varInfo, bool &needsDestroy) const;
 
 template <typename Ty>
 bool OpenACCMappableModel<Ty>::generateCopy(
     mlir::Type type, mlir::OpBuilder &mlirBuilder, mlir::Location loc,
     mlir::TypedValue<mlir::acc::MappableType> src,
-    mlir::TypedValue<mlir::acc::MappableType> dest,
-    mlir::ValueRange bounds) const {
+    mlir::TypedValue<mlir::acc::MappableType> dest, mlir::ValueRange bounds,
+    mlir::acc::VariableInfoAttr varInfo) const {
   mlir::ModuleOp mod =
       mlirBuilder.getBlock()->getParent()->getParentOfType<mlir::ModuleOp>();
   assert(mod && "failed to retrieve parent module");
@@ -935,19 +990,23 @@ bool OpenACCMappableModel<Ty>::generateCopy(
 template bool OpenACCMappableModel<fir::BaseBoxType>::generateCopy(
     mlir::Type, mlir::OpBuilder &, mlir::Location,
     mlir::TypedValue<mlir::acc::MappableType>,
-    mlir::TypedValue<mlir::acc::MappableType>, mlir::ValueRange) const;
+    mlir::TypedValue<mlir::acc::MappableType>, mlir::ValueRange,
+    mlir::acc::VariableInfoAttr) const;
 template bool OpenACCMappableModel<fir::ReferenceType>::generateCopy(
     mlir::Type, mlir::OpBuilder &, mlir::Location,
     mlir::TypedValue<mlir::acc::MappableType>,
-    mlir::TypedValue<mlir::acc::MappableType>, mlir::ValueRange) const;
+    mlir::TypedValue<mlir::acc::MappableType>, mlir::ValueRange,
+    mlir::acc::VariableInfoAttr) const;
 template bool OpenACCMappableModel<fir::PointerType>::generateCopy(
     mlir::Type, mlir::OpBuilder &, mlir::Location,
     mlir::TypedValue<mlir::acc::MappableType>,
-    mlir::TypedValue<mlir::acc::MappableType>, mlir::ValueRange) const;
+    mlir::TypedValue<mlir::acc::MappableType>, mlir::ValueRange,
+    mlir::acc::VariableInfoAttr) const;
 template bool OpenACCMappableModel<fir::HeapType>::generateCopy(
     mlir::Type, mlir::OpBuilder &, mlir::Location,
     mlir::TypedValue<mlir::acc::MappableType>,
-    mlir::TypedValue<mlir::acc::MappableType>, mlir::ValueRange) const;
+    mlir::TypedValue<mlir::acc::MappableType>, mlir::ValueRange,
+    mlir::acc::VariableInfoAttr) const;
 
 template <typename Op>
 static mlir::Value genLogicalCombiner(fir::FirOpBuilder &builder,
@@ -999,11 +1058,35 @@ static mlir::Value genScalarCombiner(fir::FirOpBuilder &builder,
     TODO(loc, "reduction mul type");
   }
 
-  if (op == mlir::acc::ReductionOperator::AccMin)
-    return fir::genMin(builder, loc, {value1, value2});
+  if (op == mlir::acc::ReductionOperator::AccMin ||
+      op == mlir::acc::ReductionOperator::AccMinimumf ||
+      op == mlir::acc::ReductionOperator::AccMinnumf) {
+    Fortran::common::FPMaxminBehavior savedMode = builder.getFPMaxminBehavior();
+    if (op == mlir::acc::ReductionOperator::AccMinimumf)
+      builder.setFPMaxminBehavior(Fortran::common::FPMaxminBehavior::Extremum);
+    else if (op == mlir::acc::ReductionOperator::AccMinnumf)
+      builder.setFPMaxminBehavior(
+          Fortran::common::FPMaxminBehavior::ExtremeNum);
 
-  if (op == mlir::acc::ReductionOperator::AccMax)
-    return fir::genMax(builder, loc, {value1, value2});
+    mlir::Value result = fir::genMin(builder, loc, {value1, value2});
+    builder.setFPMaxminBehavior(savedMode);
+    return result;
+  }
+
+  if (op == mlir::acc::ReductionOperator::AccMax ||
+      op == mlir::acc::ReductionOperator::AccMaximumf ||
+      op == mlir::acc::ReductionOperator::AccMaxnumf) {
+    Fortran::common::FPMaxminBehavior savedMode = builder.getFPMaxminBehavior();
+    if (op == mlir::acc::ReductionOperator::AccMaximumf)
+      builder.setFPMaxminBehavior(Fortran::common::FPMaxminBehavior::Extremum);
+    else if (op == mlir::acc::ReductionOperator::AccMaxnumf)
+      builder.setFPMaxminBehavior(
+          Fortran::common::FPMaxminBehavior::ExtremeNum);
+
+    mlir::Value result = fir::genMax(builder, loc, {value1, value2});
+    builder.setFPMaxminBehavior(savedMode);
+    return result;
+  }
 
   if (op == mlir::acc::ReductionOperator::AccIand)
     return mlir::arith::AndIOp::create(builder, loc, value1, value2);
@@ -1032,6 +1115,25 @@ static mlir::Value genScalarCombiner(fir::FirOpBuilder &builder,
   TODO(loc, "reduction operator");
 }
 
+static bool useAccReductionCombineOp(mlir::Type elementType,
+                                     mlir::acc::ReductionOperator op) {
+  if (useAccReductionCombineAll)
+    return true;
+  if (!useAccReductionCombine)
+    return false;
+  // LOGICAL operators do not have mlir operators and requires FIR specific
+  // logic to interpret the TRUE and FALSE values from the storage (implemented
+  // in fir.convert to i1).
+  if (!llvm::isa<mlir::IntegerType, mlir::FloatType, mlir::ComplexType>(
+          elementType))
+    return false;
+  // MIN/MAX for floating point can have different edge-case behaviors (NANs).
+  // Currently the mlir operator does not match the behavior implemented by
+  // flang.
+  return op != mlir::acc::ReductionOperator::AccMax &&
+         op != mlir::acc::ReductionOperator::AccMin;
+}
+
 template <typename Ty>
 bool OpenACCMappableModel<Ty>::generateCombiner(
     mlir::Type type, mlir::OpBuilder &mlirBuilder, mlir::Location loc,
@@ -1056,11 +1158,25 @@ bool OpenACCMappableModel<Ty>::generateCombiner(
   }
 
   mlir::Type elementType = fir::getFortranElementType(dest.getType());
-  auto genKernel = [&](mlir::Location l, fir::FirOpBuilder &b,
-                       hlfir::Entity srcElementValue,
-                       hlfir::Entity destElementValue) -> hlfir::Entity {
-    return hlfir::Entity{genScalarCombiner(builder, loc, op, elementType,
-                                           srcElementValue, destElementValue)};
+  auto genKernel =
+      [&](mlir::Location l, fir::FirOpBuilder &b, hlfir::Entity destElementAddr,
+          hlfir::Entity srcElementAddr, mlir::ArrayAttr accessGroups) -> void {
+    assert(!accessGroups && "access groups not expected in acc reductions");
+    if (useAccReductionCombineOp(elementType, op)) {
+      mlir::acc::ReductionCombineOp::create(builder, loc, destElementAddr,
+                                            srcElementAddr, op);
+      return;
+    }
+    hlfir::Entity srcElementValue =
+        hlfir::loadTrivialScalar(loc, builder, srcElementAddr);
+    hlfir::Entity destElementValue =
+        hlfir::loadTrivialScalar(loc, builder, destElementAddr);
+    hlfir::Entity combined(genScalarCombiner(
+        builder, loc, op, elementType, destElementValue, srcElementValue));
+    hlfir::AssignOp::create(builder, loc, combined, destElementAddr,
+                            /*realloc=*/false,
+                            /*keep_lhs_length_if_realloc=*/false,
+                            /*temporary_lhs=*/false);
   };
   hlfir::genNoAliasAssignment(loc, builder, srcSection, destSection,
                               /*emitWorkshareLoop=*/false,
@@ -1092,7 +1208,8 @@ template bool OpenACCMappableModel<fir::HeapType>::generateCombiner(
 template <typename Ty>
 bool OpenACCMappableModel<Ty>::generatePrivateDestroy(
     mlir::Type type, mlir::OpBuilder &mlirBuilder, mlir::Location loc,
-    mlir::Value privatized, mlir::ValueRange bounds) const {
+    mlir::Value privatized, mlir::ValueRange bounds,
+    mlir::acc::VariableInfoAttr varInfo) const {
   hlfir::Entity inputVar = hlfir::Entity{privatized};
   mlir::ModuleOp mod =
       mlirBuilder.getBlock()->getParent()->getParentOfType<mlir::ModuleOp>();
@@ -1127,16 +1244,20 @@ bool OpenACCMappableModel<Ty>::generatePrivateDestroy(
 
 template bool OpenACCMappableModel<fir::BaseBoxType>::generatePrivateDestroy(
     mlir::Type type, mlir::OpBuilder &builder, mlir::Location loc,
-    mlir::Value privatized, mlir::ValueRange bounds) const;
+    mlir::Value privatized, mlir::ValueRange bounds,
+    mlir::acc::VariableInfoAttr varInfo) const;
 template bool OpenACCMappableModel<fir::ReferenceType>::generatePrivateDestroy(
     mlir::Type type, mlir::OpBuilder &builder, mlir::Location loc,
-    mlir::Value privatized, mlir::ValueRange bounds) const;
+    mlir::Value privatized, mlir::ValueRange bounds,
+    mlir::acc::VariableInfoAttr varInfo) const;
 template bool OpenACCMappableModel<fir::HeapType>::generatePrivateDestroy(
     mlir::Type type, mlir::OpBuilder &builder, mlir::Location loc,
-    mlir::Value privatized, mlir::ValueRange bounds) const;
+    mlir::Value privatized, mlir::ValueRange bounds,
+    mlir::acc::VariableInfoAttr varInfo) const;
 template bool OpenACCMappableModel<fir::PointerType>::generatePrivateDestroy(
     mlir::Type type, mlir::OpBuilder &builder, mlir::Location loc,
-    mlir::Value privatized, mlir::ValueRange bounds) const;
+    mlir::Value privatized, mlir::ValueRange bounds,
+    mlir::acc::VariableInfoAttr varInfo) const;
 
 template <typename Ty>
 mlir::Value OpenACCPointerLikeModel<Ty>::genAllocate(

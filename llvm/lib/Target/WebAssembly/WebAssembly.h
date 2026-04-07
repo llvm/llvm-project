@@ -34,6 +34,19 @@ ModulePass *createWebAssemblyFixFunctionBitcasts();
 FunctionPass *createWebAssemblyOptimizeReturned();
 FunctionPass *createWebAssemblyLowerRefTypesIntPtrConv();
 FunctionPass *createWebAssemblyRefTypeMem2Local();
+FunctionPass *createWebAssemblyReduceToAnyAllTrue(WebAssemblyTargetMachine &TM);
+
+// GlobalISel
+InstructionSelector *
+createWebAssemblyInstructionSelector(const WebAssemblyTargetMachine &,
+                                     const WebAssemblySubtarget &,
+                                     const WebAssemblyRegisterBankInfo &);
+
+FunctionPass *createWebAssemblyPostLegalizerCombiner();
+void initializeWebAssemblyPostLegalizerCombinerPass(PassRegistry &);
+
+FunctionPass *createWebAssemblyPreLegalizerCombiner();
+void initializeWebAssemblyPreLegalizerCombinerPass(PassRegistry &);
 
 // GlobalISel
 InstructionSelector *
@@ -72,6 +85,7 @@ FunctionPass *createWebAssemblyCFGStackify();
 FunctionPass *createWebAssemblyExplicitLocals();
 FunctionPass *createWebAssemblyLowerBrUnless();
 FunctionPass *createWebAssemblyRegNumbering();
+FunctionPass *createWebAssemblyVecReduce();
 FunctionPass *createWebAssemblyDebugFixup();
 FunctionPass *createWebAssemblyPeephole();
 ModulePass *createWebAssemblyMCLowerPrePass();

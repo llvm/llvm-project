@@ -78,6 +78,30 @@ define float @ret_fmuladd_different_same_arg_positive_addend(float noundef %arg0
   ret float %call
 }
 
+define half @ret_fma__square_maybe_undef__pos2(half %unknown) {
+; CHECK-LABEL: define nofpclass(ninf nsub nnorm) half @ret_fma__square_maybe_undef__pos2
+; CHECK-SAME: (half [[UNKNOWN:%.*]]) {
+; CHECK-NEXT:    [[POS2:%.*]] = call half @returns_positive_or_nan()
+; CHECK-NEXT:    [[RESULT:%.*]] = call nofpclass(ninf nsub nnorm) half @llvm.fma.f16(half [[UNKNOWN]], half [[UNKNOWN]], half [[POS2]])
+; CHECK-NEXT:    ret half [[RESULT]]
+;
+  %pos2 = call half @returns_positive_or_nan()
+  %result = call half @llvm.fma.f16(half %unknown, half %unknown, half %pos2)
+  ret half %result
+}
+
+define half @ret_fma__square__pos2(half noundef %unknown) {
+; CHECK-LABEL: define nofpclass(ninf nsub nnorm) half @ret_fma__square__pos2
+; CHECK-SAME: (half noundef [[UNKNOWN:%.*]]) {
+; CHECK-NEXT:    [[POS2:%.*]] = call half @returns_positive_or_nan()
+; CHECK-NEXT:    [[RESULT:%.*]] = call nofpclass(ninf nsub nnorm) half @llvm.fma.f16(half noundef [[UNKNOWN]], half noundef [[UNKNOWN]], half [[POS2]])
+; CHECK-NEXT:    ret half [[RESULT]]
+;
+  %pos2 = call half @returns_positive_or_nan()
+  %result = call half @llvm.fma.f16(half %unknown, half %unknown, half %pos2)
+  ret half %result
+}
+
 ;---------------------------------------------------------------------
 ; Sign bit permutations
 ;---------------------------------------------------------------------

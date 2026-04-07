@@ -487,18 +487,18 @@ yield
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
 # CHECK-NEXT:  1      1     1.00                        adc	r0, r1, #0
 # CHECK-NEXT:  1      1     1.00                        adcs	r0, r1, #0
-# CHECK-NEXT:  1      1     1.00                  U     adcs	r0, r1
+# CHECK-NEXT:  1      1     1.00                        adcs	r0, r1
 # CHECK-NEXT:  1      1     1.00                        adc.w	r0, r1, r2
 # CHECK-NEXT:  1      1     1.00                        adcs.w	r0, r1, r2
 # CHECK-NEXT:  1      2     1.00                        adc.w	r0, r1, r2, lsl #1
 # CHECK-NEXT:  1      2     1.00                        adcs.w	r0, r1, r2, lsl #1
 # CHECK-NEXT:  1      1     0.50                        add.w	r0, sp, #1
-# CHECK-NEXT:  1      1     1.00                  U     add.w	sp, sp, #1
+# CHECK-NEXT:  1      1     1.00                        add.w	sp, sp, #1
 # CHECK-NEXT:  1      1     0.50                        add.w	r0, sp, #1
 # CHECK-NEXT:  1      1     0.50                        adds.w	r0, sp, #1
 # CHECK-NEXT:  1      1     1.00                        addw	r0, sp, #1
-# CHECK-NEXT:  1      1     1.00                  U     add	r0, sp, r0
-# CHECK-NEXT:  1      1     1.00                  U     add	sp, r1
+# CHECK-NEXT:  1      1     1.00                        add	r0, sp, r0
+# CHECK-NEXT:  1      1     1.00                        add	sp, r1
 # CHECK-NEXT:  1      1     1.00                        add.w	r0, sp, r1
 # CHECK-NEXT:  1      1     1.00                        adds.w	r0, sp, r1
 # CHECK-NEXT:  1      2     1.00                        add.w	r0, sp, r1, lsl #1
@@ -514,9 +514,9 @@ yield
 # CHECK-NEXT:  1      1     1.00                        adds.w	r0, r1, r2
 # CHECK-NEXT:  1      2     1.00                        add.w	r0, r1, r2, lsl #1
 # CHECK-NEXT:  1      2     1.00                        adds.w	r0, r1, r2, lsl #1
-# CHECK-NEXT:  1      1     1.00                  U     adr.w	r0, #-6
-# CHECK-NEXT:  1      1     1.00                  U     adr.w	r8, #-6
-# CHECK-NEXT:  1      1     1.00                  U     adr.w	r0, #-6
+# CHECK-NEXT:  1      1     1.00                        adr.w	r0, #-6
+# CHECK-NEXT:  1      1     1.00                        adr.w	r8, #-6
+# CHECK-NEXT:  1      1     1.00                        adr.w	r0, #-6
 # CHECK-NEXT:  1      1     1.00                        and	r0, r1, #1
 # CHECK-NEXT:  1      1     1.00                        ands	r0, r1, #1
 # CHECK-NEXT:  1      1     1.00                        ands	r1, r0
@@ -552,7 +552,7 @@ yield
 # CHECK-NEXT:  1      1     1.00                        cmp	r0, #1
 # CHECK-NEXT:  1      1     1.00                        cmp.w	r0, #1
 # CHECK-NEXT:  1      1     1.00                        cmp	r0, r1
-# CHECK-NEXT:  1      1     1.00                  U     cmp	r0, r10
+# CHECK-NEXT:  1      1     1.00                        cmp	r0, r10
 # CHECK-NEXT:  1      1     1.00                        cmp.w	r0, r1
 # CHECK-NEXT:  1      2     1.00                        cmp.w	r0, r1, lsl #1
 # CHECK-NEXT:  1      1     1.00                        csel	r1, r2, r3, eq
@@ -734,8 +734,8 @@ yield
 # CHECK-NEXT:  1      1     1.00                        rsbs	r0, r1, #0
 # CHECK-NEXT:  1      1     1.00                        rsb.w	r0, r1, #1
 # CHECK-NEXT:  1      1     1.00                        rsbs.w	r0, r1, #1
-# CHECK-NEXT:  1      1     1.00                  U     rsb	r0, r1, r2
-# CHECK-NEXT:  1      1     1.00                  U     rsbs	r0, r1, r2
+# CHECK-NEXT:  1      1     1.00                        rsb	r0, r1, r2
+# CHECK-NEXT:  1      1     1.00                        rsbs	r0, r1, r2
 # CHECK-NEXT:  1      2     1.00                        rsb	r0, r1, r2, lsl #1
 # CHECK-NEXT:  1      2     1.00                        rsbs	r0, r1, r2, lsl #1
 # CHECK-NEXT:  1      2     1.00    *      *      U     sadd16	r0, r1, r2
@@ -743,7 +743,7 @@ yield
 # CHECK-NEXT:  1      2     1.00    *      *      U     sasx	r0, r1, r2
 # CHECK-NEXT:  1      1     1.00                        sbc	r0, r1, #1
 # CHECK-NEXT:  1      1     1.00                        sbcs	r0, r1, #1
-# CHECK-NEXT:  1      1     1.00                  U     sbcs	r0, r1
+# CHECK-NEXT:  1      1     1.00                        sbcs	r0, r1
 # CHECK-NEXT:  1      1     1.00                        sbc.w	r0, r1, r2
 # CHECK-NEXT:  1      1     1.00                        sbcs.w	r0, r1, r2
 # CHECK-NEXT:  1      2     1.00                        sbc.w	r0, r1, r2, lsl #1
@@ -779,7 +779,7 @@ yield
 # CHECK-NEXT:  1      2     1.00                        smlsldx	r0, r1, r2, r3
 # CHECK-NEXT:  1      2     1.00                        smmla	r0, r1, r2, r3
 # CHECK-NEXT:  1      2     1.00                        smmlar	r0, r1, r2, r3
-# CHECK-NEXT:  1      2     1.00                  U     smmls	r0, r1, r2, r3
+# CHECK-NEXT:  1      2     1.00                        smmls	r0, r1, r2, r3
 # CHECK-NEXT:  1      2     1.00                        smmlsr	r0, r1, r2, r3
 # CHECK-NEXT:  1      2     1.00                        smmul	r0, r1, r2
 # CHECK-NEXT:  1      2     1.00                        smmulr	r0, r1, r2
@@ -855,7 +855,7 @@ yield
 # CHECK-NEXT:  1      1     1.00           *            strh.w	r0, [r1, r2, lsl #1]
 # CHECK-NEXT:  1      1     1.00           *            strht	r0, [r1, #1]
 # CHECK-NEXT:  1      1     1.00           *            strt	r0, [r1, #1]
-# CHECK-NEXT:  1      1     1.00                  U     sub	sp, #4
+# CHECK-NEXT:  1      1     1.00                        sub	sp, #4
 # CHECK-NEXT:  1      1     0.50                        sub.w	r0, sp, #1
 # CHECK-NEXT:  1      1     0.50                        subs.w	r0, sp, #1
 # CHECK-NEXT:  1      1     1.00                        subw	r0, sp, #1

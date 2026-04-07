@@ -47,354 +47,12 @@
 
 using namespace llvm;
 
-// Several of the following methods are internal utilities defined in
-// CodeGen/GlobalIsel/CallLowering.cpp
-// TODO: Find a better solution?
-
-// Internal utility from CallLowering.cpp
 static unsigned extendOpFromFlags(ISD::ArgFlagsTy Flags) {
   if (Flags.isSExt())
     return TargetOpcode::G_SEXT;
   if (Flags.isZExt())
     return TargetOpcode::G_ZEXT;
   return TargetOpcode::G_ANYEXT;
-}
-
-// Internal utility from CallLowering.cpp
-/// Pack values \p SrcRegs to cover the vector type result \p DstRegs.
-static MachineInstrBuilder
-mergeVectorRegsToResultRegs(MachineIRBuilder &B, ArrayRef<Register> DstRegs,
-                            ArrayRef<Register> SrcRegs) {
-  MachineRegisterInfo &MRI = *B.getMRI();
-  LLT LLTy = MRI.getType(DstRegs[0]);
-  LLT PartLLT = MRI.getType(SrcRegs[0]);
-
-  // Deal with v3s16 split into v2s16
-  LLT LCMTy = getCoverTy(LLTy, PartLLT);
-  if (LCMTy == LLTy) {
-    // Common case where no padding is needed.
-    assert(DstRegs.size() == 1);
-    return B.buildConcatVectors(DstRegs[0], SrcRegs);
-  }
-
-  // We need to create an unmerge to the result registers, which may require
-  // widening the original value.
-  Register UnmergeSrcReg;
-  if (LCMTy != PartLLT) {
-    assert(DstRegs.size() == 1);
-    return B.buildDeleteTrailingVectorElements(
-        DstRegs[0], B.buildMergeLikeInstr(LCMTy, SrcRegs));
-  } else {
-    // We don't need to widen anything if we're extracting a scalar which was
-    // promoted to a vector e.g. s8 -> v4s8 -> s8
-    assert(SrcRegs.size() == 1);
-    UnmergeSrcReg = SrcRegs[0];
-  }
-
-  int NumDst = LCMTy.getSizeInBits() / LLTy.getSizeInBits();
-
-  SmallVector<Register, 8> PadDstRegs(NumDst);
-  llvm::copy(DstRegs, PadDstRegs.begin());
-
-  // Create the excess dead defs for the unmerge.
-  for (int I = DstRegs.size(); I != NumDst; ++I)
-    PadDstRegs[I] = MRI.createGenericVirtualRegister(LLTy);
-
-  if (PadDstRegs.size() == 1)
-    return B.buildDeleteTrailingVectorElements(DstRegs[0], UnmergeSrcReg);
-  return B.buildUnmerge(PadDstRegs, UnmergeSrcReg);
-}
-
-// Internal utility from CallLowering.cpp
-/// Create a sequence of instructions to combine pieces split into register
-/// typed values to the original IR value. \p OrigRegs contains the destination
-/// value registers of type \p LLTy, and \p Regs contains the legalized pieces
-/// with type \p PartLLT. This is used for incoming values (physregs to vregs).
-
-// Modified to account for floating-point extends/truncations
-static void buildCopyFromRegs(MachineIRBuilder &B, ArrayRef<Register> OrigRegs,
-                              ArrayRef<Register> Regs, LLT LLTy, LLT PartLLT,
-                              const ISD::ArgFlagsTy Flags,
-                              bool IsFloatingPoint) {
-  MachineRegisterInfo &MRI = *B.getMRI();
-
-  if (PartLLT == LLTy) {
-    // We should have avoided introducing a new virtual register, and just
-    // directly assigned here.
-    assert(OrigRegs[0] == Regs[0]);
-    return;
-  }
-
-  if (PartLLT.getSizeInBits() == LLTy.getSizeInBits() && OrigRegs.size() == 1 &&
-      Regs.size() == 1) {
-    B.buildBitcast(OrigRegs[0], Regs[0]);
-    return;
-  }
-
-  // A vector PartLLT needs extending to LLTy's element size.
-  // E.g. <2 x s64> = G_SEXT <2 x s32>.
-  if (PartLLT.isVector() == LLTy.isVector() &&
-      PartLLT.getScalarSizeInBits() > LLTy.getScalarSizeInBits() &&
-      (!PartLLT.isVector() ||
-       PartLLT.getElementCount() == LLTy.getElementCount()) &&
-      OrigRegs.size() == 1 && Regs.size() == 1) {
-    Register SrcReg = Regs[0];
-
-    LLT LocTy = MRI.getType(SrcReg);
-
-    if (Flags.isSExt()) {
-      SrcReg = B.buildAssertSExt(LocTy, SrcReg, LLTy.getScalarSizeInBits())
-                   .getReg(0);
-    } else if (Flags.isZExt()) {
-      SrcReg = B.buildAssertZExt(LocTy, SrcReg, LLTy.getScalarSizeInBits())
-                   .getReg(0);
-    }
-
-    // Sometimes pointers are passed zero extended.
-    LLT OrigTy = MRI.getType(OrigRegs[0]);
-    if (OrigTy.isPointer()) {
-      LLT IntPtrTy = LLT::scalar(OrigTy.getSizeInBits());
-      B.buildIntToPtr(OrigRegs[0], B.buildTrunc(IntPtrTy, SrcReg));
-      return;
-    }
-
-    if (IsFloatingPoint)
-      B.buildFPTrunc(OrigRegs[0], SrcReg);
-    else
-      B.buildTrunc(OrigRegs[0], SrcReg);
-    return;
-  }
-
-  if (!LLTy.isVector() && !PartLLT.isVector()) {
-    assert(OrigRegs.size() == 1);
-    LLT OrigTy = MRI.getType(OrigRegs[0]);
-
-    unsigned SrcSize = PartLLT.getSizeInBits().getFixedValue() * Regs.size();
-    if (SrcSize == OrigTy.getSizeInBits())
-      B.buildMergeValues(OrigRegs[0], Regs);
-    else {
-      auto Widened = B.buildMergeLikeInstr(LLT::scalar(SrcSize), Regs);
-
-      if (IsFloatingPoint)
-        B.buildFPTrunc(OrigRegs[0], Widened);
-      else
-        B.buildTrunc(OrigRegs[0], Widened);
-    }
-
-    return;
-  }
-
-  if (PartLLT.isVector()) {
-    assert(OrigRegs.size() == 1);
-    SmallVector<Register> CastRegs(Regs);
-
-    // If PartLLT is a mismatched vector in both number of elements and element
-    // size, e.g. PartLLT == v2s64 and LLTy is v3s32, then first coerce it to
-    // have the same elt type, i.e. v4s32.
-    // TODO: Extend this coersion to element multiples other than just 2.
-    if (TypeSize::isKnownGT(PartLLT.getSizeInBits(), LLTy.getSizeInBits()) &&
-        PartLLT.getScalarSizeInBits() == LLTy.getScalarSizeInBits() * 2 &&
-        Regs.size() == 1) {
-      LLT NewTy = PartLLT.changeElementType(LLTy.getElementType())
-                      .changeElementCount(PartLLT.getElementCount() * 2);
-      CastRegs[0] = B.buildBitcast(NewTy, Regs[0]).getReg(0);
-      PartLLT = NewTy;
-    }
-
-    if (LLTy.getScalarType() == PartLLT.getElementType()) {
-      mergeVectorRegsToResultRegs(B, OrigRegs, CastRegs);
-    } else {
-      unsigned I = 0;
-      LLT GCDTy = getGCDType(LLTy, PartLLT);
-
-      // We are both splitting a vector, and bitcasting its element types. Cast
-      // the source pieces into the appropriate number of pieces with the result
-      // element type.
-      for (Register SrcReg : CastRegs)
-        CastRegs[I++] = B.buildBitcast(GCDTy, SrcReg).getReg(0);
-      mergeVectorRegsToResultRegs(B, OrigRegs, CastRegs);
-    }
-
-    return;
-  }
-
-  assert(LLTy.isVector() && !PartLLT.isVector());
-
-  LLT DstEltTy = LLTy.getElementType();
-
-  // Pointer information was discarded. We'll need to coerce some register types
-  // to avoid violating type constraints.
-  LLT RealDstEltTy = MRI.getType(OrigRegs[0]).getElementType();
-
-  assert(DstEltTy.getSizeInBits() == RealDstEltTy.getSizeInBits());
-
-  if (DstEltTy == PartLLT) {
-    // Vector was trivially scalarized.
-
-    if (RealDstEltTy.isPointer()) {
-      for (Register Reg : Regs)
-        MRI.setType(Reg, RealDstEltTy);
-    }
-
-    B.buildBuildVector(OrigRegs[0], Regs);
-  } else if (DstEltTy.getSizeInBits() > PartLLT.getSizeInBits()) {
-    // Deal with vector with 64-bit elements decomposed to 32-bit
-    // registers. Need to create intermediate 64-bit elements.
-    SmallVector<Register, 8> EltMerges;
-    int PartsPerElt =
-        divideCeil(DstEltTy.getSizeInBits(), PartLLT.getSizeInBits());
-    LLT ExtendedPartTy = LLT::scalar(PartLLT.getSizeInBits() * PartsPerElt);
-
-    for (int I = 0, NumElts = LLTy.getNumElements(); I != NumElts; ++I) {
-      auto Merge =
-          B.buildMergeLikeInstr(ExtendedPartTy, Regs.take_front(PartsPerElt));
-      if (ExtendedPartTy.getSizeInBits() > RealDstEltTy.getSizeInBits())
-        Merge = B.buildTrunc(RealDstEltTy, Merge);
-      // Fix the type in case this is really a vector of pointers.
-      MRI.setType(Merge.getReg(0), RealDstEltTy);
-      EltMerges.push_back(Merge.getReg(0));
-      Regs = Regs.drop_front(PartsPerElt);
-    }
-
-    B.buildBuildVector(OrigRegs[0], EltMerges);
-  } else {
-    // Vector was split, and elements promoted to a wider type.
-    // FIXME: Should handle floating point promotions.
-    unsigned NumElts = LLTy.getNumElements();
-    LLT BVType = LLT::fixed_vector(NumElts, PartLLT);
-
-    Register BuildVec;
-    if (NumElts == Regs.size())
-      BuildVec = B.buildBuildVector(BVType, Regs).getReg(0);
-    else {
-      // Vector elements are packed in the inputs.
-      // e.g. we have a <4 x s16> but 2 x s32 in regs.
-      assert(NumElts > Regs.size());
-      LLT SrcEltTy = MRI.getType(Regs[0]);
-
-      LLT OriginalEltTy = MRI.getType(OrigRegs[0]).getElementType();
-
-      // Input registers contain packed elements.
-      // Determine how many elements per reg.
-      assert((SrcEltTy.getSizeInBits() % OriginalEltTy.getSizeInBits()) == 0);
-      unsigned EltPerReg =
-          (SrcEltTy.getSizeInBits() / OriginalEltTy.getSizeInBits());
-
-      SmallVector<Register, 0> BVRegs;
-      BVRegs.reserve(Regs.size() * EltPerReg);
-      for (Register R : Regs) {
-        auto Unmerge = B.buildUnmerge(OriginalEltTy, R);
-        for (unsigned K = 0; K < EltPerReg; ++K)
-          BVRegs.push_back(B.buildAnyExt(PartLLT, Unmerge.getReg(K)).getReg(0));
-      }
-
-      // We may have some more elements in BVRegs, e.g. if we have 2 s32 pieces
-      // for a <3 x s16> vector. We should have less than EltPerReg extra items.
-      if (BVRegs.size() > NumElts) {
-        assert((BVRegs.size() - NumElts) < EltPerReg);
-        BVRegs.truncate(NumElts);
-      }
-      BuildVec = B.buildBuildVector(BVType, BVRegs).getReg(0);
-    }
-    B.buildTrunc(OrigRegs[0], BuildVec);
-  }
-}
-
-// Internal utility from CallLowering.cpp
-/// Create a sequence of instructions to expand the value in \p SrcReg (of type
-/// \p SrcTy) to the types in \p DstRegs (of type \p PartTy). \p ExtendOp should
-/// contain the type of scalar value extension if necessary.
-///
-/// This is used for outgoing values (vregs to physregs)
-static void buildCopyToRegs(MachineIRBuilder &B, ArrayRef<Register> DstRegs,
-                            Register SrcReg, LLT SrcTy, LLT PartTy,
-                            unsigned ExtendOp = TargetOpcode::G_ANYEXT) {
-  // We could just insert a regular copy, but this is unreachable at the moment.
-  assert(SrcTy != PartTy && "identical part types shouldn't reach here");
-
-  const TypeSize PartSize = PartTy.getSizeInBits();
-
-  if (PartTy.isVector() == SrcTy.isVector() &&
-      PartTy.getScalarSizeInBits() > SrcTy.getScalarSizeInBits()) {
-    assert(DstRegs.size() == 1);
-    B.buildInstr(ExtendOp, {DstRegs[0]}, {SrcReg});
-    return;
-  }
-
-  if (SrcTy.isVector() && !PartTy.isVector() &&
-      TypeSize::isKnownGT(PartSize, SrcTy.getElementType().getSizeInBits())) {
-    // Vector was scalarized, and the elements extended.
-    auto UnmergeToEltTy = B.buildUnmerge(SrcTy.getElementType(), SrcReg);
-    for (int i = 0, e = DstRegs.size(); i != e; ++i)
-      B.buildAnyExt(DstRegs[i], UnmergeToEltTy.getReg(i));
-    return;
-  }
-
-  if (SrcTy.isVector() && PartTy.isVector() &&
-      PartTy.getSizeInBits() == SrcTy.getSizeInBits() &&
-      ElementCount::isKnownLT(SrcTy.getElementCount(),
-                              PartTy.getElementCount())) {
-    // A coercion like: v2f32 -> v4f32 or nxv2f32 -> nxv4f32
-    Register DstReg = DstRegs.front();
-    B.buildPadVectorWithUndefElements(DstReg, SrcReg);
-    return;
-  }
-
-  LLT GCDTy = getGCDType(SrcTy, PartTy);
-  if (GCDTy == PartTy) {
-    // If this already evenly divisible, we can create a simple unmerge.
-    B.buildUnmerge(DstRegs, SrcReg);
-    return;
-  }
-
-  if (SrcTy.isVector() && !PartTy.isVector() &&
-      SrcTy.getScalarSizeInBits() > PartTy.getSizeInBits()) {
-    LLT ExtTy =
-        LLT::vector(SrcTy.getElementCount(),
-                    LLT::scalar(PartTy.getScalarSizeInBits() * DstRegs.size() /
-                                SrcTy.getNumElements()));
-    auto Ext = B.buildAnyExt(ExtTy, SrcReg);
-    B.buildUnmerge(DstRegs, Ext);
-    return;
-  }
-
-  MachineRegisterInfo &MRI = *B.getMRI();
-  LLT DstTy = MRI.getType(DstRegs[0]);
-  LLT LCMTy = getCoverTy(SrcTy, PartTy);
-
-  if (PartTy.isVector() && LCMTy == PartTy) {
-    assert(DstRegs.size() == 1);
-    B.buildPadVectorWithUndefElements(DstRegs[0], SrcReg);
-    return;
-  }
-
-  const unsigned DstSize = DstTy.getSizeInBits();
-  const unsigned SrcSize = SrcTy.getSizeInBits();
-  unsigned CoveringSize = LCMTy.getSizeInBits();
-
-  Register UnmergeSrc = SrcReg;
-
-  if (!LCMTy.isVector() && CoveringSize != SrcSize) {
-    // For scalars, it's common to be able to use a simple extension.
-    if (SrcTy.isScalar() && DstTy.isScalar()) {
-      CoveringSize = alignTo(SrcSize, DstSize);
-      LLT CoverTy = LLT::scalar(CoveringSize);
-      UnmergeSrc = B.buildInstr(ExtendOp, {CoverTy}, {SrcReg}).getReg(0);
-    } else {
-      // Widen to the common type.
-      // FIXME: This should respect the extend type
-      Register Undef = B.buildUndef(SrcTy).getReg(0);
-      SmallVector<Register, 8> MergeParts(1, SrcReg);
-      for (unsigned Size = SrcSize; Size != CoveringSize; Size += SrcSize)
-        MergeParts.push_back(Undef);
-      UnmergeSrc = B.buildMergeLikeInstr(LCMTy, MergeParts).getReg(0);
-    }
-  }
-
-  if (LCMTy.isVector() && CoveringSize != SrcSize)
-    UnmergeSrc = B.buildPadVectorWithUndefElements(LCMTy, SrcReg).getReg(0);
-
-  B.buildUnmerge(DstRegs, UnmergeSrc);
 }
 
 // Test whether the given calling convention is supported.
@@ -410,12 +68,6 @@ static bool callingConvSupported(CallingConv::ID CallConv) {
          CallConv == CallingConv::CXX_FAST_TLS ||
          CallConv == CallingConv::WASM_EmscriptenInvoke ||
          CallConv == CallingConv::Swift;
-}
-
-static void fail(MachineIRBuilder &MIRBuilder, const char *Msg) {
-  MachineFunction &MF = MIRBuilder.getMF();
-  MIRBuilder.getContext().diagnose(
-      DiagnosticInfoUnsupported(MF.getFunction(), Msg, MIRBuilder.getDL()));
 }
 
 WebAssemblyCallLowering::WebAssemblyCallLowering(
@@ -512,9 +164,7 @@ bool WebAssemblyCallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
           Arg.Regs[Part] = MRI.createGenericVirtualRegister(NewLLT);
         }
         buildCopyToRegs(MIRBuilder, Arg.Regs, Arg.OrigRegs[0], OrigLLT, NewLLT,
-                        Arg.Ty->isFloatingPointTy()
-                            ? TargetOpcode::G_FPEXT
-                            : extendOpFromFlags(Arg.Flags[0]));
+                        extendOpFromFlags(Arg.Flags[0]));
       }
 
       for (unsigned Part = 0; Part < NumParts; ++Part) {
@@ -536,99 +186,125 @@ bool WebAssemblyCallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
   return true;
 }
 
-static unsigned getWASMArgOpcode(MVT ArgType) {
-#define MVT_CASE(type)                                                         \
-  case MVT::type:                                                              \
-    return WebAssembly::ARGUMENT_##type;
-
+static unsigned getWASMArgumentOpcode(MVT ArgType) {
   switch (ArgType.SimpleTy) {
-    MVT_CASE(i32)
-    MVT_CASE(i64)
-    MVT_CASE(f32)
-    MVT_CASE(f64)
-    MVT_CASE(funcref)
-    MVT_CASE(externref)
-    MVT_CASE(exnref)
-    MVT_CASE(v16i8)
-    MVT_CASE(v8i16)
-    MVT_CASE(v4i32)
-    MVT_CASE(v2i64)
-    MVT_CASE(v4f32)
-    MVT_CASE(v2f64)
-    MVT_CASE(v8f16)
+  case MVT::i32:
+    return WebAssembly::ARGUMENT_i32;
+  case MVT::i64:
+    return WebAssembly::ARGUMENT_i64;
+  case MVT::f32:
+    return WebAssembly::ARGUMENT_f32;
+  case MVT::f64:
+    return WebAssembly::ARGUMENT_f64;
+
+  case MVT::funcref:
+    return WebAssembly::ARGUMENT_funcref;
+  case MVT::externref:
+    return WebAssembly::ARGUMENT_externref;
+  case MVT::exnref:
+    return WebAssembly::ARGUMENT_exnref;
+
+  case MVT::v16i8:
+    return WebAssembly::ARGUMENT_v16i8;
+  case MVT::v8i16:
+    return WebAssembly::ARGUMENT_v8i16;
+  case MVT::v4i32:
+    return WebAssembly::ARGUMENT_v4i32;
+  case MVT::v2i64:
+    return WebAssembly::ARGUMENT_v2i64;
+  case MVT::v8f16:
+    return WebAssembly::ARGUMENT_v8f16;
+  case MVT::v4f32:
+    return WebAssembly::ARGUMENT_v4f32;
+  case MVT::v2f64:
+    return WebAssembly::ARGUMENT_v2f64;
   default:
     break;
   }
   llvm_unreachable("Found unexpected type for WASM argument");
+}
 
-#undef MVT_CASE
+static LLT getLLTForWasmMVT(MVT Ty, const DataLayout &DL) {
+  if (Ty == MVT::externref) {
+    return LLT::pointer(
+        WebAssembly::WasmAddressSpace::WASM_ADDRESS_SPACE_EXTERNREF,
+        DL.getPointerSizeInBits(
+            WebAssembly::WasmAddressSpace::WASM_ADDRESS_SPACE_EXTERNREF));
+  }
+
+  if (Ty == MVT::funcref) {
+    return LLT::pointer(
+        WebAssembly::WasmAddressSpace::WASM_ADDRESS_SPACE_FUNCREF,
+        DL.getPointerSizeInBits(
+            WebAssembly::WasmAddressSpace::WASM_ADDRESS_SPACE_FUNCREF));
+  }
+
+  return llvm::getLLTForMVT(Ty);
 }
 
 bool WebAssemblyCallLowering::lowerFormalArguments(
     MachineIRBuilder &MIRBuilder, const Function &F,
     ArrayRef<ArrayRef<Register>> VRegs, FunctionLoweringInfo &FLI) const {
-
   MachineFunction &MF = MIRBuilder.getMF();
   MachineRegisterInfo &MRI = MF.getRegInfo();
   WebAssemblyFunctionInfo *MFI = MF.getInfo<WebAssemblyFunctionInfo>();
   const DataLayout &DL = F.getDataLayout();
-  auto &TLI = *getTLI<WebAssemblyTargetLowering>();
-  auto &Subtarget = MF.getSubtarget<WebAssemblySubtarget>();
-  auto &TRI = *Subtarget.getRegisterInfo();
-  auto &TII = *Subtarget.getInstrInfo();
-  auto &RBI = *Subtarget.getRegBankInfo();
+  const WebAssemblyTargetLowering &TLI = *getTLI<WebAssemblyTargetLowering>();
+  const WebAssemblySubtarget &Subtarget =
+      MF.getSubtarget<WebAssemblySubtarget>();
+  const WebAssemblyRegisterInfo &TRI = *Subtarget.getRegisterInfo();
+  const WebAssemblyInstrInfo &TII = *Subtarget.getInstrInfo();
+  const RegisterBankInfo &RBI = *Subtarget.getRegBankInfo();
 
   LLVMContext &Ctx = MIRBuilder.getContext();
   const CallingConv::ID CallConv = F.getCallingConv();
 
-  if (!callingConvSupported(F.getCallingConv())) {
-    fail(MIRBuilder, "WebAssembly doesn't support non-C calling conventions");
+  if (!callingConvSupported(CallConv)) {
     return false;
   }
 
-  // Set up the live-in for the incoming ARGUMENTS.
   MF.getRegInfo().addLiveIn(WebAssembly::ARGUMENTS);
+  MF.front().addLiveIn(WebAssembly::ARGUMENTS);
 
   SmallVector<ArgInfo, 8> SplitArgs;
 
   if (!FLI.CanLowerReturn) {
     insertSRetIncomingArgument(F, SplitArgs, FLI.DemoteRegister, MRI, DL);
   }
-  unsigned i = 0;
 
+  unsigned ArgIdx = 0;
   bool HasSwiftErrorArg = false;
   bool HasSwiftSelfArg = false;
-  for (const auto &Arg : F.args()) {
-    ArgInfo OrigArg{VRegs[i], Arg.getType(), i};
-    setArgFlags(OrigArg, i + AttributeList::FirstArgIndex, DL, F);
+  for (const Argument &Arg : F.args()) {
+    ArgInfo OrigArg{VRegs[ArgIdx], Arg.getType(), ArgIdx};
+    setArgFlags(OrigArg, ArgIdx + AttributeList::FirstArgIndex, DL, F);
 
     HasSwiftSelfArg |= Arg.hasSwiftSelfAttr();
     HasSwiftErrorArg |= Arg.hasSwiftErrorAttr();
     if (Arg.hasInAllocaAttr()) {
-      fail(MIRBuilder, "WebAssembly hasn't implemented inalloca arguments");
       return false;
     }
     if (Arg.hasNestAttr()) {
-      fail(MIRBuilder, "WebAssembly hasn't implemented nest arguments");
       return false;
     }
     splitToValueTypes(OrigArg, SplitArgs, DL, F.getCallingConv());
-    ++i;
+    ++ArgIdx;
   }
 
   unsigned FinalArgIdx = 0;
-  for (auto &Arg : SplitArgs) {
-    EVT OrigVT = TLI.getValueType(DL, Arg.Ty);
-    MVT NewVT = TLI.getRegisterTypeForCallingConv(Ctx, CallConv, OrigVT);
-    LLT OrigLLT = getLLTForType(*Arg.Ty, DL);
-    LLT NewLLT = getLLTForMVT(NewVT);
+  for (ArgInfo &Arg : SplitArgs) {
+    const EVT OrigVT = TLI.getValueType(DL, Arg.Ty);
+    const MVT NewVT = TLI.getRegisterTypeForCallingConv(Ctx, CallConv, OrigVT);
+    const LLT OrigLLT =
+        getLLTForType(*OrigVT.getTypeForEVT(F.getContext()), DL);
+    const LLT NewLLT = getLLTForWasmMVT(NewVT, DL);
 
     // If we need to split the type over multiple regs, check it's a scenario
     // we currently support.
-    unsigned NumParts =
+    const unsigned NumParts =
         TLI.getNumRegistersForCallingConv(Ctx, CallConv, OrigVT);
 
-    ISD::ArgFlagsTy OrigFlags = Arg.Flags[0];
+    const ISD::ArgFlagsTy OrigFlags = Arg.Flags[0];
     Arg.Flags.clear();
 
     for (unsigned Part = 0; Part < NumParts; ++Part) {
@@ -645,7 +321,7 @@ bool WebAssemblyCallLowering::lowerFormalArguments(
     }
 
     Arg.OrigRegs.assign(Arg.Regs.begin(), Arg.Regs.end());
-    if (NumParts != 1 || OrigVT != NewVT) {
+    if (NumParts != 1 || OrigLLT != NewLLT) {
       // If we can't directly assign the register, we need one or more
       // intermediate values.
       Arg.Regs.resize(NumParts);
@@ -659,9 +335,10 @@ bool WebAssemblyCallLowering::lowerFormalArguments(
     }
 
     for (unsigned Part = 0; Part < NumParts; ++Part) {
-      auto ArgInst = MIRBuilder.buildInstr(getWASMArgOpcode(NewVT))
-                         .addDef(Arg.Regs[Part])
-                         .addImm(FinalArgIdx);
+      MachineInstrBuilder ArgInst =
+          MIRBuilder.buildInstr(getWASMArgumentOpcode(NewVT))
+              .addDef(Arg.Regs[Part])
+              .addImm(FinalArgIdx);
 
       constrainOperandRegClass(MF, TRI, MRI, TII, RBI, *ArgInst,
                                ArgInst->getDesc(), ArgInst->getOperand(0), 0);
@@ -669,20 +346,19 @@ bool WebAssemblyCallLowering::lowerFormalArguments(
       ++FinalArgIdx;
     }
 
-    if (NumParts != 1 || OrigVT != NewVT) {
+    if (OrigVT != NewVT) {
       buildCopyFromRegs(MIRBuilder, Arg.OrigRegs, Arg.Regs, OrigLLT, NewLLT,
-                        Arg.Flags[0], Arg.Ty->isFloatingPointTy());
+                        Arg.Flags[0]);
     }
   }
-
-  /**/
 
   // For swiftcc, emit additional swiftself and swifterror arguments
   // if there aren't. These additional arguments are also added for callee
   // signature They are necessary to match callee and caller signature for
   // indirect call.
-  auto PtrVT = TLI.getPointerTy(DL);
   if (CallConv == CallingConv::Swift) {
+    const MVT PtrVT = TLI.getPointerTy(DL);
+
     if (!HasSwiftSelfArg) {
       MFI->addParam(PtrVT);
     }
@@ -694,14 +370,16 @@ bool WebAssemblyCallLowering::lowerFormalArguments(
   // Varargs are copied into a buffer allocated by the caller, and a pointer to
   // the buffer is passed as an argument.
   if (F.isVarArg()) {
-    auto PtrVT = TLI.getPointerTy(DL);
-    Register VarargVreg = MF.getRegInfo().createGenericVirtualRegister(
-        getLLTForType(*PointerType::get(Ctx, 0), DL));
+    const MVT PtrVT = TLI.getPointerTy(DL, 0);
+    const LLT PtrLLT = LLT::pointer(0, DL.getPointerSizeInBits(0));
+    Register VarargVreg = MF.getRegInfo().createGenericVirtualRegister(PtrLLT);
+
     MFI->setVarargBufferVreg(VarargVreg);
 
-    auto ArgInst = MIRBuilder.buildInstr(getWASMArgOpcode(PtrVT))
-                       .addDef(VarargVreg)
-                       .addImm(FinalArgIdx);
+    MachineInstrBuilder ArgInst =
+        MIRBuilder.buildInstr(getWASMArgumentOpcode(PtrVT))
+            .addDef(VarargVreg)
+            .addImm(FinalArgIdx);
 
     constrainOperandRegClass(MF, TRI, MRI, TII, RBI, *ArgInst,
                              ArgInst->getDesc(), ArgInst->getOperand(0), 0);
@@ -738,12 +416,10 @@ bool WebAssemblyCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   auto &TRI = *Subtarget.getRegisterInfo();
   auto &TII = *Subtarget.getInstrInfo();
   auto &RBI = *Subtarget.getRegBankInfo();
+  const Function &F = MF.getFunction();
 
   CallingConv::ID CallConv = Info.CallConv;
   if (!callingConvSupported(CallConv)) {
-    fail(MIRBuilder,
-         "WebAssembly doesn't support language-specific or target-specific "
-         "calling conventions yet");
     return false;
   }
 
@@ -757,21 +433,23 @@ bool WebAssemblyCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
 
   if (Info.IsTailCall) {
     Info.LoweredTailCall = true;
-    auto NoTail = [&](const char *Msg) {
+    auto NoTail = [&]() {
       if (Info.CB && Info.CB->isMustTailCall())
-        fail(MIRBuilder, Msg);
+        return true;
       Info.LoweredTailCall = false;
+      return false;
     };
 
     if (!Subtarget.hasTailCall())
-      NoTail("WebAssembly 'tail-call' feature not enabled");
+      if (NoTail())
+        return false;
 
     // Varargs calls cannot be tail calls because the buffer is on the stack
     if (Info.IsVarArg)
-      NoTail("WebAssembly does not support varargs tail calls");
+      if (NoTail())
+        return false;
 
     // Do not tail call unless caller and callee return types match
-    const Function &F = MF.getFunction();
     const TargetMachine &TM = TLI.getTargetMachine();
     Type *RetTy = F.getReturnType();
     SmallVector<MVT, 4> CallerRetTys;
@@ -782,8 +460,8 @@ bool WebAssemblyCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
                       std::equal(CallerRetTys.begin(), CallerRetTys.end(),
                                  CalleeRetTys.begin());
     if (!TypesMatch)
-      NoTail("WebAssembly tail call requires caller and callee return types to "
-             "match");
+      if (NoTail())
+        return false;
 
     // If pointers to local stack values are passed, we cannot tail call
     if (Info.CB) {
@@ -799,8 +477,8 @@ bool WebAssemblyCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
           Val = Src;
         }
         if (isa<AllocaInst>(Val)) {
-          NoTail(
-              "WebAssembly does not support tail calling with stack arguments");
+          if (NoTail())
+            return false;
           break;
         }
       }
@@ -868,10 +546,12 @@ bool WebAssemblyCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
       }
 
       for (auto &Ret : SplitReturns) {
-        EVT OrigVT = TLI.getValueType(DL, Ret.Ty);
-        MVT NewVT = TLI.getRegisterTypeForCallingConv(Ctx, CallConv, OrigVT);
-        LLT OrigLLT = getLLTForType(*Ret.Ty, DL);
-        LLT NewLLT = getLLTForMVT(NewVT);
+        const EVT OrigVT = TLI.getValueType(DL, Ret.Ty);
+        const MVT NewVT =
+            TLI.getRegisterTypeForCallingConv(Ctx, CallConv, OrigVT);
+        const LLT OrigLLT =
+            getLLTForType(*OrigVT.getTypeForEVT(F.getContext()), DL);
+        const LLT NewLLT = getLLTForWasmMVT(NewVT, DL);
         const TargetRegisterClass &NewRegClass = *TLI.getRegClassFor(NewVT);
 
         // If we need to split the type over multiple regs, check it's a
@@ -896,7 +576,7 @@ bool WebAssemblyCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
         }
 
         Ret.OrigRegs.assign(Ret.Regs.begin(), Ret.Regs.end());
-        if (NumParts != 1 || OrigVT != NewVT) {
+        if (NumParts != 1 || OrigLLT != NewLLT) {
           // If we can't directly assign the register, we need one or more
           // intermediate values.
           Ret.Regs.resize(NumParts);
@@ -908,7 +588,7 @@ bool WebAssemblyCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
             Ret.Regs[Part] = MRI.createGenericVirtualRegister(NewLLT);
           }
           buildCopyFromRegs(MIRBuilder, Ret.OrigRegs, Ret.Regs, OrigLLT, NewLLT,
-                            Ret.Flags[0], Ret.Ty->isFloatingPointTy());
+                            Ret.Flags[0]);
         }
 
         for (unsigned Part = 0; Part < NumParts; ++Part) {
@@ -977,7 +657,6 @@ bool WebAssemblyCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
                                TableSetInstr->getOperand(2), 2);
 
     } else {
-      fail(MIRBuilder, "Invalid address space for indirect call");
       return false;
     }
 
@@ -1040,20 +719,15 @@ bool WebAssemblyCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
     HasSwiftSelfArg |= Arg.Flags[0].isSwiftSelf();
     HasSwiftErrorArg |= Arg.Flags[0].isSwiftError();
     if (Arg.Flags[0].isNest()) {
-      fail(MIRBuilder, "WebAssembly hasn't implemented nest arguments");
       return false;
     }
     if (Arg.Flags[0].isInAlloca()) {
-      fail(MIRBuilder, "WebAssembly hasn't implemented inalloca arguments");
       return false;
     }
     if (Arg.Flags[0].isInConsecutiveRegs()) {
-      fail(MIRBuilder, "WebAssembly hasn't implemented cons regs arguments");
       return false;
     }
     if (Arg.Flags[0].isInConsecutiveRegsLast()) {
-      fail(MIRBuilder,
-           "WebAssembly hasn't implemented cons regs last arguments");
       return false;
     }
 
@@ -1114,10 +788,11 @@ bool WebAssemblyCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   unsigned NumFixedArgs = 0;
 
   for (auto &Arg : SplitArgs) {
-    EVT OrigVT = TLI.getValueType(DL, Arg.Ty);
-    MVT NewVT = TLI.getRegisterTypeForCallingConv(Ctx, CallConv, OrigVT);
-    LLT OrigLLT = getLLTForType(*Arg.Ty, DL);
-    LLT NewLLT = getLLTForMVT(NewVT);
+    const EVT OrigVT = TLI.getValueType(DL, Arg.Ty);
+    const MVT NewVT = TLI.getRegisterTypeForCallingConv(Ctx, CallConv, OrigVT);
+    const LLT OrigLLT =
+        getLLTForType(*OrigVT.getTypeForEVT(F.getContext()), DL);
+    const LLT NewLLT = getLLTForWasmMVT(NewVT, DL);
 
     // If we need to split the type over multiple regs, check it's a scenario
     // we currently support.
@@ -1141,7 +816,7 @@ bool WebAssemblyCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
     }
 
     Arg.OrigRegs.assign(Arg.Regs.begin(), Arg.Regs.end());
-    if (NumParts != 1 || OrigVT != NewVT) {
+    if (NumParts != 1 || OrigLLT != NewLLT) {
       // If we can't directly assign the register, we need one or more
       // intermediate values.
       Arg.Regs.resize(NumParts);
@@ -1154,9 +829,7 @@ bool WebAssemblyCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
       }
 
       buildCopyToRegs(MIRBuilder, Arg.Regs, Arg.OrigRegs[0], OrigLLT, NewLLT,
-                      Arg.Ty->isFloatingPointTy()
-                          ? TargetOpcode::G_FPEXT
-                          : extendOpFromFlags(Arg.Flags[0]));
+                      extendOpFromFlags(Arg.Flags[0]));
     }
 
     if (!Arg.Flags[0].isVarArg()) {

@@ -103,6 +103,7 @@ def err_deleted_non_function : Error<
   "only functions can have deleted definitions">;
 def err_module_not_found : Error<"module '%0' not found">, DefaultFatal;
 def err_module_not_built : Error<"could not build module '%0'">, DefaultFatal;
+def err_module_not_written : Error<"could not write module file for '%0' to '%1': %2">, DefaultFatal;
 def err_module_build_disabled: Error<
   "module '%0' is needed but has not been provided, and implicit use of module "
   "files is disabled">, DefaultFatal;
@@ -286,6 +287,8 @@ def err_seh___except_filter : Error<
   "%0 only allowed in __except filter expression">;
 def err_seh___finally_block : Error<
   "%0 only allowed in __finally block">;
+def err_seh_object_unwinding : Error<
+  "'__try' is not permitted in functions that require object unwinding">;
 
 // Sema && AST
 def note_invalid_subexpr_in_const_expr : Note<
