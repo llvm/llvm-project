@@ -76,13 +76,11 @@ llvm::Error InstrumentationRuntime::Enable() {
   // to give the plugin a chance to activate.
   if (ProcessSP process_sp = GetProcessSP()) {
     ModuleList module_list;
-    // FIXME: Does this need a lock?
-    process_sp->GetTarget().GetImages().ForEach(
-        [&module_list](const lldb::ModuleSP module_sp) {
-          module_list.Append(module_sp);
-          return IterationAction::Continue;
-        });
-    // Give the plugin a chance to activate
+    for (const auto &module_sp :
+         process_sp->GetTarget().GetImages().Modules()) {
+      module_list.Append(module_sp);
+    }
+    // Give the plugin a chance to activate.
     ModulesDidLoad(module_list);
   }
   return llvm::Error::success();
