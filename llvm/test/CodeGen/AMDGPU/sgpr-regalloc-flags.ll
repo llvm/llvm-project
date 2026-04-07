@@ -27,6 +27,7 @@
 ; DEFAULT-NEXT: SI Lower WWM Copies
 ; DEFAULT-NEXT: Virtual Register Rewriter
 ; DEFAULT-NEXT: AMDGPU Reserve WWM Registers
+; DEFAULT-NEXT: SI Fix Xcnt Stall SAddr Reuse
 ; DEFAULT-NEXT: Virtual Register Map
 ; DEFAULT-NEXT: Live Register Matrix
 ; DEFAULT-NEXT: Greedy Register Allocator
@@ -46,6 +47,7 @@
 ; O0-NEXT: Fast Register Allocator
 ; O0-NEXT: SI Lower WWM Copies
 ; O0-NEXT: AMDGPU Reserve WWM Registers
+; O0-NEXT: SI Fix Xcnt Stall SAddr Reuse
 ; O0-NEXT: Fast Register Allocator
 ; O0-NEXT: SI Fix VGPR copies
 
@@ -74,6 +76,7 @@
 ; BASIC-DEFAULT-NEXT: SI Lower WWM Copies
 ; BASIC-DEFAULT-NEXT: Virtual Register Rewriter
 ; BASIC-DEFAULT-NEXT: AMDGPU Reserve WWM Registers
+; BASIC-DEFAULT-NEXT: SI Fix Xcnt Stall SAddr Reuse
 ; BASIC-DEFAULT-NEXT: Virtual Register Map
 ; BASIC-DEFAULT-NEXT: Live Register Matrix
 ; BASIC-DEFAULT-NEXT: Greedy Register Allocator
@@ -97,6 +100,7 @@
 ; DEFAULT-BASIC-NEXT: SI Lower WWM Copies
 ; DEFAULT-BASIC-NEXT: Virtual Register Rewriter
 ; DEFAULT-BASIC-NEXT: AMDGPU Reserve WWM Registers
+; DEFAULT-BASIC-NEXT: SI Fix Xcnt Stall SAddr Reuse
 ; DEFAULT-BASIC-NEXT: Virtual Register Map
 ; DEFAULT-BASIC-NEXT: Live Register Matrix
 ; DEFAULT-BASIC-NEXT: Basic Register Allocator
@@ -126,6 +130,7 @@
 ; BASIC-BASIC-NEXT: SI Lower WWM Copies
 ; BASIC-BASIC-NEXT: Virtual Register Rewriter
 ; BASIC-BASIC-NEXT: AMDGPU Reserve WWM Registers
+; BASIC-BASIC-NEXT: SI Fix Xcnt Stall SAddr Reuse
 ; BASIC-BASIC-NEXT: Virtual Register Map
 ; BASIC-BASIC-NEXT: Live Register Matrix
 ; BASIC-BASIC-NEXT: Basic Register Allocator

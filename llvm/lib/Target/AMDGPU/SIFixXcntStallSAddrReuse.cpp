@@ -87,13 +87,13 @@ SIFixXcntStallSAddrReusePass::run(MachineFunction &MF,
                                   MachineFunctionAnalysisManager &MFAM) {
   if (!MF.getSubtarget<GCNSubtarget>().hasWaitXcnt())
     return PreservedAnalyses::all();
-  auto *LIS = MFAM.getCachedResult<llvm::LiveIntervalsAnalysis>(MF);
+  auto *LIS = MFAM.getCachedResult<LiveIntervalsAnalysis>(MF);
   if (!SIFixXcntStallSAddrReuse(LIS).run(MF))
     return PreservedAnalyses::all();
   auto PA = getMachineFunctionPassPreservedAnalyses();
   PA.preserveSet<CFGAnalyses>();
   if (LIS)
-    PA.preserve<llvm::LiveIntervalsAnalysis>();
+    PA.preserve<LiveIntervalsAnalysis>();
   return PA;
 }
 
@@ -148,7 +148,7 @@ MachineInstr *SIFixXcntStallSAddrReuse::convertToVAddr(MachineInstr &MI,
 
   bool VAddrIsZero = false;
   if (OldVAddrReg.isVirtual()) {
-    if (auto *Def = MRI->getVRegDef(OldVAddrReg))
+    if (auto *Def = MRI->getUniqueVRegDef(OldVAddrReg))
       VAddrIsZero = Def->isImplicitDef() ||
                     (Def->isMoveImmediate() && Def->getOperand(1).isImm() &&
                      Def->getOperand(1).getImm() == 0);

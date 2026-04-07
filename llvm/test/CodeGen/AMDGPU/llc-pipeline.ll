@@ -127,6 +127,7 @@
 ; GCN-O0-NEXT:        Fast Register Allocator
 ; GCN-O0-NEXT:        SI Lower WWM Copies
 ; GCN-O0-NEXT:        AMDGPU Reserve WWM Registers
+; GCN-O0-NEXT:        SI Fix Xcnt Stall SAddr Reuse
 ; GCN-O0-NEXT:        Fast Register Allocator
 ; GCN-O0-NEXT:        SI Fix VGPR copies
 ; GCN-O0-NEXT:        Remove Redundant DEBUG_VALUE analysis
@@ -386,6 +387,7 @@
 ; GCN-O1-NEXT:        SI Lower WWM Copies
 ; GCN-O1-NEXT:        Virtual Register Rewriter
 ; GCN-O1-NEXT:        AMDGPU Reserve WWM Registers
+; GCN-O1-NEXT:        SI Fix Xcnt Stall SAddr Reuse
 ; GCN-O1-NEXT:        Virtual Register Map
 ; GCN-O1-NEXT:        Live Register Matrix
 ; GCN-O1-NEXT:        Greedy Register Allocator
@@ -703,6 +705,7 @@
 ; GCN-O1-OPTS-NEXT:        SI Lower WWM Copies
 ; GCN-O1-OPTS-NEXT:        Virtual Register Rewriter
 ; GCN-O1-OPTS-NEXT:        AMDGPU Reserve WWM Registers
+; GCN-O1-OPTS-NEXT:        SI Fix Xcnt Stall SAddr Reuse
 ; GCN-O1-OPTS-NEXT:        Virtual Register Map
 ; GCN-O1-OPTS-NEXT:        Live Register Matrix
 ; GCN-O1-OPTS-NEXT:        Greedy Register Allocator
@@ -1025,6 +1028,7 @@
 ; GCN-O2-NEXT:        SI Lower WWM Copies
 ; GCN-O2-NEXT:        Virtual Register Rewriter
 ; GCN-O2-NEXT:        AMDGPU Reserve WWM Registers
+; GCN-O2-NEXT:        SI Fix Xcnt Stall SAddr Reuse
 ; GCN-O2-NEXT:        Virtual Register Map
 ; GCN-O2-NEXT:        Live Register Matrix
 ; GCN-O2-NEXT:        Greedy Register Allocator
@@ -1360,6 +1364,7 @@
 ; GCN-O3-NEXT:        SI Lower WWM Copies
 ; GCN-O3-NEXT:        Virtual Register Rewriter
 ; GCN-O3-NEXT:        AMDGPU Reserve WWM Registers
+; GCN-O3-NEXT:        SI Fix Xcnt Stall SAddr Reuse
 ; GCN-O3-NEXT:        Virtual Register Map
 ; GCN-O3-NEXT:        Live Register Matrix
 ; GCN-O3-NEXT:        Greedy Register Allocator
