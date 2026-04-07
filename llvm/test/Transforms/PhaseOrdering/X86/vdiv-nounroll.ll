@@ -103,6 +103,6 @@ declare void @llvm.lifetime.end.p0(ptr nocapture)
 ; CHECK: [[META8]] = !{!"llvm.loop.mustprogress"}
 ; CHECK: [[META9]] = !{!"llvm.loop.unroll.disable"}
 ; CHECK: [[META10]] = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK: [[META11]] = !{!"llvm.loop.vectorize.vector_body", i32 1}
+; CHECK: [[META11]] = !{!"llvm.loop.vectorize.body", i32 1}
 ; CHECK: [[META12]] = !{!"llvm.loop.unroll.runtime.disable"}
 ;.

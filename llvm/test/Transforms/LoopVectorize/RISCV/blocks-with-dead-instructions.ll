@@ -575,7 +575,7 @@ attributes #0 = { "target-features"="+64bit,+v" }
 ;.
 ; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]], [[META3:![0-9]+]]}
 ; CHECK: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK: [[META2]] = !{!"llvm.loop.vectorize.vector_body", i32 1}
+; CHECK: [[META2]] = !{!"llvm.loop.vectorize.body", i32 1}
 ; CHECK: [[META3]] = !{!"llvm.loop.unroll.runtime.disable"}
 ; CHECK: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META2]], [[META3]]}
 ; CHECK: [[LOOP5]] = distinct !{[[LOOP5]], [[META1]], [[META2]], [[META3]]}
@@ -592,5 +592,5 @@ attributes #0 = { "target-features"="+64bit,+v" }
 ; CHECK: [[META16]] = distinct !{[[META16]], [[META13]]}
 ; CHECK: [[LOOP17]] = distinct !{[[LOOP17]], [[META1]], [[META2]], [[META3]]}
 ; CHECK: [[LOOP18]] = distinct !{[[LOOP18]], [[META1]], [[META19:![0-9]+]]}
-; CHECK: [[META19]] = !{!"llvm.loop.vectorize.scalar_remainder", i32 1}
+; CHECK: [[META19]] = !{!"llvm.loop.vectorize.epilogue", i32 1}
 ;.

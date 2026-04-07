@@ -255,10 +255,10 @@ attributes #1 = { "target-cpu"="sifive-p670" }
 ; CHECK: [[META5]] = distinct !{[[META5]], [[META2]]}
 ; CHECK: [[LOOP6]] = distinct !{[[LOOP6]], [[META7:![0-9]+]], [[META8:![0-9]+]], [[META9:![0-9]+]]}
 ; CHECK: [[META7]] = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK: [[META8]] = !{!"llvm.loop.vectorize.vector_body", i32 1}
+; CHECK: [[META8]] = !{!"llvm.loop.vectorize.body", i32 1}
 ; CHECK: [[META9]] = !{!"llvm.loop.unroll.runtime.disable"}
 ; CHECK: [[LOOP10]] = distinct !{[[LOOP10]], [[META7]], [[META11:![0-9]+]]}
-; CHECK: [[META11]] = !{!"llvm.loop.vectorize.scalar_remainder", i32 1}
+; CHECK: [[META11]] = !{!"llvm.loop.vectorize.epilogue", i32 1}
 ; CHECK: [[LOOP12]] = distinct !{[[LOOP12]], [[META7]], [[META8]], [[META9]]}
 ; CHECK: [[LOOP13]] = distinct !{[[LOOP13]], [[META7]], [[META8]], [[META9]]}
 ;.

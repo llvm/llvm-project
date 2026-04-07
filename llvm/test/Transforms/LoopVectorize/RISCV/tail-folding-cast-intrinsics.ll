@@ -1276,10 +1276,10 @@ exit:
 ; IF-EVL: [[META4]] = distinct !{[[META4]], [[META2]]}
 ; IF-EVL: [[LOOP5]] = distinct !{[[LOOP5]], [[META6:![0-9]+]], [[META7:![0-9]+]], [[META8:![0-9]+]]}
 ; IF-EVL: [[META6]] = !{!"llvm.loop.isvectorized", i32 1}
-; IF-EVL: [[META7]] = !{!"llvm.loop.vectorize.vector_body", i32 1}
+; IF-EVL: [[META7]] = !{!"llvm.loop.vectorize.body", i32 1}
 ; IF-EVL: [[META8]] = !{!"llvm.loop.unroll.runtime.disable"}
 ; IF-EVL: [[LOOP9]] = distinct !{[[LOOP9]], [[META6]], [[META10:![0-9]+]]}
-; IF-EVL: [[META10]] = !{!"llvm.loop.vectorize.scalar_remainder", i32 1}
+; IF-EVL: [[META10]] = !{!"llvm.loop.vectorize.epilogue", i32 1}
 ; IF-EVL: [[META11]] = !{[[META12:![0-9]+]]}
 ; IF-EVL: [[META12]] = distinct !{[[META12]], [[META13:![0-9]+]]}
 ; IF-EVL: [[META13]] = distinct !{[[META13]], !"LVerDomain"}
@@ -1327,10 +1327,10 @@ exit:
 ; NO-VP: [[META4]] = distinct !{[[META4]], [[META2]]}
 ; NO-VP: [[LOOP5]] = distinct !{[[LOOP5]], [[META6:![0-9]+]], [[META7:![0-9]+]], [[META8:![0-9]+]]}
 ; NO-VP: [[META6]] = !{!"llvm.loop.isvectorized", i32 1}
-; NO-VP: [[META7]] = !{!"llvm.loop.vectorize.vector_body", i32 1}
+; NO-VP: [[META7]] = !{!"llvm.loop.vectorize.body", i32 1}
 ; NO-VP: [[META8]] = !{!"llvm.loop.unroll.runtime.disable"}
 ; NO-VP: [[LOOP9]] = distinct !{[[LOOP9]], [[META6]], [[META10:![0-9]+]]}
-; NO-VP: [[META10]] = !{!"llvm.loop.vectorize.scalar_remainder", i32 1}
+; NO-VP: [[META10]] = !{!"llvm.loop.vectorize.epilogue", i32 1}
 ; NO-VP: [[META11]] = !{[[META12:![0-9]+]]}
 ; NO-VP: [[META12]] = distinct !{[[META12]], [[META13:![0-9]+]]}
 ; NO-VP: [[META13]] = distinct !{[[META13]], !"LVerDomain"}

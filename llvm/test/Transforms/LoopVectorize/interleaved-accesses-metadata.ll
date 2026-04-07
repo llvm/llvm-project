@@ -259,7 +259,7 @@ exit:
 ; CHECK: [[TBAA6]] = !{[[META2]], [[META2]], i64 0}
 ; CHECK: [[LOOP7]] = distinct !{[[LOOP7]], [[META8:![0-9]+]], [[META9:![0-9]+]], [[META10:![0-9]+]]}
 ; CHECK: [[META8]] = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK: [[META9]] = !{!"llvm.loop.vectorize.vector_body", i32 1}
+; CHECK: [[META9]] = !{!"llvm.loop.vectorize.body", i32 1}
 ; CHECK: [[META10]] = !{!"llvm.loop.unroll.runtime.disable"}
 ; CHECK: [[META11]] = !{[[META12:![0-9]+]]}
 ; CHECK: [[META12]] = distinct !{[[META12]], [[META13:![0-9]+]]}
@@ -271,7 +271,7 @@ exit:
 ; CHECK: [[META18]] = !{!"Vec2r", [[META2]], i64 0, [[META2]], i64 8}
 ; CHECK: [[TBAA19]] = !{[[META18]], [[META2]], i64 8}
 ; CHECK: [[LOOP20]] = distinct !{[[LOOP20]], [[META8]], [[META21:![0-9]+]]}
-; CHECK: [[META21]] = !{!"llvm.loop.vectorize.scalar_remainder", i32 1}
+; CHECK: [[META21]] = !{!"llvm.loop.vectorize.epilogue", i32 1}
 ; CHECK: [[LOOP22]] = distinct !{[[LOOP22]], [[META8]], [[META9]], [[META10]]}
 ; CHECK: [[LOOP23]] = distinct !{[[LOOP23]], [[META10]], [[META8]], [[META21]]}
 ;.

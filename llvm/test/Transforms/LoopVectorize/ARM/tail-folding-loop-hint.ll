@@ -75,10 +75,10 @@ for.body:
 
 ; CHECK:      [[VEC_LOOP1]] = distinct !{[[VEC_LOOP1]], [[MD_IS_VEC:![0-9]+]], [[MD_VEC_BODY:![0-9]+]], [[MD_RT_UNROLL_DIS:![0-9]+]]}
 ; CHECK-NEXT: [[MD_IS_VEC]] = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK-NEXT: [[MD_VEC_BODY]] = !{!"llvm.loop.vectorize.vector_body", i32 1}
+; CHECK-NEXT: [[MD_VEC_BODY]] = !{!"llvm.loop.vectorize.body", i32 1}
 ; CHECK-NEXT: [[MD_RT_UNROLL_DIS]] = !{!"llvm.loop.unroll.runtime.disable"}
 ; CHECK-NEXT: [[SCALAR_LOOP1]] = distinct !{[[SCALAR_LOOP1]], [[MD_RT_UNROLL_DIS]], [[MD_IS_VEC]], [[MD_SCALAR_REM:![0-9]+]]}
-; CHECK-NEXT: [[MD_SCALAR_REM]] = !{!"llvm.loop.vectorize.scalar_remainder", i32 1}
+; CHECK-NEXT: [[MD_SCALAR_REM]] = !{!"llvm.loop.vectorize.epilogue", i32 1}
 ; CHECK-NEXT: [[VEC_LOOP2]] = distinct !{[[VEC_LOOP2]], [[MD_IS_VEC]], [[MD_VEC_BODY]], [[MD_RT_UNROLL_DIS]]}
 
 !6 = distinct !{!6, !7, !8}

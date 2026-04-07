@@ -64,6 +64,6 @@ exit:
 ;.
 ; VF2: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]], [[META3:![0-9]+]]}
 ; VF2: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
-; VF2: [[META2]] = !{!"llvm.loop.vectorize.vector_body", i32 1}
+; VF2: [[META2]] = !{!"llvm.loop.vectorize.body", i32 1}
 ; VF2: [[META3]] = !{!"llvm.loop.unroll.runtime.disable"}
 ;.

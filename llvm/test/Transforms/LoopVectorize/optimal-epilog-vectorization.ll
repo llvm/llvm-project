@@ -899,11 +899,11 @@ exit:                                        ; preds = %loop
 ;.
 ; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]], [[META3:![0-9]+]]}
 ; CHECK: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK: [[META2]] = !{!"llvm.loop.vectorize.vector_body", i32 1}
+; CHECK: [[META2]] = !{!"llvm.loop.vectorize.body", i32 1}
 ; CHECK: [[META3]] = !{!"llvm.loop.unroll.runtime.disable"}
 ; CHECK: [[PROF4]] = !{!"branch_weights", i32 4, i32 0}
 ; CHECK: [[LOOP5]] = distinct !{[[LOOP5]], [[META1]], [[META6:![0-9]+]], [[META2]], [[META3]]}
-; CHECK: [[META6]] = !{!"llvm.loop.vectorize.scalar_remainder", i32 1}
+; CHECK: [[META6]] = !{!"llvm.loop.vectorize.epilogue", i32 1}
 ; CHECK: [[LOOP7]] = distinct !{[[LOOP7]], [[META3]], [[META1]], [[META6]], [[META6]]}
 ; CHECK: [[LOOP8]] = distinct !{[[LOOP8]], [[META1]], [[META2]], [[META3]]}
 ; CHECK: [[LOOP9]] = distinct !{[[LOOP9]], [[META1]], [[META6]], [[META2]], [[META3]]}
@@ -923,11 +923,11 @@ exit:                                        ; preds = %loop
 ;.
 ; CHECK-PROFITABLE-BY-DEFAULT: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]], [[META3:![0-9]+]]}
 ; CHECK-PROFITABLE-BY-DEFAULT: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK-PROFITABLE-BY-DEFAULT: [[META2]] = !{!"llvm.loop.vectorize.vector_body", i32 1}
+; CHECK-PROFITABLE-BY-DEFAULT: [[META2]] = !{!"llvm.loop.vectorize.body", i32 1}
 ; CHECK-PROFITABLE-BY-DEFAULT: [[META3]] = !{!"llvm.loop.unroll.runtime.disable"}
 ; CHECK-PROFITABLE-BY-DEFAULT: [[PROF4]] = !{!"branch_weights", i32 2, i32 2}
 ; CHECK-PROFITABLE-BY-DEFAULT: [[LOOP5]] = distinct !{[[LOOP5]], [[META1]], [[META6:![0-9]+]], [[META2]], [[META3]]}
-; CHECK-PROFITABLE-BY-DEFAULT: [[META6]] = !{!"llvm.loop.vectorize.scalar_remainder", i32 1}
+; CHECK-PROFITABLE-BY-DEFAULT: [[META6]] = !{!"llvm.loop.vectorize.epilogue", i32 1}
 ; CHECK-PROFITABLE-BY-DEFAULT: [[LOOP7]] = distinct !{[[LOOP7]], [[META3]], [[META1]], [[META6]], [[META6]]}
 ; CHECK-PROFITABLE-BY-DEFAULT: [[LOOP8]] = distinct !{[[LOOP8]], [[META1]], [[META2]], [[META3]]}
 ; CHECK-PROFITABLE-BY-DEFAULT: [[LOOP9]] = distinct !{[[LOOP9]], [[META1]], [[META6]], [[META2]], [[META3]]}

@@ -125,8 +125,8 @@ for.end:
 ; CHECK: [[LOOP5]] = distinct !{[[LOOP5]], [[META6:![0-9]+]], [[META7:![0-9]+]], [[META8:![0-9]+]], [[META9:![0-9]+]]}
 ; CHECK: [[META6]] = !{!"llvm.loop.mustprogress"}
 ; CHECK: [[META7]] = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK: [[META8]] = !{!"llvm.loop.vectorize.vector_body", i32 1}
+; CHECK: [[META8]] = !{!"llvm.loop.vectorize.body", i32 1}
 ; CHECK: [[META9]] = !{!"llvm.loop.unroll.runtime.disable"}
 ; CHECK: [[LOOP10]] = distinct !{[[LOOP10]], [[META6]], [[META7]], [[META11:![0-9]+]]}
-; CHECK: [[META11]] = !{!"llvm.loop.vectorize.scalar_remainder", i32 1}
+; CHECK: [[META11]] = !{!"llvm.loop.vectorize.epilogue", i32 1}
 ;.

@@ -671,10 +671,10 @@ exit:
 ;.
 ; IC1: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]], [[META3:![0-9]+]]}
 ; IC1: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
-; IC1: [[META2]] = !{!"llvm.loop.vectorize.vector_body", i32 1}
+; IC1: [[META2]] = !{!"llvm.loop.vectorize.body", i32 1}
 ; IC1: [[META3]] = !{!"llvm.loop.unroll.runtime.disable"}
 ; IC1: [[LOOP4]] = distinct !{[[LOOP4]], [[META3]], [[META1]], [[META5:![0-9]+]]}
-; IC1: [[META5]] = !{!"llvm.loop.vectorize.scalar_remainder", i32 1}
+; IC1: [[META5]] = !{!"llvm.loop.vectorize.epilogue", i32 1}
 ; IC1: [[LOOP6]] = distinct !{[[LOOP6]], [[META1]], [[META2]], [[META3]]}
 ; IC1: [[LOOP7]] = distinct !{[[LOOP7]], [[META1]], [[META2]], [[META3]]}
 ; IC1: [[META8]] = !{[[META9:![0-9]+]]}
@@ -685,10 +685,10 @@ exit:
 ;.
 ; IC2: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]], [[META3:![0-9]+]]}
 ; IC2: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
-; IC2: [[META2]] = !{!"llvm.loop.vectorize.vector_body", i32 1}
+; IC2: [[META2]] = !{!"llvm.loop.vectorize.body", i32 1}
 ; IC2: [[META3]] = !{!"llvm.loop.unroll.runtime.disable"}
 ; IC2: [[LOOP4]] = distinct !{[[LOOP4]], [[META3]], [[META1]], [[META5:![0-9]+]]}
-; IC2: [[META5]] = !{!"llvm.loop.vectorize.scalar_remainder", i32 1}
+; IC2: [[META5]] = !{!"llvm.loop.vectorize.epilogue", i32 1}
 ; IC2: [[LOOP6]] = distinct !{[[LOOP6]], [[META1]], [[META2]], [[META3]]}
 ; IC2: [[LOOP7]] = distinct !{[[LOOP7]], [[META1]], [[META2]], [[META3]]}
 ; IC2: [[META8]] = !{[[META9:![0-9]+]]}

@@ -255,13 +255,13 @@ if.end5:
 ; CHECK: [[META2]] = distinct !{[[META2]]}
 ; CHECK: [[LOOP3]] = distinct !{[[LOOP3]], [[META4:![0-9]+]], [[META5:![0-9]+]], [[META6:![0-9]+]]}
 ; CHECK: [[META4]] = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK: [[META5]] = !{!"llvm.loop.vectorize.vector_body", i32 1}
+; CHECK: [[META5]] = !{!"llvm.loop.vectorize.body", i32 1}
 ; CHECK: [[META6]] = !{!"llvm.loop.unroll.runtime.disable"}
 ; CHECK: [[META7]] = !{[[META8:![0-9]+]]}
 ; CHECK: [[META8]] = distinct !{[[META8]], [[META2]]}
 ; CHECK: [[LOOP9]] = distinct !{[[LOOP9]], [[META4]], [[META5]], [[META6]]}
 ; CHECK: [[LOOP10]] = distinct !{[[LOOP10]], [[META4]], [[META11:![0-9]+]]}
-; CHECK: [[META11]] = !{!"llvm.loop.vectorize.scalar_remainder", i32 1}
+; CHECK: [[META11]] = !{!"llvm.loop.vectorize.epilogue", i32 1}
 ; CHECK: [[LOOP12]] = distinct !{[[LOOP12]], [[META4]], [[META5]], [[META6]]}
 ; CHECK: [[LOOP13]] = distinct !{[[LOOP13]], [[META6]], [[META4]], [[META11]]}
 ;.

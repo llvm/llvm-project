@@ -589,11 +589,11 @@ exit:
 ;.
 ; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]], [[META3:![0-9]+]]}
 ; CHECK: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK: [[META2]] = !{!"llvm.loop.vectorize.vector_body", i32 1}
+; CHECK: [[META2]] = !{!"llvm.loop.vectorize.body", i32 1}
 ; CHECK: [[META3]] = !{!"llvm.loop.unroll.runtime.disable"}
 ; CHECK: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META2]], [[META3]]}
 ; CHECK: [[LOOP5]] = distinct !{[[LOOP5]], [[META3]], [[META1]], [[META6:![0-9]+]]}
-; CHECK: [[META6]] = !{!"llvm.loop.vectorize.scalar_remainder", i32 1}
+; CHECK: [[META6]] = !{!"llvm.loop.vectorize.epilogue", i32 1}
 ; CHECK: [[LOOP7]] = distinct !{[[LOOP7]], [[META1]], [[META2]], [[META3]]}
 ; CHECK: [[LOOP8]] = distinct !{[[LOOP8]], [[META3]], [[META1]], [[META6]]}
 ; CHECK: [[LOOP9]] = distinct !{[[LOOP9]], [[META1]], [[META2]], [[META3]]}
@@ -625,7 +625,7 @@ exit:
 ; DEBUGLOC: [[DBG24]] = !DILocation(line: 9, column: 1, scope: [[DBG5]])
 ; DEBUGLOC: [[LOOP25]] = distinct !{[[LOOP25]], [[META26:![0-9]+]], [[META27:![0-9]+]], [[META28:![0-9]+]]}
 ; DEBUGLOC: [[META26]] = !{!"llvm.loop.isvectorized", i32 1}
-; DEBUGLOC: [[META27]] = !{!"llvm.loop.vectorize.vector_body", i32 1}
+; DEBUGLOC: [[META27]] = !{!"llvm.loop.vectorize.body", i32 1}
 ; DEBUGLOC: [[META28]] = !{!"llvm.loop.unroll.runtime.disable"}
 ; DEBUGLOC: [[DBG29]] = !DILocation(line: 10, column: 1, scope: [[DBG5]])
 ; DEBUGLOC: [[DBG30]] = distinct !DISubprogram(name: "widen_ptr_induction_dbg", linkageName: "widen_ptr_induction_dbg", scope: null, file: [[META1]], line: 11, type: [[META6]], scopeLine: 11, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: [[META0]], retainedNodes: [[META31:![0-9]+]])
@@ -641,7 +641,7 @@ exit:
 ; DEBUGLOC: [[DBG40]] = !DILocation(line: 13, column: 1, scope: [[DBG30]])
 ; DEBUGLOC: [[DBG41]] = !DILocation(line: 15, column: 1, scope: [[DBG30]])
 ; DEBUGLOC: [[LOOP42]] = distinct !{[[LOOP42]], [[META28]], [[META26]], [[META43:![0-9]+]]}
-; DEBUGLOC: [[META43]] = !{!"llvm.loop.vectorize.scalar_remainder", i32 1}
+; DEBUGLOC: [[META43]] = !{!"llvm.loop.vectorize.epilogue", i32 1}
 ; DEBUGLOC: [[DBG44]] = !DILocation(line: 17, column: 1, scope: [[DBG30]])
 ; DEBUGLOC: [[DBG45]] = distinct !DISubprogram(name: "predicated_phi_dbg", linkageName: "predicated_phi_dbg", scope: null, file: [[META1]], line: 18, type: [[META6]], scopeLine: 18, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: [[META0]], retainedNodes: [[META46:![0-9]+]])
 ; DEBUGLOC: [[META46]] = !{[[META47]], [[META48]], [[META49]], [[META50]], [[META51]], [[META52]], [[META53]]}

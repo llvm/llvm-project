@@ -201,8 +201,8 @@ attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: re
 ; CHECK: [[META8]] = !{!"llvm.loop.mustprogress"}
 ; CHECK: [[META9]] = !{!"llvm.loop.parallel_accesses", [[ACC_GRP4]]}
 ; CHECK: [[META10]] = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK: [[META11]] = !{!"llvm.loop.vectorize.vector_body", i32 1}
+; CHECK: [[META11]] = !{!"llvm.loop.vectorize.body", i32 1}
 ; CHECK: [[META12]] = !{!"llvm.loop.unroll.runtime.disable"}
 ; CHECK: [[LOOP13]] = distinct !{[[LOOP13]], [[META8]], [[META9]], [[META12]], [[META10]], [[META14:![0-9]+]]}
-; CHECK: [[META14]] = !{!"llvm.loop.vectorize.scalar_remainder", i32 1}
+; CHECK: [[META14]] = !{!"llvm.loop.vectorize.epilogue", i32 1}
 ;.

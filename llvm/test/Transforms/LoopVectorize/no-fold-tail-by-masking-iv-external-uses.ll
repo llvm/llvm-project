@@ -137,8 +137,8 @@ done:
 ; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]], [[META3:![0-9]+]], [[META4:![0-9]+]]}
 ; CHECK: [[META1]] = !{!"llvm.loop.unroll.disable"}
 ; CHECK: [[META2]] = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK: [[META3]] = !{!"llvm.loop.vectorize.vector_body", i32 1}
+; CHECK: [[META3]] = !{!"llvm.loop.vectorize.body", i32 1}
 ; CHECK: [[META4]] = !{!"llvm.loop.unroll.runtime.disable"}
 ; CHECK: [[LOOP5]] = distinct !{[[LOOP5]], [[META1]], [[META2]], [[META6:![0-9]+]]}
-; CHECK: [[META6]] = !{!"llvm.loop.vectorize.scalar_remainder", i32 1}
+; CHECK: [[META6]] = !{!"llvm.loop.vectorize.epilogue", i32 1}
 ;.

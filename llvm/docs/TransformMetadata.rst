@@ -171,14 +171,14 @@ added to both loops.
 In addition to the above, the vectorizer automatically annotates the
 generated loops with two metadata attributes for remark quality:
 
-- ``llvm.loop.vectorize.vector_body`` is added to the vectorized loop.
-- ``llvm.loop.vectorize.scalar_remainder`` is added to the scalar
+- ``llvm.loop.vectorize.body`` is added to the vectorized loop.
+- ``llvm.loop.vectorize.epilogue`` is added to the scalar
   remainder (epilogue) loop.
 
 Together these provide a four-way classification:
 
-- ``vector_body`` only: main vectorized loop body
-- ``scalar_remainder`` only: scalar remainder loop after vectorization
+- ``body`` only: main vectorized loop body
+- ``epilogue`` only: scalar remainder loop after vectorization
 - Both: epilogue vectorized remainder (a remainder that was itself
   vectorized during epilogue vectorization)
 - Neither: a plain loop not produced by the vectorizer

@@ -164,10 +164,10 @@ exit:
 ; CHECK: [[DBG29]] = !DILocation(line: 11, column: 5, scope: [[META15]])
 ; CHECK: [[LOOP30]] = distinct !{[[LOOP30]], [[META31:![0-9]+]], [[META32:![0-9]+]], [[META33:![0-9]+]]}
 ; CHECK: [[META31]] = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK: [[META32]] = !{!"llvm.loop.vectorize.vector_body", i32 1}
+; CHECK: [[META32]] = !{!"llvm.loop.vectorize.body", i32 1}
 ; CHECK: [[META33]] = !{!"llvm.loop.unroll.runtime.disable"}
 ; CHECK: [[DBG34]] = !DILocation(line: 10, column: 24, scope: [[META16]])
 ; CHECK: [[LOOP35]] = distinct !{[[LOOP35]], [[META33]], [[META31]], [[META36:![0-9]+]]}
-; CHECK: [[META36]] = !{!"llvm.loop.vectorize.scalar_remainder", i32 1}
+; CHECK: [[META36]] = !{!"llvm.loop.vectorize.epilogue", i32 1}
 ; CHECK: [[DBG37]] = !DILocation(line: 14, column: 1, scope: [[DBG4]])
 ;.

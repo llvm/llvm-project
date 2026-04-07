@@ -160,6 +160,6 @@ exit:
 ; CHECK: [[META1]] = !{!"llvm.loop.unroll.disable"}
 ; CHECK: [[LOOP2]] = distinct !{[[LOOP2]], [[META3:![0-9]+]], [[META4:![0-9]+]], [[META5:![0-9]+]]}
 ; CHECK: [[META3]] = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK: [[META4]] = !{!"llvm.loop.vectorize.vector_body", i32 1}
+; CHECK: [[META4]] = !{!"llvm.loop.vectorize.body", i32 1}
 ; CHECK: [[META5]] = !{!"llvm.loop.unroll.runtime.disable"}
 ;.

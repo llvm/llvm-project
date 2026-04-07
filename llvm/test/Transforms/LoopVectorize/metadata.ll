@@ -644,10 +644,10 @@ attributes #1 = { nounwind "vector-function-abi-variant"="_ZGV_LLVM_N2v_bar(bar_
 ; CHECK: [[META3]] = !{float 2.500000e+00}
 ; CHECK: [[LOOP4]] = distinct !{[[LOOP4]], [[META5:![0-9]+]], [[META6:![0-9]+]], [[META7:![0-9]+]]}
 ; CHECK: [[META5]] = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK: [[META6]] = !{!"llvm.loop.vectorize.vector_body", i32 1}
+; CHECK: [[META6]] = !{!"llvm.loop.vectorize.body", i32 1}
 ; CHECK: [[META7]] = !{!"llvm.loop.unroll.runtime.disable"}
 ; CHECK: [[LOOP8]] = distinct !{[[LOOP8]], [[META7]], [[META5]], [[META9:![0-9]+]]}
-; CHECK: [[META9]] = !{!"llvm.loop.vectorize.scalar_remainder", i32 1}
+; CHECK: [[META9]] = !{!"llvm.loop.vectorize.epilogue", i32 1}
 ; CHECK: [[LOOP10]] = distinct !{[[LOOP10]], [[META5]], [[META6]], [[META7]]}
 ; CHECK: [[LOOP11]] = distinct !{[[LOOP11]], [[META5]], [[META6]], [[META7]]}
 ; CHECK: [[LOOP12]] = distinct !{[[LOOP12]], [[META5]], [[META6]], [[META7]]}
@@ -672,10 +672,10 @@ attributes #1 = { nounwind "vector-function-abi-variant"="_ZGV_LLVM_N2v_bar(bar_
 ; INTERLEAVE: [[META3]] = !{float 2.500000e+00}
 ; INTERLEAVE: [[LOOP4]] = distinct !{[[LOOP4]], [[META5:![0-9]+]], [[META6:![0-9]+]], [[META7:![0-9]+]]}
 ; INTERLEAVE: [[META5]] = !{!"llvm.loop.isvectorized", i32 1}
-; INTERLEAVE: [[META6]] = !{!"llvm.loop.vectorize.vector_body", i32 1}
+; INTERLEAVE: [[META6]] = !{!"llvm.loop.vectorize.body", i32 1}
 ; INTERLEAVE: [[META7]] = !{!"llvm.loop.unroll.runtime.disable"}
 ; INTERLEAVE: [[LOOP8]] = distinct !{[[LOOP8]], [[META7]], [[META5]], [[META9:![0-9]+]]}
-; INTERLEAVE: [[META9]] = !{!"llvm.loop.vectorize.scalar_remainder", i32 1}
+; INTERLEAVE: [[META9]] = !{!"llvm.loop.vectorize.epilogue", i32 1}
 ; INTERLEAVE: [[LOOP10]] = distinct !{[[LOOP10]], [[META5]], [[META6]], [[META7]]}
 ; INTERLEAVE: [[LOOP11]] = distinct !{[[LOOP11]], [[META5]], [[META6]], [[META7]]}
 ; INTERLEAVE: [[LOOP12]] = distinct !{[[LOOP12]], [[META5]], [[META6]], [[META7]]}

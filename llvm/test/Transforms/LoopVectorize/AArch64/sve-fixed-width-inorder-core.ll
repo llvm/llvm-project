@@ -217,22 +217,22 @@ for.cond.cleanup:
 ;.
 ; CHECK-CA510: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]], [[META3:![0-9]+]]}
 ; CHECK-CA510: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK-CA510: [[META2]] = !{!"llvm.loop.vectorize.vector_body", i32 1}
+; CHECK-CA510: [[META2]] = !{!"llvm.loop.vectorize.body", i32 1}
 ; CHECK-CA510: [[META3]] = !{!"llvm.loop.unroll.runtime.disable"}
 ; CHECK-CA510: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META5:![0-9]+]]}
-; CHECK-CA510: [[META5]] = !{!"llvm.loop.vectorize.scalar_remainder", i32 1}
+; CHECK-CA510: [[META5]] = !{!"llvm.loop.vectorize.epilogue", i32 1}
 ;.
 ; CHECK-CA520: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]], [[META3:![0-9]+]]}
 ; CHECK-CA520: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK-CA520: [[META2]] = !{!"llvm.loop.vectorize.vector_body", i32 1}
+; CHECK-CA520: [[META2]] = !{!"llvm.loop.vectorize.body", i32 1}
 ; CHECK-CA520: [[META3]] = !{!"llvm.loop.unroll.runtime.disable"}
 ; CHECK-CA520: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META5:![0-9]+]]}
-; CHECK-CA520: [[META5]] = !{!"llvm.loop.vectorize.scalar_remainder", i32 1}
+; CHECK-CA520: [[META5]] = !{!"llvm.loop.vectorize.epilogue", i32 1}
 ;.
 ; CHECK-CA320: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]], [[META3:![0-9]+]]}
 ; CHECK-CA320: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK-CA320: [[META2]] = !{!"llvm.loop.vectorize.vector_body", i32 1}
+; CHECK-CA320: [[META2]] = !{!"llvm.loop.vectorize.body", i32 1}
 ; CHECK-CA320: [[META3]] = !{!"llvm.loop.unroll.runtime.disable"}
 ; CHECK-CA320: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META5:![0-9]+]]}
-; CHECK-CA320: [[META5]] = !{!"llvm.loop.vectorize.scalar_remainder", i32 1}
+; CHECK-CA320: [[META5]] = !{!"llvm.loop.vectorize.epilogue", i32 1}
 ;.

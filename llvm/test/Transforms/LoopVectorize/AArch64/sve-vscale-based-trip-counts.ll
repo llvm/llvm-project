@@ -457,10 +457,10 @@ attributes #1 = { "target-features"="+sve" }
 ; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]], [[META3:![0-9]+]]}
 ; CHECK: [[META1]] = !{!"llvm.loop.unroll.runtime.disable"}
 ; CHECK: [[META2]] = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK: [[META3]] = !{!"llvm.loop.vectorize.scalar_remainder", i32 1}
+; CHECK: [[META3]] = !{!"llvm.loop.vectorize.epilogue", i32 1}
 ; CHECK: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META2]], [[META3]]}
 ; CHECK: [[LOOP5]] = distinct !{[[LOOP5]], [[META2]], [[META6:![0-9]+]], [[META1]]}
-; CHECK: [[META6]] = !{!"llvm.loop.vectorize.vector_body", i32 1}
+; CHECK: [[META6]] = !{!"llvm.loop.vectorize.body", i32 1}
 ; CHECK: [[LOOP7]] = distinct !{[[LOOP7]], [[META1]], [[META2]], [[META3]]}
 ; CHECK: [[LOOP8]] = distinct !{[[LOOP8]], [[META2]], [[META6]], [[META1]]}
 ; CHECK: [[LOOP9]] = distinct !{[[LOOP9]], [[META1]], [[META2]], [[META3]]}

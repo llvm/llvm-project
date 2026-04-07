@@ -536,11 +536,11 @@ exit:
 ;.
 ; CHECK-VS1: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]], [[META3:![0-9]+]]}
 ; CHECK-VS1: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK-VS1: [[META2]] = !{!"llvm.loop.vectorize.vector_body", i32 1}
+; CHECK-VS1: [[META2]] = !{!"llvm.loop.vectorize.body", i32 1}
 ; CHECK-VS1: [[META3]] = !{!"llvm.loop.unroll.runtime.disable"}
 ; CHECK-VS1: [[PROF4]] = !{!"branch_weights", i32 8, i32 8}
 ; CHECK-VS1: [[LOOP5]] = distinct !{[[LOOP5]], [[META1]], [[META6:![0-9]+]], [[META2]], [[META3]]}
-; CHECK-VS1: [[META6]] = !{!"llvm.loop.vectorize.scalar_remainder", i32 1}
+; CHECK-VS1: [[META6]] = !{!"llvm.loop.vectorize.epilogue", i32 1}
 ; CHECK-VS1: [[LOOP7]] = distinct !{[[LOOP7]], [[META1]], [[META6]], [[META6]]}
 ; CHECK-VS1: [[LOOP8]] = distinct !{[[LOOP8]], [[META1]], [[META2]], [[META3]]}
 ; CHECK-VS1: [[LOOP9]] = distinct !{[[LOOP9]], [[META1]], [[META6]]}
@@ -548,11 +548,11 @@ exit:
 ;.
 ; CHECK-VS2: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]], [[META3:![0-9]+]]}
 ; CHECK-VS2: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK-VS2: [[META2]] = !{!"llvm.loop.vectorize.vector_body", i32 1}
+; CHECK-VS2: [[META2]] = !{!"llvm.loop.vectorize.body", i32 1}
 ; CHECK-VS2: [[META3]] = !{!"llvm.loop.unroll.runtime.disable"}
 ; CHECK-VS2: [[PROF4]] = !{!"branch_weights", i32 8, i32 8}
 ; CHECK-VS2: [[LOOP5]] = distinct !{[[LOOP5]], [[META1]], [[META6:![0-9]+]], [[META2]], [[META3]]}
-; CHECK-VS2: [[META6]] = !{!"llvm.loop.vectorize.scalar_remainder", i32 1}
+; CHECK-VS2: [[META6]] = !{!"llvm.loop.vectorize.epilogue", i32 1}
 ; CHECK-VS2: [[LOOP7]] = distinct !{[[LOOP7]], [[META1]], [[META6]], [[META6]]}
 ; CHECK-VS2: [[LOOP8]] = distinct !{[[LOOP8]], [[META1]], [[META2]], [[META3]]}
 ; CHECK-VS2: [[LOOP9]] = distinct !{[[LOOP9]], [[META1]], [[META6]]}

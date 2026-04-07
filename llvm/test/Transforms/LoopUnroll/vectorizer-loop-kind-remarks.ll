@@ -10,7 +10,7 @@
 ; RUN:   -unroll-count=2 -disable-output -pass-remarks-output=%t.yaml 2>&1
 ; RUN: FileCheck --input-file=%t.yaml %s --check-prefix=YAML
 
-; Verify that when the loop vectorizer produces vector_body / scalar_remainder
+; Verify that when the loop vectorizer produces body / epilogue
 ; metadata and the unroller successfully unrolls the resulting loops, each
 ; unroll remark carries the correct loop-kind qualifier.
 ;
@@ -18,8 +18,8 @@
 ; Epilogue vectorization is forced to exercise all four loop categories:
 ;
 ;   1. plain loop         – not touched by the vectorizer
-;   2. vectorized loop    – main vector body      (vector_body only)
-;   3. remainder loop     – scalar cleanup         (scalar_remainder only)
+;   2. vectorized loop    – main vector body      (body only)
+;   3. remainder loop     – scalar cleanup         (epilogue only)
 ;   4. vectorized remainder loop – epilogue vector (both flags)
 ;
 ; Both stderr remarks and YAML structured output are checked.
@@ -76,36 +76,28 @@ exit:
 ; YAML:      Name:            PartialUnrolled
 ; YAML:      Function:        plain_loop
 ; YAML:      Args:
-; YAML:        - String:          'unrolled '
-; YAML:        - String:          loop
-; YAML:        - String:          ' by a factor of '
+; YAML:        - String:          'unrolled loop by a factor of '
 
 ; YAML:      --- !Passed
 ; YAML:      Pass:            loop-unroll
 ; YAML:      Name:            PartialUnrolled
 ; YAML:      Function:        vectorizable_loop
 ; YAML:      Args:
-; YAML:        - String:          'unrolled '
-; YAML:        - String:          vectorized remainder loop
-; YAML:        - String:          ' by a factor of '
+; YAML:        - String:          'unrolled vectorized remainder loop by a factor of '
 
 ; YAML:      --- !Passed
 ; YAML:      Pass:            loop-unroll
 ; YAML:      Name:            PartialUnrolled
 ; YAML:      Function:        vectorizable_loop
 ; YAML:      Args:
-; YAML:        - String:          'unrolled '
-; YAML:        - String:          vectorized loop
-; YAML:        - String:          ' by a factor of '
+; YAML:        - String:          'unrolled vectorized loop by a factor of '
 
 ; YAML:      --- !Passed
 ; YAML:      Pass:            loop-unroll
 ; YAML:      Name:            PartialUnrolled
 ; YAML:      Function:        vectorizable_loop
 ; YAML:      Args:
-; YAML:        - String:          'unrolled '
-; YAML:        - String:          remainder loop
-; YAML:        - String:          ' by a factor of '
+; YAML:        - String:          'unrolled remainder loop by a factor of '
 
 ;--- Metadata ------------------------------------------------------------------
 

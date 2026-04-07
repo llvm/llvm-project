@@ -831,16 +831,16 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
 
   // Determine whether this loop originated from the vectorizer so we can
   // produce more informative remarks.
-  bool IsVectorBody =
-      getBooleanLoopAttribute(L, "llvm.loop.vectorize.vector_body");
-  bool IsScalarRemainder =
-      getBooleanLoopAttribute(L, "llvm.loop.vectorize.scalar_remainder");
+  bool IsVectorBody = getBooleanLoopAttribute(L, "llvm.loop.vectorize.body");
+  bool IsEpilogue = getBooleanLoopAttribute(L, "llvm.loop.vectorize.epilogue");
 
-  Twine LoopKind = "";
-  if (IsVectorBody)
-    LoopKind.concat("vectorized ");
-  if (IsScalarRemainder)
-    LoopKind.concat("remainder ");
+  StringRef LoopKind;
+  if (IsVectorBody && IsEpilogue)
+    LoopKind = "vectorized remainder ";
+  else if (IsVectorBody)
+    LoopKind = "vectorized ";
+  else if (IsEpilogue)
+    LoopKind = "remainder ";
 
   // Report the unrolling decision.
   if (CompletelyUnroll) {
@@ -850,7 +850,7 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
       ORE->emit([&]() {
         return OptimizationRemark(DEBUG_TYPE, "FullyUnrolled", L->getStartLoc(),
                                   L->getHeader())
-               << "completely unrolled " << LoopKind.str() << "loop with "
+               << "completely unrolled " + LoopKind.str() + "loop with "
                << NV("UnrollCount", ULO.Count) << " iterations";
       });
   } else {
@@ -868,7 +868,7 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
       ORE->emit([&]() {
         OptimizationRemark Diag(DEBUG_TYPE, "PartialUnrolled", L->getStartLoc(),
                                 L->getHeader());
-        Diag << "unrolled " << LoopKind.str() << "loop by a factor of "
+        Diag << "unrolled " + LoopKind.str() + "loop by a factor of "
              << NV("UnrollCount", ULO.Count);
         if (ULO.Runtime)
           Diag << " with run-time trip count"

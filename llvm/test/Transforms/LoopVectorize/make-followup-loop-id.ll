@@ -116,9 +116,9 @@ exit:
 ; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]], [[META3:![0-9]+]], [[META4:![0-9]+]]}
 ; CHECK: [[META1]] = !{!"llvm.loop.isvectorized"}
 ; CHECK: [[META2]] = !{!"llvm.loop.unroll.count", i32 8}
-; CHECK: [[META3]] = !{!"llvm.loop.vectorize.vector_body", i32 1}
+; CHECK: [[META3]] = !{!"llvm.loop.vectorize.body", i32 1}
 ; CHECK: [[META4]] = !{!"llvm.loop.unroll.runtime.disable"}
 ; CHECK: [[LOOP5]] = distinct !{[[LOOP5]], [[META1]], [[META2]], [[META3]], [[META4]]}
 ; CHECK: [[LOOP6]] = distinct !{[[LOOP6]], [[META1]], [[META2]], [[META7:![0-9]+]]}
-; CHECK: [[META7]] = !{!"llvm.loop.vectorize.scalar_remainder", i32 1}
+; CHECK: [[META7]] = !{!"llvm.loop.vectorize.epilogue", i32 1}
 ;.

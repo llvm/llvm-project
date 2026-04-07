@@ -1066,7 +1066,7 @@ exit:
 ; CHECK: [[PROF14]] = !{!"function_entry_count", i64 0}
 ; CHECK: [[LOOP15]] = distinct !{[[LOOP15]], [[META16:![0-9]+]], [[META17:![0-9]+]], [[META18:![0-9]+]]}
 ; CHECK: [[META16]] = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK: [[META17]] = !{!"llvm.loop.vectorize.vector_body", i32 1}
+; CHECK: [[META17]] = !{!"llvm.loop.vectorize.body", i32 1}
 ; CHECK: [[META18]] = !{!"llvm.loop.unroll.runtime.disable"}
 ; CHECK: [[LOOP19]] = distinct !{[[LOOP19]], [[META16]], [[META17]], [[META18]]}
 ; CHECK: [[LOOP20]] = distinct !{[[LOOP20]], [[META16]], [[META17]], [[META18]]}
@@ -1074,12 +1074,12 @@ exit:
 ; CHECK: [[LOOP22]] = distinct !{[[LOOP22]], [[META16]], [[META17]], [[META18]]}
 ; CHECK: [[LOOP23]] = distinct !{[[LOOP23]], [[META16]], [[META17]], [[META18]]}
 ; CHECK: [[LOOP24]] = distinct !{[[LOOP24]], [[META16]], [[META25:![0-9]+]]}
-; CHECK: [[META25]] = !{!"llvm.loop.vectorize.scalar_remainder", i32 1}
+; CHECK: [[META25]] = !{!"llvm.loop.vectorize.epilogue", i32 1}
 ;.
 ; PGSO: [[PROF14]] = !{!"function_entry_count", i64 0}
 ; PGSO: [[LOOP15]] = distinct !{[[LOOP15]], [[META16:![0-9]+]], [[META17:![0-9]+]], [[META18:![0-9]+]]}
 ; PGSO: [[META16]] = !{!"llvm.loop.isvectorized", i32 1}
-; PGSO: [[META17]] = !{!"llvm.loop.vectorize.vector_body", i32 1}
+; PGSO: [[META17]] = !{!"llvm.loop.vectorize.body", i32 1}
 ; PGSO: [[META18]] = !{!"llvm.loop.unroll.runtime.disable"}
 ; PGSO: [[LOOP19]] = distinct !{[[LOOP19]], [[META16]], [[META17]], [[META18]]}
 ; PGSO: [[LOOP20]] = distinct !{[[LOOP20]], [[META16]], [[META17]], [[META18]]}
@@ -1087,15 +1087,15 @@ exit:
 ; PGSO: [[LOOP22]] = distinct !{[[LOOP22]], [[META16]], [[META17]], [[META18]]}
 ; PGSO: [[LOOP23]] = distinct !{[[LOOP23]], [[META16]], [[META17]], [[META18]]}
 ; PGSO: [[LOOP24]] = distinct !{[[LOOP24]], [[META16]], [[META25:![0-9]+]]}
-; PGSO: [[META25]] = !{!"llvm.loop.vectorize.scalar_remainder", i32 1}
+; PGSO: [[META25]] = !{!"llvm.loop.vectorize.epilogue", i32 1}
 ;.
 ; NPGSO: [[PROF14]] = !{!"function_entry_count", i64 0}
 ; NPGSO: [[LOOP15]] = distinct !{[[LOOP15]], [[META16:![0-9]+]], [[META17:![0-9]+]], [[META18:![0-9]+]]}
 ; NPGSO: [[META16]] = !{!"llvm.loop.isvectorized", i32 1}
-; NPGSO: [[META17]] = !{!"llvm.loop.vectorize.vector_body", i32 1}
+; NPGSO: [[META17]] = !{!"llvm.loop.vectorize.body", i32 1}
 ; NPGSO: [[META18]] = !{!"llvm.loop.unroll.runtime.disable"}
 ; NPGSO: [[LOOP19]] = distinct !{[[LOOP19]], [[META18]], [[META16]], [[META20:![0-9]+]]}
-; NPGSO: [[META20]] = !{!"llvm.loop.vectorize.scalar_remainder", i32 1}
+; NPGSO: [[META20]] = !{!"llvm.loop.vectorize.epilogue", i32 1}
 ; NPGSO: [[LOOP21]] = distinct !{[[LOOP21]], [[META16]], [[META17]], [[META18]]}
 ; NPGSO: [[LOOP22]] = distinct !{[[LOOP22]], [[META16]], [[META17]], [[META18]]}
 ; NPGSO: [[LOOP23]] = distinct !{[[LOOP23]], [[META16]], [[META20]]}

@@ -231,11 +231,11 @@ attributes #0 = { nounwind ssp uwtable "correctly-rounded-divide-sqrt-fp-math"="
 ; CHECK: [[META6]] = !{!"Simple C/C++ TBAA"}
 ; CHECK: [[LOOP7]] = distinct !{[[LOOP7]], [[META8:![0-9]+]], [[META9:![0-9]+]], [[META10:![0-9]+]]}
 ; CHECK: [[META8]] = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK: [[META9]] = !{!"llvm.loop.vectorize.vector_body", i32 1}
+; CHECK: [[META9]] = !{!"llvm.loop.vectorize.body", i32 1}
 ; CHECK: [[META10]] = !{!"llvm.loop.unroll.runtime.disable"}
 ; CHECK: [[PROF11]] = !{!"branch_weights", i32 4, i32 12}
 ; CHECK: [[LOOP12]] = distinct !{[[LOOP12]], [[META8]], [[META13:![0-9]+]], [[META9]], [[META10]]}
-; CHECK: [[META13]] = !{!"llvm.loop.vectorize.scalar_remainder", i32 1}
+; CHECK: [[META13]] = !{!"llvm.loop.vectorize.epilogue", i32 1}
 ; CHECK: [[LOOP14]] = distinct !{[[LOOP14]], [[META15:![0-9]+]]}
 ; CHECK: [[META15]] = !{!"llvm.loop.unroll.disable"}
 ; CHECK: [[LOOP16]] = distinct !{[[LOOP16]], [[META8]], [[META13]], [[META13]]}

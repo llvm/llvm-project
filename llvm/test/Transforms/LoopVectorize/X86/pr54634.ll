@@ -161,10 +161,10 @@ L44:
 ; CHECK: [[META11]] = !{!"jtbaa_arraybuf", [[META2]], i64 0}
 ; CHECK: [[LOOP12]] = distinct !{[[LOOP12]], [[META13:![0-9]+]], [[META14:![0-9]+]], [[META15:![0-9]+]]}
 ; CHECK: [[META13]] = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK: [[META14]] = !{!"llvm.loop.vectorize.vector_body", i32 1}
+; CHECK: [[META14]] = !{!"llvm.loop.vectorize.body", i32 1}
 ; CHECK: [[META15]] = !{!"llvm.loop.unroll.runtime.disable"}
 ; CHECK: [[PROF16]] = !{!"branch_weights", i32 4, i32 12}
 ; CHECK: [[LOOP17]] = distinct !{[[LOOP17]], [[META13]], [[META18:![0-9]+]], [[META14]], [[META15]]}
-; CHECK: [[META18]] = !{!"llvm.loop.vectorize.scalar_remainder", i32 1}
+; CHECK: [[META18]] = !{!"llvm.loop.vectorize.epilogue", i32 1}
 ; CHECK: [[LOOP19]] = distinct !{[[LOOP19]], [[META15]], [[META13]], [[META18]], [[META18]]}
 ;.

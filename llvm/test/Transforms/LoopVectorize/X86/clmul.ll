@@ -110,8 +110,8 @@ for.exit:
 ;.
 ; WITH-PCLMUL: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]], [[META3:![0-9]+]]}
 ; WITH-PCLMUL: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
-; WITH-PCLMUL: [[META2]] = !{!"llvm.loop.vectorize.vector_body", i32 1}
+; WITH-PCLMUL: [[META2]] = !{!"llvm.loop.vectorize.body", i32 1}
 ; WITH-PCLMUL: [[META3]] = !{!"llvm.loop.unroll.runtime.disable"}
 ; WITH-PCLMUL: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META5:![0-9]+]]}
-; WITH-PCLMUL: [[META5]] = !{!"llvm.loop.vectorize.scalar_remainder", i32 1}
+; WITH-PCLMUL: [[META5]] = !{!"llvm.loop.vectorize.epilogue", i32 1}
 ;.

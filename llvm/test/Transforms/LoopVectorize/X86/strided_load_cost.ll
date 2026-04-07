@@ -680,11 +680,11 @@ attributes #0 = { "target-cpu"="core-avx2" "target-features"="+avx,+avx2,+sse,+s
 ; CHECK: [[META4]] = !{!"Simple C/C++ TBAA"}
 ; CHECK: [[LOOP5]] = distinct !{[[LOOP5]], [[META6:![0-9]+]], [[META7:![0-9]+]], [[META8:![0-9]+]]}
 ; CHECK: [[META6]] = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK: [[META7]] = !{!"llvm.loop.vectorize.vector_body", i32 1}
+; CHECK: [[META7]] = !{!"llvm.loop.vectorize.body", i32 1}
 ; CHECK: [[META8]] = !{!"llvm.loop.unroll.runtime.disable"}
 ; CHECK: [[PROF9]] = !{!"branch_weights", i32 4, i32 28}
 ; CHECK: [[LOOP10]] = distinct !{[[LOOP10]], [[META6]], [[META11:![0-9]+]], [[META7]], [[META8]]}
-; CHECK: [[META11]] = !{!"llvm.loop.vectorize.scalar_remainder", i32 1}
+; CHECK: [[META11]] = !{!"llvm.loop.vectorize.epilogue", i32 1}
 ; CHECK: [[LOOP12]] = distinct !{[[LOOP12]], [[META8]], [[META6]], [[META11]], [[META11]]}
 ; CHECK: [[LOOP13]] = distinct !{[[LOOP13]], [[META6]], [[META7]], [[META8]]}
 ;.
@@ -694,11 +694,11 @@ attributes #0 = { "target-cpu"="core-avx2" "target-features"="+avx,+avx2,+sse,+s
 ; MAX-BW: [[META4]] = !{!"Simple C/C++ TBAA"}
 ; MAX-BW: [[LOOP5]] = distinct !{[[LOOP5]], [[META6:![0-9]+]], [[META7:![0-9]+]], [[META8:![0-9]+]]}
 ; MAX-BW: [[META6]] = !{!"llvm.loop.isvectorized", i32 1}
-; MAX-BW: [[META7]] = !{!"llvm.loop.vectorize.vector_body", i32 1}
+; MAX-BW: [[META7]] = !{!"llvm.loop.vectorize.body", i32 1}
 ; MAX-BW: [[META8]] = !{!"llvm.loop.unroll.runtime.disable"}
 ; MAX-BW: [[PROF9]] = !{!"branch_weights", i32 4, i32 28}
 ; MAX-BW: [[LOOP10]] = distinct !{[[LOOP10]], [[META6]], [[META11:![0-9]+]], [[META7]], [[META8]]}
-; MAX-BW: [[META11]] = !{!"llvm.loop.vectorize.scalar_remainder", i32 1}
+; MAX-BW: [[META11]] = !{!"llvm.loop.vectorize.epilogue", i32 1}
 ; MAX-BW: [[LOOP12]] = distinct !{[[LOOP12]], [[META8]], [[META6]], [[META11]], [[META11]]}
 ; MAX-BW: [[LOOP13]] = distinct !{[[LOOP13]], [[META6]], [[META7]], [[META8]]}
 ;.

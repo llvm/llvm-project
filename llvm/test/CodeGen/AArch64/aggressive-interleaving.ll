@@ -315,10 +315,10 @@ exit:
 ;.
 ; A320: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]], [[META3:![0-9]+]]}
 ; A320: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
-; A320: [[META2]] = !{!"llvm.loop.vectorize.vector_body", i32 1}
+; A320: [[META2]] = !{!"llvm.loop.vectorize.body", i32 1}
 ; A320: [[META3]] = !{!"llvm.loop.unroll.runtime.disable"}
 ; A320: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META5:![0-9]+]]}
-; A320: [[META5]] = !{!"llvm.loop.vectorize.scalar_remainder", i32 1}
+; A320: [[META5]] = !{!"llvm.loop.vectorize.epilogue", i32 1}
 ; A320: [[LOOP6]] = distinct !{[[LOOP6]], [[META1]], [[META2]], [[META3]]}
 ; A320: [[LOOP7]] = distinct !{[[LOOP7]], [[META3]], [[META1]], [[META5]]}
 ; A320: [[LOOP8]] = distinct !{[[LOOP8]], [[META1]], [[META2]], [[META3]]}

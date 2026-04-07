@@ -541,10 +541,10 @@ exit:
 ; CHECK: [[LOOP8]] = distinct !{[[LOOP8]], [[META9:![0-9]+]], [[META10:![0-9]+]], [[META11:![0-9]+]], [[META12:![0-9]+]]}
 ; CHECK: [[META9]] = !{!"llvm.loop.mustprogress"}
 ; CHECK: [[META10]] = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK: [[META11]] = !{!"llvm.loop.vectorize.vector_body", i32 1}
+; CHECK: [[META11]] = !{!"llvm.loop.vectorize.body", i32 1}
 ; CHECK: [[META12]] = !{!"llvm.loop.unroll.runtime.disable"}
 ; CHECK: [[LOOP13]] = distinct !{[[LOOP13]], [[META9]], [[META10]], [[META14:![0-9]+]]}
-; CHECK: [[META14]] = !{!"llvm.loop.vectorize.scalar_remainder", i32 1}
+; CHECK: [[META14]] = !{!"llvm.loop.vectorize.epilogue", i32 1}
 ; CHECK: [[LOOP15]] = distinct !{[[LOOP15]], [[META10]], [[META11]], [[META12]]}
 ; CHECK: [[LOOP16]] = distinct !{[[LOOP16]], [[META12]], [[META10]], [[META14]]}
 ; CHECK: [[PROF17]] = !{!"branch_weights", i32 0, i32 1}

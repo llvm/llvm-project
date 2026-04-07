@@ -2378,10 +2378,10 @@ define void @tgamma_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;.
 ; CHECK: [[META0:![0-9]+]] = distinct !{[[META0]], [[META1:![0-9]+]], [[META2:![0-9]+]], [[META3:![0-9]+]]}
 ; CHECK: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK: [[META2]] = !{!"llvm.loop.vectorize.vector_body", i32 1}
+; CHECK: [[META2]] = !{!"llvm.loop.vectorize.body", i32 1}
 ; CHECK: [[META3]] = !{!"llvm.loop.unroll.runtime.disable"}
 ; CHECK: [[META4:![0-9]+]] = distinct !{[[META4]], [[META3]], [[META1]], [[META5:![0-9]+]]}
-; CHECK: [[META5]] = !{!"llvm.loop.vectorize.scalar_remainder", i32 1}
+; CHECK: [[META5]] = !{!"llvm.loop.vectorize.epilogue", i32 1}
 ; CHECK: [[META6:![0-9]+]] = distinct !{[[META6]], [[META1]], [[META2]], [[META3]]}
 ; CHECK: [[META7:![0-9]+]] = distinct !{[[META7]], [[META3]], [[META1]], [[META5]]}
 ; CHECK: [[META8:![0-9]+]] = distinct !{[[META8]], [[META1]], [[META2]], [[META3]]}

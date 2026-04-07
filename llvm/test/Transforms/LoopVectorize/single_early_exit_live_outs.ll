@@ -1728,7 +1728,7 @@ attributes #0 = { "vector-function-abi-variant"="_ZGVsNxv_foo(foo_vec)" }
 ;.
 ; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]], [[META3:![0-9]+]]}
 ; CHECK: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK: [[META2]] = !{!"llvm.loop.vectorize.vector_body", i32 1}
+; CHECK: [[META2]] = !{!"llvm.loop.vectorize.body", i32 1}
 ; CHECK: [[META3]] = !{!"llvm.loop.unroll.runtime.disable"}
 ; CHECK: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META2]], [[META3]]}
 ; CHECK: [[LOOP5]] = distinct !{[[LOOP5]], [[META1]], [[META2]], [[META3]]}
@@ -1755,6 +1755,6 @@ attributes #0 = { "vector-function-abi-variant"="_ZGVsNxv_foo(foo_vec)" }
 ; CHECK: [[LOOP26]] = distinct !{[[LOOP26]], [[META1]], [[META2]], [[META3]]}
 ; CHECK: [[LOOP27]] = distinct !{[[LOOP27]], [[META1]], [[META2]], [[META3]]}
 ; CHECK: [[LOOP28]] = distinct !{[[LOOP28]], [[META3]], [[META1]], [[META29:![0-9]+]]}
-; CHECK: [[META29]] = !{!"llvm.loop.vectorize.scalar_remainder", i32 1}
+; CHECK: [[META29]] = !{!"llvm.loop.vectorize.epilogue", i32 1}
 ; CHECK: [[LOOP30]] = distinct !{[[LOOP30]], [[META1]], [[META2]], [[META3]]}
 ;.

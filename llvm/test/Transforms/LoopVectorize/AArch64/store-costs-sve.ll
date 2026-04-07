@@ -269,11 +269,11 @@ attributes #1 = { vscale_range(1,16) "target-features"="+sve" }
 ;.
 ; DEFAULT: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]], [[META3:![0-9]+]]}
 ; DEFAULT: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
-; DEFAULT: [[META2]] = !{!"llvm.loop.vectorize.vector_body", i32 1}
+; DEFAULT: [[META2]] = !{!"llvm.loop.vectorize.body", i32 1}
 ; DEFAULT: [[META3]] = !{!"llvm.loop.unroll.runtime.disable"}
 ; DEFAULT: [[PROF4]] = !{!"branch_weights", i32 4, i32 28}
 ; DEFAULT: [[LOOP5]] = distinct !{[[LOOP5]], [[META1]], [[META6:![0-9]+]], [[META2]], [[META3]]}
-; DEFAULT: [[META6]] = !{!"llvm.loop.vectorize.scalar_remainder", i32 1}
+; DEFAULT: [[META6]] = !{!"llvm.loop.vectorize.epilogue", i32 1}
 ; DEFAULT: [[LOOP7]] = distinct !{[[LOOP7]], [[META3]], [[META1]], [[META6]], [[META6]]}
 ; DEFAULT: [[META8]] = !{[[META9:![0-9]+]]}
 ; DEFAULT: [[META9]] = distinct !{[[META9]], [[META10:![0-9]+]]}
@@ -292,7 +292,7 @@ attributes #1 = { vscale_range(1,16) "target-features"="+sve" }
 ;.
 ; PRED: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]], [[META3:![0-9]+]]}
 ; PRED: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
-; PRED: [[META2]] = !{!"llvm.loop.vectorize.vector_body", i32 1}
+; PRED: [[META2]] = !{!"llvm.loop.vectorize.body", i32 1}
 ; PRED: [[META3]] = !{!"llvm.loop.unroll.runtime.disable"}
 ; PRED: [[META4]] = !{[[META5:![0-9]+]]}
 ; PRED: [[META5]] = distinct !{[[META5]], [[META6:![0-9]+]]}
@@ -301,5 +301,5 @@ attributes #1 = { vscale_range(1,16) "target-features"="+sve" }
 ; PRED: [[META8]] = distinct !{[[META8]], [[META6]]}
 ; PRED: [[LOOP9]] = distinct !{[[LOOP9]], [[META1]], [[META2]], [[META3]]}
 ; PRED: [[LOOP10]] = distinct !{[[LOOP10]], [[META1]], [[META11:![0-9]+]]}
-; PRED: [[META11]] = !{!"llvm.loop.vectorize.scalar_remainder", i32 1}
+; PRED: [[META11]] = !{!"llvm.loop.vectorize.epilogue", i32 1}
 ;.

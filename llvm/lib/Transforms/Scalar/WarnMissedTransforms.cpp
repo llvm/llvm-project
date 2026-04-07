@@ -28,15 +28,16 @@ static void warnAboutLeftoverTransformations(Loop *L,
 
     // Determine whether this loop originated from the vectorizer so we can
     // produce more informative remarks.
-    bool IsVectorBody =
-        getBooleanLoopAttribute(L, "llvm.loop.vectorize.vector_body");
-    bool IsScalarRemainder =
-        getBooleanLoopAttribute(L, "llvm.loop.vectorize.scalar_remainder");
-    Twine LoopKind = "";
-    if (IsVectorBody)
-      LoopKind.concat("vectorized ");
-    if (IsScalarRemainder)
-      LoopKind.concat("remainder ");
+    bool IsVectorBody = getBooleanLoopAttribute(L, "llvm.loop.vectorize.body");
+    bool IsEpilogue =
+        getBooleanLoopAttribute(L, "llvm.loop.vectorize.epilogue");
+    StringRef LoopKind;
+    if (IsVectorBody && IsEpilogue)
+      LoopKind = "vectorized remainder ";
+    else if (IsVectorBody)
+      LoopKind = "vectorized ";
+    else if (IsEpilogue)
+      LoopKind = "remainder ";
 
     ORE->emit(
         DiagnosticInfoOptimizationFailure(DEBUG_TYPE,

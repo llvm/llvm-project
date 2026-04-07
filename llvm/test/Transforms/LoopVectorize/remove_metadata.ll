@@ -28,10 +28,10 @@ for.end:
 !0 = !{!0, !{!"llvm.loop.vectorize.some_property"}, !{!"llvm.loop.vectorize.enable", i32 1}}
 
 ; Verify that user-facing llvm.loop.vectorize.* hints are stripped, but the
-; internal vector_body / scalar_remainder markers are added for downstream
+; internal body / epilogue markers are added for downstream
 ; remark quality.
 ; CHECK-NOT: llvm.loop.vectorize.enable
 ; CHECK-NOT: llvm.loop.vectorize.some_property
 ; CHECK-DAG: {!"llvm.loop.isvectorized", i32 1}
-; CHECK-DAG: {!"llvm.loop.vectorize.scalar_remainder", i32 1}
-; CHECK-DAG: {!"llvm.loop.vectorize.vector_body", i32 1}
+; CHECK-DAG: {!"llvm.loop.vectorize.epilogue", i32 1}
+; CHECK-DAG: {!"llvm.loop.vectorize.body", i32 1}

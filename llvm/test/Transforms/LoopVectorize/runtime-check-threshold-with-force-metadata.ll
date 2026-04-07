@@ -93,8 +93,8 @@ exit:
 ; LIMIT1: [[META4]] = distinct !{[[META4]], [[META2]]}
 ; LIMIT1: [[LOOP5]] = distinct !{[[LOOP5]], [[META6:![0-9]+]], [[META7:![0-9]+]], [[META8:![0-9]+]]}
 ; LIMIT1: [[META6]] = !{!"llvm.loop.isvectorized", i32 1}
-; LIMIT1: [[META7]] = !{!"llvm.loop.vectorize.vector_body", i32 1}
+; LIMIT1: [[META7]] = !{!"llvm.loop.vectorize.body", i32 1}
 ; LIMIT1: [[META8]] = !{!"llvm.loop.unroll.runtime.disable"}
 ; LIMIT1: [[LOOP9]] = distinct !{[[LOOP9]], [[META6]], [[META10:![0-9]+]]}
-; LIMIT1: [[META10]] = !{!"llvm.loop.vectorize.scalar_remainder", i32 1}
+; LIMIT1: [[META10]] = !{!"llvm.loop.vectorize.epilogue", i32 1}
 ;.

@@ -39,8 +39,8 @@ for.end:
 ; CHECK: ![[LOOP_VECTOR]] = distinct !{![[LOOP_VECTOR]], ![[FOLLOWUP_ALL:[0-9]+]], ![[FOLLOWUP_VECTORIZED:[0-9]+]], ![[VECTOR_BODY:[0-9]+]], ![[RT_UNROLL_DIS:[0-9]+]]}
 ; CHECK: ![[FOLLOWUP_ALL]] = !{!"FollowupAll"}
 ; CHECK: ![[FOLLOWUP_VECTORIZED]] = !{!"FollowupVectorized"}
-; CHECK: ![[VECTOR_BODY]] = !{!"llvm.loop.vectorize.vector_body", i32 1}
+; CHECK: ![[VECTOR_BODY]] = !{!"llvm.loop.vectorize.body", i32 1}
 ; CHECK: ![[RT_UNROLL_DIS]] = !{!"llvm.loop.unroll.runtime.disable"}
 ; CHECK: ![[LOOP_EPILOGUE]] = distinct !{![[LOOP_EPILOGUE]], ![[FOLLOWUP_ALL]], ![[FOLLOWUP_EPILOGUE:[0-9]+]], ![[SCALAR_REMAINDER:[0-9]+]]}
 ; CHECK: ![[FOLLOWUP_EPILOGUE]] = !{!"FollowupEpilogue"}
-; CHECK: ![[SCALAR_REMAINDER]] = !{!"llvm.loop.vectorize.scalar_remainder", i32 1}
+; CHECK: ![[SCALAR_REMAINDER]] = !{!"llvm.loop.vectorize.epilogue", i32 1}

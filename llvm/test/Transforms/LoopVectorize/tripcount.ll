@@ -393,13 +393,13 @@ for.end:
 ; CHECK: [[PROF4]] = !{!"branch_weights", i32 10, i32 2490}
 ; CHECK: [[LOOP5]] = distinct !{[[LOOP5]], [[META6:![0-9]+]], [[META7:![0-9]+]], [[META8:![0-9]+]], [[META9:![0-9]+]]}
 ; CHECK: [[META6]] = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK: [[META7]] = !{!"llvm.loop.vectorize.vector_body", i32 1}
+; CHECK: [[META7]] = !{!"llvm.loop.vectorize.body", i32 1}
 ; CHECK: [[META8]] = !{!"llvm.loop.unroll.runtime.disable"}
 ; CHECK: [[META9]] = !{!"llvm.loop.estimated_trip_count", i32 250}
 ; CHECK: [[PROF10]] = !{!"branch_weights", i32 1, i32 3}
 ; CHECK: [[PROF11]] = !{!"branch_weights", i32 10, i32 0}
 ; CHECK: [[LOOP12]] = distinct !{[[LOOP12]], [[META8]], [[META6]], [[META13:![0-9]+]], [[META14:![0-9]+]]}
-; CHECK: [[META13]] = !{!"llvm.loop.vectorize.scalar_remainder", i32 1}
+; CHECK: [[META13]] = !{!"llvm.loop.vectorize.epilogue", i32 1}
 ; CHECK: [[META14]] = !{!"llvm.loop.estimated_trip_count", i32 1}
 ; CHECK: [[LOOP15]] = distinct !{[[LOOP15]], [[META6]], [[META7]], [[META8]]}
 ; CHECK: [[LOOP16]] = distinct !{[[LOOP16]], [[META8]], [[META6]], [[META13]]}

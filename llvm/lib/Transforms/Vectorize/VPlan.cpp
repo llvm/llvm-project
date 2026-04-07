@@ -1810,7 +1810,7 @@ void LoopVectorizationPlanner::updateLoopMetadataAndProfileInfo(
   // unconditionally (including during epilogue vectorization) so that the
   // final scalar tail is always identifiable.
   if (Plan.getScalarPreheader()->hasPredecessors())
-    addBooleanLoopAttribute(OrigLoop, "llvm.loop.vectorize.scalar_remainder");
+    addBooleanLoopAttribute(OrigLoop, "llvm.loop.vectorize.epilogue");
 
   if (!VectorLoop)
     return;
@@ -1832,10 +1832,10 @@ void LoopVectorizationPlanner::updateLoopMetadataAndProfileInfo(
   }
   // Tag the vector loop body so downstream passes can identify it. During
   // epilogue vectorization the epilogue vector loop naturally inherits
-  // scalar_remainder from the pass-1 remainder and gets vector_body here,
-  // giving it both tags — which uniquely identifies it as an epilogue
-  // vectorized remainder.
-  addBooleanLoopAttribute(VectorLoop, "llvm.loop.vectorize.vector_body");
+  // epilogue from the pass-1 remainder and gets body here,
+  // giving it both tags — which uniquely identifies it as a vectorized
+  // epilogue.
+  addBooleanLoopAttribute(VectorLoop, "llvm.loop.vectorize.body");
   TargetTransformInfo::UnrollingPreferences UP;
   TTI.getUnrollingPreferences(VectorLoop, *PSE.getSE(), UP, ORE);
   if (!UP.UnrollVectorizedLoop || VectorizingEpilogue)

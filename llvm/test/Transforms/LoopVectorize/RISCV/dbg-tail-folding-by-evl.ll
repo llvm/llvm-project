@@ -85,6 +85,6 @@ exit:
 ; CHECK: [[DBG9]] = !DILocation(line: 2, column: 5, scope: [[DBG3]])
 ; CHECK: [[LOOP10]] = distinct !{[[LOOP10]], [[META11:![0-9]+]], [[META12:![0-9]+]], [[META13:![0-9]+]]}
 ; CHECK: [[META11]] = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK: [[META12]] = !{!"llvm.loop.vectorize.vector_body", i32 1}
+; CHECK: [[META12]] = !{!"llvm.loop.vectorize.body", i32 1}
 ; CHECK: [[META13]] = !{!"llvm.loop.unroll.runtime.disable"}
 ;.

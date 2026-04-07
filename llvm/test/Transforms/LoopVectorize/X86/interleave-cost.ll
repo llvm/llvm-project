@@ -645,7 +645,7 @@ attributes #1 = { "min-legal-vector-width"="0" "target-cpu"="cascadelake" }
 ;.
 ; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]], [[META3:![0-9]+]]}
 ; CHECK: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK: [[META2]] = !{!"llvm.loop.vectorize.vector_body", i32 1}
+; CHECK: [[META2]] = !{!"llvm.loop.vectorize.body", i32 1}
 ; CHECK: [[META3]] = !{!"llvm.loop.unroll.runtime.disable"}
 ; CHECK: [[META4]] = !{[[META5:![0-9]+]]}
 ; CHECK: [[META5]] = distinct !{[[META5]], [[META6:![0-9]+]]}
@@ -654,7 +654,7 @@ attributes #1 = { "min-legal-vector-width"="0" "target-cpu"="cascadelake" }
 ; CHECK: [[META8]] = distinct !{[[META8]], [[META6]]}
 ; CHECK: [[LOOP9]] = distinct !{[[LOOP9]], [[META1]], [[META2]], [[META3]]}
 ; CHECK: [[LOOP10]] = distinct !{[[LOOP10]], [[META1]], [[META11:![0-9]+]]}
-; CHECK: [[META11]] = !{!"llvm.loop.vectorize.scalar_remainder", i32 1}
+; CHECK: [[META11]] = !{!"llvm.loop.vectorize.epilogue", i32 1}
 ; CHECK: [[META12]] = !{[[META13:![0-9]+]]}
 ; CHECK: [[META13]] = distinct !{[[META13]], [[META14:![0-9]+]]}
 ; CHECK: [[META14]] = distinct !{[[META14]], !"LVerDomain"}

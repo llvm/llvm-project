@@ -8,7 +8,7 @@
 ; RUN:   -disable-output -pass-remarks-output=%t.yaml 2>&1
 ; RUN: FileCheck --input-file=%t.yaml %s --check-prefix=YAML
 
-; Verify that when the loop vectorizer produces vector_body / scalar_remainder
+; Verify that when the loop vectorizer produces body / epilogue
 ; metadata and the unroller *fails* to unroll (runtime unrolling is disabled),
 ; the surviving unroll hints reach WarnMissedTransforms, which emits a
 ; distinct "not unrolled" warning for each loop-kind qualifier.
@@ -17,8 +17,8 @@
 ; Epilogue vectorization is forced to exercise all four loop categories:
 ;
 ;   1. plain loop         – not touched by the vectorizer
-;   2. vectorized loop    – main vector body      (vector_body only)
-;   3. remainder loop     – scalar cleanup         (scalar_remainder only)
+;   2. vectorized loop    – main vector body      (body only)
+;   3. remainder loop     – scalar cleanup         (epilogue only)
 ;   4. vectorized remainder loop – epilogue vector (both flags)
 ;
 ; Runtime unrolling is disabled via metadata so the unroller cannot act,

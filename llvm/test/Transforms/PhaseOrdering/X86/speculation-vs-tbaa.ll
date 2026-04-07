@@ -114,8 +114,8 @@ for.cond.cleanup:                                 ; preds = %for.cond
 ; O23: [[META9]] = !{!"double", [[META6]], i64 0}
 ; O23: [[LOOP10]] = distinct !{[[LOOP10]], [[META11:![0-9]+]], [[META12:![0-9]+]], [[META13:![0-9]+]]}
 ; O23: [[META11]] = !{!"llvm.loop.isvectorized", i32 1}
-; O23: [[META12]] = !{!"llvm.loop.vectorize.vector_body", i32 1}
+; O23: [[META12]] = !{!"llvm.loop.vectorize.body", i32 1}
 ; O23: [[META13]] = !{!"llvm.loop.unroll.runtime.disable"}
 ; O23: [[LOOP14]] = distinct !{[[LOOP14]], [[META13]], [[META11]], [[META15:![0-9]+]]}
-; O23: [[META15]] = !{!"llvm.loop.vectorize.scalar_remainder", i32 1}
+; O23: [[META15]] = !{!"llvm.loop.vectorize.epilogue", i32 1}
 ;.

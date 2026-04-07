@@ -1425,10 +1425,10 @@ exit:
 ;.
 ; COST: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]], [[META3:![0-9]+]]}
 ; COST: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
-; COST: [[META2]] = !{!"llvm.loop.vectorize.vector_body", i32 1}
+; COST: [[META2]] = !{!"llvm.loop.vectorize.body", i32 1}
 ; COST: [[META3]] = !{!"llvm.loop.unroll.runtime.disable"}
 ; COST: [[LOOP4]] = distinct !{[[LOOP4]], [[META3]], [[META1]], [[META5:![0-9]+]]}
-; COST: [[META5]] = !{!"llvm.loop.vectorize.scalar_remainder", i32 1}
+; COST: [[META5]] = !{!"llvm.loop.vectorize.epilogue", i32 1}
 ; COST: [[LOOP6]] = distinct !{[[LOOP6]], [[META1]], [[META2]], [[META3]]}
 ; COST: [[LOOP7]] = distinct !{[[LOOP7]], [[META3]], [[META1]], [[META5]]}
 ; COST: [[LOOP8]] = distinct !{[[LOOP8]], [[META1]], [[META2]], [[META3]]}
@@ -1438,10 +1438,10 @@ exit:
 ;.
 ; FORCED: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]], [[META3:![0-9]+]]}
 ; FORCED: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
-; FORCED: [[META2]] = !{!"llvm.loop.vectorize.vector_body", i32 1}
+; FORCED: [[META2]] = !{!"llvm.loop.vectorize.body", i32 1}
 ; FORCED: [[META3]] = !{!"llvm.loop.unroll.runtime.disable"}
 ; FORCED: [[LOOP4]] = distinct !{[[LOOP4]], [[META3]], [[META1]], [[META5:![0-9]+]]}
-; FORCED: [[META5]] = !{!"llvm.loop.vectorize.scalar_remainder", i32 1}
+; FORCED: [[META5]] = !{!"llvm.loop.vectorize.epilogue", i32 1}
 ; FORCED: [[LOOP6]] = distinct !{[[LOOP6]], [[META1]], [[META2]], [[META3]]}
 ; FORCED: [[LOOP7]] = distinct !{[[LOOP7]], [[META3]], [[META1]], [[META5]]}
 ; FORCED: [[LOOP8]] = distinct !{[[LOOP8]], [[META1]], [[META2]], [[META3]]}

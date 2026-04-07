@@ -7966,8 +7966,8 @@ Attributes in the metadata will be added to both the vectorized and
 epilogue loop.
 See :ref:`Transformation Metadata <transformation-metadata>` for details.
 
-'``llvm.loop.vectorize.vector_body``' Metadata
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+'``llvm.loop.vectorize.body``' Metadata
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 This metadata is automatically added by the loop vectorizer to the
 vectorized loop body. It is used by subsequent optimization passes
@@ -7975,15 +7975,15 @@ vectorized loop body. It is used by subsequent optimization passes
 precise optimization remarks that identify the loop as a vector loop.
 
 The first operand is the string
-``llvm.loop.vectorize.vector_body`` and the second operand is an
+``llvm.loop.vectorize.body`` and the second operand is an
 integer. A value of 1 indicates this is a vectorized loop body:
 
 .. code-block:: llvm
 
-   !0 = !{!"llvm.loop.vectorize.vector_body", i32 1}
+   !0 = !{!"llvm.loop.vectorize.body", i32 1}
 
-'``llvm.loop.vectorize.scalar_remainder``' Metadata
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+'``llvm.loop.vectorize.epilogue``' Metadata
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 This metadata is automatically added by the loop vectorizer to the
 scalar remainder (epilogue) loop to identify it as such. It is used by
@@ -7993,20 +7993,20 @@ that distinguish between the vectorized loop and its scalar remainder.
 
 Together these two attributes provide a four-way classification:
 
-- ``vector_body`` only: main vectorized loop body
-- ``scalar_remainder`` only: scalar remainder loop after vectorization
-- Both ``vector_body`` and ``scalar_remainder``: epilogue vectorized
-  remainder (a remainder loop that was itself vectorized during epilogue
+- ``body`` only: main vectorized loop body
+- ``epilogue`` only: scalar remainder loop after vectorization
+- Both ``body`` and ``epilogue``: vectorized epilogue 
+  (a remainder loop that was itself vectorized during epilogue
   vectorization)
 - Neither: a plain loop not produced by the vectorizer
 
 The first operand is the string
-``llvm.loop.vectorize.scalar_remainder`` and the second operand is
+``llvm.loop.vectorize.epilogue`` and the second operand is
 an integer. A value of 1 indicates the loop is a remainder loop:
 
 .. code-block:: llvm
 
-   !0 = !{!"llvm.loop.vectorize.scalar_remainder", i32 1}
+   !0 = !{!"llvm.loop.vectorize.epilogue", i32 1}
 
 '``llvm.loop.unroll``'
 ^^^^^^^^^^^^^^^^^^^^^^

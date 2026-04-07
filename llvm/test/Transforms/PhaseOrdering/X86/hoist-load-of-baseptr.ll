@@ -253,11 +253,11 @@ declare void @llvm.lifetime.end.p0(ptr nocapture)
 ; O2: [[LOOP4]] = distinct !{[[LOOP4]], [[META5:![0-9]+]], [[META6:![0-9]+]], [[META7:![0-9]+]], [[META8:![0-9]+]]}
 ; O2: [[META5]] = !{!"llvm.loop.mustprogress"}
 ; O2: [[META6]] = !{!"llvm.loop.isvectorized", i32 1}
-; O2: [[META7]] = !{!"llvm.loop.vectorize.vector_body", i32 1}
+; O2: [[META7]] = !{!"llvm.loop.vectorize.body", i32 1}
 ; O2: [[META8]] = !{!"llvm.loop.unroll.runtime.disable"}
 ; O2: [[LOOP9]] = distinct !{[[LOOP9]], [[META5]]}
 ; O2: [[LOOP10]] = distinct !{[[LOOP10]], [[META5]], [[META8]], [[META6]], [[META11:![0-9]+]]}
-; O2: [[META11]] = !{!"llvm.loop.vectorize.scalar_remainder", i32 1}
+; O2: [[META11]] = !{!"llvm.loop.vectorize.epilogue", i32 1}
 ;.
 ; O3: [[INT_TBAA0]] = !{[[META1:![0-9]+]], [[META1]], i64 0}
 ; O3: [[META1]] = !{!"int", [[META2:![0-9]+]], i64 0}
@@ -266,9 +266,9 @@ declare void @llvm.lifetime.end.p0(ptr nocapture)
 ; O3: [[LOOP4]] = distinct !{[[LOOP4]], [[META5:![0-9]+]], [[META6:![0-9]+]], [[META7:![0-9]+]], [[META8:![0-9]+]]}
 ; O3: [[META5]] = !{!"llvm.loop.mustprogress"}
 ; O3: [[META6]] = !{!"llvm.loop.isvectorized", i32 1}
-; O3: [[META7]] = !{!"llvm.loop.vectorize.vector_body", i32 1}
+; O3: [[META7]] = !{!"llvm.loop.vectorize.body", i32 1}
 ; O3: [[META8]] = !{!"llvm.loop.unroll.runtime.disable"}
 ; O3: [[LOOP9]] = distinct !{[[LOOP9]], [[META5]], [[META8]], [[META6]], [[META10:![0-9]+]]}
-; O3: [[META10]] = !{!"llvm.loop.vectorize.scalar_remainder", i32 1}
+; O3: [[META10]] = !{!"llvm.loop.vectorize.epilogue", i32 1}
 ; O3: [[LOOP11]] = distinct !{[[LOOP11]], [[META5]]}
 ;.

@@ -182,8 +182,8 @@ attributes #0 = { uwtable vscale_range(1,16) "aarch64_pstate_sm_body" "target-fe
 ; CHECK: [[LOOP13]] = distinct !{[[LOOP13]], [[META14:![0-9]+]], [[META15:![0-9]+]], [[META16:![0-9]+]], [[META17:![0-9]+]]}
 ; CHECK: [[META14]] = !{!"llvm.loop.mustprogress"}
 ; CHECK: [[META15]] = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK: [[META16]] = !{!"llvm.loop.vectorize.vector_body", i32 1}
+; CHECK: [[META16]] = !{!"llvm.loop.vectorize.body", i32 1}
 ; CHECK: [[META17]] = !{!"llvm.loop.unroll.runtime.disable"}
 ; CHECK: [[LOOP18:![0-9]+]] = distinct !{[[LOOP18]], [[META14]], [[META15]], [[META19:![0-9]+]]}
-; CHECK: [[META19]] = !{!"llvm.loop.vectorize.scalar_remainder", i32 1}
+; CHECK: [[META19]] = !{!"llvm.loop.vectorize.epilogue", i32 1}
 ;.
