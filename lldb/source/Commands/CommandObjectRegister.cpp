@@ -36,28 +36,30 @@ using namespace lldb_private;
 #define LLDB_OPTIONS_register_read
 #include "CommandOptions.inc"
 
-static size_t GetNameSize(const RegisterInfo * reg_info, bool use_primary_name) {
-    const char *raw = use_primary_name ? reg_info->name : reg_info->alt_name;
-    std::string str = raw ? std::string(raw) : std::string();
-    return static_cast<size_t>(str.size());
+static size_t GetNameSize(const RegisterInfo *reg_info, bool use_primary_name) {
+  const char *raw = use_primary_name ? reg_info->name : reg_info->alt_name;
+  std::string str = raw ? std::string(raw) : std::string();
+  return static_cast<size_t>(str.size());
 }
 
 static size_t ComputeLongestRegisterName(RegisterContext *reg_ctx,
-                                    const RegisterSet& reg_set,
-                                    bool use_primary_name, bool primitive_only) {
+                                         const RegisterSet &reg_set,
+                                         bool use_primary_name,
+                                         bool primitive_only) {
   const size_t num_registers = reg_set.num_registers;
   size_t name_right_align_at = 0;
 
   // Loop through all the registers to find the longest register name.
   for (size_t reg_idx = 0; reg_idx < num_registers; ++reg_idx) {
     const size_t reg = reg_set.registers[reg_idx];
-    if (const RegisterInfo *reg_info = 
-            reg_ctx->GetRegisterInfoAtIndex(reg)) {
+    if (const RegisterInfo *reg_info = reg_ctx->GetRegisterInfoAtIndex(reg)) {
       // Derived registers are skipped if primitive_only is true.
       if (primitive_only && reg_info->value_regs)
         continue;
 
-      name_right_align_at = std::max(name_right_align_at, GetNameSize(reg_info, use_primary_name));
+      name_right_align_at = std::max(name_right_align_at,
+                                     GetNameSize(reg_info, use_primary_name));
+
     }
   }
 
@@ -65,7 +67,9 @@ static size_t ComputeLongestRegisterName(RegisterContext *reg_ctx,
 }
 
 // We expect that [command] only contains register names to be printed.
-static size_t ComputeLongestRegisterName(Args &command, RegisterContext *reg_ctx, bool use_primary_name) {
+static size_t ComputeLongestRegisterName(Args &command,
+                                         RegisterContext *reg_ctx,
+                                         bool use_primary_name) {
   size_t name_right_align_at = 0;
 
   // Loop through all the arguments to find the longest register name.
@@ -77,7 +81,8 @@ static size_t ComputeLongestRegisterName(Args &command, RegisterContext *reg_ctx
 
     if (const RegisterInfo *reg_info =
             reg_ctx->GetRegisterInfoByName(arg_str)) {
-      name_right_align_at = std::max(name_right_align_at, GetNameSize(reg_info, use_primary_name));
+      name_right_align_at = std::max(name_right_align_at,
+                                     GetNameSize(reg_info, use_primary_name));
     }
   }
 
@@ -134,8 +139,9 @@ public:
     bool prefix_with_name = !prefix_with_altname;
     DumpRegisterValue(reg_value, strm, reg_info, prefix_with_name,
                       prefix_with_altname, m_format_options.GetFormat(),
-                      reg_name_right_align_at, exe_ctx.GetBestExecutionContextScope(),
-                      print_flags, exe_ctx.GetTargetSP());
+                      reg_name_right_align_at,
+                      exe_ctx.GetBestExecutionContextScope(), print_flags,
+                      exe_ctx.GetTargetSP());
     if ((reg_info.encoding == eEncodingUint) ||
         (reg_info.encoding == eEncodingSint)) {
       Process *process = exe_ctx.GetProcessPtr();
@@ -171,8 +177,9 @@ public:
       strm.Printf("%s:\n", (reg_set->name ? reg_set->name : "unknown"));
       strm.IndentMore();
       const size_t num_registers = reg_set->num_registers;
-      size_t reg_name_right_align_at =
-          ComputeLongestRegisterName(reg_ctx, *reg_set, !static_cast<bool>(m_command_options.alternate_name), primitive_only);
+      size_t reg_name_right_align_at = ComputeLongestRegisterName(
+          reg_ctx, *reg_set,
+          !static_cast<bool>(m_command_options.alternate_name), primitive_only);
       for (size_t reg_idx = 0; reg_idx < num_registers; ++reg_idx) {
         const uint32_t reg = reg_set->registers[reg_idx];
         const RegisterInfo *reg_info = reg_ctx->GetRegisterInfoAtIndex(reg);
@@ -180,8 +187,9 @@ public:
         if (primitive_only && reg_info && reg_info->value_regs)
           continue;
 
-        if (reg_info && DumpRegister(exe_ctx, strm, *reg_ctx, *reg_info,
-                                     /*print_flags=*/false, reg_name_right_align_at))
+        if (reg_info &&
+            DumpRegister(exe_ctx, strm, *reg_ctx, *reg_info,
+                         /*print_flags=*/false, reg_name_right_align_at))
           ++available_count;
         else
           ++unavailable_count;
@@ -245,8 +253,11 @@ protected:
         result.AppendError("the --set <set> option can't be used when "
                            "registers names are supplied as arguments\n");
       } else {
-        int alignment = ComputeLongestRegisterName(command, reg_ctx, !static_cast<bool>(m_command_options.alternate_name));
-        strm.IndentMore(); // Extra ident to be consistent with register sets dumping
+        int alignment = ComputeLongestRegisterName(
+            command, reg_ctx,
+            !static_cast<bool>(m_command_options.alternate_name));
+        strm.IndentMore(); // Extra ident to be consistent with register sets
+                           // dumping
         for (auto &entry : command) {
           // in most LLDB commands we accept $rbx as the name for register RBX
           // - and here we would reject it and non-existant. we should be more
@@ -262,8 +273,8 @@ protected:
             // printing flags afterwards.
             bool print_flags =
                 !m_format_options.GetFormatValue().OptionWasSet();
-            if (!DumpRegister(m_exe_ctx, strm, *reg_ctx, *reg_info,
-                              print_flags, alignment))
+            if (!DumpRegister(m_exe_ctx, strm, *reg_ctx, *reg_info, print_flags,
+                              alignment))
               strm.Printf("%-12s = error: unavailable\n", reg_info->name);
           } else {
             result.AppendErrorWithFormat("Invalid register name '%s'",
