@@ -409,6 +409,9 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
     case BuiltinType::BFloat16:
       resultType = cgm.bFloat16Ty;
       break;
+    case BuiltinType::MFloat8:
+      resultType = cgm.uInt8Ty;
+      break;
     case BuiltinType::Float:
       assert(&astContext.getFloatTypeSemantics(type) ==
                  &llvm::APFloat::IEEEsingle() &&

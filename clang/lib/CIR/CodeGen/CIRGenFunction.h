@@ -1655,6 +1655,13 @@ public:
 
   void emitCXXThrowExpr(const CXXThrowExpr *e);
 
+  struct cxxTryBodyEmitter {
+    virtual mlir::LogicalResult operator()(CIRGenFunction &cgf) = 0;
+    virtual ~cxxTryBodyEmitter() = default;
+  };
+
+  mlir::LogicalResult emitCXXTryStmt(const clang::CXXTryStmt &s,
+                                     cxxTryBodyEmitter &bodyCallback);
   mlir::LogicalResult emitCXXTryStmt(const clang::CXXTryStmt &s);
 
   void emitCtorPrologue(const clang::CXXConstructorDecl *ctor,

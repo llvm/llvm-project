@@ -387,7 +387,7 @@ VariableAnnotator::AnnotateStructured(Instruction &inst) {
     if (!v || v->IsArtificial())
       continue;
 
-    const char *nm = v->GetName().AsCString();
+    const char *nm = v->GetName().AsCString(nullptr);
     llvm::StringRef name = nm ? nm : "<anon>";
 
     DWARFExpressionList &exprs = v->LocationExpressionList();
@@ -419,7 +419,7 @@ VariableAnnotator::AnnotateStructured(Instruction &inst) {
     }
 
     if (Type *type = v->GetType())
-      if (const char *type_str = type->GetName().AsCString())
+      if (const char *type_str = type->GetName().AsCString(nullptr))
         type_name = type_str;
 
     current_vars.try_emplace(
@@ -1369,7 +1369,7 @@ size_t Disassembler::AppendInstructions(Target &target, Address start,
 
   if (bytes_read == 0) {
     if (error_strm_ptr) {
-      if (const char *error_cstr = error.AsCString())
+      if (const char *error_cstr = error.AsCString(nullptr))
         error_strm_ptr->Printf("error: %s\n", error_cstr);
     }
     return 0;
