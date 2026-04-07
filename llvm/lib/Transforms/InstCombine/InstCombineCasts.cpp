@@ -3111,9 +3111,12 @@ static Instruction *foldSplatShuffleToMul(const ShuffleVectorInst &Shuf,
   if (!EltTy)
     return nullptr;
 
+  const unsigned DstWidth = DstTy->getBitWidth();
+  assert(DstWidth == ShufTy->getPrimitiveSizeInBits().getFixedValue() &&
+         "bitcast width mismatch");
   // It would be less beneficial when the dest type is so large that it needs to
   // be legalized in the backend.
-  if (!Shuf.getDataLayout().fitsInLegalInteger(DstTy->getBitWidth()))
+  if (!Shuf.getDataLayout().fitsInLegalInteger(DstWidth))
     return nullptr;
 
   ArrayRef<int> Mask = Shuf.getShuffleMask();
@@ -3121,10 +3124,6 @@ static Instruction *foldSplatShuffleToMul(const ShuffleVectorInst &Shuf,
   // Check if this is a splat-shuffle with a valid index
   if (!all_equal(Mask) || Mask[0] == PoisonMaskElem)
     return nullptr;
-
-  unsigned DstWidth = DstTy->getBitWidth();
-  assert(DstWidth == ShufTy->getPrimitiveSizeInBits().getFixedValue() &&
-         "bitcast width mismatch");
 
   // Get the value to splat via the splat index.
   unsigned SplatIndex = static_cast<unsigned>(Mask[0]);
