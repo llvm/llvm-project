@@ -5944,6 +5944,72 @@ static unsigned selectUmullSmull(SDValue &N0, SDValue &N1, SelectionDAG &DAG,
   return 0;
 }
 
+// Transform mul<v2i64, splat(const)> into a SHL and ADD/SUB
+// (1) multiply-by-(power-of-2 +/- 1) into shift and add/sub.
+// mul x, (2^N + 1) --> add (shl x, N), x
+// mul x, (2^N - 1) --> sub (shl x, N), x
+// Examples: x * 33 --> (x << 5) + x
+//           x * 15 --> (x << 4) - x
+//           x * -33 --> -((x << 5) + x)
+//           x * -15 --> -((x << 4) - x) ; this reduces --> x - (x << 4)
+// (2) multiply-by-(power-of-2 +/- power-of-2) into shifts and add/sub.
+// mul x, (2^N + 2^M) --> (add (shl x, N), (shl x, M))
+// mul x, (2^N - 2^M) --> (sub (shl x, N), (shl x, M))
+// Examples: x * 0x8800 --> (x << 15) + (x << 11)
+//           x * 0xf800 --> (x << 16) - (x << 11)
+//           x * -0x8800 --> -((x << 15) + (x << 11))
+//           x * -0xf800 --> -((x << 16) - (x << 11)) ; (x << 11) - (x << 16)
+static SDValue convertMulToShlAdd(SDNode *N, SelectionDAG &DAG) {
+  const SDNode *Operand = N->getOperand(1).getNode();
+  APInt SplatValue;
+
+  // Not a constant splat so should just stay as a multiplication operation
+  if (!ISD::isConstantSplatVector(Operand, SplatValue) ||
+      !SplatValue.getBoolValue())
+    return SDValue();
+
+  bool IsNegative = SplatValue.isNegative();
+  SplatValue = SplatValue.abs();
+  // Placeholder for MathOp
+  unsigned MathOp = ISD::DELETED_NODE;
+  unsigned TZeros = SplatValue.countr_zero();
+
+  // Shift the splat value by all the zeros, this won't affect the parity
+  // this will help us find the first and second multiple to use.
+  SplatValue.lshrInPlace(TZeros);
+
+  if ((SplatValue - 1).isPowerOf2())
+    MathOp = ISD::ADD;
+  else if ((SplatValue + 1).isPowerOf2())
+    MathOp = ISD::SUB;
+
+  // If the constant is not (2^n + 1) or (2^n - 1), it would require
+  // more than one addition/subtraction. For v2i64, the cost of
+  // multiple vector adds/shifts often exceeds the cost of
+  // scalarization (moving to GPRs to use a single MUL).
+  if (MathOp != ISD::DELETED_NODE) {
+    SDLoc DL(N);
+    EVT VT = N->getValueType(0);
+    SDValue LHS = N->getOperand(0);
+
+    unsigned ShiftAmt = MathOp == ISD::ADD ? (SplatValue - 1).logBase2()
+                                           : (SplatValue + 1).logBase2();
+    ShiftAmt += TZeros;
+
+    SDValue Shl =
+        DAG.getNode(ISD::SHL, DL, VT, LHS, DAG.getConstant(ShiftAmt, DL, VT));
+
+    SDValue NewLHS = TZeros ? DAG.getNode(ISD::SHL, DL, VT, LHS,
+                                          DAG.getConstant(TZeros, DL, VT))
+                            : LHS;
+    SDValue Combined = DAG.getNode(MathOp, DL, VT, Shl, NewLHS);
+    if (IsNegative)
+      Combined = DAG.getNegative(Combined, DL, VT);
+    return Combined;
+  }
+  return SDValue();
+}
+
 SDValue AArch64TargetLowering::LowerMUL(SDValue Op, SelectionDAG &DAG) const {
   EVT VT = Op.getValueType();
 
@@ -5990,7 +6056,10 @@ SDValue AArch64TargetLowering::LowerMUL(SDValue Op, SelectionDAG &DAG) const {
       // legal.
       if (Subtarget->hasSVE())
         return LowerToPredicatedOp(Op, DAG, AArch64ISD::MUL_PRED);
-      // Fall through to expand this.  It is not legal.
+      // Try to optimize the mul to a shift left and add instead of scalarizing.
+      if (SDValue ShlAdd = convertMulToShlAdd(Op.getNode(), DAG))
+        return ShlAdd;
+      // Fall through to expanding as the mul is not legal.
       return SDValue();
     } else
       // Other vector multiplications are legal.
@@ -20537,7 +20606,6 @@ static SDValue performMulCombine(SDNode *N, SelectionDAG &DAG,
     return Ext;
   if (SDValue Ext = performVectorExtCombine(N, DAG))
     return Ext;
-
   if (DCI.isBeforeLegalizeOps())
     return SDValue();
 
