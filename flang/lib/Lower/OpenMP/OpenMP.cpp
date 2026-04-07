@@ -716,10 +716,7 @@ static mlir::Operation *
 createAndSetPrivatizedLoopVar(lower::AbstractConverter &converter,
                               mlir::Location loc, mlir::Value indexVal,
                               const semantics::Symbol *sym) {
-  // The handling of linear symbols is deferred to the OpenMP IRBuilder,
-  // which is responsible for all its aspects, including privatization.
-  assert((converter.isPresentShallowLookup(*sym) ||
-          sym->test(semantics::Symbol::Flag::OmpLinear)) &&
+  assert(converter.isPresentShallowLookup(*sym) &&
          "Expected symbol to be in symbol table.");
   return setLoopVar(converter, loc, indexVal, sym);
 }
@@ -3263,7 +3260,7 @@ genStandaloneSimd(lower::AbstractConverter &converter, lower::SymMap &symTable,
   return simdOp;
 }
 
-static mlir::omp::TaskloopOp genStandaloneTaskloop(
+static mlir::omp::TaskloopContextOp genStandaloneTaskloop(
     lower::AbstractConverter &converter, lower::SymMap &symTable,
     lower::StatementContext &stmtCtx, semantics::SemanticsContext &semaCtx,
     lower::pft::Evaluation &eval, mlir::Location loc,
@@ -3292,13 +3289,23 @@ static mlir::omp::TaskloopOp genStandaloneTaskloop(
   taskloopArgs.inReduction.syms = inReductionSyms;
   taskloopArgs.inReduction.vars = taskloopClauseOps.inReductionVars;
 
+  fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+  auto taskLoopContextOp =
+      mlir::omp::TaskloopContextOp::create(firOpBuilder, loc);
+
+  mlir::OpBuilder::InsertionGuard guard(firOpBuilder);
+  firOpBuilder.createBlock(&taskLoopContextOp.getRegion());
+  firOpBuilder.setInsertionPointToStart(&taskLoopContextOp.getRegion().front());
   auto taskLoopOp = genWrapperOp<mlir::omp::TaskloopOp>(
       converter, loc, taskloopClauseOps, taskloopArgs);
 
   genLoopNestOp(converter, symTable, semaCtx, eval, loc, queue, item,
                 loopNestClauseOps, iv, {{taskLoopOp, taskloopArgs}},
                 llvm::omp::Directive::OMPD_taskloop, dsp);
-  return taskLoopOp;
+
+  firOpBuilder.setInsertionPointAfter(taskLoopOp);
+  mlir::omp::TerminatorOp::create(firOpBuilder, loc);
+  return taskLoopContextOp;
 }
 
 //===----------------------------------------------------------------------===//
