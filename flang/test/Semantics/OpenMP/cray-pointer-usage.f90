@@ -43,3 +43,20 @@ subroutine test_cray_pointer_usage
     print *, var(1)
   !$omp end parallel
 end subroutine test_cray_pointer_usage
+
+subroutine test_nested_cray_pointer
+  implicit none
+  real :: X, B
+  pointer(P, B)
+
+  X = 1.0
+  P = loc(X)
+
+  ! Test nested constructs: pointer declared in outer parallel, pointee used in nested critical
+  ! This should compile successfully - pointer P is in shared clause of parallel
+  !$omp parallel default(none) shared(P, X)
+    !$omp critical
+      B = B + 2.0
+    !$omp end critical
+  !$omp end parallel
+end subroutine test_nested_cray_pointer

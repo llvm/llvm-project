@@ -2780,7 +2780,7 @@ void OmpAttributeVisitor::CreateImplicitSymbols(
         if (sym->GetUltimate().test(Symbol::Flag::CrayPointee)) {
           std::string crayPtrName{
               semantics::GetCrayPointer(*sym).name().ToString()};
-          if (!IsObjectWithDSA(*currScope().FindSymbol(crayPtrName))) {
+          if (!IsObjectWithVisibleDSA(*currScope().FindSymbol(crayPtrName))) {
             context_.Say(loc,
                 "The DEFAULT(NONE) clause requires that the Cray Pointer '%s' must be listed in a data-sharing attribute clause"_err_en_US,
                 crayPtrName);
