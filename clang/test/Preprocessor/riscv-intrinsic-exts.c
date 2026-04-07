@@ -42,7 +42,6 @@
 // CHECK-INTRINSIC-EXTS-NEXT: #define __riscv_intrinsic_xsfvfwmaccqqq 1
 // CHECK-INTRINSIC-EXTS-NEXT: #define __riscv_intrinsic_xsfvqmaccdod 1
 // CHECK-INTRINSIC-EXTS-NEXT: #define __riscv_intrinsic_xsfvqmaccqoq 1
-// CHECK-INTRINSIC-EXTS-NEXT: #define __riscv_intrinsic_xtheadbb 1
 // CHECK-INTRINSIC-EXTS-NEXT: #define __riscv_intrinsic_zbb 1
 // CHECK-INTRINSIC-EXTS-NEXT: #define __riscv_intrinsic_zbc 1
 // CHECK-INTRINSIC-EXTS-NEXT: #define __riscv_intrinsic_zbkb 1

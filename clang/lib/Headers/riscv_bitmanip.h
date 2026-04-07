@@ -21,7 +21,6 @@ extern "C" {
 #define __riscv_intrinsic_zbkb 1
 #define __riscv_intrinsic_zbkc 1
 #define __riscv_intrinsic_zbkx 1
-#define __riscv_intrinsic_xtheadbb 1
 
 #if defined(__riscv_zbb)
 static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__))

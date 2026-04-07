@@ -12,11 +12,11 @@ Clang provides macros to detect which RISC-V intrinsics are supported by the
 toolchain.
 Note: This is independent from assembler support.
 
-Scalar/Vector Intrinsic Detection
+Intrinsic Detection
 ---------------------------
 
-Macros of the form ``__riscv_intrinsic_<extension>`` indicate that the
-toolchain supports scalar/vector built-in functions for a given extension:
+Macros of the form ``__riscv_intrinsic_<extension>`` indicate that the toolchain
+supports intrinsics for a given extension:
 
 .. code-block:: c
 
