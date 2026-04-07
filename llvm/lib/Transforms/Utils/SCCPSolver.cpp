@@ -182,8 +182,9 @@ private:
       //                    XXX
       IsDomainReturned = true;
       // SrcCR is not emptyset -> Y cannot be emptyset but might be fullset.
-      return ConstantRange::getNonEmpty((*this)(XLo),
-                                        modularAdd((*this)(XHi - 1), 1));
+      // f(Hi - 1) must ∈ [0, M), thus, we don't use modular addition to get the
+      // open right end f(Hi - 1) + 1.
+      return ConstantRange::getNonEmpty((*this)(XLo), (*this)(XHi - 1) + 1);
     }
 
     if (Periods.isOne()) {
@@ -200,6 +201,7 @@ private:
       //                   ~XXX~
       IsDomainReturned = false;
       // [f(Lo), f(Hi)) repeated -> Y cannot be fullset but might be emptyset.
+      // We must use modular addition to get the closed left end f(Hi - 1) + 1.
       return getMightEmptyRange(modularAdd((*this)(XHi - 1), 1), (*this)(XLo));
     }
     // k >= 2: the walk overlaps itself too much to have a unique inverse.
@@ -384,7 +386,6 @@ getPreImageOfInvertiblePeriodicMapping(unsigned Opcode, const APInt &C,
                                        const ConstantRange &SrcCR,
                                        const ConstantRange &CmpCR) {
   // TODO: Support srem and other more complex periodic mappings.
-  std::optional<ConstantRange> SrcCmpCR;
   switch (Opcode) {
   case Instruction::Mul:
     // y = C*x = C*x mod (MAX + 1)
