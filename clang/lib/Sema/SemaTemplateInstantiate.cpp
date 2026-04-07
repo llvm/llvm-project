@@ -1637,7 +1637,7 @@ namespace {
         // that we have to lose TypeLoc fidelity in cases where TypeLocs are
         // less critical, otherwise this might result in diagnostics pointing to
         // arbitrary locations.
-        // We now only applied to concepts substitutions and their valid
+        // We now only apply to concepts substitutions and their valid
         // template arguments for performance reasons.
         if (auto Iter = Cache->find(ID); Iter != Cache->end()) {
           Output = Iter->second;
