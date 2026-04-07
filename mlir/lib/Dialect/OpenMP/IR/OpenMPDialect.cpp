@@ -3364,10 +3364,9 @@ LogicalResult TaskgroupOp::verify() {
 //===----------------------------------------------------------------------===//
 
 TaskloopOp TaskloopContextOp::getLoopOp() {
-  for (mlir::Operation &op : getRegion().front())
-    if (auto taskloopOp = dyn_cast<TaskloopOp>(&op))
-      return taskloopOp;
-  return nullptr;
+  return cast<TaskloopOp>(
+      *llvm::find_if(getRegion().front(),
+                     [](mlir::Operation &op) { return isa<TaskloopOp>(op); }));
 }
 
 LogicalResult TaskloopContextOp::verifyRegions() {
