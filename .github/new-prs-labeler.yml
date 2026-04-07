@@ -376,6 +376,12 @@ mlir:llvm:
       - mlir/**/LLVM*
       - mlir/**/LLVM*/**
 
+mlir:nvvm:
+  - changed-files:
+    - any-glob-to-any-file:
+      - mlir/**/NVVM*
+      - mlir/**/NVVM*/**
+
 mlir:linalg:
   - changed-files:
     - any-glob-to-any-file:

@@ -121,6 +121,11 @@ public:
       // the loop, like A[B[i]]. We cannot determine direction or distance in
       // those cases, and also are unable to generate any runtime checks.
       IndirectUnsafe,
+      // Both accesses to the same loop-invariant address and at least one is a
+      // write. Vectorization is unsafe because different vector lanes would
+      // read/write the same memory location, and the ordering of accesses
+      // across lanes matters.
+      InvariantUnsafe,
 
       // Lexically forward.
       //

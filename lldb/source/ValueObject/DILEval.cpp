@@ -388,11 +388,23 @@ lldb::ValueObjectSP LookupIdentifier(llvm::StringRef name_ref,
 
 Interpreter::Interpreter(lldb::TargetSP target, llvm::StringRef expr,
                          std::shared_ptr<StackFrame> frame_sp,
-                         lldb::DynamicValueType use_dynamic, bool use_synthetic,
-                         bool fragile_ivar, bool check_ptr_vs_member)
+                         lldb::DynamicValueType use_dynamic, uint32_t options)
     : m_target(std::move(target)), m_expr(expr), m_exe_ctx_scope(frame_sp),
-      m_use_dynamic(use_dynamic), m_use_synthetic(use_synthetic),
-      m_fragile_ivar(fragile_ivar), m_check_ptr_vs_member(check_ptr_vs_member) {
+      m_use_dynamic(use_dynamic) {
+
+  const bool check_ptr_vs_member =
+      (options & StackFrame::eExpressionPathOptionCheckPtrVsMember) != 0;
+  const bool no_fragile_ivar =
+      (options & StackFrame::eExpressionPathOptionsNoFragileObjcIvar) != 0;
+  const bool no_synth_child =
+      (options & StackFrame::eExpressionPathOptionsNoSyntheticChildren) != 0;
+  const bool allow_var_updates =
+      (options & StackFrame::eExpressionPathOptionsAllowVarUpdates) != 0;
+
+  m_use_synthetic = !no_synth_child;
+  m_fragile_ivar = !no_fragile_ivar;
+  m_check_ptr_vs_member = check_ptr_vs_member;
+  m_allow_var_updates = allow_var_updates;
 }
 
 llvm::Expected<lldb::ValueObjectSP> Interpreter::Evaluate(const ASTNode &node) {
@@ -1052,7 +1064,7 @@ Interpreter::Visit(const BitFieldExtractionNode &node) {
     std::string message = llvm::formatv(
         "bitfield range {0}:{1} is not valid for \"({2}) {3}\"", first_index,
         last_index, base->GetTypeName().AsCString("<invalid type>"),
-        base->GetName().AsCString());
+        base->GetName().GetStringRef());
     return llvm::make_error<DILDiagnosticError>(m_expr, message,
                                                 node.GetLocation());
   }

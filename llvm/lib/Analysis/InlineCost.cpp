@@ -1004,11 +1004,9 @@ class InlineCostCallAnalyzer final : public CallAnalyzer {
         } else if (SwitchInst *SI = dyn_cast<SwitchInst>(&I)) {
           if (getSimplifiedValue<ConstantInt>(SI->getCondition()))
             CurrentSavings += InstrCost;
-        } else if (Value *V = dyn_cast<Value>(&I)) {
+        } else if (SimplifiedValues.count(&I)) {
           // Count an instruction as savings if we can fold it.
-          if (SimplifiedValues.count(V)) {
-            CurrentSavings += InstrCost;
-          }
+          CurrentSavings += InstrCost;
         }
       }
 
@@ -3241,11 +3239,6 @@ std::optional<InlineResult> llvm::getAttributeBasedInliningDecision(
   // Don't inline this call if the caller has the optnone attribute.
   if (Caller->hasOptNone())
     return InlineResult::failure("optnone attribute");
-
-  // Don't inline a function that treats null pointer as valid into a caller
-  // that does not have this attribute.
-  if (!Caller->nullPointerIsDefined() && Callee->nullPointerIsDefined())
-    return InlineResult::failure("nullptr definitions incompatible");
 
   // Don't inline functions which can be interposed at link-time.
   if (Callee->isInterposable())

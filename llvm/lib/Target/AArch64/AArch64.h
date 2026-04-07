@@ -21,6 +21,10 @@
 #include "llvm/PassRegistry.h"
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Target/TargetMachine.h"
+#include <memory>
+
+struct AArch64O0PreLegalizerCombinerImplRuleConfig;
+struct AArch64PreLegalizerCombinerImplRuleConfig;
 
 namespace llvm {
 
@@ -71,6 +75,32 @@ InstructionSelector *
 createAArch64InstructionSelector(const AArch64TargetMachine &,
                                  const AArch64Subtarget &,
                                  const AArch64RegisterBankInfo &);
+class AArch64O0PreLegalizerCombinerPass
+    : public PassInfoMixin<AArch64O0PreLegalizerCombinerPass> {
+  std::unique_ptr<AArch64O0PreLegalizerCombinerImplRuleConfig> RuleConfig;
+
+public:
+  AArch64O0PreLegalizerCombinerPass();
+  AArch64O0PreLegalizerCombinerPass(AArch64O0PreLegalizerCombinerPass &&);
+  ~AArch64O0PreLegalizerCombinerPass();
+
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+class AArch64PreLegalizerCombinerPass
+    : public PassInfoMixin<AArch64PreLegalizerCombinerPass> {
+  std::unique_ptr<AArch64PreLegalizerCombinerImplRuleConfig> RuleConfig;
+
+public:
+  AArch64PreLegalizerCombinerPass();
+  AArch64PreLegalizerCombinerPass(AArch64PreLegalizerCombinerPass &&);
+  ~AArch64PreLegalizerCombinerPass();
+
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
 FunctionPass *createAArch64O0PreLegalizerCombiner();
 FunctionPass *createAArch64PreLegalizerCombiner();
 FunctionPass *createAArch64PostLegalizerCombiner(bool IsOptNone);
@@ -84,7 +114,7 @@ void initializeAArch64A53Fix835769LegacyPass(PassRegistry &);
 void initializeAArch64A57FPLoadBalancingPass(PassRegistry&);
 void initializeAArch64AdvSIMDScalarLegacyPass(PassRegistry &);
 void initializeAArch64AsmPrinterPass(PassRegistry &);
-void initializeAArch64PointerAuthPass(PassRegistry&);
+void initializeAArch64PointerAuthLegacyPass(PassRegistry &);
 void initializeAArch64BranchTargetsLegacyPass(PassRegistry &);
 void initializeAArch64CFIFixupPass(PassRegistry&);
 void initializeAArch64CollectLOHLegacyPass(PassRegistry &);
@@ -98,12 +128,12 @@ void initializeAArch64ExpandPseudoLegacyPass(PassRegistry &);
 void initializeAArch64LoadStoreOptLegacyPass(PassRegistry &);
 void initializeAArch64LowerHomogeneousPrologEpilogPass(PassRegistry &);
 void initializeAArch64MIPeepholeOptLegacyPass(PassRegistry &);
-void initializeAArch64O0PreLegalizerCombinerPass(PassRegistry &);
-void initializeAArch64PostCoalescerPass(PassRegistry &);
+void initializeAArch64O0PreLegalizerCombinerLegacyPass(PassRegistry &);
+void initializeAArch64PostCoalescerLegacyPass(PassRegistry &);
 void initializeAArch64PostLegalizerCombinerPass(PassRegistry &);
 void initializeAArch64PostLegalizerLoweringPass(PassRegistry &);
 void initializeAArch64PostSelectOptimizePass(PassRegistry &);
-void initializeAArch64PreLegalizerCombinerPass(PassRegistry &);
+void initializeAArch64PreLegalizerCombinerLegacyPass(PassRegistry &);
 void initializeAArch64PromoteConstantPass(PassRegistry&);
 void initializeAArch64RedundantCopyEliminationPass(PassRegistry&);
 void initializeAArch64RedundantCondBranchPass(PassRegistry &);
@@ -184,6 +214,19 @@ public:
 
 class AArch64ConditionOptimizerPass
     : public PassInfoMixin<AArch64ConditionOptimizerPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+class AArch64PointerAuthPass : public PassInfoMixin<AArch64PointerAuthPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+class AArch64PostCoalescerPass
+    : public PassInfoMixin<AArch64PostCoalescerPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);

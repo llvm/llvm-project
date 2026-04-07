@@ -84,6 +84,7 @@
 #define __CLC_U_GENTYPE __CLC_XCONCAT(uint, __CLC_VECSIZE)
 
 #define __CLC_GENTYPE_DENORMS_ARE_ZERO __clc_denormals_are_zero_fp32()
+#define __CLC_GENTYPE_FAST_FMA __CLC_FAST_FMA_F32
 
 #define __CLC_BIT_INT int
 #define __CLC_SCALAR
@@ -124,6 +125,7 @@
 #undef __CLC_GENTYPE_MIN
 #undef __CLC_GENTYPE_TRUE_MIN
 #undef __CLC_GENTYPE_DENORMS_ARE_ZERO
+#undef __CLC_GENTYPE_FAST_FMA
 #undef __CLC_FP_LIT
 #undef __CLC_FPSIZE
 #undef __CLC_SCALAR_GENTYPE
@@ -141,6 +143,7 @@
 #define __CLC_GENTYPE_MIN (__CLC_GENTYPE) DBL_MIN
 #define __CLC_GENTYPE_TRUE_MIN (__CLC_GENTYPE) DBL_TRUE_MIN
 #define __CLC_GENTYPE_DENORMS_ARE_ZERO __clc_denormals_are_zero_fp64()
+#define __CLC_GENTYPE_FAST_FMA __CLC_FAST_FMA_F64
 
 #define __CLC_S_GENTYPE __CLC_XCONCAT(long, __CLC_VECSIZE)
 #define __CLC_U_GENTYPE __CLC_XCONCAT(ulong, __CLC_VECSIZE)
@@ -184,6 +187,7 @@
 #undef __CLC_GENTYPE_MIN
 #undef __CLC_GENTYPE_TRUE_MIN
 #undef __CLC_GENTYPE_DENORMS_ARE_ZERO
+#undef __CLC_GENTYPE_FAST_FMA
 #undef __CLC_FP_LIT
 #undef __CLC_FPSIZE
 #undef __CLC_SCALAR_GENTYPE
@@ -201,6 +205,7 @@
 #define __CLC_GENTYPE_MIN (__CLC_GENTYPE) HALF_MIN
 #define __CLC_GENTYPE_TRUE_MIN (__CLC_GENTYPE) HALF_TRUE_MIN
 #define __CLC_GENTYPE_DENORMS_ARE_ZERO __clc_denormals_are_zero_fp16()
+#define __CLC_GENTYPE_FAST_FMA __CLC_FAST_FMA_F16
 
 #define __CLC_S_GENTYPE __CLC_XCONCAT(short, __CLC_VECSIZE)
 #define __CLC_U_GENTYPE __CLC_XCONCAT(ushort, __CLC_VECSIZE)
@@ -244,6 +249,7 @@
 #undef __CLC_GENTYPE_MIN
 #undef __CLC_GENTYPE_TRUE_MIN
 #undef __CLC_GENTYPE_DENORMS_ARE_ZERO
+#undef __CLC_GENTYPE_FAST_FMA
 #undef __CLC_FP_LIT
 #undef __CLC_FPSIZE
 #undef __CLC_SCALAR_GENTYPE
