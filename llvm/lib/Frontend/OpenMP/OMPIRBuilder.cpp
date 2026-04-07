@@ -8350,16 +8350,16 @@ static void FixupDebugInfoForOutlinedFunction(
         OldVar->getFlags(), OldVar->getAlignInBits(), OldVar->getAnnotations());
     return NewVar;
   };
-  auto UpdateDebugRecord = [&](DbgVariableRecord *DR) {
+
+  auto UpdateDebugRecord = [&](auto *DR) {
     DILocalVariable *OldVar = DR->getVariable();
     unsigned ArgNo = 0;
-    if (DR->getNumVariableLocationOps() != 1u)
-      return;
-    auto Loc = DR->getVariableLocationOp(0u);
-    auto Iter = ValueReplacementMap.find(Loc);
-    if (Iter != ValueReplacementMap.end()) {
-      DR->replaceVariableLocationOp(Loc, std::get<0>(Iter->second));
-      ArgNo = std::get<1>(Iter->second) + 1;
+    for (auto Loc : DR->location_ops()) {
+      auto Iter = ValueReplacementMap.find(Loc);
+      if (Iter != ValueReplacementMap.end()) {
+        DR->replaceVariableLocationOp(Loc, std::get<0>(Iter->second));
+        ArgNo = std::get<1>(Iter->second) + 1;
+      }
     }
     if (ArgNo != 0)
       DR->setVariable(GetUpdatedDIVariable(OldVar, ArgNo));
@@ -8369,14 +8369,14 @@ static void FixupDebugInfoForOutlinedFunction(
   auto MoveDebugRecordToCorrectBlock = [&](DbgVariableRecord *DVR) {
     if (DVR->getNumVariableLocationOps() != 1u)
       return;
-    auto Loc = DVR->getVariableLocationOp(0u);
+    Value *Loc = DVR->getVariableLocationOp(0u);
     BasicBlock *CurBB = DVR->getParent();
     BasicBlock *RequiredBB = nullptr;
 
     if (Instruction *LocInst = dyn_cast<Instruction>(Loc))
       RequiredBB = LocInst->getParent();
     else if (isa<llvm::Argument>(Loc))
-      RequiredBB = &(DVR->getFunction()->getEntryBlock());
+      RequiredBB = &DVR->getFunction()->getEntryBlock();
 
     if (RequiredBB && RequiredBB != CurBB) {
       assert(!RequiredBB->empty());
