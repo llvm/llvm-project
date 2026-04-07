@@ -43,6 +43,7 @@ class APInt;
 class AssemblerConstantPools;
 class MCAsmBackend;
 class MCAssembler;
+class MCLFIRewriter;
 class MCContext;
 class MCExpr;
 class MCInst;
@@ -61,6 +62,7 @@ struct DefRangeRegisterRelHeader;
 struct DefRangeSubfieldRegisterHeader;
 struct DefRangeRegisterHeader;
 struct DefRangeFramePointerRelHeader;
+struct DefRangeRegisterRelIndirHeader;
 }
 
 using MCSectionSubPair = std::pair<MCSection *, uint32_t>;
@@ -291,6 +293,8 @@ protected:
   /// Returns true if the .cv_loc directive is in the right section.
   bool checkCVLocSection(unsigned FuncId, unsigned FileNo, SMLoc Loc);
 
+  std::unique_ptr<MCLFIRewriter> LFIRewriter;
+
 public:
   MCStreamer(const MCStreamer &) = delete;
   MCStreamer &operator=(const MCStreamer &) = delete;
@@ -307,6 +311,10 @@ public:
   SMLoc getStartTokLoc() const {
     return StartTokLocPtr ? *StartTokLocPtr : SMLoc();
   }
+
+  void setLFIRewriter(std::unique_ptr<MCLFIRewriter> Rewriter);
+
+  MCLFIRewriter *getLFIRewriter() { return LFIRewriter.get(); }
 
   /// State management
   ///
@@ -461,7 +469,7 @@ public:
   void switchSectionNoPrint(MCSection *Section);
 
   /// Create the default sections and set the initial one.
-  virtual void initSections(bool NoExecStack, const MCSubtargetInfo &STI);
+  virtual void initSections(const MCSubtargetInfo &STI);
 
   MCSymbol *endSection(MCSection *Section);
 
@@ -970,6 +978,10 @@ public:
   virtual void emitCVDefRangeDirective(
       ArrayRef<std::pair<const MCSymbol *, const MCSymbol *>> Ranges,
       codeview::DefRangeFramePointerRelHeader DRHdr);
+
+  virtual void emitCVDefRangeDirective(
+      ArrayRef<std::pair<const MCSymbol *, const MCSymbol *>> Ranges,
+      codeview::DefRangeRegisterRelIndirHeader DRHdr);
 
   /// This implements the CodeView '.cv_stringtable' assembler directive.
   virtual void emitCVStringTableDirective() {}

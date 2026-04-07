@@ -201,6 +201,8 @@ class BreakpointNames(TestBase):
         found_bkpt = bkpts.GetBreakpointAtIndex(0)
         self.assertEqual(bkpt.GetID(), found_bkpt.GetID(), "The right breakpoint.")
         self.assertEqual(bkpt.GetID(), bkpt_id, "With the same ID as before.")
+        self.assertEqual(bkpts[0].GetID(), bkpt.GetID(), "subscript [0] matches")
+        self.assertEqual(bkpts[-1].GetID(), bkpt.GetID(), "subscript [-1] matches")
 
         retval = lldb.SBCommandReturnObject()
         self.dbg.GetCommandInterpreter().HandleCommand(

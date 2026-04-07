@@ -1,5 +1,13 @@
 add_header(off64_t HDR off64_t.h)
 add_header(size_t HDR size_t.h)
+add_header(
+  rsize_t
+  HDR
+    rsize_t.h
+  DEPENDS
+    .size_t
+    libc.include.llvm-libc-macros.annex_k_macros
+)
 add_header(ssize_t HDR ssize_t.h)
 add_header(__atfork_callback_t HDR __atfork_callback_t.h)
 add_header(__search_compare_t HDR __search_compare_t.h)
@@ -29,6 +37,15 @@ add_header(double_t HDR double_t.h)
 add_header(DIR HDR DIR.h)
 add_header(dev_t HDR dev_t.h)
 add_header(div_t HDR div_t.h)
+add_header(errno_t HDR errno_t.h DEPENDS libc.include.llvm-libc-macros.annex_k_macros)
+add_header(
+  constraint_handler_t
+  HDR
+    constraint_handler_t.h
+  DEPENDS
+    .errno_t
+    libc.include.llvm-libc-macros.annex_k_macros
+)
 add_header(ldiv_t HDR ldiv_t.h)
 add_header(lldiv_t HDR lldiv_t.h)
 add_header(FILE HDR FILE.h)
@@ -42,6 +59,7 @@ add_header(imaxdiv_t HDR imaxdiv_t.h)
 add_header(in_addr_t HDR in_addr_t.h)
 add_header(in_addr HDR in_addr.h DEPENDS .in_addr_t)
 add_header(ino_t HDR ino_t.h)
+add_header(key_t HDR key_t.h)
 add_header(mbstate_t HDR mbstate_t.h)
 add_header(mode_t HDR mode_t.h)
 add_header(mtx_t HDR mtx_t.h DEPENDS .__futex_word .__mutex_type)
@@ -52,6 +70,7 @@ add_header(off_t HDR off_t.h)
 add_header(once_flag HDR once_flag.h DEPENDS .__futex_word)
 add_header(posix_spawn_file_actions_t HDR posix_spawn_file_actions_t.h)
 add_header(posix_spawnattr_t HDR posix_spawnattr_t.h)
+add_header(posix_tnode HDR posix_tnode.h)
 add_header(pthread_attr_t HDR pthread_attr_t.h DEPENDS .size_t)
 add_header(pthread_condattr_t HDR pthread_condattr_t.h DEPENDS .clockid_t)
 add_header(pthread_key_t HDR pthread_key_t.h)
@@ -79,9 +98,27 @@ add_header(dl_info HDR Dl_info.h)
 add_header(struct_f_owner_ex HDR struct_f_owner_ex.h DEPENDS .pid_t)
 add_header(struct_flock HDR struct_flock.h DEPENDS .off_t .pid_t)
 add_header(struct_flock64 HDR struct_flock64.h DEPENDS .off64_t .pid_t)
+add_header(
+  struct_ipc_perm
+  HDR struct_ipc_perm.h
+  DEPENDS
+    .key_t
+    .uid_t
+    .gid_t
+    .mode_t
+)
 add_header(struct_pollfd HDR struct_pollfd.h)
 add_header(struct_rlimit HDR struct_rlimit.h DEPENDS .rlim_t)
 add_header(struct_sched_param HDR struct_sched_param.h)
+add_header(struct_sembuf HDR struct_sembuf.h)
+add_header(struct_seminfo HDR struct_seminfo.h)
+add_header(
+  struct_semid_ds
+  HDR struct_semid_ds.h
+  DEPENDS
+    .struct_ipc_perm
+    .time_t
+)
 add_header(struct_timeval HDR struct_timeval.h DEPENDS .suseconds_t .time_t)
 add_header(struct_itimerval HDR struct_itimerval.h DEPENDS .struct_timeval)
 add_header(struct_rusage HDR struct_rusage.h DEPENDS .struct_timeval)
@@ -195,6 +232,7 @@ add_header(Elf32_Off HDR Elf32_Off.h DEPENDS libc.include.llvm-libc-macros.stdin
 add_header(Elf32_Sword HDR Elf32_Sword.h DEPENDS libc.include.llvm-libc-macros.stdint_macros)
 add_header(Elf32_Word HDR Elf32_Word.h DEPENDS libc.include.llvm-libc-macros.stdint_macros)
 add_header(Elf32_Xword HDR Elf32_Xword.h DEPENDS libc.include.llvm-libc-macros.stdint_macros)
+add_header(Elf32_auxv_t HDR Elf32_auxv_t.h DEPENDS libc.include.llvm-libc-macros.stdint_macros)
 add_header(
   Elf32_Chdr
   HDR
@@ -313,6 +351,7 @@ add_header(Elf64_Sword HDR Elf64_Sword.h DEPENDS libc.include.llvm-libc-macros.s
 add_header(Elf64_Sxword HDR Elf64_Sxword.h DEPENDS libc.include.llvm-libc-macros.stdint_macros)
 add_header(Elf64_Word HDR Elf64_Word.h DEPENDS libc.include.llvm-libc-macros.stdint_macros)
 add_header(Elf64_Xword HDR Elf64_Xword.h DEPENDS libc.include.llvm-libc-macros.stdint_macros)
+add_header(Elf64_auxv_t HDR Elf64_auxv_t.h DEPENDS libc.include.llvm-libc-macros.stdint_macros)
 add_header(
   Elf64_Chdr
   HDR
@@ -551,3 +590,18 @@ add_header(EFI_SYSTEM_TABLE
     .EFI_TABLE_HEADER
     .char16_t
 )
+add_header(__action_closure_fn_t 
+  HDR 
+    __action_closure_fn_t.h 
+  DEPENDS 
+    .posix_tnode 
+    .VISIT
+)
+add_header(__action_fn_t 
+  HDR 
+    __action_fn_t.h 
+  DEPENDS 
+    .posix_tnode 
+    .VISIT
+)
+add_header(__free_fn_t HDR __free_fn_t.h)

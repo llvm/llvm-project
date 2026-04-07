@@ -545,6 +545,11 @@ public:
     llvm_unreachable("not implemented");
   }
 
+  virtual void createDirectBranch(MCInst &Inst, const MCSymbol *Target,
+                                  MCContext *Ctx) {
+    llvm_unreachable("not implemented");
+  }
+
   virtual MCPhysReg getX86R11() const { llvm_unreachable("not implemented"); }
 
   virtual unsigned getShortBranchOpcode(unsigned Opcode) const {
@@ -1590,13 +1595,18 @@ public:
     llvm_unreachable("not implemented");
   }
 
-  /// Similar to getDefaultDefIn
+  /// Registers which may contain a meaningful value after a function returns.
   virtual void getDefaultLiveOut(BitVector &Regs) const {
     llvm_unreachable("not implemented");
   }
 
   /// Change \p Regs with a bitmask with all general purpose regs
   virtual void getGPRegs(BitVector &Regs, bool IncludeAlias = true) const {
+    llvm_unreachable("not implemented");
+  }
+
+  /// Remove non scavengeable special registers from \p Regs
+  virtual void removeNonScavengeableRegs(BitVector &Regs) const {
     llvm_unreachable("not implemented");
   }
 
@@ -1790,6 +1800,11 @@ public:
   }
 
   virtual void patchPLTEntryForBTI(BinaryFunction &PLTFunction, MCInst &Call) {
+    llvm_unreachable("not implemented");
+  }
+
+  virtual void patchFunctionEntryForBTI(BinaryFunction &Function,
+                                        MCInst &Call) {
     llvm_unreachable("not implemented");
   }
 
@@ -2399,7 +2414,7 @@ public:
 
   virtual InstructionListType
   createInstrumentedIndirectCall(MCInst &&CallInst, MCSymbol *HandlerFuncAddr,
-                                 int CallSiteID, MCContext *Ctx) {
+                                 size_t CallSiteID, MCContext *Ctx) {
     llvm_unreachable("not implemented");
     return InstructionListType();
   }

@@ -46,15 +46,9 @@ private:
   IR2VecKind OutputEmbeddingMode;
 
 public:
-  PyIR2VecTool(const std::string &Filename, const std::string &Mode,
+  PyIR2VecTool(const std::string &Filename, IR2VecKind Mode,
                const std::string &VocabPath) {
-    OutputEmbeddingMode = [](const std::string &Mode) -> IR2VecKind {
-      if (Mode == "sym")
-        return IR2VecKind::Symbolic;
-      if (Mode == "fa")
-        return IR2VecKind::FlowAware;
-      throw nb::value_error("Invalid mode. Use 'sym' or 'fa'");
-    }(Mode);
+    OutputEmbeddingMode = Mode;
 
     if (VocabPath.empty())
       throw nb::value_error("Empty Vocab Path not allowed");
@@ -68,6 +62,14 @@ public:
                              toString(std::move(Err)))
                                 .c_str());
     }
+  }
+
+  nb::list getFuncNames() {
+    nb::list NbFuncNames;
+    for (const Function &F : M->getFunctionDefs())
+      NbFuncNames.append(nb::str(F.getName().str().c_str()));
+
+    return NbFuncNames;
   }
 
   nb::dict getFuncEmbMap() {
@@ -150,6 +152,41 @@ public:
 
     return NbBBEmbMap;
   }
+
+  nb::dict getInstEmbMap(const std::string &FuncName) {
+    const Function *F = M->getFunction(FuncName);
+
+    if (!F)
+      throw nb::value_error(
+          ("Function '" + FuncName + "' not found in module").c_str());
+
+    auto ToolInstEmbMap = Tool->getInstEmbeddingsMap(*F, OutputEmbeddingMode);
+
+    if (!ToolInstEmbMap)
+      throw nb::value_error(toString(ToolInstEmbMap.takeError()).c_str());
+
+    nb::dict NbInstEmbMap;
+
+    for (const auto &[InstPtr, InstEmb] : *ToolInstEmbMap) {
+      auto InstEmbVec = InstEmb.getData();
+      double *NbInstEmbVec = new double[InstEmbVec.size()];
+      std::copy(InstEmbVec.begin(), InstEmbVec.end(), NbInstEmbVec);
+
+      auto NbArray = nb::ndarray<nb::numpy, double>(
+          NbInstEmbVec, {InstEmbVec.size()},
+          nb::capsule(NbInstEmbVec, [](void *P) noexcept {
+            delete[] static_cast<double *>(P);
+          }));
+
+      std::string InstStr;
+      raw_string_ostream OS(InstStr);
+      InstPtr->print(OS);
+
+      NbInstEmbMap[nb::str(OS.str().c_str())] = NbArray;
+    }
+
+    return NbInstEmbMap;
+  }
 };
 
 } // namespace
@@ -157,10 +194,19 @@ public:
 NB_MODULE(ir2vec, m) {
   m.doc() = std::string("Python bindings for ") + ToolName;
 
+  nb::enum_<IR2VecKind>(m, "IR2VecKind",
+                        "Embedding mode for IR2Vec representations")
+      .value("Symbolic", IR2VecKind::Symbolic, "Symbolic encodings only")
+      .value("FlowAware", IR2VecKind::FlowAware,
+             "Flow-aware encodings (includes data/control flow)")
+      .export_values();
+
   nb::class_<PyIR2VecTool>(m, "IR2VecTool")
-      .def(nb::init<const std::string &, const std::string &,
-                    const std::string &>(),
+      .def(nb::init<const std::string &, IR2VecKind, const std::string &>(),
            nb::arg("filename"), nb::arg("mode"), nb::arg("vocabPath"))
+      .def("getFuncNames", &PyIR2VecTool::getFuncNames,
+           "Get list of all defined functions in the module\n"
+           "Returns: list[str] - Function names")
       .def("getFuncEmbMap", &PyIR2VecTool::getFuncEmbMap,
            "Generate function-level embeddings for all functions\n"
            "Returns: dict[str, ndarray[float64]] - "
@@ -173,13 +219,19 @@ NB_MODULE(ir2vec, m) {
            "Generate embeddings for all basic blocks in a function\n"
            "Args: funcName (str) - IR-Name of the function\n"
            "Returns: dict[str, ndarray[float64]] - "
-           "{basic_block_name: embedding vector}");
+           "{basic_block_name: embedding vector}")
+      .def("getInstEmbMap", &PyIR2VecTool::getInstEmbMap, nb::arg("funcName"),
+           "Generate embeddings for all instructions in a function\n"
+           "Args: funcName (str) - IR-Name of the function\n"
+           "Returns: dict[str, ndarray[float64]] - "
+           "{instruction_string: embedding_vector}");
+
   m.def(
       "initEmbedding",
-      [](const std::string &filename, const std::string &mode,
+      [](const std::string &filename, IR2VecKind mode,
          const std::string &vocabPath) {
         return std::make_unique<PyIR2VecTool>(filename, mode, vocabPath);
       },
-      nb::arg("filename"), nb::arg("mode") = "sym", nb::arg("vocabPath"),
+      nb::arg("filename"), nb::arg("mode"), nb::arg("vocabPath"),
       nb::rv_policy::take_ownership);
 }

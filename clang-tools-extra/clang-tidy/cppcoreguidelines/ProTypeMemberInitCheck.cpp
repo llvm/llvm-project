@@ -71,8 +71,9 @@ removeFieldInitialized(const FieldDecl *M,
     // Erase all members in a union if any member of it is initialized.
     for (const auto *F : R->fields())
       FieldDecls.erase(F);
-  } else
+  } else {
     FieldDecls.erase(M);
+  }
 }
 
 static void
@@ -571,7 +572,8 @@ void ProTypeMemberInitCheck::checkMissingBaseClassInitializer(
 
     for (const CXXCtorInitializer *Init : Ctor->inits())
       if (Init->isBaseInitializer() && Init->isWritten())
-        BasesToInit.erase(Init->getBaseClass()->getAsCXXRecordDecl());
+        BasesToInit.erase(
+            Init->getBaseClass()->getAsCXXRecordDecl()->getCanonicalDecl());
   }
 
   if (BasesToInit.empty())

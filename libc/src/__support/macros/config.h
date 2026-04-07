@@ -48,6 +48,8 @@
 
 #define __builtin_prefetch(X, Y, Z)
 
+#define LIBC_HAS_BUILTIN_IS_CONSTANT_EVALUATED 1
+
 #endif // LIBC_COMPILER_IS_MSVC
 
 #ifdef __clang__
@@ -64,6 +66,16 @@
 // TODO(#98548): GCC emits a warning when using the visibility attribute which
 // needs to be diagnosed and addressed.
 #define LIBC_NAMESPACE_DECL LIBC_NAMESPACE
+#endif
+
+// IMPORTANT (USE WITH CAUTION): This macro is intended to be used at the top of
+// the file and set to 1. It alters the signatures of some functions to have
+// constexpr qualifier and forces the use of constexpr-compatible
+// implementation, which might be a completely different code path or
+// instructions. Some of these functions exploit platform-specific non-constexpr
+// implementations to achieve certain goals, thus it is disabled by default.
+#ifndef LIBC_ENABLE_CONSTEXPR
+#define LIBC_ENABLE_CONSTEXPR 0
 #endif
 
 #endif // LLVM_LIBC_SRC___SUPPORT_MACROS_CONFIG_H

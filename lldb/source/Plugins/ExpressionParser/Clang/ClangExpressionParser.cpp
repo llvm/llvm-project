@@ -725,10 +725,24 @@ static void SetupImportStdModuleLangOpts(CompilerInstance &compiler,
 // Implementation of ClangExpressionParser
 //===----------------------------------------------------------------------===//
 
+static void SetPointerAuthOptionsForArm64e(LangOptions &lang_opts) {
+  lang_opts.PointerAuthIntrinsics = true;
+  lang_opts.PointerAuthCalls = true;
+  lang_opts.PointerAuthReturns = true;
+  lang_opts.PointerAuthAuthTraps = true;
+  lang_opts.PointerAuthIndirectGotos = true;
+  lang_opts.PointerAuthVTPtrAddressDiscrimination = true;
+  lang_opts.PointerAuthVTPtrTypeDiscrimination = true;
+  lang_opts.PointerAuthObjcIsa = true;
+  lang_opts.PointerAuthObjcClassROPointers = true;
+  lang_opts.PointerAuthObjcInterfaceSel = true;
+}
+
 ClangExpressionParser::ClangExpressionParser(
     ExecutionContextScope *exe_scope, Expression &expr,
     bool generate_debug_info, DiagnosticManager &diagnostic_manager,
-    std::vector<std::string> include_directories, std::string filename)
+    std::vector<std::string> include_directories, std::string filename,
+    bool force_disable_ptrauth_codegen)
     : ExpressionParser(exe_scope, expr, generate_debug_info), m_compiler(),
       m_pp_callbacks(nullptr),
       m_include_directories(std::move(include_directories)),
@@ -776,24 +790,28 @@ ClangExpressionParser::ClangExpressionParser(
   if (auto *target_info = TargetInfo::CreateTargetInfo(
           m_compiler->getDiagnostics(),
           m_compiler->getInvocation().getTargetOpts())) {
-    if (log) {
-      LLDB_LOGF(log, "Target datalayout string: '%s'",
-                target_info->getDataLayoutString());
-      LLDB_LOGF(log, "Target ABI: '%s'", target_info->getABI().str().c_str());
-      LLDB_LOGF(log, "Target vector alignment: %d",
-                target_info->getMaxVectorAlign());
-    }
+    LLDB_LOGF(log, "Target datalayout string: '%s'",
+              target_info->getDataLayoutString());
+    LLDB_LOGF(log, "Target ABI: '%s'", target_info->getABI().str().c_str());
+    LLDB_LOGF(log, "Target vector alignment: %d",
+              target_info->getMaxVectorAlign());
     m_compiler->setTarget(target_info);
   } else {
-    if (log)
-      LLDB_LOGF(log, "Failed to create TargetInfo for '%s'",
-                m_compiler->getTargetOpts().Triple.c_str());
+    LLDB_LOGF(log, "Failed to create TargetInfo for '%s'",
+              m_compiler->getTargetOpts().Triple.c_str());
 
     lldbassert(false && "Failed to create TargetInfo.");
   }
 
   // 4. Set language options.
   SetupLangOpts(*m_compiler, *exe_scope, expr, diagnostic_manager);
+
+  const llvm::Triple triple = target_sp->GetArchitecture().GetTriple();
+  const bool enable_ptrauth =
+      triple.isArm64e() && !force_disable_ptrauth_codegen;
+  if (enable_ptrauth)
+    SetPointerAuthOptionsForArm64e(m_compiler->getLangOpts());
+
   auto *clang_expr = dyn_cast<ClangUserExpression>(&m_expr);
   if (clang_expr && clang_expr->DidImportCxxModules()) {
     LLDB_LOG(log, "Adding lang options for importing C++ modules");
@@ -810,6 +828,12 @@ ClangExpressionParser::ClangExpressionParser(
     m_compiler->getCodeGenOpts().setDebugInfo(codegenoptions::FullDebugInfo);
   else
     m_compiler->getCodeGenOpts().setDebugInfo(codegenoptions::NoDebugInfo);
+
+  if (enable_ptrauth) {
+    PointerAuthOptions &ptrauth_opts = m_compiler->getCodeGenOpts().PointerAuth;
+    clang::CompilerInvocation::setDefaultPointerAuthOptions(
+        ptrauth_opts, m_compiler->getLangOpts(), triple);
+  }
 
   // Disable some warnings.
   SetupDefaultClangDiagnostics(*m_compiler);
@@ -1488,8 +1512,8 @@ lldb_private::Status ClangExpressionParser::DoPrepareForExecution(
           "Couldn't find %s() in the module", m_expr.FunctionName());
       return err;
     } else {
-      LLDB_LOGF(log, "Found function %s for %s", function_name.AsCString(),
-                m_expr.FunctionName());
+      LLDB_LOG(log, "Found function {0} for {1}", function_name,
+               m_expr.FunctionName());
     }
   }
 
@@ -1540,9 +1564,9 @@ lldb_private::Status ClangExpressionParser::DoPrepareForExecution(
 
   if (decl_map) {
     StreamString error_stream;
-    IRForTarget ir_for_target(decl_map, m_expr.NeedsVariableResolution(),
-                              *execution_unit_sp, error_stream,
-                              function_name.AsCString());
+    IRForTarget ir_for_target(
+        decl_map, m_expr.NeedsVariableResolution(), *execution_unit_sp,
+        error_stream, execution_policy, function_name.AsCString(nullptr));
 
     if (!ir_for_target.runOnModule(*execution_unit_sp->GetModule())) {
       err = Status(error_stream.GetString().str());
@@ -1604,7 +1628,7 @@ lldb_private::Status ClangExpressionParser::DoPrepareForExecution(
         if (auto *checker_funcs = llvm::dyn_cast<ClangDynamicCheckerFunctions>(
                 process->GetDynamicCheckers())) {
           IRDynamicChecks ir_dynamic_checks(*checker_funcs,
-                                            function_name.AsCString());
+                                            function_name.AsCString(nullptr));
 
           llvm::Module *module = execution_unit_sp->GetModule();
           if (!module || !ir_dynamic_checks.runOnModule(*module)) {

@@ -115,6 +115,37 @@ TEST_F(SmallStringTest, AppendStringRefs) {
   EXPECT_STREQ("abcdefghijklmnopqrstu", theString.c_str());
 }
 
+TEST_F(SmallStringTest, StartsWith) {
+  SmallString<32> Str("hello");
+  EXPECT_TRUE(Str.starts_with(""));
+  EXPECT_TRUE(Str.starts_with("he"));
+  EXPECT_FALSE(Str.starts_with("helloworld"));
+  EXPECT_FALSE(Str.starts_with("hi"));
+  EXPECT_TRUE(Str.starts_with('h'));
+  EXPECT_FALSE(Str.starts_with('i'));
+}
+
+TEST_F(SmallStringTest, EndsWith) {
+  SmallString<32> Str("hello");
+  EXPECT_TRUE(Str.ends_with(""));
+  EXPECT_TRUE(Str.ends_with("lo"));
+  EXPECT_FALSE(Str.ends_with("helloworld"));
+  EXPECT_FALSE(Str.ends_with("worldhello"));
+  EXPECT_FALSE(Str.ends_with("so"));
+  EXPECT_TRUE(Str.ends_with('o'));
+  EXPECT_FALSE(Str.ends_with('p'));
+}
+
+TEST_F(SmallStringTest, Contains) {
+  SmallString<32> Str("hello");
+  EXPECT_TRUE(Str.contains(""));
+  EXPECT_TRUE(Str.contains("ell"));
+  EXPECT_TRUE(Str.contains("hello"));
+  EXPECT_FALSE(Str.contains("world"));
+  EXPECT_TRUE(Str.contains('e'));
+  EXPECT_FALSE(Str.contains('w'));
+}
+
 TEST_F(SmallStringTest, StringRefConversion) {
   StringRef abc = "abc";
   theString.assign(abc.begin(), abc.end());

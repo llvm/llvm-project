@@ -6,12 +6,17 @@ define i32 @test(i32 %arg, i32 %arg1) {
 ; CHECK-SAME: i32 [[ARG:%.*]], i32 [[ARG1:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[BB:.*:]]
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext i32 [[ARG1]] to i64
-; CHECK-NEXT:    [[ZEXT2:%.*]] = zext i32 [[ARG]] to i64
-; CHECK-NEXT:    [[SEXT:%.*]] = sext i32 [[ARG]] to i64
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> poison, i32 [[ARG]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i32> [[TMP0]], <2 x i32> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP2:%.*]] = zext <2 x i32> [[TMP1]] to <2 x i64>
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <2 x i32> [[TMP1]] to <2 x i64>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x i64> [[TMP2]], <2 x i64> [[TMP3]], <2 x i32> <i32 0, i32 3>
 ; CHECK-NEXT:    br label %[[BB3:.*]]
 ; CHECK:       [[BB3]]:
 ; CHECK-NEXT:    [[GETELEMENTPTR:%.*]] = getelementptr i64, ptr addrspace(1) null, i64 [[ZEXT]]
+; CHECK-NEXT:    [[ZEXT2:%.*]] = extractelement <2 x i64> [[TMP4]], i32 0
 ; CHECK-NEXT:    [[GETELEMENTPTR4:%.*]] = getelementptr i64, ptr addrspace(1) null, i64 [[ZEXT2]]
+; CHECK-NEXT:    [[SEXT:%.*]] = extractelement <2 x i64> [[TMP4]], i32 1
 ; CHECK-NEXT:    [[GETELEMENTPTR5:%.*]] = getelementptr i64, ptr addrspace(1) null, i64 [[SEXT]]
 ; CHECK-NEXT:    [[ZEXT6:%.*]] = zext i32 0 to i64
 ; CHECK-NEXT:    [[GETELEMENTPTR7:%.*]] = getelementptr i64, ptr addrspace(1) null, i64 [[ZEXT6]]

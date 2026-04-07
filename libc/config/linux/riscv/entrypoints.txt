@@ -229,6 +229,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdio.sprintf
     libc.src.stdio.asprintf
     libc.src.stdio.sscanf
+    libc.src.stdio.stderr
+    libc.src.stdio.stdin
+    libc.src.stdio.stdout
     libc.src.stdio.vsscanf
     libc.src.stdio.vfprintf
     libc.src.stdio.vprintf
@@ -286,12 +289,13 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.stat.mkdir
     libc.src.sys.stat.mkdirat
     libc.src.sys.stat.stat
+    libc.src.sys.stat.utimensat
 
     # sys/statvfs.h
     libc.src.sys.statvfs.fstatvfs
     libc.src.sys.statvfs.statvfs
 
-    # sys/utimes.h entrypoints
+    # sys/time.h entrypoints
     libc.src.sys.time.utimes
 
     # sys/utsname.h entrypoints
@@ -324,6 +328,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     # unistd.h entrypoints
     libc.src.unistd.access
     libc.src.unistd.chdir
+    libc.src.unistd.chown
     libc.src.unistd.close
     libc.src.unistd.dup
     libc.src.unistd.dup2
@@ -373,6 +378,17 @@ set(TARGET_LIBC_ENTRYPOINTS
 
     # wctype.h entrypoints
     libc.src.wctype.iswalpha
+    libc.src.wctype.iswgraph
+    libc.src.wctype.iswcntrl
+    libc.src.wctype.iswdigit
+    libc.src.wctype.iswupper
+    libc.src.wctype.iswalnum
+    libc.src.wctype.iswlower
+    libc.src.wctype.iswspace
+    libc.src.wctype.iswblank
+    libc.src.wctype.iswxdigit
+    libc.src.wctype.iswpunct
+    libc.src.wctype.iswprint
 
     # sys/uio.h entrypoints
     libc.src.sys.uio.writev
@@ -427,9 +443,12 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.acos
     libc.src.math.acosf
     libc.src.math.acoshf
+    libc.src.math.acospif
     libc.src.math.asin
     libc.src.math.asinf
     libc.src.math.asinhf
+    libc.src.math.asinpi
+    libc.src.math.asinpif
     libc.src.math.atan2
     libc.src.math.atan2f
     libc.src.math.atan
@@ -440,6 +459,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.canonicalizel
     libc.src.math.cbrt
     libc.src.math.cbrtf
+    libc.src.math.cbrtbf16
     libc.src.math.ceil
     libc.src.math.ceilf
     libc.src.math.ceill
@@ -484,6 +504,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.floorf
     libc.src.math.floorl
     libc.src.math.fma
+    libc.src.math.fmabf16
     libc.src.math.fmaf
     libc.src.math.fmax
     libc.src.math.fmaxf
@@ -676,6 +697,7 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.acospif16
     libc.src.math.asinf16
     libc.src.math.asinhf16
+    libc.src.math.atan2f16
     libc.src.math.atanhf16
     libc.src.math.canonicalizef16
     libc.src.math.ceilf16
@@ -683,6 +705,8 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.cosf16
     libc.src.math.coshf16
     libc.src.math.cospif16
+    libc.src.math.erff16
+    libc.src.math.erfcf16
     libc.src.math.exp10f16
     libc.src.math.exp10m1f16
     libc.src.math.exp2f16
@@ -735,7 +759,9 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.llrintf16
     libc.src.math.llroundf16
     libc.src.math.log10f16
+    libc.src.math.log10p1f16
     libc.src.math.log2f16
+    libc.src.math.log2p1f16
     libc.src.math.logbf16
     libc.src.math.logf16
     libc.src.math.lrintf16
@@ -868,6 +894,8 @@ endif()
 
 list(APPEND TARGET_LIBM_ENTRYPOINTS
   # bfloat16 entrypoints
+  libc.src.math.atanbf16
+  libc.src.math.asinbf16
   libc.src.math.bf16add
   libc.src.math.bf16addf
   libc.src.math.bf16addl
@@ -904,6 +932,7 @@ list(APPEND TARGET_LIBM_ENTRYPOINTS
   libc.src.math.fromfpbf16
   libc.src.math.fromfpxbf16
   libc.src.math.getpayloadbf16
+  libc.src.math.hypotbf16
   libc.src.math.ilogbbf16
   libc.src.math.iscanonicalbf16
   libc.src.math.issignalingbf16
@@ -1314,6 +1343,7 @@ if(LLVM_LIBC_FULL_BUILD)
 
     # sys/socket.h entrypoints
     libc.src.sys.socket.bind
+    libc.src.sys.socket.connect
     libc.src.sys.socket.socket
     libc.src.sys.socket.socketpair
     libc.src.sys.socket.send

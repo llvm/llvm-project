@@ -247,7 +247,7 @@ static Address ApplyNonVirtualAndVirtualOffset(
   if (!nonVirtualOffset.isZero()) {
     llvm::Type *OffsetType =
         (CGF.CGM.getTarget().getCXXABI().isItaniumFamily() &&
-         CGF.CGM.getItaniumVTableContext().isRelativeLayout())
+         CGF.CGM.getLangOpts().RelativeCXXABIVTables)
             ? CGF.Int32Ty
             : CGF.PtrDiffTy;
     baseOffset =
@@ -570,23 +570,6 @@ static void EmitBaseInitializer(CodeGenFunction &CGF,
                                           isBaseVirtual);
 }
 
-static bool isMemcpyEquivalentSpecialMember(const CXXMethodDecl *D) {
-  auto *CD = dyn_cast<CXXConstructorDecl>(D);
-  if (!(CD && CD->isCopyOrMoveConstructor()) &&
-      !D->isCopyAssignmentOperator() && !D->isMoveAssignmentOperator())
-    return false;
-
-  // We can emit a memcpy for a trivial copy or move constructor/assignment.
-  if (D->isTrivial() && !D->getParent()->mayInsertExtraPadding())
-    return true;
-
-  // We *must* emit a memcpy for a defaulted union copy or move op.
-  if (D->getParent()->isUnion() && D->isDefaulted())
-    return true;
-
-  return false;
-}
-
 static void EmitLValueForAnyFieldInitialization(CodeGenFunction &CGF,
                                                 CXXCtorInitializer *MemberInit,
                                                 LValue &LHS) {
@@ -641,7 +624,8 @@ static void EmitMemberInitializer(CodeGenFunction &CGF,
     QualType BaseElementTy = CGF.getContext().getBaseElementType(Array);
     CXXConstructExpr *CE = dyn_cast<CXXConstructExpr>(MemberInit->getInit());
     if (BaseElementTy.isPODType(CGF.getContext()) ||
-        (CE && isMemcpyEquivalentSpecialMember(CE->getConstructor()))) {
+        (CE && CE->getConstructor()->isMemcpyEquivalentSpecialMember(
+                   CGF.getContext()))) {
       unsigned SrcArgIndex =
           CGF.CGM.getCXXABI().getSrcArgforCopyCtor(Constructor, Args);
       llvm::Value *SrcPtr =
@@ -909,6 +893,11 @@ public:
     if (PointerAuthQualifier Q = F->getType().getPointerAuth();
         Q && Q.isAddressDiscriminated())
       return false;
+    // Non-trivially-copyable fields with pointer field protection need to be
+    // copied one by one.
+    if (!CGF.getContext().arePFPFieldsTriviallyCopyable(ClassDecl) &&
+        CGF.getContext().isPFPField(F))
+      return false;
     return true;
   }
 
@@ -1044,7 +1033,8 @@ private:
     CXXConstructExpr *CE = dyn_cast<CXXConstructExpr>(MemberInit->getInit());
 
     // Bail out on non-memcpyable, not-trivially-copyable members.
-    if (!(CE && isMemcpyEquivalentSpecialMember(CE->getConstructor())) &&
+    if (!(CE && CE->getConstructor()->isMemcpyEquivalentSpecialMember(
+                    CGF.getContext())) &&
         !(FieldType.isTriviallyCopyableType(CGF.getContext()) ||
           FieldType->isReferenceType()))
       return false;
@@ -1153,7 +1143,7 @@ private:
       return nullptr;
     } else if (CXXMemberCallExpr *MCE = dyn_cast<CXXMemberCallExpr>(S)) {
       CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(MCE->getCalleeDecl());
-      if (!(MD && isMemcpyEquivalentSpecialMember(MD)))
+      if (!(MD && MD->isMemcpyEquivalentSpecialMember(CGF.getContext())))
         return nullptr;
       MemberExpr *IOA = dyn_cast<MemberExpr>(MCE->getImplicitObjectArgument());
       if (!IOA)
@@ -1234,6 +1224,7 @@ public:
 
   void finish() { emitAggregatedStmts(); }
 };
+
 } // end anonymous namespace
 
 static bool isInitializerOfDynamicClass(const CXXCtorInitializer *BaseInit) {
@@ -2157,7 +2148,7 @@ void CodeGenFunction::EmitCXXAggrConstructorCall(
   // because of GCC extensions that permit zero-length arrays.  There
   // are probably legitimate places where we could assume that this
   // doesn't happen, but it's not clear that it's worth it.
-  llvm::BranchInst *zeroCheckBranch = nullptr;
+  llvm::CondBrInst *zeroCheckBranch = nullptr;
 
   // Optimize for a constant count.
   llvm::ConstantInt *constantCount = dyn_cast<llvm::ConstantInt>(numElements);
@@ -2287,7 +2278,7 @@ void CodeGenFunction::EmitCXXConstructorCall(
   // If this is a trivial constructor, emit a memcpy now before we lose
   // the alignment information on the argument.
   // FIXME: It would be better to preserve alignment information into CallArg.
-  if (isMemcpyEquivalentSpecialMember(D)) {
+  if (D->isMemcpyEquivalentSpecialMember(getContext())) {
     assert(E->getNumArgs() == 1 && "unexpected argcount for trivial ctor");
 
     const Expr *Arg = E->getArg(0);
@@ -2355,7 +2346,7 @@ void CodeGenFunction::EmitCXXConstructorCall(
   // If this is a trivial constructor, just emit what's needed. If this is a
   // union copy constructor, we must emit a memcpy, because the AST does not
   // model that copy.
-  if (isMemcpyEquivalentSpecialMember(D)) {
+  if (D->isMemcpyEquivalentSpecialMember(getContext())) {
     assert(Args.size() == 2 && "unexpected argcount for trivial ctor");
     QualType SrcTy = D->getParamDecl(0)->getType().getNonReferenceType();
     Address Src = makeNaturalAddressForPointer(
@@ -3090,7 +3081,7 @@ llvm::Value *CodeGenFunction::EmitVTableTypeCheckedLoad(
   llvm::Metadata *MD = CGM.CreateMetadataIdentifierForType(T);
   llvm::Value *TypeId = llvm::MetadataAsValue::get(CGM.getLLVMContext(), MD);
 
-  auto CheckedLoadIntrinsic = CGM.getVTables().useRelativeLayout()
+  auto CheckedLoadIntrinsic = CGM.getLangOpts().RelativeCXXABIVTables
                                   ? llvm::Intrinsic::type_checked_load_relative
                                   : llvm::Intrinsic::type_checked_load;
   llvm::Value *CheckedLoad = Builder.CreateCall(

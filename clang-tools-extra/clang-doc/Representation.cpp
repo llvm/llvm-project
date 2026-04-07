@@ -27,6 +27,15 @@
 namespace clang {
 namespace doc {
 
+// Thread local arenas usable in each thread pool
+thread_local llvm::BumpPtrAllocator TransientArena;
+thread_local llvm::BumpPtrAllocator PersistentArena;
+
+ConcurrentStringPool &getGlobalStringPool() {
+  static ConcurrentStringPool GlobalPool;
+  return GlobalPool;
+}
+
 CommentKind stringToCommentKind(llvm::StringRef KindStr) {
   static const llvm::StringMap<CommentKind> KindMap = {
       {"FullComment", CommentKind::CK_FullComment},
@@ -85,22 +94,21 @@ llvm::StringRef commentKindToString(CommentKind Kind) {
 const SymbolID EmptySID = SymbolID();
 
 template <typename T>
-static llvm::Expected<std::unique_ptr<Info>>
-reduce(std::vector<std::unique_ptr<Info>> &Values) {
+static llvm::Expected<OwnedPtr<Info>> reduce(OwningPtrArray<Info> &Values) {
   if (Values.empty() || !Values[0])
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "no value to reduce");
-  std::unique_ptr<Info> Merged = std::make_unique<T>(Values[0]->USR);
-  T *Tmp = static_cast<T *>(Merged.get());
+  OwnedPtr<Info> Merged = allocatePtr<T>(Values[0]->USR);
+  T *Tmp = static_cast<T *>(getPtr(Merged));
   for (auto &I : Values)
-    Tmp->merge(std::move(*static_cast<T *>(I.get())));
+    Tmp->merge(std::move(*static_cast<T *>(getPtr(I))));
   return std::move(Merged);
 }
 
 // Return the index of the matching child in the vector, or -1 if merge is not
 // necessary.
 template <typename T>
-static int getChildIndexIfExists(std::vector<T> &Children, T &ChildToMerge) {
+static int getChildIndexIfExists(OwningVec<T> &Children, T &ChildToMerge) {
   for (unsigned long I = 0; I < Children.size(); I++) {
     if (ChildToMerge.USR == Children[I].USR)
       return I;
@@ -109,8 +117,25 @@ static int getChildIndexIfExists(std::vector<T> &Children, T &ChildToMerge) {
 }
 
 template <typename T>
-static void reduceChildren(std::vector<T> &Children,
-                           std::vector<T> &&ChildrenToMerge) {
+static void reduceChildren(llvm::simple_ilist<T> &Children,
+                           llvm::simple_ilist<T> &&ChildrenToMerge) {
+  while (!ChildrenToMerge.empty()) {
+    T *ChildToMerge = &ChildrenToMerge.front();
+    ChildrenToMerge.pop_front();
+
+    auto It = llvm::find_if(
+        Children, [&](const T &C) { return C.USR == ChildToMerge->USR; });
+    if (It == Children.end()) {
+      Children.push_back(*ChildToMerge);
+    } else {
+      It->merge(std::move(*ChildToMerge));
+    }
+  }
+}
+
+template <typename T>
+static void reduceChildren(OwningVec<T> &Children,
+                           OwningVec<T> &&ChildrenToMerge) {
   for (auto &ChildToMerge : ChildrenToMerge) {
     int MergeIdx = getChildIndexIfExists(Children, ChildToMerge);
     if (MergeIdx == -1) {
@@ -122,8 +147,7 @@ static void reduceChildren(std::vector<T> &Children,
 }
 
 // Dispatch function.
-llvm::Expected<std::unique_ptr<Info>>
-mergeInfos(std::vector<std::unique_ptr<Info>> &Values) {
+llvm::Expected<OwnedPtr<Info>> mergeInfos(OwningPtrArray<Info> &Values) {
   if (Values.empty() || !Values[0])
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "no info values to merge");
@@ -209,26 +233,26 @@ calculateRelativeFilePath(const InfoType &Type, const StringRef &Path,
   return llvm::sys::path::relative_path(FilePath);
 }
 
-llvm::SmallString<64>
-Reference::getRelativeFilePath(const StringRef &CurrentPath) const {
-  return calculateRelativeFilePath(RefType, Path, Name, CurrentPath);
+StringRef Reference::getRelativeFilePath(const StringRef &CurrentPath) const {
+  return internString(
+      calculateRelativeFilePath(RefType, Path, Name, CurrentPath));
 }
 
-llvm::SmallString<16> Reference::getFileBaseName() const {
+StringRef Reference::getFileBaseName() const {
   if (RefType == InfoType::IT_namespace)
-    return llvm::SmallString<16>("index");
+    return "index";
 
   return Name;
 }
 
-llvm::SmallString<64>
-Info::getRelativeFilePath(const StringRef &CurrentPath) const {
-  return calculateRelativeFilePath(IT, Path, extractName(), CurrentPath);
+StringRef Info::getRelativeFilePath(const StringRef &CurrentPath) const {
+  return internString(
+      calculateRelativeFilePath(IT, Path, extractName(), CurrentPath));
 }
 
-llvm::SmallString<16> Info::getFileBaseName() const {
+StringRef Info::getFileBaseName() const {
   if (IT == InfoType::IT_namespace)
-    return llvm::SmallString<16>("index");
+    return "index";
 
   return extractName();
 }
@@ -408,7 +432,7 @@ BaseRecordInfo::BaseRecordInfo(SymbolID USR, StringRef Name, StringRef Path,
     : RecordInfo(USR, Name, Path), Access(Access), IsVirtual(IsVirtual),
       IsParent(IsParent) {}
 
-llvm::SmallString<16> Info::extractName() const {
+StringRef Info::extractName() const {
   if (!Name.empty())
     return Name;
 
@@ -419,62 +443,58 @@ llvm::SmallString<16> Info::extractName() const {
     // namespace, which would conflict with the hard-coded global namespace name
     // below.)
     if (Name == "GlobalNamespace" && Namespace.empty())
-      return llvm::SmallString<16>("@GlobalNamespace");
+      return "@GlobalNamespace";
     // The case of anonymous namespaces is taken care of in serialization,
     // so here we can safely assume an unnamed namespace is the global
     // one.
-    return llvm::SmallString<16>("GlobalNamespace");
+    return "GlobalNamespace";
   case InfoType::IT_record:
-    return llvm::SmallString<16>("@nonymous_record_" +
-                                 toHex(llvm::toStringRef(USR)));
+    return internString("@nonymous_record_" + toHex(llvm::toStringRef(USR)));
   case InfoType::IT_enum:
-    return llvm::SmallString<16>("@nonymous_enum_" +
-                                 toHex(llvm::toStringRef(USR)));
+    return internString("@nonymous_enum_" + toHex(llvm::toStringRef(USR)));
   case InfoType::IT_typedef:
-    return llvm::SmallString<16>("@nonymous_typedef_" +
-                                 toHex(llvm::toStringRef(USR)));
+    return internString("@nonymous_typedef_" + toHex(llvm::toStringRef(USR)));
   case InfoType::IT_function:
-    return llvm::SmallString<16>("@nonymous_function_" +
-                                 toHex(llvm::toStringRef(USR)));
+    return internString("@nonymous_function_" + toHex(llvm::toStringRef(USR)));
   case InfoType::IT_concept:
-    return llvm::SmallString<16>("@nonymous_concept_" +
-                                 toHex(llvm::toStringRef(USR)));
+    return internString("@nonymous_concept_" + toHex(llvm::toStringRef(USR)));
   case InfoType::IT_variable:
-    return llvm::SmallString<16>("@nonymous_variable_" +
-                                 toHex(llvm::toStringRef(USR)));
+    return internString("@nonymous_variable_" + toHex(llvm::toStringRef(USR)));
   case InfoType::IT_friend:
-    return llvm::SmallString<16>("@nonymous_friend_" +
-                                 toHex(llvm::toStringRef(USR)));
+    return internString("@nonymous_friend_" + toHex(llvm::toStringRef(USR)));
   case InfoType::IT_default:
-    return llvm::SmallString<16>("@nonymous_" + toHex(llvm::toStringRef(USR)));
+    return internString("@nonymous_" + toHex(llvm::toStringRef(USR)));
   }
   llvm_unreachable("Invalid InfoType.");
-  return llvm::SmallString<16>("");
+  return "";
 }
 
 // Order is based on the Name attribute: case insensitive order
 bool Index::operator<(const Index &Other) const {
-  // Loop through each character of both strings
-  for (unsigned I = 0; I < Name.size() && I < Other.Name.size(); ++I) {
-    // Compare them after converting both to lower case
-    int D = tolower(Name[I]) - tolower(Other.Name[I]);
-    if (D == 0)
-      continue;
-    return D < 0;
-  }
-  // If both strings have the size it means they would be equal if changed to
-  // lower case. In here, lower case will be smaller than upper case
-  // Example: string < stRing = true
-  // This is the opposite of how operator < handles strings
-  if (Name.size() == Other.Name.size())
-    return Name > Other.Name;
-  // If they are not the same size; the shorter string is smaller
-  return Name.size() < Other.Name.size();
+  // Start with case-insensitive (e.g., 'apple' < 'Zebra').
+  // This prevents 'Zebra' from appearing before 'apple' due to ASCII values,
+  // where uppercase letters have a lower numeric value than lowercase.
+  int Cmp = Name.compare_insensitive(Other.Name);
+  if (Cmp != 0)
+    return Cmp < 0;
+
+  // If names are identical, we fall back to standard string comparison where
+  // uppercase precedes lowercase (e.g., 'Apple' < 'apple').
+  return Name < Other.Name;
+}
+
+OwningVec<const Index *> Index::getSortedChildren() const {
+  OwningVec<const Index *> SortedChildren;
+  SortedChildren.reserve(Children.size());
+  for (const auto &[_, C] : Children)
+    SortedChildren.push_back(&C);
+  llvm::sort(SortedChildren,
+             [](const Index *A, const Index *B) { return *A < *B; });
+  return SortedChildren;
 }
 
 void Index::sort() {
-  llvm::sort(Children);
-  for (auto &C : Children)
+  for (auto &[_, C] : Children)
     C.sort();
 }
 
@@ -485,10 +505,11 @@ ClangDocContext::ClangDocContext(tooling::ExecutionContext *ECtx,
                                  StringRef RepositoryLinePrefix, StringRef Base,
                                  std::vector<std::string> UserStylesheets,
                                  clang::DiagnosticsEngine &Diags,
-                                 bool FTimeTrace)
+                                 OutputFormatTy Format, bool FTimeTrace)
     : ECtx(ECtx), ProjectName(ProjectName), OutDirectory(OutDirectory),
       SourceRoot(std::string(SourceRoot)), UserStylesheets(UserStylesheets),
-      Base(Base), Diags(Diags), PublicOnly(PublicOnly), FTimeTrace(FTimeTrace) {
+      Base(Base), Diags(Diags), Format(Format), PublicOnly(PublicOnly),
+      FTimeTrace(FTimeTrace) {
   llvm::SmallString<128> SourceRootDir(SourceRoot);
   if (SourceRoot.empty())
     // If no SourceRoot was provided the current path is used as the default
@@ -506,7 +527,7 @@ ClangDocContext::ClangDocContext(tooling::ExecutionContext *ECtx,
 }
 
 void ScopeChildren::sort() {
-  llvm::sort(Namespaces);
+  Namespaces.sort();
   llvm::sort(Records);
   llvm::sort(Functions);
   llvm::sort(Enums);

@@ -252,19 +252,23 @@ def CIR_PointerType : CIR_Type<"Pointer", "ptr", [
   let parameters = (ins
     "mlir::Type":$pointee,
     OptionalParameter<
-        "cir::TargetAddressSpaceAttr">:$addrSpace
+        "mlir::ptr::MemorySpaceAttrInterface">:$addrSpace
   );
 
   let skipDefaultBuilders = 1;
   let builders = [
     TypeBuilderWithInferredContext<(ins
       "mlir::Type":$pointee,
-       CArg<"cir::TargetAddressSpaceAttr", "nullptr">:$addrSpace), [{
+       CArg<"mlir::ptr::MemorySpaceAttrInterface", "{}">:$addrSpace), [{
+        // Drop default address space and replace with empty attribute.
+        addrSpace = cir::normalizeDefaultAddressSpace(addrSpace);
         return $_get(pointee.getContext(), pointee, addrSpace);
     }]>,
     TypeBuilder<(ins
       "mlir::Type":$pointee,
-      CArg<"cir::TargetAddressSpaceAttr", "nullptr">:$addrSpace), [{
+      CArg<"mlir::ptr::MemorySpaceAttrInterface", "{}">:$addrSpace), [{
+        // Drop default address space and replace with empty attribute.
+        addrSpace = cir::normalizeDefaultAddressSpace(addrSpace);
         return $_get($_ctxt, pointee, addrSpace);
     }]>
   ];
@@ -272,7 +276,7 @@ def CIR_PointerType : CIR_Type<"Pointer", "ptr", [
   let assemblyFormat = [{
     `<`
       $pointee
-      ( `,` ` ` custom<TargetAddressSpace>($addrSpace)^ )?
+      ( `,` ` ` custom<AddressSpaceValue>($addrSpace)^ )?
     `>`
   }];
 
@@ -303,15 +307,18 @@ def CIR_PointerType : CIR_Type<"Pointer", "ptr", [
       return false;
     }
   }];
+
+  let genVerifyDecl = 1;
 }
 
 //===----------------------------------------------------------------------===//
 // CIR_DataMemberType
 //===----------------------------------------------------------------------===//
 
-def CIR_DataMemberType : CIR_Type<"DataMember", "data_member",
-    [DeclareTypeInterfaceMethods<DataLayoutTypeInterface>]
-> {
+def CIR_DataMemberType : CIR_Type<"DataMember", "data_member", [
+  DeclareTypeInterfaceMethods<DataLayoutTypeInterface>,
+  DeclareTypeInterfaceMethods<CIR_SizedTypeInterface>
+]> {
   let summary = "CIR type that represents a pointer-to-data-member in C++";
   let description = [{
     `cir.data_member` models a pointer-to-data-member in C++. Values of this
@@ -555,8 +562,10 @@ def CIR_FuncType : CIR_Type<"Func", "func"> {
 // MethodType
 //===----------------------------------------------------------------------===//
 
-def CIR_MethodType : CIR_Type<"Method", "method",
-    [DeclareTypeInterfaceMethods<DataLayoutTypeInterface>]> {
+def CIR_MethodType : CIR_Type<"Method", "method", [
+  DeclareTypeInterfaceMethods<DataLayoutTypeInterface>,
+  DeclareTypeInterfaceMethods<CIR_SizedTypeInterface>
+]> {
   let summary = "CIR type that represents C++ pointer-to-member-function type";
   let description = [{
     `cir.method` models the pointer-to-member-function type in C++. The layout
@@ -739,7 +748,30 @@ def CIR_RecordType : CIR_Type<"Record", "record", [
 
     bool isLayoutIdentical(const RecordType &other);
 
+    // Checks the name of this record to check if it is a 'after' (or during)
+    // ABI converison.
+    bool isABIConvertedRecord() const;
+
+    // Get the version of this record's name for use during cxx-abi conversion.
+    mlir::StringAttr getABIConvertedName() const;
+
+    // This function should only be called after the CXXABILowering pass. It is
+    // intended to do a 'fixup' of the name so that we don't end up with messy
+    // looking CIR after CXXABI lowering. This should only be called if all uses
+    // of the pre-CXXABILowering version have been removed, otherwise we'll have
+    // a conflict in RecordStorage because two types will have the same hash.
+    void removeABIConversionNamePrefix();
+
+    bool isSized() const {
+      return isComplete();
+    }
+
+    /// Returns the data size (excluding tail padding) for struct types.
+    unsigned computeStructDataSize(const mlir::DataLayout &dataLayout) const;
+
   private:
+
+    static constexpr char abi_conversion_prefix[] = "__post_abi_";
     unsigned computeStructSize(const mlir::DataLayout &dataLayout) const;
     uint64_t computeStructAlignment(const mlir::DataLayout &dataLayout) const;
   public:

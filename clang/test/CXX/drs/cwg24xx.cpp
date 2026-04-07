@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -std=c++98 -pedantic-errors %s -verify=expected,cxx98-14
-// RUN: %clang_cc1 -std=c++11 -pedantic-errors %s -verify=expected,cxx98-14
-// RUN: %clang_cc1 -std=c++14 -pedantic-errors %s -verify=expected,cxx98-14
-// RUN: %clang_cc1 -std=c++17 -pedantic-errors %s -verify=expected,since-cxx17
-// RUN: %clang_cc1 -std=c++20 -pedantic-errors %s -verify=expected,since-cxx20,since-cxx17
-// RUN: %clang_cc1 -std=c++23 -pedantic-errors %s -verify=expected,since-cxx20,since-cxx17
-// RUN: %clang_cc1 -std=c++2c -pedantic-errors %s -verify=expected,since-cxx20,since-cxx17
+// RUN: %clang_cc1 -std=c++98 -fexceptions -fcxx-exceptions -pedantic-errors %s -verify-directives -verify=expected,cxx98-14
+// RUN: %clang_cc1 -std=c++11 -fexceptions -fcxx-exceptions -pedantic-errors %s -verify-directives -verify=expected,cxx98-14
+// RUN: %clang_cc1 -std=c++14 -fexceptions -fcxx-exceptions -pedantic-errors %s -verify-directives -verify=expected,cxx98-14
+// RUN: %clang_cc1 -std=c++17 -fexceptions -fcxx-exceptions -pedantic-errors %s -verify-directives -verify=expected,since-cxx17
+// RUN: %clang_cc1 -std=c++20 -fexceptions -fcxx-exceptions -pedantic-errors %s -verify-directives -verify=expected,since-cxx20,since-cxx17
+// RUN: %clang_cc1 -std=c++23 -fexceptions -fcxx-exceptions -pedantic-errors %s -verify-directives -verify=expected,since-cxx20,since-cxx17
+// RUN: %clang_cc1 -std=c++2c -fexceptions -fcxx-exceptions -pedantic-errors %s -verify-directives -verify=expected,since-cxx20,since-cxx17
 
 // cwg2406 is in cwg2406.cpp
 
@@ -172,7 +172,8 @@ void ref() {
 
 void (*p)();
 void (*pp)() throw() = p;
-// since-cxx17-error@-1 {{cannot initialize a variable of type 'void (*)() throw()' with an lvalue of type 'void (*)()': different exception specifications}}
+// cxx98-14-error@-1 {{target exception specification is not superset of source}}
+// since-cxx17-error@-2 {{cannot initialize a variable of type 'void (*)() throw()' with an lvalue of type 'void (*)()': different exception specifications}}
 
 struct S {
   typedef void (*p)();
@@ -199,13 +200,13 @@ struct S {
 struct T : S {
     virtual void f() &;
     // expected-error@-1 {{cannot overload a member function with ref-qualifier '&' with a member function without a ref-qualifier}}
-    // expected-note@#cwg2496-f {{previous declaration is here}}
+    //   expected-note@#cwg2496-f {{previous declaration is here}}
     virtual void g();
     // expected-error@-1 {{cannot overload a member function without a ref-qualifier with a member function with ref-qualifier '&'}}
-    // expected-note@#cwg2496-g {{previous declaration is here}}
+    //   expected-note@#cwg2496-g {{previous declaration is here}}
     virtual void h() &&;
     // expected-error@-1 {{cannot overload a member function with ref-qualifier '&&' with a member function without a ref-qualifier}}
-    // expected-note@#cwg2496-h {{previous declaration is here}}
+    //   expected-note@#cwg2496-h {{previous declaration is here}}
     virtual void i();
     virtual void j() &;
     virtual void k() &;
