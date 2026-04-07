@@ -22,7 +22,7 @@ define i32 @unsigned_absolute_difference(ptr noalias %x, ptr noalias %y) {
 ; CHECK-NEXT:  <x1> vector loop: {
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      EMIT vp<[[VP4:%[0-9]+]]> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
-; CHECK-NEXT:      WIDEN-REDUCTION-PHI ir<%sum.0> = phi vp<[[VP3]]>, vp<[[VP9:%[0-9]+]]> (VF scaled by 1/4)
+; CHECK-NEXT:      WIDEN-REDUCTION-PHI ir<%sum.0> = phi vp<[[VP3]]>, vp<[[VP13:%[0-9]+]]> (VF scaled by 1/4)
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = SCALAR-STEPS vp<[[VP4]]>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      CLONE ir<%x.ptr> = getelementptr inbounds nuw ir<%x>, vp<[[VP5]]>
 ; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer inbounds nuw ir<%x.ptr>
@@ -30,8 +30,12 @@ define i32 @unsigned_absolute_difference(ptr noalias %x, ptr noalias %y) {
 ; CHECK-NEXT:      CLONE ir<%y.ptr> = getelementptr inbounds nuw ir<%y>, vp<[[VP5]]>
 ; CHECK-NEXT:      vp<[[VP7:%[0-9]+]]> = vector-pointer inbounds nuw ir<%y.ptr>
 ; CHECK-NEXT:      WIDEN ir<%y.val> = load vp<[[VP7]]>
-; CHECK-NEXT:      EMIT vp<[[VP8:%[0-9]+]]> = unsigned-absolute-difference ir<%x.val>, ir<%y.val>
-; CHECK-NEXT:      EXPRESSION vp<[[VP9]]> = ir<%sum.0> + partial.reduce.add (vp<[[VP8]]> zext to i32)
+; CHECK-NEXT:      WIDEN vp<[[VP8:%[0-9]+]]> = freeze ir<%x.val>
+; CHECK-NEXT:      WIDEN vp<[[VP9:%[0-9]+]]> = freeze ir<%y.val>
+; CHECK-NEXT:      WIDEN-INTRINSIC vp<[[VP10:%[0-9]+]]> = call llvm.umax(vp<[[VP8]]>, vp<[[VP9]]>)
+; CHECK-NEXT:      WIDEN-INTRINSIC vp<[[VP11:%[0-9]+]]> = call llvm.umin(vp<[[VP8]]>, vp<[[VP9]]>)
+; CHECK-NEXT:      WIDEN vp<[[VP12:%[0-9]+]]> = sub vp<[[VP10]]>, vp<[[VP11]]>
+; CHECK-NEXT:      EXPRESSION vp<[[VP13]]> = ir<%sum.0> + partial.reduce.add (vp<[[VP12]]> zext to i32)
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP4]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
 ; CHECK-NEXT:    No successors
@@ -39,13 +43,13 @@ define i32 @unsigned_absolute_difference(ptr noalias %x, ptr noalias %y) {
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP11:%[0-9]+]]> = compute-reduction-result (add) vp<[[VP9]]>
+; CHECK-NEXT:    EMIT vp<[[VP15:%[0-9]+]]> = compute-reduction-result (add) vp<[[VP13]]>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<8000>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<exit>:
-; CHECK-NEXT:    IR   %sum.1.lcssa = phi i32 [ %sum.1, %for.body ] (extra operand: vp<[[VP11]]> from middle.block)
+; CHECK-NEXT:    IR   %sum.1.lcssa = phi i32 [ %sum.1, %for.body ] (extra operand: vp<[[VP15]]> from middle.block)
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph:
@@ -91,7 +95,7 @@ define i32 @signed_absolute_difference(ptr noalias %x, ptr noalias %y) {
 ; CHECK-NEXT:  <x1> vector loop: {
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      EMIT vp<[[VP4:%[0-9]+]]> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
-; CHECK-NEXT:      WIDEN-REDUCTION-PHI ir<%sum.0> = phi vp<[[VP3]]>, vp<[[VP9:%[0-9]+]]> (VF scaled by 1/4)
+; CHECK-NEXT:      WIDEN-REDUCTION-PHI ir<%sum.0> = phi vp<[[VP3]]>, vp<[[VP13:%[0-9]+]]> (VF scaled by 1/4)
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = SCALAR-STEPS vp<[[VP4]]>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      CLONE ir<%x.ptr> = getelementptr inbounds nuw ir<%x>, vp<[[VP5]]>
 ; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer inbounds nuw ir<%x.ptr>
@@ -99,8 +103,12 @@ define i32 @signed_absolute_difference(ptr noalias %x, ptr noalias %y) {
 ; CHECK-NEXT:      CLONE ir<%y.ptr> = getelementptr inbounds nuw ir<%y>, vp<[[VP5]]>
 ; CHECK-NEXT:      vp<[[VP7:%[0-9]+]]> = vector-pointer inbounds nuw ir<%y.ptr>
 ; CHECK-NEXT:      WIDEN ir<%y.val> = load vp<[[VP7]]>
-; CHECK-NEXT:      EMIT vp<[[VP8:%[0-9]+]]> = signed-absolute-difference ir<%x.val>, ir<%y.val>
-; CHECK-NEXT:      EXPRESSION vp<[[VP9]]> = ir<%sum.0> + partial.reduce.add (vp<[[VP8]]> zext to i32)
+; CHECK-NEXT:      WIDEN vp<[[VP8:%[0-9]+]]> = freeze ir<%x.val>
+; CHECK-NEXT:      WIDEN vp<[[VP9:%[0-9]+]]> = freeze ir<%y.val>
+; CHECK-NEXT:      WIDEN-INTRINSIC vp<[[VP10:%[0-9]+]]> = call llvm.smax(vp<[[VP8]]>, vp<[[VP9]]>)
+; CHECK-NEXT:      WIDEN-INTRINSIC vp<[[VP11:%[0-9]+]]> = call llvm.smin(vp<[[VP8]]>, vp<[[VP9]]>)
+; CHECK-NEXT:      WIDEN vp<[[VP12:%[0-9]+]]> = sub vp<[[VP10]]>, vp<[[VP11]]>
+; CHECK-NEXT:      EXPRESSION vp<[[VP13]]> = ir<%sum.0> + partial.reduce.add (vp<[[VP12]]> zext to i32)
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP4]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
 ; CHECK-NEXT:    No successors
@@ -108,13 +116,13 @@ define i32 @signed_absolute_difference(ptr noalias %x, ptr noalias %y) {
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP11:%[0-9]+]]> = compute-reduction-result (add) vp<[[VP9]]>
+; CHECK-NEXT:    EMIT vp<[[VP15:%[0-9]+]]> = compute-reduction-result (add) vp<[[VP13]]>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<8000>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<exit>:
-; CHECK-NEXT:    IR   %sum.1.lcssa = phi i32 [ %sum.1, %for.body ] (extra operand: vp<[[VP11]]> from middle.block)
+; CHECK-NEXT:    IR   %sum.1.lcssa = phi i32 [ %sum.1, %for.body ] (extra operand: vp<[[VP15]]> from middle.block)
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph:

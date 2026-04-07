@@ -481,8 +481,6 @@ unsigned VPInstruction::getNumOperandsForOpcode() const {
   case VPInstruction::WidePtrAdd:
   case VPInstruction::WideIVStep:
   case VPInstruction::CalculateTripCountMinusVF:
-  case VPInstruction::SignedAbsoluteDifference:
-  case VPInstruction::UnsignedAbsoluteDifference:
     return 2;
   case Instruction::Select:
   case VPInstruction::ActiveLaneMask:
@@ -912,17 +910,6 @@ Value *VPInstruction::generate(VPTransformState &State) {
     }
 
     return Result;
-  }
-  case VPInstruction::SignedAbsoluteDifference:
-  case VPInstruction::UnsignedAbsoluteDifference: {
-    bool IsSigned = getOpcode() == VPInstruction::SignedAbsoluteDifference;
-    Value *X = Builder.CreateFreeze(State.get(getOperand(0)));
-    Value *Y = Builder.CreateFreeze(State.get(getOperand(1)));
-    Value *Max = Builder.CreateBinaryIntrinsic(
-        IsSigned ? Intrinsic::smax : Intrinsic::umax, X, Y);
-    Value *Min = Builder.CreateBinaryIntrinsic(
-        IsSigned ? Intrinsic::smin : Intrinsic::umin, X, Y);
-    return Builder.CreateSub(Max, Min);
   }
   default:
     llvm_unreachable("Unsupported opcode for instruction");
@@ -1370,8 +1357,6 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
   case VPInstruction::Reverse:
   case VPInstruction::VScale:
   case VPInstruction::Unpack:
-  case VPInstruction::SignedAbsoluteDifference:
-  case VPInstruction::UnsignedAbsoluteDifference:
     return false;
   default:
     return true;
@@ -1551,12 +1536,6 @@ void VPInstruction::printRecipe(raw_ostream &O, const Twine &Indent,
     break;
   case VPInstruction::LastActiveLane:
     O << "last-active-lane";
-    break;
-  case VPInstruction::SignedAbsoluteDifference:
-    O << "signed-absolute-difference";
-    break;
-  case VPInstruction::UnsignedAbsoluteDifference:
-    O << "unsigned-absolute-difference";
     break;
   case VPInstruction::ReductionStartVector:
     O << "reduction-start-vector";

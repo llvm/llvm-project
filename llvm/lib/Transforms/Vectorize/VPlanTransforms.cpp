@@ -6040,10 +6040,17 @@ optimizeExtendsForPartialReduction(VPSingleDefRecipe *BinOp,
         BinOp->getOperand(0)->getDefiningRecipe()->getOperand(0));
     bool IsSigned = Ext->getOpcode() == Instruction::SExt;
     VPBuilder Builder(BinOp);
-    VPValue *AbsDiff = Builder.createNaryOp(
-        IsSigned ? VPInstruction::SignedAbsoluteDifference
-                 : VPInstruction::UnsignedAbsoluteDifference,
-        {X, Y});
+    Type *SrcTy = TypeInfo.inferScalarType(X);
+    auto *FreezeX = Builder.insert(new VPWidenRecipe(Instruction::Freeze, {X}));
+    auto *FreezeY = Builder.insert(new VPWidenRecipe(Instruction::Freeze, {Y}));
+    auto *Max = Builder.insert(
+        new VPWidenIntrinsicRecipe(IsSigned ? Intrinsic::smax : Intrinsic::umax,
+                                   {FreezeX, FreezeY}, SrcTy));
+    auto *Min = Builder.insert(
+        new VPWidenIntrinsicRecipe(IsSigned ? Intrinsic::smin : Intrinsic::umin,
+                                   {FreezeX, FreezeY}, SrcTy));
+    auto *AbsDiff =
+        Builder.insert(new VPWidenRecipe(Instruction::Sub, {Max, Min}));
     return Builder.createWidenCast(Instruction::CastOps::ZExt, AbsDiff,
                                    TypeInfo.inferScalarType(BinOp));
   }
