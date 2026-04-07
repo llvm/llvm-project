@@ -17,3 +17,6 @@ needs SPIRV/COMGR
 break rock build
 [compiler-rt] Split the GPU.cmake cache file to AMDGPU and NVPTX (#190349)
 ---
+needs more work
+Reland "[LTO][LLD] Prevent invalid LTO libfunc transforms (#164916)
+---
