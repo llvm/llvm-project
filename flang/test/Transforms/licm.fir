@@ -2060,3 +2060,30 @@ func.func @_QMmPtest(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}) {
   fir.store %9 to %4 : !fir.ref<i32>
   return
 }
+
+// -----
+// Test hoisting of fir.convert for memref<> type.
+// CHECK-LABEL:   func.func @test_() {
+// CHECK:           %[[ALLOCA_0:.*]] = memref.alloca() {bindc_name = "x", uniq_name = "_QFtestEx"} : memref<10xf32>
+// CHECK:           %[[CONVERT_0:.*]] = fir.convert %[[ALLOCA_0]] : (memref<10xf32>) -> !fir.ref<!fir.array<10xf32>>
+// CHECK:           %[[CONVERT_1:.*]] = fir.convert %[[CONVERT_0]] : (!fir.ref<!fir.array<10xf32>>) -> memref<10xf32>
+// CHECK:           scf.for %[[VAL_0:.*]] = {{.*}} {
+// CHECK:             memref.store %{{.*}}, %[[CONVERT_1]]{{\[}}%[[VAL_0]]] : memref<10xf32>
+// CHECK:           }
+// CHECK:           return
+// CHECK:         }
+
+func.func @test_() {
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant 0.000000e+00 : f32
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
+  %alloca_0 = memref.alloca() {bindc_name = "x", uniq_name = "_QFtestEx"} : memref<10xf32>
+  scf.for %arg0 = %c0 to %c10 step %c1 {
+    %3 = fir.convert %alloca_0 : (memref<10xf32>) -> !fir.ref<!fir.array<10xf32>>
+    %10 = fir.convert %3 : (!fir.ref<!fir.array<10xf32>>) -> memref<10xf32>
+    memref.store %cst, %10[%arg0] : memref<10xf32>
+    scf.yield
+  }
+  return
+}
