@@ -115,17 +115,17 @@ private:
   RegisterClassInfo RCI;
 
   bool runOnBasicBlock(MachineBasicBlock &MBB);
-  bool colorChainSet(std::vector<Chain*> GV, MachineBasicBlock &MBB,
+  bool colorChainSet(std::vector<Chain *> GV, MachineBasicBlock &MBB,
                      int &Balance);
   bool colorChain(Chain *G, Color C, MachineBasicBlock &MBB);
   int scavengeRegister(Chain *G, Color C, MachineBasicBlock &MBB);
   void scanInstruction(MachineInstr *MI, unsigned Idx,
-                       std::map<unsigned, Chain*> &Active,
+                       std::map<unsigned, Chain *> &Active,
                        std::vector<std::unique_ptr<Chain>> &AllChains);
   void maybeKillChain(MachineOperand &MO, unsigned Idx,
-                      std::map<unsigned, Chain*> &RegChains);
+                      std::map<unsigned, Chain *> &RegChains);
   Color getColor(unsigned Register);
-  Chain *getAndEraseNext(Color PreferredColor, std::vector<Chain*> &L);
+  Chain *getAndEraseNext(Color PreferredColor, std::vector<Chain *> &L);
 };
 
 class AArch64A57FPLoadBalancingLegacy : public MachineFunctionPass {
@@ -133,7 +133,7 @@ public:
   static char ID;
   explicit AArch64A57FPLoadBalancingLegacy() : MachineFunctionPass(ID) {}
 
-  bool runOnMachineFunction(MachineFunction &F) override;
+  bool runOnMachineFunction(MachineFunction &MF) override;
 
   MachineFunctionProperties getRequiredProperties() const override {
     return MachineFunctionProperties().setNoVRegs();
@@ -307,37 +307,41 @@ public:
 
 //===----------------------------------------------------------------------===//
 
-bool AArch64A57FPLoadBalancingImpl::run(MachineFunction &F) {
-  if (!F.getSubtarget<AArch64Subtarget>().balanceFPOps())
+bool AArch64A57FPLoadBalancingImpl::run(MachineFunction &MF) {
+  if (!MF.getSubtarget<AArch64Subtarget>().balanceFPOps())
     return false;
 
   bool Changed = false;
   LLVM_DEBUG(dbgs() << "***** AArch64A57FPLoadBalancing *****\n");
 
-  MRI = &F.getRegInfo();
-  TRI = F.getRegInfo().getTargetRegisterInfo();
-  RCI.runOnMachineFunction(F);
+  MRI = &MF.getRegInfo();
+  TRI = MF.getRegInfo().getTargetRegisterInfo();
+  RCI.runOnMachineFunction(MF);
 
-  for (auto &MBB : F) {
+  for (auto &MBB : MF) {
     Changed |= runOnBasicBlock(MBB);
   }
 
   return Changed;
 }
 
-bool AArch64A57FPLoadBalancingLegacy::runOnMachineFunction(MachineFunction &F) {
-  if (skipFunction(F.getFunction()))
+bool AArch64A57FPLoadBalancingLegacy::runOnMachineFunction(MachineFunction &MF) {
+  if (skipFunction(MF.getFunction()))
     return false;
 
   AArch64A57FPLoadBalancingImpl Impl;
-  return Impl.run(F);
+  return Impl.run(MF);
 }
 
-PreservedAnalyses AArch64A57FPLoadBalancingPass::run(MachineFunction &MF,
-                                                     MachineFunctionAnalysisManager &MFAM) {
+PreservedAnalyses
+AArch64A57FPLoadBalancingPass::run(MachineFunction &MF,
+                                   MachineFunctionAnalysisManager &MFAM) {
   AArch64A57FPLoadBalancingImpl Impl;
-  if (Impl.run(MF))
-    return PreservedAnalyses::none();
+  if (Impl.run(MF)) {
+    PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
+    PA.preserveSet<CFGAnalyses>();
+    return PA;
+  }
   return PreservedAnalyses::all();
 }
 
@@ -417,7 +421,7 @@ bool AArch64A57FPLoadBalancingImpl::runOnBasicBlock(MachineBasicBlock &MBB) {
 }
 
 Chain *AArch64A57FPLoadBalancingImpl::getAndEraseNext(Color PreferredColor,
-                                                  std::vector<Chain*> &L) {
+                                                      std::vector<Chain*> &L) {
   if (L.empty())
     return nullptr;
 
@@ -452,9 +456,9 @@ Chain *AArch64A57FPLoadBalancingImpl::getAndEraseNext(Color PreferredColor,
   return Ch;
 }
 
-bool AArch64A57FPLoadBalancingImpl::colorChainSet(std::vector<Chain*> GV,
-                                              MachineBasicBlock &MBB,
-                                              int &Parity) {
+bool AArch64A57FPLoadBalancingImpl::colorChainSet(std::vector<Chain *> GV,
+                                                  MachineBasicBlock &MBB,
+                                                  int &Parity) {
   bool Changed = false;
   LLVM_DEBUG(dbgs() << "colorChainSet(): #sets=" << GV.size() << "\n");
 
@@ -510,7 +514,7 @@ bool AArch64A57FPLoadBalancingImpl::colorChainSet(std::vector<Chain*> GV,
 }
 
 int AArch64A57FPLoadBalancingImpl::scavengeRegister(Chain *G, Color C,
-                                                MachineBasicBlock &MBB) {
+                                                    MachineBasicBlock &MBB) {
   // Can we find an appropriate register that is available throughout the life
   // of the chain? Simulate liveness backwards until the end of the chain.
   LiveRegUnits Units(*TRI);
@@ -544,7 +548,7 @@ int AArch64A57FPLoadBalancingImpl::scavengeRegister(Chain *G, Color C,
 }
 
 bool AArch64A57FPLoadBalancingImpl::colorChain(Chain *G, Color C,
-                                           MachineBasicBlock &MBB) {
+                                               MachineBasicBlock &MBB) {
   bool Changed = false;
   LLVM_DEBUG(dbgs() << " - colorChain(" << G->str() << ", "
                     << ColorNames[(int)C] << ")\n");
@@ -693,8 +697,9 @@ void AArch64A57FPLoadBalancingImpl::scanInstruction(
   }
 }
 
-void AArch64A57FPLoadBalancingImpl::maybeKillChain(MachineOperand &MO, unsigned Idx,
-               std::map<unsigned, Chain*> &ActiveChains) {
+void AArch64A57FPLoadBalancingImpl::maybeKillChain(
+    MachineOperand &MO, unsigned Idx,
+    std::map<unsigned, Chain *> &ActiveChains) {
   // Given an operand and the set of active chains (keyed by register),
   // determine if a chain should be ended and remove from ActiveChains.
   MachineInstr *MI = MO.getParent();
