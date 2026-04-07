@@ -1151,8 +1151,7 @@ bool TwoAddressInstructionImpl::rescheduleKillAboveMI(
   if (!KillMI || MI == KillMI)
     return false;
 
-  bool IsCopyKill = KillMI->isCopyLike();
-  if (IsCopyKill) {
+  if (KillMI->isCopyLike()) {
     if (!MI->mayLoad())
       return false;
 
