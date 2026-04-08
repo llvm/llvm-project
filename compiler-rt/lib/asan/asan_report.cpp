@@ -577,6 +577,106 @@ void ReportNonselfError(uptr *nonself_callstack, u32 n_nonself_callstack,
   }
 }
 
+static constexpr uptr kNonselfLeakCapacity = 1024;
+static constexpr int kMaxTrackedDevices = 16;
+
+struct NonselfLeak {
+  u64 alloc_pc;        // hash key (0 = empty slot)
+  u64 total_bytes;
+  u64 count;
+  int device_id;
+  s64 vma_adjust;
+  int fd;
+  u64 file_extent_size;
+  u64 file_extent_start;
+};
+
+static NonselfLeak nonself_leak_table[kNonselfLeakCapacity];
+
+static NonselfLeak *NonselfLeakFind(u64 pc, int device_id) {
+  uptr idx = (uptr)(pc * 0x9e3779b97f4a7c15ULL) & (kNonselfLeakCapacity - 1);
+  for (uptr i = 0; i < kNonselfLeakCapacity; i++) {
+    NonselfLeak *slot = &nonself_leak_table[idx];
+    if (slot->alloc_pc == 0)
+      return slot;
+    if (slot->alloc_pc == pc && slot->device_id == device_id)
+      return slot;
+    idx = (idx + 1) & (kNonselfLeakCapacity - 1);
+  }
+  return nullptr;
+}
+
+void ReportNonselfLeak(u64 alloc_pc, u64 alloc_size, int device_id,
+                       const char *device_name, s64 vma_adjust, int fd,
+                       u64 file_extent_size, u64 file_extent_start) {
+  if (!common_flags()->detect_leaks)
+    return;
+
+  if (device_id == -1) {
+    struct { u64 bytes; u64 count; } dev_totals[kMaxTrackedDevices] = {};
+
+    for (uptr i = 0; i < kNonselfLeakCapacity; i++) {
+      NonselfLeak *e = &nonself_leak_table[i];
+      if (e->alloc_pc == 0)
+        continue;
+
+      Printf("Leak of %llu byte(s) in %llu allocation(s) on %s device %d "
+             "from:\n",
+             e->total_bytes, e->count,
+             device_name ? device_name : "unknown", e->device_id);
+
+      InternalScopedString source_location;
+      source_location.AppendF("    #0 0x%llx", e->alloc_pc);
+#if SANITIZER_AMDGPU
+      source_location.Append(" in ");
+      __sanitizer::AMDGPUCodeObjectSymbolizer symbolizer;
+      symbolizer.Init(e->fd, e->file_extent_start, e->file_extent_size);
+      if (!symbolizer.SymbolizePC(e->alloc_pc - e->vma_adjust, source_location))
+        source_location.Append("<unavailable>\n");
+      symbolizer.Release();
+#else
+      source_location.Append(" (<unavailable>)\n");
+#endif
+      Printf("%s", source_location.data());
+
+      if (e->device_id >= 0 && e->device_id < kMaxTrackedDevices) {
+        dev_totals[e->device_id].bytes += e->total_bytes;
+        dev_totals[e->device_id].count += e->count;
+      }
+    }
+
+    for (int i = 0; i < kMaxTrackedDevices; i++) {
+      if (dev_totals[i].count > 0)
+        Printf(
+            "SUMMARY: AddressSanitizer: %llu byte(s) leaked in %llu "
+            "allocation(s) on %s device %d.\n",
+            dev_totals[i].bytes, dev_totals[i].count,
+            device_name ? device_name : "unknown", i);
+    }
+
+    internal_memset(nonself_leak_table, 0, sizeof(nonself_leak_table));
+    return;
+  }
+
+  NonselfLeak *slot = NonselfLeakFind(alloc_pc, device_id);
+  if (!slot)
+    return;
+
+  if (slot->alloc_pc == 0) {
+    slot->alloc_pc = alloc_pc;
+    slot->total_bytes = alloc_size;
+    slot->count = 1;
+    slot->device_id = device_id;
+    slot->vma_adjust = vma_adjust;
+    slot->fd = fd;
+    slot->file_extent_size = file_extent_size;
+    slot->file_extent_start = file_extent_start;
+  } else {
+    slot->total_bytes += alloc_size;
+    slot->count++;
+  }
+}
+
 }  // namespace __asan
 
 // --------------------------- Interface --------------------- {{{1

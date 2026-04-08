@@ -284,6 +284,17 @@ extern "C" NOINLINE INTERFACE_ATTRIBUTE void __asan_report_nonself_error(
                      nonself_file_extent_start);
 }
 
+// Report a device memory leak, or print a summary when device_id == -1.
+// Called by GPU runtimes to report allocations made on the device that
+// were never freed.
+extern "C" NOINLINE INTERFACE_ATTRIBUTE void __asan_report_nonself_leak(
+    u64 alloc_pc, u64 alloc_size, int device_id, const char *device_name,
+    s64 vma_adjust, int fd, u64 file_extent_size,
+    u64 file_extent_start = /*default*/ 0) {
+  ReportNonselfLeak(alloc_pc, alloc_size, device_id, device_name, vma_adjust,
+                    fd, file_extent_size, file_extent_start);
+}
+
 // Force the linker to keep the symbols for various ASan interface functions.
 // We want to keep those in the executable in order to let the instrumented
 // dynamic libraries access the symbol even if it is not used by the executable

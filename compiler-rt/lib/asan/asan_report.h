@@ -115,5 +115,10 @@ void ReportNonselfError(uptr *nonself_callstack, u32 n_nonself_callstack,
                         int nonself_fd, u64 nonself_file_extent_size,
                         u64 nonself_file_extent_start);
 
+// Report a device memory leak or print summary when device_id == -1.
+void ReportNonselfLeak(u64 alloc_pc, u64 alloc_size, int device_id,
+                       const char *device_name, s64 vma_adjust, int fd,
+                       u64 file_extent_size, u64 file_extent_start);
+
 }  // namespace __asan
 #endif  // ASAN_REPORT_H
