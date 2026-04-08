@@ -53,6 +53,13 @@ BOOL WINAPI HeapValidate(HANDLE hHeap, DWORD dwFlags, LPCVOID lpMem);
 
 using namespace __asan;
 
+// Marks an allocation as originally zero-size. Must be called on allocations
+// that were changed from size 0 to 1 outside of Allocate() (e.g.
+// SharedReAlloc).
+namespace __asan {
+void asan_mark_zero_allocation(void* ptr);
+}
+
 // MT: Simply defining functions with the same signature in *.obj
 // files overrides the standard functions in the CRT.
 // MD: Memory allocation functions are defined in the CRT .dll,
@@ -322,6 +329,22 @@ void *SharedReAlloc(ReAllocFunction reallocFunc, SizeFunction heapSizeFunc,
       }
     }
 
+    if (dwFlags & HEAP_REALLOC_IN_PLACE_ONLY) {
+      size_t old_usable_size = asan_malloc_usable_size(lpMem, pc, bp);
+      if (dwBytes == old_usable_size) {
+        // Nothing to change, return the current pointer.
+        return lpMem;
+      } else if (dwBytes >= old_usable_size) {
+        // Growing with HEAP_REALLOC_IN_PLACE_ONLY is not supported.
+        return nullptr;
+      } else {
+        // Shrinking with HEAP_REALLOC_IN_PLACE_ONLY is not yet supported.
+        // For now return the current pointer and
+        // leave the allocation size as it is.
+        return lpMem;
+      }
+    }
+
     if (ownershipState == ASAN && !only_asan_supported_flags) {
       // Conversion to unsupported flags allocation,
       // transfer this allocation back to the original allocator.
@@ -355,7 +378,8 @@ void *SharedReAlloc(ReAllocFunction reallocFunc, SizeFunction heapSizeFunc,
   // passing a 0 size into asan_realloc will free the allocation.
   // To avoid this and keep behavior consistent, fudge the size if 0.
   // (asan_malloc already does this)
-  if (dwBytes == 0)
+  bool was_zero_size = (dwBytes == 0);
+  if (was_zero_size)
     dwBytes = 1;
 
   size_t old_size;
@@ -365,6 +389,9 @@ void *SharedReAlloc(ReAllocFunction reallocFunc, SizeFunction heapSizeFunc,
   void *ptr = asan_realloc(lpMem, dwBytes, &stack);
   if (ptr == nullptr)
     return nullptr;
+
+  if (was_zero_size)
+    asan_mark_zero_allocation(ptr);
 
   if (dwFlags & HEAP_ZERO_MEMORY) {
     size_t new_size = asan_malloc_usable_size(ptr, pc, bp);

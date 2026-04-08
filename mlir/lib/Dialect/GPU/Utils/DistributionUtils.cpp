@@ -15,6 +15,7 @@
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/IR/Value.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/STLExtras.h"
 
 #include <numeric>
 
@@ -56,8 +57,7 @@ WarpDistributionPattern::moveRegionToNewWarpOpAndAppendReturns(
     SmallVector<size_t> &indices) const {
   SmallVector<Type> types(warpOp.getResultTypes().begin(),
                           warpOp.getResultTypes().end());
-  auto yield = cast<gpu::YieldOp>(
-      warpOp.getBodyRegion().getBlocks().begin()->getTerminator());
+  gpu::YieldOp yield = warpOp.getTerminator();
   SmallVector<Value> yieldValues(yield.getOperands().begin(),
                                  yield.getOperands().end());
   llvm::SmallDenseMap<Value, unsigned> indexLookup;
@@ -89,8 +89,7 @@ WarpDistributionPattern::moveRegionToNewWarpOpAndAppendReturns(
 OpOperand *WarpDistributionPattern::getWarpResult(
     WarpExecuteOnLane0Op warpOp,
     llvm::function_ref<bool(Operation *)> fn) const {
-  auto yield = cast<gpu::YieldOp>(
-      warpOp.getBodyRegion().getBlocks().begin()->getTerminator());
+  gpu::YieldOp yield = warpOp.getTerminator();
   for (OpOperand &yieldOperand : yield->getOpOperands()) {
     Value yieldValues = yieldOperand.get();
     Operation *definedOp = yieldValues.getDefiningOp();
@@ -120,8 +119,7 @@ bool WarpDistributionPattern::delinearizeLaneId(
       return false;
     sizes.push_back(large / small);
   }
-  if (std::accumulate(sizes.begin(), sizes.end(), 1,
-                      std::multiplies<int64_t>()) != warpSize)
+  if (llvm::product_of(sizes) != warpSize)
     return false;
 
   AffineExpr s0, s1;

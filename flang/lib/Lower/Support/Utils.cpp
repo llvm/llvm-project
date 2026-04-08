@@ -16,6 +16,7 @@
 #include "flang/Lower/AbstractConverter.h"
 #include "flang/Lower/ConvertVariable.h"
 #include "flang/Lower/IterationSpace.h"
+#include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/Support/PrivateReductionUtils.h"
 #include "flang/Optimizer/Builder/HLFIRTools.h"
 #include "flang/Optimizer/Builder/Todo.h"
@@ -82,7 +83,7 @@ public:
          x.cosubscript())
       cosubs -= getHashValue(v);
     return getHashValue(x.base()) * 97u - cosubs + getHashValue(x.stat()) +
-           257u + getHashValue(x.team());
+           257u + getHashValue(x.team()) + getHashValue(x.notify());
   }
   static unsigned getHashValue(const Fortran::evaluate::NamedEntity &x) {
     if (x.IsSymbol())
@@ -341,7 +342,8 @@ public:
                       const Fortran::evaluate::CoarrayRef &y) {
     return isEqual(x.base(), y.base()) &&
            isEqual(x.cosubscript(), y.cosubscript()) &&
-           isEqual(x.stat(), y.stat()) && isEqual(x.team(), y.team());
+           isEqual(x.stat(), y.stat()) && isEqual(x.team(), y.team()) &&
+           isEqual(x.notify(), y.notify());
   }
   static bool isEqual(const Fortran::evaluate::NamedEntity &x,
                       const Fortran::evaluate::NamedEntity &y) {
@@ -610,6 +612,10 @@ unsigned getHashValue(const Fortran::lower::ExplicitIterSpace::ArrayBases &x) {
       [&](const auto *p) { return HashEvaluateExpr::getHashValue(*p); }, x);
 }
 
+unsigned getHashValue(const Fortran::evaluate::Component *x) {
+  return HashEvaluateExpr::getHashValue(*x);
+}
+
 bool isEqual(const Fortran::lower::SomeExpr *x,
              const Fortran::lower::SomeExpr *y) {
   const auto *empty =
@@ -641,6 +647,17 @@ bool isEqual(const Fortran::lower::ExplicitIterSpace::ArrayBases &x,
       x, y);
 }
 
+bool isEqual(const Fortran::evaluate::Component *x,
+             const Fortran::evaluate::Component *y) {
+  const auto *empty =
+      llvm::DenseMapInfo<const Fortran::evaluate::Component *>::getEmptyKey();
+  const auto *tombstone = llvm::DenseMapInfo<
+      const Fortran::evaluate::Component *>::getTombstoneKey();
+  if (x == empty || y == empty || x == tombstone || y == tombstone)
+    return x == y;
+  return x == y || IsEqualEvaluateExpr::isEqual(*x, *y);
+}
+
 void copyFirstPrivateSymbol(lower::AbstractConverter &converter,
                             const semantics::Symbol *sym,
                             mlir::OpBuilder::InsertPoint *copyAssignIP) {
@@ -654,8 +671,9 @@ void privatizeSymbol(
     lower::AbstractConverter &converter, fir::FirOpBuilder &firOpBuilder,
     lower::SymMap &symTable,
     llvm::SetVector<const semantics::Symbol *> &allPrivatizedSymbols,
-    llvm::SmallSet<const semantics::Symbol *, 16> &mightHaveReadHostSym,
-    const semantics::Symbol *symToPrivatize, OperandsStructType *clauseOps) {
+    llvm::SmallPtrSet<const semantics::Symbol *, 16> &mightHaveReadHostSym,
+    const semantics::Symbol *symToPrivatize, OperandsStructType *clauseOps,
+    std::optional<llvm::omp::Directive> dir) {
   constexpr bool isDoConcurrent =
       std::is_same_v<OpType, fir::LocalitySpecifierOp>;
   mlir::OpBuilder::InsertPoint dcIP;
@@ -668,7 +686,17 @@ void privatizeSymbol(
 
   const semantics::Symbol *sym =
       isDoConcurrent ? &symToPrivatize->GetUltimate() : symToPrivatize;
-  const lower::SymbolBox hsb = converter.lookupOneLevelUpSymbol(*sym);
+  // Module variables accessed via USE inside nested BLOCKs may not be
+  // instantiated yet. Ensure they are bound before looking up the host box.
+  const auto &ultimate = sym->GetUltimate();
+  if (ultimate.owner().kind() == semantics::Scope::Kind::Module &&
+      !symTable.lookupSymbol(ultimate)) {
+    Fortran::lower::AggregateStoreMap storeMap;
+    Fortran::lower::instantiateVariable(
+        converter, Fortran::lower::pft::Variable{ultimate, /*global=*/true},
+        symTable, storeMap);
+  }
+  lower::SymbolBox hsb = symTable.lookupSymbol(*sym);
   assert(hsb && "Host symbol box not found");
 
   mlir::Location symLoc = hsb.getAddr().getLoc();
@@ -676,6 +704,13 @@ void privatizeSymbol(
   bool emitCopyRegion =
       symToPrivatize->test(semantics::Symbol::Flag::OmpFirstPrivate) ||
       symToPrivatize->test(semantics::Symbol::Flag::LocalityLocalInit);
+  // A symbol attached to the simd directive can have the firstprivate flag set
+  // on it when it is also used in a non-firstprivate privatization clause.
+  // For instance: $omp do simd lastprivate(a) firstprivate(a)
+  // We cannot apply the firstprivate privatizer to simd, so make sure we do
+  // not emit the copy region when dealing with the SIMD directive.
+  if (dir && dir == llvm::omp::Directive::OMPD_simd)
+    emitCopyRegion = false;
 
   mlir::Value privVal = hsb.getAddr();
   mlir::Type allocType = privVal.getType();
@@ -754,7 +789,7 @@ void privatizeSymbol(
         mlir::isa<fir::BaseBoxType>(allocType) ||
         mlir::isa<fir::BoxCharType>(allocType);
     if (needsInitialization) {
-      lower::SymbolBox hsb = converter.lookupOneLevelUpSymbol(
+      lower::SymbolBox hsb = symTable.lookupSymbol(
           isDoConcurrent ? symToPrivatize->GetUltimate() : *symToPrivatize);
 
       assert(hsb && "Host symbol box not found");
@@ -846,17 +881,19 @@ privatizeSymbol<mlir::omp::PrivateClauseOp, mlir::omp::PrivateClauseOps>(
     lower::AbstractConverter &converter, fir::FirOpBuilder &firOpBuilder,
     lower::SymMap &symTable,
     llvm::SetVector<const semantics::Symbol *> &allPrivatizedSymbols,
-    llvm::SmallSet<const semantics::Symbol *, 16> &mightHaveReadHostSym,
+    llvm::SmallPtrSet<const semantics::Symbol *, 16> &mightHaveReadHostSym,
     const semantics::Symbol *symToPrivatize,
-    mlir::omp::PrivateClauseOps *clauseOps);
+    mlir::omp::PrivateClauseOps *clauseOps,
+    std::optional<llvm::omp::Directive> dir);
 
 template void
 privatizeSymbol<fir::LocalitySpecifierOp, fir::LocalitySpecifierOperands>(
     lower::AbstractConverter &converter, fir::FirOpBuilder &firOpBuilder,
     lower::SymMap &symTable,
     llvm::SetVector<const semantics::Symbol *> &allPrivatizedSymbols,
-    llvm::SmallSet<const semantics::Symbol *, 16> &mightHaveReadHostSym,
+    llvm::SmallPtrSet<const semantics::Symbol *, 16> &mightHaveReadHostSym,
     const semantics::Symbol *symToPrivatize,
-    fir::LocalitySpecifierOperands *clauseOps);
+    fir::LocalitySpecifierOperands *clauseOps,
+    std::optional<llvm::omp::Directive> dir);
 
 } // end namespace Fortran::lower

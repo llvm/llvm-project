@@ -72,14 +72,14 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 #if _LIBCPP_STD_VER >= 14
 
 template <class _InputIterator, class _OutputIterator>
-_LIBCPP_HIDE_FROM_ABI constexpr pair<_OutputIterator, __iter_value_type<_InputIterator>>
+_LIBCPP_HIDE_FROM_ABI constexpr pair<_OutputIterator, __iterator_value_type<_InputIterator>>
 __partial_sum_max(_InputIterator __first, _InputIterator __last, _OutputIterator __result) {
   if (__first == __last)
     return {__result, 0};
 
-  auto __max                              = *__first;
-  __iter_value_type<_InputIterator> __sum = *__first;
-  *__result                               = __sum;
+  auto __max                                  = *__first;
+  __iterator_value_type<_InputIterator> __sum = *__first;
+  *__result                                   = __sum;
 
   while (++__first != __last) {
     if (__max < *__first) {
@@ -124,7 +124,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr auto __nth_radix(size_t __radix_number, _Radix _
 template <class _ForwardIterator, class _Map, class _RandomAccessIterator>
 _LIBCPP_HIDE_FROM_ABI constexpr void
 __collect(_ForwardIterator __first, _ForwardIterator __last, _Map __map, _RandomAccessIterator __counters) {
-  using __value_type = __iter_value_type<_ForwardIterator>;
+  using __value_type = __iterator_value_type<_ForwardIterator>;
   using __traits     = __counting_sort_traits<__value_type, _Map>;
 
   std::for_each(__first, __last, [&__counters, &__map](const auto& __preimage) { ++__counters[__map(__preimage)]; });
@@ -160,7 +160,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr bool __collect_impl(
     _RandomAccessIterator1 __counters,
     _RandomAccessIterator2 __maximums,
     index_sequence<_Radices...>) {
-  using __value_type                 = __iter_value_type<_ForwardIterator>;
+  using __value_type                 = __iterator_value_type<_ForwardIterator>;
   constexpr auto __radix_value_range = __radix_sort_traits<__value_type, _Map, _Radix>::__radix_value_range;
 
   auto __previous  = numeric_limits<__invoke_result_t<_Map, __value_type>>::min();
@@ -189,7 +189,7 @@ __collect(_ForwardIterator __first,
           _Radix __radix,
           _RandomAccessIterator1 __counters,
           _RandomAccessIterator2 __maximums) {
-  using __value_type           = __iter_value_type<_ForwardIterator>;
+  using __value_type           = __iterator_value_type<_ForwardIterator>;
   constexpr auto __radix_count = __radix_sort_traits<__value_type, _Map, _Radix>::__radix_count;
   return std::__collect_impl(
       __first, __last, __map, __radix, __counters, __maximums, make_index_sequence<__radix_count>());
@@ -213,10 +213,10 @@ _LIBCPP_HIDE_FROM_ABI constexpr void __dispose_backward(
 template <class _ForwardIterator, class _RandomAccessIterator, class _Map>
 _LIBCPP_HIDE_FROM_ABI constexpr _RandomAccessIterator
 __counting_sort_impl(_ForwardIterator __first, _ForwardIterator __last, _RandomAccessIterator __result, _Map __map) {
-  using __value_type = __iter_value_type<_ForwardIterator>;
+  using __value_type = __iterator_value_type<_ForwardIterator>;
   using __traits     = __counting_sort_traits<__value_type, _Map>;
 
-  __iter_diff_t<_RandomAccessIterator> __counters[__traits::__value_range + 1] = {0};
+  __iterator_difference_type<_RandomAccessIterator> __counters[__traits::__value_range + 1] = {0};
 
   std::__collect(__first, __last, __map, std::next(std::begin(__counters)));
   std::__dispose(__first, __last, __result, __map, std::begin(__counters));
@@ -224,12 +224,13 @@ __counting_sort_impl(_ForwardIterator __first, _ForwardIterator __last, _RandomA
   return __result + __counters[__traits::__value_range];
 }
 
-template <class _RandomAccessIterator1,
-          class _RandomAccessIterator2,
-          class _Map,
-          class _Radix,
-          enable_if_t< __radix_sort_traits<__iter_value_type<_RandomAccessIterator1>, _Map, _Radix>::__radix_count == 1,
-                       int> = 0>
+template <
+    class _RandomAccessIterator1,
+    class _RandomAccessIterator2,
+    class _Map,
+    class _Radix,
+    enable_if_t<__radix_sort_traits<__iterator_value_type<_RandomAccessIterator1>, _Map, _Radix>::__radix_count == 1,
+                int> = 0>
 _LIBCPP_HIDE_FROM_ABI constexpr void __radix_sort_impl(
     _RandomAccessIterator1 __first,
     _RandomAccessIterator1 __last,
@@ -243,24 +244,25 @@ _LIBCPP_HIDE_FROM_ABI constexpr void __radix_sort_impl(
   std::move(__buffer, __buffer_end, __first);
 }
 
-template <
-    class _RandomAccessIterator1,
-    class _RandomAccessIterator2,
-    class _Map,
-    class _Radix,
-    enable_if_t< __radix_sort_traits<__iter_value_type<_RandomAccessIterator1>, _Map, _Radix>::__radix_count % 2 == 0,
-                 int> = 0 >
+template <class _RandomAccessIterator1,
+          class _RandomAccessIterator2,
+          class _Map,
+          class _Radix,
+          enable_if_t<
+              __radix_sort_traits<__iterator_value_type<_RandomAccessIterator1>, _Map, _Radix>::__radix_count % 2 == 0,
+              int> = 0>
 _LIBCPP_HIDE_FROM_ABI constexpr void __radix_sort_impl(
     _RandomAccessIterator1 __first,
     _RandomAccessIterator1 __last,
     _RandomAccessIterator2 __buffer_begin,
     _Map __map,
     _Radix __radix) {
-  using __value_type = __iter_value_type<_RandomAccessIterator1>;
+  using __value_type = __iterator_value_type<_RandomAccessIterator1>;
   using __traits     = __radix_sort_traits<__value_type, _Map, _Radix>;
 
-  __iter_diff_t<_RandomAccessIterator1> __counters[__traits::__radix_count][__traits::__radix_value_range] = {{0}};
-  __iter_diff_t<_RandomAccessIterator1> __maximums[__traits::__radix_count]                                = {0};
+  __iterator_difference_type<_RandomAccessIterator1>
+      __counters[__traits::__radix_count][__traits::__radix_value_range]                 = {{0}};
+  __iterator_difference_type<_RandomAccessIterator1> __maximums[__traits::__radix_count] = {0};
   const auto __is_sorted = std::__collect(__first, __last, __map, __radix, __counters, __maximums);
   if (!__is_sorted) {
     const auto __range_size = std::distance(__first, __last);

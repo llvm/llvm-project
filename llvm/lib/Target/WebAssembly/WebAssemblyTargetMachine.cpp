@@ -20,6 +20,10 @@
 #include "WebAssemblyTargetObjectFile.h"
 #include "WebAssemblyTargetTransformInfo.h"
 #include "WebAssemblyUtilities.h"
+#include "llvm/CodeGen/GlobalISel/IRTranslator.h"
+#include "llvm/CodeGen/GlobalISel/InstructionSelect.h"
+#include "llvm/CodeGen/GlobalISel/Legalizer.h"
+#include "llvm/CodeGen/GlobalISel/RegBankSelect.h"
 #include "llvm/CodeGen/MIRParser/MIParser.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/RegAllocRegistry.h"
@@ -45,12 +49,6 @@ static cl::opt<bool> WasmDisableExplicitLocals(
     "wasm-disable-explicit-locals", cl::Hidden,
     cl::desc("WebAssembly: output implicit locals in"
              " instruction output for test purposes only."),
-    cl::init(false));
-
-static cl::opt<bool> WasmDisableFixIrreducibleControlFlowPass(
-    "wasm-disable-fix-irreducible-control-flow-pass", cl::Hidden,
-    cl::desc("webassembly: disables the fix "
-             " irreducible control flow optimization pass"),
     cl::init(false));
 
 // Exception handling & setjmp-longjmp handling related options.
@@ -92,6 +90,9 @@ LLVMInitializeWebAssemblyTarget() {
 
   // Register backend passes
   auto &PR = *PassRegistry::getPassRegistry();
+  initializeGlobalISel(PR);
+  initializeWebAssemblyPreLegalizerCombinerPass(PR);
+  initializeWebAssemblyPostLegalizerCombinerPass(PR);
   initializeWebAssemblyAddMissingPrototypesPass(PR);
   initializeWebAssemblyLowerEmscriptenEHSjLjPass(PR);
   initializeLowerGlobalDtorsLegacyPassPass(PR);
@@ -127,16 +128,11 @@ LLVMInitializeWebAssemblyTarget() {
 // WebAssembly Lowering public interface.
 //===----------------------------------------------------------------------===//
 
-static Reloc::Model getEffectiveRelocModel(std::optional<Reloc::Model> RM,
-                                           const Triple &TT) {
-  if (!RM) {
-    // Default to static relocation model.  This should always be more optimial
-    // than PIC since the static linker can determine all global addresses and
-    // assume direct function calls.
-    return Reloc::Static;
-  }
-
-  return *RM;
+static Reloc::Model getEffectiveRelocModel(std::optional<Reloc::Model> RM) {
+  // Default to static relocation model.  This should always be more optimial
+  // than PIC since the static linker can determine all global addresses and
+  // assume direct function calls.
+  return RM.value_or(Reloc::Static);
 }
 
 using WebAssembly::WasmEnableEH;
@@ -196,19 +192,9 @@ WebAssemblyTargetMachine::WebAssemblyTargetMachine(
     const Target &T, const Triple &TT, StringRef CPU, StringRef FS,
     const TargetOptions &Options, std::optional<Reloc::Model> RM,
     std::optional<CodeModel::Model> CM, CodeGenOptLevel OL, bool JIT)
-    : CodeGenTargetMachineImpl(
-          T,
-          TT.isArch64Bit()
-              ? (TT.isOSEmscripten() ? "e-m:e-p:64:64-p10:8:8-p20:8:8-i64:64-"
-                                       "i128:128-f128:64-n32:64-S128-ni:1:10:20"
-                                     : "e-m:e-p:64:64-p10:8:8-p20:8:8-i64:64-"
-                                       "i128:128-n32:64-S128-ni:1:10:20")
-              : (TT.isOSEmscripten() ? "e-m:e-p:32:32-p10:8:8-p20:8:8-i64:64-"
-                                       "i128:128-f128:64-n32:64-S128-ni:1:10:20"
-                                     : "e-m:e-p:32:32-p10:8:8-p20:8:8-i64:64-"
-                                       "i128:128-n32:64-S128-ni:1:10:20"),
-          TT, CPU, FS, Options, getEffectiveRelocModel(RM, TT),
-          getEffectiveCodeModel(CM, CodeModel::Large), OL),
+    : CodeGenTargetMachineImpl(T, TT.computeDataLayout(), TT, CPU, FS, Options,
+                               getEffectiveRelocModel(RM),
+                               getEffectiveCodeModel(CM, CodeModel::Large), OL),
       TLOF(new WebAssemblyTargetObjectFile()),
       UsesMultivalueABI(Options.MCOptions.getABIName() == "experimental-mv") {
   // WebAssembly type-checks instructions, but a noreturn function with a return
@@ -227,8 +213,8 @@ WebAssemblyTargetMachine::WebAssemblyTargetMachine(
   this->Options.DataSections = true;
   this->Options.UniqueSectionNames = true;
 
-  initAsmInfo();
   basicCheckForEHAndSjLj(this);
+  initAsmInfo();
   // Note that we don't use setRequiresStructuredCFG(true). It disables
   // optimizations than we're ok with, and want, such as critical edge
   // splitting and tail merging.
@@ -349,6 +335,8 @@ private:
       else
         Ret += (StringRef("-") + KV.Key + ",").str();
     }
+    // remove trailing ','
+    Ret.pop_back();
     return Ret;
   }
 
@@ -455,6 +443,13 @@ public:
 
   // No reg alloc
   bool addRegAssignAndRewriteOptimized() override { return false; }
+
+  bool addIRTranslator() override;
+  void addPreLegalizeMachineIR() override;
+  bool addLegalizeMachineIR() override;
+  void addPreRegBankSelect() override;
+  bool addRegBankSelect() override;
+  bool addGlobalInstructionSelect() override;
 };
 } // end anonymous namespace
 
@@ -521,6 +516,9 @@ void WebAssemblyPassConfig::addIRPasses() {
 
   // Expand indirectbr instructions to switches.
   addPass(createIndirectBrExpandPass());
+
+  // Try to expand `vecreduce_{and, or}` into `{any, all}_true`.
+  addPass(createWebAssemblyReduceToAnyAllTrue(getWebAssemblyTargetMachine()));
 
   TargetPassConfig::addIRPasses();
 }
@@ -603,9 +601,12 @@ void WebAssemblyPassConfig::addPreEmitPass() {
   // Nullify DBG_VALUE_LISTs that we cannot handle.
   addPass(createWebAssemblyNullifyDebugValueLists());
 
+  // Remove any unreachable blocks that may be left floating around.
+  // Rare, but possible. Needed for WebAssemblyFixIrreducibleControlFlow.
+  addPass(&UnreachableMachineBlockElimID);
+
   // Eliminate multiple-entry loops.
-  if (!WasmDisableFixIrreducibleControlFlowPass)
-    addPass(createWebAssemblyFixIrreducibleControlFlow());
+  addPass(createWebAssemblyFixIrreducibleControlFlow());
 
   // Do various transformations for exception handling.
   // Every CFG-changing optimizations should come before this.
@@ -672,6 +673,46 @@ void WebAssemblyPassConfig::addPreEmitPass() {
 bool WebAssemblyPassConfig::addPreISel() {
   TargetPassConfig::addPreISel();
   addPass(createWebAssemblyLowerRefTypesIntPtrConv());
+  return false;
+}
+
+bool WebAssemblyPassConfig::addIRTranslator() {
+  addPass(new IRTranslator());
+  return false;
+}
+
+void WebAssemblyPassConfig::addPreLegalizeMachineIR() {
+  if (getOptLevel() != CodeGenOptLevel::None) {
+    addPass(createWebAssemblyPreLegalizerCombiner());
+  }
+}
+bool WebAssemblyPassConfig::addLegalizeMachineIR() {
+  addPass(new Legalizer());
+  return false;
+}
+
+void WebAssemblyPassConfig::addPreRegBankSelect() {
+  if (getOptLevel() != CodeGenOptLevel::None) {
+    addPass(createWebAssemblyPostLegalizerCombiner());
+  }
+}
+
+bool WebAssemblyPassConfig::addRegBankSelect() {
+  addPass(new RegBankSelect());
+  return false;
+}
+
+bool WebAssemblyPassConfig::addGlobalInstructionSelect() {
+  addPass(new InstructionSelect(getOptLevel()));
+
+  // We insert only if ISelDAG won't insert these at a later point.
+  if (isGlobalISelAbortEnabled()) {
+    addPass(createWebAssemblyArgumentMove());
+    addPass(createWebAssemblySetP2AlignOperands());
+    addPass(createWebAssemblyFixBrTableDefaults());
+    addPass(createWebAssemblyCleanCodeAfterTrap());
+  }
+
   return false;
 }
 

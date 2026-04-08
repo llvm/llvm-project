@@ -160,9 +160,7 @@ private:
     if (F.isDeclaration())
       return false;
 
-    return F.getCallingConv() == CallingConv::SPIR_KERNEL ||
-           F.getCallingConv() == CallingConv::AMDGPU_KERNEL ||
-           F.getCallingConv() == CallingConv::PTX_Kernel;
+    return F.hasKernelCallingConv();
   }
 
   static SmallString<0> computeFunctionCategory(SplitByCategoryType Type,
@@ -243,13 +241,15 @@ int main(int argc, char **argv) {
   cl::HideUnrelatedOptions({&SplitCategory, &getColorCategory()});
   cl::ParseCommandLineOptions(argc, argv, "LLVM module splitter\n");
 
+  Triple TT(MTriple);
+
   std::unique_ptr<TargetMachine> TM;
   if (!MTriple.empty()) {
     InitializeAllTargets();
     InitializeAllTargetMCs();
 
     std::string Error;
-    const Target *T = TargetRegistry::lookupTarget(MTriple, Error);
+    const Target *T = TargetRegistry::lookupTarget(TT, Error);
     if (!T) {
       errs() << "unknown target '" << MTriple << "': " << Error << "\n";
       return 1;
@@ -257,7 +257,7 @@ int main(int argc, char **argv) {
 
     TargetOptions Options;
     TM = std::unique_ptr<TargetMachine>(T->createTargetMachine(
-        Triple(MTriple), MCPU, /*FS*/ "", Options, std::nullopt, std::nullopt));
+        TT, MCPU, /*FS*/ "", Options, std::nullopt, std::nullopt));
   }
 
   std::unique_ptr<Module> M = parseIRFile(InputFilename, Err, Context);

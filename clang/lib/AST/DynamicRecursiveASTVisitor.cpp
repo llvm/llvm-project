@@ -87,7 +87,7 @@ using namespace clang;
 //      ends up executing RAV's implementation because we used a qualified
 //      function call.
 //
-//   End result: RAV::TraverseCallExpr() is executed,
+//   End result: RAV::TraverseCallExpr() is executed.
 namespace {
 template <bool Const> struct Impl : RecursiveASTVisitor<Impl<Const>> {
   DynamicRecursiveASTVisitorBase<Const> &Visitor;

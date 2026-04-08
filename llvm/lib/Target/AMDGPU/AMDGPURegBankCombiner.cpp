@@ -52,8 +52,8 @@ protected:
 
 public:
   AMDGPURegBankCombinerImpl(
-      MachineFunction &MF, CombinerInfo &CInfo, const TargetPassConfig *TPC,
-      GISelValueTracking &VT, GISelCSEInfo *CSEInfo,
+      MachineFunction &MF, CombinerInfo &CInfo, GISelValueTracking &VT,
+      GISelCSEInfo *CSEInfo,
       const AMDGPURegBankCombinerImplRuleConfig &RuleConfig,
       const GCNSubtarget &STI, MachineDominatorTree *MDT,
       const LegalizerInfo *LI);
@@ -89,6 +89,10 @@ public:
 
   void applyCanonicalizeZextShiftAmt(MachineInstr &MI, MachineInstr &Ext) const;
 
+  bool combineD16Load(MachineInstr &MI) const;
+  bool applyD16Load(unsigned D16Opc, MachineInstr &DstMI,
+                    MachineInstr *SmallLoad, Register ToOverwriteD16) const;
+
 private:
   SIModeRegisterDefaults getMode() const;
   bool getIEEE() const;
@@ -111,11 +115,11 @@ private:
 #undef GET_GICOMBINER_IMPL
 
 AMDGPURegBankCombinerImpl::AMDGPURegBankCombinerImpl(
-    MachineFunction &MF, CombinerInfo &CInfo, const TargetPassConfig *TPC,
-    GISelValueTracking &VT, GISelCSEInfo *CSEInfo,
+    MachineFunction &MF, CombinerInfo &CInfo, GISelValueTracking &VT,
+    GISelCSEInfo *CSEInfo,
     const AMDGPURegBankCombinerImplRuleConfig &RuleConfig,
     const GCNSubtarget &STI, MachineDominatorTree *MDT, const LegalizerInfo *LI)
-    : Combiner(MF, CInfo, TPC, &VT, CSEInfo), RuleConfig(RuleConfig), STI(STI),
+    : Combiner(MF, CInfo, &VT, CSEInfo), RuleConfig(RuleConfig), STI(STI),
       RBI(*STI.getRegBankInfo()), TRI(*STI.getRegisterInfo()),
       TII(*STI.getInstrInfo()),
       Helper(Observer, B, /*IsPreLegalize*/ false, &VT, MDT, LI),
@@ -329,7 +333,7 @@ bool AMDGPURegBankCombinerImpl::matchFPMed3ToClamp(MachineInstr &MI,
   Register Val = Src0->getOperand(0).getReg();
 
   auto isOp3Zero = [&]() {
-    MachineInstr *Op3 = getDefIgnoringCopies(MI.getOperand(4).getReg(), MRI);
+    MachineInstr *Op3 = getDefIgnoringCopies(MI.getOperand(3).getReg(), MRI);
     if (Op3->getOpcode() == TargetOpcode::G_FCONSTANT)
       return Op3->getOperand(1).getFPImm()->isExactlyValue(0.0);
     return false;
@@ -392,6 +396,88 @@ void AMDGPURegBankCombinerImpl::applyCanonicalizeZextShiftAmt(
   MI.eraseFromParent();
 }
 
+bool AMDGPURegBankCombinerImpl::combineD16Load(MachineInstr &MI) const {
+  Register Dst;
+  MachineInstr *Load, *SextLoad;
+  const int64_t CleanLo16 = 0xFFFFFFFFFFFF0000;
+  const int64_t CleanHi16 = 0x000000000000FFFF;
+
+  // Load lo
+  if (mi_match(MI.getOperand(1).getReg(), MRI,
+               m_GOr(m_GAnd(m_GBitcast(m_Reg(Dst)),
+                            m_Copy(m_SpecificICst(CleanLo16))),
+                     m_MInstr(Load)))) {
+
+    if (Load->getOpcode() == AMDGPU::G_ZEXTLOAD) {
+      const MachineMemOperand *MMO = *Load->memoperands_begin();
+      unsigned LoadSize = MMO->getSizeInBits().getValue();
+      if (LoadSize == 8)
+        return applyD16Load(AMDGPU::G_AMDGPU_LOAD_D16_LO_U8, MI, Load, Dst);
+      if (LoadSize == 16)
+        return applyD16Load(AMDGPU::G_AMDGPU_LOAD_D16_LO, MI, Load, Dst);
+      return false;
+    }
+
+    if (mi_match(
+            Load, MRI,
+            m_GAnd(m_MInstr(SextLoad), m_Copy(m_SpecificICst(CleanHi16))))) {
+      if (SextLoad->getOpcode() != AMDGPU::G_SEXTLOAD)
+        return false;
+
+      const MachineMemOperand *MMO = *SextLoad->memoperands_begin();
+      if (MMO->getSizeInBits().getValue() != 8)
+        return false;
+
+      return applyD16Load(AMDGPU::G_AMDGPU_LOAD_D16_LO_I8, MI, SextLoad, Dst);
+    }
+
+    return false;
+  }
+
+  // Load hi
+  if (mi_match(MI.getOperand(1).getReg(), MRI,
+               m_GOr(m_GAnd(m_GBitcast(m_Reg(Dst)),
+                            m_Copy(m_SpecificICst(CleanHi16))),
+                     m_GShl(m_MInstr(Load), m_Copy(m_SpecificICst(16)))))) {
+
+    if (Load->getOpcode() == AMDGPU::G_ZEXTLOAD) {
+      const MachineMemOperand *MMO = *Load->memoperands_begin();
+      unsigned LoadSize = MMO->getSizeInBits().getValue();
+      if (LoadSize == 8)
+        return applyD16Load(AMDGPU::G_AMDGPU_LOAD_D16_HI_U8, MI, Load, Dst);
+      if (LoadSize == 16)
+        return applyD16Load(AMDGPU::G_AMDGPU_LOAD_D16_HI, MI, Load, Dst);
+      return false;
+    }
+
+    if (mi_match(
+            Load, MRI,
+            m_GAnd(m_MInstr(SextLoad), m_Copy(m_SpecificICst(CleanHi16))))) {
+      if (SextLoad->getOpcode() != AMDGPU::G_SEXTLOAD)
+        return false;
+      const MachineMemOperand *MMO = *SextLoad->memoperands_begin();
+      if (MMO->getSizeInBits().getValue() != 8)
+        return false;
+
+      return applyD16Load(AMDGPU::G_AMDGPU_LOAD_D16_HI_I8, MI, SextLoad, Dst);
+    }
+
+    return false;
+  }
+
+  return false;
+}
+
+bool AMDGPURegBankCombinerImpl::applyD16Load(
+    unsigned D16Opc, MachineInstr &DstMI, MachineInstr *SmallLoad,
+    Register SrcReg32ToOverwriteD16) const {
+  B.buildInstr(D16Opc, {DstMI.getOperand(0).getReg()},
+               {SmallLoad->getOperand(1).getReg(), SrcReg32ToOverwriteD16})
+      .setMemRefs(SmallLoad->memoperands());
+  DstMI.eraseFromParent();
+  return true;
+}
+
 SIModeRegisterDefaults AMDGPURegBankCombinerImpl::getMode() const {
   return MF.getInfo<SIMachineFunctionInfo>()->getMode();
 }
@@ -443,7 +529,6 @@ private:
 } // end anonymous namespace
 
 void AMDGPURegBankCombiner::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.addRequired<TargetPassConfig>();
   AU.setPreservesCFG();
   getSelectionDAGFallbackAnalysisUsage(AU);
   AU.addRequired<GISelValueTrackingAnalysisLegacy>();
@@ -464,7 +549,6 @@ AMDGPURegBankCombiner::AMDGPURegBankCombiner(bool IsOptNone)
 bool AMDGPURegBankCombiner::runOnMachineFunction(MachineFunction &MF) {
   if (MF.getProperties().hasFailedISel())
     return false;
-  auto *TPC = &getAnalysis<TargetPassConfig>();
   const Function &F = MF.getFunction();
   bool EnableOpt =
       MF.getTarget().getOptLevel() != CodeGenOptLevel::None && !skipFunction(F);
@@ -486,7 +570,7 @@ bool AMDGPURegBankCombiner::runOnMachineFunction(MachineFunction &MF) {
   // RegBankSelect seems not to leave dead instructions, so a full DCE pass is
   // unnecessary.
   CInfo.EnableFullDCE = false;
-  AMDGPURegBankCombinerImpl Impl(MF, CInfo, TPC, *VT, /*CSEInfo*/ nullptr,
+  AMDGPURegBankCombinerImpl Impl(MF, CInfo, *VT, /*CSEInfo*/ nullptr,
                                  RuleConfig, ST, MDT, LI);
   return Impl.combineMachineInstrs();
 }
@@ -495,7 +579,6 @@ char AMDGPURegBankCombiner::ID = 0;
 INITIALIZE_PASS_BEGIN(AMDGPURegBankCombiner, DEBUG_TYPE,
                       "Combine AMDGPU machine instrs after regbankselect",
                       false, false)
-INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
 INITIALIZE_PASS_DEPENDENCY(GISelValueTrackingAnalysisLegacy)
 INITIALIZE_PASS_END(AMDGPURegBankCombiner, DEBUG_TYPE,
                     "Combine AMDGPU machine instrs after regbankselect", false,

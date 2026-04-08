@@ -47,7 +47,7 @@ namespace orc {
 // (5) V -- A JITDylib associated with ES.
 class CoreAPIsBasedStandardTest : public testing::Test {
 public:
-  ~CoreAPIsBasedStandardTest() {
+  ~CoreAPIsBasedStandardTest() override {
     if (auto Err = ES.endSession())
       ES.reportError(std::move(Err));
   }
@@ -118,6 +118,10 @@ public:
   void callWrapperAsync(ExecutorAddr WrapperFnAddr,
                         IncomingWFRHandler OnComplete,
                         ArrayRef<char> ArgBuffer) override {
+    llvm_unreachable("Unsupported");
+  }
+
+  Expected<std::unique_ptr<DylibManager>> createDefaultDylibMgr() override {
     llvm_unreachable("Unsupported");
   }
 

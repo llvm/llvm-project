@@ -545,8 +545,7 @@ TEST(VirtualFileSystemTest, PhysicalFileSystemWorkingDirFailure) {
   ASSERT_EQ(sys::fs::current_path(PrevWD), std::error_code());
   ASSERT_EQ(sys::fs::createUniqueDirectory("d1", WD), std::error_code());
   ASSERT_EQ(sys::fs::set_current_path(WD), std::error_code());
-  auto Restore =
-      llvm::make_scope_exit([&] { sys::fs::set_current_path(PrevWD); });
+  llvm::scope_exit Restore([&] { sys::fs::set_current_path(PrevWD); });
 
   // Delete the working directory to create an error.
   if (sys::fs::remove_directories(WD, /*IgnoreErrors=*/false))
@@ -1941,7 +1940,30 @@ TEST_F(VFSFromYAMLTest, ReturnsExternalPathVFSHit) {
   EXPECT_EQ(0, NumDiagnostics);
 }
 
-TEST_F(VFSFromYAMLTest, RootRelativeTest) {
+TEST_F(VFSFromYAMLTest, RelativeFileDirWithOverlayRelativeSetting) {
+  auto Lower = makeIntrusiveRefCnt<DummyFileSystem>();
+  Lower->addDirectory("//root/foo/bar");
+  Lower->addRegularFile("//root/foo/bar/a");
+  Lower->setCurrentWorkingDirectory("//root/foo");
+  IntrusiveRefCntPtr<vfs::FileSystem> FS =
+      getFromYAMLString("{\n"
+                        "  'case-sensitive': false,\n"
+                        "  'overlay-relative': true,\n"
+                        "  'roots': [\n"
+                        "    { 'name': '//root/foo/bar/b', 'type': 'file',\n"
+                        "      'external-contents': 'a'\n"
+                        "    }\n"
+                        "  ]\n"
+                        "}",
+                        Lower, "bar/overlay");
+
+  ASSERT_NE(FS.get(), nullptr);
+  ErrorOr<vfs::Status> S = FS->status("//root/foo/bar/b");
+  ASSERT_FALSE(S.getError());
+  EXPECT_EQ("//root/foo/bar/a", S->getName());
+}
+
+TEST_F(VFSFromYAMLTest, RootRelativeToOverlayDirTest) {
   auto Lower = makeIntrusiveRefCnt<DummyFileSystem>();
   Lower->addDirectory("//root/foo/bar");
   Lower->addRegularFile("//root/foo/bar/a");
@@ -2002,6 +2024,35 @@ TEST_F(VFSFromYAMLTest, RootRelativeTest) {
   ASSERT_FALSE(S.getError());
   EXPECT_EQ("\\\\root\\foo\\bar\\a", S->getName());
 #endif
+}
+
+TEST_F(VFSFromYAMLTest, RootRelativeToCWDTest) {
+  auto Lower = makeIntrusiveRefCnt<DummyFileSystem>();
+  Lower->addDirectory("//root/foo/bar");
+  Lower->addRegularFile("//root/foo/bar/a");
+  Lower->addDirectory("//root/foo/bar/cwd");
+  Lower->addRegularFile("//root/foo/bar/cwd/a");
+  Lower->setCurrentWorkingDirectory("//root/foo/bar/cwd");
+  IntrusiveRefCntPtr<vfs::FileSystem> FS =
+      getFromYAMLString("{\n"
+                        "  'case-sensitive': false,\n"
+                        "  'root-relative': 'cwd',\n"
+                        "  'roots': [\n"
+                        "    { 'name': 'b', 'type': 'file',\n"
+                        "      'external-contents': '//root/foo/bar/a'\n"
+                        "    }\n"
+                        "  ]\n"
+                        "}",
+                        Lower, "//root/foo/bar/overlay");
+
+  ASSERT_NE(FS.get(), nullptr);
+
+  ErrorOr<vfs::Status> S1 = FS->status("//root/foo/bar/b");
+  ASSERT_TRUE(S1.getError());
+
+  ErrorOr<vfs::Status> S2 = FS->status("//root/foo/bar/cwd/b");
+  ASSERT_FALSE(S2.getError());
+  EXPECT_EQ("//root/foo/bar/a", S2->getName());
 }
 
 TEST_F(VFSFromYAMLTest, ReturnsInternalPathVFSHit) {
@@ -2489,6 +2540,7 @@ TEST_F(VFSFromYAMLTest, RelativePaths) {
   SmallString<128> CWD;
   EC = llvm::sys::fs::current_path(CWD);
   ASSERT_FALSE(EC);
+  Lower->setCurrentWorkingDirectory(CWD);
 
   // Filename at root level without a parent directory.
   IntrusiveRefCntPtr<vfs::FileSystem> FS = getFromYAMLString(
@@ -2673,6 +2725,33 @@ TEST_F(VFSFromYAMLTest, GetRealPath) {
   // Try a non-existing file.
   EXPECT_EQ(FS->getRealPath("/non_existing", RealPath),
             errc::no_such_file_or_directory);
+}
+
+TEST_F(VFSFromYAMLTest, ErrorMap) {
+  auto Lower = makeIntrusiveRefCnt<DummyFileSystem>();
+  Lower->addDirectory("/dir");
+  Lower->addRegularFile("/foo");
+  IntrusiveRefCntPtr<vfs::FileSystem> FS =
+      getFromYAMLString("{ 'use-external-names': false,\n"
+                        "  'case-sensitive': false,\n"
+                        "  'roots': [\n"
+                        "{\n"
+                        "  'type': 'directory',\n"
+                        "  'name': '/root',\n"
+                        "  'contents': [ {\n"
+                        "                  'type': 'file',\n"
+                        "                  'name': 'bar',\n"
+                        "                  'external-contents': '/foo'\n"
+                        "                }\n"
+                        "              ]\n"
+                        "}\n"
+                        "]\n"
+                        "}",
+                        Lower);
+  ASSERT_NE(FS.get(), nullptr);
+
+  // Lookup a file location that doesn't exist.
+  ASSERT_FALSE(FS->status("/root/bar/file"));
 }
 
 TEST_F(VFSFromYAMLTest, WorkingDirectory) {

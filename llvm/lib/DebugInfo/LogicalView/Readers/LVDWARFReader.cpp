@@ -274,7 +274,7 @@ void LVDWARFReader::processOneAttribute(const DWARFDie &Die,
       for (DWARFAddressRange &Range : Ranges) {
         // This seems to be a tombstone for empty ranges.
         if ((Range.LowPC == Range.HighPC) ||
-            (Range.LowPC = getTombstoneAddress()))
+            (Range.LowPC == getTombstoneAddress()))
           continue;
         // Store the real upper limit for the address range.
         if (UpdateHighAddress && Range.HighPC > 0)
@@ -395,10 +395,9 @@ LVScope *LVDWARFReader::processOneDie(const DWARFDie &InputDIE, LVScope *Parent,
       if (abbrCode) {
         if (const DWARFAbbreviationDeclaration *AbbrevDecl =
                 TheDIE.getAbbreviationDeclarationPtr())
-          if (AbbrevDecl)
-            for (const DWARFAbbreviationDeclaration::AttributeSpec &AttrSpec :
-                 AbbrevDecl->attributes())
-              processOneAttribute(TheDIE, &CurrentEndOffset, AttrSpec);
+          for (const DWARFAbbreviationDeclaration::AttributeSpec &AttrSpec :
+               AbbrevDecl->attributes())
+            processOneAttribute(TheDIE, &CurrentEndOffset, AttrSpec);
       }
     };
 
@@ -461,13 +460,17 @@ LVScope *LVDWARFReader::processOneDie(const DWARFDie &InputDIE, LVScope *Parent,
         if (!CurrentRanges.empty()) {
           for (LVAddressRange &Range : CurrentRanges)
             addSectionRange(SectionIndex, CurrentScope, Range.first,
-                            Range.second);
+                            Range.second > Range.first
+                                ? Range.second - 1 // Make hi-pc exclusive
+                                : Range.second);
           CurrentRanges.clear();
         }
         // If the scope is the CU, do not update the ranges set.
         if (FoundLowPC && FoundHighPC && !IsCompileUnit) {
           addSectionRange(SectionIndex, CurrentScope, CurrentLowPC,
-                          CurrentHighPC);
+                          CurrentHighPC > CurrentLowPC
+                              ? CurrentHighPC - 1 // Make hi-pc exclusive
+                              : CurrentHighPC);
         }
       }
     }

@@ -9,6 +9,7 @@
 #include "mlir/Dialect/GPU/IR/CompilationInterfaces.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/DialectImplementation.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MathExtras.h"
@@ -306,10 +307,75 @@ LogicalResult BlockPrefetch2dOp::verify() {
   return success();
 }
 
+template <typename OpType, typename = std::enable_if_t<llvm::is_one_of<
+                               OpType, BlockLoadOp, BlockStoreOp>::value>>
+LogicalResult verify1DBlockArg(OpType op) {
+  Type srcOrDstTy;
+  if constexpr (std::is_same_v<OpType, BlockLoadOp>)
+    srcOrDstTy = op.getResult().getType();
+  else
+    srcOrDstTy = op.getVal().getType();
+  VectorType vTy = dyn_cast<VectorType>(srcOrDstTy);
+  // scalar case is always valid
+  if (!vTy)
+    return success();
+  int elemTySize = vTy.getElementType().getIntOrFloatBitWidth() / 8;
+  if (elemTySize == 1) {
+    llvm::SmallSet<int, 4> validSizes{2, 4, 8, 16};
+    if (validSizes.contains(vTy.getNumElements()))
+      return success();
+    else
+      return op.emitOpError(
+          "vector size must be 2, 4, 8 or 16 for 8-bit element type");
+  } else {
+    llvm::SmallSet<int, 3> validSizes{2, 4, 8};
+    if (validSizes.contains(vTy.getNumElements()))
+      return success();
+    else
+      return op.emitOpError(
+          "vector size must be 2, 4 or 8 for element type > 8 bits");
+  }
+}
+
+LogicalResult BlockLoadOp::verify() { return verify1DBlockArg(*this); }
+
+LogicalResult BlockStoreOp::verify() { return verify1DBlockArg(*this); }
+
 LogicalResult MMAOp::verify() {
   if (getC()) {
     if (getResult().getType() != getC().getType())
       return emitOpError("type of C operand must match result type");
+  }
+  return success();
+}
+
+LogicalResult MMAMxOp::verify() {
+  if (getC()) {
+    if (getResult().getType() != getC().getType())
+      return emitOpError("type of C operand must match result type");
+  }
+  return success();
+}
+
+LogicalResult TruncfOp::verify() {
+  Type srcTy = getSrc().getType();
+  Type dstTy = getDst().getType();
+  if (isa<VectorType>(srcTy) && !isa<VectorType>(dstTy))
+    return emitOpError("both src and dst should be vector types or both should "
+                       "be scalar types");
+  if (isa<VectorType>(srcTy)) {
+    VectorType srcVecTy = dyn_cast<VectorType>(srcTy);
+    VectorType dstVecTy = dyn_cast<VectorType>(dstTy);
+    if (srcVecTy.getNumElements() != dstVecTy.getNumElements())
+      return emitOpError(
+          "src and dst vector types should have the same number of elements");
+    if (srcVecTy.getElementTypeBitWidth() <= dstVecTy.getElementTypeBitWidth())
+      return emitError(
+          "dst element bitwidth should be less than src element bitwidth");
+  } else {
+    if (srcTy.getIntOrFloatBitWidth() <= dstTy.getIntOrFloatBitWidth())
+      return emitError(
+          "dst element bitwidth should be less than src element bitwidth");
   }
   return success();
 }

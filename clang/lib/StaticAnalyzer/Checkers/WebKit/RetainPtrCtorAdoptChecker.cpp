@@ -67,7 +67,7 @@ public:
       }
 
       bool TraverseClassTemplateDecl(ClassTemplateDecl *CTD) {
-        if (isRetainPtr(safeGetName(CTD)))
+        if (isRetainPtrOrOSPtr(safeGetName(CTD)))
           return true; // Skip the contents of RetainPtr.
         return Base::TraverseClassTemplateDecl(CTD);
       }
@@ -121,7 +121,8 @@ public:
   }
 
   bool isAdoptFnName(const std::string &Name) const {
-    return isAdoptNS(Name) || Name == "adoptCF" || Name == "adoptCFArc";
+    return isAdoptNS(Name) || Name == "adoptCF" || Name == "adoptCFArc" ||
+           Name == "adoptOSObject" || Name == "adoptOSObjectArc";
   }
 
   bool isAdoptNS(const std::string &Name) const {
@@ -177,7 +178,8 @@ public:
       CreateOrCopyFnCall.insert(Arg); // Avoid double reporting.
       return;
     }
-    if (Result == IsOwnedResult::Owned || Result == IsOwnedResult::Skip) {
+    if (Result == IsOwnedResult::Owned || Result == IsOwnedResult::Skip ||
+        isNullPtr(Arg)) {
       CreateOrCopyFnCall.insert(Arg);
       return;
     }
@@ -303,7 +305,7 @@ public:
     if (!Cls)
       return;
 
-    if (!isRetainPtr(safeGetName(Cls)) || !CE->getNumArgs())
+    if (!isRetainPtrOrOSPtr(safeGetName(Cls)) || !CE->getNumArgs())
       return;
 
     // Ignore RetainPtr construction inside adoptNS, adoptCF, and retainPtr.
@@ -353,15 +355,37 @@ public:
   void visitBinaryOperator(const BinaryOperator *BO) const {
     if (!BO->isAssignmentOp())
       return;
-    if (!isa<ObjCIvarRefExpr>(BO->getLHS()))
-      return;
+    auto *LHS = BO->getLHS();
     auto *RHS = BO->getRHS()->IgnoreParenCasts();
-    const Expr *Inner = nullptr;
-    if (isAllocInit(RHS, &Inner)) {
-      CreateOrCopyFnCall.insert(RHS);
-      if (Inner)
-        CreateOrCopyFnCall.insert(Inner);
+    if (isa<ObjCIvarRefExpr>(LHS)) {
+      const Expr *Inner = nullptr;
+      if (isAllocInit(RHS, &Inner)) {
+        CreateOrCopyFnCall.insert(RHS);
+        if (Inner)
+          CreateOrCopyFnCall.insert(Inner);
+      }
+      return;
     }
+    auto *UO = dyn_cast<UnaryOperator>(LHS);
+    if (!UO)
+      return;
+    auto OpCode = UO->getOpcode();
+    if (OpCode != UO_Deref)
+      return;
+    auto *DerefTarget = UO->getSubExpr();
+    if (!DerefTarget)
+      return;
+    DerefTarget = DerefTarget->IgnoreParenCasts();
+    auto *DRE = dyn_cast<DeclRefExpr>(DerefTarget);
+    if (!DRE)
+      return;
+    auto *Decl = DRE->getDecl();
+    if (!Decl)
+      return;
+    if (!isa<ParmVarDecl>(Decl) || !isCreateOrCopy(RHS))
+      return;
+    if (Decl->hasAttr<CFReturnsRetainedAttr>())
+      CreateOrCopyFnCall.insert(RHS);
   }
 
   void visitReturnStmt(const ReturnStmt *RS, const Decl *DeclWithIssue) const {
@@ -382,6 +406,10 @@ public:
       // Under ARC, returning [[X alloc] init] doesn't leak X.
       if (RTC.isUnretained(RetValue->getType()))
         return;
+    }
+    if (retainsRet && *retainsRet) {
+      CreateOrCopyFnCall.insert(RetValue);
+      return;
     }
     if (auto *CE = dyn_cast<CallExpr>(RetValue)) {
       auto *Callee = CE->getDirectCallee();
@@ -417,50 +445,6 @@ public:
     return std::nullopt;
   }
 
-  bool isAllocInit(const Expr *E, const Expr **InnerExpr = nullptr) const {
-    auto *ObjCMsgExpr = dyn_cast<ObjCMessageExpr>(E);
-    if (auto *POE = dyn_cast<PseudoObjectExpr>(E)) {
-      if (unsigned ExprCount = POE->getNumSemanticExprs()) {
-        auto *Expr = POE->getSemanticExpr(ExprCount - 1)->IgnoreParenCasts();
-        ObjCMsgExpr = dyn_cast<ObjCMessageExpr>(Expr);
-        if (InnerExpr)
-          *InnerExpr = ObjCMsgExpr;
-      }
-    }
-    if (!ObjCMsgExpr)
-      return false;
-    auto Selector = ObjCMsgExpr->getSelector();
-    auto NameForFirstSlot = Selector.getNameForSlot(0);
-    if (NameForFirstSlot == "alloc" || NameForFirstSlot.starts_with("copy") ||
-        NameForFirstSlot.starts_with("mutableCopy"))
-      return true;
-    if (!NameForFirstSlot.starts_with("init") &&
-        !NameForFirstSlot.starts_with("_init"))
-      return false;
-    if (!ObjCMsgExpr->isInstanceMessage())
-      return false;
-    auto *Receiver = ObjCMsgExpr->getInstanceReceiver();
-    if (!Receiver)
-      return false;
-    Receiver = Receiver->IgnoreParenCasts();
-    if (auto *Inner = dyn_cast<ObjCMessageExpr>(Receiver)) {
-      if (InnerExpr)
-        *InnerExpr = Inner;
-      auto InnerSelector = Inner->getSelector();
-      return InnerSelector.getNameForSlot(0) == "alloc";
-    } else if (auto *CE = dyn_cast<CallExpr>(Receiver)) {
-      if (InnerExpr)
-        *InnerExpr = CE;
-      if (auto *Callee = CE->getDirectCallee()) {
-        if (Callee->getDeclName().isIdentifier()) {
-          auto CalleeName = Callee->getName();
-          return CalleeName.starts_with("alloc");
-        }
-      }
-    }
-    return false;
-  }
-
   bool isCreateOrCopy(const Expr *E) const {
     auto *CE = dyn_cast<CallExpr>(E);
     if (!CE)
@@ -486,11 +470,11 @@ public:
           continue;
         }
       }
-      if (isa<CXXNullPtrLiteralExpr>(E))
+      if (isNullPtr(E))
         return IsOwnedResult::NotOwned;
       if (auto *DRE = dyn_cast<DeclRefExpr>(E)) {
         auto QT = DRE->getType();
-        if (isRetainPtrType(QT))
+        if (isRetainPtrOrOSPtrType(QT))
           return IsOwnedResult::NotOwned;
         QT = QT.getCanonicalType();
         if (RTC.isUnretained(QT, true /* ignoreARC */))
@@ -529,12 +513,13 @@ public:
           if (auto *CD = dyn_cast<CXXConversionDecl>(MD)) {
             auto QT = CD->getConversionType().getCanonicalType();
             auto *ResultType = QT.getTypePtrOrNull();
-            if (isRetainPtr(safeGetName(Cls)) && ResultType &&
+            if (isRetainPtrOrOSPtr(safeGetName(Cls)) && ResultType &&
                 (ResultType->isPointerType() || ResultType->isReferenceType() ||
                  ResultType->isObjCObjectPointerType()))
               return IsOwnedResult::NotOwned;
           }
-          if (safeGetName(MD) == "leakRef" && isRetainPtr(safeGetName(Cls)))
+          if (safeGetName(MD) == "leakRef" &&
+              isRetainPtrOrOSPtr(safeGetName(Cls)))
             return IsOwnedResult::Owned;
         }
       }
@@ -552,7 +537,7 @@ public:
             continue;
           }
           auto RetType = Callee->getReturnType();
-          if (isRetainPtrType(RetType))
+          if (isRetainPtrOrOSPtrType(RetType))
             return IsOwnedResult::NotOwned;
           if (isCreateOrCopyFunction(Callee)) {
             CreateOrCopyFnCall.insert(CE);

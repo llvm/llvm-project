@@ -16,6 +16,7 @@
 #include "EvaluationResult.h"
 #include "InterpState.h"
 #include "PrimType.h"
+#include "Record.h"
 #include "Source.h"
 
 namespace clang {
@@ -37,7 +38,8 @@ public:
   EvaluationResult interpretExpr(const Expr *E,
                                  bool ConvertResultToRValue = false,
                                  bool DestroyToplevelScope = false);
-  EvaluationResult interpretDecl(const VarDecl *VD, bool CheckFullyInitialized);
+  EvaluationResult interpretDecl(const VarDecl *VD, const Expr *Init,
+                                 bool CheckFullyInitialized);
   /// Interpret the given Expr to a Pointer.
   EvaluationResult interpretAsPointer(const Expr *E, PtrCallback PtrCB);
   /// Interpret the given expression as if it was in the body of the given
@@ -59,15 +61,16 @@ protected:
 
   /// Methods implemented by the compiler.
   virtual bool visitExpr(const Expr *E, bool DestroyToplevelScope) = 0;
-  virtual bool visitDeclAndReturn(const VarDecl *VD, bool ConstantContext) = 0;
+  virtual bool visitDeclAndReturn(const VarDecl *VD, const Expr *Init,
+                                  bool ConstantContext) = 0;
   virtual bool visitFunc(const FunctionDecl *F) = 0;
   virtual bool visit(const Expr *E) = 0;
   virtual bool emitBool(bool V, const Expr *E) = 0;
 
   /// Emits jumps.
-  bool jumpTrue(const LabelTy &Label);
-  bool jumpFalse(const LabelTy &Label);
-  bool jump(const LabelTy &Label);
+  bool jumpTrue(const LabelTy &Label, SourceInfo SI);
+  bool jumpFalse(const LabelTy &Label, SourceInfo SI);
+  bool jump(const LabelTy &Label, SourceInfo SI);
   bool fallthrough(const LabelTy &Label);
   /// Speculative execution.
   bool speculate(const CallExpr *E, const LabelTy &EndLabel);
@@ -88,11 +91,7 @@ protected:
   }
 
   /// Parameter indices.
-  llvm::DenseMap<const ParmVarDecl *, ParamOffset> Params;
-  /// Lambda captures.
-  llvm::DenseMap<const ValueDecl *, ParamOffset> LambdaCaptures;
-  /// Offset of the This parameter in a lambda record.
-  ParamOffset LambdaThisCapture{0, false};
+  llvm::DenseMap<const ParmVarDecl *, FuncParam> Params;
   /// Local descriptors.
   llvm::SmallVector<SmallVector<Local, 8>, 2> Descriptors;
   std::optional<SourceInfo> LocOverride = std::nullopt;

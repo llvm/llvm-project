@@ -12,6 +12,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclGroup.h"
 #include "clang/Basic/Builtins.h"
+#include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/FileEntry.h"
 #include "clang/Basic/LangOptions.h"
@@ -23,7 +24,6 @@
 #include "clang/Basic/TokenKinds.h"
 #include "clang/Frontend/ASTUnit.h"
 #include "clang/Frontend/CompilerInstance.h"
-#include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/Frontend/FrontendPluginRegistry.h"
 #include "clang/Frontend/LayoutOverrideSource.h"
 #include "clang/Frontend/MultiplexConsumer.h"
@@ -623,25 +623,14 @@ static std::error_code collectModuleHeaderIncludes(
     llvm::sys::path::native(UmbrellaDir->Entry.getName(), DirNative);
 
     llvm::vfs::FileSystem &FS = FileMgr.getVirtualFileSystem();
-    SmallVector<std::pair<std::string, FileEntryRef>, 8> Headers;
+    SmallVector<std::pair<std::string, std::string>, 8> HeaderPaths;
     for (llvm::vfs::recursive_directory_iterator Dir(FS, DirNative, EC), End;
          Dir != End && !EC; Dir.increment(EC)) {
       // Check whether this entry has an extension typically associated with
       // headers.
       if (!llvm::StringSwitch<bool>(llvm::sys::path::extension(Dir->path()))
-               .Cases(".h", ".H", ".hh", ".hpp", true)
+               .Cases({".h", ".H", ".hh", ".hpp"}, true)
                .Default(false))
-        continue;
-
-      auto Header = FileMgr.getOptionalFileRef(Dir->path());
-      // FIXME: This shouldn't happen unless there is a file system race. Is
-      // that worth diagnosing?
-      if (!Header)
-        continue;
-
-      // If this header is marked 'unavailable' in this module, don't include
-      // it.
-      if (ModMap.isHeaderUnavailableInModule(*Header, Module))
         continue;
 
       // Compute the relative path from the directory to this file.
@@ -655,20 +644,33 @@ static std::error_code collectModuleHeaderIncludes(
            ++It)
         llvm::sys::path::append(RelativeHeader, *It);
 
-      std::string RelName = RelativeHeader.c_str();
-      Headers.push_back(std::make_pair(RelName, *Header));
+      HeaderPaths.push_back(
+          std::make_pair(Dir->path().str(), RelativeHeader.c_str()));
     }
 
     if (EC)
       return EC;
 
     // Sort header paths and make the header inclusion order deterministic
-    // across different OSs and filesystems.
-    llvm::sort(Headers, llvm::less_first());
-    for (auto &H : Headers) {
+    // across different OSs and filesystems. As the header search table
+    // serialization order depends on the file reference UID, we need to create
+    // file references in deterministic order too.
+    llvm::sort(HeaderPaths, llvm::less_first());
+    for (auto &[Path, RelPath] : HeaderPaths) {
+      auto Header = FileMgr.getOptionalFileRef(Path);
+      // FIXME: This shouldn't happen unless there is a file system race. Is
+      // that worth diagnosing?
+      if (!Header)
+        continue;
+
+      // If this header is marked 'unavailable' in this module, don't include
+      // it.
+      if (ModMap.isHeaderUnavailableInModule(*Header, Module))
+        continue;
+
       // Include this header as part of the umbrella directory.
-      Module->addTopHeader(H.second);
-      addHeaderInclude(H.first, Includes, LangOpts, Module->IsExternC);
+      Module->addTopHeader(*Header);
+      addHeaderInclude(RelPath, Includes, LangOpts, Module->IsExternC);
     }
   }
 
@@ -704,8 +706,9 @@ static bool loadModuleMapForModuleBuild(CompilerInstance &CI, bool IsSystem,
   }
 
   // Load the module map file.
-  if (HS.parseAndLoadModuleMapFile(*ModuleMap, IsSystem, ModuleMapID, &Offset,
-                                   PresumedModuleMapFile))
+  if (HS.parseAndLoadModuleMapFile(*ModuleMap, IsSystem,
+                                   /*ImplicitlyDiscovered=*/false, ModuleMapID,
+                                   &Offset, PresumedModuleMapFile))
     return true;
 
   if (SrcMgr.getBufferOrFake(ModuleMapID).getBufferSize() == Offset)
@@ -834,7 +837,7 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
 
   // If we fail, reset state since the client will not end up calling the
   // matching EndSourceFile(). All paths that return true should release this.
-  auto FailureCleanup = llvm::make_scope_exit([&]() {
+  llvm::scope_exit FailureCleanup([&]() {
     if (HasBegunSourceFile)
       CI.getDiagnosticClient().EndSourceFile();
     CI.setASTConsumer(nullptr);
@@ -846,6 +849,11 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
 
   if (!BeginInvocation(CI))
     return false;
+
+  // The list of module files the input AST file depends on. This is separate
+  // from FrontendOptions::ModuleFiles, because those only represent explicit
+  // modules, while this is capable of representing implicit ones too.
+  SmallVector<ModuleFileName> ModuleFiles;
 
   // If we're replaying the build of an AST file, import it and set up
   // the initial state from its build.
@@ -862,7 +870,8 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
 
     std::unique_ptr<ASTUnit> AST = ASTUnit::LoadFromASTFile(
         InputFile, CI.getPCHContainerReader(), ASTUnit::LoadPreprocessorOnly,
-        nullptr, ASTDiags, CI.getFileSystemOpts(), CI.getHeaderSearchOpts());
+        CI.getVirtualFileSystemPtr(), nullptr, ASTDiags, CI.getFileSystemOpts(),
+        CI.getHeaderSearchOpts());
     if (!AST)
       return false;
 
@@ -874,8 +883,9 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
 
     // Set the shared objects, these are reset when we finish processing the
     // file, otherwise the CompilerInstance will happily destroy them.
+    CI.setVirtualFileSystem(AST->getFileManager().getVirtualFileSystemPtr());
     CI.setFileManager(AST->getFileManagerPtr());
-    CI.createSourceManager(CI.getFileManager());
+    CI.createSourceManager();
     CI.getSourceManager().initializeForReplay(AST->getSourceManager());
 
     // Preload all the module files loaded transitively by the AST unit. Also
@@ -887,7 +897,7 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
 
       for (serialization::ModuleFile &MF : MM)
         if (&MF != &PrimaryModule)
-          CI.getFrontendOpts().ModuleFiles.push_back(MF.FileName);
+          ModuleFiles.emplace_back(MF.FileName);
 
       ASTReader->visitTopLevelModuleMaps(PrimaryModule, [&](FileEntryRef FE) {
         CI.getFrontendOpts().ModuleMapFiles.push_back(
@@ -928,9 +938,9 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
     StringRef InputFile = Input.getFile();
 
     std::unique_ptr<ASTUnit> AST = ASTUnit::LoadFromASTFile(
-        InputFile, CI.getPCHContainerReader(), ASTUnit::LoadEverything, nullptr,
-        Diags, CI.getFileSystemOpts(), CI.getHeaderSearchOpts(),
-        &CI.getLangOpts());
+        InputFile, CI.getPCHContainerReader(), ASTUnit::LoadEverything,
+        CI.getVirtualFileSystemPtr(), nullptr, Diags, CI.getFileSystemOpts(),
+        CI.getHeaderSearchOpts(), &CI.getLangOpts());
 
     if (!AST)
       return false;
@@ -941,6 +951,7 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
 
     // Set the shared objects, these are reset when we finish processing the
     // file, otherwise the CompilerInstance will happily destroy them.
+    CI.setVirtualFileSystem(AST->getVirtualFileSystemPtr());
     CI.setFileManager(AST->getFileManagerPtr());
     CI.setSourceManager(AST->getSourceManagerPtr());
     CI.setPreprocessor(AST->getPreprocessorPtr());
@@ -964,14 +975,13 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
     return true;
   }
 
-  // Set up the file and source managers, if needed.
-  if (!CI.hasFileManager()) {
-    if (!CI.createFileManager()) {
-      return false;
-    }
-  }
+  // Set up the file system, file and source managers, if needed.
+  if (!CI.hasVirtualFileSystem())
+    CI.createVirtualFileSystem();
+  if (!CI.hasFileManager())
+    CI.createFileManager();
   if (!CI.hasSourceManager()) {
-    CI.createSourceManager(CI.getFileManager());
+    CI.createSourceManager();
     if (CI.getDiagnosticOpts().getFormat() == DiagnosticOptions::SARIF) {
       static_cast<SARIFDiagnosticPrinter *>(&CI.getDiagnosticClient())
           ->setSarifWriter(
@@ -1014,19 +1024,31 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
     return true;
   }
 
-  // If the implicit PCH include is actually a directory, rather than
-  // a single file, search for a suitable PCH file in that directory.
   if (!CI.getPreprocessorOpts().ImplicitPCHInclude.empty()) {
     FileManager &FileMgr = CI.getFileManager();
     PreprocessorOptions &PPOpts = CI.getPreprocessorOpts();
+
+    // Canonicalize ImplicitPCHInclude. This way, all the downstream code,
+    // including the ASTWriter, will receive the absolute path to the included
+    // PCH.
+    SmallString<128> PCHIncludePath(PPOpts.ImplicitPCHInclude);
+    FileMgr.makeAbsolutePath(PCHIncludePath);
+    llvm::sys::path::remove_dots(PCHIncludePath, true);
+    PPOpts.ImplicitPCHInclude = PCHIncludePath.str();
     StringRef PCHInclude = PPOpts.ImplicitPCHInclude;
-    std::string SpecificModuleCachePath = CI.getSpecificModuleCachePath();
+
+    // If the implicit PCH include is actually a directory, rather than
+    // a single file, search for a suitable PCH file in that directory.
     if (auto PCHDir = FileMgr.getOptionalDirectoryRef(PCHInclude)) {
       std::error_code EC;
       SmallString<128> DirNative;
       llvm::sys::path::native(PCHDir->getName(), DirNative);
       bool Found = false;
       llvm::vfs::FileSystem &FS = FileMgr.getVirtualFileSystem();
+      std::string SpecificModuleCachePath = createSpecificModuleCachePath(
+          CI.getFileManager(), CI.getHeaderSearchOpts().ModuleCachePath,
+          CI.getHeaderSearchOpts().DisableModuleHash,
+          CI.getInvocation().computeContextHash());
       for (llvm::vfs::directory_iterator Dir = FS.dir_begin(DirNative, EC),
                                          DirEnd;
            Dir != DirEnd && !EC; Dir.increment(EC)) {
@@ -1035,7 +1057,8 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
                 Dir->path(), FileMgr, CI.getModuleCache(),
                 CI.getPCHContainerReader(), CI.getLangOpts(),
                 CI.getCodeGenOpts(), CI.getTargetOpts(),
-                CI.getPreprocessorOpts(), SpecificModuleCachePath,
+                CI.getPreprocessorOpts(), CI.getHeaderSearchOpts(),
+                SpecificModuleCachePath,
                 /*RequireStrictOptionMatches=*/true)) {
           PPOpts.ImplicitPCHInclude = std::string(Dir->path());
           Found = true;
@@ -1162,7 +1185,7 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
   for (const auto &Filename : CI.getFrontendOpts().ModuleMapFiles) {
     if (auto File = CI.getFileManager().getOptionalFileRef(Filename))
       CI.getPreprocessor().getHeaderSearchInfo().parseAndLoadModuleMapFile(
-          *File, /*IsSystem*/ false);
+          *File, /*IsSystem*/ false, /*ImplicitlyDiscovered=*/false);
     else
       CI.getDiagnostics().Report(diag::err_module_map_not_found) << Filename;
   }
@@ -1270,6 +1293,17 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
   // If we were asked to load any module files, do so now.
   for (const auto &ModuleFile : CI.getFrontendOpts().ModuleFiles) {
     serialization::ModuleFile *Loaded = nullptr;
+    if (!CI.loadModuleFile(ModuleFileName::makeExplicit(ModuleFile), Loaded))
+      return false;
+
+    if (Loaded && Loaded->StandardCXXModule)
+      CI.getDiagnostics().Report(
+          diag::warn_eagerly_load_for_standard_cplusplus_modules);
+  }
+
+  // If we were asked to load any module files by the ASTUnit, do so now.
+  for (const auto &ModuleFile : ModuleFiles) {
+    serialization::ModuleFile *Loaded = nullptr;
     if (!CI.loadModuleFile(ModuleFile, Loaded))
       return false;
 
@@ -1312,7 +1346,7 @@ llvm::Error FrontendAction::Execute() {
   if (CI.shouldBuildGlobalModuleIndex() && CI.hasFileManager() &&
       CI.hasPreprocessor()) {
     StringRef Cache =
-        CI.getPreprocessor().getHeaderSearchInfo().getModuleCachePath();
+        CI.getPreprocessor().getHeaderSearchInfo().getSpecificModuleCachePath();
     if (!Cache.empty()) {
       if (llvm::Error Err = GlobalModuleIndex::writeIndex(
               CI.getFileManager(), CI.getPCHContainerReader(), Cache)) {

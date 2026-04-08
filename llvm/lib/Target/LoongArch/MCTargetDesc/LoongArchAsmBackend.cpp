@@ -136,8 +136,6 @@ static void fixupLeb128(MCContext &Ctx, const MCFixup &Fixup, uint8_t *Data,
   unsigned I;
   for (I = 0; Value; ++I, Value >>= 7)
     Data[I] |= uint8_t(Value & 0x7f);
-  if (Value)
-    Ctx.reportError(Fixup.getLoc(), "Invalid uleb128 value!");
 }
 
 void LoongArchAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
@@ -259,14 +257,10 @@ std::pair<bool, bool> LoongArchAsmBackend::relaxLEB128(MCFragment &F,
   return std::make_pair(true, true);
 }
 
-bool LoongArchAsmBackend::relaxDwarfLineAddr(MCFragment &F,
-                                             bool &WasRelaxed) const {
+bool LoongArchAsmBackend::relaxDwarfLineAddr(MCFragment &F) const {
   MCContext &C = getContext();
-
   int64_t LineDelta = F.getDwarfLineDelta();
   const MCExpr &AddrDelta = F.getDwarfAddrDelta();
-  size_t OldSize = F.getVarSize();
-
   int64_t Value;
   if (AddrDelta.evaluateAsAbsolute(Value, *Asm))
     return false;
@@ -312,15 +306,12 @@ bool LoongArchAsmBackend::relaxDwarfLineAddr(MCFragment &F,
   F.setVarContents(Data);
   F.setVarFixups({MCFixup::create(Offset, &AddrDelta,
                                   MCFixup::getDataKindForSize(PCBytes))});
-  WasRelaxed = OldSize != Data.size();
   return true;
 }
 
-bool LoongArchAsmBackend::relaxDwarfCFA(MCFragment &F, bool &WasRelaxed) const {
+bool LoongArchAsmBackend::relaxDwarfCFA(MCFragment &F) const {
   const MCExpr &AddrDelta = F.getDwarfAddrDelta();
   SmallVector<MCFixup, 2> Fixups;
-  size_t OldSize = F.getVarContents().size();
-
   int64_t Value;
   if (AddrDelta.evaluateAsAbsolute(Value, *Asm))
     return false;
@@ -333,7 +324,6 @@ bool LoongArchAsmBackend::relaxDwarfCFA(MCFragment &F, bool &WasRelaxed) const {
   if (Value == 0) {
     F.clearVarContents();
     F.clearVarFixups();
-    WasRelaxed = OldSize != 0;
     return true;
   }
 
@@ -367,8 +357,6 @@ bool LoongArchAsmBackend::relaxDwarfCFA(MCFragment &F, bool &WasRelaxed) const {
   }
   F.setVarContents(Data);
   F.setVarFixups(Fixups);
-
-  WasRelaxed = OldSize != Data.size();
   return true;
 }
 
@@ -439,11 +427,14 @@ bool LoongArchAsmBackend::addReloc(const MCFragment &F, const MCFixup &Fixup,
           isPCRelFixupResolved(Target.getSubSym(), F))
         return Fallback();
 
-      // In SecA == SecB case. If the section is not linker-relaxable, the
-      // FixedValue has already been calculated out in evaluateFixup,
-      // return true and avoid record relocations.
-      if (&SecA == &SecB && !SecA.isLinkerRelaxable())
-        return true;
+      if (&SecA == &SecB) {
+        // If the section is not linker-relaxable, or if the fixup is in a .dwo
+        // section (where relocations are forbidden), we must resolve the
+        // difference directly. The computed Value in evaluateFixup is correct
+        // based on the current layout.
+        if (!SecA.isLinkerRelaxable() || SecCur.getName().ends_with(".dwo"))
+          return true;
+      }
     }
 
     switch (Fixup.getKind()) {

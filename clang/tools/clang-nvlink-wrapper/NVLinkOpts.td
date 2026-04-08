@@ -112,3 +112,8 @@ def mllvm_EQ : Joined<["-"], "mllvm=">, Flags<[HelpHidden]>, Alias<mllvm>;
 
 def dry_run : Flag<["--", "-"], "dry-run">, Flags<[WrapperOnlyOption]>,
   HelpText<"Print generated commands without running.">;
+def assume_device_object
+    : Flag<["--", "-"], "assume-device-object">,
+      Flags<[WrapperOnlyOption]>,
+      HelpText<
+          "Assume objects have device object files, only in dry-run mode.">;

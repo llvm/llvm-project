@@ -13,6 +13,7 @@
 
 #include "MCTargetDesc/WebAssemblyFixupKinds.h"
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCExpr.h"
@@ -36,6 +37,7 @@ public:
       : MCAsmBackend(llvm::endianness::little), Is64Bit(Is64Bit),
         IsEmscripten(IsEmscripten) {}
 
+  std::optional<MCFixupKind> getFixupKind(StringRef Name) const override;
   MCFixupKindInfo getFixupKindInfo(MCFixupKind Kind) const override;
 
   void applyFixup(const MCFragment &, const MCFixup &, const MCValue &Target,
@@ -47,6 +49,18 @@ public:
   bool writeNopData(raw_ostream &OS, uint64_t Count,
                     const MCSubtargetInfo *STI) const override;
 };
+
+std::optional<MCFixupKind>
+WebAssemblyAsmBackend::getFixupKind(StringRef Name) const {
+  unsigned Type = llvm::StringSwitch<unsigned>(Name)
+#define WASM_RELOC(NAME, ID) .Case(#NAME, ID)
+#include "llvm/BinaryFormat/WasmRelocs.def"
+#undef WASM_RELOC
+                      .Default(-1u);
+  if (Type != -1u)
+    return static_cast<MCFixupKind>(FirstLiteralRelocationKind + Type);
+  return std::nullopt;
+}
 
 MCFixupKindInfo
 WebAssemblyAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
@@ -60,6 +74,11 @@ WebAssemblyAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
       {"fixup_uleb128_i32", 0, 5 * 8, 0},
       {"fixup_uleb128_i64", 0, 10 * 8, 0},
   };
+
+  // Fixup kinds from raw relocation types and .reloc directives force
+  // relocations and do not use these fields.
+  if (mc::isRelocation(Kind))
+    return {};
 
   if (Kind < FirstTargetFixupKind)
     return MCAsmBackend::getFixupKindInfo(Kind);

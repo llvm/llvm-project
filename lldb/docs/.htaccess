@@ -19,6 +19,7 @@ Redirect 301 /resources/architecture.html https://lldb.llvm.org/resources/overvi
 Redirect 301 /design/sbapi.html https://lldb.llvm.org/resources/sbapi.html
 Redirect 301 /design/overview.html https://lldb.llvm.org/resources/overview.html
 Redirect 301 /use/extensions.html https://lldb.llvm.org/resources/extensions.html
+Redirect 301 /use/python.html https://lldb.llvm.org/use/tutorials/script-driven-debugging.html
 Redirect 301 /resources/bots.html https://lldb.llvm.org/resources/test.html
 
 # Redirect old Python API to new Python API.

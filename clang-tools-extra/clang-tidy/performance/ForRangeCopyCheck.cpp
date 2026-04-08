@@ -1,4 +1,4 @@
-//===--- ForRangeCopyCheck.cpp - clang-tidy--------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -38,7 +38,7 @@ void ForRangeCopyCheck::registerMatchers(MatchFinder *Finder) {
   auto HasReferenceOrPointerTypeOrIsAllowed = hasType(qualType(
       unless(anyOf(hasCanonicalType(anyOf(referenceType(), pointerType())),
                    hasDeclaration(namedDecl(
-                       matchers::matchesAnyListedName(AllowedTypes)))))));
+                       matchers::matchesAnyListedRegexName(AllowedTypes)))))));
   auto IteratorReturnsValueType = cxxOperatorCallExpr(
       hasOverloadedOperatorName("*"),
       callee(

@@ -120,7 +120,7 @@ subroutine bozchecks
   !ERROR: Actual argument 'z'55'' associated with dummy argument 'c=' is not a variable or typed expression
   call explicit(z'deadbeef', o'666', b'01010101')
 
-  !ERROR: BOZ argument requires an explicit interface
+  !ERROR: BOZ argument z'12345' requires an explicit interface
   call implictSub(Z'12345')
 
   !ERROR: Output item must not be a BOZ literal constant

@@ -13,7 +13,9 @@ unittest("DebugInfoPDBTests") {
     "NativeSymbolReuseTest.cpp",
     "PDBApiTest.cpp",
     "PDBVariantTest.cpp",
+    "PublicsStreamTest.cpp",
     "StringTableBuilderTest.cpp",
+    "TpiStreamTest.cpp",
   ]
 
   # DebugInfoPDBTests uses llvm::getInputFileDirectory(), which expects

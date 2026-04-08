@@ -573,4 +573,5 @@ attributes #0 = { nounwind }
 attributes #1 = { noreturn }
 attributes #2 = { noreturn nounwind }
 
-; CHECK: __cpp_exception:
+;; The exception tag should not be defined locally
+; CHECK-NOT: __cpp_exception:

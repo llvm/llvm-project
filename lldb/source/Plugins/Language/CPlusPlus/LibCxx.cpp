@@ -8,6 +8,10 @@
 
 #include "LibCxx.h"
 
+#include "Plugins/Language/CPlusPlus/CxxStringTypes.h"
+#include "Plugins/Language/CPlusPlus/Generic.h"
+#include "Plugins/LanguageRuntime/CPlusPlus/CPPLanguageRuntime.h"
+#include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/FormatEntity.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
@@ -23,13 +27,9 @@
 #include "lldb/Utility/Stream.h"
 #include "lldb/ValueObject/ValueObject.h"
 #include "lldb/ValueObject/ValueObjectConstResult.h"
-
-#include "Plugins/Language/CPlusPlus/CxxStringTypes.h"
-#include "Plugins/Language/CPlusPlus/Generic.h"
-#include "Plugins/LanguageRuntime/CPlusPlus/CPPLanguageRuntime.h"
-#include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-forward.h"
+#include "llvm/Support/ErrorExtras.h"
 #include <optional>
 #include <tuple>
 
@@ -40,18 +40,15 @@ using namespace lldb_private::formatters;
 static void consumeInlineNamespace(llvm::StringRef &name) {
   // Delete past an inline namespace, if any: __[a-zA-Z0-9_]+::
   auto scratch = name;
-  if (scratch.consume_front("__") && std::isalnum(scratch[0])) {
-    scratch = scratch.drop_while([](char c) { return std::isalnum(c); });
+  if (scratch.consume_front("__") &&
+      std::isalnum(static_cast<unsigned char>(scratch[0]))) {
+    scratch = scratch.drop_while(
+        [](char c) { return std::isalnum(static_cast<unsigned char>(c)); });
     if (scratch.consume_front("::")) {
       // Successfully consumed a namespace.
       name = scratch;
     }
   }
-}
-
-bool lldb_private::formatters::isOldCompressedPairLayout(
-    ValueObject &pair_obj) {
-  return isStdTemplate(pair_obj.GetTypeName(), "__compressed_pair");
 }
 
 bool lldb_private::formatters::isStdTemplate(ConstString type_name,
@@ -103,6 +100,35 @@ lldb_private::formatters::GetSecondValueOfLibCXXCompressedPair(
     value = pair.GetChildMemberWithName("__second_");
   }
   return value;
+}
+
+std::pair<lldb::ValueObjectSP, bool>
+lldb_private::formatters::GetValueOrOldCompressedPair(
+    ValueObject &obj, llvm::StringRef child_name,
+    llvm::StringRef compressed_pair_name) {
+  auto is_old_compressed_pair = [](ValueObject &pair_obj) -> bool {
+    return isStdTemplate(pair_obj.GetTypeName(), "__compressed_pair");
+  };
+
+  ValueObjectSP node_sp(obj.GetChildMemberWithName(child_name));
+  if (node_sp)
+    return {node_sp, is_old_compressed_pair(*node_sp)};
+
+  // Try the even older __compressed_pair layout.
+
+  assert(!compressed_pair_name.empty());
+
+  node_sp = obj.GetChildMemberWithName(compressed_pair_name);
+
+  // Unrecognized layout (possibly older than LLDB supports).
+  if (!node_sp)
+    return {nullptr, false};
+
+  // Expected old compressed_pair layout, but got something else.
+  if (!is_old_compressed_pair(*node_sp))
+    return {nullptr, false};
+
+  return {node_sp, true};
 }
 
 bool lldb_private::formatters::LibcxxFunctionSummaryProvider(
@@ -205,11 +231,12 @@ bool lldb_private::formatters::LibcxxUniquePointerSummaryProvider(
   if (!valobj_sp)
     return false;
 
-  ValueObjectSP ptr_sp(valobj_sp->GetChildMemberWithName("__ptr_"));
+  auto [ptr_sp, is_compressed_pair] =
+      GetValueOrOldCompressedPair(*valobj_sp, "__ptr_", "__ptr_");
   if (!ptr_sp)
     return false;
 
-  if (isOldCompressedPairLayout(*ptr_sp))
+  if (is_compressed_pair)
     ptr_sp = GetFirstValueOfLibCXXCompressedPair(*ptr_sp);
 
   if (!ptr_sp)
@@ -217,6 +244,83 @@ bool lldb_private::formatters::LibcxxUniquePointerSummaryProvider(
 
   DumpCxxSmartPtrPointerSummary(stream, *ptr_sp, options);
 
+  return true;
+}
+
+static std::optional<int64_t> LibcxxExtractOrderingValue(ValueObject &valobj) {
+  lldb::ValueObjectSP value_sp = valobj.GetChildMemberWithName("__value_");
+  if (!value_sp)
+    return std::nullopt;
+  bool success;
+  int64_t value = value_sp->GetValueAsSigned(0, &success);
+  if (!success)
+    return std::nullopt;
+  return value;
+}
+
+bool lldb_private::formatters::LibcxxPartialOrderingSummaryProvider(
+    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
+  std::optional<int64_t> value = LibcxxExtractOrderingValue(valobj);
+  if (!value)
+    return false;
+  switch (*value) {
+  case -1:
+    stream << "less";
+    break;
+  case 0:
+    stream << "equivalent";
+    break;
+  case 1:
+    stream << "greater";
+    break;
+  case -127:
+    stream << "unordered";
+    break;
+  default:
+    return false;
+  }
+  return true;
+}
+
+bool lldb_private::formatters::LibcxxWeakOrderingSummaryProvider(
+    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
+  std::optional<int64_t> value = LibcxxExtractOrderingValue(valobj);
+  if (!value)
+    return false;
+  switch (*value) {
+  case -1:
+    stream << "less";
+    break;
+  case 0:
+    stream << "equivalent";
+    break;
+  case 1:
+    stream << "greater";
+    break;
+  default:
+    return false;
+  }
+  return true;
+}
+
+bool lldb_private::formatters::LibcxxStrongOrderingSummaryProvider(
+    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
+  std::optional<int64_t> value = LibcxxExtractOrderingValue(valobj);
+  if (!value)
+    return false;
+  switch (*value) {
+  case -1:
+    stream << "less";
+    break;
+  case 0:
+    stream << "equal";
+    break;
+  case 1:
+    stream << "greater";
+    break;
+  default:
+    return false;
+  }
   return true;
 }
 
@@ -312,8 +416,7 @@ lldb_private::formatters::LibcxxSharedPtrSyntheticFrontEnd::
   if (name == "object" || name == "$$dereference$$")
     return 1;
 
-  return llvm::createStringError("Type has no child named '%s'",
-                                 name.AsCString());
+  return llvm::createStringErrorV("type has no child named '{0}'", name);
 }
 
 lldb_private::formatters::LibcxxSharedPtrSyntheticFrontEnd::
@@ -379,13 +482,14 @@ lldb_private::formatters::LibcxxUniquePtrSyntheticFrontEnd::Update() {
   if (!valobj_sp)
     return lldb::ChildCacheState::eRefetch;
 
-  ValueObjectSP ptr_sp(valobj_sp->GetChildMemberWithName("__ptr_"));
+  auto [ptr_sp, is_compressed_pair] =
+      GetValueOrOldCompressedPair(*valobj_sp, "__ptr_", "__ptr_");
   if (!ptr_sp)
     return lldb::ChildCacheState::eRefetch;
 
   // Retrieve the actual pointer and the deleter, and clone them to give them
   // user-friendly names.
-  if (isOldCompressedPairLayout(*ptr_sp)) {
+  if (is_compressed_pair) {
     if (ValueObjectSP value_pointer_sp =
             GetFirstValueOfLibCXXCompressedPair(*ptr_sp))
       m_value_ptr_sp = value_pointer_sp->Clone(ConstString("pointer"));
@@ -414,8 +518,7 @@ lldb_private::formatters::LibcxxUniquePtrSyntheticFrontEnd::
     return 1;
   if (name == "obj" || name == "object" || name == "$$dereference$$")
     return 2;
-  return llvm::createStringError("Type has no child named '%s'",
-                                 name.AsCString());
+  return llvm::createStringErrorV("type has no child named '{0}'", name);
 }
 
 /// The field layout in a libc++ string (cap, side, data or data, size, cap).
@@ -424,17 +527,15 @@ enum class StringLayout { CSD, DSC };
 }
 
 static ValueObjectSP ExtractLibCxxStringData(ValueObject &valobj) {
-  if (auto rep_sp = valobj.GetChildMemberWithName("__rep_"))
-    return rep_sp;
-
-  ValueObjectSP valobj_r_sp = valobj.GetChildMemberWithName("__r_");
-  if (!valobj_r_sp || !valobj_r_sp->GetError().Success())
+  auto [valobj_r_sp, is_compressed_pair] =
+      GetValueOrOldCompressedPair(valobj, "__rep_", "__r_");
+  if (!valobj_r_sp)
     return nullptr;
 
-  if (!isOldCompressedPairLayout(*valobj_r_sp))
-    return nullptr;
+  if (is_compressed_pair)
+    return GetFirstValueOfLibCXXCompressedPair(*valobj_r_sp);
 
-  return GetFirstValueOfLibCXXCompressedPair(*valobj_r_sp);
+  return valobj_r_sp;
 }
 
 /// Determine the size in bytes of \p valobj (a libc++ std::string object) and

@@ -380,3 +380,288 @@ Symbols:
 TEST_F(DWARFCallFrameInfoTest, ValOffset_dwarf3) {
   TestValOffset(DWARFCallFrameInfo::DWARF, "debug_frame3");
 }
+
+// Test that we correctly handle invalid FDE entries that have CIE ID values
+TEST_F(DWARFCallFrameInfoTest, InvalidFDEWithCIEID_dwarf32) {
+  // Create an FDE with cie_offset of 0xFFFFFFFF (DW_CIE_ID) which is invalid
+  auto ExpectedFile = TestFile::fromYaml(R"(
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_X86_64
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x0000000000000260
+    AddressAlign:    0x0000000000000010
+    Content:         554889E5897DFC8B45FC5DC3
+  - Name:            .debug_frame
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x0000000000000008
+    # First, a valid CIE
+    # 00000000 0000000000000014 ffffffff CIE
+    #   Version:               3
+    #   Augmentation:          ""
+    #   Code alignment factor: 1
+    #   Data alignment factor: -8
+    #   Return address column: 16
+    Content:         14000000FFFFFFFF03000178100C0708900100000000000018000000FFFFFFFF60020000000000000C00000000000000
+    # Then an invalid FDE with CIE pointer = 0xFFFFFFFF (which would make it look like a CIE)
+    # 00000018 0000000000000018 ffffffff FDE cie=ffffffff pc=0000000000000260..000000000000026c
+    # The cie offset of 0xFFFFFFFF is invalid for an FDE in debug_frame
+Symbols:
+  - Name:            test_invalid
+    Type:            STT_FUNC
+    Section:         .text
+    Value:           0x0000000000000260
+    Size:            0x000000000000000C
+    Binding:         STB_GLOBAL
+...
+)");
+  ASSERT_THAT_EXPECTED(ExpectedFile, llvm::Succeeded());
+
+  auto module_sp = std::make_shared<Module>(ExpectedFile->moduleSpec());
+  SectionList *list = module_sp->GetSectionList();
+  ASSERT_NE(nullptr, list);
+
+  auto section_sp = list->FindSectionByType(eSectionTypeDWARFDebugFrame, false);
+  ASSERT_NE(nullptr, section_sp);
+
+  DWARFCallFrameInfo cfi(*module_sp->GetObjectFile(), section_sp,
+                         DWARFCallFrameInfo::DWARF);
+
+  // This should trigger our assertion or return nullptr because the FDE is
+  // invalid
+  const Symbol *sym = module_sp->FindFirstSymbolWithNameAndType(
+      ConstString("test_invalid"), eSymbolTypeAny);
+  ASSERT_NE(nullptr, sym);
+
+  std::unique_ptr<UnwindPlan> plan_up = cfi.GetUnwindPlan(sym->GetAddress());
+  // The plan should be null because we have an invalid FDE
+  EXPECT_EQ(nullptr, plan_up);
+}
+
+// Test that we correctly handle invalid FDE entries that have CIE ID values
+TEST_F(DWARFCallFrameInfoTest, InvalidFDEWithCIEID_dwarf64) {
+  // Create an FDE with cie_offset of 0xFFFFFFFFFFFFFFFF (DW64_CIE_ID) which is
+  // invalid
+  auto ExpectedFile = TestFile::fromYaml(R"(
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_X86_64
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x0000000000000260
+    AddressAlign:    0x0000000000000010
+    Content:         554889E5897DFC8B45FC5DC3
+  - Name:            .debug_frame
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x0000000000000008
+    # DWARF64 format CIE
+    # Initial length: 0xFFFFFFFF followed by 64-bit length
+    # 00000000 ffffffff 0000000000000014 ffffffffffffffff CIE
+    Content:         FFFFFFFF1400000000000000FFFFFFFFFFFFFFFF03000178100C0708900100000000FFFFFFFF1800000000000000FFFFFFFFFFFFFFFF60020000000000000C00000000000000
+    # DWARF64 FDE with invalid CIE pointer = 0xFFFFFFFFFFFFFFFF
+    # Initial length: 0xFFFFFFFF, followed by 64-bit length (0x18)
+    # Then 64-bit CIE pointer: 0xFFFFFFFFFFFFFFFF (which is DW64_CIE_ID, invalid for FDE)
+Symbols:
+  - Name:            test_invalid64
+    Type:            STT_FUNC
+    Section:         .text
+    Value:           0x0000000000000260
+    Size:            0x000000000000000C
+    Binding:         STB_GLOBAL
+...
+)");
+  ASSERT_THAT_EXPECTED(ExpectedFile, llvm::Succeeded());
+
+  auto module_sp = std::make_shared<Module>(ExpectedFile->moduleSpec());
+  SectionList *list = module_sp->GetSectionList();
+  ASSERT_NE(nullptr, list);
+
+  auto section_sp = list->FindSectionByType(eSectionTypeDWARFDebugFrame, false);
+  ASSERT_NE(nullptr, section_sp);
+
+  DWARFCallFrameInfo cfi(*module_sp->GetObjectFile(), section_sp,
+                         DWARFCallFrameInfo::DWARF);
+
+  const Symbol *sym = module_sp->FindFirstSymbolWithNameAndType(
+      ConstString("test_invalid64"), eSymbolTypeAny);
+  ASSERT_NE(nullptr, sym);
+
+  std::unique_ptr<UnwindPlan> plan_up = cfi.GetUnwindPlan(sym->GetAddress());
+  // The plan should be null because we have an invalid FDE
+  EXPECT_EQ(nullptr, plan_up);
+}
+
+// Test valid CIE markers in eh_frame format
+TEST_F(DWARFCallFrameInfoTest, ValidCIEMarkers_eh_frame) {
+  auto ExpectedFile = TestFile::fromYaml(R"(
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_DYN
+  Machine:         EM_X86_64
+  Entry:           0x0000000000000260
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x0000000000000260
+    AddressAlign:    0x0000000000000010
+    Content:         554889E5897DFC8B45FC5DC3
+  - Name:            .eh_frame
+    Type:            SHT_X86_64_UNWIND
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x0000000000000290
+    AddressAlign:    0x0000000000000008
+    # eh_frame content
+    # CIE + FDE that works with address 0x260
+    Content:         1400000000000000017A5200017810011B0C0708900100001C0000001C000000B0FFFFFF0C00000000410E108602430D0600000000000000
+Symbols:
+  - Name:            simple_function
+    Type:            STT_FUNC
+    Section:         .text
+    Value:           0x0000000000000260
+    Size:            0x000000000000000F
+    Binding:         STB_GLOBAL
+...
+)");
+  ASSERT_THAT_EXPECTED(ExpectedFile, llvm::Succeeded());
+
+  auto module_sp = std::make_shared<Module>(ExpectedFile->moduleSpec());
+  SectionList *list = module_sp->GetSectionList();
+  ASSERT_NE(nullptr, list);
+
+  auto section_sp = list->FindSectionByType(eSectionTypeEHFrame, false);
+  ASSERT_NE(nullptr, section_sp);
+
+  DWARFCallFrameInfo cfi(*module_sp->GetObjectFile(), section_sp,
+                         DWARFCallFrameInfo::EH);
+
+  const Symbol *sym = module_sp->FindFirstSymbolWithNameAndType(
+      ConstString("simple_function"), eSymbolTypeAny);
+  ASSERT_NE(nullptr, sym);
+
+  std::unique_ptr<UnwindPlan> plan_up = cfi.GetUnwindPlan(sym->GetAddress());
+  // Should succeed with valid CIE and FDE
+  ASSERT_NE(nullptr, plan_up);
+  EXPECT_GE(plan_up->GetRowCount(), 1);
+}
+
+// Test valid CIE markers in debug_frame DWARF32 format
+TEST_F(DWARFCallFrameInfoTest, ValidCIEMarkers_dwarf32) {
+  auto ExpectedFile = TestFile::fromYaml(R"(
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_X86_64
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x0000000000001130
+    AddressAlign:    0x0000000000000010
+    Content:         554889E5897DFC8B45FC83C0015DC3
+  - Name:            .debug_frame
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x0000000000000008
+    # debug_frame content in DWARF32 format
+    # CIE (length=0x14, CIE_id=0xFFFFFFFF, version=4)
+    # FDE (length=0x24, CIE_offset=0)
+    Content:         14000000FFFFFFFF040008000178100C0708900100000000240000000000000030110000000000000F00000000000000410E108602430D064A0C070800000000
+Symbols:
+  - Name:            simple_function
+    Type:            STT_FUNC
+    Section:         .text
+    Value:           0x0000000000001130
+    Size:            0x000000000000000F
+    Binding:         STB_GLOBAL
+...
+)");
+  ASSERT_THAT_EXPECTED(ExpectedFile, llvm::Succeeded());
+
+  auto module_sp = std::make_shared<Module>(ExpectedFile->moduleSpec());
+  SectionList *list = module_sp->GetSectionList();
+  ASSERT_NE(nullptr, list);
+
+  auto section_sp = list->FindSectionByType(eSectionTypeDWARFDebugFrame, false);
+  ASSERT_NE(nullptr, section_sp);
+
+  DWARFCallFrameInfo cfi(*module_sp->GetObjectFile(), section_sp,
+                         DWARFCallFrameInfo::DWARF);
+
+  const Symbol *sym = module_sp->FindFirstSymbolWithNameAndType(
+      ConstString("simple_function"), eSymbolTypeAny);
+  ASSERT_NE(nullptr, sym);
+
+  std::unique_ptr<UnwindPlan> plan_up = cfi.GetUnwindPlan(sym->GetAddress());
+  // Should succeed with valid CIE and FDE
+  ASSERT_NE(nullptr, plan_up);
+  EXPECT_GE(plan_up->GetRowCount(), 1);
+}
+
+// Test valid CIE markers in debug_frame DWARF64 format
+TEST_F(DWARFCallFrameInfoTest, ValidCIEMarkers_dwarf64) {
+  auto ExpectedFile = TestFile::fromYaml(R"(
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_X86_64
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x0000000000001130
+    AddressAlign:    0x0000000000000010
+    Content:         554889E5897DFC8B45FC83C0015DC3
+  - Name:            .debug_frame
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x0000000000000008
+    # debug_frame content in DWARF64 format
+    # CIE: length_marker=0xFFFFFFFF, length=0x14, CIE_id=0xFFFFFFFFFFFFFFFF, version=4
+    # FDE: length_marker=0xFFFFFFFF, length=0x24, CIE_offset=0x0 (points to CIE)
+    Content:         FFFFFFFF1400000000000000FFFFFFFFFFFFFFFF040008000178100C07089001FFFFFFFF2400000000000000000000000000000030110000000000000F00000000000000410E108602430D064A0C0708
+Symbols:
+  - Name:            simple_function
+    Type:            STT_FUNC
+    Section:         .text
+    Value:           0x0000000000001130
+    Size:            0x000000000000000F
+    Binding:         STB_GLOBAL
+...
+)");
+  ASSERT_THAT_EXPECTED(ExpectedFile, llvm::Succeeded());
+
+  auto module_sp = std::make_shared<Module>(ExpectedFile->moduleSpec());
+  SectionList *list = module_sp->GetSectionList();
+  ASSERT_NE(nullptr, list);
+
+  auto section_sp = list->FindSectionByType(eSectionTypeDWARFDebugFrame, false);
+  ASSERT_NE(nullptr, section_sp);
+
+  DWARFCallFrameInfo cfi(*module_sp->GetObjectFile(), section_sp,
+                         DWARFCallFrameInfo::DWARF);
+
+  const Symbol *sym = module_sp->FindFirstSymbolWithNameAndType(
+      ConstString("simple_function"), eSymbolTypeAny);
+  ASSERT_NE(nullptr, sym);
+
+  std::unique_ptr<UnwindPlan> plan_up = cfi.GetUnwindPlan(sym->GetAddress());
+  // Should succeed with valid CIE and FDE
+  ASSERT_NE(nullptr, plan_up);
+  EXPECT_GE(plan_up->GetRowCount(), 1);
+}

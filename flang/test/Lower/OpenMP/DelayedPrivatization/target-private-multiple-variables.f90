@@ -70,7 +70,6 @@ end subroutine target_allocatable
 ! CHECK-NEXT:   %[[SHAPE:.*]] = fir.shape %[[BOX_DIMS]]#1
 ! CHECK-NEXT:   %[[DATA_ALLOC:.*]] = fir.allocmem !fir.array<?xf32>, %[[BOX_DIMS]]#1
 ! CHECK-NEXT:   %[[DECL:.*]]:2 = hlfir.declare %[[DATA_ALLOC:.*]](%[[SHAPE]])
-! CHECK-NEXT:   %[[TRUE:.*]] = arith.constant true
 ! CHECK-NEXT:   %[[C0_2:.*]] = arith.constant 0 : index
 ! CHECK-NEXT:   %[[BOX_DIMS_2:.*]]:3 = fir.box_dims %[[MOLD]], %[[C0_2]]
 ! CHECK-NEXT:   %[[SHAPE_SHIFT:.*]] = fir.shape_shift %[[BOX_DIMS_2]]#0, %[[BOX_DIMS_2]]#1
@@ -157,7 +156,7 @@ end subroutine target_allocatable
 ! CHECK-SAME:       %[[REAL_ARR_DESC_MAP]] -> %[[MAPPED_ARG2:[^,]+]]
 ! CHECK-SAME:       %[[CHAR_VAR_DESC_MAP]] -> %[[MAPPED_ARG3:.[^,]+]]
 ! CHECK-SAME:       %[[MAPPED_MI0]] -> %[[MAPPED_ARG0:[^,]+]]
-! CHECK-SAME:       !fir.ref<!fir.box<!fir.heap<i32>>>, !fir.ref<!fir.box<!fir.array<?xf32>>>, !fir.ref<!fir.boxchar<1>>, !fir.ref<i32>, !fir.llvm_ptr<!fir.ref<i32>>, !fir.llvm_ptr<!fir.ref<!fir.array<?xf32>>>, !fir.ref<!fir.boxchar<1>>
+! CHECK-SAME:       !fir.ref<!fir.box<!fir.heap<i32>>>, !fir.ref<!fir.box<!fir.array<?xf32>>>, !fir.ref<!fir.boxchar<1>>, !fir.ref<i32>, !fir.llvm_ptr<!fir.ref<i32>>, !fir.llvm_ptr<!fir.ref<!fir.array<?xf32>>>, !fir.llvm_ptr<!fir.ref<!fir.char<1,?>>>
 ! CHECK-SAME:     private(
 ! CHECK-SAME:       @[[ALLOC_PRIVATIZER_SYM]] %{{[^[:space:]]+}}#0 -> %[[ALLOC_ARG:[^,]+]] [map_idx=0],
 ! CHECK-SAME:       @[[REAL_PRIVATIZER_SYM]] %{{[^[:space:]]+}}#0 -> %[[REAL_ARG:[^,]+]],

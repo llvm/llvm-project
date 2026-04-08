@@ -15,7 +15,6 @@
 namespace Fortran::runtime {
 
 #if !defined(RT_DEVICE_COMPILATION)
-// FLANG_RT_DEBUG code is disabled when false.
 static constexpr bool enableDebugOutput{false};
 #endif
 

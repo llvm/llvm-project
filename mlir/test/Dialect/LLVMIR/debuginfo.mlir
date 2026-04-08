@@ -1,12 +1,17 @@
-// RUN: mlir-opt %s | mlir-opt | FileCheck %s
+// RUN: mlir-opt %s --verify-roundtrip | mlir-opt | FileCheck %s
 
 // CHECK-DAG: #[[FILE:.*]] = #llvm.di_file<"debuginfo.mlir" in "/test/">
 #file = #llvm.di_file<"debuginfo.mlir" in "/test/">
 
-// CHECK-DAG: #[[CU:.*]] = #llvm.di_compile_unit<id = distinct[0]<>, sourceLanguage = DW_LANG_C, file = #[[FILE]], producer = "MLIR", isOptimized = true, emissionKind = Full>
+// CHECK-DAG: #[[NS:.*]] = #llvm.di_namespace<name = "cu_import_ns", exportSymbols = false>
+// CHECK-DAG: #[[IE:.*]] = #llvm.di_imported_entity<tag = DW_TAG_imported_module, scope = #[[FILE]], entity = #[[NS]], file = #[[FILE]]>
+// CHECK-DAG: #[[CU:.*]] = #llvm.di_compile_unit<id = distinct[0]<>, sourceLanguage = DW_LANG_C, file = #[[FILE]], producer = "MLIR", isOptimized = true, emissionKind = Full, isDebugInfoForProfiling = true, importedEntities = #[[IE]]>
+#cu_import_ns = #llvm.di_namespace<name = "cu_import_ns", exportSymbols = false>
+#cu_import_ie = #llvm.di_imported_entity<tag = DW_TAG_imported_module, scope = #file, entity = #cu_import_ns, file = #file>
 #cu = #llvm.di_compile_unit<
   id = distinct[0]<>, sourceLanguage = DW_LANG_C, file = #file,
-  producer = "MLIR", isOptimized = true, emissionKind = Full
+  producer = "MLIR", isOptimized = true, emissionKind = Full,
+  isDebugInfoForProfiling = true, importedEntities = #cu_import_ie
 >
 
 // CHECK-DAG: #[[NULL:.*]] = #llvm.di_null_type
@@ -44,17 +49,28 @@
   dwarfAddressSpace = 3, extraData = #int1
 >
 
+// CHECK-DAG: #[[PTR3:.*]] = #llvm.di_derived_type<tag = DW_TAG_pointer_type, flags = "Artificial|ObjectPointer">
+#ptr3 = #llvm.di_derived_type<
+  tag = DW_TAG_pointer_type, flags = "Artificial|ObjectPointer"
+>
+
+// CHECK-DAG: #[[PTR4:.*]] = #llvm.di_derived_type<tag = DW_TAG_pointer_type>
+#ptr4 = #llvm.di_derived_type<
+  tag = DW_TAG_pointer_type, flags = "Zero"
+>
+
 // CHECK-DAG: #[[COMP0:.*]] = #llvm.di_composite_type<tag = DW_TAG_array_type, name = "array0", line = 10, sizeInBits = 128, alignInBits = 32>
 #comp0 = #llvm.di_composite_type<
   tag = DW_TAG_array_type, name = "array0",
   line = 10, sizeInBits = 128, alignInBits = 32
 >
 
-// CHECK-DAG: #[[COMP1:.*]] = #llvm.di_composite_type<tag = DW_TAG_array_type, name = "array1", file = #[[FILE]], scope = #[[FILE]], baseType = #[[INT0]], elements = #llvm.di_subrange<count = 4 : i64>>
+// CHECK-DAG: #[[COMP1:.*]] = #llvm.di_composite_type<tag = DW_TAG_array_type, name = "array1", file = #[[FILE]], scope = #[[FILE]], baseType = #[[INT0]], allocated = {{.*}}, elements = #llvm.di_subrange<count = 4 : i64>>
 #comp1 = #llvm.di_composite_type<
   tag = DW_TAG_array_type, name = "array1", file = #file,
   scope = #file, baseType = #int0,
   // Specify the subrange count.
+  allocated = <[DW_OP_push_object_address, DW_OP_deref]>,
   elements = #llvm.di_subrange<count = 4>
 >
 
@@ -88,9 +104,9 @@
  name = "expr_elements2", baseType = #int0, elements =
  #llvm.di_generic_subrange<count = #exp1, lowerBound = #exp2, stride = #exp3>>
 
-// CHECK-DAG: #[[SPTYPE0:.*]] = #llvm.di_subroutine_type<callingConvention = DW_CC_normal, types = #[[NULL]], #[[INT0]], #[[PTR0]], #[[PTR1]], #[[PTR2]], #[[COMP0:.*]], #[[COMP1:.*]], #[[COMP2:.*]], #[[COMP3:.*]]>
+// CHECK-DAG: #[[SPTYPE0:.*]] = #llvm.di_subroutine_type<callingConvention = DW_CC_normal, types = #[[NULL]], #[[INT0]], #[[PTR0]], #[[PTR1]], #[[PTR2]], #[[PTR3]], #[[PTR4]], #[[COMP0:.*]], #[[COMP1:.*]], #[[COMP2:.*]], #[[COMP3:.*]]>
 #spType0 = #llvm.di_subroutine_type<
-  callingConvention = DW_CC_normal, types = #null, #int0, #ptr0, #ptr1, #ptr2, #comp0, #comp1, #comp2, #comp3
+  callingConvention = DW_CC_normal, types = #null, #int0, #ptr0, #ptr1, #ptr2, #ptr3, #ptr4, #comp0, #comp1, #comp2, #comp3
 >
 
 // CHECK-DAG: #[[SPTYPE1:.*]] = #llvm.di_subroutine_type<types = #[[INT1]], #[[INT1]]>

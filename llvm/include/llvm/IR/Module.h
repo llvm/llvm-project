@@ -710,6 +710,17 @@ public:
     return make_range(begin(), end());
   }
 
+  /// Get an iterator range over all function definitions (excluding
+  /// declarations).
+  auto getFunctionDefs() {
+    return make_filter_range(functions(),
+                             [](Function &F) { return !F.isDeclaration(); });
+  }
+  auto getFunctionDefs() const {
+    return make_filter_range(
+        functions(), [](const Function &F) { return !F.isDeclaration(); });
+  }
+
 /// @}
 /// @name Alias Iteration
 /// @{
@@ -1045,6 +1056,9 @@ public:
   /// Get how unwind v2 (epilog) information should be generated for x64
   /// Windows.
   WinX64EHUnwindV2Mode getWinX64EHUnwindV2Mode() const;
+
+  /// Gets the Control Flow Guard mode.
+  ControlFlowGuardMode getControlFlowGuardMode() const;
 };
 
 /// Given "llvm.used" or "llvm.compiler.used" as a global name, collect the

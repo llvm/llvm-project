@@ -20,19 +20,17 @@ void CIRDataLayout::reset(mlir::DataLayoutSpecInterface spec) {
     if (mlir::DataLayoutEntryInterface entry = spec.getSpecForIdentifier(key))
       if (auto str = llvm::dyn_cast<mlir::StringAttr>(entry.getValue()))
         bigEndian = str == mlir::DLTIDialect::kDataLayoutEndiannessBig;
+
+    mlir::StringAttr addrSpKey = mlir::StringAttr::get(
+        spec.getContext(), mlir::DLTIDialect::kDataLayoutProgramMemorySpaceKey);
+    if (mlir::DataLayoutEntryInterface entry =
+            spec.getSpecForIdentifier(addrSpKey))
+      if (auto val = llvm::dyn_cast<mlir::IntegerAttr>(entry.getValue()))
+        programAddrSpace = val.getInt();
   }
 }
 
 llvm::Align CIRDataLayout::getAlignment(mlir::Type ty, bool useABIAlign) const {
-  if (auto recTy = llvm::dyn_cast<cir::RecordType>(ty)) {
-    // Packed record types always have an ABI alignment of one.
-    if (recTy && recTy.getPacked() && useABIAlign)
-      return llvm::Align(1);
-
-    // Get the layout annotation... which is lazily created on demand.
-    llvm_unreachable("getAlignment()) for record type is not implemented");
-  }
-
   // FIXME(cir): This does not account for differnt address spaces, and relies
   // on CIR's data layout to give the proper alignment.
   assert(!cir::MissingFeatures::addressSpace());

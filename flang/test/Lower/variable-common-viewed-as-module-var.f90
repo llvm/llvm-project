@@ -31,7 +31,7 @@ end
 ! CHECK: fir.global common @var_storage_(dense<0> : vector<1xi8>) {alignment = 1 : i64} : !fir.array<1xi8>
 
 ! CHECK-LABEL: func.func @_QPs1
-! CHECK: hlfir.declare %{{.*}} typeparams %c1 {uniq_name = "_QMm_common_varEvar"} : (!fir.ref<!fir.char<1>>, index) -> (!fir.ref<!fir.char<1>>, !fir.ref<!fir.char<1>>)
+! CHECK: hlfir.declare %{{.*}} typeparams %c1 storage(%{{.*}}[0]) {uniq_name = "_QMm_common_varEvar"} : (!fir.ref<!fir.char<1>>, index, !fir.ref<!fir.array<1xi8>>) -> (!fir.ref<!fir.char<1>>, !fir.ref<!fir.char<1>>)
 
 ! CHECK-LABEL: func.func @_QPs2
 ! CHECK: hlfir.declare %{{.*}} typeparams %c1 {fortran_attrs = #fir.var_attrs<bind_c>, uniq_name = "var_storage_"} : (!fir.ref<!fir.char<1>>, index) -> (!fir.ref<!fir.char<1>>, !fir.ref<!fir.char<1>>)

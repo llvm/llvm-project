@@ -91,9 +91,11 @@ static Expected<int> getSocketFD(StringRef SocketPath) {
   setsockopt(Socket, SOL_SOCKET, SO_PEERCRED, NULL, 0);
 #endif
   struct sockaddr_un Addr = setSocketAddr(SocketPath);
-  if (::connect(Socket, (struct sockaddr *)&Addr, sizeof(Addr)) == -1)
+  if (::connect(Socket, (struct sockaddr *)&Addr, sizeof(Addr)) == -1) {
+    ::close(Socket);
     return llvm::make_error<StringError>(getLastSocketErrorCode(),
                                          "Connect socket failed");
+  }
 
 #ifdef _WIN32
   return _open_osfhandle(Socket, 0);
@@ -255,7 +257,7 @@ manageTimeout(const std::chrono::milliseconds &Timeout,
   // has been canceled by another thread
   if (getActiveFD() == -1 || (CancelFD.has_value() && FD[1].revents & POLLIN))
     return std::make_error_code(std::errc::operation_canceled);
-#if _WIN32
+#ifdef _WIN32
   if (PollStatus == SOCKET_ERROR)
 #else
   if (PollStatus == -1)
@@ -332,7 +334,7 @@ ListeningSocket::~ListeningSocket() {
 raw_socket_stream::raw_socket_stream(int SocketFD)
     : raw_fd_stream(SocketFD, true) {}
 
-raw_socket_stream::~raw_socket_stream() {}
+raw_socket_stream::~raw_socket_stream() = default;
 
 Expected<std::unique_ptr<raw_socket_stream>>
 raw_socket_stream::createConnectedUnix(StringRef SocketPath) {

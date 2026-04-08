@@ -108,7 +108,7 @@ Error RemarkLinker::link(const object::ObjectFile &Obj, Format RemarkFormat) {
 
 Error RemarkLinker::serialize(raw_ostream &OS, Format RemarksFormat) const {
   Expected<std::unique_ptr<RemarkSerializer>> MaybeSerializer =
-      createRemarkSerializer(RemarksFormat, SerializerMode::Standalone, OS,
+      createRemarkSerializer(RemarksFormat, OS,
                              std::move(const_cast<StringTable &>(StrTab)));
   if (!MaybeSerializer)
     return MaybeSerializer.takeError();

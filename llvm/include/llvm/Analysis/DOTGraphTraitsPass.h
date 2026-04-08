@@ -80,7 +80,7 @@ protected:
   /// virtual destructor needed. Making this dtor protected stops accidental
   /// invocation when the derived class destructor should have been called.
   /// Those derived classes sould be marked final to avoid the warning.
-  ~DOTGraphTraitsViewer() {}
+  ~DOTGraphTraitsViewer() = default;
 
 private:
   StringRef Name;
@@ -161,7 +161,7 @@ protected:
   /// virtual destructor needed. Making this dtor protected stops accidental
   /// invocation when the derived class destructor should have been called.
   /// Those derived classes sould be marked final to avoid the warning.
-  ~DOTGraphTraitsPrinter() {}
+  ~DOTGraphTraitsPrinter() = default;
 
 private:
   StringRef Name;

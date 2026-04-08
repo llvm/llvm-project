@@ -643,8 +643,10 @@ public:
   using IdentifierLine = std::pair<StringRef, unsigned>;
 
   // Returns the file location of the pattern (buffer identifier + line number
-  // pair).
-  std::vector<IdentifierLine> getLocation() const;
+  // pair). If `forSourceOutput` is true, replace absolute paths in the buffer
+  // identifier with just their filename so that we don't leak build paths into
+  // the generated code.
+  std::vector<IdentifierLine> getLocation(bool forSourceOutput = false) const;
 
   // Recursively collects all bound symbols inside the DAG tree rooted
   // at `tree` and updates the given `infoMap`.

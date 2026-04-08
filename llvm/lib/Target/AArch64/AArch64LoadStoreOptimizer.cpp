@@ -21,6 +21,7 @@
 #include "AArch64MachineFunctionInfo.h"
 #include "AArch64Subtarget.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
@@ -42,7 +43,6 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/DebugCounter.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <cstdint>
 #include <functional>
@@ -121,11 +121,7 @@ using LdStPairFlags = struct LdStPairFlags {
   std::optional<MCPhysReg> getRenameReg() const { return RenameReg; }
 };
 
-struct AArch64LoadStoreOpt : public MachineFunctionPass {
-  static char ID;
-
-  AArch64LoadStoreOpt() : MachineFunctionPass(ID) {}
-
+struct AArch64LoadStoreOpt {
   AliasAnalysis *AA;
   const AArch64InstrInfo *TII;
   const TargetRegisterInfo *TRI;
@@ -134,11 +130,6 @@ struct AArch64LoadStoreOpt : public MachineFunctionPass {
   // Track which register units have been modified and used.
   LiveRegUnits ModifiedRegUnits, UsedRegUnits;
   LiveRegUnits DefinedInBB;
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<AAResultsWrapperPass>();
-    MachineFunctionPass::getAnalysisUsage(AU);
-  }
 
   // Scan the instructions looking for a load/store that can be combined
   // with the current instruction into a load/store pair.
@@ -230,7 +221,20 @@ struct AArch64LoadStoreOpt : public MachineFunctionPass {
 
   bool optimizeBlock(MachineBasicBlock &MBB, bool EnableNarrowZeroStOpt);
 
+  bool runOnMachineFunction(MachineFunction &MF);
+};
+
+struct AArch64LoadStoreOptLegacy : public MachineFunctionPass {
+  static char ID;
+
+  AArch64LoadStoreOptLegacy() : MachineFunctionPass(ID) {}
+
   bool runOnMachineFunction(MachineFunction &Fn) override;
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<AAResultsWrapperPass>();
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
 
   MachineFunctionProperties getRequiredProperties() const override {
     return MachineFunctionProperties().setNoVRegs();
@@ -239,11 +243,11 @@ struct AArch64LoadStoreOpt : public MachineFunctionPass {
   StringRef getPassName() const override { return AARCH64_LOAD_STORE_OPT_NAME; }
 };
 
-char AArch64LoadStoreOpt::ID = 0;
+char AArch64LoadStoreOptLegacy::ID = 0;
 
 } // end anonymous namespace
 
-INITIALIZE_PASS(AArch64LoadStoreOpt, "aarch64-ldst-opt",
+INITIALIZE_PASS(AArch64LoadStoreOptLegacy, "aarch64-ldst-opt",
                 AARCH64_LOAD_STORE_OPT_NAME, false, false)
 
 static bool isNarrowStore(unsigned Opc) {
@@ -448,6 +452,10 @@ static unsigned getPreIndexedOpcode(unsigned Opc) {
   switch (Opc) {
   default:
     llvm_unreachable("Opcode has no pre-indexed equivalent!");
+  case AArch64::STRBui:
+    return AArch64::STRBpre;
+  case AArch64::STRHui:
+    return AArch64::STRHpre;
   case AArch64::STRSui:
     return AArch64::STRSpre;
   case AArch64::STRDui:
@@ -462,6 +470,10 @@ static unsigned getPreIndexedOpcode(unsigned Opc) {
     return AArch64::STRWpre;
   case AArch64::STRXui:
     return AArch64::STRXpre;
+  case AArch64::LDRBui:
+    return AArch64::LDRBpre;
+  case AArch64::LDRHui:
+    return AArch64::LDRHpre;
   case AArch64::LDRSui:
     return AArch64::LDRSpre;
   case AArch64::LDRDui:
@@ -553,6 +565,10 @@ static unsigned getPostIndexedOpcode(unsigned Opc) {
   switch (Opc) {
   default:
     llvm_unreachable("Opcode has no post-indexed wise equivalent!");
+  case AArch64::STRBui:
+    return AArch64::STRBpost;
+  case AArch64::STRHui:
+    return AArch64::STRHpost;
   case AArch64::STRSui:
   case AArch64::STURSi:
     return AArch64::STRSpost;
@@ -572,6 +588,10 @@ static unsigned getPostIndexedOpcode(unsigned Opc) {
   case AArch64::STRXui:
   case AArch64::STURXi:
     return AArch64::STRXpost;
+  case AArch64::LDRBui:
+    return AArch64::LDRBpost;
+  case AArch64::LDRHui:
+    return AArch64::LDRHpost;
   case AArch64::LDRSui:
   case AArch64::LDURSi:
     return AArch64::LDRSpost;
@@ -740,6 +760,8 @@ static bool isMergeableLdStUpdate(MachineInstr &MI, AArch64FunctionInfo &AFI) {
   default:
     return false;
   // Scaled instructions.
+  case AArch64::STRBui:
+  case AArch64::STRHui:
   case AArch64::STRSui:
   case AArch64::STRDui:
   case AArch64::STRQui:
@@ -747,6 +769,8 @@ static bool isMergeableLdStUpdate(MachineInstr &MI, AArch64FunctionInfo &AFI) {
   case AArch64::STRWui:
   case AArch64::STRHHui:
   case AArch64::STRBBui:
+  case AArch64::LDRBui:
+  case AArch64::LDRHui:
   case AArch64::LDRSui:
   case AArch64::LDRDui:
   case AArch64::LDRQui:
@@ -834,10 +858,10 @@ static bool isMergeableIndexLdSt(MachineInstr &MI, int &Scale) {
   }
 }
 
-static bool isRewritableImplicitDef(unsigned Opc) {
-  switch (Opc) {
+static bool isRewritableImplicitDef(const MachineOperand &MO) {
+  switch (MO.getParent()->getOpcode()) {
   default:
-    return false;
+    return MO.isRenamable();
   case AArch64::ORRWrs:
   case AArch64::ADDWri:
     return true;
@@ -1048,7 +1072,7 @@ AArch64LoadStoreOpt::mergePairedInsns(MachineBasicBlock::iterator I,
                         MI.getRegClassConstraint(OpIdx, TII, TRI))
                   MatchingReg = GetMatchingSubReg(RC);
                 else {
-                  if (!isRewritableImplicitDef(MI.getOpcode()))
+                  if (!isRewritableImplicitDef(MOP))
                     continue;
                   MatchingReg = GetMatchingSubReg(
                       TRI->getMinimalPhysRegClass(MOP.getReg()));
@@ -1386,6 +1410,25 @@ AArch64LoadStoreOpt::mergePairedInsns(MachineBasicBlock::iterator I,
       if (MOP.isReg() && MOP.isKill())
         DefinedInBB.addReg(MOP.getReg());
 
+  // Copy over any implicit-def operands. This is like MI.copyImplicitOps, but
+  // only copies implicit defs and makes sure that each operand is only added
+  // once in case of duplicates.
+  auto CopyImplicitOps = [&](MachineBasicBlock::iterator MI1,
+                             MachineBasicBlock::iterator MI2) {
+    SmallSetVector<Register, 4> Ops;
+    for (const MachineOperand &MO :
+         llvm::drop_begin(MI1->operands(), MI1->getDesc().getNumOperands()))
+      if (MO.isReg() && MO.isImplicit() && MO.isDef())
+        Ops.insert(MO.getReg());
+    for (const MachineOperand &MO :
+         llvm::drop_begin(MI2->operands(), MI2->getDesc().getNumOperands()))
+      if (MO.isReg() && MO.isImplicit() && MO.isDef())
+        Ops.insert(MO.getReg());
+    for (auto Op : Ops)
+      MIB.addDef(Op, RegState::Implicit);
+  };
+  CopyImplicitOps(I, Paired);
+
   // Erase the old instructions.
   I->eraseFromParent();
   Paired->eraseFromParent();
@@ -1721,7 +1764,7 @@ static bool canRenameMOP(const MachineOperand &MOP,
     // them must be known. For example, in ORRWrs the implicit-def
     // corresponds to the result register.
     if (MOP.isImplicit() && MOP.isDef()) {
-      if (!isRewritableImplicitDef(MOP.getParent()->getOpcode()))
+      if (!isRewritableImplicitDef(MOP))
         return false;
       return TRI->isSuperOrSubRegisterEq(
           MOP.getParent()->getOperand(0).getReg(), MOP.getReg());
@@ -3075,13 +3118,9 @@ bool AArch64LoadStoreOpt::optimizeBlock(MachineBasicBlock &MBB,
 }
 
 bool AArch64LoadStoreOpt::runOnMachineFunction(MachineFunction &Fn) {
-  if (skipFunction(Fn.getFunction()))
-    return false;
-
   Subtarget = &Fn.getSubtarget<AArch64Subtarget>();
   TII = Subtarget->getInstrInfo();
   TRI = Subtarget->getRegisterInfo();
-  AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
 
   // Resize the modified and used register unit trackers.  We do this once
   // per function and then clear the register units each time we optimize a load
@@ -3110,8 +3149,31 @@ bool AArch64LoadStoreOpt::runOnMachineFunction(MachineFunction &Fn) {
 // The resulting IR is invalid, but nothing uses the KILL markers after this
 // pass, so it's never caused a problem in practice.
 
+bool AArch64LoadStoreOptLegacy::runOnMachineFunction(MachineFunction &MF) {
+  if (skipFunction(MF.getFunction()))
+    return false;
+  AArch64LoadStoreOpt Impl;
+  Impl.AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
+  return Impl.runOnMachineFunction(MF);
+}
+
 /// createAArch64LoadStoreOptimizationPass - returns an instance of the
 /// load / store optimization pass.
-FunctionPass *llvm::createAArch64LoadStoreOptimizationPass() {
-  return new AArch64LoadStoreOpt();
+FunctionPass *llvm::createAArch64LoadStoreOptLegacyPass() {
+  return new AArch64LoadStoreOptLegacy();
+}
+
+PreservedAnalyses
+AArch64LoadStoreOptPass::run(MachineFunction &MF,
+                             MachineFunctionAnalysisManager &MFAM) {
+  AArch64LoadStoreOpt Impl;
+  Impl.AA = &MFAM.getResult<FunctionAnalysisManagerMachineFunctionProxy>(MF)
+                 .getManager()
+                 .getResult<AAManager>(MF.getFunction());
+  bool Changed = Impl.runOnMachineFunction(MF);
+  if (!Changed)
+    return PreservedAnalyses::all();
+  PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
 }

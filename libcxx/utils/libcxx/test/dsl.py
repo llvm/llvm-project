@@ -83,12 +83,12 @@ def _memoizeExpensiveOperation(extractCacheKey):
 
 def _executeWithFakeConfig(test, commands):
     """
-    Returns (stdout, stderr, exitCode, timeoutInfo, parsedCommands)
+    Returns (stdout, stderr, exitCode, timeoutInfo, parsedCommands, testUpdateOutput)
     """
     litConfig = lit.LitConfig.LitConfig(
         progname="lit",
         path=[],
-        quiet=False,
+        diagnostic_level="note",
         useValgrind=False,
         valgrindLeakCheck=False,
         valgrindArgs=[],
@@ -111,8 +111,8 @@ def _makeConfigTest(config):
             os.makedirs(supportDir)
 
     # Create a dummy test suite and single dummy test inside it. As part of
-    # the Lit configuration, automatically do the equivalent of 'mkdir %T'
-    # and 'rm -r %T' to avoid cluttering the build directory.
+    # the Lit configuration, automatically do the equivalent of 'mkdir %{temp}'
+    # and 'rm -r %{temp}' to avoid cluttering the build directory.
     suite = lit.Test.TestSuite("__config__", sourceRoot, execRoot, config)
     tmp = tempfile.NamedTemporaryFile(dir=sourceRoot, delete=False, suffix=".cpp")
     tmp.close()
@@ -144,7 +144,7 @@ def sourceBuilds(config, source, additionalFlags=[]):
     with _makeConfigTest(config) as test:
         with open(test.getSourcePath(), "w") as sourceFile:
             sourceFile.write(source)
-        _, _, exitCode, _, _ = _executeWithFakeConfig(
+        _, _, exitCode, _, _, _ = _executeWithFakeConfig(
             test, ["%{{build}} {}".format(" ".join(additionalFlags))]
         )
         return exitCode == 0
@@ -167,7 +167,7 @@ def programOutput(config, program, args=None):
     with _makeConfigTest(config) as test:
         with open(test.getSourcePath(), "w") as source:
             source.write(program)
-        _, err, exitCode, _, buildcmd = _executeWithFakeConfig(test, ["%{build}"])
+        _, err, exitCode, _, buildcmd, _ = _executeWithFakeConfig(test, ["%{build}"])
         if exitCode != 0:
             raise ConfigurationCompilationError(
                 "Failed to build program, cmd:\n{}\nstderr is:\n{}".format(
@@ -175,7 +175,7 @@ def programOutput(config, program, args=None):
                 )
             )
 
-        out, err, exitCode, _, runcmd = _executeWithFakeConfig(
+        out, err, exitCode, _, runcmd, _ = _executeWithFakeConfig(
             test, ["%{{run}} {}".format(" ".join(args))]
         )
         if exitCode != 0:
@@ -212,7 +212,7 @@ def tryCompileFlag(config, flag):
     """
     # fmt: off
     with _makeConfigTest(config) as test:
-        out, err, exitCode, timeoutInfo, _ = _executeWithFakeConfig(test, [
+        out, err, exitCode, timeoutInfo, _, _ = _executeWithFakeConfig(test, [
             "%{{cxx}} -xc++ {} -Werror -fsyntax-only %{{flags}} %{{compile_flags}} {}".format(os.devnull, flag)
         ])
         return exitCode, out, err
@@ -239,7 +239,7 @@ def runScriptExitCode(config, script):
     could appear on the right-hand-side of a `RUN:` keyword.
     """
     with _makeConfigTest(config) as test:
-        _, _, exitCode, _, _ = _executeWithFakeConfig(test, script)
+        _, _, exitCode, _, _, _ = _executeWithFakeConfig(test, script)
         return exitCode
 
 
@@ -253,7 +253,7 @@ def commandOutput(config, command):
     could appear on the right-hand-side of a `RUN:` keyword.
     """
     with _makeConfigTest(config) as test:
-        out, err, exitCode, _, cmd = _executeWithFakeConfig(test, command)
+        out, err, exitCode, _, cmd, _ = _executeWithFakeConfig(test, command)
         if exitCode != 0:
             raise ConfigurationRuntimeError(
                 "Failed to run command: {}\nstderr is:\n{}".format(cmd, err)
@@ -296,7 +296,7 @@ def hasAnyLocale(config, locales):
         + name_string_literals
         + """, nullptr,
       };
-      int main() {
+      int main(int, char**) {
         for (size_t i = 0; test_locale_names[i]; i++) {
           if (::setlocale(LC_ALL, test_locale_names[i]) != NULL) {
             return 0;
@@ -330,7 +330,7 @@ def compilerMacros(config, flags=""):
       #endif
       """
             )
-        unparsedOutput, err, exitCode, _, cmd = _executeWithFakeConfig(
+        unparsedOutput, err, exitCode, _, cmd, _ = _executeWithFakeConfig(
             test, ["%{{cxx}} %s -dM -E %{{flags}} %{{compile_flags}} {}".format(flags)]
         )
         if exitCode != 0:
@@ -365,8 +365,8 @@ def featureTestMacros(config, flags=""):
     }
 
 
-def _getSubstitution(substitution, config):
-  for (orig, replacement) in config.substitutions:
+def _getSubstitution(substitution, all_substitutions):
+  for (orig, replacement) in all_substitutions:
     if orig == substitution:
       return replacement
   raise ValueError('Substitution {} is not in the config.'.format(substitution))

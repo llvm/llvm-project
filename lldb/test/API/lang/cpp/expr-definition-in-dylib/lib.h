@@ -3,11 +3,18 @@
 
 struct Foo {
   int method();
-  Foo();
+  Foo(int val);
   ~Foo();
+
+  int x;
 };
 
-struct Bar {
+struct Base {
+  [[gnu::abi_tag("BaseCtor")]] Base();
+  [[gnu::abi_tag("BaseDtor")]] ~Base();
+};
+
+struct Bar : public Base {
   [[gnu::abi_tag("Ctor")]] Bar();
   [[gnu::abi_tag("Dtor")]] ~Bar();
 };

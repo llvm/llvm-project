@@ -1,4 +1,5 @@
 ; RUN: not llc -mtriple=amdgcn-amd-amdhsa -mcpu=bonaire -filetype=null %s 2>&1 | FileCheck -implicit-check-not=error %s
+; RUN: not llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 -filetype=null %s 2>&1 | FileCheck -implicit-check-not=error %s
 
 ; CHECK: error: couldn't allocate output register for constraint '{v256}'
 define void @out_of_bounds_vgpr32_def() {

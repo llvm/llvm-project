@@ -52,11 +52,11 @@ std::optional<StringRef> TypeConstraint::getBuilderCall() const {
     return std::nullopt;
   return TypeSwitch<const llvm::Init *, std::optional<StringRef>>(
              builderCall->getValue())
-      .Case<llvm::StringInit>([&](auto *init) {
+      .Case([&](const llvm::StringInit *init) {
         StringRef value = init->getValue();
         return value.empty() ? std::optional<StringRef>() : value;
       })
-      .Default([](auto *) { return std::nullopt; });
+      .Default(std::nullopt);
 }
 
 // Return the C++ type for this type (which may just be ::mlir::Type).

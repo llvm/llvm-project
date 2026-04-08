@@ -20,11 +20,15 @@ def Arith_Dialect : Dialect {
     mathematical operations. This includes unary, binary, and ternary arithmetic
     ops, bitwise and shift ops, cast ops, and compare ops. Operations in this
     dialect also accept vectors and tensors of integers or floats. The dialect
-    assumes integers are represented by bitvectors with a two's complement 
-    representation. Unless otherwise stated, the operations within this dialect 
-    propagate poison values, i.e., if any of its inputs are poison, then the 
-    output is poison. Unless otherwise stated, operations applied to `vector` 
+    assumes integers are represented by bitvectors with a two's complement
+    representation. Unless otherwise stated, the operations within this dialect
+    propagate poison values, i.e., if any of its inputs are poison, then the
+    output is poison. Unless otherwise stated, operations applied to `vector`
     and `tensor` values propagates poison elementwise.
+
+    Manipulating value with type `i0` isn't supported in this dialect at the
+    moment and is considered invalid. This can change in the future if some
+    motivating use-cases are presented.
   }];
 
   let hasConstantMaterializer = 1;
@@ -93,9 +97,9 @@ def ATOMIC_RMW_KIND_XORI     : I64EnumAttrCase<"xori", 15>;
 
 def AtomicRMWKindAttr : I64EnumAttr<
     "AtomicRMWKind", "",
-    [ATOMIC_RMW_KIND_ADDF, ATOMIC_RMW_KIND_ADDI, ATOMIC_RMW_KIND_ANDI, 
+    [ATOMIC_RMW_KIND_ADDF, ATOMIC_RMW_KIND_ADDI, ATOMIC_RMW_KIND_ANDI,
      ATOMIC_RMW_KIND_ASSIGN, ATOMIC_RMW_KIND_MAXIMUMF, ATOMIC_RMW_KIND_MAXNUMF,
-     ATOMIC_RMW_KIND_MAXS, ATOMIC_RMW_KIND_MAXU, ATOMIC_RMW_KIND_MINIMUMF, 
+     ATOMIC_RMW_KIND_MAXS, ATOMIC_RMW_KIND_MAXU, ATOMIC_RMW_KIND_MINIMUMF,
      ATOMIC_RMW_KIND_MINNUMF, ATOMIC_RMW_KIND_MINS, ATOMIC_RMW_KIND_MINU,
      ATOMIC_RMW_KIND_MULF, ATOMIC_RMW_KIND_MULI, ATOMIC_RMW_KIND_ORI,
      ATOMIC_RMW_KIND_XORI]> {

@@ -39,6 +39,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Pass.h"
+#include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
@@ -93,8 +94,8 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeARMTarget() {
   PassRegistry &Registry = *PassRegistry::getPassRegistry();
   initializeGlobalISel(Registry);
   initializeARMAsmPrinterPass(Registry);
-  initializeARMLoadStoreOptPass(Registry);
-  initializeARMPreAllocLoadStoreOptPass(Registry);
+  initializeARMLoadStoreOptLegacyPass(Registry);
+  initializeARMPreAllocLoadStoreOptLegacyPass(Registry);
   initializeARMParallelDSPPass(Registry);
   initializeARMBranchTargetsPass(Registry);
   initializeARMConstantIslandsPass(Registry);
@@ -111,6 +112,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeARMTarget() {
   initializeMVELaneInterleavingPass(Registry);
   initializeARMFixCortexA57AES1742098Pass(Registry);
   initializeARMDAGToDAGISelLegacyPass(Registry);
+  initializeKCFIPass(Registry);
 }
 
 static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
@@ -119,62 +121,6 @@ static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
   if (TT.isOSWindows())
     return std::make_unique<TargetLoweringObjectFileCOFF>();
   return std::make_unique<ARMElfTargetObjectFile>();
-}
-
-static std::string computeDataLayout(const Triple &TT,
-                                     const TargetOptions &Options,
-                                     bool isLittle) {
-  auto ABI = ARM::computeTargetABI(TT, Options.MCOptions.ABIName);
-  std::string Ret;
-
-  if (isLittle)
-    // Little endian.
-    Ret += "e";
-  else
-    // Big endian.
-    Ret += "E";
-
-  Ret += DataLayout::getManglingComponent(TT);
-
-  // Pointers are 32 bits and aligned to 32 bits.
-  Ret += "-p:32:32";
-
-  // Function pointers are aligned to 8 bits (because the LSB stores the
-  // ARM/Thumb state).
-  Ret += "-Fi8";
-
-  // ABIs other than APCS have 64 bit integers with natural alignment.
-  if (ABI != ARM::ARM_ABI_APCS)
-    Ret += "-i64:64";
-
-  // We have 64 bits floats. The APCS ABI requires them to be aligned to 32
-  // bits, others to 64 bits. We always try to align to 64 bits.
-  if (ABI == ARM::ARM_ABI_APCS)
-    Ret += "-f64:32:64";
-
-  // We have 128 and 64 bit vectors. The APCS ABI aligns them to 32 bits, others
-  // to 64. We always ty to give them natural alignment.
-  if (ABI == ARM::ARM_ABI_APCS)
-    Ret += "-v64:32:64-v128:32:128";
-  else if (ABI != ARM::ARM_ABI_AAPCS16)
-    Ret += "-v128:64:128";
-
-  // Try to align aggregates to 32 bits (the default is 64 bits, which has no
-  // particular hardware support on 32-bit ARM).
-  Ret += "-a:0:32";
-
-  // Integer registers are 32 bits.
-  Ret += "-n32";
-
-  // The stack is 64 bit aligned on AAPCS and 32 bit aligned everywhere else.
-  if (ABI == ARM::ARM_ABI_AAPCS16)
-    Ret += "-S128";
-  else if (ABI == ARM::ARM_ABI_AAPCS)
-    Ret += "-S64";
-  else
-    Ret += "-S32";
-
-  return Ret;
 }
 
 static Reloc::Model getEffectiveRelocModel(const Triple &TT,
@@ -201,12 +147,13 @@ ARMBaseTargetMachine::ARMBaseTargetMachine(const Target &T, const Triple &TT,
                                            const TargetOptions &Options,
                                            std::optional<Reloc::Model> RM,
                                            std::optional<CodeModel::Model> CM,
-                                           CodeGenOptLevel OL, bool isLittle)
-    : CodeGenTargetMachineImpl(T, computeDataLayout(TT, Options, isLittle), TT,
-                               CPU, FS, Options, getEffectiveRelocModel(TT, RM),
-                               getEffectiveCodeModel(CM, CodeModel::Small), OL),
+                                           CodeGenOptLevel OL)
+    : CodeGenTargetMachineImpl(
+          T, TT.computeDataLayout(Options.MCOptions.ABIName), TT, CPU, FS,
+          Options, getEffectiveRelocModel(TT, RM),
+          getEffectiveCodeModel(CM, CodeModel::Small), OL),
       TargetABI(ARM::computeTargetABI(TT, Options.MCOptions.ABIName)),
-      TLOF(createTLOF(getTargetTriple())), isLittle(isLittle) {
+      TLOF(createTLOF(getTargetTriple())), isLittle(TT.isLittleEndian()) {
 
   // Default to triple-appropriate float ABI
   if (Options.FloatABIType == FloatABI::Default) {
@@ -284,6 +231,10 @@ ARMBaseTargetMachine::getSubtargetImpl(const Function &F) const {
   if (F.hasMinSize())
     Key += "+minsize";
 
+  DenormalMode DM = F.getDenormalFPEnv().DefaultMode;
+  if (DM != DenormalMode::getIEEE())
+    Key += "denormal-fp-math=" + DM.str();
+
   auto &I = SubtargetMap[Key];
   if (!I) {
     // This needs to be done before we create a new subtarget since any
@@ -291,7 +242,7 @@ ARMBaseTargetMachine::getSubtargetImpl(const Function &F) const {
     // function that reside in TargetOptions.
     resetTargetOptions(F);
     I = std::make_unique<ARMSubtarget>(TargetTriple, CPU, FS, *this, isLittle,
-                                        F.hasMinSize());
+                                       F.hasMinSize(), DM);
 
     if (!I->isThumb() && !I->hasARMOps())
       F.getContext().emitError("Function '" + F.getName() + "' uses ARM "
@@ -334,7 +285,7 @@ ARMLETargetMachine::ARMLETargetMachine(const Target &T, const Triple &TT,
                                        std::optional<Reloc::Model> RM,
                                        std::optional<CodeModel::Model> CM,
                                        CodeGenOptLevel OL, bool JIT)
-    : ARMBaseTargetMachine(T, TT, CPU, FS, Options, RM, CM, OL, true) {}
+    : ARMBaseTargetMachine(T, TT, CPU, FS, Options, RM, CM, OL) {}
 
 ARMBETargetMachine::ARMBETargetMachine(const Target &T, const Triple &TT,
                                        StringRef CPU, StringRef FS,
@@ -342,7 +293,7 @@ ARMBETargetMachine::ARMBETargetMachine(const Target &T, const Triple &TT,
                                        std::optional<Reloc::Model> RM,
                                        std::optional<CodeModel::Model> CM,
                                        CodeGenOptLevel OL, bool JIT)
-    : ARMBaseTargetMachine(T, TT, CPU, FS, Options, RM, CM, OL, false) {}
+    : ARMBaseTargetMachine(T, TT, CPU, FS, Options, RM, CM, OL) {}
 
 namespace {
 
@@ -385,10 +336,15 @@ char ARMExecutionDomainFix::ID;
 } // end anonymous namespace
 
 INITIALIZE_PASS_BEGIN(ARMExecutionDomainFix, "arm-execution-domain-fix",
-  "ARM Execution Domain Fix", false, false)
-INITIALIZE_PASS_DEPENDENCY(ReachingDefAnalysis)
+                      "ARM Execution Domain Fix", false, false)
+INITIALIZE_PASS_DEPENDENCY(ReachingDefInfoWrapperPass)
 INITIALIZE_PASS_END(ARMExecutionDomainFix, "arm-execution-domain-fix",
-  "ARM Execution Domain Fix", false, false)
+                    "ARM Execution Domain Fix", false, false)
+
+void ARMBaseTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
+#define GET_PASS_REGISTRY "ARMPassRegistry.def"
+#include "llvm/Passes/TargetPassRegistry.inc"
+}
 
 TargetPassConfig *ARMBaseTargetMachine::createPassConfig(PassManagerBase &PM) {
   return new ARMPassConfig(*this, PM);
@@ -518,7 +474,7 @@ void ARMPassConfig::addPreRegAlloc() {
     addPass(createMLxExpansionPass());
 
     if (EnableARMLoadStoreOpt)
-      addPass(createARMLoadStoreOptimizationPass(/* pre-register alloc */ true));
+      addPass(createARMLoadStoreOptLegacyPass(/* pre-register alloc */ true));
 
     if (!DisableA15SDOptimization)
       addPass(createA15SDOptimizerPass());
@@ -528,7 +484,7 @@ void ARMPassConfig::addPreRegAlloc() {
 void ARMPassConfig::addPreSched2() {
   if (getOptLevel() != CodeGenOptLevel::None) {
     if (EnableARMLoadStoreOpt)
-      addPass(createARMLoadStoreOptimizationPass());
+      addPass(createARMLoadStoreOptLegacyPass());
 
     addPass(new ARMExecutionDomainFix());
     addPass(createBreakFalseDeps());
@@ -537,6 +493,9 @@ void ARMPassConfig::addPreSched2() {
   // Expand some pseudo instructions into multiple instructions to allow
   // proper scheduling.
   addPass(createARMExpandPseudoPass());
+
+  // Emit KCFI checks for indirect calls.
+  addPass(createKCFIPass());
 
   if (getOptLevel() != CodeGenOptLevel::None) {
     // When optimising for size, always run the Thumb2SizeReduction pass before
@@ -568,9 +527,12 @@ void ARMPassConfig::addPreSched2() {
 void ARMPassConfig::addPreEmitPass() {
   addPass(createThumb2SizeReductionPass());
 
-  // Constant island pass work on unbundled instructions.
-  addPass(createUnpackMachineBundles([](const MachineFunction &MF) {
-    return MF.getSubtarget<ARMSubtarget>().isThumb2();
+  // Unpack bundles for:
+  // - Thumb2: Constant island pass requires unbundled instructions
+  // - KCFI: KCFI_CHECK pseudo instructions need to be unbundled for AsmPrinter
+  addPass(createUnpackMachineBundlesLegacy([](const MachineFunction &MF) {
+    return MF.getSubtarget<ARMSubtarget>().isThumb2() ||
+           MF.getFunction().getParent()->getModuleFlag("kcfi");
   }));
 
   // Don't optimize barriers or block placement at -O0.
@@ -581,6 +543,7 @@ void ARMPassConfig::addPreEmitPass() {
 }
 
 void ARMPassConfig::addPreEmitPass2() {
+
   // Inserts fixup instructions before unsafe AES operations. Instructions may
   // be inserted at the start of blocks and at within blocks so this pass has to
   // come before those below.

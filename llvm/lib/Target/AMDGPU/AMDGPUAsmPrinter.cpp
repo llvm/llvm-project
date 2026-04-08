@@ -323,7 +323,7 @@ void AMDGPUAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
                          "' is already defined");
 
     const DataLayout &DL = GV->getDataLayout();
-    uint64_t Size = DL.getTypeAllocSize(GV->getValueType());
+    uint64_t Size = GV->getGlobalSize(DL);
     Align Alignment = GV->getAlign().value_or(Align(4));
 
     emitVisibility(GVSym, GV->getVisibility(), !GV->isDeclaration());
@@ -356,6 +356,32 @@ bool AMDGPUAsmPrinter::doInitialization(Module &M) {
   }
 
   return AsmPrinter::doInitialization(M);
+}
+
+/// Mimics GCNSubtarget::computeOccupancy for MCExpr.
+///
+/// Remove dependency on GCNSubtarget and depend only only the necessary values
+/// for said occupancy computation. Should match computeOccupancy implementation
+/// without passing \p STM on.
+const AMDGPUMCExpr *createOccupancy(unsigned InitOcc, const MCExpr *NumSGPRs,
+                                    const MCExpr *NumVGPRs,
+                                    unsigned DynamicVGPRBlockSize,
+                                    const GCNSubtarget &STM, MCContext &Ctx) {
+  unsigned MaxWaves = IsaInfo::getMaxWavesPerEU(&STM);
+  unsigned Granule = IsaInfo::getVGPRAllocGranule(&STM, DynamicVGPRBlockSize);
+  unsigned TargetTotalNumVGPRs = IsaInfo::getTotalNumVGPRs(&STM);
+  unsigned Generation = STM.getGeneration();
+
+  auto CreateExpr = [&Ctx](unsigned Value) {
+    return MCConstantExpr::create(Value, Ctx);
+  };
+
+  return AMDGPUMCExpr::create(AMDGPUMCExpr::AGVK_Occupancy,
+                              {CreateExpr(MaxWaves), CreateExpr(Granule),
+                               CreateExpr(TargetTotalNumVGPRs),
+                               CreateExpr(Generation), CreateExpr(InitOcc),
+                               NumSGPRs, NumVGPRs},
+                              Ctx);
 }
 
 void AMDGPUAsmPrinter::validateMCResourceInfo(Function &F) {
@@ -400,10 +426,9 @@ void AMDGPUAsmPrinter::validateMCResourceInfo(Function &F) {
     if (NumSGPRSymbol->isVariable() &&
         TryGetMCExprValue(NumSGPRSymbol->getVariableValue(), NumSgpr) &&
         NumSgpr > MaxAddressableNumSGPRs) {
-      DiagnosticInfoResourceLimit Diag(F, "addressable scalar registers",
-                                       NumSgpr, MaxAddressableNumSGPRs,
-                                       DS_Error, DK_ResourceLimit);
-      F.getContext().diagnose(Diag);
+      F.getContext().diagnose(DiagnosticInfoResourceLimit(
+          F, "addressable scalar registers", NumSgpr, MaxAddressableNumSGPRs,
+          DS_Error, DK_ResourceLimit));
       return;
     }
   }
@@ -429,10 +454,9 @@ void AMDGPUAsmPrinter::validateMCResourceInfo(Function &F) {
         STM.hasSGPRInitBug()) {
       unsigned MaxAddressableNumSGPRs = STM.getAddressableNumSGPRs();
       if (NumSgpr > MaxAddressableNumSGPRs) {
-        DiagnosticInfoResourceLimit Diag(F, "scalar registers", NumSgpr,
-                                         MaxAddressableNumSGPRs, DS_Error,
-                                         DK_ResourceLimit);
-        F.getContext().diagnose(Diag);
+        F.getContext().diagnose(DiagnosticInfoResourceLimit(
+            F, "scalar registers", NumSgpr, MaxAddressableNumSGPRs, DS_Error,
+            DK_ResourceLimit));
         return;
       }
     }
@@ -459,7 +483,7 @@ void AMDGPUAsmPrinter::validateMCResourceInfo(Function &F) {
                         MaxWaves, MFI.getDynamicVGPRBlockSize())});
       uint64_t NumSGPRsForWavesPerEU = std::max(
           {NumSgpr, (uint64_t)1, (uint64_t)STM.getMinNumSGPRs(MaxWaves)});
-      const MCExpr *OccupancyExpr = AMDGPUMCExpr::createOccupancy(
+      const MCExpr *OccupancyExpr = createOccupancy(
           STM.getOccupancyWithWorkGroupSizes(*MF).second,
           MCConstantExpr::create(NumSGPRsForWavesPerEU, OutContext),
           MCConstantExpr::create(NumVGPRsForWavesPerEU, OutContext),
@@ -508,9 +532,9 @@ bool AMDGPUAsmPrinter::doFinalization(Module &M) {
   MCSectionELF *MaxGPRSection =
       OutContext.getELFSection(".AMDGPU.gpr_maximums", ELF::SHT_PROGBITS, 0);
   OutStreamer->switchSection(MaxGPRSection);
-  getTargetStreamer()->EmitMCResourceMaximums(RI.getMaxVGPRSymbol(OutContext),
-                                              RI.getMaxAGPRSymbol(OutContext),
-                                              RI.getMaxSGPRSymbol(OutContext));
+  getTargetStreamer()->EmitMCResourceMaximums(
+      RI.getMaxVGPRSymbol(OutContext), RI.getMaxAGPRSymbol(OutContext),
+      RI.getMaxSGPRSymbol(OutContext), RI.getMaxNamedBarrierSymbol(OutContext));
   OutStreamer->popSection();
 
   for (Function &F : M.functions())
@@ -535,7 +559,7 @@ SmallString<128> AMDGPUAsmPrinter::getMCExprStr(const MCExpr *Value) {
 void AMDGPUAsmPrinter::emitCommonFunctionComments(
     const MCExpr *NumVGPR, const MCExpr *NumAGPR, const MCExpr *TotalNumVGPR,
     const MCExpr *NumSGPR, const MCExpr *ScratchSize, uint64_t CodeSize,
-    const AMDGPUMachineFunction *MFI) {
+    const AMDGPUMachineFunctionInfo *MFI) {
   OutStreamer->emitRawComment(" codeLenInByte = " + Twine(CodeSize), false);
   OutStreamer->emitRawComment(" TotalNumSgprs: " + getMCExprStr(NumSGPR),
                               false);
@@ -557,7 +581,6 @@ const MCExpr *AMDGPUAsmPrinter::getAmdhsaKernelCodeProperties(
   MCContext &Ctx = MF.getContext();
   uint16_t KernelCodeProperties = 0;
   const GCNUserSGPRUsageInfo &UserSGPRInfo = MFI.getUserSGPRInfo();
-  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
 
   if (UserSGPRInfo.hasPrivateSegmentBuffer()) {
     KernelCodeProperties |=
@@ -587,12 +610,9 @@ const MCExpr *AMDGPUAsmPrinter::getAmdhsaKernelCodeProperties(
     KernelCodeProperties |=
         amdhsa::KERNEL_CODE_PROPERTY_ENABLE_SGPR_PRIVATE_SEGMENT_SIZE;
   }
-  if (ST.isWave32()) {
+  if (MF.getSubtarget<GCNSubtarget>().isWave32()) {
     KernelCodeProperties |=
         amdhsa::KERNEL_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32;
-  }
-  if (isGFX1250(ST) && ST.hasCUStores()) {
-    KernelCodeProperties |= amdhsa::KERNEL_CODE_PROPERTY_USES_CU_STORES;
   }
 
   // CurrentProgramInfo.DynamicCallStack is a MCExpr and could be
@@ -632,14 +652,14 @@ AMDGPUAsmPrinter::getAmdhsaKernelDescriptor(const MachineFunction &MF,
   KernelDescriptor.compute_pgm_rsrc2 = PI.getComputePGMRSrc2(Ctx);
   KernelDescriptor.kernel_code_properties = getAmdhsaKernelCodeProperties(MF);
 
-  int64_t PGRM_Rsrc3 = 1;
+  int64_t PGM_Rsrc3 = 1;
   bool EvaluatableRsrc3 =
-      CurrentProgramInfo.ComputePGMRSrc3->evaluateAsAbsolute(PGRM_Rsrc3);
-  (void)PGRM_Rsrc3;
+      CurrentProgramInfo.ComputePGMRSrc3->evaluateAsAbsolute(PGM_Rsrc3);
+  (void)PGM_Rsrc3;
   (void)EvaluatableRsrc3;
   assert(STM.getGeneration() >= AMDGPUSubtarget::GFX10 ||
-         STM.hasGFX90AInsts() || !EvaluatableRsrc3 ||
-         static_cast<uint64_t>(PGRM_Rsrc3) == 0);
+         STM.hasGFX90AInsts() || STM.hasGFX1250Insts() || !EvaluatableRsrc3 ||
+         static_cast<uint64_t>(PGM_Rsrc3) == 0);
   KernelDescriptor.compute_pgm_rsrc3 = CurrentProgramInfo.ComputePGMRSrc3;
 
   KernelDescriptor.kernarg_preload = MCConstantExpr::create(
@@ -659,12 +679,13 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
       &getAnalysis<AMDGPUResourceUsageAnalysisWrapperPass>().getResourceInfo();
   CurrentProgramInfo.reset(MF);
 
-  const AMDGPUMachineFunction *MFI = MF.getInfo<AMDGPUMachineFunction>();
+  const AMDGPUMachineFunctionInfo *MFI =
+      MF.getInfo<AMDGPUMachineFunctionInfo>();
   MCContext &Ctx = MF.getContext();
 
   // The starting address of all shader programs must be 256 bytes aligned.
   // Regular functions just need the basic required instruction alignment.
-  MF.setAlignment(MFI->isEntryFunction() ? Align(256) : Align(4));
+  MF.ensureAlignment(MFI->isEntryFunction() ? Align(256) : Align(4));
 
   SetupMachineFunction(MF);
 
@@ -720,6 +741,8 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
                      IsLocal),
         RI.getSymbol(CurrentFnSym->getName(), RIK::RIK_NumSGPR, OutContext,
                      IsLocal),
+        RI.getSymbol(CurrentFnSym->getName(), RIK::RIK_NumNamedBarrier,
+                     OutContext, IsLocal),
         RI.getSymbol(CurrentFnSym->getName(), RIK::RIK_PrivateSegSize,
                      OutContext, IsLocal),
         RI.getSymbol(CurrentFnSym->getName(), RIK::RIK_UsesVCC, OutContext,
@@ -807,6 +830,11 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
           " AccumOffset: " + getMCExprStr(AdjustedAccum), false);
     }
 
+    if (STM.hasGFX1250Insts())
+      OutStreamer->emitRawComment(
+          " NamedBarCnt: " + getMCExprStr(CurrentProgramInfo.NamedBarCnt),
+          false);
+
     OutStreamer->emitRawComment(
         " Occupancy: " + getMCExprStr(CurrentProgramInfo.Occupancy), false);
 
@@ -838,7 +866,7 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
 
     [[maybe_unused]] int64_t PGMRSrc3;
     assert(STM.getGeneration() >= AMDGPUSubtarget::GFX10 ||
-           STM.hasGFX90AInsts() ||
+           STM.hasGFX90AInsts() || STM.hasGFX1250Insts() ||
            (CurrentProgramInfo.ComputePGMRSrc3->evaluateAsAbsolute(PGMRSrc3) &&
             static_cast<uint64_t>(PGMRSrc3) == 0));
     if (STM.hasGFX90AInsts()) {
@@ -1012,6 +1040,11 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
       MCBinaryExpr::createOr(GetSymRefExpr(RIK::RIK_HasDynSizedStack),
                              GetSymRefExpr(RIK::RIK_HasRecursion), Ctx);
 
+  const MCExpr *BarBlkConst = MCConstantExpr::create(4, Ctx);
+  const MCExpr *AlignToBlk = AMDGPUMCExpr::createAlignTo(
+      GetSymRefExpr(RIK::RIK_NumNamedBarrier), BarBlkConst, Ctx);
+  ProgInfo.NamedBarCnt = MCBinaryExpr::createDiv(AlignToBlk, BarBlkConst, Ctx);
+
   const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
 
   // The calculations related to SGPR/VGPR blocks are
@@ -1030,10 +1063,9 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
         NumSgpr > MaxAddressableNumSGPRs) {
       // This can happen due to a compiler bug or when using inline asm.
       LLVMContext &Ctx = MF.getFunction().getContext();
-      DiagnosticInfoResourceLimit Diag(
+      Ctx.diagnose(DiagnosticInfoResourceLimit(
           MF.getFunction(), "addressable scalar registers", NumSgpr,
-          MaxAddressableNumSGPRs, DS_Error, DK_ResourceLimit);
-      Ctx.diagnose(Diag);
+          MaxAddressableNumSGPRs, DS_Error, DK_ResourceLimit));
       ProgInfo.NumSGPR = CreateExpr(MaxAddressableNumSGPRs - 1);
     }
   }
@@ -1086,10 +1118,9 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
       // This can happen due to a compiler bug or when using inline asm to use
       // the registers which are usually reserved for vcc etc.
       LLVMContext &Ctx = MF.getFunction().getContext();
-      DiagnosticInfoResourceLimit Diag(MF.getFunction(), "scalar registers",
-                                       NumSgpr, MaxAddressableNumSGPRs,
-                                       DS_Error, DK_ResourceLimit);
-      Ctx.diagnose(Diag);
+      Ctx.diagnose(DiagnosticInfoResourceLimit(
+          MF.getFunction(), "scalar registers", NumSgpr, MaxAddressableNumSGPRs,
+          DS_Error, DK_ResourceLimit));
       ProgInfo.NumSGPR = CreateExpr(MaxAddressableNumSGPRs);
       ProgInfo.NumSGPRsForWavesPerEU = CreateExpr(MaxAddressableNumSGPRs);
     }
@@ -1104,19 +1135,16 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
 
   if (MFI->getNumUserSGPRs() > STM.getMaxNumUserSGPRs()) {
     LLVMContext &Ctx = MF.getFunction().getContext();
-    DiagnosticInfoResourceLimit Diag(MF.getFunction(), "user SGPRs",
-                                     MFI->getNumUserSGPRs(),
-                                     STM.getMaxNumUserSGPRs(), DS_Error);
-    Ctx.diagnose(Diag);
+    Ctx.diagnose(DiagnosticInfoResourceLimit(
+        MF.getFunction(), "user SGPRs", MFI->getNumUserSGPRs(),
+        STM.getMaxNumUserSGPRs(), DS_Error));
   }
 
-  if (MFI->getLDSSize() >
-      static_cast<unsigned>(STM.getAddressableLocalMemorySize())) {
+  if (MFI->getLDSSize() > STM.getAddressableLocalMemorySize()) {
     LLVMContext &Ctx = MF.getFunction().getContext();
-    DiagnosticInfoResourceLimit Diag(
+    Ctx.diagnose(DiagnosticInfoResourceLimit(
         MF.getFunction(), "local memory", MFI->getLDSSize(),
-        STM.getAddressableLocalMemorySize(), DS_Error);
-    Ctx.diagnose(Diag);
+        STM.getAddressableLocalMemorySize(), DS_Error));
   }
   // The MCExpr equivalent of getNumSGPRBlocks/getNumVGPRBlocks:
   // (alignTo(max(1u, NumGPR), GPREncodingGranule) / GPREncodingGranule) - 1
@@ -1132,9 +1160,13 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
     const MCExpr *SubGPR = MCBinaryExpr::createSub(DivGPR, OneConst, Ctx);
     return SubGPR;
   };
-
-  ProgInfo.SGPRBlocks = GetNumGPRBlocks(ProgInfo.NumSGPRsForWavesPerEU,
-                                        IsaInfo::getSGPREncodingGranule(&STM));
+  // GFX10+ will always allocate 128 SGPRs and this field must be 0
+  if (STM.getGeneration() >= AMDGPUSubtarget::GFX10) {
+    ProgInfo.SGPRBlocks = CreateExpr(0ul);
+  } else {
+    ProgInfo.SGPRBlocks = GetNumGPRBlocks(
+        ProgInfo.NumSGPRsForWavesPerEU, IsaInfo::getSGPREncodingGranule(&STM));
+  }
   ProgInfo.VGPRBlocks = GetNumGPRBlocks(ProgInfo.NumVGPRsForWavesPerEU,
                                         IsaInfo::getVGPREncodingGranule(&STM));
 
@@ -1149,21 +1181,20 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
   // Make clamp modifier on NaN input returns 0.
   ProgInfo.DX10Clamp = Mode.DX10Clamp;
 
-  unsigned LDSAlignShift;
-  if (STM.getFeatureBits().test(FeatureAddressableLocalMemorySize327680)) {
-    // LDS is allocated in 256 dword blocks.
-    LDSAlignShift = 10;
-  } else if (STM.getFeatureBits().test(
-                 FeatureAddressableLocalMemorySize163840)) {
-    // LDS is allocated in 320 dword blocks.
+  unsigned LDSAlignShift = 8;
+  switch (getLdsDwGranularity(STM)) {
+  case 512:
+  case 320:
     LDSAlignShift = 11;
-  } else if (STM.getFeatureBits().test(
-                 FeatureAddressableLocalMemorySize65536)) {
-    // LDS is allocated in 128 dword blocks.
+    break;
+  case 128:
     LDSAlignShift = 9;
-  } else {
-    // LDS is allocated in 64 dword blocks.
+    break;
+  case 64:
     LDSAlignShift = 8;
+    break;
+  default:
+    llvm_unreachable("invald LDS block size");
   }
 
   ProgInfo.SGPRSpill = MFI->getNumSpilledSGPRs();
@@ -1197,7 +1228,7 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
 
   if (getIsaVersion(getGlobalSTI()->getCPU()).Major >= 10) {
     ProgInfo.MemOrdered = 1;
-    ProgInfo.FwdProgress = 1;
+    ProgInfo.FwdProgress = !F.hasFnAttribute("amdgpu-no-fwd-progress");
   }
 
   // 0 = X, 1 = XY, 2 = XYZ
@@ -1219,8 +1250,7 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
 
   ProgInfo.UserSGPR = MFI->getNumUserSGPRs();
   // For AMDHSA, TRAP_HANDLER must be zero, as it is populated by the CP.
-  ProgInfo.TrapHandlerEnable =
-      STM.isAmdHsaOS() ? 0 : STM.isTrapHandlerEnabled();
+  ProgInfo.TrapHandlerEnable = STM.isAmdHsaOS() ? 0 : STM.hasTrapHandler();
   ProgInfo.TGIdXEnable = MFI->hasWorkGroupIDX();
   ProgInfo.TGIdYEnable = MFI->hasWorkGroupIDY();
   ProgInfo.TGIdZEnable = MFI->hasWorkGroupIDZ();
@@ -1253,7 +1283,13 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
                 amdhsa::COMPUTE_PGM_RSRC3_GFX90A_TG_SPLIT_SHIFT);
   }
 
-  ProgInfo.Occupancy = AMDGPUMCExpr::createOccupancy(
+  if (STM.hasGFX1250Insts())
+    ProgInfo.ComputePGMRSrc3 =
+        SetBits(ProgInfo.ComputePGMRSrc3, ProgInfo.NamedBarCnt,
+                amdhsa::COMPUTE_PGM_RSRC3_GFX125_NAMED_BAR_CNT,
+                amdhsa::COMPUTE_PGM_RSRC3_GFX125_NAMED_BAR_CNT_SHIFT);
+
+  ProgInfo.Occupancy = createOccupancy(
       STM.computeOccupancy(F, ProgInfo.LDSSize).second,
       ProgInfo.NumSGPRsForWavesPerEU, ProgInfo.NumVGPRsForWavesPerEU,
       MFI->getDynamicVGPRBlockSize(), STM, Ctx);
@@ -1407,7 +1443,7 @@ static void EmitPALMetadataCommon(AMDGPUPALMetadata *MD,
                                   const SIProgramInfo &CurrentProgramInfo,
                                   CallingConv::ID CC, const GCNSubtarget &ST,
                                   unsigned DynamicVGPRBlockSize) {
-  if (ST.hasIEEEMode())
+  if (ST.hasFeature(AMDGPU::FeatureDX10ClampAndIEEEMode))
     MD->setHwStage(CC, ".ieee_mode", (bool)CurrentProgramInfo.IEEEMode);
 
   MD->setHwStage(CC, ".wgp_mode", (bool)CurrentProgramInfo.WgpMode);
@@ -1423,9 +1459,10 @@ static void EmitPALMetadataCommon(AMDGPUPALMetadata *MD,
       MD->setComputeRegisters(".dynamic_vgpr_en", true);
   }
 
-  MD->setHwStage(CC, ".lds_size",
-                 (unsigned)(CurrentProgramInfo.LdsSize *
-                            getLdsDwGranularity(ST) * sizeof(uint32_t)));
+  MD->updateHwStageMaximum(
+      CC, ".lds_size",
+      (unsigned)(CurrentProgramInfo.LdsSize * getLdsDwGranularity(ST) *
+                 sizeof(uint32_t)));
 }
 
 // This is the equivalent of EmitProgramInfoSI above, but for when the OS type

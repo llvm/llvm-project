@@ -34,9 +34,11 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/PrintPasses.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/GenericLoopInfoImpl.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
 
@@ -54,30 +56,22 @@ static cl::opt<bool, true>
     VerifyLoopInfoX("verify-loop-info", cl::location(VerifyLoopInfo),
                     cl::Hidden, cl::desc("Verify loop info (time consuming)"));
 
+namespace llvm {
+extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+} // end namespace llvm
+
 //===----------------------------------------------------------------------===//
 // Loop implementation
 //
 
-bool Loop::isLoopInvariant(const Value *V, bool HasCoroSuspendInst) const {
-  if (const Instruction *I = dyn_cast<Instruction>(V)) {
-    // FIXME: this is semantically inconsistent. We're tracking a proper fix in
-    // issue #149604.
-    // If V is a pointer to stack object and L contains a coro.suspend function
-    // call, then V may not be loop invariant because the ramp function and
-    // resume function have different stack frames.
-    if (HasCoroSuspendInst && isa<AllocaInst>(I))
-      return false;
-    else
-      return !contains(I);
-  }
+bool Loop::isLoopInvariant(const Value *V) const {
+  if (const Instruction *I = dyn_cast<Instruction>(V))
+    return !contains(I);
   return true; // All non-instructions are loop invariant
 }
 
-bool Loop::hasLoopInvariantOperands(const Instruction *I,
-                                    bool HasCoroSuspendInst) const {
-  return all_of(I->operands(), [&](Value *V) {
-    return isLoopInvariant(V, HasCoroSuspendInst);
-  });
+bool Loop::hasLoopInvariantOperands(const Instruction *I) const {
+  return all_of(I->operands(), [&](Value *V) { return isLoopInvariant(V); });
 }
 
 bool Loop::makeLoopInvariant(Value *V, bool &Changed, Instruction *InsertPt,
@@ -91,6 +85,7 @@ bool Loop::makeLoopInvariant(Value *V, bool &Changed, Instruction *InsertPt,
 bool Loop::makeLoopInvariant(Instruction *I, bool &Changed,
                              Instruction *InsertPt, MemorySSAUpdater *MSSAU,
                              ScalarEvolution *SE) const {
+  BasicBlock *OriginalParent = I->getParent();
   // Test if the value is already loop-invariant.
   if (isLoopInvariant(I))
     return true;
@@ -121,11 +116,27 @@ bool Loop::makeLoopInvariant(Instruction *I, bool &Changed,
       MSSAU->moveToPlace(MUD, InsertPt->getParent(),
                          MemorySSA::BeforeTerminator);
 
+  // We want to preserve profile metadata if possible. However, we need to
+  // ensure that profile metadata would remain the same outside of the loop.
+  // Given at this point we know the conditional is loop-invariant, we just
+  // need to worry about other control flow in the loop conditioned on values
+  // that are potentially not independent of the condition of the instruction
+  // we are interested in hoisting. Given this is not knowable in the general
+  // case, we only hoist from a loop header (which covers a reasonable number
+  // of cases) where we are guaranteed to not run into problems.
+  SmallVector<unsigned, 1> ProfileMetadataToPreserve;
+  if (!ProfcheckDisableMetadataFixes)
+    if (OriginalParent == getHeader())
+      ProfileMetadataToPreserve.push_back(LLVMContext::MD_prof);
+
   // There is possibility of hoisting this instruction above some arbitrary
   // condition. Any metadata defined on it can be control dependent on this
   // condition. Conservatively strip it here so that we don't give any wrong
   // information to the optimizer.
-  I->dropUnknownNonDebugMetadata();
+  I->dropUnknownNonDebugMetadata(ProfileMetadataToPreserve);
+
+  if (ProfileMetadataToPreserve.empty() && isa<SelectInst>(I))
+    setExplicitlyUnknownBranchWeightsIfProfiled(*I, "LoopInfo");
 
   if (SE)
     SE->forgetBlockAndLoopDispositions(I);
@@ -186,9 +197,8 @@ PHINode *Loop::getCanonicalInductionVariable() const {
 /// Get the latch condition instruction.
 ICmpInst *Loop::getLatchCmpInst() const {
   if (BasicBlock *Latch = getLoopLatch())
-    if (BranchInst *BI = dyn_cast_or_null<BranchInst>(Latch->getTerminator()))
-      if (BI->isConditional())
-        return dyn_cast<ICmpInst>(BI->getCondition());
+    if (CondBrInst *BI = dyn_cast_or_null<CondBrInst>(Latch->getTerminator()))
+      return dyn_cast<ICmpInst>(BI->getCondition());
 
   return nullptr;
 }
@@ -246,8 +256,7 @@ ICmpInst::Predicate Loop::LoopBounds::getCanonicalPredicate() const {
   BasicBlock *Latch = L.getLoopLatch();
   assert(Latch && "Expecting valid latch");
 
-  BranchInst *BI = dyn_cast_or_null<BranchInst>(Latch->getTerminator());
-  assert(BI && BI->isConditional() && "Expecting conditional latch branch");
+  CondBrInst *BI = cast<CondBrInst>(Latch->getTerminator());
 
   ICmpInst *LatchCmpInst = dyn_cast<ICmpInst>(BI->getCondition());
   assert(LatchCmpInst &&
@@ -377,7 +386,7 @@ bool Loop::isAuxiliaryInductionVariable(PHINode &AuxIndVar,
   return SE.isLoopInvariant(IndDesc.getStep(), this);
 }
 
-BranchInst *Loop::getLoopGuardBranch() const {
+CondBrInst *Loop::getLoopGuardBranch() const {
   if (!isLoopSimplifyForm())
     return nullptr;
 
@@ -401,8 +410,8 @@ BranchInst *Loop::getLoopGuardBranch() const {
 
   assert(GuardBB->getTerminator() && "Expecting valid guard terminator");
 
-  BranchInst *GuardBI = dyn_cast<BranchInst>(GuardBB->getTerminator());
-  if (!GuardBI || GuardBI->isUnconditional())
+  CondBrInst *GuardBI = dyn_cast<CondBrInst>(GuardBB->getTerminator());
+  if (!GuardBI)
     return nullptr;
 
   BasicBlock *GuardOtherSucc = (GuardBI->getSuccessor(0) == Preheader)
@@ -899,7 +908,7 @@ bool LoopInfo::invalidate(Function &F, const PreservedAnalyses &PA,
 void LoopInfo::erase(Loop *Unloop) {
   assert(!Unloop->isInvalid() && "Loop has already been erased!");
 
-  auto InvalidateOnExit = make_scope_exit([&]() { destroy(Unloop); });
+  llvm::scope_exit InvalidateOnExit([&]() { destroy(Unloop); });
 
   // First handle the special case of no parent loop to simplify the algorithm.
   if (Unloop->isOutermost()) {
@@ -998,8 +1007,8 @@ PreservedAnalyses LoopPrinterPass::run(Function &F,
   return PreservedAnalyses::all();
 }
 
-void llvm::printLoop(Loop &L, raw_ostream &OS, const std::string &Banner) {
-
+void llvm::printLoop(const Loop &L, raw_ostream &OS,
+                     const std::string &Banner) {
   if (forcePrintModuleIR()) {
     // handling -print-module-scope
     OS << Banner << " (loop: ";

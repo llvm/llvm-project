@@ -33,8 +33,12 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 
+#include "GlobalHandler.h"
 #include "PluginInterface.h"
+
 using GenericPluginTy = llvm::omp::target::plugin::GenericPluginTy;
+using DeviceInfo = llvm::omp::target::plugin::DeviceInfo;
+using InfoTreeNode = llvm::omp::target::plugin::InfoTreeNode;
 
 // Forward declarations.
 struct __tgt_bin_desc;
@@ -156,11 +160,28 @@ struct DeviceTy {
   /// Ask the device whether the runtime should use auto zero-copy.
   bool useAutoZeroCopy();
 
+  /// Ask the device whether the storage is accessible.
+  bool isAccessiblePtr(const void *Ptr, size_t Size);
+
   /// Check if there are pending images for this device.
   bool hasPendingImages() const { return HasPendingImages; }
 
   /// Indicate that there are pending images for this device or not.
   void setHasPendingImages(bool V) { HasPendingImages = V; }
+
+  /// Get information from the device.
+  template <typename T> T getInfo(DeviceInfo Info) const {
+    InfoTreeNode DevInfo = RTL->obtain_device_info(RTLDeviceID);
+
+    auto EntryOpt = DevInfo.get(Info);
+    if (!EntryOpt)
+      return 0;
+
+    auto Entry = *EntryOpt;
+    if (!std::holds_alternative<T>(Entry->Value))
+      return T{};
+    return std::get<T>(Entry->Value);
+  }
 
 private:
   /// Deinitialize the device (and plugin).

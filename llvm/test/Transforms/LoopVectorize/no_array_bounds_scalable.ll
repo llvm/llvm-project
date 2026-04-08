@@ -9,7 +9,7 @@
 ;  }
 
 ; CHECK: warning: <unknown>:0:0: loop not interleaved: the optimizer was unable to perform the requested transformation; the transformation might be disabled or specified as part of an unsupported transformation ordering
-define dso_local void @foo(ptr nocapture %A, ptr nocapture readonly %B, i32 %N) {
+define void @foo(ptr nocapture %A, ptr nocapture readonly %B, i32 %N) {
 entry:
   %cmp7 = icmp sgt i32 %N, 0
   br i1 %cmp7, label %for.body.preheader, label %for.end
@@ -36,7 +36,7 @@ for.end:                                          ; preds = %for.body, %entry
 }
 
 ; CHECK: warning: <unknown>:0:0: loop not vectorized: the optimizer was unable to perform the requested transformation; the transformation might be disabled or specified as part of an unsupported transformation ordering
-define dso_local void @foo2(ptr nocapture %A, ptr nocapture readonly %B, i32 %N) {
+define void @foo2(ptr nocapture %A, ptr nocapture readonly %B, i32 %N) {
 entry:
   %cmp7 = icmp sgt i32 %N, 0
   br i1 %cmp7, label %for.body.preheader, label %for.end

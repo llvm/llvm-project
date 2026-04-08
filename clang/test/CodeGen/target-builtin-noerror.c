@@ -141,10 +141,8 @@ void verifyfeaturestrings(void) {
   (void)__builtin_cpu_supports("sm4");
   (void)__builtin_cpu_supports("apxf");
   (void)__builtin_cpu_supports("usermsr");
-  (void)__builtin_cpu_supports("avx10.1-256");
-  (void)__builtin_cpu_supports("avx10.1-512");
-  (void)__builtin_cpu_supports("avx10.2-256");
-  (void)__builtin_cpu_supports("avx10.2-512");
+  (void)__builtin_cpu_supports("avx10.1");
+  (void)__builtin_cpu_supports("avx10.2");
   (void)__builtin_cpu_supports("movrs");
 }
 
@@ -180,6 +178,8 @@ void verifycpustrings(void) {
   (void)__builtin_cpu_is("lunarlake");
   (void)__builtin_cpu_is("clearwaterforest");
   (void)__builtin_cpu_is("pantherlake");
+  (void)__builtin_cpu_is("wildcatlake");
+  (void)__builtin_cpu_is("novalake");
   (void)__builtin_cpu_is("haswell");
   (void)__builtin_cpu_is("icelake-client");
   (void)__builtin_cpu_is("icelake-server");
@@ -209,5 +209,6 @@ void verifycpustrings(void) {
   (void)__builtin_cpu_is("znver3");
   (void)__builtin_cpu_is("znver4");
   (void)__builtin_cpu_is("znver5");
+  (void)__builtin_cpu_is("znver6");
   (void)__builtin_cpu_is("diamondrapids");
 }

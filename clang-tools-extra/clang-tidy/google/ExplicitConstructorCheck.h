@@ -1,4 +1,4 @@
-//===--- ExplicitConstructorCheck.h - clang-tidy ----------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -18,7 +18,7 @@ namespace clang::tidy::google {
 /// See https://google.github.io/styleguide/cppguide.html#Explicit_Constructors
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/google/explicit-constructor.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/google/explicit-constructor.html
 class ExplicitConstructorCheck : public ClangTidyCheck {
 public:
   ExplicitConstructorCheck(StringRef Name, ClangTidyContext *Context)

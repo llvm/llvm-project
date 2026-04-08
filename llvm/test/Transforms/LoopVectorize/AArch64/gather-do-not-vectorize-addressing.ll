@@ -4,7 +4,7 @@
 ; RUN: opt < %s -passes=loop-vectorize -mtriple=aarch64--linux-gnu -mattr=+sve -force-vector-width=2 -force-vector-interleave=1 \
 ; RUN:   -prefer-predicate-over-epilogue=scalar-epilogue -scalable-vectorization=on -S -o - | FileCheck --check-prefix=SVE %s
 
-define dso_local double @test(ptr nocapture noundef readonly %data, ptr nocapture noundef readonly %offset, i32 noundef %size) local_unnamed_addr {
+define double @test(ptr nocapture noundef readonly %data, ptr nocapture noundef readonly %offset, i32 noundef %size) {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP6:%.*]] = icmp sgt i32 [[SIZE:%.*]], 0
@@ -20,9 +20,8 @@ define dso_local double @test(ptr nocapture noundef readonly %data, ptr nocaptur
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <2 x double> [ <double 0.000000e+00, double -0.000000e+00>, [[VECTOR_PH]] ], [ [[TMP14:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[OFFSET:%.*]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[OFFSET:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[OFFSET]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[TMP3]], align 4
@@ -77,7 +76,7 @@ define dso_local double @test(ptr nocapture noundef readonly %data, ptr nocaptur
 ; SVE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; SVE:       vector.ph:
 ; SVE-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; SVE-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 2
+; SVE-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 1
 ; SVE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[WIDE_TRIP_COUNT]], [[TMP3]]
 ; SVE-NEXT:    [[N_VEC:%.*]] = sub i64 [[WIDE_TRIP_COUNT]], [[N_MOD_VF]]
 ; SVE-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -88,7 +87,7 @@ define dso_local double @test(ptr nocapture noundef readonly %data, ptr nocaptur
 ; SVE-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 2 x i32>, ptr [[TMP5]], align 4
 ; SVE-NEXT:    [[TMP7:%.*]] = sext <vscale x 2 x i32> [[WIDE_LOAD]] to <vscale x 2 x i64>
 ; SVE-NEXT:    [[TMP8:%.*]] = getelementptr inbounds double, ptr [[DATA:%.*]], <vscale x 2 x i64> [[TMP7]]
-; SVE-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 2 x double> @llvm.masked.gather.nxv2f64.nxv2p0(<vscale x 2 x ptr> [[TMP8]], i32 8, <vscale x 2 x i1> splat (i1 true), <vscale x 2 x double> poison)
+; SVE-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 2 x double> @llvm.masked.gather.nxv2f64.nxv2p0(<vscale x 2 x ptr> align 8 [[TMP8]], <vscale x 2 x i1> splat (i1 true), <vscale x 2 x double> poison)
 ; SVE-NEXT:    [[TMP9]] = fadd <vscale x 2 x double> [[VEC_PHI]], [[WIDE_MASKED_GATHER]]
 ; SVE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
 ; SVE-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]

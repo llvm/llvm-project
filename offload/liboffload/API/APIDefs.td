@@ -145,7 +145,6 @@ defvar DefaultReturns = [Return<PREFIX#"_RESULT_SUCCESS">,
                          Return<PREFIX#"_ERRC_DEVICE_LOST">];
 
 class APIObject {
-  string name;
   string desc;
 }
 
@@ -175,6 +174,10 @@ class Enum : APIObject {
   // type for functions where this enum may be used as an output type. If set,
   // all Etor values must be TaggedEtor records
   bit is_typed = 0;
+
+  // This refers to whether the enumerator is used to name bits of a bit field,
+  // where consecutive values are bit-shifted rather than incremented.
+  bit is_bit_field = 0;
 
   list<Etor> etors = [];
 }

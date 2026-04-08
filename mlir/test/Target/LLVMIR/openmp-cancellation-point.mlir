@@ -24,16 +24,18 @@ llvm.func @cancellation_point_parallel() {
 // CHECK:         %[[VAL_15:.*]] = icmp eq i32 %[[VAL_14]], 0
 // CHECK:         br i1 %[[VAL_15]], label %[[VAL_16:.*]], label %[[VAL_17:.*]]
 // CHECK:       omp.par.region1.cncl:                             ; preds = %[[VAL_12]]
+// CHECK:         br label %[[FINI:.*]]
+// CHECK:       .fini:
 // CHECK:         %[[VAL_18:.*]] = call i32 @__kmpc_global_thread_num(ptr @1)
 // CHECK:         %[[VAL_19:.*]] = call i32 @__kmpc_cancel_barrier(ptr @2, i32 %[[VAL_18]])
-// CHECK:         br label %[[VAL_20:.*]]
+// CHECK:         br label %[[EXIT_STUB:.*]]
 // CHECK:       omp.par.region1.split:                            ; preds = %[[VAL_12]]
 // CHECK:         br label %[[VAL_21:.*]]
 // CHECK:       omp.region.cont:                                  ; preds = %[[VAL_16]]
 // CHECK:         br label %[[VAL_22:.*]]
 // CHECK:       omp.par.pre_finalize:                             ; preds = %[[VAL_21]]
-// CHECK:         br label %[[VAL_20]]
-// CHECK:       omp.par.exit.exitStub:                            ; preds = %[[VAL_22]], %[[VAL_17]]
+// CHECK:         br label %[[FINI]]
+// CHECK:       omp.par.exit.exitStub:
 // CHECK:         ret void
 
 llvm.func @cancellation_point_sections() {
@@ -94,14 +96,12 @@ llvm.func @cancellation_point_sections() {
 // CHECK:       omp_section_loop.inc:                             ; preds = %[[VAL_46]]
 // CHECK:         %[[VAL_38]] = add nuw i32 %[[VAL_37]], 1
 // CHECK:         br label %[[VAL_35]]
-// CHECK:       omp_section_loop.exit:                            ; preds = %[[VAL_53]], %[[VAL_39]]
+// CHECK:       omp_section_loop.exit:
 // CHECK:         call void @__kmpc_for_static_fini(ptr @1, i32 %[[VAL_30]])
 // CHECK:         %[[VAL_55:.*]] = call i32 @__kmpc_global_thread_num(ptr @1)
 // CHECK:         call void @__kmpc_barrier(ptr @2, i32 %[[VAL_55]])
 // CHECK:         br label %[[VAL_56:.*]]
 // CHECK:       omp_section_loop.after:                           ; preds = %[[VAL_42]]
-// CHECK:         br label %[[VAL_57:.*]]
-// CHECK:       omp_section_loop.aftersections.fini:              ; preds = %[[VAL_56]]
 // CHECK:         ret void
 // CHECK:       omp.section.region.cncl:                          ; preds = %[[VAL_48]]
 // CHECK:         br label %[[VAL_42]]
@@ -175,7 +175,7 @@ llvm.func @cancellation_point_wsloop(%lb : i32, %ub : i32, %step : i32) {
 // CHECK:       omp_loop.inc:                                     ; preds = %[[VAL_106]]
 // CHECK:         %[[VAL_92]] = add nuw i32 %[[VAL_91]], 1
 // CHECK:         br label %[[VAL_89]]
-// CHECK:       omp_loop.exit:                                    ; preds = %[[VAL_105]], %[[VAL_93]]
+// CHECK:       omp_loop.exit:
 // CHECK:         call void @__kmpc_for_static_fini(ptr @1, i32 %[[VAL_84]])
 // CHECK:         %[[VAL_107:.*]] = call i32 @__kmpc_global_thread_num(ptr @1)
 // CHECK:         call void @__kmpc_barrier(ptr @2, i32 %[[VAL_107]])

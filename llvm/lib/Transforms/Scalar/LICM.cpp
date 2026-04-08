@@ -169,7 +169,9 @@ cl::opt<unsigned> llvm::SetLicmMssaNoAccForPromotionCap(
              "number of accesses allowed to be present in a loop in order to "
              "enable memory promotion."));
 
+namespace llvm {
 extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+} // end namespace llvm
 
 static bool inSubLoop(BasicBlock *BB, Loop *CurLoop, LoopInfo *LI);
 static bool isNotUsedOrFoldableInLoop(const Instruction &I, const Loop *CurLoop,
@@ -437,10 +439,9 @@ bool LoopInvariantCodeMotion::runOnLoop(Loop *L, AAResults *AA, LoopInfo *LI,
   // potentially happen in other passes where instructions are being moved
   // across that edge.
   bool HasCoroSuspendInst = llvm::any_of(L->getBlocks(), [](BasicBlock *BB) {
-    return llvm::any_of(*BB, [](Instruction &I) {
-      IntrinsicInst *II = dyn_cast<IntrinsicInst>(&I);
-      return II && II->getIntrinsicID() == Intrinsic::coro_suspend;
-    });
+    using namespace PatternMatch;
+    return any_of(make_pointer_range(*BB),
+                  match_fn(m_Intrinsic<Intrinsic::coro_suspend>()));
   });
 
   MemorySSAUpdater MSSAU(MSSA);
@@ -474,7 +475,7 @@ bool LoopInvariantCodeMotion::runOnLoop(Loop *L, AAResults *AA, LoopInfo *LI,
   if (Preheader)
     Changed |= hoistRegion(DT->getNode(L->getHeader()), AA, LI, DT, AC, TLI, L,
                            MSSAU, SE, &SafetyInfo, Flags, ORE, LoopNestMode,
-                           LicmAllowSpeculation, HasCoroSuspendInst);
+                           LicmAllowSpeculation);
 
   // Now that all loop invariants have been removed from the loop, promote any
   // memory references to scalars that we can.
@@ -664,17 +665,16 @@ private:
 
   // The branches that we can hoist, mapped to the block that marks a
   // convergence point of their control flow.
-  DenseMap<BranchInst *, BasicBlock *> HoistableBranches;
+  DenseMap<CondBrInst *, BasicBlock *> HoistableBranches;
 
 public:
   ControlFlowHoister(LoopInfo *LI, DominatorTree *DT, Loop *CurLoop,
                      MemorySSAUpdater &MSSAU)
       : LI(LI), DT(DT), CurLoop(CurLoop), MSSAU(MSSAU) {}
 
-  void registerPossiblyHoistableBranch(BranchInst *BI) {
+  void registerPossiblyHoistableBranch(CondBrInst *BI) {
     // We can only hoist conditional branches with loop invariant operands.
-    if (!ControlFlowHoisting || !BI->isConditional() ||
-        !CurLoop->hasLoopInvariantOperands(BI))
+    if (!ControlFlowHoisting || !CurLoop->hasLoopInvariantOperands(BI))
       return;
 
     // The branch destinations need to be in the loop, and we don't gain
@@ -774,7 +774,7 @@ public:
 
     // Check if this block is conditional based on a pending branch
     auto HasBBAsSuccessor =
-        [&](DenseMap<BranchInst *, BasicBlock *>::value_type &Pair) {
+        [&](DenseMap<CondBrInst *, BasicBlock *>::value_type &Pair) {
           return BB != Pair.second && (Pair.first->getSuccessor(0) == BB ||
                                        Pair.first->getSuccessor(1) == BB);
         };
@@ -790,7 +790,7 @@ public:
       HoistDestinationMap[BB] = InitialPreheader;
       return InitialPreheader;
     }
-    BranchInst *BI = It->first;
+    CondBrInst *BI = It->first;
     assert(std::none_of(std::next(It), HoistableBranches.end(),
                         HasBBAsSuccessor) &&
            "BB is expected to be the target of at most one branch");
@@ -823,21 +823,21 @@ public:
     BasicBlock *HoistCommonSucc = CreateHoistedBlock(CommonSucc);
 
     // Link up these blocks with branches.
-    if (!HoistCommonSucc->getTerminator()) {
+    if (!HoistCommonSucc->hasTerminator()) {
       // The new common successor we've generated will branch to whatever that
       // hoist target branched to.
       BasicBlock *TargetSucc = HoistTarget->getSingleSuccessor();
       assert(TargetSucc && "Expected hoist target to have a single successor");
       HoistCommonSucc->moveBefore(TargetSucc);
-      BranchInst::Create(TargetSucc, HoistCommonSucc);
+      UncondBrInst::Create(TargetSucc, HoistCommonSucc);
     }
-    if (!HoistTrueDest->getTerminator()) {
+    if (!HoistTrueDest->hasTerminator()) {
       HoistTrueDest->moveBefore(HoistCommonSucc);
-      BranchInst::Create(HoistCommonSucc, HoistTrueDest);
+      UncondBrInst::Create(HoistCommonSucc, HoistTrueDest);
     }
-    if (!HoistFalseDest->getTerminator()) {
+    if (!HoistFalseDest->hasTerminator()) {
       HoistFalseDest->moveBefore(HoistCommonSucc);
-      BranchInst::Create(HoistCommonSucc, HoistFalseDest);
+      UncondBrInst::Create(HoistCommonSucc, HoistFalseDest);
     }
 
     // If BI is being cloned to what was originally the preheader then
@@ -860,7 +860,7 @@ public:
 
     // Now finally clone BI.
     auto *NewBI =
-        BranchInst::Create(HoistTrueDest, HoistFalseDest, BI->getCondition(),
+        CondBrInst::Create(BI->getCondition(), HoistTrueDest, HoistFalseDest,
                            HoistTarget->getTerminator()->getIterator());
     HoistTarget->getTerminator()->eraseFromParent();
     // md_prof should also come from the original branch - since the
@@ -892,7 +892,7 @@ bool llvm::hoistRegion(DomTreeNode *N, AAResults *AA, LoopInfo *LI,
                        ICFLoopSafetyInfo *SafetyInfo,
                        SinkAndHoistLICMFlags &Flags,
                        OptimizationRemarkEmitter *ORE, bool LoopNestMode,
-                       bool AllowSpeculation, bool HasCoroSuspendInst) {
+                       bool AllowSpeculation) {
   // Verify inputs.
   assert(N != nullptr && AA != nullptr && LI != nullptr && DT != nullptr &&
          CurLoop != nullptr && SafetyInfo != nullptr &&
@@ -920,12 +920,11 @@ bool llvm::hoistRegion(DomTreeNode *N, AAResults *AA, LoopInfo *LI,
     for (Instruction &I : llvm::make_early_inc_range(*BB)) {
       // Try hoisting the instruction out to the preheader.  We can only do
       // this if all of the operands of the instruction are loop invariant and
-      // if it is safe to hoist the instruction. We also check block frequency
-      // to make sure instruction only gets hoisted into colder blocks.
+      // if it is safe to hoist the instruction.
       // TODO: It may be safe to hoist if we are hoisting to a conditional block
       // and we have accurately duplicated the control flow from the loop header
       // to that block.
-      if (CurLoop->hasLoopInvariantOperands(&I, HasCoroSuspendInst) &&
+      if (CurLoop->hasLoopInvariantOperands(&I) &&
           canSinkOrHoistInst(I, AA, DT, CurLoop, MSSAU, true, Flags, ORE) &&
           isSafeToExecuteUnconditionally(I, DT, TLI, CurLoop, SafetyInfo, ORE,
                                          Preheader->getTerminator(), AC,
@@ -975,7 +974,7 @@ bool llvm::hoistRegion(DomTreeNode *N, AAResults *AA, LoopInfo *LI,
                SafetyInfo->doesNotWriteMemoryBefore(I, CurLoop);
       };
       if ((IsInvariantStart(I) || isGuard(&I)) &&
-          CurLoop->hasLoopInvariantOperands(&I, HasCoroSuspendInst) &&
+          CurLoop->hasLoopInvariantOperands(&I) &&
           MustExecuteWithoutWritesBefore(I)) {
         hoist(I, DT, CurLoop, CFH.getOrCreateHoistedBlock(BB), SafetyInfo,
               MSSAU, SE, ORE);
@@ -1008,7 +1007,7 @@ bool llvm::hoistRegion(DomTreeNode *N, AAResults *AA, LoopInfo *LI,
 
       // Remember possibly hoistable branches so we can actually hoist them
       // later if needed.
-      if (BranchInst *BI = dyn_cast<BranchInst>(&I))
+      if (CondBrInst *BI = dyn_cast<CondBrInst>(&I))
         CFH.registerPossiblyHoistableBranch(BI);
     }
   }
@@ -1117,11 +1116,10 @@ static bool isLoadInvariantInLoop(LoadInst *LI, DominatorTree *DT,
   return false;
 }
 
-namespace {
 /// Return true if-and-only-if we know how to (mechanically) both hoist and
 /// sink a given instruction out of a loop.  Does not address legality
 /// concerns such as aliasing or speculation safety.
-bool isHoistableAndSinkableInst(Instruction &I) {
+static bool isHoistableAndSinkableInst(Instruction &I) {
   // Only these instructions are hoistable/sinkable.
   return (isa<LoadInst>(I) || isa<StoreInst>(I) || isa<CallInst>(I) ||
           isa<FenceInst>(I) || isa<CastInst>(I) || isa<UnaryOperator>(I) ||
@@ -1133,8 +1131,8 @@ bool isHoistableAndSinkableInst(Instruction &I) {
 }
 
 /// Return true if I is the only Instruction with a MemoryAccess in L.
-bool isOnlyMemoryAccess(const Instruction *I, const Loop *L,
-                        const MemorySSAUpdater &MSSAU) {
+static bool isOnlyMemoryAccess(const Instruction *I, const Loop *L,
+                               const MemorySSAUpdater &MSSAU) {
   for (auto *BB : L->getBlocks())
     if (auto *Accs = MSSAU.getMemorySSA()->getBlockAccesses(BB)) {
       int NotAPhi = 0;
@@ -1147,7 +1145,6 @@ bool isOnlyMemoryAccess(const Instruction *I, const Loop *L,
       }
     }
   return true;
-}
 }
 
 static MemoryAccess *getClobberingMemoryAccess(MemorySSA &MSSA,
@@ -1705,10 +1702,7 @@ static void hoist(Instruction &I, const DominatorTree *DT, const Loop *CurLoop,
       // time in isGuaranteedToExecute if we don't actually have anything to
       // drop.  It is a compile time optimization, not required for correctness.
       !SafetyInfo->isGuaranteedToExecute(I, DT, CurLoop)) {
-    if (ProfcheckDisableMetadataFixes)
-      I.dropUBImplyingAttrsAndMetadata();
-    else
-      I.dropUBImplyingAttrsAndMetadata({LLVMContext::MD_prof});
+    I.dropUBImplyingAttrsAndMetadata();
   }
 
   if (isa<PHINode>(I))
@@ -2591,11 +2585,11 @@ static bool hoistAdd(ICmpInst::Predicate Pred, Value *VariantLHS,
   // Try to represent VariantLHS as sum of invariant and variant operands.
   using namespace PatternMatch;
   Value *VariantOp, *InvariantOp;
-  if (IsSigned &&
-      !match(VariantLHS, m_NSWAdd(m_Value(VariantOp), m_Value(InvariantOp))))
+  if (IsSigned && !match(VariantLHS, m_NSWAddLike(m_Value(VariantOp),
+                                                  m_Value(InvariantOp))))
     return false;
-  if (!IsSigned &&
-      !match(VariantLHS, m_NUWAdd(m_Value(VariantOp), m_Value(InvariantOp))))
+  if (!IsSigned && !match(VariantLHS, m_NUWAddLike(m_Value(VariantOp),
+                                                   m_Value(InvariantOp))))
     return false;
 
   // LHS itself is a loop-variant, try to represent it in the form:
@@ -2760,7 +2754,7 @@ static bool isReassociableOp(Instruction *I, unsigned IntOpcode,
 /// A1, A2, ... and C are loop invariants into expressions like
 /// ((A1 * C * B1) + (A2 * C * B2) + ...) and hoist the (A1 * C), (A2 * C), ...
 /// invariant expressions. This functions returns true only if any hoisting has
-/// actually occured.
+/// actually occurred.
 static bool hoistMulAddAssociation(Instruction &I, Loop &L,
                                    ICFLoopSafetyInfo &SafetyInfo,
                                    MemorySSAUpdater &MSSAU, AssumptionCache *AC,
@@ -2931,6 +2925,92 @@ static bool hoistBOAssociation(Instruction &I, Loop &L,
   return true;
 }
 
+/// Reassociate add/sub expressions of the form:
+///
+/// 1. "(LV + C1) - C2" ==> "LV + (C1 - C2)"
+/// 2. "(LV - C1) - C2" ==> "LV - (C1 + C2)"
+/// 3. "(LV - C1) + C2" ==> "LV + (C2 - C1)"
+///
+/// where LV is a loop variant, and C1 and C2 are loop invariants.
+/// Sub is not associative, but these algebraic identities allow hoisting
+/// invariant computations out of the loop.
+static bool hoistSubAddAssociation(Instruction &I, Loop &L,
+                                   ICFLoopSafetyInfo &SafetyInfo,
+                                   MemorySSAUpdater &MSSAU, AssumptionCache *AC,
+                                   DominatorTree *DT) {
+  using namespace PatternMatch;
+
+  Instruction *BO;
+  Value *LV, *C1, *C2;
+  Instruction::BinaryOps InvOp, ResultOp;
+
+  // Try to match one of three reassociation patterns involving sub.
+  //
+  //   1. (LV + C1) - C2 ==> LV + (C1 - C2)
+  //   2. (LV - C1) - C2 ==> LV - (C1 + C2)
+  //   3. (LV - C1) + C2 ==> LV + (C2 - C1)
+  //                            ^     ^
+  //                             \     \___ InvOp
+  //                              \
+  //                               \____ ResultOp
+  //
+  if (match(&I,
+            m_Sub(m_OneUse(m_Instruction(BO, m_Add(m_Value(LV), m_Value(C1)))),
+                  m_Value(C2)))) {
+    // Case 1.
+    //
+    // Depending on which of the addition is invariant, we might need to swap
+    // the arguments
+    if (L.isLoopInvariant(LV) && !L.isLoopInvariant(C1))
+      std::swap(LV, C1);
+    InvOp = Instruction::Sub;
+    ResultOp = Instruction::Add;
+  } else if (match(&I, m_Sub(m_OneUse(m_Instruction(
+                                 BO, m_Sub(m_Value(LV), m_Value(C1)))),
+                             m_Value(C2)))) {
+    // Case 2.
+    InvOp = Instruction::Add;
+    ResultOp = Instruction::Sub;
+  } else if (match(&I, m_c_Add(m_OneUse(m_Instruction(
+                                   BO, m_Sub(m_Value(LV), m_Value(C1)))),
+                               m_Value(C2)))) {
+    // Case 3.
+    //
+    // We use (C2 - C1) as the invariant as opposed to case 1, but instead of
+    // adding a special case in invariant creation, we can just swap the
+    // operands here.
+    std::swap(C1, C2);
+    InvOp = Instruction::Sub;
+    ResultOp = Instruction::Add;
+  } else {
+    return false;
+  }
+
+  if (L.isLoopInvariant(LV) || !L.isLoopInvariant(C1) || !L.isLoopInvariant(C2))
+    return false;
+
+  auto *Preheader = L.getLoopPreheader();
+  assert(Preheader && "Loop is not in simplify form?");
+
+  IRBuilder<> Builder(Preheader->getTerminator());
+  auto *Inv = Builder.CreateBinOp(InvOp, C1, C2, "invariant.op");
+
+  auto *NewBO = BinaryOperator::Create(ResultOp, LV, Inv,
+                                       I.getName() + ".reass", I.getIterator());
+  NewBO->setDebugLoc(DebugLoc::getDropped());
+
+  // No overflow flags are set on the new instructions -- reassociation
+  // involving sub does not preserve nsw/nuw in general.
+
+  I.replaceAllUsesWith(NewBO);
+  eraseInstruction(I, SafetyInfo, MSSAU);
+
+  salvageDebugInfo(*BO);
+  eraseInstruction(*BO, SafetyInfo, MSSAU);
+
+  return true;
+}
+
 static bool hoistArithmetics(Instruction &I, Loop &L,
                              ICFLoopSafetyInfo &SafetyInfo,
                              MemorySSAUpdater &MSSAU, AssumptionCache *AC,
@@ -2969,6 +3049,12 @@ static bool hoistArithmetics(Instruction &I, Loop &L,
   }
 
   if (hoistBOAssociation(I, L, SafetyInfo, MSSAU, AC, DT)) {
+    ++NumHoisted;
+    ++NumBOAssociationsHoisted;
+    return true;
+  }
+
+  if (hoistSubAddAssociation(I, L, SafetyInfo, MSSAU, AC, DT)) {
     ++NumHoisted;
     ++NumBOAssociationsHoisted;
     return true;

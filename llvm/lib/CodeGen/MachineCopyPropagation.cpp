@@ -137,8 +137,8 @@ public:
       PreservedRegUnits.resize(TRI.getNumRegUnits());
       for (unsigned SafeReg = 0, E = TRI.getNumRegs(); SafeReg < E; ++SafeReg)
         if (!RegMaskOp.clobbersPhysReg(SafeReg))
-          for (auto SafeUnit : TRI.regunits(SafeReg))
-            PreservedRegUnits.set(SafeUnit);
+          for (MCRegUnit SafeUnit : TRI.regunits(SafeReg))
+            PreservedRegUnits.set(static_cast<unsigned>(SafeUnit));
 
       return PreservedRegUnits;
     }
@@ -819,7 +819,7 @@ void MachineCopyPropagation::forwardUses(MachineInstr &MI) {
       assert(SubRegIdx &&
              "MI source is not a sub-register of Copy destination");
       ForwardedReg = TRI->getSubReg(CopySrcReg, SubRegIdx);
-      if (!ForwardedReg) {
+      if (!ForwardedReg || TRI->isArtificial(ForwardedReg)) {
         LLVM_DEBUG(dbgs() << "MCP: Copy source does not have sub-register "
                           << TRI->getSubRegIndexName(SubRegIdx) << '\n');
         continue;
@@ -937,16 +937,6 @@ void MachineCopyPropagation::ForwardCopyPropagateBlock(MachineBasicBlock &MBB) {
     if (CopyOperands) {
       Register RegSrc = CopyOperands->Source->getReg();
       Register RegDef = CopyOperands->Destination->getReg();
-      // It's possible that the previous transformations have resulted in a
-      // no-op register move (i.e. one where source and destination registers
-      // are the same and are not referring to a reserved register). If so,
-      // delete it.
-      if (RegSrc == RegDef && !MRI->isReserved(RegSrc)) {
-        MI.eraseFromParent();
-        NumDeletes++;
-        Changed = true;
-        continue;
-      }
 
       if (!TRI->regsOverlap(RegDef, RegSrc)) {
         // Copy is now a candidate for deletion.
@@ -1005,8 +995,8 @@ void MachineCopyPropagation::ForwardCopyPropagateBlock(MachineBasicBlock &MBB) {
         // Invalidate all entries in the copy map which are not preserved by
         // this register mask.
         bool MIRefedinCopyInfo = false;
-        for (unsigned RegUnit : TRI->regunits(Reg)) {
-          if (!PreservedRegUnits.test(RegUnit))
+        for (MCRegUnit RegUnit : TRI->regunits(Reg)) {
+          if (!PreservedRegUnits.test(static_cast<unsigned>(RegUnit)))
             Tracker.clobberRegUnit(RegUnit, *TRI, *TII, UseCopyInstr);
           else {
             if (MaybeDead == Tracker.findCopyForUnit(RegUnit, *TRI)) {
@@ -1257,7 +1247,7 @@ void MachineCopyPropagation::BackwardCopyPropagateBlock(
   Tracker.clear();
 }
 
-static void LLVM_ATTRIBUTE_UNUSED printSpillReloadChain(
+[[maybe_unused]] static void printSpillReloadChain(
     DenseMap<MachineInstr *, SmallVector<MachineInstr *>> &SpillChain,
     DenseMap<MachineInstr *, SmallVector<MachineInstr *>> &ReloadChain,
     MachineInstr *Leader) {

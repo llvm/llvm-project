@@ -41,6 +41,7 @@
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/UnimplementedError.h"
 #include "lldb/Utility/UriParser.h"
+#include "llvm/Support/ErrorExtras.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/ScopedPrinter.h"
@@ -146,6 +147,9 @@ void GDBRemoteCommunicationServerLLGS::RegisterPacketHandlers() {
   RegisterMemberFunctionHandler(
       StringExtractorGDBRemote::eServerPacketType_QSetWorkingDir,
       &GDBRemoteCommunicationServerLLGS::Handle_QSetWorkingDir);
+  RegisterMemberFunctionHandler(
+      StringExtractorGDBRemote::eServerPacketType_qStructuredDataPlugins,
+      &GDBRemoteCommunicationServerLLGS::Handle_qStructuredDataPlugins);
   RegisterMemberFunctionHandler(
       StringExtractorGDBRemote::eServerPacketType_qsThreadInfo,
       &GDBRemoteCommunicationServerLLGS::Handle_qsThreadInfo);
@@ -462,13 +466,11 @@ void GDBRemoteCommunicationServerLLGS::InitializeDelegate(
     NativeProcessProtocol *process) {
   assert(process && "process cannot be NULL");
   Log *log = GetLog(LLDBLog::Process);
-  if (log) {
-    LLDB_LOGF(log,
-              "GDBRemoteCommunicationServerLLGS::%s called with "
-              "NativeProcessProtocol pid %" PRIu64 ", current state: %s",
-              __FUNCTION__, process->GetID(),
-              StateAsCString(process->GetState()));
-  }
+  LLDB_LOGF(log,
+            "GDBRemoteCommunicationServerLLGS::%s called with "
+            "NativeProcessProtocol pid %" PRIu64 ", current state: %s",
+            __FUNCTION__, process->GetID(),
+            StateAsCString(process->GetState()));
 }
 
 GDBRemoteCommunication::PacketResult
@@ -797,18 +799,15 @@ GetJSONThreadsInfo(NativeProcessProtocol &process, bool abridged) {
     struct ThreadStopInfo tid_stop_info;
     std::string description;
     if (!thread.GetStopReason(tid_stop_info, description))
-      return llvm::make_error<llvm::StringError>(
-          "failed to get stop reason", llvm::inconvertibleErrorCode());
+      return llvm::createStringError("failed to get stop reason");
 
     const int signum = tid_stop_info.signo;
-    if (log) {
-      LLDB_LOGF(log,
-                "GDBRemoteCommunicationServerLLGS::%s pid %" PRIu64
-                " tid %" PRIu64
-                " got signal signo = %d, reason = %d, exc_type = %" PRIu64,
-                __FUNCTION__, process.GetID(), tid, signum,
-                tid_stop_info.reason, tid_stop_info.details.exception.type);
-    }
+    LLDB_LOGF(log,
+              "GDBRemoteCommunicationServerLLGS::%s pid %" PRIu64
+              " tid %" PRIu64
+              " got signal signo = %d, reason = %d, exc_type = %" PRIu64,
+              __FUNCTION__, process.GetID(), tid, signum, tid_stop_info.reason,
+              tid_stop_info.details.exception.type);
 
     json::Object thread_obj;
 
@@ -1154,12 +1153,10 @@ void GDBRemoteCommunicationServerLLGS::ProcessStateChanged(
     NativeProcessProtocol *process, lldb::StateType state) {
   assert(process && "process cannot be NULL");
   Log *log = GetLog(LLDBLog::Process);
-  if (log) {
-    LLDB_LOGF(log,
-              "GDBRemoteCommunicationServerLLGS::%s called with "
-              "NativeProcessProtocol pid %" PRIu64 ", state: %s",
-              __FUNCTION__, process->GetID(), StateAsCString(state));
-  }
+  LLDB_LOGF(log,
+            "GDBRemoteCommunicationServerLLGS::%s called with "
+            "NativeProcessProtocol pid %" PRIu64 ", state: %s",
+            __FUNCTION__, process->GetID(), StateAsCString(state));
 
   switch (state) {
   case StateType::eStateRunning:
@@ -1185,12 +1182,10 @@ void GDBRemoteCommunicationServerLLGS::ProcessStateChanged(
     break;
 
   default:
-    if (log) {
-      LLDB_LOGF(log,
-                "GDBRemoteCommunicationServerLLGS::%s didn't handle state "
-                "change for pid %" PRIu64 ", new state: %s",
-                __FUNCTION__, process->GetID(), StateAsCString(state));
-    }
+    LLDB_LOGF(log,
+              "GDBRemoteCommunicationServerLLGS::%s didn't handle state "
+              "change for pid %" PRIu64 ", new state: %s",
+              __FUNCTION__, process->GetID(), StateAsCString(state));
     break;
   }
 }
@@ -1243,6 +1238,19 @@ Status GDBRemoteCommunicationServerLLGS::InitializeConnection(
       read_object_sp, [this](MainLoopBase &) { DataAvailableCallback(); },
       error);
   return error;
+}
+
+GDBRemoteCommunication::PacketResult
+GDBRemoteCommunicationServerLLGS::SendStructuredDataPacket(
+    const llvm::json::Value &value) {
+  std::string json_string;
+  raw_string_ostream os(json_string);
+  os << value;
+
+  StreamGDBRemote escaped_response;
+  escaped_response.PutCString("JSON-async:");
+  escaped_response.PutEscapedBytes(json_string.c_str(), json_string.size());
+  return SendPacketNoLock(escaped_response.GetString());
 }
 
 GDBRemoteCommunication::PacketResult
@@ -1434,6 +1442,21 @@ GDBRemoteCommunicationServerLLGS::Handle_jLLDBTraceGetBinaryData(
     return SendPacketNoLock(response.GetString());
   } else
     return SendErrorResponse(bytes.takeError());
+}
+
+GDBRemoteCommunication::PacketResult
+GDBRemoteCommunicationServerLLGS::Handle_qStructuredDataPlugins(
+    StringExtractorGDBRemote &packet) {
+  // Fail if we don't have a current process.
+  if (!m_current_process ||
+      (m_current_process->GetID() == LLDB_INVALID_PROCESS_ID))
+    return SendErrorResponse(68);
+
+  std::vector<std::string> structured_data_plugins =
+      m_current_process->GetStructuredDataPlugins();
+
+  return SendJSONResponse(
+      llvm::json::Value(llvm::json::Array(structured_data_plugins)));
 }
 
 GDBRemoteCommunication::PacketResult
@@ -2419,8 +2442,7 @@ GDBRemoteCommunicationServerLLGS::Handle_H(StringExtractorGDBRemote &packet) {
   auto pid_tid = packet.GetPidTid(default_process ? default_process->GetID()
                                                   : LLDB_INVALID_PROCESS_ID);
   if (!pid_tid)
-    return SendErrorResponse(llvm::make_error<StringError>(
-        inconvertibleErrorCode(), "Malformed thread-id"));
+    return SendErrorResponse(llvm::createStringError("malformed thread-id"));
 
   lldb::pid_t pid = pid_tid->first;
   lldb::tid_t tid = pid_tid->second;
@@ -2428,15 +2450,14 @@ GDBRemoteCommunicationServerLLGS::Handle_H(StringExtractorGDBRemote &packet) {
   if (pid == StringExtractorGDBRemote::AllProcesses)
     return SendUnimplementedResponse("Selecting all processes not supported");
   if (pid == LLDB_INVALID_PROCESS_ID)
-    return SendErrorResponse(llvm::make_error<StringError>(
-        inconvertibleErrorCode(), "No current process and no PID provided"));
+    return SendErrorResponse(
+        llvm::createStringError("no current process and no PID provided"));
 
   // Check the process ID and find respective process instance.
   auto new_process_it = m_debugged_processes.find(pid);
   if (new_process_it == m_debugged_processes.end())
-    return SendErrorResponse(llvm::make_error<StringError>(
-        inconvertibleErrorCode(),
-        llvm::formatv("No process with PID {0} debugged", pid)));
+    return SendErrorResponse(
+        llvm::createStringErrorV("no process with PID {0} debugged", pid));
 
   // Ensure we have the given thread when not specifying -1 (all threads) or 0
   // (any thread).
@@ -2852,18 +2873,16 @@ GDBRemoteCommunicationServerLLGS::Handle_qMemoryRegionInfo(
     }
 
     // Flags
-    MemoryRegionInfo::OptionalBool memory_tagged =
-        region_info.GetMemoryTagged();
-    MemoryRegionInfo::OptionalBool is_shadow_stack =
-        region_info.IsShadowStack();
+    LazyBool memory_tagged = region_info.GetMemoryTagged();
+    LazyBool is_shadow_stack = region_info.IsShadowStack();
 
-    if (memory_tagged != MemoryRegionInfo::eDontKnow ||
-        is_shadow_stack != MemoryRegionInfo::eDontKnow) {
+    if (memory_tagged != eLazyBoolDontKnow ||
+        is_shadow_stack != eLazyBoolDontKnow) {
       response.PutCString("flags:");
       // Space is the separator.
-      if (memory_tagged == MemoryRegionInfo::eYes)
+      if (memory_tagged == eLazyBoolYes)
         response.PutCString("mt ");
-      if (is_shadow_stack == MemoryRegionInfo::eYes)
+      if (is_shadow_stack == eLazyBoolYes)
         response.PutCString("ss ");
 
       response.PutChar(';');
@@ -4102,8 +4121,7 @@ GDBRemoteCommunicationServerLLGS::Handle_T(StringExtractorGDBRemote &packet) {
   auto pid_tid = packet.GetPidTid(m_current_process ? m_current_process->GetID()
                                                     : LLDB_INVALID_PROCESS_ID);
   if (!pid_tid)
-    return SendErrorResponse(llvm::make_error<StringError>(
-        inconvertibleErrorCode(), "Malformed thread-id"));
+    return SendErrorResponse(llvm::createStringError("malformed thread-id"));
 
   lldb::pid_t pid = pid_tid->first;
   lldb::tid_t tid = pid_tid->second;
@@ -4111,8 +4129,8 @@ GDBRemoteCommunicationServerLLGS::Handle_T(StringExtractorGDBRemote &packet) {
   // Technically, this would also be caught by the PID check but let's be more
   // explicit about the error.
   if (pid == LLDB_INVALID_PROCESS_ID)
-    return SendErrorResponse(llvm::make_error<StringError>(
-        inconvertibleErrorCode(), "No current process and no PID provided"));
+    return SendErrorResponse(
+        llvm::createStringError("no current process and no PID provided"));
 
   // Check the process ID and find respective process instance.
   auto new_process_it = m_debugged_processes.find(pid);

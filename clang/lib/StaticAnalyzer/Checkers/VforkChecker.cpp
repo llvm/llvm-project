@@ -45,7 +45,7 @@ namespace {
 class VforkChecker : public Checker<check::PreCall, check::PostCall,
                                     check::Bind, check::PreStmt<ReturnStmt>> {
   const BugType BT{this, "Dangerous construct in a vforked process"};
-  mutable llvm::SmallSet<const IdentifierInfo *, 10> VforkAllowlist;
+  mutable llvm::SmallPtrSet<const IdentifierInfo *, 10> VforkAllowlist;
   mutable const IdentifierInfo *II_vfork = nullptr;
 
   static bool isChildProcess(const ProgramStateRef State);

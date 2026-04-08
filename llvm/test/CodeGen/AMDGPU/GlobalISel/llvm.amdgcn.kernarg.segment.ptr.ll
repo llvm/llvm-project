@@ -1,6 +1,6 @@
-; RUN: llc -global-isel -mtriple=amdgcn--amdhsa -mcpu=kaveri < %s | FileCheck -check-prefixes=CO-V4,HSA,ALL %s
-; RUN: llc -global-isel -mtriple=amdgcn-mesa-mesa3d -mcpu=hawaii -mattr=+flat-for-global < %s | FileCheck -check-prefixes=CO-V4,OS-MESA3D,ALL %s
-; RUN: llc -global-isel -mtriple=amdgcn-mesa-unknown -mcpu=hawaii -mattr=+flat-for-global < %s | FileCheck -check-prefixes=OS-UNKNOWN,ALL %s
+; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn--amdhsa -mcpu=kaveri < %s | FileCheck -check-prefixes=CO-V4,HSA,ALL %s
+; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn-mesa-mesa3d -mcpu=hawaii -mattr=+flat-for-global < %s | FileCheck -check-prefixes=CO-V4,OS-MESA3D,ALL %s
+; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn-mesa-unknown -mcpu=hawaii -mattr=+flat-for-global < %s | FileCheck -check-prefixes=OS-UNKNOWN,ALL %s
 
 ; ALL-LABEL: {{^}}test:
 ; OS-MESA3D: enable_sgpr_kernarg_segment_ptr = 1

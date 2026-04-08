@@ -15,9 +15,9 @@
 #ifndef FLANG_RT_RUNTIME_IO_ERROR_H_
 #define FLANG_RT_RUNTIME_IO_ERROR_H_
 
+#include "iostat.h"
 #include "memory.h"
 #include "terminator.h"
-#include "flang/Runtime/iostat.h"
 #include <cinttypes>
 
 namespace Fortran::runtime::io {
@@ -66,6 +66,17 @@ public:
 
   RT_API_ATTRS int GetIoStat() const { return ioStat_; }
   RT_API_ATTRS bool GetIoMsg(char *, std::size_t);
+
+  // Sets the HasEnd flag so that EOF isn't fatal; used to peek ahead
+  RT_API_ATTRS bool SetHasEnd(bool yes = true) {
+    bool oldValue{(flags_ & hasEnd) != 0};
+    if (yes) {
+      flags_ |= hasEnd;
+    } else {
+      flags_ &= ~hasEnd;
+    }
+    return oldValue;
+  }
 
 private:
   enum Flag : std::uint8_t {

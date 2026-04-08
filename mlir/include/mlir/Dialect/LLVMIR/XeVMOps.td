@@ -69,6 +69,7 @@ class XeVM_Op<string mnemonic, list<Trait> traits = []>
 }
 
 def XeVM_ElemType : AnyTypeOf<[AnyI8, AnyI16, AnyI32, F32, TF32, F16, BF16]>;
+def XeVM_1DBlockElemType : AnyTypeOf<[I8, I16, I32, I64]>;
 
 //===----------------------------------------------------------------------===//
 // XeVM Load Cache Control
@@ -185,6 +186,84 @@ def XeVM_StoreCacheControlAttr
     : EnumAttr<XeVM_Dialect, XeVM_StoreCacheControl, "store_cache_control"> {
   let summary = [{Describe the cache settings for store operators}];
   let assemblyFormat = "`<` $value `>`";
+}
+
+def XeVM_BlockLoadOp
+    : XeVM_Op<"blockload">,
+      Results<(outs AnyTypeOf<
+          [XeVM_1DBlockElemType,
+           FixedVectorOfRankAndType<[1], [XeVM_1DBlockElemType]>]>:$res)>,
+      Arguments<(ins Arg<LLVM_AnyPointer, "", [MemRead]>:$ptr,
+          OptionalAttr<XeVM_LoadCacheControlAttr>:$cache_control)> {
+  let summary = "subgroup block load";
+  let description = [{
+    Reads one or more components of Result data for each invocation
+    in the subgroup from the specified `ptr` as a block operation.
+    The data is read strided, so the first value read is:
+    ```
+      ptr[ SubgroupLocalInvocationId ]
+    ```
+    and the second value read is:
+    ```
+      ptr[ SubgroupLocalInvocationId + SubgroupMaxSize ]
+    ```
+    Result type may be a scalar or vector type of scalar element type.
+
+    The parameters are:
+      * `ptr` - the base address to load from. Must be uniform across subgroup.
+      * `cache_control` - an enumerator that sets the cache behaviour
+
+    Example:
+    ```mlir
+      %loaded_a = xevm.blockload %src,
+                      <{cache_control=#xevm.load_cache_control<L1uc_L2uc_L3uc>}>
+                    : (!llvm.ptr<1>) -> vector<4xi16>
+    ```
+  }];
+  let assemblyFormat = [{
+    operands prop-dict attr-dict `:` functional-type(operands, results)
+  }];
+  let hasVerifier = 1;
+}
+
+def XeVM_BlockStoreOp
+    : XeVM_Op<"blockstore">,
+      Arguments<(ins Arg<LLVM_AnyPointer, "", [MemWrite]>:$ptr,
+          AnyTypeOf<[XeVM_1DBlockElemType,
+                     FixedVectorOfRankAndType<[1],
+                                              [XeVM_1DBlockElemType]>]>:$val,
+          OptionalAttr<XeVM_StoreCacheControlAttr>:$cache_control)> {
+  let summary = "subgroup block store";
+  let description = [{
+    Writes one or more components of `val` for each invocation
+    in the subgroup to the specified `ptr` as a block operation.
+    The data is written strided, so the first value is written to:
+    ```
+      ptr[ SubgroupLocalInvocationId ]
+    ```
+    and the second value is written to:
+    ```
+      ptr[ SubgroupLocalInvocationId + SubgroupMaxSize ]
+    ```
+    `val` type may be a scalar or vector type of scalar element type.
+
+    The parameters are:
+      * `ptr` - the base address to store to. Must be uniform across subgroup.
+      * `val` - the value to store
+      * `cache_control` - an enumerator that sets the cache behaviour
+
+    Example:
+    ```mlir
+      xevm.blockstore %ptr, %val
+        <{cache_control=#xevm.store_cache_control<L1uc_L2uc_L3uc>}>
+        : (!llvm.ptr<1>, vector<4xi16>)
+    ```
+  }];
+
+  let assemblyFormat = [{
+    operands prop-dict attr-dict `:` `(` type(operands) `)`
+  }];
+  let hasVerifier = 1;
 }
 
 def XeVM_BlockLoad2dOp
@@ -384,10 +463,9 @@ def XeVM_PrefetchOp
 
 def XeVM_BlockPrefetch2dOp
     : XeVM_Op<"blockprefetch2d">,
-      Arguments<(ins Arg<LLVM_AnyPointer, "", [MemRead]>:$ptr, I32:$base_width,
-          I32:$base_height, I32:$base_pitch, I32:$x, I32:$y,
-          I32Attr:$elem_size_in_bits, I32Attr:$tile_width, I32Attr:$tile_height,
-          I32Attr:$v_blocks,
+      Arguments<(ins LLVM_AnyPointer:$ptr, I32:$base_width, I32:$base_height,
+          I32:$base_pitch, I32:$x, I32:$y, I32Attr:$elem_size_in_bits,
+          I32Attr:$tile_width, I32Attr:$tile_height, I32Attr:$v_blocks,
           OptionalAttr<XeVM_LoadCacheControlAttr>:$cache_control)> {
 
   let summary = "2D block prefetch";
@@ -441,11 +519,15 @@ def XeVM_ET_U4 : I32EnumAttrCase<"U4", 13, "u4">;
 def XeVM_ET_TF32 : I32EnumAttrCase<"TF32", 14, "tf32">;
 def XeVM_ET_F32 : I32EnumAttrCase<"F32", 15, "f32">;
 def XeVM_ET_S32 : I32EnumAttrCase<"S32", 16, "s32">;
+def XeVM_ET_E2M1 : I32EnumAttrCase<"E2M1", 17, "e2m1">;
+def XeVM_ET_BF8 : I32EnumAttrCase<"BF8", 18, "bf8">;
+def XeVM_ET_F8 : I32EnumAttrCase<"F8", 19, "f8">;
 
-def XeVM_ElemTypeAttr : I32EnumAttr<"ElemType", "XeVM element type",
-                                    [XeVM_ET_BF16, XeVM_ET_F16, XeVM_ET_S8,
-                                     XeVM_ET_U8, XeVM_ET_S4, XeVM_ET_U4,
-                                     XeVM_ET_TF32, XeVM_ET_F32, XeVM_ET_S32]> {
+def XeVM_ElemTypeAttr
+    : I32EnumAttr<"ElemType", "XeVM element type",
+                  [XeVM_ET_BF16, XeVM_ET_F16, XeVM_ET_S8, XeVM_ET_U8,
+                   XeVM_ET_S4, XeVM_ET_U4, XeVM_ET_TF32, XeVM_ET_F32,
+                   XeVM_ET_S32, XeVM_ET_E2M1, XeVM_ET_BF8, XeVM_ET_F8]> {
   let cppNamespace = "::mlir::xevm";
 }
 
@@ -514,6 +596,98 @@ def XeVM_MMAOp
   let hasVerifier = 1;
 }
 
+def XeVM_TruncfSrcElemTypes
+    : I32EnumAttr<
+          "TruncfSrcElemTypes",
+          "Source element type for xevm.truncf", [XeVM_ET_F16, XeVM_ET_BF16]> {
+  let cppNamespace = "::mlir::xevm";
+}
+
+def XeVM_TruncfSrcElemTypeAttr : XeVM_Attr<"TruncfSrcElemType", "src_etype"> {
+  let parameters = (ins "xevm::TruncfSrcElemTypes":$etype);
+  let assemblyFormat = "`src_etype` `=` $etype";
+}
+
+def XeVM_TruncfDstElemTypes
+    : I32EnumAttr<"TruncfDstElemTypes",
+                  "Destination element type for xevm.truncf",
+                  [XeVM_ET_BF8, XeVM_ET_F8, XeVM_ET_E2M1]> {
+  let cppNamespace = "::mlir::xevm";
+}
+
+def XeVM_TruncfDstElemTypeAttr : XeVM_Attr<"TruncfDstElemType", "dst_etype"> {
+  let parameters = (ins "xevm::TruncfDstElemTypes":$etype);
+  let assemblyFormat = "`dst_etype` `=` $etype";
+}
+
+def XeVM_TruncfOp
+    : XeVM_Op<"truncf">,
+      Results<(outs AnyTypeOf<[VectorOfRankAndType<[1], [I8, I<4>]>, I8,
+                               I<4>]>:$dst)>,
+      Arguments<(ins AnyTypeOf<[VectorOfRankAndType<[1], [F16, BF16]>, F16,
+                                BF16]>:$src,
+          XeVM_TruncfSrcElemTypeAttr:$src_etype,
+          XeVM_TruncfDstElemTypeAttr:$dst_etype)> {
+  let summary = "Floating point truncation from f16/bf16 to f8/bf8/f4";
+  let description = [{
+    The `xevm.truncf` operation truncates a floating point value from
+    f16/bf16 to f8/bf8/f4 format.
+  }];
+
+  let assemblyFormat = [{
+    $src ` ` `{` $src_etype `,` $dst_etype `}` attr-dict `:` functional-type(operands, results)
+  }];
+
+  let hasVerifier = 1;
+}
+
+def XeVM_MMAMxOp
+    : XeVM_Op<"mma_mx">,
+      Results<(outs FixedVectorOfRankAndType<[1], [XeVM_MatrixElemType]>:$d)>,
+      Arguments<(ins FixedVectorOfRankAndType<[1], [XeVM_MatrixElemType]>:$a,
+          FixedVectorOfRankAndType<[1], [XeVM_MatrixElemType]>:$b,
+          FixedVectorOfRankAndType<[1], [I8]>:$scale_a,
+          FixedVectorOfRankAndType<[1], [I8]>:$scale_b,
+          Optional<FixedVectorOfRankAndType<[1], [XeVM_MatrixElemType]>>:$c,
+          XeVM_MMAShapeAttr:$shape, XeVM_MMATypesAttr:$types)> {
+
+  let summary = "Subgroup matrix multiply-add with MxN shape and MX scaling";
+
+  let description = [{
+    The `xevm.mma_mx` is similar to `xevm.mma` has scale operands for A and B matrices.
+    It is a cooperative operation where all threads/lanes in a subgroup participates
+    and carries out matrix multiplication plus accumulation:
+
+      D = C + A x B
+
+      where the A, B, C input matrices and the result D have shapes:
+        - D : MxN
+        - C : MxN
+        - A : MxK
+        - B : KxN
+
+    Parameters:
+      * `a` - vector of matrix A elements.
+      * `b` - vector of matrix B elements.
+      * `scale_a` - vector of scaling factors for matrix A.
+      * `scale_b` - vector of scaling factors for matrix B.
+      * `c` - (optional) vector of matrix C elements.
+      * `shape` - the shape of the matrices, specified as `M`, `N`, and `K` values.
+      * `types` - the data types of the matrices, specified as `D`, `A`, `B`, and optionally `C`.
+
+  }];
+
+  let assemblyFormat = [{
+    $a `,` $b `,` $scale_a `,` $scale_b (`,` $c^)? ` `
+    `{`
+      `shape` `=` $shape `,`
+      `types` `=` $types
+    `}` attr-dict `:` functional-type(operands, results)
+  }];
+
+  let hasVerifier = 1;
+}
+
 //===----------------------------------------------------------------------===//
 // XeVM target attribute.
 //===----------------------------------------------------------------------===//
@@ -557,5 +731,38 @@ def XeVM_TargetAttr : XeVM_Attr<"XeVMTarget", "target"> {
   let skipDefaultBuilders = 1;
   let genVerifyDecl = 1;
 }
+
+//===----------------------------------------------------------------------===//
+// XeVM special register op definitions
+//===----------------------------------------------------------------------===//
+
+class XeVM_SpecialIdRegisterOp<string mnemonic, list<Trait> traits = []>
+    : XeVM_Op<mnemonic, traits>,
+      Results<(outs AnyTypeOf<[I32, I64]>:$res)>,
+      Arguments<(ins OptionalAttr<LLVM_ConstantRangeAttr>:$range)> {
+  let assemblyFormat = "(`range` $range^)? attr-dict `:` type($res)";
+}
+
+multiclass XeVM_SpecialRegisterXYZ<string mnemonic, list<Trait> traits = []> {
+  def XOp : XeVM_SpecialIdRegisterOp<!strconcat(mnemonic, ".x"), traits>;
+  def YOp : XeVM_SpecialIdRegisterOp<!strconcat(mnemonic, ".y"), traits>;
+  def ZOp : XeVM_SpecialIdRegisterOp<!strconcat(mnemonic, ".z"), traits>;
+}
+
+//===----------------------------------------------------------------------===//
+// Workitem index and range
+defm XeVM_WorkitemId : XeVM_SpecialRegisterXYZ<"local_id">;
+defm XeVM_WorkgroupDim : XeVM_SpecialRegisterXYZ<"local_size">;
+
+//===----------------------------------------------------------------------===//
+// Workgroup index and range
+defm XeVM_WorkgroupId : XeVM_SpecialRegisterXYZ<"group_id">;
+defm XeVM_GridDim : XeVM_SpecialRegisterXYZ<"group_count">;
+
+//===----------------------------------------------------------------------===//
+// Lane, Subgroup index and range
+def XeVM_LaneIdOp : XeVM_SpecialIdRegisterOp<"lane_id">;
+def XeVM_SubgroupIdOp : XeVM_SpecialIdRegisterOp<"subgroup_id">;
+def XeVM_SubgroupSizeOp : XeVM_SpecialIdRegisterOp<"subgroup_size">;
 
 #endif // XEVMIR_OPS

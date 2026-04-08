@@ -14,8 +14,8 @@
 #define __SM4EVEXINTRIN_H
 
 #define __DEFAULT_FN_ATTRS512                                                  \
-  __attribute__((__always_inline__, __nodebug__,                               \
-                 __target__("sm4,avx10.2-512"), __min_vector_width__(512)))
+  __attribute__((__always_inline__, __nodebug__, __target__("sm4,avx10.2"),    \
+                 __min_vector_width__(512)))
 
 static __inline__ __m512i __DEFAULT_FN_ATTRS512
 _mm512_sm4key4_epi32(__m512i __A, __m512i __B) {

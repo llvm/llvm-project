@@ -966,3 +966,45 @@ namespace AddressComparison {
   static_assert(&U2.a[0] != &U2.b[1]);
   static_assert(&U2.a[0] == &U2.b[1]); // both-error {{failed}}
 }
+
+#if __cplusplus >= 202002L
+namespace UnionMemberOnePastEnd {
+  constexpr bool b() {
+    union  {
+      int p;
+    };
+    return &p == (&p + 1);
+  }
+  static_assert(!b());
+}
+
+namespace ActicvateInvalidPtr {
+  constexpr void bar() { // both-error {{never produces a constant expression}}
+    union {
+      int a[1];
+    } foo;
+    foo.a[1] = 0; // both-note {{assignment to dereferenced one-past-the-end pointer}}
+  }
+}
+
+namespace NonTrivialUnionCtor {
+  union A {
+    int y = 5;
+  };
+  union D {
+    constexpr D(int n) : n(n) {}
+    constexpr D() : n(3) {}
+
+    A a;
+    int n;
+  };
+
+  constexpr bool j() {
+    D d;
+    d.a.y = 3; // both-note {{assignment to member 'a' of union with active member 'n'}}
+    return d.a.y == 3;
+  }
+  static_assert(j()); // both-error {{not an integral constant expression}} \
+                      // both-note {{in call to}}
+}
+#endif

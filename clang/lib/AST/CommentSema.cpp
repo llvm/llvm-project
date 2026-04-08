@@ -100,32 +100,30 @@ void Sema::checkFunctionDeclVerbatimLine(const BlockCommandComment *Comment) {
   if (!Info->IsFunctionDeclarationCommand)
     return;
 
-  unsigned DiagSelect;
+  std::optional<unsigned> DiagSelect;
   switch (Comment->getCommandID()) {
     case CommandTraits::KCI_function:
-      DiagSelect = (!isAnyFunctionDecl() && !isFunctionTemplateDecl())? 1 : 0;
+      if (!isAnyFunctionDecl() && !isFunctionTemplateDecl())
+        DiagSelect = diag::CallableKind::Function;
       break;
     case CommandTraits::KCI_functiongroup:
-      DiagSelect = (!isAnyFunctionDecl() && !isFunctionTemplateDecl())? 2 : 0;
+      if (!isAnyFunctionDecl() && !isFunctionTemplateDecl())
+        DiagSelect = diag::CallableKind::FunctionGroup;
       break;
     case CommandTraits::KCI_method:
-      DiagSelect = !isObjCMethodDecl() ? 3 : 0;
+      DiagSelect = diag::CallableKind::Method;
       break;
     case CommandTraits::KCI_methodgroup:
-      DiagSelect = !isObjCMethodDecl() ? 4 : 0;
+      DiagSelect = diag::CallableKind::MethodGroup;
       break;
     case CommandTraits::KCI_callback:
-      DiagSelect = !isFunctionPointerVarDecl() ? 5 : 0;
-      break;
-    default:
-      DiagSelect = 0;
+      DiagSelect = diag::CallableKind::Callback;
       break;
   }
   if (DiagSelect)
     Diag(Comment->getLocation(), diag::warn_doc_function_method_decl_mismatch)
-    << Comment->getCommandMarker()
-    << (DiagSelect-1) << (DiagSelect-1)
-    << Comment->getSourceRange();
+        << Comment->getCommandMarker() << (*DiagSelect) << (*DiagSelect)
+        << Comment->getSourceRange();
 }
 
 void Sema::checkContainerDeclVerbatimLine(const BlockCommandComment *Comment) {
@@ -225,7 +223,7 @@ static ParamCommandPassDirection getParamPassDirection(StringRef Arg) {
   return llvm::StringSwitch<ParamCommandPassDirection>(Arg)
       .Case("[in]", ParamCommandPassDirection::In)
       .Case("[out]", ParamCommandPassDirection::Out)
-      .Cases("[in,out]", "[out,in]", ParamCommandPassDirection::InOut)
+      .Cases({"[in,out]", "[out,in]"}, ParamCommandPassDirection::InOut)
       .Default(static_cast<ParamCommandPassDirection>(-1));
 }
 
@@ -1061,8 +1059,8 @@ InlineCommandRenderKind Sema::getInlineCommandRenderKind(StringRef Name) const {
 
   return llvm::StringSwitch<InlineCommandRenderKind>(Name)
       .Case("b", InlineCommandRenderKind::Bold)
-      .Cases("c", "p", InlineCommandRenderKind::Monospaced)
-      .Cases("a", "e", "em", InlineCommandRenderKind::Emphasized)
+      .Cases({"c", "p"}, InlineCommandRenderKind::Monospaced)
+      .Cases({"a", "e", "em"}, InlineCommandRenderKind::Emphasized)
       .Case("anchor", InlineCommandRenderKind::Anchor)
       .Default(InlineCommandRenderKind::Normal);
 }

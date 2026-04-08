@@ -28,6 +28,7 @@ static_library("Utils") {
     "CountVisits.cpp",
     "CtorUtils.cpp",
     "DXILUpgrade.cpp",
+    "DebugSSAUpdater.cpp",
     "Debugify.cpp",
     "DeclareRuntimeLibcalls.cpp",
     "DemoteRegToStack.cpp",

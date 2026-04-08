@@ -65,6 +65,8 @@ public:
   /// constant.  If this succeeds, the emission must be finalized.
   mlir::Attribute tryEmitForInitializer(const VarDecl &d);
 
+  mlir::Attribute emitForInitializer(const APValue &value, QualType destType);
+
   void finalize(cir::GlobalOp gv);
 
   // All of the "abstract" emission methods below permit the emission to
@@ -81,6 +83,14 @@ public:
   //     side effects, or emitting an initialization that requires a
   //     reference to its current location.
   mlir::Attribute emitForMemory(mlir::Attribute c, QualType destType);
+  static mlir::Attribute emitForMemory(CIRGenModule &cgm, mlir::Attribute c,
+                                       clang::QualType destTy);
+
+  mlir::Attribute emitNullForMemory(mlir::Location loc, QualType t) {
+    return emitNullForMemory(loc, cgm, t);
+  }
+  static mlir::Attribute emitNullForMemory(mlir::Location loc,
+                                           CIRGenModule &cgm, QualType t);
 
   /// Try to emit the initializer of the given declaration as an abstract
   /// constant.
@@ -104,7 +114,11 @@ public:
 
   mlir::TypedAttr tryEmitPrivate(const Expr *e, QualType destType);
   mlir::Attribute tryEmitPrivate(const APValue &value, QualType destType);
-  mlir::Attribute tryEmitPrivateForMemory(const APValue &value, QualType t);
+  mlir::Attribute tryEmitPrivateForMemory(const Expr *e, QualType destTy);
+  mlir::Attribute tryEmitPrivateForMemory(const APValue &value,
+                                          QualType destTy);
+
+  mlir::Attribute tryEmitAbstract(const Expr *e, QualType destType);
 
 private:
 #ifndef NDEBUG

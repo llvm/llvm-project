@@ -14,6 +14,7 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_AMDGPUISELDAGTODAG_H
 #define LLVM_LIB_TARGET_AMDGPU_AMDGPUISELDAGTODAG_H
 
+#include "AMDGPUSelectionDAGInfo.h"
 #include "GCNSubtarget.h"
 #include "SIMachineFunctionInfo.h"
 #include "SIModeRegisterDefaults.h"
@@ -43,21 +44,6 @@ static inline bool getConstantValue(SDValue N, uint32_t &Out) {
   }
 
   return false;
-}
-
-// TODO: Handle undef as zero
-static inline SDNode *packConstantV2I16(const SDNode *N, SelectionDAG &DAG) {
-  assert(N->getOpcode() == ISD::BUILD_VECTOR && N->getNumOperands() == 2);
-  uint32_t LHSVal, RHSVal;
-  if (getConstantValue(N->getOperand(0), LHSVal) &&
-      getConstantValue(N->getOperand(1), RHSVal)) {
-    SDLoc SL(N);
-    uint32_t K = (LHSVal & 0xffff) | (RHSVal << 16);
-    return DAG.getMachineNode(AMDGPU::S_MOV_B32, SL, N->getValueType(0),
-                              DAG.getTargetConstant(K, SL, MVT::i32));
-  }
-
-  return nullptr;
 }
 
 /// AMDGPU specific code to select AMDGPU machine instructions for
@@ -106,6 +92,17 @@ private:
   bool isUniformLoad(const SDNode *N) const;
   bool isUniformBr(const SDNode *N) const;
 
+  MachineSDNode *buildRegSequence16(SmallVectorImpl<SDValue> &Elts,
+                                    const SDLoc &DL) const;
+  MachineSDNode *buildRegSequence32(SmallVectorImpl<SDValue> &Elts,
+                                    const SDLoc &DL) const;
+  MachineSDNode *buildRegSequence(SmallVectorImpl<SDValue> &Elts,
+                                  const SDLoc &DL, unsigned ElementSize) const;
+
+  void selectWMMAModsNegAbs(unsigned ModOpcode, unsigned &Mods,
+                            SmallVectorImpl<SDValue> &Elts, SDValue &Src,
+                            const SDLoc &DL, unsigned ElementSize) const;
+
   // Returns true if ISD::AND SDNode `N`'s masking of the shift amount operand's
   // `ShAmtBits` bits is unneeded.
   bool isUnneededShiftMask(const SDNode *N, unsigned ShAmtBits) const;
@@ -114,6 +111,8 @@ private:
                                   SDValue &RHS) const;
 
   MachineSDNode *buildSMovImm64(SDLoc &DL, uint64_t Val, EVT VT) const;
+
+  SDNode *packConstantV2I16(const SDNode *N, SelectionDAG &DAG) const;
 
   SDNode *glueCopyToOp(SDNode *N, SDValue NewChain, SDValue Glue) const;
   SDNode *glueCopyToM0(SDNode *N, SDValue Val) const;
@@ -171,11 +170,16 @@ private:
   bool SelectGlobalSAddrCPol(SDNode *N, SDValue Addr, SDValue &SAddr,
                              SDValue &VOffset, SDValue &Offset,
                              SDValue &CPol) const;
+  bool SelectGlobalSAddrCPolM0(SDNode *N, SDValue Addr, SDValue &SAddr,
+                               SDValue &VOffset, SDValue &Offset,
+                               SDValue &CPol) const;
   bool SelectGlobalSAddrGLC(SDNode *N, SDValue Addr, SDValue &SAddr,
                             SDValue &VOffset, SDValue &Offset,
                             SDValue &CPol) const;
   bool SelectGlobalSAddrNoIOffset(SDNode *N, SDValue Addr, SDValue &SAddr,
                                   SDValue &VOffset, SDValue &CPol) const;
+  bool SelectGlobalSAddrNoIOffsetM0(SDNode *N, SDValue Addr, SDValue &SAddr,
+                                    SDValue &VOffset, SDValue &CPol) const;
   bool SelectScratchSAddr(SDNode *N, SDValue Addr, SDValue &SAddr,
                           SDValue &Offset) const;
   bool checkFlatScratchSVSSwizzleBug(SDValue VAddr, SDValue SAddr,
@@ -240,6 +244,9 @@ private:
   bool SelectVOP3PMods(SDValue In, SDValue &Src, SDValue &SrcMods,
                        bool IsDOT = false) const;
   bool SelectVOP3PModsDOT(SDValue In, SDValue &Src, SDValue &SrcMods) const;
+  bool SelectVOP3PNoModsDOT(SDValue In, SDValue &Src) const;
+  bool SelectVOP3PModsF32(SDValue In, SDValue &Src, SDValue &SrcMods) const;
+  bool SelectVOP3PNoModsF32(SDValue In, SDValue &Src) const;
 
   bool SelectWMMAOpSelVOP3PMods(SDValue In, SDValue &Src) const;
 
@@ -292,6 +299,7 @@ private:
   void SelectFP_EXTEND(SDNode *N);
   void SelectDSAppendConsume(SDNode *N, unsigned IntrID);
   void SelectDSBvhStackIntrinsic(SDNode *N, unsigned IntrID);
+  void SelectTensorLoadStore(SDNode *N, unsigned IntrID);
   void SelectDS_GWS(SDNode *N, unsigned IntrID);
   void SelectInterpP1F16(SDNode *N);
   void SelectINTRINSIC_W_CHAIN(SDNode *N);

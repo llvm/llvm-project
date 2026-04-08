@@ -12,6 +12,7 @@
 
 #include "SPIRVInstrInfo.h"
 #include "SPIRV.h"
+#include "SPIRVSubtarget.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -22,7 +23,8 @@
 
 using namespace llvm;
 
-SPIRVInstrInfo::SPIRVInstrInfo() : SPIRVGenInstrInfo() {}
+SPIRVInstrInfo::SPIRVInstrInfo(const SPIRVSubtarget &STI)
+    : SPIRVGenInstrInfo(STI, RI) {}
 
 bool SPIRVInstrInfo::isConstantInstr(const MachineInstr &MI) const {
   switch (MI.getOpcode()) {
@@ -130,7 +132,8 @@ bool SPIRVInstrInfo::isHeaderInstr(const MachineInstr &MI) const {
   }
 }
 
-bool SPIRVInstrInfo::canUseFastMathFlags(const MachineInstr &MI) const {
+bool SPIRVInstrInfo::canUseFastMathFlags(const MachineInstr &MI,
+                                         bool KHRFloatControls2) const {
   switch (MI.getOpcode()) {
   case SPIRV::OpFAddS:
   case SPIRV::OpFSubS:
@@ -144,6 +147,24 @@ bool SPIRVInstrInfo::canUseFastMathFlags(const MachineInstr &MI) const {
   case SPIRV::OpFRemV:
   case SPIRV::OpFMod:
     return true;
+  case SPIRV::OpFNegateV:
+  case SPIRV::OpFNegate:
+  case SPIRV::OpOrdered:
+  case SPIRV::OpUnordered:
+  case SPIRV::OpFOrdEqual:
+  case SPIRV::OpFOrdNotEqual:
+  case SPIRV::OpFOrdLessThan:
+  case SPIRV::OpFOrdLessThanEqual:
+  case SPIRV::OpFOrdGreaterThan:
+  case SPIRV::OpFOrdGreaterThanEqual:
+  case SPIRV::OpFUnordEqual:
+  case SPIRV::OpFUnordNotEqual:
+  case SPIRV::OpFUnordLessThan:
+  case SPIRV::OpFUnordLessThanEqual:
+  case SPIRV::OpFUnordGreaterThan:
+  case SPIRV::OpFUnordGreaterThanEqual:
+  case SPIRV::OpExtInst:
+    return KHRFloatControls2 ? true : false;
   default:
     return false;
   }

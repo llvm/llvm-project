@@ -14,7 +14,8 @@
 #include "clang/Driver/Distro.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/InputInfo.h"
-#include "clang/Driver/Options.h"
+#include "clang/Options/Options.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Config/llvm-config.h" // for LLVM_HOST_TRIPLE
 #include "llvm/Option/ArgList.h"
@@ -153,16 +154,16 @@ CudaInstallationDetector::CudaInstallationDetector(
   std::initializer_list<const char *> Versions = {"8.0", "7.5", "7.0"};
   auto &FS = D.getVFS();
 
-  if (Args.hasArg(clang::driver::options::OPT_cuda_path_EQ)) {
+  if (Args.hasArg(options::OPT_cuda_path_EQ)) {
     Candidates.emplace_back(
-        Args.getLastArgValue(clang::driver::options::OPT_cuda_path_EQ).str());
+        Args.getLastArgValue(options::OPT_cuda_path_EQ).str());
   } else if (HostTriple.isOSWindows()) {
     for (const char *Ver : Versions)
       Candidates.emplace_back(
           D.SysRoot + "/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v" +
           Ver);
   } else {
-    if (!Args.hasArg(clang::driver::options::OPT_cuda_path_ignore_env)) {
+    if (!Args.hasArg(options::OPT_cuda_path_ignore_env)) {
       // Try to find ptxas binary. If the executable is located in a directory
       // called 'bin/', its parent directory might be a good guess for a valid
       // CUDA installation.
@@ -319,7 +320,7 @@ void CudaInstallationDetector::AddCudaIncludeArgs(
 
 void CudaInstallationDetector::CheckCudaVersionSupportsArch(
     OffloadArch Arch) const {
-  if (Arch == OffloadArch::UNKNOWN || Version == CudaVersion::UNKNOWN ||
+  if (Arch == OffloadArch::Unknown || Version == CudaVersion::UNKNOWN ||
       ArchsWithBadVersion[(int)Arch])
     return;
 
@@ -408,7 +409,7 @@ void NVPTX::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
 
   // Obtain architecture from the action.
   OffloadArch gpu_arch = StringToOffloadArch(GPUArchName);
-  assert(gpu_arch != OffloadArch::UNKNOWN &&
+  assert(gpu_arch != OffloadArch::Unknown &&
          "Device action expected to have an architecture.");
 
   // Check that our installation's ptxas supports gpu_arch.
@@ -643,6 +644,8 @@ void NVPTX::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   llvm::sys::path::append(DefaultLibPath, CLANG_INSTALL_LIBDIR_BASENAME);
   CmdArgs.push_back(Args.MakeArgString(Twine("-L") + DefaultLibPath));
 
+  getToolChain().addProfileRTLibs(Args, CmdArgs);
+
   if (Args.hasArg(options::OPT_stdlib))
     CmdArgs.append({"-lc", "-lm"});
   if (Args.hasArg(options::OPT_startfiles)) {
@@ -666,8 +669,7 @@ void NVPTX::getNVPTXTargetFeatures(const Driver &D, const llvm::Triple &Triple,
                                    const llvm::opt::ArgList &Args,
                                    std::vector<StringRef> &Features) {
   if (Args.hasArg(options::OPT_cuda_feature_EQ)) {
-    StringRef PtxFeature =
-        Args.getLastArgValue(options::OPT_cuda_feature_EQ, "+ptx42");
+    StringRef PtxFeature = Args.getLastArgValue(options::OPT_cuda_feature_EQ);
     Features.push_back(Args.MakeArgString(PtxFeature));
     return;
   }
@@ -706,15 +708,20 @@ void NVPTX::getNVPTXTargetFeatures(const Driver &D, const llvm::Triple &Triple,
     CASE_CUDA_VERSION(92, 61);
     CASE_CUDA_VERSION(91, 61);
     CASE_CUDA_VERSION(90, 60);
+    CASE_CUDA_VERSION(80, 50);
+    CASE_CUDA_VERSION(75, 43);
+    CASE_CUDA_VERSION(70, 42);
 #undef CASE_CUDA_VERSION
   // TODO: Use specific CUDA version once it's public.
   case clang::CudaVersion::NEW:
     PtxFeature = "+ptx86";
     break;
   default:
-    PtxFeature = "+ptx42";
+    // No PTX feature specified; let the backend choose based on the target SM.
+    break;
   }
-  Features.push_back(PtxFeature);
+  if (PtxFeature)
+    Features.push_back(PtxFeature);
 }
 
 /// NVPTX toolchain. Our assembler is ptxas, and our linker is nvlink. This
@@ -763,11 +770,12 @@ NVPTXToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
       getDriver().Diag(diag::err_drv_undetermined_gpu_arch)
           << getArchName() << llvm::toString(GPUsOrErr.takeError()) << "-march";
     } else {
-      if (GPUsOrErr->size() > 1)
+      auto &GPUs = *GPUsOrErr;
+      if (llvm::SmallSet<std::string, 1>(GPUs.begin(), GPUs.end()).size() > 1)
         getDriver().Diag(diag::warn_drv_multi_gpu_arch)
-            << getArchName() << llvm::join(*GPUsOrErr, ", ") << "-march";
+            << getArchName() << llvm::join(GPUs, ", ") << "-march";
       DAL->AddJoinedArg(nullptr, Opts.getOption(options::OPT_march_EQ),
-                        Args.MakeArgString(GPUsOrErr->front()));
+                        Args.MakeArgString(GPUs.front()));
     }
   }
 
@@ -777,6 +785,16 @@ NVPTXToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
 void NVPTXToolChain::addClangTargetOptions(
     const llvm::opt::ArgList &DriverArgs, llvm::opt::ArgStringList &CC1Args,
     Action::OffloadKind DeviceOffloadingKind) const {}
+
+void NVPTXToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
+                                               ArgStringList &CC1Args) const {
+  if (DriverArgs.hasArg(options::OPT_nostdinc) ||
+      DriverArgs.hasArg(options::OPT_nostdlibinc))
+    return;
+
+  if (std::optional<std::string> Path = getStdlibIncludePath())
+    addSystemInclude(DriverArgs, CC1Args, *Path);
+}
 
 bool NVPTXToolChain::supportsDebugInfoOption(const llvm::opt::Arg *A) const {
   const Option &O = A->getOption();
@@ -852,13 +870,6 @@ void CudaToolChain::addClangTargetOptions(
   CC1Args.append({"-fcuda-is-device", "-mllvm",
                   "-enable-memcpyopt-without-libcalls",
                   "-fno-threadsafe-statics"});
-
-  // Unsized function arguments used for variadics were introduced in CUDA-9.0
-  // We still do not support generating code that actually uses variadic
-  // arguments yet, but we do need to allow parsing them as recent CUDA
-  // headers rely on that. https://github.com/llvm/llvm-project/issues/58410
-  if (CudaInstallation.version() >= CudaVersion::CUDA_90)
-    CC1Args.push_back("-fcuda-allow-variadic-functions");
 
   if (DriverArgs.hasFlag(options::OPT_fcuda_short_ptr,
                          options::OPT_fno_cuda_short_ptr, false))

@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <utility>
+
 #include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.h"
 
 #include "mlir/IR/Diagnostics.h"
@@ -46,8 +48,6 @@ static bool happensBefore(Operation *a, Operation *b) {
 //===----------------------------------------------------------------------===//
 // TransformState
 //===----------------------------------------------------------------------===//
-
-constexpr const Value transform::TransformState::kTopLevelValue;
 
 transform::TransformState::TransformState(
     Region *region, Operation *payloadRoot,
@@ -312,7 +312,7 @@ LogicalResult transform::TransformState::setParams(Value value,
 }
 
 template <typename Mapping, typename Key, typename Mapped>
-void dropMappingEntry(Mapping &mapping, Key key, Mapped mapped) {
+static void dropMappingEntry(Mapping &mapping, Key key, Mapped mapped) {
   auto it = mapping.find(key);
   if (it == mapping.end())
     return;
@@ -556,8 +556,7 @@ void transform::TransformState::recordValueHandleInvalidationByOpHandleOne(
       auto arg = llvm::cast<BlockArgument>(payloadValue);
       definingOp = arg.getParentBlock()->getParentOp();
       argumentNo = arg.getArgNumber();
-      blockNo = std::distance(arg.getOwner()->getParent()->begin(),
-                              arg.getOwner()->getIterator());
+      blockNo = arg.getOwner()->computeBlockNumber();
       regionNo = arg.getOwner()->getParent()->getRegionNumber();
     }
     assert(definingOp && "expected the value to be defined by an op as result "
@@ -771,7 +770,7 @@ LogicalResult transform::TransformState::checkAndRecordHandleInvalidation(
 }
 
 template <typename T>
-DiagnosedSilenceableFailure
+static DiagnosedSilenceableFailure
 checkRepeatedConsumptionInOperand(ArrayRef<T> payload,
                                   transform::TransformOpInterface transform,
                                   unsigned operandNumber) {
@@ -812,7 +811,7 @@ transform::TransformState::applyTransform(TransformOpInterface transform) {
   LDBG() << "applying: "
          << OpWithFlags(transform, OpPrintingFlags().skipRegions());
   FULL_LDBG() << "Top-level payload before application:\n" << *getTopLevel();
-  auto printOnFailureRAII = llvm::make_scope_exit([this] {
+  llvm::scope_exit printOnFailureRAII([this] {
     (void)this;
     LDBG() << "Failing Top-level payload:\n"
            << OpWithFlags(getTopLevel(),
@@ -1174,7 +1173,8 @@ bool transform::TransformResults::isSet(unsigned resultNumber) const {
 transform::TrackingListener::TrackingListener(TransformState &state,
                                               TransformOpInterface op,
                                               TrackingListenerConfig config)
-    : TransformState::Extension(state), transformOp(op), config(config) {
+    : TransformState::Extension(state), transformOp(op),
+      config(std::move(config)) {
   if (op) {
     for (OpOperand *opOperand : transformOp.getConsumedHandleOpOperands()) {
       consumedHandles.insert(opOperand->get());
@@ -1307,8 +1307,8 @@ void transform::TrackingListener::notifyOperationReplaced(
   // Check if there are any handles that must be updated.
   Value aliveHandle;
   if (config.skipHandleFn) {
-    auto it = llvm::find_if(opHandles,
-                            [&](Value v) { return !config.skipHandleFn(v); });
+    auto *it = llvm::find_if(opHandles,
+                             [&](Value v) { return !config.skipHandleFn(v); });
     if (it != opHandles.end())
       aliveHandle = *it;
   } else if (!opHandles.empty()) {
@@ -1497,8 +1497,7 @@ transform::detail::checkApplyToOne(Operation *transformOp,
 
 template <typename T>
 static SmallVector<T> castVector(ArrayRef<transform::MappedValue> range) {
-  return llvm::to_vector(llvm::map_range(
-      range, [](transform::MappedValue value) { return cast<T>(value); }));
+  return llvm::map_to_vector(range, llvm::CastTo<T>);
 }
 
 void transform::detail::setApplyToOneResults(

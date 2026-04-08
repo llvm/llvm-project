@@ -56,7 +56,8 @@ struct RootDescriptor {
       return;
     }
 
-    assert(Version == llvm::dxbc::RootSignatureVersion::V1_1 &&
+    assert((Version == llvm::dxbc::RootSignatureVersion::V1_1 ||
+            Version == llvm::dxbc::RootSignatureVersion::V1_2) &&
            "Specified an invalid root signature version");
     switch (Type) {
     case dxil::ResourceClass::CBuffer:
@@ -100,7 +101,8 @@ struct DescriptorTableClause {
       return;
     }
 
-    assert(Version == dxbc::RootSignatureVersion::V1_1 &&
+    assert((Version == dxbc::RootSignatureVersion::V1_1 ||
+            Version == dxbc::RootSignatureVersion::V1_2) &&
            "Specified an invalid root signature version");
     switch (Type) {
     case dxil::ResourceClass::CBuffer:
@@ -131,6 +133,7 @@ struct StaticSampler {
   float MaxLOD = std::numeric_limits<float>::max();
   uint32_t Space = 0;
   dxbc::ShaderVisibility Visibility = dxbc::ShaderVisibility::All;
+  dxbc::StaticSamplerFlags Flags = dxbc::StaticSamplerFlags::None;
 };
 
 /// Models RootElement : RootFlags | RootConstants | RootParam

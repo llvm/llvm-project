@@ -3,15 +3,19 @@ function(add_macro_header name)
   cmake_parse_arguments(
     "MACRO_HEADER"
     "" # Optional arguments
-    "HDR" # Single value arguments
+    "HDR;DEST_HDR" # Single value arguments
     "DEPENDS" # Multi-value arguments
     ${ARGN}
   )
+  if (MACRO_HEADER_DEST_HDR)
+    set(dest_header_arg DEST_HDR ${MACRO_HEADER_DEST_HDR})
+  endif()
   if(TARGET libc.include.llvm-libc-macros.${LIBC_TARGET_OS}.${name})
     add_header(
       ${name}
       HDR
         ${MACRO_HEADER_HDR}
+      ${dest_header_arg}
       DEPENDS
         .${LIBC_TARGET_OS}.${name}
         ${MACRO_HEADER_DEPENDS}
@@ -21,6 +25,7 @@ function(add_macro_header name)
       ${name}
       HDR
         ${MACRO_HEADER_HDR}
+      ${dest_header_arg}
       DEPENDS
         ${MACRO_HEADER_DEPENDS}
     )
@@ -30,6 +35,12 @@ endfunction(add_macro_header)
 if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
   add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
 endif()
+
+add_macro_header(
+  annex_k_macros
+  HDR
+    annex-k-macros.h
+)
 
 add_macro_header(
   assert_macros
@@ -62,9 +73,24 @@ add_macro_header(
 )
 
 add_macro_header(
+  cfloat128_macros
+  HDR
+    cfloat128-macros.h
+)
+
+add_macro_header(
+  cfloat16_macros
+  HDR
+    cfloat16-macros.h
+)
+
+add_macro_header(
   complex_macros
   HDR
     complex-macros.h
+  DEPENDS
+    .cfloat128_macros
+    .cfloat16_macros
 )
 
 add_macro_header(
@@ -138,6 +164,12 @@ add_macro_header(
 )
 
 add_macro_header(
+  netinet_in_macros
+  HDR
+    netinet-in-macros.h
+)
+
+add_macro_header(
   offsetof_macro
   HDR
     offsetof-macro.h
@@ -197,6 +229,18 @@ add_macro_header(
   sys_ioctl_macros
   HDR
     sys-ioctl-macros.h
+)
+
+add_macro_header(
+  sys_ipc_macros
+  HDR
+    sys-ipc-macros.h
+)
+
+add_macro_header(
+  sys_sem_macros
+  HDR
+    sys-sem-macros.h
 )
 
 add_macro_header(
@@ -325,6 +369,12 @@ add_macro_header(
 )
 
 add_macro_header(
+  nl_types_macros
+  HDR
+    nl-types-macros.h
+)
+
+add_macro_header(
   pthread_macros
   HDR
     pthread-macros.h
@@ -350,3 +400,18 @@ add_macro_header(
     sysexits-macros.h
 )
 
+if (LIBC_CONF_MODULAR_FORMAT)
+  add_macro_header(
+    _LIBC_MODULAR_FORMAT_PRINTF
+    HDR
+      _LIBC_MODULAR_FORMAT_PRINTF.h
+  )
+else()
+  add_macro_header(
+    _LIBC_MODULAR_FORMAT_PRINTF
+    HDR
+      _LIBC_MODULAR_FORMAT_PRINTF-disable.h
+      DEST_HDR
+      _LIBC_MODULAR_FORMAT_PRINTF.h
+  )
+endif()

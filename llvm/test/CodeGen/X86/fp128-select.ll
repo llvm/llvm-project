@@ -13,8 +13,8 @@ define void @test_select(ptr %p, ptr %q, i1 zeroext %c) nounwind {
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    testl %edx, %edx
 ; SSE-NEXT:    jne .LBB0_1
-; SSE-NEXT:  # %bb.3:
-; SSE-NEXT:    movaps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE-NEXT:  # %bb.2:
+; SSE-NEXT:    movaps {{.*#+}} xmm0 = [NaN]
 ; SSE-NEXT:    movaps %xmm0, (%rsi)
 ; SSE-NEXT:    retq
 ; SSE-NEXT:  .LBB0_1:
@@ -58,7 +58,7 @@ define fp128 @test_select_cc(fp128, fp128) nounwind {
 ; SSE-NEXT:    xorps %xmm1, %xmm1
 ; SSE-NEXT:    jmp .LBB1_3
 ; SSE-NEXT:  .LBB1_1:
-; SSE-NEXT:    movaps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE-NEXT:    movaps {{.*#+}} xmm1 = [1.0E+0]
 ; SSE-NEXT:  .LBB1_3: # %BB0
 ; SSE-NEXT:    testl %ebx, %ebx
 ; SSE-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload

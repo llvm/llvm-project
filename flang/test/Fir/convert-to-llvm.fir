@@ -3,8 +3,8 @@
 // RUN: fir-opt --split-input-file --fir-to-llvm-ir="target=i386-unknown-linux-gnu" %s | FileCheck %s --check-prefixes=CHECK,CHECK-COMDAT,GENERIC
 // RUN: fir-opt --split-input-file --fir-to-llvm-ir="target=powerpc64le-unknown-linux-gnu" %s | FileCheck %s --check-prefixes=CHECK,CHECK-COMDAT,GENERIC
 // RUN: fir-opt --split-input-file --fir-to-llvm-ir="target=x86_64-pc-win32" %s | FileCheck %s --check-prefixes=CHECK,CHECK-COMDAT,GENERIC
-// RUN: fir-opt --split-input-file --fir-to-llvm-ir="target=aarch64-apple-darwin" %s | FileCheck %s --check-prefixes=CHECK,CHECK-NO-COMDAT,GENERIC 
-// RUN: fir-opt --split-input-file --fir-to-llvm-ir="target=amdgcn-amd-amdhsa, datalayout=e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5-P0" %s | FileCheck -check-prefixes=CHECK,AMDGPU %s
+// RUN: fir-opt --split-input-file --fir-to-llvm-ir="target=aarch64-apple-darwin" %s | FileCheck %s --check-prefixes=CHECK,CHECK-NO-COMDAT,GENERIC
+// RUN: fir-opt --split-input-file --fir-to-llvm-ir="target=amdgcn-amd-amdhsa, datalayout=e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32-p7:160:256:256:32-p8:128:128-p9:192:256:256:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5-G1-ni:7:8:9" %s | FileCheck -check-prefixes=CHECK,AMDGPU %s
 
 //===================================================
 // SUMMARY: Tests for FIR --> LLVM MLIR conversion
@@ -17,7 +17,10 @@ fir.global @g_i0 : i32 {
   fir.has_value %1 : i32
 }
 
-// CHECK: llvm.mlir.global external @g_i0() {addr_space = 0 : i32} : i32 {
+// CHECK: llvm.mlir.global external @g_i0()
+// GENERIC-SAME: {addr_space = 0 : i32}
+// AMDGPU-SAME: {addr_space = 1 : i32}
+// CHECK-SAME: i32 {
 // CHECK:   %[[C0:.*]] = llvm.mlir.constant(0 : i32) : i32
 // CHECK:   llvm.return %[[C0]] : i32
 // CHECK: }
@@ -29,7 +32,10 @@ fir.global @g_ci5 constant : i32 {
   fir.has_value %c : i32
 }
 
-// CHECK: llvm.mlir.global external constant @g_ci5() {addr_space = 0 : i32} : i32 {
+// CHECK: llvm.mlir.global external constant @g_ci5()
+// GENERIC-SAME: {addr_space = 0 : i32}
+// AMDGPU-SAME: {addr_space = 1 : i32}
+// CHECK-SAME: i32 {
 // CHECK:   %[[C5:.*]] = llvm.mlir.constant(5 : i32) : i32
 // CHECK:   llvm.return %[[C5]] : i32
 // CHECK: }
@@ -37,17 +43,26 @@ fir.global @g_ci5 constant : i32 {
 // -----
 
 fir.global internal @i_i515 (515:i32) : i32
-// CHECK: llvm.mlir.global internal @i_i515(515 : i32) {addr_space = 0 : i32} : i32
+// CHECK: llvm.mlir.global internal @i_i515(515 : i32)
+// GENERIC-SAME: {addr_space = 0 : i32}
+// AMDGPU-SAME: {addr_space = 1 : i32}
+// CHECK-SAME: : i32
 
 // -----
 
 fir.global common @C_i511 (0:i32) : i32
-// CHECK: llvm.mlir.global common @C_i511(0 : i32) {addr_space = 0 : i32} : i32
+// CHECK: llvm.mlir.global common @C_i511(0 : i32)
+// GENERIC-SAME: {addr_space = 0 : i32}
+// AMDGPU-SAME: {addr_space = 1 : i32}
+// CHECK-SAME: : i32
 
 // -----
 
 fir.global weak @w_i86 (86:i32) : i32
-// CHECK: llvm.mlir.global weak @w_i86(86 : i32) {addr_space = 0 : i32} : i32
+// CHECK: llvm.mlir.global weak @w_i86(86 : i32)
+// GENERIC-SAME: {addr_space = 0 : i32}
+// AMDGPU-SAME: {addr_space = 1 : i32}
+// CHECK-SAME: : i32
 
 // -----
 
@@ -69,9 +84,13 @@ fir.global @symbol : i64 {
   fir.has_value %0 : i64
 }
 
-// CHECK: %{{.*}} = llvm.mlir.addressof @[[SYMBOL:.*]] : !llvm.ptr
+// CHECK:  %[[ADDROF:.*]] = llvm.mlir.addressof @[[SYMBOL:.*]] : !llvm.ptr
+// AMDGPU: %{{.*}} = llvm.addrspacecast %[[ADDROF]] : !llvm.ptr<1> to !llvm.ptr
 
-// CHECK: llvm.mlir.global external @[[SYMBOL]]() {addr_space = 0 : i32} : i64 {
+// CHECK: llvm.mlir.global external @[[SYMBOL]]()
+// GENERIC-SAME: {addr_space = 0 : i32}
+// AMDGPU-SAME: {addr_space = 1 : i32}
+// CHECK-SAME: i64 {
 // CHECK:   %{{.*}} = llvm.mlir.constant(1 : i64) : i64
 // CHECK:   llvm.return %{{.*}} : i64
 // CHECK: }
@@ -88,7 +107,10 @@ fir.global internal @_QEmultiarray : !fir.array<32x32xi32> {
   fir.has_value %2 : !fir.array<32x32xi32>
 }
 
-// CHECK: llvm.mlir.global internal @_QEmultiarray() {addr_space = 0 : i32} : !llvm.array<32 x array<32 x i32>> {
+// CHECK: llvm.mlir.global internal @_QEmultiarray() 
+// GENERIC-SAME: {addr_space = 0 : i32}
+// AMDGPU-SAME: {addr_space = 1 : i32}
+// CHECK-SAME: : !llvm.array<32 x array<32 x i32>> {
 // CHECK:   %[[CST:.*]] = llvm.mlir.constant(dense<1> : vector<32x32xi32>) : !llvm.array<32 x array<32 x i32>>
 // CHECK:   llvm.return %[[CST]] : !llvm.array<32 x array<32 x i32>>
 // CHECK: }
@@ -105,7 +127,10 @@ fir.global internal @_QEmultiarray : !fir.array<32xi32> {
   fir.has_value %2 : !fir.array<32xi32>
 }
 
-// CHECK:          llvm.mlir.global internal @_QEmultiarray() {addr_space = 0 : i32} : !llvm.array<32 x i32> {
+// CHECK:          llvm.mlir.global internal @_QEmultiarray() 
+// GENERIC-SAME: {addr_space = 0 : i32}
+// AMDGPU-SAME: {addr_space = 1 : i32}
+// CHECK-SAME: : !llvm.array<32 x i32> {
 // CHECK:            %[[CST:.*]] = llvm.mlir.constant(1 : i32) : i32
 // CHECK:            %{{.*}} = llvm.mlir.undef : !llvm.array<32 x i32>
 // CHECK:            %{{.*}} = llvm.insertvalue %[[CST]], %{{.*}}[5] : !llvm.array<32 x i32>
@@ -895,7 +920,7 @@ func.func @store_unlimited_polymorphic_box(%arg0 : !fir.class<none>, %arg1 : !fi
 // CHECK:     %[[VAL_8:.*]] = llvm.mlir.constant(40 : i32) : i32
 // CHECK:     "llvm.intr.memcpy"(%[[VAL_4]], %[[VAL_0]], %[[VAL_8]]) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
 // CHECK:     %[[VAL_9:.*]] = llvm.mlir.constant(64 : i32) : i32
-// CHECK:     "llvm.intr.memcpy"(%[[VAL_5]], %[[VAL_1]], %[[VAL_9]]) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
+// CHECK:     "llvm.intr.memcpy"(%[[VAL_5]], %[[VAL_1]], %[[VAL_9]]) <{isVolatile = false}>  : (!llvm.ptr, !llvm.ptr, i32) -> ()
 // CHECK:     %[[VAL_10:.*]] = llvm.mlir.constant(40 : i32) : i32
 // CHECK:     "llvm.intr.memcpy"(%[[VAL_6]], %[[VAL_2]], %[[VAL_10]]) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
 // CHECK:     %[[VAL_11:.*]] = llvm.mlir.constant(64 : i32) : i32
@@ -954,7 +979,7 @@ func.func @test_load_box(%addr : !fir.ref<!fir.box<!fir.array<10xf32>>>) {
 // AMDGPU-NEXT:   %[[alloca_box_copy:.*]] = llvm.alloca %[[c1]] x !llvm.struct<([[DESC_TYPE:.*]])>{{.*}} : (i32) -> !llvm.ptr<5>
 // AMDGPU-NEXT:   %[[box_copy:.*]] = llvm.addrspacecast %[[alloca_box_copy]] : !llvm.ptr<5> to !llvm.ptr
 // CHECK-NEXT:    %[[size:.*]] = llvm.mlir.constant(48 : i32) : i32
-// CHECK-NEXT:    "llvm.intr.memcpy"(%[[box_copy]], %[[arg0]], %[[size]]) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
+// CHECK-NEXT:    "llvm.intr.memcpy"(%[[box_copy]], %[[arg0]], %[[size]]) <{arg_attrs = [{{.*}}], isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
 // CHECK-NEXT:    llvm.call @takes_box(%[[box_copy]]) : (!llvm.ptr) -> ()
 // CHECK-NEXT:    llvm.return
 // CHECK-NEXT:  }
@@ -981,7 +1006,7 @@ func.func private @some_assumed_rank_func(!fir.box<!fir.array<*:f64>>) -> ()
 // CHECK:           %[[VAL_7:.*]] = llvm.mlir.constant(24 : i32) : i32
 // CHECK:           %[[VAL_8:.*]] = llvm.mul %[[VAL_7]], %[[VAL_6]] : i32
 // CHECK:           %[[VAL_9:.*]] = llvm.add %[[VAL_3]], %[[VAL_8]] : i32
-// CHECK:           "llvm.intr.memcpy"(%[[VAL_2]], %[[VAL_0]], %[[VAL_9]]) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
+// CHECK:           "llvm.intr.memcpy"(%[[VAL_2]], %[[VAL_0]], %[[VAL_9]]) <{arg_attrs = [{{.*}}], isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
 // CHECK:           llvm.call @some_assumed_rank_func(%[[VAL_2]]) : (!llvm.ptr) -> ()
 
 // -----
@@ -1801,7 +1826,9 @@ func.func @embox1(%arg0: !fir.ref<!fir.type<_QMtest_dinitTtseq{i:i32}>>) {
 // CHECK:         %{{.*}} = llvm.insertvalue %[[VERSION]], %{{.*}}[2] : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, ptr, array<1 x i64>)> 
 // CHECK:         %[[TYPE_CODE_I8:.*]] = llvm.trunc %[[TYPE_CODE]] : i32 to i8
 // CHECK:         %{{.*}} = llvm.insertvalue %[[TYPE_CODE_I8]], %{{.*}}[4] : !llvm.struct<(ptr, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, ptr, array<1 x i{{.*}}>)>
-// CHECK:         %[[TDESC:.*]] = llvm.mlir.addressof @_QMtest_dinitE.dt.tseq : !llvm.ptr
+// GENERIC:       %[[TDESC:.*]] = llvm.mlir.addressof @_QMtest_dinitE.dt.tseq : !llvm.ptr
+// AMDGPU:        %[[ADDROF:.*]] = llvm.mlir.addressof @_QMtest_dinitE.dt.tseq : !llvm.ptr<1>
+// AMDGPU:        %[[TDESC:.*]] = llvm.addrspacecast %[[ADDROF]] : !llvm.ptr<1> to !llvm.ptr
 // CHECK:         %{{.*}} = llvm.insertvalue %[[TDESC]], %{{.*}}[7] : !llvm.struct<(ptr, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, ptr, array<1 x i{{.*}}>)>
 
 // -----
@@ -2196,11 +2223,11 @@ func.func @ext_array_coor0(%arg0: !fir.ref<!fir.array<?xi32>>) {
 // CHECK:         %[[C0:.*]] = llvm.mlir.constant(0 : i64) : i64
 // CHECK:         %[[C1:.*]] = llvm.mlir.constant(1 : i64) : i64
 // CHECK:         %[[C0_1:.*]] = llvm.mlir.constant(0 : i64) : i64
-// CHECK:         %[[IDX:.*]] = llvm.sub %[[C0]], %[[C1]] overflow<nsw> : i64
-// CHECK:         %[[DIFF0:.*]] = llvm.mul %[[IDX]], %[[C1]] overflow<nsw> : i64
-// CHECK:         %[[SC:.*]] = llvm.mul %[[DIFF0]], %[[C1]]  overflow<nsw> : i64
-// CHECK:         %[[OFFSET:.*]] = llvm.add %[[SC]], %[[C0_1]]  overflow<nsw> : i64
-// CHECK:         %{{.*}} = llvm.getelementptr %[[ARG0]][%[[OFFSET]]] : (!llvm.ptr, i64) -> !llvm.ptr, i32
+// CHECK:         %[[IDX:.*]] = llvm.sub %[[C0]], %[[C1]] overflow<nsw, nuw> : i64
+// CHECK:         %[[DIFF0:.*]] = llvm.mul %[[IDX]], %[[C1]] overflow<nsw, nuw> : i64
+// CHECK:         %[[SC:.*]] = llvm.mul %[[DIFF0]], %[[C1]]  overflow<nsw, nuw> : i64
+// CHECK:         %[[OFFSET:.*]] = llvm.add %[[SC]], %[[C0_1]]  overflow<nsw, nuw> : i64
+// CHECK:         %{{.*}} = llvm.getelementptr nusw|nuw %[[ARG0]][%[[OFFSET]]] : (!llvm.ptr, i64) -> !llvm.ptr, i32
 
 // Conversion with shift and slice.
 
@@ -2216,12 +2243,12 @@ func.func @ext_array_coor1(%arg0: !fir.ref<!fir.array<?xi32>>) {
 // CHECK:         %[[C1:.*]] = llvm.mlir.constant(1 : i64) : i64
 // CHECK:         %[[C0_1:.*]] = llvm.mlir.constant(0 : i64) : i64
 // CHECK:         %[[IDX:.*]] = llvm.sub %[[C0]], %[[C0]] overflow<nsw> : i64
-// CHECK:         %[[DIFF0:.*]] = llvm.mul %[[IDX]], %[[C0]] overflow<nsw> : i64
+// CHECK:         %[[DIFF0:.*]] = llvm.mul %[[IDX]], %[[C0]] overflow<nsw, nuw> : i64
 // CHECK:         %[[ADJ:.*]] = llvm.sub %[[C0]], %[[C0]]  overflow<nsw> : i64
-// CHECK:         %[[DIFF1:.*]] = llvm.add %[[DIFF0]], %[[ADJ]] overflow<nsw> : i64
-// CHECK:         %[[STRIDE:.*]] = llvm.mul %[[DIFF1]], %[[C1]] overflow<nsw> : i64
-// CHECK:         %[[OFFSET:.*]] = llvm.add %[[STRIDE]], %[[C0_1]] overflow<nsw> : i64
-// CHECK:         %{{.*}} = llvm.getelementptr %[[ARG0]][%[[OFFSET]]] : (!llvm.ptr, i64) -> !llvm.ptr, i32
+// CHECK:         %[[DIFF1:.*]] = llvm.add %[[DIFF0]], %[[ADJ]] overflow<nsw, nuw> : i64
+// CHECK:         %[[STRIDE:.*]] = llvm.mul %[[DIFF1]], %[[C1]] overflow<nsw, nuw> : i64
+// CHECK:         %[[OFFSET:.*]] = llvm.add %[[STRIDE]], %[[C0_1]] overflow<nsw, nuw> : i64
+// CHECK:         %{{.*}} = llvm.getelementptr nusw|nuw %[[ARG0]][%[[OFFSET]]] : (!llvm.ptr, i64) -> !llvm.ptr, i32
 
 // Conversion for a dynamic length char.
 
@@ -2236,11 +2263,11 @@ func.func @ext_array_coor2(%arg0: !fir.ref<!fir.array<?x!fir.char<1,?>>>) {
 // CHECK:         %[[C0:.*]] = llvm.mlir.constant(0 : i64) : i64
 // CHECK:         %[[C1:.*]] = llvm.mlir.constant(1 : i64) : i64
 // CHECK:         %[[C0_1:.*]] = llvm.mlir.constant(0 : i64) : i64
-// CHECK:         %[[IDX:.*]] = llvm.sub %[[C0]], %[[C1]] overflow<nsw> : i64
-// CHECK:         %[[DIFF0:.*]] = llvm.mul %[[IDX]], %[[C1]] overflow<nsw> : i64
-// CHECK:         %[[SC:.*]] = llvm.mul %[[DIFF0]], %[[C1]]  overflow<nsw> : i64
-// CHECK:         %[[OFFSET:.*]] = llvm.add %[[SC]], %[[C0_1]] overflow<nsw> : i64
-// CHECK:         %{{.*}} = llvm.getelementptr %[[ARG0]][%[[OFFSET]]] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+// CHECK:         %[[IDX:.*]] = llvm.sub %[[C0]], %[[C1]] overflow<nsw, nuw> : i64
+// CHECK:         %[[DIFF0:.*]] = llvm.mul %[[IDX]], %[[C1]] overflow<nsw, nuw> : i64
+// CHECK:         %[[SC:.*]] = llvm.mul %[[DIFF0]], %[[C1]]  overflow<nsw, nuw> : i64
+// CHECK:         %[[OFFSET:.*]] = llvm.add %[[SC]], %[[C0_1]] overflow<nsw, nuw> : i64
+// CHECK:         %{{.*}} = llvm.getelementptr nusw|nuw %[[ARG0]][%[[OFFSET]]] : (!llvm.ptr, i64) -> !llvm.ptr, i8
 
 // Conversion for a `fir.box`.
 
@@ -2255,15 +2282,15 @@ func.func @ext_array_coor3(%arg0: !fir.box<!fir.array<?xi32>>) {
 // CHECK:         %[[C0:.*]] = llvm.mlir.constant(0 : i64) : i64
 // CHECK:         %[[C1:.*]] = llvm.mlir.constant(1 : i64) : i64
 // CHECK:         %[[C0_1:.*]] = llvm.mlir.constant(0 : i64) : i64
-// CHECK:         %[[IDX:.*]] = llvm.sub %[[C0]], %[[C1]] overflow<nsw> : i64
-// CHECK:         %[[DIFF0:.*]] = llvm.mul %[[IDX]], %[[C1]] overflow<nsw> : i64
+// CHECK:         %[[IDX:.*]] = llvm.sub %[[C0]], %[[C1]] overflow<nsw, nuw> : i64
+// CHECK:         %[[DIFF0:.*]] = llvm.mul %[[IDX]], %[[C1]] overflow<nsw, nuw> : i64
 // CHECK:         %[[GEPSTRIDE:.*]] = llvm.getelementptr %[[ARG0]][0, 7, 0, 2] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(ptr, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, array<1 x array<3 x i64>>)>
 // CHECK:         %[[LOADEDSTRIDE:.*]] = llvm.load %[[GEPSTRIDE]] : !llvm.ptr -> i64
-// CHECK:         %[[SC:.*]] = llvm.mul %[[DIFF0]], %[[LOADEDSTRIDE]] overflow<nsw> : i64
-// CHECK:         %[[OFFSET:.*]] = llvm.add %[[SC]], %[[C0_1]] overflow<nsw> : i64
+// CHECK:         %[[SC:.*]] = llvm.mul %[[DIFF0]], %[[LOADEDSTRIDE]] overflow<nsw, nuw> : i64
+// CHECK:         %[[OFFSET:.*]] = llvm.add %[[SC]], %[[C0_1]] overflow<nsw, nuw> : i64
 // CHECK:         %[[GEPADDR:.*]] = llvm.getelementptr %[[ARG0]][0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(ptr, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, array<1 x array<3 x i64>>)>
 // CHECK:         %[[LOADEDADDR:.*]] = llvm.load %[[GEPADDR]] : !llvm.ptr -> !llvm.ptr
-// CHECK:         %[[GEPADDROFFSET:.*]] = llvm.getelementptr %[[LOADEDADDR]][%[[OFFSET]]] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+// CHECK:         %[[GEPADDROFFSET:.*]] = llvm.getelementptr nusw|nuw %[[LOADEDADDR]][%[[OFFSET]]] : (!llvm.ptr, i64) -> !llvm.ptr, i8
 
 // Conversion with non zero shift and slice.
 
@@ -2285,12 +2312,12 @@ func.func @ext_array_coor4(%arg0: !fir.ref<!fir.array<100xi32>>) {
 // CHECK:         %[[C1_1:.*]] = llvm.mlir.constant(1 : i64) : i64
 // CHECK:         %[[C0_1:.*]] = llvm.mlir.constant(0 : i64) : i64
 // CHECK:         %[[IDX:.*]] = llvm.sub %[[C1]], %[[C0]] overflow<nsw> : i64
-// CHECK:         %[[DIFF0:.*]] = llvm.mul %[[IDX]], %[[C1]] overflow<nsw> : i64
+// CHECK:         %[[DIFF0:.*]] = llvm.mul %[[IDX]], %[[C1]] overflow<nsw, nuw> : i64
 // CHECK:         %[[ADJ:.*]] = llvm.sub %[[C10]], %[[C0]] overflow<nsw> : i64
-// CHECK:         %[[DIFF1:.*]] = llvm.add %[[DIFF0]], %[[ADJ]] overflow<nsw> : i64
-// CHECK:         %[[STRIDE:.*]] = llvm.mul %[[DIFF1]], %[[C1_1]] overflow<nsw> : i64
-// CHECK:         %[[OFFSET:.*]] = llvm.add %[[STRIDE]], %[[C0_1]] overflow<nsw> : i64
-// CHECK:         %{{.*}} = llvm.getelementptr %[[ARG0]][%[[OFFSET]]] : (!llvm.ptr, i64) -> !llvm.ptr, i32
+// CHECK:         %[[DIFF1:.*]] = llvm.add %[[DIFF0]], %[[ADJ]] overflow<nsw, nuw> : i64
+// CHECK:         %[[STRIDE:.*]] = llvm.mul %[[DIFF1]], %[[C1_1]] overflow<nsw, nuw> : i64
+// CHECK:         %[[OFFSET:.*]] = llvm.add %[[STRIDE]], %[[C0_1]] overflow<nsw, nuw> : i64
+// CHECK:         %{{.*}} = llvm.getelementptr nusw|nuw %[[ARG0]][%[[OFFSET]]] : (!llvm.ptr, i64) -> !llvm.ptr, i32
 
 // Conversion with index type shape and slice
 
@@ -2303,14 +2330,14 @@ func.func @ext_array_coor5(%arg0: !fir.ref<!fir.array<?xi32>>, %idx1 : index, %i
 // CHECK-SAME:        %[[VAL_0:.*]]: !llvm.ptr, %[[VAL_1:.*]]: i64, %[[VAL_2:.*]]: i64, %[[VAL_3:.*]]: i64, %[[VAL_4:.*]]: i64, %[[VAL_5:.*]]: i64) {
 // CHECK:           %[[VAL_6:.*]] = llvm.mlir.constant(1 : i64) : i64
 // CHECK:           %[[VAL_7:.*]] = llvm.mlir.constant(0 : i64) : i64
-// CHECK:           %[[VAL_8:.*]] = llvm.sub %[[VAL_5]], %[[VAL_6]] overflow<nsw> : i64
-// CHECK:           %[[VAL_9:.*]] = llvm.mul %[[VAL_8]], %[[VAL_4]] overflow<nsw> : i64
-// CHECK:           %[[VAL_10:.*]] = llvm.sub %[[VAL_2]], %[[VAL_6]] overflow<nsw> : i64
-// CHECK:           %[[VAL_11:.*]] = llvm.add %[[VAL_9]], %[[VAL_10]] overflow<nsw> : i64
-// CHECK:           %[[VAL_12:.*]] = llvm.mul %[[VAL_11]], %[[VAL_6]] overflow<nsw> : i64
-// CHECK:           %[[VAL_13:.*]] = llvm.add %[[VAL_12]], %[[VAL_7]] overflow<nsw> : i64
-// CHECK:           %[[VAL_14:.*]] = llvm.mul %[[VAL_6]], %[[VAL_1]] overflow<nsw> : i64
-// CHECK:           %[[VAL_16:.*]] = llvm.getelementptr %[[VAL_0]][%[[VAL_13]]] : (!llvm.ptr, i64) -> !llvm.ptr, i32
+// CHECK:           %[[VAL_8:.*]] = llvm.sub %[[VAL_5]], %[[VAL_6]] overflow<nsw, nuw> : i64
+// CHECK:           %[[VAL_9:.*]] = llvm.mul %[[VAL_8]], %[[VAL_4]] overflow<nsw, nuw> : i64
+// CHECK:           %[[VAL_10:.*]] = llvm.sub %[[VAL_2]], %[[VAL_6]] overflow<nsw, nuw> : i64
+// CHECK:           %[[VAL_11:.*]] = llvm.add %[[VAL_9]], %[[VAL_10]] overflow<nsw, nuw> : i64
+// CHECK:           %[[VAL_12:.*]] = llvm.mul %[[VAL_11]], %[[VAL_6]] overflow<nsw, nuw> : i64
+// CHECK:           %[[VAL_13:.*]] = llvm.add %[[VAL_12]], %[[VAL_7]] overflow<nsw, nuw> : i64
+// CHECK:           %[[VAL_14:.*]] = llvm.mul %[[VAL_6]], %[[VAL_1]] overflow<nsw, nuw> : i64
+// CHECK:           %[[VAL_16:.*]] = llvm.getelementptr nusw|nuw %[[VAL_0]][%[[VAL_13]]] : (!llvm.ptr, i64) -> !llvm.ptr, i32
 // CHECK:         }
 
 // Conversion for 3-d array
@@ -2324,28 +2351,28 @@ func.func @ext_array_coor6(%arg0: !fir.ref<!fir.array<?x?x?xi32>>, %idx1 : index
 // CHECK-SAME:        %[[VAL_0:.*]]: !llvm.ptr, %[[VAL_1:.*]]: i64, %[[VAL_2:.*]]: i64, %[[VAL_3:.*]]: i64, %[[VAL_4:.*]]: i64, %[[VAL_5:.*]]: i64) {
 // CHECK:           %[[VAL_6:.*]] = llvm.mlir.constant(1 : i64) : i64
 // CHECK:           %[[VAL_7:.*]] = llvm.mlir.constant(0 : i64) : i64
-// CHECK:           %[[VAL_8:.*]] = llvm.sub %[[VAL_5]], %[[VAL_6]] overflow<nsw> : i64
-// CHECK:           %[[VAL_9:.*]] = llvm.mul %[[VAL_8]], %[[VAL_4]] overflow<nsw> : i64
-// CHECK:           %[[VAL_10:.*]] = llvm.sub %[[VAL_2]], %[[VAL_6]] overflow<nsw> : i64
-// CHECK:           %[[VAL_11:.*]] = llvm.add %[[VAL_9]], %[[VAL_10]] overflow<nsw> : i64
-// CHECK:           %[[VAL_12:.*]] = llvm.mul %[[VAL_11]], %[[VAL_6]] overflow<nsw> : i64
-// CHECK:           %[[VAL_13:.*]] = llvm.add %[[VAL_12]], %[[VAL_7]] overflow<nsw> : i64
-// CHECK:           %[[VAL_14:.*]] = llvm.mul %[[VAL_6]], %[[VAL_1]] overflow<nsw> : i64
-// CHECK:           %[[VAL_15:.*]] = llvm.sub %[[VAL_5]], %[[VAL_6]] overflow<nsw> : i64
-// CHECK:           %[[VAL_16:.*]] = llvm.mul %[[VAL_15]], %[[VAL_4]] overflow<nsw> : i64
-// CHECK:           %[[VAL_17:.*]] = llvm.sub %[[VAL_2]], %[[VAL_6]] overflow<nsw> : i64
-// CHECK:           %[[VAL_18:.*]] = llvm.add %[[VAL_16]], %[[VAL_17]] overflow<nsw> : i64
-// CHECK:           %[[VAL_19:.*]] = llvm.mul %[[VAL_18]], %[[VAL_14]] overflow<nsw> : i64
-// CHECK:           %[[VAL_20:.*]] = llvm.add %[[VAL_19]], %[[VAL_13]] overflow<nsw> : i64
-// CHECK:           %[[VAL_21:.*]] = llvm.mul %[[VAL_14]], %[[VAL_1]] overflow<nsw> : i64
-// CHECK:           %[[VAL_22:.*]] = llvm.sub %[[VAL_5]], %[[VAL_6]] overflow<nsw> : i64
-// CHECK:           %[[VAL_23:.*]] = llvm.mul %[[VAL_22]], %[[VAL_4]] overflow<nsw> : i64
-// CHECK:           %[[VAL_24:.*]] = llvm.sub %[[VAL_2]], %[[VAL_6]] overflow<nsw> : i64
-// CHECK:           %[[VAL_25:.*]] = llvm.add %[[VAL_23]], %[[VAL_24]] overflow<nsw> : i64
-// CHECK:           %[[VAL_26:.*]] = llvm.mul %[[VAL_25]], %[[VAL_21]] overflow<nsw> : i64
-// CHECK:           %[[VAL_27:.*]] = llvm.add %[[VAL_26]], %[[VAL_20]] overflow<nsw> : i64
-// CHECK:           %[[VAL_28:.*]] = llvm.mul %[[VAL_21]], %[[VAL_1]] overflow<nsw> : i64
-// CHECK:           %[[VAL_30:.*]] = llvm.getelementptr %[[VAL_0]][%[[VAL_27]]] : (!llvm.ptr, i64) -> !llvm.ptr, i32
+// CHECK:           %[[VAL_8:.*]] = llvm.sub %[[VAL_5]], %[[VAL_6]] overflow<nsw, nuw> : i64
+// CHECK:           %[[VAL_9:.*]] = llvm.mul %[[VAL_8]], %[[VAL_4]] overflow<nsw, nuw> : i64
+// CHECK:           %[[VAL_10:.*]] = llvm.sub %[[VAL_2]], %[[VAL_6]] overflow<nsw, nuw> : i64
+// CHECK:           %[[VAL_11:.*]] = llvm.add %[[VAL_9]], %[[VAL_10]] overflow<nsw, nuw> : i64
+// CHECK:           %[[VAL_12:.*]] = llvm.mul %[[VAL_11]], %[[VAL_6]] overflow<nsw, nuw> : i64
+// CHECK:           %[[VAL_13:.*]] = llvm.add %[[VAL_12]], %[[VAL_7]] overflow<nsw, nuw> : i64
+// CHECK:           %[[VAL_14:.*]] = llvm.mul %[[VAL_6]], %[[VAL_1]] overflow<nsw, nuw> : i64
+// CHECK:           %[[VAL_15:.*]] = llvm.sub %[[VAL_5]], %[[VAL_6]] overflow<nsw, nuw> : i64
+// CHECK:           %[[VAL_16:.*]] = llvm.mul %[[VAL_15]], %[[VAL_4]] overflow<nsw, nuw> : i64
+// CHECK:           %[[VAL_17:.*]] = llvm.sub %[[VAL_2]], %[[VAL_6]] overflow<nsw, nuw> : i64
+// CHECK:           %[[VAL_18:.*]] = llvm.add %[[VAL_16]], %[[VAL_17]] overflow<nsw, nuw> : i64
+// CHECK:           %[[VAL_19:.*]] = llvm.mul %[[VAL_18]], %[[VAL_14]] overflow<nsw, nuw> : i64
+// CHECK:           %[[VAL_20:.*]] = llvm.add %[[VAL_19]], %[[VAL_13]] overflow<nsw, nuw> : i64
+// CHECK:           %[[VAL_21:.*]] = llvm.mul %[[VAL_14]], %[[VAL_1]] overflow<nsw, nuw> : i64
+// CHECK:           %[[VAL_22:.*]] = llvm.sub %[[VAL_5]], %[[VAL_6]] overflow<nsw, nuw> : i64
+// CHECK:           %[[VAL_23:.*]] = llvm.mul %[[VAL_22]], %[[VAL_4]] overflow<nsw, nuw> : i64
+// CHECK:           %[[VAL_24:.*]] = llvm.sub %[[VAL_2]], %[[VAL_6]] overflow<nsw, nuw> : i64
+// CHECK:           %[[VAL_25:.*]] = llvm.add %[[VAL_23]], %[[VAL_24]] overflow<nsw, nuw> : i64
+// CHECK:           %[[VAL_26:.*]] = llvm.mul %[[VAL_25]], %[[VAL_21]] overflow<nsw, nuw> : i64
+// CHECK:           %[[VAL_27:.*]] = llvm.add %[[VAL_26]], %[[VAL_20]] overflow<nsw, nuw> : i64
+// CHECK:           %[[VAL_28:.*]] = llvm.mul %[[VAL_21]], %[[VAL_1]] overflow<nsw, nuw> : i64
+// CHECK:           %[[VAL_30:.*]] = llvm.getelementptr nusw|nuw %[[VAL_0]][%[[VAL_27]]] : (!llvm.ptr, i64) -> !llvm.ptr, i32
 // CHECK:           llvm.return
 // CHECK:         }
 
@@ -2362,14 +2389,14 @@ func.func @ext_array_coor_dt_slice(%arg0: !fir.ref<!fir.array<20x!fir.type<_QFte
 // CHECK:           %[[VAL_6:.*]] = llvm.mlir.constant(0 : i32) : i32
 // CHECK:           %[[VAL_7:.*]] = llvm.mlir.constant(1 : i64) : i64
 // CHECK:           %[[VAL_8:.*]] = llvm.mlir.constant(0 : i64) : i64
-// CHECK:           %[[VAL_9:.*]] = llvm.sub %[[VAL_5]], %[[VAL_7]] overflow<nsw> : i64
-// CHECK:           %[[VAL_10:.*]] = llvm.mul %[[VAL_9]], %[[VAL_4]] overflow<nsw> : i64
-// CHECK:           %[[VAL_11:.*]] = llvm.sub %[[VAL_2]], %[[VAL_7]] overflow<nsw> : i64
-// CHECK:           %[[VAL_12:.*]] = llvm.add %[[VAL_10]], %[[VAL_11]] overflow<nsw> : i64
-// CHECK:           %[[VAL_13:.*]] = llvm.mul %[[VAL_12]], %[[VAL_7]] overflow<nsw> : i64
-// CHECK:           %[[VAL_14:.*]] = llvm.add %[[VAL_13]], %[[VAL_8]] overflow<nsw> : i64
-// CHECK:           %[[VAL_15:.*]] = llvm.mul %[[VAL_7]], %[[VAL_1]] overflow<nsw> : i64
-// CHECK:           %[[VAL_17:.*]] = llvm.getelementptr %[[VAL_0]][%[[VAL_14]], 0] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.struct<"_QFtest_dt_sliceTt", (i32, i32)>
+// CHECK:           %[[VAL_9:.*]] = llvm.sub %[[VAL_5]], %[[VAL_7]] overflow<nsw, nuw> : i64
+// CHECK:           %[[VAL_10:.*]] = llvm.mul %[[VAL_9]], %[[VAL_4]] overflow<nsw, nuw> : i64
+// CHECK:           %[[VAL_11:.*]] = llvm.sub %[[VAL_2]], %[[VAL_7]] overflow<nsw, nuw> : i64
+// CHECK:           %[[VAL_12:.*]] = llvm.add %[[VAL_10]], %[[VAL_11]] overflow<nsw, nuw> : i64
+// CHECK:           %[[VAL_13:.*]] = llvm.mul %[[VAL_12]], %[[VAL_7]] overflow<nsw, nuw> : i64
+// CHECK:           %[[VAL_14:.*]] = llvm.add %[[VAL_13]], %[[VAL_8]] overflow<nsw, nuw> : i64
+// CHECK:           %[[VAL_15:.*]] = llvm.mul %[[VAL_7]], %[[VAL_1]] overflow<nsw, nuw> : i64
+// CHECK:           %[[VAL_17:.*]] = llvm.getelementptr nusw|nuw %[[VAL_0]][%[[VAL_14]], 0] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.struct<"_QFtest_dt_sliceTt", (i32, i32)>
 // CHECK:           llvm.return
 // CHECK:         }
 
@@ -2383,7 +2410,7 @@ func.func @ext_array_coor_dt_slice2(%arg0: !fir.ref<!fir.array<2x!fir.type<_QFte
 
 // CHECK-LABEL:   llvm.func @ext_array_coor_dt_slice2(
 // CHECK-SAME:        %[[ARG0:.*]]: !llvm.ptr, %[[IDX1:.*]]: i64, %[[IDX2:.*]]: i64, %[[IDX3:.*]]: i64, %[[IDX4:.*]]: i64, %[[IDX5:.*]]: i64, %[[IDX6:.*]]: i64, %[[IDX7:.*]]: i64) {
-// CHECK:           %{{.*}} = llvm.getelementptr %[[ARG0]][%{{.*}}, 0, %[[IDX6]], %[[IDX5]]] : (!llvm.ptr, i64, i64, i64) -> !llvm.ptr, !llvm.struct<"_QFtest_dt_slice2Tt", (array<3 x array<2 x i32>>)>
+// CHECK:           %{{.*}} = llvm.getelementptr nusw|nuw %[[ARG0]][%{{.*}}, 0, %[[IDX6]], %[[IDX5]]] : (!llvm.ptr, i64, i64, i64) -> !llvm.ptr, !llvm.struct<"_QFtest_dt_slice2Tt", (array<3 x array<2 x i32>>)>
 // CHECK:           llvm.return
 // CHECK:         }
 
@@ -2824,7 +2851,10 @@ func.func @coordinate_array_unknown_size_1d(%arg0: !fir.ptr<!fir.array<? x i32>>
 
 fir.global common @c_(dense<0> : vector<4294967296xi8>) : !fir.array<4294967296xi8>
 
-// CHECK: llvm.mlir.global common @c_(dense<0> : vector<4294967296xi8>) {addr_space = 0 : i32} : !llvm.array<4294967296 x i8>
+// CHECK: llvm.mlir.global common @c_(dense<0> : vector<4294967296xi8>) 
+// GENERIC-SAME: {addr_space = 0 : i32}
+// AMDGPU-SAME: {addr_space = 1 : i32}
+// CHECK-SAME: !llvm.array<4294967296 x i8>
 
 // -----
 
@@ -2924,3 +2954,158 @@ func.func @select_with_cast(%arg1 : i8, %arg2 : i16, %arg3: i64, %arg4: index) -
 // CHECK:         ^bb5:
 // CHECK:           llvm.return
 // CHECK:         }
+
+// -----
+
+// Test `fir.select_case` with block arguments requiring type conversion.
+
+func.func @select_case_block_args(%arg0: !fir.ref<i32>, %arg1: !fir.ref<!fir.array<2xi32>>, %arg2: !fir.ref<!fir.array<2xi32>>) {
+  %0 = fir.load %arg0 : !fir.ref<i32>
+  %c1 = arith.constant 1 : i32
+  %c2 = arith.constant 2 : i32
+  fir.select_case %0 : i32 [#fir.point, %c1, ^bb1(%arg1 : !fir.ref<!fir.array<2xi32>>),
+                            #fir.point, %c2, ^bb1(%arg2 : !fir.ref<!fir.array<2xi32>>),
+                            unit, ^bb2]
+^bb1(%1: !fir.ref<!fir.array<2xi32>>):
+  cf.br ^bb2
+^bb2:
+  return
+}
+
+// CHECK-LABEL: llvm.func @select_case_block_args
+// CHECK: llvm.cond_br %{{.*}}, ^{{.*}}(%{{.*}} : !llvm.ptr), ^{{.*}}
+// CHECK: ^{{.*}}(%{{.*}}: !llvm.ptr):
+
+// -----
+
+// Check memcpy alignment
+
+func.func @test_load_box_alignment(%addr : !fir.ref<!fir.box<!fir.array<10xf32>>>) {
+  %0 = fir.load %addr : !fir.ref<!fir.box<!fir.array<10xf32>>>
+  return
+}
+// CHECK-LABEL:   llvm.func @test_load_box_alignment(
+// CHECK:           "llvm.intr.memcpy"(%{{.*}}, %[[arg0]], %{{.*}}) <{arg_attrs = [{llvm.align = 8 : i64}, {llvm.align = 8 : i64}, {}], isVolatile = false}>
+
+// -----
+
+// Test `fir.bitcast` operation conversion.
+
+func.func @bitcast_i32_to_f32(%arg0 : i32) -> f32 {
+  %0 = fir.bitcast %arg0 : (i32) -> f32
+  return %0 : f32
+}
+
+// CHECK-LABEL: llvm.func @bitcast_i32_to_f32(
+// CHECK-SAME:    %[[ARG0:.*]]: i32) -> f32
+// CHECK:         %[[RES:.*]] = llvm.bitcast %[[ARG0]] : i32 to f32
+// CHECK:         llvm.return %[[RES]] : f32
+
+// -----
+
+func.func @bitcast_f32_to_i32(%arg0 : f32) -> i32 {
+  %0 = fir.bitcast %arg0 : (f32) -> i32
+  return %0 : i32
+}
+
+// CHECK-LABEL: llvm.func @bitcast_f32_to_i32(
+// CHECK-SAME:    %[[ARG0:.*]]: f32) -> i32
+// CHECK:         %[[RES:.*]] = llvm.bitcast %[[ARG0]] : f32 to i32
+// CHECK:         llvm.return %[[RES]] : i32
+
+// -----
+
+func.func @bitcast_i32_to_logical(%arg0 : i32) -> !fir.logical<4> {
+  %0 = fir.bitcast %arg0 : (i32) -> !fir.logical<4>
+  return %0 : !fir.logical<4>
+}
+
+// CHECK-LABEL: llvm.func @bitcast_i32_to_logical(
+// CHECK-SAME:    %[[ARG0:.*]]: i32) -> i32
+// CHECK:         llvm.return %[[ARG0]] : i32
+
+// -----
+
+func.func @bitcast_logical_to_i32(%arg0 : !fir.logical<4>) -> i32 {
+  %0 = fir.bitcast %arg0 : (!fir.logical<4>) -> i32
+  return %0 : i32
+}
+
+// CHECK-LABEL: llvm.func @bitcast_logical_to_i32(
+// CHECK-SAME:    %[[ARG0:.*]]: i32) -> i32
+// CHECK:         llvm.return %[[ARG0]] : i32
+
+// -----
+
+func.func @bitcast_logical_to_f32(%arg0 : !fir.logical<4>) -> f32 {
+  %0 = fir.bitcast %arg0 : (!fir.logical<4>) -> f32
+  return %0 : f32
+}
+
+// CHECK-LABEL: llvm.func @bitcast_logical_to_f32(
+// CHECK-SAME:    %[[ARG0:.*]]: i32) -> f32
+// CHECK:         %[[RES:.*]] = llvm.bitcast %[[ARG0]] : i32 to f32
+// CHECK:         llvm.return %[[RES]] : f32
+
+// -----
+
+func.func @bitcast_f32_to_logical(%arg0 : f32) -> !fir.logical<4> {
+  %0 = fir.bitcast %arg0 : (f32) -> !fir.logical<4>
+  return %0 : !fir.logical<4>
+}
+
+// CHECK-LABEL: llvm.func @bitcast_f32_to_logical(
+// CHECK-SAME:    %[[ARG0:.*]]: f32) -> i32
+// CHECK:         %[[RES:.*]] = llvm.bitcast %[[ARG0]] : f32 to i32
+// CHECK:         llvm.return %[[RES]] : i32
+
+// -----
+
+func.func @bitcast_char1_to_i8(%arg0 : !fir.char<1>) -> i8 {
+  %0 = fir.bitcast %arg0 : (!fir.char<1>) -> i8
+  return %0 : i8
+}
+
+// CHECK-LABEL: llvm.func @bitcast_char1_to_i8(
+// CHECK-SAME:    %[[ARG0:.*]]: !llvm.array<1 x i8>) -> i8
+// CHECK:         %[[EXT:.*]] = llvm.extractvalue %[[ARG0]][0] : !llvm.array<1 x i8>
+// CHECK:         llvm.return %[[EXT]] : i8
+
+// -----
+
+func.func @bitcast_i8_to_char1(%arg0 : i8) -> !fir.char<1> {
+  %0 = fir.bitcast %arg0 : (i8) -> !fir.char<1>
+  return %0 : !fir.char<1>
+}
+
+// CHECK-LABEL: llvm.func @bitcast_i8_to_char1(
+// CHECK-SAME:    %[[ARG0:.*]]: i8) -> !llvm.array<1 x i8>
+// CHECK:         %[[UNDEF:.*]] = llvm.mlir.undef : !llvm.array<1 x i8>
+// CHECK:         %[[INS:.*]] = llvm.insertvalue %[[ARG0]], %[[UNDEF]][0] : !llvm.array<1 x i8>
+// CHECK:         llvm.return %[[INS]] : !llvm.array<1 x i8>
+
+// -----
+
+func.func @bitcast_f32_to_char4(%arg0 : f32) -> !fir.char<4> {
+  %0 = fir.bitcast %arg0 : (f32) -> !fir.char<4>
+  return %0 : !fir.char<4>
+}
+
+// CHECK-LABEL: llvm.func @bitcast_f32_to_char4(
+// CHECK-SAME:    %[[ARG0:.*]]: f32) -> !llvm.array<1 x i32>
+// CHECK:         %[[BC:.*]] = llvm.bitcast %[[ARG0]] : f32 to i32
+// CHECK:         %[[UNDEF:.*]] = llvm.mlir.undef : !llvm.array<1 x i32>
+// CHECK:         %[[INS:.*]] = llvm.insertvalue %[[BC]], %[[UNDEF]][0] : !llvm.array<1 x i32>
+// CHECK:         llvm.return %[[INS]] : !llvm.array<1 x i32>
+
+// -----
+
+func.func @bitcast_f64_to_i64(%arg0 : f64) -> i64 {
+  %0 = fir.bitcast %arg0 : (f64) -> i64
+  return %0 : i64
+}
+
+// CHECK-LABEL: llvm.func @bitcast_f64_to_i64(
+// CHECK-SAME:    %[[ARG0:.*]]: f64) -> i64
+// CHECK:         %[[RES:.*]] = llvm.bitcast %[[ARG0]] : f64 to i64
+// CHECK:         llvm.return %[[RES]] : i64

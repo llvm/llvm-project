@@ -10,6 +10,7 @@
 
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/DataFormatters/TypeSynthetic.h"
+#include "llvm/Support/ErrorExtras.h"
 
 using namespace lldb;
 
@@ -70,7 +71,7 @@ llvm::Expected<uint32_t> lldb_private::formatters::
     MsvcStlVectorSyntheticFrontEnd::CalculateNumChildren() {
   if (!m_start || !m_finish)
     return llvm::createStringError(
-        "Failed to determine start/end of vector data.");
+        "failed to determine start/end of vector data");
 
   uint64_t start_val = m_start->GetValueAsUnsigned(0);
   uint64_t finish_val = m_finish->GetValueAsUnsigned(0);
@@ -80,18 +81,18 @@ llvm::Expected<uint32_t> lldb_private::formatters::
     return 0;
 
   if (start_val == 0)
-    return llvm::createStringError("Invalid value for start of vector.");
+    return llvm::createStringError("invalid value for start of vector");
 
   if (finish_val == 0)
-    return llvm::createStringError("Invalid value for end of vector.");
+    return llvm::createStringError("invalid value for end of vector");
 
   if (start_val > finish_val)
     return llvm::createStringError(
-        "Start of vector data begins after end pointer.");
+        "start of vector data begins after end pointer");
 
   size_t num_children = (finish_val - start_val);
   if (num_children % m_element_size)
-    return llvm::createStringError("Size not multiple of element size.");
+    return llvm::createStringError("size not multiple of element size");
 
   return num_children / m_element_size;
 }
@@ -138,12 +139,10 @@ lldb_private::formatters::MsvcStlVectorSyntheticFrontEnd::Update() {
 llvm::Expected<size_t> lldb_private::formatters::
     MsvcStlVectorSyntheticFrontEnd::GetIndexOfChildWithName(ConstString name) {
   if (!m_start || !m_finish)
-    return llvm::createStringError("Type has no child named '%s'",
-                                   name.AsCString());
+    return llvm::createStringErrorV("type has no child named '{0}'", name);
   auto optional_idx = ExtractIndexFromString(name.GetCString());
   if (!optional_idx) {
-    return llvm::createStringError("Type has no child named '%s'",
-                                   name.AsCString());
+    return llvm::createStringErrorV("type has no child named '{0}'", name);
   }
   return *optional_idx;
 }
@@ -267,17 +266,14 @@ llvm::Expected<size_t>
 lldb_private::formatters::MsvcStlVectorBoolSyntheticFrontEnd::
     GetIndexOfChildWithName(ConstString name) {
   if (!m_count || !m_base_data_address)
-    return llvm::createStringError("Type has no child named '%s'",
-                                   name.AsCString());
-  auto optional_idx = ExtractIndexFromString(name.AsCString());
+    return llvm::createStringErrorV("type has no child named '{0}'", name);
+  auto optional_idx = ExtractIndexFromString(name.AsCString(nullptr));
   if (!optional_idx) {
-    return llvm::createStringError("Type has no child named '%s'",
-                                   name.AsCString());
+    return llvm::createStringErrorV("type has no child named '{0}'", name);
   }
   uint32_t idx = *optional_idx;
   if (idx >= CalculateNumChildrenIgnoringErrors())
-    return llvm::createStringError("Type has no child named '%s'",
-                                   name.AsCString());
+    return llvm::createStringErrorV("type has no child named '{0}'", name);
   return idx;
 }
 

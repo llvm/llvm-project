@@ -381,7 +381,7 @@ void SymbolTable::reportProblemSymbols(
     return;
 
   for (Symbol *b : ctx.config.gcroot) {
-    if (undefs.count(b))
+    if (undefs.contains(b))
       errorOrWarn(ctx) << "<root>: undefined symbol: " << printSymbol(b);
     if (localImports)
       if (Symbol *imp = localImports->lookup(b))
@@ -399,7 +399,7 @@ void SymbolTable::reportProblemSymbols(
       ++symIndex;
       if (!sym)
         continue;
-      if (undefs.count(sym)) {
+      if (undefs.contains(sym)) {
         auto [it, inserted] = firstDiag.try_emplace(sym, undefDiags.size());
         if (inserted)
           undefDiags.push_back({sym, {{file, symIndex}}});
@@ -1190,6 +1190,8 @@ static StringRef exportSourceName(ExportSource s) {
     return "/export";
   case ExportSource::ModuleDefinition:
     return "/def";
+  case ExportSource::ExportAll:
+    return "/export-all-symbols";
   default:
     llvm_unreachable("unknown ExportSource");
   }
@@ -1399,6 +1401,7 @@ void SymbolTable::resolveAlternateNames() {
       auto toUndef = dyn_cast<Undefined>(toSym);
       if (toUndef && (!toUndef->weakAlias || toUndef->isAntiDep))
         continue;
+      toSym->isUsedInRegularObj = true;
       if (toSym->isLazy())
         forceLazy(toSym);
       u->setWeakAlias(toSym);
@@ -1436,11 +1439,37 @@ void SymbolTable::compileBitcodeFiles() {
   if (bitcodeFileInstances.empty())
     return;
 
-  llvm::TimeTraceScope timeScope("Compile bitcode");
+  // Collect the bitcode library functions that are not safe to call because
+  // they were not yet brought in the link. (Such symbols are lazy.)
+  llvm::BumpPtrAllocator alloc;
+  llvm::StringSaver saver(alloc);
+  SmallVector<StringRef> bitcodeLibFuncs;
+  // Triple must be captured before the bitcode is moved into the compiler.
+  // Note that the below assumes that the set of possible libfuncs is roughly
+  // equivalent for all bitcode translation units.
+  llvm::Triple tt =
+      llvm::Triple(bitcodeFileInstances.front()->obj->getTargetTriple());
+  for (StringRef libFunc : lto::LTO::getLibFuncSymbols(tt, saver)) {
+    if (Symbol *sym = find(libFunc)) {
+      if (auto *l = dyn_cast<LazyArchive>(sym)) {
+        if (isBitcode(l->getMemberBuffer()))
+          bitcodeLibFuncs.push_back(libFunc);
+      } else if (auto *o = dyn_cast<LazyObject>(sym)) {
+        if (isBitcode(o->file->mb))
+          bitcodeLibFuncs.push_back(libFunc);
+      }
+    }
+  }
+
   ScopedTimer t(ctx.ltoTimer);
   lto.reset(new BitcodeCompiler(ctx));
-  for (BitcodeFile *f : bitcodeFileInstances)
-    lto->add(*f);
+  lto->setBitcodeLibFuncs(bitcodeLibFuncs);
+  {
+    llvm::TimeTraceScope addScope("Add bitcode file instances");
+    for (BitcodeFile *f : bitcodeFileInstances)
+      lto->add(*f);
+  }
+
   for (InputFile *newObj : lto->compile()) {
     ObjFile *obj = cast<ObjFile>(newObj);
     obj->parse();

@@ -892,15 +892,9 @@ void PatternEmitter::emitAttributeMatch(DagNode tree, StringRef castedName,
   const auto &attr = namedAttr->attr;
 
   os << "{\n";
-  if (op.getDialect().usePropertiesForAttributes()) {
-    os.indent() << formatv(
-        "[[maybe_unused]] auto tblgen_attr = {0}.getProperties().{1}();\n",
-        castedName, op.getGetterName(namedAttr->name));
-  } else {
-    os.indent() << formatv("[[maybe_unused]] auto tblgen_attr = "
-                           "{0}->getAttrOfType<{1}>(\"{2}\");\n",
-                           castedName, attr.getStorageType(), namedAttr->name);
-  }
+  os.indent() << formatv(
+      "[[maybe_unused]] auto tblgen_attr = {0}.getProperties().{1}();\n",
+      castedName, op.getGetterName(namedAttr->name));
 
   // TODO: This should use getter method to avoid duplication.
   if (attr.hasDefaultValue()) {
@@ -1024,6 +1018,32 @@ void PatternEmitter::emitMatchLogic(DagNode tree, StringRef opName) {
   int depth = 0;
   emitMatch(tree, opName, depth);
 
+  // Some of the operands could be bound to the same symbol name, we need
+  // to enforce equality constraint on those.
+  // This has to happen before user provided constraints, which may assume the
+  // same name checks are already performed, since in the pattern source code
+  // the user provided constraints appear later.
+  // TODO: we should be able to emit equality checks early
+  // and short circuit unnecessary work if vars are not equal.
+  for (auto symbolInfoIt = symbolInfoMap.begin();
+       symbolInfoIt != symbolInfoMap.end();) {
+    auto range = symbolInfoMap.getRangeOfEqualElements(symbolInfoIt->first);
+    auto startRange = range.first;
+    auto endRange = range.second;
+
+    auto firstOperand = symbolInfoIt->second.getVarName(symbolInfoIt->first);
+    for (++startRange; startRange != endRange; ++startRange) {
+      auto secondOperand = startRange->second.getVarName(symbolInfoIt->first);
+      emitMatchCheck(
+          opName,
+          formatv("*{0}.begin() == *{1}.begin()", firstOperand, secondOperand),
+          formatv("\"Operands '{0}' and '{1}' must be equal\"", firstOperand,
+                  secondOperand));
+    }
+
+    symbolInfoIt = endRange;
+  }
+
   for (auto &appliedConstraint : pattern.getConstraints()) {
     auto &constraint = appliedConstraint.constraint;
     auto &entities = appliedConstraint.entities;
@@ -1068,29 +1088,6 @@ void PatternEmitter::emitMatchLogic(DagNode tree, StringRef opName) {
     }
   }
 
-  // Some of the operands could be bound to the same symbol name, we need
-  // to enforce equality constraint on those.
-  // TODO: we should be able to emit equality checks early
-  // and short circuit unnecessary work if vars are not equal.
-  for (auto symbolInfoIt = symbolInfoMap.begin();
-       symbolInfoIt != symbolInfoMap.end();) {
-    auto range = symbolInfoMap.getRangeOfEqualElements(symbolInfoIt->first);
-    auto startRange = range.first;
-    auto endRange = range.second;
-
-    auto firstOperand = symbolInfoIt->second.getVarName(symbolInfoIt->first);
-    for (++startRange; startRange != endRange; ++startRange) {
-      auto secondOperand = startRange->second.getVarName(symbolInfoIt->first);
-      emitMatchCheck(
-          opName,
-          formatv("*{0}.begin() == *{1}.begin()", firstOperand, secondOperand),
-          formatv("\"Operands '{0}' and '{1}' must be equal\"", firstOperand,
-                  secondOperand));
-    }
-
-    symbolInfoIt = endRange;
-  }
-
   LLVM_DEBUG(llvm::dbgs() << "--- done emitting match logic ---\n");
 }
 
@@ -1126,7 +1123,7 @@ void PatternEmitter::emit(StringRef rewriteName) {
   LLVM_DEBUG(llvm::dbgs() << "done collecting ops used in result patterns\n");
 
   // Emit RewritePattern for Pattern.
-  auto locs = pattern.getLocation();
+  auto locs = pattern.getLocation(/*forSourceOutput=*/true);
   os << formatv("/* Generated from:\n    {0:$[ instantiating\n    ]}\n*/\n",
                 llvm::reverse(locs));
   os << formatv(R"(struct {0} : public ::mlir::RewritePattern {
@@ -1603,7 +1600,6 @@ std::string PatternEmitter::handleOpCreation(DagNode tree, int resultIndex,
   LLVM_DEBUG(llvm::dbgs() << '\n');
 
   Operator &resultOp = tree.getDialectOp(opMap);
-  bool useProperties = resultOp.getDialect().usePropertiesForAttributes();
   auto numOpArgs = resultOp.getNumArgs();
   auto numPatArgs = tree.getNumArgs();
 
@@ -1695,10 +1691,9 @@ std::string PatternEmitter::handleOpCreation(DagNode tree, int resultIndex,
     createAggregateLocalVarsForOpArgs(tree, childNodeNames, depth);
 
     // Then create the op.
-    os.scope("", "\n}\n").os
-        << formatv("{0} = {1}::create(rewriter, {2}, tblgen_values, {3});",
-                   valuePackName, resultOp.getQualCppClassName(), locToUse,
-                   useProperties ? "tblgen_props" : "tblgen_attrs");
+    os.scope("", "\n}\n").os << formatv(
+        "{0} = {1}::create(rewriter, {2}, tblgen_values, {3});", valuePackName,
+        resultOp.getQualCppClassName(), locToUse, "tblgen_props");
     return resultValue;
   }
 
@@ -1757,7 +1752,7 @@ std::string PatternEmitter::handleOpCreation(DagNode tree, int resultIndex,
   os << formatv("{0} = {1}::create(rewriter, {2}, tblgen_types, "
                 "tblgen_values, {3});\n",
                 valuePackName, resultOp.getQualCppClassName(), locToUse,
-                useProperties ? "tblgen_props" : "tblgen_attrs");
+                "tblgen_props");
   os.unindent() << "}\n";
   return resultValue;
 }
@@ -1871,26 +1866,15 @@ void PatternEmitter::createAggregateLocalVarsForOpArgs(
     DagNode node, const ChildNodeIndexNameMap &childNodeNames, int depth) {
   Operator &resultOp = node.getDialectOp(opMap);
 
-  bool useProperties = resultOp.getDialect().usePropertiesForAttributes();
   auto scope = os.scope();
   os << formatv("::llvm::SmallVector<::mlir::Value, 4> "
                 "tblgen_values; (void)tblgen_values;\n");
-  if (useProperties) {
-    os << formatv("{0}::Properties tblgen_props; (void)tblgen_props;\n",
-                  resultOp.getQualCppClassName());
-  } else {
-    os << formatv("::llvm::SmallVector<::mlir::NamedAttribute, 4> "
-                  "tblgen_attrs; (void)tblgen_attrs;\n");
-  }
+  os << formatv("{0}::Properties tblgen_props; (void)tblgen_props;\n",
+                resultOp.getQualCppClassName());
 
-  const char *setPropCmd =
+  const char *setterCmd =
       "tblgen_props.{0} = "
       "::llvm::dyn_cast_if_present<decltype(tblgen_props.{0})>({1});\n";
-  const char *addAttrCmd =
-      "if (auto tmpAttr = {1}) {\n"
-      "  tblgen_attrs.emplace_back(rewriter.getStringAttr(\"{0}\"), "
-      "tmpAttr);\n}\n";
-  const char *setterCmd = (useProperties) ? setPropCmd : addAttrCmd;
   const char *propSetterCmd = "tblgen_props.{0}({1});\n";
 
   int numVariadic = 0;
@@ -1989,18 +1973,10 @@ void PatternEmitter::createAggregateLocalVarsForOpArgs(
     const auto *sameVariadicSize =
         resultOp.getTrait("::mlir::OpTrait::SameVariadicOperandSize");
     if (!sameVariadicSize) {
-      if (useProperties) {
-        const char *setSizes = R"(
+      const char *setSizes = R"(
           tblgen_props.operandSegmentSizes = {{ {0} };
         )";
-        os.printReindented(formatv(setSizes, llvm::join(sizes, ", ")).str());
-      } else {
-        const char *setSizes = R"(
-          tblgen_attrs.emplace_back(rewriter.getStringAttr("operandSegmentSizes"),
-            rewriter.getDenseI32ArrayAttr({{ {0} }));
-            )";
-        os.printReindented(formatv(setSizes, llvm::join(sizes, ", ")).str());
-      }
+      os.printReindented(formatv(setSizes, llvm::join(sizes, ", ")).str());
     }
   }
 }
@@ -2117,7 +2093,7 @@ static void emitRewriters(const RecordKeeper &records, raw_ostream &os) {
   }
 
   // Emit function to add the generated matchers to the pattern list.
-  os << "void LLVM_ATTRIBUTE_UNUSED populateWithGenerated("
+  os << "[[maybe_unused]] void populateWithGenerated("
         "::mlir::RewritePatternSet &patterns) {\n";
   for (const auto &name : rewriterNames) {
     os << "  patterns.add<" << name << ">(patterns.getContext());\n";

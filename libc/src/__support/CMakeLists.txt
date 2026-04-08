@@ -59,6 +59,7 @@ add_header_library(
     .freetrie
 )
 
+libc_set_definition(libc_freelist_malloc_size "LIBC_FREELIST_MALLOC_SIZE=${LIBC_CONF_FREELIST_MALLOC_BUFFER_SIZE}")
 add_object_library(
   freelist_heap
   SRCS
@@ -66,7 +67,7 @@ add_object_library(
   HDRS
     freelist_heap.h
   COMPILE_OPTIONS
-    -DLIBC_FREELIST_MALLOC_SIZE=${LIBC_CONF_FREELIST_MALLOC_BUFFER_SIZE}
+    ${libc_freelist_malloc_size}
   DEPENDS
     .block
     .freelist
@@ -97,6 +98,7 @@ add_header_library(
     common.h
     endian_internal.h
     macros/properties/architectures.h
+    macros/properties/compiler.h
     macros/attributes.h
     macros/config.h
   DEPENDS
@@ -155,12 +157,22 @@ add_header_library(
     ctype_utils.h
 )
 
+list(APPEND wctype_utils_deps
+  libc.hdr.types.wchar_t
+)
+
+if ("${LIBC_CONF_WCTYPE_MODE}" STREQUAL "LIBC_WCTYPE_MODE_UTF8")
+  list(APPEND wctype_utils_deps
+      libc.src.__support.wctype.wctype_classification_utils
+  )
+endif()
+
 add_header_library(
   wctype_utils
   HDRS
     wctype_utils.h
   DEPENDS
-    libc.hdr.types.wint_t
+    ${wctype_utils_deps}
 )
 
 add_header_library(
@@ -178,19 +190,7 @@ add_header_library(
   DEPENDS
     .ctype_utils
     .str_to_num_result
-    libc.hdr.errno_macros
-    libc.src.__support.CPP.limits
-    libc.src.__support.CPP.type_traits
-    libc.src.__support.common
-)
-
-add_header_library(
-  wcs_to_integer
-  HDRS
-    wcs_to_integer.h
-  DEPENDS
     .wctype_utils
-    .str_to_num_result
     libc.hdr.errno_macros
     libc.src.__support.CPP.limits
     libc.src.__support.CPP.type_traits
@@ -231,7 +231,9 @@ add_header_library(
   HDRS
     high_precision_decimal.h
   DEPENDS
+    .ctype_utils
     .str_to_integer
+    .wctype_utils
     libc.hdr.stdint_proxy
 )
 
@@ -246,6 +248,7 @@ add_header_library(
     .str_to_integer
     .str_to_num_result
     .uint128
+    .wctype_utils
     libc.hdr.errno_macros
     libc.hdr.stdint_proxy
     libc.src.__support.common
@@ -301,6 +304,7 @@ add_header_library(
   DEPENDS
     libc.hdr.stdint_proxy
     libc.src.__support.common
+    libc.src.string.memory_utils.inline_memcpy
 )
 
 add_header_library(
@@ -348,6 +352,15 @@ add_header_library(
 )
 
 add_header_library(
+  frac128
+  HDRS
+    frac128.h
+  DEPENDS
+    .big_int
+    libc.src.__support.macros.config
+)
+
+add_header_library(
   uint128
   HDRS
     uint128.h
@@ -356,15 +369,23 @@ add_header_library(
     libc.src.__support.macros.properties.types
 )
 
-add_header_library(
-  libc_assert
-  HDRS
-    libc_assert.h
-  DEPENDS
-    .integer_to_string
-    libc.src.__support.OSUtil.osutil
-    libc.src.__support.macros.optimization
-)
+if(LIBC_COPT_USE_C_ASSERT OR NOT LLVM_LIBC_FULL_BUILD)
+  add_header_library(
+    libc_assert
+    HDRS
+      libc_assert.h
+  )
+else()
+  add_header_library(
+    libc_assert
+    HDRS
+      libc_assert.h
+    DEPENDS
+      .integer_to_string
+      libc.src.__support.OSUtil.osutil
+      libc.src.__support.macros.optimization
+  )
+endif()
 
 add_header_library(
   hash
@@ -398,6 +419,21 @@ add_header_library(
     libc.src.__support.macros.attributes
 )
 
+add_header_library(
+  weak_avl
+  HDRS
+    weak_avl.h
+  DEPENDS
+    libc.hdr.stdint_proxy
+    libc.src.__support.CPP.bit
+    libc.src.__support.CPP.new
+    libc.src.__support.CPP.utility
+    libc.src.__support.CPP.optional
+    libc.src.__support.libc_assert
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+)
+
 add_subdirectory(FPUtil)
 add_subdirectory(OSUtil)
 add_subdirectory(StringUtil)
@@ -420,6 +456,10 @@ add_subdirectory(time)
 # Therefore, cannot currently build this on macos in overlay mode
 if(NOT (LIBC_TARGET_OS_IS_DARWIN))
   add_subdirectory(wchar)
+  add_subdirectory(wctype)
 endif()
 
 add_subdirectory(math)
+if(LIBC_COMPILER_HAS_EXT_VECTOR_TYPE)
+  add_subdirectory(mathvec)
+endif()

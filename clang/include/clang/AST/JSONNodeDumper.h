@@ -20,9 +20,10 @@
 #include "clang/AST/AttrVisitor.h"
 #include "clang/AST/CommentCommandTraits.h"
 #include "clang/AST/CommentVisitor.h"
-#include "clang/AST/ExprConcepts.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/AST/ExprConcepts.h"
 #include "clang/AST/Mangle.h"
+#include "clang/AST/StmtVisitor.h"
 #include "clang/AST/Type.h"
 #include "llvm/Support/JSON.h"
 
@@ -149,7 +150,7 @@ class JSONNodeDumper
   void writeIncludeStack(PresumedLoc Loc, bool JustFirst = false);
 
   // Writes the attributes of a SourceLocation object without.
-  void writeBareSourceLocation(SourceLocation Loc, bool IsSpelling);
+  void writeBareSourceLocation(SourceLocation Loc);
 
   // Writes the attributes of a SourceLocation to JSON based on its presumed
   // spelling location. If the given location represents a macro invocation,
@@ -218,6 +219,7 @@ public:
   void VisitSectionAttr(const SectionAttr *SA);
   void VisitVisibilityAttr(const VisibilityAttr *VA);
   void VisitTLSModelAttr(const TLSModelAttr *TA);
+  void VisitAvailabilityAttr(const AvailabilityAttr *AA);
 
   void VisitTypedefType(const TypedefType *TT);
   void VisitUsingType(const UsingType *TT);
@@ -315,6 +317,7 @@ public:
   void VisitRequiresExpr(const RequiresExpr *RE);
   void VisitCXXDefaultArgExpr(const CXXDefaultArgExpr *Node);
   void VisitCXXDefaultInitExpr(const CXXDefaultInitExpr *Node);
+  void VisitLambdaExpr(const LambdaExpr *LE);
 
   void VisitObjCEncodeExpr(const ObjCEncodeExpr *OEE);
   void VisitObjCMessageExpr(const ObjCMessageExpr *OME);
@@ -333,6 +336,7 @@ public:
   void VisitStringLiteral(const StringLiteral *SL);
   void VisitCXXBoolLiteralExpr(const CXXBoolLiteralExpr *BLE);
 
+  void VisitLoopControlStmt(const LoopControlStmt *LS);
   void VisitIfStmt(const IfStmt *IS);
   void VisitSwitchStmt(const SwitchStmt *SS);
   void VisitCaseStmt(const CaseStmt *CS);

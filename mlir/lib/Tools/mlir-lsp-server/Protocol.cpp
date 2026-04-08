@@ -13,14 +13,11 @@
 #include "Protocol.h"
 #include "llvm/Support/JSON.h"
 
-using namespace mlir;
-using namespace mlir::lsp;
-
 //===----------------------------------------------------------------------===//
 // MLIRConvertBytecodeParams
 //===----------------------------------------------------------------------===//
 
-bool mlir::lsp::fromJSON(const llvm::json::Value &value,
+bool llvm::lsp::fromJSON(const llvm::json::Value &value,
                          MLIRConvertBytecodeParams &result,
                          llvm::json::Path path) {
   llvm::json::ObjectMapper o(value, path);
@@ -31,6 +28,6 @@ bool mlir::lsp::fromJSON(const llvm::json::Value &value,
 // MLIRConvertBytecodeResult
 //===----------------------------------------------------------------------===//
 
-llvm::json::Value mlir::lsp::toJSON(const MLIRConvertBytecodeResult &value) {
+llvm::json::Value llvm::lsp::toJSON(const MLIRConvertBytecodeResult &value) {
   return llvm::json::Object{{"output", value.output}};
 }

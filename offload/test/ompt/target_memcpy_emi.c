@@ -1,6 +1,8 @@
+// clang-format off
 // RUN: %libomptarget-compile-run-and-check-generic
 // REQUIRES: ompt
 // REQUIRES: gpu
+// clang-format on
 
 /*
  * Verify all three data transfer directions: H2D, D2D and D2H
@@ -54,28 +56,28 @@ int main(void) {
 /// CHECK: Callback Init:
 
 /// CHECK: Allocating Memory on Device
-/// CHECK: Callback DataOp EMI: endpoint=1 optype=1
+/// CHECK: Callback DataOp EMI: endpoint=ompt_scope_begin optype=ompt_target_data_alloc
 /// CHECK-SAME: src_device_num=[[HOST:[0-9]+]]
 /// CHECK-SAME: dest_device_num=[[DEVICE:[0-9]+]]
-/// CHECK: Callback DataOp EMI: endpoint=2 optype=1 {{.+}} src_device_num=[[HOST]] {{.+}} dest_device_num=[[DEVICE]]
+/// CHECK: Callback DataOp EMI: endpoint=ompt_scope_end optype=ompt_target_data_alloc {{.+}} src_device_num=[[HOST]] {{.+}} dest_device_num=[[DEVICE]]
 
 /// CHECK: Testing: Host to Device
-/// CHECK: Callback DataOp EMI: endpoint=1 optype=2 {{.+}} src_device_num=[[HOST]] {{.+}} dest_device_num=[[DEVICE]]
-/// CHECK: Callback DataOp EMI: endpoint=2 optype=2 {{.+}} src_device_num=[[HOST]] {{.+}} dest_device_num=[[DEVICE]]
+/// CHECK: Callback DataOp EMI: endpoint=ompt_scope_begin optype=ompt_target_data_transfer_to_device {{.+}} src_device_num=[[HOST]] {{.+}} dest_device_num=[[DEVICE]]
+/// CHECK: Callback DataOp EMI: endpoint=ompt_scope_end optype=ompt_target_data_transfer_to_device {{.+}} src_device_num=[[HOST]] {{.+}} dest_device_num=[[DEVICE]]
 
 /// CHECK: Testing: Device to Device
-/// CHECK: Callback DataOp EMI: endpoint=1 optype=3 {{.+}} src_device_num=[[DEVICE]] {{.+}} dest_device_num=[[DEVICE]]
-/// CHECK: Callback DataOp EMI: endpoint=2 optype=3 {{.+}} src_device_num=[[DEVICE]] {{.+}} dest_device_num=[[DEVICE]]
+/// CHECK: Callback DataOp EMI: endpoint=ompt_scope_begin optype=ompt_target_data_transfer_from_device {{.+}} src_device_num=[[DEVICE]] {{.+}} dest_device_num=[[DEVICE]]
+/// CHECK: Callback DataOp EMI: endpoint=ompt_scope_end optype=ompt_target_data_transfer_from_device {{.+}} src_device_num=[[DEVICE]] {{.+}} dest_device_num=[[DEVICE]]
 
 /// CHECK: Testing: Device to Host
-/// CHECK: Callback DataOp EMI: endpoint=1 optype=3 {{.+}} src_device_num=[[DEVICE]] {{.+}} dest_device_num=[[HOST]]
-/// CHECK: Callback DataOp EMI: endpoint=2 optype=3 {{.+}} src_device_num=[[DEVICE]] {{.+}} dest_device_num=[[HOST]]
+/// CHECK: Callback DataOp EMI: endpoint=ompt_scope_begin optype=ompt_target_data_transfer_from_device {{.+}} src_device_num=[[DEVICE]] {{.+}} dest_device_num=[[HOST]]
+/// CHECK: Callback DataOp EMI: endpoint=ompt_scope_end optype=ompt_target_data_transfer_from_device {{.+}} src_device_num=[[DEVICE]] {{.+}} dest_device_num=[[HOST]]
 
 /// CHECK: Checking Correctness
 
 /// CHECK: Freeing Memory on Device
-/// CHECK: Callback DataOp EMI: endpoint=1 optype=4 {{.+}} src_device_num=[[DEVICE]]
-/// CHECK: Callback DataOp EMI: endpoint=2 optype=4 {{.+}} src_device_num=[[DEVICE]]
+/// CHECK: Callback DataOp EMI: endpoint=ompt_scope_begin optype=ompt_target_data_delete {{.+}} src_device_num=[[DEVICE]]
+/// CHECK: Callback DataOp EMI: endpoint=ompt_scope_end optype=ompt_target_data_delete {{.+}} src_device_num=[[DEVICE]]
 
 /// CHECK: Callback Fini:
 

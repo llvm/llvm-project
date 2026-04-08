@@ -1,4 +1,4 @@
-//===--- MoveForwardingReferenceCheck.cpp - clang-tidy --------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -21,7 +21,7 @@ static void replaceMoveWithForward(const UnresolvedLookupExpr *Callee,
   const SourceManager &SM = Context.getSourceManager();
   const LangOptions &LangOpts = Context.getLangOpts();
 
-  CharSourceRange CallRange =
+  const CharSourceRange CallRange =
       Lexer::makeFileCharRange(CharSourceRange::getTokenRange(
                                    Callee->getBeginLoc(), Callee->getEndLoc()),
                                SM, LangOpts);
@@ -39,7 +39,7 @@ static void replaceMoveWithForward(const UnresolvedLookupExpr *Callee,
     // std::move(). This will hopefully prevent erroneous replacements if the
     // code does unusual things (e.g. create an alias for std::move() in
     // another namespace).
-    NestedNameSpecifier NNS = Callee->getQualifier();
+    const NestedNameSpecifier NNS = Callee->getQualifier();
     switch (NNS.getKind()) {
     case NestedNameSpecifier::Kind::Null:
       // Called as "move" (i.e. presumably the code had a "using std::move;").

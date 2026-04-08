@@ -33,7 +33,7 @@ using namespace sema;
 
 static bool hasMatchingEnvironmentOrNone(const ASTContext &Context,
                                          const AvailabilityAttr *AA) {
-  IdentifierInfo *IIEnvironment = AA->getEnvironment();
+  const IdentifierInfo *IIEnvironment = AA->getEnvironment();
   auto Environment = Context.getTargetInfo().getTriple().getEnvironment();
   if (!IIEnvironment || Environment == llvm::Triple::UnknownEnvironment)
     return true;
@@ -102,7 +102,7 @@ Sema::ShouldDiagnoseAvailabilityOfDecl(const NamedDecl *D, std::string *Message,
       break;
     for (const Type *T = TD->getUnderlyingType().getTypePtr(); /**/; /**/) {
       if (auto *TT = dyn_cast<TagType>(T)) {
-        D = TT->getOriginalDecl()->getDefinitionOrSelf();
+        D = TT->getDecl()->getDefinitionOrSelf();
       } else if (isa<SubstTemplateTypeParmType>(T)) {
         // A Subst* node represents a use through a template.
         // Any uses of the underlying declaration happened through it's template
@@ -187,7 +187,9 @@ static bool ShouldDiagnoseAvailabilityInContext(
   // For libraries the availability will be checked later in
   // DiagnoseHLSLAvailability class once where the specific environment/shader
   // stage of the caller is known.
-  if (S.getLangOpts().HLSL) {
+  // We only do this for APIs that are not explicitly deprecated. Any API that
+  // is explicitly deprecated we always issue a diagnostic on.
+  if (S.getLangOpts().HLSL && K != AR_Deprecated) {
     if (!S.getLangOpts().HLSLStrictAvailability ||
         (DeclEnv != nullptr &&
          S.getASTContext().getTargetInfo().getTriple().getEnvironment() ==
@@ -674,10 +676,11 @@ static void DoEmitAvailabilityWarning(Sema &S, AvailabilityResult K,
   struct AllowWarningInSystemHeaders {
     AllowWarningInSystemHeaders(DiagnosticsEngine &E,
                                 bool AllowWarningInSystemHeaders)
-        : Engine(E), Prev(E.getSuppressSystemWarnings()) {
-      E.setSuppressSystemWarnings(!AllowWarningInSystemHeaders);
+        : Engine(E), Prev(E.getForceSystemWarnings()) {
+      if (AllowWarningInSystemHeaders)
+        Engine.setForceSystemWarnings(true);
     }
-    ~AllowWarningInSystemHeaders() { Engine.setSuppressSystemWarnings(Prev); }
+    ~AllowWarningInSystemHeaders() { Engine.setForceSystemWarnings(Prev); }
 
   private:
     DiagnosticsEngine &Engine;
@@ -985,12 +988,26 @@ void DiagnoseUnguardedAvailability::DiagnoseDeclAvailability(
     const char *ExtraIndentation = "    ";
     std::string FixItString;
     llvm::raw_string_ostream FixItOS(FixItString);
-    FixItOS << "if (" << (SemaRef.getLangOpts().ObjC ? "@available"
-                                                     : "__builtin_available")
-            << "("
-            << AvailabilityAttr::getPlatformNameSourceSpelling(
-                   SemaRef.getASTContext().getTargetInfo().getPlatformName())
-            << " " << Introduced.getAsString() << ", *)) {\n"
+    // If the attr was derived from anyAppleOS, emit the fix-it using
+    // anyAppleOS and the original anyAppleOS version rather than the
+    // platform-specific name and version.
+    VersionTuple OrigAnyAppleOSVersion = AA->getOrigAnyAppleOSVersion();
+    StringRef FixItPlatformName;
+    VersionTuple FixItVersion;
+
+    if (OrigAnyAppleOSVersion.empty()) {
+      FixItPlatformName = AvailabilityAttr::getPlatformNameSourceSpelling(
+          SemaRef.getASTContext().getTargetInfo().getPlatformName());
+      FixItVersion = Introduced;
+    } else {
+      FixItPlatformName = "anyAppleOS";
+      FixItVersion = OrigAnyAppleOSVersion;
+    }
+    FixItOS << "if ("
+            << (SemaRef.getLangOpts().ObjC ? "@available"
+                                           : "__builtin_available")
+            << "(" << FixItPlatformName << " " << FixItVersion.getAsString()
+            << ", *)) {\n"
             << Indentation << ExtraIndentation;
     FixitDiag << FixItHint::CreateInsertion(IfInsertionLoc, FixItOS.str());
     SourceLocation ElseInsertionLoc = Lexer::findLocationAfterToken(
@@ -1017,7 +1034,7 @@ bool DiagnoseUnguardedAvailability::VisitTypeLoc(TypeLoc Ty) {
     return true;
 
   if (const auto *TT = dyn_cast<TagType>(TyPtr)) {
-    TagDecl *TD = TT->getOriginalDecl()->getDefinitionOrSelf();
+    TagDecl *TD = TT->getDecl()->getDefinitionOrSelf();
     DiagnoseDeclAvailability(TD, Range);
 
   } else if (const auto *TD = dyn_cast<TypedefType>(TyPtr)) {

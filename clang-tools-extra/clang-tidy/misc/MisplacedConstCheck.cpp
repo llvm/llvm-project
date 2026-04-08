@@ -1,4 +1,4 @@
-//===--- MisplacedConstCheck.cpp - clang-tidy------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -40,7 +40,7 @@ static QualType guessAlternateQualification(ASTContext &Context, QualType QT) {
   Qualifiers Quals = QT.getLocalQualifiers();
   Quals.removeConst();
 
-  QualType NewQT = Context.getPointerType(
+  const QualType NewQT = Context.getPointerType(
       QualType(QT->getPointeeType().getTypePtr(), Qualifiers::Const));
   return NewQT.withCVRQualifiers(Quals.getCVRQualifiers());
 }
@@ -48,7 +48,7 @@ static QualType guessAlternateQualification(ASTContext &Context, QualType QT) {
 void MisplacedConstCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *Var = Result.Nodes.getNodeAs<ValueDecl>("decl");
   ASTContext &Ctx = *Result.Context;
-  QualType CanQT = Var->getType().getCanonicalType();
+  const QualType CanQT = Var->getType().getCanonicalType();
 
   SourceLocation AliasLoc;
   const char *AliasType = nullptr;

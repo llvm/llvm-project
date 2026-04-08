@@ -252,15 +252,15 @@ for.end:
 ; FMIN (FAST)
 
 ; CHECK-REMARK: vectorized loop (vectorization width: vscale x 8, interleaved count: 2)
-define float @fmin_fast(ptr noalias nocapture readonly %a, i64 %n) #0 {
+define float @fmin_fast(ptr noalias nocapture readonly %a, i64 %n) {
 ; CHECK-LABEL: @fmin_fast
 ; CHECK: vector.body:
 ; CHECK: %[[LOAD1:.*]] = load <vscale x 8 x float>
 ; CHECK: %[[LOAD2:.*]] = load <vscale x 8 x float>
 ; CHECK: %[[FCMP1:.*]] = fcmp fast olt <vscale x 8 x float> %[[LOAD1]]
 ; CHECK: %[[FCMP2:.*]] = fcmp fast olt <vscale x 8 x float> %[[LOAD2]]
-; CHECK: %[[SEL1:.*]] = select <vscale x 8 x i1> %[[FCMP1]], <vscale x 8 x float> %[[LOAD1]]
-; CHECK: %[[SEL2:.*]] = select <vscale x 8 x i1> %[[FCMP2]], <vscale x 8 x float> %[[LOAD2]]
+; CHECK: %[[SEL1:.*]] = select nnan nsz <vscale x 8 x i1> %[[FCMP1]], <vscale x 8 x float> %[[LOAD1]]
+; CHECK: %[[SEL2:.*]] = select nnan nsz <vscale x 8 x i1> %[[FCMP2]], <vscale x 8 x float> %[[LOAD2]]
 ; CHECK: middle.block:
 ; CHECK: %[[FCMP:.*]] = fcmp fast olt <vscale x 8 x float> %[[SEL1]], %[[SEL2]]
 ; CHECK-NEXT: %[[SEL:.*]] = select fast <vscale x 8 x i1> %[[FCMP]], <vscale x 8 x float> %[[SEL1]], <vscale x 8 x float> %[[SEL2]]
@@ -274,7 +274,7 @@ for.body:
   %arrayidx = getelementptr inbounds float, ptr %a, i64 %iv
   %0 = load float, ptr %arrayidx, align 4
   %cmp.i = fcmp fast olt float %0, %sum.07
-  %.sroa.speculated = select i1 %cmp.i, float %0, float %sum.07
+  %.sroa.speculated = select nnan nsz i1 %cmp.i, float %0, float %sum.07
   %iv.next = add nuw nsw i64 %iv, 1
   %exitcond.not = icmp eq i64 %iv.next, %n
   br i1 %exitcond.not, label %for.end, label %for.body, !llvm.loop !0
@@ -286,15 +286,15 @@ for.end:
 ; FMAX (FAST)
 
 ; CHECK-REMARK: vectorized loop (vectorization width: vscale x 8, interleaved count: 2)
-define float @fmax_fast(ptr noalias nocapture readonly %a, i64 %n) #0 {
+define float @fmax_fast(ptr noalias nocapture readonly %a, i64 %n) {
 ; CHECK-LABEL: @fmax_fast
 ; CHECK: vector.body:
 ; CHECK: %[[LOAD1:.*]] = load <vscale x 8 x float>
 ; CHECK: %[[LOAD2:.*]] = load <vscale x 8 x float>
 ; CHECK: %[[FCMP1:.*]] = fcmp fast ogt <vscale x 8 x float> %[[LOAD1]]
 ; CHECK: %[[FCMP2:.*]] = fcmp fast ogt <vscale x 8 x float> %[[LOAD2]]
-; CHECK: %[[SEL1:.*]] = select <vscale x 8 x i1> %[[FCMP1]], <vscale x 8 x float> %[[LOAD1]]
-; CHECK: %[[SEL2:.*]] = select <vscale x 8 x i1> %[[FCMP2]], <vscale x 8 x float> %[[LOAD2]]
+; CHECK: %[[SEL1:.*]] = select nnan nsz <vscale x 8 x i1> %[[FCMP1]], <vscale x 8 x float> %[[LOAD1]]
+; CHECK: %[[SEL2:.*]] = select nnan nsz <vscale x 8 x i1> %[[FCMP2]], <vscale x 8 x float> %[[LOAD2]]
 ; CHECK: middle.block:
 ; CHECK: %[[FCMP:.*]] = fcmp fast ogt <vscale x 8 x float> %[[SEL1]], %[[SEL2]]
 ; CHECK-NEXT: %[[SEL:.*]] = select fast <vscale x 8 x i1> %[[FCMP]], <vscale x 8 x float> %[[SEL1]], <vscale x 8 x float> %[[SEL2]]
@@ -308,7 +308,7 @@ for.body:
   %arrayidx = getelementptr inbounds float, ptr %a, i64 %iv
   %0 = load float, ptr %arrayidx, align 4
   %cmp.i = fcmp fast ogt float %0, %sum.07
-  %.sroa.speculated = select i1 %cmp.i, float %0, float %sum.07
+  %.sroa.speculated = select nnan nsz i1 %cmp.i, float %0, float %sum.07
   %iv.next = add nuw nsw i64 %iv, 1
   %exitcond.not = icmp eq i64 %iv.next, %n
   br i1 %exitcond.not, label %for.end, label %for.body, !llvm.loop !0
@@ -417,21 +417,17 @@ for.end:                                 ; preds = %for.body, %entry
 
 ; Note: This test was added to ensure we always check the legality of reductions (end emit a warning if necessary) before checking for memory dependencies
 ; CHECK-REMARK: Scalable vectorization not supported for the reduction operations found in this loop.
-; CHECK-REMARK: vectorized loop (vectorization width: 4, interleaved count: 2)
+; CHECK-REMARK: Ignoring user-specified interleave count due to possibly unsafe dependencies in the loop.
+; CHECK-REMARK: vectorized loop (vectorization width: 4, interleaved count: 1)
 define i32 @memory_dependence(ptr noalias nocapture %a, ptr noalias nocapture readonly %b, i64 %n) {
 ; CHECK-LABEL: @memory_dependence
 ; CHECK: vector.body:
 ; CHECK: %[[LOAD1:.*]] = load <4 x i32>
 ; CHECK: %[[LOAD2:.*]] = load <4 x i32>
-; CHECK: %[[LOAD3:.*]] = load <4 x i32>
-; CHECK: %[[LOAD4:.*]] = load <4 x i32>
-; CHECK: %[[ADD1:.*]] = add nsw <4 x i32> %[[LOAD3]], %[[LOAD1]]
-; CHECK: %[[ADD2:.*]] = add nsw <4 x i32> %[[LOAD4]], %[[LOAD2]]
-; CHECK: %[[MUL1:.*]] = mul <4 x i32> %[[LOAD3]]
-; CHECK: %[[MUL2:.*]] = mul <4 x i32> %[[LOAD4]]
+; CHECK: %[[ADD1:.*]] = add nsw <4 x i32> %[[LOAD2]], %[[LOAD1]]
+; CHECK: %[[MUL1:.*]] = mul <4 x i32> %[[LOAD2]]
 ; CHECK: middle.block:
-; CHECK: %[[RDX:.*]] = mul <4 x i32> %[[MUL2]], %[[MUL1]]
-; CHECK: call i32 @llvm.vector.reduce.mul.v4i32(<4 x i32> %[[RDX]])
+; CHECK: call i32 @llvm.vector.reduce.mul.v4i32(<4 x i32> %[[MUL1]])
 entry:
   br label %for.body
 
@@ -455,7 +451,6 @@ for.end:
   ret i32 %mul
 }
 
-attributes #0 = { "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" }
 
 !0 = distinct !{!0, !1, !2, !3, !4}
 !1 = !{!"llvm.loop.vectorize.width", i32 8}

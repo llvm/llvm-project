@@ -255,6 +255,10 @@ private:
       if (auto CodePatterns = scalarValue(N, "CodePatterns"))
         F.CodePatterns = *CodePatterns;
     });
+    Dict.handle("MacroFilter", [&](Node &N) {
+      if (auto MacroFilter = scalarValue(N, "MacroFilter"))
+        F.MacroFilter = *MacroFilter;
+    });
     Dict.parse(N);
   }
 
@@ -263,6 +267,10 @@ private:
     Dict.handle("ShowAKA", [&](Node &N) {
       if (auto ShowAKA = boolValue(N, "ShowAKA"))
         F.ShowAKA = *ShowAKA;
+    });
+    Dict.handle("MacroContentsLimit", [&](Node &N) {
+      if (auto MacroContentsLimit = uint32Value(N, "MacroContentsLimit"))
+        F.MacroContentsLimit = *MacroContentsLimit;
     });
     Dict.parse(N);
   }

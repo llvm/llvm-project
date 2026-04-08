@@ -431,7 +431,7 @@ public:
     mlir::Value box = args.valueInTuple;
     mlir::IndexType idxTy = builder.getIndexType();
     llvm::SmallVector<mlir::Value> lbounds;
-    if (!ba.lboundIsAllOnes() && !Fortran::evaluate::IsAssumedRank(sym)) {
+    if (!ba.lboundIsAllOnes() && !Fortran::semantics::IsAssumedRank(sym)) {
       if (ba.isStaticArray()) {
         for (std::int64_t lb : ba.staticLBound())
           lbounds.emplace_back(builder.createIntegerConstant(loc, idxTy, lb));
@@ -490,7 +490,7 @@ private:
     bool isPolymorphic = type && type->IsPolymorphic();
     return isScalarOrContiguous && !isPolymorphic &&
            !isDerivedWithLenParameters(sym) &&
-           !Fortran::evaluate::IsAssumedRank(sym);
+           !Fortran::semantics::IsAssumedRank(sym);
   }
 };
 } // namespace

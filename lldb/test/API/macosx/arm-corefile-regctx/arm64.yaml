@@ -1,0 +1,30 @@
+cpu: arm64
+threads:
+  # (lldb) reg read
+  # % pbpaste | grep = | sed 's, ,,g' | awk -F= '{print "{name: " $1 ", value: " $2 "},"}'
+  - regsets:
+      - flavor: gpr
+        registers: [
+           {name: x0, value: 0x0000000000000001}, {name: x1, value: 0x000000016fdff3c0},
+           {name: x2, value: 0x000000016fdff3d0}, {name: x3, value: 0x000000016fdff510},
+           {name: x4, value: 0x0000000000000000}, {name: x5, value: 0x0000000000000000},
+           {name: x6, value: 0x0000000000000000}, {name: x7, value: 0x0000000000000000},
+           {name: x8, value: 0x000000010000d910}, {name: x9, value: 0x0000000000000001},
+           {name: x10, value: 0xe1e88de000000000}, {name: x11, value: 0x0000000000000003},
+           {name: x12, value: 0x0000000000000148}, {name: x13, value: 0x0000000000004000},
+           {name: x14, value: 0x0000000000000008}, {name: x15, value: 0x0000000000000000},
+           {name: x16, value: 0x0000000000000000}, {name: x17, value: 0x0000000100003f5c},
+           {name: x18, value: 0x0000000000000000}, {name: x19, value: 0x0000000100003f5c},
+           {name: x20, value: 0x000000010000c000}, {name: x21, value: 0x000000010000d910},
+           {name: x22, value: 0x000000016fdff250}, {name: x23, value: 0x000000018ce12366},
+           {name: x24, value: 0x000000016fdff1d0}, {name: x25, value: 0x0000000000000001},
+           {name: x26, value: 0x0000000000000000}, {name: x27, value: 0x0000000000000000},
+           {name: x28, value: 0x0000000000000000}, {name: fp, value: 0x000000016fdff3a0},
+           {name: lr, value: 0x000000018cd97f28}, {name: sp, value: 0x000000016fdff140},
+           {name: pc, value: 0x0000000100003f5c}, {name: cpsr, value: 0x80001000}
+        ]
+      - flavor: exc
+        registers: [ {name: far, value: 0x0000000100003f5c}, 
+                     {name: esr, value: 0xf2000000}, 
+                     {name: exception, value: 0x00000000}
+                   ]

@@ -31,13 +31,9 @@ ProcessWasm::ProcessWasm(lldb::TargetSP target_sp, ListenerSP listener_sp)
 }
 
 void ProcessWasm::Initialize() {
-  static llvm::once_flag g_once_flag;
-
-  llvm::call_once(g_once_flag, []() {
-    PluginManager::RegisterPlugin(GetPluginNameStatic(),
-                                  GetPluginDescriptionStatic(), CreateInstance,
-                                  DebuggerInitialize);
-  });
+  PluginManager::RegisterPlugin(GetPluginNameStatic(),
+                                GetPluginDescriptionStatic(), CreateInstance,
+                                DebuggerInitialize);
 }
 
 void ProcessWasm::DebuggerInitialize(Debugger &debugger) {
@@ -94,10 +90,15 @@ size_t ProcessWasm::ReadMemory(lldb::addr_t vm_addr, void *buf, size_t size,
   case WasmAddressType::Object:
     return ProcessGDBRemote::ReadMemory(vm_addr, buf, size, error);
   case WasmAddressType::Invalid:
-    error.FromErrorStringWithFormat(
-        "Wasm read failed for invalid address 0x%" PRIx64, vm_addr);
-    return 0;
+    break;
   }
+
+  error.FromErrorStringWithFormatv(
+      "Wasm read failed for invalid address {0:x} (type = {1:x}, module = "
+      "{2:x}, offset = {3:x})",
+      vm_addr, wasm_addr.GetType(), wasm_addr.GetModuleID(),
+      wasm_addr.GetOffset());
+  return 0;
 }
 
 llvm::Expected<std::vector<lldb::addr_t>>

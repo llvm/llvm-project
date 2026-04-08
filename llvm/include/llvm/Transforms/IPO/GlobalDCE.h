@@ -81,7 +81,7 @@ private:
   void ComputeDependencies(Value *V, SmallPtrSetImpl<GlobalValue *> &U);
 };
 
-ModulePass *createGlobalDCEPass();
+LLVM_ABI ModulePass *createGlobalDCEPass();
 }
 
 #endif // LLVM_TRANSFORMS_IPO_GLOBALDCE_H

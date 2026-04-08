@@ -10,27 +10,32 @@ target triple = "dxil-pc-shadermodel6.6-compute"
 define void @test() {
   ; Buffer<float4>
   %float4 = call target("dx.TypedBuffer", <4 x float>, 0, 0, 0)
-      @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, i1 false, ptr @A.str)
+      @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, ptr @A.str)
   ; CHECK: %"Buffer<float4>" = type { <4 x float> }
 
   ; Buffer<int>
   %int = call target("dx.TypedBuffer", i32, 0, 0, 1)
-      @llvm.dx.resource.handlefrombinding(i32 0, i32 1, i32 1, i32 0, i1 false, ptr null)
+      @llvm.dx.resource.handlefrombinding(i32 0, i32 1, i32 1, i32 0, ptr null)
   ; CHECK: %"Buffer<int32_t>" = type { i32 }
 
   ; Buffer<uint3>
   %uint3 = call target("dx.TypedBuffer", <3 x i32>, 0, 0, 0)
-      @llvm.dx.resource.handlefrombinding(i32 0, i32 2, i32 1, i32 0, i1 false, ptr null)
+      @llvm.dx.resource.handlefrombinding(i32 0, i32 2, i32 1, i32 0, ptr null)
   ; CHECK: %"Buffer<uint32_t3>" = type { <3 x i32> }
 
   ; StructuredBuffer<S>
   %struct0 = call target("dx.RawBuffer", %struct.S, 0, 0)
-      @llvm.dx.resource.handlefrombinding(i32 0, i32 10, i32 1, i32 0, i1 true, ptr @SB.str)
+      @llvm.dx.resource.handlefrombinding(i32 0, i32 10, i32 1, i32 0, ptr @SB.str)
   ; CHECK: %"StructuredBuffer<struct.S>" = type { %struct.S }
+
+  ; StructuredBuffer<float[3][2]>
+  %struct1 = call target("dx.RawBuffer", [3 x [2 x float]], 0, 0)
+      @llvm.dx.resource.handlefrombinding(i32 0, i32 12, i32 1, i32 0, ptr null)
+  ; CHECK: %"StructuredBuffer<float[3][2]>" = type { [3 x [2 x float]] }
 
   ; ByteAddressBuffer
   %byteaddr = call target("dx.RawBuffer", i8, 0, 0)
-      @llvm.dx.resource.handlefrombinding(i32 0, i32 20, i32 1, i32 0, i1 false, ptr null)
+      @llvm.dx.resource.handlefrombinding(i32 0, i32 20, i32 1, i32 0, ptr null)
   ; CHECK: %ByteAddressBuffer = type { i32 }
 
   ret void
@@ -40,12 +45,14 @@ define void @test() {
 ; CHECK-NEXT: @[[T1:.*]] = external constant %"Buffer<int32_t>"
 ; CHECK-NEXT: @[[T2:.*]] = external constant %"Buffer<uint32_t3>"
 ; CHECK-NEXT: @[[S0:.*]] = external constant %"StructuredBuffer<struct.S>"
+; CHECK-NEXT: @[[S1:.*]] = external constant %"StructuredBuffer<float[3][2]>"
 ; CHECK-NEXT: @[[B0:.*]] = external constant %ByteAddressBuffer
 
 ; CHECK: !{i32 0, ptr @[[T0]], !"A"
 ; CHECK: !{i32 1, ptr @[[T1]], !""
 ; CHECK: !{i32 2, ptr @[[T2]], !""
 ; CHECK: !{i32 3, ptr @[[S0]], !"SB"
-; CHECK: !{i32 4, ptr @[[B0]], !""
+; CHECK: !{i32 4, ptr @[[S1]], !""
+; CHECK: !{i32 5, ptr @[[B0]], !""
 
 attributes #0 = { nocallback nofree nosync nounwind willreturn memory(none) }

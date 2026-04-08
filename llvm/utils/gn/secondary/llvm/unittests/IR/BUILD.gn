@@ -30,6 +30,7 @@ unittest("IRTests") {
     "DominatorTreeTest.cpp",
     "DroppedVariableStatsIRTest.cpp",
     "FunctionTest.cpp",
+    "GlobalObjectTest.cpp",
     "IRBuilderTest.cpp",
     "InstructionsTest.cpp",
     "IntrinsicsTest.cpp",

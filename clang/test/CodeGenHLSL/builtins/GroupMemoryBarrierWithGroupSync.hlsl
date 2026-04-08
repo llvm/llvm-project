@@ -17,4 +17,4 @@ void test_GroupMemoryBarrierWithGroupSync() {
 
 // CHECK: declare void @llvm.[[TARGET]].group.memory.barrier.with.group.sync() #[[ATTRS:[0-9]+]]
 // CHECK-NOT: attributes #[[ATTRS]] = {{.+}}memory(none){{.+}}
-// CHECK: attributes #[[ATTRS]] = {
+// CHECK: attributes #[[ATTRS]] = {{.+}}convergent{{.+}}

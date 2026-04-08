@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy -std=c++20 %s modernize-loop-convert %t -- -- -I %S/Inputs/loop-convert
+// RUN: %check_clang_tidy -std=c++20-or-later %s modernize-loop-convert %t -- -- -I %S/Inputs/loop-convert
 
 namespace std {
 struct strong_ordering {

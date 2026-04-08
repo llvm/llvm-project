@@ -2,12 +2,12 @@
 
 // test diagnostics are issued when profiling data mis-matches annotations
 // RUN: llvm-profdata merge %S/Inputs/misexpect-branch.proftext -o %t.profdata
-// RUN: %clang_cc1 %s -O2 -o - -emit-llvm -fprofile-instrument-use-path=%t.profdata -verify=imprecise -Wmisexpect
-// RUN: %clang_cc1 %s -O2 -o - -emit-llvm -fprofile-instrument-use-path=%t.profdata -verify=exact -Wmisexpect -debug-info-kind=line-tables-only
+// RUN: %clang_cc1 %s -O2 -o - -emit-llvm -fprofile-instrument-use=clang -fprofile-instrument-use-path=%t.profdata -verify=imprecise -Wmisexpect
+// RUN: %clang_cc1 %s -O2 -o - -emit-llvm -fprofile-instrument-use=clang -fprofile-instrument-use-path=%t.profdata -verify=exact -Wmisexpect -debug-info-kind=line-tables-only
 
 // there should be no diagnostics when the tolerance is sufficiently high, or when -Wmisexpect is not requested
-// RUN: %clang_cc1 %s -O2 -o - -emit-llvm -fprofile-instrument-use-path=%t.profdata -verify=foo -fdiagnostics-misexpect-tolerance=10 -Wmisexpect -debug-info-kind=line-tables-only
-// RUN: %clang_cc1 %s -O2 -o - -disable-llvm-passes -emit-llvm -fprofile-instrument-use-path=%t.profdata -verify=foo
+// RUN: %clang_cc1 %s -O2 -o - -emit-llvm -fprofile-instrument-use=clang -fprofile-instrument-use-path=%t.profdata -verify=foo -fdiagnostics-misexpect-tolerance=10 -Wmisexpect -debug-info-kind=line-tables-only
+// RUN: %clang_cc1 %s -O2 -o - -disable-llvm-passes -emit-llvm -fprofile-instrument-use=clang -fprofile-instrument-use-path=%t.profdata -verify=foo
 
 // Ensure we emit an error when we don't use pgo with tolerance threshold
 // RUN: %clang_cc1 %s -O2 -o - -emit-llvm  -fdiagnostics-misexpect-tolerance=10 -Wmisexpect -debug-info-kind=line-tables-only 2>&1 | FileCheck -check-prefix=NO_PGO %s

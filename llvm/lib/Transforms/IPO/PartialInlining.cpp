@@ -109,7 +109,7 @@ static cl::opt<float> MinRegionSizeRatio(
              "outline candidate and original function"));
 // Used to tune the minimum number of execution counts needed in the predecessor
 // block to the cold edge. ie. confidence interval.
-static cl::opt<unsigned>
+cl::opt<unsigned>
     MinBlockCounterExecution("min-block-execution", cl::init(100), cl::Hidden,
                              cl::desc("Minimum block executions to consider "
                                       "its BranchProbabilityInfo valid"));
@@ -513,8 +513,8 @@ PartialInlinerImpl::computeOutliningColdRegionsInfo(
 std::unique_ptr<FunctionOutliningInfo>
 PartialInlinerImpl::computeOutliningInfo(Function &F) const {
   BasicBlock *EntryBlock = &F.front();
-  BranchInst *BR = dyn_cast<BranchInst>(EntryBlock->getTerminator());
-  if (!BR || BR->isUnconditional())
+  CondBrInst *BR = dyn_cast<CondBrInst>(EntryBlock->getTerminator());
+  if (!BR)
     return std::unique_ptr<FunctionOutliningInfo>();
 
   // Returns true if Succ is BB's successor
@@ -661,10 +661,8 @@ static bool hasProfileData(const Function &F, const FunctionOutliningInfo &OI) {
     return true;
   // Now check if any of the entry block has MD_prof data:
   for (auto *E : OI.Entries) {
-    BranchInst *BR = dyn_cast<BranchInst>(E->getTerminator());
-    if (!BR || BR->isUnconditional())
-      continue;
-    if (hasBranchWeightMD(*BR))
+    CondBrInst *BR = dyn_cast<CondBrInst>(E->getTerminator());
+    if (BR && hasBranchWeightMD(*BR))
       return true;
   }
   return false;
@@ -801,7 +799,7 @@ PartialInlinerImpl::computeBBInlineCost(BasicBlock *BB,
   InstructionCost InlineCost = 0;
   const DataLayout &DL = BB->getDataLayout();
   int InstrCost = InlineConstants::getInstrCost();
-  for (Instruction &I : BB->instructionsWithoutDebug()) {
+  for (Instruction &I : *BB) {
     // Skip free instructions.
     switch (I.getOpcode()) {
     case Instruction::BitCast:

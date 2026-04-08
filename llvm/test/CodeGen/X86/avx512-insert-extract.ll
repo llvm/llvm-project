@@ -1445,7 +1445,7 @@ define i8 @test_extractelement_variable_v64i8_indexi8(<64 x i8> %t1, i8 %index) 
 ; CHECK-NEXT:    addb %dil, %dil
 ; CHECK-NEXT:    vmovaps %zmm0, (%rsp)
 ; CHECK-NEXT:    movzbl %dil, %eax
-; CHECK-NEXT:    andl $63, %eax
+; CHECK-NEXT:    andl $62, %eax
 ; CHECK-NEXT:    movzbl (%rsp,%rax), %eax
 ; CHECK-NEXT:    movq %rbp, %rsp
 ; CHECK-NEXT:    popq %rbp
@@ -1669,8 +1669,7 @@ define i32 @test_insertelement_variable_v32i1(<32 x i8> %a, i8 %b, i32 %index) n
 ; SKX-NEXT:    vpmovm2b %k0, %ymm0
 ; SKX-NEXT:    vpbroadcastb %eax, %ymm0 {%k1}
 ; SKX-NEXT:    vpsllw $7, %ymm0, %ymm0
-; SKX-NEXT:    vpmovb2m %ymm0, %k0
-; SKX-NEXT:    kmovd %k0, %eax
+; SKX-NEXT:    vpmovmskb %ymm0, %eax
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
   %t1 = icmp ugt <32 x i8> %a, zeroinitializer

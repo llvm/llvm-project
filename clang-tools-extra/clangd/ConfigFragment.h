@@ -354,6 +354,12 @@ struct Fragment {
     ///   All  => enable all code patterns and snippets suggestion
     ///   None => disable all code patterns and snippets suggestion
     std::optional<Located<std::string>> CodePatterns;
+    /// How to filter macros before offering them as suggestions
+    /// Values are Config::MacroFilterPolicy:
+    ///   ExactPrefix:  Suggest macros if the prefix matches exactly
+    ///   FuzzyMatch:   Fuzzy-match macros if they do not have "_" as prefix or
+    ///   suffix
+    std::optional<Located<std::string>> MacroFilter;
   };
   CompletionBlock Completion;
 
@@ -361,6 +367,8 @@ struct Fragment {
   struct HoverBlock {
     /// Whether hover show a.k.a type.
     std::optional<Located<bool>> ShowAKA;
+    /// Limit the number of characters returned when hovering a macro.
+    std::optional<Located<uint32_t>> MacroContentsLimit;
   };
   HoverBlock Hover;
 

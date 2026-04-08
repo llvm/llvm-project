@@ -2047,7 +2047,6 @@ define signext i32 @abs_i32(i32 signext %x) {
   %a = call i32 @llvm.abs.i32(i32 %x, i1 false)
   ret i32 %a
 }
-declare i32 @llvm.abs.i32(i32, i1)
 
 define i64 @abs_i64(i64 %x) {
 ; NOSFB-LABEL: abs_i64:
@@ -2075,20 +2074,19 @@ define i64 @abs_i64(i64 %x) {
 ; RV32SFB-LABEL: abs_i64:
 ; RV32SFB:       # %bb.0:
 ; RV32SFB-NEXT:    snez a2, a0
-; RV32SFB-NEXT:    add a2, a2, a1
+; RV32SFB-NEXT:    neg a3, a1
 ; RV32SFB-NEXT:    bgez a1, .LBB35_2
 ; RV32SFB-NEXT:  # %bb.1:
 ; RV32SFB-NEXT:    neg a0, a0
 ; RV32SFB-NEXT:  .LBB35_2:
 ; RV32SFB-NEXT:    bgez a1, .LBB35_4
 ; RV32SFB-NEXT:  # %bb.3:
-; RV32SFB-NEXT:    neg a1, a2
+; RV32SFB-NEXT:    sub a1, a3, a2
 ; RV32SFB-NEXT:  .LBB35_4:
 ; RV32SFB-NEXT:    ret
   %a = call i64 @llvm.abs.i64(i64 %x, i1 false)
   ret i64 %a
 }
-declare i64 @llvm.abs.i64(i64, i1)
 
 define i64 @select_andn(i64 %A, i64 %B, i64 %C, i1 zeroext %cond) {
 ; NOSFB-LABEL: select_andn:

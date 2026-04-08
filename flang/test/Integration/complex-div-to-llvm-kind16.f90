@@ -6,7 +6,7 @@
 
 
 ! CHECK-LABEL: @div_test_quad
-! CHECK-SAME: ptr %[[RET:.*]], ptr %[[LHS:.*]], ptr %[[RHS:.*]])
+! CHECK-SAME: ptr noalias %[[RET:.*]], ptr noalias %[[LHS:.*]], ptr noalias %[[RHS:.*]])
 ! CHECK: %[[LOAD_LHS:.*]] = load { fp128, fp128 }, ptr %[[LHS]], align 16
 ! CHECK: %[[LOAD_RHS:.*]] = load { fp128, fp128 }, ptr %[[RHS]], align 16
 ! CHECK: %[[LHS_REAL:.*]] = extractvalue { fp128, fp128 } %[[LOAD_LHS]], 0

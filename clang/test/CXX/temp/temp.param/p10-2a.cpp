@@ -86,16 +86,18 @@ using f1 = F<int>;
 using f2 = F<long>; // expected-error {{constraints not satisfied for alias template 'F' [with T = long]}}
 
 template<typename T, typename... Ts>
-concept OneOf = (is_same_v<T, Ts> || ...);
-// expected-note@-1 2{{because 'is_same_v<char, char[1]>' evaluated to false}}
-// expected-note@-2 2{{and 'is_same_v<char, char[2]>' evaluated to false}}
-// expected-note@-3 {{because 'is_same_v<short, int>' evaluated to false}}
-// expected-note@-4 {{and 'is_same_v<short, long>' evaluated to false}}
-// expected-note@-5 {{and 'is_same_v<short, char>' evaluated to false}}
-// expected-note@-6 3{{because 'is_same_v<int, char[1]>' evaluated to false}}
-// expected-note@-7 3{{and 'is_same_v<int, char[2]>' evaluated to false}}
-// expected-note@-8 2{{because 'is_same_v<std::nullptr_t, char>' evaluated to false}}
-// expected-note@-9 2{{and 'is_same_v<std::nullptr_t, int>' evaluated to false}}
+concept OneOf = (is_same_v<T, Ts> || ...); // #OneOf
+// expected-note@#OneOf 2{{because 'is_same_v<char, char[1]>' evaluated to false}}
+// expected-note@#OneOf 2{{and 'is_same_v<char, char[2]>' evaluated to false}}
+// expected-note@#OneOf {{because 'is_same_v<short, int>' evaluated to false}}
+// expected-note@#OneOf {{and 'is_same_v<short, long>' evaluated to false}}
+// expected-note@#OneOf {{and 'is_same_v<short, char>' evaluated to false}}
+// expected-note@#OneOf 3{{because 'is_same_v<int, char[1]>' evaluated to false}}
+// expected-note@#OneOf 3{{and 'is_same_v<int, char[2]>' evaluated to false}}
+// expected-note@#OneOf {{because 'is_same_v<decltype(nullptr), char>' evaluated to false}}
+// expected-note@#OneOf {{because 'is_same_v<std::nullptr_t, char>' evaluated to false}}
+// expected-note@#OneOf {{and 'is_same_v<std::nullptr_t, int>' evaluated to false}}
+// expected-note@#OneOf {{and 'is_same_v<decltype(nullptr), int>' evaluated to false}}
 
 template<OneOf<char[1], char[2]> T, OneOf<int, long, char> U>
 // expected-note@-1 2{{because 'OneOf<char, char[1], char[2]>' evaluated to false}}
@@ -124,6 +126,7 @@ using I = int;
 
 using i1 = I<1>;
 using i2 = I<'a'>;
+// FIXME: This crashes with -std=c++2c
 using i3 = I<nullptr>;
 // expected-error@-1 {{constraints not satisfied for alias template 'I' [with x = nullptr]}}
 

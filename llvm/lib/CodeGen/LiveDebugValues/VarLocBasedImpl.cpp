@@ -125,6 +125,7 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachineInstrBundle.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/PseudoSourceValue.h"
@@ -1094,7 +1095,7 @@ public:
   /// Default construct and initialize the pass.
   VarLocBasedLDV();
 
-  ~VarLocBasedLDV();
+  ~VarLocBasedLDV() override;
 
   /// Print to ostream with a message.
   void printVarLocInMBB(const MachineFunction &MF, const VarLocInMBB &V,
@@ -2231,7 +2232,7 @@ bool VarLocBasedLDV::ExtendRanges(MachineFunction &MF,
   TFI->getCalleeSaves(MF, CalleeSavedRegs);
   this->ShouldEmitDebugEntryValues = ShouldEmitDebugEntryValues;
 
-  LS.initialize(MF);
+  LS.scanFunction(MF);
 
   bool Changed = false;
   bool OLChanged = false;
@@ -2347,9 +2348,35 @@ bool VarLocBasedLDV::ExtendRanges(MachineFunction &MF,
         OpenRanges.insertFromLocSet(getVarLocsInMBB(MBB, InLocs), VarLocIDs);
         LastNonDbgMI = nullptr;
         RegSetInstrs.clear();
-        for (auto &MI : *MBB)
-          process(MI, OpenRanges, VarLocIDs, Transfers, EntryValTransfers,
-                  RegSetInstrs);
+        // Iterate through instructions within each packet to handle VLIW
+        // bundles correctly; this keeps DBG_VALUE placement valid on
+        // packet-based targets.
+        for (auto I = MBB->instr_begin(), E = MBB->instr_end(); I != E;) {
+          auto BStart = llvm::getBundleStart(I);
+          auto BEnd = llvm::getBundleEnd(I);
+          bool PacketHasTerminator = false;
+          for (auto BI = BStart; BI != BEnd; ++BI) {
+            if (BI->isTerminator()) {
+              PacketHasTerminator = true;
+              break;
+            }
+          }
+          if (PacketHasTerminator) {
+            // FIXME: This drops debug info for spills in terminator bundles;
+            // DBG_VALUE instructions can't be inserted after the bundle.
+            // It may be possible to insert the DBG_VALUE elsewhere.
+            I = BEnd;
+            continue;
+          }
+          auto FirstOp = (BStart->isBundle()) ? std::next(BStart) : BStart;
+          for (auto BI = FirstOp; BI != BEnd; ++BI) {
+            if (BI->isTerminator())
+              continue;
+            process(*BI, OpenRanges, VarLocIDs, Transfers, EntryValTransfers,
+                    RegSetInstrs);
+          }
+          I = BEnd;
+        }
         OLChanged |= transferTerminator(MBB, OpenRanges, OutLocs, VarLocIDs);
 
         LLVM_DEBUG(printVarLocInMBB(MF, OutLocs, VarLocIDs,

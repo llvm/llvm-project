@@ -1,4 +1,4 @@
-// RUN: llvm-tblgen -gen-register-info -register-info-debug -I %p/../../include %s -o /dev/null 2>&1 | FileCheck %s
+// RUN: llvm-tblgen -gen-register-info -register-info-debug -I %p/../../include %s -o - 2>&1 >/dev/null | FileCheck %s
 include "llvm/Target/Target.td"
 def TestTarget : Target;
 

@@ -164,6 +164,7 @@ enum {
   // ELF relocation specifiers in data directives:
   S_PLT          = 0x400,
   S_GOTPCREL,
+  S_FUNCINIT,
 
   // Mach-O @ relocation specifiers:
   S_MACHO_GOT,
@@ -181,7 +182,9 @@ enum {
 
 /// Return the string representation of the ELF relocation specifier
 /// (e.g. ":got:", ":lo12:").
-StringRef getSpecifierName(const MCSpecifierExpr &Expr);
+StringRef getSpecifierName(Specifier S);
+
+Specifier parsePercentSpecifierName(StringRef);
 
 inline Specifier getSymbolLoc(Specifier S) {
   return static_cast<Specifier>(S & AArch64::S_SymLocBits);

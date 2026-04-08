@@ -80,6 +80,17 @@ struct CopyOnly {
   friend constexpr bool operator==(const CopyOnly& mi, int ii) { return mi.i == ii; }
 };
 
+struct MoveOnly2 {
+  int j;
+  bool used_move1 = false;
+  bool used_move2 = false;
+
+  constexpr explicit MoveOnly2(int jj) : j(jj) {}
+  constexpr MoveOnly2(const MoveOnly2&) = delete;
+  constexpr MoveOnly2(MoveOnly2&& m) : j(m.j), used_move1(true) {}
+  constexpr MoveOnly2(const MoveOnly2&& m) : j(m.j), used_move2(true) {}
+};
+
 struct BaseError {};
 struct DerivedError : BaseError {};
 
@@ -163,6 +174,22 @@ constexpr bool test() {
     std::expected<bool, BaseError> e2(std::move(e1));
     assert(e2.has_value());
     assert(!e2.value()); // yes, e2 holds "false" since LWG3836
+  }
+
+  // Check move constructor selection
+  {
+    MoveOnly2 t{1};
+    std::expected<MoveOnly2, BaseError> e1(std::move(t));
+    assert(e1.has_value());
+    assert(e1.value().used_move1 == true);
+    assert(e1.value().j == 1);
+  }
+  {
+    const MoveOnly2 t2{2};
+    std::expected<MoveOnly2, BaseError> e1(std::move(t2));
+    assert(e1.has_value());
+    assert(e1.value().used_move2 == true);
+    assert(e1.value().j == 2);
   }
   return true;
 }

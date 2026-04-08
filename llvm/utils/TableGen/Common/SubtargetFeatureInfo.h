@@ -101,6 +101,12 @@ struct SubtargetFeatureInfo {
   static void emitComputeAssemblerAvailableFeatures(
       StringRef TargetName, StringRef ClassName, StringRef FuncName,
       SubtargetFeatureInfoMap &SubtargetFeatures, raw_ostream &OS);
+
+  static void emitPredicateCheck(raw_ostream &OS,
+                                 ArrayRef<const Record *> Predicates);
+
+  static void emitMCPredicateCheck(raw_ostream &OS, StringRef TargetName,
+                                   ArrayRef<const Record *> Predicates);
 };
 } // end namespace llvm
 

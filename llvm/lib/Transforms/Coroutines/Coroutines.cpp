@@ -93,6 +93,7 @@ static Intrinsic::ID NonOverloadedCoroIntrinsics[] = {
     Intrinsic::coro_save,
     Intrinsic::coro_subfn_addr,
     Intrinsic::coro_suspend,
+    Intrinsic::coro_is_in_ramp,
 };
 
 bool coro::isSuspendBlock(BasicBlock *BB) {
@@ -117,26 +118,27 @@ bool coro::declaresIntrinsics(const Module &M, ArrayRef<Intrinsic::ID> List) {
   return false;
 }
 
-// Replace all coro.frees associated with the provided CoroId either with 'null'
-// if Elide is true and with its frame parameter otherwise.
-void coro::replaceCoroFree(CoroIdInst *CoroId, bool Elide) {
+// Replace all coro.frees associated with the provided frame with 'null' and
+// erase all associated coro.deads
+void coro::elideCoroFree(Value *FramePtr) {
   SmallVector<CoroFreeInst *, 4> CoroFrees;
-  for (User *U : CoroId->users())
-    if (auto CF = dyn_cast<CoroFreeInst>(U))
+  SmallVector<CoroDeadInst *, 4> CoroDeads;
+  for (User *U : FramePtr->users()) {
+    if (auto *CF = dyn_cast<CoroFreeInst>(U))
       CoroFrees.push_back(CF);
-
-  if (CoroFrees.empty())
-    return;
+    else if (auto *CD = dyn_cast<CoroDeadInst>(U))
+      CoroDeads.push_back(CD);
+  }
 
   Value *Replacement =
-      Elide
-          ? ConstantPointerNull::get(PointerType::get(CoroId->getContext(), 0))
-          : CoroFrees.front()->getFrame();
-
+      ConstantPointerNull::get(PointerType::get(FramePtr->getContext(), 0));
   for (CoroFreeInst *CF : CoroFrees) {
     CF->replaceAllUsesWith(Replacement);
     CF->eraseFromParent();
   }
+
+  for (auto *CD : CoroDeads)
+    CD->eraseFromParent();
 }
 
 void coro::suppressCoroAllocs(CoroIdInst *CoroId) {
@@ -275,6 +277,9 @@ void coro::Shape::analyze(Function &F,
           }
         }
         break;
+      case Intrinsic::coro_is_in_ramp:
+        CoroIsInRampInsts.push_back(cast<CoroIsInRampInst>(II));
+        break;
       case Intrinsic::coro_promise:
         assert(CoroPromise == nullptr &&
                "CoroEarly must ensure coro.promise unique");
@@ -356,9 +361,9 @@ void coro::Shape::invalidateCoroutine(
     // present.
     for (AnyCoroSuspendInst *CS : CoroSuspends) {
       CS->replaceAllUsesWith(PoisonValue::get(CS->getType()));
-      CS->eraseFromParent();
       if (auto *CoroSave = CS->getCoroSave())
         CoroSave->eraseFromParent();
+      CS->eraseFromParent();
     }
     CoroSuspends.clear();
 
@@ -662,7 +667,7 @@ void CoroIdAsyncInst::checkWellFormed() const {
 
 static void checkAsyncContextProjectFunction(const Instruction *I,
                                              Function *F) {
-  auto *FunTy = cast<FunctionType>(F->getValueType());
+  auto *FunTy = F->getFunctionType();
   if (!FunTy->getReturnType()->isPointerTy())
     fail(I,
          "llvm.coro.suspend.async resume function projection function must "

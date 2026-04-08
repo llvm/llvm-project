@@ -3,6 +3,12 @@
 // RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +avx512bitalg -emit-llvm -o - -Wall -Werror | FileCheck %s
 // RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=i386-apple-darwin -target-feature +avx512bitalg -emit-llvm -o - -Wall -Werror | FileCheck %s
 
+// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +avx512bitalg -emit-llvm -o - -Wall -Werror -fexperimental-new-constant-interpreter | FileCheck %s
+// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=i386-apple-darwin -target-feature +avx512bitalg -emit-llvm -o - -Wall -Werror -fexperimental-new-constant-interpreter | FileCheck %s
+// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +avx512bitalg -emit-llvm -o - -Wall -Werror -fexperimental-new-constant-interpreter | FileCheck %s
+// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=i386-apple-darwin -target-feature +avx512bitalg -emit-llvm -o - -Wall -Werror -fexperimental-new-constant-interpreter | FileCheck %s
+
+
 #include <immintrin.h>
 #include "builtin_test_helpers.h"
 
@@ -64,4 +70,14 @@ __mmask64 test_mm512_bitshuffle_epi64_mask(__m512i __A, __m512i __B) {
   // CHECK: @llvm.x86.avx512.vpshufbitqmb.512
   return _mm512_bitshuffle_epi64_mask(__A, __B);
 }
+TEST_CONSTEXPR(_mm512_bitshuffle_epi64_mask(
+  (__m512i)(__v64qi){1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,-128, -1,0,0,0,0,0,0,0, 85,85,85,85,85,85,85,85,
+                     1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,-128, -1,0,0,0,0,0,0,0, 85,85,85,85,85,85,85,85},
+  (__m512i)(__v64qi){0,1,2,3,4,5,6,7, 63,62,61,60,59,58,57,56, 0,1,2,3,4,5,6,7, 0,1,2,3,4,5,6,7,
+                     0,1,2,3,4,5,6,7, 63,62,61,60,59,58,57,56, 0,1,2,3,4,5,6,7, 0,1,2,3,4,5,6,7}) == 0x55ff010155ff0101ULL);
 
+TEST_CONSTEXPR(_mm512_mask_bitshuffle_epi64_mask(0xFFFFFFFF00000000ULL,
+  (__m512i)(__v64qi){1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,-128, -1,0,0,0,0,0,0,0, 85,85,85,85,85,85,85,85,
+                     1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,-128, -1,0,0,0,0,0,0,0, 85,85,85,85,85,85,85,85},
+  (__m512i)(__v64qi){0,1,2,3,4,5,6,7, 63,62,61,60,59,58,57,56, 0,1,2,3,4,5,6,7, 0,1,2,3,4,5,6,7,
+                     0,1,2,3,4,5,6,7, 63,62,61,60,59,58,57,56, 0,1,2,3,4,5,6,7, 0,1,2,3,4,5,6,7}) == 0x55ff010100000000ULL);

@@ -239,3 +239,17 @@ namespace GH150705 {
   constexpr const A& a = b;
   constexpr auto x = (a.*q)(); // both-error {{constant expression}}
 }
+
+namespace DependentRequiresExpr {
+  template <class T,
+            bool = []() -> bool { // both-error {{not a constant expression}}
+              if (requires { T::type; })
+                return true;
+              return false;
+            }()>
+  struct p {
+    using type = void;
+  };
+
+  template <class T> using P = p<T>::type; // both-note {{while checking a default template argument}}
+}

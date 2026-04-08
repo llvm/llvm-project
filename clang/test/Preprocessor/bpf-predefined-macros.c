@@ -70,6 +70,12 @@ int u;
 #ifdef __BPF_FEATURE_LOAD_ACQ_STORE_REL
 int v;
 #endif
+#ifdef __BPF_FEATURE_GOTOX
+int w;
+#endif
+#ifdef __BPF_FEATURE_ATOMIC_MEM_ORDERING
+int x;
+#endif
 
 // CHECK: int b;
 // CHECK: int c;
@@ -110,6 +116,12 @@ int v;
 // CPU_V4: int u;
 
 // CPU_V4: int v;
+// CPU_V4: int w;
+
+// CPU_V1: int x;
+// CPU_V2: int x;
+// CPU_V3: int x;
+// CPU_V4: int x;
 
 // CPU_GENERIC: int g;
 

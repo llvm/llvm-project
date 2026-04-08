@@ -45,6 +45,8 @@ unary_operation(Operation op, InputType input, unsigned int precision,
     return mpfrInput.atan();
   case Operation::Atanh:
     return mpfrInput.atanh();
+  case Operation::Atanpi:
+    return mpfrInput.atanpi();
   case Operation::Cbrt:
     return mpfrInput.cbrt();
   case Operation::Ceil:
@@ -57,6 +59,8 @@ unary_operation(Operation op, InputType input, unsigned int precision,
     return mpfrInput.cospi();
   case Operation::Erf:
     return mpfrInput.erf();
+  case Operation::Erfc:
+    return mpfrInput.erfc();
   case Operation::Exp:
     return mpfrInput.exp();
   case Operation::Exp2:
@@ -75,8 +79,12 @@ unary_operation(Operation op, InputType input, unsigned int precision,
     return mpfrInput.log();
   case Operation::Log2:
     return mpfrInput.log2();
+  case Operation::Log2p1:
+    return mpfrInput.log2p1();
   case Operation::Log10:
     return mpfrInput.log10();
+  case Operation::Log10p1:
+    return mpfrInput.log10p1();
   case Operation::Log1p:
     return mpfrInput.log1p();
   case Operation::Mod2PI:
@@ -89,6 +97,8 @@ unary_operation(Operation op, InputType input, unsigned int precision,
     return mpfrInput.round();
   case Operation::RoundEven:
     return mpfrInput.roundeven();
+  case Operation::Rsqrt:
+    return mpfrInput.rsqrt();
   case Operation::Sin:
     return mpfrInput.sin();
   case Operation::Sinpi:
@@ -271,6 +281,10 @@ template void explain_unary_operation_single_output_error(Operation op,
                                                           float128, long double,
                                                           double, RoundingMode);
 #endif // LIBC_TYPES_FLOAT128_IS_NOT_LONG_DOUBLE
+
+template void explain_unary_operation_single_output_error(Operation op,
+                                                          bfloat16, bfloat16,
+                                                          double, RoundingMode);
 
 template <typename T>
 void explain_unary_operation_two_outputs_error(
@@ -489,6 +503,8 @@ explain_ternary_operation_one_output_error(Operation,
 #endif
 
 template void explain_ternary_operation_one_output_error(
+    Operation, const TernaryInput<bfloat16> &, bfloat16, double, RoundingMode);
+template void explain_ternary_operation_one_output_error(
     Operation, const TernaryInput<float> &, bfloat16, double, RoundingMode);
 template void explain_ternary_operation_one_output_error(
     Operation, const TernaryInput<double> &, bfloat16, double, RoundingMode);
@@ -559,6 +575,9 @@ template bool compare_unary_operation_single_output(Operation, float128,
                                                     long double, double,
                                                     RoundingMode);
 #endif // LIBC_TYPES_FLOAT128_IS_NOT_LONG_DOUBLE
+template bool compare_unary_operation_single_output(Operation, bfloat16,
+                                                    bfloat16, double,
+                                                    RoundingMode);
 
 template <typename T>
 bool compare_unary_operation_two_outputs(Operation op, T input,
@@ -751,6 +770,9 @@ compare_ternary_operation_one_output(Operation,
                                      double, RoundingMode);
 #endif
 
+template bool
+compare_ternary_operation_one_output(Operation, const TernaryInput<bfloat16> &,
+                                     bfloat16, double, RoundingMode);
 template bool compare_ternary_operation_one_output(Operation,
                                                    const TernaryInput<float> &,
                                                    bfloat16, double,
@@ -791,6 +813,8 @@ template bool round_to_long<float16>(float16, long &);
 template bool round_to_long<float128>(float128, long &);
 #endif // LIBC_TYPES_FLOAT128_IS_NOT_LONG_DOUBLE
 
+template bool round_to_long<bfloat16>(bfloat16, long &);
+
 template <typename T> bool round_to_long(T x, RoundingMode mode, long &result) {
   MPFRNumber mpfr(x);
   return mpfr.round_to_long(get_mpfr_rounding_mode(mode), result);
@@ -807,6 +831,8 @@ template bool round_to_long<float16>(float16, RoundingMode, long &);
 #ifdef LIBC_TYPES_FLOAT128_IS_NOT_LONG_DOUBLE
 template bool round_to_long<float128>(float128, RoundingMode, long &);
 #endif // LIBC_TYPES_FLOAT128_IS_NOT_LONG_DOUBLE
+
+template bool round_to_long<bfloat16>(bfloat16, RoundingMode, long &);
 
 template <typename T> T round(T x, RoundingMode mode) {
   MPFRNumber mpfr(x);
@@ -825,6 +851,8 @@ template float16 round<float16>(float16, RoundingMode);
 #ifdef LIBC_TYPES_FLOAT128_IS_NOT_LONG_DOUBLE
 template float128 round<float128>(float128, RoundingMode);
 #endif // LIBC_TYPES_FLOAT128_IS_NOT_LONG_DOUBLE
+
+template bfloat16 round<bfloat16>(bfloat16, RoundingMode);
 
 } // namespace mpfr
 } // namespace testing

@@ -10,10 +10,11 @@
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/DebugInfo.h"
 
+using namespace llvm;
+
 #if LLVM_ENABLE_DEBUGLOC_TRACKING_ORIGIN
 #include "llvm/Support/Signals.h"
 
-namespace llvm {
 DbgLocOrigin::DbgLocOrigin(bool ShouldCollectTrace) {
   if (!ShouldCollectTrace)
     return;
@@ -30,10 +31,7 @@ void DbgLocOrigin::addTrace() {
   auto &[Depth, StackTrace] = StackTraces.emplace_back();
   Depth = sys::getStackTrace(StackTrace);
 }
-} // namespace llvm
-#endif
-
-using namespace llvm;
+#endif // LLVM_ENABLE_DEBUGLOC_TRACKING_ORIGIN
 
 #if LLVM_ENABLE_DEBUGLOC_TRACKING_COVERAGE
 DILocAndCoverageTracking::DILocAndCoverageTracking(const DILocation *L)
@@ -85,16 +83,14 @@ DebugLoc DebugLoc::getFnDebugLoc() const {
 }
 
 bool DebugLoc::isImplicitCode() const {
-  if (DILocation *Loc = get()) {
+  if (DILocation *Loc = get())
     return Loc->isImplicitCode();
-  }
   return true;
 }
 
 void DebugLoc::setImplicitCode(bool ImplicitCode) {
-  if (DILocation *Loc = get()) {
+  if (DILocation *Loc = get())
     Loc->setImplicitCode(ImplicitCode);
-  }
 }
 
 DebugLoc DebugLoc::replaceInlinedAtSubprogram(
@@ -181,10 +177,19 @@ DebugLoc DebugLoc::getMergedLocations(ArrayRef<DebugLoc> Locs) {
   return Merged;
 }
 DebugLoc DebugLoc::getMergedLocation(DebugLoc LocA, DebugLoc LocB) {
-  if (!LocA)
-    return LocA;
-  if (!LocB)
+  if (!LocA || !LocB) {
+    // If coverage tracking is enabled, prioritize returning empty non-annotated
+    // locations to empty annotated locations.
+#if LLVM_ENABLE_DEBUGLOC_TRACKING_COVERAGE
+    if (!LocA && LocA.getKind() == DebugLocKind::Normal)
+      return LocA;
+    if (!LocB && LocB.getKind() == DebugLocKind::Normal)
+      return LocB;
+#endif // LLVM_ENABLE_DEBUGLOC_TRACKING_COVERAGE
+    if (!LocA)
+      return LocA;
     return LocB;
+  }
   return DILocation::getMergedLocation(LocA, LocB);
 }
 

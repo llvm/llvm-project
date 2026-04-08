@@ -65,8 +65,8 @@ void SwiftAggLowering::addTypedData(QualType type, CharUnits begin) {
   // Deal with various aggregate types as special cases:
 
   // Record types.
-  if (auto recType = type->getAs<RecordType>()) {
-    addTypedData(recType->getOriginalDecl(), begin);
+  if (auto recType = type->getAsCanonical<RecordType>()) {
+    addTypedData(recType->getDecl(), begin);
 
     // Array types.
   } else if (type->isArrayType()) {
@@ -814,7 +814,7 @@ static ABIArgInfo classifyType(CodeGenModule &CGM, CanQualType type,
                                bool forReturn) {
   unsigned IndirectAS = CGM.getDataLayout().getAllocaAddrSpace();
   if (auto recordType = dyn_cast<RecordType>(type)) {
-    auto record = recordType->getOriginalDecl();
+    auto record = recordType->getDecl();
     auto &layout = CGM.getContext().getASTRecordLayout(record);
 
     if (mustPassRecordIndirectly(CGM, record))
@@ -822,8 +822,7 @@ static ABIArgInfo classifyType(CodeGenModule &CGM, CanQualType type,
                                      /*AddrSpace=*/IndirectAS, /*byval=*/false);
 
     SwiftAggLowering lowering(CGM);
-    lowering.addTypedData(recordType->getOriginalDecl(), CharUnits::Zero(),
-                          layout);
+    lowering.addTypedData(recordType->getDecl(), CharUnits::Zero(), layout);
     lowering.finish();
 
     return classifyExpandedType(lowering, forReturn, layout.getAlignment(),

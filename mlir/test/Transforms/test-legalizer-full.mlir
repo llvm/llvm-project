@@ -72,3 +72,21 @@ builtin.module {
   }
 
 }
+
+// -----
+
+// The region of "test.post_order_legalization" is converted before the op.
+
+// expected-remark@+1 {{applyFullConversion failed}}
+builtin.module {
+func.func @test_preorder_legalization() {
+  // expected-error@+1 {{failed to legalize operation 'test.post_order_legalization'}}
+  "test.post_order_legalization"() ({
+  ^bb0(%arg0: i64):
+    // Not-explicitly-legal ops are not allowed to survive.
+    "test.remaining_consumer"(%arg0) : (i64) -> ()
+    "test.invalid"(%arg0) : (i64) -> ()
+  }) : () -> ()
+  return
+}
+}

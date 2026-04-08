@@ -1,4 +1,4 @@
-//===---------- Matchers.cpp - clang-tidy ---------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -12,7 +12,7 @@
 namespace clang::tidy::matchers {
 
 bool NotIdenticalStatementsPredicate::operator()(
-    const clang::ast_matchers::internal::BoundNodesMap &Nodes) const {
+    const ast_matchers::internal::BoundNodesMap &Nodes) const {
   return !utils::areStatementsIdentical(Node.get<Stmt>(),
                                         Nodes.getNodeAs<Stmt>(ID), *Context);
 }
@@ -27,7 +27,6 @@ MatchesAnyListedTypeNameMatcher::~MatchesAnyListedTypeNameMatcher() = default;
 bool MatchesAnyListedTypeNameMatcher::matches(
     const QualType &Node, ast_matchers::internal::ASTMatchFinder *Finder,
     ast_matchers::internal::BoundNodesTreeBuilder *Builder) const {
-
   if (NameMatchers.empty())
     return false;
 

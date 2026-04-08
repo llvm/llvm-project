@@ -15,7 +15,8 @@
 namespace llvm {
 
 class Function;
-class GCNSubtarget;
+
+enum class LitModifier { None, Lit, Lit64 };
 
 /// AMDGPU target specific MCExpr operations.
 ///
@@ -36,7 +37,9 @@ public:
     AGVK_ExtraSGPRs,
     AGVK_TotalNumVGPRs,
     AGVK_AlignTo,
-    AGVK_Occupancy
+    AGVK_Occupancy,
+    AGVK_Lit,
+    AGVK_Lit64,
   };
 
   // Relocation specifiers.
@@ -60,7 +63,7 @@ private:
   ArrayRef<const MCExpr *> Args;
 
   AMDGPUMCExpr(VariantKind Kind, ArrayRef<const MCExpr *> Args, MCContext &Ctx);
-  ~AMDGPUMCExpr();
+  ~AMDGPUMCExpr() override;
 
   bool evaluateExtraSGPRs(MCValue &Res, const MCAssembler *Asm) const;
   bool evaluateTotalNumVGPR(MCValue &Res, const MCAssembler *Asm) const;
@@ -94,10 +97,8 @@ public:
     return create(VariantKind::AGVK_AlignTo, {Value, Align}, Ctx);
   }
 
-  static const AMDGPUMCExpr *
-  createOccupancy(unsigned InitOcc, const MCExpr *NumSGPRs,
-                  const MCExpr *NumVGPRs, unsigned DynamicVGPRBlockSize,
-                  const GCNSubtarget &STM, MCContext &Ctx);
+  static const AMDGPUMCExpr *createLit(LitModifier Lit, int64_t Value,
+                                       MCContext &Ctx);
 
   ArrayRef<const MCExpr *> getArgs() const { return Args; }
   VariantKind getKind() const { return Kind; }
@@ -129,6 +130,11 @@ const MCExpr *foldAMDGPUMCExpr(const MCExpr *Expr, MCContext &Ctx);
 static inline AMDGPUMCExpr::Specifier getSpecifier(const MCSymbolRefExpr *SRE) {
   return AMDGPUMCExpr::Specifier(SRE->getKind());
 }
+
+LLVM_READONLY bool isLitExpr(const MCExpr *Expr);
+
+LLVM_READONLY int64_t getLitValue(const MCExpr *Expr);
+
 } // end namespace AMDGPU
 } // end namespace llvm
 

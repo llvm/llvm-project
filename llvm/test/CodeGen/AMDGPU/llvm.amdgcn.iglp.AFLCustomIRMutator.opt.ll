@@ -17,7 +17,7 @@ define amdgpu_kernel void @test_iglp_opt_rev_mfma_gemm(<1 x i64> %L1) {
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    ds_write_b128 v0, v[2:5]
 ; GCN-NEXT:    v_mov_b32_e32 v2, 0
-; GCN-NEXT:    v_mov_b32_e32 v3, v2
+; GCN-NEXT:    v_mov_b32_e32 v3, 0
 ; GCN-NEXT:    s_cmp_lg_u64 s[0:1], 0
 ; GCN-NEXT:    ; iglp_opt mask(0x00000001)
 ; GCN-NEXT:    ds_write_b128 v0, v[30:33] offset:112
@@ -31,10 +31,10 @@ define amdgpu_kernel void @test_iglp_opt_rev_mfma_gemm(<1 x i64> %L1) {
 ; GCN-NEXT:    s_endpgm
 entry:
   call void @llvm.amdgcn.iglp.opt(i32 1)
-  %load.4 = load <32 x float>, ptr addrspace(3) null, align 128
+  %load.4 = load <32 x float>, ptr addrspace(3) zeroinitializer, align 128
   %B = urem <1 x i64> zeroinitializer, %L1
-  store <32 x float> %load.4, ptr addrspace(3) null, align 128
-  store <1 x i64> %B, ptr addrspace(3) null, align 8
+  store <32 x float> %load.4, ptr addrspace(3) zeroinitializer, align 128
+  store <1 x i64> %B, ptr addrspace(3) zeroinitializer, align 8
   ret void
 }
 

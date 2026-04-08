@@ -70,7 +70,8 @@ namespace clangd {
 namespace {
 
 PrintingPolicy getPrintingPolicy(PrintingPolicy Base) {
-  Base.AnonymousTagLocations = false;
+  Base.AnonymousTagNameStyle =
+      llvm::to_underlying(PrintingPolicy::AnonymousTagMode::Plain);
   Base.TerseOutput = true;
   Base.PolishForDeclaration = true;
   Base.ConstantsAsWritten = true;
@@ -176,19 +177,22 @@ HoverInfo::PrintedType printType(QualType QT, ASTContext &ASTCtx,
   // tag for extra clarity. This isn't very idiomatic, so don't attempt it for
   // complex cases, including pointers/references, template specializations,
   // etc.
+  PrintingPolicy Copy(PP);
   if (!QT.isNull() && !QT.hasQualifiers() && PP.SuppressTagKeyword) {
     if (auto *TT = llvm::dyn_cast<TagType>(QT.getTypePtr());
-        TT && TT->isCanonicalUnqualified())
-      OS << TT->getOriginalDecl()->getKindName() << " ";
+        TT && TT->isCanonicalUnqualified()) {
+      Copy.SuppressTagKeywordInAnonNames = true;
+      OS << TT->getDecl()->getKindName() << " ";
+    }
   }
-  QT.print(OS, PP);
+  QT.print(OS, Copy);
 
   const Config &Cfg = Config::current();
   if (!QT.isNull() && Cfg.Hover.ShowAKA) {
     bool ShouldAKA = false;
     QualType DesugaredTy = clang::desugarForDiagnostic(ASTCtx, QT, ShouldAKA);
     if (ShouldAKA)
-      Result.AKA = DesugaredTy.getAsString(PP);
+      Result.AKA = DesugaredTy.getAsString(Copy);
   }
   return Result;
 }
@@ -454,8 +458,7 @@ std::optional<std::string> printExprValue(const Expr *E,
       Constant.Val.getInt().getSignificantBits() <= 64) {
     // Compare to int64_t to avoid bit-width match requirements.
     int64_t Val = Constant.Val.getInt().getExtValue();
-    for (const EnumConstantDecl *ECD :
-         T->castAs<EnumType>()->getOriginalDecl()->enumerators())
+    for (const EnumConstantDecl *ECD : T->castAsEnumDecl()->enumerators())
       if (ECD->getInitVal() == Val)
         return llvm::formatv("{0} ({1})", ECD->getNameAsString(),
                              printHex(Constant.Val.getInt()))
@@ -508,108 +511,147 @@ PrintExprResult printExprValue(const SelectionTree::Node *N,
                          /*Node=*/N};
 }
 
-std::optional<StringRef> fieldName(const Expr *E) {
+// Returns the FieldDecl if E is of the form `this->field`, otherwise nullptr.
+const FieldDecl *fieldDecl(const Expr *E) {
   const auto *ME = llvm::dyn_cast<MemberExpr>(E->IgnoreCasts());
   if (!ME || !llvm::isa<CXXThisExpr>(ME->getBase()->IgnoreCasts()))
-    return std::nullopt;
-  const auto *Field = llvm::dyn_cast<FieldDecl>(ME->getMemberDecl());
+    return nullptr;
+  return llvm::dyn_cast<FieldDecl>(ME->getMemberDecl());
+}
+
+std::optional<StringRef> fieldName(const Expr *E) {
+  const auto *Field = fieldDecl(E);
   if (!Field || !Field->getDeclName().isIdentifier())
     return std::nullopt;
   return Field->getDeclName().getAsIdentifierInfo()->getName();
 }
 
-// If CMD is of the form T foo() { return FieldName; } then returns "FieldName".
-std::optional<StringRef> getterVariableName(const CXXMethodDecl *CMD) {
+std::optional<std::string> fieldComment(const ASTContext &Ctx, const Expr *E) {
+  const auto *Field = fieldDecl(E);
+  if (!Field)
+    return std::nullopt;
+  const auto Comment = getDeclComment(Ctx, *Field);
+  if (Comment.empty())
+    return std::nullopt;
+  return Comment;
+}
+
+// Returns the returned expression of a trivial getter body, or nullptr if the
+// method does not match the pattern T foo() { return FieldName; }.
+const Expr *getterReturnExpr(const CXXMethodDecl *CMD) {
   assert(CMD->hasBody());
   if (CMD->getNumParams() != 0 || CMD->isVariadic())
-    return std::nullopt;
+    return nullptr;
   const auto *Body = llvm::dyn_cast<CompoundStmt>(CMD->getBody());
   const auto *OnlyReturn = (Body && Body->size() == 1)
                                ? llvm::dyn_cast<ReturnStmt>(Body->body_front())
                                : nullptr;
   if (!OnlyReturn || !OnlyReturn->getRetValue())
-    return std::nullopt;
-  return fieldName(OnlyReturn->getRetValue());
+    return nullptr;
+  return OnlyReturn->getRetValue();
 }
 
 // If CMD is one of the forms:
 //   void foo(T arg) { FieldName = arg; }
-//   R foo(T arg) { FieldName = arg; return *this; }
+//   R* foo(T arg) { FieldName = arg; return this; }
+//   R& foo(T arg) { FieldName = arg; return *this; }
 //   void foo(T arg) { FieldName = std::move(arg); }
-//   R foo(T arg) { FieldName = std::move(arg); return *this; }
-// then returns "FieldName"
-std::optional<StringRef> setterVariableName(const CXXMethodDecl *CMD) {
+//   R* foo(T arg) { FieldName = std::move(arg); return this; }
+//   R& foo(T arg) { FieldName = std::move(arg); return *this; }
+// returns the LHS expression (FieldName) of the assignment in a trivial setter
+// body, or nullptr if the method does not match the pattern of a trivial
+// setter.
+const Expr *setterLHS(const CXXMethodDecl *CMD) {
   assert(CMD->hasBody());
   if (CMD->isConst() || CMD->getNumParams() != 1 || CMD->isVariadic())
-    return std::nullopt;
+    return nullptr;
   const ParmVarDecl *Arg = CMD->getParamDecl(0);
   if (Arg->isParameterPack())
-    return std::nullopt;
+    return nullptr;
 
   const auto *Body = llvm::dyn_cast<CompoundStmt>(CMD->getBody());
   if (!Body || Body->size() == 0 || Body->size() > 2)
-    return std::nullopt;
+    return nullptr;
   // If the second statement exists, it must be `return this` or `return *this`.
   if (Body->size() == 2) {
     auto *Ret = llvm::dyn_cast<ReturnStmt>(Body->body_back());
     if (!Ret || !Ret->getRetValue())
-      return std::nullopt;
+      return nullptr;
     const Expr *RetVal = Ret->getRetValue()->IgnoreCasts();
     if (const auto *UO = llvm::dyn_cast<UnaryOperator>(RetVal)) {
       if (UO->getOpcode() != UO_Deref)
-        return std::nullopt;
+        return nullptr;
       RetVal = UO->getSubExpr()->IgnoreCasts();
     }
     if (!llvm::isa<CXXThisExpr>(RetVal))
-      return std::nullopt;
+      return nullptr;
   }
   // The first statement must be an assignment of the arg to a field.
   const Expr *LHS, *RHS;
   if (const auto *BO = llvm::dyn_cast<BinaryOperator>(Body->body_front())) {
     if (BO->getOpcode() != BO_Assign)
-      return std::nullopt;
+      return nullptr;
     LHS = BO->getLHS();
     RHS = BO->getRHS();
   } else if (const auto *COCE =
                  llvm::dyn_cast<CXXOperatorCallExpr>(Body->body_front())) {
     if (COCE->getOperator() != OO_Equal || COCE->getNumArgs() != 2)
-      return std::nullopt;
+      return nullptr;
     LHS = COCE->getArg(0);
     RHS = COCE->getArg(1);
   } else {
-    return std::nullopt;
+    return nullptr;
   }
 
   // Detect the case when the item is moved into the field.
   if (auto *CE = llvm::dyn_cast<CallExpr>(RHS->IgnoreCasts())) {
     if (CE->getNumArgs() != 1)
-      return std::nullopt;
+      return nullptr;
     auto *ND = llvm::dyn_cast_or_null<NamedDecl>(CE->getCalleeDecl());
     if (!ND || !ND->getIdentifier() || ND->getName() != "move" ||
         !ND->isInStdNamespace())
-      return std::nullopt;
+      return nullptr;
     RHS = CE->getArg(0);
   }
 
   auto *DRE = llvm::dyn_cast<DeclRefExpr>(RHS->IgnoreCasts());
   if (!DRE || DRE->getDecl() != Arg)
-    return std::nullopt;
-  return fieldName(LHS);
+    return nullptr;
+  return LHS;
 }
 
-std::string synthesizeDocumentation(const NamedDecl *ND) {
-  if (const auto *CMD = llvm::dyn_cast<CXXMethodDecl>(ND)) {
-    // Is this an ordinary, non-static method whose definition is visible?
-    if (CMD->getDeclName().isIdentifier() && !CMD->isStatic() &&
-        (CMD = llvm::dyn_cast_or_null<CXXMethodDecl>(CMD->getDefinition())) &&
-        CMD->hasBody()) {
-      if (const auto GetterField = getterVariableName(CMD))
-        return llvm::formatv("Trivial accessor for `{0}`.", *GetterField);
-      if (const auto SetterField = setterVariableName(CMD))
-        return llvm::formatv("Trivial setter for `{0}`.", *SetterField);
+std::string synthesizeDocumentation(const ASTContext &Ctx,
+                                    const NamedDecl *ND) {
+  const auto *CMD = llvm::dyn_cast<CXXMethodDecl>(ND);
+  if (!CMD)
+    return {};
+
+  // Is this an ordinary, non-static method whose definition is visible?
+  if (!CMD->getDeclName().isIdentifier() || CMD->isStatic())
+    return {};
+
+  CMD = llvm::dyn_cast_or_null<CXXMethodDecl>(CMD->getDefinition());
+  if (!CMD || !CMD->hasBody())
+    return {};
+
+  if (const Expr *RetVal = getterReturnExpr(CMD)) {
+    if (const auto GetterField = fieldName(RetVal)) {
+      if (const auto Comment = fieldComment(Ctx, RetVal))
+        return llvm::formatv("Trivial accessor for `{0}`.\n\n{1}", *GetterField,
+                             *Comment);
+      return llvm::formatv("Trivial accessor for `{0}`.", *GetterField);
     }
   }
-  return "";
+  if (const auto *const SetterLHS = setterLHS(CMD)) {
+    if (const auto FieldName = fieldName(SetterLHS)) {
+      if (const auto Comment = fieldComment(Ctx, SetterLHS))
+        return llvm::formatv("Trivial setter for `{0}`.\n\n{1}", *FieldName,
+                             *Comment);
+      return llvm::formatv("Trivial setter for `{0}`.", *FieldName);
+    }
+  }
+
+  return {};
 }
 
 /// Generate a \p Hover object given the declaration \p D.
@@ -635,7 +677,7 @@ HoverInfo getHoverContents(const NamedDecl *D, const PrintingPolicy &PP,
   HI.CommentOpts = D->getASTContext().getLangOpts().CommentOpts;
   enhanceFromIndex(HI, *CommentD, Index);
   if (HI.Documentation.empty())
-    HI.Documentation = synthesizeDocumentation(D);
+    HI.Documentation = synthesizeDocumentation(Ctx, D);
 
   HI.Kind = index::getSymbolInfo(D).Kind;
 
@@ -795,7 +837,9 @@ HoverInfo getHoverContents(const DefinedMacro &Macro, const syntax::Token &Tok,
     for (const auto &ExpandedTok : Expansion->Expanded) {
       ExpansionText += ExpandedTok.text(SM);
       ExpansionText += " ";
-      if (ExpansionText.size() > 2048) {
+      const Config &Cfg = Config::current();
+      const size_t Limit = static_cast<size_t>(Cfg.Hover.MacroContentsLimit);
+      if (Limit && ExpansionText.size() > Limit) {
         ExpansionText.clear();
         break;
       }
@@ -832,7 +876,7 @@ std::optional<HoverInfo> getThisExprHoverContents(const CXXThisExpr *CTE,
                                                   ASTContext &ASTCtx,
                                                   const PrintingPolicy &PP) {
   QualType OriginThisType = CTE->getType()->getPointeeType();
-  QualType ClassType = declaredType(OriginThisType->getAsTagDecl());
+  QualType ClassType = declaredType(OriginThisType->castAsTagDecl());
   // For partial specialization class, origin `this` pointee type will be
   // parsed as `InjectedClassNameType`, which will ouput template arguments
   // like "type-parameter-0-0". So we retrieve user written class type in this
@@ -1274,10 +1318,10 @@ std::optional<HoverInfo> getHover(ParsedAST &AST, Position Pos,
     HoverCountMetric.record(1, "include");
     HoverInfo HI;
     HI.Name = std::string(llvm::sys::path::filename(Inc.Resolved));
-    // FIXME: We don't have a fitting value for Kind.
     HI.Definition =
         URIForFile::canonicalize(Inc.Resolved, AST.tuPath()).file().str();
     HI.DefinitionLanguage = "";
+    HI.Kind = index::SymbolKind::IncludeDirective;
     maybeAddUsedSymbols(AST, HI, Inc);
     return HI;
   }
@@ -1308,7 +1352,9 @@ std::optional<HoverInfo> getHover(ParsedAST &AST, Position Pos,
       }
     } else if (Tok.kind() == tok::kw_auto || Tok.kind() == tok::kw_decltype) {
       HoverCountMetric.record(1, "keyword");
-      if (auto Deduced = getDeducedType(AST.getASTContext(), Tok.location())) {
+      if (auto Deduced =
+              getDeducedType(AST.getASTContext(), AST.getHeuristicResolver(),
+                             Tok.location())) {
         HI = getDeducedTypeHoverContents(*Deduced, Tok, AST.getASTContext(), PP,
                                          Index);
         HighlightRange = Tok.range(SM).toCharRange(SM);
@@ -1483,10 +1529,6 @@ void HoverInfo::sizeToMarkupParagraph(markup::Paragraph &P) const {
 }
 
 markup::Document HoverInfo::presentDoxygen() const {
-  // NOTE: this function is currently almost identical to presentDefault().
-  // This is to have a minimal change when introducing the doxygen parser.
-  // This function will be changed when rearranging the output for doxygen
-  // parsed documentation.
 
   markup::Document Output;
   // Header contains a text of the form:
@@ -1502,11 +1544,31 @@ markup::Document HoverInfo::presentDoxygen() const {
   // level 1 and 2 headers in a huge font, see
   // https://github.com/microsoft/vscode/issues/88417 for details.
   markup::Paragraph &Header = Output.addHeading(3);
-  if (Kind != index::SymbolKind::Unknown)
+  if (Kind != index::SymbolKind::Unknown &&
+      Kind != index::SymbolKind::IncludeDirective)
     Header.appendText(index::getSymbolKindString(Kind)).appendSpace();
   assert(!Name.empty() && "hover triggered on a nameless symbol");
 
-  Header.appendCode(Name);
+  if (Kind == index::SymbolKind::IncludeDirective) {
+    Header.appendCode(Name);
+
+    if (!Definition.empty())
+      Output.addParagraph().appendCode(Definition);
+
+    if (!UsedSymbolNames.empty()) {
+      Output.addRuler();
+      usedSymbolNamesToMarkup(Output);
+    }
+
+    return Output;
+  }
+
+  if (!Definition.empty()) {
+    Output.addRuler();
+    definitionScopeToMarkup(Output);
+  } else {
+    Header.appendCode(Name);
+  }
 
   if (!Provider.empty()) {
     providerToMarkupParagraph(Output);
@@ -1514,33 +1576,82 @@ markup::Document HoverInfo::presentDoxygen() const {
 
   // Put a linebreak after header to increase readability.
   Output.addRuler();
-  // Print Types on their own lines to reduce chances of getting line-wrapped by
-  // editor, as they might be long.
-  if (ReturnType) {
-    // For functions we display signature in a list form, e.g.:
-    // → `x`
-    // Parameters:
-    // - `bool param1`
-    // - `int param2 = 5`
-    Output.addParagraph().appendText("→ ").appendCode(
-        llvm::to_string(*ReturnType));
-  }
 
   SymbolDocCommentVisitor SymbolDoc(Documentation, CommentOpts);
 
+  if (SymbolDoc.hasBriefCommand()) {
+    if (Kind != index::SymbolKind::Parameter &&
+        Kind != index::SymbolKind::TemplateTypeParm)
+      // Only add a "Brief" heading if we are not documenting a parameter.
+      // Parameters only have a brief section and adding the brief header would
+      // be redundant.
+      Output.addHeading(3).appendText("Brief");
+    SymbolDoc.briefToMarkup(Output.addParagraph());
+    Output.addRuler();
+  }
+
+  // For functions we display signature in a list form, e.g.:
+  // Template Parameters:
+  // - `typename T` - description
+  // Parameters:
+  // - `bool param1` - description
+  // - `int param2 = 5` - description
+  // Returns
+  // `type` - description
+  if (TemplateParameters && !TemplateParameters->empty()) {
+    Output.addHeading(3).appendText("Template Parameters");
+    markup::BulletList &L = Output.addBulletList();
+    for (const auto &Param : *TemplateParameters) {
+      markup::Paragraph &P = L.addItem().addParagraph();
+      P.appendCode(llvm::to_string(Param));
+      if (SymbolDoc.isTemplateTypeParmDocumented(llvm::to_string(Param.Name))) {
+        P.appendText(" - ");
+        SymbolDoc.templateTypeParmDocToMarkup(llvm::to_string(Param.Name), P);
+      }
+    }
+    Output.addRuler();
+  }
+
   if (Parameters && !Parameters->empty()) {
-    Output.addParagraph().appendText("Parameters:");
+    Output.addHeading(3).appendText("Parameters");
     markup::BulletList &L = Output.addBulletList();
     for (const auto &Param : *Parameters) {
       markup::Paragraph &P = L.addItem().addParagraph();
       P.appendCode(llvm::to_string(Param));
 
       if (SymbolDoc.isParameterDocumented(llvm::to_string(Param.Name))) {
-        P.appendText(" -");
+        P.appendText(" - ");
         SymbolDoc.parameterDocToMarkup(llvm::to_string(Param.Name), P);
       }
     }
+    Output.addRuler();
   }
+
+  // Print Types on their own lines to reduce chances of getting line-wrapped by
+  // editor, as they might be long.
+  if (ReturnType &&
+      ((ReturnType->Type != "void" && !ReturnType->AKA.has_value()) ||
+       (ReturnType->AKA.has_value() && ReturnType->AKA != "void"))) {
+    Output.addHeading(3).appendText("Returns");
+    markup::Paragraph &P = Output.addParagraph();
+    P.appendCode(llvm::to_string(*ReturnType));
+
+    if (SymbolDoc.hasReturnCommand()) {
+      P.appendText(" - ");
+      SymbolDoc.returnToMarkup(P);
+    }
+
+    SymbolDoc.retvalsToMarkup(Output);
+    Output.addRuler();
+  }
+
+  if (SymbolDoc.hasDetailedDoc()) {
+    Output.addHeading(3).appendText("Details");
+    SymbolDoc.detailedDocToMarkup(Output);
+  }
+
+  Output.addRuler();
+
   // Don't print Type after Parameters or ReturnType as this will just duplicate
   // the information
   if (Type && !ReturnType && !Parameters)
@@ -1559,13 +1670,6 @@ markup::Document HoverInfo::presentDoxygen() const {
 
   if (CalleeArgInfo) {
     calleeArgInfoToMarkupParagraph(Output.addParagraph());
-  }
-
-  SymbolDoc.docToMarkup(Output);
-
-  if (!Definition.empty()) {
-    Output.addRuler();
-    definitionScopeToMarkup(Output);
   }
 
   if (!UsedSymbolNames.empty()) {
@@ -1591,7 +1695,8 @@ markup::Document HoverInfo::presentDefault() const {
   // level 1 and 2 headers in a huge font, see
   // https://github.com/microsoft/vscode/issues/88417 for details.
   markup::Paragraph &Header = Output.addHeading(3);
-  if (Kind != index::SymbolKind::Unknown)
+  if (Kind != index::SymbolKind::Unknown &&
+      Kind != index::SymbolKind::IncludeDirective)
     Header.appendText(index::getSymbolKindString(Kind)).appendSpace();
   assert(!Name.empty() && "hover triggered on a nameless symbol");
   Header.appendCode(Name);
@@ -1615,7 +1720,7 @@ markup::Document HoverInfo::presentDefault() const {
   }
 
   if (Parameters && !Parameters->empty()) {
-    Output.addParagraph().appendText("Parameters: ");
+    Output.addParagraph().appendText("Parameters:");
     markup::BulletList &L = Output.addBulletList();
     for (const auto &Param : *Parameters)
       L.addItem().addParagraph().appendCode(llvm::to_string(Param));
@@ -1728,7 +1833,7 @@ void parseDocumentationParagraph(llvm::StringRef Text, markup::Paragraph &Out) {
 
 void parseDocumentation(llvm::StringRef Input, markup::Document &Output) {
   // A documentation string is treated as a sequence of paragraphs,
-  // where the paragraphs are seperated by at least one empty line
+  // where the paragraphs are separated by at least one empty line
   // (meaning 2 consecutive newline characters).
   // Possible leading empty lines (introduced by an odd number > 1 of
   // empty lines between 2 paragraphs) will be removed later in the Markup

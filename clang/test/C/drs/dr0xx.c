@@ -459,7 +459,7 @@ void dr088_1(void) {
   /* Distinct type from the file scope forward declaration. */
   struct dr088_t_1;
   /* FIXME: this diagnostic could be improved to not be utterly baffling. */
-  dr088_f((struct dr088_t_1 *)0); /* expected-warning {{incompatible pointer types passing 'struct dr088_t_1 *' to parameter of type 'struct dr088_t_1 *'}} */
+  dr088_f((struct dr088_t_1 *)0); /* expected-error {{incompatible pointer types passing 'struct dr088_t_1 *' to parameter of type 'struct dr088_t_1 *'}} */
 }
 
 void dr088_2(struct dr088_t_1 *p) { /* Pointer to incomplete type. */ }

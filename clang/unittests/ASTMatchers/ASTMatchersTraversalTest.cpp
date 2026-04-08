@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "ASTMatchersTest.h"
-#include "clang/AST/Attrs.inc"
+#include "clang/AST/Attr.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/PrettyPrinter.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
@@ -5140,21 +5140,6 @@ TEST(ForEachLambdaCapture, MatchExplicitCapturesOnly) {
   EXPECT_TRUE(matchAndVerifyResultTrue(
       "int main() { int x, y, z; auto f = [&, z]() { return x + y + z; }; }",
       matcher, std::make_unique<VerifyIdIsBoundTo<LambdaCapture>>("LC", 1)));
-}
-
-TEST(HasConditionVariableStatement, DoesNotMatchCondition) {
-  EXPECT_TRUE(notMatches(
-    "void x() { if(true) {} }",
-    ifStmt(hasConditionVariableStatement(declStmt()))));
-  EXPECT_TRUE(notMatches(
-    "void x() { int x; if((x = 42)) {} }",
-    ifStmt(hasConditionVariableStatement(declStmt()))));
-}
-
-TEST(HasConditionVariableStatement, MatchesConditionVariables) {
-  EXPECT_TRUE(matches(
-    "void x() { if(int* a = 0) {} }",
-    ifStmt(hasConditionVariableStatement(declStmt()))));
 }
 
 TEST(ForEach, BindsOneNode) {

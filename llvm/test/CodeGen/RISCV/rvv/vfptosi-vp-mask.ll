@@ -30,8 +30,6 @@ define <vscale x 2 x i1> @vfptosi_nxv2i1_nxv2bf16_unmasked(<vscale x 2 x bfloat>
   ret <vscale x 2 x i1> %v
 }
 
-declare <vscale x 2 x i1> @llvm.vp.fptosi.nxv2i1.nxv2f16(<vscale x 2 x half>, <vscale x 2 x i1>, i32)
-
 define <vscale x 2 x i1> @vfptosi_nxv2i1_nxv2f16(<vscale x 2 x half> %va, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; ZVFH-LABEL: vfptosi_nxv2i1_nxv2f16:
 ; ZVFH:       # %bb.0:
@@ -72,8 +70,6 @@ define <vscale x 2 x i1> @vfptosi_nxv2i1_nxv2f16_unmasked(<vscale x 2 x half> %v
   ret <vscale x 2 x i1> %v
 }
 
-declare <vscale x 2 x i1> @llvm.vp.fptosi.nxv2i1.nxv2f32(<vscale x 2 x float>, <vscale x 2 x i1>, i32)
-
 define <vscale x 2 x i1> @vfptosi_nxv2i1_nxv2f32(<vscale x 2 x float> %va, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfptosi_nxv2i1_nxv2f32:
 ; CHECK:       # %bb.0:
@@ -96,15 +92,13 @@ define <vscale x 2 x i1> @vfptosi_nxv2i1_nxv2f32_unmasked(<vscale x 2 x float> %
   ret <vscale x 2 x i1> %v
 }
 
-declare <vscale x 2 x i1> @llvm.vp.fptosi.nxv2i1.nxv2f64(<vscale x 2 x double>, <vscale x 2 x i1>, i32)
-
 define <vscale x 2 x i1> @vfptosi_nxv2i1_nxv2f64(<vscale x 2 x double> %va, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfptosi_nxv2i1_nxv2f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
-; CHECK-NEXT:    vfcvt.rtz.x.f.v v10, v8, v0.t
-; CHECK-NEXT:    vmsne.vi v8, v10, 0, v0.t
-; CHECK-NEXT:    vmv1r.v v0, v8
+; CHECK-NEXT:    vfcvt.rtz.x.f.v v8, v8, v0.t
+; CHECK-NEXT:    vmsne.vi v10, v8, 0, v0.t
+; CHECK-NEXT:    vmv1r.v v0, v10
 ; CHECK-NEXT:    ret
   %v = call <vscale x 2 x i1> @llvm.vp.fptosi.nxv2i1.nxv2f64(<vscale x 2 x double> %va, <vscale x 2 x i1> %m, i32 %evl)
   ret <vscale x 2 x i1> %v
