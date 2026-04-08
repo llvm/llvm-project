@@ -38,6 +38,25 @@ std::unique_ptr<Module> getLLVMIR(const std::string &Filename,
   return M;
 }
 
+class PyVocab {
+private:
+  std::shared_ptr<Vocabulary> Vocab;
+
+public:
+  explicit PyVocab(const std::string &VocabPath) {
+    if (VocabPath.empty())
+      throw nb::value_error("Empty vocabulary path not allowed");
+    auto VocabOrErr = ir2vec::loadVocabulary(VocabPath);
+    if (!VocabOrErr)
+      throw nb::value_error(
+          ("Failed to load vocabulary: " + toString(VocabOrErr.takeError()))
+              .c_str());
+    Vocab = std::move(*VocabOrErr);
+  }
+
+  std::shared_ptr<Vocabulary> getVocab() const { return Vocab; }
+};
+
 class PyIR2VecTool {
 private:
   std::unique_ptr<LLVMContext> Ctx;
@@ -46,22 +65,25 @@ private:
   IR2VecKind OutputEmbeddingMode;
 
 public:
-  PyIR2VecTool(const std::string &Filename, IR2VecKind Mode,
-               const std::string &VocabPath) {
-    OutputEmbeddingMode = Mode;
+  /// \note
+  /// In the currently exposed API, the vocabulary is set once at construction
+  /// and there is no public interface to call this again. Callers should treat
+  /// the vocabulary as immutable for the lifetime of the tool instance.
+  PyIR2VecTool(const std::string &Filename, IR2VecKind Mode, PyVocab &Vocab) {
+    if (!Vocab.getVocab())
+      throw nb::value_error("Vocabulary object is not initialized");
 
-    if (VocabPath.empty())
-      throw nb::value_error("Empty Vocab Path not allowed");
+    if (Filename.empty())
+      throw nb::value_error("Empty filename not allowed");
+
+    OutputEmbeddingMode = Mode;
 
     Ctx = std::make_unique<LLVMContext>();
     M = getLLVMIR(Filename, *Ctx);
     Tool = std::make_unique<IR2VecTool>(*M);
 
-    if (auto Err = Tool->initializeVocabulary(VocabPath)) {
-      throw nb::value_error(("Failed to initialize IR2Vec vocabulary: " +
-                             toString(std::move(Err)))
-                                .c_str());
-    }
+    if (auto Err = Tool->setVocabulary(Vocab.getVocab()))
+      throw nb::value_error(toString(std::move(Err)).c_str());
   }
 
   nb::list getFuncNames() {
@@ -201,9 +223,19 @@ NB_MODULE(ir2vec, m) {
              "Flow-aware encodings (includes data/control flow)")
       .export_values();
 
+  nb::class_<PyVocab>(m, "Vocab");
+
+  m.def(
+      "loadVocab",
+      [](const std::string &vocabPath) {
+        return std::make_unique<PyVocab>(vocabPath);
+      },
+      nb::arg("vocabPath"), "Load an IR2Vec vocabulary from a JSON file",
+      nb::rv_policy::take_ownership);
+
   nb::class_<PyIR2VecTool>(m, "IR2VecTool")
-      .def(nb::init<const std::string &, IR2VecKind, const std::string &>(),
-           nb::arg("filename"), nb::arg("mode"), nb::arg("vocabPath"))
+      .def(nb::init<const std::string &, IR2VecKind, PyVocab &>(),
+           nb::arg("filename"), nb::arg("mode"), nb::arg("vocab"))
       .def("getFuncNames", &PyIR2VecTool::getFuncNames,
            "Get list of all defined functions in the module\n"
            "Returns: list[str] - Function names")
@@ -228,10 +260,9 @@ NB_MODULE(ir2vec, m) {
 
   m.def(
       "initEmbedding",
-      [](const std::string &filename, IR2VecKind mode,
-         const std::string &vocabPath) {
-        return std::make_unique<PyIR2VecTool>(filename, mode, vocabPath);
+      [](const std::string &filename, IR2VecKind mode, PyVocab &vocab) {
+        return std::make_unique<PyIR2VecTool>(filename, mode, vocab);
       },
-      nb::arg("filename"), nb::arg("mode"), nb::arg("vocabPath"),
+      nb::arg("filename"), nb::arg("mode"), nb::arg("vocab"),
       nb::rv_policy::take_ownership);
 }
