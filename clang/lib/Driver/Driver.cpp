@@ -4705,7 +4705,8 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
     }
   }
 
-  if (C.getDefaultToolChain().getTriple().isDXIL()) {
+  if (C.getDefaultToolChain().getTriple().isDXIL() ||
+      C.getDefaultToolChain().getTriple().isSPIRV()) {
     const auto &TC =
         static_cast<const toolchains::HLSLToolChain &>(C.getDefaultToolChain());
 
@@ -4719,11 +4720,16 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
             C.MakeAction<ObjcopyJobAction>(LastAction, types::TY_Object));
     }
 
-    // Call validator for dxil when -Vd not in Args.
-    if (TC.requiresValidation(Args)) {
+    // Call validator when -Vd not in Args.
+    auto ValInfo = TC.getValidationInfo(Args);
+    if (ValInfo.NeedsValidation) {
       Action *LastAction = Actions.back();
-      Actions.push_back(C.MakeAction<BinaryAnalyzeJobAction>(
-          LastAction, types::TY_DX_CONTAINER));
+      if (LastAction->getType() == types::TY_Object) {
+        types::ID OutType =
+            ValInfo.ProducesOutput ? types::TY_DX_CONTAINER : types::TY_Object;
+        Actions.push_back(
+            C.MakeAction<BinaryAnalyzeJobAction>(LastAction, OutType));
+      }
     }
 
     // Call metal-shaderconverter when targeting metal.
@@ -4736,19 +4742,6 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
           LastAction->getType() == types::TY_Object)
         Actions.push_back(C.MakeAction<BinaryTranslatorJobAction>(
             LastAction, types::TY_DX_CONTAINER));
-    }
-  }
-
-  if (C.getDefaultToolChain().getTriple().isSPIRV()) {
-    const auto &TC =
-        static_cast<const toolchains::HLSLToolChain &>(C.getDefaultToolChain());
-
-    // Call spirv-val for SPIR-V when -Vd not in Args.
-    if (TC.requiresValidation(Args)) {
-      Action *LastAction = Actions.back();
-      if (LastAction->getType() == types::TY_Object)
-        Actions.push_back(
-            C.MakeAction<BinaryAnalyzeJobAction>(LastAction, types::TY_Object));
     }
   }
 
@@ -6430,33 +6423,16 @@ const char *Driver::GetNamedOutputPath(Compilation &C, const JobAction &JA,
        C.getArgs().hasArg(options::OPT_dxc_Fo)) ||
       JA.getType() == types::TY_DX_CONTAINER) {
     StringRef FoValue = C.getArgs().getLastArgValue(options::OPT_dxc_Fo);
-    // If we are targeting DXIL and not validating/translating/objcopying, we
-    // should set the final result file. Otherwise we should emit to a
-    // temporary.
-    if (C.getDefaultToolChain().getTriple().isDXIL()) {
-      const auto &TC = static_cast<const toolchains::HLSLToolChain &>(
-          C.getDefaultToolChain());
-      // Fo can be empty here if the validator is running for a compiler flow
-      // that is using Fc or just printing disassembly.
-      if (TC.isLastJob(C.getArgs(), JA.getKind()) && !FoValue.empty())
-        return C.addResultFile(C.getArgs().MakeArgString(FoValue.str()), &JA);
-      StringRef Name = llvm::sys::path::filename(BaseInput);
-      std::pair<StringRef, StringRef> Split = Name.split('.');
-      const char *Suffix = types::getTypeTempSuffix(JA.getType(), true);
-      return CreateTempFile(C, Split.first, Suffix, false);
-    }
-
-    assert(C.getDefaultToolChain().getTriple().isSPIRV());
+    assert((C.getDefaultToolChain().getTriple().isDXIL() ||
+            C.getDefaultToolChain().getTriple().isSPIRV()) &&
+           "expected DXIL or SPIR-V triple for HLSL output path");
     const auto &TC =
         static_cast<const toolchains::HLSLToolChain &>(C.getDefaultToolChain());
-
-    // If this is the last job in the compilation for this input, and Fo is
-    // non-empty, we can return the Fo file (the final output)
-    if (TC.isLastJob(C.getArgs(), JA.getKind()) && !FoValue.empty())
+    // Fo can be empty here if the validator is running for a compiler flow
+    // that is using Fc or just printing disassembly.
+    if (TC.isLastOutputProducingJob(C.getArgs(), JA.getKind()) &&
+        !FoValue.empty())
       return C.addResultFile(C.getArgs().MakeArgString(FoValue.str()), &JA);
-
-    // Otherwise, create a temporary file for validation (like DXIL creates
-    // temp files).
     StringRef Name = llvm::sys::path::filename(BaseInput);
     std::pair<StringRef, StringRef> Split = Name.split('.');
     const char *Suffix = types::getTypeTempSuffix(JA.getType(), true);

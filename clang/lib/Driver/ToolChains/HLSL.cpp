@@ -305,30 +305,29 @@ void tools::hlsl::Validator::ConstructJob(Compilation &C, const JobAction &JA,
   const InputInfo &Input = Inputs[0];
 
   const llvm::Triple &T = getToolChain().getTriple();
+  std::string ExecPath;
   if (T.isSPIRV()) {
-    std::string SPIRVValPath = getToolChain().GetProgramPath("spirv-val");
-    assert(SPIRVValPath != "spirv-val" && "cannot find spirv-val");
+    ExecPath = getToolChain().GetProgramPath("spirv-val");
+    assert(ExecPath != "spirv-val" && "cannot find spirv-val");
 
     CmdArgs.push_back("--target-env");
     CmdArgs.push_back(Args.MakeArgString(T.getOSName()));
     CmdArgs.push_back("--scalar-block-layout");
     CmdArgs.push_back(Input.getFilename());
-
-    const char *Exec = Args.MakeArgString(SPIRVValPath);
-    C.addCommand(std::make_unique<Command>(
-        JA, *this, ResponseFileSupport::None(), Exec, CmdArgs, Inputs, Input));
-  } else {
-    std::string DxvPath = getToolChain().GetProgramPath("dxv");
-    assert(DxvPath != "dxv" && "cannot find dxv");
+  } else if (T.isDXIL()) {
+    ExecPath = getToolChain().GetProgramPath("dxv");
+    assert(ExecPath != "dxv" && "cannot find dxv");
 
     CmdArgs.push_back(Input.getFilename());
     CmdArgs.push_back("-o");
     CmdArgs.push_back(Output.getFilename());
-
-    const char *Exec = Args.MakeArgString(DxvPath);
-    C.addCommand(std::make_unique<Command>(
-        JA, *this, ResponseFileSupport::None(), Exec, CmdArgs, Inputs, Input));
+  } else {
+    llvm_unreachable("unexpected triple for HLSL validation");
   }
+
+  const char *Exec = Args.MakeArgString(ExecPath);
+  C.addCommand(std::make_unique<Command>(JA, *this, ResponseFileSupport::None(),
+                                         Exec, CmdArgs, Inputs, Input));
 }
 
 void tools::hlsl::MetalConverter::ConstructJob(
@@ -593,35 +592,43 @@ HLSLToolChain::TranslateArgs(const DerivedArgList &Args, StringRef BoundArch,
   return DAL;
 }
 
-bool HLSLToolChain::requiresValidation(DerivedArgList &Args,
-                                       bool Diagnose) const {
+HLSLToolChain::ValidationInfo
+HLSLToolChain::getValidationInfo(DerivedArgList &Args, bool Diagnose) const {
+  ValidationInfo Info;
+
   bool HasFo = Args.hasArg(options::OPT_dxc_Fo);
   bool DisableValidation =
       Args.getLastArg(options::OPT_dxc_disable_validation) != nullptr;
 
   if (DisableValidation || !HasFo)
-    return false;
+    return Info;
 
-  if (getArch() == llvm::Triple::dxil) {
+  if (getTriple().isDXIL()) {
     std::string DxvPath = GetProgramPath("dxv");
-    if (DxvPath != "dxv")
-      return true;
+    if (DxvPath != "dxv") {
+      Info.NeedsValidation = true;
+      Info.ProducesOutput = true;
+      return Info;
+    }
 
     if (Diagnose)
       getDriver().Diag(diag::warn_drv_dxc_missing_dxv);
-    return false;
+    return Info;
   }
 
   if (getTriple().isSPIRV()) {
     std::string SpirvValPath = GetProgramPath("spirv-val");
-    if (SpirvValPath != "spirv-val")
-      return true;
+    if (SpirvValPath != "spirv-val") {
+      Info.NeedsValidation = true;
+      Info.ProducesOutput = false;
+      return Info;
+    }
 
     if (Diagnose)
       getDriver().Diag(diag::warn_drv_dxc_missing_spirv_val);
   }
 
-  return false;
+  return Info;
 }
 
 bool HLSLToolChain::requiresBinaryTranslation(DerivedArgList &Args) const {
@@ -634,18 +641,16 @@ bool HLSLToolChain::requiresObjcopy(DerivedArgList &Args) const {
           Args.hasArg(options::OPT_dxc_Frs) || isRootSignatureTarget(Args));
 }
 
-bool HLSLToolChain::isLastJob(DerivedArgList &Args,
-                              Action::ActionClass AC) const {
+bool HLSLToolChain::isLastOutputProducingJob(DerivedArgList &Args,
+                                             Action::ActionClass AC) const {
   // Note: we check in the reverse order of execution
   if (requiresBinaryTranslation(Args))
     return AC == Action::Action::BinaryTranslatorJobClass;
-  // For SPIR-V, spirv-val is a pure validator that doesn't produce output
-  // files, so the compile step is the last output-producing job. For DXIL,
-  // dxv validates and signs, producing the final output.
-  if (requiresValidation(Args, /*Diagnose=*/false)) {
-    if (getTriple().isSPIRV())
-      return AC == Action::Action::AssembleJobClass;
-    return AC == Action::Action::BinaryAnalyzeJobClass;
+  auto ValInfo = getValidationInfo(Args, /*Diagnose=*/false);
+  if (ValInfo.NeedsValidation) {
+    if (ValInfo.ProducesOutput)
+      return AC == Action::Action::BinaryAnalyzeJobClass;
+    return AC == Action::Action::AssembleJobClass;
   }
   if (requiresObjcopy(Args))
     return AC == Action::Action::ObjcopyJobClass;
