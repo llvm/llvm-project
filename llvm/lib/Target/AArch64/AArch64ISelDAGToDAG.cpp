@@ -416,7 +416,7 @@ public:
   void SelectMultiVectorLutiLane(SDNode *Node, unsigned NumOutVecs,
                                  unsigned Opc, uint32_t MaxImm);
   void EmitMultiVectorLutiLane(SDNode *Node, unsigned NumOutVecs, unsigned Opc,
-                               ArrayRef<SDValue> Ops, bool HasChain);
+                               ArrayRef<SDValue> Ops);
   void SelectMultiVectorLutiLaneTuple(SDNode *Node, unsigned NumOutVecs,
                                       unsigned Opc, uint32_t MaxImm);
 
@@ -2251,20 +2251,18 @@ void AArch64DAGToDAGISel::SelectFrintFromVT(SDNode *N, unsigned NumVecs,
 void AArch64DAGToDAGISel::EmitMultiVectorLutiLane(SDNode *Node,
                                                   unsigned NumOutVecs,
                                                   unsigned Opc,
-                                                  ArrayRef<SDValue> Ops,
-                                                  bool HasChain) {
+                                                  ArrayRef<SDValue> Ops) {
   SDLoc DL(Node);
   EVT VT = Node->getValueType(0);
+  bool HasChain = Node->getOpcode() == ISD::INTRINSIC_W_CHAIN;
 
   SmallVector<SDValue, 4> MachineOps(Ops);
-  SDNode *Instruction;
-  if (HasChain) {
+  SmallVector<EVT, 2> ResTys = {MVT::Untyped};
+  if (HasChain)
     MachineOps.push_back(Node->getOperand(0));
-    Instruction =
-        CurDAG->getMachineNode(Opc, DL, {MVT::Untyped, MVT::Other}, MachineOps);
-  } else {
-    Instruction = CurDAG->getMachineNode(Opc, DL, MVT::Untyped, MachineOps);
-  }
+  if (HasChain)
+    ResTys.push_back(MVT::Other);
+  SDNode *Instruction = CurDAG->getMachineNode(Opc, DL, ResTys, MachineOps);
   SDValue SuperReg(Instruction, 0);
 
   for (unsigned i = 0; i < NumOutVecs; ++i)
@@ -2290,7 +2288,7 @@ void AArch64DAGToDAGISel::SelectMultiVectorLutiLane(SDNode *Node,
     return;
 
   SDValue Ops[] = {ZtValue, Node->getOperand(3), Node->getOperand(4)};
-  EmitMultiVectorLutiLane(Node, NumOutVecs, Opc, Ops, /*HasChain=*/true);
+  EmitMultiVectorLutiLane(Node, NumOutVecs, Opc, Ops);
 }
 
 void AArch64DAGToDAGISel::SelectMultiVectorLutiLaneTuple(SDNode *Node,
@@ -2307,37 +2305,20 @@ void AArch64DAGToDAGISel::SelectMultiVectorLutiLaneTuple(SDNode *Node,
       createZTuple({Node->getOperand(3), Node->getOperand(4)}),
       Node->getOperand(5),
   };
-  EmitMultiVectorLutiLane(Node, NumOutVecs, Opc, Ops, /*HasChain=*/false);
+  EmitMultiVectorLutiLane(Node, NumOutVecs, Opc, Ops);
 }
 
 void AArch64DAGToDAGISel::SelectMultiVectorLuti(SDNode *Node,
                                                 unsigned NumOutVecs,
                                                 unsigned Opc,
                                                 unsigned NumInVecs) {
-  const unsigned ChainOp = 0;
-  const unsigned ZtOp = 2;
-  const unsigned FirstVecOp = 3;
-
   SDValue ZtValue;
-  if (!ImmToReg<AArch64::ZT0, 0>(Node->getOperand(ZtOp), ZtValue))
+  if (!ImmToReg<AArch64::ZT0, 0>(Node->getOperand(2), ZtValue))
     return;
 
-  SDValue ZTuple;
-  switch (NumInVecs) {
-  case 2:
-    ZTuple = createZMulTuple(
-        {Node->getOperand(FirstVecOp), Node->getOperand(FirstVecOp + 1)});
-    break;
-  case 3:
-    ZTuple = createZTuple({Node->getOperand(FirstVecOp),
-                           Node->getOperand(FirstVecOp + 1),
-                           Node->getOperand(FirstVecOp + 2)});
-    break;
-  default:
-    llvm_unreachable("unexpected LUTI ZT tuple width");
-  }
-
-  SDValue Ops[] = {ZtValue, ZTuple, Node->getOperand(ChainOp)};
+  SmallVector<SDValue, 4> Regs(Node->ops().slice(3, NumInVecs));
+  SDValue ZTuple = NumInVecs == 2 ? createZMulTuple(Regs) : createZTuple(Regs);
+  SDValue Ops[] = {ZtValue, ZTuple, Node->getOperand(0)};
 
   SDLoc DL(Node);
   EVT VT = Node->getValueType(0);
@@ -2346,9 +2327,9 @@ void AArch64DAGToDAGISel::SelectMultiVectorLuti(SDNode *Node,
       CurDAG->getMachineNode(Opc, DL, {MVT::Untyped, MVT::Other}, Ops);
   SDValue SuperReg(Instruction, 0);
 
-  for (unsigned i = 0; i < NumOutVecs; ++i)
-    ReplaceUses(SDValue(Node, i), CurDAG->getTargetExtractSubreg(
-                                      AArch64::zsub0 + i, DL, VT, SuperReg));
+  for (unsigned I = 0; I < NumOutVecs; ++I)
+    ReplaceUses(SDValue(Node, I), CurDAG->getTargetExtractSubreg(
+                                      AArch64::zsub0 + I, DL, VT, SuperReg));
 
   ReplaceUses(SDValue(Node, NumOutVecs), SDValue(Instruction, 1));
   CurDAG->RemoveDeadNode(Node);
