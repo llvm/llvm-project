@@ -1,9 +1,6 @@
 #ifndef STD_LLDB_COMPRESSED_PAIR_H
 #define STD_LLDB_COMPRESSED_PAIR_H
 
-#include <type_traits>
-#include <utility> // for std::forward
-
 // COMPRESSED_PAIR_REV versions:
 // 0 -> Post-c88580c layout
 // 1 -> Post-27c83382d83dc layout
@@ -14,6 +11,13 @@
 
 namespace std {
 namespace __lldb {
+
+using size_t = decltype(sizeof(0));
+
+// Stripped down version of std::integral_constant
+template <class _Tp, _Tp __v> struct integral_constant {
+  static inline constexpr const _Tp value = __v;
+};
 
 #if __has_cpp_attribute(msvc::no_unique_address)
 #define _LLDB_NO_UNIQUE_ADDRESS [[msvc::no_unique_address]]
