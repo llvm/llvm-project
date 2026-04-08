@@ -1629,6 +1629,7 @@ static addr_t ComputeConstituentLoadAddress(BreakpointLocation &constituent,
         constituent.GetID(),
         error.AsCString() ? error.AsCString() : "unknown error");
     // FIXME: ShouldShowError must only guard the error message.
+    // FIXME: Use diagnostics instead of printing "warning" to the async output.
     return LLDB_INVALID_ADDRESS;
   }
 
@@ -1645,34 +1646,30 @@ Process::CreateBreakpointSite(const BreakpointLocationSP &constituent,
   if (load_addr == LLDB_INVALID_ADDRESS)
     return LLDB_INVALID_BREAK_ID;
 
-  BreakpointSiteSP bp_site_sp;
-
   // Look up this breakpoint site.  If it exists, then add this new
   // constituent, otherwise create a new breakpoint site and add it.
-  bp_site_sp = m_breakpoint_site_list.FindByAddress(load_addr);
-  if (bp_site_sp) {
+  if (BreakpointSiteSP bp_site_sp =
+          m_breakpoint_site_list.FindByAddress(load_addr)) {
     bp_site_sp->AddConstituent(constituent);
     constituent->SetBreakpointSite(bp_site_sp);
     return bp_site_sp->GetID();
-  } else {
-    bp_site_sp.reset(new BreakpointSite(constituent, load_addr, use_hardware));
-    if (bp_site_sp) {
-      Status error = EnableBreakpointSite(bp_site_sp.get());
-      if (error.Success()) {
-        constituent->SetBreakpointSite(bp_site_sp);
-        return m_breakpoint_site_list.Add(bp_site_sp);
-      } else {
-        if (ShouldShowError(*this) || use_hardware) {
-          // Report error for setting breakpoint...
-          GetTarget().GetDebugger().GetAsyncErrorStream()->Printf(
-              "warning: failed to set breakpoint site at 0x%" PRIx64
-              " for breakpoint %i.%i: %s\n",
-              load_addr, constituent->GetBreakpoint().GetID(),
-              constituent->GetID(),
-              error.AsCString() ? error.AsCString() : "unknown error");
-        }
-      }
-    }
+  }
+
+  BreakpointSiteSP bp_site_sp(
+      new BreakpointSite(constituent, load_addr, use_hardware));
+  Status error = EnableBreakpointSite(bp_site_sp.get());
+  if (error.Success()) {
+    constituent->SetBreakpointSite(bp_site_sp);
+    return m_breakpoint_site_list.Add(bp_site_sp);
+  }
+
+  if (ShouldShowError(*this) || use_hardware) {
+    // Report error for setting breakpoint...
+    GetTarget().GetDebugger().GetAsyncErrorStream()->Printf(
+        "warning: failed to set breakpoint site at 0x%" PRIx64
+        " for breakpoint %i.%i: %s\n",
+        load_addr, constituent->GetBreakpoint().GetID(), constituent->GetID(),
+        error.AsCString() ? error.AsCString() : "unknown error");
   }
   return LLDB_INVALID_BREAK_ID;
 }
