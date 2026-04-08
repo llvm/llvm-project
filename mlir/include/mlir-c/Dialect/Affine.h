@@ -22,6 +22,15 @@ MLIR_DECLARE_CAPI_DIALECT_REGISTRATION(Affine, affine);
 }
 #endif
 
+// Currently these are opt-in
+#define GET_ENUM_CAPI_DECLS
+#define GET_ENUM_ATTR_CAPI_DECLS
+#include "mlir/Dialect/Affine/IR/AffineOpsCAPIEnumAttrs.h.inc"
+#define GET_TYPE_CAPI_DECLS
+#include "mlir/Dialect/Affine/IR/AffineOpsCAPITypes.h.inc"
+#define GET_ATTR_CAPI_DECLS
+#include "mlir/Dialect/Affine/IR/AffineOpsCAPIAttrs.h.inc"
+
 #include "mlir/Dialect/Affine/Transforms/Passes.capi.h.inc"
 
 #endif // MLIR_C_DIALECT_AFFINE_H
