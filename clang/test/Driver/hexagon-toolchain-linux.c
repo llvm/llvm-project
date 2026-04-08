@@ -180,3 +180,36 @@
 // RUN:   --sysroot=%S/Inputs/basic_linux_libcxx_tree -r %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK-PIE-RELOCATABLE %s
 // CHECK-PIE-RELOCATABLE-NOT:  "-pie"
+
+// -----------------------------------------------------------------------------
+// Sanitizer library paths: -fsanitize=memory
+// -----------------------------------------------------------------------------
+// RUN: %clang -### --target=hexagon-unknown-linux-musl \
+// RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
+// RUN:   -mcpu=hexagonv60 \
+// RUN:   -fuse-ld=lld \
+// RUN:   -fsanitize=memory \
+// RUN:   --sysroot=%S/Inputs/basic_linux_libcxx_tree %s 2>&1 | FileCheck -check-prefix=CHECK-MSAN %s
+// CHECK-MSAN:      "-L{{[^"]*}}basic_linux_libcxx_tree{{/|\\\\}}usr{{/|\\\\}}lib{{/|\\\\}}msan"
+// CHECK-MSAN-SAME: "-L{{[^"]*}}basic_linux_libcxx_tree{{/|\\\\}}usr{{/|\\\\}}lib"
+// -----------------------------------------------------------------------------
+// Sanitizer library paths: -fsanitize=address
+// -----------------------------------------------------------------------------
+// RUN: %clang -### --target=hexagon-unknown-linux-musl \
+// RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
+// RUN:   -mcpu=hexagonv60 \
+// RUN:   -fuse-ld=lld \
+// RUN:   -fsanitize=address \
+// RUN:   --sysroot=%S/Inputs/basic_linux_libcxx_tree %s 2>&1 | FileCheck -check-prefix=CHECK-ASAN %s
+// CHECK-ASAN:      "-L{{[^"]*}}basic_linux_libcxx_tree{{/|\\\\}}usr{{/|\\\\}}lib{{/|\\\\}}asan"
+// CHECK-ASAN-SAME: "-L{{[^"]*}}basic_linux_libcxx_tree{{/|\\\\}}usr{{/|\\\\}}lib"
+// -----------------------------------------------------------------------------
+// No sanitizer: no msan/asan library paths
+// -----------------------------------------------------------------------------
+// RUN: %clang -### --target=hexagon-unknown-linux-musl \
+// RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
+// RUN:   -mcpu=hexagonv60 \
+// RUN:   -fuse-ld=lld \
+// RUN:   --sysroot=%S/Inputs/basic_linux_libcxx_tree %s 2>&1 | FileCheck -check-prefix=CHECK-NOSAN %s
+// CHECK-NOSAN-NOT: "-L{{.*}}{{/|\\\\}}msan"
+// CHECK-NOSAN-NOT: "-L{{.*}}{{/|\\\\}}asan"
