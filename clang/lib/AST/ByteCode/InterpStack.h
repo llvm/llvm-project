@@ -16,8 +16,8 @@
 #include "FixedPoint.h"
 #include "IntegralAP.h"
 #include "MemberPointer.h"
-#include "Reflect.h"
 #include "PrimType.h"
+#include "Reflect.h"
 
 namespace clang {
 namespace interp {
