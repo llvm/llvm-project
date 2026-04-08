@@ -1417,9 +1417,8 @@ bool AMDGPURegisterBankInfo::applyMappingSBufferLoad(
       MRI.setRegBank(LoadParts[i], AMDGPU::VGPRRegBank);
     }
 
-    MachineMemOperand *MMO = BaseMMO;
     if (i != 0)
-      BaseMMO = MF.getMachineMemOperand(BaseMMO, MMOOffset + 16 * i, MemSize);
+      BaseMMO = MF.getMachineMemOperand(BaseMMO, 16, MemSize);
 
     B.buildInstr(getSBufferLoadCorrespondingBufferLoadOpcode(MI.getOpcode()))
         .addDef(LoadParts[i])       // vdata
@@ -1430,7 +1429,7 @@ bool AMDGPURegisterBankInfo::applyMappingSBufferLoad(
         .addImm(ImmOffset + 16 * i) // offset(imm)
         .addImm(0)                  // cachepolicy, swizzled buffer(imm)
         .addImm(0)                  // idxen(imm)
-        .addMemOperand(MMO);
+        .addMemOperand(BaseMMO);
   }
 
   // TODO: If only the resource is a VGPR, it may be better to execute the
