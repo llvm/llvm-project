@@ -94,40 +94,26 @@ Rematerializer::rematerializeToPos(RegisterIdx RootIdx, unsigned UseRegion,
   assert(!DRI.DependencyMap.contains(RootIdx));
   LLVM_DEBUG(dbgs() << "Rematerializing " << printID(RootIdx) << '\n');
 
-  // Traverse the root's dependency DAG depth-first to find the set of
-  // registers we must rematerialize along with it and a legal order to
-  // rematerialize them in.
-  SmallVector<RegisterIdx, 4> DepDAG{RootIdx};
-  SmallSetVector<RegisterIdx, 8> RematOrder;
-  RematOrder.insert(RootIdx);
-  do {
-    RegisterIdx RegIdx = DepDAG.pop_back_val();
-    for (const Reg::Dependency &Dep : getReg(RegIdx).Dependencies) {
-      // The dependency may already have a rematerialization ready to use.
-      if (DRI.DependencyMap.contains(Dep.RegIdx))
-        continue;
-      // We may have already seen the dependency in the dependency DAG.
-      if (RematOrder.contains(Dep.RegIdx))
-        continue;
-      DepDAG.push_back(Dep.RegIdx);
-      RematOrder.insert(Dep.RegIdx);
-    }
-  } while (!DepDAG.empty());
-
-  // Rematerialize all necessary registers in the root's dependency DAG. At each
-  // rematerialization, dependencies should already be available.
-  RegisterIdx LastNewIdx;
-  for (RegisterIdx RegIdx : reverse(RematOrder)) {
-    assert(!DRI.DependencyMap.contains(RegIdx) && "useless remat");
-    SmallVector<Reg::Dependency, 2> Dependencies;
-    for (const Reg::Dependency &Dep : getReg(RegIdx).Dependencies)
-      Dependencies.emplace_back(Dep.MOIdx, DRI.DependencyMap.at(Dep.RegIdx));
-    LastNewIdx =
-        rematerializeReg(RegIdx, UseRegion, InsertPos, std::move(Dependencies));
-    DRI.DependencyMap.insert({RegIdx, LastNewIdx});
+  SmallVector<Reg::Dependency, 2> NewDeps;
+  // Copy all dependencies because recursive rematerialization of dependencies
+  // may invalidate references to the backing vector of registers.
+  SmallVector<Reg::Dependency, 2> OldDeps(getReg(RootIdx).Dependencies);
+  for (const Reg::Dependency &Dep : OldDeps) {
+    // Recursively rematerialize required dependencies at the same position as
+    // the root. Registers form a DAG so the recursion is guaranteed to
+    // terminate.
+    auto RematIdx = DRI.DependencyMap.find(Dep.RegIdx);
+    RegisterIdx NewDepRegIdx;
+    if (RematIdx == DRI.DependencyMap.end())
+      NewDepRegIdx = rematerializeToPos(Dep.RegIdx, UseRegion, InsertPos, DRI);
+    else
+      NewDepRegIdx = RematIdx->second;
+    NewDeps.emplace_back(Dep.MOIdx, NewDepRegIdx);
   }
-
-  return LastNewIdx;
+  RegisterIdx NewIdx =
+      rematerializeReg(RootIdx, UseRegion, InsertPos, std::move(NewDeps));
+  DRI.DependencyMap.insert({RootIdx, NewIdx});
+  return NewIdx;
 }
 
 void Rematerializer::transferUser(RegisterIdx FromRegIdx, RegisterIdx ToRegIdx,

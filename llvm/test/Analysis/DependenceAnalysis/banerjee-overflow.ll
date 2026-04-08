@@ -11,8 +11,6 @@
 ;     A[i + j - 5] = 1;
 ;   }
 ;
-; FIXME: DependenceAnalysis fails to detect dependency between two stores.
-;
 ; memory accesses                     | (i,j) == (0,4611686018427387905)
 ; ------------------------------------|----------------------------------
 ; A[i - j + 9223372036854775805]      | A[4611686018427387900]
