@@ -37,25 +37,29 @@ checkMagicAndDetectVersionEndian(StringRef Bytes) {
   if (Bytes.size() < 6)
     return createStringError(std::errc::invalid_argument,
                              "data too small to be a GSYM file");
-  const auto HostByteOrder = llvm::endianness::native;
-  const bool IsHostLittleEndian = HostByteOrder == llvm::endianness::little;
+  // Detect host endian
+                             const auto HostEndian = llvm::endianness::native;
+  const bool IsHostLittleEndian = (HostEndian == llvm::endianness::little);
+  // Read magic bytes using host endian
   DataExtractor Data(Bytes, IsHostLittleEndian, 4);
   uint64_t Offset = 0;
   uint32_t Magic = Data.getU32(&Offset);
-  llvm::endianness Endian;
+  llvm::endianness FileEndian;
+  // If magic bytes looks alright, the host and the file has the same endianness, vice versa.
   if (Magic == GSYM_MAGIC) {
-    Endian = HostByteOrder;
+    FileEndian = HostEndian;
   } else if (Magic == GSYM_CIGAM) {
-    Endian = IsHostLittleEndian ? llvm::endianness::big
-                                : llvm::endianness::little;
+    FileEndian = IsHostLittleEndian ? llvm::endianness::big
+                                    : llvm::endianness::little;
     // Re-create DataExtractor with correct endianness to read version.
     Data = DataExtractor(Bytes, !IsHostLittleEndian, 4);
-    Offset = 4;
   } else {
     return createStringError(std::errc::invalid_argument,
                              "not a GSYM file (bad magic)");
   }
-  return std::make_pair(Data.getU16(&Offset), Endian);
+  // Read version using the correct endian
+  uint16_t Version = Data.getU16(&Offset);
+  return std::make_pair(Version, FileEndian);
 }
 
 llvm::Expected<std::unique_ptr<GsymReader>>
@@ -80,7 +84,7 @@ GsymReader::create(std::unique_ptr<MemoryBuffer> &MemBuffer) {
   if (!MemBuffer)
     return createStringError(std::errc::invalid_argument,
                              "invalid memory buffer");
-  auto VersionEndianOrErr =
+  Expected<std::pair<uint16_t, llvm::endianness>> VersionEndianOrErr =
       checkMagicAndDetectVersionEndian(MemBuffer->getBuffer());
   if (!VersionEndianOrErr)
     return VersionEndianOrErr.takeError();
@@ -107,7 +111,7 @@ llvm::Error GsymReader::parse() {
   if (auto Err = parseHeaderAndGlobalDataDirectory())
     return Err;
 
-  // Step 2: Validate that all required sections are present.
+  // Step 2: Validate that all required sections are present and consistent.
   for (auto Type :
        {GlobalInfoType::AddrOffsets, GlobalInfoType::AddrInfoOffsets,
         GlobalInfoType::StringTable, GlobalInfoType::FileTable,
@@ -117,8 +121,18 @@ llvm::Error GsymReader::parse() {
                                "missing required section type %u",
                                static_cast<uint32_t>(Type));
 
-  // Step 3: Parse each section using the for+switch loop.
-  // Starting from 1, because 0 is EndOfList.
+  if (GlobalDataSections[GlobalInfoType::AddrOffsets].FileSize !=
+      static_cast<uint64_t>(getNumAddresses()) * getAddressOffsetSize())
+    return createStringError(std::errc::invalid_argument,
+                             "AddrOffsets section size mismatch");
+
+  if (GlobalDataSections[GlobalInfoType::AddrInfoOffsets].FileSize !=
+      static_cast<uint64_t>(getNumAddresses()) * getAddressInfoOffsetSize())
+    return createStringError(std::errc::invalid_argument,
+                             "AddrInfoOffsets section size mismatch");
+
+  // Step 3: Parse each global data section.
+  // Starting from enum value 1, because 0 is EndOfList.
   for (uint32_t I = 1;
        I < static_cast<uint32_t>(GlobalInfoType::NumTypes); ++I) {
     switch (static_cast<GlobalInfoType>(I)) {

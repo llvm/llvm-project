@@ -83,24 +83,6 @@ llvm::Error GsymReaderV2::parseHeaderAndGlobalDataDirectory() {
           parseGlobalDataEntries(Data, Offset, BufSize, GlobalDataSections))
     return Err;
 
-  // Validate V2-specific section size constraints.
-  {
-    const GlobalData &AddrOffsetsGD =
-        GlobalDataSections[GlobalInfoType::AddrOffsets];
-    if (AddrOffsetsGD.FileSize !=
-        static_cast<uint64_t>(Hdr->NumAddresses) * Hdr->AddrOffSize)
-      return createStringError(std::errc::invalid_argument,
-                               "AddrOffsets section size mismatch");
-
-    const GlobalData &AddrInfoOffsetsGD =
-        GlobalDataSections[GlobalInfoType::AddrInfoOffsets];
-    if (AddrInfoOffsetsGD.FileSize !=
-        static_cast<uint64_t>(Hdr->NumAddresses) *
-            HeaderV2::getAddressInfoOffsetSize())
-      return createStringError(std::errc::invalid_argument,
-                               "AddrInfoOffsets section size mismatch");
-  }
-
   return Error::success();
 }
 
