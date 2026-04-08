@@ -53171,6 +53171,31 @@ static SDValue combineAddOrSubToADCOrSBB(SDNode *N, const SDLoc &DL,
   return SDValue();
 }
 
+static SDValue combineOrWithGF2P8AFFINEQB(SDNode *N, const SDLoc &DL,
+                                          SelectionDAG &DAG, EVT VT) {
+  using namespace SDPatternMatch;
+  assert(N->getOpcode() == ISD::OR);
+
+  if (!N->getFlags().hasDisjoint() &&
+      !DAG.haveNoCommonBitsSet(N->getOperand(0), N->getOperand(1)))
+    return SDValue();
+
+  SDValue X, Y, SplatOp;
+  APInt Imm, SplatVal;
+  if (sd_match(N,
+               m_c_BinOp(ISD::OR,
+                         m_OneUse(m_TernaryOp(X86ISD::GF2P8AFFINEQB, m_Value(X),
+                                              m_Value(Y), m_ConstInt(Imm))),
+                         m_Value(SplatOp))) &&
+      X86::isConstantSplat(SplatOp, SplatVal, /*AllowPartialUndefs=*/false)) {
+    uint64_t NewImm = (Imm.getZExtValue() ^ SplatVal.getZExtValue()) & 0xFF;
+    return DAG.getNode(X86ISD::GF2P8AFFINEQB, DL, VT, X, Y,
+                       DAG.getTargetConstant(NewImm, DL, MVT::i8));
+  }
+
+  return SDValue();
+}
+
 static SDValue combineOrXorWithSETCC(unsigned Opc, const SDLoc &DL, EVT VT,
                                      SDValue N0, SDValue N1,
                                      SelectionDAG &DAG) {
@@ -53262,6 +53287,9 @@ static SDValue combineOr(SDNode *N, SelectionDAG &DAG,
   if (SDValue FPLogic = convertIntLogicToFPLogic(N->getOpcode(), dl, VT, N0, N1,
                                                  DAG, DCI, Subtarget))
     return FPLogic;
+
+  if (SDValue R = combineOrWithGF2P8AFFINEQB(N, dl, DAG, VT))
+    return R;
 
   if (DCI.isBeforeLegalizeOps())
     return SDValue();
