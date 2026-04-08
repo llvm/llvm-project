@@ -329,6 +329,12 @@ struct LogicalConstantVistor : public evaluate::Traverse<LogicalConstantVistor,
       }
     }
   }
+
+  template <typename T>
+  Result operator()(const evaluate::ConditionalExpr<T> &) const {
+    // A conditional expression is not treated as a constant logical value.
+    return std::nullopt;
+  }
 };
 } // namespace
 

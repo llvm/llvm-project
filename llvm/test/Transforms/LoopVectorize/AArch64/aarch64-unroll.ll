@@ -1,7 +1,6 @@
 ; RUN: opt < %s -passes=loop-vectorize -mtriple=aarch64-none-linux-gnu -mattr=+neon -S | FileCheck %s
 target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
 
-; Function Attrs: nounwind
 define ptr @array_add(ptr noalias nocapture readonly %a, ptr noalias nocapture readonly %b, ptr %c, i32 %size) {
 ;CHECK-LABEL: array_add
 ;CHECK: load <4 x i32>
