@@ -67,11 +67,11 @@ TEST_F(raw_socket_streamTest, CLIENT_TO_SERVER_AND_SERVER_TO_CLIENT) {
   char Bytes[8];
   ssize_t BytesRead = Server.read(Bytes, 8);
 
-  std::string string(Bytes, 8);
+  std::string Str(Bytes, 8);
   ASSERT_EQ(Server.has_error(), false);
 
   ASSERT_EQ(8, BytesRead);
-  ASSERT_EQ("01234567", string);
+  ASSERT_EQ("01234567", Str);
 }
 
 TEST_F(raw_socket_streamTest, READ_WITH_TIMEOUT) {
