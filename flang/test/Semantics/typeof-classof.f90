@@ -30,8 +30,26 @@ contains
     typeof(c) :: f
   end subroutine
 
+  subroutine test_typeof_assumed_char(a)
+    character(*) :: a
+    !UNPARSE: TYPEOF(a) :: b
+    typeof(a) :: b
+  end subroutine
+
   subroutine test_classof(a)
     class(base_type), intent(in) :: a
+    !UNPARSE: CLASSOF(a), ALLOCATABLE :: b
+    classof(a), allocatable :: b
+  end subroutine
+
+  subroutine test_typeof_assumed_type(a, b)
+    type(*), intent(in) :: a
+    !UNPARSE: TYPEOF(a) :: b
+    typeof(a) :: b
+  end subroutine
+
+  subroutine test_classof_unlimited_poly(a)
+    class(*), intent(in) :: a
     !UNPARSE: CLASSOF(a), ALLOCATABLE :: b
     classof(a), allocatable :: b
   end subroutine

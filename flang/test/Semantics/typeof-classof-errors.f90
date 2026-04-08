@@ -35,4 +35,33 @@ contains
     !ERROR: The data-ref in TYPEOF must not be a whole assumed-size array
     typeof(a) :: b
   end subroutine
+
+  subroutine test_typeof_unlimited_poly(a)
+    class(*), intent(in) :: a
+    !ERROR: The data-ref in TYPEOF must not be unlimited polymorphic
+    typeof(a) :: b
+  end subroutine
+
+  subroutine test_classof_assumed_type(a)
+    type(*), intent(in) :: a
+    !ERROR: The data-ref in CLASSOF must not be assumed-type
+    classof(a) :: b
+  end subroutine
+
+  subroutine test_typeof_optional_assumed_char(a)
+    character(*), optional :: a
+    !ERROR: The OPTIONAL data-ref in TYPEOF must not have assumed or deferred type parameters
+    typeof(a) :: b
+  end subroutine
+
+  subroutine test_typeof_optional_deferred_char(a)
+    character(:), allocatable, optional :: a
+    !ERROR: The OPTIONAL data-ref in TYPEOF must not have assumed or deferred type parameters
+    typeof(a) :: b
+  end subroutine
+
+  subroutine test_typeof_optional_ok(a)
+    integer, optional :: a
+    typeof(a) :: b
+  end subroutine
 end module

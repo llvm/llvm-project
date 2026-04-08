@@ -6569,10 +6569,33 @@ bool DeclarationVisitor::ResolveTypeOfOrClassOf(
     return false;
   }
 
+  // C713: If the data-ref has the OPTIONAL attribute, it shall not have
+  // a deferred or assumed type parameter.
+  if (ultimate.attrs().test(Attr::OPTIONAL)) {
+    bool hasAssumedOrDeferred{false};
+    if (refType->category() == DeclTypeSpec::Character) {
+      const auto &len{refType->characterTypeSpec().length()};
+      hasAssumedOrDeferred = len.isAssumed() || len.isDeferred();
+    } else if (refType->category() == DeclTypeSpec::TypeDerived ||
+        refType->category() == DeclTypeSpec::ClassDerived) {
+      for (const auto &[_, value] : refType->derivedTypeSpec().parameters()) {
+        if (value.isAssumed() || value.isDeferred()) {
+          hasAssumedOrDeferred = true;
+          break;
+        }
+      }
+    }
+    if (hasAssumedOrDeferred) {
+      Say(currStmtSource().value(),
+          "The OPTIONAL data-ref in %s must not have assumed or deferred type parameters"_err_en_US,
+          specName);
+      return false;
+    }
+  }
+
   switch (refType->category()) {
   case DeclTypeSpec::Numeric:
   case DeclTypeSpec::Logical:
-  case DeclTypeSpec::Character:
     if (isClassOf) {
       Say(currStmtSource().value(),
           "CLASSOF may not be used with an intrinsic-type object"_err_en_US);
@@ -6580,6 +6603,28 @@ bool DeclarationVisitor::ResolveTypeOfOrClassOf(
     }
     SetDeclTypeSpec(*refType);
     break;
+  case DeclTypeSpec::Character: {
+    if (isClassOf) {
+      Say(currStmtSource().value(),
+          "CLASSOF may not be used with an intrinsic-type object"_err_en_US);
+      return false;
+    }
+    const auto &charSpec{refType->characterTypeSpec()};
+    if (charSpec.length().isAssumed()) {
+      auto lenExpr{evaluate::NamedEntity{ultimate}.LEN()};
+      if (lenExpr) {
+        SetDeclTypeSpec(currScope().MakeCharacterType(
+            ParamValue{
+                SomeIntExpr{std::move(*lenExpr)}, common::TypeParamAttr::Len},
+            KindExpr{charSpec.kind()}));
+      } else {
+        SetDeclTypeSpec(*refType);
+      }
+    } else {
+      SetDeclTypeSpec(*refType);
+    }
+    break;
+  }
   case DeclTypeSpec::TypeDerived:
   case DeclTypeSpec::ClassDerived: {
     const DerivedTypeSpec &derived{refType->derivedTypeSpec()};
@@ -6607,14 +6652,24 @@ bool DeclarationVisitor::ResolveTypeOfOrClassOf(
     break;
   }
   case DeclTypeSpec::TypeStar:
-  case DeclTypeSpec::ClassStar:
-    // If data-ref is unlimited polymorphic, TYPEOF gives TYPE(*) and
-    // CLASSOF gives CLASS(*).
     if (isClassOf) {
-      SetDeclTypeSpec(context().globalScope().MakeClassStarType());
-    } else {
-      SetDeclTypeSpec(context().globalScope().MakeTypeStarType());
+      // C712: CLASSOF shall not be used with assumed-type
+      Say(currStmtSource().value(),
+          "The data-ref in CLASSOF must not be assumed-type"_err_en_US);
+      return false;
     }
+    // TYPEOF of TYPE(*) is valid, produces TYPE(*)
+    SetDeclTypeSpec(context().globalScope().MakeTypeStarType());
+    break;
+  case DeclTypeSpec::ClassStar:
+    if (!isClassOf) {
+      // C711: TYPEOF shall not be used with unlimited polymorphic
+      Say(currStmtSource().value(),
+          "The data-ref in TYPEOF must not be unlimited polymorphic"_err_en_US);
+      return false;
+    }
+    // CLASSOF of CLASS(*) is valid, produces CLASS(*)
+    SetDeclTypeSpec(context().globalScope().MakeClassStarType());
     break;
   }
   return true;
