@@ -5472,13 +5472,14 @@ protected:
       return;
     }
 
-    result.AppendMessageWithFormat("%zu frame provider(s) registered:\n\n",
-                                   descriptors.size());
+    Stream &strm = result.GetOutputStream();
+    strm << llvm::formatv("{0} frame provider(s) registered:\n\n",
+                          descriptors.size());
 
     for (const auto &entry : descriptors) {
       const ScriptedFrameProviderDescriptor &descriptor = entry.second;
-      descriptor.Dump(&result.GetOutputStream());
-      result.GetOutputStream().PutChar('\n');
+      descriptor.Dump(&strm);
+      strm.PutChar('\n');
     }
 
     result.SetStatus(eReturnStatusSuccessFinishResult);

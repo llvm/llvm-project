@@ -7,7 +7,6 @@ target triple = "i386-unknown-linux-gnu"
 @src = common global [120 x half] zeroinitializer, align 4
 @dst = common global [120 x half] zeroinitializer, align 4
 
-; Function Attrs: norecurse nounwind
 define void @stride8(half %k, i32 %width_) {
 ; CHECK-LABEL: 'stride8'
 ; CHECK:  Cost of 148 for VF 32: INTERLEAVE-GROUP with factor 8 at %0, ir<%arrayidx>
@@ -97,7 +96,6 @@ for.body:                                         ; preds = %for.body.lr.ph, %fo
   br i1 %cmp, label %for.body, label %for.cond.cleanup.loopexit
 }
 
-; Function Attrs: norecurse nounwind
 define void @stride3(half %k, i32 %width_) {
 ; CHECK-LABEL: 'stride3'
 ; CHECK:  Cost of 18 for VF 32: INTERLEAVE-GROUP with factor 3 at %0, ir<%arrayidx>

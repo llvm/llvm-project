@@ -313,8 +313,10 @@ public:
           fir::getKindMapping(doLoop->getParentOfType<mlir::ModuleOp>()));
 
       for (mlir::Value liveIn : loopNestLiveIns) {
+        bool isReductionVar = llvm::find(loop.getReduceVars(), liveIn) !=
+                              loop.getReduceVars().end();
         targetClauseOps.mapVars.push_back(
-            genMapInfoOpForLiveIn(builder, liveIn));
+            genMapInfoOpForLiveIn(builder, liveIn, isReductionVar));
         liveInShapeInfoMap.insert(
             {liveIn, TargetDeclareShapeCreationInfo(liveIn)});
       }
@@ -540,8 +542,9 @@ private:
         /*dataExvIsAssumedSize=*/false, rawAddr.getLoc());
   }
 
-  mlir::omp::MapInfoOp genMapInfoOpForLiveIn(fir::FirOpBuilder &builder,
-                                             mlir::Value liveIn) const {
+  mlir::omp::MapInfoOp
+  genMapInfoOpForLiveIn(fir::FirOpBuilder &builder, mlir::Value liveIn,
+                        bool isReductionVar = false) const {
     mlir::Value rawAddr = liveIn;
     llvm::StringRef name;
 
@@ -574,7 +577,10 @@ private:
     mlir::omp::VariableCaptureKind captureKind =
         mlir::omp::VariableCaptureKind::ByRef;
 
-    if (fir::isa_trivial(eleType) || fir::isa_char(eleType)) {
+    if (isReductionVar) {
+      mapFlag |= mlir::omp::ClauseMapFlags::to;
+      mapFlag |= mlir::omp::ClauseMapFlags::from;
+    } else if (fir::isa_trivial(eleType) || fir::isa_char(eleType)) {
       captureKind = mlir::omp::VariableCaptureKind::ByCopy;
     } else if (!fir::isa_builtin_cptr_type(eleType)) {
       mapFlag |= mlir::omp::ClauseMapFlags::to;
