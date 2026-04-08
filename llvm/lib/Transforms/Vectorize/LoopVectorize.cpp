@@ -8358,8 +8358,6 @@ void LoopVectorizationPlanner::addReductionResultComputation(
       AnyOfSelect = cast<VPRecipeBase>(*find_if(PhiR->users(), [](VPUser *U) {
         return match(U, m_Select(m_VPValue(), m_VPValue(), m_VPValue()));
       }));
-    }
-    if (AnyOfSelect) {
       VPValue *Start = PhiR->getStartValue();
       // NewVal is the non-phi operand of the select.
       VPValue *NewVal = AnyOfSelect->getOperand(1) == PhiR
@@ -8994,7 +8992,6 @@ static SmallVector<Instruction *> preparePlanForEpilogueVectorLoop(
       auto IsReductionResult = [](VPRecipeBase *R) {
         auto *VPI = dyn_cast<VPInstruction>(R);
         return VPI && VPI->getOpcode() == VPInstruction::ComputeReductionResult;
-        });
       };
       auto *RdxResult = cast<VPInstruction>(
           vputils::findRecipe(ReductionPhi->getBackedgeValue(), IsReductionResult));
