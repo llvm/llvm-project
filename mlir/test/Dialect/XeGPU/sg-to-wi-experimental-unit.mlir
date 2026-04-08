@@ -487,6 +487,11 @@ gpu.func @vector_transpose() {
       layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>
     }
     : vector<16x2xf32> to vector<2x16xf32>
+  %transpose2 = xegpu.convert_layout %transpose
+    <{
+      input_layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>,
+      target_layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>
+    }> : vector<2x16xf32>
   gpu.return
 }
 
