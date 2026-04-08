@@ -2736,6 +2736,89 @@ func.func @shuffle_nofold1(%v0 : vector<4xi32>, %v1 : vector<2xi32>) -> vector<5
 
 // -----
 
+// All mask elements are poison: replace shuffle with poison.
+// CHECK-LABEL: func @shuffle_all_poison_mask
+//   CHECK-NOT:   vector.shuffle
+//       CHECK:   %[[P:.*]] = ub.poison : vector<2xi32>
+//       CHECK:   return %[[P]]
+func.func @shuffle_all_poison_mask(%v0 : vector<3xi32>, %v1 : vector<3xi32>) -> vector<2xi32> {
+  %shuffle = vector.shuffle %v0, %v1 [-1, -1] : vector<3xi32>, vector<3xi32>
+  return %shuffle : vector<2xi32>
+}
+
+// -----
+
+// V1 is unused: replace V1 operand with poison.
+// CHECK-LABEL: func @shuffle_unused_v1
+//  CHECK-SAME:   %[[A:.*]]: vector<3xi32>, %[[B:.*]]: vector<3xi32>
+//       CHECK:   %[[P:.*]] = ub.poison : vector<3xi32>
+//       CHECK:   vector.shuffle %[[P]], %[[B]] [4, 3] : vector<3xi32>, vector<3xi32>
+func.func @shuffle_unused_v1(%v0 : vector<3xi32>, %v1 : vector<3xi32>) -> vector<2xi32> {
+  %shuffle = vector.shuffle %v0, %v1 [4, 3] : vector<3xi32>, vector<3xi32>
+  return %shuffle : vector<2xi32>
+}
+
+// -----
+
+// V2 is unused: replace V2 operand with poison.
+// CHECK-LABEL: func @shuffle_unused_v2
+//  CHECK-SAME:   %[[A:.*]]: vector<3xi32>, %[[B:.*]]: vector<3xi32>
+//       CHECK:   %[[P:.*]] = ub.poison : vector<3xi32>
+//       CHECK:   vector.shuffle %[[A]], %[[P]] [2, 0] : vector<3xi32>, vector<3xi32>
+func.func @shuffle_unused_v2(%v0 : vector<3xi32>, %v1 : vector<3xi32>) -> vector<2xi32> {
+  %shuffle = vector.shuffle %v0, %v1 [2, 0] : vector<3xi32>, vector<3xi32>
+  return %shuffle : vector<2xi32>
+}
+
+// -----
+
+// V1 is unused (mask has poison indices mixed with V2 references).
+// CHECK-LABEL: func @shuffle_unused_v1_with_poison_idx
+//  CHECK-SAME:   %[[A:.*]]: vector<3xi32>, %[[B:.*]]: vector<3xi32>
+//       CHECK:   %[[P:.*]] = ub.poison : vector<3xi32>
+//       CHECK:   vector.shuffle %[[P]], %[[B]] [4, -1, 3] : vector<3xi32>, vector<3xi32>
+func.func @shuffle_unused_v1_with_poison_idx(%v0 : vector<3xi32>, %v1 : vector<3xi32>) -> vector<3xi32> {
+  %shuffle = vector.shuffle %v0, %v1 [4, -1, 3] : vector<3xi32>, vector<3xi32>
+  return %shuffle : vector<3xi32>
+}
+
+// -----
+
+// V2 is unused (multidimensional vectors).
+// CHECK-LABEL: func @shuffle_unused_v2_multidim
+//  CHECK-SAME:   %[[A:.*]]: vector<4x2xf32>, %[[B:.*]]: vector<3x2xf32>
+//       CHECK:   %[[P:.*]] = ub.poison : vector<3x2xf32>
+//       CHECK:   vector.shuffle %[[A]], %[[P]] [2, 0, 3] : vector<4x2xf32>, vector<3x2xf32>
+func.func @shuffle_unused_v2_multidim(%v0 : vector<4x2xf32>, %v1 : vector<3x2xf32>) -> vector<3x2xf32> {
+  %shuffle = vector.shuffle %v0, %v1 [2, 0, 3] : vector<4x2xf32>, vector<3x2xf32>
+  return %shuffle : vector<3x2xf32>
+}
+
+// -----
+
+// Both operands are used: no folding.
+// CHECK-LABEL: func @shuffle_both_operands_used
+//  CHECK-SAME:   %[[A:.*]]: vector<3xi32>, %[[B:.*]]: vector<3xi32>
+//       CHECK:   vector.shuffle %[[A]], %[[B]] [0, 3, 1, 4] : vector<3xi32>, vector<3xi32>
+func.func @shuffle_both_operands_used(%v0 : vector<3xi32>, %v1 : vector<3xi32>) -> vector<4xi32> {
+  %shuffle = vector.shuffle %v0, %v1 [0, 3, 1, 4] : vector<3xi32>, vector<3xi32>
+  return %shuffle : vector<4xi32>
+}
+
+// -----
+
+// One operand is poison, the other one is not used.
+// CHECK-LABEL: func @shuffle_poison_unused
+//       CHECK:   %[[r:.*]] = ub.poison : vector<4xi32>
+//       CHECK:   return %[[r]]
+func.func @shuffle_poison_unused(%1: vector<2xi32>) -> vector<4xi32> {
+  %0 = ub.poison : vector<2xi32>
+  %r = vector.shuffle %0, %1 [0, 1, -1, -1] : vector<2xi32>, vector<2xi32>
+  return %r : vector<4xi32>
+}
+
+// -----
+
 // CHECK-LABEL: func @transpose_splatlike_constant
 //       CHECK:   %[[CST:.+]] = arith.constant dense<5.000000e+00> : vector<8x4xf32>
 //       CHECK:   return %[[CST]]

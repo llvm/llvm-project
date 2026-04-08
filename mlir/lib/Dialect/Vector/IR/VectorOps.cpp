@@ -3472,12 +3472,66 @@ public:
   }
 };
 
+/// Pattern to replace usused shuffle operands / results with poison.
+///
+/// Example Input:
+///   %r = vector.shuffle %v1, %v2 [2, 3, 3, 3] : vector<2xi32>, vector<2xi32>
+///
+/// Example Output:
+///   %0 = ub.poison : vector<2xi32>
+///   %r = vector.shuffle %0, %v2 [2, 3, 3, 3] : vector<2xi32>, vector<2xi32>
+class FoldUnusedShuffleOperand final : public OpRewritePattern<ShuffleOp> {
+public:
+  using Base::Base;
+
+  LogicalResult matchAndRewrite(ShuffleOp op,
+                                PatternRewriter &rewriter) const override {
+    // Replace with poison if all mask elements are poison.
+    if (llvm::all_of(op.getMask(), [](int64_t mask) {
+          return mask == ShuffleOp::kPoisonIndex;
+        })) {
+      rewriter.replaceOpWithNewOp<ub::PoisonOp>(op, op.getType());
+      return success();
+    }
+
+    // Helper function to replace an operand with poison.
+    auto replaceOperandWithPoison = [&](OpOperand &operand) {
+      // Do not replace if the operand is already poison.
+      if (!matchPattern(operand.get(), ub::m_Poison())) {
+        Value poison = ub::PoisonOp::create(rewriter, op.getLoc(),
+                                            operand.get().getType());
+        rewriter.modifyOpInPlace(op, [&]() { operand.set(poison); });
+        return success();
+      }
+      return failure();
+    };
+
+    // Replace V1 with poison if it is not used.
+    int64_t leadingV1Size = op.getV1VectorType().getRank() > 0
+                                ? op.getV1VectorType().getDimSize(0)
+                                : 1;
+    bool isV1Used = llvm::any_of(op.getMask(), [&](int64_t mask) {
+      return mask != ShuffleOp::kPoisonIndex && mask < leadingV1Size;
+    });
+    if (!isV1Used && succeeded(replaceOperandWithPoison(op.getV1Mutable())))
+      return success();
+
+    // Replace V2 with poison if it is not used.
+    bool isV2Used = llvm::any_of(op.getMask(), [&](int64_t mask) {
+      return mask != ShuffleOp::kPoisonIndex && mask >= leadingV1Size;
+    });
+    if (!isV2Used && succeeded(replaceOperandWithPoison(op.getV2Mutable())))
+      return success();
+
+    return failure();
+  }
+};
 } // namespace
 
 void ShuffleOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                             MLIRContext *context) {
-  results.add<ShuffleSplat, ShuffleInterleave, Canonicalize0DShuffleOp>(
-      context);
+  results.add<ShuffleSplat, ShuffleInterleave, Canonicalize0DShuffleOp,
+              FoldUnusedShuffleOperand>(context);
 }
 
 //===----------------------------------------------------------------------===//
