@@ -159,7 +159,7 @@ swift::SILValue LLDBNameLookup::emitLValueForVariable(
   ConstString variable_const_string(variable_name.get());
 
   SwiftExpressionParser::SILVariableMap::iterator vi =
-      m_variable_map.find(variable_const_string.AsCString());
+      m_variable_map.find(variable_const_string.AsCString(nullptr));
 
   if (vi == m_variable_map.end())
     return swift::SILValue();
@@ -794,7 +794,8 @@ SwiftExpressionParser::GetASTContext(DiagnosticManager &diagnostic_manager) {
     // Lazily get the clang importer if we can to make sure it exists in
     // case we need it.
     if (!m_swift_ast_ctx.GetClangImporter()) {
-      if (const char *diags = m_swift_ast_ctx.GetFatalErrors().AsCString())
+      if (const char *diags =
+              m_swift_ast_ctx.GetFatalErrors().AsCString(nullptr))
         diagnostic_manager.PutString(eSeverityError, diags);
       diagnostic_manager.PutString(eSeverityInfo,
                                    "Couldn't initialize Swift expression "
@@ -1080,14 +1081,13 @@ MaterializeVariable(SwiftASTManipulatorBase::VariableInfo &variable,
                                      "couldn't add variable to struct: %s.\n",
                                      error.AsCString());
 
-    LLDB_LOGF(
-        log,
-        "Added persistent variable %s with flags 0x%llx to "
-        "struct at offset %llu",
-        variable_metadata->m_persistent_variable_sp->GetName().AsCString(),
-        (unsigned long long)
-            variable_metadata->m_persistent_variable_sp->m_flags,
-        (unsigned long long)offset);
+    LLDB_LOGF(log,
+              "Added persistent variable {0} with flags {1:x} to struct at "
+              "offset {2}",
+              variable_metadata->m_persistent_variable_sp->GetName(),
+              (unsigned long long)
+                  variable_metadata->m_persistent_variable_sp->m_flags,
+              (unsigned long long)offset);
   }
 
   bool unowned_self = false;

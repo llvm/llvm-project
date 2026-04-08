@@ -114,13 +114,11 @@ public:
 
   llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override {
     if (!m_start) {
-      return llvm::createStringError("Type has no child named '%s'",
-                                     name.AsCString());
+      return llvm::createStringErrorV("Type has no child named '{0}'", name);
     }
     auto optional_idx = formatters::ExtractIndexFromString(name.GetCString());
     if (!optional_idx) {
-      return llvm::createStringError("Type has no child named '%s'",
-                                     name.AsCString());
+      return llvm::createStringErrorV("Type has no child named '{0}'", name);
     }
     return *optional_idx;
   }

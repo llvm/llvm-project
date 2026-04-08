@@ -70,8 +70,7 @@ TypeFilterImpl::FrontEnd::GetIndexOfChildWithName(ConstString name) {
       }
     }
   }
-  return llvm::createStringError("Type has no child named '%s'",
-                                 name.AsCString());
+  return llvm::createStringErrorV("Type has no child named '{0}'", name);
 }
 
 std::string TypeFilterImpl::GetDescription() {
@@ -225,8 +224,7 @@ bool ScriptedSyntheticChildren::FrontEnd::MightHaveChildren() {
 llvm::Expected<size_t>
 ScriptedSyntheticChildren::FrontEnd::GetIndexOfChildWithName(ConstString name) {
   if (!m_wrapper_sp || m_interpreter == nullptr)
-    return llvm::createStringError("Type has no child named '%s'",
-                                   name.AsCString());
+    return llvm::createStringErrorV("Type has no child named '{0}'", name);
   return m_interpreter->GetIndexOfChildWithName(m_wrapper_sp,
                                                 name.GetCString());
 }

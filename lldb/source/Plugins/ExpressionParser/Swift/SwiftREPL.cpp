@@ -450,7 +450,7 @@ bool isThrownError(ValueObjectSP valobj_sp) {
   if (length < 3)
     return false;
 
-  const char *name_cstr = name.AsCString();
+  const char *name_cstr = name.AsCString("");
   if (name_cstr[0] != '$')
     return false;
   if (name_cstr[1] != 'E')

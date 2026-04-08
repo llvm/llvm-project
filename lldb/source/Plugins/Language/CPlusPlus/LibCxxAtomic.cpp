@@ -135,8 +135,7 @@ lldb_private::formatters::LibcxxStdAtomicSyntheticFrontEnd::
     GetIndexOfChildWithName(ConstString name) {
   if (name == "Value")
     return 0;
-  return llvm::createStringError("Type has no child named '%s'",
-                                 name.AsCString());
+  return llvm::createStringErrorV("Type has no child named '{0}'", name);
 }
 
 SyntheticChildrenFrontEnd *

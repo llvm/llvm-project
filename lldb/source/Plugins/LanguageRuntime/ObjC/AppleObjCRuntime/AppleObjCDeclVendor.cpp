@@ -586,8 +586,7 @@ uint32_t AppleObjCDeclVendor::FindDecls(ConstString name, bool append,
         break;
       }
     } else if (log) {
-      LLDB_LOGF(log, "AOCTV::FT Couldn't find %s in the ASTContext",
-                name.AsCString());
+      LLDB_LOG(log, "AOCTV::FT Couldn't find {0} in the ASTContext", name);
     }
 
     // It's not.  If it exists, we have to put it into our ASTContext.

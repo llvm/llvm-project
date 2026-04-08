@@ -177,12 +177,10 @@ llvm::Expected<size_t>
 lldb_private::formatters::LibcxxStdProxyArraySyntheticFrontEnd::
     GetIndexOfChildWithName(ConstString name) {
   if (!m_base)
-    return llvm::createStringError("Type has no child named '%s'",
-                                   name.AsCString());
+    return llvm::createStringErrorV("Type has no child named '{0}'", name);
   auto optional_idx = formatters::ExtractIndexFromString(name.GetCString());
   if (!optional_idx) {
-    return llvm::createStringError("Type has no child named '%s'",
-                                   name.AsCString());
+    return llvm::createStringErrorV("Type has no child named '{0}'", name);
   }
   return *optional_idx;
 }

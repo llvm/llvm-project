@@ -603,14 +603,12 @@ bool lldb_private::formatters::swift::ArraySyntheticFrontEnd::
 llvm::Expected<size_t> lldb_private::formatters::swift::ArraySyntheticFrontEnd::
     GetIndexOfChildWithName(ConstString name) {
   if (!m_array_buffer)
-    return llvm::createStringError("Type has no child named '%s'",
-                                   name.AsCString());
+    return llvm::createStringErrorV("Type has no child named '{0}'", name);
   const char *item_name = name.GetCString();
   auto optional_idx = ExtractIndexFromString(item_name);
   if (!optional_idx ||
       optional_idx.value() >= CalculateNumChildrenIgnoringErrors())
-    return llvm::createStringError("Type has no child named '%s'",
-                                   name.AsCString());
+    return llvm::createStringErrorV("Type has no child named '{0}'", name);
   return optional_idx.value();
 }
 

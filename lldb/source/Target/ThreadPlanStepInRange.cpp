@@ -484,8 +484,8 @@ bool ThreadPlanStepInRange::DefaultShouldStopHereImpl(Flags &flags,
       if (m_step_into_target == sc.GetFunctionName()) {
         should_stop_here = true;
       } else {
-        const char *target_name = m_step_into_target.AsCString();
-        const char *function_name = sc.GetFunctionName().AsCString();
+        const char *target_name = m_step_into_target.AsCString(nullptr);
+        const char *function_name = sc.GetFunctionName().AsCString(nullptr);
 
         if (function_name == nullptr)
           should_stop_here = false;
@@ -496,7 +496,7 @@ bool ThreadPlanStepInRange::DefaultShouldStopHereImpl(Flags &flags,
         LLDB_LOG(log,
                  "Stepping out of frame {0} which did not match step into "
                  "target {1}.",
-                 sc.GetFunctionName(), step_in_range_plan->m_step_into_target);
+                 sc.GetFunctionName(), m_step_into_target);
     }
   }
 

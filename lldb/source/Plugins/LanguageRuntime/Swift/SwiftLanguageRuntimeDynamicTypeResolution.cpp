@@ -347,7 +347,7 @@ public:
       return nullptr;
     bool is_imported = true;
     CompilerType clang_type =
-        m_runtime.LookupAnonymousClangType(mangled.AsCString());
+        m_runtime.LookupAnonymousClangType(mangled.AsCString(nullptr));
     if (!clang_type)
       is_imported =
           ts->IsImportedType(swift_type.GetOpaqueQualType(), &clang_type);
@@ -400,7 +400,7 @@ public:
           llvm::raw_string_ostream(unique_swift_name)
               << '#' << m_num_anonymous_clang_types++;
           swift_type = typesystem.CreateClangStructType(unique_swift_name);
-          auto *key = swift_type.GetMangledTypeName().AsCString();
+          auto *key = swift_type.GetMangledTypeName().AsCString(nullptr);
           m_runtime.RegisterAnonymousClangType(key, field_type);
         } else {
           // TODO: The mangling flavor should be threaded through getTypeInfo.
@@ -942,7 +942,7 @@ SwiftRuntimeTypeVisitor::VisitImpl(std::optional<unsigned> visit_only,
 
   {
     CompilerType clang_type = m_runtime.LookupAnonymousClangType(
-        m_type.GetMangledTypeName().AsCString());
+        m_type.GetMangledTypeName().AsCString(nullptr));
     if (!clang_type)
       ts.IsImportedType(m_type.GetOpaqueQualType(), &clang_type);
     if (clang_type) {

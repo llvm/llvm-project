@@ -293,8 +293,8 @@ void SwiftUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
   LLDB_LOGF(log, "  [SUE::SC] Expression captures self: %s",
             m_needs_object_ptr ? "true" : "false");
 
-  LLDB_LOGF(log, "  [SUE::SC] Containing class name: %s",
-            info.type.GetTypeName().AsCString());
+  LLDB_LOG(log, "  [SUE::SC] Containing class name: {0}",
+           info.type.GetTypeName());
 }
 
 /// Create a \c VariableInfo record for \c variable if there isn't

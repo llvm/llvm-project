@@ -929,8 +929,7 @@ llvm::Expected<size_t> lldb_private::formatters::
   static const ConstString g_zero("[0]");
   if (name == g_zero)
     return 0;
-  return llvm::createStringError("Type has no child named '%s'",
-                                 name.AsCString());
+  return llvm::createStringErrorV("Type has no child named '{0}'", name);
 }
 
 llvm::Expected<uint32_t> lldb_private::formatters::

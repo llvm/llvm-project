@@ -683,8 +683,7 @@ llvm::Expected<size_t> lldb_private::formatters::swift::
     UnsafeTypeSyntheticFrontEnd::GetIndexOfChildWithName(ConstString name) {
   if (m_unsafe_ptr && m_unsafe_ptr->HasPointee() && name == "pointee")
     return 0;
-  return llvm::createStringError("Type has no child named '%s'",
-                                 name.AsCString());
+  return llvm::createStringErrorV("Type has no child named '{0}'", name);
 }
 
 SyntheticChildrenFrontEnd *

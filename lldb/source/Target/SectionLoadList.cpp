@@ -137,6 +137,7 @@ bool SectionLoadList::SetSectionLoadAddress(const lldb::SectionSP &section,
                "error: module has been deleted",
                __FUNCTION__, static_cast<void *>(section.get()),
                section->GetName(), load_addr);
+    }
   }
   return false;
 }
