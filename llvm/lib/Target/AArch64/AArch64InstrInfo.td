@@ -3281,8 +3281,9 @@ defm EON  : LogicalReg<0b10, 1, "eon",
                        BinOpFrag<(not (xor_like node:$LHS, node:$RHS))>>;
 defm EOR  : LogicalReg<0b10, 0, "eor", xor>;
 defm ORN  : LogicalReg<0b01, 1, "orn",
-                       BinOpFrag<(or node:$LHS, (not node:$RHS))>, 7>;
+                       BinOpFrag<(or node:$LHS, (not node:$RHS))>>;
 defm ORR  : LogicalReg<0b01, 0, "orr", or>;
+
 
 def : InstAlias<"mov $dst, $src",
                 (ORRWrs GPR32:$dst, WZR,
@@ -3324,6 +3325,10 @@ def : InstAlias<"tst $src1, $src2$sh",
                 (ANDSXrs XZR, GPR64:$src1,
                          (logical_shifted_reg64 GPR64:$src2, logical_shift64:$sh)), 2>;
 
+def : Pat<(or (not GPR32:$Wm), (i32 imm:$x)),
+          (ORNWrr (MOVi32imm imm:$x), GPR32:$Wm)>;
+def : Pat<(or (not GPR64:$Xm), (i64 imm:$x)),
+          (ORNXrr (MOVi64imm imm:$x), GPR64:$Xm)>;
 
 def : Pat<(not GPR32:$Wm), (ORNWrr WZR, GPR32:$Wm)>;
 def : Pat<(not GPR64:$Xm), (ORNXrr XZR, GPR64:$Xm)>;
