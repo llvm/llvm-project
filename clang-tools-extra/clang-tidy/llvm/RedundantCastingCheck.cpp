@@ -71,13 +71,12 @@ void RedundantCastingCheck::registerMatchers(MatchFinder *Finder) {
   auto AnyIsaCalleeName =
       allOf(unless(isMacroID()), unless(cxxMemberCallExpr()),
             callee(expr(ignoringImpCasts(
-                declRefExpr(
-                    to(namedDecl(hasAnyName(IsaFunctionNames), IsInLLVMNamespace)),
-                    hasAnyTemplateArgumentLoc(anything()))
+                declRefExpr(to(namedDecl(hasAnyName(IsaFunctionNames),
+                                         IsInLLVMNamespace)),
+                            hasAnyTemplateArgumentLoc(anything()))
                     .bind("callee")))));
-  Finder->addMatcher(callExpr(AnyIsaCalleeName, argumentCountIs(1))
-                         .bind("call"),
-                     this);
+  Finder->addMatcher(
+      callExpr(AnyIsaCalleeName, argumentCountIs(1)).bind("call"), this);
 
   auto AnyIsaCalleeNameInUninstantiatedTemplate =
       allOf(unless(isMacroID()), unless(cxxMemberCallExpr()),
@@ -172,13 +171,13 @@ void RedundantCastingCheck::check(const MatchFinder::MatchResult &Result) {
 
   for (CanQualType TargetTy : TargetTypes) {
     const auto *RetDecl = TargetTy->getAsCXXRecordDecl();
-    const bool IsDerived = FromDecl && RetDecl && FromDecl->isDerivedFrom(RetDecl);
+    const bool IsDerived =
+        FromDecl && RetDecl && FromDecl->isDerivedFrom(RetDecl);
     if (FromTy != TargetTy && !IsDerived)
       continue;
 
     if (IsIsa) {
-      diag(Call->getExprLoc(), "call to '%0' always succeeds")
-          << FuncName;
+      diag(Call->getExprLoc(), "call to '%0' always succeeds") << FuncName;
     } else {
       QualType ParentTy;
       if (const auto *ParentCast = Nodes.getNodeAs<Expr>("parent_cast")) {
@@ -200,7 +199,8 @@ void RedundantCastingCheck::check(const MatchFinder::MatchResult &Result) {
                              /*RecordPaths=*/false,
                              /*DetectVirtual=*/false);
           const bool IsDerivedFromParent =
-              FromDecl && ParentDecl && FromDecl->isDerivedFrom(ParentDecl, Paths);
+              FromDecl && ParentDecl &&
+              FromDecl->isDerivedFrom(ParentDecl, Paths);
           // For the following case a direct `cast<A>(d)` would be ambiguous:
           //   struct A {};
           //   struct B : A {};
@@ -225,10 +225,11 @@ void RedundantCastingCheck::check(const MatchFinder::MatchResult &Result) {
     // printing the canonical type for a template parameter prints as e.g.
     // 'type-parameter-0-0'
     const QualType DiagFromTy(ArgPointeeTy->getUnqualifiedDesugaredType(), 0);
-    diag(Arg->getExprLoc(),
-         "source expression has%select{| pointee}0 type %1%select{|, which is a "
-         "subtype of %3}2",
-         DiagnosticIDs::Note)
+    diag(
+        Arg->getExprLoc(),
+        "source expression has%select{| pointee}0 type %1%select{|, which is a "
+        "subtype of %3}2",
+        DiagnosticIDs::Note)
         << Arg->getSourceRange() << ArgTy->isPointerType() << DiagFromTy
         << (FromTy != TargetTy) << TargetTy;
     return;
