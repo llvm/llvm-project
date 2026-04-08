@@ -64,7 +64,6 @@ for.end:                                          ; preds = %for.body
   ret i32 0
 }
 
-declare void @llvm.pseudoprobe(i64, i64, i32, i64)
 
 !llvm.pseudo_probe_desc = !{!0}
 
