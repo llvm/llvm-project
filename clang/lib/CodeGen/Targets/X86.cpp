@@ -2190,8 +2190,9 @@ ABIArgInfo X86_64ABIInfo::getIndirectReturnResult(QualType Ty) const {
     if (Ty->isBitIntType())
       return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace());
 
-    return (isPromotableIntegerTypeForABI(Ty) ? ABIArgInfo::getExtend(Ty)
-                                              : ABIArgInfo::getDirect());
+    llvm::Type *IRTy = CGT.ConvertType(Ty);
+    return (isPromotableIntegerTypeForABI(Ty) ? ABIArgInfo::getExtend(Ty, IRTy)
+                                              : ABIArgInfo::getDirect(IRTy));
   }
 
   return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace());
@@ -2229,8 +2230,9 @@ ABIArgInfo X86_64ABIInfo::getIndirectResult(QualType Ty,
     if (const auto *ED = Ty->getAsEnumDecl())
       Ty = ED->getIntegerType();
 
-    return (isPromotableIntegerTypeForABI(Ty) ? ABIArgInfo::getExtend(Ty)
-                                              : ABIArgInfo::getDirect());
+    llvm::Type *IRTy = CGT.ConvertType(Ty);
+    return (isPromotableIntegerTypeForABI(Ty) ? ABIArgInfo::getExtend(Ty, IRTy)
+                                              : ABIArgInfo::getDirect(IRTy));
   }
 
   if (CGCXXABI::RecordArgABI RAA = getRecordArgABI(Ty, getCXXABI()))
@@ -2914,22 +2916,7 @@ bool X86_64ABIInfo::passRegCallStructTypeDirectly(
       return false;
 
     llvm::Type *CoerceTy = AI.getCoerceToType();
-    if (!CoerceTy) {
-      // We need to explicitly construct the coerce type for x87 long double
-      // arguments because X86_64ABIInfo::classifyArgumentType classifies them
-      // as direct without specifying a coerce type.
-      if (const BuiltinType *BT = MTy->getAs<BuiltinType>()) {
-        assert(BT->getKind() == BuiltinType::LongDouble &&
-               "Unexpected builtin type with no coerce type");
-        assert(&getTarget().getLongDoubleFormat() ==
-                   &llvm::APFloat::x87DoubleExtended() &&
-               "Unexpected long double representation");
-        CoerceTy = llvm::Type::getX86_FP80Ty(getVMContext());
-      } else {
-        llvm_unreachable("ABI info for struct member has no coerce type");
-      }
-    }
-
+    assert(CoerceTy && "ABI info for struct member has no coerce type");
     if (AT) {
       uint64_t NumElts = AT->getZExtSize();
       LocalNeededInt *= NumElts;
