@@ -34,8 +34,8 @@ int *constexpr_live_false(int *num) {
 
 int *constexpr_live_nested(int *num) {
   int local = 0;
-  return kTrue ? (kFalse ? num : f(&local)) : num; } // expected-warning {{address of stack memory is returned later}} // expected-note {{returned here}}
-
+  return kTrue ? (kFalse ? num : f(&local)) : num; // expected-warning {{address of stack memory is returned later}} // expected-note {{returned here}}
+}
 int *noreturn_dead_false(bool cond, int *num) {
   int local = 0;
   return cond ? num : noret_f(&local);
