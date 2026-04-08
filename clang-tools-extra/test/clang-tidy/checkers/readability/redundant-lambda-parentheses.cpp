@@ -2,20 +2,6 @@
 // RUN: %check_clang_tidy -std=c++20 -check-suffixes=,CXX20 %s readability-redundant-lambda-parentheses %t
 // RUN: %check_clang_tidy -std=c++23-or-later -check-suffixes=,CXX20,CXX23 %s readability-redundant-lambda-parentheses %t
 
-#if __cplusplus >= 202002L
-template <bool B>
-void testRequires() {
-  // Should NOT warn - requires clause after parens
-  auto f1 = []() requires B {};
-  auto f2 = []() noexcept requires B {};
-  auto f3 = []<typename T>() requires B {};
-
-  // Should warn - requires clause is before parens, parens are removable
-  auto f4 = []<typename T> requires B () {};
-  // CHECK-MESSAGES-CXX20: :[[@LINE-1]]:39: warning: redundant empty parameter list in lambda expression [readability-redundant-lambda-parentheses]
-  // CHECK-FIXES-CXX20:   auto f4 = []<typename T> requires B {};
-}
-#endif
 
 int main() {
   // Basic cases - warn in all standards
@@ -101,3 +87,18 @@ int main() {
   // CHECK-MESSAGES-CXX23: :[[@LINE-1]]:14: warning: redundant empty parameter list in lambda expression [readability-redundant-lambda-parentheses]
   // CHECK-FIXES-CXX23:   auto s = [] noexcept {{\[\[}}{{\]\]}} {};
 }
+
+#if __cplusplus >= 202002L
+template <bool B>
+void testRequires() {
+  // Should NOT warn - requires clause after parens
+  auto f1 = []() requires B {};
+  auto f2 = []() noexcept requires B {};
+  auto f3 = []<typename T>() requires B {};
+
+  // Should warn - requires clause is before parens, parens are removable
+  auto f4 = []<typename T> requires B () {};
+  // CHECK-MESSAGES-CXX20: :[[@LINE-1]]:39: warning: redundant empty parameter list in lambda expression [readability-redundant-lambda-parentheses]
+  // CHECK-FIXES-CXX20:   auto f4 = []<typename T> requires B {};
+}
+#endif

@@ -42,27 +42,22 @@ void RedundantLambdaParenthesesCheck::check(
   if (LParenLoc.isInvalid() || RParenLoc.isInvalid())
     return;
 
-  std::optional<Token> NextTok =
+  const std::optional<Token> NextTok =
       Lexer::findNextToken(RParenLoc, *Result.SourceManager, LangOpts);
 
+  if (!NextTok)
+    return;
+
   // Attributes after '()' have different semantics depending on position.
-  if (NextTok && NextTok->is(tok::l_square))
+  if (NextTok->is(tok::l_square))
     return;
 
   // requires clause after '()' means parens cannot be removed.
   if (Lambda->getCallOperator()->getTrailingRequiresClause())
     return;
 
-  if (!LangOpts.CPlusPlus23) {
-    if (NextTok && NextTok->is(tok::raw_identifier)) {
-      StringRef Id = NextTok->getRawIdentifier();
-      if (Id == "constexpr" || Id == "consteval" || Id == "mutable" ||
-          Id == "noexcept")
-        return;
-    }
-    if (NextTok && NextTok->is(tok::arrow))
-      return;
-  }
+  if (!LangOpts.CPlusPlus23 && NextTok->isNot(tok::l_brace))
+    return;
 
   diag(LParenLoc, "redundant empty parameter list in lambda expression")
       << FixItHint::CreateRemoval({LParenLoc, RParenLoc});
