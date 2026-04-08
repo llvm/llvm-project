@@ -738,11 +738,12 @@ ZOSXPLinkABIInfo::getFPTypeOfComplexLikeType(QualType Ty) const {
       if (Count >= 2)
         return std::nullopt;
 
-      // For the current ABI, a record can be treated as complex-like if no field
-      // requires an alignment stronger than a native complex type (2 * sizeof(T))
-      // and the record size is exactly 2 * sizeof(T). Under these constraints,
-      // per-field alignment cannot introduce internal or tail padding, and the
-      // layout is guaranteed to match two adjacent FP elements.
+      // For the current ABI, a record can be treated as complex-like if no
+      // field requires an alignment stronger than a native complex type (2 *
+      // sizeof(T)) and the record size is exactly 2 * sizeof(T). Under these
+      // constraints, per-field alignment cannot introduce internal or tail
+      // padding, and the layout is guaranteed to match two adjacent FP
+      // elements.
       unsigned MaxAlignOnDecl = FD->getMaxAlignment();
       QualType FT = FD->getType();
       QualType FTSingleTy = getSingleElementType(FT);
@@ -834,7 +835,7 @@ ABIArgInfo ZOSXPLinkABIInfo::classifyReturnType(QualType RetTy,
       // and 3.
       llvm::Type *CoerceTy = llvm::IntegerType::get(getVMContext(), GPRBits);
       CoerceTy = llvm::ArrayType::get(CoerceTy, NumElements);
-      return ABIArgInfo::getDirect(CoerceTy);
+      return ABIArgInfo::getDirectInReg(CoerceTy);
     } else
       return getNaturalAlignIndirect(RetTy,
                                      getDataLayout().getAllocaAddrSpace());
