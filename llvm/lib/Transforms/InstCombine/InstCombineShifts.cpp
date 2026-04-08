@@ -552,7 +552,7 @@ static bool canEvaluateShiftedShift(unsigned OuterShAmt, bool IsOuterShl,
     return IsInnerShl && cast<BinaryOperator>(InnerShift)->hasNoSignedWrap() &&
            *InnerShiftConst == OuterShAmt;
   if (IsInnerShl == IsOuterShl)
-    return true;
+    return Semantics == ShiftSemantics::Lossy;
 
   // Equal shift amounts in opposite directions become bitwise 'and':
   // lshr (shl X, C), C --> and X, C'
