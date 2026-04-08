@@ -2769,6 +2769,47 @@ void TypeSystemSwiftTypeRef::SetCachedType(ConstString mangled,
   m_swift_type_map.Insert(mangled.GetCString(), type_sp);
 }
 
+bool TypeSystemSwiftTypeRef::IsMarkerProtocol(ConstString mangled_name) {
+  if (auto lldb_type = GetCachedType(mangled_name)) {
+    TypePayloadSwift payload(lldb_type->GetPayload());
+    return payload.IsMarkerProtocol();
+  }
+  return false;
+}
+
+llvm::Expected<swift::Demangle::NodePointer>
+TypeSystemSwiftTypeRef::RemoveMarkerProtocols(
+    swift::Demangle::Demangler &dem, swift::Demangle::NodePointer node,
+    swift::Mangle::ManglingFlavor flavor) {
+  using namespace swift::Demangle;
+  NodePointer type_list_node = swift_demangle::NodeAtPath(
+      node, {Node::Kind::Global, Node::Kind::TypeMangling, Node::Kind::Type,
+             Node::Kind::ProtocolList, Node::Kind::TypeList});
+  if (!type_list_node)
+    return node;
+
+  // Collect indices of marker protocols, then remove in reverse order so
+  // that earlier indices remain valid.
+  swift_demangle::NodeBuilder b(dem);
+  llvm::SmallVector<size_t> to_remove;
+  for (size_t i = 0; i < type_list_node->getNumChildren(); ++i) {
+    // Mangle a single-protocol type for this child so we can look it up in the
+    // type cache.
+    auto *protocol_list =
+        b.Node(Node::Kind::ProtocolList,
+               b.Node(Node::Kind::TypeList, type_list_node->getChild(i)));
+    auto mangling = mangleNode(b.GlobalType(protocol_list), flavor);
+    if (!mangling.isSuccess())
+      return llvm::createStringError("failed to mangle protocol in type: " +
+                                     nodeToString(node));
+    if (IsMarkerProtocol(ConstString(mangling.result())))
+      to_remove.push_back(i);
+  }
+  for (size_t i : llvm::reverse(to_remove))
+    type_list_node->removeChildAt(i);
+  return node;
+}
+
 bool TypeSystemSwiftTypeRef::SupportsLanguage(lldb::LanguageType language) {
   return language == eLanguageTypeSwift;
 }
@@ -5746,6 +5787,23 @@ bool TypeSystemSwiftTypeRef::IsOptionalType(lldb::opaque_compiler_type_t type) {
          module->getText() == swift::STDLIB_NAME &&
          identifier->getKind() == Node::Kind::Identifier &&
          identifier->getText() == "Optional";
+}
+
+bool TypeSystemSwiftTypeRef::IsProtocolComposition(
+    llvm::StringRef mangled_name) {
+  using namespace swift::Demangle;
+  Demangler dem;
+  NodePointer global = dem.demangleSymbol(mangled_name);
+  using Kind = Node::Kind;
+  NodePointer type_list =
+      swift_demangle::ChildAtPath(global, {Kind::TypeMangling, Kind::Type,
+                                           Kind::ProtocolList, Kind::TypeList});
+  if (!type_list)
+    return false;
+  // In the demangle tree a ProtocolList with more than one TypeList child
+  // represents a protocol composition (e.g., `P & Q`). Zero children
+  // encodes the `Any` type, and exactly one child is a plain protocol.
+  return type_list->getNumChildren() > 1;
 }
 
 CompilerType TypeSystemSwiftTypeRef::GetOptionalType(CompilerType type) {

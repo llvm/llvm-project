@@ -196,6 +196,11 @@ TypeSystemSwift::GetUInt8Type(swift::Mangle::ManglingFlavor flavor) {
       ConstString(SwiftLanguageRuntime::MakeMangledName("s5UInt8VD", flavor)));
 }
 
+CompilerType TypeSystemSwift::GetAnyType(swift::Mangle::ManglingFlavor flavor) {
+  return GetTypeFromMangledTypename(
+      ConstString(SwiftLanguageRuntime::MakeMangledName("ypD", flavor)));
+}
+
 bool TypeSystemSwift::ShouldTreatScalarValueAsAddress(
     opaque_compiler_type_t type) {
   return Flags(GetTypeInfo(type, nullptr))

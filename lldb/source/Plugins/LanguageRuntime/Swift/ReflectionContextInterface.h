@@ -16,6 +16,7 @@
 #include <mutex>
 
 #include "LockGuarded.h"
+#include "lldb/Symbol/CompilerType.h"
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-types.h"
 #include "swift/ABI/ObjectFile.h"
@@ -84,19 +85,23 @@ public:
           std::optional<llvm::sys::MemoryBlock> FileBuffer,
           llvm::SmallVector<llvm::StringRef, 1> likely_module_names = {}) = 0;
   virtual llvm::Expected<const swift::reflection::TypeRef &>
-  GetTypeRef(llvm::StringRef mangled_type_name,
-             swift::reflection::DescriptorFinder *descriptor_finder) = 0;
+  GetTypeRef(llvm::StringRef mangled_type_name) = 0;
   virtual llvm::Expected<const swift::reflection::TypeRef &>
-  GetTypeRef(swift::Demangle::Demangler &dem, swift::Demangle::NodePointer node,
-             swift::reflection::DescriptorFinder *descriptor_finder) = 0;
+  GetTypeRef(swift::Demangle::Demangler &dem,
+             swift::Demangle::NodePointer node) = 0;
+
+  /// Build a TypeRef suitable for use in reflection context queries. This
+  /// performs canonical demangling (type alias resolution and
+  /// @_originallyDefinedIn module fixups) and strips marker protocols.
+  llvm::Expected<const swift::reflection::TypeRef &>
+  GetCanonicalTypeRef(CompilerType type);
   virtual llvm::Expected<const swift::reflection::RecordTypeInfo &>
   GetClassInstanceTypeInfo(
       const swift::reflection::TypeRef &type_ref,
       swift::remote::TypeInfoProvider *provider,
       swift::reflection::DescriptorFinder *descriptor_finder) = 0;
   virtual llvm::Expected<const swift::reflection::TypeInfo &>
-  GetTypeInfo(const swift::reflection::TypeRef &type_ref,
-              swift::remote::TypeInfoProvider *provider,
+  GetTypeInfo(CompilerType type, swift::remote::TypeInfoProvider *provider,
               swift::reflection::DescriptorFinder *descriptor_finder) = 0;
   virtual llvm::Expected<const swift::reflection::TypeInfo &>
   GetTypeInfoFromInstance(
@@ -122,11 +127,11 @@ public:
                         const swift::reflection::TypeRef *tr,
                         std::function<bool(SuperClassType)> fn) = 0;
 
-  virtual std::optional<std::pair<const swift::reflection::TypeRef *,
-                                  swift::remote::RemoteAddress>>
+  virtual llvm::Expected<std::pair<const swift::reflection::TypeRef *,
+                                   swift::remote::RemoteAddress>>
   ProjectExistentialAndUnwrapClass(
       swift::remote::RemoteAddress existential_addess,
-      const swift::reflection::TypeRef &existential_tr,
+      CompilerType existential_type,
       swift::reflection::DescriptorFinder *descriptor_finder) = 0;
   virtual std::optional<int32_t> ProjectEnumValue(
       swift::remote::RemoteAddress enum_addr,

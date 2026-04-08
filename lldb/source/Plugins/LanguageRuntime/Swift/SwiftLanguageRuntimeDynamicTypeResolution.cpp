@@ -1933,8 +1933,7 @@ CompilerType SwiftLanguageRuntime::GetBaseClass(CompilerType class_ty) {
   if (!tr_ts)
     return {};
   auto type_ref_or_err =
-      reflection_ctx->GetTypeRef(class_ty.GetMangledTypeName().GetStringRef(),
-                                 tr_ts->GetDescriptorFinder());
+      reflection_ctx->GetTypeRef(class_ty.GetMangledTypeName().GetStringRef());
   if (!type_ref_or_err) {
     LLDB_LOG_ERROR(GetLog(LLDBLog::Expressions | LLDBLog::Types),
                    type_ref_or_err.takeError(), "{0}");
@@ -2164,8 +2163,7 @@ SwiftLanguageRuntime::BindGenericPackType(StackFrame &frame,
           });
 
       // Build a TypeRef from the demangle tree.
-      auto type_ref_or_err = reflection_ctx->GetTypeRef(
-          dem, pack_element, ts->GetDescriptorFinder());
+      auto type_ref_or_err = reflection_ctx->GetTypeRef(dem, pack_element);
       if (!type_ref_or_err)
         return type_ref_or_err.takeError();
       auto &type_ref = *type_ref_or_err;
@@ -2628,15 +2626,6 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Existential(
     return false;
   }
 
-  auto tr_or_err =
-      GetTypeRef(existential_type, tss->GetTypeSystemSwiftTypeRef().get());
-  if (!tr_or_err) {
-    LLDB_LOG_ERROR(GetLog(LLDBLog::Types), tr_or_err.takeError(),
-                   "Could not get existential typeref: {0}");
-    return false;
-  }
-  const swift::reflection::TypeRef *existential_typeref = &*tr_or_err;
-
   lldb::addr_t existential_address;
   bool use_local_buffer = false;
 
@@ -2691,12 +2680,12 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Existential(
     uint64_t dynamic_address = 0;
     if (flavor == swift::Mangle::ManglingFlavor::Default) {
       auto pair = reflection_ctx->ProjectExistentialAndUnwrapClass(
-          remote_existential, *existential_typeref,
-          tr_ts->GetDescriptorFinder());
+          remote_existential, existential_type, tr_ts->GetDescriptorFinder());
 
       if (!pair) {
-        if (log)
-          log->Printf("Runtime failed to get dynamic type of existential");
+        LLDB_LOG_ERROR(GetLog(LLDBLog::Types), pair.takeError(),
+                       "Runtime failed to get dynamic type of existential: "
+                       "{0}");
         return false;
       }
 
@@ -2902,8 +2891,7 @@ CompilerType SwiftLanguageRuntime::BindGenericTypeParameters(
   if (!tr_ts)
     return unbound_type;
 
-  auto type_ref_or_err = reflection_ctx->GetTypeRef(
-      dem, unbound_node, tr_ts->GetDescriptorFinder());
+  auto type_ref_or_err = reflection_ctx->GetTypeRef(dem, unbound_node);
   if (!type_ref_or_err) {
     LLDB_LOG_ERROR(GetLog(LLDBLog::Expressions | LLDBLog::Types),
                    type_ref_or_err.takeError(),
@@ -2929,8 +2917,8 @@ CompilerType SwiftLanguageRuntime::BindGenericTypeParameters(
       return;
     }
 
-    auto type_ref_or_err = reflection_ctx->GetTypeRef(
-        type.GetMangledTypeName().GetStringRef(), tr_ts->GetDescriptorFinder());
+    auto type_ref_or_err =
+        reflection_ctx->GetTypeRef(type.GetMangledTypeName().GetStringRef());
     if (!type_ref_or_err) {
       LLDB_LOG_ERROR(
           GetLog(LLDBLog::Expressions | LLDBLog::Types),
@@ -3026,8 +3014,7 @@ SwiftLanguageRuntime::BindGenericTypeParameters(StackFrame &stack_frame,
     return get_canonical();
 
   // Build a TypeRef from the demangle tree.
-  auto type_ref_or_err =
-      reflection_ctx->GetTypeRef(dem, canonical, ts.GetDescriptorFinder());
+  auto type_ref_or_err = reflection_ctx->GetTypeRef(dem, canonical);
   if (!type_ref_or_err)
     return llvm::joinErrors(
         llvm::createStringError("cannot bind generic parameters"),
@@ -3679,37 +3666,19 @@ SwiftLanguageRuntime::GetTypeRef(CompilerType type,
               "type: %s\n",
               type.GetMangledTypeName().GetCString());
 
-  // Demangle the mangled name.
-  swift::Demangle::Demangler dem;
-  llvm::StringRef mangled_name = type.GetMangledTypeName().GetStringRef();
   auto ts = type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwift>();
   if (!ts)
     return llvm::createStringError("not a Swift type");
 
-  // List of commonly used types known to have been been annotated with
-  // @_originallyDefinedIn to a different module.
-  static llvm::StringMap<llvm::StringRef> known_types_with_redefined_modules = {
-      {"$s14CoreFoundation7CGFloatVD", "$s12CoreGraphics7CGFloatVD"}};
-
-  auto it = known_types_with_redefined_modules.find(mangled_name);
-  if (it != known_types_with_redefined_modules.end())
-    mangled_name = it->second;
-
   if (!module_holder)
     return llvm::createStringError("no module holder");
-
-  swift::Demangle::NodePointer node =
-      module_holder->GetCanonicalDemangleTree(dem, mangled_name);
-  if (!node)
-    return llvm::createStringError("could not demangle");
 
   // Build a TypeRef.
   ThreadSafeReflectionContext reflection_ctx = GetReflectionContext();
   if (!reflection_ctx)
     return llvm::createStringError("no reflection context");
 
-  auto type_ref_or_err = reflection_ctx->GetTypeRef(
-      dem, node, module_holder->GetDescriptorFinder());
+  auto type_ref_or_err = reflection_ctx->GetCanonicalTypeRef(type);
   if (!type_ref_or_err)
     return llvm::joinErrors(
         llvm::createStringError("cannot get typeref for type %s",
@@ -3829,8 +3798,7 @@ SwiftLanguageRuntime::GetSwiftRuntimeTypeInfo(
                                                         : g_reflection,
       &GetProcess().GetTarget().GetDebugger(), *GetMemoryReader());
   LLDBTypeInfoProvider provider(*this, ts);
-  return reflection_ctx->GetTypeInfo(*type_ref_or_err, &provider,
-                                     ts.GetDescriptorFinder());
+  return reflection_ctx->GetTypeInfo(type, &provider, ts.GetDescriptorFinder());
 }
 
 bool SwiftLanguageRuntime::IsStoredInlineInBuffer(CompilerType type) {
@@ -3947,8 +3915,7 @@ SwiftLanguageRuntime::ResolveTypeAlias(CompilerType alias) {
         auto mangling = swift_demangle::GetMangledName(dem, child, flavor);
         if (!mangling.isSuccess())
           continue;
-        auto type_ref_or_err = reflection_ctx->GetTypeRef(
-            mangling.result(), tr_ts->GetDescriptorFinder());
+        auto type_ref_or_err = reflection_ctx->GetTypeRef(mangling.result());
         if (!type_ref_or_err) {
           LLDB_LOG_ERRORV(GetLog(LLDBLog::Types), type_ref_or_err.takeError(),
                           "{0}");

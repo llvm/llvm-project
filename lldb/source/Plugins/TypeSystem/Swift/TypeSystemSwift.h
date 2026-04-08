@@ -44,29 +44,35 @@ typedef std::shared_ptr<SwiftASTContextForExpressions>
 
 /// The implementation of lldb::Type's m_payload field for TypeSystemSwift.
 class TypePayloadSwift {
-  /// Layout: bit 1 ... IsFixedValueBuffer.
-  Type::Payload m_payload = 0;
-
-  static constexpr unsigned FixedValueBufferBit = 1;
-
 public:
+  enum class Options : uint32_t {
+    FixedValueBuffer = 1,
+    IsMarkerProtocol = 1 << 1
+  };
   TypePayloadSwift() = default;
-  explicit TypePayloadSwift(bool is_fixed_value_buffer);
-  explicit TypePayloadSwift(Type::Payload opaque_payload)
-      : m_payload(opaque_payload) {}
-  operator Type::Payload() { return m_payload; }
+
+  explicit TypePayloadSwift(Options option) {
+    m_flags.Set(llvm::to_underlying(option));
+  }
+
+  explicit TypePayloadSwift(Type::Payload opaque_payload) {
+    m_flags.Reset(opaque_payload);
+  }
+
+  operator Type::Payload() { return m_flags.Get(); }
 
   /// \return whether this is a Swift fixed-size buffer. Resilient variables in
   /// fixed-size buffers may be indirect depending on the runtime size of the
   /// type. This is more a property of the value than of its type.
   bool IsFixedValueBuffer() {
-    return Flags(m_payload).Test(FixedValueBufferBit);
+    return m_flags.Test(llvm::to_underlying(Options::FixedValueBuffer));
   }
-  void SetIsFixedValueBuffer(bool is_fixed_value_buffer) {
-    m_payload = is_fixed_value_buffer
-                    ? Flags(m_payload).Set(FixedValueBufferBit)
-                    : Flags(m_payload).Clear(FixedValueBufferBit);
+  bool IsMarkerProtocol() {
+    return m_flags.Test(llvm::to_underlying(Options::IsMarkerProtocol));
   }
+
+private:
+  Flags m_flags;
 };
 
 /// Abstract base class for all Swift TypeSystems.
@@ -222,6 +228,7 @@ public:
   GetOptionalUnsafeRawPointerType(swift::Mangle::ManglingFlavor flavor);
   CompilerType GetUnsafeCurrentTaskType(swift::Mangle::ManglingFlavor flavor);
   CompilerType GetUInt8Type(swift::Mangle::ManglingFlavor flavor);
+  CompilerType GetAnyType(swift::Mangle::ManglingFlavor flavor);
 
   /// Attempts to convert a Clang type into a Swift type.
   /// For example, int is converted to Int32.
