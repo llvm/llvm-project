@@ -1,16 +1,17 @@
-//===---- X86InsertVZeroUpper.cpp - AVX vzeroupper instruction inserter ---===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// This file defines the pass which inserts x86 AVX vzeroupper instructions
-// before calls to SSE encoded functions. This avoids transition latency
-// penalty when transferring control between AVX encoded instructions and old
-// SSE encoding mode.
-//
+///
+/// \file
+/// This file defines the pass which inserts x86 AVX vzeroupper instructions
+/// before calls to SSE encoded functions. This avoids transition latency
+/// penalty when transferring control between AVX encoded instructions and old
+/// SSE encoding mode.
+///
 //===----------------------------------------------------------------------===//
 
 #include "X86.h"
@@ -168,12 +169,12 @@ static bool callHasRegMask(MachineInstr &MI) {
 }
 
 /// Insert a vzeroupper instruction before I.
-static void insertVZeroUpper(MachineBasicBlock::iterator I,
-                             MachineBasicBlock &MBB, const TargetInstrInfo *TII,
-                             bool &EverMadeChange) {
+static bool insertVZeroUpper(MachineBasicBlock::iterator I,
+                             MachineBasicBlock &MBB,
+                             const TargetInstrInfo *TII) {
   BuildMI(MBB, I, I->getDebugLoc(), TII->get(X86::VZEROUPPER));
   ++NumVZU;
-  EverMadeChange = true;
+  return true;
 }
 
 /// Add MBB to the DirtySuccessors list if it hasn't already been added.
@@ -188,15 +189,15 @@ static void addDirtySuccessor(MachineBasicBlock &MBB,
 
 /// Loop over all of the instructions in the basic block, inserting vzeroupper
 /// instructions before function calls.
-static void processBasicBlock(MachineBasicBlock &MBB,
+static bool processBasicBlock(MachineBasicBlock &MBB,
                               BlockStateMap &BlockStates,
                               DirtySuccessorsWorkList &DirtySuccessors,
-                              bool IsX86INTR, const TargetInstrInfo *TII,
-                              bool &EverMadeChange) {
+                              bool IsX86INTR, const TargetInstrInfo *TII) {
   // Start by assuming that the block is PASS_THROUGH which implies no unguarded
   // calls.
   BlockExitState CurState = PASS_THROUGH;
   BlockStates[MBB.getNumber()].FirstUnguardedCall = MBB.end();
+  bool MadeChange = false;
 
   for (MachineInstr &MI : MBB) {
     bool IsCall = MI.isCall();
@@ -249,7 +250,7 @@ static void processBasicBlock(MachineBasicBlock &MBB,
       // After the inserted VZEROUPPER the state becomes clean again, but
       // other YMM/ZMM may appear before other subsequent calls or even before
       // the end of the BB.
-      insertVZeroUpper(MI, MBB, TII, EverMadeChange);
+      MadeChange |= insertVZeroUpper(MI, MBB, TII);
       CurState = EXITS_CLEAN;
     } else if (CurState == PASS_THROUGH) {
       // If this block is currently in pass-through state and we encounter a
@@ -270,6 +271,7 @@ static void processBasicBlock(MachineBasicBlock &MBB,
       addDirtySuccessor(*Succ, BlockStates, DirtySuccessors);
 
   BlockStates[MBB.getNumber()].ExitState = CurState;
+  return MadeChange;
 }
 
 /// Loop over all of the basic blocks, inserting vzeroupper instructions before
@@ -316,8 +318,8 @@ static bool insertVZeroUpper(MachineFunction &MF) {
   // unguarded call in each block, and add successors of dirty blocks to the
   // DirtySuccessors list.
   for (MachineBasicBlock &MBB : MF)
-    processBasicBlock(MBB, BlockStates, DirtySuccessors, IsX86INTR, TII,
-                      EverMadeChange);
+    EverMadeChange |=
+        processBasicBlock(MBB, BlockStates, DirtySuccessors, IsX86INTR, TII);
 
   // If any YMM/ZMM regs are live-in to this function, add the entry block to
   // the DirtySuccessors list
@@ -335,7 +337,7 @@ static bool insertVZeroUpper(MachineFunction &MF) {
     // MBB is a successor of a dirty block, so its first call needs to be
     // guarded.
     if (BBState.FirstUnguardedCall != MBB.end())
-      insertVZeroUpper(BBState.FirstUnguardedCall, MBB, TII, EverMadeChange);
+      EverMadeChange |= insertVZeroUpper(BBState.FirstUnguardedCall, MBB, TII);
 
     // If this successor was a pass-through block, then it is now dirty. Its
     // successors need to be added to the worklist (if they haven't been
