@@ -2848,7 +2848,7 @@ def fir_DivcOp : ComplexArithmeticOp<"divc",
 // Logical operations
 
 class LogicalBinaryOp<string mnemonic, list<Trait> traits = []> :
-      fir_ArithmeticOp<mnemonic, traits>,
+      fir_ArithmeticOp<mnemonic, !listconcat(traits, [Pure])>,
       Arguments<(ins AnyLogicalOrIntegerLike:$lhs,
                      AnyLogicalOrIntegerLike:$rhs)>;
 
