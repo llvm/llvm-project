@@ -355,13 +355,9 @@ MlirAttribute mlirLLVMDICompileUnitAttrGet(
     MlirAttribute const *importedEntities) {
   SmallVector<Attribute> importsStorage;
   importsStorage.reserve(nImportedEntities);
-  DistinctAttr recIdAttr = mlirAttributeIsNull(recId)
-                               ? DistinctAttr{}
-                               : cast<DistinctAttr>(unwrap(recId));
-  DistinctAttr idAttr =
-      mlirAttributeIsNull(id) ? DistinctAttr{} : cast<DistinctAttr>(unwrap(id));
   return wrap(DICompileUnitAttr::get(
-      unwrap(ctx), recIdAttr, isRecSelf, idAttr, sourceLanguage,
+      unwrap(ctx), cast<DistinctAttr>(unwrap(recId)), isRecSelf,
+      cast<DistinctAttr>(unwrap(id)), sourceLanguage,
       cast<DIFileAttr>(unwrap(file)), cast<StringAttr>(unwrap(producer)),
       isOptimized, DIEmissionKind(emissionKind), isDebugInfoForProfiling,
       DINameTableKind(nameTableKind),

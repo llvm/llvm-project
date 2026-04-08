@@ -133,7 +133,7 @@ def DICompileUnitAttr : DialectAttribute<(attr
   Bool:$isRecSelf,
   OptionalAttribute<"DistinctAttr">:$id,
   VarInt:$sourceLanguage,
-  Attr<"DIFileAttr">:$file,
+  OptionalAttribute<"DIFileAttr">:$file,
   OptionalAttribute<"StringAttr">:$producer,
   Bool:$isOptimized,
   EnumClassFlag<"DIEmissionKind", "getEmissionKind()">:$_rawEmissionKind,

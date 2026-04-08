@@ -343,14 +343,13 @@ DIRecursiveTypeAttrInterface DICompileUnitAttr::withRecId(DistinctAttr recId) {
 }
 
 DIRecursiveTypeAttrInterface DICompileUnitAttr::getRecSelf(DistinctAttr recId) {
-  MLIRContext *ctx = recId.getContext();
-  auto emptyStr = StringAttr::get(ctx, "");
+
   return DICompileUnitAttr::get(
-      ctx, recId, /*isRecSelf=*/true, /*id=*/DistinctAttr{},
-      llvm::dwarf::DW_LANG_C89, DIFileAttr::get(ctx, "<rec>", ""), emptyStr,
-      /*isOptimized=*/false, DIEmissionKind::Full,
-      /*isDebugInfoForProfiling=*/false, DINameTableKind::Default, emptyStr,
-      /*importedEntities=*/{});
+      recId.getContext(), recId, /*isRecSelf=*/true, /*id=*/{},
+      /*sourceLanguage=*/0u, /*file=*/{}, /*producer=*/{},
+      /*isOptimized=*/false, DIEmissionKind::None,
+      /*isDebugInfoForProfiling=*/false, DINameTableKind::Default,
+      /*splitDebugFilename=*/{}, /*importedEntities=*/{});
 }
 
 //===----------------------------------------------------------------------===//

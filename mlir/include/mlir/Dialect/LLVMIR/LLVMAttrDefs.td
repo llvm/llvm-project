@@ -335,7 +335,7 @@ def LLVM_DIEncodingParameter : LLVM_DIParameter<
 >;
 
 def LLVM_DILanguageParameter : LLVM_DIParameter<
-  "language", /*default=*/"", "Language", /*errorCase=*/"0"
+  "language", /*default=*/"0", "Language", /*errorCase=*/"0"
 >;
 
 def LLVM_DITagParameter : LLVM_DIParameter<
@@ -426,10 +426,10 @@ def LLVM_DICompileUnitAttr : LLVM_Attr<"DICompileUnit", "di_compile_unit",
     // DICompileUnitAttr specific parameters.
     OptionalParameter<"DistinctAttr">:$id,
     LLVM_DILanguageParameter:$sourceLanguage,
-    "DIFileAttr":$file,
+    OptionalParameter<"DIFileAttr">:$file,
     OptionalParameter<"StringAttr">:$producer,
-    "bool":$isOptimized,
-    "DIEmissionKind":$emissionKind,
+    OptionalParameter<"bool">:$isOptimized,
+    OptionalParameter<"DIEmissionKind">:$emissionKind,
     OptionalParameter<"bool">:$isDebugInfoForProfiling,
     OptionalParameter<"DINameTableKind">:$nameTableKind,
     OptionalParameter<"StringAttr">:$splitDebugFilename,
