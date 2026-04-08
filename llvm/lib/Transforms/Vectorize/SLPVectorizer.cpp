@@ -10715,15 +10715,15 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
         Ptr0 = PointerOps[CurrentOrder.front()];
         PtrN = PointerOps[CurrentOrder.back()];
       }
-      Align CommonAlignment = computeCommonAlignment<StoreInst>(VL0);
+      Align CommonAlignment = computeCommonAlignment<StoreInst>(VL);
       std::optional<int64_t> Dist =
           getPointersDiff(ScalarTy, Ptr0, ScalarTy, PtrN, *DL, *SE);
       // Check that the sorted pointer operands are consecutive.
       if (static_cast<uint64_t>(*Dist) == VL.size() - 1)
         return TreeEntry::Vectorize;
-      if (analyzeConstantStrideCandidate(PointerOps, ScalarTy, CommonAlignment,
-                                         CurrentOrder, *Dist, Ptr0, PtrN,
-                                         SPtrInfo))
+      if (EnableStridedStores && analyzeConstantStrideCandidate(
+                                     PointerOps, ScalarTy, CommonAlignment,
+                                     CurrentOrder, *Dist, Ptr0, PtrN, SPtrInfo))
         return TreeEntry::StridedVectorize;
     }
 
@@ -26014,7 +26014,7 @@ bool SLPVectorizerPass::vectorizeStores(
     SmallVector<std::unique_ptr<StoreChainContext>> AllContexts;
     BoUpSLP::ValueList Operands;
     SmallVector<StoreChainContext::SizePair> RangeSizes;
-    unsigned MaxStride = EnableStridedStores ? MaxProfitableStride : 1;
+    const unsigned MaxStride = EnableStridedStores ? MaxProfitableStride : 1;
 
     // All chains that we're still building
     struct PartialChainStatus {
