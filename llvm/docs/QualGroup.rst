@@ -120,8 +120,10 @@ However, we need a balance between flexibility, structure, and enough organizati
 
 Active contribution implies sustained engagement that meaningfully advances the group’s objectives. Participation may be synchronous or asynchronous, depending on availability. Participation status reflects current bandwidth and coordination needs and may be updated during the `biannual membership review <#membership-review>`_.
 
-**Observers**, or **interested participants**, are individuals who follow the group’s work and may participate when availability allows. They remain welcome to attend meetings, provide feedback, and contribute at any time. Observer status does not imply reduced importance or access within the group.
-
+**Observers**, or **interested participants** are anyone who follows the group’s work and may participate when availability allows. 
+This is an open status and does not require the `nomination process <#nomination-process>`_ used for active contributors. 
+Observers remain welcome to attend meetings, provide feedback, and contribute at any time. 
+Moreover, observer status does not imply reduced importance or access within the group.
 
 Membership Criteria
 -------------------
@@ -151,6 +153,10 @@ Individuals may nominate themselves or be nominated by an existing member. Nomin
 * Explain the nominee’s background and relevance to qualification efforts.
 * Be submitted via this form: `Participant Introduction & Membership <https://forms.gle/cE1kHjqkKNtafUrD7>`_
 * Be communicated to an active LLVM Qualification Group member (e.g., on the Discord channel).
+
+This nomination process applies to becoming an **active contributor**. People who simply wish to 
+follow the group’s work or participate occasionally may do so as observers / interested participants, 
+without a formal nomination process.
 
 Nominations are discussed within the group. If consensus is reached, the nominee is accepted. Otherwise, a majority vote will decide.
 
