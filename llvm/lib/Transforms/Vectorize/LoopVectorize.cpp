@@ -6804,9 +6804,8 @@ void LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
         ElementCount EpilogueUserVF =
             ElementCount::getFixed(EpilogueVectorizationForceVF);
         if (EpilogueUserVF.isVector() &&
-            ElementCount::isKnownLT(EpilogueUserVF, UserVF)) {
+            ElementCount::isKnownLT(EpilogueUserVF, UserVF) && CM.selectUserVectorizationFactor(EpilogueUserVF)) {
           // Build a separate plan for the forced epilogue VF.
-          CM.collectNonVectorizedAndSetWideningDecisions(EpilogueUserVF);
           buildVPlansWithVPRecipes(EpilogueUserVF, EpilogueUserVF);
         }
         buildVPlansWithVPRecipes(UserVF, UserVF);
@@ -7196,19 +7195,22 @@ LoopVectorizationPlanner::computeBestVF() {
     return {VectorizationFactor::Disabled(), nullptr};
   // If there is a single VPlan with a single VF, return it directly.
   VPlan &FirstPlan = *VPlans[0];
-  if (VPlans.size() == 1 && size(FirstPlan.vectorFactors()) == 1)
-    return {VectorizationFactor(*FirstPlan.vectorFactors().begin(), 0, 0),
-            &FirstPlan};
-
   ElementCount UserVF = Hints.getWidth();
-  if (EpilogueVectorizationForceVF > 1 && UserVF && hasPlanWithVF(UserVF)) {
-    [[maybe_unused]] ElementCount EpilogueVF =
-        ElementCount::getFixed(EpilogueVectorizationForceVF);
-    assert(*VPlans[0]->vectorFactors().begin() == EpilogueVF &&
-           "expected first plan to be for the forced epilogue VF");
-    assert(*VPlans[1]->vectorFactors().begin() == UserVF &&
-           "expected second plan to be for the forced UserVF");
-    return {VectorizationFactor(UserVF, 0, 0), VPlans[1].get()};
+  if (hasPlanWithVF(UserVF)) {
+    if (VPlans.size() == 1) {
+      assert(size(FirstPlan.vectorFactors()) == 1);
+      return {VectorizationFactor(*FirstPlan.vectorFactors().begin(), 0, 0),
+              &FirstPlan};
+    }
+    if (EpilogueVectorizationForceVF > 1) {
+      [[maybe_unused]] ElementCount EpilogueVF =
+          ElementCount::getFixed(EpilogueVectorizationForceVF);
+      assert(*VPlans[0]->vectorFactors().begin() == EpilogueVF &&
+             "expected first plan to be for the forced epilogue VF");
+      assert(*VPlans[1]->vectorFactors().begin() == UserVF &&
+             "expected second plan to be for the forced UserVF");
+      return {VectorizationFactor(UserVF, 0, 0), VPlans[1].get()};
+    }
   }
 
   LLVM_DEBUG(dbgs() << "LV: Computing best VF using cost kind: "
