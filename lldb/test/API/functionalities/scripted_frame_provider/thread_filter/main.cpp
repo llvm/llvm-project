@@ -12,7 +12,7 @@ void thread_work() {
   while (g_barrier.load() > 0)
     ;
   while (g_spin) // break in thread
-    ;
+    std::this_thread::yield();
 }
 
 int main() {
