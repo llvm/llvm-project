@@ -1082,10 +1082,10 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     if (log && log->GetVerbose()) {
       size_t count = stack.size();
       LLDB_LOGF(log, "Stack before operation has %" PRIu64 " values:",
-                (uint64_t)count);
+                static_cast<uint64_t>(count));
       for (size_t i = 0; i < count; ++i) {
         StreamString new_value;
-        new_value.Printf("[%" PRIu64 "]", (uint64_t)i);
+        new_value.Printf("[%" PRIu64 "]", static_cast<uint64_t>(i));
         stack[i].Dump(&new_value);
         LLDB_LOGF(log, "  %s", new_value.GetData());
       }
@@ -1234,25 +1234,28 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
       stack.push_back(to_generic(opcodes.GetU8(&offset)));
       break;
     case DW_OP_const1s:
-      stack.push_back(to_generic((int8_t)opcodes.GetU8(&offset)));
+      stack.push_back(to_generic(static_cast<int8_t>(opcodes.GetU8(&offset))));
       break;
     case DW_OP_const2u:
       stack.push_back(to_generic(opcodes.GetU16(&offset)));
       break;
     case DW_OP_const2s:
-      stack.push_back(to_generic((int16_t)opcodes.GetU16(&offset)));
+      stack.push_back(
+          to_generic(static_cast<int16_t>(opcodes.GetU16(&offset))));
       break;
     case DW_OP_const4u:
       stack.push_back(to_generic(opcodes.GetU32(&offset)));
       break;
     case DW_OP_const4s:
-      stack.push_back(to_generic((int32_t)opcodes.GetU32(&offset)));
+      stack.push_back(
+          to_generic(static_cast<int32_t>(opcodes.GetU32(&offset))));
       break;
     case DW_OP_const8u:
       stack.push_back(to_generic(opcodes.GetU64(&offset)));
       break;
     case DW_OP_const8s:
-      stack.push_back(to_generic((int64_t)opcodes.GetU64(&offset)));
+      stack.push_back(
+          to_generic(static_cast<int64_t>(opcodes.GetU64(&offset))));
       break;
     // These should also use to_generic, but we can't do that due to a
     // producer-side bug in llvm. See llvm.org/pr48087.
@@ -1506,7 +1509,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     // the DWARF expression to skip forward or backward from the current
     // operation, beginning after the 2-byte constant.
     case DW_OP_skip: {
-      int16_t skip_offset = (int16_t)opcodes.GetU16(&offset);
+      int16_t skip_offset = static_cast<int16_t>(opcodes.GetU16(&offset));
       lldb::offset_t new_offset = offset + skip_offset;
       // New offset can point at the end of the data, in this case we should
       // terminate the DWARF expression evaluation (will happen in the loop
@@ -1530,7 +1533,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     case DW_OP_bra: {
       tmp = stack.back();
       stack.pop_back();
-      int16_t bra_offset = (int16_t)opcodes.GetU16(&offset);
+      int16_t bra_offset = static_cast<int16_t>(opcodes.GetU16(&offset));
       Scalar zero(0);
       if (tmp.GetScalar() != zero) {
         lldb::offset_t new_offset = offset + bra_offset;
@@ -1765,7 +1768,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
         return err;
 
       int64_t breg_offset = opcodes.GetSLEB128(&offset);
-      tmp.GetScalar() += (uint64_t)breg_offset;
+      tmp.GetScalar() += static_cast<uint64_t>(breg_offset);
       tmp.ClearContext();
       stack.push_back(tmp);
       stack.back().SetValueType(Value::ValueType::LoadAddress);
@@ -1783,7 +1786,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
         return err;
 
       int64_t breg_offset = opcodes.GetSLEB128(&offset);
-      tmp.GetScalar() += (uint64_t)breg_offset;
+      tmp.GetScalar() += static_cast<uint64_t>(breg_offset);
       tmp.ClearContext();
       stack.push_back(tmp);
       stack.back().SetValueType(Value::ValueType::LoadAddress);
@@ -2256,7 +2259,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
         }
       }
       return llvm::createStringErrorV("unhandled opcode {0} in DWARFExpression",
-                                      LocationAtom(op));
+                                      static_cast<LocationAtom>(op));
     }
   }
 
@@ -2274,11 +2277,11 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
 
   if (log && log->GetVerbose()) {
     size_t count = stack.size();
-    LLDB_LOGF(log,
-              "Stack after operation has %" PRIu64 " values:", (uint64_t)count);
+    LLDB_LOGF(log, "Stack after operation has %" PRIu64 " values:",
+              static_cast<uint64_t>(count));
     for (size_t i = 0; i < count; ++i) {
       StreamString new_value;
-      new_value.Printf("[%" PRIu64 "]", (uint64_t)i);
+      new_value.Printf("[%" PRIu64 "]", static_cast<uint64_t>(i));
       stack[i].Dump(&new_value);
       LLDB_LOGF(log, "  %s", new_value.GetData());
     }
