@@ -1256,7 +1256,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
       stack.push_back(Scalar(op->getRawOperand(0)));
       break;
     case DW_OP_consts:
-      stack.push_back(Scalar(op->getRawOperand(0)));
+      stack.push_back(Scalar((int64_t)op->getRawOperand(0)));
       break;
 
     // OPCODE: DW_OP_dup
@@ -1514,7 +1514,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
       return llvm::createStringErrorV(
           "Invalid opcode offset in DW_OP_skip: {0}+({1}) > {2}",
           op->getEndOffset(), skip_offset, expr_data.size());
-    } break;
+    }
 
     // OPCODE: DW_OP_bra
     // OPERANDS: int16_t
