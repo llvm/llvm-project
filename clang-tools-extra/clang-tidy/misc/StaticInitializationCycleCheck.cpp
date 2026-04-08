@@ -67,9 +67,8 @@ static bool shouldIgnoreRef(const DeclRefExpr *DRE, const Decl *ParentD) {
               if (const auto *FD = dyn_cast<FunctionDecl>(D))
                 return FD == ParentF->getDefinition();
               return false;
-            } else {
-              return D->getCanonicalDecl() == ParentD->getCanonicalDecl();
             }
+            return D->getCanonicalDecl() == ParentD->getCanonicalDecl();
           }())
         return ParentLambda != nullptr;
     }
