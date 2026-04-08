@@ -398,7 +398,7 @@ void DataAggregator::parsePreAggregated() {
   file_magic Magic;
   if (BC && !BC->HasFixedLoadAddress &&
       !identify_magic(BC->getFilename(), Magic) &&
-      Magic == file_magic::elf_shared_object) {
+      Magic == file_magic::elf_shared_object && !BC->HasInterpHeader) {
     if (auto FileBID = BC->getFileBuildID()) {
       FilterBuildID = *FileBID;
       outs() << "PERF2BOLT: filtering pre-aggregated data for buildid "

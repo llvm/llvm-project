@@ -5,7 +5,9 @@
 
 # RUN: llvm-mc -filetype=obj -triple x86_64-unknown-unknown %s -o %t.o
 # RUN: %clang %cflags %t.o -o %t.so -shared -Wl,-q -Wl,--build-id=0xaabb1122 -nostdlib
+# RUN: %clang %cflags %t.o -o %t.exe -fPIC -pie -Wl,-q -Wl,--build-id=0xaabb1122 -nostdlib
 # RUN: link_fdata %s %t.so %t.pa PREAGG
+# RUN: link_fdata %s %t.exe %t.pa-pie PREAGG
 # RUN: link_fdata %s %t.so %t.pa-bid PREAGG-BID
 
 ## Test 1: Without buildid prefix, addresses don't match the .so's buildid
@@ -31,6 +33,7 @@ foo:
   pushq %rbp
   movq  %rsp, %rbp
   cmpl  $0, %edi
+Lbr:
   je    Lfalse
 Ltrue:
   movl  $1, %eax
@@ -42,11 +45,8 @@ Lret:
   retq
   .size foo, .-foo
 
-# PREAGG: B #foo# #Lret# 10 0
-# PREAGG: F #Lfalse# #Lret# 5
-
-# PREAGG-BID: B aabb1122:#foo# aabb1122:#Lret# 10 0
-# PREAGG-BID: F aabb1122:#Lfalse# aabb1122:#Lret# 5
+# PREAGG: T #Lbr# #Lfalse# #Lret# 10
+# PREAGG-BID: T aabb1122:#Lbr# aabb1122:#Lfalse# aabb1122:#Lret# 10
 
 ## Test 3: Executable with ".so" in the filename should NOT trigger filtering.
 ## The old heuristic (ends_with(".so")) would false-positive here, but
@@ -68,3 +68,8 @@ Lret:
 # CHECK-NOEXT: PERF2BOLT: filtering pre-aggregated data for buildid aabb1122
 # CHECK-NOEXT: BOLT-INFO: 1 out of {{[0-9]+}} functions in the binary
 # CHECK-NOEXT-NOT: (0.0%)
+#
+## Test 5: Check that PIE binaries are not misidentified as shared libraries.
+# RUN: perf2bolt %t.exe -o %t.fdata5 --pa -p %t.pa-pie 2>&1 | FileCheck %s \
+# RUN:   --check-prefix=CHECK-PIE
+# CHECK-PIE: BOLT-INFO: 1 out of {{[0-9]+}} functions in the binary
