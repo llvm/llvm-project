@@ -1336,6 +1336,18 @@ const char *Lexer::SkipEscapedNewLines(const char *P) {
   }
 }
 
+const char *Lexer::SkipHorizontalWhitespace(const char *Ptr) {
+  // Small amounts of horizontal whitespace is very common between tokens.
+  // Check for space character separately to skip the expensive
+  // isHorizontalWhitespace() check
+  if (*Ptr == ' ' || isHorizontalWhitespace(*Ptr)) {
+    do {
+      ++Ptr;
+    } while (*Ptr == ' ' || isHorizontalWhitespace(*Ptr));
+  }
+  return Ptr;
+}
+
 std::optional<Token> Lexer::findNextToken(SourceLocation Loc,
                                           const SourceManager &SM,
                                           const LangOptions &LangOpts,
@@ -3764,16 +3776,12 @@ LexStart:
   assert(!Result.hasPtrData() && "Result has not been reset");
 
   // CurPtr - Cache BufferPtr in an automatic variable.
-  const char *CurPtr = BufferPtr;
+  const char *CurPtr = SkipHorizontalWhitespace(BufferPtr);
 
-  // Small amounts of horizontal whitespace is very common between tokens.
-  // Check for space character separately to skip the expensive
-  // isHorizontalWhitespace() check
-  if (*CurPtr == ' ' || isHorizontalWhitespace(*CurPtr)) {
-    do {
-      ++CurPtr;
-    } while (*CurPtr == ' ' || isHorizontalWhitespace(*CurPtr));
-
+  /// CurPtr has been advanced forward, indicating that a horizontal whitespace
+  /// character has been encountered. Check if the Lexer is in keep whitespace
+  /// mode.
+  if (CurPtr != BufferPtr) {
     // If we are keeping whitespace and other tokens, just return what we just
     // skipped.  The next lexer invocation will return the token after the
     // whitespace.

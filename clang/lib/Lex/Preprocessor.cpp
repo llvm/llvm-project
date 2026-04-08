@@ -1380,13 +1380,34 @@ bool Preprocessor::HandleModuleContextualKeyword(Token &Result) {
   llvm::SaveAndRestore<bool> SavedParsingPreprocessorDirective(
       CurPPLexer->ParsingPreprocessorDirective, true);
 
-  // The next token may be an angled string literal after import keyword.
-  llvm::SaveAndRestore<bool> SavedParsingFilemame(
-      CurPPLexer->ParsingFilename,
-      Result.getIdentifierInfo()->isImportKeyword());
+  bool ParsingFilename = false;
+  if (Result.getIdentifierInfo()->isImportKeyword()) {
+    if (getLangOpts().Digraphs && CurLexer &&
+        CurLexer->getCurrentBufferOffset() + 2 < CurLexer->getBuffer().size()) {
+      // If the import preprocessing token folled by a digraph character '<:',
+      // the import preprocessing should not traited as a import contextual
+      // keyword. Eg.
+      //    int
+      //    import <:10
+      //    :>;
+      //
+      // This is a array definition, and equivalent to:
+      //
+      //    int import[10];
+      const char *CurPtr = CurLexer->getBufferLocation();
+      CurPtr = Lexer::SkipHorizontalWhitespace(CurPtr);
+      auto C0 = Lexer::getCharAndSizeNoWarn(CurPtr, getLangOpts());
+      auto C1 = Lexer::getCharAndSizeNoWarn(CurPtr + C0.Size, getLangOpts());
+      if (C0.Char == '<' && (C1.Char == ':' || C1.Char == '%'))
+        return false;
+    }
+    ParsingFilename = true;
+  }
 
-  std::optional<Token> NextTok =
-      CurLexer ? CurLexer->peekNextPPToken() : CurTokenLexer->peekNextPPToken();
+  // The next token may be an angled string literal after import keyword.
+  llvm::SaveAndRestore<bool> SavedParsingFilemame(CurPPLexer->ParsingFilename,
+                                                  ParsingFilename);
+  std::optional<Token> NextTok = peekNextPPToken();
   if (!NextTok)
     return false;
 
