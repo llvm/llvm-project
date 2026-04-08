@@ -5,13 +5,16 @@
 define void @foo(i16 %finder_idx) {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:  # %bb.1: # %for.body
+; CHECK-NEXT:  .LBB0_1: # %for.body
 ; CHECK-NEXT:    slli a0, a0, 48
 ; CHECK-NEXT:    bltz a0, .LBB0_4
 ; CHECK-NEXT:  # %bb.2: # %while.cond.preheader.i
+; CHECK-NEXT:    j .LBB0_5
+; CHECK-NEXT:  # %bb.3: # %exit1
 ; CHECK-NEXT:    li a0, 0
-; CHECK-NEXT:  # %bb.3: # %while.body
+; CHECK-NEXT:    j .LBB0_1
 ; CHECK-NEXT:  .LBB0_4: # %while.cond1.preheader.i
+; CHECK-NEXT:  .LBB0_5: # %while.body
 entry:
   br label %for.body
 
@@ -43,13 +46,16 @@ if.then:
 define void @bar(i16 %finder_idx) {
 ; CHECK-LABEL: bar:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:  # %bb.1: # %for.body
+; CHECK-NEXT:  .LBB1_1: # %for.body
 ; CHECK-NEXT:    slli a0, a0, 48
 ; CHECK-NEXT:    bgez a0, .LBB1_4
 ; CHECK-NEXT:  # %bb.2: # %while.cond.preheader.i
+; CHECK-NEXT:    j .LBB1_5
+; CHECK-NEXT:  # %bb.3: # %exit1
 ; CHECK-NEXT:    li a0, 0
-; CHECK-NEXT:  # %bb.3: # %while.body
+; CHECK-NEXT:    j .LBB1_1
 ; CHECK-NEXT:  .LBB1_4: # %while.cond1.preheader.i
+; CHECK-NEXT:  .LBB1_5: # %while.body
 entry:
   br label %for.body
 

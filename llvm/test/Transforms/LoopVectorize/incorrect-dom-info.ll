@@ -5,7 +5,6 @@ target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 
 @PL_utf8skip = external constant [0 x i8]
 
-; Function Attrs: nounwind ssp uwtable
 define void @Perl_pp_quotemeta(i1 %arg) #0 {
   %len = alloca i64, align 8
   br i1 %arg, label %2, label %1
@@ -135,7 +134,7 @@ thread-pre-split5:                                ; preds = %.lr.ph
   ret void
 }
 
-attributes #0 = { nounwind ssp uwtable "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "use-soft-float"="false" }
+attributes #0 = { "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "use-soft-float"="false" }
 
 !llvm.ident = !{!0}
 

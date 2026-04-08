@@ -403,6 +403,16 @@ cc_library(
     ],
 )
 
+gentbl_cc_library(
+    name = "BytecodeDialectInterfaceIncGen",
+    tbl_outs = {
+        "include/mlir/Bytecode/BytecodeDialectInterface.h.inc": ["-gen-dialect-interface-decls"],
+    },
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Bytecode/BytecodeDialectInterface.td",
+    deps = [":OpBaseTdFiles"],
+)
+
 cc_library(
     name = "IR",
     srcs = glob([
@@ -435,6 +445,7 @@ cc_library(
         ":BuiltinOpsIncGen",
         ":BuiltinTypeInterfacesIncGen",
         ":BuiltinTypesIncGen",
+        ":BytecodeDialectInterfaceIncGen",
         ":BytecodeOpInterfaceIncGen",
         ":CallOpInterfacesIncGen",
         ":DataLayoutInterfacesIncGen",
@@ -1704,6 +1715,7 @@ cc_library(
     ],
     hdrs = [
         "include/mlir/Dialect/AMDGPU/IR/AMDGPUDialect.h",
+        "include/mlir/Dialect/AMDGPU/IR/AMDGPUEnums.h",
         "lib/Conversion/LLVMCommon/MemRefDescriptor.h",
     ],
     includes = ["include"],
@@ -4229,6 +4241,7 @@ cc_library(
         ":TensorDialect",
         ":TransformUtils",
         ":Transforms",
+        ":UBDialect",
         ":ValueBoundsOpInterface",
         ":VectorDialect",
         ":VectorUtils",
@@ -4418,6 +4431,7 @@ cc_library(
         ":LoopLikeInterface",
         ":MemRefDialect",
         ":MemorySlotInterfaces",
+        ":MemorySlotUtils",
         ":ParallelCombiningOpInterface",
         ":SCFDeviceMappingInterfacesIncGen",
         ":SCFIncGen",
@@ -4466,6 +4480,17 @@ cc_library(
         ":IR",
         ":InferIntRangeInterface",
         ":ShapedOpInterfaces",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "MemorySlotUtils",
+    srcs = ["lib/Interfaces/Utils/MemorySlotUtils.cpp"],
+    hdrs = ["include/mlir/Interfaces/Utils/MemorySlotUtils.h"],
+    includes = ["include"],
+    deps = [
+        ":IR",
         "//llvm:Support",
     ],
 )
@@ -5366,6 +5391,7 @@ cc_library(
     ),
     includes = ["include"],
     deps = [
+        ":BytecodeDialectInterfaceIncGen",
         ":BytecodeOpInterface",
         ":CallOpInterfaces",
         ":ControlFlowInterfaces",
@@ -8212,12 +8238,23 @@ cc_library(
     ],
 )
 
+gentbl_cc_library(
+    name = "ConvertToEmitCPatternInterfaceIncGen",
+    tbl_outs = {
+        "include/mlir/Conversion/ConvertToEmitC/ConvertToEmitCPatternInterface.h.inc": ["-gen-dialect-interface-decls"],
+    },
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Conversion/ConvertToEmitC/ConvertToEmitCPatternInterface.td",
+    deps = [":OpBaseTdFiles"],
+)
+
 cc_library(
     name = "ConvertToEmitCInterface",
     hdrs = ["include/mlir/Conversion/ConvertToEmitC/ToEmitCInterface.h"],
     includes = ["include"],
     deps = [
         ":ConversionPassIncGen",
+        ":ConvertToEmitCPatternInterfaceIncGen",
         ":IR",
         "//llvm:Support",
     ],
@@ -8671,6 +8708,7 @@ cc_library(
     ],
     includes = ["include"],
     deps = [
+        ":BytecodeDialectInterfaceIncGen",
         ":BytecodeOpInterfaceIncGen",
         ":IR",
         "//llvm:Support",
@@ -10634,6 +10672,7 @@ cc_library(
     deps = [
         ":Analysis",
         ":FuncDialect",
+        ":FunctionInterfaces",
         ":IR",
         ":LLVMDialect",
         ":OpenMPDialect",
@@ -10751,6 +10790,7 @@ cc_library(
     ],
     includes = ["include"],
     deps = [
+        ":BytecodeDialectInterfaceIncGen",
         ":BytecodeOpInterface",
         ":IR",
         ":InferTypeOpInterface",
@@ -11941,6 +11981,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":ArithDialect",
+        ":BytecodeDialectInterfaceIncGen",
         ":BytecodeOpInterface",
         ":Dialect",
         ":DialectUtils",
@@ -13115,6 +13156,7 @@ td_library(
         ":ControlFlowInterfacesTdFiles",
         ":InferStridedMetadataInterfaceTdFiles",
         ":MemOpInterfacesTdFiles",
+        ":MemoryAccessOpInterfacesTdFiles",
         ":MemorySlotInterfacesTdFiles",
         ":OpBaseTdFiles",
         ":ShapedOpInterfacesTdFiles",
@@ -13212,6 +13254,7 @@ cc_library(
         ":MemRefOpsIncGen",
         ":MemoryAccessOpInterfacesIncGen",
         ":MemorySlotInterfaces",
+        ":MemorySlotUtils",
         ":RuntimeVerifiableOpInterface",
         ":ShapedOpInterfaces",
         ":SideEffectInterfaces",
@@ -14045,6 +14088,8 @@ cc_library(
     hdrs = glob(["include/mlir/Reducer/*.h"]),
     includes = ["include"],
     deps = [
+        ":ControlFlowDialect",
+        ":ControlFlowInterfaces",
         ":DialectReductionPatternInterfaceIncGen",
         ":IR",
         ":Pass",

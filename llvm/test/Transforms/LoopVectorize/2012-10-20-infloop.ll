@@ -1,7 +1,7 @@
 ; RUN: opt < %s -passes=loop-vectorize,dce -force-vector-interleave=1 -force-vector-width=4
 
 ; Check that we don't fall into an infinite loop.
-define void @test() nounwind {
+define void @test() {
 entry:
  br label %for.body
 
@@ -12,7 +12,7 @@ for.body:
 
 
 
-define void @test2() nounwind {
+define void @test2() {
 entry:
  br label %for.body
 
@@ -27,7 +27,7 @@ for.end:                                          ; preds = %for.body
 }
 
 ;PR14701
-define void @start_model_rare(i1 %arg) nounwind uwtable ssp {
+define void @start_model_rare(i1 %arg) {
 entry:
   br i1 false, label %return, label %if.end
 

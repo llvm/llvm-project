@@ -4973,10 +4973,19 @@ static constexpr KnownFPClass::MinMaxKind getMinMaxKind(Intrinsic::ID IID) {
 }
 
 /// \return true if this is a floating point value that is known to have a
-/// magnitude smaller than 1. i.e., fabs(X) <= 1.0
-static bool isAbsoluteValueLessEqualOne(const Value *V) {
-  // TODO: Handle frexp and x - floor(x)?
-  return match(V, m_Intrinsic<Intrinsic::amdgcn_trig_preop>(m_Value()));
+/// magnitude smaller than 1. i.e., fabs(X) <= 1.0 or is nan.
+static bool isAbsoluteValueULEOne(const Value *V) {
+  // TODO: Handle frexp
+  // TODO: Other rounding intrinsics?
+
+  // fabs(x - floor(x)) <= 1
+  const Value *SubFloorX;
+  if (match(V, m_FSub(m_Value(SubFloorX),
+                      m_Intrinsic<Intrinsic::floor>(m_Deferred(SubFloorX)))))
+    return true;
+
+  return match(V, m_Intrinsic<Intrinsic::amdgcn_trig_preop>(m_Value())) ||
+         match(V, m_Intrinsic<Intrinsic::amdgcn_fract>(m_Value()));
 }
 
 void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
@@ -5644,9 +5653,9 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
 
     /// Propgate no-infs if the other source is known smaller than one, such
     /// that this cannot introduce overflow.
-    if (KnownLHS.isKnownNever(fcInf) && isAbsoluteValueLessEqualOne(RHS))
+    if (KnownLHS.isKnownNever(fcInf) && isAbsoluteValueULEOne(RHS))
       Known.knownNot(fcInf);
-    else if (KnownRHS.isKnownNever(fcInf) && isAbsoluteValueLessEqualOne(LHS))
+    else if (KnownRHS.isKnownNever(fcInf) && isAbsoluteValueULEOne(LHS))
       Known.knownNot(fcInf);
 
     break;
@@ -6045,50 +6054,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     KnownBits Bits(EltTy->getPrimitiveSizeInBits());
     computeKnownBits(Src, DemandedElts, Bits, Q, Depth + 1);
 
-    // Transfer information from the sign bit.
-    if (Bits.isNonNegative())
-      Known.signBitMustBeZero();
-    else if (Bits.isNegative())
-      Known.signBitMustBeOne();
-
-    if (EltTy->isIEEELikeFPTy()) {
-      // IEEE floats are NaN when all bits of the exponent plus at least one of
-      // the fraction bits are 1. This means:
-      //   - If we assume unknown bits are 0 and the value is NaN, it will
-      //     always be NaN
-      //   - If we assume unknown bits are 1 and the value is not NaN, it can
-      //     never be NaN
-      // Note: They do not hold for x86_fp80 format.
-      if (APFloat(EltTy->getFltSemantics(), Bits.One).isNaN())
-        Known.KnownFPClasses = fcNan;
-      else if (!APFloat(EltTy->getFltSemantics(), ~Bits.Zero).isNaN())
-        Known.knownNot(fcNan);
-
-      // Build KnownBits representing Inf and check if it must be equal or
-      // unequal to this value.
-      auto InfKB = KnownBits::makeConstant(
-          APFloat::getInf(EltTy->getFltSemantics()).bitcastToAPInt());
-      InfKB.Zero.clearSignBit();
-      if (const auto InfResult = KnownBits::eq(Bits, InfKB)) {
-        assert(!InfResult.value());
-        Known.knownNot(fcInf);
-      } else if (Bits == InfKB) {
-        Known.KnownFPClasses = fcInf;
-      }
-
-      // Build KnownBits representing Zero and check if it must be equal or
-      // unequal to this value.
-      auto ZeroKB = KnownBits::makeConstant(
-          APFloat::getZero(EltTy->getFltSemantics()).bitcastToAPInt());
-      ZeroKB.Zero.clearSignBit();
-      if (const auto ZeroResult = KnownBits::eq(Bits, ZeroKB)) {
-        assert(!ZeroResult.value());
-        Known.knownNot(fcZero);
-      } else if (Bits == ZeroKB) {
-        Known.KnownFPClasses = fcZero;
-      }
-    }
-
+    Known = KnownFPClass::bitcast(EltTy->getFltSemantics(), Bits);
     break;
   }
   default:
@@ -8447,12 +8413,18 @@ static SelectPatternResult matchFastFloatClamp(CmpInst::Predicate Pred,
     if (match(FalseVal, m_OrdOrUnordFMin(m_Specific(CmpLHS), m_APFloat(FC2))) &&
         *FC1 < *FC2)
       return {SPF_FMAXNUM, SPNB_RETURNS_ANY, false};
+    if (match(FalseVal, m_FMinNum(m_Specific(CmpLHS), m_APFloat(FC2))) &&
+        *FC1 < *FC2)
+      return {SPF_FMAXNUM, SPNB_RETURNS_ANY, false};
     break;
   case CmpInst::FCMP_OGT:
   case CmpInst::FCMP_OGE:
   case CmpInst::FCMP_UGT:
   case CmpInst::FCMP_UGE:
     if (match(FalseVal, m_OrdOrUnordFMax(m_Specific(CmpLHS), m_APFloat(FC2))) &&
+        *FC1 > *FC2)
+      return {SPF_FMINNUM, SPNB_RETURNS_ANY, false};
+    if (match(FalseVal, m_FMaxNum(m_Specific(CmpLHS), m_APFloat(FC2))) &&
         *FC1 > *FC2)
       return {SPF_FMINNUM, SPNB_RETURNS_ANY, false};
     break;
