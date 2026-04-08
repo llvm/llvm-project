@@ -23,7 +23,6 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/IR/IntrinsicsWebAssembly.h"
-#include "llvm/Support/ErrorHandling.h"
 
 #define DEBUG_TYPE "wasm-isel"
 
@@ -89,9 +88,8 @@ bool WebAssemblyInstructionSelector::select(MachineInstr &I) {
   MachineFunction &MF = *MBB.getParent();
   MachineRegisterInfo &MRI = MF.getRegInfo();
 
-  if (!I.isPreISelOpcode()) {
+  if (!I.isPreISelOpcode())
     return true;
-  }
 
   if (selectImpl(I, *CoverageInfo))
     return true;
@@ -105,9 +103,8 @@ bool WebAssemblyInstructionSelector::select(MachineInstr &I) {
     const TargetRegisterClass *DefRC =
         TRI.getConstrainedRegClassForOperand(I.getOperand(0), MRI);
 
-    if (!DefRC) {
+    if (!DefRC)
       return false;
-    }
 
     I.setDesc(TII.get(TargetOpcode::IMPLICIT_DEF));
     return RBI.constrainGenericRegister(DefReg, *DefRC, MRI) != nullptr;
