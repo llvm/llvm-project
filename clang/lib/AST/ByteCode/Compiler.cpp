@@ -4248,10 +4248,10 @@ bool Compiler<Emitter>::VisitCXXReflectExpr(const CXXReflectExpr *E) {
     return true;
 
   switch (E->getKind()) {
-  case ReflectionKind::Type: {
-    APValue Result(ReflectionKind::Type, E->getOpaqueValue());
-    return this->emitReflectValue(E->getKind(), E->getOpaqueValue(), E);
-  }
+    case ReflectionKind::Type: {
+      APValue Result(ReflectionKind::Type, E->getOpaqueValue());
+      return this->emitReflectValue(E->getKind(), E->getOpaqueValue(), E);
+    }
   }
 
   return false;
@@ -6173,28 +6173,28 @@ bool Compiler<Emitter>::visitWhileStmt(const WhileStmt *S) {
       return false;
   }
 
-  if (!this->visitBool(Cond))
-    return false;
+    if (!this->visitBool(Cond))
+      return false;
 
-  if (!this->maybeEmitDeferredVarInit(S->getConditionVariable()))
-    return false;
+    if (!this->maybeEmitDeferredVarInit(S->getConditionVariable()))
+      return false;
 
-  if (!this->jumpFalse(EndLabel, S))
-    return false;
+    if (!this->jumpFalse(EndLabel, S))
+      return false;
 
-  if (!this->visitStmt(Body))
-    return false;
+    if (!this->visitStmt(Body))
+      return false;
 
-  if (!CondScope.destroyLocals())
-    return false;
-  // } End of loop body.
+    if (!CondScope.destroyLocals())
+      return false;
+    // } End of loop body.
 
-  if (!this->jump(CondLabel, S))
-    return false;
-  this->fallthrough(EndLabel);
-  this->emitLabel(EndLabel);
+    if (!this->jump(CondLabel, S))
+      return false;
+    this->fallthrough(EndLabel);
+    this->emitLabel(EndLabel);
 
-  return CondScope.destroyLocals() && WholeLoopScope.destroyLocals();
+    return CondScope.destroyLocals() && WholeLoopScope.destroyLocals();
 }
 
 template <class Emitter> bool Compiler<Emitter>::visitDoStmt(const DoStmt *S) {

@@ -16,6 +16,7 @@
 #include "../ExprConstShared.h"
 #include "BitcastBuffer.h"
 #include "Boolean.h"
+#include "Reflect.h"
 #include "DynamicAllocator.h"
 #include "FixedPoint.h"
 #include "Floating.h"
@@ -28,7 +29,6 @@
 #include "MemberPointer.h"
 #include "PrimType.h"
 #include "Program.h"
-#include "Reflect.h"
 #include "State.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Expr.h"
@@ -2959,16 +2959,16 @@ inline bool DoShift(InterpState &S, CodePtr OpPC, LT &LHS, RT &RHS,
     return true;
   }
 
-  // Right shift.
-  if (Compare(RHS, RT::from(MaxShiftAmount, RHS.bitWidth())) ==
-      ComparisonCategoryResult::Greater) {
-    R = LT::AsUnsigned::from(-1);
-  } else {
-    // Do the shift on potentially signed LT, then convert to unsigned type.
-    LT A;
-    LT::shiftRight(LHS, LT::from(RHS, Bits), Bits, &A);
-    R = LT::AsUnsigned::from(A);
-  }
+    // Right shift.
+    if (Compare(RHS, RT::from(MaxShiftAmount, RHS.bitWidth())) ==
+        ComparisonCategoryResult::Greater) {
+      R = LT::AsUnsigned::from(-1);
+    } else {
+      // Do the shift on potentially signed LT, then convert to unsigned type.
+      LT A;
+      LT::shiftRight(LHS, LT::from(RHS, Bits), Bits, &A);
+      R = LT::AsUnsigned::from(A);
+    }
 
   S.Stk.push<LT>(LT::from(R));
   return true;
@@ -3733,8 +3733,7 @@ inline bool CheckDestruction(InterpState &S, CodePtr OpPC) {
   return CheckDestructor(S, OpPC, Ptr);
 }
 
-inline bool ReflectValue(InterpState &S, CodePtr OpPC, ReflectionKind Kind,
-                         const void *Operand) {
+inline bool ReflectValue(InterpState &S, CodePtr OpPC, ReflectionKind Kind, const void *Operand) {
   S.Stk.push<Reflect>(Kind, Operand);
   return true;
 }
