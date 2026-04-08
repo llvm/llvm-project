@@ -151,12 +151,12 @@ TEST_F(VPDominatorTreeTest, DominanceRegionsTest) {
     //  VPBB1
     //    |
     //  R1 {
-    //         R1BB1 <-+
-    //       /         |
+    //         R1BB1
+    //       /        \
     //   R2 {          |
     //     \           |
-    //     R2BB1<-+    |
-    //       |    |   R1BB2
+    //     R2BB1       |
+    //       |   \    R1BB2
     //     R2BB2-/     |
     //        \        |
     //         R2BB3   |
@@ -214,12 +214,12 @@ TEST_F(VPDominatorTreeTest, DominanceRegionsTest) {
     //  VPBB1
     //    |
     //  R1 {
-    //         R1BB1 <-+
-    //       /         |
+    //         R1BB1
+    //       /        \
     //   R2 {          |
     //     \           |
-    //     R2BB1<-+    |
-    //       |    |   R1BB2
+    //     R2BB1       |
+    //       |   \    R1BB2
     //     R2BB2-/     |
     //        \        |
     //         R2BB3   |
