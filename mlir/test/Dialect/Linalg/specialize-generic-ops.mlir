@@ -1233,7 +1233,7 @@ func.func @op_mmt4d(%A: tensor<?x?x?x?xf32>, %B: tensor<?x?x?x?xf32>,
 
 // ALL-LABEL: op_mmt4d
 
-// NOT-NAMED: linalg.generic
+// NAMED-NOT: linalg.generic
 // NAMED: linalg.mmt4d
 
 // CATEGORY-NOT: linalg.generic
@@ -1260,7 +1260,7 @@ func.func @op_mmt4d_transpose_a(%A: tensor<?x?x?x?xf32>, %B: tensor<?x?x?x?xf32>
 
 // ALL-LABEL: op_mmt4d_transpose_a
 
-// NOT-NAMED: linalg.generic
+// NAMED-NOT: linalg.generic
 // NAMED: linalg.mmt4d
 
 // CATEGORY-NOT: linalg.generic
@@ -1287,7 +1287,7 @@ func.func @op_mmt4d_transpose_b(%A: tensor<?x?x?x?xf32>, %B: tensor<?x?x?x?xf32>
 
 // ALL-LABEL: op_mmt4d_transpose_b
 
-// NOT-NAMED: linalg.generic
+// NAMED-NOT: linalg.generic
 // NAMED: linalg.mmt4d
 
 // CATEGORY-NOT: linalg.generic
@@ -1313,7 +1313,7 @@ func.func @op_mmt4d_transpose_a_and_b(
 
 // ALL-LABEL: op_mmt4d_transpose_a_and_b
 
-// NOT-NAMED: linalg.generic
+// NAMED-NOT: linalg.generic
 // NAMED: linalg.mmt4d
 
 // CATEGORY-NOT: linalg.generic
@@ -1340,7 +1340,7 @@ func.func @op_mmt4d_transpose_c(%A: tensor<?x?x?x?xf32>, %B: tensor<?x?x?x?xf32>
 
 // ALL-LABEL: op_mmt4d_transpose_c
 
-// NOT-NAMED: linalg.generic
+// NAMED-NOT: linalg.generic
 // NAMED: linalg.mmt4d
 
 // CATEGORY-NOT: linalg.generic
@@ -1367,7 +1367,7 @@ func.func @op_mmt4d_transpose_c_inner(%A: tensor<?x?x?x?xf32>, %B: tensor<?x?x?x
 
 // ALL-LABEL: op_mmt4d_transpose_c_inner
 
-// NOT-NAMED: linalg.generic
+// NAMED-NOT: linalg.generic
 // NAMED: linalg.mmt4d
 
 // CATEGORY-NOT: linalg.generic
