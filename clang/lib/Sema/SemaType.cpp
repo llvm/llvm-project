@@ -10,7 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "AttributeLangSupport.h"
 #include "TypeLocBuilder.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
@@ -6690,8 +6689,8 @@ static void HandleAddressSpaceTypeAttribute(QualType &Type,
              "Unexpected language mode");
       S.Diag(Attr.getLoc(), diag::err_attribute_not_supported_in_lang)
           << Attr
-          << (S.getLangOpts().isSYCL() ? AttributeLangSupport::SYCL
-                                       : AttributeLangSupport::HLSL);
+          << (S.getLangOpts().isSYCL() ? diag::UnsupportedAttrLang::SYCL
+                                       : diag::UnsupportedAttrLang::HLSL);
       Attr.setInvalid();
       return;
     }
