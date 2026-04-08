@@ -10,7 +10,6 @@
 
 // Make sure that FileCheck fails when it should fail. This ensure that FileCheck
 // actually checks the content of the file.
-// XFAIL: *
 
-// RUN: echo "hello world" | FileCheck %s
+// RUN: echo "hello world" | not FileCheck %s
 // CHECK: foobar
