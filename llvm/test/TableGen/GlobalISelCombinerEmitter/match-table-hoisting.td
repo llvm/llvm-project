@@ -5,9 +5,14 @@
 include "llvm/Target/Target.td"
 include "llvm/Target/GlobalISel/Combine.td"
 
+
 def MyTargetISA : InstrInfo;
 def MyTarget : Target { let InstructionSet = MyTargetISA; }
 
+// These two combine rules both use GIM_CheckIsSameOperandIgnoreCopies.
+// Check that the match table does not try to combine them by hoisting them in the GroupMatcher,
+// which would cause a runtime crash as the "other inst" used by the predicate is
+// only defined in the leaf RuleMatcher.
 def SharedPreds0 : GICombineRule<
    (defs root:$root),
    (match (G_SUB $sub1, $B, $C),
