@@ -2231,7 +2231,7 @@ void DAGTypeLegalizer::SExtOrZExtPromotedOperands(SDValue &LHS, SDValue &RHS) {
   // Prefer to promote the comparison operand with zero extension.
 
   // If the width of OpL/OpR excluding the duplicated sign bits is no greater
-  // than the width of LHS/RHS, we can avoid/ inserting a zext_inreg operation
+  // than the width of LHS/RHS, we can avoid inserting a zext_inreg operation
   // that we might not be able to remove.
   unsigned OpLEffectiveBits = DAG.ComputeMaxSignificantBits(OpL);
   unsigned OpREffectiveBits = DAG.ComputeMaxSignificantBits(OpR);
