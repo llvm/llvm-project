@@ -8,6 +8,7 @@
 
 #include "clang/Analysis/Analyses/LifetimeSafety/LiveOrigins.h"
 #include "Dataflow.h"
+#include "clang/Analysis/Analyses/LifetimeSafety/Facts.h"
 #include "llvm/Support/ErrorHandling.h"
 
 namespace clang::lifetimes::internal {
@@ -56,8 +57,14 @@ struct Lattice {
 static SourceLocation GetFactLoc(CausingFactType F) {
   if (const auto *UF = F.dyn_cast<const UseFact *>())
     return UF->getUseExpr()->getExprLoc();
-  if (const auto *OEF = F.dyn_cast<const OriginEscapesFact *>())
-    return OEF->getEscapeExpr()->getExprLoc();
+  if (const auto *OEF = F.dyn_cast<const OriginEscapesFact *>()) {
+    if (auto *ReturnEsc = dyn_cast<ReturnEscapeFact>(OEF))
+      return ReturnEsc->getReturnExpr()->getExprLoc();
+    if (auto *FieldEsc = dyn_cast<FieldEscapeFact>(OEF))
+      return FieldEsc->getFieldDecl()->getLocation();
+    if (auto *GlobalEsc = dyn_cast<GlobalEscapeFact>(OEF))
+      return GlobalEsc->getGlobal()->getLocation();
+  }
   llvm_unreachable("unhandled causing fact in PointerUnion");
 }
 
@@ -157,6 +164,12 @@ public:
     if (!OF.getKillDest())
       return In;
     return Lattice(Factory.remove(In.LiveOrigins, OF.getDestOriginID()));
+  }
+
+  Lattice transfer(Lattice In, const ExpireFact &F) {
+    if (auto OID = F.getOriginID())
+      return Lattice(Factory.remove(In.LiveOrigins, *OID));
+    return In;
   }
 
   LivenessMap getLiveOriginsAt(ProgramPoint P) const {

@@ -32,7 +32,7 @@ struct _Unwind_Exception {
   // The implementation of _Unwind_Exception uses an attribute mode on the
   // above fields which has the side effect of causing this whole struct to
   // round up to 32 bytes in size (48 with SEH). To be more explicit, we add
-  // pad fields added for binary compatibility.
+  // pad fields for binary compatibility.
   uint32_t reserved[3];
 #endif
   // The Itanium ABI requires that _Unwind_Exception objects are "double-word

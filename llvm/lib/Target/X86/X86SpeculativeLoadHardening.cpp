@@ -501,7 +501,6 @@ bool X86SpeculativeLoadHardeningImpl::run(MachineFunction &MF) {
     ZeroEFLAGSDefOp->setIsDead(true);
     BuildMI(Entry, EntryInsertPt, Loc, TII->get(X86::SUBREG_TO_REG),
             PS->InitialReg)
-        .addImm(0)
         .addReg(PredStateSubReg)
         .addImm(X86::sub_32bit);
   }
@@ -1926,7 +1925,7 @@ Register X86SpeculativeLoadHardeningImpl::hardenValueInRegister(
     unsigned SubRegImm = SubRegImms[Log2_32(Bytes)];
     Register NarrowStateReg = MRI->createVirtualRegister(RC);
     BuildMI(MBB, InsertPt, Loc, TII->get(TargetOpcode::COPY), NarrowStateReg)
-        .addReg(StateReg, 0, SubRegImm);
+        .addReg(StateReg, {}, SubRegImm);
     StateReg = NarrowStateReg;
   }
 

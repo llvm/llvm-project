@@ -59,6 +59,8 @@ define void @foo(i8 %v0, i8 %v1, i8 %v2, i8 %v3, <2 x i8> %vec) {
     sandboxir::Action A(nullptr, {Add0}, {}, 0);
     EXPECT_EQ(IMaps.getVectorForOrig(Add0), nullptr);
     EXPECT_EQ(IMaps.getVectorForOrig(Add1), nullptr);
+    EXPECT_FALSE(IMaps.isVectorized(Add0));
+    EXPECT_FALSE(IMaps.isVectorized(Add1));
     EXPECT_FALSE(IMaps.getOrigLane(&A, Add0));
   }
   {
@@ -68,6 +70,8 @@ define void @foo(i8 %v0, i8 %v1, i8 %v2, i8 %v3, <2 x i8> %vec) {
     IMaps.registerVector({Add0, Add1}, &A);
     EXPECT_EQ(IMaps.getVectorForOrig(Add0), &A);
     EXPECT_EQ(IMaps.getVectorForOrig(Add1), &A);
+    EXPECT_TRUE(IMaps.isVectorized(Add0));
+    EXPECT_TRUE(IMaps.getVectorForOrig(Add1));
     EXPECT_FALSE(IMaps.getOrigLane(&A, VAdd0));     // Bad Orig value
     EXPECT_FALSE(IMaps.getOrigLane(&OtherA, Add0)); // Bad Vector value
     EXPECT_EQ(*IMaps.getOrigLane(&A, Add0), 0U);

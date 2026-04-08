@@ -420,9 +420,7 @@ INITIALIZE_PASS_DEPENDENCY(MachineBlockFrequencyInfoWrapperPass);
 INITIALIZE_PASS_END(MachineSchedulerLegacy, DEBUG_TYPE,
                     "Machine Instruction Scheduler", false, false)
 
-MachineSchedulerLegacy::MachineSchedulerLegacy() : MachineFunctionPass(ID) {
-  initializeMachineSchedulerLegacyPass(*PassRegistry::getPassRegistry());
-}
+MachineSchedulerLegacy::MachineSchedulerLegacy() : MachineFunctionPass(ID) {}
 
 void MachineSchedulerLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesCFG();
@@ -451,9 +449,7 @@ INITIALIZE_PASS_END(PostMachineSchedulerLegacy, "postmisched",
                     "PostRA Machine Instruction Scheduler", false, false)
 
 PostMachineSchedulerLegacy::PostMachineSchedulerLegacy()
-    : MachineFunctionPass(ID) {
-  initializePostMachineSchedulerLegacyPass(*PassRegistry::getPassRegistry());
-}
+    : MachineFunctionPass(ID) {}
 
 void PostMachineSchedulerLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesCFG();
@@ -2946,17 +2942,6 @@ unsigned SchedBoundary::countResource(const MCSchedClassDesc *SC, unsigned PIdx,
 
 /// Move the boundary of scheduled code by one SUnit.
 void SchedBoundary::bumpNode(SUnit *SU) {
-  // Update the reservation table.
-  if (HazardRec->isEnabled()) {
-    if (!isTop() && SU->isCall) {
-      // Calls are scheduled with their preceding instructions. For bottom-up
-      // scheduling, clear the pipeline state before emitting.
-      HazardRec->Reset();
-    }
-    HazardRec->EmitInstruction(SU);
-    // Scheduling an instruction may have made pending instructions available.
-    CheckPending = true;
-  }
   // checkHazard should prevent scheduling multiple instructions per cycle that
   // exceed the issue width.
   const MCSchedClassDesc *SC = DAG->getSchedClass(SU);
@@ -3082,6 +3067,18 @@ void SchedBoundary::bumpNode(SUnit *SU) {
     IsResourceLimited =
         checkResourceLimit(SchedModel->getLatencyFactor(), getCriticalCount(),
                            getScheduledLatency(), true);
+
+  // Update the reservation table.
+  if (HazardRec->isEnabled()) {
+    if (!isTop() && SU->isCall) {
+      // Calls are scheduled with their preceding instructions. For bottom-up
+      // scheduling, clear the pipeline state before emitting.
+      HazardRec->Reset();
+    }
+    HazardRec->EmitInstruction(SU);
+    // Scheduling an instruction may have made pending instructions available.
+    CheckPending = true;
+  }
 
   // Update CurrMOps after calling bumpCycle to handle stalls, since bumpCycle
   // resets CurrMOps. Loop to handle instructions with more MOps than issue in
@@ -3258,31 +3255,6 @@ initResourceDelta(const ScheduleDAGMI *DAG,
   }
 }
 
-/// Compute remaining latency. We need this both to determine whether the
-/// overall schedule has become latency-limited and whether the instructions
-/// outside this zone are resource or latency limited.
-///
-/// The "dependent" latency is updated incrementally during scheduling as the
-/// max height/depth of scheduled nodes minus the cycles since it was
-/// scheduled:
-///   DLat = max (N.depth - (CurrCycle - N.ReadyCycle) for N in Zone
-///
-/// The "independent" latency is the max ready queue depth:
-///   ILat = max N.depth for N in Available|Pending
-///
-/// RemainingLatency is the greater of independent and dependent latency.
-///
-/// These computations are expensive, especially in DAGs with many edges, so
-/// only do them if necessary.
-static unsigned computeRemLatency(SchedBoundary &CurrZone) {
-  unsigned RemLatency = CurrZone.getDependentLatency();
-  RemLatency = std::max(RemLatency,
-                        CurrZone.findMaxLatency(CurrZone.Available.elements()));
-  RemLatency = std::max(RemLatency,
-                        CurrZone.findMaxLatency(CurrZone.Pending.elements()));
-  return RemLatency;
-}
-
 /// Returns true if the current cycle plus remaning latency is greater than
 /// the critical path in the scheduling region.
 bool GenericSchedulerBase::shouldReduceLatency(const CandPolicy &Policy,
@@ -3439,6 +3411,31 @@ void GenericSchedulerBase::traceCandidate(const SchedCandidate &Cand) {
   dbgs() << '\n';
 }
 #endif
+
+/// Compute remaining latency. We need this both to determine whether the
+/// overall schedule has become latency-limited and whether the instructions
+/// outside this zone are resource or latency limited.
+///
+/// The "dependent" latency is updated incrementally during scheduling as the
+/// max height/depth of scheduled nodes minus the cycles since it was
+/// scheduled:
+///   DLat = max (N.depth - (CurrCycle - N.ReadyCycle) for N in Zone
+///
+/// The "independent" latency is the max ready queue depth:
+///   ILat = max N.depth for N in Available|Pending
+///
+/// RemainingLatency is the greater of independent and dependent latency.
+///
+/// These computations are expensive, especially in DAGs with many edges, so
+/// only do them if necessary.
+unsigned llvm::computeRemLatency(SchedBoundary &CurrZone) {
+  unsigned RemLatency = CurrZone.getDependentLatency();
+  RemLatency = std::max(RemLatency,
+                        CurrZone.findMaxLatency(CurrZone.Available.elements()));
+  RemLatency = std::max(RemLatency,
+                        CurrZone.findMaxLatency(CurrZone.Pending.elements()));
+  return RemLatency;
+}
 
 /// Return true if this heuristic determines order.
 /// TODO: Consider refactor return type of these functions as integer or enum,

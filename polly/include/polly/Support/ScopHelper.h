@@ -14,6 +14,7 @@
 #define POLLY_SUPPORT_IRHELPER_H
 
 #include "llvm/ADT/SetVector.h"
+#include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/ValueHandle.h"
@@ -37,7 +38,7 @@ class Scop;
 class ScopStmt;
 
 /// Same as llvm/Analysis/ScalarEvolutionExpressions.h
-using LoopToScevMapT = llvm::DenseMap<const llvm::Loop *, const llvm::SCEV *>;
+using LoopToScevMapT = llvm::DenseMap<const llvm::Loop *, llvm::SCEVUse>;
 
 /// Enumeration of assumptions Polly can take.
 enum AssumptionKind {
@@ -396,15 +397,6 @@ llvm::Value *expandCodeFor(Scop &S, llvm::ScalarEvolution &SE,
                            const llvm::SCEV *E, llvm::Type *Ty,
                            llvm::BasicBlock::iterator IP, ValueMapT *VMap,
                            LoopToScevMapT *LoopMap, llvm::BasicBlock *RTCBB);
-
-/// Return the condition for the terminator @p TI.
-///
-/// For unconditional branches the "i1 true" condition will be returned.
-///
-/// @param TI The terminator to get the condition from.
-///
-/// @return The condition of @p TI and nullptr if none could be extracted.
-llvm::Value *getConditionFromTerminator(llvm::Instruction *TI);
 
 /// Get the smallest loop that contains @p S but is not in @p S.
 llvm::Loop *getLoopSurroundingScop(Scop &S, llvm::LoopInfo &LI);

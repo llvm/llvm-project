@@ -1417,9 +1417,14 @@ bool FastISel::selectIntrinsicCall(const IntrinsicInst *II) {
     updateValueMap(II, ResultReg);
     return true;
   }
-  case Intrinsic::fake_use:
-    // At -O0, we don't need fake use, so just ignore it.
+  case Intrinsic::fake_use: {
+    const Value *V = II->getArgOperand(0);
+    if (Register Reg = getRegForValue(V))
+      BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
+              TII.get(TargetOpcode::FAKE_USE))
+          .addReg(Reg);
     return true;
+  }
   case Intrinsic::experimental_stackmap:
     return selectStackmap(II);
   case Intrinsic::experimental_patchpoint_void:
@@ -1779,19 +1784,12 @@ bool FastISel::selectOperator(const User *I, unsigned Opcode) {
   case Instruction::GetElementPtr:
     return selectGetElementPtr(I);
 
-  case Instruction::Br: {
-    const BranchInst *BI = cast<BranchInst>(I);
-
-    if (BI->isUnconditional()) {
-      const BasicBlock *LLVMSucc = BI->getSuccessor(0);
-      MachineBasicBlock *MSucc = FuncInfo.getMBB(LLVMSucc);
-      fastEmitBranch(MSucc, BI->getDebugLoc());
-      return true;
-    }
-
-    // Conditional branches are not handed yet.
-    // Halt "fast" selection and bail.
-    return false;
+  case Instruction::UncondBr: {
+    const UncondBrInst *BI = cast<UncondBrInst>(I);
+    const BasicBlock *LLVMSucc = BI->getSuccessor(0);
+    MachineBasicBlock *MSucc = FuncInfo.getMBB(LLVMSucc);
+    fastEmitBranch(MSucc, BI->getDebugLoc());
+    return true;
   }
 
   case Instruction::Unreachable: {
@@ -2176,7 +2174,8 @@ Register FastISel::fastEmitInst_extractsubreg(MVT RetVT, Register Op0,
   const TargetRegisterClass *RC = MRI.getRegClass(Op0);
   MRI.constrainRegClass(Op0, TRI.getSubClassWithSubReg(RC, Idx));
   BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(TargetOpcode::COPY),
-          ResultReg).addReg(Op0, 0, Idx);
+          ResultReg)
+      .addReg(Op0, {}, Idx);
   return ResultReg;
 }
 

@@ -379,6 +379,13 @@ def RegionBranchOpInterface : OpInterface<"RegionBranchOpInterface"> {
     ::mlir::OperandRange getSuccessorOperands(
         ::mlir::RegionBranchPoint src, ::mlir::RegionSuccessor dest);
 
+    /// Return all successor inputs for the given region successor.
+    ///
+    /// If the "successor" is a region, it will return non-forwarded arguments,
+    /// if it is a "parent", it will return non-forwarded results.
+    ::llvm::SmallVector<Value> getNonSuccessorInputs(
+        ::mlir::RegionSuccessor successor);
+
     /// Build a mapping from successor operands to successor input. Each
     /// successor operand could be forwarded to multiple successor inputs.
     /// Operands that are not forwarded are not added to the map. Unless a
@@ -425,7 +432,11 @@ def RegionBranchTerminatorOpInterface :
         passing them to the region successor indicated by `point`.
       }],
       "::mlir::MutableOperandRange", "getMutableSuccessorOperands",
-      (ins "::mlir::RegionSuccessor":$point)
+      (ins "::mlir::RegionSuccessor":$point),
+      [{}],
+      /*defaultImplementation=*/[{
+        return ::mlir::MutableOperandRange($_op);
+      }]
     >,
     InterfaceMethod<[{
         Returns the potential region successors that are branched to after this
@@ -625,17 +636,6 @@ def WeightedRegionBranchOpInterface
 // Op is "return-like".
 def ReturnLike : TraitList<[
     DeclareOpInterfaceMethods<RegionBranchTerminatorOpInterface>,
-    NativeOpTrait<
-        /*name=*/"ReturnLike",
-        /*traits=*/[],
-        /*extraOpDeclaration=*/"",
-        /*extraOpDefinition=*/[{
-          ::mlir::MutableOperandRange $cppClass::getMutableSuccessorOperands(
-            ::mlir::RegionSuccessor successor) {
-            return ::mlir::MutableOperandRange(*this);
-          }
-        }]
-    >
-]>;
+    NativeOpTrait</*name=*/"ReturnLike">]>;
 
 #endif // MLIR_INTERFACES_CONTROLFLOWINTERFACES

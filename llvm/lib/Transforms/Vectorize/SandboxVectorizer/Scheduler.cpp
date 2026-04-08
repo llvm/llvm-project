@@ -82,7 +82,7 @@ void Scheduler::scheduleAndUpdateReadyList(SchedBundle &Bndl) {
       if (DepN->ready() && !DepN->scheduled())
         ReadyList.insert(DepN);
     }
-    N->setScheduled(true);
+    N->setScheduled();
   }
 }
 
@@ -99,7 +99,7 @@ void Scheduler::notifyCreateInstr(Instruction *I) {
                      *ScheduleTopItOpt != I->getParent()->end() &&
                      (*ScheduleTopItOpt.value()).comesBefore(I);
   if (IsScheduled)
-    N->setScheduled(true);
+    N->setScheduled();
   // If the new instruction is above the top of schedule we need to remove its
   // dependency predecessors from the ready list and increment their
   // `UnscheduledSuccs` counters.

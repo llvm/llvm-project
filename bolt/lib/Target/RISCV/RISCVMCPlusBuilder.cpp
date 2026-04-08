@@ -245,7 +245,7 @@ public:
     Inst.setOpcode(Opcode);
     Inst.clear();
     Inst.addOperand(MCOperand::createExpr(MCSpecifierExpr::create(
-        MCSymbolRefExpr::create(Target, *Ctx), ELF::R_RISCV_CALL_PLT, *Ctx)));
+        MCSymbolRefExpr::create(Target, *Ctx), RISCV::S_CALL_PLT, *Ctx)));
   }
 
   void createCall(MCInst &Inst, const MCSymbol *Target,
@@ -433,7 +433,7 @@ public:
     case ELF::R_RISCV_TLS_GD_HI20:
       // The GOT is reused so no need to create GOT relocations
     case ELF::R_RISCV_PCREL_HI20:
-      return MCSpecifierExpr::create(Expr, ELF::R_RISCV_PCREL_HI20, Ctx);
+      return MCSpecifierExpr::create(Expr, RISCV::S_PCREL_HI, Ctx);
     case ELF::R_RISCV_PCREL_LO12_I:
     case ELF::R_RISCV_PCREL_LO12_S:
       return MCSpecifierExpr::create(Expr, RISCV::S_PCREL_LO, Ctx);
@@ -443,9 +443,9 @@ public:
     case ELF::R_RISCV_LO12_S:
       return MCSpecifierExpr::create(Expr, RISCV::S_LO, Ctx);
     case ELF::R_RISCV_CALL:
-      return MCSpecifierExpr::create(Expr, ELF::R_RISCV_CALL_PLT, Ctx);
+      return MCSpecifierExpr::create(Expr, RISCV::S_CALL_PLT, Ctx);
     case ELF::R_RISCV_CALL_PLT:
-      return MCSpecifierExpr::create(Expr, ELF::R_RISCV_CALL_PLT, Ctx);
+      return MCSpecifierExpr::create(Expr, RISCV::S_CALL_PLT, Ctx);
     }
   }
 
@@ -470,6 +470,7 @@ public:
     switch (cast<MCSpecifierExpr>(ImmExpr)->getSpecifier()) {
     default:
       return false;
+    case RISCV::S_CALL_PLT:
     case ELF::R_RISCV_CALL_PLT:
       return true;
     }
@@ -552,15 +553,12 @@ public:
                .addReg(RegCnt);
   }
 
-  InstructionListType createRegCmpJE(MCPhysReg RegNo, MCPhysReg RegTmp,
-                                     const MCSymbol *Target,
+  InstructionListType createRegCmpJE(MCPhysReg RegNo, const MCSymbol *Target,
                                      MCContext *Ctx) const {
     InstructionListType Insts;
-    Insts.emplace_back(
-        MCInstBuilder(RISCV::SUB).addReg(RegTmp).addReg(RegNo).addReg(RegNo));
     Insts.emplace_back(MCInstBuilder(RISCV::BEQ)
                            .addReg(RegNo)
-                           .addReg(RegTmp)
+                           .addReg(RISCV::X0)
                            .addExpr(MCSymbolRefExpr::create(Target, *Ctx)));
     return Insts;
   }
@@ -712,7 +710,7 @@ public:
     Insts.emplace_back();
     loadReg(Insts.back(), RISCV::X10, RISCV::X10, 0);
     InstructionListType cmpJmp =
-        createRegCmpJE(RISCV::X10, RISCV::X11, IndCallHandler, Ctx);
+        createRegCmpJE(RISCV::X10, IndCallHandler, Ctx);
     Insts.insert(Insts.end(), cmpJmp.begin(), cmpJmp.end());
     Insts.emplace_back();
     createStackPointerIncrement(Insts.back(), 16);
@@ -820,7 +818,7 @@ public:
 
   InstructionListType createInstrumentedIndirectCall(MCInst &&CallInst,
                                                      MCSymbol *HandlerFuncAddr,
-                                                     int CallSiteID,
+                                                     size_t CallSiteID,
                                                      MCContext *Ctx) override {
     // Code sequence used to enter indirect call instrumentation helper:
     //   addi  sp, sp, -0x10

@@ -567,10 +567,10 @@ bb:
 define void @add_v128i8(ptr %x, ptr %y) vscale_range(2,2) {
 ; CHECK-LABEL: add_v128i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vl8r.v v8, (a0)
-; CHECK-NEXT:    vl8r.v v16, (a1)
+; CHECK-NEXT:    vl8r.v v8, (a1)
+; CHECK-NEXT:    vl8r.v v16, (a0)
 ; CHECK-NEXT:    vsetvli a1, zero, e8, m8, ta, ma
-; CHECK-NEXT:    vadd.vv v8, v8, v16
+; CHECK-NEXT:    vadd.vv v8, v16, v8
 ; CHECK-NEXT:    vs8r.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <128 x i8>, ptr %x
@@ -821,10 +821,9 @@ define void @coalesce_vl_clobber(ptr %p) {
 ; CHECK-NEXT:    vsetvli a3, a2, e8, mf8, ta, ma
 ; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    slli a1, a1, 32
-; CHECK-NEXT:    vsetivli zero, 0, e8, mf2, ta, mu
-; CHECK-NEXT:    vmv.v.i v10, 0
+; CHECK-NEXT:    vmv1r.v v10, v9
 ; CHECK-NEXT:    srli a1, a1, 32
-; CHECK-NEXT:    vmerge.vim v10, v10, 1, v0
+; CHECK-NEXT:    vsetivli zero, 0, e8, mf2, ta, mu
 ; CHECK-NEXT:    vslideup.vx v10, v9, a1, v0.t
 ; CHECK-NEXT:    vsetvli zero, zero, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmsne.vi v0, v10, 0, v0.t

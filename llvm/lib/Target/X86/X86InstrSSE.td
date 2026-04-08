@@ -301,9 +301,9 @@ let Predicates = [UseAVX] in {
   // Represent the same patterns above but in the form they appear for
   // 256-bit types
   def : Pat<(v8f32 (X86vzload32 addr:$src)),
-            (SUBREG_TO_REG (i32 0), (VMOVSSrm addr:$src), sub_xmm)>;
+            (SUBREG_TO_REG (VMOVSSrm addr:$src), sub_xmm)>;
   def : Pat<(v4f64 (X86vzload64 addr:$src)),
-            (SUBREG_TO_REG (i32 0), (VMOVSDrm addr:$src), sub_xmm)>;
+            (SUBREG_TO_REG (VMOVSDrm addr:$src), sub_xmm)>;
 }
 
 let Predicates = [UseAVX, OptForSize] in {
@@ -316,11 +316,11 @@ let Predicates = [UseAVX, OptForSize] in {
 
   // Move low f32 and clear high bits.
   def : Pat<(v8f32 (X86vzmovl (v8f32 VR256:$src))),
-            (SUBREG_TO_REG (i32 0),
+            (SUBREG_TO_REG
              (v4f32 (VMOVSSrr (v4f32 (V_SET0)),
               (v4f32 (EXTRACT_SUBREG (v8f32 VR256:$src), sub_xmm)))), sub_xmm)>;
   def : Pat<(v8i32 (X86vzmovl (v8i32 VR256:$src))),
-            (SUBREG_TO_REG (i32 0),
+            (SUBREG_TO_REG
              (v4i32 (VMOVSSrr (v4i32 (V_SET0)),
               (v4i32 (EXTRACT_SUBREG (v8i32 VR256:$src), sub_xmm)))), sub_xmm)>;
 }
@@ -4293,7 +4293,7 @@ let Predicates = [UseAVX] in {
   def : Pat<(v4i32 (X86vzload32 addr:$src)),
             (VMOVDI2PDIrm addr:$src)>;
   def : Pat<(v8i32 (X86vzload32 addr:$src)),
-            (SUBREG_TO_REG (i64 0), (v4i32 (VMOVDI2PDIrm addr:$src)), sub_xmm)>;
+            (SUBREG_TO_REG (v4i32 (VMOVDI2PDIrm addr:$src)), sub_xmm)>;
 }
 
 let Predicates = [UseSSE2] in {
@@ -4373,7 +4373,7 @@ let Predicates = [UseAVX] in {
   def : Pat<(v2i64 (X86vzload64 addr:$src)),
             (VMOVQI2PQIrm addr:$src)>;
   def : Pat<(v4i64 (X86vzload64 addr:$src)),
-            (SUBREG_TO_REG (i64 0), (v2i64 (VMOVQI2PQIrm addr:$src)), sub_xmm)>;
+            (SUBREG_TO_REG (v2i64 (VMOVQI2PQIrm addr:$src)), sub_xmm)>;
 
   def : Pat<(X86vextractstore64 (v2i64 VR128:$src), addr:$dst),
             (VMOVPQI2QImr addr:$dst, VR128:$src)>;
@@ -4412,12 +4412,12 @@ let Predicates = [UseSSE2] in {
 
 let Predicates = [UseAVX] in {
   def : Pat<(v4f64 (X86vzmovl (v4f64 VR256:$src))),
-            (SUBREG_TO_REG (i32 0),
+            (SUBREG_TO_REG
              (v2f64 (VMOVZPQILo2PQIrr
                      (v2f64 (EXTRACT_SUBREG (v4f64 VR256:$src), sub_xmm)))),
              sub_xmm)>;
   def : Pat<(v4i64 (X86vzmovl (v4i64 VR256:$src))),
-            (SUBREG_TO_REG (i32 0),
+            (SUBREG_TO_REG
              (v2i64 (VMOVZPQILo2PQIrr
                      (v2i64 (EXTRACT_SUBREG (v4i64 VR256:$src), sub_xmm)))),
              sub_xmm)>;
@@ -6442,12 +6442,12 @@ let Predicates = [HasAVX, OptForSpeed] in {
 
   // Move low f32 and clear high bits.
   def : Pat<(v8f32 (X86vzmovl (v8f32 VR256:$src))),
-            (SUBREG_TO_REG (i32 0),
+            (SUBREG_TO_REG
              (v4f32 (VBLENDPSrri (v4f32 (V_SET0)),
                           (v4f32 (EXTRACT_SUBREG (v8f32 VR256:$src), sub_xmm)),
                           (i8 1))), sub_xmm)>;
   def : Pat<(v8i32 (X86vzmovl (v8i32 VR256:$src))),
-            (SUBREG_TO_REG (i32 0),
+            (SUBREG_TO_REG
              (v4i32 (VPBLENDWrri (v4i32 (V_SET0)),
                           (v4i32 (EXTRACT_SUBREG (v8i32 VR256:$src), sub_xmm)),
                           (i8 3))), sub_xmm)>;
@@ -6677,9 +6677,25 @@ multiclass SS42AI_pcmpestrm<string asm> {
 
 let Defs = [XMM0, EFLAGS], Uses = [EAX, EDX], hasSideEffects = 0 in {
   let Predicates = [HasAVX] in
-  defm VPCMPESTRM : SS42AI_pcmpestrm<"vpcmpestrm">, VEX, WIG;
+  defm VPCMPESTRM : SS42AI_pcmpestrm<"vpcmpestrm">, VEX;
   defm PCMPESTRM :  SS42AI_pcmpestrm<"pcmpestrm">;
 }
+
+let Defs = [XMM0, EFLAGS], Uses = [RAX, RDX], hasSideEffects = 0 in {
+  let Predicates = [HasAVX, In64BitMode] in
+  defm VPCMPESTRMQ : SS42AI_pcmpestrm<"vpcmpestrmq">, VEX, REX_W;
+  let Predicates = [UseSSE42, In64BitMode] in
+  defm PCMPESTRMQ :  SS42AI_pcmpestrm<"pcmpestrmq">, REX_W;
+}
+
+def : InstAlias<"vpcmpestrm{l}\t{$src5, $src3, $src1|$src1, $src3, $src5}",
+                (VPCMPESTRMrri VR128:$src1, VR128:$src3, u8imm:$src5), 0, "att">;
+def : InstAlias<"vpcmpestrm{l}\t{$src5, $src3, $src1|$src1, $src3, $src5}",
+                (VPCMPESTRMrmi VR128:$src1, i128mem:$src3, u8imm:$src5), 0, "att">;
+def : InstAlias<"pcmpestrm{l}\t{$src5, $src3, $src1|$src1, $src3, $src5}",
+                (PCMPESTRMrri VR128:$src1, VR128:$src3, u8imm:$src5), 0, "att">;
+def : InstAlias<"pcmpestrm{l}\t{$src5, $src3, $src1|$src1, $src3, $src5}",
+                (PCMPESTRMrmi VR128:$src1, i128mem:$src3, u8imm:$src5), 0, "att">;
 
 multiclass SS42AI_pcmpistri<string asm> {
   def rri : SS42AI<0x63, MRMSrcReg, (outs),
@@ -6713,9 +6729,25 @@ multiclass SS42AI_pcmpestri<string asm> {
 
 let Defs = [ECX, EFLAGS], Uses = [EAX, EDX], hasSideEffects = 0 in {
   let Predicates = [HasAVX] in
-  defm VPCMPESTRI : SS42AI_pcmpestri<"vpcmpestri">, VEX, WIG;
+  defm VPCMPESTRI : SS42AI_pcmpestri<"vpcmpestri">, VEX;
   defm PCMPESTRI  : SS42AI_pcmpestri<"pcmpestri">;
 }
+
+let Defs = [ECX, EFLAGS], Uses = [RAX, RDX], hasSideEffects = 0 in {
+  let Predicates = [HasAVX, In64BitMode] in
+  defm VPCMPESTRIQ : SS42AI_pcmpestri<"vpcmpestriq">, VEX, REX_W;
+  let Predicates = [UseSSE42, In64BitMode] in
+  defm PCMPESTRIQ  : SS42AI_pcmpestri<"pcmpestriq">, REX_W;
+}
+
+def : InstAlias<"vpcmpestri{l}\t{$src5, $src3, $src1|$src1, $src3, $src5}",
+                (VPCMPESTRIrri VR128:$src1, VR128:$src3, u8imm:$src5), 0, "att">;
+def : InstAlias<"vpcmpestri{l}\t{$src5, $src3, $src1|$src1, $src3, $src5}",
+                (VPCMPESTRIrmi VR128:$src1, i128mem:$src3, u8imm:$src5), 0, "att">;
+def : InstAlias<"pcmpestri{l}\t{$src5, $src3, $src1|$src1, $src3, $src5}",
+                (PCMPESTRIrri VR128:$src1, VR128:$src3, u8imm:$src5), 0, "att">;
+def : InstAlias<"pcmpestri{l}\t{$src5, $src3, $src1|$src1, $src3, $src5}",
+                (PCMPESTRIrmi VR128:$src1, i128mem:$src3, u8imm:$src5), 0, "att">;
 
 //===----------------------------------------------------------------------===//
 // SSE4.2 - CRC Instructions

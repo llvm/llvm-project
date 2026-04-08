@@ -118,8 +118,10 @@ func.func @for_loop_with_constant_result() -> i1 {
 
 // Test to catch a bug present in some versions of the data flow analysis
 // CHECK-LABEL: func @while_false
-// CHECK: %[[false:.*]] = arith.constant false
-// CHECK: scf.condition(%[[false]])
+// CHECK: %[[divui:.*]] = arith.divui
+// CHECK-NOT: scf.while
+// CHECK-NOT: scf.condition
+// CHECK: return %[[divui]]
 func.func @while_false(%arg0 : index) -> index {
     %c0 = arith.constant 0 : index
     %c1 = arith.constant 1 : index

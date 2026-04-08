@@ -806,10 +806,10 @@ MachineInstr *SIShrinkInstructions::matchSwap(MachineInstr &MovT) const {
         Y1 = getSubRegForIndex(Y, Ysub, I);
         auto *MIB = BuildMI(MBB, MovX->getIterator(), MovT.getDebugLoc(),
                             TII->get(AMDGPU::V_SWAP_B32))
-                        .addDef(X1.Reg, 0, X1.SubReg)
-                        .addDef(Y1.Reg, 0, Y1.SubReg)
-                        .addReg(Y1.Reg, 0, Y1.SubReg)
-                        .addReg(X1.Reg, 0, X1.SubReg)
+                        .addDef(X1.Reg, {}, X1.SubReg)
+                        .addDef(Y1.Reg, {}, Y1.SubReg)
+                        .addReg(Y1.Reg, {}, Y1.SubReg)
+                        .addReg(X1.Reg, {}, X1.SubReg)
                         .getInstr();
         Swaps.push_back(MIB);
       }
@@ -909,9 +909,21 @@ bool SIShrinkInstructions::run(MachineFunction &MF) {
         }
       }
 
+      // Shrink scalar logic operations.
+      if (MI.getOpcode() == AMDGPU::S_AND_B32 ||
+          MI.getOpcode() == AMDGPU::S_OR_B32 ||
+          MI.getOpcode() == AMDGPU::S_XOR_B32) {
+        ChangeKind CK = shrinkScalarLogicOp(MI);
+        if (CK == ChangeKind::UpdateHint)
+          continue;
+        Changed |= (CK == ChangeKind::UpdateInst);
+      }
+
       // Try to use S_ADDK_I32 and S_MULK_I32.
       if (MI.getOpcode() == AMDGPU::S_ADD_I32 ||
-          MI.getOpcode() == AMDGPU::S_MUL_I32) {
+          MI.getOpcode() == AMDGPU::S_MUL_I32 ||
+          (MI.getOpcode() == AMDGPU::S_OR_B32 &&
+           MI.getFlag(MachineInstr::MIFlag::Disjoint))) {
         const MachineOperand *Dest = &MI.getOperand(0);
         MachineOperand *Src0 = &MI.getOperand(1);
         MachineOperand *Src1 = &MI.getOperand(2);
@@ -931,12 +943,11 @@ bool SIShrinkInstructions::run(MachineFunction &MF) {
           MRI->setRegAllocationHint(Src0->getReg(), 0, Dest->getReg());
           continue;
         }
-
         if (Src0->isReg() && Src0->getReg() == Dest->getReg()) {
           if (Src1->isImm() && isKImmOperand(*Src1)) {
-            unsigned Opc = (MI.getOpcode() == AMDGPU::S_ADD_I32) ?
-              AMDGPU::S_ADDK_I32 : AMDGPU::S_MULK_I32;
-
+            unsigned Opc = (MI.getOpcode() == AMDGPU::S_MUL_I32)
+                               ? AMDGPU::S_MULK_I32
+                               : AMDGPU::S_ADDK_I32;
             Src1->setImm(SignExtend64(Src1->getImm(), 32));
             MI.setDesc(TII->get(Opc));
             MI.tieOperands(0, 1);
@@ -972,16 +983,6 @@ bool SIShrinkInstructions::run(MachineFunction &MF) {
         }
 
         continue;
-      }
-
-      // Shrink scalar logic operations.
-      if (MI.getOpcode() == AMDGPU::S_AND_B32 ||
-          MI.getOpcode() == AMDGPU::S_OR_B32 ||
-          MI.getOpcode() == AMDGPU::S_XOR_B32) {
-        ChangeKind CK = shrinkScalarLogicOp(MI);
-        if (CK == ChangeKind::UpdateHint)
-          continue;
-        Changed |= (CK == ChangeKind::UpdateInst);
       }
 
       if (IsPostRA && TII->isMIMG(MI.getOpcode()) &&

@@ -12,7 +12,6 @@
 
 #include <cassert>
 #include <cstddef>
-#include <ffi.h>
 #include <string>
 #include <unordered_map>
 
@@ -30,6 +29,8 @@
 #include "llvm/Frontend/OpenMP/OMPDeviceConstants.h"
 #include "llvm/Frontend/OpenMP/OMPGridValues.h"
 #include "llvm/Support/DynamicLibrary.h"
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/raw_ostream.h"
 
 #if !defined(__BYTE_ORDER__) || !defined(__ORDER_LITTLE_ENDIAN__) ||           \
     !defined(__ORDER_BIG_ENDIAN__)
@@ -81,7 +82,7 @@ struct GenELF64KernelTy : public GenericKernelTy {
                            "invalid function for kernel %s", getName());
 
     // Save the function pointer.
-    Func = (void (*)())Global.getPtr();
+    Func = reinterpret_cast<KernelTy *>(Global.getPtr());
 
     KernelEnvironment.Configuration.ExecMode = OMP_TGT_EXEC_MODE_GENERIC;
     KernelEnvironment.Configuration.MayUseNestedParallelism = /*Unknown=*/2;
@@ -92,27 +93,17 @@ struct GenELF64KernelTy : public GenericKernelTy {
     return Plugin::success();
   }
 
-  /// Launch the kernel using the libffi.
+  /// Launch the kernel using the arguments.
   Error launchImpl(GenericDeviceTy &GenericDevice, uint32_t NumThreads[3],
-                   uint32_t NumBlocks[3], KernelArgsTy &KernelArgs,
-                   KernelLaunchParamsTy LaunchParams,
+                   uint32_t NumBlocks[3], uint32_t DynBlockMemSize,
+                   KernelArgsTy &KernelArgs, KernelLaunchParamsTy LaunchParams,
                    AsyncInfoWrapperTy &AsyncInfoWrapper) const override {
-    // Create a vector of ffi_types, one per argument.
-    SmallVector<ffi_type *, 16> ArgTypes(KernelArgs.NumArgs, &ffi_type_pointer);
-    ffi_type **ArgTypesPtr = (ArgTypes.size()) ? &ArgTypes[0] : nullptr;
-
-    // Prepare the cif structure before running the kernel function.
-    ffi_cif Cif;
-    ffi_status Status = ffi_prep_cif(&Cif, FFI_DEFAULT_ABI, KernelArgs.NumArgs,
-                                     &ffi_type_void, ArgTypesPtr);
-    if (Status != FFI_OK)
-      return Plugin::error(ErrorCode::UNKNOWN, "error in ffi_prep_cif: %d",
-                           Status);
-
-    // Call the kernel function through libffi.
-    long Return;
-    ffi_call(&Cif, Func, &Return, (void **)LaunchParams.Ptrs);
-
+    if (KernelArgs.Version < OMP_KERNEL_ARG_VERSION)
+      return Plugin::error(ErrorCode::UNSUPPORTED,
+                           "Incompatible kernel argument version for plugin");
+    // TODO: The data will need to be copied locally if we ever support
+    //       asynchronous kernel launches in the host interface.
+    Func(LaunchParams.Data);
     return Plugin::success();
   }
 
@@ -125,8 +116,10 @@ struct GenELF64KernelTy : public GenericKernelTy {
   }
 
 private:
+  /// Host kernel arguments are defined as a single, contiguous buffer.
+  using KernelTy = void(void *);
   /// The kernel function to execute.
-  void (*Func)(void);
+  KernelTy *Func;
 };
 
 /// Class implementing the GenELF64 device images properties.
@@ -198,37 +191,30 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
     GenELF64DeviceImageTy *Image = Plugin.allocate<GenELF64DeviceImageTy>();
     new (Image) GenELF64DeviceImageTy(ImageId, *this, std::move(TgtImage));
 
-    // Create a temporary file.
-    char TmpFileName[] = "/tmp/tmpfile_XXXXXX";
-    int TmpFileFd = mkstemp(TmpFileName);
-    if (TmpFileFd == -1)
-      return Plugin::error(ErrorCode::HOST_IO,
-                           "failed to create tmpfile for loading target image");
-
-    // Open the temporary file.
-    FILE *TmpFile = fdopen(TmpFileFd, "wb");
-    if (!TmpFile)
-      return Plugin::error(ErrorCode::HOST_IO,
-                           "failed to open tmpfile %s for loading target image",
-                           TmpFileName);
+    SmallString<128> TmpFileName;
+    int TmpFileFd;
+    if (auto EC = llvm::sys::fs::createTemporaryFile("tmpfile", "tmp",
+                                                     TmpFileFd, TmpFileName))
+      return Plugin::error(
+          ErrorCode::HOST_IO,
+          "failed to create tmpfile for loading target image: %s",
+          EC.message().c_str());
 
     // Write the image into the temporary file.
-    size_t Written = fwrite(Image->getStart(), Image->getSize(), 1, TmpFile);
-    if (Written != 1)
+    llvm::raw_fd_ostream TmpFile(TmpFileFd, /*shouldClose=*/true);
+    TmpFile.write(static_cast<const char *>(Image->getStart()),
+                  Image->getSize());
+    TmpFile.close();
+
+    if (TmpFile.has_error())
       return Plugin::error(ErrorCode::HOST_IO,
                            "failed to write target image to tmpfile %s",
-                           TmpFileName);
-
-    // Close the temporary file.
-    int Ret = fclose(TmpFile);
-    if (Ret)
-      return Plugin::error(ErrorCode::HOST_IO,
-                           "failed to close tmpfile %s with the target image",
-                           TmpFileName);
+                           TmpFileName.c_str());
 
     // Load the temporary file as a dynamic library.
     std::string ErrMsg;
-    DynamicLibrary DynLib = DynamicLibrary::getLibrary(TmpFileName, &ErrMsg);
+    DynamicLibrary DynLib =
+        DynamicLibrary::getLibrary(TmpFileName.c_str(), &ErrMsg);
 
     // Check if the loaded library is valid.
     if (!DynLib.isValid())
@@ -299,10 +285,8 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
   Error dataExchangeImpl(const void *SrcPtr, GenericDeviceTy &DstGenericDevice,
                          void *DstPtr, int64_t Size,
                          AsyncInfoWrapperTy &AsyncInfoWrapper) override {
-    // This function should never be called because the function
-    // GenELF64PluginTy::isDataExchangable() returns false.
-    return Plugin::error(ErrorCode::UNSUPPORTED,
-                         "dataExchangeImpl not supported");
+    std::memcpy(DstPtr, SrcPtr, Size);
+    return Plugin::success();
   }
 
   /// Insert a data fence between previous data operations and the following
@@ -345,8 +329,7 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
 
   /// This plugin does not support interoperability
   Error initAsyncInfoImpl(AsyncInfoWrapperTy &AsyncInfoWrapper) override {
-    return Plugin::error(ErrorCode::UNSUPPORTED,
-                         "initAsyncInfoImpl not supported");
+    return Plugin::success();
   }
 
   Error enqueueHostCallImpl(void (*Callback)(void *), void *UserData,
@@ -377,12 +360,55 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
     return true;
   }
   Error syncEventImpl(void *EventPtr) override { return Plugin::success(); }
+  Expected<float> getEventElapsedTimeImpl(void *StartEventPtr,
+                                          void *EndEventPtr) override {
+    return 0.0f;
+  }
 
   /// Print information about the device.
   Expected<InfoTreeNode> obtainInfoImpl() override {
+    constexpr auto uint32_max = std::numeric_limits<uint32_t>::max();
     InfoTreeNode Info;
     Info.add("Device Type", "Generic-elf-64bit");
+    Info.add("Product Name", "Host", "", DeviceInfo::PRODUCT_NAME);
+    Info.add("Vendor", "Unknown", "", DeviceInfo::VENDOR);
+    Info.add("Vendor ID", 1, "", DeviceInfo::VENDOR_ID);
+    Info.add("Device Name", "Host Offload Device", "", DeviceInfo::NAME);
+    Info.add("Driver Version", "Unknown", "", DeviceInfo::DRIVER_VERSION);
+    Info.add("Number of total EUs", 1, "", DeviceInfo::NUM_COMPUTE_UNITS);
+    Info.add("Max memory clock frequency (MHz)",
+             std::numeric_limits<uintptr_t>::digits, "",
+             DeviceInfo::MEMORY_CLOCK_RATE);
+    Info.add("Max clock frequency (MHz)",
+             std::numeric_limits<uintptr_t>::digits, "",
+             DeviceInfo::MAX_CLOCK_FREQUENCY);
+    Info.add("Memory Address Size", std::numeric_limits<uintptr_t>::digits,
+             "bits", DeviceInfo::ADDRESS_BITS);
+    Info.add("Local memory size (bytes)", 1, "",
+             DeviceInfo::WORK_GROUP_LOCAL_MEM_SIZE);
+    Info.add("Global memory size (bytes)", 1, "", DeviceInfo::GLOBAL_MEM_SIZE);
+    Info.add("Max Memory Allocation Size (bytes)", 1, "",
+             DeviceInfo::MAX_MEM_ALLOC_SIZE);
+    Info.add("Max Group size", 1, "", DeviceInfo::MAX_WORK_GROUP_SIZE);
+    auto &MaxGroupSize =
+        *Info.add("Workgroup Max Size per Dimension", std::monostate{}, "",
+                  DeviceInfo::MAX_WORK_GROUP_SIZE_PER_DIMENSION);
+    MaxGroupSize.add("x", 1);
+    MaxGroupSize.add("y", 1);
+    MaxGroupSize.add("z", 1);
+    Info.add("Maximum Grid Dimensions", uint32_max, "",
+             DeviceInfo::MAX_WORK_SIZE);
+    auto &MaxSize = *Info.add("Grid Size per Dimension", std::monostate{}, "",
+                              DeviceInfo::MAX_WORK_SIZE_PER_DIMENSION);
+    MaxSize.add("x", uint32_max);
+    MaxSize.add("y", uint32_max);
+    MaxSize.add("z", uint32_max);
     return Info;
+  }
+
+  Error getDeviceMemorySize(uint64_t &DSize) override {
+    DSize = 1;
+    return Plugin::success();
   }
 
   /// Getters and setters for stack size and heap size not relevant.
@@ -441,13 +467,8 @@ struct GenELF64PluginTy final : public GenericPluginTy {
   /// This class should not be copied.
   GenELF64PluginTy(const GenELF64PluginTy &) = delete;
   GenELF64PluginTy(GenELF64PluginTy &&) = delete;
-
   /// Initialize the plugin and return the number of devices.
   Expected<int32_t> initImpl() override {
-#ifdef USES_DYNAMIC_FFI
-    if (auto Err = Plugin::check(ffi_init(), "failed to initialize libffi"))
-      return std::move(Err);
-#endif
     ODBG(OLDT_Init) << "GenELF64 plugin detected " << ODBG_IF_LEVEL(2)
                     << NUM_DEVICES << " " << ODBG_RESET_LEVEL() << "devices";
 
@@ -475,12 +496,17 @@ struct GenELF64PluginTy final : public GenericPluginTy {
 
   /// This plugin does not support exchanging data between two devices.
   bool isDataExchangable(int32_t SrcDeviceId, int32_t DstDeviceId) override {
-    return false;
+    return true;
   }
 
   /// All images (ELF-compatible) should be compatible with this plugin.
   Expected<bool> isELFCompatible(uint32_t, StringRef) const override {
+#if _WIN32
+    // Windows does not support ELF binaries, so return false for all images.
+    return false;
+#else
     return true;
+#endif // _WIN32
   }
 
   Triple::ArchType getTripleArch() const override {

@@ -31,6 +31,8 @@
 
 #endif
 
+%%public_api()
+
 __BEGIN_C_DECLS
 
 int *__llvm_libc_errno(void) __NOEXCEPT;

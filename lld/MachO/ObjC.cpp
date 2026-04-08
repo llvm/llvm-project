@@ -264,7 +264,7 @@ void ObjcCategoryChecker::parseCategory(const ConcatInputSection *catIsec) {
 
   auto *classSym = cast<Symbol *>(classReloc->referent);
   if (auto *d = dyn_cast<Defined>(classSym))
-    if (!classMap.count(d))
+    if (!classMap.contains(d))
       parseClass(d);
 
   if (const auto *r = catIsec->getRelocAt(catLayout.classMethodsOffset)) {
@@ -1179,7 +1179,7 @@ void ObjcCategoryMerger::collectAndValidateCategoriesData() {
       assert(categorySym &&
              "Failed to get a valid category at __objc_catlit offset");
 
-      if (nlCategories.count(categorySym))
+      if (nlCategories.contains(categorySym))
         continue;
 
       auto *catBodyIsec = dyn_cast<ConcatInputSection>(categorySym->isec());

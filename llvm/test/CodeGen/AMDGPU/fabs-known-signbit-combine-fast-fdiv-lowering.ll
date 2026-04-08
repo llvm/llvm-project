@@ -314,6 +314,6 @@ declare float @llvm.maximumnum.f32(float, float) #0
 declare float @llvm.minimumnum.f32(float, float) #0
 
 attributes #0 = { nocallback nocreateundeforpoison nofree nosync nounwind speculatable willreturn memory(none) }
-attributes #1 = { "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
+attributes #1 = { denormal_fpenv(float: preservesign) }
 
 !0 = !{float 2.500000e+00}

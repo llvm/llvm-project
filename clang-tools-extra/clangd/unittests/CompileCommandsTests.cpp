@@ -535,13 +535,31 @@ TEST(CommandMangler, StdLatestFlag) {
   EXPECT_THAT(llvm::join(Cmd.CommandLine, " "), HasSubstr("/std:c++latest"));
 }
 
-TEST(CommandMangler, StdLatestFlag_Inference) {
+TEST(CommandMangler, ClangClStdFlags_Inference) {
+  // Check that clang-cl-specific /std: flags are not dropped during inference.
   const auto Mangler = CommandMangler::forTests();
-  tooling::CompileCommand Cmd;
-  Cmd.CommandLine = {"clang-cl", "/std:c++latest", "--", "/Users/foo.cc"};
-  Mangler(Cmd, "/Users/foo.hpp");
-  // Check that the /std:c++latest flag is not dropped during inference
-  EXPECT_THAT(llvm::join(Cmd.CommandLine, " "), HasSubstr("/std:c++latest"));
+
+  {
+    tooling::CompileCommand Cmd;
+    Cmd.CommandLine = {"clang-cl", "/std:c++23preview", "--", "/Users/foo.cc"};
+    Mangler(Cmd, "/Users/foo.hpp");
+    EXPECT_THAT(llvm::join(Cmd.CommandLine, " "),
+                HasSubstr("/std:c++23preview"));
+  }
+
+  {
+    tooling::CompileCommand Cmd;
+    Cmd.CommandLine = {"clang-cl", "/std:clatest", "--", "/Users/foo.c"};
+    Mangler(Cmd, "/Users/foo.h");
+    EXPECT_THAT(llvm::join(Cmd.CommandLine, " "), HasSubstr("/std:clatest"));
+  }
+
+  {
+    tooling::CompileCommand Cmd;
+    Cmd.CommandLine = {"clang-cl", "/std:c++latest", "--", "/Users/foo.cc"};
+    Mangler(Cmd, "/Users/foo.hpp");
+    EXPECT_THAT(llvm::join(Cmd.CommandLine, " "), HasSubstr("/std:c++latest"));
+  }
 }
 
 } // namespace

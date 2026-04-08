@@ -167,11 +167,11 @@ static Type parseAndVerifyType(SPIRVDialect const &dialect,
   if (parser.parseType(type))
     return Type();
 
-  // Allow SPIR-V dialect types
+  // Allow SPIR-V dialect types.
   if (&type.getDialect() == &dialect)
     return type;
 
-  // Check other allowed types
+  // Check other allowed types.
   if (auto t = dyn_cast<FloatType>(type)) {
     // TODO: All float types are allowed for now, but this should be fixed.
   } else if (auto t = dyn_cast<IntegerType>(type)) {
@@ -186,10 +186,21 @@ static Type parseAndVerifyType(SPIRVDialect const &dialect,
       parser.emitError(typeLoc, "only 1-D vector allowed but found ") << t;
       return Type();
     }
+    if (t.getNumElements() < 2) {
+      parser.emitError(typeLoc, "SPIR-V does not allow one-element vectors");
+      return Type();
+    }
     if (t.getNumElements() > 4) {
       parser.emitError(
           typeLoc, "vector length has to be less than or equal to 4 but found ")
           << t.getNumElements();
+      return Type();
+    }
+    if (!isa<ScalarType>(t.getElementType())) {
+      parser.emitError(
+          typeLoc,
+          "vector element type must be a SPIR-V scalar type but found ")
+          << t.getElementType();
       return Type();
     }
   } else if (auto t = dyn_cast<TensorArmType>(type)) {
@@ -763,6 +774,11 @@ static Type parseStructType(SPIRVDialect const &dialect,
     Type memberType;
     if (parser.parseType(memberType))
       return Type();
+    if (!isa<SPIRVType>(memberType)) {
+      parser.emitError(parser.getNameLoc(),
+                       "member type must be a valid SPIR-V type");
+      return Type();
+    }
     memberTypes.push_back(memberType);
 
     if (succeeded(parser.parseOptionalLSquare()))
@@ -845,6 +861,8 @@ Type SPIRVDialect::parseType(DialectAsmParser &parser) const {
     return parseRuntimeArrayType(*this, parser);
   if (keyword == "sampled_image")
     return parseSampledImageType(*this, parser);
+  if (keyword == "sampler")
+    return SamplerType::get(getContext());
   if (keyword == "struct")
     return parseStructType(*this, parser);
   if (keyword == "matrix")
@@ -890,6 +908,8 @@ static void print(ImageType type, DialectAsmPrinter &os) {
 static void print(SampledImageType type, DialectAsmPrinter &os) {
   os << "sampled_image<" << type.getImageType() << ">";
 }
+
+static void print(SamplerType type, DialectAsmPrinter &os) { os << "sampler"; }
 
 static void print(StructType type, DialectAsmPrinter &os) {
   FailureOr<AsmPrinter::CyclicPrintReset> cyclicPrint;
@@ -985,8 +1005,8 @@ static void print(TensorArmType type, DialectAsmPrinter &os) {
 void SPIRVDialect::printType(Type type, DialectAsmPrinter &os) const {
   TypeSwitch<Type>(type)
       .Case<ArrayType, CooperativeMatrixType, PointerType, RuntimeArrayType,
-            ImageType, SampledImageType, StructType, MatrixType, TensorArmType>(
-          [&](auto type) { print(type, os); })
+            ImageType, SampledImageType, SamplerType, StructType, MatrixType,
+            TensorArmType>([&](auto type) { print(type, os); })
       .DefaultUnreachable("Unhandled SPIR-V type");
 }
 
@@ -1023,6 +1043,10 @@ LogicalResult SPIRVDialect::verifyOperationAttribute(Operation *op,
   } else if (symbol == spirv::getTargetEnvAttrName()) {
     if (!isa<spirv::TargetEnvAttr>(attr))
       return op->emitError("'") << symbol << "' must be a spirv::TargetEnvAttr";
+  } else if (symbol == spirv::getLoopControlAttrName()) {
+    if (!isa<spirv::LoopControlAttr>(attr))
+      return op->emitError("'")
+             << symbol << "' must be a spirv::LoopControlAttr";
   } else {
     return op->emitError("found unsupported '")
            << symbol << "' attribute on operation";

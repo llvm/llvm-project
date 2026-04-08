@@ -71,6 +71,8 @@ DisableOption(FirToLlvmIr, "fir-to-llvmir", "FIR to LLVM-IR dialect");
 DisableOption(LlvmIrToLlvm, "llvm", "conversion to LLVM");
 DisableOption(BoxedProcedureRewrite, "boxed-procedure-rewrite",
               "rewrite boxed procedures");
+EnableOption(SafeTrampoline, "safe-trampoline",
+             "W^X compliant runtime trampoline pool");
 
 DisableOption(ExternalNameConversion, "external-name-interop",
               "convert names with external convention");

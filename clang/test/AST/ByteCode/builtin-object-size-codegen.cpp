@@ -15,6 +15,10 @@ void foo() {
   gi = __builtin_object_size(&c->bs[0], 2);
   // CHECK: store i32 16
   gi = __builtin_object_size(&c->bs[0], 3);
+
+  C c2{};
+  // CHECK: store i32 16
+  gi = __builtin_object_size(&c2.bs[0], 1);
 }
 
 
@@ -102,3 +106,19 @@ void test3() {
   gi = __builtin_object_size((B*)&c, 3);
 
 }
+
+struct A { char buf[16]; };
+struct B : A {};
+struct C { int i; B bs[1]; } *c;
+void globalPointer() {
+  int gi;
+  // CHECK: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 true, i1 true, i1 false)
+  gi = __builtin_object_size(&c->bs[0], 2);
+}
+
+void nonPtrParam(C c) {
+  int gi;
+  // CHECK: store i32 16
+  gi = __builtin_object_size(&c.bs[0], 2);
+}
+
