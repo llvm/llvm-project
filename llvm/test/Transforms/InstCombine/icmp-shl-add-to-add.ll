@@ -309,3 +309,50 @@ define i1 @icmp_ugt_shl_nuw_add_nsw_fuzz(i32 %x, i32 %y) {
   %cmp = icmp ugt i32 %shlx, %add
   ret i1 %cmp
 }
+
+; Regression test: (shl nuw X, C1) `icmp` (lshr Y, C2) must NOT fold into
+;   X `icmp` (lshr Y, C1+C2), because lshr is lossy and the low C1 bits of
+;   (lshr Y, C2) may be non-zero.
+;
+; Counterexample: X=1, Y=34, C1=4, C2=1
+;   Correct: (1 << 4) uge (34 >> 1) = 16 uge 17 = false
+;   Buggy:    1       uge (34 >> 5) =  1 uge  1 = true  <-- WRONG
+define i1 @test_uge_shl_nuw_lshr(i64 %x, i64 %y) {
+; CHECK-LABEL: @test_uge_shl_nuw_lshr(
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i64 [[X:%.*]], 4
+; CHECK-NEXT:    [[LSHR:%.*]] = lshr i64 [[Y:%.*]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i64 [[SHL]], [[LSHR]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %shl = shl nuw i64 %x, 4
+  %lshr = lshr i64 %y, 1
+  %cmp = icmp uge i64 %shl, %lshr
+  ret i1 %cmp
+}
+
+define i1 @test_ult_shl_nuw_lshr(i64 %x, i64 %y) {
+; CHECK-LABEL: @test_ult_shl_nuw_lshr(
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i64 [[X:%.*]], 4
+; CHECK-NEXT:    [[LSHR:%.*]] = lshr i64 [[Y:%.*]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[SHL]], [[LSHR]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %shl = shl nuw i64 %x, 4
+  %lshr = lshr i64 %y, 1
+  %cmp = icmp ult i64 %shl, %lshr
+  ret i1 %cmp
+}
+
+; Same pattern with eq predicate: also must not fold.
+define i1 @test_eq_shl_nuw_lshr(i64 %x, i64 %y) {
+; CHECK-LABEL: @test_eq_shl_nuw_lshr(
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i64 [[X:%.*]], 4
+; CHECK-NEXT:    [[LSHR:%.*]] = lshr i64 [[Y:%.*]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[SHL]], [[LSHR]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %shl = shl nuw i64 %x, 4
+  %lshr = lshr i64 %y, 1
+  %cmp = icmp eq i64 %shl, %lshr
+  ret i1 %cmp
+}
