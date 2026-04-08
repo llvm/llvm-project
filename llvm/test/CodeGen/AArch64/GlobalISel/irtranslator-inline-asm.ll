@@ -111,8 +111,8 @@ define i32 @test_specific_register_output_trunc() nounwind ssp {
   ; CHECK: bb.1.entry:
   ; CHECK-NEXT:   INLINEASM &"mov ${0:w}, 7", attdialect, regdef, implicit-def $x0
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x0
-  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
-  ; CHECK-NEXT:   $w0 = COPY [[TRUNC]](s32)
+  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(i32) = G_TRUNC [[COPY]](s64)
+  ; CHECK-NEXT:   $w0 = COPY [[TRUNC]](i32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $w0
 entry:
   %0 = tail call i32 asm "mov ${0:w}, 7", "={x0}"() nounwind
@@ -127,9 +127,9 @@ define zeroext i8 @test_register_output_trunc(ptr %src) nounwind {
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
   ; CHECK-NEXT:   INLINEASM &"mov ${0:w}, 32", attdialect, regdef:GPR32common, def %1
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY %1
-  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[COPY1]](s32)
-  ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[TRUNC]](s8)
-  ; CHECK-NEXT:   $w0 = COPY [[ZEXT]](s32)
+  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(i8) = G_TRUNC [[COPY1]](s32)
+  ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:_(i32) = G_ZEXT [[TRUNC]](i8)
+  ; CHECK-NEXT:   $w0 = COPY [[ZEXT]](i32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $w0
 entry:
   %0 = tail call i8 asm "mov ${0:w}, 32", "=r"() nounwind
@@ -211,9 +211,9 @@ define zeroext i8 @test_input_register(ptr %src) nounwind {
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gpr64common = COPY [[COPY]](p0)
   ; CHECK-NEXT:   INLINEASM &"ldtrb ${0:w}, [$1]", attdialect, regdef:GPR32common, def %1, reguse:GPR64common, [[COPY1]]
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY %1
-  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[COPY2]](s32)
-  ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[TRUNC]](s8)
-  ; CHECK-NEXT:   $w0 = COPY [[ZEXT]](s32)
+  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(i8) = G_TRUNC [[COPY2]](s32)
+  ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:_(i32) = G_ZEXT [[TRUNC]](i8)
+  ; CHECK-NEXT:   $w0 = COPY [[ZEXT]](i32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $w0
 entry:
   %0 = tail call i8 asm "ldtrb ${0:w}, [$1]", "=r,r"(ptr %src) nounwind
@@ -237,14 +237,14 @@ define i32 @test_memory_constraint(ptr %a) nounwind {
 define i16 @test_anyext_input() {
   ; CHECK-LABEL: name: test_anyext_input
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s16) = G_CONSTANT i16 1
-  ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[C]](s16)
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i16) = G_CONSTANT i16 1
+  ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[C]](i16)
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr32common = COPY [[ANYEXT]](s32)
   ; CHECK-NEXT:   INLINEASM &"", sideeffect attdialect, regdef:GPR32common, def %0, reguse:GPR32common, [[COPY]]
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY %0
-  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY1]](s32)
-  ; CHECK-NEXT:   [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[TRUNC]](s16)
-  ; CHECK-NEXT:   $w0 = COPY [[ANYEXT1]](s32)
+  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(i16) = G_TRUNC [[COPY1]](s32)
+  ; CHECK-NEXT:   [[ANYEXT1:%[0-9]+]]:_(i32) = G_ANYEXT [[TRUNC]](i16)
+  ; CHECK-NEXT:   $w0 = COPY [[ANYEXT1]](i32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $w0
   %1 = call i16 asm sideeffect "", "=r,r"(i16 1)
   ret i16 %1
@@ -253,14 +253,14 @@ define i16 @test_anyext_input() {
 define i16 @test_anyext_input_with_matching_constraint() {
   ; CHECK-LABEL: name: test_anyext_input_with_matching_constraint
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s16) = G_CONSTANT i16 1
-  ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[C]](s16)
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i16) = G_CONSTANT i16 1
+  ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[C]](i16)
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr32common = COPY [[ANYEXT]](s32)
   ; CHECK-NEXT:   INLINEASM &"", sideeffect attdialect, regdef:GPR32common, def %0, reguse tiedto:$0, [[COPY]](tied-def 3)
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY %0
-  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY1]](s32)
-  ; CHECK-NEXT:   [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[TRUNC]](s16)
-  ; CHECK-NEXT:   $w0 = COPY [[ANYEXT1]](s32)
+  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(i16) = G_TRUNC [[COPY1]](s32)
+  ; CHECK-NEXT:   [[ANYEXT1:%[0-9]+]]:_(i32) = G_ANYEXT [[TRUNC]](i16)
+  ; CHECK-NEXT:   $w0 = COPY [[ANYEXT1]](i32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $w0
   %1 = call i16 asm sideeffect "", "=r,0"(i16 1)
   ret i16 %1
@@ -284,10 +284,10 @@ define void @test_indirectify_i32_value(i32 %x, i32 %y) {
   ; CHECK: bb.1.entry:
   ; CHECK-NEXT:   liveins: $w0, $w1
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $w0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $w1
   ; CHECK-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0
-  ; CHECK-NEXT:   G_STORE [[COPY]](s32), [[FRAME_INDEX]](p0) :: (store (s32) into %stack.0)
+  ; CHECK-NEXT:   G_STORE [[COPY]](i32), [[FRAME_INDEX]](p0) :: (store (i32) into %stack.0)
   ; CHECK-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.1
   ; CHECK-NEXT:   G_STORE [[COPY1]](s32), [[FRAME_INDEX1]](p0) :: (store (s32) into %stack.1)
   ; CHECK-NEXT:   INLINEASM &"", sideeffect mayload maystore attdialect, mem:m, [[FRAME_INDEX]](p0), mem:m, [[FRAME_INDEX1]](p0)
@@ -300,10 +300,10 @@ entry:
 define void @test_indirectify_i32_constant() {
   ; CHECK-LABEL: name: test_indirectify_i32_constant
   ; CHECK: bb.1.entry:
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 42
-  ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 42
+  ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
   ; CHECK-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0
-  ; CHECK-NEXT:   G_STORE [[C]](s32), [[FRAME_INDEX]](p0) :: (store (s32) into %stack.0)
+  ; CHECK-NEXT:   G_STORE [[C]](i32), [[FRAME_INDEX]](p0) :: (store (i32) into %stack.0)
   ; CHECK-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.1
   ; CHECK-NEXT:   G_STORE [[C1]](s32), [[FRAME_INDEX1]](p0) :: (store (s32) into %stack.1)
   ; CHECK-NEXT:   INLINEASM &"", sideeffect mayload maystore attdialect, mem:m, [[FRAME_INDEX]](p0), mem:m, [[FRAME_INDEX1]](p0)
@@ -318,8 +318,8 @@ define void @test_indirectify_i16_value(i16 %val) {
   ; CHECK: bb.1.entry:
   ; CHECK-NEXT:   liveins: $w0
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $w0
+  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(i16) = G_TRUNC [[COPY]](i32)
   ; CHECK-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0
   ; CHECK-NEXT:   G_STORE [[TRUNC]](s16), [[FRAME_INDEX]](p0) :: (store (s16) into %stack.0)
   ; CHECK-NEXT:   INLINEASM &"", sideeffect mayload maystore attdialect, mem:m, [[FRAME_INDEX]](p0)
@@ -332,7 +332,7 @@ entry:
 define void @test_indirectify_i16_constant() {
   ; CHECK-LABEL: name: test_indirectify_i16_constant
   ; CHECK: bb.1.entry:
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s16) = G_CONSTANT i16 42
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i16) = G_CONSTANT i16 42
   ; CHECK-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0
   ; CHECK-NEXT:   G_STORE [[C]](s16), [[FRAME_INDEX]](p0) :: (store (s16) into %stack.0)
   ; CHECK-NEXT:   INLINEASM &"", sideeffect mayload maystore attdialect, mem:m, [[FRAME_INDEX]](p0)
@@ -347,7 +347,7 @@ define void @test_indirectify_i64_value(i64 %val) {
   ; CHECK: bb.1.entry:
   ; CHECK-NEXT:   liveins: $x0
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x0
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i64) = COPY $x0
   ; CHECK-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0
   ; CHECK-NEXT:   G_STORE [[COPY]](s64), [[FRAME_INDEX]](p0) :: (store (s64) into %stack.0)
   ; CHECK-NEXT:   INLINEASM &"", sideeffect mayload maystore attdialect, mem:m, [[FRAME_INDEX]](p0)
@@ -360,7 +360,7 @@ entry:
 define void @test_indirectify_i64_constant() {
   ; CHECK-LABEL: name: test_indirectify_i64_constant
   ; CHECK: bb.1.entry:
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 42
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 42
   ; CHECK-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0
   ; CHECK-NEXT:   G_STORE [[C]](s64), [[FRAME_INDEX]](p0) :: (store (s64) into %stack.0)
   ; CHECK-NEXT:   INLINEASM &"", sideeffect mayload maystore attdialect, mem:m, [[FRAME_INDEX]](p0)

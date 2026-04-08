@@ -22,11 +22,11 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr64 = COPY $d0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr64sp = COPY [[COPY]]
-    ; CHECK-NEXT: [[LDRQui:%[0-9]+]]:fpr128 = LDRQui [[COPY1]], 0 :: (load (s128))
+    ; CHECK-NEXT: [[LDRQui:%[0-9]+]]:fpr128 = LDRQui [[COPY1]], 0 :: (load (f128))
     ; CHECK-NEXT: $noreg = PATCHABLE_RET [[LDRQui]]
     %1:fpr(p0) = COPY $d0
-    %0:fpr(s128) = G_LOAD %1(p0) :: (load (s128))
-    $noreg = PATCHABLE_RET %0(s128)
+    %0:fpr(f128) = G_LOAD %1(p0) :: (load (f128))
+    $noreg = PATCHABLE_RET %0(f128)
 
 ...
 ---
@@ -231,11 +231,11 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr64 = COPY $d0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr128 = COPY $q0
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gpr64sp = COPY [[COPY]]
-    ; CHECK-NEXT: STRQui [[COPY1]], [[COPY2]], 0 :: (store (s128))
+    ; CHECK-NEXT: STRQui [[COPY1]], [[COPY2]], 0 :: (store (f128))
     ; CHECK-NEXT: $noreg = PATCHABLE_RET
     %1:fpr(p0) = COPY $d0
-    %0:fpr(s128) = COPY $q0
-    G_STORE %0(s128), %1(p0) :: (store (s128))
+    %0:fpr(f128) = COPY $q0
+    G_STORE %0(f128), %1(p0) :: (store (f128))
     $noreg = PATCHABLE_RET
 
 ...
@@ -489,13 +489,13 @@ body:             |
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:fpr32 = COPY $s0
     ; CHECK-NEXT: [[FNMADDSrrr:%[0-9]+]]:fpr32 = nofpexcept FNMADDSrrr [[COPY1]], [[COPY2]], [[COPY]], implicit $fpcr
     ; CHECK-NEXT: $noreg = PATCHABLE_RET [[FNMADDSrrr]]
-    %5:fpr(s32) = COPY $s2
-    %4:fpr(s32) = COPY $s1
-    %3:fpr(s32) = COPY $s0
-    %1:fpr(s32) = G_FNEG %5
-    %0:fpr(s32) = G_FNEG %4
-    %2:fpr(s32) = G_FMA %0, %3, %1
-    $noreg = PATCHABLE_RET %2(s32)
+    %5:fpr(f32) = COPY $s2
+    %4:fpr(f32) = COPY $s1
+    %3:fpr(f32) = COPY $s0
+    %1:fpr(f32) = G_FNEG %5
+    %0:fpr(f32) = G_FNEG %4
+    %2:fpr(f32) = G_FMA %0, %3, %1
+    $noreg = PATCHABLE_RET %2(f32)
 
 ...
 ---
@@ -527,13 +527,13 @@ body:             |
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:fpr64 = COPY $d0
     ; CHECK-NEXT: [[FNMADDDrrr:%[0-9]+]]:fpr64 = nofpexcept FNMADDDrrr [[COPY1]], [[COPY2]], [[COPY]], implicit $fpcr
     ; CHECK-NEXT: $noreg = PATCHABLE_RET [[FNMADDDrrr]]
-    %5:fpr(s64) = COPY $d2
-    %4:fpr(s64) = COPY $d1
-    %3:fpr(s64) = COPY $d0
-    %1:fpr(s64) = G_FNEG %5
-    %0:fpr(s64) = G_FNEG %4
-    %2:fpr(s64) = G_FMA %0, %3, %1
-    $noreg = PATCHABLE_RET %2(s64)
+    %5:fpr(f64) = COPY $d2
+    %4:fpr(f64) = COPY $d1
+    %3:fpr(f64) = COPY $d0
+    %1:fpr(f64) = G_FNEG %5
+    %0:fpr(f64) = G_FNEG %4
+    %2:fpr(f64) = G_FMA %0, %3, %1
+    $noreg = PATCHABLE_RET %2(f64)
 
 ...
 ---
@@ -565,13 +565,13 @@ body:             |
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:fpr32 = COPY $s0
     ; CHECK-NEXT: [[FNMADDSrrr:%[0-9]+]]:fpr32 = nofpexcept FNMADDSrrr [[COPY1]], [[COPY2]], [[COPY]], implicit $fpcr
     ; CHECK-NEXT: $noreg = PATCHABLE_RET [[FNMADDSrrr]]
-    %5:fpr(s32) = COPY $s2
-    %4:fpr(s32) = COPY $s1
-    %3:fpr(s32) = COPY $s0
-    %1:fpr(s32) = G_FNEG %5
-    %0:fpr(s32) = G_FNEG %4
-    %2:fpr(s32) = G_FMA %3, %0, %1
-    $noreg = PATCHABLE_RET %2(s32)
+    %5:fpr(f32) = COPY $s2
+    %4:fpr(f32) = COPY $s1
+    %3:fpr(f32) = COPY $s0
+    %1:fpr(f32) = G_FNEG %5
+    %0:fpr(f32) = G_FNEG %4
+    %2:fpr(f32) = G_FMA %3, %0, %1
+    $noreg = PATCHABLE_RET %2(f32)
 
 ...
 ---
@@ -603,13 +603,13 @@ body:             |
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:fpr64 = COPY $d0
     ; CHECK-NEXT: [[FNMADDDrrr:%[0-9]+]]:fpr64 = nofpexcept FNMADDDrrr [[COPY1]], [[COPY2]], [[COPY]], implicit $fpcr
     ; CHECK-NEXT: $noreg = PATCHABLE_RET [[FNMADDDrrr]]
-    %5:fpr(s64) = COPY $d2
-    %4:fpr(s64) = COPY $d1
-    %3:fpr(s64) = COPY $d0
-    %1:fpr(s64) = G_FNEG %5
-    %0:fpr(s64) = G_FNEG %4
-    %2:fpr(s64) = G_FMA %3, %0, %1
-    $noreg = PATCHABLE_RET %2(s64)
+    %5:fpr(f64) = COPY $d2
+    %4:fpr(f64) = COPY $d1
+    %3:fpr(f64) = COPY $d0
+    %1:fpr(f64) = G_FNEG %5
+    %0:fpr(f64) = G_FNEG %4
+    %2:fpr(f64) = G_FMA %3, %0, %1
+    $noreg = PATCHABLE_RET %2(f64)
 
 ...
 ---
@@ -638,12 +638,12 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr64 = COPY $d0
     ; CHECK-NEXT: [[SADDLv8i8_v8i16_:%[0-9]+]]:fpr128 = SADDLv8i8_v8i16 [[COPY1]], [[COPY]]
     ; CHECK-NEXT: $noreg = PATCHABLE_RET [[SADDLv8i8_v8i16_]]
-    %4:fpr(<8 x s8>) = COPY $d1
-    %3:fpr(<8 x s8>) = COPY $d0
-    %1:fpr(<8 x s16>) = G_SEXT %4(<8 x s8>)
-    %0:fpr(<8 x s16>) = G_SEXT %3(<8 x s8>)
-    %2:fpr(<8 x s16>) = G_ADD %0, %1
-    $noreg = PATCHABLE_RET %2(<8 x s16>)
+    %4:fpr(<8 x i8>) = COPY $d1
+    %3:fpr(<8 x i8>) = COPY $d0
+    %1:fpr(<8 x i16>) = G_SEXT %4(<8 x i8>)
+    %0:fpr(<8 x i16>) = G_SEXT %3(<8 x i8>)
+    %2:fpr(<8 x i16>) = G_ADD %0, %1
+    $noreg = PATCHABLE_RET %2(<8 x i16>)
 
 ...
 ---
@@ -1048,12 +1048,12 @@ body:             |
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:fpr32 = COPY $s0
     ; CHECK-NEXT: [[FMSUBSrrr:%[0-9]+]]:fpr32 = nofpexcept FMSUBSrrr [[COPY]], [[COPY2]], [[COPY1]], implicit $fpcr
     ; CHECK-NEXT: $noreg = PATCHABLE_RET [[FMSUBSrrr]]
-    %4:fpr(s32) = COPY $s2
-    %3:fpr(s32) = COPY $s1
-    %2:fpr(s32) = COPY $s0
-    %0:fpr(s32) = G_FNEG %4
-    %1:fpr(s32) = G_FMA %0, %2, %3
-    $noreg = PATCHABLE_RET %1(s32)
+    %4:fpr(f32) = COPY $s2
+    %3:fpr(f32) = COPY $s1
+    %2:fpr(f32) = COPY $s0
+    %0:fpr(f32) = G_FNEG %4
+    %1:fpr(f32) = G_FMA %0, %2, %3
+    $noreg = PATCHABLE_RET %1(f32)
 
 ...
 ---
@@ -1084,12 +1084,12 @@ body:             |
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:fpr64 = COPY $d0
     ; CHECK-NEXT: [[FMSUBDrrr:%[0-9]+]]:fpr64 = nofpexcept FMSUBDrrr [[COPY]], [[COPY2]], [[COPY1]], implicit $fpcr
     ; CHECK-NEXT: $noreg = PATCHABLE_RET [[FMSUBDrrr]]
-    %4:fpr(s64) = COPY $d2
-    %3:fpr(s64) = COPY $d1
-    %2:fpr(s64) = COPY $d0
-    %0:fpr(s64) = G_FNEG %4
-    %1:fpr(s64) = G_FMA %0, %2, %3
-    $noreg = PATCHABLE_RET %1(s64)
+    %4:fpr(f64) = COPY $d2
+    %3:fpr(f64) = COPY $d1
+    %2:fpr(f64) = COPY $d0
+    %0:fpr(f64) = G_FNEG %4
+    %1:fpr(f64) = G_FMA %0, %2, %3
+    $noreg = PATCHABLE_RET %1(f64)
 
 ...
 ---
@@ -1120,12 +1120,12 @@ body:             |
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:fpr64 = COPY $d0
     ; CHECK-NEXT: [[FMLSv2f32_:%[0-9]+]]:fpr64 = nofpexcept FMLSv2f32 [[COPY1]], [[COPY2]], [[COPY]], implicit $fpcr
     ; CHECK-NEXT: $noreg = PATCHABLE_RET [[FMLSv2f32_]]
-    %4:fpr(<2 x s32>) = COPY $d2
-    %3:fpr(<2 x s32>) = COPY $d1
-    %2:fpr(<2 x s32>) = COPY $d0
-    %0:fpr(<2 x s32>) = G_FNEG %4
-    %1:fpr(<2 x s32>) = G_FMA %0, %2, %3
-    $noreg = PATCHABLE_RET %1(<2 x s32>)
+    %4:fpr(<2 x f32>) = COPY $d2
+    %3:fpr(<2 x f32>) = COPY $d1
+    %2:fpr(<2 x f32>) = COPY $d0
+    %0:fpr(<2 x f32>) = G_FNEG %4
+    %1:fpr(<2 x f32>) = G_FMA %0, %2, %3
+    $noreg = PATCHABLE_RET %1(<2 x f32>)
 
 ...
 ---
@@ -1156,12 +1156,12 @@ body:             |
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:fpr128 = COPY $q0
     ; CHECK-NEXT: [[FMLSv4f32_:%[0-9]+]]:fpr128 = nofpexcept FMLSv4f32 [[COPY1]], [[COPY2]], [[COPY]], implicit $fpcr
     ; CHECK-NEXT: $noreg = PATCHABLE_RET [[FMLSv4f32_]]
-    %4:fpr(<4 x s32>) = COPY $q2
-    %3:fpr(<4 x s32>) = COPY $q1
-    %2:fpr(<4 x s32>) = COPY $q0
-    %0:fpr(<4 x s32>) = G_FNEG %4
-    %1:fpr(<4 x s32>) = G_FMA %0, %2, %3
-    $noreg = PATCHABLE_RET %1(<4 x s32>)
+    %4:fpr(<4 x f32>) = COPY $q2
+    %3:fpr(<4 x f32>) = COPY $q1
+    %2:fpr(<4 x f32>) = COPY $q0
+    %0:fpr(<4 x f32>) = G_FNEG %4
+    %1:fpr(<4 x f32>) = G_FMA %0, %2, %3
+    $noreg = PATCHABLE_RET %1(<4 x f32>)
 
 ...
 ---
@@ -1192,12 +1192,12 @@ body:             |
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:fpr128 = COPY $q0
     ; CHECK-NEXT: [[FMLSv2f64_:%[0-9]+]]:fpr128 = nofpexcept FMLSv2f64 [[COPY1]], [[COPY2]], [[COPY]], implicit $fpcr
     ; CHECK-NEXT: $noreg = PATCHABLE_RET [[FMLSv2f64_]]
-    %4:fpr(<2 x s64>) = COPY $q2
-    %3:fpr(<2 x s64>) = COPY $q1
-    %2:fpr(<2 x s64>) = COPY $q0
-    %0:fpr(<2 x s64>) = G_FNEG %4
-    %1:fpr(<2 x s64>) = G_FMA %0, %2, %3
-    $noreg = PATCHABLE_RET %1(<2 x s64>)
+    %4:fpr(<2 x f64>) = COPY $q2
+    %3:fpr(<2 x f64>) = COPY $q1
+    %2:fpr(<2 x f64>) = COPY $q0
+    %0:fpr(<2 x f64>) = G_FNEG %4
+    %1:fpr(<2 x f64>) = G_FMA %0, %2, %3
+    $noreg = PATCHABLE_RET %1(<2 x f64>)
 
 ...
 ---
@@ -1228,12 +1228,12 @@ body:             |
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:fpr32 = COPY $s0
     ; CHECK-NEXT: [[FMSUBSrrr:%[0-9]+]]:fpr32 = nofpexcept FMSUBSrrr [[COPY2]], [[COPY]], [[COPY1]], implicit $fpcr
     ; CHECK-NEXT: $noreg = PATCHABLE_RET [[FMSUBSrrr]]
-    %4:fpr(s32) = COPY $s2
-    %3:fpr(s32) = COPY $s1
-    %2:fpr(s32) = COPY $s0
-    %0:fpr(s32) = G_FNEG %4
-    %1:fpr(s32) = G_FMA %2, %0, %3
-    $noreg = PATCHABLE_RET %1(s32)
+    %4:fpr(f32) = COPY $s2
+    %3:fpr(f32) = COPY $s1
+    %2:fpr(f32) = COPY $s0
+    %0:fpr(f32) = G_FNEG %4
+    %1:fpr(f32) = G_FMA %2, %0, %3
+    $noreg = PATCHABLE_RET %1(f32)
 
 ...
 ---
@@ -1264,12 +1264,12 @@ body:             |
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:fpr64 = COPY $d0
     ; CHECK-NEXT: [[FMSUBDrrr:%[0-9]+]]:fpr64 = nofpexcept FMSUBDrrr [[COPY2]], [[COPY]], [[COPY1]], implicit $fpcr
     ; CHECK-NEXT: $noreg = PATCHABLE_RET [[FMSUBDrrr]]
-    %4:fpr(s64) = COPY $d2
-    %3:fpr(s64) = COPY $d1
-    %2:fpr(s64) = COPY $d0
-    %0:fpr(s64) = G_FNEG %4
-    %1:fpr(s64) = G_FMA %2, %0, %3
-    $noreg = PATCHABLE_RET %1(s64)
+    %4:fpr(f64) = COPY $d2
+    %3:fpr(f64) = COPY $d1
+    %2:fpr(f64) = COPY $d0
+    %0:fpr(f64) = G_FNEG %4
+    %1:fpr(f64) = G_FMA %2, %0, %3
+    $noreg = PATCHABLE_RET %1(f64)
 
 ...
 ---
@@ -1300,12 +1300,12 @@ body:             |
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:fpr64 = COPY $d0
     ; CHECK-NEXT: [[FMLSv2f32_:%[0-9]+]]:fpr64 = nofpexcept FMLSv2f32 [[COPY1]], [[COPY2]], [[COPY]], implicit $fpcr
     ; CHECK-NEXT: $noreg = PATCHABLE_RET [[FMLSv2f32_]]
-    %4:fpr(<2 x s32>) = COPY $d2
-    %3:fpr(<2 x s32>) = COPY $d1
-    %2:fpr(<2 x s32>) = COPY $d0
-    %0:fpr(<2 x s32>) = G_FNEG %4
-    %1:fpr(<2 x s32>) = G_FMA %2, %0, %3
-    $noreg = PATCHABLE_RET %1(<2 x s32>)
+    %4:fpr(<2 x f32>) = COPY $d2
+    %3:fpr(<2 x f32>) = COPY $d1
+    %2:fpr(<2 x f32>) = COPY $d0
+    %0:fpr(<2 x f32>) = G_FNEG %4
+    %1:fpr(<2 x f32>) = G_FMA %2, %0, %3
+    $noreg = PATCHABLE_RET %1(<2 x f32>)
 
 ...
 ---
@@ -1336,12 +1336,12 @@ body:             |
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:fpr128 = COPY $q0
     ; CHECK-NEXT: [[FMLSv4f32_:%[0-9]+]]:fpr128 = nofpexcept FMLSv4f32 [[COPY1]], [[COPY2]], [[COPY]], implicit $fpcr
     ; CHECK-NEXT: $noreg = PATCHABLE_RET [[FMLSv4f32_]]
-    %4:fpr(<4 x s32>) = COPY $q2
-    %3:fpr(<4 x s32>) = COPY $q1
-    %2:fpr(<4 x s32>) = COPY $q0
-    %0:fpr(<4 x s32>) = G_FNEG %4
-    %1:fpr(<4 x s32>) = G_FMA %2, %0, %3
-    $noreg = PATCHABLE_RET %1(<4 x s32>)
+    %4:fpr(<4 x f32>) = COPY $q2
+    %3:fpr(<4 x f32>) = COPY $q1
+    %2:fpr(<4 x f32>) = COPY $q0
+    %0:fpr(<4 x f32>) = G_FNEG %4
+    %1:fpr(<4 x f32>) = G_FMA %2, %0, %3
+    $noreg = PATCHABLE_RET %1(<4 x f32>)
 
 ...
 ---
@@ -1372,12 +1372,12 @@ body:             |
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:fpr128 = COPY $q0
     ; CHECK-NEXT: [[FMLSv2f64_:%[0-9]+]]:fpr128 = nofpexcept FMLSv2f64 [[COPY1]], [[COPY2]], [[COPY]], implicit $fpcr
     ; CHECK-NEXT: $noreg = PATCHABLE_RET [[FMLSv2f64_]]
-    %4:fpr(<2 x s64>) = COPY $q2
-    %3:fpr(<2 x s64>) = COPY $q1
-    %2:fpr(<2 x s64>) = COPY $q0
-    %0:fpr(<2 x s64>) = G_FNEG %4
-    %1:fpr(<2 x s64>) = G_FMA %2, %0, %3
-    $noreg = PATCHABLE_RET %1(<2 x s64>)
+    %4:fpr(<2 x f64>) = COPY $q2
+    %3:fpr(<2 x f64>) = COPY $q1
+    %2:fpr(<2 x f64>) = COPY $q0
+    %0:fpr(<2 x f64>) = G_FNEG %4
+    %1:fpr(<2 x f64>) = G_FMA %2, %0, %3
+    $noreg = PATCHABLE_RET %1(<2 x f64>)
 
 ...
 ---
@@ -1408,12 +1408,12 @@ body:             |
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:fpr32 = COPY $s0
     ; CHECK-NEXT: [[FNMSUBSrrr:%[0-9]+]]:fpr32 = nofpexcept FNMSUBSrrr [[COPY2]], [[COPY1]], [[COPY]], implicit $fpcr
     ; CHECK-NEXT: $noreg = PATCHABLE_RET [[FNMSUBSrrr]]
-    %4:fpr(s32) = COPY $s2
-    %3:fpr(s32) = COPY $s1
-    %2:fpr(s32) = COPY $s0
-    %0:fpr(s32) = G_FNEG %4
-    %1:fpr(s32) = G_FMA %2, %3, %0
-    $noreg = PATCHABLE_RET %1(s32)
+    %4:fpr(f32) = COPY $s2
+    %3:fpr(f32) = COPY $s1
+    %2:fpr(f32) = COPY $s0
+    %0:fpr(f32) = G_FNEG %4
+    %1:fpr(f32) = G_FMA %2, %3, %0
+    $noreg = PATCHABLE_RET %1(f32)
 
 ...
 ---
@@ -1444,12 +1444,12 @@ body:             |
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:fpr64 = COPY $d0
     ; CHECK-NEXT: [[FNMSUBDrrr:%[0-9]+]]:fpr64 = nofpexcept FNMSUBDrrr [[COPY2]], [[COPY1]], [[COPY]], implicit $fpcr
     ; CHECK-NEXT: $noreg = PATCHABLE_RET [[FNMSUBDrrr]]
-    %4:fpr(s64) = COPY $d2
-    %3:fpr(s64) = COPY $d1
-    %2:fpr(s64) = COPY $d0
-    %0:fpr(s64) = G_FNEG %4
-    %1:fpr(s64) = G_FMA %2, %3, %0
-    $noreg = PATCHABLE_RET %1(s64)
+    %4:fpr(f64) = COPY $d2
+    %3:fpr(f64) = COPY $d1
+    %2:fpr(f64) = COPY $d0
+    %0:fpr(f64) = G_FNEG %4
+    %1:fpr(f64) = G_FMA %2, %3, %0
+    $noreg = PATCHABLE_RET %1(f64)
 
 ...
 ---
@@ -2500,12 +2500,12 @@ body:             |
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:fpr32 = COPY $s0
     ; CHECK-NEXT: [[FNMADDSrrr:%[0-9]+]]:fpr32 = nofpexcept FNMADDSrrr [[COPY2]], [[COPY1]], [[COPY]], implicit $fpcr
     ; CHECK-NEXT: $noreg = PATCHABLE_RET [[FNMADDSrrr]]
-    %4:fpr(s32) = COPY $s2
-    %3:fpr(s32) = COPY $s1
-    %2:fpr(s32) = COPY $s0
-    %0:fpr(s32) = G_FMA %2, %3, %4
-    %1:fpr(s32) = G_FNEG %0
-    $noreg = PATCHABLE_RET %1(s32)
+    %4:fpr(f32) = COPY $s2
+    %3:fpr(f32) = COPY $s1
+    %2:fpr(f32) = COPY $s0
+    %0:fpr(f32) = G_FMA %2, %3, %4
+    %1:fpr(f32) = G_FNEG %0
+    $noreg = PATCHABLE_RET %1(f32)
 
 ...
 ---
@@ -2536,12 +2536,12 @@ body:             |
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:fpr64 = COPY $d0
     ; CHECK-NEXT: [[FNMADDDrrr:%[0-9]+]]:fpr64 = nofpexcept FNMADDDrrr [[COPY2]], [[COPY1]], [[COPY]], implicit $fpcr
     ; CHECK-NEXT: $noreg = PATCHABLE_RET [[FNMADDDrrr]]
-    %4:fpr(s64) = COPY $d2
-    %3:fpr(s64) = COPY $d1
-    %2:fpr(s64) = COPY $d0
-    %0:fpr(s64) = G_FMA %2, %3, %4
-    %1:fpr(s64) = G_FNEG %0
-    $noreg = PATCHABLE_RET %1(s64)
+    %4:fpr(f64) = COPY $d2
+    %3:fpr(f64) = COPY $d1
+    %2:fpr(f64) = COPY $d0
+    %0:fpr(f64) = G_FMA %2, %3, %4
+    %1:fpr(f64) = G_FNEG %0
+    $noreg = PATCHABLE_RET %1(f64)
 
 ...
 ---
@@ -2569,11 +2569,11 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr32 = COPY $s0
     ; CHECK-NEXT: [[FNMULSrr:%[0-9]+]]:fpr32 = nofpexcept FNMULSrr [[COPY1]], [[COPY]], implicit $fpcr
     ; CHECK-NEXT: $noreg = PATCHABLE_RET [[FNMULSrr]]
-    %3:fpr(s32) = COPY $s1
-    %2:fpr(s32) = COPY $s0
-    %0:fpr(s32) = G_FMUL %2, %3
-    %1:fpr(s32) = G_FNEG %0
-    $noreg = PATCHABLE_RET %1(s32)
+    %3:fpr(f32) = COPY $s1
+    %2:fpr(f32) = COPY $s0
+    %0:fpr(f32) = G_FMUL %2, %3
+    %1:fpr(f32) = G_FNEG %0
+    $noreg = PATCHABLE_RET %1(f32)
 
 ...
 ---
@@ -2601,11 +2601,11 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr64 = COPY $d0
     ; CHECK-NEXT: [[FNMULDrr:%[0-9]+]]:fpr64 = nofpexcept FNMULDrr [[COPY1]], [[COPY]], implicit $fpcr
     ; CHECK-NEXT: $noreg = PATCHABLE_RET [[FNMULDrr]]
-    %3:fpr(s64) = COPY $d1
-    %2:fpr(s64) = COPY $d0
-    %0:fpr(s64) = G_FMUL %2, %3
-    %1:fpr(s64) = G_FNEG %0
-    $noreg = PATCHABLE_RET %1(s64)
+    %3:fpr(f64) = COPY $d1
+    %2:fpr(f64) = COPY $d0
+    %0:fpr(f64) = G_FMUL %2, %3
+    %1:fpr(f64) = G_FNEG %0
+    $noreg = PATCHABLE_RET %1(f64)
 
 ...
 ---
@@ -2695,11 +2695,11 @@ body:             |
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:fpr64 = COPY $d0
     ; CHECK-NEXT: [[FMLAv2f32_:%[0-9]+]]:fpr64 = nofpexcept FMLAv2f32 [[COPY]], [[COPY1]], [[COPY2]], implicit $fpcr
     ; CHECK-NEXT: $noreg = PATCHABLE_RET [[FMLAv2f32_]]
-    %3:fpr(<2 x s32>) = COPY $d2
-    %2:fpr(<2 x s32>) = COPY $d1
-    %1:fpr(<2 x s32>) = COPY $d0
-    %0:fpr(<2 x s32>) = G_FMA %1, %2, %3
-    $noreg = PATCHABLE_RET %0(<2 x s32>)
+    %3:fpr(<2 x f32>) = COPY $d2
+    %2:fpr(<2 x f32>) = COPY $d1
+    %1:fpr(<2 x f32>) = COPY $d0
+    %0:fpr(<2 x f32>) = G_FMA %1, %2, %3
+    $noreg = PATCHABLE_RET %0(<2 x f32>)
 
 ...
 ---
@@ -2729,11 +2729,11 @@ body:             |
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:fpr128 = COPY $q0
     ; CHECK-NEXT: [[FMLAv4f32_:%[0-9]+]]:fpr128 = nofpexcept FMLAv4f32 [[COPY]], [[COPY1]], [[COPY2]], implicit $fpcr
     ; CHECK-NEXT: $noreg = PATCHABLE_RET [[FMLAv4f32_]]
-    %3:fpr(<4 x s32>) = COPY $q2
-    %2:fpr(<4 x s32>) = COPY $q1
-    %1:fpr(<4 x s32>) = COPY $q0
-    %0:fpr(<4 x s32>) = G_FMA %1, %2, %3
-    $noreg = PATCHABLE_RET %0(<4 x s32>)
+    %3:fpr(<4 x f32>) = COPY $q2
+    %2:fpr(<4 x f32>) = COPY $q1
+    %1:fpr(<4 x f32>) = COPY $q0
+    %0:fpr(<4 x f32>) = G_FMA %1, %2, %3
+    $noreg = PATCHABLE_RET %0(<4 x f32>)
 
 ...
 ---
@@ -2763,11 +2763,11 @@ body:             |
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:fpr128 = COPY $q0
     ; CHECK-NEXT: [[FMLAv2f64_:%[0-9]+]]:fpr128 = nofpexcept FMLAv2f64 [[COPY]], [[COPY1]], [[COPY2]], implicit $fpcr
     ; CHECK-NEXT: $noreg = PATCHABLE_RET [[FMLAv2f64_]]
-    %3:fpr(<2 x s64>) = COPY $q2
-    %2:fpr(<2 x s64>) = COPY $q1
-    %1:fpr(<2 x s64>) = COPY $q0
-    %0:fpr(<2 x s64>) = G_FMA %1, %2, %3
-    $noreg = PATCHABLE_RET %0(<2 x s64>)
+    %3:fpr(<2 x f64>) = COPY $q2
+    %2:fpr(<2 x f64>) = COPY $q1
+    %1:fpr(<2 x f64>) = COPY $q0
+    %0:fpr(<2 x f64>) = G_FMA %1, %2, %3
+    $noreg = PATCHABLE_RET %0(<2 x f64>)
 
 ...
 ---
@@ -3034,10 +3034,10 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr64 = COPY $d0
     ; CHECK-NEXT: [[FADDv2f32_:%[0-9]+]]:fpr64 = nofpexcept FADDv2f32 [[COPY1]], [[COPY]], implicit $fpcr
     ; CHECK-NEXT: $noreg = PATCHABLE_RET [[FADDv2f32_]]
-    %2:fpr(<2 x s32>) = COPY $d1
-    %1:fpr(<2 x s32>) = COPY $d0
-    %0:fpr(<2 x s32>) = G_FADD %1, %2
-    $noreg = PATCHABLE_RET %0(<2 x s32>)
+    %2:fpr(<2 x f32>) = COPY $d1
+    %1:fpr(<2 x f32>) = COPY $d0
+    %0:fpr(<2 x f32>) = G_FADD %1, %2
+    $noreg = PATCHABLE_RET %0(<2 x f32>)
 
 ...
 ---
@@ -3064,10 +3064,10 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr128 = COPY $q0
     ; CHECK-NEXT: [[FADDv4f32_:%[0-9]+]]:fpr128 = nofpexcept FADDv4f32 [[COPY1]], [[COPY]], implicit $fpcr
     ; CHECK-NEXT: $noreg = PATCHABLE_RET [[FADDv4f32_]]
-    %2:fpr(<4 x s32>) = COPY $q1
-    %1:fpr(<4 x s32>) = COPY $q0
-    %0:fpr(<4 x s32>) = G_FADD %1, %2
-    $noreg = PATCHABLE_RET %0(<4 x s32>)
+    %2:fpr(<4 x f32>) = COPY $q1
+    %1:fpr(<4 x f32>) = COPY $q0
+    %0:fpr(<4 x f32>) = G_FADD %1, %2
+    $noreg = PATCHABLE_RET %0(<4 x f32>)
 
 ...
 ---
@@ -3094,10 +3094,10 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr128 = COPY $q0
     ; CHECK-NEXT: [[FADDv2f64_:%[0-9]+]]:fpr128 = nofpexcept FADDv2f64 [[COPY1]], [[COPY]], implicit $fpcr
     ; CHECK-NEXT: $noreg = PATCHABLE_RET [[FADDv2f64_]]
-    %2:fpr(<2 x s64>) = COPY $q1
-    %1:fpr(<2 x s64>) = COPY $q0
-    %0:fpr(<2 x s64>) = G_FADD %1, %2
-    $noreg = PATCHABLE_RET %0(<2 x s64>)
+    %2:fpr(<2 x f64>) = COPY $q1
+    %1:fpr(<2 x f64>) = COPY $q0
+    %0:fpr(<2 x f64>) = G_FADD %1, %2
+    $noreg = PATCHABLE_RET %0(<2 x f64>)
 
 ...
 ---
@@ -3124,10 +3124,10 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr64 = COPY $d0
     ; CHECK-NEXT: [[FDIVv2f32_:%[0-9]+]]:fpr64 = nofpexcept FDIVv2f32 [[COPY1]], [[COPY]], implicit $fpcr
     ; CHECK-NEXT: $noreg = PATCHABLE_RET [[FDIVv2f32_]]
-    %2:fpr(<2 x s32>) = COPY $d1
-    %1:fpr(<2 x s32>) = COPY $d0
-    %0:fpr(<2 x s32>) = G_FDIV %1, %2
-    $noreg = PATCHABLE_RET %0(<2 x s32>)
+    %2:fpr(<2 x f32>) = COPY $d1
+    %1:fpr(<2 x f32>) = COPY $d0
+    %0:fpr(<2 x f32>) = G_FDIV %1, %2
+    $noreg = PATCHABLE_RET %0(<2 x f32>)
 
 ...
 ---
@@ -3154,10 +3154,10 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr128 = COPY $q0
     ; CHECK-NEXT: [[FDIVv4f32_:%[0-9]+]]:fpr128 = nofpexcept FDIVv4f32 [[COPY1]], [[COPY]], implicit $fpcr
     ; CHECK-NEXT: $noreg = PATCHABLE_RET [[FDIVv4f32_]]
-    %2:fpr(<4 x s32>) = COPY $q1
-    %1:fpr(<4 x s32>) = COPY $q0
-    %0:fpr(<4 x s32>) = G_FDIV %1, %2
-    $noreg = PATCHABLE_RET %0(<4 x s32>)
+    %2:fpr(<4 x f32>) = COPY $q1
+    %1:fpr(<4 x f32>) = COPY $q0
+    %0:fpr(<4 x f32>) = G_FDIV %1, %2
+    $noreg = PATCHABLE_RET %0(<4 x f32>)
 
 ...
 ---
@@ -3184,10 +3184,10 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr128 = COPY $q0
     ; CHECK-NEXT: [[FDIVv2f64_:%[0-9]+]]:fpr128 = nofpexcept FDIVv2f64 [[COPY1]], [[COPY]], implicit $fpcr
     ; CHECK-NEXT: $noreg = PATCHABLE_RET [[FDIVv2f64_]]
-    %2:fpr(<2 x s64>) = COPY $q1
-    %1:fpr(<2 x s64>) = COPY $q0
-    %0:fpr(<2 x s64>) = G_FDIV %1, %2
-    $noreg = PATCHABLE_RET %0(<2 x s64>)
+    %2:fpr(<2 x f64>) = COPY $q1
+    %1:fpr(<2 x f64>) = COPY $q0
+    %0:fpr(<2 x f64>) = G_FDIV %1, %2
+    $noreg = PATCHABLE_RET %0(<2 x f64>)
 
 ...
 ---
@@ -3214,10 +3214,10 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr64 = COPY $d0
     ; CHECK-NEXT: [[FMULv2f32_:%[0-9]+]]:fpr64 = nofpexcept FMULv2f32 [[COPY1]], [[COPY]], implicit $fpcr
     ; CHECK-NEXT: $noreg = PATCHABLE_RET [[FMULv2f32_]]
-    %2:fpr(<2 x s32>) = COPY $d1
-    %1:fpr(<2 x s32>) = COPY $d0
-    %0:fpr(<2 x s32>) = G_FMUL %1, %2
-    $noreg = PATCHABLE_RET %0(<2 x s32>)
+    %2:fpr(<2 x f32>) = COPY $d1
+    %1:fpr(<2 x f32>) = COPY $d0
+    %0:fpr(<2 x f32>) = G_FMUL %1, %2
+    $noreg = PATCHABLE_RET %0(<2 x f32>)
 
 ...
 ---
@@ -3244,10 +3244,10 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr128 = COPY $q0
     ; CHECK-NEXT: [[FMULv4f32_:%[0-9]+]]:fpr128 = nofpexcept FMULv4f32 [[COPY1]], [[COPY]], implicit $fpcr
     ; CHECK-NEXT: $noreg = PATCHABLE_RET [[FMULv4f32_]]
-    %2:fpr(<4 x s32>) = COPY $q1
-    %1:fpr(<4 x s32>) = COPY $q0
-    %0:fpr(<4 x s32>) = G_FMUL %1, %2
-    $noreg = PATCHABLE_RET %0(<4 x s32>)
+    %2:fpr(<4 x f32>) = COPY $q1
+    %1:fpr(<4 x f32>) = COPY $q0
+    %0:fpr(<4 x f32>) = G_FMUL %1, %2
+    $noreg = PATCHABLE_RET %0(<4 x f32>)
 
 ...
 ---
@@ -3274,10 +3274,10 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr128 = COPY $q0
     ; CHECK-NEXT: [[FMULv2f64_:%[0-9]+]]:fpr128 = nofpexcept FMULv2f64 [[COPY1]], [[COPY]], implicit $fpcr
     ; CHECK-NEXT: $noreg = PATCHABLE_RET [[FMULv2f64_]]
-    %2:fpr(<2 x s64>) = COPY $q1
-    %1:fpr(<2 x s64>) = COPY $q0
-    %0:fpr(<2 x s64>) = G_FMUL %1, %2
-    $noreg = PATCHABLE_RET %0(<2 x s64>)
+    %2:fpr(<2 x f64>) = COPY $q1
+    %1:fpr(<2 x f64>) = COPY $q0
+    %0:fpr(<2 x f64>) = G_FMUL %1, %2
+    $noreg = PATCHABLE_RET %0(<2 x f64>)
 
 ...
 ---
@@ -3304,10 +3304,10 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr64 = COPY $d0
     ; CHECK-NEXT: [[FSUBv2f32_:%[0-9]+]]:fpr64 = nofpexcept FSUBv2f32 [[COPY1]], [[COPY]], implicit $fpcr
     ; CHECK-NEXT: $noreg = PATCHABLE_RET [[FSUBv2f32_]]
-    %2:fpr(<2 x s32>) = COPY $d1
-    %1:fpr(<2 x s32>) = COPY $d0
-    %0:fpr(<2 x s32>) = G_FSUB %1, %2
-    $noreg = PATCHABLE_RET %0(<2 x s32>)
+    %2:fpr(<2 x f32>) = COPY $d1
+    %1:fpr(<2 x f32>) = COPY $d0
+    %0:fpr(<2 x f32>) = G_FSUB %1, %2
+    $noreg = PATCHABLE_RET %0(<2 x f32>)
 
 ...
 ---
@@ -3334,10 +3334,10 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr128 = COPY $q0
     ; CHECK-NEXT: [[FSUBv4f32_:%[0-9]+]]:fpr128 = nofpexcept FSUBv4f32 [[COPY1]], [[COPY]], implicit $fpcr
     ; CHECK-NEXT: $noreg = PATCHABLE_RET [[FSUBv4f32_]]
-    %2:fpr(<4 x s32>) = COPY $q1
-    %1:fpr(<4 x s32>) = COPY $q0
-    %0:fpr(<4 x s32>) = G_FSUB %1, %2
-    $noreg = PATCHABLE_RET %0(<4 x s32>)
+    %2:fpr(<4 x f32>) = COPY $q1
+    %1:fpr(<4 x f32>) = COPY $q0
+    %0:fpr(<4 x f32>) = G_FSUB %1, %2
+    $noreg = PATCHABLE_RET %0(<4 x f32>)
 
 ...
 ---
@@ -3364,10 +3364,10 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr128 = COPY $q0
     ; CHECK-NEXT: [[FSUBv2f64_:%[0-9]+]]:fpr128 = nofpexcept FSUBv2f64 [[COPY1]], [[COPY]], implicit $fpcr
     ; CHECK-NEXT: $noreg = PATCHABLE_RET [[FSUBv2f64_]]
-    %2:fpr(<2 x s64>) = COPY $q1
-    %1:fpr(<2 x s64>) = COPY $q0
-    %0:fpr(<2 x s64>) = G_FSUB %1, %2
-    $noreg = PATCHABLE_RET %0(<2 x s64>)
+    %2:fpr(<2 x f64>) = COPY $q1
+    %1:fpr(<2 x f64>) = COPY $q0
+    %0:fpr(<2 x f64>) = G_FSUB %1, %2
+    $noreg = PATCHABLE_RET %0(<2 x f64>)
 
 ...
 ---
@@ -3949,9 +3949,9 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr32 = COPY $s0
     ; CHECK-NEXT: [[FNEGSr:%[0-9]+]]:fpr32 = FNEGSr [[COPY]]
     ; CHECK-NEXT: $noreg = PATCHABLE_RET [[FNEGSr]]
-    %1:fpr(s32) = COPY $s0
-    %0:fpr(s32) = G_FNEG %1
-    $noreg = PATCHABLE_RET %0(s32)
+    %1:fpr(f32) = COPY $s0
+    %0:fpr(f32) = G_FNEG %1
+    $noreg = PATCHABLE_RET %0(f32)
 
 ...
 ---
@@ -3975,9 +3975,9 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr64 = COPY $d0
     ; CHECK-NEXT: [[FNEGDr:%[0-9]+]]:fpr64 = FNEGDr [[COPY]]
     ; CHECK-NEXT: $noreg = PATCHABLE_RET [[FNEGDr]]
-    %1:fpr(s64) = COPY $d0
-    %0:fpr(s64) = G_FNEG %1
-    $noreg = PATCHABLE_RET %0(s64)
+    %1:fpr(f64) = COPY $d0
+    %0:fpr(f64) = G_FNEG %1
+    $noreg = PATCHABLE_RET %0(f64)
 
 ...
 ---
@@ -4001,9 +4001,9 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr64 = COPY $d0
     ; CHECK-NEXT: [[FNEGv2f32_:%[0-9]+]]:fpr64 = FNEGv2f32 [[COPY]]
     ; CHECK-NEXT: $noreg = PATCHABLE_RET [[FNEGv2f32_]]
-    %1:fpr(<2 x s32>) = COPY $d0
-    %0:fpr(<2 x s32>) = G_FNEG %1
-    $noreg = PATCHABLE_RET %0(<2 x s32>)
+    %1:fpr(<2 x f32>) = COPY $d0
+    %0:fpr(<2 x f32>) = G_FNEG %1
+    $noreg = PATCHABLE_RET %0(<2 x f32>)
 
 ...
 ---
@@ -4027,9 +4027,9 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr128 = COPY $q0
     ; CHECK-NEXT: [[FNEGv4f32_:%[0-9]+]]:fpr128 = FNEGv4f32 [[COPY]]
     ; CHECK-NEXT: $noreg = PATCHABLE_RET [[FNEGv4f32_]]
-    %1:fpr(<4 x s32>) = COPY $q0
-    %0:fpr(<4 x s32>) = G_FNEG %1
-    $noreg = PATCHABLE_RET %0(<4 x s32>)
+    %1:fpr(<4 x f32>) = COPY $q0
+    %0:fpr(<4 x f32>) = G_FNEG %1
+    $noreg = PATCHABLE_RET %0(<4 x f32>)
 
 ...
 ---
@@ -4053,9 +4053,9 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr128 = COPY $q0
     ; CHECK-NEXT: [[FNEGv2f64_:%[0-9]+]]:fpr128 = FNEGv2f64 [[COPY]]
     ; CHECK-NEXT: $noreg = PATCHABLE_RET [[FNEGv2f64_]]
-    %1:fpr(<2 x s64>) = COPY $q0
-    %0:fpr(<2 x s64>) = G_FNEG %1
-    $noreg = PATCHABLE_RET %0(<2 x s64>)
+    %1:fpr(<2 x f64>) = COPY $q0
+    %0:fpr(<2 x f64>) = G_FNEG %1
+    $noreg = PATCHABLE_RET %0(<2 x f64>)
 
 ...
 ---
@@ -4079,9 +4079,9 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr64 = COPY $d0
     ; CHECK-NEXT: [[FCVTLv2i32_:%[0-9]+]]:fpr128 = nofpexcept FCVTLv2i32 [[COPY]], implicit $fpcr
     ; CHECK-NEXT: $noreg = PATCHABLE_RET [[FCVTLv2i32_]]
-    %1:fpr(<2 x s32>) = COPY $d0
-    %0:fpr(<2 x s64>) = G_FPEXT %1(<2 x s32>)
-    $noreg = PATCHABLE_RET %0(<2 x s64>)
+    %1:fpr(<2 x f32>) = COPY $d0
+    %0:fpr(<2 x f64>) = G_FPEXT %1(<2 x f32>)
+    $noreg = PATCHABLE_RET %0(<2 x f64>)
 
 ...
 ---
@@ -4105,9 +4105,9 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr64 = COPY $d0
     ; CHECK-NEXT: [[FCVTLv4i16_:%[0-9]+]]:fpr128 = nofpexcept FCVTLv4i16 [[COPY]], implicit $fpcr
     ; CHECK-NEXT: $noreg = PATCHABLE_RET [[FCVTLv4i16_]]
-    %1:fpr(<4 x s16>) = COPY $d0
-    %0:fpr(<4 x s32>) = G_FPEXT %1(<4 x s16>)
-    $noreg = PATCHABLE_RET %0(<4 x s32>)
+    %1:fpr(<4 x f16>) = COPY $d0
+    %0:fpr(<4 x f32>) = G_FPEXT %1(<4 x f16>)
+    $noreg = PATCHABLE_RET %0(<4 x f32>)
 
 ...
 ---
@@ -4131,9 +4131,9 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr64 = COPY $d0
     ; CHECK-NEXT: [[FCVTZSv2f32_:%[0-9]+]]:fpr64 = nofpexcept FCVTZSv2f32 [[COPY]], implicit $fpcr
     ; CHECK-NEXT: $noreg = PATCHABLE_RET [[FCVTZSv2f32_]]
-    %1:fpr(<2 x s32>) = COPY $d0
-    %0:fpr(<2 x s32>) = G_FPTOSI %1(<2 x s32>)
-    $noreg = PATCHABLE_RET %0(<2 x s32>)
+    %1:fpr(<2 x f32>) = COPY $d0
+    %0:fpr(<2 x i32>) = G_FPTOSI %1(<2 x f32>)
+    $noreg = PATCHABLE_RET %0(<2 x i32>)
 
 ...
 ---
@@ -4157,9 +4157,9 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr128 = COPY $q0
     ; CHECK-NEXT: [[FCVTZSv4f32_:%[0-9]+]]:fpr128 = nofpexcept FCVTZSv4f32 [[COPY]], implicit $fpcr
     ; CHECK-NEXT: $noreg = PATCHABLE_RET [[FCVTZSv4f32_]]
-    %1:fpr(<4 x s32>) = COPY $q0
-    %0:fpr(<4 x s32>) = G_FPTOSI %1(<4 x s32>)
-    $noreg = PATCHABLE_RET %0(<4 x s32>)
+    %1:fpr(<4 x f32>) = COPY $q0
+    %0:fpr(<4 x i32>) = G_FPTOSI %1(<4 x f32>)
+    $noreg = PATCHABLE_RET %0(<4 x i32>)
 
 ...
 ---
@@ -4183,9 +4183,9 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr128 = COPY $q0
     ; CHECK-NEXT: [[FCVTZSv2f64_:%[0-9]+]]:fpr128 = nofpexcept FCVTZSv2f64 [[COPY]], implicit $fpcr
     ; CHECK-NEXT: $noreg = PATCHABLE_RET [[FCVTZSv2f64_]]
-    %1:fpr(<2 x s64>) = COPY $q0
-    %0:fpr(<2 x s64>) = G_FPTOSI %1(<2 x s64>)
-    $noreg = PATCHABLE_RET %0(<2 x s64>)
+    %1:fpr(<2 x f64>) = COPY $q0
+    %0:fpr(<2 x i64>) = G_FPTOSI %1(<2 x f64>)
+    $noreg = PATCHABLE_RET %0(<2 x i64>)
 
 ...
 ---
@@ -4209,9 +4209,9 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr64 = COPY $d0
     ; CHECK-NEXT: [[FCVTZUv2f32_:%[0-9]+]]:fpr64 = nofpexcept FCVTZUv2f32 [[COPY]], implicit $fpcr
     ; CHECK-NEXT: $noreg = PATCHABLE_RET [[FCVTZUv2f32_]]
-    %1:fpr(<2 x s32>) = COPY $d0
-    %0:fpr(<2 x s32>) = G_FPTOUI %1(<2 x s32>)
-    $noreg = PATCHABLE_RET %0(<2 x s32>)
+    %1:fpr(<2 x f32>) = COPY $d0
+    %0:fpr(<2 x i32>) = G_FPTOUI %1(<2 x f32>)
+    $noreg = PATCHABLE_RET %0(<2 x i32>)
 
 ...
 ---
@@ -4235,9 +4235,9 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr128 = COPY $q0
     ; CHECK-NEXT: [[FCVTZUv4f32_:%[0-9]+]]:fpr128 = nofpexcept FCVTZUv4f32 [[COPY]], implicit $fpcr
     ; CHECK-NEXT: $noreg = PATCHABLE_RET [[FCVTZUv4f32_]]
-    %1:fpr(<4 x s32>) = COPY $q0
-    %0:fpr(<4 x s32>) = G_FPTOUI %1(<4 x s32>)
-    $noreg = PATCHABLE_RET %0(<4 x s32>)
+    %1:fpr(<4 x f32>) = COPY $q0
+    %0:fpr(<4 x i32>) = G_FPTOUI %1(<4 x f32>)
+    $noreg = PATCHABLE_RET %0(<4 x i32>)
 
 ...
 ---
@@ -4261,9 +4261,9 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr128 = COPY $q0
     ; CHECK-NEXT: [[FCVTZUv2f64_:%[0-9]+]]:fpr128 = nofpexcept FCVTZUv2f64 [[COPY]], implicit $fpcr
     ; CHECK-NEXT: $noreg = PATCHABLE_RET [[FCVTZUv2f64_]]
-    %1:fpr(<2 x s64>) = COPY $q0
-    %0:fpr(<2 x s64>) = G_FPTOUI %1(<2 x s64>)
-    $noreg = PATCHABLE_RET %0(<2 x s64>)
+    %1:fpr(<2 x f64>) = COPY $q0
+    %0:fpr(<2 x i64>) = G_FPTOUI %1(<2 x f64>)
+    $noreg = PATCHABLE_RET %0(<2 x i64>)
 
 ...
 ---
@@ -4287,9 +4287,9 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr128 = COPY $q0
     ; CHECK-NEXT: [[FCVTNv2i32_:%[0-9]+]]:fpr64 = nofpexcept FCVTNv2i32 [[COPY]], implicit $fpcr
     ; CHECK-NEXT: $noreg = PATCHABLE_RET [[FCVTNv2i32_]]
-    %1:fpr(<2 x s64>) = COPY $q0
-    %0:fpr(<2 x s32>) = G_FPTRUNC %1(<2 x s64>)
-    $noreg = PATCHABLE_RET %0(<2 x s32>)
+    %1:fpr(<2 x f64>) = COPY $q0
+    %0:fpr(<2 x f32>) = G_FPTRUNC %1(<2 x f64>)
+    $noreg = PATCHABLE_RET %0(<2 x f32>)
 
 ...
 ---
@@ -4313,9 +4313,9 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr128 = COPY $q0
     ; CHECK-NEXT: [[FCVTNv4i16_:%[0-9]+]]:fpr64 = nofpexcept FCVTNv4i16 [[COPY]], implicit $fpcr
     ; CHECK-NEXT: $noreg = PATCHABLE_RET [[FCVTNv4i16_]]
-    %1:fpr(<4 x s32>) = COPY $q0
-    %0:fpr(<4 x s16>) = G_FPTRUNC %1(<4 x s32>)
-    $noreg = PATCHABLE_RET %0(<4 x s16>)
+    %1:fpr(<4 x f32>) = COPY $q0
+    %0:fpr(<4 x f16>) = G_FPTRUNC %1(<4 x f32>)
+    $noreg = PATCHABLE_RET %0(<4 x f16>)
 
 ...
 ---
@@ -4417,9 +4417,9 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr64 = COPY $d0
     ; CHECK-NEXT: [[SCVTFv2f32_:%[0-9]+]]:fpr64 = nofpexcept SCVTFv2f32 [[COPY]], implicit $fpcr
     ; CHECK-NEXT: $noreg = PATCHABLE_RET [[SCVTFv2f32_]]
-    %1:fpr(<2 x s32>) = COPY $d0
-    %0:fpr(<2 x s32>) = G_SITOFP %1(<2 x s32>)
-    $noreg = PATCHABLE_RET %0(<2 x s32>)
+    %1:fpr(<2 x i32>) = COPY $d0
+    %0:fpr(<2 x f32>) = G_SITOFP %1(<2 x i32>)
+    $noreg = PATCHABLE_RET %0(<2 x f32>)
 
 ...
 ---
@@ -4443,9 +4443,9 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr128 = COPY $q0
     ; CHECK-NEXT: [[SCVTFv4f32_:%[0-9]+]]:fpr128 = nofpexcept SCVTFv4f32 [[COPY]], implicit $fpcr
     ; CHECK-NEXT: $noreg = PATCHABLE_RET [[SCVTFv4f32_]]
-    %1:fpr(<4 x s32>) = COPY $q0
-    %0:fpr(<4 x s32>) = G_SITOFP %1(<4 x s32>)
-    $noreg = PATCHABLE_RET %0(<4 x s32>)
+    %1:fpr(<4 x i32>) = COPY $q0
+    %0:fpr(<4 x f32>) = G_SITOFP %1(<4 x i32>)
+    $noreg = PATCHABLE_RET %0(<4 x f32>)
 
 ...
 ---
@@ -4469,9 +4469,9 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr128 = COPY $q0
     ; CHECK-NEXT: [[SCVTFv2f64_:%[0-9]+]]:fpr128 = nofpexcept SCVTFv2f64 [[COPY]], implicit $fpcr
     ; CHECK-NEXT: $noreg = PATCHABLE_RET [[SCVTFv2f64_]]
-    %1:fpr(<2 x s64>) = COPY $q0
-    %0:fpr(<2 x s64>) = G_SITOFP %1(<2 x s64>)
-    $noreg = PATCHABLE_RET %0(<2 x s64>)
+    %1:fpr(<2 x i64>) = COPY $q0
+    %0:fpr(<2 x f64>) = G_SITOFP %1(<2 x i64>)
+    $noreg = PATCHABLE_RET %0(<2 x f64>)
 
 ...
 ---
@@ -4573,9 +4573,9 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr64 = COPY $d0
     ; CHECK-NEXT: [[UCVTFv2f32_:%[0-9]+]]:fpr64 = nofpexcept UCVTFv2f32 [[COPY]], implicit $fpcr
     ; CHECK-NEXT: $noreg = PATCHABLE_RET [[UCVTFv2f32_]]
-    %1:fpr(<2 x s32>) = COPY $d0
-    %0:fpr(<2 x s32>) = G_UITOFP %1(<2 x s32>)
-    $noreg = PATCHABLE_RET %0(<2 x s32>)
+    %1:fpr(<2 x i32>) = COPY $d0
+    %0:fpr(<2 x f32>) = G_UITOFP %1(<2 x i32>)
+    $noreg = PATCHABLE_RET %0(<2 x f32>)
 
 ...
 ---
@@ -4599,9 +4599,9 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr128 = COPY $q0
     ; CHECK-NEXT: [[UCVTFv4f32_:%[0-9]+]]:fpr128 = nofpexcept UCVTFv4f32 [[COPY]], implicit $fpcr
     ; CHECK-NEXT: $noreg = PATCHABLE_RET [[UCVTFv4f32_]]
-    %1:fpr(<4 x s32>) = COPY $q0
-    %0:fpr(<4 x s32>) = G_UITOFP %1(<4 x s32>)
-    $noreg = PATCHABLE_RET %0(<4 x s32>)
+    %1:fpr(<4 x i32>) = COPY $q0
+    %0:fpr(<4 x f32>) = G_UITOFP %1(<4 x i32>)
+    $noreg = PATCHABLE_RET %0(<4 x f32>)
 
 ...
 ---
@@ -4625,9 +4625,9 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr128 = COPY $q0
     ; CHECK-NEXT: [[UCVTFv2f64_:%[0-9]+]]:fpr128 = nofpexcept UCVTFv2f64 [[COPY]], implicit $fpcr
     ; CHECK-NEXT: $noreg = PATCHABLE_RET [[UCVTFv2f64_]]
-    %1:fpr(<2 x s64>) = COPY $q0
-    %0:fpr(<2 x s64>) = G_UITOFP %1(<2 x s64>)
-    $noreg = PATCHABLE_RET %0(<2 x s64>)
+    %1:fpr(<2 x i64>) = COPY $q0
+    %0:fpr(<2 x f64>) = G_UITOFP %1(<2 x i64>)
+    $noreg = PATCHABLE_RET %0(<2 x f64>)
 
 ...
 ---

@@ -2,11 +2,6 @@
 ; RUN: llc < %s -verify-machineinstrs -mtriple=aarch64-none-linux-gnu -mattr=+neon | FileCheck %s --check-prefixes=CHECK,CHECK-SD
 ; RUN: llc < %s -verify-machineinstrs -mtriple=aarch64-none-linux-gnu -mattr=+neon -global-isel -global-isel-abort=2 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 
-; CHECK-GI:       warning: Instruction selection used fallback path for test_bitcastv2f32tov1f64
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for test_bitcastv1f64tov2f32
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for test_concat_v1i32_undef
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for test_concat_diff_v1i32_v1i32
-
 define <16 x i8> @ins16bw(<16 x i8> %tmp1, i8 %tmp2) {
 ; CHECK-LABEL: ins16bw:
 ; CHECK:       // %bb.0:

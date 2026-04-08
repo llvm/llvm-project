@@ -421,7 +421,7 @@ define void @store_atomic_i128_from_gep() {
 ; GISEL-LABEL: store_atomic_i128_from_gep:
 ; GISEL:    bl init
 ; GISEL:    dmb ish
-; GISEL:    stp x8, x8, [x9, #16]
+; GISEL:    stp x8, x9, [x10, #16]
 ;
 ; SDAG-LABEL: store_atomic_i128_from_gep:
 ; SDAG:    bl init

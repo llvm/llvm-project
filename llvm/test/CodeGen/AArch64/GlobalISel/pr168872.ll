@@ -10,34 +10,34 @@ define <4 x ptr> @pr168872(<4 x ptr> %ptrs) {
   ; CHECK: bb.1.entry:
   ; CHECK-NEXT:   liveins: $q0, $q1
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $q0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(<2 x s64>) = COPY $q1
-  ; CHECK-NEXT:   [[BITCAST:%[0-9]+]]:_(<2 x p0>) = G_BITCAST [[COPY]](<2 x s64>)
-  ; CHECK-NEXT:   [[BITCAST1:%[0-9]+]]:_(<2 x p0>) = G_BITCAST [[COPY1]](<2 x s64>)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<2 x i64>) = COPY $q0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(<2 x i64>) = COPY $q1
+  ; CHECK-NEXT:   [[BITCAST:%[0-9]+]]:_(<2 x p0>) = G_BITCAST [[COPY]](<2 x i64>)
+  ; CHECK-NEXT:   [[BITCAST1:%[0-9]+]]:_(<2 x p0>) = G_BITCAST [[COPY1]](<2 x i64>)
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(p0) = G_CONSTANT i64 0
   ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<2 x p0>) = G_BUILD_VECTOR [[C]](p0), [[C]](p0)
-  ; CHECK-NEXT:   [[ICMP:%[0-9]+]]:_(<2 x s64>) = G_ICMP intpred(ugt), [[BITCAST]](<2 x p0>), [[BUILD_VECTOR]]
-  ; CHECK-NEXT:   [[ICMP1:%[0-9]+]]:_(<2 x s64>) = G_ICMP intpred(ugt), [[BITCAST1]](<2 x p0>), [[BUILD_VECTOR]]
+  ; CHECK-NEXT:   [[ICMP:%[0-9]+]]:_(<2 x i64>) = G_ICMP intpred(ugt), [[BITCAST]](<2 x p0>), [[BUILD_VECTOR]]
+  ; CHECK-NEXT:   [[ICMP1:%[0-9]+]]:_(<2 x i64>) = G_ICMP intpred(ugt), [[BITCAST1]](<2 x p0>), [[BUILD_VECTOR]]
   ; CHECK-NEXT:   [[PTRTOINT:%[0-9]+]]:_(<2 x s64>) = G_PTRTOINT [[BITCAST]](<2 x p0>)
   ; CHECK-NEXT:   [[PTRTOINT1:%[0-9]+]]:_(<2 x s64>) = G_PTRTOINT [[BITCAST1]](<2 x p0>)
   ; CHECK-NEXT:   [[PTRTOINT2:%[0-9]+]]:_(<2 x s64>) = G_PTRTOINT [[BUILD_VECTOR]](<2 x p0>)
   ; CHECK-NEXT:   [[PTRTOINT3:%[0-9]+]]:_(<2 x s64>) = G_PTRTOINT [[BUILD_VECTOR]](<2 x p0>)
-  ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
-  ; CHECK-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[C1]](s64), [[C1]](s64)
-  ; CHECK-NEXT:   [[XOR:%[0-9]+]]:_(<2 x s64>) = G_XOR [[ICMP]], [[BUILD_VECTOR1]]
-  ; CHECK-NEXT:   [[XOR1:%[0-9]+]]:_(<2 x s64>) = G_XOR [[ICMP1]], [[BUILD_VECTOR1]]
-  ; CHECK-NEXT:   [[AND:%[0-9]+]]:_(<2 x s64>) = G_AND [[PTRTOINT]], [[ICMP]]
-  ; CHECK-NEXT:   [[AND1:%[0-9]+]]:_(<2 x s64>) = G_AND [[PTRTOINT1]], [[ICMP1]]
-  ; CHECK-NEXT:   [[AND2:%[0-9]+]]:_(<2 x s64>) = G_AND [[PTRTOINT2]], [[XOR]]
-  ; CHECK-NEXT:   [[AND3:%[0-9]+]]:_(<2 x s64>) = G_AND [[PTRTOINT3]], [[XOR1]]
+  ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(i64) = G_CONSTANT i64 -1
+  ; CHECK-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x i64>) = G_BUILD_VECTOR [[C1]](i64), [[C1]](i64)
+  ; CHECK-NEXT:   [[XOR:%[0-9]+]]:_(<2 x i64>) = G_XOR [[ICMP]], [[BUILD_VECTOR1]]
+  ; CHECK-NEXT:   [[XOR1:%[0-9]+]]:_(<2 x i64>) = G_XOR [[ICMP1]], [[BUILD_VECTOR1]]
+  ; CHECK-NEXT:   [[AND:%[0-9]+]]:_(<2 x i64>) = G_AND [[PTRTOINT]], [[ICMP]]
+  ; CHECK-NEXT:   [[AND1:%[0-9]+]]:_(<2 x i64>) = G_AND [[PTRTOINT1]], [[ICMP1]]
+  ; CHECK-NEXT:   [[AND2:%[0-9]+]]:_(<2 x i64>) = G_AND [[PTRTOINT2]], [[XOR]]
+  ; CHECK-NEXT:   [[AND3:%[0-9]+]]:_(<2 x i64>) = G_AND [[PTRTOINT3]], [[XOR1]]
   ; CHECK-NEXT:   [[OR:%[0-9]+]]:_(<2 x s64>) = G_OR [[AND]], [[AND2]]
   ; CHECK-NEXT:   [[OR1:%[0-9]+]]:_(<2 x s64>) = G_OR [[AND1]], [[AND3]]
   ; CHECK-NEXT:   [[INTTOPTR:%[0-9]+]]:_(<2 x p0>) = G_INTTOPTR [[OR]](<2 x s64>)
   ; CHECK-NEXT:   [[INTTOPTR1:%[0-9]+]]:_(<2 x p0>) = G_INTTOPTR [[OR1]](<2 x s64>)
-  ; CHECK-NEXT:   [[BITCAST2:%[0-9]+]]:_(<2 x s64>) = G_BITCAST [[INTTOPTR]](<2 x p0>)
-  ; CHECK-NEXT:   [[BITCAST3:%[0-9]+]]:_(<2 x s64>) = G_BITCAST [[INTTOPTR1]](<2 x p0>)
-  ; CHECK-NEXT:   $q0 = COPY [[BITCAST2]](<2 x s64>)
-  ; CHECK-NEXT:   $q1 = COPY [[BITCAST3]](<2 x s64>)
+  ; CHECK-NEXT:   [[BITCAST2:%[0-9]+]]:_(<2 x i64>) = G_BITCAST [[INTTOPTR]](<2 x p0>)
+  ; CHECK-NEXT:   [[BITCAST3:%[0-9]+]]:_(<2 x i64>) = G_BITCAST [[INTTOPTR1]](<2 x p0>)
+  ; CHECK-NEXT:   $q0 = COPY [[BITCAST2]](<2 x i64>)
+  ; CHECK-NEXT:   $q1 = COPY [[BITCAST3]](<2 x i64>)
   ; CHECK-NEXT:   RET_ReallyLR implicit $q0, implicit $q1
 entry:
   %cmp = icmp ugt <4 x ptr> %ptrs, zeroinitializer

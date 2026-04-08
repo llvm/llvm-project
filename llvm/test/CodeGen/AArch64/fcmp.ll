@@ -843,19 +843,19 @@ define <3 x double> @v3f64_double(<3 x double> %a, <3 x double> %b, <3 x double>
 ; CHECK-GI-NEXT:    // kill: def $d6 killed $d6 def $q6
 ; CHECK-GI-NEXT:    // kill: def $d7 killed $d7 def $q7
 ; CHECK-GI-NEXT:    fcmp d2, d5
-; CHECK-GI-NEXT:    ldr x8, [sp]
+; CHECK-GI-NEXT:    ldr x9, [sp]
 ; CHECK-GI-NEXT:    ldr x10, [sp, #24]
 ; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-GI-NEXT:    mov v3.d[1], v4.d[0]
 ; CHECK-GI-NEXT:    mov v6.d[1], v7.d[0]
 ; CHECK-GI-NEXT:    ldp d1, d4, [sp, #8]
-; CHECK-GI-NEXT:    cset w9, mi
-; CHECK-GI-NEXT:    sbfx x9, x9, #0, #1
+; CHECK-GI-NEXT:    cset w8, mi
+; CHECK-GI-NEXT:    sbfx x8, x8, #0, #1
 ; CHECK-GI-NEXT:    fcmgt v0.2d, v3.2d, v0.2d
 ; CHECK-GI-NEXT:    mov v1.d[1], v4.d[0]
-; CHECK-GI-NEXT:    and x8, x8, x9
-; CHECK-GI-NEXT:    bic x9, x10, x9
-; CHECK-GI-NEXT:    orr x8, x8, x9
+; CHECK-GI-NEXT:    and x9, x9, x8
+; CHECK-GI-NEXT:    bic x8, x10, x8
+; CHECK-GI-NEXT:    orr x8, x9, x8
 ; CHECK-GI-NEXT:    fmov d2, x8
 ; CHECK-GI-NEXT:    bsl v0.16b, v6.16b, v1.16b
 ; CHECK-GI-NEXT:    mov d1, v0.d[1]
