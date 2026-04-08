@@ -113,7 +113,7 @@ static cl::opt<bool> VerboseVerbose(
              "issues, or add it to the input dump if enabled.  Implies\n"
              "-v.\n"));
 
-static cl::opt<DiffFormatType> DiffMode(
+static cl::opt<DiffFormatType> DiffFormat(
     "diff", cl::desc("Show mismatches using a diff-style format.\n"),
     cl::ValueOptional,
     cl::values(clEnumValN(None, "none", "Standard FileCheck diagnostics"),
@@ -794,7 +794,7 @@ int main(int argc, char **argv) {
   if (GlobalDefineError)
     return 2;
 
-  Req.DiffMode = DiffMode;
+  Req.DiffFormat = DiffFormat;
   Req.AllowEmptyInput = AllowEmptyInput;
   Req.AllowUnusedPrefixes = AllowUnusedPrefixes;
   Req.EnableVarScope = EnableVarScope;
@@ -868,7 +868,7 @@ int main(int argc, char **argv) {
                      : 1;
   if ((DumpInput == DumpInputAlways ||
        (ExitCode == 1 && DumpInput == DumpInputFail)) &&
-      Req.DiffMode == DiffFormatType::None) {
+      Req.DiffFormat == DiffFormatType::None) {
     errs() << "\n"
            << "Input file: " << InputFilename << "\n"
            << "Check file: " << CheckFilename << "\n"
