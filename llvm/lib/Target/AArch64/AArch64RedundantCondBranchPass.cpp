@@ -25,10 +25,15 @@ using namespace llvm;
 #define DEBUG_TYPE "aarch64-redundantcondbranch"
 
 namespace {
-class AArch64RedundantCondBranch : public MachineFunctionPass {
+
+class AArch64RedundantCondBranchImpl {
+public:
+  bool run(MachineFunction &MF);
+};
+class AArch64RedundantCondBranchLegacy : public MachineFunctionPass {
 public:
   static char ID;
-  AArch64RedundantCondBranch() : MachineFunctionPass(ID) {}
+  AArch64RedundantCondBranchLegacy() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
@@ -39,17 +44,14 @@ public:
     return "AArch64 Redundant Conditional Branch Elimination";
   }
 };
-char AArch64RedundantCondBranch::ID = 0;
+char AArch64RedundantCondBranchLegacy::ID = 0;
 } // namespace
 
-INITIALIZE_PASS(AArch64RedundantCondBranch, "aarch64-redundantcondbranch",
+INITIALIZE_PASS(AArch64RedundantCondBranchLegacy, "aarch64-redundantcondbranch",
                 "AArch64 Redundant Conditional Branch Elimination pass", false,
                 false)
 
-bool AArch64RedundantCondBranch::runOnMachineFunction(MachineFunction &MF) {
-  if (skipFunction(MF.getFunction()))
-    return false;
-
+bool AArch64RedundantCondBranchImpl::run(MachineFunction &MF) {
   const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
 
   bool Changed = false;
@@ -58,6 +60,23 @@ bool AArch64RedundantCondBranch::runOnMachineFunction(MachineFunction &MF) {
   return Changed;
 }
 
+bool AArch64RedundantCondBranchLegacy::runOnMachineFunction(
+    MachineFunction &MF) {
+  if (skipFunction(MF.getFunction()))
+    return false;
+
+  return AArch64RedundantCondBranchImpl().run(MF);
+}
+
+PreservedAnalyses
+AArch64RedundantCondBranchPass::run(MachineFunction &MF,
+                                    MachineFunctionAnalysisManager &) {
+  if (AArch64RedundantCondBranchImpl().run(MF)) {
+    return getMachineFunctionPassPreservedAnalyses();
+  }
+  return PreservedAnalyses::all();
+}
+
 FunctionPass *llvm::createAArch64RedundantCondBranchPass() {
-  return new AArch64RedundantCondBranch();
+  return new AArch64RedundantCondBranchLegacy();
 }
