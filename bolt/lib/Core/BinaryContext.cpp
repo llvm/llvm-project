@@ -155,6 +155,9 @@ BinaryContext::BinaryContext(std::unique_ptr<MCContext> Ctx,
       STI(std::move(STI)), InstPrinter(std::move(InstPrinter)),
       MIA(std::move(MIA)), MIB(std::move(MIB)), MRI(std::move(MRI)),
       DisAsm(std::move(DisAsm)), Logger(Logger), InitialDynoStats(isAArch64()) {
+  // createMCAsmInfo stored a pointer to a local MCTargetOptions in MCAsmInfo.
+  // Update it to point to our member that will outlive MCAsmInfo.
+  const_cast<MCAsmInfo *>(this->AsmInfo.get())->setTargetOptions(MCOptions);
   RegularPageSize = isAArch64() ? RegularPageSizeAArch64 : RegularPageSizeX86;
   PageAlign = opts::NoHugePages ? RegularPageSize : HugePageSize;
 }
