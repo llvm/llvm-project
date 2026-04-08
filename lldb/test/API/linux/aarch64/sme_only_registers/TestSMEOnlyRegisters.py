@@ -560,3 +560,28 @@ class SVESIMDRegistersTestCase(TestBase):
             check_expected_regs()
 
             self.runCmd("process kill")
+
+    # Core files are produced by running the test program on an SME only system
+    # with the extra argument "crash". For example:
+    # $ ./test simd on 32 crash
+    #
+    # Each file is named after the arguments used to create it.
+    # /proc/self/coredump_filter was set to 0.
+    #
+    # We do not test all combinations of state because unlike a live process,
+    # we do not have to handle state transitions when debugging a core file.
+    # To get reasonable coverage I have chosen 2 configurations that include
+    # streaming and non-streaming mode, ZA on and off and 2 different vector
+    # lengths.
+
+    @skipIfLLVMTargetMissing("AArch64")
+    def test_sme_only_core_simd_za_on_vl_32(self):
+        self.runCmd("target create --core core_simd_on_32")
+        expected_registers = self.expected_registers(32, Mode.SIMD, ZA.ON)
+        self.check_expected_regs_fn(expected_registers)()
+
+    @skipIfLLVMTargetMissing("AArch64")
+    def test_sme_only_core_streaming_za_off_vl_64(self):
+        self.runCmd("target create --core core_streaming_off_64")
+        expected_registers = self.expected_registers(64, Mode.SSVE, ZA.OFF)
+        self.check_expected_regs_fn(expected_registers)()
