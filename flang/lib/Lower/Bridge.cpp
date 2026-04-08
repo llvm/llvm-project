@@ -6285,29 +6285,29 @@ private:
   // calls does block management, possibly starting a new block, and possibly
   // generating a branch to end a block. So these calls may still be required
   // for that functionality.
-  void genFIR(const Fortran::parser::AssociateStmt &) {}         // nop
-  void genFIR(const Fortran::parser::BlockStmt &) {}             // nop
-  void genFIR(const Fortran::parser::CaseStmt &) {}              // nop
-  void genFIR(const Fortran::parser::ContinueStmt &) {}          // nop
-  void genFIR(const Fortran::parser::ElseIfStmt &) {}            // nop
-  void genFIR(const Fortran::parser::ElseStmt &) {}              // nop
-  void genFIR(const Fortran::parser::EndAssociateStmt &) {}      // nop
-  void genFIR(const Fortran::parser::EndBlockStmt &) {}          // nop
-  void genFIR(const Fortran::parser::EndDoStmt &) {}             // nop
-  void genFIR(const Fortran::parser::EndFunctionStmt &) {}       // nop
-  void genFIR(const Fortran::parser::EndIfStmt &) {}             // nop
-  void genFIR(const Fortran::parser::EndMpSubprogramStmt &) {}   // nop
-  void genFIR(const Fortran::parser::EndProgramStmt &) {}        // nop
-  void genFIR(const Fortran::parser::EndSelectStmt &) {}         // nop
-  void genFIR(const Fortran::parser::EndSubroutineStmt &) {}     // nop
-  void genFIR(const Fortran::parser::EntryStmt &) {}             // nop
-  void genFIR(const Fortran::parser::IfStmt &) {}                // nop
-  void genFIR(const Fortran::parser::IfThenStmt &) {}            // nop
-  void genFIR(const Fortran::parser::NonLabelDoStmt &) {}        // nop
-  void genFIR(const Fortran::parser::OmpEndLoopDirective &) {}   // nop
-  void genFIR(const Fortran::parser::SelectTypeStmt &) {}        // nop
-  void genFIR(const Fortran::parser::TypeGuardStmt &) {}         // nop
-  void genFIR(const Fortran::parser::ChangeTeamStmt &stmt) {}    // nop
+  void genFIR(const Fortran::parser::AssociateStmt &) {}       // nop
+  void genFIR(const Fortran::parser::BlockStmt &) {}           // nop
+  void genFIR(const Fortran::parser::CaseStmt &) {}            // nop
+  void genFIR(const Fortran::parser::ContinueStmt &) {}        // nop
+  void genFIR(const Fortran::parser::ElseIfStmt &) {}          // nop
+  void genFIR(const Fortran::parser::ElseStmt &) {}            // nop
+  void genFIR(const Fortran::parser::EndAssociateStmt &) {}    // nop
+  void genFIR(const Fortran::parser::EndBlockStmt &) {}        // nop
+  void genFIR(const Fortran::parser::EndDoStmt &) {}           // nop
+  void genFIR(const Fortran::parser::EndFunctionStmt &) {}     // nop
+  void genFIR(const Fortran::parser::EndIfStmt &) {}           // nop
+  void genFIR(const Fortran::parser::EndMpSubprogramStmt &) {} // nop
+  void genFIR(const Fortran::parser::EndProgramStmt &) {}      // nop
+  void genFIR(const Fortran::parser::EndSelectStmt &) {}       // nop
+  void genFIR(const Fortran::parser::EndSubroutineStmt &) {}   // nop
+  void genFIR(const Fortran::parser::EntryStmt &) {}           // nop
+  void genFIR(const Fortran::parser::IfStmt &) {}              // nop
+  void genFIR(const Fortran::parser::IfThenStmt &) {}          // nop
+  void genFIR(const Fortran::parser::NonLabelDoStmt &) {}      // nop
+  void genFIR(const Fortran::parser::OmpEndLoopDirective &) {} // nop
+  void genFIR(const Fortran::parser::SelectTypeStmt &) {}      // nop
+  void genFIR(const Fortran::parser::TypeGuardStmt &) {}       // nop
+  void genFIR(const Fortran::parser::ChangeTeamStmt &stmt) {}  // nop
   void genFIR(const Fortran::parser::EndChangeTeamStmt &stmt) {} // nop
 
   /// Generate FIR for Evaluation \p eval.
