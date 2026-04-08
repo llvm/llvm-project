@@ -1745,6 +1745,8 @@ static std::optional<InstCounterType> counterTypeForInstr(unsigned Opcode) {
     return KM_CNT;
   case AMDGPU::S_WAIT_XCNT:
     return X_CNT;
+  case AMDGPU::S_WAIT_ASYNCCNT:
+    return ASYNC_CNT;
   default:
     return {};
   }

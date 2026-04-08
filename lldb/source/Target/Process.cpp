@@ -1600,76 +1600,77 @@ static bool ShouldShowError(Process &process) {
   llvm_unreachable("unhandled process state");
 }
 
+static addr_t ComputeConstituentLoadAddress(BreakpointLocation &constituent,
+                                            Process &proc) {
+  // Reset the IsIndirect flag here, in case the location changes from pointing
+  // from an indirect symbol to a regular symbol.
+  constituent.SetIsIndirect(false);
+
+  Target &target = proc.GetTarget();
+
+  if (!constituent.ShouldResolveIndirectFunctions())
+    return constituent.GetAddress().GetOpcodeLoadAddress(&target);
+
+  const Symbol *symbol =
+      constituent.GetAddress().CalculateSymbolContextSymbol();
+  if (!symbol || !symbol->IsIndirect())
+    return constituent.GetAddress().GetOpcodeLoadAddress(&target);
+
+  // An indirect symbol is involved.
+  Status error;
+  Address symbol_address = symbol->GetAddress();
+  addr_t load_addr = proc.ResolveIndirectFunction(&symbol_address, error);
+
+  if (!error.Success() && ShouldShowError(proc)) {
+    target.GetDebugger().GetAsyncErrorStream()->Printf(
+        "warning: failed to resolve indirect function at 0x%" PRIx64
+        " for breakpoint %i.%i: %s\n",
+        symbol->GetLoadAddress(&target), constituent.GetBreakpoint().GetID(),
+        constituent.GetID(),
+        error.AsCString() ? error.AsCString() : "unknown error");
+    // FIXME: ShouldShowError must only guard the error message.
+    // FIXME: Use diagnostics instead of printing "warning" to the async output.
+    return LLDB_INVALID_ADDRESS;
+  }
+
+  Address resolved_address(load_addr);
+  constituent.SetIsIndirect(true);
+  return resolved_address.GetOpcodeLoadAddress(&target);
+}
+
 lldb::break_id_t
 Process::CreateBreakpointSite(const BreakpointLocationSP &constituent,
                               bool use_hardware) {
-  addr_t load_addr = LLDB_INVALID_ADDRESS;
+  addr_t load_addr = ComputeConstituentLoadAddress(*constituent, *this);
 
-  bool show_error = ShouldShowError(*this);
+  if (load_addr == LLDB_INVALID_ADDRESS)
+    return LLDB_INVALID_BREAK_ID;
 
-  // Reset the IsIndirect flag here, in case the location changes from pointing
-  // to a indirect symbol to a regular symbol.
-  constituent->SetIsIndirect(false);
-
-  if (constituent->ShouldResolveIndirectFunctions()) {
-    const Symbol *symbol =
-        constituent->GetAddress().CalculateSymbolContextSymbol();
-    if (symbol && symbol->IsIndirect()) {
-      Status error;
-      Address symbol_address = symbol->GetAddress();
-      load_addr = ResolveIndirectFunction(&symbol_address, error);
-      if (!error.Success() && show_error) {
-        GetTarget().GetDebugger().GetAsyncErrorStream()->Printf(
-            "warning: failed to resolve indirect function at 0x%" PRIx64
-            " for breakpoint %i.%i: %s\n",
-            symbol->GetLoadAddress(&GetTarget()),
-            constituent->GetBreakpoint().GetID(), constituent->GetID(),
-            error.AsCString() ? error.AsCString() : "unknown error");
-        return LLDB_INVALID_BREAK_ID;
-      }
-      Address resolved_address(load_addr);
-      load_addr = resolved_address.GetOpcodeLoadAddress(&GetTarget());
-      constituent->SetIsIndirect(true);
-    } else
-      load_addr = constituent->GetAddress().GetOpcodeLoadAddress(&GetTarget());
-  } else
-    load_addr = constituent->GetAddress().GetOpcodeLoadAddress(&GetTarget());
-
-  if (load_addr != LLDB_INVALID_ADDRESS) {
-    BreakpointSiteSP bp_site_sp;
-
-    // Look up this breakpoint site.  If it exists, then add this new
-    // constituent, otherwise create a new breakpoint site and add it.
-
-    bp_site_sp = m_breakpoint_site_list.FindByAddress(load_addr);
-
-    if (bp_site_sp) {
-      bp_site_sp->AddConstituent(constituent);
-      constituent->SetBreakpointSite(bp_site_sp);
-      return bp_site_sp->GetID();
-    } else {
-      bp_site_sp.reset(
-          new BreakpointSite(constituent, load_addr, use_hardware));
-      if (bp_site_sp) {
-        Status error = EnableBreakpointSite(bp_site_sp.get());
-        if (error.Success()) {
-          constituent->SetBreakpointSite(bp_site_sp);
-          return m_breakpoint_site_list.Add(bp_site_sp);
-        } else {
-          if (show_error || use_hardware) {
-            // Report error for setting breakpoint...
-            GetTarget().GetDebugger().GetAsyncErrorStream()->Printf(
-                "warning: failed to set breakpoint site at 0x%" PRIx64
-                " for breakpoint %i.%i: %s\n",
-                load_addr, constituent->GetBreakpoint().GetID(),
-                constituent->GetID(),
-                error.AsCString() ? error.AsCString() : "unknown error");
-          }
-        }
-      }
-    }
+  // Look up this breakpoint site.  If it exists, then add this new
+  // constituent, otherwise create a new breakpoint site and add it.
+  if (BreakpointSiteSP bp_site_sp =
+          m_breakpoint_site_list.FindByAddress(load_addr)) {
+    bp_site_sp->AddConstituent(constituent);
+    constituent->SetBreakpointSite(bp_site_sp);
+    return bp_site_sp->GetID();
   }
-  // We failed to enable the breakpoint
+
+  BreakpointSiteSP bp_site_sp(
+      new BreakpointSite(constituent, load_addr, use_hardware));
+  Status error = EnableBreakpointSite(bp_site_sp.get());
+  if (error.Success()) {
+    constituent->SetBreakpointSite(bp_site_sp);
+    return m_breakpoint_site_list.Add(bp_site_sp);
+  }
+
+  if (ShouldShowError(*this) || use_hardware) {
+    // Report error for setting breakpoint...
+    GetTarget().GetDebugger().GetAsyncErrorStream()->Printf(
+        "warning: failed to set breakpoint site at 0x%" PRIx64
+        " for breakpoint %i.%i: %s\n",
+        load_addr, constituent->GetBreakpoint().GetID(), constituent->GetID(),
+        error.AsCString() ? error.AsCString() : "unknown error");
+  }
   return LLDB_INVALID_BREAK_ID;
 }
 
@@ -2316,6 +2317,45 @@ uint64_t Process::ReadUnsignedIntegerFromMemory(lldb::addr_t vm_addr,
   return fail_value;
 }
 
+llvm::SmallVector<std::optional<uint64_t>>
+Process::ReadUnsignedIntegersFromMemory(llvm::ArrayRef<addr_t> addresses,
+                                        unsigned integer_byte_size) {
+  if (addresses.empty())
+    return {};
+  // Like ReadUnsignedIntegerFromMemory, this only supports a handful
+  // of widths.
+  if (!llvm::is_contained({1u, 2u, 4u, 8u}, integer_byte_size))
+    return llvm::SmallVector<std::optional<uint64_t>>(addresses.size(),
+                                                      std::nullopt);
+
+  llvm::SmallVector<Range<addr_t, size_t>> ranges{
+      llvm::map_range(addresses, [=](addr_t ptr) {
+        return Range<addr_t, size_t>(ptr, integer_byte_size);
+      })};
+
+  std::vector<uint8_t> buffer(integer_byte_size * addresses.size(), 0);
+  llvm::SmallVector<llvm::MutableArrayRef<uint8_t>> memory =
+      ReadMemoryRanges(ranges, buffer);
+
+  llvm::SmallVector<std::optional<uint64_t>> result;
+  result.reserve(addresses.size());
+  const uint32_t addr_size = GetAddressByteSize();
+  const ByteOrder byte_order = GetByteOrder();
+
+  for (llvm::MutableArrayRef<uint8_t> range : memory) {
+    if (range.size() != integer_byte_size) {
+      result.push_back(std::nullopt);
+      continue;
+    }
+
+    DataExtractor data(range.data(), integer_byte_size, byte_order, addr_size);
+    offset_t offset = 0;
+    result.push_back(data.GetMaxU64(&offset, integer_byte_size));
+    assert(offset == integer_byte_size);
+  }
+  return result;
+}
+
 int64_t Process::ReadSignedIntegerFromMemory(lldb::addr_t vm_addr,
                                              size_t integer_byte_size,
                                              int64_t fail_value,
@@ -2333,6 +2373,12 @@ addr_t Process::ReadPointerFromMemory(lldb::addr_t vm_addr, Status &error) {
                                   error))
     return scalar.ULongLong(LLDB_INVALID_ADDRESS);
   return LLDB_INVALID_ADDRESS;
+}
+
+llvm::SmallVector<std::optional<addr_t>>
+Process::ReadPointersFromMemory(llvm::ArrayRef<addr_t> ptr_locs) {
+  const size_t ptr_size = GetAddressByteSize();
+  return ReadUnsignedIntegersFromMemory(ptr_locs, ptr_size);
 }
 
 bool Process::WritePointerToMemory(lldb::addr_t vm_addr, lldb::addr_t ptr_value,

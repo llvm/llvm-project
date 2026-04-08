@@ -1701,15 +1701,16 @@ protected:
           page_count);
       if (page_count > 0) {
         bool print_comma = false;
-        result.AppendMessageWithFormat("Dirty pages: ");
+        Stream &strm = result.GetOutputStream();
+        strm << "Dirty pages: ";
         for (size_t i = 0; i < page_count; i++) {
           if (print_comma)
-            result.AppendMessageWithFormat(", ");
+            strm << ", ";
           else
             print_comma = true;
-          result.AppendMessageWithFormat("0x%" PRIx64, (*dirty_page_list)[i]);
+          strm << llvm::formatv("{0:x}", (*dirty_page_list)[i]);
         }
-        result.AppendMessage(".");
+        strm << ".\n";
       }
     }
   }

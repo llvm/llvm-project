@@ -433,7 +433,7 @@ struct PruningFunctionCloner {
   ValueToValueMapTy &VMap;
   bool ModuleLevelChanges;
   const char *NameSuffix;
-  ClonedCodeInfo &CodeInfo;
+  ClonedCodeInfo *CodeInfo;
   bool HostFuncIsStrictFP;
 
   Instruction *cloneInstruction(BasicBlock::const_iterator II);
@@ -441,7 +441,7 @@ struct PruningFunctionCloner {
 public:
   PruningFunctionCloner(Function *newFunc, const Function *oldFunc,
                         ValueToValueMapTy &valueMap, bool moduleLevelChanges,
-                        const char *nameSuffix, ClonedCodeInfo &codeInfo)
+                        const char *nameSuffix, ClonedCodeInfo *codeInfo)
       : NewFunc(newFunc), OldFunc(oldFunc), VMap(valueMap),
         ModuleLevelChanges(moduleLevelChanges), NameSuffix(nameSuffix),
         CodeInfo(codeInfo) {
@@ -615,9 +615,6 @@ void PruningFunctionCloner::CloneBlock(
       }
     }
 
-    if (auto *CB = dyn_cast<CallBase>(II); CB && CB->isIndirectCall())
-      CodeInfo.OriginallyIndirectCalls.insert(NewInst);
-
     if (II->hasName())
       NewInst->setName(II->getName() + NameSuffix);
     VMap[&*II] = NewInst; // Add instruction map to value.
@@ -629,10 +626,12 @@ void PruningFunctionCloner::CloneBlock(
 
     CloneDbgRecordsToHere(NewInst, II);
 
-    CodeInfo.OrigVMap[&*II] = NewInst;
-    if (auto *CB = dyn_cast<CallBase>(&*II))
-      if (CB->hasOperandBundles())
-        CodeInfo.OperandBundleCallSites.push_back(NewInst);
+    if (CodeInfo) {
+      CodeInfo->OrigVMap[&*II] = NewInst;
+      if (auto *CB = dyn_cast<CallBase>(&*II))
+        if (CB->hasOperandBundles())
+          CodeInfo->OperandBundleCallSites.push_back(NewInst);
+    }
 
     if (const AllocaInst *AI = dyn_cast<AllocaInst>(II)) {
       if (isa<ConstantInt>(AI->getArraySize()))
@@ -691,10 +690,12 @@ void PruningFunctionCloner::CloneBlock(
 
     VMap[OldTI] = NewInst; // Add instruction map to value.
 
-    CodeInfo.OrigVMap[OldTI] = NewInst;
-    if (auto *CB = dyn_cast<CallBase>(OldTI))
-      if (CB->hasOperandBundles())
-        CodeInfo.OperandBundleCallSites.push_back(NewInst);
+    if (CodeInfo) {
+      CodeInfo->OrigVMap[OldTI] = NewInst;
+      if (auto *CB = dyn_cast<CallBase>(OldTI))
+        if (CB->hasOperandBundles())
+          CodeInfo->OperandBundleCallSites.push_back(NewInst);
+    }
 
     // Recursively clone any reachable successor blocks.
     append_range(ToClone, successors(BB->getTerminator()));
@@ -707,11 +708,13 @@ void PruningFunctionCloner::CloneBlock(
     CloneDbgRecordsToHere(NewInst, OldTI->getIterator());
   }
 
-  CodeInfo.ContainsCalls |= hasCalls;
-  CodeInfo.ContainsMemProfMetadata |= hasMemProfMetadata;
-  CodeInfo.ContainsDynamicAllocas |= hasDynamicAllocas;
-  CodeInfo.ContainsDynamicAllocas |=
-      hasStaticAllocas && BB != &BB->getParent()->front();
+  if (CodeInfo) {
+    CodeInfo->ContainsCalls |= hasCalls;
+    CodeInfo->ContainsMemProfMetadata |= hasMemProfMetadata;
+    CodeInfo->ContainsDynamicAllocas |= hasDynamicAllocas;
+    CodeInfo->ContainsDynamicAllocas |=
+        hasStaticAllocas && BB != &BB->getParent()->front();
+  }
 }
 
 /// This works like CloneAndPruneFunctionInto, except that it does not clone the
@@ -723,7 +726,7 @@ void llvm::CloneAndPruneIntoFromInst(Function *NewFunc, const Function *OldFunc,
                                      bool ModuleLevelChanges,
                                      SmallVectorImpl<ReturnInst *> &Returns,
                                      const char *NameSuffix,
-                                     ClonedCodeInfo &CodeInfo) {
+                                     ClonedCodeInfo *CodeInfo) {
   assert(NameSuffix && "NameSuffix cannot be null!");
 
   ValueMapTypeRemapper *TypeMapper = nullptr;
@@ -1003,12 +1006,10 @@ void llvm::CloneAndPruneIntoFromInst(Function *NewFunc, const Function *OldFunc,
 /// constant arguments cause a significant amount of code in the callee to be
 /// dead.  Since this doesn't produce an exact copy of the input, it can't be
 /// used for things like CloneFunction or CloneModule.
-void llvm::CloneAndPruneFunctionInto(Function *NewFunc, const Function *OldFunc,
-                                     ValueToValueMapTy &VMap,
-                                     bool ModuleLevelChanges,
-                                     SmallVectorImpl<ReturnInst *> &Returns,
-                                     const char *NameSuffix,
-                                     ClonedCodeInfo &CodeInfo) {
+void llvm::CloneAndPruneFunctionInto(
+    Function *NewFunc, const Function *OldFunc, ValueToValueMapTy &VMap,
+    bool ModuleLevelChanges, SmallVectorImpl<ReturnInst *> &Returns,
+    const char *NameSuffix, ClonedCodeInfo *CodeInfo) {
   CloneAndPruneIntoFromInst(NewFunc, OldFunc, &OldFunc->front().front(), VMap,
                             ModuleLevelChanges, Returns, NameSuffix, CodeInfo);
 }
