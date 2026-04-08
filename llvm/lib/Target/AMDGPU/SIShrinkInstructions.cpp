@@ -850,6 +850,51 @@ MachineInstr *SIShrinkInstructions::matchSwap(MachineInstr &MovT) const {
   return nullptr;
 }
 
+// Trace the selector operand of a V_PERM_B32 back through COPYs to find the
+// immediate mask.
+static bool getPermMaskImm(MachineInstr &Perm, MachineRegisterInfo *MRI,
+                           uint32_t &Mask) {
+  const int Src2Idx =
+      AMDGPU::getNamedOperandIdx(Perm.getOpcode(), AMDGPU::OpName::src2);
+  const MachineOperand &Op = Perm.getOperand(Src2Idx);
+  if (Op.isImm()) {
+    Mask = static_cast<uint32_t>(Op.getImm());
+    return true;
+  }
+  if (!Op.isReg() || !Op.getReg().isVirtual())
+    return false;
+
+  Register Reg = Op.getReg();
+  SmallDenseSet<Register, 4> Seen;
+  while (Reg.isVirtual() && Seen.insert(Reg).second) {
+    MachineInstr *Def = MRI->getUniqueVRegDef(Reg);
+    if (!Def)
+      return false;
+    if (Def->isMoveImmediate()) {
+      const MachineOperand &ImmOp = Def->getOperand(1);
+      if (!ImmOp.isImm())
+        return false;
+      Mask = static_cast<uint32_t>(ImmOp.getImm());
+      return true;
+    }
+    if (!Def->isCopy() || !Def->getOperand(1).isReg())
+      return false;
+
+    if (Def->getOperand(0).getSubReg() != AMDGPU::NoSubRegister ||
+        Def->getOperand(1).getSubReg() != AMDGPU::NoSubRegister)
+      return false;
+    Reg = Def->getOperand(1).getReg();
+  }
+  return false;
+}
+
+// Matches two v_perms that together swap 16-bit halves between two inputs. For
+// example:
+//
+// v_perm v2, v0, v1, 0x5040100
+// v_perm v3, v0, v1, 0x7060302
+// =>
+// v_swap_b16 v0.h, v1.l
 MachineInstr *
 SIShrinkInstructions::matchSwapB16(MachineInstr &Perm,
                                    PendingSwapMap &SwapCandidates) const {
@@ -857,8 +902,7 @@ SIShrinkInstructions::matchSwapB16(MachineInstr &Perm,
   if (IsPostRA)
     return nullptr;
 
-  if (ST->getGeneration() < AMDGPUSubtarget::GFX11 ||
-      !ST->useRealTrue16Insts() ||
+  if (!ST->useRealTrue16Insts() ||
       TII->pseudoToMCOpcode(AMDGPU::V_SWAP_B16) == -1)
     return nullptr;
 
@@ -866,42 +910,6 @@ SIShrinkInstructions::matchSwapB16(MachineInstr &Perm,
       AMDGPU::getNamedOperandIdx(Perm.getOpcode(), AMDGPU::OpName::src0);
   const int Src1Idx =
       AMDGPU::getNamedOperandIdx(Perm.getOpcode(), AMDGPU::OpName::src1);
-  const int Src2Idx =
-      AMDGPU::getNamedOperandIdx(Perm.getOpcode(), AMDGPU::OpName::src2);
-
-  // Trace mask immediate back through COPYs and moves if necessary/possible.
-  auto getPermMaskImm = [&](MachineInstr &MI, uint32_t &Mask) {
-    const MachineOperand &Op = MI.getOperand(Src2Idx);
-    if (Op.isImm()) {
-      Mask = static_cast<uint32_t>(Op.getImm());
-      return true;
-    }
-    if (!Op.isReg() || !Op.getReg().isVirtual())
-      return false;
-
-    Register Reg = Op.getReg();
-    SmallDenseSet<Register, 4> Seen;
-    while (Reg.isVirtual() && Seen.insert(Reg).second) {
-      MachineInstr *Def = MRI->getUniqueVRegDef(Reg);
-      if (!Def)
-        return false;
-      if (Def->isMoveImmediate()) {
-        const MachineOperand &ImmOp = Def->getOperand(1);
-        if (!ImmOp.isImm())
-          return false;
-        Mask = static_cast<uint32_t>(ImmOp.getImm());
-        return true;
-      }
-      if (!Def->isCopy() || !Def->getOperand(1).isReg())
-        return false;
-
-      if (Def->getOperand(0).getSubReg() != AMDGPU::NoSubRegister ||
-          Def->getOperand(1).getSubReg() != AMDGPU::NoSubRegister)
-        return false;
-      Reg = Def->getOperand(1).getReg();
-    }
-    return false;
-  };
 
   const MachineOperand &S0 = Perm.getOperand(Src0Idx);
   const MachineOperand &S1 = Perm.getOperand(Src1Idx);
@@ -919,7 +927,7 @@ SIShrinkInstructions::matchSwapB16(MachineInstr &Perm,
     return nullptr;
 
   uint32_t Mask = 0;
-  if (!getPermMaskImm(Perm, Mask))
+  if (!getPermMaskImm(Perm, MRI, Mask))
     return nullptr;
 
   // For two v_perms with common operands {src0, src1} and complementary,
@@ -939,15 +947,9 @@ SIShrinkInstructions::matchSwapB16(MachineInstr &Perm,
       {0x03020706u, 0x01000504u, AMDGPU::lo16, AMDGPU::hi16},
   };
 
-  // If current v_perm's mask is not in above list, bail.
-  bool IsSwapEligible = false;
-  for (const SwapCase &C : Cases) {
-    if (Mask == C.S1Mask || Mask == C.S0Mask) {
-      IsSwapEligible = true;
-      break;
-    }
-  }
-  if (!IsSwapEligible)
+  if (!llvm::any_of(Cases, [Mask](const SwapCase &C) {
+        return Mask == C.S1Mask || Mask == C.S0Mask;
+      }))
     return nullptr;
 
   auto PackRegKey = [](Register Reg, unsigned Sub) {
@@ -1008,14 +1010,18 @@ SIShrinkInstructions::matchSwapB16(MachineInstr &Perm,
   SwapCandidates.erase(It);
 
   // Ensure that we can use Lo128 registers for operands of the v_swap.
-  if (!MRI->constrainRegClass(S1Dst, &AMDGPU::VGPR_32_Lo128RegClass) ||
-      !MRI->constrainRegClass(S0Dst, &AMDGPU::VGPR_32_Lo128RegClass))
+  const MCInstrDesc &SwapDesc = TII->get(AMDGPU::V_SWAP_B16);
+  const TargetRegisterClass *Swap16RC = TII->getRegClass(SwapDesc, 0);
+  const TargetRegisterClass *Swap32RC =
+      TRI->getMatchingSuperRegClass(MRI->getRegClass(S0Dst), Swap16RC, S0Sub);
+  if (!Swap32RC)
     return nullptr;
-  if (!Src1Sub &&
-      !MRI->constrainRegClass(Src1Reg, &AMDGPU::VGPR_32_Lo128RegClass))
+  if (!MRI->constrainRegClass(S1Dst, Swap32RC) ||
+      !MRI->constrainRegClass(S0Dst, Swap32RC))
     return nullptr;
-  if (!Src0Sub &&
-      !MRI->constrainRegClass(Src0Reg, &AMDGPU::VGPR_32_Lo128RegClass))
+  if (!Src1Sub && !MRI->constrainRegClass(Src1Reg, Swap32RC))
+    return nullptr;
+  if (!Src0Sub && !MRI->constrainRegClass(Src0Reg, Swap32RC))
     return nullptr;
 
   MachineBasicBlock &MBB = *P0->getParent();
@@ -1023,8 +1029,8 @@ SIShrinkInstructions::matchSwapB16(MachineInstr &Perm,
   const DebugLoc &DL = P0->getDebugLoc();
 
   // Extract the two 16-bit halves to be swapped, S1In and S0In.
-  Register S1In = MRI->createVirtualRegister(&AMDGPU::VGPR_16_Lo128RegClass);
-  Register S0In = MRI->createVirtualRegister(&AMDGPU::VGPR_16_Lo128RegClass);
+  Register S1In = MRI->createVirtualRegister(Swap16RC);
+  Register S0In = MRI->createVirtualRegister(Swap16RC);
   unsigned S1InSub = TRI->composeSubRegIndices(Src1Sub, S1Sub);
   unsigned S0InSub = TRI->composeSubRegIndices(Src0Sub, S0Sub);
   BuildMI(MBB, I, DL, TII->get(TargetOpcode::COPY), S1In)
@@ -1033,8 +1039,8 @@ SIShrinkInstructions::matchSwapB16(MachineInstr &Perm,
       .addReg(Src0Reg, {}, S0InSub);
 
   // Swap. S1Out = S0In; S0Out = S1In;
-  Register S1Out = MRI->createVirtualRegister(&AMDGPU::VGPR_16_Lo128RegClass);
-  Register S0Out = MRI->createVirtualRegister(&AMDGPU::VGPR_16_Lo128RegClass);
+  Register S1Out = MRI->createVirtualRegister(Swap16RC);
+  Register S0Out = MRI->createVirtualRegister(Swap16RC);
   auto *SwapMI = BuildMI(MBB, I, DL, TII->get(AMDGPU::V_SWAP_B16))
                      .addDef(S1Out)
                      .addDef(S0Out)
@@ -1046,12 +1052,12 @@ SIShrinkInstructions::matchSwapB16(MachineInstr &Perm,
   Register S1Base = Src1Reg;
   Register S0Base = Src0Reg;
   if (Src1Sub) {
-    S1Base = MRI->createVirtualRegister(&AMDGPU::VGPR_32_Lo128RegClass);
+    S1Base = MRI->createVirtualRegister(Swap32RC);
     BuildMI(MBB, I, DL, TII->get(TargetOpcode::COPY), S1Base)
         .addReg(Src1Reg, {}, Src1Sub);
   }
   if (Src0Sub) {
-    S0Base = MRI->createVirtualRegister(&AMDGPU::VGPR_32_Lo128RegClass);
+    S0Base = MRI->createVirtualRegister(Swap32RC);
     BuildMI(MBB, I, DL, TII->get(TargetOpcode::COPY), S0Base)
         .addReg(Src0Reg, {}, Src0Sub);
   }
