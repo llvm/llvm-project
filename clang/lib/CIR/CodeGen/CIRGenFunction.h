@@ -111,6 +111,46 @@ public:
 
   llvm::SmallVector<LifetimeExtendedCleanupEntry> lifetimeExtendedCleanupStack;
 
+  /// A cleanup that was pushed to the EH stack but whose deactivation is
+  /// deferred until the enclosing CleanupDeactivationScope exits. Used to
+  /// protect partially-constructed aggregates (e.g. lambda captures) so that
+  /// already-initialized sub-objects are destroyed if a later initializer
+  /// throws, while avoiding double-destruction after full construction.
+  struct DeferredDeactivateCleanup {
+    EHScopeStack::stable_iterator cleanup;
+    mlir::Operation *dominatingIP;
+  };
+  llvm::SmallVector<DeferredDeactivateCleanup> deferredDeactivationCleanupStack;
+
+  /// Scope that deactivates all enclosed deferred cleanups on exit.
+  /// Mirrors CodeGenFunction::CleanupDeactivationScope in classic codegen.
+  struct CleanupDeactivationScope {
+    CIRGenFunction &cgf;
+    size_t oldDeactivateCleanupStackSize;
+    bool deactivated = false;
+
+    CleanupDeactivationScope(CIRGenFunction &cgf)
+        : cgf(cgf), oldDeactivateCleanupStackSize(
+                        cgf.deferredDeactivationCleanupStack.size()) {}
+
+    void forceDeactivate() {
+      assert(!deactivated && "Deactivating already deactivated scope");
+      auto &stack = cgf.deferredDeactivationCleanupStack;
+      for (size_t i = stack.size(); i > oldDeactivateCleanupStackSize; i--) {
+        cgf.deactivateCleanupBlock(stack[i - 1].cleanup,
+                                   stack[i - 1].dominatingIP);
+        stack[i - 1].dominatingIP->erase();
+      }
+      stack.resize(oldDeactivateCleanupStackSize);
+      deactivated = true;
+    }
+
+    ~CleanupDeactivationScope() {
+      if (!deactivated)
+        forceDeactivate();
+    }
+  };
+
   GlobalDecl curSEHParent;
 
   /// A mapping from NRVO variables to the flags used to indicate
@@ -995,7 +1035,7 @@ public:
   void popCleanupBlocks(EHScopeStack::stable_iterator oldCleanupStackDepth,
                         size_t oldLifetimeExtendedSize,
                         ArrayRef<mlir::Value *> valuesToReload = {});
-  void popCleanupBlock();
+  void popCleanupBlock(bool forDeactivation = false);
 
   void terminateStructuredRegionBody(mlir::Region &r, mlir::Location loc);
 
@@ -1021,6 +1061,23 @@ public:
 
     cgm.errorNYI("pushFullExprCleanup in conditional branch");
   }
+
+  /// Push a cleanup and record it for deferred deactivation. The cleanup will
+  /// be deactivated when the enclosing CleanupDeactivationScope exits.
+  template <class T, class... As>
+  void pushCleanupAndDeferDeactivation(CleanupKind kind, As... a) {
+    mlir::Location loc = builder.getUnknownLoc();
+    mlir::Operation *dominatingIP = builder.getBool(false, loc).getOperation();
+    ehStack.pushCleanup<T>(kind, a...);
+    deferredDeactivationCleanupStack.push_back(
+        {ehStack.stable_begin(), dominatingIP});
+  }
+
+  void pushDestroyAndDeferDeactivation(QualType::DestructionKind dtorKind,
+                                       Address addr, QualType type);
+  void pushDestroyAndDeferDeactivation(CleanupKind cleanupKind, Address addr,
+                                       QualType type, Destroyer *destroyer,
+                                       bool useEHCleanupForArray);
 
   /// Queue a cleanup to be pushed after finishing the current full-expression.
   /// When the enclosing RunCleanupsScope exits, popCleanupBlocks promotes these

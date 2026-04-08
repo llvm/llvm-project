@@ -100,6 +100,9 @@ void *EHScopeStack::pushCleanup(CleanupKind kind, size_t size) {
     cleanupKind =
         isNormalCleanup ? cir::CleanupKind::All : cir::CleanupKind::EH;
   } else {
+    // Exceptions are disabled (or no EH flag was requested). Drop the EH
+    // flag so the scope entry stays consistent with the op's cleanup kind.
+    isEHCleanup = false;
     if (isNormalCleanup)
       cleanupKind = cir::CleanupKind::Normal;
     else
@@ -251,7 +254,7 @@ void CIRGenFunction::deactivateCleanupBlock(EHScopeStack::stable_iterator c,
   // to the current RunCleanupsScope.
   if (c == ehStack.stable_begin() &&
       currentCleanupStackDepth.strictlyEncloses(c)) {
-    popCleanupBlock();
+    popCleanupBlock(/*forDeactivation=*/true);
     return;
   }
 
@@ -300,7 +303,7 @@ static void emitCleanup(CIRGenFunction &cgf, cir::CleanupScopeOp cleanupScope,
   }
 }
 
-void CIRGenFunction::popCleanupBlock() {
+void CIRGenFunction::popCleanupBlock(bool forDeactivation) {
   assert(!ehStack.empty() && "cleanup stack is empty!");
   assert(isa<EHCleanupScope>(*ehStack.begin()) && "top not a cleanup!");
   EHCleanupScope &scope = cast<EHCleanupScope>(*ehStack.begin());
@@ -316,11 +319,34 @@ void CIRGenFunction::popCleanupBlock() {
                              ? scope.getActiveFlag()
                              : Address::invalid();
 
-  bool requiresNormalCleanup = scope.isNormalCleanup();
+  // When deactivating, suppress normal cleanup emission. The cleanup should
+  // not fire on the normal exit path. EH cleanup is still needed so that
+  // exceptions during the body are handled.
+  bool requiresNormalCleanup = scope.isNormalCleanup() && !forDeactivation;
   bool requiresEHCleanup = scope.isEHCleanup();
+
+  // When deactivating a cleanup that still needs EH protection, downgrade
+  // the scope's cleanup kind from All to EH so that FlattenCFG only emits
+  // the cleanup on the exception path. This prevents the destroyer from
+  // firing on normal exit (which would double-destroy, since the enclosing
+  // scope's destructor already handles the normal path).
+  if (forDeactivation && requiresEHCleanup)
+    cleanupScope.setCleanupKind(cir::CleanupKind::EH);
 
   // If we don't need the cleanup at all, we're done.
   if (!requiresNormalCleanup && !requiresEHCleanup) {
+    // If we get here, it means we added a cleanup scope that ended up not
+    // being needed, probably because the cleanup we're popping is being
+    // deactivated. Rather than try to move the contents of its body region out
+    // of the cleanup and erase it, we just add a yield to the cleanup region
+    // to make it valid but still a no-op. It will be erased during
+    // canonicalization.
+    mlir::Block &cleanupBlock = cleanupScope.getCleanupRegion().back();
+    if (!cleanupBlock.mightHaveTerminator()) {
+      mlir::OpBuilder::InsertionGuard guard(builder);
+      builder.setInsertionPointToEnd(&cleanupBlock);
+      cir::YieldOp::create(builder, builder.getUnknownLoc());
+    }
     ehStack.popCleanup();
     return;
   }
