@@ -13,6 +13,7 @@
 #include "clang/Analysis/CallGraph.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SCCIterator.h"
+#include <sstream>
 
 using namespace clang;
 using namespace clang::ast_matchers;
@@ -349,6 +350,8 @@ reportCycles(ArrayRef<const VarUseNode *> SCC,
     FoundPath.push_back(N);
   }
 
+  std::stringstream CycleOs;
+
   for (const VarUseNode *N : FoundPath) {
     const VarUseRecord &U = *NextNode[N];
     // 'U' is the source of the value, 'N->getDecl()' is the destination
@@ -363,7 +366,14 @@ reportCycles(ArrayRef<const VarUseNode *> SCC,
                "%0 of %1 may be used to compute result of %2",
                DiagnosticIDs::Note)
           << VarFuncUseStr << U.Node->getDecl() << N->getDecl();
+
+    CycleOs << N->getDecl()->getNameAsString() << " - ";
   }
+  CycleOs << FoundPath.front()->getDecl()->getNameAsString();
+
+  Chk.diag((*VarNode)->getDecl()->getLocation(),
+           "possible cyclical initialization: %0", DiagnosticIDs::Note)
+      << CycleOs.str();
 }
 
 namespace clang::tidy::misc {
