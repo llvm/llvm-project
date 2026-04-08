@@ -74,7 +74,6 @@ struct GlobalData {
   /// \returns A GlobalData entry or an error.
   LLVM_ABI static llvm::Expected<GlobalData> decode(DataExtractor &GsymData,
                                                     uint64_t &Offset);
-
 };
 
 } // namespace gsym

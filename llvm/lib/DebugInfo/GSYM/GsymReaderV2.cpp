@@ -187,8 +187,8 @@ void GsymReaderV2::dump(raw_ostream &OS) {
     uint64_t RelOffset = I * getAddressInfoOffsetSize();
     uint64_t RelValue =
         AddrInfoOffsetsData.getUnsigned(&RelOffset, getAddressInfoOffsetSize());
-    OS << format("[%4u] ", I) << HEX64(RelValue)
-       << " (" << HEX64(getAddressInfoOffset(I)) << ")\n";
+    OS << format("[%4u] ", I) << HEX64(RelValue) << " ("
+       << HEX64(getAddressInfoOffset(I)) << ")\n";
   }
   OS << "\nFiles:\n";
   OS << "INDEX  DIRECTORY  BASENAME   PATH\n";

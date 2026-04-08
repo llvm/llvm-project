@@ -57,8 +57,7 @@ protected:
   DataExtractor FileEntryData;
   StringTable StrTab;
 
-  GsymReader(std::unique_ptr<MemoryBuffer> Buffer,
-             llvm::endianness Endian);
+  GsymReader(std::unique_ptr<MemoryBuffer> Buffer, llvm::endianness Endian);
 
 public:
   LLVM_ABI GsymReader(GsymReader &&RHS) = default;
@@ -289,7 +288,6 @@ public:
   LLVM_ABI std::optional<uint64_t> getAddress(size_t Index) const;
 
 protected:
-
   /// Get the raw bytes for a GlobalData section as a StringRef.
   ///
   /// \param Type The section type to retrieve.

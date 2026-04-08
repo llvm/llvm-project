@@ -77,8 +77,8 @@ llvm::Error GsymReaderV1::parseHeaderAndGlobalDataDirectory() {
   uint64_t FileTableSize =
       4 + static_cast<uint64_t>(NumFiles) *
               FileEntry::getEncodedSize(Header::getStringOffsetSize());
-  GlobalDataSections[GlobalInfoType::FileTable] = {
-      GlobalInfoType::FileTable, Offset, FileTableSize};
+  GlobalDataSections[GlobalInfoType::FileTable] = {GlobalInfoType::FileTable,
+                                                   Offset, FileTableSize};
 
   // StringTable: offset and size are in the header.
   GlobalDataSections[GlobalInfoType::StringTable] = {

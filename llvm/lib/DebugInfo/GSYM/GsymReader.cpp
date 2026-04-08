@@ -30,27 +30,28 @@ GsymReader::GsymReader(std::unique_ptr<MemoryBuffer> Buffer,
       AddrInfoOffsetsData(StringRef(), true, 0),
       FileEntryData(StringRef(), true, 0) {}
 
-/// Check magic bytes, determine endianness, and return the GSYM version and endianness.
-/// If magic bytes are invalid, return error.
+/// Check magic bytes, determine endianness, and return the GSYM version and
+/// endianness. If magic bytes are invalid, return error.
 static Expected<std::pair<uint16_t, llvm::endianness>>
 checkMagicAndDetectVersionEndian(StringRef Bytes) {
   if (Bytes.size() < 6)
     return createStringError(std::errc::invalid_argument,
                              "data too small to be a GSYM file");
   // Detect host endian
-                             const auto HostEndian = llvm::endianness::native;
+  const auto HostEndian = llvm::endianness::native;
   const bool IsHostLittleEndian = (HostEndian == llvm::endianness::little);
   // Read magic bytes using host endian
   DataExtractor Data(Bytes, IsHostLittleEndian, 4);
   uint64_t Offset = 0;
   uint32_t Magic = Data.getU32(&Offset);
   llvm::endianness FileEndian;
-  // If magic bytes looks alright, the host and the file has the same endianness, vice versa.
+  // If magic bytes looks alright, the host and the file have the same
+  // endianness, vice versa.
   if (Magic == GSYM_MAGIC) {
     FileEndian = HostEndian;
   } else if (Magic == GSYM_CIGAM) {
-    FileEndian = IsHostLittleEndian ? llvm::endianness::big
-                                    : llvm::endianness::little;
+    FileEndian =
+        IsHostLittleEndian ? llvm::endianness::big : llvm::endianness::little;
     // Re-create DataExtractor with correct endianness to read version.
     Data = DataExtractor(Bytes, !IsHostLittleEndian, 4);
   } else {
@@ -133,8 +134,8 @@ llvm::Error GsymReader::parse() {
 
   // Step 3: Parse each global data section.
   // Starting from enum value 1, because 0 is EndOfList.
-  for (uint32_t I = 1;
-       I < static_cast<uint32_t>(GlobalInfoType::NumTypes); ++I) {
+  for (uint32_t I = 1; I < static_cast<uint32_t>(GlobalInfoType::NumTypes);
+       ++I) {
     switch (static_cast<GlobalInfoType>(I)) {
     case GlobalInfoType::AddrOffsets: {
       auto Bytes = getGlobalData(GlobalInfoType::AddrOffsets);
@@ -259,8 +260,7 @@ llvm::Error GsymReader::parseFileTable(StringRef Bytes) {
   return Error::success();
 }
 
-llvm::Expected<StringRef>
-GsymReader::getGlobalData(GlobalInfoType Type) const {
+llvm::Expected<StringRef> GsymReader::getGlobalData(GlobalInfoType Type) const {
   auto It = GlobalDataSections.find(Type);
   if (It == GlobalDataSections.end())
     return createStringError(std::errc::invalid_argument,
@@ -269,12 +269,12 @@ GsymReader::getGlobalData(GlobalInfoType Type) const {
   const GlobalData &GD = It->second;
   StringRef Buf = MemBuffer->getBuffer();
   if (GD.FileOffset + GD.FileSize > Buf.size())
-    return createStringError(
-        std::errc::invalid_argument,
-        "GlobalData section type %u extends beyond buffer "
-        "(offset=%" PRIu64 ", size=%" PRIu64 ", bufsize=%" PRIu64 ")",
-        static_cast<uint32_t>(Type), GD.FileOffset, GD.FileSize,
-        static_cast<uint64_t>(Buf.size()));
+    return createStringError(std::errc::invalid_argument,
+                             "GlobalData section type %u extends beyond buffer "
+                             "(offset=%" PRIu64 ", size=%" PRIu64
+                             ", bufsize=%" PRIu64 ")",
+                             static_cast<uint32_t>(Type), GD.FileOffset,
+                             GD.FileSize, static_cast<uint64_t>(Buf.size()));
   return Buf.substr(GD.FileOffset, GD.FileSize);
 }
 
