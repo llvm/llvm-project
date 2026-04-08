@@ -6800,13 +6800,13 @@ void LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
       CM.collectInLoopReductions();
       if (CM.selectUserVectorizationFactor(UserVF)) {
         LLVM_DEBUG(dbgs() << "LV: Using user VF " << UserVF << ".\n");
-        ElementCount EpilogueVF =
+        ElementCount EpilogueUserVF =
             ElementCount::getFixed(EpilogueVectorizationForceVF);
-        if (EpilogueVectorizationForceVF > 1 &&
-            ElementCount::isKnownLT(EpilogueVF, UserVF)) {
+        if (EpilogueUserVF.isVector() &&
+            ElementCount::isKnownLT(EpilogueUserVF, UserVF)) {
           // Build a separate plan for the forced epilogue VF.
-          CM.collectNonVectorizedAndSetWideningDecisions(EpilogueVF);
-          buildVPlansWithVPRecipes(EpilogueVF, EpilogueVF);
+          CM.collectNonVectorizedAndSetWideningDecisions(EpilogueUserVF);
+          buildVPlansWithVPRecipes(EpilogueUserVF, EpilogueUserVF);
         }
         buildVPlansWithVPRecipes(UserVF, UserVF);
         LLVM_DEBUG(printPlans(dbgs()));
@@ -7196,7 +7196,8 @@ LoopVectorizationPlanner::computeBestVF() {
   // If there is a single VPlan with a single VF, return it directly.
   VPlan &FirstPlan = *VPlans[0];
   if (VPlans.size() == 1 && size(FirstPlan.vectorFactors()) == 1)
-    return {{*FirstPlan.vectorFactors().begin(), 0, 0}, &FirstPlan};
+    return {VectorizationFactor(*FirstPlan.vectorFactors().begin(), 0, 0),
+            &FirstPlan};
 
   ElementCount UserVF = Hints.getWidth();
   if (EpilogueVectorizationForceVF > 1 && UserVF && hasPlanWithVF(UserVF)) {
@@ -7206,10 +7207,9 @@ LoopVectorizationPlanner::computeBestVF() {
            "expected first plan to be for the forced epilogue VF");
     assert(*VPlans[1]->vectorFactors().begin() == UserVF &&
            "expected second plan to be for the forced UserVF");
-    return {{UserVF, 0, 0}, &*VPlans[1]};
+    return {VectorizationFactor(UserVF, 0, 0), VPlans[1].get()};
   }
 
-  ElementCount ScalarVF = ElementCount::getFixed(1);
   LLVM_DEBUG(dbgs() << "LV: Computing best VF using cost kind: "
                     << (CM.CostKind == TTI::TCK_RecipThroughput
                             ? "Reciprocal Throughput\n"
@@ -7220,6 +7220,7 @@ LoopVectorizationPlanner::computeBestVF() {
                             ? "Code Size and Latency\n"
                             : "Unknown\n"));
 
+  ElementCount ScalarVF = ElementCount::getFixed(1);
   assert(FirstPlan.hasVF(ScalarVF) &&
          "More than a single plan/VF w/o any plan having scalar VF");
 
