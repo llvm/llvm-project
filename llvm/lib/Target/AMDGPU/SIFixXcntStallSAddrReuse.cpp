@@ -248,10 +248,10 @@ MachineInstr *SIFixXcntStallSAddrReuse::convertToVAddr(MachineInstr &MI,
     LIS->InsertMachineInstrInMaps(*AddLo);
     LIS->InsertMachineInstrInMaps(*AddHi);
     LIS->createAndComputeVirtRegInterval(TmpVAddr);
-    LIS->createAndComputeVirtRegInterval(VAddrSignExt);
+    LIS->createAndComputeVirtRegInterval(HiExt);
     LIS->createAndComputeVirtRegInterval(SAddrV);
-    LIS->createAndComputeVirtRegInterval(SAddrLo);
-    LIS->createAndComputeVirtRegInterval(SAddrHi);
+    LIS->createAndComputeVirtRegInterval(LoV);
+    LIS->createAndComputeVirtRegInterval(HiV);
   }
 
   MachineInstrBuilder MIB = BuildMI(MBB, MI, DL, TII->get(NewOpc));
