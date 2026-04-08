@@ -643,12 +643,6 @@ public:
 
   virtual lldb::ValueObjectSP DoCast(const CompilerType &compiler_type);
 
-  virtual lldb::ValueObjectSP CastPointerType(const char *name,
-                                              CompilerType &ast_type);
-
-  virtual lldb::ValueObjectSP CastPointerType(const char *name,
-                                              lldb::TypeSP &type_sp);
-
   /// Return the target load address associated with this value object.
   lldb::addr_t GetLoadAddress();
 

@@ -2968,33 +2968,6 @@ lldb::ValueObjectSP ValueObject::Clone(ConstString new_name) {
   return ValueObjectCast::Create(*this, new_name, GetCompilerType());
 }
 
-ValueObjectSP ValueObject::CastPointerType(const char *name,
-                                           CompilerType &compiler_type) {
-  ValueObjectSP valobj_sp;
-  addr_t ptr_value = GetPointerValue().address;
-
-  if (ptr_value != LLDB_INVALID_ADDRESS) {
-    Address ptr_addr(ptr_value);
-    ExecutionContext exe_ctx(GetExecutionContextRef());
-    valobj_sp = ValueObjectMemory::Create(
-        exe_ctx.GetBestExecutionContextScope(), name, ptr_addr, compiler_type);
-  }
-  return valobj_sp;
-}
-
-ValueObjectSP ValueObject::CastPointerType(const char *name, TypeSP &type_sp) {
-  ValueObjectSP valobj_sp;
-  addr_t ptr_value = GetPointerValue().address;
-
-  if (ptr_value != LLDB_INVALID_ADDRESS) {
-    Address ptr_addr(ptr_value);
-    ExecutionContext exe_ctx(GetExecutionContextRef());
-    valobj_sp = ValueObjectMemory::Create(
-        exe_ctx.GetBestExecutionContextScope(), name, ptr_addr, type_sp);
-  }
-  return valobj_sp;
-}
-
 lldb::addr_t ValueObject::GetLoadAddress() {
   if (auto target_sp = GetTargetSP()) {
     const bool scalar_is_load_address = true;
