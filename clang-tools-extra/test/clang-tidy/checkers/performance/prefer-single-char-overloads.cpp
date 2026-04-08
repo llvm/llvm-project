@@ -29,13 +29,13 @@ void StringFind() {
   Str.find("x"
 
   "");
-  // CHECK-MESSAGES: [[@LINE-3]]:12: warning: 'find' called with a string literal consisting of a single character; consider using the more efficient overload accepting a character [performance-faster-string-find]
+  // CHECK-MESSAGES: [[@LINE-3]]:12: warning: 'find' called with a string literal
   // CHECK-FIXES: Str.find('x');
 
   Str.find(""
 
   "k");
-  // CHECK-MESSAGES: [[@LINE-3]]:12: warning: 'find' called with a string literal consisting of a single character; consider using the more efficient overload accepting a character [performance-faster-string-find]
+  // CHECK-MESSAGES: [[@LINE-3]]:12: warning: 'find' called with a string literal
   // CHECK-FIXES: Str.find('k');
 
   // Works with the pos argument.
