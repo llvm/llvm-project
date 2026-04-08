@@ -849,7 +849,7 @@ public:
   }
   void Unparse(const Allocation &x) { // R932
     Walk(std::get<AllocateObject>(x.t));
-    Walk("(", std::get<std::list<AllocateShapeSpec>>(x.t), ",", ")");
+    Walk("(", std::get<std::list<AllocateShapeSpec>>(std::get<AllocateShapeSpecListOrBounds>(x.t).u), ",", ")");
     Walk("[", std::get<std::optional<AllocateCoarraySpec>>(x.t), "]");
   }
   void Unparse(const AllocateShapeSpec &x) { // R934 & R938

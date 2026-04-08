@@ -1923,10 +1923,45 @@ struct AllocateCoarraySpec {
 
 // R932 allocation ->
 //        allocate-object [( allocate-shape-spec-list )]
-//        [lbracket allocate-coarray-spec rbracket]
+//        [lbracket allocate-coarray-spec rbracket] | 
+//        ( [ lower-bounds-expr : ] upper-bounds-expr )
+//        [ lbracket allocate-coarray-spec rbracket ]
+// The 2023 spec has a typo, as well as a deviation from the
+// similar explicit-shape-bounds-spec and assumed-shape-bounds-spec 
+// rules for array-spec. The typo is that it's missing an allocate-object
+// for the second rule. The deviation is that array-spec has rules 
+// differentiating the bound-list versus bounds-spec, while this
+// allocation rule has allocate-shape-spec-list as part of the first rule,
+// and what would be allocate-shape-bounds-spec written inline as 
+// [ lower-bounds-expr : ] upper-bounds-expr
+// Altogether, we can use the following grammar:
+// R933 allocation -> 
+//        allocate-object [ ( allocate-shape-spec-list-or-bounds ) ]
+//        [ lbracket allocate-coarray-spec rbracket ] | 
+// allocate-shape-spec-list-or-bounds -> 
+//        allocate-shape-spec-list | 
+//        allocate-shape-bounds-spec
+// allocate-shape-bounds-spec -> 
+//        [ lower-bounds-expr : ] upper-bounds-expr
+
+using BoundsExpr = IntExpr;
+
+struct AllocateShapeBoundsSpec {
+  TUPLE_CLASS_BOILERPLATE(AllocateShapeBoundsSpec);
+  std::tuple<
+    std::optional<BoundsExpr>, 
+    BoundsExpr> 
+  t;
+};
+
+struct AllocateShapeSpecListOrBounds {
+  UNION_CLASS_BOILERPLATE(AllocateShapeSpecListOrBounds);
+  std::variant<std::list<AllocateShapeSpec>, AllocateShapeBoundsSpec> u;
+};
+
 struct Allocation {
   TUPLE_CLASS_BOILERPLATE(Allocation);
-  std::tuple<AllocateObject, std::list<AllocateShapeSpec>,
+  std::tuple<AllocateObject, AllocateShapeSpecListOrBounds,
       std::optional<AllocateCoarraySpec>>
       t;
 };
