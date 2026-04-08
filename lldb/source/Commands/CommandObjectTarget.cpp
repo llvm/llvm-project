@@ -2438,7 +2438,7 @@ protected:
           }
           if (num_dumped == 0)
             result.AppendWarningWithFormatv(
-                "No source filenames matched '{0}'.\n", arg_cstr);
+                "No source filenames matched '{0}'.", arg_cstr);
           else
             total_num_dumped += num_dumped;
         }
