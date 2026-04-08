@@ -9,9 +9,9 @@
 #ifndef LLVM_CLANG_AST_INTERP_REFLECT_H
 #define LLVM_CLANG_AST_INTERP_REFLECT_H
 
-#include "clang/AST/Reflection.h"
 #include "clang/AST/APValue.h"
 #include "clang/AST/ComparisonCategories.h"
+#include "clang/AST/Reflection.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
@@ -28,7 +28,8 @@ private:
 
 public:
   Reflect() : Kind(ReflectionKind::Type), Operand(nullptr) {}
-  Reflect(ReflectionKind Kind, const void *Operand) : Kind(Kind), Operand(Operand) {}
+  Reflect(ReflectionKind Kind, const void *Operand)
+      : Kind(Kind), Operand(Operand) {}
 
   ComparisonCategoryResult compare(const Reflect &RHS) const {
     llvm::FoldingSetNodeID LID, RID;
@@ -46,8 +47,6 @@ public:
   APValue toAPValue(const ASTContext &Ctx) const {
     return APValue(Kind, Operand);
   }
-
-
 };
 
 inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Reflect &R) {
