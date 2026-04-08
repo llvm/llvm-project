@@ -210,13 +210,21 @@ public:
 
 /// Helper macro to declare registry class.
 ///
+/// The `LLVM_ABI_EXPORT` (i.e. __delcpsec(dllexport) on Win32) attached to the
+/// declaration is mandatory since MSVC disallows adding dllexport after the
+/// first non-exported specialization declaration, and it is generally safe. All
+/// of link.exe, ld.bfd, and lld-link will attempt to import undefined symbols
+/// (including template specializations) from DLLs, even if the symbol is
+/// declared with dllexport, just like non-imported symbols. The dllimport
+/// attribute is not eligible here, since the specialization may or may not be
+/// defined in the same object, a static library, or an import library.
 #define LLVM_DECLARE_REGISTRY(REGISTRY_CLASS)                                  \
   namespace llvm::detail {                                                     \
   template <>                                                                  \
   struct RegistryLinkListDeclarationMarker<REGISTRY_CLASS> : std::true_type {  \
   };                                                                           \
   template <>                                                                  \
-  RegistryLinkListStorage<REGISTRY_CLASS> &                                    \
+  LLVM_ABI_EXPORT RegistryLinkListStorage<REGISTRY_CLASS> &                    \
   getRegistryLinkListInstance<REGISTRY_CLASS>();                               \
   }
 
