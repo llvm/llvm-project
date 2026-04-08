@@ -10,6 +10,7 @@
 #include "flang/Common/idioms.h"
 #include "flang/Parser/characters.h"
 #include "flang/Support/Fortran.h"
+#include "llvm/ADT/StringRef.h"
 #include <string>
 #include <string_view>
 
@@ -231,8 +232,8 @@ std::optional<LanguageControlFlag> LanguageFeatureControl::FindWarning(
 std::optional<std::string_view> LanguageFeatureControl::CheckDeprecatedSpelling(
     std::string_view input) const {
   // Strip "no-" prefix for lookup, same as FindWarning does.
-  // TODO: replace with starts_with when moving to C++20
-  if (input.size() > 3 && input.substr(0, 3) == "no-") {
+  // TODO: Consider using std::string_view when moving to C++
+  if (llvm::StringRef{input}.starts_with("no-")) {
     input = input.substr(3);
   }
   if (auto it{deprecatedCliOptions_.find(std::string{input})};

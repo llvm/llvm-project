@@ -1037,7 +1037,8 @@ static bool parseDiagArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
   // this has to change when other -W<opt>'s are supported.
   if (args.hasArg(clang::options::OPT_W_Joined)) {
     const auto &wArgs = args.getAllArgValues(clang::options::OPT_W_Joined);
-    for (const auto &wArg : wArgs) {
+     // TODO: Consider using std::string_view when moving to C++
+    for (const llvm::StringRef wArg : wArgs) {
       if (wArg == "error") {
         res.setWarnAsErr(true);
         // -Wfatal-errors
@@ -1047,8 +1048,7 @@ static bool parseDiagArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
       } else if (features.EnableWarning(wArg)) {
         if (auto canonical{features.CheckDeprecatedSpelling(wArg)}) {
           std::string suggestion{*canonical};
-          // TODO: replace with starts_with when moving to C++20
-          if (wArg.size() > 3 && wArg.substr(0, 3) == "no-") {
+          if (wArg.starts_with("no-")) {
             suggestion = "no-" + suggestion;
           }
           const unsigned diagID =
