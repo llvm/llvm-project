@@ -1,11 +1,18 @@
+#include <atomic>
 #include <thread>
-#include <unistd.h>
 #include <vector>
 
 #define NUM_THREADS 3
 
+std::atomic<int> g_barrier(NUM_THREADS);
+volatile bool g_spin = true;
+
 void thread_work() {
-  pause(); // break in thread
+  --g_barrier;
+  while (g_barrier.load() > 0)
+    ;
+  while (g_spin) // break in thread
+    ;
 }
 
 int main() {

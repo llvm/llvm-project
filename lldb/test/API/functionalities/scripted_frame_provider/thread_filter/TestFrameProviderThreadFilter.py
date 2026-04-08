@@ -28,13 +28,13 @@ class FrameProviderThreadFilterTestCase(TestBase):
             only_one_thread=False,
         )
 
-        # The breakpoint is on a one-shot line (fetch_add), so each hit is
-        # from a unique thread. Continue until all 3 have hit it.
+        # All threads synchronize via an atomic barrier, then each one
+        # hits the breakpoint while spinning. Continue until all 3 have hit.
         while bkpt.GetHitCount() < 3:
             process.Continue()
 
-        # After 3 hits, all worker threads are alive: some in the spin loop,
-        # one at the breakpoint. Collect all non-main threads.
+        # After 3 hits, all worker threads are alive in the spin loop.
+        # Collect all non-main threads.
         worker_threads = []
         for t in process:
             for i in range(t.GetNumFrames()):
