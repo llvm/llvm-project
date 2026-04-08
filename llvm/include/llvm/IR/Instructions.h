@@ -3705,9 +3705,9 @@ public:
         return;
       }
       // In some cases while simplifying switch instructions, we end up with
-      // degenerate switch instructions (e.g., only contain the default case).
-      // We drop profile metadata in such cases given it does not convey
-      // anything.
+      // degenerate switch instructions (e.g., only contains the default case).
+      // We drop profile metadata in such cases rather than updating given it
+      // does not convey anything.
       SI.setMetadata(LLVMContext::MD_prof, nullptr);
     }
   }
