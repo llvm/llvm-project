@@ -2360,3 +2360,151 @@ func.func @fold_tensor_cast_into_forall_non_sequential_writes(
   // %0#0 contains %arg1 data; %0#1 contains %arg0 data.
   return %0#0, %0#1 : tensor<?x32xf32>, tensor<?x32xf32>
 }
+
+// -----
+
+// Test: nested for loops with effectively-dead iter_args.
+// The outer result is unused, the outer block arg feeds the inner iter_arg
+// whose block arg is also unused. Both iter_args should be removed.
+
+// CHECK-LABEL: func @nested_for_effectively_dead_iter_args
+//  CHECK-SAME:   (%[[LB:.*]]: index, %[[UB:.*]]: index, %[[STEP:.*]]: index, %[[MEM:.*]]: memref<f32>)
+//       CHECK:   %[[CST:.*]] = arith.constant
+//       CHECK:   scf.for %[[I:.*]] = %[[LB]] to %[[UB]] step %[[STEP]] {
+//       CHECK:     scf.for %[[J:.*]] = %[[LB]] to %[[UB]] step %[[STEP]] {
+//       CHECK:       memref.store %[[CST]], %[[MEM]][]
+//       CHECK:     }
+//       CHECK:   }
+//       CHECK:   return
+func.func @nested_for_effectively_dead_iter_args(
+    %lb: index, %ub: index, %step: index, %mem: memref<f32>) {
+  %cst = arith.constant 1.0 : f32
+  %init = arith.constant 0.0 : f32
+  %outer = scf.for %i = %lb to %ub step %step iter_args(%a = %init) -> (f32) {
+    %inner = scf.for %j = %lb to %ub step %step iter_args(%b = %a) -> (f32) {
+      memref.store %cst, %mem[] : memref<f32>
+      scf.yield %cst : f32
+    }
+    scf.yield %inner : f32
+  }
+  return
+}
+
+// -----
+
+// Test: three levels of nesting with effectively-dead iter_args.
+
+// CHECK-LABEL: func @triple_nested_effectively_dead_iter_args
+//       CHECK:   scf.for %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} {
+//       CHECK:     scf.for %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} {
+//       CHECK:       scf.for %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} {
+//       CHECK:         memref.store
+//       CHECK:       }
+//       CHECK:     }
+//       CHECK:   }
+//       CHECK:   return
+func.func @triple_nested_effectively_dead_iter_args(
+    %lb: index, %ub: index, %step: index, %mem: memref<f32>) {
+  %cst = arith.constant 1.0 : f32
+  %init = arith.constant 0.0 : f32
+  %outer = scf.for %i = %lb to %ub step %step iter_args(%a = %init) -> (f32) {
+    %mid = scf.for %j = %lb to %ub step %step iter_args(%b = %a) -> (f32) {
+      %inner = scf.for %k = %lb to %ub step %step iter_args(%c = %b) -> (f32) {
+        memref.store %cst, %mem[] : memref<f32>
+        scf.yield %cst : f32
+      }
+      scf.yield %inner : f32
+    }
+    scf.yield %mid : f32
+  }
+  return
+}
+
+// -----
+
+// Negative test: block arg is used in the loop body.
+// The iter_arg must NOT be removed even though the result is unused.
+
+// CHECK-LABEL: func @iter_arg_used_in_body
+//       CHECK:   scf.for {{.*}} iter_args
+//       CHECK:     memref.store
+//       CHECK:     scf.yield
+//       CHECK:   }
+func.func @iter_arg_used_in_body(
+    %lb: index, %ub: index, %step: index, %mem: memref<f32>) {
+  %init = arith.constant 0.0 : f32
+  %r = scf.for %i = %lb to %ub step %step iter_args(%a = %init) -> (f32) {
+    memref.store %a, %mem[] : memref<f32>
+    %next = arith.addf %a, %a : f32
+    scf.yield %next : f32
+  }
+  return
+}
+
+// -----
+
+// Test: two chained for loops where the second loop's result is unused and
+// its iter_arg chain through an inner loop is effectively dead.
+
+// CHECK-LABEL: func @chained_for_effectively_dead
+//  CHECK-SAME:   (%[[LB:.*]]: index, %[[UB:.*]]: index, %[[STEP:.*]]: index, %[[MEM:.*]]: memref<f32>)
+//       CHECK:   %[[CST:.*]] = arith.constant
+//       CHECK:   scf.for %{{.*}} = %[[LB]] to %{{.*}} step %[[STEP]] {
+//       CHECK:     scf.for %{{.*}} = %[[LB]] to %{{.*}} step %[[STEP]] {
+//       CHECK:       memref.store
+//       CHECK:     }
+//       CHECK:   }
+//       CHECK:   scf.for %{{.*}} = %[[LB]] to %{{.*}} step %[[STEP]] {
+//       CHECK:     scf.for %{{.*}} = %[[LB]] to %{{.*}} step %[[STEP]] {
+//       CHECK:       memref.store
+//       CHECK:     }
+//       CHECK:   }
+//       CHECK:   return
+func.func @chained_for_effectively_dead(
+    %lb: index, %ub: index, %step: index, %mem: memref<f32>) {
+  %cst = arith.constant 1.0 : f32
+  %init = arith.constant 0.0 : f32
+  %first = scf.for %i = %lb to %ub step %step iter_args(%a = %init) -> (f32) {
+    %inner1 = scf.for %j = %lb to %ub step %step iter_args(%b = %a) -> (f32) {
+      memref.store %cst, %mem[] : memref<f32>
+      scf.yield %cst : f32
+    }
+    scf.yield %inner1 : f32
+  }
+  %second = scf.for %i = %lb to %ub step %step iter_args(%a = %first) -> (f32) {
+    %inner2 = scf.for %j = %lb to %ub step %step iter_args(%b = %a) -> (f32) {
+      memref.store %cst, %mem[] : memref<f32>
+      scf.yield %cst : f32
+    }
+    scf.yield %inner2 : f32
+  }
+  return
+}
+
+// -----
+
+// Test: 2-level loop nest with two iter_args, both effectively unused.
+
+// CHECK-LABEL: func @nested_for_two_iter_args
+//  CHECK-SAME:   (%[[LB:.*]]: index, %[[UB:.*]]: index, %[[STEP:.*]]: index, %[[MEM:.*]]: memref<f32>)
+//       CHECK:   scf.for %{{.*}} = %[[LB]] to %[[UB]] step %[[STEP]] {
+//       CHECK:     scf.for %{{.*}} = %[[LB]] to %[[UB]] step %[[STEP]] {
+//       CHECK:       memref.store
+//       CHECK:     }
+//       CHECK:   }
+//       CHECK:   return
+func.func @nested_for_two_iter_args(
+    %lb: index, %ub: index, %step: index, %mem: memref<f32>) {
+  %c0 = arith.constant 0.0 : f32
+  %c1 = arith.constant 1.0 : f32
+  %r:2 = scf.for %i = %lb to %ub step %step
+      iter_args(%a = %c0, %b = %c1) -> (f32, f32) {
+    %inner:2 = scf.for %j = %lb to %ub step %step
+        iter_args(%x = %a, %y = %b) -> (f32, f32) {
+      memref.store %c1, %mem[] : memref<f32>
+      scf.yield %c1, %c0 : f32, f32
+    }
+    scf.yield %inner#0, %inner#1 : f32, f32
+  }
+  return
+}

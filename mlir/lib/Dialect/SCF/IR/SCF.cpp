@@ -1002,11 +1002,153 @@ struct ForOpTensorCastFolder : public OpRewritePattern<ForOp> {
     return failure();
   }
 };
+
+/// Remove iter_arg/result pairs from scf.for when the result is unused and
+/// the corresponding iter_arg block argument is "effectively unused" --
+/// meaning it has no uses, or its only uses are as init operands for nested
+/// scf.for iter_args whose block arguments are also effectively unused.
+///
+/// This handles cases that the generic RemoveDeadRegionBranchOpSuccessorInputs
+/// pattern cannot, specifically when inner loop results are used by outer
+/// loop yields creating cross-loop use chains that appear live but are
+/// semantically dead.
+///
+/// Example:
+///   %r = scf.for %i = %lb to %ub step %s iter_args(%a = %init) -> (f32) {
+///     %inner = scf.for %j = %lb to %ub step %s
+///         iter_args(%b = %a) -> (f32) {
+///       // %b is unused in the body
+///       scf.yield %val : f32
+///     }
+///     scf.yield %inner : f32
+///   }
+///   // %r is unused
+///
+/// After canonicalization:
+///   scf.for %i = %lb to %ub step %s {
+///     scf.for %j = %lb to %ub step %s {
+///       // body without iter_args
+///     }
+///   }
+struct ForOpUnusedIterArgElimination : public OpRewritePattern<ForOp> {
+  using OpRewritePattern<ForOp>::OpRewritePattern;
+
+  /// Check if a block argument is effectively unused. A block argument is
+  /// effectively unused if it has no uses, or all its uses are init operands
+  /// for nested scf.for iter_args where: (a) the inner block arg is also
+  /// effectively unused, and (b) the inner for's result at that position is
+  /// only used as yield operands at positions we are removing from parentFor.
+  static bool isBlockArgEffectivelyUnused(Value blockArg, ForOp parentFor,
+                                          const BitVector &parentCandidates) {
+    if (blockArg.use_empty())
+      return true;
+
+    for (OpOperand &use : blockArg.getUses()) {
+      auto innerFor = dyn_cast<ForOp>(use.getOwner());
+      if (!innerFor)
+        return false;
+
+      unsigned opNum = use.getOperandNumber();
+      if (opNum < innerFor.getNumControlOperands())
+        return false;
+
+      unsigned innerIdx = opNum - innerFor.getNumControlOperands();
+      Value innerResult = innerFor.getResult(innerIdx);
+
+      // Inner result must only be used at yield positions of parentFor
+      // that are candidates for removal.
+      for (OpOperand &resUse : innerResult.getUses()) {
+        auto yieldOp = dyn_cast<YieldOp>(resUse.getOwner());
+        if (!yieldOp || yieldOp->getParentOp() != parentFor.getOperation())
+          return false;
+        if (!parentCandidates.test(resUse.getOperandNumber()))
+          return false;
+      }
+
+      // Build candidate positions for the inner for: innerIdx is a candidate
+      // because its result will become unused after the parent transformation.
+      BitVector innerCandidates(innerFor.getNumResults(), false);
+      innerCandidates.set(innerIdx);
+      for (unsigned j = 0; j < innerFor.getNumResults(); ++j) {
+        if (innerFor.getResult(j).use_empty())
+          innerCandidates.set(j);
+      }
+
+      Value innerBlockArg = innerFor.getRegionIterArg(innerIdx);
+      if (!isBlockArgEffectivelyUnused(innerBlockArg, innerFor,
+                                       innerCandidates))
+        return false;
+    }
+    return true;
+  }
+
+  LogicalResult matchAndRewrite(ForOp forOp,
+                                PatternRewriter &rewriter) const override {
+    unsigned numResults = forOp.getNumResults();
+    if (numResults == 0)
+      return failure();
+
+    // Step 1: Find candidate positions (result unused).
+    BitVector candidates(numResults, false);
+    for (unsigned i = 0; i < numResults; ++i) {
+      if (forOp.getResult(i).use_empty())
+        candidates.set(i);
+    }
+    if (candidates.none())
+      return failure();
+
+    // Step 2: For each candidate, verify the block arg is effectively unused
+    // but not trivially unused (the generic patterns handle the trivial case).
+    BitVector toRemove(numResults, false);
+    for (unsigned i : candidates.set_bits()) {
+      Value blockArg = forOp.getRegionIterArg(i);
+      if (blockArg.use_empty())
+        continue;
+      if (isBlockArgEffectivelyUnused(blockArg, forOp, candidates))
+        toRemove.set(i);
+    }
+    if (toRemove.none())
+      return failure();
+
+    // Step 3: Replace block arg uses with init values. This is safe because
+    // the block arg is effectively unused and the init value dominates the
+    // body.
+    for (unsigned i : toRemove.set_bits()) {
+      Value blockArg = forOp.getRegionIterArg(i);
+      Value initVal = forOp.getInitArgs()[i];
+      rewriter.replaceAllUsesWith(blockArg, initVal);
+    }
+
+    // Step 4: Erase yield operands for removed positions.
+    auto yieldOp = cast<YieldOp>(forOp.getBody()->getTerminator());
+    rewriter.modifyOpInPlace(yieldOp,
+                             [&]() { yieldOp->eraseOperands(toRemove); });
+
+    // Step 5: Erase block arguments for removed positions.
+    BitVector blockArgsToErase(forOp.getBody()->getNumArguments(), false);
+    for (unsigned i : toRemove.set_bits())
+      blockArgsToErase.set(i + forOp.getNumInductionVars());
+    rewriter.modifyOpInPlace(
+        forOp, [&]() { forOp.getBody()->eraseArguments(blockArgsToErase); });
+
+    // Step 6: Erase init operands for removed positions.
+    BitVector initOperandsToErase(forOp->getNumOperands(), false);
+    for (unsigned i : toRemove.set_bits())
+      initOperandsToErase.set(i + forOp.getNumControlOperands());
+    rewriter.modifyOpInPlace(
+        forOp, [&]() { forOp->eraseOperands(initOperandsToErase); });
+
+    // Step 7: Erase results for removed positions.
+    rewriter.eraseOpResults(forOp, toRemove);
+
+    return success();
+  }
+};
 } // namespace
 
 void ForOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                         MLIRContext *context) {
-  results.add<ForOpTensorCastFolder>(context);
+  results.add<ForOpTensorCastFolder, ForOpUnusedIterArgElimination>(context);
   populateRegionBranchOpInterfaceCanonicalizationPatterns(
       results, ForOp::getOperationName());
   populateRegionBranchOpInterfaceInliningPattern(
