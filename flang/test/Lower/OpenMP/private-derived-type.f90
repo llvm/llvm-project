@@ -16,12 +16,12 @@ subroutine s4
 end subroutine s4
 
 ! CHECK:  omp.private {type = private} @[[DERIVED_PRIV:.*]] : !fir.type<{{.*}}y3{x:!fir.box<!fir.heap<i32>>}> init {
-! CHECK:             %[[VAL_25:.*]] = fir.embox %[[VAL_23:.*]] : (!fir.ref<!fir.type<_QFs4Ty3{x:!fir.box<!fir.heap<i32>>}>>) -> !fir.box<!fir.type<_QFs4Ty3{x:!fir.box<!fir.heap<i32>>}>>
+! CHECK:             %[[VAL_25:.*]] = fir.embox %{{.*}} : (!fir.ref<!fir.type<_QFs4Ty3{x:!fir.box<!fir.heap<i32>>}>>) -> !fir.box<!fir.type<_QFs4Ty3{x:!fir.box<!fir.heap<i32>>}>>
 ! CHECK:             %[[VAL_26:.*]] = fir.address_of
 ! CHECK:             %[[VAL_27:.*]] = arith.constant 8 : i32
 ! CHECK:             %[[VAL_28:.*]] = fir.convert %[[VAL_25]] : (!fir.box<!fir.type<_QFs4Ty3{x:!fir.box<!fir.heap<i32>>}>>) -> !fir.box<none>
 ! CHECK:             %[[VAL_29:.*]] = fir.convert %[[VAL_26]] : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
-!                    Check we do call FortranAInitialize on the derived type
+! Check we do call FortranAInitialize on the derived type
 ! CHECK:             fir.call @_FortranAInitialize(%[[VAL_28]], %[[VAL_29]], %[[VAL_27]]) fastmath<contract> : (!fir.box<none>, !fir.ref<i8>, i32) -> ()
 ! CHECK:  }
 
@@ -29,14 +29,16 @@ end subroutine s4
 !                  Example of how the lowering for regular derived type variables:
 ! CHECK:           %[[VAL_DERIVED_ALLOCA:.*]] = fir.alloca !fir.type<_QFs4Ty3{x:!fir.box<!fir.heap<i32>>}> {bindc_name = "v", uniq_name = "_QFs4Ev"}
 ! CHECK:           %[[VAL_DERIVED_DECLARE:.*]]:2 = hlfir.declare %[[VAL_DERIVED_ALLOCA]] {{.*}}
-! CHECK:           %[[ADDR:.*]] = fir.address_of(@_QQ_QFs4Ty3.DerivedInit) : !fir.ref<!fir.type<_QFs4Ty3{x:!fir.box<!fir.heap<i32>>}>>
-! CHECK:           fir.copy %[[ADDR]] to %[[VAL_DERIVED_DECLARE]]#0 no_overlap : {{.*}}
+! CHECK:           %[[VAL_COORD:.*]] = fir.coordinate_of %[[VAL_DERIVED_DECLARE]]#0, x : (!fir.ref<!fir.type<_QFs4Ty3{x:!fir.box<!fir.heap<i32>>}>>) -> !fir.ref<!fir.box<!fir.heap<i32>>>
+! CHECK:           %[[VAL_ZERO:.*]] = fir.zero_bits !fir.heap<i32>
+! CHECK:           %[[VAL_EMBOX:.*]] = fir.embox %[[VAL_ZERO]] : (!fir.heap<i32>) -> !fir.box<!fir.heap<i32>>
+! CHECK:           fir.store %[[VAL_EMBOX]] to %[[VAL_COORD]] : !fir.ref<!fir.box<!fir.heap<i32>>>
 ! CHECK:           omp.parallel {
 ! CHECK:             omp.wsloop private(@[[DERIVED_PRIV]] %{{.*}}#0 -> %{{.*}}, @{{.*}} %{{.*}}#0 -> %{{.*}} : !fir.ref<!fir.type<_QFs4Ty3{x:!fir.box<!fir.heap<i32>>}>>, !fir.ref<i32>) {
 ! CHECK:           }
 ! CHECK:           %[[VAL_39:.*]] = fir.embox %[[VAL_DERIVED_DECLARE]]#0 : (!fir.ref<!fir.type<_QFs4Ty3{x:!fir.box<!fir.heap<i32>>}>>) -> !fir.box<!fir.type<_QFs4Ty3{x:!fir.box<!fir.heap<i32>>}>>
 ! CHECK:           %[[VAL_40:.*]] = fir.convert %[[VAL_39]] : (!fir.box<!fir.type<_QFs4Ty3{x:!fir.box<!fir.heap<i32>>}>>) -> !fir.box<none>
-!                  Check the derived type is destroyed
+! Check the derived type is destroyed
 ! CHECK:           fir.call @_FortranADestroy(%[[VAL_40]]) fastmath<contract> : (!fir.box<none>) -> ()
 ! CHECK:           return
 ! CHECK:         }
