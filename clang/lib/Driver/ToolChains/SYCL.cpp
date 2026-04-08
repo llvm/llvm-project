@@ -19,15 +19,17 @@ SYCLInstallationDetector::SYCLInstallationDetector(
     const Driver &D, const llvm::Triple &HostTriple,
     const llvm::opt::ArgList &Args)
     : D(D) {
-  // Detect the presence of the SYCL runtime library (libsycl.so) in the
+  // Detect the presence of the SYCL runtime library (libLLVMSYCL.so) in the
   // filesystem. This is used to determine whether a usable SYCL installation
   // is available for the current driver invocation.
   StringRef SysRoot = D.SysRoot;
   SmallString<128> DriverDir(D.Dir);
+  SmallString<128> LibPath(DriverDir);
+  llvm::sys::path::append(LibPath, "..", "lib", HostTriple.str(),
+                          "libLLVMSYCL.so");
   if (DriverDir.starts_with(SysRoot) &&
-      (Args.hasArg(options::OPT_fsycl) ||
-       D.getVFS().exists(DriverDir + "/../lib/libsycl.so"))) {
-    llvm::sys::path::append(DriverDir, "..", "lib");
+      (Args.hasArg(options::OPT_fsycl) || D.getVFS().exists(LibPath))) {
+    llvm::sys::path::append(DriverDir, "..", "lib", HostTriple.str());
     SYCLRTLibPath = DriverDir;
   }
 }

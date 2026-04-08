@@ -3115,8 +3115,7 @@ size_t ProcessGDBRemote::DoWriteMemory(addr_t addr, const void *buf,
   MemoryRegionInfo region;
   Status region_status = GetMemoryRegionInfo(addr, region);
 
-  bool is_flash =
-      region_status.Success() && region.GetFlash() == MemoryRegionInfo::eYes;
+  bool is_flash = region_status.Success() && region.GetFlash() == eLazyBoolYes;
 
   if (is_flash) {
     if (!m_allow_flash_writes) {
@@ -4421,9 +4420,8 @@ void ProcessGDBRemote::GetMaxMemorySize() {
         // In unlikely scenario that max packet size is less then 70, we will
         // hope that data being written is small enough to fit.
         Log *log(GetLog(GDBRLog::Comm | GDBRLog::Memory));
-        if (log)
-          log->Warning("Packet size is too small. "
-                       "LLDB may face problems while writing memory");
+        LLDB_LOG(log, "warning: Packet size is too small. "
+                      "LLDB may face problems while writing memory");
       }
 
       m_max_memory_size = stub_max_size;

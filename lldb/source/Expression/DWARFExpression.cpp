@@ -21,7 +21,6 @@
 #include "lldb/Utility/RegisterValue.h"
 #include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/StreamString.h"
-#include "lldb/Utility/VMRange.h"
 
 #include "lldb/Host/Host.h"
 #include "lldb/Utility/Endian.h"
@@ -1337,7 +1336,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     // value and pushes its absolute value. If the absolute value can not be
     // represented, the result is undefined.
     case DW_OP_abs:
-      if (!stack.back().ResolveValue(exe_ctx).AbsoluteValue()) {
+      if (!stack.back().GetScalar().AbsoluteValue()) {
         return llvm::createStringError(
             "failed to take the absolute value of the first stack item");
       }
@@ -1350,8 +1349,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     case DW_OP_and:
       tmp = stack.back();
       stack.pop_back();
-      stack.back().ResolveValue(exe_ctx) =
-          stack.back().ResolveValue(exe_ctx) & tmp.ResolveValue(exe_ctx);
+      stack.back().GetScalar() = stack.back().GetScalar() & tmp.GetScalar();
       break;
 
     // OPCODE: DW_OP_div
@@ -1361,18 +1359,18 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     // the result.
     case DW_OP_div: {
       tmp = stack.back();
-      if (tmp.ResolveValue(exe_ctx).IsZero())
+      if (tmp.GetScalar().IsZero())
         return llvm::createStringError("divide by zero");
 
       stack.pop_back();
       Scalar divisor, dividend;
-      divisor = tmp.ResolveValue(exe_ctx);
-      dividend = stack.back().ResolveValue(exe_ctx);
+      divisor = tmp.GetScalar();
+      dividend = stack.back().GetScalar();
       divisor.MakeSigned();
       dividend.MakeSigned();
       stack.back() = dividend / divisor;
 
-      if (!stack.back().ResolveValue(exe_ctx).IsValid())
+      if (!stack.back().GetScalar().IsValid())
         return llvm::createStringError("divide failed");
     } break;
 
@@ -1383,8 +1381,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     case DW_OP_minus:
       tmp = stack.back();
       stack.pop_back();
-      stack.back().ResolveValue(exe_ctx) =
-          stack.back().ResolveValue(exe_ctx) - tmp.ResolveValue(exe_ctx);
+      stack.back().GetScalar() = stack.back().GetScalar() - tmp.GetScalar();
       break;
 
     // OPCODE: DW_OP_mod
@@ -1395,8 +1392,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     case DW_OP_mod:
       tmp = stack.back();
       stack.pop_back();
-      stack.back().ResolveValue(exe_ctx) =
-          stack.back().ResolveValue(exe_ctx) % tmp.ResolveValue(exe_ctx);
+      stack.back().GetScalar() = stack.back().GetScalar() % tmp.GetScalar();
       break;
 
     // OPCODE: DW_OP_mul
@@ -1406,15 +1402,14 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     case DW_OP_mul:
       tmp = stack.back();
       stack.pop_back();
-      stack.back().ResolveValue(exe_ctx) =
-          stack.back().ResolveValue(exe_ctx) * tmp.ResolveValue(exe_ctx);
+      stack.back().GetScalar() = stack.back().GetScalar() * tmp.GetScalar();
       break;
 
     // OPCODE: DW_OP_neg
     // OPERANDS: none
     // DESCRIPTION: pops the top stack entry, and pushes its negation.
     case DW_OP_neg:
-      if (!stack.back().ResolveValue(exe_ctx).UnaryNegate())
+      if (!stack.back().GetScalar().UnaryNegate())
         return llvm::createStringError("unary negate failed");
       break;
 
@@ -1423,7 +1418,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     // DESCRIPTION: pops the top stack entry, and pushes its bitwise
     // complement
     case DW_OP_not:
-      if (!stack.back().ResolveValue(exe_ctx).OnesComplement())
+      if (!stack.back().GetScalar().OnesComplement())
         return llvm::createStringError("logical NOT failed");
       break;
 
@@ -1434,8 +1429,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     case DW_OP_or:
       tmp = stack.back();
       stack.pop_back();
-      stack.back().ResolveValue(exe_ctx) =
-          stack.back().ResolveValue(exe_ctx) | tmp.ResolveValue(exe_ctx);
+      stack.back().GetScalar() = stack.back().GetScalar() | tmp.GetScalar();
       break;
 
     // OPCODE: DW_OP_plus
@@ -1468,7 +1462,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     case DW_OP_shl:
       tmp = stack.back();
       stack.pop_back();
-      stack.back().ResolveValue(exe_ctx) <<= tmp.ResolveValue(exe_ctx);
+      stack.back().GetScalar() <<= tmp.GetScalar();
       break;
 
     // OPCODE: DW_OP_shr
@@ -1479,8 +1473,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     case DW_OP_shr:
       tmp = stack.back();
       stack.pop_back();
-      if (!stack.back().ResolveValue(exe_ctx).ShiftRightLogical(
-              tmp.ResolveValue(exe_ctx)))
+      if (!stack.back().GetScalar().ShiftRightLogical(tmp.GetScalar()))
         return llvm::createStringError("DW_OP_shr failed");
       break;
 
@@ -1493,7 +1486,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     case DW_OP_shra:
       tmp = stack.back();
       stack.pop_back();
-      stack.back().ResolveValue(exe_ctx) >>= tmp.ResolveValue(exe_ctx);
+      stack.back().GetScalar() >>= tmp.GetScalar();
       break;
 
     // OPCODE: DW_OP_xor
@@ -1503,8 +1496,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     case DW_OP_xor:
       tmp = stack.back();
       stack.pop_back();
-      stack.back().ResolveValue(exe_ctx) =
-          stack.back().ResolveValue(exe_ctx) ^ tmp.ResolveValue(exe_ctx);
+      stack.back().GetScalar() = stack.back().GetScalar() ^ tmp.GetScalar();
       break;
 
     // OPCODE: DW_OP_skip
@@ -1540,7 +1532,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
       stack.pop_back();
       int16_t bra_offset = (int16_t)opcodes.GetU16(&offset);
       Scalar zero(0);
-      if (tmp.ResolveValue(exe_ctx) != zero) {
+      if (tmp.GetScalar() != zero) {
         lldb::offset_t new_offset = offset + bra_offset;
         // New offset can point at the end of the data, in this case we should
         // terminate the DWARF expression evaluation (will happen in the loop
@@ -1565,8 +1557,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     case DW_OP_eq:
       tmp = stack.back();
       stack.pop_back();
-      stack.back().ResolveValue(exe_ctx) =
-          stack.back().ResolveValue(exe_ctx) == tmp.ResolveValue(exe_ctx);
+      stack.back().GetScalar() = stack.back().GetScalar() == tmp.GetScalar();
       break;
 
     // OPCODE: DW_OP_ge
@@ -1579,8 +1570,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     case DW_OP_ge:
       tmp = stack.back();
       stack.pop_back();
-      stack.back().ResolveValue(exe_ctx) =
-          stack.back().ResolveValue(exe_ctx) >= tmp.ResolveValue(exe_ctx);
+      stack.back().GetScalar() = stack.back().GetScalar() >= tmp.GetScalar();
       break;
 
     // OPCODE: DW_OP_gt
@@ -1593,8 +1583,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     case DW_OP_gt:
       tmp = stack.back();
       stack.pop_back();
-      stack.back().ResolveValue(exe_ctx) =
-          stack.back().ResolveValue(exe_ctx) > tmp.ResolveValue(exe_ctx);
+      stack.back().GetScalar() = stack.back().GetScalar() > tmp.GetScalar();
       break;
 
     // OPCODE: DW_OP_le
@@ -1607,8 +1596,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     case DW_OP_le:
       tmp = stack.back();
       stack.pop_back();
-      stack.back().ResolveValue(exe_ctx) =
-          stack.back().ResolveValue(exe_ctx) <= tmp.ResolveValue(exe_ctx);
+      stack.back().GetScalar() = stack.back().GetScalar() <= tmp.GetScalar();
       break;
 
     // OPCODE: DW_OP_lt
@@ -1621,8 +1609,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     case DW_OP_lt:
       tmp = stack.back();
       stack.pop_back();
-      stack.back().ResolveValue(exe_ctx) =
-          stack.back().ResolveValue(exe_ctx) < tmp.ResolveValue(exe_ctx);
+      stack.back().GetScalar() = stack.back().GetScalar() < tmp.GetScalar();
       break;
 
     // OPCODE: DW_OP_ne
@@ -1635,8 +1622,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     case DW_OP_ne:
       tmp = stack.back();
       stack.pop_back();
-      stack.back().ResolveValue(exe_ctx) =
-          stack.back().ResolveValue(exe_ctx) != tmp.ResolveValue(exe_ctx);
+      stack.back().GetScalar() = stack.back().GetScalar() != tmp.GetScalar();
       break;
 
     // OPCODE: DW_OP_litn
@@ -1779,7 +1765,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
         return err;
 
       int64_t breg_offset = opcodes.GetSLEB128(&offset);
-      tmp.ResolveValue(exe_ctx) += (uint64_t)breg_offset;
+      tmp.GetScalar() += (uint64_t)breg_offset;
       tmp.ClearContext();
       stack.push_back(tmp);
       stack.back().SetValueType(Value::ValueType::LoadAddress);
@@ -1797,7 +1783,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
         return err;
 
       int64_t breg_offset = opcodes.GetSLEB128(&offset);
-      tmp.ResolveValue(exe_ctx) += (uint64_t)breg_offset;
+      tmp.GetScalar() += (uint64_t)breg_offset;
       tmp.ClearContext();
       stack.push_back(tmp);
       stack.back().SetValueType(Value::ValueType::LoadAddress);
@@ -2142,7 +2128,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
         bit_size = bit_size_sign_or_err->first;
         sign = bit_size_sign_or_err->second;
       }
-      Scalar &top = stack.back().ResolveValue(exe_ctx);
+      Scalar &top = stack.back().GetScalar();
       top.TruncOrExtendTo(bit_size, sign);
       break;
     }
@@ -2269,7 +2255,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
           break;
         }
       }
-      return llvm::createStringErrorV("Unhandled opcode {0} in DWARFExpression",
+      return llvm::createStringErrorV("unhandled opcode {0} in DWARFExpression",
                                       LocationAtom(op));
     }
   }

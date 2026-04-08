@@ -5070,7 +5070,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
                                     ConstantInt::get(IRB.getInt32Ty(), 0));
   }
 
-  // Handle llvm.x86.avx512.mask.pmov{,s,us}.*.512
+  // Handle llvm.x86.avx512.mask.pmov{,s,us}.*.{128,256,512}
   //
   // e.g., call <16 x i8> @llvm.x86.avx512.mask.pmov.qb.512
   //         (<8 x i64>, <16 x i8>, i8)
@@ -5104,10 +5104,21 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
         cast<FixedVectorType>(WriteThrough->getType())->getNumElements();
     assert(ANumElements == OutputNumElements ||
            ANumElements * 2 == OutputNumElements);
+    // N.B. some PMOV{,S,US} instructions have a 4x or even 8x ratio in the
+    //      number of elements e.g.,
+    //      <16 x i8> @llvm.x86.avx512.mask.pmovs.qb.256
+    //                    (<4 x i64>, <16 x i8>, i8)
+    //      <16 x i8> @llvm.x86.avx512.mask.pmovs.qb.128
+    //                    (<2 x i64>, <16 x i8>, i8)
+    // However, we currently handle those elsewhere.
 
     assert(Mask->getType()->isIntegerTy());
-    assert(Mask->getType()->getScalarSizeInBits() == ANumElements);
     insertCheckShadowOf(Mask, &I);
+
+    // The mask has 1 bit per element of A, but a minimum of 8 bits.
+    if (Mask->getType()->getScalarSizeInBits() == 8 && OutputNumElements < 8)
+      Mask = IRB.CreateTrunc(Mask, Type::getIntNTy(*MS.C, OutputNumElements));
+    assert(Mask->getType()->getScalarSizeInBits() == ANumElements);
 
     assert(I.getType() == WriteThrough->getType());
 
@@ -6679,58 +6690,142 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
     // AVX512 PMOV: Packed MOV, with truncation
     // Precisely handled by applying the same intrinsic to the shadow
+    case Intrinsic::x86_avx512_mask_pmov_dw_128:
+    case Intrinsic::x86_avx512_mask_pmov_db_128:
+    case Intrinsic::x86_avx512_mask_pmov_qb_128:
+    case Intrinsic::x86_avx512_mask_pmov_qw_128:
+    case Intrinsic::x86_avx512_mask_pmov_qd_128:
+    case Intrinsic::x86_avx512_mask_pmov_wb_128:
+    case Intrinsic::x86_avx512_mask_pmov_dw_256:
+    case Intrinsic::x86_avx512_mask_pmov_db_256:
+    case Intrinsic::x86_avx512_mask_pmov_qb_256:
+    case Intrinsic::x86_avx512_mask_pmov_qw_256:
     case Intrinsic::x86_avx512_mask_pmov_dw_512:
     case Intrinsic::x86_avx512_mask_pmov_db_512:
     case Intrinsic::x86_avx512_mask_pmov_qb_512:
     case Intrinsic::x86_avx512_mask_pmov_qw_512: {
-      // Intrinsic::x86_avx512_mask_pmov_{qd,wb}_512 were removed in
+      // Intrinsic::x86_avx512_mask_pmov_{qd,wb}_{256,512} were removed in
       // f608dc1f5775ee880e8ea30e2d06ab5a4a935c22
       handleIntrinsicByApplyingToShadow(I, I.getIntrinsicID(),
                                         /*trailingVerbatimArgs=*/1);
       break;
     }
 
-    // AVX512 PMVOV{S,US}: Packed MOV, with signed/unsigned saturation
+    // AVX512 PMOV{S,US}: Packed MOV, with signed/unsigned saturation
     // Approximately handled using the corresponding truncation intrinsic
     // TODO: improve handleAVX512VectorDownConvert to precisely model saturation
     case Intrinsic::x86_avx512_mask_pmovs_dw_512:
     case Intrinsic::x86_avx512_mask_pmovus_dw_512: {
       handleIntrinsicByApplyingToShadow(I,
                                         Intrinsic::x86_avx512_mask_pmov_dw_512,
-                                        /* trailingVerbatimArgs=*/1);
+                                        /*trailingVerbatimArgs=*/1);
       break;
     }
+
+    case Intrinsic::x86_avx512_mask_pmovs_dw_256:
+    case Intrinsic::x86_avx512_mask_pmovus_dw_256:
+      handleIntrinsicByApplyingToShadow(I,
+                                        Intrinsic::x86_avx512_mask_pmov_dw_256,
+                                        /*trailingVerbatimArgs=*/1);
+      break;
+
+    case Intrinsic::x86_avx512_mask_pmovs_dw_128:
+    case Intrinsic::x86_avx512_mask_pmovus_dw_128:
+      handleIntrinsicByApplyingToShadow(I,
+                                        Intrinsic::x86_avx512_mask_pmov_dw_128,
+                                        /*trailingVerbatimArgs=*/1);
+      break;
 
     case Intrinsic::x86_avx512_mask_pmovs_db_512:
     case Intrinsic::x86_avx512_mask_pmovus_db_512: {
       handleIntrinsicByApplyingToShadow(I,
                                         Intrinsic::x86_avx512_mask_pmov_db_512,
-                                        /* trailingVerbatimArgs=*/1);
+                                        /*trailingVerbatimArgs=*/1);
       break;
     }
+
+    case Intrinsic::x86_avx512_mask_pmovs_db_256:
+    case Intrinsic::x86_avx512_mask_pmovus_db_256:
+      handleIntrinsicByApplyingToShadow(I,
+                                        Intrinsic::x86_avx512_mask_pmov_db_256,
+                                        /*trailingVerbatimArgs=*/1);
+      break;
+
+    case Intrinsic::x86_avx512_mask_pmovs_db_128:
+    case Intrinsic::x86_avx512_mask_pmovus_db_128:
+      handleIntrinsicByApplyingToShadow(I,
+                                        Intrinsic::x86_avx512_mask_pmov_db_128,
+                                        /*trailingVerbatimArgs=*/1);
+      break;
 
     case Intrinsic::x86_avx512_mask_pmovs_qb_512:
     case Intrinsic::x86_avx512_mask_pmovus_qb_512: {
       handleIntrinsicByApplyingToShadow(I,
                                         Intrinsic::x86_avx512_mask_pmov_qb_512,
-                                        /* trailingVerbatimArgs=*/1);
+                                        /*trailingVerbatimArgs=*/1);
       break;
     }
+
+    case Intrinsic::x86_avx512_mask_pmovs_qb_256:
+    case Intrinsic::x86_avx512_mask_pmovus_qb_256:
+      handleIntrinsicByApplyingToShadow(I,
+                                        Intrinsic::x86_avx512_mask_pmov_qb_256,
+                                        /*trailingVerbatimArgs=*/1);
+      break;
+
+    case Intrinsic::x86_avx512_mask_pmovs_qb_128:
+    case Intrinsic::x86_avx512_mask_pmovus_qb_128:
+      handleIntrinsicByApplyingToShadow(I,
+                                        Intrinsic::x86_avx512_mask_pmov_qb_128,
+                                        /*trailingVerbatimArgs=*/1);
+      break;
 
     case Intrinsic::x86_avx512_mask_pmovs_qw_512:
     case Intrinsic::x86_avx512_mask_pmovus_qw_512: {
       handleIntrinsicByApplyingToShadow(I,
                                         Intrinsic::x86_avx512_mask_pmov_qw_512,
-                                        /* trailingVerbatimArgs=*/1);
+                                        /*trailingVerbatimArgs=*/1);
       break;
     }
 
+    case Intrinsic::x86_avx512_mask_pmovs_qw_256:
+    case Intrinsic::x86_avx512_mask_pmovus_qw_256:
+      handleIntrinsicByApplyingToShadow(I,
+                                        Intrinsic::x86_avx512_mask_pmov_qw_256,
+                                        /*trailingVerbatimArgs=*/1);
+      break;
+
+    case Intrinsic::x86_avx512_mask_pmovs_qw_128:
+    case Intrinsic::x86_avx512_mask_pmovus_qw_128:
+      handleIntrinsicByApplyingToShadow(I,
+                                        Intrinsic::x86_avx512_mask_pmov_qw_128,
+                                        /*trailingVerbatimArgs=*/1);
+      break;
+
+    case Intrinsic::x86_avx512_mask_pmovs_qd_128:
+    case Intrinsic::x86_avx512_mask_pmovus_qd_128:
+      handleIntrinsicByApplyingToShadow(I,
+                                        Intrinsic::x86_avx512_mask_pmov_qd_128,
+                                        /*trailingVerbatimArgs=*/1);
+      break;
+
+    case Intrinsic::x86_avx512_mask_pmovs_wb_128:
+    case Intrinsic::x86_avx512_mask_pmovus_wb_128:
+      handleIntrinsicByApplyingToShadow(I,
+                                        Intrinsic::x86_avx512_mask_pmov_wb_128,
+                                        /*trailingVerbatimArgs=*/1);
+      break;
+
+    case Intrinsic::x86_avx512_mask_pmovs_qd_256:
+    case Intrinsic::x86_avx512_mask_pmovus_qd_256:
+    case Intrinsic::x86_avx512_mask_pmovs_wb_256:
+    case Intrinsic::x86_avx512_mask_pmovus_wb_256:
     case Intrinsic::x86_avx512_mask_pmovs_qd_512:
     case Intrinsic::x86_avx512_mask_pmovus_qd_512:
     case Intrinsic::x86_avx512_mask_pmovs_wb_512:
     case Intrinsic::x86_avx512_mask_pmovus_wb_512: {
-      // Since Intrinsic::x86_avx512_mask_pmov_{qd,wb}_512 do not exist, we
-      // cannot use handleIntrinsicByApplyingToShadow. Instead, we call the
+      // Since Intrinsic::x86_avx512_mask_pmov_{qd,wb}_{256,512} do not exist,
+      // we cannot use handleIntrinsicByApplyingToShadow. Instead, we call the
       // slow-path handler.
       handleAVX512VectorDownConvert(I);
       break;

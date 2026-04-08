@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Context.h"
+#include "ExecutorBase.h"
 #include "Value.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/InlineAsm.h"
@@ -22,65 +23,6 @@
 namespace llvm::ubi {
 
 using namespace PatternMatch;
-
-enum class FrameState {
-  // It is about to enter the function.
-  // Valid transition:
-  //   -> Running
-  Entry,
-  // It is executing instructions inside the function.
-  // Valid transitions:
-  //   -> Pending (on call)
-  //   -> Exit (on return)
-  Running,
-  // It is about to enter a callee or handle return value from the callee.
-  // Valid transitions:
-  //   -> Running (after returning from callee)
-  Pending,
-  // It is about to return the control to the caller.
-  Exit,
-};
-
-/// Context for a function call.
-/// This struct maintains the state during the execution of a function,
-/// including the control flow, values of executed instructions, and stack
-/// objects.
-struct Frame {
-  Function &Func;
-  Frame *LastFrame;
-  CallBase *CallSite;
-  ArrayRef<AnyValue> Args;
-  AnyValue &RetVal;
-
-  TargetLibraryInfo TLI;
-  BasicBlock *BB;
-  BasicBlock::iterator PC;
-  FrameState State = FrameState::Entry;
-  // Stack objects allocated in this frame. They will be automatically freed
-  // when the function returns.
-  SmallVector<IntrusiveRefCntPtr<MemoryObject>> Allocas;
-  // Values of arguments and executed instructions in this function.
-  DenseMap<Value *, AnyValue> ValueMap;
-
-  // Reserved for in-flight subroutines.
-  Function *ResolvedCallee = nullptr;
-  SmallVector<AnyValue> CalleeArgs;
-  AnyValue CalleeRetVal;
-
-  Frame(Function &F, CallBase *CallSite, Frame *LastFrame,
-        ArrayRef<AnyValue> Args, AnyValue &RetVal,
-        const TargetLibraryInfoImpl &TLIImpl)
-      : Func(F), LastFrame(LastFrame), CallSite(CallSite), Args(Args),
-        RetVal(RetVal), TLI(TLIImpl, &F) {
-    assert((Args.size() == F.arg_size() ||
-            (F.isVarArg() && Args.size() >= F.arg_size())) &&
-           "Expected enough arguments to call the function.");
-    BB = &Func.getEntryBlock();
-    PC = BB->begin();
-    for (Argument &Arg : F.args())
-      ValueMap[&Arg] = Args[Arg.getArgNo()];
-  }
-};
 
 static AnyValue addNoWrap(const APInt &LHS, const APInt &RHS, bool HasNSW,
                           bool HasNUW) {
@@ -121,32 +63,11 @@ static AnyValue mulNoWrap(const APInt &LHS, const APInt &RHS, bool HasNSW,
 /// Instruction executor using the visitor pattern.
 /// Unlike the Context class that manages the global state,
 /// InstExecutor only maintains the state for call frames.
-class InstExecutor : public InstVisitor<InstExecutor, void> {
-  Context &Ctx;
+class InstExecutor : public InstVisitor<InstExecutor, void>,
+                     public ExecutorBase {
   const DataLayout &DL;
-  EventHandler &Handler;
   std::list<Frame> CallStack;
-  // Used to indicate whether the interpreter should continue execution.
-  bool Status;
-  Frame *CurrentFrame = nullptr;
   AnyValue None;
-
-  void reportImmediateUB(StringRef Msg) {
-    // Check if we have already reported an immediate UB.
-    if (!Status)
-      return;
-    Status = false;
-    // TODO: Provide stack trace information.
-    Handler.onImmediateUB(Msg);
-  }
-
-  void reportError(StringRef Msg) {
-    // Check if we have already reported an error message.
-    if (!Status)
-      return;
-    Status = false;
-    Handler.onError(Msg);
-  }
 
   const AnyValue &getValue(Value *V) {
     if (auto *C = dyn_cast<Constant>(V))
@@ -251,88 +172,6 @@ class InstExecutor : public InstVisitor<InstExecutor, void> {
     return false;
   }
 
-  /// Check if the upcoming memory access is valid. Returns the offset relative
-  /// to the underlying object if it is valid.
-  std::optional<uint64_t> verifyMemAccess(const MemoryObject &MO,
-                                          const APInt &Address,
-                                          uint64_t AccessSize, Align Alignment,
-                                          bool IsStore) {
-    // Loading from a stack object outside its lifetime is not undefined
-    // behavior and returns a poison value instead. Storing to it is still
-    // undefined behavior.
-    if (IsStore ? MO.getState() != MemoryObjectState::Alive
-                : MO.getState() == MemoryObjectState::Freed) {
-      reportImmediateUB("Try to access a dead memory object.");
-      return std::nullopt;
-    }
-
-    if (Address.countr_zero() < Log2(Alignment)) {
-      reportImmediateUB("Misaligned memory access.");
-      return std::nullopt;
-    }
-
-    if (AccessSize > MO.getSize() || Address.ult(MO.getAddress())) {
-      reportImmediateUB("Memory access is out of bounds.");
-      return std::nullopt;
-    }
-
-    APInt Offset = Address - MO.getAddress();
-
-    if (Offset.ugt(MO.getSize() - AccessSize)) {
-      reportImmediateUB("Memory access is out of bounds.");
-      return std::nullopt;
-    }
-
-    return Offset.getZExtValue();
-  }
-
-  AnyValue load(const AnyValue &Ptr, Align Alignment, Type *ValTy) {
-    if (Ptr.isPoison()) {
-      reportImmediateUB("Invalid memory access with a poison pointer.");
-      return AnyValue::getPoisonValue(Ctx, ValTy);
-    }
-    auto &PtrVal = Ptr.asPointer();
-    auto *MO = PtrVal.getMemoryObject();
-    if (!MO) {
-      reportImmediateUB(
-          "Invalid memory access via a pointer with nullary provenance.");
-      return AnyValue::getPoisonValue(Ctx, ValTy);
-    }
-    // TODO: pointer capability check
-    if (auto Offset =
-            verifyMemAccess(*MO, PtrVal.address(),
-                            Ctx.getEffectiveTypeStoreSize(ValTy), Alignment,
-                            /*IsStore=*/false)) {
-      // Load from a dead stack object yields poison value.
-      if (MO->getState() == MemoryObjectState::Dead)
-        return AnyValue::getPoisonValue(Ctx, ValTy);
-
-      return Ctx.load(*MO, *Offset, ValTy);
-    }
-    return AnyValue::getPoisonValue(Ctx, ValTy);
-  }
-
-  void store(const AnyValue &Ptr, Align Alignment, const AnyValue &Val,
-             Type *ValTy) {
-    if (Ptr.isPoison()) {
-      reportImmediateUB("Invalid memory access with a poison pointer.");
-      return;
-    }
-    auto &PtrVal = Ptr.asPointer();
-    auto *MO = PtrVal.getMemoryObject();
-    if (!MO) {
-      reportImmediateUB(
-          "Invalid memory access via a pointer with nullary provenance.");
-      return;
-    }
-    // TODO: pointer capability check
-    if (auto Offset =
-            verifyMemAccess(*MO, PtrVal.address(),
-                            Ctx.getEffectiveTypeStoreSize(ValTy), Alignment,
-                            /*IsStore=*/true))
-      Ctx.store(*MO, *Offset, Val, ValTy);
-  }
-
   AnyValue computePtrAdd(const Pointer &Ptr, const APInt &Offset,
                          GEPNoWrapFlags Flags, AnyValue &AccumulatedOffset) {
     if (Offset.isZero())
@@ -418,7 +257,7 @@ class InstExecutor : public InstVisitor<InstExecutor, void> {
 public:
   InstExecutor(Context &C, EventHandler &H, Function &F,
                ArrayRef<AnyValue> Args, AnyValue &RetVal)
-      : Ctx(C), DL(Ctx.getDataLayout()), Handler(H), Status(true) {
+      : ExecutorBase(C, H), DL(Ctx.getDataLayout()) {
     CallStack.emplace_back(F, /*CallSite=*/nullptr, /*LastFrame=*/nullptr, Args,
                            RetVal, Ctx.getTLIImpl());
   }

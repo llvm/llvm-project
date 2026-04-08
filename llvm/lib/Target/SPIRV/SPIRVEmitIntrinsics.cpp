@@ -19,6 +19,8 @@
 #include "SPIRVUtils.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/StringSet.h"
+#include "llvm/Analysis/LoopInfo.h"
+#include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/InstVisitor.h"
@@ -3089,29 +3091,60 @@ void SPIRVEmitIntrinsics::emitUnstructuredLoopControls(Function &F,
   // Shaders use SPIRVStructurizer which emits OpLoopMerge via spv_loop_merge.
   if (ST->isShader())
     return;
-  if (!ST->canUseExtension(
-          SPIRV::Extension::SPV_INTEL_unstructured_loop_controls))
+
+  if (ST->canUseExtension(
+          SPIRV::Extension::SPV_INTEL_unstructured_loop_controls)) {
+    for (BasicBlock &BB : F) {
+      Instruction *Term = BB.getTerminator();
+      MDNode *LoopMD = Term->getMetadata(LLVMContext::MD_loop);
+      if (!LoopMD)
+        continue;
+
+      SmallVector<unsigned, 1> Ops =
+          getSpirvLoopControlOperandsFromLoopMetadata(LoopMD);
+      unsigned LC = Ops[0];
+      if (LC == SPIRV::LoopControl::None)
+        continue;
+
+      // Emit intrinsic: loop control mask + optional parameters.
+      B.SetInsertPoint(Term);
+      SmallVector<Value *, 4> IntrArgs;
+      for (unsigned Op : Ops)
+        IntrArgs.push_back(B.getInt32(Op));
+      B.CreateIntrinsic(Intrinsic::spv_loop_control_intel, IntrArgs);
+    }
+    return;
+  }
+
+  // For non-shader targets without the Intel extension, emit OpLoopMerge
+  // using spv_loop_merge intrinsics, mirroring the structurizer approach.
+  DominatorTree DT(F);
+  LoopInfo LI(DT);
+  if (LI.empty())
     return;
 
-  for (BasicBlock &BB : F) {
-    Instruction *Term = BB.getTerminator();
-    MDNode *LoopMD = Term->getMetadata(LLVMContext::MD_loop);
-    if (!LoopMD)
+  for (Loop *L : LI.getLoopsInPreorder()) {
+    BasicBlock *Latch = L->getLoopLatch();
+    if (!Latch)
+      continue;
+    BasicBlock *MergeBlock = L->getUniqueExitBlock();
+    if (!MergeBlock)
       continue;
 
-    SmallVector<unsigned, 1> Ops =
-        getSpirvLoopControlOperandsFromLoopMetadata(LoopMD);
-    unsigned LC = Ops[0];
-    if (LC == SPIRV::LoopControl::None)
+    // Check for loop unroll metadata on the latch terminator.
+    SmallVector<unsigned, 1> LoopControlOps =
+        getSpirvLoopControlOperandsFromLoopMetadata(L);
+    if (LoopControlOps[0] == SPIRV::LoopControl::None)
       continue;
 
-    // Emit intrinsic: loop control mask + optional parameters.
-    B.SetInsertPoint(Term);
-    SmallVector<Value *, 4> IntrArgs;
-    IntrArgs.push_back(B.getInt32(LC));
-    for (unsigned I = 1; I < Ops.size(); ++I)
-      IntrArgs.push_back(B.getInt32(Ops[I]));
-    B.CreateIntrinsic(Intrinsic::spv_loop_control_intel, IntrArgs);
+    BasicBlock *Header = L->getHeader();
+    B.SetInsertPoint(Header->getTerminator());
+    auto *MergeAddress = BlockAddress::get(&F, MergeBlock);
+    auto *ContinueAddress = BlockAddress::get(&F, Latch);
+    SmallVector<Value *, 4> Args = {MergeAddress, ContinueAddress};
+    for (unsigned Imm : LoopControlOps)
+      Args.emplace_back(B.getInt32(Imm));
+    B.CreateIntrinsic(Intrinsic::spv_loop_merge, {Args});
   }
 }
 
