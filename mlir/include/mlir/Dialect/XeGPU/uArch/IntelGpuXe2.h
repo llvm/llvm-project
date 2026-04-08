@@ -294,7 +294,7 @@ struct CRIuArch : public Xe2Plus {
   }
 
   CRIuArch()
-      : Xe2Plus("cri",                     // archName
+      : Xe2Plus("cri",                          // archName
                 "Crescent Island Architecture", // archDescription
                 getInstructionRegistryArr(),
                 // Using bmg config as placeholder
