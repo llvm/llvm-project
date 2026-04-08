@@ -153,7 +153,7 @@ bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
 
 /// Helper for extra no-alias checks via known-safe recipe and SCEV.
 class SinkStoreInfo {
-  const SmallPtrSetImpl<VPRecipeBase *> &ExcludeRecipes;
+  SmallPtrSet<VPRecipeBase *, 4> ExcludeRecipes;
   VPReplicateRecipe &GroupLeader;
   PredicatedScalarEvolution &PSE;
   const Loop &L;
@@ -198,11 +198,11 @@ class SinkStoreInfo {
   }
 
 public:
-  SinkStoreInfo(const SmallPtrSetImpl<VPRecipeBase *> &ExcludeRecipes,
+  SinkStoreInfo(ArrayRef<VPReplicateRecipe *> ExcludeRecipes,
                 VPReplicateRecipe &GroupLeader, PredicatedScalarEvolution &PSE,
                 const Loop &L, VPTypeAnalysis &TypeInfo)
-      : ExcludeRecipes(ExcludeRecipes), GroupLeader(GroupLeader), PSE(PSE),
-        L(L), TypeInfo(TypeInfo) {}
+      : ExcludeRecipes(ExcludeRecipes.begin(), ExcludeRecipes.end()),
+        GroupLeader(GroupLeader), PSE(PSE), L(L), TypeInfo(TypeInfo) {}
 
   /// Return true if \p R should be skipped during alias checking, either
   /// because it's in the exclude set or because no-alias can be proven via
@@ -4940,25 +4940,6 @@ void VPlanTransforms::hoistPredicatedLoads(VPlan &Plan,
   }
 }
 
-static bool
-canSinkStoreWithNoAliasCheck(ArrayRef<VPReplicateRecipe *> StoresToSink,
-                             PredicatedScalarEvolution &PSE, const Loop &L,
-                             VPTypeAnalysis &TypeInfo) {
-  auto StoreLoc = vputils::getMemoryLocation(*StoresToSink.front());
-  if (!StoreLoc || !StoreLoc->AATags.Scope)
-    return false;
-
-  // When sinking a group of stores, all members of the group alias each other.
-  // Skip them during the alias checks.
-  SmallPtrSet<VPRecipeBase *, 4> StoresToSinkSet(StoresToSink.begin(),
-                                                 StoresToSink.end());
-
-  VPBasicBlock *FirstBB = StoresToSink.front()->getParent();
-  VPBasicBlock *LastBB = StoresToSink.back()->getParent();
-  SinkStoreInfo SinkInfo(StoresToSinkSet, *StoresToSink[0], PSE, L, TypeInfo);
-  return canHoistOrSinkWithNoAliasCheck(*StoreLoc, FirstBB, LastBB, SinkInfo);
-}
-
 void VPlanTransforms::sinkPredicatedStores(VPlan &Plan,
                                            PredicatedScalarEvolution &PSE,
                                            const Loop *L) {
@@ -4970,7 +4951,18 @@ void VPlanTransforms::sinkPredicatedStores(VPlan &Plan,
   VPTypeAnalysis TypeInfo(Plan);
 
   for (auto &Group : Groups) {
-    if (!canSinkStoreWithNoAliasCheck(Group, PSE, *L, TypeInfo))
+    // Try to use the earliest (most dominating) store to replace all others.
+    VPReplicateRecipe *EarliestStore = Group.front();
+    VPBasicBlock *FirstBB = Group.front()->getParent();
+    VPBasicBlock *LastBB = Group.back()->getParent();
+    auto StoreLoc = vputils::getMemoryLocation(*EarliestStore);
+
+    // When sinking a group of stores, all members of the group alias each
+    // other. Skip them during the alias checks.
+    if (!StoreLoc ||
+        !canHoistOrSinkWithNoAliasCheck(
+            *StoreLoc, FirstBB, LastBB,
+            SinkStoreInfo(Group, *EarliestStore, PSE, *L, TypeInfo)))
       continue;
 
     // Use the last (most dominated) store's location for the unconditional
