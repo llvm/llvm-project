@@ -5,7 +5,6 @@
 
 ; CHECK: error: couldn't allocate output register for constraint '{v[0:12]}'
 
-
 define amdgpu_kernel void @k() {
 entry:
   %x = call i416 asm sideeffect "", "={v[0:12]}"()
