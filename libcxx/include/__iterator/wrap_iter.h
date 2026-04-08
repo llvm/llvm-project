@@ -34,18 +34,17 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class _Iter>
 class __wrap_iter {
 public:
-  typedef _Iter iterator_type;
-  typedef typename iterator_traits<iterator_type>::value_type value_type;
-  typedef typename iterator_traits<iterator_type>::difference_type difference_type;
-  typedef typename iterator_traits<iterator_type>::pointer pointer;
-  typedef typename iterator_traits<iterator_type>::reference reference;
-  typedef typename iterator_traits<iterator_type>::iterator_category iterator_category;
+  typedef typename iterator_traits<_Iter>::value_type value_type;
+  typedef typename iterator_traits<_Iter>::difference_type difference_type;
+  typedef typename iterator_traits<_Iter>::pointer pointer;
+  typedef typename iterator_traits<_Iter>::reference reference;
+  typedef typename iterator_traits<_Iter>::iterator_category iterator_category;
 #if _LIBCPP_STD_VER >= 20
   typedef contiguous_iterator_tag iterator_concept;
 #endif
 
 private:
-  iterator_type __i_;
+  _Iter __i_;
 
   friend struct pointer_traits<__wrap_iter<_Iter> >;
 
@@ -103,7 +102,7 @@ public:
   }
 
 private:
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 explicit __wrap_iter(iterator_type __x) _NOEXCEPT : __i_(__x) {}
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 explicit __wrap_iter(_Iter __x) _NOEXCEPT : __i_(__x) {}
 
   template <class _Up>
   friend class __wrap_iter;

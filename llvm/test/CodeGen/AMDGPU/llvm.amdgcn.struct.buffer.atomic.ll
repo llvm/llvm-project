@@ -1,18 +1,20 @@
-;RUN: llc < %s -mtriple=amdgcn -mcpu=verde -amdgpu-atomic-optimizer-strategy=None | FileCheck %s
-;RUN: llc < %s -mtriple=amdgcn -mcpu=tonga -amdgpu-atomic-optimizer-strategy=None | FileCheck %s
+;RUN: llc < %s -global-isel=0 -mtriple=amdgcn -mcpu=verde -amdgpu-atomic-optimizer-strategy=None | FileCheck -check-prefixes=CHECK,SDAG %s
+;RUN: llc < %s -global-isel=0 -mtriple=amdgcn -mcpu=tonga -amdgpu-atomic-optimizer-strategy=None | FileCheck -check-prefixes=CHECK,SDAG %s
+;RUN: llc < %s -global-isel=1 -new-reg-bank-select -mtriple=amdgcn -mcpu=tonga -amdgpu-atomic-optimizer-strategy=None | FileCheck -check-prefixes=CHECK,GISEL %s
 
 ;CHECK-LABEL: {{^}}test1:
 ;CHECK-NOT: s_waitcnt
 ;CHECK: buffer_atomic_swap v0, {{v[0-9]+}}, s[0:3], 0 idxen glc
+;GISEL: s_movk_i32 [[SOFS:s[0-9]+]], 0x1ffc
 ;CHECK: s_waitcnt vmcnt(0)
 ;CHECK: buffer_atomic_swap v0, {{v[0-9]+}}, s[0:3], 0 idxen glc
-;CHECK: s_movk_i32 [[SOFS:s[0-9]+]], 0x1ffc
+;SDAG: s_movk_i32 [[SOFS:s[0-9]+]], 0x1ffc
 ;CHECK: s_waitcnt vmcnt(0)
 ;CHECK: buffer_atomic_swap v0, {{v\[[0-9]+:[0-9]+\]}}, s[0:3], 0 idxen offen glc
 ;CHECK: s_waitcnt vmcnt(0)
 ;CHECK: buffer_atomic_swap v0, {{v\[[0-9]+:[0-9]+\]}}, s[0:3], 0 idxen offen glc
 ;CHECK: s_waitcnt vmcnt(0)
-;CHECK: buffer_atomic_swap v0, v[1:2], s[0:3], 0 idxen offen offset:42 glc
+;CHECK: buffer_atomic_swap v0, v{{\[[0-9]+:[0-9]+\]}}, s[0:3], 0 idxen offen offset:42 glc
 ;CHECK-DAG: s_waitcnt vmcnt(0)
 ;CHECK: buffer_atomic_swap v0, {{v[0-9]+}}, s[0:3], [[SOFS]] idxen offset:4 glc
 ;CHECK: s_waitcnt vmcnt(0)
@@ -81,9 +83,10 @@ main_body:
 ;CHECK-NOT: s_waitcnt
 ;CHECK: buffer_atomic_cmpswap {{v\[[0-9]+:[0-9]+\]}}, {{v[0-9]+}}, s[0:3], 0 idxen glc
 ;CHECK: s_waitcnt vmcnt(0)
+;GISEL: s_movk_i32 [[SOFS:s[0-9]+]], 0x1ffc
 ;CHECK: buffer_atomic_cmpswap {{v\[[0-9]+:[0-9]+\]}}, {{v[0-9]+}}, s[0:3], 0 idxen glc
 ;CHECK: s_waitcnt vmcnt(0)
-;CHECK: s_movk_i32 [[SOFS:s[0-9]+]], 0x1ffc
+;SDAG: s_movk_i32 [[SOFS:s[0-9]+]], 0x1ffc
 ;CHECK: buffer_atomic_cmpswap {{v\[[0-9]+:[0-9]+\]}}, {{v\[[0-9]+:[0-9]+\]}}, s[0:3], 0 idxen offen glc
 ;CHECK: s_waitcnt vmcnt(0)
 ;CHECK: buffer_atomic_cmpswap {{v\[[0-9]+:[0-9]+\]}}, {{v\[[0-9]+:[0-9]+\]}}, s[0:3], 0 idxen offen glc
@@ -124,9 +127,10 @@ main_body:
 ;CHECK-NOT: s_waitcnt
 ;CHECK: buffer_atomic_cmpswap_x2 {{v\[[0-9]+:[0-9]+\]}}, {{v[0-9]+}}, s[0:3], 0 idxen glc
 ;CHECK: s_waitcnt vmcnt(0)
+;GISEL: s_movk_i32 [[SOFS:s[0-9]+]], 0x1ffc
 ;CHECK: buffer_atomic_cmpswap_x2 {{v\[[0-9]+:[0-9]+\]}}, {{v[0-9]+}}, s[0:3], 0 idxen glc
 ;CHECK: s_waitcnt vmcnt(0)
-;CHECK: s_movk_i32 [[SOFS:s[0-9]+]], 0x1ffc
+;SDAG: s_movk_i32 [[SOFS:s[0-9]+]], 0x1ffc
 ;CHECK: buffer_atomic_cmpswap_x2 {{v\[[0-9]+:[0-9]+\]}}, {{v\[[0-9]+:[0-9]+\]}}, s[0:3], 0 idxen offen glc
 ;CHECK: s_waitcnt vmcnt(0)
 ;CHECK: buffer_atomic_cmpswap_x2 {{v\[[0-9]+:[0-9]+\]}}, {{v\[[0-9]+:[0-9]+\]}}, s[0:3], 0 idxen offen glc

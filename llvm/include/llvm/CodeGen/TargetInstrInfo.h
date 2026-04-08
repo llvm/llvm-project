@@ -428,6 +428,22 @@ public:
     return ~0U;
   }
 
+  enum class InstSizeVerifyMode {
+    /// Do not verify instruction size.
+    NoVerify,
+    /// Check that the instruction size matches exactly.
+    ExactSize,
+    /// Allow the reported instruction size to be larger than the actual size.
+    AllowOverEstimate,
+  };
+
+  /// Determine whether/how the instruction size returned by
+  /// getInstSizeInBytes() should be verified.
+  virtual InstSizeVerifyMode
+  getInstSizeVerifyMode(const MachineInstr &MI) const {
+    return InstSizeVerifyMode::NoVerify;
+  }
+
   /// Return true if the instruction is as cheap as a move instruction.
   ///
   /// Targets for different archs need to override this, and different
@@ -2345,10 +2361,9 @@ public:
     llvm_unreachable("impossible call instruction");
   }
 
-  /// Return the uniformity behavior of the given instruction.
-  virtual InstructionUniformity
-  getInstructionUniformity(const MachineInstr &MI) const {
-    return InstructionUniformity::Default;
+  /// Return the uniformity behavior of the given value.
+  virtual ValueUniformity getValueUniformity(const MachineInstr &MI) const {
+    return ValueUniformity::Default;
   }
 
   /// Returns true if the given \p MI defines a TargetIndex operand that can be

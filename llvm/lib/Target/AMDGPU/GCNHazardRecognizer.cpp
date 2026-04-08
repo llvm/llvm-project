@@ -334,6 +334,10 @@ unsigned GCNHazardRecognizer::PreEmitNoops(MachineInstr *MI) {
   return std::max(W, NopPadding.getValue());
 }
 
+unsigned GCNHazardRecognizer::getHazardWaitStates(MachineInstr *MI) const {
+  return this->PreEmitNoopsCommon(MI);
+}
+
 unsigned GCNHazardRecognizer::PreEmitNoopsCommon(MachineInstr *MI) const {
   if (MI->isBundle())
     return 0;

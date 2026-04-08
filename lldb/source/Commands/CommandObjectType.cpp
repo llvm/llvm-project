@@ -67,14 +67,16 @@ public:
   bool m_skip_pointers;
   bool m_skip_references;
   bool m_cascade;
+  bool m_wants_deref;
   FormatterMatchType m_match_type;
   StringList m_target_types;
   std::string m_category;
 
-  SynthAddOptions(bool sptr, bool sref, bool casc,
+  SynthAddOptions(bool sptr, bool sref, bool casc, bool wants_deref,
                   FormatterMatchType match_type, std::string catg)
       : m_skip_pointers(sptr), m_skip_references(sref), m_cascade(casc),
-        m_match_type(match_type), m_category(catg) {}
+        m_wants_deref(wants_deref), m_match_type(match_type), m_category(catg) {
+  }
 
   typedef std::shared_ptr<SynthAddOptions> SharedPointer;
 };
@@ -322,6 +324,13 @@ private:
           error = Status::FromErrorStringWithFormat(
               "invalid value for cascade: %s", option_arg.str().c_str());
         break;
+      case 'D':
+        m_wants_deref = OptionArgParser::ToBoolean(option_arg, true, &success);
+        if (!success)
+          error = Status::FromErrorStringWithFormat(
+              "invalid value for wants-dereference: %s",
+              option_arg.str().c_str());
+        break;
       case 'P':
         handwrite_python = true;
         break;
@@ -361,6 +370,7 @@ private:
 
     void OptionParsingStarting(ExecutionContext *execution_context) override {
       m_cascade = true;
+      m_wants_deref = true;
       m_class_name = "";
       m_skip_pointers = false;
       m_skip_references = false;
@@ -379,6 +389,7 @@ private:
     bool m_cascade;
     bool m_skip_references;
     bool m_skip_pointers;
+    bool m_wants_deref;
     std::string m_class_name;
     bool m_input_python;
     std::string m_category;
@@ -454,7 +465,8 @@ protected:
                     SyntheticChildren::Flags()
                         .SetCascades(options->m_cascade)
                         .SetSkipPointers(options->m_skip_pointers)
-                        .SetSkipReferences(options->m_skip_references),
+                        .SetSkipReferences(options->m_skip_references)
+                        .SetFrontEndWantsDereference(options->m_wants_deref),
                     class_name_str.c_str());
 
                 lldb::TypeCategoryImplSP category;
@@ -1604,7 +1616,7 @@ bool CommandObjectTypeSummaryAdd::AddSummary(ConstString type_name,
   }
 
   if (match_type == eFormatterMatchCallback) {
-    const char *function_name = type_name.AsCString();
+    const char *function_name = type_name.AsCString(nullptr);
     ScriptInterpreter *interpreter = GetDebugger().GetScriptInterpreter();
     if (interpreter && !interpreter->CheckObjectExists(function_name)) {
       *error = Status::FromErrorStringWithFormat(
@@ -2131,7 +2143,8 @@ bool CommandObjectTypeSynthAdd::Execute_HandwritePython(
     Args &command, CommandReturnObject &result) {
   auto options = std::make_unique<SynthAddOptions>(
       m_options.m_skip_pointers, m_options.m_skip_references,
-      m_options.m_cascade, m_options.m_match_type, m_options.m_category);
+      m_options.m_cascade, m_options.m_wants_deref, m_options.m_match_type,
+      m_options.m_category);
 
   for (auto &entry : command.entries()) {
     if (entry.ref().empty()) {
@@ -2173,6 +2186,7 @@ bool CommandObjectTypeSynthAdd::Execute_PythonClass(
   ScriptedSyntheticChildren *impl = new ScriptedSyntheticChildren(
       SyntheticChildren::Flags()
           .SetCascades(m_options.m_cascade)
+          .SetFrontEndWantsDereference(m_options.m_wants_deref)
           .SetSkipPointers(m_options.m_skip_pointers)
           .SetSkipReferences(m_options.m_skip_references),
       m_options.m_class_name.c_str());
@@ -2248,10 +2262,10 @@ bool CommandObjectTypeSynthAdd::AddSynth(ConstString type_name,
     if (category->AnyMatches(candidate_type, eFormatCategoryItemFilter,
                              false)) {
       if (error)
-        *error = Status::FromErrorStringWithFormat(
-            "cannot add synthetic for type %s when "
+        *error = Status::FromErrorStringWithFormatv(
+            "cannot add synthetic for type {0} when "
             "filter is defined in same category!",
-            type_name.AsCString());
+            type_name);
       return false;
     }
   }
@@ -2267,7 +2281,7 @@ bool CommandObjectTypeSynthAdd::AddSynth(ConstString type_name,
   }
 
   if (match_type == eFormatterMatchCallback) {
-    const char *function_name = type_name.AsCString();
+    const char *function_name = type_name.AsCString(nullptr);
     ScriptInterpreter *interpreter = GetDebugger().GetScriptInterpreter();
     if (interpreter && !interpreter->CheckObjectExists(function_name)) {
       *error = Status::FromErrorStringWithFormat(
@@ -2390,11 +2404,11 @@ private:
       if (category->AnyMatches(candidate_type, eFormatCategoryItemSynth,
                                false)) {
         if (error)
-          *error = Status::FromErrorStringWithFormat(
-              "cannot add filter for type %s when "
+          *error = Status::FromErrorStringWithFormatv(
+              "cannot add filter for type {0} when "
               "synthetic is defined in same "
               "category!",
-              type_name.AsCString());
+              type_name);
         return false;
       }
     }

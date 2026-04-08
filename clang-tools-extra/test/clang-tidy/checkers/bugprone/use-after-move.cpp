@@ -11,8 +11,17 @@
 // RUN:   }}' -- \
 // RUN:   -fno-delayed-template-parsing
 
+#include <deque>
+#include <forward_list>
+#include <list>
+#include <map>
+#include <set>
+#include <string>
+#include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <memory>
+#include <vector>
 
 typedef decltype(nullptr) nullptr_t;
 
@@ -30,62 +39,6 @@ struct any {
   any();
   void reset();
 };
-
-template <typename T1, typename T2>
-struct pair {};
-
-template <typename Key, typename T>
-struct map {
-  struct iterator {};
-
-  map();
-  void clear();
-  bool empty();
-  template <class... Args>
-  pair<iterator, bool> try_emplace(const Key &key, Args &&...args);
-};
-
-template <typename Key, typename T>
-struct unordered_map {
-  struct iterator {};
-
-  unordered_map();
-  void clear();
-  bool empty();
-  template <class... Args>
-  pair<iterator, bool> try_emplace(const Key &key, Args &&...args);
-};
-
-#define DECLARE_STANDARD_CONTAINER(name) \
-  template <typename T>                  \
-  struct name {                          \
-    name();                              \
-    void clear();                        \
-    bool empty();                        \
-  }
-
-#define DECLARE_STANDARD_CONTAINER_WITH_ASSIGN(name) \
-  template <typename T>                              \
-  struct name {                                      \
-    name();                                          \
-    void clear();                                    \
-    bool empty();                                    \
-    void assign(size_t, const T &);                  \
-  }
-
-DECLARE_STANDARD_CONTAINER_WITH_ASSIGN(basic_string);
-DECLARE_STANDARD_CONTAINER_WITH_ASSIGN(vector);
-DECLARE_STANDARD_CONTAINER_WITH_ASSIGN(deque);
-DECLARE_STANDARD_CONTAINER_WITH_ASSIGN(forward_list);
-DECLARE_STANDARD_CONTAINER_WITH_ASSIGN(list);
-DECLARE_STANDARD_CONTAINER(set);
-DECLARE_STANDARD_CONTAINER(multiset);
-DECLARE_STANDARD_CONTAINER(multimap);
-DECLARE_STANDARD_CONTAINER(unordered_set);
-DECLARE_STANDARD_CONTAINER(unordered_multiset);
-DECLARE_STANDARD_CONTAINER(unordered_multimap);
-
-typedef basic_string<char> string;
 
 } // namespace std
 
@@ -134,6 +87,36 @@ void selfMove() {
   A a;
   a = std::move(a);
   a.foo();
+}
+
+void * operator new(size_t, void *p);
+
+// Don't flag an explicit destructor call
+void explicitDestructor() {
+  alignas(A) char storage[sizeof(A)];
+  A& a = *new (storage) A();
+  std::move(a);
+  a.~A(); // It's always valid to destruct a moved object.
+
+  using B = AnnotatedContainer<int>;
+  alignas(B) char other_storage[sizeof(B)];
+  B& a_p = *new (other_storage) B();
+  std::move(a_p);
+  a_p.~B(); // Same as above, but with a template class.
+
+  A& b = *new (storage) A();
+  std::move(b);
+  (b).~A(); // Parenthesis should not change the behavior.
+  b.foo(); // But destruction is not a reinitialization.
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: 'b' used after it was moved
+  // CHECK-NOTES: [[@LINE-4]]:3: note: move occurred here
+
+  A& c = *new (storage) A();
+  std::move(c);
+  c.foo();
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: 'c' used after it was moved
+  // CHECK-NOTES: [[@LINE-3]]:3: note: move occurred here
+  c.~A();
 }
 
 // A warning should only be emitted for one use-after-move.
@@ -851,7 +834,7 @@ void standardContainerClearIsReinit() {
     container.empty();
   }
   {
-    std::multimap<int> container;
+    std::multimap<int, int> container;
     std::move(container);
     container.clear();
     container.empty();
@@ -875,7 +858,7 @@ void standardContainerClearIsReinit() {
     container.empty();
   }
   {
-    std::unordered_multimap<int> container;
+    std::unordered_multimap<int, int> container;
     std::move(container);
     container.clear();
     container.empty();
