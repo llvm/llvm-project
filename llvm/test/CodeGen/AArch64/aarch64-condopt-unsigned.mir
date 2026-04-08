@@ -279,6 +279,37 @@ body:             |
 ...
 
 ---
+# CSINC/CSINC with HI/LO (unsigned > and <): imm differs by 2
+# First:  cmp w0, #10; csinc ..., hi  (w0 > 10 unsigned)
+# Second: cmp w0, #12; csinc ..., lo  (w0 < 12 unsigned)
+# Expected: Both adjusted to use immediate 11 with HS/LS respectively
+name:            csinc_hi_lo_intrablock
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $w0
+    ; CHECK-LABEL: name: csinc_hi_lo_intrablock
+    ; CHECK: liveins: $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr32common = COPY $w0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32 = COPY [[COPY]]
+    ; CHECK-NEXT: [[SUBSWri:%[0-9]+]]:gpr32 = SUBSWri [[COPY]], 11, 0, implicit-def $nzcv
+    ; CHECK-NEXT: [[CSINCWr:%[0-9]+]]:gpr32 = CSINCWr [[COPY1]], $wzr, 2, implicit $nzcv
+    ; CHECK-NEXT: [[SUBSWri1:%[0-9]+]]:gpr32 = SUBSWri [[COPY]], 11, 0, implicit-def $nzcv
+    ; CHECK-NEXT: [[CSINCWr1:%[0-9]+]]:gpr32 = CSINCWr [[COPY1]], $wzr, 9, implicit $nzcv
+    ; CHECK-NEXT: $w0 = COPY [[CSINCWr1]]
+    ; CHECK-NEXT: RET undef $lr, implicit $w0
+    %0:gpr32common = COPY $w0
+    %1:gpr32 = COPY %0
+    %2:gpr32 = SUBSWri %0, 10, 0, implicit-def $nzcv
+    %3:gpr32 = CSINCWr %1, $wzr, 8, implicit $nzcv
+    %4:gpr32 = SUBSWri %0, 12, 0, implicit-def $nzcv
+    %5:gpr32 = CSINCWr %1, $wzr, 3, implicit $nzcv
+    $w0 = COPY %5
+    RET undef $lr, implicit $w0
+...
+
+---
 # Test: HI with immediate 0 can be optimized by adjusting upward
 # Head: cmp w0, #0; b.hi  (w0 > 0 unsigned)
 # True: cmp w0, #1; b.hi  (w0 > 1 unsigned)

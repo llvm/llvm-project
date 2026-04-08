@@ -1293,7 +1293,7 @@ declare i32 @__tgt_target_kernel_nowait(ptr, i64, i32, i32, ptr, ptr, i32, ptr, 
 ; CHECK: ; Function Attrs: nounwind
 ; CHECK-NEXT: declare noalias ptr @__kmpc_aligned_alloc(i32, i64, i64, ptr)
 
-; CHECK: ; Function Attrs: nosync nounwind allocsize(0)
+; CHECK: ; Function Attrs: nosync nounwind allockind("alloc,uninitialized") allocsize(0)
 ; CHECK-NEXT: declare noalias ptr @__kmpc_alloc_shared(i64)
 
 ; CHECK: ; Function Attrs: convergent nounwind
@@ -1329,7 +1329,7 @@ declare i32 @__tgt_target_kernel_nowait(ptr, i64, i32, i32, ptr, ptr, i32, ptr, 
 ; CHECK-NOT: Function Attrs
 ; CHECK: declare void @__kmpc_fork_call_if(ptr, i32, ptr, i32, ptr)
 
-; CHECK: ; Function Attrs: nosync nounwind
+; CHECK: ; Function Attrs: nosync nounwind allockind("free")
 ; CHECK-NEXT: declare void @__kmpc_free_shared(ptr allocptr captures(none), i64)
 
 ; CHECK: ; Function Attrs: nounwind
@@ -1935,7 +1935,7 @@ declare i32 @__tgt_target_kernel_nowait(ptr, i64, i32, i32, ptr, ptr, i32, ptr, 
 ; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind willreturn
 ; OPTIMISTIC-NEXT: declare noalias ptr @__kmpc_aligned_alloc(i32, i64, i64, ptr)
 
-; OPTIMISTIC: ; Function Attrs: nosync nounwind allocsize(0)
+; OPTIMISTIC: ; Function Attrs: nosync nounwind allockind("alloc,uninitialized") allocsize(0)
 ; OPTIMISTIC-NEXT: declare noalias ptr @__kmpc_alloc_shared(i64)
 
 ; OPTIMISTIC: ; Function Attrs: convergent nounwind
@@ -1971,7 +1971,7 @@ declare i32 @__tgt_target_kernel_nowait(ptr, i64, i32, i32, ptr, ptr, i32, ptr, 
 ; OPTIMISTIC-NOT: Function Attrs
 ; OPTIMISTIC: declare void @__kmpc_fork_call_if(ptr nofree readonly captures(none), i32, ptr nofree readonly captures(none), i32, ptr)
 
-; OPTIMISTIC: ; Function Attrs: nosync nounwind
+; OPTIMISTIC: ; Function Attrs: nosync nounwind allockind("free")
 ; OPTIMISTIC-NEXT: declare void @__kmpc_free_shared(ptr allocptr captures(none), i64)
 
 ; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind willreturn memory(inaccessiblemem: read)
@@ -2593,7 +2593,7 @@ declare i32 @__tgt_target_kernel_nowait(ptr, i64, i32, i32, ptr, ptr, i32, ptr, 
 ; EXT: ; Function Attrs: nounwind
 ; EXT-NEXT: declare noalias ptr @__kmpc_aligned_alloc(i32 signext, i64, i64, ptr)
 
-; EXT: ; Function Attrs: nosync nounwind allocsize(0)
+; EXT: ; Function Attrs: nosync nounwind allockind("alloc,uninitialized") allocsize(0)
 ; EXT-NEXT: declare noalias ptr @__kmpc_alloc_shared(i64)
 
 ; EXT: ; Function Attrs: convergent nounwind
@@ -2629,7 +2629,7 @@ declare i32 @__tgt_target_kernel_nowait(ptr, i64, i32, i32, ptr, ptr, i32, ptr, 
 ; EXT-NOT: Function Attrs
 ; EXT: declare void @__kmpc_fork_call_if(ptr, i32 signext, ptr, i32 signext, ptr)
 
-; EXT: ; Function Attrs: nosync nounwind
+; EXT: ; Function Attrs: nosync nounwind allockind("free")
 ; EXT-NEXT: declare void @__kmpc_free_shared(ptr allocptr captures(none), i64)
 
 ; EXT: ; Function Attrs: nounwind

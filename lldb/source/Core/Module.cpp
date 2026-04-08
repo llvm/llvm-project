@@ -157,10 +157,9 @@ Module::Module(const ModuleSpec &module_spec)
 
   // First extract all module specifications from the file using the local file
   // path. If there are no specifications, then don't fill anything in
-  ModuleSpecList modules_specs;
-  if (ObjectFile::GetModuleSpecifications(module_spec.GetFileSpec(), 0,
-                                          file_size, modules_specs,
-                                          extractor_sp) == 0)
+  ModuleSpecList modules_specs = ObjectFile::GetModuleSpecifications(
+      module_spec.GetFileSpec(), 0, file_size, extractor_sp);
+  if (modules_specs.GetSize() == 0)
     return;
 
   // Now make sure that one of the module specifications matches what we just
@@ -1258,7 +1257,7 @@ const Symbol *Module::FindFirstSymbolWithNameAndType(ConstString name,
                                                      SymbolType symbol_type) {
   LLDB_SCOPED_TIMERF(
       "Module::FindFirstSymbolWithNameAndType (name = %s, type = %i)",
-      name.AsCString(), symbol_type);
+      name.AsCString(""), symbol_type);
   if (Symtab *symtab = GetSymtab())
     return symtab->FindFirstSymbolWithNameAndType(
         name, symbol_type, Symtab::eDebugAny, Symtab::eVisibilityAny);
@@ -1285,7 +1284,7 @@ void Module::SymbolIndicesToSymbolContextList(
 void Module::FindFunctionSymbols(ConstString name, uint32_t name_type_mask,
                                  SymbolContextList &sc_list) {
   LLDB_SCOPED_TIMERF("Module::FindSymbolsFunctions (name = %s, mask = 0x%8.8x)",
-                     name.AsCString(), name_type_mask);
+                     name.AsCString(""), name_type_mask);
   if (Symtab *symtab = GetSymtab())
     symtab->FindFunctionSymbols(name, name_type_mask, sc_list);
 }
@@ -1418,85 +1417,6 @@ bool Module::IsLoadedInTarget(Target *target) {
     }
   }
   return false;
-}
-
-bool Module::LoadScriptingResourceInTarget(Target *target, Status &error) {
-  if (!target) {
-    error = Status::FromErrorString("invalid destination Target");
-    return false;
-  }
-
-  LoadScriptFromSymFile should_load =
-      target->TargetProperties::GetLoadScriptFromSymbolFile();
-
-  if (should_load == eLoadScriptFromSymFileFalse)
-    return false;
-
-  Debugger &debugger = target->GetDebugger();
-  const ScriptLanguage script_language = debugger.GetScriptLanguage();
-  if (script_language == eScriptLanguageNone)
-    return true;
-
-  ScriptInterpreter *script_interpreter = debugger.GetScriptInterpreter();
-  if (!script_interpreter) {
-    error = Status::FromErrorString("invalid ScriptInterpreter");
-    return false;
-  }
-
-  PlatformSP platform_sp(target->GetPlatform());
-
-  if (!platform_sp) {
-    error = Status::FromErrorString("invalid Platform");
-    return false;
-  }
-
-  StreamString feedback_stream;
-  FileSpecList file_specs = platform_sp->LocateExecutableScriptingResources(
-      target, *this, feedback_stream);
-
-  if (!feedback_stream.Empty())
-    debugger.ReportWarning(feedback_stream.GetString().str(), debugger.GetID());
-
-  const uint32_t num_specs = file_specs.GetSize();
-  if (num_specs == 0)
-    return true;
-
-  for (uint32_t i = 0; i < num_specs; ++i) {
-    FileSpec scripting_fspec(file_specs.GetFileSpecAtIndex(i));
-    if (!scripting_fspec && !FileSystem::Instance().Exists(scripting_fspec))
-      continue;
-
-    if (should_load == eLoadScriptFromSymFileWarn) {
-      // clang-format off
-      debugger.ReportWarning(
-          llvm::formatv(
-R"('{0}' contains a debug script. To run this script in this debug session:
-
-    command script import "{1}"
-
-To run all discovered debug scripts in this session:
-
-    settings set target.load-script-from-symbol-file true
-)",
-              GetFileSpec().GetFileNameStrippingExtension(),
-              scripting_fspec.GetPath()),
-          debugger.GetID());
-      // clang-format on
-
-      return false;
-    }
-
-    StreamString scripting_stream;
-    scripting_fspec.Dump(scripting_stream.AsRawOstream());
-    LoadScriptOptions options;
-    bool did_load = script_interpreter->LoadScriptingModule(
-        scripting_stream.GetData(), options, error,
-        /*module_sp*/ nullptr, /*extra_path*/ {}, target->shared_from_this());
-    if (!did_load)
-      return false;
-  }
-
-  return true;
 }
 
 bool Module::SetArchitecture(const ArchSpec &new_arch) {

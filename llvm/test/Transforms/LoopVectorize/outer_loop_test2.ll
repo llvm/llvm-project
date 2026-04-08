@@ -56,7 +56,6 @@
 @A = common global [1024 x i32] zeroinitializer, align 16
 @B = common global [1024 x i32] zeroinitializer, align 16
 
-; Function Attrs: norecurse nounwind uwtable
 define void @foo(i32 %iCount, i32 %c, i32 %jCount) {
 entry:
   %cmp22 = icmp sgt i32 %iCount, 0

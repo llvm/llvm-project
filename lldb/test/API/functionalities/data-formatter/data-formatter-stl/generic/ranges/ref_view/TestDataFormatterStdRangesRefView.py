@@ -9,6 +9,8 @@ from lldbsuite.test import lldbutil
 
 
 class StdRangesRefViewDataFormatterTestCase(TestBase):
+    SHARED_BUILD_TESTCASE = False
+
     def check_string_vec_children(self):
         return [
             ValueCheck(name="[0]", summary='"First"'),

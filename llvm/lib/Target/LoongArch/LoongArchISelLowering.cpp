@@ -8562,13 +8562,14 @@ bool LoongArchTargetLowering::isEligibleForTailCallOptimization(
     return false;
 
   // Do not tail call opt if caller's and callee's byval arguments do not match.
-  for (unsigned i = 0, j = 0; i < Outs.size(); i++) {
+  for (unsigned i = 0, j = 0; i < Outs.size(); ++i) {
     if (!Outs[i].Flags.isByVal())
       continue;
-    if (j++ >= LoongArchFI->getIncomingByValArgsSize())
+    if (j >= LoongArchFI->getIncomingByValArgsSize())
       return false;
-    if (LoongArchFI->getIncomingByValArgs(i).getValueType() != Outs[i].ArgVT)
+    if (LoongArchFI->getIncomingByValArgs(j).getValueType() != Outs[i].ArgVT)
       return false;
+    ++j;
   }
 
   // The callee has to preserve all registers the caller needs to preserve.
@@ -9154,6 +9155,24 @@ EVT LoongArchTargetLowering::getSetCCResultType(const DataLayout &DL,
   return VT.changeVectorElementTypeToInteger();
 }
 
+bool LoongArchTargetLowering::canMergeStoresTo(
+    unsigned AddressSpace, EVT MemVT, const MachineFunction &MF) const {
+  // Do not merge to float value size (128 or 256 bits) if no implicit
+  // float attribute is set.
+  bool NoFloat = MF.getFunction().hasFnAttribute(Attribute::NoImplicitFloat);
+  unsigned MaxIntSize = Subtarget.is64Bit() ? 64 : 32;
+  if (NoFloat)
+    return MemVT.getSizeInBits() <= MaxIntSize;
+
+  // Make sure we don't merge greater than our maximum supported vector width.
+  if (Subtarget.hasExtLASX())
+    MaxIntSize = 256;
+  else if (Subtarget.hasExtLSX())
+    MaxIntSize = 128;
+
+  return MemVT.getSizeInBits() <= MaxIntSize;
+}
+
 bool LoongArchTargetLowering::hasAndNot(SDValue Y) const {
   EVT VT = Y.getValueType();
 
@@ -9468,57 +9487,93 @@ static int getEstimateRefinementSteps(EVT VT,
   return RefinementSteps;
 }
 
+static bool
+isSupportedReciprocalEstimateType(EVT VT, const LoongArchSubtarget &Subtarget) {
+  assert(Subtarget.hasFrecipe() &&
+         "Reciprocal estimate queried on unsupported target");
+
+  if (!VT.isSimple())
+    return false;
+
+  switch (VT.getSimpleVT().SimpleTy) {
+  case MVT::f32:
+    // f32 is the base type for reciprocal estimate instructions.
+    return true;
+
+  case MVT::f64:
+    return Subtarget.hasBasicD();
+
+  case MVT::v4f32:
+  case MVT::v2f64:
+    return Subtarget.hasExtLSX();
+
+  case MVT::v8f32:
+  case MVT::v4f64:
+    return Subtarget.hasExtLASX();
+
+  default:
+    return false;
+  }
+}
+
 SDValue LoongArchTargetLowering::getSqrtEstimate(SDValue Operand,
                                                  SelectionDAG &DAG, int Enabled,
                                                  int &RefinementSteps,
                                                  bool &UseOneConstNR,
                                                  bool Reciprocal) const {
-  if (Subtarget.hasFrecipe()) {
-    SDLoc DL(Operand);
-    EVT VT = Operand.getValueType();
+  assert(Enabled != ReciprocalEstimate::Disabled &&
+         "Enabled should never be Disabled here");
 
-    if (VT == MVT::f32 || (VT == MVT::f64 && Subtarget.hasBasicD()) ||
-        (VT == MVT::v4f32 && Subtarget.hasExtLSX()) ||
-        (VT == MVT::v2f64 && Subtarget.hasExtLSX()) ||
-        (VT == MVT::v8f32 && Subtarget.hasExtLASX()) ||
-        (VT == MVT::v4f64 && Subtarget.hasExtLASX())) {
+  if (!Subtarget.hasFrecipe())
+    return SDValue();
 
-      if (RefinementSteps == ReciprocalEstimate::Unspecified)
-        RefinementSteps = getEstimateRefinementSteps(VT, Subtarget);
+  SDLoc DL(Operand);
+  EVT VT = Operand.getValueType();
 
-      SDValue Estimate = DAG.getNode(LoongArchISD::FRSQRTE, DL, VT, Operand);
-      if (Reciprocal)
-        Estimate = DAG.getNode(ISD::FMUL, DL, VT, Operand, Estimate);
+  // Check supported types.
+  if (!isSupportedReciprocalEstimateType(VT, Subtarget))
+    return SDValue();
 
-      return Estimate;
-    }
-  }
+  // Handle refinement steps.
+  if (RefinementSteps == ReciprocalEstimate::Unspecified)
+    RefinementSteps = getEstimateRefinementSteps(VT, Subtarget);
 
-  return SDValue();
+  // LoongArch only has FRSQRTE which is 1.0 / sqrt(x).
+  UseOneConstNR = false;
+  SDValue Rsqrt = DAG.getNode(LoongArchISD::FRSQRTE, DL, VT, Operand);
+
+  // If the caller wants 1.0 / sqrt(x), or if further refinement steps
+  // are needed (which rely on the reciprocal form), return the raw reciprocal
+  // estimate.
+  if (Reciprocal || RefinementSteps > 0)
+    return Rsqrt;
+
+  // Otherwise, return sqrt(x) by multiplying with the operand.
+  return DAG.getNode(ISD::FMUL, DL, VT, Operand, Rsqrt);
 }
 
 SDValue LoongArchTargetLowering::getRecipEstimate(SDValue Operand,
                                                   SelectionDAG &DAG,
                                                   int Enabled,
                                                   int &RefinementSteps) const {
-  if (Subtarget.hasFrecipe()) {
-    SDLoc DL(Operand);
-    EVT VT = Operand.getValueType();
+  assert(Enabled != ReciprocalEstimate::Disabled &&
+         "Enabled should never be Disabled here");
 
-    if (VT == MVT::f32 || (VT == MVT::f64 && Subtarget.hasBasicD()) ||
-        (VT == MVT::v4f32 && Subtarget.hasExtLSX()) ||
-        (VT == MVT::v2f64 && Subtarget.hasExtLSX()) ||
-        (VT == MVT::v8f32 && Subtarget.hasExtLASX()) ||
-        (VT == MVT::v4f64 && Subtarget.hasExtLASX())) {
+  if (!Subtarget.hasFrecipe())
+    return SDValue();
 
-      if (RefinementSteps == ReciprocalEstimate::Unspecified)
-        RefinementSteps = getEstimateRefinementSteps(VT, Subtarget);
+  SDLoc DL(Operand);
+  EVT VT = Operand.getValueType();
 
-      return DAG.getNode(LoongArchISD::FRECIPE, DL, VT, Operand);
-    }
-  }
+  // Check supported types.
+  if (!isSupportedReciprocalEstimateType(VT, Subtarget))
+    return SDValue();
 
-  return SDValue();
+  if (RefinementSteps == ReciprocalEstimate::Unspecified)
+    RefinementSteps = getEstimateRefinementSteps(VT, Subtarget);
+
+  // FRECIPE computes 1.0 / x.
+  return DAG.getNode(LoongArchISD::FRECIPE, DL, VT, Operand);
 }
 
 //===----------------------------------------------------------------------===//
@@ -9951,6 +10006,25 @@ unsigned LoongArchTargetLowering::getNumRegistersForCallingConv(
     return 1;
 
   return TargetLowering::getNumRegistersForCallingConv(Context, CC, VT);
+}
+
+void LoongArchTargetLowering::computeKnownBitsForTargetNode(
+    const SDValue Op, KnownBits &Known, const APInt &DemandedElts,
+    const SelectionDAG &DAG, unsigned Depth) const {
+  unsigned Opc = Op.getOpcode();
+  Known.resetAll();
+  switch (Opc) {
+  default:
+    break;
+  case LoongArchISD::VPICK_ZEXT_ELT: {
+    assert(isa<VTSDNode>(Op->getOperand(2)) && "Unexpected operand!");
+    EVT VT = cast<VTSDNode>(Op->getOperand(2))->getVT();
+    unsigned VTBits = VT.getScalarSizeInBits();
+    assert(Known.getBitWidth() >= VTBits && "Unexpected width!");
+    Known.Zero.setBitsFrom(VTBits);
+    break;
+  }
+  }
 }
 
 bool LoongArchTargetLowering::SimplifyDemandedBitsForTargetNode(

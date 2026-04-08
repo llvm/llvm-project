@@ -19,6 +19,7 @@
 #include "llvm/IR/FPEnv.h"
 #include "llvm/Support/ErrorHandling.h"
 
+#include "mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Location.h"
@@ -124,6 +125,8 @@ public:
       return cir::ZeroAttr::get(recordTy);
     if (auto dataMemberTy = mlir::dyn_cast<cir::DataMemberType>(ty))
       return getNullDataMemberAttr(dataMemberTy);
+    if (auto methodTy = mlir::dyn_cast<cir::MethodType>(ty))
+      return getNullMethodAttr(methodTy);
     if (mlir::isa<cir::BoolType>(ty)) {
       return getFalseAttr();
     }
@@ -365,8 +368,10 @@ public:
 
   /// Create a copy with inferred length.
   cir::CopyOp createCopy(mlir::Value dst, mlir::Value src,
-                         bool isVolatile = false) {
-    return cir::CopyOp::create(*this, dst.getLoc(), dst, src, isVolatile);
+                         bool isVolatile = false,
+                         bool skipTailPadding = false) {
+    return cir::CopyOp::create(*this, dst.getLoc(), dst, src, isVolatile,
+                               skipTailPadding);
   }
 
   cir::StoreOp createStore(mlir::Location loc, mlir::Value val, mlir::Value dst,
@@ -394,14 +399,15 @@ public:
     return CIRBaseBuilderTy::createStore(loc, flag, dst);
   }
 
-  [[nodiscard]] cir::GlobalOp createGlobal(mlir::ModuleOp mlirModule,
-                                           mlir::Location loc,
-                                           mlir::StringRef name,
-                                           mlir::Type type, bool isConstant,
-                                           cir::GlobalLinkageKind linkage) {
+  [[nodiscard]] cir::GlobalOp
+  createGlobal(mlir::ModuleOp mlirModule, mlir::Location loc,
+               mlir::StringRef name, mlir::Type type, bool isConstant,
+               cir::GlobalLinkageKind linkage,
+               mlir::ptr::MemorySpaceAttrInterface addrSpace) {
     mlir::OpBuilder::InsertionGuard guard(*this);
     setInsertionPointToStart(mlirModule.getBody());
-    return cir::GlobalOp::create(*this, loc, name, type, isConstant, linkage);
+    return cir::GlobalOp::create(*this, loc, name, type, isConstant, addrSpace,
+                                 linkage);
   }
 
   cir::GetMemberOp createGetMember(mlir::Location loc, mlir::Type resultTy,

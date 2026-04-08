@@ -120,7 +120,6 @@ The Directory Structure
   |-- ClangTidyTest.h
   |-- GoogleModuleTest.cpp
   |-- LLVMModuleTest.cpp
-  |-- ObjCModuleTest.cpp
       ...
 
 

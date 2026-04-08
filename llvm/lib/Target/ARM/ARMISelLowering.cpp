@@ -3205,8 +3205,7 @@ SDValue ARMTargetLowering::LowerConstantPool(SDValue Op,
         Twine(DAG.getDataLayout().getInternalSymbolPrefix()) + "CP" +
             Twine(DAG.getMachineFunction().getFunctionNumber()) + "_" +
             Twine(AFI->createPICLabelUId()));
-    SDValue GA = DAG.getTargetGlobalAddress(dyn_cast<GlobalValue>(GV),
-                                            dl, PtrVT);
+    SDValue GA = DAG.getTargetGlobalAddress(GV, dl, PtrVT);
     return LowerGlobalAddress(GA, DAG);
   }
 
@@ -4458,6 +4457,29 @@ static bool isFloatingPointZero(SDValue Op) {
   return false;
 }
 
+static bool isSafeSignedCMN(SDValue Op, SelectionDAG &DAG) {
+  // 0 - INT_MIN sign wraps, so no signed wrap means cmn is safe.
+  if (Op->getFlags().hasNoSignedWrap())
+    return true;
+
+  // We can still figure out if the second operand is safe to use
+  // in a CMN instruction by checking if it is known to be not the minimum
+  // signed value. If it is not, then we can safely use CMN.
+  // Note: We can eventually remove this check and simply rely on
+  // Op->getFlags().hasNoSignedWrap() once SelectionDAG/ISelLowering
+  // consistently sets them appropriately when making said nodes.
+
+  KnownBits KnownSrc = DAG.computeKnownBits(Op.getOperand(1));
+  return !KnownSrc.getSignedMinValue().isMinSignedValue();
+}
+
+static bool isCMN(SDValue Op, ISD::CondCode CC, SelectionDAG &DAG) {
+  return Op.getOpcode() == ISD::SUB && isNullConstant(Op.getOperand(0)) &&
+         (isIntEqualitySetCC(CC) ||
+          (isUnsignedIntSetCC(CC) && DAG.isKnownNeverZero(Op.getOperand(1))) ||
+          (isSignedIntSetCC(CC) && isSafeSignedCMN(Op, DAG)));
+}
+
 /// Returns appropriate ARM CMP (cmp) and corresponding condition code for
 /// the given operands.
 SDValue ARMTargetLowering::getARMCmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
@@ -4591,6 +4613,21 @@ SDValue ARMTargetLowering::getARMCmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
     CompareType = ARMISD::CMPZ;
     break;
   }
+
+  // TODO: Remove CMPZ check once we generalize and remove the CMPZ enum from
+  // the codebase.
+
+  // TODO: When we have a solution to the vselect predicate not allowing pl/mi
+  // all the time, allow those cases to be cmn too no matter what.
+  if (CompareType != ARMISD::CMPZ && isCMN(RHS, CC, DAG)) {
+    CompareType = ARMISD::CMN;
+    RHS = RHS.getOperand(1);
+  } else if (CompareType != ARMISD::CMPZ && isCMN(LHS, CC, DAG)) {
+    CompareType = ARMISD::CMN;
+    LHS = LHS.getOperand(1);
+    CondCode = IntCCToARMCC(ISD::getSetCCSwappedOperands(CC));
+  }
+
   ARMcc = DAG.getConstant(CondCode, dl, MVT::i32);
   return DAG.getNode(CompareType, dl, FlagsVT, LHS, RHS);
 }
@@ -16193,25 +16230,27 @@ static SDValue CombineBaseUpdate(SDNode *N,
   if (findPointerConstIncrement(Addr.getNode(), &Base, &CInc)) {
     unsigned Offset =
         getPointerConstIncrement(Addr->getOpcode(), Base, CInc, DCI.DAG);
-    for (SDUse &Use : Base->uses()) {
+    if (Offset) {
+      for (SDUse &Use : Base->uses()) {
 
-      SDNode *User = Use.getUser();
-      if (Use.getResNo() != Base.getResNo() || User == Addr.getNode() ||
-          User->getNumOperands() != 2)
-        continue;
+        SDNode *User = Use.getUser();
+        if (Use.getResNo() != Base.getResNo() || User == Addr.getNode() ||
+            User->getNumOperands() != 2)
+          continue;
 
-      SDValue UserInc = User->getOperand(Use.getOperandNo() == 0 ? 1 : 0);
-      unsigned UserOffset =
-          getPointerConstIncrement(User->getOpcode(), Base, UserInc, DCI.DAG);
+        SDValue UserInc = User->getOperand(Use.getOperandNo() == 0 ? 1 : 0);
+        unsigned UserOffset =
+            getPointerConstIncrement(User->getOpcode(), Base, UserInc, DCI.DAG);
 
-      if (!UserOffset || UserOffset <= Offset)
-        continue;
+        if (!UserOffset || UserOffset <= Offset)
+          continue;
 
-      unsigned NewConstInc = UserOffset - Offset;
-      SDValue NewInc = DCI.DAG.getConstant(NewConstInc, SDLoc(N), MVT::i32);
-      BaseUpdates.push_back({User, NewInc, NewConstInc});
-      if (BaseUpdates.size() >= MaxBaseUpdates)
-        break;
+        unsigned NewConstInc = UserOffset - Offset;
+        SDValue NewInc = DCI.DAG.getConstant(NewConstInc, SDLoc(N), MVT::i32);
+        BaseUpdates.push_back({User, NewInc, NewConstInc});
+        if (BaseUpdates.size() >= MaxBaseUpdates)
+          break;
+      }
     }
   }
 

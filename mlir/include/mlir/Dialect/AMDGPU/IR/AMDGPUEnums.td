@@ -80,4 +80,40 @@ def AMDGPU_MFMAPermB : I32Enum<"MFMAPermB",
   let cppNamespace = "::mlir::amdgpu";
 }
 
+def AMDGPU_LoadTemporalHint : I32Enum<"LoadTemporalHint",
+    "AMDGPU-specific prefetch temporal hints for load instructions. "
+    "RT - regular temporal for both near and far caches; "
+    "NT - non-temporal for both near and far caches; "
+    "HT - high-priority temporal for both near and far caches; "
+    "LU - last-use; "
+    "NT_RT - non-temporal for near cache(s) and regular for far caches; "
+    "RT_NT - regular for near cache(s) and non-temporal for far caches; "
+    "NT_HT - non-temporal for near cache(s) and high-priority temporal for far caches",
+    [
+      I32EnumCase<"RT",    0>,
+      I32EnumCase<"NT",    1>,
+      I32EnumCase<"HT",    2>,
+      I32EnumCase<"LU",    3>,
+      I32EnumCase<"NT_RT", 4>,
+      I32EnumCase<"RT_NT", 5>,
+      I32EnumCase<"NT_HT", 6>
+    ]> {
+  let cppNamespace = "::mlir::amdgpu";
+}
+
+def AMDGPU_CacheScope : I32Enum<"Scope",
+    "AMDGPU-specific cache scopes. "
+    "WGP - workgroup processor (CUs); "
+    "SE - shader engine (GL2); "
+    "DEV - device; "
+    "SYS - system",
+    [
+      I32EnumCase<"WGP",    0>,
+      I32EnumCase<"SE",     1>,
+      I32EnumCase<"DEV",    2>,
+      I32EnumCase<"SYS",    3>
+    ]> {
+  let cppNamespace = "::mlir::amdgpu";
+}
+
 #endif // MLIR_DIALECT_AMDGPU_IR_AMDGPUENUMS_TD

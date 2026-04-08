@@ -28,9 +28,9 @@ JSONFormat::analysisResultMapEntryFromJSON(const Object &Entry) const {
 
   AnalysisName Name = analysisNameFromJSON(*OptName);
 
-  auto ExpectedFns = AnalysisResultRegistry::lookup(Name);
-  if (!ExpectedFns) {
-    return ExpectedFns.takeError();
+  auto ExpectedCodec = AnalysisResultRegistry::instantiate(Name);
+  if (!ExpectedCodec) {
+    return ExpectedCodec.takeError();
   }
 
   const Object *ResultObj = Entry.getObject("result");
@@ -42,7 +42,7 @@ JSONFormat::analysisResultMapEntryFromJSON(const Object &Entry) const {
   }
 
   auto ExpectedResult =
-      ExpectedFns->second(*ResultObj, &entityIdFromJSONObject);
+      (*ExpectedCodec)->deserialize(*ResultObj, &entityIdFromJSONObject);
   if (!ExpectedResult) {
     return ExpectedResult.takeError();
   }
@@ -53,14 +53,14 @@ JSONFormat::analysisResultMapEntryFromJSON(const Object &Entry) const {
 llvm::Expected<Object> JSONFormat::analysisResultMapEntryToJSON(
     const AnalysisName &Name,
     const std::unique_ptr<AnalysisResult> &Result) const {
-  auto ExpectedFns = AnalysisResultRegistry::lookup(Name);
-  if (!ExpectedFns) {
-    return ExpectedFns.takeError();
+  auto ExpectedCodec = AnalysisResultRegistry::instantiate(Name);
+  if (!ExpectedCodec) {
+    return ExpectedCodec.takeError();
   }
 
   Object Entry;
   Entry["analysis_name"] = analysisNameToJSON(Name);
-  Entry["result"] = ExpectedFns->first(*Result, &entityIdToJSONObject);
+  Entry["result"] = (*ExpectedCodec)->serialize(*Result, &entityIdToJSONObject);
   return Entry;
 }
 
@@ -71,8 +71,11 @@ llvm::Expected<Object> JSONFormat::analysisResultMapEntryToJSON(
 llvm::Expected<std::map<AnalysisName, std::unique_ptr<AnalysisResult>>>
 JSONFormat::analysisResultMapFromJSON(const Array &ResultsArray) const {
   std::map<AnalysisName, std::unique_ptr<AnalysisResult>> Results;
-  for (size_t I = 0; I < ResultsArray.size(); ++I) {
-    const Object *Entry = ResultsArray[I].getAsObject();
+
+  auto AsObject = [](const Value &V) { return V.getAsObject(); };
+  auto ObjectsRange = llvm::map_range(ResultsArray, AsObject);
+
+  for (auto [I, Entry] : enumerate(ObjectsRange)) {
     if (!Entry) {
       return ErrorBuilder::create(std::errc::invalid_argument,
                                   ErrorMessages::FailedToReadObjectAtIndex,
@@ -96,7 +99,7 @@ JSONFormat::analysisResultMapFromJSON(const Array &ResultsArray) const {
           .build();
     }
   }
-  return Results;
+  return std::move(Results);
 }
 
 llvm::Expected<Array> JSONFormat::analysisResultMapToJSON(
@@ -179,7 +182,7 @@ llvm::Expected<WPASuite> JSONFormat::readWPASuite(llvm::StringRef Path) {
     getData(Suite) = std::move(*ExpectedResultsMap);
   }
 
-  return Suite;
+  return std::move(Suite);
 }
 
 llvm::Error JSONFormat::writeWPASuite(const WPASuite &Suite,

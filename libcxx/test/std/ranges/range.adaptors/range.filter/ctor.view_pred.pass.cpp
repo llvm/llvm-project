@@ -19,7 +19,7 @@
 #include "types.h"
 
 struct Range : std::ranges::view_base {
-  constexpr explicit Range(int* b, int* e) : begin_(b), end_(e) { }
+  constexpr explicit Range(int* b, int* e) : begin_(b), end_(e) {}
   constexpr int* begin() const { return begin_; }
   constexpr int* end() const { return end_; }
 
@@ -52,7 +52,7 @@ static_assert(!test_convertible<std::ranges::filter_view<Range, Pred>, Range, Pr
 
 #else
 
-static_assert( test_convertible<std::ranges::filter_view<Range, Pred>, Range, Pred>(),
+static_assert(test_convertible<std::ranges::filter_view<Range, Pred>, Range, Pred>(),
               "This constructor must not be explicit");
 
 #endif // TEST_STD_VER >= 23
