@@ -174,6 +174,24 @@ define i1 @x_floor_uno_to_trunc_uno(float %x) {
   ret i1 %ret
 }
 
+define i1 @x_floor_true_neg(float %x) {
+; CHECK-LABEL: @x_floor_true_neg(
+; CHECK-NEXT:    ret i1 true
+;
+  %ceil = call float @llvm.floor.f32(float %x)
+  %ret = fcmp true float %x, %ceil
+  ret i1 %ret
+}
+
+define i1 @x_floor_false_neg(float %x) {
+; CHECK-LABEL: @x_floor_false_neg(
+; CHECK-NEXT:    ret i1 false
+;
+  %ceil = call float @llvm.floor.f32(float %x)
+  %ret = fcmp false float %x, %ceil
+  ret i1 %ret
+}
+
 define i1 @ceil_x_oge(float %x) {
 ; CHECK-LABEL: @ceil_x_oge(
 ; CHECK-NEXT:    [[RET:%.*]] = fcmp ninf ord float [[X:%.*]], 0.000000e+00
@@ -344,5 +362,23 @@ define i1 @x_ceil_uno_to_trunc_uno(float %x) {
 ;
   %ceil = call float @llvm.ceil.f32(float %x)
   %ret = fcmp uno float %x, %ceil
+  ret i1 %ret
+}
+
+define i1 @x_ceil_true_neg(float %x) {
+; CHECK-LABEL: @x_ceil_true_neg(
+; CHECK-NEXT:    ret i1 true
+;
+  %ceil = call float @llvm.ceil.f32(float %x)
+  %ret = fcmp true float %x, %ceil
+  ret i1 %ret
+}
+
+define i1 @x_ceil_false_neg(float %x) {
+; CHECK-LABEL: @x_ceil_false_neg(
+; CHECK-NEXT:    ret i1 false
+;
+  %ceil = call float @llvm.ceil.f32(float %x)
+  %ret = fcmp false float %x, %ceil
   ret i1 %ret
 }
