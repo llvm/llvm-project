@@ -375,7 +375,7 @@ APValue::APValue(const APValue &RHS)
     break;
   case Reflection:
     MakeReflection(RHS.getReflectionOperandKind(),
-                   RHS.getOpaqueReflectionOperand());
+                   RHS.getReflectionOpaqueOperand());
     break;
   }
 }
@@ -497,7 +497,7 @@ static void profileReflection(llvm::FoldingSetNodeID &ID, APValue V) {
   switch (V.getReflectionOperandKind()) {
   case ReflectionKind::Type: {
     const TypeSourceInfo *info =
-        static_cast<const TypeSourceInfo *>(V.getOpaqueReflectionOperand());
+        static_cast<const TypeSourceInfo *>(V.getReflectionOpaqueOperand());
     ID.AddPointer((info->getType().getCanonicalType().getAsOpaquePtr()));
     return;
   }

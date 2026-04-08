@@ -19,6 +19,7 @@ consteval void test()
     static_assert(__is_same(decltype(^^unsigned int), info));
     static_assert(__is_same(decltype(^^unsigned long), info));
     static_assert(__is_same(decltype(^^unsigned long long), info));
+    static_assert(__is_same(decltype(^^info), info));
 
     static_assert(__is_same(decltype(^^int), decltype(^^int)));
     static_assert(__is_same(decltype(^^int), decltype(^^float)));
@@ -36,4 +37,7 @@ consteval void test()
     static_assert(^^float != ^^int);
     static_assert(!(^^float == ^^int));
     static_assert(r == q);
+
+    int a;
+    static_assert(^^int == ^^decltype(a));
 }
