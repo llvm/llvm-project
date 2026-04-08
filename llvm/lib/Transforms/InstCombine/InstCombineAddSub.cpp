@@ -1609,6 +1609,10 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
     // ~B + (A + C) --> A - B + (C-1)
     // (~B + A) + C --> A - B + (C-1)
     // (A + ~B) + C --> A - B + (C-1)
+    // This relies on the ~B == -1-B identity.
+    // With constant C, subtraction of one is free, so we replace three ops
+    // (two adds and a bitwise-not) with two (sub and add)
+    // or even one (just sub for the C==1 special case).
     const APInt *C;
     if (match(&I, m_c_BinOp(m_Add(m_Value(A), m_APIntAllowPoison(C)),
                             m_Not(m_Value(B)))) ||
