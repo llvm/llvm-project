@@ -1,0 +1,53 @@
+; REQUIRES: x86_64-linux
+; Test that [buildid:]0xaddr format is correctly parsed in perfscript input.
+
+;; Test 1: LBR-only perfscript with buildid prefix, using --filter-build-id
+;; to match "aabb1122". Output should match the original noprobe.perfscript.
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/buildid-noprobe.perfscript --binary=%S/Inputs/noprobe.perfbin --output=%t --skip-symbolization --filter-build-id=aabb1122
+; RUN: FileCheck %s --input-file %t --check-prefix=CHECK-LBR
+
+; CHECK-LBR:      7
+; CHECK-LBR-NEXT: 5b0-5c8:7
+; CHECK-LBR-NEXT: 5b0-5d7:13
+; CHECK-LBR-NEXT: 5dc-5e9:6
+; CHECK-LBR-NEXT: 5e5-5e9:12
+; CHECK-LBR-NEXT: 5ff-62f:19
+; CHECK-LBR-NEXT: 634-637:18
+; CHECK-LBR-NEXT: 645-645:18
+; CHECK-LBR-NEXT: 6
+; CHECK-LBR-NEXT: 5c8->5dc:7
+; CHECK-LBR-NEXT: 5d7->5e5:13
+; CHECK-LBR-NEXT: 5e9->634:18
+; CHECK-LBR-NEXT: 62f->5b0:21
+; CHECK-LBR-NEXT: 637->645:18
+; CHECK-LBR-NEXT: 645->5ff:19
+
+;; Test 2: Hybrid perfscript with buildid prefix, using --filter-build-id
+;; to match "aabb1122". Output should match noinline-cs-noprobe.aggperfscript.
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/buildid-cs-noprobe.aggperfscript --binary=%S/Inputs/noinline-cs-noprobe.perfbin --output=%t2 --skip-symbolization --profile-summary-cold-count=0 --filter-build-id=aabb1122
+; RUN: FileCheck %s --input-file %t2 --check-prefix=CHECK-HYBRID
+
+; CHECK-HYBRID:      [foo]
+; CHECK-HYBRID-NEXT:   3
+; CHECK-HYBRID-NEXT:   5ff-62f:6
+; CHECK-HYBRID-NEXT:   634-637:6
+; CHECK-HYBRID-NEXT:   645-645:6
+; CHECK-HYBRID-NEXT:   3
+; CHECK-HYBRID-NEXT:   62f->5b0:6
+; CHECK-HYBRID-NEXT:   637->645:6
+; CHECK-HYBRID-NEXT:   645->5ff:6
+; CHECK-HYBRID-NEXT: [foo:3 @ bar]
+; CHECK-HYBRID-NEXT:   4
+; CHECK-HYBRID-NEXT:   5b0-5c8:2
+; CHECK-HYBRID-NEXT:   5b0-5d7:4
+; CHECK-HYBRID-NEXT:   5dc-5e9:2
+; CHECK-HYBRID-NEXT:   5e5-5e9:4
+; CHECK-HYBRID-NEXT:   3
+; CHECK-HYBRID-NEXT:   5c8->5dc:4
+; CHECK-HYBRID-NEXT:   5d7->5e5:4
+; CHECK-HYBRID-NEXT:   5e9->634:6
+
+;; Test 3: With non-matching filter, all addresses should be filtered out,
+;; resulting in no samples (empty output).
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/buildid-noprobe.perfscript --binary=%S/Inputs/noprobe.perfbin --output=%t3 --skip-symbolization --filter-build-id=ccdd3344 2>&1 | FileCheck %s --check-prefix=CHECK-NOMATCH
+; CHECK-NOMATCH: warning: No samples in perf script!
