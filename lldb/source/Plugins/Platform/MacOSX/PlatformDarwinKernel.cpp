@@ -625,7 +625,7 @@ bool PlatformDarwinKernel::KextHasdSYMSibling(
       kext_bundle_filepath.GetFileNameStrippingExtension();
   std::string deep_bundle_str =
       kext_bundle_filepath.GetPath() + "/Contents/MacOS/";
-  deep_bundle_str += executable_name.AsCString();
+  deep_bundle_str += executable_name.GetStringRef();
   deep_bundle_str += ".dSYM";
   dsym_fspec.SetFile(deep_bundle_str, FileSpec::Style::native);
   FileSystem::Instance().Resolve(dsym_fspec);
@@ -636,7 +636,7 @@ bool PlatformDarwinKernel::KextHasdSYMSibling(
   // look for a shallow bundle format
   //
   std::string shallow_bundle_str = kext_bundle_filepath.GetPath() + "/";
-  shallow_bundle_str += executable_name.AsCString();
+  shallow_bundle_str += executable_name.GetStringRef();
   shallow_bundle_str += ".dSYM";
   dsym_fspec.SetFile(shallow_bundle_str, FileSpec::Style::native);
   FileSystem::Instance().Resolve(dsym_fspec);

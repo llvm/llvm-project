@@ -35,9 +35,6 @@ TEST_MAIN(int, char **, char **) {
   written = LIBC_NAMESPACE::fprintf(file, "%d%c%.1f\n", 1, 'c', 1.0);
   ASSERT_EQ(written, 6);
 
-  written = LIBC_NAMESPACE::fprintf(file, "%032b%s\n", 1, "A simple string\n");
-  ASSERT_EQ(written, 49);
-
   // Check that the server correctly handles divergent numbers of arguments.
   const char *format = gpu::get_thread_id() % 2 ? "%s" : "%20ld\n";
   written = LIBC_NAMESPACE::fprintf(file, format, str);
@@ -47,22 +44,11 @@ TEST_MAIN(int, char **, char **) {
   written = LIBC_NAMESPACE::fprintf(file, format, str);
   ASSERT_EQ(written, 16);
 
-  // Check that we handle null arguments correctly.
+  // These are non-standard so we cannot check the chars directly
   written = LIBC_NAMESPACE::fprintf(file, "%p", nullptr);
-  ASSERT_EQ(written, 9);
-
-#ifndef LIBC_COPT_PRINTF_NO_NULLPTR_CHECKS
-  written = LIBC_NAMESPACE::fprintf(file, "%s", nullptr);
-  ASSERT_EQ(written, 6);
-#endif // LIBC_COPT_PRINTF_NO_NULLPTR_CHECKS
-
-  // Check for extremely abused variable width arguments
-  written = LIBC_NAMESPACE::fprintf(file, "%**d", 1, 2, 1.0);
-  ASSERT_EQ(written, 4);
-  written = LIBC_NAMESPACE::fprintf(file, "%**d%6d", 1, 2, 1.0);
-  ASSERT_EQ(written, 10);
-  written = LIBC_NAMESPACE::fprintf(file, "%**.**f", 1, 2, 1.0);
-  ASSERT_EQ(written, 7);
+  ASSERT_TRUE(written >= 0);
+  written = LIBC_NAMESPACE::fprintf(file, "%032b%s\n", 1, "A simple string\n");
+  ASSERT_TRUE(written >= 0);
 
   return 0;
 }

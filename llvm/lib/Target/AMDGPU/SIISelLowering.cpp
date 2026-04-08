@@ -10281,10 +10281,12 @@ SDValue SITargetLowering::lowerSBuffer(EVT VT, SDLoc DL, SDValue Rsrc,
                    NumLoads > 1 ? Align(16 * NumLoads) : Align(4));
 
   uint64_t InstOffset = Ops[5]->getAsZExtVal();
+  unsigned LoadSize = LoadVT.getStoreSize();
   for (unsigned i = 0; i < NumLoads; ++i) {
     Ops[5] = DAG.getTargetConstant(InstOffset + 16 * i, DL, MVT::i32);
+    MachineMemOperand *LoadMMO = MF.getMachineMemOperand(MMO, 16 * i, LoadSize);
     Loads.push_back(getMemIntrinsicNode(AMDGPUISD::BUFFER_LOAD, DL, VTList, Ops,
-                                        LoadVT, MMO, DAG));
+                                        LoadVT, LoadMMO, DAG));
   }
 
   if (NumElts == 8 || NumElts == 16)

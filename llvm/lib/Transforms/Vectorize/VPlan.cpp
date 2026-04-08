@@ -1231,19 +1231,31 @@ VPlan *VPlan::duplicate() {
   DenseMap<VPValue *, VPValue *> Old2NewVPValues;
   for (VPIRValue *OldLiveIn : getLiveIns())
     Old2NewVPValues[OldLiveIn] = NewPlan->getOrAddLiveIn(OldLiveIn);
-  Old2NewVPValues[&VectorTripCount] = &NewPlan->VectorTripCount;
-  Old2NewVPValues[&VF] = &NewPlan->VF;
-  Old2NewVPValues[&UF] = &NewPlan->UF;
-  Old2NewVPValues[&VFxUF] = &NewPlan->VFxUF;
-  if (BackedgeTakenCount) {
-    NewPlan->BackedgeTakenCount = new VPSymbolicValue();
-    Old2NewVPValues[BackedgeTakenCount] = NewPlan->BackedgeTakenCount;
-  }
+
   if (auto *TripCountIRV = dyn_cast_or_null<VPIRValue>(TripCount))
     Old2NewVPValues[TripCountIRV] = NewPlan->getOrAddLiveIn(TripCountIRV);
   // else NewTripCount will be created and inserted into Old2NewVPValues when
   // TripCount is cloned. In any case NewPlan->TripCount is updated below.
 
+  assert(none_of(Old2NewVPValues.keys(), IsaPred<VPSymbolicValue>) &&
+         "All VPSymbolicValues must be handled below");
+
+  if (BackedgeTakenCount)
+    NewPlan->BackedgeTakenCount = new VPSymbolicValue();
+
+  // Map and propagate materialized state for symbolic values.
+  for (auto [OldSV, NewSV] :
+       {std::pair{&VectorTripCount, &NewPlan->VectorTripCount},
+        {&VF, &NewPlan->VF},
+        {&UF, &NewPlan->UF},
+        {&VFxUF, &NewPlan->VFxUF},
+        {BackedgeTakenCount, NewPlan->BackedgeTakenCount}}) {
+    if (!OldSV)
+      continue;
+    Old2NewVPValues[OldSV] = NewSV;
+    if (OldSV->isMaterialized())
+      NewSV->markMaterialized();
+  }
   remapOperands(Entry, NewEntry, Old2NewVPValues);
 
   // Initialize remaining fields of cloned VPlan.
