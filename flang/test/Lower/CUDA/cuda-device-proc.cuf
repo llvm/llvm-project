@@ -2,8 +2,6 @@
 
 ! Test CUDA Fortran procedures available in cudadevice module
 
-
-
 attributes(global) subroutine devsub()
   implicit none
   integer :: ret
