@@ -113,10 +113,9 @@ and from the command line.
 .. option:: --diff <value>
 
   Controls how mismatches between the check patterns and the input are
-  reported. The default is ``standard``, which uses the standard FileCheck
-  diagnostic output.
+  reported. The default is ``unidiff``, which shows the unified diff output.
 
-  * ``standard`` – Use the standard FileCheck diagnostic messages.
+  * ``none`` – Use the standard FileCheck diagnostic messages.
   * ``unidiff`` – Display mismatches using a unified diff format.
 
 .. option:: --dump-input <value>

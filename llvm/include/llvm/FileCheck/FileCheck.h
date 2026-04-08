@@ -28,7 +28,7 @@ class SourceMgr;
 template <typename T> class SmallVectorImpl;
 
 // Diff the output on failures.
-enum DiffFormatType { Standard, Unified };
+enum DiffFormatType { None, Unified };
 
 /// Contains info about various FileCheck options.
 struct FileCheckRequest {
@@ -46,7 +46,7 @@ struct FileCheckRequest {
   bool AllowDeprecatedDagOverlap = false;
   bool Verbose = false;
   bool VerboseVerbose = false;
-  DiffFormatType DiffMode = DiffFormatType::Standard;
+  DiffFormatType DiffMode = DiffFormatType::Unified;
 };
 
 namespace Check {

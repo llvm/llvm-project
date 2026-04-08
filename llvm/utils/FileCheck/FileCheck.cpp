@@ -115,8 +115,10 @@ static cl::opt<bool> VerboseVerbose(
 
 static cl::opt<DiffFormatType> DiffMode(
     "diff", cl::desc("Show mismatches using a diff-style format.\n"),
-    cl::values(clEnumValN(Standard, "standard", "Outputs a Standard diff"),
-               clEnumValN(Unified, "unidiff", "Outputs a Unified diff")));
+    cl::ValueOptional,
+    cl::values(clEnumValN(None, "none", "Standard FileCheck diagnostics"),
+               clEnumValN(Unified, "unidiff", "Outputs a Unified diff"),
+               clEnumValN(Unified, "", "")));
 
 // The order of DumpInputValue members affects their precedence, as documented
 // for -dump-input below.
@@ -866,7 +868,7 @@ int main(int argc, char **argv) {
                      : 1;
   if ((DumpInput == DumpInputAlways ||
        (ExitCode == 1 && DumpInput == DumpInputFail)) &&
-      Req.DiffMode == DiffFormatType::Standard) {
+      Req.DiffMode == DiffFormatType::None) {
     errs() << "\n"
            << "Input file: " << InputFilename << "\n"
            << "Check file: " << CheckFilename << "\n"

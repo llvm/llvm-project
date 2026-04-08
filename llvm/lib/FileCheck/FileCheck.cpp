@@ -1289,7 +1289,7 @@ void Pattern::printSubstitutions(const SourceMgr &SM, StringRef Buffer,
       if (Diags)
         Diags->emplace_back(SM, CheckTy, getLoc(), MatchTy,
                             SMRange(Range.Start, Range.Start), OS.str());
-      else if (Req.DiffMode == DiffFormatType::Standard) {
+      else if (Req.DiffMode == DiffFormatType::None) {
         SM.PrintMessage(Range.Start, SourceMgr::DK_Note, OS.str());
       }
     }
@@ -1415,7 +1415,7 @@ void Pattern::printFuzzyMatch(const SourceMgr &SM, StringRef Buffer,
     SMRange MatchRange =
         ProcessMatchResult(FileCheckDiag::MatchFuzzy, SM, getLoc(),
                            getCheckTy(), Buffer, Best, 0, Diags);
-    if (Req.DiffMode == DiffFormatType::Standard)
+    if (Req.DiffMode == DiffFormatType::None)
       SM.PrintMessage(MatchRange.Start, SourceMgr::DK_Note,
                       "possible intended match here");
 
@@ -2170,7 +2170,7 @@ static Error printNoMatch(bool ExpectedMatch, const SourceMgr &SM,
     if (Pat.getCount() > 1)
       Message +=
           formatv(" ({0} out of {1})", MatchedCount, Pat.getCount()).str();
-    if (Req.DiffMode == DiffFormatType::Standard) {
+    if (Req.DiffMode == DiffFormatType::None) {
       SM.PrintMessage(
           Loc, ExpectedMatch ? SourceMgr::DK_Error : SourceMgr::DK_Remark,
           Message);
@@ -2320,7 +2320,7 @@ bool FileCheckString::CheckNext(const SourceMgr &SM, StringRef Buffer,
   // Count the number of newlines between the previous match and this one.
   const char *FirstNewLine = nullptr;
   unsigned NumNewLines = CountNumNewlinesBetween(Buffer, FirstNewLine);
-  if (NumNewLines == 0 && Req.DiffMode == DiffFormatType::Standard) {
+  if (NumNewLines == 0 && Req.DiffMode == DiffFormatType::None) {
     SM.PrintMessage(Loc, SourceMgr::DK_Error,
                     CheckName + ": is on the same line as previous match");
     SM.PrintMessage(SMLoc::getFromPointer(Buffer.end()), SourceMgr::DK_Note,
@@ -2330,7 +2330,7 @@ bool FileCheckString::CheckNext(const SourceMgr &SM, StringRef Buffer,
     return true;
   }
 
-  if (NumNewLines != 1 && Req.DiffMode == DiffFormatType::Standard) {
+  if (NumNewLines != 1 && Req.DiffMode == DiffFormatType::None) {
     SM.PrintMessage(Loc, SourceMgr::DK_Error,
                     CheckName +
                         ": is not on the line after the previous match");
@@ -2900,7 +2900,7 @@ bool FileCheck::checkInput(SourceMgr &SM, StringRef Buffer,
   bool ChecksFailed = false;
   unsigned TotalMismatches = 0;
   bool HeaderPrinted = false;
-  bool IsDiffMode = Req.DiffMode != DiffFormatType::Standard;
+  bool IsDiffMode = Req.DiffMode != DiffFormatType::None;
   auto &OS = llvm::errs();
 
   unsigned i = 0, j = 0, e = CheckStrings.size();
@@ -2979,7 +2979,7 @@ bool FileCheck::checkInput(SourceMgr &SM, StringRef Buffer,
       break;
   }
 
-  if (Req.DiffMode != DiffFormatType::Standard && TotalMismatches > 0) {
+  if (Req.DiffMode != DiffFormatType::None && TotalMismatches > 0) {
     OS.changeColor(llvm::raw_ostream::YELLOW, true);
     OS << "FileCheck: Found " << TotalMismatches << " unique textual mismatch"
        << (TotalMismatches > 1 ? "es." : ".") << "\n";
