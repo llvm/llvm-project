@@ -272,7 +272,7 @@ int main(int Argc, char **Argv) {
           ExitOnErr(createOnDiskUnifiedCASDatabases(Opts.CASPath));
     }
   } else {
-    CAS = ExitOnErr(createCASFromIdentifier(Opts.CASPath));
+    std::tie(CAS, AC) = ExitOnErr(createCASFromIdentifier(Opts.CASPath));
   }
   assert(CAS);
 
@@ -313,7 +313,8 @@ int main(int Argc, char **Argv) {
     if (Opts.UpstreamCASPath.empty())
       ExitOnErr(createStringError("missing '-upstream-cas'"));
 
-    auto UpstreamCAS = ExitOnErr(createCASFromIdentifier(Opts.UpstreamCASPath));
+    auto UpstreamCAS =
+        ExitOnErr(createCASFromIdentifier(Opts.UpstreamCASPath)).first;
 
     return import(*UpstreamCAS, *CAS, Opts.Inputs);
   }

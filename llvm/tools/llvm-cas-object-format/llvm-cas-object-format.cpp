@@ -44,7 +44,7 @@ int main(int argc, char *argv[]) {
   cl::ParseCommandLineOptions(argc, argv);
 
   std::shared_ptr<ObjectStore> CAS =
-      ExitOnErr(createCASFromIdentifier(CASPath));
+      ExitOnErr(createCASFromIdentifier(CASPath)).first;
 
   for (StringRef IF : InputFiles) {
     ExitOnError ExitOnErr;

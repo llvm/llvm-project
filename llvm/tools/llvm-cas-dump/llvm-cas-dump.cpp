@@ -165,7 +165,7 @@ int main(int argc, char *argv[]) {
                             HexDumpOneLine,    Verbose,   DIERefs};
 
   std::shared_ptr<ObjectStore> CAS =
-      ExitOnErr(createCASFromIdentifier(CASPath));
+      ExitOnErr(createCASFromIdentifier(CASPath)).first;
   MCCASPrinter Printer(Options, *CAS, llvm::outs());
 
   StringMap<ObjectRef> Files;

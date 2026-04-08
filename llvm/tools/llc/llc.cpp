@@ -397,7 +397,7 @@ static std::shared_ptr<cas::ObjectStore> getCAS() {
     return cas::createInMemoryCAS();
   auto MaybeCAS = cas::createCASFromIdentifier(CASPath);
   if (MaybeCAS)
-    return std::move(*MaybeCAS);
+    return std::move(MaybeCAS->first);
   reportError(toString(MaybeCAS.takeError()));
 }
 

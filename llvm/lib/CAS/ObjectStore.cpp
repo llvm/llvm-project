@@ -13,7 +13,8 @@
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
-#include "llvm/CAS/UnifiedOnDiskCache.h"
+#include "llvm/CAS/ActionCache.h"
+#include "llvm/CAS/BuiltinUnifiedCASDatabases.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/FileSystem.h"
@@ -352,17 +353,21 @@ ObjectProxy::getMemoryBuffer(StringRef Name,
   return CAS->getMemoryBuffer(H, Name, RequiresNullTerminator);
 }
 
-static Expected<std::shared_ptr<ObjectStore>>
+static Expected<
+    std::pair<std::shared_ptr<ObjectStore>, std::shared_ptr<ActionCache>>>
 createOnDiskCASImpl(const Twine &Path) {
-  return createOnDiskCAS(Path);
+  SmallString<128> Buffer;
+  return createOnDiskUnifiedCASDatabases(Path.toStringRef(Buffer));
 }
 
-static Expected<std::shared_ptr<ObjectStore>>
+static Expected<
+    std::pair<std::shared_ptr<ObjectStore>, std::shared_ptr<ActionCache>>>
 createInMemoryCASImpl(const Twine &) {
-  return createInMemoryCAS();
+  return std::make_pair(createInMemoryCAS(), createInMemoryActionCache());
 }
 
-static Expected<std::shared_ptr<ObjectStore>>
+static Expected<
+    std::pair<std::shared_ptr<ObjectStore>, std::shared_ptr<ActionCache>>>
 createPluginCASImpl(const Twine &URL) {
   // Format used is
   //   plugin://${PATH_TO_PLUGIN}?${OPT1}=${VAL1}&${OPT2}=${VAL2}..
@@ -390,12 +395,7 @@ createPluginCASImpl(const Twine &URL) {
     OnDiskPath = *Path;
   }
 
-  std::pair<std::shared_ptr<ObjectStore>, std::shared_ptr<ActionCache>> CASDBs;
-  if (Error E = createPluginCASDatabases(PluginPath, OnDiskPath, PluginArgs)
-                    .moveInto(CASDBs))
-    return std::move(E);
-
-  return std::move(CASDBs.first);
+  return createPluginCASDatabases(PluginPath, OnDiskPath, PluginArgs);
 }
 
 static ManagedStatic<StringMap<ObjectStoreCreateFuncTy *>> RegisteredScheme;
@@ -409,7 +409,7 @@ static StringMap<ObjectStoreCreateFuncTy *> &getRegisteredScheme() {
   return *RegisteredScheme;
 }
 
-Expected<std::shared_ptr<ObjectStore>>
+Expected<std::pair<std::shared_ptr<ObjectStore>, std::shared_ptr<ActionCache>>>
 cas::createCASFromIdentifier(StringRef Path) {
   for (auto &Scheme : getRegisteredScheme()) {
     if (Path.consume_front(Scheme.getKey()))
@@ -429,10 +429,7 @@ cas::createCASFromIdentifier(StringRef Path) {
   }
 
   // Fallback is to create UnifiedOnDiskCache.
-  auto UniDB = builtin::createBuiltinUnifiedOnDiskCache(Path);
-  if (!UniDB)
-    return UniDB.takeError();
-  return builtin::createObjectStoreFromUnifiedOnDiskCache(std::move(*UniDB));
+  return createOnDiskUnifiedCASDatabases(Path);
 }
 
 void cas::registerCASURLScheme(StringRef Prefix,

@@ -12,6 +12,9 @@ RUN: llvm-cas --cas %t/cas --ingest %S/Inputs > %t/cas.id
 RUN: llvm-cas --cas %t/cas --validate
 RUN: llvm-cas --cas %t/cas --validate --check-hash
 
+# Check that validation works with a relative path.
+RUN: cd %t && llvm-cas --cas cas --validate --check-hash
+
 RUN: rm %t/cas/v1.1/data.v1
 RUN: not llvm-cas --cas %t/cas --validate
 RUN: not llvm-cas --cas %t/cas --validate --check-hash

@@ -11,6 +11,20 @@
 
 using namespace llvm;
 
+static Expected<std::pair<std::shared_ptr<cas::ObjectStore>,
+                          std::shared_ptr<cas::ActionCache>>>
+createGRPCRelayDBs(const llvm::Twine &Path) {
+  std::shared_ptr<cas::ObjectStore> CAS;
+  std::shared_ptr<cas::ActionCache> AC;
+  SmallString<128> Buffer;
+  Path.toVector(Buffer);
+  if (Error E = cas::createGRPCRelayCAS(Buffer).moveInto(CAS))
+    return std::move(E);
+  if (Error E = cas::createGRPCActionCache(Buffer).moveInto(AC))
+    return std::move(E);
+  return std::make_pair(std::move(CAS), std::move(AC));
+}
+
 cas::RegisterGRPCCAS::RegisterGRPCCAS() {
-  cas::registerCASURLScheme("grpc://", &cas::createGRPCRelayCAS);
+  cas::registerCASURLScheme("grpc://", createGRPCRelayDBs);
 }
