@@ -174,6 +174,13 @@ static cl::opt<bool> EnableInitializesImprovement(
     "enable-dse-initializes-attr-improvement", cl::init(true), cl::Hidden,
     cl::desc("Enable the initializes attr improvement in DSE"));
 
+
+static cl::opt<unsigned> MemorySSAThrowCheckLimit(
+    "dse-memoryssa-throw-check-limit", cl::init(50), cl::Hidden,
+    cl::desc("The maximum number of blocks to check for unmodeled may-throw "
+             "instructions between the dead and killing stores "
+             "(default = 50)"));
+
 //===----------------------------------------------------------------------===//
 // Helper functions
 //===----------------------------------------------------------------------===//
@@ -2068,15 +2075,78 @@ void DSEState::deleteDeadInstruction(Instruction *SI,
 
 bool DSEState::mayThrowBetween(Instruction *KillingI, Instruction *DeadI,
                                const Value *KillingUndObj) {
-  // First see if we can ignore it by using the fact that KillingI is an
-  // alloca/alloca like object that is not visible to the caller during
-  // execution of the function.
+  // If the object is not visible to the caller on unwind, intervening throws
+  // do not block DSE for this location.
   if (KillingUndObj && isInvisibleToCallerOnUnwind(KillingUndObj))
     return false;
 
-  if (KillingI->getParent() == DeadI->getParent())
-    return ThrowingBlocks.count(KillingI->getParent());
-  return !ThrowingBlocks.empty();
+  auto IsMemorySSAUntrackedThrow = [&](Instruction &I) {
+    // This function is only meant to catch "extra" may-throws that are not
+    // modeled as MemoryDefs in MemorySSA.
+    return I.mayThrow() && !MSSA.getMemoryAccess(&I);
+  };
+
+  auto ScanRange = [&](BasicBlock *BB, BasicBlock::iterator Begin,
+                       BasicBlock::iterator End) {
+    for (auto It = Begin; It != End; ++It)
+      if (IsMemorySSAUntrackedThrow(*It))
+        return true;
+    return false;
+  };
+
+  BasicBlock *KillingBB = KillingI->getParent();
+  BasicBlock *DeadBB = DeadI->getParent();
+  // Same block: only scan the actual instruction interval.
+  if (KillingBB == DeadBB)
+    return ScanRange(DeadBB, std::next(DeadI->getIterator()),
+                     KillingI->getIterator());
+
+  // If there are no blocks containing extra may-throws, we're done.
+  if (ThrowingBlocks.empty())
+    return false;
+
+  // Cross-BB case: walk backwards from the killing block, but stay within the
+  // region dominated by the dead block. Any block outside that region is not
+  // between DeadI and KillingI.
+  if (!DT.dominates(DeadBB, KillingBB))
+    return true;
+
+  SmallVector<BasicBlock *, 8> WorkList;
+  SmallPtrSet<BasicBlock *, 8> Visited;
+  WorkList.push_back(KillingBB);
+  Visited.insert(KillingBB);
+  unsigned NumChecked = 0;
+  while (!WorkList.empty()) {
+    BasicBlock *BB = WorkList.pop_back_val();
+    if (++NumChecked > MemorySSAThrowCheckLimit)
+      return true;
+
+    if (BB == KillingBB) {
+      // Only instructions before KillingI are relevant in the destination.
+      if (ThrowingBlocks.count(BB) &&
+          ScanRange(BB, BB->begin(), KillingI->getIterator()))
+        return true;
+    } else if (BB == DeadBB) {
+      // Only instructions after DeadI are relevant in the source.
+      if (ThrowingBlocks.count(BB) &&
+          ScanRange(BB, std::next(DeadI->getIterator()), BB->end()))
+        return true;
+      continue;
+    } else {
+      // Entire intermediate block is between DeadI and KillingI.
+      if (ThrowingBlocks.count(BB))
+        return true;
+    }
+
+    for (BasicBlock *Pred : predecessors(BB)) {
+      if (Pred != DeadBB && !DT.dominates(DeadBB, Pred))
+        continue;
+      if (Visited.insert(Pred).second)
+        WorkList.push_back(Pred);
+    }
+  }
+
+  return false;
 }
 
 bool DSEState::isDSEBarrier(const Value *KillingUndObj, Instruction *DeadI) {

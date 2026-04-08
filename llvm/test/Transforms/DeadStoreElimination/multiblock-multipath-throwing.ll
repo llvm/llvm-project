@@ -10,12 +10,12 @@ declare void @use(ptr)
 ; Tests where the pointer/object is accessible after the function returns.
 
 ; Cannot remove the store from the entry block, because the call in bb2 may throw.
+; The store in bb1 may still be eliminated by sinking/merging it into bb5.
 define void @accessible_after_return_1(ptr noalias %P, i1 %c1) {
 ; CHECK-LABEL: @accessible_after_return_1(
-; CHECK-NEXT:    store i32 1, ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    br i1 [[C1:%.*]], label [[BB1:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    store i32 0, ptr [[P]], align 4
+; CHECK-NEXT:    store i32 0, ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    br label [[BB5:%.*]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    call void @readnone_may_throw()
@@ -46,12 +46,11 @@ bb5:
 define void @accessible_after_return6(ptr %P, i1 %c.1, i1 %c.2) {
 ; CHECK-LABEL: @accessible_after_return6(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store i32 0, ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    br i1 [[C_1:%.*]], label [[BB1:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    br i1 [[C_2:%.*]], label [[BB3:%.*]], label [[BB4:%.*]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    store i32 1, ptr [[P]], align 4
+; CHECK-NEXT:    store i32 1, ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ; CHECK:       bb3:
 ; CHECK-NEXT:    call void @readnone_may_throw()
@@ -90,7 +89,7 @@ bb4:
 define void @alloca_1(i1 %c1) {
 ; CHECK-LABEL: @alloca_1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[P:%.*]] = alloca i32
+; CHECK-NEXT:    [[P:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    br i1 [[C1:%.*]], label [[BB1:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    store i32 0, ptr [[P]], align 4
@@ -127,7 +126,7 @@ bb5:
 ; call in bb3 (which may throw) can be ignored.
 define void @alloca_2(i1 %c.1, i1 %c.2) {
 ; CHECK-LABEL: @alloca_2(
-; CHECK-NEXT:    [[P:%.*]] = alloca i32
+; CHECK-NEXT:    [[P:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    br i1 [[C_1:%.*]], label [[BB1:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    store i32 0, ptr [[P]], align 4
