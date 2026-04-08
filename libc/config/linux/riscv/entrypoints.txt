@@ -447,6 +447,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.asin
     libc.src.math.asinf
     libc.src.math.asinhf
+    libc.src.math.asinpi
     libc.src.math.asinpif
     libc.src.math.atan2
     libc.src.math.atan2f
@@ -760,6 +761,7 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.log10f16
     libc.src.math.log10p1f16
     libc.src.math.log2f16
+    libc.src.math.log2p1f16
     libc.src.math.logbf16
     libc.src.math.logf16
     libc.src.math.lrintf16
@@ -893,6 +895,7 @@ endif()
 list(APPEND TARGET_LIBM_ENTRYPOINTS
   # bfloat16 entrypoints
   libc.src.math.atanbf16
+  libc.src.math.asinbf16
   libc.src.math.bf16add
   libc.src.math.bf16addf
   libc.src.math.bf16addl
@@ -1340,6 +1343,7 @@ if(LLVM_LIBC_FULL_BUILD)
 
     # sys/socket.h entrypoints
     libc.src.sys.socket.bind
+    libc.src.sys.socket.connect
     libc.src.sys.socket.socket
     libc.src.sys.socket.socketpair
     libc.src.sys.socket.send

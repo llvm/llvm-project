@@ -19,6 +19,7 @@
 #include "clang/AST/ASTStructuralEquivalence.h"
 #include "clang/AST/ASTUnresolvedSet.h"
 #include "clang/AST/AbstractTypeReader.h"
+#include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclCXX.h"
@@ -241,9 +242,10 @@ bool ChainedASTReaderListener::needsSystemInputFileVisitation() {
 }
 
 void ChainedASTReaderListener::visitModuleFile(ModuleFileName Filename,
-                                               ModuleKind Kind) {
-  First->visitModuleFile(Filename, Kind);
-  Second->visitModuleFile(Filename, Kind);
+                                               ModuleKind Kind,
+                                               bool DirectlyImported) {
+  First->visitModuleFile(Filename, Kind, DirectlyImported);
+  Second->visitModuleFile(Filename, Kind, DirectlyImported);
 }
 
 bool ChainedASTReaderListener::visitInputFile(StringRef Filename,
@@ -3307,7 +3309,7 @@ ASTReader::ReadControlBlock(ModuleFile &F,
       }
 
       if (Listener)
-        Listener->visitModuleFile(F.FileName, F.Kind);
+        Listener->visitModuleFile(F.FileName, F.Kind, F.isDirectlyImported());
 
       if (Listener && Listener->needsInputFileVisitation()) {
         unsigned N = Listener->needsSystemInputFileVisitation() ? NumInputs
@@ -4028,6 +4030,27 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
         WeakUndeclaredIdentifiers.push_back(
           getGlobalIdentifierID(F, Record[I++]));
         WeakUndeclaredIdentifiers.push_back(
+            ReadSourceLocation(F, Record, I).getRawEncoding());
+      }
+      break;
+
+    case EXTNAME_UNDECLARED_IDENTIFIERS:
+      if (Record.size() % 3 != 0)
+        return llvm::createStringError(std::errc::illegal_byte_sequence,
+                                       "invalid extname identifiers record");
+
+      // FIXME: Ignore #pragma redefine_extname'd, undeclared identifiers from
+      // non-original PCH files. This isn't the way to do it :)
+      ExtnameUndeclaredIdentifiers.clear();
+
+      // Translate the #pragma redefine_extname'd, undeclared identifiers into
+      // global IDs.
+      for (unsigned I = 0, N = Record.size(); I < N; /* in loop */) {
+        ExtnameUndeclaredIdentifiers.push_back(
+            getGlobalIdentifierID(F, Record[I++]));
+        ExtnameUndeclaredIdentifiers.push_back(
+            getGlobalIdentifierID(F, Record[I++]));
+        ExtnameUndeclaredIdentifiers.push_back(
             ReadSourceLocation(F, Record, I).getRawEncoding());
       }
       break;
@@ -5880,7 +5903,7 @@ namespace {
     bool ReadTargetOptions(const TargetOptions &TargetOpts,
                            StringRef ModuleFilename, bool Complain,
                            bool AllowCompatibleDifferences) override {
-      return checkTargetOptions(ExistingTargetOpts, TargetOpts, ModuleFilename,
+      return checkTargetOptions(TargetOpts, ExistingTargetOpts, ModuleFilename,
                                 nullptr, AllowCompatibleDifferences);
     }
 
@@ -9689,6 +9712,27 @@ void ASTReader::ReadWeakUndeclaredIdentifiers(
     WeakIDs.push_back(std::make_pair(WeakId, WI));
   }
   WeakUndeclaredIdentifiers.clear();
+}
+
+void ASTReader::ReadExtnameUndeclaredIdentifiers(
+    SmallVectorImpl<std::pair<IdentifierInfo *, AsmLabelAttr *>> &ExtnameIDs) {
+  if (ExtnameUndeclaredIdentifiers.empty())
+    return;
+
+  for (unsigned I = 0, N = ExtnameUndeclaredIdentifiers.size(); I < N; I += 3) {
+    IdentifierInfo *NameId =
+        DecodeIdentifierInfo(ExtnameUndeclaredIdentifiers[I]);
+    IdentifierInfo *ExtnameId =
+        DecodeIdentifierInfo(ExtnameUndeclaredIdentifiers[I+1]);
+    SourceLocation Loc =
+        SourceLocation::getFromRawEncoding(ExtnameUndeclaredIdentifiers[I+2]);
+    AsmLabelAttr *Attr = AsmLabelAttr::CreateImplicit(
+        getContext(), ExtnameId->getName(),
+        AttributeCommonInfo(ExtnameId, SourceRange(Loc),
+                            AttributeCommonInfo::Form::Pragma()));
+    ExtnameIDs.push_back(std::make_pair(NameId, Attr));
+  }
+  ExtnameUndeclaredIdentifiers.clear();
 }
 
 void ASTReader::ReadUsedVTables(SmallVectorImpl<ExternalVTableUse> &VTables) {

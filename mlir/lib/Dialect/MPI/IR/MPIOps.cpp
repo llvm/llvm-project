@@ -52,7 +52,7 @@ struct FoldCast final : public mlir::OpRewritePattern<OpT> {
     if (!src.getType().hasStaticShape()) {
       return mlir::failure();
     }
-    op.getRefMutable().assign(src);
+    b.modifyOpInPlace(op, [&]() { op.getRefMutable().assign(src); });
     return mlir::success();
   }
 };

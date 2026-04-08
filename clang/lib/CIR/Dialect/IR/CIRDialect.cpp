@@ -207,26 +207,6 @@ static bool omitRegionTerm(mlir::Region &r) {
   return singleNonEmptyBlock && yieldsNothing();
 }
 
-void printVisibilityAttr(OpAsmPrinter &printer,
-                         cir::VisibilityAttr &visibility) {
-  switch (visibility.getValue()) {
-  case cir::VisibilityKind::Hidden:
-    printer << "hidden";
-    break;
-  case cir::VisibilityKind::Protected:
-    printer << "protected";
-    break;
-  case cir::VisibilityKind::Default:
-    break;
-  }
-}
-
-void parseVisibilityAttr(OpAsmParser &parser, cir::VisibilityAttr &visibility) {
-  cir::VisibilityKind visibilityKind =
-      parseOptionalCIRKeyword(parser, cir::VisibilityKind::Default);
-  visibility = cir::VisibilityAttr::get(parser.getContext(), visibilityKind);
-}
-
 //===----------------------------------------------------------------------===//
 // InlineKindAttr (FIXME: remove once FuncOp uses assembly format)
 //===----------------------------------------------------------------------===//
@@ -308,6 +288,61 @@ void cir::AllocaOp::build(mlir::OpBuilder &odsBuilder,
   }
   odsState.addTypes(addr);
 }
+
+//===----------------------------------------------------------------------===//
+// ArrayCtor & ArrayDtor
+//===----------------------------------------------------------------------===//
+
+template <typename Op> static LogicalResult verifyArrayCtorDtor(Op op) {
+  auto ptrTy = mlir::cast<cir::PointerType>(op.getAddr().getType());
+  mlir::Type pointeeTy = ptrTy.getPointee();
+
+  mlir::Block &body = op.getBody().front();
+  if (body.getNumArguments() != 1)
+    return op.emitOpError("body must have exactly one block argument");
+
+  auto expectedEltPtrTy =
+      mlir::dyn_cast<cir::PointerType>(body.getArgument(0).getType());
+  if (!expectedEltPtrTy)
+    return op.emitOpError("block argument must be a !cir.ptr type");
+
+  if (op.getNumElements()) {
+    auto recTy = mlir::dyn_cast<cir::RecordType>(pointeeTy);
+    if (!recTy)
+      return op.emitOpError(
+          "when 'num_elements' is present, 'addr' must be a pointer to a "
+          "!cir.record type");
+
+    if (expectedEltPtrTy != ptrTy)
+      return op.emitOpError("when 'num_elements' is present, 'addr' type must "
+                            "match the block argument type");
+  } else {
+    auto arrayTy = mlir::dyn_cast<cir::ArrayType>(pointeeTy);
+    if (!arrayTy)
+      return op.emitOpError(
+          "when 'num_elements' is absent, 'addr' must be a pointer to a "
+          "!cir.array type");
+
+    mlir::Type innerEltTy = arrayTy.getElementType();
+    while (auto nested = mlir::dyn_cast<cir::ArrayType>(innerEltTy))
+      innerEltTy = nested.getElementType();
+
+    auto recTy = mlir::dyn_cast<cir::RecordType>(innerEltTy);
+    if (!recTy)
+      return op.emitOpError(
+          "the block argument type must be a pointer to a !cir.record type");
+
+    if (expectedEltPtrTy.getPointee() != innerEltTy)
+      return op.emitOpError(
+          "block argument pointee type must match the innermost array "
+          "element type");
+  }
+
+  return success();
+}
+
+LogicalResult cir::ArrayCtor::verify() { return verifyArrayCtorDtor(*this); }
+LogicalResult cir::ArrayDtor::verify() { return verifyArrayCtorDtor(*this); }
 
 //===----------------------------------------------------------------------===//
 // BreakOp
@@ -1765,9 +1800,8 @@ void cir::GlobalOp::build(
                         odsBuilder.getStringAttr(sym_name));
   odsState.addAttribute(getSymTypeAttrName(odsState.name),
                         mlir::TypeAttr::get(sym_type));
-  if (isConstant)
-    odsState.addAttribute(getConstantAttrName(odsState.name),
-                          odsBuilder.getUnitAttr());
+  auto &properties = odsState.getOrAddProperties<cir::GlobalOp::Properties>();
+  properties.setConstant(isConstant);
 
   addrSpace = normalizeDefaultAddressSpace(addrSpace);
   if (addrSpace)
@@ -1788,9 +1822,6 @@ void cir::GlobalOp::build(
     odsBuilder.createBlock(dtorRegion);
     dtorBuilder(odsBuilder, odsState.location);
   }
-
-  odsState.addAttribute(getGlobalVisibilityAttrName(odsState.name),
-                        cir::VisibilityAttr::get(odsBuilder.getContext()));
 }
 
 /// Given the region at `index`, or the parent operation if `index` is None,
@@ -2054,8 +2085,6 @@ void cir::FuncOp::build(OpBuilder &builder, OperationState &result,
   result.addAttribute(
       getLinkageAttrNameString(),
       GlobalLinkageKindAttr::get(builder.getContext(), linkage));
-  result.addAttribute(getGlobalVisibilityAttrName(result.name),
-                      cir::VisibilityAttr::get(builder.getContext()));
 }
 
 ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
@@ -2069,7 +2098,6 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
   mlir::StringAttr noProtoNameAttr = getNoProtoAttrName(state.name);
   mlir::StringAttr comdatNameAttr = getComdatAttrName(state.name);
   mlir::StringAttr visNameAttr = getSymVisibilityAttrName(state.name);
-  mlir::StringAttr visibilityNameAttr = getGlobalVisibilityAttrName(state.name);
   mlir::StringAttr dsoLocalNameAttr = getDsoLocalAttrName(state.name);
   mlir::StringAttr specialMemberAttr = getCxxSpecialMemberAttrName(state.name);
 
@@ -2108,9 +2136,8 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
                        parser.getBuilder().getStringAttr(visAttrStr));
   }
 
-  cir::VisibilityAttr cirVisibilityAttr;
-  parseVisibilityAttr(parser, cirVisibilityAttr);
-  state.addAttribute(visibilityNameAttr, cirVisibilityAttr);
+  state.getOrAddProperties<cir::FuncOp::Properties>().global_visibility =
+      parseOptionalCIRKeyword(parser, cir::VisibilityKind::Default);
 
   if (parser.parseOptionalKeyword(dsoLocalNameAttr).succeeded())
     state.addAttribute(dsoLocalNameAttr, parser.getBuilder().getUnitAttr());
@@ -2385,11 +2412,8 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
   if (vis != mlir::SymbolTable::Visibility::Public)
     p << ' ' << vis;
 
-  cir::VisibilityAttr cirVisibilityAttr = getGlobalVisibilityAttr();
-  if (!cirVisibilityAttr.isDefault()) {
-    p << ' ';
-    printVisibilityAttr(p, cirVisibilityAttr);
-  }
+  if (getGlobalVisibility() != cir::VisibilityKind::Default)
+    p << ' ' << stringifyVisibilityKind(getGlobalVisibility());
 
   if (getDsoLocal())
     p << " dso_local";
@@ -2885,6 +2909,11 @@ LogicalResult cir::CopyOp::verify() {
 
   if (getSrc() == getDst())
     return emitError() << "source and destination are the same";
+
+  if (getSkipTailPadding() &&
+      !mlir::isa<cir::RecordType>(getType().getPointee()))
+    return emitError()
+           << "skip_tail_padding is only valid for record pointee types";
 
   return mlir::success();
 }

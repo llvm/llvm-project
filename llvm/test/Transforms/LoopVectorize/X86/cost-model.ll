@@ -10,7 +10,7 @@ target triple = "x86_64-apple-macosx10.8.0"
 @a = common global [2048 x i32] zeroinitializer, align 16
 
 ; The program below gathers and scatters data. We better not vectorize it.
-define void @cost_model_1() nounwind uwtable noinline ssp {
+define void @cost_model_1() noinline {
 ; CHECK-LABEL: define void @cost_model_1(
 ; CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:

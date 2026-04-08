@@ -591,13 +591,13 @@ The return value is the UBYTE4 representation of the \a x parameter.
 This function swizzles and scales components of the \a x parameter. Use this
 function to compensate for the lack of UBYTE4 support in some hardware.
 }];
-  // Use the same scaling factor used by FXC, and DXC for DXIL
-  // (i.e., 255.001953)
-  // https://github.com/microsoft/DirectXShaderCompiler/blob/070d0d5a2beacef9eeb51037a9b04665716fd6f3/lib/HLSL/HLOperationLower.cpp#L666C1-L697C2
-  // The DXC implementation refers to a comment on the following stackoverflow
-  // discussion to justify the scaling factor: "Built-in rounding, necessary
-  // because of truncation. 0.001953 * 256 = 0.5"
-  // https://stackoverflow.com/questions/52103720/why-does-d3dcolortoubyte4-multiplies-components-by-255-001953f
+  // Use the scaling factor used by FXC, and DXC for DXIL (i.e., 255.001953).
+  // The [DXC implementation] refers to [stack overflow] to justify the scaling
+  // factor:
+  // > Built-in rounding, necessary because of truncation. 0.001953 * 256 = 0.5
+  // 
+  // [DXC implementation]: https://github.com/microsoft/DirectXShaderCompiler/blob/070d0d5a2beacef9eeb51037a9b04665716fd6f3/lib/HLSL/HLOperationLower.cpp#L666C1-L697C2
+  // [stack overflow]: https://stackoverflow.com/questions/52103720/why-does-d3dcolortoubyte4-multiplies-components-by-255-001953f
   let Body = "return V.zyxw * 255.001953f;";
   let ParamNames = ["V"];
   let Args = [VectorType<FloatTy, 4>];
@@ -753,14 +753,18 @@ def hlsl_dot_double : HLSLBuiltin<"dot", "__builtin_hlsl_dot"> {
 // Dot product of 2 half vectors plus a float scalar.
 def hlsl_dot2add : HLSLBuiltin<"dot2add"> {
   let Doc = [{
-\fn float dot2add(half2 A, half2 B, float C)
-\brief Dot product of 2 vector of type half and add a float scalar value.
+\fn float dot2add(half2 A, half2 B, float Acc)
+\brief Multiplies the elements of the two half-precision float input vectors
+together and sums the results into the 32-bit float accumulator.
 \param A The first input value to dot product.
 \param B The second input value to dot product.
-\param C The input value added to the dot product.
+\param Acc The accumulator value added to the dot product.
+
+This instruction operates within a single 32-bit wide SIMD lane.
+The inputs are 16-bit quantities packed into the same lane.
 }];
   let DetailFunc = "dot2add_impl";
-  let ParamNames = ["A", "B", "C"];
+  let ParamNames = ["A", "B", "Acc"];
   let Args = [VectorType<HalfTy, 2>, VectorType<HalfTy, 2>, FloatTy];
   let ReturnType = FloatTy;
   let Availability = SM6_4;

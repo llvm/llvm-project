@@ -31,6 +31,7 @@
 #include "llvm/ADT/TypeSwitch.h"
 
 #include <numeric>
+#include <type_traits>
 
 using namespace mlir;
 using namespace mlir::tosa;
@@ -1077,128 +1078,192 @@ LogicalResult tosa::ArgMaxOp::verify() {
   return success();
 }
 
-template <typename T>
-static LogicalResult verifyPoolingOp(T op) {
-  const llvm::ArrayRef<int64_t> kernel = op.getKernel();
-  if (llvm::any_of(kernel, [](int64_t s) { return s < 1; }))
-    return op.emitOpError("expect all kernel values to be >= 1, got ")
+static LogicalResult verifyPoolingOpImpl(Operation *op,
+                                         ArrayRef<int64_t> kernel,
+                                         ArrayRef<int64_t> strides,
+                                         ArrayRef<int64_t> padding, Value input,
+                                         Value output) {
+  const bool hasKernel = kernel.size() > 0;
+  const bool hasStrides = strides.size() > 0;
+  const bool hasPad = padding.size() > 0;
+
+  if (hasKernel && llvm::any_of(kernel, [](int64_t s) { return s < 1; }))
+    return op->emitOpError("expect all kernel values to be >= 1, got ")
            << kernel;
 
-  const llvm::ArrayRef<int64_t> strides = op.getStride();
-  if (llvm::any_of(strides, [](int64_t s) { return s < 1; }))
-    return op.emitOpError("expect all stride values to be >= 1, got ")
+  if (hasStrides && llvm::any_of(strides, [](int64_t s) { return s < 1; }))
+    return op->emitOpError("expect all stride values to be >= 1, got ")
            << strides;
 
-  const llvm::ArrayRef<int64_t> padding = op.getPad();
-  if (llvm::any_of(padding, [](int64_t p) { return p < 0; }))
-    return op.emitOpError("expect all padding values to be >= 0, got ")
+  if (hasPad && llvm::any_of(padding, [](int64_t p) { return p < 0; }))
+    return op->emitOpError("expect all padding values to be >= 0, got ")
            << padding;
 
-  // Padding must be less than kernel size to avoid a divide-by-zero
-  const int64_t kernelX = kernel[1];
-  const int64_t padLeft = padding[2];
-  const int64_t padRight = padding[3];
-  if (padRight >= kernelX || padLeft >= kernelX)
-    return op.emitOpError("expected left/right padding to be less than the "
-                          "width of the kernel, got pad_left=")
-           << padLeft << ", pad_right=" << padRight << ", kernel_x=" << kernelX;
+  if (hasKernel && hasPad) {
+    // Padding must be less than kernel size to avoid a divide-by-zero
+    const int64_t kernelX = kernel[1];
+    const int64_t padLeft = padding[2];
+    const int64_t padRight = padding[3];
+    if (padRight >= kernelX || padLeft >= kernelX)
+      return op->emitOpError("expected left/right padding to be less than the "
+                             "width of the kernel, got pad_left=")
+             << padLeft << ", pad_right=" << padRight
+             << ", kernel_x=" << kernelX;
 
-  const int64_t kernelY = kernel[0];
-  const int64_t padTop = padding[0];
-  const int64_t padBottom = padding[1];
-  if (padTop >= kernelY || padBottom >= kernelY)
-    return op.emitOpError("expected top/bottom padding to be less than the "
-                          "height of the kernel, got pad_top=")
-           << padTop << ", pad_bottom=" << padBottom
-           << ", kernel_y=" << kernelY;
+    const int64_t kernelY = kernel[0];
+    const int64_t padTop = padding[0];
+    const int64_t padBottom = padding[1];
+    if (padTop >= kernelY || padBottom >= kernelY)
+      return op->emitOpError("expected top/bottom padding to be less than the "
+                             "height of the kernel, got pad_top=")
+             << padTop << ", pad_bottom=" << padBottom
+             << ", kernel_y=" << kernelY;
+  }
 
-  const auto inputType =
-      llvm::dyn_cast<RankedTensorType>(op.getInput().getType());
-  const auto outputType =
-      llvm::dyn_cast<RankedTensorType>(op.getResult().getType());
+  const auto inputType = llvm::dyn_cast<RankedTensorType>(input.getType());
+  const auto outputType = llvm::dyn_cast<RankedTensorType>(output.getType());
   if (!inputType || !outputType)
     return success();
 
-  const auto verifyOutputSize =
-      [&op](const int64_t inputSize, const int64_t outputSize,
-            const int64_t kernelSize, const int64_t strideSize,
-            const int64_t padBefore, const int64_t padAfter,
-            const llvm::StringRef dimName, const llvm::StringRef dimAxis,
-            const llvm::StringRef padBeforeName,
-            const llvm::StringRef padAfterName) -> LogicalResult {
-    if (ShapedType::isDynamic(inputSize))
+  if (hasKernel && hasStrides && hasPad) {
+    const auto verifyOutputSize =
+        [op](const int64_t inputSize, const int64_t outputSize,
+             const int64_t kernelSize, const int64_t strideSize,
+             const int64_t padBefore, const int64_t padAfter,
+             const llvm::StringRef dimName, const llvm::StringRef dimAxis,
+             const llvm::StringRef padBeforeName,
+             const llvm::StringRef padAfterName) -> LogicalResult {
+      if (ShapedType::isDynamic(inputSize))
+        return success();
+
+      const std::optional<int64_t> calculatedOutSizeMinusOne =
+          idivCheck(inputSize + padBefore + padAfter - kernelSize, strideSize);
+      if (!calculatedOutSizeMinusOne.has_value())
+        return op->emitOpError("expected input_")
+               << dimName << " + pad_" << padBeforeName << " + pad_"
+               << padAfterName << " - kernel_" << dimAxis
+               << " to be wholly divisible by stride_" << dimAxis << ", got ("
+               << inputSize << " + " << padBefore << " + " << padAfter << " - "
+               << kernelSize << ") / " << strideSize;
+
+      const int64_t calculatedOutSize = calculatedOutSizeMinusOne.value() + 1;
+      if (ShapedType::isStatic(outputSize) && calculatedOutSize != outputSize)
+        return op->emitOpError("calculated output ")
+               << dimName << " did not match expected: " << "calculated="
+               << calculatedOutSize << ", expected=" << outputSize;
+
       return success();
+    };
 
-    const std::optional<int64_t> calculatedOutSizeMinusOne =
-        idivCheck(inputSize + padBefore + padAfter - kernelSize, strideSize);
-    if (!calculatedOutSizeMinusOne.has_value())
-      return op.emitOpError("expected input_")
-             << dimName << " + pad_" << padBeforeName << " + pad_"
-             << padAfterName << " - kernel_" << dimAxis
-             << " to be wholly divisible by stride_" << dimAxis << ", got ("
-             << inputSize << " + " << padBefore << " + " << padAfter << " - "
-             << kernelSize << ") / " << strideSize;
+    if (failed(verifyOutputSize(inputType.getDimSize(1),
+                                outputType.getDimSize(1), kernel[0], strides[0],
+                                padding[0], padding[1], "height", "y", "top",
+                                "bottom")))
+      return failure();
 
-    const int64_t calculatedOutSize = calculatedOutSizeMinusOne.value() + 1;
-    if (ShapedType::isStatic(outputSize) && calculatedOutSize != outputSize)
-      return op.emitOpError("calculated output ")
-             << dimName << " did not match expected: " << "calculated="
-             << calculatedOutSize << ", expected=" << outputSize;
+    if (failed(verifyOutputSize(
+            inputType.getDimSize(2), outputType.getDimSize(2), kernel[1],
+            strides[1], padding[2], padding[3], "width", "x", "left", "right")))
+      return failure();
+  }
+  return success();
+}
 
-    return success();
-  };
+template <typename T>
+static LogicalResult verifyPoolingOp(T op) {
+  return verifyPoolingOpImpl(op.getOperation(), op.getKernel(), op.getStride(),
+                             op.getPad(), op.getInput(), op.getOutput());
+}
 
-  if (failed(verifyOutputSize(inputType.getDimSize(1), outputType.getDimSize(1),
-                              kernel[0], strides[0], padding[0], padding[1],
-                              "height", "y", "top", "bottom")))
+template <typename T>
+static LogicalResult verifyAvgPoolCommonTypeAndZpChecks(T op) {
+  const Type inputETy = getStorageElementTypeOrSelf(op.getInput().getType());
+  const Type resultETy = getStorageElementTypeOrSelf(op.getOutput().getType());
+  const Type inputZpETy =
+      getStorageElementTypeOrSelf(op.getInputZp().getType());
+  const Type outputZpETy =
+      getStorageElementTypeOrSelf(op.getOutputZp().getType());
+
+  auto accType = op.getAccType();
+  if (llvm::isa<IntegerType>(inputETy) && !accType.isInteger(32))
+    return op.emitOpError("accumulator type for integer tensor is not i32");
+
+  if (inputETy.isF16() && !(accType.isF16() || accType.isF32()))
+    return op.emitOpError("accumulator type for f16 tensor is not f16/f32");
+
+  if (inputETy.isBF16() && !accType.isF32())
+    return op.emitOpError("accumulator type for bf16 tensor is not f32");
+
+  if (inputETy.isF32() && !accType.isF32())
+    return op.emitOpError("accumulator type for f32 tensor is not f32");
+
+  if (inputETy != inputZpETy)
+    return op.emitOpError("expect both input and its zero point are the same "
+                          "element type, got ")
+           << inputETy << " and " << inputZpETy;
+
+  if (resultETy != outputZpETy)
+    return op.emitOpError("expect both output and its zero point are the same "
+                          "element type, got ")
+           << resultETy << " and " << outputZpETy;
+
+  FailureOr<int64_t> maybeIZp = op.getInputZeroPoint();
+  if (succeeded(maybeIZp) && op.verifyInputZeroPoint(*maybeIZp).failed())
     return failure();
 
-  if (failed(verifyOutputSize(inputType.getDimSize(2), outputType.getDimSize(2),
-                              kernel[1], strides[1], padding[2], padding[3],
-                              "width", "x", "left", "right")))
+  FailureOr<int64_t> maybeOZp = op.getOutputZeroPoint();
+  if (succeeded(maybeOZp) && op.verifyOutputZeroPoint(*maybeOZp).failed())
     return failure();
 
   return success();
 }
 
+namespace {
+struct AdaptivePoolingConstShapeValues {
+  llvm::SmallVector<int64_t> kernel;
+  llvm::SmallVector<int64_t> stride;
+  llvm::SmallVector<int64_t> pad;
+};
+} // namespace
+
+template <typename T>
+static constexpr bool IsSupportedAdaptivePoolConstShapeVerifyOp =
+    std::is_same_v<T, tosa::AvgPool2dAdaptiveOp>
+    // || std::is_same_v<T, tosa::MaxPool2dAdaptiveOp>
+    ;
+
+template <typename T,
+          typename std::enable_if<IsSupportedAdaptivePoolConstShapeVerifyOp<T>,
+                                  int>::type = 0>
+static void extractAdaptivePoolingConstShapeOperands(
+    T op, AdaptivePoolingConstShapeValues &values) {
+  tosa::getConstShapeValues(op.getKernel().getDefiningOp(), values.kernel);
+  tosa::getConstShapeValues(op.getStride().getDefiningOp(), values.stride);
+  tosa::getConstShapeValues(op.getPad().getDefiningOp(), values.pad);
+}
+
 LogicalResult tosa::AvgPool2dOp::verify() {
   if (failed(verifyPoolingOp(*this)))
     return failure();
+  if (failed(verifyAvgPoolCommonTypeAndZpChecks(*this)))
+    return failure();
+  return success();
+}
 
-  const Type inputETy = getStorageElementTypeOrSelf(getInput().getType());
-  const Type resultETy = getStorageElementTypeOrSelf(getOutput().getType());
-  const Type inputZpETy = getStorageElementTypeOrSelf(getInputZp().getType());
-  const Type outputZpETy = getStorageElementTypeOrSelf(getOutputZp().getType());
+LogicalResult tosa::AvgPool2dAdaptiveOp::verify() {
+  AdaptivePoolingConstShapeValues values;
+  extractAdaptivePoolingConstShapeOperands(*this, values);
 
-  auto accType = getAccType();
-  if (llvm::isa<IntegerType>(inputETy) && !accType.isInteger(32))
-    return emitOpError("accumulator type for integer tensor is not i32");
+  // If pad/stride/kernel are not constant, this is okay, we just can't check
+  // their values. extractAdaptivePoolingConstShapeOperands will return an empty
+  // list for each non CTC input. verifyPoolingOpImpl will need to handle values
+  // not being present, and return success if they cannot be checked.
 
-  if (inputETy.isF16() && !(accType.isF16() || accType.isF32()))
-    return emitOpError("accumulator type for f16 tensor is not f16/f32");
-
-  if (inputETy.isBF16() && !accType.isF32())
-    return emitOpError("accumulator type for bf16 tensor is not f32");
-
-  if (inputETy.isF32() && !accType.isF32())
-    return emitOpError("accumulator type for f32 tensor is not f32");
-
-  if (inputETy != inputZpETy)
-    return emitOpError("expect both input and its zero point are the same "
-                       "element type, got ")
-           << inputETy << " and " << inputZpETy;
-
-  if (resultETy != outputZpETy)
-    return emitOpError("expect both output and its zero point are the same "
-                       "element type, got ")
-           << resultETy << " and " << outputZpETy;
-
-  FailureOr<int64_t> maybeIZp = getInputZeroPoint();
-  if (succeeded(maybeIZp) && verifyInputZeroPoint(*maybeIZp).failed())
+  if (failed(verifyPoolingOpImpl(getOperation(), values.kernel, values.stride,
+                                 values.pad, getInput(), getOutput())))
     return failure();
 
-  FailureOr<int64_t> maybeOZp = getOutputZeroPoint();
-  if (succeeded(maybeOZp) && verifyOutputZeroPoint(*maybeOZp).failed())
+  if (failed(verifyAvgPoolCommonTypeAndZpChecks(*this)))
     return failure();
 
   return success();
@@ -1390,6 +1455,52 @@ buildAvgPool2dOpWithQuantInfo(OpBuilder &builder, OperationState &result,
   result.addAttribute("kernel", kernel);
   result.addAttribute("stride", stride);
   result.addAttribute("pad", pad);
+  result.addAttribute("acc_type", accType);
+  result.types.push_back(outputType);
+}
+
+/// This builder mirrors avg_pool2d quant-info handling and materializes
+/// kernel/stride/pad as const_shape operands for avg_pool2d_adaptive.
+static void buildAvgPool2dAdaptiveOpWithQuantInfo(
+    OpBuilder &builder, OperationState &result, Type outputType, Value input,
+    DenseI64ArrayAttr kernel, DenseI64ArrayAttr stride, DenseI64ArrayAttr pad,
+    TypeAttr accType) {
+  const Location loc{result.location};
+  int64_t inputZp{0};
+  int64_t outputZp{0};
+
+  if (auto quantAttr =
+          buildUnaryOpQuantizationAttr(builder, input, outputType)) {
+    inputZp = quantAttr.getInputZp();
+    outputZp = quantAttr.getOutputZp();
+  }
+  const std::optional<Value> inputZpOp =
+      createZeroPointTensor(builder, loc, input.getType(), inputZp);
+  if (!inputZpOp) {
+    (void)emitError(loc,
+                    "Failed to create input zero point tensor for quantized "
+                    "AVG_POOL2D_ADAPTIVE op");
+  }
+  const std::optional<Value> outputZpOp =
+      createZeroPointTensor(builder, loc, outputType, outputZp);
+  if (!outputZpOp) {
+    (void)emitError(loc, "Failed to create output zero point tensor for "
+                         "quantized AVG_POOL2D_ADAPTIVE op");
+  }
+
+  if (inputZpOp && outputZpOp) {
+    ImplicitLocOpBuilder b(loc, builder);
+    Value kernelShape = getTosaConstShape(b, kernel.asArrayRef());
+    Value strideShape = getTosaConstShape(b, stride.asArrayRef());
+    Value padShape = getTosaConstShape(b, pad.asArrayRef());
+    result.addOperands({input, inputZpOp.value(), outputZpOp.value(),
+                        kernelShape, strideShape, padShape});
+  } else {
+    // Failed to create one or more zero points above: just add input as
+    // operands. This will trigger error in building the op because of missing
+    // operands.
+    result.addOperands({input});
+  }
   result.addAttribute("acc_type", accType);
   result.types.push_back(outputType);
 }
@@ -1831,8 +1942,8 @@ LogicalResult tosa::ConcatOp::verify() {
 
 LogicalResult tosa::EqualOp::inferReturnTypeComponents(
     MLIRContext *context, ::std::optional<Location> location,
-    ValueShapeRange operands, DictionaryAttr attributes,
-    OpaqueProperties properties, RegionRange regions,
+    ValueShapeRange operands, DictionaryAttr attributes, PropertyRef properties,
+    RegionRange regions,
     SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
   auto elementType = IntegerType::get(context, /*width=*/1);
 
@@ -2332,8 +2443,8 @@ LogicalResult tosa::SliceOp::verify() {
 
 LogicalResult tosa::MulOp::inferReturnTypeComponents(
     MLIRContext *context, ::std::optional<Location> location,
-    ValueShapeRange operands, DictionaryAttr attributes,
-    OpaqueProperties properties, RegionRange regions,
+    ValueShapeRange operands, DictionaryAttr attributes, PropertyRef properties,
+    RegionRange regions,
     SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
   // mul op's output shape only depend on input1 and input2, not on shift
   ValueShapeRange twoInputs = operands.drop_back();
@@ -2763,6 +2874,8 @@ ZERO_POINT_HELPER(TransposeConv2DOp, Input, true)
 ZERO_POINT_HELPER(TransposeConv2DOp, Weight, true)
 ZERO_POINT_HELPER(AvgPool2dOp, Input, true)
 ZERO_POINT_HELPER(AvgPool2dOp, Output, true)
+ZERO_POINT_HELPER(AvgPool2dAdaptiveOp, Input, true)
+ZERO_POINT_HELPER(AvgPool2dAdaptiveOp, Output, true)
 ZERO_POINT_HELPER(MatMulOp, A, true)
 ZERO_POINT_HELPER(MatMulOp, B, true)
 ZERO_POINT_HELPER(NegateOp, Input1, true)
@@ -3370,7 +3483,7 @@ static LogicalResult NAryInferReturnTypes(
   LogicalResult OP::inferReturnTypeComponents(                                 \
       MLIRContext *context, ::std::optional<Location> location,                \
       ValueShapeRange operands, DictionaryAttr attributes,                     \
-      OpaqueProperties properties, RegionRange regions,                        \
+      PropertyRef properties, RegionRange regions,                             \
       SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {           \
     return NAryInferReturnTypes(operands, inferredReturnShapes);               \
   }
@@ -3931,6 +4044,35 @@ LogicalResult AvgPool2dOp::inferReturnTypeComponents(
   const Properties &prop = adaptor.getProperties();
   return poolingInferReturnTypes(inputShape, prop.kernel, prop.stride, prop.pad,
                                  inferredReturnShapes);
+}
+
+LogicalResult AvgPool2dAdaptiveOp::inferReturnTypeComponents(
+    MLIRContext *context, ::std::optional<Location> location,
+    AvgPool2dAdaptiveOp::Adaptor adaptor,
+    SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
+  ShapeAdaptor inputShape(adaptor.getInput().getType());
+
+  llvm::SmallVector<int64_t> kernelValues;
+  llvm::SmallVector<int64_t> strideValues;
+  llvm::SmallVector<int64_t> padValues;
+  if (tosa::getConstShapeValues(adaptor.getKernel().getDefiningOp(),
+                                kernelValues) &&
+      tosa::getConstShapeValues(adaptor.getStride().getDefiningOp(),
+                                strideValues) &&
+      tosa::getConstShapeValues(adaptor.getPad().getDefiningOp(), padValues)) {
+    return poolingInferReturnTypes(inputShape, kernelValues, strideValues,
+                                   padValues, inferredReturnShapes);
+  }
+
+  llvm::SmallVector<int64_t> outputShape(4, ShapedType::kDynamic);
+  if (inputShape.hasRank()) {
+    // Keep N & C as pooling only changes H & W.
+    outputShape[0] = inputShape.getDimSize(0);
+    outputShape[3] = inputShape.getDimSize(3);
+  }
+
+  inferredReturnShapes.push_back(ShapedTypeComponents(outputShape));
+  return success();
 }
 
 LogicalResult MaxPool2dOp::inferReturnTypeComponents(
