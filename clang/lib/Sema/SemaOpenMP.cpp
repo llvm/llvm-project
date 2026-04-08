@@ -14962,8 +14962,10 @@ StmtResult SemaOpenMP::ActOnOpenMPTileDirective(ArrayRef<OMPClause *> Clauses,
   // Create iteration variables for the generated loops.
   SmallVector<VarDecl *, 4> FloorIndVars;
   SmallVector<VarDecl *, 4> TileIndVars;
+  SmallVector<VarDecl *, 4> TileCntVars;
   FloorIndVars.resize(NumLoops);
   TileIndVars.resize(NumLoops);
+  TileCntVars.resize(NumLoops);
   for (unsigned I = 0; I < NumLoops; ++I) {
     OMPLoopBasedDirective::HelperExprs &LoopHelper = LoopHelpers[I];
 
@@ -14983,26 +14985,100 @@ StmtResult SemaOpenMP::ActOnOpenMPTileDirective(ArrayRef<OMPClause *> Clauses,
       FloorIndVars[I] = FloorCntDecl;
     }
 
-    // Iteration variable for the tile (i.e. inner) loop.
+    // Logical iteration variable for the tile loop. Retains the meaning of
+    // the original logical iteration number (floor_iv + tile_cnt) so that
+    // LoopHelper.Updates can derive the original loop variable unchanged.
     {
-      std::string TileCntName =
+      std::string TileIVName =
           (Twine(".tile_") + llvm::utostr(I) + ".iv." + OrigVarName).str();
 
-      // Reuse the iteration variable created by checkOpenMPLoop. It is also
-      // used by the expressions to derive the original iteration variable's
-      // value from the logical iteration number.
-      auto *TileCntDecl = cast<VarDecl>(IterVarRef->getDecl());
-      TileCntDecl->setDeclName(
-          &SemaRef.PP.getIdentifierTable().get(TileCntName));
-      TileIndVars[I] = TileCntDecl;
+      auto *TileIVDecl = cast<VarDecl>(IterVarRef->getDecl());
+      TileIVDecl->setDeclName(&SemaRef.PP.getIdentifierTable().get(TileIVName));
+      TileIndVars[I] = TileIVDecl;
+    }
+
+    // Loop counter for the rectangular tile loop [0, TileSize).
+    {
+      std::string TileCntName =
+          (Twine(".tile.cnt.") + llvm::utostr(I) + ".iv." + OrigVarName).str();
+      VarDecl *TileCntDecl =
+          buildVarDecl(SemaRef, {}, CntTy, TileCntName, nullptr, OrigCntVar);
+      TileCntVars[I] = TileCntDecl;
     }
 
     addLoopPreInits(Context, LoopHelper, LoopStmts[I], OriginalInits[I],
                     PreInits);
+
+    // Declare the logical tile IV in PreInits so it is in scope for the
+    // entire loop nest (it will be assigned in each tile loop body).
+    Decl *TileIVDeclPtr = TileIndVars[I];
+    PreInits.push_back(new (Context) DeclStmt(
+        DeclGroupRef::Create(Context, &TileIVDeclPtr, 1), {}, {}));
   }
 
   // Once the original iteration values are set, append the innermost body.
   Stmt *Inner = Body;
+
+  // Build a combined validity predicate that guards the innermost body.
+  // For each tiled dimension, check that the logical iteration number
+  // (.tile.iv) is within the original trip count. This is required because the
+  // tile loop now has rectangular (constant) bounds and may overshoot on the
+  // remainder tile. The predicate is: .tile.iv.0 < N0 && .tile.iv.1 < N1 ...
+  //
+  // Optimization: if every dimension's trip count is a compile-time constant
+  // that is evenly divisible by the corresponding tile size (also a constant),
+  // then the remainder tile is empty and the predicate is trivially true.
+  {
+    bool PredicateNeeded = false;
+    for (unsigned I = 0; I < NumLoops; ++I) {
+      Expr *TSExpr = SizesClause->getSizesRefs()[I];
+      Expr *NExpr = LoopHelpers[I].NumIterations;
+      llvm::APSInt TileVal, TripVal;
+      bool TSConst =
+          !TSExpr->containsErrors() && TSExpr->isIntegerConstantExpr(Context);
+      bool NConst = NExpr->isIntegerConstantExpr(Context);
+      if (TSConst && NConst) {
+        Expr::EvalResult TSResult;
+        TSExpr->EvaluateAsInt(TSResult, Context);
+        TileVal = TSResult.Val.getInt();
+        Expr::EvalResult NResult;
+        NExpr->EvaluateAsInt(NResult, Context);
+        TripVal = NResult.Val.getInt();
+        if (TileVal.isStrictlyPositive() && (TripVal.srem(TileVal)).isZero())
+          continue;
+      }
+      PredicateNeeded = true;
+      break;
+    }
+
+    if (PredicateNeeded) {
+      Expr *CombinedPred = nullptr;
+      for (unsigned I = 0; I < NumLoops; ++I) {
+        auto *OrigCntVar = cast<DeclRefExpr>(LoopHelpers[I].Counters[0]);
+        QualType IVTy = LoopHelpers[I].NumIterations->getType();
+        Expr *TileIVRef = buildDeclRefExpr(SemaRef, TileIndVars[I], IVTy,
+                                           OrigCntVar->getExprLoc());
+        ExprResult DimPred =
+            SemaRef.BuildBinOp(CurScope, OrigCntVar->getExprLoc(), BO_LT,
+                               TileIVRef, LoopHelpers[I].NumIterations);
+        if (!DimPred.isUsable())
+          return StmtError();
+        if (CombinedPred) {
+          ExprResult Combined =
+              SemaRef.BuildBinOp(CurScope, OrigCntVar->getExprLoc(), BO_LAnd,
+                                 CombinedPred, DimPred.get());
+          if (!Combined.isUsable())
+            return StmtError();
+          CombinedPred = Combined.get();
+        } else {
+          CombinedPred = DimPred.get();
+        }
+      }
+      Inner = IfStmt::Create(
+          Context, SourceLocation(), IfStatementKind::Ordinary, nullptr,
+          nullptr, CombinedPred, SourceLocation(), SourceLocation(), Inner);
+    }
+  }
 
   auto MakeDimTileSize = [&SemaRef = this->SemaRef, &CopyTransformer, &Context,
                           SizesClause, CurScope](int I) -> Expr * {
@@ -15011,7 +15087,7 @@ StmtResult SemaOpenMP::ActOnOpenMPTileDirective(ArrayRef<OMPClause *> Clauses,
     if (DimTileSizeExpr->containsErrors())
       return nullptr;
 
-    if (isa<ConstantExpr>(DimTileSizeExpr))
+    if (DimTileSizeExpr->isIntegerConstantExpr(Context))
       return AssertSuccess(CopyTransformer.TransformExpr(DimTileSizeExpr));
 
     // When the tile size is not a constant but a variable, it is possible to
@@ -15047,6 +15123,9 @@ StmtResult SemaOpenMP::ActOnOpenMPTileDirective(ArrayRef<OMPClause *> Clauses,
   };
 
   // Create tile loops from the inside to the outside.
+  // Each tile loop uses .tile.cnt as its counter with rectangular bounds
+  // [0, TileSize), and computes .tile.iv = .floor.iv + .tile.cnt to set
+  // the logical iteration number for LoopHelper.Updates.
   for (int I = NumLoops - 1; I >= 0; --I) {
     OMPLoopBasedDirective::HelperExprs &LoopHelper = LoopHelpers[I];
     Expr *NumIterations = LoopHelper.NumIterations;
@@ -15057,70 +15136,65 @@ StmtResult SemaOpenMP::ActOnOpenMPTileDirective(ArrayRef<OMPClause *> Clauses,
     // Commonly used variables. One of the constraints of an AST is that every
     // node object must appear at most once, hence we define a lambda that
     // creates a new AST node at every use.
+    auto MakeTileCntRef = [&SemaRef = this->SemaRef, &TileCntVars, I, IVTy,
+                           OrigCntVar]() {
+      return buildDeclRefExpr(SemaRef, TileCntVars[I], IVTy,
+                              OrigCntVar->getExprLoc());
+    };
     auto MakeTileIVRef = [&SemaRef = this->SemaRef, &TileIndVars, I, IVTy,
                           OrigCntVar]() {
       return buildDeclRefExpr(SemaRef, TileIndVars[I], IVTy,
                               OrigCntVar->getExprLoc());
     };
 
-    // For init-statement: auto .tile.iv = .floor.iv
+    // For init-statement: auto .tile.cnt = 0
     SemaRef.AddInitializerToDecl(
-        TileIndVars[I],
-        SemaRef
-            .DefaultLvalueConversion(
-                makeFloorIVRef(SemaRef, FloorIndVars, I, IVTy, OrigCntVar))
-            .get(),
+        TileCntVars[I],
+        SemaRef.ActOnIntegerConstant(LoopHelper.Init->getExprLoc(), 0).get(),
         /*DirectInit=*/false);
-    Decl *CounterDecl = TileIndVars[I];
+    Decl *CounterDecl = TileCntVars[I];
     StmtResult InitStmt = new (Context)
         DeclStmt(DeclGroupRef::Create(Context, &CounterDecl, 1),
                  OrigCntVar->getBeginLoc(), OrigCntVar->getEndLoc());
     if (!InitStmt.isUsable())
       return StmtError();
 
-    // For cond-expression:
-    //   .tile.iv < min(.floor.iv + DimTileSize, NumIterations)
+    // For cond-expression: .tile.cnt < DimTileSize  (rectangular bound)
     Expr *DimTileSize = MakeDimTileSize(I);
     if (!DimTileSize)
       return StmtError();
-    ExprResult EndOfTile = SemaRef.BuildBinOp(
-        CurScope, LoopHelper.Cond->getExprLoc(), BO_Add,
-        makeFloorIVRef(SemaRef, FloorIndVars, I, IVTy, OrigCntVar),
-        DimTileSize);
-    if (!EndOfTile.isUsable())
-      return StmtError();
-    ExprResult IsPartialTile =
-        SemaRef.BuildBinOp(CurScope, LoopHelper.Cond->getExprLoc(), BO_LT,
-                           NumIterations, EndOfTile.get());
-    if (!IsPartialTile.isUsable())
-      return StmtError();
-    ExprResult MinTileAndIterSpace = SemaRef.ActOnConditionalOp(
-        LoopHelper.Cond->getBeginLoc(), LoopHelper.Cond->getEndLoc(),
-        IsPartialTile.get(), NumIterations, EndOfTile.get());
-    if (!MinTileAndIterSpace.isUsable())
-      return StmtError();
     ExprResult CondExpr =
         SemaRef.BuildBinOp(CurScope, LoopHelper.Cond->getExprLoc(), BO_LT,
-                           MakeTileIVRef(), MinTileAndIterSpace.get());
+                           MakeTileCntRef(), DimTileSize);
     if (!CondExpr.isUsable())
       return StmtError();
 
-    // For incr-statement: ++.tile.iv
+    // For incr-statement: ++.tile.cnt
     ExprResult IncrStmt = SemaRef.BuildUnaryOp(
-        CurScope, LoopHelper.Inc->getExprLoc(), UO_PreInc, MakeTileIVRef());
+        CurScope, LoopHelper.Inc->getExprLoc(), UO_PreInc, MakeTileCntRef());
     if (!IncrStmt.isUsable())
       return StmtError();
 
-    // Statements to set the original iteration variable's value from the
-    // logical iteration number.
+    // Compute the logical iteration number:
+    //   .tile.iv = .floor.iv + .tile.cnt
+    ExprResult FloorPlusCnt = SemaRef.BuildBinOp(
+        CurScope, OrigCntVar->getExprLoc(), BO_Add,
+        makeFloorIVRef(SemaRef, FloorIndVars, I, IVTy, OrigCntVar),
+        MakeTileCntRef());
+    if (!FloorPlusCnt.isUsable())
+      return StmtError();
+    ExprResult TileIVAssign =
+        SemaRef.BuildBinOp(CurScope, OrigCntVar->getExprLoc(), BO_Assign,
+                           MakeTileIVRef(), FloorPlusCnt.get());
+    if (!TileIVAssign.isUsable())
+      return StmtError();
+
     // Generated for loop is:
     // \code
-    // Original_for_init;
-    // for (auto .tile.iv = .floor.iv;
-    //      .tile.iv < min(.floor.iv + DimTileSize, NumIterations);
-    //      ++.tile.iv) {
-    //   Original_Body;
-    //   Original_counter_update;
+    // for (auto .tile.cnt = 0; .tile.cnt < DimTileSize; ++.tile.cnt) {
+    //   .tile.iv = .floor.iv + .tile.cnt;
+    //   Original_counter_update;  // derives orig var from .tile.iv
+    //   Inner;                    // predicated body or inner tile loops
     // }
     // \endcode
     // FIXME: If the innermost body is an loop itself, inserting these
@@ -15128,6 +15202,7 @@ StmtResult SemaOpenMP::ActOnOpenMPTileDirective(ArrayRef<OMPClause *> Clauses,
     // for applying tiling again). If this is the case, sink the expressions
     // further into the inner loop.
     SmallVector<Stmt *, 4> BodyParts;
+    BodyParts.push_back(TileIVAssign.get());
     BodyParts.append(LoopHelper.Updates.begin(), LoopHelper.Updates.end());
     if (auto *SourceCXXFor = dyn_cast<CXXForRangeStmt>(LoopStmt))
       BodyParts.push_back(SourceCXXFor->getLoopVarStmt());
