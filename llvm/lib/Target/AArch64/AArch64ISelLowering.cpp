@@ -7320,11 +7320,9 @@ SDValue AArch64TargetLowering::LowerMLOAD(SDValue Op, SelectionDAG &DAG) const {
     return DAG.getMergeValues({Result, Load.getValue(1)}, DL);
   }
 
-  // Expand instruction is available with SVE2p2 in streaming mode only
-  // if SMEFA64 is available. Expand is always available with SME2p2.
-  if (!(Subtarget->hasSVE2p2() &&
-        (!Subtarget->isStreaming() || Subtarget->hasSMEFA64())) &&
-      !Subtarget->hasSME2p2())
+  // Return if EXPAND instruction is not available.
+  if ((!Subtarget->isSVEAvailable() || !Subtarget->hasSVE2p2()) &&
+      (!Subtarget->isSVEorStreamingSVEAvailable() || !Subtarget->hasSME2p2()))
     return Op;
 
   // Create mask using the number of active lanes in the predicate.
@@ -31448,11 +31446,11 @@ SDValue AArch64TargetLowering::LowerFixedLengthVectorMLoadToSVE(
     Result = NewLoad;
   } else {
     // Fixed-length masked.expandload intrinsics should have been scalarised
-    // if the required features are not available to use expand.
-    assert(((Subtarget->hasSVE2p2() &&
-             (!Subtarget->isStreaming() || Subtarget->hasSMEFA64())) ||
-            Subtarget->hasSME2p2()) &&
-           "Expected SVE2p2 or SME2p2");
+    // if the required features are not available to use EXPAND.
+    assert(
+        (Subtarget->isSVEAvailable() && Subtarget->hasSVE2p2()) ||
+        (Subtarget->isSVEorStreamingSVEAvailable() && Subtarget->hasSME2p2()) &&
+            "Expected SVE2p2 or SME2p2");
 
     SDValue CntActive = DAG.getNode(
         ISD::INTRINSIC_WO_CHAIN, DL, MVT::i64,

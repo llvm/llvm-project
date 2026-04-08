@@ -5157,8 +5157,6 @@ AArch64TTIImpl::getCostOfKeepingLiveOverCall(ArrayRef<Type *> Tys) const {
 
 bool AArch64TTIImpl::isLegalMaskedExpandLoad(Type *DataTy,
                                              Align Alignment) const {
-  EVT VT = TLI->getValueType(DL, DataTy, true);
-
   // Neon types should be scalarised when we are not choosing to use SVE.
   if (useNeonVector(DataTy))
     return false;
