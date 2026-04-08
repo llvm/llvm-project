@@ -124,14 +124,6 @@ private:
 template <StlType Stl>
 class AbstractListFrontEnd : public SyntheticChildrenFrontEnd {
 public:
-  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override {
-    auto optional_idx = formatters::ExtractIndexFromString(name.GetCString());
-    if (!optional_idx) {
-      return llvm::createStringError("Type has no child named '%s'",
-                                     name.AsCString());
-    }
-    return *optional_idx;
-  }
   lldb::ChildCacheState Update() override;
 
 protected:
@@ -561,11 +553,11 @@ llvm::Expected<uint32_t> MsvcStlListFrontEnd::CalculateNumChildren() {
   auto size_sp =
       m_backend.GetChildAtNamePath({"_Mypair", "_Myval2", "_Mysize"});
   if (!size_sp)
-    return llvm::createStringError("Failed to resolve size.");
+    return llvm::createStringError("failed to resolve size");
 
   m_count = size_sp->GetValueAsUnsigned(UINT32_MAX);
   if (m_count == UINT32_MAX)
-    return llvm::createStringError("Failed to read size value.");
+    return llvm::createStringError("failed to read size value");
 
   return m_count;
 }

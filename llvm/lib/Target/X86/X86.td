@@ -32,6 +32,15 @@ def IsX32 : SubtargetFeature<"x32", "IsX32", "true",
 // X86 Subtarget ISA features
 //===----------------------------------------------------------------------===//
 
+foreach i = {8-15} in
+    def FeatureReserveR#i : SubtargetFeature<"reserve-r"#i, "ReservedRReg[X86::R"#i#"]", "true",
+                                             "Reserve R"#i#", making it unavailable as a GPR">;
+foreach i = {16-31} in
+    def FeatureReserveR#i : SubtargetFeature<"reserve-r"#i, "ReservedRReg[X86::R"#i#"]", "true",
+                                             "Reserve R"#i#", making it unavailable as a GPR">;
+def FeatureReserveEDI : SubtargetFeature<"reserve-edi", "ReservedRReg[X86::EDI]", "true",
+                                         "Reserve EDI, making it unavailable as a GPR">;
+
 def FeatureX87     : SubtargetFeature<"x87","HasX87", "true",
                                       "Enable X87 float instructions">;
 
@@ -364,6 +373,8 @@ def FeatureCF : SubtargetFeature<"cf", "HasCF", "true",
                                  "Support conditional faulting">;
 def FeatureZU : SubtargetFeature<"zu", "HasZU", "true",
                                  "Support zero-upper SETcc/IMUL">;
+def FeatureJMPABS : SubtargetFeature<"jmpabs", "HasJMPABS", "true",
+                                     "Support 64-bit absolute JMP">;
 def FeatureUseGPR32InInlineAsm
     : SubtargetFeature<"inline-asm-use-gpr32", "UseInlineAsmGPR32", "true",
                        "Enable use of GPR32 in inline assembly for APX">;
@@ -769,6 +780,14 @@ def TuningUseSLMArithCosts
 def TuningUseGLMDivSqrtCosts
     : SubtargetFeature<"use-glm-div-sqrt-costs", "UseGLMDivSqrtCosts", "true",
         "Use Goldmont specific floating point div/sqrt costs">;
+
+def TuningNDDImm
+    : SubtargetFeature<"prefer-ndd-imm", "HasNDDI",
+          "true", "Prefer NDD immediate variant">;
+
+def TuningNDDMem
+    : SubtargetFeature<"prefer-ndd-mem", "HasNDDM",
+          "true", "Prefer NDD memory addressing">;
 
 // Starting with Redwood Cove architecture, the branch has branch taken hint
 // (i.e., instruction prefix 3EH).
@@ -1181,6 +1200,7 @@ def ProcessorFeatures {
                                                   FeaturePPX,
                                                   FeatureNDD,
                                                   FeatureNF,
+                                                  FeatureJMPABS,
                                                   FeatureMOVRS,
                                                   FeatureAMXMOVRS,
                                                   FeatureAMXAVX512,
@@ -1354,6 +1374,7 @@ def ProcessorFeatures {
                                                   FeatureNF,
                                                   FeatureNDD,
                                                   FeatureZU,
+                                                  FeatureJMPABS,
                                                   FeatureCCMP,
                                                   FeaturePREFETCHI];
   list<SubtargetFeature> NVLFeatures =

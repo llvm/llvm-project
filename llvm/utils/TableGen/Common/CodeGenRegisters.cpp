@@ -844,7 +844,25 @@ unsigned CodeGenRegisterClass::getWeight(const CodeGenRegBank &RegBank) const {
 bool CodeGenRegisterClass::Key::operator<(
     const CodeGenRegisterClass::Key &B) const {
   assert(Members && B.Members);
-  return std::tie(*Members, RSI) < std::tie(*B.Members, B.RSI);
+
+  // Lexicographical comparison. Ignores artificial registers when asked.
+  auto IA = Members->begin(), EA = Members->end();
+  auto IB = B.Members->begin(), EB = B.Members->end();
+  for (;;) {
+    while (IgnoreArtificialMembers && IA != EA && (*IA)->Artificial)
+      ++IA;
+    while (IgnoreArtificialMembers && IB != EB && (*IB)->Artificial)
+      ++IB;
+    if (IA == EA && IB == EB)
+      break;
+    if (IA == EA || IB == EB)
+      return IA == EA;
+    if (**IA != **IB)
+      return **IA < **IB;
+    ++IA;
+    ++IB;
+  }
+  return RSI < B.RSI;
 }
 
 // Returns true if RC is a strict subclass.
@@ -1284,7 +1302,7 @@ void CodeGenRegBank::addToMaps(CodeGenRegisterClass *RC) {
 
   // Duplicate classes are rejected by insert().
   // That's OK, we only care about the properties handled by CGRC::Key.
-  CodeGenRegisterClass::Key K(*RC);
+  CodeGenRegisterClass::Key K(*RC, /*IgnoreArtificialMembers=*/true);
   Key2RC.try_emplace(K, RC);
 }
 
@@ -1294,7 +1312,8 @@ CodeGenRegBank::getOrCreateSubClass(const CodeGenRegisterClass *RC,
                                     const CodeGenRegister::Vec *Members,
                                     StringRef Name) {
   // Synthetic sub-class has the same size and alignment as RC.
-  CodeGenRegisterClass::Key K(Members, RC->RSI);
+  CodeGenRegisterClass::Key K(Members, RC->RSI,
+                              /*IgnoreArtificialMembers=*/true);
   RCKeyMap::const_iterator FoundI = Key2RC.find(K);
   if (FoundI != Key2RC.end())
     return {FoundI->second, false};
@@ -1499,7 +1518,7 @@ void CodeGenRegBank::computeSubRegLaneMasks() {
   CoveringLanes = LaneBitmask::getAll();
   for (CodeGenSubRegIndex &Idx : SubRegIndices) {
     if (Idx.getComposites().empty()) {
-      if (Bit > LaneBitmask::BitWidth) {
+      if (Bit >= LaneBitmask::BitWidth) {
         PrintFatalError(
             Twine("Ran out of lanemask bits to represent subregister ") +
             Idx.getName());
@@ -1741,7 +1760,16 @@ static void computeUberSets(std::vector<UberRegSet> &UberSets,
     if (!RegClass.Allocatable)
       continue;
 
-    const CodeGenRegister::Vec &Regs = RegClass.getMembers();
+    // Ignore artificial registers. They may be members of register
+    // classes that together include registers and their subregisters,
+    // in which case it is impossible to normalize the weights of
+    // their register units.
+    CodeGenRegister::Vec Regs;
+    for (const CodeGenRegister *Reg : RegClass.getMembers()) {
+      if (!Reg->Artificial)
+        Regs.push_back(Reg);
+    }
+
     if (Regs.empty())
       continue;
 
@@ -2357,6 +2385,13 @@ void CodeGenRegBank::inferCommonSubClass(CodeGenRegisterClass *RC) {
     if (Intersection.empty())
       continue;
 
+    // Skip casses where the intersection is composed of artificial
+    // registers.
+    if (llvm::all_of(Intersection, [](const CodeGenRegister *Reg) {
+          return Reg->Artificial;
+        }))
+      continue;
+
     // If RC1 and RC2 have different spill sizes or alignments, use the
     // stricter one for sub-classing.  If they are equal, prefer RC1.
     if (RC2->RSI.hasStricterSpillThan(RC1->RSI))
@@ -2396,7 +2431,11 @@ void CodeGenRegBank::inferSubClassWithSubReg(CodeGenRegisterClass *RC) {
     if (I == SRSets.end())
       continue;
     // In most cases, all RC registers support the SubRegIndex.
-    if (I->second.size() == RC->getMembers().size()) {
+    auto IsNotArtificial = [](const CodeGenRegister *R) {
+      return !R->Artificial;
+    };
+    if (I->second.size() ==
+        (size_t)count_if(RC->getMembers(), IsNotArtificial)) {
       RC->setSubClassWithSubReg(&SubIdx, RC);
       continue;
     }
@@ -2443,6 +2482,8 @@ void CodeGenRegBank::inferMatchingSuperRegClass(
     SubRegs.clear();
     TopoSigs.reset();
     for (const CodeGenRegister *Super : RC->getMembers()) {
+      if (Super->Artificial)
+        continue;
       const CodeGenRegister *Sub = Super->getSubRegs().find(SubIdx)->second;
       assert(Sub && "Missing sub-register");
       SubRegs.push_back(Sub);
@@ -2464,7 +2505,13 @@ void CodeGenRegBank::inferMatchingSuperRegClass(
         continue;
       // Compute the subset of RC that maps into SubRC.
       CodeGenRegister::Vec SubSetVec;
-      for (const auto &[Sub, Super] : zip_equal(SubRegs, RC->getMembers())) {
+      auto IsNotArtificial = [](const CodeGenRegister *R) {
+        return !R->Artificial;
+      };
+      auto NonArtificialMembers =
+          make_filter_range(RC->getMembers(), IsNotArtificial);
+      for (const auto &[Sub, Super] :
+           zip_equal(SubRegs, NonArtificialMembers)) {
         if (SubRC.contains(Sub))
           SubSetVec.push_back(Super);
       }
@@ -2473,7 +2520,8 @@ void CodeGenRegBank::inferMatchingSuperRegClass(
         continue;
 
       // RC injects completely into SubRC.
-      if (SubSetVec.size() == RC->getMembers().size()) {
+      if (SubSetVec.size() ==
+          (size_t)count_if(RC->getMembers(), IsNotArtificial)) {
         SubRC.addSuperRegClass(SubIdx, RC);
 
         // We can skip checking subregister indices that can be composed from

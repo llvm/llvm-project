@@ -209,9 +209,9 @@ define i64 @intrinsic_lrint_i64_f64(double %arg) {
 ; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-SDAG-NEXT:    v_rndne_f64_e32 v[0:1], v[0:1]
 ; GFX9-SDAG-NEXT:    s_movk_i32 s4, 0xffe0
+; GFX9-SDAG-NEXT:    s_mov_b32 s5, 0xc1f00000
 ; GFX9-SDAG-NEXT:    v_ldexp_f64 v[2:3], v[0:1], s4
 ; GFX9-SDAG-NEXT:    s_mov_b32 s4, 0
-; GFX9-SDAG-NEXT:    s_mov_b32 s5, 0xc1f00000
 ; GFX9-SDAG-NEXT:    v_floor_f64_e32 v[2:3], v[2:3]
 ; GFX9-SDAG-NEXT:    v_fma_f64 v[0:1], v[2:3], s[4:5], v[0:1]
 ; GFX9-SDAG-NEXT:    v_cvt_u32_f64_e32 v0, v[0:1]
@@ -412,9 +412,9 @@ define i64 @intrinsic_llrint_i64_f64(double %arg) {
 ; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-SDAG-NEXT:    v_rndne_f64_e32 v[0:1], v[0:1]
 ; GFX9-SDAG-NEXT:    s_movk_i32 s4, 0xffe0
+; GFX9-SDAG-NEXT:    s_mov_b32 s5, 0xc1f00000
 ; GFX9-SDAG-NEXT:    v_ldexp_f64 v[2:3], v[0:1], s4
 ; GFX9-SDAG-NEXT:    s_mov_b32 s4, 0
-; GFX9-SDAG-NEXT:    s_mov_b32 s5, 0xc1f00000
 ; GFX9-SDAG-NEXT:    v_floor_f64_e32 v[2:3], v[2:3]
 ; GFX9-SDAG-NEXT:    v_fma_f64 v[0:1], v[2:3], s[4:5], v[0:1]
 ; GFX9-SDAG-NEXT:    v_cvt_u32_f64_e32 v0, v[0:1]

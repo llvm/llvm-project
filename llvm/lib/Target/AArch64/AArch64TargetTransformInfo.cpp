@@ -696,9 +696,10 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     break;
   }
   case Intrinsic::abs: {
-    static const auto ValidAbsTys = {MVT::v8i8,  MVT::v16i8, MVT::v4i16,
-                                     MVT::v8i16, MVT::v2i32, MVT::v4i32,
-                                     MVT::v2i64};
+    static const auto ValidAbsTys = {MVT::v8i8,    MVT::v16i8,   MVT::v4i16,
+                                     MVT::v8i16,   MVT::v2i32,   MVT::v4i32,
+                                     MVT::v2i64,   MVT::nxv16i8, MVT::nxv8i16,
+                                     MVT::nxv4i32, MVT::nxv2i64};
     auto LT = getTypeLegalizationCost(RetTy);
     if (any_of(ValidAbsTys, equal_to(LT.second)))
       return LT.first;
@@ -1107,6 +1108,67 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
       return LegalCost;
     }
     break;
+  case Intrinsic::pow: {
+    // For scalar calls we know the target has the libcall, and for fixed-width
+    // vectors we know for the worst case it can be scalarised.
+    EVT VT = getTLI()->getValueType(DL, RetTy);
+    RTLIB::Libcall LC = RTLIB::getPOW(VT);
+    bool HasLibcall = getTLI()->getLibcallImpl(LC) != RTLIB::Unsupported;
+    bool CanLowerWithLibcalls = !isa<ScalableVectorType>(RetTy) || HasLibcall;
+
+    // If we know that the call can be lowered with libcalls then it's safe to
+    // reduce the costs in some cases. This is important for scalable vectors,
+    // since we cannot scalarize the call in the absence of a vector math
+    // library.
+    if (CanLowerWithLibcalls && ICA.getInst() && !ICA.getArgs().empty()) {
+      // If we know the fast math flags and the exponent is a constant then the
+      // cost may be less for some exponents like 0.25 and 0.75.
+      const Constant *ExpC = dyn_cast<Constant>(ICA.getArgs()[1]);
+      if (ExpC && isa<VectorType>(ExpC->getType()))
+        ExpC = ExpC->getSplatValue();
+      if (auto *ExpF = dyn_cast_or_null<ConstantFP>(ExpC)) {
+        // The argument must be a FP constant.
+        bool Is025 = ExpF->getValueAPF().isExactlyValue(0.25);
+        bool Is075 = ExpF->getValueAPF().isExactlyValue(0.75);
+        FastMathFlags FMF = ICA.getInst()->getFastMathFlags();
+        if ((Is025 || Is075) && FMF.noInfs() && FMF.approxFunc() &&
+            (!Is025 || FMF.noSignedZeros())) {
+          IntrinsicCostAttributes Attrs(Intrinsic::sqrt, RetTy, {RetTy}, FMF);
+          InstructionCost Sqrt = getIntrinsicInstrCost(Attrs, CostKind);
+          if (Is025)
+            return 2 * Sqrt;
+          InstructionCost FMul =
+              getArithmeticInstrCost(Instruction::FMul, RetTy, CostKind);
+          return (Sqrt * 2) + FMul;
+        }
+        // TODO: For 1/3 exponents we expect the cbrt call to be slightly
+        // cheaper than pow.
+      }
+    }
+
+    if (HasLibcall)
+      return getCallInstrCost(nullptr, RetTy, ICA.getArgTypes(), CostKind);
+    break;
+  }
+  case Intrinsic::sqrt:
+  case Intrinsic::fabs:
+  case Intrinsic::ceil:
+  case Intrinsic::floor:
+  case Intrinsic::nearbyint:
+  case Intrinsic::round:
+  case Intrinsic::rint:
+  case Intrinsic::roundeven:
+  case Intrinsic::trunc:
+  case Intrinsic::minnum:
+  case Intrinsic::maxnum:
+  case Intrinsic::minimum:
+  case Intrinsic::maximum: {
+    if (isa<ScalableVectorType>(RetTy) && ST->isSVEorStreamingSVEAvailable()) {
+      auto LT = getTypeLegalizationCost(RetTy);
+      return LT.first;
+    }
+    break;
+  }
   default:
     break;
   }
@@ -4249,8 +4311,8 @@ std::optional<InstructionCost> AArch64TTIImpl::getFP16BF16PromoteCost(
     return std::nullopt;
   if (Ty->getScalarType()->isHalfTy() && ST->hasFullFP16())
     return std::nullopt;
-  if (CanUseSVE && Ty->isScalableTy() && ST->hasSVEB16B16() &&
-      ST->isNonStreamingSVEorSME2Available())
+  // If we have +sve-b16b16 the operation can be promoted to SVE.
+  if (CanUseSVE && ST->hasSVEB16B16() && ST->isNonStreamingSVEorSME2Available())
     return std::nullopt;
 
   Type *PromotedTy = Ty->getWithNewType(Type::getFloatTy(Ty->getContext()));
@@ -5180,7 +5242,7 @@ static bool shouldUnrollMultiExitLoop(Loop *L, ScalarEvolution &SE,
     return false;
 
   if (any_of(Blocks, [](BasicBlock *BB) {
-        return !isa<BranchInst>(BB->getTerminator());
+        return !isa<UncondBrInst, CondBrInst>(BB->getTerminator());
       }))
     return false;
 
@@ -5309,10 +5371,9 @@ getAppleRuntimeUnrollPreferences(Loop *L, ScalarEvolution &SE,
 
   // Try to runtime-unroll loops with early-continues depending on loop-varying
   // loads; this helps with branch-prediction for the early-continues.
-  auto *Term = dyn_cast<BranchInst>(Header->getTerminator());
+  auto *Term = dyn_cast<CondBrInst>(Header->getTerminator());
   SmallVector<BasicBlock *> Preds(predecessors(Latch));
-  if (!Term || !Term->isConditional() || Preds.size() == 1 ||
-      !llvm::is_contained(Preds, Header) ||
+  if (!Term || Preds.size() == 1 || !llvm::is_contained(Preds, Header) ||
       none_of(Preds, [L](BasicBlock *Pred) { return L->contains(Pred); }))
     return;
 
@@ -5868,10 +5929,6 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
   if (CostKind != TTI::TCK_RecipThroughput)
     return Invalid;
 
-  if (VF.isFixed() && !ST->isSVEorStreamingSVEAvailable() &&
-      (!ST->isNeonAvailable() || !ST->hasDotProd()))
-    return Invalid;
-
   if ((Opcode != Instruction::Add && Opcode != Instruction::Sub &&
        Opcode != Instruction::FAdd) ||
       OpAExtend == TTI::PR_None)
@@ -5900,6 +5957,7 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
 
   bool IsUSDot = OpBExtend != TTI::PR_None && OpAExtend != OpBExtend;
   if (IsUSDot && !ST->hasMatMulInt8())
+    // FIXME: Remove this early bailout in favour of expand cost.
     return Invalid;
 
   unsigned Ratio =
@@ -5931,22 +5989,28 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
   std::pair<InstructionCost, MVT> InputLT =
       getTypeLegalizationCost(InputVectorType);
 
+  // Returns true if the subtarget supports the operation for a given type.
+  auto IsSupported = [&](bool SVEPred, bool NEONPred) -> bool {
+    return (ST->isSVEorStreamingSVEAvailable() && SVEPred) ||
+           (AccumLT.second.isFixedLengthVector() &&
+            AccumLT.second.getSizeInBits() <= 128 && ST->isNeonAvailable() &&
+            NEONPred);
+  };
+
+  bool IsSub = Opcode == Instruction::Sub;
   InstructionCost Cost = InputLT.first * TTI::TCC_Basic;
 
-  // The sub/negation cannot be folded into the operands of
-  // ISD::PARTIAL_REDUCE_*MLA, so make the cost more expensive.
-  if (Opcode == Instruction::Sub)
-    Cost += 8;
+  if (AccumLT.second.getScalarType() == MVT::i32 &&
+      InputLT.second.getScalarType() == MVT::i8 && !IsSub) {
+    // i8 -> i32 is natively supported with udot/sdot for both NEON and SVE.
+    if (!IsUSDot && IsSupported(true, ST->hasDotProd()))
+      return Cost;
+    // i8 -> i32 usdot requires +i8mm
+    if (IsUSDot && IsSupported(ST->hasMatMulInt8(), ST->hasMatMulInt8()))
+      return Cost;
+  }
 
-  // Prefer using full types by costing half-full input types as more expensive.
-  if (TypeSize::isKnownLT(InputVectorType->getPrimitiveSizeInBits(),
-                          TypeSize::getScalable(128)))
-    // FIXME: This can be removed after the cost of the extends are folded into
-    // the dot-product expression in VPlan, after landing:
-    //  https://github.com/llvm/llvm-project/pull/147302
-    Cost *= 2;
-
-  if (ST->isSVEorStreamingSVEAvailable() && !IsUSDot) {
+  if (ST->isSVEorStreamingSVEAvailable() && !IsUSDot && !IsSub) {
     // i16 -> i64 is natively supported for udot/sdot
     if (AccumLT.second.getScalarType() == MVT::i64 &&
         InputLT.second.getScalarType() == MVT::i16)
@@ -5965,31 +6029,41 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
       // the extends in the IR are still counted. This can be fixed
       // after https://github.com/llvm/llvm-project/pull/147302 has landed.
       return Cost;
-  }
-
-  // i8 -> i32 is natively supported for udot/sdot/usdot, both for NEON and SVE.
-  if (ST->isSVEorStreamingSVEAvailable() ||
-      (AccumLT.second.isFixedLengthVector() && ST->isNeonAvailable() &&
-       ST->hasDotProd())) {
-    if (AccumLT.second.getScalarType() == MVT::i32 &&
-        InputLT.second.getScalarType() == MVT::i8)
-      return Cost;
-  }
-
-  // f16 -> f32 is natively supported for fdot
-  if (Opcode == Instruction::FAdd && (ST->hasSME2() || ST->hasSVE2p1())) {
-    if (AccumLT.second.getScalarType() == MVT::f32 &&
+    // f16 -> f32 is natively supported for fdot
+    if (Opcode == Instruction::FAdd && (ST->hasSME2() || ST->hasSVE2p1()) &&
+        AccumLT.second.getScalarType() == MVT::f32 &&
         InputLT.second.getScalarType() == MVT::f16 &&
         AccumLT.second.getVectorMinNumElements() == 4 &&
         InputLT.second.getVectorMinNumElements() == 8)
       return Cost;
-    // Floating-point types aren't promoted, so expanding the partial reduction
-    // is more expensive.
-    return Cost + 20;
   }
 
-  // Add additional cost for the extends that would need to be inserted.
-  return Cost + 2;
+  // For a ratio of 2, we can use *mlal top/bottom instructions.
+  if (Ratio == 2 && !IsSub) {
+    MVT InVT = InputLT.second.getScalarType();
+
+    // SVE2 [us]mlalb/t and NEON [us]mlal(2)
+    if (IsSupported(ST->hasSVE2(), true) &&
+        llvm::is_contained({MVT::i8, MVT::i16, MVT::i32}, InVT.SimpleTy))
+      return Cost * 2;
+
+    // SVE2 fmlalb/t and NEON fmlal(2)
+    if (IsSupported(ST->hasSVE2(), ST->hasFP16FML()) && InVT == MVT::f16)
+      return Cost * 2;
+
+    // SVE and NEON bfmlalb/t
+    if (IsSupported(ST->hasBF16(), ST->hasBF16()) && InVT == MVT::bf16)
+      return Cost * 2;
+  }
+
+  InstructionCost ExpandCost = BaseT::getPartialReductionCost(
+      Opcode, InputTypeA, InputTypeB, AccumType, VF, OpAExtend, OpBExtend,
+      BinOp, CostKind, FMF);
+
+  // Slightly lower the cost of a sub reduction so that it can be considered
+  // as candidate for 'cdot' operations. This is a somewhat arbitrary number,
+  // because we don't yet model these operations directly.
+  return ExpandCost.isValid() && IsSub ? ((8 * ExpandCost) / 10) : ExpandCost;
 }
 
 InstructionCost
@@ -6429,7 +6503,7 @@ bool AArch64TTIImpl::preferPredicateOverEpilogue(TailFoldingInfo *TFI) const {
   // with an unpredicated loop.
   unsigned NumInsns = 0;
   for (BasicBlock *BB : TFI->LVL->getLoop()->blocks()) {
-    NumInsns += BB->sizeWithoutDebug();
+    NumInsns += BB->size();
   }
 
   // We expect 4 of these to be a IV PHI, IV add, IV compare and branch.
@@ -6468,8 +6542,7 @@ bool AArch64TTIImpl::shouldTreatInstructionLikeSelect(
     // break point in the code - the end of a block with an unconditional
     // terminator.
     if (I->getOpcode() == Instruction::Or &&
-        isa<BranchInst>(I->getNextNode()) &&
-        cast<BranchInst>(I->getNextNode())->isUnconditional())
+        isa<UncondBrInst>(I->getNextNode()))
       return true;
 
     if (I->getOpcode() == Instruction::Add ||
@@ -6798,11 +6871,10 @@ bool AArch64TTIImpl::isProfitableToSinkOperands(
     Ops.push_back(&I->getOperandUse(0));
     return true;
   }
-  case Instruction::Br: {
-    if (cast<BranchInst>(I)->isUnconditional())
-      return false;
-
-    if (!ShouldSinkCondition(cast<BranchInst>(I)->getCondition(), Ops))
+  case Instruction::UncondBr:
+    return false;
+  case Instruction::CondBr: {
+    if (!ShouldSinkCondition(cast<CondBrInst>(I)->getCondition(), Ops))
       return false;
 
     Ops.push_back(&I->getOperandUse(0));
@@ -6819,6 +6891,53 @@ bool AArch64TTIImpl::isProfitableToSinkOperands(
     }
     break;
 
+  // Type            |    BIC    |    ORN    |    EON
+  // ----------------+-----------+-----------+-----------
+  // scalar          |    Base   |    Base   |    Base
+  // scalar w/shift  |     -     |     -     |     -
+  // fixed vector    | NEON/Base | NEON/Base | BSL2N/Base
+  // scalable vector |    SVE    |     -     |   BSL2N
+  case Instruction::Xor:
+    // EON only for scalars (possibly expanded fixed vectors)
+    // and vectors using the SVE2/SME BSL2N instruction.
+    if (I->getType()->isVectorTy() && ST->isNeonAvailable()) {
+      bool HasBSL2N =
+          ST->isSVEorStreamingSVEAvailable() && (ST->hasSVE2() || ST->hasSME());
+      if (!HasBSL2N)
+        break;
+    }
+    [[fallthrough]];
+  case Instruction::And:
+  case Instruction::Or:
+    // Even though we could use the SVE2/SME BSL2N instruction,
+    // it might pessimize with an extra MOV depending on register allocation.
+    if (I->getOpcode() == Instruction::Or &&
+        isa<ScalableVectorType>(I->getType()))
+      break;
+    // Shift can be fold into scalar AND/ORR/EOR,
+    // but not the non-negated operand of BIC/ORN/EON.
+    if (!(I->getType()->isVectorTy() && ST->hasNEON()) &&
+        match(I, m_c_BinOp(m_Shift(m_Value(), m_ConstantInt()), m_Value())))
+      break;
+    for (auto &Op : I->operands()) {
+      // (and/or/xor X, (not Y)) -> (bic/orn/eon X, Y)
+      if (match(Op.get(), m_Not(m_Value()))) {
+        Ops.push_back(&Op);
+        return true;
+      }
+      // (and/or/xor X, (splat (not Y))) -> (bic/orn/eon X, (splat Y))
+      if (match(Op.get(),
+                m_Shuffle(m_InsertElt(m_Value(), m_Not(m_Value()), m_ZeroInt()),
+                          m_Value(), m_ZeroMask()))) {
+        Use &InsertElt = cast<Instruction>(Op)->getOperandUse(0);
+        Use &Not = cast<Instruction>(InsertElt)->getOperandUse(1);
+        Ops.push_back(&Not);
+        Ops.push_back(&InsertElt);
+        Ops.push_back(&Op);
+        return true;
+      }
+    }
+    break;
   default:
     break;
   }

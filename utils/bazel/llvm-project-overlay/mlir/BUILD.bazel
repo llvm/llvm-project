@@ -15,7 +15,6 @@ load(
     "cc_headers_only",
     "if_cuda_available",
     "mlir_c_api_cc_library",
-    "nanobind_pyi_genrule",
 )
 load(":linalggen.bzl", "genlinalg")
 load(":tblgen.bzl", "gentbl_cc_library", "td_library")
@@ -29,7 +28,6 @@ licenses(["notice"])
 
 exports_files([
     "LICENSE.TXT",
-    "run_lit.sh",
     "utils/lldb-scripts/mlirDataFormatters.py",
     "utils/pygments/mlir_lexer.py",
     "utils/textmate/mlir.json",
@@ -59,7 +57,7 @@ expand_template(
         "#cmakedefine MLIR_GREEDY_REWRITE_RANDOMIZER_SEED ${MLIR_GREEDY_REWRITE_RANDOMIZER_SEED}": "/* #undef MLIR_GREEDY_REWRITE_RANDOMIZER_SEED */",
         "#cmakedefine01 MLIR_ENABLE_NVPTXCOMPILER": "#define MLIR_ENABLE_NVPTXCOMPILER 0",
         "#cmakedefine01 MLIR_ENABLE_PDL_IN_PATTERNMATCH": "#define MLIR_ENABLE_PDL_IN_PATTERNMATCH 1",
-        "#cmakedefine01 MLIR_ENABLE_ROCM_CONVERSIONS": "#define MLIR_ENABLE_ROCM_CONVERSIONS 0",
+        "#cmakedefine01 LLVM_HAS_AMDGPU_TARGET": "#define LLVM_HAS_AMDGPU_TARGET 0",
     },
     template = "include/mlir/Config/mlir-config.h.cmake",
 )
@@ -405,6 +403,16 @@ cc_library(
     ],
 )
 
+gentbl_cc_library(
+    name = "BytecodeDialectInterfaceIncGen",
+    tbl_outs = {
+        "include/mlir/Bytecode/BytecodeDialectInterface.h.inc": ["-gen-dialect-interface-decls"],
+    },
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Bytecode/BytecodeDialectInterface.td",
+    deps = [":OpBaseTdFiles"],
+)
+
 cc_library(
     name = "IR",
     srcs = glob([
@@ -437,6 +445,7 @@ cc_library(
         ":BuiltinOpsIncGen",
         ":BuiltinTypeInterfacesIncGen",
         ":BuiltinTypesIncGen",
+        ":BytecodeDialectInterfaceIncGen",
         ":BytecodeOpInterfaceIncGen",
         ":CallOpInterfacesIncGen",
         ":DataLayoutInterfacesIncGen",
@@ -1332,29 +1341,6 @@ cc_binary(
 )
 
 ##---------------------------------------------------------------------------##
-# Python stub generation for native extensions.
-##---------------------------------------------------------------------------##
-
-py_binary(
-    name = "stubgen_runner",
-    srcs = ["lib/Bindings/Python/stubgen_runner.py"],
-    data = ["@nanobind//:src/stubgen.py"],
-    deps = ["@rules_python//python/runfiles"],
-)
-
-nanobind_pyi_genrule(
-    name = "_mlir_pyi",
-    outs = [
-        "_mlir/__init__.pyi",
-        "_mlir/ir.pyi",
-        "_mlir/passmanager.pyi",
-        "_mlir/rewrite.pyi",
-    ],
-    module_name = "_mlir",
-    deps = [":_mlir.so"],
-)
-
-##---------------------------------------------------------------------------##
 
 td_library(
     name = "AttrTdFiles",
@@ -1729,6 +1715,7 @@ cc_library(
     ],
     hdrs = [
         "include/mlir/Dialect/AMDGPU/IR/AMDGPUDialect.h",
+        "include/mlir/Dialect/AMDGPU/IR/AMDGPUEnums.h",
         "lib/Conversion/LLVMCommon/MemRefDescriptor.h",
     ],
     includes = ["include"],
@@ -2454,107 +2441,14 @@ cc_library(
 )
 
 ##---------------------------------------------------------------------------##
-# AMX dialect.
+# X86 dialect.
 ##---------------------------------------------------------------------------##
 
 td_library(
-    name = "AMXTdFiles",
+    name = "X86TdFiles",
     srcs = [
-        "include/mlir/Dialect/AMX/AMX.td",
-        "include/mlir/Dialect/AMX/AMXInterfaces.td",
-    ],
-    includes = ["include"],
-    deps = [
-        ":BuiltinDialectTdFiles",
-        ":LLVMOpsTdFiles",
-        ":SideEffectInterfacesTdFiles",
-    ],
-)
-
-gentbl_cc_library(
-    name = "AMXIncGen",
-    tbl_outs = {
-        "include/mlir/Dialect/AMX/AMXDialect.h.inc": [
-            "-gen-dialect-decls",
-            "-dialect=amx",
-        ],
-        "include/mlir/Dialect/AMX/AMXDialect.cpp.inc": [
-            "-gen-dialect-defs",
-            "-dialect=amx",
-        ],
-        "include/mlir/Dialect/AMX/AMXTypes.h.inc": [
-            "-gen-typedef-decls",
-            "-typedefs-dialect=amx",
-        ],
-        "include/mlir/Dialect/AMX/AMXTypes.cpp.inc": [
-            "-gen-typedef-defs",
-            "-typedefs-dialect=amx",
-        ],
-        "include/mlir/Dialect/AMX/AMX.h.inc": ["-gen-op-decls"],
-        "include/mlir/Dialect/AMX/AMX.cpp.inc": ["-gen-op-defs"],
-        "g3doc/Dialects/AMX/AMX.md": [
-            "-gen-op-doc",
-            "-dialect=amx",
-        ],
-    },
-    tblgen = ":mlir-tblgen",
-    td_file = "include/mlir/Dialect/AMX/AMX.td",
-    deps = [":AMXTdFiles"],
-)
-
-gentbl_cc_library(
-    name = "AMXInterfaceIncGen",
-    tbl_outs = {
-        "include/mlir/Dialect/AMX/AMXInterfaces.h.inc": ["-gen-op-interface-decls"],
-        "include/mlir/Dialect/AMX/AMXInterfaces.cpp.inc": ["-gen-op-interface-defs"],
-    },
-    tblgen = ":mlir-tblgen",
-    td_file = "include/mlir/Dialect/AMX/AMXInterfaces.td",
-    deps = [
-        ":AMXTdFiles",
-    ],
-)
-
-cc_library(
-    name = "AMXDialect",
-    srcs = ["lib/Dialect/AMX/IR/AMXDialect.cpp"],
-    hdrs = ["include/mlir/Dialect/AMX/AMXDialect.h"],
-    includes = ["include"],
-    deps = [
-        ":AMXIncGen",
-        ":AMXInterfaceIncGen",
-        ":BytecodeOpInterface",
-        ":IR",
-        ":LLVMCommonConversion",
-        ":LLVMDialect",
-        ":SideEffectInterfaces",
-        "//llvm:Support",
-    ],
-)
-
-cc_library(
-    name = "AMXTransforms",
-    srcs = glob(["lib/Dialect/AMX/Transforms/*.cpp"]),
-    hdrs = ["include/mlir/Dialect/AMX/Transforms.h"],
-    includes = ["include"],
-    deps = [
-        ":AMXDialect",
-        ":ConvertToLLVMInterface",
-        ":IR",
-        ":LLVMCommonConversion",
-        ":LLVMDialect",
-    ],
-)
-
-##---------------------------------------------------------------------------##
-# X86Vector dialect.
-##---------------------------------------------------------------------------##
-
-td_library(
-    name = "X86VectorTdFiles",
-    srcs = [
-        "include/mlir/Dialect/X86Vector/X86Vector.td",
-        "include/mlir/Dialect/X86Vector/X86VectorInterfaces.td",
+        "include/mlir/Dialect/X86/X86.td",
+        "include/mlir/Dialect/X86/X86Interfaces.td",
     ],
     includes = ["include"],
     deps = [
@@ -2565,43 +2459,51 @@ td_library(
 )
 
 gentbl_cc_library(
-    name = "X86VectorIncGen",
+    name = "X86IncGen",
     tbl_outs = {
-        "include/mlir/Dialect/X86Vector/X86VectorDialect.h.inc": [
+        "include/mlir/Dialect/X86/X86Dialect.h.inc": [
             "-gen-dialect-decls",
-            "-dialect=x86vector",
+            "-dialect=x86",
         ],
-        "include/mlir/Dialect/X86Vector/X86VectorDialect.cpp.inc": [
+        "include/mlir/Dialect/X86/X86Dialect.cpp.inc": [
             "-gen-dialect-defs",
-            "-dialect=x86vector",
+            "-dialect=x86",
         ],
-        "include/mlir/Dialect/X86Vector/X86Vector.h.inc": ["-gen-op-decls"],
-        "include/mlir/Dialect/X86Vector/X86Vector.cpp.inc": ["-gen-op-defs"],
-        "g3doc/Dialects/X86Vector/X86Vector.md": [
+        "include/mlir/Dialect/X86/X86.h.inc": ["-gen-op-decls"],
+        "include/mlir/Dialect/X86/X86.cpp.inc": ["-gen-op-defs"],
+        "include/mlir/Dialect/X86/X86Types.h.inc": [
+            "-gen-typedef-decls",
+            "-typedefs-dialect=x86",
+        ],
+        "include/mlir/Dialect/X86/X86Types.cpp.inc": [
+            "-gen-typedef-defs",
+            "-typedefs-dialect=x86",
+        ],
+        "g3doc/Dialects/X86/X86.md": [
             "-gen-op-doc",
-            "-dialect=x86vector",
+            "-dialect=x86",
         ],
     },
     tblgen = ":mlir-tblgen",
-    td_file = "include/mlir/Dialect/X86Vector/X86Vector.td",
-    deps = [":X86VectorTdFiles"],
+    td_file = "include/mlir/Dialect/X86/X86.td",
+    deps = [":X86TdFiles"],
 )
 
 gentbl_cc_library(
-    name = "X86VectorInterfacesIncGen",
+    name = "X86InterfacesIncGen",
     tbl_outs = {
-        "include/mlir/Dialect/X86Vector/X86VectorInterfaces.h.inc": ["-gen-op-interface-decls"],
-        "include/mlir/Dialect/X86Vector/X86VectorInterfaces.cpp.inc": ["-gen-op-interface-defs"],
+        "include/mlir/Dialect/X86/X86Interfaces.h.inc": ["-gen-op-interface-decls"],
+        "include/mlir/Dialect/X86/X86Interfaces.cpp.inc": ["-gen-op-interface-defs"],
     },
     tblgen = ":mlir-tblgen",
-    td_file = "include/mlir/Dialect/X86Vector/X86VectorInterfaces.td",
-    deps = [":X86VectorTdFiles"],
+    td_file = "include/mlir/Dialect/X86/X86Interfaces.td",
+    deps = [":X86TdFiles"],
 )
 
 cc_library(
-    name = "X86VectorDialect",
-    srcs = ["lib/Dialect/X86Vector/IR/X86VectorDialect.cpp"],
-    hdrs = ["include/mlir/Dialect/X86Vector/X86VectorDialect.h"],
+    name = "X86Dialect",
+    srcs = ["lib/Dialect/X86/IR/X86Dialect.cpp"],
+    hdrs = ["include/mlir/Dialect/X86/X86Dialect.h"],
     includes = ["include"],
     deps = [
         ":BytecodeOpInterface",
@@ -2609,15 +2511,16 @@ cc_library(
         ":InferTypeOpInterface",
         ":LLVMCommonConversion",
         ":LLVMDialect",
+        ":LLVMSupportHeaders",
         ":SideEffectInterfaces",
-        ":X86VectorIncGen",
-        ":X86VectorInterfacesIncGen",
+        ":X86IncGen",
+        ":X86InterfacesIncGen",
     ],
 )
 
 td_library(
-    name = "X86VectorTransformOpsTdFiles",
-    srcs = ["include/mlir/Dialect/X86Vector/TransformOps/X86VectorTransformOps.td"],
+    name = "X86TransformOpsTdFiles",
+    srcs = ["include/mlir/Dialect/X86/TransformOps/X86TransformOps.td"],
     includes = ["include"],
     deps = [
         ":OpBaseTdFiles",
@@ -2627,22 +2530,22 @@ td_library(
 )
 
 gentbl_cc_library(
-    name = "X86VectorTransformOpsIncGen",
+    name = "X86TransformOpsIncGen",
     tbl_outs = {
-        "include/mlir/Dialect/X86Vector/TransformOps/X86VectorTransformOps.h.inc": ["-gen-op-decls"],
-        "include/mlir/Dialect/X86Vector/TransformOps/X86VectorTransformOps.cpp.inc": ["-gen-op-defs"],
+        "include/mlir/Dialect/X86/TransformOps/X86TransformOps.h.inc": ["-gen-op-decls"],
+        "include/mlir/Dialect/X86/TransformOps/X86TransformOps.cpp.inc": ["-gen-op-defs"],
     },
     tblgen = ":mlir-tblgen",
-    td_file = "include/mlir/Dialect/X86Vector/TransformOps/X86VectorTransformOps.td",
+    td_file = "include/mlir/Dialect/X86/TransformOps/X86TransformOps.td",
     deps = [
-        ":X86VectorTransformOpsTdFiles",
+        ":X86TransformOpsTdFiles",
     ],
 )
 
 cc_library(
-    name = "X86VectorTransformOps",
-    srcs = glob(["lib/Dialect/X86Vector/TransformOps/*.cpp"]),
-    hdrs = glob(["include/mlir/Dialect/X86Vector/TransformOps/*.h"]),
+    name = "X86TransformOps",
+    srcs = glob(["lib/Dialect/X86/TransformOps/*.cpp"]),
+    hdrs = glob(["include/mlir/Dialect/X86/TransformOps/*.h"]),
     includes = ["include"],
     deps = [
         ":IR",
@@ -2651,16 +2554,16 @@ cc_library(
         ":TransformDialect",
         ":TransformDialectInterfaces",
         ":VectorDialect",
-        ":X86VectorDialect",
-        ":X86VectorTransformOpsIncGen",
-        ":X86VectorTransforms",
+        ":X86Dialect",
+        ":X86TransformOpsIncGen",
+        ":X86Transforms",
     ],
 )
 
 cc_library(
-    name = "X86VectorUtils",
-    srcs = glob(["lib/Dialect/X86Vector/Utils/*.cpp"]),
-    hdrs = glob(["include/mlir/Dialect/X86Vector/Utils/*.h"]),
+    name = "X86Utils",
+    srcs = glob(["lib/Dialect/X86/Utils/*.cpp"]),
+    hdrs = glob(["include/mlir/Dialect/X86/Utils/*.h"]),
     includes = ["include"],
     deps = [
         ":IR",
@@ -2669,18 +2572,20 @@ cc_library(
         ":SCFDialect",
         ":Support",
         ":VectorDialect",
-        ":X86VectorDialect",
+        ":X86Dialect",
         "//llvm:Support",
     ],
 )
 
 cc_library(
-    name = "X86VectorTransforms",
-    srcs = glob(["lib/Dialect/X86Vector/Transforms/*.cpp"]),
-    hdrs = ["include/mlir/Dialect/X86Vector/Transforms.h"],
+    name = "X86Transforms",
+    srcs = glob(["lib/Dialect/X86/Transforms/*.cpp"]),
+    hdrs = ["include/mlir/Dialect/X86/Transforms.h"],
     includes = ["include"],
     deps = [
         ":ArithDialect",
+        ":ControlFlowDialect",
+        ":ConvertToLLVMInterface",
         ":IR",
         ":LLVMCommonConversion",
         ":LLVMDialect",
@@ -2693,8 +2598,8 @@ cc_library(
         ":TransformUtils",
         ":VectorDialect",
         ":VectorUtils",
-        ":X86VectorDialect",
-        ":X86VectorUtils",
+        ":X86Dialect",
+        ":X86Utils",
         "//llvm:Support",
     ],
 )
@@ -2849,6 +2754,7 @@ td_library(
         ":DestinationStyleOpInterfaceTdFiles",
         ":InferTypeOpInterfaceTdFiles",
         ":LoopLikeInterfaceTdFiles",
+        ":MemorySlotInterfacesTdFiles",
         ":ParallelCombiningOpInterfaceTdFiles",
         ":SideEffectInterfacesTdFiles",
         ":ViewLikeInterfaceTdFiles",
@@ -3429,6 +3335,7 @@ cc_library(
         ":ShardingInterface",
         ":Support",
         ":TensorDialect",
+        ":TransformUtils",
         ":Transforms",
         "//llvm:Support",
     ],
@@ -4319,6 +4226,7 @@ cc_library(
         ":Analysis",
         ":ArithDialect",
         ":ArithUtils",
+        ":DialectUtils",
         ":FuncDialect",
         ":FunctionInterfaces",
         ":IR",
@@ -4333,6 +4241,7 @@ cc_library(
         ":TensorDialect",
         ":TransformUtils",
         ":Transforms",
+        ":UBDialect",
         ":ValueBoundsOpInterface",
         ":VectorDialect",
         ":VectorUtils",
@@ -4514,12 +4423,15 @@ cc_library(
         ":ControlFlowInterfaces",
         ":ConvertToEmitCInterface",
         ":DestinationStyleOpInterface",
+        ":DialectUtils",
         ":FunctionInterfaces",
         ":IR",
         ":InferTypeOpInterface",
         ":InliningUtils",
         ":LoopLikeInterface",
         ":MemRefDialect",
+        ":MemorySlotInterfaces",
+        ":MemorySlotUtils",
         ":ParallelCombiningOpInterface",
         ":SCFDeviceMappingInterfacesIncGen",
         ":SCFIncGen",
@@ -4573,6 +4485,17 @@ cc_library(
 )
 
 cc_library(
+    name = "MemorySlotUtils",
+    srcs = ["lib/Interfaces/Utils/MemorySlotUtils.cpp"],
+    hdrs = ["include/mlir/Interfaces/Utils/MemorySlotUtils.h"],
+    includes = ["include"],
+    deps = [
+        ":IR",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
     name = "DataLayoutInterfaces",
     srcs = ["lib/Interfaces/DataLayoutInterfaces.cpp"],
     hdrs = ["include/mlir/Interfaces/DataLayoutInterfaces.h"],
@@ -4603,6 +4526,7 @@ cc_library(
     hdrs = ["include/mlir/Interfaces/LoopLikeInterface.h"],
     includes = ["include"],
     deps = [
+        ":ControlFlowInterfaces",
         ":FunctionInterfaces",
         ":IR",
         ":LoopLikeInterfaceIncGen",
@@ -5105,7 +5029,7 @@ cc_library(
         ":VectorToSCF",
         ":VectorTransformOpsIncGen",
         ":VectorTransforms",
-        ":X86VectorTransforms",
+        ":X86Transforms",
     ],
 )
 
@@ -5446,8 +5370,8 @@ cc_library(
             "lib/Dialect/LLVMIR/IR/ROCDL*.h",
             "lib/Dialect/LLVMIR/IR/VCIX*.cpp",
             "lib/Dialect/LLVMIR/IR/VCIX*.h",
-            "lib/Dialect/LLVMIR/IR/*X86Vector*.cpp",
-            "lib/Dialect/LLVMIR/IR/*X86Vector*.h",
+            "lib/Dialect/LLVMIR/IR/*X86*.cpp",
+            "lib/Dialect/LLVMIR/IR/*X86*.h",
             "lib/Dialect/LLVMIR/IR/XeVM*.cpp",
             "lib/Dialect/LLVMIR/IR/XeVM*.h",
         ],
@@ -5461,12 +5385,13 @@ cc_library(
             "include/mlir/Dialect/LLVMIR/BasicPtxBuilderInterface.h",
             "include/mlir/Dialect/LLVMIR/ROCDL*.h",
             "include/mlir/Dialect/LLVMIR/VCIX*.h",
-            "include/mlir/Dialect/LLVMIR/*X86Vector*.h",
+            "include/mlir/Dialect/LLVMIR/*X86*.h",
             "include/mlir/Dialect/LLVMIR/XeVM*.h",
         ],
     ),
     includes = ["include"],
     deps = [
+        ":BytecodeDialectInterfaceIncGen",
         ":BytecodeOpInterface",
         ":CallOpInterfaces",
         ":ControlFlowInterfaces",
@@ -6164,6 +6089,7 @@ cc_library(
         "lib/Conversion/GPUCommon/AttrToSPIRVConverter.cpp",
         "lib/Conversion/GPUCommon/GPUOpsLowering.cpp",
         "lib/Conversion/GPUCommon/GPUToLLVMConversion.cpp",
+        "lib/Conversion/GPUCommon/IndexIntrinsicsOpLowering.cpp",
     ],
     hdrs = [
         "include/mlir/Conversion/GPUCommon/AttrToSPIRVConverter.h",
@@ -6438,10 +6364,9 @@ cc_library(
         ":NVVMToLLVMIRTranslation",
         ":TargetLLVM",
         ":ToLLVMIRTranslation",
-        "//llvm:NVPTXCodeGen",
         "//llvm:Support",
         "//llvm:config",
-    ],
+    ] + (["//llvm:NVPTXCodeGen"] if "NVPTX" in llvm_targets else []),
 )
 
 td_library(
@@ -6621,7 +6546,11 @@ cc_library(
         "//llvm:MCParser",
         "//llvm:Support",
         "//llvm:TargetParser",
-    ],
+        "//llvm:config",
+    ] + ([
+        "//llvm:AMDGPUAsmParser",
+        "//llvm:AMDGPUCodeGen",
+    ] if "AMDGPU" in llvm_targets else []),
 )
 
 td_library(
@@ -8269,6 +8198,7 @@ gentbl_cc_library(
     tbl_outs = {
         "include/mlir/Conversion/ConvertToLLVM/ToLLVMAttrInterface.h.inc": ["--gen-attr-interface-decls"],
         "include/mlir/Conversion/ConvertToLLVM/ToLLVMAttrInterface.cpp.inc": ["--gen-attr-interface-defs"],
+        "include/mlir/Conversion/ConvertToLLVM/ToLLVMDialectInterface.h.inc": ["--gen-dialect-interface-decls"],
         "include/mlir/Conversion/ConvertToLLVM/ToLLVMOpInterface.h.inc": ["--gen-op-interface-decls"],
         "include/mlir/Conversion/ConvertToLLVM/ToLLVMOpInterface.cpp.inc": ["--gen-op-interface-defs"],
     },
@@ -8308,12 +8238,23 @@ cc_library(
     ],
 )
 
+gentbl_cc_library(
+    name = "ConvertToEmitCPatternInterfaceIncGen",
+    tbl_outs = {
+        "include/mlir/Conversion/ConvertToEmitC/ConvertToEmitCPatternInterface.h.inc": ["-gen-dialect-interface-decls"],
+    },
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Conversion/ConvertToEmitC/ConvertToEmitCPatternInterface.td",
+    deps = [":OpBaseTdFiles"],
+)
+
 cc_library(
     name = "ConvertToEmitCInterface",
     hdrs = ["include/mlir/Conversion/ConvertToEmitC/ToEmitCInterface.h"],
     includes = ["include"],
     deps = [
         ":ConversionPassIncGen",
+        ":ConvertToEmitCPatternInterfaceIncGen",
         ":IR",
         "//llvm:Support",
     ],
@@ -8386,8 +8327,10 @@ cc_library(
         ":TransformUtils",
         ":Transforms",
         ":VectorDialect",
+        ":VectorToGPU",
         ":XeGPUDialect",
         ":XeGPUUtils",
+        ":XeGPUuArch",
         "//llvm:Support",
     ],
 )
@@ -8765,6 +8708,7 @@ cc_library(
     ],
     includes = ["include"],
     deps = [
+        ":BytecodeDialectInterfaceIncGen",
         ":BytecodeOpInterfaceIncGen",
         ":IR",
         "//llvm:Support",
@@ -9251,6 +9195,7 @@ cc_library(
         "//llvm:Core",
         "//llvm:FrontendOpenMP",
         "//llvm:Support",
+        "//llvm:TargetParser",
     ],
 )
 
@@ -9350,6 +9295,16 @@ cc_library(
     ],
 )
 
+gentbl_cc_library(
+    name = "LLVMImportDialectInterfaceIncGen",
+    tbl_outs = {
+        "include/mlir/Target/LLVMIR/LLVMImportDialectInterface.h.inc": ["-gen-dialect-interface-decls"],
+    },
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Target/LLVMIR/LLVMImportDialectInterface.td",
+    deps = [":OpBaseTdFiles"],
+)
+
 cc_library(
     name = "FromLLVMIRTranslation",
     srcs = [
@@ -9377,6 +9332,7 @@ cc_library(
         ":IR",
         ":LLVMConversionIncGen",
         ":LLVMDialect",
+        ":LLVMImportDialectInterfaceIncGen",
         ":LLVMIntrinsicConversionIncGen",
         ":Support",
         ":TranslateLib",
@@ -9573,7 +9529,6 @@ cc_library(
     srcs = ["lib/RegisterAllDialects.cpp"],
     deps = [
         ":AMDGPUDialect",
-        ":AMXDialect",
         ":AffineDialect",
         ":AllPassesAndDialects",
         ":ArithDialect",
@@ -9643,7 +9598,7 @@ cc_library(
         ":VectorDialect",
         ":VectorTransforms",
         ":WasmSSADialect",
-        ":X86VectorDialect",
+        ":X86Dialect",
         ":XeGPUDialect",
         ":XeVMDialect",
         ":XeVMTarget",
@@ -9697,7 +9652,6 @@ cc_library(
     name = "RegisterAllExtensions",
     srcs = ["lib/RegisterAllExtensions.cpp"],
     deps = [
-        ":AMXTransforms",
         ":AffineTransformOps",
         ":AllExtensions",
         ":ArithToEmitC",
@@ -9745,7 +9699,8 @@ cc_library(
         ":UBToLLVM",
         ":VectorToLLVM",
         ":VectorTransformOps",
-        ":X86VectorTransformOps",
+        ":X86TransformOps",
+        ":X86Transforms",
         ":XeGPUTransformOps",
         ":XeVMToLLVM",
         ":XeVMToLLVMIRTranslation",
@@ -10319,6 +10274,7 @@ td_library(
     name = "OpenAccOpsTdFiles",
     srcs = [
         "include/mlir/Dialect/OpenACC/AccCommon.td",
+        "include/mlir/Dialect/OpenACC/OpenACCAttributes.td",
         "include/mlir/Dialect/OpenACC/OpenACCBase.td",
         "include/mlir/Dialect/OpenACC/OpenACCCGAttributes.td",
         "include/mlir/Dialect/OpenACC/OpenACCCGOps.td",
@@ -10332,6 +10288,7 @@ td_library(
     includes = ["include"],
     deps = [
         ":AtomicInterfacesTdFiles",
+        ":InferTypeOpInterfaceTdFiles",
         ":LoopLikeInterfaceTdFiles",
         ":OpBaseTdFiles",
         ":SideEffectInterfacesTdFiles",
@@ -10446,6 +10403,7 @@ cc_library(
         ":BytecodeOpInterface",
         ":ControlFlowInterfaces",
         ":DataLayoutInterfaces",
+        ":DialectUtils",
         ":GPUDialect",
         ":IR",
         ":LLVMDialect",
@@ -10456,6 +10414,7 @@ cc_library(
         ":OpenACCOpsInterfacesIncGen",
         ":OpenACCTypeInterfacesIncGen",
         ":OpenACCTypesIncGen",
+        ":SCFDialect",
         ":SideEffectInterfaces",
         ":Support",
         ":TransformUtils",
@@ -10504,6 +10463,7 @@ cc_library(
         ":ArithUtils",
         ":DataLayoutInterfaces",
         ":DialectUtils",
+        ":FuncDialect",
         ":FunctionInterfaces",
         ":IR",
         ":OpenACCDialect",
@@ -10530,14 +10490,18 @@ cc_library(
     deps = [
         ":Analysis",
         ":ArithDialect",
+        ":ArithUtils",
+        ":DialectUtils",
         ":FuncDialect",
         ":FunctionInterfaces",
         ":GPUDialect",
         ":IR",
+        ":LoopLikeInterface",
         ":MemRefDialect",
         ":OpenACCAnalysis",
         ":OpenACCDialect",
         ":OpenACCPassIncGen",
+        ":OpenACCUtils",
         ":Pass",
         ":SCFDialect",
         ":SideEffectInterfaces",
@@ -10681,6 +10645,7 @@ cc_library(
         ":Support",
         "//llvm:FrontendOpenMP",
         "//llvm:Support",
+        "//llvm:TargetParser",
     ],
 )
 
@@ -10707,6 +10672,7 @@ cc_library(
     deps = [
         ":Analysis",
         ":FuncDialect",
+        ":FunctionInterfaces",
         ":IR",
         ":LLVMDialect",
         ":OpenMPDialect",
@@ -10824,6 +10790,7 @@ cc_library(
     ],
     includes = ["include"],
     deps = [
+        ":BytecodeDialectInterfaceIncGen",
         ":BytecodeOpInterface",
         ":IR",
         ":InferTypeOpInterface",
@@ -11515,7 +11482,7 @@ cc_library(
         ":VectorToSCF",
         ":VectorTransforms",
         ":VectorUtils",
-        ":X86VectorTransforms",
+        ":X86Transforms",
         "//llvm:Support",
     ],
 )
@@ -11758,8 +11725,6 @@ cc_library(
     ]),
     includes = ["include"],
     deps = [
-        ":AMXDialect",
-        ":AMXTransforms",
         ":ArithAttrToLLVMConversion",
         ":ArithDialect",
         ":ArithUtils",
@@ -11781,8 +11746,8 @@ cc_library(
         ":TransformUtils",
         ":VectorDialect",
         ":VectorTransforms",
-        ":X86VectorDialect",
-        ":X86VectorTransforms",
+        ":X86Dialect",
+        ":X86Transforms",
         "//llvm:Core",
         "//llvm:Support",
     ],
@@ -11820,7 +11785,6 @@ cc_library(
     ]),
     includes = ["include"],
     deps = [
-        ":AMXDialect",
         ":AffineDialect",
         ":AffineUtils",
         ":ArithDialect",
@@ -11833,6 +11797,7 @@ cc_library(
         ":SCFDialect",
         ":TransformUtils",
         ":VectorDialect",
+        ":X86Dialect",
         "//llvm:Support",
     ],
 )
@@ -12016,6 +11981,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":ArithDialect",
+        ":BytecodeDialectInterfaceIncGen",
         ":BytecodeOpInterface",
         ":Dialect",
         ":DialectUtils",
@@ -13005,6 +12971,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":ArithDialect",
+        ":AsmParser",
         ":ComplexDialect",
         ":DialectUtils",
         ":IR",
@@ -13119,7 +13086,7 @@ cc_library(
         ":TransformUtils",
         ":VectorDialect",
         ":VectorUtils",
-        ":X86VectorDialect",
+        ":X86Dialect",
         "//llvm:Support",
     ],
 )
@@ -13189,6 +13156,7 @@ td_library(
         ":ControlFlowInterfacesTdFiles",
         ":InferStridedMetadataInterfaceTdFiles",
         ":MemOpInterfacesTdFiles",
+        ":MemoryAccessOpInterfacesTdFiles",
         ":MemorySlotInterfacesTdFiles",
         ":OpBaseTdFiles",
         ":ShapedOpInterfacesTdFiles",
@@ -13286,6 +13254,7 @@ cc_library(
         ":MemRefOpsIncGen",
         ":MemoryAccessOpInterfacesIncGen",
         ":MemorySlotInterfaces",
+        ":MemorySlotUtils",
         ":RuntimeVerifiableOpInterface",
         ":ShapedOpInterfaces",
         ":SideEffectInterfaces",
@@ -13636,6 +13605,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":ArithDialect",
+        ":ControlFlowDialect",
         ":ConvertToLLVMInterface",
         ":DLTIDialect",
         ":IR",
@@ -13919,6 +13889,7 @@ cc_library(
         ":CallOpInterfaces",
         ":ControlFlowDialect",
         ":ControlFlowInterfaces",
+        ":DataLayoutInterfaces",
         ":FuncDialect",
         ":FunctionInterfaces",
         ":IR",
@@ -14117,6 +14088,8 @@ cc_library(
     hdrs = glob(["include/mlir/Reducer/*.h"]),
     includes = ["include"],
     deps = [
+        ":ControlFlowDialect",
+        ":ControlFlowInterfaces",
         ":DialectReductionPatternInterfaceIncGen",
         ":IR",
         ":Pass",
@@ -14362,7 +14335,10 @@ cc_library(
     srcs = [
         "lib/Dialect/UB/IR/UBOps.cpp",
     ],
-    hdrs = ["include/mlir/Dialect/UB/IR/UBOps.h"],
+    hdrs = [
+        "include/mlir/Dialect/UB/IR/UBMatchers.h",
+        "include/mlir/Dialect/UB/IR/UBOps.h",
+    ],
     includes = ["include"],
     deps = [
         ":BytecodeOpInterface",
@@ -14641,6 +14617,7 @@ cc_library(
         ":VectorDialect",
         ":XeGPUDialect",
         ":XeGPUUtils",
+        ":XeGPUuArch",
         ":XeVMDialect",
         "//llvm:Support",
     ],

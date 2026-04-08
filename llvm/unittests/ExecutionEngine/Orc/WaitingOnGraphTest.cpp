@@ -7,9 +7,49 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/Orc/WaitingOnGraph.h"
+#include "llvm/ExecutionEngine/Orc/WaitingOnGraphOpReplay.h"
+#include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 
 namespace llvm::orc::detail {
+
+class ElementSetTest : public testing::Test {
+public:
+  using TestElementSet = WaitingOnGraph<uintptr_t, uintptr_t>::ElementSet;
+
+  bool merge(TestElementSet &S, const TestElementSet &Other) {
+    return S.merge(Other);
+  }
+
+  bool remove(TestElementSet &S, const TestElementSet &Other) {
+    return S.remove(Other);
+  }
+
+  template <typename Pred> bool remove_if(TestElementSet &S, Pred &&P) {
+    return S.remove_if(std::forward<Pred>(P));
+  }
+};
+
+class ContainerElementsMapTest : public testing::Test {
+public:
+  using TestContainerElementsMap =
+      WaitingOnGraph<uintptr_t, uintptr_t>::ContainerElementsMap;
+
+  bool merge(TestContainerElementsMap &M,
+             const TestContainerElementsMap &Other) {
+    return M.merge(Other);
+  }
+
+  bool remove(TestContainerElementsMap &M,
+              const TestContainerElementsMap &Other) {
+    return M.remove(Other);
+  }
+
+  template <typename Visitor>
+  bool visit(TestContainerElementsMap &M, Visitor &&V) {
+    return M.visit(std::forward<Visitor>(V));
+  }
+};
 
 class WaitingOnGraphTest : public testing::Test {
 public:
@@ -41,10 +81,8 @@ protected:
 
   static ContainerElementsMap merge(ContainerElementsMap M1,
                                     const ContainerElementsMap &M2) {
-    ContainerElementsMap Result = std::move(M1);
-    for (auto &[Container, Elems] : M2)
-      Result[Container].insert(Elems.begin(), Elems.end());
-    return Result;
+    M1.merge(M2);
+    return M1;
   }
 
   ContainerElementsMap
@@ -60,7 +98,7 @@ protected:
 
     for (size_t I = 1; I != SNs.size(); ++I) {
       assert(!DepsMustMatch || SNs[I]->deps() == Deps);
-      Result = merge(std::move(Result), SNs[I]->defs());
+      Result.merge(SNs[I]->defs());
     }
 
     return Result;
@@ -68,11 +106,9 @@ protected:
 
   EmitResult integrate(EmitResult ER) {
     for (auto &SN : ER.Ready)
-      for (auto &[Container, Elems] : SN->defs())
-        Ready[Container].insert(Elems.begin(), Elems.end());
+      Ready.merge(SN->defs());
     for (auto &SN : ER.Failed)
-      for (auto &[Container, Elems] : SN->defs())
-        Failed[Container].insert(Elems.begin(), Elems.end());
+      Failed.merge(SN->defs());
     return ER;
   }
 
@@ -118,6 +154,157 @@ protected:
 using namespace llvm;
 using namespace llvm::orc;
 using namespace llvm::orc::detail;
+
+TEST_F(ElementSetTest, Merge) {
+  // Merge into empty set.
+  TestElementSet S;
+  TestElementSet Other({1, 2, 3});
+  EXPECT_TRUE(merge(S, Other));
+  EXPECT_EQ(S, Other);
+
+  // Merge with all-duplicate elements -- no change.
+  EXPECT_FALSE(merge(S, Other));
+  EXPECT_EQ(S, Other);
+
+  // Merge empty into non-empty -- no change.
+  EXPECT_FALSE(merge(S, TestElementSet()));
+  EXPECT_EQ(S, Other);
+
+  // Merge with partial overlap.
+  EXPECT_TRUE(merge(S, TestElementSet({3, 4, 5})));
+  EXPECT_EQ(S, TestElementSet({1, 2, 3, 4, 5}));
+}
+
+TEST_F(ElementSetTest, Remove) {
+  // Remove from empty set.
+  TestElementSet S;
+  EXPECT_FALSE(remove(S, TestElementSet({1, 2})));
+  EXPECT_TRUE(S.empty());
+
+  // Remove empty from non-empty -- no change.
+  S = TestElementSet({1, 2, 3});
+  EXPECT_FALSE(remove(S, TestElementSet()));
+  EXPECT_EQ(S, TestElementSet({1, 2, 3}));
+
+  // Remove with no overlap -- no change.
+  EXPECT_FALSE(remove(S, TestElementSet({4, 5})));
+  EXPECT_EQ(S, TestElementSet({1, 2, 3}));
+
+  // Remove with partial overlap (|this| > |Other| path).
+  S = TestElementSet({1, 2, 3, 4, 5});
+  EXPECT_TRUE(remove(S, TestElementSet({2, 4})));
+  EXPECT_EQ(S, TestElementSet({1, 3, 5}));
+
+  // Remove with partial overlap (|this| <= |Other| path).
+  S = TestElementSet({1, 2});
+  EXPECT_TRUE(remove(S, TestElementSet({2, 3, 4, 5})));
+  EXPECT_EQ(S, TestElementSet({1}));
+
+  // Remove all elements.
+  S = TestElementSet({1, 2});
+  EXPECT_TRUE(remove(S, TestElementSet({1, 2})));
+  EXPECT_TRUE(S.empty());
+}
+
+TEST_F(ElementSetTest, RemoveIf) {
+  // RemoveIf on empty set.
+  TestElementSet S;
+  EXPECT_FALSE(remove_if(S, [](const auto &) { return true; }));
+
+  // RemoveIf with predicate matching nothing.
+  S = TestElementSet({1, 2, 3});
+  EXPECT_FALSE(remove_if(S, [](const auto &) { return false; }));
+  EXPECT_EQ(S, TestElementSet({1, 2, 3}));
+
+  // RemoveIf with predicate matching some elements.
+  EXPECT_TRUE(remove_if(S, [](const auto &E) { return E % 2 == 0; }));
+  EXPECT_EQ(S, TestElementSet({1, 3}));
+
+  // RemoveIf with predicate matching all elements.
+  EXPECT_TRUE(remove_if(S, [](const auto &) { return true; }));
+  EXPECT_TRUE(S.empty());
+}
+
+TEST_F(ContainerElementsMapTest, Merge) {
+  // Merge into empty map.
+  TestContainerElementsMap M;
+  TestContainerElementsMap Other({{0, {1, 2}}, {1, {3}}});
+  EXPECT_TRUE(merge(M, Other));
+  EXPECT_EQ(M, Other);
+
+  // Merge with all-duplicate entries -- no change.
+  EXPECT_FALSE(merge(M, Other));
+  EXPECT_EQ(M, Other);
+
+  // Merge empty -- no change.
+  EXPECT_FALSE(merge(M, TestContainerElementsMap()));
+  EXPECT_EQ(M, Other);
+
+  // Merge with disjoint containers.
+  EXPECT_TRUE(merge(M, TestContainerElementsMap({{2, {4}}})));
+  EXPECT_EQ(M, TestContainerElementsMap({{0, {1, 2}}, {1, {3}}, {2, {4}}}));
+
+  // Merge with overlapping container, new elements.
+  EXPECT_TRUE(merge(M, TestContainerElementsMap({{0, {3}}})));
+  EXPECT_EQ(M, TestContainerElementsMap({{0, {1, 2, 3}}, {1, {3}}, {2, {4}}}));
+}
+
+TEST_F(ContainerElementsMapTest, Remove) {
+  // Remove from empty map.
+  TestContainerElementsMap M;
+  EXPECT_FALSE(remove(M, TestContainerElementsMap({{0, {1}}})));
+  EXPECT_TRUE(M.empty());
+
+  // Remove with no matching container.
+  M = TestContainerElementsMap({{0, {1, 2}}, {1, {3}}});
+  EXPECT_FALSE(remove(M, TestContainerElementsMap({{2, {1}}})));
+  EXPECT_EQ(M, TestContainerElementsMap({{0, {1, 2}}, {1, {3}}}));
+
+  // Remove with no overlap within matching container.
+  EXPECT_FALSE(remove(M, TestContainerElementsMap({{0, {5}}})));
+  EXPECT_EQ(M, TestContainerElementsMap({{0, {1, 2}}, {1, {3}}}));
+
+  // Remove partial elements from a container.
+  EXPECT_TRUE(remove(M, TestContainerElementsMap({{0, {1}}})));
+  EXPECT_EQ(M, TestContainerElementsMap({{0, {2}}, {1, {3}}}));
+
+  // Remove all elements from a container -- container should be cleaned up.
+  EXPECT_TRUE(remove(M, TestContainerElementsMap({{0, {2}}})));
+  EXPECT_EQ(M, TestContainerElementsMap({{1, {3}}}));
+}
+
+TEST_F(ContainerElementsMapTest, Visit) {
+  // Visit empty map -- no-op.
+  TestContainerElementsMap M;
+  EXPECT_FALSE(visit(M, [](auto &, auto &) { return false; }));
+
+  // Visit with no modifications.
+  M = TestContainerElementsMap({{0, {1, 2}}, {1, {3}}});
+  EXPECT_FALSE(visit(M, [](auto &, auto &) { return false; }));
+  EXPECT_EQ(M, TestContainerElementsMap({{0, {1, 2}}, {1, {3}}}));
+
+  // Visit that removes some elements from one container.
+  M = TestContainerElementsMap({{0, {1, 2, 3}}, {1, {4}}});
+  EXPECT_TRUE(visit(M, [](auto &Container, auto &Elements) {
+    if (Container == 0) {
+      Elements.erase(2);
+      return true;
+    }
+    return false;
+  }));
+  EXPECT_EQ(M, TestContainerElementsMap({{0, {1, 3}}, {1, {4}}}));
+
+  // Visit that empties a container -- container should be removed.
+  M = TestContainerElementsMap({{0, {1}}, {1, {2}}});
+  EXPECT_TRUE(visit(M, [](auto &Container, auto &Elements) {
+    if (Container == 0) {
+      Elements.clear();
+      return true;
+    }
+    return false;
+  }));
+  EXPECT_EQ(M, TestContainerElementsMap({{1, {2}}}));
+}
 
 TEST_F(WaitingOnGraphTest, ConstructAndDestroyEmpty) {
   // Nothing to do here -- we're just testing construction and destruction
@@ -346,8 +533,8 @@ TEST_F(WaitingOnGraphTest, Simplification_SimplifyIntraSimplifyPropagateDeps) {
   auto &SNs = getSNs(SR);
   EXPECT_EQ(SNs.size(), 2U);
 
-  // ContainerElemenstMap ExpectedDefs0({{0, {0}}});
-  // ContainerElemenstMap ExpectedDeps0({{0, {1, 3}}});
+  // ContainerElementsMap ExpectedDefs0({{0, {0}}});
+  // ContainerElementsMap ExpectedDeps0({{0, {1, 3}}});
   EXPECT_EQ(getDefs(*SNs.at(0)), ContainerElementsMap({{0, {0}}}));
   EXPECT_EQ(getDeps(*SNs.at(0)), ContainerElementsMap({{0, {2, 3}}}));
 
@@ -481,7 +668,7 @@ TEST_F(WaitingOnGraphTest, Emit_ZigZag) {
   //   ^ -- At this point we expect two pending supernodes.
   // 3. (0, 1) -> (0, 2)
   //   ^ -- Resolution of (0, 1) should cause all three emitted nodes to coalsce
-  //        into one supernode defining (0, {1, 2, 3}).
+  //        into one supernode defining (0, {0, 1, 2}).
   // 4. (0, 3)
   //   ^ -- Should cause all four nodes to become ready.
 
@@ -623,4 +810,46 @@ TEST_F(WaitingOnGraphTest, Fail_ZigZag) {
   auto ER1 = emit(TestGraph::simplify(B.takeSuperNodes()));
   EXPECT_EQ(ER1.Ready.size(), 0U);
   EXPECT_EQ(collapseDefs(ER1.Failed, false), merge(Defs0, Defs1));
+}
+
+TEST_F(WaitingOnGraphTest, RecordAndReplay) {
+  // Record a sequence of operations, then replay them on a fresh graph.
+  std::string RecordBuf;
+  raw_string_ostream RecordOS(RecordBuf);
+  WaitingOnGraphOpStreamRecorder<uintptr_t, uintptr_t> Rec(RecordOS);
+
+  SuperNodeBuilder B;
+
+  // Emit a node with no deps -- becomes Ready immediately.
+  ContainerElementsMap Defs0({{0, {0}}});
+  B.add(Defs0, ContainerElementsMap());
+  auto ER0 = integrate(
+      G.emit(TestGraph::simplify(B.takeSuperNodes(), &Rec), GetExternalState));
+  EXPECT_EQ(collapseDefs(ER0.Ready), Defs0);
+  EXPECT_EQ(ER0.Failed.size(), 0U);
+
+  // Emit a node depending on an external dep -- stays Pending.
+  ContainerElementsMap Defs1({{0, {1}}});
+  ContainerElementsMap Deps1({{1, {0}}});
+  B.add(Defs1, Deps1);
+  auto ER1 = integrate(
+      G.emit(TestGraph::simplify(B.takeSuperNodes(), &Rec), GetExternalState));
+  EXPECT_EQ(ER1.Ready.size(), 0U);
+  EXPECT_EQ(ER1.Failed.size(), 0U);
+
+  // Fail the external dep -- causes the pending node to fail.
+  ContainerElementsMap FailElems({{1, {0}}});
+  auto FailedSNs = G.fail(FailElems, &Rec);
+  EXPECT_EQ(FailedSNs.size(), 1U);
+
+  Rec.recordEnd();
+
+  // Now replay on a fresh graph.
+  TestGraph G2;
+  typename WaitingOnGraphOpReplay<uintptr_t, uintptr_t>::Replayer R(G2);
+  Error Err = Error::success();
+  for (auto &Op :
+       readWaitingOnGraphOpsFromBuffer<uintptr_t, uintptr_t>(RecordBuf, Err))
+    R.replay(std::move(Op));
+  EXPECT_THAT_ERROR(std::move(Err), Succeeded());
 }

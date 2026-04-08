@@ -56,7 +56,7 @@
 // CHECK:      omp.loop_nest (%[[ARG3:.*]]) : i32 = (%[[IDX_VAL]]) to (%[[END_IDX]]) inclusive step (%[[IDX_VAL]]) {
 // CHECK:        llvm.store %[[ARG3]], %{{.*}} : i32, !llvm.ptr
 // CHECK:        %[[CONST_VAL2:.*]] = llvm.mlir.constant(48 : i32) : i32
-// CHECK:        "llvm.intr.memcpy"(%[[ALLOCA1:.*]], %[[ARG0]], %[[CONST_VAL2]]) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
+// CHECK:        "llvm.intr.memcpy"(%[[ALLOCA1:.*]], %[[ARG0]], %[[CONST_VAL2]]) <{arg_attrs = [{{.*}}], isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
 // CHECK:        %[[VAL1:.*]] = llvm.load %{{.*}} : !llvm.ptr -> i32
 // CHECK:        %[[VAL2:.*]] = llvm.sext %[[VAL1]] : i32 to i64
 // CHECK:        %[[VAL3:.*]] = llvm.getelementptr %[[ALLOCA1]][0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)>
@@ -68,11 +68,11 @@
 // CHECK:        %[[VAL10:.*]] = llvm.mlir.constant(1 : i64) : i64
 // CHECK:        %[[VAL11:.*]] = llvm.mlir.constant(0 : i64) : i64
 // CHECK:        %[[VAL12:.*]] = llvm.sub %[[VAL2]], %[[VAL6]] overflow<nsw> : i64
-// CHECK:        %[[VAL13:.*]] = llvm.mul %[[VAL12]], %[[VAL10]] overflow<nsw> : i64
-// CHECK:        %[[VAL14:.*]] = llvm.mul %[[VAL13]], %[[VAL10]] overflow<nsw> : i64
-// CHECK:        %[[VAL15:.*]] = llvm.add %[[VAL14]], %[[VAL11]] overflow<nsw> : i64
-// CHECK:        %[[VAL16:.*]] = llvm.mul %[[VAL10]], %[[VAL8]] overflow<nsw> : i64
-// CHECK:        %[[VAL17:.*]] = llvm.getelementptr %[[VAL4]][%[[VAL15]]] : (!llvm.ptr, i64) -> !llvm.ptr, i32
+// CHECK:        %[[VAL13:.*]] = llvm.mul %[[VAL12]], %[[VAL10]] overflow<nsw, nuw> : i64
+// CHECK:        %[[VAL14:.*]] = llvm.mul %[[VAL13]], %[[VAL10]] overflow<nsw, nuw> : i64
+// CHECK:        %[[VAL15:.*]] = llvm.add %[[VAL14]], %[[VAL11]] overflow<nsw, nuw> : i64
+// CHECK:        %[[VAL16:.*]] = llvm.mul %[[VAL10]], %[[VAL8]] overflow<nsw, nuw> : i64
+// CHECK:        %[[VAL17:.*]] = llvm.getelementptr nusw|nuw %[[VAL4]][%[[VAL15]]] : (!llvm.ptr, i64) -> !llvm.ptr, i32
 // CHECK:        %[[VAL18:.*]] = llvm.load %[[VAL17]] {nontemporal} : !llvm.ptr -> i32
 // CHECK:        %[[VAL19:.*]] = llvm.load %{{.*}} : !llvm.ptr -> i32
 // CHECK:        %[[VAL20:.*]] = llvm.add %[[VAL18]], %[[VAL19]] : i32

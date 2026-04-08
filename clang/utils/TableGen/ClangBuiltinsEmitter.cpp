@@ -345,6 +345,7 @@ private:
                                .Case("__fp16", "h")
                                .Case("__hlsl_resource_t", "Qr")
                                .Case("__amdgpu_buffer_rsrc_t", "Qb")
+                               .Case("__amdgpu_feature_predicate_t", "Qc")
                                .Case("__amdgpu_texture_t", "Qt")
                                .Case("__int128_t", "LLLi")
                                .Case("_Float16", "x")
@@ -769,10 +770,17 @@ void clang::EmitClangBuiltinDocs(const RecordKeeper &Records, raw_ostream &OS) {
     }
   }
 
-  // Sort categories alphabetically by name for deterministic output.
+  // Sort categories alphabetically by name for deterministic output, but
+  // push the "Undocumented" category to the end so that documented sections
+  // always appear first.
   llvm::sort(SplitDocs, [](const auto &A, const auto &B) {
-    return A.first->getValueAsString("Name") <
-           B.first->getValueAsString("Name");
+    StringRef NameA = A.first->getValueAsString("Name");
+    StringRef NameB = B.first->getValueAsString("Name");
+    bool UndocA = (NameA == "Undocumented");
+    bool UndocB = (NameB == "Undocumented");
+    if (UndocA != UndocB)
+      return UndocB;
+    return NameA < NameB;
   });
 
   // Write out each category and its builtins.

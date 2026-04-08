@@ -29,6 +29,6 @@ void BM_getline_string(benchmark::State& state) {
   }
 }
 
-BENCHMARK(BM_getline_string);
+BENCHMARK(BM_getline_string)->Name("std::getline(std::istringstream, std::string)");
 
 BENCHMARK_MAIN();

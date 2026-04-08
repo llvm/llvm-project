@@ -28,6 +28,7 @@ namespace {
 class X86_64 : public TargetInfo {
 public:
   X86_64(Ctx &);
+  void initTargetSpecificSections() override;
   RelExpr getRelExpr(RelType type, const Symbol &s,
                      const uint8_t *loc) const override;
   RelType getDynRel(RelType type) const override;
@@ -353,6 +354,13 @@ bool X86_64::relaxOnce(int pass) const {
     }
   }
   return changed;
+}
+
+void X86_64::initTargetSpecificSections() {
+  if (ctx.arg.andFeatures & GNU_PROPERTY_X86_FEATURE_1_IBT) {
+    ctx.in.ibtPlt = std::make_unique<IBTPltSection>(ctx);
+    ctx.inputSections.push_back(ctx.in.ibtPlt.get());
+  }
 }
 
 // Only needed to support relocations used by relocateNonAlloc and relocateEh.

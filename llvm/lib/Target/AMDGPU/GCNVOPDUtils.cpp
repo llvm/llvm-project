@@ -60,7 +60,7 @@ bool llvm::checkVOPDRegConstraints(const SIInstrInfo &TII,
     }
     UniqueLiterals.push_back(&Op);
   };
-  SmallVector<Register> UniqueScalarRegs;
+  SmallSet<Register, 4> UniqueScalarRegs;
 
   // MIX must not modify any registers used by MIY.
   for (const auto &Use : MIY.uses())
@@ -83,8 +83,7 @@ bool llvm::checkVOPDRegConstraints(const SIInstrInfo &TII,
     const MachineOperand &Src0 = *TII.getNamedOperand(MI, AMDGPU::OpName::src0);
     if (Src0.isReg()) {
       if (!TRI->isVectorRegister(MRI, Src0.getReg())) {
-        if (!is_contained(UniqueScalarRegs, Src0.getReg()))
-          UniqueScalarRegs.push_back(Src0.getReg());
+        UniqueScalarRegs.insert(Src0.getReg());
       }
     } else if (!TII.isInlineConstant(Src0)) {
       if (IsVOPD3)
@@ -100,7 +99,7 @@ bool llvm::checkVOPDRegConstraints(const SIInstrInfo &TII,
       addLiteral(MI.getOperand(CompOprIdx));
     }
     if (MI.getDesc().hasImplicitUseOfPhysReg(AMDGPU::VCC))
-      UniqueScalarRegs.push_back(AMDGPU::VCC_LO);
+      UniqueScalarRegs.insert(AMDGPU::VCC_LO);
 
     if (IsVOPD3) {
       for (auto OpName : {AMDGPU::OpName::src1, AMDGPU::OpName::src2}) {
@@ -111,7 +110,7 @@ bool llvm::checkVOPDRegConstraints(const SIInstrInfo &TII,
           if (AMDGPU::hasNamedOperand(MI.getOpcode(), AMDGPU::OpName::bitop3))
             continue;
           if (MI.getOpcode() == AMDGPU::V_CNDMASK_B32_e64) {
-            UniqueScalarRegs.push_back(Src->getReg());
+            UniqueScalarRegs.insert(Src->getReg());
             continue;
           }
         }
@@ -142,9 +141,9 @@ bool llvm::checkVOPDRegConstraints(const SIInstrInfo &TII,
   if ((UniqueLiterals.size() + UniqueScalarRegs.size()) > 2)
     return false;
 
-  // On GFX12+ if both OpX and OpY are V_MOV_B32 then OPY uses SRC2
+  // On GFX1170+ if both OpX and OpY are V_MOV_B32 then OPY uses SRC2
   // source-cache.
-  bool SkipSrc = ST.getGeneration() >= AMDGPUSubtarget::GFX12 &&
+  bool SkipSrc = (ST.hasGFX11_7Insts() || ST.hasGFX12Insts()) &&
                  MIX.getOpcode() == AMDGPU::V_MOV_B32_e32 &&
                  MIY.getOpcode() == AMDGPU::V_MOV_B32_e32;
   bool AllowSameVGPR = ST.hasGFX1250Insts();

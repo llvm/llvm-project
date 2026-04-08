@@ -307,6 +307,18 @@ const MachineInstr *SPIRVGlobalRegistry::createConstOrTypeAtFunctionEntry(
   // point set above that is always the first MBB.
   assert(ConstOrType->getParent() == NewMBB);
   LastInsertedType->second = ConstOrType;
+  // Advance past any continued instructions so that the next type/constant
+  // is inserted after the full group, preserving required adjacency.
+  while (auto *Next = LastInsertedType->second->getNextNode()) {
+    unsigned Opc = Next->getOpcode();
+    if (Opc == SPIRV::OpTypeStructContinuedINTEL ||
+        Opc == SPIRV::OpConstantCompositeContinuedINTEL ||
+        Opc == SPIRV::OpSpecConstantCompositeContinuedINTEL ||
+        Opc == SPIRV::OpCompositeConstructContinuedINTEL)
+      LastInsertedType->second = Next;
+    else
+      break;
+  }
 
   MIRBuilder.setInsertPt(*OldMBB, oldInsertPoint);
   return ConstOrType;
@@ -316,19 +328,32 @@ SPIRVTypeInst
 SPIRVGlobalRegistry::getOpTypeVector(uint32_t NumElems, SPIRVTypeInst ElemType,
                                      MachineIRBuilder &MIRBuilder) {
   auto EleOpc = ElemType->getOpcode();
-  (void)EleOpc;
   assert(NumElems >= 2 && "SPIR-V OpTypeVector requires at least 2 components");
-  assert((EleOpc == SPIRV::OpTypeInt || EleOpc == SPIRV::OpTypeFloat ||
-          EleOpc == SPIRV::OpTypeBool) &&
-         "Invalid vector element type");
 
-  return createConstOrTypeAtFunctionEntry(MIRBuilder, [&](MachineIRBuilder
-                                                              &MIRBuilder) {
-    return MIRBuilder.buildInstr(SPIRV::OpTypeVector)
-        .addDef(createTypeVReg(MIRBuilder))
-        .addUse(getSPIRVTypeID(ElemType))
-        .addImm(NumElems);
-  });
+  if (EleOpc == SPIRV::OpTypePointer) {
+    if (!cast<SPIRVSubtarget>(MIRBuilder.getMF().getSubtarget())
+             .canUseExtension(
+                 SPIRV::Extension::SPV_INTEL_masked_gather_scatter)) {
+      const Function &F = MIRBuilder.getMF().getFunction();
+      F.getContext().diagnose(DiagnosticInfoUnsupported(
+          F,
+          "Vector of pointers requires SPV_INTEL_masked_gather_scatter "
+          "extension",
+          DebugLoc(), DS_Error));
+    }
+  } else {
+    assert((EleOpc == SPIRV::OpTypeInt || EleOpc == SPIRV::OpTypeFloat ||
+            EleOpc == SPIRV::OpTypeBool) &&
+           "Invalid vector element type");
+  }
+
+  return createConstOrTypeAtFunctionEntry(
+      MIRBuilder, [&](MachineIRBuilder &MIRBuilder) {
+        return MIRBuilder.buildInstr(SPIRV::OpTypeVector)
+            .addDef(createTypeVReg(MIRBuilder))
+            .addUse(getSPIRVTypeID(ElemType))
+            .addImm(NumElems);
+      });
 }
 
 Register SPIRVGlobalRegistry::getOrCreateConstFP(APFloat Val, MachineInstr &I,
@@ -809,7 +834,14 @@ Register SPIRVGlobalRegistry::buildGlobalVariable(
     return ResVReg;
   }
 
-  auto MIB = MIRBuilder.buildInstr(SPIRV::OpVariable)
+  // Emit the OpVariable into the entry block to ensure the def dominates
+  // all uses across all MBBs.
+  MachineBasicBlock &EntryBB = MIRBuilder.getMF().front();
+  MachineIRBuilder GVBuilder(MIRBuilder.getState());
+  if (&GVBuilder.getMBB() != &EntryBB)
+    GVBuilder.setInsertPt(EntryBB, EntryBB.getFirstTerminator());
+
+  auto MIB = GVBuilder.buildInstr(SPIRV::OpVariable)
                  .addDef(ResVReg)
                  .addUse(getSPIRVTypeID(BaseType))
                  .addImm(static_cast<uint32_t>(Storage));
@@ -1026,7 +1058,7 @@ SPIRVTypeInst SPIRVGlobalRegistry::getOpTypeStruct(
           auto MIBCont =
               MIRBuilder.buildInstr(SPIRV::OpTypeStructContinuedINTEL);
           for (size_t J = I; J < std::min(I + MaxNumElements, NumElements); ++J)
-            MIBCont.addUse(FieldTypes[I]);
+            MIBCont.addUse(FieldTypes[J]);
         }
         return MIBStruct;
       });
@@ -1108,6 +1140,11 @@ SPIRVTypeInst SPIRVGlobalRegistry::findSPIRVType(
     const Type *Ty, MachineIRBuilder &MIRBuilder,
     SPIRV::AccessQualifier::AccessQualifier AccQual,
     bool ExplicitLayoutRequired, bool EmitIR) {
+  // Treat <1 x T> as T.
+  if (auto *FVT = dyn_cast<FixedVectorType>(Ty);
+      FVT && FVT->getNumElements() == 1)
+    return findSPIRVType(FVT->getElementType(), MIRBuilder, AccQual,
+                         ExplicitLayoutRequired, EmitIR);
   Ty = adjustIntTypeByWidth(Ty);
   // TODO: findMI needs to know if a layout is required.
   if (const MachineInstr *MI =
@@ -1213,18 +1250,22 @@ SPIRVTypeInst SPIRVGlobalRegistry::createSPIRVType(
   }
 
   unsigned AddrSpace = typeToAddressSpace(Ty);
-  SPIRVTypeInst SpvElementType = nullptr;
-  if (Type *ElemTy = ::getPointeeType(Ty))
-    SpvElementType = getOrCreateSPIRVType(ElemTy, MIRBuilder, AccQual, EmitIR);
-  else
-    SpvElementType = getOrCreateSPIRVIntegerType(8, MIRBuilder);
 
   // Get access to information about available extensions
   const SPIRVSubtarget *ST =
       static_cast<const SPIRVSubtarget *>(&MIRBuilder.getMF().getSubtarget());
   auto SC = addressSpaceToStorageClass(AddrSpace, *ST);
 
+  SPIRVTypeInst SpvElementType = nullptr;
   Type *ElemTy = ::getPointeeType(Ty);
+  if (ElemTy && isa<FunctionType>(ElemTy) &&
+      !ST->canUseExtension(SPIRV::Extension::SPV_INTEL_function_pointers))
+    ElemTy = nullptr;
+  if (ElemTy)
+    SpvElementType = getOrCreateSPIRVType(ElemTy, MIRBuilder, AccQual, EmitIR);
+  else
+    SpvElementType = getOrCreateSPIRVIntegerType(8, MIRBuilder);
+
   if (!ElemTy) {
     ElemTy = Type::getInt8Ty(MIRBuilder.getContext());
   }
@@ -1929,6 +1970,9 @@ SPIRVTypeInst SPIRVGlobalRegistry::getOrCreateSPIRVVectorType(
 SPIRVTypeInst SPIRVGlobalRegistry::getOrCreateSPIRVVectorType(
     SPIRVTypeInst BaseType, unsigned NumElements, MachineInstr &I,
     const SPIRVInstrInfo &TII) {
+  // At this point of time all 1-element vectors are resolved. Add assertion
+  // to fire if anything changes.
+  assert(NumElements >= 2 && "SPIR-V vectors must have at least 2 components");
   Type *Ty = FixedVectorType::get(
       const_cast<Type *>(getTypeForSPIRVType(BaseType)), NumElements);
   if (const MachineInstr *MI = findMI(Ty, false, CurMF))
@@ -2170,7 +2214,7 @@ void SPIRVGlobalRegistry::buildMemAliasingOpDecorate(
       getOrAddMemAliasingINTELInst(MIRBuilder, AliasingListMD);
   if (!AliasList)
     return;
-  MIRBuilder.buildInstr(SPIRV::OpDecorate)
+  MIRBuilder.buildInstr(SPIRV::OpDecorateId)
       .addUse(Reg)
       .addImm(Dec)
       .addUse(AliasList->getOperand(0).getReg());

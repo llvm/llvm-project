@@ -1,7 +1,7 @@
+from __future__ import annotations
 import sys
 
 from argparse import Namespace
-from typing import Optional
 from lit.Test import Test
 
 
@@ -95,7 +95,7 @@ class Display(object):
         self,
         opts: Namespace,
         tests: list[Test],
-        header: Optional[str],
+        header: str | None,
         progress_bar,
     ):
         self.opts = opts

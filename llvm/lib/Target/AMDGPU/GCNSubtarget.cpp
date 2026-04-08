@@ -140,10 +140,22 @@ GCNSubtarget &GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
   if (AddressableLocalMemorySize == 0)
     AddressableLocalMemorySize = 32768;
 
+  if (FlatOffsetBitWidth == 0)
+    FlatOffsetBitWidth = 13;
+
   LocalMemorySize = AMDGPU::IsaInfo::getLocalMemorySize(this);
 
   HasFminFmaxLegacy = getGeneration() < AMDGPUSubtarget::VOLCANIC_ISLANDS;
   HasSMulHi = getGeneration() >= AMDGPUSubtarget::GFX9;
+
+  // InstCacheLineSize is set from TableGen subtarget features
+  // (FeatureInstCacheLineSize64 / FeatureInstCacheLineSize128).
+  // Fall back to 64 if no feature was specified (e.g. generic targets).
+  if (InstCacheLineSize == 0)
+    InstCacheLineSize = 64;
+
+  assert(llvm::isPowerOf2_32(InstCacheLineSize) &&
+         "InstCacheLineSize must be a power of 2");
 
   TargetID.setTargetIDFromFeaturesString(FS);
 
@@ -325,6 +337,13 @@ void GCNSubtarget::overrideSchedPolicy(MachineSchedPolicy &Policy,
   // pressure once register usage is above the threshold defined by
   // SIRegisterInfo::getRegPressureSetLimit()
   Policy.ShouldTrackPressure = true;
+
+  const Function &F = Region.RegionBegin->getMF()->getFunction();
+  if (AMDGPU::getSchedStrategy(F) == "coexec") {
+    Policy.OnlyTopDown = true;
+    Policy.OnlyBottomUp = false;
+    return;
+  }
 
   // Enabling both top down and bottom up scheduling seems to give us less
   // register spills than just using one of these approaches on its own.

@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_SHARED_MATH_FADD_H
 #define LLVM_LIBC_SHARED_MATH_FADD_H
 
+#include "shared/libc_common.h"
 #include "src/__support/math/fadd.h"
 
 namespace LIBC_NAMESPACE_DECL {

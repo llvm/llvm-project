@@ -193,7 +193,7 @@ static llvm::StringRef getPersonalityFn(CIRGenModule &cgm,
   auto funcTy = cir::FuncType::get({}, i32Ty, /*isVarArg=*/true);
 
   cir::FuncOp personalityFn = cgm.createRuntimeFunction(
-      funcTy, personality.personalityFn, mlir::ArrayAttr(), /*isLocal=*/true);
+      funcTy, personality.personalityFn, {}, /*isLocal=*/true);
 
   return personalityFn.getSymName();
 }
@@ -273,13 +273,12 @@ void CIRGenFunction::addCatchHandlerAttr(
   }
 }
 
-mlir::LogicalResult CIRGenFunction::emitCXXTryStmt(const CXXTryStmt &s) {
-  if (s.getTryBlock()->body_empty())
-    return mlir::LogicalResult::success();
-
+mlir::LogicalResult
+CIRGenFunction::emitCXXTryStmt(const CXXTryStmt &s,
+                               cxxTryBodyEmitter &bodyCallback) {
   mlir::Location loc = getLoc(s.getSourceRange());
-  // Create a scope to hold try local storage for catch params.
 
+  // Create a scope to hold try local storage for catch params.
   mlir::OpBuilder::InsertPoint scopeIP;
   cir::ScopeOp::create(
       builder, loc,
@@ -322,8 +321,13 @@ mlir::LogicalResult CIRGenFunction::emitCXXTryStmt(const CXXTryStmt &s) {
       builder, tryLoc,
       /*tryBuilder=*/
       [&](mlir::OpBuilder &b, mlir::Location loc) {
-        if (emitStmt(s.getTryBlock(), /*useCurrentScope=*/true).failed())
+        // Create a RunCleanupsScope that allows us to apply any cleanups that
+        // are created for statements within the try body before exiting the
+        // try body.
+        RunCleanupsScope tryBodyCleanups(*this);
+        if (bodyCallback(*this).failed())
           tryRes = mlir::failure();
+        tryBodyCleanups.forceCleanup();
         cir::YieldOp::create(builder, loc);
       },
       /*handlersBuilder=*/
@@ -410,6 +414,25 @@ mlir::LogicalResult CIRGenFunction::emitCXXTryStmt(const CXXTryStmt &s) {
   }
 
   return mlir::success();
+}
+
+mlir::LogicalResult CIRGenFunction::emitCXXTryStmt(const CXXTryStmt &s) {
+  if (s.getTryBlock()->body_empty())
+    return mlir::LogicalResult::success();
+
+  struct simpleTryBodyEmitter final : cxxTryBodyEmitter {
+    const clang::CXXTryStmt &s;
+    simpleTryBodyEmitter(const clang::CXXTryStmt &s) : s(s) {}
+
+    mlir::LogicalResult operator()(CIRGenFunction &cgf) override {
+      return cgf.emitStmt(s.getTryBlock(), /*useCurrentScope=*/true);
+    }
+    ~simpleTryBodyEmitter() override = default;
+  };
+
+  simpleTryBodyEmitter emitter{s};
+
+  return emitCXXTryStmt(s, emitter);
 }
 
 // in classic codegen this function is mapping to `isInvokeDest` previously and

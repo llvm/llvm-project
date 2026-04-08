@@ -20,6 +20,7 @@
 #include "NVPTXTargetMachine.h"
 #include "NVPTXTargetObjectFile.h"
 #include "NVPTXUtilities.h"
+#include "NVVMProperties.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/STLExtras.h"
@@ -112,12 +113,6 @@ static cl::opt<bool> UsePrecSqrtF32(
 static cl::opt<bool> UseApproxLog2F32(
     "nvptx-approx-log2f32",
     cl::desc("NVPTX Specific: whether to use lg2.approx for log2"),
-    cl::init(false));
-
-static cl::opt<bool> ForceMinByValParamAlign(
-    "nvptx-force-min-byval-param-align", cl::Hidden,
-    cl::desc("NVPTX Specific: force 4-byte minimal alignment for byval"
-             " params of device functions."),
     cl::init(false));
 
 NVPTX::DivPrecisionLevel
@@ -1191,6 +1186,9 @@ SDValue NVPTXTargetLowering::getSqrtEstimate(SDValue Operand, SelectionDAG &DAG,
   }
 }
 
+static Align getArgumentAlignment(const CallBase *CB, Type *Ty, unsigned Idx,
+                                  const DataLayout &DL);
+
 std::string NVPTXTargetLowering::getPrototype(
     const DataLayout &DL, Type *RetTy, const ArgListTy &Args,
     const SmallVectorImpl<ISD::OutputArg> &Outs,
@@ -1295,14 +1293,8 @@ std::string NVPTXTargetLowering::getPrototype(
   return Prototype;
 }
 
-Align NVPTXTargetLowering::getFunctionArgumentAlignment(
-    const Function *F, Type *Ty, unsigned Idx, const DataLayout &DL) const {
-  return getAlign(*F, Idx).value_or(getFunctionParamOptimizedAlign(F, Ty, DL));
-}
-
-Align NVPTXTargetLowering::getArgumentAlignment(const CallBase *CB, Type *Ty,
-                                                unsigned Idx,
-                                                const DataLayout &DL) const {
+static Align getArgumentAlignment(const CallBase *CB, Type *Ty, unsigned Idx,
+                                  const DataLayout &DL) {
   if (!CB) {
     // CallSite is zero, fallback to ABI type alignment
     return DL.getABITypeAlign(Ty);
@@ -1557,9 +1549,9 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
         Align ParamAlign = commonAlignment(ArgAlign, ParamOffset);
         SDValue ParamAddr =
             DAG.getObjectPtrOffset(dl, ParamSymbol, ParamOffset);
-        SDValue StoreParam =
-            DAG.getStore(ArgDeclare, dl, SrcLoad, ParamAddr,
-                         MachinePointerInfo(ADDRESS_SPACE_PARAM), ParamAlign);
+        SDValue StoreParam = DAG.getStore(
+            ArgDeclare, dl, SrcLoad, ParamAddr,
+            MachinePointerInfo(NVPTX::AddressSpace::DeviceParam), ParamAlign);
         CallPrereqs.push_back(StoreParam);
 
         J += NumElts;
@@ -1629,9 +1621,9 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
               return GetStoredValue(J + K);
             });
 
-        SDValue StoreParam =
-            DAG.getStore(ArgDeclare, dl, Val, Ptr,
-                         MachinePointerInfo(ADDRESS_SPACE_PARAM), CurrentAlign);
+        SDValue StoreParam = DAG.getStore(
+            ArgDeclare, dl, Val, Ptr,
+            MachinePointerInfo(NVPTX::AddressSpace::DeviceParam), CurrentAlign);
         CallPrereqs.push_back(StoreParam);
 
         J += NumElts;
@@ -1746,9 +1738,9 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
       SDValue Ptr =
           DAG.getObjectPtrOffset(dl, RetSymbol, TypeSize::getFixed(Offsets[I]));
 
-      SDValue R =
-          DAG.getLoad(VecVT, dl, Call, Ptr,
-                      MachinePointerInfo(ADDRESS_SPACE_PARAM), CurrentAlign);
+      SDValue R = DAG.getLoad(
+          VecVT, dl, Call, Ptr,
+          MachinePointerInfo(NVPTX::AddressSpace::DeviceParam), CurrentAlign);
 
       LoadChains.push_back(R.getValue(1));
       for (const unsigned J : llvm::seq(NumElts))
@@ -2568,7 +2560,12 @@ static SDValue LowerVectorArith(SDValue Op, SelectionDAG &DAG) {
   return V;
 }
 
-static SDValue lowerTcgen05St(SDValue Op, SelectionDAG &DAG) {
+static SDValue lowerTcgen05St(SDValue Op, SelectionDAG &DAG,
+                              bool hasOffset = false) {
+  // skip lowering if the vector operand is already legalized
+  if (!Op->getOperand(hasOffset ? 4 : 3).getValueType().isVector())
+    return Op;
+
   SDNode *N = Op.getNode();
   SDLoc DL(N);
   SmallVector<SDValue, 32> Ops;
@@ -2826,7 +2823,6 @@ static SDValue lowerIntrinsicVoid(SDValue Op, SelectionDAG &DAG) {
   switch (IntrinNo) {
   default:
     break;
-  case Intrinsic::nvvm_tcgen05_st_16x64b_x1:
   case Intrinsic::nvvm_tcgen05_st_16x64b_x2:
   case Intrinsic::nvvm_tcgen05_st_16x64b_x4:
   case Intrinsic::nvvm_tcgen05_st_16x64b_x8:
@@ -2846,15 +2842,6 @@ static SDValue lowerIntrinsicVoid(SDValue Op, SelectionDAG &DAG) {
   case Intrinsic::nvvm_tcgen05_st_16x256b_x8:
   case Intrinsic::nvvm_tcgen05_st_16x256b_x16:
   case Intrinsic::nvvm_tcgen05_st_16x256b_x32:
-  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x1:
-  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x2:
-  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x4:
-  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x8:
-  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x16:
-  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x32:
-  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x64:
-  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x128:
-  case Intrinsic::nvvm_tcgen05_st_32x32b_x1:
   case Intrinsic::nvvm_tcgen05_st_32x32b_x2:
   case Intrinsic::nvvm_tcgen05_st_32x32b_x4:
   case Intrinsic::nvvm_tcgen05_st_32x32b_x8:
@@ -2864,6 +2851,14 @@ static SDValue lowerIntrinsicVoid(SDValue Op, SelectionDAG &DAG) {
   case Intrinsic::nvvm_tcgen05_st_32x32b_x64:
   case Intrinsic::nvvm_tcgen05_st_32x32b_x128:
     return lowerTcgen05St(Op, DAG);
+  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x2:
+  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x4:
+  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x8:
+  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x16:
+  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x32:
+  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x64:
+  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x128:
+    return lowerTcgen05St(Op, DAG, /* hasOffset */ true);
   case Intrinsic::nvvm_tcgen05_mma_shared_disable_output_lane_cg1:
   case Intrinsic::nvvm_tcgen05_mma_shared_disable_output_lane_cg2:
   case Intrinsic::nvvm_tcgen05_mma_shared_scale_d_disable_output_lane_cg1:
@@ -4063,6 +4058,7 @@ SDValue NVPTXTargetLowering::LowerFormalArguments(
   auto PtrVT = getPointerTy(DAG.getDataLayout());
 
   const Function &F = DAG.getMachineFunction().getFunction();
+  const bool IsKernel = isKernelFunction(F);
 
   SDValue Root = DAG.getRoot();
   SmallVector<SDValue, 16> OutChains;
@@ -4118,7 +4114,7 @@ SDValue NVPTXTargetLowering::LowerFormalArguments(
       assert(ByvalIn.VT == PtrVT && "ByVal argument must be a pointer");
 
       SDValue P;
-      if (isKernelFunction(F)) {
+      if (IsKernel) {
         assert(isParamGridConstant(Arg) && "ByVal argument must be lowered to "
                                            "grid_constant by NVPTXLowerArgs");
         P = ArgSymbol;
@@ -4151,11 +4147,12 @@ SDValue NVPTXTargetLowering::LowerFormalArguments(
             dl, ArgSymbol, TypeSize::getFixed(Offsets[I]));
 
         const Align PartAlign = commonAlignment(ArgAlign, Offsets[I]);
-        SDValue P =
-            DAG.getLoad(VecVT, dl, Root, VecAddr,
-                        MachinePointerInfo(ADDRESS_SPACE_PARAM), PartAlign,
-                        MachineMemOperand::MODereferenceable |
-                            MachineMemOperand::MOInvariant);
+        const unsigned AS = IsKernel ? NVPTX::AddressSpace::EntryParam
+                                     : NVPTX::AddressSpace::DeviceParam;
+        SDValue P = DAG.getLoad(VecVT, dl, Root, VecAddr,
+                                MachinePointerInfo(AS), PartAlign,
+                                MachineMemOperand::MODereferenceable |
+                                    MachineMemOperand::MOInvariant);
         P.getNode()->setIROrder(Arg.getArgNo() + 1);
         for (const unsigned J : llvm::seq(NumElts)) {
           SDValue Elt = getExtractVectorizedValue(P, J, LoadVT, dl, DAG);
@@ -4232,7 +4229,8 @@ NVPTXTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
         DAG.getObjectPtrOffset(dl, RetSymbol, TypeSize::getFixed(Offsets[I]));
 
     Chain = DAG.getStore(Chain, dl, Val, Ptr,
-                         MachinePointerInfo(ADDRESS_SPACE_PARAM), CurrentAlign);
+                         MachinePointerInfo(NVPTX::AddressSpace::DeviceParam),
+                         CurrentAlign);
 
     I += NumElts;
   }
@@ -5565,57 +5563,6 @@ void NVPTXTargetLowering::getTgtMemIntrinsic(
     return;
   }
   }
-}
-
-/// getFunctionParamOptimizedAlign - since function arguments are passed via
-/// .param space, we may want to increase their alignment in a way that
-/// ensures that we can effectively vectorize their loads & stores. We can
-/// increase alignment only if the function has internal or has private
-/// linkage as for other linkage types callers may already rely on default
-/// alignment. To allow using 128-bit vectorized loads/stores, this function
-/// ensures that alignment is 16 or greater.
-Align NVPTXTargetLowering::getFunctionParamOptimizedAlign(
-    const Function *F, Type *ArgTy, const DataLayout &DL) const {
-  // Capping the alignment to 128 bytes as that is the maximum alignment
-  // supported by PTX.
-  const Align ABITypeAlign = std::min(Align(128), DL.getABITypeAlign(ArgTy));
-
-  // If a function has linkage different from internal or private, we
-  // must use default ABI alignment as external users rely on it. Same
-  // for a function that may be called from a function pointer.
-  if (!F || !F->hasLocalLinkage() ||
-      F->hasAddressTaken(/*Users=*/nullptr,
-                         /*IgnoreCallbackUses=*/false,
-                         /*IgnoreAssumeLikeCalls=*/true,
-                         /*IgnoreLLVMUsed=*/true))
-    return ABITypeAlign;
-
-  assert(!isKernelFunction(*F) && "Expect kernels to have non-local linkage");
-  return std::max(Align(16), ABITypeAlign);
-}
-
-/// Helper for computing alignment of a device function byval parameter.
-Align NVPTXTargetLowering::getFunctionByValParamAlign(
-    const Function *F, Type *ArgTy, Align InitialAlign,
-    const DataLayout &DL) const {
-  Align ArgAlign = InitialAlign;
-  // Try to increase alignment to enhance vectorization options.
-  if (F)
-    ArgAlign = std::max(ArgAlign, getFunctionParamOptimizedAlign(F, ArgTy, DL));
-
-  // Old ptx versions have a bug. When PTX code takes address of
-  // byval parameter with alignment < 4, ptxas generates code to
-  // spill argument into memory. Alas on sm_50+ ptxas generates
-  // SASS code that fails with misaligned access. To work around
-  // the problem, make sure that we align byval parameters by at
-  // least 4. This bug seems to be fixed at least starting from
-  // ptxas > 9.0.
-  // TODO: remove this after verifying the bug is not reproduced
-  // on non-deprecated ptxas versions.
-  if (ForceMinByValParamAlign)
-    ArgAlign = std::max(ArgAlign, Align(4));
-
-  return ArgAlign;
 }
 
 // Helper for getting a function parameter name. Name is composed from
@@ -7726,7 +7673,7 @@ static void computeKnownBitsForPRMT(const SDValue Op, KnownBits &Known,
     unsigned Sign = Sel.getHiBits(1).getZExtValue();
     KnownBits Byte = BitField.extractBits(8, Idx * 8);
     if (Sign)
-      Byte = KnownBits::ashr(Byte, 8);
+      Byte = KnownBits::ashr(Byte, KnownBits::makeConstant(APInt(8, 7)));
     Known.insertBits(Byte, I * 8);
   }
 }
