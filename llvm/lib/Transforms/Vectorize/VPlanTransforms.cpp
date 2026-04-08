@@ -4102,14 +4102,14 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan) {
         continue;
       }
 
-      // Lower CanonicalIVIncrementForPart to Add VPInstruction.
+      // Lower CanonicalIVIncrementForPart to plain Add.
       if (match(
               &R,
               m_VPInstruction<VPInstruction::CanonicalIVIncrementForPart>())) {
         auto *VPI = cast<VPInstruction>(&R);
         VPValue *Add = Builder.createOverflowingOp(
-            Instruction::Add, {VPI->getOperand(0), VPI->getOperand(1)},
-            VPI->getNoWrapFlags(), VPI->getDebugLoc());
+            Instruction::Add, VPI->operands(), VPI->getNoWrapFlags(),
+            VPI->getDebugLoc());
         VPI->replaceAllUsesWith(Add);
         ToRemove.push_back(VPI);
         continue;
