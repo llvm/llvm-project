@@ -531,6 +531,7 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
     break;
   case ISD::VECREDUCE_SEQ_FADD:
   case ISD::VECREDUCE_SEQ_FMUL:
+  case ISD::VECREDUCE_FDOT:
     Action = TLI.getOperationAction(Node->getOpcode(),
                                     Node->getOperand(1).getValueType());
     break;
@@ -1315,6 +1316,9 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
   case ISD::VECREDUCE_SEQ_FADD:
   case ISD::VECREDUCE_SEQ_FMUL:
     Results.push_back(TLI.expandVecReduceSeq(Node, DAG));
+    return;
+  case ISD::VECREDUCE_FDOT:
+    Results.push_back(TLI.expandVecReduceDot(Node, DAG));
     return;
   case ISD::SREM:
   case ISD::UREM:

@@ -568,6 +568,7 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::VECREDUCE_SEQ_FADD:         return "vecreduce_seq_fadd";
   case ISD::VECREDUCE_FMUL:             return "vecreduce_fmul";
   case ISD::VECREDUCE_SEQ_FMUL:         return "vecreduce_seq_fmul";
+  case ISD::VECREDUCE_FDOT:             return "vecreduce_fdot";
   case ISD::VECREDUCE_ADD:              return "vecreduce_add";
   case ISD::VECREDUCE_MUL:              return "vecreduce_mul";
   case ISD::VECREDUCE_AND:              return "vecreduce_and";

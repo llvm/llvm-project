@@ -179,6 +179,7 @@ void DAGTypeLegalizer::SoftenFloatResult(SDNode *N, unsigned ResNo) {
     case ISD::VECREDUCE_FMINIMUM: R = SoftenFloatRes_VECREDUCE(N); break;
     case ISD::VECREDUCE_SEQ_FADD:
     case ISD::VECREDUCE_SEQ_FMUL: R = SoftenFloatRes_VECREDUCE_SEQ(N); break;
+    case ISD::VECREDUCE_FDOT: R = SoftenFloatRes_VECREDUCE_FDOT(N); break;
       // clang-format on
     }
 
@@ -1142,6 +1143,11 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_VECREDUCE(SDNode *N) {
 
 SDValue DAGTypeLegalizer::SoftenFloatRes_VECREDUCE_SEQ(SDNode *N) {
   ReplaceValueWith(SDValue(N, 0), TLI.expandVecReduceSeq(N, DAG));
+  return SDValue();
+}
+
+SDValue DAGTypeLegalizer::SoftenFloatRes_VECREDUCE_FDOT(SDNode *N) {
+  ReplaceValueWith(SDValue(N, 0), TLI.expandVecReduceDot(N, DAG));
   return SDValue();
 }
 
@@ -2786,6 +2792,9 @@ void DAGTypeLegalizer::SoftPromoteHalfResult(SDNode *N, unsigned ResNo) {
   case ISD::VECREDUCE_SEQ_FMUL:
     R = SoftPromoteHalfRes_VECREDUCE_SEQ(N);
     break;
+  case ISD::VECREDUCE_FDOT:
+    R = SoftPromoteHalfRes_VECREDUCE_FDOT(N);
+    break;
   }
 
   if (R.getNode())
@@ -3139,6 +3148,12 @@ SDValue DAGTypeLegalizer::SoftPromoteHalfRes_VECREDUCE(SDNode *N) {
 SDValue DAGTypeLegalizer::SoftPromoteHalfRes_VECREDUCE_SEQ(SDNode *N) {
   // Expand and soften.
   ReplaceValueWith(SDValue(N, 0), TLI.expandVecReduceSeq(N, DAG));
+  return SDValue();
+}
+
+SDValue DAGTypeLegalizer::SoftPromoteHalfRes_VECREDUCE_FDOT(SDNode *N) {
+  // Expand and soften.
+  ReplaceValueWith(SDValue(N, 0), TLI.expandVecReduceDot(N, DAG));
   return SDValue();
 }
 

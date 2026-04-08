@@ -8045,6 +8045,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
   case Intrinsic::vector_reduce_fmin:
   case Intrinsic::vector_reduce_fmaximum:
   case Intrinsic::vector_reduce_fminimum:
+  case Intrinsic::vector_reduce_fdot:
     visitVectorReduce(I, Intrinsic);
     return;
 
@@ -11142,6 +11143,9 @@ void SelectionDAGBuilder::visitVectorReduce(const CallInst &I,
   SDValue Op2;
   if (I.arg_size() > 1)
     Op2 = getValue(I.getArgOperand(1));
+  SDValue Op3;
+  if (I.arg_size() > 2)
+    Op3 = getValue(I.getArgOperand(2));
   SDLoc dl = getCurSDLoc();
   EVT VT = TLI.getValueType(DAG.getDataLayout(), I.getType());
   SDValue Res;
@@ -11204,6 +11208,11 @@ void SelectionDAGBuilder::visitVectorReduce(const CallInst &I,
     break;
   case Intrinsic::vector_reduce_fminimum:
     Res = DAG.getNode(ISD::VECREDUCE_FMINIMUM, dl, VT, Op1, SDFlags);
+    break;
+  case Intrinsic::vector_reduce_fdot:
+    // Always emit VECREDUCE_FDOT; all FMF flags (contract, reassoc, etc.)
+    // are carried in SDFlags and checked during expansion.
+    Res = DAG.getNode(ISD::VECREDUCE_FDOT, dl, VT, {Op1, Op2, Op3}, SDFlags);
     break;
   default:
     llvm_unreachable("Unhandled vector reduce intrinsic");

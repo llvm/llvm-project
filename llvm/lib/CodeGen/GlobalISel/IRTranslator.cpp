@@ -2571,6 +2571,27 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
 
     return true;
   }
+  case Intrinsic::vector_reduce_fdot: {
+    // Lower as G_FMUL(vecA, vecB) followed by G_VECREDUCE_SEQ_FADD or
+    // G_VECREDUCE_FADD + G_FADD depending on the reassoc flag.
+    Register Dst = getOrCreateVReg(CI);
+    Register AccSrc = getOrCreateVReg(*CI.getArgOperand(0));
+    Register VecA = getOrCreateVReg(*CI.getArgOperand(1));
+    Register VecB = getOrCreateVReg(*CI.getArgOperand(2));
+    LLT VecTy = MRI->getType(VecA);
+    auto MIFlags = MachineInstr::copyFlagsFromInstruction(CI);
+    auto Prod = MIRBuilder.buildFMul(VecTy, VecA, VecB, MIFlags);
+    if (!CI.hasAllowReassoc()) {
+      MIRBuilder.buildInstr(TargetOpcode::G_VECREDUCE_SEQ_FADD, {Dst},
+                            {AccSrc, Prod}, MIFlags);
+    } else {
+      LLT DstTy = MRI->getType(Dst);
+      auto Rdx = MIRBuilder.buildInstr(TargetOpcode::G_VECREDUCE_FADD, {DstTy},
+                                       {Prod}, MIFlags);
+      MIRBuilder.buildFAdd(Dst, AccSrc, Rdx, MIFlags);
+    }
+    return true;
+  }
   case Intrinsic::trap:
     return translateTrap(CI, MIRBuilder, TargetOpcode::G_TRAP);
   case Intrinsic::debugtrap:

@@ -20784,6 +20784,62 @@ Examples:
       %unord = call reassoc float @llvm.vector.reduce.fmul.v4f32(float 1.0, <4 x float> %input) ; relaxed reduction
       %ord = call float @llvm.vector.reduce.fmul.v4f32(float %start_value, <4 x float> %input) ; sequential reduction
 
+.. _int_vector_reduce_fdot:
+
+'``llvm.vector.reduce.fdot.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare float @llvm.vector.reduce.fdot.v4f32(float %acc, <4 x float> %a, <4 x float> %b)
+      declare double @llvm.vector.reduce.fdot.v2f64(double %acc, <2 x double> %a, <2 x double> %b)
+
+Overview:
+"""""""""
+
+The '``llvm.vector.reduce.fdot.*``' intrinsic computes the floating-point dot
+product of two vectors, returning the result as a scalar. The return type
+matches the element-type of the vector inputs.
+
+Arguments:
+""""""""""
+
+The first argument is the scalar start value (accumulator) of the reduction.
+The second and third arguments must be FP vectors of identical type.
+
+Semantics:
+""""""""""
+
+The intrinsic computes ``%acc + sum(%a[i] * %b[i])``. The order of floating-
+point operations and therefore the final result depends on the fast-math flags
+attached to the call:
+
+* Without any fast-math flags (default), the computation is performed as a
+  sequential chain of ``fmul``/``fadd`` pairs: each element of ``%a`` is
+  multiplied by the corresponding element of ``%b``, and the product is added
+  to the running accumulator. Two roundings occur per element (one for the
+  multiply, one for the add).
+
+* With the ``contract`` fast-math flag, the computation uses a sequential FMA
+  chain: ``fma(%a[0], %b[0], fma(%a[1], %b[1], ... %acc ...))``. Only one
+  rounding occurs per element.
+
+* With the ``reassoc`` fast-math flag, the order of operations is unspecified.
+  Targets may exploit this to perform a tree-based or otherwise reordered
+  reduction for improved performance.
+
+Examples:
+"""""""""
+
+::
+
+      %dot = call float @llvm.vector.reduce.fdot.v4f32(float 0.0, <4 x float> %a, <4 x float> %b)
+      %dot_fma = call contract float @llvm.vector.reduce.fdot.v4f32(float 0.0, <4 x float> %a, <4 x float> %b)
+      %dot_fast = call reassoc contract float @llvm.vector.reduce.fdot.v4f32(float 0.0, <4 x float> %a, <4 x float> %b)
+
 .. _int_vector_reduce_and:
 
 '``llvm.vector.reduce.and.*``' Intrinsic

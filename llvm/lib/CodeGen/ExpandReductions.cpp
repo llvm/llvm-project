@@ -35,6 +35,7 @@ bool expandReductions(Function &F, const TargetTransformInfo *TTI) {
       default: break;
       case Intrinsic::vector_reduce_fadd:
       case Intrinsic::vector_reduce_fmul:
+      case Intrinsic::vector_reduce_fdot:
       case Intrinsic::vector_reduce_add:
       case Intrinsic::vector_reduce_mul:
       case Intrinsic::vector_reduce_and:
@@ -86,6 +87,31 @@ bool expandReductions(Function &F, const TargetTransformInfo *TTI) {
                                   "bin.rdx");
       }
       break;
+    }
+    case Intrinsic::vector_reduce_fdot: {
+      // Dot product: acc + sum(vecA[i] * vecB[i]).
+      // With 'contract': fma(a[i], b[i], rdx) chain.
+      // Without 'contract': sequential fmul(a[i], b[i]) + fadd(rdx, prod).
+      Value *Rdx = II->getArgOperand(0);
+      Value *VecA = II->getArgOperand(1);
+      Value *VecB = II->getArgOperand(2);
+      auto *VecTy = cast<FixedVectorType>(VecA->getType());
+      unsigned NumElts = VecTy->getNumElements();
+      for (unsigned i = 0; i < NumElts; i++) {
+        Value *Ai = Builder.CreateExtractElement(VecA, i);
+        Value *Bi = Builder.CreateExtractElement(VecB, i);
+        if (FMF.allowContract()) {
+          Rdx = Builder.CreateIntrinsic(
+              Intrinsic::fma, {VecTy->getElementType()}, {Ai, Bi, Rdx});
+        } else {
+          Value *Prod = Builder.CreateFMul(Ai, Bi);
+          Rdx = Builder.CreateFAdd(Rdx, Prod);
+        }
+      }
+      II->replaceAllUsesWith(Rdx);
+      II->eraseFromParent();
+      Changed = true;
+      continue;
     }
     case Intrinsic::vector_reduce_and:
     case Intrinsic::vector_reduce_or: {

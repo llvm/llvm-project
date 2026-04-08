@@ -6620,6 +6620,16 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
           "Intrinsic has incorrect argument type!");
     break;
   }
+  case Intrinsic::vector_reduce_fdot: {
+    // First arg is scalar accumulator; second and third are FP vectors of the
+    // same type.
+    Type *ArgTy = Call.getArgOperand(1)->getType();
+    Check(ArgTy->isFPOrFPVectorTy() && ArgTy->isVectorTy(),
+          "Intrinsic has incorrect argument type!");
+    Check(Call.getArgOperand(2)->getType() == ArgTy,
+          "Intrinsic vector arguments must have the same type!");
+    break;
+  }
   case Intrinsic::smul_fix:
   case Intrinsic::smul_fix_sat:
   case Intrinsic::umul_fix:

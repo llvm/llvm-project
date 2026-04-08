@@ -1488,6 +1488,13 @@ enum NodeType {
   VECREDUCE_SEQ_FADD,
   VECREDUCE_SEQ_FMUL,
 
+  /// VECREDUCE_FDOT(Acc: scalar, VecA, VecB) - Floating-point dot product
+  /// reduction. Computes Acc + sum(VecA[i] * VecB[i]).
+  /// Without 'contract' flag: sequential fmul+fadd pairs (two roundings each).
+  /// With 'contract' flag: sequential FMA chain (single rounding per element).
+  /// With 'reassoc' flag: order of operations is unspecified.
+  VECREDUCE_FDOT,
+
   /// These reductions have relaxed evaluation order semantics, and have a
   /// single vector operand. The order of evaluation is unspecified. For
   /// pow-of-2 vectors, one valid legalizer expansion is to use a tree

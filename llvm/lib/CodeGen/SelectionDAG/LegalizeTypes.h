@@ -630,6 +630,7 @@ private:
   SDValue SoftenFloatRes_XINT_TO_FP(SDNode *N);
   SDValue SoftenFloatRes_VECREDUCE(SDNode *N);
   SDValue SoftenFloatRes_VECREDUCE_SEQ(SDNode *N);
+  SDValue SoftenFloatRes_VECREDUCE_FDOT(SDNode *N);
 
   // Convert Float Operand to Integer.
   bool SoftenFloatOperand(SDNode *N, unsigned OpNo);
@@ -796,6 +797,7 @@ private:
   SDValue SoftPromoteHalfRes_UNDEF(SDNode *N);
   SDValue SoftPromoteHalfRes_VECREDUCE(SDNode *N);
   SDValue SoftPromoteHalfRes_VECREDUCE_SEQ(SDNode *N);
+  SDValue SoftPromoteHalfRes_VECREDUCE_FDOT(SDNode *N);
 
   bool SoftPromoteHalfOperand(SDNode *N, unsigned OpNo);
   SDValue SoftPromoteHalfOp_BITCAST(SDNode *N);
@@ -882,6 +884,7 @@ private:
   SDValue ScalarizeVecOp_STRICT_FP_EXTEND(SDNode *N);
   SDValue ScalarizeVecOp_VECREDUCE(SDNode *N);
   SDValue ScalarizeVecOp_VECREDUCE_SEQ(SDNode *N);
+  SDValue ScalarizeVecOp_VECREDUCE_FDOT(SDNode *N);
   SDValue ScalarizeVecOp_CMP(SDNode *N);
   SDValue ScalarizeVecOp_FAKE_USE(SDNode *N);
   SDValue ScalarizeVecOp_VECTOR_FIND_LAST_ACTIVE(SDNode *N);
@@ -971,6 +974,7 @@ private:
   SDValue SplitVecOp_VSELECT(SDNode *N, unsigned OpNo);
   SDValue SplitVecOp_VECREDUCE(SDNode *N, unsigned OpNo);
   SDValue SplitVecOp_VECREDUCE_SEQ(SDNode *N);
+  SDValue SplitVecOp_VECREDUCE_FDOT(SDNode *N);
   SDValue SplitVecOp_VP_REDUCE(SDNode *N, unsigned OpNo);
   SDValue SplitVecOp_UnaryOp(SDNode *N);
   SDValue SplitVecOp_TruncateHelper(SDNode *N);
@@ -1117,6 +1121,7 @@ private:
   SDValue WidenVecOp_IS_FPCLASS(SDNode *N);
   SDValue WidenVecOp_VECREDUCE(SDNode *N);
   SDValue WidenVecOp_VECREDUCE_SEQ(SDNode *N);
+  SDValue WidenVecOp_VECREDUCE_FDOT(SDNode *N);
   SDValue WidenVecOp_VP_REDUCE(SDNode *N);
   SDValue WidenVecOp_ExpOp(SDNode *N);
   SDValue WidenVecOp_VP_CttzElements(SDNode *N);

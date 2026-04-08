@@ -5863,6 +5863,11 @@ public:
   /// Expand a VECREDUCE_SEQ_* into an explicit ordered calculation.
   SDValue expandVecReduceSeq(SDNode *Node, SelectionDAG &DAG) const;
 
+  /// Expand a VECREDUCE_FDOT into an explicit fmul+fadd or FMA chain.
+  /// Uses FMA chain when the 'contract' fast-math flag is set, otherwise
+  /// expands to a sequential fmul+fadd chain.
+  SDValue expandVecReduceDot(SDNode *Node, SelectionDAG &DAG) const;
+
   /// Expand an SREM or UREM using SDIV/UDIV or SDIVREM/UDIVREM, if legal.
   /// Returns true if the expansion was successful.
   bool expandREM(SDNode *Node, SDValue &Result, SelectionDAG &DAG) const;

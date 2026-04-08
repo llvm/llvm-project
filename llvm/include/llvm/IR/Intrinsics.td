@@ -2783,6 +2783,10 @@ let IntrProperties = [IntrNoMem, IntrSpeculatable, IntrNoCreateUndefOrPoison] in
   def int_vector_reduce_fmul : DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
                                          [LLVMVectorElementType<0>,
                                           llvm_anyvector_ty]>;
+  def int_vector_reduce_fdot : DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
+                                         [LLVMVectorElementType<0>,
+                                          llvm_anyvector_ty,
+                                          LLVMMatchType<0>]>;
   def int_vector_reduce_add : DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
                                         [llvm_anyvector_ty]>;
   def int_vector_reduce_mul : DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
