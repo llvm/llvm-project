@@ -113,31 +113,11 @@ py_binary(
 
 LLVM_LIBC_HEADERS = [
     libc_header_info(
-        "arpa/inet",
-        has_def_template = True,
-    ),
-    libc_header_info(
         "assert",
         has_def_template = True,
     ),
     libc_header_info(
-        "complex",
-        has_def_template = True,
-    ),
-    libc_header_info(
-        "elf",
-        has_def_template = True,
-    ),
-    libc_header_info(
         "errno",
-        has_def_template = True,
-    ),
-    libc_header_info(
-        "fcntl",
-        has_def_template = True,
-    ),
-    libc_header_info(
-        "inttypes",
         has_def_template = True,
     ),
     libc_header_info(
@@ -149,35 +129,11 @@ LLVM_LIBC_HEADERS = [
         has_def_template = True,
     ),
     libc_header_info(
-        "netinet/in",
-        has_def_template = True,
-    ),
-    libc_header_info(
-        "poll",
-        has_def_template = True,
-    ),
-    libc_header_info(
-        "sched",
-        has_def_template = True,
-    ),
-    libc_header_info(
-        "signal",
-        has_def_template = True,
-    ),
-    libc_header_info(
         "stdbit",
         has_def_template = True,
     ),
     libc_header_info(
         "stdfix",
-        has_def_template = True,
-    ),
-    libc_header_info(
-        "stdio",
-        has_def_template = True,
-    ),
-    libc_header_info(
-        "sysexits",
         has_def_template = True,
     ),
     libc_header_info(
@@ -188,30 +144,32 @@ LLVM_LIBC_HEADERS = [
         "sys/syscall",
         has_def_template = True,
     ),
-    libc_header_info(
-        "termios",
-        has_def_template = True,
-    ),
-    libc_header_info(
-        "unistd",
-        has_def_template = True,
-    ),
+    libc_header_info("arpa/inet"),
+    libc_header_info("complex"),
     libc_header_info("ctype"),
     libc_header_info("dirent"),
     libc_header_info("dlfcn"),
+    libc_header_info("elf"),
     libc_header_info("endian"),
+    libc_header_info("fcntl"),
     libc_header_info("features"),
     libc_header_info("fenv"),
     libc_header_info("float"),
+    libc_header_info("inttypes"),
     libc_header_info("limits"),
     libc_header_info("locale"),
+    libc_header_info("netinet/in"),
     libc_header_info("nl_types"),
+    libc_header_info("poll"),
     libc_header_info("pthread"),
+    libc_header_info("sched"),
     libc_header_info("search"),
     libc_header_info("setjmp"),
+    libc_header_info("signal"),
     libc_header_info("spawn"),
     libc_header_info("stdckdint"),
     libc_header_info("stdint"),
+    libc_header_info("stdio"),
     libc_header_info("string"),
     libc_header_info("strings"),
     libc_header_info("sys/auxv"),
@@ -229,14 +187,16 @@ LLVM_LIBC_HEADERS = [
     libc_header_info("sys/types"),
     libc_header_info("sys/utsname"),
     libc_header_info("sys/wait"),
+    libc_header_info("sysexits"),
+    libc_header_info("termios"),
     libc_header_info("threads"),
     libc_header_info("time"),
     libc_header_info("uchar"),
+    libc_header_info("unistd"),
     libc_header_info("wchar"),
     libc_header_info("wctype"),
     libc_header_info(
         "stdlib",
-        has_def_template = True,
         other_srcs = ["include/stdlib-malloc.yaml"],
     ),
     libc_header_info(
