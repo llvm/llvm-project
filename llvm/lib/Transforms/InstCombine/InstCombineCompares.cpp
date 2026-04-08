@@ -8782,21 +8782,15 @@ static Instruction *foldFCmpWithFloorAndCeil(FCmpInst &I,
     }
   }
 
-  switch (Pred) {
-  case FCmpInst::FCMP_OEQ:
-  case FCmpInst::FCMP_ONE:
-  case FCmpInst::FCMP_ORD:
-  case FCmpInst::FCMP_UEQ:
-  case FCmpInst::FCMP_UNE:
-  case FCmpInst::FCMP_UNO:
+  if ((FloorX || CeilX) && FCmpInst::isCommutative(Pred)) {
     // fcmp pred floor(x), x => fcmp pred trunc(x), x
     // fcmp pred  ceil(x), x => fcmp pred trunc(x), x
-    // where pred is oeq, one, ord, ueq, une, or uno.
-    if (FloorX || CeilX) {
-      Value *TruncX = IC.Builder.CreateUnaryIntrinsic(Intrinsic::trunc, RHS);
-      return new FCmpInst(Pred, TruncX, RHS, "", &I);
-    }
-    break;
+    // where pred is oeq, one, ord, ueq, une, uno.
+    Value *TruncX = IC.Builder.CreateUnaryIntrinsic(Intrinsic::trunc, RHS);
+    return new FCmpInst(Pred, TruncX, RHS, "", &I);
+  }
+
+  switch (Pred) {
   case FCmpInst::FCMP_OLE:
     // fcmp ole floor(x), x => fcmp ord x, 0
     if (FloorX)
