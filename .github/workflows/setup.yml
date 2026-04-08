@@ -25,7 +25,7 @@ on:
         value: ${{ jobs.setup.outputs.windows_variants }}
       test_type:
         description: The test type to run for component tests (i.e. smoke, full)
-        value: 'smoke'
+        value: 'quick'
       windows_test_labels:
         description: ROCm projects to run Windows tests on. Optional filter.
         value: ${{ jobs.setup.outputs.windows_test_labels }}
@@ -43,13 +43,12 @@ jobs:
       BASE_REF: '0efc7532e43c16b532fdd2887e00aec8eb69e10f'
     outputs:
       enable_build_jobs: true
-      # Temporary fix on gfx94x due to non availability of MI325 machines
       linux_variants: >
-        [ {"test-runs-on": "", "family": "gfx90a", "bypass_tests_for_releases": true, "sanity_check_only_for_family": true, "build_variant_label": "release", "build_variant_suffix": "", "build_variant_cmake_preset": "", "artifact_group": "gfx90a"}, {"test-runs-on": "", "family": "gfx110X-all", "bypass_tests_for_releases": true, "sanity_check_only_for_family": true, "build_variant_label": "release", "build_variant_suffix": "", "build_variant_cmake_preset": "", "artifact_group": "gfx110X-all"}, {"test-runs-on": "", "family": "gfx94X-dcgpu", "bypass_tests_for_releases": true, "sanity_check_only_for_family": true, "build_variant_label": "release", "build_variant_suffix": "", "build_variant_cmake_preset": "", "artifact_group": "gfx94X-dcgpu"}, {"test-runs-on": "linux-mi355-1gpu-ossci-rocm", "benchmark-runs-on": "linux-mi355-1gpu-ossci-rocm", "family": "gfx950-dcgpu", "build_variant_label": "release", "build_variant_suffix": "", "build_variant_cmake_preset": "", "artifact_group": "gfx950-dcgpu"}]
+        [ {"test-runs-on": "", "family": "gfx90a", "bypass_tests_for_releases": true, "sanity_check_only_for_family": true, "build_variant_label": "release", "build_variant_suffix": "", "build_variant_cmake_preset": "", "artifact_group": "gfx90a"}, {"test-runs-on": "", "family": "gfx110X-all", "bypass_tests_for_releases": true, "sanity_check_only_for_family": true, "build_variant_label": "release", "build_variant_suffix": "", "build_variant_cmake_preset": "", "artifact_group": "gfx110X-all"}, {"test-runs-on": "linux-gfx942-1gpu-ossci-rocm", "family": "gfx94X-dcgpu", "bypass_tests_for_releases": true, "build_variant_label": "release", "build_variant_suffix": "", "build_variant_cmake_preset": "", "artifact_group": "gfx94X-dcgpu"}, {"test-runs-on": "linux-mi355-1gpu-ossci-rocm", "benchmark-runs-on": "linux-mi355-1gpu-ossci-rocm", "family": "gfx950-dcgpu", "build_variant_label": "release", "build_variant_suffix": "", "build_variant_cmake_preset": "", "artifact_group": "gfx950-dcgpu"}]
       linux_test_labels: ${{ steps.configure.outputs.linux_test_labels }}
       windows_variants: >
             [{"test-runs-on": "windows-gfx1151-gpu-rocm", "benchmark-runs-on": "windows-gfx1151-gpu-rocm", "family": "gfx1151", "build_variant_label": "release", "build_variant_suffix": "", "build_variant_cmake_preset": "windows-release", "artifact_group": "gfx1151"}]
-      test_type: 'smoke'
+      test_type: 'quick'
       windows_test_labels: ${{ steps.configure.outputs.windows_test_labels }}
       rocm_package_version: ${{ steps.rocm_package_version.outputs.rocm_package_version }}
     steps:

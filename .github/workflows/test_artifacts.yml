@@ -99,8 +99,8 @@ jobs:
           TEST_TYPE: ${{ inputs.test_type }}
           TEST_LABELS: ${{ inputs.test_labels }}
         run: |
-          if [[ "${TEST_TYPE:-}" == "smoke" ]]; then
-              PROJECTS_TO_TEST='rocblas,rocroller,hipblas,hipblaslt,hipsolver,rocsolver,rocprim,hipcub,rocthrust,hipsparse,rocsparse,rocrand,hiprand,rocfft,hipfft,rocwmma'
+          if [[ "${TEST_TYPE:-}" == "quick" ]]; then
+              PROJECTS_TO_TEST='rocroller,hipblas,hipblaslt,hipsolver,rocsolver,rocprim,hipcub,rocthrust,hipsparse,rocsparse,rocrand,hiprand,rocfft,hipfft,rocwmma'
               export PROJECTS_TO_TEST
               echo "PROJECTS_TO_TEST=$PROJECTS_TO_TEST" >> "$GITHUB_ENV"
           fi
