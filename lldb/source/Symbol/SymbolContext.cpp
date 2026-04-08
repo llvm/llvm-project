@@ -685,7 +685,7 @@ llvm::Error
 SymbolContext::GetAddressRangeFromHereToEndLine(uint32_t end_line,
                                                 AddressRange &range) {
   if (!line_entry.IsValid()) {
-    return llvm::createStringError("Symbol context has no line table.");
+    return llvm::createStringError("symbol context has no line table");
   }
 
   range = line_entry.range;
@@ -840,7 +840,7 @@ const Symbol *SymbolContext::FindBestGlobalDataSymbol(ConstString name,
 
     if (external_symbols.size() > 1) {
       StreamString ss;
-      ss.Printf("Multiple external symbols found for '%s'\n", name.AsCString());
+      ss.Format("Multiple external symbols found for '{0}'\n", name);
       for (const Symbol *symbol : external_symbols) {
         symbol->GetDescription(&ss, eDescriptionLevelFull, &target);
       }
@@ -851,7 +851,7 @@ const Symbol *SymbolContext::FindBestGlobalDataSymbol(ConstString name,
       return external_symbols[0];
     } else if (internal_symbols.size() > 1) {
       StreamString ss;
-      ss.Printf("Multiple internal symbols found for '%s'\n", name.AsCString());
+      ss.Format("Multiple internal symbols found for '{0}'\n", name);
       for (const Symbol *symbol : internal_symbols) {
         symbol->GetDescription(&ss, eDescriptionLevelVerbose, &target);
         ss.PutChar('\n');
