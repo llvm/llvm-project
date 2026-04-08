@@ -49,6 +49,10 @@ static const OmpDirectiveSet noWaitClauseNotAllowedSet{
 namespace Fortran::semantics {
 struct AnalyzedCondStmt;
 
+namespace omp {
+struct LoopSequence;
+}
+
 // Mapping from 'Symbol' to 'Source' to keep track of the variables
 // used in multiple clauses
 using SymbolSourceMap = std::multimap<const Symbol *, parser::CharBlock>;
@@ -326,11 +330,10 @@ private:
   void CheckAtomicUpdate(const parser::OpenMPAtomicConstruct &x);
 
   void CheckScanModifier(const parser::OmpClause::Reduction &x);
-  void CheckLooprangeBounds(const parser::OpenMPLoopConstruct &x);
   void CheckDistLinear(const parser::OpenMPLoopConstruct &x);
   void CheckSIMDNest(const parser::OpenMPConstruct &x);
-  void CheckNestedBlock(
-      const parser::OpenMPLoopConstruct &x, const parser::Block &body);
+  void CheckRectangularNest(const parser::OmpDirectiveSpecification &spec,
+      const omp::LoopSequence &nest);
   void CheckNestedConstruct(const parser::OpenMPLoopConstruct &x);
   void CheckTargetNest(const parser::OpenMPConstruct &x);
   void CheckTargetUpdate();
@@ -361,6 +364,8 @@ private:
       const parser::OmpObjectList &ompObjectList, llvm::omp::Clause clauseId);
   void CheckArraySection(const parser::ArrayElement &arrayElement,
       const parser::Name &name, const llvm::omp::Clause clause);
+  void CheckLastPartRefForArraySection(
+      const parser::Designator &designator, llvm::omp::Clause clauseId);
   void CheckSharedBindingInOuterContext(
       const parser::OmpObjectList &ompObjectList);
   void CheckIfContiguous(const parser::OmpObject &object);

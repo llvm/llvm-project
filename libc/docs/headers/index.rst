@@ -32,6 +32,7 @@ Implementation Status
    strings
    sys/mman
    sys/resource
+   sys/socket
    sys/stat
    sys/statvfs
    sys/time
@@ -44,6 +45,4 @@ Implementation Status
    unistd
    wchar
    wctype
-..
-   TODO: https://github.com/llvm/llvm-project/issues/123821
    pthread

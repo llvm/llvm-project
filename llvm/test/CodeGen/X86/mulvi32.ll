@@ -145,13 +145,14 @@ define <4 x i64> @_mul4xi32toi64a(<4 x i32>, <4 x i32>) {
 ;
 ; SSE42-LABEL: _mul4xi32toi64a:
 ; SSE42:       # %bb.0:
-; SSE42-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[2,1,3,3]
-; SSE42-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[2,1,3,3]
-; SSE42-NEXT:    pmuludq %xmm3, %xmm2
-; SSE42-NEXT:    pmovzxdq {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero
-; SSE42-NEXT:    pmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
-; SSE42-NEXT:    pmuludq %xmm1, %xmm0
-; SSE42-NEXT:    movdqa %xmm2, %xmm1
+; SSE42-NEXT:    pxor %xmm3, %xmm3
+; SSE42-NEXT:    pmovzxdq {{.*#+}} xmm4 = xmm0[0],zero,xmm0[1],zero
+; SSE42-NEXT:    punpckhdq {{.*#+}} xmm0 = xmm0[2],xmm3[2],xmm0[3],xmm3[3]
+; SSE42-NEXT:    pmovzxdq {{.*#+}} xmm2 = xmm1[0],zero,xmm1[1],zero
+; SSE42-NEXT:    punpckhdq {{.*#+}} xmm1 = xmm1[2],xmm3[2],xmm1[3],xmm3[3]
+; SSE42-NEXT:    pmuludq %xmm0, %xmm1
+; SSE42-NEXT:    pmuludq %xmm4, %xmm2
+; SSE42-NEXT:    movdqa %xmm2, %xmm0
 ; SSE42-NEXT:    retq
 ;
 ; AVX1-LABEL: _mul4xi32toi64a:

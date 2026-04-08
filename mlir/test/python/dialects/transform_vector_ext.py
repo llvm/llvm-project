@@ -87,24 +87,11 @@ def enum_configurable_patterns():
         lowering_strategy=vector.VectorContractLowering.ParallelArith
     )
 
-    # CHECK: transform.apply_patterns.vector.lower_multi_reduction
-    vector.ApplyLowerMultiReductionPatternsOp()
-    # CHECK: transform.apply_patterns.vector.lower_multi_reduction
-    # This is the default mode, not printed.
-    vector.ApplyLowerMultiReductionPatternsOp(
-        lowering_strategy=vector.VectorMultiReductionLowering.InnerParallel
-    )
-    # CHECK: transform.apply_patterns.vector.lower_multi_reduction
+    # CHECK: transform.apply_patterns.vector.reorder_multi_reduction_dims
+    vector.ApplyReorderMultiReductionPatternsOp()
+    # CHECK: transform.apply_patterns.vector.reorder_multi_reduction_dims
     # CHECK-SAME: lowering_strategy = innerreduction
-    vector.ApplyLowerMultiReductionPatternsOp(
-        lowering_strategy=vector.VectorMultiReductionLowering.InnerReduction
-    )
-
-    # CHECK: transform.apply_patterns.vector.reorder_and_expand_multi_reduction_dims
-    vector.ApplyReorderAndExpandMultiReductionPatternsOp()
-    # CHECK: transform.apply_patterns.vector.reorder_and_expand_multi_reduction_dims
-    # CHECK-SAME: lowering_strategy = innerreduction
-    vector.ApplyReorderAndExpandMultiReductionPatternsOp(
+    vector.ApplyReorderMultiReductionPatternsOp(
         lowering_strategy=vector.VectorMultiReductionLowering.InnerReduction
     )
 

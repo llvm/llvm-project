@@ -62,12 +62,8 @@ llvm.func @simple_teams_only_reduction_() attributes {fir.internal_name = "_QPsi
 // CHECK-SAME: %[[REDARRAY]]
 // CHECK-SAME: @[[REDFUNC:[A-Za-z_.][A-Za-z0-9_.]*]]
 
-// CHECK: [[FINALIZE:.+]]:
-// CHECK: call void @__kmpc_barrier
-
 // Non atomic version
 // CHECK: call void @__kmpc_end_reduce
-// CHECK: br label %[[FINALIZE]]
 
 // Atomic version not generated
 // CHECK: unreachable

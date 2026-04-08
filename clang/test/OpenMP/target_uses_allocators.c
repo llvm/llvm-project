@@ -97,6 +97,7 @@ void foo() {
 
 // CHECK: %[[#R0:]] = call i32 @__kmpc_global_thread_num(ptr @1)
 // CHECK-NEXT: store i64 %x, ptr %x.addr, align 8
+// CHECK-NEXT: store ptr %dyn_ptr, ptr %dyn_ptr.addr, align 8
 // CHECK-NEXT: %.x..void.addr = call ptr @__kmpc_alloc(i32 %[[#R0]], i64 4, ptr null)
 // CHECK-NEXT: %[[#R1:]] = load i32, ptr %x.addr, align 4
 // CHECK-NEXT: store i32 %[[#R1]], ptr %.x..void.addr, align 4
@@ -104,6 +105,7 @@ void foo() {
 
 // CHECK: %[[#R0:]] = call i32 @__kmpc_global_thread_num(ptr @1)
 // CHECK-NEXT: store i64 %x, ptr %x.addr, align 8
+// CHECK-NEXT: store ptr %dyn_ptr, ptr %dyn_ptr.addr, align 8
 // CHECK-NEXT: %.x..void.addr = call ptr @__kmpc_alloc(i32 %[[#R0]], i64 4, ptr inttoptr (i64 1 to ptr))
 // CHECK-NEXT: %[[#R1:]] = load i32, ptr %x.addr, align 4
 // CHECK-NEXT: store i32 %[[#R1]], ptr %.x..void.addr, align 4
@@ -111,6 +113,7 @@ void foo() {
 
 // CHECK: %[[#R0:]] = call i32 @__kmpc_global_thread_num(ptr @1)
 // CHECK-NEXT: store i64 %x, ptr %x.addr, align 8
+// CHECK-NEXT: store ptr %dyn_ptr, ptr %dyn_ptr.addr, align 8
 // CHECK-NEXT: %.x..void.addr = call ptr @__kmpc_alloc(i32 %[[#R0]], i64 4, ptr inttoptr (i64 2 to ptr))
 // CHECK-NEXT: %[[#R1:]] = load i32, ptr %x.addr, align 4
 // CHECK-NEXT: store i32 %[[#R1]], ptr %.x..void.addr, align 4
@@ -118,6 +121,7 @@ void foo() {
 
 // CHECK: %[[#R0:]] = call i32 @__kmpc_global_thread_num(ptr @1)
 // CHECK-NEXT: store i64 %x, ptr %x.addr, align 8
+// CHECK-NEXT: store ptr %dyn_ptr, ptr %dyn_ptr.addr, align 8
 // CHECK-NEXT: %.x..void.addr = call ptr @__kmpc_alloc(i32 %[[#R0]], i64 4, ptr inttoptr (i64 3 to ptr))
 // CHECK-NEXT: %[[#R1:]] = load i32, ptr %x.addr, align 4
 // CHECK-NEXT: store i32 %[[#R1]], ptr %.x..void.addr, align 4
@@ -125,6 +129,7 @@ void foo() {
 
 // CHECK: %[[#R0:]] = call i32 @__kmpc_global_thread_num(ptr @1)
 // CHECK-NEXT: store i64 %x, ptr %x.addr, align 8
+// CHECK-NEXT: store ptr %dyn_ptr, ptr %dyn_ptr.addr, align 8
 // CHECK-NEXT: %.x..void.addr = call ptr @__kmpc_alloc(i32 %[[#R0]], i64 4, ptr inttoptr (i64 4 to ptr))
 // CHECK-NEXT: %[[#R1:]] = load i32, ptr %x.addr, align 4
 // CHECK-NEXT: store i32 %[[#R1]], ptr %.x..void.addr, align 4
@@ -132,6 +137,7 @@ void foo() {
 
 // CHECK: %[[#R0:]] = call i32 @__kmpc_global_thread_num(ptr @1)
 // CHECK-NEXT: store i64 %x, ptr %x.addr, align 8
+// CHECK-NEXT: store ptr %dyn_ptr, ptr %dyn_ptr.addr, align 8
 // CHECK-NEXT: %.x..void.addr = call ptr @__kmpc_alloc(i32 %[[#R0]], i64 4, ptr inttoptr (i64 5 to ptr))
 // CHECK-NEXT: %[[#R1:]] = load i32, ptr %x.addr, align 4
 // CHECK-NEXT: store i32 %[[#R1]], ptr %.x..void.addr, align 4
@@ -139,6 +145,7 @@ void foo() {
 
 // CHECK: %[[#R0:]] = call i32 @__kmpc_global_thread_num(ptr @1)
 // CHECK-NEXT: store i64 %x, ptr %x.addr, align 8
+// CHECK-NEXT: store ptr %dyn_ptr, ptr %dyn_ptr.addr, align 8
 // CHECK-NEXT: %.x..void.addr = call ptr @__kmpc_alloc(i32 %[[#R0]], i64 4, ptr inttoptr (i64 6 to ptr))
 // CHECK-NEXT: %[[#R1:]] = load i32, ptr %x.addr, align 4
 // CHECK-NEXT: store i32 %[[#R1]], ptr %.x..void.addr, align 4
@@ -146,6 +153,7 @@ void foo() {
 
 // CHECK: %[[#R0:]] = call i32 @__kmpc_global_thread_num(ptr @1)
 // CHECK-NEXT: store i64 %x, ptr %x.addr, align 8
+// CHECK-NEXT: store ptr %dyn_ptr, ptr %dyn_ptr.addr, align 8
 // CHECK-NEXT: %.x..void.addr = call ptr @__kmpc_alloc(i32 %[[#R0]], i64 4, ptr inttoptr (i64 7 to ptr))
 // CHECK-NEXT: %[[#R1:]] = load i32, ptr %x.addr, align 4
 // CHECK-NEXT: store i32 %[[#R1]], ptr %.x..void.addr, align 4
@@ -153,6 +161,7 @@ void foo() {
 
 // CHECK: %[[#R0:]] = call i32 @__kmpc_global_thread_num(ptr @1)
 // CHECK-NEXT: store i64 %x, ptr %x.addr, align 8
+// CHECK-NEXT: store ptr %dyn_ptr, ptr %dyn_ptr.addr, align 8
 // CHECK-NEXT: %.x..void.addr = call ptr @__kmpc_alloc(i32 %[[#R0]], i64 4, ptr inttoptr (i64 8 to ptr))
 // CHECK-NEXT: %[[#R1:]] = load i32, ptr %x.addr, align 4
 // CHECK-NEXT: store i32 %[[#R1]], ptr %.x..void.addr, align 4

@@ -437,12 +437,14 @@ define void @foo(i8 %v) {
 }
 !0 = !{i32 0}
 )IR");
-#ifndef NDEBUG
   llvm::Function *LLVMF = &*M->getFunction("foo");
   sandboxir::Context Ctx(C);
   auto *F = Ctx.createFunction(LLVMF);
+#ifndef NDEBUG
   EXPECT_DEATH(sandboxir::Region::createRegionsFromMD(*F, *TTI), "No region.*");
 #endif
+  EXPECT_DEATH(sandboxir::Region::createRegionsFromMD(*F, *TTI),
+               "No region specified for Aux!");
 }
 
 TEST_F(RegionTest, AuxRoundTrip) {

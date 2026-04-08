@@ -171,8 +171,7 @@
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 
-; Function Attrs: nounwind optsize ssp uwtable
-define void @_Z4testPii(ptr nocapture %A, i32 %Length) #0 !dbg !4 {
+define void @_Z4testPii(ptr nocapture %A, i32 %Length) !dbg !4 {
 entry:
   %cmp10 = icmp sgt i32 %Length, 0, !dbg !12
   br i1 %cmp10, label %loop, label %exit, !dbg !12, !llvm.loop !14
@@ -198,8 +197,7 @@ exit:                                          ; preds = %loop, %entry
 ; CHECK-NOT: x i32>
 ; CHECK: ret
 
-; Function Attrs: nounwind optsize ssp uwtable
-define void @_Z13test_disabledPii(ptr nocapture %A, i32 %Length) #0 !dbg !7 {
+define void @_Z13test_disabledPii(ptr nocapture %A, i32 %Length) !dbg !7 {
 entry:
   %cmp4 = icmp sgt i32 %Length, 0, !dbg !25
   br i1 %cmp4, label %loop, label %exit, !dbg !25, !llvm.loop !27
@@ -222,8 +220,7 @@ exit:                                          ; preds = %loop, %entry
 ; CHECK-NOT: x i32>
 ; CHECK: ret
 
-; Function Attrs: nounwind optsize ssp uwtable
-define void @_Z17test_array_boundsPiS_i(ptr nocapture %A, ptr nocapture readonly %B, i32 %Length) #0 !dbg !8 {
+define void @_Z17test_array_boundsPiS_i(ptr nocapture %A, ptr nocapture readonly %B, i32 %Length) !dbg !8 {
 entry:
   %cmp9 = icmp sgt i32 %Length, 0, !dbg !32
   br i1 %cmp9, label %loop.preheader, label %exit, !dbg !32, !llvm.loop !34
@@ -253,8 +250,7 @@ exit:
 ; CHECK-NOT: x i32>
 ; CHECK: ret
 
-; Function Attrs: nounwind uwtable
-define i32 @test_multiple_failures(ptr nocapture readonly %A) #0 !dbg !46 {
+define i32 @test_multiple_failures(ptr nocapture readonly %A) !dbg !46 {
 entry:
   br label %loop, !dbg !38
 
@@ -307,8 +303,6 @@ declare i32 @foo(...)
 ; CHECK: test_multiple_failure
 ; CHECK-NOT: x i32>
 ; CHECK: ret
-
-attributes #0 = { nounwind }
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!9, !10}

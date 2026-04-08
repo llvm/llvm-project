@@ -443,7 +443,7 @@ static const ArchDefinition g_coff_arch_def = {
 
 // clang-format off
 static const ArchDefinitionEntry g_xcoff_arch_entries[] = {
-    {ArchSpec::eCore_ppc_generic,   llvm::XCOFF::TCPU_COM},
+    {ArchSpec::eCore_ppc_generic,   llvm::XCOFF::TCPU_PPC},
     {ArchSpec::eCore_ppc64_generic, llvm::XCOFF::TCPU_PPC64}
 };
 // clang-format on
@@ -717,6 +717,8 @@ bool ArchSpec::CharIsSignedByDefault() const {
   case llvm::Triple::ppc64:
     return m_triple.isOSDarwin();
 
+  case llvm::Triple::riscv64:
+  case llvm::Triple::riscv32:
   case llvm::Triple::ppc64le:
   case llvm::Triple::systemz:
   case llvm::Triple::xcore:

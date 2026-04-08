@@ -99,7 +99,14 @@ static RT_API_ATTRS common::optional<bool> DefinedFormattedIo(
     }
     ExternalFileUnit *actualExternal{io.GetExternalFileUnit()};
     ExternalFileUnit *external{actualExternal};
-    if (!external) {
+    if (external) {
+      // Neither parent nor child I/O may be asynchronous.
+      if (const auto *extBase{io.get_if<ExternalIoStatementBase>()}) {
+        if (extBase->asynchronousID() >= 0) {
+          io.GetIoErrorHandler().SignalError(IostatParentAsynchronous);
+        }
+      }
+    } else {
       // Create a new unit to service defined I/O for an
       // internal I/O parent.
       external = &ExternalFileUnit::NewUnit(handler, true);
@@ -193,6 +200,12 @@ static RT_API_ATTRS bool DefinedUnformattedIo(IoStatementState &io,
   if (!external) { // INQUIRE(IOLENGTH=)
     handler.SignalError(IostatNonExternalDefinedUnformattedIo);
     return false;
+  }
+  // Neither parent nor child I/O may be asynchronous.
+  if (const auto *extBase{io.get_if<ExternalIoStatementBase>()}) {
+    if (extBase->asynchronousID() >= 0) {
+      io.GetIoErrorHandler().SignalError(IostatParentAsynchronous);
+    }
   }
   ChildIo &child{external->PushChildIo(io)};
   int unit{external->unitNumber()};

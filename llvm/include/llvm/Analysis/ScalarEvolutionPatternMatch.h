@@ -13,6 +13,7 @@
 #ifndef LLVM_ANALYSIS_SCALAREVOLUTIONPATTERNMATCH_H
 #define LLVM_ANALYSIS_SCALAREVOLUTIONPATTERNMATCH_H
 
+#include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 
 namespace llvm {
@@ -20,6 +21,11 @@ namespace SCEVPatternMatch {
 
 template <typename Pattern> bool match(const SCEV *S, const Pattern &P) {
   return P.match(S);
+}
+
+template <typename SCEVPtrT, typename Pattern>
+bool match(const SCEVUseT<SCEVPtrT> U, const Pattern &P) {
+  return P.match(U.getPointer());
 }
 
 template <typename Predicate> struct cst_pred_ty : public Predicate {
@@ -82,8 +88,24 @@ template <typename Class> struct bind_ty {
   }
 };
 
+template <typename SCEVPtrT> struct bind_ty<SCEVUseT<SCEVPtrT>> {
+  SCEVUseT<SCEVPtrT> &VR;
+
+  bind_ty(SCEVUseT<SCEVPtrT> &V) : VR(V) {}
+
+  template <typename ITy> bool match(ITy *V) const {
+    VR = V;
+    return true;
+  }
+};
+
 /// Match a SCEV, capturing it if we match.
 inline bind_ty<const SCEV> m_SCEV(const SCEV *&V) { return V; }
+
+template <typename SCEVPtrT>
+inline bind_ty<SCEVUseT<SCEVPtrT>> m_SCEV(SCEVUseT<SCEVPtrT> &V) {
+  return V;
+}
 inline bind_ty<const SCEVConstant> m_SCEVConstant(const SCEVConstant *&V) {
   return V;
 }
@@ -159,7 +181,8 @@ template <typename SCEVTy, typename Op0_t> struct SCEVUnaryExpr_match {
 
   bool match(const SCEV *S) const {
     auto *E = dyn_cast<SCEVTy>(S);
-    return E && E->getNumOperands() == 1 && Op0.match(E->getOperand(0));
+    return E && E->getNumOperands() == 1 &&
+           Op0.match(E->getOperand(0).getPointer());
   }
 };
 
@@ -215,9 +238,10 @@ struct SCEVBinaryExpr_match {
 
     auto *E = dyn_cast<SCEVTy>(S);
     return E && E->getNumOperands() == 2 &&
-           ((Op0.match(E->getOperand(0)) && Op1.match(E->getOperand(1))) ||
-            (Commutable && Op0.match(E->getOperand(1)) &&
-             Op1.match(E->getOperand(0))));
+           ((Op0.match(E->getOperand(0).getPointer()) &&
+             Op1.match(E->getOperand(1).getPointer())) ||
+            (Commutable && Op0.match(E->getOperand(1).getPointer()) &&
+             Op1.match(E->getOperand(0).getPointer())));
   }
 };
 

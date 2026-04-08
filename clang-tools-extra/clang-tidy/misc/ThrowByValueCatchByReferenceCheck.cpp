@@ -31,8 +31,8 @@ void ThrowByValueCatchByReferenceCheck::registerMatchers(MatchFinder *Finder) {
 
 void ThrowByValueCatchByReferenceCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {
-  Options.store(Opts, "CheckThrowTemporaries", true);
-  Options.store(Opts, "WarnOnLargeObjects", WarnOnLargeObject);
+  Options.store(Opts, "CheckThrowTemporaries", CheckAnonymousTemporaries);
+  Options.store(Opts, "WarnOnLargeObject", WarnOnLargeObject);
   Options.store(Opts, "MaxSize", MaxSizeOptions);
 }
 
@@ -51,8 +51,8 @@ bool ThrowByValueCatchByReferenceCheck::isFunctionParameter(
 bool ThrowByValueCatchByReferenceCheck::isCatchVariable(
     const DeclRefExpr *DeclRefExpr) {
   auto *ValueDecl = DeclRefExpr->getDecl();
-  if (auto *VarDecl = dyn_cast<clang::VarDecl>(ValueDecl))
-    return VarDecl->isExceptionVariable();
+  if (auto *Var = dyn_cast<VarDecl>(ValueDecl))
+    return Var->isExceptionVariable();
   return false;
 }
 
@@ -103,10 +103,10 @@ void ThrowByValueCatchByReferenceCheck::diagnoseThrowLocations(
     // If we have a DeclRefExpr, we flag for emitting a diagnosis message in
     // case the referenced variable is neither a function parameter nor a
     // variable declared in the catch statement.
-    if (VariableReference)
+    if (VariableReference) {
       Emit = !isFunctionOrCatchVar(VariableReference);
-    else if (ConstructorCall &&
-             ConstructorCall->getConstructor()->isCopyOrMoveConstructor()) {
+    } else if (ConstructorCall &&
+               ConstructorCall->getConstructor()->isCopyOrMoveConstructor()) {
       // If we have a copy / move construction, we emit a diagnosis message if
       // the object that we copy construct from is neither a function parameter
       // nor a variable declared in a catch statement

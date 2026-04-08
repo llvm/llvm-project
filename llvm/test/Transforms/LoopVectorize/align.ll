@@ -9,7 +9,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ;CHECK: load <4 x i32>, ptr {{.*}} align  4
 ;CHECK: store <4 x i32> {{.*}} align  4
 
-define void @align(ptr %a, ptr %b, ptr %c) nounwind uwtable ssp {
+define void @align(ptr %a, ptr %b, ptr %c) {
   br label %1
 
 ; <label>:1                                       ; preds = %1, %0

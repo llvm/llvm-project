@@ -234,9 +234,6 @@ def IsN64       :     Predicate<"Subtarget->isABI_N64()">;
 def IsNotN64    :     Predicate<"!Subtarget->isABI_N64()">;
 def RelocNotPIC :     Predicate<"!TM.isPositionIndependent()">;
 def RelocPIC    :     Predicate<"TM.isPositionIndependent()">;
-def NoNaNsFPMath :    Predicate<"TM.Options.NoNaNsFPMath">;
-def UseAbs :          Predicate<"Subtarget->inAbs2008Mode() ||"
-                                "TM.Options.NoNaNsFPMath">;
 def HasStdEnc :       Predicate<"Subtarget->hasStandardEncoding()">,
                       AssemblerPredicate<(all_of (not FeatureMips16))>;
 def NotDSP :          Predicate<"!Subtarget->hasDSP()">;
@@ -259,8 +256,8 @@ def UseIndirectJumpsHazard : Predicate<"Subtarget->useIndirectJumpsHazard()">,
                             AssemblerPredicate<(all_of FeatureUseIndirectJumpsHazard)>;
 def NoIndirectJumpGuards : Predicate<"!Subtarget->useIndirectJumpsHazard()">,
                            AssemblerPredicate<(all_of (not FeatureUseIndirectJumpsHazard))>;
-def HasR5900 : Predicate<"Subtarget->isR5900()">,
-               AssemblerPredicate<(all_of FeatureR5900)>;
+def IsR5900 : Predicate<"Subtarget->isR5900()">,
+              AssemblerPredicate<(all_of FeatureR5900)>;
 def NotR5900 : Predicate<"!Subtarget->isR5900()">,
                AssemblerPredicate<(all_of (not FeatureR5900))>;
 def HasCRC   : Predicate<"Subtarget->hasCRC()">,

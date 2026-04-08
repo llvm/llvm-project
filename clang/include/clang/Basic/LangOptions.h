@@ -177,6 +177,7 @@ public:
     MSVC2017 = 1910,
     MSVC2017_5 = 1912,
     MSVC2017_7 = 1914,
+    MSVC2017_8 = 1915,
     MSVC2019 = 1920,
     MSVC2019_5 = 1925,
     MSVC2019_8 = 1928,
@@ -511,6 +512,11 @@ public:
   CoreFoundationABI CFRuntime = CoreFoundationABI::Unspecified;
 
   std::string ObjCConstantStringClass;
+  std::string ObjCConstantArrayClass;
+  std::string ObjCConstantDictionaryClass;
+  std::string ObjCConstantIntegerNumberClass;
+  std::string ObjCConstantFloatNumberClass;
+  std::string ObjCConstantDoubleNumberClass;
 
   /// The name of the handler function to be called when -ftrapv is
   /// specified.

@@ -41,6 +41,7 @@
 #ifdef LLVM_ON_UNIX
 #include <pwd.h>
 #include <sys/stat.h>
+#include <unistd.h>
 #endif
 
 using namespace llvm;
@@ -783,6 +784,152 @@ TEST_F(FileSystemTest, RealPath) {
   ASSERT_NO_ERROR(fs::remove_directories(Twine(TestDirectory) + "/test1"));
 }
 
+TEST_F(FileSystemTest, Readlink) {
+  int FD;
+  SmallString<128> Target(TestDirectory);
+  path::append(Target, "target");
+  ASSERT_NO_ERROR(fs::openFileForWrite(Target, FD, fs::CD_CreateNew));
+  ::close(FD);
+
+  SmallString<128> Link(TestDirectory);
+  path::append(Link, "link");
+  std::error_code EC = fs::create_symlink(Target, Link);
+  if (EC) {
+    ASSERT_NO_ERROR(fs::remove(Target));
+    GTEST_SKIP() << "Symlinks not supported: " << EC.message();
+  }
+
+  SmallString<128> Result;
+  ASSERT_NO_ERROR(fs::readlink(Link, Result));
+  EXPECT_EQ(Target, Result);
+
+  ASSERT_NO_ERROR(fs::remove(Link));
+  ASSERT_NO_ERROR(fs::remove(Target));
+}
+
+TEST_F(FileSystemTest, ReadlinkRelative) {
+  int FD;
+  SmallString<128> Target(TestDirectory);
+  path::append(Target, "target");
+  ASSERT_NO_ERROR(fs::openFileForWrite(Target, FD, fs::CD_CreateNew));
+  ::close(FD);
+
+  SmallString<128> Link(TestDirectory);
+  path::append(Link, "link");
+  std::error_code EC = fs::create_symlink("target", Link);
+  if (EC) {
+    ASSERT_NO_ERROR(fs::remove(Target));
+    GTEST_SKIP() << "Symlinks not supported: " << EC.message();
+  }
+
+  SmallString<128> Result;
+  ASSERT_NO_ERROR(fs::readlink(Link, Result));
+  EXPECT_EQ("target", Result);
+
+  ASSERT_NO_ERROR(fs::remove(Link));
+  ASSERT_NO_ERROR(fs::remove(Target));
+}
+
+TEST_F(FileSystemTest, ReadlinkRelativeWithSlash) {
+  // Verify that a symlink target created with forward slashes is read back
+  // with the native separator. On Windows, create_symlink normalizes forward
+  // slashes to backslashes.
+  SmallString<128> SubDir(TestDirectory);
+  path::append(SubDir, "subdir");
+  ASSERT_NO_ERROR(fs::create_directory(SubDir));
+
+  int FD;
+  SmallString<128> Target(SubDir);
+  path::append(Target, "target");
+  ASSERT_NO_ERROR(fs::openFileForWrite(Target, FD, fs::CD_CreateNew));
+  ::close(FD);
+
+  SmallString<128> Link(TestDirectory);
+  path::append(Link, "link");
+  std::error_code EC = fs::create_symlink("subdir/target", Link);
+  if (EC) {
+    ASSERT_NO_ERROR(fs::remove(Target));
+    ASSERT_NO_ERROR(fs::remove(SubDir));
+    GTEST_SKIP() << "Symlinks not supported: " << EC.message();
+  }
+
+  SmallString<128> Result;
+  ASSERT_NO_ERROR(fs::readlink(Link, Result));
+  SmallString<128> Expected("subdir/target");
+  path::native(Expected);
+  EXPECT_EQ(Expected, Result);
+
+  ASSERT_NO_ERROR(fs::remove(Link));
+  ASSERT_NO_ERROR(fs::remove(Target));
+  ASSERT_NO_ERROR(fs::remove(SubDir));
+}
+
+TEST_F(FileSystemTest, CreateRelativeDirectorySymlink) {
+  // Verify that a relative symlink to a directory is correctly detected as a
+  // directory symlink. On Windows, create_symlink needs to resolve the relative
+  // target against the link's parent to check if the target is a directory.
+  SmallString<128> SubDir(TestDirectory);
+  path::append(SubDir, "subdir");
+  ASSERT_NO_ERROR(fs::create_directory(SubDir));
+
+  SmallString<128> TargetDir(SubDir);
+  path::append(TargetDir, "target_dir");
+  ASSERT_NO_ERROR(fs::create_directory(TargetDir));
+
+  // Create a symlink in TestDirectory pointing to "subdir/target_dir" using a
+  // relative path. The target is relative to the link's parent (TestDirectory),
+  // not the CWD.
+  SmallString<128> Link(TestDirectory);
+  path::append(Link, "link");
+  SmallString<128> RelTarget("subdir");
+  path::append(RelTarget, "target_dir");
+  path::native(RelTarget);
+  std::error_code EC = fs::create_symlink(RelTarget, Link);
+  if (EC) {
+    ASSERT_NO_ERROR(fs::remove(TargetDir));
+    ASSERT_NO_ERROR(fs::remove(SubDir));
+    GTEST_SKIP() << "Symlinks not supported: " << EC.message();
+  }
+
+  // The symlink should be recognized as a directory.
+  EXPECT_TRUE(fs::is_directory(Link));
+
+  // Verify we can access a file through the directory symlink.
+  int FD;
+  SmallString<128> FileInTarget(TargetDir);
+  path::append(FileInTarget, "file");
+  ASSERT_NO_ERROR(fs::openFileForWrite(FileInTarget, FD, fs::CD_CreateNew));
+  ::close(FD);
+
+  SmallString<128> FileThroughLink(Link);
+  path::append(FileThroughLink, "file");
+  EXPECT_TRUE(fs::is_regular_file(FileThroughLink));
+
+  ASSERT_NO_ERROR(fs::remove(FileInTarget));
+  ASSERT_NO_ERROR(fs::remove(Link));
+  ASSERT_NO_ERROR(fs::remove(TargetDir));
+  ASSERT_NO_ERROR(fs::remove(SubDir));
+}
+
+TEST_F(FileSystemTest, ReadlinkNonSymlink) {
+  int FD;
+  SmallString<128> Regular(TestDirectory);
+  path::append(Regular, "regular");
+  ASSERT_NO_ERROR(fs::openFileForWrite(Regular, FD, fs::CD_CreateNew));
+  ::close(FD);
+
+  SmallString<128> Result;
+  EXPECT_EQ(fs::readlink(Regular, Result), errc::invalid_argument);
+
+  ASSERT_NO_ERROR(fs::remove(Regular));
+}
+
+TEST_F(FileSystemTest, ReadlinkNonExistent) {
+  SmallString<128> Result;
+  EXPECT_EQ(fs::readlink(TestDirectory + "/does_not_exist", Result),
+            errc::no_such_file_or_directory);
+}
+
 TEST_F(FileSystemTest, ExpandTilde) {
   SmallString<64> Expected;
   SmallString<64> Actual;
@@ -838,7 +985,7 @@ TEST_F(FileSystemTest, RemoveDirectoriesNoExePerm) {
   // It's expected that the directory exists, but some environments appear to
   // allow the removal despite missing the 'x' permission, so be flexible.
   if (fs::exists(Twine(TestDirectory) + "/noexeperm")) {
-    fs::setPermissions(Twine(TestDirectory) + "/noexeperm", fs::all_perms);
+    fs::setPermissions(Twine(TestDirectory) + "/noexeperm", fs::all_all);
     ASSERT_NO_ERROR(fs::remove_directories(Twine(TestDirectory) + "/noexeperm",
                                            /*IgnoreErrors=*/false));
   }
@@ -939,19 +1086,19 @@ TEST_F(FileSystemTest, TempFiles) {
 #ifdef _WIN32
   // Path name > 260 chars should get an error.
   const char *Path270 =
-    "abcdefghijklmnopqrstuvwxyz9abcdefghijklmnopqrstuvwxyz8"
-    "abcdefghijklmnopqrstuvwxyz7abcdefghijklmnopqrstuvwxyz6"
-    "abcdefghijklmnopqrstuvwxyz5abcdefghijklmnopqrstuvwxyz4"
-    "abcdefghijklmnopqrstuvwxyz3abcdefghijklmnopqrstuvwxyz2"
-    "abcdefghijklmnopqrstuvwxyz1abcdefghijklmnopqrstuvwxyz0";
+      "abcdefghijklmnopqrstuvwxyz9abcdefghijklmnopqrstuvwxyz8"
+      "abcdefghijklmnopqrstuvwxyz7abcdefghijklmnopqrstuvwxyz6"
+      "abcdefghijklmnopqrstuvwxyz5abcdefghijklmnopqrstuvwxyz4"
+      "abcdefghijklmnopqrstuvwxyz3abcdefghijklmnopqrstuvwxyz2"
+      "abcdefghijklmnopqrstuvwxyz1abcdefghijklmnopqrstuvwxyz%";
   EXPECT_EQ(fs::createUniqueFile(Path270, FileDescriptor, TempPath),
             errc::invalid_argument);
   // Relative path < 247 chars, no problem.
   const char *Path216 =
-    "abcdefghijklmnopqrstuvwxyz7abcdefghijklmnopqrstuvwxyz6"
-    "abcdefghijklmnopqrstuvwxyz5abcdefghijklmnopqrstuvwxyz4"
-    "abcdefghijklmnopqrstuvwxyz3abcdefghijklmnopqrstuvwxyz2"
-    "abcdefghijklmnopqrstuvwxyz1abcdefghijklmnopqrstuvwxyz0";
+      "abcdefghijklmnopqrstuvwxyz7abcdefghijklmnopqrstuvwxyz6"
+      "abcdefghijklmnopqrstuvwxyz5abcdefghijklmnopqrstuvwxyz4"
+      "abcdefghijklmnopqrstuvwxyz3abcdefghijklmnopqrstuvwxyz2"
+      "abcdefghijklmnopqrstuvwxyz1abcdefghijklmnopqrstu%%%%%%";
   ASSERT_NO_ERROR(fs::createTemporaryFile(Path216, "", TempPath));
   ASSERT_NO_ERROR(fs::remove(Twine(TempPath)));
 #endif
@@ -1178,21 +1325,21 @@ TEST_F(FileSystemTest, BrokenSymlinkDirectoryIteration) {
   // Create a known hierarchy to recurse over.
   ASSERT_NO_ERROR(fs::create_directories(Twine(TestDirectory) + "/symlink"));
   ASSERT_NO_ERROR(
-      fs::create_link("no_such_file", Twine(TestDirectory) + "/symlink/a"));
+      fs::create_symlink("no_such_file", Twine(TestDirectory) + "/symlink/a"));
   ASSERT_NO_ERROR(
       fs::create_directories(Twine(TestDirectory) + "/symlink/b/bb"));
+  ASSERT_NO_ERROR(fs::create_symlink("no_such_file",
+                                     Twine(TestDirectory) + "/symlink/b/ba"));
+  ASSERT_NO_ERROR(fs::create_symlink("no_such_file",
+                                     Twine(TestDirectory) + "/symlink/b/bc"));
   ASSERT_NO_ERROR(
-      fs::create_link("no_such_file", Twine(TestDirectory) + "/symlink/b/ba"));
-  ASSERT_NO_ERROR(
-      fs::create_link("no_such_file", Twine(TestDirectory) + "/symlink/b/bc"));
-  ASSERT_NO_ERROR(
-      fs::create_link("no_such_file", Twine(TestDirectory) + "/symlink/c"));
+      fs::create_symlink("no_such_file", Twine(TestDirectory) + "/symlink/c"));
   ASSERT_NO_ERROR(
       fs::create_directories(Twine(TestDirectory) + "/symlink/d/dd/ddd"));
-  ASSERT_NO_ERROR(fs::create_link(Twine(TestDirectory) + "/symlink/d/dd",
-                                  Twine(TestDirectory) + "/symlink/d/da"));
+  ASSERT_NO_ERROR(fs::create_symlink(Twine(TestDirectory) + "/symlink/d/dd",
+                                     Twine(TestDirectory) + "/symlink/d/da"));
   ASSERT_NO_ERROR(
-      fs::create_link("no_such_file", Twine(TestDirectory) + "/symlink/e"));
+      fs::create_symlink("no_such_file", Twine(TestDirectory) + "/symlink/e"));
 
   typedef std::vector<std::string> v_t;
   v_t VisitedNonBrokenSymlinks;
@@ -1509,6 +1656,58 @@ TEST_F(FileSystemTest, FileMappingSync) {
   // Manually remove the test file.
   ASSERT_FALSE((bool)fs::remove(FileName));
 }
+
+#ifdef _WIN32
+TEST_F(FileSystemTest, FileMappingNamed) {
+  // Create a temp file.
+  SmallString<0> TempPath(TestDirectory);
+  sys::path::append(TempPath, "test-%%%%");
+  auto TempFileOrError = fs::TempFile::create(TempPath);
+  ASSERT_TRUE((bool)TempFileOrError);
+  fs::TempFile File = std::move(*TempFileOrError);
+  StringRef Content("hello there");
+  std::string FileName = File.TmpName;
+  ASSERT_NO_ERROR(
+      fs::resize_file_before_mapping_readwrite(File.FD, Content.size()));
+  {
+    // Map in the file twice with the same name
+    std::error_code EC1;
+    fs::mapped_file_region MFR1(
+        fs::convertFDToNativeFile(File.FD), fs::mapped_file_region::readwrite,
+        Content.size(), 0, EC1, "Local\\FileSystemTest_map");
+    ASSERT_NO_ERROR(EC1);
+
+    std::error_code EC2;
+    fs::mapped_file_region MFR2(
+        fs::convertFDToNativeFile(File.FD), fs::mapped_file_region::readwrite,
+        Content.size(), 0, EC2, "Local\\FileSystemTest_map");
+    ASSERT_NO_ERROR(EC2);
+
+    // Write content through mapped memory and check the content
+    llvm::copy(Content, MFR1.data());
+    ASSERT_EQ(std::memcmp(MFR1.data(), MFR2.data(), Content.size()), 0);
+  }
+  {
+    // Map in the file twice named and unnamed
+    std::error_code EC1;
+    fs::mapped_file_region MFR1(fs::convertFDToNativeFile(File.FD),
+                                fs::mapped_file_region::readwrite,
+                                Content.size(), 0, EC1, nullptr);
+    ASSERT_NO_ERROR(EC1);
+
+    std::error_code EC2;
+    fs::mapped_file_region MFR2(
+        fs::convertFDToNativeFile(File.FD), fs::mapped_file_region::readwrite,
+        Content.size(), 0, EC2, "Local\\FileSystemTest_map2");
+    ASSERT_NO_ERROR(EC2);
+
+    // Write content through mapped memory and check the content
+    llvm::copy(Content, MFR1.data());
+    ASSERT_EQ(std::memcmp(MFR1.data(), MFR2.data(), Content.size()), 0);
+  }
+  ASSERT_FALSE((bool)File.discard());
+}
+#endif
 
 TEST(Support, NormalizePath) {
   //                           Input,        Expected Win, Expected Posix
@@ -2116,8 +2315,8 @@ TEST_F(FileSystemTest, is_local) {
 
   int FD;
   SmallString<128> TempPath;
-  ASSERT_NO_ERROR(
-      fs::createUniqueFile(Twine(TestDirectory) + "/temp", FD, TempPath));
+  ASSERT_NO_ERROR(fs::createUniqueFile(Twine(TestDirectory) + "/temp-%%%%%%",
+                                       FD, TempPath));
   FileRemover Cleanup(TempPath);
 
   // Make sure it exists.
@@ -2216,6 +2415,21 @@ TEST_F(FileSystemTest, permissions) {
   SmallString<64> TempPath;
   ASSERT_NO_ERROR(fs::createTemporaryFile("prefix", "temp", FD, TempPath));
   FileRemover Cleanup(TempPath);
+
+  // BSD semantics (also available on Linux via mount -o bsdgroups/grpid) are
+  // for the group ID to be inherited, rather than only if the directory's
+  // set-group-ID bit is set, and so if the temporary file is created in a
+  // directory whose group is one the current user is not in (e.g. /tmp,
+  // typically root:wheel, i.e. 0:0, for a non-admin user) we will be unable to
+  // test setting the set-group-ID bit on it. Force the group to the effective
+  // group ID, i.e. the default Linux semantics, so we can perform tests
+  // setting the set-group-ID bit below. Note getegid() has no reserved return
+  // value to signify an error, it always succeeds.
+#ifdef LLVM_ON_UNIX
+  fs::file_status Status;
+  ASSERT_NO_ERROR(fs::status(FD, Status));
+  ASSERT_NO_ERROR(fs::changeFileOwnership(FD, Status.getUser(), getegid()));
+#endif
 
   // Make sure it exists.
   ASSERT_TRUE(fs::exists(Twine(TempPath)));
@@ -2715,13 +2929,13 @@ TEST_F(FileSystemTest, CopyFile) {
   verifyFileContents(Destination, Data[1]);
 
   // Note: The remaining logic is targeted at a potential failure case related
-  // to file cloning and symlinks on Darwin. On Windows, fs::create_link() does
-  // not return success here so the test is skipped.
+  // to file cloning and symlinks on Darwin. On Windows, fs::create_symlink()
+  // may not return success here so the test is skipped.
 #if !defined(_WIN32)
   // Set up a symlink to the third file.
   SmallString<128> Symlink(RootTestDirectory.path());
   path::append(Symlink, "symlink");
-  ASSERT_NO_ERROR(fs::create_link(path::filename(Sources[2]), Symlink));
+  ASSERT_NO_ERROR(fs::create_symlink(path::filename(Sources[2]), Symlink));
   verifyFileContents(Symlink, Data[2]);
 
   // fs::getUniqueID() should follow symlinks. Otherwise, this isn't good test

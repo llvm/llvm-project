@@ -18,28 +18,17 @@
 // Operand and SDNode transformation definitions.
 //===----------------------------------------------------------------------===//
 
-def simm10 : RISCVSImmOp<10>, ImmLeaf<XLenVT, "return isInt<10>(Imm);">;
-
-def SImm8UnsignedAsmOperand : SImmAsmOperand<8, "Unsigned"> {
-  let RenderMethod = "addSImm8UnsignedOperands";
+def SImm8PLI_BAsmOperand : SImmAsmOperand<8, "PLI_B"> {
+  let RenderMethod = "addSExtImmOperands<8>";
 }
-
-// (rdlo, rdhi) PPAIRE_DB (rs1plo, rs1phi, rs2plo, rs2phi)
-def SDT_RISCVPPairE_DB : SDTypeProfile<2, 4, [SDTCisVT<0, v4i8>,
-                                              SDTCisSameAs<0, 1>,
-                                              SDTCisSameAs<0, 2>,
-                                              SDTCisSameAs<0, 3>,
-                                              SDTCisSameAs<0, 4>,
-                                              SDTCisSameAs<0, 5>]>;
-def riscv_ppaire_db : RVSDNode<"PPAIRE_DB", SDT_RISCVPPairE_DB>;
 
 // A 8-bit signed immediate allowing range [-128, 255]
 // but represented as [-128, 127].
-def simm8_unsigned : RISCVOp, ImmLeaf<XLenVT, "return isInt<8>(Imm);"> {
-  let ParserMatchClass = SImm8UnsignedAsmOperand;
+def simm8_pli_b : RISCVOp {
+  let ParserMatchClass = SImm8PLI_BAsmOperand;
   let EncoderMethod = "getImmOpValue";
   let DecoderMethod = "decodeSImmOperand<8>";
-  let OperandType = "OPERAND_SIMM8_UNSIGNED";
+  let OperandType = "OPERAND_SIMM8";
   let MCOperandPredicate = [{
     int64_t Imm;
     if (!MCOp.evaluateAsConstantImm(Imm))
@@ -48,17 +37,17 @@ def simm8_unsigned : RISCVOp, ImmLeaf<XLenVT, "return isInt<8>(Imm);"> {
   }];
 }
 
-def SImm10UnsignedAsmOperand : SImmAsmOperand<10, "Unsigned"> {
-  let RenderMethod = "addSImm10UnsignedOperands";
+def SImm10PLUIAsmOperand : SImmAsmOperand<10, "PLUI"> {
+  let RenderMethod = "addSExtImmOperands<10>";
 }
 
 // A 10-bit signed immediate allowing range [-512, 1023]
 // but represented as [-512, 511].
-def simm10_unsigned : RISCVOp {
-  let ParserMatchClass = SImm10UnsignedAsmOperand;
+def simm10_plui : RISCVOp {
+  let ParserMatchClass = SImm10PLUIAsmOperand;
   let EncoderMethod = "getImmOpValue";
   let DecoderMethod = "decodeSImmOperand<10>";
-  let OperandType = "OPERAND_SIMM10_UNSIGNED";
+  let OperandType = "OPERAND_SIMM10";
   let MCOperandPredicate = [{
     int64_t Imm;
     if (!MCOp.evaluateAsConstantImm(Imm))
@@ -66,6 +55,68 @@ def simm10_unsigned : RISCVOp {
     return isInt<10>(Imm);
   }];
 }
+
+def SImm10PLI_HAsmOperand : SImmAsmOperand<10, "PLI_H"> {
+  let RenderMethod = "addSExtImmOperands<10>";
+}
+
+def SImm10PLI_WAsmOperand : SImmAsmOperand<10, "PLI_W"> {
+  let RenderMethod = "addSExtImmOperands<10>";
+}
+
+// A 10-bit signed immediate to be splatted to 16 bit elements allowing range
+// [-512, 511] and [65025,65535] but represented as [-512, 511].
+def simm10_pli_h : RISCVOp {
+  let ParserMatchClass = SImm10PLI_HAsmOperand;
+  let EncoderMethod = "getImmOpValue";
+  let DecoderMethod = "decodeSImmOperand<10>";
+  let OperandType = "OPERAND_SIMM10";
+  let MCOperandPredicate = [{
+    int64_t Imm;
+    if (!MCOp.evaluateAsConstantImm(Imm))
+      return false;
+    return isInt<10>(Imm);
+  }];
+}
+
+// A 10-bit signed immediate to be splatted to 32 bit elements allowing range
+// [-512, 511] and [4294966784,4294967295]
+def simm10_pli_w : RISCVOp {
+  let ParserMatchClass = SImm10PLI_WAsmOperand;
+  let EncoderMethod = "getImmOpValue";
+  let DecoderMethod = "decodeSImmOperand<10>";
+  let OperandType = "OPERAND_SIMM10";
+  let MCOperandPredicate = [{
+    int64_t Imm;
+    if (!MCOp.evaluateAsConstantImm(Imm))
+      return false;
+    return isInt<10>(Imm);
+  }];
+}
+
+class UImmPlus1AsmOperand<int width> : AsmOperandClass {
+  let Name = "UImm" # width # "Plus1";
+  let RenderMethod = "addImmOperands";
+  let DiagnosticType = "InvalidUImm" # width # "Plus1";
+}
+
+class RISCVUImmPlus1Op<int bitsNum>
+    : RISCVOp, ImmLeaf<XLenVT, "return Imm > 0 && isUInt<" # bitsNum # ">(Imm - 1);"> {
+  let ParserMatchClass = UImmPlus1AsmOperand<bitsNum>;
+  let EncoderMethod = "getImmOpValueMinus1";
+  let DecoderMethod = "decodeUImmPlus1Operand<" # bitsNum # ">";
+  let OperandType = "OPERAND_UIMM" # bitsNum # "_PLUS1";
+  let MCOperandPredicate = [{
+    int64_t Imm;
+    if (!MCOp.evaluateAsConstantImm(Imm))
+      return false;
+    return Imm > 0 && isUInt<}] # bitsNum # [{>(Imm - 1);
+  }];
+}
+
+def uimm4_plus1 : RISCVUImmPlus1Op<4>;
+def uimm5_plus1 : RISCVUImmPlus1Op<5>;
+def uimm6_plus1 : RISCVUImmPlus1Op<6>;
 
 //===----------------------------------------------------------------------===//
 // Instruction class templates
@@ -89,8 +140,8 @@ class RVPLoadImm_i<bits<7> funct7, dag ins, string opcodestr,
 }
 
 // Base for pli.h/w.
-class PLI_i<bits<7> funct7, string opcodestr>
-    : RVPLoadImm_i<funct7, (ins simm10:$imm10), opcodestr, "$rd, $imm10"> {
+class PLI_i<bits<7> funct7, string opcodestr, DAGOperand imm>
+    : RVPLoadImm_i<funct7, (ins imm:$imm10), opcodestr, "$rd, $imm10"> {
   bits<10> imm10;
 
   let Inst{24-16} = imm10{8-0};
@@ -99,7 +150,7 @@ class PLI_i<bits<7> funct7, string opcodestr>
 
 // Base for plui.h/w.
 class PLUI_i<bits<7> funct7, string opcodestr>
-    : RVPLoadImm_i<funct7, (ins simm10_unsigned:$imm10), opcodestr,
+    : RVPLoadImm_i<funct7, (ins simm10_plui:$imm10), opcodestr,
                    "$rd, $imm10"> {
   bits<10> imm10;
 
@@ -182,32 +233,36 @@ class RVPShift_ri<bits<3> f, bits<3> funct3, string opcodestr, Operand ImmType>
   let Inst{27}    = 0b0;
 }
 
-class RVPShiftD_ri<bits<3> f, bits<3> funct3, string opcodestr>
-    : RVPShift_ri<f, funct3, opcodestr, uimm6> {
+class RVPShiftD_ri<bits<3> f, bits<3> funct3, string opcodestr,
+                   Operand ImmType = uimm6>
+    : RVPShift_ri<f, funct3, opcodestr, ImmType> {
   bits<6> shamt;
 
   let Inst{26} = 0b1;
   let Inst{25-20} = shamt;
 }
 
-class RVPShiftW_ri<bits<3> f, bits<3> funct3, string opcodestr>
-    : RVPShift_ri<f, funct3, opcodestr, uimm5> {
+class RVPShiftW_ri<bits<3> f, bits<3> funct3, string opcodestr,
+                   Operand ImmType = uimm5>
+    : RVPShift_ri<f, funct3, opcodestr, ImmType> {
   bits<5> shamt;
 
   let Inst{26-25} = 0b01;
   let Inst{24-20} = shamt;
 }
 
-class RVPShiftH_ri<bits<3> f, bits<3> funct3, string opcodestr>
-    : RVPShift_ri<f, funct3, opcodestr, uimm4> {
+class RVPShiftH_ri<bits<3> f, bits<3> funct3, string opcodestr,
+                   Operand ImmType = uimm4>
+    : RVPShift_ri<f, funct3, opcodestr, ImmType> {
   bits<4> shamt;
 
   let Inst{26-24} = 0b001;
   let Inst{23-20} = shamt;
 }
 
-class RVPShiftB_ri<bits<3> f, bits<3> funct3, string opcodestr>
-    : RVPShift_ri<f, funct3, opcodestr, uimm3> {
+class RVPShiftB_ri<bits<3> f, bits<3> funct3, string opcodestr,
+                   Operand ImmType = uimm3>
+    : RVPShift_ri<f, funct3, opcodestr, ImmType> {
   bits<3> shamt;
 
   let Inst{26-23} = 0b0001;
@@ -501,22 +556,27 @@ let Predicates = [HasStdExtP, IsRV64] in {
 let Predicates = [HasStdExtP] in {
   def PSLLI_B  : RVPShiftB_ri<0b000, 0b010, "pslli.b">;
   def PSLLI_H  : RVPShiftH_ri<0b000, 0b010, "pslli.h">;
+
+  let Defs = [VXSAT] in
   def PSSLAI_H : RVPShiftH_ri<0b101, 0b010, "psslai.h">;
 } // Predicates = [HasStdExtP]
 let Predicates = [HasStdExtP, IsRV32], DecoderNamespace = "RV32Only" in {
+  let Defs = [VXSAT] in
   def SSLAI    : RVPShiftW_ri<0b101, 0b010, "sslai">;
 } // Predicates = [HasStdExtP, IsRV32], DecoderNamespace = "RV32Only"
 let Predicates = [HasStdExtP, IsRV64] in {
   def PSLLI_W  : RVPShiftW_ri<0b000, 0b010, "pslli.w">;
+
+  let Defs = [VXSAT] in
   def PSSLAI_W : RVPShiftW_ri<0b101, 0b010, "psslai.w">;
 } // Predicates = [HasStdExtP, IsRV64]
 
 let Predicates = [HasStdExtP] in
-def PLI_H : PLI_i<0b1011000, "pli.h">;
+def PLI_H : PLI_i<0b1011000, "pli.h", simm10_pli_h>;
 let Predicates = [HasStdExtP, IsRV64] in
-def PLI_W : PLI_i<0b1011001, "pli.w">;
+def PLI_W : PLI_i<0b1011001, "pli.w", simm10_pli_w>;
 let Predicates = [HasStdExtP] in {
-  def PLI_B : RVPLoadImm_i<0b1011010, (ins simm8_unsigned:$imm8), "pli.b",
+  def PLI_B : RVPLoadImm_i<0b1011010, (ins simm8_pli_b:$imm8), "pli.b",
                            "$rd, $imm8"> {
     bits<8> imm8;
 
@@ -528,8 +588,11 @@ let Predicates = [HasStdExtP] in {
 
 let Predicates = [HasStdExtP] in {
   def PSEXT_H_B : RVPUnary_ri<0b00, 0b00100, "psext.h.b">;
+
+  let Defs = [VXSAT] in {
   def PSABS_H   : RVPUnary_ri<0b00, 0b00111, "psabs.h">;
   def PSABS_B   : RVPUnary_ri<0b10, 0b00111, "psabs.b">;
+  } // Defs = [VXSAT]
 } // Predicates = [HasStdExtP]
 let Predicates = [HasStdExtP, IsRV64] in {
   def PSEXT_W_B : RVPUnary_ri<0b01, 0b00100, "psext.w.b">;
@@ -548,31 +611,62 @@ let Predicates = [HasStdExtP] in {
   def PADD_HS   : RVPBinaryScalar_rr<0b001, 0b00, 0b010, "padd.hs">;
   def PADD_BS   : RVPBinaryScalar_rr<0b001, 0b10, 0b010, "padd.bs">;
 
+  let Defs = [VXSAT] in
+  def PSSHL_HS  : RVPBinaryScalar_rr<0b010, 0b00, 0b010, "psshl.hs">;
+
+  let Defs = [VXSAT] in
+  def PSSHLR_HS : RVPBinaryScalar_rr<0b011, 0b00, 0b010, "psshlr.hs">;
+
+  let Defs = [VXSAT] in
   def PSSHA_HS  : RVPBinaryScalar_rr<0b110, 0b00, 0b010, "pssha.hs">;
 
+  let Defs = [VXSAT] in
   def PSSHAR_HS : RVPBinaryScalar_rr<0b111, 0b00, 0b010, "psshar.hs">;
 } // Predicates = [HasStdExtP]
 let Predicates = [HasStdExtP, IsRV32], DecoderNamespace = "RV32Only" in {
+  let Defs = [VXSAT] in
+  def SSHL      : RVPBinaryScalar_rr<0b010, 0b01, 0b010, "sshl">;
+
+  let Defs = [VXSAT] in
+  def SSHLR     : RVPBinaryScalar_rr<0b011, 0b01, 0b010, "sshlr">;
+
+  let Defs = [VXSAT] in
   def SSHA      : RVPBinaryScalar_rr<0b110, 0b01, 0b010, "ssha">;
 
+  let Defs = [VXSAT] in
   def SSHAR     : RVPBinaryScalar_rr<0b111, 0b01, 0b010, "sshar">;
-} // Predicates = [HasStdExtP, IsRV32]
+} // Predicates = [HasStdExtP, IsRV32], DecoderNamespace = "RV32Only"
 let Predicates = [HasStdExtP, IsRV64] in {
   def PSLL_WS   : RVPBinaryScalar_rr<0b000, 0b01, 0b010, "psll.ws">;
 
   def PADD_WS   : RVPBinaryScalar_rr<0b001, 0b01, 0b010, "padd.ws">;
 
+  let Defs = [VXSAT] in {
+  def PSSHL_WS  : RVPBinaryScalar_rr<0b010, 0b01, 0b010, "psshl.ws">;
+  def SHL       : RVPBinaryScalar_rr<0b010, 0b11, 0b010, "shl">;
+  } // Defs = [VXSAT]
+
+  let Defs = [VXSAT] in {
+  def PSSHLR_WS : RVPBinaryScalar_rr<0b011, 0b01, 0b010, "psshlr.ws">;
+  def SHLR      : RVPBinaryScalar_rr<0b011, 0b11, 0b010, "shlr">;
+  } // Defs = [VXSAT]
+
+  let Defs = [VXSAT] in {
   def PSSHA_WS  : RVPBinaryScalar_rr<0b110, 0b01, 0b010, "pssha.ws">;
   def SHA       : RVPBinaryScalar_rr<0b110, 0b11, 0b010, "sha">;
+  } // Defs = [VXSAT]
 
+  let Defs = [VXSAT] in {
   def PSSHAR_WS : RVPBinaryScalar_rr<0b111, 0b01, 0b010, "psshar.ws">;
   def SHAR      : RVPBinaryScalar_rr<0b111, 0b11, 0b010, "shar">;
+  } // Defs = [VXSAT]
 } // Predicates = [HasStdExtP, IsRV64]
 
 let Predicates = [HasStdExtP] in {
   def PSRLI_B    : RVPShiftB_ri<0b000, 0b100, "psrli.b">;
   def PSRLI_H    : RVPShiftH_ri<0b000, 0b100, "psrli.h">;
 
+  let Defs = [VXSAT] in
   def PUSATI_H   : RVPShiftH_ri<0b010, 0b100, "pusati.h">;
 
   def PSRAI_B    : RVPShiftB_ri<0b100, 0b100, "psrai.b">;
@@ -580,27 +674,34 @@ let Predicates = [HasStdExtP] in {
 
   def PSRARI_H   : RVPShiftH_ri<0b101, 0b100, "psrari.h">;
 
-  def PSATI_H    : RVPShiftH_ri<0b110, 0b100, "psati.h">;
+  let Defs = [VXSAT] in
+  def PSATI_H    : RVPShiftH_ri<0b110, 0b100, "psati.h", uimm4_plus1>;
 } // Predicates = [HasStdExtP]
 let Predicates = [HasStdExtP, IsRV32], DecoderNamespace = "RV32Only" in {
+  let Defs = [VXSAT] in
   def USATI_RV32 : RVPShiftW_ri<0b010, 0b100, "usati">;
 
   def SRARI_RV32 : RVPShiftW_ri<0b101, 0b100, "srari">;
 
-  def SATI_RV32  : RVPShiftW_ri<0b110, 0b100, "sati">;
-} // Predicates = [HasStdExtP, IsRV32]
+  let Defs = [VXSAT] in
+  def SATI_RV32  : RVPShiftW_ri<0b110, 0b100, "sati", uimm5_plus1>;
+} // Predicates = [HasStdExtP, IsRV32], DecoderNamespace = "RV32Only"
 let Predicates = [HasStdExtP, IsRV64] in {
   def PSRLI_W    : RVPShiftW_ri<0b000, 0b100, "psrli.w">;
   def PSRAI_W    : RVPShiftW_ri<0b100, 0b100, "psrai.w">;
 
+  let Defs = [VXSAT] in {
   def PUSATI_W   : RVPShiftW_ri<0b010, 0b100, "pusati.w">;
   def USATI_RV64 : RVPShiftD_ri<0b010, 0b100, "usati">;
+  } // Defs = [VXSAT]
 
   def PSRARI_W   : RVPShiftW_ri<0b101, 0b100, "psrari.w">;
   def SRARI_RV64 : RVPShiftD_ri<0b101, 0b100, "srari">;
 
-  def PSATI_W    : RVPShiftW_ri<0b110, 0b100, "psati.w">;
-  def SATI_RV64  : RVPShiftD_ri<0b110, 0b100, "sati">;
+  let Defs = [VXSAT] in {
+  def PSATI_W    : RVPShiftW_ri<0b110, 0b100, "psati.w", uimm5_plus1>;
+  def SATI_RV64  : RVPShiftD_ri<0b110, 0b100, "sati", uimm6_plus1>;
+  } // Defs = [VXSAT]
 } // Predicates = [HasStdExtP, IsRV64]
 
 let Predicates = [HasStdExtP] in {
@@ -630,14 +731,18 @@ let Predicates = [HasStdExtP] in {
   def PADD_H   : RVPBinary_rr<0b0000, 0b00, 0b000, "padd.h", Commutable=1>;
   def PADD_B   : RVPBinary_rr<0b0000, 0b10, 0b000, "padd.b", Commutable=1>;
 
+  let Defs = [VXSAT] in {
   def PSADD_H  : RVPBinary_rr<0b0010, 0b00, 0b000, "psadd.h", Commutable=1>;
   def PSADD_B  : RVPBinary_rr<0b0010, 0b10, 0b000, "psadd.b", Commutable=1>;
+  } // Defs = [VXSAT]
 
   def PAADD_H  : RVPBinary_rr<0b0011, 0b00, 0b000, "paadd.h", Commutable=1>;
   def PAADD_B  : RVPBinary_rr<0b0011, 0b10, 0b000, "paadd.b", Commutable=1>;
 
+  let Defs = [VXSAT] in {
   def PSADDU_H : RVPBinary_rr<0b0110, 0b00, 0b000, "psaddu.h", Commutable=1>;
   def PSADDU_B : RVPBinary_rr<0b0110, 0b10, 0b000, "psaddu.b", Commutable=1>;
+  } // Defs = [VXSAT]
 
   def PAADDU_H : RVPBinary_rr<0b0111, 0b00, 0b000, "paaddu.h", Commutable=1>;
   def PAADDU_B : RVPBinary_rr<0b0111, 0b10, 0b000, "paaddu.b", Commutable=1>;
@@ -648,8 +753,10 @@ let Predicates = [HasStdExtP] in {
   def PABD_H   : RVPBinary_rr<0b1001, 0b00, 0b000, "pabd.h", Commutable=1>;
   def PABD_B   : RVPBinary_rr<0b1001, 0b10, 0b000, "pabd.b", Commutable=1>;
 
+  let Defs = [VXSAT] in {
   def PSSUB_H  : RVPBinary_rr<0b1010, 0b00, 0b000, "pssub.h">;
   def PSSUB_B  : RVPBinary_rr<0b1010, 0b10, 0b000, "pssub.b">;
+  } // Defs = [VXSAT]
 
   def PASUB_H  : RVPBinary_rr<0b1011, 0b00, 0b000, "pasub.h">;
   def PASUB_B  : RVPBinary_rr<0b1011, 0b10, 0b000, "pasub.b">;
@@ -657,25 +764,31 @@ let Predicates = [HasStdExtP] in {
   def PABDU_H  : RVPBinary_rr<0b1101, 0b00, 0b000, "pabdu.h", Commutable=1>;
   def PABDU_B  : RVPBinary_rr<0b1101, 0b10, 0b000, "pabdu.b", Commutable=1>;
 
+  let Defs = [VXSAT] in {
   def PSSUBU_H : RVPBinary_rr<0b1110, 0b00, 0b000, "pssubu.h">;
   def PSSUBU_B : RVPBinary_rr<0b1110, 0b10, 0b000, "pssubu.b">;
+  } // Defs = [VXSAT]
 
   def PASUBU_H : RVPBinary_rr<0b1111, 0b00, 0b000, "pasubu.h">;
   def PASUBU_B : RVPBinary_rr<0b1111, 0b10, 0b000, "pasubu.b">;
 } // Predicates = [HasStdExtP]
 let Predicates = [HasStdExtP, IsRV32], DecoderNamespace = "RV32Only" in {
+  let Defs = [VXSAT] in
   def SADD     : RVPBinary_rr<0b0010, 0b01, 0b000, "sadd", Commutable=1>;
 
   def AADD     : RVPBinary_rr<0b0011, 0b01, 0b000, "aadd", Commutable=1>;
 
+  let Defs = [VXSAT] in
   def SADDU    : RVPBinary_rr<0b0110, 0b01, 0b000, "saddu", Commutable=1>;
 
   def AADDU    : RVPBinary_rr<0b0111, 0b01, 0b000, "aaddu", Commutable=1>;
 
+  let Defs = [VXSAT] in
   def SSUB     : RVPBinary_rr<0b1010, 0b01, 0b000, "ssub">;
 
   def ASUB     : RVPBinary_rr<0b1011, 0b01, 0b000, "asub">;
 
+  let Defs = [VXSAT] in
   def SSUBU    : RVPBinary_rr<0b1110, 0b01, 0b000, "ssubu">;
 
   def ASUBU    : RVPBinary_rr<0b1111, 0b01, 0b000, "asubu">;
@@ -683,20 +796,24 @@ let Predicates = [HasStdExtP, IsRV32], DecoderNamespace = "RV32Only" in {
 let Predicates = [HasStdExtP, IsRV64] in {
   def PADD_W   : RVPBinary_rr<0b0000, 0b01, 0b000, "padd.w", Commutable=1>;
 
+  let Defs = [VXSAT] in
   def PSADD_W  : RVPBinary_rr<0b0010, 0b01, 0b000, "psadd.w", Commutable=1>;
 
   def PAADD_W  : RVPBinary_rr<0b0011, 0b01, 0b000, "paadd.w", Commutable=1>;
 
+  let Defs = [VXSAT] in
   def PSADDU_W : RVPBinary_rr<0b0110, 0b01, 0b000, "psaddu.w", Commutable=1>;
 
   def PAADDU_W : RVPBinary_rr<0b0111, 0b01, 0b000, "paaddu.w", Commutable=1>;
 
   def PSUB_W   : RVPBinary_rr<0b1000, 0b01, 0b000, "psub.w">;
 
+  let Defs = [VXSAT] in
   def PSSUB_W  : RVPBinary_rr<0b1010, 0b01, 0b000, "pssub.w">;
 
   def PASUB_W  : RVPBinary_rr<0b1011, 0b01, 0b000, "pasub.w">;
 
+  let Defs = [VXSAT] in
   def PSSUBU_W : RVPBinary_rr<0b1110, 0b01, 0b000, "pssubu.w">;
 
   def PASUBU_W : RVPBinary_rr<0b1111, 0b01, 0b000, "pasubu.w">;
@@ -743,27 +860,42 @@ let Predicates = [HasStdExtP, IsRV64] in {
 // Note the spec has a 3-bit f field in bits 30:28 with 0 in bit 27.
 // Here we include the 0 in the f field to reduce number of tablegen classes.
 let Predicates = [HasStdExtP] in {
-  def PSH1ADD_H   : RVPBinary_rr<0b0100, 0b00, 0b010, "psh1add.h">;
+  def PSH1ADD_H    : RVPBinary_rr<0b0100, 0b00, 0b010, "psh1add.h">;
 
-  def PSSH1SADD_H : RVPBinary_rr<0b0110, 0b00, 0b010, "pssh1sadd.h">;
+  let Defs = [VXSAT] in
+  def PSSH1SADD_H  : RVPBinary_rr<0b0110, 0b00, 0b010, "pssh1sadd.h">;
 } // Predicates = [HasStdExtP]
 let Predicates = [HasStdExtP, IsRV32], DecoderNamespace = "RV32Only" in {
-  def SSH1SADD    : RVPBinary_rr<0b0110, 0b01, 0b010, "ssh1sadd">;
+  let Defs = [VXSAT] in
+  def SSH1SADD     : RVPBinary_rr<0b0110, 0b01, 0b010, "ssh1sadd">;
 } // Predicates = [HasStdExtP, IsRV32], DecoderNamespace = "RV32Only"
 let Predicates = [HasStdExtP, IsRV64] in {
-  def PSH1ADD_W   : RVPBinary_rr<0b0100, 0b01, 0b010, "psh1add.w">;
+  let Defs = [VXSAT] in {
+    def PNCLIPUP_B : RVPBinary_rr<0b0000, 0b00, 0b010, "pnclipup.b">;
+    def PNCLIPUP_H : RVPBinary_rr<0b0000, 0b01, 0b010, "pnclipup.h">;
+    def PNCLIPUP_W : RVPBinary_rr<0b0000, 0b11, 0b010, "pnclipup.w">;
+  }
 
-  def PSSH1SADD_W : RVPBinary_rr<0b0110, 0b01, 0b010, "pssh1sadd.w">;
+  def PSH1ADD_W    : RVPBinary_rr<0b0100, 0b01, 0b010, "psh1add.w">;
 
-  def UNZIP8P     : RVPBinary_rr<0b1100, 0b00, 0b010, "unzip8p">;
-  def UNZIP16P    : RVPBinary_rr<0b1100, 0b01, 0b010, "unzip16p">;
-  def UNZIP8HP    : RVPBinary_rr<0b1100, 0b10, 0b010, "unzip8hp">;
-  def UNZIP16HP   : RVPBinary_rr<0b1100, 0b11, 0b010, "unzip16hp">;
+  let Defs = [VXSAT] in
+  def PSSH1SADD_W  : RVPBinary_rr<0b0110, 0b01, 0b010, "pssh1sadd.w">;
 
-  def ZIP8P       : RVPBinary_rr<0b1110, 0b00, 0b010, "zip8p">;
-  def ZIP16P      : RVPBinary_rr<0b1110, 0b01, 0b010, "zip16p">;
-  def ZIP8HP      : RVPBinary_rr<0b1110, 0b10, 0b010, "zip8hp">;
-  def ZIP16HP     : RVPBinary_rr<0b1110, 0b11, 0b010, "zip16hp">;
+  let Defs = [VXSAT] in {
+    def PNCLIPP_B  : RVPBinary_rr<0b1000, 0b00, 0b010, "pnclipp.b">;
+    def PNCLIPP_H  : RVPBinary_rr<0b1000, 0b01, 0b010, "pnclipp.h">;
+    def PNCLIPP_W  : RVPBinary_rr<0b1000, 0b11, 0b010, "pnclipp.w">;
+  }
+
+  def UNZIP8P      : RVPBinary_rr<0b1100, 0b00, 0b010, "unzip8p">;
+  def UNZIP16P     : RVPBinary_rr<0b1100, 0b01, 0b010, "unzip16p">;
+  def UNZIP8HP     : RVPBinary_rr<0b1100, 0b10, 0b010, "unzip8hp">;
+  def UNZIP16HP    : RVPBinary_rr<0b1100, 0b11, 0b010, "unzip16hp">;
+
+  def ZIP8P        : RVPBinary_rr<0b1110, 0b00, 0b010, "zip8p">;
+  def ZIP16P       : RVPBinary_rr<0b1110, 0b01, 0b010, "zip16p">;
+  def ZIP8HP       : RVPBinary_rr<0b1110, 0b10, 0b010, "zip8hp">;
+  def ZIP16HP      : RVPBinary_rr<0b1110, 0b11, 0b010, "zip16hp">;
 } // Predicates = [HasStdExtP, IsRV64]
 
 let Predicates = [HasStdExtP] in {
@@ -896,11 +1028,13 @@ let Predicates = [HasStdExtP] in {
   def PMQR2ADDA_H : RVPTernary_rrr<0b0111, 0b10, 0b101, "pmqr2adda.h">;
 
   def PM2SUB_H    : RVPBinary_rr<0b1000, 0b00, 0b101, "pm2sub.h">;
+  let Defs = [VXSAT] in
   def PM2SADD_H   : RVPBinary_rr<0b1000, 0b10, 0b101, "pm2sadd.h", Commutable=1>;
 
   def PM2SUBA_H   : RVPTernary_rrr<0b1001, 0b00, 0b101, "pm2suba.h">;
 
   def PM2SUB_HX   : RVPBinary_rr<0b1010, 0b00, 0b101, "pm2sub.hx">;
+  let Defs = [VXSAT] in
   def PM2SADD_HX  : RVPBinary_rr<0b1010, 0b10, 0b101, "pm2sadd.hx", Commutable=1>;
 
   def PM2SUBA_HX  : RVPTernary_rrr<0b1011, 0b00, 0b101, "pm2suba.hx">;
@@ -1053,8 +1187,10 @@ let Predicates = [HasStdExtP] in {
   def PMHACCSU_H    : RVPTernary_rrr<0b1001, 0b00, 0b111, "pmhaccsu.h">;
   def PMHRACCSU_H   : RVPTernary_rrr<0b1001, 0b10, 0b111, "pmhraccsu.h">;
 
+  let Defs = [VXSAT] in {
   def PMULQ_H       : RVPBinary_rr<0b1010, 0b00, 0b111, "pmulq.h", Commutable=1>;
   def PMULQR_H      : RVPBinary_rr<0b1010, 0b10, 0b111, "pmulqr.h", Commutable=1>;
+  } // Defs = [VXSAT]
 } // Predicates = [HasStdExtP]
 let Predicates = [HasStdExtP, IsRV32], DecoderNamespace = "RV32Only" in {
   def MULHR      : RVPBinary_rr<0b0000, 0b11, 0b111, "mulhr", Commutable=1>;
@@ -1084,8 +1220,10 @@ let Predicates = [HasStdExtP, IsRV32], DecoderNamespace = "RV32Only" in {
   def MHACCSU    : RVPTernary_rrr<0b1001, 0b01, 0b111, "mhaccsu">;
   def MHRACCSU   : RVPTernary_rrr<0b1001, 0b11, 0b111, "mhraccsu">;
 
+  let Defs = [VXSAT] in {
   def MULQ       : RVPBinary_rr<0b1010, 0b01, 0b111, "mulq", Commutable=1>;
   def MULQR      : RVPBinary_rr<0b1010, 0b11, 0b111, "mulqr", Commutable=1>;
+  } // Defs = [VXSAT]
 
   def MQACC_H00  : RVPTernary_rrr<0b1101, 0b00, 0b111, "mqacc.h00">;
   def MQRACC_H00 : RVPTernary_rrr<0b1101, 0b10, 0b111, "mqracc.h00">;
@@ -1124,8 +1262,10 @@ let Predicates = [HasStdExtP, IsRV64] in {
   def PMHACCSU_W   : RVPTernary_rrr<0b1001, 0b01, 0b111, "pmhaccsu.w">;
   def PMHRACCSU_W  : RVPTernary_rrr<0b1001, 0b11, 0b111, "pmhraccsu.w">;
 
+  let Defs = [VXSAT] in {
   def PMULQ_W      : RVPBinary_rr<0b1010, 0b01, 0b111, "pmulq.w", Commutable=1>;
   def PMULQR_W     : RVPBinary_rr<0b1010, 0b11, 0b111, "pmulqr.w", Commutable=1>;
+  } // Defs = [VXSAT]
 
   def PMQACC_W_H00  : RVPTernary_rrr<0b1101, 0b00, 0b111, "pmqacc.w.h00">;
   def MQACC_W00     : RVPTernary_rrr<0b1101, 0b01, 0b111, "mqacc.w00">;
@@ -1139,7 +1279,7 @@ let Predicates = [HasStdExtP, IsRV64] in {
 } // Predicates = [HasStdExtP, IsRV64]
 
 let Predicates = [HasStdExtP, IsRV32] in {
-  def PLI_DH : RVPPairLoadImm_i<0b0011000, (ins simm10:$imm10), "pli.dh",
+  def PLI_DH : RVPPairLoadImm_i<0b0011000, (ins simm10_pli_h:$imm10), "pli.dh",
                                 "$rd, $imm10"> {
     bits<10> imm10;
 
@@ -1147,7 +1287,7 @@ let Predicates = [HasStdExtP, IsRV32] in {
     let Inst{15}    = imm10{9};
   }
 
-  def PLI_DB : RVPPairLoadImm_i<0b0011010, (ins simm8_unsigned:$imm8), "pli.db",
+  def PLI_DB : RVPPairLoadImm_i<0b0011010, (ins simm8_pli_b:$imm8), "pli.db",
                                 "$rd, $imm8"> {
     bits<8> imm8;
 
@@ -1156,7 +1296,7 @@ let Predicates = [HasStdExtP, IsRV32] in {
     let Inst{15}    = 0b0;
   }
 
-  def PLUI_DH : RVPPairLoadImm_i<0b0111000, (ins simm10_unsigned:$imm10),
+  def PLUI_DH : RVPPairLoadImm_i<0b0111000, (ins simm10_plui:$imm10),
                                  "plui.dh", "$rd, $imm10"> {
     bits<10> imm10;
 
@@ -1265,13 +1405,17 @@ let Predicates = [HasStdExtP, IsRV32] in {
   def PNSRLI_H     : RVPNarrowingShiftH_ri<0b000, "pnsrli.h">;
   def NSRLI        : RVPNarrowingShiftW_ri<0b000, "nsrli">;
 
+  let Defs = [VXSAT] in {
   def PNCLIPIU_B   : RVPNarrowingShiftB_ri<0b010, "pnclipiu.b">;
   def PNCLIPIU_H   : RVPNarrowingShiftH_ri<0b010, "pnclipiu.h">;
   def NCLIPIU      : RVPNarrowingShiftW_ri<0b010, "nclipiu">;
+  } // Defs = [VXSAT]
 
+  let Defs = [VXSAT] in {
   def PNCLIPRIU_B  : RVPNarrowingShiftB_ri<0b011, "pnclipriu.b">;
   def PNCLIPRIU_H  : RVPNarrowingShiftH_ri<0b011, "pnclipriu.h">;
   def NCLIPRIU     : RVPNarrowingShiftW_ri<0b011, "nclipriu">;
+  } // Defs = [VXSAT]
 
   def PNSRAI_B     : RVPNarrowingShiftB_ri<0b100, "pnsrai.b">;
   def PNSRAI_H     : RVPNarrowingShiftH_ri<0b100, "pnsrai.h">;
@@ -1281,25 +1425,33 @@ let Predicates = [HasStdExtP, IsRV32] in {
   def PNSRARI_H    : RVPNarrowingShiftH_ri<0b101, "pnsrari.h">;
   def NSRARI       : RVPNarrowingShiftW_ri<0b101, "nsrari">;
 
+  let Defs = [VXSAT] in {
   def PNCLIPI_B    : RVPNarrowingShiftB_ri<0b110, "pnclipi.b">;
   def PNCLIPI_H    : RVPNarrowingShiftH_ri<0b110, "pnclipi.h">;
   def NCLIPI       : RVPNarrowingShiftW_ri<0b110, "nclipi">;
+  } // Defs = [VXSAT]
 
+  let Defs = [VXSAT] in {
   def PNCLIPRI_B   : RVPNarrowingShiftB_ri<0b111, "pnclipri.b">;
   def PNCLIPRI_H   : RVPNarrowingShiftH_ri<0b111, "pnclipri.h">;
   def NCLIPRI      : RVPNarrowingShiftW_ri<0b111, "nclipri">;
+  } // Defs = [VXSAT]
 
   def PNSRL_BS     : RVPNarrowingShift_rr<0b000, 0b00, "pnsrl.bs">;
   def PNSRL_HS     : RVPNarrowingShift_rr<0b000, 0b01, "pnsrl.hs">;
   def NSRL         : RVPNarrowingShift_rr<0b000, 0b11, "nsrl">;
 
+  let Defs = [VXSAT] in {
   def PNCLIPU_BS   : RVPNarrowingShift_rr<0b010, 0b00, "pnclipu.bs">;
   def PNCLIPU_HS   : RVPNarrowingShift_rr<0b010, 0b01, "pnclipu.hs">;
   def NCLIPU       : RVPNarrowingShift_rr<0b010, 0b11, "nclipu">;
+  } // Defs = [VXSAT]
 
+  let Defs = [VXSAT] in {
   def PNCLIPRU_BS  : RVPNarrowingShift_rr<0b011, 0b00, "pnclipru.bs">;
   def PNCLIPRU_HS  : RVPNarrowingShift_rr<0b011, 0b01, "pnclipru.hs">;
   def NCLIPRU      : RVPNarrowingShift_rr<0b011, 0b11, "nclipru">;
+  } // Defs = [VXSAT]
 
   def PNSRA_BS     : RVPNarrowingShift_rr<0b100, 0b00, "pnsra.bs">;
   def PNSRA_HS     : RVPNarrowingShift_rr<0b100, 0b01, "pnsra.hs">;
@@ -1309,28 +1461,36 @@ let Predicates = [HasStdExtP, IsRV32] in {
   def PNSRAR_HS    : RVPNarrowingShift_rr<0b101, 0b01, "pnsrar.hs">;
   def NSRAR        : RVPNarrowingShift_rr<0b101, 0b11, "nsrar">;
 
+  let Defs = [VXSAT] in {
   def PNCLIP_BS    : RVPNarrowingShift_rr<0b110, 0b00, "pnclip.bs">;
   def PNCLIP_HS    : RVPNarrowingShift_rr<0b110, 0b01, "pnclip.hs">;
   def NCLIP        : RVPNarrowingShift_rr<0b110, 0b11, "nclip">;
+  } // Defs = [VXSAT]
 
+  let Defs = [VXSAT] in {
   def PNCLIPR_BS   : RVPNarrowingShift_rr<0b111, 0b00, "pnclipr.bs">;
   def PNCLIPR_HS   : RVPNarrowingShift_rr<0b111, 0b01, "pnclipr.hs">;
   def NCLIPR       : RVPNarrowingShift_rr<0b111, 0b11, "nclipr">;
+  } // Defs = [VXSAT]
 
   def PSLLI_DB     : RVPPairShiftB_ri<0b000, "pslli.db">;
   def PSLLI_DH     : RVPPairShiftH_ri<0b000, "pslli.dh">;
   def PSLLI_DW     : RVPPairShiftW_ri<0b000, "pslli.dw">;
 
+  let Defs = [VXSAT] in {
   def PSSLAI_DH    : RVPPairShiftH_ri<0b101, "psslai.dh">;
   def PSSLAI_DW    : RVPPairShiftW_ri<0b101, "psslai.dw">;
+  } // Defs = [VXSAT]
 
   def PSEXT_DH_B   : RVPPairUnary_r<0b00, 0b00100, "psext.dh.b">;
   def PSEXT_DW_B   : RVPPairUnary_r<0b01, 0b00100, "psext.dw.b">;
 
   def PSEXT_DW_H   : RVPPairUnary_r<0b01, 0b00101, "psext.dw.h">;
 
+  let Defs = [VXSAT] in {
   def PSABS_DH     : RVPPairUnary_r<0b00, 0b00111, "psabs.dh">;
   def PSABS_DB     : RVPPairUnary_r<0b10, 0b00111, "psabs.db">;
+  } // Defs = [VXSAT]
 
   def PSLL_DHS     : RVPPairShift_rr<0b000, 0b00, "psll.dhs">;
   def PSLL_DWS     : RVPPairShift_rr<0b000, 0b01, "psll.dws">;
@@ -1340,18 +1500,34 @@ let Predicates = [HasStdExtP, IsRV32] in {
   def PADD_DWS     : RVPPairShift_rr<0b001, 0b01, "padd.dws">;
   def PADD_DBS     : RVPPairShift_rr<0b001, 0b10, "padd.dbs">;
 
+  let Defs = [VXSAT] in {
+  def PSSHL_DHS    : RVPPairShift_rr<0b010, 0b00, "psshl.dhs">;
+  def PSSHL_DWS    : RVPPairShift_rr<0b010, 0b01, "psshl.dws">;
+  } // Defs = [VXSAT]
+
+  let Defs = [VXSAT] in {
+  def PSSHLR_DHS   : RVPPairShift_rr<0b011, 0b00, "psshlr.dhs">;
+  def PSSHLR_DWS   : RVPPairShift_rr<0b011, 0b01, "psshlr.dws">;
+  } // Defs = [VXSAT]
+
+  let Defs = [VXSAT] in {
   def PSSHA_DHS    : RVPPairShift_rr<0b110, 0b00, "pssha.dhs">;
   def PSSHA_DWS    : RVPPairShift_rr<0b110, 0b01, "pssha.dws">;
+  } // Defs = [VXSAT]
 
+  let Defs = [VXSAT] in {
   def PSSHAR_DHS   : RVPPairShift_rr<0b111, 0b00, "psshar.dhs">;
   def PSSHAR_DWS   : RVPPairShift_rr<0b111, 0b01, "psshar.dws">;
+  } // Defs = [VXSAT]
 
   def PSRLI_DB     : RVPPairShiftB_ri<0b000, "psrli.db",  0b1>;
   def PSRLI_DH     : RVPPairShiftH_ri<0b000, "psrli.dh",  0b1>;
   def PSRLI_DW     : RVPPairShiftW_ri<0b000, "psrli.dw",  0b1>;
 
+  let Defs = [VXSAT] in {
   def PUSATI_DH    : RVPPairShiftH_ri<0b010, "pusati.dh", 0b1>;
   def PUSATI_DW    : RVPPairShiftW_ri<0b010, "pusati.dw", 0b1>;
+  } // Defs = [VXSAT]
 
   def PSRAI_DB     : RVPPairShiftB_ri<0b100, "psrai.db",  0b1>;
   def PSRAI_DH     : RVPPairShiftH_ri<0b100, "psrai.dh",  0b1>;
@@ -1360,8 +1536,10 @@ let Predicates = [HasStdExtP, IsRV32] in {
   def PSRARI_DH    : RVPPairShiftH_ri<0b101, "psrari.dh", 0b1>;
   def PSRARI_DW    : RVPPairShiftW_ri<0b101, "psrari.dw", 0b1>;
 
+  let Defs = [VXSAT] in {
   def PSATI_DH     : RVPPairShiftH_ri<0b110, "psati.dh",  0b1>;
   def PSATI_DW     : RVPPairShiftW_ri<0b110, "psati.dw",  0b1>;
+  } // Defs = [VXSAT]
 
   def PSRL_DHS     : RVPPairShift_rr<0b000, 0b00, "psrl.dhs", 0b1>;
   def PSRL_DWS     : RVPPairShift_rr<0b000, 0b01, "psrl.dws", 0b1>;
@@ -1376,17 +1554,21 @@ let Predicates = [HasStdExtP, IsRV32] in {
   def PADD_DB      : RVPPairBinary_rr<0b0000, 0b10, "padd.db", Commutable=1>;
   def ADDD         : RVPPairBinary_rr<0b0000, 0b11, "addd", Commutable=1>;
 
+  let Defs = [VXSAT] in {
   def PSADD_DH     : RVPPairBinary_rr<0b0010, 0b00, "psadd.dh", Commutable=1>;
   def PSADD_DW     : RVPPairBinary_rr<0b0010, 0b01, "psadd.dw", Commutable=1>;
   def PSADD_DB     : RVPPairBinary_rr<0b0010, 0b10, "psadd.db", Commutable=1>;
+  } // Defs = [VXSAT]
 
   def PAADD_DH     : RVPPairBinary_rr<0b0011, 0b00, "paadd.dh", Commutable=1>;
   def PAADD_DW     : RVPPairBinary_rr<0b0011, 0b01, "paadd.dw", Commutable=1>;
   def PAADD_DB     : RVPPairBinary_rr<0b0011, 0b10, "paadd.db", Commutable=1>;
 
+  let Defs = [VXSAT] in {
   def PSADDU_DH    : RVPPairBinary_rr<0b0110, 0b00, "psaddu.dh", Commutable=1>;
   def PSADDU_DW    : RVPPairBinary_rr<0b0110, 0b01, "psaddu.dw", Commutable=1>;
   def PSADDU_DB    : RVPPairBinary_rr<0b0110, 0b10, "psaddu.db", Commutable=1>;
+  } // Defs = [VXSAT]
 
   def PAADDU_DH    : RVPPairBinary_rr<0b0111, 0b00, "paaddu.dh", Commutable=1>;
   def PAADDU_DW    : RVPPairBinary_rr<0b0111, 0b01, "paaddu.dw", Commutable=1>;
@@ -1400,9 +1582,11 @@ let Predicates = [HasStdExtP, IsRV32] in {
   def PABD_DH      : RVPPairBinary_rr<0b1001, 0b00, "pabd.dh", Commutable=1>;
   def PABD_DB      : RVPPairBinary_rr<0b1001, 0b10, "pabd.db", Commutable=1>;
 
+  let Defs = [VXSAT] in {
   def PSSUB_DH     : RVPPairBinary_rr<0b1010, 0b00, "pssub.dh">;
   def PSSUB_DW     : RVPPairBinary_rr<0b1010, 0b01, "pssub.dw">;
   def PSSUB_DB     : RVPPairBinary_rr<0b1010, 0b10, "pssub.db">;
+  } // Defs = [VXSAT]
 
   def PASUB_DH     : RVPPairBinary_rr<0b1011, 0b00, "pasub.dh">;
   def PASUB_DW     : RVPPairBinary_rr<0b1011, 0b01, "pasub.dw">;
@@ -1411,9 +1595,11 @@ let Predicates = [HasStdExtP, IsRV32] in {
   def PABDU_DH     : RVPPairBinary_rr<0b1101, 0b00, "pabdu.dh", Commutable=1>;
   def PABDU_DB     : RVPPairBinary_rr<0b1101, 0b10, "pabdu.db", Commutable=1>;
 
+  let Defs = [VXSAT] in {
   def PSSUBU_DH    : RVPPairBinary_rr<0b1110, 0b00, "pssubu.dh">;
   def PSSUBU_DW    : RVPPairBinary_rr<0b1110, 0b01, "pssubu.dw">;
   def PSSUBU_DB    : RVPPairBinary_rr<0b1110, 0b10, "pssubu.db">;
+  } // Defs = [VXSAT]
 
   def PASUBU_DH    : RVPPairBinary_rr<0b1111, 0b00, "pasubu.dh">;
   def PASUBU_DW    : RVPPairBinary_rr<0b1111, 0b01, "pasubu.dw">;
@@ -1422,8 +1608,10 @@ let Predicates = [HasStdExtP, IsRV32] in {
   def PSH1ADD_DH   : RVPPairBinaryShift_rr<0b010, 0b00, "psh1add.dh">;
   def PSH1ADD_DW   : RVPPairBinaryShift_rr<0b010, 0b01, "psh1add.dw">;
 
+  let Defs = [VXSAT] in {
   def PSSH1SADD_DH : RVPPairBinaryShift_rr<0b011, 0b00, "pssh1sadd.dh">;
   def PSSH1SADD_DW : RVPPairBinaryShift_rr<0b011, 0b01, "pssh1sadd.dw">;
+  } // Defs = [VXSAT]
 
   def PPAIRE_DB    : RVPPairBinaryPack_rr<0b000, 0b00, "ppaire.db">;
   def PPAIRE_DH    : RVPPairBinaryPack_rr<0b000, 0b01, "ppaire.dh">;
@@ -1504,19 +1692,31 @@ def riscv_waddau : RVSDNode<"WADDAU", SDT_RISCVWideningAddSubAccumulate>;
 // Widening sub accumulate unsigned: rd = rd + zext(rs1) - zext(rs2)
 def riscv_wsubau : RVSDNode<"WSUBAU", SDT_RISCVWideningAddSubAccumulate>;
 
+def riscv_waddu : RVSDNode<"WADDU", SDTIntBinHiLoOp, [SDNPCommutative]>;
+def riscv_wsubu : RVSDNode<"WSUBU", SDTIntBinHiLoOp>;
+
 def riscv_wmulsu : RVSDNode<"WMULSU", SDTIntBinHiLoOp>;
+
+def SDT_RISCVWideningShiftLeft : SDTypeProfile<2, 2, [SDTCisVT<0, i32>,
+                                                      SDTCisSameAs<0, 1>,
+                                                      SDTCisSameAs<0, 2>,
+                                                      SDTCisSameAs<0, 3>]>;
+def riscv_wsll : RVSDNode<"WSLL", SDT_RISCVWideningShiftLeft>;
+def riscv_wsla : RVSDNode<"WSLA", SDT_RISCVWideningShiftLeft>;
 
 // Narrowing shift: res = nsrl(lo, hi, shamt) is equivalent to
 // res = truncate (srl (build_pair lo, hi), shamt), XLenVT
 def SDT_RISCVNarrowingShift : SDTypeProfile<1, 3, [SDTCisVT<0, i32>,
-                                                   SDTCisVT<1, i32>,
-                                                   SDTCisVT<2, i32>,
-                                                   SDTCisVT<3, i32>]>;
+                                                   SDTCisSameAs<0, 1>,
+                                                   SDTCisSameAs<0, 2>,
+                                                   SDTCisSameAs<0, 3>]>;
 def riscv_nsrl : RVSDNode<"NSRL", SDT_RISCVNarrowingShift>;
 def riscv_nsra : RVSDNode<"NSRA", SDT_RISCVNarrowingShift>;
 
 // ComplexPattern for 64-bit shift mask (NSRL/NSRA only read 6 bits).
-def shiftMask64 : ComplexPattern<i32, 1, "selectShiftMask64", [], [], 0>;
+def shiftMask64 : ComplexPattern<XLenVT, 1, "selectShiftMask<64>", [], [], 0>;
+def shiftMask8 : ComplexPattern<XLenVT, 1, "selectShiftMask<8>", [], [], 0>;
+def shiftMask16 : ComplexPattern<XLenVT, 1, "selectShiftMask<16>", [], [], 0>;
 
 // Build a GPRPair from two GPR registers for narrowing shift instructions.
 def BuildGPRPair : OutPatFrag<(ops node:$lo, node:$hi),
@@ -1531,12 +1731,39 @@ def riscv_mulhr : RVSDNode<"MULHR", SDTIntBinOp>;
 def riscv_mulhru : RVSDNode<"MULHRU", SDTIntBinOp>;
 def riscv_mulhrsu : RVSDNode<"MULHRSU", SDTIntBinOp>;
 
+def SDT_RISCVPackedShift : SDTypeProfile<1, 2, [SDTCisVec<0>,
+                                                SDTCisSameAs<0, 1>,
+                                                SDTCisVT<2, XLenVT>]>;
+def riscv_pshl : RVSDNode<"PSHL", SDT_RISCVPackedShift>;
+def riscv_psrl : RVSDNode<"PSRL", SDT_RISCVPackedShift>;
+def riscv_psra : RVSDNode<"PSRA", SDT_RISCVPackedShift>;
+def riscv_psslai : RVSDNode<"PSSLAI", SDT_RISCVPackedShift>;
+
+// The immediate for these is the number of trailing ones in the max value.
+def riscv_sati : RVSDNode<"SATI", SDTIntBinOp>;
+def riscv_usati : RVSDNode<"USATI", SDTIntBinOp>;
+
 // Bitwise merge: res = (~op0 & op1) | (op0 & op2)
 def SDT_RISCVMERGE : SDTypeProfile<1, 3, [SDTCisInt<0>,
                                           SDTCisSameAs<0, 1>,
                                           SDTCisSameAs<0, 2>,
                                           SDTCisSameAs<0, 3>]>;
 def riscv_merge : RVSDNode<"MERGE", SDT_RISCVMERGE>;
+
+// (rdlo, rdhi) PPAIRE_DB (rs1plo, rs1phi, rs2plo, rs2phi)
+def SDT_RISCVPPairE_DB : SDTypeProfile<2, 4, [SDTCisVT<0, v4i8>,
+                                              SDTCisSameAs<0, 1>,
+                                              SDTCisSameAs<0, 2>,
+                                              SDTCisSameAs<0, 3>,
+                                              SDTCisSameAs<0, 4>,
+                                              SDTCisSameAs<0, 5>]>;
+def riscv_ppaire_db : RVSDNode<"PPAIRE_DB", SDT_RISCVPPairE_DB>;
+
+// Add one to the immediate. Used by RISCVISD::SATI.
+def IncImm : SDNodeXForm<imm, [{
+    return CurDAG->getTargetConstant(N->getZExtValue() + 1, SDLoc(N),
+                                     N->getValueType(0));
+}]>;
 
 let Predicates = [HasStdExtP] in {
 
@@ -1560,194 +1787,212 @@ let Predicates = [HasStdExtP] in {
   def : Pat<(XLenVT (riscv_merge GPR:$rd, GPR:$rs1, GPR:$rs2)),
             (PseudoMERGE GPR:$rd, GPR:$rs1, GPR:$rs2)>;
 
+  // Match a pattern of 2 bytes being inserted into bits [15:8] when only the
+  // upper 16 bits are being demanded.
+  def : Pat<(binop_allhusers<or> (shl GPR:$rs2, (XLenVT 8)),
+                                 zexti8:$rs1),
+            (PPAIRE_B zexti8:$rs1, GPR:$rs2)>;
+
   // Basic 8-bit arithmetic patterns
-  def: Pat<(XLenVecI8VT (add GPR:$rs1, GPR:$rs2)), (PADD_B GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(XLenVecI8VT (sub GPR:$rs1, GPR:$rs2)), (PSUB_B GPR:$rs1, GPR:$rs2)>;
+  def : PatGprGpr<add, PADD_B, XLenVecI8VT>;
+  def : PatGprGpr<sub, PSUB_B, XLenVecI8VT>;
+  def : PatGprSplatGpr<add, PADD_BS, XLenVecI8VT>;
 
   // Basic 16-bit arithmetic patterns
-  def: Pat<(XLenVecI16VT (add GPR:$rs1, GPR:$rs2)), (PADD_H GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(XLenVecI16VT (sub GPR:$rs1, GPR:$rs2)), (PSUB_H GPR:$rs1, GPR:$rs2)>;
+  def : PatGprGpr<add, PADD_H, XLenVecI16VT>;
+  def : PatGprGpr<sub, PSUB_H, XLenVecI16VT>;
+  def : PatGprSplatGpr<add, PADD_HS, XLenVecI16VT>;
 
   // 8-bit bitwise operation patterns
-  def: Pat<(XLenVecI8VT (and GPR:$rs1, GPR:$rs2)), (AND GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(XLenVecI8VT (or GPR:$rs1, GPR:$rs2)), (OR GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(XLenVecI8VT (xor GPR:$rs1, GPR:$rs2)), (XOR GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(XLenVecI8VT (vnot GPR:$rs1)), (XORI GPR:$rs1, -1)>;
+  def : PatGprGpr<and, AND, XLenVecI8VT>;
+  def : PatGprGpr<or,  OR,  XLenVecI8VT>;
+  def : PatGprGpr<xor, XOR, XLenVecI8VT>;
+  def : Pat<(XLenVecI8VT (vnot GPR:$rs1)), (XORI GPR:$rs1, -1)>;
   let Predicates = [HasStdExtP, HasStdExtZbbOrZbkb] in {
-    def: Pat<(XLenVecI8VT (and GPR:$rs1, (vnot GPR:$rs2))), (ANDN GPR:$rs1, GPR:$rs2)>;
-    def: Pat<(XLenVecI8VT (or  GPR:$rs1, (vnot GPR:$rs2))), (ORN GPR:$rs1, GPR:$rs2)>;
-    def: Pat<(XLenVecI8VT (vnot (xor GPR:$rs1, GPR:$rs2))), (XNOR GPR:$rs1, GPR:$rs2)>;
+    def : Pat<(XLenVecI8VT (and GPR:$rs1, (vnot GPR:$rs2))), (ANDN GPR:$rs1, GPR:$rs2)>;
+    def : Pat<(XLenVecI8VT (or  GPR:$rs1, (vnot GPR:$rs2))), (ORN GPR:$rs1, GPR:$rs2)>;
+    def : Pat<(XLenVecI8VT (vnot (xor GPR:$rs1, GPR:$rs2))), (XNOR GPR:$rs1, GPR:$rs2)>;
   }
 
   // 16-bit bitwise operation patterns
-  def: Pat<(XLenVecI16VT (and GPR:$rs1, GPR:$rs2)), (AND GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(XLenVecI16VT (or GPR:$rs1, GPR:$rs2)), (OR GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(XLenVecI16VT (xor GPR:$rs1, GPR:$rs2)), (XOR GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(XLenVecI16VT (vnot GPR:$rs1)), (XORI GPR:$rs1, -1)>;
+  def : PatGprGpr<and, AND, XLenVecI16VT>;
+  def : PatGprGpr<or,  OR,  XLenVecI16VT>;
+  def : PatGprGpr<xor, XOR, XLenVecI16VT>;
+  def : Pat<(XLenVecI16VT (vnot GPR:$rs1)), (XORI GPR:$rs1, -1)>;
   let Predicates = [HasStdExtP, HasStdExtZbbOrZbkb] in {
-    def: Pat<(XLenVecI16VT (and GPR:$rs1, (vnot GPR:$rs2))), (ANDN GPR:$rs1, GPR:$rs2)>;
-    def: Pat<(XLenVecI16VT (or  GPR:$rs1, (vnot GPR:$rs2))), (ORN GPR:$rs1, GPR:$rs2)>;
-    def: Pat<(XLenVecI16VT (vnot (xor GPR:$rs1, GPR:$rs2))), (XNOR GPR:$rs1, GPR:$rs2)>;
+    def : Pat<(XLenVecI16VT (and GPR:$rs1, (vnot GPR:$rs2))), (ANDN GPR:$rs1, GPR:$rs2)>;
+    def : Pat<(XLenVecI16VT (or  GPR:$rs1, (vnot GPR:$rs2))), (ORN GPR:$rs1, GPR:$rs2)>;
+    def : Pat<(XLenVecI16VT (vnot (xor GPR:$rs1, GPR:$rs2))), (XNOR GPR:$rs1, GPR:$rs2)>;
   }
 
   // 8-bit saturating add/sub patterns
-  def: Pat<(XLenVecI8VT (saddsat GPR:$rs1, GPR:$rs2)), (PSADD_B GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(XLenVecI8VT (uaddsat GPR:$rs1, GPR:$rs2)), (PSADDU_B GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(XLenVecI8VT (ssubsat GPR:$rs1, GPR:$rs2)), (PSSUB_B GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(XLenVecI8VT (usubsat GPR:$rs1, GPR:$rs2)), (PSSUBU_B GPR:$rs1, GPR:$rs2)>;
+  def : PatGprGpr<saddsat, PSADD_B, XLenVecI8VT>;
+  def : PatGprGpr<uaddsat, PSADDU_B, XLenVecI8VT>;
+  def : PatGprGpr<ssubsat, PSSUB_B, XLenVecI8VT>;
+  def : PatGprGpr<usubsat, PSSUBU_B, XLenVecI8VT>;
 
   // 16-bit saturating add/sub patterns
-  def: Pat<(XLenVecI16VT (saddsat GPR:$rs1, GPR:$rs2)), (PSADD_H GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(XLenVecI16VT (uaddsat GPR:$rs1, GPR:$rs2)), (PSADDU_H GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(XLenVecI16VT (ssubsat GPR:$rs1, GPR:$rs2)), (PSSUB_H GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(XLenVecI16VT (usubsat GPR:$rs1, GPR:$rs2)), (PSSUBU_H GPR:$rs1, GPR:$rs2)>;
+  def : PatGprGpr<saddsat, PSADD_H, XLenVecI16VT>;
+  def : PatGprGpr<uaddsat, PSADDU_H, XLenVecI16VT>;
+  def : PatGprGpr<ssubsat, PSSUB_H, XLenVecI16VT>;
+  def : PatGprGpr<usubsat, PSSUBU_H, XLenVecI16VT>;
 
   // 8-bit averaging patterns
-  def: Pat<(XLenVecI8VT (avgfloors GPR:$rs1, GPR:$rs2)), (PAADD_B GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(XLenVecI8VT (avgflooru GPR:$rs1, GPR:$rs2)), (PAADDU_B GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(XLenVecI8VT (riscv_asub GPR:$rs1, GPR:$rs2)), (PASUB_B GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(XLenVecI8VT (riscv_asubu GPR:$rs1, GPR:$rs2)), (PASUBU_B GPR:$rs1, GPR:$rs2)>;
+  def : PatGprGpr<avgfloors, PAADD_B, XLenVecI8VT>;
+  def : PatGprGpr<avgflooru, PAADDU_B, XLenVecI8VT>;
+  def : PatGprGpr<riscv_asub, PASUB_B, XLenVecI8VT>;
+  def : PatGprGpr<riscv_asubu, PASUBU_B, XLenVecI8VT>;
 
   // 16-bit averaging patterns
-  def: Pat<(XLenVecI16VT (avgfloors GPR:$rs1, GPR:$rs2)), (PAADD_H GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(XLenVecI16VT (avgflooru GPR:$rs1, GPR:$rs2)), (PAADDU_H GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(XLenVecI16VT (riscv_asub GPR:$rs1, GPR:$rs2)), (PASUB_H GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(XLenVecI16VT (riscv_asubu GPR:$rs1, GPR:$rs2)), (PASUBU_H GPR:$rs1, GPR:$rs2)>;
+  def : PatGprGpr<avgfloors, PAADD_H, XLenVecI16VT>;
+  def : PatGprGpr<avgflooru, PAADDU_H, XLenVecI16VT>;
+  def : PatGprGpr<riscv_asub, PASUB_H, XLenVecI16VT>;
+  def : PatGprGpr<riscv_asubu, PASUBU_H, XLenVecI16VT>;
 
   // 8-bit absolute difference patterns
-  def: Pat<(XLenVecI8VT (abds GPR:$rs1, GPR:$rs2)), (PABD_B GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(XLenVecI8VT (abdu GPR:$rs1, GPR:$rs2)), (PABDU_B GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(XLenVecI8VT (abs GPR:$rs1)), (PABD_B GPR:$rs1, (XLenVecI8VT X0))>;
+  def : PatGprGpr<abds, PABD_B, XLenVecI8VT>;
+  def : PatGprGpr<abdu, PABDU_B, XLenVecI8VT>;
 
   // 16-bit absolute difference patterns
-  def: Pat<(XLenVecI16VT (abds GPR:$rs1, GPR:$rs2)), (PABD_H GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(XLenVecI16VT (abdu GPR:$rs1, GPR:$rs2)), (PABDU_H GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(XLenVecI16VT (abs GPR:$rs1)), (PABD_H GPR:$rs1, (XLenVecI16VT X0))>;
+  def : PatGprGpr<abds, PABD_H, XLenVecI16VT>;
+  def : PatGprGpr<abdu, PABDU_H, XLenVecI16VT>;
 
   // 16-bit multiply high patterns
-  def: Pat<(XLenVecI16VT (mulhs GPR:$rs1, GPR:$rs2)), (PMULH_H GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(XLenVecI16VT (mulhu GPR:$rs1, GPR:$rs2)), (PMULHU_H GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(XLenVecI16VT (riscv_mulhsu GPR:$rs1, GPR:$rs2)), (PMULHSU_H GPR:$rs1, GPR:$rs2)>;
+  def : PatGprGpr<mulhs, PMULH_H, XLenVecI16VT>;
+  def : PatGprGpr<mulhu, PMULHU_H, XLenVecI16VT>;
+  def : PatGprGpr<riscv_mulhsu, PMULHSU_H, XLenVecI16VT>;
 
   // 16-bit multiply high rounding patterns
-  def: Pat<(XLenVecI16VT (riscv_mulhr GPR:$rs1, GPR:$rs2)), (PMULHR_H GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(XLenVecI16VT (riscv_mulhru GPR:$rs1, GPR:$rs2)), (PMULHRU_H GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(XLenVecI16VT (riscv_mulhrsu GPR:$rs1, GPR:$rs2)), (PMULHRSU_H GPR:$rs1, GPR:$rs2)>;
+  def : PatGprGpr<riscv_mulhr, PMULHR_H, XLenVecI16VT>;
+  def : PatGprGpr<riscv_mulhru, PMULHRU_H, XLenVecI16VT>;
+  def : PatGprGpr<riscv_mulhrsu, PMULHRSU_H, XLenVecI16VT>;
 
   // 8-bit logical shift left/right patterns
-  def: Pat<(XLenVecI8VT (shl GPR:$rs1, (XLenVecI8VT (splat_vector uimm3:$shamt)))),
-           (PSLLI_B GPR:$rs1, uimm3:$shamt)>;
-  def: Pat<(XLenVecI8VT (srl GPR:$rs1, (XLenVecI8VT (splat_vector uimm3:$shamt)))),
-           (PSRLI_B GPR:$rs1, uimm3:$shamt)>;
+  def : PatGprImm<riscv_pshl, PSLLI_B, uimm3, XLenVecI8VT>;
+  def : PatGprImm<riscv_psrl, PSRLI_B, uimm3, XLenVecI8VT>;
 
   // 16-bit logical shift left/right patterns
-  def: Pat<(XLenVecI16VT (shl GPR:$rs1, (XLenVecI16VT (splat_vector uimm4:$shamt)))),
-           (PSLLI_H GPR:$rs1, uimm4:$shamt)>;
-  def: Pat<(XLenVecI16VT (srl GPR:$rs1, (XLenVecI16VT (splat_vector uimm4:$shamt)))),
-           (PSRLI_H GPR:$rs1, uimm4:$shamt)>;
+  def : PatGprImm<riscv_pshl, PSLLI_H, uimm4, XLenVecI16VT>;
+  def : PatGprImm<riscv_psrl, PSRLI_H, uimm4, XLenVecI16VT>;
 
   // 8-bit arithmetic shift right patterns
-  def: Pat<(XLenVecI8VT (sra GPR:$rs1, (XLenVecI8VT (splat_vector uimm3:$shamt)))),
-           (PSRAI_B GPR:$rs1, uimm3:$shamt)>;
+  def : PatGprImm<riscv_psra, PSRAI_B, uimm3, XLenVecI8VT>;
 
   // 16-bit arithmetic shift right patterns
-  def: Pat<(XLenVecI16VT (sra GPR:$rs1, (XLenVecI16VT (splat_vector uimm4:$shamt)))),
-           (PSRAI_H GPR:$rs1, uimm4:$shamt)>;
+  def : PatGprImm<riscv_psra, PSRAI_H, uimm4, XLenVecI16VT>;
 
   // 16-bit signed saturation shift left patterns
-  def: Pat<(XLenVecI16VT (sshlsat GPR:$rs1, (XLenVecI16VT (splat_vector uimm4:$shamt)))),
-           (PSSLAI_H GPR:$rs1, uimm4:$shamt)>;
+  def : PatGprImm<riscv_psslai, PSSLAI_H, timm, XLenVecI16VT>;
 
   // 8-bit logical shift left/right
-  def: Pat<(XLenVecI8VT (shl GPR:$rs1,
-                             (XLenVecI8VT (splat_vector (XLenVT GPR:$rs2))))),
-           (PSLL_BS GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(XLenVecI8VT (srl GPR:$rs1,
-                             (XLenVecI8VT (splat_vector (XLenVT GPR:$rs2))))),
-           (PSRL_BS GPR:$rs1, GPR:$rs2)>;
+  def : PatGprShiftMask<riscv_pshl, PSLL_BS, shiftMask8, XLenVecI8VT>;
+  def : PatGprShiftMask<riscv_psrl, PSRL_BS, shiftMask8, XLenVecI8VT>;
 
   // 8-bit arithmetic shift left/right
-  def: Pat<(XLenVecI8VT (sra GPR:$rs1,
-                             (XLenVecI8VT (splat_vector (XLenVT GPR:$rs2))))),
-           (PSRA_BS GPR:$rs1, GPR:$rs2)>;
+  def : PatGprShiftMask<riscv_psra, PSRA_BS, shiftMask8, XLenVecI8VT>;
 
   // 16-bit logical shift left/right
-  def: Pat<(XLenVecI16VT (shl GPR:$rs1,
-                              (XLenVecI16VT (splat_vector (XLenVT GPR:$rs2))))),
-           (PSLL_HS GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(XLenVecI16VT (srl GPR:$rs1,
-                              (XLenVecI16VT (splat_vector (XLenVT GPR:$rs2))))),
-           (PSRL_HS GPR:$rs1, GPR:$rs2)>;
+  def : PatGprShiftMask<riscv_pshl, PSLL_HS, shiftMask16, XLenVecI16VT>;
+  def : PatGprShiftMask<riscv_psrl, PSRL_HS, shiftMask16, XLenVecI16VT>;
 
   // 16-bit arithmetic shift left/right
-  def: Pat<(XLenVecI16VT (sra GPR:$rs1,
-                              (XLenVecI16VT (splat_vector (XLenVT GPR:$rs2))))),
-           (PSRA_HS GPR:$rs1, GPR:$rs2)>;
-
-  // 8-bit PLI SD node pattern
-  def: Pat<(XLenVecI8VT (splat_vector simm8_unsigned:$imm8)), (PLI_B simm8_unsigned:$imm8)>;
-  // 16-bit PLI SD node pattern
-  def: Pat<(XLenVecI16VT (splat_vector simm10:$imm10)), (PLI_H simm10:$imm10)>;
+  def : PatGprShiftMask<riscv_psra, PSRA_HS, shiftMask16, XLenVecI16VT>;
 
   // // splat pattern
-  def: Pat<(XLenVecI8VT (splat_vector (XLenVT GPR:$rs2))), (PADD_BS (XLenVT X0), GPR:$rs2)>;
-  def: Pat<(XLenVecI16VT (splat_vector (XLenVT GPR:$rs2))), (PADD_HS (XLenVT X0), GPR:$rs2)>;
+  def : Pat<(XLenVecI8VT (splat_vector (XLenVT GPR:$rs2))), (PADD_BS (XLenVT X0), GPR:$rs2)>;
+  def : Pat<(XLenVecI16VT (splat_vector (XLenVT GPR:$rs2))), (PADD_HS (XLenVT X0), GPR:$rs2)>;
 
   // 8/16-bit comparison patterns (result is all 1s or all 0s per element)
   // a == b
-  def: Pat<(XLenVecI8VT (setcc (XLenVecI8VT GPR:$rs1), (XLenVecI8VT GPR:$rs2), SETEQ)),
-           (PMSEQ_B GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(XLenVecI16VT (setcc (XLenVecI16VT GPR:$rs1), (XLenVecI16VT GPR:$rs2), SETEQ)),
-           (PMSEQ_H GPR:$rs1, GPR:$rs2)>;
+  def : PatGprGpr<seteq, PMSEQ_B, XLenVecI8VT>;
+  def : PatGprGpr<seteq, PMSEQ_H, XLenVecI16VT>;
   // a < b
-  def: Pat<(XLenVecI8VT (setcc (XLenVecI8VT GPR:$rs1), (XLenVecI8VT GPR:$rs2), SETLT)),
-           (PMSLT_B GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(XLenVecI8VT (setcc (XLenVecI8VT GPR:$rs1), (XLenVecI8VT GPR:$rs2), SETULT)),
-           (PMSLTU_B GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(XLenVecI16VT (setcc (XLenVecI16VT GPR:$rs1), (XLenVecI16VT GPR:$rs2), SETLT)),
-           (PMSLT_H GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(XLenVecI16VT (setcc (XLenVecI16VT GPR:$rs1), (XLenVecI16VT GPR:$rs2), SETULT)),
-           (PMSLTU_H GPR:$rs1, GPR:$rs2)>;
+  def : PatGprGpr<setlt, PMSLT_B, XLenVecI8VT>;
+  def : PatGprGpr<setult, PMSLTU_B, XLenVecI8VT>;
+  def : PatGprGpr<setlt, PMSLT_H, XLenVecI16VT>;
+  def : PatGprGpr<setult, PMSLTU_H, XLenVecI16VT>;
 
   // 8/16-bit [s|u]min/[s|u]max patterns
-  def: Pat<(XLenVecI8VT (smin GPR:$rs1, GPR:$rs2)), (PMIN_B GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(XLenVecI8VT (umin GPR:$rs1, GPR:$rs2)), (PMINU_B GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(XLenVecI16VT (smin GPR:$rs1, GPR:$rs2)), (PMIN_H GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(XLenVecI16VT (umin GPR:$rs1, GPR:$rs2)), (PMINU_H GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(XLenVecI8VT (smax GPR:$rs1, GPR:$rs2)), (PMAX_B GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(XLenVecI8VT (umax GPR:$rs1, GPR:$rs2)), (PMAXU_B GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(XLenVecI16VT (smax GPR:$rs1, GPR:$rs2)), (PMAX_H GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(XLenVecI16VT (umax GPR:$rs1, GPR:$rs2)), (PMAXU_H GPR:$rs1, GPR:$rs2)>;
+  def : PatGprGpr<smin, PMIN_B, XLenVecI8VT>;
+  def : PatGprGpr<umin, PMINU_B, XLenVecI8VT>;
+  def : PatGprGpr<smin, PMIN_H, XLenVecI16VT>;
+  def : PatGprGpr<umin, PMINU_H, XLenVecI16VT>;
+  def : PatGprGpr<smax, PMAX_B, XLenVecI8VT>;
+  def : PatGprGpr<umax, PMAXU_B, XLenVecI8VT>;
+  def : PatGprGpr<smax, PMAX_H, XLenVecI16VT>;
+  def : PatGprGpr<umax, PMAXU_H, XLenVecI16VT>;
 
   // 8/16-bit vselect patterns
-  def: Pat<(XLenVecI8VT (vselect (XLenVecI8VT GPR:$mask), GPR:$true_v, GPR:$false_v)),
-           (MERGE GPR:$mask, GPR:$false_v, GPR:$true_v)>;
-  def: Pat<(XLenVecI16VT (vselect (XLenVecI16VT GPR:$mask), GPR:$true_v, GPR:$false_v)),
-           (MERGE GPR:$mask, GPR:$false_v, GPR:$true_v)>;
+  def : Pat<(XLenVecI8VT (vselect (XLenVecI8VT GPR:$mask), GPR:$true_v, GPR:$false_v)),
+            (MERGE GPR:$mask, GPR:$false_v, GPR:$true_v)>;
+  def : Pat<(XLenVecI16VT (vselect (XLenVecI16VT GPR:$mask), GPR:$true_v, GPR:$false_v)),
+            (MERGE GPR:$mask, GPR:$false_v, GPR:$true_v)>;
 } // Predicates = [HasStdExtP]
 
 let Predicates = [HasStdExtP, IsRV32] in {
+  def : PatGpr<bitreverse, REV_RV32>;
+
+  def : Pat<(XLenVT (riscv_sati GPR:$rs1, timm:$imm)),
+            (SATI_RV32 GPR:$rs1, (IncImm timm:$imm))>;
+  def : Pat<(XLenVT (riscv_usati GPR:$rs1, timm:$imm)),
+            (USATI_RV32 GPR:$rs1, timm:$imm)>;
+
   def : PatGprGpr<saddsat, SADD>;
   def : PatGprGpr<ssubsat, SSUB>;
   def : PatGprGpr<uaddsat, SADDU>;
   def : PatGprGpr<usubsat, SSUBU>;
   def : PatGprGpr<sshlsat, SSHA>;
+  def : PatGprGpr<ushlsat, SSHL>;
+  def : PatGprUimmLog2XLen<sshlsat, SSLAI>;
+  // No SSLLI
+
+  // 32-bit averaging patterns
+  def : PatGprGpr<avgfloors, AADD, i32>;
+  def : PatGprGpr<avgflooru, AADDU, i32>;
+
+  def : Pat<(i32 (add GPR:$rd, (mul_oneuse sexti16:$rs1, sexti16:$rs2))),
+            (MACC_H00 GPR:$rd, sexti16:$rs1, sexti16:$rs2)>;
+  def : Pat<(i32 (add GPR:$rd, (mul_oneuse zexti16:$rs1, zexti16:$rs2))),
+            (MACCU_H00 GPR:$rd, zexti16:$rs1, zexti16:$rs2)>;
+  def : Pat<(i32 (add GPR:$rd, (mul_oneuse sexti16:$rs1, zexti16:$rs2))),
+            (MACCSU_H00 GPR:$rd, sexti16:$rs1, zexti16:$rs2)>;
+
+  def : Pat<(i32 (add GPR:$rd, (binop_oneuse<mulhs> GPR:$rs1, GPR:$rs2))),
+            (MHACC GPR:$rd, GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(i32 (add GPR:$rd, (binop_oneuse<mulhu> GPR:$rs1, GPR:$rs2))),
+            (MHACCU GPR:$rd, GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(i32 (add GPR:$rd, (binop_oneuse<riscv_mulhsu> GPR:$rs1, GPR:$rs2))),
+            (MHACCSU GPR:$rd, GPR:$rs1, GPR:$rs2)>;
 
   // Narrowing shift patterns (NSRL/NSRA)
   // Immediate shift amount patterns
-  def : Pat<(i32 (riscv_nsrl GPR:$lo, GPR:$hi, uimm6:$shamt)),
+  def : Pat<(riscv_nsrl GPR:$lo, GPR:$hi, uimm6:$shamt),
             (NSRLI (BuildGPRPair GPR:$lo, GPR:$hi), uimm6:$shamt)>;
-  def : Pat<(i32 (riscv_nsra GPR:$lo, GPR:$hi, uimm6:$shamt)),
+  def : Pat<(riscv_nsra GPR:$lo, GPR:$hi, uimm6:$shamt),
             (NSRAI (BuildGPRPair GPR:$lo, GPR:$hi), uimm6:$shamt)>;
   // Register shift amount patterns
-  def : Pat<(i32 (riscv_nsrl GPR:$lo, GPR:$hi, shiftMask64:$shamt)),
+  def : Pat<(riscv_nsrl GPR:$lo, GPR:$hi, shiftMask64:$shamt),
             (NSRL (BuildGPRPair GPR:$lo, GPR:$hi), shiftMask64:$shamt)>;
-  def : Pat<(i32 (riscv_nsra GPR:$lo, GPR:$hi, shiftMask64:$shamt)),
+  def : Pat<(riscv_nsra GPR:$lo, GPR:$hi, shiftMask64:$shamt),
             (NSRA (BuildGPRPair GPR:$lo, GPR:$hi), shiftMask64:$shamt)>;
 
+  // Match a pattern of 2 bytes being inserted into bits [31:16], with bits
+  // bits [15:0] coming from a zero extended value. We can use pack with
+  // ppaire.b for bits [31:16]. If bits [15:0] can also be a ppaire.b, it can be
+  // matched separately.
+  def : Pat<(i32 (or (or (shl GPR:$op1rs2, (XLenVT 24)),
+                       (shl zexti8:$op1rs1, (XLenVT 16))),
+                     zexti16:$rs1)),
+            (PACK zexti16:$rs1,
+                  (XLenVT (PPAIRE_B zexti8:$op1rs1, GPR:$op1rs2)))>;
+
   // 8/16-bit multiply low patterns
-  def: Pat<(v4i8 (mul GPR:$rs1, GPR:$rs2)),
-           (PNSRLI_B (PWMUL_B GPR:$rs1, GPR:$rs2), 0)>;
-  def: Pat<(v2i16 (mul GPR:$rs1, GPR:$rs2)),
-           (PNSRLI_H (PWMUL_H GPR:$rs1, GPR:$rs2), 0)>;
+  def : Pat<(v4i8 (mul GPR:$rs1, GPR:$rs2)),
+            (PNSRLI_B (PWMUL_B GPR:$rs1, GPR:$rs2), 0)>;
+  def : Pat<(v2i16 (mul GPR:$rs1, GPR:$rs2)),
+            (PNSRLI_H (PWMUL_H GPR:$rs1, GPR:$rs2), 0)>;
 
   // Load/Store patterns
   def : StPat<store, SW, GPR, v4i8>;
@@ -1764,107 +2009,115 @@ let Predicates = [HasStdExtP, IsRV64] in {
   def : PatGpr<riscv_absw, ABSW>;
   def : PatGpr<riscv_clsw, CLSW>;
 
-  // 32-bit PLI SD node pattern
-  def: Pat<(v2i32 (splat_vector simm10:$imm10)), (PLI_W simm10:$imm10)>;
+  def : PatGpr<bitreverse, REV_RV64>;
+
+  def : Pat<(XLenVT (riscv_sati GPR:$rs1, timm:$imm)),
+            (SATI_RV64 GPR:$rs1, (IncImm timm:$imm))>;
+  def : Pat<(XLenVT (riscv_usati GPR:$rs1, timm:$imm)),
+            (USATI_RV64 GPR:$rs1, timm:$imm)>;
+
+  def : Pat<(i64 (add GPR:$rd, (mul_oneuse sexti32:$rs1, sexti32:$rs2))),
+            (MACC_W00 GPR:$rd, sexti32:$rs1, sexti32:$rs2)>;
+  def : Pat<(i64 (add GPR:$rd, (mul_oneuse zexti32:$rs1, zexti32:$rs2))),
+            (MACCU_W00 GPR:$rd, zexti32:$rs1, zexti32:$rs2)>;
+  def : Pat<(i64 (add GPR:$rd, (mul_oneuse sexti32:$rs1, zexti32:$rs2))),
+            (MACCSU_W00 GPR:$rd, sexti32:$rs1, zexti32:$rs2)>;
+
+  // Match a pattern of 2 bytes being inserted into bits [31:16], with bits
+  // bits [15:0] coming from a zero extended value, and bits [63:32] being
+  // ignored. We can use ppaire.h with ppaire.b for bits [31:16]. If bits [15:0]
+  // can also be a ppaire.b, it can be matched separately.
+  def : Pat<(binop_allwusers<or>
+                 (or (shl GPR:$op1rs2, (XLenVT 24)),
+                     (shl zexti8:$op1rs1, (XLenVT 16))),
+                 zexti16:$rs1),
+            (PPAIRE_H zexti16:$rs1,
+                      (XLenVT (PPAIRE_B zexti8:$op1rs1, GPR:$op1rs2)))>;
 
   // Basic 32-bit arithmetic patterns
-  def: Pat<(v2i32 (add GPR:$rs1, GPR:$rs2)), (PADD_W GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(v2i32 (sub GPR:$rs1, GPR:$rs2)), (PSUB_W GPR:$rs1, GPR:$rs2)>;
+  def : PatGprGpr<add, PADD_W, v2i32>;
+  def : PatGprGpr<sub, PSUB_W, v2i32>;
+  def : PatGprSplatGpr<add, PADD_WS, v2i32>;
 
   // 32-bit bitwise operation patterns
-  def: Pat<(v2i32 (and GPR:$rs1, GPR:$rs2)), (AND GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(v2i32 (or GPR:$rs1, GPR:$rs2)), (OR GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(v2i32 (xor GPR:$rs1, GPR:$rs2)), (XOR GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(v2i32 (vnot GPR:$rs1)), (XORI GPR:$rs1, -1)>;
+  def : PatGprGpr<and, AND, v2i32>;
+  def : PatGprGpr<or, OR, v2i32>;
+  def : PatGprGpr<xor, XOR, v2i32>;
+  def : Pat<(v2i32 (vnot GPR:$rs1)), (XORI GPR:$rs1, -1)>;
   let Predicates = [HasStdExtP, HasStdExtZbbOrZbkb] in {
-    def: Pat<(v2i32 (and GPR:$rs1, (vnot GPR:$rs2))), (ANDN GPR:$rs1, GPR:$rs2)>;
-    def: Pat<(v2i32 (or  GPR:$rs1, (vnot GPR:$rs2))), (ORN GPR:$rs1, GPR:$rs2)>;
-    def: Pat<(v2i32 (vnot (xor GPR:$rs1, GPR:$rs2))), (XNOR GPR:$rs1, GPR:$rs2)>;
+    def : Pat<(v2i32 (and GPR:$rs1, (vnot GPR:$rs2))), (ANDN GPR:$rs1, GPR:$rs2)>;
+    def : Pat<(v2i32 (or  GPR:$rs1, (vnot GPR:$rs2))), (ORN GPR:$rs1, GPR:$rs2)>;
+    def : Pat<(v2i32 (vnot (xor GPR:$rs1, GPR:$rs2))), (XNOR GPR:$rs1, GPR:$rs2)>;
   }
 
   // 32-bit saturating add/sub patterns
-  def: Pat<(v2i32 (saddsat GPR:$rs1, GPR:$rs2)), (PSADD_W GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(v2i32 (uaddsat GPR:$rs1, GPR:$rs2)), (PSADDU_W GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(v2i32 (ssubsat GPR:$rs1, GPR:$rs2)), (PSSUB_W GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(v2i32 (usubsat GPR:$rs1, GPR:$rs2)), (PSSUBU_W GPR:$rs1, GPR:$rs2)>;
+  def : PatGprGpr<saddsat, PSADD_W, v2i32>;
+  def : PatGprGpr<uaddsat, PSADDU_W, v2i32>;
+  def : PatGprGpr<ssubsat, PSSUB_W, v2i32>;
+  def : PatGprGpr<usubsat, PSSUBU_W, v2i32>;
 
   // 32-bit averaging patterns
-  def: Pat<(v2i32 (avgfloors GPR:$rs1, GPR:$rs2)), (PAADD_W GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(v2i32 (avgflooru GPR:$rs1, GPR:$rs2)), (PAADDU_W GPR:$rs1, GPR:$rs2)>;
+  def : PatGprGpr<avgfloors, PAADD_W, v2i32>;
+  def : PatGprGpr<avgflooru, PAADDU_W, v2i32>;
 
   // 32-bit averaging-sub patterns
-  def: Pat<(v2i32 (riscv_asub GPR:$rs1, GPR:$rs2)), (PASUB_W GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(v2i32 (riscv_asubu GPR:$rs1, GPR:$rs2)), (PASUBU_W GPR:$rs1, GPR:$rs2)>;
+  def : PatGprGpr<riscv_asub, PASUB_W, v2i32>;
+  def : PatGprGpr<riscv_asubu, PASUBU_W, v2i32>;
 
   // 32-bit multiply high patterns
-  def: Pat<(v2i32 (mulhs GPR:$rs1, GPR:$rs2)), (PMULH_W GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(v2i32 (mulhu GPR:$rs1, GPR:$rs2)), (PMULHU_W GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(v2i32 (riscv_mulhsu GPR:$rs1, GPR:$rs2)), (PMULHSU_W GPR:$rs1, GPR:$rs2)>;
+  def : PatGprGpr<mulhs, PMULH_W, v2i32>;
+  def : PatGprGpr<mulhu, PMULHU_W, v2i32>;
+  def : PatGprGpr<riscv_mulhsu, PMULHSU_W, v2i32>;
 
   // 32-bit multiply high rounding patterns
-  def: Pat<(v2i32 (riscv_mulhr GPR:$rs1, GPR:$rs2)), (PMULHR_W GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(v2i32 (riscv_mulhru GPR:$rs1, GPR:$rs2)), (PMULHRU_W GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(v2i32 (riscv_mulhrsu GPR:$rs1, GPR:$rs2)), (PMULHRSU_W GPR:$rs1, GPR:$rs2)>;
+  def : PatGprGpr<riscv_mulhr, PMULHR_W, v2i32>;
+  def : PatGprGpr<riscv_mulhru, PMULHRU_W, v2i32>;
+  def : PatGprGpr<riscv_mulhrsu, PMULHRSU_W, v2i32>;
 
   // 8/16/32-bit multiply low patterns
-  def: Pat<(v8i8 (mul GPR:$rs1, GPR:$rs2)),
-           (PPAIRE_B (PMUL_H_B00 GPR:$rs1, GPR:$rs2), (PMUL_H_B11 GPR:$rs1, GPR:$rs2))>;
-  def: Pat<(v4i16 (mul GPR:$rs1, GPR:$rs2)),
-           (PPAIRE_H (PMUL_W_H00 GPR:$rs1, GPR:$rs2), (PMUL_W_H11 GPR:$rs1, GPR:$rs2))>;
-  def: Pat<(v2i32 (mul GPR:$rs1, GPR:$rs2)),
-           (PACK (MUL_W00 GPR:$rs1, GPR:$rs2), (MUL_W11 GPR:$rs1, GPR:$rs2))>;
+  def : Pat<(v8i8 (mul GPR:$rs1, GPR:$rs2)),
+            (PPAIRE_B (PMUL_H_B00 GPR:$rs1, GPR:$rs2), (PMUL_H_B11 GPR:$rs1, GPR:$rs2))>;
+  def : Pat<(v4i16 (mul GPR:$rs1, GPR:$rs2)),
+            (PPAIRE_H (PMUL_W_H00 GPR:$rs1, GPR:$rs2), (PMUL_W_H11 GPR:$rs1, GPR:$rs2))>;
+  def : Pat<(v2i32 (mul GPR:$rs1, GPR:$rs2)),
+            (PACK (MUL_W00 GPR:$rs1, GPR:$rs2), (MUL_W11 GPR:$rs1, GPR:$rs2))>;
+
+  // 32-bit logical shift left/right patterns
+  def : PatGprImm<riscv_pshl, PSLLI_W, uimm5, v2i32>;
+  def : PatGprImm<riscv_psrl, PSRLI_W, uimm5, v2i32>;
+
+  // 32-bit arithmetic shift left/right patterns
+  def : PatGprImm<riscv_psra, PSRAI_W, uimm5, v2i32>;
+
+  // 32-bit signed saturation shift left patterns
+  def : PatGprImm<riscv_psslai, PSSLAI_W, timm, v2i32>;
 
   // 32-bit logical shift left/right
-  def: Pat<(v2i32 (shl GPR:$rs1, (v2i32 (splat_vector (XLenVT GPR:$rs2))))),
-           (PSLL_WS GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(v2i32 (srl GPR:$rs1, (v2i32 (splat_vector (XLenVT GPR:$rs2))))),
-           (PSRL_WS GPR:$rs1, GPR:$rs2)>;
+  def : PatGprShiftMask<riscv_pshl, PSLL_WS, shiftMask32, v2i32>;
+  def : PatGprShiftMask<riscv_psrl, PSRL_WS, shiftMask32, v2i32>;
 
   // 32-bit arithmetic shift left/right
-  def: Pat<(v2i32 (sra GPR:$rs1, (v2i32 (splat_vector (XLenVT GPR:$rs2))))),
-           (PSRA_WS GPR:$rs1, GPR:$rs2)>;
+  def : PatGprShiftMask<riscv_psra, PSRA_WS, shiftMask32, v2i32>;
 
   // splat pattern
-  def: Pat<(v2i32 (splat_vector (XLenVT GPR:$rs2))), (PADD_WS (XLenVT X0), GPR:$rs2)>;
+  def : Pat<(v2i32 (splat_vector (XLenVT GPR:$rs2))), (PADD_WS (XLenVT X0), GPR:$rs2)>;
 
   // 32-bit comparison patterns (result is all 1s or all 0s per element)
   // a == b
-  def: Pat<(v2i32 (setcc (v2i32 GPR:$rs1), (v2i32 GPR:$rs2), SETEQ)),
-           (PMSEQ_W GPR:$rs1, GPR:$rs2)>;
+  def : PatGprGpr<seteq, PMSEQ_W, v2i32>;
   // a < b
-  def: Pat<(v2i32 (setcc (v2i32 GPR:$rs1), (v2i32 GPR:$rs2), SETLT)),
-           (PMSLT_W GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(v2i32 (setcc (v2i32 GPR:$rs1), (v2i32 GPR:$rs2), SETULT)),
-           (PMSLTU_W GPR:$rs1, GPR:$rs2)>;
-  // a > b => b < a
-  def: Pat<(v2i32 (setcc (v2i32 GPR:$rs2), (v2i32 GPR:$rs1), SETGT)),
-           (PMSLT_W GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(v2i32 (setcc (v2i32 GPR:$rs2), (v2i32 GPR:$rs1), SETUGT)),
-           (PMSLTU_W GPR:$rs1, GPR:$rs2)>;
+  def : PatGprGpr<setlt, PMSLT_W, v2i32>;
+  def : PatGprGpr<setult, PMSLTU_W, v2i32>;
 
   // 32-bit [s|u]min/[s|u]max patterns
-  def: Pat<(v2i32 (smin GPR:$rs1, GPR:$rs2)), (PMIN_W GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(v2i32 (umin GPR:$rs1, GPR:$rs2)), (PMINU_W GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(v2i32 (smax GPR:$rs1, GPR:$rs2)), (PMAX_W GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(v2i32 (umax GPR:$rs1, GPR:$rs2)), (PMAXU_W GPR:$rs1, GPR:$rs2)>;
-
-  // 32-bit logical shift left/right patterns
-  def: Pat<(v2i32 (shl GPR:$rs1, (v2i32 (splat_vector uimm5:$shamt)))),
-           (PSLLI_W GPR:$rs1, uimm5:$shamt)>;
-  def: Pat<(v2i32 (srl GPR:$rs1, (v2i32 (splat_vector uimm5:$shamt)))),
-           (PSRLI_W GPR:$rs1, uimm5:$shamt)>;
-
-  // 32-bit arithmetic shift left/right patterns
-  def: Pat<(v2i32 (sra GPR:$rs1, (v2i32 (splat_vector uimm5:$shamt)))),
-           (PSRAI_W GPR:$rs1, uimm5:$shamt)>;
-
-  // 32-bit signed saturation shift left patterns
-  def: Pat<(v2i32 (sshlsat GPR:$rs1, (v2i32 (splat_vector uimm5:$shamt)))),
-           (PSSLAI_W GPR:$rs1, uimm5:$shamt)>;
+  def : PatGprGpr<smin, PMIN_W, v2i32>;
+  def : PatGprGpr<umin, PMINU_W, v2i32>;
+  def : PatGprGpr<smax, PMAX_W, v2i32>;
+  def : PatGprGpr<umax, PMAXU_W, v2i32>;
 
   // 32-bit vselect patterns
-  def: Pat<(v2i32 (vselect (v2i32 GPR:$mask), GPR:$true_v, GPR:$false_v)),
-           (MERGE GPR:$mask, GPR:$false_v, GPR:$true_v)>;
+  def : Pat<(v2i32 (vselect (v2i32 GPR:$mask), GPR:$true_v, GPR:$false_v)),
+            (MERGE GPR:$mask, GPR:$false_v, GPR:$true_v)>;
 
   // Load/Store patterns
   def : StPat<store, SD, GPR, v8i8>;

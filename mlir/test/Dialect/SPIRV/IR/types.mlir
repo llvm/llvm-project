@@ -235,6 +235,15 @@ func.func private @image_parameters_nocomma_5(!spirv.image<f32, Dim1D, NoDepth, 
 // -----
 
 //===----------------------------------------------------------------------===//
+// SamplerType
+//===----------------------------------------------------------------------===//
+
+// CHECK: func private @sampler_type(!spirv.sampler)
+func.func private @sampler_type(!spirv.sampler) -> ()
+
+// -----
+
+//===----------------------------------------------------------------------===//
 // SampledImageType
 //===----------------------------------------------------------------------===//
 
@@ -381,6 +390,12 @@ func.func private @struct_type_missing_comma(!spirv.struct<(!spirv.matrix<3 x ve
 
 // expected-error @+1 {{expected attribute value}}
 func.func private @struct_missing_member_decorator_value(!spirv.struct<(!spirv.matrix<3 x vector<3xf32>> [0, RowMajor, MatrixStride=])>)
+
+// -----
+
+// Regression test for https://github.com/llvm/llvm-project/issues/179675
+// expected-error @+1 {{member type must be a valid SPIR-V type}}
+func.func private @struct_type_non_spirv_member(!spirv.struct<(vector<2x2xi1>)>) -> ()
 
 // -----
 

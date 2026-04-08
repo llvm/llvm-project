@@ -1793,6 +1793,20 @@ bool CursorVisitor::VisitAdjustedTypeLoc(AdjustedTypeLoc TL) {
   return Visit(TL.getOriginalLoc());
 }
 
+bool CursorVisitor::VisitAutoTypeLoc(AutoTypeLoc TL) {
+
+  if (TL.isConstrained()) {
+    if (auto *CR = TL.getConceptReference()) {
+      if (CR->getNamedConcept()) {
+        return Visit(MakeCursorTemplateRef(CR->getNamedConcept(),
+                                           CR->getConceptNameLoc(), TU));
+      }
+    }
+  }
+
+  return false;
+}
+
 bool CursorVisitor::VisitDeducedTemplateSpecializationTypeLoc(
     DeducedTemplateSpecializationTypeLoc TL) {
   if (VisitTemplateName(TL.getTypePtr()->getTemplateName(),
@@ -1893,7 +1907,6 @@ DEFAULT_TYPELOC_IMPL(Enum, TagType)
 DEFAULT_TYPELOC_IMPL(SubstTemplateTypeParm, Type)
 DEFAULT_TYPELOC_IMPL(SubstTemplateTypeParmPack, Type)
 DEFAULT_TYPELOC_IMPL(SubstBuiltinTemplatePack, Type)
-DEFAULT_TYPELOC_IMPL(Auto, Type)
 DEFAULT_TYPELOC_IMPL(BitInt, Type)
 DEFAULT_TYPELOC_IMPL(DependentBitInt, Type)
 
@@ -3226,6 +3239,7 @@ void EnqueueVisitor::VisitStmt(const Stmt *S) { EnqueueChildren(S); }
 void EnqueueVisitor::VisitSwitchStmt(const SwitchStmt *S) {
   AddStmt(S->getBody());
   AddStmt(S->getCond());
+  AddStmt(S->getInit());
   AddDecl(S->getConditionVariable());
 }
 
@@ -9382,12 +9396,7 @@ CXModule clang_getModuleForFile(CXTranslationUnit TU, CXFile File) {
   return Header.getModule();
 }
 
-CXFile clang_Module_getASTFile(CXModule CXMod) {
-  if (!CXMod)
-    return nullptr;
-  Module *Mod = static_cast<Module *>(CXMod);
-  return cxfile::makeCXFile(Mod->getASTFile());
-}
+CXFile clang_Module_getASTFile(CXModule CXMod) { return nullptr; }
 
 CXModule clang_Module_getParent(CXModule CXMod) {
   if (!CXMod)
@@ -10181,7 +10190,7 @@ cxindex::Logger::~Logger() {
 }
 
 CXString clang_getBinaryOperatorKindSpelling(enum CXBinaryOperatorKind kind) {
-  if (kind > CXBinaryOperator_Last)
+  if (kind <= CXBinaryOperator_Invalid || kind > CXBinaryOperator_Last)
     return cxstring::createEmpty();
 
   return cxstring::createDup(
@@ -10203,6 +10212,9 @@ enum CXBinaryOperatorKind clang_getCursorBinaryOperatorKind(CXCursor cursor) {
 }
 
 CXString clang_getUnaryOperatorKindSpelling(enum CXUnaryOperatorKind kind) {
+  if (kind <= CXUnaryOperator_Invalid || kind > CXUnaryOperator_Last)
+    return cxstring::createEmpty();
+
   return cxstring::createRef(
       UnaryOperator::getOpcodeStr(static_cast<UnaryOperatorKind>(kind - 1)));
 }

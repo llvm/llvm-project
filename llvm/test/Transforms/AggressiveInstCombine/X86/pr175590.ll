@@ -258,6 +258,43 @@ exit:
   ret i1 %cmp
 }
 
+define i1 @test_ternary_recurrence_crash(double noundef %distmat1_, double noundef %distmat2_, double %x) {
+; CHECK-LABEL: define i1 @test_ternary_recurrence_crash(
+; CHECK-SAME: double noundef [[DISTMAT1_:%.*]], double noundef [[DISTMAT2_:%.*]], double [[X:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[INIT_VAL:%.*]] = call double @llvm.sqrt.f64(double [[X]])
+; CHECK-NEXT:    br label %[[FOR_COND:.*]]
+; CHECK:       [[FOR_COND]]:
+; CHECK-NEXT:    [[RMSD_0:%.*]] = phi double [ [[INIT_VAL]], %[[ENTRY]] ], [ [[FMACALL:%.*]], %[[FOR_BODY:.*]] ]
+; CHECK-NEXT:    [[CMP:%.*]] = phi i1 [ true, %[[ENTRY]] ], [ false, %[[FOR_BODY]] ]
+; CHECK-NEXT:    br i1 [[CMP]], label %[[FOR_BODY]], label %[[FOR_COND_CLEANUP:.*]]
+; CHECK:       [[FOR_COND_CLEANUP]]:
+; CHECK-NEXT:    [[RES:%.*]] = fcmp oge double [[RMSD_0]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK:       [[FOR_BODY]]:
+; CHECK-NEXT:    [[SUB:%.*]] = fsub double [[DISTMAT1_]], [[DISTMAT2_]]
+; CHECK-NEXT:    [[FMACALL]] = call double @llvm.fmuladd.f64(double noundef [[SUB]], double noundef [[SUB]], double [[RMSD_0]])
+; CHECK-NEXT:    br label %[[FOR_COND]]
+;
+entry:
+  %init_val = call double @llvm.sqrt.f64(double %x)
+  br label %for.cond
+
+for.cond:                                         ; preds = %for.body, %entry
+  %RMSD.0 = phi double [ %init_val, %entry ], [ %fmacall, %for.body ]
+  %cmp = phi i1 [ true, %entry ], [ false, %for.body ]
+  br i1 %cmp, label %for.body, label %for.cond.cleanup
+
+for.cond.cleanup:                                 ; preds = %for.cond
+  %res = fcmp oge double %RMSD.0, 0.000000e+00
+  ret i1 %res
+
+for.body:                                         ; preds = %for.cond
+  %sub = fsub double %distmat1_, %distmat2_
+  %fmacall = call double @llvm.fmuladd.f64(double noundef %sub, double noundef %sub, double %RMSD.0)
+  br label %for.cond
+}
+
 declare double @llvm.fmuladd.f64(double, double, double)
 
 declare double @llvm.fma.f64(double, double, double)

@@ -223,38 +223,17 @@ def ApplyMaterializeMasksPatternsOp : Op<Transform_Dialect,
   let assemblyFormat = "attr-dict";
 }
 
-def ApplyLowerMultiReductionPatternsOp : Op<Transform_Dialect,
-    "apply_patterns.vector.lower_multi_reduction",
-    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
-  let description = [{
-    Indicates that vector multi_reduction-like operations should be lowered to
-    finer-grained vector primitives.
-
-    This is usually a late step that is run after bufferization as part of the
-    process of lowering to e.g. LLVM or NVVM.
-  }];
-
-  let arguments = (ins DefaultValuedAttr<VectorMultiReductionLoweringAttr,
-      "vector::VectorMultiReductionLowering::InnerParallel">:$lowering_strategy
-  );
-
-  let assemblyFormat = [{
-    (`lowering_strategy` `=` $lowering_strategy^)? attr-dict
-  }];
-}
-
-def ApplyReorderAndExpandMultiReductionPatternsOp: Op<Transform_Dialect,
-    "apply_patterns.vector.reorder_and_expand_multi_reduction_dims",
+def ApplyReorderMultiReductionPatternsOp: Op<Transform_Dialect,
+    "apply_patterns.vector.reorder_multi_reduction_dims",
     [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
   let description = [{
     Indicates that vector multi_reduction-like operations should be
     transformed such that all reduction dimensions become innermost or
-    outermost, and 1-D reductions are lifted to 2-D.
+    outermost, depending on `lowering_strategy`.
 
     This populates the patterns from
-    `populateVectorMultiReductionReorderAndExpandPatterns`, i.e.:
+    `populateVectorMultiReductionReorderPatterns`, i.e.:
     * `InnerOuterDimReductionConversion`
-    * `OneDimMultiReductionToTwoDim`
   }];
 
   let arguments = (ins DefaultValuedAttr<VectorMultiReductionLoweringAttr,
@@ -287,12 +266,15 @@ def ApplyMultiReductionUnrollingPatternsOp: Op<Transform_Dialect,
     "apply_patterns.vector.multi_reduction_unrolling",
     [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
   let description = [{
-    Indicates that 2-D vector multi_reduction operations should be unrolled
-    into either a sequence of vector.reduction ops (innerreduction) or
-    element-wise arith ops (innerparallel).
+    Indicates that vector multi_reduction operations should be unrolled.
+    1-D multi_reductions are converted directly to vector.reduction.
+    2-D multi_reductions are unrolled into either a sequence of
+    vector.reduction ops (innerreduction) or element-wise arith ops
+    (innerparallel).
 
     This populates the patterns from
     `populateVectorMultiReductionUnrollingPatterns`, i.e.:
+    * `OneDimMultiReductionToReduction`
     * `TwoDimMultiReductionToReduction` (innerreduction)
     * `TwoDimMultiReductionToElementWise` (innerparallel)
   }];

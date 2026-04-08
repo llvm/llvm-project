@@ -15,12 +15,12 @@
 #ifndef LLVM_MC_MCLFIREWRITER_H
 #define LLVM_MC_MCLFIREWRITER_H
 
-#include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/Compiler.h"
 
 namespace llvm {
+class MCContext;
 class MCInst;
 class MCSubtargetInfo;
 class MCStreamer;

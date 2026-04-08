@@ -1,5 +1,5 @@
-# RUN: llc -mtriple=amdgcn -mcpu=gfx1250 -start-before=amdgpu-lower-vgpr-encoding -o - %s | FileCheck -check-prefixes=GCN,ASM %s
-# RUN: llc -mtriple=amdgcn -mcpu=gfx1250 -start-before=amdgpu-lower-vgpr-encoding -o - %s | llvm-mc -triple=amdgcn -mcpu=gfx1250 -filetype=obj -o - | llvm-objdump -d --mcpu=gfx1250 - | FileCheck -check-prefixes=GCN,DIS %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1250 -mattr=-real-true16 -start-before=amdgpu-lower-vgpr-encoding -o - %s | FileCheck -check-prefixes=GCN,ASM %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1250 -mattr=-real-true16 -start-before=amdgpu-lower-vgpr-encoding -o - %s | llvm-mc -triple=amdgcn -mcpu=gfx1250 -mattr=-real-true16 -filetype=obj -o - | llvm-objdump -d --mcpu=gfx1250 --mattr=-real-true16 - | FileCheck -check-prefixes=GCN,DIS %s
 
 # ASM-LABEL: {{^}}high_vgprs:
 # DIS-LABEL: <high_vgprs>:
@@ -244,7 +244,7 @@ body:             |
     ; GCN-NEXT: s_set_vgpr_msb 0xb55
     ; ASM-SAME:                                         ;  msbs: dst=1 src0=1 src1=1 src2=1
     ; GCN-NEXT: v_wmma_f32_16x16x32_bf16 v[14:21] /*v[270:277]*/, v[26:33] /*v[282:289]*/, v[34:41] /*v[290:297]*/, v[14:21] /*v[270:277]*/
-    early-clobber $vgpr270_vgpr271_vgpr272_vgpr273_vgpr274_vgpr275_vgpr276_vgpr277 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr 8, undef $vgpr282_vgpr283_vgpr284_vgpr285_vgpr286_vgpr287_vgpr288_vgpr289, 8, undef $vgpr290_vgpr291_vgpr292_vgpr293_vgpr294_vgpr295_vgpr296_vgpr297, 8, killed undef $vgpr270_vgpr271_vgpr272_vgpr273_vgpr274_vgpr275_vgpr276_vgpr277, 0, 0, 0, 0, implicit $exec
+    early-clobber $vgpr270_vgpr271_vgpr272_vgpr273_vgpr274_vgpr275_vgpr276_vgpr277 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr undef $vgpr282_vgpr283_vgpr284_vgpr285_vgpr286_vgpr287_vgpr288_vgpr289, undef $vgpr290_vgpr291_vgpr292_vgpr293_vgpr294_vgpr295_vgpr296_vgpr297, 8, killed undef $vgpr270_vgpr271_vgpr272_vgpr273_vgpr274_vgpr275_vgpr276_vgpr277, 0, 0, 0, 0, implicit $exec
 
     ; ASM: NumVgprs: 1024
 
@@ -346,15 +346,20 @@ body:             |
     ; GCN-NEXT: v_fmaak_f32 v0, v1 /*v257*/, v2 /*v258*/, 0x1
     $vgpr0 = V_FMAAK_F32 undef $vgpr257, undef $vgpr258, 1, implicit $exec, implicit $mode
 
+    ; The v_fmamk below needs src2=1. After the commute, compatible piggybacking
+    ; is still allowed, so src2=1 is piggybacked here.
     ; GCN-NEXT: s_set_vgpr_msb 0x551
     ; ASM-SAME:                                         ;  msbs: dst=1 src0=1 src1=0 src2=1
     ; GCN-NEXT: v_fmaak_f32 v0 /*v256*/, v1 /*v257*/, v2, 0x1
     $vgpr256 = V_FMAAK_F32 undef $vgpr257, undef $vgpr2, 1, implicit $exec, implicit $mode
 
-    ; Commute FMAAK to avoid mode change
+    ; Commute FMAAK to avoid mode change. After commute, CurrentMode is updated
+    ; to lock in the mode bits the commuted instruction relies on.
     ; GCN-NEXT: v_fmaak_f32 v0 /*v256*/, v2 /*v258*/, v1, 0x1
     $vgpr256 = V_FMAAK_F32 undef $vgpr1, undef $vgpr258, 1, implicit $exec, implicit $mode
 
+    ; This v_fmamk needs src2=1. Since src2 was nullopt (not locked), it can
+    ; piggyback onto the s_set_vgpr_msb above by adding src2=1.
     ; GCN-NEXT: v_fmamk_f32 v0 /*v256*/, v1 /*v257*/, 0x1, v2 /*v258*/
     $vgpr256 = V_FMAMK_F32 undef $vgpr257, 1, undef $vgpr258, implicit $exec, implicit $mode
 
@@ -472,6 +477,9 @@ body:             |
     ; ASM-SAME:                                         ;  msbs: dst=0 src0=1 src1=0 src2=0
     ; GCN-NEXT: v_subrev_nc_u32_e32 v0, v0 /*v256*/, v2
     $vgpr0 = V_SUBREV_U32_e32 undef $vgpr256, undef $vgpr2, implicit $exec
+
+    ; GCN-NEXT: s_set_vgpr_msb 0x100
+    ; ASM-SAME:                                         ;  msbs: dst=0 src0=0 src1=0 src2=0
 
     ; ASM: NumVgprs: 513
 ...
@@ -963,4 +971,75 @@ body:             |
     ; ASM-SAME:                                         ;  msbs: dst=0 src0=1 src1=0 src2=0
     ; GCN-NEXT: v_wmma_scale16_f32_16x16x128_f8f6f4 v[210:217], v[244:259] /*v[500:515]*/, v[0:15], v[10:17], v[0:1], v[2:3]
     $vgpr210_vgpr211_vgpr212_vgpr213_vgpr214_vgpr215_vgpr216_vgpr217 = V_WMMA_SCALE16_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr undef $vgpr500_vgpr501_vgpr502_vgpr503_vgpr504_vgpr505_vgpr506_vgpr507_vgpr508_vgpr509_vgpr510_vgpr511_vgpr512_vgpr513_vgpr514_vgpr515, undef $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 0, undef $vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17, undef $vgpr0_vgpr1, undef $vgpr2_vgpr3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+...
+
+# Test that incompatible piggybacking is prevented after a successful commute.
+# After commute, CurrentMode is updated with the commuted instruction's mode.
+# A subsequent instruction that would CHANGE an existing mode bit cannot
+# piggyback. However, instructions that only ADD new mode bits (without
+# changing existing ones) can still piggyback - see fmak_fmamk_vop3 test.
+
+# ASM-LABEL: {{^}}commute_no_piggyback:
+# DIS-LABEL: <commute_no_piggyback>:
+---
+name:            commute_no_piggyback
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; ASM: %bb.0:
+
+    ; Step 1: v_mov sets dst=1, src0=2. src1 is nullopt (defaults to 0).
+    ; GCN-NEXT: s_set_vgpr_msb 0x42
+    ; ASM-SAME:                                         ;  msbs: dst=1 src0=2 src1=0 src2=0
+    ; GCN-NEXT: v_mov_b32_e32 v0 /*v256*/, v0 /*v512*/
+    $vgpr256 = V_MOV_B32_e32 undef $vgpr512, implicit $exec
+
+    ; Step 2: v_add is commuted to be compatible (src0=2, src1=0).
+    ; GCN-NEXT: v_add_f32_e64 v0 /*v256*/, v0 /*v512*/, v1
+    $vgpr256 = V_ADD_F32_e64 0, undef $vgpr1, 0, undef $vgpr512, 0, 0, implicit $exec, implicit $mode
+
+    ; Step 3: v_add needs src1=2. Without the fix, this piggybacks onto step 1's
+    ; s_set_vgpr_msb, changing src1 from 0 to 2 and breaking step 2.
+    ; GCN-NEXT: s_set_vgpr_msb 0x424a
+    ; ASM-SAME:                                         ;  msbs: dst=1 src0=2 src1=2 src2=0
+    ; GCN-NEXT: v_add_f32_e64 v0 /*v256*/, v0 /*v512*/, v1 /*v513*/
+    $vgpr256 = V_ADD_F32_e64 0, undef $vgpr512, 0, undef $vgpr513, 0, 0, implicit $exec, implicit $mode
+
+    ; GCN-NEXT: s_set_vgpr_msb 0x4a00
+    ; ASM-SAME:                                         ;  msbs: dst=0 src0=0 src1=0 src2=0
+
+    ; ASM: NumVgprs: 514
+...
+
+# ASM-LABEL: {{^}}redundant_xcnt:
+# DIS-LABEL: <redundant_xcnt>:
+---
+name: redundant_xcnt
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; ASM: %bb.0:
+
+    liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $vgpr256, $vgpr257
+
+    ; GCN-NEXT: global_load_b32 v5, v[0:1], off
+    $vgpr5 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec
+
+    ; GCN-NEXT: global_load_b32 v5, v[2:3], off
+    $vgpr5 = GLOBAL_LOAD_DWORD $vgpr2_vgpr3, 0, 0, implicit $exec
+
+    S_WAIT_XCNT 1
+
+    ; GCN-NEXT: s_set_vgpr_msb 4
+    ; ASM-SAME:                                         ;  msbs: dst=0 src0=0 src1=1 src2=0
+    ; GCN-NEXT: v_add_f32_e32 v0, 1, v0 /*v256*/
+    $vgpr0 = V_ADD_F32_e32 1, $vgpr256, implicit $mode, implicit $exec
+
+    S_WAIT_XCNT 0
+
+    ; GCN-NEXT: v_add_f32_e32 v2, 1, v1 /*v257*/
+    $vgpr2 = V_ADD_F32_e32 1, $vgpr257, implicit $mode, implicit $exec
+
+    ; GCN-NEXT: s_set_vgpr_msb 0x400
+    ; ASM-SAME:                                         ;  msbs: dst=0 src0=0 src1=0 src2=0
 ...
