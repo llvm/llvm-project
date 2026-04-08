@@ -525,6 +525,14 @@ class SVESIMDRegistersTestCase(TestBase):
         # Then all combinations of different states.
         expr_tests.extend(list(permutations(states, 2)))
 
+        platform = self.dbg.GetSelectedPlatform()
+        # The feature we use to get from streaming mode back to non-streaming
+        # mode was added in 6.19. Without it we simply cannot restore FP state.
+        # So remove any test going that restores to non-streaming mode
+        # from streaming mode.
+        if (platform.GetOSMajorVersion(), platform.GetOSMinorVersion()) < (6, 19):
+            expr_tests = list(filter(lambda p: p[1][0] == Mode.SIMD, expr_tests))
+
         if self.TraceOn():
             print("Expression tests:")
             pprint(expr_tests)
