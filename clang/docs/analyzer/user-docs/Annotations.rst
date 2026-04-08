@@ -184,7 +184,7 @@ This attribute may appear at most once per function declaration.
 .. code-block:: c
 
   // Without size parameter:
-  void __attribute((ownership_returns(malloc))) *my_malloc(size_t);
+  void __attribute((ownership_returns(malloc))) *my_malloc(size_t sz);
 
   // With size parameter (parameter 1 is the allocation size in bytes):
   void __attribute((ownership_returns(malloc, 1))) *my_sized_malloc(size_t sz);
