@@ -3936,8 +3936,8 @@ an event.
 For more information on the pmevent instructions, refer to the `PTX ISA
 <https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#miscellaneous-instructions-pmevent>`__.
 
-movmatrix Intrinsics
---------------------
+Warp-level Matrix Transpose Intrinsics
+---------------------------------------
 
 '``llvm.nvvm.movmatrix.sync.aligned.m8n8.trans.b16``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -3952,17 +3952,19 @@ Syntax:
 Overview:
 """""""""
 
-The '``@llvm.nvvm.movmatrix.sync.aligned.m8n8.trans.b16``' intrinsic generates
-the ``movmatrix.sync.aligned.m8n8.trans.b16`` PTX instruction, which performs
-a warp-synchronous register shuffle to transpose an 8x8 matrix of 16-bit
-values held in warp registers.
+The '``@llvm.nvvm.movmatrix.sync.aligned.m8n8.trans.b16``' intrinsic
+transposes an 8x8 matrix of 16-bit elements distributed across all 32
+threads of a warp. Each thread provides a 32-bit register containing two
+packed ``.b16`` elements, and receives back two packed ``.b16`` elements
+from the transposed matrix in the same format.
 
-The 32 threads of a warp collectively hold the elements of an 8x8 matrix of
-``.b16`` values, with two elements packed into each thread's 32-bit register.
-The transposed result is returned in the same packed layout.
+This is a warp-synchronous operation — all threads in the warp must
+execute the intrinsic together, and the result in each thread depends on
+values provided by other threads.
 
 For more information, refer to the `PTX ISA
 <https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#warp-level-matrix-instructions-movmatrix>`__.
+
 
 Other Intrinsics
 ----------------

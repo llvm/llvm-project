@@ -5634,9 +5634,9 @@ defset list<WMMA_INSTR> STMATRIXs = {
 // movmatrix
 let isConvergent = true in {
 def MOVMATRIX_SYNC_ALIGNED_M8N8_TRANS_B16
-  : NVPTXInst<(outs B32:$dst),
+  : BasicNVPTXInst<(outs B32:$dst),
               (ins B32:$src),
-              "movmatrix.sync.aligned.m8n8.trans.b16 $dst, $src;",
+              "movmatrix.sync.aligned.m8n8.trans.b16",
               [(set B32:$dst,
                 (int_nvvm_movmatrix_sync_aligned_m8n8_trans_b16 B32:$src))]>,
     Requires<[hasSM<75>, hasPTX<78>]>;

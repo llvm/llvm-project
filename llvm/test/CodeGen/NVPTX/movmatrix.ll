@@ -18,3 +18,23 @@ define i32 @test_movmatrix(i32 %a) {
   %d = call i32 @llvm.nvvm.movmatrix.sync.aligned.m8n8.trans.b16(i32 %a)
   ret i32 %d
 }
+
+; Test that LLVM does not CSE two movmatrix calls with the same input,
+; as the result depends on values from other threads in the warp.
+define i32 @test_movmatrix_cse(i32 %a) {
+; CHECK-LABEL: test_movmatrix_cse(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<5>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b32 %r1, [test_movmatrix_cse_param_0];
+; CHECK-NEXT:    movmatrix.sync.aligned.m8n8.trans.b16 %r2, %r1;
+; CHECK-NEXT:    movmatrix.sync.aligned.m8n8.trans.b16 %r3, %r1;
+; CHECK-NEXT:    add.s32 %r4, %r2, %r3;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r4;
+; CHECK-NEXT:    ret;
+  %d1 = call i32 @llvm.nvvm.movmatrix.sync.aligned.m8n8.trans.b16(i32 %a)
+  %d2 = call i32 @llvm.nvvm.movmatrix.sync.aligned.m8n8.trans.b16(i32 %a)
+  %sum = add i32 %d1, %d2
+  ret i32 %sum
+}

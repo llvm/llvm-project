@@ -2805,7 +2805,7 @@ foreach transposed = [0, 1] in {
 // movmatrix
 def int_nvvm_movmatrix_sync_aligned_m8n8_trans_b16
   : DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty],
-                          [IntrNoMem, IntrConvergent, IntrNoCallback]>;
+                          [IntrInaccessibleMemOnly, IntrConvergent]>;
 
 // MAPA
 let IntrProperties = [IntrNoMem, IntrSpeculatable, NoCapture<ArgIndex<0>>] in {
