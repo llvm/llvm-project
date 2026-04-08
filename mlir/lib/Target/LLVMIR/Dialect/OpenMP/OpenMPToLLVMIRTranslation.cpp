@@ -2644,17 +2644,12 @@ buildDependData(OperandRange dependVars, std::optional<ArrayAttr> dependKinds,
         builder.CreateAdd(totalCount, iterInfos.back().getTotalTrips());
   }
 
-  // Allocate the kmp_depend_info array. Only move to the entry block
-  // when totalCount is a constant; dynamic sizes (from iterator trip
-  // counts) must stay at the current insertion point to avoid
-  // domination issues.
-  llvm::Value *depArray;
-  {
-    llvm::IRBuilderBase::InsertPointGuard guard(builder);
-    if (llvm::isa<llvm::Constant>(totalCount))
-      builder.restoreIP(findAllocaInsertPoint(builder, moduleTranslation));
-    depArray = builder.CreateAlloca(dependInfoTy, totalCount, ".dep.arr.addr");
-  }
+  // Heap-allocate the kmp_depend_info array so we don't risk
+  // dynamic-sized alloca outside the entry block (e.g. inside loops).
+  llvm::Constant *allocSize = llvm::ConstantExpr::getSizeOf(dependInfoTy);
+  llvm::Value *depArray =
+      builder.CreateMalloc(ompBuilder.SizeTy, dependInfoTy, allocSize,
+                           totalCount, /*MallocF=*/nullptr, ".dep.arr.addr");
 
   // Fill non-iterated entries at indices [0, numLocator).
   if (numLocator > 0) {
@@ -2938,6 +2933,10 @@ convertOmpTaskOp(omp::TaskOp taskOp, llvm::IRBuilderBase &builder,
   popCancelFinalizationCB(cancelTerminators, ompBuilder, afterIP.get());
 
   builder.restoreIP(*afterIP);
+
+  if (dependencies.DepArray)
+    builder.CreateFree(dependencies.DepArray);
+
   return success();
 }
 
@@ -7267,6 +7266,9 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
     return failure();
 
   builder.restoreIP(*afterIP);
+
+  if (dds.DepArray)
+    builder.CreateFree(dds.DepArray);
 
   // Remap access operations to declare target reference pointers for the
   // device, essentially generating extra loadop's as necessary

@@ -1971,13 +1971,14 @@ void OpenMPIRBuilder::emitTaskDependency(IRBuilderBase &Builder, Value *Entry,
   Value *Addr = Builder.CreateStructGEP(
       DependInfo, Entry,
       static_cast<unsigned int>(RTLDependInfoFields::BaseAddr));
-  Value *DepValPtr = Builder.CreatePtrToInt(Dep.DepVal, Builder.getInt64Ty());
+  Value *DepValPtr = Builder.CreatePtrToInt(Dep.DepVal, SizeTy);
   Builder.CreateStore(DepValPtr, Addr);
   // Store the size of the variable
   Value *Size = Builder.CreateStructGEP(
       DependInfo, Entry, static_cast<unsigned int>(RTLDependInfoFields::Len));
   Builder.CreateStore(
-      Builder.getInt64(M.getDataLayout().getTypeStoreSize(Dep.DepValueType)),
+      ConstantInt::get(SizeTy,
+                       M.getDataLayout().getTypeStoreSize(Dep.DepValueType)),
       Size);
   // Store the dependency kind
   Value *Flags = Builder.CreateStructGEP(
@@ -2000,7 +2001,7 @@ static Value *emitTaskDependencies(
     return nullptr;
 
   // Given a vector of DependData objects, in this function we create an
-  // array on the stack that holds kmp_dep_info objects corresponding
+  // array on the stack that holds kmp_depend_info objects corresponding
   // to each dependency. This is then passed to the OpenMP runtime.
   // For example, if there are 'n' dependencies then the following psedo
   // code is generated. Assume the first dependence is on a variable 'a'
@@ -2452,8 +2453,8 @@ llvm::StructType *OpenMPIRBuilder::getKmpTaskAffinityInfoTy() {
 OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTask(
     const LocationDescription &Loc, InsertPointTy AllocaIP,
     BodyGenCallbackTy BodyGenCB, bool Tied, Value *Final, Value *IfCondition,
-    DependenciesInfo Dependencies, AffinityData Affinities, bool Mergeable,
-    Value *EventHandle, Value *Priority) {
+    const DependenciesInfo &Dependencies, AffinityData Affinities,
+    bool Mergeable, Value *EventHandle, Value *Priority) {
 
   if (!updateToLocation(Loc))
     return InsertPointTy();

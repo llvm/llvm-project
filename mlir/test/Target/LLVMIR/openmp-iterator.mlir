@@ -323,7 +323,7 @@ llvm.func @omp_task_depend_iterator_simple(%addr : !llvm.ptr) {
 
 // CHECK-LABEL: define void @omp_task_depend_iterator_simple
 // CHECK-SAME: (ptr %[[ADDR:[0-9]+]])
-// CHECK: %[[DEP_ARR:.*]] = alloca %struct.kmp_dep_info, i64 10
+// CHECK: %[[DEP_ARR:.*]] = tail call ptr @malloc(i64 %mallocsize)
 //
 // Iterator loop: preheader -> header -> cond -> body -> inc -> header...
 // CHECK: omp_dep_iterator.header:
@@ -348,8 +348,9 @@ llvm.func @omp_task_depend_iterator_simple(%addr : !llvm.ptr) {
 // CHECK: omp_dep_iterator.inc:
 // CHECK: %[[NEXT]] = add nuw i64 %[[IV]], 1
 //
-// Task creation with deps
+// Task creation with deps, then free
 // CHECK: call i32 @__kmpc_omp_task_with_deps(ptr @{{.*}}, i32 %{{.*}}, ptr %{{.*}}, i32 10, ptr %[[DEP_ARR]], i32 0, ptr null)
+// CHECK: tail call void @free(ptr %[[DEP_ARR]])
 
 llvm.func @omp_task_depend_iterator_mixed(%addr : !llvm.ptr, %plain : !llvm.ptr) {
   %c1 = llvm.mlir.constant(1 : i64) : i64
@@ -368,7 +369,7 @@ llvm.func @omp_task_depend_iterator_mixed(%addr : !llvm.ptr, %plain : !llvm.ptr)
 
 // CHECK-LABEL: define void @omp_task_depend_iterator_mixed
 // CHECK-SAME: (ptr %[[ADDR2:[0-9]+]], ptr %[[PLAIN:[0-9]+]])
-// CHECK: %[[DEP_ARR2:.*]] = alloca %struct.kmp_dep_info, i64 11
+// CHECK: %[[DEP_ARR2:.*]] = tail call ptr @malloc(i64 %mallocsize)
 //
 // Plain entry at index 0
 // CHECK: %[[PLAIN_ENTRY:.*]] = getelementptr inbounds %struct.kmp_dep_info, ptr %[[DEP_ARR2]], i64 0
@@ -387,6 +388,7 @@ llvm.func @omp_task_depend_iterator_mixed(%addr : !llvm.ptr, %plain : !llvm.ptr)
 // CHECK: store i8 1, ptr
 //
 // CHECK: call i32 @__kmpc_omp_task_with_deps(ptr @{{.*}}, i32 %{{.*}}, ptr %{{.*}}, i32 11, ptr %[[DEP_ARR2]], i32 0, ptr null)
+// CHECK: tail call void @free(ptr %[[DEP_ARR2]])
 
 // Dynamic bounds: iterator bounds are function arguments, so the trip count
 // and dep-array size are computed at runtime.  The alloca must be placed
@@ -414,13 +416,14 @@ llvm.func @omp_task_depend_iterator_dynamic(%addr : !llvm.ptr,
 // Dynamic total = 0 + scaled trip count
 // CHECK: %[[TOTAL:.*]] = add i64 0, %[[SCALED]]
 //
-// Alloca must come AFTER the trip-count computation (not in entry block)
-// CHECK: %[[DEP_ARR:.*]] = alloca %struct.kmp_dep_info, i64 %[[TOTAL]]
+// Malloc with dynamic size
+// CHECK: %[[DEP_ARR:.*]] = tail call ptr @malloc(i64 %mallocsize)
 // CHECK: omp_dep_iterator.body:
 // CHECK: getelementptr inbounds %struct.kmp_dep_info, ptr %[[DEP_ARR]]
 // NumDeps is truncated to i32 for the runtime call
 // CHECK: %[[NDEPS:.*]] = trunc i64 %[[TOTAL]] to i32
 // CHECK: call i32 @__kmpc_omp_task_with_deps(ptr @{{.*}}, i32 %{{.*}}, ptr %{{.*}}, i32 %[[NDEPS]], ptr %[[DEP_ARR]], i32 0, ptr null)
+// CHECK: tail call void @free(ptr %[[DEP_ARR]])
 
 // Dynamic bounds with mixed plain + iterated depends.
 llvm.func @omp_task_depend_iterator_dynamic_mixed(%addr : !llvm.ptr,
@@ -439,7 +442,7 @@ llvm.func @omp_task_depend_iterator_dynamic_mixed(%addr : !llvm.ptr,
 // CHECK: %[[TRIPS2:.*]] = mul i64 1, %{{.*}}
 // total = 1 (plain) + dynamic trip count
 // CHECK: %[[TOTAL2:.*]] = add i64 1, %[[TRIPS2]]
-// CHECK: %[[DEP_ARR2:.*]] = alloca %struct.kmp_dep_info, i64 %[[TOTAL2]]
+// CHECK: %[[DEP_ARR2:.*]] = tail call ptr @malloc(i64 %mallocsize)
 // Plain entry at index 0
 // CHECK: %[[PLAIN_ENTRY:.*]] = getelementptr inbounds %struct.kmp_dep_info, ptr %[[DEP_ARR2]], i64 0
 // CHECK: store i8 3, ptr
@@ -448,6 +451,7 @@ llvm.func @omp_task_depend_iterator_dynamic_mixed(%addr : !llvm.ptr,
 // CHECK: add i64 1, %omp_dep_iterator.iv
 // CHECK: %[[NDEPS2:.*]] = trunc i64 %[[TOTAL2]] to i32
 // CHECK: call i32 @__kmpc_omp_task_with_deps(ptr @{{.*}}, i32 %{{.*}}, ptr %{{.*}}, i32 %[[NDEPS2]], ptr %[[DEP_ARR2]], i32 0, ptr null)
+// CHECK: tail call void @free(ptr %[[DEP_ARR2]])
 
 //--- target.mlir
 
@@ -478,7 +482,7 @@ module attributes {omp.is_target_device = false, omp.target_triples = ["amdgcn-a
 
 // TARGET-LABEL: define void @omp_target_depend_iterator
 // TARGET-SAME: (ptr %[[ADDR:[0-9]+]])
-// TARGET-DAG: %[[DEP_ARR:.*]] = alloca %struct.kmp_dep_info, i64 10
+// TARGET-DAG: %[[DEP_ARR:.*]] = tail call ptr @malloc(i64 %mallocsize)
 //
 // Iterator loop: preheader -> header -> cond -> body -> inc -> header...
 // TARGET: omp_dep_iterator.header:
@@ -503,8 +507,9 @@ module attributes {omp.is_target_device = false, omp.target_triples = ["amdgcn-a
 // TARGET: omp_dep_iterator.inc:
 // TARGET: %[[NEXT]] = add nuw i64 %[[IV]], 1
 //
-// Target task: wait_deps with ndeps=10, then begin_if0/proxy/complete_if0
+// Target task: wait_deps with ndeps=10, then begin_if0/proxy/complete_if0, then free
 // TARGET: call void @__kmpc_omp_wait_deps(ptr @{{.*}}, i32 %{{.*}}, i32 10, ptr %[[DEP_ARR]], i32 0, ptr null)
 // TARGET: call void @__kmpc_omp_task_begin_if0
 // TARGET: call void @.omp_target_task_proxy_func
 // TARGET: call void @__kmpc_omp_task_complete_if0
+// TARGET: tail call void @free(ptr %[[DEP_ARR]])

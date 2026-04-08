@@ -1514,13 +1514,13 @@ public:
   /// A struct to pack static and dynamic dependency information for a task.
   ///
   /// For fixed-count (non-iterator) dependencies, callers populate \p Deps
-  /// and the builder allocates and fills the kmp_dep_info array internally.
+  /// and the builder allocates and fills the kmp_depend_info array internally.
   /// For iterator-based dependencies, the caller pre-builds the array and
   /// sets \p NumDeps and \p DepArray directly.
   struct DependenciesInfo {
     SmallVector<DependData> Deps; // vector of dependencies
-    Value *NumDeps;  // number of kmp_dep_info entries (used by iterator path)
-    Value *DepArray; // kmp_dep_info array (used by iterator path)
+    Value *NumDeps; // number of kmp_depend_info entries (used by iterator path)
+    Value *DepArray; // kmp_depend_info array (used by iterator path)
 
     DependenciesInfo() : Deps(), NumDeps(nullptr), DepArray(nullptr) {}
     DependenciesInfo(SmallVector<DependData> D)
@@ -1529,7 +1529,7 @@ public:
     bool empty() const { return Deps.empty() && DepArray == nullptr; }
   };
 
-  /// Store one kmp_dep_info entry at the given \p Entry pointer.
+  /// Store one kmp_depend_info entry at the given \p Entry pointer.
   LLVM_ABI void emitTaskDependency(IRBuilderBase &Builder, Value *Entry,
                                    const DependData &Dep);
 
@@ -1613,7 +1613,7 @@ public:
   LLVM_ABI InsertPointOrErrorTy createTask(
       const LocationDescription &Loc, InsertPointTy AllocaIP,
       BodyGenCallbackTy BodyGenCB, bool Tied = true, Value *Final = nullptr,
-      Value *IfCondition = nullptr, DependenciesInfo Dependencies = {},
+      Value *IfCondition = nullptr, const DependenciesInfo &Dependencies = {},
       AffinityData Affinities = {}, bool Mergeable = false,
       Value *EventHandle = nullptr, Value *Priority = nullptr);
 
