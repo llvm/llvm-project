@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+
 #ifndef LLVM_CLANG_AST_REFLECTION_H
 #define LLVM_CLANG_AST_REFLECTION_H
 
@@ -18,11 +19,12 @@
 namespace clang {
 
 // TODO(Reflection): Add support for Template, Namespace and DeclRefExpr.
-enum class ReflectionKind { Type };
+enum class ReflectionKind {
+  Type
+};
 
-inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
-                                     ReflectionKind Kind) {
-  switch (Kind) {
+inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, ReflectionKind Kind) {
+  switch(Kind) {
   case ReflectionKind::Type:
     OS << "type";
   }
@@ -30,5 +32,6 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
   return OS;
 }
 
-} // namespace clang
+}
+
 #endif

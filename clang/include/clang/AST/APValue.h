@@ -716,7 +716,7 @@ public:
     return ((const AddrLabelDiffData *)(const char *)&Data)->RHSExpr;
   }
 
-  const ReflectionKind getReflectionOperandKind() const {
+  ReflectionKind getReflectionOperandKind() const {
     assert(isReflection() && "Invalid accessor");
     return ((const ReflectionData *)(const char *)&Data)->OperandKind;
   }
@@ -779,8 +779,8 @@ private:
   void MakeReflection(ReflectionKind OperandKind,
                       const void *Operand) {
     assert(isAbsent() && "Bad state change");
-    new ((void *)(char *)Data.buffer) ReflectionData(
-            OperandKind, Operand);
+    new ((void *)(char *)Data.buffer) ReflectionData{
+            OperandKind, Operand};
     Kind = Reflection;
   }
   void MakeInt() {
