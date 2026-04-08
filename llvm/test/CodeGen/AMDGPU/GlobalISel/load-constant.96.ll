@@ -922,8 +922,8 @@ define amdgpu_ps <3 x i32> @s_load_constant_v3i32_align1(ptr addrspace(4) inreg 
 ; GFX1250-UNALIGNED-LABEL: s_load_constant_v3i32_align1:
 ; GFX1250-UNALIGNED:       ; %bb.0:
 ; GFX1250-UNALIGNED-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-UNALIGNED-NEXT:    v_mov_b32_e32 v2, 0
-; GFX1250-UNALIGNED-NEXT:    ; kill: def $vgpr0_vgpr1 killed $sgpr0_sgpr1 killed $exec
+; GFX1250-UNALIGNED-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1250-UNALIGNED-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
 ; GFX1250-UNALIGNED-NEXT:    global_load_b96 v[0:2], v[0:1], off nv
 ; GFX1250-UNALIGNED-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-UNALIGNED-NEXT:    v_readfirstlane_b32 s0, v0
@@ -1203,8 +1203,8 @@ define amdgpu_ps <3 x i32> @s_load_constant_v3i32_align2(ptr addrspace(4) inreg 
 ; GFX1250-UNALIGNED-LABEL: s_load_constant_v3i32_align2:
 ; GFX1250-UNALIGNED:       ; %bb.0:
 ; GFX1250-UNALIGNED-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-UNALIGNED-NEXT:    v_mov_b32_e32 v2, 0
-; GFX1250-UNALIGNED-NEXT:    ; kill: def $vgpr0_vgpr1 killed $sgpr0_sgpr1 killed $exec
+; GFX1250-UNALIGNED-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1250-UNALIGNED-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
 ; GFX1250-UNALIGNED-NEXT:    global_load_b96 v[0:2], v[0:1], off nv
 ; GFX1250-UNALIGNED-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-UNALIGNED-NEXT:    v_readfirstlane_b32 s0, v0
