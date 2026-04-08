@@ -850,44 +850,6 @@ MachineInstr *SIShrinkInstructions::matchSwap(MachineInstr &MovT) const {
   return nullptr;
 }
 
-// Trace the selector operand of a V_PERM_B32 back through COPYs to find the
-// immediate mask.
-static bool getPermMaskImm(MachineInstr &Perm, MachineRegisterInfo *MRI,
-                           uint32_t &Mask) {
-  const int Src2Idx =
-      AMDGPU::getNamedOperandIdx(Perm.getOpcode(), AMDGPU::OpName::src2);
-  const MachineOperand &Op = Perm.getOperand(Src2Idx);
-  if (Op.isImm()) {
-    Mask = static_cast<uint32_t>(Op.getImm());
-    return true;
-  }
-  if (!Op.isReg() || !Op.getReg().isVirtual())
-    return false;
-
-  Register Reg = Op.getReg();
-  SmallDenseSet<Register, 4> Seen;
-  while (Reg.isVirtual() && Seen.insert(Reg).second) {
-    MachineInstr *Def = MRI->getUniqueVRegDef(Reg);
-    if (!Def)
-      return false;
-    if (Def->isMoveImmediate()) {
-      const MachineOperand &ImmOp = Def->getOperand(1);
-      if (!ImmOp.isImm())
-        return false;
-      Mask = static_cast<uint32_t>(ImmOp.getImm());
-      return true;
-    }
-    if (!Def->isCopy() || !Def->getOperand(1).isReg())
-      return false;
-
-    if (Def->getOperand(0).getSubReg() != AMDGPU::NoSubRegister ||
-        Def->getOperand(1).getSubReg() != AMDGPU::NoSubRegister)
-      return false;
-    Reg = Def->getOperand(1).getReg();
-  }
-  return false;
-}
-
 // Matches two v_perms that together swap 16-bit halves between two inputs. For
 // example:
 //
@@ -910,6 +872,8 @@ SIShrinkInstructions::matchSwapB16(MachineInstr &Perm,
       AMDGPU::getNamedOperandIdx(Perm.getOpcode(), AMDGPU::OpName::src0);
   const int Src1Idx =
       AMDGPU::getNamedOperandIdx(Perm.getOpcode(), AMDGPU::OpName::src1);
+  const int Src2Idx =
+      AMDGPU::getNamedOperandIdx(Perm.getOpcode(), AMDGPU::OpName::src2);
 
   const MachineOperand &S0 = Perm.getOperand(Src0Idx);
   const MachineOperand &S1 = Perm.getOperand(Src1Idx);
@@ -921,14 +885,14 @@ SIShrinkInstructions::matchSwapB16(MachineInstr &Perm,
   unsigned Src1Sub = S1.getSubReg();
   if (!Src0Reg.isVirtual() || !Src1Reg.isVirtual())
     return nullptr;
-  if (!TRI->isVGPR(*MRI, Src0Reg) || !TRI->isVGPR(*MRI, Src1Reg))
-    return nullptr;
   if (Src0Reg == Src1Reg && Src0Sub == Src1Sub)
     return nullptr;
 
-  uint32_t Mask = 0;
-  if (!getPermMaskImm(Perm, MRI, Mask))
+  std::optional<int64_t> MaybeMask =
+      TII->getImmOrMaterializedImm(Perm.getOperand(Src2Idx));
+  if (!MaybeMask)
     return nullptr;
+  uint32_t Mask = static_cast<uint32_t>(*MaybeMask);
 
   // For two v_perms with common operands {src0, src1} and complementary,
   // eligible masks {S0Mask, S1Mask}, we emit a v_swap_b16 which swaps
@@ -1012,55 +976,52 @@ SIShrinkInstructions::matchSwapB16(MachineInstr &Perm,
   // Ensure that we can use Lo128 registers for operands of the v_swap.
   const MCInstrDesc &SwapDesc = TII->get(AMDGPU::V_SWAP_B16);
   const TargetRegisterClass *Swap16RC = TII->getRegClass(SwapDesc, 0);
-  const TargetRegisterClass *Swap32RC =
-      TRI->getMatchingSuperRegClass(MRI->getRegClass(S0Dst), Swap16RC, S0Sub);
-  if (!Swap32RC)
+
+  const TargetRegisterClass *Src032RC =
+      Src0Sub ? TRI->getSubRegisterClass(MRI->getRegClass(Src0Reg), Src0Sub)
+              : MRI->getRegClass(Src0Reg);
+  const TargetRegisterClass *Src132RC =
+      Src1Sub ? TRI->getSubRegisterClass(MRI->getRegClass(Src1Reg), Src1Sub)
+              : MRI->getRegClass(Src1Reg);
+  if (!Src032RC || !Src132RC)
     return nullptr;
-  if (!MRI->constrainRegClass(S1Dst, Swap32RC) ||
-      !MRI->constrainRegClass(S0Dst, Swap32RC))
-    return nullptr;
-  if (!Src1Sub && !MRI->constrainRegClass(Src1Reg, Swap32RC))
-    return nullptr;
-  if (!Src0Sub && !MRI->constrainRegClass(Src0Reg, Swap32RC))
-    return nullptr;
+
+  const TargetRegisterClass *Base0RC =
+      TRI->getMatchingSuperRegClass(Src032RC, Swap16RC, S0Sub);
+  const TargetRegisterClass *Base1RC =
+      TRI->getMatchingSuperRegClass(Src132RC, Swap16RC, S1Sub);
 
   MachineBasicBlock &MBB = *P0->getParent();
   MachineBasicBlock::iterator I = P0->getIterator();
   const DebugLoc &DL = P0->getDebugLoc();
 
-  // Extract the two 16-bit halves to be swapped, S1In and S0In.
-  Register S1In = MRI->createVirtualRegister(Swap16RC);
-  Register S0In = MRI->createVirtualRegister(Swap16RC);
-  unsigned S1InSub = TRI->composeSubRegIndices(Src1Sub, S1Sub);
-  unsigned S0InSub = TRI->composeSubRegIndices(Src0Sub, S0Sub);
-  BuildMI(MBB, I, DL, TII->get(TargetOpcode::COPY), S1In)
-      .addReg(Src1Reg, {}, S1InSub);
-  BuildMI(MBB, I, DL, TII->get(TargetOpcode::COPY), S0In)
-      .addReg(Src0Reg, {}, S0InSub);
+  // If P0/P1's operands were subregisters, COPY into Low128 32-bit registers.
+  Register S0Base = Src0Reg;
+  Register S1Base = Src1Reg;
+  if (Src0Sub) {
+    S0Base = MRI->createVirtualRegister(Base0RC);
+    BuildMI(MBB, I, DL, TII->get(TargetOpcode::COPY), S0Base)
+        .addReg(Src0Reg, {}, Src0Sub);
+  } else if (!MRI->constrainRegClass(Src0Reg, Base0RC)) {
+    return nullptr;
+  }
+  if (Src1Sub) {
+    S1Base = MRI->createVirtualRegister(Base1RC);
+    BuildMI(MBB, I, DL, TII->get(TargetOpcode::COPY), S1Base)
+        .addReg(Src1Reg, {}, Src1Sub);
+  } else if (!MRI->constrainRegClass(Src1Reg, Base1RC)) {
+    return nullptr;
+  }
 
-  // Swap. S1Out = S0In; S0Out = S1In;
+  // Swap. S1Out = Src0.S0Sub; S0Out = Src1.S1Sub;
   Register S1Out = MRI->createVirtualRegister(Swap16RC);
   Register S0Out = MRI->createVirtualRegister(Swap16RC);
   auto *SwapMI = BuildMI(MBB, I, DL, TII->get(AMDGPU::V_SWAP_B16))
                      .addDef(S1Out)
                      .addDef(S0Out)
-                     .addReg(S0In)
-                     .addReg(S1In)
+                     .addReg(S0Base, {}, S0Sub)
+                     .addReg(S1Base, {}, S1Sub)
                      .getInstr();
-
-  // If P0/P1's operands were subregisters, COPY into new 32-bit registers.
-  Register S1Base = Src1Reg;
-  Register S0Base = Src0Reg;
-  if (Src1Sub) {
-    S1Base = MRI->createVirtualRegister(Swap32RC);
-    BuildMI(MBB, I, DL, TII->get(TargetOpcode::COPY), S1Base)
-        .addReg(Src1Reg, {}, Src1Sub);
-  }
-  if (Src0Sub) {
-    S0Base = MRI->createVirtualRegister(Swap32RC);
-    BuildMI(MBB, I, DL, TII->get(TargetOpcode::COPY), S0Base)
-        .addReg(Src0Reg, {}, Src0Sub);
-  }
 
   BuildMI(MBB, I, DL, TII->get(TargetOpcode::INSERT_SUBREG), S1Dst)
       .addReg(S1Base)
