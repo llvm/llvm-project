@@ -2145,8 +2145,6 @@ void X86_64ABIInfo::classify(QualType Ty, uint64_t OffsetBase, Class &Lo,
       //
       // FIXME: Extended the Lo and Hi logic properly to work for size wider
       // than 128.
-      // bool IsEmptyField = isEmptyField(getContext(), *i, true) &&
-      //                     properlyIgnoreEmptyCXXFieldsAndBases();
       if (Size > 128 &&
           ((!IsUnion && Size != getContext().getTypeSize(i->getType())) ||
            Size > getNativeVectorSizeForAVXABI(AVXLevel))) {
