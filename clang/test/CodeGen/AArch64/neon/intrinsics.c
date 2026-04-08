@@ -1731,8 +1731,16 @@ float64x1_t test_vminnm_f64(float64x1_t v1, float64x1_t v2) {
   // CIR: cir.call_llvm_intrinsic "aarch64.neon.fminnm" %{{.*}}, %{{.*}} : (!cir.vector<1 x !cir.double>, !cir.vector<1 x !cir.double>) -> !cir.vector<1 x !cir.double>
   
   // LLVM-SAME: <1 x double> {{.*}} [[V1:%.*]], <1 x double> noundef [[V2:%.*]]) {{.*}} {
-  // LLVM:    [[VMINNM_V2_I:%.*]] = call <1 x double> @llvm.aarch64.neon.fminnm.v1f64(<1 x double>  %{{.*}}, <1 x double> %{{.*}})
-  // LLVM:    ret <1 x double> [[VMINNM_V2_I]]
+  // LLVM:    [[TMP0:%.*]] = bitcast <1 x double> [[V1]] to i64
+  // LLVM:    [[__P0_ADDR_I_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP0]], i32 0
+  // LLVM:    [[TMP1:%.*]] = bitcast <1 x double> [[V2]] to i64
+  // LLVM:    [[__P1_ADDR_I_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP1]], i32 0
+  // LLVM:    [[TMP2:%.*]] = bitcast <1 x i64> [[__P0_ADDR_I_SROA_0_0_VEC_INSERT]] to <8 x i8>
+  // LLVM:    [[TMP3:%.*]] = bitcast <1 x i64> [[__P1_ADDR_I_SROA_0_0_VEC_INSERT]] to <8 x i8>
+  // LLVM:    [[VMINNM_I:%.*]] = bitcast <8 x i8> [[TMP2]] to <1 x double>
+  // LLVM:    [[VMINNM1_I:%.*]] = bitcast <8 x i8> [[TMP3]] to <1 x double>
+  // LLVM:    [[VMINNM2_I:%.*]] = call <1 x double> @llvm.aarch64.neon.fminnm.v1f64(<1 x double> [[VMINNM_I]], <1 x double> [[VMINNM1_I]])
+  // LLVM:    ret <1 x double> [[VMINNM2_I]]
   return vminnm_f64(v1, v2);
 }
 
