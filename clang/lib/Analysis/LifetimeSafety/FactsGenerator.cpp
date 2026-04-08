@@ -713,10 +713,15 @@ void FactsGenerator::handleFunctionCall(const Expr *Call,
             KillSrc));
         KillSrc = false;
       } else if (IsArgLifetimeBound(I)) {
-        // A lifetimebound argument may affect the result at every origin level,
-        // so we propagate the whole OriginList instead of only the outermost
-        // origin.
-        flow(CallList, ArgList, KillSrc);
+        // Only flow the outer origin here. For lifetimebound args in
+        // gsl::Pointer construction, we do not have enough information to
+        // safely match inner origins, so the source and
+        // destination origin lists may have different lengths.
+        // FIXME: Handle origin-shape mismatches gracefully so we can also flow
+        // inner origins.
+        CurrentBlockFacts.push_back(FactMgr.createFact<OriginFlowFact>(
+            CallList->getOuterOriginID(), ArgList->getOuterOriginID(),
+            KillSrc));
         KillSrc = false;
       }
     } else if (shouldTrackPointerImplicitObjectArg(I)) {
