@@ -2032,15 +2032,15 @@ template<typename T> static InstructionCost costAndCollectOperands(
     // TODO: this is still pessimistic for the general case because of the
     // Bin Pow algorithm actually used by the expander, see
     // SCEVExpander::visitMulExpr(), ExpandOpBinPowN().
-    unsigned MulOpc = Instruction::Mul;
+    unsigned OpCode = Instruction::Mul;
     if (S->getNumOperands() == 2)
       if (auto *SC = dyn_cast<SCEVConstant>(S->getOperand(0))) {
         if (SC->getAPInt().isAllOnes()) // -1
-          MulOpc = Instruction::Sub;
+          OpCode = Instruction::Sub;
         else if (SC->getAPInt().isPowerOf2())
-          MulOpc = Instruction::Shl;
+          OpCode = Instruction::Shl;
       }
-    Cost = ArithCost(MulOpc, S->getNumOperands() - 1);
+    Cost = ArithCost(OpCode, S->getNumOperands() - 1);
     break;
   }
   case scSMaxExpr:
