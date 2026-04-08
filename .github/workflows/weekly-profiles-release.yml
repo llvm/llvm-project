@@ -1,0 +1,128 @@
+name: Weekly Profiles Release
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-linux:
+    name: Build Linux x86_64
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: sudo apt-get install -y ninja-build ccache
+
+      - name: Restore ccache
+        uses: actions/cache@v4
+        with:
+          path: ~/.ccache
+          key: ccache-linux-${{ github.sha }}
+          restore-keys: ccache-linux-
+
+      - name: Configure
+        run: |
+          cmake -G Ninja -S llvm -B build \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_C_COMPILER=gcc \
+            -DCMAKE_CXX_COMPILER=g++ \
+            -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+            -DLLVM_ENABLE_PROJECTS=clang \
+            -DLLVM_TARGETS_TO_BUILD="X86;AArch64" \
+            -DLLVM_INSTALL_TOOLCHAIN_ONLY=ON \
+            -DCMAKE_INSTALL_PREFIX=build/install
+
+      - name: Build and install
+        run: ninja -C build install-clang install-clang-resource-headers
+
+      - name: Package
+        run: tar czf clang-profiles-linux-x86_64.tar.gz -C build/install .
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: clang-profiles-linux-x86_64
+          path: clang-profiles-linux-x86_64.tar.gz
+
+  build-windows:
+    name: Build Windows x86_64
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Restore sccache
+        uses: actions/cache@v4
+        with:
+          path: ~\AppData\Local\Mozilla\sccache
+          key: sccache-windows-${{ github.sha }}
+          restore-keys: sccache-windows-
+
+      - name: Install sccache
+        run: choco install sccache -y
+
+      - name: Configure
+        run: >
+          cmake -G Ninja -S llvm -B build
+          -DCMAKE_BUILD_TYPE=Release
+          -DCMAKE_C_COMPILER=cl
+          -DCMAKE_CXX_COMPILER=cl
+          -DCMAKE_C_COMPILER_LAUNCHER=sccache
+          -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
+          -DLLVM_ENABLE_PROJECTS=clang
+          -DLLVM_TARGETS_TO_BUILD="X86;AArch64"
+          -DLLVM_INSTALL_TOOLCHAIN_ONLY=ON
+          -DCMAKE_INSTALL_PREFIX=build/install
+
+      - name: Build and install
+        run: ninja -C build install-clang install-clang-resource-headers
+
+      - name: Package
+        run: Compress-Archive -Path build\install\* -DestinationPath clang-profiles-windows-x86_64.zip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: clang-profiles-windows-x86_64
+          path: clang-profiles-windows-x86_64.zip
+
+  create-release:
+    name: Create GitHub Release
+    needs: [build-linux, build-windows]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: clang-profiles-linux-x86_64
+          path: artifacts
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: clang-profiles-windows-x86_64
+          path: artifacts
+
+      - name: Compute tag
+        id: tag
+        run: |
+          date_tag="profiles-$(date -u +%Y-%m-%d)"
+          echo "tag=${date_tag}-${{ github.run_number }}" >> "$GITHUB_OUTPUT"
+          echo "name=Profiles Build $(date -u +%Y-%m-%d) #${{ github.run_number }}" >> "$GITHUB_OUTPUT"
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.tag }}
+          name: ${{ steps.tag.outputs.name }}
+          target_commitish: ${{ github.sha }}
+          files: artifacts/*
+          body: |
+            Automated weekly build of Clang with safety profiles support.
+
+            **Branch:** `${{ github.ref_name }}`
+            **Commit:** `${{ github.sha }}`
+
+            ### Artifacts
+            - `clang-profiles-linux-x86_64.tar.gz` — Linux x86_64 (Ubuntu 22.04, gcc)
+            - `clang-profiles-windows-x86_64.zip` — Windows x86_64 (MSVC 2022)

@@ -1,0 +1,17 @@
+name: Schedule Profiles Build
+
+on:
+  schedule:
+    - cron: '0 12 * * 5'
+
+permissions:
+  actions: write
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger build on profiles-framework
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run weekly-profiles-release.yml --repo ${{ github.repository }} --ref profiles-framework
