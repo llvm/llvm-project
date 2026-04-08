@@ -2004,10 +2004,17 @@ static Type *shrinkFPConstantVector(Value *V, bool PreferBFloat) {
 }
 
 /// Find the minimum FP type we can safely truncate to.
-static Type *getMinimumFPType(Value *V, bool PreferBFloat) {
+static Type *getMinimumFPType(Value *V, Type *PreferredTy, InstCombiner &IC) {
   if (auto *FPExt = dyn_cast<FPExtInst>(V))
     return FPExt->getOperand(0)->getType();
 
+  Value *Src;
+  if (match(V, m_IToFP(m_Value(Src))))
+    if (IC.canBeCastedExactlyIntToFP(Src, PreferredTy, isa<SIToFPInst>(V),
+                                     cast<Instruction>(V)))
+      return PreferredTy;
+
+  bool PreferBFloat = PreferredTy->getScalarType()->isBFloatTy();
   // If this value is a constant, return the constant in the smallest FP type
   // that can accurately represent it.  This allows us to turn
   // (float)((double)X+2.0) into x+2.0f.
@@ -2104,22 +2111,9 @@ Instruction *InstCombinerImpl::visitFPTrunc(FPTruncInst &FPT) {
   Type *Ty = FPT.getType();
   auto *BO = dyn_cast<BinaryOperator>(FPT.getOperand(0));
   if (BO && BO->hasOneUse()) {
-    bool PreferBFloat = Ty->getScalarType()->isBFloatTy();
-    Type *LHSMinType = getMinimumFPType(BO->getOperand(0), PreferBFloat);
-    Type *RHSMinType = getMinimumFPType(BO->getOperand(1), PreferBFloat);
+    Type *LHSMinType = getMinimumFPType(BO->getOperand(0), Ty, *this);
+    Type *RHSMinType = getMinimumFPType(BO->getOperand(1), Ty, *this);
     unsigned OpWidth = BO->getType()->getFPMantissaWidth();
-
-    Value *Src;
-    if (match(BO->getOperand(0), m_IToFP(m_Value(Src))))
-      if (canBeCastedExactlyIntToFP(Src, Ty, isa<SIToFPInst>(BO->getOperand(0)),
-                                    &FPT))
-        LHSMinType = Ty;
-
-    if (match(BO->getOperand(1), m_IToFP(m_Value(Src))))
-      if (canBeCastedExactlyIntToFP(Src, Ty, isa<SIToFPInst>(BO->getOperand(1)),
-                                    &FPT))
-        RHSMinType = Ty;
-
     unsigned LHSWidth = LHSMinType->getFPMantissaWidth();
     unsigned RHSWidth = RHSMinType->getFPMantissaWidth();
     unsigned SrcWidth = std::max(LHSWidth, RHSWidth);
