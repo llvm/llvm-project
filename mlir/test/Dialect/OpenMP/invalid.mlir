@@ -3036,6 +3036,23 @@ func.func @omp_taskloop_invalid_composite(%lb: index, %ub: index, %step: index) 
 }
 
 // -----
+func.func @omp_taskloop_local_loop_bounds() {
+  // expected-error @below {{'omp.taskloop.context' op expects loop bounds and steps to be defined outside of the taskloop.context region}}
+  omp.taskloop.context {
+    %lb = arith.constant 1 : index
+    %ub = arith.constant 10 : index
+    %step = arith.constant 1 : index
+    omp.taskloop.wrapper {
+      omp.loop_nest (%i) : index = (%lb) to (%ub) step (%step) {
+        omp.yield
+      }
+    }
+    omp.terminator
+  }
+  return
+}
+
+// -----
 
 func.func @omp_loop_invalid_nesting(%lb : index, %ub : index, %step : index) {
 
