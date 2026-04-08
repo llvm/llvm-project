@@ -62,7 +62,7 @@ let Predicates = [HasStdExtZicbop] in {
 def PREFETCH_I : Prefetch_ri<0b00000, "prefetch.i">, Sched<[]>;
 def PREFETCH_R : Prefetch_ri<0b00001, "prefetch.r">, Sched<[]>;
 def PREFETCH_W : Prefetch_ri<0b00011, "prefetch.w">, Sched<[]>;
-} // Predicates = [HasStdExtZicbop, NoVendorXMIPSCBOP]
+} // Predicates = [HasStdExtZicbop]
 
 //===----------------------------------------------------------------------===//
 // Patterns
