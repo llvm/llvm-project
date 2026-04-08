@@ -79,8 +79,11 @@ SymbolVendorPECOFF::CreateInstance(const lldb::ModuleSP &module_sp,
   if (!fspec) {
     if (auto pdb_spec = obj_file->GetPDBPath()) {
       fspec = *pdb_spec;
-      if (ConstString dir = obj_file->GetFileSpec().GetDirectory())
-        search_paths.Insert(0, FileSpec(dir));
+      if (obj_file->GetFileSpec().GetDirectory()) {
+        FileSpec dir_spec = obj_file->GetFileSpec();
+        dir_spec.ClearFilename();
+        search_paths.Insert(0, dir_spec);
+      }
     }
   }
   // Otherwise, try gnu_debuglink, if one exists.
