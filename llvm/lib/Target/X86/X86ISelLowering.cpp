@@ -28,6 +28,7 @@
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/VectorUtils.h"
+#include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -1323,6 +1324,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::SUB,                MVT::i16, Custom);
     setOperationAction(ISD::SUB,                MVT::i32, Custom);
   }
+
   if (Subtarget.hasNDD()) {
     // Enable custom lowering for scalar USUBSAT to optimize usub.sat(X,1)
     // with cmp+adc when NDD is available.
@@ -1331,6 +1333,13 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::USUBSAT, MVT::i32, Custom);
     setOperationAction(ISD::USUBSAT, MVT::i64, Custom);
   }
+
+  if (!Subtarget.useSoftFloat() && Subtarget.hasSSE2() &&
+      !Subtarget.hasSSSE3()) {
+    setOperationAction(ISD::CTLZ, MVT::v4i32, Custom);
+    setOperationAction(ISD::CTLZ_ZERO_POISON, MVT::v4i32, Custom);
+  }
+
   if (!Subtarget.useSoftFloat() && Subtarget.hasSSE41()) {
     setOperationAction(ISD::VECTOR_SHUFFLE_VAR, MVT::v2i64, Custom);
     setOperationAction(ISD::VECTOR_SHUFFLE_VAR, MVT::v2f64, Custom);
@@ -29873,6 +29882,13 @@ static SDValue LowerVectorCTLZ(SDValue Op, const SDLoc &DL,
   // Decompose 512-bit ops into smaller 256-bit ops.
   if (VT.is512BitVector() && !Subtarget.hasBWI())
     return splitVectorIntUnary(Op, DAG, DL);
+
+  if (VT == MVT::v4i32 && Subtarget.hasSSE2() && !Subtarget.hasSSSE3()) {
+    const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+    SDValue New = TLI.expandCTLZWithFP(Op.getNode(), DAG);
+    if (New)
+      return New;
+  }
 
   assert(Subtarget.hasSSSE3() && "Expected SSSE3 support for PSHUFB");
   return LowerVectorCTLZInRegLUT(Op, DL, Subtarget, DAG);
