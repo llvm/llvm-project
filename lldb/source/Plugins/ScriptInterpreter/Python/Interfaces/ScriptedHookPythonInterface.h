@@ -25,11 +25,15 @@ public:
                      const StructuredDataImpl &args_sp) override;
 
   /// A hook class must implement at least one callback. All three are
-  /// individually optional; hooks that implement none will simply never fire.
+  /// individually optional; hooks that implement none will be rejected
+  /// at creation time.
   llvm::SmallVector<AbstractMethodRequirement>
   GetAbstractMethodRequirements() const override {
     return {};
   }
+
+  /// Check which of the three hook methods the Python class implements.
+  SupportedHookMethods GetSupportedMethods() override;
 
   void HandleModuleLoaded(lldb::StreamSP &output_sp) override;
   void HandleModuleUnloaded(lldb::StreamSP &output_sp) override;

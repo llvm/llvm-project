@@ -4314,11 +4314,11 @@ void Target::StopHookScripted::GetSubclassDescription(
 
 // Hook
 
-Target::Hook::Hook(lldb::TargetSP target_sp, lldb::user_id_t uid)
-    : UserID(uid), m_target_sp(std::move(target_sp)) {}
+Target::Hook::Hook(lldb::TargetSP target_sp, lldb::user_id_t uid, HookKind kind)
+    : UserID(uid), m_target_sp(std::move(target_sp)), m_kind(kind) {}
 
 Target::Hook::Hook(const Hook &rhs)
-    : UserID(rhs.GetID()), m_target_sp(rhs.m_target_sp),
+    : UserID(rhs.GetID()), m_target_sp(rhs.m_target_sp), m_kind(rhs.m_kind),
       m_enabled(rhs.m_enabled), m_trigger_mask(rhs.m_trigger_mask),
       m_sc_specifier_sp(rhs.m_sc_specifier_sp),
       m_at_initial_stop(rhs.m_at_initial_stop),
@@ -4380,6 +4380,14 @@ void Target::Hook::GetDescription(Stream &s,
       s.Printf("Triggers: %s\n", fires_on.c_str());
     }
   }
+  // Subclasses add their content (commands or class) then call
+  // GetFilterDescription to print filters.
+  s.IndentLess();
+}
+
+void Target::Hook::GetFilterDescription(Stream &s,
+                                        lldb::DescriptionLevel level) const {
+  s.IndentMore();
 
   if (m_auto_continue)
     s.Indent("AutoContinue on\n");
@@ -4416,6 +4424,7 @@ void Target::HookCommandLine::GetDescription(
     return;
   }
 
+  // Commands come after the header (ID, State, Triggers) but before filters.
   s.IndentMore();
   s.Indent("Commands: \n");
   s.IndentMore();
@@ -4425,6 +4434,8 @@ void Target::HookCommandLine::GetDescription(
   }
   s.IndentLess();
   s.IndentLess();
+
+  GetFilterDescription(s, level);
 }
 
 // HookCommandLine
@@ -4540,6 +4551,21 @@ Status Target::HookScripted::SetScriptCallback(
         "ScriptedHook::%s () - ERROR: %s", __FUNCTION__,
         "Failed to create valid script object");
 
+  // Determine which triggers the class supports by checking which callback
+  // methods it implements.
+  auto methods = m_interface_sp->GetSupportedMethods();
+  if (!methods.any())
+    return Status::FromErrorString(
+        "hook class implements none of the expected methods "
+        "(handle_module_loaded, handle_module_unloaded, handle_stop)");
+
+  if (methods.handle_module_loaded)
+    m_trigger_mask |= kModulesLoaded;
+  if (methods.handle_module_unloaded)
+    m_trigger_mask |= kModulesUnloaded;
+  if (methods.handle_stop)
+    m_trigger_mask |= kProcessStop;
+
   return {};
 }
 
@@ -4549,8 +4575,7 @@ void Target::HookScripted::HandleModuleLoaded(StreamSP output_sp) {
 
   StreamSP stream = std::make_shared<StreamString>();
   m_interface_sp->HandleModuleLoaded(stream);
-  output_sp->PutCString(
-      reinterpret_cast<StreamString *>(stream.get())->GetData());
+  output_sp->PutCString(static_cast<StreamString *>(stream.get())->GetData());
 }
 
 void Target::HookScripted::HandleModuleUnloaded(StreamSP output_sp) {
@@ -4559,8 +4584,7 @@ void Target::HookScripted::HandleModuleUnloaded(StreamSP output_sp) {
 
   StreamSP stream = std::make_shared<StreamString>();
   m_interface_sp->HandleModuleUnloaded(stream);
-  output_sp->PutCString(
-      reinterpret_cast<StreamString *>(stream.get())->GetData());
+  output_sp->PutCString(static_cast<StreamString *>(stream.get())->GetData());
 }
 
 Target::StopHook::StopHookResult
@@ -4574,8 +4598,7 @@ Target::HookScripted::HandleStop(ExecutionContext &exc_ctx,
 
   lldb::StreamSP stream = std::make_shared<lldb_private::StreamString>();
   auto should_stop_or_err = m_interface_sp->HandleStop(exc_ctx, stream);
-  output_sp->PutCString(
-      reinterpret_cast<StreamString *>(stream.get())->GetData());
+  output_sp->PutCString(static_cast<StreamString *>(stream.get())->GetData());
   if (!should_stop_or_err)
     return StopHook::StopHookResult::KeepStopped;
 
@@ -4591,45 +4614,35 @@ void Target::HookScripted::GetDescription(Stream &s,
     return;
   }
 
+  // Class and args come after the header (ID, State, Triggers) but before
+  // filters.
   s.IndentMore();
-  s.Indent("Class:");
+  s.Indent("Class: ");
   s.Printf("%s\n", m_class_name.c_str());
 
-  if (!m_extra_args.IsValid()) {
-    s.IndentLess();
-    return;
+  if (m_extra_args.IsValid()) {
+    StructuredData::ObjectSP object_sp = m_extra_args.GetObjectSP();
+    if (object_sp && object_sp->IsValid()) {
+      StructuredData::Dictionary *as_dict = object_sp->GetAsDictionary();
+      if (as_dict && as_dict->IsValid() && as_dict->GetSize() > 0) {
+        s.Indent("Args:\n");
+        s.IndentMore();
+
+        auto print_one_element = [&s](llvm::StringRef key,
+                                      StructuredData::Object *object) {
+          s.Indent();
+          s.Format("{0} : {1}\n", key, object->GetStringValue());
+          return true;
+        };
+
+        as_dict->ForEach(print_one_element);
+        s.IndentLess();
+      }
+    }
   }
-  StructuredData::ObjectSP object_sp = m_extra_args.GetObjectSP();
-  if (!object_sp || !object_sp->IsValid()) {
-    s.IndentLess();
-    return;
-  }
-
-  StructuredData::Dictionary *as_dict = object_sp->GetAsDictionary();
-  if (!as_dict || !as_dict->IsValid()) {
-    s.IndentLess();
-    return;
-  }
-
-  uint32_t num_keys = as_dict->GetSize();
-  if (num_keys == 0) {
-    s.IndentLess();
-    return;
-  }
-
-  s.Indent("Args:\n");
-  s.IndentMore();
-
-  auto print_one_element = [&s](llvm::StringRef key,
-                                StructuredData::Object *object) {
-    s.Indent();
-    s.Format("{0} : {1}\n", key, object->GetStringValue());
-    return true;
-  };
-
-  as_dict->ForEach(print_one_element);
   s.IndentLess();
-  s.IndentLess();
+
+  GetFilterDescription(s, level);
 }
 
 // Hook management methods
@@ -4697,13 +4710,20 @@ void Target::RunModuleHooks(bool is_load) {
 
   uint32_t trigger = is_load ? Hook::kModulesLoaded : Hook::kModulesUnloaded;
 
+  // Copy active hooks into a local vector before iterating, in case a
+  // callback modifies m_hooks (same pattern as RunStopHooks).
+  std::vector<HookSP> active_hooks;
+  for (auto &[_, hook_sp] : m_hooks) {
+    if (hook_sp->IsEnabled() && hook_sp->FiresOn(trigger))
+      active_hooks.push_back(hook_sp);
+  }
+
+  if (active_hooks.empty())
+    return;
+
   StreamSP output_sp = m_debugger.GetAsyncOutputStream();
 
-  for (auto &[_, hook_sp] : m_hooks) {
-    if (!hook_sp->IsEnabled())
-      continue;
-    if (!hook_sp->FiresOn(trigger))
-      continue;
+  for (auto &hook_sp : active_hooks) {
     if (is_load)
       hook_sp->HandleModuleLoaded(output_sp);
     else

@@ -5590,14 +5590,10 @@ protected:
 
     Target::HookSP new_hook_sp = target.CreateHook(hook_kind);
 
-    if (is_python_class) {
-      // Python class hooks respond to all triggers; the class controls
-      // behavior by which callback methods it implements.
-      new_hook_sp->SetTriggerMask(Target::Hook::kModulesLoaded |
-                                  Target::Hook::kModulesUnloaded |
-                                  Target::Hook::kProcessStop);
-    } else {
+    if (!is_python_class) {
       // Build trigger mask from explicit command-line flags.
+      auto *cmd_hook =
+          static_cast<Target::HookCommandLine *>(new_hook_sp.get());
       uint32_t trigger_mask = 0;
       if (m_options.m_on_load)
         trigger_mask |= Target::Hook::kModulesLoaded;
@@ -5605,8 +5601,10 @@ protected:
         trigger_mask |= Target::Hook::kModulesUnloaded;
       if (m_options.m_on_stop)
         trigger_mask |= Target::Hook::kProcessStop;
-      new_hook_sp->SetTriggerMask(trigger_mask);
+      cmd_hook->SetTriggerMask(trigger_mask);
     }
+    // Python class hooks: triggers are computed in SetScriptCallback based
+    // on which callback methods the class implements.
 
     // Set up symbol context specifier if filter options were provided.
     if (m_options.m_sym_ctx_specified) {
@@ -5677,7 +5675,7 @@ protected:
           hook->SetScriptCallback(m_python_class_options.GetName(),
                                   m_python_class_options.GetStructuredData());
       if (callback_error.Fail()) {
-        result.AppendErrorWithFormat("Couldn't add hook: %s",
+        result.AppendErrorWithFormat("couldn't add hook: %s",
                                      callback_error.AsCString());
         target.UndoCreateHook(new_hook_sp->GetID());
         return;
@@ -5723,12 +5721,12 @@ protected:
     for (size_t i = 0; i < command.GetArgumentCount(); i++) {
       lldb::user_id_t user_id;
       if (!llvm::to_integer(command.GetArgumentAtIndex(i), user_id)) {
-        result.AppendErrorWithFormat("invalid hook id: \"%s\".\n",
+        result.AppendErrorWithFormat("invalid hook id: \"%s\"",
                                      command.GetArgumentAtIndex(i));
         return;
       }
       if (!target.RemoveHookByID(user_id)) {
-        result.AppendErrorWithFormat("unknown hook id: \"%s\".\n",
+        result.AppendErrorWithFormat("unknown hook id: \"%s\"",
                                      command.GetArgumentAtIndex(i));
         return;
       }
@@ -5754,76 +5752,24 @@ protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
     Target &target = GetTarget();
 
-    // Check if the first argument is a trigger name for per-trigger
-    // toggling: load, unload, stop.
-    uint32_t trigger_type = 0;
-    size_t id_start_idx = 0;
-
-    if (command.GetArgumentCount() > 0) {
-      llvm::StringRef first_arg = command.GetArgumentAtIndex(0);
-      if (first_arg == "load") {
-        trigger_type = Target::Hook::kModulesLoaded;
-        id_start_idx = 1;
-      } else if (first_arg == "unload") {
-        trigger_type = Target::Hook::kModulesUnloaded;
-        id_start_idx = 1;
-      } else if (first_arg == "stop") {
-        trigger_type = Target::Hook::kProcessStop;
-        id_start_idx = 1;
-      }
-    }
-
-    // If no hook IDs given (after possibly consuming trigger name), apply to
-    // all.
-    if (command.GetArgumentCount() == id_start_idx) {
-      if (trigger_type) {
-        // Per-trigger toggle on all hooks.
-        size_t num_hooks = target.GetNumHooks();
-        for (size_t i = 0; i < num_hooks; i++) {
-          Target::HookSP hook_sp = target.GetHookAtIndex(i);
-          if (!hook_sp)
-            continue;
-          if (m_enable)
-            hook_sp->AddTrigger(trigger_type);
-          else
-            hook_sp->RemoveTrigger(trigger_type);
-        }
-      } else {
-        // Whole-hook toggle on all hooks.
-        target.SetAllHooksEnabledState(m_enable);
-      }
+    // No IDs = apply to all hooks.
+    if (command.GetArgumentCount() == 0) {
+      target.SetAllHooksEnabledState(m_enable);
       result.SetStatus(eReturnStatusSuccessFinishNoResult);
       return;
     }
 
-    // Process hook IDs.
-    for (size_t i = id_start_idx; i < command.GetArgumentCount(); i++) {
+    for (size_t i = 0; i < command.GetArgumentCount(); i++) {
       lldb::user_id_t user_id;
       if (!llvm::to_integer(command.GetArgumentAtIndex(i), user_id)) {
-        result.AppendErrorWithFormat("invalid hook id: \"%s\".\n",
+        result.AppendErrorWithFormat("invalid hook id: \"%s\"",
                                      command.GetArgumentAtIndex(i));
         return;
       }
-
-      if (trigger_type) {
-        // Per-trigger toggle on a specific hook.
-        Target::HookSP hook_sp = target.GetHookByID(user_id);
-        if (!hook_sp) {
-          result.AppendErrorWithFormat("unknown hook id: \"%s\".\n",
-                                       command.GetArgumentAtIndex(i));
-          return;
-        }
-        if (m_enable)
-          hook_sp->AddTrigger(trigger_type);
-        else
-          hook_sp->RemoveTrigger(trigger_type);
-      } else {
-        // Whole-hook toggle.
-        if (!target.SetHookEnabledStateByID(user_id, m_enable)) {
-          result.AppendErrorWithFormat("unknown hook id: \"%s\".\n",
-                                       command.GetArgumentAtIndex(i));
-          return;
-        }
+      if (!target.SetHookEnabledStateByID(user_id, m_enable)) {
+        result.AppendErrorWithFormat("unknown hook id: \"%s\"",
+                                     command.GetArgumentAtIndex(i));
+        return;
       }
     }
     result.SetStatus(eReturnStatusSuccessFinishNoResult);
@@ -5831,6 +5777,158 @@ protected:
 
 private:
   bool m_enable;
+};
+
+#pragma mark CommandObjectTargetHookModify
+
+#define LLDB_OPTIONS_target_hook_modify
+#include "CommandOptions.inc"
+
+/// Modify trigger settings on a hook. Only valid for command-based hooks;
+/// scripted hooks derive their triggers from the class methods.
+class CommandObjectTargetHookModify : public CommandObjectParsed {
+public:
+  class CommandOptions : public Options {
+  public:
+    CommandOptions() = default;
+    ~CommandOptions() override = default;
+
+    llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
+      return llvm::ArrayRef(g_target_hook_modify_options);
+    }
+
+    Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
+                          ExecutionContext *execution_context) override {
+      Status error;
+      const int short_option =
+          g_target_hook_modify_options[option_idx].short_option;
+      switch (short_option) {
+      case 'e':
+        m_enable_trigger = option_arg.str();
+        break;
+      case 'd':
+        m_disable_trigger = option_arg.str();
+        break;
+      default:
+        llvm_unreachable("unhandled option");
+      }
+      return error;
+    }
+
+    void OptionParsingStarting(ExecutionContext *execution_context) override {
+      m_enable_trigger.clear();
+      m_disable_trigger.clear();
+    }
+
+    std::string m_enable_trigger;
+    std::string m_disable_trigger;
+  };
+
+  CommandObjectTargetHookModify(CommandInterpreter &interpreter)
+      : CommandObjectParsed(interpreter, "target hook modify",
+                            "Modify trigger settings on a hook.",
+                            "target hook modify [--enable-trigger <name>] "
+                            "[--disable-trigger <name>] [<id>]") {
+    AddSimpleArgumentList(eArgTypeStopHookID, eArgRepeatOptional);
+    SetHelpLong(R"help(
+Modify trigger settings on command-based hooks. Scripted hooks derive their
+triggers from the class methods and cannot be modified.
+
+If no hook ID is given, the last added hook is modified.
+
+Valid trigger names: load, unload, stop.
+
+Examples:
+  target hook modify --enable-trigger stop 1
+  target hook modify --disable-trigger load 1
+  target hook modify --enable-trigger stop   (modifies last added hook)
+)help");
+  }
+
+  ~CommandObjectTargetHookModify() override = default;
+
+  Options *GetOptions() override { return &m_options; }
+
+protected:
+  static uint32_t ParseTriggerName(llvm::StringRef name) {
+    if (name == "load")
+      return Target::Hook::kModulesLoaded;
+    if (name == "unload")
+      return Target::Hook::kModulesUnloaded;
+    if (name == "stop")
+      return Target::Hook::kProcessStop;
+    return 0;
+  }
+
+  void DoExecute(Args &command, CommandReturnObject &result) override {
+    Target &target = GetTarget();
+
+    if (m_options.m_enable_trigger.empty() &&
+        m_options.m_disable_trigger.empty()) {
+      result.AppendError("at least one of --enable-trigger or "
+                         "--disable-trigger must be specified");
+      return;
+    }
+
+    // Resolve the hook ID. Default to last added if not specified.
+    Target::HookSP hook_sp;
+    if (command.GetArgumentCount() == 0) {
+      size_t num_hooks = target.GetNumHooks();
+      if (num_hooks == 0) {
+        result.AppendError("no hooks exist");
+        return;
+      }
+      hook_sp = target.GetHookAtIndex(num_hooks - 1);
+    } else {
+      lldb::user_id_t user_id;
+      if (!llvm::to_integer(command.GetArgumentAtIndex(0), user_id)) {
+        result.AppendErrorWithFormat("invalid hook id: \"%s\"",
+                                     command.GetArgumentAtIndex(0));
+        return;
+      }
+      hook_sp = target.GetHookByID(user_id);
+      if (!hook_sp) {
+        result.AppendErrorWithFormat("unknown hook id: \"%s\"",
+                                     command.GetArgumentAtIndex(0));
+        return;
+      }
+    }
+
+    // Reject trigger modification on scripted hooks.
+    if (hook_sp->GetHookKind() != Target::Hook::HookKind::CommandBased) {
+      result.AppendError("cannot modify triggers on a scripted hook; "
+                         "triggers are determined by the class methods");
+      return;
+    }
+    auto *cmd_hook = static_cast<Target::HookCommandLine *>(hook_sp.get());
+
+    if (!m_options.m_enable_trigger.empty()) {
+      uint32_t trigger = ParseTriggerName(m_options.m_enable_trigger);
+      if (!trigger) {
+        result.AppendErrorWithFormat("unknown trigger name: \"%s\". "
+                                     "Valid names: load, unload, stop",
+                                     m_options.m_enable_trigger.c_str());
+        return;
+      }
+      cmd_hook->AddTrigger(trigger);
+    }
+
+    if (!m_options.m_disable_trigger.empty()) {
+      uint32_t trigger = ParseTriggerName(m_options.m_disable_trigger);
+      if (!trigger) {
+        result.AppendErrorWithFormat("unknown trigger name: \"%s\". "
+                                     "Valid names: load, unload, stop",
+                                     m_options.m_disable_trigger.c_str());
+        return;
+      }
+      cmd_hook->RemoveTrigger(trigger);
+    }
+
+    result.SetStatus(eReturnStatusSuccessFinishNoResult);
+  }
+
+private:
+  CommandOptions m_options;
 };
 
 #pragma mark CommandObjectTargetHookList
@@ -5877,15 +5975,15 @@ public:
     LoadSubCommand("disable",
                    CommandObjectSP(new CommandObjectTargetHookEnableDisable(
                        interpreter, false, "target hook disable",
-                       "Disable a hook or a specific trigger on a hook.",
-                       "target hook disable [<trigger>] [<id> ...]")));
+                       "Disable a hook.", "target hook disable [<id> ...]")));
     LoadSubCommand("enable",
                    CommandObjectSP(new CommandObjectTargetHookEnableDisable(
                        interpreter, true, "target hook enable",
-                       "Enable a hook or a specific trigger on a hook.",
-                       "target hook enable [<trigger>] [<id> ...]")));
+                       "Enable a hook.", "target hook enable [<id> ...]")));
     LoadSubCommand(
         "list", CommandObjectSP(new CommandObjectTargetHookList(interpreter)));
+    LoadSubCommand("modify", CommandObjectSP(new CommandObjectTargetHookModify(
+                                 interpreter)));
   }
 
   ~CommandObjectMultiwordTargetHooks() override = default;

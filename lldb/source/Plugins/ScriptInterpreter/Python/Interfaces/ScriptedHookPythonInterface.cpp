@@ -24,6 +24,32 @@ ScriptedHookPythonInterface::ScriptedHookPythonInterface(
     ScriptInterpreterPythonImpl &interpreter)
     : ScriptedHookInterface(), ScriptedPythonInterface(interpreter) {}
 
+ScriptedHookInterface::SupportedHookMethods
+ScriptedHookPythonInterface::GetSupportedMethods() {
+  SupportedHookMethods methods;
+  // Qualify through ScriptedPythonInterface to resolve the diamond
+  // inheritance (both ScriptedHookInterface and ScriptedPythonInterface
+  // inherit ScriptedInterface which owns m_object_instance_sp).
+  auto &obj_sp = ScriptedPythonInterface::m_object_instance_sp;
+  if (!obj_sp)
+    return methods;
+
+  using Locker = ScriptInterpreterPythonImpl::Locker;
+  Locker py_lock(&m_interpreter, Locker::AcquireLock | Locker::NoSTDIN,
+                 Locker::FreeLock);
+
+  PythonObject implementor(PyRefType::Borrowed, (PyObject *)obj_sp->GetValue());
+  if (!implementor.IsValid())
+    return methods;
+
+  methods.handle_module_loaded =
+      implementor.HasAttribute("handle_module_loaded");
+  methods.handle_module_unloaded =
+      implementor.HasAttribute("handle_module_unloaded");
+  methods.handle_stop = implementor.HasAttribute("handle_stop");
+  return methods;
+}
+
 llvm::Expected<StructuredData::GenericSP>
 ScriptedHookPythonInterface::CreatePluginObject(
     llvm::StringRef class_name, lldb::TargetSP target_sp,

@@ -144,20 +144,22 @@ target hook list
 # CHECK: Hook: 9
 # CHECK:   State: enabled
 # CHECK:   Triggers: stop
+# CHECK:   Commands:
+# CHECK:       bt
 # CHECK:   Specifier:
 # CHECK:     Module: mylib.so
 
-# Per-trigger disable: remove stop from hook #9.
-target hook disable stop 9
+# Per-trigger disable: remove stop from hook #9 using modify.
+target hook modify --disable-trigger stop 9
 target hook list
 # CHECK: (lldb) target hook list
 # CHECK: Hook: 9
 # CHECK:   State: enabled
 # CHECK-NOT: Triggers: stop
-# CHECK:   Specifier:
+# CHECK:   Commands:
 
-# Per-trigger enable: re-add stop to hook #9.
-target hook enable stop 9
+# Per-trigger enable: re-add stop to hook #9 using modify.
+target hook modify --enable-trigger stop 9
 target hook list
 # CHECK: (lldb) target hook list
 # CHECK: Hook: 9

@@ -1666,16 +1666,19 @@ public:
   //   All commands run for every trigger the hook is signed up for.
   //
   // Python class hooks: the user provides a Python class name and optional
-  //   extra_args (-k key -v value). The class controls which events it
-  //   handles by implementing the corresponding callback methods
-  //   (handle_module_loaded, handle_module_unloaded, handle_stop).
-  //   Triggers are set automatically based on which methods exist.
+  //   extra_args that will be passed to the hook init method (-k key -v value).
+  //   The class controls which events it handles by implementing the
+  //   corresponding callback methods (handle_module_loaded,
+  //   handle_module_unloaded, handle_stop). Triggers are set automatically
+  //   based on which methods exist.
   class Hook : public UserID {
   public:
     Hook(const Hook &rhs);
     virtual ~Hook() = default;
 
     enum class HookKind : uint32_t { CommandBased = 0, ScriptBased };
+
+    HookKind GetHookKind() const { return m_kind; }
 
     /// Individual trigger bits. Combine with bitwise OR to form a trigger mask.
     // FIXME: Add kProcessExit, kProcessDetach, etc. as needed.
@@ -1693,15 +1696,6 @@ public:
     /// Return the bitmask of triggers this hook responds to.
     /// Each bit corresponds to a TriggerBit value.
     uint32_t GetTriggerMask() const { return m_trigger_mask; }
-
-    /// Replace the trigger mask. \a mask is a bitwise OR of TriggerBit values.
-    void SetTriggerMask(uint32_t mask) { m_trigger_mask = mask; }
-
-    /// Add a trigger to the mask. \a trigger is a single TriggerBit value.
-    void AddTrigger(uint32_t trigger) { m_trigger_mask |= trigger; }
-
-    /// Remove a trigger from the mask. \a trigger is a single TriggerBit value.
-    void RemoveTrigger(uint32_t trigger) { m_trigger_mask &= ~trigger; }
 
     /// Return true if this hook fires on the given trigger.
     bool FiresOn(uint32_t trigger) const { return m_trigger_mask & trigger; }
@@ -1752,7 +1746,12 @@ public:
     virtual void GetDescription(Stream &s, lldb::DescriptionLevel level) const;
 
   protected:
+    /// Print the filter portion of the description (AutoContinue, Specifier,
+    /// ThreadSpec). Called by subclass GetDescription after printing the
+    /// hook-specific content (commands or class).
+    void GetFilterDescription(Stream &s, lldb::DescriptionLevel level) const;
     lldb::TargetSP m_target_sp;
+    HookKind m_kind;
     bool m_enabled = true;
     uint32_t m_trigger_mask = 0; // No default, triggers must be explicit.
 
@@ -1765,12 +1764,21 @@ public:
     bool m_auto_continue = false;
     bool m_suppress_output = false;
 
-    Hook(lldb::TargetSP target_sp, lldb::user_id_t uid);
+    Hook(lldb::TargetSP target_sp, lldb::user_id_t uid, HookKind kind);
   };
 
   class HookCommandLine : public Hook {
   public:
     ~HookCommandLine() override = default;
+
+    /// Replace the trigger mask. \a mask is a bitwise OR of TriggerBit values.
+    void SetTriggerMask(uint32_t mask) { m_trigger_mask = mask; }
+
+    /// Add a trigger to the mask. \a trigger is a single TriggerBit value.
+    void AddTrigger(uint32_t trigger) { m_trigger_mask |= trigger; }
+
+    /// Remove a trigger from the mask. \a trigger is a single TriggerBit value.
+    void RemoveTrigger(uint32_t trigger) { m_trigger_mask &= ~trigger; }
 
     /// Return the list of commands that this hook runs.
     StringList &GetCommands() { return m_commands; }
@@ -1791,7 +1799,7 @@ public:
     StringList m_commands;
 
     HookCommandLine(lldb::TargetSP target_sp, lldb::user_id_t uid)
-        : Hook(target_sp, uid) {}
+        : Hook(target_sp, uid, HookKind::CommandBased) {}
     friend class Target;
   };
 
@@ -1815,7 +1823,7 @@ public:
     lldb::ScriptedHookInterfaceSP m_interface_sp;
 
     HookScripted(lldb::TargetSP target_sp, lldb::user_id_t uid)
-        : Hook(target_sp, uid) {}
+        : Hook(target_sp, uid, HookKind::ScriptBased) {}
     friend class Target;
   };
 

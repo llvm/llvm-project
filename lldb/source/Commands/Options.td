@@ -1985,6 +1985,19 @@ let Command = "target hook add" in {
              "gains control of the process. Defaults to true.">;
 }
 
+let Command = "target hook modify" in {
+  def target_hook_modify_enable_trigger
+      : Option<"enable-trigger", "e">,
+        Arg<"Name">,
+        Desc<"Enable a trigger on the hook. Valid trigger names: load, "
+             "unload, stop.">;
+  def target_hook_modify_disable_trigger
+      : Option<"disable-trigger", "d">,
+        Arg<"Name">,
+        Desc<"Disable a trigger on the hook. Valid trigger names: load, "
+             "unload, stop.">;
+}
+
 let Command = "thread backtrace" in {
   def thread_backtrace_count : Option<"count", "c">,
                                Group<1>,
