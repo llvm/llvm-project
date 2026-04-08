@@ -72,6 +72,7 @@ set(SCUDO_HEADERS
   flags.h
   fuchsia.h
   internal_defs.h
+  libc_pal.h
   linux.h
   list.h
   memtag.h
