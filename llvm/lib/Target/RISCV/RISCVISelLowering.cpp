@@ -9660,8 +9660,15 @@ static SDValue lowerSelectToBinOp(SDNode *N, SelectionDAG &DAG,
       return DAG.getNode(ISD::AND, DL, VT, Neg, DAG.getFreeze(FalseV));
     }
     if (isNullConstant(FalseV)) {
-      // (select c, (1 << ShAmount) + 1, 0) -> (c << ShAmount) + c
       if (auto *TrueC = dyn_cast<ConstantSDNode>(TrueV)) {
+        // (select c, y, 0) -> (c * (y - 1)) + c
+        int64_t MulImm = TrueC->getSExtValue();
+        if (MulImm != INT64_MIN && isInt<12>(MulImm - 1) &&
+            Subtarget.hasVendorXqciac())
+          return DAG.getNode(RISCVISD::QC_MULIADD, DL, VT, CondV, CondV,
+                             DAG.getTargetConstant(MulImm - 1, DL, VT));
+
+        // (select c, (1 << ShAmount) + 1, 0) -> (c << ShAmount) + c
         uint64_t TrueM1 = TrueC->getZExtValue() - 1;
         if (isPowerOf2_64(TrueM1)) {
           unsigned ShAmount = Log2_64(TrueM1);
