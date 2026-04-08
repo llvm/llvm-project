@@ -3737,18 +3737,16 @@ module attributes {omp.is_target_device = true, llvm.target_triple = "nvptx64-nv
 llvm.mlir.global internal @any() : i32
 llvm.mlir.global internal @host() : i32
 llvm.mlir.global internal @nohost() : i32
-llvm.func @omp_groupprivate_device() {
+llvm.func @omp_groupprivate_device() attributes {
+    omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (to)>} {
   %0 = llvm.mlir.constant(1 : i32) : i32
-  %1 = llvm.mlir.addressof @any : !llvm.ptr
-  %2 = omp.groupprivate %1 : !llvm.ptr, device_type(any) -> !llvm.ptr
+  %2 = omp.groupprivate @any : !llvm.ptr, device_type(any)
   llvm.store %0, %2 : i32, !llvm.ptr
 
-  %3 = llvm.mlir.addressof @host : !llvm.ptr
-  %4 = omp.groupprivate %3 : !llvm.ptr, device_type(host) -> !llvm.ptr
+  %4 = omp.groupprivate @host : !llvm.ptr, device_type(host)
   llvm.store %0, %4 : i32, !llvm.ptr
 
-  %5 = llvm.mlir.addressof @nohost : !llvm.ptr
-  %6 = omp.groupprivate %5 : !llvm.ptr, device_type(nohost) -> !llvm.ptr
+  %6 = omp.groupprivate @nohost : !llvm.ptr, device_type(nohost)
   llvm.store %0, %6 : i32, !llvm.ptr
   llvm.return
 }
@@ -3773,16 +3771,13 @@ llvm.mlir.global internal @host1() : i32
 llvm.mlir.global internal @nohost1() : i32
 llvm.func @omp_groupprivate_host() {
   %0 = llvm.mlir.constant(1 : i32) : i32
-  %1 = llvm.mlir.addressof @any1 : !llvm.ptr
-  %2 = omp.groupprivate %1 : !llvm.ptr, device_type(any) -> !llvm.ptr
+  %2 = omp.groupprivate @any1 : !llvm.ptr, device_type(any)
   llvm.store %0, %2 : i32, !llvm.ptr
 
-  %3 = llvm.mlir.addressof @host1 : !llvm.ptr
-  %4 = omp.groupprivate %3 : !llvm.ptr, device_type(host) -> !llvm.ptr
+  %4 = omp.groupprivate @host1 : !llvm.ptr, device_type(host)
   llvm.store %0, %4 : i32, !llvm.ptr
 
-  %5 = llvm.mlir.addressof @nohost1 : !llvm.ptr
-  %6 = omp.groupprivate %5 : !llvm.ptr, device_type(nohost) -> !llvm.ptr
+  %6 = omp.groupprivate @nohost1 : !llvm.ptr, device_type(nohost)
   llvm.store %0, %6 : i32, !llvm.ptr
   llvm.return
 }

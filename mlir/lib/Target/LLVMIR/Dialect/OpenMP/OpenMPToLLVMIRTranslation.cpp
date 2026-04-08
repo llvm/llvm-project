@@ -4909,26 +4909,6 @@ convertOmpCancellationPoint(omp::CancellationPointOp op,
   return success();
 }
 
-static LLVM::GlobalOp
-getGlobalFromSymbol(Operation *symOp,
-                    LLVM::ModuleTranslation &moduleTranslation,
-                    Operation *opInst) {
-
-  // Handle potential address space cast
-  if (auto asCast = dyn_cast<LLVM::AddrSpaceCastOp>(symOp))
-    symOp = asCast.getOperand().getDefiningOp();
-
-  // Check if we have an AddressOfOp
-  if (!isa<LLVM::AddressOfOp>(symOp)) {
-    if (opInst)
-      opInst->emitError("Addressing symbol not found");
-    return nullptr;
-  }
-
-  LLVM::AddressOfOp addressOfOp = cast<LLVM::AddressOfOp>(symOp);
-  return addressOfOp.getGlobal(moduleTranslation.symbolTable());
-}
-
 /// Converts an OpenMP Threadprivate operation into LLVM IR using
 /// OpenMPIRBuilder.
 static LogicalResult
@@ -4944,8 +4924,15 @@ convertOmpThreadprivate(Operation &opInst, llvm::IRBuilderBase &builder,
   Value symAddr = threadprivateOp.getSymAddr();
   auto *symOp = symAddr.getDefiningOp();
 
+  if (auto asCast = dyn_cast<LLVM::AddrSpaceCastOp>(symOp))
+    symOp = asCast.getOperand().getDefiningOp();
+
+  if (!isa<LLVM::AddressOfOp>(symOp))
+    return opInst.emitError("Addressing symbol not found");
+
+  LLVM::AddressOfOp addressOfOp = cast<LLVM::AddressOfOp>(symOp);
   LLVM::GlobalOp global =
-      getGlobalFromSymbol(symOp, moduleTranslation, &opInst);
+      addressOfOp.getGlobal(moduleTranslation.symbolTable());
   if (!global)
     return failure();
   llvm::GlobalValue *globalValue = moduleTranslation.lookupGlobal(global);
@@ -8138,7 +8125,7 @@ convertFreeSharedMemOp(omp::FreeSharedMemOp freeMemOp,
   return success();
 }
 
-/// Converts an OpenMP Groupprivate operation into LLVM IR.
+/// Converts an OpenMP groupprivate operation into LLVM IR.
 static LogicalResult
 convertOmpGroupprivate(Operation &opInst, llvm::IRBuilderBase &builder,
                        LLVM::ModuleTranslation &moduleTranslation) {
@@ -8149,81 +8136,56 @@ convertOmpGroupprivate(Operation &opInst, llvm::IRBuilderBase &builder,
     return failure();
 
   bool isTargetDevice = ompBuilder->Config.isTargetDevice();
-  auto deviceType = groupprivateOp.getDeviceType();
 
-  // Skip allocation based on device_type
+  // Determine whether group-private storage should be allocated based on
+  // device_type. When not specified, default to 'any' (allocate on both).
   bool shouldAllocate = true;
-  if (deviceType.has_value()) {
-    switch (*deviceType) {
-    case mlir::omp::DeclareTargetDeviceType::host:
-      // Only allocate on host
-      shouldAllocate = !isTargetDevice;
-      break;
-    case mlir::omp::DeclareTargetDeviceType::nohost:
-      // Only allocate on device
-      shouldAllocate = isTargetDevice;
-      break;
-    case mlir::omp::DeclareTargetDeviceType::any:
-      // Allocate on both
-      shouldAllocate = true;
-      break;
-    }
+  switch (groupprivateOp.getDeviceType().value_or(
+      mlir::omp::DeclareTargetDeviceType::any)) {
+  case mlir::omp::DeclareTargetDeviceType::host:
+    shouldAllocate = !isTargetDevice;
+    break;
+  case mlir::omp::DeclareTargetDeviceType::nohost:
+    shouldAllocate = isTargetDevice;
+    break;
+  case mlir::omp::DeclareTargetDeviceType::any:
+    shouldAllocate = true;
+    break;
   }
 
-  Value symAddr = groupprivateOp.getSymAddr();
-  llvm::Value *symValue = moduleTranslation.lookupValue(symAddr);
-  llvm::Value *resultPtr;
-
-  // Get the element type and variable name from the global.
-  // Groupprivate requires sym_addr to come from a global variable.
-  llvm::Type *varType = nullptr;
-  std::string varName = "omp.groupprivate";
-
-  if (Operation *symOp = symAddr.getDefiningOp()) {
-    if (LLVM::GlobalOp global =
-            getGlobalFromSymbol(symOp, moduleTranslation, nullptr)) {
-      // Get type from the global
-      varType = moduleTranslation.convertType(global.getType());
-      // Get name from the global
-      if (llvm::GlobalValue *globalValue =
-              moduleTranslation.lookupGlobal(global)) {
-        varName = globalValue->getName().str();
-      }
-    }
-  }
-
-  if (!varType) {
+  // Look up the global variable directly by symbol name.
+  LLVM::GlobalOp global = SymbolTable::lookupNearestSymbolFrom<LLVM::GlobalOp>(
+      &opInst, groupprivateOp.getSymNameAttr());
+  if (!global)
     return opInst.emitError()
-           << "Groupprivate requires sym_addr to reference a global variable";
-  }
+           << "expected symbol '" << groupprivateOp.getSymName()
+           << "' to reference an LLVM global variable";
 
-  if (shouldAllocate) {
-    if (isTargetDevice) {
-      llvm::Module *llvmModule = moduleTranslation.getLLVMModule();
-      llvm::Triple targetTriple = llvm::Triple(llvmModule->getTargetTriple());
-      if (targetTriple.isAMDGCN() || targetTriple.isNVPTX()) {
-        // Shared address space is 3 for AMDGPU and NVPTX targets.
-        unsigned sharedAddressSpace = 3;
-        llvm::GlobalVariable *sharedVar = new llvm::GlobalVariable(
-            *llvmModule, varType, /*isConstant=*/false,
-            llvm::GlobalValue::InternalLinkage, llvm::PoisonValue::get(varType),
-            varName, /*InsertBefore=*/nullptr,
-            llvm::GlobalValue::NotThreadLocal, sharedAddressSpace,
-            /*isExternallyInitialized=*/false);
-        resultPtr = sharedVar;
-      } else {
-        return opInst.emitError()
-               << "Groupprivate operation is not supported for this target: "
-               << targetTriple.str();
-      }
+  llvm::GlobalValue *globalValue = moduleTranslation.lookupGlobal(global);
+  llvm::Type *varType = moduleTranslation.convertType(global.getType());
+  std::string varName = globalValue->getName().str();
+
+  llvm::Value *resultPtr;
+  if (shouldAllocate && isTargetDevice) {
+    llvm::Module *llvmModule = moduleTranslation.getLLVMModule();
+    llvm::Triple targetTriple(llvmModule->getTargetTriple());
+    if (targetTriple.isAMDGCN() || targetTriple.isNVPTX()) {
+      unsigned sharedAddressSpace = 3;
+      llvm::GlobalVariable *sharedVar = new llvm::GlobalVariable(
+          *llvmModule, varType, /*isConstant=*/false,
+          llvm::GlobalValue::InternalLinkage, llvm::PoisonValue::get(varType),
+          varName, /*InsertBefore=*/nullptr, llvm::GlobalValue::NotThreadLocal,
+          sharedAddressSpace,
+          /*isExternallyInitialized=*/false);
+      resultPtr = sharedVar;
     } else {
-      // Use original address when allocating on host device.
-      // TODO: Add support for allocating group-private storage on host device.
-      resultPtr = symValue;
+      return opInst.emitError() << "groupprivate is not supported for target: "
+                                << targetTriple.str();
     }
   } else {
-    // Use original address when not allocating group-private storage.
-    resultPtr = symValue;
+    // Use original global address on host or when not allocating
+    // group-private storage.
+    resultPtr = globalValue;
   }
 
   moduleTranslation.mapValue(opInst.getResult(0), resultPtr);
@@ -8238,8 +8200,8 @@ LogicalResult OpenMPDialectLLVMIRTranslationInterface::convertOperation(
   llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
 
   if (ompBuilder->Config.isTargetDevice() &&
-      !isa<omp::TargetOp, omp::MapInfoOp, omp::TerminatorOp, omp::YieldOp,
-           omp::GroupprivateOp>(op) &&
+      !isa<omp::TargetOp, omp::MapInfoOp, omp::TerminatorOp, omp::YieldOp>(
+          op) &&
       isHostDeviceOp(op))
     return op->emitOpError() << "unsupported host op found in device";
 

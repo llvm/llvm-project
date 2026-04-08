@@ -9,16 +9,13 @@ module attributes {omp.is_target_device = true, llvm.target_triple = "amdgcn-amd
     omp.target map_entries(%map_a -> %arg1 : !llvm.ptr) {
       %loaded = llvm.load %arg1 : !llvm.ptr -> i32
 
-      %any_addr = llvm.mlir.addressof @global_any : !llvm.ptr
-      %any_gp = omp.groupprivate %any_addr : !llvm.ptr, device_type(any) -> !llvm.ptr
+      %any_gp = omp.groupprivate @global_any : !llvm.ptr, device_type(any)
       llvm.store %loaded, %any_gp : i32, !llvm.ptr
 
-      %host_addr = llvm.mlir.addressof @global_host : !llvm.ptr
-      %host_gp = omp.groupprivate %host_addr : !llvm.ptr, device_type(host) -> !llvm.ptr
+      %host_gp = omp.groupprivate @global_host : !llvm.ptr, device_type(host)
       llvm.store %loaded, %host_gp : i32, !llvm.ptr
 
-      %nohost_addr = llvm.mlir.addressof @global_nohost : !llvm.ptr
-      %nohost_gp = omp.groupprivate %nohost_addr : !llvm.ptr, device_type(nohost) -> !llvm.ptr
+      %nohost_gp = omp.groupprivate @global_nohost : !llvm.ptr, device_type(nohost)
       llvm.store %loaded, %nohost_gp : i32, !llvm.ptr
 
       omp.terminator
