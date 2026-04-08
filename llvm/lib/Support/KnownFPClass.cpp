@@ -288,8 +288,7 @@ KnownFPClass KnownFPClass::bitcast(const fltSemantics &FltSemantics,
 }
 
 static KnownFPClass itofp_impl(const KnownBits &KnownSrc,
-                               const fltSemantics &FltSem,
-                               FPClassTest InterestedClasses, bool IsSigned) {
+                               const fltSemantics &FltSem, bool IsSigned) {
   KnownFPClass Known;
   // Cannot produce nan
   Known.knownNot(fcNan);
@@ -303,10 +302,6 @@ static KnownFPClass itofp_impl(const KnownBits &KnownSrc,
   // UIToFP is always non-negative regardless of known bits.
   if (!IsSigned)
     Known.signBitMustBeZero();
-
-  // Only compute known bits if we can learn something useful from them.
-  if (!(InterestedClasses & (fcPosZero | fcNormal | fcInf)))
-    return Known;
 
   // If the integer is non-zero, the result cannot be +0.0
   if (KnownSrc.isNonZero())
@@ -322,36 +317,31 @@ static KnownFPClass itofp_impl(const KnownBits &KnownSrc,
       Known.signBitMustBeOne();
   }
 
-  // Guard kept for ilogb()
-  if (InterestedClasses & fcInf) {
-    // Get width of largest magnitude integer known.
-    // This still works for a signed minimum value because the largest FP
-    // value is scaled by some fraction close to 2.0 (1.0 + 0.xxxx).
-    int IntSize = KnownSrc.getBitWidth();
-    if (!IsSigned)
-      IntSize -= KnownSrc.countMinLeadingZeros();
-    else
-      IntSize -= KnownSrc.countMinSignBits();
+  // Get width of largest magnitude integer known.
+  // This still works for a signed minimum value because the largest FP
+  // value is scaled by some fraction close to 2.0 (1.0 + 0.xxxx).
+  int IntSize = KnownSrc.getBitWidth();
+  if (!IsSigned)
+    IntSize -= KnownSrc.countMinLeadingZeros();
+  else
+    IntSize -= KnownSrc.countMinSignBits();
 
-    // If the exponent of the largest finite FP value can hold the largest
-    // integer, the result of the cast must be finite.
-    if (APFloat::semanticsMaxExponent(FltSem) >= IntSize)
-      Known.knownNot(fcInf);
-  }
+  // If the exponent of the largest finite FP value can hold the largest
+  // integer, the result of the cast must be finite.
+  if (APFloat::semanticsMaxExponent(FltSem) >= IntSize)
+    Known.knownNot(fcInf);
 
   return Known;
 }
 
 KnownFPClass KnownFPClass::sitofp(const KnownBits &SrcKnown,
-                                  const fltSemantics &FltSem,
-                                  FPClassTest InterestedClasses) {
-  return itofp_impl(SrcKnown, FltSem, InterestedClasses, /*IsSigned=*/true);
+                                  const fltSemantics &FltSem) {
+  return itofp_impl(SrcKnown, FltSem, /*IsSigned=*/true);
 }
 
 KnownFPClass KnownFPClass::uitofp(const KnownBits &SrcKnown,
-                                  const fltSemantics &FltSem,
-                                  FPClassTest InterestedClasses) {
-  return itofp_impl(SrcKnown, FltSem, InterestedClasses, /*IsSigned=*/false);
+                                  const fltSemantics &FltSem) {
+  return itofp_impl(SrcKnown, FltSem, /*IsSigned=*/false);
 }
 
 // Handle known sign bit and nan cases for fadd.

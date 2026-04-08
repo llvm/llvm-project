@@ -6124,9 +6124,8 @@ KnownFPClass SelectionDAG::computeKnownFPClass(SDValue Op,
     KnownBits IntKnown =
         computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
     const fltSemantics &FltSem = VT.getScalarType().getFltSemantics();
-    Known = Opcode == ISD::SINT_TO_FP
-                ? KnownFPClass::sitofp(IntKnown, FltSem, InterestedClasses)
-                : KnownFPClass::uitofp(IntKnown, FltSem, InterestedClasses);
+    Known = Opcode == ISD::SINT_TO_FP ? KnownFPClass::sitofp(IntKnown, FltSem)
+                                      : KnownFPClass::uitofp(IntKnown, FltSem);
     break;
   }
   case ISD::BITCAST: {

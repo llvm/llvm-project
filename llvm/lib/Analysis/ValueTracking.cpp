@@ -5839,8 +5839,8 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     const fltSemantics &FltSem =
         Op->getType()->getScalarType()->getFltSemantics();
     Known = Op->getOpcode() == Instruction::SIToFP
-                ? KnownFPClass::sitofp(IntKnown, FltSem, InterestedClasses)
-                : KnownFPClass::uitofp(IntKnown, FltSem, InterestedClasses);
+                ? KnownFPClass::sitofp(IntKnown, FltSem)
+                : KnownFPClass::uitofp(IntKnown, FltSem);
     break;
   }
   case Instruction::ExtractElement: {

@@ -240,12 +240,13 @@ struct KnownFPClass {
   LLVM_ABI static KnownFPClass bitcast(const fltSemantics &FltSemantics,
                                        const KnownBits &Bits);
 
+  /// Report known values for sitofp
   LLVM_ABI static KnownFPClass sitofp(const KnownBits &KnownSrc,
-                                      const fltSemantics &FltSem,
-                                      FPClassTest InterestedClasses);
+                                      const fltSemantics &FltSemantics);
+
+  /// Report known values for uitofp
   LLVM_ABI static KnownFPClass uitofp(const KnownBits &KnownSrc,
-                                      const fltSemantics &FltSem,
-                                      FPClassTest InterestedClasses);
+                                      const fltSemantics &FltSemantics);
 
   /// Report known values for fadd
   LLVM_ABI static KnownFPClass
