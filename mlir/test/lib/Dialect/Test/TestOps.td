@@ -489,6 +489,20 @@ def OpWithBitEnumPropNamed : TEST_Op<"op_with_bit_enum_prop_named"> {
   let assemblyFormat = "$value1 ($value2^)? attr-dict";
 }
 
+def TestSimpleEnum8Prop : EnumProp<TestSimpleEnum8>;
+
+def OpWithSimpleEnum8Prop : TEST_Op<"op_with_simple_enum_8_prop"> {
+  let arguments = (ins TestSimpleEnum8Prop:$value);
+  let assemblyFormat = "$value attr-dict";
+}
+
+def TestSimpleEnum16Prop : EnumProp<TestSimpleEnum16>;
+
+def OpWithSimpleEnum16Prop : TEST_Op<"op_with_simple_enum_16_prop"> {
+  let arguments = (ins TestSimpleEnum16Prop:$value);
+  let assemblyFormat = "$value attr-dict";
+}
+
 //===----------------------------------------------------------------------===//
 // Test Bit Enum Attributes
 //===----------------------------------------------------------------------===//
