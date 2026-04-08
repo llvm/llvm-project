@@ -287,6 +287,73 @@ KnownFPClass KnownFPClass::bitcast(const fltSemantics &FltSemantics,
   return Known;
 }
 
+static KnownFPClass itofp_impl(const KnownBits &KnownSrc,
+                               const fltSemantics &FltSem,
+                               FPClassTest InterestedClasses, bool IsSigned) {
+  KnownFPClass Known;
+  // Cannot produce nan
+  Known.knownNot(fcNan);
+
+  // Integers cannot be subnormal
+  Known.knownNot(fcSubnormal);
+
+  // sitofp and uitofp turn into +0.0 for zero.
+  Known.knownNot(fcNegZero);
+
+  // UIToFP is always non-negative regardless of known bits.
+  if (!IsSigned)
+    Known.signBitMustBeZero();
+
+  // Only compute known bits if we can learn something useful from them.
+  if (!(InterestedClasses & (fcPosZero | fcNormal | fcInf)))
+    return Known;
+
+  // If the integer is non-zero, the result cannot be +0.0
+  if (KnownSrc.isNonZero())
+    Known.knownNot(fcPosZero);
+
+  if (IsSigned) {
+    // If the signed integer is known non-negative, the result is
+    // non-negative. If the signed integer is known negative, the result is
+    // negative.
+    if (KnownSrc.isNonNegative())
+      Known.signBitMustBeZero();
+    else if (KnownSrc.isNegative())
+      Known.signBitMustBeOne();
+  }
+
+  // Guard kept for ilogb()
+  if (InterestedClasses & fcInf) {
+    // Get width of largest magnitude integer known.
+    // This still works for a signed minimum value because the largest FP
+    // value is scaled by some fraction close to 2.0 (1.0 + 0.xxxx).
+    int IntSize = KnownSrc.getBitWidth();
+    if (!IsSigned)
+      IntSize -= KnownSrc.countMinLeadingZeros();
+    else
+      IntSize -= KnownSrc.countMinSignBits();
+
+    // If the exponent of the largest finite FP value can hold the largest
+    // integer, the result of the cast must be finite.
+    if (APFloat::semanticsMaxExponent(FltSem) >= IntSize)
+      Known.knownNot(fcInf);
+  }
+
+  return Known;
+}
+
+KnownFPClass KnownFPClass::sitofp(const KnownBits &SrcKnown,
+                                  const fltSemantics &FltSem,
+                                  FPClassTest InterestedClasses) {
+  return itofp_impl(SrcKnown, FltSem, InterestedClasses, /*IsSigned=*/true);
+}
+
+KnownFPClass KnownFPClass::uitofp(const KnownBits &SrcKnown,
+                                  const fltSemantics &FltSem,
+                                  FPClassTest InterestedClasses) {
+  return itofp_impl(SrcKnown, FltSem, InterestedClasses, /*IsSigned=*/false);
+}
+
 // Handle known sign bit and nan cases for fadd.
 static KnownFPClass fadd_impl(const KnownFPClass &KnownLHS,
                               const KnownFPClass &KnownRHS, DenormalMode Mode) {
