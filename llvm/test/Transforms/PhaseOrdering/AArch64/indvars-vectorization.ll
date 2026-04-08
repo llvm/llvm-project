@@ -15,8 +15,8 @@ define void @s172(i32 noundef %xa, i32 noundef %xb, ptr noundef %a, ptr noundef 
 ; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[SUB]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[XB]] to i64
 ; CHECK-NEXT:    [[TMP2:%.*]] = tail call i64 @llvm.smax.i64(i64 [[TMP0]], i64 31999)
-; CHECK-NEXT:    [[SMAX10:%.*]] = add nuw nsw i64 [[TMP2]], 1
-; CHECK-NEXT:    [[TMP8:%.*]] = sub i64 [[SMAX10]], [[TMP0]]
+; CHECK-NEXT:    [[TMP3:%.*]] = sub i64 [[TMP2]], [[TMP0]]
+; CHECK-NEXT:    [[TMP8:%.*]] = add i64 [[TMP3]], 1
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ugt i64 [[TMP8]], 23
 ; CHECK-NEXT:    [[IDENT_CHECK_NOT:%.*]] = icmp eq i32 [[XB]], 1
 ; CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[MIN_ITERS_CHECK]], [[IDENT_CHECK_NOT]]
