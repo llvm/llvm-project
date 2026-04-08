@@ -302,9 +302,9 @@ Value *SCEVExpander::InsertBinop(Instruction::BinaryOps Opcode,
       auto canGenerateIncompatiblePoison = [&Flags](Instruction *I) {
         // Ensure that no-wrap flags match.
         if (isa<OverflowingBinaryOperator>(I)) {
-          if (I->hasNoSignedWrap() != (Flags & SCEV::FlagNSW))
+          if (I->hasNoSignedWrap() != any(Flags & SCEV::FlagNSW))
             return true;
-          if (I->hasNoUnsignedWrap() != (Flags & SCEV::FlagNUW))
+          if (I->hasNoUnsignedWrap() != any(Flags & SCEV::FlagNUW))
             return true;
         }
         // Conservatively, do not use any instruction which has any of exact
@@ -341,9 +341,9 @@ Value *SCEVExpander::InsertBinop(Instruction::BinaryOps Opcode,
   // InstSimplifyFolder.
   Instruction *BO = Builder.Insert(BinaryOperator::Create(Opcode, LHS, RHS));
   BO->setDebugLoc(Loc);
-  if (Flags & SCEV::FlagNUW)
+  if (any(Flags & SCEV::FlagNUW))
     BO->setHasNoUnsignedWrap();
-  if (Flags & SCEV::FlagNSW)
+  if (any(Flags & SCEV::FlagNSW))
     BO->setHasNoSignedWrap();
 
   return BO;
@@ -382,8 +382,9 @@ Value *SCEVExpander::expandAddToGEP(const SCEV *Offset, Value *V,
          SE.DT.dominates(cast<Instruction>(V), &*Builder.GetInsertPoint()));
 
   Value *Idx = expand(Offset);
-  GEPNoWrapFlags NW = (Flags & SCEV::FlagNUW) ? GEPNoWrapFlags::noUnsignedWrap()
-                                              : GEPNoWrapFlags::none();
+  GEPNoWrapFlags NW = any(Flags & SCEV::FlagNUW)
+                          ? GEPNoWrapFlags::noUnsignedWrap()
+                          : GEPNoWrapFlags::none();
 
   // Fold a GEP with constant operands.
   if (Constant *CLHS = dyn_cast<Constant>(V))
@@ -573,7 +574,7 @@ Value *SCEVExpander::visitAddExpr(SCEVUseT<const SCEVAddExpr *> S) {
             X = SE.getSCEV(U->getValue());
         NewOps.push_back(X);
       }
-      Sum = expandAddToGEP(SE.getAddExpr(NewOps), Sum, S->getNoWrapFlags());
+      Sum = expandAddToGEP(SE.getAddExpr(NewOps), Sum, S.getNoWrapFlags());
     } else if (Op->isNonConstantNegative()) {
       // Instead of doing a negate and add, just do a subtract.
       Value *W = expand(SE.getNegativeSCEV(Op));
@@ -586,7 +587,7 @@ Value *SCEVExpander::visitAddExpr(SCEVUseT<const SCEVAddExpr *> S) {
       // Canonicalize a constant to the RHS.
       if (isa<Constant>(Sum))
         std::swap(Sum, W);
-      Sum = InsertBinop(Instruction::Add, Sum, W, S->getNoWrapFlags(),
+      Sum = InsertBinop(Instruction::Add, Sum, W, S.getNoWrapFlags(),
                         /*IsSafeToHoist*/ true);
       ++I;
     }
@@ -670,7 +671,7 @@ Value *SCEVExpander::visitMulExpr(SCEVUseT<const SCEVMulExpr *> S) {
       if (match(W, m_Power2(RHS))) {
         // Canonicalize Prod*(1<<C) to Prod<<C.
         assert(!Ty->isVectorTy() && "vector types are not SCEVable");
-        auto NWFlags = S->getNoWrapFlags();
+        auto NWFlags = S.getNoWrapFlags();
         // clear nsw flag if shl will produce poison value.
         if (RHS->logBase2() == RHS->getBitWidth() - 1)
           NWFlags = ScalarEvolution::clearFlags(NWFlags, SCEV::FlagNSW);
@@ -678,7 +679,7 @@ Value *SCEVExpander::visitMulExpr(SCEVUseT<const SCEVMulExpr *> S) {
                            ConstantInt::get(Ty, RHS->logBase2()), NWFlags,
                            /*IsSafeToHoist*/ true);
       } else {
-        Prod = InsertBinop(Instruction::Mul, Prod, W, S->getNoWrapFlags(),
+        Prod = InsertBinop(Instruction::Mul, Prod, W, S.getNoWrapFlags(),
                            /*IsSafeToHoist*/ true);
       }
     }
@@ -1340,8 +1341,8 @@ Value *SCEVExpander::visitAddRecExpr(SCEVUseT<const SCEVAddRecExpr *> S) {
     SmallVector<SCEVUse, 4> NewOps(S->getNumOperands());
     for (unsigned i = 0, e = S->getNumOperands(); i != e; ++i)
       NewOps[i] = SE.getAnyExtendExpr(S->getOperand(i), CanonicalIV->getType());
-    Value *V = expand(SE.getAddRecExpr(NewOps, S->getLoop(),
-                                       S->getNoWrapFlags(SCEV::FlagNW)));
+    Value *V = expand(
+        SE.getAddRecExpr(NewOps, S->getLoop(), S.getNoWrapFlags(SCEV::FlagNW)));
     BasicBlock::iterator NewInsertPt =
         findInsertPointAfter(cast<Instruction>(V), &*Builder.GetInsertPoint());
     V = expand(SE.getTruncateExpr(SE.getUnknown(V), Ty), NewInsertPt);
@@ -1358,13 +1359,13 @@ Value *SCEVExpander::visitAddRecExpr(SCEVUseT<const SCEVAddRecExpr *> S) {
     if (isa<PointerType>(S->getType())) {
       Value *StartV = expand(SE.getPointerBase(S));
       return expandAddToGEP(SE.removePointerBase(S), StartV,
-                            S->getNoWrapFlags(SCEV::FlagNUW));
+                            S.getNoWrapFlags(SCEV::FlagNUW));
     }
 
     SmallVector<SCEVUse, 4> NewOps(S->operands());
     NewOps[0] = SE.getConstant(Ty, 0);
-    const SCEV *Rest = SE.getAddRecExpr(NewOps, L,
-                                        S->getNoWrapFlags(SCEV::FlagNW));
+    const SCEV *Rest =
+        SE.getAddRecExpr(NewOps, L, S.getNoWrapFlags(SCEV::FlagNW));
 
     // Just do a normal add. Pre-expand the operands to suppress folding.
     //
