@@ -1608,7 +1608,7 @@ Status NativeProcessAIX::GetLoadedModuleFileSpec(const char *module_path,
     }
   }
   return Status::FromErrorStringWithFormat("Module file (%s) not found in /proc/%" PRIu64 "/maps file!",
-                module_file_spec.GetFilename().AsCString(), GetID());
+                module_file_spec.GetFilename().AsCString(nullptr), GetID());
 }
 
 Status NativeProcessAIX::GetFileLoadAddress(const llvm::StringRef &file_name,

@@ -206,7 +206,7 @@ bool ObjectFileXCOFF::SetLoadAddress(Target &target, lldb::addr_t value,
           if (!value_is_offset)
             load_addr = section_sp->GetFileAddress();
           else {
-            if (strcmp(section_sp->GetName().AsCString(), ".text") == 0)
+            if (strcmp(section_sp->GetName().AsCString(nullptr), ".text") == 0)
               load_addr = section_sp->GetFileOffset() + value;
             else /* Other sections: data, bss, loader, dwline, dwinfo, dwabrev */
               load_addr = section_sp->GetFileAddress() + value;
@@ -237,13 +237,13 @@ bool ObjectFileXCOFF::SetLoadAddressByType(Target &target, lldb::addr_t value,
         // Iterate through the object file sections to find all of the sections
         // that have SHF_ALLOC in their flag bits.
         SectionSP section_sp(section_list->GetSectionAtIndex(sect_idx));
-        if (type_id == 1 && section_sp && strcmp(section_sp->GetName().AsCString(), ".text") == 0) {
+        if (type_id == 1 && section_sp && strcmp(section_sp->GetName().AsCString(nullptr), ".text") == 0) {
           if (!section_sp->IsThreadSpecific()) {
             if (target.GetSectionLoadListPublic().SetSectionLoadAddress(
                     section_sp, section_sp->GetFileOffset() + value))
               ++num_loaded_sections;
           }
-        } else if (type_id == 2 && section_sp && strcmp(section_sp->GetName().AsCString(), ".data") == 0) {
+        } else if (type_id == 2 && section_sp && strcmp(section_sp->GetName().AsCString(nullptr), ".data") == 0) {
           if (!section_sp->IsThreadSpecific()) {
             if (target.GetSectionLoadListPublic().SetSectionLoadAddress(
                     section_sp, section_sp->GetFileAddress() + value))
