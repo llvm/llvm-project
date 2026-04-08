@@ -32,8 +32,6 @@ namespace detail {
 /// triple requires specific binary images. We need
 /// to map the image type onto the device target triple.
 
-/// Unknown target.
-static constexpr char DeviceBinaryTripleUnknown[] = "unknown-unknown-unknown";
 /// SPIR-V with 64-bit pointers.
 static constexpr char DeviceBinaryTripleSPIRV64[] = "spirv64-unknown-unknown";
 
