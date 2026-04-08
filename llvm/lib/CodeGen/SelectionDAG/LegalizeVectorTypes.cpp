@@ -4727,6 +4727,9 @@ SDValue DAGTypeLegalizer::SplitVecOp_TruncateHelper(SDNode *N) {
   if (getTypeAction(FinalVT) == TargetLowering::TypeScalarizeVector)
     return SplitVecOp_UnaryOp(N);
 
+  if (IsFloat && !isPowerOf2_32(InElementSize))
+    return SplitVecOp_UnaryOp(N);
+
   // Get the split input vector.
   SDValue InLoVec, InHiVec;
   GetSplitVector(InVec, InLoVec, InHiVec);

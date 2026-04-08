@@ -8230,3 +8230,75 @@ entry:
   %c = uitofp <2 x i128> %a to <2 x fp128>
   ret <2 x fp128> %c
 }
+
+define <4 x half> @utofp_v4i48_v4f16(<4 x i48> %a) {
+; CHECK-NOFP16-SD-LABEL: utofp_v4i48_v4f16:
+; CHECK-NOFP16-SD:       // %bb.0:
+; CHECK-NOFP16-SD-NEXT:    and x8, x1, #0xffffffffffff
+; CHECK-NOFP16-SD-NEXT:    and x9, x0, #0xffffffffffff
+; CHECK-NOFP16-SD-NEXT:    ucvtf s0, x8
+; CHECK-NOFP16-SD-NEXT:    ucvtf s1, x9
+; CHECK-NOFP16-SD-NEXT:    and x8, x2, #0xffffffffffff
+; CHECK-NOFP16-SD-NEXT:    fcvt h2, s0
+; CHECK-NOFP16-SD-NEXT:    fcvt h0, s1
+; CHECK-NOFP16-SD-NEXT:    ucvtf s1, x8
+; CHECK-NOFP16-SD-NEXT:    and x8, x3, #0xffffffffffff
+; CHECK-NOFP16-SD-NEXT:    mov v0.h[1], v2.h[0]
+; CHECK-NOFP16-SD-NEXT:    fcvt h1, s1
+; CHECK-NOFP16-SD-NEXT:    ucvtf s2, x8
+; CHECK-NOFP16-SD-NEXT:    mov v0.h[2], v1.h[0]
+; CHECK-NOFP16-SD-NEXT:    fcvt h1, s2
+; CHECK-NOFP16-SD-NEXT:    mov v0.h[3], v1.h[0]
+; CHECK-NOFP16-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NOFP16-SD-NEXT:    ret
+;
+; CHECK-FP16-SD-LABEL: utofp_v4i48_v4f16:
+; CHECK-FP16-SD:       // %bb.0:
+; CHECK-FP16-SD-NEXT:    and x8, x1, #0xffffffffffff
+; CHECK-FP16-SD-NEXT:    and x9, x0, #0xffffffffffff
+; CHECK-FP16-SD-NEXT:    ucvtf h1, x8
+; CHECK-FP16-SD-NEXT:    ucvtf h0, x9
+; CHECK-FP16-SD-NEXT:    and x8, x2, #0xffffffffffff
+; CHECK-FP16-SD-NEXT:    mov v0.h[1], v1.h[0]
+; CHECK-FP16-SD-NEXT:    ucvtf h1, x8
+; CHECK-FP16-SD-NEXT:    and x8, x3, #0xffffffffffff
+; CHECK-FP16-SD-NEXT:    mov v0.h[2], v1.h[0]
+; CHECK-FP16-SD-NEXT:    ucvtf h1, x8
+; CHECK-FP16-SD-NEXT:    mov v0.h[3], v1.h[0]
+; CHECK-FP16-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-FP16-SD-NEXT:    ret
+;
+; CHECK-NOFP16-GI-LABEL: utofp_v4i48_v4f16:
+; CHECK-NOFP16-GI:       // %bb.0:
+; CHECK-NOFP16-GI-NEXT:    fmov d0, x0
+; CHECK-NOFP16-GI-NEXT:    movi v1.2d, #0x00ffffffffffff
+; CHECK-NOFP16-GI-NEXT:    fmov d2, x2
+; CHECK-NOFP16-GI-NEXT:    mov v0.d[1], x1
+; CHECK-NOFP16-GI-NEXT:    mov v2.d[1], x3
+; CHECK-NOFP16-GI-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-NOFP16-GI-NEXT:    and v1.16b, v2.16b, v1.16b
+; CHECK-NOFP16-GI-NEXT:    ucvtf v0.2d, v0.2d
+; CHECK-NOFP16-GI-NEXT:    ucvtf v1.2d, v1.2d
+; CHECK-NOFP16-GI-NEXT:    fcvtn v0.2s, v0.2d
+; CHECK-NOFP16-GI-NEXT:    fcvtn2 v0.4s, v1.2d
+; CHECK-NOFP16-GI-NEXT:    fcvtn v0.4h, v0.4s
+; CHECK-NOFP16-GI-NEXT:    ret
+;
+; CHECK-FP16-GI-LABEL: utofp_v4i48_v4f16:
+; CHECK-FP16-GI:       // %bb.0:
+; CHECK-FP16-GI-NEXT:    fmov d0, x0
+; CHECK-FP16-GI-NEXT:    movi v1.2d, #0x00ffffffffffff
+; CHECK-FP16-GI-NEXT:    fmov d2, x2
+; CHECK-FP16-GI-NEXT:    mov v0.d[1], x1
+; CHECK-FP16-GI-NEXT:    mov v2.d[1], x3
+; CHECK-FP16-GI-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-FP16-GI-NEXT:    and v1.16b, v2.16b, v1.16b
+; CHECK-FP16-GI-NEXT:    ucvtf v0.2d, v0.2d
+; CHECK-FP16-GI-NEXT:    ucvtf v1.2d, v1.2d
+; CHECK-FP16-GI-NEXT:    fcvtn v0.2s, v0.2d
+; CHECK-FP16-GI-NEXT:    fcvtn2 v0.4s, v1.2d
+; CHECK-FP16-GI-NEXT:    fcvtn v0.4h, v0.4s
+; CHECK-FP16-GI-NEXT:    ret
+  %r = uitofp <4 x i48> %a to <4 x half>
+  ret <4 x half> %r
+}
