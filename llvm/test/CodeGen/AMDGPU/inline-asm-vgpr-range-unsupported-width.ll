@@ -5,7 +5,6 @@
 
 ; CHECK: error: couldn't allocate output register for constraint '{v[0:12]}'
 
-target triple = "amdgcn-amd-amdhsa"
 
 define amdgpu_kernel void @k() {
 entry:
