@@ -17,7 +17,7 @@ define <2 x half> @elementwise_fadd_v2f16_lds(ptr addrspace(3) %ptr, <2 x half> 
 ;
 ; GFX900-LABEL: define <2 x half> @elementwise_fadd_v2f16_lds(
 ; GFX900-SAME: ptr addrspace(3) [[PTR:%.*]], <2 x half> [[VAL:%.*]]) #[[ATTR0:[0-9]+]] {
-; GFX900-NEXT:    [[LANE_VAL:%.*]] = extractelement <2 x half> [[VAL]], i64 0
+; GFX900-NEXT:    [[LANE_VAL:%.*]] = extractelement <2 x half> [[VAL]], i32 0
 ; GFX900-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(3) [[PTR]], align 4
 ; GFX900-NEXT:    br label %[[ATOMICRMW_START:.*]]
 ; GFX900:       [[ATOMICRMW_START]]:
@@ -36,9 +36,9 @@ define <2 x half> @elementwise_fadd_v2f16_lds(ptr addrspace(3) %ptr, <2 x half> 
 ; GFX900:       [[ATOMICRMW_END]]:
 ; GFX900-NEXT:    [[EXTRACTED1:%.*]] = trunc i32 [[NEWLOADED]] to i16
 ; GFX900-NEXT:    [[TMP5:%.*]] = bitcast i16 [[EXTRACTED1]] to half
-; GFX900-NEXT:    [[LANE_OLD:%.*]] = insertelement <2 x half> zeroinitializer, half [[TMP5]], i64 0
-; GFX900-NEXT:    [[LANE_PTR:%.*]] = getelementptr inbounds <2 x half>, ptr addrspace(3) [[PTR]], i64 0, i64 1
-; GFX900-NEXT:    [[LANE_VAL2:%.*]] = extractelement <2 x half> [[VAL]], i64 1
+; GFX900-NEXT:    [[LANE_OLD:%.*]] = insertelement <2 x half> zeroinitializer, half [[TMP5]], i32 0
+; GFX900-NEXT:    [[LANE_PTR:%.*]] = getelementptr inbounds <2 x half>, ptr addrspace(3) [[PTR]], i32 0, i32 1
+; GFX900-NEXT:    [[LANE_VAL2:%.*]] = extractelement <2 x half> [[VAL]], i32 1
 ; GFX900-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr addrspace(3) @llvm.ptrmask.p3.i32(ptr addrspace(3) [[LANE_PTR]], i32 -4)
 ; GFX900-NEXT:    [[TMP6:%.*]] = ptrtoint ptr addrspace(3) [[LANE_PTR]] to i32
 ; GFX900-NEXT:    [[PTRLSB:%.*]] = and i32 [[TMP6]], 3
@@ -66,7 +66,7 @@ define <2 x half> @elementwise_fadd_v2f16_lds(ptr addrspace(3) %ptr, <2 x half> 
 ; GFX900-NEXT:    [[SHIFTED15:%.*]] = lshr i32 [[NEWLOADED14]], [[TMP7]]
 ; GFX900-NEXT:    [[EXTRACTED16:%.*]] = trunc i32 [[SHIFTED15]] to i16
 ; GFX900-NEXT:    [[TMP12:%.*]] = bitcast i16 [[EXTRACTED16]] to half
-; GFX900-NEXT:    [[LANE_OLD3:%.*]] = insertelement <2 x half> [[LANE_OLD]], half [[TMP12]], i64 1
+; GFX900-NEXT:    [[LANE_OLD3:%.*]] = insertelement <2 x half> [[LANE_OLD]], half [[TMP12]], i32 1
 ; GFX900-NEXT:    ret <2 x half> [[LANE_OLD3]]
 ;
   %res = atomicrmw elementwise fadd ptr addrspace(3) %ptr, <2 x half> %val monotonic, align 4
@@ -81,7 +81,7 @@ define <2 x bfloat> @elementwise_fadd_v2bf16_lds(ptr addrspace(3) %ptr, <2 x bfl
 ;
 ; GFX900-LABEL: define <2 x bfloat> @elementwise_fadd_v2bf16_lds(
 ; GFX900-SAME: ptr addrspace(3) [[PTR:%.*]], <2 x bfloat> [[VAL:%.*]]) #[[ATTR0]] {
-; GFX900-NEXT:    [[LANE_VAL:%.*]] = extractelement <2 x bfloat> [[VAL]], i64 0
+; GFX900-NEXT:    [[LANE_VAL:%.*]] = extractelement <2 x bfloat> [[VAL]], i32 0
 ; GFX900-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(3) [[PTR]], align 4
 ; GFX900-NEXT:    br label %[[ATOMICRMW_START:.*]]
 ; GFX900:       [[ATOMICRMW_START]]:
@@ -100,9 +100,9 @@ define <2 x bfloat> @elementwise_fadd_v2bf16_lds(ptr addrspace(3) %ptr, <2 x bfl
 ; GFX900:       [[ATOMICRMW_END]]:
 ; GFX900-NEXT:    [[EXTRACTED1:%.*]] = trunc i32 [[NEWLOADED]] to i16
 ; GFX900-NEXT:    [[TMP5:%.*]] = bitcast i16 [[EXTRACTED1]] to bfloat
-; GFX900-NEXT:    [[LANE_OLD:%.*]] = insertelement <2 x bfloat> zeroinitializer, bfloat [[TMP5]], i64 0
-; GFX900-NEXT:    [[LANE_PTR:%.*]] = getelementptr inbounds <2 x bfloat>, ptr addrspace(3) [[PTR]], i64 0, i64 1
-; GFX900-NEXT:    [[LANE_VAL2:%.*]] = extractelement <2 x bfloat> [[VAL]], i64 1
+; GFX900-NEXT:    [[LANE_OLD:%.*]] = insertelement <2 x bfloat> zeroinitializer, bfloat [[TMP5]], i32 0
+; GFX900-NEXT:    [[LANE_PTR:%.*]] = getelementptr inbounds <2 x bfloat>, ptr addrspace(3) [[PTR]], i32 0, i32 1
+; GFX900-NEXT:    [[LANE_VAL2:%.*]] = extractelement <2 x bfloat> [[VAL]], i32 1
 ; GFX900-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr addrspace(3) @llvm.ptrmask.p3.i32(ptr addrspace(3) [[LANE_PTR]], i32 -4)
 ; GFX900-NEXT:    [[TMP6:%.*]] = ptrtoint ptr addrspace(3) [[LANE_PTR]] to i32
 ; GFX900-NEXT:    [[PTRLSB:%.*]] = and i32 [[TMP6]], 3
@@ -130,7 +130,7 @@ define <2 x bfloat> @elementwise_fadd_v2bf16_lds(ptr addrspace(3) %ptr, <2 x bfl
 ; GFX900-NEXT:    [[SHIFTED15:%.*]] = lshr i32 [[NEWLOADED14]], [[TMP7]]
 ; GFX900-NEXT:    [[EXTRACTED16:%.*]] = trunc i32 [[SHIFTED15]] to i16
 ; GFX900-NEXT:    [[TMP12:%.*]] = bitcast i16 [[EXTRACTED16]] to bfloat
-; GFX900-NEXT:    [[LANE_OLD3:%.*]] = insertelement <2 x bfloat> [[LANE_OLD]], bfloat [[TMP12]], i64 1
+; GFX900-NEXT:    [[LANE_OLD3:%.*]] = insertelement <2 x bfloat> [[LANE_OLD]], bfloat [[TMP12]], i32 1
 ; GFX900-NEXT:    ret <2 x bfloat> [[LANE_OLD3]]
 ;
   %res = atomicrmw elementwise fadd ptr addrspace(3) %ptr, <2 x bfloat> %val monotonic, align 4
