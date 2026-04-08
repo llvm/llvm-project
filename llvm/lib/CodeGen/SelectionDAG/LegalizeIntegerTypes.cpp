@@ -5301,11 +5301,14 @@ void DAGTypeLegalizer::ExpandIntRes_XMULO(SDNode *N,
   RTLIB::Libcall LC = RTLIB::getMULO(VT);
   RTLIB::LibcallImpl LCImpl = DAG.getLibcalls().getLibcallImpl(LC);
 
-  // If we don't have the libcall or if the function we are compiling is the
-  // implementation of the expected libcall (avoid inf-loop), expand inline.
+  // If we don't have the libcall, if the function we are compiling is the
+  // implementation of the expected libcall (avoid inf-loop), or if the
+  // function has the no-builtins attribute (it may be a custom implementation
+  // of the libcall under a different name), expand inline.
   if (LCImpl == RTLIB::Unsupported ||
       RTLIB::RuntimeLibcallsInfo::getLibcallImplName(LCImpl) ==
-          DAG.getMachineFunction().getName()) {
+          DAG.getMachineFunction().getName() ||
+      DAG.getMachineFunction().getFunction().hasFnAttribute("no-builtins")) {
     // FIXME: This is not an optimal expansion, but better than crashing.
     SDValue MulLo, MulHi;
     TLI.forceExpandWideMUL(DAG, dl, /*Signed=*/true, N->getOperand(0),
