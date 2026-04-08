@@ -213,7 +213,7 @@ namespace explicit_specialization {
     CONST int pi2<int,T> = 3; // expected-note {{partial specialization matches [with T = int]}}
 
     void foo() {
-      int a = pi2<int,int>;  // expected-error {{ambiguous partial specializations of 'pi2<int, int>'}}
+      int a = pi2<int,int>;  // expected-error {{ambiguous partial specializations of 'pi2}}
     }
   }
 
@@ -539,5 +539,24 @@ void test() {
     OuterTpl<int>::f,
     OuterTpl<int>::g<int>;
 }
+}
+#endif
+
+
+#if __cplusplus > 202002
+namespace GH132592 {
+  template<class>
+  constexpr auto x = false;
+
+  template<class T> requires true
+  constexpr auto x<T> = true; // expected-note 2{{partial specialization matches}}
+
+  template<class T> requires true && true
+  constexpr auto x<T> = true; // expected-note 2{{partial specialization matches}}
+
+  template<class T>
+  concept X = x<T>;
+  static_assert(x<void> && !X<void>); // expected-error {{ambiguous partial specializations of 'x'}}
+  static_assert(!X<void> && x<void>); // expected-error {{ambiguous partial specializations of 'x'}}
 }
 #endif
