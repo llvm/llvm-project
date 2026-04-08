@@ -56,14 +56,14 @@ static std::string withCapitalFirstLetter(std::string name) {
   return name;
 }
 
-static std::string namespacePrefix() {
+/* static std::string namespacePrefix() {
   static const std::string prefix = [] {
     if (!capiNamespacePrefix.empty())
       return capiNamespacePrefix.getValue();
     return withCapitalFirstLetter(capiDialect.getValue());
   }();
   return prefix;
-}
+} */
 
 static void emitAttrTypeHeader(StringRef name, raw_ostream &os) {
   const char *const header = R"(
@@ -101,9 +101,24 @@ static bool isUnsupportedParam(const AttrOrTypeParameter &param) {
   return false;
 }
 
-static std::string toLower(std::string s) {
+/* static std::string toLower(std::string s) {
     std::transform(s.begin(), s.end(), s.begin(), ::tolower);
     return s;
+} */
+
+// Transforms a C++ namespace string (e.g. "::ns1::ns2") into a camel-case
+// identifier prefix (e.g. "ns1Ns2") suitable for use in C API names.
+static std::string cppNamespaceToPrefix(StringRef ns) {
+  std::string result;
+  SmallVector<StringRef, 4> parts;
+  ns.split(parts, "::", /*MaxSplit=*/-1, /*KeepEmpty=*/false);
+  for (auto [i, part] : llvm::enumerate(parts)) {
+    std::string s = part.str();
+    if (i > 0 && !s.empty())
+      s[0] = static_cast<char>(std::toupper(static_cast<unsigned char>(s[0])));
+    result += s;
+  }
+  return result;
 }
 
 static std::string mapParamTypeToCAPI(const AttrOrTypeParameter &param) {
@@ -112,8 +127,9 @@ static std::string mapParamTypeToCAPI(const AttrOrTypeParameter &param) {
     const Record *rec = defInit->getDef();
     if (rec->isSubClassOf("EnumParameter")) {
       std::string type = "";
-      type += toLower(namespacePrefix());
-      type += rec->getValueAsString("underlyingEnumName");
+      // type += toLower(namespacePrefix());
+      type += cppNamespaceToPrefix(param.getCppType());
+      // type += rec->getValueAsString("underlyingEnumName");
       return type;
     }
     if (rec->isSubClassOf("StringRefParameter"))
@@ -170,7 +186,7 @@ static void emitGettorDeclOrDef(const AttrOrTypeDef &def, ArrayRef<AttrOrTypePar
     os << "MlirAttribute ";
   else
     os << "MlirType ";
-  os << llvm::StringRef(namespacePrefix()).lower() << def.getCppClassName() << "Get(";
+  os << llvm::StringRef(cppNamespaceToPrefix(def.getDialect().getCppNamespace())) << def.getCppClassName() << "Get(";
   SmallVector<MethodParameter> params_ =
       getGettorParams(params, {{"MlirContext", "context"}});
   for (auto [i, param] : llvm::enumerate(params_)) {
@@ -214,7 +230,7 @@ static void emitAccessorDecls(const AttrOrTypeDef &def,
       continue;
     std::string paramName = param.getName().str();
     os << "MLIR_CAPI_EXPORTED ";
-    os << mapParamTypeToCAPI(param) << " " << toLower(namespacePrefix()) << def.getCppClassName()
+    os << mapParamTypeToCAPI(param) << " " << cppNamespaceToPrefix(def.getDialect().getCppNamespace()) << def.getCppClassName()
        << "Get" << withCapitalFirstLetter(param.getName().str());
     if (isAttrGenerator)
       os << "(MlirAttribute attr);";
@@ -225,7 +241,7 @@ static void emitAccessorDecls(const AttrOrTypeDef &def,
 }
 
 static void emitTypeIDDeclOrDef(const AttrOrTypeDef &def, raw_ostream &os, bool isDeclGenerator) {
-  os << "MLIR_CAPI_EXPORTED MlirTypeID " << toLower(namespacePrefix()) << def.getCppClassName()
+  os << "MLIR_CAPI_EXPORTED MlirTypeID " << cppNamespaceToPrefix(def.getDialect().getCppNamespace()) << def.getCppClassName()
      << "GetTypeID(";
      if (isDeclGenerator) {
       os << ");\n";
@@ -237,7 +253,7 @@ static void emitTypeIDDeclOrDef(const AttrOrTypeDef &def, raw_ostream &os, bool 
 }
 
 static void emitTypeIDDeclOrDef(const EnumInfo &enumInfo, raw_ostream &os, bool isDeclGenerator) {
-  os << "MLIR_CAPI_EXPORTED MlirTypeID " << toLower(namespacePrefix()) << enumInfo.getEnumClassName()
+  os << "MLIR_CAPI_EXPORTED MlirTypeID " << cppNamespaceToPrefix(enumInfo.getCppNamespace()) << enumInfo.getEnumClassName()
      << "GetTypeID(";
      if (isDeclGenerator) {
       os << ");\n";
@@ -259,7 +275,7 @@ static void emitIsADeclOrDef(const AttrOrTypeDef &def, raw_ostream &os,
     os << "Attribute";
   else
     os << "Type";
-  os << "IsA" << namespacePrefix() << def.getCppClassName();
+  os << "IsA" << cppNamespaceToPrefix(def.getDialect().getCppNamespace()) << def.getCppClassName();
   if (isAttrGenerator)
     os << "(MlirAttribute attr";
   else
@@ -279,7 +295,7 @@ static void emitIsADeclOrDef(const AttrOrTypeDef &def, raw_ostream &os,
 static void emitIsADeclOrDef(const EnumInfo &enumInfo, raw_ostream &os,
                               bool isDeclGenerator) {
   std::string name = enumInfo.getEnumClassName().str() + "Attr";
-  os << "MLIR_CAPI_EXPORTED bool mlirAttributeIsA" << namespacePrefix() << name;
+  os << "MLIR_CAPI_EXPORTED bool mlirAttributeIsA" << cppNamespaceToPrefix(enumInfo.getCppNamespace()) << name;
   os << "(MlirAttribute attr";
   if (isDeclGenerator) {
     os << ");\n";
@@ -309,13 +325,13 @@ static bool emitEnumDecls(ArrayRef<const Record *> records, raw_ostream &os) {
     llvm::IfDefEmitter scope(os, "GET_" + enumInfo.getEnumClassName().upper() +
                                      "_ENUM_CAPI_DECL");
     os << "// " << enumInfo.getSummary() << "\n";
-    os << "enum " << toLower(namespacePrefix()) << enumInfo.getEnumClassName();
+    os << "enum " << cppNamespaceToPrefix(enumInfo.getCppNamespace()) << enumInfo.getEnumClassName();
 
     if (!enumInfo.getUnderlyingType().empty())
       os << " : " << enumInfo.getUnderlyingType();
     os << " {\n";
 
-    auto prefix = formatv("{0}{1}_", namespacePrefix(), enumInfo.getEnumClassName());
+    auto prefix = formatv("{0}{1}_", cppNamespaceToPrefix(enumInfo.getCppNamespace()), enumInfo.getEnumClassName());
     for (const EnumCase &enumerant : enumInfo.getAllCases()) {
       auto symbol = makeIdentifier(enumerant.getSymbol());
       auto value = enumerant.getValue();
@@ -326,7 +342,7 @@ static bool emitEnumDecls(ArrayRef<const Record *> records, raw_ostream &os) {
     }
     os << "};\n";
     // Add convenience typedef
-    os << formatv("typedef enum {0}{1} {0}{1}; \n", toLower(namespacePrefix()), enumInfo.getEnumClassName());
+    os << formatv("typedef enum {0}{1} {0}{1}; \n", cppNamespaceToPrefix(enumInfo.getCppNamespace()), enumInfo.getEnumClassName());
   }
 
   os << "\n";
@@ -345,7 +361,7 @@ static bool emitEnumAttrDecls(ArrayRef<const Record *> records, raw_ostream &os,
         continue;
       EnumInfo enumInfo(*attr.getDef()->getValueAsDef("enum"));
       StringRef name = enumInfo.getEnumClassName();
-      os << "#define GET_" + namespacePrefix() + "_" + name.upper() +
+      os << "#define GET_" + cppNamespaceToPrefix(enumInfo.getCppNamespace()) + "_" + name.upper() +
                 "_ENUM_ATTR_CAPI_DECL\n";
     }
   }
@@ -357,21 +373,21 @@ static bool emitEnumAttrDecls(ArrayRef<const Record *> records, raw_ostream &os,
       continue;
 
     EnumInfo enumInfo(*attr.getDef()->getValueAsDef("enum"));
-    llvm::IfDefEmitter scope(os, "GET_" + namespacePrefix() + "_" +
+    llvm::IfDefEmitter scope(os, "GET_" + cppNamespaceToPrefix(enumInfo.getCppNamespace()) + "_" +
                                      enumInfo.getEnumClassName().upper() +
                                      "_ENUM_ATTR_CAPI_DECL");
 
-    os << "MLIR_CAPI_EXPORTED MlirAttribute " << namespacePrefix()
+    os << "MLIR_CAPI_EXPORTED MlirAttribute " << cppNamespaceToPrefix(enumInfo.getCppNamespace())
        << enumInfo.getEnumClassName() << "AttrGet(MlirContext context, "
-       << toLower(namespacePrefix()) << enumInfo.getEnumClassName() << " value);\n";
+       << cppNamespaceToPrefix(enumInfo.getCppNamespace()) << enumInfo.getEnumClassName() << " value);\n";
 
     std::string name = enumInfo.getEnumClassName().str() + "Attr";
     emitTypeIDDeclOrDef(enumInfo, os, EMIT_DECLS);
     emitIsADeclOrDef(enumInfo, os, EMIT_DECLS);
 
-    os << "MLIR_CAPI_EXPORTED " << toLower(namespacePrefix())
+    os << "MLIR_CAPI_EXPORTED " << cppNamespaceToPrefix(enumInfo.getCppNamespace())
        << enumInfo.getEnumClassName() << " ";
-    os << toLower(namespacePrefix()) << name << "GetValue(MlirAttribute attr);\n";
+    os << cppNamespaceToPrefix(enumInfo.getCppNamespace()) << name << "GetValue(MlirAttribute attr);\n";
   }
 
   os << "\n";
