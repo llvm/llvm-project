@@ -670,10 +670,10 @@ protected:
       }
 
       if (bytes_read < total_byte_size)
-        result.AppendWarningWithFormat(
-            "Not all bytes (%" PRIu64 "/%" PRIu64
-            ") were able to be read from 0x%" PRIx64 ".\n",
-            (uint64_t)bytes_read, (uint64_t)total_byte_size, addr);
+        result.AppendWarningWithFormatv("Not all bytes ({0} / {1}) "
+                                        "were able to be read from {2:x}.",
+                                        (uint64_t)bytes_read,
+                                        (uint64_t)total_byte_size, addr);
     } else {
       // we treat c-strings as a special case because they do not have a fixed
       // size
@@ -712,9 +712,9 @@ protected:
         }
 
         if (item_byte_size == read) {
-          result.AppendWarningWithFormat(
-              "unable to find a NULL terminated string at 0x%" PRIx64
-              ". Consider increasing the maximum read length.\n",
+          result.AppendWarningWithFormatv(
+              "unable to find a NULL terminated string at {0:x}"
+              ". Consider increasing the maximum read length.",
               data_addr);
           --read;
           break_on_no_NULL = true;
