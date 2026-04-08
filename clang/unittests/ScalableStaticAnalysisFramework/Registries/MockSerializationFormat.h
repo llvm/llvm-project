@@ -44,11 +44,6 @@ public:
   llvm::Error writeLUSummaryEncoding(const LUSummaryEncoding &SummaryEncoding,
                                      llvm::StringRef Path) override;
 
-  llvm::Expected<WPASuite> readWPASuite(llvm::StringRef Path) override;
-
-  llvm::Error writeWPASuite(const WPASuite &Suite,
-                            llvm::StringRef Path) override;
-
   /// Lists what analyses implement this particular serialisation format.
   void forEachRegisteredAnalysis(
       llvm::function_ref<void(llvm::StringRef Name, llvm::StringRef Desc)>

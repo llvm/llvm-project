@@ -99,10 +99,10 @@ public:
 
   /// Performs one step. Returns true if another step is needed; false when
   /// converged. Single-step analyses always return false.
-  virtual llvm::Expected<bool> step() override = 0;
+  virtual llvm::Expected<bool> step() = 0;
 
   /// Called after the step() loop converges. Override for post-processing.
-  virtual llvm::Error finalize() override { return llvm::Error::success(); }
+  virtual llvm::Error finalize() { return llvm::Error::success(); }
 
 protected:
   /// Read-only access to the result being built.

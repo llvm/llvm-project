@@ -42,7 +42,5 @@ FIELD(TUSummaryEncoding, Data)
 FIELD(TUSummaryEncoding, IdTable)
 FIELD(TUSummaryEncoding, LinkageTable)
 FIELD(TUSummaryEncoding, TUNamespace)
-FIELD(WPASuite, Data)
-FIELD(WPASuite, IdTable)
 
 #undef FIELD

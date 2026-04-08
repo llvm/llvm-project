@@ -99,15 +99,6 @@ public:
     return failing("writeLUSummaryEncoding");
   }
 
-  llvm::Expected<WPASuite> readWPASuite(llvm::StringRef Path) override {
-    return failing("readWPASuite");
-  }
-
-  llvm::Error writeWPASuite(const WPASuite &Suite,
-                            llvm::StringRef Path) override {
-    return failing("writeWPASuite");
-  }
-
   void forEachRegisteredAnalysis(
       llvm::function_ref<void(llvm::StringRef Name, llvm::StringRef Desc)>
           Callback) const override {}

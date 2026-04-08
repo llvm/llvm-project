@@ -14,8 +14,6 @@
 // NOLINTNEXTLINE(misc-use-internal-linkage)
 volatile int SSAFJSONFormatAnchorSource = 0;
 LLVM_INSTANTIATE_REGISTRY(llvm::Registry<clang::ssaf::JSONFormat::FormatInfo>)
-LLVM_INSTANTIATE_REGISTRY(
-    llvm::Registry<clang::ssaf::JSONFormat::AnalysisResultRegistry::Codec>)
 
 static clang::ssaf::SerializationFormatRegistry::Add<clang::ssaf::JSONFormat>
     RegisterJSONFormat("json", "JSON serialization format");
@@ -142,16 +140,6 @@ SummaryName summaryNameFromJSON(llvm::StringRef SummaryNameStr) {
 }
 
 llvm::StringRef summaryNameToJSON(const SummaryName &SN) { return SN.str(); }
-
-//----------------------------------------------------------------------------
-// AnalysisName
-//----------------------------------------------------------------------------
-
-AnalysisName analysisNameFromJSON(llvm::StringRef AnalysisNameStr) {
-  return AnalysisName(AnalysisNameStr.str());
-}
-
-llvm::StringRef analysisNameToJSON(const AnalysisName &AN) { return AN.str(); }
 
 //----------------------------------------------------------------------------
 // EntityId
