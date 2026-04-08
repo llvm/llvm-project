@@ -1767,7 +1767,9 @@ private:
   /// Scop::Context on the other side is an overapproximation and does not
   /// include all requirements, but is always defined. However, there is still
   /// no guarantee that there is no undefined behavior in
-  /// DefinedBehaviorContext.
+  /// DefinedBehaviorContext. Moreover, AssumedContext and InvalidContext are
+  /// gist'd using Scop::Context, but here we can add assumptions that only hold
+  /// under RTC-checked conditions.
   isl::set DefinedBehaviorContext;
 
   /// The schedule of the SCoP
@@ -2670,17 +2672,10 @@ public:
 raw_ostream &operator<<(raw_ostream &OS, const Scop &scop);
 
 class ScopInfo {
-public:
-  using RegionToScopMapTy = MapVector<Region *, std::unique_ptr<Scop>>;
-  using reverse_iterator = RegionToScopMapTy::reverse_iterator;
-  using const_reverse_iterator = RegionToScopMapTy::const_reverse_iterator;
-  using iterator = RegionToScopMapTy::iterator;
-  using const_iterator = RegionToScopMapTy::const_iterator;
-
 private:
   /// A map of Region to its Scop object containing
   ///        Polly IR of static control part.
-  RegionToScopMapTy RegionToScopMap;
+  llvm::SmallDenseMap<const Region *, std::unique_ptr<Scop>> RegionToScopMap;
   const DataLayout &DL;
   ScopDetection &SD;
   ScalarEvolution &SE;
@@ -2701,47 +2696,12 @@ public:
   ///         the scop object. If the given region is a subregion, return a
   ///         nullptr. Top level region containing the entry block of a function
   ///         is not considered in the scop creation.
-  Scop *getScop(Region *R) const {
-    auto MapIt = RegionToScopMap.find(R);
-    if (MapIt != RegionToScopMap.end())
-      return MapIt->second.get();
-    return nullptr;
-  }
+  Scop *getScop(const Region *R);
 
   /// Recompute the Scop-Information for a function.
   ///
   /// This invalidates any iterators.
-  void recompute();
-
-  /// Handle invalidation explicitly
-  bool invalidate(Function &F, const PreservedAnalyses &PA,
-                  FunctionAnalysisManager::Invalidator &Inv);
-
-  iterator begin() { return RegionToScopMap.begin(); }
-  iterator end() { return RegionToScopMap.end(); }
-  const_iterator begin() const { return RegionToScopMap.begin(); }
-  const_iterator end() const { return RegionToScopMap.end(); }
-  reverse_iterator rbegin() { return RegionToScopMap.rbegin(); }
-  reverse_iterator rend() { return RegionToScopMap.rend(); }
-  const_reverse_iterator rbegin() const { return RegionToScopMap.rbegin(); }
-  const_reverse_iterator rend() const { return RegionToScopMap.rend(); }
-  bool empty() const { return RegionToScopMap.empty(); }
-};
-
-struct ScopInfoAnalysis : AnalysisInfoMixin<ScopInfoAnalysis> {
-  static AnalysisKey Key;
-
-  using Result = ScopInfo;
-
-  Result run(Function &, FunctionAnalysisManager &);
-};
-
-struct ScopInfoPrinterPass final : PassInfoMixin<ScopInfoPrinterPass> {
-  ScopInfoPrinterPass(raw_ostream &OS) : Stream(OS) {}
-
-  PreservedAnalyses run(Function &, FunctionAnalysisManager &);
-
-  raw_ostream &Stream;
+  void invalidate();
 };
 } // end namespace polly
 

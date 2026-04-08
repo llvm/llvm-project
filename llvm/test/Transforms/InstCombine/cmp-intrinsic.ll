@@ -274,8 +274,7 @@ define <2 x i1> @cttz_eq_bitwidth_v2i32(<2 x i32> %a) {
 
 define i1 @cttz_eq_zero_i33(i33 %x) {
 ; CHECK-LABEL: @cttz_eq_zero_i33(
-; CHECK-NEXT:    [[TMP1:%.*]] = and i33 [[X:%.*]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i33 [[TMP1]], 0
+; CHECK-NEXT:    [[CMP:%.*]] = trunc i33 [[X:%.*]] to i1
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %tz = tail call i33 @llvm.cttz.i33(i33 %x, i1 false)

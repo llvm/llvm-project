@@ -572,10 +572,26 @@ DeclareRedType ReductionProcessor::createDeclareReductionHelper(
 
   mlir::OpBuilder modBuilder(module.getBodyRegion());
   mlir::Type valTy = fir::unwrapRefType(type);
-  if (!isByRef)
+
+  // For by-ref reductions, we want to keep track of the
+  // boxed/referenced/allocated type. For example, for a `real, allocatable`
+  // variable, `real` should be stored.
+  mlir::TypeAttr boxedTyAttr{};
+  mlir::Type boxedTy;
+
+  if (isByRef) {
+    boxedTy = fir::unwrapPassByRefType(valTy);
+    boxedTyAttr = mlir::TypeAttr::get(boxedTy);
+    // For character types that are not already references, we need to wrap
+    // them in a reference type for by-ref reductions.
+    if (fir::isa_char(valTy) && !fir::isa_ref_type(type)) {
+      type = fir::ReferenceType::get(valTy);
+    }
+  } else
     type = valTy;
 
-  decl = DeclareRedType::create(modBuilder, loc, reductionOpName, type);
+  decl = DeclareRedType::create(modBuilder, loc, reductionOpName, type,
+                                boxedTyAttr);
   createReductionAllocAndInitRegions(converter, loc, decl, genInitValueCB, type,
                                      isByRef);
   builder.createBlock(&decl.getReductionRegion(),
@@ -585,6 +601,18 @@ DeclareRedType ReductionProcessor::createDeclareReductionHelper(
   mlir::Value op1 = decl.getReductionRegion().front().getArgument(0);
   mlir::Value op2 = decl.getReductionRegion().front().getArgument(1);
   genCombinerCB(builder, loc, type, op1, op2, isByRef);
+
+  if (isByRef && fir::isa_box_type(valTy)) {
+    mlir::Region &dataPtrPtrRegion = decl.getDataPtrPtrRegion();
+    mlir::Block &dataAddrBlock = *builder.createBlock(
+        &dataPtrPtrRegion, dataPtrPtrRegion.end(), {type}, {loc});
+    builder.setInsertionPointToEnd(&dataAddrBlock);
+    mlir::Value boxRefOperand = dataAddrBlock.getArgument(0);
+    mlir::Value baseAddrOffset = fir::BoxOffsetOp::create(
+        builder, loc, boxRefOperand, fir::BoxFieldAttr::base_addr);
+    genYield<DeclareRedType>(builder, loc, baseAddrOffset);
+  }
+
   return decl;
 }
 

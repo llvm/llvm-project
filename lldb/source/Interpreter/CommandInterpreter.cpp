@@ -148,7 +148,7 @@ CommandInterpreter::CommandInterpreter(Debugger &debugger,
   SetEventName(eBroadcastBitQuitCommandReceived, "quit");
   SetSynchronous(synchronous_execution);
   CheckInWithManager();
-  m_collection_sp->Initialize(g_interpreter_properties);
+  m_collection_sp->Initialize(g_interpreter_properties_def);
 }
 
 bool CommandInterpreter::GetExpandRegexAliases() const {
@@ -316,6 +316,11 @@ void CommandInterpreter::Initialize() {
     AddAlias("continue", cmd_obj_sp);
   }
 
+  // At this point, I'm leaving "b" command aliased to "_regexp-break".  There's
+  // a catch-all regexp in the command that takes any unrecognized input and
+  // runs it as `break set <input>` and switching the command to break add
+  // would change that behavior.  People who want to use the break add for the
+  // "b" alias can do so in their .lldbinit.
   cmd_obj_sp = GetCommandSPExact("_regexp-break");
   if (cmd_obj_sp)
     AddAlias("b", cmd_obj_sp)->SetSyntax(cmd_obj_sp->GetSyntax());
@@ -665,6 +670,89 @@ void CommandInterpreter::LoadCommandDictionary() {
       CommandObjectSP break_regex_cmd_sp(break_regex_cmd_up.release());
       m_command_dict[std::string(break_regex_cmd_sp->GetCommandName())] =
           break_regex_cmd_sp;
+    }
+  }
+
+  // clang-format off
+  // FIXME: It would be simpler to just use the linespec's directly here, but
+  // the `b` alias allows "foo.c   :   12   :   45" but the linespec parser
+  // is more rigorous, and doesn't strip spaces, so the two are not equivalent.
+  const char *break_add_regexes[][2] = {
+      {"^(.*[^[:space:]])[[:space:]]*:[[:space:]]*([[:digit:]]+)[[:space:]]*:[[:space:]]*([[:digit:]]+)[[:space:]]*$",
+       "breakpoint add file --file '%1' --line %2 --column %3"},
+      {"^(.*[^[:space:]])[[:space:]]*:[[:space:]]*([[:digit:]]+)[[:space:]]*$",
+       "breakpoint add file --file '%1' --line %2"},
+      {"^/([^/]+)/$", "breakpoint add pattern -- %1"},
+      {"^([[:digit:]]+)[[:space:]]*$",
+      "breakpoint add file --line %1"},
+      {"^\\*?(0x[[:xdigit:]]+)[[:space:]]*$",
+      "breakpoint add address %1"},
+      {"^[\"']?([-+]?\\[.*\\])[\"']?[[:space:]]*$",
+       "breakpoint add name '%1'"},
+      {"^(-.*)$",
+      "breakpoint add name '%1'"},
+      {"^(.*[^[:space:]])`(.*[^[:space:]])[[:space:]]*$",
+       "breakpoint add name '%2' --shlib '%1'"},
+      {"^\\&(.*[^[:space:]])[[:space:]]*$",
+       "breakpoint add name '%1' --skip-prologue=0"},
+      {"^[\"']?(.*[^[:space:]\"'])[\"']?[[:space:]]*$",
+       "breakpoint add name '%1'"}};
+  // clang-format on
+
+  size_t num_add_regexes = std::size(break_add_regexes);
+
+  std::unique_ptr<CommandObjectRegexCommand> break_add_regex_cmd_up(
+      new CommandObjectRegexCommand(
+          *this, "_regexp-break-add",
+          "Set a breakpoint using one of several shorthand formats, or list "
+          "the existing breakpoints if no arguments are provided.",
+          "\n"
+          "_regexp-break-add <filename>:<linenum>:<colnum>\n"
+          "              main.c:12:21          // Break at line 12 and column "
+          "21 of main.c\n\n"
+          "_regexp-break-add <filename>:<linenum>\n"
+          "              main.c:12             // Break at line 12 of "
+          "main.c\n\n"
+          "_regexp-break-add <linenum>\n"
+          "              12                    // Break at line 12 of current "
+          "file\n\n"
+          "_regexp-break-add 0x<address>\n"
+          "              0x1234000             // Break at address "
+          "0x1234000\n\n"
+          "_regexp-break-add <name>\n"
+          "              main                  // Break in 'main' after the "
+          "prologue\n\n"
+          "_regexp-break-add &<name>\n"
+          "              &main                 // Break at first instruction "
+          "in 'main'\n\n"
+          "_regexp-break-add <module>`<name>\n"
+          "              libc.so`malloc        // Break in 'malloc' from "
+          "'libc.so'\n\n"
+          "_regexp-break-add /<source-regex>/\n"
+          "              /break here/          // Break on source lines in "
+          "current file\n"
+          "                                    // containing text 'break "
+          "here'.\n"
+          "_regexp-break-add\n"
+          "                                    // List the existing "
+          "breakpoints\n",
+          lldb::eSymbolCompletion | lldb::eSourceFileCompletion, false));
+
+  if (break_add_regex_cmd_up) {
+    bool success = true;
+    for (size_t i = 0; i < num_add_regexes; i++) {
+      success = break_add_regex_cmd_up->AddRegexCommand(
+          break_add_regexes[i][0], break_add_regexes[i][1]);
+      if (!success)
+        break;
+    }
+    success =
+        break_add_regex_cmd_up->AddRegexCommand("^$", "breakpoint list --full");
+
+    if (success) {
+      CommandObjectSP break_add_regex_cmd_sp(break_add_regex_cmd_up.release());
+      m_command_dict[std::string(break_add_regex_cmd_sp->GetCommandName())] =
+          break_add_regex_cmd_sp;
     }
   }
 
@@ -1099,13 +1187,14 @@ CommandInterpreter::GetCommandSP(llvm::StringRef cmd_str, bool include_aliases,
       command_sp = pos->second;
   }
 
+  StringList local_matches;
+
   if (!exact && !command_sp) {
     // We will only get into here if we didn't find any exact matches.
 
     CommandObjectSP user_match_sp, user_mw_match_sp, alias_match_sp,
         real_match_sp;
 
-    StringList local_matches;
     if (matches == nullptr)
       matches = &local_matches;
 
@@ -1456,7 +1545,8 @@ bool CommandInterpreter::AliasExists(llvm::StringRef cmd) const {
 }
 
 bool CommandInterpreter::UserCommandExists(llvm::StringRef cmd) const {
-  return m_user_dict.find(cmd) != m_user_dict.end();
+  return llvm::is_contained(m_user_dict, cmd) ||
+         llvm::is_contained(m_user_mw_dict, cmd);
 }
 
 bool CommandInterpreter::UserMultiwordCommandExists(llvm::StringRef cmd) const {
@@ -1551,9 +1641,9 @@ void CommandInterpreter::GetHelp(CommandReturnObject &result,
 
   if (!m_alias_dict.empty() &&
       ((cmd_types & eCommandTypesAliases) == eCommandTypesAliases)) {
-    result.AppendMessageWithFormat(
+    result.AppendMessageWithFormatv(
         "Current command abbreviations "
-        "(type '%shelp command alias' for more info):\n",
+        "(type '{0}help command alias' for more info):",
         GetCommandPrefix());
     result.AppendMessage("");
     max_len = FindLongestCommandWord(m_alias_dict);
@@ -1590,8 +1680,8 @@ void CommandInterpreter::GetHelp(CommandReturnObject &result,
     result.AppendMessage("");
   }
 
-  result.AppendMessageWithFormat(
-      "For more information on any command, type '%shelp <command-name>'.\n",
+  result.AppendMessageWithFormatv(
+      "For more information on any command, type '{0}help <command-name>'.",
       GetCommandPrefix());
 }
 
@@ -2740,8 +2830,8 @@ void CommandInterpreter::HandleCommands(
 
     if (options.GetEchoCommands()) {
       // TODO: Add Stream support.
-      result.AppendMessageWithFormat("%s %s\n",
-                                     m_debugger.GetPrompt().str().c_str(), cmd);
+      result.AppendMessageWithFormatv(
+          "{0} {1}", m_debugger.GetPrompt().str().c_str(), cmd);
     }
 
     CommandReturnObject tmp_result(m_debugger.GetUseColor());
@@ -2802,9 +2892,9 @@ void CommandInterpreter::HandleCommands(
               ": '%s' continued the target.\n",
               (uint64_t)idx + 1, cmd);
         else
-          result.AppendMessageWithFormat("Command #%" PRIu64
-                                         " '%s' continued the target.\n",
-                                         (uint64_t)idx + 1, cmd);
+          result.AppendMessageWithFormatv(
+              "Command #{0} '{1}' continued the target.", (uint64_t)idx + 1,
+              cmd);
 
         result.SetStatus(tmp_result.GetStatus());
         m_debugger.SetAsyncExecution(old_async_execution);
@@ -2822,8 +2912,8 @@ void CommandInterpreter::HandleCommands(
             ": '%s' stopped with a signal or exception.\n",
             (uint64_t)idx + 1, cmd);
       else
-        result.AppendMessageWithFormat(
-            "Command #%" PRIu64 " '%s' stopped with a signal or exception.\n",
+        result.AppendMessageWithFormatv(
+            "Command #{0} '{1}' stopped with a signal or exception.",
             (uint64_t)idx + 1, cmd);
 
       result.SetStatus(tmp_result.GetStatus());
@@ -3302,7 +3392,7 @@ void CommandInterpreter::IOHandlerInputComplete(IOHandler &io_handler,
     OverrideExecutionContext(exe_ctx);
     pushed_exe_ctx = true;
   }
-  auto finalize = llvm::make_scope_exit([this, pushed_exe_ctx]() {
+  llvm::scope_exit finalize([this, pushed_exe_ctx]() {
     if (pushed_exe_ctx)
       RestoreExecutionContext();
   });
@@ -3462,8 +3552,8 @@ bool CommandInterpreter::SaveTranscript(
                      "Bytes written do not match transcript size.");
 
   result.SetStatus(eReturnStatusSuccessFinishNoResult);
-  result.AppendMessageWithFormat("Session's transcripts saved to %s\n",
-                                 output_file->c_str());
+  result.AppendMessageWithFormatv("Session's transcripts saved to {0}",
+                                  output_file->c_str());
   if (!GetSaveTranscript())
     result.AppendError(
         "Note: the setting interpreter.save-transcript is set to false, so the "
@@ -3702,13 +3792,11 @@ CommandInterpreter::ResolveCommandImpl(std::string &command_line,
           done = static_cast<bool>(cmd_obj);
         } else {
           StreamString error_msg;
-          error_msg.Printf("Ambiguous command '%s'. Possible matches:\n",
+          error_msg.Printf("ambiguous command '%s'. Possible matches:\n",
                            next_word.c_str());
-
-          for (uint32_t i = 0; i < num_matches; ++i) {
+          for (uint32_t i = 0; i < num_matches; ++i)
             error_msg.Printf("\t%s\n", matches.GetStringAtIndex(i));
-          }
-          result.AppendRawError(error_msg.GetString());
+          result.AppendError(error_msg.GetString());
         }
       } else {
         // We didn't have only one match, otherwise we wouldn't get here.

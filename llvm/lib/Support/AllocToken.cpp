@@ -28,6 +28,20 @@ llvm::getAllocTokenModeFromString(StringRef Name) {
       .Default(std::nullopt);
 }
 
+StringRef llvm::getAllocTokenModeAsString(AllocTokenMode Mode) {
+  switch (Mode) {
+  case AllocTokenMode::Increment:
+    return "increment";
+  case AllocTokenMode::Random:
+    return "random";
+  case AllocTokenMode::TypeHash:
+    return "typehash";
+  case AllocTokenMode::TypeHashPointerSplit:
+    return "typehashpointersplit";
+  }
+  llvm_unreachable("Unknown AllocTokenMode");
+}
+
 static uint64_t getStableHash(const AllocTokenMetadata &Metadata,
                               uint64_t MaxTokens) {
   return getStableSipHash(Metadata.TypeName) % MaxTokens;

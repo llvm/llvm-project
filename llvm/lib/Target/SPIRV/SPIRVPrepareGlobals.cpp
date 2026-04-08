@@ -6,8 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// The pass transforms IR globals that cannot be trivially mapped to SPIRV
-// into something that is trival to lower.
+// The pass:
+//   - transforms IR globals that cannot be trivially mapped to SPIRV into
+//     something that is trival to lower;
+//   - for AMDGCN flavoured SPIRV, it assigns unique IDs to the specialisation
+//     constants associated with feature predicates, which were inserted by the
+//     FE when expanding calls to __builtin_amdgcn_processor_is or
+//     __builtin_amdgcn_is_invocable
 //
 //===----------------------------------------------------------------------===//
 
@@ -15,7 +20,16 @@
 #include "SPIRVUtils.h"
 
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringMap.h"
+#include "llvm/IR/IntrinsicsSPIRV.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Support/Debug.h"
+
+#include <climits>
+#include <string>
+
+#define DEBUG_TYPE "spirv-prepare-globals"
 
 using namespace llvm;
 
@@ -32,62 +46,103 @@ struct SPIRVPrepareGlobals : public ModulePass {
   bool runOnModule(Module &M) override;
 };
 
-bool tryExtendLLVMBitcodeMarker(GlobalVariable &Bitcode) {
-  assert(Bitcode.getName() == "llvm.embedded.module");
-
-  ArrayType *AT = cast<ArrayType>(Bitcode.getValueType());
-  if (AT->getNumElements() != 0)
+// The backend does not support GlobalAlias. Replace aliases with their aliasees
+// when possible and remove them from the module.
+bool tryReplaceAliasWithAliasee(GlobalAlias &GA) {
+  // According to the lang ref, aliases cannot be replaced if either the alias
+  // or the aliasee are interposable. We only replace in the case that both
+  // are not interposable.
+  if (GA.isInterposable()) {
+    LLVM_DEBUG(dbgs() << "Skipping interposable alias: " << GA.getName()
+                      << "\n");
     return false;
+  }
 
-  ArrayType *AT1 = ArrayType::get(AT->getElementType(), 1);
-  Constant *OneEltInit = Constant::getNullValue(AT1);
-  Bitcode.replaceInitializer(OneEltInit);
+  auto *AO = dyn_cast<GlobalObject>(GA.getAliasee());
+  if (!AO) {
+    LLVM_DEBUG(dbgs() << "Skipping alias whose aliasee is not a GlobalObject: "
+                      << GA.getName() << "\n");
+    return false;
+  }
+
+  if (AO->isInterposable()) {
+    LLVM_DEBUG(dbgs() << "Skipping interposable aliasee: " << AO->getName()
+                      << "\n");
+    return false;
+  }
+
+  LLVM_DEBUG(dbgs() << "Replacing alias " << GA.getName()
+                    << " with aliasee: " << AO->getName() << "\n");
+
+  GA.replaceAllUsesWith(AO);
+  if (GA.isDiscardableIfUnused()) {
+    GA.eraseFromParent();
+  }
+
   return true;
 }
 
-// In HIP, dynamic LDS variables are represented using 0-element global arrays
-// in the __shared__ language address-space.
-//
-//  extern __shared__ int LDS[];
-//
-// These are not representable in SPIRV directly.
-// To represent them, for AMD, we use an array with UINT32_MAX-elements.
-// These are reverse translated to 0-element arrays.
-bool tryExtendDynamicLDSGlobal(GlobalVariable &GV) {
-  constexpr unsigned WorkgroupAS =
-      storageClassToAddressSpace(SPIRV::StorageClass::Workgroup);
-  const bool IsWorkgroupExternal =
-      GV.hasExternalLinkage() && GV.getAddressSpace() == WorkgroupAS;
-  if (!IsWorkgroupExternal)
+bool tryAssignPredicateSpecConstIDs(Module &M, Function *F) {
+  StringMap<unsigned> IDs;
+  for (auto &&U : F->users()) {
+    auto *CI = dyn_cast<CallInst>(U);
+    if (!CI)
+      continue;
+
+    auto *SpecID = dyn_cast<ConstantInt>(CI->getArgOperand(0));
+    if (!SpecID)
+      continue;
+
+    unsigned ID = SpecID->getZExtValue();
+    if (ID != UINT32_MAX)
+      continue;
+
+    // Replace placeholder Specialisation Constant IDs with unique IDs
+    // associated with the predicate being evaluated, which is encoded via
+    // spv_assign_name.
+    auto *MD =
+        cast<MDNode>(cast<MetadataAsValue>(CI->getOperand(2))->getMetadata());
+    auto *P = cast<MDString>(MD->getOperand(0));
+
+    ID = IDs.try_emplace(P->getString(), IDs.size()).first->second;
+    CI->setArgOperand(0, ConstantInt::get(CI->getArgOperand(0)->getType(), ID));
+  }
+
+  if (IDs.empty())
     return false;
 
-  const ArrayType *AT = dyn_cast<ArrayType>(GV.getValueType());
-  if (!AT || AT->getNumElements() != 0)
-    return false;
+  // Store the predicate -> ID mapping as a fixed format string
+  // (predicate ID\0...), for later use during SPIR-V consumption.
+  std::string Tmp;
+  for (auto &&[Predicate, SpecID] : IDs)
+    Tmp.append(Predicate).append(" ").append(utostr(SpecID)).push_back('\0');
 
-  constexpr auto UInt32Max = std::numeric_limits<uint32_t>::max();
-  ArrayType *NewAT = ArrayType::get(AT->getElementType(), UInt32Max);
-  GlobalVariable *NewGV = new GlobalVariable(
-      *GV.getParent(), NewAT, GV.isConstant(), GV.getLinkage(), nullptr, "",
-      &GV, GV.getThreadLocalMode(), WorkgroupAS, GV.isExternallyInitialized());
-  NewGV->takeName(&GV);
-  GV.replaceAllUsesWith(NewGV);
-  GV.eraseFromParent();
+  Constant *PredSpecIDStr =
+      ConstantDataArray::getString(M.getContext(), Tmp, false);
+
+  new GlobalVariable(M, PredSpecIDStr->getType(), true,
+                     GlobalVariable::LinkageTypes::ExternalLinkage,
+                     PredSpecIDStr, "llvm.amdgcn.feature.predicate.ids");
 
   return true;
 }
 
 bool SPIRVPrepareGlobals::runOnModule(Module &M) {
-  const bool IsAMD = M.getTargetTriple().getVendor() == Triple::AMD;
-  if (!IsAMD)
-    return false;
-
   bool Changed = false;
-  if (GlobalVariable *Bitcode = M.getNamedGlobal("llvm.embedded.module"))
-    Changed |= tryExtendLLVMBitcodeMarker(*Bitcode);
 
-  for (GlobalVariable &GV : make_early_inc_range(M.globals()))
-    Changed |= tryExtendDynamicLDSGlobal(GV);
+  for (GlobalAlias &GA : make_early_inc_range(M.aliases())) {
+    Changed |= tryReplaceAliasWithAliasee(GA);
+  }
+
+  if (M.getTargetTriple().getVendor() != Triple::AMD)
+    return Changed;
+
+  // TODO: Currently, for AMDGCN flavoured SPIR-V, the symbol can only be
+  //       inserted via feature predicate use, but in the future this will need
+  //       revisiting if we start making more liberal use of the intrinsic.
+  if (Function *F = Intrinsic::getDeclarationIfExists(
+          &M, Intrinsic::spv_named_boolean_spec_constant))
+    Changed |= tryAssignPredicateSpecConstIDs(M, F);
 
   return Changed;
 }

@@ -256,8 +256,6 @@ bb7:                                              ; preds = %bb2
   ret void
 }
 
-declare i32 @llvm.ctpop.i32(i32)
-
 define void @test6(i32 signext %arg, i32 signext %arg1) nounwind {
 ; CHECK-LABEL: test6:
 ; CHECK:       # %bb.0: # %bb
@@ -409,8 +407,6 @@ bb2:                                              ; preds = %bb2, %bb
 bb7:                                              ; preds = %bb2
   ret void
 }
-
-declare i64 @llvm.ctpop.i64(i64)
 
 define void @test8(i32 signext %arg, i32 signext %arg1) nounwind {
 ; CHECK-LABEL: test8:
@@ -714,7 +710,6 @@ bb7:                                              ; preds = %bb2
   %i8 = trunc i64 %i5 to i32
   ret i32 %i8
 }
-
 
 ; int test14(int a, int n) {
 ;   for (int i = 1; i < n; ++i) {
@@ -1323,7 +1318,6 @@ bb2:                                              ; preds = %bb2, %bb
 bb7:                                              ; preds = %bb2
   ret void
 }
-declare i32 @llvm.riscv.sha256sig0(i32)
 
 ; The type promotion of %7 forms a sext_inreg, but %7 and %6 are combined to
 ; form a sh2add. This leaves behind a sext.w that isn't needed.
@@ -1498,8 +1492,6 @@ bb2:                                              ; preds = %bb2, %bb
 bb7:                                              ; preds = %bb2
   ret void
 }
-
-declare i32 @llvm.riscv.vmv.x.s.nxv1i32( <vscale x 1 x i32>)
 
 ; Test that we can look through brev8 in hasAllNBitUsers.
 define signext i32 @test21(i64 %arg1, i64 %arg2, i64 %arg3)  {

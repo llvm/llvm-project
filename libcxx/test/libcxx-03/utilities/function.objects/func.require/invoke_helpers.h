@@ -52,13 +52,7 @@ struct Caster {
     struct apply {
         typedef typename std::remove_reference<T>::type RawType;
         typedef typename QualTag::template apply<RawType>::type CVType;
-#if TEST_STD_VER >= 11
-        typedef typename std::conditional<RValue,
-            CVType&&, CVType&
-        >::type type;
-#else
         typedef CVType& type;
-#endif
     };
 
     template <class T>
@@ -165,21 +159,10 @@ struct DerefPropType {
     template <class Up>
     explicit DerefPropType(Up const& val) : object(val) {}
 
-#if TEST_STD_VER < 11
     To& operator*() { return object; }
     To const& operator*() const { return object; }
     To volatile& operator*() volatile  { return object; }
     To const volatile& operator*() const volatile { return object; }
-#else
-    To& operator*() & { return object; }
-    To const& operator*() const & { return object; }
-    To volatile& operator*() volatile  & { return object; }
-    To const volatile& operator*() const volatile & { return object; }
-    To&& operator*() && { return static_cast<To &&>(object); }
-    To const&& operator*() const && { return static_cast<To const&&>(object); }
-    To volatile&& operator*() volatile  && { return static_cast<To volatile&&>(object); }
-    To const volatile&& operator*() const volatile && { return static_cast<To const volatile&&>(object); }
-#endif
 };
 
 //==============================================================================

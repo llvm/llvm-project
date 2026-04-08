@@ -75,11 +75,6 @@ tablegen("AMDGPUGenSDNodeInfo") {
   td_file = "AMDGPU.td"
 }
 
-tablegen("InstCombineTables") {
-  visibility = [ ":LLVMAMDGPUCodeGen" ]
-  args = [ "-gen-searchable-tables" ]
-}
-
 tablegen("R600GenCallingConv") {
   visibility = [ ":LLVMAMDGPUCodeGen" ]
   args = [ "-gen-callingconv" ]
@@ -110,7 +105,6 @@ static_library("LLVMAMDGPUCodeGen") {
     ":AMDGPUGenRegBankGICombiner",
     ":AMDGPUGenRegisterBank",
     ":AMDGPUGenSDNodeInfo",
-    ":InstCombineTables",
     ":R600GenCallingConv",
     ":R600GenDAGISel",
     ":R600GenDFAPacketizer",
@@ -146,6 +140,7 @@ static_library("LLVMAMDGPUCodeGen") {
     "AMDGPUAttributor.cpp",
     "AMDGPUBarrierLatency.cpp",
     "AMDGPUCallLowering.cpp",
+    "AMDGPUCoExecSchedStrategy.cpp",
     "AMDGPUCodeGenPrepare.cpp",
     "AMDGPUCombinerHelper.cpp",
     "AMDGPUCtorDtorLowering.cpp",
@@ -155,6 +150,7 @@ static_library("LLVMAMDGPUCodeGen") {
     "AMDGPUGlobalISelDivergenceLowering.cpp",
     "AMDGPUGlobalISelUtils.cpp",
     "AMDGPUHSAMetadataStreamer.cpp",
+    "AMDGPUHazardLatency.cpp",
     "AMDGPUIGroupLP.cpp",
     "AMDGPUISelDAGToDAG.cpp",
     "AMDGPUISelLowering.cpp",
@@ -177,7 +173,7 @@ static_library("LLVMAMDGPUCodeGen") {
     "AMDGPUMCInstLower.cpp",
     "AMDGPUMCResourceInfo.cpp",
     "AMDGPUMIRFormatter.cpp",
-    "AMDGPUMachineFunction.cpp",
+    "AMDGPUMachineFunctionInfo.cpp",
     "AMDGPUMachineModuleInfo.cpp",
     "AMDGPUMacroFusion.cpp",
     "AMDGPUMarkLastScratchLoad.cpp",

@@ -10,6 +10,7 @@ from lldbsuite.test.decorators import *
 
 
 @skipIfRemote
+@skipIfWindows
 @add_test_categories(["pexpect"])
 class PExpectTest(TestBase):
     NO_DEBUG_INFO_TESTCASE = True

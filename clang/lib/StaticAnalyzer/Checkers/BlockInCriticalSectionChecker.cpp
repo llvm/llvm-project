@@ -214,7 +214,7 @@ public:
 
 class BlockInCriticalSectionChecker : public Checker<check::PostCall> {
 private:
-  const std::array<MutexDescriptor, 8> MutexDescriptors{
+  const std::array<MutexDescriptor, 9> MutexDescriptors{
       // NOTE: There are standard library implementations where some methods
       // of `std::mutex` are inherited from an implementation detail base
       // class, and those aren't matched by the name specification {"std",
@@ -238,7 +238,8 @@ private:
       FirstArgMutexDescriptor({CDM::CLibrary, {"mtx_timedlock"}, 1},
                               {CDM::CLibrary, {"mtx_unlock"}, 1}),
       RAIIMutexDescriptor("lock_guard"),
-      RAIIMutexDescriptor("unique_lock")};
+      RAIIMutexDescriptor("unique_lock"),
+      RAIIMutexDescriptor("scoped_lock")};
 
   const CallDescriptionSet BlockingFunctions{{CDM::CLibrary, {"sleep"}},
                                              {CDM::CLibrary, {"getc"}},

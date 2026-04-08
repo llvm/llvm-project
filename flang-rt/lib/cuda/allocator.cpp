@@ -19,8 +19,6 @@
 #include "flang/Runtime/CUDA/common.h"
 #include "flang/Support/Fortran.h"
 
-#include "cuda_runtime.h"
-
 namespace Fortran::runtime::cuda {
 
 struct DeviceAllocation {
@@ -121,6 +119,15 @@ static void eraseAllocation(int pos) {
   --numDeviceAllocations;
 }
 
+void CUFResetStream(cudaStream_t stream) {
+  CriticalSection critical{lock};
+  for (int i = 0; i < numDeviceAllocations; ++i) {
+    if (deviceAllocations[i].stream == stream) {
+      deviceAllocations[i].stream = nullptr;
+    }
+  }
+}
+
 extern "C" {
 
 void RTDEF(CUFRegisterAllocator)() {
@@ -132,6 +139,28 @@ void RTDEF(CUFRegisterAllocator)() {
       kManagedAllocatorPos, {&CUFAllocManaged, CUFFreeManaged});
   allocatorRegistry.Register(
       kUnifiedAllocatorPos, {&CUFAllocUnified, CUFFreeUnified});
+}
+
+cudaStream_t RTDECL(CUFGetAssociatedStream)(void *p) {
+  int pos = findAllocation(p);
+  if (pos >= 0) {
+    cudaStream_t stream = deviceAllocations[pos].stream;
+    return stream;
+  }
+  return nullptr;
+}
+
+int RTDECL(CUFSetAssociatedStream)(void *p, cudaStream_t stream) {
+  if (p == nullptr) {
+    return StatBaseNull;
+  }
+  int pos = findAllocation(p);
+  if (pos >= 0) {
+    deviceAllocations[pos].stream = stream;
+  } else {
+    insertAllocation(p, 0, stream);
+  }
+  return StatOk;
 }
 }
 

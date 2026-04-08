@@ -307,6 +307,24 @@ TEST(MapVectorTest, AtTest) {
   EXPECT_EQ(ConstMV.at(1), 12);
 }
 
+TEST(MapVectorTest, KeysValuesIterator) {
+  MapVector<int, int> MV;
+
+  MV.insert(std::make_pair(1, 11));
+  MV.insert(std::make_pair(2, 12));
+  MV.insert(std::make_pair(3, 13));
+  MV.insert(std::make_pair(4, 14));
+  MV.insert(std::make_pair(5, 15));
+  MV.insert(std::make_pair(6, 16));
+
+  EXPECT_THAT(MV.keys(), testing::ElementsAre(1, 2, 3, 4, 5, 6));
+  EXPECT_THAT(MV.values(), testing::ElementsAre(11, 12, 13, 14, 15, 16));
+
+  const MapVector<int, int> &ConstMV = MV;
+  EXPECT_THAT(ConstMV.keys(), testing::ElementsAre(1, 2, 3, 4, 5, 6));
+  EXPECT_THAT(ConstMV.values(), testing::ElementsAre(11, 12, 13, 14, 15, 16));
+}
+
 template <class IntType> struct MapVectorMappedTypeTest : ::testing::Test {
   using int_type = IntType;
 };

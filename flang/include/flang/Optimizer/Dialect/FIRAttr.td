@@ -14,6 +14,7 @@
 #define FIR_DIALECT_FIR_ATTRS
 
 include "flang/Optimizer/Dialect/FIRDialect.td"
+include "mlir/Dialect/OpenACC/OpenACCAttributes.td"
 include "mlir/IR/EnumAttr.td"
 
 class fir_Attr<string name> : AttrDef<FIROpsDialect, name>;
@@ -36,13 +37,17 @@ def FIRvolatile     : I32BitEnumAttrCaseBit<"fortran_volatile", 12, "volatile">;
 def FIRHostAssoc    : I32BitEnumAttrCaseBit<"host_assoc", 13>;
 // Used inside parent procedure to flag variables host associated in internal procedure.
 def FIRInternalAssoc    : I32BitEnumAttrCaseBit<"internal_assoc", 14>;
+// Used by alias analysis
+def FIRcray_pointer : I32BitEnumAttrCaseBit<"cray_pointer", 15>;
+def FIRcray_pointee : I32BitEnumAttrCaseBit<"cray_pointee", 16>;
 
 def fir_FortranVariableFlagsEnum : I32BitEnumAttr<
     "FortranVariableFlagsEnum",
     "Fortran variable attributes",
     [FIRnoAttributes, FIRallocatable, FIRasynchronous, FIRbind_c, FIRcontiguous,
      FIRintent_in, FIRintent_inout, FIRintent_out, FIRoptional, FIRparameter,
-     FIRpointer, FIRtarget, FIRvalue, FIRvolatile, FIRHostAssoc, FIRInternalAssoc]> {
+     FIRpointer, FIRtarget, FIRvalue, FIRvolatile, FIRHostAssoc, FIRInternalAssoc,
+     FIRcray_pointer, FIRcray_pointee]> {
   let separator = ", ";
   let cppNamespace = "::fir";
   let printBitEnumPrimaryGroups = 1;
@@ -73,12 +78,14 @@ def FIRfuncPure          : I32BitEnumAttrCaseBit<"pure", 1>;
 def FIRfuncNonRecursive  : I32BitEnumAttrCaseBit<"non_recursive", 2>;
 def FIRfuncSimple        : I32BitEnumAttrCaseBit<"simple", 3>;
 def FIRfuncBind_c        : I32BitEnumAttrCaseBit<"bind_c", 4>;
+def FIRfuncRecursive : I32BitEnumAttrCaseBit<"recursive", 5>;
 
-def fir_FortranProcedureFlagsEnum : I32BitEnumAttr<
-    "FortranProcedureFlagsEnum",
-    "Fortran procedure attributes",
-    [FIRfuncNoAttributes, FIRfuncElemental, FIRfuncPure, FIRfuncNonRecursive,
-     FIRfuncSimple, FIRfuncBind_c]> {
+def fir_FortranProcedureFlagsEnum
+    : I32BitEnumAttr<"FortranProcedureFlagsEnum",
+                     "Fortran procedure attributes",
+                     [FIRfuncNoAttributes, FIRfuncElemental, FIRfuncPure,
+                      FIRfuncNonRecursive, FIRfuncSimple, FIRfuncBind_c,
+                      FIRfuncRecursive]> {
   let separator = ", ";
   let cppNamespace = "::fir";
   let genSpecializedAttr = 0;
@@ -239,4 +246,33 @@ def fir_FortranInlineAttr
     : EnumAttr<FIROpsDialect, fir_FortranInlineEnum, "inline_attrs"> {
   let assemblyFormat = "`<` $value `>`";
 }
+
+// USE statement rename mapping: local_name => use_name
+def fir_UseRenameAttr : fir_Attr<"UseRename"> {
+  let mnemonic = "use_rename";
+  let summary = "Represents a rename in a Fortran USE statement";
+  let description = [{
+    This attribute stores the mapping for a renamed symbol in a USE statement.
+    For example, in "USE mod, local_var => module_var", this stores the
+    local name and a symbol reference to the module variable.
+  }];
+
+  let parameters = (ins "mlir::StringAttr":$local_name,
+      "mlir::FlatSymbolRefAttr":$symbol);
+
+  let assemblyFormat = "`<` $local_name `,` $symbol `>`";
+}
+
+// Fortran-specific variable information for OpenACC.
+// Carries metadata that cannot be recovered from the FIR type system alone
+// and is required in the FIR implementation of OpenACC type interfaces.
+def fir_OpenACCFortranVariableInfoAttr
+    : AttrDef<FIROpsDialect, "OpenACCFortranVariableInfo",
+              [OpenACC_IsVariableInfoAttr],
+              "::mlir::acc::VariableInfoAttr"> {
+  let mnemonic = "acc_var_info";
+  let parameters = (ins "bool":$mayBeOptional);
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
 #endif // FIR_DIALECT_FIR_ATTRS

@@ -165,6 +165,8 @@ public:
   static Language *FindPlugin(lldb::LanguageType language,
                               llvm::StringRef file_path);
 
+  static llvm::Expected<lldb::LanguageType>
+  GetExceptionLanguageForLanguage(llvm::StringRef lang_name);
   // return false from callback to stop iterating
   static void ForEach(llvm::function_ref<IterationAction(Language *)> callback);
 
@@ -177,8 +179,6 @@ public:
   virtual bool IsTopLevelFunction(Function &function);
 
   virtual bool IsSourceFile(llvm::StringRef file_path) const = 0;
-
-  virtual const Highlighter *GetHighlighter() const { return nullptr; }
 
   virtual lldb::TypeCategoryImplSP GetFormatters();
 

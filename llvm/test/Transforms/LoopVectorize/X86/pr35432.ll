@@ -6,7 +6,7 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-@a = common local_unnamed_addr global [192 x [192 x i32]] zeroinitializer, align 16
+@a = common global [192 x [192 x i32]] zeroinitializer, align 16
 
 define i32 @main(ptr %ptr) {
 ; CHECK-LABEL: @main(
@@ -67,7 +67,7 @@ define i32 @main(ptr %ptr) {
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i32 [[DOTPROMOTED]], [[INDEX]]
 ; CHECK-NEXT:    [[TMP20:%.*]] = add i32 [[OFFSET_IDX]], 1
 ; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr inbounds i32, ptr [[PTR:%.*]], i32 [[TMP20]]
-; CHECK-NEXT:    [[TMP25:%.*]] = getelementptr inbounds i32, ptr [[TMP22]], i32 4
+; CHECK-NEXT:    [[TMP25:%.*]] = getelementptr inbounds i32, ptr [[TMP22]], i64 4
 ; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr [[TMP22]], align 4
 ; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr [[TMP25]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
@@ -178,9 +178,9 @@ for.end12:                                        ; preds = %for.cond.for.end12_
 ; Function Attrs: argmemonly nounwind
 declare void @llvm.lifetime.start.p0(ptr nocapture) #1
 
-declare i32 @goo(...) local_unnamed_addr #2
+declare i32 @goo(...) #2
 
-declare i32 @foo(...) local_unnamed_addr #2
+declare i32 @foo(...) #2
 
 ; Function Attrs: argmemonly nounwind
 declare void @llvm.lifetime.end.p0(ptr nocapture) #1

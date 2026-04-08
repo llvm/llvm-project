@@ -6,3 +6,5 @@ KeepEmptyLines:
   AtStartOfFile: false
 LineEnding: LF
 QualifierAlignment: Left
+RemoveBracesLLVM: true
+RemoveSemicolon: true

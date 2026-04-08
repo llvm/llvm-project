@@ -75,6 +75,28 @@ TEST_F(OpenACCOpsInterfacesTest, GlobalVariableOpInterfaceConstant) {
   EXPECT_TRUE(globalVarIface.isConstant());
 }
 
+TEST_F(OpenACCOpsInterfacesTest, GlobalVariableOpInterfaceInitRegion) {
+  // Test that memref::GlobalOp returns nullptr for getInitRegion()
+  // since it uses attributes for initialization, not regions
+
+  auto memrefType = MemRefType::get({10}, builder.getF32Type());
+  OwningOpRef<memref::GlobalOp> globalOp = memref::GlobalOp::create(
+      builder, loc,
+      /*sym_name=*/builder.getStringAttr("test_global"),
+      /*sym_visibility=*/builder.getStringAttr("private"),
+      /*type=*/TypeAttr::get(memrefType),
+      /*initial_value=*/Attribute(),
+      /*constant=*/UnitAttr(),
+      /*alignment=*/IntegerAttr());
+
+  auto globalVarIface =
+      dyn_cast<GlobalVariableOpInterface>(globalOp->getOperation());
+  ASSERT_TRUE(globalVarIface != nullptr);
+
+  // memref::GlobalOp doesn't have regions for initialization
+  EXPECT_EQ(globalVarIface.getInitRegion(), nullptr);
+}
+
 //===----------------------------------------------------------------------===//
 // AddressOfGlobalOpInterface Tests
 //===----------------------------------------------------------------------===//

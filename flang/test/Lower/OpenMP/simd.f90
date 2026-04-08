@@ -1,8 +1,11 @@
 ! Tests for 2.9.3.1 Simd
 
 ! The "if" clause was added to the "simd" directive in OpenMP 5.0.
-! RUN: %flang_fc1 -flang-experimental-hlfir -emit-hlfir -fopenmp -fopenmp-version=50 %s -o - | FileCheck %s
-! RUN: bbc -hlfir -emit-hlfir -fopenmp -fopenmp-version=50 %s -o - | FileCheck %s
+
+! To prevent testing for unrelated clauses like implicit linear clause and focusing on the
+! clauses of interest here, the OpenMP version is 6.0
+! RUN: %flang_fc1 -flang-experimental-hlfir -emit-hlfir -fopenmp -fopenmp-version=60 %s -o - | FileCheck %s
+! RUN: bbc -hlfir -emit-hlfir -fopenmp -fopenmp-version=60 %s -o - | FileCheck %s
 
 !CHECK: omp.declare_reduction @[[REDUCER:.*]] : i32
 
@@ -270,7 +273,7 @@ subroutine lastprivate_with_simd
   integer :: i
   real :: sum
 
-  
+
 !CHECK: omp.simd private(@_QFlastprivate_with_simdEsum_private_f32 %[[VAR_SUM_DECLARE]]#0 -> %[[VAR_SUM_PINNED:.*]], @{{.*}}) {
 !CHECK: omp.loop_nest (%[[ARG:.*]]) : i32 = ({{.*}} to ({{.*}}) inclusive step ({{.*}}) {
 !CHECK: %[[VAR_SUM_PINNED_DECLARE:.*]]:2 = hlfir.declare %[[VAR_SUM_PINNED]] {{.*}}

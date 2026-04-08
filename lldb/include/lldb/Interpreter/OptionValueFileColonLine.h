@@ -41,6 +41,10 @@ public:
     m_column_number = LLDB_INVALID_COLUMN_NUMBER;
   }
 
+  void SetFile(const FileSpec &file_spec) { m_file_spec = file_spec; }
+  void SetLine(uint32_t line) { m_line_number = line; }
+  void SetColumn(uint32_t column) { m_column_number = column; }
+
   void AutoComplete(CommandInterpreter &interpreter,
                     CompletionRequest &request) override;
 

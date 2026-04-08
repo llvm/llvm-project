@@ -1070,29 +1070,6 @@ define double @test_fmax_f64(double %a0, double %a1, double %a2, double %a3) {
   ret double %t2
 }
 
-declare i8 @llvm.umin.i8(i8 %a, i8 %b)
-declare i16 @llvm.umin.i16(i16 %a, i16 %b)
-declare i32 @llvm.umin.i32(i32 %a, i32 %b)
-declare i64 @llvm.umin.i64(i64 %a, i64 %b)
-declare i8 @llvm.smin.i8(i8 %a, i8 %b)
-declare i16 @llvm.smin.i16(i16 %a, i16 %b)
-declare i32 @llvm.smin.i32(i32 %a, i32 %b)
-declare i64 @llvm.smin.i64(i64 %a, i64 %b)
-declare i8 @llvm.umax.i8(i8 %a, i8 %b)
-declare i16 @llvm.umax.i16(i16 %a, i16 %b)
-declare i32 @llvm.umax.i32(i32 %a, i32 %b)
-declare i64 @llvm.umax.i64(i64 %a, i64 %b)
-declare i8 @llvm.smax.i8(i8 %a, i8 %b)
-declare i16 @llvm.smax.i16(i16 %a, i16 %b)
-declare i32 @llvm.smax.i32(i32 %a, i32 %b)
-declare i64 @llvm.smax.i64(i64 %a, i64 %b)
-declare half @llvm.minnum.f16(half, half)
-declare float @llvm.minnum.f32(float, float)
-declare double @llvm.minnum.f64(double, double)
-declare half @llvm.maxnum.f16(half, half)
-declare float @llvm.maxnum.f32(float, float)
-declare double @llvm.maxnum.f64(double, double)
-
 define double @test_fmadd_strategy(double %a0, double %a1, double %a2, double %a3, i64 %flag) {
 ; CHECK-LABEL: test_fmadd_strategy:
 ; CHECK:       # %bb.0: # %entry

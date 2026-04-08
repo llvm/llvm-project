@@ -29,8 +29,16 @@ Non-comprehensive list of changes in this release
 ELF Improvements
 ----------------
 
-* ``--print-gc-sections=<file>`` prints garbage collection section listing to a file.
-  (`#159706 <https://github.com/llvm/llvm-project/pull/159706>`_)
+* Added ``--bp-compression-sort-section=<glob>[=<layout_priority>[=<match_priority>]]``,
+  replacing the old coarse ``--bp-compression-sort`` modes with a way to split
+  input sections into multiple compression groups, run balanced partitioning
+  independently per group, and leave out sections that are poor candidates for
+  BP.
+  ``layout_priority`` controls group placement order (lower value = placed
+  first, default 0). ``match_priority`` resolves conflicts when multiple globs
+  match the same section (lower value = higher priority; explicit priority
+  beats positional last-match-wins; default: positional). In ELF, the glob
+  matches input section names (e.g. ``.text.unlikely.code1``).
 
 Breaking changes
 ----------------
@@ -44,16 +52,12 @@ MinGW Improvements
 MachO Improvements
 ------------------
 
-* ``--separate-cstring-literal-sections`` emits cstring literal sections into sections defined by their section name.
-  (`#158720 <https://github.com/llvm/llvm-project/pull/158720>`_)
-* ``--tail-merge-strings`` enables tail merging of cstring literals.
-  (`#161262 <https://github.com/llvm/llvm-project/pull/161262>`_)
+* ``--bp-compression-sort-section`` now accepts optional layout and match
+  priorities (same syntax as ELF). In Mach-O, the glob matches the
+  concatenated segment+section name (e.g. ``__TEXT__text``).
 
 WebAssembly Improvements
 ------------------------
-
-* The ``--stack-first`` flag is now enabled by default. The old
-  behavior can be enabled using ``--no-stack-first``.
 
 Fixes
 #####

@@ -29,6 +29,8 @@ struct CUDAIntrinsicLibrary : IntrinsicLibrary {
   template <int extent>
   fir::ExtendedValue genAtomicAddVector(mlir::Type,
                                         llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genAtomicAddVector4x4(mlir::Type,
+                                           llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genAtomicAnd(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genAtomicCas(mlir::Type,
                                   llvm::ArrayRef<fir::ExtendedValue>);
@@ -49,6 +51,22 @@ struct CUDAIntrinsicLibrary : IntrinsicLibrary {
   mlir::Value genBarrierTryWaitSleep(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genClusterBlockIndex(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genClusterDimBlocks(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  fir::ExtendedValue
+      genCUDASetDefaultStream(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue
+      genCUDASetDefaultStreamArray(mlir::Type,
+                                   llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue
+      genCUDAGetDefaultStreamArg(mlir::Type,
+                                 llvm::ArrayRef<fir::ExtendedValue>);
+  mlir::Value genCUDAGetDefaultStreamNull(mlir::Type,
+                                          llvm::ArrayRef<mlir::Value>);
+  fir::ExtendedValue
+      genCUDAStreamSynchronize(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  mlir::Value genCUDAStreamSynchronizeNull(mlir::Type,
+                                           llvm::ArrayRef<mlir::Value>);
+  fir::ExtendedValue genCUDAStreamDestroy(mlir::Type,
+                                          llvm::ArrayRef<fir::ExtendedValue>);
   void genFenceProxyAsync(llvm::ArrayRef<fir::ExtendedValue>);
   template <const char *fctName, int extent>
   fir::ExtendedValue genLDXXFunc(mlir::Type,

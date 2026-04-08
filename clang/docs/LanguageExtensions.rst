@@ -839,23 +839,23 @@ of different sizes and signs is forbidden in binary and ternary builtins.
  T __builtin_elementwise_copysign(T x, T y)     return the magnitude of x with the sign of y.                          floating point types
  T __builtin_elementwise_fmod(T x, T y)         return the floating-point remainder of (x/y) whose sign                floating point types
                                                 matches the sign of x.
- T __builtin_elementwise_max(T x, T y)          return x or y, whichever is larger                                     integer and floating point types
-                                                For floating point types, follows semantics of maxNum
+ T __builtin_elementwise_max(T x, T y)          return x or y, whichever is larger                                     integer
+                                                For floating point types, follows semantics of maxNum                  floating point types (deprecated)
                                                 in IEEE 754-2008. See `LangRef
-                                                <http://llvm.org/docs/LangRef.html#llvm-min-intrinsics-comparation>`_
+                                                <http://llvm.org/docs/LangRef.html#i-fminmax-family>`_
                                                 for the comparison.
- T __builtin_elementwise_min(T x, T y)          return x or y, whichever is smaller                                    integer and floating point types
-                                                For floating point types, follows semantics of minNum
+ T __builtin_elementwise_min(T x, T y)          return x or y, whichever is smaller                                    integer
+                                                For floating point types, follows semantics of minNum                  floating point types (deprecated)
                                                 in IEEE 754-2008. See `LangRef
-                                                <http://llvm.org/docs/LangRef.html#llvm-min-intrinsics-comparation>`_
+                                                <http://llvm.org/docs/LangRef.html#i-fminmax-family>`_
                                                 for the comparison.
  T __builtin_elementwise_maxnum(T x, T y)       return x or y, whichever is larger. Follows IEEE 754-2008              floating point types
                                                 semantics (maxNum) with +0.0>-0.0. See `LangRef
-                                                <http://llvm.org/docs/LangRef.html#llvm-min-intrinsics-comparation>`_
+                                                <http://llvm.org/docs/LangRef.html#i-fminmax-family>`_
                                                 for the comparison.
  T __builtin_elementwise_minnum(T x, T y)       return x or y, whichever is smaller. Follows IEEE 754-2008             floating point types
                                                 semantics (minNum) with +0.0>-0.0. See `LangRef
-                                                <http://llvm.org/docs/LangRef.html#llvm-min-intrinsics-comparation>`_
+                                                <http://llvm.org/docs/LangRef.html#i-fminmax-family>`_
                                                 for the comparison.
  T __builtin_elementwise_add_sat(T x, T y)      return the sum of x and y, clamped to the range of                     integer types
                                                 representable values for the signed/unsigned integer type.
@@ -863,19 +863,19 @@ of different sizes and signs is forbidden in binary and ternary builtins.
                                                 representable values for the signed/unsigned integer type.
  T __builtin_elementwise_maximum(T x, T y)      return x or y, whichever is larger. Follows IEEE 754-2019              floating point types
                                                 semantics, see `LangRef
-                                                <http://llvm.org/docs/LangRef.html#llvm-min-intrinsics-comparation>`_
+                                                <http://llvm.org/docs/LangRef.html#i-fminmax-family>`_
                                                 for the comparison.
  T __builtin_elementwise_minimum(T x, T y)      return x or y, whichever is smaller. Follows IEEE 754-2019             floating point types
                                                 semantics, see `LangRef
-                                                <http://llvm.org/docs/LangRef.html#llvm-min-intrinsics-comparation>`_
+                                                <http://llvm.org/docs/LangRef.html#i-fminmax-family>`_
                                                 for the comparison.
  T __builtin_elementwise_maximumnum(T x, T y)   return x or y, whichever is larger. Follows IEEE 754-2019              floating point types
                                                 semantics, see `LangRef
-                                                <http://llvm.org/docs/LangRef.html#llvm-min-intrinsics-comparation>`_
+                                                <http://llvm.org/docs/LangRef.html#i-fminmax-family>`_
                                                 for the comparison.
  T __builtin_elementwise_minimumnum(T x, T y)   return x or y, whichever is smaller. Follows IEEE 754-2019             floating point types
                                                 semantics, see `LangRef
-                                                <http://llvm.org/docs/LangRef.html#llvm-min-intrinsics-comparation>`_
+                                                <http://llvm.org/docs/LangRef.html#i-fminmax-family>`_
                                                 for the comparison.
 T __builtin_elementwise_fshl(T x, T y, T z)     perform a funnel shift left. Concatenate x and y (x is the most        integer types
                                                 significant bits of the wide value), the combined value is shifted
@@ -926,27 +926,31 @@ Example:
 
 Let ``VT`` be a vector type and ``ET`` the element type of ``VT``.
 
-======================================= ====================================================================== ==================================
-         Name                            Operation                                                              Supported element types
-======================================= ====================================================================== ==================================
- ET __builtin_reduce_max(VT a)           return the largest element of the vector. The floating point result    integer and floating point types
-                                         will always be a number unless all elements of the vector are NaN.
- ET __builtin_reduce_min(VT a)           return the smallest element of the vector. The floating point result   integer and floating point types
-                                         will always be a number unless all elements of the vector are NaN.
- ET __builtin_reduce_add(VT a)           \+                                                                     integer types
- ET __builtin_reduce_mul(VT a)           \*                                                                     integer types
- ET __builtin_reduce_and(VT a)           &                                                                      integer types
- ET __builtin_reduce_or(VT a)            \|                                                                     integer types
- ET __builtin_reduce_xor(VT a)           ^                                                                      integer types
- ET __builtin_reduce_maximum(VT a)       return the largest element of the vector. Follows IEEE 754-2019        floating point types
-                                         semantics, see `LangRef
-                                         <http://llvm.org/docs/LangRef.html#llvm-min-intrinsics-comparation>`_
-                                         for the comparison.
- ET __builtin_reduce_minimum(VT a)       return the smallest element of the vector. Follows IEEE 754-2019       floating point types
-                                         semantics, see `LangRef
-                                         <http://llvm.org/docs/LangRef.html#llvm-min-intrinsics-comparation>`_
-                                         for the comparison.
-======================================= ====================================================================== ==================================
+============================================== ====================================================================== ==================================
+         Name                                   Operation                                                              Supported element types
+============================================== ====================================================================== ==================================
+ ET __builtin_reduce_max(VT a)                  return the largest element of the vector. The floating point result    integer and floating point types
+                                                will always be a number unless all elements of the vector are NaN.
+ ET __builtin_reduce_min(VT a)                  return the smallest element of the vector. The floating point result   integer and floating point types
+                                                will always be a number unless all elements of the vector are NaN.
+ ET __builtin_reduce_add(VT a)                  \+                                                                     integer types
+ ET __builtin_reduce_mul(VT a)                  \*                                                                     integer types
+ ET __builtin_reduce_and(VT a)                  &                                                                      integer types
+ ET __builtin_reduce_or(VT a)                   \|                                                                     integer types
+ ET __builtin_reduce_xor(VT a)                  ^                                                                      integer types
+ ET __builtin_reduce_maximum(VT a)              return the largest element of the vector. Follows IEEE 754-2019        floating point types
+                                                semantics, see `LangRef
+                                                <http://llvm.org/docs/LangRef.html#i-fminmax-family>`_
+                                                for the comparison.
+ ET __builtin_reduce_minimum(VT a)              return the smallest element of the vector. Follows IEEE 754-2019       floating point types
+                                                semantics, see `LangRef
+                                                <http://llvm.org/docs/LangRef.html#i-fminmax-family>`_
+                                                for the comparison.
+ ET __builtin_reduce_assoc_fadd(VT a[, ET s])   associative floating-point add reduction.                              floating point types
+ ET __builtin_reduce_in_order_fadd(VT a, ET s)  in order floating-point add reduction, initializing the accumulator    floating point types
+                                                with `(ET)s`, then adding each lane of the `a` in-order, starting
+                                                from lane 0. The additions cannot be reassociated.
+============================================== ====================================================================== ==================================
 
 *Masked Builtins*
 
@@ -975,15 +979,15 @@ Example:
     using v8i = int [[clang::ext_vector_type(8)]];
 
     v8i load(v8b mask, int *ptr) { return __builtin_masked_load(mask, ptr); }
-    
+
     v8i load_expand(v8b mask, int *ptr) {
       return __builtin_masked_expand_load(mask, ptr);
     }
-    
+
     void store(v8b mask, v8i val, int *ptr) {
       __builtin_masked_store(mask, val, ptr);
     }
-    
+
     void store_compress(v8b mask, v8i val, int *ptr) {
       __builtin_masked_compress_store(mask, val, ptr);
     }
@@ -1072,6 +1076,12 @@ The matrix type extension supports explicit casts. Implicit type conversion betw
     i = (matrix_5_5<int>)d;
     i = static_cast<matrix_5_5<int>>(d);
   }
+
+The matrix type extension supports column and row major memory layouts, but not
+all builtins are supported with row-major layout. The layout defaults to column
+major and can be specified using `-fmatrix-memory-layout`. To enable column
+major layout, use `-fmatrix-memory-layout=column-major`, and for row major
+layout use `-fmatrix-memory-layout=row-major`
 
 Half-Precision Floating Point
 =============================
@@ -1186,6 +1196,177 @@ certain library facilities with ``_Float16``; for example, there is no ``printf`
 specifier for ``_Float16``, and (unlike ``float``) it will not be implicitly promoted to
 ``double`` when passed to ``printf``, so the programmer must explicitly cast it to
 ``double`` before using it with an ``%f`` or similar specifier.
+
+Pragmas
+=======
+
+#pragma export
+--------------
+
+Clang supports the export pragma used to indicate an
+external symbol is to be exported from the shared library being built.  The
+syntax for the pragma is:
+
+.. code-block:: c++
+
+  #pragma export (name)
+
+where ``name`` is the name of the external function or variable to be
+exported.  The symbol needs to have external linkage.  The pragma may appear
+before or after the declaration of ``name``, but must precede the
+definition.  The pragma must also appear at file scope.  If ``name`` is not
+defined, the pragma will have no effect.  The pragma needs to be specified
+in the same translation unit as ``name`` is defined.
+
+The pragma has the same effect as adding ``__attribute__((visibility("default")))``
+to the declaration of ``name``.
+
+In C++, the function being exported must be declared as ``extern "C"``.  If the
+function has overloads, the pragma only applies to the overload with ``extern "C"``
+linkage.  For example:
+
+.. code-block:: c++
+
+  #pragma export(func)
+  int func(double) { return 0; }
+  extern "C" int func(int) { return 4;}
+
+In the code above the pragma will export ``func(int)`` but not ``func(double)``.
+
+If none of the overloads are declared with ``extern "C"`` a warning will be
+generated saying the pragma didn't resolve to a declaration.  For example:
+
+.. code-block:: c++
+
+  #pragma export(func)
+  int func(double) { return 0; } // warning: failed to resolve '#pragma export' to a declaration
+
+Overflow behavior types
+=======================
+
+Clang provides an extension that allows developers to annotate integer types
+with explicit overflow behavior. This enables fine-grained control over whether
+arithmetic operations should wrap on overflow (with two's complement semantics)
+or be checked for overflow (trapping or reporting via sanitizers).
+
+This feature is experimental and must be enabled with the ``-cc1`` option
+``-fexperimental-overflow-behavior-types``.
+
+Query for this feature with ``__has_extension(overflow_behavior_types)``.
+
+Syntax
+------
+
+Overflow behavior can be specified using either attribute syntax or keyword
+syntax:
+
+**Attribute syntax:**
+
+.. code-block:: c
+
+  typedef int __attribute__((overflow_behavior(wrap))) wrapping_int;
+  typedef int __attribute__((overflow_behavior(trap))) checked_int;
+
+**Keyword syntax:**
+
+.. code-block:: c
+
+  typedef int __ob_wrap wrapping_int;
+  typedef int __ob_trap checked_int;
+
+The annotation can also be applied directly to variable declarations:
+
+.. code-block:: c
+
+  int __ob_wrap counter = 0;
+  unsigned __ob_trap safe_index = 0;
+
+Semantics
+---------
+
+**wrap behavior:**
+
+When an integer type is annotated with ``wrap`` (or ``__ob_wrap``), arithmetic
+operations on values of that type use two's complement wrapping semantics on
+overflow. This behavior is well-defined regardless of signedness. Compilers
+must not optimize based on the assumption that overflow does not occur.
+
+**trap behavior:**
+
+When an integer type is annotated with ``trap`` (or ``__ob_trap``), arithmetic
+operations on values of that type are checked for overflow. If overflow occurs,
+the program traps or reports via sanitizers (depending on compiler settings).
+
+Integer Promotions and Conversions
+----------------------------------
+
+Overflow behavior types follow standard C integer promotion and conversion
+rules. The overflow behavior annotation is preserved through implicit
+promotions and conversions.
+
+**Standard promotion rules apply:**
+
+Integer literals without a suffix have type ``int`` (or a larger type if the
+value requires it), following normal C rules. When such a literal is used in
+an operation with an overflow behavior type, standard promotion rules determine
+the result type, and the overflow behavior is propagated:
+
+.. code-block:: c
+
+  typedef int __ob_wrap wrap_int;
+  wrap_int x = 100;
+  wrap_int y = x + 1;  // 1 is promoted; result is __ob_wrap int
+
+**Combining different overflow behaviors:**
+
+When operands have different overflow behaviors, ``trap`` takes precedence
+over ``wrap``:
+
+.. code-block:: c
+
+  typedef int __ob_wrap wrap_int;
+  typedef int __ob_trap trap_int;
+  wrap_int a = 1;
+  trap_int b = 2;
+  auto c = a + b;  // Result is __ob_trap int (trap dominates)
+
+**Conversion to standard types:**
+
+When an overflow behavior type is converted to a standard integer type (without
+an overflow behavior annotation), the overflow behavior is discarded. Compilers
+may warn about this:
+
+.. code-block:: c
+
+  typedef int __ob_wrap wrap_int;
+  wrap_int w = 42;
+  int i = w;  // Warning: discards overflow behavior
+
+Interaction with Compiler Flags
+-------------------------------
+
+Overflow behavior annotations take precedence over global compiler flags:
+
+- A ``wrap`` type wraps on overflow even when ``-ftrapv`` is enabled.
+- A ``trap`` type is checked for overflow even when ``-fwrapv`` is enabled.
+
+This allows mixing different overflow behaviors within the same program,
+enabling developers to selectively apply wrapping or checking to specific
+types while using different defaults elsewhere.
+
+Incompatible Assignments
+------------------------
+
+Direct assignment between types with different overflow behaviors (``wrap``
+vs ``trap``) is an error:
+
+.. code-block:: c
+
+  int __ob_wrap w;
+  int __ob_trap t;
+  w = t;  // Error: incompatible overflow behaviors
+
+For more detailed documentation, see :doc:`OverflowBehaviorTypes`.
 
 Messages on ``deprecated`` and ``unavailable`` Attributes
 =========================================================
@@ -2044,8 +2225,6 @@ The following type trait primitives are supported by Clang. Those traits marked
   is trivially relocatable, as defined by the C++26 standard [meta.unary.prop].
   Note that when relocating the caller code should ensure that if the object is polymorphic,
   the dynamic type is of the most derived type. Padding bytes should not be copied.
-* ``__builtin_is_replaceable`` (C++): Returns true if an object
-  is replaceable, as defined by the C++26 standard [meta.unary.prop].
 * ``__is_trivially_equality_comparable`` (Clang): Returns true if comparing two
   objects of the provided type is known to be equivalent to comparing their
   object representations. Note that types containing padding bytes are never
@@ -2420,6 +2599,50 @@ Clang provides support for Microsoft extensions to support enumerations with no 
 
   typedef enum empty { } A;
 
+Microsoft Anonymous Structs and Unions
+--------------------------------------
+
+Clang provides support for a Microsoft extension that allows use of named struct or union types to
+declare anonymous members inside another struct or union, making their fields directly accessible
+from the enclosing type.
+
+For example, consider the following code:
+
+.. code-block:: c
+
+    struct Inner {
+        int x;
+        int y;
+    };
+
+    struct Outer {
+        struct Inner;  /* Microsoft extension: named anonymous struct member */
+    };
+
+    void f(struct Outer *o) {
+        o->x = 1;      /* accesses x member of anonymous member of type Inner directly */
+        o->y = 1;      /* accesses x member of anonymous member of type Inner directly */
+    }
+
+Without this extension, such declarations generate a warning that the declaration does not
+declare anything, the associated member names are not available for access, and the layout
+of types containing such declarations are affected accordingly.
+
+This extension can be controlled independently of other Microsoft extensions:
+
+* ``-fms-anonymous-structs``
+    Enable named anonymous struct/union support
+
+* ``-fno-ms-anonymous-structs``
+    Disable anonymous struct/union support
+
+This extension is also **implicitly enabled** when either of the following options is used:
+
+* ``-fms-extensions``
+* ``-fms-compatibility``
+
+When multiple controlling options are specified, the last option on the command line takes
+precedence.
 
 Interoperability with C++11 lambdas
 -----------------------------------
@@ -2487,8 +2710,9 @@ programming patterns, makes programs more concise, and improves the safety of
 container creation.  There are several feature macros associated with object
 literals and subscripting: ``__has_feature(objc_array_literals)`` tests the
 availability of array literals; ``__has_feature(objc_dictionary_literals)``
-tests the availability of dictionary literals;
-``__has_feature(objc_subscripting)`` tests the availability of object
+tests the availability of dictionary literals; ``objc_constant_literals``
+tests the availability of having number, array, and dictionary literals
+emitted at compile time; ``__has_feature(objc_subscripting)`` tests the availability of object
 subscripting.
 
 Objective-C Autosynthesis of Properties
@@ -2835,6 +3059,50 @@ between the host and device is known to be compatible.
     global OnlySL *d
   );
   #pragma OPENCL EXTENSION __cl_clang_non_portable_kernel_param_types : disable
+
+``__cl_clang_function_scope_local_variables``
+----------------------------------------------
+
+This extension allows declaring variables in the local address space within
+function scope, including non-kernel functions or nested scopes within a kernel,
+using regular OpenCL extension pragma mechanism detailed in `the OpenCL
+Extension Specification, section 1.2
+<https://www.khronos.org/registry/OpenCL/specs/3.0-unified/html/OpenCL_Ext.html#extensions-overview>`_.
+
+This relaxes the `Declaration Scopes and Variable Types
+<https://registry.khronos.org/OpenCL/specs/3.0-unified/html/OpenCL_C.html#_usage_for_declaration_scopes_and_variable_types>`_
+rule that limits local-address-space variable declarations to the outermost
+compound statement inside the body of the kernel function.
+
+To expose static local allocations at kernel scope, targets can either force-
+inline non-kernel functions that declare local memory or pass a kernel-allocated
+local buffer to those functions via an implicit argument.
+
+.. code-block:: c++
+
+  #pragma OPENCL EXTENSION __cl_clang_function_scope_local_variables : enable
+  kernel void kernel1(...)
+  {
+    {
+      local float a; // compiled - no diagnostic generated
+    }
+  }
+  void foo()
+  {
+    local float c; // compiled - no diagnostic generated
+  }
+
+  #pragma OPENCL EXTENSION __cl_clang_function_scope_local_variables : disable
+  kernel void kernel2(...)
+  {
+    {
+      local float a; // error - variables in the local address space can only be declared in the outermost scope of a kernel function
+    }
+  }
+  void bar()
+  {
+    local float c; // error - non-kernel function variable cannot be declared in local address space
+  }
 
 Remove address space builtin function
 -------------------------------------
@@ -3695,6 +3963,42 @@ the arguments. Both arguments and the result have the bitwidth specified
 by the name of the builtin. These builtins can be used within constant
 expressions.
 
+``__builtin_stdc_rotate_left`` and ``__builtin_stdc_rotate_right``
+------------------------------------------------------------------
+
+**Syntax**:
+
+.. code-block:: c
+
+    T __builtin_stdc_rotate_left(T value, count)
+    T __builtin_stdc_rotate_right(T value, count)
+
+where ``T`` is any unsigned integer type and ``count`` is any integer type.
+
+**Description**:
+
+These builtins rotate the bits in ``value`` by ``count`` positions. The
+``__builtin_stdc_rotate_left`` builtin rotates bits to the left, while
+``__builtin_stdc_rotate_right`` rotates bits to the right. The first
+argument (``value``) must be an unsigned integer type, including ``_BitInt`` types.
+The second argument (``count``) can be any integer type. The rotation count is
+normalized modulo the bit-width of the value being rotated, with negative
+counts converted to equivalent positive rotations (e.g., rotating left
+by ``-1`` is equivalent to rotating left by ``BitWidth-1``). These builtins can
+be used within constant expressions.
+
+**Example of use**:
+
+.. code-block:: c
+
+  unsigned char rotated_left = __builtin_stdc_rotate_left((unsigned char)0xB1, 3);
+  unsigned int rotated_right = __builtin_stdc_rotate_right(0x12345678U, 8);
+
+  unsigned char neg_rotate = __builtin_stdc_rotate_left((unsigned char)0xB1, -1);
+
+  unsigned _BitInt(20) value = 0xABCDE;
+  unsigned _BitInt(20) rotated = __builtin_stdc_rotate_left(value, 5);
+
 ``__builtin_unreachable``
 -------------------------
 
@@ -4313,9 +4617,9 @@ as ``unsigned __int128`` and C23 ``unsigned _BitInt(N)``.
 ``__builtin_counted_by_ref`` returns a pointer to the count field from the
 ``counted_by`` attribute.
 
-The argument must be a flexible array member. If the argument isn't a flexible
-array member or doesn't have the ``counted_by`` attribute, the builtin returns
-``(void *)0``.
+The argument must be a flexible array member or a pointer with the ``counted_by``
+attribute. If the argument doesn't have the ``counted_by`` attribute, the builtin
+returns ``(void *)0``.
 
 **Syntax**:
 
@@ -4346,9 +4650,9 @@ array member or doesn't have the ``counted_by`` attribute, the builtin returns
 The ``__builtin_counted_by_ref`` builtin allows the programmer to prevent a
 common error associated with the ``counted_by`` attribute. When using the
 ``counted_by`` attribute, the ``count`` field **must** be set before the
-flexible array member can be accessed. Otherwise, the sanitizers may view such
-accesses as false positives. For instance, it's not uncommon for programmers to
-initialize the flexible array before setting the ``count`` field:
+flexible array member or pointer can be accessed. Otherwise, the sanitizers may
+view such accesses as false positives. For instance, it's not uncommon for
+programmers to initialize the flexible array before setting the ``count`` field:
 
 .. code-block:: c
 
@@ -4366,14 +4670,46 @@ initialize the flexible array before setting the ``count`` field:
   ptr->count = COUNT;
 
 Enforcing the rule that ``ptr->count = COUNT;`` must occur after every
-allocation of a struct with a flexible array member with the ``counted_by``
-attribute is prone to failure in large code bases. This builtin mitigates this
-for allocators (like in Linux) that are implemented in a way where the counter
-assignment can happen automatically.
+allocation of a struct with a ``counted_by`` member is prone to failure in large
+code bases. This builtin mitigates this for allocators (like in Linux) that are
+implemented in a way where the counter assignment can happen automatically.
 
 **Note:** The value returned by ``__builtin_counted_by_ref`` cannot be assigned
 to a variable, have its address taken, or passed into or returned from a
 function, because doing so violates bounds safety conventions.
+
+.. _builtin_stack_address-doc:
+
+``__builtin_stack_address``
+---------------------------
+
+``__builtin_stack_address`` returns the address that separates the current
+function's (i.e. the one calling the builtin) stack space and the region of the
+stack that may be modified by called functions. The semantics match those of
+GCC's builtin of the same name.
+
+**Syntax**:
+
+.. code-block:: c++
+
+  void *__builtin_stack_address()
+
+**Example**:
+
+.. code-block:: c++
+
+  void *sp = __builtin_stack_address();
+
+**Description**:
+
+The address returned by ``__builtin_stack_address`` identifies the starting
+address of the stack region that may be used by called functions.
+
+On some architectures (e.g. x86), it's sufficient to return the value in the
+stack pointer register directly. On others (e.g. SPARCv9), adjustments are
+required to the value of the stack pointer register.
+``__builtin_stack_address`` performs the necessary adjustments and returns the
+correct boundary address.
 
 Multiprecision Arithmetic Builtins
 ----------------------------------
@@ -4787,6 +5123,20 @@ The syntax and semantics are similar to GCC-compatible __atomic_* builtins.
 The builtins work with signed and unsigned integers and require to specify memory ordering.
 The return value is the original value that was stored in memory before comparison.
 
+Clang provides two additional atomic builtins with incrementing behavior. These
+builtins perform an unsigned increment or decrement modulo a  wrap-around value.
+
+* ``__atomic_fetch_uinc``
+* ``__atomic_fetch_udec``
+
+See the LLVM IR `atomicrmw <https://llvm.org/docs/LangRef.html#atomicrmw-instruction>`_
+instruction for the complete semantics of uinc_wrap and udec_wrap.
+
+Atomic memory scopes are designed to assist optimizations for systems with
+several levels of memory hierarchy like GPUs. The following memory scopes are
+currently supported:
+
+
 Example:
 
 .. code-block:: c
@@ -4853,10 +5203,6 @@ are identical to the standard GNU / GCC atomic builtins but taking an extra
 memory scope argument. These are designed to be a generic alternative to the
 ``__opencl_atomic_*`` builtin functions for targets that support atomic memory
 scopes.
-
-Atomic memory scopes are designed to assist optimizations for systems with
-several levels of memory hierarchy like GPUs. The following memory scopes are
-currently supported:
 
 * ``__MEMORY_SCOPE_SYSTEM``
 * ``__MEMORY_SCOPE_DEVICE``
@@ -5211,6 +5557,120 @@ If no address spaces names are provided, all address spaces are fenced.
   // Fence only requested address spaces.
   __builtin_amdgcn_fence(__ATOMIC_SEQ_CST, "workgroup", "local")
   __builtin_amdgcn_fence(__ATOMIC_SEQ_CST, "workgroup", "local", "global")
+
+__builtin_amdgcn_processor_is and __builtin_amdgcn_is_invocable
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+``__builtin_amdgcn_processor_is`` and ``__builtin_amdgcn_is_invocable`` provide
+a functional mechanism for programatically querying:
+
+* the identity of the current target processor;
+* the capability of the current target processor to invoke a particular builtin.
+
+**Syntax**:
+
+.. code-block:: c
+
+  __amdgpu_feature_predicate_t __builtin_amdgcn_processor_is(const char*);
+  __amdgpu_feature_predicate_t __builtin_amdgcn_is_invocable(builtin_name);
+
+**Example of use**:
+
+.. code-block:: c++
+
+  if (__builtin_amdgcn_processor_is("gfx1201") ||
+      __builtin_amdgcn_is_invocable(__builtin_amdgcn_s_sleep_var))
+    __builtin_amdgcn_s_sleep_var(x);
+
+  if (!__builtin_amdgcn_processor_is("gfx906"))
+    __builtin_amdgcn_s_wait_event_export_ready();
+  else if (__builtin_amdgcn_processor_is("gfx1010") ||
+           __builtin_amdgcn_processor_is("gfx1101"))
+    __builtin_amdgcn_s_ttracedata_imm(1);
+
+  while (__builtin_amdgcn_processor_is("gfx1101")) *p += x;
+
+  do {
+    break;
+  } while (__builtin_amdgcn_processor_is("gfx1010"));
+
+  for (; __builtin_amdgcn_processor_is("gfx1201"); ++*p) break;
+
+  if (__builtin_amdgcn_is_invocable(__builtin_amdgcn_s_wait_event_export_ready))
+    __builtin_amdgcn_s_wait_event_export_ready();
+  else if (__builtin_amdgcn_is_invocable(__builtin_amdgcn_s_ttracedata_imm))
+    __builtin_amdgcn_s_ttracedata_imm(1);
+
+  do {
+    break;
+  } while (
+      __builtin_amdgcn_is_invocable(__builtin_amdgcn_global_load_tr_b64_i32));
+
+  for (; __builtin_amdgcn_is_invocable(__builtin_amdgcn_permlane64); ++*p)
+    break;
+
+**Description**:
+
+The builtins return a value of type ``__amdgpu_feature_predicate_t``, which is a
+target specific type that behaves as if its C++ definition was the following:
+
+.. code-block:: c++
+
+  struct __amdgpu_feature_predicate_t {
+    __amdgpu_feature_predicate_t() = delete;
+    __amdgpu_feature_predicate_t(const __amdgpu_feature_predicate_t&) = delete;
+    __amdgpu_feature_predicate_t(__amdgpu_feature_predicate_t&&) = delete;
+
+    explicit
+    operator bool() const noexcept;
+  };
+
+The builtins can be used in C as well, wherein the
+``__amdgpu_feature_predicate_t`` type behaves as an opaque, forward declared
+type with conditional automated conversion to ``_Bool`` when used as the
+predicate argument to a control structure:
+
+.. code-block:: c
+
+  struct __amdgpu_feature_predicate_t ret();     // Error
+  void arg(struct __amdgpu_feature_predicate_t); // Error
+  void local() {
+    struct __amdgpu_feature_predicate_t x;       // Error
+    struct __amdgpu_feature_predicate_t y =
+        __builtin_amdgcn_processor_is("gfx900"); // Error
+  }
+  void valid_use() {
+    _Bool x = (_Bool)__builtin_amdgcn_processor_is("gfx900"); // OK
+    if (__builtin_amdgcn_processor_is("gfx900"))       // Implicit cast to _Bool
+      return;
+    for (; __builtin_amdgcn_processor_is("gfx900");)   // Implicit cast to _Bool
+      break;
+    while (__builtin_amdgcn_processor_is("gfx900"))    // Implicit cast to _Bool
+      break;
+    do {
+      break;
+    } while (__builtin_amdgcn_processor_is("gfx900")); // Implicit cast to _Bool
+
+    __builtin_amdgcn_processor_is("gfx900") ? x : !x;
+  }
+
+The boolean interpretation of the predicate values returned by the builtins:
+
+* indicates whether the current target matches the argument; the argument MUST
+  be a string literal and a valid AMDGPU target
+* indicates whether the builtin function passed as the argument can be invoked
+  by the current target; the argument MUST be either a generic or AMDGPU
+  specific builtin name
+
+When invoked while compiling for a concrete target, the builtins are evaluated
+early by Clang, and never produce any CodeGen effects / have no observable
+side-effects in IR. Conversely, when compiling for AMDGCN flavoured SPIR-v,
+which is an abstract target, a series of specialization constants are implicitly
+created, in correspondence with the predicates. These predicates get resolved
+when finalizing the compilation process for a concrete target, and shall reflect
+the latter's identity and features. Thus, it is possible to author high-level
+code, in e.g. HIP, that is target adaptive in a dynamic fashion, contrary to
+macro based mechanisms.
 
 __builtin_amdgcn_ballot_w{32,64}
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -5647,6 +6107,23 @@ statements S1 and S2 above.
 If Loop Distribution is turned on globally with
 ``-mllvm -enable-loop-distribution``, specifying ``distribute(disable)`` can
 be used the disable it on a per-loop basis.
+
+Disable Loop Invariant Code Motion
+----------------------------------
+
+Loop Invariant Code Motion (LICM) moves loop invariant code outside of the loop.
+If ``licm(disable))`` is specified, compiler will skip LICM on the specific loop.
+
+.. code-block:: c++
+
+  #pragma clang loop licm(disable)
+  while (i < Length) {
+    List[i] = A[x] * i * 2;
+    i++;
+  }
+
+The load for A[x] is loop invariant, it will not be hoisted out of the loop
+when LICM is disabled.
 
 Additional Information
 ----------------------

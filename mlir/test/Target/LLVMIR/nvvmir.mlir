@@ -156,6 +156,12 @@ llvm.func @nvvm_special_regs() -> i32 {
   %76 = nvvm.read.ptx.sreg.tid.x range <i32, 0, 0> : i32
   // CHECK: %77 = call i32 @llvm.nvvm.read.ptx.sreg.tid.x()
   %77 = nvvm.read.ptx.sreg.tid.x range <i32, 4294967295, 4294967295> : i32
+  // CHECK: call i32 @llvm.nvvm.read.ptx.sreg.total_smem_size()
+  %78 = nvvm.read.ptx.sreg.total.smem.size : i32
+  // CHECK: call i32 @llvm.nvvm.read.ptx.sreg.dynamic_smem_size()
+  %79 = nvvm.read.ptx.sreg.dynamic.smem.size : i32
+  // CHECK: call i32 @llvm.nvvm.read.ptx.sreg.aggr_smem_size()
+  %80 = nvvm.read.ptx.sreg.aggr.smem.size : i32
   llvm.return %1 : i32
 }
 
@@ -484,13 +490,13 @@ llvm.func @nvvm_wmma_store_d_f64(%arg0: !llvm.ptr, %arg1 : i32, %arg2 : f64, %ar
 // CHECK-LABEL: @cp_async
 llvm.func @cp_async(%arg0: !llvm.ptr<3>, %arg1: !llvm.ptr<1>) {
   // CHECK: call void @llvm.nvvm.cp.async.ca.shared.global.4(ptr addrspace(3) %{{.*}}, ptr addrspace(1) %{{.*}})
-  nvvm.cp.async.shared.global %arg0, %arg1, 4, cache =  ca : !llvm.ptr<3>, !llvm.ptr<1>
+  nvvm.cp.async.shared.global %arg0, %arg1, 4, cache = ca : !llvm.ptr<3>, !llvm.ptr<1>
   // CHECK: call void @llvm.nvvm.cp.async.ca.shared.global.8(ptr addrspace(3) %{{.*}}, ptr addrspace(1) %{{.*}})
-  nvvm.cp.async.shared.global %arg0, %arg1, 8, cache =  ca : !llvm.ptr<3>, !llvm.ptr<1>
+  nvvm.cp.async.shared.global %arg0, %arg1, 8, cache = ca : !llvm.ptr<3>, !llvm.ptr<1>
   // CHECK: call void @llvm.nvvm.cp.async.ca.shared.global.16(ptr addrspace(3) %{{.*}}, ptr addrspace(1) %{{.*}})
-  nvvm.cp.async.shared.global %arg0, %arg1, 16, cache =  ca : !llvm.ptr<3>, !llvm.ptr<1>
+  nvvm.cp.async.shared.global %arg0, %arg1, 16, cache = ca : !llvm.ptr<3>, !llvm.ptr<1>
   // CHECK: call void @llvm.nvvm.cp.async.cg.shared.global.16(ptr addrspace(3) %{{.*}}, ptr addrspace(1) %{{.*}})
-  nvvm.cp.async.shared.global %arg0, %arg1, 16, cache =  cg : !llvm.ptr<3>, !llvm.ptr<1>
+  nvvm.cp.async.shared.global %arg0, %arg1, 16, cache = cg : !llvm.ptr<3>, !llvm.ptr<1>
 
   // CHECK: call void @llvm.nvvm.cp.async.commit.group()
   nvvm.cp.async.commit.group
@@ -502,13 +508,13 @@ llvm.func @cp_async(%arg0: !llvm.ptr<3>, %arg1: !llvm.ptr<1>) {
 // CHECK-LABEL: @async_cp_zfill
 llvm.func @async_cp_zfill(%dst: !llvm.ptr<3>, %src: !llvm.ptr<1>, %cpSize: i32) {
   // CHECK: call void @llvm.nvvm.cp.async.ca.shared.global.4.s(ptr addrspace(3) %{{.*}}, ptr addrspace(1) %{{.*}}, i32 %{{.*}})
-  nvvm.cp.async.shared.global %dst, %src, 4, cache =  ca, %cpSize : !llvm.ptr<3>, !llvm.ptr<1>, i32
+  nvvm.cp.async.shared.global %dst, %src, 4, cache = ca, %cpSize : !llvm.ptr<3>, !llvm.ptr<1>, i32
   // CHECK: call void @llvm.nvvm.cp.async.ca.shared.global.8.s(ptr addrspace(3) %{{.*}}, ptr addrspace(1) %{{.*}}, i32 %{{.*}})
-  nvvm.cp.async.shared.global %dst, %src, 8, cache =  ca, %cpSize : !llvm.ptr<3>, !llvm.ptr<1>, i32
+  nvvm.cp.async.shared.global %dst, %src, 8, cache = ca, %cpSize : !llvm.ptr<3>, !llvm.ptr<1>, i32
   // CHECK: call void @llvm.nvvm.cp.async.ca.shared.global.16.s(ptr addrspace(3) %{{.*}}, ptr addrspace(1) %{{.*}}, i32 %{{.*}})
-  nvvm.cp.async.shared.global %dst, %src, 16, cache =  ca, %cpSize : !llvm.ptr<3>, !llvm.ptr<1>, i32
+  nvvm.cp.async.shared.global %dst, %src, 16, cache = ca, %cpSize : !llvm.ptr<3>, !llvm.ptr<1>, i32
   // CHECK: call void @llvm.nvvm.cp.async.cg.shared.global.16.s(ptr addrspace(3) %{{.*}}, ptr addrspace(1) %{{.*}}, i32 %{{.*}})
-  nvvm.cp.async.shared.global %dst, %src, 16, cache =  cg, %cpSize : !llvm.ptr<3>, !llvm.ptr<1>, i32
+  nvvm.cp.async.shared.global %dst, %src, 16, cache = cg, %cpSize : !llvm.ptr<3>, !llvm.ptr<1>, i32
   llvm.return
 }
 
@@ -699,42 +705,6 @@ llvm.func @kernel_func(%arg0: !llvm.ptr {llvm.byval = i32, nvvm.grid_constant}, 
   llvm.return
 }
 
-
-// -----
-// CHECK-LABEL: @nvvm_fence_proxy_tensormap_generic_release
-llvm.func @nvvm_fence_proxy_tensormap_generic_release() {
-  %c128 = llvm.mlir.constant(128) : i32
-  // CHECK: call void @llvm.nvvm.fence.proxy.tensormap_generic.release.cta()
-  nvvm.fence.proxy.release #nvvm.mem_scope<cta>
-
-  // CHECK: call void @llvm.nvvm.fence.proxy.tensormap_generic.release.cluster()
-  nvvm.fence.proxy.release #nvvm.mem_scope<cluster>
-
-  // CHECK: call void @llvm.nvvm.fence.proxy.tensormap_generic.release.gpu()
-  nvvm.fence.proxy.release #nvvm.mem_scope<gpu>
-
-  // CHECK: call void @llvm.nvvm.fence.proxy.tensormap_generic.release.sys()
-  nvvm.fence.proxy.release #nvvm.mem_scope<sys>
-  llvm.return
-}
-
-// -----
-// CHECK-LABEL: @nvvm_fence_proxy_tensormap_generic_acquire
-llvm.func @nvvm_fence_proxy_tensormap_generic_acquire(%addr : !llvm.ptr) {
-  %c128 = llvm.mlir.constant(128) : i32
-  // CHECK: call void @llvm.nvvm.fence.proxy.tensormap_generic.acquire.cta(ptr {{%[0-9]+}}, i32 128)
-  nvvm.fence.proxy.acquire #nvvm.mem_scope<cta> %addr, %c128
-
-  // CHECK: call void @llvm.nvvm.fence.proxy.tensormap_generic.acquire.cluster(ptr {{%[0-9]+}}, i32 128)
-  nvvm.fence.proxy.acquire #nvvm.mem_scope<cluster> %addr, %c128
-
-  // CHECK: call void @llvm.nvvm.fence.proxy.tensormap_generic.acquire.gpu(ptr {{%[0-9]+}}, i32 128)
-  nvvm.fence.proxy.acquire #nvvm.mem_scope<gpu> %addr, %c128
-
-  // CHECK: call void @llvm.nvvm.fence.proxy.tensormap_generic.acquire.sys(ptr {{%[0-9]+}}, i32 128)
-  nvvm.fence.proxy.acquire #nvvm.mem_scope<sys> %addr, %c128
-  llvm.return
-}
 // -----
 
 // CHECK-LABEL: @nvvm_exit
@@ -939,20 +909,19 @@ llvm.func @nvvm_dot_accumulate_2way(%a: vector<2xi16>, %b: vector<4xi8>, %c: i32
 
 // -----
 
-// CHECK-LABEL: @nvvm_pmevent
-llvm.func @nvvm_pmevent() {
-  // CHECK: call void @llvm.nvvm.pm.event.mask(i16 15000)
-  nvvm.pmevent mask = 15000
-  // CHECK: call void @llvm.nvvm.pm.event.mask(i16 4)
-  nvvm.pmevent mask = 4
-  llvm.return
-}
-
-// -----
-
 // CHECK-LABEL: @nanosleep
 llvm.func @nanosleep(%duration: i32) {
   // CHECK: call void @llvm.nvvm.nanosleep(i32 %{{.*}})
   nvvm.nanosleep %duration
   llvm.return
 }
+
+// -----
+
+// CHECK: @managed_g = addrspace(1) global i32 0
+// CHECK: @managed_decl = external addrspace(1) global i32
+// CHECK: !nvvm.annotations = !{![[MANAGED0:[0-9]+]], ![[MANAGED1:[0-9]+]]}
+// CHECK: ![[MANAGED0]] = !{ptr addrspace(1) @managed_g, !"managed", i32 1}
+// CHECK: ![[MANAGED1]] = !{ptr addrspace(1) @managed_decl, !"managed", i32 1}
+llvm.mlir.global external @managed_g(0 : i32) {addr_space = 1 : i32, nvvm.managed} : i32
+llvm.mlir.global external @managed_decl() {addr_space = 1 : i32, nvvm.managed} : i32

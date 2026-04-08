@@ -11,6 +11,8 @@
 #include "IntegralAP.h"
 #include "Interp.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/ExprCXX.h"
+#include "llvm/ADT/ScopeExit.h"
 
 using namespace clang;
 using namespace clang::interp;
@@ -37,7 +39,7 @@ EvaluationResult EvalEmitter::interpretExpr(const Expr *E,
                                             bool DestroyToplevelScope) {
   S.setEvalLocation(E->getExprLoc());
   this->ConvertResultToRValue = ConvertResultToRValue && !isa<ConstantExpr>(E);
-  this->CheckFullyInitialized = isa<ConstantExpr>(E);
+  this->CheckFullyInitialized = isa<ConstantExpr>(E) && !E->isGLValue();
   EvalResult.setSource(E);
 
   if (!this->visitExpr(E, DestroyToplevelScope)) {
@@ -106,11 +108,11 @@ EvalEmitter::LabelTy EvalEmitter::getLabel() { return NextLabel++; }
 Scope::Local EvalEmitter::createLocal(Descriptor *D) {
   // Allocate memory for a local.
   auto Memory = std::make_unique<char[]>(sizeof(Block) + D->getAllocSize());
-  auto *B = new (Memory.get()) Block(Ctx.getEvalID(), D, /*isStatic=*/false);
+  auto *B = new (Memory.get()) Block(Ctx.getEvalID(), D, /*IsStatic=*/false);
   B->invokeCtor();
 
   // Initialize local variable inline descriptor.
-  InlineDescriptor &Desc = *reinterpret_cast<InlineDescriptor *>(B->rawData());
+  auto &Desc = B->getBlockDesc<InlineDescriptor>();
   Desc.Desc = D;
   Desc.Offset = sizeof(InlineDescriptor);
   Desc.IsActive = false;
@@ -125,25 +127,29 @@ Scope::Local EvalEmitter::createLocal(Descriptor *D) {
   return {Off, D};
 }
 
-bool EvalEmitter::jumpTrue(const LabelTy &Label) {
+bool EvalEmitter::jumpTrue(const LabelTy &Label, SourceInfo SI) {
   if (isActive()) {
+    CurrentSource = SI;
     if (S.Stk.pop<bool>())
       ActiveLabel = Label;
   }
   return true;
 }
 
-bool EvalEmitter::jumpFalse(const LabelTy &Label) {
+bool EvalEmitter::jumpFalse(const LabelTy &Label, SourceInfo SI) {
   if (isActive()) {
+    CurrentSource = SI;
     if (!S.Stk.pop<bool>())
       ActiveLabel = Label;
   }
   return true;
 }
 
-bool EvalEmitter::jump(const LabelTy &Label) {
-  if (isActive())
+bool EvalEmitter::jump(const LabelTy &Label, SourceInfo SI) {
+  if (isActive()) {
+    CurrentSource = SI;
     CurrentLabel = ActiveLabel = Label;
+  }
   return true;
 }
 
@@ -155,6 +161,12 @@ bool EvalEmitter::fallthrough(const LabelTy &Label) {
 }
 
 bool EvalEmitter::speculate(const CallExpr *E, const LabelTy &EndLabel) {
+  if (!isActive())
+    return true;
+
+  PushIgnoreDiags(S, OpPC);
+  auto _ = llvm::scope_exit([&]() { PopIgnoreDiags(S, OpPC); });
+
   size_t StackSizeBefore = S.Stk.size();
   const Expr *Arg = E->getArg(0);
   if (!this->visit(Arg)) {
@@ -191,12 +203,6 @@ template <> bool EvalEmitter::emitRet<PT_Ptr>(SourceInfo Info) {
     return true;
 
   const Pointer &Ptr = S.Stk.pop<Pointer>();
-
-  if (Ptr.isFunctionPointer()) {
-    EvalResult.takeValue(Ptr.toAPValue(Ctx.getASTContext()));
-    return true;
-  }
-
   // If we're returning a raw pointer, call our callback.
   if (this->PtrCB)
     return (*this->PtrCB)(Ptr);
@@ -205,6 +211,12 @@ template <> bool EvalEmitter::emitRet<PT_Ptr>(SourceInfo Info) {
     return false;
   if (CheckFullyInitialized && !EvalResult.checkFullyInitialized(S, Ptr))
     return false;
+
+  // Function pointers are always returned as lvalues.
+  if (Ptr.isFunctionPointer()) {
+    EvalResult.takeValue(Ptr.toAPValue(Ctx.getASTContext()));
+    return true;
+  }
 
   // Implicitly convert lvalue to rvalue, if requested.
   if (ConvertResultToRValue) {
@@ -291,7 +303,7 @@ bool EvalEmitter::emitGetLocal(uint32_t I, SourceInfo Info) {
   if (!CheckLocalLoad(S, OpPC, B))
     return false;
 
-  S.Stk.push<T>(*reinterpret_cast<T *>(B->data()));
+  S.Stk.push<T>(B->deref<T>());
   return true;
 }
 
@@ -303,8 +315,8 @@ bool EvalEmitter::emitSetLocal(uint32_t I, SourceInfo Info) {
   using T = typename PrimConv<OpType>::T;
 
   Block *B = getLocal(I);
-  *reinterpret_cast<T *>(B->data()) = S.Stk.pop<T>();
-  InlineDescriptor &Desc = *reinterpret_cast<InlineDescriptor *>(B->rawData());
+  B->deref<T>() = S.Stk.pop<T>();
+  auto &Desc = B->getBlockDesc<InlineDescriptor>();
   Desc.IsInitialized = true;
 
   return true;
@@ -327,8 +339,7 @@ bool EvalEmitter::emitGetLocalEnabled(uint32_t I, SourceInfo Info) {
     return true;
 
   Block *B = getLocal(I);
-  const InlineDescriptor &Desc =
-      *reinterpret_cast<InlineDescriptor *>(B->rawData());
+  const auto &Desc = B->getBlockDesc<InlineDescriptor>();
 
   S.Stk.push<bool>(Desc.IsActive);
   return true;
@@ -344,7 +355,7 @@ bool EvalEmitter::emitEnableLocal(uint32_t I, SourceInfo Info) {
   // probably use a different struct than InlineDescriptor for the block-level
   // inline descriptor of local varaibles.
   Block *B = getLocal(I);
-  InlineDescriptor &Desc = *reinterpret_cast<InlineDescriptor *>(B->rawData());
+  auto &Desc = B->getBlockDesc<InlineDescriptor>();
   Desc.IsActive = true;
   return true;
 }
@@ -360,12 +371,16 @@ void EvalEmitter::updateGlobalTemporaries() {
     assert(GlobalIndex);
     const Pointer &Ptr = P.getPtrGlobal(*GlobalIndex);
     APValue *Cached = Temp->getOrCreateValue(true);
-    if (OptPrimType T = Ctx.classify(E->getType())) {
+
+    QualType TempType = E->getType();
+    if (const auto *MTE = dyn_cast<MaterializeTemporaryExpr>(E))
+      TempType = MTE->getSubExpr()->skipRValueSubobjectAdjustments()->getType();
+
+    if (OptPrimType T = Ctx.classify(TempType)) {
       TYPE_SWITCH(*T,
                   { *Cached = Ptr.deref<T>().toAPValue(Ctx.getASTContext()); });
     } else {
-      if (std::optional<APValue> APV =
-              Ptr.toRValue(Ctx, Temp->getTemporaryExpr()->getType()))
+      if (std::optional<APValue> APV = Ptr.toRValue(Ctx, TempType))
         *Cached = *APV;
     }
   }

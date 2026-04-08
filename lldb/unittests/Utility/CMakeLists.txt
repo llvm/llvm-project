@@ -18,6 +18,7 @@ add_lldb_unittest(UtilityTests
   ListenerTest.cpp
   LogTest.cpp
   NameMatchesTest.cpp
+  NonNullSharedPtrTest.cpp
   PredicateTest.cpp
   ProcessInfoTest.cpp
   ProcessInstanceInfoTest.cpp
@@ -34,7 +35,6 @@ add_lldb_unittest(UtilityTests
   StreamTest.cpp
   StringExtractorGDBRemoteTest.cpp
   StringExtractorTest.cpp
-  StringLexerTest.cpp
   StringListTest.cpp
   StructuredDataTest.cpp
   SubsystemRAIITest.cpp
@@ -47,6 +47,7 @@ add_lldb_unittest(UtilityTests
   UserIDResolverTest.cpp
   UUIDTest.cpp
   VASprintfTest.cpp
+  VirtualDataExtractorTest.cpp
   VMRangeTest.cpp
   XcodeSDKTest.cpp
 

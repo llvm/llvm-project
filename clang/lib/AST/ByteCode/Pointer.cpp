@@ -11,6 +11,7 @@
 #include "Context.h"
 #include "Floating.h"
 #include "Function.h"
+#include "InitMap.h"
 #include "Integral.h"
 #include "InterpBlock.h"
 #include "MemberPointer.h"
@@ -32,13 +33,12 @@ Pointer::Pointer(Block *Pointee, uint64_t BaseAndOffset)
 
 Pointer::Pointer(Block *Pointee, unsigned Base, uint64_t Offset)
     : Offset(Offset), StorageKind(Storage::Block) {
+  assert(Pointee);
   assert((Base == RootPtrMark || Base % alignof(void *) == 0) && "wrong base");
   assert(Base >= Pointee->getDescriptor()->getMetadataSize());
 
   BS = {Pointee, Base, nullptr, nullptr};
-
-  if (Pointee)
-    Pointee->addPointer(this);
+  Pointee->addPointer(this);
 }
 
 Pointer::Pointer(const Pointer &P)
@@ -182,11 +182,10 @@ APValue Pointer::toAPValue(const ASTContext &ASTCtx) const {
                    /*IsOnePastEnd=*/false, /*IsNullPtr=*/false);
   if (isFunctionPointer()) {
     const FunctionPointer &FP = asFunctionPointer();
-    if (const FunctionDecl *FD = FP.getFunction()->getDecl())
+    if (const FunctionDecl *FD = FP.Func->getDecl())
       return APValue(FD, CharUnits::fromQuantity(Offset), {},
                      /*OnePastTheEnd=*/false, /*IsNull=*/false);
-    return APValue(FP.getFunction()->getExpr(), CharUnits::fromQuantity(Offset),
-                   {},
+    return APValue(FP.Func->getExpr(), CharUnits::fromQuantity(Offset), {},
                    /*OnePastTheEnd=*/false, /*IsNull=*/false);
   }
 
@@ -248,7 +247,7 @@ APValue Pointer::toAPValue(const ASTContext &ASTCtx) const {
         unsigned Index = Ptr.getIndex();
         QualType ElemType = Desc->getElemQualType();
         Offset += (Index * ASTCtx.getTypeSizeInChars(ElemType));
-        if (Ptr.getArray().getType()->isArrayType())
+        if (Ptr.getArray().getFieldDesc()->IsArray)
           Path.push_back(APValue::LValuePathEntry::ArrayIndex(Index));
         Ptr = Ptr.getArray();
       } else {
@@ -278,7 +277,7 @@ APValue Pointer::toAPValue(const ASTContext &ASTCtx) const {
       } else {
         Offset += (Index * ASTCtx.getTypeSizeInChars(ElemType));
       }
-      if (Ptr.getArray().getType()->isArrayType())
+      if (Ptr.getArray().getFieldDesc()->IsArray)
         Path.push_back(APValue::LValuePathEntry::ArrayIndex(Index));
       Ptr = Ptr.getArray();
     } else {
@@ -352,8 +351,7 @@ void Pointer::print(llvm::raw_ostream &OS) const {
     OS << "}";
     break;
   case Storage::Fn:
-    OS << "(Fn) { " << asFunctionPointer().getFunction() << " + " << Offset
-       << " }";
+    OS << "(Fn) { " << Fn.Func << " + " << Offset << " }";
     break;
   case Storage::Typeid:
     OS << "(Typeid) { " << (const void *)asTypeidPointer().TypePtr << ", "
@@ -362,7 +360,13 @@ void Pointer::print(llvm::raw_ostream &OS) const {
   }
 }
 
-size_t Pointer::computeOffsetForComparison() const {
+/// Compute an offset that can be used to compare the pointer to another one
+/// with the same base. To get accurate results, we basically _have to_ compute
+/// the lvalue offset using the ASTRecordLayout.
+///
+/// FIXME: We're still mixing values from the record layout with our internal
+/// offsets, which will inevitably lead to cryptic errors.
+size_t Pointer::computeOffsetForComparison(const ASTContext &ASTCtx) const {
   switch (StorageKind) {
   case Storage::Int:
     return Int.Value + Offset;
@@ -370,7 +374,7 @@ size_t Pointer::computeOffsetForComparison() const {
     // See below.
     break;
   case Storage::Fn:
-    return Fn.getIntegerRepresentation() + Offset;
+    return getIntegerRepresentation();
   case Storage::Typeid:
     return reinterpret_cast<uintptr_t>(asTypeidPointer().TypePtr) + Offset;
   }
@@ -378,7 +382,6 @@ size_t Pointer::computeOffsetForComparison() const {
   size_t Result = 0;
   Pointer P = *this;
   while (true) {
-
     if (P.isVirtualBaseClass()) {
       Result += getInlineDesc()->Offset;
       P = P.getBase();
@@ -400,28 +403,29 @@ size_t Pointer::computeOffsetForComparison() const {
 
     if (P.isRoot()) {
       if (P.isOnePastEnd())
-        ++Result;
+        Result +=
+            ASTCtx.getTypeSizeInChars(P.getDeclDesc()->getType()).getQuantity();
       break;
     }
 
-    if (const Record *R = P.getBase().getRecord(); R && R->isUnion()) {
-      if (P.isOnePastEnd())
-        ++Result;
-      // Direct child of a union - all have offset 0.
-      P = P.getBase();
-      continue;
-    }
+    assert(P.getField());
+    const Record *R = P.getBase().getRecord();
+    assert(R);
 
-    // Fields, etc.
-    Result += P.getInlineDesc()->Offset;
+    const ASTRecordLayout &Layout = ASTCtx.getASTRecordLayout(R->getDecl());
+    Result += ASTCtx
+                  .toCharUnitsFromBits(
+                      Layout.getFieldOffset(P.getField()->getFieldIndex()))
+                  .getQuantity();
+
     if (P.isOnePastEnd())
-      ++Result;
+      Result +=
+          ASTCtx.getTypeSizeInChars(P.getField()->getType()).getQuantity();
 
     P = P.getBase();
     if (P.isRoot())
       break;
   }
-
   return Result;
 }
 
@@ -432,9 +436,6 @@ std::string Pointer::toDiagnosticString(const ASTContext &Ctx) const {
   if (isIntegralPointer())
     return (Twine("&(") + Twine(asIntPointer().Value + Offset) + ")").str();
 
-  if (isFunctionPointer())
-    return asFunctionPointer().toDiagnosticString(Ctx);
-
   return toAPValue(Ctx).getAsString(Ctx, getType());
 }
 
@@ -444,8 +445,7 @@ bool Pointer::isInitialized() const {
 
   if (isRoot() && BS.Base == sizeof(GlobalInlineDescriptor) &&
       Offset == BS.Base) {
-    const GlobalInlineDescriptor &GD =
-        *reinterpret_cast<const GlobalInlineDescriptor *>(block()->rawData());
+    const auto &GD = block()->getBlockDesc<GlobalInlineDescriptor>();
     return GD.InitState == GlobalInitState::Initialized;
   }
 
@@ -473,22 +473,74 @@ bool Pointer::isElementInitialized(unsigned Index) const {
 
   if (isRoot() && BS.Base == sizeof(GlobalInlineDescriptor) &&
       Offset == BS.Base) {
-    const GlobalInlineDescriptor &GD =
-        *reinterpret_cast<const GlobalInlineDescriptor *>(block()->rawData());
+    const auto &GD = block()->getBlockDesc<GlobalInlineDescriptor>();
     return GD.InitState == GlobalInitState::Initialized;
   }
 
   if (Desc->isPrimitiveArray()) {
-    InitMapPtr &IM = getInitMap();
-    if (!IM)
-      return false;
+    InitMapPtr IM = getInitMap();
 
-    if (IM->first)
+    if (IM.allInitialized())
       return true;
 
-    return IM->second->isElementInitialized(Index);
+    if (!IM.hasInitMap())
+      return false;
+    return IM->isElementInitialized(Index);
   }
   return isInitialized();
+}
+
+bool Pointer::isElementAlive(unsigned Index) const {
+  assert(getFieldDesc()->isPrimitiveArray());
+
+  InitMapPtr &IM = getInitMap();
+  if (!IM.hasInitMap())
+    return true;
+
+  if (IM.allInitialized())
+    return true;
+
+  return IM->isElementAlive(Index);
+}
+
+void Pointer::startLifetime() const {
+  if (!isBlockPointer())
+    return;
+  if (BS.Base < sizeof(InlineDescriptor))
+    return;
+
+  if (inArray()) {
+    const Descriptor *Desc = getFieldDesc();
+    InitMapPtr &IM = getInitMap();
+    if (!IM.hasInitMap())
+      IM.setInitMap(new InitMap(Desc->getNumElems(), IM.allInitialized()));
+
+    IM->startElementLifetime(getIndex());
+    assert(isArrayRoot() || (this->getLifetime() == Lifetime::Started));
+    return;
+  }
+
+  getInlineDesc()->LifeState = Lifetime::Started;
+}
+
+void Pointer::endLifetime() const {
+  if (!isBlockPointer())
+    return;
+  if (BS.Base < sizeof(InlineDescriptor))
+    return;
+
+  if (inArray()) {
+    const Descriptor *Desc = getFieldDesc();
+    InitMapPtr &IM = getInitMap();
+    if (!IM.hasInitMap())
+      IM.setInitMap(new InitMap(Desc->getNumElems(), IM.allInitialized()));
+
+    IM->endElementLifetime(getIndex());
+    assert(isArrayRoot() || (this->getLifetime() == Lifetime::Ended));
+    return;
+  }
+
+  getInlineDesc()->LifeState = Lifetime::Ended;
 }
 
 void Pointer::initialize() const {
@@ -499,8 +551,7 @@ void Pointer::initialize() const {
 
   if (isRoot() && BS.Base == sizeof(GlobalInlineDescriptor) &&
       Offset == BS.Base) {
-    GlobalInlineDescriptor &GD = *reinterpret_cast<GlobalInlineDescriptor *>(
-        asBlockPointer().Pointee->rawData());
+    auto &GD = BS.Pointee->getBlockDesc<GlobalInlineDescriptor>();
     GD.InitState = GlobalInitState::Initialized;
     return;
   }
@@ -526,34 +577,24 @@ void Pointer::initializeElement(unsigned Index) const {
   assert(Index < getFieldDesc()->getNumElems());
 
   InitMapPtr &IM = getInitMap();
-  if (!IM) {
-    const Descriptor *Desc = getFieldDesc();
-    IM = std::make_pair(false, std::make_shared<InitMap>(Desc->getNumElems()));
-  }
-
-  assert(IM);
-
-  // All initialized.
-  if (IM->first)
+  if (IM.allInitialized())
     return;
 
-  if (IM->second->initializeElement(Index)) {
-    IM->first = true;
-    IM->second.reset();
+  if (!IM.hasInitMap()) {
+    const Descriptor *Desc = getFieldDesc();
+    IM.setInitMap(new InitMap(Desc->getNumElems()));
   }
+  assert(IM.hasInitMap());
+
+  if (IM->initializeElement(Index))
+    IM.noteAllInitialized();
 }
 
 void Pointer::initializeAllElements() const {
   assert(getFieldDesc()->isPrimitiveArray());
   assert(isArrayRoot());
 
-  InitMapPtr &IM = getInitMap();
-  if (!IM) {
-    IM = std::make_pair(true, nullptr);
-  } else {
-    IM->first = true;
-    IM->second.reset();
-  }
+  getInitMap().noteAllInitialized();
 }
 
 bool Pointer::allElementsInitialized() const {
@@ -565,13 +606,29 @@ bool Pointer::allElementsInitialized() const {
 
   if (isRoot() && BS.Base == sizeof(GlobalInlineDescriptor) &&
       Offset == BS.Base) {
-    const GlobalInlineDescriptor &GD =
-        *reinterpret_cast<const GlobalInlineDescriptor *>(block()->rawData());
+    const auto &GD = block()->getBlockDesc<GlobalInlineDescriptor>();
+    return GD.InitState == GlobalInitState::Initialized;
+  }
+
+  InitMapPtr IM = getInitMap();
+  return IM.allInitialized();
+}
+
+bool Pointer::allElementsAlive() const {
+  assert(getFieldDesc()->isPrimitiveArray());
+  assert(isArrayRoot());
+
+  if (isStatic() && BS.Base == 0)
+    return true;
+
+  if (isRoot() && BS.Base == sizeof(GlobalInlineDescriptor) &&
+      Offset == BS.Base) {
+    const auto &GD = block()->getBlockDesc<GlobalInlineDescriptor>();
     return GD.InitState == GlobalInitState::Initialized;
   }
 
   InitMapPtr &IM = getInitMap();
-  return IM && IM->first;
+  return IM.allInitialized() || (IM.hasInitMap() && IM->allElementsAlive());
 }
 
 void Pointer::activate() const {
@@ -741,11 +798,8 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx,
         Ptr.isPastEnd())
       return false;
 
-    // Primitive values.
-    if (OptPrimType T = Ctx.classify(Ty)) {
-      TYPE_SWITCH(*T, R = Ptr.deref<T>().toAPValue(ASTCtx));
-      return true;
-    }
+    // Primitives should never end up here.
+    assert(!Ctx.canClassify(Ty));
 
     if (const auto *RT = Ty->getAsCanonical<RecordType>()) {
       const auto *Record = Ptr.getRecord();
@@ -757,11 +811,13 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx,
         APValue Value;
         for (const auto &F : Record->fields()) {
           const Pointer &FP = Ptr.atField(F.Offset);
-          QualType FieldTy = F.Decl->getType();
           if (FP.isActive()) {
-            if (OptPrimType T = Ctx.classify(FieldTy)) {
-              TYPE_SWITCH(*T, Value = FP.deref<T>().toAPValue(ASTCtx));
+            const Descriptor *Desc = F.Desc;
+            if (Desc->isPrimitive()) {
+              TYPE_SWITCH(Desc->getPrimType(),
+                          Value = FP.deref<T>().toAPValue(ASTCtx));
             } else {
+              QualType FieldTy = F.Decl->getType();
               Ok &= Composite(FieldTy, FP, Value);
             }
             ActiveField = FP.getFieldDesc()->asFieldDecl();
@@ -776,27 +832,28 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx,
 
         R = APValue(APValue::UninitStruct(), NB, NF);
 
-        for (unsigned I = 0; I < NF; ++I) {
+        for (unsigned I = 0; I != NF; ++I) {
           const Record::Field *FD = Record->getField(I);
-          QualType FieldTy = FD->Decl->getType();
+          const Descriptor *Desc = FD->Desc;
           const Pointer &FP = Ptr.atField(FD->Offset);
           APValue &Value = R.getStructField(I);
-
-          if (OptPrimType T = Ctx.classify(FieldTy)) {
-            TYPE_SWITCH(*T, Value = FP.deref<T>().toAPValue(ASTCtx));
+          if (Desc->isPrimitive()) {
+            TYPE_SWITCH(Desc->getPrimType(),
+                        Value = FP.deref<T>().toAPValue(ASTCtx));
           } else {
+            QualType FieldTy = FD->Decl->getType();
             Ok &= Composite(FieldTy, FP, Value);
           }
         }
 
-        for (unsigned I = 0; I < NB; ++I) {
+        for (unsigned I = 0; I != NB; ++I) {
           const Record::Base *BD = Record->getBase(I);
           QualType BaseTy = Ctx.getASTContext().getCanonicalTagType(BD->Decl);
           const Pointer &BP = Ptr.atField(BD->Offset);
           Ok &= Composite(BaseTy, BP, R.getStructBase(I));
         }
 
-        for (unsigned I = 0; I < NV; ++I) {
+        for (unsigned I = 0; I != NV; ++I) {
           const Record::Base *VD = Record->getVirtualBase(I);
           QualType VirtBaseTy =
               Ctx.getASTContext().getCanonicalTagType(VD->Decl);
@@ -831,22 +888,22 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx,
     }
 
     // Complex types.
-    if (const auto *CT = Ty->getAs<ComplexType>()) {
+    if (Ty->isAnyComplexType()) {
+      const Descriptor *Desc = Ptr.getFieldDesc();
       // Can happen via C casts.
-      if (!Ptr.getFieldDesc()->isPrimitiveArray())
+      if (!Desc->isPrimitiveArray())
         return false;
 
-      QualType ElemTy = CT->getElementType();
-      if (ElemTy->isIntegerType()) {
-        OptPrimType ElemT = Ctx.classify(ElemTy);
-        assert(ElemT);
-        INT_TYPE_SWITCH(*ElemT, {
+      PrimType ElemT = Desc->getPrimType();
+      if (isIntegerOrBoolType(ElemT)) {
+        PrimType ElemT = Desc->getPrimType();
+        INT_TYPE_SWITCH(ElemT, {
           auto V1 = Ptr.elem<T>(0);
           auto V2 = Ptr.elem<T>(1);
           R = APValue(V1.toAPSInt(), V2.toAPSInt());
           return true;
         });
-      } else if (ElemTy->isFloatingType()) {
+      } else if (ElemT == PT_Float) {
         R = APValue(Ptr.elem<Floating>(0).getAPFloat(),
                     Ptr.elem<Floating>(1).getAPFloat());
         return true;
@@ -856,9 +913,9 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx,
 
     // Vector types.
     if (const auto *VT = Ty->getAs<VectorType>()) {
+      const Descriptor *Desc = Ptr.getFieldDesc();
       assert(Ptr.getFieldDesc()->isPrimitiveArray());
-      QualType ElemTy = VT->getElementType();
-      PrimType ElemT = *Ctx.classify(ElemTy);
+      PrimType ElemT = Desc->getPrimType();
 
       SmallVector<APValue> Values;
       Values.reserve(VT->getNumElements());
@@ -872,8 +929,30 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx,
       return true;
     }
 
+    // Constant Matrix types.
+    if (const auto *MT = Ty->getAs<ConstantMatrixType>()) {
+      assert(Ptr.getFieldDesc()->isPrimitiveArray());
+      const Descriptor *Desc = Ptr.getFieldDesc();
+      PrimType ElemT = Desc->getPrimType();
+      unsigned NumElems = MT->getNumElementsFlattened();
+
+      SmallVector<APValue> Values;
+      Values.reserve(NumElems);
+      for (unsigned I = 0; I != NumElems; ++I) {
+        TYPE_SWITCH(ElemT,
+                    { Values.push_back(Ptr.elem<T>(I).toAPValue(ASTCtx)); });
+      }
+
+      R = APValue(Values.data(), MT->getNumRows(), MT->getNumColumns());
+      return true;
+    }
+
     llvm_unreachable("invalid value to return");
   };
+
+  // Can't return functions as rvalues.
+  if (ResultType->isFunctionType())
+    return std::nullopt;
 
   // Invalid to read from.
   if (isDummy() || !isLive() || isPastEnd())
@@ -885,6 +964,8 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx,
 
   // Just load primitive types.
   if (OptPrimType T = Ctx.classify(ResultType)) {
+    if (!canDeref(*T))
+      return std::nullopt;
     TYPE_SWITCH(*T, return this->deref<T>().toAPValue(ASTCtx));
   }
 
@@ -895,8 +976,8 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx,
   return Result;
 }
 
-IntPointer IntPointer::atOffset(const ASTContext &ASTCtx,
-                                unsigned Offset) const {
+std::optional<IntPointer> IntPointer::atOffset(const ASTContext &ASTCtx,
+                                               unsigned Offset) const {
   if (!this->Desc)
     return *this;
   const Record *R = this->Desc->ElemRecord;
@@ -914,6 +995,9 @@ IntPointer IntPointer::atOffset(const ASTContext &ASTCtx,
     return *this;
 
   const FieldDecl *FD = F->Decl;
+  if (FD->getParent()->isInvalidDecl())
+    return std::nullopt;
+
   const ASTRecordLayout &Layout = ASTCtx.getASTRecordLayout(FD->getParent());
   unsigned FieldIndex = FD->getFieldIndex();
   uint64_t FieldOffset =

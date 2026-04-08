@@ -89,8 +89,7 @@ void SBAddress::SetAddress(lldb::SBSection section, lldb::addr_t offset) {
   LLDB_INSTRUMENT_VA(this, section, offset);
 
   Address &addr = ref();
-  addr.SetSection(section.GetSP());
-  addr.SetOffset(offset);
+  addr = Address(section.GetSP(), offset);
 }
 
 void SBAddress::SetAddress(const Address &address) { ref() = address; }
@@ -139,13 +138,8 @@ void SBAddress::SetLoadAddress(lldb::addr_t load_addr, lldb::SBTarget &target) {
 bool SBAddress::OffsetAddress(addr_t offset) {
   LLDB_INSTRUMENT_VA(this, offset);
 
-  if (m_opaque_up->IsValid()) {
-    addr_t addr_offset = m_opaque_up->GetOffset();
-    if (addr_offset != LLDB_INVALID_ADDRESS) {
-      m_opaque_up->SetOffset(addr_offset + offset);
-      return true;
-    }
-  }
+  if (m_opaque_up->IsValid())
+    return m_opaque_up->Slide(offset);
   return false;
 }
 

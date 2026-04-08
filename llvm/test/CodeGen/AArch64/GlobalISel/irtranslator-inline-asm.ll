@@ -183,6 +183,25 @@ define void @test_input_imm() {
   ret void
 }
 
+@var = global i64 0, align 8
+define void @test_immediate_constraint_sym() {
+  ; CHECK-LABEL: name: test_immediate_constraint_sym
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK-NEXT:   INLINEASM &"#TEST $0", 9 /* sideeffect mayload attdialect */, 13 /* imm */, @var
+  ; CHECK-NEXT:   RET_ReallyLR
+  call void asm sideeffect "#TEST $0", "i"(ptr @var)
+  ret void
+}
+
+define void @test_s_constraint() {
+  ; CHECK-LABEL: name: test_s_constraint
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK-NEXT:   INLINEASM &"#TEST $0", 9 /* sideeffect mayload attdialect */, 13 /* imm */, @var
+  ; CHECK-NEXT:   RET_ReallyLR
+  call void asm sideeffect "#TEST $0", "s"(ptr @var)
+  ret void
+}
+
 define zeroext i8 @test_input_register(ptr %src) nounwind {
   ; CHECK-LABEL: name: test_input_register
   ; CHECK: bb.1.entry:
@@ -250,8 +269,9 @@ define i16 @test_anyext_input_with_matching_constraint() {
 define i64 @test_input_with_matching_constraint_to_physical_register() {
   ; CHECK-LABEL: name: test_input_with_matching_constraint_to_physical_register
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-  ; CHECK-NEXT:   INLINEASM &"", 0 /* attdialect */, 10 /* regdef */, implicit-def $x2, 2147483657 /* reguse tiedto:$0 */, [[C]](tied-def 3)(s64)
+  ; CHECK-NEXT:   %0:_(s64) = G_CONSTANT i64 0
+  ; CHECK-NEXT:   %1:gpr64arg = COPY %0(s64)
+  ; CHECK-NEXT:   INLINEASM &"", 0 /* attdialect */, 10 /* regdef */, implicit-def $x2, 2147483657 /* reguse tiedto:$0 */, %1(tied-def 3)
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x2
   ; CHECK-NEXT:   $x0 = COPY [[COPY]](s64)
   ; CHECK-NEXT:   RET_ReallyLR implicit $x0

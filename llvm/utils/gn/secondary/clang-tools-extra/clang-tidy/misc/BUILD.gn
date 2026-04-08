@@ -32,6 +32,7 @@ static_library("misc") {
     "//llvm/lib/Support",
   ]
   sources = [
+    "AnonymousNamespaceInHeaderCheck.cpp",
     "ConfusableIdentifierCheck.cpp",
     "ConstCorrectnessCheck.cpp",
     "CoroutineHostileRAIICheck.cpp",
@@ -42,6 +43,7 @@ static_library("misc") {
     "MisleadingBidirectionalCheck.cpp",
     "MisleadingIdentifierCheck.cpp",
     "MisplacedConstCheck.cpp",
+    "MultipleInheritanceCheck.cpp",
     "NewDeleteOverloadsCheck.cpp",
     "NoRecursionCheck.cpp",
     "NonCopyableObjectsCheck.cpp",

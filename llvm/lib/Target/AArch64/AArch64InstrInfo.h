@@ -255,6 +255,12 @@ public:
   /// Returns whether the instruction is a pre-indexed load/store.
   static bool isPreLdSt(const MachineInstr &MI);
 
+  /// Returns whether the instruction is a zero-extending load.
+  static bool isZExtLoad(const MachineInstr &MI);
+
+  /// Returns whether the instruction is a sign-extending load.
+  static bool isSExtLoad(const MachineInstr &MI);
+
   /// Returns whether the instruction is a paired load/store.
   static bool isPairedLdSt(const MachineInstr &MI);
 
@@ -368,7 +374,7 @@ public:
   void loadRegFromStackSlot(
       MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
       Register DestReg, int FrameIndex, const TargetRegisterClass *RC,
-      Register VReg,
+      Register VReg, unsigned SubReg = 0,
       MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
 
   // This tells target independent code that it is okay to pass instructions
@@ -571,6 +577,9 @@ public:
                                                Register TargetReg,
                                                bool FrameSetup) const;
 
+  static int
+  findCondCodeUseOperandIdxForBranchOrSelect(const MachineInstr &Instr);
+
 #define GET_INSTRINFO_HELPER_DECLS
 #include "AArch64GenInstrInfo.inc"
 
@@ -705,6 +714,8 @@ int isAArch64FrameOffsetLegal(const MachineInstr &MI, StackOffset &Offset,
                               unsigned *OutUnscaledOp = nullptr,
                               int64_t *EmittableOffset = nullptr);
 
+bool optimizeTerminators(MachineBasicBlock *MBB, const TargetInstrInfo &TII);
+
 static inline bool isUncondBranchOpcode(int Opc) { return Opc == AArch64::B; }
 
 static inline bool isCondBranchOpcode(int Opc) {
@@ -806,6 +817,27 @@ static inline unsigned getPACOpcodeForKey(AArch64PACKey::ID K, bool Zero) {
   llvm_unreachable("Unhandled AArch64PACKey::ID enum");
 }
 
+/// Return B(L)RA opcode to be used for an authenticated branch or call using
+/// the given key, or its B(L)RA*Z variant that doesn't take a discriminator
+/// operand, using zero instead.
+static inline unsigned getBranchOpcodeForKey(bool IsCall, AArch64PACKey::ID K,
+                                             bool Zero) {
+  using namespace AArch64PACKey;
+  static const unsigned BranchOpcode[2][2] = {
+      {AArch64::BRAA, AArch64::BRAAZ},
+      {AArch64::BRAB, AArch64::BRABZ},
+  };
+  static const unsigned CallOpcode[2][2] = {
+      {AArch64::BLRAA, AArch64::BLRAAZ},
+      {AArch64::BLRAB, AArch64::BLRABZ},
+  };
+
+  assert((K == IA || K == IB) && "B(L)RA* instructions require IA or IB key");
+  if (IsCall)
+    return CallOpcode[K == IB][Zero];
+  return BranchOpcode[K == IB][Zero];
+}
+
 // struct TSFlags {
 #define TSFLAG_ELEMENT_SIZE_TYPE(X)      (X)        // 3-bits
 #define TSFLAG_DESTRUCTIVE_INST_TYPE(X) ((X) << 3)  // 4-bits
@@ -867,11 +899,11 @@ enum SMEMatrixType {
 #undef TSFLAG_INSTR_FLAGS
 #undef TSFLAG_SME_MATRIX_TYPE
 
-int getSVEPseudoMap(uint16_t Opcode);
-int getSVERevInstr(uint16_t Opcode);
-int getSVENonRevInstr(uint16_t Opcode);
+int32_t getSVEPseudoMap(uint32_t Opcode);
+int32_t getSVERevInstr(uint32_t Opcode);
+int32_t getSVENonRevInstr(uint32_t Opcode);
 
-int getSMEPseudoMap(uint16_t Opcode);
+int32_t getSMEPseudoMap(uint32_t Opcode);
 }
 
 } // end namespace llvm

@@ -1,6 +1,3 @@
-// The for loop in the backticks below requires bash.
-// REQUIRES: shell
-//
 // RUN: %clangxx_memprof  %s -o %t
 
 // stderr log_path

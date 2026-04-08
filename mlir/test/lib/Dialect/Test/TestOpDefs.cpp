@@ -13,6 +13,7 @@
 #include "mlir/IR/Verifier.h"
 #include "mlir/Interfaces/FunctionImplementation.h"
 #include "mlir/Interfaces/MemorySlotInterfaces.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 
 using namespace mlir;
 using namespace test;
@@ -34,6 +35,7 @@ static StringLiteral getVisibilityString(SymbolTable::Visibility visibility) {
   case SymbolTable::Visibility::Public:
     return "public";
   }
+  llvm_unreachable("Unknown SymbolTable::Visibility");
 }
 
 void OverriddenSymbolVisibilityOp::setVisibility(
@@ -254,7 +256,7 @@ OpFoldResult TestOpInPlaceFold::fold(FoldAdaptor adaptor) {
 
 LogicalResult OpWithInferTypeInterfaceOp::inferReturnTypes(
     MLIRContext *, std::optional<Location> location, ValueRange operands,
-    DictionaryAttr attributes, OpaqueProperties properties, RegionRange regions,
+    DictionaryAttr attributes, PropertyRef properties, RegionRange regions,
     SmallVectorImpl<Type> &inferredReturnTypes) {
   if (operands[0].getType() != operands[1].getType()) {
     return emitOptionalError(location, "operand type mismatch ",
@@ -271,8 +273,8 @@ LogicalResult OpWithInferTypeInterfaceOp::inferReturnTypes(
 
 LogicalResult OpWithShapedTypeInferTypeInterfaceOp::inferReturnTypeComponents(
     MLIRContext *context, std::optional<Location> location,
-    ValueShapeRange operands, DictionaryAttr attributes,
-    OpaqueProperties properties, RegionRange regions,
+    ValueShapeRange operands, DictionaryAttr attributes, PropertyRef properties,
+    RegionRange regions,
     SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
   // Create return type consisting of the last element of the first operand.
   auto operandType = operands.front().getType();
@@ -308,10 +310,10 @@ LogicalResult OpWithResultShapeInterfaceOp::reifyReturnTypeShapes(
   shapes.reserve(operands.size());
   for (Value operand : llvm::reverse(operands)) {
     auto rank = cast<RankedTensorType>(operand.getType()).getRank();
-    auto currShape = llvm::to_vector<4>(
-        llvm::map_range(llvm::seq<int64_t>(0, rank), [&](int64_t dim) -> Value {
+    auto currShape = llvm::map_to_vector<4>(
+        llvm::seq<int64_t>(0, rank), [&](int64_t dim) -> Value {
           return builder.createOrFold<tensor::DimOp>(loc, operand, dim);
-        }));
+        });
     shapes.push_back(tensor::FromElementsOp::create(
         builder, getLoc(),
         RankedTensorType::get({rank}, builder.getIndexType()), currShape));
@@ -329,7 +331,7 @@ LogicalResult ReifyShapedTypeUsingReifyResultShapesOp::reifyResultShapes(
   shapes.reserve(getNumOperands());
   for (Value operand : llvm::reverse(getOperands())) {
     auto tensorType = cast<RankedTensorType>(operand.getType());
-    auto currShape = llvm::to_vector<4>(llvm::map_range(
+    auto currShape = llvm::map_to_vector<4>(
         llvm::seq<int64_t>(0, tensorType.getRank()),
         [&](int64_t dim) -> OpFoldResult {
           return tensorType.isDynamicDim(dim)
@@ -338,7 +340,7 @@ LogicalResult ReifyShapedTypeUsingReifyResultShapesOp::reifyResultShapes(
                                                                dim))
                      : static_cast<OpFoldResult>(
                            builder.getIndexAttr(tensorType.getDimSize(dim)));
-        }));
+        });
     shapes.emplace_back(std::move(currShape));
   }
   return success();
@@ -450,7 +452,7 @@ namespace {
 struct TestResource : public SideEffects::Resource::Base<TestResource> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestResource)
 
-  StringRef getName() final { return "<Test>"; }
+  StringRef getName() const final { return "<Test>"; }
 };
 } // namespace
 
@@ -477,6 +479,12 @@ void SideEffectOp::getEffects(
     SideEffects::Resource *resource = SideEffects::DefaultResource::get();
     if (effectElement.get("test_resource"))
       resource = TestResource::get();
+    else if (effectElement.get("test_nonaddressable_resource"))
+      resource = TestNonAddressableResource::get();
+    else if (effectElement.get("test_nonaddressable_resource_a"))
+      resource = TestNonAddressableResourceA::get();
+    else if (effectElement.get("test_nonaddressable_resource_b"))
+      resource = TestNonAddressableResourceB::get();
 
     // Check for a result to affect.
     if (effectElement.get("on_result"))
@@ -491,6 +499,22 @@ void SideEffectOp::getEffects(
 void SideEffectOp::getEffects(
     SmallVectorImpl<TestEffects::EffectInstance> &effects) {
   testSideEffectOpGetEffect(getOperation(), effects);
+}
+
+//===----------------------------------------------------------------------===//
+// ConditionalSideEffectOp
+//===----------------------------------------------------------------------===//
+
+void ConditionalSideEffectOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  if (!getHasEffects())
+    return;
+
+  SideEffects::Resource *resource = SideEffects::DefaultResource::get();
+  effects.emplace_back(MemoryEffects::Read::get(), resource);
+  effects.emplace_back(MemoryEffects::Write::get(), resource);
+  effects.emplace_back(MemoryEffects::Free::get(), resource);
+  effects.emplace_back(MemoryEffects::Allocate::get(), resource);
 }
 
 void SideEffectWithRegionOp::getEffects(
@@ -516,6 +540,12 @@ void SideEffectWithRegionOp::getEffects(
     SideEffects::Resource *resource = SideEffects::DefaultResource::get();
     if (effectElement.get("test_resource"))
       resource = TestResource::get();
+    else if (effectElement.get("test_nonaddressable_resource"))
+      resource = TestNonAddressableResource::get();
+    else if (effectElement.get("test_nonaddressable_resource_a"))
+      resource = TestNonAddressableResourceA::get();
+    else if (effectElement.get("test_nonaddressable_resource_b"))
+      resource = TestNonAddressableResourceB::get();
 
     // Check for a result to affect.
     if (effectElement.get("on_result"))
@@ -743,15 +773,27 @@ void RegionIfOp::getSuccessorRegions(
   if (!point.isParent()) {
     if (point.getTerminatorPredecessorOrNull()->getParentRegion() !=
         &getJoinRegion())
-      regions.push_back(RegionSuccessor(&getJoinRegion(), getJoinArgs()));
+      regions.push_back(RegionSuccessor(&getJoinRegion()));
     else
-      regions.push_back(RegionSuccessor(getOperation(), getResults()));
+      regions.push_back(RegionSuccessor::parent());
     return;
   }
 
   // The then and else regions are the entry regions of this op.
-  regions.push_back(RegionSuccessor(&getThenRegion(), getThenArgs()));
-  regions.push_back(RegionSuccessor(&getElseRegion(), getElseArgs()));
+  regions.push_back(RegionSuccessor(&getThenRegion()));
+  regions.push_back(RegionSuccessor(&getElseRegion()));
+}
+
+ValueRange RegionIfOp::getSuccessorInputs(RegionSuccessor successor) {
+  if (successor.isParent())
+    return getResults();
+  if (successor == &getThenRegion())
+    return getThenArgs();
+  if (successor == &getElseRegion())
+    return getElseArgs();
+  if (successor == &getJoinRegion())
+    return getJoinArgs();
+  llvm_unreachable("invalid region successor");
 }
 
 void RegionIfOp::getRegionInvocationBounds(
@@ -772,7 +814,11 @@ void AnyCondOp::getSuccessorRegions(RegionBranchPoint point,
   if (point.isParent())
     regions.emplace_back(&getRegion());
   else
-    regions.emplace_back(getOperation(), getResults());
+    regions.push_back(RegionSuccessor::parent());
+}
+
+ValueRange AnyCondOp::getSuccessorInputs(RegionSuccessor successor) {
+  return successor.isParent() ? ValueRange(getResults()) : ValueRange();
 }
 
 void AnyCondOp::getRegionInvocationBounds(
@@ -858,9 +904,33 @@ LogicalResult TestVerifiersOp::verifyRegions() {
 // TestWithBoundsOp
 //===----------------------------------------------------------------------===//
 
+LogicalResult TestWithBoundsOp::verify() {
+  Type type = getElementTypeOrSelf(getResult().getType());
+  unsigned expectedWidth = 0;
+  if (type.isIndex())
+    expectedWidth = IndexType::kInternalStorageBitWidth;
+  else if (auto intTy = llvm::dyn_cast<IntegerType>(type))
+    expectedWidth = intTy.getWidth();
+  if (expectedWidth != 0 && getUmin().getBitWidth() != expectedWidth)
+    return emitOpError("bound attribute width (")
+           << getUmin().getBitWidth() << ") does not match result type width ("
+           << expectedWidth << ")";
+  return success();
+}
+
 void TestWithBoundsOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
                                          SetIntRangeFn setResultRanges) {
   setResultRanges(getResult(), {getUmin(), getUmax(), getSmin(), getSmax()});
+}
+
+//===----------------------------------------------------------------------===//
+// TestWithoutBoundsOp
+//===----------------------------------------------------------------------===//
+
+void TestWithoutBoundsOp::inferResultRangesFromOptional(
+    ArrayRef<IntegerValueRange> argRanges, SetIntLatticeFn setResultRanges) {
+  // Mimic ops with uninitialized range.
+  setResultRanges(getResult(), IntegerValueRange{});
 }
 
 //===----------------------------------------------------------------------===//
@@ -986,6 +1056,9 @@ mlir::presburger::BoundType ReifyBoundOp::getBoundType() {
 }
 
 LogicalResult ReifyBoundOp::verify() {
+  if (getType() != "EQ" && getType() != "LB" && getType() != "UB")
+    return emitOpError("invalid bound type '")
+           << getType() << "', expected 'EQ', 'LB', or 'UB'";
   if (isa<ShapedType>(getVar().getType())) {
     if (!getDim().has_value())
       return emitOpError("expected 'dim' attribute for shaped type variable");
@@ -1121,7 +1194,7 @@ LogicalResult OpWithInferTypeAdaptorInterfaceOp::inferReturnTypes(
 // refineReturnType, currently only refineReturnType can be omitted.
 LogicalResult OpWithRefineTypeInterfaceOp::inferReturnTypes(
     MLIRContext *context, std::optional<Location> location, ValueRange operands,
-    DictionaryAttr attributes, OpaqueProperties properties, RegionRange regions,
+    DictionaryAttr attributes, PropertyRef properties, RegionRange regions,
     SmallVectorImpl<Type> &returnTypes) {
   returnTypes.clear();
   return OpWithRefineTypeInterfaceOp::refineReturnTypes(
@@ -1131,7 +1204,7 @@ LogicalResult OpWithRefineTypeInterfaceOp::inferReturnTypes(
 
 LogicalResult OpWithRefineTypeInterfaceOp::refineReturnTypes(
     MLIRContext *, std::optional<Location> location, ValueRange operands,
-    DictionaryAttr attributes, OpaqueProperties properties, RegionRange regions,
+    DictionaryAttr attributes, PropertyRef properties, RegionRange regions,
     SmallVectorImpl<Type> &returnTypes) {
   if (operands[0].getType() != operands[1].getType()) {
     return emitOptionalError(location, "operand type mismatch ",
@@ -1213,7 +1286,7 @@ OpWithShapedTypeInferTypeAdaptorInterfaceOp::reifyReturnTypeShapes(
 
 LogicalResult TestOpWithPropertiesAndInferredType::inferReturnTypes(
     MLIRContext *context, std::optional<Location>, ValueRange operands,
-    DictionaryAttr attributes, OpaqueProperties properties, RegionRange regions,
+    DictionaryAttr attributes, PropertyRef properties, RegionRange regions,
     SmallVectorImpl<Type> &inferredReturnTypes) {
 
   Adaptor adaptor(operands, attributes, properties, regions);
@@ -1228,11 +1301,16 @@ LogicalResult TestOpWithPropertiesAndInferredType::inferReturnTypes(
 
 void LoopBlockOp::getSuccessorRegions(
     RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
-  regions.emplace_back(&getBody(), getBody().getArguments());
+  regions.emplace_back(&getBody());
   if (point.isParent())
     return;
 
-  regions.emplace_back(getOperation(), getOperation()->getResults());
+  regions.push_back(RegionSuccessor::parent());
+}
+
+ValueRange LoopBlockOp::getSuccessorInputs(RegionSuccessor successor) {
+  return successor.isParent() ? ValueRange(getOperation()->getResults())
+                              : ValueRange(getBody().getArguments());
 }
 
 OperandRange LoopBlockOp::getEntrySuccessorOperands(RegionSuccessor successor) {
@@ -1249,6 +1327,33 @@ LoopBlockTerminatorOp::getMutableSuccessorOperands(RegionSuccessor successor) {
   if (successor.isParent())
     return getExitArgMutable();
   return getNextIterArgMutable();
+}
+
+//===----------------------------------------------------------------------===//
+// TestCrashingReturnOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult TestCrashingReturnOp::verify() {
+  if (!getValid())
+    return emitOpError("requires 'valid' unit attribute");
+  return success();
+}
+
+MutableOperandRange
+TestCrashingReturnOp::getMutableSuccessorOperands(RegionSuccessor successor) {
+  if (!getValid())
+    llvm::report_fatal_error("getMutableSuccessorOperands called on unverified "
+                             "test.crashing_return");
+  return getArgsMutable();
+}
+
+//===----------------------------------------------------------------------===//
+// TestReturnWithIgnoredValueOp
+//===----------------------------------------------------------------------===//
+
+MutableOperandRange TestReturnWithIgnoredValueOp::getMutableSuccessorOperands(
+    RegionSuccessor /*successor*/) {
+  return getValuesMutable();
 }
 
 //===----------------------------------------------------------------------===//
@@ -1336,9 +1441,14 @@ MutableOperandRange TestCallOnDeviceOp::getArgOperandsMutable() {
 void TestStoreWithARegion::getSuccessorRegions(
     RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
   if (point.isParent())
-    regions.emplace_back(&getBody(), getBody().front().getArguments());
+    regions.emplace_back(&getBody());
   else
-    regions.emplace_back(getOperation(), getOperation()->getResults());
+    regions.push_back(RegionSuccessor::parent());
+}
+
+ValueRange TestStoreWithARegion::getSuccessorInputs(RegionSuccessor successor) {
+  return successor.isParent() ? ValueRange(getOperation()->getResults())
+                              : ValueRange(getBody().front().getArguments());
 }
 
 //===----------------------------------------------------------------------===//
@@ -1350,9 +1460,90 @@ void TestStoreWithALoopRegion::getSuccessorRegions(
   // Both the operation itself and the region may be branching into the body or
   // back into the operation itself. It is possible for the operation not to
   // enter the body.
-  regions.emplace_back(
-      RegionSuccessor(&getBody(), getBody().front().getArguments()));
-  regions.emplace_back(getOperation(), getOperation()->getResults());
+  regions.emplace_back(&getBody());
+  regions.push_back(RegionSuccessor::parent());
+}
+
+ValueRange
+TestStoreWithALoopRegion::getSuccessorInputs(RegionSuccessor successor) {
+  return successor.isParent() ? ValueRange(getOperation()->getResults())
+                              : ValueRange(getBody().front().getArguments());
+}
+
+//===----------------------------------------------------------------------===//
+// TestRegionTypesCompatOp
+//===----------------------------------------------------------------------===//
+
+void TestRegionTypesCompatOp::getSuccessorRegions(
+    RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
+  if (point.isParent())
+    regions.emplace_back(&getBody());
+  else
+    regions.push_back(RegionSuccessor::parent());
+}
+
+OperandRange
+TestRegionTypesCompatOp::getEntrySuccessorOperands(RegionSuccessor) {
+  return getEntries();
+}
+
+ValueRange
+TestRegionTypesCompatOp::getSuccessorInputs(RegionSuccessor successor) {
+  if (successor.isParent())
+    return getResults();
+  return getBody().getArguments();
+}
+
+bool TestRegionTypesCompatOp::areTypesCompatible(Type lhs, Type rhs) {
+  return lhs == rhs || (isa<IntegerType>(lhs) && isa<IntegerType>(rhs));
+}
+
+//===----------------------------------------------------------------------===//
+// TestLoopTypesCompatOp
+//===----------------------------------------------------------------------===//
+
+void TestLoopTypesCompatOp::getSuccessorRegions(
+    RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
+  regions.emplace_back(&getBody());
+  if (!point.isParent())
+    regions.push_back(RegionSuccessor::parent());
+}
+
+OperandRange TestLoopTypesCompatOp::getEntrySuccessorOperands(RegionSuccessor) {
+  return getInitArgs();
+}
+
+ValueRange
+TestLoopTypesCompatOp::getSuccessorInputs(RegionSuccessor successor) {
+  if (successor.isParent())
+    return getResults();
+  return getBody().getArguments();
+}
+
+MutableArrayRef<OpOperand> TestLoopTypesCompatOp::getInitsMutable() {
+  return getInitArgsMutable();
+}
+
+Block::BlockArgListType TestLoopTypesCompatOp::getRegionIterArgs() {
+  return getBody().getArguments();
+}
+
+std::optional<MutableArrayRef<OpOperand>>
+TestLoopTypesCompatOp::getYieldedValuesMutable() {
+  return cast<TestTypesCompatYieldOp>(getBody().front().getTerminator())
+      .getArgsMutable();
+}
+
+std::optional<ResultRange> TestLoopTypesCompatOp::getLoopResults() {
+  return getResults();
+}
+
+SmallVector<Region *> TestLoopTypesCompatOp::getLoopRegions() {
+  return {&getBody()};
+}
+
+bool TestLoopTypesCompatOp::areTypesCompatible(Type lhs, Type rhs) {
+  return lhs == rhs || (isa<IntegerType>(lhs) && isa<IntegerType>(rhs));
 }
 
 //===----------------------------------------------------------------------===//
@@ -1636,4 +1827,15 @@ test::TestCreateTensorOp::getBufferType(
     return failure();
 
   return convertTensorToBuffer(getOperation(), options, type);
+}
+
+// Define a custom builder for ManyRegionsOp declared in TestOps.td.
+//  OpBuilder<(ins "::std::unique_ptr<::mlir::Region>":$firstRegion,
+//                 "::std::unique_ptr<::mlir::Region>":$secondRegion)>
+void test::ManyRegionsOp::build(
+    mlir::OpBuilder &builder, mlir::OperationState &state,
+    llvm::SmallVectorImpl<std::unique_ptr<mlir::Region>> &&regions) {
+  for (auto &&regionPtr : std::move(regions))
+    state.addRegion(std::move(regionPtr));
+  ManyRegionsOp::build(builder, state, {}, regions.size());
 }

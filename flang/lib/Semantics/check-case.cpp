@@ -117,26 +117,27 @@ private:
 
   using PairOfValues = std::pair<std::optional<Value>, std::optional<Value>>;
   PairOfValues ComputeBounds(const parser::CaseValueRange &range) {
-    return common::visit(
-        common::visitors{
-            [&](const parser::CaseValue &x) {
-              auto value{GetValue(x)};
-              return PairOfValues{value, value};
-            },
-            [&](const parser::CaseValueRange::Range &x) {
-              std::optional<Value> lo, hi;
-              if (x.lower) {
-                lo = GetValue(*x.lower);
-              }
-              if (x.upper) {
-                hi = GetValue(*x.upper);
-              }
-              if ((x.lower && !lo) || (x.upper && !hi)) {
-                return PairOfValues{}; // error case
-              }
-              return PairOfValues{std::move(lo), std::move(hi)};
-            },
-        },
+    return common::visit(common::visitors{
+                             [&](const parser::CaseValue &x) {
+                               auto value{GetValue(x)};
+                               return PairOfValues{value, value};
+                             },
+                             [&](const parser::CaseValueRange::Range &x) {
+                               const auto &[lower, upper]{x.t};
+                               std::optional<Value> lo, hi;
+                               if (lower) {
+                                 lo = GetValue(*lower);
+                               }
+                               if (upper) {
+                                 hi = GetValue(*upper);
+                               }
+                               if ((lower && !lo) || (upper && !hi)) {
+                                 return PairOfValues{}; // error case
+                               }
+                               return PairOfValues{
+                                   std::move(lo), std::move(hi)};
+                             },
+                         },
         range.u);
   }
 

@@ -9,6 +9,7 @@
 #include "lldb/ValueObject/ValueObjectSynthetic.h"
 
 #include "lldb/Core/Value.h"
+#include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/DataFormatters/TypeSynthetic.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Utility/ConstString.h"
@@ -18,6 +19,7 @@
 #include "lldb/ValueObject/ValueObject.h"
 
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/Error.h"
 #include <optional>
 
 namespace lldb_private {
@@ -344,12 +346,30 @@ ValueObjectSynthetic::GetIndexOfChildWithName(llvm::StringRef name_ref) {
   }
 
   if (!found_index && m_synth_filter_up != nullptr) {
-    auto index_or_err = m_synth_filter_up->GetIndexOfChildWithName(name);
-    if (!index_or_err)
-      return index_or_err.takeError();
+    size_t index = SIZE_MAX;
+    if (auto index_or_err = m_synth_filter_up->GetIndexOfChildWithName(name)) {
+      index = *index_or_err;
+    } else if (!m_synth_sp->CustomSubscripting()) {
+      // Provide automatic support for subscript child names ("[N]").
+      auto maybe_index = formatters::ExtractIndexFromString(name.GetCString());
+      if (!maybe_index)
+        // The child name was not of the form "[N]", return the original error.
+        return index_or_err.takeError();
+
+      // Subscripting succeeded, ignore the original error.
+      llvm::consumeError(index_or_err.takeError());
+      index = *maybe_index;
+
+      // Prevent unnecessary work by limiting max to one past the index.
+      uint32_t max = index + 1;
+      auto num_children = GetNumChildrenIgnoringErrors(max);
+      if (index >= num_children)
+        return llvm::createStringError("Subscript index out of range: %zu",
+                                       index);
+    }
     std::lock_guard<std::mutex> guard(m_child_mutex);
-    m_name_toindex[name.GetCString()] = *index_or_err;
-    return *index_or_err;
+    m_name_toindex[name.GetCString()] = index;
+    return index;
   } else if (!found_index && m_synth_filter_up == nullptr) {
     return llvm::createStringError("Type has no child named '%s'",
                                    name.AsCString());
@@ -442,4 +462,19 @@ void ValueObjectSynthetic::SetLanguageFlags(uint64_t flags) {
     m_parent->SetLanguageFlags(flags);
   else
     this->ValueObject::SetLanguageFlags(flags);
+}
+
+void ValueObjectSynthetic::GetExpressionPath(Stream &stream,
+                                             GetExpressionPathFormat epformat) {
+  // A synthetic ValueObject may wrap an underlying  Register or RegisterSet
+  // ValueObject, which requires a different approach to generating the
+  // expression path. In such cases, delegate to the non-synthetic value object.
+  if (const lldb::ValueType obj_value_type = GetValueType();
+      IsSynthetic() && (obj_value_type == lldb::eValueTypeRegister ||
+                        obj_value_type == lldb::eValueTypeRegisterSet)) {
+
+    if (const lldb::ValueObjectSP raw_value = GetNonSyntheticValue())
+      return raw_value->GetExpressionPath(stream, epformat);
+  }
+  return ValueObject::GetExpressionPath(stream, epformat);
 }

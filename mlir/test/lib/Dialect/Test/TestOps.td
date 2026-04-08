@@ -546,7 +546,7 @@ def VariadicRegionInferredTypesOp : TEST_Op<"variadic_region_inferred",
   let extraClassDeclaration = [{
     static llvm::LogicalResult inferReturnTypes(mlir::MLIRContext *context,
           std::optional<::mlir::Location> location, mlir::ValueRange operands,
-          mlir::DictionaryAttr attributes, mlir::OpaqueProperties properties, mlir::RegionRange regions,
+          mlir::DictionaryAttr attributes, mlir::PropertyRef properties, mlir::RegionRange regions,
           llvm::SmallVectorImpl<mlir::Type> &inferredReturnTypes) {
       inferredReturnTypes.assign({mlir::IntegerType::get(context, 16)});
       return mlir::success();
@@ -829,6 +829,13 @@ def OperandZeroAndResultHaveSameElementCount :
             [AllElementCountsMatch<["x", "res"]>]> {
   let arguments = (ins AnyShaped:$x, AnyShaped:$y);
   let results = (outs AnyShaped:$res);
+}
+
+def OperandAndResultHaveSameElementCountAnyType :
+    TEST_Op<"operand_and_result_have_same_element_count_any_type",
+            [AllElementCountsMatch<["x", "res"]>]> {
+  let arguments = (ins AnyType:$x);
+  let results = (outs AnyType:$res);
 }
 
 def FourEqualsFive :
@@ -2232,6 +2239,18 @@ def TestReturnOp : TEST_Op<"return", [Pure, ReturnLike, Terminator]> {
     [{ build($_builder, $_state, {}); }]>
   ];
 }
+// A return-like terminator used to test FuncOp verifier ordering.
+// When 'valid' unit-attr is absent the op is malformed; its verifier
+// emits an error, but getMutableSuccessorOperands() calls report_fatal_error
+// to expose the fact that FuncOp::verify() runs before the region is checked.
+def TestCrashingReturnOp : TEST_Op<"crashing_return", [
+    DeclareOpInterfaceMethods<RegionBranchTerminatorOpInterface,
+       ["getMutableSuccessorOperands"]>,
+    Terminator]> {
+  let arguments = (ins Variadic<AnyType>:$args, UnitAttr:$valid);
+  let assemblyFormat = "($args^ `:` type($args))? attr-dict";
+  let hasVerifier = 1;
+}
 def TestCastOp : TEST_Op<"cast">,
   Arguments<(ins Variadic<AnyType>)>, Results<(outs AnyType)>;
 def TestInvalidOp : TEST_Op<"invalid", [Terminator]>,
@@ -2280,6 +2299,19 @@ def TestSignatureConversionUndoOp : TEST_Op<"signature_conversion_undo"> {
 def TestSignatureConversionNoConverterOp
   : TEST_Op<"signature_conversion_no_converter"> {
   let regions = (region AnyRegion);
+}
+
+// A return-like operation with override on the successor operand getter
+// interface method.
+def TestReturnWithIgnoredValueOp : TEST_Op<"return_with_ignored_value", [
+    Pure,
+    ReturnLike,
+    DeclareOpInterfaceMethods<RegionBranchTerminatorOpInterface, [
+      "getMutableSuccessorOperands"
+    ]>,
+    Terminator
+]> {
+  let arguments = (ins Variadic<AnyType>:$values, AnyType:$unwanted_value);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2352,6 +2384,24 @@ def IsolatedGraphRegionOp : TEST_Op<"isolated_graph_region",  [
   let assemblyFormat = "attr-dict-with-keyword $region";
 }
 
+def ManyRegionsOp : TEST_Op<"many_regions", []> {
+  let summary = "operation created with move-only objects";
+  let description = [{
+    Test op with multiple regions with a `create` function that
+    takes parameters containing move-only objects.
+  }];
+
+  let regions = (region VariadicRegion<AnyRegion>:$regions);
+  let builders =
+      [OpBuilder<(ins "::std::unique_ptr<::mlir::Region>":$singleRegion), [{
+      $_state.addRegion(std::move(singleRegion));
+      build($_builder, $_state, {}, /*regionsCount=*/1);
+    }]>,
+       // Define in TestOps.cpp.
+       OpBuilder<(ins "::llvm::SmallVectorImpl<::std::unique_ptr<::mlir::"
+                      "Region>>&&":$regions)>];
+}
+
 def AffineScopeOp : TEST_Op<"affine_scope", [AffineScope]> {
   let summary =  "affine scope operation";
   let description = [{
@@ -2419,6 +2469,13 @@ def ArrayOfAttrOp : TEST_Op<"array_of_attr_op"> {
 def SideEffectOp : TEST_Op<"side_effect_op",
     [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
      DeclareOpInterfaceMethods<TestEffectOpInterface>]> {
+  let results = (outs AnyType:$result);
+}
+
+def ConditionalSideEffectOp
+    : TEST_Op<"conditional_side_effect_op", [DeclareOpInterfaceMethods<
+                                                MemoryEffectsOpInterface>]> {
+  let arguments = (ins BoolAttr:$has_effects);
   let results = (outs AnyType:$result);
 }
 
@@ -2617,7 +2674,8 @@ def RegionIfYieldOp : TEST_Op<"region_if_yield",
 def RegionIfOp : TEST_Op<"region_if",
       [DeclareOpInterfaceMethods<RegionBranchOpInterface,
                                  ["getRegionInvocationBounds",
-                                  "getEntrySuccessorOperands"]>,
+                                  "getEntrySuccessorOperands",
+                                  "getSuccessorInputs"]>,
        SingleBlockImplicitTerminator<"RegionIfYieldOp">,
        RecursiveMemoryEffects]> {
   let description =[{
@@ -2647,7 +2705,8 @@ def RegionIfOp : TEST_Op<"region_if",
 
 def AnyCondOp : TEST_Op<"any_cond",
       [DeclareOpInterfaceMethods<RegionBranchOpInterface,
-                                 ["getRegionInvocationBounds"]>,
+                                 ["getRegionInvocationBounds",
+                                  "getSuccessorInputs"]>,
        RecursiveMemoryEffects]> {
   let results = (outs Variadic<AnyType>:$results);
   let regions = (region AnyRegion:$region);
@@ -2655,7 +2714,8 @@ def AnyCondOp : TEST_Op<"any_cond",
 
 def LoopBlockOp : TEST_Op<"loop_block",
     [DeclareOpInterfaceMethods<RegionBranchOpInterface,
-        ["getEntrySuccessorOperands"]>, RecursiveMemoryEffects]> {
+        ["getEntrySuccessorOperands", "getSuccessorInputs"]>,
+     RecursiveMemoryEffects]> {
 
   let results = (outs F32:$floatResult);
   let arguments = (ins I32:$init);
@@ -2668,8 +2728,9 @@ def LoopBlockOp : TEST_Op<"loop_block",
 }
 
 def LoopBlockTerminatorOp : TEST_Op<"loop_block_term",
-    [DeclareOpInterfaceMethods<RegionBranchTerminatorOpInterface>, Pure,
-     Terminator]> {
+    [DeclareOpInterfaceMethods<RegionBranchTerminatorOpInterface,
+        ["getMutableSuccessorOperands"]>,
+     Pure, Terminator]> {
   let arguments = (ins I32:$nextIterArg, F32:$exitArg);
 
   let assemblyFormat = [{
@@ -2687,6 +2748,41 @@ def TestNoTerminatorOp : TEST_Op<"switch_with_no_break", [
   let assemblyFormat = [{
     $arg attr-dict custom<SwitchCases>($cases, $caseRegions)
   }];
+}
+
+//===----------------------------------------------------------------------===//
+// Test areTypesCompatible for RegionBranchOpInterface / LoopLikeOpInterface
+//===----------------------------------------------------------------------===//
+
+def TestTypesCompatYieldOp : TEST_Op<"types_compat_yield",
+    [Pure, ReturnLike, Terminator]> {
+  let arguments = (ins Variadic<AnyType>:$args);
+  let assemblyFormat = "($args^ `:` type($args))? attr-dict";
+}
+
+def TestRegionTypesCompatOp : TEST_Op<"region_types_compat",
+    [DeclareOpInterfaceMethods<RegionBranchOpInterface,
+       ["getEntrySuccessorOperands", "getSuccessorInputs",
+        "areTypesCompatible"]>,
+     SingleBlockImplicitTerminator<"TestTypesCompatYieldOp">,
+     RecursiveMemoryEffects]> {
+  let arguments = (ins Variadic<AnyType>:$entries);
+  let results = (outs Variadic<AnyType>:$results);
+  let regions = (region SizedRegion<1>:$body);
+}
+
+def TestLoopTypesCompatOp : TEST_Op<"loop_types_compat",
+    [DeclareOpInterfaceMethods<LoopLikeOpInterface,
+       ["getInitsMutable", "getRegionIterArgs", "getYieldedValuesMutable",
+        "getLoopResults"]>,
+     DeclareOpInterfaceMethods<RegionBranchOpInterface,
+       ["getEntrySuccessorOperands", "getSuccessorInputs",
+        "areTypesCompatible"]>,
+     SingleBlockImplicitTerminator<"TestTypesCompatYieldOp">,
+     RecursiveMemoryEffects]> {
+  let arguments = (ins Variadic<AnyType>:$init_args);
+  let results = (outs Variadic<AnyType>:$results);
+  let regions = (region SizedRegion<1>:$body);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2740,7 +2836,7 @@ class TableGenBuildInferReturnTypeBaseOp<string mnemonic,
   let extraClassDeclaration = [{
     static ::llvm::LogicalResult inferReturnTypes(::mlir::MLIRContext *,
           ::std::optional<::mlir::Location> location, ::mlir::ValueRange operands,
-          ::mlir::DictionaryAttr attributes, mlir::OpaqueProperties properties, ::mlir::RegionRange regions,
+          ::mlir::DictionaryAttr attributes, mlir::PropertyRef properties, ::mlir::RegionRange regions,
           ::llvm::SmallVectorImpl<::mlir::Type> &inferredReturnTypes) {
       inferredReturnTypes.assign({operands[0].getType()});
       return ::mlir::success();
@@ -3145,6 +3241,7 @@ def InferIntRangeType : AnyTypeOf<[AnyInteger, Index, VectorOfNonZeroRankOf<[Any
 def TestWithBoundsOp : TEST_Op<"with_bounds",
                           [DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>,
                            NoMemoryEffect]> {
+  let hasVerifier = 1;
   let description = [{
     Creates a value with specified [min, max] range for integer range analysis.
 
@@ -3162,6 +3259,23 @@ def TestWithBoundsOp : TEST_Op<"with_bounds",
   let results = (outs InferIntRangeType:$fakeVal);
 
   let assemblyFormat = "attr-dict `:` type($fakeVal)";
+}
+
+def TestWithoutBoundsOp : TEST_Op<"without_bounds",
+                         [DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRangesFromOptional"]>,
+                          NoMemoryEffect]> {
+  let description = [{
+    Creates a value with uninitialized range for integer range analysis tests.
+
+    Example:
+
+    ```mlir
+    %0 = test.without_bounds : index
+    ```
+  }];
+  let results = (outs InferIntRangeType:$result);
+
+  let assemblyFormat = "attr-dict `:` type($result)";
 }
 
 def TestWithBoundsRegionOp : TEST_Op<"with_bounds_region",
@@ -3723,7 +3837,7 @@ def TestCallOnDeviceOp : TEST_Op<"call_on_device",
 }
 
 def TestStoreWithARegion : TEST_Op<"store_with_a_region",
-    [DeclareOpInterfaceMethods<RegionBranchOpInterface>,
+    [DeclareOpInterfaceMethods<RegionBranchOpInterface, ["getSuccessorInputs"]>,
      SingleBlock]> {
   let arguments = (ins
     Arg<AnyMemRef, "", [MemWrite]>:$address,
@@ -3735,7 +3849,7 @@ def TestStoreWithARegion : TEST_Op<"store_with_a_region",
 }
 
 def TestStoreWithALoopRegion : TEST_Op<"store_with_a_loop_region",
-    [DeclareOpInterfaceMethods<RegionBranchOpInterface>,
+    [DeclareOpInterfaceMethods<RegionBranchOpInterface, ["getSuccessorInputs"]>,
      SingleBlock]> {
   let arguments = (ins
     Arg<AnyMemRef, "", [MemWrite]>:$address,

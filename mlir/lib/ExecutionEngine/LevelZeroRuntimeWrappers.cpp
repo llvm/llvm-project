@@ -10,15 +10,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/Twine.h"
-
 #include "level_zero/ze_api.h"
 #include <cassert>
+#include <cstring>
 #include <deque>
 #include <exception>
 #include <functional>
 #include <iostream>
 #include <limits>
+#include <memory>
+#include <stdexcept>
 #include <unordered_set>
 #include <vector>
 
@@ -71,10 +72,9 @@ static ze_driver_handle_t getDriver(uint32_t idx = 0) {
   drivers.resize(driverCount);
   L0_SAFE_CALL(zeInitDrivers(&driverCount, drivers.data(), &driver_type));
   if (idx >= driverCount)
-    throw std::runtime_error((llvm::Twine("Requested driver idx out-of-bound, "
-                                          "number of availabe drivers: ") +
-                              std::to_string(driverCount))
-                                 .str());
+    throw std::runtime_error(std::string("Requested driver idx out-of-bound, "
+                                         "number of availabe drivers: ") +
+                             std::to_string(driverCount));
   isDriverInitialised = true;
   return drivers[idx];
 }
@@ -380,16 +380,15 @@ struct StreamWrapper {
   }
 };
 
-static ze_module_handle_t loadModule(const void *data, size_t dataSize) {
+static ze_module_handle_t
+loadModule(const void *data, size_t dataSize,
+           ze_module_format_t format = ZE_MODULE_FORMAT_NATIVE) {
   assert(data);
   ze_module_handle_t zeModule;
-  ze_module_desc_t desc = {ZE_STRUCTURE_TYPE_MODULE_DESC,
-                           nullptr,
-                           ZE_MODULE_FORMAT_IL_SPIRV,
-                           dataSize,
-                           (const uint8_t *)data,
-                           nullptr,
-                           nullptr};
+  ze_module_desc_t desc = {
+      ZE_STRUCTURE_TYPE_MODULE_DESC, nullptr, format, dataSize,
+      (const uint8_t *)data,         nullptr, nullptr};
+
   ze_module_build_log_handle_t buildLogHandle;
   ze_result_t result =
       zeModuleCreate(getRtContext().context.get(), getRtContext().device, &desc,
@@ -519,6 +518,13 @@ extern "C" void mgpuMemset16(void *dst, unsigned short value, size_t count,
 extern "C" ze_module_handle_t mgpuModuleLoad(const void *data,
                                              size_t gpuBlobSize) {
   return catchAll([&]() { return loadModule(data, gpuBlobSize); });
+}
+
+extern "C" ze_module_handle_t mgpuModuleLoadJIT(void *data, int optLevel) {
+  return catchAll([&]() {
+    return loadModule(data, strlen(reinterpret_cast<char *>(data)),
+                      ZE_MODULE_FORMAT_IL_SPIRV);
+  });
 }
 
 extern "C" ze_kernel_handle_t mgpuModuleGetFunction(ze_module_handle_t module,

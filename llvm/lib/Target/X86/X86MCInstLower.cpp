@@ -181,7 +181,7 @@ MCSymbol *X86MCInstLower::GetSymbolFromOperand(const MachineOperand &MO) const {
   }
 
   if (!Suffix.empty())
-    Name += DL.getPrivateGlobalPrefix();
+    Name += DL.getInternalSymbolPrefix();
 
   if (MO.isGlobal()) {
     const GlobalValue *GV = MO.getGlobal();
@@ -370,7 +370,7 @@ MCOperand X86MCInstLower::LowerMachineOperand(const MachineInstr *MI,
 
 // Replace TAILJMP opcodes with their equivalent opcodes that have encoding
 // information.
-static unsigned convertTailJumpOpcode(unsigned Opcode) {
+static unsigned convertTailJumpOpcode(unsigned Opcode, bool IsLarge = false) {
   switch (Opcode) {
   case X86::TAILJMPr:
     Opcode = X86::JMP32r;
@@ -392,7 +392,7 @@ static unsigned convertTailJumpOpcode(unsigned Opcode) {
     break;
   case X86::TAILJMPd:
   case X86::TAILJMPd64:
-    Opcode = X86::JMP_1;
+    Opcode = IsLarge ? X86::JMPABS64i : X86::JMP_1;
     break;
   case X86::TAILJMPd_CC:
   case X86::TAILJMPd64_CC:
@@ -485,10 +485,17 @@ void X86MCInstLower::Lower(const MachineInstr *MI, MCInst &OutMI) const {
   case X86::TAILJMPr64:
   case X86::TAILJMPr64_REX:
   case X86::TAILJMPd:
-  case X86::TAILJMPd64:
     assert(OutMI.getNumOperands() == 1 && "Unexpected number of operands!");
     OutMI.setOpcode(convertTailJumpOpcode(OutMI.getOpcode()));
     break;
+  case X86::TAILJMPd64: {
+    assert(OutMI.getNumOperands() == 1 && "Unexpected number of operands!");
+    bool IsLarge = TM.getCodeModel() == CodeModel::Large;
+    assert((!IsLarge || AsmPrinter.getSubtarget().hasJMPABS()) &&
+           "Unexpected TAILJMPd64 in large code model without JMPABS");
+    OutMI.setOpcode(convertTailJumpOpcode(OutMI.getOpcode(), IsLarge));
+    break;
+  }
   case X86::TAILJMPd_CC:
   case X86::TAILJMPd64_CC:
     assert(OutMI.getNumOperands() == 2 && "Unexpected number of operands!");
@@ -1565,10 +1572,16 @@ static void printConstant(const Constant *COp, unsigned BitWidth,
       printConstant(CI->getValue(), CS, PrintZero);
   } else if (auto *CF = dyn_cast<ConstantFP>(COp)) {
     if (auto VTy = dyn_cast<FixedVectorType>(CF->getType())) {
-      for (unsigned I = 0, E = VTy->getNumElements(); I != E; ++I) {
-        if (I != 0)
-          CS << ',';
-        printConstant(CF->getValueAPF(), CS, PrintZero);
+      unsigned EltBits = VTy->getScalarSizeInBits();
+      unsigned E = std::min(BitWidth / EltBits, VTy->getNumElements());
+      if ((BitWidth % EltBits) == 0) {
+        for (unsigned I = 0; I != E; ++I) {
+          if (I != 0)
+            CS << ",";
+          printConstant(CF->getValueAPF(), CS, PrintZero);
+        }
+      } else {
+        CS << "?";
       }
     } else
       printConstant(CF->getValueAPF(), CS, PrintZero);
@@ -2526,6 +2539,12 @@ void X86AsmPrinter::emitInstruction(const MachineInstr *MI) {
     EmitSEHInstruction(MI);
     return;
 
+  case X86::SEH_SplitChainedAtEndOfBlock:
+    assert(!SplitChainedAtEndOfBlock &&
+           "Duplicate SEH_SplitChainedAtEndOfBlock in a current block");
+    SplitChainedAtEndOfBlock = true;
+    return;
+
   case X86::SEH_BeginEpilogue: {
     assert(MF->hasWinCFI() && "SEH_ instruction in function without WinCFI?");
     EmitSEHInstruction(MI);
@@ -2604,6 +2623,15 @@ void X86AsmPrinter::emitInstruction(const MachineInstr *MI) {
         EmitAndCountInstruction(MCInstBuilder(X86::DS_PREFIX));
     }
     break;
+
+  case X86::JCC_SELF:
+    MCSymbol *Sym = OutContext.createTempSymbol();
+    OutStreamer->emitLabel(Sym);
+    EmitAndCountInstruction(
+        MCInstBuilder(X86::JCC_1)
+            .addExpr(MCSymbolRefExpr::create(Sym, OutContext))
+            .addImm(MI->getOperand(0).getImm()));
+    return;
   }
 
   MCInst TmpInst;
@@ -2619,6 +2647,18 @@ void X86AsmPrinter::emitInstruction(const MachineInstr *MI) {
   }
 
   EmitAndCountInstruction(TmpInst);
+}
+
+void X86AsmPrinter::emitInlineAsmEnd(const MCSubtargetInfo &StartInfo,
+                                     const MCSubtargetInfo *EndInfo,
+                                     const MachineInstr *MI) {
+  if (MI) {
+    // If unwinding inline asm ends on a call, wineh may require insertion of
+    // a nop.
+    unsigned ExtraInfo = MI->getOperand(InlineAsm::MIOp_ExtraInfo).getImm();
+    if (ExtraInfo & InlineAsm::Extra_MayUnwind)
+      maybeEmitNopAfterCallForWindowsEH(MI);
+  }
 }
 
 void X86AsmPrinter::emitCallInstruction(const llvm::MCInst &MCI) {

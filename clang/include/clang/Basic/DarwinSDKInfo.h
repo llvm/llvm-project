@@ -11,11 +11,15 @@
 
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/VersionTuple.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/TargetParser/Triple.h"
 #include <optional>
+#include <string>
 
 namespace llvm {
 namespace json {
@@ -28,6 +32,39 @@ namespace clang {
 /// The information about the darwin SDK that was used during this compilation.
 class DarwinSDKInfo {
 public:
+  /// Information about the supported platforms, derived from the target triple
+  /// definitions, in the SDK.
+  struct SDKPlatformInfo {
+  public:
+    SDKPlatformInfo(llvm::Triple::VendorType Vendor, llvm::Triple::OSType OS,
+                    llvm::Triple::EnvironmentType Environment,
+                    llvm::Triple::ObjectFormatType ObjectFormat,
+                    StringRef PlatformPrefix)
+        : Vendor(Vendor), OS(OS), Environment(Environment),
+          ObjectFormat(ObjectFormat), PlatformPrefix(PlatformPrefix) {}
+
+    llvm::Triple::VendorType getVendor() const { return Vendor; }
+    llvm::Triple::OSType getOS() const { return OS; }
+    llvm::Triple::EnvironmentType getEnvironment() const { return Environment; }
+    llvm::Triple::ObjectFormatType getObjectFormat() const {
+      return ObjectFormat;
+    }
+    StringRef getPlatformPrefix() const { return PlatformPrefix; }
+
+    bool operator==(const llvm::Triple &RHS) const {
+      return (Vendor == RHS.getVendor()) && (OS == RHS.getOS()) &&
+             (Environment == RHS.getEnvironment()) &&
+             (ObjectFormat == RHS.getObjectFormat());
+    }
+
+  private:
+    llvm::Triple::VendorType Vendor;
+    llvm::Triple::OSType OS;
+    llvm::Triple::EnvironmentType Environment;
+    llvm::Triple::ObjectFormatType ObjectFormat;
+    std::string PlatformPrefix;
+  };
+
   /// A value that describes two os-environment pairs that can be used as a key
   /// to the version map in the SDK.
   struct OSEnvPair {
@@ -141,20 +178,48 @@ public:
     llvm::DenseMap<VersionTuple, VersionTuple> Mapping;
   };
 
+  using PlatformInfoStorageType = SmallVector<SDKPlatformInfo, 2>;
+
   DarwinSDKInfo(
-      VersionTuple Version, VersionTuple MaximumDeploymentTarget,
-      llvm::Triple::OSType OS,
+      std::string FilePath, llvm::Triple::OSType OS,
+      llvm::Triple::EnvironmentType Environment, VersionTuple Version,
+      StringRef DisplayName, VersionTuple MaximumDeploymentTarget,
+      PlatformInfoStorageType PlatformInfos,
       llvm::DenseMap<OSEnvPair::StorageType,
                      std::optional<RelatedTargetVersionMapping>>
           VersionMappings =
               llvm::DenseMap<OSEnvPair::StorageType,
                              std::optional<RelatedTargetVersionMapping>>())
-      : Version(Version), MaximumDeploymentTarget(MaximumDeploymentTarget),
-        OS(OS), VersionMappings(std::move(VersionMappings)) {}
+      : FilePath(FilePath), OS(OS), Environment(Environment), Version(Version),
+        DisplayName(DisplayName),
+        MaximumDeploymentTarget(MaximumDeploymentTarget),
+        PlatformInfos(std::move(PlatformInfos)),
+        VersionMappings(std::move(VersionMappings)) {}
+
+  StringRef getFilePath() const { return FilePath; }
+
+  llvm::Triple::OSType getOS() const { return OS; }
+
+  llvm::Triple::EnvironmentType getEnvironment() const { return Environment; }
 
   const llvm::VersionTuple &getVersion() const { return Version; }
 
-  const llvm::Triple::OSType &getOS() const { return OS; }
+  const StringRef getDisplayName() const { return DisplayName; }
+
+  const SDKPlatformInfo &getCanonicalPlatformInfo() const {
+    return PlatformInfos[0];
+  }
+
+  bool supportsTriple(llvm::Triple Triple) const {
+    return llvm::find(PlatformInfos, Triple) != PlatformInfos.end();
+  }
+
+  const StringRef getPlatformPrefix(llvm::Triple Triple) const {
+    auto PlatformInfoIt = llvm::find(PlatformInfos, Triple);
+    if (PlatformInfoIt == PlatformInfos.end())
+      return StringRef();
+    return PlatformInfoIt->getPlatformPrefix();
+  }
 
   // Returns the optional, target-specific version mapping that maps from one
   // target to another target.
@@ -175,12 +240,17 @@ public:
   }
 
   static std::optional<DarwinSDKInfo>
-  parseDarwinSDKSettingsJSON(const llvm::json::Object *Obj);
+  parseDarwinSDKSettingsJSON(std::string FilePath,
+                             const llvm::json::Object *Obj);
 
 private:
-  VersionTuple Version;
-  VersionTuple MaximumDeploymentTarget;
+  std::string FilePath;
   llvm::Triple::OSType OS;
+  llvm::Triple::EnvironmentType Environment;
+  VersionTuple Version;
+  std::string DisplayName;
+  VersionTuple MaximumDeploymentTarget;
+  PlatformInfoStorageType PlatformInfos;
   // Need to wrap the value in an optional here as the value has to be default
   // constructible, and std::unique_ptr doesn't like DarwinSDKInfo being
   // Optional as Optional is trying to copy it in emplace.

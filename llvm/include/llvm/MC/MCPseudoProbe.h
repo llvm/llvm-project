@@ -328,6 +328,7 @@ public:
 
   // Return false if it's a dummy inline site
   bool hasInlineSite() const { return !isRoot() && !Parent->isRoot(); }
+  bool isTopLevelFunc() const { return !isRoot() && Parent->isRoot(); }
   InlineSite getInlineSite() const { return InlineSite(Guid, ProbeId); }
   void setProbes(MutableArrayRef<MCDecodedPseudoProbe> ProbesRef) {
     Probes = ProbesRef.data();
@@ -429,6 +430,14 @@ class MCPseudoProbeDecoder {
   ErrorOr<StringRef> readString(uint32_t Size);
 
 public:
+  // MCPseudoProbeDecoder cannot be copied/moved due to address dependence on
+  // the DummyInlineRoot member address.
+  MCPseudoProbeDecoder() = default;
+  MCPseudoProbeDecoder(const MCPseudoProbeDecoder &) = delete;
+  MCPseudoProbeDecoder(MCPseudoProbeDecoder &&) = delete;
+  MCPseudoProbeDecoder &operator=(const MCPseudoProbeDecoder &) = delete;
+  MCPseudoProbeDecoder &operator=(MCPseudoProbeDecoder &&) = delete;
+
   using Uint64Set = DenseSet<uint64_t>;
   using Uint64Map = DenseMap<uint64_t, uint64_t>;
 

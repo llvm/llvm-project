@@ -30,7 +30,7 @@ body:             |
   ; CHECK-NEXT:   FCMPSrr [[COPY3]], [[COPY4]], implicit-def $nzcv, implicit $fpcr
   ; CHECK-NEXT:   [[CSINCWr:%[0-9]+]]:gpr32 = CSINCWr $wzr, $wzr, 13, implicit $nzcv
   ; CHECK-NEXT:   [[SUBWri:%[0-9]+]]:gpr32common = SUBWri [[COPY1]], 1, 0
-  ; CHECK-NEXT:   [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG 0, [[SUBWri]], %subreg.sub_32
+  ; CHECK-NEXT:   [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG [[SUBWri]], %subreg.sub_32
   ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:fpr32 = COPY [[DEF]]
   ; CHECK-NEXT:   FCMPSrr [[COPY5]], [[COPY4]], implicit-def $nzcv, implicit $fpcr
   ; CHECK-NEXT:   [[CSINCWr1:%[0-9]+]]:gpr32 = CSINCWr $wzr, $wzr, 12, implicit $nzcv
@@ -64,7 +64,7 @@ body:             |
     FCMPSrr %29, %4, implicit-def $nzcv, implicit $fpcr
     %28:gpr32 = CSINCWr $wzr, $wzr, 13, implicit $nzcv
     %7:gpr32 = SUBSWri %1, 1, 0, implicit-def $nzcv
-    %8:gpr64 = SUBREG_TO_REG 0, %7, %subreg.sub_32
+    %8:gpr64 = SUBREG_TO_REG %7, %subreg.sub_32
     %30:fpr32 = COPY %3
     FCMPSrr %30, %4, implicit-def $nzcv, implicit $fpcr
     %27:gpr32 = CSINCWr $wzr, $wzr, 12, implicit $nzcv

@@ -24,6 +24,25 @@
 using namespace clang;
 using namespace clang::CIRGen;
 
+/// Return the smallest possible amount of storage that might be allocated
+/// starting from the beginning of an object of a particular class.
+///
+/// This may be smaller than sizeof(RD) if RD has virtual base classes.
+CharUnits CIRGenModule::getMinimumClassObjectSize(const CXXRecordDecl *rd) {
+  if (!rd->hasDefinition())
+    return CharUnits::One();
+
+  auto &layout = getASTContext().getASTRecordLayout(rd);
+
+  // If the class is final, then we know that the pointer points to an
+  // object of that type and can use the full alignment.
+  if (rd->isEffectivelyFinal())
+    return layout.getSize();
+
+  // Otherwise, we have to assume it could be a subclass.
+  return std::max(layout.getNonVirtualSize(), CharUnits::One());
+}
+
 /// Checks whether the given constructor is a valid subject for the
 /// complete-to-base constructor delegation optimization, i.e. emitting the
 /// complete constructor as a simple call to the base constructor.
@@ -111,8 +130,23 @@ static void emitMemberInitializer(CIRGenFunction &cgf,
     // NOTE(cir): CodeGen allows record types to be memcpy'd if applicable,
     // whereas ClangIR wants to represent all object construction explicitly.
     if (!baseElementTy->isRecordType()) {
-      cgf.cgm.errorNYI(memberInit->getSourceRange(),
-                       "emitMemberInitializer: array of non-record type");
+      unsigned srcArgIndex =
+          cgf.cgm.getCXXABI().getSrcArgforCopyCtor(constructor, args);
+      cir::LoadOp srcPtr = cgf.getBuilder().createLoad(
+          cgf.getLoc(memberInit->getSourceLocation()),
+          cgf.getAddrOfLocalVar(args[srcArgIndex]));
+      LValue thisRhslv = cgf.makeNaturalAlignAddrLValue(srcPtr, recordTy);
+      LValue src = cgf.emitLValueForFieldInitialization(thisRhslv, field,
+                                                        field->getName());
+
+      // Copy the aggregate.
+      cgf.emitAggregateCopy(lhs, src, fieldType,
+                            cgf.getOverlapForFieldInit(field),
+                            lhs.isVolatileQualified());
+      // Ensure that we destroy the objects if an exception is thrown later in
+      // the constructor.
+      assert(!cgf.needsEHCleanup(fieldType.isDestructedType()) &&
+             "Arrays of non-record types shouldn't need EH cleanup");
       return;
     }
   }
@@ -134,7 +168,7 @@ struct CallBaseDtor final : EHScopeStack::Cleanup {
   CallBaseDtor(const CXXRecordDecl *base, bool baseIsVirtual)
       : baseClass(base), baseIsVirtual(baseIsVirtual) {}
 
-  void emit(CIRGenFunction &cgf) override {
+  void emit(CIRGenFunction &cgf, Flags flags) override {
     const CXXRecordDecl *derivedClass =
         cast<CXXMethodDecl>(cgf.curFuncDecl)->getParent();
 
@@ -148,6 +182,25 @@ struct CallBaseDtor final : EHScopeStack::Cleanup {
         baseIsVirtual);
     cgf.emitCXXDestructorCall(d, Dtor_Base, baseIsVirtual,
                               /*delegating=*/false, addr, thisTy);
+  }
+};
+
+/// If the delegating constructor's body throws after the delegated-to
+/// constructor completes, destroy the object (mirrors CGClass.cpp's
+/// CallDelegatingCtorDtor).
+struct CallDelegatingCtorDtor final : EHScopeStack::Cleanup {
+  const CXXDestructorDecl *dtor;
+  Address addr;
+  CXXDtorType type;
+
+  CallDelegatingCtorDtor(const CXXDestructorDecl *dtor, Address addr,
+                         CXXDtorType type)
+      : dtor(dtor), addr(addr), type(type) {}
+
+  void emit(CIRGenFunction &cgf, Flags flags) override {
+    QualType thisTy = dtor->getFunctionObjectParameterType();
+    cgf.emitCXXDestructorCall(dtor, type, /*forVirtualBase=*/false,
+                              /*delegating=*/true, addr, thisTy);
   }
 };
 
@@ -425,8 +478,8 @@ void CIRGenFunction::initializeVTablePointer(mlir::Location loc,
   // vtable field is derived from `this` pointer, therefore they should be in
   // the same addr space.
   assert(!cir::MissingFeatures::addressSpace());
-  auto vtablePtr = cir::VTableGetVPtrOp::create(
-      builder, loc, builder.getPtrToVPtrType(), classAddr.getPointer());
+  auto vtablePtr =
+      cir::VTableGetVPtrOp::create(builder, loc, classAddr.getPointer());
   Address vtableField = Address(vtablePtr, classAddr.getAlignment());
   builder.createStore(loc, vtableAddressPoint, vtableField);
   assert(!cir::MissingFeatures::opTBAA());
@@ -569,6 +622,25 @@ void CIRGenFunction::emitInitializerForField(FieldDecl *field, LValue lhs,
   assert(!cir::MissingFeatures::requiresCleanups());
 }
 
+Address CIRGenFunction::emitCXXMemberDataPointerAddress(
+    const Expr *e, Address base, mlir::Value memberPtr,
+    const MemberPointerType *memberPtrType, LValueBaseInfo *baseInfo) {
+  assert(!cir::MissingFeatures::cxxABI());
+
+  cir::GetRuntimeMemberOp op = builder.createGetIndirectMember(
+      getLoc(e->getSourceRange()), base.getPointer(), memberPtr);
+
+  QualType memberType = memberPtrType->getPointeeType();
+  assert(!cir::MissingFeatures::opTBAA());
+  CharUnits memberAlign = cgm.getNaturalTypeAlignment(memberType, baseInfo);
+  memberAlign = cgm.getDynamicOffsetAlignment(
+      base.getAlignment(), memberPtrType->getMostRecentCXXRecordDecl(),
+      memberAlign);
+
+  return Address(op, convertTypeForMem(memberPtrType->getPointeeType()),
+                 memberAlign);
+}
+
 CharUnits
 CIRGenModule::getDynamicOffsetAlignment(CharUnits actualBaseAlign,
                                         const CXXRecordDecl *baseDecl,
@@ -686,10 +758,11 @@ void CIRGenFunction::emitCXXAggrConstructorCall(
       constantCount.erase();
   } else {
     // Otherwise, emit the check.
-    cgm.errorNYI(e->getSourceRange(), "dynamic-length array expression");
+    cgm.errorNYI(e->getSourceRange(),
+                 "emitCXXAggrConstructorCall: dynamic-length array expression");
   }
 
-  // Tradional LLVM codegen emits a loop here. CIR lowers to a loop as part of
+  // Traditional LLVM codegen emits a loop here. CIR lowers to a loop as part of
   // LoweringPrepare.
 
   // The alignment of the base, adjusted by the size of a single element,
@@ -701,10 +774,6 @@ void CIRGenFunction::emitCXXAggrConstructorCall(
   CanQualType type = getContext().getCanonicalTagType(ctor->getParent());
   CharUnits eltAlignment = arrayBase.getAlignment().alignmentOfArrayElement(
       getContext().getTypeSizeInChars(type));
-
-  // Zero initialize the storage, if requested.
-  if (zeroInitialize)
-    emitNullInitialization(*currSrcLoc, arrayBase, type);
 
   // C++ [class.temporary]p4:
   // There are two contexts in which temporaries are destroyed at a different
@@ -733,6 +802,11 @@ void CIRGenFunction::emitCXXAggrConstructorCall(
               b.getInsertionBlock()->addArgument(ptrToElmType, loc);
           Address curAddr = Address(arg, elementType, eltAlignment);
           assert(!cir::MissingFeatures::sanitizers());
+          // Zero-initialize each element before invoking its constructor,
+          // matching CGClass::EmitCXXAggrConstructorCall which does per-element
+          // zero-init inside the array ctor loop.
+          if (zeroInitialize)
+            emitNullInitialization(loc, curAddr, type);
           auto currAVS = AggValueSlot::forAddr(
               curAddr, type.getQualifiers(), AggValueSlot::IsDestructed,
               AggValueSlot::IsNotAliased, AggValueSlot::DoesNotOverlap,
@@ -740,7 +814,7 @@ void CIRGenFunction::emitCXXAggrConstructorCall(
           emitCXXConstructorCall(ctor, Ctor_Complete,
                                  /*ForVirtualBase=*/false,
                                  /*Delegating=*/false, currAVS, e);
-          cir::YieldOp::create(builder, loc);
+          cir::YieldOp::create(b, loc);
         });
   }
 }
@@ -909,7 +983,7 @@ mlir::Value loadThisForDtorDelete(CIRGenFunction &cgf,
 struct CallDtorDelete final : EHScopeStack::Cleanup {
   CallDtorDelete() {}
 
-  void emit(CIRGenFunction &cgf) override {
+  void emit(CIRGenFunction &cgf, Flags flags) override {
     const CXXDestructorDecl *dtor = cast<CXXDestructorDecl>(cgf.curFuncDecl);
     const CXXRecordDecl *classDecl = dtor->getParent();
     cgf.emitDeleteCall(dtor->getOperatorDelete(),
@@ -926,7 +1000,7 @@ public:
   DestroyField(const FieldDecl *field, CIRGenFunction::Destroyer *destroyer)
       : field(field), destroyer(destroyer) {}
 
-  void emit(CIRGenFunction &cgf) override {
+  void emit(CIRGenFunction &cgf, Flags flags) override {
     // Find the address of the field.
     Address thisValue = cgf.loadCXXThisAddress();
     CanQualType recordTy =
@@ -935,7 +1009,7 @@ public:
     LValue lv = cgf.emitLValueForField(thisLV, field);
     assert(lv.isSimple());
 
-    assert(!cir::MissingFeatures::ehCleanupFlags());
+    assert(!cir::MissingFeatures::useEHCleanupForArray());
     cgf.emitDestroy(lv.getAddress(), field->getType(), destroyer);
   }
 };
@@ -1032,7 +1106,7 @@ void CIRGenFunction::enterDtorCleanups(const CXXDestructorDecl *dd,
       continue;
 
     CleanupKind cleanupKind = getCleanupKind(dtorKind);
-    assert(!cir::MissingFeatures::ehCleanupFlags());
+    assert(!cir::MissingFeatures::useEHCleanupForArray());
     ehStack.pushCleanup<DestroyField>(cleanupKind, field,
                                       getDestroyer(dtorKind));
   }
@@ -1055,9 +1129,10 @@ void CIRGenFunction::emitDelegatingCXXConstructorCall(
 
   const CXXRecordDecl *classDecl = ctor->getParent();
   if (cgm.getLangOpts().Exceptions && !classDecl->hasTrivialDestructor()) {
-    cgm.errorNYI(ctor->getSourceRange(),
-                 "emitDelegatingCXXConstructorCall: exception");
-    return;
+    CXXDtorType dtorType =
+        curGD.getCtorType() == Ctor_Complete ? Dtor_Complete : Dtor_Base;
+    ehStack.pushCleanup<CallDelegatingCtorDtor>(
+        EHCleanup, classDecl->getDestructor(), thisPtr, dtorType);
   }
 }
 
@@ -1210,8 +1285,8 @@ bool CIRGenFunction::shouldEmitVTableTypeCheckedLoad(const CXXRecordDecl *rd) {
 
 mlir::Value CIRGenFunction::getVTablePtr(mlir::Location loc, Address thisAddr,
                                          const CXXRecordDecl *rd) {
-  auto vtablePtr = cir::VTableGetVPtrOp::create(
-      builder, loc, builder.getPtrToVPtrType(), thisAddr.getPointer());
+  auto vtablePtr =
+      cir::VTableGetVPtrOp::create(builder, loc, thisAddr.getPointer());
   Address vtablePtrAddr = Address(vtablePtr, thisAddr.getAlignment());
 
   auto vtable = builder.createLoad(loc, vtablePtrAddr);
@@ -1231,19 +1306,27 @@ void CIRGenFunction::emitCXXConstructorCall(const clang::CXXConstructorDecl *d,
                                             bool delegating,
                                             AggValueSlot thisAVS,
                                             const clang::CXXConstructExpr *e) {
-  CallArgList args;
   Address thisAddr = thisAVS.getAddress();
   QualType thisType = d->getThisType();
   mlir::Value thisPtr = thisAddr.getPointer();
 
   assert(!cir::MissingFeatures::addressSpace());
 
-  args.add(RValue::get(thisPtr), thisType);
+  // If this is a trivial constructor, just emit what's needed. If this is a
+  // union copy constructor, we must emit a memcpy, because the AST does not
+  // model that copy.
+  if (d->isMemcpyEquivalentSpecialMember(getContext())) {
+    assert(e->getNumArgs() == 1 && "unexpected argcount for trivial ctor");
+    const Expr *arg = e->getArg(0);
+    LValue src = emitLValue(arg);
+    CanQualType destTy = getContext().getCanonicalTagType(d->getParent());
+    LValue dest = makeAddrLValue(thisAddr, destTy);
+    emitAggregateCopy(dest, src, src.getType(), thisAVS.mayOverlap());
+    return;
+  }
 
-  // In LLVM Codegen: If this is a trivial constructor, just emit what's needed.
-  // If this is a union copy constructor, we must emit a memcpy, because the AST
-  // does not model that copy.
-  assert(!cir::MissingFeatures::isMemcpyEquivalentSpecialMember());
+  CallArgList args;
+  args.add(RValue::get(thisPtr), thisType);
 
   const FunctionProtoType *fpt = d->getType()->castAs<FunctionProtoType>();
 
@@ -1269,7 +1352,8 @@ void CIRGenFunction::emitCXXConstructorCall(
   // ctor call into trivial initialization.
   assert(!cir::MissingFeatures::isTrivialCtorOrDtor());
 
-  assert(!cir::MissingFeatures::isMemcpyEquivalentSpecialMember());
+  // Note: memcpy-equivalent special members are handled in the
+  // emitCXXConstructorCall overload that takes a CXXConstructExpr.
 
   bool passPrototypeArgs = true;
 

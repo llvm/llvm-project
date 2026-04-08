@@ -89,10 +89,17 @@ cc_library(
         "@llvm-project//third-party:llvm_zlib_enabled": [
             "LLVM_ENABLE_ZLIB=1",
         ],
-        "//conditions:default": [],
+        "//conditions:default": [
+            "LLVM_ENABLE_ZLIB=0",
+        ],
     }),
     # Clang includes zlib with angled instead of quoted includes, so we need
     # strip_include_prefix here.
     strip_include_prefix = ".",
     visibility = ["//visibility:public"],
+)
+
+alias(
+    name = "zlib-ng",
+    actual = ":zlib",
 )

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LIBC_SRC___SUPPORT_MATH_CBRT_H
-#define LIBC_SRC___SUPPORT_MATH_CBRT_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_MATH_CBRT_H
+#define LLVM_LIBC_SRC___SUPPORT_MATH_CBRT_H
 
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
@@ -35,7 +35,7 @@ using namespace fputil;
 // > P = fpminimax(x^(-2/3), 7, [|D...|], [1, 2]);
 // > dirtyinfnorm(P/x^(-2/3) - 1, [1, 2]);
 // 0x1.28...p-21
-LIBC_INLINE static double intial_approximation(double x) {
+LIBC_INLINE double initial_approximation(double x) {
   constexpr double COEFFS[8] = {
       0x1.bc52aedead5c6p1,  -0x1.b52bfebf110b3p2,  0x1.1d8d71d53d126p3,
       -0x1.de2db9e81cf87p2, 0x1.0154ca06153bdp2,   -0x1.5973c66ee6da7p0,
@@ -59,14 +59,14 @@ LIBC_INLINE static double intial_approximation(double x) {
 // Get the error term for Newton iteration:
 //   h(x) = x^3 * a^2 - 1,
 #ifdef LIBC_TARGET_CPU_HAS_FMA_DOUBLE
-LIBC_INLINE static double get_error(const DoubleDouble &x_3,
-                                    const DoubleDouble &a_sq) {
+LIBC_INLINE double get_error(const DoubleDouble &x_3,
+                             const DoubleDouble &a_sq) {
   return fputil::multiply_add(x_3.hi, a_sq.hi, -1.0) +
          fputil::multiply_add(x_3.lo, a_sq.hi, x_3.hi * a_sq.lo);
 }
 #else
-LIBC_INLINE static constexpr double get_error(const DoubleDouble &x_3,
-                                              const DoubleDouble &a_sq) {
+LIBC_INLINE constexpr double get_error(const DoubleDouble &x_3,
+                                       const DoubleDouble &a_sq) {
   DoubleDouble x_3_a_sq = fputil::quick_mult(a_sq, x_3);
   return (x_3_a_sq.hi - 1.0) + x_3_a_sq.lo;
 }
@@ -144,7 +144,7 @@ LIBC_INLINE static constexpr double get_error(const DoubleDouble &x_3,
 // exceptional handling, similar to what was done in the CORE-MATH project:
 // https://gitlab.inria.fr/core-math/core-math/-/blob/master/src/binary64/cbrt/cbrt.c
 
-LIBC_INLINE static constexpr double cbrt(double x) {
+LIBC_INLINE constexpr double cbrt(double x) {
   using DoubleDouble = fputil::DoubleDouble;
   using namespace cbrt_internal;
   using FPBits = fputil::FPBits<double>;
@@ -194,7 +194,7 @@ LIBC_INLINE static constexpr double cbrt(double x) {
   double a = FPBits(a_bits).get_val();
 
   // Initial approximation of x_r^(-2/3).
-  double p = intial_approximation(x_r);
+  double p = initial_approximation(x_r);
 
   // Look up for 2^(-2*n/3) used for first approximation step.
   constexpr double EXP2_M2_OVER_3[3] = {1.0, 0x1.428a2f98d728bp-1,
@@ -347,4 +347,4 @@ LIBC_INLINE static constexpr double cbrt(double x) {
 
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LIBC_SRC___SUPPORT_MATH_CBRT_H
+#endif // LLVM_LIBC_SRC___SUPPORT_MATH_CBRT_H

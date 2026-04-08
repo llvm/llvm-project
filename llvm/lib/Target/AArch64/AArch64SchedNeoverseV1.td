@@ -592,9 +592,6 @@ def : SchedAlias<WriteBrReg, V1Write_1c_1B>;
 // Branch and link, register
 def : InstRW<[V1Write_1c_1B_1S], (instrs BL, BLR)>;
 
-// Compare and branch
-def : InstRW<[V1Write_1c_1B], (instregex "^[CT]BN?Z[XW]$")>;
-
 
 // Arithmetic and Logical Instructions
 // -----------------------------------------------------------------------------
@@ -1484,7 +1481,7 @@ def : InstRW<[V1Write_2c_1M0], (instregex "^REV_PP_[BHSD]$",
 
 // Predicate set/initialize/find next
 // Predicate unpack and widen
-def : InstRW<[V1Write_2c_1M0], (instrs PTEST_PP,
+def : InstRW<[V1Write_2c_1M0], (instrs PTEST_PP, PTEST_PP_ANY, PTEST_PP_FIRST,
                                        PUNPKHI_PP, PUNPKLO_PP)>;
 
 // Predicate select
@@ -1507,7 +1504,7 @@ def : InstRW<[V1Write_2c_1V01],
                         "^ADR_LSL_ZZZ_[SD]_[0123]$",
                         "^[SU]ABD_ZP[mZ]Z_[BHSD]",
                         "^[SU](MAX|MIN)_Z(I|P[mZ]Z)_[BHSD]",
-                        "^[SU]Q(ADD|SUB)_Z(I|ZZ)_[BHSD]$",
+                        "^[SU]Q(ADD|SUB)_Z(I|ZZ)_[BHSD]",
                         "^SUBR_Z(I|P[mZ]Z)_[BHSD]",
                         "^(AND|EOR|ORR)_ZI$",
                         "^(AND|BIC|EOR|EOR(BT|TB)?|ORR)_ZP?ZZ",

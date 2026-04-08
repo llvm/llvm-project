@@ -14,6 +14,7 @@
 #include "llvm/Support/Jobserver.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/ThreadPool.h"
@@ -45,9 +46,6 @@ using namespace llvm;
 extern const char *TestMainArgv0;
 
 namespace {
-
-// Unique anchor whose address helps locate the current test binary.
-static int JobserverTestAnchor = 0;
 
 // RAII helper to set an environment variable for the duration of a test.
 class ScopedEnvironment {
@@ -224,7 +222,44 @@ TEST_F(JobserverClientTest, UnixClientFifo) {
   EXPECT_TRUE(S1.isValid());
 }
 
+TEST_F(JobserverClientTest, UnixClientNonFifo) {
+  // This test verifies that non-FIFO jobservers can be used, such as steve
+  // or guildmaster.
+  SmallString<64> F;
+  std::error_code EC =
+      sys::fs::createTemporaryFile("jobserver-test", "nonfifo", F);
+  ASSERT_FALSE(EC);
+  FileRemover Cleanup(F);
+
+  // Intentionally inserted \t in environment string.
+  std::string Makeflags = " \t -j4\t \t--jobserver-auth=fifo:";
+  Makeflags += F.c_str();
+  ScopedEnvironment Env("MAKEFLAGS", Makeflags.c_str());
+
+  JobserverClient *Client = JobserverClient::getInstance();
+  ASSERT_NE(Client, nullptr);
+
+  // Get the implicit token.
+  JobSlot S1 = Client->tryAcquire();
+  EXPECT_TRUE(S1.isValid());
+  EXPECT_TRUE(S1.isImplicit());
+
+  // File is empty, next acquire fails.
+  JobSlot S2 = Client->tryAcquire();
+  EXPECT_FALSE(S2.isValid());
+
+  // Release does not write to the file for the implicit token.
+  Client->release(std::move(S1));
+
+  // Re-acquire the implicit token.
+  S1 = Client->tryAcquire();
+  EXPECT_TRUE(S1.isValid());
+}
+
 #if LLVM_ENABLE_THREADS
+// Unique anchor whose address helps locate the current test binary.
+static int JobserverTestAnchor = 0;
+
 // Test fixture for tests that use the jobserver strategy. It creates a
 // temporary FIFO, sets MAKEFLAGS, and provides a helper to pre-load the FIFO
 // with job tokens, simulating `make -jN`.

@@ -16,6 +16,7 @@ static_library("Orc") {
   ]
   sources = [
     "AbsoluteSymbols.cpp",
+    "BacktraceTools.cpp",
     "COFF.cpp",
     "COFFPlatform.cpp",
     "COFFVCRuntimeSupport.cpp",

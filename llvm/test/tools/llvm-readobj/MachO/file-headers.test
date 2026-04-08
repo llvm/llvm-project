@@ -1,160 +1,99 @@
-# RUN: yaml2obj %s --docnum=1 -o %t.i386
+# RUN: yaml2obj %s --docnum=1 -o %t.i386 -DCPUTYPE=0x00000007 -DSUBTYPE=0x00000003 -DENDIAN=true
 # RUN: llvm-readobj -h %t.i386 \
-# RUN:  | FileCheck %s --strict-whitespace --match-full-lines -DFILE=%t.i386 --check-prefix I386
+# RUN:  | FileCheck %s --strict-whitespace --match-full-lines -DFILE=%t.i386 --check-prefix=MACHO32 \
+# RUN:      -DFORMAT="Mach-O 32-bit i386" -DARCH=i386 -DCPUTYPE="X86 (0x7)" \
+# RUN:      -DSUBTYPE="CPU_SUBTYPE_I386_ALL (0x3)"
 
-#      I386:File: [[FILE]]
-# I386-NEXT:Format: Mach-O 32-bit i386
-# I386-NEXT:Arch: i386
-# I386-NEXT:AddressSize: 32bit
-# I386-NEXT:MachHeader {
-# I386-NEXT:  Magic: Magic (0xFEEDFACE)
-# I386-NEXT:  CpuType: X86 (0x7)
-# I386-NEXT:  CpuSubType: CPU_SUBTYPE_I386_ALL (0x3)
-# I386-NEXT:  FileType: Relocatable (0x1)
-# I386-NEXT:  NumOfLoadCommands: 0
-# I386-NEXT:  SizeOfLoadCommands: 0
-# I386-NEXT:  Flags [ (0x2000)
-# I386-NEXT:    MH_SUBSECTIONS_VIA_SYMBOLS (0x2000)
-# I386-NEXT:  ]
-# I386-NEXT:}
-# I386-NOT:{{.}}
+# RUN: yaml2obj %s --docnum=1 -o %t.arm-v7 -DCPUTYPE=0x0000000C -DSUBTYPE=0x9 -DENDIAN=true
+# RUN: llvm-readobj -h %t.arm-v7 \
+# RUN:  | FileCheck %s --strict-whitespace --match-full-lines -DFILE=%t.arm-v7 --check-prefix=MACHO32 \
+# RUN:      -DFORMAT="Mach-O arm" -DARCH=arm \
+# RUN:      -DCPUTYPE="Arm (0xC)" -DSUBTYPE="CPU_SUBTYPE_ARM_V7 (0x9)"
 
---- !mach-o
-FileHeader:
-  magic:      0xFEEDFACE
-  cputype:    0x00000007
-  cpusubtype: 0x00000003
-  filetype:   0x00000001
-  ncmds:      0
-  sizeofcmds: 0
-  flags:      0x00002000
+# RUN: yaml2obj %s --docnum=1 -o %t.arm64_32 -DCPUTYPE=0x0200000C -DSUBTYPE=0x1 -DENDIAN=true
+# RUN: llvm-readobj -h %t.arm64_32 \
+# RUN:  | FileCheck %s --strict-whitespace --match-full-lines -DFILE=%t.arm64_32 --check-prefix=MACHO32 \
+# RUN:      -DFORMAT="Mach-O arm64 (ILP32)" -DARCH=aarch64_32 -DCPUTYPE="Arm64 (ILP32) (0x200000C)" \
+# RUN:      -DSUBTYPE="CPU_SUBTYPE_ARM64_32_V8 (0x1)"
 
-# RUN: yaml2obj %s --docnum=2 -o %t.x86-64
-# RUN: llvm-readobj -h %t.x86-64 \
-# RUN:  | FileCheck %s --strict-whitespace --match-full-lines -DFILE=%t.x86-64 --check-prefix X86-64
-
-#      X86-64:File: [[FILE]]
-# X86-64-NEXT:Format: Mach-O 64-bit x86-64
-# X86-64-NEXT:Arch: x86_64
-# X86-64-NEXT:AddressSize: 64bit
-# X86-64-NEXT:MachHeader {
-# X86-64-NEXT:  Magic: Magic64 (0xFEEDFACF)
-# X86-64-NEXT:  CpuType: X86-64 (0x1000007)
-# X86-64-NEXT:  CpuSubType: CPU_SUBTYPE_X86_64_ALL (0x3)
-# X86-64-NEXT:  FileType: Relocatable (0x1)
-# X86-64-NEXT:  NumOfLoadCommands: 0
-# X86-64-NEXT:  SizeOfLoadCommands: 0
-# X86-64-NEXT:  Flags [ (0x2000)
-# X86-64-NEXT:    MH_SUBSECTIONS_VIA_SYMBOLS (0x2000)
-# X86-64-NEXT:  ]
-# X86-64-NEXT:  Reserved: 0x0
-# X86-64-NEXT:}
-# X86-64-NOT:{{.}}
-
---- !mach-o
-FileHeader:
-  magic:      0xFEEDFACF
-  cputype:    0x01000007
-  cpusubtype: 0x00000003
-  filetype:   0x00000001
-  ncmds:      0
-  sizeofcmds: 0
-  flags:      0x00002000
-  reserved:   0x00000000
-
-# RUN: yaml2obj %s --docnum=3 -o %t.ppc
+# RUN: yaml2obj %s --docnum=1 -o %t.ppc -DCPUTYPE=0x00000012 -DSUBTYPE=0x00000000 -DENDIAN=false
 # RUN: llvm-readobj -h %t.ppc \
-# RUN:  | FileCheck %s --strict-whitespace --match-full-lines -DFILE=%t.ppc --check-prefix PPC
-
-#      PPC:File: [[FILE]]
-# PPC-NEXT:Format: Mach-O 32-bit ppc
-# PPC-NEXT:Arch: powerpc
-# PPC-NEXT:AddressSize: 32bit
-# PPC-NEXT:MachHeader {
-# PPC-NEXT:  Magic: Magic (0xFEEDFACE)
-# PPC-NEXT:  CpuType: PowerPC (0x12)
-# PPC-NEXT:  CpuSubType: CPU_SUBTYPE_POWERPC_ALL (0x0)
-# PPC-NEXT:  FileType: Relocatable (0x1)
-# PPC-NEXT:  NumOfLoadCommands: 0
-# PPC-NEXT:  SizeOfLoadCommands: 0
-# PPC-NEXT:  Flags [ (0x2000)
-# PPC-NEXT:    MH_SUBSECTIONS_VIA_SYMBOLS (0x2000)
-# PPC-NEXT:  ]
-# PPC-NEXT:}
-# PPC-NOT:{{.}}
+# RUN:  | FileCheck %s --strict-whitespace --match-full-lines -DFILE=%t.ppc --check-prefix=MACHO32 \
+# RUN:      -DFORMAT="Mach-O 32-bit ppc" -DARCH=powerpc -DCPUTYPE="PowerPC (0x12)" \
+# RUN:      -DSUBTYPE="CPU_SUBTYPE_POWERPC_ALL (0x0)"
 
 --- !mach-o
-IsLittleEndian: false
+IsLittleEndian: [[ENDIAN]]
 FileHeader:
   magic:      0xFEEDFACE
-  cputype:    0x00000012
-  cpusubtype: 0x00000000
+  cputype:    [[CPUTYPE]]
+  cpusubtype: [[SUBTYPE]]
   filetype:   0x00000001
   ncmds:      0
   sizeofcmds: 0
   flags:      0x00002000
 
-# RUN: yaml2obj %s --docnum=4 -o %t.ppc64
-# RUN: llvm-readobj -h %t.ppc64 \
-# RUN:  | FileCheck %s --strict-whitespace --match-full-lines -DFILE=%t.ppc64 --check-prefix PPC64
+#      MACHO32:File: [[FILE]]
+# MACHO32-NEXT:Format: [[FORMAT]]
+# MACHO32-NEXT:Arch: [[ARCH]]
+# MACHO32-NEXT:AddressSize: 32bit
+# MACHO32-NEXT:MachHeader {
+# MACHO32-NEXT:  Magic: Magic (0xFEEDFACE)
+# MACHO32-NEXT:  CpuType: [[CPUTYPE]]
+# MACHO32-NEXT:  CpuSubType: [[SUBTYPE]]
+# MACHO32-NEXT:  FileType: Relocatable (0x1)
+# MACHO32-NEXT:  NumOfLoadCommands: 0
+# MACHO32-NEXT:  SizeOfLoadCommands: 0
+# MACHO32-NEXT:  Flags [ (0x2000)
+# MACHO32-NEXT:    MH_SUBSECTIONS_VIA_SYMBOLS (0x2000)
+# MACHO32-NEXT:  ]
+# MACHO32-NEXT:}
+# MACHO32-NOT:{{.}}
 
-#      PPC64:File: [[FILE]]
-# PPC64-NEXT:Format: Mach-O 64-bit ppc64
-# PPC64-NEXT:Arch: powerpc64
-# PPC64-NEXT:AddressSize: 64bit
-# PPC64-NEXT:MachHeader {
-# PPC64-NEXT:  Magic: Magic64 (0xFEEDFACF)
-# PPC64-NEXT:  CpuType: PowerPC64 (0x1000012)
-# PPC64-NEXT:  CpuSubtype: 0x0
-# PPC64-NEXT:  FileType: Relocatable (0x1)
-# PPC64-NEXT:  NumOfLoadCommands: 0
-# PPC64-NEXT:  SizeOfLoadCommands: 0
-# PPC64-NEXT:  Flags [ (0x2000)
-# PPC64-NEXT:    MH_SUBSECTIONS_VIA_SYMBOLS (0x2000)
-# PPC64-NEXT:  ]
-# PPC64-NEXT:  Reserved: 0x0
-# PPC64-NEXT:}
-# PPC64-NOT:{{.}}
+# RUN: yaml2obj %s --docnum=2 -o %t.x86-64 -DCPUTYPE=0x01000007 -DSUBTYPE=0x00000003 -DENDIAN=true
+# RUN: llvm-readobj -h %t.x86-64 \
+# RUN:  | FileCheck %s --strict-whitespace --match-full-lines -DFILE=%t.x86-64 --check-prefix=MACHO64 \
+# RUN:      -DFORMAT="Mach-O 64-bit x86-64" -DARCH=x86_64 -DCPUTYPE="X86-64 (0x1000007)" \
+# RUN:      -DSUBTYPE="CPU_SUBTYPE_X86_64_ALL (0x3)"
+
+# RUN: yaml2obj %s --docnum=2 -o %t.arm64 -DCPUTYPE=0x0100000C -DSUBTYPE=0x00000000 -DENDIAN=true
+# RUN: llvm-readobj -h %t.arm64 \
+# RUN:  | FileCheck %s --strict-whitespace --match-full-lines -DFILE=%t.arm64 --check-prefix=MACHO64 \
+# RUN:      -DFORMAT="Mach-O arm64" -DARCH=aarch64 -DCPUTYPE="Arm64 (0x100000C)" \
+# RUN:      -DSUBTYPE="CPU_SUBTYPE_ARM64_ALL (0x0)"
+
+# RUN: yaml2obj %s --docnum=2 -o %t.ppc64 -DCPUTYPE=0x01000012 -DSUBTYPE=0x00000000 -DENDIAN=false
+# RUN: llvm-readobj -h %t.ppc64 \
+# RUN:  | FileCheck %s --strict-whitespace --match-full-lines -DFILE=%t.ppc64 --check-prefix=MACHO64 \
+# RUN:      -DFORMAT="Mach-O 64-bit ppc64" -DARCH=powerpc64 -DCPUTYPE="PowerPC64 (0x1000012)" \
+# RUN:      -DSUBTYPE=0x0
 
 --- !mach-o
-IsLittleEndian: false
+IsLittleEndian: [[ENDIAN]]
 FileHeader:
   magic:      0xFEEDFACF
-  cputype:    0x01000012
-  cpusubtype: 0x00000000
+  cputype:    [[CPUTYPE]]
+  cpusubtype: [[SUBTYPE]]
   filetype:   0x00000001
   ncmds:      0
   sizeofcmds: 0
   flags:      0x00002000
   reserved:   0x00000000
 
-# RUN: yaml2obj %s --docnum=5 -o %t.arm
-# RUN: llvm-readobj -h %t.arm \
-# RUN:  | FileCheck %s --strict-whitespace --match-full-lines -DFILE=%t.arm --check-prefix ARM
-
-#      ARM:File: [[FILE]]
-# ARM-NEXT:Format: Mach-O arm
-# ARM-NEXT:Arch: arm
-# ARM-NEXT:AddressSize: 32bit
-# ARM-NEXT:MachHeader {
-# ARM-NEXT:  Magic: Magic (0xFEEDFACE)
-# ARM-NEXT:  CpuType: Arm (0xC)
-# ARM-NEXT:  CpuSubType: CPU_SUBTYPE_ARM_V7 (0x9)
-# ARM-NEXT:  FileType: Relocatable (0x1)
-# ARM-NEXT:  NumOfLoadCommands: 0
-# ARM-NEXT:  SizeOfLoadCommands: 0
-# ARM-NEXT:  Flags [ (0x2000)
-# ARM-NEXT:    MH_SUBSECTIONS_VIA_SYMBOLS (0x2000)
-# ARM-NEXT:  ]
-# ARM-NEXT:}
-# ARM-NOT:{{.}}
-
---- !mach-o
-FileHeader:
-  magic:      0xFEEDFACE
-  cputype:    0x0000000C
-  cpusubtype: 0x00000009
-  filetype:   0x00000001
-  ncmds:      0
-  sizeofcmds: 0
-  flags:      0x00002000
+#      MACHO64:File: [[FILE]]
+# MACHO64-NEXT:Format: [[FORMAT]]
+# MACHO64-NEXT:Arch: [[ARCH]]
+# MACHO64-NEXT:AddressSize: 64bit
+# MACHO64-NEXT:MachHeader {
+# MACHO64-NEXT:  Magic: Magic64 (0xFEEDFACF)
+# MACHO64-NEXT:  CpuType: [[CPUTYPE]]
+# MACHO64-NEXT:  CpuSubType: [[SUBTYPE]]
+# MACHO64-NEXT:  FileType: Relocatable (0x1)
+# MACHO64-NEXT:  NumOfLoadCommands: 0
+# MACHO64-NEXT:  SizeOfLoadCommands: 0
+# MACHO64-NEXT:  Flags [ (0x2000)
+# MACHO64-NEXT:    MH_SUBSECTIONS_VIA_SYMBOLS (0x2000)
+# MACHO64-NEXT:  ]
+# MACHO64-NEXT:  Reserved: 0x0
+# MACHO64-NEXT:}
+# MACHO64-NOT:{{.}}

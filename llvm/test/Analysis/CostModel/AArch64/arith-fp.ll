@@ -478,7 +478,7 @@ define void @frem() {
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:24 CodeSize:4 Lat:4 SizeLat:4 for: %V2F64 = frem <2 x double> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:48 CodeSize:4 Lat:4 SizeLat:4 for: %V4F64 = frem <4 x double> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:4 Lat:4 SizeLat:4 for: %F128 = frem fp128 undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:4 Lat:4 SizeLat:4 for: %V2F128 = frem <2 x fp128> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V2F128 = frem <2 x fp128> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %F32 = frem float undef, undef

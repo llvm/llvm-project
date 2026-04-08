@@ -49,9 +49,7 @@ public:
   StaticDataProfileInfo *SDPI = nullptr;
   const ProfileSummaryInfo *PSI = nullptr;
 
-  StaticDataAnnotator() : ModulePass(ID) {
-    initializeStaticDataAnnotatorPass(*PassRegistry::getPassRegistry());
-  }
+  StaticDataAnnotator() : ModulePass(ID) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<StaticDataProfileInfoWrapperPass>();

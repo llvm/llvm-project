@@ -55,7 +55,7 @@ void M68kAsmPrinter::printOperand(const MachineInstr *MI, int OpNum,
     break;
   case MachineOperand::MO_ConstantPoolIndex: {
     const DataLayout &DL = getDataLayout();
-    OS << DL.getPrivateGlobalPrefix() << "CPI" << getFunctionNumber() << '_'
+    OS << DL.getInternalSymbolPrefix() << "CPI" << getFunctionNumber() << '_'
        << MO.getIndex();
     break;
   }
@@ -188,10 +188,6 @@ void M68kAsmPrinter::emitInstruction(const MachineInstr *MI) {
 void M68kAsmPrinter::emitFunctionBodyStart() {}
 
 void M68kAsmPrinter::emitFunctionBodyEnd() {}
-
-void M68kAsmPrinter::emitStartOfAsmFile(Module &M) {
-  OutStreamer->emitSyntaxDirective();
-}
 
 void M68kAsmPrinter::emitEndOfAsmFile(Module &M) {}
 

@@ -1,7 +1,8 @@
 ; RUN: llc < %s -mtriple=x86_64-pc-windows-msvc | FileCheck %s
 ; Control Flow Guard is currently only available on Windows
 
-; CHECK: @feat.00 = 2048
+; If no checks were inserted then the GuardCF bit shouldn't be set in @feat.00.
+; CHECK: @feat.00 = 0
 
 ; CHECK: .section .gfids$y
 ; CHECK: .symidx "?address_taken@@YAXXZ"

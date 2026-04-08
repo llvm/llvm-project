@@ -280,6 +280,10 @@ let RenderMethod = "addMemOffsOperands" in {
     let Name = "MemOffs64_64";
     let SuperClasses = [X86Mem64AsmOperand];
   }
+  def X86MemConstOffs64_AsmOperand : AsmOperandClass {
+    let Name = "MemConstOffs64";
+    let SuperClasses = [X86Mem8AsmOperand];
+  }
 } // RenderMethod = "addMemOffsOperands"
 
 class X86SrcIdxOperand<string printMethod, AsmOperandClass parserMatchClass>
@@ -329,6 +333,9 @@ def offset64_32 : X86MemOffsOperand<i64imm, "printMemOffs32",
                                     X86MemOffs64_32AsmOperand>;
 def offset64_64 : X86MemOffsOperand<i64imm, "printMemOffs64",
                                     X86MemOffs64_64AsmOperand>;
+
+def offset64const  : X86MemOffsOperand<i64imm, "printMemOffset",
+                                       X86MemConstOffs64_AsmOperand>;
 
 def ccode : Operand<i8> {
   let PrintMethod = "printCondCode";
@@ -408,6 +415,14 @@ def ImmUnsignedi4AsmOperand : AsmOperandClass {
   let DiagnosticType = "InvalidImmUnsignedi4";
 }
 
+// 6-bit immediate used by some AMX instructions
+// [0, 0x3F]
+def ImmUnsignedi6AsmOperand : AsmOperandClass {
+  let Name = "ImmUnsignedi6";
+  let RenderMethod = "addImmOperands";
+  let DiagnosticType = "InvalidImmUnsignedi6";
+}
+
 // Unsigned immediate used by SSE/AVX instructions
 // [0, 0xFF]
 //   [0xFFFFFFFFFFFFFF80, 0xFFFFFFFFFFFFFFFF]
@@ -465,6 +480,14 @@ def u8imm : Operand<i8> {
 def i16u8imm : Operand<i16> {
   let PrintMethod = "printU8Imm";
   let ParserMatchClass = ImmUnsignedi8AsmOperand;
+  let OperandType = "OPERAND_IMMEDIATE";
+}
+
+// 32-bit immediate but only 6-bits are significant and they are unsigned.
+// Used by some AMX instructions that use intrinsics.
+def i32u6imm : Operand<i32> {
+  let PrintMethod = "printU8Imm";
+  let ParserMatchClass = ImmUnsignedi6AsmOperand;
   let OperandType = "OPERAND_IMMEDIATE";
 }
 

@@ -19,7 +19,7 @@ echo --x86: build and test x86 variant
 echo --x64: build and test x64 variant
 echo --arm64: build and test arm64 variant
 echo --skip-checkout: use local git checkout instead of downloading src.zip
-echo --local-python: use installed Python and does not try to use a specific version (3.10)
+echo --local-python: use installed Python and does not try to use a specific version (3.11)
 echo --force-msvc: use MSVC compiler for stage0, even if clang-cl is present
 echo.
 echo Note: At least one variant to build is required.
@@ -115,8 +115,8 @@ echo Using VS devcmd: %vsdevcmd%
 :: start echoing what we do
 @echo on
 
-set python32_dir=C:\Users\%USERNAME%\AppData\Local\Programs\Python\Python310-32
-set python64_dir=C:\Users\%USERNAME%\AppData\Local\Programs\Python\Python310
+set python32_dir=C:\Users\%USERNAME%\AppData\Local\Programs\Python\Python311-32
+set python64_dir=C:\Users\%USERNAME%\AppData\Local\Programs\Python\Python311
 set pythonarm64_dir=C:\Users\%USERNAME%\AppData\Local\Programs\Python\Python311-arm64
 
 set revision=llvmorg-%version%
@@ -146,8 +146,26 @@ if "%skip-checkout%" == "true" (
   set llvm_src=%build_dir%\llvm-project
 )
 
-curl -O https://gitlab.gnome.org/GNOME/libxml2/-/archive/v2.9.12/libxml2-v2.9.12.tar.gz || exit /b 1
-tar zxf libxml2-v2.9.12.tar.gz
+set libxml_version=2.9.12
+curl -O https://gitlab.gnome.org/GNOME/libxml2/-/archive/v%libxml_version%/libxml2-v%libxml_version%.tar.gz || exit /b 1
+call :verify_checksum libxml2-v%libxml_version%.tar.gz sha256 98bfa7a9a5e2a75638422050740448ee9f02bf4dc2075c9822d7747d5ff9e617 || exit /b 1
+REM 'test' directory excluded because of symlinks.
+tar zxf libxml2-v%libxml_version%.tar.gz --exclude "test/*" || exit /b 1
+
+REM FIXME: It would be preferrable to use zlib-ng here since it is better
+REM        maintained and performs better than zlib, but lld tests currently
+REM        assume the original zlib is used. They need to be fixed first:
+REM        https://github.com/llvm/llvm-project/pull/186630#discussion_r2939953952
+set zlib_version=1.3.2
+curl -LO https://github.com/madler/zlib/releases/download/v%zlib_version%/zlib-%zlib_version%.tar.gz || exit /b 1
+call :verify_checksum zlib-%zlib_version%.tar.gz sha256 bb329a0a2cd0274d05519d61c667c062e06990d72e125ee2dfa8de64f0119d16 || exit /b 1
+tar zxf zlib-%zlib_version%.tar.gz || exit /b 1
+
+set zstd_version=1.5.7
+curl -LO https://github.com/facebook/zstd/releases/download/v%zstd_version%/zstd-%zstd_version%.tar.gz || exit /b 1
+call :verify_checksum zstd-%zstd_version%.tar.gz sha256 eb33e51f49a15e023950cd7825ca74a4a2b43db8354825ac24fc1b7ee09e6fa3 || exit /b 1
+REM 'tests' directory excluded because of symlinks.
+tar zxf zstd-%zstd_version%.tar.gz --exclude "tests/*" || exit /b 1
 
 REM Setting CMAKE_CL_SHOWINCLUDES_PREFIX to work around PR27226.
 REM Common flags for all builds.
@@ -163,6 +181,8 @@ set common_cmake_flags=^
   -DCMAKE_CL_SHOWINCLUDES_PREFIX="Note: including file: " ^
   -DLLVM_ENABLE_LIBXML2=FORCE_ON ^
   -DCLANG_ENABLE_LIBXML2=OFF ^
+  -DLLVM_ENABLE_ZLIB=FORCE_ON ^
+  -DLLVM_ENABLE_ZSTD=FORCE_ON ^
   -DCMAKE_C_FLAGS="%common_compiler_flags%" ^
   -DCMAKE_CXX_FLAGS="%common_compiler_flags%" ^
   -DLLVM_ENABLE_RPMALLOC=ON ^
@@ -190,8 +210,7 @@ if "%force-msvc%" == "" (
 
 set common_lldb_flags=^
   -DLLDB_RELOCATABLE_PYTHON=1 ^
-  -DLLDB_EMBED_PYTHON_HOME=OFF ^
-  -DLLDB_ENABLE_LIBXML2=OFF
+  -DLLDB_EMBED_PYTHON_HOME=OFF
 
 set cmake_profile_flags=""
 
@@ -214,6 +233,8 @@ call "%vsdevcmd%" -arch=x86 || exit /b 1
 mkdir build32_stage0
 cd build32_stage0
 call :do_build_libxml || exit /b 1
+call :do_build_zlib || exit /b 1
+call :do_build_zstd || exit /b 1
 
 REM Stage0 binaries directory; used in stage1.
 set "stage0_bin_dir=%build_dir%/build32_stage0/bin"
@@ -222,7 +243,11 @@ set cmake_flags=^
   -DLLVM_ENABLE_RPMALLOC=OFF ^
   -DPython3_ROOT_DIR=%PYTHONHOME% ^
   -DLIBXML2_INCLUDE_DIR=%libxmldir%/include/libxml2 ^
-  -DLIBXML2_LIBRARIES=%libxmldir%/lib/libxml2s.lib
+  -DLIBXML2_LIBRARIES=%libxmldir%/lib/libxml2s.lib ^
+  -DZLIB_INCLUDE_DIR=%zlibdir%/include ^
+  -DZLIB_LIBRARY=%zlibdir%/lib/zs.lib ^
+  -Dzstd_INCLUDE_DIR=%zstddir%/include ^
+  -Dzstd_LIBRARY=%zstddir%/lib/zstd_static.lib
 
 cmake -GNinja %cmake_flags% %llvm_src%\llvm || exit /b 1
 ninja || ninja || ninja || exit /b 1
@@ -275,6 +300,8 @@ call "%vsdevcmd%" -arch=%arch% || exit /b 1
 mkdir build_%arch%_stage0
 cd build_%arch%_stage0
 call :do_build_libxml || exit /b 1
+call :do_build_zlib || exit /b 1
+call :do_build_zstd || exit /b 1
 
 REM Stage0 binaries directory; used in stage1.
 set "stage0_bin_dir=%build_dir%/build_%arch%_stage0/bin"
@@ -283,6 +310,10 @@ set cmake_flags=^
   -DPython3_ROOT_DIR=%PYTHONHOME% ^
   -DLIBXML2_INCLUDE_DIR=%libxmldir%/include/libxml2 ^
   -DLIBXML2_LIBRARIES=%libxmldir%/lib/libxml2s.lib ^
+  -DZLIB_INCLUDE_DIR=%zlibdir%/include ^
+  -DZLIB_LIBRARY=%zlibdir%/lib/zs.lib ^
+  -Dzstd_INCLUDE_DIR=%zstddir%/include ^
+  -Dzstd_LIBRARY=%zstddir%/lib/zstd_static.lib ^
   -DCLANG_DEFAULT_LINKER=lld
 if "%arch%"=="arm64" (
   set cmake_flags=%cmake_flags% ^
@@ -347,7 +378,7 @@ if "%arch%"=="amd64" (
   set filename=clang+llvm-%version%-aarch64-pc-windows-msvc
 )
 cmake -GNinja %cmake_flags% %cmake_profile_flags% -DLLVM_INSTALL_TOOLCHAIN_ONLY=OFF ^
-  -DCMAKE_INSTALL_PREFIX=%build_dir%/%filename% ..\llvm-project\llvm || exit /b 1
+  -DCMAKE_INSTALL_PREFIX=%build_dir%/%filename% %llvm_src%\llvm || exit /b 1
 ninja install || exit /b 1
 :: check llvm_config is present & returns something
 %build_dir%/%filename%/bin/llvm-config.exe --bindir || exit /b 1
@@ -382,6 +413,19 @@ exit /b 0
 ::=============================================================================
 
 ::==============================================================================
+:: Verify checksum.
+::==============================================================================
+:verify_checksum
+cmake -E %2sum %1 > %1.%2sum
+echo %3  %1> %1.%2sum.orig
+cmake -E compare_files --ignore-eol %1.%2sum %1.%2sum.orig
+if %ERRORLEVEL% NEQ 0 (
+  echo verify_checksum failed for %1
+  exit /b 1
+)
+exit /b 0
+
+::==============================================================================
 :: Build libxml.
 ::==============================================================================
 :do_build_libxml
@@ -395,16 +439,48 @@ cmake -GNinja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=install ^
   -DLIBXML2_WITH_LZMA=OFF -DLIBXML2_WITH_MEM_DEBUG=OFF -DLIBXML2_WITH_MODULES=OFF ^
   -DLIBXML2_WITH_OUTPUT=ON -DLIBXML2_WITH_PATTERN=OFF -DLIBXML2_WITH_PROGRAMS=OFF ^
   -DLIBXML2_WITH_PUSH=OFF -DLIBXML2_WITH_PYTHON=OFF -DLIBXML2_WITH_READER=OFF ^
-  -DLIBXML2_WITH_REGEXPS=OFF -DLIBXML2_WITH_RUN_DEBUG=OFF -DLIBXML2_WITH_SAX1=OFF ^
+  -DLIBXML2_WITH_REGEXPS=OFF -DLIBXML2_WITH_RUN_DEBUG=OFF -DLIBXML2_WITH_SAX1=ON ^
   -DLIBXML2_WITH_SCHEMAS=OFF -DLIBXML2_WITH_SCHEMATRON=OFF -DLIBXML2_WITH_TESTS=OFF ^
   -DLIBXML2_WITH_THREADS=ON -DLIBXML2_WITH_THREAD_ALLOC=OFF -DLIBXML2_WITH_TREE=ON ^
   -DLIBXML2_WITH_VALID=OFF -DLIBXML2_WITH_WRITER=OFF -DLIBXML2_WITH_XINCLUDE=OFF ^
   -DLIBXML2_WITH_XPATH=OFF -DLIBXML2_WITH_XPTR=OFF -DLIBXML2_WITH_ZLIB=OFF ^
   -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded ^
-  ../../libxml2-v2.9.12 || exit /b 1
+  ../../libxml2-v%libxml_version% || exit /b 1
 ninja install || exit /b 1
 set libxmldir=%cd%\install
 set "libxmldir=%libxmldir:\=/%"
+cd ..
+exit /b 0
+
+::==============================================================================
+:: Build zlib.
+::==============================================================================
+:do_build_zlib
+mkdir zlibbuild
+cd zlibbuild
+cmake -GNinja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=install ^
+  -DZLIB_BUILD_TESTING=OFF -DZLIB_BUILD_SHARED=OFF -DZLIB_BUILD_STATIC=ON ^
+  -DZLIB_INSTALL=ON -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded ^
+  ../../zlib-%zlib_version% || exit /b 1
+ninja install || exit /b 1
+set zlibdir=%cd%\install
+set "zlibdir=%zlibdir:\=/%"
+cd ..
+exit /b 0
+
+::==============================================================================
+:: Build zstd.
+::==============================================================================
+:do_build_zstd
+mkdir zstdbuild
+cd zstdbuild
+cmake -GNinja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=install ^
+  -DZSTD_BUILD_PROGRAMS=OFF -DZSTD_BUILD_TESTS=OFF -DZSTD_BUILD_STATIC=ON ^
+  -DZSTD_BUILD_SHARED=OFF -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded ^
+  ../../zstd-%zstd_version%/build/cmake || exit /b 1
+ninja install || exit /b 1
+set zstddir=%cd%\install
+set "zstddir=%zstddir:\=/%"
 cd ..
 exit /b 0
 

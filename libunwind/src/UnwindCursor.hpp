@@ -41,7 +41,8 @@
 #define _LIBUNWIND_CHECK_LINUX_SIGRETURN 1
 #endif
 
-#if defined(_LIBUNWIND_TARGET_HAIKU) && defined(_LIBUNWIND_TARGET_X86_64)
+#if defined(_LIBUNWIND_TARGET_HAIKU) &&                                        \
+    (defined(_LIBUNWIND_TARGET_I386) || defined(_LIBUNWIND_TARGET_X86_64))
 #include <OS.h>
 #include <signal.h>
 #define _LIBUNWIND_CHECK_HAIKU_SIGRETURN 1
@@ -120,7 +121,9 @@ class _LIBUNWIND_HIDDEN DwarfFDECache {
   typedef typename A::pint_t pint_t;
 public:
   static constexpr pint_t kSearchAll = static_cast<pint_t>(-1);
-  static pint_t findFDE(pint_t mh, pint_t pc);
+  template <typename R>
+  static pint_t findFDE(pint_t mh, typename R::link_hardened_reg_arg_t pc);
+
   static void add(pint_t mh, pint_t ip_start, pint_t ip_end, pint_t fde);
   static void removeAllIn(pint_t mh);
   static void iterateCacheEntries(void (*func)(unw_word_t ip_start,
@@ -173,8 +176,9 @@ bool DwarfFDECache<A>::_registeredForDyldUnloads = false;
 #endif
 
 template <typename A>
-typename DwarfFDECache<A>::pint_t DwarfFDECache<A>::findFDE(pint_t mh,
-                                                            pint_t pc) {
+template <typename R>
+typename DwarfFDECache<A>::pint_t
+DwarfFDECache<A>::findFDE(pint_t mh, typename R::link_hardened_reg_arg_t pc) {
   pint_t result = 0;
   _LIBUNWIND_LOG_IF_FALSE(_lock.lock_shared());
   for (entry *p = _buffer; p < _bufferUsed; ++p) {
@@ -959,7 +963,7 @@ template <typename A, typename R> bool UnwindCursor<A, R>::isSignalFrame() {
 /// UnwindCursor contains all state (including all register values) during
 /// an unwind.  This is normally stack allocated inside a unw_cursor_t.
 template <typename A, typename R>
-class UnwindCursor : public AbstractUnwindCursor{
+class UnwindCursor : public AbstractUnwindCursor {
   typedef typename A::pint_t pint_t;
 public:
                       UnwindCursor(unw_context_t *context, A &as);
@@ -1059,8 +1063,9 @@ private:
 #if defined(_LIBUNWIND_SUPPORT_DWARF_UNWIND)
   bool getInfoFromFdeCie(const typename CFI_Parser<A>::FDE_Info &fdeInfo,
                          const typename CFI_Parser<A>::CIE_Info &cieInfo,
-                         pint_t pc, uintptr_t dso_base);
-  bool getInfoFromDwarfSection(const typename R::link_reg_t &pc,
+                         typename R::link_hardened_reg_arg_t pc,
+                         uintptr_t dso_base);
+  bool getInfoFromDwarfSection(typename R::link_hardened_reg_arg_t pc,
                                const UnwindInfoSections &sects,
                                uint32_t fdeSectionOffsetHint = 0);
   int stepWithDwarfFDE(bool stage2) {
@@ -1078,7 +1083,7 @@ private:
 #endif
 
 #if defined(_LIBUNWIND_SUPPORT_COMPACT_UNWIND)
-  bool getInfoFromCompactEncodingSection(const typename R::link_reg_t &pc,
+  bool getInfoFromCompactEncodingSection(typename R::link_hardened_reg_arg_t pc,
                                          const UnwindInfoSections &sects);
   int stepWithCompactEncoding(bool stage2 = false) {
 #if defined(_LIBUNWIND_SUPPORT_DWARF_UNWIND)
@@ -1366,7 +1371,7 @@ private:
   bool             _unwindInfoMissing;
   bool             _isSignalFrame;
 #if defined(_LIBUNWIND_CHECK_LINUX_SIGRETURN) ||                               \
-    defined(_LIBUNWIND_TARGET_HAIKU)
+    defined(_LIBUNWIND_CHECK_HAIKU_SIGRETURN)
   bool             _isSigReturn = false;
 #endif
 #ifdef _LIBUNWIND_TRACE_RET_INJECT
@@ -1729,11 +1734,11 @@ bool UnwindCursor<A, R>::getInfoFromEHABISection(
 template <typename A, typename R>
 bool UnwindCursor<A, R>::getInfoFromFdeCie(
     const typename CFI_Parser<A>::FDE_Info &fdeInfo,
-    const typename CFI_Parser<A>::CIE_Info &cieInfo, pint_t pc,
-    uintptr_t dso_base) {
+    const typename CFI_Parser<A>::CIE_Info &cieInfo,
+    typename R::link_hardened_reg_arg_t pc, uintptr_t dso_base) {
   typename CFI_Parser<A>::PrologInfo prolog;
-  if (CFI_Parser<A>::parseFDEInstructions(_addressSpace, fdeInfo, cieInfo, pc,
-                                          R::getArch(), &prolog)) {
+  if (CFI_Parser<A>::template parseFDEInstructions<R>(
+          _addressSpace, fdeInfo, cieInfo, pc, R::getArch(), &prolog)) {
     // Save off parsed FDE info
     _info.start_ip          = fdeInfo.pcStart;
     _info.end_ip            = fdeInfo.pcEnd;
@@ -1754,7 +1759,7 @@ bool UnwindCursor<A, R>::getInfoFromFdeCie(
 
 template <typename A, typename R>
 bool UnwindCursor<A, R>::getInfoFromDwarfSection(
-    const typename R::link_reg_t &pc, const UnwindInfoSections &sects,
+    typename R::link_hardened_reg_arg_t pc, const UnwindInfoSections &sects,
     uint32_t fdeSectionOffsetHint) {
   typename CFI_Parser<A>::FDE_Info fdeInfo;
   typename CFI_Parser<A>::CIE_Info cieInfo;
@@ -1762,34 +1767,33 @@ bool UnwindCursor<A, R>::getInfoFromDwarfSection(
   bool foundInCache = false;
   // If compact encoding table gave offset into dwarf section, go directly there
   if (fdeSectionOffsetHint != 0) {
-    foundFDE = CFI_Parser<A>::findFDE(_addressSpace, pc, sects.dwarf_section,
-                                    sects.dwarf_section_length,
-                                    sects.dwarf_section + fdeSectionOffsetHint,
-                                    &fdeInfo, &cieInfo);
+    foundFDE = CFI_Parser<A>::template findFDE<R>(
+        _addressSpace, pc, sects.dwarf_section, sects.dwarf_section_length,
+        sects.dwarf_section + fdeSectionOffsetHint, &fdeInfo, &cieInfo);
   }
 #if defined(_LIBUNWIND_SUPPORT_DWARF_INDEX)
   if (!foundFDE && (sects.dwarf_index_section != 0)) {
-    foundFDE = EHHeaderParser<A>::findFDE(
+    foundFDE = EHHeaderParser<A>::template findFDE<R>(
         _addressSpace, pc, sects.dwarf_index_section,
         (uint32_t)sects.dwarf_index_section_length, &fdeInfo, &cieInfo);
   }
 #endif
   if (!foundFDE) {
     // otherwise, search cache of previously found FDEs.
-    pint_t cachedFDE = DwarfFDECache<A>::findFDE(sects.dso_base, pc);
+    pint_t cachedFDE =
+        DwarfFDECache<A>::template findFDE<R>(sects.dso_base, pc);
     if (cachedFDE != 0) {
-      foundFDE =
-          CFI_Parser<A>::findFDE(_addressSpace, pc, sects.dwarf_section,
-                                 sects.dwarf_section_length,
-                                 cachedFDE, &fdeInfo, &cieInfo);
+      foundFDE = CFI_Parser<A>::template findFDE<R>(
+          _addressSpace, pc, sects.dwarf_section, sects.dwarf_section_length,
+          cachedFDE, &fdeInfo, &cieInfo);
       foundInCache = foundFDE;
     }
   }
   if (!foundFDE) {
     // Still not found, do full scan of __eh_frame section.
-    foundFDE = CFI_Parser<A>::findFDE(_addressSpace, pc, sects.dwarf_section,
-                                      sects.dwarf_section_length, 0,
-                                      &fdeInfo, &cieInfo);
+    foundFDE = CFI_Parser<A>::template findFDE<R>(
+        _addressSpace, pc, sects.dwarf_section, sects.dwarf_section_length, 0,
+        &fdeInfo, &cieInfo);
   }
   if (foundFDE) {
     if (getInfoFromFdeCie(fdeInfo, cieInfo, pc, sects.dso_base)) {
@@ -1814,7 +1818,7 @@ bool UnwindCursor<A, R>::getInfoFromDwarfSection(
 #if defined(_LIBUNWIND_SUPPORT_COMPACT_UNWIND)
 template <typename A, typename R>
 bool UnwindCursor<A, R>::getInfoFromCompactEncodingSection(
-    const typename R::link_reg_t &pc, const UnwindInfoSections &sects) {
+    typename R::link_hardened_reg_arg_t pc, const UnwindInfoSections &sects) {
   const bool log = false;
   if (log)
     fprintf(stderr, "getInfoFromCompactEncodingSection(pc=0x%llX, mh=0x%llX)\n",
@@ -2033,7 +2037,7 @@ bool UnwindCursor<A, R>::getInfoFromCompactEncodingSection(
   if (personalityIndex != 0) {
     --personalityIndex; // change 1-based to zero-based index
     if (personalityIndex >= sectionHeader.personalityArrayCount()) {
-      _LIBUNWIND_DEBUG_LOG("found encoding 0x%08X with personality index %d,  "
+      _LIBUNWIND_DEBUG_LOG("found encoding 0x%08X with personality index %d, "
                             "but personality table has only %d entries",
                             encoding, personalityIndex,
                             sectionHeader.personalityArrayCount());
@@ -2772,7 +2776,7 @@ void UnwindCursor<A, R>::setInfoBasedOnIPRegister(bool isReturnAddress) {
 
   // Ask address space object to find unwind sections for this pc.
   UnwindInfoSections sects;
-  if (_addressSpace.findUnwindSections(pc, sects)) {
+  if (_addressSpace.template findUnwindSections<R>(pc, sects)) {
 #if defined(_LIBUNWIND_SUPPORT_COMPACT_UNWIND)
     // If there is a compact unwind encoding table, look there first.
     if (sects.compact_unwind_section != 0) {
@@ -2828,8 +2832,8 @@ void UnwindCursor<A, R>::setInfoBasedOnIPRegister(bool isReturnAddress) {
 #if defined(_LIBUNWIND_SUPPORT_DWARF_UNWIND)
   // There is no static unwind info for this pc. Look to see if an FDE was
   // dynamically registered for it.
-  pint_t cachedFDE = DwarfFDECache<A>::findFDE(DwarfFDECache<A>::kSearchAll,
-                                               pc);
+  pint_t cachedFDE =
+      DwarfFDECache<A>::template findFDE<R>(DwarfFDECache<A>::kSearchAll, pc);
   if (cachedFDE != 0) {
     typename CFI_Parser<A>::FDE_Info fdeInfo;
     typename CFI_Parser<A>::CIE_Info cieInfo;
@@ -2841,7 +2845,7 @@ void UnwindCursor<A, R>::setInfoBasedOnIPRegister(bool isReturnAddress) {
   // Lastly, ask AddressSpace object about platform specific ways to locate
   // other FDEs.
   pint_t fde;
-  if (_addressSpace.findOtherFDE(pc, fde)) {
+  if (_addressSpace.template findOtherFDE<R>(pc, fde)) {
     typename CFI_Parser<A>::FDE_Info fdeInfo;
     typename CFI_Parser<A>::CIE_Info cieInfo;
     if (!CFI_Parser<A>::decodeFDE(_addressSpace, fde, &fdeInfo, &cieInfo)) {
@@ -3252,7 +3256,7 @@ int UnwindCursor<A, R>::stepThroughSigReturn() {
 
 template <typename A, typename R> int UnwindCursor<A, R>::step(bool stage2) {
   (void)stage2;
-  // Bottom of stack is defined is when unwind info cannot be found.
+  // Bottom of stack is defined when unwind info cannot be found.
   if (_unwindInfoMissing)
     return UNW_STEP_END;
 
@@ -3311,7 +3315,7 @@ bool UnwindCursor<A, R>::getFunctionName(char *buf, size_t bufLen,
 #else
   typename R::link_reg_t pc = this->getReg(UNW_REG_IP);
 #endif
-  return _addressSpace.findFunctionName(pc, buf, bufLen, offset);
+  return _addressSpace.template findFunctionName<R>(pc, buf, bufLen, offset);
 }
 
 #if defined(_LIBUNWIND_CHECK_LINUX_SIGRETURN)

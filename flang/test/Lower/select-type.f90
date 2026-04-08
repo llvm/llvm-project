@@ -660,15 +660,15 @@ contains
 ! CHECK:  %[[SELECTOR:.*]] = fir.load %[[ARG0]] : !fir.ref<!fir.class<!fir.ptr<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>>
 ! CHECK:  fir.select_type %[[SELECTOR]] : !fir.class<!fir.ptr<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>> [#fir.type_is<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>, ^bb{{.*}}, #fir.type_is<!fir.type<_QMselect_type_lower_testTp2{a:i32,b:i32,c:i32}>>, ^bb{{.*}}, #fir.class_is<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>, ^bb{{.*}}, unit, ^bb{{.*}}]
 ! CHECK: ^bb{{.*}}:
-! CHECK:  %[[EXACT_BOX:.*]] = fir.convert %[[SELECTOR]] : (!fir.class<!fir.ptr<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>) -> !fir.box<!fir.ptr<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>
+! CHECK:  %[[EXACT_BOX:.*]] = fir.box_addr %[[SELECTOR]] : (!fir.class<!fir.ptr<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>) -> !fir.ref<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>
 ! CHECK:  %[[C1:.*]] = arith.constant 1 : i32
-! CHECK:  %[[COORD_A:.*]] = fir.coordinate_of %[[EXACT_BOX]], a : (!fir.box<!fir.ptr<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>) -> !fir.ref<i32>
+! CHECK:  %[[COORD_A:.*]] = fir.coordinate_of %[[EXACT_BOX]], a : (!fir.ref<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>) -> !fir.ref<i32>
 ! CHECK:  fir.store %[[C1]] to %[[COORD_A]] : !fir.ref<i32>
 ! CHECK:  cf.br ^bb{{.*}}
 ! CHECK: ^bb{{.*}}:
-! CHECK:  %[[EXACT_BOX:.*]] = fir.convert %[[SELECTOR]] : (!fir.class<!fir.ptr<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>) -> !fir.box<!fir.ptr<!fir.type<_QMselect_type_lower_testTp2{a:i32,b:i32,c:i32}>>>
+! CHECK:  %[[EXACT_BOX:.*]] = fir.box_addr %[[SELECTOR]] : (!fir.class<!fir.ptr<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>) -> !fir.ref<!fir.type<_QMselect_type_lower_testTp2{a:i32,b:i32,c:i32}>>
 ! CHECK:  %[[C3:.*]] = arith.constant 3 : i32
-! CHECK:  %[[COORD_C:.*]] = fir.coordinate_of %[[EXACT_BOX]], c : (!fir.box<!fir.ptr<!fir.type<_QMselect_type_lower_testTp2{a:i32,b:i32,c:i32}>>>) -> !fir.ref<i32>
+! CHECK:  %[[COORD_C:.*]] = fir.coordinate_of %[[EXACT_BOX]], c : (!fir.ref<!fir.type<_QMselect_type_lower_testTp2{a:i32,b:i32,c:i32}>>) -> !fir.ref<i32>
 ! CHECK:  fir.store %[[C3]] to %[[COORD_C]] : !fir.ref<i32>
 ! CHECK:  cf.br ^bb{{.*}}
 ! CHECK: ^bb{{.*}}
@@ -693,15 +693,15 @@ contains
 ! CHECK: %[[SELECTOR:.*]] = fir.load %[[ARG0]] : !fir.ref<!fir.class<!fir.heap<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>>
 ! CHECK: fir.select_type %[[SELECTOR]] : !fir.class<!fir.heap<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>> [#fir.type_is<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>, ^bb1, #fir.type_is<!fir.type<_QMselect_type_lower_testTp2{a:i32,b:i32,c:i32}>>, ^bb2, unit, ^bb3]
 ! CHECK: ^bb{{.*}}:
-! CHECK:  %[[EXACT_BOX:.*]] = fir.convert %[[SELECTOR]] : (!fir.class<!fir.heap<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>) -> !fir.box<!fir.heap<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>
+! CHECK:  %[[EXACT_BOX:.*]] = fir.box_addr %[[SELECTOR]] : (!fir.class<!fir.heap<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>) -> !fir.ref<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>
 ! CHECK:  %[[C1:.*]] = arith.constant 1 : i32
-! CHECK:  %[[COORD_A:.*]] = fir.coordinate_of %[[EXACT_BOX]], a : (!fir.box<!fir.heap<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>) -> !fir.ref<i32>
+! CHECK:  %[[COORD_A:.*]] = fir.coordinate_of %[[EXACT_BOX]], a : (!fir.ref<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>) -> !fir.ref<i32>
 ! CHECK:  fir.store %[[C1]] to %[[COORD_A]] : !fir.ref<i32>
 ! CHECK:  cf.br ^bb{{.*}}
 ! CHECK: ^bb{{.*}}:
-! CHECK:  %[[EXACT_BOX:.*]] = fir.convert %[[SELECTOR]] : (!fir.class<!fir.heap<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>) -> !fir.box<!fir.heap<!fir.type<_QMselect_type_lower_testTp2{a:i32,b:i32,c:i32}>>>
+! CHECK:  %[[EXACT_BOX:.*]] = fir.box_addr %[[SELECTOR]] : (!fir.class<!fir.heap<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>) -> !fir.ref<!fir.type<_QMselect_type_lower_testTp2{a:i32,b:i32,c:i32}>>
 ! CHECK:  %[[C3:.*]] = arith.constant 3 : i32
-! CHECK:  %[[COORD_C:.*]] = fir.coordinate_of %[[EXACT_BOX]], c : (!fir.box<!fir.heap<!fir.type<_QMselect_type_lower_testTp2{a:i32,b:i32,c:i32}>>>) -> !fir.ref<i32>
+! CHECK:  %[[COORD_C:.*]] = fir.coordinate_of %[[EXACT_BOX]], c : (!fir.ref<!fir.type<_QMselect_type_lower_testTp2{a:i32,b:i32,c:i32}>>) -> !fir.ref<i32>
 ! CHECK:  fir.store %[[C3]] to %[[COORD_C]] : !fir.ref<i32>
 ! CHECK:  cf.br ^bb{{.*}}
 

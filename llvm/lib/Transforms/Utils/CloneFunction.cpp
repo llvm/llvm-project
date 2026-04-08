@@ -35,6 +35,7 @@
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
+#include <cstdint>
 #include <map>
 #include <optional>
 using namespace llvm;
@@ -87,8 +88,8 @@ createIdentityMDPredicate(const Function &F, CloneFunctionChangeType Changes) {
   };
 
   return [=](const Metadata *MD) {
-    // Avoid cloning types, compile units, and (other) subprograms.
-    if (isa<DICompileUnit>(MD) || isa<DIType>(MD))
+    // Avoid cloning compile units.
+    if (isa<DICompileUnit>(MD))
       return true;
 
     if (auto *SP = dyn_cast<DISubprogram>(MD))
@@ -102,6 +103,29 @@ createIdentityMDPredicate(const Function &F, CloneFunctionChangeType Changes) {
     if (auto *DV = dyn_cast<DILocalVariable>(MD))
       if (auto *S = dyn_cast_or_null<DILocalScope>(DV->getScope()))
         return ShouldKeep(S->getSubprogram());
+
+    // Clone types that are local to subprograms being cloned.
+    // Avoid cloning other types.
+    auto *Type = dyn_cast<DIType>(MD);
+    if (!Type)
+      return false;
+
+    // No need to clone types if subprograms are not cloned.
+    if (SPClonedWithinModule == nullptr)
+      return true;
+
+    // Scopeless types may be derived from local types (e.g. pointers to local
+    // types). They may need cloning.
+    if (const DIDerivedType *DTy = dyn_cast_or_null<DIDerivedType>(Type);
+        DTy && !DTy->getScope())
+      return false;
+
+    auto *LScope = dyn_cast_or_null<DILocalScope>(Type->getScope());
+    if (!LScope)
+      return true;
+
+    if (ShouldKeep(LScope->getSubprogram()))
+      return true;
 
     return false;
   };
@@ -451,8 +475,8 @@ PruningFunctionCloner::cloneInstruction(BasicBlock::const_iterator II) {
       for (unsigned I = 0, E = Descriptor.size(); I != E; ++I) {
         Intrinsic::IITDescriptor Operand = Descriptor[I];
         switch (Operand.Kind) {
-        case Intrinsic::IITDescriptor::Argument:
-          if (Operand.getArgumentKind() !=
+        case Intrinsic::IITDescriptor::Overloaded:
+          if (Operand.getOverloadKind() !=
               Intrinsic::IITDescriptor::AK_MatchType) {
             if (I == 0)
               TParams.push_back(OldInst.getType());
@@ -460,7 +484,7 @@ PruningFunctionCloner::cloneInstruction(BasicBlock::const_iterator II) {
               TParams.push_back(OldInst.getOperand(I - 1)->getType());
           }
           break;
-        case Intrinsic::IITDescriptor::SameVecWidthArgument:
+        case Intrinsic::IITDescriptor::SameVecWidth:
           ++I;
           break;
         default:
@@ -620,25 +644,23 @@ void PruningFunctionCloner::CloneBlock(
   // Finally, clone over the terminator.
   const Instruction *OldTI = BB->getTerminator();
   bool TerminatorDone = false;
-  if (const BranchInst *BI = dyn_cast<BranchInst>(OldTI)) {
-    if (BI->isConditional()) {
-      // If the condition was a known constant in the callee...
-      ConstantInt *Cond = dyn_cast<ConstantInt>(BI->getCondition());
-      // Or is a known constant in the caller...
-      if (!Cond) {
-        Value *V = VMap.lookup(BI->getCondition());
-        Cond = dyn_cast_or_null<ConstantInt>(V);
-      }
+  if (const CondBrInst *BI = dyn_cast<CondBrInst>(OldTI)) {
+    // If the condition was a known constant in the callee...
+    ConstantInt *Cond = dyn_cast<ConstantInt>(BI->getCondition());
+    // Or is a known constant in the caller...
+    if (!Cond) {
+      Value *V = VMap.lookup(BI->getCondition());
+      Cond = dyn_cast_or_null<ConstantInt>(V);
+    }
 
-      // Constant fold to uncond branch!
-      if (Cond) {
-        BasicBlock *Dest = BI->getSuccessor(!Cond->getZExtValue());
-        auto *NewBI = BranchInst::Create(Dest, NewBB);
-        NewBI->setDebugLoc(BI->getDebugLoc());
-        VMap[OldTI] = NewBI;
-        ToClone.push_back(Dest);
-        TerminatorDone = true;
-      }
+    // Constant fold to uncond branch!
+    if (Cond) {
+      BasicBlock *Dest = BI->getSuccessor(!Cond->getZExtValue());
+      auto *NewBI = UncondBrInst::Create(Dest, NewBB);
+      NewBI->setDebugLoc(BI->getDebugLoc());
+      VMap[OldTI] = NewBI;
+      ToClone.push_back(Dest);
+      TerminatorDone = true;
     }
   } else if (const SwitchInst *SI = dyn_cast<SwitchInst>(OldTI)) {
     // If switching on a value known constant in the caller.
@@ -650,7 +672,7 @@ void PruningFunctionCloner::CloneBlock(
     if (Cond) { // Constant fold to uncond branch!
       SwitchInst::ConstCaseHandle Case = *SI->findCaseValue(Cond);
       BasicBlock *Dest = const_cast<BasicBlock *>(Case.getCaseSuccessor());
-      auto *NewBI = BranchInst::Create(Dest, NewBB);
+      auto *NewBI = UncondBrInst::Create(Dest, NewBB);
       NewBI->setDebugLoc(SI->getDebugLoc());
       VMap[OldTI] = NewBI;
       ToClone.push_back(Dest);
@@ -785,7 +807,7 @@ void llvm::CloneAndPruneIntoFromInst(Function *NewFunc, const Function *OldFunc,
          ++phino) {
       OPN = PHIToResolve[phino];
       PHINode *PN = cast<PHINode>(VMap[OPN]);
-      for (unsigned pred = 0, e = NumPreds; pred != e; ++pred) {
+      for (int64_t pred = NumPreds - 1; pred >= 0; --pred) {
         Value *V = VMap.lookup(PN->getIncomingBlock(pred));
         if (BasicBlock *MappedBlock = cast_or_null<BasicBlock>(V)) {
           Value *InVal =
@@ -794,11 +816,9 @@ void llvm::CloneAndPruneIntoFromInst(Function *NewFunc, const Function *OldFunc,
           assert(InVal && "Unknown input value?");
           PN->setIncomingValue(pred, InVal);
           PN->setIncomingBlock(pred, MappedBlock);
-        } else {
-          PN->removeIncomingValue(pred, false);
-          --pred; // Revisit the next entry.
-          --e;
+          continue;
         }
+        PN->removeIncomingValue(pred, false);
       }
     }
 
@@ -812,23 +832,29 @@ void llvm::CloneAndPruneIntoFromInst(Function *NewFunc, const Function *OldFunc,
     if (NumPreds != PN->getNumIncomingValues()) {
       assert(NumPreds < PN->getNumIncomingValues());
       // Count how many times each predecessor comes to this block.
-      std::map<BasicBlock *, unsigned> PredCount;
+      DenseMap<BasicBlock *, unsigned> PredCount;
       for (BasicBlock *Pred : predecessors(NewBB))
-        --PredCount[Pred];
-
-      // Figure out how many entries to remove from each PHI.
-      for (BasicBlock *Pred : PN->blocks())
         ++PredCount[Pred];
 
-      // At this point, the excess predecessor entries are positive in the
-      // map.  Loop over all of the PHIs and remove excess predecessor
-      // entries.
       BasicBlock::iterator I = NewBB->begin();
+      DenseMap<BasicBlock *, unsigned> SeenPredCount;
+      SeenPredCount.reserve(PredCount.size());
       for (; (PN = dyn_cast<PHINode>(I)); ++I) {
-        for (const auto &[Pred, Count] : PredCount) {
-          for ([[maybe_unused]] unsigned _ : llvm::seq<unsigned>(Count))
-            PN->removeIncomingValue(Pred, false);
-        }
+        SeenPredCount.clear();
+        PN->removeIncomingValueIf(
+            [&](unsigned Idx) {
+              BasicBlock *IncomingBlock = PN->getIncomingBlock(Idx);
+              auto It = PredCount.find(IncomingBlock);
+              if (It == PredCount.end())
+                return true;
+              unsigned &SeenCount = SeenPredCount[IncomingBlock];
+              if (SeenCount < It->second) {
+                SeenCount++;
+                return false;
+              }
+              return true;
+            },
+            false);
       }
     }
 
@@ -931,13 +957,13 @@ void llvm::CloneAndPruneIntoFromInst(Function *NewFunc, const Function *OldFunc,
   // uncond branches, and this code folds them.
   Function::iterator I = Begin;
   while (I != NewFunc->end()) {
-    BranchInst *BI = dyn_cast<BranchInst>(I->getTerminator());
-    if (!BI || BI->isConditional()) {
+    UncondBrInst *BI = dyn_cast<UncondBrInst>(I->getTerminator());
+    if (!BI) {
       ++I;
       continue;
     }
 
-    BasicBlock *Dest = BI->getSuccessor(0);
+    BasicBlock *Dest = BI->getSuccessor();
     if (!Dest->getSinglePredecessor() || Dest->hasAddressTaken()) {
       ++I;
       continue;

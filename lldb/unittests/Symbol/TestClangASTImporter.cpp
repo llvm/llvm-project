@@ -287,7 +287,7 @@ TEST_F(TestClangASTImporter, RecordLayoutFromOrigin) {
   clang_utils::SourceASTWithRecord source;
 
   auto *dwarf_parser =
-      static_cast<DWARFASTParserClang *>(source.ast->GetDWARFParser());
+      llvm::cast<DWARFASTParserClang>(source.ast->GetDWARFParser());
   auto &importer = dwarf_parser->GetClangASTImporter();
 
   // Set the layout for the origin decl in the origin ClangASTImporter.

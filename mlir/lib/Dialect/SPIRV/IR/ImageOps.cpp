@@ -89,8 +89,8 @@ static LogicalResult verifyImageOperands(Operation *imageOp,
                                   "floating-point type scalar");
 
       auto samplingOp = cast<spirv::SamplingOpInterface>(imageOp);
-      auto sampledImageType = llvm::cast<spirv::SampledImageType>(
-          samplingOp.getSampledImage().getType());
+      auto sampledImageType =
+          cast<spirv::SampledImageType>(samplingOp.getSampledImage().getType());
       imageType = cast<spirv::ImageType>(sampledImageType.getImageType());
     } else {
       if (!isa<mlir::IntegerType>(operands[index].getType()))
@@ -243,8 +243,7 @@ LogicalResult spirv::ImageWriteOp::verify() {
 //===----------------------------------------------------------------------===//
 
 LogicalResult spirv::ImageQuerySizeOp::verify() {
-  spirv::ImageType imageType =
-      llvm::cast<spirv::ImageType>(getImage().getType());
+  spirv::ImageType imageType = cast<spirv::ImageType>(getImage().getType());
   Type resultType = getResult().getType();
 
   spirv::Dim dim = imageType.getDim();
@@ -292,7 +291,7 @@ LogicalResult spirv::ImageQuerySizeOp::verify() {
     componentNumber += 1;
 
   unsigned resultComponentNumber = 1;
-  if (auto resultVectorType = llvm::dyn_cast<VectorType>(resultType))
+  if (auto resultVectorType = dyn_cast<VectorType>(resultType))
     resultComponentNumber = resultVectorType.getNumElements();
 
   if (componentNumber != resultComponentNumber)

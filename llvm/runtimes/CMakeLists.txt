@@ -5,15 +5,18 @@
 
 set(COMMON_CMAKE_ARGS "-DHAVE_LLVM_LIT=ON;-DCLANG_RESOURCE_DIR=${CLANG_RESOURCE_DIR}")
 foreach(proj ${LLVM_ENABLE_RUNTIMES})
-  set(proj_dir "${CMAKE_CURRENT_SOURCE_DIR}/../../${proj}")
-  if(IS_DIRECTORY ${proj_dir} AND EXISTS ${proj_dir}/CMakeLists.txt)
-    list(APPEND runtimes ${proj_dir})
-  else()
-    message(FATAL_ERROR "LLVM_ENABLE_RUNTIMES requests ${proj} but directory not found: ${proj_dir}")
-  endif()
   string(TOUPPER "${proj}" canon_name)
   STRING(REGEX REPLACE "-" "_" canon_name ${canon_name})
-  set(LLVM_EXTERNAL_${canon_name}_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../${proj}")
+  if(NOT LLVM_EXTERNAL_${canon_name}_SOURCE_DIR)
+    set(LLVM_EXTERNAL_${canon_name}_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../${proj}")
+  endif()
+  set(proj_dir "${LLVM_EXTERNAL_${canon_name}_SOURCE_DIR}")
+  if(NOT IS_DIRECTORY ${proj_dir} OR NOT EXISTS ${proj_dir}/CMakeLists.txt)
+    message(FATAL_ERROR "LLVM_ENABLE_RUNTIMES requests ${proj} but directory not found: ${proj_dir}")
+  endif()
+  list(APPEND runtimes ${proj_dir})
+  list(APPEND RUNTIMES_CMAKE_ARGS
+    "-DLLVM_EXTERNAL_${canon_name}_SOURCE_DIR=${LLVM_EXTERNAL_${canon_name}_SOURCE_DIR}")
 endforeach()
 
 function(get_compiler_rt_path path)
@@ -34,6 +37,13 @@ function(get_compiler_rt_path path)
       return()
     endif()
   endforeach()
+
+  # If LLVM_BUILTIN_TARGETS is specified, we still need
+  # to locate the compiler-rt runtime to be able to build builtins.
+  # This supports bootstrapping builtins without compiler-rt.
+  if (LLVM_BUILTIN_TARGETS)
+    set(${path} "${CMAKE_CURRENT_SOURCE_DIR}/../../compiler-rt" PARENT_SCOPE)
+  endif()
 endfunction()
 
 include(LLVMExternalProjectUtils)
@@ -251,16 +261,23 @@ function(runtime_default_target)
     # The target libomp-mod is a dependee of check-flang needed to run its
     # OpenMP tests
     list(APPEND extra_targets "libomp-mod")
-  endif ()
-  if ("flang-rt" IN_LIST LLVM_ENABLE_RUNTIMES)
-    # The target flang-rt-mod is a dependee of check-flang needed to run its
-    # tests.
-    list(APPEND extra_targets "flang-rt-mod")
+
+    # Let the "doxygen" build target also build openmp's doxygen, just like
+    # "check" and "install" also apply to the runtimes builds.
+    # TODO: Generalize for all runtimes, but currently openmp is the only
+    #       runtime that has a doxygen target.
+    if (LLVM_ENABLE_DOXYGEN)
+      list(APPEND extra_targets "doxygen-openmp")
+      if (TARGET doxygen)
+        add_dependencies(doxygen doxygen-openmp)
+      endif ()
+    endif ()
   endif ()
 
   if(LLVM_INCLUDE_TESTS)
     set_property(GLOBAL APPEND PROPERTY LLVM_ALL_LIT_TESTSUITES "@${LLVM_BINARY_DIR}/runtimes/runtimes-bins/lit.tests")
-    list(APPEND test_targets runtimes-test-depends check-runtimes)
+    list(APPEND test_targets runtimes-test-depends check-runtimes check-builtins)
+    list(APPEND ARG_CMAKE_ARGS "-DCOMPILER_RT_TEST_EXTERNAL_BUILTINS=ON")
   endif()
 
   set_enable_per_target_runtime_dir()
@@ -275,6 +292,7 @@ function(runtime_default_target)
                                       -DLLVM_ENABLE_PROJECTS_USED=${LLVM_ENABLE_PROJECTS_USED}
                                       -DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR=${LLVM_ENABLE_PER_TARGET_RUNTIME_DIR}
                                       -DLLVM_BUILD_TOOLS=${LLVM_BUILD_TOOLS}
+                                      -DLLVM_ENABLE_DOXYGEN=${LLVM_ENABLE_DOXYGEN}
                                       -DCMAKE_C_COMPILER_WORKS=ON
                                       -DCMAKE_CXX_COMPILER_WORKS=ON
                                       -DCMAKE_Fortran_COMPILER_WORKS=ON
@@ -367,6 +385,15 @@ function(runtime_register_target name)
       list(APPEND ${name}_test_targets ${target}-${name})
       list(APPEND test_targets ${target}-${name})
     endforeach()
+
+    # If a builtins-${name} target exists, we'll test those builtins
+    # with this runtimes build
+    if(TARGET builtins-${name})
+      list(APPEND ARG_CMAKE_ARGS "-DCOMPILER_RT_TEST_EXTERNAL_BUILTINS=ON")
+      set(check-builtins-${name} check-builtins)
+      list(APPEND ${name}_test_targets check-builtins-${name})
+      list(APPEND test_targets check-builtins-${name})
+    endif()
     set(test_targets "${test_targets}" PARENT_SCOPE)
   endif()
 
@@ -432,6 +459,9 @@ function(runtime_register_target name)
   if(LLVM_INCLUDE_TESTS)
     add_dependencies(check-runtimes check-runtimes-${name})
     add_dependencies(runtimes-test-depends runtimes-test-depends-${name})
+    if(TARGET builtins-${name})
+      add_dependencies(check-builtins check-builtins-${name})
+    endif()
   endif()
   foreach(runtime_name ${runtime_names})
     if(NOT TARGET ${runtime_name})
@@ -494,6 +524,7 @@ if(build_runtimes)
                 llvm-symbolizer
                 llvm-xray
                 llvm-offload-binary
+                llvm-gpu-loader
                 not
                 obj2yaml
                 opt
@@ -523,7 +554,7 @@ if(build_runtimes)
 
   # TODO: We need to consider passing it as '-DRUNTIMES_x86_64_LLVM_ENABLE_RUNTIMES'.
   if("libclc" IN_LIST LLVM_ENABLE_RUNTIMES)
-    foreach(dep clang llvm-as llvm-link opt)
+    foreach(dep clang llvm-link opt llvm-ar llvm-ranlib llvm-spirv)
       if(TARGET ${dep})
         list(APPEND extra_deps ${dep})
       endif()
@@ -541,15 +572,18 @@ if(build_runtimes)
   if ("openmp" IN_LIST LLVM_ENABLE_RUNTIMES AND "flang" IN_LIST LLVM_ENABLE_PROJECTS)
     list(APPEND extra_args ENABLE_FORTRAN)
   endif()
-  if("flang" IN_LIST LLVM_ENABLE_PROJECTS)
-    # Ensure REAL(16) support in runtimes to be consistent with compiler
-    if(FLANG_RUNTIME_F128_MATH_LIB OR HAVE_LDBL_MANT_DIG_113)
-      list(APPEND extra_cmake_args "-DFORTRAN_SUPPORTS_REAL16=TRUE")
-    else()
-      list(APPEND extra_cmake_args "-DFORTRAN_SUPPORTS_REAL16=FALSE")
-    endif()
-  endif()
   if("openmp" IN_LIST LLVM_ENABLE_RUNTIMES OR "offload" IN_LIST LLVM_ENABLE_RUNTIMES)
+    if (${LLVM_TOOL_FLANG_BUILD})
+      message(STATUS "Configuring build of omp_lib.mod and omp_lib_kinds.mod via flang")
+      set(LIBOMP_FORTRAN_MODULES_COMPILER "${CMAKE_BINARY_DIR}/bin/flang")
+      set(LIBOMP_MODULES_INSTALL_PATH "${CMAKE_INSTALL_INCLUDEDIR}/flang")
+      # TODO: This is a workaround until flang becomes a first-class project
+      # in llvm/CMakeList.txt.  Until then, this line ensures that flang is
+      # built before "openmp" is built as a runtime project.  Besides "flang"
+      # to build the compiler, we also need to add "module_files" to make sure
+      # that all .mod files are also properly build.
+      list(APPEND extra_deps "flang" "module_files")
+    endif()
     foreach(dep opt llvm-link llvm-extract clang llvm-offload-binary clang-nvlink-wrapper)
       if(TARGET ${dep})
         list(APPEND extra_deps ${dep})
@@ -604,6 +638,17 @@ if(build_runtimes)
           PROPERTIES FOLDER "Runtimes"
         )
         set(test_targets "")
+
+        # NOTE: Currently, the builtins tests are run with the runtimes build,
+        # and the default runtimes target installs a check-builtins target
+        # which forwards to the default builtins build. If the default runtimes
+        # target is not used, we create a custom target which will depend on
+        # each check-builtins-${name}.
+        add_custom_target(check-builtins)
+        set_target_properties(
+          check-builtins
+          PROPERTIES FOLDER "Compiler-RT"
+        )
       endif()
       if(LLVM_RUNTIME_DISTRIBUTION_COMPONENTS)
         foreach(component ${LLVM_RUNTIME_DISTRIBUTION_COMPONENTS})
@@ -659,13 +704,6 @@ if(build_runtimes)
     # We need to add the runtimes as a dependency because compiler-rt can be
     # built as part of runtimes and we need the profile runtime for PGO
     add_dependencies(clang-bootstrap-deps runtimes)
-    # The bootstrap build will attempt to configure the offload runtime
-    # before the openmp project which will error out due to failing to
-    # find libomp.so. We must add omp as a dependency before runtimes
-    # are configured.
-    if("openmp" IN_LIST LLVM_ENABLE_PROJECTS AND "offload" IN_LIST LLVM_ENABLE_RUNTIMES)
-      add_dependencies(clang-bootstrap-deps omp)
-    endif()
   endif()
 
   if(LLVM_INCLUDE_TESTS)
@@ -677,4 +715,10 @@ if(build_runtimes)
 
     set_property(GLOBAL APPEND PROPERTY LLVM_ALL_ADDITIONAL_TEST_TARGETS runtimes ${extra_deps})
   endif()
+endif()
+
+if(LIBOMP_ENABLE_ARM64X)
+  # TODO: This only needs to depend on openmp-arm64ec-pc-windows-msvc, but the 
+  # openmp targets set up for cross build runtimes don't currently work correctly.
+  add_dependencies(runtimes-configure runtimes-arm64ec-pc-windows-msvc-build)
 endif()

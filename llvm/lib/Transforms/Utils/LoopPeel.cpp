@@ -11,6 +11,7 @@
 
 #include "llvm/Transforms/Utils/LoopPeel.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/Loads.h"
@@ -419,9 +420,9 @@ std::optional<unsigned> PhiAnalyzer::calculateIterationsToPeel() {
 // the remainder loop after peeling. The load must also be used (transitively)
 // by an exit condition. Returns the number of iterations to peel off (at the
 // moment either 0 or 1).
-static unsigned peelToTurnInvariantLoadsDerefencebale(Loop &L,
-                                                      DominatorTree &DT,
-                                                      AssumptionCache *AC) {
+static unsigned peelToTurnInvariantLoadsDereferenceable(Loop &L,
+                                                        DominatorTree &DT,
+                                                        AssumptionCache *AC) {
   // Skip loops with a single exiting block, because there should be no benefit
   // for the heuristic below.
   if (L.getExitingBlock())
@@ -447,7 +448,10 @@ static unsigned peelToTurnInvariantLoadsDerefencebale(Loop &L,
   const DataLayout &DL = L.getHeader()->getDataLayout();
   for (BasicBlock *BB : L.blocks()) {
     for (Instruction &I : *BB) {
-      if (I.mayWriteToMemory())
+      // Calls that only access inaccessible memory can never alias with loads.
+      if (I.mayWriteToMemory() &&
+          !(isa<CallBase>(I) &&
+            cast<CallBase>(I).onlyAccessesInaccessibleMemory()))
         return 0;
 
       if (LoadUsers.contains(&I))
@@ -495,7 +499,7 @@ bool llvm::canPeelLastIteration(const Loop &L, ScalarEvolution &SE) {
                     m_BasicBlock(Succ1), m_BasicBlock(Succ2))) &&
          ((Pred == CmpInst::ICMP_EQ && Succ2 == L.getHeader()) ||
           (Pred == CmpInst::ICMP_NE && Succ1 == L.getHeader())) &&
-         Bound->getType()->isIntegerTy() && 
+         Bound->getType()->isIntegerTy() &&
          SE.isLoopInvariant(SE.getSCEV(Bound), &L) &&
          match(SE.getSCEV(Inc),
                m_scev_AffineAddRec(m_SCEV(), m_scev_One(), m_SpecificLoop(&L)));
@@ -512,7 +516,7 @@ static bool shouldPeelLastIteration(Loop &L, CmpPredicate Pred,
     return false;
 
   const SCEV *BTC = SE.getBackedgeTakenCount(&L);
-  SCEVExpander Expander(SE, L.getHeader()->getDataLayout(), "loop-peel");
+  SCEVExpander Expander(SE, "loop-peel");
   if (!SE.isKnownNonZero(BTC) &&
       Expander.isHighCostExpansion(BTC, &L, SCEVCheapExpansionBudget, &TTI,
                                    L.getLoopPredecessor()->getTerminator()))
@@ -705,8 +709,8 @@ countToEliminateCompares(Loop &L, unsigned MaxPeelCount, ScalarEvolution &SE,
         ComputePeelCountMinMax(MinMax);
     }
 
-    auto *BI = dyn_cast<BranchInst>(BB->getTerminator());
-    if (!BI || BI->isUnconditional())
+    auto *BI = dyn_cast<CondBrInst>(BB->getTerminator());
+    if (!BI)
       continue;
 
     // Ignore loop exit condition.
@@ -728,8 +732,8 @@ static bool violatesLegacyMultiExitLoopCheck(Loop *L) {
   if (!Latch)
     return true;
 
-  BranchInst *LatchBR = dyn_cast<BranchInst>(Latch->getTerminator());
-  if (!LatchBR || LatchBR->getNumSuccessors() != 2 || !L->isLoopExiting(Latch))
+  CondBrInst *LatchBR = dyn_cast<CondBrInst>(Latch->getTerminator());
+  if (!LatchBR || !L->isLoopExiting(Latch))
     return true;
 
   assert((LatchBR->getSuccessor(0) == L->getHeader() ||
@@ -816,7 +820,7 @@ void llvm::computePeelCount(Loop *L, unsigned LoopSize,
   DesiredPeelCount = std::max(DesiredPeelCount, CountToEliminateCmps);
 
   if (DesiredPeelCount == 0)
-    DesiredPeelCount = peelToTurnInvariantLoadsDerefencebale(*L, DT, AC);
+    DesiredPeelCount = peelToTurnInvariantLoadsDereferenceable(*L, DT, AC);
 
   if (DesiredPeelCount > 0) {
     DesiredPeelCount = std::min(DesiredPeelCount, MaxPeelCount);
@@ -969,7 +973,7 @@ static void cloneLoopBlocks(
     // This is the last iteration and we definitely will go to the exit. Just
     // set both successors to InsertBot and let the branch be simplified later.
     assert(IterNumber == 0 && "Only peeling a single iteration implemented.");
-    auto *LatchTerm = cast<BranchInst>(NewLatch->getTerminator());
+    auto *LatchTerm = cast<CondBrInst>(NewLatch->getTerminator());
     LatchTerm->setSuccessor(0, InsertBot);
     LatchTerm->setSuccessor(1, InsertBot);
   } else {
@@ -1096,7 +1100,7 @@ llvm::gatherPeelingPreferences(Loop *L, ScalarEvolution &SE,
 /// this provides a benefit, since the peeled off iterations, which account
 /// for the bulk of dynamic execution, can be further simplified by scalar
 /// optimizations.
-bool llvm::peelLoop(Loop *L, unsigned PeelCount, bool PeelLast, LoopInfo *LI,
+void llvm::peelLoop(Loop *L, unsigned PeelCount, bool PeelLast, LoopInfo *LI,
                     ScalarEvolution *SE, DominatorTree &DT, AssumptionCache *AC,
                     bool PreserveLCSSA, ValueToValueMapTy &LVMap) {
   assert(PeelCount > 0 && "Attempt to peel out zero iterations?");
@@ -1118,7 +1122,7 @@ bool llvm::peelLoop(Loop *L, unsigned PeelCount, bool PeelLast, LoopInfo *LI,
   // later. Immediate dominator of such block might change, because we add more
   // routes which can lead to the exit: we can reach it from the peeled
   // iterations too.
-  DenseMap<BasicBlock *, BasicBlock *> NonLoopBlocksIDom;
+  MapVector<BasicBlock *, BasicBlock *> NonLoopBlocksIDom;
   for (auto *BB : L->blocks()) {
     auto *BBDomNode = DT.getNode(BB);
     SmallVector<BasicBlock *, 16> ChildrenToUpdate;
@@ -1212,9 +1216,9 @@ bool llvm::peelLoop(Loop *L, unsigned PeelCount, bool PeelLast, LoopInfo *LI,
       }
     } else {
       NewPreHeader = SplitEdge(PreHeader, Header, &DT, LI);
-      SCEVExpander Expander(*SE, Latch->getDataLayout(), "loop-peel");
+      SCEVExpander Expander(*SE, "loop-peel");
 
-      BranchInst *PreHeaderBR = cast<BranchInst>(PreHeader->getTerminator());
+      Instruction *PreHeaderBR = PreHeader->getTerminator();
       Value *BTCValue =
           Expander.expandCodeFor(BTC, BTC->getType(), PreHeaderBR);
       IRBuilder<> B(PreHeaderBR);
@@ -1435,6 +1439,4 @@ bool llvm::peelLoop(Loop *L, unsigned PeelCount, bool PeelLast, LoopInfo *LI,
 
   NumPeeled++;
   NumPeeledEnd += PeelLast;
-
-  return true;
 }

@@ -112,30 +112,22 @@ define <2 x half> @fptrunc_v2f128_v2f16(<2 x fp128> %a) {
 ;
 ; CHECK-GI-LABEL: fptrunc_v2f128_v2f16:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    sub sp, sp, #64
-; CHECK-GI-NEXT:    str x30, [sp, #48] // 8-byte Spill
-; CHECK-GI-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-GI-NEXT:    sub sp, sp, #48
+; CHECK-GI-NEXT:    str x30, [sp, #32] // 8-byte Spill
+; CHECK-GI-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-GI-NEXT:    .cfi_offset w30, -16
-; CHECK-GI-NEXT:    mov v2.d[0], x8
 ; CHECK-GI-NEXT:    str q1, [sp] // 16-byte Spill
-; CHECK-GI-NEXT:    mov v2.d[1], x8
-; CHECK-GI-NEXT:    str q2, [sp, #32] // 16-byte Spill
 ; CHECK-GI-NEXT:    bl __trunctfhf2
 ; CHECK-GI-NEXT:    // kill: def $h0 killed $h0 def $q0
 ; CHECK-GI-NEXT:    str q0, [sp, #16] // 16-byte Spill
 ; CHECK-GI-NEXT:    ldr q0, [sp] // 16-byte Reload
 ; CHECK-GI-NEXT:    bl __trunctfhf2
+; CHECK-GI-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
 ; CHECK-GI-NEXT:    // kill: def $h0 killed $h0 def $q0
-; CHECK-GI-NEXT:    str q0, [sp] // 16-byte Spill
-; CHECK-GI-NEXT:    ldr q0, [sp, #32] // 16-byte Reload
-; CHECK-GI-NEXT:    bl __trunctfhf2
-; CHECK-GI-NEXT:    ldr q0, [sp, #32] // 16-byte Reload
-; CHECK-GI-NEXT:    bl __trunctfhf2
-; CHECK-GI-NEXT:    ldp q1, q0, [sp] // 32-byte Folded Reload
-; CHECK-GI-NEXT:    ldr x30, [sp, #48] // 8-byte Reload
-; CHECK-GI-NEXT:    mov v0.h[1], v1.h[0]
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-GI-NEXT:    add sp, sp, #64
+; CHECK-GI-NEXT:    ldr x30, [sp, #32] // 8-byte Reload
+; CHECK-GI-NEXT:    mov v1.h[1], v0.h[0]
+; CHECK-GI-NEXT:    fmov d0, d1
+; CHECK-GI-NEXT:    add sp, sp, #48
 ; CHECK-GI-NEXT:    ret
 entry:
   %c = fptrunc <2 x fp128> %a to <2 x half>
@@ -260,8 +252,9 @@ define <3 x float> @fptrunc_v3f64_v3f32(<3 x double> %a) {
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-GI-NEXT:    fcvt s2, d2
+; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-GI-NEXT:    fcvtn v2.2s, v2.2d
 ; CHECK-GI-NEXT:    fcvtn v1.2s, v0.2d
 ; CHECK-GI-NEXT:    mov v0.s[0], v1.s[0]
 ; CHECK-GI-NEXT:    mov v0.s[1], v1.s[1]
@@ -284,61 +277,49 @@ entry:
 }
 
 define <2 x half> @fptrunc_v2f64_v2f16(<2 x double> %a) {
-; CHECK-SD-LABEL: fptrunc_v2f64_v2f16:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    fcvtxn v0.2s, v0.2d
-; CHECK-SD-NEXT:    fcvtn v0.4h, v0.4s
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: fptrunc_v2f64_v2f16:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    mov d1, v0.d[1]
-; CHECK-GI-NEXT:    fcvt h0, d0
-; CHECK-GI-NEXT:    fcvt h1, d1
-; CHECK-GI-NEXT:    mov v0.h[1], v1.h[0]
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: fptrunc_v2f64_v2f16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fcvtxn v0.2s, v0.2d
+; CHECK-NEXT:    fcvtn v0.4h, v0.4s
+; CHECK-NEXT:    ret
 entry:
   %c = fptrunc <2 x double> %a to <2 x half>
   ret <2 x half> %c
 }
 
 define <3 x half> @fptrunc_v3f64_v3f16(<3 x double> %a) {
-; CHECK-LABEL: fptrunc_v3f64_v3f16:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fcvt h0, d0
-; CHECK-NEXT:    fcvt h1, d1
-; CHECK-NEXT:    fcvt h2, d2
-; CHECK-NEXT:    mov v0.h[1], v1.h[0]
-; CHECK-NEXT:    mov v0.h[2], v2.h[0]
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: fptrunc_v3f64_v3f16:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    fcvt h0, d0
+; CHECK-SD-NEXT:    fcvt h1, d1
+; CHECK-SD-NEXT:    fcvt h2, d2
+; CHECK-SD-NEXT:    mov v0.h[1], v1.h[0]
+; CHECK-SD-NEXT:    mov v0.h[2], v2.h[0]
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fptrunc_v3f64_v3f16:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 def $q2
+; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-GI-NEXT:    fcvtxn v0.2s, v0.2d
+; CHECK-GI-NEXT:    fcvtxn2 v0.4s, v2.2d
+; CHECK-GI-NEXT:    fcvtn v0.4h, v0.4s
+; CHECK-GI-NEXT:    ret
 entry:
   %c = fptrunc <3 x double> %a to <3 x half>
   ret <3 x half> %c
 }
 
 define <4 x half> @fptrunc_v4f64_v4f16(<4 x double> %a) {
-; CHECK-SD-LABEL: fptrunc_v4f64_v4f16:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    fcvtxn v0.2s, v0.2d
-; CHECK-SD-NEXT:    fcvtxn2 v0.4s, v1.2d
-; CHECK-SD-NEXT:    fcvtn v0.4h, v0.4s
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: fptrunc_v4f64_v4f16:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    mov d2, v0.d[1]
-; CHECK-GI-NEXT:    fcvt h0, d0
-; CHECK-GI-NEXT:    mov d3, v1.d[1]
-; CHECK-GI-NEXT:    fcvt h1, d1
-; CHECK-GI-NEXT:    fcvt h2, d2
-; CHECK-GI-NEXT:    mov v0.h[1], v2.h[0]
-; CHECK-GI-NEXT:    fcvt h2, d3
-; CHECK-GI-NEXT:    mov v0.h[2], v1.h[0]
-; CHECK-GI-NEXT:    mov v0.h[3], v2.h[0]
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: fptrunc_v4f64_v4f16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fcvtxn v0.2s, v0.2d
+; CHECK-NEXT:    fcvtxn2 v0.4s, v1.2d
+; CHECK-NEXT:    fcvtn v0.4h, v0.4s
+; CHECK-NEXT:    ret
 entry:
   %c = fptrunc <4 x double> %a to <4 x half>
   ret <4 x half> %c

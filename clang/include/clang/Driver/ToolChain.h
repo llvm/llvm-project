@@ -109,6 +109,13 @@ public:
     UNW_Libgcc
   };
 
+  enum CStdlibType {
+    CST_Newlib,
+    CST_Picolibc,
+    CST_LLVMLibC,
+    CST_System,
+  };
+
   enum class UnwindTableLevel {
     None,
     Synchronous,
@@ -194,6 +201,7 @@ private:
   mutable std::optional<CXXStdlibType> cxxStdlibType;
   mutable std::optional<RuntimeLibType> runtimeLibType;
   mutable std::optional<UnwindLibType> unwindLibType;
+  mutable std::optional<CStdlibType> cStdlibType;
 
 protected:
   MultilibSet Multilibs;
@@ -275,9 +283,7 @@ public:
   /// this toolchain.
   StringRef getDefaultUniversalArchName() const;
 
-  std::string getTripleString() const {
-    return Triple.getTriple();
-  }
+  StringRef getTripleString() const { return Triple.getTriple(); }
 
   /// Get the toolchain's effective clang triple.
   const llvm::Triple &getEffectiveTriple() const {
@@ -538,10 +544,6 @@ public:
   // Returns Triple without the OSs version.
   llvm::Triple getTripleWithoutOSVersion() const;
 
-  /// Returns the target-specific path for Flang's intrinsic modules in the
-  /// resource directory if it exists.
-  std::optional<std::string> getDefaultIntrinsicModuleDir() const;
-
   // Returns the target specific runtime path if it exists.
   std::optional<std::string> getRuntimePath() const;
 
@@ -618,6 +620,10 @@ public:
   // provided that debugging was requested in the first place.
   // i.e. a value of 'true' does not imply that debugging is wanted.
   virtual bool GetDefaultStandaloneDebug() const { return false; }
+
+  /// Returns true if this toolchain adds '-gsimple-template-names=simple'
+  /// by default when generating debug-info.
+  virtual bool getDefaultDebugSimpleTemplateNames() const { return false; }
 
   // Return the default debugger "tuning."
   virtual llvm::DebuggerKind getDefaultDebuggerTuning() const {
@@ -729,6 +735,11 @@ public:
   // given compilation arguments.
   virtual UnwindLibType GetUnwindLibType(const llvm::opt::ArgList &Args) const;
 
+  // Determine the C standard library to use with the given
+  // compilation arguments. Defaults to CST_System when no --cstdlib= flag
+  // is provided.
+  virtual CStdlibType GetCStdlibType(const llvm::opt::ArgList &Args) const;
+
   // Detect the highest available version of libc++ in include path.
   virtual std::string detectLibcxxVersion(StringRef IncludePath) const;
 
@@ -753,8 +764,8 @@ public:
                                    llvm::opt::ArgStringList &CmdArgs) const;
 
   /// AddFilePathLibArgs - Add each thing in getFilePaths() as a "-L" option.
-  void AddFilePathLibArgs(const llvm::opt::ArgList &Args,
-                          llvm::opt::ArgStringList &CmdArgs) const;
+  virtual void AddFilePathLibArgs(const llvm::opt::ArgList &Args,
+                                  llvm::opt::ArgStringList &CmdArgs) const;
 
   /// AddCCKextLibArgs - Add the system specific linker arguments to use
   /// for kernel extensions (Darwin-specific).
@@ -809,10 +820,10 @@ public:
   getDeviceLibs(const llvm::opt::ArgList &Args,
                 const Action::OffloadKind DeviceOffloadingKind) const;
 
-  /// Add the system specific linker arguments to use
-  /// for the given HIP runtime library type.
-  virtual void AddHIPRuntimeLibArgs(const llvm::opt::ArgList &Args,
-                                    llvm::opt::ArgStringList &CmdArgs) const {}
+  /// Add the system specific libraries for the active offload kinds.
+  virtual void addOffloadRTLibs(unsigned ActiveKinds,
+                                const llvm::opt::ArgList &Args,
+                                llvm::opt::ArgStringList &CmdArgs) const {}
 
   /// Return sanitizers which are available in this toolchain.
   virtual SanitizerMask getSupportedSanitizers() const;
@@ -837,17 +848,27 @@ public:
 
   // We want to expand the shortened versions of the triples passed in to
   // the values used for the bitcode libraries.
-  static llvm::Triple getOpenMPTriple(StringRef TripleStr) {
-    llvm::Triple TT(TripleStr);
-    if (TT.getVendor() == llvm::Triple::UnknownVendor ||
-        TT.getOS() == llvm::Triple::UnknownOS) {
-      if (TT.getArch() == llvm::Triple::nvptx)
-        return llvm::Triple("nvptx-nvidia-cuda");
-      if (TT.getArch() == llvm::Triple::nvptx64)
-        return llvm::Triple("nvptx64-nvidia-cuda");
-      if (TT.isAMDGCN())
-        return llvm::Triple("amdgcn-amd-amdhsa");
+  static void normalizeOffloadTriple(llvm::Triple &TT) {
+    if (TT.isNVPTX()) {
+      if (TT.getVendor() == llvm::Triple::UnknownVendor)
+        TT.setVendor(llvm::Triple::NVIDIA);
+      if (TT.getOS() == llvm::Triple::UnknownOS)
+        TT.setOS(llvm::Triple::CUDA);
+      return;
     }
+
+    if (TT.isAMDGPU()) {
+      if (TT.getVendor() == llvm::Triple::UnknownVendor)
+        TT.setVendor(llvm::Triple::AMD);
+      if (TT.getOS() == llvm::Triple::UnknownOS)
+        TT.setOS(llvm::Triple::AMDHSA);
+      return;
+    }
+  }
+
+  static llvm::Triple normalizeOffloadTriple(llvm::StringRef OrigTT) {
+    llvm::Triple TT(OrigTT);
+    normalizeOffloadTriple(TT);
     return TT;
   }
 };

@@ -3,18 +3,18 @@
 ! RUN:  bbc -emit-hlfir -fopenmp -o - %s 2>&1 | FileCheck %s
 ! RUN:  %flang_fc1 -emit-hlfir -fopenmp -o - %s 2>&1 | FileCheck %s
 
-! CHECK-LABEL:  omp.private {type = private} 
+! CHECK-LABEL:  omp.private {type = private}
 ! CHECK-SAME:        @[[I_PRIVATE:.*]] : i32
 
-! CHECK-LABEL:  omp.private 
-! CHECK-SAME:      {type = firstprivate} @[[J_FIRSTPRIVATE:.*]] : i32 
+! CHECK-LABEL:  omp.private
+! CHECK-SAME:      {type = firstprivate} @[[J_FIRSTPRIVATE:.*]] : i32
 ! CHECK-SAME:      copy {
-! CHECK:            hlfir.assign 
+! CHECK:            hlfir.assign
 
 ! CHECK-LABEL:  func.func @_QPtest_masked_taskloop() {
 ! CHECK:          %[[VAL_0:.*]] = fir.dummy_scope : !fir.dscope
 ! CHECK:          %[[ALLOCA_I:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFtest_masked_taskloopEi"}
-! CHECK:          %[[DECL_I:.*]]:2 = hlfir.declare %[[ALLOCA_I]] 
+! CHECK:          %[[DECL_I:.*]]:2 = hlfir.declare %[[ALLOCA_I]]
 ! CHECK-SAME:         {uniq_name = "_QFtest_masked_taskloopEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:          %[[ALLOCA_J:.*]] = fir.address_of(@_QFtest_masked_taskloopEj) : !fir.ref<i32>
 ! CHECK:          %[[DECL_J:.*]]:2 = hlfir.declare %[[ALLOCA_J]] {uniq_name = "_QFtest_masked_taskloopEj"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
@@ -51,5 +51,5 @@ subroutine test_masked_taskloop
   do i=1,10
    j = j + 1
   end do
-  !$omp end masked taskloop 
+  !$omp end masked taskloop
 end subroutine

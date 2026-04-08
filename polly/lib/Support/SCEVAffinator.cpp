@@ -271,6 +271,10 @@ PWACtx SCEVAffinator::visitVScale(const SCEVVScale *VScale) {
   llvm_unreachable("SCEVVScale not yet supported");
 }
 
+PWACtx SCEVAffinator::visitPtrToAddrExpr(const SCEVPtrToAddrExpr *Expr) {
+  return visit(Expr->getOperand(0));
+}
+
 PWACtx SCEVAffinator::visitPtrToIntExpr(const SCEVPtrToIntExpr *Expr) {
   return visit(Expr->getOperand(0));
 }

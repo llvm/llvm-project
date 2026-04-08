@@ -84,9 +84,9 @@ struct VectorMaskedLoadOpConverter final
             scf::YieldOp::create(builder, loc, iValue);
           });
       iValue = ifOp.getResult(0);
-
-      indices.back() =
-          arith::AddIOp::create(rewriter, loc, indices.back(), one);
+      if (!indices.empty())
+        indices.back() =
+            arith::AddIOp::create(rewriter, loc, indices.back(), one);
     }
 
     rewriter.replaceOp(maskedLoadOp, iValue);
@@ -148,8 +148,9 @@ struct VectorMaskedStoreOpConverter final
           llvm::MaybeAlign(maskedStoreOp.getAlignment().value_or(0)));
 
       rewriter.setInsertionPointAfter(ifOp);
-      indices.back() =
-          arith::AddIOp::create(rewriter, loc, indices.back(), one);
+      if (!indices.empty())
+        indices.back() =
+            arith::AddIOp::create(rewriter, loc, indices.back(), one);
     }
 
     rewriter.eraseOp(maskedStoreOp);

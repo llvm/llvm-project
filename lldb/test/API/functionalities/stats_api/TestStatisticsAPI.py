@@ -1,6 +1,7 @@
 # Test the SBAPI for GetStatistics()
 
 import json
+import os
 
 import lldb
 from lldbsuite.test.decorators import *
@@ -185,3 +186,24 @@ class TestStatsAPI(TestBase):
         target_info = debug_stats["targets"][0]
         self.assertTrue("loadCoreTime" in target_info)
         self.assertTrue(float(target_info["loadCoreTime"]) > 0.0)
+
+    def test_command_stats_coredump(self):
+        """
+        Test to see if the coredump path is included in statistics dump.
+        """
+        yaml_file = "minidump.yaml"
+        minidump_path = self.getBuildArtifact(os.path.basename(yaml_file) + ".dmp")
+        self.yaml2obj(yaml_file, minidump_path)
+        target = self.dbg.CreateTarget(None)
+        process = target.LoadCore(minidump_path)
+        self.assertTrue(process.IsValid())
+
+        stats_options = lldb.SBStatisticsOptions()
+        stats = target.GetStatistics(stats_options)
+        stream = lldb.SBStream()
+        stats.GetAsJSON(stream)
+        debug_stats = json.loads(stream.GetData())
+        self.assertTrue("targets" in debug_stats)
+        target_info = debug_stats["targets"][0]
+        self.assertTrue("coreFile" in target_info)
+        self.assertEqual(target_info["coreFile"], os.path.basename(minidump_path))

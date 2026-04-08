@@ -631,6 +631,19 @@ TEST_F(DefineOutlineTest, QualifyReturnValue) {
         class Foo {};
         Foo foo() ;)cpp",
        "Foo foo() { return {}; }"},
+      {R"cpp(
+        template <typename T> class Expected {};
+        class Foo {
+          class Bar {};
+          Expected<Bar> fu^nc() { return {}; }
+        };)cpp",
+       R"cpp(
+        template <typename T> class Expected {};
+        class Foo {
+          class Bar {};
+          Expected<Bar> func() ;
+        };)cpp",
+       "Expected<Foo::Bar> Foo::func() { return {}; }\n"},
   };
   llvm::StringMap<std::string> EditedFiles;
   for (auto &Case : Cases) {
@@ -950,6 +963,37 @@ inline void Foo::neighbor() {}
 )cpp",
           {}},
 
+      // Adjacent definition with `= default`
+      {
+          R"cpp(
+struct Foo {
+  void ignored1();
+  Foo();
+  void fun^c() {}
+  void ignored2();
+};
+)cpp",
+          R"cpp(
+#include "a.hpp"
+void Foo::ignored1() {}
+Foo::Foo() = default;
+void Foo::ignored2() {}
+)cpp",
+          R"cpp(
+struct Foo {
+  void ignored1();
+  Foo();
+  void func() ;
+  void ignored2();
+};
+)cpp",
+          R"cpp(
+#include "a.hpp"
+void Foo::ignored1() {}
+Foo::Foo() = default;void Foo::func() {}
+
+void Foo::ignored2() {}
+)cpp"},
   };
 
   for (const auto &Case : Cases) {

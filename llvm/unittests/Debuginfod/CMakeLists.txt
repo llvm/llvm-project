@@ -1,5 +1,8 @@
+set(LLVM_LINK_COMPONENTS
+  SupportHTTP
+  )
+
 add_llvm_unittest(DebuginfodTests
-  HTTPServerTests.cpp
   DebuginfodTests.cpp
   )
 

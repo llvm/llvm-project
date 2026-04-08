@@ -6,19 +6,19 @@ roots:
       - name: .clang-tidy
         type: file
         external-contents: INPUT_DIR/root-clang-tidy.yml
-      - name: main.cpp
+      - name: cqc-main.cpp
         type: file
         external-contents: MAIN_FILE
       - name: subdir
         type: directory
         contents:
-          - name: main.cpp
+          - name: cqc-main.cpp
             type: file
             external-contents: MAIN_FILE
       - name: subdir-override
         type: directory
         contents:
-          - name: main.cpp
+          - name: cqc-main.cpp
             type: file
             external-contents: MAIN_FILE
           - name: .clang-tidy
@@ -27,7 +27,7 @@ roots:
       - name: subdir-empty
         type: directory
         contents:
-          - name: main.cpp
+          - name: cqc-main.cpp
             type: file
             external-contents: MAIN_FILE
           - name: .clang-tidy
@@ -36,7 +36,7 @@ roots:
       - name: subdir-append
         type: directory
         contents:
-          - name: main.cpp
+          - name: cqc-main.cpp
             type: file
             external-contents: MAIN_FILE
           - name: .clang-tidy

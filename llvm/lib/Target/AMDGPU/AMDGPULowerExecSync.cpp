@@ -44,7 +44,7 @@ static GlobalVariable *uniquifyGVPerKernel(Module &M, GlobalVariable *GV,
   for (Use &U : GV->uses()) {
     if (auto *I = dyn_cast<Instruction>(U.getUser())) {
       Function *F = I->getFunction();
-      if (isKernelLDS(F) && F != KF) {
+      if (isKernel(*F) && F != KF) {
         NeedsReplacement = true;
         break;
       }
@@ -61,7 +61,7 @@ static GlobalVariable *uniquifyGVPerKernel(Module &M, GlobalVariable *GV,
   for (Use &U : make_early_inc_range(GV->uses())) {
     if (auto *I = dyn_cast<Instruction>(U.getUser())) {
       Function *F = I->getFunction();
-      if (!isKernelLDS(F) || F == KF) {
+      if (!isKernel(*F) || F == KF) {
         U.getUser()->replaceUsesOfWith(GV, NewGV);
       }
     }
@@ -117,7 +117,7 @@ static bool lowerExecSyncGlobalVariables(
   for (GlobalVariable *GV : OrderedGVs) {
     unsigned BarrierScope = AMDGPU::Barrier::BARRIER_SCOPE_WORKGROUP;
     unsigned BarId = NumAbsolutes + 1;
-    unsigned BarCnt = DL.getTypeAllocSize(GV->getValueType()) / 16;
+    unsigned BarCnt = GV->getGlobalSize(DL) / 16;
     NumAbsolutes += BarCnt;
 
     // 4 bits for alignment, 5 bits for the barrier num,
@@ -133,7 +133,7 @@ static bool lowerExecSyncGlobalVariables(
   SmallVector<Function *> OrderedKernels;
   for (auto &K : LDSUsesInfo.direct_access) {
     Function *F = K.first;
-    assert(isKernelLDS(F));
+    assert(isKernel(*F));
     OrderedKernels.push_back(F);
   }
   OrderedKernels = sortByName(std::move(OrderedKernels));
@@ -160,7 +160,7 @@ static bool lowerExecSyncGlobalVariables(
       unsigned BarrierScope = AMDGPU::Barrier::BARRIER_SCOPE_WORKGROUP;
       unsigned BarId = Kernel2BarId[F];
       BarId += NumAbsolutes + 1;
-      unsigned BarCnt = DL.getTypeAllocSize(GV->getValueType()) / 16;
+      unsigned BarCnt = GV->getGlobalSize(DL) / 16;
       Kernel2BarId[F] += BarCnt;
       unsigned Offset = 0x802000u | BarrierScope << 9 | BarId << 4;
       recordLDSAbsoluteAddress(&M, NewGV, Offset);
@@ -169,7 +169,7 @@ static bool lowerExecSyncGlobalVariables(
   }
   // Also erase those special LDS variables from indirect_access.
   for (auto &K : LDSUsesInfo.indirect_access) {
-    assert(isKernelLDS(K.first));
+    assert(isKernel(*K.first));
     for (GlobalVariable *GV : K.second) {
       if (isNamedBarrier(*GV))
         K.second.erase(GV);
@@ -191,7 +191,7 @@ static bool runLowerExecSyncGlobals(Module &M) {
   VariableFunctionMap LDSToKernelsThatNeedToAccessItIndirectly;
   for (auto &K : LDSUsesInfo.indirect_access) {
     Function *F = K.first;
-    assert(isKernelLDS(F));
+    assert(isKernel(*F));
     for (GlobalVariable *GV : K.second) {
       LDSToKernelsThatNeedToAccessItIndirectly[GV].insert(F);
     }
