@@ -28,8 +28,8 @@ define void @trunc_iv_steps_with_epilogue(ptr %A, i64 %N) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = trunc i64 [[INDEX]] to i32
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[A]], i32 [[TMP5]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i8>, ptr [[TMP7]], align 1
-; CHECK-NEXT:    [[TMP8:%.*]] = add <8 x i8> [[WIDE_LOAD]], splat (i8 2)
-; CHECK-NEXT:    store <8 x i8> [[TMP8]], ptr [[TMP7]], align 1
+; CHECK-NEXT:    [[TMP9:%.*]] = add <8 x i8> [[WIDE_LOAD]], splat (i8 2)
+; CHECK-NEXT:    store <8 x i8> [[TMP9]], ptr [[TMP7]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP10]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]

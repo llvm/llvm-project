@@ -3797,12 +3797,10 @@ ElementCount LoopVectorizationCostModel::getMaximizedVFForTarget(
     MaxVF =
         clampVFByMaxTripCount(MaxVF, MaxTripCount, UserIC, FoldTailByMasking);
 
-    if (MaxVectorElementCount != MaxVF) {
-      // Invalidate any widening decisions we might have made, in case the loop
-      // requires prediction (decided later), but we have already made some
-      // load/store widening decisions.
-      invalidateCostModelingDecisions();
-    }
+    assert((MaxVectorElementCount == MaxVF ||
+            (WideningDecisions.empty() && CallWideningDecisions.empty() &&
+             Uniforms.empty() && Scalars.empty())) &&
+           "No decisions should have been taken at this point");
   }
   return MaxVF;
 }
@@ -4379,6 +4377,9 @@ std::unique_ptr<VPlan> LoopVectorizationPlanner::selectBestEpiloguePlan(
   if (EpilogueVectorizationForceVF > 1) {
     if (EpilogueVectorizationForceVF >=
         IC * estimateElementCount(MainLoopVF, CM.getVScaleForTuning())) {
+      // Note that the main loop leave IC * MainLoopVF iterations iff a scalar
+      // epilogue is required, but then the epilogue loop also requires a scalar
+      // epilogue.
       LLVM_DEBUG(dbgs() << "LEV: Forced epilogue VF results in dead epilogue "
                            "vector loop, skipping vectorizing epilogue.\n");
       return nullptr;
@@ -6804,7 +6805,8 @@ void LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
         ElementCount EpilogueUserVF =
             ElementCount::getFixed(EpilogueVectorizationForceVF);
         if (EpilogueUserVF.isVector() &&
-            ElementCount::isKnownLT(EpilogueUserVF, UserVF) && CM.selectUserVectorizationFactor(EpilogueUserVF)) {
+            ElementCount::isKnownLT(EpilogueUserVF, UserVF) &&
+            CM.selectUserVectorizationFactor(EpilogueUserVF)) {
           // Build a separate plan for the forced epilogue VF.
           buildVPlansWithVPRecipes(EpilogueUserVF, EpilogueUserVF);
         }
@@ -7198,16 +7200,16 @@ LoopVectorizationPlanner::computeBestVF() {
   ElementCount UserVF = Hints.getWidth();
   if (hasPlanWithVF(UserVF)) {
     if (VPlans.size() == 1) {
-      assert(size(FirstPlan.vectorFactors()) == 1);
-      return {VectorizationFactor(*FirstPlan.vectorFactors().begin(), 0, 0),
-              &FirstPlan};
+      assert(FirstPlan.getSingleVF() == UserVF &&
+             "UserVF must match single VF");
+      return {VectorizationFactor(FirstPlan.getSingleVF(), 0, 0), &FirstPlan};
     }
     if (EpilogueVectorizationForceVF > 1) {
-      [[maybe_unused]] ElementCount EpilogueVF =
-          ElementCount::getFixed(EpilogueVectorizationForceVF);
-      assert(*VPlans[0]->vectorFactors().begin() == EpilogueVF &&
+      assert(VPlans.size() == 2 && "Must have exactly 2 VPlans built");
+      assert(VPlans[0]->getSingleVF() ==
+                 ElementCount::getFixed(EpilogueVectorizationForceVF) &&
              "expected first plan to be for the forced epilogue VF");
-      assert(*VPlans[1]->vectorFactors().begin() == UserVF &&
+      assert(VPlans[1]->getSingleVF() == UserVF &&
              "expected second plan to be for the forced UserVF");
       return {VectorizationFactor(UserVF, 0, 0), VPlans[1].get()};
     }
@@ -9667,7 +9669,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   if (EpiPlan) {
     VPlan &BestEpiPlan = *EpiPlan;
     VPlan &BestMainPlan = BestPlan;
-    ElementCount EpilogueVF = *BestEpiPlan.vectorFactors().begin();
+    ElementCount EpilogueVF = BestEpiPlan.getSingleVF();
 
     // The first pass vectorizes the main loop and creates a scalar epilogue
     // to be vectorized by executing the plan (potentially with a different
