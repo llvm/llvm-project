@@ -662,8 +662,8 @@ bool AtomicExpandImpl::expandElementwiseAtomicRMW(AtomicRMWInst *AI) {
        ++Lane) {
     Value *Idx = ConstantInt::get(IdxTy, Lane);
     Value *LanePtr = Builder.CreateInBoundsGEP(
-        VecTy, AI->getPointerOperand(),
-        {ConstantInt::get(IdxTy, 0), Idx}, "lane.ptr");
+        VecTy, AI->getPointerOperand(), {ConstantInt::get(IdxTy, 0), Idx},
+        "lane.ptr");
     Value *LaneVal =
         Builder.CreateExtractElement(AI->getValOperand(), Idx, "lane.val");
     auto *LaneRMW = Builder.CreateAtomicRMW(
