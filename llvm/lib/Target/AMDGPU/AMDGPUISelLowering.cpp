@@ -5813,7 +5813,10 @@ bool AMDGPUTargetLowering::SimplifyDemandedBitsForTargetNode(
   switch (Op.getOpcode()) {
   case ISD::INTRINSIC_WO_CHAIN: {
     switch (Op.getConstantOperandVal(0)) {
-    case Intrinsic::amdgcn_readfirstlane: {
+    case Intrinsic::amdgcn_readfirstlane:
+    case Intrinsic::amdgcn_readlane:
+    case Intrinsic::amdgcn_set_inactive:
+    case Intrinsic::amdgcn_wwm: {
       if (SimplifyDemandedBits(Op.getOperand(1), OriginalDemandedBits,
                                OriginalDemandedElts, Known, TLO, Depth + 1))
         return true;
