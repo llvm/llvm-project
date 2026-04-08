@@ -1646,7 +1646,7 @@ safely deallocated with the standard ``free()``.
   The second parameter is optional.
   It represents the index of the parameter that represents the allocation size in bytes (counting from 1).
   The referenced parameter must have some integral type.
-  This attribute may appear at most once per declaration;
+  This attribute may appear at most once per declaration.
   If forward declarations have this attribute, those must have the same parameters.
 * Use ``ownership_takes`` to mark a function as a deallocating function. Takes 2
   parameters: the allocation type, and the index of the parameter that is being
