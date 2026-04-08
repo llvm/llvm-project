@@ -1538,21 +1538,18 @@ canonicalizeNestedAddSubWithConstant(BinaryOperator &I,
   if (!Inner || !Inner->hasOneUse())
     return nullptr;
 
-  const bool IsOuterAdd = I.getOpcode() == Instruction::Add;
-  bool IsInnerAdd;
-
   Value *X, *Y = I.getOperand(1);
+  Instruction::BinaryOps OuterOpcode;
   Constant *C;
   if (match(Inner, m_Add(m_Value(X), m_ImmConstant(C))))
-    IsInnerAdd = true;
+    OuterOpcode = Instruction::Add;
   else if (match(Inner, m_Sub(m_Value(X), m_ImmConstant(C))))
-    IsInnerAdd = false;
+    OuterOpcode = Instruction::Sub;
   else
     return nullptr;
 
-  Value *XY = IsOuterAdd ? Builder.CreateAdd(X, Y) : Builder.CreateSub(X, Y);
-  return IsInnerAdd ? BinaryOperator::CreateAdd(XY, C)
-                    : BinaryOperator::CreateSub(XY, C);
+  Value *XY = Builder.CreateBinOp(I.getOpcode(), X, Y);
+  return BinaryOperator::Create(OuterOpcode, XY, C);
 }
 
 Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
