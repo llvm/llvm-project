@@ -150,6 +150,29 @@ static void emitARMTargetDef(const RecordKeeper &RK, raw_ostream &OS) {
      << "#endif // EMIT_EXTENSIONS\n"
      << "\n";
 
+  // Emit a macro that expands to local bool declarations for each extension,
+  // parameterized by a caller-provided extension test helper.
+  OS << "#ifdef EMIT_EXTENSION_FEATURE_LOCAL_DECLS\n"
+     << "#ifndef AARCH64_DECLARE_EXTENSION_FEATURE_LOCALS\n"
+     << "#define AARCH64_DECLARE_EXTENSION_FEATURE_LOCALS(TEST_EXT) \\\n";
+  for (size_t I = 0; I < SortedExtensions.size(); ++I) {
+    const Record *Rec = SortedExtensions[I];
+    std::string FieldName(Rec->getValueAsString("FieldName"));
+    if (FieldName == "HasSVE")
+      FieldName = "HasSVEExt";
+    auto AEK = Rec->getValueAsString("ArchExtKindSpelling").upper();
+    OS << "  [[maybe_unused]] const bool " << FieldName << " = TEST_EXT(" << AEK
+       << ");";
+    if (I + 1 != SortedExtensions.size())
+      OS << " \\\n";
+    else
+      OS << "\n";
+  }
+  OS << "#endif\n"
+     << "#undef EMIT_EXTENSION_FEATURE_LOCAL_DECLS\n"
+     << "#endif // EMIT_EXTENSION_FEATURE_LOCAL_DECLS\n"
+     << "\n";
+
   // Emit FMV information
   auto FMVExts = RK.getAllDerivedDefinitionsIfDefined("FMVExtension");
   OS << "#ifdef EMIT_FMV_INFO\n"

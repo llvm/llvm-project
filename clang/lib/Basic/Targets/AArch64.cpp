@@ -42,6 +42,20 @@ static_assert(NumBuiltins ==
               (NumNeonBuiltins + NumFp16Builtins + NumSVEBuiltins +
                NumSVENeonBridgeBuiltins + NumSMEBuiltins + NumAArch64Builtins));
 
+#define AARCH64_HAS_EXT(ArchExtKind) hasExtension(llvm::AArch64::ArchExtKind)
+#define EMIT_EXTENSION_FEATURE_LOCAL_DECLS
+#include "llvm/TargetParser/AArch64TargetParserDef.inc"
+#define DECLARE_AARCH64_EXTENSION_FEATURE_LOCALS()                             \
+  AARCH64_DECLARE_EXTENSION_FEATURE_LOCALS(AARCH64_HAS_EXT)                    \
+  [[maybe_unused]] const bool HasFCMA = HasComplxNum;                          \
+  [[maybe_unused]] const bool HasJSCVT = HasJS;                                \
+  [[maybe_unused]] const bool HasBFloat16 = HasBF16;                           \
+  [[maybe_unused]] const bool HasI8MM = HasMatMulInt8;                         \
+  [[maybe_unused]] const bool HasF32MM = HasMatMulFP32;                        \
+  [[maybe_unused]] const bool HasF64MM = HasMatMulFP64;                        \
+  [[maybe_unused]] const bool HasSME_F8F32 = HasSMEF8F32;                      \
+  [[maybe_unused]] const bool HasSME_F8F16 = HasSMEF8F16;
+
 namespace clang {
 namespace AArch64 {
 #define GET_BUILTIN_STR_TABLE
@@ -497,10 +511,7 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
 
   const bool HasSVE = FPU & SveMode;
   const bool HasNeon = FPU & NeonMode;
-#define AARCH64_EXTENSION_FEATURE(Name, Ext)                                   \
-  [[maybe_unused]] const bool Name = hasExtension(llvm::AArch64::AEK_##Ext);
-#include "AArch64TargetInfoFeatures.inc"
-#undef AARCH64_EXTENSION_FEATURE
+  DECLARE_AARCH64_EXTENSION_FEATURE_LOCALS()
 
   if (HasSVE2)
     Builder.defineMacro("__ARM_FEATURE_SVE2", "1");
@@ -880,10 +891,7 @@ void AArch64TargetInfo::computeFeatureLookup() {
   const bool HasFP = FPU & FPUMode;
   const bool HasNeon = FPU & NeonMode;
   const bool HasSVE = FPU & SveMode;
-#define AARCH64_EXTENSION_FEATURE(Name, Ext)                                   \
-  [[maybe_unused]] const bool Name = hasExtension(llvm::AArch64::AEK_##Ext);
-#include "AArch64TargetInfoFeatures.inc"
-#undef AARCH64_EXTENSION_FEATURE
+  DECLARE_AARCH64_EXTENSION_FEATURE_LOCALS()
 
   FeatureLookupBuilder(HasFeatureLookup)
       .Cases({"aarch64", "arm64", "arm"}, true)
