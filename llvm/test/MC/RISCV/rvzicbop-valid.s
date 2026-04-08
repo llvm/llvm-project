@@ -9,6 +9,20 @@
 # RUN:     | llvm-objdump --no-print-imm-hex --mattr=+zicbop -d -r - \
 # RUN:     | FileCheck --check-prefix=CHECK-ASM-AND-OBJ %s
 
+# prefetch hints are always available even without Zicbop
+# (riscv-non-isa/riscv-elf-psabi-doc#474).
+
+# RUN: llvm-mc %s -triple=riscv32 -show-encoding \
+# RUN:     | FileCheck -check-prefixes=CHECK-ASM,CHECK-ASM-AND-OBJ %s
+# RUN: llvm-mc %s -triple=riscv64 -show-encoding \
+# RUN:     | FileCheck -check-prefixes=CHECK-ASM,CHECK-ASM-AND-OBJ %s
+# RUN: llvm-mc -filetype=obj -triple=riscv32 < %s \
+# RUN:     | llvm-objdump --no-print-imm-hex -d -r - \
+# RUN:     | FileCheck --check-prefix=CHECK-ASM-AND-OBJ %s
+# RUN: llvm-mc -filetype=obj -triple=riscv64 < %s \
+# RUN:     | llvm-objdump --no-print-imm-hex -d -r - \
+# RUN:     | FileCheck --check-prefix=CHECK-ASM-AND-OBJ %s
+
 # CHECK-ASM-AND-OBJ: prefetch.i -2048(t0)
 # CHECK-ASM: encoding: [0x13,0xe0,0x02,0x80]
 prefetch.i -2048(t0)
