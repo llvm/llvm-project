@@ -126,9 +126,9 @@ void RedundantCastingCheck::check(const MatchFinder::MatchResult &Result) {
     if (TArgs->size() != 2)
       return;
 
-    TemplateArgument TArg = TArgs->get(0);
+    const TemplateArgument TArg = TArgs->get(0);
     if (TArg.getKind() == TemplateArgument::Type) {
-      CanQualType TargetTy = TArg.getAsType()->getCanonicalTypeUnqualified();
+      const CanQualType TargetTy = TArg.getAsType()->getCanonicalTypeUnqualified();
       TargetTypes.emplace_back(TargetTy);
     } else if (TArg.getKind() == TemplateArgument::Pack) {
       for (const auto &E : TArg.pack_elements()) {
@@ -169,7 +169,7 @@ void RedundantCastingCheck::check(const MatchFinder::MatchResult &Result) {
   if (!IsIsa && TargetTypes.size() != 1)
     return;
 
-  for (CanQualType TargetTy : TargetTypes) {
+  for (const CanQualType TargetTy : TargetTypes) {
     const auto *RetDecl = TargetTy->getAsCXXRecordDecl();
     const bool IsDerived =
         FromDecl && RetDecl && FromDecl->isDerivedFrom(RetDecl);
