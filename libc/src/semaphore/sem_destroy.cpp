@@ -17,12 +17,13 @@
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, sem_destroy, (sem_t * sem)) {
-  if (!sem_utils::is_valid(sem)) {
+  auto *s = reinterpret_cast<Semaphore *>(sem);
+  if (sem == nullptr || !s->is_valid()) {
     libc_errno = EINVAL;
     return -1;
   }
 
-  sem_utils::invalidate(sem);
+  s->destroy();
   return 0;
 }
 

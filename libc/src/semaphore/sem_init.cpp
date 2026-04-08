@@ -25,7 +25,7 @@ LLVM_LIBC_FUNCTION(int, sem_init,
   }
 
   (void)pshared;
-  sem_utils::initialize(sem, value);
+  reinterpret_cast<Semaphore *>(sem)->init(value);
   return 0;
 }
 

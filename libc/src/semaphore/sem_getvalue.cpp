@@ -18,15 +18,13 @@ namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, sem_getvalue,
                    (sem_t *__restrict sem, int *__restrict sval)) {
-  if (!sem_utils::is_valid(sem) || sval == nullptr) {
+  auto *s = reinterpret_cast<Semaphore *>(sem);
+  if (sem == nullptr || !s->is_valid() || sval == nullptr) {
     libc_errno = EINVAL;
     return -1;
   }
 
-  // get value is informational but not a synchronization op
-  // RELAXED ordering is enough
-  *sval =
-      static_cast<int>(sem_utils::value(sem).load(cpp::MemoryOrder::RELAXED));
+  *sval = s->getvalue();
   return 0;
 }
 
