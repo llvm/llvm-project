@@ -2603,7 +2603,7 @@ Process::ReadModuleFromMemory(const FileSpec &file_spec,
             file_spec.GetPath().c_str());
   ModuleSP module_sp = std::make_shared<Module>(file_spec, ArchSpec());
   if (!module_sp)
-    return llvm::createStringError("Failed to allocate Module");
+    return llvm::createStringError("failed to allocate module");
 
   Status error;
   std::unique_ptr<Progress> progress_up;
@@ -6159,7 +6159,7 @@ addr_t Process::ResolveIndirectFunction(const Address *address, Status &error) {
       const Symbol *symbol = address->CalculateSymbolContextSymbol();
       error = Status::FromErrorStringWithFormat(
           "Unable to call resolver for indirect function %s",
-          symbol ? symbol->GetName().AsCString() : "<UNKNOWN>");
+          symbol ? symbol->GetName().AsCString(nullptr) : "<UNKNOWN>");
       function_addr = LLDB_INVALID_ADDRESS;
     } else {
       if (ABISP abi_sp = GetABI())

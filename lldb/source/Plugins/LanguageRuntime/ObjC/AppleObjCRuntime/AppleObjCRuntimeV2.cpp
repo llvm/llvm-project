@@ -312,8 +312,8 @@ __lldb_apple_objc_v2_get_dynamic_class_info3(void *gdb_objc_realized_classes_ptr
 static const char *g_shared_cache_class_name_funcptr = R"(
 extern "C"
 {
-    const char *%s(void *objc_class);
-    const char *(*class_name_lookup_func)(void *) = %s;
+    const char *{0}(void *objc_class);
+    const char *(*class_name_lookup_func)(void *) = {1};
 }
 )";
 
@@ -1189,7 +1189,7 @@ AppleObjCRuntimeV2::CreateExceptionResolver(const BreakpointSP &bkpt,
 
   if (throw_bp)
     resolver_sp = std::make_shared<BreakpointResolverName>(
-        bkpt, std::get<1>(GetExceptionThrowLocation()).AsCString(),
+        bkpt, std::get<1>(GetExceptionThrowLocation()).AsCString(nullptr),
         eFunctionNameTypeBase, eLanguageTypeUnknown, Breakpoint::Exact, 0,
         /*offset_is_insn_count = */ false, eLazyBoolNo);
   // FIXME: We don't do catch breakpoints for ObjC yet.
@@ -1960,10 +1960,9 @@ AppleObjCRuntimeV2::SharedCacheClassInfoExtractor::
   // concatenate the two parts of our expression text.  The format string has
   // two %s's, so provide the name twice.
   std::string shared_class_expression;
-  llvm::raw_string_ostream(shared_class_expression)
-      << llvm::format(g_shared_cache_class_name_funcptr,
-                      class_name_getter_function_name.AsCString(),
-                      class_name_getter_function_name.AsCString());
+  llvm::raw_string_ostream(shared_class_expression) << llvm::formatv(
+      g_shared_cache_class_name_funcptr, class_name_getter_function_name,
+      class_name_getter_function_name);
 
   shared_class_expression += g_get_shared_cache_class_info_definitions;
   shared_class_expression += g_get_shared_cache_class_info_body;
@@ -2775,7 +2774,7 @@ DeclVendor *AppleObjCRuntimeV2::GetDeclVendor() {
 lldb::addr_t AppleObjCRuntimeV2::LookupRuntimeSymbol(ConstString name) {
   lldb::addr_t ret = LLDB_INVALID_ADDRESS;
 
-  const char *name_cstr = name.AsCString();
+  const char *name_cstr = name.AsCString(nullptr);
 
   if (name_cstr) {
     llvm::StringRef name_strref(name_cstr);
@@ -2796,7 +2795,7 @@ lldb::addr_t AppleObjCRuntimeV2::LookupRuntimeSymbol(ConstString name) {
 
         if (descriptor) {
           const ConstString ivar_name_cs(class_and_ivar.second);
-          const char *ivar_name_cstr = ivar_name_cs.AsCString();
+          const char *ivar_name_cstr = ivar_name_cs.AsCString(nullptr);
 
           auto ivar_func = [&ret,
                             ivar_name_cstr](const char *name, const char *type,

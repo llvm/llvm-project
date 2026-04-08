@@ -2818,7 +2818,7 @@ SDValue SelectionDAG::FoldSetCC(EVT VT, SDValue N1, SDValue N2,
     ISD::CondCode SwappedCond = ISD::getSetCCSwappedOperands(Cond);
     if (!TLI->isCondCodeLegal(SwappedCond, OpVT.getSimpleVT()))
       return SDValue();
-    return getSetCC(dl, VT, N2, N1, SwappedCond, /*Chian=*/{},
+    return getSetCC(dl, VT, N2, N1, SwappedCond, /*Chain=*/{},
                     /*IsSignaling=*/false, Flags);
   } else if ((N2CFP && N2CFP->getValueAPF().isNaN()) ||
              (OpVT.isFloatingPoint() && (N1.isUndef() || N2.isUndef()))) {

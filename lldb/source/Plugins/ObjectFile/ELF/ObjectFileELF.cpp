@@ -682,9 +682,10 @@ ModuleSpecList ObjectFileELF::GetModuleSpecifications(
           uint32_t core_notes_crc = 0;
 
           if (!gnu_debuglink_crc) {
-            LLDB_SCOPED_TIMERF(
-                "Calculating module crc32 %s with size %" PRIu64 " KiB",
-                file.GetFilename().AsCString(), (length - file_offset) / 1024);
+            LLDB_SCOPED_TIMERF("Calculating module crc32 %s with size %" PRIu64
+                               " KiB",
+                               file.GetFilename().AsCString(""),
+                               (length - file_offset) / 1024);
 
             // For core files - which usually don't happen to have a
             // gnu_debuglink, and are pretty bulky - calculating whole
@@ -3331,7 +3332,7 @@ void ObjectFileELF::ParseSymtab(Symtab &lldb_symtab) {
           /*is_trampoline=*/false,
           /*is_artificial=*/true,
           /*section_sp=*/section_sp,
-          /*offset=*/0,
+          /*offset=*/entry_point_addr.GetOffset(),
           /*size=*/0, // FDE can span multiple symbols so don't use its size.
           /*size_is_valid=*/false,
           /*contains_linker_annotations=*/false,
@@ -3342,8 +3343,8 @@ void ObjectFileELF::ParseSymtab(Symtab &lldb_symtab) {
       // address.
       if (arch.GetMachine() == llvm::Triple::arm &&
           (entry_point_file_addr & 1)) {
-        symbol.GetAddressRef().SetOffset(entry_point_addr.GetOffset() ^ 1);
-        m_address_class_map[entry_point_file_addr ^ 1] =
+        symbol.GetAddressRef().Slide(-1);
+        m_address_class_map[entry_point_file_addr - 1] =
             AddressClass::eCodeAlternateISA;
       } else {
         m_address_class_map[entry_point_file_addr] = AddressClass::eCode;

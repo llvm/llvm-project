@@ -101,6 +101,13 @@ Changes to LLVM infrastructure
     this may fail if symlink permissions are not available.
   * Added ``readlink``, which reads the target of a symbolic link.
 
+* Bitcode libraries can now implement compiler-managed library functions
+  (libcalls) without causing incorrect API manipulation or undefined references
+  ([#177046](https://github.com/llvm/llvm-project/pull/125687)). Note that
+  there are still issues with invalid compiler reasoning about some functions
+  in bitcode, e.g. `malloc`. Not yet supported on MachO or when using
+  distributed ThinLTO. 
+
 Changes to building LLVM
 ------------------------
 
@@ -239,13 +246,14 @@ Changes to the LLVM tools
 Changes to LLDB
 ---------------
 
+* A new ``webinspector-wasm`` platform was added to list and attach to WebAssembly processes in Safari.
+* The default for `load-script-from-symbol-file` was changed from `warn` to `trusted`. This means that scripts from
+  code signed dSYM bundles are now loaded automatically, while untrusted bundles continue to produce a warning.
+
 ### Deprecated APIs
 
 * ``SBTarget::GetDataByteSize()``, ``SBTarget::GetCodeByteSize()``, and ``SBSection::GetTargetByteSize()``
-  have been deprecated. They always return 1, as before.
-* A new ``webinspector-wasm`` platform was added to list and attach to WebAssebly processes in Safari.
-* The default for `load-script-from-symbol-file` was changed from `warn` to `trusted`. This means that scripts from
-  code signed dSYM bundles are now loaded automatically, while untrusted bundles continue to produce a warning.
+  have been deprecated. They always return `1`, as before.
 
 ### FreeBSD
 
@@ -265,8 +273,7 @@ Changes to LLDB
 * Support for ARM, PPC64le, and RISCV64 has been added.
 * The crashed thread is now automatically selected on start.
 * Threads are listed in incrmental order by pid then by tid.
-* Unread kernel messages saved in msgbufp are now printed when lldb starts. This information is printed only
-  when lldb is in the interactive mode (i.e. not in batch mode).
+* Unread kernel messages saved in `msgbufp` are now printed when LLDB starts.
 * Writing to the core is now supported. For safety reasons, this feature is off by default. To enable it,
   `plugin.process.freebsd-kernel-core.read-only` must be set to `false`. This setting is available when
   using `/dev/mem` or a kernel dump. However, since `kvm_write()` does not support writing to kernel dumps,
@@ -274,7 +281,7 @@ Changes to LLDB
 
 ### Linux
 
-* On Arm Linux, the tpidruro register can now be read. Writing to this register is not supported.
+* On Arm Linux, the `tpidruro` register can now be read. Writing to this register is not supported.
 * Thread local variables are now supported on Arm Linux if the program being debugged is using glibc.
 * LLDB now supports AArch64 Linux systems that only have SME (as opposed to
   SVE and SME). Prior to this version of LLDB, there was a bug that caused LLDB

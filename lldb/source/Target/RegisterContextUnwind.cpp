@@ -649,7 +649,7 @@ void RegisterContextUnwind::InitializeNonZerothFrame() {
       active_row->Dump(active_row_strm, m_fast_unwind_plan_sp.get(), &m_thread,
                        m_start_pc.GetLoadAddress(exe_ctx.GetTargetPtr()));
       UnwindLogMsg("Using fast unwind plan '%s'",
-                   m_fast_unwind_plan_sp->GetSourceName().AsCString());
+                   m_fast_unwind_plan_sp->GetSourceName().AsCString(""));
       UnwindLogMsg("active row: %s", active_row_strm.GetData());
     }
   } else {
@@ -665,7 +665,7 @@ void RegisterContextUnwind::InitializeNonZerothFrame() {
                          &m_thread,
                          m_start_pc.GetLoadAddress(exe_ctx.GetTargetPtr()));
         UnwindLogMsg("Using full unwind plan '%s'",
-                     m_full_unwind_plan_sp->GetSourceName().AsCString());
+                     m_full_unwind_plan_sp->GetSourceName().AsCString(""));
         UnwindLogMsg("active row: %s", active_row_strm.GetData());
       }
     }
@@ -1361,7 +1361,7 @@ RegisterContextUnwind::GetAbstractRegisterLocation(uint32_t lldb_regnum,
       active_row->Dump(active_row_strm, m_full_unwind_plan_sp.get(), &m_thread,
                        m_start_pc.GetLoadAddress(exe_ctx.GetTargetPtr()));
       UnwindLogMsg("Using full unwind plan '%s'",
-                   m_full_unwind_plan_sp->GetSourceName().AsCString());
+                   m_full_unwind_plan_sp->GetSourceName().AsCString(""));
       UnwindLogMsg("active row: %s", active_row_strm.GetData());
     }
 
@@ -1502,7 +1502,7 @@ RegisterContextUnwind::GetAbstractRegisterLocation(uint32_t lldb_regnum,
   std::string unwindplan_name;
   if (m_full_unwind_plan_sp) {
     unwindplan_name += "via '";
-    unwindplan_name += m_full_unwind_plan_sp->GetSourceName().AsCString();
+    unwindplan_name += m_full_unwind_plan_sp->GetSourceName().AsCString("");
     unwindplan_name += "'";
   }
   UnwindLogMsg("no save location for %s (%d) %s", regnum.GetName(),
@@ -1760,7 +1760,7 @@ UnwindPlanSP RegisterContextUnwind::TryAdoptArchitectureUnwindPlan() {
     if (GetLog(LLDBLog::Unwind)) {
       UnwindLogMsg(
           "Replacing Full Unwindplan with Architecture UnwindPlan, '%s'",
-          m_full_unwind_plan_sp->GetSourceName().AsCString());
+          m_full_unwind_plan_sp->GetSourceName().AsCString(""));
       const UnwindPlan::Row *active_row =
           m_full_unwind_plan_sp->GetRowForFunctionOffset(m_current_offset);
       if (active_row) {
@@ -2137,7 +2137,7 @@ bool RegisterContextUnwind::ReadFrameAddress(
           process.ReadPointerFromMemory(candidate_addr, st);
       if (st.Fail()) {
         UnwindLogMsg("Cannot read memory at 0x%" PRIx64 ": %s", candidate_addr,
-                     st.AsCString());
+                     st.AsCString(""));
         return false;
       }
       Address addr;

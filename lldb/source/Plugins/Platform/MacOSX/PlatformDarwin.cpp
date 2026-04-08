@@ -236,8 +236,9 @@ PlatformDarwin::LocateExecutableScriptingResourcesFromDSYM(
                                          orig_script_fspec, script_fspec);
 
     if (FileSystem::Instance().Exists(script_fspec)) {
-      file_specs.try_emplace(std::move(script_fspec),
-                             target.GetLoadScriptFromSymbolFile());
+      LoadScriptFromSymFile load_style =
+          Platform::GetScriptLoadStyleForModule(script_fspec, target);
+      file_specs.try_emplace(std::move(script_fspec), load_style);
       break;
     }
 
@@ -1107,11 +1108,11 @@ ResolveSDKPathFromDebugInfo(lldb_private::Target *target) {
 
   ModuleSP exe_module_sp = target->GetExecutableModule();
   if (!exe_module_sp)
-    return llvm::createStringError("Failed to get module from target");
+    return llvm::createStringError("failed to get module from target");
 
   SymbolFile *sym_file = exe_module_sp->GetSymbolFile();
   if (!sym_file)
-    return llvm::createStringError("Failed to get symbol file from executable");
+    return llvm::createStringError("failed to get symbol file from executable");
 
   if (sym_file->GetNumCompileUnits() == 0)
     return llvm::createStringError(
