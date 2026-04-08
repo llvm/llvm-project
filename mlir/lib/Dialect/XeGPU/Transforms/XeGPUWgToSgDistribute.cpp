@@ -492,7 +492,9 @@ struct WgToSgVectorBroadcastOp
     if (!layout || !layout.isForWorkgroup())
       return failure();
 
-    SmallVector<int64_t> sgShape = getSgShapeAndCount(wgShape, layout).first;
+    SmallVector<int64_t> sgShape;
+    int count;
+    std::tie(sgShape, count) = getSgShapeAndCount(wgShape, layout);
     VectorType newResultType =
         VectorType::get(sgShape, resultType.getElementType());
 
@@ -500,11 +502,15 @@ struct WgToSgVectorBroadcastOp
       return failure();
 
     SmallVector<Value> newBroadcastOps;
-    for (auto operand : adaptor.getOperands().front()) {
-      auto newBroadcast = vector::BroadcastOp::create(rewriter, op.getLoc(),
-                                                      newResultType, operand);
+    auto distSource = adaptor.getOperands().front();
+    int numDistributions = count / distSource.size();
+    for (int i = 0; i < numDistributions; ++i) {
+      for (auto operand : distSource) {
+        auto newBroadcast = vector::BroadcastOp::create(rewriter, op.getLoc(),
+                                                        newResultType, operand);
 
-      newBroadcastOps.push_back(newBroadcast.getResult());
+        newBroadcastOps.push_back(newBroadcast.getResult());
+      }
     }
     rewriter.replaceOpWithMultiple(op, {newBroadcastOps});
     return success();
@@ -816,8 +822,12 @@ struct WgToSgArithConstantOp : public OpConversionPattern<arith::ConstantOp> {
       // Splat: single value for all subgroups
       Attribute singleVal = vecAttr.getSplatValue<Attribute>();
       auto sgAttr = DenseElementsAttr::get(newType, singleVal);
-      auto cstOp = arith::ConstantOp::create(rewriter, loc, newType, sgAttr);
-      rewriter.replaceOp(op, cstOp);
+      SmallVector<Value> newConstOps;
+      for (int i = 0; i < count; ++i) {
+        auto cstOp = arith::ConstantOp::create(rewriter, loc, newType, sgAttr);
+        newConstOps.push_back(cstOp);
+      }
+      rewriter.replaceOpWithMultiple(op, {newConstOps});
       return success();
     } else if (sgShape == wgShape) { // if the entire vector is shared by all
                                      // subgroups, don't distribute
@@ -1245,7 +1255,6 @@ struct WgToSgMultiDimReductionOp
     bool isScalarResult = !dstVecType;
 
     auto originalSrcShape = srcType.getShape();
-    int srcVecRank = originalSrcShape.size();
     Type elemTy = srcType.getElementType();
 
     xegpu::DistributeLayoutAttr layout =
@@ -1258,9 +1267,11 @@ struct WgToSgMultiDimReductionOp
     // Get sg_layout and sg_data from the parent layout
     SmallVector<int64_t> sgLayout;
     SmallVector<int64_t> sgData;
+    xegpu::DistributeLayoutAttr parentLayout;
     if (auto sliceAttr = dyn_cast<xegpu::SliceAttr>(layout)) {
-      sgLayout = sliceAttr.getParent().getEffectiveSgLayoutAsInt();
-      sgData = sliceAttr.getParent().getEffectiveSgDataAsInt();
+      parentLayout = sliceAttr.getParent();
+      sgLayout = parentLayout.getEffectiveSgLayoutAsInt();
+      sgData = parentLayout.getEffectiveSgDataAsInt();
     } else
       return rewriter.notifyMatchFailure(
           op, "Reduction should have SliceAttr layout");
@@ -1320,26 +1331,33 @@ struct WgToSgMultiDimReductionOp
       return success();
     }
 
-    // Step 2: cross-subgroup reduction using SLM
+    // Step 2: cross-subgroup reduction using SLM - allocating slm memory
     auto slmStoreDataShape = sgSrcShape;
     for (int64_t dim : reductionDims)
       slmStoreDataShape[dim] = 1;
     VectorType slmStoreDataType = VectorType::get(slmStoreDataShape, elemTy);
-    Value slmStoreData;
-    if (isScalarResult) {
-      // Scalar result: broadcast scalar to vector<1x...x1> for SLM store
-      slmStoreData = vector::BroadcastOp::create(
-          rewriter, loc, slmStoreDataType, localReductions[0]);
-    } else {
-      slmStoreData = vector::ShapeCastOp::create(
-          rewriter, loc, slmStoreDataType, localReductions[0]);
+    SmallVector<Value> slmStoreData;
+    for (auto localResult : localReductions) {
+      if (isScalarResult) {
+        // Scalar result: broadcast scalar to vector<1x...x1> for SLM store
+        slmStoreData.push_back(vector::BroadcastOp::create(
+            rewriter, loc, slmStoreDataType, localResult));
+      } else {
+        slmStoreData.push_back(vector::ShapeCastOp::create(
+            rewriter, loc, slmStoreDataType, localResult));
+      }
     }
-
+    // for reduction dimension, SLM stores partial results from each subgroup
     SmallVector<int64_t> slmShape(originalSrcShape.begin(),
                                   originalSrcShape.end());
-    // for reduction dimension, SLM stores partial results from each subgroup
-    for (int64_t dim : reductionDims)
+    SmallVector<int> slmSgData(sgData.begin(), sgData.end());
+    SmallVector<int> slmSgLayout(sgLayout.begin(), sgLayout.end());
+    for (int dim : reductionDims) {
       slmShape[dim] = sgLayout[dim];
+      slmSgData[dim] = 1;
+    }
+    xegpu::LayoutAttr slmStoreLayout =
+        xegpu::LayoutAttr::get(rewriter.getContext(), slmSgLayout, slmSgData);
 
     // Allocate SLM
     auto bitWidth = elemTy.getIntOrFloatBitWidth();
@@ -1353,82 +1371,61 @@ struct WgToSgMultiDimReductionOp
     auto memDesc =
         xegpu::CreateMemDescOp::create(rewriter, loc, memDescType, slm);
 
-    // if localReductions have more than 1 result, not support
-    if (localReductions.size() > 1) {
-      return rewriter.notifyMatchFailure(
-          op,
-          "Multiple local reductions not supported in current implementation.");
-    }
-
-    // Step 4: Store local results to SLM
+    // Step 3: Store local results to SLM
     auto sgId = gpu::SubgroupIdOp::create(rewriter, loc,
                                           rewriter.getIndexType(), nullptr);
 
-    // Convert sgLayout to Values for delinearizeIndex
-    SmallVector<Value> sgLayoutValues;
-    for (int64_t dim : sgLayout)
-      sgLayoutValues.push_back(
-          arith::ConstantIndexOp::create(rewriter, loc, dim));
-
-    auto sgIdsResult = affine::delinearizeIndex(rewriter, loc, sgId.getResult(),
-                                                sgLayoutValues);
-    if (failed(sgIdsResult))
+    auto slmStoreCoords =
+        slmStoreLayout.computeDistributedCoords(rewriter, loc, sgId, slmShape);
+    if (failed(slmStoreCoords))
       return failure();
-    SmallVector<Value> sgIds = *sgIdsResult;
-
-    auto getSlmOffsets = [&](int64_t reductionDimStride) {
-      SmallVector<OpFoldResult> offsets;
-      offsets.reserve(srcVecRank);
-      for (int i = 0; i < srcVecRank; ++i) {
-        Value dimVal = sgIds[i];
-        int64_t sgDataStride = (llvm::is_contained(reductionDims, i))
-                                   ? reductionDimStride
-                                   : sgSrcShape[i];
-        Value strideVal =
-            arith::ConstantIndexOp::create(rewriter, loc, sgDataStride);
-        Value offsetVal =
-            arith::MulIOp::create(rewriter, loc, dimVal, strideVal);
-        offsets.push_back(offsetVal);
-      }
-      return offsets;
-    };
-
-    SmallVector<OpFoldResult> slmStoreOffsets =
-        getSlmOffsets(/*reductionDimStride=*/1);
-
-    xegpu::StoreMatrixOp::create(rewriter, loc, slmStoreData,
-                                 memDesc.getResult(), slmStoreOffsets,
-                                 /*layout=*/nullptr);
+    for (auto [data, coord] : llvm::zip(slmStoreData, *slmStoreCoords)) {
+      SmallVector<OpFoldResult> coordOfr(coord.begin(), coord.end());
+      xegpu::StoreMatrixOp::create(rewriter, loc, data, memDesc.getResult(),
+                                   coordOfr,
+                                   /*layout=*/nullptr);
+    }
 
     gpu::BarrierOp::create(rewriter, loc);
 
-    // Step 5: Load from SLM for final reduction
+    // Step 4: Load from SLM for final reduction
     SmallVector<int64_t> slmLoadDataShape(sgSrcShape.begin(), sgSrcShape.end());
-    for (int64_t dim : reductionDims)
+    for (int64_t dim : reductionDims) {
       slmLoadDataShape[dim] = slmShape[dim];
-
-    SmallVector<OpFoldResult> slmLoadOffsets =
-        getSlmOffsets(/*reductionDimStride=*/0);
+      slmSgData[dim] = slmShape[dim];
+    }
+    xegpu::LayoutAttr slmLoadLayout =
+        xegpu::LayoutAttr::get(rewriter.getContext(), slmSgLayout, slmSgData);
+    auto slmLoadCoords =
+        slmLoadLayout.computeDistributedCoords(rewriter, loc, sgId, slmShape);
+    if (failed(slmLoadCoords))
+      return failure();
 
     VectorType slmLoadType = VectorType::get(slmLoadDataShape, elemTy);
-    auto slmLoadOp = xegpu::LoadMatrixOp::create(
-        rewriter, loc, slmLoadType, memDesc.getResult(), slmLoadOffsets,
-        /*layout=*/nullptr);
+    SmallVector<Value> slmLoadData;
+    for (auto coord : *slmLoadCoords) {
+      SmallVector<OpFoldResult> coordOfr(coord.begin(), coord.end());
+      slmLoadData.push_back(xegpu::LoadMatrixOp::create(
+          rewriter, loc, slmLoadType, memDesc.getResult(), coordOfr,
+          /*layout=*/nullptr));
+    }
 
-    // Step 6: Perform final reduction with neutral accumulator
+    // Step 5: Perform final reduction with neutral accumulator and add the
+    // original accumulator at the end
     Value neutralFinalAcc = xegpu::createReductionNeutralValue(
         rewriter, loc, sgDstType, op.getKind());
 
-    auto finalReduce = vector::MultiDimReductionOp::create(
-        rewriter, loc, sgDstType, op.getKind(), slmLoadOp.getResult(),
-        neutralFinalAcc, reductionDims);
-
-    // Step 7: Add the original accumulator at the end
-    auto finalResult = vector::makeArithReduction(rewriter, loc, op.getKind(),
-                                                  finalReduce.getResult(),
-                                                  adaptor.getAcc()[0]);
-
-    rewriter.replaceOp(op, finalResult);
+    SmallVector<Value> finalResults;
+    for (size_t i = 0; i < slmLoadData.size(); ++i) {
+      auto loaded = slmLoadData[i];
+      auto finalReduce = vector::MultiDimReductionOp::create(
+          rewriter, loc, sgDstType, op.getKind(), loaded, neutralFinalAcc,
+          reductionDims);
+      finalResults.push_back(vector::makeArithReduction(
+          rewriter, loc, op.getKind(), finalReduce.getResult(),
+          adaptor.getAcc()[i]));
+    }
+    rewriter.replaceOpWithMultiple(op, {finalResults});
     return success();
   }
 };

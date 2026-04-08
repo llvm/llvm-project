@@ -535,10 +535,8 @@ private:
   /// Returns true if any possible dependence is disproved.
   /// If there might be a dependence, returns false.
   /// Sets appropriate direction entry.
-  bool weakCrossingSIVtest(const SCEV *SrcCoeff, const SCEV *SrcConst,
-                           const SCEV *DstConst, const Loop *CurrentSrcLoop,
-                           const Loop *CurrentDstLoop, unsigned Level,
-                           FullDependence &Result) const;
+  bool weakCrossingSIVtest(const SCEVAddRecExpr *Src, const SCEVAddRecExpr *Dst,
+                           unsigned Level, FullDependence &Result) const;
 
   /// ExactSIVtest - Tests the SIV subscript pair
   /// (Src and Dst) for dependence.
@@ -585,10 +583,16 @@ private:
   /// Returns true if any possible dependence is disproved.
   /// Works in some cases that symbolicRDIVtest doesn't,
   /// and vice versa.
-  bool exactRDIVtest(const SCEV *SrcCoeff, const SCEV *DstCoeff,
-                     const SCEV *SrcConst, const SCEV *DstConst,
-                     const Loop *SrcLoop, const Loop *DstLoop,
+  bool exactRDIVtest(const SCEVAddRecExpr *Src, const SCEVAddRecExpr *Dst,
                      FullDependence &Result) const;
+
+  /// exactTestImpl - Core implementation shared by the Exact SIV test and the
+  /// Exact RDIV test. Returns true if any possible dependence is disproved. If
+  /// \p Level is provided, this function will also attempt to explore
+  /// directions and refine \p Result for the given level.
+  bool exactTestImpl(const SCEVAddRecExpr *Src, const SCEVAddRecExpr *Dst,
+                     FullDependence &Result,
+                     std::optional<unsigned> Level) const;
 
   /// gcdMIVtest - Tests an MIV subscript pair for dependence.
   /// Returns true if any possible dependence is disproved.
@@ -608,8 +612,9 @@ private:
   /// collectCoeffInfo - Walks through the subscript, collecting each
   /// coefficient, the associated loop bounds, and recording its positive and
   /// negative parts for later use.
-  CoefficientInfo *collectCoeffInfo(const SCEV *Subscript, bool SrcFlag,
-                                    const SCEV *&Constant) const;
+  void collectCoeffInfo(const SCEV *Subscript, bool SrcFlag,
+                        const SCEV *&Constant,
+                        SmallVectorImpl<CoefficientInfo> &CI) const;
 
   /// Given \p Expr of the form
   ///
@@ -639,46 +644,47 @@ private:
   /// getLowerBound - Looks through all the bounds info and
   /// computes the lower bound given the current direction settings
   /// at each level.
-  const SCEV *getLowerBound(BoundInfo *Bound) const;
+  const SCEV *getLowerBound(ArrayRef<BoundInfo> Bound) const;
 
   /// getUpperBound - Looks through all the bounds info and
   /// computes the upper bound given the current direction settings
   /// at each level.
-  const SCEV *getUpperBound(BoundInfo *Bound) const;
+  const SCEV *getUpperBound(ArrayRef<BoundInfo> Bound) const;
 
   /// exploreDirections - Hierarchically expands the direction vector
   /// search space, combining the directions of discovered dependences
   /// in the DirSet field of Bound. Returns the number of distinct
   /// dependences discovered. If the dependence is disproved,
   /// it will return 0.
-  unsigned exploreDirections(unsigned Level, CoefficientInfo *A,
-                             CoefficientInfo *B, BoundInfo *Bound,
+  unsigned exploreDirections(unsigned Level, ArrayRef<CoefficientInfo> A,
+                             ArrayRef<CoefficientInfo> B,
+                             MutableArrayRef<BoundInfo> Bound,
                              const SmallBitVector &Loops,
                              unsigned &DepthExpanded, const SCEV *Delta) const;
 
   /// testBounds - Returns true iff the current bounds are plausible.
-  bool testBounds(unsigned char DirKind, unsigned Level, BoundInfo *Bound,
-                  const SCEV *Delta) const;
+  bool testBounds(unsigned char DirKind, unsigned Level,
+                  MutableArrayRef<BoundInfo> Bound, const SCEV *Delta) const;
 
   /// findBoundsALL - Computes the upper and lower bounds for level K
   /// using the * direction. Records them in Bound.
-  void findBoundsALL(CoefficientInfo *A, CoefficientInfo *B, BoundInfo *Bound,
-                     unsigned K) const;
+  void findBoundsALL(ArrayRef<CoefficientInfo> A, ArrayRef<CoefficientInfo> B,
+                     MutableArrayRef<BoundInfo> Bound, unsigned K) const;
 
   /// findBoundsLT - Computes the upper and lower bounds for level K
   /// using the < direction. Records them in Bound.
-  void findBoundsLT(CoefficientInfo *A, CoefficientInfo *B, BoundInfo *Bound,
-                    unsigned K) const;
+  void findBoundsLT(ArrayRef<CoefficientInfo> A, ArrayRef<CoefficientInfo> B,
+                    MutableArrayRef<BoundInfo> Bound, unsigned K) const;
 
   /// findBoundsGT - Computes the upper and lower bounds for level K
   /// using the > direction. Records them in Bound.
-  void findBoundsGT(CoefficientInfo *A, CoefficientInfo *B, BoundInfo *Bound,
-                    unsigned K) const;
+  void findBoundsGT(ArrayRef<CoefficientInfo> A, ArrayRef<CoefficientInfo> B,
+                    MutableArrayRef<BoundInfo> Bound, unsigned K) const;
 
   /// findBoundsEQ - Computes the upper and lower bounds for level K
   /// using the = direction. Records them in Bound.
-  void findBoundsEQ(CoefficientInfo *A, CoefficientInfo *B, BoundInfo *Bound,
-                    unsigned K) const;
+  void findBoundsEQ(ArrayRef<CoefficientInfo> A, ArrayRef<CoefficientInfo> B,
+                    MutableArrayRef<BoundInfo> Bound, unsigned K) const;
 
   /// Given a linear access function, tries to recover subscripts
   /// for each dimension of the array element access.

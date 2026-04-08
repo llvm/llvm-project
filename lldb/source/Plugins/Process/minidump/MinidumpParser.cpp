@@ -353,7 +353,7 @@ static bool CheckForLinuxExecutable(ConstString path,
   lldb::addr_t addr = base_of_image;
   MemoryRegionInfo region = MinidumpParser::GetMemoryRegionInfo(regions, addr);
   while (region.GetName() == path) {
-    if (region.GetExecutable() == MemoryRegionInfo::eYes)
+    if (region.GetExecutable() == eLazyBoolYes)
       return true;
     addr += region.GetRange().GetByteSize();
     region = MinidumpParser::GetMemoryRegionInfo(regions, addr);
@@ -535,8 +535,8 @@ CreateRegionsCacheFromMemoryInfoList(MinidumpParser &parser,
                    "Failed to read memory info list: {0}");
     return false;
   }
-  constexpr auto yes = MemoryRegionInfo::eYes;
-  constexpr auto no = MemoryRegionInfo::eNo;
+  constexpr auto yes = eLazyBoolYes;
+  constexpr auto no = eLazyBoolNo;
   for (const MemoryInfo &entry : *ExpectedInfo) {
     MemoryRegionInfo region;
     region.GetRange().SetRangeBase(entry.BaseAddress);
@@ -579,8 +579,8 @@ CreateRegionsCacheFromMemoryList(MinidumpParser &parser,
       MemoryRegionInfo region;
       region.GetRange().SetRangeBase(memory_desc.StartOfMemoryRange);
       region.GetRange().SetByteSize(memory_desc.Memory.DataSize);
-      region.SetReadable(MemoryRegionInfo::eYes);
-      region.SetMapped(MemoryRegionInfo::eYes);
+      region.SetReadable(eLazyBoolYes);
+      region.SetMapped(eLazyBoolYes);
       regions.push_back(region);
     }
   }
@@ -593,8 +593,8 @@ CreateRegionsCacheFromMemoryList(MinidumpParser &parser,
       MemoryRegionInfo region;
       region.GetRange().SetRangeBase(memory_desc.first.StartOfMemoryRange);
       region.GetRange().SetByteSize(memory_desc.first.DataSize);
-      region.SetReadable(MemoryRegionInfo::eYes);
-      region.SetMapped(MemoryRegionInfo::eYes);
+      region.SetReadable(eLazyBoolYes);
+      region.SetMapped(eLazyBoolYes);
       regions.push_back(region);
     }
 
@@ -705,9 +705,9 @@ MinidumpParser::GetMemoryRegionInfo(const MemoryRegionInfos &regions,
   else
     region.GetRange().SetRangeEnd(pos->GetRange().GetRangeBase());
 
-  region.SetReadable(MemoryRegionInfo::eNo);
-  region.SetWritable(MemoryRegionInfo::eNo);
-  region.SetExecutable(MemoryRegionInfo::eNo);
-  region.SetMapped(MemoryRegionInfo::eNo);
+  region.SetReadable(eLazyBoolNo);
+  region.SetWritable(eLazyBoolNo);
+  region.SetExecutable(eLazyBoolNo);
+  region.SetMapped(eLazyBoolNo);
   return region;
 }

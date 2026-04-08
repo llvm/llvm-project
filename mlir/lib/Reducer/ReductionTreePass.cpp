@@ -89,7 +89,7 @@ static LogicalResult findOptimal(ModuleOp module, Region &region,
   // While exploring the reduction tree, we always branch from an interesting
   // node. Thus the root node must be interesting.
   if (initStatus.first != Tester::Interestingness::True)
-    return module.emitWarning() << "uninterested module will not be reduced";
+    return module.emitError() << "uninterested module will not be reduced";
 
   llvm::SpecificBumpPtrAllocator<ReductionNode> allocator;
 
@@ -155,7 +155,7 @@ static LogicalResult eraseAllOpsInRegion(ModuleOp module, Region &region,
   // While exploring the reduction tree, we always branch from an interesting
   // node. Thus the root node must be interesting.
   if (initStatus.first != Tester::Interestingness::True)
-    return module.emitWarning() << "uninterested module will not be reduced";
+    return module.emitError() << "uninterested module will not be reduced";
   llvm::SpecificBumpPtrAllocator<ReductionNode> allocator;
 
   // Setting the ranges to {{0, 0}} will result in the deletion of all ops

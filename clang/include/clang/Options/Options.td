@@ -1768,10 +1768,10 @@ defm gnu_inline_asm : BoolFOption<"gnu-inline-asm",
   PosFlag<SetTrue>>;
 
 def fno_profile_sample_use : Flag<["-"], "fno-profile-sample-use">, Group<f_Group>,
-    Visibility<[ClangOption, CLOption]>;
+    Visibility<[ClangOption, CLOption, FlangOption, FC1Option]>;
 def fprofile_sample_use_EQ : Joined<["-"], "fprofile-sample-use=">,
     Group<f_Group>,
-    Visibility<[ClangOption, CLOption, CC1Option]>,
+    Visibility<[ClangOption, CLOption, CC1Option, FlangOption, FC1Option]>,
     HelpText<"Enable sample-based profile guided optimizations">,
     MarshallingInfoString<CodeGenOpts<"SampleProfileFile">>;
 def fprofile_sample_accurate : Flag<["-"], "fprofile-sample-accurate">,
@@ -2236,6 +2236,13 @@ defm diagnostics_show_note_include_stack : BoolFOption<"diagnostics-show-note-in
     DiagnosticOpts<"ShowNoteIncludeStack">, DefaultFalse,
     PosFlag<SetTrue, [], [ClangOption], "Display include stacks for diagnostic notes">,
     NegFlag<SetFalse>, BothFlags<[], [ClangOption, CC1Option]>>;
+defm diagnostics_show_inlining_chain
+    : BoolFOption<"diagnostics-show-inlining-chain",
+                  CodeGenOpts<"ShowInliningChain">, DefaultFalse,
+                  PosFlag<SetTrue, [], [ClangOption, CC1Option],
+                          "Show inlining chain notes for "
+                          "[[gnu::warning/error]] diagnostics">,
+                  NegFlag<SetFalse, [], [ClangOption, CC1Option]>>;
 def fdiagnostics_format_EQ : Joined<["-"], "fdiagnostics-format=">, Group<f_clang_Group>;
 def fdiagnostics_show_category_EQ : Joined<["-"], "fdiagnostics-show-category=">, Group<f_clang_Group>;
 def fdiagnostics_show_template_tree : Flag<["-"], "fdiagnostics-show-template-tree">,
@@ -3850,6 +3857,9 @@ def fno_module_maps : Flag <["-"], "fno-module-maps">, Alias<fno_implicit_module
 def fno_modules_strict_decluse : Flag <["-"], "fno-strict-modules-decluse">, Group<f_Group>;
 def fmodule_file_deps : Flag <["-"], "fmodule-file-deps">, Group<f_Group>;
 def fno_module_file_deps : Flag <["-"], "fno-module-file-deps">, Group<f_Group>;
+def fmodule_file_deps_EQ : Joined<["-"], "fmodule-file-deps=">, Group<f_Group>,
+  HelpText<"Include module files in dependency output">,
+  Values<"none,all,direct">;
 def fno_ms_extensions : Flag<["-"], "fno-ms-extensions">, Group<f_Group>,
   Visibility<[ClangOption, CLOption]>;
 def fno_ms_compatibility : Flag<["-"], "fno-ms-compatibility">, Group<f_Group>,
@@ -6004,10 +6014,13 @@ def mrelax_all : Flag<["-"], "mrelax-all">, Group<m_Group>,
   MarshallingInfoFlag<CodeGenOpts<"RelaxAll">>;
 def mincremental_linker_compatible : Flag<["-"], "mincremental-linker-compatible">, Group<m_Group>,
   Visibility<[ClangOption, CC1Option, CC1AsOption]>,
+  Default<"T.isDefaultIncrementalLinkerCompatibleByDefault()">,
   HelpText<"(integrated-as) Emit an object file which can be used with an incremental linker">,
   MarshallingInfoFlag<CodeGenOpts<"IncrementalLinkerCompatible">>;
 def mno_incremental_linker_compatible : Flag<["-"], "mno-incremental-linker-compatible">, Group<m_Group>,
-  HelpText<"(integrated-as) Emit an object file which cannot be used with an incremental linker">;
+  Visibility<[ClangOption, CC1Option, CC1AsOption]>,
+  HelpText<"(integrated-as) Emit an object file which cannot be used with an incremental linker">,
+  MarshallingInfoNegativeFlag<CodeGenOpts<"IncrementalLinkerCompatible">>;
 def mrtd : Flag<["-"], "mrtd">, Group<m_Group>,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Make StdCall calling convention the default">;
@@ -8494,9 +8507,11 @@ let Visibility = [CC1Option] in {
 def sys_header_deps : Flag<["-"], "sys-header-deps">,
   HelpText<"Include system headers in dependency output">,
   MarshallingInfoFlag<DependencyOutputOpts<"IncludeSystemHeaders">>;
-def module_file_deps : Flag<["-"], "module-file-deps">,
+def module_file_deps_EQ : Joined<["-"], "module-file-deps=">,
   HelpText<"Include module files in dependency output">,
-  MarshallingInfoFlag<DependencyOutputOpts<"IncludeModuleFiles">>;
+  Values<"none,all,direct">,
+  NormalizedValues<["MFDK_None", "MFDK_All", "MFDK_Direct"]>,
+  MarshallingInfoEnum<DependencyOutputOpts<"IncludeModuleFiles">, "MFDK_None">;
 def header_include_file : Separate<["-"], "header-include-file">,
   HelpText<"Filename (or -) to write header include output to">,
   MarshallingInfoString<DependencyOutputOpts<"HeaderIncludeOutputFile">>;
