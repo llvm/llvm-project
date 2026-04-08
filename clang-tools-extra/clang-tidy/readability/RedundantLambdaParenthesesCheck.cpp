@@ -17,7 +17,8 @@ namespace {
 
 AST_MATCHER(LambdaExpr, hasRedundantParens) {
   return Node.hasExplicitParameters() &&
-         Node.getCallOperator()->getNumParams() == 0;
+         Node.getCallOperator()->getNumParams() == 0 &&
+         !Node.getCallOperator()->getTrailingRequiresClause();
 }
 
 } // namespace
@@ -42,6 +43,12 @@ void RedundantLambdaParenthesesCheck::check(
   if (LParenLoc.isInvalid() || RParenLoc.isInvalid())
     return;
 
+  // Ensure parens are truly empty (reject "(void)")
+  const std::optional<Token> FirstInParens =
+      Lexer::findNextToken(LParenLoc, *Result.SourceManager, LangOpts);
+  if (!FirstInParens || FirstInParens->getLocation() != RParenLoc)
+    return;
+
   const std::optional<Token> NextTok =
       Lexer::findNextToken(RParenLoc, *Result.SourceManager, LangOpts);
 
@@ -50,10 +57,6 @@ void RedundantLambdaParenthesesCheck::check(
 
   // Attributes after '()' have different semantics depending on position.
   if (NextTok->is(tok::l_square))
-    return;
-
-  // requires clause after '()' means parens cannot be removed.
-  if (Lambda->getCallOperator()->getTrailingRequiresClause())
     return;
 
   if (!LangOpts.CPlusPlus23 && NextTok->isNot(tok::l_brace))

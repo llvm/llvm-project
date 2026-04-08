@@ -102,6 +102,28 @@ int main() {
   auto x = [] /* comment */ () { return 42; };
   // CHECK-MESSAGES: :[[@LINE-1]]:29: warning: redundant empty parameter list in lambda expression [readability-redundant-lambda-parentheses]
   // CHECK-FIXES:   auto x = [] /* comment */ { return 42; };
+
+  // Should NOT warn - (void) is not truly empty parens
+  auto void1 = [](void) {};
+  auto void2 = [] (void) {};
+
+  // Should NOT warn - macro between parens
+#define EMPTY
+#define VOID void
+  auto macro1 = [](EMPTY) {};
+  auto macro2 = [](VOID) {};
+#undef EMPTY
+#undef VOID
+
+// Should NOT warn - macro for parens themselves
+#define LPAREN (
+#define RPAREN )
+#define PARENS ()
+  auto macro3 = []LPAREN RPAREN {};
+  auto macro4 = []PARENS {};
+#undef LPAREN
+#undef RPAREN
+#undef PARENS
 }
 
 #if __cplusplus >= 202002L
