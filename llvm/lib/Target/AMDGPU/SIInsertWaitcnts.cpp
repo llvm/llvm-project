@@ -70,49 +70,6 @@ static cl::opt<bool> ExpertSchedulingModeFlag(
     cl::desc("Enable expert scheduling mode 2 for all functions (GFX12+ only)"),
     cl::init(false), cl::Hidden);
 
-namespace llvm {
-
-namespace AMDGPU {
-
-iota_range<InstCounterType> inst_counter_types(InstCounterType MaxCounter) {
-  return enum_seq(LOAD_CNT, MaxCounter);
-}
-
-StringLiteral getInstCounterName(InstCounterType T) {
-  switch (T) {
-  case LOAD_CNT:
-    return "LOAD_CNT";
-  case DS_CNT:
-    return "DS_CNT";
-  case EXP_CNT:
-    return "EXP_CNT";
-  case STORE_CNT:
-    return "STORE_CNT";
-  case SAMPLE_CNT:
-    return "SAMPLE_CNT";
-  case BVH_CNT:
-    return "BVH_CNT";
-  case KM_CNT:
-    return "KM_CNT";
-  case X_CNT:
-    return "X_CNT";
-  case VA_VDST:
-    return "VA_VDST";
-  case VM_VSRC:
-    return "VM_VSRC";
-  default:
-    return "Unknown T";
-  }
-}
-
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-void Waitcnt::dump() const { dbgs() << *this << "\n"; }
-#endif
-
-} // namespace AMDGPU
-
-} // namespace llvm
-
 namespace {
 // Get the maximum wait count value for a given counter type.
 static unsigned getWaitCountMax(const AMDGPU::HardwareLimits &Limits,
