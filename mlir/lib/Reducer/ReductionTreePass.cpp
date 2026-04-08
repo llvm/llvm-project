@@ -165,7 +165,6 @@ static LogicalResult findOptimal(ModuleOp module, Region &region,
           module, region, test, [](auto &region, auto) {
             for (auto &block : region.getBlocks())
               block.clear();
-            ;
           })))
     // If clearing the entire region kept the module interesting
     // we will return success.
