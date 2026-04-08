@@ -672,8 +672,7 @@ protected:
       if (bytes_read < total_byte_size)
         result.AppendWarningWithFormatv("Not all bytes ({0} / {1}) "
                                         "were able to be read from {2:x}.",
-                                        (uint64_t)bytes_read,
-                                        (uint64_t)total_byte_size, addr);
+                                        bytes_read, total_byte_size, addr);
     } else {
       // we treat c-strings as a special case because they do not have a fixed
       // size
