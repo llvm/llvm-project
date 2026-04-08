@@ -28,18 +28,18 @@ namespace serialization {
 template <typename T> class BasicReaderBase;
 } // end namespace serialization
 
-class AddrLabelExpr;
-class ASTContext;
-class CharUnits;
-class CXXRecordDecl;
-class Decl;
-class DiagnosticBuilder;
-class Expr;
-class FieldDecl;
-struct PrintingPolicy;
-class Type;
-class ValueDecl;
-class QualType;
+  class AddrLabelExpr;
+  class ASTContext;
+  class CharUnits;
+  class CXXRecordDecl;
+  class Decl;
+  class DiagnosticBuilder;
+  class Expr;
+  class FieldDecl;
+  struct PrintingPolicy;
+  class Type;
+  class ValueDecl;
+  class QualType;
 
 /// Symbolic representation of typeid(T) for some type T.
 class TypeInfoLValue {
