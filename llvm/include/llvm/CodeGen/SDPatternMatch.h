@@ -22,12 +22,14 @@
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/Support/KnownBits.h"
 
+#include <type_traits>
+
 namespace llvm {
 namespace SDPatternMatch {
 
 /// MatchContext can repurpose existing patterns to behave differently under
-/// a certain context. For instance, `m_Opc(ISD::ADD)` matches plain ADD nodes
-/// in normal circumstances, but matches VP_ADD nodes under a custom
+/// a certain context. For instance, `m_SpecificOpc(ISD::ADD)` matches plain ADD
+/// nodes in normal circumstances, but matches VP_ADD nodes under a custom
 /// VPMatchContext. This design is meant to facilitate code / pattern reusing.
 class BasicMatchContext {
   const SelectionDAG *DAG;
@@ -221,7 +223,9 @@ template <typename... Preds> auto m_NoneOf(const Preds &...preds) {
   return m_Unless(m_AnyOf(preds...));
 }
 
-inline Opcode_match m_Opc(unsigned Opcode) { return Opcode_match(Opcode); }
+inline Opcode_match m_SpecificOpc(unsigned Opcode) {
+  return Opcode_match(Opcode);
+}
 
 inline auto m_Undef() {
   return m_AnyOf(Opcode_match(ISD::UNDEF), Opcode_match(ISD::POISON));
@@ -330,19 +334,29 @@ inline SwitchContext<MatchContext, Pattern> m_Context(const MatchContext &Ctx,
 }
 
 // === Value type ===
-struct ValueType_bind {
+
+template <typename Pattern> struct ValueType_bind {
   EVT &BindVT;
+  Pattern P;
 
-  explicit ValueType_bind(EVT &Bind) : BindVT(Bind) {}
+  explicit ValueType_bind(EVT &Bind, const Pattern &P) : BindVT(Bind), P(P) {}
 
-  template <typename MatchContext> bool match(const MatchContext &, SDValue N) {
+  template <typename MatchContext>
+  bool match(const MatchContext &Ctx, SDValue N) {
     BindVT = N.getValueType();
-    return true;
+    return P.match(Ctx, N);
   }
 };
 
+template <typename Pattern>
+ValueType_bind(const Pattern &P) -> ValueType_bind<Pattern>;
+
 /// Retreive the ValueType of the current SDValue.
-inline ValueType_bind m_VT(EVT &VT) { return ValueType_bind(VT); }
+inline auto m_VT(EVT &VT) { return ValueType_bind(VT, m_Value()); }
+
+template <typename Pattern> inline auto m_VT(EVT &VT, const Pattern &P) {
+  return ValueType_bind(VT, P);
+}
 
 template <typename Pattern, typename PredFuncT> struct ValueType_match {
   PredFuncT PredFunc;
@@ -484,7 +498,8 @@ struct Operands_match<OpIdx, OpndPred, OpndPreds...>
 
 template <typename... OpndPreds>
 auto m_Node(unsigned Opcode, const OpndPreds &...preds) {
-  return m_AllOf(m_Opc(Opcode), Operands_match<0, OpndPreds...>(preds...));
+  return m_AllOf(m_SpecificOpc(Opcode),
+                 Operands_match<0, OpndPreds...>(preds...));
 }
 
 /// Provide number of operands that are not chain or glue, as well as the first
@@ -534,7 +549,7 @@ struct TernaryOpc_match {
 
   template <typename MatchContext>
   bool match(const MatchContext &Ctx, SDValue N) {
-    if (sd_context_match(N, Ctx, m_Opc(Opcode))) {
+    if (sd_context_match(N, Ctx, m_SpecificOpc(Opcode))) {
       EffectiveOperands<ExcludeChain> EO(N, Ctx);
       assert(EO.Size == 3);
       return ((Op0.match(Ctx, N->getOperand(EO.FirstIndex)) &&
@@ -636,7 +651,7 @@ struct BinaryOpc_match {
 
   template <typename MatchContext>
   bool match(const MatchContext &Ctx, SDValue N) {
-    if (sd_context_match(N, Ctx, m_Opc(Opcode))) {
+    if (sd_context_match(N, Ctx, m_SpecificOpc(Opcode))) {
       EffectiveOperands<ExcludeChain> EO(N, Ctx);
       assert(EO.Size == 2);
       if (!((LHS.match(Ctx, N->getOperand(EO.FirstIndex)) &&
@@ -711,15 +726,15 @@ struct MaxMin_match {
              (Commutable && LHS.match(Ctx, R) && RHS.match(Ctx, L));
     };
 
-    if (sd_context_match(N, Ctx, m_Opc(ISD::SELECT)) ||
-        sd_context_match(N, Ctx, m_Opc(ISD::VSELECT))) {
+    if (sd_context_match(N, Ctx, m_SpecificOpc(ISD::SELECT)) ||
+        sd_context_match(N, Ctx, m_SpecificOpc(ISD::VSELECT))) {
       EffectiveOperands<ExcludeChain> EO_SELECT(N, Ctx);
       assert(EO_SELECT.Size == 3);
       SDValue Cond = N->getOperand(EO_SELECT.FirstIndex);
       SDValue TrueValue = N->getOperand(EO_SELECT.FirstIndex + 1);
       SDValue FalseValue = N->getOperand(EO_SELECT.FirstIndex + 2);
 
-      if (sd_context_match(Cond, Ctx, m_Opc(ISD::SETCC))) {
+      if (sd_context_match(Cond, Ctx, m_SpecificOpc(ISD::SETCC))) {
         EffectiveOperands<ExcludeChain> EO_SETCC(Cond, Ctx);
         assert(EO_SETCC.Size == 3);
         SDValue L = Cond->getOperand(EO_SETCC.FirstIndex);
@@ -730,7 +745,7 @@ struct MaxMin_match {
       }
     }
 
-    if (sd_context_match(N, Ctx, m_Opc(ISD::SELECT_CC))) {
+    if (sd_context_match(N, Ctx, m_SpecificOpc(ISD::SELECT_CC))) {
       EffectiveOperands<ExcludeChain> EO_SELECT(N, Ctx);
       assert(EO_SELECT.Size == 5);
       SDValue L = N->getOperand(EO_SELECT.FirstIndex);
@@ -1013,7 +1028,7 @@ template <typename Opnd_P, bool ExcludeChain = false> struct UnaryOpc_match {
 
   template <typename MatchContext>
   bool match(const MatchContext &Ctx, SDValue N) {
-    if (sd_context_match(N, Ctx, m_Opc(Opcode))) {
+    if (sd_context_match(N, Ctx, m_SpecificOpc(Opcode))) {
       EffectiveOperands<ExcludeChain> EO(N, Ctx);
       assert(EO.Size == 1);
       if (!Opnd.match(Ctx, N->getOperand(EO.FirstIndex)))
@@ -1159,11 +1174,55 @@ struct ConstantInt_match {
                                       BindVal ? *BindVal : Discard);
   }
 };
+
+template <typename T> struct Constant64_match {
+  static_assert(sizeof(T) == 8, "T must be 64 bits wide");
+
+  T &BindVal;
+
+  explicit Constant64_match(T &V) : BindVal(V) {}
+
+  template <typename MatchContext>
+  bool match(const MatchContext &Ctx, SDValue N) {
+    APInt V;
+    if (!ConstantInt_match(&V).match(Ctx, N))
+      return false;
+
+    if constexpr (std::is_signed_v<T>) {
+      if (std::optional<int64_t> TrySExt = V.trySExtValue()) {
+        BindVal = *TrySExt;
+        return true;
+      }
+    }
+
+    if constexpr (std::is_unsigned_v<T>) {
+      if (std::optional<uint64_t> TryZExt = V.tryZExtValue()) {
+        BindVal = *TryZExt;
+        return true;
+      }
+    }
+
+    return false;
+  }
+};
+
 /// Match any integer constants or splat of an integer constant.
 inline ConstantInt_match m_ConstInt() { return ConstantInt_match(nullptr); }
 /// Match any integer constants or splat of an integer constant; return the
 /// specific constant or constant splat value.
 inline ConstantInt_match m_ConstInt(APInt &V) { return ConstantInt_match(&V); }
+/// Match any integer constants or splat of an integer constant that can fit in
+/// 64 bits; return the specific constant or constant splat value, zero-extended
+/// to 64 bits.
+inline Constant64_match<uint64_t> m_ConstInt(uint64_t &V) {
+  return Constant64_match<uint64_t>(V);
+}
+/// Match any integer constants or splat of an integer constant that can fit in
+/// 64 bits; return the specific constant or constant splat value, sign-extended
+/// to 64 bits.
+inline Constant64_match<int64_t> m_ConstInt(int64_t &V) {
+  return Constant64_match<int64_t>(V);
+}
 
 struct SpecificInt_match {
   APInt IntVal;

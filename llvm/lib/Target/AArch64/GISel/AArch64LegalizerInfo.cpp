@@ -350,6 +350,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
                  {v4s32, v4s32}})
       .widenScalarToNextPow2(1, /*Min=*/32)
       .clampScalar(1, s32, s64)
+      .widenScalarOrEltToNextPow2OrMinSize(1, /*Min=*/8)
       .clampNumElements(0, v8s8, v16s8)
       .clampNumElements(0, v4s16, v8s16)
       .clampNumElements(0, v2s32, v4s32)
@@ -810,7 +811,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .alwaysLegal();
 
   getActionDefinitionsBuilder({G_TRUNC_SSAT_S, G_TRUNC_SSAT_U, G_TRUNC_USAT_U})
-      .legalFor({{v8s8, v8s16}, {v4s16, v4s32}, {v2s32, v2s64}});
+      .legalFor({{v8s8, v8s16}, {v4s16, v4s32}, {v2s32, v2s64}})
+      .clampNumElements(0, v2s32, v2s32);
 
   getActionDefinitionsBuilder(G_SEXT_INREG)
       .legalFor({s32, s64})
@@ -1261,6 +1263,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
           [=](const LegalityQuery &Query) {
             return Query.Types[0].isFixedVector() &&
                    Query.Types[1].isFixedVector() &&
+                   Query.Types[0].getScalarSizeInBits() >= 8 &&
+                   isPowerOf2_64(Query.Types[0].getScalarSizeInBits()) &&
                    Query.Types[0].getSizeInBits() <= 128 &&
                    Query.Types[1].getSizeInBits() <= 64;
           },

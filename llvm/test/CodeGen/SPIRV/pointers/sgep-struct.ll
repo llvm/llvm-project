@@ -21,10 +21,10 @@ entry:
   ; CHECK: %[[#ptr_field:]] = OpInBoundsAccessChain %[[#ptr_float]] %[[#s_var]] %[[#idx_1]]
 
   %2 = load float, ptr %1, align 4
-  ; CHECK: %[[#val:]] = OpLoad %[[#float]] %[[#ptr_field]] Aligned 4
+  ; CHECK: %[[#val:]] = OpLoad %[[#float]] %[[#ptr_field]]
 
   store float %2, ptr %out, align 4
-  ; CHECK: OpStore %[[#out_var]] %[[#val]] Aligned 4
+  ; CHECK: OpStore %[[#out_var]] %[[#val]]
 
   ret void
 }

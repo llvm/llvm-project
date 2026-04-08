@@ -1831,8 +1831,8 @@ LogicalResult tosa::ConcatOp::verify() {
 
 LogicalResult tosa::EqualOp::inferReturnTypeComponents(
     MLIRContext *context, ::std::optional<Location> location,
-    ValueShapeRange operands, DictionaryAttr attributes,
-    OpaqueProperties properties, RegionRange regions,
+    ValueShapeRange operands, DictionaryAttr attributes, PropertyRef properties,
+    RegionRange regions,
     SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
   auto elementType = IntegerType::get(context, /*width=*/1);
 
@@ -2280,8 +2280,6 @@ LogicalResult tosa::SliceOp::verify() {
       return emitOpError("length of size is not equal to rank of input shape");
   }
 
-  constexpr int64_t kInferableDimSize = -1;
-
   SmallVector<int64_t> startValues;
   tosa::getConstShapeValues(start.getDefiningOp(), startValues);
   if (startValues.size()) {
@@ -2334,8 +2332,8 @@ LogicalResult tosa::SliceOp::verify() {
 
 LogicalResult tosa::MulOp::inferReturnTypeComponents(
     MLIRContext *context, ::std::optional<Location> location,
-    ValueShapeRange operands, DictionaryAttr attributes,
-    OpaqueProperties properties, RegionRange regions,
+    ValueShapeRange operands, DictionaryAttr attributes, PropertyRef properties,
+    RegionRange regions,
     SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
   // mul op's output shape only depend on input1 and input2, not on shift
   ValueShapeRange twoInputs = operands.drop_back();
@@ -2493,9 +2491,8 @@ LogicalResult tosa::TileOp::inferReturnTypeComponents(
     SmallVector<int64_t> fallback(rank, ShapedType::kDynamic);
     inferredReturnShapes.push_back(ShapedTypeComponents(fallback, inputType));
     return success();
-  } else {
-    multiples = convertToMlirShape(multiples);
   }
+  multiples = convertToMlirShape(multiples);
 
   ShapeAdaptor inputShape(adaptor.getInput1().getType());
   SmallVector<int64_t> outputShape;
@@ -2504,7 +2501,8 @@ LogicalResult tosa::TileOp::inferReturnTypeComponents(
     inferredReturnShapes.push_back(
         ShapedTypeComponents(outputShape, inputType));
     return success();
-  } else if (static_cast<size_t>(inputShape.getRank()) != multiples.size())
+  }
+  if (static_cast<size_t>(inputShape.getRank()) != multiples.size())
     return failure();
 
   // Any non dynamic dimension can be multiplied to a known size.
@@ -2578,9 +2576,8 @@ LogicalResult tosa::ReshapeOp::inferReturnTypeComponents(
     SmallVector<int64_t> fallback(rank, ShapedType::kDynamic);
     inferredReturnShapes.push_back(ShapedTypeComponents(fallback, inputType));
     return success();
-  } else {
-    newShapeValue = convertToMlirShape(newShapeValue);
   }
+  newShapeValue = convertToMlirShape(newShapeValue);
 
   // We cannot infer from the total number of elements so we must take the
   // shape attribute as exact.
@@ -2626,9 +2623,10 @@ llvm::LogicalResult tosa::ReshapeOp::verify() {
     return mlir::success();
   }
 
-  int missingDims = llvm::count(shapeValues, -1);
+  int missingDims = llvm::count(shapeValues, kInferableDimSize);
   if (missingDims > 1)
-    return emitOpError() << "expected at most one target dimension to be -1";
+    return emitOpError() << "expected at most one target dimension to be "
+                         << kInferableDimSize;
 
   const auto outputType = dyn_cast<RankedTensorType>(getType());
   if (!outputType)
@@ -2639,11 +2637,12 @@ llvm::LogicalResult tosa::ReshapeOp::verify() {
 
   for (auto [newShapeDim, outputShapeDim] :
        zip(shapeValues, outputType.getShape())) {
-    if (newShapeDim != -1 && newShapeDim != ShapedType::kDynamic &&
+    if (newShapeDim != kInferableDimSize &&
+        newShapeDim != ShapedType::kDynamic &&
         outputShapeDim != ShapedType::kDynamic && newShapeDim != outputShapeDim)
       return emitOpError() << "new shape is inconsistent with result shape";
 
-    if (newShapeDim != ShapedType::kDynamic && newShapeDim < -1)
+    if (newShapeDim != ShapedType::kDynamic && newShapeDim < kInferableDimSize)
       return emitOpError() << "new shape has invalid tensor dimension size "
                            << newShapeDim;
   }
@@ -2696,8 +2695,7 @@ static FailureOr<int64_t> getZeroPoint(Value val, bool signExtend) {
   if (llvm::isa<IntegerType>(zpElemType)) {
     if (signExtend)
       return zpAttr.getValues<APInt>()[0].getSExtValue();
-    else
-      return zpAttr.getValues<APInt>()[0].getZExtValue();
+    return zpAttr.getValues<APInt>()[0].getZExtValue();
   }
 
   // return non-zero value to trigger error check
@@ -3372,7 +3370,7 @@ static LogicalResult NAryInferReturnTypes(
   LogicalResult OP::inferReturnTypeComponents(                                 \
       MLIRContext *context, ::std::optional<Location> location,                \
       ValueShapeRange operands, DictionaryAttr attributes,                     \
-      OpaqueProperties properties, RegionRange regions,                        \
+      PropertyRef properties, RegionRange regions,                             \
       SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {           \
     return NAryInferReturnTypes(operands, inferredReturnShapes);               \
   }

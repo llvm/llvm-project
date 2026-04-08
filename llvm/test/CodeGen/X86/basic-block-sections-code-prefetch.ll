@@ -8,6 +8,7 @@
 ; RUN: echo 't 1,1' >> %t
 ; RUN: echo 't 2,1' >> %t
 ; RUN: echo 't 3,0' >> %t
+; RUN: echo 't 3,1' >> %t
 ; RUN: echo 'f bar' >> %t
 ; RUN: echo 't 0,0' >> %t
 ; RUN: echo 't 21,1' >> %t
@@ -44,12 +45,16 @@ end:                                             ; preds = %11, %9
 ; CHECK:      .LBB0_3:
 ; CHECK-NEXT:   .globl	__llvm_prefetch_target_foo_3_0
 ; CHECK-NEXT: __llvm_prefetch_target_foo_3_0:
+; CHECK:        .globl	__llvm_prefetch_target_foo_3_1
+; CHECK-NEXT: __llvm_prefetch_target_foo_3_1:
 }
 
 define weak i32 @bar() nounwind {
   %call = call i32 @baz()
   ret i32 %call
 ; CHECK:      bar:
+; CHECK-NEXT:   .weak __llvm_prefetch_target_bar_21_1
+; CHECK-NEXT: __llvm_prefetch_target_bar_21_1:
 ; CHECK-NEXT:   .weak __llvm_prefetch_target_bar_0_0
 ; CHECK-NEXT: __llvm_prefetch_target_bar_0_0:
 ; CHECK:        callq baz@PLT

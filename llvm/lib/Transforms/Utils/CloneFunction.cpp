@@ -475,8 +475,8 @@ PruningFunctionCloner::cloneInstruction(BasicBlock::const_iterator II) {
       for (unsigned I = 0, E = Descriptor.size(); I != E; ++I) {
         Intrinsic::IITDescriptor Operand = Descriptor[I];
         switch (Operand.Kind) {
-        case Intrinsic::IITDescriptor::Argument:
-          if (Operand.getArgumentKind() !=
+        case Intrinsic::IITDescriptor::Overloaded:
+          if (Operand.getOverloadKind() !=
               Intrinsic::IITDescriptor::AK_MatchType) {
             if (I == 0)
               TParams.push_back(OldInst.getType());
@@ -484,7 +484,7 @@ PruningFunctionCloner::cloneInstruction(BasicBlock::const_iterator II) {
               TParams.push_back(OldInst.getOperand(I - 1)->getType());
           }
           break;
-        case Intrinsic::IITDescriptor::SameVecWidthArgument:
+        case Intrinsic::IITDescriptor::SameVecWidth:
           ++I;
           break;
         default:
@@ -644,25 +644,23 @@ void PruningFunctionCloner::CloneBlock(
   // Finally, clone over the terminator.
   const Instruction *OldTI = BB->getTerminator();
   bool TerminatorDone = false;
-  if (const BranchInst *BI = dyn_cast<BranchInst>(OldTI)) {
-    if (BI->isConditional()) {
-      // If the condition was a known constant in the callee...
-      ConstantInt *Cond = dyn_cast<ConstantInt>(BI->getCondition());
-      // Or is a known constant in the caller...
-      if (!Cond) {
-        Value *V = VMap.lookup(BI->getCondition());
-        Cond = dyn_cast_or_null<ConstantInt>(V);
-      }
+  if (const CondBrInst *BI = dyn_cast<CondBrInst>(OldTI)) {
+    // If the condition was a known constant in the callee...
+    ConstantInt *Cond = dyn_cast<ConstantInt>(BI->getCondition());
+    // Or is a known constant in the caller...
+    if (!Cond) {
+      Value *V = VMap.lookup(BI->getCondition());
+      Cond = dyn_cast_or_null<ConstantInt>(V);
+    }
 
-      // Constant fold to uncond branch!
-      if (Cond) {
-        BasicBlock *Dest = BI->getSuccessor(!Cond->getZExtValue());
-        auto *NewBI = BranchInst::Create(Dest, NewBB);
-        NewBI->setDebugLoc(BI->getDebugLoc());
-        VMap[OldTI] = NewBI;
-        ToClone.push_back(Dest);
-        TerminatorDone = true;
-      }
+    // Constant fold to uncond branch!
+    if (Cond) {
+      BasicBlock *Dest = BI->getSuccessor(!Cond->getZExtValue());
+      auto *NewBI = UncondBrInst::Create(Dest, NewBB);
+      NewBI->setDebugLoc(BI->getDebugLoc());
+      VMap[OldTI] = NewBI;
+      ToClone.push_back(Dest);
+      TerminatorDone = true;
     }
   } else if (const SwitchInst *SI = dyn_cast<SwitchInst>(OldTI)) {
     // If switching on a value known constant in the caller.
@@ -674,7 +672,7 @@ void PruningFunctionCloner::CloneBlock(
     if (Cond) { // Constant fold to uncond branch!
       SwitchInst::ConstCaseHandle Case = *SI->findCaseValue(Cond);
       BasicBlock *Dest = const_cast<BasicBlock *>(Case.getCaseSuccessor());
-      auto *NewBI = BranchInst::Create(Dest, NewBB);
+      auto *NewBI = UncondBrInst::Create(Dest, NewBB);
       NewBI->setDebugLoc(SI->getDebugLoc());
       VMap[OldTI] = NewBI;
       ToClone.push_back(Dest);
@@ -959,13 +957,13 @@ void llvm::CloneAndPruneIntoFromInst(Function *NewFunc, const Function *OldFunc,
   // uncond branches, and this code folds them.
   Function::iterator I = Begin;
   while (I != NewFunc->end()) {
-    BranchInst *BI = dyn_cast<BranchInst>(I->getTerminator());
-    if (!BI || BI->isConditional()) {
+    UncondBrInst *BI = dyn_cast<UncondBrInst>(I->getTerminator());
+    if (!BI) {
       ++I;
       continue;
     }
 
-    BasicBlock *Dest = BI->getSuccessor(0);
+    BasicBlock *Dest = BI->getSuccessor();
     if (!Dest->getSinglePredecessor() || Dest->hasAddressTaken()) {
       ++I;
       continue;

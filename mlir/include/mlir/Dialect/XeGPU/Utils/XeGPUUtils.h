@@ -147,6 +147,26 @@ Value lowerToVectorReductions(TypedValue<VectorType> src,
                               vector::CombiningKind kind, int64_t reductionDim,
                               Location loc, PatternRewriter &rewriter);
 
+/// Creates a constant filled with the neutral (identity) value for the
+/// given reduction kind. For example: 0 for ADD/OR/XOR, 1 for MUL/AND,
+/// max/min signed/unsigned int for MINSI/MINUI/MAXSI/MAXUI, and +/-infinity
+/// for float min/max operations. If \p type is a VectorType, returns a splat
+/// vector constant; otherwise returns a scalar constant. Returns nullptr if
+/// the element type is incompatible with the requested reduction kind.
+Value createReductionNeutralValue(OpBuilder &builder, Location loc, Type type,
+                                  vector::CombiningKind kind);
+
+/// Lowers cross-lane reductions to shuffle operations on a 2D vector.
+/// Extracts slices along the reduction dimension, performs subgroup reductions
+/// with shuffles across reductionSize work-items, and inserts the results back
+/// into an accumulator vector.
+Value lowerCrossLaneReductionToShuffles(TypedValue<VectorType> src,
+                                        TypedValue<VectorType> acc,
+                                        vector::CombiningKind kind,
+                                        int64_t reductionDim,
+                                        int64_t reductionSize, Location loc,
+                                        PatternRewriter &rewriter);
+
 /// Helper Function to find a proper instruction multiple for the user-supplied
 /// sg-level data shape (diven by `dim`). `candidates` are uArch allowed shapes.
 /// `candidateMultiples` are uArch multiples of such shapes (i.e. block count or

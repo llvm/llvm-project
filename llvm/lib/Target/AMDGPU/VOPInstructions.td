@@ -1055,6 +1055,7 @@ class VOP_DPP_Real <VOP_DPP_Pseudo ps, int EncodingFamily> :
 
   let VALU = 1;
   let DPP = 1;
+  let isConvergent = 1;
   let isPseudo = 0;
   let isCodeGenOnly = 0;
 
@@ -1065,7 +1066,6 @@ class VOP_DPP_Real <VOP_DPP_Pseudo ps, int EncodingFamily> :
   let Constraints     = ps.Constraints;
 
   // Copy relevant pseudo op flags
-  let isConvergent         = ps.isConvergent;
   let SubtargetPredicate   = ps.SubtargetPredicate;
   let True16Predicate      = ps.True16Predicate;
   let AssemblerPredicate   = ps.AssemblerPredicate;
@@ -1082,7 +1082,6 @@ class VOP_DPP_Real <VOP_DPP_Pseudo ps, int EncodingFamily> :
   let mayLoad              = ps.mayLoad;
   let mayStore             = ps.mayStore;
   let TRANS                = ps.TRANS;
-  let isConvergent         = ps.isConvergent;
 }
 
 class VOP_DPP_Base <string OpName, VOPProfile P,
@@ -1097,6 +1096,7 @@ class VOP_DPP_Base <string OpName, VOPProfile P,
 
   let VALU = 1;
   let DPP = 1;
+  let isConvergent = 1;
   let Size = 8;
 
   let AsmMatchConverter = !if(P.HasModifiers, "cvtDPP", "");
@@ -1217,6 +1217,7 @@ class VOP_DPP8_Base<string OpName, VOPProfile P, dag InsDPP8 = P.InsDPP8, string
 
   let VALU = 1;
   let DPP = 1;
+  let isConvergent = 1;
   let Size = 8;
 
   let AsmMatchConverter = "cvtDPP8";
@@ -1379,10 +1380,12 @@ class getVOP3ModPat<VOPProfile P, SDPatternOperator node> {
 
 class getVOP3PModPat<VOPProfile P, SDPatternOperator node, bit HasExplicitClamp,
                      bit IsDOT = 0,
-                     ComplexPattern SrcPat = !if(IsDOT, VOP3PModsDOT, VOP3PMods)> {
+                     ComplexPattern SrcPat = !if(IsDOT, VOP3PModsDOT,
+                                                        VOP3PMods),
+                     ComplexPattern Src2Pat = SrcPat> {
   dag src0_dag = (P.Src0VT (SrcPat P.Src0VT:$src0, i32:$src0_modifiers));
   dag src1_dag = (P.Src1VT (SrcPat P.Src1VT:$src1, i32:$src1_modifiers));
-  dag src2_dag = (P.Src2VT (SrcPat P.Src2VT:$src2, i32:$src2_modifiers));
+  dag src2_dag = (P.Src2VT (Src2Pat P.Src2VT:$src2, i32:$src2_modifiers));
   dag clamp_dag = (i1 timm:$clamp);
 
   list<dag> ret3 = [(set P.DstVT:$vdst,
@@ -2103,6 +2106,38 @@ multiclass VOP3_Realtriple_gfx11<bits<10> op, bit isSingle = 0,
                                  string opName = NAME> :
   VOP3_Realtriple<GFX11Gen, op, isSingle, opName>;
 
+multiclass VOP3_Realtriple_gfx11_not_gfx1170<bits<10> op, bit isSingle = 0,
+                                             string opName = NAME> :
+  VOP3_Realtriple<GFX11Not11_70Gen, op, isSingle, opName>;
+
+//===----------------------------------------------------------------------===//
+// VOP3 GFX1170
+//===----------------------------------------------------------------------===//
+
+multiclass VOP3_Real_Base_alias<GFXGen Gen, bits<10> op, string opName, string alias, bit isSingle = 0> {
+  defm NAME : VOP3_Real_Base<Gen, op, opName, isSingle>;
+  def Gen.Suffix#"_alias" : AMDGPUMnemonicAlias<alias, NAME> {
+    let AssemblerPredicate = Gen.AssemblerPredicate;
+  }
+}
+
+multiclass VOP3_Real_Base_gfx1170<bits<10> op, string opName = NAME, string alias = NAME, bit isSingle = 0>
+  : VOP3_Real_Base_alias<GFX1170Gen, op, opName, alias, isSingle>;
+
+multiclass VOP3_Realtriple_t16_and_fake16_gfx1170<bits<10> op, string asmName, string opName = NAME,
+                                                  string pseudo_mnemonic = "", bit isSingle = 0> {
+  defm _t16 : VOP3_Realtriple_with_name<GFX1170Gen, op, opName#"_t16", asmName, pseudo_mnemonic, isSingle>;
+  defm _fake16 : VOP3_Realtriple_with_name<GFX1170Gen, op, opName#"_fake16", asmName, pseudo_mnemonic, isSingle>;
+}
+
+multiclass VOP3_Realtriple_with_name_gfx1170<bits<10> op, string opName, string asmName, string pseudo_mnemonic = "",
+                                             bit isSingle = 0> :
+  VOP3_Realtriple_with_name<GFX1170Gen, op, opName, asmName, pseudo_mnemonic, isSingle>;
+
+multiclass VOP3Only_Real_Base_gfx11_gfx12<bits<10> op> :
+  VOP3_Real_Base<GFX11Gen, op, NAME, 1/*IsSingle*/>,
+  VOP3_Real_Base<GFX12Gen, op, NAME, 1/*IsSingle*/>;
+
 //===----------------------------------------------------------------------===//
 // VOP3 GFX12
 //===----------------------------------------------------------------------===//
@@ -2199,6 +2234,10 @@ multiclass VOP3Dot_Realtriple_gfx11_gfx12<bits<10> op, string asmName, bit isSin
   VOP3Dot_Realtriple<GFX11Gen, op, asmName, isSingle, opName>,
   VOP3Dot_Realtriple<GFX12Gen, op, asmName, isSingle, opName>;
 
+multiclass VOP3_Real_with_name_gfx11_gfx12<bits<10> op, string opName,
+                                           string asmName> :
+  VOP3_Real_with_name<GFX11Gen, op, opName, asmName>,
+  VOP3_Real_with_name<GFX12Gen, op, opName, asmName>;
 
 //===----------------------------------------------------------------------===//
 

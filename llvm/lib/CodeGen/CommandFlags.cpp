@@ -66,6 +66,7 @@ using namespace llvm;
 
 CGOPT(std::string, MArch)
 CGOPT(std::string, MCPU)
+CGOPT(std::string, MTune)
 CGLIST(std::string, MAttrs)
 CGOPT_EXP(Reloc::Model, RelocModel)
 CGOPT(ThreadModel::Model, ThreadModel)
@@ -74,7 +75,6 @@ CGOPT_EXP(uint64_t, LargeDataThreshold)
 CGOPT(ExceptionHandling, ExceptionModel)
 CGOPT_EXP(CodeGenFileType, FileType)
 CGOPT(FramePointerKind, FramePointerUsage)
-CGOPT(bool, EnableNoNaNsFPMath)
 CGOPT(bool, EnableNoSignedZerosFPMath)
 CGOPT(bool, EnableNoTrappingFPMath)
 CGOPT(bool, EnableAIXExtendedAltivecABI)
@@ -231,12 +231,6 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
           clEnumValN(FramePointerKind::None, "none",
                      "Enable frame pointer elimination")));
   CGBINDOPT(FramePointerUsage);
-
-  static cl::opt<bool> EnableNoNaNsFPMath(
-      "enable-no-nans-fp-math",
-      cl::desc("Enable FP math optimizations that assume no NaNs"),
-      cl::init(false));
-  CGBINDOPT(EnableNoNaNsFPMath);
 
   static cl::opt<bool> EnableNoSignedZerosFPMath(
       "enable-no-signed-zeros-fp-math",
@@ -548,6 +542,15 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
   mc::RegisterMCTargetOptionsFlags();
 }
 
+codegen::RegisterMTuneFlag::RegisterMTuneFlag() {
+  static cl::opt<std::string> MTune(
+      "mtune",
+      cl::desc("Tune for a specific CPU microarchitecture (-mtune=help for "
+               "details)"),
+      cl::value_desc("tune-cpu-name"), cl::init(""));
+  CGBINDOPT(MTune);
+}
+
 codegen::RegisterSaveStatsFlag::RegisterSaveStatsFlag() {
   static cl::opt<SaveStatsMode> SaveStats(
       "save-stats",
@@ -589,7 +592,6 @@ TargetOptions
 codegen::InitTargetOptionsFromCodeGenFlags(const Triple &TheTriple) {
   TargetOptions Options;
   Options.AllowFPOpFusion = getFuseFPOps();
-  Options.NoNaNsFPMath = getEnableNoNaNsFPMath();
   Options.NoSignedZerosFPMath = getEnableNoSignedZerosFPMath();
   Options.NoTrappingFPMath = getEnableNoTrappingFPMath();
 
@@ -644,13 +646,27 @@ codegen::InitTargetOptionsFromCodeGenFlags(const Triple &TheTriple) {
 }
 
 std::string codegen::getCPUStr() {
-  // If user asked for the 'native' CPU, autodetect here. If autodection fails,
-  // this will set the CPU to an empty string which tells the target to
+  std::string MCPU = getMCPU();
+
+  // If user asked for the 'native' CPU, autodetect here. If auto-detection
+  // fails, this will set the CPU to an empty string which tells the target to
   // pick a basic default.
-  if (getMCPU() == "native")
+  if (MCPU == "native")
     return std::string(sys::getHostCPUName());
 
-  return getMCPU();
+  return MCPU;
+}
+
+std::string codegen::getTuneCPUStr() {
+  std::string TuneCPU = getMTune();
+
+  // If user asked for the 'native' tune CPU, autodetect here. If auto-detection
+  // fails, this will set the tune CPU to an empty string which tells the target
+  // to pick a basic default.
+  if (TuneCPU == "native")
+    return std::string(sys::getHostCPUName());
+
+  return TuneCPU;
 }
 
 std::string codegen::getFeaturesStr() {
@@ -697,16 +713,16 @@ void codegen::renderBoolStringAttr(AttrBuilder &B, StringRef Name, bool Val) {
       renderBoolStringAttr(NewAttrs, AttrName, *CL);                           \
   } while (0)
 
-/// Set function attributes of function \p F based on CPU, Features, and command
-/// line flags.
-void codegen::setFunctionAttributes(StringRef CPU, StringRef Features,
-                                    Function &F) {
+void codegen::setFunctionAttributes(Function &F, StringRef CPU,
+                                    StringRef Features, StringRef TuneCPU) {
   auto &Ctx = F.getContext();
   AttributeList Attrs = F.getAttributes();
   AttrBuilder NewAttrs(Ctx);
 
   if (!CPU.empty() && !F.hasFnAttribute("target-cpu"))
     NewAttrs.addAttribute("target-cpu", CPU);
+  if (!TuneCPU.empty() && !F.hasFnAttribute("tune-cpu"))
+    NewAttrs.addAttribute("tune-cpu", TuneCPU);
   if (!Features.empty()) {
     // Append the command line features to any that are already on the function.
     StringRef OldFeatures =
@@ -739,7 +755,6 @@ void codegen::setFunctionAttributes(StringRef CPU, StringRef Features,
   if (getStackRealign())
     NewAttrs.addAttribute("stackrealign");
 
-  HANDLE_BOOL_ATTR(EnableNoNaNsFPMathView, "no-nans-fp-math");
   HANDLE_BOOL_ATTR(EnableNoSignedZerosFPMathView, "no-signed-zeros-fp-math");
 
   if ((DenormalFPMathView->getNumOccurrences() > 0 ||
@@ -768,12 +783,10 @@ void codegen::setFunctionAttributes(StringRef CPU, StringRef Features,
   F.setAttributes(Attrs.addFnAttributes(Ctx, NewAttrs));
 }
 
-/// Set function attributes of functions in Module M based on CPU,
-/// Features, and command line flags.
-void codegen::setFunctionAttributes(StringRef CPU, StringRef Features,
-                                    Module &M) {
+void codegen::setFunctionAttributes(Module &M, StringRef CPU,
+                                    StringRef Features, StringRef TuneCPU) {
   for (Function &F : M)
-    setFunctionAttributes(CPU, Features, F);
+    setFunctionAttributes(F, CPU, Features, TuneCPU);
 }
 
 Expected<std::unique_ptr<TargetMachine>>

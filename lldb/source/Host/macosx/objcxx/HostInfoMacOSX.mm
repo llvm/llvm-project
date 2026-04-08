@@ -44,6 +44,7 @@
 #include <AvailabilityMacros.h>
 #include <CoreFoundation/CoreFoundation.h>
 #include <Foundation/Foundation.h>
+#include <Security/Security.h>
 #include <mach-o/dyld.h>
 #if defined(MAC_OS_X_VERSION_MIN_REQUIRED) && \
     MAC_OS_X_VERSION_MIN_REQUIRED >= MAC_OS_VERSION_12_0
@@ -456,8 +457,9 @@ xcrun(const std::string &sdk, llvm::ArrayRef<llvm::StringRef> arguments,
   // xcrun can take surprisingly long to build up its database.
   auto timeout = std::chrono::seconds(60);
   bool run_in_shell = false;
-  lldb_private::Status error = Host::RunShellCommand(
-      args, FileSpec(), &status, &signo, &output_str, timeout, run_in_shell);
+  lldb_private::Status error =
+      Host::RunShellCommand(args, FileSpec(), &status, &signo, &output_str,
+                            nullptr, timeout, run_in_shell);
 
   // Check that xcrun returned something useful.
   if (error.Fail()) {
@@ -818,7 +820,8 @@ static DataExtractorSP map_shared_cache_binary_segments(void *image) {
             g_dyld_image_segment_data_4HWTrace(image_copy, segmentName);
         (void)dispatch_data_create_map(data_from_libdyld, &seg.data, &seg.size);
 
-        segments.push_back(seg);
+        if (seg.size > 0 && seg.data != 0)
+          segments.push_back(seg);
       });
 
   if (!segments.size())
@@ -829,13 +832,10 @@ static DataExtractorSP map_shared_cache_binary_segments(void *image) {
             "map_shared_cache_binary_segments() mapping segments of "
             "dyld_image_t %p into lldb address space",
             image);
-  bool log_verbosely = log && log->GetVerbose();
   for (const segment &seg : segments) {
-    if (log_verbosely)
-      LLDB_LOGF(
-          log,
-          "image %p %s vmaddr 0x%llx vmsize 0x%zx mapped to lldb vm addr %p",
-          image, seg.name.c_str(), seg.vmaddr, seg.vmsize, seg.data);
+    LLDB_LOGF_VERBOSE(
+        log, "image %p %s vmaddr 0x%llx vmsize 0x%zx mapped to lldb vm addr %p",
+        image, seg.name.c_str(), seg.vmaddr, seg.vmsize, seg.data);
   }
 
   // Calculate the virtual address range in lldb's
@@ -913,9 +913,8 @@ bool SharedCacheInfo::CreateSharedCacheImageList(UUID sc_uuid,
       // ensure lifetime.
       ConstString installname(dyld_image_get_installname(image));
       Log *log = GetLog(LLDBLog::Modules);
-      if (log && log->GetVerbose())
-        LLDB_LOGF(log, "sc file %s image %p", installname.GetCString(),
-                  (void *)image);
+      LLDB_LOGF_VERBOSE(log, "sc file %s image %p", installname.GetCString(),
+                        (void *)image);
 
       m_dyld_image_retain_4HWTrace(image);
       m_file_infos[sc_uuid].push_back(SharedCacheImageInfo(
@@ -1097,4 +1096,31 @@ bool HostInfoMacOSX::SharedCacheIndexFiles(FileSpec &filepath, UUID &uuid,
     return GetSharedCacheSingleton(sc_mode).CreateSharedCacheImageList(
         uuid, filepath.GetPath());
   return false;
+}
+
+bool HostInfoMacOSX::IsBundleCodeSignTrusted(const FileSpec &bundle_path) {
+  std::string path = bundle_path.GetPath();
+  CFURLRef url = CFURLCreateFromFileSystemRepresentation(
+      kCFAllocatorDefault, reinterpret_cast<const UInt8 *>(path.data()),
+      path.size(), /*isDirectory=*/true);
+  if (!url)
+    return false;
+  auto url_cleanup = llvm::make_scope_exit([&]() { CFRelease(url); });
+
+  SecStaticCodeRef static_code = nullptr;
+  if (SecStaticCodeCreateWithPath(url, kSecCSDefaultFlags, &static_code) !=
+      errSecSuccess)
+    return false;
+  auto code_cleanup = llvm::make_scope_exit([&]() { CFRelease(static_code); });
+
+  // Check that the signature chains to a trusted root CA.
+  SecRequirementRef requirement = nullptr;
+  if (SecRequirementCreateWithString(CFSTR("anchor trusted"),
+                                     kSecCSDefaultFlags,
+                                     &requirement) != errSecSuccess)
+    return false;
+  auto req_cleanup = llvm::make_scope_exit([&]() { CFRelease(requirement); });
+
+  return SecStaticCodeCheckValidity(static_code, kSecCSDefaultFlags,
+                                    requirement) == errSecSuccess;
 }

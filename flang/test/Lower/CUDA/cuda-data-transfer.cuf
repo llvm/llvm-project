@@ -482,7 +482,7 @@ end
 ! CHECK: %[[D:.*]]:2 = hlfir.declare %1(%2) {data_attr = #cuf.cuda<device>, uniq_name = "_QFsub24Ed"} : (!fir.ref<!fir.array<4xf32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<4xf32>>, !fir.ref<!fir.array<4xf32>>)
 ! CHECK: %[[M:.*]]:2 = hlfir.declare %4 {data_attr = #cuf.cuda<managed>, uniq_name = "_QFsub24Em"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
 ! CHECK: %[[D1:.*]] = hlfir.designate %[[D]]#0 (%c1{{.*}})  : (!fir.ref<!fir.array<4xf32>>, index) -> !fir.ref<f32>
-! CHECK: cuf.data_transfer %[[D1]] to %[[M]]#0 {transfer_kind = #cuf.cuda_transfer<device_device>} : !fir.ref<f32>, !fir.ref<f32>
+! CHECK: cuf.data_transfer %[[D1]] to %[[M]]#0 {hasManagedOrUnifedSymbols, transfer_kind = #cuf.cuda_transfer<device_device>} : !fir.ref<f32>, !fir.ref<f32>
 
 subroutine sub25()
   use mod1
@@ -616,3 +616,60 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPsub32() 
 ! CHECK-COUNT-2: cuf.data_transfer
+
+subroutine sub33(m, n)
+  integer :: m, n
+  real(2), managed :: dc(m,n)
+  real(4) :: c(m,n)
+
+  c = (dc)
+end subroutine
+
+! CHECK-LABEL: func.func @_QPsub33
+! CHECK-NOT: cuf.data_transfer 
+
+subroutine sub34(n)
+  integer :: n
+  real(2), managed, allocatable :: dx(:)
+  allocate(dx(1:n))
+  dx(1:n) = 7.0_2
+end subroutine
+
+! CHECK-LABEL: func.func @_QPsub34
+! CHECK:  cuf.data_transfer %{{.*}} to %{{.*}} {hasManagedOrUnifedSymbols, transfer_kind = #cuf.cuda_transfer<host_device>} : f16, !fir.box<!fir.array<?xf16>>
+
+module managed_mod
+  integer, managed :: marray(10)
+end module
+
+subroutine sub35()
+  use managed_mod
+  integer :: host_arr(10)
+  marray = host_arr
+  marray = 0
+end subroutine
+
+! CHECK-LABEL: func.func @_QPsub35()
+! CHECK-NOT: cuf.data_transfer
+
+! Test that host_var = managed_module_var does NOT generate cuf.data_transfer
+! (managed memory is host-accessible, so direct assignment suffices).
+subroutine sub36()
+  use managed_mod
+  integer :: host_arr(10)
+  host_arr = marray
+end subroutine
+
+! CHECK-LABEL: func.func @_QPsub36()
+! CHECK-NOT: cuf.data_transfer
+
+! Test that device_var = managed_module_var DOES generate cuf.data_transfer
+! (device memory requires explicit cudaMemcpy).
+subroutine sub37()
+  use managed_mod
+  integer, device :: dev_arr(10)
+  dev_arr = marray
+end subroutine
+
+! CHECK-LABEL: func.func @_QPsub37()
+! CHECK: cuf.data_transfer

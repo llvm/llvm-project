@@ -18,6 +18,7 @@
 #include "llvm/Support/FormatVariadic.h"
 #include <OffloadAPI.h>
 
+#include <cstdint>
 #include <mutex>
 
 // TODO: Some plugins expect to be linked into libomptarget which defines these
@@ -174,8 +175,8 @@ struct ol_event_impl_t {
                   ol_queue_handle_t Queue)
       : EventInfo(EventInfo), Device(Device), QueueId(Queue->Id), Queue(Queue) {
   }
-  // EventInfo may be null, in which case the event should be considered always
-  // complete
+  // Opaque backend-specific event state. This is expected to be non-null for
+  // backends that materialize real events.
   void *EventInfo;
   ol_device_handle_t Device;
   size_t QueueId;
@@ -528,11 +529,11 @@ Error olGetDeviceInfoImplDetail(ol_device_handle_t Device,
 
     auto getField = [&](StringRef Name, uint32_t &Dest) {
       if (auto F = Entry->get(Name)) {
-        if (!std::holds_alternative<size_t>((*F)->Value))
+        if (!std::holds_alternative<uint64_t>((*F)->Value))
           return makeError(
               ErrorCode::BACKEND_FAILURE,
               "plugin returned incorrect type for dimensions element");
-        Dest = std::get<size_t>((*F)->Value);
+        Dest = std::get<uint64_t>((*F)->Value);
       } else
         return makeError(ErrorCode::BACKEND_FAILURE,
                          "plugin didn't provide all values for dimensions");
@@ -793,7 +794,8 @@ Error olWaitEvents_impl(ol_queue_handle_t Queue, ol_event_handle_t *Events,
       return Plugin::error(ErrorCode::INVALID_NULL_HANDLE,
                            "olWaitEvents asked to wait on a NULL event");
 
-    // Do nothing if the event is for this queue or the event is always complete
+    // Do nothing if the event is for this queue or the backend does not
+    // materialize event state for it.
     if (Event->QueueId == Queue->Id || !Event->EventInfo)
       continue;
 
@@ -838,13 +840,31 @@ Error olGetQueueInfoSize_impl(ol_queue_handle_t Queue, ol_queue_info_t PropName,
 }
 
 Error olSyncEvent_impl(ol_event_handle_t Event) {
-  // No event info means that this event was complete on creation
+  // Some backends do not materialize backend event state. Treat such events as
+  // trivially complete.
   if (!Event->EventInfo)
     return Plugin::success();
 
   if (auto Res = Event->Device->Device->syncEvent(Event->EventInfo))
     return Res;
 
+  return Error::success();
+}
+
+Error olGetEventElapsedTime_impl(ol_event_handle_t StartEvent,
+                                 ol_event_handle_t EndEvent,
+                                 float *ElapsedTime) {
+  if (StartEvent->Device != EndEvent->Device)
+    return createOffloadError(
+        ErrorCode::INVALID_DEVICE,
+        "StartEvent and EndEvent must belong to the same device");
+
+  auto ElapsedTimeOrErr = StartEvent->Device->Device->getEventElapsedTime(
+      StartEvent->EventInfo, EndEvent->EventInfo);
+  if (!ElapsedTimeOrErr)
+    return ElapsedTimeOrErr.takeError();
+
+  *ElapsedTime = *ElapsedTimeOrErr;
   return Error::success();
 }
 
@@ -866,7 +886,8 @@ Error olGetEventInfoImplDetail(ol_event_handle_t Event,
   case OL_EVENT_INFO_QUEUE:
     return Info.write<ol_queue_handle_t>(Queue);
   case OL_EVENT_INFO_IS_COMPLETE: {
-    // No event info means that this event was complete on creation
+    // Some backends do not materialize backend event state. Treat such events
+    // as trivially complete.
     if (!Event->EventInfo)
       return Info.write<bool>(true);
 
@@ -897,24 +918,24 @@ Error olGetEventInfoSize_impl(ol_event_handle_t Event, ol_event_info_t PropName,
 }
 
 Error olCreateEvent_impl(ol_queue_handle_t Queue, ol_event_handle_t *EventOut) {
-  auto Pending = Queue->Device->Device->hasPendingWork(Queue->AsyncInfo);
-  if (auto Err = Pending.takeError())
+  auto Event = std::make_unique<ol_event_impl_t>(nullptr, Queue->Device, Queue);
+
+  if (auto Err = Queue->Device->Device->createEvent(&Event->EventInfo))
     return Err;
 
-  *EventOut = new ol_event_impl_t(nullptr, Queue->Device, Queue);
-  if (!*Pending)
-    // Queue is empty, don't record an event and consider the event always
-    // complete
-    return Plugin::success();
+  if (auto Err = Queue->Device->Device->recordEvent(Event->EventInfo,
+                                                    Queue->AsyncInfo)) {
+    if (Event->EventInfo) {
+      if (auto DestroyErr =
+              Queue->Device->Device->destroyEvent(Event->EventInfo))
+        return joinErrors(std::move(Err), std::move(DestroyErr));
+    }
 
-  if (auto Res = Queue->Device->Device->createEvent(&(*EventOut)->EventInfo))
-    return Res;
+    return Err;
+  }
 
-  if (auto Res = Queue->Device->Device->recordEvent((*EventOut)->EventInfo,
-                                                    Queue->AsyncInfo))
-    return Res;
-
-  return Plugin::success();
+  *EventOut = Event.release();
+  return Error::success();
 }
 
 Error olMemcpy_impl(ol_queue_handle_t Queue, void *DstPtr,

@@ -857,8 +857,8 @@ define <4 x float> @test_mfma_scale_f32_16x16x128_f8f6f4_0_0_sgprs(<8 x i32> inr
 ; SDAG-NEXT:    v_mov_b32_e32 v21, s17
 ; SDAG-NEXT:    v_mov_b32_e32 v22, s18
 ; SDAG-NEXT:    v_mov_b32_e32 v23, s19
-; SDAG-NEXT:    v_mov_b32_e32 v7, v1
-; SDAG-NEXT:    v_mov_b32_e32 v6, v0
+; SDAG-NEXT:    v_readfirstlane_b32 s0, v1
+; SDAG-NEXT:    v_readfirstlane_b32 s1, v0
 ; SDAG-NEXT:    v_mov_b32_e32 v8, s20
 ; SDAG-NEXT:    v_mov_b32_e32 v9, s21
 ; SDAG-NEXT:    v_mov_b32_e32 v10, s22
@@ -869,6 +869,8 @@ define <4 x float> @test_mfma_scale_f32_16x16x128_f8f6f4_0_0_sgprs(<8 x i32> inr
 ; SDAG-NEXT:    v_mov_b32_e32 v15, s27
 ; SDAG-NEXT:    v_mov_b32_e32 v4, s28
 ; SDAG-NEXT:    v_mov_b32_e32 v5, s29
+; SDAG-NEXT:    v_mov_b32_e32 v6, s1
+; SDAG-NEXT:    v_mov_b32_e32 v7, s0
 ; SDAG-NEXT:    s_nop 1
 ; SDAG-NEXT:    v_mfma_scale_f32_16x16x128_f8f6f4 v[0:3], v[16:23], v[8:15], v[4:7], v2, v3 op_sel_hi:[0,0,0]
 ; SDAG-NEXT:    s_setpc_b64 s[30:31]
@@ -876,6 +878,9 @@ define <4 x float> @test_mfma_scale_f32_16x16x128_f8f6f4_0_0_sgprs(<8 x i32> inr
 ; GISEL-LABEL: test_mfma_scale_f32_16x16x128_f8f6f4_0_0_sgprs:
 ; GISEL:       ; %bb.0:
 ; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-NEXT:    s_xor_saveexec_b64 s[4:5], -1
+; GISEL-NEXT:    scratch_store_dword off, v24, s32 ; 4-byte Folded Spill
+; GISEL-NEXT:    s_mov_b64 exec, s[4:5]
 ; GISEL-NEXT:    s_mov_b32 s12, s0
 ; GISEL-NEXT:    s_mov_b32 s13, s1
 ; GISEL-NEXT:    s_mov_b32 s14, s2
@@ -884,16 +889,23 @@ define <4 x float> @test_mfma_scale_f32_16x16x128_f8f6f4_0_0_sgprs(<8 x i32> inr
 ; GISEL-NEXT:    v_mov_b64_e32 v[6:7], s[14:15]
 ; GISEL-NEXT:    v_mov_b64_e32 v[8:9], s[16:17]
 ; GISEL-NEXT:    v_mov_b64_e32 v[10:11], s[18:19]
+; GISEL-NEXT:    v_writelane_b32 v24, s30, 0
+; GISEL-NEXT:    v_writelane_b32 v24, s31, 1
+; GISEL-NEXT:    v_readfirstlane_b32 s30, v0
+; GISEL-NEXT:    v_readfirstlane_b32 s31, v1
 ; GISEL-NEXT:    v_mov_b64_e32 v[12:13], s[20:21]
-; GISEL-NEXT:    v_mov_b32_e32 v22, v0
-; GISEL-NEXT:    v_mov_b32_e32 v23, v1
-; GISEL-NEXT:    v_mov_b32_e32 v20, s28
-; GISEL-NEXT:    v_mov_b32_e32 v21, s29
+; GISEL-NEXT:    v_mov_b64_e32 v[20:21], s[28:29]
 ; GISEL-NEXT:    v_mov_b64_e32 v[14:15], s[22:23]
 ; GISEL-NEXT:    v_mov_b64_e32 v[16:17], s[24:25]
 ; GISEL-NEXT:    v_mov_b64_e32 v[18:19], s[26:27]
-; GISEL-NEXT:    s_nop 1
+; GISEL-NEXT:    v_mov_b64_e32 v[22:23], s[30:31]
+; GISEL-NEXT:    v_readlane_b32 s31, v24, 1
+; GISEL-NEXT:    v_readlane_b32 s30, v24, 0
 ; GISEL-NEXT:    v_mfma_scale_f32_16x16x128_f8f6f4 v[0:3], v[4:11], v[12:19], v[20:23], v2, v3 op_sel_hi:[0,0,0]
+; GISEL-NEXT:    s_xor_saveexec_b64 s[0:1], -1
+; GISEL-NEXT:    scratch_load_dword v24, off, s32 ; 4-byte Folded Reload
+; GISEL-NEXT:    s_mov_b64 exec, s[0:1]
+; GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GISEL-NEXT:    s_setpc_b64 s[30:31]
   %result = call <4 x float> @llvm.amdgcn.mfma.scale.f32.16x16x128.f8f6f4.v8i32.v8i32(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2, i32 0, i32 0, i32 0, i32 %scale0, i32 0, i32 %scale1)
   ret <4 x float> %result

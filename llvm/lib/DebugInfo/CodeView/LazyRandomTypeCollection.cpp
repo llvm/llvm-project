@@ -87,7 +87,11 @@ CVType LazyRandomTypeCollection::getType(TypeIndex Index) {
   assert(!Index.isSimple());
 
   auto EC = ensureTypeExists(Index);
-  error(std::move(EC));
+  if (EC) {
+    assert(false && "Invalid type index (use tryGetType or getTypeOrError)");
+    llvm::consumeError(std::move(EC));
+    return {};
+  }
   assert(contains(Index));
 
   return Records[Index.toArrayIndex()].Type;
@@ -98,9 +102,8 @@ LazyRandomTypeCollection::getTypeOrError(TypeIndex Index) {
   if (Index.isSimple())
     return llvm::createStringError("Type index too low (%d)", Index.getIndex());
 
-  if (auto EC = ensureTypeExists(Index)) {
+  if (auto EC = ensureTypeExists(Index))
     return EC;
-  }
 
   if (!contains(Index))
     return llvm::createStringError("Type index too high (%d)",

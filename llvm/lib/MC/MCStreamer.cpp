@@ -249,7 +249,7 @@ void MCStreamer::emitDwarfLocLabelDirective(SMLoc Loc, StringRef Name) {
 MCSymbol *MCStreamer::getDwarfLineTableSymbol(unsigned CUID) {
   MCDwarfLineTable &Table = getContext().getMCDwarfLineTable(CUID);
   if (!Table.getLabel()) {
-    StringRef Prefix = Context.getAsmInfo()->getPrivateGlobalPrefix();
+    StringRef Prefix = Context.getAsmInfo()->getInternalSymbolPrefix();
     Table.setLabel(
         Context.getOrCreateSymbol(Prefix + "line_table_start" + Twine(CUID)));
   }
@@ -382,11 +382,20 @@ void MCStreamer::emitCVDefRangeDirective(
   emitCVDefRangeDirective(Ranges, BytePrefix);
 }
 
+void MCStreamer::emitCVDefRangeDirective(
+    ArrayRef<std::pair<const MCSymbol *, const MCSymbol *>> Ranges,
+    codeview::DefRangeRegisterRelIndirHeader DRHdr) {
+  SmallString<20> BytePrefix;
+  copyBytesForDefRange(BytePrefix, codeview::S_DEFRANGE_REGISTER_REL_INDIR,
+                       DRHdr);
+  emitCVDefRangeDirective(Ranges, BytePrefix);
+}
+
 void MCStreamer::emitEHSymAttributes(const MCSymbol *Symbol,
                                      MCSymbol *EHSymbol) {
 }
 
-void MCStreamer::initSections(bool NoExecStack, const MCSubtargetInfo &STI) {
+void MCStreamer::initSections(const MCSubtargetInfo &STI) {
   switchSectionNoPrint(getContext().getObjectFileInfo()->getTextSection());
 }
 
