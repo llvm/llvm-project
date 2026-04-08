@@ -2798,10 +2798,23 @@ func.func @shuffle_unused_v2_multidim(%v0 : vector<4x2xf32>, %v1 : vector<3x2xf3
 
 // Both operands are used: no folding.
 // CHECK-LABEL: func @shuffle_both_operands_used
-//       CHECK:   vector.shuffle %arg0, %arg1 [0, 3, 1, 4] : vector<3xi32>, vector<3xi32>
+//  CHECK-SAME:   %[[A:.*]]: vector<3xi32>, %[[B:.*]]: vector<3xi32>
+//       CHECK:   vector.shuffle %[[A]], %[[B]] [0, 3, 1, 4] : vector<3xi32>, vector<3xi32>
 func.func @shuffle_both_operands_used(%v0 : vector<3xi32>, %v1 : vector<3xi32>) -> vector<4xi32> {
   %shuffle = vector.shuffle %v0, %v1 [0, 3, 1, 4] : vector<3xi32>, vector<3xi32>
   return %shuffle : vector<4xi32>
+}
+
+// -----
+
+// One operand is poison, the other one is not used.
+// CHECK-LABEL: func @shuffle_poison_unused
+//       CHECK:   %[[r:.*]] = ub.poison : vector<4xi32>
+//       CHECK:   return %[[r]]
+func.func @shuffle_poison_unused(%1: vector<2xi32>) -> vector<4xi32> {
+  %0 = ub.poison : vector<2xi32>
+  %r = vector.shuffle %0, %1 [0, 1, -1, -1] : vector<2xi32>, vector<2xi32>
+  return %r : vector<4xi32>
 }
 
 // -----
