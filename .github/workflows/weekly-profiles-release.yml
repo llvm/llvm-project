@@ -55,24 +55,12 @@ jobs:
 
       - uses: ilammy/msvc-dev-cmd@v1
 
-      - name: Restore sccache
-        uses: actions/cache@v4
-        with:
-          path: ~\AppData\Local\Mozilla\sccache
-          key: sccache-windows-${{ github.sha }}
-          restore-keys: sccache-windows-
-
-      - name: Install sccache
-        run: choco install sccache -y
-
       - name: Configure
         run: >
           cmake -G Ninja -S llvm -B build
           -DCMAKE_BUILD_TYPE=Release
           -DCMAKE_C_COMPILER=cl
           -DCMAKE_CXX_COMPILER=cl
-          -DCMAKE_C_COMPILER_LAUNCHER=sccache
-          -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
           -DLLVM_ENABLE_PROJECTS=clang
           -DLLVM_TARGETS_TO_BUILD="X86;AArch64"
           -DLLVM_INSTALL_TOOLCHAIN_ONLY=ON
