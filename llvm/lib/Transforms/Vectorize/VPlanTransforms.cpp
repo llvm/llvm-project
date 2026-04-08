@@ -5960,7 +5960,7 @@ namespace {
 
 using ExtendKind = TTI::PartialReductionExtendKind;
 struct ReductionExtend {
-  Type *Type = nullptr;
+  Type *SrcType = nullptr;
   ExtendKind Kind = ExtendKind::PR_None;
 };
 
@@ -6172,8 +6172,8 @@ getPartialReductionLinkCost(VPCostContext &CostCtx,
                         ? (unsigned)Instruction::Add
                         : Link.ReductionBinOp->getOpcode();
   return CostCtx.TTI.getPartialReductionCost(
-      Opcode, ExtendedOp.ExtendA.Type, ExtendedOp.ExtendB.Type, RdxType, VF,
-      ExtendedOp.ExtendA.Kind, ExtendedOp.ExtendB.Kind, BinOpc,
+      Opcode, ExtendedOp.ExtendA.SrcType, ExtendedOp.ExtendB.SrcType, RdxType,
+      VF, ExtendedOp.ExtendA.Kind, ExtendedOp.ExtendB.Kind, BinOpc,
       CostCtx.CostKind, Flags);
 }
 
@@ -6321,7 +6321,7 @@ getScaledReductions(VPReductionPHIRecipe *RedPhiR, VPCostContext &CostCtx,
       std::swap(Op, PrevValue);
     }
 
-    Type *ExtSrcType = ExtendedOp->ExtendA.Type;
+    Type *ExtSrcType = ExtendedOp->ExtendA.SrcType;
     TypeSize ExtSrcSize = ExtSrcType->getPrimitiveSizeInBits();
     if (!PHISize.hasKnownScalarFactor(ExtSrcSize))
       return std::nullopt;
@@ -6378,10 +6378,9 @@ void VPlanTransforms::createPartialReductions(VPlan &Plan,
   // something that isn't another partial reduction. This is because the
   // extends are intended to be lowered along with the reduction itself.
   auto ExtendUsersValid = [&](VPValue *Ext) {
-    return !isa_and_present<VPWidenCastRecipe>(Ext) ||
-           all_of(Ext->users(), [&](VPUser *U) {
-             return PartialReductionOps.contains(cast<VPRecipeBase>(U));
-           });
+    return !isa<VPWidenCastRecipe>(Ext) || all_of(Ext->users(), [&](VPUser *U) {
+      return PartialReductionOps.contains(cast<VPRecipeBase>(U));
+    });
   };
 
   auto IsProfitablePartialReductionChainForVF =
