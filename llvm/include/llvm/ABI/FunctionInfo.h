@@ -158,7 +158,8 @@ public:
 
   Align getIndirectAlign() const {
     assert(isIndirect() && "Invalid Kind!");
-    assert(Alignment && "Indirect arguments must have an alignment");
+    assert(Alignment.has_value() &&
+           "Indirect arguments must have an alignment");
     return *Alignment;
   }
 
