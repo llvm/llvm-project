@@ -606,7 +606,7 @@ define void @ptr_iv_non_i8_type(ptr %base, i64 %end) {
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], [[LOOP]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[IV_PTR:%.*]] = getelementptr i32, ptr [[BASE]], i64 [[IV]]
+; CHECK-NEXT:    [[IV_PTR:%.*]] = getelementptr [4 x i8], ptr [[BASE]], i64 [[IV]]
 ; CHECK-NEXT:    call void @use.p0(ptr [[IV_PTR]])
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 4
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[IV_NEXT]], [[END]]

@@ -31,6 +31,12 @@ VirtualDataExtractor::VirtualDataExtractor(const DataBufferSP &data_sp,
   m_lookup_table.Sort();
 }
 
+VirtualDataExtractor::VirtualDataExtractor(const DataBufferSP &data_sp,
+                                           LookupTable lookup_table)
+    : DataExtractor(data_sp), m_lookup_table(std::move(lookup_table)) {
+  m_lookup_table.Sort();
+}
+
 const VirtualDataExtractor::LookupTable::Entry *
 VirtualDataExtractor::FindEntry(offset_t virtual_addr) const {
   // Use RangeDataVector's binary search instead of linear search.
@@ -78,6 +84,108 @@ const void *VirtualDataExtractor::GetData(offset_t *offset_ptr,
   }
 
   return result;
+}
+
+offset_t VirtualDataExtractor::SetData(const void *bytes, lldb::offset_t length,
+                                       lldb::ByteOrder byte_order) {
+  // Invoked from the base class ctor.
+  if (!m_data_sp || m_start == nullptr)
+    return DataExtractor::SetData(bytes, length, byte_order);
+
+  // A no-op SetData that is setting the same data buffer again.
+  if (!m_data_sp && m_start == bytes && length == GetVirtualByteSize())
+    return GetVirtualByteSize();
+
+  assert("SetData(1) called on VirtualDataExtractor that already had data" &&
+         false);
+
+  DataExtractor::SetData(bytes, length, byte_order);
+  ResetLookupTableToMatchPhysical();
+
+  return GetVirtualByteSize();
+}
+
+offset_t VirtualDataExtractor::SetData(const DataExtractor &data,
+                                       lldb::offset_t offset,
+                                       lldb::offset_t length) {
+  // Invoked from the base class ctor
+  if (!m_data_sp || m_start == nullptr)
+    return DataExtractor::SetData(data, offset, length);
+
+  // A no-op SetData that is setting the same data buffer again
+  if (m_data_sp && data.GetSharedDataBuffer().get() == m_data_sp.get() &&
+      offset == 0 && length == GetVirtualByteSize())
+    return GetVirtualByteSize();
+  assert("SetData(2) called on VirtualDataExtractor that already had data" &&
+         false);
+
+  DataExtractor::SetData(data, offset, length);
+  ResetLookupTableToMatchPhysical();
+
+  return GetVirtualByteSize();
+}
+
+offset_t VirtualDataExtractor::SetData(const lldb::DataBufferSP &data_sp,
+                                       lldb::offset_t offset,
+                                       lldb::offset_t length) {
+  // Invoked from the base class ctor
+  if (!m_data_sp || m_start == nullptr)
+    return DataExtractor::SetData(data_sp, offset, length);
+
+  // A no-op SetData that is setting the same data buffer again
+  if (m_data_sp && data_sp.get() == m_data_sp.get() && offset == 0 &&
+      length == GetVirtualByteSize())
+    return GetVirtualByteSize();
+
+  assert("SetData(3) called on VirtualDataExtractor that already had data" &&
+         false);
+
+  DataExtractor::SetData(data_sp, offset, length);
+  ResetLookupTableToMatchPhysical();
+
+  return GetVirtualByteSize();
+}
+
+void VirtualDataExtractor::ResetLookupTableToMatchPhysical() {
+  // calling SetData on a VirtualDataExtractor that already has a
+  // data buffer means the LookupTable needs to be either replaced, or
+  // if we assume the buffer is a subset of the original, we need to
+  // update all the entries to have correct new offsets into the buffer
+  // and remove entries that are outside the new range.
+  // For now, zero out the LookupTable and behave as if this is a simple
+  // DataExtractor.
+  m_lookup_table.Clear();
+  m_lookup_table.Append(
+      VirtualDataExtractor::LookupTable::Entry{0, GetPhysicalByteSize(), 0});
+}
+
+uint64_t VirtualDataExtractor::GetVirtualByteSize() const {
+  offset_t lowest = -1ULL;
+  offset_t highest = 0;
+  for (const auto ent : m_lookup_table) {
+    lowest = std::min(lowest, ent.base);
+    highest = std::max(highest, ent.base + ent.size);
+  }
+  return highest - lowest;
+}
+
+uint64_t VirtualDataExtractor::GetPhysicalByteSize() const {
+  return m_end - m_start;
+}
+
+offset_t VirtualDataExtractor::VirtualBytesLeft(offset_t virtual_offset) const {
+  const offset_t size = GetVirtualByteSize();
+  if (size > virtual_offset)
+    return size - virtual_offset;
+  return 0;
+}
+
+offset_t
+VirtualDataExtractor::PhysicalBytesLeft(offset_t physical_offset) const {
+  const offset_t size = m_end - m_start;
+  if (size > physical_offset)
+    return size - physical_offset;
+  return 0;
 }
 
 const uint8_t *VirtualDataExtractor::PeekData(offset_t offset,
@@ -136,4 +244,71 @@ uint64_t VirtualDataExtractor::GetU64_unchecked(offset_t *offset_ptr) const {
   uint64_t result = DataExtractor::GetU64_unchecked(&physical_offset);
   *offset_ptr += 8;
   return result;
+}
+
+DataExtractorSP
+VirtualDataExtractor::GetSubsetExtractorSP(offset_t virtual_offset,
+                                           offset_t virtual_length) {
+  const LookupTable::Entry *entry = FindEntry(virtual_offset);
+  assert(
+      entry &&
+      "VirtualDataExtractor subset extractor requires valid virtual address");
+  if (!entry)
+    return {};
+
+  // Entry::data is the offset into the DataBuffer's actual start/end range
+  // Entry::base is the virtual address at the start of this region of data
+  offset_t offset_into_entry_range = virtual_offset - entry->base;
+  assert(
+      offset_into_entry_range + virtual_length <= entry->size &&
+      "VirtualDataExtractor subset may not span multiple LookupTable entries");
+  if (offset_into_entry_range + virtual_length > entry->size)
+    return {};
+
+  // We could support a Subset VirtualDataExtractor which covered
+  // multiple LookupTable virtual entries, but we'd need to mutate
+  // all of the LookupTable entries that were properly included in
+  // the Subset, a bit tricky.  So we won't implement that until it's
+  // needed.
+
+  offset_t physical_start = entry->data + offset_into_entry_range;
+  std::shared_ptr<DataExtractor> new_sp = std::make_shared<DataExtractor>(
+      GetSharedDataBuffer(), GetByteOrder(), GetAddressByteSize());
+  new_sp->SetData(GetSharedDataBuffer(), physical_start, virtual_length);
+  return new_sp;
+}
+
+// Return a DataExtractorSP that contains a single LookupTable's entry; all
+// bytes are guaranteed to be readable.
+DataExtractorSP
+VirtualDataExtractor::GetSubsetExtractorSP(offset_t virtual_offset) {
+  const LookupTable::Entry *entry = FindEntry(virtual_offset);
+  assert(
+      entry &&
+      "VirtualDataExtractor subset extractor requires valid virtual address");
+  if (!entry)
+    return {};
+
+  // Entry::data is the offset into the DataBuffer's actual start/end range
+  // Entry::base is the virtual address at the start of this region of data
+  offset_t offset_into_entry_range = virtual_offset - entry->base;
+
+  offset_t physical_start = entry->data + offset_into_entry_range;
+  std::shared_ptr<DataExtractor> new_sp = std::make_shared<DataExtractor>(
+      GetSharedDataBuffer(), GetByteOrder(), GetAddressByteSize());
+  new_sp->SetData(GetSharedDataBuffer(), physical_start,
+                  entry->size - offset_into_entry_range);
+  return new_sp;
+}
+
+// Return an ArrayRef to the first contiguous region of the LookupTable
+// only.  The LookupTable entries may have gaps of unmapped data, and we
+// can't include those in the ArrayRef or something may touch those pages.
+llvm::ArrayRef<uint8_t> VirtualDataExtractor::GetData() const {
+  const LookupTable::Entry *entry = FindEntry(0);
+  assert(entry &&
+         "VirtualDataExtractor GetData requires valid virtual address");
+  if (!entry)
+    return {};
+  return {m_start + static_cast<size_t>(entry->data), static_cast<size_t>(entry->size)};
 }

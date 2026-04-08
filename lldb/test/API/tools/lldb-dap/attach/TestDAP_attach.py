@@ -6,6 +6,7 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 import lldbdap_testcase
+import os
 import subprocess
 import threading
 import time
@@ -15,6 +16,8 @@ import time
 # process scheduling can cause a massive (minutes) delay during this test.
 @skipIf(oslist=["linux"], archs=["arm$"])
 class TestDAP_attach(lldbdap_testcase.DAPTestCaseBase):
+    SHARED_BUILD_TESTCASE = False
+
     def spawn(self, program, args=None):
         return self.spawnSubprocess(
             executable=program,
@@ -94,6 +97,30 @@ class TestDAP_attach(lldbdap_testcase.DAPTestCaseBase):
             if self.spawn_thread.is_alive():
                 self.spawn_thread.join(timeout=10)
 
+    @expectedFailureWindows
+    def test_by_partial_name_waitFor(self):
+        """
+        Tests waiting for and attaching to a process by partial process name
+        that doesn't exist yet.
+        """
+        program = self.build_and_create_debug_adapter_for_attach()
+        self.spawn_event = threading.Event()
+        self.spawn_thread = threading.Thread(
+            target=self.spawn_and_wait,
+            args=(
+                program,
+                1.0,
+            ),
+        )
+        self.spawn_thread.start()
+        try:
+            self.attach(program=os.path.basename(program), waitFor=True)
+            self.continue_and_verify_pid()
+        finally:
+            self.spawn_event.set()
+            if self.spawn_thread.is_alive():
+                self.spawn_thread.join(timeout=10)
+
     def test_attach_with_missing_session_debugger(self):
         """
         Test that attaching with only one of debuggerId/targetId specified
@@ -103,7 +130,8 @@ class TestDAP_attach(lldbdap_testcase.DAPTestCaseBase):
 
         # Test with only targetId specified (no debuggerId)
         session = {"targetId": 99999}
-        resp = self.attach(session=session, waitForResponse=True)
+        attach_seq = self.attach(session=session)
+        resp = self.dap_server.receive_response(attach_seq)
         self.assertFalse(resp["success"])
         self.assertIn(
             "missing value at arguments.session.debuggerId",
@@ -121,7 +149,7 @@ class TestDAP_attach(lldbdap_testcase.DAPTestCaseBase):
         # Since debugger ID 9999 likely doesn't exist in the global registry,
         # we expect a validation error.
         session = {"debuggerId": 9999, "targetId": 9999}
-        resp = self.attach(session=session, waitForResponse=True)
+        resp = self.attach_and_configurationDone(session=session)
         self.assertFalse(resp["success"])
         error_msg = resp["body"]["error"]["format"]
         # Either error is acceptable - both indicate the debugger reuse

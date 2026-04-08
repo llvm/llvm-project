@@ -165,10 +165,7 @@ class LLVM_ABI GISelValueTrackingAnalysisLegacy : public MachineFunctionPass {
 
 public:
   static char ID;
-  GISelValueTrackingAnalysisLegacy() : MachineFunctionPass(ID) {
-    initializeGISelValueTrackingAnalysisLegacyPass(
-        *PassRegistry::getPassRegistry());
-  }
+  GISelValueTrackingAnalysisLegacy() : MachineFunctionPass(ID) {}
   GISelValueTracking &get(MachineFunction &MF);
   void getAnalysisUsage(AnalysisUsage &AU) const override;
   bool runOnMachineFunction(MachineFunction &MF) override;

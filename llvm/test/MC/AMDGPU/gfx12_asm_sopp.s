@@ -388,3 +388,30 @@ s_waitcnt vmcnt(9)
 
 s_wakeup
 // GFX12: s_wakeup                                ; encoding: [0x00,0x00,0xb4,0xbf]
+
+s_wait_event 0
+// GFX1200: s_wait_event { export_ready: 0 }        ; encoding: [0x00,0x00,0x8b,0xbf]
+
+s_wait_event 1
+// GFX1200: s_wait_event 0x1                        ; encoding: [0x01,0x00,0x8b,0xbf]
+
+s_wait_event 2
+// GFX1200: s_wait_event { export_ready: 1 }        ; encoding: [0x02,0x00,0x8b,0xbf]
+
+s_wait_event 0x3141
+// GFX1200: s_wait_event 0x3141 ; encoding: [0x41,0x31,0x8b,0xbf]
+
+s_wait_event 0xc1d1
+// GFX1200: s_wait_event 0xc1d1 ; encoding: [0xd1,0xc1,0x8b,0xbf]
+
+s_wait_event 0xffff
+// GFX1200: s_wait_event 0xffff                      ; encoding: [0xff,0xff,0x8b,0xbf]
+
+s_wait_event { export_ready: 0 }
+// GFX1200: s_wait_event { export_ready: 0 }        ; encoding: [0x00,0x00,0x8b,0xbf]
+
+s_wait_event { export_ready: 1 }
+// GFX1200: s_wait_event 0x1                        ; encoding: [0x01,0x00,0x8b,0xbf]
+
+s_wait_event { }
+// GFX1200: s_wait_event { export_ready: 0 }        ; encoding: [0x00,0x00,0x8b,0xbf]

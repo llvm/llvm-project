@@ -16,4 +16,4 @@ Sections:
     AddressAlign:    0x1
     Entries:         [ 0 ]
 
-# CHECK: SHT_GNU_versym should be associated with symbol table
+# CHECK: error: SHT_GNU_versym should be associated with symbol table

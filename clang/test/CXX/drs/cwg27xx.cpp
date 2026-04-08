@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++98 -pedantic-errors -verify=expected,cxx98 %s
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++11 -pedantic-errors -verify=expected %s
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++14 -pedantic-errors -verify=expected %s
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++17 -pedantic-errors -verify=expected %s
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++20 -pedantic-errors -verify=expected,since-cxx20 %s
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++23 -pedantic-errors -verify=expected,since-cxx20,since-cxx23 %s
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++2c -pedantic-errors -verify=expected,since-cxx20,since-cxx23,since-cxx26 %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++98 -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,cxx98 %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++11 -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++14 -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++17 -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++20 -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx20 %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++23 -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx20,since-cxx23 %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++2c -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx20,since-cxx23,since-cxx26 %s
 
 #if __cplusplus == 199711L
 #define static_assert(...) __extension__ _Static_assert(__VA_ARGS__)
@@ -46,13 +46,13 @@ A(T...) -> A<int, sizeof...(T)> requires (sizeof...(T) == 2); // #cwg2707-guide-
 A a = {1, 2};
 
 A b = {3, 4, 5};
-// since-cxx20-error@-1 {{no viable constructor or deduction guide}}
-//   since-cxx20-note@#cwg2707-A {{candidate function template not viable}}
-//   since-cxx20-note@#cwg2707-A {{implicit deduction guide}}
-//   since-cxx20-note@#cwg2707-guide-A {{constraints not satisfied}}
+// since-cxx20-error@-1 {{no viable constructor or deduction guide for deduction of template arguments of 'A'}}
+//   since-cxx20-note@#cwg2707-A {{candidate function template not viable: requires 1 argument, but 3 were provided}}
+//   since-cxx20-note@#cwg2707-A {{implicit deduction guide declared as 'template <class T, unsigned int N> A(cwg2707::A<T, N>) -> cwg2707::A<T, N>'}}
+//   since-cxx20-note@#cwg2707-guide-A {{candidate template ignored: constraints not satisfied [with T = <int, int, int>]}}
 //   since-cxx20-note@#cwg2707-guide-A {{because 'sizeof...(T) == 2' (3 == 2) evaluated to false}}
-//   since-cxx20-note@#cwg2707-A {{candidate function template not viable}}
-//   since-cxx20-note@#cwg2707-A {{implicit deduction guide}}
+//   since-cxx20-note@#cwg2707-A {{candidate function template not viable: requires 0 arguments, but 3 were provided}}
+//   since-cxx20-note@#cwg2707-A {{implicit deduction guide declared as 'template <class T, unsigned int N> A() -> cwg2707::A<T, N>'}}
 
 #endif
 

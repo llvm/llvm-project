@@ -10,13 +10,10 @@ define amdgpu_kernel void @readfirstlane_uniform(ptr addrspace(1) noalias nocapt
 ; GCN-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; GCN-NEXT:    s_add_i32 s12, s12, s17
 ; GCN-NEXT:    v_readfirstlane_b32 s4, v0
-; GCN-NEXT:    s_mov_b32 s5, 0
+; GCN-NEXT:    s_lshl_b32 s4, s4, 2
 ; GCN-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
-; GCN-NEXT:    s_lshl_b64 s[4:5], s[4:5], 2
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    s_add_u32 s0, s0, s4
-; GCN-NEXT:    s_addc_u32 s1, s1, s5
-; GCN-NEXT:    s_load_dword s4, s[0:1], 0x0
+; GCN-NEXT:    s_load_dword s4, s[0:1], s4
 ; GCN-NEXT:    s_add_u32 s0, s2, 40
 ; GCN-NEXT:    s_addc_u32 s1, s3, 0
 ; GCN-NEXT:    v_mov_b32_e32 v0, s0

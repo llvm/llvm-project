@@ -18,8 +18,8 @@ define void @test0(ptr %b, i64 %n, i64 %u, i64 %y) nounwind  {
 ; CHECK:       bb:
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[INDVAR_NEXT:%.*]], [[BB]] ], [ 20, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[J:%.*]] = mul i64 [[I]], [[V]]
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr double, ptr [[E]], i64 [[J]]
-; CHECK-NEXT:    [[T8:%.*]] = getelementptr double, ptr [[TMP0]], i64 [[Z]]
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr [8 x i8], ptr [[E]], i64 [[J]]
+; CHECK-NEXT:    [[T8:%.*]] = getelementptr [8 x i8], ptr [[TMP0]], i64 [[Z]]
 ; CHECK-NEXT:    store <2 x double> zeroinitializer, ptr [[T8]], align 8
 ; CHECK-NEXT:    [[INDVAR_NEXT]] = add i64 [[I]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVAR_NEXT]], [[N]]

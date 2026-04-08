@@ -64,12 +64,16 @@ define void @test_distributed_shared_cluster_float_atomic(ptr addrspace(7) %dsme
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
 ; CHECK-NEXT:    ld.param.b64 %rd1, [test_distributed_shared_cluster_float_atomic_param_0];
+; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    mov.b16 %rs1, 0x3C00;
-; CHECK-NEXT:    atom.shared::cluster.add.noftz.f16 %rs2, [%rd1], %rs1;
+; CHECK-NEXT:    atom.acquire.sys.shared::cluster.add.noftz.f16 %rs2, [%rd1], %rs1;
+; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    mov.b16 %rs3, 0x3F80;
-; CHECK-NEXT:    atom.shared::cluster.add.noftz.bf16 %rs4, [%rd1], %rs3;
-; CHECK-NEXT:    atom.shared::cluster.add.f32 %r1, [%rd1], 0f3F800000;
-; CHECK-NEXT:    atom.shared::cluster.add.f64 %rd2, [%rd1], 0d3FF0000000000000;
+; CHECK-NEXT:    atom.acquire.sys.shared::cluster.add.noftz.bf16 %rs4, [%rd1], %rs3;
+; CHECK-NEXT:    fence.sc.sys;
+; CHECK-NEXT:    atom.acquire.sys.shared::cluster.add.f32 %r1, [%rd1], 0f3F800000;
+; CHECK-NEXT:    fence.sc.sys;
+; CHECK-NEXT:    atom.acquire.sys.shared::cluster.add.f64 %rd2, [%rd1], 0d3FF0000000000000;
 ; CHECK-NEXT:    ret;
 entry:
   ; Floating point atomic operations
@@ -90,20 +94,20 @@ define void @test_distributed_shared_cluster_int_atomic(ptr addrspace(7) %dsmem_
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
 ; CHECK-NEXT:    ld.param.b64 %rd1, [test_distributed_shared_cluster_int_atomic_param_0];
-; CHECK-NEXT:    atom.shared::cluster.add.u32 %r1, [%rd1], 1;
-; CHECK-NEXT:    atom.shared::cluster.add.u64 %rd2, [%rd1], 1;
-; CHECK-NEXT:    atom.shared::cluster.exch.b32 %r2, [%rd1], 1;
-; CHECK-NEXT:    atom.shared::cluster.exch.b64 %rd3, [%rd1], 1;
-; CHECK-NEXT:    atom.shared::cluster.min.s32 %r3, [%rd1], 1;
-; CHECK-NEXT:    atom.shared::cluster.min.s64 %rd4, [%rd1], 1;
-; CHECK-NEXT:    atom.shared::cluster.min.u32 %r4, [%rd1], 1;
-; CHECK-NEXT:    atom.shared::cluster.min.u64 %rd5, [%rd1], 1;
-; CHECK-NEXT:    atom.shared::cluster.max.s32 %r5, [%rd1], 1;
-; CHECK-NEXT:    atom.shared::cluster.max.s64 %rd6, [%rd1], 1;
-; CHECK-NEXT:    atom.shared::cluster.max.u32 %r6, [%rd1], 1;
-; CHECK-NEXT:    atom.shared::cluster.max.u64 %rd7, [%rd1], 1;
-; CHECK-NEXT:    atom.shared::cluster.inc.u32 %r7, [%rd1], 1;
-; CHECK-NEXT:    atom.shared::cluster.dec.u32 %r8, [%rd1], 1;
+; CHECK-NEXT:    atom.relaxed.sys.shared::cluster.add.u32 %r1, [%rd1], 1;
+; CHECK-NEXT:    atom.relaxed.sys.shared::cluster.add.u64 %rd2, [%rd1], 1;
+; CHECK-NEXT:    atom.relaxed.sys.shared::cluster.exch.b32 %r2, [%rd1], 1;
+; CHECK-NEXT:    atom.relaxed.sys.shared::cluster.exch.b64 %rd3, [%rd1], 1;
+; CHECK-NEXT:    atom.relaxed.sys.shared::cluster.min.s32 %r3, [%rd1], 1;
+; CHECK-NEXT:    atom.relaxed.sys.shared::cluster.min.s64 %rd4, [%rd1], 1;
+; CHECK-NEXT:    atom.relaxed.sys.shared::cluster.min.u32 %r4, [%rd1], 1;
+; CHECK-NEXT:    atom.relaxed.sys.shared::cluster.min.u64 %rd5, [%rd1], 1;
+; CHECK-NEXT:    atom.relaxed.sys.shared::cluster.max.s32 %r5, [%rd1], 1;
+; CHECK-NEXT:    atom.relaxed.sys.shared::cluster.max.s64 %rd6, [%rd1], 1;
+; CHECK-NEXT:    atom.relaxed.sys.shared::cluster.max.u32 %r6, [%rd1], 1;
+; CHECK-NEXT:    atom.relaxed.sys.shared::cluster.max.u64 %rd7, [%rd1], 1;
+; CHECK-NEXT:    atom.relaxed.sys.shared::cluster.inc.u32 %r7, [%rd1], 1;
+; CHECK-NEXT:    atom.relaxed.sys.shared::cluster.dec.u32 %r8, [%rd1], 1;
 ; CHECK-NEXT:    ret;
 entry:
   ; Integer add operations
@@ -142,12 +146,12 @@ define void @test_distributed_shared_cluster_bitwise_atomic(ptr addrspace(7) %ds
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
 ; CHECK-NEXT:    ld.param.b64 %rd1, [test_distributed_shared_cluster_bitwise_atomic_param_0];
-; CHECK-NEXT:    atom.shared::cluster.and.b32 %r1, [%rd1], 1;
-; CHECK-NEXT:    atom.shared::cluster.and.b64 %rd2, [%rd1], 1;
-; CHECK-NEXT:    atom.shared::cluster.or.b32 %r2, [%rd1], 1;
-; CHECK-NEXT:    atom.shared::cluster.or.b64 %rd3, [%rd1], 1;
-; CHECK-NEXT:    atom.shared::cluster.xor.b32 %r3, [%rd1], 1;
-; CHECK-NEXT:    atom.shared::cluster.xor.b64 %rd4, [%rd1], 1;
+; CHECK-NEXT:    atom.relaxed.sys.shared::cluster.and.b32 %r1, [%rd1], 1;
+; CHECK-NEXT:    atom.relaxed.sys.shared::cluster.and.b64 %rd2, [%rd1], 1;
+; CHECK-NEXT:    atom.relaxed.sys.shared::cluster.or.b32 %r2, [%rd1], 1;
+; CHECK-NEXT:    atom.relaxed.sys.shared::cluster.or.b64 %rd3, [%rd1], 1;
+; CHECK-NEXT:    atom.relaxed.sys.shared::cluster.xor.b32 %r3, [%rd1], 1;
+; CHECK-NEXT:    atom.relaxed.sys.shared::cluster.xor.b64 %rd4, [%rd1], 1;
 ; CHECK-NEXT:    ret;
 entry:
   ; Bitwise operations

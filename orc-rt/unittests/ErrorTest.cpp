@@ -284,6 +284,21 @@ TEST(ErrorTest, IsAHandling) {
   consumeError(std::move(G));
 }
 
+TEST(Error, ReReturnErrorFromHandler) {
+  int ErrorInfo = 0;
+
+  Error E = handleErrors(make_error<CustomError>(7),
+                         [&](std::unique_ptr<CustomError> CE) {
+                           return make_error(std::move(CE));
+                         });
+
+  handleAllErrors(std::move(E),
+                  [&](const CustomError &CE) { ErrorInfo = CE.getInfo(); });
+
+  EXPECT_EQ(ErrorInfo, 7)
+      << "Failed to handle Error returned from handleErrors.";
+}
+
 TEST(ErrorTest, StringError) {
   auto E = make_error<StringError>("foo");
   if (E.isA<StringError>())

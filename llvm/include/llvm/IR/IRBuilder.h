@@ -528,8 +528,7 @@ public:
     return ConstantInt::get(getInt64Ty(), C);
   }
 
-  /// Get a constant N-bit value, zero extended or truncated from
-  /// a 64-bit value.
+  /// Get a constant N-bit value, zero extended from a 64-bit value.
   ConstantInt *getIntN(unsigned N, uint64_t C) {
     return ConstantInt::get(getIntNTy(N), C);
   }
@@ -542,6 +541,24 @@ public:
   //===--------------------------------------------------------------------===//
   // Type creation methods
   //===--------------------------------------------------------------------===//
+
+  /// Fetch the type representing an 8-bit byte.
+  ByteType *getByte8Ty() { return Type::getByte8Ty(Context); }
+
+  /// Fetch the type representing a 16-bit byte.
+  ByteType *getByte16Ty() { return Type::getByte16Ty(Context); }
+
+  /// Fetch the type representing a 32-bit byte.
+  ByteType *getByte32Ty() { return Type::getByte32Ty(Context); }
+
+  /// Fetch the type representing a 64-bit byte.
+  ByteType *getByte64Ty() { return Type::getByte64Ty(Context); }
+
+  /// Fetch the type representing a 128-bit byte.
+  ByteType *getByte128Ty() { return Type::getByte128Ty(Context); }
+
+  /// Fetch the type representing an N-bit byte.
+  ByteType *getByteNTy(unsigned N) { return Type::getByteNTy(Context, N); }
 
   /// Fetch the type representing a single bit
   IntegerType *getInt1Ty() {
@@ -604,6 +621,12 @@ public:
   /// Fetch the type representing a pointer.
   PointerType *getPtrTy(unsigned AddrSpace = 0) {
     return PointerType::get(Context, AddrSpace);
+  }
+
+  /// Fetch the type of a byte with size at least as big as that of a
+  /// pointer in the given address space.
+  ByteType *getBytePtrTy(const DataLayout &DL, unsigned AddrSpace = 0) {
+    return DL.getBytePtrType(Context, AddrSpace);
   }
 
   /// Fetch the type of an integer with size at least as big as that of a
@@ -969,6 +992,10 @@ public:
   /// in poison if type \p Ty is not big enough to hold the value.
   LLVM_ABI Value *CreateTypeSize(Type *Ty, TypeSize Size);
 
+  /// Get allocation size of an alloca as a runtime Value* (handles both static
+  /// and dynamic allocas and vscale factor).
+  LLVM_ABI Value *CreateAllocationSize(Type *DestTy, AllocaInst *AI);
+
   /// Creates a vector of type \p DstType with the linear sequence <0, 1, ...>
   LLVM_ABI Value *CreateStepVector(Type *DstType, const Twine &Name = "");
 
@@ -1173,39 +1200,38 @@ public:
     return Insert(ReturnInst::Create(Context, V));
   }
 
-  /// Create a sequence of N insertvalue instructions,
-  /// with one Value from the retVals array each, that build a aggregate
-  /// return value one value at a time, and a ret instruction to return
-  /// the resulting aggregate value.
+  /// Create a sequence of N insertvalue instructions, with one Value from the
+  /// RetVals array each, that build a aggregate return value one value at a
+  /// time, and a ret instruction to return the resulting aggregate value.
   ///
   /// This is a convenience function for code that uses aggregate return values
   /// as a vehicle for having multiple return values.
-  ReturnInst *CreateAggregateRet(Value *const *retVals, unsigned N) {
+  ReturnInst *CreateAggregateRet(ArrayRef<Value *> RetVals) {
     Value *V = PoisonValue::get(getCurrentFunctionReturnType());
-    for (unsigned i = 0; i != N; ++i)
-      V = CreateInsertValue(V, retVals[i], i, "mrv");
+    for (size_t i = 0, N = RetVals.size(); i != N; ++i)
+      V = CreateInsertValue(V, RetVals[i], i, "mrv");
     return Insert(ReturnInst::Create(Context, V));
   }
 
   /// Create an unconditional 'br label X' instruction.
-  BranchInst *CreateBr(BasicBlock *Dest) {
-    return Insert(BranchInst::Create(Dest));
+  UncondBrInst *CreateBr(BasicBlock *Dest) {
+    return Insert(UncondBrInst::Create(Dest));
   }
 
   /// Create a conditional 'br Cond, TrueDest, FalseDest'
   /// instruction.
-  BranchInst *CreateCondBr(Value *Cond, BasicBlock *True, BasicBlock *False,
+  CondBrInst *CreateCondBr(Value *Cond, BasicBlock *True, BasicBlock *False,
                            MDNode *BranchWeights = nullptr,
                            MDNode *Unpredictable = nullptr) {
-    return Insert(addBranchMetadata(BranchInst::Create(True, False, Cond),
+    return Insert(addBranchMetadata(CondBrInst::Create(Cond, True, False),
                                     BranchWeights, Unpredictable));
   }
 
   /// Create a conditional 'br Cond, TrueDest, FalseDest'
   /// instruction. Copy branch meta data if available.
-  BranchInst *CreateCondBr(Value *Cond, BasicBlock *True, BasicBlock *False,
+  CondBrInst *CreateCondBr(Value *Cond, BasicBlock *True, BasicBlock *False,
                            Instruction *MDSrc) {
-    BranchInst *Br = BranchInst::Create(True, False, Cond);
+    CondBrInst *Br = CondBrInst::Create(Cond, True, False);
     if (MDSrc) {
       unsigned WL[4] = {LLVMContext::MD_prof, LLVMContext::MD_unpredictable,
                         LLVMContext::MD_make_implicit, LLVMContext::MD_dbg};
@@ -1738,12 +1764,13 @@ public:
   }
 
   Value *CreateLogicalOp(Instruction::BinaryOps Opc, Value *Cond1, Value *Cond2,
-                         const Twine &Name = "") {
+                         const Twine &Name = "",
+                         Instruction *MDFrom = nullptr) {
     switch (Opc) {
     case Instruction::And:
-      return CreateLogicalAnd(Cond1, Cond2, Name);
+      return CreateLogicalAnd(Cond1, Cond2, Name, MDFrom);
     case Instruction::Or:
-      return CreateLogicalOr(Cond1, Cond2, Name);
+      return CreateLogicalOr(Cond1, Cond2, Name, MDFrom);
     default:
       break;
     }
@@ -1923,6 +1950,20 @@ public:
     return Insert(new AtomicRMWInst(Op, Ptr, Val, *Align, Ordering, SSID));
   }
 
+  CallInst *CreateStructuredGEP(Type *BaseType, Value *PtrBase,
+                                ArrayRef<Value *> Indices,
+                                const Twine &Name = "") {
+    SmallVector<Value *> Args;
+    Args.push_back(PtrBase);
+    llvm::append_range(Args, Indices);
+
+    CallInst *Output = CreateIntrinsic(Intrinsic::structured_gep,
+                                       {PtrBase->getType()}, Args, {}, Name);
+    Output->addParamAttr(
+        0, Attribute::get(getContext(), Attribute::ElementType, BaseType));
+    return Output;
+  }
+
   Value *CreateGEP(Type *Ty, Value *Ptr, ArrayRef<Value *> IdxList,
                    const Twine &Name = "",
                    GEPNoWrapFlags NW = GEPNoWrapFlags::none()) {
@@ -2013,23 +2054,6 @@ public:
                               const Twine &Name = "") {
     return CreateGEP(getInt8Ty(), Ptr, Offset, Name,
                      GEPNoWrapFlags::inBounds());
-  }
-
-  /// Same as CreateGlobalString, but return a pointer with "i8*" type
-  /// instead of a pointer to array of i8.
-  ///
-  /// If no module is given via \p M, it is take from the insertion point basic
-  /// block.
-  LLVM_DEPRECATED("Use CreateGlobalString instead", "CreateGlobalString")
-  Constant *CreateGlobalStringPtr(StringRef Str, const Twine &Name = "",
-                                  unsigned AddressSpace = 0,
-                                  Module *M = nullptr, bool AddNull = true) {
-    GlobalVariable *GV =
-        CreateGlobalString(Str, Name, AddressSpace, M, AddNull);
-    Constant *Zero = ConstantInt::get(Type::getInt32Ty(Context), 0);
-    Constant *Indices[] = {Zero, Zero};
-    return ConstantExpr::getInBoundsGetElementPtr(GV->getValueType(), GV,
-                                                  Indices);
   }
 
   //===--------------------------------------------------------------------===//
@@ -2292,6 +2316,13 @@ public:
   /// must be castable using a bitcast or ptrcast, because signedness is
   /// not specified.
   LLVM_ABI Value *CreateAggregateCast(Value *V, Type *DestTy);
+
+  /// Create a chain of casts to convert V to NewTy, preserving the bit pattern
+  /// of V. This may involve multiple casts (e.g., ptr -> i64 -> <2 x i32>).
+  /// The created cast instructions are inserted into the current basic block.
+  /// If no casts are needed, V is returned.
+  LLVM_ABI Value *CreateBitPreservingCastChain(const DataLayout &DL, Value *V,
+                                               Type *NewTy);
 
   //===--------------------------------------------------------------------===//
   // Instruction creation methods: Compare Instructions
@@ -2645,8 +2676,14 @@ public:
                          Name);
   }
 
-  /// Return the i64 difference between two pointer values, dividing out
-  /// the size of the pointed-to objects.
+  /// Return the difference between two pointer values. The returned value
+  /// type is the address type of the pointers.
+  LLVM_ABI Value *CreatePtrDiff(Value *LHS, Value *RHS, const Twine &Name = "",
+                                bool IsNUW = false);
+
+  /// Return the difference between two pointer values, dividing out the size
+  /// of the pointed-to objects. The returned value type is the address type
+  /// of the pointers.
   ///
   /// This is intended to implement C-style pointer subtraction. As such, the
   /// pointers must be appropriately aligned for their element types and
@@ -2667,15 +2704,27 @@ public:
   /// Return a vector value that contains the vector V reversed
   LLVM_ABI Value *CreateVectorReverse(Value *V, const Twine &Name = "");
 
-  /// Return a vector splice intrinsic if using scalable vectors, otherwise
-  /// return a shufflevector. If the immediate is positive, a vector is
-  /// extracted from concat(V1, V2), starting at Imm. If the immediate
-  /// is negative, we extract -Imm elements from V1 and the remaining
-  /// elements from V2. Imm is a signed integer in the range
-  /// -VL <= Imm < VL (where VL is the runtime vector length of the
-  /// source/result vector)
-  LLVM_ABI Value *CreateVectorSplice(Value *V1, Value *V2, int64_t Imm,
-                                     const Twine &Name = "");
+  /// Create a vector.splice.left intrinsic call, or a shufflevector that
+  /// produces the same result if the result type is a fixed-length vector and
+  /// \p Offset is a constant.
+  LLVM_ABI Value *CreateVectorSpliceLeft(Value *V1, Value *V2, Value *Offset,
+                                         const Twine &Name = "");
+
+  Value *CreateVectorSpliceLeft(Value *V1, Value *V2, uint32_t Offset,
+                                const Twine &Name = "") {
+    return CreateVectorSpliceLeft(V1, V2, getInt32(Offset), Name);
+  }
+
+  /// Create a vector.splice.right intrinsic call, or a shufflevector that
+  /// produces the same result if the result type is a fixed-length vector and
+  /// \p Offset is a constant.
+  LLVM_ABI Value *CreateVectorSpliceRight(Value *V1, Value *V2, Value *Offset,
+                                          const Twine &Name = "");
+
+  Value *CreateVectorSpliceRight(Value *V1, Value *V2, uint32_t Offset,
+                                 const Twine &Name = "") {
+    return CreateVectorSpliceRight(V1, V2, getInt32(Offset), Name);
+  }
 
   /// Return a vector value that contains \arg V broadcasted to \p
   /// NumElts elements.
