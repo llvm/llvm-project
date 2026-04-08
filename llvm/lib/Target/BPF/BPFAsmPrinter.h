@@ -9,8 +9,8 @@
 #ifndef LLVM_LIB_TARGET_BPF_BPFASMPRINTER_H
 #define LLVM_LIB_TARGET_BPF_BPFASMPRINTER_H
 
+#include "BPFBTFDebug.h"
 #include "BPFTargetMachine.h"
-#include "BTFDebug.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 
 namespace llvm {
@@ -37,7 +37,7 @@ public:
   static char ID;
 
 private:
-  BTFDebug *BTF;
+  BPFBTFDebug *BTF;
   TargetMachine &TM;
   bool SawTrapCall = false;
 

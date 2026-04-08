@@ -116,6 +116,9 @@ VALUE_DEBUGOPT(DwarfVersion, 3, 0, Compatible)
 /// CodeView and DWARF into the same object.
 DEBUGOPT(EmitCodeView, 1, 0, Compatible)
 
+/// Whether we should emit BTF debug information. BTF can coexist with DWARF.
+DEBUGOPT(EmitBTF, 1, 0, Compatible)
+
 /// Whether to emit the .debug$H section containing hashes of CodeView types.
 DEBUGOPT(CodeViewGHash, 1, 0, Compatible)
 
