@@ -36,8 +36,8 @@ define dso_local void @test(ptr %start, ptr %end) #0 {
 ; AVX2:       iter.check:
 ; AVX2-NEXT:    [[END3:%.*]] = ptrtoint ptr [[END]] to i64
 ; AVX2-NEXT:    [[START4:%.*]] = ptrtoint ptr [[START]] to i64
-; AVX2-NEXT:    [[TMP0:%.*]] = add i64 [[END3]], -4
-; AVX2-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[START4]]
+; AVX2-NEXT:    [[TMP0:%.*]] = sub i64 [[END3]], [[START4]]
+; AVX2-NEXT:    [[TMP1:%.*]] = add i64 [[TMP0]], -4
 ; AVX2-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 2
 ; AVX2-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[TMP2]], 1
 ; AVX2-NEXT:    [[MIN_ITERS_CHECK1:%.*]] = icmp ult i64 [[TMP1]], 28

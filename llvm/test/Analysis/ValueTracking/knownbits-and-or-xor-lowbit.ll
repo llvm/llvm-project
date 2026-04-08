@@ -191,9 +191,9 @@ define i1 @add_YX_xor_bit0_is_one_fail(i8 %x, i8 %C) nounwind {
 
 define <2 x i1> @add_XY_or_bit0_is_one_fail(<2 x i8> %x, <2 x i8> %C) nounwind {
 ; CHECK-LABEL: @add_XY_or_bit0_is_one_fail(
-; CHECK-NEXT:    [[C1:%.*]] = add <2 x i8> [[C:%.*]], splat (i8 1)
-; CHECK-NEXT:    [[Y:%.*]] = add <2 x i8> [[C1]], [[X:%.*]]
-; CHECK-NEXT:    [[W:%.*]] = or <2 x i8> [[X]], [[Y]]
+; CHECK-NEXT:    [[Y:%.*]] = add <2 x i8> [[C1:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[Y1:%.*]] = add <2 x i8> [[Y]], splat (i8 1)
+; CHECK-NEXT:    [[W:%.*]] = or <2 x i8> [[X]], [[Y1]]
 ; CHECK-NEXT:    [[R:%.*]] = icmp eq <2 x i8> [[W]], splat (i8 90)
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
