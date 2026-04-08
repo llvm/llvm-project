@@ -295,6 +295,8 @@ void OmpStructureChecker::CheckNestedConstruct(
     }
   }
 
+  // The loop sequence will correspond to the nest associated with the
+  // loop-associated construct being visited.
   LoopSequence sequence(body, version, true);
   auto assoc{llvm::omp::getDirectiveAssociation(dir)};
   auto needRange{GetAffectedLoopRangeWithReason(beginSpec, version)};
@@ -328,6 +330,14 @@ void OmpStructureChecker::CheckNestedConstruct(
 
     auto haveDepth{needPerfect ? havePerf : haveSema};
     std::string_view perfectTxt{needPerfect ? " perfect" : ""};
+
+    if (needDepth.value > 1 && IsDoConcurrentLegal(version)) {
+      if (auto *conc{sequence.getNestedDoConcurrent()}) {
+        auto &msg{context_.Say(*parser::GetSource(*conc->owner()),
+            "DO CONCURRENT must be the only affected loop in a loop nest"_err_en_US)};
+        needDepth.reason.AttachTo(msg);
+      }
+    }
 
     // If the present depth is 0, it's likely that the construct doesn't
     // have any loops in it, which would be diagnosed above.

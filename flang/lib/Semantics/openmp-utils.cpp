@@ -1259,6 +1259,25 @@ void LoopSequence::createChildrenFromRange(
   }
 }
 
+const LoopSequence *LoopSequence::getNestedDoConcurrent() const {
+  // DO CONCURRENT loops are considered invalid code, even though they
+  // can be allowed in some circumstances.
+  if (!invalidIC_) {
+    return nullptr;
+  }
+  // The invalidIC_ will point to the DO CONCURRENT if that's the only
+  // invalid loop construct, but it may also point to DO WHILE.
+  for (auto &sequence : children()) {
+    auto &owner{DEREF(sequence.entry_->owner)};
+    if (auto *loop{parser::Unwrap<parser::DoConstruct>(owner)}) {
+      if (loop->IsDoConcurrent()) {
+        return &sequence;
+      }
+    }
+  }
+  return nullptr;
+}
+
 std::vector<LoopControl> LoopSequence::getLoopControls() const {
   if (!entry_->owner) {
     return {};
@@ -1597,7 +1616,7 @@ WithReason<bool> LoopSequence::isWellFormedSequence() const {
 WithReason<bool> LoopSequence::isWellFormedNest() const {
   // DO CONCURRENT is allowed at the top level in OpenMP 6.0+.
   if (invalidIC_) {
-    if (version_ < 60 || !IsDoConcurrent(*invalidIC_)) {
+    if (!IsDoConcurrentLegal(version_) || !IsDoConcurrent(*invalidIC_)) {
       return {false, WhyNotWellFormed(*invalidIC_, false)};
     }
   }
