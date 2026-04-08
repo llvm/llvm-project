@@ -40,6 +40,9 @@ struct is_empty : integral_constant<bool, __is_empty(_Tp)> {};
 template <class _Tp>
 struct is_final : public integral_constant<bool, __is_final(_Tp)> {};
 
+template <typename T>
+struct is_reference : integral_constant<bool, __is_reference(T)> {};
+
 #if __has_cpp_attribute(msvc::no_unique_address)
 #define _LLDB_NO_UNIQUE_ADDRESS [[msvc::no_unique_address]]
 #elif __has_cpp_attribute(no_unique_address)
