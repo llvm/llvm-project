@@ -7,8 +7,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file contains the declaration of device_type enumeration representing
-/// type of devices that SYCL 2020 support.
+/// This file contains the declaration of the device_type enumeration.
 ///
 //===----------------------------------------------------------------------===//
 

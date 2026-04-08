@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file contains the declaration of the USM allocation functions.
+/// This file contains the declaration of USM allocation functions.
 ///
 //===----------------------------------------------------------------------===//
 

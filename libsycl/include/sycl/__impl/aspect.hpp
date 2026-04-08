@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file contains the declaration of aspect enumeration which is used to
+/// This file contains the declaration of an aspect enumeration which is used to
 /// identify characteristics of the device.
 ///
 //===----------------------------------------------------------------------===//

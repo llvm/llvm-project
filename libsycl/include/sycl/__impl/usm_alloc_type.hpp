@@ -8,7 +8,7 @@
 ///
 /// \file
 /// This file contains the declaration of the alloc enumeration that defines
-/// types of memory allocations supported by SYCL 2020.
+/// types of USM allocations.
 ///
 //===----------------------------------------------------------------------===//
 
