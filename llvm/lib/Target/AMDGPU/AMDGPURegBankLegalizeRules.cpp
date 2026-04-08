@@ -1814,4 +1814,34 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Uni(S32, {{UniInVgprS32}, {IntrId, Imm, Vgpr32, Imm, Vgpr32, Vgpr32}})
       .Div(S32, {{Vgpr32}, {IntrId, Imm, Vgpr32, Imm, Vgpr32, Vgpr32}});
 
+  // WMMA intrinsics: all register operands map to VGPR.
+  addRulesForIOpcs(
+      {// GFX11+
+       amdgcn_wmma_f32_16x16x16_f16, amdgcn_wmma_f32_16x16x16_bf16,
+       amdgcn_wmma_f16_16x16x16_f16, amdgcn_wmma_bf16_16x16x16_bf16,
+       amdgcn_wmma_f16_16x16x16_f16_tied, amdgcn_wmma_bf16_16x16x16_bf16_tied,
+       amdgcn_wmma_i32_16x16x16_iu8, amdgcn_wmma_i32_16x16x16_iu4,
+       // GFX12
+       amdgcn_wmma_f32_16x16x16_fp8_fp8, amdgcn_wmma_f32_16x16x16_fp8_bf8,
+       amdgcn_wmma_f32_16x16x16_bf8_fp8, amdgcn_wmma_f32_16x16x16_bf8_bf8,
+       amdgcn_wmma_i32_16x16x32_iu4,
+       // GFX1250
+       amdgcn_wmma_f32_16x16x4_f32, amdgcn_wmma_f32_16x16x32_bf16,
+       amdgcn_wmma_f32_16x16x32_f16, amdgcn_wmma_f16_16x16x32_f16,
+       amdgcn_wmma_bf16_16x16x32_bf16, amdgcn_wmma_bf16f32_16x16x32_bf16,
+       amdgcn_wmma_f32_16x16x64_fp8_fp8, amdgcn_wmma_f32_16x16x64_fp8_bf8,
+       amdgcn_wmma_f32_16x16x64_bf8_fp8, amdgcn_wmma_f32_16x16x64_bf8_bf8,
+       amdgcn_wmma_f16_16x16x64_fp8_fp8, amdgcn_wmma_f16_16x16x64_fp8_bf8,
+       amdgcn_wmma_f16_16x16x64_bf8_fp8, amdgcn_wmma_f16_16x16x64_bf8_bf8,
+       amdgcn_wmma_f16_16x16x128_fp8_fp8, amdgcn_wmma_f16_16x16x128_fp8_bf8,
+       amdgcn_wmma_f16_16x16x128_bf8_fp8, amdgcn_wmma_f16_16x16x128_bf8_bf8,
+       amdgcn_wmma_f32_16x16x128_fp8_fp8, amdgcn_wmma_f32_16x16x128_fp8_bf8,
+       amdgcn_wmma_f32_16x16x128_bf8_fp8, amdgcn_wmma_f32_16x16x128_bf8_bf8,
+       amdgcn_wmma_i32_16x16x64_iu8, amdgcn_wmma_f32_16x16x128_f8f6f4,
+       amdgcn_wmma_scale_f32_16x16x128_f8f6f4,
+       amdgcn_wmma_scale16_f32_16x16x128_f8f6f4, amdgcn_wmma_f32_32x16x128_f4,
+       amdgcn_wmma_scale_f32_32x16x128_f4,
+       amdgcn_wmma_scale16_f32_32x16x128_f4})
+      .Any({{}, {{}, {}, ApplyAllVgpr}});
+
 } // end initialize rules

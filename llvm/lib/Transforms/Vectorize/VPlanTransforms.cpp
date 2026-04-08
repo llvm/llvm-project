@@ -4102,6 +4102,19 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan) {
         continue;
       }
 
+      // Lower CanonicalIVIncrementForPart to plain Add.
+      if (match(
+              &R,
+              m_VPInstruction<VPInstruction::CanonicalIVIncrementForPart>())) {
+        auto *VPI = cast<VPInstruction>(&R);
+        VPValue *Add = Builder.createOverflowingOp(
+            Instruction::Add, VPI->operands(), VPI->getNoWrapFlags(),
+            VPI->getDebugLoc());
+        VPI->replaceAllUsesWith(Add);
+        ToRemove.push_back(VPI);
+        continue;
+      }
+
       // Lower BranchOnCount to ICmp + BranchOnCond.
       VPValue *IV, *TC;
       if (match(&R, m_BranchOnCount(m_VPValue(IV), m_VPValue(TC)))) {
