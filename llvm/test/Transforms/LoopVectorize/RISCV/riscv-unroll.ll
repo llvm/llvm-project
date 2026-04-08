@@ -4,7 +4,6 @@
 ; RUN: opt < %s -passes=loop-vectorize -force-target-max-vector-interleave=1 -mtriple=riscv64 -mattr=+v -scalable-vectorization=off -riscv-v-register-bit-width-lmul=2 -S | FileCheck %s --check-prefix=LMUL2
 ; RUN: opt < %s -passes=loop-vectorize -force-target-max-vector-interleave=1 -mtriple=riscv32 -mattr=+v -scalable-vectorization=off -riscv-v-register-bit-width-lmul=2 -S | FileCheck %s --check-prefix=LMUL2
 
-; Function Attrs: nounwind
 define ptr @array_add(ptr noalias nocapture readonly %a, ptr noalias nocapture readonly %b, ptr %c, i32 %size) {
 ; LMUL1-LABEL: @array_add(
 ; LMUL1-NEXT:  entry:

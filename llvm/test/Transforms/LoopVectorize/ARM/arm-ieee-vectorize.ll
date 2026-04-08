@@ -313,7 +313,7 @@ for.body:                                         ; preds = %entry, %for.body
   %0 = load float, ptr %arrayidx, align 4
   %arrayidx1 = getelementptr inbounds float, ptr %B, i32 %i.011
   %1 = load float, ptr %arrayidx1, align 4
-  %fabsf = tail call fast float @fabsf(float %1) #2
+  %fabsf = tail call fast float @fabsf(float %1) #1
   %conv3 = fmul fast float %fabsf, %0
   %arrayidx4 = getelementptr inbounds float, ptr %C, i32 %i.011
   store float %conv3, ptr %arrayidx4, align 4
@@ -327,5 +327,4 @@ for.end:                                          ; preds = %for.body, %entry
 
 declare float @fabsf(float)
 
-attributes #1 = { nounwind readnone "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="cortex-a8" "target-features"="+dsp,+neon,+vfp3" "use-soft-float"="false" }
-attributes #2 = { nounwind readnone "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="true" "no-nans-fp-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="cortex-a8" "target-features"="+dsp,+neon,+vfp3" "use-soft-float"="false" }
+attributes #1 = { readnone }

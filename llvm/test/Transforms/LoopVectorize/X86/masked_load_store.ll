@@ -17,7 +17,7 @@ target triple = "x86_64-pc_linux"
 ;  }
 ;}
 
-define void @foo1(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture readonly %trigger) #0 {
+define void @foo1(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture readonly %trigger) {
 ; AVX1-LABEL: define void @foo1(
 ; AVX1-SAME: ptr captures(none) [[A:%.*]], ptr readonly captures(none) [[B:%.*]], ptr readonly captures(none) [[TRIGGER:%.*]]) #[[ATTR0:[0-9]+]] {
 ; AVX1-NEXT:  [[ENTRY:.*:]]
@@ -238,7 +238,7 @@ for.end:                                          ; preds = %for.inc
 
 ; The same as @foo1 but all the pointers are address space 1 pointers.
 
-define void @foo1_addrspace1(ptr addrspace(1) nocapture %A, ptr addrspace(1) nocapture readonly %B, ptr addrspace(1) nocapture readonly %trigger) #0 {
+define void @foo1_addrspace1(ptr addrspace(1) nocapture %A, ptr addrspace(1) nocapture readonly %B, ptr addrspace(1) nocapture readonly %trigger) {
 ; AVX1-LABEL: define void @foo1_addrspace1(
 ; AVX1-SAME: ptr addrspace(1) captures(none) [[A:%.*]], ptr addrspace(1) readonly captures(none) [[B:%.*]], ptr addrspace(1) readonly captures(none) [[TRIGGER:%.*]]) #[[ATTR0]] {
 ; AVX1-NEXT:  [[ENTRY:.*:]]
@@ -468,7 +468,7 @@ for.end:                                          ; preds = %for.inc
 ;  }
 ;}
 
-define void @foo2(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture readonly %trigger) #0 {
+define void @foo2(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture readonly %trigger) {
 ; AVX1-LABEL: define void @foo2(
 ; AVX1-SAME: ptr captures(none) [[A:%.*]], ptr readonly captures(none) [[B:%.*]], ptr readonly captures(none) [[TRIGGER:%.*]]) #[[ATTR0]] {
 ; AVX1-NEXT:  [[ENTRY:.*:]]
@@ -710,7 +710,7 @@ for.end:                                          ; preds = %for.inc
 ;  }
 ;}
 
-define void @foo3(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture readonly %trigger) #0 {
+define void @foo3(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture readonly %trigger) {
 ; AVX1-LABEL: define void @foo3(
 ; AVX1-SAME: ptr captures(none) [[A:%.*]], ptr readonly captures(none) [[B:%.*]], ptr readonly captures(none) [[TRIGGER:%.*]]) #[[ATTR0]] {
 ; AVX1-NEXT:  [[ENTRY:.*:]]
@@ -962,7 +962,7 @@ for.end:                                          ; preds = %for.inc
 ;  }
 ;}
 
-define void @foo4(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture readonly %trigger) #0 {
+define void @foo4(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture readonly %trigger) {
 ; AVX-LABEL: define void @foo4(
 ; AVX-SAME: ptr captures(none) [[A:%.*]], ptr readonly captures(none) [[B:%.*]], ptr readonly captures(none) [[TRIGGER:%.*]]) #[[ATTR0:[0-9]+]] {
 ; AVX-NEXT:  [[ENTRY:.*]]:
@@ -1070,7 +1070,7 @@ for.end:                                          ; preds = %for.inc
 ;  }
 ;}
 
-define void @foo6(ptr nocapture readonly %in, ptr nocapture %out, i32 %size, ptr nocapture readonly %trigger) #0 {
+define void @foo6(ptr nocapture readonly %in, ptr nocapture %out, i32 %size, ptr nocapture readonly %trigger) {
 ; AVX1-LABEL: define void @foo6(
 ; AVX1-SAME: ptr readonly captures(none) [[IN:%.*]], ptr captures(none) [[OUT:%.*]], i32 [[SIZE:%.*]], ptr readonly captures(none) [[TRIGGER:%.*]]) #[[ATTR0]] {
 ; AVX1-NEXT:  [[ENTRY:.*]]:
@@ -1288,7 +1288,7 @@ for.end:                                          ; preds = %for.inc
 ;      out[i] = (double) 0.5;
 ; }
 
-define void @foo7(ptr noalias nocapture %out, ptr noalias nocapture readonly %in, ptr noalias nocapture readonly %trigger, i32 %size) #0 {
+define void @foo7(ptr noalias nocapture %out, ptr noalias nocapture readonly %in, ptr noalias nocapture readonly %trigger, i32 %size) {
 ; AVX1-LABEL: define void @foo7(
 ; AVX1-SAME: ptr noalias captures(none) [[OUT:%.*]], ptr noalias readonly captures(none) [[IN:%.*]], ptr noalias readonly captures(none) [[TRIGGER:%.*]], i32 [[SIZE:%.*]]) #[[ATTR0]] {
 ; AVX1-NEXT:  [[ENTRY:.*:]]
@@ -1609,7 +1609,7 @@ for.end:                                          ; preds = %for.inc, %entry
 ;      out[i] = (double) 0.5;
 ;}
 
-define void @foo8(ptr noalias nocapture %out, ptr noalias nocapture readonly %in, ptr noalias nocapture readonly %trigger, i32 %size) #0 {
+define void @foo8(ptr noalias nocapture %out, ptr noalias nocapture readonly %in, ptr noalias nocapture readonly %trigger, i32 %size) {
 ; AVX1-LABEL: define void @foo8(
 ; AVX1-SAME: ptr noalias captures(none) [[OUT:%.*]], ptr noalias readonly captures(none) [[IN:%.*]], ptr noalias readonly captures(none) [[TRIGGER:%.*]], i32 [[SIZE:%.*]]) #[[ATTR0]] {
 ; AVX1-NEXT:  [[ENTRY:.*:]]
@@ -1922,4 +1922,3 @@ for.end:                                          ; preds = %for.inc, %entry
   ret void
 }
 
-attributes #0 = { norecurse nounwind }

@@ -6,7 +6,7 @@
 ; GCN-NOT: store <2 x half>
 
 ; REMARK: remark: <unknown>:0:0: loop not vectorized: runtime pointer checks needed. Not enabled for divergent target
-define amdgpu_kernel void @runtime_check_divergent_target(ptr addrspace(1) nocapture %a, ptr addrspace(1) nocapture %b) #0 {
+define amdgpu_kernel void @runtime_check_divergent_target(ptr addrspace(1) nocapture %a, ptr addrspace(1) nocapture %b) {
 entry:
   br label %for.body
 
@@ -26,4 +26,3 @@ for.end:                                          ; preds = %for.body, %entry
   ret void
 }
 
-attributes #0 = { nounwind }

@@ -16,8 +16,7 @@
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 
-; Function Attrs: nounwind ssp uwtable
-define void @_Z4testPiS_i(ptr nocapture %A, ptr nocapture %B, i32 %number) #0 !dbg !4 {
+define void @_Z4testPiS_i(ptr nocapture %A, ptr nocapture %B, i32 %number) !dbg !4 {
 entry:
   %cmp25 = icmp sgt i32 %number, 0, !dbg !10
   br i1 %cmp25, label %for.body.preheader, label %for.end15, !dbg !10, !llvm.loop !12
@@ -65,8 +64,6 @@ for.end15.loopexit:                               ; preds = %for.body7
 for.end15:                                        ; preds = %for.end15.loopexit, %entry, %for.cond5.preheader
   ret void, !dbg !26
 }
-
-attributes #0 = { nounwind }
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!7, !8}

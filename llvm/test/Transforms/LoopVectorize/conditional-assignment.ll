@@ -4,8 +4,7 @@
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 
-; Function Attrs: nounwind ssp uwtable
-define void @conditional_store(ptr noalias nocapture %indices) #0 !dbg !4 {
+define void @conditional_store(ptr noalias nocapture %indices) !dbg !4 {
 entry:
   br label %for.body, !dbg !10
 
@@ -28,8 +27,6 @@ for.inc:                                          ; preds = %for.body, %if.then
 for.end:                                          ; preds = %for.inc
   ret void, !dbg !19
 }
-
-attributes #0 = { nounwind }
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!7, !8}

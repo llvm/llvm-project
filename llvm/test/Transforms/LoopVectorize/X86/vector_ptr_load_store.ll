@@ -19,7 +19,7 @@ target triple = "x86_64-apple-macosx10.8.0"
 ; CHECK: test_consecutive_store
 ; CHECK: LV: The Smallest and Widest types: 64 / 64 bits.
 ; CHECK: LV: Selecting VF: 4
-define void @test_consecutive_store(ptr, ptr, ptr nocapture) nounwind ssp uwtable align 2 {
+define void @test_consecutive_store(ptr, ptr, ptr nocapture) {
   %4 = load ptr, ptr %2, align 8
   %5 = icmp eq ptr %0, %1
   br i1 %5, label %12, label %6
@@ -54,7 +54,7 @@ define void @test_consecutive_store(ptr, ptr, ptr nocapture) nounwind ssp uwtabl
 ; CHECK: test_nonconsecutive_store
 ; CHECK: LV: The Smallest and Widest types: 16 / 64 bits.
 ; CHECK: LV: Selecting VF: 1
-define void @test_nonconsecutive_store() nounwind ssp uwtable {
+define void @test_nonconsecutive_store() {
   br label %1
 
 ; <label>:1                                       ; preds = %14, %0
@@ -97,7 +97,7 @@ define void @test_nonconsecutive_store() nounwind ssp uwtable {
 ; CHECK: test_consecutive_ptr_load
 ; CHECK: LV: The Smallest and Widest types: 8 / 64 bits.
 ; CHECK: LV: Selecting VF: 4
-define i8 @test_consecutive_ptr_load() nounwind readonly ssp uwtable {
+define i8 @test_consecutive_ptr_load() readonly {
   br label %1
 
 ; <label>:1                                       ; preds = %1, %0
@@ -122,7 +122,7 @@ define i8 @test_consecutive_ptr_load() nounwind readonly ssp uwtable {
 ; CHECK: test_nonconsecutive_ptr_load
 ; CHECK: LV: The Smallest and Widest types: 16 / 64 bits.
 ; CHECK: LV: Selecting VF: 4
-define void @test_nonconsecutive_ptr_load() nounwind ssp uwtable {
+define void @test_nonconsecutive_ptr_load() {
   br label %1
 
 ; <label>:1                                       ; preds = %13, %0

@@ -20,7 +20,7 @@
 target datalayout = "e-m:e-i64:64-n32:64"
 target triple = "powerpc64le-unknown-linux-gnu"
 
-define void @test(ptr %arg, ptr %arg1) align 2 {
+define void @test(ptr %arg, ptr %arg1) {
 bb:
   %tpm15 = load ptr, ptr %arg, align 8
   %tpm19 = load ptr, ptr %arg1, align 8

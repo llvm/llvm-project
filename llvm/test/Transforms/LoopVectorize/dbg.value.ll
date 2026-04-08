@@ -9,7 +9,6 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 @C = global [1024 x i32] zeroinitializer, align 16, !dbg !9
 ; CHECK-LABEL: @test(
 
-; Function Attrs: nounwind ssp uwtable
 define i32 @test() #0 !dbg !15 {
 entry:
   tail call void @llvm.dbg.value(metadata i32 0, metadata !19, metadata !21), !dbg !22
@@ -35,15 +34,11 @@ for.end:                                          ; preds = %for.body
   ret i32 0, !dbg !25
 }
 
-; Function Attrs: nounwind readnone
-
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
-
-; Function Attrs: nounwind readnone
 declare void @llvm.dbg.value(metadata, metadata, metadata) #1
 
-attributes #0 = { nounwind ssp uwtable "fp-contract-model"="standard" "frame-pointer"="non-leaf" "relocation-model"="pic" "ssp-buffers-size"="8" }
-attributes #1 = { nounwind readnone }
+attributes #0 = { "fp-contract-model"="standard" "frame-pointer"="non-leaf" "relocation-model"="pic" "ssp-buffers-size"="8" }
+attributes #1 = { readnone }
 
 !llvm.dbg.cu = !{!11}
 !llvm.module.flags = !{!14}

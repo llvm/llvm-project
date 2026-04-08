@@ -8,7 +8,7 @@ target triple = "powerpc64-unknown-linux-gnu"
 @global_data = external global %struct.GlobalData, align 16
 @ntimes = external hidden unnamed_addr global i32, align 4
 
-define signext i32 @s173() #0 {
+define signext i32 @s173() {
 ; CHECK-LABEL: define signext i32 @s173(
 ; CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
@@ -131,8 +131,6 @@ for.end12:                                        ; preds = %for.end, %entry
   ret i32 0
 
 }
-
-attributes #0 = { nounwind }
 
 ;.
 ; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
