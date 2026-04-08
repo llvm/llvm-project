@@ -1749,6 +1749,17 @@ genSimdImplicitLinear(lower::AbstractConverter &converter,
   }
 }
 
+static void genScopeClauses(
+    lower::AbstractConverter &converter, semantics::SemanticsContext &semaCtx,
+    const List<Clause> &clauses, mlir::Location loc,
+    mlir::omp::ScopeOperands &clauseOps,
+    llvm::SmallVectorImpl<const semantics::Symbol *> &reductionSyms) {
+  ClauseProcessor cp(converter, semaCtx, clauses);
+  cp.processAllocate(clauseOps);
+  cp.processNowait(clauseOps);
+  cp.processReduction(loc, clauseOps, reductionSyms);
+}
+
 static void genSingleClauses(lower::AbstractConverter &converter,
                              semantics::SemanticsContext &semaCtx,
                              const List<Clause> &clauses, mlir::Location loc,
@@ -2660,14 +2671,40 @@ genSectionsOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
   return sectionsOp;
 }
 
-static mlir::Operation *
+static mlir::omp::ScopeOp
 genScopeOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
            semantics::SemanticsContext &semaCtx, lower::pft::Evaluation &eval,
            mlir::Location loc, const ConstructQueue &queue,
            ConstructQueue::const_iterator item) {
-  if (!semaCtx.langOptions().OpenMPSimd)
-    TODO(loc, "Scope construct");
-  return nullptr;
+  lower::SymMapScope scope(symTable);
+  mlir::omp::ScopeOperands clauseOps;
+  llvm::SmallVector<const semantics::Symbol *> reductionSyms;
+  genScopeClauses(converter, semaCtx, item->clauses, loc, clauseOps,
+                  reductionSyms);
+
+  std::optional<DataSharingProcessor> dsp;
+  if (enableDelayedPrivatization) {
+    dsp.emplace(converter, semaCtx, item->clauses, eval,
+                lower::omp::isLastItemInQueue(item, queue),
+                /*useDelayedPrivatization=*/true, symTable);
+    dsp->processStep1(&clauseOps);
+  }
+
+  EntryBlockArgs args;
+  if (dsp)
+    args.priv.syms = dsp->getDelayedPrivSymbols();
+  args.priv.vars = clauseOps.privateVars;
+  args.reduction.syms = reductionSyms;
+  args.reduction.vars = clauseOps.reductionVars;
+
+  return genOpWithBody<mlir::omp::ScopeOp>(
+      OpWithBodyGenInfo(converter, symTable, semaCtx, loc, eval,
+                        llvm::omp::Directive::OMPD_scope)
+          .setClauses(&item->clauses)
+          .setEntryBlockArgs(&args)
+          .setDataSharingProcessor(enableDelayedPrivatization ? &dsp.value()
+                                                              : nullptr),
+      queue, item, clauseOps);
 }
 
 static mlir::omp::SingleOp
