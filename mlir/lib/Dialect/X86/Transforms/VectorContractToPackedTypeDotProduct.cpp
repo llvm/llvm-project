@@ -215,9 +215,6 @@ struct VectorContractToPackedTypeDotProduct
         isInVnniLayout(contractOp.getOperation(),
                        contractOp.getIndexingMapsArray(), blockingFactor);
 
-    // if (lhsTy.getElementType().isSignlessInteger(8) && !isVnni)
-    // return failure();
-
     VectorType accTy = dyn_cast<VectorType>(contractOp.getAccType());
     if (!accTy)
       return rewriter.notifyMatchFailure(contractOp, "Wrong accmulator type.");
