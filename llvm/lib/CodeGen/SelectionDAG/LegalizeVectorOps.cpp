@@ -775,6 +775,7 @@ void VectorLegalizer::Promote(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
     PromoteSTRICT(Node, Results);
     return;
   case ISD::VECREDUCE_FADD:
+  case ISD::VECREDUCE_FMUL:
     PromoteFloatVECREDUCE(Node, Results, /*NonArithmetic=*/false);
     return;
   case ISD::VECREDUCE_FMAX:
@@ -1076,6 +1077,20 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
       return;
     }
     break;
+  case ISD::FCANONICALIZE: {
+    // If the scalar element type has a
+    // Legal/Custom FCANONICALIZE, don't
+    // mess with the vector, fall back.
+    EVT VT = Node->getValueType(0);
+    EVT EltVT = VT.getVectorElementType();
+    if (TLI.getOperationAction(ISD::FCANONICALIZE, EltVT.getSimpleVT()) !=
+        TargetLowering::Expand)
+      break;
+    // Otherwise canonicalize the whole vector.
+    SDValue Mul = TLI.expandFCANONICALIZE(Node, DAG);
+    Results.push_back(Mul);
+    return;
+  }
   case ISD::FSUB:
     ExpandFSUB(Node, Results);
     return;

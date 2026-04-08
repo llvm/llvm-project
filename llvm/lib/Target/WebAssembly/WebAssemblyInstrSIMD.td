@@ -1369,7 +1369,7 @@ multiclass PMinMaxInt<Vec vec, NI baseMinInst, NI baseMaxInst> {
 // the wasm_simd128.h intrinsics because v128_t is an integer vector.
 foreach vec = [F32x4, F64x2, F16x8] in {
   defvar pmin = !cast<NI>("PMIN_"#vec);
-  defvar pmax = !cast<NI>("PMAX_"#vec); 
+  defvar pmax = !cast<NI>("PMAX_"#vec);
   defm : PMinMaxInt<vec, pmin, pmax>;
 }
 
@@ -1641,6 +1641,8 @@ defm "" : SIMDConvert<F32x4, F64x2, demote_zero,
 def promote_t : SDTypeProfile<1, 1, [SDTCisVec<0>, SDTCisVec<1>]>;
 def promote_low : SDNode<"WebAssemblyISD::PROMOTE_LOW", promote_t>;
 defm "" : SIMDConvert<F64x2, F32x4, promote_low, "promote_low_f32x4", 0x5f>;
+defm "" : HalfPrecisionConvert<F32x4, I16x8, promote_low, "promote_low_f16x8",
+                               0x14b>;
 
 // Lower extending loads to load64_zero + promote_low
 def extloadv2f32 : PatFrag<(ops node:$ptr), (extload node:$ptr)> {
@@ -1842,21 +1844,21 @@ def relaxed_fmax : SDNode<"WebAssemblyISD::RELAXED_FMAX", SDTFPBinOp>;
 def relaxed_pmin :
   PatFrag<(ops node:$lhs, node:$rhs), (pmin $lhs, $rhs), [{
   return (N->getFlags().hasNoNaNs() ||
-          (CurDAG->isKnownNeverNaN(N->getOperand(0)) &&
-           CurDAG->isKnownNeverNaN(N->getOperand(1)))) &&
+          (CurDAG->isKnownNeverNaN(N->getOperand(1)) &&
+           CurDAG->isKnownNeverNaN(N->getOperand(2)))) &&
          (N->getFlags().hasNoSignedZeros() ||
-          CurDAG->isKnownNeverZeroFloat(N->getOperand(0)) ||
-          CurDAG->isKnownNeverZeroFloat(N->getOperand(1)));
+          CurDAG->isKnownNeverZeroFloat(N->getOperand(1)) ||
+          CurDAG->isKnownNeverZeroFloat(N->getOperand(2)));
 }]>;
 
 def relaxed_pmax :
   PatFrag<(ops node:$lhs, node:$rhs), (pmax $lhs, $rhs), [{
   return (N->getFlags().hasNoNaNs() ||
-          (CurDAG->isKnownNeverNaN(N->getOperand(0)) &&
-           CurDAG->isKnownNeverNaN(N->getOperand(1)))) &&
+          ((CurDAG->isKnownNeverNaN(N->getOperand(1))) &&
+           CurDAG->isKnownNeverNaN(N->getOperand(2)))) &&
          (N->getFlags().hasNoSignedZeros() ||
-          CurDAG->isKnownNeverZeroFloat(N->getOperand(0)) ||
-          CurDAG->isKnownNeverZeroFloat(N->getOperand(1)));
+          CurDAG->isKnownNeverZeroFloat(N->getOperand(1)) ||
+          CurDAG->isKnownNeverZeroFloat(N->getOperand(2)));
 }]>;
 
 let Predicates = [HasRelaxedSIMD] in {
