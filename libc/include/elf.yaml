@@ -1,5 +1,4 @@
 header: elf.h
-header_template: elf.h.def
 standards:
   - svid
 macros:
@@ -485,6 +484,34 @@ macros:
     macro_value: 58
   - macro_name: R_X86_64_IRELATIVE
     macro_value: 37
+  - macro_name: ELF32_ST_BIND
+    macro_header: elf-macros.h
+  - macro_name: ELF32_ST_TYPE
+    macro_header: elf-macros.h
+  - macro_name: ELF32_ST_INFO
+    macro_header: elf-macros.h
+  - macro_name: ELF64_ST_BIND
+    macro_header: elf-macros.h
+  - macro_name: ELF64_ST_TYPE
+    macro_header: elf-macros.h
+  - macro_name: ELF64_ST_INFO
+    macro_header: elf-macros.h
+  - macro_name: ELF32_ST_VISIBILITY
+    macro_header: elf-macros.h
+  - macro_name: ELF64_ST_VISIBILITY
+    macro_header: elf-macros.h
+  - macro_name: ELF32_R_SYM
+    macro_header: elf-macros.h
+  - macro_name: ELF32_R_TYPE
+    macro_header: elf-macros.h
+  - macro_name: ELF32_R_INFO
+    macro_header: elf-macros.h
+  - macro_name: ELF64_R_SYM
+    macro_header: elf-macros.h
+  - macro_name: ELF64_R_TYPE
+    macro_header: elf-macros.h
+  - macro_name: ELF64_R_INFO
+    macro_header: elf-macros.h
 types:
   - type_name: Elf32_Addr
   - type_name: Elf32_Chdr
