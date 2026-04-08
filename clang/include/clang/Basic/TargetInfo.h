@@ -826,8 +826,9 @@ public:
   unsigned getIbm128Align() const { return Ibm128Align; }
   const llvm::fltSemantics &getIbm128Format() const { return *Ibm128Format; }
 
-  /// getMetaInfoWidth/Align - Returns the size/align of std::meta::info.
+  /// Returns the size of std::meta::info.
   unsigned getMetaInfoWidth() const { return MetaInfoWidth; }
+  /// eturns the align of std::meta::info.
   unsigned getMetaInfoAlign() const { return MetaInfoAlign; }
 
   /// Return the mangled code of long double.
