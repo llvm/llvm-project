@@ -113,7 +113,8 @@ void CompilerInstance::setAuxTarget(TargetInfo *Value) { AuxTarget = Value; }
 
 bool CompilerInstance::createTarget() {
 
-  // Validate Vulkan environment for SPIRV. 
+  // SPIR-V targeting requires a fully specified Vulkan environment.
+  // Validate here before CreateTargetInfo() to emit a proper diagnostic
   llvm::Triple Triple(getInvocation().getTargetOpts().Triple);
   if (Triple.getArch() == llvm::Triple::spirv) {
     if (Triple.getOS() != llvm::Triple::Vulkan ||
