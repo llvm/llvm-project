@@ -60,50 +60,21 @@
 // RUN: llvm-offload-binary -o %t.dev.out \
 // RUN:   --image=file=%t.dev.bc,kind=hip,triple=spirv64-unknown-chipstar,arch=generic
 
-// Test the in-tree SPIR-V backend path (no llvm-spirv available).
-// Run from a directory that doesn't contain llvm-spirv and use
-// --no-canonical-prefixes so getExecutableDir() looks there instead of
-// the build bin dir. Empty PATH ensures PATH lookup also fails.
-// RUN: mkdir -p %t/no-spirv %t/empty
-// RUN: ln -sf clang-linker-wrapper %t/no-spirv/clang-linker-wrapper
-// RUN: env "PATH=%t/empty" %t/no-spirv/clang-linker-wrapper \
-// RUN:   --no-canonical-prefixes --dry-run \
+// The linker wrapper forwards --hip-path from --device-compiler= to the inner
+// clang invocation; the HIPSPV toolchain inside that clang then drives the
+// llvm-link / opt (HipSpvPasses) / SPIR-V backend pipeline (covered by the
+// CHIPSTAR run below).
+// RUN: clang-linker-wrapper --dry-run \
 // RUN:   --device-compiler=spirv64-unknown-chipstar=--hip-path="%S/Inputs/hipspv" \
 // RUN:   --host-triple=spirv64-unknown-chipstar \
 // RUN:   --linker-path=clang-offload-bundler \
 // RUN:   --emit-fatbin-only -o /dev/null %t.dev.out \
 // RUN: 2>&1 | FileCheck %s --check-prefix=WRAPPER -DHIP_PATH=%S/Inputs/hipspv
 
-// The linker wrapper runs opt (HipSpvPasses) then uses the in-tree SPIR-V
-// backend when llvm-spirv is not available.
-// WRAPPER: "{{.*}}opt" {{.*}}-load-pass-plugin
-// WRAPPER-SAME: {{.*}}libLLVMHipSpvPasses.so
-// WRAPPER-SAME: -passes=hip-post-link-passes
-
-// WRAPPER: "{{.*}}clang{{.*}}" --no-default-config -o
+// WRAPPER: clang{{.*}}" --no-default-config -o {{[^ ]*.img}}
 // WRAPPER-SAME: --target=spirv64-unknown-chipstar
-// WRAPPER-SAME: -mllvm -spirv-ext=+SPV_INTEL_function_pointers,+SPV_INTEL_subgroups,+SPV_EXT_relaxed_printf_string_address_space,+SPV_KHR_bit_instructions,+SPV_EXT_shader_atomic_float_add
-// WRAPPER-SAME: -c -x ir
-
-// Test the llvm-spirv translator path (llvm-spirv available in executable dir).
-// Place a fake llvm-spirv next to the clang-linker-wrapper symlink.
-// RUN: mkdir -p %t/with-spirv
-// RUN: ln -sf clang-linker-wrapper %t/with-spirv/clang-linker-wrapper
-// RUN: touch %t/with-spirv/llvm-spirv && chmod +x %t/with-spirv/llvm-spirv
-// RUN: env "PATH=%t/empty" %t/with-spirv/clang-linker-wrapper \
-// RUN:   --no-canonical-prefixes --dry-run \
-// RUN:   --device-compiler=spirv64-unknown-chipstar=--hip-path="%S/Inputs/hipspv" \
-// RUN:   --host-triple=spirv64-unknown-chipstar \
-// RUN:   --linker-path=clang-offload-bundler \
-// RUN:   --emit-fatbin-only -o /dev/null %t.dev.out \
-// RUN: 2>&1 | FileCheck %s --check-prefix=WRAPPER-TR
-
-// WRAPPER-TR: "{{.*}}opt" {{.*}}-load-pass-plugin
-// WRAPPER-TR-SAME: {{.*}}libLLVMHipSpvPasses.so
-// WRAPPER-TR-SAME: -passes=hip-post-link-passes
-
-// WRAPPER-TR: "{{.*}}llvm-spirv" {{.*}}--spirv-max-version=1.2
-// WRAPPER-TR-SAME: --spirv-ext=-all,+SPV_INTEL_function_pointers,+SPV_INTEL_subgroups
+// WRAPPER-SAME: {{[^ ]*.o}}
+// WRAPPER-SAME: --hip-path=[[HIP_PATH]]
 
 // RUN: touch %t.dummy.o
 // RUN: %clang -### --no-default-config -o %t.dummy.img \
