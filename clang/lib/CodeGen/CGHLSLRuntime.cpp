@@ -127,7 +127,7 @@ static const VarDecl *findStructResourceParentDeclAndBuildName(
       E = ICE->getSubExpr();
     else if (const auto *ASE = dyn_cast<ArraySubscriptExpr>(E))
       E = ASE->getBase();
-    else if (const auto *TE = dyn_cast<CXXThisExpr>(E))
+    else if (isa<CXXThisExpr>(E))
       // Resource member access on "this" pointer not yet implemented
       // (llvm/llvm-project#190299)
       return nullptr;
