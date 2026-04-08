@@ -6873,9 +6873,8 @@ static inline bool isSETCCorConvertedSETCC(SDValue N) {
 // to ToMaskVT if needed with vector extension or truncation.
 SDValue DAGTypeLegalizer::convertMask(SDValue InMask, EVT MaskVT,
                                       EVT ToMaskVT) {
-  // Currently a SETCC or a AND/OR/XOR with two SETCCs are handled.
-  // FIXME: This code seems to be too restrictive, we might consider
-  // generalizing it or dropping it.
+  // Called from convertMaskTree for SETCC leaf nodes. Re-creates the SETCC with
+  // result type MaskVT, then sign-extends/truncates and pads to ToMaskVT.
   assert(isSETCCorConvertedSETCC(InMask) && "Unexpected mask argument.");
 
   // Make a new Mask node, with a legal result VT.
@@ -6892,9 +6891,14 @@ SDValue DAGTypeLegalizer::convertMask(SDValue InMask, EVT MaskVT,
     Mask = DAG.getNode(InMask->getOpcode(), SDLoc(InMask), MaskVT, Ops,
                        InMask->getFlags());
 
-  // If MaskVT has smaller or bigger elements than ToMaskVT, a vector sign
-  // extend or truncate is needed.
+  return adjustMaskToType(Mask, ToMaskVT);
+}
+
+// Adjust element width (sign-extend/truncate) and element count
+// (extract/concat) of Mask to match ToMaskVT.
+SDValue DAGTypeLegalizer::adjustMaskToType(SDValue Mask, EVT ToMaskVT) {
   LLVMContext &Ctx = *DAG.getContext();
+  EVT MaskVT = Mask.getValueType();
   unsigned MaskScalarBits = MaskVT.getScalarSizeInBits();
   unsigned ToMaskScalBits = ToMaskVT.getScalarSizeInBits();
   if (MaskScalarBits < ToMaskScalBits) {
@@ -6929,6 +6933,125 @@ SDValue DAGTypeLegalizer::convertMask(SDValue InMask, EVT MaskVT,
   return Mask;
 }
 
+// Adjust both operands to a common intermediate mask type, picking a scalar
+// width that minimizes extend/truncate overhead given the final target ToVT.
+EVT DAGTypeLegalizer::unifyMaskTypes(SDValue &Op0, SDValue &Op1, EVT ToVT) {
+  assert(Op0.getValueType().getVectorNumElements() ==
+             Op1.getValueType().getVectorNumElements() &&
+         "unifyMaskTypes only handles scalar width differences");
+  unsigned Bits0 = Op0.getValueType().getScalarSizeInBits();
+  unsigned Bits1 = Op1.getValueType().getScalarSizeInBits();
+  unsigned NarrowBits = std::min(Bits0, Bits1);
+  unsigned WideBits = std::max(Bits0, Bits1);
+  unsigned ToBits = ToVT.getScalarSizeInBits();
+  unsigned IntBits = NarrowBits == WideBits ? NarrowBits
+                     : ToBits >= WideBits   ? WideBits
+                     : ToBits <= NarrowBits ? NarrowBits
+                                            : ToBits;
+  EVT OpVT = EVT::getVectorVT(*DAG.getContext(), MVT::getIntegerVT(IntBits),
+                              Op0.getValueType().getVectorNumElements());
+  Op0 = adjustMaskToType(Op0, OpVT);
+  Op1 = adjustMaskToType(Op1, OpVT);
+  return OpVT;
+}
+
+SDValue DAGTypeLegalizer::convertMaskTree(SDValue V, EVT ToVT, unsigned Depth) {
+  if (Depth >= DAG.MaxRecursionDepth)
+    return SDValue();
+
+  SDValue Result = [&]() -> SDValue {
+    unsigned Opcode = V.getOpcode();
+
+    // Base case: SETCC produces the mask at its natural type.
+    if (isSETCCOp(Opcode)) {
+      EVT MaskVT = getSetCCResultType(getSETCCOperandType(V));
+      return convertMask(V, MaskVT, MaskVT);
+    }
+
+    // Base case: all-zeros or all-ones BUILD_VECTOR. Use ToVT directly since
+    // these are invariant under sign-extend/truncate.
+    if (ISD::isBuildVectorAllZeros(V.getNode()))
+      return DAG.getConstant(0, SDLoc(V), ToVT);
+    if (ISD::isBuildVectorAllOnes(V.getNode()))
+      return DAG.getAllOnesConstant(SDLoc(V), ToVT);
+
+    SDLoc DL(V);
+
+    // Logical operations (AND/OR/XOR): try picking the best fitting width out
+    // of children's element widths.
+    if (isLogicalMaskOp(Opcode)) {
+      SDValue Op0 = convertMaskTree(V.getOperand(0), ToVT, Depth + 1);
+      if (!Op0)
+        return SDValue();
+      SDValue Op1 = convertMaskTree(V.getOperand(1), ToVT, Depth + 1);
+      if (!Op1)
+        return SDValue();
+      EVT OpVT = unifyMaskTypes(Op0, Op1, ToVT);
+      return DAG.getNode(Opcode, DL, OpVT, Op0, Op1);
+    }
+
+    // FREEZE: widen the operand and re-wrap.
+    if (Opcode == ISD::FREEZE) {
+      SDValue Inner = convertMaskTree(V.getOperand(0), ToVT, Depth + 1);
+      if (!Inner)
+        return SDValue();
+      return DAG.getNode(ISD::FREEZE, DL, Inner.getValueType(), Inner);
+    }
+
+    // Vector shuffle: try inferring the best fitting width from operands.
+    if (Opcode == ISD::VECTOR_SHUFFLE) {
+      // Bail out when the number of elements is different, we can't
+      // simply reuse shuffle mask in this case.
+      if (V.getValueType().getVectorNumElements() !=
+          ToVT.getVectorNumElements())
+        return SDValue();
+
+      auto *Shuf = cast<ShuffleVectorSDNode>(V);
+      SDValue Op0 = convertMaskTree(V.getOperand(0), ToVT, Depth + 1);
+      if (!Op0)
+        return SDValue();
+      if (V.getOperand(1).isUndef()) {
+        EVT OpVT = Op0.getValueType();
+        return DAG.getVectorShuffle(OpVT, DL, Op0, DAG.getUNDEF(OpVT),
+                                    Shuf->getMask());
+      }
+      SDValue Op1 = convertMaskTree(V.getOperand(1), ToVT, Depth + 1);
+      if (!Op1)
+        return SDValue();
+      EVT OpVT = unifyMaskTypes(Op0, Op1, ToVT);
+      return DAG.getVectorShuffle(OpVT, DL, Op0, Op1, Shuf->getMask());
+    }
+
+    // SELECT/VSELECT: try inferring the best fitting width from operands.
+    if (Opcode == ISD::SELECT || Opcode == ISD::VSELECT) {
+      SDValue Op1 = convertMaskTree(V.getOperand(1), ToVT, Depth + 1);
+      if (!Op1)
+        return SDValue();
+      SDValue Op2 = convertMaskTree(V.getOperand(2), ToVT, Depth + 1);
+      if (!Op2)
+        return SDValue();
+      EVT OpVT = unifyMaskTypes(Op1, Op2, ToVT);
+
+      SDValue Cond = V.getOperand(0);
+      if (Opcode == ISD::VSELECT) {
+        Cond = convertMaskTree(Cond, ToVT, Depth + 1);
+        if (!Cond)
+          return SDValue();
+        Cond = adjustMaskToType(Cond, OpVT);
+      }
+      return DAG.getNode(Opcode, DL, OpVT, Cond, Op1, Op2);
+    }
+
+    return SDValue();
+  }();
+
+  if (!Result)
+    return SDValue();
+  if (Depth == 0)
+    Result = adjustMaskToType(Result, ToVT);
+  return Result;
+}
+
 // This method tries to handle some special cases for the vselect mask
 // and if needed adjusting the mask vector type to match that of the VSELECT.
 // Without it, many cases end up with scalarization of the SETCC, with many
@@ -6938,9 +7061,6 @@ SDValue DAGTypeLegalizer::WidenVSELECTMask(SDNode *N) {
   SDValue Cond = N->getOperand(0);
 
   if (N->getOpcode() != ISD::VSELECT)
-    return SDValue();
-
-  if (!isSETCCOp(Cond->getOpcode()) && !isLogicalMaskOp(Cond->getOpcode()))
     return SDValue();
 
   // If this is a splitted VSELECT that was previously already handled, do
@@ -6995,49 +7115,8 @@ SDValue DAGTypeLegalizer::WidenVSELECTMask(SDNode *N) {
   if (!ToMaskVT.getScalarType().isInteger())
     ToMaskVT = ToMaskVT.changeVectorElementTypeToInteger();
 
-  SDValue Mask;
-  if (isSETCCOp(Cond->getOpcode())) {
-    EVT MaskVT = getSetCCResultType(getSETCCOperandType(Cond));
-    Mask = convertMask(Cond, MaskVT, ToMaskVT);
-  } else if (isLogicalMaskOp(Cond->getOpcode()) &&
-             isSETCCOp(Cond->getOperand(0).getOpcode()) &&
-             isSETCCOp(Cond->getOperand(1).getOpcode())) {
-    // Cond is (AND/OR/XOR (SETCC, SETCC))
-    SDValue SETCC0 = Cond->getOperand(0);
-    SDValue SETCC1 = Cond->getOperand(1);
-    EVT VT0 = getSetCCResultType(getSETCCOperandType(SETCC0));
-    EVT VT1 = getSetCCResultType(getSETCCOperandType(SETCC1));
-    unsigned ScalarBits0 = VT0.getScalarSizeInBits();
-    unsigned ScalarBits1 = VT1.getScalarSizeInBits();
-    unsigned ScalarBits_ToMask = ToMaskVT.getScalarSizeInBits();
-    EVT MaskVT;
-    // If the two SETCCs have different VTs, either extend/truncate one of
-    // them to the other "towards" ToMaskVT, or truncate one and extend the
-    // other to ToMaskVT.
-    if (ScalarBits0 != ScalarBits1) {
-      EVT NarrowVT = ((ScalarBits0 < ScalarBits1) ? VT0 : VT1);
-      EVT WideVT = ((NarrowVT == VT0) ? VT1 : VT0);
-      if (ScalarBits_ToMask >= WideVT.getScalarSizeInBits())
-        MaskVT = WideVT;
-      else if (ScalarBits_ToMask <= NarrowVT.getScalarSizeInBits())
-        MaskVT = NarrowVT;
-      else
-        MaskVT = ToMaskVT;
-    } else
-      // If the two SETCCs have the same VT, don't change it.
-      MaskVT = VT0;
-
-    // Make new SETCCs and logical nodes.
-    SETCC0 = convertMask(SETCC0, VT0, MaskVT);
-    SETCC1 = convertMask(SETCC1, VT1, MaskVT);
-    Cond = DAG.getNode(Cond->getOpcode(), SDLoc(Cond), MaskVT, SETCC0, SETCC1);
-
-    // Convert the logical op for VSELECT if needed.
-    Mask = convertMask(Cond, MaskVT, ToMaskVT);
-  } else
-    return SDValue();
-
-  return Mask;
+  // Try to recursively widen the mask expression tree to the target type.
+  return convertMaskTree(Cond, ToMaskVT);
 }
 
 SDValue DAGTypeLegalizer::WidenVecRes_Select(SDNode *N) {

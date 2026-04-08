@@ -382,13 +382,10 @@ define <4 x float> @shuffle_zip1(<4 x float> %arg) {
 ; CHECK-LABEL: shuffle_zip1:
 ; CHECK:       // %bb.0: // %bb
 ; CHECK-NEXT:    fcmgt.4s v0, v0, #0.0
-; CHECK-NEXT:    uzp1.8h v1, v0, v0
-; CHECK-NEXT:    xtn.4h v0, v0
-; CHECK-NEXT:    xtn.4h v1, v1
-; CHECK-NEXT:    zip2.4h v0, v0, v1
 ; CHECK-NEXT:    fmov.4s v1, #1.00000000
-; CHECK-NEXT:    zip1.4h v0, v0, v0
-; CHECK-NEXT:    sshll.4s v0, v0, #0
+; CHECK-NEXT:    uzp1.4s v2, v0, v0
+; CHECK-NEXT:    zip2.4s v0, v0, v2
+; CHECK-NEXT:    zip1.4s v0, v0, v0
 ; CHECK-NEXT:    and.16b v0, v0, v1
 ; CHECK-NEXT:    ret
 bb:
@@ -403,13 +400,10 @@ define <4 x i32> @shuffle_zip2(<4 x i32> %arg) {
 ; CHECK-LABEL: shuffle_zip2:
 ; CHECK:       // %bb.0: // %bb
 ; CHECK-NEXT:    cmtst.4s v0, v0, v0
-; CHECK-NEXT:    uzp1.8h v1, v0, v0
-; CHECK-NEXT:    xtn.4h v0, v0
-; CHECK-NEXT:    xtn.4h v1, v1
-; CHECK-NEXT:    zip2.4h v0, v0, v1
 ; CHECK-NEXT:    movi.4s v1, #1
-; CHECK-NEXT:    zip1.4h v0, v0, v0
-; CHECK-NEXT:    ushll.4s v0, v0, #0
+; CHECK-NEXT:    uzp1.4s v2, v0, v0
+; CHECK-NEXT:    zip2.4s v0, v0, v2
+; CHECK-NEXT:    zip1.4s v0, v0, v0
 ; CHECK-NEXT:    and.16b v0, v0, v1
 ; CHECK-NEXT:    ret
 bb:
@@ -424,13 +418,10 @@ define <4 x i32> @shuffle_zip3(<4 x i32> %arg) {
 ; CHECK-LABEL: shuffle_zip3:
 ; CHECK:       // %bb.0: // %bb
 ; CHECK-NEXT:    cmgt.4s v0, v0, #0
-; CHECK-NEXT:    uzp1.8h v1, v0, v0
-; CHECK-NEXT:    xtn.4h v0, v0
-; CHECK-NEXT:    xtn.4h v1, v1
-; CHECK-NEXT:    zip2.4h v0, v0, v1
 ; CHECK-NEXT:    movi.4s v1, #1
-; CHECK-NEXT:    zip1.4h v0, v0, v0
-; CHECK-NEXT:    ushll.4s v0, v0, #0
+; CHECK-NEXT:    uzp1.4s v2, v0, v0
+; CHECK-NEXT:    zip2.4s v0, v0, v2
+; CHECK-NEXT:    zip1.4s v0, v0, v0
 ; CHECK-NEXT:    and.16b v0, v0, v1
 ; CHECK-NEXT:    ret
 bb:
