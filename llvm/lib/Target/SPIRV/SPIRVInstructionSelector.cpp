@@ -235,6 +235,9 @@ private:
   bool selectOpIsNan(Register ResVReg, SPIRVTypeInst ResType,
                      MachineInstr &I) const;
 
+  bool selectPopCount(Register ResVReg, SPIRVTypeInst ResType,
+                      MachineInstr &I, unsigned Opcode) const;
+
   template <bool Signed>
   bool selectDot4AddPacked(Register ResVReg, SPIRVTypeInst ResType,
                            MachineInstr &I) const;
@@ -1020,7 +1023,7 @@ bool SPIRVInstructionSelector::spvSelect(Register ResVReg,
     return selectIToF(ResVReg, ResType, I, false, SPIRV::OpConvertUToF);
 
   case TargetOpcode::G_CTPOP:
-    return selectUnOp(ResVReg, ResType, I, SPIRV::OpBitCount);
+    return selectPopCount(ResVReg, ResType, I, SPIRV::OpBitCount);
   case TargetOpcode::G_SMIN:
     return selectExtInst(ResVReg, ResType, I, CL::s_min, GL::SMin);
   case TargetOpcode::G_UMIN:
@@ -1557,6 +1560,13 @@ bool SPIRVInstructionSelector::selectOpWithSrcs(Register ResVReg,
   }
   MIB.constrainAllUses(TII, TRI, RBI);
   return true;
+}
+
+bool SPIRVInstructionSelector::handlePopCount(Register ResVReg,
+                                          SPIRVTypeInst ResType,
+                                          MachineInstr &I,
+                                          unsigned Opcode) const {
+
 }
 
 bool SPIRVInstructionSelector::selectUnOp(Register ResVReg,
