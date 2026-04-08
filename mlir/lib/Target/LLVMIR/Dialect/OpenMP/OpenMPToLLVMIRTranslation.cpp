@@ -2855,16 +2855,17 @@ convertOmpTaskOp(omp::TaskOp taskOp, llvm::IRBuilderBase &builder,
 /// The correct entry point is convertOmpTaskloopContextOp. This gets called
 /// whilst lowering the body of the taskloop context (i.e. the task function).
 static LogicalResult
-convertOmpTaskloopOp(omp::TaskloopOp taskloopOp, llvm::IRBuilderBase &builder,
-                     LLVM::ModuleTranslation &moduleTranslation) {
-  mlir::Operation &opInst = *taskloopOp.getOperation();
+convertOmpTaskloopWrapperOp(omp::TaskloopWrapperOp loopWrapperOp,
+                            llvm::IRBuilderBase &builder,
+                            LLVM::ModuleTranslation &moduleTranslation) {
+  mlir::Operation &opInst = *loopWrapperOp.getOperation();
   if (failed(checkImplementationStatus(opInst)))
     return failure();
 
   // Recurse into the loop body.
-  auto continuationBlockOrError =
-      convertOmpOpRegions(taskloopOp.getRegion(), "omp.taskloop.region",
-                          builder, moduleTranslation);
+  auto continuationBlockOrError = convertOmpOpRegions(
+      loopWrapperOp.getRegion(), "omp.taskloop.wrapper.region", builder,
+      moduleTranslation);
 
   if (failed(handleError(continuationBlockOrError, opInst)))
     return failure();
@@ -2880,7 +2881,7 @@ convertOmpTaskloopContextOp(omp::TaskloopContextOp contextOp,
                             LLVM::ModuleTranslation &moduleTranslation) {
   using InsertPointTy = llvm::OpenMPIRBuilder::InsertPointTy;
   mlir::Operation &opInst = *contextOp.getOperation();
-  omp::TaskloopOp taskloopOp = contextOp.getLoopOp();
+  omp::TaskloopWrapperOp loopWrapperOp = contextOp.getLoopOp();
   if (failed(checkImplementationStatus(opInst)))
     return failure();
 
@@ -2896,7 +2897,7 @@ convertOmpTaskloopContextOp(omp::TaskloopContextOp contextOp,
 
   assert(builder.GetInsertPoint() == builder.GetInsertBlock()->end());
   llvm::BasicBlock *taskloopStartBlock = llvm::BasicBlock::Create(
-      builder.getContext(), "omp.taskloop.start",
+      builder.getContext(), "omp.taskloop.wrapper.start",
       /*Parent=*/builder.GetInsertBlock()->getParent());
   llvm::Instruction *branchToTaskloopStartBlock =
       builder.CreateBr(taskloopStartBlock);
@@ -3128,7 +3129,7 @@ convertOmpTaskloopContextOp(omp::TaskloopContextOp contextOp,
     return builder.saveIP();
   };
 
-  auto loopOp = cast<omp::LoopNestOp>(taskloopOp.getWrappedLoop());
+  auto loopOp = cast<omp::LoopNestOp>(loopWrapperOp.getWrappedLoop());
 
   auto loopInfo = [&]() -> llvm::Expected<llvm::CanonicalLoopInfo *> {
     llvm::CanonicalLoopInfo *loopInfo = findCurrentLoopInfo(moduleTranslation);
@@ -7540,7 +7541,7 @@ LogicalResult OpenMPDialectLLVMIRTranslationInterface::convertOperation(
   // it around the taskloop context not the inner loop wrapper.
   if (isa<omp::TaskloopContextOp>(op))
     isOutermostLoopWrapper = true;
-  else if (isa<omp::TaskloopOp>(op))
+  else if (isa<omp::TaskloopWrapperOp>(op))
     isOutermostLoopWrapper = false;
 
   if (isOutermostLoopWrapper)
@@ -7639,8 +7640,8 @@ LogicalResult OpenMPDialectLLVMIRTranslationInterface::convertOperation(
           .Case([&](omp::TaskOp op) {
             return convertOmpTaskOp(op, builder, moduleTranslation);
           })
-          .Case([&](omp::TaskloopOp op) {
-            return convertOmpTaskloopOp(op, builder, moduleTranslation);
+          .Case([&](omp::TaskloopWrapperOp op) {
+            return convertOmpTaskloopWrapperOp(op, builder, moduleTranslation);
           })
           .Case([&](omp::TaskloopContextOp op) {
             return convertOmpTaskloopContextOp(op, builder, moduleTranslation);

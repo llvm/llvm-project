@@ -24,7 +24,7 @@
 ! CHECK:            %[[C1_I32_0:.*]] = arith.constant 1 : i32
 ! CHECK:            omp.taskloop.context private(
 ! CHECK-SAME:            @[[J_FIRSTPRIVATE]] %[[DECL_J]]#0 -> %[[ARG0:.*]], @[[I_PRIVATE]] %[[DECL_I]]#0 -> %[[ARG1:.*]] : !fir.ref<i32>, !fir.ref<i32>) {
-! CHECK:              omp.taskloop {
+! CHECK:              omp.taskloop.wrapper {
 ! CHECK:                omp.loop_nest (%[[IV:.*]]) : i32 = (%[[C1_I32]]) to (%[[C10_I32]]) inclusive step (%[[C1_I32_0]]) {
 ! CHECK:                  %[[VAL1:.*]]:2 = hlfir.declare %[[ARG0]] {uniq_name = "_QFtest_masked_taskloopEj"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:                  %[[VAL2:.*]]:2 = hlfir.declare %[[ARG1]] {uniq_name = "_QFtest_masked_taskloopEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)

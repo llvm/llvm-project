@@ -16,6 +16,7 @@
 #include "PreferIsaOrDynCastInConditionalsCheck.h"
 #include "PreferRegisterOverUnsignedCheck.h"
 #include "PreferStaticOverAnonymousNamespaceCheck.h"
+#include "RedundantCastingCheck.h"
 #include "TwineLocalCheck.h"
 #include "TypeSwitchCaseTypesCheck.h"
 #include "UseNewMLIROpBuilderCheck.h"
@@ -43,6 +44,8 @@ public:
         "llvm-prefer-static-over-anonymous-namespace");
     CheckFactories.registerCheck<readability::QualifiedAutoCheck>(
         "llvm-qualified-auto");
+    CheckFactories.registerCheck<RedundantCastingCheck>(
+        "llvm-redundant-casting");
     CheckFactories.registerCheck<TwineLocalCheck>("llvm-twine-local");
     CheckFactories.registerCheck<TypeSwitchCaseTypesCheck>(
         "llvm-type-switch-case-types");

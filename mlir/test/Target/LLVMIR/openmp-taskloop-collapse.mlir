@@ -21,7 +21,7 @@ llvm.func @_QPtest() {
   %c5_i32 = llvm.mlir.constant(5 : i32) : i32
   %c10_i32 = llvm.mlir.constant(10 : i32) : i32
   omp.taskloop.context private(@_QFtestEa_firstprivate_i32 %3 -> %arg0, @_QFtestEi_private_i32 %1 -> %arg1 : !llvm.ptr, !llvm.ptr) {
-    omp.taskloop {
+    omp.taskloop.wrapper {
       omp.loop_nest (%arg2, %arg3) : i32 = (%c1_i32, %c1_i32) to (%c10_i32, %c5_i32) inclusive step (%c1_i32, %c1_i32) collapse(2) {
         llvm.store %arg2, %arg1 : i32, !llvm.ptr
         %10 = llvm.load %arg0 : !llvm.ptr -> i32
@@ -76,7 +76,7 @@ llvm.func @_QPtest2() {
   %c5_i32 = llvm.mlir.constant(5 : i32) : i32
   %c10_i32 = llvm.mlir.constant(10 : i32) : i32
   omp.taskloop.context private(@_QFtestEa_firstprivate_i32 %3 -> %arg0, @_QFtestEi_private_i32 %1 -> %arg1 : !llvm.ptr, !llvm.ptr) {
-    omp.taskloop {
+    omp.taskloop.wrapper {
       omp.loop_nest (%arg2, %arg3, %arg4) : i32 = (%c1_i32, %c1_i32, %c2_i32) to (%c10_i32, %c5_i32, %c5_i32) inclusive step (%c1_i32, %c1_i32, %c1_i32) collapse(3) {
         llvm.store %arg2, %arg1 : i32, !llvm.ptr
         %10 = llvm.load %arg0 : !llvm.ptr -> i32
@@ -136,7 +136,7 @@ llvm.func @_QPtest3() {
   %c10_i32 = llvm.mlir.constant(10 : i32) : i32
   %c20_i32 = llvm.mlir.constant(20 : i32) : i32
   omp.taskloop.context private(@_QFtestEa_firstprivate_i32 %3 -> %arg0, @_QFtestEi_private_i32 %1 -> %arg1 : !llvm.ptr, !llvm.ptr) {
-    omp.taskloop {
+    omp.taskloop.wrapper {
       omp.loop_nest (%arg2, %arg3) : i32 = (%c10_i32, %c1_i32) to (%c20_i32, %c5_i32) inclusive step (%c1_i32, %c1_i32) collapse(2) {
         llvm.store %arg2, %arg1 : i32, !llvm.ptr
         %10 = llvm.load %arg0 : !llvm.ptr -> i32
@@ -196,7 +196,7 @@ llvm.func @_QPtest4() {
   %c10_i32 = llvm.mlir.constant(10 : i32) : i32
   %c15_i32 = llvm.mlir.constant(15 : i32) : i32
   omp.taskloop.context private(@_QFtestEa_firstprivate_i32 %3 -> %arg0, @_QFtestEi_private_i32 %1 -> %arg1 : !llvm.ptr, !llvm.ptr) {
-    omp.taskloop {
+    omp.taskloop.wrapper {
       omp.loop_nest (%arg2, %arg3) : i32 = (%c2_i32, %c5_i32) to (%c10_i32, %c15_i32) inclusive step (%c2_i32, %c3_i32) collapse(2) {
         llvm.store %arg2, %arg1 : i32, !llvm.ptr
         %10 = llvm.load %arg0 : !llvm.ptr -> i32
@@ -258,7 +258,7 @@ llvm.func @_QPtest5() {
   %c10_i32 = llvm.mlir.constant(10 : i32) : i32
   %c15_i32 = llvm.mlir.constant(15 : i32) : i32
   omp.taskloop.context private(@_QFtestEa_firstprivate_i32 %3 -> %arg0, @_QFtestEi_private_i32 %1 -> %arg1 : !llvm.ptr, !llvm.ptr) {
-    omp.taskloop {
+    omp.taskloop.wrapper {
       omp.loop_nest (%arg2, %arg3) : i32 = (%cneg2_i32, %c5_i32) to (%c10_i32, %c15_i32) inclusive step (%c2_i32, %c3_i32) collapse(2) {
         llvm.store %arg2, %arg1 : i32, !llvm.ptr
         %10 = llvm.load %arg0 : !llvm.ptr -> i32
@@ -316,7 +316,7 @@ llvm.func @_QPtest6() {
   %c5_i32 = llvm.mlir.constant(5 : i32) : i32
   %c10_i32 = llvm.mlir.constant(10 : i32) : i32
   omp.taskloop.context private(@_QFtestEa_firstprivate_i32 %3 -> %arg0, @_QFtestEi_private_i32 %1 -> %arg1 : !llvm.ptr, !llvm.ptr) {
-    omp.taskloop {
+    omp.taskloop.wrapper {
       omp.loop_nest (%arg2, %arg3) : i32 = (%c10_i32, %c1_i32) to (%c5_i32, %c5_i32) inclusive step (%cneg1_i32, %c1_i32) collapse(2) {
         llvm.store %arg2, %arg1 : i32, !llvm.ptr
         %10 = llvm.load %arg0 : !llvm.ptr -> i32
