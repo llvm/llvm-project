@@ -125,9 +125,6 @@ static StringRef ExecutableName;
 /// Binary path for the CUDA installation.
 static std::string CudaBinaryPath;
 
-/// HIP installation path.
-static std::string HipPath;
-
 /// Mutex lock to protect writes to shared TempFiles in parallel.
 static std::mutex TempFilesMutex;
 
@@ -579,160 +576,7 @@ Expected<StringRef> clang(ArrayRef<StringRef> InputFiles, const ArgList &Args,
   if (NonLTOAMDGPU)
     CmdArgs.append({"-x", "ir"});
 
-  // For non-chipStar SPIR-V targets, pass the HIP path to clang so it can
-  // find resources. For chipStar, passes are run via opt separately, so the
-  // inner clang doesn't need --hip-path (it just compiles IR to SPIR-V).
-  if (Triple.isSPIRV() && !HipPath.empty() &&
-      Triple.getOS() != llvm::Triple::ChipStar)
-    CmdArgs.push_back(Args.MakeArgString("--hip-path=" + HipPath));
-
-  // For chipStar targets: llvm-link (merge) -> opt (HipSpvPasses) -> clang
-  // (SPIR-V backend). The passes must operate on LLVM IR before the backend
-  // lowers to MIR, and all TU bitcode must be merged first for RDC support.
-  SmallVector<StringRef, 16> ProcessedInputFiles;
-  if (Triple.isSPIRV() && Triple.getOS() == llvm::Triple::ChipStar) {
-    // Step 1: Merge all input bitcode files with llvm-link (needed for RDC
-    // where functions can be defined across translation units).
-    StringRef MergedFile;
-    if (InputFiles.size() > 1) {
-      Expected<std::string> LinkPath =
-          findProgram("llvm-link", {getExecutableDir("llvm-link")});
-      if (!LinkPath)
-        return LinkPath.takeError();
-
-      auto LinkOutOrErr = createOutputFile(
-          sys::path::filename(ExecutableName) + ".merged", "bc");
-      if (!LinkOutOrErr)
-        return LinkOutOrErr.takeError();
-
-      SmallVector<StringRef, 16> LinkArgs{*LinkPath};
-      for (StringRef F : InputFiles)
-        LinkArgs.push_back(F);
-      LinkArgs.push_back("-o");
-      LinkArgs.push_back(*LinkOutOrErr);
-
-      if (Error Err = executeCommands(*LinkPath, LinkArgs))
-        return std::move(Err);
-
-      MergedFile = *LinkOutOrErr;
-    } else {
-      MergedFile = InputFiles[0];
-    }
-
-    // Step 2: Run HipSpvPasses via opt on the merged bitcode.
-    SmallString<128> PluginPath;
-    if (!HipPath.empty()) {
-      PluginPath.assign(HipPath);
-      sys::path::append(PluginPath, "lib", "libLLVMHipSpvPasses.so");
-      if (!sys::fs::exists(PluginPath)) {
-        PluginPath.assign(HipPath);
-        sys::path::append(PluginPath, "lib", "llvm", "libLLVMHipSpvPasses.so");
-      }
-      if (!sys::fs::exists(PluginPath))
-        PluginPath.clear();
-    }
-
-    StringRef OptOutputFile = MergedFile;
-    if (!PluginPath.empty()) {
-      Expected<std::string> OptPath =
-          findProgram("opt", {getExecutableDir("opt")});
-      if (!OptPath)
-        return OptPath.takeError();
-
-      auto OptOutOrErr = createOutputFile(
-          sys::path::filename(ExecutableName) + ".lowered", "bc");
-      if (!OptOutOrErr)
-        return OptOutOrErr.takeError();
-
-      SmallVector<StringRef, 16> OptArgs{
-          *OptPath,
-          MergedFile,
-          "-load-pass-plugin",
-          Args.MakeArgString(PluginPath),
-          "-passes=hip-post-link-passes",
-          "-o",
-          *OptOutOrErr,
-      };
-
-      if (Error Err = executeCommands(*OptPath, OptArgs))
-        return std::move(Err);
-
-      OptOutputFile = *OptOutOrErr;
-    }
-
-    // Step 3: Convert processed bitcode to SPIR-V.
-    // Check if llvm-spirv translator is available. If so, use it directly;
-    // otherwise use the in-tree SPIR-V backend via clang.
-    // Use sys::findProgramByName() instead of findProgram() to avoid the
-    // dry-run fallback that always "finds" programs by returning their name.
-    bool UseLLVMSpirvTranslator = false;
-    std::string LLVMSpirvPathStr;
-    {
-      ErrorOr<std::string> LLVMSpirvPath = sys::findProgramByName(
-          "llvm-spirv", {getExecutableDir("llvm-spirv")});
-      if (!LLVMSpirvPath)
-        LLVMSpirvPath = sys::findProgramByName("llvm-spirv");
-      if (LLVMSpirvPath) {
-        LLVMSpirvPathStr = *LLVMSpirvPath;
-        UseLLVMSpirvTranslator = true;
-      }
-    }
-    if (UseLLVMSpirvTranslator) {
-      // Use llvm-spirv translator: BC -> SPIR-V binary directly.
-      auto SpirvOutOrErr = createOutputFile(
-          sys::path::filename(ExecutableName) + ".spirv", "spv");
-      if (!SpirvOutOrErr)
-        return SpirvOutOrErr.takeError();
-
-      // Derive SPIR-V max version from the triple's sub-arch.
-      // chipStar needs v1.2 for sub-group extensions by default.
-      std::string MaxVerArg;
-      if (Triple.getSubArch() == llvm::Triple::SPIRVSubArch_v13)
-        MaxVerArg = "--spirv-max-version=1.3";
-      else if (Triple.getSubArch() == llvm::Triple::SPIRVSubArch_v12 ||
-               Triple.getOS() == llvm::Triple::ChipStar)
-        MaxVerArg = "--spirv-max-version=1.2";
-      else
-        MaxVerArg = "--spirv-max-version=1.1";
-
-      SmallVector<StringRef, 16> TranslateArgs{
-          LLVMSpirvPathStr,
-          OptOutputFile,
-          Args.MakeArgString(MaxVerArg),
-          "--spirv-ext=-all,+SPV_INTEL_function_pointers,+SPV_INTEL_subgroups",
-          "-o",
-          *SpirvOutOrErr,
-      };
-
-      if (Error Err = executeCommands(LLVMSpirvPathStr, TranslateArgs))
-        return std::move(Err);
-
-      // The SPIR-V binary is the final output; skip the inner clang
-      // compilation by returning it directly as the linked image.
-      return *SpirvOutOrErr;
-    }
-
-    // No llvm-spirv available; use the in-tree SPIR-V backend via clang.
-    ProcessedInputFiles.push_back(OptOutputFile);
-    CmdArgs.push_back("-mllvm");
-    CmdArgs.push_back("-spirv-ext=+SPV_INTEL_function_pointers"
-                      ",+SPV_INTEL_subgroups"
-                      ",+SPV_EXT_relaxed_printf_string_address_space"
-                      ",+SPV_KHR_bit_instructions"
-                      ",+SPV_EXT_shader_atomic_float_add");
-    // The extracted bitcode files have a .o extension which causes the driver
-    // to treat them as pre-compiled objects, skipping the Backend compilation
-    // step. Force the input language to LLVM IR so the SPIR-V backend runs.
-    // Use -c to skip the link phase -- the SPIR-V backend output is the final
-    // binary; hitting HIPSPV::Linker would re-run the full pipeline.
-    CmdArgs.push_back("-c");
-    CmdArgs.push_back("-x");
-    CmdArgs.push_back("ir");
-  } else {
-    ProcessedInputFiles.append(InputFiles.begin(), InputFiles.end());
-  }
-
-  for (StringRef InputFile : ProcessedInputFiles)
+  for (StringRef InputFile : InputFiles)
     CmdArgs.push_back(InputFile);
 
   // If this is CPU offloading we copy the input libraries.
@@ -791,14 +635,8 @@ Expected<StringRef> clang(ArrayRef<StringRef> InputFiles, const ArgList &Args,
 
   for (StringRef Arg : Args.getAllArgValues(OPT_linker_arg_EQ))
     CmdArgs.append({"-Xlinker", Args.MakeArgString(Arg)});
-  for (StringRef Arg : Args.getAllArgValues(OPT_compiler_arg_EQ)) {
-    // For chipStar, --hip-path is already handled by opt step above;
-    // passing it to the inner clang (which just does IR->SPIR-V) is unused.
-    if (Triple.isSPIRV() && Triple.getOS() == llvm::Triple::ChipStar &&
-        Arg.starts_with("--hip-path="))
-      continue;
+  for (StringRef Arg : Args.getAllArgValues(OPT_compiler_arg_EQ))
     CmdArgs.push_back(Args.MakeArgString(Arg));
-  }
 
   if (Error Err = executeCommands(*ClangPath, CmdArgs))
     return std::move(Err);
@@ -1525,16 +1363,6 @@ int main(int Argc, char **Argv) {
   SaveTemps = Args.hasArg(OPT_save_temps);
   CudaBinaryPath = Args.getLastArgValue(OPT_cuda_path_EQ).str();
   CanonicalPrefixes = !Args.hasArg(OPT_no_canonical_prefixes);
-
-  // Extract --hip-path= from --device-compiler= args, where the outer driver
-  // forwards it via the CompilerOptions forwarding mechanism.
-  for (StringRef Arg : Args.getAllArgValues(OPT_device_compiler_args_EQ)) {
-    auto [DevTriple, Value] = Arg.split('=');
-    if (Value.consume_front("--hip-path=")) {
-      HipPath = Value.str();
-      break;
-    }
-  }
 
   llvm::Triple Triple(
       Args.getLastArgValue(OPT_host_triple_EQ, sys::getDefaultTargetTriple()));

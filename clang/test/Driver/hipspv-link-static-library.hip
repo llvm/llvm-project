@@ -48,12 +48,10 @@
 // SDL-NEW-SAME: "{{.*}}/tu0.o" "{{.*}}/libSDL2.a"
 // DELETE-SDL-NEW: "{{.*}}llvm-link" "-o" "{{.*}}.bc" "{{.*}}.o" "{{.*}}.o"
 
-// SDL-NEW-WRAPPER: "{{.*}}opt"
-// SDL-NEW-WRAPPER-SAME: -load-pass-plugin
-// SDL-NEW-WRAPPER-SAME: [[HIP_PATH]]/lib/libLLVMHipSpvPasses.so
-// SDL-NEW-WRAPPER: clang{{.*}}" --no-default-config
+// SDL-NEW-WRAPPER: clang{{.*}}" --no-default-config -o {{[^ ]*.img}}
 // SDL-NEW-WRAPPER-SAME: --target=spirv64-unknown-chipstar
-// SDL-NEW-WRAPPER-SAME: -c -x ir
+// SDL-NEW-WRAPPER-SAME: {{[^ ]*.o}}
+// SDL-NEW-WRAPPER-SAME: --hip-path=[[HIP_PATH]]
 
 // SDL: "{{.*}}opt"
 // SDL-SAME: "-load-pass-plugin" {{".*/hipspv/lib/libLLVMHipSpvPasses.so"}}
