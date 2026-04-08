@@ -1028,9 +1028,8 @@ public:
     if (VF.isScalar())
       return true;
 
-    // Pseudo probe needs to be duplicated for each unrolled iteration and
-    // vector lane so that profiled loop trip count can be accurately
-    // accumulated instead of being under counted.
+    // Pseudo probes must be duplicated per vector lane so that the
+    // profiled loop trip count is not undercounted.
     if (isa<PseudoProbeInst>(I))
       return false;
 
