@@ -124,4 +124,5 @@ TODO for added SYCL classes
 * ``event``: get_wait_list, get_info, get_profiling_info, wait_and_throw & default ctor are not implemented
 * general opens:
 
-  * define a way to report errors from object dtors.
+  * define a way to report errors from object dtors
+  * unittests: add functions to reset libsycl internal state completely (static variables)

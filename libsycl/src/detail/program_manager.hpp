@@ -86,7 +86,7 @@ public:
   ol_symbol_handle_t getOrCreateKernel(DeviceKernelInfo &KernelInfo,
                                        DeviceImpl &Device);
 
-private:
+protected:
   ProgramAndKernelManager() = default;
   ~ProgramAndKernelManager() = default;
   ProgramAndKernelManager(ProgramAndKernelManager const &) = delete;
