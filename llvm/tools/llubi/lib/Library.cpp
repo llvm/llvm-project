@@ -65,30 +65,25 @@ std::optional<std::string> Library::readStringFromMemory(const Pointer &Ptr) {
 }
 
 AnyValue Library::executeMalloc(StringRef Name, Type *Type,
-                                ArrayRef<AnyValue> Args) {
+                                ArrayRef<AnyValue> Args,
+                                MemAllocKind AllocKind) {
   const auto &SizeVal = Args[0];
-
-  if (SizeVal.asInteger().getActiveBits() > 64) {
-    Executor.reportImmediateUB(
-        "malloc() with allocation size that overflows uint64_t.");
-    return AnyValue::poison();
-  }
 
   const uint64_t AllocSize = SizeVal.asInteger().getZExtValue();
 
-  const IntrusiveRefCntPtr<MemoryObject> Obj = Ctx.allocate(
-      AllocSize, getMaxAlign(DL), Name, 0, MemInitKind::Uninitialized);
+  const IntrusiveRefCntPtr<MemoryObject> Obj =
+      Ctx.allocate(AllocSize, getMaxAlign(DL), Name, 0,
+                   MemInitKind::Uninitialized, AllocKind);
 
-  if (!Obj) {
-    Executor.reportError("Insufficient stack space.");
-    return AnyValue::poison();
-  }
+  if (!Obj)
+    return AnyValue::getNullValue(Ctx, Type);
 
   return Ctx.deriveFromMemoryObject(Obj);
 }
 
 AnyValue Library::executeCalloc(StringRef Name, Type *Type,
-                                ArrayRef<AnyValue> Args) {
+                                ArrayRef<AnyValue> Args,
+                                MemAllocKind AllocKind) {
   const auto &CountVal = Args[0];
   const auto &SizeVal = Args[1];
 
@@ -99,18 +94,16 @@ AnyValue Library::executeCalloc(StringRef Name, Type *Type,
   const APInt AllocSize = Count.umul_ov(Size, Overflow);
   if (Overflow) {
     Executor.reportImmediateUB(
-        "calloc() with allocation size that overflows uint64_t.");
+        "calloc() with allocation size that overflows size_t.");
     return AnyValue::poison();
   }
 
   const IntrusiveRefCntPtr<MemoryObject> Obj =
       Ctx.allocate(AllocSize.getLimitedValue(), getMaxAlign(DL), Name, 0,
-                   MemInitKind::Zeroed);
+                   MemInitKind::Zeroed, AllocKind);
 
-  if (!Obj) {
-    Executor.reportError("Insufficient stack space.");
-    return AnyValue::poison();
-  }
+  if (!Obj)
+    return AnyValue::getNullValue(Ctx, Type);
 
   return Ctx.deriveFromMemoryObject(Obj);
 }
@@ -140,6 +133,15 @@ AnyValue Library::executeFree(ArrayRef<AnyValue> Args) {
     Executor.reportImmediateUB("double-freeing a memory object.");
     return AnyValue::poison();
   }
+
+  if (!Obj->isHeapAllocated()) {
+    Executor.reportImmediateUB("freeing an stack allocation.");
+    return AnyValue::poison();
+  }
+
+  // Currently we don't for cases where a memory allocated with C
+  // allocation family (malloc, calloc, etc.) is freed with a different free
+  // function comes from a different family (C++ delete, etc.)
 
   if (!Ctx.free(*Obj)) {
     Executor.reportImmediateUB("freeing an invalid pointer.");
@@ -319,12 +321,14 @@ std::optional<AnyValue> Library::executeLibcall(LibFunc LF, StringRef Name,
 
   switch (LF) {
   case LibFunc_malloc:
+    return executeMalloc(Name, Type, Args, MemAllocKind::Malloc);
   case LibFunc_Znwm:
+    return executeMalloc(Name, Type, Args, MemAllocKind::New);
   case LibFunc_Znam:
-    return executeMalloc(Name, Type, Args);
+    return executeMalloc(Name, Type, Args, MemAllocKind::NewArray);
 
   case LibFunc_calloc:
-    return executeCalloc(Name, Type, Args);
+    return executeCalloc(Name, Type, Args, MemAllocKind::Malloc);
 
   case LibFunc_free:
   case LibFunc_ZdaPv:

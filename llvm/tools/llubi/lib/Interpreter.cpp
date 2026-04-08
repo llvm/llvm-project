@@ -779,7 +779,8 @@ public:
     auto Obj = Ctx.allocate(AllocSize, AI.getPointerAlignment(DL).value(),
                             AI.getName(), AI.getAddressSpace(),
                             IsInitiallyDead ? MemInitKind::Poisoned
-                                            : MemInitKind::Uninitialized);
+                                            : MemInitKind::Uninitialized,
+                            MemAllocKind::Stack);
     if (!Obj) {
       reportError("Insufficient stack space.");
       return;

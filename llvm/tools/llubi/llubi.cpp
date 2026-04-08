@@ -227,7 +227,8 @@ int main(int argc, char **argv) {
     uint32_t PtrSize = Ctx.getDataLayout().getPointerSize();
     uint64_t PtrsSize = PtrSize * (InputArgv.size() + 1);
     auto ArgvPtrsMem = Ctx.allocate(PtrsSize, 8, "argv",
-                                    /*AS=*/0, ubi::MemInitKind::Zeroed);
+                                    /*AS=*/0, ubi::MemInitKind::Zeroed,
+                                    ubi::MemAllocKind::Global);
     if (!ArgvPtrsMem) {
       WithColor::error() << "Failed to allocate memory for argv pointers.\n";
       return 1;
@@ -235,7 +236,8 @@ int main(int argc, char **argv) {
     for (const auto &[Idx, Arg] : enumerate(InputArgv)) {
       uint64_t Size = Arg.length() + 1;
       auto ArgvStrMem = Ctx.allocate(Size, 8, "argv_str",
-                                     /*AS=*/0, ubi::MemInitKind::Zeroed);
+                                     /*AS=*/0, ubi::MemInitKind::Zeroed,
+                                     ubi::MemAllocKind::Global);
       if (!ArgvStrMem) {
         WithColor::error() << "Failed to allocate memory for argv strings.\n";
         return 1;

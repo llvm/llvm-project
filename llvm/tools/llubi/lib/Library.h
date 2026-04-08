@@ -29,8 +29,10 @@ class Library {
 
   std::optional<std::string> readStringFromMemory(const Pointer &Ptr);
 
-  AnyValue executeMalloc(StringRef Name, Type *Type, ArrayRef<AnyValue> Args);
-  AnyValue executeCalloc(StringRef Name, Type *Type, ArrayRef<AnyValue> Args);
+  AnyValue executeMalloc(StringRef Name, Type *Type, ArrayRef<AnyValue> Args,
+                         MemAllocKind AllocKind);
+  AnyValue executeCalloc(StringRef Name, Type *Type, ArrayRef<AnyValue> Args,
+                         MemAllocKind AllocKind);
   AnyValue executeFree(ArrayRef<AnyValue> Args);
   AnyValue executePuts(ArrayRef<AnyValue> Args);
   AnyValue executePrintf(ArrayRef<AnyValue> Args);

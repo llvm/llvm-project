@@ -24,6 +24,14 @@ enum class MemInitKind {
   Poisoned,
 };
 
+enum class MemAllocKind {
+  Global,
+  Stack,
+  Malloc,
+  New,
+  NewArray,
+};
+
 enum class MemoryObjectState {
   // This memory object is accessible.
   // Valid transitions:
@@ -83,11 +91,12 @@ class MemoryObject : public RefCountedBase<MemoryObject> {
   unsigned AS;
 
   MemoryObjectState State;
+  MemAllocKind AllocKind;
   bool IsConstant = false;
 
 public:
   MemoryObject(uint64_t Addr, uint64_t Size, StringRef Name, unsigned AS,
-               MemInitKind InitKind);
+               MemInitKind InitKind, MemAllocKind AllocKind);
   MemoryObject(const MemoryObject &) = delete;
   MemoryObject(MemoryObject &&) = delete;
   MemoryObject &operator=(const MemoryObject &) = delete;
@@ -100,6 +109,7 @@ public:
   unsigned getAddressSpace() const { return AS; }
   MemoryObjectState getState() const { return State; }
   void setState(MemoryObjectState S) { State = S; }
+  MemAllocKind getAllocKind() const { return AllocKind; }
   bool isConstant() const { return IsConstant; }
   void setIsConstant(bool C) { IsConstant = C; }
 
@@ -115,6 +125,10 @@ public:
   MutableArrayRef<Byte> getBytes() { return Bytes; }
 
   void markAsFreed();
+
+  bool isGlobal() const;
+  bool isStackAllocated() const;
+  bool isHeapAllocated() const;
 };
 
 /// An interface for handling events and managing outputs during interpretation.
@@ -257,7 +271,8 @@ public:
   const AnyValue &getConstantValue(Constant *C);
   IntrusiveRefCntPtr<MemoryObject> allocate(uint64_t Size, uint64_t Align,
                                             StringRef Name, unsigned AS,
-                                            MemInitKind InitKind);
+                                            MemInitKind InitKind,
+                                            MemAllocKind AllocKind);
   bool free(const MemoryObject &Obj);
   /// Derive a pointer from a memory object with offset 0.
   /// Please use Pointer's interface for further manipulations.
