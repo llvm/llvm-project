@@ -309,25 +309,25 @@ protected:
 
   /// Parse address offsets section bytes into AddrOffsets.
   ///
-  /// \param Bytes The raw section bytes from getGlobalData().
+  /// \param Bytes The raw section bytes.
   /// \returns Error on failure.
   llvm::Error parseAddrOffsets(StringRef Bytes);
 
   /// Parse address info offsets section bytes into AddrInfoOffsetsData.
   ///
-  /// \param Bytes The raw section bytes from getGlobalData().
+  /// \param Bytes The raw section bytes.
   /// \returns Error on failure.
   llvm::Error parseAddrInfoOffsets(StringRef Bytes);
 
   /// Parse string table section bytes into StrTab.
   ///
-  /// \param Bytes The raw section bytes from getGlobalData().
+  /// \param Bytes The raw section bytes.
   /// \returns Error on failure.
   llvm::Error parseStringTable(StringRef Bytes);
 
   /// Parse file table section bytes into FileEntryData.
   ///
-  /// \param Bytes The raw section bytes from getGlobalData().
+  /// \param Bytes The raw section bytes.
   /// \returns Error on failure.
   llvm::Error parseFileTable(StringRef Bytes);
 
