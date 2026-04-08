@@ -1239,6 +1239,58 @@ static ExprResult LookupMemberExpr(Sema &S, LookupResult &R,
 
   QualType BaseType = BaseExpr.get()->getType();
 
+  // TODO: This code should be improved. It should probably be moved to go with
+  // the other HLSL specific code in this function. HLSL: Intercept member
+  // accesses on ConstantBuffer<T>.
+  if (S.getLangOpts().HLSL) {
+    if (auto *RD = BaseType->getAsCXXRecordDecl()) {
+      if (RD->getName() == "ConstantBuffer") {
+        if (auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(RD)) {
+          if (CTSD->getTemplateArgs().size() > 0) {
+            QualType InnerType = CTSD->getTemplateArgs()[0].getAsType();
+            // Ensure we have the canonical type and strip any references just
+            // in case
+            QualType CanonType =
+                InnerType.getCanonicalType().getNonReferenceType();
+            QualType AddrSpaceType =
+                S.Context.getCanonicalType(S.Context.getAddrSpaceQualType(
+                    CanonType, LangAS::hlsl_constant));
+            QualType ReturnTy = S.Context.getCanonicalType(
+                S.Context.getLValueReferenceType(AddrSpaceType));
+
+            DeclarationName ConvName =
+                S.Context.DeclarationNames.getCXXConversionFunctionName(
+                    CanQualType::CreateUnsafe(ReturnTy));
+            LookupResult ConvR(S, ConvName, OpLoc, Sema::LookupOrdinaryName);
+            if (S.LookupQualifiedName(ConvR, RD)) {
+              CXXConversionDecl *ConvDecl = nullptr;
+              NamedDecl *FoundDecl = nullptr;
+              for (NamedDecl *D : ConvR) {
+                if (auto *CD =
+                        dyn_cast<CXXConversionDecl>(D->getUnderlyingDecl())) {
+                  ConvDecl = CD;
+                  FoundDecl = D;
+                  break;
+                }
+              }
+              if (ConvDecl) {
+                ExprResult ConvCall = S.BuildCXXMemberCallExpr(
+                    BaseExpr.get(), FoundDecl, ConvDecl,
+                    /*HadMultipleCandidates=*/false);
+                if (!ConvCall.isInvalid()) {
+                  BaseExpr = ConvCall;
+                  return LookupMemberExpr(S, R, BaseExpr, IsArrow, OpLoc, SS,
+                                          ObjCImpDecl, HasTemplateArgs,
+                                          TemplateKWLoc);
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
   DeclarationName MemberName = R.getLookupName();
   SourceLocation MemberLoc = R.getNameLoc();
 

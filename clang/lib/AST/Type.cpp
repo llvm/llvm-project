@@ -100,6 +100,7 @@ bool Qualifiers::isTargetAddressSpaceSupersetOf(LangAS A, LangAS B,
          // address spaces to default to work around this problem.
          (A == LangAS::Default && B == LangAS::hlsl_private) ||
          (A == LangAS::Default && B == LangAS::hlsl_device) ||
+         (A == LangAS::Default && B == LangAS::hlsl_constant) ||
          (A == LangAS::Default && B == LangAS::hlsl_input) ||
          (A == LangAS::Default && B == LangAS::hlsl_output) ||
          (A == LangAS::Default && B == LangAS::hlsl_push_constant) ||

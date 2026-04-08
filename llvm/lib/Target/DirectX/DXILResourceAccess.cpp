@@ -57,7 +57,8 @@ static Value *traverseGEPOffsets(const DataLayout &DL, IRBuilder<> &Builder,
 
   while (Ptr) {
     if (auto *II = dyn_cast<IntrinsicInst>(Ptr)) {
-      assert(II->getIntrinsicID() == Intrinsic::dx_resource_getpointer &&
+      assert((II->getIntrinsicID() == Intrinsic::dx_resource_getbasepointer ||
+              II->getIntrinsicID() == Intrinsic::dx_resource_getpointer) &&
              "Resource access through unexpected intrinsic");
       return Offset ? Offset : ConstantInt::get(Builder.getInt32Ty(), 0);
     }
@@ -574,7 +575,8 @@ static SmallVector<IntrinsicInst *> collectUsedHandles(Value *Ptr) {
     else if (auto *II = dyn_cast<IntrinsicInst>(X)) {
       Intrinsic::ID IID = II->getIntrinsicID();
 
-      if (IID == Intrinsic::dx_resource_getpointer)
+      if (IID == Intrinsic::dx_resource_getbasepointer ||
+          IID == Intrinsic::dx_resource_getpointer)
         Worklist.push_back(II->getArgOperand(/*Handle=*/0));
 
       if (llvm::is_contained(HandleIntrins, IID))
@@ -625,14 +627,16 @@ getAccessIndices(Instruction *I, SmallSetVector<Instruction *, 16> &DeadInsts) {
       return {nullptr, II->getArgOperand(/*Index=*/3)};
     }
 
-    if (II->getIntrinsicID() == Intrinsic::dx_resource_getpointer) {
+    if (II->getIntrinsicID() == Intrinsic::dx_resource_getbasepointer ||
+        II->getIntrinsicID() == Intrinsic::dx_resource_getpointer) {
       auto *V = dyn_cast<Instruction>(II->getArgOperand(/*Handle=*/0));
       auto AccessIdx = getAccessIndices(V, DeadInsts);
       assert(!AccessIdx.hasGetPtrIdx() &&
              "Encountered multiple dx.resource.getpointers in ptr chain?");
-      AccessIdx.GetPtrIdx = II->getArgOperand(1);
-
-      DeadInsts.insert(II);
+      if (II->getIntrinsicID() == Intrinsic::dx_resource_getpointer)
+        AccessIdx.GetPtrIdx = II->getArgOperand(1);
+      else
+        AccessIdx.GetPtrIdx = nullptr;
       return AccessIdx;
     }
   }
@@ -696,7 +700,7 @@ static void
 replaceHandleWithIndices(Instruction *Ptr, IntrinsicInst *OldHandle,
                          SmallSetVector<Instruction *, 16> &DeadInsts) {
   auto AccessIdx = getAccessIndices(Ptr, DeadInsts);
-  assert(AccessIdx.hasGetPtrIdx() && AccessIdx.hasHandleIdx() &&
+  assert(AccessIdx.hasHandleIdx() &&
          "Couldn't retrieve indices. This is guaranteed by getAccessIndices");
 
   IRBuilder<> Builder(Ptr);
@@ -704,9 +708,15 @@ replaceHandleWithIndices(Instruction *Ptr, IntrinsicInst *OldHandle,
   Handle->setArgOperand(/*Index=*/3, AccessIdx.HandleIdx);
   Builder.Insert(Handle);
 
-  auto *GetPtr =
-      Builder.CreateIntrinsic(Ptr->getType(), Intrinsic::dx_resource_getpointer,
-                              {Handle, AccessIdx.GetPtrIdx});
+  Intrinsic::ID GetPtrIID = AccessIdx.hasGetPtrIdx()
+                                ? Intrinsic::dx_resource_getpointer
+                                : Intrinsic::dx_resource_getbasepointer;
+  SmallVector<Value *, 2> Args;
+  Args.push_back(Handle);
+  if (AccessIdx.hasGetPtrIdx())
+    Args.push_back(AccessIdx.GetPtrIdx);
+
+  auto *GetPtr = Builder.CreateIntrinsic(Ptr->getType(), GetPtrIID, Args);
 
   Ptr->replaceAllUsesWith(GetPtr);
   DeadInsts.insert(Ptr);
@@ -796,11 +806,14 @@ static bool transformResourcePointers(Function &F, DXILResourceTypeMap &DRTM) {
   SmallVector<std::pair<IntrinsicInst *, dxil::ResourceTypeInfo>> Resources;
   for (BasicBlock &BB : make_early_inc_range(F))
     for (Instruction &I : BB)
-      if (auto *II = dyn_cast<IntrinsicInst>(&I))
-        if (II->getIntrinsicID() == Intrinsic::dx_resource_getpointer) {
+      if (auto *II = dyn_cast<IntrinsicInst>(&I)) {
+        Intrinsic::ID IID = II->getIntrinsicID();
+        if (IID == Intrinsic::dx_resource_getbasepointer ||
+            IID == Intrinsic::dx_resource_getpointer) {
           auto *HandleTy = cast<TargetExtType>(II->getArgOperand(0)->getType());
           Resources.emplace_back(II, DRTM[HandleTy]);
         }
+      }
 
   for (auto &[II, RI] : Resources)
     replaceAccess(II, RI);

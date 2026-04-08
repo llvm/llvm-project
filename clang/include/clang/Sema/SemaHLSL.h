@@ -205,6 +205,7 @@ public:
   // HLSL Type trait implementations
   bool IsScalarizedLayoutCompatible(QualType T1, QualType T2) const;
   bool IsTypedResourceElementCompatible(QualType T1);
+  bool IsConstantBufferElementCompatible(QualType T1);
 
   bool CheckCompatibleParameterABI(FunctionDecl *New, FunctionDecl *Old);
 

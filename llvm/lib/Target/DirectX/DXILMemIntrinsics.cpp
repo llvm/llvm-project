@@ -69,7 +69,8 @@ static Type *getPointeeType(Value *Ptr, const DataLayout &DL) {
     return AI->getAllocatedType();
 
   if (auto *II = dyn_cast<IntrinsicInst>(Ptr)) {
-    if (II->getIntrinsicID() == Intrinsic::dx_resource_getpointer) {
+    if (II->getIntrinsicID() == Intrinsic::dx_resource_getbasepointer ||
+        II->getIntrinsicID() == Intrinsic::dx_resource_getpointer) {
       Type *Ty = cast<dxil::AnyResourceExtType>(II->getArgOperand(0)->getType())
                      ->getResourceType();
       assert(Ty && "getpointer used on untyped resource");
