@@ -338,6 +338,11 @@ class ProfiledBinary {
 
   bool IsCOFF = false;
 
+  // Whether the binary has a PT_INTERP program header (PIE executables do,
+  // true shared libraries don't). Used to distinguish PIE from .so since
+  // both are ET_DYN.
+  bool HasInterp = false;
+
   // Build ID used to filter perfscript addresses in [buildid:]addr format.
   // For shared libraries, set to the binary's build ID.
   // For main executables, kept empty (addresses have no buildid prefix).
