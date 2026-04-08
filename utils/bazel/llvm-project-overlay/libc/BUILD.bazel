@@ -3743,6 +3743,16 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_cbrtbf16",
+    hdrs = ["src/__support/math/cbrtbf16.h"],
+    deps = [
+        ":__support_fputil_bfloat16",
+        ":__support_macros_config",
+        ":__support_math_cbrtf",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_cbrtf",
     hdrs = ["src/__support/math/cbrtf.h"],
     deps = [
@@ -6872,6 +6882,11 @@ libc_math_function(
 libc_math_function(
     name = "cbrt",
     additional_deps = [":__support_math_cbrt"],
+)
+
+libc_math_function(
+    name = "cbrtbf16",
+    additional_deps = [":__support_math_cbrtbf16"],
 )
 
 libc_math_function(
