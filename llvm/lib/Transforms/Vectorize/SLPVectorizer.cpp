@@ -10487,7 +10487,7 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
     case LoadsState::Vectorize:
       return TreeEntry::Vectorize;
     case LoadsState::CompressVectorize:
-      if (!IsGraphTransformMode && !VectorizableTree.empty()) {
+      if (!IsGraphTransformMode && VectorizableTree.size() > 1) {
         // Delay slow vectorized nodes for better vectorization attempts.
         LoadEntriesToVectorize.insert(VectorizableTree.size());
         return TreeEntry::NeedToGather;
@@ -10495,7 +10495,7 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
       return IsGatheredNode() ? TreeEntry::NeedToGather
                               : TreeEntry::CompressVectorize;
     case LoadsState::ScatterVectorize:
-      if (!IsGraphTransformMode && !VectorizableTree.empty()) {
+      if (!IsGraphTransformMode && VectorizableTree.size() > 1) {
         // Delay slow vectorized nodes for better vectorization attempts.
         LoadEntriesToVectorize.insert(VectorizableTree.size());
         return TreeEntry::NeedToGather;
@@ -14351,6 +14351,22 @@ void BoUpSLP::transformNodes() {
       if (E.State != TreeEntry::Vectorize ||
           !E.getOperations().isAddSubLikeOp())
         break;
+      const TreeEntry *LHS = getOperandEntry(&E, 0);
+      const TreeEntry *RHS = getOperandEntry(&E, 1);
+      auto IsOneUseVectorFMulOperand = [](const TreeEntry *TE) {
+        return TE->State == TreeEntry::Vectorize &&
+               TE->ReorderIndices.empty() && TE->ReuseShuffleIndices.empty() &&
+               TE->getOpcode() == Instruction::FMul && !TE->isAltShuffle() &&
+               all_of(TE->Scalars, [&](Value *V) {
+                 return (TE->hasCopyableElements() &&
+                         TE->isCopyableElement(V)) ||
+                        V->hasOneUse();
+               });
+      };
+      if (!IsOneUseVectorFMulOperand(LHS) &&
+          (E.getOpcode() == Instruction::FSub ||
+           !IsOneUseVectorFMulOperand(RHS)))
+        break;
       if (!canConvertToFMA(E.Scalars, E.getOperations(), *DT, *DL, *TTI, *TLI)
                .isValid())
         break;
@@ -15549,7 +15565,7 @@ BoUpSLP::getVectorSpillReloadCost(const TreeEntry *E, VectorType *VecTy,
   };
 
   if (E->State == TreeEntry::SplitVectorize) {
-    for (const auto [Idx, _] : E->CombinedEntriesWithIndices) {
+    for (const auto &[Idx, _] : E->CombinedEntriesWithIndices) {
       const TreeEntry *OpTE = VectorizableTree[Idx].get();
 
       if (!CountedOpEntries.insert(OpTE).second)
@@ -17776,6 +17792,7 @@ InstructionCost BoUpSLP::calculateTreeCostAndTrimNonProfitable(
     return Cost;
 
   bool Changed = false;
+  bool PreferTrimmedTree = false;
   while (!Worklist.empty() && std::get<0>(Worklist.top().second) > 0) {
     TreeEntry *TE = Worklist.top().first;
     if (TE->isGather() || TE->Idx == 0 || DeletedNodes.contains(TE) ||
@@ -17875,7 +17892,23 @@ InstructionCost BoUpSLP::calculateTreeCostAndTrimNonProfitable(
         }))
       GatherCost *= 2;
     // Erase subtree if it is non-profitable.
-    if (TotalSubtreeCost > GatherCost) {
+    ArrayRef<unsigned> Nodes = std::get<2>(Worklist.top().second);
+    // Prefer trimming equal-cost alternate-shuffle subtrees rooted at binary
+    // ops: alt-shuffles introduce runtime shuffle overhead that the cost model
+    // may underestimate. Skip if the subtree contains ExtractElement nodes,
+    // since those operate on already-materialized vectors where the cost model
+    // is more accurate.
+    auto IsEqualCostAltShuffleToTrim = [&]() {
+      return TotalSubtreeCost == GatherCost && TE->hasState() &&
+             TE->isAltShuffle() && Instruction::isBinaryOp(TE->getOpcode()) &&
+             none_of(Nodes, [&](unsigned Idx) {
+               return VectorizableTree[Idx]->hasState() &&
+                      VectorizableTree[Idx]->getOpcode() ==
+                          Instruction::ExtractElement;
+             });
+    };
+    if (TotalSubtreeCost > GatherCost || IsEqualCostAltShuffleToTrim()) {
+      PreferTrimmedTree |= TotalSubtreeCost == GatherCost;
       // If the remaining tree is just a buildvector - exit, it will cause
       // endless attempts to vectorize.
       if (VectorizableTree.front()->hasState() &&
@@ -17895,7 +17928,7 @@ InstructionCost BoUpSLP::calculateTreeCostAndTrimNonProfitable(
         TransformedToGatherNodes.erase(TE);
         NodesCosts.erase(TE);
       }
-      for (unsigned Idx : std::get<2>(Worklist.top().second)) {
+      for (unsigned Idx : Nodes) {
         TreeEntry &ChildTE = *VectorizableTree[Idx];
         DeletedNodes.insert(&ChildTE);
         TransformedToGatherNodes.erase(&ChildTE);
@@ -18009,7 +18042,8 @@ InstructionCost BoUpSLP::calculateTreeCostAndTrimNonProfitable(
                       << ".\n"
                       << "SLP: Current total cost = " << NewCost << "\n");
   }
-  if (NewCost + LoadsExtractsCost >= Cost) {
+  if (NewCost + LoadsExtractsCost > Cost ||
+      (!PreferTrimmedTree && NewCost + LoadsExtractsCost == Cost)) {
     DeletedNodes.clear();
     TransformedToGatherNodes.clear();
     NewCost = Cost;
@@ -18064,11 +18098,11 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
     LLVM_DEBUG(dbgs() << "Scale " << Scale << " For entry " << TE.Idx << "\n");
     return C * Scale;
   };
-  Instruction *ReductionRoot = nullptr;
+  Instruction *ReductionRoot = RdxRoot;
   if (UserIgnoreList) {
     // Scale reduction cost to the factor of the loop nest trip count.
     ReductionCost = ScaleCost(ReductionCost, *VectorizableTree.front().get(),
-                              /*Scalar=*/nullptr, RdxRoot);
+                              /*Scalar=*/nullptr, ReductionRoot);
   }
 
   // Add the cost for reduction.
@@ -25525,7 +25559,8 @@ bool StoreChainContext::initializeContext(BoUpSLP &R, const DataLayout &DL,
   Type *StoreScalarTy = StoreTy->getScalarType();
   MinVF = PowerOf2Ceil(TTI.getStoreMinimumVF(
       R.getMinVF(DL.getTypeStoreSizeInBits(StoreScalarTy)), StoreScalarTy,
-      ValueTy->getScalarType()));
+      ValueTy->getScalarType(), Store->getAlign(),
+      Store->getPointerAddressSpace()));
   MinVF /= getNumElements(StoreTy);
   MinVF = std::max<unsigned>(2, MinVF);
 
@@ -27081,7 +27116,7 @@ public:
       InstructionsState S = States[I];
       SmallVector<Value *> Candidates;
       Candidates.reserve(2 * OrigReducedVals.size());
-      DenseMap<Value *, Value *> TrackedToOrig(2 * OrigReducedVals.size());
+      SmallVector<Value *> TrackedToOrig;
       for (Value *ReducedVal : OrigReducedVals) {
         Value *RdxVal = TrackedVals.at(ReducedVal);
         // Check if the reduction value was not overriden by the extractelement
@@ -27098,7 +27133,7 @@ public:
              !S.isCopyableElement(RdxVal)))
           continue;
         Candidates.push_back(RdxVal);
-        TrackedToOrig.try_emplace(RdxVal, ReducedVal);
+        TrackedToOrig.push_back(ReducedVal);
       }
       bool ShuffledExtracts = false;
       // Try to handle shuffled extractelements.
@@ -27114,7 +27149,7 @@ public:
           if (!Inst)
             continue;
           CommonCandidates.push_back(RdxVal);
-          TrackedToOrig.try_emplace(RdxVal, RV);
+          TrackedToOrig.push_back(RV);
         }
         SmallVector<int> Mask;
         if (isFixedVectorShuffle(CommonCandidates, Mask, AC)) {
@@ -27129,11 +27164,12 @@ public:
         if (RK == ReductionOrdering::Ordered)
           continue;
         Value *Res = Candidates.front();
-        Value *OrigV = TrackedToOrig.at(Candidates.front());
+        Value *OrigV = TrackedToOrig.front();
         ++VectorizedVals.try_emplace(OrigV).first->getSecond();
-        for (Value *VC : ArrayRef(Candidates).drop_front()) {
+        for (const auto [Idx, VC] :
+             enumerate(ArrayRef(Candidates).drop_front())) {
           Res = createOp(Builder, RdxKind, Res, VC, "const.rdx", ReductionOps);
-          Value *OrigV = TrackedToOrig.at(VC);
+          Value *OrigV = TrackedToOrig[Idx + 1];
           ++VectorizedVals.try_emplace(OrigV).first->getSecond();
           if (auto *ResI = dyn_cast<Instruction>(Res))
             V.analyzedReductionRoot(ResI);
@@ -27155,8 +27191,8 @@ public:
       // Gather same values.
       SmallMapVector<Value *, unsigned, 16> SameValuesCounter;
       if (IsSupportedHorRdxIdentityOp)
-        for (Value *V : Candidates) {
-          Value *OrigV = TrackedToOrig.at(V);
+        for (const auto [Idx, V] : enumerate(Candidates)) {
+          Value *OrigV = TrackedToOrig[Idx];
           ++SameValuesCounter.try_emplace(OrigV).first->second;
         }
       // Used to check if the reduced values used same number of times. In this
@@ -27182,12 +27218,15 @@ public:
                      return P.second == SameValuesCounter.front().second;
                    });
         Candidates.resize(SameValuesCounter.size());
+        TrackedToOrig.resize(SameValuesCounter.size());
         transform(SameValuesCounter, Candidates.begin(),
                   [&](const auto &P) { return TrackedVals.at(P.first); });
+        transform(SameValuesCounter, TrackedToOrig.begin(),
+                  [](const auto &P) { return P.first; });
         NumReducedVals = Candidates.size();
         // Have a reduction of the same element.
         if (NumReducedVals == 1) {
-          Value *OrigV = TrackedToOrig.at(Candidates.front());
+          Value *OrigV = TrackedToOrig.front();
           unsigned Cnt = At(SameValuesCounter, OrigV);
           Value *RedVal =
               emitScaleForReusedOps(Candidates.front(), Builder, Cnt);
@@ -27325,8 +27364,7 @@ public:
           for (unsigned Cnt = 0; Cnt < NumReducedVals; ++Cnt) {
             if (Cnt >= Pos && Cnt < Pos + ReduxWidth)
               continue;
-            Value *V = Candidates[Cnt];
-            Value *OrigV = TrackedToOrig.at(V);
+            Value *OrigV = TrackedToOrig[Cnt];
             ++SameValuesCounter.try_emplace(OrigV).first->second;
           }
         }
@@ -27351,7 +27389,7 @@ public:
             LocalExternallyUsedValues.insert(RdxVal);
             continue;
           }
-          Value *OrigV = TrackedToOrig.at(RdxVal);
+          Value *OrigV = TrackedToOrig[Cnt];
           unsigned NumOps =
               VectorizedVals.lookup(OrigV) + At(SameValuesCounter, OrigV);
           if (NumOps != ReducedValsToOps.at(OrigV).size())
@@ -27431,14 +27469,6 @@ public:
         // Vectorize a tree.
         Value *VectorizedRoot = V.vectorizeTree(
             LocalExternallyUsedValues, InsertPt, VectorValuesAndScales);
-        // Update TrackedToOrig mapping, since the tracked values might be
-        // updated.
-        for (Value *RdxVal : Candidates) {
-          Value *OrigVal = TrackedToOrig.at(RdxVal);
-          Value *TransformedRdxVal = TrackedVals.at(OrigVal);
-          if (TransformedRdxVal != RdxVal)
-            TrackedToOrig.try_emplace(TransformedRdxVal, OrigVal);
-        }
 
         if (RK == ReductionOrdering::Ordered) {
           // No need to generate reduction here, emit extractelements instead in
@@ -27467,8 +27497,20 @@ public:
 
         // Emit code to correctly handle reused reduced values, if required.
         if (OptReusedScalars && !SameScaleFactor) {
+          // Build TrackedToOrig aligned with the root node scalars order,
+          // which may differ from Candidates order due to tree reordering.
+          ArrayRef<Value *> RootVL = V.getRootNodeScalars();
+          ArrayRef<Value *> CandSlice(Candidates.begin() + Pos, ReduxWidth);
+          SmallVector<Value *> RootTrackedToOrig(RootVL.size());
+          for (auto [Idx, V] : enumerate(RootVL)) {
+            auto *It = find(CandSlice, V);
+            assert(It != CandSlice.end() &&
+                   "Root scalar not found in candidates");
+            RootTrackedToOrig[Idx] =
+                TrackedToOrig[Pos + std::distance(CandSlice.begin(), It)];
+          }
           VectorizedRoot = emitReusedOps(VectorizedRoot, Builder, V,
-                                         SameValuesCounter, TrackedToOrig);
+                                         SameValuesCounter, RootTrackedToOrig);
         }
 
         Type *ScalarTy = VL.front()->getType();
@@ -27485,8 +27527,8 @@ public:
             V.isReducedBitcastRoot() || V.isReducedCmpBitcastRoot());
 
         // Count vectorized reduced values to exclude them from final reduction.
-        for (Value *RdxVal : VL) {
-          Value *OrigV = TrackedToOrig.at(RdxVal);
+        for (const auto [Idx, RdxVal] : enumerate(VL)) {
+          Value *OrigV = TrackedToOrig[Pos + Idx];
           if (IsSupportedHorRdxIdentityOp) {
             VectorizedVals.try_emplace(OrigV, At(SameValuesCounter, OrigV));
             continue;
@@ -28197,7 +28239,7 @@ private:
   Value *
   emitReusedOps(Value *VectorizedValue, IRBuilderBase &Builder, BoUpSLP &R,
                 const SmallMapVector<Value *, unsigned, 16> &SameValuesCounter,
-                const DenseMap<Value *, Value *> &TrackedToOrig) {
+                ArrayRef<Value *> TrackedToOrig) {
     assert(IsSupportedHorRdxIdentityOp &&
            "The optimization of matched scalar identity horizontal reductions "
            "must be supported.");
@@ -28213,8 +28255,8 @@ private:
     case RecurKind::Add: {
       // root = mul prev_root, <1, 1, n, 1>
       SmallVector<Constant *> Vals;
-      for (Value *V : VL) {
-        unsigned Cnt = SameValuesCounter.lookup(TrackedToOrig.at(V));
+      for (const auto [Idx, V] : enumerate(VL)) {
+        unsigned Cnt = SameValuesCounter.lookup(TrackedToOrig[Idx]);
         Vals.push_back(ConstantInt::get(V->getType(), Cnt, /*IsSigned=*/false));
       }
       auto *Scale = ConstantVector::get(Vals);
@@ -28250,11 +28292,10 @@ private:
           PoisonMaskElem);
       std::iota(Mask.begin(), Mask.end(), 0);
       bool NeedShuffle = false;
-      for (unsigned I = 0, VF = VL.size(); I < VF; ++I) {
-        Value *V = VL[I];
-        unsigned Cnt = SameValuesCounter.lookup(TrackedToOrig.at(V));
+      for (const auto [Idx, V] : enumerate(VL)) {
+        unsigned Cnt = SameValuesCounter.lookup(TrackedToOrig[Idx]);
         if (Cnt % 2 == 0) {
-          Mask[I] = VF;
+          Mask[Idx] = VL.size();
           NeedShuffle = true;
         }
       }
@@ -28271,8 +28312,8 @@ private:
     case RecurKind::FAdd: {
       // root = fmul prev_root, <1.0, 1.0, n.0, 1.0>
       SmallVector<Constant *> Vals;
-      for (Value *V : VL) {
-        unsigned Cnt = SameValuesCounter.lookup(TrackedToOrig.at(V));
+      for (const auto [Idx, V] : enumerate(VL)) {
+        unsigned Cnt = SameValuesCounter.lookup(TrackedToOrig[Idx]);
         Vals.push_back(ConstantFP::get(V->getType(), Cnt));
       }
       auto *Scale = ConstantVector::get(Vals);

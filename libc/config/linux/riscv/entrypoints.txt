@@ -895,6 +895,7 @@ endif()
 list(APPEND TARGET_LIBM_ENTRYPOINTS
   # bfloat16 entrypoints
   libc.src.math.atanbf16
+  libc.src.math.asinbf16
   libc.src.math.bf16add
   libc.src.math.bf16addf
   libc.src.math.bf16addl
@@ -1342,6 +1343,7 @@ if(LLVM_LIBC_FULL_BUILD)
 
     # sys/socket.h entrypoints
     libc.src.sys.socket.bind
+    libc.src.sys.socket.connect
     libc.src.sys.socket.socket
     libc.src.sys.socket.socketpair
     libc.src.sys.socket.send

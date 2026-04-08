@@ -1306,6 +1306,8 @@ void TargetLoweringObjectFileMachO::emitModuleMetadata(MCStreamer &Streamer,
   // Emit the linker options if present.
   emitLinkerDirectives(Streamer, M);
 
+  emitPseudoProbeDescMetadata(Streamer, M);
+
   unsigned VersionVal = 0;
   unsigned ImageInfoFlags = 0;
   StringRef SectionVal;

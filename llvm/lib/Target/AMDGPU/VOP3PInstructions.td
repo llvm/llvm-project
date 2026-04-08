@@ -87,13 +87,11 @@ multiclass VOP3PInst<string OpName, VOPProfile P,
 }
 
 multiclass VOP3PInstDotWithDual<string OpName, VOPProfile P,
-                                SDPatternOperator node = null_frag,
-                                bits<6> VOPDOp, string VOPDName> {
+                                SDPatternOperator node = null_frag> {
   def NAME : VOP3P_Pseudo<OpName, P,
                           getVOP3PModPat<P, node,
                                          1 /*HasExplicitClamp*/, 1/*IsDOT*/,
-                                         VOP3PModsDOT, VOP3PModsF32>.ret>,
-             VOPD_Component<VOPDOp, VOPDName>;
+                                         VOP3PModsDOT, VOP3PModsF32>.ret>;
   let SubtargetPredicate = isGFX11Plus in {
   if P.HasExtVOP3DPP then
     def _dpp : VOP3_DPP_Pseudo<OpName, P> {
@@ -614,12 +612,12 @@ defm V_DOT2_U32_U16 : VOP3PInst<"v_dot2_u32_u16",
   VOP3P_Profile<VOP_I32_V2I16_V2I16_I32>, int_amdgcn_udot2, 1>;
 } // End OtherPredicates = [HasDot2Insts]
 
-let OtherPredicates = [HasDot10Insts], isCommutable = 1, usesCustomInserter = 1 in
+let OtherPredicates = [HasDot10Insts] in
 defm V_DOT2_F32_F16 :
   VOP3PInstDotWithDual<"v_dot2_f32_f16",
                        VOP3P_Profile<VOP_F32_V2F16_V2F16_F32, VOP3_REGULAR,
                                      /*HasDPP*/ 1>,
-                       AMDGPUfdot2, 0xC, "v_dot2acc_f32_f16">;
+                       AMDGPUfdot2>;
 
 let OtherPredicates = [HasDot7Insts] in {
 defm V_DOT4_U32_U8  : VOP3PInst<"v_dot4_u32_u8",
@@ -642,10 +640,9 @@ def DOT2_BF16_Profile
 
 let SubtargetPredicate = HasDot12Insts  in {
 
-let isCommutable = 1, usesCustomInserter = 1 in
 defm V_DOT2_F32_BF16 :
   VOP3PInstDotWithDual<"v_dot2_f32_bf16", DOT2_BF16_Profile,
-                       int_amdgcn_fdot2_f32_bf16, 0xD, "v_dot2acc_f32_bf16">;
+                       int_amdgcn_fdot2_f32_bf16>;
 
 } // End SubtargetPredicate = HasDot12Insts
 
@@ -1878,7 +1875,8 @@ def BF16_BF16X32_WMMA_w32        : VOP3PWMMA_Profile<[v8bf16, v16bf16, v16bf16, 
                                      /*_Has_ImodOp=*/1, /*_HasMatrixFMT=*/0, /*_HasMatrixScale=*/0, /*_Scale16=*/0, /*_HasMatrixReuse=*/1, /*_IsF4*/0,
                                      /*_NoABMods*/1>;
 def BF16F32_BF16_WMMA_w32        : VOP3PWMMA_Profile<[v8bf16, v16bf16, v16bf16,  v8f32], /*_IsSWMMAC=*/0, /*_IndexType=*/0, /*_IsIU=*/0, /*_IsFP8BF8=*/0,
-                                     /*_Has_ImodOp=*/1, /*_HasMatrixFMT=*/0, /*_HasMatrixScale=*/0, /*_Scale16=*/0, /*_HasMatrixReuse=*/1>;
+                                     /*_Has_ImodOp=*/1, /*_HasMatrixFMT=*/0, /*_HasMatrixScale=*/0, /*_Scale16=*/0, /*_HasMatrixReuse=*/1, /*_IsF4*/0,
+                                     /*_NoABMods*/1>;
 def F32_FP8BF8X64_WMMA_w32       : VOP3PWMMA_Profile<[v8f32, v8i32,    v8i32,    v8f32], /*_IsSWMMAC=*/0, /*_IndexType=*/0, /*_IsIU=*/0, /*_IsFP8BF8=*/1,
                                      /*_Has_ImodOp=*/1, /*_HasMatrixFMT=*/0, /*_HasMatrixScale=*/0, /*_Scale16=*/0, /*_HasMatrixReuse=*/1>;
 def F32_FP8BF8X128_WMMA_w32      : VOP3PWMMA_Profile<[v8f32, v16i32,   v16i32,   v8f32], /*_IsSWMMAC=*/0, /*_IndexType=*/0, /*_IsIU=*/0, /*_IsFP8BF8=*/1,
@@ -2442,6 +2440,7 @@ defm V_WMMA_F32_16X16X16_BF8_FP8_w64 : VOP3P_Real_WMMA_gfx1170_gfx12w64 <0x048, 
 defm V_WMMA_F32_16X16X16_BF8_BF8_w64 : VOP3P_Real_WMMA_gfx1170_gfx12w64 <0x049, F32_FP8BF8_WMMA_w64>;
 defm V_WMMA_I32_16X16X32_IU4_w64     : VOP3P_Real_WMMA_gfx1170_gfx12w64 <0x04a, I32_IU4X32_WMMA_w64>;
 
+let OtherPredicates = [HasSWMMACGfx1200Insts] in {
 defm V_SWMMAC_F32_16X16X32_F16_w32     : VOP3P_Real_WMMA_gfx1170_gfx12 <0x050, F32_F16_SWMMAC_w32>;
 defm V_SWMMAC_F32_16X16X32_BF16_w32    : VOP3P_Real_WMMA_gfx1170_gfx12 <0x051, F32_BF16_SWMMAC_w32>;
 defm V_SWMMAC_F16_16X16X32_F16_w32     : VOP3P_Real_WMMA_gfx1170_gfx12 <0x052, F16_F16_SWMMAC_w32>;
@@ -2465,6 +2464,7 @@ defm V_SWMMAC_F32_16X16X32_FP8_FP8_w64 : VOP3P_Real_WMMA_gfx1170_gfx12w64 <0x057
 defm V_SWMMAC_F32_16X16X32_FP8_BF8_w64 : VOP3P_Real_WMMA_gfx1170_gfx12w64 <0x058, F32_FP8BF8_SWMMAC_w64>;
 defm V_SWMMAC_F32_16X16X32_BF8_FP8_w64 : VOP3P_Real_WMMA_gfx1170_gfx12w64 <0x059, F32_FP8BF8_SWMMAC_w64>;
 defm V_SWMMAC_F32_16X16X32_BF8_BF8_w64 : VOP3P_Real_WMMA_gfx1170_gfx12w64 <0x05a, F32_FP8BF8_SWMMAC_w64>;
+} // End OtherPredicates = [HasSWMMACGfx1200Insts]
 
 defm V_WMMA_F32_16X16X4_F32_w32       : VOP3P_Real_WMMA_gfx1250 <0x05d, F32_F32_WMMA_w32>;
 defm V_WMMA_F32_16X16X32_BF16_w32     : VOP3P_Real_WMMA_gfx1250 <0x062, F32_BF16X32_WMMA_w32>;
@@ -2500,6 +2500,7 @@ defm V_WMMA_SCALE_F32_32X16X128_F4_w32   : VOP3PX2_Real_ScaledWMMA_F4 <"gfx1250"
 defm V_WMMA_SCALE16_F32_32X16X128_F4_w32 : VOP3PX2_Real_ScaledWMMA_F4 <"gfx1250", 0x088, 0x3a, F32_32X16X128_F4_SCALE16_w32>;
 } // End WaveSizePredicate = isWave32, SubtargetPredicate = isGFX1250Plus, DecoderNamespace = "GFX1250"
 
+let OtherPredicates = [HasSWMMACGfx1250Insts] in {
 defm V_SWMMAC_F32_16X16X64_F16_w32      : VOP3P_Real_WMMA_gfx1250 <0x065, F32_F16X64_SWMMAC_w32>;
 defm V_SWMMAC_F32_16X16X64_BF16_w32     : VOP3P_Real_WMMA_gfx1250 <0x066, F32_BF16X64_SWMMAC_w32>;
 defm V_SWMMAC_F16_16X16X64_F16_w32      : VOP3P_Real_WMMA_gfx1250 <0x067, F16_F16X64_SWMMAC_w32>;
@@ -2514,6 +2515,7 @@ defm V_SWMMAC_F16_16X16X128_FP8_BF8_w32 : VOP3P_Real_WMMA_gfx1250 <0x078, F16_FP
 defm V_SWMMAC_F16_16X16X128_BF8_FP8_w32 : VOP3P_Real_WMMA_gfx1250 <0x079, F16_FP8BF8X128_SWMMAC_w32>;
 defm V_SWMMAC_F16_16X16X128_BF8_BF8_w32 : VOP3P_Real_WMMA_gfx1250 <0x07a, F16_FP8BF8X128_SWMMAC_w32>;
 defm V_SWMMAC_I32_16X16X128_IU8_w32     : VOP3P_Real_WMMA_gfx1250 <0x07b, I32_IU8X128_SWMMAC_w32>;
+} // End OtherPredicates = [HasSWMMACGfx1250Insts]
 
 multiclass VOP3P_Real_with_name<GFXGen Gen, bits<8> op,
                           string backing_ps_name = NAME,

@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "AArch64ExpandImm.h"
 #include "AArch64InstrInfo.h"
 #include "AArch64MCSymbolizer.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
@@ -144,6 +145,63 @@ static InstructionListType createIncMemory(MCPhysReg RegTo, MCPhysReg RegTmp) {
   return Insts;
 }
 
+static InstructionListType createMOVImm(MCPhysReg DstReg, unsigned BitSize,
+                                        uint64_t Imm) {
+  SmallVector<AArch64_IMM::ImmInsnModel> Insn;
+  AArch64_IMM::expandMOVImm(Imm, BitSize, Insn);
+  assert(Insn.size() != 0);
+
+  InstructionListType Insts;
+  for (auto I = Insn.begin(), E = Insn.end(); I != E; ++I) {
+    switch (I->Opcode) {
+    case AArch64::ORRWri:
+    case AArch64::ORRXri:
+    case AArch64::ANDXri:
+    case AArch64::EORXri:
+      if (I->Op1 == 0)
+        Insts.emplace_back(
+            MCInstBuilder(I->Opcode)
+                .addReg(DstReg)
+                .addReg(BitSize == 32 ? AArch64::WZR : AArch64::XZR)
+                .addImm(I->Op2));
+      else
+        Insts.emplace_back(
+            MCInstBuilder(I->Opcode).addReg(DstReg).addReg(DstReg).addImm(
+                I->Op2));
+      break;
+    case AArch64::EORXrs:
+    case AArch64::EONXrs:
+    case AArch64::ORRWrs:
+    case AArch64::ORRXrs:
+      Insts.emplace_back(MCInstBuilder(I->Opcode)
+                             .addReg(DstReg)
+                             .addReg(DstReg)
+                             .addReg(DstReg)
+                             .addImm(I->Op2));
+      break;
+    case AArch64::MOVNWi:
+    case AArch64::MOVNXi:
+    case AArch64::MOVZWi:
+    case AArch64::MOVZXi:
+      Insts.emplace_back(
+          MCInstBuilder(I->Opcode).addReg(DstReg).addImm(I->Op1).addImm(
+              I->Op2));
+      break;
+    case AArch64::MOVKWi:
+    case AArch64::MOVKXi:
+      Insts.emplace_back(MCInstBuilder(I->Opcode)
+                             .addReg(DstReg)
+                             .addReg(DstReg)
+                             .addImm(I->Op1)
+                             .addImm(I->Op2));
+      break;
+    default:
+      llvm_unreachable("Unhandled! Please refer to expandMOVImm in llvm");
+    }
+  }
+  return Insts;
+}
+
 class AArch64MCPlusBuilder : public MCPlusBuilder {
 public:
   using MCPlusBuilder::MCPlusBuilder;
@@ -158,6 +216,7 @@ public:
 
   MCPhysReg getStackPointer() const override { return AArch64::SP; }
   MCPhysReg getFramePointer() const override { return AArch64::FP; }
+  MCPhysReg getFlagsReg() const override { return AArch64::NZCV; }
 
   bool isBreakpoint(const MCInst &Inst) const override {
     return Inst.getOpcode() == AArch64::BRK;
@@ -1238,6 +1297,19 @@ public:
     return true;
   }
 
+  BitVector getRegsUsedAsParams() const override {
+    BitVector Regs = BitVector(RegInfo->getNumRegs(), false);
+    Regs |= getAliases(AArch64::X0);
+    Regs |= getAliases(AArch64::X1);
+    Regs |= getAliases(AArch64::X2);
+    Regs |= getAliases(AArch64::X3);
+    Regs |= getAliases(AArch64::X4);
+    Regs |= getAliases(AArch64::X5);
+    Regs |= getAliases(AArch64::X6);
+    Regs |= getAliases(AArch64::X7);
+    return Regs;
+  }
+
   void getCalleeSavedRegs(BitVector &Regs) const override {
     Regs |= getAliases(AArch64::X18);
     Regs |= getAliases(AArch64::X19);
@@ -1252,6 +1324,88 @@ public:
     Regs |= getAliases(AArch64::X28);
     Regs |= getAliases(AArch64::LR);
     Regs |= getAliases(AArch64::FP);
+  }
+
+  void getDefaultLiveOut(BitVector &Regs) const override {
+    // According to the AArch64 ABI the return registers are X0 to X7,
+    // which happen to be the same as the parameter registers.
+    Regs |= getRegsUsedAsParams();
+  }
+
+  void getGPRegs(BitVector &Regs, bool IncludeAlias = true) const override {
+    if (IncludeAlias) {
+      Regs |= getAliases(AArch64::X0);
+      Regs |= getAliases(AArch64::X1);
+      Regs |= getAliases(AArch64::X2);
+      Regs |= getAliases(AArch64::X3);
+      Regs |= getAliases(AArch64::X4);
+      Regs |= getAliases(AArch64::X5);
+      Regs |= getAliases(AArch64::X6);
+      Regs |= getAliases(AArch64::X7);
+      Regs |= getAliases(AArch64::X8);
+      Regs |= getAliases(AArch64::X9);
+      Regs |= getAliases(AArch64::X10);
+      Regs |= getAliases(AArch64::X11);
+      Regs |= getAliases(AArch64::X12);
+      Regs |= getAliases(AArch64::X13);
+      Regs |= getAliases(AArch64::X14);
+      Regs |= getAliases(AArch64::X15);
+      Regs |= getAliases(AArch64::X16);
+      Regs |= getAliases(AArch64::X17);
+      Regs |= getAliases(AArch64::X18);
+      Regs |= getAliases(AArch64::X19);
+      Regs |= getAliases(AArch64::X20);
+      Regs |= getAliases(AArch64::X21);
+      Regs |= getAliases(AArch64::X22);
+      Regs |= getAliases(AArch64::X23);
+      Regs |= getAliases(AArch64::X24);
+      Regs |= getAliases(AArch64::X25);
+      Regs |= getAliases(AArch64::X26);
+      Regs |= getAliases(AArch64::X27);
+      Regs |= getAliases(AArch64::X28);
+      Regs |= getAliases(AArch64::LR);
+      Regs |= getAliases(AArch64::FP);
+      return;
+    }
+    Regs.set(AArch64::X0);
+    Regs.set(AArch64::X1);
+    Regs.set(AArch64::X2);
+    Regs.set(AArch64::X3);
+    Regs.set(AArch64::X4);
+    Regs.set(AArch64::X5);
+    Regs.set(AArch64::X6);
+    Regs.set(AArch64::X7);
+    Regs.set(AArch64::X8);
+    Regs.set(AArch64::X9);
+    Regs.set(AArch64::X10);
+    Regs.set(AArch64::X11);
+    Regs.set(AArch64::X12);
+    Regs.set(AArch64::X13);
+    Regs.set(AArch64::X14);
+    Regs.set(AArch64::X15);
+    Regs.set(AArch64::X16);
+    Regs.set(AArch64::X17);
+    Regs.set(AArch64::X18);
+    Regs.set(AArch64::X19);
+    Regs.set(AArch64::X20);
+    Regs.set(AArch64::X21);
+    Regs.set(AArch64::X22);
+    Regs.set(AArch64::X23);
+    Regs.set(AArch64::X24);
+    Regs.set(AArch64::X25);
+    Regs.set(AArch64::X26);
+    Regs.set(AArch64::X27);
+    Regs.set(AArch64::X28);
+    Regs.set(AArch64::LR);
+    Regs.set(AArch64::FP);
+  }
+
+  void removeNonScavengeableRegs(BitVector &Regs) const override {
+    BitVector ExclusionMask = getAliases(AArch64::LR);
+    ExclusionMask |= getAliases(AArch64::FP);
+    ExclusionMask |= getAliases(AArch64::X18); // platform register
+    ExclusionMask.flip();
+    Regs &= ExclusionMask;
   }
 
   const MCExpr *getTargetExprFor(MCInst &Inst, const MCExpr *Expr,
@@ -2412,6 +2566,29 @@ public:
            isAArch64ExclusiveStore(Inst);
   }
 
+  bool isCleanRegXOR(const MCInst &Inst) const override {
+    switch (Inst.getOpcode()) {
+    case AArch64::EORXrs:
+    case AArch64::EORWrs:
+      return Inst.getOperand(1).getReg() == Inst.getOperand(2).getReg() &&
+             Inst.getOperand(3).getImm() == 0;
+    case AArch64::ORRXrs:
+      return Inst.getOperand(1).getReg() == AArch64::XZR &&
+             Inst.getOperand(2).getReg() == AArch64::XZR &&
+             Inst.getOperand(3).getImm() == 0;
+    case AArch64::ORRWrs:
+      return Inst.getOperand(1).getReg() == AArch64::WZR &&
+             Inst.getOperand(2).getReg() == AArch64::WZR &&
+             Inst.getOperand(3).getImm() == 0;
+    case AArch64::MOVZXi:
+    case AArch64::MOVZWi:
+      return Inst.getOperand(1).isImm() && Inst.getOperand(1).getImm() == 0 &&
+             Inst.getOperand(2).getImm() == 0;
+    default:
+      return false;
+    }
+  }
+
   bool isStoreToStack(const MCInst &Inst) const {
     if (!mayStore(Inst))
       return false;
@@ -2867,30 +3044,11 @@ public:
 
   InstructionListType createLoadImmediate(const MCPhysReg Dest,
                                           uint64_t Imm) const override {
-    InstructionListType Insts;
-
-    Insts.emplace_back();
-    MCInst &Inst = Insts.back();
-    Inst.clear();
-    Inst.setOpcode(AArch64::MOVZXi);
-    Inst.addOperand(MCOperand::createReg(Dest));
-    Inst.addOperand(MCOperand::createImm(Imm & 0xFFFF));
-    Inst.addOperand(MCOperand::createImm(0));
-
-    int Shift = 16;
-    for (int I = 0; I < 3; I++, Shift += 16) {
-      const uint64_t ImmVal = (Imm >> Shift) & 0xFFFF;
-      if (!ImmVal)
-        continue;
-      Insts.emplace_back();
-      MCInst &Inst = Insts.back();
-      Inst.setOpcode(AArch64::MOVKXi);
-      Inst.addOperand(MCOperand::createReg(Dest));
-      Inst.addOperand(MCOperand::createReg(Dest));
-      Inst.addOperand(MCOperand::createImm(ImmVal));
-      Inst.addOperand(MCOperand::createImm(Shift));
-    }
-    return Insts;
+    if (RegInfo->getRegClass(AArch64::GPR64RegClassID).contains(Dest))
+      return createMOVImm(Dest, 64, Imm);
+    if (RegInfo->getRegClass(AArch64::GPR32RegClassID).contains(Dest))
+      return createMOVImm(Dest, 32, Imm);
+    llvm_unreachable("Unexpected RegClass");
   }
 
   void createIndirectCallInst(MCInst &Inst, bool IsTailCall,

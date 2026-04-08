@@ -546,7 +546,7 @@ def VariadicRegionInferredTypesOp : TEST_Op<"variadic_region_inferred",
   let extraClassDeclaration = [{
     static llvm::LogicalResult inferReturnTypes(mlir::MLIRContext *context,
           std::optional<::mlir::Location> location, mlir::ValueRange operands,
-          mlir::DictionaryAttr attributes, mlir::OpaqueProperties properties, mlir::RegionRange regions,
+          mlir::DictionaryAttr attributes, mlir::PropertyRef properties, mlir::RegionRange regions,
           llvm::SmallVectorImpl<mlir::Type> &inferredReturnTypes) {
       inferredReturnTypes.assign({mlir::IntegerType::get(context, 16)});
       return mlir::success();
@@ -2472,6 +2472,13 @@ def SideEffectOp : TEST_Op<"side_effect_op",
   let results = (outs AnyType:$result);
 }
 
+def ConditionalSideEffectOp
+    : TEST_Op<"conditional_side_effect_op", [DeclareOpInterfaceMethods<
+                                                MemoryEffectsOpInterface>]> {
+  let arguments = (ins BoolAttr:$has_effects);
+  let results = (outs AnyType:$result);
+}
+
 def SideEffectWithRegionOp : TEST_Op<"side_effect_with_region_op",
     [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
      DeclareOpInterfaceMethods<TestEffectOpInterface>]> {
@@ -2829,7 +2836,7 @@ class TableGenBuildInferReturnTypeBaseOp<string mnemonic,
   let extraClassDeclaration = [{
     static ::llvm::LogicalResult inferReturnTypes(::mlir::MLIRContext *,
           ::std::optional<::mlir::Location> location, ::mlir::ValueRange operands,
-          ::mlir::DictionaryAttr attributes, mlir::OpaqueProperties properties, ::mlir::RegionRange regions,
+          ::mlir::DictionaryAttr attributes, mlir::PropertyRef properties, ::mlir::RegionRange regions,
           ::llvm::SmallVectorImpl<::mlir::Type> &inferredReturnTypes) {
       inferredReturnTypes.assign({operands[0].getType()});
       return ::mlir::success();
@@ -3106,6 +3113,30 @@ def TestNVVMRequiresSMArchCondOp :
 
 def TestNVVMRequirestSMArchCondMultiOp :
     TEST_Op<"nvvm_requires_sm_90a_or_sm_100a", [NVVMRequiresSMa<[90, 100]>]> {
+  let arguments = (ins );
+  let assemblyFormat = "attr-dict";
+}
+
+def TestNVVMRequiresSMFamilyCondOp :
+    TEST_Op<"nvvm_requires_sm_100f", [NVVMRequiresSMf<[100]>]> {
+  let arguments = (ins );
+  let assemblyFormat = "attr-dict";
+}
+
+def TestNVVMRequiresSMFamilyCondHigherOp :
+    TEST_Op<"nvvm_requires_sm_103f", [NVVMRequiresSMf<[103]>]> {
+  let arguments = (ins );
+  let assemblyFormat = "attr-dict";
+}
+
+def TestNVVMRequiresSMFamilyCondMultiOp :
+    TEST_Op<"nvvm_requires_sm_100f_or_sm_120f", [NVVMRequiresSMf<[100, 120]>]> {
+  let arguments = (ins );
+  let assemblyFormat = "attr-dict";
+}
+
+def TestNVVMRequiresSMArchOrFamilyCondOp :
+    TEST_Op<"nvvm_requires_sm_90a_or_sm_100f", [NVVMRequiresSMaOrSMf<[90], [100]>]> {
   let arguments = (ins );
   let assemblyFormat = "attr-dict";
 }

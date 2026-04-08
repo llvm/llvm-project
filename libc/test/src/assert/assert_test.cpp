@@ -7,21 +7,21 @@
 //===----------------------------------------------------------------------===//
 
 #undef NDEBUG
+#include "hdr/signal_macros.h"
 #include "src/assert/assert.h"
 #include "test/UnitTest/Test.h"
 
 extern "C" int close(int);
 
 TEST(LlvmLibcAssert, Enabled) {
-  // -1 matches against any signal, which is necessary for now until
-  // LIBC_NAMESPACE::abort() unblocks SIGABRT. Close standard error for the
-  // child process so we don't print the assertion failure message.
+  // Close standard error for the child process so we don't print the assertion
+  // failure message.
   EXPECT_DEATH(
       [] {
         close(2);
         assert(0);
       },
-      WITH_SIGNAL(-1));
+      WITH_SIGNAL(SIGABRT));
 }
 
 #define NDEBUG

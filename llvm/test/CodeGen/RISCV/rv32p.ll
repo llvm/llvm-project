@@ -614,6 +614,73 @@ define i32 @shlsati_i32(i32 %a) {
  ret i32 %sshlsat
 }
 
+define i8 @ushlsat_i8(i8 %a, i8 %b) {
+; CHECK-LABEL: ushlsat_i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    zext.b a1, a1
+; CHECK-NEXT:    slli a0, a0, 24
+; CHECK-NEXT:    sshl a0, a0, a1
+; CHECK-NEXT:    srli a0, a0, 24
+; CHECK-NEXT:    ret
+ %ushlsat = tail call i8 @llvm.ushl.sat.i8(i8 %a,i8 %b)
+ ret i8 %ushlsat
+}
+
+define i16 @ushlsat_i16(i16 %a, i16 %b) {
+; CHECK-LABEL: ushlsat_i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    zext.h a1, a1
+; CHECK-NEXT:    slli a0, a0, 16
+; CHECK-NEXT:    sshl a0, a0, a1
+; CHECK-NEXT:    srli a0, a0, 16
+; CHECK-NEXT:    ret
+ %ushlsat = tail call i16 @llvm.ushl.sat.i16(i16 %a,i16 %b)
+ ret i16 %ushlsat
+}
+
+define i32 @ushlsat_i32(i32 %a, i32 %b) {
+; CHECK-LABEL: ushlsat_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    sshl a0, a0, a1
+; CHECK-NEXT:    ret
+ %ushlsat = tail call i32 @llvm.ushl.sat.i32(i32 %a,i32 %b)
+ ret i32 %ushlsat
+}
+
+define i8 @ushlsati_i8(i8 %a) {
+; CHECK-LABEL: ushlsati_i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    slli a0, a0, 24
+; CHECK-NEXT:    li a1, 5
+; CHECK-NEXT:    sshl a0, a0, a1
+; CHECK-NEXT:    srli a0, a0, 24
+; CHECK-NEXT:    ret
+ %ushlsat = tail call i8 @llvm.ushl.sat.i8(i8 %a, i8 5)
+ ret i8 %ushlsat
+}
+
+define i16 @ushlsati_i16(i16 %a) {
+; CHECK-LABEL: ushlsati_i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    slli a0, a0, 16
+; CHECK-NEXT:    li a1, 10
+; CHECK-NEXT:    sshl a0, a0, a1
+; CHECK-NEXT:    srli a0, a0, 16
+; CHECK-NEXT:    ret
+ %ushlsat = tail call i16 @llvm.ushl.sat.i16(i16 %a, i16 10)
+ ret i16 %ushlsat
+}
+
+define i32 @ushlsati_i32(i32 %a) {
+; CHECK-LABEL: ushlsati_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a1, 21
+; CHECK-NEXT:    sshl a0, a0, a1
+; CHECK-NEXT:    ret
+ %ushlsat = tail call i32 @llvm.ushl.sat.i32(i32 %a, i32 21)
+ ret i32 %ushlsat
+}
+
 define i8 @sadd_i8(i8 %x, i8 %y) {
 ; CHECK-LABEL: sadd_i8:
 ; CHECK:       # %bb.0:
@@ -745,6 +812,56 @@ define i32 @usub_i32(i32 %x, i32 %y) {
 ; CHECK-NEXT:    ret
   %a = call i32 @llvm.usub.sat.i32(i32 %x, i32 %y)
   ret i32 %a
+}
+
+define i32 @aadd_i32(i32 %a, i32 %b) {
+; CHECK-LABEL: aadd_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    aadd a0, a0, a1
+; CHECK-NEXT:    ret
+  %ext.a = sext i32 %a to i64
+  %ext.b = sext i32 %b to i64
+  %add = add i64 %ext.a, %ext.b
+  %shift = ashr i64 %add, 1
+  %res = trunc i64 %shift to i32
+  ret i32 %res
+}
+
+define i32 @aadd2_i32(i32 %a, i32 %b) {
+; CHECK-LABEL: aadd2_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    aadd a0, a0, a1
+; CHECK-NEXT:    ret
+  %and = and i32 %a, %b
+  %xor = xor i32 %a, %b
+  %shift = ashr i32 %xor, 1
+  %res = add i32 %and, %shift
+  ret i32 %res
+}
+
+define i32 @aaddu_i32(i32 %a, i32 %b) {
+; CHECK-LABEL: aaddu_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    aaddu a0, a0, a1
+; CHECK-NEXT:    ret
+  %ext.a = zext i32 %a to i64
+  %ext.b = zext i32 %b to i64
+  %add = add i64 %ext.a, %ext.b
+  %shift = lshr i64 %add, 1
+  %res = trunc i64 %shift to i32
+  ret i32 %res
+}
+
+define i32 @aaddu2_i32(i32 %a, i32 %b) {
+; CHECK-LABEL: aaddu2_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    aaddu a0, a0, a1
+; CHECK-NEXT:    ret
+  %and = and i32 %a, %b
+  %xor = xor i32 %a, %b
+  %shift = lshr i32 %xor, 1
+  %res = add i32 %and, %shift
+  ret i32 %res
 }
 
 define i64 @wmul_i32(i32 %x, i32 %y) {
@@ -956,6 +1073,250 @@ define i64 @wmaccsu_commute(i32 %a, i32 %b, i64 %c) nounwind {
   %mul = mul i64 %aext, %bext
   %result = add i64 %mul, %c
   ret i64 %result
+}
+
+define i32 @macc_h00(i32 %rd, i16 %a, i16 %b) nounwind {
+; CHECK-LABEL: macc_h00:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    macc.h00 a0, a1, a2
+; CHECK-NEXT:    ret
+  %aext = sext i16 %a to i32
+  %bext = sext i16 %b to i32
+  %mul = mul i32 %aext, %bext
+  %result = add i32 %rd, %mul
+  ret i32 %result
+}
+
+define i32 @macc_h00_commute(i32 %rd, i16 %a, i16 %b) nounwind {
+; CHECK-LABEL: macc_h00_commute:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    macc.h00 a0, a1, a2
+; CHECK-NEXT:    ret
+  %aext = sext i16 %a to i32
+  %bext = sext i16 %b to i32
+  %mul = mul i32 %aext, %bext
+  %result = add i32 %mul, %rd
+  ret i32 %result
+}
+
+define i32 @maccu_h00(i32 %rd, i16 %a, i16 %b) nounwind {
+; CHECK-LABEL: maccu_h00:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    maccu.h00 a0, a1, a2
+; CHECK-NEXT:    ret
+  %aext = zext i16 %a to i32
+  %bext = zext i16 %b to i32
+  %mul = mul i32 %aext, %bext
+  %result = add i32 %rd, %mul
+  ret i32 %result
+}
+
+define i32 @maccu_h00_commute(i32 %rd, i16 %a, i16 %b) nounwind {
+; CHECK-LABEL: maccu_h00_commute:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    maccu.h00 a0, a1, a2
+; CHECK-NEXT:    ret
+  %aext = zext i16 %a to i32
+  %bext = zext i16 %b to i32
+  %mul = mul i32 %aext, %bext
+  %result = add i32 %mul, %rd
+  ret i32 %result
+}
+
+define i32 @maccsu_h00(i32 %rd, i16 %a, i16 %b) nounwind {
+; CHECK-LABEL: maccsu_h00:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    maccsu.h00 a0, a1, a2
+; CHECK-NEXT:    ret
+  %aext = sext i16 %a to i32
+  %bext = zext i16 %b to i32
+  %mul = mul i32 %aext, %bext
+  %result = add i32 %rd, %mul
+  ret i32 %result
+}
+
+define i32 @maccsu_h00_commute(i32 %rd, i16 %a, i16 %b) nounwind {
+; CHECK-LABEL: maccsu_h00_commute:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    maccsu.h00 a0, a1, a2
+; CHECK-NEXT:    ret
+  %aext = sext i16 %a to i32
+  %bext = zext i16 %b to i32
+  %mul = mul i32 %aext, %bext
+  %result = add i32 %mul, %rd
+  ret i32 %result
+}
+
+define i32 @maccsu_h00_swap_operands(i32 %rd, i16 %a, i16 %b) nounwind {
+; CHECK-LABEL: maccsu_h00_swap_operands:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    maccsu.h00 a0, a2, a1
+; CHECK-NEXT:    ret
+  %aext = zext i16 %a to i32
+  %bext = sext i16 %b to i32
+  %mul = mul i32 %aext, %bext
+  %result = add i32 %rd, %mul
+  ret i32 %result
+}
+
+define i32 @maccsu_h00_swap_operands_commute(i32 %rd, i16 %a, i16 %b) nounwind {
+; CHECK-LABEL: maccsu_h00_swap_operands_commute:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    maccsu.h00 a0, a2, a1
+; CHECK-NEXT:    ret
+  %aext = zext i16 %a to i32
+  %bext = sext i16 %b to i32
+  %mul = mul i32 %aext, %bext
+  %result = add i32 %mul, %rd
+  ret i32 %result
+}
+
+; Negative test: multiply result has multiple uses, should not combine to macc
+define i32 @macc_h00_multiple_uses(i16 %a, i16 %b, i32 %c, ptr %out) nounwind {
+; CHECK-LABEL: macc_h00_multiple_uses:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    sext.h a0, a0
+; CHECK-NEXT:    sext.h a1, a1
+; CHECK-NEXT:    mul a1, a0, a1
+; CHECK-NEXT:    add a0, a2, a1
+; CHECK-NEXT:    sw a1, 0(a3)
+; CHECK-NEXT:    ret
+  %aext = sext i16 %a to i32
+  %bext = sext i16 %b to i32
+  %mul = mul i32 %aext, %bext
+  %result = add i32 %c, %mul
+  store i32 %mul, ptr %out
+  ret i32 %result
+}
+
+define i32 @mhacc(i32 %rd, i32 %a, i32 %b) nounwind {
+; CHECK-LABEL: mhacc:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mhacc a0, a1, a2
+; CHECK-NEXT:    ret
+  %aext = sext i32 %a to i64
+  %bext = sext i32 %b to i64
+  %mul = mul i64 %aext, %bext
+  %shift = lshr i64 %mul, 32
+  %trunc = trunc i64 %shift to i32
+  %result = add i32 %rd, %trunc
+  ret i32 %result
+}
+
+define i32 @mhacc_commute(i32 %rd, i32 %a, i32 %b) nounwind {
+; CHECK-LABEL: mhacc_commute:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mhacc a0, a1, a2
+; CHECK-NEXT:    ret
+  %aext = sext i32 %a to i64
+  %bext = sext i32 %b to i64
+  %mul = mul i64 %aext, %bext
+  %shift = lshr i64 %mul, 32
+  %trunc = trunc i64 %shift to i32
+  %result = add i32 %trunc, %rd
+  ret i32 %result
+}
+
+define i32 @mhaccu(i32 %rd, i32 %a, i32 %b) nounwind {
+; CHECK-LABEL: mhaccu:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mhaccu a0, a1, a2
+; CHECK-NEXT:    ret
+  %aext = zext i32 %a to i64
+  %bext = zext i32 %b to i64
+  %mul = mul i64 %aext, %bext
+  %shift = lshr i64 %mul, 32
+  %trunc = trunc i64 %shift to i32
+  %result = add i32 %rd, %trunc
+  ret i32 %result
+}
+
+define i32 @mhaccu_commute(i32 %rd, i32 %a, i32 %b) nounwind {
+; CHECK-LABEL: mhaccu_commute:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mhaccu a0, a1, a2
+; CHECK-NEXT:    ret
+  %aext = zext i32 %a to i64
+  %bext = zext i32 %b to i64
+  %mul = mul i64 %aext, %bext
+  %shift = lshr i64 %mul, 32
+  %trunc = trunc i64 %shift to i32
+  %result = add i32 %trunc, %rd
+  ret i32 %result
+}
+
+define i32 @mhaccsu(i32 %rd, i32 %a, i32 %b) nounwind {
+; CHECK-LABEL: mhaccsu:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mhaccsu a0, a1, a2
+; CHECK-NEXT:    ret
+  %aext = sext i32 %a to i64
+  %bext = zext i32 %b to i64
+  %mul = mul i64 %aext, %bext
+  %shift = lshr i64 %mul, 32
+  %trunc = trunc i64 %shift to i32
+  %result = add i32 %rd, %trunc
+  ret i32 %result
+}
+
+define i32 @mhaccsu_commute(i32 %rd, i32 %a, i32 %b) nounwind {
+; CHECK-LABEL: mhaccsu_commute:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mhaccsu a0, a1, a2
+; CHECK-NEXT:    ret
+  %aext = sext i32 %a to i64
+  %bext = zext i32 %b to i64
+  %mul = mul i64 %aext, %bext
+  %shift = lshr i64 %mul, 32
+  %trunc = trunc i64 %shift to i32
+  %result = add i32 %trunc, %rd
+  ret i32 %result
+}
+
+define i32 @mhaccsu_swap_operands(i32 %rd, i32 %a, i32 %b) nounwind {
+; CHECK-LABEL: mhaccsu_swap_operands:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mhaccsu a0, a2, a1
+; CHECK-NEXT:    ret
+  %aext = zext i32 %a to i64
+  %bext = sext i32 %b to i64
+  %mul = mul i64 %aext, %bext
+  %shift = lshr i64 %mul, 32
+  %trunc = trunc i64 %shift to i32
+  %result = add i32 %rd, %trunc
+  ret i32 %result
+}
+
+define i32 @mhaccsu_swap_operands_commute(i32 %rd, i32 %a, i32 %b) nounwind {
+; CHECK-LABEL: mhaccsu_swap_operands_commute:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mhaccsu a0, a2, a1
+; CHECK-NEXT:    ret
+  %aext = zext i32 %a to i64
+  %bext = sext i32 %b to i64
+  %mul = mul i64 %aext, %bext
+  %shift = lshr i64 %mul, 32
+  %trunc = trunc i64 %shift to i32
+  %result = add i32 %trunc, %rd
+  ret i32 %result
+}
+
+; Negative test: multiply result has multiple uses, should not combine to mhacc
+define i32 @mhacc_multiple_uses(i32 %a, i32 %b, i32 %c, ptr %out) nounwind {
+; CHECK-LABEL: mhacc_multiple_uses:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mulh a1, a0, a1
+; CHECK-NEXT:    add a0, a2, a1
+; CHECK-NEXT:    sw a1, 0(a3)
+; CHECK-NEXT:    ret
+  %aext = sext i32 %a to i64
+  %bext = sext i32 %b to i64
+  %mul = mul i64 %aext, %bext
+  %shift = lshr i64 %mul, 32
+  %trunc = trunc i64 %shift to i32
+  %result = add i32 %c, %trunc
+  store i32 %trunc, ptr %out
+  ret i32 %result
 }
 
 ; Negative test: multiply result has multiple uses, should not combine
@@ -1273,4 +1634,164 @@ entry:
   %obit = extractvalue {i32, i1} %t, 1
   store i32 %val, ptr %res
   ret i1 %obit
+}
+
+define i32 @mm_sati_8_i32(i32 %x) {
+; CHECK-LABEL: mm_sati_8_i32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    sati a0, a0, 8
+; CHECK-NEXT:    ret
+entry:
+  %0 = call i32 @llvm.smin.i32(i32 %x, i32 127)
+  %1 = call i32 @llvm.smax.i32(i32 %0, i32 -128)
+  ret i32 %1
+}
+
+define i32 @mm_sati_16_i32(i32 %x) {
+; CHECK-LABEL: mm_sati_16_i32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    sati a0, a0, 16
+; CHECK-NEXT:    ret
+entry:
+  %0 = call i32 @llvm.smax.i32(i32 %x, i32 -32768)
+  %1 = call i32 @llvm.smin.i32(i32 %0, i32 32767)
+  ret i32 %1
+}
+
+define i32 @mm_sati_24_i32(i32 %x) {
+; CHECK-LABEL: mm_sati_24_i32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    sati a0, a0, 24
+; CHECK-NEXT:    ret
+entry:
+  %0 = call i32 @llvm.smin.i32(i32 %x, i32 8388607)
+  %1 = call i32 @llvm.smax.i32(i32 %0, i32 -8388608)
+  ret i32 %1
+}
+
+define i32 @mm_sati_32_i32(i32 %x) {
+; CHECK-LABEL: mm_sati_32_i32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    ret
+entry:
+  %0 = call i32 @llvm.smax.i32(i32 %x, i32 -2147483648)
+  %1 = call i32 @llvm.smin.i32(i32 %0, i32 2147483647)
+  ret i32 %1
+}
+
+define i32 @mm_sati_1_i32(i32 %x) {
+; CHECK-LABEL: mm_sati_1_i32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    sati a0, a0, 1
+; CHECK-NEXT:    ret
+entry:
+  %0 = call i32 @llvm.smin.i32(i32 %x, i32 0)
+  %1 = call i32 @llvm.smax.i32(i32 %0, i32 -1)
+  ret i32 %1
+}
+
+define i32 @mm_sati_minallones_i32(i32 %x) {
+; CHECK-LABEL: mm_sati_minallones_i32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    li a0, 0
+; CHECK-NEXT:    ret
+entry:
+  %0 = call i32 @llvm.smin.i32(i32 %x, i32 -1)
+  %1 = call i32 @llvm.smax.i32(i32 %0, i32 0)
+  ret i32 %1
+}
+
+define i32 @mm_sati_minallones2_i32(i32 %x) {
+; CHECK-LABEL: mm_sati_minallones2_i32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    li a0, -1
+; CHECK-NEXT:    ret
+entry:
+  %0 = call i32 @llvm.smax.i32(i32 %x, i32 0)
+  %1 = call i32 @llvm.smin.i32(i32 %0, i32 -1)
+  ret i32 %1
+}
+
+define i32 @mm_usati_8_i32(i32 %x) {
+; CHECK-LABEL: mm_usati_8_i32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    usati a0, a0, 8
+; CHECK-NEXT:    ret
+entry:
+  %0 = call i32 @llvm.smin.i32(i32 %x, i32 255)
+  %1 = call i32 @llvm.smax.i32(i32 %0, i32 0)
+  ret i32 %1
+}
+
+define i32 @mm_usati_16_i32(i32 %x) {
+; CHECK-LABEL: mm_usati_16_i32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    usati a0, a0, 16
+; CHECK-NEXT:    ret
+entry:
+  %0 = call i32 @llvm.smax.i32(i32 %x, i32 0)
+  %1 = call i32 @llvm.smin.i32(i32 %0, i32 65535)
+  ret i32 %1
+}
+
+define i32 @mm_usati_1_i32(i32 %x) {
+; CHECK-LABEL: mm_usati_1_i32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    usati a0, a0, 1
+; CHECK-NEXT:    ret
+entry:
+  %0 = call i32 @llvm.smax.i32(i32 %x, i32 0)
+  %1 = call i32 @llvm.smin.i32(i32 %0, i32 1)
+  ret i32 %1
+}
+
+define i32 @mm_usati_31_i32(i32 %x) {
+; CHECK-LABEL: mm_usati_31_i32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    max a0, a0, zero
+; CHECK-NEXT:    ret
+entry:
+  %0 = call i32 @llvm.smin.i32(i32 %x, i32 2147483647)
+  %1 = call i32 @llvm.smax.i32(i32 %0, i32 0)
+  ret i32 %1
+}
+
+define i32 @mm_usati_32_i32(i32 %x) {
+; CHECK-LABEL: mm_usati_32_i32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    li a0, -1
+; CHECK-NEXT:    ret
+entry:
+  %0 = call i32 @llvm.smax.i32(i32 %x, i32 0)
+  %1 = call i32 @llvm.smin.i32(i32 %0, i32 4294967295)
+  ret i32 %1
+}
+
+; Negative test where the inner operation does not have a constant operand.
+define i32 @mm_usati_nonconstantinnner_i32(i32 %x, i32 %y) {
+; CHECK-LABEL: mm_usati_nonconstantinnner_i32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    max a0, a0, a1
+; CHECK-NEXT:    li a1, 255
+; CHECK-NEXT:    min a0, a0, a1
+; CHECK-NEXT:    ret
+entry:
+  %0 = call i32 @llvm.smax.i32(i32 %x, i32 %y)
+  %1 = call i32 @llvm.smin.i32(i32 %0, i32 255)
+  ret i32 %1
+}
+
+; Test that we select pack.
+define i32 @mm_usati_32_knownbits_i32(i32 %x, i32 %y) {
+; CHECK-LABEL: mm_usati_32_knownbits_i32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    usati a0, a0, 16
+; CHECK-NEXT:    pack a0, a0, a1
+; CHECK-NEXT:    ret
+entry:
+  %0 = call i32 @llvm.smax.i32(i32 %x, i32 0)
+  %1 = call i32 @llvm.smin.i32(i32 %0, i32 65535)
+  %2 = shl i32 %y, 16
+  %3 = or i32 %1, %2
+  ret i32 %3
 }
