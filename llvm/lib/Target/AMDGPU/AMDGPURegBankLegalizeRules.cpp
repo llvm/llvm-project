@@ -1750,6 +1750,14 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
   addRulesForIOpcs({amdgcn_ds_bvh_stack_push8_pop2_rtn}, Standard)
       .Div(S64, {{Vgpr64, Vgpr32}, {IntrId, Vgpr32, Vgpr32, VgprV8S32}});
 
+  addRulesForIOpcs({amdgcn_ds_gws_sema_p, amdgcn_ds_gws_sema_v,
+                    amdgcn_ds_gws_sema_release_all})
+      .Any({{}, {{}, {IntrId, SgprB32_M0}}});
+
+  addRulesForIOpcs(
+      {amdgcn_ds_gws_barrier, amdgcn_ds_gws_init, amdgcn_ds_gws_sema_br})
+      .Any({{}, {{}, {IntrId, Vgpr32, SgprB32_M0}}});
+
   addRulesForIOpcs({amdgcn_ds_ordered_add, amdgcn_ds_ordered_swap}, Standard)
       .Div(S32, {{Vgpr32}, {IntrId, SgprB32_M0, Vgpr32}});
 
