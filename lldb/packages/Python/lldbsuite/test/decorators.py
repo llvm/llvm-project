@@ -499,6 +499,7 @@ def unicode_test(func):
             return unittest.skip(
                 "Unicode test requires an interactive console (stderr is redirected)"
             )
+        return
 
     def unicode_wrapped(*args, **kwargs):
         import os
