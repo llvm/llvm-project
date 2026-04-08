@@ -577,18 +577,11 @@ bool AArch64RegisterInfo::isStrictlyReservedReg(const MachineFunction &MF,
 }
 
 bool AArch64RegisterInfo::isAnyArgRegReserved(const MachineFunction &MF) const {
-  auto *AFI = MF.getInfo<AArch64FunctionInfo>();
-  if (std::optional<bool> Cached = AFI->getAnyArgRegReserved())
-    return *Cached;
-
-  bool Any =
-      llvm::any_of(*AArch64::GPR64argRegClass.MC, [this, &MF](MCPhysReg r) {
-        return isStrictlyReservedReg(MF, r);
-      });
-  // Re-computing this in getStrictlyReservedRegs during call lowering for
-  // every call is compile-time expensive, so we avoid by caching the result.
-  AFI->setAnyArgRegReserved(Any);
-  return Any;
+  for (size_t i = 0; i < AArch64::GPR64argRegClass.getNumRegs(); ++i) {
+    if (MF.getSubtarget<AArch64Subtarget>().isXRegisterReserved(i))
+      return true;
+  }
+  return false;
 }
 
 void AArch64RegisterInfo::emitReservedArgRegCallError(

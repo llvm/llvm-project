@@ -222,9 +222,6 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   /// Whether this function changes streaming mode within the function.
   bool HasStreamingModeChanges = false;
 
-  /// Cache for whether any argument register is reserved.
-  mutable std::optional<bool> AnyArgRegReserved;
-
   /// True if the function need unwind information.
   mutable std::optional<bool> NeedsDwarfUnwindInfo;
 
@@ -631,9 +628,6 @@ public:
     SwiftAsyncContextFrameIdx = FI;
   }
   int getSwiftAsyncContextFrameIdx() const { return SwiftAsyncContextFrameIdx; }
-
-  std::optional<bool> getAnyArgRegReserved() const { return AnyArgRegReserved; }
-  void setAnyArgRegReserved(bool V) const { AnyArgRegReserved = V; }
 
   bool needsDwarfUnwindInfo(const MachineFunction &MF) const;
   bool needsAsyncDwarfUnwindInfo(const MachineFunction &MF) const;
