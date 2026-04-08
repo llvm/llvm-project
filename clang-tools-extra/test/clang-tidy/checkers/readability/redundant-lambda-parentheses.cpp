@@ -86,6 +86,22 @@ int main() {
   auto s = []() noexcept [[]] {};
   // CHECK-MESSAGES-CXX23: :[[@LINE-1]]:14: warning: redundant empty parameter list in lambda expression [readability-redundant-lambda-parentheses]
   // CHECK-FIXES-CXX23:   auto s = [] noexcept {{\[\[}}{{\]\]}} {};
+
+  auto t = []( /* comment */ ) { return 42; };
+  // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: redundant empty parameter list in lambda expression [readability-redundant-lambda-parentheses]
+  // CHECK-FIXES:   auto t = [] { return 42; };
+
+  auto u = []() /* comment */ { return 42; };
+  // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: redundant empty parameter list in lambda expression [readability-redundant-lambda-parentheses]
+  // CHECK-FIXES:   auto u = [] /* comment */ { return 42; };
+
+  auto w = [](/* comment */) { return 42; };
+  // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: redundant empty parameter list in lambda expression [readability-redundant-lambda-parentheses]
+  // CHECK-FIXES:   auto w = [] { return 42; };
+
+  auto x = [] /* comment */ () { return 42; };
+  // CHECK-MESSAGES: :[[@LINE-1]]:29: warning: redundant empty parameter list in lambda expression [readability-redundant-lambda-parentheses]
+  // CHECK-FIXES:   auto x = [] /* comment */ { return 42; };
 }
 
 #if __cplusplus >= 202002L
