@@ -438,8 +438,8 @@ int main(int argc, char *argv[]) {
   if (argc != 4 && argc != 5) {
     printf(
         "Expected at least 3 arguments, process mode, za on or off, streaming "
-        "vector "
-        "length. Optionally ending with \"crash\" to generate a core file.\n");
+        "vector length. Optionally ending with \"crash\" to generate a core "
+        "file.\n");
     exit(1);
   }
 
