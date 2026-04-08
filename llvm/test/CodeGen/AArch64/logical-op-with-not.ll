@@ -755,7 +755,7 @@ define i32 @orn_cst_i32(i32 %c) {
 define i64 @orn_cst_i64(i64 %c) {
 ; CHECK-LABEL: orn_cst_i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #4 // =0x4
+; CHECK-NEXT:    mov x8, #4 // =0x4
 ; CHECK-NEXT:    orn x0, x8, x0
 ; CHECK-NEXT:    ret
   %not = xor i64 %c, -1
