@@ -432,7 +432,7 @@ void FactsGenerator::handleTernaryOperator(const ConditionalOperator *CO) {
     break;
   }
   default:
-    llvm_unreachable("expected at most 2 successors");
+    llvm_unreachable("expected at most 2 predecessors");
     return;
   }
 
