@@ -2728,7 +2728,7 @@ for.end:
 ; to 0.
 ; PR17532
 
-define i32 @i8_loop() nounwind readnone ssp uwtable {
+define i32 @i8_loop() {
 ; CHECK-LABEL: @i8_loop(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
@@ -2829,7 +2829,7 @@ exit:
 }
 
 
-define i32 @i16_loop() nounwind readnone ssp uwtable {
+define i32 @i16_loop() {
 ; CHECK-LABEL: @i16_loop(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
