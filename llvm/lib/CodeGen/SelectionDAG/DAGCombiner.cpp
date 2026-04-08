@@ -14182,11 +14182,12 @@ SDValue DAGCombiner::visitSELECT_CC(SDNode *N) {
 }
 
 SDValue DAGCombiner::visitSETCC(SDNode *N) {
-  // setcc is very commonly used as an argument to brcond. This pattern
-  // also lend itself to numerous combines and, as a result, it is desired
-  // we keep the argument to a brcond as a setcc as much as possible.
+  // setcc is very commonly used as an argument to brcond or cond_loop. This
+  // pattern also lend itself to numerous combines and, as a result, it is
+  // desired we keep the argument to a brcond as a setcc as much as possible.
   bool PreferSetCC =
-      N->hasOneUse() && N->user_begin()->getOpcode() == ISD::BRCOND;
+      N->hasOneUse() && (N->user_begin()->getOpcode() == ISD::BRCOND ||
+                         N->user_begin()->getOpcode() == ISD::COND_LOOP);
 
   ISD::CondCode Cond = cast<CondCodeSDNode>(N->getOperand(2))->get();
   EVT VT = N->getValueType(0);
