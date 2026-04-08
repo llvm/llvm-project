@@ -406,7 +406,7 @@ TEST(SessionTest, ActiveManagedCallsDelayShutdown) {
   ASSERT_FALSE(ShutdownOpIdx);
 
   // Take a managed code call token. This should succeed.
-  auto Tok = TaskGroup::Token(S.managedCodeCallsGroup());
+  auto Tok = TaskGroup::Token(S.managedCodeTaskGroup());
   ASSERT_TRUE(Tok);
 
   // We expect shutdown to wait for any active managed calls to complete.
@@ -420,7 +420,7 @@ TEST(SessionTest, ActiveManagedCallsDelayShutdown) {
 
   // The managed calls code group should have been closed. Assert that we
   // can't get a new token.
-  ASSERT_FALSE(TaskGroup::Token(S.managedCodeCallsGroup()));
+  ASSERT_FALSE(TaskGroup::Token(S.managedCodeTaskGroup()));
 
   Tok = TaskGroup::Token(); // Reset token.
 
@@ -433,7 +433,7 @@ static void managedSyncVoidFunction(int *P) { *P = 42; }
 
 TEST(SessionTest, SyncCallManagedCodeVoidFn) {
   // Test synchronous calls to a void function while holding a
-  // ManagedCodeCallsGroup token.
+  // ManagedCodeTaskGroup token.
   Session S(mockExecutorProcessInfo(), std::make_unique<NoDispatcher>(),
             noErrors);
 
@@ -463,7 +463,7 @@ static int managedSyncNonVoidFunction(int N) { return N + 1; }
 
 TEST(SessionTest, SyncCallManagedCodeNonVoidFn) {
   // Test synchronous calls to a non-void function while holding a
-  // ManagedCodeCallsGroup token.
+  // ManagedCodeTaskGroup token.
   Session S(mockExecutorProcessInfo(), std::make_unique<NoDispatcher>(),
             noErrors);
 
@@ -495,7 +495,7 @@ static void managedAsyncVoidFunction(move_only_function<void()> Return,
 
 TEST(SessionTest, AsyncCallManagedCodeVoidFn) {
   // Test asynchronous calls to a void function while holding a
-  // ManagedCodeCallsGroup token.
+  // ManagedCodeTaskGroup token.
   Session S(mockExecutorProcessInfo(), std::make_unique<NoDispatcher>(),
             noErrors);
 
@@ -531,7 +531,7 @@ static void managedAsyncNonVoidFunction(move_only_function<void(int)> Return,
 
 TEST(SessionTest, AsyncCallManagedCodeNonVoidFn) {
   // Test asynchronous calls to a non-void function while holding a
-  // ManagedCodeCallsGroup token.
+  // ManagedCodeTaskGroup token.
   Session S(mockExecutorProcessInfo(), std::make_unique<NoDispatcher>(),
             noErrors);
 
@@ -562,7 +562,7 @@ TEST(SessionTest, AsyncCallManagedCodeNonVoidFn) {
 }
 
 TEST(SessionTest, AsyncCallManagedCodeHoldsTokenAcrossAsyncGap) {
-  // Verify that the ManagedCodeCallsGroup token is held until the async
+  // Verify that the ManagedCodeTaskGroup token is held until the async
   // continuation runs, not just until callManagedCodeAsync returns. This
   // ensures shutdown blocks for the duration of the actual async work.
   Session S(mockExecutorProcessInfo(), std::make_unique<NoDispatcher>(),

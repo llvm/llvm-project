@@ -184,7 +184,7 @@ void Session::shutdown(OnShutdownFn OnShutdown) {
       break;
     case State::Detached:
       Lock.unlock();
-      waitForManagedCodeCallsThenShutdown();
+      waitForManagedCodeTasksThenShutdown();
       return;
     default:
       assert(false && "Illegal state");
@@ -326,12 +326,12 @@ void Session::completeDetach() {
     assert(TargetState == State::Shutdown);
   }
 
-  waitForManagedCodeCallsThenShutdown();
+  waitForManagedCodeTasksThenShutdown();
 }
 
-void Session::waitForManagedCodeCallsThenShutdown() {
-  ManagedCodeCallsGroup->addOnComplete([this]() { proceedToShutdown(); });
-  ManagedCodeCallsGroup->close();
+void Session::waitForManagedCodeTasksThenShutdown() {
+  ManagedCodeTaskGroup->addOnComplete([this]() { proceedToShutdown(); });
+  ManagedCodeTaskGroup->close();
 }
 
 void Session::proceedToShutdown() {
