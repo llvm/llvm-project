@@ -12,6 +12,8 @@
 #include "clang/ScalableStaticAnalysisFramework/Core/Model/EntityId.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Model/SummaryName.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/EntitySummary.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/iterator_range.h"
 #include <set>
 
 namespace clang::ssaf {
@@ -37,7 +39,9 @@ class EntityPointerLevel {
   EntityId Entity;
   unsigned PointerLevel;
 
+  friend class UnsafeBufferUsageEntitySummary;
   friend class UnsafeBufferUsageTUSummaryExtractor;
+  friend EntityPointerLevel buildEntityPointerLevel(EntityId, unsigned);
 
   EntityPointerLevel(EntityId Entity, unsigned PointerLevel)
       : Entity(Entity), PointerLevel(PointerLevel) {}
@@ -86,20 +90,30 @@ class UnsafeBufferUsageEntitySummary final : public EntitySummary {
   const EntityPointerLevelSet UnsafeBuffers;
 
   friend class UnsafeBufferUsageTUSummaryExtractor;
+  friend UnsafeBufferUsageEntitySummary
+      buildUnsafeBufferUsageEntitySummary(EntityPointerLevelSet);
+  friend llvm::iterator_range<EntityPointerLevelSet::const_iterator>
+  getUnsafeBuffers(const UnsafeBufferUsageEntitySummary &);
 
   UnsafeBufferUsageEntitySummary(EntityPointerLevelSet UnsafeBuffers)
       : EntitySummary(), UnsafeBuffers(std::move(UnsafeBuffers)) {}
 
 public:
-  SummaryName getSummaryName() const override {
-    return SummaryName{"UnsafeBufferUsage"};
-  };
+  static constexpr llvm::StringLiteral Name = "UnsafeBufferUsage";
+
+  SummaryName getSummaryName() const override { return summaryName(); };
 
   bool operator==(const EntityPointerLevelSet &Other) const {
     return UnsafeBuffers == Other;
   }
 
+  bool operator==(const UnsafeBufferUsageEntitySummary &Other) const {
+    return UnsafeBuffers == Other.UnsafeBuffers;
+  }
+
   bool empty() const { return UnsafeBuffers.empty(); }
+
+  static SummaryName summaryName() { return SummaryName{Name.str()}; }
 };
 } // namespace clang::ssaf
 

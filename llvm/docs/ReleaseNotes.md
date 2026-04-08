@@ -101,6 +101,13 @@ Changes to LLVM infrastructure
     this may fail if symlink permissions are not available.
   * Added ``readlink``, which reads the target of a symbolic link.
 
+* Bitcode libraries can now implement compiler-managed library functions
+  (libcalls) without causing incorrect API manipulation or undefined references
+  ([#177046](https://github.com/llvm/llvm-project/pull/125687)). Note that
+  there are still issues with invalid compiler reasoning about some functions
+  in bitcode, e.g. `malloc`. Not yet supported on MachO or when using
+  distributed ThinLTO. 
+
 Changes to building LLVM
 ------------------------
 
@@ -121,6 +128,11 @@ Changes to the AArch64 Backend
 
 * The `sysp`, `mrrs`, and `msrr` instructions are now accepted without
   requiring the `+d128` feature gating.
+* Added a new internal option `-aarch64-emit-debug-tls-location` to allow the
+  emission of `DW_AT_location` for thread-local variables. This is currently
+  disabled by default to maintain compatibility with Binutils and LLVM older
+  toolchains that do not define the `R_AARCH64_TLS_DTPREL64` static relocation
+  type for TLS offsets.
 
 Changes to the AMDGPU Backend
 -----------------------------
@@ -234,11 +246,14 @@ Changes to the LLVM tools
 Changes to LLDB
 ---------------
 
+* A new ``webinspector-wasm`` platform was added to list and attach to WebAssembly processes in Safari.
+* The default for `load-script-from-symbol-file` was changed from `warn` to `trusted`. This means that scripts from
+  code signed dSYM bundles are now loaded automatically, while untrusted bundles continue to produce a warning.
+
 ### Deprecated APIs
 
 * ``SBTarget::GetDataByteSize()``, ``SBTarget::GetCodeByteSize()``, and ``SBSection::GetTargetByteSize()``
-  have been deprecated. They always return 1, as before.
-* A new ``webinspector-wasm`` platform was added to list and attach to WebAssebly processes in Safari.
+  have been deprecated. They always return `1`, as before.
 
 ### FreeBSD
 
@@ -251,15 +266,14 @@ Changes to LLDB
 #### Kernel Debugging
 
 * The plugin that analyzes FreeBSD kernel core dump and live core has been renamed from `freebsd-kernel` to
- `freebsd-kernel-core`. Remote kernel debugging is still handled by the `gdb-remote` plugin. 
+ `freebsd-kernel-core`. Remote kernel debugging is still handled by the `gdb-remote` plugin.
 * Support for libfbsdvmcore has been removed. As a result, FreeBSD kernel dump debugging is now only
   available on FreeBSD hosts. Live kernel debugging through the GDB remote protocol is still available
   from any platform.
 * Support for ARM, PPC64le, and RISCV64 has been added.
 * The crashed thread is now automatically selected on start.
 * Threads are listed in incrmental order by pid then by tid.
-* Unread kernel messages saved in msgbufp are now printed when lldb starts. This information is printed only
-  when lldb is in the interactive mode (i.e. not in batch mode).
+* Unread kernel messages saved in `msgbufp` are now printed when LLDB starts.
 * Writing to the core is now supported. For safety reasons, this feature is off by default. To enable it,
   `plugin.process.freebsd-kernel-core.read-only` must be set to `false`. This setting is available when
   using `/dev/mem` or a kernel dump. However, since `kvm_write()` does not support writing to kernel dumps,
@@ -267,8 +281,19 @@ Changes to LLDB
 
 ### Linux
 
-* On Arm Linux, the tpidruro register can now be read. Writing to this register is not supported.
+* On Arm Linux, the `tpidruro` register can now be read. Writing to this register is not supported.
 * Thread local variables are now supported on Arm Linux if the program being debugged is using glibc.
+* LLDB now supports AArch64 Linux systems that only have SME (as opposed to
+  SVE and SME). See the AArch64 Linux [documentation](https://lldb.llvm.org/use/aarch64-linux.html#sme-only-systems)
+  for more details.
+
+  Prior to this version of LLDB, there was a bug that caused LLDB to crash on
+  startup on these systems ([#138717](https://github.com/llvm/llvm-project/issues/138717)).
+  This affected LLDB versions from 18 up to and including 22. 17 and below are not affected.
+  If you are using such a system and cannot change LLDB version, or want to package
+  an affected version in a way that is compatible with these systems, the issue
+  contains details of backports that could be done to fix the affected versions.
+
 
 Changes to BOLT
 ---------------

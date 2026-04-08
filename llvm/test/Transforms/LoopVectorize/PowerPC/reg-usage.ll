@@ -168,7 +168,7 @@ for.end:
 }
 
 
-define void @double_(ptr nocapture %A, i32 %n) nounwind uwtable ssp {
+define void @double_(ptr nocapture %A, i32 %n) {
 ;CHECK-LABEL: double_
 ;CHECK-PWR8: LV(REG): VF = 2
 ;CHECK-PWR8: LV(REG): Found max usage: 2 item
@@ -220,7 +220,7 @@ define void @double_(ptr nocapture %A, i32 %n) nounwind uwtable ssp {
   ret void
 }
 
-define ppc_fp128 @fp128_(ptr nocapture %n, ppc_fp128 %d) nounwind readonly {
+define ppc_fp128 @fp128_(ptr nocapture %n, ppc_fp128 %d) readonly {
 ;CHECK-LABEL: fp128_
 ;CHECK: LV(REG): VF = 1
 ;CHECK: LV(REG): Found max usage: 2 item

@@ -1323,6 +1323,7 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
       case Intrinsic::amdgcn_wmma_f32_16x16x32_f16:
       case Intrinsic::amdgcn_wmma_f16_16x16x32_f16:
       case Intrinsic::amdgcn_wmma_bf16_16x16x32_bf16:
+      case Intrinsic::amdgcn_wmma_bf16f32_16x16x32_bf16:
         if (F->arg_size() == 8) {
           NewFn = nullptr;
           return true;
@@ -4733,7 +4734,8 @@ static Value *upgradeAMDGCNIntrinsicCall(StringRef Name, CallBase *CI,
   case Intrinsic::amdgcn_wmma_f32_16x16x32_bf16:
   case Intrinsic::amdgcn_wmma_f32_16x16x32_f16:
   case Intrinsic::amdgcn_wmma_f16_16x16x32_f16:
-  case Intrinsic::amdgcn_wmma_bf16_16x16x32_bf16: {
+  case Intrinsic::amdgcn_wmma_bf16_16x16x32_bf16:
+  case Intrinsic::amdgcn_wmma_bf16f32_16x16x32_bf16: {
     // Drop src0 and src1 modifiers.
     const Value *Op0 = CI->getArgOperand(0);
     const Value *Op2 = CI->getArgOperand(2);
@@ -4747,9 +4749,11 @@ static Value *upgradeAMDGCNIntrinsicCall(StringRef Name, CallBase *CI,
     for (int I = 4, E = CI->arg_size(); I < E; ++I)
       Args.push_back(CI->getArgOperand(I));
 
+    SmallVector<Type *, 3> Overloads{F->getReturnType(), Args[0]->getType()};
+    if (F->getIntrinsicID() == Intrinsic::amdgcn_wmma_bf16f32_16x16x32_bf16)
+      Overloads.push_back(Args[3]->getType());
     Function *NewDecl = Intrinsic::getOrInsertDeclaration(
-        F->getParent(), F->getIntrinsicID(),
-        {F->getReturnType(), Args[0]->getType()});
+        F->getParent(), F->getIntrinsicID(), Overloads);
 
     SmallVector<OperandBundleDef, 1> Bundles;
     CI->getOperandBundlesAsDefs(Bundles);

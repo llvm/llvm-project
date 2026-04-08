@@ -7012,14 +7012,6 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     MI.getOperand(0).setReg(OriginalExec);
     return BB;
   }
-  case AMDGPU::V_DOT2_F32_F16:
-  case AMDGPU::V_DOT2_F32_BF16: {
-    // Hint RA to assign dst and src2 the same physical register.
-    // For targets without VOP2, but with VOPD, variant of the instruction this
-    // is one of the conditions to attempt converting VOP3P to VOPD.
-    MRI.setSimpleHint(MI.getOperand(0).getReg(), MI.getOperand(6).getReg());
-    return BB;
-  }
   default:
     if (TII->isImage(MI) || TII->isMUBUF(MI)) {
       if (!MI.mayStore())
@@ -10289,10 +10281,12 @@ SDValue SITargetLowering::lowerSBuffer(EVT VT, SDLoc DL, SDValue Rsrc,
                    NumLoads > 1 ? Align(16 * NumLoads) : Align(4));
 
   uint64_t InstOffset = Ops[5]->getAsZExtVal();
+  unsigned LoadSize = LoadVT.getStoreSize();
   for (unsigned i = 0; i < NumLoads; ++i) {
     Ops[5] = DAG.getTargetConstant(InstOffset + 16 * i, DL, MVT::i32);
+    MachineMemOperand *LoadMMO = MF.getMachineMemOperand(MMO, 16 * i, LoadSize);
     Loads.push_back(getMemIntrinsicNode(AMDGPUISD::BUFFER_LOAD, DL, VTList, Ops,
-                                        LoadVT, MMO, DAG));
+                                        LoadVT, LoadMMO, DAG));
   }
 
   if (NumElts == 8 || NumElts == 16)
@@ -17395,6 +17389,195 @@ SDValue SITargetLowering::performFMACombine(SDNode *N,
   return SDValue();
 }
 
+// Given a double-precision ordered or unordered comparison, return the
+// condition code for an equivalent integral comparison of the operands' upper
+// 32 bits, or `SETCC_INVALID` if not possible.
+// For simplicity, no simplification occurs if the operands are not both known
+// to have sign bit zero.
+//
+// EQ/NE:
+//  If LHS.lo32 == RHS.lo32:
+//    setcc LHS, RHS, eq/ne => setcc LHS.hi32, RHS.hi32, eq/ne
+//  If LHS.lo32 != RHS.lo32:
+//    setcc LHS, RHS, eq/ne => setcc LHS.hi32, RHS.hi32, false/true
+//  The reduction is not possible if operands may be +0 and -0.
+//  For ordered eq / unordered ne, at most one operand may be NaN.
+//  For unordered eq / ordered ne, neither operand can be NaN.
+//
+// LT/GE:
+//  If LHS.lo32 >= RHS.lo32 (unsigned):
+//    setcc LHS, RHS, [u]lt/ge => LHS.hi32, RHS.hi32, [u]lt/ge
+//  If LHS.lo32 < RHS.lo32 (unsigned):
+//    setcc LHS, RHS, [u]lt/ge => LHS.hi32, RHS.hi32, [u]le/gt
+//  The reduction is only supported if both operands are nonnegative.
+//  For ordered lt / unordered ge, the RHS cannot be NaN.
+//  For unordered lt / ordered ge, neither operand can be NaN.
+//
+// LE/GT:
+//  If LHS.lo32 > RHS.lo32 (unsigned):
+//    setcc LHS, RHS, [u]le/gt => LHS.hi32, RHS.hi32, [u]lt/ge
+//  If LHS.lo32 <= RHS.lo32 (unsigned):
+//    setcc LHS, RHS, [u]le/gt => LHS.hi32, RHS.hi32, [u]le/gt
+//  The reduction is only supported if both operands are nonnegative.
+//  For unordered le / ordered gt, the LHS cannot be NaN.
+//  For ordered le / unordered gt, neither operand can be NaN.
+static ISD::CondCode tryReduceF64CompareToHiHalf(const ISD::CondCode CC,
+                                                 const SDValue LHS,
+                                                 const SDValue RHS,
+                                                 const SelectionDAG &DAG) {
+  EVT VT = LHS.getValueType();
+  assert(VT == MVT::f64 && "Incorrect operand type!");
+
+  const KnownBits RHSBits = DAG.computeKnownBits(RHS);
+  // Bail if RHS sign bit is not known to be zero.
+  if (!RHSBits.Zero.isSignBitSet())
+    return ISD::SETCC_INVALID;
+
+  const KnownBits RHSKnownLo32 = RHSBits.trunc(32);
+  const KnownFPClass RHSFPClass =
+      KnownFPClass::bitcast(VT.getFltSemantics(), RHSBits);
+  const bool RHSMaybeNaN = !RHSFPClass.isKnownNeverNaN();
+
+  const KnownBits LHSBits = DAG.computeKnownBits(LHS);
+  const KnownBits LHSKnownLo32 = LHSBits.trunc(32);
+  const KnownFPClass LHSFPClass =
+      KnownFPClass::bitcast(VT.getFltSemantics(), LHSBits);
+  const bool LHSMaybeNaN = !LHSFPClass.isKnownNeverNaN();
+
+  // Bail if LHS sign bit is not known to be zero.
+  if (!LHSBits.Zero.isSignBitSet())
+    return ISD::SETCC_INVALID;
+
+  switch (CC) {
+  default:
+    break;
+  case ISD::SETEQ:
+  case ISD::SETOEQ:
+  case ISD::SETUEQ:
+  case ISD::SETONE:
+  case ISD::SETUNE: {
+    // OEQ should be false if either operand is NaN, so it suffices that at
+    // least one operand is not NaN.
+    if (CC == ISD::SETOEQ && LHSMaybeNaN && RHSMaybeNaN)
+      break;
+    // UEQ should be true if either operand is NaN, but this cannot be checked
+    // on underlying bits.
+    if (CC == ISD::SETUEQ && (LHSMaybeNaN || RHSMaybeNaN))
+      break;
+    // ONE should be false if either operand is NaN, but this cannot be
+    // checked on underlying bits.
+    if (CC == ISD::SETONE && (LHSMaybeNaN || RHSMaybeNaN))
+      break;
+    // UNE should be true if either operand is NaN, so it suffices that they
+    // are not both NaN.
+    if (CC == ISD::SETUNE && LHSMaybeNaN && RHSMaybeNaN)
+      break;
+
+    const std::optional<bool> KnownEq =
+        KnownBits::eq(LHSKnownLo32, RHSKnownLo32);
+
+    if (!KnownEq)
+      break;
+
+    if (*KnownEq)
+      return (CC == ISD::SETEQ || CC == ISD::SETOEQ || CC == ISD::SETUEQ)
+                 ? ISD::SETEQ
+                 : ISD::SETNE;
+
+    return (CC == ISD::SETEQ || CC == ISD::SETOEQ || CC == ISD::SETUEQ)
+               ? ISD::SETFALSE
+               : ISD::SETTRUE;
+  }
+  case ISD::SETLT:
+  case ISD::SETOLT:
+  case ISD::SETULT:
+  case ISD::SETGE:
+  case ISD::SETOGE:
+  case ISD::SETUGE: {
+    // OLT should be false if either operand is NaN.
+    // Since NaNs have maximum exponent and nonzero mantissa, false positives
+    // are only possible if the RHS is NaN. (No issue with RHS == +inf since
+    // the inequality is strict)
+    if (CC == ISD::SETOLT && RHSMaybeNaN)
+      break;
+    // ULT should be true if either operand is NaN, but this cannot be ensured
+    // with a truncated comparison.
+    if (CC == ISD::SETULT && (LHSMaybeNaN || RHSMaybeNaN))
+      break;
+    // OGE should be false if either operand is NaN, but this cannot be
+    // ensured with a truncated comparison.
+    if (CC == ISD::SETOGE && (LHSMaybeNaN || RHSMaybeNaN))
+      break;
+    // UGE should be true if either operand is NaN.
+    // False negatives are only possible if the RHS is NaN.
+    // (No issue with RHS == +inf since the inequality is inclusive)
+    if (CC == ISD::SETUGE && RHSMaybeNaN)
+      break;
+
+    const std::optional<bool> KnownUge =
+        KnownBits::uge(LHSKnownLo32, RHSKnownLo32);
+
+    if (!KnownUge)
+      break;
+
+    if (*KnownUge) {
+      // LHS.lo32 uge RHS.lo32, so LHS >= RHS iff LHS.hi32 >= RHS.hi32
+      return (CC == ISD::SETLT || CC == ISD::SETOLT || CC == ISD::SETULT)
+                 ? ISD::SETLT
+                 : ISD::SETGE;
+    }
+    // LHS.lo32 ult RHS.lo32, so LHS >= RHS iff LHS.hi32 > RHS.hi32
+    return (CC == ISD::SETLT || CC == ISD::SETOLT || CC == ISD::SETULT)
+               ? ISD::SETLE
+               : ISD::SETGT;
+  }
+  case ISD::SETLE:
+  case ISD::SETOLE:
+  case ISD::SETULE:
+  case ISD::SETGT:
+  case ISD::SETOGT:
+  case ISD::SETUGT: {
+    // OLE should be false if either operand is NaN, but this cannot be
+    // ensured with a truncated comparison.
+    if (CC == ISD::SETOLE && (LHSMaybeNaN || RHSMaybeNaN))
+      break;
+    // ULE should be true if either operand is NaN.
+    // False negatives are only possible if the LHS is NaN.
+    // (No issue with LHS == +inf since the inequality is inclusive)
+    if (CC == ISD::SETULE && LHSMaybeNaN)
+      break;
+    // OGT should be false if either operand is NaN.
+    // False positives are only possible if the LHS is NaN.
+    // (No issue with LHS == +inf since the inequality is strict)
+    if (CC == ISD::SETOGT && LHSMaybeNaN)
+      break;
+    // UGT should be true if either operand is NaN, but this cannot be ensured
+    // with a truncated comparison.
+    if (CC == ISD::SETUGT && (LHSMaybeNaN || RHSMaybeNaN))
+      break;
+
+    const std::optional<bool> KnownUle =
+        KnownBits::ule(LHSKnownLo32, RHSKnownLo32);
+
+    if (!KnownUle)
+      break;
+
+    if (*KnownUle) {
+      // LHS.lo32 ule RHS.lo32, so LHS <= RHS iff LHS.hi32 <= RHS.hi32
+      return (CC == ISD::SETLE || CC == ISD::SETOLE || CC == ISD::SETULE)
+                 ? ISD::SETLE
+                 : ISD::SETGT;
+    }
+    // LHS.lo32 ugt RHS.lo32, so LHS <= RHS iff LHS.hi32 < RHS.hi32
+    return (CC == ISD::SETLE || CC == ISD::SETOLE || CC == ISD::SETULE)
+               ? ISD::SETLT
+               : ISD::SETGE;
+  }
+  }
+
+  return ISD::SETCC_INVALID;
+}
+
 SDValue SITargetLowering::performSetCCCombine(SDNode *N,
                                               DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -17622,6 +17805,13 @@ SDValue SITargetLowering::performSetCCCombine(SDNode *N,
       return DAG.getNode(AMDGPUISD::FP_CLASS, SL, MVT::i1, LHS.getOperand(0),
                          DAG.getConstant(Mask, SL, MVT::i32));
     }
+  }
+
+  if (VT == MVT::f64) {
+    ISD::CondCode HiHalfCC = tryReduceF64CompareToHiHalf(CC, LHS, RHS, DAG);
+    if (HiHalfCC != ISD::SETCC_INVALID)
+      return DAG.getSetCC(SL, N->getValueType(0), getHiHalf64(LHS, DAG),
+                          getHiHalf64(RHS, DAG), HiHalfCC);
   }
 
   return SDValue();
@@ -18603,7 +18793,7 @@ SITargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI_,
       // Check for lossy scalar/vector conversions.
       if (VT.isVector() && VT.getSizeInBits() != 32)
         return std::pair(0U, nullptr);
-      if (Idx < RC->getNumRegs())
+      if (RC && Idx < RC->getNumRegs())
         return std::pair(RC->getRegister(Idx), RC);
       return std::pair(0U, nullptr);
     }

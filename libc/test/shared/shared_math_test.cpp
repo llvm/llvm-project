@@ -218,7 +218,6 @@ TEST(LlvmLibcSharedMathTest, AllDouble) {
   EXPECT_FP_EQ(0.0, LIBC_NAMESPACE::shared::atan2(0.0, 0.0));
   EXPECT_FP_EQ(0.0, LIBC_NAMESPACE::shared::cbrt(0.0));
   EXPECT_FP_EQ(1.0, LIBC_NAMESPACE::shared::cos(0.0));
-  EXPECT_FP_EQ(0.0, LIBC_NAMESPACE::shared::dsqrtl(0.0));
   EXPECT_FP_EQ(1.0, LIBC_NAMESPACE::shared::exp(0.0));
   EXPECT_FP_EQ(1.0, LIBC_NAMESPACE::shared::exp2(0.0));
   EXPECT_FP_EQ(1.0, LIBC_NAMESPACE::shared::exp10(0.0));
@@ -294,6 +293,7 @@ TEST(LlvmLibcSharedMathTest, AllLongDouble) {
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<long double>;
   EXPECT_FP_EQ(0.0L, LIBC_NAMESPACE::shared::dfmal(0.0L, 0.0L, 0.0L));
   EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::shared::fsqrtl(0.0L));
+  EXPECT_FP_EQ(0.0, LIBC_NAMESPACE::shared::dsqrtl(0.0));
   EXPECT_EQ(0, LIBC_NAMESPACE::shared::ilogbl(1.0L));
   EXPECT_EQ(0L, LIBC_NAMESPACE::shared::llogbl(1.0L));
   EXPECT_FP_EQ(0.0L, LIBC_NAMESPACE::shared::logbl(1.0L));
@@ -445,6 +445,10 @@ TEST(LlvmLibcSharedMathTest, AllFloat128) {
 TEST(LlvmLibcSharedMathTest, AllBFloat16) {
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<bfloat16>;
   EXPECT_FP_EQ(bfloat16(0.0), LIBC_NAMESPACE::shared::atanbf16(bfloat16(0.0)));
+  EXPECT_FP_EQ(bfloat16(0.0), LIBC_NAMESPACE::shared::asinbf16(bfloat16(0.0)));
+  EXPECT_FP_EQ(bfloat16(5.0), LIBC_NAMESPACE::shared::bf16add(2.0, 3.0));
+  EXPECT_FP_EQ(bfloat16(2.0f), LIBC_NAMESPACE::shared::bf16divf(4.0f, 2.0f));
+  EXPECT_FP_EQ(bfloat16(2.0), LIBC_NAMESPACE::shared::bf16div(4.0, 2.0));
 
   bfloat16 canonicalizebf16_cx = bfloat16(0.0);
   bfloat16 canonicalizebf16_x = bfloat16(0.0);
@@ -485,9 +489,11 @@ TEST(LlvmLibcSharedMathTest, AllBFloat16) {
   bfloat16 min_denormal = FPBits::min_subnormal(Sign ::POS).get_val();
   EXPECT_FP_EQ(min_denormal, LIBC_NAMESPACE::shared::nextupbf16(bfloat16(0.0)));
 
-  EXPECT_FP_EQ(bfloat16(0.0),
-               LIBC_NAMESPACE::shared::nexttowardbf16(bfloat16(0.0), 0.0L));
   EXPECT_FP_EQ(bfloat16(0.0), LIBC_NAMESPACE::shared::nextafterbf16(
                                   bfloat16(0.0), bfloat16(0.0)));
   EXPECT_FP_EQ(bfloat16(1.0), LIBC_NAMESPACE::shared::sqrtbf16(bfloat16(1.0)));
+#ifndef LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
+  EXPECT_FP_EQ(bfloat16(0.0),
+               LIBC_NAMESPACE::shared::nexttowardbf16(bfloat16(0.0), 0.0L));
+#endif // LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
 }
