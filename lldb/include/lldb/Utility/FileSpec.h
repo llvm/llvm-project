@@ -472,6 +472,30 @@ template <> struct format_provider<lldb_private::FileSpec> {
                      StringRef Style);
 };
 
+/// DenseMapInfo implementation.
+/// \{
+template <> struct DenseMapInfo<lldb_private::FileSpec> {
+  static inline lldb_private::FileSpec getEmptyKey() {
+    return lldb_private::FileSpec();
+  }
+  static inline lldb_private::FileSpec getTombstoneKey() {
+    return lldb_private::FileSpec();
+  }
+  static unsigned getHashValue(lldb_private::FileSpec file_spec) {
+    return llvm::hash_combine(
+        DenseMapInfo<lldb_private::ConstString>::getHashValue(
+            file_spec.GetDirectory()),
+        DenseMapInfo<lldb_private::ConstString>::getHashValue(
+            file_spec.GetFilename()),
+        DenseMapInfo<llvm::sys::path::Style>::getHashValue(
+            file_spec.GetPathStyle()));
+  }
+  static bool isEqual(lldb_private::FileSpec LHS, lldb_private::FileSpec RHS) {
+    return LHS == RHS;
+  }
+};
+/// \}
+
 } // namespace llvm
 
 #endif // LLDB_UTILITY_FILESPEC_H
