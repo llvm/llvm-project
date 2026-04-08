@@ -7348,6 +7348,10 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
          "Trying to execute plan with unsupported UF");
   if (BestVPlan.hasEarlyExit())
     ++LoopsEarlyExitVectorized;
+
+  RUN_VPLAN_PASS(VPlanTransforms::materializeConstantVectorTripCount, BestVPlan,
+                 BestVF, BestUF, PSE);
+
   // TODO: Move to VPlan transform stage once the transition to the VPlan-based
   // cost model is complete for better cost estimates.
   RUN_VPLAN_PASS(VPlanTransforms::unrollByUF, BestVPlan, BestUF);
@@ -9747,8 +9751,6 @@ bool LoopVectorizePass::processLoop(Loop *L) {
                            BestPlan);
     // TODO: Move to general VPlan pipeline once epilogue loops are also
     // supported.
-    RUN_VPLAN_PASS(VPlanTransforms::materializeConstantVectorTripCount,
-                   BestPlan, VF.Width, IC, PSE);
     LVP.addMinimumIterationCheck(BestPlan, VF.Width, IC,
                                  VF.MinProfitableTripCount);
     LVP.attachRuntimeChecks(BestPlan, Checks, HasBranchWeights);
