@@ -91,11 +91,10 @@ static bool WarnOnPotentialUnquotedUnsignedType(Args &command,
       continue;
     auto next = command.entries()[entry.index() + 1].ref();
     if (next == "int" || next == "short" || next == "char" || next == "long") {
-      result.AppendWarningWithFormat(
-          "unsigned %s being treated as two types. if you meant the combined "
-          "type "
-          "name use  quotes, as in \"unsigned %s\"\n",
-          next.str().c_str(), next.str().c_str());
+      result.AppendWarningWithFormatv(
+          "unsigned {0} being treated as two types. if you meant the combined "
+          "type name use quotes, as in \"unsigned {0}\"",
+          next);
       return true;
     }
   }
@@ -1293,9 +1292,9 @@ bool CommandObjectTypeSummaryAdd::Execute_ScriptSummary(
     ScriptInterpreter *interpreter = GetDebugger().GetScriptInterpreter();
 
     if (interpreter && !interpreter->CheckObjectExists(funct_name))
-      result.AppendWarningWithFormat(
-          "The provided function \"%s\" does not exist - "
-          "please define it before attempting to use this summary.\n",
+      result.AppendWarningWithFormatv(
+          "The provided function \"{0}\" does not exist - "
+          "please define it before attempting to use this summary.",
           funct_name);
   } else if (!m_options.m_python_script
                   .empty()) // we have a quick 1-line script, just use it

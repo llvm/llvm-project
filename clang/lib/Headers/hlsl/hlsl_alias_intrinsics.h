@@ -25,7 +25,7 @@ namespace hlsl {
       availability(platform, introduced = version, environment = stage)))
 
 #ifdef __HLSL_ENABLE_16_BIT
-#define _HLSL_16BIT_AVAILABILITY(platform, version)                            \
+#define _HLSL_16BIT_AVAILABILITY(platform, version, ...)                       \
   __attribute__((availability(platform, introduced = version)))
 #define _HLSL_16BIT_AVAILABILITY_STAGE(platform, version, stage)               \
   __attribute__((                                                              \
@@ -33,7 +33,8 @@ namespace hlsl {
 #define _HLSL_16BIT_AVAILABILITY_SHADERMODEL_DEFAULT()                         \
   _HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
 #else
-#define _HLSL_16BIT_AVAILABILITY(environment, version)
+#define _HLSL_16BIT_AVAILABILITY(platform, version, ...)                       \
+  __VA_OPT__(_HLSL_AVAILABILITY(platform, __VA_ARGS__))
 #define _HLSL_16BIT_AVAILABILITY_STAGE(environment, version, stage)
 #define _HLSL_16BIT_AVAILABILITY_SHADERMODEL_DEFAULT()
 #endif

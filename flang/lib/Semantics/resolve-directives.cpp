@@ -2330,12 +2330,6 @@ void OmpAttributeVisitor::PrivatizeAssociatedLoopIndexAndCheckLoopLevel(
     ivDSA = Symbol::Flag::OmpLastPrivate;
   }
 
-  bool isLoopConstruct{
-      GetContext().directive == llvm::omp::Directive::OMPD_loop};
-  const parser::OmpClause *clause{GetAssociatedClause()};
-  bool hasCollapseClause{
-      clause ? (clause->Id() == llvm::omp::OMPC_collapse) : false};
-
   for (auto &construct : std::get<parser::Block>(x.t)) {
     if (const auto *innermostConstruct{parser::omp::GetOmpLoop(construct)}) {
       PrivatizeAssociatedLoopIndexAndCheckLoopLevel(*innermostConstruct);
@@ -2343,17 +2337,6 @@ void OmpAttributeVisitor::PrivatizeAssociatedLoopIndexAndCheckLoopLevel(
                    parser::omp::GetDoConstruct(construct)}) {
       for (const parser::DoConstruct *loop{&*doConstruct}; loop && level > 0;
           --level) {
-        if (loop->IsDoConcurrent()) {
-          // DO CONCURRENT is explicitly allowed for the LOOP construct so long
-          // as there isn't a COLLAPSE clause
-          if (isLoopConstruct) {
-            if (hasCollapseClause) {
-              // hasCollapseClause implies clause != nullptr
-              context_.Say(clause->source,
-                  "DO CONCURRENT loops cannot be used with the COLLAPSE clause."_err_en_US);
-            }
-          }
-        }
         // go through all the nested do-loops and resolve index variables
         if (const parser::Name *iv{GetLoopIndex(*loop)}) {
           if (!iv->symbol || !IsLocalInsideScope(*iv->symbol, currScope())) {

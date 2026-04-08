@@ -1016,6 +1016,9 @@ def TaskloopContextOp : OpenMP_Op<"taskloop.context", traits = [
     }
     ```
 
+    The wrapped `omp.loop_nest` lower bounds, upper bounds and steps must be
+    defined outside of the `omp.taskloop.context` region.
+
     For definitions of "undeferred task", "included task", "final task" and
     "mergeable task", please check OpenMP Specification.
 

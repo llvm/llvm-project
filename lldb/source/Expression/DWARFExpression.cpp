@@ -593,8 +593,7 @@ bool DWARFExpression::LinkThreadLocalStorage(
 static llvm::Error Evaluate_DW_OP_entry_value(DWARFExpression::Stack &stack,
                                               ExecutionContext *exe_ctx,
                                               RegisterContext *reg_ctx,
-                                              const DataExtractor &opcodes,
-                                              lldb::offset_t &opcode_offset,
+                                              llvm::ArrayRef<uint8_t> subexpr,
                                               Log *log) {
   // DW_OP_entry_value(sub-expr) describes the location a variable had upon
   // function entry: this variable location is presumed to be optimized out at
@@ -729,11 +728,6 @@ static llvm::Error Evaluate_DW_OP_entry_value(DWARFExpression::Stack &stack,
   // 3. Attempt to locate the DW_OP_entry_value expression in the set of
   //    available call site parameters. If found, evaluate the corresponding
   //    parameter in the context of the parent frame.
-  const uint32_t subexpr_len = opcodes.GetULEB128(&opcode_offset);
-  const void *subexpr_data = opcodes.GetData(&opcode_offset, subexpr_len);
-  if (!subexpr_data)
-    return llvm::createStringError("subexpr could not be read");
-
   const CallSiteParameter *matched_param = nullptr;
   for (const CallSiteParameter &param : call_edge->GetCallSiteParameters()) {
     DataExtractor param_subexpr_extractor;
@@ -741,7 +735,7 @@ static llvm::Error Evaluate_DW_OP_entry_value(DWARFExpression::Stack &stack,
       continue;
     lldb::offset_t param_subexpr_offset = 0;
     const void *param_subexpr_data =
-        param_subexpr_extractor.GetData(&param_subexpr_offset, subexpr_len);
+        param_subexpr_extractor.GetData(&param_subexpr_offset, subexpr.size());
     if (!param_subexpr_data ||
         param_subexpr_extractor.BytesLeft(param_subexpr_offset) != 0)
       continue;
@@ -753,7 +747,7 @@ static llvm::Error Evaluate_DW_OP_entry_value(DWARFExpression::Stack &stack,
     // Note that an equality check is sufficient: the contents of the
     // DW_OP_entry_value subexpression are only used to identify the right call
     // site parameter in the parent, and do not require any special handling.
-    if (memcmp(subexpr_data, param_subexpr_data, subexpr_len) == 0) {
+    if (memcmp(subexpr.data(), param_subexpr_data, subexpr.size()) == 0) {
       matched_param = &param;
       break;
     }
@@ -1026,8 +1020,11 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     const DWARFExpression::Delegate *dwarf_cu,
     const lldb::RegisterKind reg_kind, const Value *initial_value_ptr,
     const Value *object_address_ptr) {
+  uint32_t address_size = opcodes.GetAddressByteSize();
+  llvm::DataExtractor expr_data = opcodes.GetAsLLVM();
+  llvm::DWARFExpression expr(expr_data, address_size);
 
-  if (opcodes.GetByteSize() == 0)
+  if (expr_data.size() == 0)
     return llvm::createStringError(
         "no location, value may have been optimized out");
 
@@ -1048,7 +1045,6 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
   if (initial_value_ptr)
     stack.push_back(*initial_value_ptr);
 
-  lldb::offset_t offset = 0;
   Value tmp;
   uint32_t reg_num;
 
@@ -1065,9 +1061,9 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     // TODO: Avoid implicit trunc?
     // See https://github.com/llvm/llvm-project/issues/112510.
     bool is_signed = std::is_signed<decltype(v)>::value;
-    return Scalar(llvm::APSInt(llvm::APInt(8 * opcodes.GetAddressByteSize(), v,
-                                           is_signed, /*implicitTrunc=*/true),
-                               !is_signed));
+    return Scalar(llvm::APSInt(
+        llvm::APInt(8 * address_size, v, is_signed, /*implicitTrunc=*/true),
+        !is_signed));
   };
 
   // The default kind is a memory location. This is updated by any
@@ -1075,9 +1071,10 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
   // by composition operations like DW_OP_piece.
   LocationDescriptionKind dwarf4_location_description_kind = Memory;
 
-  while (opcodes.ValidOffset(offset)) {
-    const lldb::offset_t op_offset = offset;
-    const uint8_t op = opcodes.GetU8(&offset);
+  llvm::DWARFExpression::iterator op = expr.begin(), op_end = expr.end();
+  while (op != op_end) {
+    const uint64_t op_offset = op.getOffset();
+    const LocationAtom opcode = static_cast<LocationAtom>(op->getCode());
 
     if (log && log->GetVerbose()) {
       size_t count = stack.size();
@@ -1090,22 +1087,21 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
         LLDB_LOGF(log, "  %s", new_value.GetData());
       }
       LLDB_LOGF(log, "0x%8.8" PRIx64 ": %s", op_offset,
-                DW_OP_value_to_name(op));
+                DW_OP_value_to_name(opcode));
     }
 
-    if (std::optional<unsigned> arity =
-            llvm::dwarf::OperationArity(static_cast<LocationAtom>(op))) {
+    if (std::optional<unsigned> arity = OperationArity(opcode)) {
       if (stack.size() < *arity)
         return llvm::createStringError(
             "%s needs at least %d stack entries (stack has %d entries)",
-            DW_OP_value_to_name(op), *arity, stack.size());
+            DW_OP_value_to_name(opcode), *arity, stack.size());
     }
 
-    switch (op) {
+    switch (opcode) {
     // The DW_OP_addr operation has a single operand that encodes a machine
     // address and whose size is the size of an address on the target machine.
     case DW_OP_addr:
-      stack.push_back(Scalar(opcodes.GetAddress(&offset)));
+      stack.push_back(Scalar(op->getRawOperand(0)));
       if (target &&
           target->GetArchitecture().GetCore() == ArchSpec::eCore_wasm32) {
         // wasm file sections aren't mapped into memory, therefore addresses can
@@ -1160,7 +1156,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     // retrieved from the dereferenced address is the size of an address on the
     // target machine.
     case DW_OP_deref: {
-      size_t size = opcodes.GetAddressByteSize();
+      size_t size = address_size;
       if (llvm::Error err = Evaluate_DW_OP_deref_size(
               stack, exe_ctx, module_sp, process, target, size, size,
               dwarf4_location_description_kind))
@@ -1180,10 +1176,10 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     // the size of an address on the target machine before being pushed on the
     // expression stack.
     case DW_OP_deref_size: {
-      size_t size = opcodes.GetU8(&offset);
+      size_t size = op->getRawOperand(0);
       if (llvm::Error err = Evaluate_DW_OP_deref_size(
-              stack, exe_ctx, module_sp, process, target, size,
-              opcodes.GetAddressByteSize(), dwarf4_location_description_kind))
+              stack, exe_ctx, module_sp, process, target, size, address_size,
+              dwarf4_location_description_kind))
         return err;
     } break;
 
@@ -1231,39 +1227,36 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     // DW_OP_constu     unsigned LEB128 integer constant
     // DW_OP_consts     signed LEB128 integer constant
     case DW_OP_const1u:
-      stack.push_back(to_generic(opcodes.GetU8(&offset)));
+      stack.push_back(to_generic(op->getRawOperand(0)));
       break;
     case DW_OP_const1s:
-      stack.push_back(to_generic(static_cast<int8_t>(opcodes.GetU8(&offset))));
+      stack.push_back(to_generic(static_cast<int8_t>(op->getRawOperand(0))));
       break;
     case DW_OP_const2u:
-      stack.push_back(to_generic(opcodes.GetU16(&offset)));
+      stack.push_back(to_generic(op->getRawOperand(0)));
       break;
     case DW_OP_const2s:
-      stack.push_back(
-          to_generic(static_cast<int16_t>(opcodes.GetU16(&offset))));
+      stack.push_back(to_generic(static_cast<int16_t>(op->getRawOperand(0))));
       break;
     case DW_OP_const4u:
-      stack.push_back(to_generic(opcodes.GetU32(&offset)));
+      stack.push_back(to_generic(op->getRawOperand(0)));
       break;
     case DW_OP_const4s:
-      stack.push_back(
-          to_generic(static_cast<int32_t>(opcodes.GetU32(&offset))));
+      stack.push_back(to_generic(static_cast<int32_t>(op->getRawOperand(0))));
       break;
     case DW_OP_const8u:
-      stack.push_back(to_generic(opcodes.GetU64(&offset)));
+      stack.push_back(to_generic(op->getRawOperand(0)));
       break;
     case DW_OP_const8s:
-      stack.push_back(
-          to_generic(static_cast<int64_t>(opcodes.GetU64(&offset))));
+      stack.push_back(to_generic(static_cast<int64_t>(op->getRawOperand(0))));
       break;
     // These should also use to_generic, but we can't do that due to a
     // producer-side bug in llvm. See llvm.org/pr48087.
     case DW_OP_constu:
-      stack.push_back(Scalar(opcodes.GetULEB128(&offset)));
+      stack.push_back(Scalar(op->getRawOperand(0)));
       break;
     case DW_OP_consts:
-      stack.push_back(Scalar(opcodes.GetSLEB128(&offset)));
+      stack.push_back(Scalar(static_cast<int64_t>(op->getRawOperand(0))));
       break;
 
     // OPCODE: DW_OP_dup
@@ -1299,7 +1292,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     // DESCRIPTION: The stack entry with the specified index (0 through 255,
     // inclusive) is pushed on the stack
     case DW_OP_pick: {
-      uint8_t pick_idx = opcodes.GetU8(&offset);
+      uint8_t pick_idx = op->getRawOperand(0);
       if (pick_idx < stack.size())
         stack.push_back(stack[stack.size() - 1 - pick_idx]);
       else {
@@ -1450,7 +1443,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     // DESCRIPTION: pops the top stack entry, adds it to the unsigned LEB128
     // constant operand and pushes the result.
     case DW_OP_plus_uconst: {
-      const uint64_t uconst_value = opcodes.GetULEB128(&offset);
+      const uint64_t uconst_value = op->getRawOperand(0);
       // Implicit conversion from a UINT to a Scalar...
       stack.back().GetScalar() += uconst_value;
       if (!stack.back().GetScalar().IsValid())
@@ -1509,19 +1502,19 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     // the DWARF expression to skip forward or backward from the current
     // operation, beginning after the 2-byte constant.
     case DW_OP_skip: {
-      int16_t skip_offset = static_cast<int16_t>(opcodes.GetU16(&offset));
-      lldb::offset_t new_offset = offset + skip_offset;
+      int16_t skip_offset = static_cast<int16_t>(op->getRawOperand(0));
+      lldb::offset_t new_offset = op->getEndOffset() + skip_offset;
       // New offset can point at the end of the data, in this case we should
       // terminate the DWARF expression evaluation (will happen in the loop
       // condition).
-      if (new_offset <= opcodes.GetByteSize())
-        offset = new_offset;
-      else {
-        return llvm::createStringErrorV(
-            "Invalid opcode offset in DW_OP_skip: {0}+({1}) > {2}", offset,
-            skip_offset, opcodes.GetByteSize());
+      if (new_offset <= expr_data.size()) {
+        op = op.skipBytes(skip_offset);
+        continue;
       }
-    } break;
+      return llvm::createStringErrorV(
+          "Invalid opcode offset in DW_OP_skip: {0}+({1}) > {2}",
+          op->getEndOffset(), skip_offset, expr_data.size());
+    }
 
     // OPCODE: DW_OP_bra
     // OPERANDS: int16_t
@@ -1533,20 +1526,20 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     case DW_OP_bra: {
       tmp = stack.back();
       stack.pop_back();
-      int16_t bra_offset = static_cast<int16_t>(opcodes.GetU16(&offset));
+      int16_t bra_offset = static_cast<int16_t>(op->getRawOperand(0));
       Scalar zero(0);
       if (tmp.GetScalar() != zero) {
-        lldb::offset_t new_offset = offset + bra_offset;
+        lldb::offset_t new_offset = op->getEndOffset() + bra_offset;
         // New offset can point at the end of the data, in this case we should
         // terminate the DWARF expression evaluation (will happen in the loop
         // condition).
-        if (new_offset <= opcodes.GetByteSize())
-          offset = new_offset;
-        else {
-          return llvm::createStringErrorV(
-              "Invalid opcode offset in DW_OP_bra: {0}+({1}) > {2}", offset,
-              bra_offset, opcodes.GetByteSize());
+        if (new_offset <= expr_data.size()) {
+          op = op.skipBytes(bra_offset);
+          continue;
         }
+        return llvm::createStringErrorV(
+            "Invalid opcode offset in DW_OP_bra: {0}+({1}) > {2}",
+            op->getEndOffset(), bra_offset, expr_data.size());
       }
     } break;
 
@@ -1665,7 +1658,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     case DW_OP_lit29:
     case DW_OP_lit30:
     case DW_OP_lit31:
-      stack.push_back(to_generic(op - DW_OP_lit0));
+      stack.push_back(to_generic(opcode - DW_OP_lit0));
       break;
 
     // OPCODE: DW_OP_regN
@@ -1704,7 +1697,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     case DW_OP_reg30:
     case DW_OP_reg31: {
       dwarf4_location_description_kind = Register;
-      reg_num = op - DW_OP_reg0;
+      reg_num = opcode - DW_OP_reg0;
 
       if (llvm::Error err =
               ReadRegisterValueAsScalar(reg_ctx, reg_kind, reg_num, tmp))
@@ -1717,7 +1710,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     // DESCRIPTION: Push the value in register on the top of the stack.
     case DW_OP_regx: {
       dwarf4_location_description_kind = Register;
-      reg_num = opcodes.GetULEB128(&offset);
+      reg_num = op->getRawOperand(0);
       Status read_err;
       if (llvm::Error err =
               ReadRegisterValueAsScalar(reg_ctx, reg_kind, reg_num, tmp))
@@ -1762,12 +1755,12 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     case DW_OP_breg29:
     case DW_OP_breg30:
     case DW_OP_breg31: {
-      reg_num = op - DW_OP_breg0;
+      reg_num = opcode - DW_OP_breg0;
       if (llvm::Error err =
               ReadRegisterValueAsScalar(reg_ctx, reg_kind, reg_num, tmp))
         return err;
 
-      int64_t breg_offset = opcodes.GetSLEB128(&offset);
+      int64_t breg_offset = op->getRawOperand(0);
       tmp.GetScalar() += static_cast<uint64_t>(breg_offset);
       tmp.ClearContext();
       stack.push_back(tmp);
@@ -1780,12 +1773,12 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     // DESCRIPTION: Value is in memory at the address specified by register
     // N plus an offset.
     case DW_OP_bregx: {
-      reg_num = opcodes.GetULEB128(&offset);
+      reg_num = op->getRawOperand(0);
       if (llvm::Error err =
               ReadRegisterValueAsScalar(reg_ctx, reg_kind, reg_num, tmp))
         return err;
 
-      int64_t breg_offset = opcodes.GetSLEB128(&offset);
+      int64_t breg_offset = op->getRawOperand(1);
       tmp.GetScalar() += static_cast<uint64_t>(breg_offset);
       tmp.ClearContext();
       stack.push_back(tmp);
@@ -1798,7 +1791,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
           Scalar value;
           if (llvm::Error err = frame->GetFrameBaseValue(value))
             return err;
-          int64_t fbreg_offset = opcodes.GetSLEB128(&offset);
+          int64_t fbreg_offset = op->getRawOperand(0);
           value += fbreg_offset;
           stack.push_back(value);
           stack.back().SetValueType(Value::ValueType::LoadAddress);
@@ -1838,7 +1831,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
       // Reset for the next piece.
       dwarf4_location_description_kind = Memory;
 
-      const uint64_t piece_byte_size = opcodes.GetULEB128(&offset);
+      const uint64_t piece_byte_size = op->getRawOperand(0);
 
       if (piece_byte_size > 0) {
         Value curr_piece;
@@ -1975,8 +1968,8 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
             log, dwarf_cu, dwarf4_location_description_kind, &stack.back());
         // Reset for the next piece.
         dwarf4_location_description_kind = Memory;
-        const uint64_t piece_bit_size = opcodes.GetULEB128(&offset);
-        const uint64_t piece_bit_offset = opcodes.GetULEB128(&offset);
+        const uint64_t piece_bit_size = op->getRawOperand(0);
+        const uint64_t piece_bit_offset = op->getRawOperand(1);
         switch (stack.back().GetValueType()) {
         case Value::ValueType::Invalid:
           return llvm::createStringError(
@@ -2013,16 +2006,19 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     case DW_OP_implicit_value: {
       dwarf4_location_description_kind = Implicit;
 
-      const uint32_t len = opcodes.GetULEB128(&offset);
-      const void *data = opcodes.GetData(&offset, len);
+      // The second operand is a sequence of bytes of the length specified by
+      // the first operand. LLVM represents it as an offset to that sequence.
+      const uint64_t block_size = op->getRawOperand(0);
+      uint64_t block_offset = op->getRawOperand(1);
 
-      if (!data) {
-        LLDB_LOG(log, "Evaluate_DW_OP_implicit_value: could not be read data");
-        return llvm::createStringError("could not evaluate %s",
-                                       DW_OP_value_to_name(op));
-      }
+      llvm::Error error = llvm::Error::success();
+      llvm::StringRef block_data =
+          expr_data.getBytes(&block_offset, block_size, &error);
 
-      Value result(data, len);
+      if (error)
+        return error;
+
+      Value result(block_data.data(), block_data.size());
       stack.push_back(result);
       break;
     }
@@ -2030,7 +2026,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     case DW_OP_implicit_pointer: {
       dwarf4_location_description_kind = Implicit;
       return llvm::createStringError("could not evaluate %s",
-                                     DW_OP_value_to_name(op));
+                                     DW_OP_value_to_name(opcode));
     }
 
     // OPCODE: DW_OP_push_object_address
@@ -2110,7 +2106,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     // DESCRIPTION: Pop the top stack element, convert it to a
     // different type, and push the result.
     case DW_OP_convert: {
-      const uint64_t relative_die_offset = opcodes.GetULEB128(&offset);
+      const uint64_t relative_die_offset = op->getRawOperand(0);
       uint64_t bit_size;
       bool sign;
       if (relative_die_offset == 0) {
@@ -2171,7 +2167,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     case DW_OP_form_tls_address:
     case DW_OP_GNU_push_tls_address: {
       if (stack.size() < 1) {
-        if (op == DW_OP_form_tls_address)
+        if (opcode == DW_OP_form_tls_address)
           return llvm::createStringError(
               "DW_OP_form_tls_address needs an argument");
         else
@@ -2211,7 +2207,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
       if (!dwarf_cu)
         return llvm::createStringError("DW_OP_GNU_addr_index found without a "
                                        "compile unit being specified");
-      uint64_t index = opcodes.GetULEB128(&offset);
+      uint64_t index = op->getRawOperand(0);
       lldb::addr_t value = dwarf_cu->ReadAddressFromDebugAddrSection(index);
       stack.push_back(Scalar(value));
       if (target &&
@@ -2236,31 +2232,62 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
         return llvm::createStringError("DW_OP_GNU_const_index found without a "
                                        "compile unit being specified");
       }
-      uint64_t index = opcodes.GetULEB128(&offset);
+      uint64_t index = op->getRawOperand(0);
       lldb::addr_t value = dwarf_cu->ReadAddressFromDebugAddrSection(index);
       stack.push_back(Scalar(value));
     } break;
 
     case DW_OP_GNU_entry_value:
     case DW_OP_entry_value: {
+      // Technically, DW_OP_entry_value has two operands, but LLVM represents
+      // it as a single-operand operation (bug?). We can deal with this: the
+      // second operand immediately follows the first, but have to be careful
+      // when advancing the iterator, see the comment below.
+      const uint64_t block_size = op->getRawOperand(0);
+      uint64_t block_offset = op->getEndOffset();
+
+      llvm::Error error = llvm::Error::success();
+      llvm::ArrayRef<uint8_t> block_data = llvm::arrayRefFromStringRef(
+          expr_data.getBytes(&block_offset, block_size, &error));
+
+      if (error)
+        return error;
+
       if (llvm::Error err = Evaluate_DW_OP_entry_value(stack, exe_ctx, reg_ctx,
-                                                       opcodes, offset, log))
+                                                       block_data, log))
         return llvm::createStringError(
             "could not evaluate DW_OP_entry_value: %s",
             llvm::toString(std::move(err)).c_str());
-      break;
+
+      // We can't use `operator++` here because the iterator currently points
+      // to the second operand. See the comment above.
+      op = op.skipBytes(block_size);
+      continue;
     }
 
     default:
       if (dwarf_cu) {
-        if (dwarf_cu->ParseVendorDWARFOpcode(op, opcodes, offset, reg_ctx,
+        const uint64_t operands_offset = op_offset + 1;
+        uint64_t offset = operands_offset; // Updated by the callee.
+        if (dwarf_cu->ParseVendorDWARFOpcode(opcode, expr_data, offset, reg_ctx,
                                              reg_kind, stack)) {
-          break;
+          // This is a little tricky. If LLVM knows about this vendor-specific
+          // operation, `getEndOffset()` points past its last operand. If LLVM
+          // knows nothing about this operation, `getEndOffset()` points to its
+          // opcode. In both cases `offset` will point to the next operation,
+          // but we can't use it directly because the only available mutating
+          // method of `iterator` (not counting `operator++`) is `skipBytes()`.
+          // So we calculate the offset and pass it to `skipBytes()`.
+          assert(offset >= op->getEndOffset());
+          uint64_t offset_to_next_op = offset - op->getEndOffset();
+          op = op.skipBytes(offset_to_next_op);
+          continue;
         }
       }
       return llvm::createStringErrorV("unhandled opcode {0} in DWARFExpression",
-                                      static_cast<LocationAtom>(op));
+                                      opcode);
     }
+    ++op;
   }
 
   if (stack.empty()) {

@@ -298,7 +298,7 @@
 "`LWG4472 <https://wg21.link/LWG4472>`__","``std::atomic_ref<const T>`` can be constructed from temporaries","2026-03 (Croydon)","","","`#189840 <https://github.com/llvm/llvm-project/issues/189840>`__",""
 "`LWG4474 <https://wg21.link/LWG4474>`__","""`round_to_nearest`"" rounding mode is unclear","2026-03 (Croydon)","","","`#189841 <https://github.com/llvm/llvm-project/issues/189841>`__",""
 "`LWG4476 <https://wg21.link/LWG4476>`__","``run_loop`` should not have a ``set_error`` completion","2026-03 (Croydon)","","","`#189842 <https://github.com/llvm/llvm-project/issues/189842>`__",""
-"`LWG4477 <https://wg21.link/LWG4477>`__","Placement ``operator delete`` should be constexpr","2026-03 (Croydon)","","","`#189843 <https://github.com/llvm/llvm-project/issues/189843>`__",""
+"`LWG4477 <https://wg21.link/LWG4477>`__","Placement ``operator delete`` should be constexpr","2026-03 (Croydon)","|Complete|","23","`#189843 <https://github.com/llvm/llvm-project/issues/189843>`__",""
 "`LWG4478 <https://wg21.link/LWG4478>`__","``meta::has_identifier`` is not specified for annotations","2026-03 (Croydon)","","","`#189844 <https://github.com/llvm/llvm-project/issues/189844>`__",""
 "`LWG4480 <https://wg21.link/LWG4480>`__","``<stdatomic.h>`` should provide ``ATOMIC_CHAR8_T_LOCK_FREE``","2026-03 (Croydon)","","","`#189845 <https://github.com/llvm/llvm-project/issues/189845>`__",""
 "`LWG4481 <https://wg21.link/LWG4481>`__","Disallow ``chrono::duration<const T, P>``","2026-03 (Croydon)","","","`#189846 <https://github.com/llvm/llvm-project/issues/189846>`__",""

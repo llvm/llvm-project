@@ -7449,6 +7449,8 @@ Fortran::lower::LoweringBridge::LoweringBridge(
   fir::setTargetFeatures(*module, targetMachine.getTargetFeatureString());
   fir::support::setMLIRDataLayout(*module, targetMachine.createDataLayout());
   fir::setIdent(*module, Fortran::common::getFlangFullVersion());
+  fir::setRelocationModel(*module, cgOpts.getRelocationModel());
+  fir::setIsPIE(*module, cgOpts.IsPIE);
   if (cgOpts.RecordCommandLine)
     fir::setCommandline(*module, *cgOpts.RecordCommandLine);
 }
