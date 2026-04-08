@@ -320,8 +320,7 @@ cir::GlobalOp LoweringPreparePass::buildRuntimeVariable(
         cir::GlobalLinkageKindAttr::get(builder.getContext(), linkage));
     mlir::SymbolTable::setSymbolVisibility(
         g, mlir::SymbolTable::Visibility::Private);
-    g.setGlobalVisibilityAttr(
-        cir::VisibilityAttr::get(builder.getContext(), visibility));
+    g.setGlobalVisibility(visibility);
   }
   return g;
 }
@@ -1385,19 +1384,16 @@ static void lowerArrayDtorCtorIntoLoop(cir::CIRBaseBuilderTy &builder,
   const unsigned sizeTypeSize =
       astCtx->getTypeSize(astCtx->getSignedSizeType());
 
+  // Both constructors and destructors use end = begin + numElements.
+  // Constructors iterate forward [begin, end).  Destructors iterate backward
+  // from end, decrementing before calling the destructor on each element.
   mlir::Value begin, end;
   if (isDynamic) {
-    assert(!isCtor && "Unexpected dynamic ctor loop");
-    mlir::Value one = builder.getUnsignedInt(loc, 1, sizeTypeSize);
-    mlir::Value endOffsetVal = builder.createSub(loc, numElements, one);
     begin = addr;
-    end = cir::PtrStrideOp::create(builder, loc, eltTy, begin, endOffsetVal);
+    end = cir::PtrStrideOp::create(builder, loc, eltTy, begin, numElements);
   } else {
-    // Static: emit endOffset const first, then array_to_ptrdecay, matching
-    // the expected IR ordering.
-    uint64_t endOffset = isCtor ? arrayLen : arrayLen - 1;
     mlir::Value endOffsetVal =
-        builder.getUnsignedInt(loc, endOffset, sizeTypeSize);
+        builder.getUnsignedInt(loc, arrayLen, sizeTypeSize);
     begin = cir::CastOp::create(builder, loc, eltTy,
                                 cir::CastKind::array_to_ptrdecay, addr);
     end = cir::PtrStrideOp::create(builder, loc, eltTy, begin, endOffsetVal);
@@ -1410,9 +1406,18 @@ static void lowerArrayDtorCtorIntoLoop(cir::CIRBaseBuilderTy &builder,
   // This places the destructor loop emitted below inside the if block.
   cir::IfOp ifOp;
   if (isDynamic) {
-    mlir::Value isEmpty =
-        cir::CmpOp::create(builder, loc, cir::CmpOpKind::ne, start, stop);
-    ifOp = cir::IfOp::create(builder, loc, isEmpty,
+    mlir::Value guardCond;
+    if (isCtor) {
+      mlir::Value zero = builder.getUnsignedInt(loc, 0, sizeTypeSize);
+      guardCond = cir::CmpOp::create(builder, loc, cir::CmpOpKind::ne,
+                                     numElements, zero);
+    } else {
+      // We could check for numElements != 0 in this case too, but this matches
+      // what classic codegen does.
+      guardCond =
+          cir::CmpOp::create(builder, loc, cir::CmpOpKind::ne, start, stop);
+    }
+    ifOp = cir::IfOp::create(builder, loc, guardCond,
                              /*withElseRegion=*/false,
                              [&](mlir::OpBuilder &, mlir::Location) {});
     builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
@@ -1422,6 +1427,21 @@ static void lowerArrayDtorCtorIntoLoop(cir::CIRBaseBuilderTy &builder,
       loc, /*addr type*/ builder.getPointerTo(eltTy),
       /*var type*/ eltTy, "__array_idx", builder.getAlignmentAttr(1));
   builder.createStore(loc, start, tmpAddr);
+
+  mlir::Block *bodyBlock = &op->getRegion(0).front();
+
+  // Clone the region body (ctor/dtor call and any setup ops like per-element
+  // zero-init) into the loop, remapping the block argument to the current
+  // element pointer.
+  auto cloneRegionBodyInto = [&](mlir::Block *srcBlock,
+                                 mlir::Value replacement) {
+    mlir::IRMapping map;
+    map.map(srcBlock->getArgument(0), replacement);
+    for (mlir::Operation &regionOp : *srcBlock) {
+      if (!mlir::isa<cir::YieldOp>(&regionOp))
+        builder.clone(regionOp, map);
+    }
+  };
 
   builder.createDoWhile(
       loc,
@@ -1435,31 +1455,20 @@ static void lowerArrayDtorCtorIntoLoop(cir::CIRBaseBuilderTy &builder,
       /*bodyBuilder=*/
       [&](mlir::OpBuilder &b, mlir::Location loc) {
         auto currentElement = cir::LoadOp::create(b, loc, eltTy, tmpAddr);
-
-        // Clone the region body (ctor/dtor call and any setup ops like
-        // per-element zero-init) into the loop, remapping the block argument
-        // to the current element pointer.
-        mlir::Block *oldBlock = &op->getRegion(0).front();
-        mlir::BlockArgument oldArg = oldBlock->getArgument(0);
-        mlir::IRMapping map;
-        map.map(oldArg, currentElement);
-        for (mlir::Operation &regionOp : *oldBlock) {
-          if (!mlir::isa<cir::YieldOp>(&regionOp))
-            builder.clone(regionOp, map);
+        if (isCtor) {
+          cloneRegionBodyInto(bodyBlock, currentElement);
+          mlir::Value stride = builder.getUnsignedInt(loc, 1, sizeTypeSize);
+          auto nextElement = cir::PtrStrideOp::create(builder, loc, eltTy,
+                                                      currentElement, stride);
+          builder.createStore(loc, nextElement, tmpAddr);
+        } else {
+          mlir::Value stride = builder.getSignedInt(loc, -1, sizeTypeSize);
+          auto prevElement = cir::PtrStrideOp::create(builder, loc, eltTy,
+                                                      currentElement, stride);
+          builder.createStore(loc, prevElement, tmpAddr);
+          cloneRegionBodyInto(bodyBlock, prevElement);
         }
 
-        // Array elements get constructed in order but destructed in reverse.
-        mlir::Value stride;
-        if (isCtor)
-          stride = builder.getUnsignedInt(loc, 1, sizeTypeSize);
-        else
-          stride = builder.getSignedInt(loc, -1, sizeTypeSize);
-
-        auto nextElement = cir::PtrStrideOp::create(builder, loc, eltTy,
-                                                    currentElement, stride);
-
-        // Store the element pointer to the temporary variable
-        builder.createStore(loc, nextElement, tmpAddr);
         builder.createYield(loc);
       });
 
@@ -1495,6 +1504,14 @@ void LoweringPreparePass::lowerArrayCtor(cir::ArrayCtor op) {
   builder.setInsertionPointAfter(op.getOperation());
 
   mlir::Type eltTy = op->getRegion(0).getArgument(0).getType();
+
+  if (op.getNumElements()) {
+    lowerArrayDtorCtorIntoLoop(builder, astCtx, op, eltTy, op.getAddr(),
+                               op.getNumElements(), /*arrayLen=*/0,
+                               /*isCtor=*/true);
+    return;
+  }
+
   assert(!cir::MissingFeatures::vlas());
   auto arrayLen =
       mlir::cast<cir::ArrayType>(op.getAddr().getType().getPointee()).getSize();

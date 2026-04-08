@@ -62,15 +62,6 @@ int16_t3 abs(int16_t3);
 _HLSL_16BIT_AVAILABILITY_SHADERMODEL_DEFAULT()
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
 int16_t4 abs(int16_t4);
-
-_HLSL_16BIT_AVAILABILITY_SHADERMODEL_DEFAULT()
-constexpr uint16_t abs(uint16_t V) { return V; }
-_HLSL_16BIT_AVAILABILITY_SHADERMODEL_DEFAULT()
-constexpr uint16_t2 abs(uint16_t2 V) { return V; }
-_HLSL_16BIT_AVAILABILITY_SHADERMODEL_DEFAULT()
-constexpr uint16_t3 abs(uint16_t3 V) { return V; }
-_HLSL_16BIT_AVAILABILITY_SHADERMODEL_DEFAULT()
-constexpr uint16_t4 abs(uint16_t4 V) { return V; }
 #endif
 
 _HLSL_16BIT_AVAILABILITY_SHADERMODEL_DEFAULT()
@@ -95,11 +86,6 @@ int3 abs(int3);
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
 int4 abs(int4);
 
-constexpr uint abs(uint V) { return V; }
-constexpr uint2 abs(uint2 V) { return V; }
-constexpr uint3 abs(uint3 V) { return V; }
-constexpr uint4 abs(uint4 V) { return V; }
-
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
 float abs(float);
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
@@ -117,11 +103,6 @@ _HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
 int64_t3 abs(int64_t3);
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
 int64_t4 abs(int64_t4);
-
-constexpr uint64_t abs(uint64_t V) { return V; }
-constexpr uint64_t2 abs(uint64_t2 V) { return V; }
-constexpr uint64_t3 abs(uint64_t3 V) { return V; }
-constexpr uint64_t4 abs(uint64_t4 V) { return V; }
 
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
 double abs(double);
@@ -1236,6 +1217,60 @@ _HLSL_BUILTIN_ALIAS(__builtin_elementwise_floor)
 float4 floor(float4);
 
 //===----------------------------------------------------------------------===//
+// fused multiply-add builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn double fma(double a, double b, double c)
+/// \brief Returns the double-precision fused multiply-addition of a * b + c.
+/// \param a The first value in the fused multiply-addition.
+/// \param b The second value in the fused multiply-addition.
+/// \param c The third value in the fused multiply-addition.
+
+// double scalars and vectors
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_fma)
+double fma(double, double, double);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_fma)
+double2 fma(double2, double2, double2);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_fma)
+double3 fma(double3, double3, double3);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_fma)
+double4 fma(double4, double4, double4);
+
+// double matrices
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_fma)
+double1x1 fma(double1x1, double1x1, double1x1);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_fma)
+double1x2 fma(double1x2, double1x2, double1x2);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_fma)
+double1x3 fma(double1x3, double1x3, double1x3);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_fma)
+double1x4 fma(double1x4, double1x4, double1x4);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_fma)
+double2x1 fma(double2x1, double2x1, double2x1);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_fma)
+double2x2 fma(double2x2, double2x2, double2x2);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_fma)
+double2x3 fma(double2x3, double2x3, double2x3);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_fma)
+double2x4 fma(double2x4, double2x4, double2x4);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_fma)
+double3x1 fma(double3x1, double3x1, double3x1);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_fma)
+double3x2 fma(double3x2, double3x2, double3x2);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_fma)
+double3x3 fma(double3x3, double3x3, double3x3);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_fma)
+double3x4 fma(double3x4, double3x4, double3x4);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_fma)
+double4x1 fma(double4x1, double4x1, double4x1);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_fma)
+double4x2 fma(double4x2, double4x2, double4x2);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_fma)
+double4x3 fma(double4x3, double4x3, double4x3);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_fma)
+double4x4 fma(double4x4, double4x4, double4x4);
+
+//===----------------------------------------------------------------------===//
 // frac builtins
 //===----------------------------------------------------------------------===//
 
@@ -1893,6 +1928,29 @@ _HLSL_BUILTIN_ALIAS(__builtin_hlsl_normalize)
 float3 normalize(float3);
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_normalize)
 float4 normalize(float4);
+
+//===----------------------------------------------------------------------===//
+// NonUniformResourceIndex builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn uint NonUniformResourceIndex(uint I)
+/// \brief A compiler hint to indicate that a resource index varies across
+/// threads within a wave (i.e., it is non-uniform).
+/// \param I [in] Resource array index
+///
+/// The return value is the \a I parameter.
+///
+/// When indexing into an array of shader resources (e.g., textures, buffers),
+/// some GPU hardware and drivers require the compiler to know whether the index
+/// is uniform (same for all threads) or non-uniform (varies per thread).
+///
+/// Using NonUniformResourceIndex explicitly marks an index as non-uniform,
+/// disabling certain assumptions or optimizations that could lead to incorrect
+/// behavior when dynamically accessing resource arrays with non-uniform
+/// indices.
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_resource_nonuniformindex)
+uint NonUniformResourceIndex(uint);
 
 //===----------------------------------------------------------------------===//
 // or builtins

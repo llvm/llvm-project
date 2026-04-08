@@ -662,6 +662,7 @@ defm GLSL : SourceLanguageOperand<2>;
 defm OpenCL_C : SourceLanguageOperand<3>;
 defm OpenCL_CPP : SourceLanguageOperand<4>;
 defm HLSL : SourceLanguageOperand<5>;
+defm CPP_for_OpenCL : SourceLanguageOperand<6>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define AddressingModel enum values and at the same time

@@ -468,6 +468,7 @@ if(COMPILER_RT_ARM_OPTIMIZED_FP AND BUILTIN_SUPPORTED_ARCH MATCHES "arm")
     set(assembly_files
       arm/mulsf3.S
       arm/divsf3.S
+      arm/adddf3.S
       )
     set_source_files_properties(${assembly_files}
       PROPERTIES COMPILE_OPTIONS ${implicit_it_flag})
@@ -515,6 +516,7 @@ set(thumb1_base_SOURCES
   arm/addsf3.S
   ${GENERIC_SOURCES}
 )
+set_special_properties(arm/adddf3.S SUPERSEDES subdf3.c PROVIDES subdf3)
 
 if(COMPILER_RT_ARM_OPTIMIZED_FP)
   set(thumb1_base_SOURCES

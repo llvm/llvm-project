@@ -48,7 +48,9 @@ public:
   mlir::Type getEleTy() const;
 
   /// Get the raw address type of the memory described by the box.
-  mlir::Type getBaseAddressType() const;
+  /// When \p dropHeapOrPtr is true, the returned type is always a
+  /// fir::ReferenceType.
+  mlir::Type getBaseAddressType(bool dropHeapOrPtr = false) const;
 
   /// Unwrap element type from fir.heap, fir.ptr and fir.array.
   mlir::Type unwrapInnerType() const;
@@ -68,10 +70,19 @@ public:
   /// Is this a box describing volatile memory?
   bool isVolatile() const;
 
+  /// Is this a box describing an array or assumed-rank?
+  bool isArray() const;
+
   /// Return the same type, except for the shape, that is taken the shape
   /// of shapeMold.
   BaseBoxType getBoxTypeWithNewShape(mlir::Type shapeMold) const;
   BaseBoxType getBoxTypeWithNewShape(int rank) const;
+
+  /// Return a box type with the same attributes and shape, except that the
+  /// element type that is changed to the provided one. The returned box will be
+  /// a fir.class if \p polymorphic is true and a fir.box otherwise.
+  BaseBoxType getBoxTypeWithNewElementType(mlir::Type elementType,
+                                           bool polymorphic) const;
 
   /// Return the same type, except for the attribute (fir.heap/fir.ptr).
   BaseBoxType getBoxTypeWithNewAttr(Attribute attr) const;

@@ -1383,8 +1383,15 @@ ConstantLValueEmitter::tryEmitBase(const APValue::LValueBase &base) {
       cir::FuncOp fop = cgm.getAddrOfFunction(fd);
       CIRGenBuilderTy &builder = cgm.getBuilder();
       mlir::MLIRContext *mlirContext = builder.getContext();
+      // Use the destination pointer type (e.g. struct field type), not
+      // fop.getFunctionType(), so initializers stay valid when a no-prototype
+      // FuncOp is later replaced by a prototyped definition with the same
+      // symbol. CIR allows the view type to differ from the symbol's type.
+      mlir::Type ptrTy = cgm.getTypes().convertTypeForMem(destType);
+      assert(mlir::isa<cir::PointerType>(ptrTy) &&
+             "function address in constant must be a pointer");
       return cir::GlobalViewAttr::get(
-          builder.getPointerTo(fop.getFunctionType()),
+          ptrTy,
           mlir::FlatSymbolRefAttr::get(mlirContext, fop.getSymNameAttr()));
     }
 
@@ -1395,9 +1402,10 @@ ConstantLValueEmitter::tryEmitBase(const APValue::LValueBase &base) {
           return cgm.getAddrOfGlobalVarAttr(vd);
 
         if (vd->isLocalVarDecl()) {
-          cgm.errorNYI(vd->getSourceRange(),
-                       "ConstantLValueEmitter: local var decl");
-          return {};
+          cir::GlobalLinkageKind linkage =
+              cgm.getCIRLinkageVarDefinition(vd, /*IsConstant=*/false);
+          return cgm.getBuilder().getGlobalViewAttr(
+              cgm.getOrCreateStaticVarDecl(*vd, linkage));
         }
       }
     }
@@ -1603,10 +1611,9 @@ static mlir::TypedAttr emitNullConstant(CIRGenModule &cgm, const RecordDecl *rd,
 
   // Now go through all other fields and zero them out.
   for (unsigned i = 0; i != numElements; ++i) {
-    if (!elements[i]) {
-      cgm.errorNYI(rd->getSourceRange(), "emitNullConstant: field not zeroed");
-      return {};
-    }
+    if (!elements[i])
+      elements[i] =
+          cgm.getBuilder().getZeroInitAttr(recordTy.getElementType(i));
   }
 
   mlir::MLIRContext *mlirContext = recordTy.getContext();
@@ -1638,21 +1645,8 @@ mlir::Attribute ConstantEmitter::tryEmitPrivateForVarInit(const VarDecl &d) {
     if (ty->isRecordType()) {
       if (const auto *e = dyn_cast_or_null<CXXConstructExpr>(d.getInit())) {
         const CXXConstructorDecl *cd = e->getConstructor();
-        // FIXME: we should probably model this more closely to C++ than
-        // just emitting a global with zero init (mimic what we do for trivial
-        // assignments and whatnots). Since this is for globals shouldn't
-        // be a problem for the near future.
-        if (cd->isTrivial() && cd->isDefaultConstructor()) {
-          const auto *cxxrd = ty->castAsCXXRecordDecl();
-          if (!cgm.getTypes().isZeroInitializable(cxxrd)) {
-            // To handle this case, we really need to go through
-            // emitNullConstant, but we need an attribute, not a value
-            cgm.errorNYI(
-                "tryEmitPrivateForVarInit: non-zero-initializable cxx record");
-            return {};
-          }
-          return cir::ZeroAttr::get(cgm.convertType(d.getType()));
-        }
+        if (cd->isTrivial() && cd->isDefaultConstructor())
+          return cgm.emitNullConstantAttr(d.getType());
       }
     }
   }
@@ -1976,8 +1970,7 @@ mlir::TypedAttr CIRGenModule::emitNullConstantAttr(QualType t) {
   assert(t->isMemberDataPointerType() &&
          "Should only see pointers to data members here!");
 
-  errorNYI("CIRGenModule::emitNullConstantAttr unsupported type");
-  return {};
+  return emitNullMemberAttr(t, t->castAs<MemberPointerType>());
 }
 
 mlir::TypedAttr
