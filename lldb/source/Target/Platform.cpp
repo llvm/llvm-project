@@ -2191,17 +2191,13 @@ size_t Platform::GetSoftwareBreakpointTrapOpcode(Target &target,
   if (bp_site) {
     // TODO: support big-endian arm and thumb trap codes.
     lldb::BreakpointLocationSP bp_loc_sp(bp_site->GetConstituentAtIndex(0));
-    if (bp_loc_sp) {
+    if (bp_loc_sp)
       addr_class = bp_loc_sp->GetAddress().GetAddressClass();
-      if (addr_class == AddressClass::eUnknown &&
-          (bp_loc_sp->GetAddress().GetFileAddress() & 1))
-        addr_class = AddressClass::eCodeAlternateISA;
-    }
   }
 
   size_t size_hint = 0;
   // Check for either ARM or RISC-V short instruction conditions.
-  if ((addr_class == AddressClass::eCodeAlternateISA) ||
+  if (addr_class == AddressClass::eCodeAlternateISA ||
       (arch.GetFlags() & ArchSpec::eRISCV_rvc))
     size_hint = 2;
   auto trap_opcode = SoftwareTrapOpcodeBytes(arch, size_hint);

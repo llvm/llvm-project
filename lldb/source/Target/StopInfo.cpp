@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <array>
+#include <cstdint>
 #include <string>
 
 #include "lldb/Breakpoint/Breakpoint.h"
@@ -103,16 +104,15 @@ void StopInfo::SkipOverTrapInstruction() {
 
   auto &target = process_sp->GetTarget();
   auto platform_sp = target.GetPlatform();
-  auto size_hint =
+  size_t size_hint =
       platform_sp->GetTrapOpcodeSizeHint(target, Address(pc), bytes_at_pc);
-  auto platform_opcode =
+  llvm::ArrayRef<uint8_t> platform_opcode =
       platform_sp->SoftwareTrapOpcodeBytes(target.GetArchitecture(), size_hint);
 
-  if (auto *arch_plugin = target.GetArchitecturePlugin();
-      arch_plugin &&
-      arch_plugin->IsValidTrapInstruction(
-          platform_opcode,
-          llvm::ArrayRef<uint8_t>(bytes_at_pc.data(), bytes_at_pc.size()))) {
+  Architecture *arch_plugin = target.GetArchitecturePlugin();
+  llvm::ArrayRef<uint8_t> inst_bytes(bytes_at_pc.data(), bytes_at_pc.size());
+  if (arch_plugin &&
+      arch_plugin->IsValidTrapInstruction(platform_opcode, inst_bytes)) {
     LLDB_LOG(log, "stepping over breakpoint in inferior to new pc: {}",
              pc + platform_opcode.size());
     reg_ctx_sp->SetPC(pc + platform_opcode.size());
