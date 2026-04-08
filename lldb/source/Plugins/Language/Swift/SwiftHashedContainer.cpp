@@ -158,6 +158,8 @@ public:
     : m_cocoaObject_sp(cocoaObject_sp), m_frontend(frontend) {}
 
   virtual size_t GetCount() override {
+    if (!m_frontend)
+      return 0;
     return m_frontend->CalculateNumChildrenIgnoringErrors();
   }
 
@@ -167,6 +169,8 @@ public:
   }
 
   virtual ValueObjectSP GetElementAtIndex(size_t idx) override {
+    if (!m_frontend)
+      return {};
     return m_frontend->GetChildAtIndex(idx);
   }
 
