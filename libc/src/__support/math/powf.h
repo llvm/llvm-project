@@ -9,10 +9,22 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_MATH_POWF_H
 #define LLVM_LIBC_SRC___SUPPORT_MATH_POWF_H
 
+#include "src/__support/macros/optimization.h"
+
+#if defined(LIBC_MATH_HAS_SKIP_ACCURATE_PASS) &&                               \
+    defined(LIBC_MATH_HAS_SMALL_TABLES)
+
+#include "src/__support/math/powf_small_tables.h"
+
+#else
+
 #include "common_constants.h" // Lookup tables EXP_M1 and EXP_M2.
 #include "exp10f.h"           // Speedup for powf(10, y) = exp10f(y)
 #include "exp2f.h"            // Speedup for powf(2, y) = exp2f(y)
 #include "exp_constants.h"
+
+#endif // LIBC_MATH_HAS_SKIP_ACCURATE_PASS && LIBC_MATH_HAS_SMALL_TABLES
+
 #include "src/__support/CPP/bit.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/PolyEval.h"
@@ -23,7 +35,6 @@
 #include "src/__support/FPUtil/triple_double.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
-#include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -33,8 +44,6 @@ namespace powf_internal {
 
 using fputil::DoubleDouble;
 using fputil::TripleDouble;
-
-using namespace common_constants_internal;
 
 #ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 alignas(16) LIBC_INLINE_VAR constexpr DoubleDouble LOG2_R_DD[128] = {
@@ -654,7 +663,7 @@ LIBC_INLINE double powf_double_double(int idx_x, double dx, double y6,
 LIBC_INLINE float powf(float x, float y) {
   using namespace powf_internal;
   using FloatBits = typename fputil::FPBits<float>;
-  using DoubleBits = typename fputil::FPBits<double>;
+  using DoubleBits [[maybe_unused]] = typename fputil::FPBits<double>;
 
   FloatBits xbits(x), ybits(y);
 
@@ -847,6 +856,11 @@ LIBC_INLINE float powf(float x, float y) {
 
   ///////// END - Check exceptional cases //////////////////////////////////////
 
+#if defined(LIBC_MATH_HAS_SKIP_ACCURATE_PASS) &&                               \
+    defined(LIBC_MATH_HAS_SMALL_TABLES)
+  return powf_small_tables(x, ex, sign, y);
+#else
+
   // x^y = 2^( y * log2(x) )
   //     = 2^( y * ( e_x + log2(m_x) ) )
   // First we compute log2(x) = e_x + log2(m_x)
@@ -1033,6 +1047,8 @@ LIBC_INLINE float powf(float x, float y) {
 
   return static_cast<float>(r_dd);
 #endif // LIBC_MATH_HAS_SKIP_ACCURATE_PASS
+
+#endif // LIBC_MATH_HAS_SKIP_ACCURATE_PASS && LIBC_MATH_HAS_SMALL_TABLES
 }
 
 } // namespace math
