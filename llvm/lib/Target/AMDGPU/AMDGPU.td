@@ -1330,6 +1330,9 @@ defm VMemToLDSLoad : AMDGPUSubtargetFeature<"vmem-to-lds-load-insts",
   "w/lds bit set or global_load_lds. This does not include scratch_load_lds."
 >;
 
+// Manual predicate for hasAsyncMark() which combines HasVMemToLDSLoad and GFX1250Plus
+def HasAsyncMark : Predicate<"Subtarget->hasAsyncMark()">;
+
 defm LdsBarrierArriveAtomic : AMDGPUSubtargetFeature<"lds-barrier-arrive-atomic",
   "Has LDS barrier-arrive atomic instructions"
 >;

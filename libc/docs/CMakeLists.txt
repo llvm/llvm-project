@@ -64,6 +64,7 @@ if (SPHINX_FOUND)
       strings
       sys/mman
       sys/resource
+      sys/socket
       sys/stat
       sys/statvfs
       sys/time

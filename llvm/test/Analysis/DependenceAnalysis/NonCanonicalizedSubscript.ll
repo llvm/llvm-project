@@ -57,9 +57,9 @@ for.end:
 define void @coupled_miv_type_mismatch(i32 %n) {
 ; CHECK-LABEL: 'coupled_miv_type_mismatch'
 ; CHECK-NEXT:  Src: %2 = load i32, ptr %arrayidx5, align 4 --> Dst: %2 = load i32, ptr %arrayidx5, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - input [* *]!
 ; CHECK-NEXT:  Src: %2 = load i32, ptr %arrayidx5, align 4 --> Dst: store i32 %add6, ptr %arrayidx10, align 4
-; CHECK-NEXT:    da analyze - anti [< >]!
+; CHECK-NEXT:    da analyze - anti [* *|<]!
 ; CHECK-NEXT:  Src: store i32 %add6, ptr %arrayidx10, align 4 --> Dst: store i32 %add6, ptr %arrayidx10, align 4
 ; CHECK-NEXT:    da analyze - output [0 *]!
 ;

@@ -84,22 +84,26 @@ define void @goo(ptr nocapture noundef %a, i32 noundef signext %n) {
 ; CHECK-SCALAR:      LV(REG): VF = 1
 ; CHECK-SCALAR-NEXT: LV(REG): Found max usage: 1 item
 ; CHECK-SCALAR-NEXT: LV(REG): RegisterClass: RISCV::GPRRC, 3 registers
-; CHECK-LMUL1:       LV(REG): VF = vscale x 2
+; CHECK-LMUL1-LABEL: goo
+; CHECK-LMUL1:       LV(REG): VF = vscale x 1
 ; CHECK-LMUL1-NEXT:  LV(REG): Found max usage: 2 item
-; CHECK-LMUL1-NEXT:  LV(REG): RegisterClass: RISCV::GPRRC, 6 registers
-; CHECK-LMUL1-NEXT:  LV(REG): RegisterClass: RISCV::VRRC, 2 registers
-; CHECK-LMUL2:       LV(REG): VF = vscale x 4
+; CHECK-LMUL1-NEXT:  LV(REG): RegisterClass: RISCV::GPRRC, 5 registers
+; CHECK-LMUL1-NEXT:  LV(REG): RegisterClass: RISCV::VRRC, 1 registers
+; CHECK-LMUL2-LABEL: goo
+; CHECK-LMUL2:       LV(REG): VF = vscale x 2
 ; CHECK-LMUL2-NEXT:  LV(REG): Found max usage: 2 item
-; CHECK-LMUL2-NEXT:  LV(REG): RegisterClass: RISCV::GPRRC, 6 registers
-; CHECK-LMUL2-NEXT:  LV(REG): RegisterClass: RISCV::VRRC, 4 registers
-; CHECK-LMUL4:       LV(REG): VF = vscale x 8
+; CHECK-LMUL2-NEXT:  LV(REG): RegisterClass: RISCV::GPRRC, 5 registers
+; CHECK-LMUL2-NEXT:  LV(REG): RegisterClass: RISCV::VRRC, 2 registers
+; CHECK-LMUL4-LABEL: goo
+; CHECK-LMUL4:       LV(REG): VF = vscale x 4
 ; CHECK-LMUL4-NEXT:  LV(REG): Found max usage: 2 item
-; CHECK-LMUL4-NEXT:  LV(REG): RegisterClass: RISCV::GPRRC, 6 registers
-; CHECK-LMUL4-NEXT:  LV(REG): RegisterClass: RISCV::VRRC, 8 registers
-; CHECK-LMUL8:       LV(REG): VF = vscale x 16
+; CHECK-LMUL4-NEXT:  LV(REG): RegisterClass: RISCV::GPRRC, 5 registers
+; CHECK-LMUL4-NEXT:  LV(REG): RegisterClass: RISCV::VRRC, 4 registers
+; CHECK-LMUL8-LABEL: goo
+; CHECK-LMUL8:       LV(REG): VF = vscale x 8
 ; CHECK-LMUL8-NEXT:  LV(REG): Found max usage: 2 item
-; CHECK-LMUL8-NEXT:  LV(REG): RegisterClass: RISCV::GPRRC, 6 registers
-; CHECK-LMUL8-NEXT:  LV(REG): RegisterClass: RISCV::VRRC, 16 registers
+; CHECK-LMUL8-NEXT:  LV(REG): RegisterClass: RISCV::GPRRC, 5 registers
+; CHECK-LMUL8-NEXT:  LV(REG): RegisterClass: RISCV::VRRC, 8 registers
 entry:
   %cmp3 = icmp sgt i32 %n, 0
   br i1 %cmp3, label %for.body.preheader, label %for.cond.cleanup

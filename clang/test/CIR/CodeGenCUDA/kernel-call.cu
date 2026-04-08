@@ -14,6 +14,14 @@
 // RUN:   -emit-cir %s -x cuda -fcuda-is-device -o %t.device.cir
 // RUN: FileCheck --input-file=%t.device.cir %s --check-prefix=DEVICE
 
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -target-sdk-version=9.2 \
+// RUN:   -fgpu-default-stream=per-thread -DCUDA_API_PER_THREAD_DEFAULT_STREAM \
+// RUN:   -emit-cir %s -x cuda -o - | FileCheck %s --check-prefix=CUDA-PTH
+
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fhip-new-launch-api \
+// RUN:   -fgpu-default-stream=per-thread -DHIP_API_PER_THREAD_DEFAULT_STREAM \
+// RUN:   -emit-cir %s -x hip -o - | FileCheck %s --check-prefix=HIP-PTH
+
 #include "Inputs/cuda.h"
 
 
@@ -55,6 +63,8 @@
 // Check cudaLaunchKernel is called with all 6 arguments:
 // func ptr, gridDim, blockDim, args, sharedMem, stream
 // CUDA-NEW: cir.call @cudaLaunchKernel({{.*}}) : (!cir.ptr<!void>{{.*}}, !rec_dim3, !rec_dim3, !cir.ptr<!cir.ptr<!void>>{{.*}}, !u64i{{.*}}, !cir.ptr<!rec_cudaStream>{{.*}}) -> (!u32i {llvm.noundef})
+// CUDA-PTH: cir.call @cudaLaunchKernel_ptsz
+
 //
 // HIP-NEW: cir.global constant external @_Z6kernelif = #cir.global_view<@_Z21__device_stub__kernelif> : !cir.func<(!s32i, !cir.float)>
 // HIP-NEW-LABEL: cir.func {{.*}} @_Z21__device_stub__kernelif
@@ -62,6 +72,8 @@
 // HIP-NEW: cir.call @__hipPopCallConfiguration({{.*}}) : (!cir.ptr<!rec_dim3>, !cir.ptr<!rec_dim3>, !cir.ptr<!u64i>, !cir.ptr<!cir.ptr<!rec_hipStream>>) -> !s32i
 // HIP-NEW: cir.get_global @_Z6kernelif : !cir.ptr<!cir.func<(!s32i, !cir.float)>>
 // HIP-NEW: cir.call @hipLaunchKernel({{.*}}) : (!cir.ptr<!void> {{.*}}, !rec_dim3, !rec_dim3, !cir.ptr<!cir.ptr<!void>>{{.*}}, !u64i{{.*}}, !cir.ptr<!rec_hipStream>{{.*}}) -> (!u32i {llvm.noundef})
+// HIP-PTH: cir.call @hipLaunchKernel_spt
+
 __global__ void kernel(int x, float y) {}
 
 // ===----------------------------------------------------------------------===

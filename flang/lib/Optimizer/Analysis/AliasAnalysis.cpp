@@ -132,8 +132,9 @@ static fir::AliasAnalysis::Source getSourceForACCMappedValue(
             fir::AliasAnalysis::SourceKind::Allocate,
             mappedValue.getType(),
             accumulatedAttrs,
-            false,
-            false};
+            /*approximateSource=*/false,
+            /*accessPath=*/{},
+            /*isCapturedInInternalProcedure=*/false};
 
   // Not private-like: classify using the corresponding host variable's source.
   //
@@ -150,6 +151,28 @@ static fir::AliasAnalysis::Source getSourceForACCMappedValue(
 
 namespace fir {
 
+void AliasAnalysis::Source::AccessPath::print(llvm::raw_ostream &os) const {
+  os << "[";
+  for (auto it = steps.begin(); it != steps.end(); ++it) {
+    if (it != steps.begin())
+      os << ", ";
+    switch (it->kind) {
+    case PathStep::Kind::Component:
+      os << "Component(\"" << it->component.getValue() << "\")";
+      break;
+    case PathStep::Kind::PointerDeref:
+      os << "PointerDeref";
+      break;
+    case PathStep::Kind::AllocDeref:
+      os << "AllocDeref";
+      break;
+    }
+  }
+  os << "]";
+  if (isApproximate)
+    os << "(~)";
+}
+
 void AliasAnalysis::Source::print(llvm::raw_ostream &os) const {
   if (auto v = llvm::dyn_cast<mlir::Value>(origin.u))
     os << v;
@@ -162,6 +185,9 @@ void AliasAnalysis::Source::print(llvm::raw_ostream &os) const {
   } else {
     os << " following box reference ";
   }
+  os << " AccessPath: ";
+  accessPath.print(os);
+  os << " ";
   attributes.Dump(os, EnumToString);
 }
 
@@ -291,6 +317,62 @@ static bool noAliasBasedOnType(mlir::Value lhs, mlir::Value rhs) {
   return false;
 }
 
+/// Return true if two access paths from the same origin variable diverge at
+/// a named component step, meaning they address disjoint subobjects of the
+/// root variable. For example, paths [Component("a")] and [Component("b")]
+/// diverge immediately, while [Component("a"), Component("x")] and
+/// [Component("a"), Component("y")] share a common prefix "a" and diverge
+/// at the second step.
+///
+/// When either path continues through a PointerDeref or AllocDeref after
+/// the divergence point, the runtime address could potentially reach a
+/// sibling subobject only if that sibling is a valid pointer target.
+/// A subobject has TARGET when the root variable has the TARGET attribute
+/// (Fortran 2018 8.5.7), or when we arrived at the current level through
+/// a PointerDeref (the pointer target carries TARGET by definition).
+/// When neither condition holds, the pointer cannot be associated with a
+/// sibling subobject and the addresses are still disjoint.  Note that the
+/// source's POINTER attribute reflects the component traversed during the
+/// walk, not the root variable, so we check only TARGET on the source.
+///
+/// One exception: if BOTH sides end with a PointerDeref, the two pointers
+/// could independently be associated with the same third-party TARGET
+/// variable, so we conservatively return false.
+static bool pathsDivergeAtComponent(const fir::AliasAnalysis::Source &lhsSrc,
+                                    const fir::AliasAnalysis::Source &rhsSrc) {
+  using PathStep = fir::AliasAnalysis::Source::PathStep;
+  auto &lhsSteps = lhsSrc.accessPath.steps;
+  auto &rhsSteps = rhsSrc.accessPath.steps;
+  size_t minLen = std::min(lhsSteps.size(), rhsSteps.size());
+  for (size_t i = 0; i < minLen; ++i) {
+    if (lhsSteps[i].kind == PathStep::Kind::Component &&
+        rhsSteps[i].kind == PathStep::Kind::Component &&
+        lhsSteps[i].component != rhsSteps[i].component) {
+      auto hasPtrDerefAfter = [](llvm::ArrayRef<PathStep> steps, size_t from) {
+        for (size_t j = from; j < steps.size(); ++j)
+          if (steps[j].kind == PathStep::Kind::PointerDeref)
+            return true;
+        return false;
+      };
+      bool lhsHasPtrDeref = hasPtrDerefAfter(lhsSteps, i + 1);
+      bool rhsHasPtrDeref = hasPtrDerefAfter(rhsSteps, i + 1);
+      if (lhsHasPtrDeref && rhsHasPtrDeref)
+        return false;
+      if (lhsHasPtrDeref || rhsHasPtrDeref) {
+        for (size_t j = 0; j < i; ++j)
+          if (lhsSteps[j].kind == PathStep::Kind::PointerDeref)
+            return false;
+        if (lhsSrc.isTarget() || rhsSrc.isTarget())
+          return false;
+      }
+      return true;
+    }
+    if (lhsSteps[i] != rhsSteps[i])
+      break;
+  }
+  return false;
+}
+
 AliasResult AliasAnalysis::alias(mlir::Value lhs, mlir::Value rhs) {
   // A wrapper around alias(Source lhsSrc, Source rhsSrc, mlir::Value lhs,
   // mlir::Value rhs) This allows a user to provide Source that may be obtained
@@ -324,6 +406,22 @@ AliasResult AliasAnalysis::alias(Source lhsSrc, Source rhsSrc, mlir::Value lhs,
     return AliasResult::MayAlias;
   }
 
+  // After a POINTER dereference the actual address is determined at runtime
+  // by pointer association (Fortran 2018 8.5.7, 15.5.2.13). A POINTER can
+  // only be associated with a TARGET or another POINTER, so the dereferenced
+  // address may alias any source that carries the TARGET or POINTER attribute.
+  // When both sides trace to the same origin variable, the pointer deref
+  // does not introduce cross-variable aliasing, so this check is skipped
+  // (the normal same-origin logic handles that case).
+  if (lhsSrc.origin.u != rhsSrc.origin.u &&
+      ((lhsSrc.accessPath.hasPointerDeref() && rhsSrc.isTargetOrPointer()) ||
+       (rhsSrc.accessPath.hasPointerDeref() && lhsSrc.isTargetOrPointer()))) {
+    LLVM_DEBUG(llvm::dbgs()
+               << "  aliasing because pointer dereference may reach "
+               << "target/pointer\n");
+    return AliasResult::MayAlias;
+  }
+
   // Cray pointers/pointees can alias with anything via LOC.
   if (supportCrayPointers) {
     if (lhsSrc.isCrayPointerOrPointee() || rhsSrc.isCrayPointerOrPointee()) {
@@ -341,8 +439,14 @@ AliasResult AliasAnalysis::alias(Source lhsSrc, Source rhsSrc, mlir::Value lhs,
     if (lhsSrc.origin == rhsSrc.origin) {
       LLVM_DEBUG(llvm::dbgs()
                  << "  aliasing because same source kind and origin\n");
-      if (approximateSource)
+      if (approximateSource) {
+        if (pathsDivergeAtComponent(lhsSrc, rhsSrc)) {
+          LLVM_DEBUG(llvm::dbgs()
+                     << "  no alias: different components of same origin\n");
+          return AliasResult::NoAlias;
+        }
         return AliasResult::MayAlias;
+      }
       // One should be careful about relying on MustAlias.
       // The LLVM definition implies that the two MustAlias
       // memory objects start at exactly the same location.
@@ -376,6 +480,11 @@ AliasResult AliasAnalysis::alias(Source lhsSrc, Source rhsSrc, mlir::Value lhs,
     if (lhsSrc.origin.u == rhsSrc.origin.u &&
         ((isRecordWithPointerComponent(lhs.getType()) && !rhsSrc.isData()) ||
          (isRecordWithPointerComponent(rhs.getType()) && !lhsSrc.isData()))) {
+      if (pathsDivergeAtComponent(lhsSrc, rhsSrc)) {
+        LLVM_DEBUG(llvm::dbgs()
+                   << "  no alias: different components of same origin\n");
+        return AliasResult::NoAlias;
+      }
       LLVM_DEBUG(llvm::dbgs()
                  << "  aliasing between composite and non-data component with "
                  << "same source kind and origin value\n");
@@ -705,6 +814,13 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
   mlir::SymbolRefAttr global;
   Source::Attributes attributes;
   mlir::Operation *instantiationPoint{nullptr};
+
+  // Access path steps collected during the backward walk (leaf-to-root order).
+  // Reversed into the final AccessPath at the end, unless the box-load branch
+  // composes the full path directly.
+  llvm::SmallVector<Source::PathStep, 4> pathSteps;
+  Source::AccessPath accessPath;
+  bool accessPathFinalized{false};
   while (defOp && !breakFromLoop) {
     // Value-scoped allocation detection via effects.
     if (classifyAllocateFromEffects(defOp, v) == SourceKind::Allocate) {
@@ -764,13 +880,17 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
             return;
           }
 
-          // If we are loading a box reference, but following the data,
-          // we gather the attributes of the box to populate the source
-          // and stop tracking.
-          if (auto boxTy = mlir::dyn_cast<fir::BaseBoxType>(ty);
-              boxTy && followingData) {
+          // Loading a box value from memory (e.g. a pointer/allocatable
+          // component's descriptor). Trace the memref so derived-type
+          // component accesses reach their [hl]fir.declare instead of
+          // SourceKind::Indirect (which forces MayAlias broadly in alias()).
+          // The access path records a PointerDeref or AllocDeref step here
+          // so that alias() can distinguish pointer-dereferenced addresses
+          // from statically known ones.
+          if (auto boxTy = mlir::dyn_cast<fir::BaseBoxType>(ty); boxTy) {
 
-            if (mlir::isa<fir::PointerType>(boxTy.getEleTy()))
+            bool isPointerBox = mlir::isa<fir::PointerType>(boxTy.getEleTy());
+            if (isPointerBox)
               attributes.set(Attribute::Pointer);
 
             auto boxSrc = getSource(op.getMemref());
@@ -785,6 +905,20 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
             } else {
               instantiationPoint = boxSrc.origin.instantiationPoint;
             }
+
+            // Compose the access path: inner path (root to this load point)
+            // + deref step + outer path (this load to the queried value).
+            accessPath.steps = boxSrc.accessPath.steps;
+            Source::PathStep derefStep;
+            derefStep.kind = isPointerBox ? Source::PathStep::Kind::PointerDeref
+                                          : Source::PathStep::Kind::AllocDeref;
+            derefStep.component = {};
+            accessPath.steps.push_back(derefStep);
+            for (int i = pathSteps.size() - 1; i >= 0; --i)
+              accessPath.steps.push_back(pathSteps[i]);
+            accessPath.isApproximate =
+                boxSrc.accessPath.isApproximate || approximateSource;
+            accessPathFinalized = true;
 
             global = llvm::dyn_cast<mlir::SymbolRefAttr>(boxSrc.origin.u);
             if (global) {
@@ -871,10 +1005,10 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
                 })
                 .template Case<omp::DistributeOp, omp::ParallelOp,
                                omp::SectionsOp, omp::SimdOp, omp::SingleOp,
-                               omp::TaskloopOp, omp::TaskOp, omp::WsloopOp>(
-                    [&](auto privateOp) {
-                      isPrivateItem = isPrivateArg(argIface, privateOp, op);
-                    });
+                               omp::TaskloopContextOp, omp::TaskOp,
+                               omp::WsloopOp>([&](auto privateOp) {
+                  isPrivateItem = isPrivateArg(argIface, privateOp, op);
+                });
             if (ompValArg) {
               v = ompValArg;
               defOp = ompValArg.getDefiningOp();
@@ -949,6 +1083,78 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
             return;
           }
 
+          // Record component access steps for the access path.
+          //
+          // hlfir.designate carries the component name directly as a
+          // StringAttr, e.g. hlfir.designate %x{"fieldName"}.
+          if (auto designateOp = mlir::dyn_cast<hlfir::DesignateOp>(defOp)) {
+            if (auto comp = designateOp.getComponent()) {
+              Source::PathStep step;
+              step.kind = Source::PathStep::Kind::Component;
+              step.component = *comp;
+              pathSteps.push_back(step);
+            }
+          } else if (auto coordOp = mlir::dyn_cast<fir::CoordinateOp>(defOp)) {
+            // fir.coordinate_of encodes field accesses as integer indices
+            // into the record type's field list (the field_indices attr).
+            // A single coordinate_of may access multiple nested fields,
+            // e.g. fir.coordinate_of %obj, inner, a has field_indices
+            // [inner_idx, a_idx].  Walk the type hierarchy to recover
+            // the field name for each static index.  Dynamic indices
+            // (kDynamicIndex) correspond to array subscripts, not named
+            // components, so they only advance the type through the
+            // array dimension.
+            std::optional<llvm::ArrayRef<int32_t>> fieldIndices =
+                coordOp.getFieldIndices();
+            if (fieldIndices) {
+              mlir::Type currentTy =
+                  fir::dyn_cast_ptrOrBoxEleTy(coordOp.getRef().getType());
+              llvm::SmallVector<mlir::StringAttr, 4> componentNames;
+              unsigned dimension = 0;
+              for (int32_t idx : *fieldIndices) {
+                if (idx == fir::CoordinateOp::kDynamicIndex) {
+                  if (dimension == 0) {
+                    if (auto seqTy =
+                            mlir::dyn_cast<fir::SequenceType>(currentTy))
+                      dimension = seqTy.getDimension();
+                  }
+                  if (dimension) {
+                    if (--dimension == 0)
+                      currentTy = mlir::cast<fir::SequenceType>(currentTy)
+                                      .getElementType();
+                  }
+                  continue;
+                }
+                auto recTy = mlir::dyn_cast<fir::RecordType>(currentTy);
+                if (!recTy) {
+                  // Unexpected type structure; discard any partially
+                  // collected names so the access path stays conservative
+                  // rather than recording a misleading partial path.
+                  componentNames.clear();
+                  break;
+                }
+                auto typeList = recTy.getTypeList();
+                if (idx < 0 || static_cast<size_t>(idx) >= typeList.size()) {
+                  // Out-of-bounds field index; same conservative treatment.
+                  componentNames.clear();
+                  break;
+                }
+                componentNames.push_back(mlir::StringAttr::get(
+                    defOp->getContext(), typeList[idx].first));
+                currentTy = typeList[idx].second;
+              }
+              // pathSteps is in leaf-to-root order (reversed at the end),
+              // so push innermost component first.
+              for (auto it = componentNames.rbegin();
+                   it != componentNames.rend(); ++it) {
+                Source::PathStep step;
+                step.kind = Source::PathStep::Kind::Component;
+                step.component = *it;
+                pathSteps.push_back(step);
+              }
+            }
+          }
+
           // Collect attributes from FortranVariableOpInterface operations.
           if (auto varIf =
                   mlir::dyn_cast<fir::FortranVariableOpInterface>(defOp))
@@ -1015,12 +1221,20 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
     }
   }
 
+  // Finalize the access path if not already done by the box-load branch.
+  if (!accessPathFinalized) {
+    std::reverse(pathSteps.begin(), pathSteps.end());
+    accessPath.steps = std::move(pathSteps);
+    accessPath.isApproximate = approximateSource;
+  }
+
   if (type == SourceKind::Global) {
     return {{global, instantiationPoint, followingData},
             type,
             ty,
             attributes,
             approximateSource,
+            accessPath,
             isCapturedInInternalProcedure};
   }
   return {{v, instantiationPoint, followingData},
@@ -1028,6 +1242,7 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
           ty,
           attributes,
           approximateSource,
+          accessPath,
           isCapturedInInternalProcedure};
 }
 

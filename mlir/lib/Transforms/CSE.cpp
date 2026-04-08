@@ -258,9 +258,11 @@ LogicalResult CSEDriver::simplifyOperation(ScopedMapTy &knownValues,
   if (op->hasTrait<OpTrait::IsTerminator>())
     return failure();
 
-  // If the operation is already trivially dead just add it to the erase list.
+  // If the operation is already trivially dead, erase it immediately.
+  // Retaining dead operations in a region can affect the equivalence check
+  // between two region ops, causing CSE to miss optimization opportunities.
   if (isOpTriviallyDead(op)) {
-    opsToErase.push_back(op);
+    rewriter.eraseOp(op);
     ++numDCE;
     return success();
   }
@@ -308,7 +310,7 @@ LogicalResult CSEDriver::simplifyOperation(ScopedMapTy &knownValues,
 
 void CSEDriver::simplifyBlock(ScopedMapTy &knownValues, Block *bb,
                               bool hasSSADominance) {
-  for (auto &op : *bb) {
+  for (auto &op : llvm::make_early_inc_range(*bb)) {
     // Most operations don't have regions, so fast path that case.
     if (op.getNumRegions() != 0) {
       // If this operation is isolated above, we can't process nested regions
@@ -397,8 +399,10 @@ void CSEDriver::simplify(Operation *op, bool *changed) {
   /// Erase any operations that were marked as dead during simplification.
   for (auto *op : opsToErase)
     rewriter.eraseOp(op);
-  if (changed)
-    *changed = !opsToErase.empty();
+  if (changed) {
+    assert(opsToErase.empty() || numDCE || numCSE);
+    *changed = numDCE || numCSE;
+  }
 
   // Note: CSE does currently not remove ops with regions, so DominanceInfo
   // does not have to be invalidated.
@@ -433,7 +437,8 @@ void CSE::runOnOperation() {
   if (!changed)
     return markAllAnalysesPreserved();
 
-  // We currently don't remove region operations, so mark dominance as
-  // preserved.
+  // We only delete redundant operations without moving any operation to a
+  // different block, so the dominance tree structure remains unchanged and
+  // DominanceInfo/PostDominanceInfo can be safely preserved.
   markAnalysesPreserved<DominanceInfo, PostDominanceInfo>();
 }

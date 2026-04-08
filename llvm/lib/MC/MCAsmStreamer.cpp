@@ -103,8 +103,6 @@ public:
     Context.setUseNamesOnTempLabels(true);
 
     auto *TO = Context.getTargetOptions();
-    if (!TO)
-      return;
     IsVerboseAsm = TO->AsmVerbose;
     if (IsVerboseAsm)
       InstPrinter->setCommentStream(CommentStream);

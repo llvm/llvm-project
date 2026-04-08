@@ -2450,10 +2450,10 @@ define amdgpu_kernel void @fdiv_test_denormals(ptr addrspace(1) nocapture readon
 ; GFX1030:       ; %bb.0: ; %bb
 ; GFX1030-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; GFX1030-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1030-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX1030-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1030-NEXT:    global_load_sbyte v2, v0, s[0:1]
 ; GFX1030-NEXT:    v_mov_b32_e32 v0, 0
-; GFX1030-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX1030-NEXT:    global_load_sbyte v3, v[0:1], off
 ; GFX1030-NEXT:    s_waitcnt vmcnt(1)
 ; GFX1030-NEXT:    v_cvt_f32_i32_e32 v4, v2

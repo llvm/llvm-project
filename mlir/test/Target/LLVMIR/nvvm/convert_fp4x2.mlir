@@ -11,6 +11,34 @@ llvm.func @convert_f32x2_to_f4x2_e2m1(%srcA : f32, %srcB : f32) {
   llvm.return
 }
 
+// -----
+
+// CHECK-LABEL: @convert_f16x2_to_f4x2
+llvm.func @convert_f16x2_to_f4x2(%srcA : vector<2xf16>) {
+  // CHECK: %[[res1:.*]] = call i16 @llvm.nvvm.f16x2.to.e2m1x2.rn.satfinite(<2 x half> %{{.*}})
+  // CHECK-NEXT: %{{.*}} = trunc i16 %[[res1]] to i8
+  %res1 = nvvm.convert.f16x2.to.f4x2 %srcA : vector<2xf16> -> i8 (f4E2M1FN)
+  // CHECK: %[[res2:.*]] = call i16 @llvm.nvvm.f16x2.to.e2m1x2.rn.relu.satfinite(<2 x half> %{{.*}})
+  // CHECK-NEXT: %{{.*}} = trunc i16 %[[res2]] to i8
+  %res2 = nvvm.convert.f16x2.to.f4x2 %srcA {relu = true} : vector<2xf16> -> i8 (f4E2M1FN)
+  llvm.return
+}
+
+// -----
+
+// CHECK-LABEL: @convert_bf16x2_to_f4x2
+llvm.func @convert_bf16x2_to_f4x2(%srcA : vector<2xbf16>) {
+  // CHECK: %[[res1:.*]] = call i16 @llvm.nvvm.bf16x2.to.e2m1x2.rn.satfinite(<2 x bfloat> %{{.*}})
+  // CHECK-NEXT: %{{.*}} = trunc i16 %[[res1]] to i8
+  %res1 = nvvm.convert.bf16x2.to.f4x2 %srcA : vector<2xbf16> -> i8 (f4E2M1FN)
+  // CHECK: %[[res2:.*]] = call i16 @llvm.nvvm.bf16x2.to.e2m1x2.rn.relu.satfinite(<2 x bfloat> %{{.*}})
+  // CHECK-NEXT: %{{.*}} = trunc i16 %[[res2]] to i8
+  %res2 = nvvm.convert.bf16x2.to.f4x2 %srcA {relu = true} : vector<2xbf16> -> i8 (f4E2M1FN)
+  llvm.return
+}
+
+// -----
+
 // CHECK-LABEL: @convert_f4x2_to_f16x2
 llvm.func @convert_f4x2_to_f16x2(%src : i8) {
   // CHECK: %[[res1:.*]] = zext i8 %{{.*}} to i16

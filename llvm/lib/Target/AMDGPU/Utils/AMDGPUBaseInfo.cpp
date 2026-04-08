@@ -199,41 +199,6 @@ namespace llvm {
 
 namespace AMDGPU {
 
-iota_range<InstCounterType> inst_counter_types(InstCounterType MaxCounter) {
-  return enum_seq(LOAD_CNT, MaxCounter);
-}
-
-StringLiteral getInstCounterName(InstCounterType T) {
-  switch (T) {
-  case LOAD_CNT:
-    return "LOAD_CNT";
-  case DS_CNT:
-    return "DS_CNT";
-  case EXP_CNT:
-    return "EXP_CNT";
-  case STORE_CNT:
-    return "STORE_CNT";
-  case SAMPLE_CNT:
-    return "SAMPLE_CNT";
-  case BVH_CNT:
-    return "BVH_CNT";
-  case KM_CNT:
-    return "KM_CNT";
-  case X_CNT:
-    return "X_CNT";
-  case VA_VDST:
-    return "VA_VDST";
-  case VM_VSRC:
-    return "VM_VSRC";
-  default:
-    return "Unknown T";
-  }
-}
-
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-void Waitcnt::dump() const { dbgs() << *this << "\n"; }
-#endif
-
 /// \returns true if the target supports signed immediate offset for SMRD
 /// instructions.
 bool hasSMRDSignedImmOffset(const MCSubtargetInfo &ST) {
@@ -1887,19 +1852,26 @@ unsigned decodeLgkmcnt(const IsaVersion &Version, unsigned Waitcnt) {
                     getLgkmcntBitWidth(Version.Major));
 }
 
+unsigned decodeLoadcnt(const IsaVersion &Version, unsigned Waitcnt) {
+  return unpackBits(Waitcnt, getLoadcntStorecntBitShift(Version.Major),
+                    getLoadcntBitWidth(Version.Major));
+}
+
+unsigned decodeStorecnt(const IsaVersion &Version, unsigned Waitcnt) {
+  return unpackBits(Waitcnt, getLoadcntStorecntBitShift(Version.Major),
+                    getStorecntBitWidth(Version.Major));
+}
+
+unsigned decodeDscnt(const IsaVersion &Version, unsigned Waitcnt) {
+  return unpackBits(Waitcnt, getDscntBitShift(Version.Major),
+                    getDscntBitWidth(Version.Major));
+}
+
 void decodeWaitcnt(const IsaVersion &Version, unsigned Waitcnt, unsigned &Vmcnt,
                    unsigned &Expcnt, unsigned &Lgkmcnt) {
   Vmcnt = decodeVmcnt(Version, Waitcnt);
   Expcnt = decodeExpcnt(Version, Waitcnt);
   Lgkmcnt = decodeLgkmcnt(Version, Waitcnt);
-}
-
-Waitcnt decodeWaitcnt(const IsaVersion &Version, unsigned Encoded) {
-  Waitcnt Decoded;
-  Decoded.set(LOAD_CNT, decodeVmcnt(Version, Encoded));
-  Decoded.set(EXP_CNT, decodeExpcnt(Version, Encoded));
-  Decoded.set(DS_CNT, decodeLgkmcnt(Version, Encoded));
-  return Decoded;
 }
 
 unsigned encodeVmcnt(const IsaVersion &Version, unsigned Waitcnt,
@@ -1932,11 +1904,6 @@ unsigned encodeWaitcnt(const IsaVersion &Version, unsigned Vmcnt,
   return Waitcnt;
 }
 
-unsigned encodeWaitcnt(const IsaVersion &Version, const Waitcnt &Decoded) {
-  return encodeWaitcnt(Version, Decoded.get(LOAD_CNT), Decoded.get(EXP_CNT),
-                       Decoded.get(DS_CNT));
-}
-
 static unsigned getCombinedCountBitMask(const IsaVersion &Version,
                                         bool IsStore) {
   unsigned Dscnt = getBitMask(getDscntBitShift(Version.Major),
@@ -1949,26 +1916,6 @@ static unsigned getCombinedCountBitMask(const IsaVersion &Version,
   unsigned Loadcnt = getBitMask(getLoadcntStorecntBitShift(Version.Major),
                                 getLoadcntBitWidth(Version.Major));
   return Dscnt | Loadcnt;
-}
-
-Waitcnt decodeLoadcntDscnt(const IsaVersion &Version, unsigned LoadcntDscnt) {
-  Waitcnt Decoded;
-  Decoded.set(LOAD_CNT, unpackBits(LoadcntDscnt,
-                                   getLoadcntStorecntBitShift(Version.Major),
-                                   getLoadcntBitWidth(Version.Major)));
-  Decoded.set(DS_CNT, unpackBits(LoadcntDscnt, getDscntBitShift(Version.Major),
-                                 getDscntBitWidth(Version.Major)));
-  return Decoded;
-}
-
-Waitcnt decodeStorecntDscnt(const IsaVersion &Version, unsigned StorecntDscnt) {
-  Waitcnt Decoded;
-  Decoded.set(STORE_CNT, unpackBits(StorecntDscnt,
-                                    getLoadcntStorecntBitShift(Version.Major),
-                                    getStorecntBitWidth(Version.Major)));
-  Decoded.set(DS_CNT, unpackBits(StorecntDscnt, getDscntBitShift(Version.Major),
-                                 getDscntBitWidth(Version.Major)));
-  return Decoded;
 }
 
 static unsigned encodeLoadcnt(const IsaVersion &Version, unsigned Waitcnt,
@@ -1989,31 +1936,20 @@ static unsigned encodeDscnt(const IsaVersion &Version, unsigned Waitcnt,
                   getDscntBitWidth(Version.Major));
 }
 
-static unsigned encodeLoadcntDscnt(const IsaVersion &Version, unsigned Loadcnt,
-                                   unsigned Dscnt) {
+unsigned encodeLoadcntDscnt(const IsaVersion &Version, unsigned Loadcnt,
+                            unsigned Dscnt) {
   unsigned Waitcnt = getCombinedCountBitMask(Version, false);
   Waitcnt = encodeLoadcnt(Version, Waitcnt, Loadcnt);
   Waitcnt = encodeDscnt(Version, Waitcnt, Dscnt);
   return Waitcnt;
 }
 
-unsigned encodeLoadcntDscnt(const IsaVersion &Version, const Waitcnt &Decoded) {
-  return encodeLoadcntDscnt(Version, Decoded.get(LOAD_CNT),
-                            Decoded.get(DS_CNT));
-}
-
-static unsigned encodeStorecntDscnt(const IsaVersion &Version,
-                                    unsigned Storecnt, unsigned Dscnt) {
+unsigned encodeStorecntDscnt(const IsaVersion &Version, unsigned Storecnt,
+                             unsigned Dscnt) {
   unsigned Waitcnt = getCombinedCountBitMask(Version, true);
   Waitcnt = encodeStorecnt(Version, Waitcnt, Storecnt);
   Waitcnt = encodeDscnt(Version, Waitcnt, Dscnt);
   return Waitcnt;
-}
-
-unsigned encodeStorecntDscnt(const IsaVersion &Version,
-                             const Waitcnt &Decoded) {
-  return encodeStorecntDscnt(Version, Decoded.get(STORE_CNT),
-                             Decoded.get(DS_CNT));
 }
 
 //===----------------------------------------------------------------------===//

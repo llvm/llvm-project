@@ -821,9 +821,10 @@ DynamicLoaderPOSIXDYLD::GetThreadLocalData(const lldb::ModuleSP module_sp,
   Log *log = GetLog(LLDBLog::DynamicLoader);
   std::optional<addr_t> link_map_addr_opt = GetLoadedModuleLinkAddr(module_sp);
   if (!link_map_addr_opt.has_value()) {
-    LLDB_LOGF(
-        log, "GetThreadLocalData error: module(%s) not found in loaded modules",
-        module_sp->GetObjectName().AsCString());
+    LLDB_LOG(
+        log,
+        "GetThreadLocalData error: module({0}) not found in loaded modules",
+        module_sp->GetObjectName());
     return LLDB_INVALID_ADDRESS;
   }
 

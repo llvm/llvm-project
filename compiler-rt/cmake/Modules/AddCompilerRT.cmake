@@ -185,6 +185,12 @@ function(add_compiler_rt_runtime name type)
     set(NO_LTO_FLAGS "")
   endif()
 
+  # The GPU build does not support shared libraries, just suppress them here as
+  # there is no global config for this.
+  if(COMPILER_RT_GPU_BUILD AND type MATCHES "SHARED")
+    return()
+  endif()
+
   # By default do not instrument or use profdata for compiler-rt.
   set(NO_PGO_FLAGS "")
   if(NOT COMPILER_RT_ENABLE_PGO)

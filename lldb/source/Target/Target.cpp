@@ -40,6 +40,7 @@
 #include "lldb/Interpreter/Interfaces/ScriptedBreakpointInterface.h"
 #include "lldb/Interpreter/Interfaces/ScriptedStopHookInterface.h"
 #include "lldb/Interpreter/OptionGroupWatchpoint.h"
+#include "lldb/Interpreter/OptionValueEnumeration.h"
 #include "lldb/Interpreter/OptionValues.h"
 #include "lldb/Interpreter/Property.h"
 #include "lldb/Symbol/Function.h"
@@ -870,10 +871,8 @@ BreakpointName *Target::FindBreakpointName(ConstString name, bool can_create,
   }
 
   if (!can_create) {
-    error = Status::FromErrorStringWithFormat(
-        "Breakpoint name \"%s\" doesn't exist and "
-        "can_create is false.",
-        name.AsCString());
+    error = Status::FromErrorStringWithFormatv(
+        "Breakpoint name \"{0}\" doesn't exist and can_create is false.", name);
     return nullptr;
   }
 
@@ -886,7 +885,7 @@ void Target::DeleteBreakpointName(ConstString name) {
   BreakpointNameList::iterator iter = m_breakpoint_names.find(name);
 
   if (iter != m_breakpoint_names.end()) {
-    const char *name_cstr = name.AsCString();
+    const char *name_cstr = name.AsCString(nullptr);
     m_breakpoint_names.erase(iter);
     for (auto bp_sp : m_breakpoint_list.Breakpoints())
       bp_sp->RemoveName(name_cstr);
@@ -895,7 +894,7 @@ void Target::DeleteBreakpointName(ConstString name) {
 
 void Target::RemoveNameFromBreakpoint(lldb::BreakpointSP &bp_sp,
                                       ConstString name) {
-  bp_sp->RemoveName(name.AsCString());
+  bp_sp->RemoveName(name.AsCString(nullptr));
 }
 
 void Target::ConfigureBreakpointName(
@@ -908,7 +907,8 @@ void Target::ConfigureBreakpointName(
 
 void Target::ApplyNameToBreakpoints(BreakpointName &bp_name) {
   llvm::Expected<std::vector<BreakpointSP>> expected_vector =
-      m_breakpoint_list.FindBreakpointsByName(bp_name.GetName().AsCString());
+      m_breakpoint_list.FindBreakpointsByName(
+          bp_name.GetName().AsCString(nullptr));
 
   if (!expected_vector) {
     LLDB_LOG(GetLog(LLDBLog::Breakpoints), "invalid breakpoint name: {}",
@@ -3762,7 +3762,7 @@ void Target::ClearScriptedFrameProviderDescriptors() {
   InvalidateThreadFrameProviders();
 }
 
-const llvm::DenseMap<uint32_t, ScriptedFrameProviderDescriptor> &
+const llvm::MapVector<uint32_t, ScriptedFrameProviderDescriptor> &
 Target::GetScriptedFrameProviderDescriptors() const {
   std::lock_guard<std::recursive_mutex> guard(
       m_frame_provider_descriptors_mutex);
@@ -5105,6 +5105,12 @@ LoadScriptFromSymFile TargetProperties::GetLoadScriptFromSymbolFile() const {
                g_target_properties[idx].default_uint_value));
 }
 
+void TargetProperties::SetLoadScriptFromSymbolFile(
+    LoadScriptFromSymFile load_style) {
+  const uint32_t idx = ePropertyLoadScriptFromSymbolFile;
+  SetPropertyAtIndex(idx, load_style);
+}
+
 LoadCWDlldbinitFile TargetProperties::GetLoadCWDlldbinitFile() const {
   const uint32_t idx = ePropertyLoadCWDlldbinitFile;
   return GetPropertyAtIndexAs<LoadCWDlldbinitFile>(
@@ -5273,6 +5279,33 @@ bool TargetProperties::GetDebugUtilityExpression() const {
 void TargetProperties::SetDebugUtilityExpression(bool debug) {
   const uint32_t idx = ePropertyDebugUtilityExpression;
   SetPropertyAtIndex(idx, debug);
+}
+
+std::optional<LoadScriptFromSymFile>
+TargetProperties::GetAutoLoadScriptsForModule(
+    llvm::StringRef module_name) const {
+  auto *dict = m_collection_sp->GetPropertyAtIndexAsOptionValueDictionary(
+      ePropertyAutoLoadScriptsForModules);
+  if (!dict)
+    return std::nullopt;
+
+  OptionValueSP value_sp = dict->GetValueForKey(module_name);
+  if (!value_sp)
+    return std::nullopt;
+
+  return value_sp->GetValueAs<LoadScriptFromSymFile>();
+}
+
+void TargetProperties::SetAutoLoadScriptsForModule(
+    llvm::StringRef module_name, LoadScriptFromSymFile load_style) {
+  auto *dict = m_collection_sp->GetPropertyAtIndexAsOptionValueDictionary(
+      ePropertyAutoLoadScriptsForModules);
+  if (!dict)
+    return;
+
+  dict->SetValueForKey(module_name,
+                       std::make_shared<OptionValueEnumeration>(
+                           g_load_script_from_sym_file_values, load_style));
 }
 
 // Target::TargetEventData

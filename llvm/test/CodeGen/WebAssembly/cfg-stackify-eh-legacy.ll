@@ -659,11 +659,9 @@ try.cont:                                         ; preds = %catch.start0
 ; --- try-delegate ends (call unwind mismatch)
 ; NOSORT:     catch
 ; NOSORT:       call  {{.*}} __cxa_begin_catch
-; --- try-delegate starts (call unwind mismatch)
-; NOSORT:       try
-; NOSORT:         call  __cxa_end_catch
-; NOSORT:       delegate    3            # label/catch{{[0-9]+}}: to caller
-; --- try-delegate ends (call unwind mismatch)
+; __cxa_end_catch doesn't need its own try-delegate because the enclosing
+; catch-mismatch delegate already routes to caller.
+; NOSORT:       call  __cxa_end_catch
 ; NOSORT:     end_try
 ; NOSORT:   delegate    1                # label/catch{{[0-9]+}}: to caller
 ; --- try-delegate ends (catch unwind mismatch)
@@ -1735,9 +1733,104 @@ unreachable:                                      ; preds = %rethrow, %entry
   unreachable
 }
 
+; Regression test for issue #187302: fixCallUnwindMismatches() was run first and
+; found that the rethrow had the correct unwind target so did not wrap it in a
+; try/delegate. Then fixCatchUnwindMismatches() added a try/delegate for
+;
+; invoke void @do_catch unwind label %terminate_catchswitch
+;
+; because otherwise it was going to unwind to outer_catchswitch rather than
+; terminate_catchswitch. But this made the rethrow incorrectly transfer control
+; to terminate_catchswitch rather than outer_catchswitch.
+; Fixed by running fixCatchUnwindMismatches() before fixCallUnwindMismatches().
+;
+; This pattern occurs in Rust's catch_unwind inside a destructor.
+
+; CHECK-LABEL: catch_unwind_in_cleanup:
+; CHECK:        catch_all
+; CHECK:          try
+; CHECK:            try
+; CHECK:              call  resume_unwind
+; CHECK:            catch   {{.*}} __cpp_exception
+; CHECK:              call  do_catch
+; end_cleanup and rethrow are inside the inner catch's scope, but each gets
+; its own try-delegate to route exceptions to the correct destination rather
+; than going through the catch-mismatch delegate to the terminate handler.
+; CHECK:              try
+; CHECK:                call  end_cleanup
+; CHECK:              delegate    7
+;                                (caller)
+; CHECK:              try
+; CHECK:                rethrow   7
+;                                (Rethrow exception caught by outermost catch_all)
+; CHECK:              delegate    2
+;                                (outer_catchswitch)
+; CHECK:            end_try
+; CHECK:          delegate    3
+;                            (terminate)
+; CHECK:          catch   {{.*}} __cpp_exception
+; CHECK:            call  do_catch
+; CHECK:            return
+define void @catch_unwind_in_cleanup() personality ptr @__gxx_wasm_personality_v0 {
+start:
+  invoke void @resume_unwind(i32 1)
+          to label %unreachable unwind label %outer_cleanuppad
+
+outer_cleanuppad:
+  %outer_pad = cleanuppad within none []
+  call void @start_cleanup() [ "funclet"(token %outer_pad) ]
+  invoke void @resume_unwind(i32 2) [ "funclet"(token %outer_pad) ]
+          to label %unreachable unwind label %inner_catchswitch
+
+inner_catchswitch:
+  %inner_cs = catchswitch within %outer_pad [label %inner_catchpad] unwind label %terminate_catchswitch
+
+inner_catchpad:
+  %inner_cp = catchpad within %inner_cs [ptr null]
+  %exn = call ptr @llvm.wasm.get.exception(token %inner_cp)
+  %sel = call i32 @llvm.wasm.get.ehselector(token %inner_cp)
+  invoke void @do_catch(ptr %exn, i32 2) [ "funclet"(token %inner_cp) ]
+          to label %inner_catchret unwind label %terminate_catchswitch
+
+terminate_catchswitch:
+  %term_cs = catchswitch within %outer_pad [label %terminate_catchpad] unwind label %outer_catchswitch
+
+terminate_catchpad:
+  %term_pad = catchpad within %term_cs [ptr null]
+  call void @panic_in_cleanup() [ "funclet"(token %term_pad) ]
+  unreachable
+
+inner_catchret:
+  catchret from %inner_cp to label %outer_cleanupret
+
+outer_cleanupret:
+  call void @end_cleanup() [ "funclet"(token %outer_pad) ]
+  cleanupret from %outer_pad unwind label %outer_catchswitch
+
+outer_catchswitch:
+  %outer_cs = catchswitch within none [label %outer_catchpad] unwind to caller
+outer_catchpad:
+  %outer_cp = catchpad within %outer_cs [ptr null]
+  %exn2 = call ptr @llvm.wasm.get.exception(token %outer_cp)
+  %sel2 = call i32 @llvm.wasm.get.ehselector(token %outer_cp)
+  call void @do_catch(ptr %exn2, i32 1) [ "funclet"(token %outer_cp) ]
+  catchret from %outer_cp to label %done
+
+done:
+  ret void
+unreachable:
+  unreachable
+}
+
+declare void @resume_unwind(i32) #1
+declare void @do_catch(ptr, i32) #0
+declare void @start_cleanup()
+declare void @end_cleanup()
+declare void @panic_in_cleanup() #2
+
 ; Check if the unwind destination mismatch stats are correct
-; NOSORT: 24 wasm-cfg-stackify    - Number of call unwind mismatches found
-; NOSORT:  5 wasm-cfg-stackify    - Number of catch unwind mismatches found
+; NOSORT: 25 wasm-cfg-stackify    - Number of call unwind mismatches found
+; NOSORT:  7 wasm-cfg-stackify    - Number of catch unwind mismatches found
 
 declare void @foo()
 declare void @bar()

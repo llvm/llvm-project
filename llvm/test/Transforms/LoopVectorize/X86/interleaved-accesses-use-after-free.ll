@@ -86,10 +86,7 @@ bb4:                                              ; preds = %bb4, %bb2
   br i1 %icmp, label %bb2, label %bb4
 }
 
-; Function Attrs: memory(readwrite, inaccessiblemem: none)
 declare void @foo() #0
-
-; Function Attrs: memory(argmem: readwrite)
 declare void @pluto() #1
 
 attributes #0 = { memory(readwrite, inaccessiblemem: none) }

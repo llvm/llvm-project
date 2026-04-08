@@ -1,6 +1,6 @@
 ; RUN: opt -S -mtriple=i386-unknown-freebsd -mcpu=i486 -passes=loop-vectorize < %s
 
-define i32 @PR14639(ptr nocapture %s, i32 %len) nounwind {
+define i32 @PR14639(ptr nocapture %s, i32 %len) {
 entry:
   %cmp4 = icmp sgt i32 %len, 0
   br i1 %cmp4, label %for.body, label %for.end

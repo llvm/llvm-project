@@ -228,6 +228,165 @@ body:             |
 
 ...
 ---
+name:            fminimumnum
+legalized:       true
+liveins:
+  - { reg: '$d0' }
+body:             |
+  bb.1.entry:
+    liveins: $d0
+
+    ; CHECK-LABEL: name: fminimumnum
+    ; CHECK: liveins: $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %a:_(s64) = G_FCONSTANT double 2.000000e+00
+    ; CHECK-NEXT: $d0 = COPY %a(s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
+    %a:_(s64) = G_FCONSTANT double 2.0
+    %b:_(s64) = G_FCONSTANT double 5.0
+    %res:_(s64) = G_FMINIMUMNUM %a, %b
+    $d0 = COPY %res(s64)
+    RET_ReallyLR implicit $d0
+
+...
+---
+name:            fmaximumnum
+legalized:       true
+liveins:
+  - { reg: '$d0' }
+body:             |
+  bb.1.entry:
+    liveins: $d0
+
+    ; CHECK-LABEL: name: fmaximumnum
+    ; CHECK: liveins: $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %b:_(s64) = G_FCONSTANT double 5.000000e+00
+    ; CHECK-NEXT: $d0 = COPY %b(s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
+    %a:_(s64) = G_FCONSTANT double 2.0
+    %b:_(s64) = G_FCONSTANT double 5.0
+    %res:_(s64) = G_FMAXIMUMNUM %a, %b
+    $d0 = COPY %res(s64)
+    RET_ReallyLR implicit $d0
+
+...
+---
+name:            fcopysign
+legalized:       true
+liveins:
+  - { reg: '$d0' }
+body:             |
+  bb.1.entry:
+    liveins: $d0
+
+    ; fcopysign(3.0, -1.0) = -3.0
+    ; CHECK-LABEL: name: fcopysign
+    ; CHECK: liveins: $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %res:_(s64) = G_FCONSTANT double -3.000000e+00
+    ; CHECK-NEXT: $d0 = COPY %res(s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
+    %a:_(s64) = G_FCONSTANT double 3.0
+    %b:_(s64) = G_FCONSTANT double -1.0
+    %res:_(s64) = G_FCOPYSIGN %a, %b
+    $d0 = COPY %res(s64)
+    RET_ReallyLR implicit $d0
+
+...
+---
+name:            fminnum
+legalized:       true
+liveins:
+  - { reg: '$d0' }
+body:             |
+  bb.1.entry:
+    liveins: $d0
+
+    ; fminnum(2.0, 5.0) = 2.0
+    ; CHECK-LABEL: name: fminnum
+    ; CHECK: liveins: $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %a:_(s64) = G_FCONSTANT double 2.000000e+00
+    ; CHECK-NEXT: $d0 = COPY %a(s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
+    %a:_(s64) = G_FCONSTANT double 2.0
+    %b:_(s64) = G_FCONSTANT double 5.0
+    %res:_(s64) = G_FMINNUM %a, %b
+    $d0 = COPY %res(s64)
+    RET_ReallyLR implicit $d0
+
+...
+---
+name:            fmaxnum
+legalized:       true
+liveins:
+  - { reg: '$d0' }
+body:             |
+  bb.1.entry:
+    liveins: $d0
+
+    ; fmaxnum(2.0, 5.0) = 5.0
+    ; CHECK-LABEL: name: fmaxnum
+    ; CHECK: liveins: $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %b:_(s64) = G_FCONSTANT double 5.000000e+00
+    ; CHECK-NEXT: $d0 = COPY %b(s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
+    %a:_(s64) = G_FCONSTANT double 2.0
+    %b:_(s64) = G_FCONSTANT double 5.0
+    %res:_(s64) = G_FMAXNUM %a, %b
+    $d0 = COPY %res(s64)
+    RET_ReallyLR implicit $d0
+
+...
+---
+name:            fminimum
+legalized:       true
+liveins:
+  - { reg: '$d0' }
+body:             |
+  bb.1.entry:
+    liveins: $d0
+
+    ; fminimum(2.0, 5.0) = 2.0
+    ; CHECK-LABEL: name: fminimum
+    ; CHECK: liveins: $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %a:_(s64) = G_FCONSTANT double 2.000000e+00
+    ; CHECK-NEXT: $d0 = COPY %a(s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
+    %a:_(s64) = G_FCONSTANT double 2.0
+    %b:_(s64) = G_FCONSTANT double 5.0
+    %res:_(s64) = G_FMINIMUM %a, %b
+    $d0 = COPY %res(s64)
+    RET_ReallyLR implicit $d0
+
+...
+---
+name:            fmaximum
+legalized:       true
+liveins:
+  - { reg: '$d0' }
+body:             |
+  bb.1.entry:
+    liveins: $d0
+
+    ; fmaximum(2.0, 5.0) = 5.0
+    ; CHECK-LABEL: name: fmaximum
+    ; CHECK: liveins: $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %b:_(s64) = G_FCONSTANT double 5.000000e+00
+    ; CHECK-NEXT: $d0 = COPY %b(s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
+    %a:_(s64) = G_FCONSTANT double 2.0
+    %b:_(s64) = G_FCONSTANT double 5.0
+    %res:_(s64) = G_FMAXIMUM %a, %b
+    $d0 = COPY %res(s64)
+    RET_ReallyLR implicit $d0
+
+...
+---
 name:            fadd32
 legalized:       true
 liveins:

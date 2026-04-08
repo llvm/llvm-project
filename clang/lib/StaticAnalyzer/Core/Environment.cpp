@@ -121,6 +121,11 @@ SVal Environment::getSVal(const EnvironmentEntry &Entry,
     return *svalBuilder.getConstantVal(cast<Expr>(S));
 
   case Stmt::ReturnStmtClass: {
+    // FIXME: Move this logic to ExprEngine::processCallExit (the only location
+    // passes a ReturnStmt to this method) and then there will be no need to
+    // accept non-expression statements in getSVal (in fact, it will be
+    // possible to change the first member of EnvironmentEntry from const Stmt*
+    // to const Expr*).
     const auto *RS = cast<ReturnStmt>(S);
     if (const Expr *RE = RS->getRetValue())
       return getSVal(EnvironmentEntry(RE, LCtx), svalBuilder);

@@ -169,16 +169,6 @@ class CrossProcessModuleCache : public ModuleCache {
   InMemoryModuleCache InMemory;
 
 public:
-  void prepareForGetLock(StringRef ModuleFilename) override {
-    // This is a compiler-internal input/output, let's bypass the sandbox.
-    auto BypassSandbox = llvm::sys::sandbox::scopedDisable();
-
-    // FIXME: Do this in LockFileManager and only if the directory doesn't
-    // exist.
-    StringRef Dir = llvm::sys::path::parent_path(ModuleFilename);
-    llvm::sys::fs::create_directories(Dir);
-  }
-
   std::unique_ptr<llvm::AdvisoryLock>
   getLock(StringRef ModuleFilename) override {
     return std::make_unique<llvm::LockFileManager>(ModuleFilename);

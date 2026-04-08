@@ -682,9 +682,10 @@ ModuleSpecList ObjectFileELF::GetModuleSpecifications(
           uint32_t core_notes_crc = 0;
 
           if (!gnu_debuglink_crc) {
-            LLDB_SCOPED_TIMERF(
-                "Calculating module crc32 %s with size %" PRIu64 " KiB",
-                file.GetFilename().AsCString(), (length - file_offset) / 1024);
+            LLDB_SCOPED_TIMERF("Calculating module crc32 %s with size %" PRIu64
+                               " KiB",
+                               file.GetFilename().AsCString(""),
+                               (length - file_offset) / 1024);
 
             // For core files - which usually don't happen to have a
             // gnu_debuglink, and are pretty bulky - calculating whole

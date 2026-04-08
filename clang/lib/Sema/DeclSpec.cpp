@@ -1398,13 +1398,12 @@ void DeclSpec::Finish(Sema &S, const PrintingPolicy &Policy) {
     }
   }
 
-  if (S.getLangOpts().C23 &&
+  if (S.getLangOpts().C23 && getTypeSpecType() != DeclSpec::TST_unspecified &&
       getConstexprSpecifier() == ConstexprSpecKind::Constexpr &&
-      getTypeSpecType() != TST_unspecified &&
       (StorageClassSpec == SCS_extern || StorageClassSpec == SCS_auto)) {
-    S.Diag(ConstexprLoc, diag::err_invalid_decl_spec_combination)
-        << DeclSpec::getSpecifierName(getStorageClassSpec())
-        << SourceRange(getStorageClassSpecLoc());
+    S.Diag(getStorageClassSpecLoc(), diag::err_invalid_decl_spec_combination)
+        << DeclSpec::getSpecifierName(getConstexprSpecifier())
+        << SourceRange(getConstexprSpecLoc());
   }
 
   // If no type specifier was provided and we're parsing a language where

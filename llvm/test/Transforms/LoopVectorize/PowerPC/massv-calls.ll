@@ -1,90 +1,90 @@
 ; RUN: opt -vector-library=MASSV -mtriple=powerpc64le-unknown-linux-gnu -passes=inject-tli-mappings,loop-vectorize -force-vector-interleave=1 -S < %s | FileCheck %s
 ; RUN: opt -vector-library=MASSV -vec-extabi -mattr=+altivec -mcpu=ppc64 -mtriple=powerpc64-ibm-aix-xcoff -passes=inject-tli-mappings,loop-vectorize -force-vector-interleave=1 -S < %s | FileCheck %s
 
-declare double @cbrt(double) #0
-declare float @cbrtf(float) #0
+declare double @cbrt(double)
+declare float @cbrtf(float)
 
-declare double @pow(double, double) #0
-declare double @llvm.pow.f64(double, double) #0
-declare float @powf(float, float) #0
-declare float @llvm.pow.f32(float, float) #0
+declare double @pow(double, double)
+declare double @llvm.pow.f64(double, double)
+declare float @powf(float, float)
+declare float @llvm.pow.f32(float, float)
 
-declare double @sqrt(double) #0
-declare float @sqrtf(float) #0
+declare double @sqrt(double)
+declare float @sqrtf(float)
 
-declare double @exp(double) #0
-declare double @llvm.exp.f64(double) #0
-declare float @expf(float) #0
-declare float @llvm.exp.f32(float) #0
+declare double @exp(double)
+declare double @llvm.exp.f64(double)
+declare float @expf(float)
+declare float @llvm.exp.f32(float)
 
-declare double @exp2(double) #0
-declare double @llvm.exp2.f64(double) #0
-declare float @exp2f(float) #0
-declare float @llvm.exp2.f32(float) #0
+declare double @exp2(double)
+declare double @llvm.exp2.f64(double)
+declare float @exp2f(float)
+declare float @llvm.exp2.f32(float)
 
-declare double @expm1(double) #0
-declare float @expm1f(float) #0
+declare double @expm1(double)
+declare float @expm1f(float)
 
-declare double @log(double) #0
-declare double @llvm.log.f64(double) #0
-declare float @logf(float) #0
-declare float @llvm.log.f32(float) #0
+declare double @log(double)
+declare double @llvm.log.f64(double)
+declare float @logf(float)
+declare float @llvm.log.f32(float)
 
-declare double @log1p(double) #0
-declare float @log1pf(float) #0
+declare double @log1p(double)
+declare float @log1pf(float)
 
-declare double @log10(double) #0
-declare double @llvm.log10.f64(double) #0
-declare float @log10f(float) #0
-declare float @llvm.log10.f32(float) #0
+declare double @log10(double)
+declare double @llvm.log10.f64(double)
+declare float @log10f(float)
+declare float @llvm.log10.f32(float)
 
-declare double @log2(double) #0
-declare double @llvm.log2.f64(double) #0
-declare float @log2f(float) #0
-declare float @llvm.log2.f32(float) #0
+declare double @log2(double)
+declare double @llvm.log2.f64(double)
+declare float @log2f(float)
+declare float @llvm.log2.f32(float)
 
-declare double @sin(double) #0
-declare double @llvm.sin.f64(double) #0
-declare float @sinf(float) #0
-declare float @llvm.sin.f32(float) #0
+declare double @sin(double)
+declare double @llvm.sin.f64(double)
+declare float @sinf(float)
+declare float @llvm.sin.f32(float)
 
-declare double @cos(double) #0
-declare double @llvm.cos.f64(double) #0
-declare float @cosf(float) #0
-declare float @llvm.cos.f32(float) #0
+declare double @cos(double)
+declare double @llvm.cos.f64(double)
+declare float @cosf(float)
+declare float @llvm.cos.f32(float)
 
-declare double @tan(double) #0
-declare float @tanf(float) #0
+declare double @tan(double)
+declare float @tanf(float)
 
-declare double @asin(double) #0
-declare float @asinf(float) #0
+declare double @asin(double)
+declare float @asinf(float)
 
-declare double @acos(double) #0
-declare float @acosf(float) #0
+declare double @acos(double)
+declare float @acosf(float)
 
-declare double @atan(double) #0
-declare float @atanf(float) #0
+declare double @atan(double)
+declare float @atanf(float)
 
-declare double @atan2(double, double) #0
-declare float @atan2f(float, float) #0
+declare double @atan2(double, double)
+declare float @atan2f(float, float)
 
-declare double @sinh(double) #0
-declare float @sinhf(float) #0
+declare double @sinh(double)
+declare float @sinhf(float)
 
-declare double @cosh(double) #0
-declare float @coshf(float) #0
+declare double @cosh(double)
+declare float @coshf(float)
 
-declare double @tanh(double) #0
-declare float @tanhf(float) #0
+declare double @tanh(double)
+declare float @tanhf(float)
 
-declare double @asinh(double) #0
-declare float @asinhf(float) #0
+declare double @asinh(double)
+declare float @asinhf(float)
 
-declare double @acosh(double) #0
-declare float @acoshf(float) #0
+declare double @acosh(double)
+declare float @acoshf(float)
 
-declare double @atanh(double) #0
-declare float @atanhf(float) #0
+declare double @atanh(double)
+declare float @atanhf(float)
 
 define void @cbrt_f64(ptr nocapture %varray) {
 ; CHECK-LABEL: @cbrt_f64(
@@ -1565,5 +1565,3 @@ for.body:
 for.end:
   ret void
 }
-
-attributes #0 = { nounwind }

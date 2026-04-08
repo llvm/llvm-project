@@ -2216,9 +2216,9 @@ define amdgpu_ps i64 @lshr_mad_i64_sgpr(i64 inreg %arg0) #0 {
 ;
 ; GFX12-LABEL: lshr_mad_i64_sgpr:
 ; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_mov_b32 s4, 0xffff1c18
 ; GFX12-NEXT:    s_mov_b32 s3, 0
 ; GFX12-NEXT:    s_mov_b32 s2, s1
+; GFX12-NEXT:    s_mov_b32 s4, 0xffff1c18
 ; GFX12-NEXT:    s_mov_b32 s5, -1
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_mul_u64 s[2:3], s[2:3], s[4:5]

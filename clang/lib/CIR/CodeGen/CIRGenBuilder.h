@@ -461,6 +461,14 @@ public:
     return getConstantInt(loc, getUInt64Ty(), c);
   }
 
+  cir::ConstantOp getZero(mlir::Location loc, mlir::Type ty) {
+    // TODO: dispatch creation for primitive types.
+    assert((mlir::isa<cir::RecordType>(ty) || mlir::isa<cir::ArrayType>(ty) ||
+            mlir::isa<cir::VectorType>(ty)) &&
+           "NYI for other types");
+    return cir::ConstantOp::create(*this, loc, cir::ZeroAttr::get(ty));
+  }
+
   //===--------------------------------------------------------------------===//
   // UnaryOp creation helpers
   //===--------------------------------------------------------------------===//

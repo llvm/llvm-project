@@ -2,8 +2,8 @@
 
 ---
 # GCN-LABEL: name: expand_imm64_sext_shrink_to_bfrev
-# GCN: $vgpr0 = V_MOV_B32_e32 0, implicit $exec, implicit-def $vgpr0_vgpr1
-# GCN: $vgpr1 = V_BFREV_B32_e32 1, implicit $exec, implicit-def $vgpr0_vgpr1
+# GCN: $vgpr0 = V_MOV_B32_e32 0, implicit $exec
+# GCN: $vgpr1 = V_BFREV_B32_e32 1, implicit $exec
 name:            expand_imm64_sext_shrink_to_bfrev
 tracksRegLiveness: true
 body:             |

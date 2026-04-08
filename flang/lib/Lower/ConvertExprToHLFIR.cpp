@@ -1788,6 +1788,12 @@ private:
     TODO(getLoc(), "lowering type parameter inquiry to HLFIR");
   }
 
+  template <typename T>
+  hlfir::EntityWithAttributes
+  gen(const Fortran::evaluate::ConditionalExpr<T> &) {
+    TODO(getLoc(), "lowering conditional expression to HLFIR");
+  }
+
   hlfir::EntityWithAttributes
   gen(const Fortran::evaluate::DescriptorInquiry &desc) {
     mlir::Location loc = getLoc();

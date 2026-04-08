@@ -236,8 +236,9 @@ PlatformDarwin::LocateExecutableScriptingResourcesFromDSYM(
                                          orig_script_fspec, script_fspec);
 
     if (FileSystem::Instance().Exists(script_fspec)) {
-      file_specs.try_emplace(std::move(script_fspec),
-                             target.GetLoadScriptFromSymbolFile());
+      LoadScriptFromSymFile load_style =
+          Platform::GetScriptLoadStyleForModule(script_fspec, target);
+      file_specs.try_emplace(std::move(script_fspec), load_style);
       break;
     }
 

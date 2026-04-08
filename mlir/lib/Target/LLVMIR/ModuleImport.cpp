@@ -2880,6 +2880,9 @@ void ModuleImport::processFunctionAttributes(llvm::Function *func,
                                  .value()));
   }
 
+  if (func->hasFnAttribute("use-sample-profile"))
+    funcOp.setUseSampleProfile(true);
+
   if (llvm::Attribute attr = func->getFnAttribute("target-cpu");
       attr.isStringAttribute())
     funcOp.setTargetCpuAttr(StringAttr::get(context, attr.getValueAsString()));

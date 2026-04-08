@@ -178,14 +178,14 @@ define amdgpu_kernel void @test_scc_quadmask_32(i32 %val0, i32 %val1, ptr addrsp
 ; GFX11-GISEL-LABEL: test_scc_quadmask_32:
 ; GFX11-GISEL:       ; %bb.0:
 ; GFX11-GISEL-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
-; GFX11-GISEL-NEXT:    v_mov_b32_e32 v0, 0
+; GFX11-GISEL-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0
 ; GFX11-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-GISEL-NEXT:    s_and_b32 s0, s0, 1
 ; GFX11-GISEL-NEXT:    s_quadmask_b32 s1, s1
 ; GFX11-GISEL-NEXT:    s_cmp_eq_u32 s0, 0
 ; GFX11-GISEL-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_mov_b32 v3, s1
 ; GFX11-GISEL-NEXT:    s_cselect_b32 s0, 1, 0
-; GFX11-GISEL-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v4, s0
+; GFX11-GISEL-NEXT:    v_mov_b32_e32 v4, s0
 ; GFX11-GISEL-NEXT:    global_store_b32 v2, v3, s[2:3]
 ; GFX11-GISEL-NEXT:    global_store_b32 v[0:1], v4, off
 ; GFX11-GISEL-NEXT:    s_endpgm
@@ -193,14 +193,13 @@ define amdgpu_kernel void @test_scc_quadmask_32(i32 %val0, i32 %val1, ptr addrsp
 ; GFX11-SDAG-LABEL: test_scc_quadmask_32:
 ; GFX11-SDAG:       ; %bb.0:
 ; GFX11-SDAG-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
-; GFX11-SDAG-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-SDAG-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_mov_b32 v1, 0
 ; GFX11-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-SDAG-NEXT:    s_and_b32 s0, s0, 1
 ; GFX11-SDAG-NEXT:    s_quadmask_b32 s1, s1
 ; GFX11-SDAG-NEXT:    s_cmp_eq_u32 s0, 0
 ; GFX11-SDAG-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v3, s1
 ; GFX11-SDAG-NEXT:    s_cselect_b32 s0, -1, 0
-; GFX11-SDAG-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX11-SDAG-NEXT:    v_cndmask_b32_e64 v4, 0, 1, s0
 ; GFX11-SDAG-NEXT:    global_store_b32 v2, v3, s[2:3]
 ; GFX11-SDAG-NEXT:    global_store_b32 v[0:1], v4, off
@@ -221,6 +220,7 @@ define amdgpu_kernel void @test_scc_quadmask_64(i32 %val0, i64 %val1, ptr addrsp
 ; GFX11-GISEL-NEXT:    s_clause 0x1
 ; GFX11-GISEL-NEXT:    s_load_b128 s[0:3], s[4:5], 0x2c
 ; GFX11-GISEL-NEXT:    s_load_b32 s4, s[4:5], 0x24
+; GFX11-GISEL-NEXT:    v_mov_b32_e32 v3, 0
 ; GFX11-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-GISEL-NEXT:    s_quadmask_b64 s[0:1], s[0:1]
 ; GFX11-GISEL-NEXT:    s_and_b32 s4, s4, 1
@@ -229,7 +229,6 @@ define amdgpu_kernel void @test_scc_quadmask_64(i32 %val0, i64 %val1, ptr addrsp
 ; GFX11-GISEL-NEXT:    v_dual_mov_b32 v4, 0 :: v_dual_mov_b32 v1, s1
 ; GFX11-GISEL-NEXT:    s_cselect_b32 s0, 1, 0
 ; GFX11-GISEL-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_mov_b32 v5, s0
-; GFX11-GISEL-NEXT:    v_mov_b32_e32 v3, 0
 ; GFX11-GISEL-NEXT:    global_store_b64 v4, v[0:1], s[2:3]
 ; GFX11-GISEL-NEXT:    global_store_b32 v[2:3], v5, off
 ; GFX11-GISEL-NEXT:    s_endpgm
@@ -239,7 +238,7 @@ define amdgpu_kernel void @test_scc_quadmask_64(i32 %val0, i64 %val1, ptr addrsp
 ; GFX11-SDAG-NEXT:    s_clause 0x1
 ; GFX11-SDAG-NEXT:    s_load_b32 s6, s[4:5], 0x24
 ; GFX11-SDAG-NEXT:    s_load_b128 s[0:3], s[4:5], 0x2c
-; GFX11-SDAG-NEXT:    v_mov_b32_e32 v4, 0
+; GFX11-SDAG-NEXT:    v_dual_mov_b32 v4, 0 :: v_dual_mov_b32 v1, 0
 ; GFX11-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-SDAG-NEXT:    s_and_b32 s4, s6, 1
 ; GFX11-SDAG-NEXT:    s_quadmask_b64 s[0:1], s[0:1]
@@ -247,7 +246,6 @@ define amdgpu_kernel void @test_scc_quadmask_64(i32 %val0, i64 %val1, ptr addrsp
 ; GFX11-SDAG-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v3, s1
 ; GFX11-SDAG-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX11-SDAG-NEXT:    s_cselect_b32 s0, -1, 0
-; GFX11-SDAG-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX11-SDAG-NEXT:    v_cndmask_b32_e64 v5, 0, 1, s0
 ; GFX11-SDAG-NEXT:    global_store_b64 v4, v[2:3], s[2:3]
 ; GFX11-SDAG-NEXT:    global_store_b32 v[0:1], v5, off

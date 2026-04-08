@@ -1163,14 +1163,26 @@ Status NativeRegisterContextLinux_arm64::WriteAllRegisterValues(
           std::bind(&NativeRegisterContextLinux_arm64::WriteAllSVE, this));
       break;
     case RegisterSetType::FPR: {
+      m_sve_buffer_is_valid = false;
+      m_sve_header_is_valid = false;
+      m_sve_state = SVEState::Unknown;
+      ConfigureRegisterContext();
+
+      // If we are on an SME only system and currently in streaming mode, about
+      // to restore non-streaming FP data.
       if (!GetRegisterInfo().IsSVEPresent() &&
-          GetRegisterInfo().IsSSVEPresent()) {
-        // On an SME only system, if we get here then we were outside of
-        // streaming mode when the registers were saved. We may be in streaming
-        // mode at the current moment, so we need to to exit it. The kernel
-        // allows us to do this by writing FPSIMD format data to the
-        // non-streaming SVE register set, with a vector length of 0 set. This
-        // is only done in this specific situation.
+          GetRegisterInfo().IsSSVEPresent() &&
+          m_sve_state == SVEState::Streaming) {
+        // We can only restore this data on kernel versions >= 6.19, so
+        // attempt it and if it fails, we will skip restoring the data.
+        //
+        // To attempt the restore we write FPSIMD format data to NT_ARM_SVE,
+        // with the vector length set to 0. If supported, this will switch
+        // modes from streaming to non-streaming and update the FP registers
+        // with the values we provided.
+        //
+        // This interface is only used by LLDB in this one specific
+        // circumstance.
 
         size_t data_size = sve::ptrace_fpsimd_offset + GetFPRSize();
         // NT_ARM_SVE data must be a multiple of 128 bits, and the FPU data size
@@ -1197,16 +1209,20 @@ Status NativeRegisterContextLinux_arm64::WriteAllRegisterValues(
         // exiting streaming mode.
         error = WriteRegisterSet(&ioVec, sve_fpsimd_data.size(), NT_ARM_SVE);
 
-        // Wrote FPU, and SVE overlaps FPU.
-        m_fpu_is_valid = false;
-        m_sve_buffer_is_valid = false;
-        m_sve_header_is_valid = false;
-
-        m_sve_state = SVEState::Unknown;
-        ConfigureRegisterContext();
-
         // Consume FP register set.
         src += GetFPRSize();
+
+        if (error.Success()) {
+          // Wrote FPU, and SVE overlaps FPU.
+          m_fpu_is_valid = false;
+          m_sve_buffer_is_valid = false;
+          m_sve_header_is_valid = false;
+
+          m_sve_state = SVEState::Unknown;
+          ConfigureRegisterContext();
+        }
+        // Else we failed to restore these registers, but we will try to restore
+        // the others.
       } else {
         error = RestoreRegisters(
             GetFPRBuffer(), &src, GetFPRSize(), m_fpu_is_valid,

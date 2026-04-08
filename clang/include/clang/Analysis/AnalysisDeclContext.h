@@ -179,7 +179,7 @@ public:
 
   /// \copydoc LocationContextManager::getStackFrame()
   const StackFrameContext *getStackFrame(LocationContext const *ParentLC,
-                                         const Stmt *S, const CFGBlock *Blk,
+                                         const Expr *E, const CFGBlock *Blk,
                                          unsigned BlockCount, unsigned Index);
 
   /// \copydoc LocationContextManager::getBlockInvocationContext()
@@ -300,7 +300,7 @@ class StackFrameContext : public LocationContext {
   friend class LocationContextManager;
 
   // The call site where this stack frame is established.
-  const Stmt *CallSite;
+  const Expr *CallSite;
 
   // The parent block of the call site.
   const CFGBlock *Block;
@@ -314,15 +314,15 @@ class StackFrameContext : public LocationContext {
   const unsigned Index;
 
   StackFrameContext(AnalysisDeclContext *ADC, const LocationContext *ParentLC,
-                    const Stmt *S, const CFGBlock *Block, unsigned BlockCount,
+                    const Expr *E, const CFGBlock *Block, unsigned BlockCount,
                     unsigned Index, int64_t ID)
-      : LocationContext(StackFrame, ADC, ParentLC, ID), CallSite(S),
+      : LocationContext(StackFrame, ADC, ParentLC, ID), CallSite(E),
         Block(Block), BlockCount(BlockCount), Index(Index) {}
 
 public:
   ~StackFrameContext() override = default;
 
-  const Stmt *getCallSite() const { return CallSite; }
+  const Expr *getCallSite() const { return CallSite; }
 
   const CFGBlock *getCallSiteBlock() const { return Block; }
 
@@ -335,10 +335,10 @@ public:
   void Profile(llvm::FoldingSetNodeID &ID) override;
 
   static void Profile(llvm::FoldingSetNodeID &ID, AnalysisDeclContext *ADC,
-                      const LocationContext *ParentLC, const Stmt *S,
+                      const LocationContext *ParentLC, const Expr *E,
                       const CFGBlock *Block, unsigned BlockCount,
                       unsigned Index) {
-    ProfileCommon(ID, StackFrame, ADC, ParentLC, S);
+    ProfileCommon(ID, StackFrame, ADC, ParentLC, E);
     ID.AddPointer(Block);
     ID.AddInteger(BlockCount);
     ID.AddInteger(Index);
@@ -397,15 +397,16 @@ public:
   ///
   /// \param ADC        The AnalysisDeclContext.
   /// \param ParentLC   The parent context of this newly created context.
-  /// \param S          The call.
+  /// \param E          The call expression.
   /// \param Block      The basic block.
-  /// \param BlockCount The current count of entering into \p Blk.
-  /// \param Index      The index of \p Blk.
-  /// \returns The context for \p D with parent context \p ParentLC.
+  /// \param BlockCount The current count of entering into \p Block.
+  /// \param StmtIdx    The index of the call expression \p E among the
+  ///                   statements of the CFGBlock \p Block.
+  /// \returns The stack frame context corresponding to the call.
   const StackFrameContext *getStackFrame(AnalysisDeclContext *ADC,
                                          const LocationContext *ParentLC,
-                                         const Stmt *S, const CFGBlock *Block,
-                                         unsigned BlockCount, unsigned Index);
+                                         const Expr *E, const CFGBlock *Block,
+                                         unsigned BlockCount, unsigned StmtIdx);
 
   /// Obtain a context of the block invocation using its parent context.
   ///
@@ -470,14 +471,6 @@ public:
   const StackFrameContext *getStackFrame(const Decl *D) {
     return LocCtxMgr.getStackFrame(getContext(D), nullptr, nullptr, nullptr, 0,
                                    0);
-  }
-
-  /// \copydoc LocationContextManager::getStackFrame()
-  const StackFrameContext *getStackFrame(AnalysisDeclContext *ADC,
-                                         const LocationContext *Parent,
-                                         const Stmt *S, const CFGBlock *Block,
-                                         unsigned BlockCount, unsigned Index) {
-    return LocCtxMgr.getStackFrame(ADC, Parent, S, Block, BlockCount, Index);
   }
 
   BodyFarm &getBodyFarm();

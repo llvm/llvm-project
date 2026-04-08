@@ -301,6 +301,57 @@ define void @load_store_vec_external_uses(ptr %ptr) {
   ret void
 }
 
+; Store-constant pattern.
+define void @load_store_vec_constants(ptr %ptr) {
+; CHECK-LABEL: define void @load_store_vec_constants(
+; CHECK-SAME: ptr [[PTR:%.*]]) {
+; CHECK-NEXT:    [[PTR0:%.*]] = getelementptr i8, ptr [[PTR]], i32 0
+; CHECK-NEXT:    store <3 x i8> <i8 42, i8 43, i8 44>, ptr [[PTR0]], align 1, !sandboxvec [[META15:![0-9]+]]
+; CHECK-NEXT:    ret void
+;
+  %ptr0 = getelementptr i8, ptr %ptr, i32 0
+  %ptr1 = getelementptr i8, ptr %ptr, i32 1
+  %ptr2 = getelementptr i8, ptr %ptr, i32 3
+  store i8 42, ptr %ptr0
+  store i16 43, ptr %ptr1
+  store i8 44, ptr %ptr2
+  ret void
+}
+
+; Same but with ConstantDataSequential.
+define void @load_store_vec_constants_CDS(ptr %ptr) {
+; CHECK-LABEL: define void @load_store_vec_constants_CDS(
+; CHECK-SAME: ptr [[PTR:%.*]]) {
+; CHECK-NEXT:    [[PTR0:%.*]] = getelementptr i8, ptr [[PTR]], i32 0
+; CHECK-NEXT:    store <4 x i8> <i8 0, i8 1, i8 2, i8 3>, ptr [[PTR0]], align 1, !sandboxvec [[META16:![0-9]+]]
+; CHECK-NEXT:    ret void
+;
+  %ptr0 = getelementptr i8, ptr %ptr, i32 0
+  %ptr1 = getelementptr i8, ptr %ptr, i32 1
+  %ptr2 = getelementptr i8, ptr %ptr, i32 3
+  store i8 0, ptr %ptr0
+  store <2 x i8> <i8 1, i8 2>, ptr %ptr1
+  store i8 3, ptr %ptr2
+  ret void
+}
+
+; Same but with floats
+define void @load_store_vec_constants_CDS_float(ptr %ptr) {
+; CHECK-LABEL: define void @load_store_vec_constants_CDS_float(
+; CHECK-SAME: ptr [[PTR:%.*]]) {
+; CHECK-NEXT:    [[PTR0:%.*]] = getelementptr float, ptr [[PTR]], i32 0
+; CHECK-NEXT:    store <8 x float> <float 1.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00>, ptr [[PTR0]], align 1, !sandboxvec [[META17:![0-9]+]]
+; CHECK-NEXT:    ret void
+;
+  %ptr0 = getelementptr float, ptr %ptr, i32 0
+  %ptr1 = getelementptr float, ptr %ptr, i32 1
+  %ptr2 = getelementptr float, ptr %ptr, i32 3
+  store float 1.0, ptr %ptr0
+  store <2 x float> zeroinitializer, ptr %ptr1
+  store <5 x float> zeroinitializer, ptr %ptr2
+  ret void
+}
+
 ;.
 ; CHECK: [[META0]] = distinct !{!"sandboxregion"}
 ; CHECK: [[META1]] = distinct !{!"sandboxregion"}
@@ -317,4 +368,7 @@ define void @load_store_vec_external_uses(ptr %ptr) {
 ; CHECK: [[META12]] = distinct !{!"sandboxregion"}
 ; CHECK: [[META13]] = distinct !{!"sandboxregion"}
 ; CHECK: [[META14]] = distinct !{!"sandboxregion"}
+; CHECK: [[META15]] = distinct !{!"sandboxregion"}
+; CHECK: [[META16]] = distinct !{!"sandboxregion"}
+; CHECK: [[META17]] = distinct !{!"sandboxregion"}
 ;.

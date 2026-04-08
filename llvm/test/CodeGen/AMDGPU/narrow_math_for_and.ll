@@ -88,11 +88,11 @@ define i64 @narrow_mul_1(i64 %a, i64 %b) {
 ; CHECK-LABEL: narrow_mul_1:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_and_b32_e32 v1, 0xf73594, v0
-; CHECK-NEXT:    v_and_b32_e32 v2, 0x100, v2
+; CHECK-NEXT:    v_and_b32_e32 v0, 0xf73594, v0
+; CHECK-NEXT:    v_and_b32_e32 v1, 0x100, v2
 ; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; CHECK-NEXT:    v_mul_u32_u24_e32 v0, v1, v2
-; CHECK-NEXT:    v_mul_hi_u32_u24_e32 v1, v1, v2
+; CHECK-NEXT:    v_mul_u32_u24_e32 v0, v0, v1
+; CHECK-NEXT:    v_mov_b32_e32 v1, 0
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %zext0 = and i64 %a, 16201108
   %zext1 = and i64 %b, 256

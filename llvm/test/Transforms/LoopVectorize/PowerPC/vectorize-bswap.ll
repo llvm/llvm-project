@@ -83,5 +83,4 @@ for.end:                                          ; preds = %for.cond.cleanup
   ret void
 }
 
-; Function Attrs: nounwind readnone speculatable willreturn
 declare i32 @llvm.bswap.i32(i32)

@@ -1,9 +1,7 @@
-add_entrypoint_object(
-  abort
-  SRCS
-    abort.cpp
+add_header_library(
+  abort_utils
   HDRS
-    ../abort.h
+    abort_utils.h
 )
 
 add_entrypoint_object(

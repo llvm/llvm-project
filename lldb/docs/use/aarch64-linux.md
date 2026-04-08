@@ -297,7 +297,11 @@ written to the non-existent non-streaming SVE register set, with the vector
 length set to 0 to cause the process to exit streaming mode and apply those
 FPSIMD values to the `V` registers.
 
-This is only used for this purpose. Otherwise, in non-streaming mode FP
+This feature was added in version 6.19 of the Linux kernel. On older versions,
+LLDB will attempt the restore and it will fail. This will result in the mode
+and some register state not being restored.
+
+This feature is only used for this purpose. Otherwise, in non-streaming mode FP
 registers are accessed using the FP register set, and in streaming mode using
 the streaming SVE register set.
 

@@ -183,7 +183,8 @@ void Session::shutdown(OnShutdownFn OnShutdown) {
       TmpCA = std::atomic_load(&this->CA);
       break;
     case State::Detached:
-      proceedToShutdown(Lock);
+      Lock.unlock();
+      waitForManagedCodeTasksThenShutdown();
       return;
     default:
       assert(false && "Illegal state");
@@ -314,27 +315,35 @@ void Session::detachServices(std::vector<Service *> ToNotify,
 }
 
 void Session::completeDetach() {
-  std::unique_lock<std::mutex> Lock(M);
-  assert(CurrentState == State::Detached);
-  if (TargetState == State::Detached) {
-    TargetState = State::None;
-    return;
+  {
+    std::scoped_lock<std::mutex> Lock(M);
+    assert(CurrentState == State::Detached);
+    if (TargetState == State::Detached) {
+      TargetState = State::None;
+      return;
+    }
+    // Someone must have requested shutdown.
+    assert(TargetState == State::Shutdown);
   }
 
-  // Someone must have requested shutdown.
-  assert(TargetState == State::Shutdown);
-  proceedToShutdown(Lock);
+  waitForManagedCodeTasksThenShutdown();
 }
 
-void Session::proceedToShutdown(std::unique_lock<std::mutex> &Lock) {
-  std::vector<Service *> ToNotify;
-  ToNotify.reserve(Services.size());
-  for (auto &Srv : Services)
-    ToNotify.push_back(Srv.get());
-  CurrentState = State::Shutdown;
-  Lock.unlock();
+void Session::waitForManagedCodeTasksThenShutdown() {
+  ManagedCodeTaskGroup->addOnComplete([this]() { proceedToShutdown(); });
+  ManagedCodeTaskGroup->close();
+}
 
-  // Notify services.
+void Session::proceedToShutdown() {
+  std::vector<Service *> ToNotify;
+  {
+    std::scoped_lock<std::mutex> Lock(M);
+    ToNotify.reserve(Services.size());
+    for (auto &Srv : Services)
+      ToNotify.push_back(Srv.get());
+    CurrentState = State::Shutdown;
+  }
+
   shutdownServices(std::move(ToNotify));
 }
 

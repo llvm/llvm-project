@@ -1026,19 +1026,18 @@ define half @test_vector_reduce_fmaximum_v16half(<16 x half> %v) {
 ; GFX11-SDAG-FAKE16-NEXT:    v_lshrrev_b32_e32 v14, 16, v1
 ; GFX11-SDAG-FAKE16-NEXT:    v_cndmask_b32_e32 v2, 0x7e00, v8, vcc_lo
 ; GFX11-SDAG-FAKE16-NEXT:    v_cmp_o_f16_e32 vcc_lo, v0, v4
-; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX11-SDAG-FAKE16-NEXT:    v_perm_b32 v6, v2, v9, 0x5040100
 ; GFX11-SDAG-FAKE16-NEXT:    v_cndmask_b32_e32 v0, 0x7e00, v10, vcc_lo
 ; GFX11-SDAG-FAKE16-NEXT:    v_cmp_o_f16_e32 vcc_lo, v12, v11
-; GFX11-SDAG-FAKE16-NEXT:    v_pk_max_f16 v10, v3, v7
 ; GFX11-SDAG-FAKE16-NEXT:    v_pk_max_f16 v12, v1, v5
+; GFX11-SDAG-FAKE16-NEXT:    v_perm_b32 v6, v2, v9, 0x5040100
+; GFX11-SDAG-FAKE16-NEXT:    v_pk_max_f16 v10, v3, v7
 ; GFX11-SDAG-FAKE16-NEXT:    v_cndmask_b32_e32 v4, 0x7e00, v13, vcc_lo
 ; GFX11-SDAG-FAKE16-NEXT:    v_cmp_o_f16_e32 vcc_lo, v3, v7
 ; GFX11-SDAG-FAKE16-NEXT:    v_lshrrev_b32_e32 v7, 16, v7
 ; GFX11-SDAG-FAKE16-NEXT:    v_lshrrev_b32_e32 v3, 16, v3
-; GFX11-SDAG-FAKE16-NEXT:    v_lshrrev_b32_e32 v13, 16, v5
-; GFX11-SDAG-FAKE16-NEXT:    v_perm_b32 v8, v4, v0, 0x5040100
 ; GFX11-SDAG-FAKE16-NEXT:    v_lshrrev_b32_e32 v15, 16, v12
+; GFX11-SDAG-FAKE16-NEXT:    v_perm_b32 v8, v4, v0, 0x5040100
+; GFX11-SDAG-FAKE16-NEXT:    v_lshrrev_b32_e32 v13, 16, v5
 ; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_3) | instid1(VALU_DEP_4)
 ; GFX11-SDAG-FAKE16-NEXT:    v_pk_max_f16 v6, v8, v6
 ; GFX11-SDAG-FAKE16-NEXT:    v_cndmask_b32_e32 v8, 0x7e00, v10, vcc_lo

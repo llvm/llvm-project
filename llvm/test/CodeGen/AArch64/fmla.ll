@@ -835,13 +835,13 @@ define <7 x half> @fmuladd_v7f16(<7 x half> %a, <7 x half> %b, <7 x half> %c) {
 ; CHECK-SD-NOFP16-NEXT:    fcvtn v1.4h, v3.4s
 ; CHECK-SD-NOFP16-NEXT:    fcvtl v3.4s, v2.4h
 ; CHECK-SD-NOFP16-NEXT:    fcvtl2 v2.4s, v2.8h
-; CHECK-SD-NOFP16-NEXT:    fcvtn2 v1.8h, v0.4s
-; CHECK-SD-NOFP16-NEXT:    fcvtl v0.4s, v1.4h
-; CHECK-SD-NOFP16-NEXT:    fcvtl2 v1.4s, v1.8h
-; CHECK-SD-NOFP16-NEXT:    fadd v0.4s, v0.4s, v3.4s
-; CHECK-SD-NOFP16-NEXT:    fadd v1.4s, v1.4s, v2.4s
 ; CHECK-SD-NOFP16-NEXT:    fcvtn v0.4h, v0.4s
-; CHECK-SD-NOFP16-NEXT:    fcvtn2 v0.8h, v1.4s
+; CHECK-SD-NOFP16-NEXT:    fcvtl v1.4s, v1.4h
+; CHECK-SD-NOFP16-NEXT:    fcvtl v0.4s, v0.4h
+; CHECK-SD-NOFP16-NEXT:    fadd v1.4s, v1.4s, v3.4s
+; CHECK-SD-NOFP16-NEXT:    fadd v2.4s, v0.4s, v2.4s
+; CHECK-SD-NOFP16-NEXT:    fcvtn v0.4h, v1.4s
+; CHECK-SD-NOFP16-NEXT:    fcvtn2 v0.8h, v2.4s
 ; CHECK-SD-NOFP16-NEXT:    ret
 ;
 ; CHECK-SD-FP16-LABEL: fmuladd_v7f16:
@@ -949,13 +949,13 @@ define <8 x half> @fmuladd_v8f16(<8 x half> %a, <8 x half> %b, <8 x half> %c) {
 ; CHECK-SD-NOFP16-NEXT:    fcvtn v1.4h, v3.4s
 ; CHECK-SD-NOFP16-NEXT:    fcvtl v3.4s, v2.4h
 ; CHECK-SD-NOFP16-NEXT:    fcvtl2 v2.4s, v2.8h
-; CHECK-SD-NOFP16-NEXT:    fcvtn2 v1.8h, v0.4s
-; CHECK-SD-NOFP16-NEXT:    fcvtl v0.4s, v1.4h
-; CHECK-SD-NOFP16-NEXT:    fcvtl2 v1.4s, v1.8h
-; CHECK-SD-NOFP16-NEXT:    fadd v0.4s, v0.4s, v3.4s
-; CHECK-SD-NOFP16-NEXT:    fadd v1.4s, v1.4s, v2.4s
 ; CHECK-SD-NOFP16-NEXT:    fcvtn v0.4h, v0.4s
-; CHECK-SD-NOFP16-NEXT:    fcvtn2 v0.8h, v1.4s
+; CHECK-SD-NOFP16-NEXT:    fcvtl v1.4s, v1.4h
+; CHECK-SD-NOFP16-NEXT:    fcvtl v0.4s, v0.4h
+; CHECK-SD-NOFP16-NEXT:    fadd v1.4s, v1.4s, v3.4s
+; CHECK-SD-NOFP16-NEXT:    fadd v2.4s, v0.4s, v2.4s
+; CHECK-SD-NOFP16-NEXT:    fcvtn v0.4h, v1.4s
+; CHECK-SD-NOFP16-NEXT:    fcvtn2 v0.8h, v2.4s
 ; CHECK-SD-NOFP16-NEXT:    ret
 ;
 ; CHECK-SD-FP16-LABEL: fmuladd_v8f16:
@@ -1010,25 +1010,25 @@ define <16 x half> @fmuladd_v16f16(<16 x half> %a, <16 x half> %b, <16 x half> %
 ; CHECK-SD-NOFP16-NEXT:    fmul v0.4s, v0.4s, v2.4s
 ; CHECK-SD-NOFP16-NEXT:    fmul v1.4s, v1.4s, v3.4s
 ; CHECK-SD-NOFP16-NEXT:    fcvtn v2.4h, v6.4s
-; CHECK-SD-NOFP16-NEXT:    fcvtl v6.4s, v5.4h
-; CHECK-SD-NOFP16-NEXT:    fcvtn v3.4h, v7.4s
-; CHECK-SD-NOFP16-NEXT:    fcvtn2 v2.8h, v0.4s
-; CHECK-SD-NOFP16-NEXT:    fcvtl v0.4s, v4.4h
+; CHECK-SD-NOFP16-NEXT:    fcvtl v6.4s, v4.4h
 ; CHECK-SD-NOFP16-NEXT:    fcvtl2 v4.4s, v4.8h
-; CHECK-SD-NOFP16-NEXT:    fcvtn2 v3.8h, v1.4s
-; CHECK-SD-NOFP16-NEXT:    fcvtl v1.4s, v2.4h
-; CHECK-SD-NOFP16-NEXT:    fcvtl2 v2.4s, v2.8h
-; CHECK-SD-NOFP16-NEXT:    fcvtl v7.4s, v3.4h
-; CHECK-SD-NOFP16-NEXT:    fadd v0.4s, v1.4s, v0.4s
-; CHECK-SD-NOFP16-NEXT:    fcvtl2 v1.4s, v3.8h
-; CHECK-SD-NOFP16-NEXT:    fcvtl2 v3.4s, v5.8h
-; CHECK-SD-NOFP16-NEXT:    fadd v5.4s, v7.4s, v6.4s
-; CHECK-SD-NOFP16-NEXT:    fadd v2.4s, v2.4s, v4.4s
+; CHECK-SD-NOFP16-NEXT:    fcvtn v3.4h, v7.4s
 ; CHECK-SD-NOFP16-NEXT:    fcvtn v0.4h, v0.4s
-; CHECK-SD-NOFP16-NEXT:    fadd v3.4s, v1.4s, v3.4s
-; CHECK-SD-NOFP16-NEXT:    fcvtn v1.4h, v5.4s
-; CHECK-SD-NOFP16-NEXT:    fcvtn2 v0.8h, v2.4s
-; CHECK-SD-NOFP16-NEXT:    fcvtn2 v1.8h, v3.4s
+; CHECK-SD-NOFP16-NEXT:    fcvtl v7.4s, v5.4h
+; CHECK-SD-NOFP16-NEXT:    fcvtn v1.4h, v1.4s
+; CHECK-SD-NOFP16-NEXT:    fcvtl2 v5.4s, v5.8h
+; CHECK-SD-NOFP16-NEXT:    fcvtl v2.4s, v2.4h
+; CHECK-SD-NOFP16-NEXT:    fcvtl v3.4s, v3.4h
+; CHECK-SD-NOFP16-NEXT:    fcvtl v0.4s, v0.4h
+; CHECK-SD-NOFP16-NEXT:    fcvtl v1.4s, v1.4h
+; CHECK-SD-NOFP16-NEXT:    fadd v2.4s, v2.4s, v6.4s
+; CHECK-SD-NOFP16-NEXT:    fadd v3.4s, v3.4s, v7.4s
+; CHECK-SD-NOFP16-NEXT:    fadd v4.4s, v0.4s, v4.4s
+; CHECK-SD-NOFP16-NEXT:    fcvtn v0.4h, v2.4s
+; CHECK-SD-NOFP16-NEXT:    fadd v2.4s, v1.4s, v5.4s
+; CHECK-SD-NOFP16-NEXT:    fcvtn v1.4h, v3.4s
+; CHECK-SD-NOFP16-NEXT:    fcvtn2 v0.8h, v4.4s
+; CHECK-SD-NOFP16-NEXT:    fcvtn2 v1.8h, v2.4s
 ; CHECK-SD-NOFP16-NEXT:    ret
 ;
 ; CHECK-SD-FP16-LABEL: fmuladd_v16f16:
@@ -1317,16 +1317,16 @@ define <7 x half> @fmul_v7f16(<7 x half> %a, <7 x half> %b, <7 x half> %c) {
 ; CHECK-SD-NOFP16-NEXT:    fcvtl2 v0.4s, v0.8h
 ; CHECK-SD-NOFP16-NEXT:    fmul v3.4s, v4.4s, v3.4s
 ; CHECK-SD-NOFP16-NEXT:    fmul v0.4s, v0.4s, v1.4s
-; CHECK-SD-NOFP16-NEXT:    fcvtn v1.4h, v3.4s
+; CHECK-SD-NOFP16-NEXT:    fcvtn v3.4h, v3.4s
+; CHECK-SD-NOFP16-NEXT:    fcvtn v0.4h, v0.4s
+; CHECK-SD-NOFP16-NEXT:    fcvtl v1.4s, v3.4h
 ; CHECK-SD-NOFP16-NEXT:    fcvtl v3.4s, v2.4h
 ; CHECK-SD-NOFP16-NEXT:    fcvtl2 v2.4s, v2.8h
-; CHECK-SD-NOFP16-NEXT:    fcvtn2 v1.8h, v0.4s
-; CHECK-SD-NOFP16-NEXT:    fcvtl v0.4s, v1.4h
-; CHECK-SD-NOFP16-NEXT:    fcvtl2 v1.4s, v1.8h
-; CHECK-SD-NOFP16-NEXT:    fadd v0.4s, v0.4s, v3.4s
-; CHECK-SD-NOFP16-NEXT:    fadd v1.4s, v1.4s, v2.4s
-; CHECK-SD-NOFP16-NEXT:    fcvtn v0.4h, v0.4s
-; CHECK-SD-NOFP16-NEXT:    fcvtn2 v0.8h, v1.4s
+; CHECK-SD-NOFP16-NEXT:    fcvtl v0.4s, v0.4h
+; CHECK-SD-NOFP16-NEXT:    fadd v1.4s, v1.4s, v3.4s
+; CHECK-SD-NOFP16-NEXT:    fadd v2.4s, v0.4s, v2.4s
+; CHECK-SD-NOFP16-NEXT:    fcvtn v0.4h, v1.4s
+; CHECK-SD-NOFP16-NEXT:    fcvtn2 v0.8h, v2.4s
 ; CHECK-SD-NOFP16-NEXT:    ret
 ;
 ; CHECK-SD-FP16-LABEL: fmul_v7f16:
@@ -1433,16 +1433,16 @@ define <8 x half> @fmul_v8f16(<8 x half> %a, <8 x half> %b, <8 x half> %c) {
 ; CHECK-SD-NOFP16-NEXT:    fcvtl2 v0.4s, v0.8h
 ; CHECK-SD-NOFP16-NEXT:    fmul v3.4s, v4.4s, v3.4s
 ; CHECK-SD-NOFP16-NEXT:    fmul v0.4s, v0.4s, v1.4s
-; CHECK-SD-NOFP16-NEXT:    fcvtn v1.4h, v3.4s
+; CHECK-SD-NOFP16-NEXT:    fcvtn v3.4h, v3.4s
+; CHECK-SD-NOFP16-NEXT:    fcvtn v0.4h, v0.4s
+; CHECK-SD-NOFP16-NEXT:    fcvtl v1.4s, v3.4h
 ; CHECK-SD-NOFP16-NEXT:    fcvtl v3.4s, v2.4h
 ; CHECK-SD-NOFP16-NEXT:    fcvtl2 v2.4s, v2.8h
-; CHECK-SD-NOFP16-NEXT:    fcvtn2 v1.8h, v0.4s
-; CHECK-SD-NOFP16-NEXT:    fcvtl v0.4s, v1.4h
-; CHECK-SD-NOFP16-NEXT:    fcvtl2 v1.4s, v1.8h
-; CHECK-SD-NOFP16-NEXT:    fadd v0.4s, v0.4s, v3.4s
-; CHECK-SD-NOFP16-NEXT:    fadd v1.4s, v1.4s, v2.4s
-; CHECK-SD-NOFP16-NEXT:    fcvtn v0.4h, v0.4s
-; CHECK-SD-NOFP16-NEXT:    fcvtn2 v0.8h, v1.4s
+; CHECK-SD-NOFP16-NEXT:    fcvtl v0.4s, v0.4h
+; CHECK-SD-NOFP16-NEXT:    fadd v1.4s, v1.4s, v3.4s
+; CHECK-SD-NOFP16-NEXT:    fadd v2.4s, v0.4s, v2.4s
+; CHECK-SD-NOFP16-NEXT:    fcvtn v0.4h, v1.4s
+; CHECK-SD-NOFP16-NEXT:    fcvtn2 v0.8h, v2.4s
 ; CHECK-SD-NOFP16-NEXT:    ret
 ;
 ; CHECK-SD-FP16-LABEL: fmul_v8f16:
@@ -1498,25 +1498,25 @@ define <16 x half> @fmul_v16f16(<16 x half> %a, <16 x half> %b, <16 x half> %c) 
 ; CHECK-SD-NOFP16-NEXT:    fmul v0.4s, v0.4s, v2.4s
 ; CHECK-SD-NOFP16-NEXT:    fmul v1.4s, v1.4s, v3.4s
 ; CHECK-SD-NOFP16-NEXT:    fcvtn v2.4h, v6.4s
-; CHECK-SD-NOFP16-NEXT:    fcvtl v6.4s, v5.4h
-; CHECK-SD-NOFP16-NEXT:    fcvtn v3.4h, v7.4s
-; CHECK-SD-NOFP16-NEXT:    fcvtn2 v2.8h, v0.4s
-; CHECK-SD-NOFP16-NEXT:    fcvtl v0.4s, v4.4h
+; CHECK-SD-NOFP16-NEXT:    fcvtl v6.4s, v4.4h
 ; CHECK-SD-NOFP16-NEXT:    fcvtl2 v4.4s, v4.8h
-; CHECK-SD-NOFP16-NEXT:    fcvtn2 v3.8h, v1.4s
-; CHECK-SD-NOFP16-NEXT:    fcvtl v1.4s, v2.4h
-; CHECK-SD-NOFP16-NEXT:    fcvtl2 v2.4s, v2.8h
-; CHECK-SD-NOFP16-NEXT:    fcvtl v7.4s, v3.4h
-; CHECK-SD-NOFP16-NEXT:    fadd v0.4s, v1.4s, v0.4s
-; CHECK-SD-NOFP16-NEXT:    fcvtl2 v1.4s, v3.8h
-; CHECK-SD-NOFP16-NEXT:    fcvtl2 v3.4s, v5.8h
-; CHECK-SD-NOFP16-NEXT:    fadd v5.4s, v7.4s, v6.4s
-; CHECK-SD-NOFP16-NEXT:    fadd v2.4s, v2.4s, v4.4s
+; CHECK-SD-NOFP16-NEXT:    fcvtn v3.4h, v7.4s
 ; CHECK-SD-NOFP16-NEXT:    fcvtn v0.4h, v0.4s
-; CHECK-SD-NOFP16-NEXT:    fadd v3.4s, v1.4s, v3.4s
-; CHECK-SD-NOFP16-NEXT:    fcvtn v1.4h, v5.4s
-; CHECK-SD-NOFP16-NEXT:    fcvtn2 v0.8h, v2.4s
-; CHECK-SD-NOFP16-NEXT:    fcvtn2 v1.8h, v3.4s
+; CHECK-SD-NOFP16-NEXT:    fcvtl v7.4s, v5.4h
+; CHECK-SD-NOFP16-NEXT:    fcvtn v1.4h, v1.4s
+; CHECK-SD-NOFP16-NEXT:    fcvtl2 v5.4s, v5.8h
+; CHECK-SD-NOFP16-NEXT:    fcvtl v2.4s, v2.4h
+; CHECK-SD-NOFP16-NEXT:    fcvtl v3.4s, v3.4h
+; CHECK-SD-NOFP16-NEXT:    fcvtl v0.4s, v0.4h
+; CHECK-SD-NOFP16-NEXT:    fcvtl v1.4s, v1.4h
+; CHECK-SD-NOFP16-NEXT:    fadd v2.4s, v2.4s, v6.4s
+; CHECK-SD-NOFP16-NEXT:    fadd v3.4s, v3.4s, v7.4s
+; CHECK-SD-NOFP16-NEXT:    fadd v4.4s, v0.4s, v4.4s
+; CHECK-SD-NOFP16-NEXT:    fcvtn v0.4h, v2.4s
+; CHECK-SD-NOFP16-NEXT:    fadd v2.4s, v1.4s, v5.4s
+; CHECK-SD-NOFP16-NEXT:    fcvtn v1.4h, v3.4s
+; CHECK-SD-NOFP16-NEXT:    fcvtn2 v0.8h, v4.4s
+; CHECK-SD-NOFP16-NEXT:    fcvtn2 v1.8h, v2.4s
 ; CHECK-SD-NOFP16-NEXT:    ret
 ;
 ; CHECK-SD-FP16-LABEL: fmul_v16f16:

@@ -694,7 +694,8 @@ public:
         return {};
       }
 
-      if (mlir::isa<cir::SingleType, cir::DoubleType>(value.getType())) {
+      if (mlir::isa<cir::SingleType, cir::DoubleType, cir::LongDoubleType>(
+              value.getType())) {
         // Create the inc/dec operation.
         // NOTE(CIR): clang calls CreateAdd but folds this to a unary op
         value = emitIncOrDec(e, value);

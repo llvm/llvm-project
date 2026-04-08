@@ -8852,6 +8852,25 @@ Example:
     !0 = !{ptr @a}
     !1 = !{ptr @b}
 
+'``inline_history``' Metadata
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+The ``inline_history`` metadata may be attached to a call instruction. It
+indicates that the call instruction has been inlined from the referenced
+functions. The call itself should not be inlined if it is a call to any of the
+referenced functions since that could result in infinite inlining as we
+continually inline through mutually recursive functions.
+
+This is intended to be added by and used by inliner passes.
+
+The metadata operands must all be function pointers or ``null``. ``null`` can
+appear when the referenced function is erased from the module, e.g. an internal
+function that has had all calls to it inlined.
+
+.. code-block:: text
+
+    call void @foo(), !inline_history !0
+
+    !0 = !{ptr @bar, null, ptr @baz}
 
 Module Flags Metadata
 =====================

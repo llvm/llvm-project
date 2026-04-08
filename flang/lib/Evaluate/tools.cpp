@@ -1195,6 +1195,9 @@ struct HasVectorSubscriptHelper
   bool operator()(const ProcedureRef &) const {
     return false; // don't descend into function call arguments
   }
+  template <typename T> bool operator()(const ConditionalExpr<T> &) const {
+    return false; // not a variable designator
+  }
 };
 
 bool HasVectorSubscript(const Expr<SomeType> &expr) {
@@ -1736,6 +1739,14 @@ struct ArgumentExtractor
     return {operation::OperationCode(x), {AsSomeExpr(x)}};
   }
 
+  template <typename T> Result operator()(const ConditionalExpr<T> &x) const {
+    // Return the condition and then/else branches as immediate operands;
+    // nested conditionals are not permitted in an OpenMP atomic context.
+    return {Operator::Conditional,
+        {AsSomeExpr(x.condition()), AsSomeExpr(x.thenValue()),
+            AsSomeExpr(x.elseValue())}};
+  }
+
   template <typename... Rs>
   Result Combine(Result &&result, Rs &&...results) const {
     // There shouldn't be any combining needed, since we're stopping the
@@ -1773,6 +1784,8 @@ std::string operation::ToString(operation::Operator op) {
     return "ASSOCIATED";
   case Operator::Call:
     return "function-call";
+  case Operator::Conditional:
+    return "conditional";
   case Operator::Constant:
     return "constant";
   case Operator::Convert:
@@ -1899,6 +1912,13 @@ struct ConvertCollector
     } else {
       return {AsSomeExpr(x.derived()), {}};
     }
+  }
+
+  template <typename T> Result operator()(const ConditionalExpr<T> &x) const {
+    // ConvertCollector tracks the typed-value conversion chain (for OMP ATOMIC
+    // validation); the condition is a LOGICAL(4) selector, not a value output,
+    // so only the value branches are collected.
+    return Combine((*this)(x.thenValue()), (*this)(x.elseValue()));
   }
 
   template <typename... Rs>

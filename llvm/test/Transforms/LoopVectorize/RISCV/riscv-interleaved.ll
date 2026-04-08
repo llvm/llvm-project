@@ -8,8 +8,7 @@
 ; CHECK: %{{.*}} = add {{.*}}, 16
 ; CHECK: %{{.*}} = add <8 x i32> %{{.*}}, splat (i32 8)
 
-; Function Attrs: nofree norecurse nosync nounwind writeonly
-define void @foo(i32 signext %n, ptr nocapture %A) #0 {
+define void @foo(i32 signext %n, ptr nocapture %A) {
 entry:
   %cmp5 = icmp sgt i32 %n, 0
   br i1 %cmp5, label %for.body.preheader, label %for.cond.cleanup
@@ -33,8 +32,6 @@ for.body:                                         ; preds = %for.body.preheader,
   %exitcond.not = icmp eq i64 %indvars.iv.next, %wide.trip.count
   br i1 %exitcond.not, label %for.cond.cleanup.loopexit, label %for.body, !llvm.loop !8
 }
-
-attributes #0 = { nofree norecurse nosync nounwind writeonly "frame-pointer"="none" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+64bit,+a,+c,+m,+relax,-save-restore" }
 
 !llvm.module.flags = !{!0, !1, !2}
 !llvm.ident = !{!3}

@@ -36,7 +36,7 @@ MCObjectStreamer::MCObjectStreamer(MCContext &Context,
   assert(Assembler->getBackendPtr() && Assembler->getEmitterPtr());
   IsObj = true;
   setAllowAutoPadding(Assembler->getBackend().allowAutoPadding());
-  if (Context.getTargetOptions() && Context.getTargetOptions()->MCRelaxAll)
+  if (Context.getTargetOptions()->MCRelaxAll)
     Assembler->setRelaxAll(true);
 }
 
@@ -171,8 +171,7 @@ void MCObjectStreamer::emitAbsoluteSymbolDiffAsULEB128(const MCSymbol *Hi,
 void MCObjectStreamer::reset() {
   if (Assembler) {
     Assembler->reset();
-    if (getContext().getTargetOptions())
-      Assembler->setRelaxAll(getContext().getTargetOptions()->MCRelaxAll);
+    Assembler->setRelaxAll(getContext().getTargetOptions()->MCRelaxAll);
   }
   EmitEHFrame = true;
   EmitDebugFrame = false;
@@ -198,8 +197,7 @@ void MCObjectStreamer::emitFrames() {
   if (EmitDebugFrame)
     MCDwarfFrameEmitter::emit(*this, false);
 
-  if (EmitSFrame || (getContext().getTargetOptions() &&
-                     getContext().getTargetOptions()->EmitSFrameUnwind))
+  if (EmitSFrame || getContext().getTargetOptions()->EmitSFrameUnwind)
     MCSFrameEmitter::emit(*this);
 }
 

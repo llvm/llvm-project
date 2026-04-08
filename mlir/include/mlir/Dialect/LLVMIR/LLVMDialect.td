@@ -62,7 +62,11 @@ def LLVM_Dialect : Dialect {
     static StringRef getSExtAttrName() { return "llvm.signext"; }
     static StringRef getStackAlignmentAttrName() { return "llvm.alignstack"; }
     static StringRef getStructRetAttrName() { return "llvm.sret"; }
+    static StringRef getWritableAttrName() { return "llvm.writable"; }
     static StringRef getWriteOnlyAttrName() { return "llvm.writeonly"; }
+    static StringRef getDeadOnUnwindAttrName() { return "llvm.dead_on_unwind"; }
+    static StringRef getDeadOnReturnAttrName() { return "llvm.dead_on_return"; }
+    static StringRef getNoFPClassAttrName() { return "llvm.nofpclass"; }
     static StringRef getZExtAttrName() { return "llvm.zeroext"; }
     static StringRef getOpBundleSizesAttrName() { return "op_bundle_sizes"; }
     static StringRef getOpBundleTagsAttrName() { return "op_bundle_tags"; }

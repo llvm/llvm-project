@@ -144,7 +144,7 @@ const char *ScriptedFrame::GetFunctionName() {
   std::optional<std::string> function_name = GetInterface()->GetFunctionName();
   if (!function_name)
     return StackFrame::GetFunctionName();
-  return ConstString(function_name->c_str()).AsCString();
+  return ConstString(function_name->c_str()).AsCString(nullptr);
 }
 
 const char *ScriptedFrame::GetDisplayFunctionName() {
@@ -153,7 +153,7 @@ const char *ScriptedFrame::GetDisplayFunctionName() {
       GetInterface()->GetDisplayFunctionName();
   if (!function_name)
     return StackFrame::GetDisplayFunctionName();
-  return ConstString(function_name->c_str()).AsCString();
+  return ConstString(function_name->c_str()).AsCString(nullptr);
 }
 
 bool ScriptedFrame::IsInlined() { return GetInterface()->IsInlined(); }
@@ -311,7 +311,8 @@ lldb::ValueObjectSP ScriptedFrame::GetValueObjectForFrameVariable(
   if (!values)
     return {};
 
-  return values->FindValueObjectByValueName(variable_sp->GetName().AsCString());
+  return values->FindValueObjectByValueName(
+      variable_sp->GetName().AsCString(nullptr));
 }
 
 lldb::ValueObjectSP ScriptedFrame::GetValueForVariableExpressionPath(

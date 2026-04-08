@@ -167,7 +167,7 @@ def Tosa_MatMulOpQuantInfoBuilder : OpBuilder<
   }]>;
 
 // Both the tosa.avg_pool2d and unary ops use the same
-// UnaruOpQuantizationAttr but the avg_pool operator has its own builder as it
+// UnaryOpQuantizationAttr but the avg_pool operator has its own builder as it
 // has additional parameters not part of the unary ops.
 def Tosa_AvgPool2dOpQuantInfoBuilder : OpBuilder<
   (ins "::mlir::Type":$outputType, "::mlir::Value":$input,
@@ -176,6 +176,17 @@ def Tosa_AvgPool2dOpQuantInfoBuilder : OpBuilder<
   [{
     buildAvgPool2dOpWithQuantInfo($_builder, $_state, outputType,
                                   input, kernel, stride, pad, acc_type);
+  }]>;
+
+def Tosa_AvgPool2dAdaptiveOpQuantInfoBuilder
+    : OpBuilder<(ins "::mlir::Type":$outputType, "::mlir::Value":$input,
+                    "::mlir::DenseI64ArrayAttr":$kernel,
+                    "::mlir::DenseI64ArrayAttr":$stride,
+                    "::mlir::DenseI64ArrayAttr":$pad,
+                    "::mlir::TypeAttr":$acc_type),
+                [{
+    buildAvgPool2dAdaptiveOpWithQuantInfo($_builder, $_state, outputType,
+                                          input, kernel, stride, pad, acc_type);
   }]>;
 
 // This builder is called on single-parameter negate operators that have a scale

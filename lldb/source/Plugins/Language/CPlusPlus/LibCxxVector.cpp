@@ -269,7 +269,7 @@ lldb_private::formatters::LibcxxVectorBoolSyntheticFrontEnd::
     GetIndexOfChildWithName(ConstString name) {
   if (!m_count || !m_base_data_address)
     return llvm::createStringErrorV("type has no child named '{0}'", name);
-  auto optional_idx = ExtractIndexFromString(name.AsCString());
+  auto optional_idx = ExtractIndexFromString(name.AsCString(nullptr));
   if (!optional_idx) {
     return llvm::createStringErrorV("type has no child named '{0}'", name);
   }

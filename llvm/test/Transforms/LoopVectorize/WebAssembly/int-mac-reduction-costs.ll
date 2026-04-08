@@ -11,17 +11,17 @@ define hidden i32 @i32_mac_s8(ptr nocapture noundef readonly %a, ptr nocapture n
 ; CHECK: LV: Found an estimated cost of 0 for VF 1 For instruction:   %conv2 = sext i8 %1 to i32
 ; CHECK: LV: Found an estimated cost of 1 for VF 1 For instruction:   %mul = mul nsw i32 %conv2, %conv
 
-; CHECK: LV: Found an estimated cost of 3 for VF 2 For instruction:   %0 = load i8, ptr %arrayidx, align 1
-; CHECK: LV: Found an estimated cost of 0 for VF 2 For instruction:   %conv = sext i8 %0 to i32
-; CHECK: LV: Found an estimated cost of 3 for VF 2 For instruction:   %1 = load i8, ptr %arrayidx1, align 1
-; CHECK: LV: Found an estimated cost of 0 for VF 2 For instruction:   %conv2 = sext i8 %1 to i32
-; CHECK: LV: Found an estimated cost of 1 for VF 2 For instruction:   %mul = mul nsw i32 %conv2, %conv
+; CHECK: Cost of 3 for VF 2: WIDEN ir<%0> = load
+; CHECK: Cost of 0 for VF 2: WIDEN-CAST ir<%conv> = sext ir<%0> to i32
+; CHECK: Cost of 3 for VF 2: WIDEN ir<%1> = load
+; CHECK: Cost of 0 for VF 2: WIDEN-CAST ir<%conv2> = sext ir<%1> to i32
+; CHECK: Cost of 1 for VF 2: WIDEN ir<%mul> = mul nsw ir<%conv2>, ir<%conv>
 
-; CHECK: LV: Found an estimated cost of 2 for VF 4 For instruction:   %0 = load i8, ptr %arrayidx, align 1
-; CHECK: LV: Found an estimated cost of 1 for VF 4 For instruction:   %conv = sext i8 %0 to i32
-; CHECK: LV: Found an estimated cost of 2 for VF 4 For instruction:   %1 = load i8, ptr %arrayidx1, align 1
-; CHECK: LV: Found an estimated cost of 1 for VF 4 For instruction:   %conv2 = sext i8 %1 to i32
-; CHECK: LV: Found an estimated cost of 1 for VF 4 For instruction:   %mul = mul nsw i32 %conv2, %conv
+; CHECK: Cost of 2 for VF 4: WIDEN ir<%0> = load
+; CHECK: Cost of 1 for VF 4: WIDEN-CAST ir<%conv> = sext ir<%0> to i32
+; CHECK: Cost of 2 for VF 4: WIDEN ir<%1> = load
+; CHECK: Cost of 1 for VF 4: WIDEN-CAST ir<%conv2> = sext ir<%1> to i32
+; CHECK: Cost of 1 for VF 4: WIDEN ir<%mul> = mul nsw ir<%conv2>, ir<%conv>
 ; CHECK: LV: Selecting VF: 4.
 entry:
   %cmp7.not = icmp eq i32 %N, 0
@@ -55,17 +55,17 @@ define hidden i32 @i32_mac_s16(ptr nocapture noundef readonly %a, ptr nocapture 
 ; CHECK: LV: Found an estimated cost of 0 for VF 1 For instruction:   %conv2 = sext i16 %1 to i32
 ; CHECK: LV: Found an estimated cost of 1 for VF 1 For instruction:   %mul = mul nsw i32 %conv2, %conv
 
-; CHECK: LV: Found an estimated cost of 2 for VF 2 For instruction:   %0 = load i16, ptr %arrayidx, align 2
-; CHECK: LV: Found an estimated cost of 0 for VF 2 For instruction:   %conv = sext i16 %0 to i32
-; CHECK: LV: Found an estimated cost of 2 for VF 2 For instruction:   %1 = load i16, ptr %arrayidx1, align 2
-; CHECK: LV: Found an estimated cost of 0 for VF 2 For instruction:   %conv2 = sext i16 %1 to i32
-; CHECK: LV: Found an estimated cost of 1 for VF 2 For instruction:   %mul = mul nsw i32 %conv2, %conv
+; CHECK: Cost of 2 for VF 2: WIDEN ir<%0> = load
+; CHECK: Cost of 0 for VF 2: WIDEN-CAST ir<%conv> = sext ir<%0> to i32
+; CHECK: Cost of 2 for VF 2: WIDEN ir<%1> = load
+; CHECK: Cost of 0 for VF 2: WIDEN-CAST ir<%conv2> = sext ir<%1> to i32
+; CHECK: Cost of 1 for VF 2: WIDEN ir<%mul> = mul nsw ir<%conv2>, ir<%conv>
 
-; CHECK: LV: Found an estimated cost of 2 for VF 4 For instruction:   %0 = load i16, ptr %arrayidx, align 2
-; CHECK: LV: Found an estimated cost of 0 for VF 4 For instruction:   %conv = sext i16 %0 to i32
-; CHECK: LV: Found an estimated cost of 2 for VF 4 For instruction:   %1 = load i16, ptr %arrayidx1, align 2
-; CHECK: LV: Found an estimated cost of 0 for VF 4 For instruction:   %conv2 = sext i16 %1 to i32
-; CHECK: LV: Found an estimated cost of 1 for VF 4 For instruction:   %mul = mul nsw i32 %conv2, %conv
+; CHECK: Cost of 2 for VF 4: WIDEN ir<%0> = load
+; CHECK: Cost of 0 for VF 4: WIDEN-CAST ir<%conv> = sext ir<%0> to i32
+; CHECK: Cost of 2 for VF 4: WIDEN ir<%1> = load
+; CHECK: Cost of 0 for VF 4: WIDEN-CAST ir<%conv2> = sext ir<%1> to i32
+; CHECK: Cost of 1 for VF 4: WIDEN ir<%mul> = mul nsw ir<%conv2>, ir<%conv>
 ; CHECK: LV: Selecting VF: 4.
 entry:
   %cmp7.not = icmp eq i32 %N, 0
@@ -99,11 +99,11 @@ define hidden i64 @i64_mac_s16(ptr nocapture noundef readonly %a, ptr nocapture 
 ; CHECK: LV: Found an estimated cost of 0 for VF 1 For instruction:   %conv2 = sext i16 %1 to i64
 ; CHECK: LV: Found an estimated cost of 1 for VF 1 For instruction:   %mul = mul nsw i64 %conv2, %conv
 
-; CHECK: LV: Found an estimated cost of 2 for VF 2 For instruction:   %0 = load i16, ptr %arrayidx, align 2
-; CHECK: LV: Found an estimated cost of 1 for VF 2 For instruction:   %conv = sext i16 %0 to i64
-; CHECK: LV: Found an estimated cost of 2 for VF 2 For instruction:   %1 = load i16, ptr %arrayidx1, align 2
-; CHECK: LV: Found an estimated cost of 1 for VF 2 For instruction:   %conv2 = sext i16 %1 to i64
-; CHECK: LV: Found an estimated cost of 1 for VF 2 For instruction:   %mul = mul nsw i64 %conv2, %conv
+; CHECK: Cost of 2 for VF 2: WIDEN ir<%0> = load
+; CHECK: Cost of 1 for VF 2: WIDEN-CAST ir<%conv> = sext ir<%0> to i64
+; CHECK: Cost of 2 for VF 2: WIDEN ir<%1> = load
+; CHECK: Cost of 1 for VF 2: WIDEN-CAST ir<%conv2> = sext ir<%1> to i64
+; CHECK: Cost of 1 for VF 2: WIDEN ir<%mul> = mul nsw ir<%conv2>, ir<%conv>
 ; CHECK: LV: Selecting VF: 2.
 entry:
   %cmp7.not = icmp eq i32 %N, 0
@@ -136,10 +136,10 @@ define hidden i64 @i64_mac_s32(ptr nocapture noundef readonly %a, ptr nocapture 
 ; CHECK: LV: Found an estimated cost of 1 for VF 1 For instruction:   %mul = mul i32 %1, %0
 ; CHECK: LV: Found an estimated cost of 1 for VF 1 For instruction:   %conv = sext i32 %mul to i64
 
-; CHECK: LV: Found an estimated cost of 2 for VF 2 For instruction:   %0 = load i32, ptr %arrayidx, align 4
-; CHECK: LV: Found an estimated cost of 2 for VF 2 For instruction:   %1 = load i32, ptr %arrayidx1, align 4
-; CHECK: LV: Found an estimated cost of 1 for VF 2 For instruction:   %mul = mul i32 %1, %0
-; CHECK: LV: Found an estimated cost of 1 for VF 2 For instruction:   %conv = sext i32 %mul to i64
+; CHECK: Cost of 2 for VF 2: WIDEN ir<%0> = load
+; CHECK: Cost of 2 for VF 2: WIDEN ir<%1> = load
+; CHECK: Cost of 1 for VF 2: WIDEN ir<%mul> = mul ir<%1>, ir<%0>
+; CHECK: Cost of 1 for VF 2: WIDEN-CAST ir<%conv> = sext ir<%mul> to i64
 ; CHECK: LV: Selecting VF: 2.
 entry:
   %cmp6.not = icmp eq i32 %N, 0
@@ -172,17 +172,17 @@ define hidden i32 @i32_mac_u8(ptr nocapture noundef readonly %a, ptr nocapture n
 ; CHECK: LV: Found an estimated cost of 0 for VF 1 For instruction:   %conv2 = zext i8 %1 to i32
 ; CHECK: LV: Found an estimated cost of 1 for VF 1 For instruction:   %mul = mul nuw nsw i32 %conv2, %conv
 
-; CHECK: LV: Found an estimated cost of 3 for VF 2 For instruction:   %0 = load i8, ptr %arrayidx, align 1
-; CHECK: LV: Found an estimated cost of 0 for VF 2 For instruction:   %conv = zext i8 %0 to i32
-; CHECK: LV: Found an estimated cost of 3 for VF 2 For instruction:   %1 = load i8, ptr %arrayidx1, align 1
-; CHECK: LV: Found an estimated cost of 0 for VF 2 For instruction:   %conv2 = zext i8 %1 to i32
-; CHECK: LV: Found an estimated cost of 1 for VF 2 For instruction:   %mul = mul nuw nsw i32 %conv2, %conv
+; CHECK: Cost of 3 for VF 2: WIDEN ir<%0> = load
+; CHECK: Cost of 0 for VF 2: WIDEN-CAST ir<%conv> = zext ir<%0> to i32
+; CHECK: Cost of 3 for VF 2: WIDEN ir<%1> = load
+; CHECK: Cost of 0 for VF 2: WIDEN-CAST ir<%conv2> = zext ir<%1> to i32
+; CHECK: Cost of 1 for VF 2: WIDEN ir<%mul> = mul nuw nsw ir<%conv2>, ir<%conv>
 
-; CHECK: LV: Found an estimated cost of 2 for VF 4 For instruction:   %0 = load i8, ptr %arrayidx, align 1
-; CHECK: LV: Found an estimated cost of 1 for VF 4 For instruction:   %conv = zext i8 %0 to i32
-; CHECK: LV: Found an estimated cost of 2 for VF 4 For instruction:   %1 = load i8, ptr %arrayidx1, align 1
-; CHECK: LV: Found an estimated cost of 1 for VF 4 For instruction:   %conv2 = zext i8 %1 to i32
-; CHECK: LV: Found an estimated cost of 1 for VF 4 For instruction:   %mul = mul nuw nsw i32 %conv2, %conv
+; CHECK: Cost of 2 for VF 4: WIDEN ir<%0> = load
+; CHECK: Cost of 1 for VF 4: WIDEN-CAST ir<%conv> = zext ir<%0> to i32
+; CHECK: Cost of 2 for VF 4: WIDEN ir<%1> = load
+; CHECK: Cost of 1 for VF 4: WIDEN-CAST ir<%conv2> = zext ir<%1> to i32
+; CHECK: Cost of 1 for VF 4: WIDEN ir<%mul> = mul nuw nsw ir<%conv2>, ir<%conv>
 ; CHECK: LV: Selecting VF: 4.
 entry:
   %cmp7.not = icmp eq i32 %N, 0
@@ -216,17 +216,17 @@ define hidden i32 @i32_mac_u16(ptr nocapture noundef readonly %a, ptr nocapture 
 ; CHECK: LV: Found an estimated cost of 0 for VF 1 For instruction:   %conv2 = zext i16 %1 to i32
 ; CHECK: LV: Found an estimated cost of 1 for VF 1 For instruction:   %mul = mul nuw nsw i32 %conv2, %conv
 
-; CHECK: LV: Found an estimated cost of 2 for VF 2 For instruction:   %0 = load i16, ptr %arrayidx, align 2
-; CHECK: LV: Found an estimated cost of 0 for VF 2 For instruction:   %conv = zext i16 %0 to i32
-; CHECK: LV: Found an estimated cost of 2 for VF 2 For instruction:   %1 = load i16, ptr %arrayidx1, align 2
-; CHECK: LV: Found an estimated cost of 0 for VF 2 For instruction:   %conv2 = zext i16 %1 to i32
-; CHECK: LV: Found an estimated cost of 1 for VF 2 For instruction:   %mul = mul nuw nsw i32 %conv2, %conv
+; CHECK: Cost of 2 for VF 2: WIDEN ir<%0> = load
+; CHECK: Cost of 0 for VF 2: WIDEN-CAST ir<%conv> = zext ir<%0> to i32
+; CHECK: Cost of 2 for VF 2: WIDEN ir<%1> = load
+; CHECK: Cost of 0 for VF 2: WIDEN-CAST ir<%conv2> = zext ir<%1> to i32
+; CHECK: Cost of 1 for VF 2: WIDEN ir<%mul> = mul nuw nsw ir<%conv2>, ir<%conv>
 
-; CHECK: LV: Found an estimated cost of 2 for VF 4 For instruction:   %0 = load i16, ptr %arrayidx, align 2
-; CHECK: LV: Found an estimated cost of 0 for VF 4 For instruction:   %conv = zext i16 %0 to i32
-; CHECK: LV: Found an estimated cost of 2 for VF 4 For instruction:   %1 = load i16, ptr %arrayidx1, align 2
-; CHECK: LV: Found an estimated cost of 0 for VF 4 For instruction:   %conv2 = zext i16 %1 to i32
-; CHECK: LV: Found an estimated cost of 1 for VF 4 For instruction:   %mul = mul nuw nsw i32 %conv2, %conv
+; CHECK: Cost of 2 for VF 4: WIDEN ir<%0> = load
+; CHECK: Cost of 0 for VF 4: WIDEN-CAST ir<%conv> = zext ir<%0> to i32
+; CHECK: Cost of 2 for VF 4: WIDEN ir<%1> = load
+; CHECK: Cost of 0 for VF 4: WIDEN-CAST ir<%conv2> = zext ir<%1> to i32
+; CHECK: Cost of 1 for VF 4: WIDEN ir<%mul> = mul nuw nsw ir<%conv2>, ir<%conv>
 ; CHECK: LV: Selecting VF: 4.
 entry:
   %cmp7.not = icmp eq i32 %N, 0
@@ -260,11 +260,11 @@ define hidden i64 @i64_mac_u16(ptr nocapture noundef readonly %a, ptr nocapture 
 ; CHECK: LV: Found an estimated cost of 0 for VF 1 For instruction:   %conv2 = zext i16 %1 to i64
 ; CHECK: LV: Found an estimated cost of 1 for VF 1 For instruction:   %mul = mul nuw nsw i64 %conv2, %conv
 
-; CHECK: LV: Found an estimated cost of 2 for VF 2 For instruction:   %0 = load i16, ptr %arrayidx, align 2
-; CHECK: LV: Found an estimated cost of 1 for VF 2 For instruction:   %conv = zext i16 %0 to i64
-; CHECK: LV: Found an estimated cost of 2 for VF 2 For instruction:   %1 = load i16, ptr %arrayidx1, align 2
-; CHECK: LV: Found an estimated cost of 1 for VF 2 For instruction:   %conv2 = zext i16 %1 to i64
-; CHECK: LV: Found an estimated cost of 1 for VF 2 For instruction:   %mul = mul nuw nsw i64 %conv2, %conv
+; CHECK: Cost of 2 for VF 2: WIDEN ir<%0> = load
+; CHECK: Cost of 1 for VF 2: WIDEN-CAST ir<%conv> = zext ir<%0> to i64
+; CHECK: Cost of 2 for VF 2: WIDEN ir<%1> = load
+; CHECK: Cost of 1 for VF 2: WIDEN-CAST ir<%conv2> = zext ir<%1> to i64
+; CHECK: Cost of 1 for VF 2: WIDEN ir<%mul> = mul nuw nsw ir<%conv2>, ir<%conv>
 ; CHECK: LV: Selecting VF: 2.
 entry:
   %cmp8.not = icmp eq i32 %N, 0
@@ -297,10 +297,10 @@ define hidden i64 @i64_mac_u32(ptr nocapture noundef readonly %a, ptr nocapture 
 ; CHECK: LV: Found an estimated cost of 1 for VF 1 For instruction:   %mul = mul i32 %1, %0
 ; CHECK: LV: Found an estimated cost of 1 for VF 1 For instruction:   %conv = zext i32 %mul to i64
 
-; CHECK: LV: Found an estimated cost of 2 for VF 2 For instruction:   %0 = load i32, ptr %arrayidx, align 4
-; CHECK: LV: Found an estimated cost of 2 for VF 2 For instruction:   %1 = load i32, ptr %arrayidx1, align 4
-; CHECK: LV: Found an estimated cost of 1 for VF 2 For instruction:   %mul = mul i32 %1, %0
-; CHECK: LV: Found an estimated cost of 1 for VF 2 For instruction:   %conv = zext i32 %mul to i64
+; CHECK: Cost of 2 for VF 2: WIDEN ir<%0> = load
+; CHECK: Cost of 2 for VF 2: WIDEN ir<%1> = load
+; CHECK: Cost of 1 for VF 2: WIDEN ir<%mul> = mul ir<%1>, ir<%0>
+; CHECK: Cost of 1 for VF 2: WIDEN-CAST ir<%conv> = zext ir<%mul> to i64
 ; CHECK: LV: Selecting VF: 2.
 entry:
   %cmp6.not = icmp eq i32 %N, 0

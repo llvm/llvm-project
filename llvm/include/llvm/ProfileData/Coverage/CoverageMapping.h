@@ -459,15 +459,56 @@ struct MCDCRecord {
 private:
   CounterMappingRegion Region;
   TestVectors TV;
+  TestVectors NotExecutedTV;
   std::optional<TVPairMap> IndependencePairs;
   BoolVector Folded;
   CondIDMap PosToID;
   LineColPairMap CondLoc;
 
+  std::string formatTestVectorRow(const TestVector &Vec, CondState Result,
+                                  unsigned DisplayRowNumber) const {
+    std::ostringstream OS;
+    const auto NumConditions = getNumConditions();
+    // Add individual condition values to the string.
+    OS << "  " << DisplayRowNumber << " { ";
+    for (unsigned Condition = 0; Condition < NumConditions; Condition++) {
+      if (isCondFolded(Condition))
+        OS << "C";
+      else {
+        auto It = PosToID.find(Condition);
+        assert(It != PosToID.end() && "Ordinal without CondID mapping");
+        switch (Vec[It->second]) {
+        case MCDC_DontCare:
+          OS << "-";
+          break;
+        case MCDC_True:
+          OS << "T";
+          break;
+        case MCDC_False:
+          OS << "F";
+          break;
+        }
+      }
+      if (Condition != NumConditions - 1)
+        OS << ",  ";
+    }
+
+    // Add result value to the string.
+    OS << "  = ";
+    if (Result == MCDC_True)
+      OS << "T";
+    else
+      OS << "F";
+    OS << "      }\n";
+    return OS.str();
+  }
+
 public:
   MCDCRecord(const CounterMappingRegion &Region, TestVectors &&TV,
-             BoolVector &&Folded, CondIDMap &&PosToID, LineColPairMap &&CondLoc)
-      : Region(Region), TV(std::move(TV)), Folded(std::move(Folded)),
+             TestVectors &&NotExecutedTV, BoolVector &&Folded,
+             CondIDMap &&PosToID, LineColPairMap &&CondLoc)
+      : Region(Region), TV(std::move(TV)),
+        NotExecutedTV(std::move(NotExecutedTV)), Folded(std::move(Folded)),
         PosToID(std::move(PosToID)), CondLoc(std::move(CondLoc)) {
     findIndependencePairs();
   }
@@ -481,6 +522,8 @@ public:
     return Region.getDecisionParams().NumConditions;
   }
   unsigned getNumTestVectors() const { return TV.size(); }
+  unsigned getNumNotExecutedTestVectors() const { return NotExecutedTV.size(); }
+
   bool isCondFolded(unsigned Condition) const {
     return Folded[false][Condition] || Folded[true][Condition];
   }
@@ -493,6 +536,11 @@ public:
   /// ordinal position to actual condition ID. This is done via PosToID[].
   CondState getTVCondition(unsigned TestVectorIndex, unsigned Condition) {
     return TV[TestVectorIndex].first[PosToID[Condition]];
+  }
+
+  CondState getNotExecutedTVCondition(unsigned NotExecutedIndex,
+                                      unsigned Condition) {
+    return NotExecutedTV[NotExecutedIndex].first[PosToID[Condition]];
   }
 
   /// Return the number of True and False decisions for all executed test
@@ -508,6 +556,10 @@ public:
   /// See MCDCRecordProcessor::RecordTestVector().
   CondState getTVResult(unsigned TestVectorIndex) {
     return TV[TestVectorIndex].second;
+  }
+
+  CondState getNotExecutedTVResult(unsigned NotExecutedIndex) {
+    return NotExecutedTV[NotExecutedIndex].second;
   }
 
   /// Determine whether a given condition (indicated by Condition) is covered
@@ -559,7 +611,7 @@ public:
 
   std::string getTestVectorHeaderString() const {
     std::ostringstream OS;
-    if (getNumTestVectors() == 0) {
+    if (getNumTestVectors() == 0 && getNumNotExecutedTestVectors() == 0) {
       OS << "None.\n";
       return OS.str();
     }
@@ -576,39 +628,16 @@ public:
   std::string getTestVectorString(unsigned TestVectorIndex) {
     assert(TestVectorIndex < getNumTestVectors() &&
            "TestVector index out of bounds!");
-    std::ostringstream OS;
-    const auto NumConditions = getNumConditions();
-    // Add individual condition values to the string.
-    OS << "  " << TestVectorIndex + 1 << " { ";
-    for (unsigned Condition = 0; Condition < NumConditions; Condition++) {
-      if (isCondFolded(Condition))
-        OS << "C";
-      else {
-        switch (getTVCondition(TestVectorIndex, Condition)) {
-        case MCDCRecord::MCDC_DontCare:
-          OS << "-";
-          break;
-        case MCDCRecord::MCDC_True:
-          OS << "T";
-          break;
-        case MCDCRecord::MCDC_False:
-          OS << "F";
-          break;
-        }
-      }
-      if (Condition != NumConditions - 1)
-        OS << ",  ";
-    }
+    const auto &[Vec, Res] = TV[TestVectorIndex];
+    return formatTestVectorRow(Vec, Res, TestVectorIndex + 1);
+  }
 
-    // Add result value to the string.
-    OS << "  = ";
-    if (getTVResult(TestVectorIndex) == MCDC_True)
-      OS << "T";
-    else
-      OS << "F";
-    OS << "      }\n";
-
-    return OS.str();
+  std::string getNotExecutedTestVectorString(unsigned NotExecutedIndex) {
+    assert(NotExecutedIndex < getNumNotExecutedTestVectors() &&
+           "Not-executed test vector index out of bounds!");
+    const auto &[Vec, Res] = NotExecutedTV[NotExecutedIndex];
+    return formatTestVectorRow(Vec, Res,
+                               getNumTestVectors() + NotExecutedIndex + 1);
   }
 
   std::string getConditionCoverageString(unsigned Condition) {

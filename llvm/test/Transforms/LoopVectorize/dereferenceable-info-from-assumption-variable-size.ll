@@ -761,7 +761,6 @@ exit:
 }
 
 ; Test to check type mismatch while calling getUMaxExpr()
-; Function Attrs: mustprogress norecurse nosync nounwind ssp memory(read, inaccessiblemem: write, target_mem0: none, target_mem1: none) uwtable(sync)
 define void @test_assumed_bounds_type_mismatch(ptr noalias %array, ptr readonly %pred, i32 %n) nosync nofree {
 ; CHECK-LABEL: define void @test_assumed_bounds_type_mismatch(
 ; CHECK-SAME: ptr noalias [[ARRAY:%.*]], ptr readonly [[PRED:%.*]], i32 [[N:%.*]]) #[[ATTR1]] {

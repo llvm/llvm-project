@@ -181,6 +181,9 @@ public:
   /// Output filename for the split debug info, not used in the skeleton CU.
   std::string SplitDwarfOutput;
 
+  /// Name of the profile file to use with -fprofile-sample-use.
+  std::string SampleProfileFile;
+
   /// Check if Clang profile instrumenation is on.
   bool hasProfileClangInstr() const {
     return getProfileInstr() == llvm::driver::ProfileClangInstr;

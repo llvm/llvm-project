@@ -2425,8 +2425,7 @@ define void @store_load_i64_aligned(ptr addrspace(5) nocapture %arg) {
 ; GFX11-LABEL: store_load_i64_aligned:
 ; GFX11:       ; %bb.0: ; %bb
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_mov_b32_e32 v1, 15
-; GFX11-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-NEXT:    v_dual_mov_b32 v1, 15 :: v_dual_mov_b32 v2, 0
 ; GFX11-NEXT:    scratch_store_b64 v0, v[1:2], off dlc
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    scratch_load_b64 v[0:1], v0, off glc dlc
@@ -2440,8 +2439,7 @@ define void @store_load_i64_aligned(ptr addrspace(5) nocapture %arg) {
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_mov_b32_e32 v1, 15
-; GFX12-NEXT:    v_mov_b32_e32 v2, 0
+; GFX12-NEXT:    v_dual_mov_b32 v1, 15 :: v_dual_mov_b32 v2, 0
 ; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    scratch_store_b64 v0, v[1:2], off scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_storecnt 0x0
@@ -2484,8 +2482,7 @@ define void @store_load_i64_aligned(ptr addrspace(5) nocapture %arg) {
 ; UNALIGNED_GFX11-LABEL: store_load_i64_aligned:
 ; UNALIGNED_GFX11:       ; %bb.0: ; %bb
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; UNALIGNED_GFX11-NEXT:    v_mov_b32_e32 v1, 15
-; UNALIGNED_GFX11-NEXT:    v_mov_b32_e32 v2, 0
+; UNALIGNED_GFX11-NEXT:    v_dual_mov_b32 v1, 15 :: v_dual_mov_b32 v2, 0
 ; UNALIGNED_GFX11-NEXT:    scratch_store_b64 v0, v[1:2], off dlc
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; UNALIGNED_GFX11-NEXT:    scratch_load_b64 v[0:1], v0, off glc dlc
@@ -2499,8 +2496,7 @@ define void @store_load_i64_aligned(ptr addrspace(5) nocapture %arg) {
 ; UNALIGNED_GFX12-NEXT:    s_wait_samplecnt 0x0
 ; UNALIGNED_GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; UNALIGNED_GFX12-NEXT:    s_wait_kmcnt 0x0
-; UNALIGNED_GFX12-NEXT:    v_mov_b32_e32 v1, 15
-; UNALIGNED_GFX12-NEXT:    v_mov_b32_e32 v2, 0
+; UNALIGNED_GFX12-NEXT:    v_dual_mov_b32 v1, 15 :: v_dual_mov_b32 v2, 0
 ; UNALIGNED_GFX12-NEXT:    s_wait_storecnt 0x0
 ; UNALIGNED_GFX12-NEXT:    scratch_store_b64 v0, v[1:2], off scope:SCOPE_SYS
 ; UNALIGNED_GFX12-NEXT:    s_wait_storecnt 0x0
@@ -2549,8 +2545,7 @@ define void @store_load_i64_unaligned(ptr addrspace(5) nocapture %arg) {
 ; GFX11-LABEL: store_load_i64_unaligned:
 ; GFX11:       ; %bb.0: ; %bb
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_mov_b32_e32 v1, 15
-; GFX11-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-NEXT:    v_dual_mov_b32 v1, 15 :: v_dual_mov_b32 v2, 0
 ; GFX11-NEXT:    scratch_store_b64 v0, v[1:2], off dlc
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    scratch_load_b64 v[0:1], v0, off glc dlc
@@ -2564,8 +2559,7 @@ define void @store_load_i64_unaligned(ptr addrspace(5) nocapture %arg) {
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_mov_b32_e32 v1, 15
-; GFX12-NEXT:    v_mov_b32_e32 v2, 0
+; GFX12-NEXT:    v_dual_mov_b32 v1, 15 :: v_dual_mov_b32 v2, 0
 ; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    scratch_store_b64 v0, v[1:2], off scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_storecnt 0x0

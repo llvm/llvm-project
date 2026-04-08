@@ -80,8 +80,8 @@ def AMDGPU_MFMAPermB : I32Enum<"MFMAPermB",
   let cppNamespace = "::mlir::amdgpu";
 }
 
-def AMDGPU_TemporalHint : I32Enum<"TemporalHint",
-    "AMDGPU-specific prefetch temporal hints. "
+def AMDGPU_LoadTemporalHint : I32Enum<"LoadTemporalHint",
+    "AMDGPU-specific prefetch temporal hints for load instructions. "
     "RT - regular temporal for both near and far caches; "
     "NT - non-temporal for both near and far caches; "
     "HT - high-priority temporal for both near and far caches; "

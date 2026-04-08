@@ -65,6 +65,20 @@ def TestSimpleEnum : I32Enum<"SimpleEnum", "", [
   let cppNamespace = "::test";
 }
 
+def TestSimpleEnum8: I8Enum<"SimpleEnum8", "", [
+    I8EnumCase<"a", 254>,
+    I8EnumCase<"b", 255>,
+  ]> {
+  let cppNamespace = "::test";
+}
+
+def TestSimpleEnum16: I16Enum<"SimpleEnum16", "", [
+    I16EnumCase<"a", 65534>,
+    I16EnumCase<"b", 65535>,
+  ]> {
+  let cppNamespace = "::test";
+}
+
 def TestSimpleEnum64 : I64Enum<"SimpleEnum64", "", [
     I64EnumCase<"a", 4294967296>,
     I64EnumCase<"b", 4294967297>

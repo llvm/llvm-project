@@ -158,6 +158,11 @@ public:
            static_cast<unsigned>(TC) + static_cast<unsigned>(KIND) +
            static_cast<unsigned>(x.ordering) * 7u;
   }
+  template <typename T>
+  static unsigned getHashValue(const Fortran::evaluate::ConditionalExpr<T> &x) {
+    return getHashValue(x.condition()) * 151u -
+           getHashValue(x.thenValue()) * 3u + getHashValue(x.elseValue());
+  }
   template <Fortran::common::TypeCategory TC, int KIND>
   static unsigned getHashValue(
       const Fortran::evaluate::RealToIntPower<Fortran::evaluate::Type<TC, KIND>>
@@ -415,6 +420,13 @@ public:
   static bool isEqual(const Fortran::evaluate::Extremum<A> &x,
                       const Fortran::evaluate::Extremum<A> &y) {
     return isBinaryEqual(x, y);
+  }
+  template <typename T>
+  static bool isEqual(const Fortran::evaluate::ConditionalExpr<T> &x,
+                      const Fortran::evaluate::ConditionalExpr<T> &y) {
+    return isEqual(x.condition(), y.condition()) &&
+           isEqual(x.thenValue(), y.thenValue()) &&
+           isEqual(x.elseValue(), y.elseValue());
   }
   template <typename A>
   static bool isEqual(const Fortran::evaluate::RealToIntPower<A> &x,

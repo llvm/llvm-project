@@ -13,11 +13,14 @@ llvm.func @_QPtest() {
   %3 = llvm.alloca %2 x i32 {bindc_name = "t2"} : (i64) -> !llvm.ptr
   %4 = llvm.alloca %2 x i32 {bindc_name = "t1"} : (i64) -> !llvm.ptr
   %5 = llvm.alloca %2 x i32 {bindc_name = "i"} : (i64) -> !llvm.ptr
-  omp.taskloop private(@_QFtestEt1_private_i32 %4 -> %arg0, @_QFtestEt2_private_i32 %3 -> %arg1, @_QFtestEi_private_i32 %5 -> %arg2 : !llvm.ptr, !llvm.ptr, !llvm.ptr) {
-    omp.loop_nest (%arg3) : i32 = (%0) to (%1) inclusive step (%0) {
-      llvm.store %arg3, %arg2 : i32, !llvm.ptr
-      omp.yield
+  omp.taskloop.context private(@_QFtestEt1_private_i32 %4 -> %arg0, @_QFtestEt2_private_i32 %3 -> %arg1, @_QFtestEi_private_i32 %5 -> %arg2 : !llvm.ptr, !llvm.ptr, !llvm.ptr) {
+    omp.taskloop.wrapper {
+      omp.loop_nest (%arg3) : i32 = (%0) to (%1) inclusive step (%0) {
+        llvm.store %arg3, %arg2 : i32, !llvm.ptr
+        omp.yield
+      }
     }
+    omp.terminator
   }
   llvm.return
 }
@@ -34,7 +37,7 @@ llvm.func @_QPtest() {
 // CHECK:         br label %[[VAL_7:.*]]
 // CHECK:       omp.private.copy:                                 ; preds = %[[VAL_5]]
 // CHECK:         br label %[[VAL_8:.*]]
-// CHECK:       omp.taskloop.start:                               ; preds = %[[VAL_7]]
+// CHECK:       omp.taskloop.wrapper.start:                               ; preds = %[[VAL_7]]
 // CHECK:         br label %[[VAL_9:.*]]
 // CHECK:       codeRepl:                                         ; preds = %[[VAL_8]]
 // CHECK:         %[[VAL_10:.*]] = getelementptr { i64, i64, i64 }, ptr %[[STRUCTARG]], i32 0, i32 0
@@ -74,11 +77,13 @@ llvm.func @_QPtest() {
 // CHECK:         br label %[[VAL_35:.*]]
 // CHECK:       taskloop.body:                                    ; preds = %[[VAL_36:.*]]
 // CHECK:         br label %[[VAL_37:.*]]
-// CHECK:       omp.taskloop.region:                              ; preds = %[[VAL_35]]
+// CHECK:       omp.taskloop.context.region:                      ; preds = %[[VAL_35]]
+// CHECK:         br label %[[VAL_38_1:.*]]
+// CHECK:       omp.taskloop.wrapper.region:                              ; preds = %[[VAL_37]]
 // CHECK:         br label %[[VAL_38:.*]]
-// CHECK:       omp_loop.preheader:                               ; preds = %[[VAL_37]]
+// CHECK:       omp_loop.preheader:                               ; preds = %[[VAL_38_1]]
 // CHECK:         %[[VAL_39:.*]] = sub i64 %[[VAL_27]], %[[VAL_25]]
-// CHECK:         %[[VAL_40:.*]] = sdiv i64 %[[VAL_39]], 1
+// CHECK:         %[[VAL_40:.*]] = sdiv i64 %[[VAL_39]], %[[VAL_29]]
 // CHECK:         %[[VAL_41:.*]] = add i64 %[[VAL_40]], 1
 // CHECK:         %[[VAL_42:.*]] = trunc i64 %[[VAL_41]] to i32
 // CHECK:         %[[VAL_43:.*]] = trunc i64 %[[VAL_25]] to i32
@@ -93,7 +98,9 @@ llvm.func @_QPtest() {
 // CHECK:         br label %[[VAL_52:.*]]
 // CHECK:       omp_loop.after:                                   ; preds = %[[VAL_51]]
 // CHECK:         br label %[[VAL_53:.*]]
-// CHECK:       omp.region.cont:                                  ; preds = %[[VAL_52]]
+// CHECK:       omp.region.cont3:                                 ; preds = %[[VAL_52]]
+// CHECK:         br label %[[VAL_53_1:.*]]
+// CHECK:       omp.region.cont:                                  ; preds = %[[VAL_53_1]]
 // CHECK:         br label %[[VAL_54:.*]]
 // CHECK:       omp_loop.body:                                    ; preds = %[[VAL_48]]
 // CHECK:         %[[VAL_55:.*]] = mul i32 %[[VAL_46]], 1
@@ -102,12 +109,12 @@ llvm.func @_QPtest() {
 // CHECK:       omp.loop_nest.region:                             ; preds = %[[VAL_50]]
 // CHECK:         store i32 %[[VAL_56]], ptr %[[VAL_34]], align 4
 // CHECK:         br label %[[VAL_58:.*]]
-// CHECK:       omp.region.cont3:                                 ; preds = %[[VAL_57]]
+// CHECK:       omp.region.cont4:                                 ; preds = %[[VAL_57]]
 // CHECK:         br label %[[VAL_45]]
 // CHECK:       omp_loop.inc:                                     ; preds = %[[VAL_58]]
 // CHECK:         %[[VAL_47]] = add nuw i32 %[[VAL_46]], 1
 // CHECK:         br label %[[VAL_44]]
-// CHECK:       taskloop.exit.exitStub:                           ; preds = %[[VAL_53]]
+// CHECK:       taskloop.exit.exitStub:                           ; preds = %[[VAL_53_1]]
 // CHECK:         ret void
 
 // CHECK-NOT: define internal void @omp_taskloop_dup

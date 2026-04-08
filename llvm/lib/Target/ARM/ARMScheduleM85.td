@@ -410,7 +410,7 @@ def M85ReadALUsi : SchedReadVariant<[
 
 def : InstRW<[M85WriteALUsi, M85Read_EX1, M85ReadALUsi],
                (instregex "t2(ADC|ADDS|BIC|EOR|ORN|ORR|RSBS|RSB|SBC|"
-                          "SUBS|CMP|CMNz|TEQ|TST)rs$")>;
+                          "SUBS|CMP|CMN|TEQ|TST)rs$")>;
 def : InstRW<[M85WriteALUsi, M85ReadALUsi],
                (instregex "t2MVNs")>;
 
@@ -419,7 +419,7 @@ def : InstRW<[M85WriteALUsi, M85ReadALUsi],
 // shift resource.
 def : InstRW<[M85WriteALUsi, M85Read_EX1, M85ReadALUsi],
                (instregex "t2(ADC|ADDS|BIC|EOR|ORN|ORR|RSBS|RSB|SBC|"
-                          "SUBS|CMP|CMNz|TEQ|TST)rr$")>;
+                          "SUBS|CMP|CMN|TEQ|TST)rr$")>;
 def : InstRW<[M85WriteALUsi, M85ReadALUsi],
                (instregex "t2MVNr")>;
 

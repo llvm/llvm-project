@@ -8,21 +8,21 @@
 define i32 @test_wave_shuffle_self_select(i32 %val) {
 ; CHECK-W32-LABEL: define i32 @test_wave_shuffle_self_select(
 ; CHECK-W32-SAME: i32 [[VAL:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-W32-NEXT:    [[TID:%.*]] = tail call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+; CHECK-W32-NEXT:    [[TID:%.*]] = tail call range(i32 0, 33) i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
 ; CHECK-W32-NEXT:    [[RES:%.*]] = tail call i32 @llvm.amdgcn.wave.shuffle.i32(i32 [[VAL]], i32 [[TID]])
 ; CHECK-W32-NEXT:    ret i32 [[RES]]
 ;
 ; CHECK-W64-LABEL: define i32 @test_wave_shuffle_self_select(
 ; CHECK-W64-SAME: i32 [[VAL:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-W64-NEXT:    [[TID:%.*]] = tail call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
-; CHECK-W64-NEXT:    [[TID1:%.*]] = tail call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 [[TID]])
+; CHECK-W64-NEXT:    [[LO:%.*]] = tail call range(i32 0, 33) i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+; CHECK-W64-NEXT:    [[TID1:%.*]] = tail call range(i32 0, 65) i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 [[LO]])
 ; CHECK-W64-NEXT:    [[RES:%.*]] = tail call i32 @llvm.amdgcn.wave.shuffle.i32(i32 [[VAL]], i32 [[TID1]])
 ; CHECK-W64-NEXT:    ret i32 [[RES]]
 ;
 ; CHECK-NO-WAVE-SIZE-LABEL: define i32 @test_wave_shuffle_self_select(
 ; CHECK-NO-WAVE-SIZE-SAME: i32 [[VAL:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NO-WAVE-SIZE-NEXT:    [[LO:%.*]] = tail call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
-; CHECK-NO-WAVE-SIZE-NEXT:    [[TID:%.*]] = tail call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 [[LO]])
+; CHECK-NO-WAVE-SIZE-NEXT:    [[LO:%.*]] = tail call range(i32 0, 33) i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+; CHECK-NO-WAVE-SIZE-NEXT:    [[TID:%.*]] = tail call range(i32 0, 65) i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 [[LO]])
 ; CHECK-NO-WAVE-SIZE-NEXT:    [[RES:%.*]] = tail call i32 @llvm.amdgcn.wave.shuffle.i32(i32 [[VAL]], i32 [[TID]])
 ; CHECK-NO-WAVE-SIZE-NEXT:    ret i32 [[RES]]
 ;
@@ -48,8 +48,8 @@ define i32 @test_wave_shuffle_dpp_row_share_0(i32 %val) {
 ;
 ; CHECK-NO-WAVE-SIZE-LABEL: define i32 @test_wave_shuffle_dpp_row_share_0(
 ; CHECK-NO-WAVE-SIZE-SAME: i32 [[VAL:%.*]]) #[[ATTR0]] {
-; CHECK-NO-WAVE-SIZE-NEXT:    [[LO:%.*]] = tail call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
-; CHECK-NO-WAVE-SIZE-NEXT:    [[TID:%.*]] = tail call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 [[LO]])
+; CHECK-NO-WAVE-SIZE-NEXT:    [[LO:%.*]] = tail call range(i32 0, 33) i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+; CHECK-NO-WAVE-SIZE-NEXT:    [[TID:%.*]] = tail call range(i32 0, 65) i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 [[LO]])
 ; CHECK-NO-WAVE-SIZE-NEXT:    [[MASKED:%.*]] = and i32 [[TID]], 112
 ; CHECK-NO-WAVE-SIZE-NEXT:    [[RES:%.*]] = tail call i32 @llvm.amdgcn.wave.shuffle.i32(i32 [[VAL]], i32 [[MASKED]])
 ; CHECK-NO-WAVE-SIZE-NEXT:    ret i32 [[RES]]
@@ -75,8 +75,8 @@ define i32 @test_wave_shuffle_dpp_row_share_0_no_or(i32 %val) {
 ;
 ; CHECK-NO-WAVE-SIZE-LABEL: define i32 @test_wave_shuffle_dpp_row_share_0_no_or(
 ; CHECK-NO-WAVE-SIZE-SAME: i32 [[VAL:%.*]]) #[[ATTR0]] {
-; CHECK-NO-WAVE-SIZE-NEXT:    [[LO:%.*]] = tail call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
-; CHECK-NO-WAVE-SIZE-NEXT:    [[TID:%.*]] = tail call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 [[LO]])
+; CHECK-NO-WAVE-SIZE-NEXT:    [[LO:%.*]] = tail call range(i32 0, 33) i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+; CHECK-NO-WAVE-SIZE-NEXT:    [[TID:%.*]] = tail call range(i32 0, 65) i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 [[LO]])
 ; CHECK-NO-WAVE-SIZE-NEXT:    [[MASKED:%.*]] = and i32 [[TID]], 112
 ; CHECK-NO-WAVE-SIZE-NEXT:    [[RES:%.*]] = tail call i32 @llvm.amdgcn.wave.shuffle.i32(i32 [[VAL]], i32 [[MASKED]])
 ; CHECK-NO-WAVE-SIZE-NEXT:    ret i32 [[RES]]
@@ -101,8 +101,8 @@ define i32 @test_wave_shuffle_dpp_row_share_7(i32 %val) {
 ;
 ; CHECK-NO-WAVE-SIZE-LABEL: define i32 @test_wave_shuffle_dpp_row_share_7(
 ; CHECK-NO-WAVE-SIZE-SAME: i32 [[VAL:%.*]]) #[[ATTR0]] {
-; CHECK-NO-WAVE-SIZE-NEXT:    [[LO:%.*]] = tail call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
-; CHECK-NO-WAVE-SIZE-NEXT:    [[TID:%.*]] = tail call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 [[LO]])
+; CHECK-NO-WAVE-SIZE-NEXT:    [[LO:%.*]] = tail call range(i32 0, 33) i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+; CHECK-NO-WAVE-SIZE-NEXT:    [[TID:%.*]] = tail call range(i32 0, 65) i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 [[LO]])
 ; CHECK-NO-WAVE-SIZE-NEXT:    [[MASKED:%.*]] = and i32 [[TID]], 48
 ; CHECK-NO-WAVE-SIZE-NEXT:    [[SHARE_7:%.*]] = or disjoint i32 [[MASKED]], 7
 ; CHECK-NO-WAVE-SIZE-NEXT:    [[RES:%.*]] = tail call i32 @llvm.amdgcn.wave.shuffle.i32(i32 [[VAL]], i32 [[SHARE_7]])
@@ -119,23 +119,23 @@ define i32 @test_wave_shuffle_dpp_row_share_7(i32 %val) {
 define i32 @test_wave_shuffle_dpp_row_share_7_no_mask(i32 %val) {
 ; CHECK-W32-LABEL: define i32 @test_wave_shuffle_dpp_row_share_7_no_mask(
 ; CHECK-W32-SAME: i32 [[VAL:%.*]]) #[[ATTR0]] {
-; CHECK-W32-NEXT:    [[TID:%.*]] = tail call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+; CHECK-W32-NEXT:    [[TID:%.*]] = tail call range(i32 0, 33) i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
 ; CHECK-W32-NEXT:    [[SHARE_7:%.*]] = or i32 [[TID]], 7
 ; CHECK-W32-NEXT:    [[RES:%.*]] = tail call i32 @llvm.amdgcn.wave.shuffle.i32(i32 [[VAL]], i32 [[SHARE_7]])
 ; CHECK-W32-NEXT:    ret i32 [[RES]]
 ;
 ; CHECK-W64-LABEL: define i32 @test_wave_shuffle_dpp_row_share_7_no_mask(
 ; CHECK-W64-SAME: i32 [[VAL:%.*]]) #[[ATTR0]] {
-; CHECK-W64-NEXT:    [[TID:%.*]] = tail call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
-; CHECK-W64-NEXT:    [[TID1:%.*]] = tail call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 [[TID]])
+; CHECK-W64-NEXT:    [[LO:%.*]] = tail call range(i32 0, 33) i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+; CHECK-W64-NEXT:    [[TID1:%.*]] = tail call range(i32 0, 65) i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 [[LO]])
 ; CHECK-W64-NEXT:    [[SHARE_7:%.*]] = or i32 [[TID1]], 7
 ; CHECK-W64-NEXT:    [[RES:%.*]] = tail call i32 @llvm.amdgcn.wave.shuffle.i32(i32 [[VAL]], i32 [[SHARE_7]])
 ; CHECK-W64-NEXT:    ret i32 [[RES]]
 ;
 ; CHECK-NO-WAVE-SIZE-LABEL: define i32 @test_wave_shuffle_dpp_row_share_7_no_mask(
 ; CHECK-NO-WAVE-SIZE-SAME: i32 [[VAL:%.*]]) #[[ATTR0]] {
-; CHECK-NO-WAVE-SIZE-NEXT:    [[LO:%.*]] = tail call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
-; CHECK-NO-WAVE-SIZE-NEXT:    [[TID:%.*]] = tail call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 [[LO]])
+; CHECK-NO-WAVE-SIZE-NEXT:    [[LO:%.*]] = tail call range(i32 0, 33) i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+; CHECK-NO-WAVE-SIZE-NEXT:    [[TID:%.*]] = tail call range(i32 0, 65) i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 [[LO]])
 ; CHECK-NO-WAVE-SIZE-NEXT:    [[SHARE_7:%.*]] = or i32 [[TID]], 7
 ; CHECK-NO-WAVE-SIZE-NEXT:    [[RES:%.*]] = tail call i32 @llvm.amdgcn.wave.shuffle.i32(i32 [[VAL]], i32 [[SHARE_7]])
 ; CHECK-NO-WAVE-SIZE-NEXT:    ret i32 [[RES]]
@@ -158,7 +158,7 @@ define i32 @test_wave_shuffle_dpp_row_share_7_lo_only(i32 %val) {
 ;
 ; CHECK-W64-LABEL: define i32 @test_wave_shuffle_dpp_row_share_7_lo_only(
 ; CHECK-W64-SAME: i32 [[VAL:%.*]]) #[[ATTR0]] {
-; CHECK-W64-NEXT:    [[TID:%.*]] = tail call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+; CHECK-W64-NEXT:    [[TID:%.*]] = tail call range(i32 0, 33) i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
 ; CHECK-W64-NEXT:    [[MASKED:%.*]] = and i32 [[TID]], 48
 ; CHECK-W64-NEXT:    [[SHARE_7:%.*]] = or disjoint i32 [[MASKED]], 7
 ; CHECK-W64-NEXT:    [[RES:%.*]] = tail call i32 @llvm.amdgcn.wave.shuffle.i32(i32 [[VAL]], i32 [[SHARE_7]])
@@ -166,7 +166,7 @@ define i32 @test_wave_shuffle_dpp_row_share_7_lo_only(i32 %val) {
 ;
 ; CHECK-NO-WAVE-SIZE-LABEL: define i32 @test_wave_shuffle_dpp_row_share_7_lo_only(
 ; CHECK-NO-WAVE-SIZE-SAME: i32 [[VAL:%.*]]) #[[ATTR0]] {
-; CHECK-NO-WAVE-SIZE-NEXT:    [[TID:%.*]] = tail call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+; CHECK-NO-WAVE-SIZE-NEXT:    [[TID:%.*]] = tail call range(i32 0, 33) i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
 ; CHECK-NO-WAVE-SIZE-NEXT:    [[MASKED:%.*]] = and i32 [[TID]], 48
 ; CHECK-NO-WAVE-SIZE-NEXT:    [[SHARE_7:%.*]] = or disjoint i32 [[MASKED]], 7
 ; CHECK-NO-WAVE-SIZE-NEXT:    [[RES:%.*]] = tail call i32 @llvm.amdgcn.wave.shuffle.i32(i32 [[VAL]], i32 [[SHARE_7]])
@@ -190,8 +190,8 @@ define i32 @test_wave_shuffle_dpp_row_share_w32_mask(i32 %val) {
 ;
 ; CHECK-W64-LABEL: define i32 @test_wave_shuffle_dpp_row_share_w32_mask(
 ; CHECK-W64-SAME: i32 [[VAL:%.*]]) #[[ATTR0]] {
-; CHECK-W64-NEXT:    [[LO:%.*]] = tail call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
-; CHECK-W64-NEXT:    [[TID:%.*]] = tail call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 [[LO]])
+; CHECK-W64-NEXT:    [[LO:%.*]] = tail call range(i32 0, 33) i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+; CHECK-W64-NEXT:    [[TID:%.*]] = tail call range(i32 0, 65) i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 [[LO]])
 ; CHECK-W64-NEXT:    [[MASKED:%.*]] = and i32 [[TID]], 16
 ; CHECK-W64-NEXT:    [[SHARE_7:%.*]] = or disjoint i32 [[MASKED]], 7
 ; CHECK-W64-NEXT:    [[RES:%.*]] = tail call i32 @llvm.amdgcn.wave.shuffle.i32(i32 [[VAL]], i32 [[SHARE_7]])
@@ -199,8 +199,8 @@ define i32 @test_wave_shuffle_dpp_row_share_w32_mask(i32 %val) {
 ;
 ; CHECK-NO-WAVE-SIZE-LABEL: define i32 @test_wave_shuffle_dpp_row_share_w32_mask(
 ; CHECK-NO-WAVE-SIZE-SAME: i32 [[VAL:%.*]]) #[[ATTR0]] {
-; CHECK-NO-WAVE-SIZE-NEXT:    [[LO:%.*]] = tail call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
-; CHECK-NO-WAVE-SIZE-NEXT:    [[TID:%.*]] = tail call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 [[LO]])
+; CHECK-NO-WAVE-SIZE-NEXT:    [[LO:%.*]] = tail call range(i32 0, 33) i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+; CHECK-NO-WAVE-SIZE-NEXT:    [[TID:%.*]] = tail call range(i32 0, 65) i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 [[LO]])
 ; CHECK-NO-WAVE-SIZE-NEXT:    [[MASKED:%.*]] = and i32 [[TID]], 16
 ; CHECK-NO-WAVE-SIZE-NEXT:    [[SHARE_7:%.*]] = or disjoint i32 [[MASKED]], 7
 ; CHECK-NO-WAVE-SIZE-NEXT:    [[RES:%.*]] = tail call i32 @llvm.amdgcn.wave.shuffle.i32(i32 [[VAL]], i32 [[SHARE_7]])

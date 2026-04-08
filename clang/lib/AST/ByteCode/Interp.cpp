@@ -259,14 +259,16 @@ void cleanupAfterFunctionCall(InterpState &S, CodePtr OpPC,
     S.Stk.discard<Pointer>();
 }
 
+bool isConstexprUnknown(const Block *B) {
+  if (B->isDummy())
+    return isa_and_nonnull<ParmVarDecl>(B->getDescriptor()->asValueDecl());
+  return B->getDescriptor()->IsConstexprUnknown;
+}
+
 bool isConstexprUnknown(const Pointer &P) {
   if (!P.isBlockPointer())
     return false;
-
-  if (P.isDummy())
-    return isa_and_nonnull<ParmVarDecl>(P.getDeclDesc()->asValueDecl());
-
-  return P.getDeclDesc()->IsConstexprUnknown;
+  return isConstexprUnknown(P.block());
 }
 
 bool CheckBCPResult(InterpState &S, const Pointer &Ptr) {
@@ -814,7 +816,7 @@ bool CheckLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
     return false;
   if (!CheckVolatile(S, OpPC, Ptr, AK))
     return false;
-  if (!Ptr.isConst() && !S.inConstantContext() && isConstexprUnknown(Ptr))
+  if (isConstexprUnknown(Ptr))
     return false;
   return true;
 }
@@ -848,6 +850,8 @@ bool CheckFinalLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   if (!CheckTemporary(S, OpPC, Ptr.block(), AK_Read))
     return false;
   if (!CheckMutable(S, OpPC, Ptr))
+    return false;
+  if (Ptr.isConstexprUnknown())
     return false;
   return true;
 }
@@ -2202,6 +2206,25 @@ bool CheckBitCast(InterpState &S, CodePtr OpPC, bool HasIndeterminateBits,
   S.FFDiag(E, diag::note_constexpr_bit_cast_indet_dest)
       << ExprType << S.getLangOpts().CharIsSigned << E->getSourceRange();
   return false;
+}
+
+bool handleReference(InterpState &S, CodePtr OpPC, Block *B) {
+  if (isConstexprUnknown(B)) {
+    S.Stk.push<Pointer>(B);
+    return true;
+  }
+
+  const auto &ID = B->getBlockDesc<const InlineDescriptor>();
+  if (!ID.IsInitialized) {
+    if (!S.checkingPotentialConstantExpression())
+      S.FFDiag(S.Current->getSource(OpPC),
+               diag::note_constexpr_use_uninit_reference);
+    return false;
+  }
+
+  assert(B->getDescriptor()->getPrimType() == PT_Ptr);
+  S.Stk.push<Pointer>(B->deref<Pointer>());
+  return true;
 }
 
 bool GetTypeid(InterpState &S, CodePtr OpPC, const Type *TypePtr,

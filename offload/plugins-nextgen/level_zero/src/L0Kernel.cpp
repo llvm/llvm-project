@@ -71,6 +71,10 @@ Error L0KernelTy::buildKernel(L0ProgramTy &Program) {
   const auto *KernelName = getName();
 
   auto Module = Program.findModuleFromKernelName(KernelName);
+  if (!Module)
+    return Plugin::error(ErrorCode::NOT_FOUND,
+                         "kernel '%s' not found in the program", KernelName);
+
   ze_kernel_desc_t KernelDesc = {ZE_STRUCTURE_TYPE_KERNEL_DESC, nullptr, 0,
                                  KernelName};
   CALL_ZE_RET_ERROR(zeKernelCreate, Module, &KernelDesc, &zeKernel);

@@ -84,9 +84,19 @@ NativeProcessAIX::Manager::Launch(ProcessLaunchInfo &launch_info,
   }
   LLDB_LOG(log, "inferior started, now in stopped state");
 
+  ProcessInstanceInfo Info;
+  if (!Host::GetProcessInfo(pid, Info)) {
+    return llvm::make_error<StringError>("Cannot get process architecture",
+                                         llvm::inconvertibleErrorCode());
+  }
+
+  // Set the architecture to the exe architecture.
+  LLDB_LOG(log, "pid = {0}, detected architecture {1}", pid,
+           Info.GetArchitecture().GetArchitectureName());
+
   return std::unique_ptr<NativeProcessAIX>(new NativeProcessAIX(
       pid, launch_info.GetPTY().ReleasePrimaryFileDescriptor(), native_delegate,
-      HostInfo::GetArchitecture(HostInfo::eArchKind64), *this, {pid}));
+      Info.GetArchitecture(), *this, {pid}));
 }
 
 llvm::Expected<std::unique_ptr<NativeProcessProtocol>>
@@ -240,6 +250,11 @@ size_t NativeProcessAIX::UpdateThreads() {
   // respect to thread state and they keep the thread list populated properly.
   // All this method needs to do is return the thread count.
   return m_threads.size();
+}
+
+Status NativeProcessAIX::GetFileLoadAddress(const llvm::StringRef &file_name,
+                                            lldb::addr_t &load_addr) {
+  return Status("unsupported");
 }
 
 Status NativeProcessAIX::GetLoadedModuleFileSpec(const char *module_path,

@@ -20,8 +20,7 @@
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 
-; Function Attrs: nounwind optsize ssp uwtable
-define void @_Z11test_switchPii(ptr nocapture %A, i32 %Length) #0 !dbg !4 {
+define void @_Z11test_switchPii(ptr nocapture %A, i32 %Length) !dbg !4 {
 entry:
   %cmp18 = icmp sgt i32 %Length, 0, !dbg !10
   br i1 %cmp18, label %for.body.preheader, label %for.end, !dbg !10, !llvm.loop !12
@@ -62,8 +61,6 @@ for.end.loopexit:                                 ; preds = %for.inc
 for.end:                                          ; preds = %for.end.loopexit, %entry
   ret void, !dbg !24
 }
-
-attributes #0 = { nounwind }
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!7, !8}

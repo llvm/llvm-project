@@ -556,8 +556,8 @@ Expected<void *> L0ProgramTy::getSymbolDeviceAddr(const char *CName) const {
     if (RC == ZE_RESULT_SUCCESS && DevicePtr)
       return DevicePtr;
   }
-  return Plugin::error(ErrorCode::INVALID_ARGUMENT,
-                       "Symbol '%s' not found on device", CName);
+  return Plugin::error(ErrorCode::NOT_FOUND, "symbol '%s' not found on device",
+                       CName);
 }
 
 Error L0ProgramTy::readGlobalVariable(const char *Name, size_t Size,

@@ -13,6 +13,7 @@ define void @test() {
 ; CHECK-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; CHECK-NEXT:    buffer_store_dword v1, off, s[0:3], s32 ; 4-byte Folded Spill
 ; CHECK-NEXT:    s_mov_b64 exec, s[4:5]
+; CHECK-NEXT:    ; implicit-def: $vgpr1 : SGPR spill to VGPR lane
 ; CHECK-NEXT:  .LBB0_1: ; %bb.1
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    s_cbranch_scc1 .LBB0_3
@@ -20,6 +21,9 @@ define void @test() {
 ; CHECK-NEXT:    ; in Loop: Header=BB0_1 Depth=1
 ; CHECK-NEXT:  .LBB0_3: ; %bb.3
 ; CHECK-NEXT:    ; in Loop: Header=BB0_1 Depth=1
+; CHECK-NEXT:    s_or_saveexec_b64 s[10:11], -1
+; CHECK-NEXT:    v_accvgpr_read_b32 v1, a0 ; Reload Reuse
+; CHECK-NEXT:    s_mov_b64 exec, s[10:11]
 ; CHECK-NEXT:    ; implicit-def: $sgpr4
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s4
 ; CHECK-NEXT:    v_readfirstlane_b32 s6, v0
@@ -29,7 +33,6 @@ define void @test() {
 ; CHECK-NEXT:    s_cselect_b64 s[6:7], -1, 0
 ; CHECK-NEXT:    s_xor_b64 s[6:7], s[6:7], s[4:5]
 ; CHECK-NEXT:    s_and_b64 vcc, exec, s[6:7]
-; CHECK-NEXT:    ; implicit-def: $vgpr1 : SGPR spill to VGPR lane
 ; CHECK-NEXT:    v_writelane_b32 v1, s4, 0
 ; CHECK-NEXT:    v_writelane_b32 v1, s5, 1
 ; CHECK-NEXT:    s_or_saveexec_b64 s[10:11], -1

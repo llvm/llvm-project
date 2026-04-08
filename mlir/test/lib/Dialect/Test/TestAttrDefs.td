@@ -352,6 +352,13 @@ def TestArrayOfUglyAttrs : ArrayOfAttr<Test_Dialect, "ArrayOfUglyAttrs",
 def TestArrayOfInts : ArrayOfAttr<Test_Dialect, "ArrayOfInts",
     "array_of_ints", "int32_t">;
 
+def TestSimpleEnum8Attr : EnumAttr<Test_Dialect, TestSimpleEnum8, "simple_enum_8"> {
+  let assemblyFormat = "`` $value";
+}
+
+def TestSimpleEnum16Attr : EnumAttr<Test_Dialect, TestSimpleEnum16, "simple_enum_16"> {
+  let assemblyFormat = "`` $value";
+}
 // An array of enum attributes.
 def TestSimpleEnumAttr : EnumAttr<Test_Dialect, TestSimpleEnum, "simple_enum"> {
   let assemblyFormat = "`` $value";

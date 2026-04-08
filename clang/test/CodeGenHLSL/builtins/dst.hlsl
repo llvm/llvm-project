@@ -1,8 +1,8 @@
 // RUN: %clang_cc1 -finclude-default-header -x hlsl -triple dxil-pc-shadermodel6.2-library %s -fnative-half-type -fnative-int16-type -emit-llvm -disable-llvm-passes -o - | FileCheck %s
 
 
-// CHECK-LABEL: define {{.*}} <4 x float> @{{[A-Za-z1-9_]+}}dst_impl{{[A-Za-z1-9_]*}}(
-// CHECK-SAME: <4 x float> {{[A-Za-z )(]*}} [[P:%.*]], <4 x float> {{[A-Za-z )(]*}} [[Q:%.*]]) #[[ATTR0:[0-9]+]] { 
+// CHECK-LABEL: define {{.*}} <4 x float> @{{[A-Za-z1-9_]+}}dstWithFloat{{[A-Za-z1-9_]*}}(
+// CHECK-SAME: <4 x float> {{[A-Za-z )(]*}} [[P:%.*]], <4 x float> {{[A-Za-z )(]*}} [[Q:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK: [[VECEXT:%.*]] = extractelement <4 x float> [[PADDR:%.*]], i32 1
 // CHECK: [[VECEXT1:%.*]] = extractelement <4 x float> [[QADDR:%.*]], i32 1
 // CHECK: [[MULRES:%.*]] = fmul {{[A-Za-z ]*}} float [[VECEXT]], [[VECEXT1]]
@@ -17,7 +17,7 @@ float4 dstWithFloat(float4 p1, float4 p2)
     return dst(p1, p2);
 }
 
-// CHECK-LABEL: define {{.*}} <4 x half> @{{[A-Za-z1-9_]+}}dst_impl{{[A-Za-z1-9_]*}}(
+// CHECK-LABEL: define {{.*}} <4 x half> @{{[A-Za-z1-9_]+}}dstwithHalf{{[A-Za-z1-9_]*}}(
 // CHECK-SAME: <4 x half> {{[A-Za-z )(]*}} [[P:%.*]], <4 x half> {{[A-Za-z )(]*}} [[Q:%.*]]) #[[ATTR0]] {
 // CHECK: [[VECEXT:%.*]] = extractelement <4 x half> [[PADDR:%.*]], i32 1
 // CHECK: [[VECEXT1:%.*]] = extractelement <4 x half> [[QADDR:%.*]], i32 1
@@ -33,8 +33,8 @@ half4 dstwithHalf(half4 p1, half4 p2)
     return dst(p1, p2);
 }
 
-// CHECK-LABEL: define {{.*}} <4 x double> @{{[A-Za-z1-9_]+}}dst_impl{{[A-Za-z1-9_]*}}(
-// CHECK-SAME: <4 x double> {{[A-Za-z )(]*}} [[P:%.*]], <4 x double> {{[A-Za-z )(]*}} [[Q:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK-LABEL: define {{.*}} <4 x double> @{{[A-Za-z1-9_]+}}dstWithDouble{{[A-Za-z1-9_]*}}(
+// CHECK-SAME: <4 x double> {{[A-Za-z )(]*}} [[P:%.*]], <4 x double> {{[A-Za-z )(]*}} [[Q:%.*]]) #[[ATTR0]] {
 // CHECK: [[VECEXT:%.*]] = extractelement <4 x double> [[PADDR:%.*]], i32 1
 // CHECK: [[VECEXT1:%.*]] = extractelement <4 x double> [[QADDR:%.*]], i32 1
 // CHECK: [[MULRES:%.*]] = fmul {{[A-Za-z ]*}} double [[VECEXT]], [[VECEXT1]]
@@ -48,4 +48,3 @@ double4 dstWithDouble(double4 p1, double4 p2)
 {
     return dst(p1, p2);
 }
-

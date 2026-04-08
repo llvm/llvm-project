@@ -34,7 +34,6 @@ target triple = "x86_64-unknown-linux-gnu"
 
 ; This test was originally vectorized, but now SCEV is smart enough to prove
 ; that its trip count is 1, so it gets ignored by vectorizer.
-; Function Attrs: uwtable
 define void @test_01(ptr addrspace(1) %p, i1 %arg) {
   br label %.outer
 
@@ -73,7 +72,6 @@ define void @test_01(ptr addrspace(1) %p, i1 %arg) {
 ; CHECK: vector.body:
 ; CHECK: store <4 x i32>
 
-; Function Attrs: uwtable
 define void @test_02(ptr addrspace(1) %p, i1 %arg) {
   br label %.outer
 

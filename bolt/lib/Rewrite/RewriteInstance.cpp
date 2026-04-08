@@ -4102,6 +4102,9 @@ std::vector<BinarySection *> RewriteInstance::getCodeSections() {
       CodeSections.emplace_back(&Section);
 
   auto compareSections = [&](const BinarySection *A, const BinarySection *B) {
+    if (A == B)
+      return false;
+
     // If both A and B have names starting with ".text.cold", then
     // - if opts::HotFunctionsAtEnd is true, we want order
     //   ".text.cold.T", ".text.cold.T-1", ... ".text.cold.1", ".text.cold"

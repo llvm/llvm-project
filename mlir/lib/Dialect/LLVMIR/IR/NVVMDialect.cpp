@@ -414,18 +414,45 @@ LogicalResult ConvertF16x2ToF8x2Op::verify() {
 
 LogicalResult ConvertBF16x2ToF8x2Op::verify() {
   using RndMode = NVVM::FPRoundingMode;
+  using SatMode = NVVM::SaturationMode;
 
-  if (!llvm::isa<mlir::Float8E8M0FNUType>(getDstTy()))
-    return emitOpError("Only ") << mlir::Float8E8M0FNUType::get(getContext())
-                                << " type is supported for conversions from "
-                                   "bf16x2 to f8x2.";
+  bool isRoundingModeRN = getRnd() == RndMode::RN;
+  bool isRoundingModeRZ = getRnd() == RndMode::RZ;
+  bool isRoundingModeRP = getRnd() == RndMode::RP;
+  bool isSatFinite = getSat() == SatMode::SATFINITE;
+  bool hasRelu = getRelu();
 
-  auto rnd = getRnd();
-  if (rnd != RndMode::RZ && rnd != RndMode::RP)
-    return emitOpError("Only RZ and RP rounding modes are supported for "
-                       "conversions from bf16x2 to f8x2.");
+  mlir::MLIRContext *ctx = getContext();
 
-  return success();
+  return llvm::TypeSwitch<mlir::Type, LogicalResult>(getDstTy())
+      .Case<mlir::Float8E4M3FNType, mlir::Float8E5M2Type>(
+          [&](mlir::Type) -> LogicalResult {
+            if (!isRoundingModeRN)
+              return emitOpError("Only RN rounding mode is supported for "
+                                 "conversions from bf16x2 to ")
+                     << mlir::Float8E4M3FNType::get(ctx) << " and "
+                     << mlir::Float8E5M2Type::get(ctx) << " types";
+            if (!isSatFinite)
+              return emitOpError("Only SATFINITE saturation mode is supported "
+                                 "for conversions from bf16x2 to ")
+                     << mlir::Float8E4M3FNType::get(ctx) << " and "
+                     << mlir::Float8E5M2Type::get(ctx) << " types";
+            return success();
+          })
+      .Case<mlir::Float8E8M0FNUType>([&](mlir::Type) -> LogicalResult {
+        if (!(isRoundingModeRZ || isRoundingModeRP))
+          return emitOpError("Only RZ and RP rounding modes are supported for "
+                             "conversions from bf16x2 to ")
+                 << mlir::Float8E8M0FNUType::get(ctx) << " type";
+        if (hasRelu)
+          return emitOpError("relu not supported for conversions to ")
+                 << mlir::Float8E8M0FNUType::get(ctx) << " type";
+        return success();
+      })
+      .Default([&](mlir::Type) -> LogicalResult {
+        llvm_unreachable("Invalid conversion in ConvertBF16x2ToF8x2Op");
+        return failure();
+      });
 }
 
 LogicalResult ConvertF32x2ToF4x2Op::verify() {
@@ -4232,6 +4259,80 @@ llvm::Intrinsic::ID ConvertF32x2ToF6x2Op::getIntrinsicID(mlir::Type dstTy,
       });
 }
 
+NVVM::IDArgPair
+ConvertF16x2ToF4x2Op::getIntrinsicIDAndArgs(NVVM::ConvertF16x2ToF4x2Op &op,
+                                            LLVM::ModuleTranslation &mt,
+                                            llvm::IRBuilderBase &builder) {
+  mlir::Type dstTy = op.getDstTy();
+  bool hasRelu = op.getRelu();
+
+  llvm::Intrinsic::ID intId = llvm::Intrinsic::not_intrinsic;
+
+  if (llvm::isa<mlir::Float4E2M1FNType>(dstTy))
+    intId = hasRelu ? llvm::Intrinsic::nvvm_f16x2_to_e2m1x2_rn_relu_satfinite
+                    : llvm::Intrinsic::nvvm_f16x2_to_e2m1x2_rn_satfinite;
+
+  llvm::SmallVector<llvm::Value *> args;
+  args.push_back(mt.lookupValue(op.getSrc()));
+
+  return {intId, std::move(args)};
+}
+
+NVVM::IDArgPair
+ConvertBF16x2ToF4x2Op::getIntrinsicIDAndArgs(NVVM::ConvertBF16x2ToF4x2Op &op,
+                                             LLVM::ModuleTranslation &mt,
+                                             llvm::IRBuilderBase &builder) {
+  mlir::Type dstTy = op.getDstTy();
+  bool hasRelu = op.getRelu();
+
+  llvm::Intrinsic::ID intId = llvm::Intrinsic::not_intrinsic;
+
+  if (llvm::isa<mlir::Float4E2M1FNType>(dstTy))
+    intId = hasRelu ? llvm::Intrinsic::nvvm_bf16x2_to_e2m1x2_rn_relu_satfinite
+                    : llvm::Intrinsic::nvvm_bf16x2_to_e2m1x2_rn_satfinite;
+
+  llvm::SmallVector<llvm::Value *> args;
+  args.push_back(mt.lookupValue(op.getSrc()));
+
+  return {intId, std::move(args)};
+}
+
+llvm::Intrinsic::ID ConvertF16x2ToF6x2Op::getIntrinsicID(mlir::Type dstTy,
+                                                         bool hasRelu) {
+  return llvm::TypeSwitch<mlir::Type, llvm::Intrinsic::ID>(dstTy)
+      .Case<mlir::Float6E2M3FNType>([&](mlir::Float6E2M3FNType) {
+        return hasRelu ? llvm::Intrinsic::nvvm_f16x2_to_e2m3x2_rn_relu_satfinite
+                       : llvm::Intrinsic::nvvm_f16x2_to_e2m3x2_rn_satfinite;
+      })
+      .Case<mlir::Float6E3M2FNType>([&](mlir::Float6E3M2FNType) {
+        return hasRelu ? llvm::Intrinsic::nvvm_f16x2_to_e3m2x2_rn_relu_satfinite
+                       : llvm::Intrinsic::nvvm_f16x2_to_e3m2x2_rn_satfinite;
+      })
+      .Default([](mlir::Type) {
+        llvm_unreachable("Invalid conversion in ConvertF16x2ToF6x2Op");
+        return llvm::Intrinsic::not_intrinsic;
+      });
+}
+
+llvm::Intrinsic::ID ConvertBF16x2ToF6x2Op::getIntrinsicID(mlir::Type dstTy,
+                                                          bool hasRelu) {
+  return llvm::TypeSwitch<mlir::Type, llvm::Intrinsic::ID>(dstTy)
+      .Case<mlir::Float6E2M3FNType>([&](mlir::Float6E2M3FNType) {
+        return hasRelu
+                   ? llvm::Intrinsic::nvvm_bf16x2_to_e2m3x2_rn_relu_satfinite
+                   : llvm::Intrinsic::nvvm_bf16x2_to_e2m3x2_rn_satfinite;
+      })
+      .Case<mlir::Float6E3M2FNType>([&](mlir::Float6E3M2FNType) {
+        return hasRelu
+                   ? llvm::Intrinsic::nvvm_bf16x2_to_e3m2x2_rn_relu_satfinite
+                   : llvm::Intrinsic::nvvm_bf16x2_to_e3m2x2_rn_satfinite;
+      })
+      .Default([](mlir::Type) {
+        llvm_unreachable("Invalid conversion in ConvertBF16x2ToF6x2Op");
+        return llvm::Intrinsic::not_intrinsic;
+      });
+}
+
 #define GET_F32x2_TO_F8X2_US_ID(rnd, has_satf)                                 \
   has_satf ? llvm::Intrinsic::nvvm_ff_to_ue8m0x2_##rnd##_satfinite             \
            : llvm::Intrinsic::nvvm_ff_to_ue8m0x2_##rnd
@@ -4287,22 +4388,39 @@ llvm::Intrinsic::ID ConvertF16x2ToF8x2Op::getIntrinsicID(mlir::Type dstTy,
       });
 }
 
-#define GET_BF16X2_TO_F8X2_ID(rnd, has_satf)                                   \
-  has_satf ? llvm::Intrinsic::nvvm_bf16x2_to_ue8m0x2_##rnd##_satfinite         \
-           : llvm::Intrinsic::nvvm_bf16x2_to_ue8m0x2_##rnd
-
 llvm::Intrinsic::ID
-ConvertBF16x2ToF8x2Op::getIntrinsicID(NVVM::FPRoundingMode rnd,
-                                      NVVM::SaturationMode sat) {
+ConvertBF16x2ToF8x2Op::getIntrinsicID(mlir::Type dstTy,
+                                      NVVM::FPRoundingMode rnd,
+                                      NVVM::SaturationMode sat, bool hasRelu) {
   bool hasSatFinite = (sat == NVVM::SaturationMode::SATFINITE);
-  switch (rnd) {
-  case NVVM::FPRoundingMode::RZ:
-    return GET_BF16X2_TO_F8X2_ID(rz, hasSatFinite);
-  case NVVM::FPRoundingMode::RP:
-    return GET_BF16X2_TO_F8X2_ID(rp, hasSatFinite);
-  default:
-    llvm_unreachable("Invalid rounding mode for CvtBF16x2ToF8x2Op");
-  }
+
+  static constexpr llvm::Intrinsic::ID ue8m0x2IDs[] = {
+      llvm::Intrinsic::nvvm_bf16x2_to_ue8m0x2_rz,
+      llvm::Intrinsic::nvvm_bf16x2_to_ue8m0x2_rp,
+      llvm::Intrinsic::nvvm_bf16x2_to_ue8m0x2_rz_satfinite,
+      llvm::Intrinsic::nvvm_bf16x2_to_ue8m0x2_rp_satfinite,
+  };
+
+  return llvm::TypeSwitch<mlir::Type, llvm::Intrinsic::ID>(dstTy)
+      .Case<mlir::Float8E4M3FNType>([&](mlir::Float8E4M3FNType) {
+        return hasRelu
+                   ? llvm::Intrinsic::nvvm_bf16x2_to_e4m3x2_rn_relu_satfinite
+                   : llvm::Intrinsic::nvvm_bf16x2_to_e4m3x2_rn_satfinite;
+      })
+      .Case<mlir::Float8E5M2Type>([&](mlir::Float8E5M2Type) {
+        return hasRelu
+                   ? llvm::Intrinsic::nvvm_bf16x2_to_e5m2x2_rn_relu_satfinite
+                   : llvm::Intrinsic::nvvm_bf16x2_to_e5m2x2_rn_satfinite;
+      })
+      .Case<mlir::Float8E8M0FNUType>([&](mlir::Float8E8M0FNUType) {
+        bool hasRoundingModeRP = (rnd == NVVM::FPRoundingMode::RP);
+        unsigned index = (hasSatFinite << 1) | hasRoundingModeRP;
+        return ue8m0x2IDs[index];
+      })
+      .Default([](mlir::Type) {
+        llvm_unreachable("Invalid conversion in ConvertBF16x2ToF8x2Op");
+        return llvm::Intrinsic::not_intrinsic;
+      });
 }
 
 NVVM::IDArgPair ConvertF8x2ToF16x2Op::getIntrinsicIDAndArgs(
@@ -4395,6 +4513,74 @@ NVVM::IDArgPair ConvertF4x2ToF16x2Op::getIntrinsicIDAndArgs(
                          llvm::Type::getInt16Ty(builder.getContext()));
 
   return {intId, {extendedI16}};
+}
+
+NVVM::IDArgPair ConvertF32x2ToS2F6x2Op::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::ConvertF32x2ToS2F6x2Op>(op);
+  bool hasRelu = thisOp.getRelu();
+  bool hasScale = static_cast<bool>(thisOp.getScaleFactor());
+
+  llvm::Intrinsic::ID id =
+      hasRelu
+          ? llvm::Intrinsic::nvvm_ff_to_s2f6x2_rn_relu_satfinite_scale_n2_ue8m0
+          : llvm::Intrinsic::nvvm_ff_to_s2f6x2_rn_satfinite_scale_n2_ue8m0;
+
+  // Fill the Intrinsic Args
+  llvm::SmallVector<llvm::Value *> args;
+  args.push_back(mt.lookupValue(thisOp.getA()));
+  args.push_back(mt.lookupValue(thisOp.getB()));
+  args.push_back(hasScale ? mt.lookupValue(thisOp.getScaleFactor())
+                          : builder.getInt16(0x7f7f));
+  return {id, std::move(args)};
+}
+
+NVVM::IDArgPair ConvertBF16x2ToS2F6x2Op::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::ConvertBF16x2ToS2F6x2Op>(op);
+  bool hasRelu = thisOp.getRelu();
+  bool hasScale = static_cast<bool>(thisOp.getScaleFactor());
+
+  llvm::Intrinsic::ID id =
+      hasRelu
+          ? llvm::Intrinsic::
+                nvvm_bf16x2_to_s2f6x2_rn_relu_satfinite_scale_n2_ue8m0
+          : llvm::Intrinsic::nvvm_bf16x2_to_s2f6x2_rn_satfinite_scale_n2_ue8m0;
+
+  // Fill the Intrinsic Args
+  llvm::SmallVector<llvm::Value *> args;
+  args.push_back(mt.lookupValue(thisOp.getSrc()));
+  args.push_back(hasScale ? mt.lookupValue(thisOp.getScaleFactor())
+                          : builder.getInt16(0x7f7f));
+  return {id, std::move(args)};
+}
+
+NVVM::IDArgPair ConvertS2F6x2ToBF16x2Op::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::ConvertS2F6x2ToBF16x2Op>(op);
+  bool hasRelu = thisOp.getRelu();
+  bool hasScale = static_cast<bool>(thisOp.getScaleFactor());
+  bool hasSat = thisOp.getSat() == NVVM::SaturationMode::SATFINITE;
+
+  static constexpr llvm::Intrinsic::ID ids[] = {
+      llvm::Intrinsic::nvvm_s2f6x2_to_bf16x2_rn_scale_n2_ue8m0,
+      llvm::Intrinsic::nvvm_s2f6x2_to_bf16x2_rn_relu_scale_n2_ue8m0,
+      llvm::Intrinsic::nvvm_s2f6x2_to_bf16x2_rn_satfinite_scale_n2_ue8m0,
+      llvm::Intrinsic::nvvm_s2f6x2_to_bf16x2_rn_relu_satfinite_scale_n2_ue8m0,
+  };
+
+  unsigned idx = (hasSat << 1) | hasRelu;
+
+  // Fill the Intrinsic Args
+  llvm::SmallVector<llvm::Value *> args;
+  llvm::Value *packedI16 =
+      builder.CreateBitCast(mt.lookupValue(thisOp.getSrc()),
+                            llvm::Type::getInt16Ty(builder.getContext()));
+  args.push_back(packedI16);
+  args.push_back(hasScale ? mt.lookupValue(thisOp.getScaleFactor())
+                          : builder.getInt16(0x7f7f));
+
+  return {ids[idx], std::move(args)};
 }
 
 llvm::Intrinsic::ID
@@ -5867,9 +6053,9 @@ LogicalResult NVVMTargetAttr::verifyTarget(Operation *gpuModule) {
                      "NVVM target attribute must be attached to a GPU module");
   }
 
-  const NVVMCheckSMVersion targetSMVersion =
-      NVVMCheckSMVersion::getTargetSMVersionFromStr(getChip());
-  if (!targetSMVersion.isMinimumSMVersion()) {
+  const unsigned targetFullSmVersion =
+      NVVMCheckSMVersion::getTargetFullSmVersionFromStr(getChip());
+  if (!NVVMCheckSMVersion::isMinimumSMVersion(targetFullSmVersion)) {
     return emitError(gpuModule->getLoc(),
                      "Minimum NVVM target SM version is sm_20");
   }
@@ -5879,7 +6065,7 @@ LogicalResult NVVMTargetAttr::verifyTarget(Operation *gpuModule) {
             if (auto reqOp = llvm::dyn_cast<NVVM::RequiresSMInterface>(op)) {
               const NVVMCheckSMVersion requirement =
                   reqOp.getRequiredMinSMVersion();
-              if (!requirement.isCompatibleWith(targetSMVersion)) {
+              if (!requirement.isCompatibleWith(targetFullSmVersion)) {
                 op->emitOpError() << "is not supported on " << getChip();
                 return WalkResult::interrupt();
               }

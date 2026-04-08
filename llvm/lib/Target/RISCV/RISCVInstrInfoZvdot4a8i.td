@@ -61,9 +61,9 @@ let HasPassthruOp = true, HasMaskOp = true in {
 // Pseudo Instructions for CodeGen
 //===----------------------------------------------------------------------===//
 
-multiclass VPseudoVDOTA4_VV_VX {
+multiclass VPseudoVDOTA4_VV_VX<bit Commutable = 0> {
   foreach m = MxSet<32>.m in {
-    defm "" : VPseudoBinaryV_VV<m>,
+    defm "" : VPseudoBinaryV_VV<m, Commutable=Commutable>,
               SchedBinary<"WriteVIMulAddV", "ReadVIMulAddV", "ReadVIMulAddV", m.MX,
                           forcePassthruRead=true>;
     defm "" : VPseudoBinaryV_VX<m>,
@@ -72,11 +72,10 @@ multiclass VPseudoVDOTA4_VV_VX {
   }
 }
 
-// TODO: Add isCommutable for VDOTA4 and VDOTA4U
 let Predicates = [HasStdExtZvdot4a8i], mayLoad = 0, mayStore = 0,
     hasSideEffects = 0 in {
-  defm PseudoVDOTA4 : VPseudoVDOTA4_VV_VX;
-  defm PseudoVDOTA4U : VPseudoVDOTA4_VV_VX;
+  defm PseudoVDOTA4 : VPseudoVDOTA4_VV_VX<Commutable=1>;
+  defm PseudoVDOTA4U : VPseudoVDOTA4_VV_VX<Commutable=1>;
   defm PseudoVDOTA4SU : VPseudoVDOTA4_VV_VX;
   // VDOTA4US does not have a VV variant
   foreach m = MxListVF4 in {

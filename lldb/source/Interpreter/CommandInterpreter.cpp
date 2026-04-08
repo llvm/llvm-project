@@ -257,7 +257,7 @@ void CommandInterpreter::ResolveCommand(const char *command_line,
                                         CommandReturnObject &result) {
   std::string command = command_line;
   if (ResolveCommandImpl(command, result) != nullptr) {
-    result.AppendMessageWithFormat("%s", command.c_str());
+    result.GetOutputStream() << command;
     result.SetStatus(eReturnStatusSuccessFinishResult);
   }
 }
@@ -423,6 +423,15 @@ void CommandInterpreter::Initialize() {
   cmd_obj_sp = GetCommandSPExact("_regexp-bt");
   if (cmd_obj_sp)
     AddAlias("bt", cmd_obj_sp)->SetSyntax(cmd_obj_sp->GetSyntax());
+
+  cmd_obj_sp = GetCommandSPExact("thread backtrace");
+  if (cmd_obj_sp) {
+    if (auto *sys_bt = AddAlias("sys_bt", cmd_obj_sp, "--provider 0")) {
+      sys_bt->SetHelp("Show the base unwinder backtrace (without frame "
+                      "providers). Equivalent to 'thread backtrace "
+                      "--provider 0'.");
+    }
+  }
 
   cmd_obj_sp = GetCommandSPExact("target create");
   if (cmd_obj_sp)

@@ -223,6 +223,13 @@ public:
   // in bytes, else it will return zero.
   uint32_t GetPrologueByteSize();
 
+  void SetPrologueByteSize(uint32_t prologue_byte_size) {
+    assert(m_type == lldb::eSymbolTypeCode ||
+           m_type == lldb::eSymbolTypeResolver);
+    m_type_data = prologue_byte_size;
+    m_type_data_resolved = true;
+  }
+
   bool GetDemangledNameIsSynthesized() const {
     return m_demangled_is_synthesized;
   }

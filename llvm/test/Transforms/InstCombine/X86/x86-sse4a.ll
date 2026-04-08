@@ -138,7 +138,7 @@ define <2 x i64> @test_extrqi_constant_undef(<2 x i64> %x) {
 
 define <2 x i64> @test_extrqi_call_constexpr() {
 ; CHECK-LABEL: @test_extrqi_call_constexpr(
-; CHECK-NEXT:    ret <2 x i64> zeroinitializer
+; CHECK-NEXT:    ret <2 x i64> <i64 0, i64 undef>
 ;
   %1 = tail call <2 x i64> @llvm.x86.sse4a.extrqi(<2 x i64> bitcast (<16 x i8> trunc (<16 x i16> bitcast (<4 x i64> <i64 0, i64 undef, i64 2, i64 undef> to <16 x i16>) to <16 x i8>) to <2 x i64>), i8 8, i8 16)
   ret <2 x i64> %1

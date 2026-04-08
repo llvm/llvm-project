@@ -60,7 +60,8 @@ void HIPSPV::Linker::constructLinkAndEmitSpirvCommand(
   ArgStringList LinkArgs{};
 
   for (auto Input : Inputs)
-    LinkArgs.push_back(Input.getFilename());
+    if (Input.isFilename())
+      LinkArgs.push_back(Input.getFilename());
 
   // Add static device libraries using the common helper function.
   // This handles unbundling archives (.a) containing bitcode bundles.

@@ -104,7 +104,7 @@ public:
       // Skip callback matching in these cases.
       if (candidate_type.GetScriptInterpreter())
         return candidate_type.GetScriptInterpreter()->FormatterCallbackFunction(
-            m_name.AsCString(),
+            m_name.AsCString(nullptr),
             std::make_shared<TypeImpl>(candidate_type.GetType()));
     }
     return false;

@@ -1981,12 +1981,11 @@ void CIRGenModule::emitTopLevelDecl(Decl *decl) {
   case Decl::Var:
   case Decl::Decomposition:
   case Decl::VarTemplateSpecialization: {
-    auto *vd = cast<VarDecl>(decl);
-    if (isa<DecompositionDecl>(decl)) {
-      errorNYI(decl->getSourceRange(), "global variable decompositions");
-      break;
-    }
-    emitGlobal(vd);
+    emitGlobal(cast<VarDecl>(decl));
+    if (auto *decomp = dyn_cast<DecompositionDecl>(decl))
+      for (auto *binding : decomp->flat_bindings())
+        if (auto *holdingVar = binding->getHoldingVar())
+          emitGlobal(holdingVar);
     break;
   }
   case Decl::OpenACCRoutine:

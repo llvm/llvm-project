@@ -1091,6 +1091,13 @@ protected:
       const ScriptInterpreter::SanitizedScriptingModuleName &sanitized_name,
       const FileSpec &original_fspec, const FileSpec &fspec);
 
+  /// Returns the \c LoadScriptFromSymFile of scripting resource associated
+  /// with the specified module \c FileSpec. If the load style wasn't explicitly
+  /// set for a module, returns the target-wide default.
+  static LoadScriptFromSymFile
+  GetScriptLoadStyleForModule(const FileSpec &module_fspec,
+                              const Target &target);
+
 private:
   typedef std::function<Status(const ModuleSpec &)> ModuleResolver;
 

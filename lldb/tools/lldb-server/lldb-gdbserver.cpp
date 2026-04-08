@@ -46,6 +46,8 @@
 #include "Plugins/Process/NetBSD/NativeProcessNetBSD.h"
 #elif defined(_WIN32)
 #include "Plugins/Process/Windows/Common/NativeProcessWindows.h"
+#elif defined(_AIX)
+#include "Plugins/Process/AIX/NativeProcessAIX.h"
 #endif
 
 #ifndef LLGS_PROGRAM_NAME
@@ -71,6 +73,8 @@ typedef process_freebsd::NativeProcessFreeBSD::Manager NativeProcessManager;
 typedef process_netbsd::NativeProcessNetBSD::Manager NativeProcessManager;
 #elif defined(_WIN32)
 typedef NativeProcessWindows::Manager NativeProcessManager;
+#elif defined(_AIX)
+typedef process_aix::NativeProcessAIX::Manager NativeProcessManager;
 #else
 // Dummy implementation to make sure the code compiles
 class NativeProcessManager : public NativeProcessProtocol::Manager {

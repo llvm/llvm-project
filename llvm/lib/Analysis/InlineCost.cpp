@@ -3240,11 +3240,6 @@ std::optional<InlineResult> llvm::getAttributeBasedInliningDecision(
   if (Caller->hasOptNone())
     return InlineResult::failure("optnone attribute");
 
-  // Don't inline a function that treats null pointer as valid into a caller
-  // that does not have this attribute.
-  if (!Caller->nullPointerIsDefined() && Callee->nullPointerIsDefined())
-    return InlineResult::failure("nullptr definitions incompatible");
-
   // Don't inline functions which can be interposed at link-time.
   if (Callee->isInterposable())
     return InlineResult::failure("interposable");

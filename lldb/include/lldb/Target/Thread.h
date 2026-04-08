@@ -1324,6 +1324,25 @@ public:
   /// Returns true if any host thread is currently inside a provider.
   bool IsAnyProviderActive();
 
+  /// Get the ordered chain of provider descriptors and their frame list IDs.
+  ///
+  /// Each element is a pair of:
+  ///   - \b ScriptedFrameProviderDescriptor: metadata for the provider
+  ///     (class name, description, priority, thread specs).
+  ///   - \b frame_list_id_t: the sequential frame list identifier assigned
+  ///     to that provider in the chain (1 for the first provider, 2 for the
+  ///     second, etc.). ID 0 is reserved for the base unwinder and is never
+  ///     present in this vector.
+  ///
+  /// The vector is ordered by provider chain position (registration order
+  /// adjusted by priority). It persists across \c ClearStackFrames() so that
+  /// provider IDs remain stable for the lifetime of the thread.
+  const std::vector<
+      std::pair<ScriptedFrameProviderDescriptor, lldb::frame_list_id_t>> &
+  GetProviderChainIds() const {
+    return m_provider_chain_ids;
+  }
+
 protected:
   friend class ThreadPlan;
   friend class ThreadList;

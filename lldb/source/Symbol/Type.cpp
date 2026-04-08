@@ -1239,12 +1239,12 @@ bool TypeMemberFunctionImpl::GetDescription(Stream &stream) {
                   m_type.GetTypeName().AsCString("<unknown>"));
     break;
   case lldb::eMemberFunctionKindInstanceMethod:
-    stream.Printf("instance method %s of type %s", m_name.AsCString(),
-                  m_decl.GetDeclContext().GetName().AsCString());
+    stream.Format("instance method {0} of type {1}", m_name,
+                  m_decl.GetDeclContext().GetName());
     break;
   case lldb::eMemberFunctionKindStaticMethod:
-    stream.Printf("static method %s of type %s", m_name.AsCString(),
-                  m_decl.GetDeclContext().GetName().AsCString());
+    stream.Format("static method {0} of type {1}", m_name,
+                  m_decl.GetDeclContext().GetName());
     break;
   }
   return true;

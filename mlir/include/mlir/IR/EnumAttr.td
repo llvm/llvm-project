@@ -48,6 +48,10 @@ class IntEnumAttrCaseBase<I intType, string sym, string strVal, int intVal> :
 
 // Cases of integer enums with a specific type. By default, the string
 // representation is the same as the C++ symbol name.
+class I8EnumCase<string sym, int val, string str = sym>
+  : EnumCase<sym, val, str, 8>;
+class I16EnumCase<string sym, int val, string str = sym>
+  : EnumCase<sym, val, str, 16>;
 class I32EnumCase<string sym, int val, string str = sym>
   : EnumCase<sym, val, str, 32>;
 class I64EnumCase<string sym, int val, string str = sym>
@@ -292,6 +296,10 @@ class IntEnum<string name, string summary, list<EnumCase> cases, int width>
           summary),
       cases, width>;
 
+class I8Enum<string name, string summary, list<EnumCase> cases>
+    : IntEnum<name, summary, cases, 8>;
+class I16Enum<string name, string summary, list<EnumCase> cases>
+    : IntEnum<name, summary, cases, 16>;
 class I32Enum<string name, string summary, list<EnumCase> cases>
     : IntEnum<name, summary, cases, 32>;
 class I64Enum<string name, string summary, list<EnumCase> cases>

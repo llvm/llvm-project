@@ -135,6 +135,24 @@ ResourceManager::ResourceManager(const MCSchedModel &SM)
     Strategies[Index] = getStrategyFor(*Resources[Index]);
   }
 
+  // Print static resource information on debug mode
+  LLVM_DEBUG({
+    dbgs() << "\nProcessor resources:\n";
+    // Print InvalidUnit first to be consistent with scheduling model indexing
+    // schema
+    const MCProcResourceDesc &InvalidUnit = *SM.getProcResource(0);
+    dbgs() << "[ 0]  - " << format_hex(ProcResID2Mask[0], 16) << " - "
+           << InvalidUnit.Name << "\n";
+    for (unsigned I = 0, E = Resources.size(); I < E; ++I) {
+      const ResourceState &RS = *Resources[I];
+      const unsigned ProcResID = RS.getProcResourceID();
+      const MCProcResourceDesc &Desc = *SM.getProcResource(ProcResID);
+      dbgs() << '[' << format_decimal(ProcResID, 2) << "] "
+             << " - " << format_hex(RS.getResourceMask(), 16) << " - "
+             << Desc.Name << " (BufferSize=" << RS.getBufferSize() << ")\n";
+    }
+  });
+
   for (unsigned I = 1, E = SM.getNumProcResourceKinds(); I < E; ++I) {
     uint64_t Mask = ProcResID2Mask[I];
     unsigned Index = getResourceStateIndex(Mask);

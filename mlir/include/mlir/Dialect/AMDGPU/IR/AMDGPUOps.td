@@ -1302,7 +1302,8 @@ def AMDGPU_GlobalLoadAsyncToLDSOp :
                    Variadic<Index>:$srcIndices,
                    Arg<AnyMemRef, "LDS memory to write to", [MemWrite]>:$dst,
                    Variadic<Index>:$dstIndices,
-                   TypeAttr:$transferType
+                   TypeAttr:$transferType,
+                   Optional<I1>: $mask
                    )>,
     Results<(outs)> {
   let summary = "MLIR wrapper for async global load to lds instructions";
@@ -1316,6 +1317,8 @@ def AMDGPU_GlobalLoadAsyncToLDSOp :
     * `$dstIndices`: indices into `$dst` for this thread's LDS write location.
     * `$transferType`: type of data to be transferred. Must be 8, 32, 64 or 128 bit scalar
      or vector type.
+    * `$mask`: optional per-thread mask. When false, the thread's LDS write
+      is masked off. The global read still occurs for all threads regardless of mask.
 
     Note: only supported on gfx1250 and later.
 
@@ -1335,7 +1338,7 @@ def AMDGPU_GlobalLoadAsyncToLDSOp :
     ```
   }];
   let assemblyFormat = [{
-    $src `[` $srcIndices `]` `,` $dst `[` $dstIndices `]`
+    $src `[` $srcIndices `]` `,` $dst `[` $dstIndices `]`  (`,` $mask^)?
     attr-dict `:` $transferType `,` type($src) `,` type($dst)
   }];
   let hasVerifier = 1;
@@ -2002,7 +2005,7 @@ def AMDGPU_GlobalPrefetchOp :
     AMDGPU_Op<"global_prefetch", [MemoryEffects<[MemWrite, MemRead]>]>,
     Arguments<(ins AnyMemRef:$src,
                Variadic<I64>:$indices,
-               AMDGPU_TemporalHintAttr:$temporalHint,
+               AMDGPU_LoadTemporalHintAttr:$temporalHint,
                AMDGPU_CacheScopeAttr:$cacheScope,
                UnitAttr:$speculative)>,
     Results<(outs)> {

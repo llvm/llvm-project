@@ -219,7 +219,7 @@ static Error getTargetTripleAndFeatures(hsa_agent_t Agent,
     // part of the triple for parsing, and take the appended subtarget name.
     SmallVector<StringRef, 5> Components;
 
-    llvm::StringRef TripleLikeStr(ISAName.data(), ISAName.size());
+    llvm::StringRef TripleLikeStr(ISAName.data(), ISAName.size() - 1);
     TripleLikeStr.split(Components, '-', /*MaxSplit=*/4);
 
     if (Components.size() == 5) {
@@ -3852,8 +3852,7 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
       return Err;
     for (auto &Target : Targets)
       if (offloading::amdgpu::isImageCompatibleWithEnv(
-              Processor ? *Processor : "", ElfOrErr->getPlatformFlags(),
-              Target.str()))
+              *Processor, ElfOrErr->getPlatformFlags(), Target.str()))
         return true;
     return false;
   }

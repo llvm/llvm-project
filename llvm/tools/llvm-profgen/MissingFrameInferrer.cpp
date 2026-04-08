@@ -118,12 +118,14 @@ void MissingFrameInferrer::initialize(
         }
       };
 
-  LLVM_DEBUG(dbgs() << "============================\n ";
-             dbgs() << "Call targets:\n";
-             PrintCallTargets(CallEdges, false);
-             dbgs() << "\nTail call targets:\n";
-             PrintCallTargets(CallEdges, true);
-             dbgs() << "============================\n";);
+  LLVM_DEBUG({
+    dbgs() << "============================\n ";
+    dbgs() << "Call targets:\n";
+    PrintCallTargets(CallEdges, false);
+    dbgs() << "\nTail call targets:\n";
+    PrintCallTargets(TailCallEdges, true);
+    dbgs() << "============================\n";
+  });
 #endif
 }
 

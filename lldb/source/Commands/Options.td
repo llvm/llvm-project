@@ -1919,6 +1919,15 @@ let Command = "thread backtrace" in {
                                     Group<1>,
                                     Desc<"Do not filter out frames according "
                                          "to installed frame recognizers">;
+  def thread_backtrace_provider
+      : Option<"provider", "p">,
+        Group<1>,
+        Arg<"FrameProviderIDRange">,
+        Desc<"Show backtrace from specific frame provider(s). "
+             "Use a single ID (e.g., '2') for one provider, "
+             "a range (e.g., '0-2', '0 to 2') for multiple, "
+             "or '*'/'all' to show every provider. "
+             "ID 0 is the base unwinder, 1+ are synthetic providers.">;
 }
 
 let Command = "thread step scope" in {
