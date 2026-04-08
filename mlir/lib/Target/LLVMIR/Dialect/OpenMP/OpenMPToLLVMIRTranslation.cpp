@@ -4929,12 +4929,9 @@ convertOmpThreadprivate(Operation &opInst, llvm::IRBuilderBase &builder,
 
   if (!isa<LLVM::AddressOfOp>(symOp))
     return opInst.emitError("Addressing symbol not found");
-
   LLVM::AddressOfOp addressOfOp = cast<LLVM::AddressOfOp>(symOp);
   LLVM::GlobalOp global =
       addressOfOp.getGlobal(moduleTranslation.symbolTable());
-  if (!global)
-    return failure();
   llvm::GlobalValue *globalValue = moduleTranslation.lookupGlobal(global);
   llvm::Type *type = globalValue->getValueType();
   llvm::TypeSize typeSize =
