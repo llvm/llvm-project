@@ -82,7 +82,7 @@ struct RuntimeGlobalSymbolSpec {
 };
 
 struct RuntimeGlobalSymbolResult {
-  uint64_t value = 0;
+  uint64_t value = LLDB_INVALID_ADDRESS;
   bool success = false;
 };
 } // namespace
@@ -783,15 +783,12 @@ static llvm::SmallVector<RuntimeGlobalSymbolResult>
 ExtractRuntimeGlobalSymbolsBatched(
     Process *process, const ModuleSP &module_sp,
     llvm::ArrayRef<RuntimeGlobalSymbolSpec> specs) {
-  llvm::SmallVector<RuntimeGlobalSymbolResult> results;
-  results.resize(specs.size());
 
-  RuntimeGlobalSymbolResult fail_value = {LLDB_INVALID_ADDRESS, false};
+  // Start out with all results in a failed state.
+  llvm::SmallVector<RuntimeGlobalSymbolResult> results(specs.size());
 
-  if (!process || !module_sp) {
-    return llvm::SmallVector<RuntimeGlobalSymbolResult>{specs.size(),
-                                                        fail_value};
-  }
+  if (!process || !module_sp)
+    return results;
 
   const uint8_t ptr_size = process->GetAddressByteSize();
 
@@ -808,24 +805,18 @@ ExtractRuntimeGlobalSymbolsBatched(
     const Symbol *symbol = module_sp->FindFirstSymbolWithNameAndType(
         spec.name, lldb::eSymbolTypeData);
 
-    if (!symbol || !symbol->ValueIsAddress()) {
-      results[i] = fail_value;
+    if (!symbol || !symbol->ValueIsAddress())
       continue;
-    }
 
     lldb::addr_t symbol_load_addr =
         symbol->GetAddressRef().GetLoadAddress(&process->GetTarget());
-    if (symbol_load_addr == LLDB_INVALID_ADDRESS) {
-      results[i] = fail_value;
+    if (symbol_load_addr == LLDB_INVALID_ADDRESS)
       continue;
-    }
 
-    if (!spec.read_value) {
+    if (!spec.read_value)
       results[i] = {symbol_load_addr, true};
-    } else {
-      results[i] = fail_value;
+    else
       work_list.push_back({i, symbol_load_addr, size});
-    }
   }
 
   // Phase 2: Batch read values, grouping consecutive entries with the same
@@ -836,7 +827,8 @@ ExtractRuntimeGlobalSymbolsBatched(
 
   for (size_t i = 0; i < work_list.size();) {
     const uint8_t byte_size = work_list[i].byte_size;
-    size_t group_start = i;
+    const size_t group_start = i;
+
     llvm::SmallVector<lldb::addr_t> addrs;
     while (i < work_list.size() && work_list[i].byte_size == byte_size)
       addrs.push_back(work_list[i++].addr);
