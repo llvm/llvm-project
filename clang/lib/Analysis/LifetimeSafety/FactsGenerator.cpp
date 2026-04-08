@@ -368,25 +368,26 @@ void FactsGenerator::handleAssignment(const Expr *LHSExpr,
 
   if (const auto *DRE_LHS = dyn_cast<DeclRefExpr>(LHSExpr)) {
     QualType QT = DRE_LHS->getDecl()->getType();
-    if (QT->isReferenceType() && hasOrigins(QT->getPointeeType())) {
-      // Writing through a reference uses the binding but overwrites the
-      // pointee. Model this as a Read of the outer origin (keeping the binding
-      // live) and a Write of the inner origins (killing the pointee's
-      // liveness).
-      if (UseFact *UF = UseFacts.lookup(DRE_LHS)) {
-        const OriginList *FullList = UF->getUsedOrigins();
-        assert(FullList);
-        UF->setUsedOrigins(FactMgr.getOriginMgr().createSingleOriginList(
-            FullList->getOuterOriginID()));
-        if (const OriginList *InnerList = FullList->peelOuterOrigin()) {
-          UseFact *WriteUF = FactMgr.createFact<UseFact>(DRE_LHS, InnerList);
-          WriteUF->markAsWritten();
-          CurrentBlockFacts.push_back(WriteUF);
+    if (QT->isReferenceType()) {
+      if (hasOrigins(QT->getPointeeType())) {
+        // Writing through a reference uses the binding but overwrites the
+        // pointee. Model this as a Read of the outer origin (keeping the
+        // binding live) and a Write of the inner origins (killing the pointee's
+        // liveness).
+        if (UseFact *UF = UseFacts.lookup(DRE_LHS)) {
+          const OriginList *FullList = UF->getUsedOrigins();
+          assert(FullList);
+          UF->setUsedOrigins(FactMgr.getOriginMgr().createSingleOriginList(
+              FullList->getOuterOriginID()));
+          if (const OriginList *InnerList = FullList->peelOuterOrigin()) {
+            UseFact *WriteUF = FactMgr.createFact<UseFact>(DRE_LHS, InnerList);
+            WriteUF->markAsWritten();
+            CurrentBlockFacts.push_back(WriteUF);
+          }
         }
       }
-    } else if (!QT->isReferenceType()) {
+    } else
       markUseAsWrite(DRE_LHS);
-    }
   }
   // Kill the old loans of the destination origin and flow the new loans
   // from the source origin.
