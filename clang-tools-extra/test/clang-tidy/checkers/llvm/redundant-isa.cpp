@@ -146,3 +146,24 @@ void testIsaTemplateMulti(const T* value) {
   // CHECK-MESSAGES: :[[@LINE-2]]:30: note: source expression has pointee type 'T'
   (void)b17;
 }
+
+namespace llvm {
+namespace magic {
+template <typename T>
+void testIsaImplicitlyLLVMUnresolve(T* value) {
+  bool b18 = isa<T>(value);
+  // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: call to 'isa' always succeeds [llvm-redundant-casting]
+  // CHECK-MESSAGES: :[[@LINE-2]]:21: note: source expression has pointee type 'T'
+  (void)b18;
+}
+} // namespace magic
+} // namespace llvm
+
+
+ISA_FUNCTION(isa)
+
+void testIsaNonLLVM(A& value) {
+  bool b19 = isa<A>(value);
+  (void)b19;
+}
+
