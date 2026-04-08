@@ -460,8 +460,6 @@ void JSONGenerator::serializeMDReference(const Reference &Ref,
   ReferenceObj["BasePath"] = Path;
 }
 
-typedef std::function<void(const Reference &, Object &)> ReferenceFunc;
-
 // Although namespaces and records both have ScopeChildren, they serialize them
 // differently. Only enums, records, and typedefs are handled here.
 void JSONGenerator::serializeCommonChildren(
