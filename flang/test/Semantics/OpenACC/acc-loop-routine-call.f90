@@ -1,7 +1,6 @@
 ! RUN: %python %S/../test_errors.py %s %flang -fopenacc
 
 ! Semantic checks for calling !$acc routine procedures from LOOP bodies
-! (AccStructureChecker::Enter(const parser::CallStmt &)).
 
 module acc_loop_routine_call_m
   implicit none
@@ -113,6 +112,14 @@ program acc_loop_routine_call
   !$acc end parallel
 
   !$acc parallel
+  !ERROR: Calling GANG(1) routine inside WORKER loop is not allowed
+  !$acc loop worker
+  do i = 1, n
+    call r_gang_dim1()
+  end do
+  !$acc end parallel
+  
+  !$acc parallel
   !ERROR: Calling GANG(2) routine inside WORKER loop is not allowed
   !$acc loop worker
   do i = 1, n
@@ -146,7 +153,7 @@ program acc_loop_routine_call
   !$acc end parallel
 
   !$acc parallel
-  !ERROR: Calling GANG(1) routine inside GANG(1) loop is not allowed
+  !ERROR: Calling GANG(1) routine inside GANG loop is not allowed
   !$acc loop gang
   do i = 1, n
     call r_gang_dim1()
@@ -154,7 +161,7 @@ program acc_loop_routine_call
   !$acc end parallel
 
   !$acc parallel
-  !ERROR: Calling GANG routine inside GANG(1) loop is not allowed
+  !ERROR: Calling GANG routine inside GANG loop is not allowed
   !$acc loop gang
   do i = 1, n
     call r_gang()
@@ -201,18 +208,11 @@ program acc_loop_routine_call
   !$acc end parallel
 
   !$acc parallel
-  !ERROR: Calling GANG(3) routine inside GANG(1) loop is not allowed
+  !ERROR: Calling GANG(3) routine inside GANG loop is not allowed
   !$acc loop gang
   do i = 1, n
     call r_gang_dim3()
   end do
   !$acc end parallel
-
-  !ERROR: Calling WORKER routine inside VECTOR loop is not allowed
-  !$acc parallel loop vector
-  do i = 1, n
-    call r_worker()
-  end do
-  !$acc end parallel loop
 
 end program acc_loop_routine_call

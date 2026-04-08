@@ -402,9 +402,15 @@ void AccStructureChecker::Enter(const parser::CallStmt &call) {
           getGangDimensionSize(inner)};
       const std::int64_t loopDimNum{loopGangDim.value_or(1)};
       if (routineGangDim && routineGangDim >= loopDimNum) {
-        context_.Say(GetContext().clauseSource,
-            "Calling %s routine inside GANG(%s) loop is not allowed"_err_en_US,
-            routineParDim, std::to_string(loopDimNum));
+        if (loopGangDim) {
+          context_.Say(GetContext().clauseSource,
+              "Calling %s routine inside GANG(%s) loop is not allowed"_err_en_US,
+              routineParDim, std::to_string(*loopGangDim));
+        } else {
+          context_.Say(GetContext().clauseSource,
+              "Calling %s routine inside GANG loop is not allowed"_err_en_US,
+              routineParDim);
+        }
       }
     }
   }
