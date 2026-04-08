@@ -183,10 +183,7 @@ public:
     return true;
   }
 
-  unsigned getCSRFirstUseCost() const override {
-    // push + pop.
-    return 2;
-  }
+  unsigned getCSRFirstUseCost(const MachineFunction &MF) const override;
 };
 
 } // End llvm namespace
