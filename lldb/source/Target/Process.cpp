@@ -1600,76 +1600,77 @@ static bool ShouldShowError(Process &process) {
   llvm_unreachable("unhandled process state");
 }
 
+static addr_t ComputeConstituentLoadAddress(BreakpointLocation &constituent,
+                                            Process &proc) {
+  // Reset the IsIndirect flag here, in case the location changes from pointing
+  // from an indirect symbol to a regular symbol.
+  constituent.SetIsIndirect(false);
+
+  Target &target = proc.GetTarget();
+
+  if (!constituent.ShouldResolveIndirectFunctions())
+    return constituent.GetAddress().GetOpcodeLoadAddress(&target);
+
+  const Symbol *symbol =
+      constituent.GetAddress().CalculateSymbolContextSymbol();
+  if (!symbol || !symbol->IsIndirect())
+    return constituent.GetAddress().GetOpcodeLoadAddress(&target);
+
+  // An indirect symbol is involved.
+  Status error;
+  Address symbol_address = symbol->GetAddress();
+  addr_t load_addr = proc.ResolveIndirectFunction(&symbol_address, error);
+
+  if (!error.Success() && ShouldShowError(proc)) {
+    target.GetDebugger().GetAsyncErrorStream()->Printf(
+        "warning: failed to resolve indirect function at 0x%" PRIx64
+        " for breakpoint %i.%i: %s\n",
+        symbol->GetLoadAddress(&target), constituent.GetBreakpoint().GetID(),
+        constituent.GetID(),
+        error.AsCString() ? error.AsCString() : "unknown error");
+    // FIXME: ShouldShowError must only guard the error message.
+    // FIXME: Use diagnostics instead of printing "warning" to the async output.
+    return LLDB_INVALID_ADDRESS;
+  }
+
+  Address resolved_address(load_addr);
+  constituent.SetIsIndirect(true);
+  return resolved_address.GetOpcodeLoadAddress(&target);
+}
+
 lldb::break_id_t
 Process::CreateBreakpointSite(const BreakpointLocationSP &constituent,
                               bool use_hardware) {
-  addr_t load_addr = LLDB_INVALID_ADDRESS;
+  addr_t load_addr = ComputeConstituentLoadAddress(*constituent, *this);
 
-  bool show_error = ShouldShowError(*this);
+  if (load_addr == LLDB_INVALID_ADDRESS)
+    return LLDB_INVALID_BREAK_ID;
 
-  // Reset the IsIndirect flag here, in case the location changes from pointing
-  // to a indirect symbol to a regular symbol.
-  constituent->SetIsIndirect(false);
-
-  if (constituent->ShouldResolveIndirectFunctions()) {
-    const Symbol *symbol =
-        constituent->GetAddress().CalculateSymbolContextSymbol();
-    if (symbol && symbol->IsIndirect()) {
-      Status error;
-      Address symbol_address = symbol->GetAddress();
-      load_addr = ResolveIndirectFunction(&symbol_address, error);
-      if (!error.Success() && show_error) {
-        GetTarget().GetDebugger().GetAsyncErrorStream()->Printf(
-            "warning: failed to resolve indirect function at 0x%" PRIx64
-            " for breakpoint %i.%i: %s\n",
-            symbol->GetLoadAddress(&GetTarget()),
-            constituent->GetBreakpoint().GetID(), constituent->GetID(),
-            error.AsCString() ? error.AsCString() : "unknown error");
-        return LLDB_INVALID_BREAK_ID;
-      }
-      Address resolved_address(load_addr);
-      load_addr = resolved_address.GetOpcodeLoadAddress(&GetTarget());
-      constituent->SetIsIndirect(true);
-    } else
-      load_addr = constituent->GetAddress().GetOpcodeLoadAddress(&GetTarget());
-  } else
-    load_addr = constituent->GetAddress().GetOpcodeLoadAddress(&GetTarget());
-
-  if (load_addr != LLDB_INVALID_ADDRESS) {
-    BreakpointSiteSP bp_site_sp;
-
-    // Look up this breakpoint site.  If it exists, then add this new
-    // constituent, otherwise create a new breakpoint site and add it.
-
-    bp_site_sp = m_breakpoint_site_list.FindByAddress(load_addr);
-
-    if (bp_site_sp) {
-      bp_site_sp->AddConstituent(constituent);
-      constituent->SetBreakpointSite(bp_site_sp);
-      return bp_site_sp->GetID();
-    } else {
-      bp_site_sp.reset(
-          new BreakpointSite(constituent, load_addr, use_hardware));
-      if (bp_site_sp) {
-        Status error = EnableBreakpointSite(bp_site_sp.get());
-        if (error.Success()) {
-          constituent->SetBreakpointSite(bp_site_sp);
-          return m_breakpoint_site_list.Add(bp_site_sp);
-        } else {
-          if (show_error || use_hardware) {
-            // Report error for setting breakpoint...
-            GetTarget().GetDebugger().GetAsyncErrorStream()->Printf(
-                "warning: failed to set breakpoint site at 0x%" PRIx64
-                " for breakpoint %i.%i: %s\n",
-                load_addr, constituent->GetBreakpoint().GetID(),
-                constituent->GetID(),
-                error.AsCString() ? error.AsCString() : "unknown error");
-          }
-        }
-      }
-    }
+  // Look up this breakpoint site.  If it exists, then add this new
+  // constituent, otherwise create a new breakpoint site and add it.
+  if (BreakpointSiteSP bp_site_sp =
+          m_breakpoint_site_list.FindByAddress(load_addr)) {
+    bp_site_sp->AddConstituent(constituent);
+    constituent->SetBreakpointSite(bp_site_sp);
+    return bp_site_sp->GetID();
   }
-  // We failed to enable the breakpoint
+
+  BreakpointSiteSP bp_site_sp(
+      new BreakpointSite(constituent, load_addr, use_hardware));
+  Status error = EnableBreakpointSite(bp_site_sp.get());
+  if (error.Success()) {
+    constituent->SetBreakpointSite(bp_site_sp);
+    return m_breakpoint_site_list.Add(bp_site_sp);
+  }
+
+  if (ShouldShowError(*this) || use_hardware) {
+    // Report error for setting breakpoint...
+    GetTarget().GetDebugger().GetAsyncErrorStream()->Printf(
+        "warning: failed to set breakpoint site at 0x%" PRIx64
+        " for breakpoint %i.%i: %s\n",
+        load_addr, constituent->GetBreakpoint().GetID(), constituent->GetID(),
+        error.AsCString() ? error.AsCString() : "unknown error");
+  }
   return LLDB_INVALID_BREAK_ID;
 }
 
