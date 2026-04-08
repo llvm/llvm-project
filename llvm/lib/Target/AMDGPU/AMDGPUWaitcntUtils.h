@@ -37,7 +37,7 @@ enum InstCounterType {
   NUM_INST_CNTS = NUM_EXPERT_INST_CNTS
 };
 
-StringLiteral getInstCounterName(InstCounterType T);
+StringLiteral getInstCounterName(InstCounterType T, bool HasExtendedWaitcnts);
 
 // Return an iterator over all counters between LOAD_CNT (the first counter)
 // and \c MaxCounter (exclusive, default value yields an enumeration over
@@ -121,23 +121,18 @@ public:
     return Wait;
   }
 
-  void print(raw_ostream &OS) const {
+  void print(raw_ostream &OS, bool HasExtendedWaitcnts) const {
     ListSeparator LS;
     for (InstCounterType T : inst_counter_types())
-      OS << LS << getInstCounterName(T) << ": " << Cnt[T];
+      OS << LS << getInstCounterName(T, HasExtendedWaitcnts) << ": " << Cnt[T];
     if (LS.unused())
       OS << "none";
     OS << '\n';
   }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  LLVM_DUMP_METHOD void dump() const;
+  LLVM_DUMP_METHOD void dump(bool HasExtendedWaitcnts) const;
 #endif
-
-  friend raw_ostream &operator<<(raw_ostream &OS, const AMDGPU::Waitcnt &Wait) {
-    Wait.print(OS);
-    return OS;
-  }
 };
 
 Waitcnt decodeWaitcnt(const IsaVersion &Version, unsigned Encoded);
