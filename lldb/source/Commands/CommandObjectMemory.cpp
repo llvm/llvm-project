@@ -1279,10 +1279,7 @@ protected:
       return;
     }
 
-    StreamString buffer(
-        Stream::eBinary,
-        process->GetTarget().GetArchitecture().GetAddressByteSize(),
-        process->GetTarget().GetArchitecture().GetByteOrder());
+    StreamString buffer(Stream::eBinary, process->GetByteOrder());
 
     OptionValueUInt64 &byte_size_value = m_format_options.GetByteSizeValue();
     size_t item_byte_size = byte_size_value.GetCurrentValue();
@@ -1336,7 +1333,7 @@ protected:
       return;
     } else if (item_byte_size == 0) {
       if (m_format_options.GetFormat() == eFormatPointer)
-        item_byte_size = buffer.GetAddressByteSize();
+        item_byte_size = process->GetAddressByteSize();
       else
         item_byte_size = 1;
     }
@@ -1704,15 +1701,16 @@ protected:
           page_count);
       if (page_count > 0) {
         bool print_comma = false;
-        result.AppendMessageWithFormat("Dirty pages: ");
+        Stream &strm = result.GetOutputStream();
+        strm << "Dirty pages: ";
         for (size_t i = 0; i < page_count; i++) {
           if (print_comma)
-            result.AppendMessageWithFormat(", ");
+            strm << ", ";
           else
             print_comma = true;
-          result.AppendMessageWithFormat("0x%" PRIx64, (*dirty_page_list)[i]);
+          strm << llvm::formatv("{0:x}", (*dirty_page_list)[i]);
         }
-        result.AppendMessage(".");
+        strm << ".\n";
       }
     }
   }

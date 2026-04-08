@@ -503,8 +503,8 @@ bool Address::Dump(Stream *s, ExecutionContextScope *exe_scope, DumpStyle style,
               const Symbol *symbol =
                   symtab->FindSymbolContainingFileAddress(file_Addr);
               if (symbol) {
-                const char *symbol_name = symbol->GetName().AsCString();
-                if (symbol_name) {
+                llvm::StringRef symbol_name = symbol->GetName().GetStringRef();
+                if (!symbol_name.empty()) {
                   s->PutCStringColorHighlighted(symbol_name, settings);
                   addr_t delta =
                       file_Addr - symbol->GetAddressRef().GetFileAddress();
