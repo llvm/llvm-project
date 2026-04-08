@@ -374,9 +374,10 @@ void FactsGenerator::handleAssignment(const Expr *LHSExpr,
       // live) and a Write of the inner origins (killing the pointee's
       // liveness).
       if (UseFact *UF = UseFacts.lookup(DRE_LHS)) {
-        const OriginList *FullList = UF->getOriginList();
+        const OriginList *FullList = UF->getUsedOrigins();
         assert(FullList);
-        UF->setOrigins(FullList->getOuterOriginID());
+        UF->setUsedOrigins(FactMgr.getOriginMgr().createSingleOriginList(
+            FullList->getOuterOriginID()));
         if (const OriginList *InnerList = FullList->peelOuterOrigin()) {
           UseFact *WriteUF = FactMgr.createFact<UseFact>(DRE_LHS, InnerList);
           WriteUF->markAsWritten();

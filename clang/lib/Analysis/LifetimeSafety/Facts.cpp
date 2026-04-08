@@ -80,14 +80,14 @@ void GlobalEscapeFact::dump(llvm::raw_ostream &OS, const LoanManager &,
 void UseFact::dump(llvm::raw_ostream &OS, const LoanManager &,
                    const OriginManager &OM) const {
   OS << "Use (";
-  bool First = true;
-  forEachOrigin([&](OriginID OID) {
-    if (!First)
+  size_t NumUsedOrigins = getUsedOrigins()->getLength();
+  size_t I = 0;
+  for (const OriginList *Cur = getUsedOrigins(); Cur;
+       Cur = Cur->peelOuterOrigin(), ++I) {
+    OM.dump(Cur->getOuterOriginID(), OS);
+    if (I < NumUsedOrigins - 1)
       OS << ", ";
-    else
-      First = false;
-    OM.dump(OID, OS);
-  });
+  }
   OS << ", " << (isWritten() ? "Write" : "Read") << ")\n";
 }
 
