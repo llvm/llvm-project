@@ -1453,7 +1453,7 @@ static Instruction *factorizeMathWithShlOps(BinaryOperator &I,
   // TODO: Also handle mul by doubling the shift amount?
   assert((I.getOpcode() == Instruction::Add ||
           I.getOpcode() == Instruction::Sub) &&
-         "Expected add/sub");
+         "Expecting add/sub instruction");
   auto *Op0 = dyn_cast<BinaryOperator>(I.getOperand(0));
   auto *Op1 = dyn_cast<BinaryOperator>(I.getOperand(1));
   if (!Op0 || !Op1 || !(Op0->hasOneUse() || Op1->hasOneUse()))
@@ -1521,6 +1521,40 @@ static Instruction *foldBoxMultiply(BinaryOperator &I) {
     return BinaryOperator::CreateMul(X, Y);
 
   return nullptr;
+}
+
+/// Canonicalize a nested add/sub with a constant on the inner RHS by
+/// sinking the constant to the outer RHS.
+/// (X +/- C) +/- Y  ->  (X +/- Y) +/- C
+static Instruction
+*canonicalizeNestedAddSubWithConstant(BinaryOperator &I,
+                                      InstCombiner::BuilderTy &Builder) {
+
+  assert((I.getOpcode() == Instruction::Add ||
+          I.getOpcode() == Instruction::Sub) &&
+         "Expecting add/sub instruction");
+
+  auto *Inner = dyn_cast<BinaryOperator>(I.getOperand(0));
+  if (!Inner || !Inner->hasOneUse())
+    return nullptr;
+
+  const bool IsOuterAdd = I.getOpcode() == Instruction::Add;
+  bool IsInnerAdd;
+
+  Value *X, *Y = I.getOperand(1);
+  Constant *C;
+  if (match(Inner, m_Add(m_Value(X), m_ImmConstant(C))))
+    IsInnerAdd = true;
+  else if (match(Inner, m_Sub(m_Value(X), m_ImmConstant(C))))
+    IsInnerAdd = false;
+  else
+    return nullptr;
+
+  Value *XY = IsOuterAdd ? Builder.CreateAdd(X, Y)
+                         : Builder.CreateSub(X, Y);
+
+  return IsInnerAdd ? BinaryOperator::CreateAdd(XY, C)
+                    : BinaryOperator::CreateSub(XY, C);
 }
 
 Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
@@ -1913,6 +1947,9 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
     return Res;
 
   if (Instruction *Res = foldBinOpOfSelectAndCastOfSelectCondition(I))
+    return Res;
+
+  if (Instruction *Res = canonicalizeNestedAddSubWithConstant(I, Builder))
     return Res;
 
   // Re-enqueue users of the induction variable of add recurrence if we infer
@@ -2965,6 +3002,9 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
       }
     }
   }
+
+  if (Instruction *Res = canonicalizeNestedAddSubWithConstant(I, Builder))
+    return Res;
 
   return TryToNarrowDeduceFlags();
 }

@@ -802,11 +802,11 @@ define <2 x i32> @test_sext_vec(<2 x i32> %a, <2 x i32> %b){
 
 define i64 @test_zext_nneg(i32 %c1, i64 %c2, i64 %c3){
 ; CHECK-LABEL: @test_zext_nneg(
-; CHECK-NEXT:    [[DOTNEG:%.*]] = add i64 [[C2:%.*]], -4
-; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[C1:%.*]] to i64
-; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 [[TMP1]], [[C3:%.*]]
-; CHECK-NEXT:    [[SUB:%.*]] = add i64 [[DOTNEG]], [[TMP2]]
-; CHECK-NEXT:    ret i64 [[SUB]]
+; CHECK-NEXT:    [[C2:%.*]] = sext i32 [[C1:%.*]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[C2]], [[SUB:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[C3:%.*]], [[TMP1]]
+; CHECK-NEXT:    [[SUB1:%.*]] = add i64 [[TMP3]], -4
+; CHECK-NEXT:    ret i64 [[SUB1]]
 ;
   %not = xor i32 %c1, -1
   %conv = zext nneg i32 %not to i64

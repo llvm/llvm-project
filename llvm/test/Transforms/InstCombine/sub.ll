@@ -1537,9 +1537,8 @@ define i8 @sub_mask_lowbits(i8 %x) {
 
 define i8 @sub_not_mask_lowbits(i8 %x) {
 ; CHECK-LABEL: @sub_not_mask_lowbits(
-; CHECK-NEXT:    [[A1:%.*]] = add i8 [[X:%.*]], 4
-; CHECK-NEXT:    [[A2:%.*]] = and i8 [[X]], 7
-; CHECK-NEXT:    [[R:%.*]] = sub i8 [[A1]], [[A2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[X:%.*]], -8
+; CHECK-NEXT:    [[R:%.*]] = or disjoint i8 [[TMP1]], 4
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %a1 = add i8 %x, 4

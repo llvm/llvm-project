@@ -1293,15 +1293,15 @@ define i8 @no_add_op2_to_pn2(i1 %c, i32 %n) {
 ; CHECK:       [[BODY]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[BODY]] ]
 ; CHECK-NEXT:    [[PN:%.*]] = phi i8 [ 0, %[[ENTRY]] ], [ [[OP1:%.*]], %[[BODY]] ]
-; CHECK-NEXT:    [[PN2:%.*]] = phi i8 [ 1, %[[ENTRY]] ], [ [[OP1]], %[[BODY]] ]
+; CHECK-NEXT:    [[OP2:%.*]] = phi i8 [ 1, %[[ENTRY]] ], [ [[OP1]], %[[BODY]] ]
 ; CHECK-NEXT:    [[OP1]] = add i8 [[PN]], 2
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i32 [[I]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[I_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[EXIT:.*]], label %[[BODY]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[OP2:%.*]] = add i8 [[PN2]], 3
 ; CHECK-NEXT:    [[RDX:%.*]] = add i8 [[OP2]], [[OP1]]
-; CHECK-NEXT:    ret i8 [[RDX]]
+; CHECK-NEXT:    [[RDX1:%.*]] = add i8 [[RDX]], 3
+; CHECK-NEXT:    ret i8 [[RDX1]]
 ;
 entry:
   br label %body

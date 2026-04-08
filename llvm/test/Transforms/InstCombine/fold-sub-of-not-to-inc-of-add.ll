@@ -13,9 +13,9 @@
 
 define i32 @p0_scalar(i32 %x, i32 %y) {
 ; CHECK-LABEL: @p0_scalar(
-; CHECK-NEXT:    [[T0_NEG:%.*]] = add i32 [[X:%.*]], 1
-; CHECK-NEXT:    [[T1:%.*]] = add i32 [[T0_NEG]], [[Y:%.*]]
-; CHECK-NEXT:    ret i32 [[T1]]
+; CHECK-NEXT:    [[T1:%.*]] = add i32 [[T0_NEG:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[T2:%.*]] = add i32 [[T1]], 1
+; CHECK-NEXT:    ret i32 [[T2]]
 ;
   %t0 = xor i32 %x, -1
   %t1 = sub i32 %y, %t0
@@ -41,9 +41,9 @@ define i8 @p0_scalar_not_truly_negatable(i8 %x, i8 %y) {
 
 define <4 x i32> @p1_vector_splat(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: @p1_vector_splat(
-; CHECK-NEXT:    [[T0_NEG:%.*]] = add <4 x i32> [[X:%.*]], splat (i32 1)
-; CHECK-NEXT:    [[T1:%.*]] = add <4 x i32> [[T0_NEG]], [[Y:%.*]]
-; CHECK-NEXT:    ret <4 x i32> [[T1]]
+; CHECK-NEXT:    [[T1:%.*]] = add <4 x i32> [[T0_NEG:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[T2:%.*]] = add <4 x i32> [[T1]], splat (i32 1)
+; CHECK-NEXT:    ret <4 x i32> [[T2]]
 ;
   %t0 = xor <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
   %t1 = sub <4 x i32> %y, %t0
@@ -52,9 +52,9 @@ define <4 x i32> @p1_vector_splat(<4 x i32> %x, <4 x i32> %y) {
 
 define <4 x i32> @p2_vector_poison(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: @p2_vector_poison(
-; CHECK-NEXT:    [[T0_NEG:%.*]] = add <4 x i32> [[X:%.*]], splat (i32 1)
-; CHECK-NEXT:    [[T1:%.*]] = add <4 x i32> [[T0_NEG]], [[Y:%.*]]
-; CHECK-NEXT:    ret <4 x i32> [[T1]]
+; CHECK-NEXT:    [[T1:%.*]] = add <4 x i32> [[T0_NEG:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[T2:%.*]] = add <4 x i32> [[T1]], splat (i32 1)
+; CHECK-NEXT:    ret <4 x i32> [[T2]]
 ;
   %t0 = xor <4 x i32> %x, <i32 -1, i32 -1, i32 poison, i32 -1>
   %t1 = sub <4 x i32> %y, %t0
