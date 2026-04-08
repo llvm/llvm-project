@@ -110,6 +110,12 @@ getCollapseSizeAndForce(const Fortran::parser::AccClauseList &);
 /// Checks whether the current insertion point is inside OpenACC loop.
 bool isInOpenACCLoop(fir::FirOpBuilder &);
 
+/// Checks whether the current insertion point is inside a collapsed acc.loop
+/// and there are still collapsed dimensions to consume (i.e., this do-loop
+/// should not generate a separate loop because the parent already distributes
+/// this dimension).
+bool isInsideCollapsedACCLoop(fir::FirOpBuilder &);
+
 /// Checks whether the current insertion point is inside OpenACC compute
 /// construct.
 bool isInsideOpenACCComputeConstruct(fir::FirOpBuilder &);

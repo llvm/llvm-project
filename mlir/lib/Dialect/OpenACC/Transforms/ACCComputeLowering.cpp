@@ -255,59 +255,6 @@ assignKnownLaunchArgs<SerialOp>(SerialOp, DeviceType, RewriterBase &,
 // Loop conversion pattern
 //===----------------------------------------------------------------------===//
 
-/// When collapse(force:N) generates an outer acc.loop with N control
-/// variables, the body may still contain inner acc.loop ops that re-iterate
-/// dimensions already covered by the collapse.  Before converting the outer
-/// loop to scf.parallel, eliminate these redundant inner loops by inlining
-/// their bodies and replacing their IVs with the corresponding outer IVs.
-static void eliminateCollapsedInnerLoops(LoopOp outerLoop,
-                                         RewriterBase &rewriter) {
-  auto collapseVal = outerLoop.getCollapseValue();
-  if (!collapseVal || *collapseVal <= 1)
-    return;
-
-  unsigned numOuterIVs = outerLoop.getBody().getNumArguments();
-  if (numOuterIVs <= 1)
-    return;
-
-  SmallVector<LoopOp> innerLoopsToErase;
-
-  outerLoop.getBody().walk([&](LoopOp innerLoop) {
-    if (innerLoop == outerLoop)
-      return WalkResult::advance();
-    if (innerLoop.getBody().getNumArguments() != 1)
-      return WalkResult::advance();
-
-    Value innerLB = innerLoop.getLowerbound()[0];
-    Value innerUB = innerLoop.getUpperbound()[0];
-    Value innerStep = innerLoop.getStep()[0];
-
-    for (unsigned ivIdx = 0; ivIdx < numOuterIVs; ++ivIdx) {
-      if (innerLB != outerLoop.getLowerbound()[ivIdx] ||
-          innerUB != outerLoop.getUpperbound()[ivIdx] ||
-          innerStep != outerLoop.getStep()[ivIdx])
-        continue;
-
-      Value outerIV = outerLoop.getBody().getArgument(ivIdx);
-
-      IRMapping mapping;
-      mapping.map(innerLoop.getBody().getArgument(0), outerIV);
-
-      rewriter.setInsertionPoint(innerLoop);
-      cloneACCRegionInto(&innerLoop.getRegion(), innerLoop->getBlock(),
-                         Block::iterator(innerLoop), mapping,
-                         innerLoop->getResults());
-
-      innerLoopsToErase.push_back(innerLoop);
-      return WalkResult::interrupt();
-    }
-    return WalkResult::advance();
-  });
-
-  for (LoopOp loop : innerLoopsToErase)
-    rewriter.eraseOp(loop);
-}
-
 class ACCLoopConversion : public OpRewritePattern<LoopOp> {
 public:
   ACCLoopConversion(MLIRContext *ctx, const ACCToGPUMappingPolicy &policy,
@@ -436,15 +383,6 @@ public:
     auto *context = op.getContext();
 
     DefaultACCToGPUMappingPolicy policy;
-
-    // Pre-pass: eliminate redundant inner acc.loop ops that re-iterate
-    // dimensions already covered by a collapsed outer acc.loop.  This must
-    // happen before the greedy loop conversion because the inner loops
-    // would otherwise be converted to scf.for independently.
-    IRRewriter rewriter(context);
-    op.walk([&](LoopOp outerLoop) {
-      eliminateCollapsedInnerLoops(outerLoop, rewriter);
-    });
 
     // Part 1: Convert acc.loop to scf.parallel/scf.for while the parent
     // compute construct is still present (needed to determine conversion

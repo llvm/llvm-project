@@ -4546,6 +4546,22 @@ bool Fortran::lower::isInOpenACCLoop(fir::FirOpBuilder &builder) {
   return false;
 }
 
+bool Fortran::lower::isInsideCollapsedACCLoop(fir::FirOpBuilder &builder) {
+  auto parentLoop =
+      builder.getBlock()->getParent()->getParentOfType<mlir::acc::LoopOp>();
+  if (!parentLoop)
+    return false;
+  unsigned numParentIVs = parentLoop.getBody().getNumArguments();
+  if (numParentIVs <= 1)
+    return false;
+
+  // Check that there are still collapsed dimensions to consume:
+  // no inner acc.loop has been generated yet.
+  unsigned innerAccLoops = 0;
+  parentLoop.getBody().walk([&](mlir::acc::LoopOp) { ++innerAccLoops; });
+  return (innerAccLoops + 1 < numParentIVs);
+}
+
 bool Fortran::lower::isInsideOpenACCComputeConstruct(
     fir::FirOpBuilder &builder) {
   return mlir::isa_and_nonnull<ACC_COMPUTE_CONSTRUCT_OPS>(

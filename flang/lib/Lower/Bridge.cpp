@@ -2493,6 +2493,18 @@ private:
     Fortran::lower::pft::Evaluation &eval = getEval();
     bool unstructuredContext = eval.lowerAsUnstructured();
 
+    // If this tightly-nested do-loop is inside a collapsed acc.loop and
+    // its dimension is already covered by the parent's control variables,
+    // skip generating any loop — just lower the body.  The IV value is
+    // already available from the parent acc.loop's block argument (stored
+    // into the private variable by buildACCLoopOp).
+    if (Fortran::lower::isInsideCollapsedACCLoop(*builder)) {
+      auto iter = eval.getNestedEvaluations().begin();
+      for (auto end = --eval.getNestedEvaluations().end(); iter != end; ++iter)
+        genFIR(*iter, unstructuredContext);
+      return;
+    }
+
     // Loops with induction variables inside OpenACC compute constructs
     // need special handling to ensure that the IVs are privatized.
     if (Fortran::lower::isInsideOpenACCComputeConstruct(*builder)) {
@@ -6273,29 +6285,29 @@ private:
   // calls does block management, possibly starting a new block, and possibly
   // generating a branch to end a block. So these calls may still be required
   // for that functionality.
-  void genFIR(const Fortran::parser::AssociateStmt &) {}       // nop
-  void genFIR(const Fortran::parser::BlockStmt &) {}           // nop
-  void genFIR(const Fortran::parser::CaseStmt &) {}            // nop
-  void genFIR(const Fortran::parser::ContinueStmt &) {}        // nop
-  void genFIR(const Fortran::parser::ElseIfStmt &) {}          // nop
-  void genFIR(const Fortran::parser::ElseStmt &) {}            // nop
-  void genFIR(const Fortran::parser::EndAssociateStmt &) {}    // nop
-  void genFIR(const Fortran::parser::EndBlockStmt &) {}        // nop
-  void genFIR(const Fortran::parser::EndDoStmt &) {}           // nop
-  void genFIR(const Fortran::parser::EndFunctionStmt &) {}     // nop
-  void genFIR(const Fortran::parser::EndIfStmt &) {}           // nop
-  void genFIR(const Fortran::parser::EndMpSubprogramStmt &) {} // nop
-  void genFIR(const Fortran::parser::EndProgramStmt &) {}      // nop
-  void genFIR(const Fortran::parser::EndSelectStmt &) {}       // nop
-  void genFIR(const Fortran::parser::EndSubroutineStmt &) {}   // nop
-  void genFIR(const Fortran::parser::EntryStmt &) {}           // nop
-  void genFIR(const Fortran::parser::IfStmt &) {}              // nop
-  void genFIR(const Fortran::parser::IfThenStmt &) {}          // nop
-  void genFIR(const Fortran::parser::NonLabelDoStmt &) {}      // nop
-  void genFIR(const Fortran::parser::OmpEndLoopDirective &) {} // nop
-  void genFIR(const Fortran::parser::SelectTypeStmt &) {}      // nop
-  void genFIR(const Fortran::parser::TypeGuardStmt &) {}       // nop
-  void genFIR(const Fortran::parser::ChangeTeamStmt &stmt) {}  // nop
+  void genFIR(const Fortran::parser::AssociateStmt &) {}         // nop
+  void genFIR(const Fortran::parser::BlockStmt &) {}             // nop
+  void genFIR(const Fortran::parser::CaseStmt &) {}              // nop
+  void genFIR(const Fortran::parser::ContinueStmt &) {}          // nop
+  void genFIR(const Fortran::parser::ElseIfStmt &) {}            // nop
+  void genFIR(const Fortran::parser::ElseStmt &) {}              // nop
+  void genFIR(const Fortran::parser::EndAssociateStmt &) {}      // nop
+  void genFIR(const Fortran::parser::EndBlockStmt &) {}          // nop
+  void genFIR(const Fortran::parser::EndDoStmt &) {}             // nop
+  void genFIR(const Fortran::parser::EndFunctionStmt &) {}       // nop
+  void genFIR(const Fortran::parser::EndIfStmt &) {}             // nop
+  void genFIR(const Fortran::parser::EndMpSubprogramStmt &) {}   // nop
+  void genFIR(const Fortran::parser::EndProgramStmt &) {}        // nop
+  void genFIR(const Fortran::parser::EndSelectStmt &) {}         // nop
+  void genFIR(const Fortran::parser::EndSubroutineStmt &) {}     // nop
+  void genFIR(const Fortran::parser::EntryStmt &) {}             // nop
+  void genFIR(const Fortran::parser::IfStmt &) {}                // nop
+  void genFIR(const Fortran::parser::IfThenStmt &) {}            // nop
+  void genFIR(const Fortran::parser::NonLabelDoStmt &) {}        // nop
+  void genFIR(const Fortran::parser::OmpEndLoopDirective &) {}   // nop
+  void genFIR(const Fortran::parser::SelectTypeStmt &) {}        // nop
+  void genFIR(const Fortran::parser::TypeGuardStmt &) {}         // nop
+  void genFIR(const Fortran::parser::ChangeTeamStmt &stmt) {}    // nop
   void genFIR(const Fortran::parser::EndChangeTeamStmt &stmt) {} // nop
 
   /// Generate FIR for Evaluation \p eval.
