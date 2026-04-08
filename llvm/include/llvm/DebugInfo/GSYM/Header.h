@@ -88,6 +88,9 @@ struct Header {
   /// Return the version of this header.
   static constexpr uint32_t getVersion() { return 1; }
 
+  /// Return the on-disk encoded size of the header in bytes.
+  static constexpr uint64_t getEncodedSize() { return sizeof(Header); }
+
   /// Return the size in bytes of address info offsets.
   static constexpr uint8_t getAddressInfoOffsetSize() { return 4; }
 

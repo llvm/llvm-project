@@ -51,33 +51,14 @@ parseGlobalDataEntries(DataExtractor &Data, uint64_t &Offset, uint64_t BufSize,
 
 /// For V2 file layout, see HeaderV2.h
 llvm::Error GsymReaderV2::parseHeaderAndGlobalDataDirectory() {
-  const StringRef Buf = MemBuffer->getBuffer();
-  const uint64_t BufSize = Buf.size();
-  if (BufSize < HeaderV2::getEncodedSize())
-    return createStringError(std::errc::invalid_argument,
-                             "not enough data for a GSYM V2 header");
-
-  const bool IsLittleEndian = (Endian == llvm::endianness::little);
-  // Read a correctly byte swapped header if we need to.
-  DataExtractor Data(Buf, IsLittleEndian, 8);
-  if (Endian != llvm::endianness::native) {
-    SwappedHdr = std::make_unique<HeaderV2>();
-    auto ExpectedHdr = HeaderV2::decode(Data);
-    if (!ExpectedHdr)
-      return ExpectedHdr.takeError();
-    *SwappedHdr = *ExpectedHdr;
-    Hdr = SwappedHdr.get();
-  } else {
-    Hdr = reinterpret_cast<const HeaderV2 *>(Buf.data());
-  }
-
-  // Detect errors in the header and report any that are found. If we make it
-  // past this without errors, we know we have a good magic value, a supported
-  // version number, verified address offset size and string table encoding.
-  if (Error Err = Hdr->checkForError())
+  if (auto Err = parseHeader(Hdr, SwappedHdr))
     return Err;
 
   // Parse GlobalData entries to find section locations.
+  const StringRef Buf = MemBuffer->getBuffer();
+  const uint64_t BufSize = Buf.size();
+  const bool IsLittleEndian = (Endian == llvm::endianness::little);
+  DataExtractor Data(Buf, IsLittleEndian, 8);
   uint64_t Offset = HeaderV2::getEncodedSize();
   if (auto Err =
           parseGlobalDataEntries(Data, Offset, BufSize, GlobalDataSections))

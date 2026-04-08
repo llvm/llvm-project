@@ -83,7 +83,7 @@ struct HeaderV2 {
   static constexpr uint32_t getVersion() { return 2; }
 
   /// Return the on-disk encoded size of the header in bytes.
-  /// Note: this may differ from sizeof(HeaderV2) due to struct padding.
+  /// This may differ from sizeof(HeaderV2) due to struct padding at the end.
   static constexpr uint64_t getEncodedSize() { return 20; }
 
   /// Return the size in bytes of address info offsets.

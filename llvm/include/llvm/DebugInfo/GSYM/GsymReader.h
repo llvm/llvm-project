@@ -20,6 +20,7 @@
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/ErrorOr.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include <inttypes.h>
 #include <map>
 #include <memory>
@@ -304,6 +305,35 @@ protected:
   ///
   /// \returns Error on failure.
   virtual llvm::Error parseHeaderAndGlobalDataDirectory() = 0;
+
+  /// Parse and validate the header from the beginning of the memory buffer.
+  ///
+  /// \param OutHdr Output pointer to the parsed header.
+  /// \param OutSwappedHdr Storage for byte-swapped header if needed.
+  /// \returns Error on failure.
+  template <class HeaderT>
+  llvm::Error parseHeader(const HeaderT *&OutHdr,
+                          std::unique_ptr<HeaderT> &OutSwappedHdr) {
+    const StringRef Buf = MemBuffer->getBuffer();
+    if (Buf.size() < HeaderT::getEncodedSize())
+      return createStringError(std::errc::invalid_argument,
+                               "not enough data for a GSYM header");
+    if (Endian != llvm::endianness::native) {
+      const bool IsLittleEndian = (Endian == llvm::endianness::little);
+      DataExtractor Data(Buf, IsLittleEndian, 8 /* address size, unused */);
+      OutSwappedHdr = std::make_unique<HeaderT>();
+      auto ExpectedHdr = HeaderT::decode(Data);
+      if (!ExpectedHdr)
+        return ExpectedHdr.takeError();
+      *OutSwappedHdr = *ExpectedHdr;
+      OutHdr = OutSwappedHdr.get();
+    } else {
+      OutHdr = reinterpret_cast<const HeaderT *>(Buf.data());
+    }
+    if (Error Err = OutHdr->checkForError())
+      return Err;
+    return Error::success();
+  }
 
   /// Parse address offsets section bytes into AddrOffsets.
   ///

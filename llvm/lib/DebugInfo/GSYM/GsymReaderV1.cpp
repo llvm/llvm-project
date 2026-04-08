@@ -12,7 +12,6 @@
 #include <inttypes.h>
 
 #include "llvm/DebugInfo/GSYM/Header.h"
-#include "llvm/Support/BinaryStreamReader.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/MemoryBuffer.h"
 
@@ -24,35 +23,14 @@ GsymReaderV1::GsymReaderV1(std::unique_ptr<MemoryBuffer> Buffer,
     : GsymReader(std::move(Buffer), Endian) {}
 
 llvm::Error GsymReaderV1::parseHeaderAndGlobalDataDirectory() {
-  const StringRef Buf = MemBuffer->getBuffer();
-  BinaryStreamReader FileData(Buf, llvm::endianness::native);
-  // Read the header. This file format is designed to be mmap'ed into a process
-  // and accessed as read only.
-  if (FileData.readObject(Hdr))
-    return createStringError(std::errc::invalid_argument,
-                             "not enough data for a GSYM header");
-
-  const bool IsLittleEndian = (Endian == llvm::endianness::little);
-  // Read a correctly byte swapped header if we need to.
-  if (Endian != llvm::endianness::native) {
-    SwappedHdr = std::make_unique<Header>();
-    DataExtractor Data(Buf, IsLittleEndian, 4);
-    if (auto ExpectedHdr = Header::decode(Data))
-      *SwappedHdr = ExpectedHdr.get();
-    else
-      return ExpectedHdr.takeError();
-    Hdr = SwappedHdr.get();
-  }
-
-  // Detect errors in the header and report any that are found. If we make it
-  // past this without errors, we know we have a good magic value, a supported
-  // version number, verified address offset size and a valid UUID size.
-  if (Error Err = Hdr->checkForError())
+  if (auto Err = parseHeader(Hdr, SwappedHdr))
     return Err;
 
   // Compute section offsets from the fixed V1 layout and populate the
   // GlobalDataSections map. V1 sections are laid out sequentially:
   //   [Header] [AddrOffsets] [AddrInfoOffsets] [FileTable] ... [StringTable]
+  const StringRef Buf = MemBuffer->getBuffer();
+  const bool IsLittleEndian = (Endian == llvm::endianness::little);
   const uint64_t NumAddrs = Hdr->NumAddresses;
   const uint8_t AddrOffSize = Hdr->AddrOffSize;
 
