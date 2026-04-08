@@ -25250,7 +25250,7 @@ bool SLPVectorizerPass::runImpl(Function &F, ScalarEvolution *SE_,
   DT->updateDFSNumbers();
 
   // Scan the blocks in the function in post order.
-  for (auto *BB : post_order(&F.getEntryBlock())) {
+  for (auto *BB : post_order(&F)) {
     if (BB->isEHPad() || isa_and_nonnull<UnreachableInst>(BB->getTerminator()))
       continue;
 

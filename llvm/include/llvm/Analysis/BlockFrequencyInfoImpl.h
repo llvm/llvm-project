@@ -1106,9 +1106,8 @@ void BlockFrequencyInfoImpl<BT>::setBlockFreq(const BlockT *BB,
 }
 
 template <class BT> void BlockFrequencyInfoImpl<BT>::initializeRPOT() {
-  const BlockT *Entry = &F->front();
   RPOT.reserve(F->size());
-  for (const BlockT *BB : post_order(Entry))
+  for (const BlockT *BB : post_order(F))
     RPOT.emplace_back(BB);
   std::reverse(RPOT.begin(), RPOT.end());
 

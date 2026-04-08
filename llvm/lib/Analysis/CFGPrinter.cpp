@@ -206,7 +206,7 @@ void DOTGraphTraits<DOTFuncInfo *>::computeDeoptOrUnreachablePaths(
   };
   /// The post order traversal iteration is done to know the status of
   /// isOnDeoptOrUnreachablePath for all the successors on the current BB.
-  llvm::for_each(post_order(&F->getEntryBlock()), evaluateBB);
+  llvm::for_each(post_order(F), evaluateBB);
 }
 
 bool DOTGraphTraits<DOTFuncInfo *>::isNodeHidden(const BasicBlock *Node,

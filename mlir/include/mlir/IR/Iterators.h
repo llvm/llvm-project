@@ -100,9 +100,10 @@ struct ReverseDominanceIterator {
   static constexpr auto makeIterable(Operation &range) {
     return llvm::reverse(ForwardIterator::makeIterable(range));
   }
-
+#if 0
   static auto makeIterable(Region &region) {
     Block *null = nullptr;
+    llvm::PostOrderTraversal<Block *>::iterator sentinel;
     if (SkipGraphRegion && !mayHaveSSADominance(region)) {
       // Skip graph regions.
       return llvm::make_pointee_range(
@@ -118,6 +119,7 @@ struct ReverseDominanceIterator {
     // Walk API expects Block references instead of pointers.
     return llvm::make_pointee_range(it);
   }
+#endif
 };
 } // namespace mlir
 
