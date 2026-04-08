@@ -244,7 +244,7 @@ LLVMInitializeAArch64Target() {
   auto &PR = *PassRegistry::getPassRegistry();
   initializeGlobalISel(PR);
   initializeAArch64A53Fix835769LegacyPass(PR);
-  initializeAArch64A57FPLoadBalancingPass(PR);
+  initializeAArch64A57FPLoadBalancingLegacyPass(PR);
   initializeAArch64AdvSIMDScalarLegacyPass(PR);
   initializeAArch64AsmPrinterPass(PR);
   initializeAArch64BranchTargetsLegacyPass(PR);
@@ -867,7 +867,7 @@ void AArch64PassConfig::addPostRegAlloc() {
 
   if (TM->getOptLevel() != CodeGenOptLevel::None && usingDefaultRegAlloc())
     // Improve performance for some FP/SIMD code for A57.
-    addPass(createAArch64A57FPLoadBalancing());
+    addPass(createAArch64A57FPLoadBalancingLegacyPass());
 }
 
 void AArch64PassConfig::addPreSched2() {

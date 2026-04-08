@@ -348,7 +348,6 @@ define amdgpu_kernel void @test_pipelined_loop_with_global(ptr addrspace(1) %foo
 ; SDAG-NEXT:    ; asyncmark
 ; SDAG-NEXT:    ; wait_asyncmark(2)
 ; SDAG-NEXT:    s_wait_asynccnt 0x2
-; SDAG-NEXT:    s_wait_asynccnt 0x2
 ; SDAG-NEXT:    s_add_co_i32 s8, s8, 1
 ; SDAG-NEXT:    s_add_co_i32 s9, s9, 4
 ; SDAG-NEXT:    ds_load_b32 v9, v9
@@ -437,7 +436,6 @@ define amdgpu_kernel void @test_pipelined_loop_with_global(ptr addrspace(1) %foo
 ; GISEL-NEXT:    global_load_async_to_lds_b32 v16, v[2:3], off offset:4 nv
 ; GISEL-NEXT:    ; asyncmark
 ; GISEL-NEXT:    ; wait_asyncmark(2)
-; GISEL-NEXT:    s_wait_asynccnt 0x2
 ; GISEL-NEXT:    s_wait_asynccnt 0x2
 ; GISEL-NEXT:    ds_load_b32 v16, v9
 ; GISEL-NEXT:    v_add_co_ci_u32_e64 v5, null, 0, v5, vcc_lo
