@@ -18,6 +18,7 @@ end module
 use m1
 integer :: jj = 4
 call ptr6(10)
+call ptr5(10)
 print *, "Pass"
 end
 
