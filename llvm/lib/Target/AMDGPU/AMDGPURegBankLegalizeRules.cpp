@@ -1494,6 +1494,7 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
 
   // Intrinsics with no register operands.
   addRulesForIOpcs({amdgcn_endpgm,
+                    amdgcn_init_exec,
                     amdgcn_s_barrier,
                     amdgcn_s_barrier_signal,
                     amdgcn_s_barrier_wait,
@@ -1516,6 +1517,9 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
                     amdgcn_s_waitcnt,
                     amdgcn_wave_barrier})
       .Any({{}, {{}, {}}});
+
+  addRulesForIOpcs({amdgcn_init_exec_from_input})
+      .Any({{}, {{}, {IntrId, Sgpr32, Imm}}});
 
   addRulesForIOpcs({amdgcn_s_ttracedata}).Any({{}, {{}, {IntrId, SgprB32_M0}}});
 
