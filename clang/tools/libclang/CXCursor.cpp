@@ -1466,12 +1466,8 @@ int clang_Cursor_getNumTemplateArguments(CXCursor C) {
     if (const auto *SD =
             dyn_cast_if_present<ClassTemplateSpecializationDecl>(D)) {
       TAL = &SD->getTemplateArgs();
-    }
-  }
-
-  if (!TAL) {
-    if (const auto *VD =
-            dyn_cast_if_present<VarTemplateSpecializationDecl>(D)) {
+    } else if (const auto *VD =
+                   dyn_cast_if_present<VarTemplateSpecializationDecl>(D)) {
       TAL = &VD->getTemplateArgs();
     }
   }
@@ -1480,8 +1476,8 @@ int clang_Cursor_getNumTemplateArguments(CXCursor C) {
     return -1;
 
   unsigned ArgCount = TAL->size();
-  for (unsigned i = 0; i < TAL->size(); i++) {
-    const TemplateArgument &Arg = TAL->get(i);
+  for (unsigned I = 0; I < TAL->size(); ++I) {
+    const TemplateArgument &Arg = TAL->get(I);
     if (Arg.getKind() == TemplateArgument::Pack)
       ArgCount += Arg.pack_size() - 1;
   }
@@ -1536,12 +1532,8 @@ static int clang_Cursor_getTemplateArgument(CXCursor C, unsigned I,
     if (const auto *SD =
             dyn_cast_if_present<ClassTemplateSpecializationDecl>(D)) {
       TAL = &SD->getTemplateArgs();
-    }
-  }
-
-  if (!TAL) {
-    if (const auto *VD =
-            dyn_cast_if_present<VarTemplateSpecializationDecl>(D)) {
+    } else if (const auto *VD =
+                   dyn_cast_if_present<VarTemplateSpecializationDecl>(D)) {
       TAL = &VD->getTemplateArgs();
     }
   }
@@ -1549,22 +1541,22 @@ static int clang_Cursor_getTemplateArgument(CXCursor C, unsigned I,
   if (!TAL)
     return CXGetTemplateArgumentStatus_BadDeclCast;
 
-  unsigned current = 0;
-  for (unsigned i = 0; i < TAL->size(); i++) {
-    const auto &TACand = TAL->get(i);
+  unsigned Current = 0;
+  for (unsigned J = 0; J < TAL->size(); ++J) {
+    const auto &TACand = TAL->get(J);
     if (TACand.getKind() == TemplateArgument::Pack) {
-      if (I < current + TACand.pack_size()) {
-        *TA = TACand.pack_elements()[I - current];
+      if (I < Current + TACand.pack_size()) {
+        *TA = TACand.pack_elements()[I - Current];
         return 0;
       }
-      current += TACand.pack_size();
+      Current += TACand.pack_size();
       continue;
     }
-    if (current == I) {
+    if (Current == I) {
       *TA = TACand;
       return 0;
     }
-    current++;
+    Current++;
   }
 
   return CXGetTemplateArgumentStatus_InvalidIndex;
