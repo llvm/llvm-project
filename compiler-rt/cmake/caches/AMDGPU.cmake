@@ -1,4 +1,4 @@
-# --! DELETE ME AFFTER ROCK BUILD SCRIPTS ARE UPDATED !---
+# This file sets up a CMakeCache for AMD GPU builds of compiler-rt.
 set(COMPILER_RT_INCLUDE_TESTS ON CACHE BOOL "")
 set(COMPILER_RT_HAS_SAFESTACK OFF CACHE BOOL "")
 
