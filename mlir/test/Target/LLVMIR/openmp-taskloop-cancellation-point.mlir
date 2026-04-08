@@ -21,8 +21,8 @@ llvm.func @_QPtest(%arg0: !llvm.ptr {fir.bindc_name = "arg", llvm.noalias, llvm.
   %1 = llvm.mlir.constant(100 : i32) : i32
   %2 = llvm.mlir.constant(1 : i64) : i64
   %3 = llvm.alloca %2 x i32 {bindc_name = "i"} : (i64) -> !llvm.ptr
-  omp.taskloop.context {
-    omp.taskloop private(@_QFtestEarg_firstprivate_i32 %arg0 -> %arg1, @_QFtestEi_private_i32 %3 -> %arg2 : !llvm.ptr, !llvm.ptr) {
+  omp.taskloop.context private(@_QFtestEarg_firstprivate_i32 %arg0 -> %arg1, @_QFtestEi_private_i32 %3 -> %arg2 : !llvm.ptr, !llvm.ptr) {
+    omp.taskloop.wrapper {
       omp.loop_nest (%arg3) : i32 = (%0) to (%1) inclusive step (%0) {
         llvm.store %arg3, %arg2 : i32, !llvm.ptr
         llvm.call @_QPbefore(%arg1) : (!llvm.ptr) -> ()
@@ -51,7 +51,7 @@ llvm.func @_QPtest(%arg0: !llvm.ptr {fir.bindc_name = "arg", llvm.noalias, llvm.
 // CHECK:       omp.private.copy1:                                ; preds = %[[VAL_7]]
 // CHECK:         call void @_copy(ptr %[[VAL_6]], ptr %[[VAL_5]])
 // CHECK:         br label %[[VAL_9:.*]]
-// CHECK:       omp.taskloop.start:                               ; preds = %[[VAL_8]]
+// CHECK:       omp.taskloop.wrapper.start:                               ; preds = %[[VAL_8]]
 // CHECK:         br label %[[VAL_10:.*]]
 // CHECK:       codeRepl:                                         ; preds = %[[VAL_9]]
 // CHECK:         %[[VAL_11:.*]] = getelementptr { i64, i64, i64, ptr }, ptr %[[STRUCTARG]], i32 0, i32 0
@@ -95,7 +95,7 @@ llvm.func @_QPtest(%arg0: !llvm.ptr {fir.bindc_name = "arg", llvm.noalias, llvm.
 // CHECK:         br label %[[VAL_37:.*]]
 // CHECK:       omp.taskloop.context.region:                      ; preds = %[[VAL_34]]
 // CHECK:         br label %[[VAL_37_1:.*]]
-// CHECK:       omp.taskloop.region:                              ; preds = %[[VAL_37]]
+// CHECK:       omp.taskloop.wrapper.region:                              ; preds = %[[VAL_37]]
 // CHECK:         br label %[[VAL_38:.*]]
 // CHECK:       omp_loop.preheader:                               ; preds = %[[VAL_37_1]]
 // CHECK:         %[[VAL_39:.*]] = sub i64 %[[VAL_28]], %[[VAL_26]]
@@ -153,8 +153,8 @@ llvm.func @_QPtest2(%arg0: !llvm.ptr {fir.bindc_name = "arg", llvm.noalias, llvm
   %2 = llvm.mlir.constant(1 : i64) : i64
   %3 = llvm.alloca %2 x i32 {bindc_name = "i"} : (i64) -> !llvm.ptr
   omp.taskgroup {
-    omp.taskloop.context {
-      omp.taskloop nogroup private(@_QFtestEarg_firstprivate_i32 %arg0 -> %arg1, @_QFtestEi_private_i32 %3 -> %arg2 : !llvm.ptr, !llvm.ptr) {
+    omp.taskloop.context nogroup private(@_QFtestEarg_firstprivate_i32 %arg0 -> %arg1, @_QFtestEi_private_i32 %3 -> %arg2 : !llvm.ptr, !llvm.ptr) {
+      omp.taskloop.wrapper {
         omp.loop_nest (%arg3) : i32 = (%0) to (%1) inclusive step (%0) {
           llvm.store %arg3, %arg2 : i32, !llvm.ptr
           llvm.call @_QPbefore(%arg1) : (!llvm.ptr) -> ()
@@ -194,7 +194,7 @@ llvm.func @_QPtest2(%arg0: !llvm.ptr {fir.bindc_name = "arg", llvm.noalias, llvm
 // CHECK:       taskgroup.exit:                                   ; preds = %[[VAL_80:.*]]
 // CHECK:         call void @__kmpc_end_taskgroup(ptr @1, i32 %[[VAL_69]])
 // CHECK:         ret void
-// CHECK:       omp.taskloop.start:                               ; preds = %[[VAL_76]]
+// CHECK:       omp.taskloop.wrapper.start:                               ; preds = %[[VAL_76]]
 // CHECK:         br label %[[VAL_81:.*]]
 // CHECK:       codeRepl:                                         ; preds = %[[VAL_77]]
 // CHECK:         %[[VAL_82:.*]] = getelementptr { i64, i64, i64, ptr }, ptr %[[VAL_65]], i32 0, i32 0
@@ -236,7 +236,7 @@ llvm.func @_QPtest2(%arg0: !llvm.ptr {fir.bindc_name = "arg", llvm.noalias, llvm
 // CHECK:         br label %[[VAL_107:.*]]
 // CHECK:       omp.taskloop.context.region:                      ; preds = %[[VAL_104]]
 // CHECK:         br label %[[VAL_107_1:.*]]
-// CHECK:       omp.taskloop.region:                              ; preds = %[[VAL_107]]
+// CHECK:       omp.taskloop.wrapper.region:                              ; preds = %[[VAL_107]]
 // CHECK:         br label %[[VAL_108:.*]]
 // CHECK:       omp_loop.preheader:                               ; preds = %[[VAL_107_1]]
 // CHECK:         %[[VAL_109:.*]] = sub i64 %[[VAL_98]], %[[VAL_96]]

@@ -25,9 +25,9 @@
 subroutine omp_taskloop_reduction()
    integer x
    x = 0
-   ! CHECK:       omp.taskloop.context {
-   ! CHECK:       omp.taskloop private(@[[PRIVATE_I]] 
-   ! CHECK-SAME:  %[[DECL_I]]#0 -> %[[ARG0:.*]] : !fir.ref<i32>) reduction(@[[ADD_RED_I32]] %[[DECL_X]]#0 -> %[[ARG1:.*]] : !fir.ref<i32>) {
+   ! CHECK:       omp.taskloop.context private(@[[PRIVATE_I]] 
+   ! CHECK-SAME:    %[[DECL_I]]#0 -> %[[ARG0:.*]] : !fir.ref<i32>) reduction(@[[ADD_RED_I32]] %[[DECL_X]]#0 -> %[[ARG1:.*]] : !fir.ref<i32>) {
+   ! CHECK:       omp.taskloop.wrapper {
    ! CHECK:       %[[VAL_ARG1:.*]]:2 = hlfir.declare %[[ARG1]] 
    !$omp taskloop reduction(+:x)
    do i = 1, 100

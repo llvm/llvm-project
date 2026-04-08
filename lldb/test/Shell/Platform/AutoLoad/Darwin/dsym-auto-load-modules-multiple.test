@@ -4,13 +4,13 @@
 # auto-loaded.
 
 # RUN: split-file %s %t
-# RUN: %clang_host -shared %t/lib.c -o %t/libFoo.dylib
-# RUN: %clang_host %t/main.c -o %t/TestModule.out %t/libFoo.dylib
+# RUN: %clang_host -g -shared %t/lib.c -o %t/libFoo.dylib
+# RUN: %clang_host -g %t/main.c -o %t/TestModule.out %t/libFoo.dylib
 # RUN: mkdir -p %t/TestModule.out.dSYM/Contents/Resources/Python
-# RUN: mkdir -p %t/libFoo.out.dSYM/Contents/Resources/Python
-#
+# RUN: mkdir -p %t/libFoo.dylib.dSYM/Contents/Resources/Python
+
 # RUN: cp %t/main_script.py %t/TestModule.out.dSYM/Contents/Resources/Python/TestModule.py
-# RUN: cp %t/lib_script.py %t/libFoo.out.dSYM/Contents/Resources/Python/libFoo.py
+# RUN: cp %t/lib_script.py %t/libFoo.dylib.dSYM/Contents/Resources/Python/libFoo.py
 
 # RUN: %lldb -b \
 # RUN:   -o 'settings set target.load-script-from-symbol-file false' \

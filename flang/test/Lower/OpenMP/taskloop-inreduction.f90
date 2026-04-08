@@ -25,9 +25,9 @@
 subroutine omp_taskloop_inreduction()
    integer x
    x = 0
-   ! CHECK:        omp.taskloop.context {
-   ! CHECK:        omp.taskloop in_reduction(@[[ADD_RED_I32]] 
-   ! CHECK:        %[[DECL_X]]#0 -> %[[ARG0:.*]] : !fir.ref<i32>) private(@[[PRIVATE_I]] %[[DECL_I]]#0 -> %[[ARG1:.*]] : !fir.ref<i32>) {
+   ! CHECK:        omp.taskloop.context in_reduction(@[[ADD_RED_I32]] 
+   ! CHECK-SAME:     %[[DECL_X]]#0 -> %[[ARG0:.*]] : !fir.ref<i32>) private(@[[PRIVATE_I]] %[[DECL_I]]#0 -> %[[ARG1:.*]] : !fir.ref<i32>) {
+   ! CHECK:        omp.taskloop.wrapper {
    ! CHECK:        %[[VAL_ARG1:.*]]:2 = hlfir.declare %[[ARG0]] 
    ! CHECK-SAME:   {uniq_name = "_QFomp_taskloop_inreductionEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
    !$omp taskloop in_reduction(+:x)

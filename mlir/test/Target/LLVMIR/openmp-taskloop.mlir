@@ -19,8 +19,8 @@ llvm.func @_QPtest() {
   %7 = llvm.mlir.constant(1 : i32) : i32
   %8 = llvm.mlir.constant(5 : i32) : i32
   %9 = llvm.mlir.constant(1 : i32) : i32
-  omp.taskloop.context {
-    omp.taskloop private(@_QFtestEa_firstprivate_i32 %3 -> %arg0, @_QFtestEi_private_i32 %1 -> %arg1 : !llvm.ptr, !llvm.ptr) {
+  omp.taskloop.context private(@_QFtestEa_firstprivate_i32 %3 -> %arg0, @_QFtestEi_private_i32 %1 -> %arg1 : !llvm.ptr, !llvm.ptr) {
+    omp.taskloop.wrapper {
       omp.loop_nest (%arg2) : i32 = (%7) to (%8) inclusive step (%9) {
         llvm.store %arg2, %arg1 : i32, !llvm.ptr
         %10 = llvm.load %arg0 : !llvm.ptr -> i32
@@ -53,7 +53,7 @@ llvm.func @_QPtest() {
 // CHECK:         %[[VAL_9:.*]] = load i32, ptr %[[VAL_1]], align 4
 // CHECK:         store i32 %[[VAL_9]], ptr %[[VAL_6]], align 4
 // CHECK:         br label %[[VAL_10:.*]]
-// CHECK:       omp.taskloop.start:                               ; preds = %[[VAL_8]]
+// CHECK:       omp.taskloop.wrapper.start:                               ; preds = %[[VAL_8]]
 // CHECK:         br label %[[VAL_11:.*]]
 // CHECK:       codeRepl:                                         ; preds = %[[VAL_10]]
 // CHECK:         %[[VAL_12:.*]] = getelementptr { i64, i64, i64, ptr }, ptr %[[STRUCTARG]], i32 0, i32 0
@@ -97,7 +97,7 @@ llvm.func @_QPtest() {
 // CHECK:         br label %[[VAL_38:.*]]
 // CHECK:       omp.taskloop.context.region:                      ; preds = %[[VAL_35]]
 // CHECK:         br label %[[VAL_38_1:.*]]
-// CHECK:       omp.taskloop.region:                              ; preds = %[[VAL_38]]
+// CHECK:       omp.taskloop.wrapper.region:                              ; preds = %[[VAL_38]]
 // CHECK:         br label %[[VAL_39:.*]]
 // CHECK:       omp_loop.preheader:                               ; preds = %[[VAL_38_1]]
 // CHECK:         %[[VAL_40:.*]] = sub i64 %[[VAL_29]], %[[VAL_27]]

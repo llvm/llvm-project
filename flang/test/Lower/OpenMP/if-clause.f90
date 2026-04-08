@@ -1585,24 +1585,24 @@ program main
   ! ----------------------------------------------------------------------------
 
   ! CHECK:      omp.taskloop.context
-  ! CHECK:      omp.taskloop
   ! CHECK-NOT: if({{.*}})
+  ! CHECK:      omp.taskloop.wrapper
   !$omp taskloop
   do i = 1, 10
   end do
   !$omp end taskloop
 
   ! CHECK:      omp.taskloop.context
-  ! CHECK:      omp.taskloop
   ! CHECK-SAME: if({{.*}})
+  ! CHECK:      omp.taskloop.wrapper
   !$omp taskloop if(.true.)
   do i = 1, 10
   end do
   !$omp end taskloop
 
   ! CHECK:      omp.taskloop.context
-  ! CHECK:      omp.taskloop
   ! CHECK-SAME: if({{.*}})
+  ! CHECK:      omp.taskloop.wrapper
   !$omp taskloop if(taskloop: .true.)
   do i = 1, 10
   end do
