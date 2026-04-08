@@ -689,14 +689,8 @@ void VPBasicBlock::print(raw_ostream &O, const Twine &Indent,
 }
 #endif
 
-static std::pair<VPBlockBase *, VPBlockBase *> cloneFrom(VPBlockBase *Entry);
-
-// Clone the CFG for all nodes reachable from \p Entry, this includes cloning
-// the blocks and their recipes. Operands of cloned recipes will NOT be updated.
-// Remapping of operands must be done separately. Returns a pair with the new
-// entry and exiting blocks of the cloned region. If \p Entry isn't part of a
-// region, return nullptr for the exiting block.
-static std::pair<VPBlockBase *, VPBlockBase *> cloneFrom(VPBlockBase *Entry) {
+std::pair<VPBlockBase *, VPBlockBase *>
+VPBlockUtils::cloneFrom(VPBlockBase *Entry) {
   DenseMap<VPBlockBase *, VPBlockBase *> Old2NewVPBlocks;
   VPBlockBase *Exiting = nullptr;
   bool InRegion = Entry->getParent();
@@ -747,7 +741,7 @@ static std::pair<VPBlockBase *, VPBlockBase *> cloneFrom(VPBlockBase *Entry) {
 }
 
 VPRegionBlock *VPRegionBlock::clone() {
-  const auto &[NewEntry, NewExiting] = cloneFrom(getEntry());
+  const auto &[NewEntry, NewExiting] = VPBlockUtils::cloneFrom(getEntry());
   VPlan &Plan = *getPlan();
   VPRegionBlock *NewRegion =
       isReplicator()
@@ -968,9 +962,9 @@ void VPlan::execute(VPTransformState *State) {
   if (hasEarlyExit()) {
     // Fix up LoopInfo for extra dispatch blocks when vectorizing loops with
     // early exits. For dispatch blocks, we need to find the smallest common
-    // loop of all successors. Note: we only need to update loop info for blocks
-    // after the middle block, but there is no easy way to get those at this
-    // point.
+    // loop of all successors that are in a loop. Note: we only need to update
+    // loop info for blocks after the middle block, but there is no easy way to
+    // get those at this point.
     for (VPBlockBase *VPB : reverse(RPOT)) {
       auto *VPBB = dyn_cast<VPBasicBlock>(VPB);
       if (!VPBB || isa<VPIRBasicBlock>(VPBB))
@@ -980,11 +974,18 @@ void VPlan::execute(VPTransformState *State) {
       if (!L || any_of(successors(BB),
                        [L](BasicBlock *Succ) { return L->contains(Succ); }))
         continue;
-      // Find the innermost loop containing all successors.
-      Loop *Target = State->LI->getLoopFor(*succ_begin(BB));
-      for (BasicBlock *Succ : drop_begin(successors(BB)))
-        Target = State->LI->getSmallestCommonLoop(Target,
-                                                  State->LI->getLoopFor(Succ));
+      // Find the innermost loop containing all successors that are in a loop.
+      // Successors not in any loop don't constrain the target loop.
+      Loop *Target = nullptr;
+      for (BasicBlock *Succ : successors(BB)) {
+        Loop *SuccLoop = State->LI->getLoopFor(Succ);
+        if (!SuccLoop)
+          continue;
+        if (!Target)
+          Target = SuccLoop;
+        else
+          Target = State->LI->getSmallestCommonLoop(Target, SuccLoop);
+      }
       State->LI->removeBlock(BB);
       if (Target)
         Target->addBasicBlockToLoop(BB, *State->LI);
@@ -1212,7 +1213,7 @@ static void remapOperands(VPBlockBase *Entry, VPBlockBase *NewEntry,
 VPlan *VPlan::duplicate() {
   unsigned NumBlocksBeforeCloning = CreatedBlocks.size();
   // Clone blocks.
-  const auto &[NewEntry, __] = cloneFrom(Entry);
+  const auto &[NewEntry, __] = VPBlockUtils::cloneFrom(Entry);
 
   BasicBlock *ScalarHeaderIRBB = getScalarHeader()->getIRBasicBlock();
   VPIRBasicBlock *NewScalarHeader = nullptr;
@@ -1230,19 +1231,31 @@ VPlan *VPlan::duplicate() {
   DenseMap<VPValue *, VPValue *> Old2NewVPValues;
   for (VPIRValue *OldLiveIn : getLiveIns())
     Old2NewVPValues[OldLiveIn] = NewPlan->getOrAddLiveIn(OldLiveIn);
-  Old2NewVPValues[&VectorTripCount] = &NewPlan->VectorTripCount;
-  Old2NewVPValues[&VF] = &NewPlan->VF;
-  Old2NewVPValues[&UF] = &NewPlan->UF;
-  Old2NewVPValues[&VFxUF] = &NewPlan->VFxUF;
-  if (BackedgeTakenCount) {
-    NewPlan->BackedgeTakenCount = new VPSymbolicValue();
-    Old2NewVPValues[BackedgeTakenCount] = NewPlan->BackedgeTakenCount;
-  }
+
   if (auto *TripCountIRV = dyn_cast_or_null<VPIRValue>(TripCount))
     Old2NewVPValues[TripCountIRV] = NewPlan->getOrAddLiveIn(TripCountIRV);
   // else NewTripCount will be created and inserted into Old2NewVPValues when
   // TripCount is cloned. In any case NewPlan->TripCount is updated below.
 
+  assert(none_of(Old2NewVPValues.keys(), IsaPred<VPSymbolicValue>) &&
+         "All VPSymbolicValues must be handled below");
+
+  if (BackedgeTakenCount)
+    NewPlan->BackedgeTakenCount = new VPSymbolicValue();
+
+  // Map and propagate materialized state for symbolic values.
+  for (auto [OldSV, NewSV] :
+       {std::pair{&VectorTripCount, &NewPlan->VectorTripCount},
+        {&VF, &NewPlan->VF},
+        {&UF, &NewPlan->UF},
+        {&VFxUF, &NewPlan->VFxUF},
+        {BackedgeTakenCount, NewPlan->BackedgeTakenCount}}) {
+    if (!OldSV)
+      continue;
+    Old2NewVPValues[OldSV] = NewSV;
+    if (OldSV->isMaterialized())
+      NewSV->markMaterialized();
+  }
   remapOperands(Entry, NewEntry, Old2NewVPValues);
 
   // Initialize remaining fields of cloned VPlan.

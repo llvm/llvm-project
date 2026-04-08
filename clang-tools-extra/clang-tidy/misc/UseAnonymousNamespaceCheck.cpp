@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "UseAnonymousNamespaceCheck.h"
+#include "../utils/FileExtensionsUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 
@@ -17,10 +18,10 @@ namespace {
 AST_POLYMORPHIC_MATCHER_P(isInHeaderFile,
                           AST_POLYMORPHIC_SUPPORTED_TYPES(FunctionDecl,
                                                           VarDecl),
-                          FileExtensionsSet, HeaderFileExtensions) {
+                          const FileExtensionsSet *, HeaderFileExtensions) {
   return utils::isExpansionLocInHeaderFile(
       Node.getBeginLoc(), Finder->getASTContext().getSourceManager(),
-      HeaderFileExtensions);
+      *HeaderFileExtensions);
 }
 
 AST_MATCHER(FunctionDecl, isMemberFunction) {
@@ -31,19 +32,18 @@ AST_MATCHER(VarDecl, isStaticDataMember) { return Node.isStaticDataMember(); }
 
 UseAnonymousNamespaceCheck::UseAnonymousNamespaceCheck(
     StringRef Name, ClangTidyContext *Context)
-    : ClangTidyCheck(Name, Context),
-      HeaderFileExtensions(Context->getHeaderFileExtensions()) {}
+    : ClangTidyCheck(Name, Context) {}
 
 void UseAnonymousNamespaceCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       functionDecl(isStaticStorageClass(),
-                   unless(anyOf(isInHeaderFile(HeaderFileExtensions),
+                   unless(anyOf(isInHeaderFile(&getHeaderFileExtensions()),
                                 isInAnonymousNamespace(), isMemberFunction())))
           .bind("x"),
       this);
   Finder->addMatcher(
       varDecl(isStaticStorageClass(),
-              unless(anyOf(isInHeaderFile(HeaderFileExtensions),
+              unless(anyOf(isInHeaderFile(&getHeaderFileExtensions()),
                            isInAnonymousNamespace(), isStaticLocal(),
                            isStaticDataMember(), hasType(isConstQualified()))))
           .bind("x"),

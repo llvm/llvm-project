@@ -218,7 +218,7 @@
 // AMDGCNSPIRV: "-cc1" "-triple" "amdgcn-amd-amdhsa" {{.*}}"-emit-obj" {{.*}}"-target-cpu" "gfx900"{{.*}} "-o" "[[GFX900_OBJ:.*o]]"
 // AMDGCNSPIRV: {{".*lld.*"}} {{.*}}"-plugin-opt=mcpu=gfx900" {{.*}} "-o" "[[GFX900_CO:.*out]]" {{.*}}"[[GFX900_OBJ]]"
 // AMDGCNSPIRV: {{".*clang-offload-bundler.*"}} "-type=o"
-// AMDGCNSPIRV-SAME: "-targets={{.*}}hipv4-spirv64-amd-amdhsa--amdgcnspirv,hipv4-amdgcn-amd-amdhsa--gfx900"
+// AMDGCNSPIRV-SAME: "-targets={{.*}}hip-spirv64-amd-amdhsa--amdgcnspirv,hip-spirv64-amd-amdhsa--gfx900"
 // AMDGCNSPIRV-SAME: "-input=[[AMDGCNSPV_CO]]" "-input=[[GFX900_CO]]"
 // AMDGCNSPIRV-NEW: "-cc1" "-triple" "spirv64-amd-amdhsa" {{.*}}"-emit-llvm-bc" {{.*}} "-o" "[[AMDGCNSPV_BC:.*bc]]"
 

@@ -283,6 +283,9 @@ static bool interp__builtin_strcmp(InterpState &S, CodePtr OpPC,
     return false;
   if (!A.isBlockPointer() || !B.isBlockPointer())
     return false;
+  if (!A.getFieldDesc()->isPrimitiveArray() ||
+      !B.getFieldDesc()->isPrimitiveArray())
+    return false;
 
   bool IsWide = ID == Builtin::BIwcscmp || ID == Builtin::BIwcsncmp ||
                 ID == Builtin::BI__builtin_wcscmp ||
@@ -1221,12 +1224,23 @@ static bool interp__builtin_is_aligned_up_down(InterpState &S, CodePtr OpPC,
   if (!Ptr.isBlockPointer())
     return false;
 
+  const ValueDecl *PtrDecl = Ptr.getDeclDesc()->asValueDecl();
+  // We need a pointer for a declaration here.
+  if (!PtrDecl) {
+    if (BuiltinOp == Builtin::BI__builtin_is_aligned)
+      S.FFDiag(Call->getArg(0), diag::note_constexpr_alignment_compute)
+          << Alignment;
+    else
+      S.FFDiag(Call->getArg(0), diag::note_constexpr_alignment_adjust)
+          << Alignment;
+    return false;
+  }
+
   // For one-past-end pointers, we can't call getIndex() since it asserts.
   // Use getNumElems() instead which gives the correct index for past-end.
   unsigned PtrOffset =
       Ptr.isElementPastEnd() ? Ptr.getNumElems() : Ptr.getIndex();
-  CharUnits BaseAlignment =
-      S.getASTContext().getDeclAlign(Ptr.getDeclDesc()->asValueDecl());
+  CharUnits BaseAlignment = S.getASTContext().getDeclAlign(PtrDecl);
   CharUnits PtrAlign =
       BaseAlignment.alignmentAtOffset(CharUnits::fromQuantity(PtrOffset));
 

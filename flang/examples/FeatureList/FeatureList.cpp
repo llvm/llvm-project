@@ -311,6 +311,7 @@ public:
   READ_FEATURE(Expr::NEQV)
   READ_FEATURE(Expr::DefinedBinary)
   READ_FEATURE(Expr::ComplexConstructor)
+  READ_FEATURE(ConditionalExpr)
   READ_FEATURE(External)
   READ_FEATURE(ExternalStmt)
   READ_FEATURE(FailImageStmt)
