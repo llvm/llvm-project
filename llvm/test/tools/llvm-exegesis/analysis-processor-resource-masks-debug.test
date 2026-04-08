@@ -1,0 +1,55 @@
+# REQUIRES: asserts
+# REQUIRES: aarch64-registered-target
+
+# RUN: llvm-exegesis -mode=analysis -benchmarks-file=%s -analysis-inconsistencies-output-file=/dev/null -analysis-numpoints=1 --debug-only=exegesis-sched-class-resolution 2>&1 | FileCheck %s
+
+## Do not print detailed processor resources information without simulation
+# CHECK-NOT: Processor resources:
+
+## Print mask-only information without simulation
+# CHECK-COUNT-1: Processor resource masks:
+# CHECK-NEXT: [ 0]  - 0x00000000000000 - InvalidUnit
+# CHECK-NEXT: [ 1]  - 0x00000000000001 - V2UnitB
+# CHECK-NEXT: [ 2]  - 0x00000000000002 - V2UnitD
+# CHECK-NEXT: [ 3]  - 0x000000000081e0 - V2UnitF
+# CHECK-NEXT: [ 4]  - 0x00000000000004 - V2UnitFlg
+# CHECK-NEXT: [ 5]  - 0x000000000107e0 - V2UnitI
+# CHECK-NEXT: [ 6]  - 0x00000000020018 - V2UnitL
+# CHECK-NEXT: [ 7]  - 0x00000000000008 - V2UnitL2
+# CHECK-NEXT: [ 8]  - 0x00000000000010 - V2UnitL01
+# CHECK-NEXT: [ 9]  - 0x00000000040060 - V2UnitM
+# CHECK-NEXT: [10]  - 0x00000000000020 - V2UnitM0
+# CHECK-NEXT: [11]  - 0x00000000000040 - V2UnitM1
+# CHECK-NEXT: [12]  - 0x00000000080180 - V2UnitR
+# CHECK-NEXT: [13]  - 0x00000000100780 - V2UnitS
+# CHECK-NEXT: [14]  - 0x00000000000080 - V2UnitS0
+# CHECK-NEXT: [15]  - 0x00000000000100 - V2UnitS1
+# CHECK-NEXT: [16]  - 0x00000000000200 - V2UnitS2
+# CHECK-NEXT: [17]  - 0x00000000000400 - V2UnitS3
+# CHECK-NEXT: [18]  - 0x00000000207800 - V2UnitV
+# CHECK-NEXT: [19]  - 0x00000000000800 - V2UnitV0
+# CHECK-NEXT: [20]  - 0x00000000001000 - V2UnitV1
+# CHECK-NEXT: [21]  - 0x00000000002000 - V2UnitV2
+# CHECK-NEXT: [22]  - 0x00000000004000 - V2UnitV3
+# CHECK-NEXT: [23]  - 0x00000000401800 - V2UnitV01
+# CHECK-NEXT: [24]  - 0x00000000802800 - V2UnitV02
+# CHECK-NEXT: [25]  - 0x00000001005000 - V2UnitV13
+# CHECK-NEXT: [26]  - 0x00000002006000 - V2UnitV23
+
+---
+mode:            latency
+key:
+  instructions:
+    - 'ADDVv4i16v H16 D16'
+  config:          ''
+  register_initial_values:
+    - 'D16=0x0'
+cpu_name:        neoverse-v2
+llvm_triple:     aarch64
+min_instructions: 100
+measurements:
+  - { key: latency, value: 1.0, per_snippet_value: 1.0 }
+error:           ''
+info:            Repeating a single explicitly serial instruction
+assembled_snippet: 10E4002F10BA710E10BA710E10BA710E10BA710EC0035FD6
+...

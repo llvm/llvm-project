@@ -14,19 +14,18 @@ from lldb.plugins.scripted_frame_provider import ScriptedFrameProvider
 class PrefixedFrame(ScriptedFrame):
     """A frame that wraps a real frame but prefixes the function name."""
 
-    def __init__(self, thread, idx, pc, function_name, prefix):
+    def __init__(self, thread, idx, function_name, prefix):
         args = lldb.SBStructuredData()
         super().__init__(thread, args)
 
         self.idx = idx
-        self.pc = pc
         self.function_name = prefix + function_name
 
     def get_id(self):
         return self.idx
 
     def get_pc(self):
-        return self.pc
+        return 0
 
     def get_function_name(self):
         return self.function_name
@@ -63,9 +62,68 @@ class PrefixPassThroughProvider(ScriptedFrameProvider):
         if idx < len(self.input_frames):
             frame = self.input_frames[idx]
             function_name = frame.GetFunctionName()
-            pc = frame.GetPC()
-            return PrefixedFrame(self.thread, idx, pc, function_name, self.PREFIX)
+            return PrefixedFrame(self.thread, idx, function_name, self.PREFIX)
         return None
+
+
+class UpperCasePassThroughProvider(ScriptedFrameProvider):
+    """
+    Provider that passes through every frame from its parent StackFrameList
+    but upper-cases each function name.
+
+    When chained after PrefixPassThroughProvider, the result should be
+    e.g. 'MY_CUSTOM_BAZ'.
+    """
+
+    def __init__(self, input_frames, args):
+        super().__init__(input_frames, args)
+
+    @staticmethod
+    def get_description():
+        return "Provider that upper-cases all function names"
+
+    def get_frame_at_index(self, idx):
+        if idx < len(self.input_frames):
+            frame = self.input_frames[idx]
+            function_name = frame.GetFunctionName()
+            return PrefixedFrame(self.thread, idx, function_name.upper(), "")
+        return None
+
+
+class BtProviderStarProvider(ScriptedFrameProvider):
+    """
+    Provider that runs 'bt --provider *' from within get_frame_at_index
+    to verify that re-entrant provider queries don't deadlock or crash.
+
+    On the first call to get_frame_at_index, it runs the command and stores
+    the output. It then passes through all frames with a 'reentrant_' prefix.
+    """
+
+    PREFIX = "reentrant_"
+
+    def __init__(self, input_frames, args):
+        super().__init__(input_frames, args)
+        self.bt_provider_star_output = None
+
+    @staticmethod
+    def get_description():
+        return "Provider that runs 'bt --provider *' during frame construction"
+
+    def get_frame_at_index(self, idx):
+        if idx >= len(self.input_frames):
+            return None
+
+        # On the first frame request, run 'bt --provider *' re-entrantly.
+        if self.bt_provider_star_output is None:
+            debugger = self.target.GetDebugger()
+            ci = debugger.GetCommandInterpreter()
+            result = lldb.SBCommandReturnObject()
+            ci.HandleCommand("bt --provider '*'", result)
+            self.bt_provider_star_output = result.GetOutput() or ""
+
+        frame = self.input_frames[idx]
+        function_name = frame.GetFunctionName()
+        return PrefixedFrame(self.thread, idx, function_name, self.PREFIX)
 
 
 class ValidatingPrefixProvider(ScriptedFrameProvider):
@@ -94,7 +152,6 @@ class ValidatingPrefixProvider(ScriptedFrameProvider):
 
         frame = self.input_frames[idx]
         function_name = frame.GetFunctionName()
-        pc = frame.GetPC()
 
         # For frames after the first, peek at the younger (already-provided)
         # frame in input_frames. If it already has our prefix, we were handed
@@ -103,7 +160,7 @@ class ValidatingPrefixProvider(ScriptedFrameProvider):
             younger = self.input_frames[idx - 1]
             if younger.GetFunctionName().startswith(self.PREFIX):
                 return PrefixedFrame(
-                    self.thread, idx, pc, function_name, "danger_will_robinson_"
+                    self.thread, idx, function_name, "danger_will_robinson_"
                 )
 
-        return PrefixedFrame(self.thread, idx, pc, function_name, self.PREFIX)
+        return PrefixedFrame(self.thread, idx, function_name, self.PREFIX)

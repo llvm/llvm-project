@@ -1006,9 +1006,8 @@ struct SharedModuleListInfo {
   SharedModuleList module_list;
   ModuleListProperties module_list_properties;
 };
-}
-static SharedModuleListInfo &GetSharedModuleListInfo()
-{
+} // namespace
+static SharedModuleListInfo &GetSharedModuleListInfo() {
   static SharedModuleListInfo *g_shared_module_list_info = nullptr;
   static llvm::once_flag g_once_flag;
   llvm::call_once(g_once_flag, []() {
@@ -1141,9 +1140,8 @@ ModuleList::GetSharedModule(const ModuleSpec &module_spec, ModuleSP &module_sp,
     if (uuid_ptr && *uuid_ptr != module_sp->GetUUID()) {
       module_sp.reset();
     } else {
-      if (module_sp->GetObjectFile() &&
-          module_sp->GetObjectFile()->GetType() ==
-              ObjectFile::eTypeStubLibrary) {
+      if (module_sp->GetObjectFile() && module_sp->GetObjectFile()->GetType() ==
+                                            ObjectFile::eTypeStubLibrary) {
         module_sp.reset();
       } else {
         if (did_create_ptr) {
@@ -1375,6 +1373,8 @@ bool ModuleList::LoadScriptingResourceInTargetForModule(Module &module,
   if (!feedback_stream.Empty())
     debugger.ReportWarning(feedback_stream.GetString().str(), debugger.GetID());
 
+  const bool trusted = platform_sp->IsSymbolFileTrusted(module);
+
   for (const auto &[scripting_fspec, load_style] : file_specs) {
     if (load_style == eLoadScriptFromSymFileFalse)
       continue;
@@ -1382,24 +1382,34 @@ bool ModuleList::LoadScriptingResourceInTargetForModule(Module &module,
     if (!FileSystem::Instance().Exists(scripting_fspec))
       continue;
 
-    if (load_style == eLoadScriptFromSymFileWarn) {
-      // clang-format off
+    switch (load_style) {
+    case eLoadScriptFromSymFileFalse:
+      llvm_unreachable("case already handled");
+    case eLoadScriptFromSymFileTrue:
+      break;
+    case eLoadScriptFromSymFileTrusted:
+      if (trusted)
+        break;
+      LLVM_FALLTHROUGH;
+    case eLoadScriptFromSymFileWarn:
       debugger.ReportWarning(
           llvm::formatv(
-R"('{0}' contains a debug script. To run this script in this debug session:
+              // clang-format off
+R"('{0}' contains {1} debug script. To run this script in this debug session:
 
-    command script import "{1}"
+    command script import "{2}"
 
 To run all discovered debug scripts in this session:
 
     settings set target.load-script-from-symbol-file true
 )",
+              // clang-format on
               module.GetFileSpec().GetFileNameStrippingExtension(),
+              trusted ? "a trusted" : "an untrusted",
               scripting_fspec.GetPath()),
           debugger.GetID());
-      // clang-format on
 
-      return false;
+      continue;
     }
 
     LLDB_LOG(log, "Auto-loading {0}", scripting_fspec.GetPath());
@@ -1472,7 +1482,6 @@ bool ModuleList::AnyOf(
 
   return false;
 }
-
 
 void ModuleList::Swap(ModuleList &other) {
   // scoped_lock locks both mutexes at once.
