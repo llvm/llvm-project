@@ -206,7 +206,18 @@ static mlir::Value emitCommonNeonShift(CIRGenBuilderTy &builder,
                               builder.createBitcast(shifTgt, resTy), shiftAmt,
                               shiftLeft);
 }
-
+static mlir::Value emitCommonNeonVecAcrossCall(CIRGenFunction &cgf,
+                                               llvm::StringRef intrincsName,
+                                               mlir::Type eltTy,
+                                               unsigned vecLen,
+                                               const clang::CallExpr *expr) {
+  CIRGenBuilderTy &builder = cgf.getBuilder();
+  mlir::Location loc = cgf.getLoc(expr->getExprLoc());
+  mlir::Value op = cgf.emitScalarExpr(expr->getArg(0));
+  cir::VectorType vTy = cir::VectorType::get(eltTy, vecLen);
+  llvm::SmallVector<mlir::Value, 1> args{op};
+  return emitNeonCall(cgf.cgm, builder, {vTy}, args, intrinsicName, eltTy, loc);
+}
 static cir::VectorType getIntVecFromVecTy(CIRGenBuilderTy &builder,
                                           cir::VectorType vecTy) {
   if (!cir::isAnyFloatingPointType(vecTy.getElementType()))
@@ -2333,6 +2344,38 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
     return mlir::Value{};
   case NEON::BI__builtin_neon_vmaxnm_v:
   case NEON::BI__builtin_neon_vmaxnmq_v:
+  case NEON::BI_builtin_neon_vmaxv_s8: {
+    return emitCommonNeonVecAcrossCall(*this, "aarch64.neon-smaxv", SInt8Ty, 8,
+                                       E);
+  }
+  case NEON::BI_builtin_neon_vmaxvq_s8: {
+    return emitCommonNeonVecAcrossCall(*this, "aarch64.neon.smaxv", SInt8Ty, 16,
+                                       E);
+  }
+  case NEON::BI_builtin_neon_vmaxv_s16: {
+    return emitCommonNeonVecAcrossCall(*this, "vector.reduce.smax", sInt16Ty, 4,
+                                       expr);
+  }
+  case NEON::BI_builtin_neon_vmaxq_s16: {
+    return emitCommonNeonVecAcrossCall(*this, "vector.reduce.smax", sInt16Ty, 8,
+                                       expr);
+  }
+  case NEON::BI_builtin_neon_vmaxv_u8: {
+    return emitCommonNeonVecAcrossCall(*this, "aarch64.neon.umaxv", uInt8Ty, 8,
+                                       expr);
+  }
+  case NEON::BI_builtin_neon_vmaxq_u8: {
+    return emitCommonNeonVecAcrossCall(*this, "aarch64.neon.umaxv", uInt8Ty, 16,
+                                       expr);
+  }
+  case NEON::BI_builtin_neon_vmaxv_u16: {
+    return emitCommonNeonVecAcrossCall(*this, "vector.reduce.umax", uInt16Ty, 4,
+                                       expr);
+  }
+  case NEON::BI_builtin_neon_vmaxvq_u16: {
+    return emitCommonNeonVecAcrossCall(*this, "vector.reduce.umax", uInt16Ty, 8,
+                                       expr);
+  }
     intrName = "aarch64.neon.fmaxnm";
     return emitNeonCall(cgm, builder, {ty, ty}, ops, intrName, ty, loc);
   case NEON::BI__builtin_neon_vmaxnmh_f16:
