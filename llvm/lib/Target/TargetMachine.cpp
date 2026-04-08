@@ -212,6 +212,14 @@ bool TargetMachine::shouldAssumeDSOLocal(const GlobalValue *GV) const {
   if (!GV)
     return false;
 
+  // Weak symbols can be preempted at runtime, so don't assume they're DSO
+  // local. This is important for PIC code where we need GOT relocations for
+  // weak symbols. Only apply this fix for ARM targets to match GCC behavior.
+  if ((GV->hasWeakLinkage() || GV->hasExternalWeakLinkage()) &&
+      (TT.getArch() == Triple::arm || TT.getArch() == Triple::armeb ||
+       TT.getArch() == Triple::thumb || TT.getArch() == Triple::thumbeb))
+    return false;
+
   // If the IR producer requested that this GV be treated as dso local, obey.
   if (GV->isDSOLocal())
     return true;
@@ -251,6 +259,7 @@ bool TargetMachine::shouldAssumeDSOLocal(const GlobalValue *GV) const {
 
   assert(TT.isOSBinFormatELF() || TT.isOSBinFormatWasm() ||
          TT.isOSBinFormatXCOFF());
+
   return false;
 }
 
