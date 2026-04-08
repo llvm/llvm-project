@@ -2749,7 +2749,7 @@ violates the strict aliasing rules. For example:
        if Clang is able to inline this function. */
   }
 
-.. option: -fstrict-aliasing, -fno-strict-aliasing
+.. option:: -fstrict-aliasing, -fno-strict-aliasing
 
 Strict aliasing can be explicitly enabled with :option:`-fstrict-aliasing` and
 disabled with :option:`-fno-strict-aliasing`. Windows MSVC platforms and UEFI
