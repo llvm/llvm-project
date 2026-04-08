@@ -172,6 +172,9 @@ llvm::Error GsymReader::parse() {
     // No parsing needed
     case GlobalInfoType::FunctionInfo:
     case GlobalInfoType::UUID:
+    // Have to list these for the exclusive switch to compile
+    case GlobalInfoType::EndOfList:
+    case GlobalInfoType::NumTypes:
       break;
     }
   }
@@ -325,6 +328,7 @@ GsymReader::getAddressIndex(const uint64_t Addr) const {
   }
   return createStringError(std::errc::invalid_argument,
                            "address 0x%" PRIx64 " is not in GSYM", Addr);
+
 }
 
 llvm::Expected<DataExtractor>
