@@ -399,8 +399,10 @@ void CSEDriver::simplify(Operation *op, bool *changed) {
   /// Erase any operations that were marked as dead during simplification.
   for (auto *op : opsToErase)
     rewriter.eraseOp(op);
-  if (changed)
+  if (changed) {
+    assert(opsToErase.empty() || numDCE || numCSE);
     *changed = numDCE || numCSE;
+  }
 
   // Note: CSE does currently not remove ops with regions, so DominanceInfo
   // does not have to be invalidated.
