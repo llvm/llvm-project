@@ -14,9 +14,9 @@ add_header_library(
 list(FIND TARGET_ENTRYPOINT_NAME_LIST getrandom getrandom_index)
 if (NOT ${getrandom_index} EQUAL -1)
   message(STATUS "Using getrandom for hashtable randomness")
-  set(randomness_compile_flags -DLIBC_HASHTABLE_USE_GETRANDOM)
+  libc_set_definition(randomness_compile_flags LIBC_HASHTABLE_USE_GETRANDOM)
   set(randomness_extra_depends
-    libc.src.__support.OSUtil.linux.getrandom
+    libc.src.__support.OSUtil.linux.syscall_wrappers.getrandom
     libc.hdr.errno_macros)
 endif()
 

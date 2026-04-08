@@ -16,7 +16,7 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %x:vr = COPY $v8
     ; CHECK-NEXT: $v0 = COPY %x
-    ; CHECK-NEXT: PseudoVSE8_V_M1_MASK $noreg, $noreg, $v0, -1, 3 /* e8 */
+    ; CHECK-NEXT: PseudoVSE8_V_M1_MASK $noreg, $noreg, $v0, -1 /* vl=VLMAX */, 3 /* e8 */
     %x:vr = COPY $v8
     %y:vmv0 = COPY %x:vr
     PseudoVSE8_V_M1_MASK $noreg, $noreg, %y:vmv0, -1, 3

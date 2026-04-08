@@ -52,6 +52,7 @@ public:
 
 private:
   bool tryEraseCallInvoke(Instruction *I);
+  void eraseFromWorklist(Instruction *I);
 };
 }
 
@@ -106,6 +107,8 @@ bool Lowerer::lower(Function &F) {
         break;
       case Intrinsic::coro_free:
         II->replaceAllUsesWith(II->getArgOperand(1));
+        break;
+      case Intrinsic::coro_dead:
         break;
       case Intrinsic::coro_alloc:
         II->replaceAllUsesWith(ConstantInt::getTrue(Context));
@@ -212,13 +215,19 @@ void NoopCoroElider::visitCallBase(CallBase &CB) {
   if (ResumeOrDestroy) {
     [[maybe_unused]] bool Success = tryEraseCallInvoke(&CB);
     assert(Success && "Unexpected CallBase");
-    RecursivelyDeleteTriviallyDeadInstructions(V);
+
+    auto AboutToDeleteCallback = [this](Value *V) {
+      eraseFromWorklist(cast<Instruction>(V));
+    };
+    RecursivelyDeleteTriviallyDeadInstructions(V, nullptr, nullptr,
+                                               AboutToDeleteCallback);
   }
 }
 
 void NoopCoroElider::visitIntrinsicInst(IntrinsicInst &II) {
   if (auto *SubFn = dyn_cast<CoroSubFnInst>(&II)) {
     auto *User = SubFn->getUniqueUndroppableUser();
+    assert(User && "Broken module");
     if (!tryEraseCallInvoke(cast<Instruction>(User)))
       return;
     SubFn->eraseFromParent();
@@ -227,6 +236,7 @@ void NoopCoroElider::visitIntrinsicInst(IntrinsicInst &II) {
 
 bool NoopCoroElider::tryEraseCallInvoke(Instruction *I) {
   if (auto *Call = dyn_cast<CallInst>(I)) {
+    eraseFromWorklist(Call);
     Call->eraseFromParent();
     return true;
   }
@@ -234,20 +244,28 @@ bool NoopCoroElider::tryEraseCallInvoke(Instruction *I) {
   if (auto *II = dyn_cast<InvokeInst>(I)) {
     Builder.SetInsertPoint(II);
     Builder.CreateBr(II->getNormalDest());
+    eraseFromWorklist(II);
+    II->getUnwindDest()->removePredecessor(II->getParent());
     II->eraseFromParent();
     return true;
   }
   return false;
 }
 
+void NoopCoroElider::eraseFromWorklist(Instruction *I) {
+  erase_if(Worklist, [I](UseToVisit &U) {
+    return I == U.UseAndIsOffsetKnown.getPointer()->getUser();
+  });
+}
+
 static bool declaresCoroCleanupIntrinsics(const Module &M) {
   return coro::declaresIntrinsics(
-      M,
-      {Intrinsic::coro_alloc, Intrinsic::coro_begin, Intrinsic::coro_subfn_addr,
-       Intrinsic::coro_free, Intrinsic::coro_id, Intrinsic::coro_id_retcon,
-       Intrinsic::coro_id_async, Intrinsic::coro_id_retcon_once,
-       Intrinsic::coro_noop, Intrinsic::coro_async_size_replace,
-       Intrinsic::coro_async_resume, Intrinsic::coro_begin_custom_abi});
+      M, {Intrinsic::coro_alloc, Intrinsic::coro_begin,
+          Intrinsic::coro_subfn_addr, Intrinsic::coro_free,
+          Intrinsic::coro_dead, Intrinsic::coro_id, Intrinsic::coro_id_retcon,
+          Intrinsic::coro_id_async, Intrinsic::coro_id_retcon_once,
+          Intrinsic::coro_noop, Intrinsic::coro_async_size_replace,
+          Intrinsic::coro_async_resume, Intrinsic::coro_begin_custom_abi});
 }
 
 PreservedAnalyses CoroCleanupPass::run(Module &M,

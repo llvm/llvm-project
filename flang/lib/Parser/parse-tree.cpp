@@ -347,16 +347,12 @@ llvm::omp::Clause OpenMPAtomicConstruct::GetKind() const {
 
 bool OpenMPAtomicConstruct::IsCapture() const {
   const OmpDirectiveSpecification &dirSpec{std::get<OmpBeginDirective>(t)};
-  return llvm::any_of(dirSpec.Clauses().v, [](auto &clause) {
-    return clause.Id() == llvm::omp::Clause::OMPC_capture;
-  });
+  return omp::FindClause(dirSpec, llvm::omp::Clause::OMPC_capture);
 }
 
 bool OpenMPAtomicConstruct::IsCompare() const {
   const OmpDirectiveSpecification &dirSpec{std::get<OmpBeginDirective>(t)};
-  return llvm::any_of(dirSpec.Clauses().v, [](auto &clause) {
-    return clause.Id() == llvm::omp::Clause::OMPC_compare;
-  });
+  return omp::FindClause(dirSpec, llvm::omp::Clause::OMPC_compare);
 }
 } // namespace Fortran::parser
 

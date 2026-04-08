@@ -71,9 +71,7 @@ protected:
 public:
   static char ID; // Pass identification, replacement for typeid
 
-  DAE() : ModulePass(ID) {
-    initializeDAEPass(*PassRegistry::getPassRegistry());
-  }
+  DAE() : ModulePass(ID) {}
 
   bool runOnModule(Module &M) override {
     if (skipModule(M))

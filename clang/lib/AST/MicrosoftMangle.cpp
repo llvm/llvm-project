@@ -25,6 +25,7 @@
 #include "clang/AST/Mangle.h"
 #include "clang/AST/VTableBuilder.h"
 #include "clang/Basic/ABI.h"
+#include "clang/Basic/DiagnosticAST.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetInfo.h"
@@ -119,10 +120,6 @@ static const DeclContext *getEffectiveDeclContext(const Decl *D) {
   }
 
   return DC->getRedeclContext();
-}
-
-static const DeclContext *getEffectiveParentContext(const DeclContext *DC) {
-  return getEffectiveDeclContext(cast<Decl>(DC));
 }
 
 static const FunctionDecl *getStructor(const NamedDecl *ND) {
@@ -556,11 +553,6 @@ bool MicrosoftMangleContextImpl::shouldMangleCXXName(const NamedDecl *D) {
 
     // Variables at global scope with internal linkage are not mangled.
     const DeclContext *DC = getEffectiveDeclContext(D);
-    // Check for extern variable declared locally.
-    if (DC->isFunctionOrMethod() && D->hasLinkage())
-      while (!DC->isNamespace() && !DC->isTranslationUnit())
-        DC = getEffectiveParentContext(DC);
-
     if (DC->isTranslationUnit() && D->getFormalLinkage() == Linkage::Internal &&
         !isa<VarTemplateSpecializationDecl>(D) && D->getIdentifier() != nullptr)
       return false;
@@ -578,25 +570,20 @@ DiagnosticBuilder MicrosoftCXXNameMangler::Error(SourceLocation loc,
                                                  StringRef thing1,
                                                  StringRef thing2) {
   DiagnosticsEngine &Diags = Context.getDiags();
-  unsigned DiagID = Diags.getCustomDiagID(DiagnosticsEngine::Error,
-                                          "cannot mangle this %0 %1 yet");
-  return Diags.Report(loc, DiagID) << thing1 << thing2;
+  return Diags.Report(loc, diag::err_ms_mangle_unsupported_with_detail)
+         << thing1 << thing2;
 }
 
 DiagnosticBuilder MicrosoftCXXNameMangler::Error(SourceLocation loc,
                                                  StringRef thingy) {
   DiagnosticsEngine &Diags = Context.getDiags();
-  unsigned DiagID = Diags.getCustomDiagID(DiagnosticsEngine::Error,
-                                          "cannot mangle this %0 yet");
-  return Diags.Report(loc, DiagID) << thingy;
+  return Diags.Report(loc, diag::err_ms_mangle_unsupported) << thingy;
 }
 
 DiagnosticBuilder MicrosoftCXXNameMangler::Error(StringRef thingy) {
   DiagnosticsEngine &Diags = Context.getDiags();
   // extra placeholders are ignored quietly when not used
-  unsigned DiagID = Diags.getCustomDiagID(DiagnosticsEngine::Error,
-                                          "cannot mangle this %0 yet");
-  return Diags.Report(DiagID) << thingy;
+  return Diags.Report(diag::err_ms_mangle_unsupported) << thingy;
 }
 
 void MicrosoftCXXNameMangler::mangle(GlobalDecl GD, StringRef Prefix) {
@@ -1184,7 +1171,9 @@ void MicrosoftCXXNameMangler::mangleUnqualifiedName(GlobalDecl GD,
 
       if (const NamespaceDecl *NS = dyn_cast<NamespaceDecl>(ND)) {
         if (NS->isAnonymousNamespace()) {
-          Out << "?A0x" << Context.getAnonymousNamespaceHash() << '@';
+          llvm::SmallString<16> Name("?A0x");
+          Name += Context.getAnonymousNamespaceHash();
+          mangleSourceName(Name);
           break;
         }
       }
@@ -2155,6 +2144,11 @@ void MicrosoftCXXNameMangler::mangleTemplateArgValue(QualType T,
       Out << '@';
     }
     Out << "@@";
+    return;
+  }
+
+  case APValue::Matrix: {
+    Error("template argument (value type: matrix)");
     return;
   }
 
@@ -3787,6 +3781,24 @@ void MicrosoftCXXNameMangler::mangleType(const HLSLAttributedResourceType *T,
 void MicrosoftCXXNameMangler::mangleType(const HLSLInlineSpirvType *T,
                                          Qualifiers, SourceRange Range) {
   llvm_unreachable("HLSL uses Itanium name mangling");
+}
+
+void MicrosoftCXXNameMangler::mangleType(const OverflowBehaviorType *T,
+                                         Qualifiers, SourceRange Range) {
+  QualType UnderlyingType = T->getUnderlyingType();
+
+  llvm::SmallString<64> TemplateMangling;
+  llvm::raw_svector_ostream Stream(TemplateMangling);
+  MicrosoftCXXNameMangler Extra(Context, Stream);
+  Stream << "?$";
+  if (T->isWrapKind()) {
+    Extra.mangleSourceName("ObtWrap_");
+  } else {
+    Extra.mangleSourceName("ObtTrap_");
+  }
+  Extra.mangleType(UnderlyingType, Range, QMM_Escape);
+
+  mangleArtificialTagType(TagTypeKind::Struct, TemplateMangling, {"__clang"});
 }
 
 // <this-adjustment> ::= <no-adjustment> | <static-adjustment> |

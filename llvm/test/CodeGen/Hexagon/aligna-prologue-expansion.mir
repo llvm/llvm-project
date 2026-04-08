@@ -1,0 +1,102 @@
+# RUN: llc -mtriple=hexagon -run-pass prologepilog %s -o - | FileCheck %s
+# RUN: llc -mtriple=hexagon -run-pass prologepilog -spill-func-threshold=0 %s -o - | FileCheck --check-prefix=SPILL-FUNC %s
+# RUN: llc -mtriple=hexagon -run-pass prologepilog -verify-machineinstrs %s -o - | FileCheck %s
+#
+# Verify that PS_aligna is placed AFTER all CSR spills.
+#
+# CHECK-LABEL: name: test_aligna_expansion
+# CHECK: S2_allocframe
+# CHECK: S2_storerd_io $r30, -8
+# CHECK: S2_storerd_io $r30, -16
+# CHECK: S2_storerd_io $r30, -24
+# CHECK: S2_storerd_io $r30, -32
+# CHECK: S2_storerd_io $r30, -40
+# CHECK: S2_storerd_io $r30, -48
+# CHECK: PS_aligna
+# CHECK-NOT: S2_storerd_io
+#
+# Verify that AP (R16) is added to liveins of blocks that use it.
+# CHECK: bb.3:
+# CHECK-NEXT: successors:
+# CHECK-NEXT: liveins: {{.*}}$r16
+#
+# SPILL-FUNC-LABEL: name: test_aligna_expansion
+# SPILL-FUNC: S2_allocframe
+# SPILL-FUNC: SAVE_REGISTERS_CALL_V4
+# SPILL-FUNC: PS_aligna
+# SPILL-FUNC-NOT: SAVE_REGISTERS_CALL_V4
+#
+# SPILL-FUNC: bb.3:
+# SPILL-FUNC-NEXT: successors:
+# SPILL-FUNC-NEXT: liveins: {{.*}}$r16
+
+--- |
+  declare void @external_func()
+  define void @test_aligna_expansion() { ret void }
+...
+
+---
+name:            test_aligna_expansion
+alignment:       16
+tracksRegLiveness: true
+frameInfo:
+  maxAlignment:    128
+  adjustsStack:    true
+  hasCalls:        true
+  maxCallFrameSize: 4294967295
+stack:
+  - { id: 0, name: '', type: variable-sized, offset: 0, alignment: 128 }
+  - { id: 1, name: '', type: spill-slot, offset: 0, size: 4, alignment: 4 }
+body:             |
+  bb.0:
+    successors: %bb.1(0x80000000)
+    liveins: $r0, $r1, $r2, $r3, $r4, $r5
+
+    renamable $r17 = COPY $r0
+    renamable $r6 = nuw A2_addi killed $r0, 7
+    renamable $r6 = A2_andir killed renamable $r6, -8
+    S2_storeri_io %stack.1, 0, killed $r5 :: (store (s32) into %stack.1)
+    renamable $r19 = COPY killed $r4
+    renamable $r20 = COPY killed $r3
+    renamable $r21 = COPY killed $r2
+    renamable $r22 = COPY killed $r1
+    $r16 = PS_aligna 128, implicit killed $r30
+    renamable $r25 = A2_tfrsi 0
+    renamable $r2 = A2_tfrsi 0
+    renamable $r23 = PS_alloca killed renamable $r6, 128, implicit-def dead $r29
+
+  bb.1:
+    successors: %bb.2(0x80000000)
+    liveins: $r2, $r17, $r19, $r20, $r21, $r22, $r23, $r25
+
+    renamable $r24 = A2_or killed renamable $r2, renamable $r19
+    renamable $r26 = A2_tfrsi 0
+    renamable $r27 = COPY renamable $r22
+    renamable $r18 = A2_tfrsi 0
+
+  bb.2:
+    successors: %bb.2(0x7c000000), %bb.3(0x04000000)
+    liveins: $r17, $r18, $r19, $r20, $r21, $r22, $r23, $r24, $r25, $r26, $r27
+
+    renamable $r2 = A2_min renamable $r27, renamable $r25
+    ADJCALLSTACKDOWN 0, 0, implicit-def $r29, implicit-def dead $r30, implicit killed $r31, implicit killed $r30, implicit $r29
+    $r0 = COPY renamable $r23
+    $r1 = COPY renamable $r20
+    $r3 = COPY renamable $r24
+    renamable $r2 = A2_add killed renamable $r2, renamable $r26
+    renamable $r18 = A2_add killed renamable $r18, renamable $r22
+    S2_storeri_io renamable $r21, 0, renamable $r17
+    J2_call @external_func, hexagoncsr, implicit-def dead $pc, implicit-def dead $r31, implicit $r29, implicit killed $r0, implicit killed $r1, implicit killed $r2, implicit killed $r3, implicit-def $r29
+    renamable $p0 = C2_cmpgti renamable $r18, -1
+    ADJCALLSTACKUP 0, 0, implicit-def dead $r29, implicit-def dead $r30, implicit-def dead $r31, implicit killed $r29
+    renamable $r27 = A2_add killed renamable $r27, renamable $r22
+    renamable $r26 = A2_sub killed renamable $r26, renamable $r22
+    J2_jumpf killed renamable $p0, %bb.2, implicit-def $pc
+
+  bb.3:
+    successors: %bb.1(0x80000000)
+    liveins: $r17, $r19, $r20, $r21, $r22, $r23, $r25
+
+    renamable $r2 = L2_loadri_io %stack.1, 0 :: (load (s32) from %stack.1)
+    J2_jump %bb.1, implicit-def $pc
+...

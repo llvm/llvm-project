@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Sema/AnalysisBasedWarnings.h"
+#include "SemaLifetimeSafety.h"
 #include "TypeLocBuilder.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
@@ -31,7 +32,6 @@
 #include "clang/Analysis/Analyses/CFGReachabilityAnalysis.h"
 #include "clang/Analysis/Analyses/CalledOnceCheck.h"
 #include "clang/Analysis/Analyses/Consumed.h"
-#include "clang/Analysis/Analyses/LifetimeSafety/LifetimeAnnotations.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/LifetimeSafety.h"
 #include "clang/Analysis/Analyses/ReachableCode.h"
 #include "clang/Analysis/Analyses/ThreadSafety.h"
@@ -55,6 +55,7 @@
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/TimeProfiler.h"
@@ -573,8 +574,8 @@ static ControlFlowKind CheckFallThrough(AnalysisDeclContext &AC) {
   // The CFG leaves in dead things, and we don't want the dead code paths to
   // confuse us, so we mark all live things first.
   llvm::BitVector live(cfg->getNumBlockIDs());
-  unsigned count = reachable_code::ScanReachableFromBlock(&cfg->getEntry(),
-                                                          live);
+  unsigned count =
+      reachable_code::ScanReachableFromBlock(&cfg->getEntry(), live);
 
   bool AddEHEdges = AC.getAddEHEdges();
   if (!AddEHEdges && count != cfg->getNumBlockIDs())
@@ -2141,6 +2142,39 @@ class ThreadSafetyReporter : public clang::threadSafety::ThreadSafetyHandler {
     Warnings.emplace_back(std::move(Warning), getNotes());
   }
 
+  void handleGuardedByAnyReadNotHeld(const NamedDecl *D,
+                                     ProtectedOperationKind POK,
+                                     ArrayRef<StringRef> LockNames,
+                                     SourceLocation Loc) override {
+    bool IsDeref;
+    switch (POK) {
+    case POK_VarAccess:
+    case POK_PassByRef:
+    case POK_ReturnByRef:
+    case POK_PassPointer:
+    case POK_ReturnPointer:
+      IsDeref = false;
+      break;
+    case POK_VarDereference:
+    case POK_PtPassByRef:
+    case POK_PtReturnByRef:
+    case POK_PtPassPointer:
+    case POK_PtReturnPointer:
+      IsDeref = true;
+      break;
+    case POK_FunctionCall:
+      llvm_unreachable("POK_FunctionCall not applicable here");
+    }
+    std::string Quoted;
+    llvm::raw_string_ostream OS(Quoted);
+    llvm::ListSeparator LS;
+    for (StringRef Name : LockNames)
+      OS << LS << "'" << Name << "'";
+    PartialDiagnosticAt Warning(Loc, S.PDiag(diag::warn_requires_any_of_locks)
+                                         << D << IsDeref << Quoted);
+    Warnings.emplace_back(std::move(Warning), getNotes());
+  }
+
   void handleMutexNotHeld(StringRef Kind, const NamedDecl *D,
                           ProtectedOperationKind POK, Name LockName,
                           LockKind LK, SourceLocation Loc,
@@ -2872,114 +2906,6 @@ public:
   }
 };
 
-namespace clang::lifetimes {
-namespace {
-class LifetimeSafetySemaHelperImpl : public LifetimeSafetySemaHelper {
-
-public:
-  LifetimeSafetySemaHelperImpl(Sema &S) : S(S) {}
-
-  void reportUseAfterFree(const Expr *IssueExpr, const Expr *UseExpr,
-                          SourceLocation FreeLoc, Confidence C) override {
-    S.Diag(IssueExpr->getExprLoc(),
-           C == Confidence::Definite
-               ? diag::warn_lifetime_safety_loan_expires_permissive
-               : diag::warn_lifetime_safety_loan_expires_strict)
-        << IssueExpr->getSourceRange();
-    S.Diag(FreeLoc, diag::note_lifetime_safety_destroyed_here);
-    S.Diag(UseExpr->getExprLoc(), diag::note_lifetime_safety_used_here)
-        << UseExpr->getSourceRange();
-  }
-
-  void reportUseAfterReturn(const Expr *IssueExpr, const Expr *ReturnExpr,
-                            SourceLocation ExpiryLoc, Confidence C) override {
-    S.Diag(IssueExpr->getExprLoc(),
-           C == Confidence::Definite
-               ? diag::warn_lifetime_safety_return_stack_addr_permissive
-               : diag::warn_lifetime_safety_return_stack_addr_strict)
-        << IssueExpr->getSourceRange();
-    S.Diag(ReturnExpr->getExprLoc(), diag::note_lifetime_safety_returned_here)
-        << ReturnExpr->getSourceRange();
-  }
-  void reportDanglingField(const Expr *IssueExpr,
-                           const FieldDecl *DanglingField,
-                           SourceLocation ExpiryLoc) override {
-    S.Diag(IssueExpr->getExprLoc(), diag::warn_lifetime_safety_dangling_field)
-        << IssueExpr->getSourceRange();
-    S.Diag(DanglingField->getLocation(),
-           diag::note_lifetime_safety_dangling_field_here)
-        << DanglingField->getEndLoc();
-  }
-
-  void suggestLifetimeboundToParmVar(SuggestionScope Scope,
-                                     const ParmVarDecl *ParmToAnnotate,
-                                     const Expr *EscapeExpr) override {
-    unsigned DiagID =
-        (Scope == SuggestionScope::CrossTU)
-            ? diag::warn_lifetime_safety_cross_tu_param_suggestion
-            : diag::warn_lifetime_safety_intra_tu_param_suggestion;
-    SourceLocation InsertionPoint = Lexer::getLocForEndOfToken(
-        ParmToAnnotate->getEndLoc(), 0, S.getSourceManager(), S.getLangOpts());
-    S.Diag(ParmToAnnotate->getBeginLoc(), DiagID)
-        << ParmToAnnotate->getSourceRange()
-        << FixItHint::CreateInsertion(InsertionPoint,
-                                      " [[clang::lifetimebound]]");
-    S.Diag(EscapeExpr->getBeginLoc(),
-           diag::note_lifetime_safety_suggestion_returned_here)
-        << EscapeExpr->getSourceRange();
-  }
-
-  void suggestLifetimeboundToImplicitThis(SuggestionScope Scope,
-                                          const CXXMethodDecl *MD,
-                                          const Expr *EscapeExpr) override {
-    unsigned DiagID = (Scope == SuggestionScope::CrossTU)
-                          ? diag::warn_lifetime_safety_cross_tu_this_suggestion
-                          : diag::warn_lifetime_safety_intra_tu_this_suggestion;
-    SourceLocation InsertionPoint;
-    InsertionPoint = Lexer::getLocForEndOfToken(
-        MD->getTypeSourceInfo()->getTypeLoc().getEndLoc(), 0,
-        S.getSourceManager(), S.getLangOpts());
-    S.Diag(InsertionPoint, DiagID)
-        << MD->getNameInfo().getSourceRange()
-        << FixItHint::CreateInsertion(InsertionPoint,
-                                      " [[clang::lifetimebound]]");
-    S.Diag(EscapeExpr->getBeginLoc(),
-           diag::note_lifetime_safety_suggestion_returned_here)
-        << EscapeExpr->getSourceRange();
-  }
-
-  void reportNoescapeViolation(const ParmVarDecl *ParmWithNoescape,
-                               const Expr *EscapeExpr) override {
-    S.Diag(ParmWithNoescape->getBeginLoc(),
-           diag::warn_lifetime_safety_noescape_escapes)
-        << ParmWithNoescape->getSourceRange();
-
-    S.Diag(EscapeExpr->getBeginLoc(),
-           diag::note_lifetime_safety_suggestion_returned_here)
-        << EscapeExpr->getSourceRange();
-  }
-
-  void reportNoescapeViolation(const ParmVarDecl *ParmWithNoescape,
-                               const FieldDecl *EscapeField) override {
-    S.Diag(ParmWithNoescape->getBeginLoc(),
-           diag::warn_lifetime_safety_noescape_escapes)
-        << ParmWithNoescape->getSourceRange();
-
-    S.Diag(EscapeField->getLocation(),
-           diag::note_lifetime_safety_escapes_to_field_here)
-        << EscapeField->getEndLoc();
-  }
-
-  void addLifetimeBoundToImplicitThis(const CXXMethodDecl *MD) override {
-    S.addLifetimeBoundToImplicitThis(const_cast<CXXMethodDecl *>(MD));
-  }
-
-private:
-  Sema &S;
-};
-} // namespace
-} // namespace clang::lifetimes
-
 static void
 LifetimeSafetyTUAnalysis(Sema &S, TranslationUnitDecl *TU,
                          clang::lifetimes::LifetimeSafetyStats &LSStats) {
@@ -2999,8 +2925,6 @@ LifetimeSafetyTUAnalysis(Sema &S, TranslationUnitDecl *TU,
     AC.getCFGBuildOptions().PruneTriviallyFalseEdges = false;
     AC.getCFGBuildOptions().AddLifetime = true;
     AC.getCFGBuildOptions().AddParameterLifetimes = true;
-    AC.getCFGBuildOptions().AddImplicitDtors = true;
-    AC.getCFGBuildOptions().AddTemporaryDtors = true;
     AC.getCFGBuildOptions().setAllAlwaysAdd();
     if (AC.getCFG())
       runLifetimeSafetyAnalysis(AC, &SemaHelper, LSStats, S.CollectStats);
@@ -3112,21 +3036,10 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
   AC.getCFGBuildOptions().AddCXXNewAllocator = false;
   AC.getCFGBuildOptions().AddCXXDefaultInitExprInCtors = true;
 
-  bool IsLifetimeSafetyDiagnosticEnabled =
-      !Diags.isIgnored(diag::warn_lifetime_safety_loan_expires_permissive,
-                       D->getBeginLoc()) ||
-      !Diags.isIgnored(diag::warn_lifetime_safety_loan_expires_strict,
-                       D->getBeginLoc()) ||
-      !Diags.isIgnored(diag::warn_lifetime_safety_return_stack_addr_permissive,
-                       D->getBeginLoc()) ||
-      !Diags.isIgnored(diag::warn_lifetime_safety_return_stack_addr_strict,
-                       D->getBeginLoc()) ||
-      !Diags.isIgnored(diag::warn_lifetime_safety_noescape_escapes,
-                       D->getBeginLoc());
   bool EnableLifetimeSafetyAnalysis =
       S.getLangOpts().EnableLifetimeSafety &&
       !S.getLangOpts().EnableLifetimeSafetyTUAnalysis &&
-      IsLifetimeSafetyDiagnosticEnabled;
+      lifetimes::IsLifetimeSafetyDiagnosticEnabled(S, D);
 
   // Force that certain expressions appear as CFGElements in the CFG.  This
   // is used to speed up various analyses.

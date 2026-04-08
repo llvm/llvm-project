@@ -525,3 +525,37 @@ for.body:                                         ; preds = %entry, %for.body
 for.end:                                          ; preds = %for.body, %entry
   ret void
 }
+
+define void @vscale_ult_no_vscale_range(ptr nocapture %A) mustprogress {
+; CHECK-LABEL: 'vscale_ult_no_vscale_range'
+; CHECK-NEXT:  Classifying expressions for: @vscale_ult_no_vscale_range
+; CHECK-NEXT:    %vscale = call i32 @llvm.vscale.i32()
+; CHECK-NEXT:    --> vscale U: [1,0) S: [1,0)
+; CHECK-NEXT:    %i.05 = phi i32 [ %add, %for.body ], [ 0, %entry ]
+; CHECK-NEXT:    --> {0,+,vscale}<%for.body> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %for.body: Computable }
+; CHECK-NEXT:    %arrayidx = getelementptr inbounds i32, ptr %A, i32 %i.05
+; CHECK-NEXT:    --> {%A,+,(4 * vscale)}<%for.body> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %for.body: Computable }
+; CHECK-NEXT:    %add = add i32 %i.05, %vscale
+; CHECK-NEXT:    --> {vscale,+,vscale}<nw><%for.body> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %for.body: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @vscale_ult_no_vscale_range
+; CHECK-NEXT:  Loop %for.body: Unpredictable backedge-taken count.
+; CHECK-NEXT:  Loop %for.body: Unpredictable constant max backedge-taken count.
+; CHECK-NEXT:  Loop %for.body: Unpredictable symbolic max backedge-taken count.
+;
+entry:
+  %vscale = call i32 @llvm.vscale.i32()
+  br label %for.body
+
+for.body:                                         ; preds = %entry, %for.body
+  %i.05 = phi i32 [ %add, %for.body ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds i32, ptr %A, i32 %i.05
+  %0 = load <vscale x 4 x i32>, ptr %arrayidx, align 4
+  %inc = add nsw <vscale x 4 x i32> %0, splat (i32 1)
+  store <vscale x 4 x i32> %inc, ptr %arrayidx, align 4
+  %add = add i32 %i.05, %vscale
+  %cmp = icmp ult i32 %add, u0x00010000
+  br i1 %cmp, label %for.body, label %for.end
+
+for.end:                                          ; preds = %for.body, %entry
+  ret void
+}

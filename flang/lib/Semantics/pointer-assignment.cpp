@@ -60,6 +60,7 @@ public:
   PointerAssignmentChecker &set_isAssumedRank(bool);
   PointerAssignmentChecker &set_pointerComponentLHS(const Symbol *);
   PointerAssignmentChecker &set_isRHSPointerActualArgument(bool);
+  PointerAssignmentChecker &set_ignoreTKR(common::IgnoreTKRSet);
   bool CheckLeftHandSide(const SomeExpr &);
   bool Check(const SomeExpr &);
 
@@ -96,6 +97,7 @@ private:
   bool isBoundsRemapping_{false};
   bool isAssumedRank_{false};
   bool isRHSPointerActualArgument_{false};
+  common::IgnoreTKRSet ignoreTKR_;
   const Symbol *pointerComponentLHS_{nullptr};
 };
 
@@ -138,6 +140,12 @@ PointerAssignmentChecker &PointerAssignmentChecker::set_pointerComponentLHS(
 PointerAssignmentChecker &
 PointerAssignmentChecker::set_isRHSPointerActualArgument(bool isPointerActual) {
   isRHSPointerActualArgument_ = isPointerActual;
+  return *this;
+}
+
+PointerAssignmentChecker &PointerAssignmentChecker::set_ignoreTKR(
+    common::IgnoreTKRSet ignoreTKR) {
+  ignoreTKR_ = ignoreTKR;
   return *this;
 }
 
@@ -354,6 +362,9 @@ bool PointerAssignmentChecker::Check(const evaluate::Designator<T> &d) {
         msg = "Pointer type must be unlimited polymorphic or non-extensible"
               " derived type when target is unlimited polymorphic"_err_en_US;
       }
+    } else if (ignoreTKR_.test(common::IgnoreTKR::Type) &&
+        ignoreTKR_.test(common::IgnoreTKR::Contiguous)) {
+      // Don't check for target type mismatch error if we have ignore_tkr(tc)
     } else if (!lhsType_->type().IsTkLenCompatibleWith(rhsType->type())) {
       msg = MessageFormattedText{
           "Target type %s is not compatible with pointer type %s"_err_en_US,
@@ -467,7 +478,10 @@ std::optional<MessageFormattedText> PointerAssignmentChecker::CheckRanks(
       !lhsType_->attrs().test(TypeAndShape::Attr::AssumedRank)) {
     int lhsRank{lhsType_->Rank()};
     int rhsRank{rhs.Rank()};
-    if (lhsRank != rhsRank) {
+    // Turn off rank mismatch error if we have ignore_tkr(rc)
+    if (lhsRank != rhsRank &&
+        !(ignoreTKR_.test(common::IgnoreTKR::Rank) &&
+            ignoreTKR_.test(common::IgnoreTKR::Contiguous))) {
       return MessageFormattedText{
           "Pointer has rank %d but target has rank %d"_err_en_US, lhsRank,
           rhsRank};
@@ -609,6 +623,7 @@ bool CheckPointerAssignment(SemanticsContext &context, parser::CharBlock source,
       .set_isVolatile(lhs.attrs.test(DummyDataObject::Attr::Volatile))
       .set_isAssumedRank(isAssumedRank)
       .set_isRHSPointerActualArgument(isPointerActualArgument)
+      .set_ignoreTKR(lhs.ignoreTKR)
       .Check(rhs);
 }
 

@@ -966,48 +966,15 @@ define i1 @scalar_i32_x_is_const2_eq(i32 %y) nounwind {
 ;------------------------------------------------------------------------------;
 
 define i1 @negative_scalar_i8_bitsinmiddle_slt(i8 %x, i8 %y) nounwind {
-; ARM6-LABEL: negative_scalar_i8_bitsinmiddle_slt:
-; ARM6:       @ %bb.0:
-; ARM6-NEXT:    uxtb r1, r1
-; ARM6-NEXT:    mov r2, #24
-; ARM6-NEXT:    ands r0, r0, r2, lsr r1
-; ARM6-NEXT:    mov r0, #0
-; ARM6-NEXT:    movmi r0, #1
-; ARM6-NEXT:    bx lr
+; ARM-LABEL: negative_scalar_i8_bitsinmiddle_slt:
+; ARM:       @ %bb.0:
+; ARM-NEXT:    mov r0, #0
+; ARM-NEXT:    bx lr
 ;
-; ARM78-LABEL: negative_scalar_i8_bitsinmiddle_slt:
-; ARM78:       @ %bb.0:
-; ARM78-NEXT:    uxtb r1, r1
-; ARM78-NEXT:    mov r2, #24
-; ARM78-NEXT:    ands r0, r0, r2, lsr r1
-; ARM78-NEXT:    mov r0, #0
-; ARM78-NEXT:    movwmi r0, #1
-; ARM78-NEXT:    bx lr
-;
-; THUMB6-LABEL: negative_scalar_i8_bitsinmiddle_slt:
-; THUMB6:       @ %bb.0:
-; THUMB6-NEXT:    uxtb r1, r1
-; THUMB6-NEXT:    movs r2, #24
-; THUMB6-NEXT:    lsrs r2, r1
-; THUMB6-NEXT:    ands r2, r0
-; THUMB6-NEXT:    bmi .LBB20_2
-; THUMB6-NEXT:  @ %bb.1:
-; THUMB6-NEXT:    movs r0, #0
-; THUMB6-NEXT:    bx lr
-; THUMB6-NEXT:  .LBB20_2:
-; THUMB6-NEXT:    movs r0, #1
-; THUMB6-NEXT:    bx lr
-;
-; THUMB78-LABEL: negative_scalar_i8_bitsinmiddle_slt:
-; THUMB78:       @ %bb.0:
-; THUMB78-NEXT:    uxtb r1, r1
-; THUMB78-NEXT:    movs r2, #24
-; THUMB78-NEXT:    lsr.w r1, r2, r1
-; THUMB78-NEXT:    ands r0, r1
-; THUMB78-NEXT:    mov.w r0, #0
-; THUMB78-NEXT:    it mi
-; THUMB78-NEXT:    movmi r0, #1
-; THUMB78-NEXT:    bx lr
+; THUMB-LABEL: negative_scalar_i8_bitsinmiddle_slt:
+; THUMB:       @ %bb.0:
+; THUMB-NEXT:    movs r0, #0
+; THUMB-NEXT:    bx lr
   %t0 = lshr i8 24, %y
   %t1 = and i8 %t0, %x
   %res = icmp slt i8 %t1, 0

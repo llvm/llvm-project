@@ -2683,7 +2683,7 @@ define float @v_exp10_fabs_f32(float %in) {
 ; VI-SDAG:       ; %bb.0:
 ; VI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-SDAG-NEXT:    v_and_b32_e32 v1, 0x7fffffff, v0
-; VI-SDAG-NEXT:    v_and_b32_e32 v1, 0xfffff000, v1
+; VI-SDAG-NEXT:    v_and_b32_e32 v1, 0x7ffff000, v1
 ; VI-SDAG-NEXT:    v_sub_f32_e64 v4, |v0|, v1
 ; VI-SDAG-NEXT:    v_mul_f32_e32 v2, 0x40549000, v1
 ; VI-SDAG-NEXT:    v_mul_f32_e32 v5, 0x3a2784bc, v4
@@ -7391,6 +7391,6 @@ declare <2 x half> @llvm.exp10.v2f16(<2 x half>) #2
 declare <3 x half> @llvm.exp10.v3f16(<3 x half>) #2
 declare <2 x half> @llvm.fabs.v2f16(<2 x half>) #2
 
-attributes #0 = { "denormal-fp-math-f32"="ieee,preserve-sign" }
-attributes #1 = { "denormal-fp-math-f32"="dynamic,dynamic" }
+attributes #0 = { denormal_fpenv(float: ieee|preservesign) }
+attributes #1 = { denormal_fpenv(float: dynamic|dynamic) }
 attributes #2 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }

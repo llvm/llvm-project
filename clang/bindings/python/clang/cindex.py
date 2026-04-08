@@ -93,6 +93,7 @@ from typing import (
     Generic,
     Iterator,
     Literal,
+    NoReturn,
     Optional,
     Sequence,
     Type as TType,
@@ -103,9 +104,14 @@ from typing import (
 
 if TYPE_CHECKING:
     from ctypes import _Pointer
+    from io import TextIOWrapper
     from typing_extensions import Protocol, TypeAlias
 
     StrPath: TypeAlias = TUnion[str, os.PathLike[str]]
+    # The type that is compatible with os.fspath:
+    # str, bytes, or os.PathLikes that return either of these two
+    StrBytesPath: TypeAlias = TUnion[StrPath, bytes, os.PathLike[bytes]]
+    InMemoryFile: TypeAlias = "tuple[StrBytesPath, TUnion[str, bytes, TextIOWrapper]]"
     LibFunc: TypeAlias = TUnion[
         "tuple[str, Optional[list[Any]]]",
         "tuple[str, Optional[list[Any]], Any]",
@@ -212,12 +218,12 @@ class TranslationUnitSaveError(Exception):
         if enumeration < 1 or enumeration > 3:
             raise Exception(
                 "Encountered undefined TranslationUnit save error "
-                "constant: %d. Please file a bug to have this "
-                "value supported." % enumeration
+                "constant: {}. Please file a bug to have this "
+                "value supported.".format(enumeration)
             )
 
         self.save_error = enumeration
-        Exception.__init__(self, "Error %d: %s" % (enumeration, message))
+        Exception.__init__(self, "Error {}: {}".format(enumeration, message))
 
 
 ### Structures and Utility Classes ###
@@ -246,7 +252,9 @@ class CachedProperty(Generic[TInstance, TResult]):
             property_name = self.wrapped.__name__
             class_name = instance_type.__name__
             raise TypeError(
-                f"'{property_name}' is not a static attribute of '{class_name}'"
+                "'{}' is not a static attribute of '{}'".format(
+                    property_name, class_name
+                )
             )
 
         value = self.wrapped(instance)
@@ -278,23 +286,25 @@ class SourceLocation(Structure):
     """
 
     _fields_ = [("ptr_data", c_void_p * 2), ("int_data", c_uint)]
-    _data = None
+    _data: tuple[File | None, int, int, int] | None = None
 
-    def _get_instantiation(self):
+    def _get_instantiation(self) -> tuple[File | None, int, int, int]:
         if self._data is None:
             f, l, c, o = c_object_p(), c_uint(), c_uint(), c_uint()
             conf.lib.clang_getInstantiationLocation(
                 self, byref(f), byref(l), byref(c), byref(o)
             )
             if f:
-                f = File(f)
+                file = File(f)
             else:
-                f = None
-            self._data = (f, int(l.value), int(c.value), int(o.value))
+                file = None
+            self._data = (file, int(l.value), int(c.value), int(o.value))
         return self._data
 
     @staticmethod
-    def from_position(tu, file, line, column):
+    def from_position(
+        tu: TranslationUnit, file: File, line: int, column: int
+    ) -> SourceLocation:
         """
         Retrieve the source location associated with a given file/line/column in
         a particular translation unit.
@@ -302,7 +312,7 @@ class SourceLocation(Structure):
         return conf.lib.clang_getLocation(tu, file, line, column)  # type: ignore [no-any-return]
 
     @staticmethod
-    def from_offset(tu, file, offset):
+    def from_offset(tu: TranslationUnit, file: File, offset: int) -> SourceLocation:
         """Retrieve a SourceLocation from a given character offset.
 
         tu -- TranslationUnit file belongs to
@@ -312,36 +322,36 @@ class SourceLocation(Structure):
         return conf.lib.clang_getLocationForOffset(tu, file, offset)  # type: ignore [no-any-return]
 
     @property
-    def file(self):
+    def file(self) -> File | None:
         """Get the file represented by this source location."""
         return self._get_instantiation()[0]
 
     @property
-    def line(self):
+    def line(self) -> int:
         """Get the line represented by this source location."""
         return self._get_instantiation()[1]
 
     @property
-    def column(self):
+    def column(self) -> int:
         """Get the column represented by this source location."""
         return self._get_instantiation()[2]
 
     @property
-    def offset(self):
+    def offset(self) -> int:
         """Get the file offset represented by this source location."""
         return self._get_instantiation()[3]
 
     @property
-    def is_in_system_header(self):
+    def is_in_system_header(self) -> bool:
         """Returns true if the given source location is in a system header."""
         return bool(conf.lib.clang_Location_isInSystemHeader(self))
 
-    def __eq__(self, other):
-        return isinstance(other, SourceLocation) and bool(
-            conf.lib.clang_equalLocations(self, other)
-        )
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, SourceLocation):
+            return NotImplemented
+        return bool(conf.lib.clang_equalLocations(self, other))
 
-    def __ne__(self, other):
+    def __ne__(self, other: object) -> bool:
         return not self.__eq__(other)
 
     def __lt__(self, other: SourceLocation) -> bool:
@@ -350,15 +360,13 @@ class SourceLocation(Structure):
     def __le__(self, other: SourceLocation) -> bool:
         return self < other or self == other
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         if self.file:
             filename = self.file.name
         else:
             filename = None
-        return "<SourceLocation file %r, line %r, column %r>" % (
-            filename,
-            self.line,
-            self.column,
+        return "<SourceLocation file {}, line {}, column {}>".format(
+            repr(filename), repr(self.line), repr(self.column)
         )
 
 
@@ -377,11 +385,11 @@ class SourceRange(Structure):
     # FIXME: Eliminate this and make normal constructor? Requires hiding ctypes
     # object.
     @staticmethod
-    def from_locations(start, end):
+    def from_locations(start: SourceLocation, end: SourceLocation) -> SourceRange:
         return conf.lib.clang_getRange(start, end)  # type: ignore [no-any-return]
 
     @property
-    def start(self):
+    def start(self) -> SourceLocation:
         """
         Return a SourceLocation representing the first character within a
         source range.
@@ -389,28 +397,28 @@ class SourceRange(Structure):
         return conf.lib.clang_getRangeStart(self)  # type: ignore [no-any-return]
 
     @property
-    def end(self):
+    def end(self) -> SourceLocation:
         """
         Return a SourceLocation representing the last character within a
         source range.
         """
         return conf.lib.clang_getRangeEnd(self)  # type: ignore [no-any-return]
 
-    def __eq__(self, other):
-        return isinstance(other, SourceRange) and bool(
-            conf.lib.clang_equalRanges(self, other)
-        )
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, SourceRange):
+            return NotImplemented
+        return bool(conf.lib.clang_equalRanges(self, other))
 
-    def __ne__(self, other):
+    def __ne__(self, other: object) -> bool:
         return not self.__eq__(other)
 
-    def __contains__(self, other):
+    def __contains__(self, other: object) -> bool:
         """Useful to detect the Token/Lexer bug"""
         if not isinstance(other, SourceLocation):
             return False
         return self.start <= other <= self.end
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<SourceRange start %r, end %r>" % (self.start, self.end)
 
 
@@ -543,10 +551,8 @@ class Diagnostic:
         return _CXString.from_result(conf.lib.clang_formatDiagnostic(self, options))
 
     def __repr__(self):
-        return "<Diagnostic severity %r, location %r, spelling %r>" % (
-            self.severity,
-            self.location,
-            self.spelling,
+        return "<Diagnostic severity {}, location {}, spelling {}>".format(
+            repr(self.severity), repr(self.location), repr(self.spelling)
         )
 
     def __str__(self):
@@ -568,7 +574,7 @@ class FixIt:
         self.value = value
 
     def __repr__(self):
-        return "<FixIt range %r, value %r>" % (self.range, self.value)
+        return "<FixIt range {}, value {}>".format(repr(self.range), repr(self.value))
 
 
 class TokenGroup:
@@ -642,10 +648,7 @@ class BaseEnumeration(Enum):
         return cls(id)
 
     def __repr__(self):
-        return "%s.%s" % (
-            self.__class__.__name__,
-            self.name,
-        )
+        return "{}.{}".format(self.__class__.__name__, self.name)
 
 
 class TokenKind(BaseEnumeration):
@@ -2727,8 +2730,9 @@ class Type(Structure):
 
                 if key >= len(self):
                     raise IndexError(
-                        "Index greater than container length: "
-                        "%d > %d" % (key, len(self))
+                        "Index greater than container length: {} > {}".format(
+                            key, len(self)
+                        )
                     )
 
                 result = Type.from_result(
@@ -2915,7 +2919,7 @@ class Type(Structure):
         """
         return conf.lib.clang_Type_getSizeOf(self)  # type: ignore [no-any-return]
 
-    def get_offset(self, fieldname: str) -> int:
+    def get_offset(self, fieldname: TUnion[str, bytes]) -> int:
         """
         Retrieve the offset of a field in the record.
         """
@@ -3067,10 +3071,29 @@ class CompletionChunkKind(BaseEnumeration):
     VERTICAL_SPACE = 20
 
 
-class _CXUnsavedFile(Structure):
+class UnsavedFile(Structure):
     """Helper for passing unsaved file arguments."""
 
     _fields_ = [("name", c_char_p), ("contents", c_char_p), ("length", c_ulong)]
+
+
+class _CXUnsavedFile(UnsavedFile):
+    """
+    _CXUnsavedFile acts as an alias to UnsavedFile.
+    This will be removed  in a future release.
+    All existing usage should be replaced directly with UnsavedFile.
+    No other changes are required.
+    """
+
+    def __getattribute__(self, attr):
+        warnings.warn(
+            "'_CXUnsavedFile' will be renamed to 'UnsavedFile' for consistency. "
+            "'UnsavedFile' is already available to use and existing uses should "
+            "be adapted to refer to it instead. '_CXUnsavedFile' will be "
+            "removed in a future release.",
+            DeprecationWarning,
+        )
+        return super().__getattribute__(attr)
 
 
 class CompletionChunk:
@@ -3089,14 +3112,14 @@ class CompletionChunk:
             "will be removed in a future release."
         )
 
-        def __getattr__(self, _):
+        def __getattr__(self, _: Any) -> NoReturn:
             raise AttributeError(self.deprecation_message)
 
-        def __getitem__(self, value: int):
+        def __getitem__(self, value: int) -> str:
             warnings.warn(self.deprecation_message, DeprecationWarning)
             return CompletionChunk.SPELLING_CACHE[CompletionChunkKind.from_id(value)]
 
-        def __contains__(self, value: int):
+        def __contains__(self, value: int) -> bool:
             warnings.warn(self.deprecation_message, DeprecationWarning)
             return CompletionChunkKind.from_id(value) in CompletionChunk.SPELLING_CACHE
 
@@ -3132,7 +3155,7 @@ class CompletionChunk:
         self.key = key
 
     def __repr__(self) -> str:
-        return "{'" + self.spelling + "', " + str(self.kind) + "}"
+        return "{{'{}', {}}}".format(self.spelling, self.kind)
 
     @CachedProperty
     def spelling(self) -> str:
@@ -3292,14 +3315,11 @@ class CompletionString(ClangObject):
         return _CXString.from_result(conf.lib.clang_getCompletionBriefComment(self.obj))
 
     def __repr__(self) -> str:
-        return (
-            " | ".join([str(a) for a in self])
-            + " || Priority: "
-            + str(self.priority)
-            + " || Availability: "
-            + str(self.availability)
-            + " || Brief comment: "
-            + str(self.briefComment)
+        return "{chunks} || Priority: {priority} || Availability: {availability} || Brief comment: {comment}".format(
+            chunks=" | ".join(str(a) for a in self),
+            priority=self.priority,
+            availability=self.availability,
+            comment=self.briefComment,
         )
 
 
@@ -3461,10 +3481,12 @@ class TranslationUnit(ClangObject):
     PARSE_INCLUDE_BRIEF_COMMENTS_IN_CODE_COMPLETION = 128
 
     @staticmethod
-    def process_unsaved_files(unsaved_files) -> Array[_CXUnsavedFile] | None:
+    def process_unsaved_files(
+        unsaved_files: list[InMemoryFile],
+    ) -> Array[UnsavedFile] | None:
         unsaved_array = None
         if len(unsaved_files):
-            unsaved_array = (_CXUnsavedFile * len(unsaved_files))()
+            unsaved_array = (UnsavedFile * len(unsaved_files))()
             for i, (name, contents) in enumerate(unsaved_files):
                 if hasattr(contents, "read"):
                     contents = contents.read()
@@ -3476,8 +3498,13 @@ class TranslationUnit(ClangObject):
 
     @classmethod
     def from_source(
-        cls, filename, args=None, unsaved_files=None, options=0, index=None
-    ):
+        cls,
+        filename: StrBytesPath | None,
+        args: list[TUnion[str, bytes]] | None = None,
+        unsaved_files: list[InMemoryFile] | None = None,
+        options: int = 0,
+        index: Index | None = None,
+    ) -> TranslationUnit:
         """Create a TranslationUnit by parsing source.
 
         This is capable of processing source code both from files on the
@@ -3488,11 +3515,12 @@ class TranslationUnit(ClangObject):
         etc. e.g. ["-Wall", "-I/path/to/include"].
 
         In-memory file content can be provided via unsaved_files. This is a
-        list of 2-tuples. The first element is the filename (str or
+        list of 2-tuples. The first element is the filename (str, bytes or
         PathLike). The second element defines the content. Content can be
-        provided as str source code or as file objects (anything with a read()
-        method). If a file object is being used, content will be read until EOF
-        and the read cursor will not be reset to its original position.
+        provided as str or bytes source code, or as file objects (anything with
+        a read() method). If a file object is being used, content will be read
+        until EOF and the read cursor will not be reset to its original
+        position.
 
         options is a bitwise or of TranslationUnit.PARSE_XXX flags which will
         control parsing behavior.
@@ -3548,7 +3576,9 @@ class TranslationUnit(ClangObject):
         return cls(ptr, index=index)
 
     @classmethod
-    def from_ast_file(cls, filename, index=None):
+    def from_ast_file(
+        cls, filename: StrBytesPath, index: Index | None = None
+    ) -> TranslationUnit:
         """Create a TranslationUnit instance from a saved AST file.
 
         A previously-saved AST file (provided with -emit-ast or
@@ -3571,7 +3601,7 @@ class TranslationUnit(ClangObject):
 
         return cls(ptr=ptr, index=index)
 
-    def __init__(self, ptr, index):
+    def __init__(self, ptr: CObjP, index: Index) -> None:
         """Create a TranslationUnit instance.
 
         TranslationUnits should be created using one of the from_* @classmethod
@@ -3581,20 +3611,20 @@ class TranslationUnit(ClangObject):
         self.index = index
         ClangObject.__init__(self, ptr)
 
-    def __del__(self):
+    def __del__(self) -> None:
         conf.lib.clang_disposeTranslationUnit(self)
 
     @property
-    def cursor(self):
+    def cursor(self) -> Cursor | None:
         """Retrieve the cursor that represents the given translation unit."""
         return Cursor.from_result(conf.lib.clang_getTranslationUnitCursor(self), self)
 
     @property
-    def spelling(self):
+    def spelling(self) -> str:
         """Get the original translation unit source file name."""
         return _CXString.from_result(conf.lib.clang_getTranslationUnitSpelling(self))
 
-    def get_includes(self):
+    def get_includes(self) -> Iterator[FileInclusion]:
         """
         Return an iterable sequence of FileInclusion objects that describe the
         sequence of inclusions in a translation unit. The first object in
@@ -3603,25 +3633,32 @@ class TranslationUnit(ClangObject):
         headers.
         """
 
-        def visitor(fobj, lptr, depth, includes):
+        def visitor(
+            fobj: CObjP,
+            lptr: _Pointer[SourceLocation],
+            depth: int,
+            includes: list[FileInclusion],
+        ) -> None:
             if depth > 0:
                 loc = lptr.contents
                 includes.append(FileInclusion(loc.file, File(fobj), loc, depth))
 
         # Automatically adapt CIndex/ctype pointers to python objects
-        includes = []
+        includes: list[FileInclusion] = []
         conf.lib.clang_getInclusions(
             self, translation_unit_includes_callback(visitor), includes
         )
 
         return iter(includes)
 
-    def get_file(self, filename):
+    def get_file(self, filename: StrBytesPath) -> File:
         """Obtain a File from this translation unit."""
 
         return File.from_name(self, filename)
 
-    def get_location(self, filename, position):
+    def get_location(
+        self, filename: StrBytesPath, position: int | tuple[int, int]
+    ) -> SourceLocation:
         """Obtain a SourceLocation for a file in this translation unit.
 
         The position can be specified by passing:
@@ -3637,7 +3674,11 @@ class TranslationUnit(ClangObject):
 
         return SourceLocation.from_position(self, f, position[0], position[1])
 
-    def get_extent(self, filename, locations):
+    def get_extent(
+        self,
+        filename: StrBytesPath,
+        locations: Sequence[SourceLocation] | Sequence[int] | Sequence[Sequence[int]],
+    ) -> SourceRange:
         """Obtain a SourceRange from this translation unit.
 
         The bounds of the SourceRange must ultimately be defined by a start and
@@ -3701,7 +3742,9 @@ class TranslationUnit(ClangObject):
 
         return DiagIterator(self)
 
-    def reparse(self, unsaved_files=None, options=0):
+    def reparse(
+        self, unsaved_files: list[InMemoryFile] | None = None, options: int = 0
+    ) -> None:
         """
         Reparse an already parsed translation unit.
 
@@ -3720,10 +3763,10 @@ class TranslationUnit(ClangObject):
             )
         )
         if result != 0:
-            msg = "Error reparsing translation unit. Error code: " + str(result)
+            msg = "Error reparsing translation unit. Error code: {}".format(result)
             raise TranslationUnitLoadError(msg)
 
-    def save(self, filename):
+    def save(self, filename: StrBytesPath) -> None:
         """Saves the TranslationUnit to a file.
 
         This is equivalent to passing -emit-ast to the clang frontend. The
@@ -3751,14 +3794,14 @@ class TranslationUnit(ClangObject):
 
     def codeComplete(
         self,
-        path,
-        line,
-        column,
-        unsaved_files=None,
-        include_macros=False,
-        include_code_patterns=False,
-        include_brief_comments=False,
-    ):
+        path: StrBytesPath,
+        line: int,
+        column: int,
+        unsaved_files: list[InMemoryFile] | None = None,
+        include_macros: bool = False,
+        include_code_patterns: bool = False,
+        include_brief_comments: bool = False,
+    ) -> CodeCompletionResults | None:
         """
         Code complete in this translation unit.
 
@@ -3795,7 +3838,11 @@ class TranslationUnit(ClangObject):
             return CodeCompletionResults(ptr)
         return None
 
-    def get_tokens(self, locations=None, extent=None):
+    def get_tokens(
+        self,
+        locations: tuple[SourceLocation, SourceLocation] | None = None,
+        extent: SourceRange | None = None,
+    ) -> Iterator[Token]:
         """Obtain tokens in this translation unit.
 
         This is a generator for Token instances. The caller specifies a range
@@ -3803,10 +3850,14 @@ class TranslationUnit(ClangObject):
         2-tuple of SourceLocation or as a SourceRange. If both are defined,
         behavior is undefined.
         """
-        if locations is None and extent is None:
-            raise TypeError("get_tokens() requires at least one argument")
+        if locations is not None and extent is not None:
+            raise TypeError("get_tokens() requires exactly one argument (two provided)")
         if locations is not None:
             extent = SourceRange(start=locations[0], end=locations[1])
+        if extent is None:
+            raise TypeError(
+                "get_tokens() requires exactly one argument (none provided)"
+            )
 
         return TokenGroup.get_tokens(self, extent)
 
@@ -3838,7 +3889,7 @@ class File(ClangObject):
         return self.name
 
     def __repr__(self):
-        return "<File: %s>" % (self.name)
+        return "<File: {}>".format(self.name)
 
     def __eq__(self, other) -> bool:
         return isinstance(other, File) and bool(
@@ -3898,13 +3949,12 @@ class CompilationDatabaseError(Exception):
 
         if enumeration > 1:
             raise Exception(
-                "Encountered undefined CompilationDatabase error "
-                "constant: %d. Please file a bug to have this "
-                "value supported." % enumeration
+                "Encountered undefined CompilationDatabase error constant: {}."
+                "Please file a bug to have this value supported.".format(enumeration)
             )
 
         self.cdb_error = enumeration
-        Exception.__init__(self, "Error %d: %s" % (enumeration, message))
+        Exception.__init__(self, "Error {}: {}".format(enumeration, message))
 
 
 class CompileCommand:
@@ -4289,6 +4339,7 @@ FUNCTION_LIST: list[LibFunc] = [
     ("clang_getCanonicalCursor", [Cursor], Cursor),
     ("clang_getCanonicalType", [Type], Type),
     ("clang_getChildDiagnostics", [Diagnostic], c_object_p),
+    ("clang_getClangVersion", [], _CXString),
     ("clang_getCompletionAvailability", [c_void_p], c_int),
     ("clang_getCompletionBriefComment", [c_void_p], _CXString),
     ("clang_getCompletionChunkCompletionString", [c_void_p, c_int], c_object_p),
@@ -4599,6 +4650,11 @@ class Config:
 
         return library
 
+    def get_clang_version(self) -> str:
+        """
+        Returns the libclang version string used by the bindings
+        """
+        return _CXString.from_result(self.lib.clang_getClangVersion())
 
 conf = Config()
 
