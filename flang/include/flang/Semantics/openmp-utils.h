@@ -24,6 +24,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 
+#include <memory>
 #include <optional>
 #include <string>
 #include <tuple>
@@ -53,14 +54,30 @@ template <typename T> T &&AsRvalue(T &&t) { return std::move(t); }
 const Scope &GetScopingUnit(const Scope &scope);
 const Scope &GetProgramUnit(const Scope &scope);
 
+template <typename T> struct WithSource {
+  template < //
+      typename U = std::remove_reference_t<T>,
+      typename = std::enable_if_t<std::is_default_constructible_v<U>>>
+  WithSource() : value(), source() {}
+  WithSource(const WithSource<T> &) = default;
+  WithSource(WithSource<T> &&) = default;
+  WithSource(const T &t, parser::CharBlock s) : value(t), source(s) {}
+  WithSource(T &&t, parser::CharBlock s) : value(std::move(t)), source(s) {}
+  WithSource &operator=(const WithSource<T> &) = default;
+  WithSource &operator=(WithSource<T> &&) = default;
+
+  using value_type = T;
+  T value;
+  parser::CharBlock source;
+};
+
 // There is no consistent way to get the source of an ActionStmt, but there
 // is "source" in Statement<T>. This structure keeps the ActionStmt with the
 // extracted source for further use.
-struct SourcedActionStmt {
-  const parser::ActionStmt *stmt{nullptr};
-  parser::CharBlock source;
-
-  operator bool() const { return stmt != nullptr; }
+struct SourcedActionStmt : public WithSource<const parser::ActionStmt *> {
+  using WithSource<value_type>::WithSource;
+  value_type stmt() const { return value; }
+  operator bool() const { return stmt() != nullptr; }
 };
 
 SourcedActionStmt GetActionStmt(const parser::ExecutionPartConstruct *x);
@@ -108,10 +125,29 @@ std::optional<bool> IsContiguous(
 std::vector<SomeExpr> GetTopLevelDesignators(const SomeExpr &expr);
 const SomeExpr *HasStorageOverlap(
     const SomeExpr &base, llvm::ArrayRef<SomeExpr> exprs);
+
 bool IsAssignment(const parser::ActionStmt *x);
 bool IsPointerAssignment(const evaluate::Assignment &x);
 
 MaybeExpr MakeEvaluateExpr(const parser::OmpStylizedInstance &inp);
+
+bool IsLoopTransforming(llvm::omp::Directive dir);
+bool IsFullUnroll(const parser::OmpDirectiveSpecification &spec);
+
+struct LoopControl {
+  LoopControl(LoopControl &&x) = default;
+  LoopControl(const LoopControl &x) = default;
+  LoopControl(const parser::LoopControl::Bounds &x);
+  LoopControl(const parser::ConcurrentControl &x);
+
+  const Symbol *iv{nullptr};
+  WithSource<MaybeExpr> lbound, ubound, step;
+
+private:
+  static WithSource<MaybeExpr> fromParserExpr(const parser::Expr &x);
+};
+
+std::vector<LoopControl> GetLoopControls(const parser::DoConstruct &x);
 
 /// A representation of a "because" message.
 struct Reason {
@@ -156,9 +192,8 @@ WithReason<int64_t> GetArgumentValueWithReason(
 WithReason<int64_t> GetNumArgumentsWithReason(
     const parser::OmpDirectiveSpecification &spec, llvm::omp::Clause clauseId,
     unsigned version);
-
-bool IsLoopTransforming(llvm::omp::Directive dir);
-bool IsFullUnroll(const parser::OpenMPLoopConstruct &x);
+WithReason<int64_t> GetHeightWithReason(
+    const parser::OmpDirectiveSpecification &spec, unsigned version);
 
 // Return the depth of the affected nests:
 //   {affected-depth, reason, must-be-perfect-nest}.
@@ -168,6 +203,9 @@ std::pair<WithReason<int64_t>, bool> GetAffectedNestDepthWithReason(
 //   {first, count, reason}.
 // If the range is "the whole sequence", the return value will be {1, -1, ...}.
 WithReason<std::pair<int64_t, int64_t>> GetAffectedLoopRangeWithReason(
+    const parser::OmpDirectiveSpecification &spec, unsigned version);
+/// Return the depth in which all loops must be rectangular.
+WithReason<int64_t> GetRectangularNestDepthWithReason(
     const parser::OmpDirectiveSpecification &spec, unsigned version);
 
 // Count the required loop count from range. If count == -1, return -1,
@@ -200,11 +238,19 @@ struct LoopSequence {
 
   bool isNest() const { return length_.value == 1; }
   const WithReason<int64_t> &length() const { return length_; }
+  const WithReason<int64_t> &height() const { return height_; }
   const Depth &depth() const { return depth_; }
   const std::vector<LoopSequence> &children() const { return children_; }
+  const parser::ExecutionPartConstruct *owner() const { return entry_->owner; }
 
   WithReason<bool> isWellFormedSequence() const;
   WithReason<bool> isWellFormedNest() const;
+
+  std::vector<LoopControl> getLoopControls() const;
+  // Check if this loop's bounds are invariant in each of the `outer`
+  // constructs.
+  WithReason<bool> isRectangular(
+      const std::vector<const LoopSequence *> &outer) const;
 
 private:
   using Construct = ExecutionPartIterator::Construct;
@@ -231,6 +277,7 @@ private:
   WithReason<int64_t> getNestedLength() const;
   Depth calculateDepths() const;
   Depth getNestedDepths() const;
+  WithReason<int64_t> calculateHeight() const;
 
   /// The construct that is not a loop or a loop-transforming construct,
   /// that is also not a valid intervening code. Unset if no such code is
@@ -248,6 +295,13 @@ private:
   WithReason<int64_t> length_;
   /// Precalculated depths. Only meaningful if the sequence is a nest.
   Depth depth_;
+  /// Precalculated height of the sequence. The height is the difference
+  /// in the nesting level between "this" and any of the children (should
+  /// be the same for each child). Intuitively it is the number of nested
+  /// loops that are added by this construct. If this->depth_ included
+  /// child->depth_ for some child, then
+  ///   height_ = this->depth_ - child->depth_
+  WithReason<int64_t> height_;
 
   // The core structure of the class:
   unsigned version_; // Needed for GetXyzWithReason

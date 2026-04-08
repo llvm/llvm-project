@@ -268,6 +268,11 @@ bool AMDGPUSubtarget::isSingleLaneExecution(const Function &Func) const {
       return false;
   }
 
+  // If the function may call the WWM intrinsic, just return false as
+  // all threads will be active at some point
+  if (!Func.hasFnAttribute("amdgpu-no-wwm"))
+    return false;
+
   return true;
 }
 

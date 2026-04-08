@@ -34,6 +34,7 @@
 #include "llvm/IR/IntrinsicsSPIRV.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include <optional>
 
 #define DEBUG_TYPE "spirv-isel"
 
@@ -381,8 +382,20 @@ private:
 
   bool selectReadImageIntrinsic(Register &ResVReg, SPIRVTypeInst ResType,
                                 MachineInstr &I) const;
+  bool selectGetDimensionsIntrinsic(Register &ResVReg, SPIRVTypeInst ResType,
+                                    MachineInstr &I) const;
+  bool selectGetDimensionsLevelsIntrinsic(Register &ResVReg,
+                                          SPIRVTypeInst ResType,
+                                          MachineInstr &I) const;
+  bool selectGetDimensionsMSIntrinsic(Register &ResVReg, SPIRVTypeInst ResType,
+                                      MachineInstr &I) const;
+  bool
+  selectImageQuerySize(Register ImageReg, Register &ResVReg, MachineInstr &I,
+                       std::optional<Register> LodReg = std::nullopt) const;
   bool selectSampleBasicIntrinsic(Register &ResVReg, SPIRVTypeInst ResType,
                                   MachineInstr &I) const;
+  bool selectCalculateLodIntrinsic(Register &ResVReg, SPIRVTypeInst ResType,
+                                   MachineInstr &I) const;
   bool selectSampleBiasIntrinsic(Register &ResVReg, SPIRVTypeInst ResType,
                                  MachineInstr &I) const;
   bool selectSampleGradIntrinsic(Register &ResVReg, SPIRVTypeInst ResType,
@@ -906,9 +919,6 @@ static bool mayApplyGenericSelection(unsigned Opcode) {
   case TargetOpcode::G_CONSTANT:
   case TargetOpcode::G_FCONSTANT:
     return false;
-  case TargetOpcode::G_SADDO:
-  case TargetOpcode::G_SSUBO:
-    return true;
   }
   return isTypeFoldingSupported(Opcode);
 }
@@ -4242,7 +4252,7 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
                    .addUse(GR.getSPIRVTypeID(ResType));
     MIB.constrainAllUses(TII, TRI, RBI);
     unsigned SpecId = I.getOperand(2).getImm();
-    buildOpDecorate(I.getOperand(0).getReg(), *MIB.getInstr(), TII,
+    buildOpDecorate(I.getOperand(0).getReg(), *++MIB->getIterator(), TII,
                     SPIRV::Decoration::SpecId, {SpecId});
 
     return true;
@@ -4635,6 +4645,23 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
   case Intrinsic::spv_resource_load_level: {
     return selectLoadLevelIntrinsic(ResVReg, ResType, I);
   }
+  case Intrinsic::spv_resource_getdimensions_x:
+  case Intrinsic::spv_resource_getdimensions_xy:
+  case Intrinsic::spv_resource_getdimensions_xyz: {
+    return selectGetDimensionsIntrinsic(ResVReg, ResType, I);
+  }
+  case Intrinsic::spv_resource_getdimensions_levels_x:
+  case Intrinsic::spv_resource_getdimensions_levels_xy:
+  case Intrinsic::spv_resource_getdimensions_levels_xyz: {
+    return selectGetDimensionsLevelsIntrinsic(ResVReg, ResType, I);
+  }
+  case Intrinsic::spv_resource_getdimensions_ms_xy:
+  case Intrinsic::spv_resource_getdimensions_ms_xyz: {
+    return selectGetDimensionsMSIntrinsic(ResVReg, ResType, I);
+  }
+  case Intrinsic::spv_resource_calculate_lod:
+  case Intrinsic::spv_resource_calculate_lod_unclamped:
+    return selectCalculateLodIntrinsic(ResVReg, ResType, I);
   case Intrinsic::spv_resource_sample:
   case Intrinsic::spv_resource_sample_clamp:
     return selectSampleBasicIntrinsic(ResVReg, ResType, I);
@@ -4941,6 +4968,209 @@ bool SPIRVInstructionSelector::generateSampleImage(
     if (ImageOperands & SPIRV::ImageOperand::MinLod)
       MIB.addUse(*ImOps.MinLod);
   }
+
+  MIB.constrainAllUses(TII, TRI, RBI);
+  return true;
+}
+
+bool SPIRVInstructionSelector::selectImageQuerySize(
+    Register ImageReg, Register &ResVReg, MachineInstr &I,
+    std::optional<Register> LodReg) const {
+  unsigned Opcode =
+      LodReg ? SPIRV::OpImageQuerySizeLod : SPIRV::OpImageQuerySize;
+  SPIRVTypeInst ImageType = GR.getSPIRVTypeForVReg(ImageReg);
+  assert(ImageType && ImageType->getOpcode() == SPIRV::OpTypeImage &&
+         "ImageReg is not an image type.");
+
+  auto Dim = static_cast<SPIRV::Dim::Dim>(ImageType->getOperand(2).getImm());
+  bool IsArray = ImageType->getOperand(4).getImm() != 0;
+  unsigned NumComponents = 0;
+  switch (Dim) {
+  case SPIRV::Dim::DIM_1D:
+  case SPIRV::Dim::DIM_Buffer:
+    NumComponents = IsArray ? 2 : 1;
+    break;
+  case SPIRV::Dim::DIM_2D:
+  case SPIRV::Dim::DIM_Cube:
+  case SPIRV::Dim::DIM_Rect:
+    NumComponents = IsArray ? 3 : 2;
+    break;
+  case SPIRV::Dim::DIM_3D:
+    NumComponents = 3;
+    break;
+  default:
+    I.emitGenericError("Unsupported image dimension for OpImageQuerySize.");
+    return false;
+  }
+
+  SPIRVTypeInst I32Ty = GR.getOrCreateSPIRVIntegerType(32, I, TII);
+  SPIRVTypeInst ResType =
+      NumComponents == 1
+          ? I32Ty
+          : GR.getOrCreateSPIRVVectorType(I32Ty, NumComponents, I, TII);
+
+  auto MIB = BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(Opcode))
+                 .addDef(ResVReg)
+                 .addUse(GR.getSPIRVTypeID(ResType))
+                 .addUse(ImageReg);
+  if (LodReg)
+    MIB.addUse(*LodReg);
+  MIB.constrainAllUses(TII, TRI, RBI);
+  return true;
+}
+
+bool SPIRVInstructionSelector::selectGetDimensionsIntrinsic(
+    Register &ResVReg, SPIRVTypeInst ResType, MachineInstr &I) const {
+  Register ImageReg = I.getOperand(2).getReg();
+  auto *ImageDef = cast<GIntrinsic>(getVRegDef(*MRI, ImageReg));
+  Register NewImageReg = MRI->createVirtualRegister(MRI->getRegClass(ImageReg));
+  if (!loadHandleBeforePosition(NewImageReg, GR.getSPIRVTypeForVReg(ImageReg),
+                                *ImageDef, I)) {
+    return false;
+  }
+  return selectImageQuerySize(NewImageReg, ResVReg, I);
+}
+
+bool SPIRVInstructionSelector::selectGetDimensionsLevelsIntrinsic(
+    Register &ResVReg, SPIRVTypeInst ResType, MachineInstr &I) const {
+  Register ImageReg = I.getOperand(2).getReg();
+  auto *ImageDef = cast<GIntrinsic>(getVRegDef(*MRI, ImageReg));
+  Register NewImageReg = MRI->createVirtualRegister(MRI->getRegClass(ImageReg));
+  if (!loadHandleBeforePosition(NewImageReg, GR.getSPIRVTypeForVReg(ImageReg),
+                                *ImageDef, I)) {
+    return false;
+  }
+
+  Register SizeReg = MRI->createVirtualRegister(&SPIRV::iIDRegClass);
+  Register LodReg = I.getOperand(3).getReg();
+
+  assert(GR.getSPIRVTypeForVReg(NewImageReg)->getOperand(6).getImm() == 1 &&
+         "OpImageQuerySizeLod and OpImageQueryLevels require a sampled image");
+
+  if (!selectImageQuerySize(NewImageReg, SizeReg, I, LodReg)) {
+    return false;
+  }
+
+  SPIRVTypeInst I32Ty = GR.getOrCreateSPIRVIntegerType(32, I, TII);
+  Register LevelsReg = MRI->createVirtualRegister(&SPIRV::iIDRegClass);
+  BuildMI(*I.getParent(), I, I.getDebugLoc(),
+          TII.get(SPIRV::OpImageQueryLevels))
+      .addDef(LevelsReg)
+      .addUse(GR.getSPIRVTypeID(I32Ty))
+      .addUse(NewImageReg)
+      .constrainAllUses(TII, TRI, RBI);
+
+  BuildMI(*I.getParent(), I, I.getDebugLoc(),
+          TII.get(SPIRV::OpCompositeConstruct))
+      .addDef(ResVReg)
+      .addUse(GR.getSPIRVTypeID(ResType))
+      .addUse(SizeReg)
+      .addUse(LevelsReg)
+      .constrainAllUses(TII, TRI, RBI);
+
+  return true;
+}
+
+bool SPIRVInstructionSelector::selectGetDimensionsMSIntrinsic(
+    Register &ResVReg, SPIRVTypeInst ResType, MachineInstr &I) const {
+  Register ImageReg = I.getOperand(2).getReg();
+  auto *ImageDef = cast<GIntrinsic>(getVRegDef(*MRI, ImageReg));
+  Register NewImageReg = MRI->createVirtualRegister(MRI->getRegClass(ImageReg));
+  if (!loadHandleBeforePosition(NewImageReg, GR.getSPIRVTypeForVReg(ImageReg),
+                                *ImageDef, I)) {
+    return false;
+  }
+
+  Register SizeReg = MRI->createVirtualRegister(&SPIRV::iIDRegClass);
+
+  assert(GR.getSPIRVTypeForVReg(NewImageReg)->getOperand(5).getImm() == 1 &&
+         "OpImageQuerySamples requires a multisampled image");
+
+  if (!selectImageQuerySize(NewImageReg, SizeReg, I)) {
+    return false;
+  }
+
+  Register SamplesReg = MRI->createVirtualRegister(&SPIRV::iIDRegClass);
+
+  SPIRVTypeInst I32Ty = GR.getOrCreateSPIRVIntegerType(32, I, TII);
+  BuildMI(*I.getParent(), I, I.getDebugLoc(),
+          TII.get(SPIRV::OpImageQuerySamples))
+      .addDef(SamplesReg)
+      .addUse(GR.getSPIRVTypeID(I32Ty))
+      .addUse(NewImageReg)
+      .constrainAllUses(TII, TRI, RBI);
+
+  BuildMI(*I.getParent(), I, I.getDebugLoc(),
+          TII.get(SPIRV::OpCompositeConstruct))
+      .addDef(ResVReg)
+      .addUse(GR.getSPIRVTypeID(ResType))
+      .addUse(SizeReg)
+      .addUse(SamplesReg)
+      .constrainAllUses(TII, TRI, RBI);
+
+  return true;
+}
+
+bool SPIRVInstructionSelector::selectCalculateLodIntrinsic(
+    Register &ResVReg, SPIRVTypeInst ResType, MachineInstr &I) const {
+  Register ImageReg = I.getOperand(2).getReg();
+  Register SamplerReg = I.getOperand(3).getReg();
+  Register CoordinateReg = I.getOperand(4).getReg();
+
+  auto *ImageDef = dyn_cast<GIntrinsic>(getVRegDef(*MRI, ImageReg));
+  if (!ImageDef)
+    return false;
+  Register NewImageReg = MRI->createVirtualRegister(MRI->getRegClass(ImageReg));
+  if (!loadHandleBeforePosition(NewImageReg, GR.getSPIRVTypeForVReg(ImageReg),
+                                *ImageDef, I)) {
+    return false;
+  }
+
+  auto *SamplerDef = dyn_cast<GIntrinsic>(getVRegDef(*MRI, SamplerReg));
+  if (!SamplerDef)
+    return false;
+  Register NewSamplerReg =
+      MRI->createVirtualRegister(MRI->getRegClass(SamplerReg));
+  if (!loadHandleBeforePosition(
+          NewSamplerReg, GR.getSPIRVTypeForVReg(SamplerReg), *SamplerDef, I)) {
+    return false;
+  }
+
+  MachineIRBuilder MIRBuilder(I);
+  SPIRVTypeInst SampledImageType = GR.getOrCreateOpTypeSampledImage(
+      GR.getSPIRVTypeForVReg(ImageReg), MIRBuilder);
+  Register SampledImageReg =
+      MRI->createVirtualRegister(GR.getRegClass(SampledImageType));
+
+  BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpSampledImage))
+      .addDef(SampledImageReg)
+      .addUse(GR.getSPIRVTypeID(SampledImageType))
+      .addUse(NewImageReg)
+      .addUse(NewSamplerReg)
+      .constrainAllUses(TII, TRI, RBI);
+
+  SPIRVTypeInst Vec2Ty = GR.getOrCreateSPIRVVectorType(ResType, 2, I, TII);
+  Register QueryResultReg = MRI->createVirtualRegister(GR.getRegClass(Vec2Ty));
+
+  BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpImageQueryLod))
+      .addDef(QueryResultReg)
+      .addUse(GR.getSPIRVTypeID(Vec2Ty))
+      .addUse(SampledImageReg)
+      .addUse(CoordinateReg)
+      .constrainAllUses(TII, TRI, RBI);
+
+  unsigned ExtractedIndex =
+      cast<GIntrinsic>(I).getIntrinsicID() ==
+              Intrinsic::spv_resource_calculate_lod_unclamped
+          ? 1
+          : 0;
+
+  MachineInstrBuilder MIB = BuildMI(*I.getParent(), I, I.getDebugLoc(),
+                                    TII.get(SPIRV::OpCompositeExtract))
+                                .addDef(ResVReg)
+                                .addUse(GR.getSPIRVTypeID(ResType))
+                                .addUse(QueryResultReg)
+                                .addImm(ExtractedIndex);
 
   MIB.constrainAllUses(TII, TRI, RBI);
   return true;

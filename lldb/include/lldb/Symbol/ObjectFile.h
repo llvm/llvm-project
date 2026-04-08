@@ -182,7 +182,6 @@ public:
   static ModuleSpecList
   GetModuleSpecifications(const lldb_private::FileSpec &file,
                           lldb::DataExtractorSP &extractor_sp,
-                          lldb::offset_t data_offset,
                           lldb::offset_t file_offset, lldb::offset_t file_size);
   static bool IsObjectFile(lldb_private::FileSpec file_spec);
   /// Split a path into a file path with object name.

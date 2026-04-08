@@ -219,6 +219,7 @@ TEST(ConfigParseTest, ParsesConfigurationBools) {
   CHECK_PARSE_BOOL(SpaceBeforeCaseColon);
   CHECK_PARSE_BOOL(SpaceBeforeCpp11BracedList);
   CHECK_PARSE_BOOL(SpaceBeforeCtorInitializerColon);
+  CHECK_PARSE_BOOL(SpaceBeforeEnumUnderlyingTypeColon);
   CHECK_PARSE_BOOL(SpaceBeforeInheritanceColon);
   CHECK_PARSE_BOOL(SpaceBeforeJsonColon);
   CHECK_PARSE_BOOL(SpaceBeforeRangeBasedForLoopColon);

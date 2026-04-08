@@ -436,18 +436,15 @@ ObjectFileSP ObjectContainerBSDArchive::GetObjectFile(const FileSpec *file) {
 
 ModuleSpecList ObjectContainerBSDArchive::GetModuleSpecifications(
     const FileSpec &file, lldb::DataExtractorSP &extractor_sp,
-    lldb::offset_t data_offset, lldb::offset_t file_offset,
-    lldb::offset_t file_size) {
+    lldb::offset_t file_offset, lldb::offset_t file_size) {
 
   if (!file || !extractor_sp)
     return {};
 
-  DataExtractorSP data_extractor_sp =
-      extractor_sp->GetSubsetExtractorSP(data_offset);
   // We have data, which means this is the first 512 bytes of the file Check to
   // see if the magic bytes match and if they do, read the entire table of
   // contents for the archive and cache it
-  ArchiveType archive_type = MagicBytesMatch(*data_extractor_sp);
+  ArchiveType archive_type = MagicBytesMatch(*extractor_sp);
   if (archive_type == ArchiveType::Invalid)
     return {};
 

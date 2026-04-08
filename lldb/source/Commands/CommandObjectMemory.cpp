@@ -1279,10 +1279,7 @@ protected:
       return;
     }
 
-    StreamString buffer(
-        Stream::eBinary,
-        process->GetTarget().GetArchitecture().GetAddressByteSize(),
-        process->GetTarget().GetArchitecture().GetByteOrder());
+    StreamString buffer(Stream::eBinary, process->GetByteOrder());
 
     OptionValueUInt64 &byte_size_value = m_format_options.GetByteSizeValue();
     size_t item_byte_size = byte_size_value.GetCurrentValue();
@@ -1336,7 +1333,7 @@ protected:
       return;
     } else if (item_byte_size == 0) {
       if (m_format_options.GetFormat() == eFormatPointer)
-        item_byte_size = buffer.GetAddressByteSize();
+        item_byte_size = process->GetAddressByteSize();
       else
         item_byte_size = 1;
     }
@@ -1688,11 +1685,11 @@ protected:
         range_info.GetRange().GetRangeEnd(), range_info.GetReadable(),
         range_info.GetWritable(), range_info.GetExecutable(), name ? " " : "",
         name, section_name ? " " : "", section_name);
-    MemoryRegionInfo::OptionalBool memory_tagged = range_info.GetMemoryTagged();
-    if (memory_tagged == MemoryRegionInfo::OptionalBool::eYes)
+    LazyBool memory_tagged = range_info.GetMemoryTagged();
+    if (memory_tagged == eLazyBoolYes)
       result.AppendMessage("memory tagging: enabled");
-    MemoryRegionInfo::OptionalBool is_shadow_stack = range_info.IsShadowStack();
-    if (is_shadow_stack == MemoryRegionInfo::OptionalBool::eYes)
+    LazyBool is_shadow_stack = range_info.IsShadowStack();
+    if (is_shadow_stack == eLazyBoolYes)
       result.AppendMessage("shadow stack: yes");
 
     const std::optional<std::vector<addr_t>> &dirty_page_list =

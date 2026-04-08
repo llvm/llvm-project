@@ -313,8 +313,329 @@ class HLSLOneArgInlineBuiltin<string name> : HLSLBuiltin<name> {
 // Intrinsic definitions (sorted alphabetically by function name)
 //===----------------------------------------------------------------------===//
 
-// TODO: Convert hand-written overloads from hlsl_intrinsics.h and
-//       hlsl_alias_intrinsics.h into TableGen below.
-//       Include "hlsl_alias_intrinsics_gen.inc" in hlsl_alias_intrinsics.h
-//       Include "hlsl_inline_intrinsics_gen.inc" in hlsl_intrinsics.h
+def hlsl_abs_unsigned : HLSLOneArgInlineBuiltin<"abs"> {
+  let Doc = [{
+\fn T abs(T Val)
+\brief Returns the absolute value of the input value, \a Val.
+\param Val The input value.
 
+Unsigned overload — unsigned values are already non-negative, so this
+function returns its input unchanged.
+}];
+  let ParamNames = ["V"];
+  let Body = "return V;";
+  let IsConstexpr = 1;
+  let VaryingTypes = UnsignedIntTypes;
+  let VaryingMatDims = [];
+}
+
+def hlsl_check_access_fully_mapped : HLSLBuiltin<"CheckAccessFullyMapped"> {
+  let Doc = [{
+\fn bool CheckAccessFullyMapped(uint Status)
+\brief Checks whether the value is fully mapped.
+\param Status The status value to check.
+}];
+  let ParamNames = ["Status"];
+  let Body = "return static_cast<bool>(Status);";
+  let Args = [UIntTy];
+  let ReturnType = BoolTy;
+}
+
+def hlsl_d3d_color_to_ubyte4 : HLSLBuiltin<"D3DCOLORtoUBYTE4"> {
+  let Doc = [{
+\fn int4 D3DCOLORtoUBYTE4(float4 x)
+\brief Converts a floating-point, 4D vector set by a D3DCOLOR to a UBYTE4.
+\param x [in] The floating-point vector4 to convert.
+
+The return value is the UBYTE4 representation of the \a x parameter.
+
+This function swizzles and scales components of the \a x parameter. Use this
+function to compensate for the lack of UBYTE4 support in some hardware.
+}];
+  // Use the scaling factor used by FXC, and DXC for DXIL (i.e., 255.001953).
+  // The [DXC implementation] refers to [stack overflow] to justify the scaling
+  // factor:
+  // > Built-in rounding, necessary because of truncation. 0.001953 * 256 = 0.5
+  // 
+  // [DXC implementation]: https://github.com/microsoft/DirectXShaderCompiler/blob/070d0d5a2beacef9eeb51037a9b04665716fd6f3/lib/HLSL/HLOperationLower.cpp#L666C1-L697C2
+  // [stack overflow]: https://stackoverflow.com/questions/52103720/why-does-d3dcolortoubyte4-multiplies-components-by-255-001953f
+  let Body = "return V.zyxw * 255.001953f;";
+  let ParamNames = ["V"];
+  let Args = [VectorType<FloatTy, 4>];
+  let ReturnType = VectorType<IntTy, 4>;
+  let IsConstexpr = 1;
+}
+
+def hlsl_ddx : HLSLOneArgDetail<"ddx", "ddx_impl"> {
+  let Doc = [{
+\fn T ddx(T x)
+\brief Computes the partial derivative of the specified value with regard to
+the screen-space x-coordinate.
+\param x [in] The floating-point scalar or vector to process.
+}];
+  let ParamNames = ["input"];
+  let VaryingTypes = [HalfTy, FloatTy];
+  let VaryingMatDims = [];
+}
+
+def hlsl_ddy : HLSLOneArgDetail<"ddy", "ddy_impl"> {
+  let Doc = [{
+\fn T ddy(T x)
+\brief Computes the partial derivative of the specified value with regard to
+the screen-space y-coordinate.
+\param x [in] The floating-point scalar or vector to process.
+}];
+  let ParamNames = ["input"];
+  let VaryingTypes = [HalfTy, FloatTy];
+  let VaryingMatDims = [];
+}
+
+def hlsl_distance : HLSLBuiltin<"distance"> {
+  let Doc = [{
+\fn K distance(T X, T Y)
+\brief Returns a distance scalar between \a X and \a Y.
+\param X The X input value.
+\param Y The Y input value.
+}];
+  let Body = "return __detail::length_impl(X - Y);";
+  let ParamNames = ["X", "Y"];
+  let Args = [Varying, Varying];
+  let ReturnType = VaryingElemType;
+  let VaryingTypes = [HalfTy, FloatTy];
+  let VaryingScalar = 1;
+  let VaryingVecSizes = [2, 3, 4];
+  let VaryingMatDims = [];
+}
+
+def hlsl_dot2add : HLSLBuiltin<"dot2add"> {
+  let Doc = [{
+\fn float dot2add(half2 A, half2 B, float Acc)
+\brief Multiplies the elements of the two half-precision float input vectors
+together and sums the results into the 32-bit float accumulator.
+\param A The first input value to dot product.
+\param B The second input value to dot product.
+\param Acc The accumulator value added to the dot product.
+
+This instruction operates within a single 32-bit wide SIMD lane.
+The inputs are 16-bit quantities packed into the same lane.
+}];
+  let DetailFunc = "dot2add_impl";
+  let ParamNames = ["A", "B", "Acc"];
+  let Args = [VectorType<HalfTy, 2>, VectorType<HalfTy, 2>, FloatTy];
+  let ReturnType = FloatTy;
+  let Availability = SM6_4;
+}
+
+def hlsl_dst : HLSLBuiltin<"dst"> {
+  let Doc = [{
+\fn vector<T, 4> dst(vector<T, 4> Src0, vector<T, 4> Src1)
+\brief Calculates a distance vector.
+\param Src0 [in] Contains the squared distance.
+\param Src1 [in] Contains the reciprocal distance.
+
+Return the computed distance vector.
+}];
+  let ParamNames = ["Src0", "Src1"];
+  let Body = "return {1, Src0[1] * Src1[1], Src0[2], Src1[3]};";
+  let Args = [Varying, Varying];
+  let ReturnType = Varying;
+  let VaryingTypes = AllFloatTypes;
+  let VaryingVecSizes = [4];
+  let VaryingMatDims = [];
+}
+
+def hlsl_faceforward : HLSLThreeArgDetail<"faceforward", "faceforward_impl"> {
+  let Doc = [{
+\fn T faceforward(T N, T I, T Ng)
+\brief Flips the surface-normal (if needed) to face in a direction opposite
+to \a I. Returns the result in terms of \a N.
+\param N The resulting floating-point surface-normal vector.
+\param I A floating-point, incident vector that points from the view
+position to the shading position.
+\param Ng A floating-point surface-normal vector.
+
+Return a floating-point, surface normal vector that is facing the view
+direction.
+}];
+  let ParamNames = ["N", "I", "Ng"];
+  let VaryingTypes = [HalfTy, FloatTy];
+  let VaryingMatDims = [];
+}
+
+def hlsl_fmod : HLSLBuiltin<"fmod"> {
+  let Doc = [{
+\fn T fmod(T x, T y)
+\brief Returns the floating-point remainder of x/y.
+\param x [in] The dividend.
+\param y [in] The divisor.
+
+Return the floating-point remainder of the x parameter divided by the y
+parameter.
+}];
+  let DetailFunc = "fmod_impl";
+  let ParamNames = ["X", "Y"];
+  let Args = [Varying, Varying];
+  let ReturnType = Varying;
+  let VaryingTypes = [HalfTy, FloatTy];
+  let VaryingScalar = 1;
+  let VaryingMatDims = [];
+}
+def hlsl_fmod_vec : HLSLBuiltin<"fmod"> {
+  let DetailFunc = "fmod_vec_impl";
+  let ParamNames = ["X", "Y"];
+  let Args = [Varying, Varying];
+  let ReturnType = Varying;
+  let VaryingTypes = [HalfTy, FloatTy];
+  let VaryingVecSizes = [2, 3, 4];
+  let VaryingMatDims = [];
+}
+
+def hlsl_fwidth : HLSLOneArgDetail<"fwidth", "fwidth_impl"> {
+  let Doc = [{
+\fn T fwidth(T x)
+\brief Computes the sum of the absolute values of the partial derivatives
+with regard to the x and y screen space coordinates.
+\param x [in] The floating-point scalar or vector to process.
+}];
+  let ParamNames = ["input"];
+  let VaryingTypes = [HalfTy, FloatTy];
+  let VaryingMatDims = [];
+}
+
+def hlsl_ldexp : HLSLBuiltin<"ldexp"> {
+  let Doc = [{
+\fn T ldexp(T X, T Exp)
+\brief Returns the result of multiplying the specified value by two raised
+to the power of the specified exponent.
+\param X [in] The specified value.
+\param Exp [in] The specified exponent.
+}];
+  let ParamNames = ["X", "Exp"];
+  let Body = "return exp2(Exp) * X;";
+  let Args = [Varying, Varying];
+  let ReturnType = Varying;
+  let VaryingTypes = [HalfTy, FloatTy];
+  let VaryingScalar = 1;
+  let VaryingVecSizes = [2, 3, 4];
+  let VaryingMatDims = [];
+}
+
+def hlsl_length : HLSLBuiltin<"length"> {
+  let Doc = [{
+\fn T length(T x)
+\brief Returns the length of the specified floating-point vector.
+\param x [in] The vector of floats, or a scalar float.
+
+Length is based on the following formula: sqrt(x[0]^2 + x[1]^2 + ...).
+}];
+  let DetailFunc = "length_impl";
+  let ParamNames = ["X"];
+  let Args = [Varying];
+  let ReturnType = VaryingElemType;
+  let VaryingTypes = [HalfTy, FloatTy];
+  let VaryingScalar = 1;
+  let VaryingVecSizes = [2, 3, 4];
+  let VaryingMatDims = [];
+}
+
+def hlsl_lit_half : HLSLBuiltin<"lit"> {
+  let Doc = [{
+\fn vector<T, 4> lit(T NDotL, T NDotH, T M)
+\brief Returns a lighting coefficient vector.
+\param NDotL The dot product of the normalized surface normal and the
+light vector.
+\param NDotH The dot product of the half-angle vector and the surface
+normal.
+\param M A specular exponent.
+
+This function returns a lighting coefficient vector (ambient, diffuse,
+specular, 1).
+}];
+  let DetailFunc = "lit_impl";
+  let ParamNames = ["NDotL", "NDotH", "M"];
+  let Args = [HalfTy, HalfTy, HalfTy];
+  let ReturnType = VectorType<HalfTy, 4>;
+}
+
+def hlsl_lit_float : HLSLBuiltin<"lit"> {
+  let DetailFunc = "lit_impl";
+  let ParamNames = ["NDotL", "NDotH", "M"];
+  let Args = [FloatTy, FloatTy, FloatTy];
+  let ReturnType = VectorType<FloatTy, 4>;
+}
+
+def hlsl_reflect : HLSLTwoArgDetail<"reflect", "reflect_impl"> {
+  let Doc = [{
+\fn T reflect(T I, T N)
+\brief Returns a reflection using an incident ray, \a I, and a surface
+normal, \a N.
+\param I The incident ray.
+\param N The surface normal.
+
+The return value is a floating-point vector that represents the reflection
+of the incident ray, \a I, off a surface with the normal \a N.
+
+This function calculates the reflection vector using the following formula:
+V = I - 2 * N * dot(I N) .
+
+N must already be normalized in order to achieve the desired result.
+}];
+  let ParamNames = ["I", "N"];
+  let VaryingTypes = [HalfTy, FloatTy];
+  let VaryingMatDims = [];
+}
+
+def hlsl_refract : HLSLBuiltin<"refract"> {
+  let Doc = [{
+\fn T refract(T I, T N, T eta)
+\brief Returns a refraction using an entering ray, \a I, a surface
+normal, \a N and refraction index \a eta
+\param I The entering ray.
+\param N The surface normal.
+\param eta The refraction index.
+
+The return value is a floating-point vector that represents the refraction
+using the refraction index, \a eta, for the direction of the entering ray,
+\a I, off a surface with the normal \a N.
+
+This function calculates the refraction vector using the following formulas:
+k = 1.0 - eta * eta * (1.0 - dot(N, I) * dot(N, I))
+if k < 0.0 the result is 0.0
+otherwise, the result is eta * I - (eta * dot(N, I) + sqrt(k)) * N
+
+I and N must already be normalized in order to achieve the desired result.
+
+I and N must be a scalar or vector whose component type is
+floating-point.
+
+eta must be a 16-bit or 32-bit floating-point scalar.
+
+Result type, the type of I, and the type of N must all be the same type.
+}];
+  let DetailFunc = "refract_impl";
+  let ParamNames = ["I", "N", "eta"];
+  let Args = [Varying, Varying, VaryingElemType];
+  let ReturnType = Varying;
+  let VaryingTypes = [HalfTy, FloatTy];
+  let VaryingScalar = 1;
+  let VaryingVecSizes = [2, 3, 4];
+  let VaryingMatDims = [];
+}
+
+def hlsl_smoothstep : HLSLThreeArgDetail<"smoothstep", "smoothstep_impl"> {
+  let Doc = [{
+\fn T smoothstep(T Min, T Max, T X)
+\brief Returns a smooth Hermite interpolation between 0 and 1, if \a X is in
+the range [\a Min, \a Max].
+\param Min The minimum range of the x parameter.
+\param Max The maximum range of the x parameter.
+\param X The specified value to be interpolated.
+
+The return value is 0.0 if \a X <= \a Min and 1.0 if \a X >= \a Max. When \a
+Min < \a X < \a Max, the function performs smooth Hermite interpolation
+between 0 and 1.
+}];
+  let ParamNames = ["Min", "Max", "X"];
+  let VaryingTypes = [HalfTy, FloatTy];
+  let VaryingMatDims = [];
+}

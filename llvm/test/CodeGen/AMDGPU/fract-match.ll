@@ -4259,18 +4259,27 @@ entry:
 
 ; isinf before isnan
 define float @safe_math_fract_f32_swapped_edge_case(float %x) #0 {
-; IR-LABEL: define float @safe_math_fract_f32_swapped_edge_case(
-; IR-SAME: float [[X:%.*]]) #[[ATTR1:[0-9]+]] {
-; IR-NEXT:  [[ENTRY:.*:]]
-; IR-NEXT:    [[FLOOR:%.*]] = call float @llvm.floor.f32(float [[X]])
-; IR-NEXT:    [[SUB:%.*]] = fsub float [[X]], [[FLOOR]]
-; IR-NEXT:    [[MIN:%.*]] = call float @llvm.minnum.f32(float [[SUB]], float 0x3FEFFFFFE0000000)
-; IR-NEXT:    [[X_FABS:%.*]] = call float @llvm.fabs.f32(float [[X]])
-; IR-NEXT:    [[NOT_INF:%.*]] = fcmp une float [[X_FABS]], 0x7FF0000000000000
-; IR-NEXT:    [[COND:%.*]] = select i1 [[NOT_INF]], float [[MIN]], float 0.000000e+00
-; IR-NEXT:    [[NOT_NAN:%.*]] = fcmp ord float [[X]], 0.000000e+00
-; IR-NEXT:    [[COND8:%.*]] = select i1 [[NOT_NAN]], float [[COND]], float [[X]]
-; IR-NEXT:    ret float [[COND8]]
+; GFX6-IR-LABEL: define float @safe_math_fract_f32_swapped_edge_case(
+; GFX6-IR-SAME: float [[X:%.*]]) #[[ATTR1]] {
+; GFX6-IR-NEXT:  [[ENTRY:.*:]]
+; GFX6-IR-NEXT:    [[FLOOR:%.*]] = call float @llvm.floor.f32(float [[X]])
+; GFX6-IR-NEXT:    [[SUB:%.*]] = fsub float [[X]], [[FLOOR]]
+; GFX6-IR-NEXT:    [[MIN:%.*]] = call float @llvm.minnum.f32(float [[SUB]], float 0x3FEFFFFFE0000000)
+; GFX6-IR-NEXT:    [[X_FABS:%.*]] = call float @llvm.fabs.f32(float [[X]])
+; GFX6-IR-NEXT:    [[NOT_INF:%.*]] = fcmp une float [[X_FABS]], 0x7FF0000000000000
+; GFX6-IR-NEXT:    [[COND:%.*]] = select i1 [[NOT_INF]], float [[MIN]], float 0.000000e+00
+; GFX6-IR-NEXT:    [[NOT_NAN:%.*]] = fcmp ord float [[X]], 0.000000e+00
+; GFX6-IR-NEXT:    [[COND8:%.*]] = select i1 [[NOT_NAN]], float [[COND]], float [[X]]
+; GFX6-IR-NEXT:    ret float [[COND8]]
+;
+; IR-FRACT-LABEL: define float @safe_math_fract_f32_swapped_edge_case(
+; IR-FRACT-SAME: float [[X:%.*]]) #[[ATTR1]] {
+; IR-FRACT-NEXT:  [[ENTRY:.*:]]
+; IR-FRACT-NEXT:    [[COND:%.*]] = call float @llvm.amdgcn.fract.f32(float [[X]])
+; IR-FRACT-NEXT:    [[X_FABS:%.*]] = call float @llvm.fabs.f32(float [[X]])
+; IR-FRACT-NEXT:    [[NOT_INF:%.*]] = fcmp une float [[X_FABS]], 0x7FF0000000000000
+; IR-FRACT-NEXT:    [[COND8:%.*]] = select i1 [[NOT_INF]], float [[COND]], float 0.000000e+00
+; IR-FRACT-NEXT:    ret float [[COND8]]
 ;
 ; GFX6-LABEL: safe_math_fract_f32_swapped_edge_case:
 ; GFX6:       ; %bb.0: ; %entry
@@ -4288,41 +4297,28 @@ define float @safe_math_fract_f32_swapped_edge_case(float %x) #0 {
 ; GFX7-LABEL: safe_math_fract_f32_swapped_edge_case:
 ; GFX7:       ; %bb.0: ; %entry
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    v_floor_f32_e32 v1, v0
-; GFX7-NEXT:    v_sub_f32_e32 v1, v0, v1
 ; GFX7-NEXT:    s_mov_b32 s4, 0x7f800000
-; GFX7-NEXT:    v_min_f32_e32 v1, 0x3f7fffff, v1
+; GFX7-NEXT:    v_fract_f32_e32 v1, v0
 ; GFX7-NEXT:    v_cmp_neq_f32_e64 vcc, |v0|, s4
-; GFX7-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; GFX7-NEXT:    v_cmp_o_f32_e32 vcc, v0, v0
-; GFX7-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
+; GFX7-NEXT:    v_cndmask_b32_e32 v0, 0, v1, vcc
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-LABEL: safe_math_fract_f32_swapped_edge_case:
 ; GFX8:       ; %bb.0: ; %entry
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_floor_f32_e32 v1, v0
-; GFX8-NEXT:    v_sub_f32_e32 v1, v0, v1
 ; GFX8-NEXT:    s_mov_b32 s4, 0x7f800000
-; GFX8-NEXT:    v_min_f32_e32 v1, 0x3f7fffff, v1
+; GFX8-NEXT:    v_fract_f32_e32 v1, v0
 ; GFX8-NEXT:    v_cmp_neq_f32_e64 vcc, |v0|, s4
-; GFX8-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; GFX8-NEXT:    v_cmp_o_f32_e32 vcc, v0, v0
-; GFX8-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
+; GFX8-NEXT:    v_cndmask_b32_e32 v0, 0, v1, vcc
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: safe_math_fract_f32_swapped_edge_case:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_floor_f32_e32 v1, v0
+; GFX11-NEXT:    v_fract_f32_e32 v1, v0
 ; GFX11-NEXT:    v_cmp_neq_f32_e64 vcc_lo, 0x7f800000, |v0|
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-NEXT:    v_sub_f32_e32 v1, v0, v1
-; GFX11-NEXT:    v_min_f32_e32 v1, 0x3f7fffff, v1
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
-; GFX11-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc_lo
-; GFX11-NEXT:    v_cmp_o_f32_e32 vcc_lo, v0, v0
-; GFX11-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc_lo
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX11-NEXT:    v_cndmask_b32_e32 v0, 0, v1, vcc_lo
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-LABEL: safe_math_fract_f32_swapped_edge_case:
@@ -4332,17 +4328,11 @@ define float @safe_math_fract_f32_swapped_edge_case(float %x) #0 {
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_floor_f32_e32 v1, v0
+; GFX12-NEXT:    v_fract_f32_e32 v1, v0
 ; GFX12-NEXT:    v_cmp_neq_f32_e64 vcc_lo, 0x7f800000, |v0|
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX12-NEXT:    v_sub_f32_e32 v1, v0, v1
-; GFX12-NEXT:    v_min_num_f32_e32 v1, 0x3f7fffff, v1
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_2)
-; GFX12-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc_lo
-; GFX12-NEXT:    v_cmp_o_f32_e32 vcc_lo, v0, v0
-; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX12-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc_lo
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX12-NEXT:    v_cndmask_b32_e32 v0, 0, v1, vcc_lo
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %floor = call float @llvm.floor.f32(float %x)
@@ -4379,50 +4369,37 @@ define float @safe_math_fract_f32_swapped_edge_case_multi_use_inner_select(float
 ; GFX7-LABEL: safe_math_fract_f32_swapped_edge_case_multi_use_inner_select:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    v_floor_f32_e32 v3, v0
-; GFX7-NEXT:    v_sub_f32_e32 v3, v0, v3
 ; GFX7-NEXT:    s_mov_b32 s8, 0x7f800000
-; GFX7-NEXT:    v_min_f32_e32 v3, 0x3f7fffff, v3
-; GFX7-NEXT:    v_cmp_neq_f32_e64 vcc, |v0|, s8
 ; GFX7-NEXT:    s_mov_b32 s6, 0
-; GFX7-NEXT:    v_cndmask_b32_e32 v3, 0, v3, vcc
-; GFX7-NEXT:    v_cmp_o_f32_e32 vcc, v0, v0
+; GFX7-NEXT:    v_fract_f32_e32 v3, v0
+; GFX7-NEXT:    v_cmp_neq_f32_e64 vcc, |v0|, s8
 ; GFX7-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX7-NEXT:    s_mov_b32 s4, s6
 ; GFX7-NEXT:    s_mov_b32 s5, s6
-; GFX7-NEXT:    v_cndmask_b32_e32 v0, v0, v3, vcc
-; GFX7-NEXT:    buffer_store_dword v3, v[1:2], s[4:7], 0 addr64
+; GFX7-NEXT:    v_cndmask_b32_e32 v0, 0, v3, vcc
+; GFX7-NEXT:    buffer_store_dword v0, v[1:2], s[4:7], 0 addr64
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-LABEL: safe_math_fract_f32_swapped_edge_case_multi_use_inner_select:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_floor_f32_e32 v3, v0
-; GFX8-NEXT:    v_sub_f32_e32 v3, v0, v3
 ; GFX8-NEXT:    s_mov_b32 s4, 0x7f800000
-; GFX8-NEXT:    v_min_f32_e32 v3, 0x3f7fffff, v3
+; GFX8-NEXT:    v_fract_f32_e32 v3, v0
 ; GFX8-NEXT:    v_cmp_neq_f32_e64 vcc, |v0|, s4
-; GFX8-NEXT:    v_cndmask_b32_e32 v3, 0, v3, vcc
-; GFX8-NEXT:    v_cmp_o_f32_e32 vcc, v0, v0
-; GFX8-NEXT:    v_cndmask_b32_e32 v0, v0, v3, vcc
-; GFX8-NEXT:    global_store_dword v[1:2], v3, off
+; GFX8-NEXT:    v_cndmask_b32_e32 v0, 0, v3, vcc
+; GFX8-NEXT:    global_store_dword v[1:2], v0, off
 ; GFX8-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: safe_math_fract_f32_swapped_edge_case_multi_use_inner_select:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_floor_f32_e32 v3, v0
+; GFX11-NEXT:    v_fract_f32_e32 v3, v0
 ; GFX11-NEXT:    v_cmp_neq_f32_e64 vcc_lo, 0x7f800000, |v0|
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-NEXT:    v_sub_f32_e32 v3, v0, v3
-; GFX11-NEXT:    v_min_f32_e32 v3, 0x3f7fffff, v3
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT:    v_cndmask_b32_e32 v3, 0, v3, vcc_lo
-; GFX11-NEXT:    v_cmp_o_f32_e32 vcc_lo, v0, v0
-; GFX11-NEXT:    global_store_b32 v[1:2], v3, off
-; GFX11-NEXT:    v_cndmask_b32_e32 v0, v0, v3, vcc_lo
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX11-NEXT:    v_cndmask_b32_e32 v0, 0, v3, vcc_lo
+; GFX11-NEXT:    global_store_b32 v[1:2], v0, off
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-LABEL: safe_math_fract_f32_swapped_edge_case_multi_use_inner_select:
@@ -4432,31 +4409,33 @@ define float @safe_math_fract_f32_swapped_edge_case_multi_use_inner_select(float
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_floor_f32_e32 v3, v0
+; GFX12-NEXT:    v_fract_f32_e32 v3, v0
 ; GFX12-NEXT:    v_cmp_neq_f32_e64 vcc_lo, 0x7f800000, |v0|
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX12-NEXT:    v_sub_f32_e32 v3, v0, v3
-; GFX12-NEXT:    v_min_num_f32_e32 v3, 0x3f7fffff, v3
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-NEXT:    v_cndmask_b32_e32 v3, 0, v3, vcc_lo
-; GFX12-NEXT:    v_cmp_o_f32_e32 vcc_lo, v0, v0
-; GFX12-NEXT:    global_store_b32 v[1:2], v3, off
-; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX12-NEXT:    v_cndmask_b32_e32 v0, v0, v3, vcc_lo
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX12-NEXT:    v_cndmask_b32_e32 v0, 0, v3, vcc_lo
+; GFX12-NEXT:    global_store_b32 v[1:2], v0, off
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
-; IR-LABEL: define float @safe_math_fract_f32_swapped_edge_case_multi_use_inner_select(
-; IR-SAME: float [[X:%.*]], ptr addrspace(1) [[PTR:%.*]]) #[[ATTR1]] {
-; IR-NEXT:    [[FLOOR:%.*]] = call float @llvm.floor.f32(float [[X]])
-; IR-NEXT:    [[SUB:%.*]] = fsub float [[X]], [[FLOOR]]
-; IR-NEXT:    [[MIN:%.*]] = call float @llvm.minnum.f32(float [[SUB]], float 0x3FEFFFFFE0000000)
-; IR-NEXT:    [[X_FABS:%.*]] = call float @llvm.fabs.f32(float [[X]])
-; IR-NEXT:    [[NOT_INF:%.*]] = fcmp une float [[X_FABS]], 0x7FF0000000000000
-; IR-NEXT:    [[COND:%.*]] = select i1 [[NOT_INF]], float [[MIN]], float 0.000000e+00
-; IR-NEXT:    store float [[COND]], ptr addrspace(1) [[PTR]], align 4
-; IR-NEXT:    [[NOT_NAN:%.*]] = fcmp ord float [[X]], 0.000000e+00
-; IR-NEXT:    [[COND8:%.*]] = select i1 [[NOT_NAN]], float [[COND]], float [[X]]
-; IR-NEXT:    ret float [[COND8]]
+; GFX6-IR-LABEL: define float @safe_math_fract_f32_swapped_edge_case_multi_use_inner_select(
+; GFX6-IR-SAME: float [[X:%.*]], ptr addrspace(1) [[PTR:%.*]]) #[[ATTR1]] {
+; GFX6-IR-NEXT:    [[FLOOR:%.*]] = call float @llvm.floor.f32(float [[X]])
+; GFX6-IR-NEXT:    [[SUB:%.*]] = fsub float [[X]], [[FLOOR]]
+; GFX6-IR-NEXT:    [[MIN:%.*]] = call float @llvm.minnum.f32(float [[SUB]], float 0x3FEFFFFFE0000000)
+; GFX6-IR-NEXT:    [[X_FABS:%.*]] = call float @llvm.fabs.f32(float [[X]])
+; GFX6-IR-NEXT:    [[NOT_INF:%.*]] = fcmp une float [[X_FABS]], 0x7FF0000000000000
+; GFX6-IR-NEXT:    [[COND:%.*]] = select i1 [[NOT_INF]], float [[MIN]], float 0.000000e+00
+; GFX6-IR-NEXT:    store float [[COND]], ptr addrspace(1) [[PTR]], align 4
+; GFX6-IR-NEXT:    [[NOT_NAN:%.*]] = fcmp ord float [[X]], 0.000000e+00
+; GFX6-IR-NEXT:    [[COND8:%.*]] = select i1 [[NOT_NAN]], float [[COND]], float [[X]]
+; GFX6-IR-NEXT:    ret float [[COND8]]
+; IR-FRACT-LABEL: define float @safe_math_fract_f32_swapped_edge_case_multi_use_inner_select(
+; IR-FRACT-SAME: float [[X:%.*]], ptr addrspace(1) [[PTR:%.*]]) #[[ATTR1]] {
+; IR-FRACT-NEXT:    [[COND:%.*]] = call float @llvm.amdgcn.fract.f32(float [[X]])
+; IR-FRACT-NEXT:    [[X_FABS:%.*]] = call float @llvm.fabs.f32(float [[X]])
+; IR-FRACT-NEXT:    [[NOT_INF:%.*]] = fcmp une float [[X_FABS]], 0x7FF0000000000000
+; IR-FRACT-NEXT:    [[COND8:%.*]] = select i1 [[NOT_INF]], float [[COND]], float 0.000000e+00
+; IR-FRACT-NEXT:    store float [[COND8]], ptr addrspace(1) [[PTR]], align 4
+; IR-FRACT-NEXT:    ret float [[COND8]]
   %floor = call float @llvm.floor.f32(float %x)
   %sub = fsub float %x, %floor
   %min = call float @llvm.minnum.f32(float %sub, float 0x3FEFFFFFE0000000)
@@ -4493,53 +4472,40 @@ define float @safe_math_fract_f32_swapped_edge_case_multi_use_inner_select_fcmp(
 ; GFX7-LABEL: safe_math_fract_f32_swapped_edge_case_multi_use_inner_select_fcmp:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    v_floor_f32_e32 v3, v0
 ; GFX7-NEXT:    s_mov_b32 s8, 0x7f800000
 ; GFX7-NEXT:    s_mov_b32 s6, 0
-; GFX7-NEXT:    v_sub_f32_e32 v3, v0, v3
 ; GFX7-NEXT:    v_cmp_neq_f32_e64 vcc, |v0|, s8
 ; GFX7-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX7-NEXT:    s_mov_b32 s4, s6
 ; GFX7-NEXT:    s_mov_b32 s5, s6
-; GFX7-NEXT:    v_min_f32_e32 v3, 0x3f7fffff, v3
-; GFX7-NEXT:    v_cndmask_b32_e64 v4, 0, 1, vcc
-; GFX7-NEXT:    buffer_store_byte v4, v[1:2], s[4:7], 0 addr64
-; GFX7-NEXT:    v_cndmask_b32_e32 v1, 0, v3, vcc
-; GFX7-NEXT:    v_cmp_o_f32_e32 vcc, v0, v0
-; GFX7-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
+; GFX7-NEXT:    v_fract_f32_e32 v3, v0
+; GFX7-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; GFX7-NEXT:    buffer_store_byte v0, v[1:2], s[4:7], 0 addr64
+; GFX7-NEXT:    v_cndmask_b32_e32 v0, 0, v3, vcc
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-LABEL: safe_math_fract_f32_swapped_edge_case_multi_use_inner_select_fcmp:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_floor_f32_e32 v3, v0
 ; GFX8-NEXT:    s_mov_b32 s4, 0x7f800000
-; GFX8-NEXT:    v_sub_f32_e32 v3, v0, v3
 ; GFX8-NEXT:    v_cmp_neq_f32_e64 vcc, |v0|, s4
-; GFX8-NEXT:    v_min_f32_e32 v3, 0x3f7fffff, v3
-; GFX8-NEXT:    v_cndmask_b32_e64 v4, 0, 1, vcc
-; GFX8-NEXT:    global_store_byte v[1:2], v4, off
-; GFX8-NEXT:    v_cndmask_b32_e32 v1, 0, v3, vcc
-; GFX8-NEXT:    v_cmp_o_f32_e32 vcc, v0, v0
-; GFX8-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
+; GFX8-NEXT:    v_fract_f32_e32 v3, v0
+; GFX8-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; GFX8-NEXT:    global_store_byte v[1:2], v0, off
+; GFX8-NEXT:    v_cndmask_b32_e32 v0, 0, v3, vcc
 ; GFX8-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: safe_math_fract_f32_swapped_edge_case_multi_use_inner_select_fcmp:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_floor_f32_e32 v3, v0
+; GFX11-NEXT:    v_fract_f32_e32 v3, v0
 ; GFX11-NEXT:    v_cmp_neq_f32_e64 vcc_lo, 0x7f800000, |v0|
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX11-NEXT:    v_sub_f32_e32 v3, v0, v3
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX11-NEXT:    v_cndmask_b32_e64 v4, 0, 1, vcc_lo
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_3) | instid1(VALU_DEP_2)
-; GFX11-NEXT:    v_min_f32_e32 v3, 0x3f7fffff, v3
+; GFX11-NEXT:    v_cndmask_b32_e32 v0, 0, v3, vcc_lo
 ; GFX11-NEXT:    global_store_b8 v[1:2], v4, off
-; GFX11-NEXT:    v_cndmask_b32_e32 v3, 0, v3, vcc_lo
-; GFX11-NEXT:    v_cmp_o_f32_e32 vcc_lo, v0, v0
-; GFX11-NEXT:    v_cndmask_b32_e32 v0, v0, v3, vcc_lo
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-LABEL: safe_math_fract_f32_swapped_edge_case_multi_use_inner_select_fcmp:
@@ -4549,32 +4515,34 @@ define float @safe_math_fract_f32_swapped_edge_case_multi_use_inner_select_fcmp(
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_floor_f32_e32 v3, v0
+; GFX12-NEXT:    v_fract_f32_e32 v3, v0
 ; GFX12-NEXT:    v_cmp_neq_f32_e64 vcc_lo, 0x7f800000, |v0|
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_2)
-; GFX12-NEXT:    v_sub_f32_e32 v3, v0, v3
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX12-NEXT:    v_cndmask_b32_e64 v4, 0, 1, vcc_lo
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_4) | instid1(VALU_DEP_2)
-; GFX12-NEXT:    v_min_num_f32_e32 v3, 0x3f7fffff, v3
+; GFX12-NEXT:    v_cndmask_b32_e32 v0, 0, v3, vcc_lo
 ; GFX12-NEXT:    global_store_b8 v[1:2], v4, off
-; GFX12-NEXT:    v_cndmask_b32_e32 v3, 0, v3, vcc_lo
-; GFX12-NEXT:    v_cmp_o_f32_e32 vcc_lo, v0, v0
-; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX12-NEXT:    v_cndmask_b32_e32 v0, v0, v3, vcc_lo
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
-; IR-LABEL: define float @safe_math_fract_f32_swapped_edge_case_multi_use_inner_select_fcmp(
-; IR-SAME: float [[X:%.*]], ptr addrspace(1) [[PTR:%.*]]) #[[ATTR1]] {
-; IR-NEXT:    [[FLOOR:%.*]] = call float @llvm.floor.f32(float [[X]])
-; IR-NEXT:    [[SUB:%.*]] = fsub float [[X]], [[FLOOR]]
-; IR-NEXT:    [[MIN:%.*]] = call float @llvm.minnum.f32(float [[SUB]], float 0x3FEFFFFFE0000000)
-; IR-NEXT:    [[X_FABS:%.*]] = call float @llvm.fabs.f32(float [[X]])
-; IR-NEXT:    [[NOT_INF:%.*]] = fcmp une float [[X_FABS]], 0x7FF0000000000000
-; IR-NEXT:    store i1 [[NOT_INF]], ptr addrspace(1) [[PTR]], align 1
-; IR-NEXT:    [[COND:%.*]] = select i1 [[NOT_INF]], float [[MIN]], float 0.000000e+00
-; IR-NEXT:    [[NOT_NAN:%.*]] = fcmp ord float [[X]], 0.000000e+00
-; IR-NEXT:    [[COND8:%.*]] = select i1 [[NOT_NAN]], float [[COND]], float [[X]]
-; IR-NEXT:    ret float [[COND8]]
+; GFX6-IR-LABEL: define float @safe_math_fract_f32_swapped_edge_case_multi_use_inner_select_fcmp(
+; GFX6-IR-SAME: float [[X:%.*]], ptr addrspace(1) [[PTR:%.*]]) #[[ATTR1]] {
+; GFX6-IR-NEXT:    [[FLOOR:%.*]] = call float @llvm.floor.f32(float [[X]])
+; GFX6-IR-NEXT:    [[SUB:%.*]] = fsub float [[X]], [[FLOOR]]
+; GFX6-IR-NEXT:    [[MIN:%.*]] = call float @llvm.minnum.f32(float [[SUB]], float 0x3FEFFFFFE0000000)
+; GFX6-IR-NEXT:    [[X_FABS:%.*]] = call float @llvm.fabs.f32(float [[X]])
+; GFX6-IR-NEXT:    [[NOT_INF:%.*]] = fcmp une float [[X_FABS]], 0x7FF0000000000000
+; GFX6-IR-NEXT:    store i1 [[NOT_INF]], ptr addrspace(1) [[PTR]], align 1
+; GFX6-IR-NEXT:    [[COND:%.*]] = select i1 [[NOT_INF]], float [[MIN]], float 0.000000e+00
+; GFX6-IR-NEXT:    [[NOT_NAN:%.*]] = fcmp ord float [[X]], 0.000000e+00
+; GFX6-IR-NEXT:    [[COND8:%.*]] = select i1 [[NOT_NAN]], float [[COND]], float [[X]]
+; GFX6-IR-NEXT:    ret float [[COND8]]
+; IR-FRACT-LABEL: define float @safe_math_fract_f32_swapped_edge_case_multi_use_inner_select_fcmp(
+; IR-FRACT-SAME: float [[X:%.*]], ptr addrspace(1) [[PTR:%.*]]) #[[ATTR1]] {
+; IR-FRACT-NEXT:    [[COND:%.*]] = call float @llvm.amdgcn.fract.f32(float [[X]])
+; IR-FRACT-NEXT:    [[X_FABS:%.*]] = call float @llvm.fabs.f32(float [[X]])
+; IR-FRACT-NEXT:    [[NOT_INF:%.*]] = fcmp une float [[X_FABS]], 0x7FF0000000000000
+; IR-FRACT-NEXT:    store i1 [[NOT_INF]], ptr addrspace(1) [[PTR]], align 1
+; IR-FRACT-NEXT:    [[COND8:%.*]] = select i1 [[NOT_INF]], float [[COND]], float 0.000000e+00
+; IR-FRACT-NEXT:    ret float [[COND8]]
   %floor = call float @llvm.floor.f32(float %x)
   %sub = fsub float %x, %floor
   %min = call float @llvm.minnum.f32(float %sub, float 0x3FEFFFFFE0000000)
@@ -4615,48 +4583,36 @@ define float @safe_math_fract_f32_swapped_edge_case_multi_use_fabs(float %x, ptr
 ; GFX7-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX7-NEXT:    s_mov_b32 s4, s6
 ; GFX7-NEXT:    s_mov_b32 s5, s6
-; GFX7-NEXT:    v_floor_f32_e32 v3, v0
 ; GFX7-NEXT:    v_and_b32_e32 v4, 0x7fffffff, v0
-; GFX7-NEXT:    v_sub_f32_e32 v3, v0, v3
 ; GFX7-NEXT:    buffer_store_dword v4, v[1:2], s[4:7], 0 addr64
 ; GFX7-NEXT:    s_mov_b32 s4, 0x7f800000
-; GFX7-NEXT:    v_min_f32_e32 v3, 0x3f7fffff, v3
+; GFX7-NEXT:    v_fract_f32_e32 v3, v0
 ; GFX7-NEXT:    v_cmp_neq_f32_e64 vcc, |v0|, s4
-; GFX7-NEXT:    v_cndmask_b32_e32 v1, 0, v3, vcc
-; GFX7-NEXT:    v_cmp_o_f32_e32 vcc, v0, v0
-; GFX7-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
+; GFX7-NEXT:    v_cndmask_b32_e32 v0, 0, v3, vcc
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-LABEL: safe_math_fract_f32_swapped_edge_case_multi_use_fabs:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_floor_f32_e32 v3, v0
-; GFX8-NEXT:    v_sub_f32_e32 v3, v0, v3
 ; GFX8-NEXT:    s_mov_b32 s4, 0x7f800000
-; GFX8-NEXT:    v_min_f32_e32 v3, 0x3f7fffff, v3
-; GFX8-NEXT:    v_and_b32_e32 v4, 0x7fffffff, v0
+; GFX8-NEXT:    v_fract_f32_e32 v3, v0
 ; GFX8-NEXT:    v_cmp_neq_f32_e64 vcc, |v0|, s4
+; GFX8-NEXT:    v_and_b32_e32 v4, 0x7fffffff, v0
+; GFX8-NEXT:    v_cndmask_b32_e32 v0, 0, v3, vcc
 ; GFX8-NEXT:    global_store_dword v[1:2], v4, off
-; GFX8-NEXT:    v_cndmask_b32_e32 v1, 0, v3, vcc
-; GFX8-NEXT:    v_cmp_o_f32_e32 vcc, v0, v0
-; GFX8-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
 ; GFX8-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: safe_math_fract_f32_swapped_edge_case_multi_use_fabs:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_floor_f32_e32 v3, v0
+; GFX11-NEXT:    v_fract_f32_e32 v3, v0
 ; GFX11-NEXT:    v_cmp_neq_f32_e64 vcc_lo, 0x7f800000, |v0|
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(VALU_DEP_1)
-; GFX11-NEXT:    v_dual_sub_f32 v3, v0, v3 :: v_dual_and_b32 v4, 0x7fffffff, v0
+; GFX11-NEXT:    v_and_b32_e32 v4, 0x7fffffff, v0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3)
+; GFX11-NEXT:    v_cndmask_b32_e32 v0, 0, v3, vcc_lo
 ; GFX11-NEXT:    global_store_b32 v[1:2], v4, off
-; GFX11-NEXT:    v_min_f32_e32 v3, 0x3f7fffff, v3
-; GFX11-NEXT:    v_cndmask_b32_e32 v3, 0, v3, vcc_lo
-; GFX11-NEXT:    v_cmp_o_f32_e32 vcc_lo, v0, v0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX11-NEXT:    v_cndmask_b32_e32 v0, v0, v3, vcc_lo
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-LABEL: safe_math_fract_f32_swapped_edge_case_multi_use_fabs:
@@ -4666,31 +4622,34 @@ define float @safe_math_fract_f32_swapped_edge_case_multi_use_fabs(float %x, ptr
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_floor_f32_e32 v3, v0
+; GFX12-NEXT:    v_fract_f32_e32 v3, v0
 ; GFX12-NEXT:    v_cmp_neq_f32_e64 vcc_lo, 0x7f800000, |v0|
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_3) | instid1(VALU_DEP_1)
-; GFX12-NEXT:    v_dual_sub_f32 v3, v0, v3 :: v_dual_and_b32 v4, 0x7fffffff, v0
+; GFX12-NEXT:    v_and_b32_e32 v4, 0x7fffffff, v0
+; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_3)
+; GFX12-NEXT:    v_cndmask_b32_e32 v0, 0, v3, vcc_lo
 ; GFX12-NEXT:    global_store_b32 v[1:2], v4, off
-; GFX12-NEXT:    v_min_num_f32_e32 v3, 0x3f7fffff, v3
-; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX12-NEXT:    v_cndmask_b32_e32 v3, 0, v3, vcc_lo
-; GFX12-NEXT:    v_cmp_o_f32_e32 vcc_lo, v0, v0
-; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX12-NEXT:    v_cndmask_b32_e32 v0, v0, v3, vcc_lo
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
-; IR-LABEL: define float @safe_math_fract_f32_swapped_edge_case_multi_use_fabs(
-; IR-SAME: float [[X:%.*]], ptr addrspace(1) [[PTR:%.*]]) #[[ATTR1]] {
-; IR-NEXT:    [[FLOOR:%.*]] = call float @llvm.floor.f32(float [[X]])
-; IR-NEXT:    [[SUB:%.*]] = fsub float [[X]], [[FLOOR]]
-; IR-NEXT:    [[MIN:%.*]] = call float @llvm.minnum.f32(float [[SUB]], float 0x3FEFFFFFE0000000)
-; IR-NEXT:    [[X_FABS:%.*]] = call float @llvm.fabs.f32(float [[X]])
-; IR-NEXT:    store float [[X_FABS]], ptr addrspace(1) [[PTR]], align 4
-; IR-NEXT:    [[NOT_INF:%.*]] = fcmp une float [[X_FABS]], 0x7FF0000000000000
-; IR-NEXT:    [[COND:%.*]] = select i1 [[NOT_INF]], float [[MIN]], float 0.000000e+00
-; IR-NEXT:    [[NOT_NAN:%.*]] = fcmp ord float [[X]], 0.000000e+00
-; IR-NEXT:    [[COND8:%.*]] = select i1 [[NOT_NAN]], float [[COND]], float [[X]]
-; IR-NEXT:    ret float [[COND8]]
+; GFX6-IR-LABEL: define float @safe_math_fract_f32_swapped_edge_case_multi_use_fabs(
+; GFX6-IR-SAME: float [[X:%.*]], ptr addrspace(1) [[PTR:%.*]]) #[[ATTR1]] {
+; GFX6-IR-NEXT:    [[FLOOR:%.*]] = call float @llvm.floor.f32(float [[X]])
+; GFX6-IR-NEXT:    [[SUB:%.*]] = fsub float [[X]], [[FLOOR]]
+; GFX6-IR-NEXT:    [[MIN:%.*]] = call float @llvm.minnum.f32(float [[SUB]], float 0x3FEFFFFFE0000000)
+; GFX6-IR-NEXT:    [[X_FABS:%.*]] = call float @llvm.fabs.f32(float [[X]])
+; GFX6-IR-NEXT:    store float [[X_FABS]], ptr addrspace(1) [[PTR]], align 4
+; GFX6-IR-NEXT:    [[NOT_INF:%.*]] = fcmp une float [[X_FABS]], 0x7FF0000000000000
+; GFX6-IR-NEXT:    [[COND:%.*]] = select i1 [[NOT_INF]], float [[MIN]], float 0.000000e+00
+; GFX6-IR-NEXT:    [[NOT_NAN:%.*]] = fcmp ord float [[X]], 0.000000e+00
+; GFX6-IR-NEXT:    [[COND8:%.*]] = select i1 [[NOT_NAN]], float [[COND]], float [[X]]
+; GFX6-IR-NEXT:    ret float [[COND8]]
+; IR-FRACT-LABEL: define float @safe_math_fract_f32_swapped_edge_case_multi_use_fabs(
+; IR-FRACT-SAME: float [[X:%.*]], ptr addrspace(1) [[PTR:%.*]]) #[[ATTR1]] {
+; IR-FRACT-NEXT:    [[COND:%.*]] = call float @llvm.amdgcn.fract.f32(float [[X]])
+; IR-FRACT-NEXT:    [[X_FABS:%.*]] = call float @llvm.fabs.f32(float [[X]])
+; IR-FRACT-NEXT:    store float [[X_FABS]], ptr addrspace(1) [[PTR]], align 4
+; IR-FRACT-NEXT:    [[NOT_INF:%.*]] = fcmp une float [[X_FABS]], 0x7FF0000000000000
+; IR-FRACT-NEXT:    [[COND8:%.*]] = select i1 [[NOT_INF]], float [[COND]], float 0.000000e+00
+; IR-FRACT-NEXT:    ret float [[COND8]]
   %floor = call float @llvm.floor.f32(float %x) #3
   %sub = fsub float %x, %floor
   %min = call float @llvm.minnum.f32(float %sub, float 0x3FEFFFFFE0000000)
@@ -4705,7 +4664,7 @@ define float @safe_math_fract_f32_swapped_edge_case_multi_use_fabs(float %x, ptr
 
 define float @safe_math_fract_f32_swapped_edge_case_wrong_compared(float %x, float %wrong) #0 {
 ; IR-LABEL: define float @safe_math_fract_f32_swapped_edge_case_wrong_compared(
-; IR-SAME: float [[X:%.*]], float [[WRONG:%.*]]) #[[ATTR1]] {
+; IR-SAME: float [[X:%.*]], float [[WRONG:%.*]]) #[[ATTR1:[0-9]+]] {
 ; IR-NEXT:  [[ENTRY:.*:]]
 ; IR-NEXT:    [[FLOOR:%.*]] = call float @llvm.floor.f32(float [[X]])
 ; IR-NEXT:    [[SUB:%.*]] = fsub float [[X]], [[FLOOR]]
@@ -5249,47 +5208,31 @@ define float @safe_math_fract_f32_swapped_edge_case_x_is_const() #0 {
 ; GFX7-LABEL: safe_math_fract_f32_swapped_edge_case_x_is_const:
 ; GFX7:       ; %bb.0: ; %entry
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    v_floor_f32_e32 v0, gv@abs32@lo
 ; GFX7-NEXT:    s_mov_b32 s4, gv@abs32@lo
-; GFX7-NEXT:    v_sub_f32_e32 v0, gv@abs32@lo, v0
 ; GFX7-NEXT:    v_mov_b32_e32 v1, 0x7f800000
-; GFX7-NEXT:    v_min_f32_e32 v0, 0x3f7fffff, v0
+; GFX7-NEXT:    v_fract_f32_e32 v0, gv@abs32@lo
 ; GFX7-NEXT:    v_cmp_neq_f32_e64 vcc, |s4|, v1
 ; GFX7-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc
-; GFX7-NEXT:    v_mov_b32_e32 v1, gv@abs32@lo
-; GFX7-NEXT:    v_cmp_o_f32_e64 vcc, s4, s4
-; GFX7-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-LABEL: safe_math_fract_f32_swapped_edge_case_x_is_const:
 ; GFX8:       ; %bb.0: ; %entry
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_floor_f32_e32 v0, gv@abs32@lo
 ; GFX8-NEXT:    s_mov_b32 s4, gv@abs32@lo
-; GFX8-NEXT:    v_sub_f32_e32 v0, gv@abs32@lo, v0
 ; GFX8-NEXT:    v_mov_b32_e32 v1, 0x7f800000
-; GFX8-NEXT:    v_min_f32_e32 v0, 0x3f7fffff, v0
+; GFX8-NEXT:    v_fract_f32_e32 v0, gv@abs32@lo
 ; GFX8-NEXT:    v_cmp_neq_f32_e64 vcc, |s4|, v1
 ; GFX8-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc
-; GFX8-NEXT:    v_mov_b32_e32 v1, gv@abs32@lo
-; GFX8-NEXT:    v_cmp_o_f32_e64 vcc, s4, s4
-; GFX8-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: safe_math_fract_f32_swapped_edge_case_x_is_const:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_floor_f32_e32 v0, gv@abs32@lo
 ; GFX11-NEXT:    s_mov_b32 s0, 0x7f800000
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-NEXT:    v_fract_f32_e32 v0, gv@abs32@lo
 ; GFX11-NEXT:    v_cmp_neq_f32_e64 vcc_lo, |gv@abs32@lo|, s0
-; GFX11-NEXT:    v_sub_f32_e32 v0, gv@abs32@lo, v0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-NEXT:    v_min_f32_e32 v0, 0x3f7fffff, v0
-; GFX11-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc_lo
-; GFX11-NEXT:    v_cmp_o_f32_e64 vcc_lo, gv@abs32@lo, gv@abs32@lo
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX11-NEXT:    v_cndmask_b32_e32 v0, gv@abs32@lo, v0, vcc_lo
+; GFX11-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc_lo
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-LABEL: safe_math_fract_f32_swapped_edge_case_x_is_const:
@@ -5299,35 +5242,36 @@ define float @safe_math_fract_f32_swapped_edge_case_x_is_const() #0 {
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    s_floor_f32 s0, gv@abs32@lo
-; GFX12-NEXT:    s_brev_b32 s1, -2
+; GFX12-NEXT:    s_brev_b32 s0, -2
+; GFX12-NEXT:    v_fract_f32_e32 v0, gv@abs32@lo
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-NEXT:    s_and_b32 s1, gv@abs32@lo, s1
-; GFX12-NEXT:    s_sub_f32 s0, gv@abs32@lo, s0
+; GFX12-NEXT:    s_and_b32 s0, gv@abs32@lo, s0
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-NEXT:    s_cmp_neq_f32 s1, 0x7f800000
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_2)
-; GFX12-NEXT:    s_min_num_f32 s0, s0, 0x3f7fffff
+; GFX12-NEXT:    s_cmp_neq_f32 s0, 0x7f800000
+; GFX12-NEXT:    s_cselect_b32 vcc_lo, -1, 0
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-NEXT:    s_cselect_b32 s0, s0, 0
-; GFX12-NEXT:    s_cmp_o_f32 gv@abs32@lo, gv@abs32@lo
-; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-NEXT:    s_cselect_b32 s0, s0, gv@abs32@lo
-; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-NEXT:    v_mov_b32_e32 v0, s0
+; GFX12-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc_lo
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
-; IR-LABEL: define float @safe_math_fract_f32_swapped_edge_case_x_is_const(
-; IR-SAME: ) #[[ATTR1]] {
-; IR-NEXT:  [[ENTRY:.*:]]
-; IR-NEXT:    [[FLOOR:%.*]] = call float @llvm.floor.f32(float bitcast (i32 ptrtoint (ptr @gv to i32) to float))
-; IR-NEXT:    [[SUB:%.*]] = fsub float bitcast (i32 ptrtoint (ptr @gv to i32) to float), [[FLOOR]]
-; IR-NEXT:    [[MIN:%.*]] = call float @llvm.minnum.f32(float [[SUB]], float 0x3FEFFFFFE0000000)
-; IR-NEXT:    [[X_FABS:%.*]] = call float @llvm.fabs.f32(float bitcast (i32 ptrtoint (ptr @gv to i32) to float))
-; IR-NEXT:    [[NOT_INF:%.*]] = fcmp une float [[X_FABS]], 0x7FF0000000000000
-; IR-NEXT:    [[COND:%.*]] = select i1 [[NOT_INF]], float [[MIN]], float 0.000000e+00
-; IR-NEXT:    [[NOT_NAN:%.*]] = fcmp ord float bitcast (i32 ptrtoint (ptr @gv to i32) to float), 0.000000e+00
-; IR-NEXT:    [[COND8:%.*]] = select i1 [[NOT_NAN]], float [[COND]], float bitcast (i32 ptrtoint (ptr @gv to i32) to float)
-; IR-NEXT:    ret float [[COND8]]
+; GFX6-IR-LABEL: define float @safe_math_fract_f32_swapped_edge_case_x_is_const(
+; GFX6-IR-SAME: ) #[[ATTR1]] {
+; GFX6-IR-NEXT:  [[ENTRY:.*:]]
+; GFX6-IR-NEXT:    [[FLOOR:%.*]] = call float @llvm.floor.f32(float bitcast (i32 ptrtoint (ptr @gv to i32) to float))
+; GFX6-IR-NEXT:    [[SUB:%.*]] = fsub float bitcast (i32 ptrtoint (ptr @gv to i32) to float), [[FLOOR]]
+; GFX6-IR-NEXT:    [[MIN:%.*]] = call float @llvm.minnum.f32(float [[SUB]], float 0x3FEFFFFFE0000000)
+; GFX6-IR-NEXT:    [[X_FABS:%.*]] = call float @llvm.fabs.f32(float bitcast (i32 ptrtoint (ptr @gv to i32) to float))
+; GFX6-IR-NEXT:    [[NOT_INF:%.*]] = fcmp une float [[X_FABS]], 0x7FF0000000000000
+; GFX6-IR-NEXT:    [[COND:%.*]] = select i1 [[NOT_INF]], float [[MIN]], float 0.000000e+00
+; GFX6-IR-NEXT:    [[NOT_NAN:%.*]] = fcmp ord float bitcast (i32 ptrtoint (ptr @gv to i32) to float), 0.000000e+00
+; GFX6-IR-NEXT:    [[COND8:%.*]] = select i1 [[NOT_NAN]], float [[COND]], float bitcast (i32 ptrtoint (ptr @gv to i32) to float)
+; GFX6-IR-NEXT:    ret float [[COND8]]
+; IR-FRACT-LABEL: define float @safe_math_fract_f32_swapped_edge_case_x_is_const(
+; IR-FRACT-SAME: ) #[[ATTR1]] {
+; IR-FRACT-NEXT:  [[ENTRY:.*:]]
+; IR-FRACT-NEXT:    [[COND:%.*]] = call float @llvm.amdgcn.fract.f32(float bitcast (i32 ptrtoint (ptr @gv to i32) to float))
+; IR-FRACT-NEXT:    [[X_FABS:%.*]] = call float @llvm.fabs.f32(float bitcast (i32 ptrtoint (ptr @gv to i32) to float))
+; IR-FRACT-NEXT:    [[NOT_INF:%.*]] = fcmp une float [[X_FABS]], 0x7FF0000000000000
+; IR-FRACT-NEXT:    [[COND8:%.*]] = select i1 [[NOT_INF]], float [[COND]], float 0.000000e+00
+; IR-FRACT-NEXT:    ret float [[COND8]]
 entry:
   %floor = call float @llvm.floor.f32(float bitcast (i32 ptrtoint (ptr @gv to i32) to float))
   %sub = fsub float bitcast (i32 ptrtoint (ptr @gv to i32) to float), %floor
@@ -5365,18 +5309,23 @@ define float @safe_math_fract_f32_swapped_edge_case_split_block(float %x, i1 %co
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    v_and_b32_e32 v1, 1, v1
-; GFX7-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v1
-; GFX7-NEXT:    v_floor_f32_e32 v1, v0
-; GFX7-NEXT:    v_sub_f32_e32 v1, v0, v1
-; GFX7-NEXT:    v_min_f32_e32 v1, 0x3f7fffff, v1
+; GFX7-NEXT:    v_cmp_ne_u32_e32 vcc, 1, v1
+; GFX7-NEXT:    ; implicit-def: $vgpr1
 ; GFX7-NEXT:    s_and_saveexec_b64 s[4:5], vcc
-; GFX7-NEXT:  ; %bb.1: ; %edge_cases
+; GFX7-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
+; GFX7-NEXT:  ; %bb.1: ; %ret
+; GFX7-NEXT:    v_floor_f32_e32 v1, v0
+; GFX7-NEXT:    v_sub_f32_e32 v0, v0, v1
+; GFX7-NEXT:    v_min_f32_e32 v1, 0x3f7fffff, v0
+; GFX7-NEXT:    ; implicit-def: $vgpr0
+; GFX7-NEXT:  ; %bb.2: ; %Flow
+; GFX7-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
+; GFX7-NEXT:  ; %bb.3: ; %edge_cases
 ; GFX7-NEXT:    s_mov_b32 s6, 0x7f800000
+; GFX7-NEXT:    v_fract_f32_e32 v1, v0
 ; GFX7-NEXT:    v_cmp_neq_f32_e64 vcc, |v0|, s6
 ; GFX7-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; GFX7-NEXT:    v_cmp_o_f32_e32 vcc, v0, v0
-; GFX7-NEXT:    v_cndmask_b32_e32 v1, v0, v1, vcc
-; GFX7-NEXT:  ; %bb.2: ; %UnifiedReturnBlock
+; GFX7-NEXT:  ; %bb.4: ; %UnifiedReturnBlock
 ; GFX7-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX7-NEXT:    v_mov_b32_e32 v0, v1
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
@@ -5385,18 +5334,23 @@ define float @safe_math_fract_f32_swapped_edge_case_split_block(float %x, i1 %co
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    v_and_b32_e32 v1, 1, v1
-; GFX8-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v1
-; GFX8-NEXT:    v_floor_f32_e32 v1, v0
-; GFX8-NEXT:    v_sub_f32_e32 v1, v0, v1
-; GFX8-NEXT:    v_min_f32_e32 v1, 0x3f7fffff, v1
+; GFX8-NEXT:    v_cmp_ne_u32_e32 vcc, 1, v1
+; GFX8-NEXT:    ; implicit-def: $vgpr1
 ; GFX8-NEXT:    s_and_saveexec_b64 s[4:5], vcc
-; GFX8-NEXT:  ; %bb.1: ; %edge_cases
+; GFX8-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
+; GFX8-NEXT:  ; %bb.1: ; %ret
+; GFX8-NEXT:    v_floor_f32_e32 v1, v0
+; GFX8-NEXT:    v_sub_f32_e32 v0, v0, v1
+; GFX8-NEXT:    v_min_f32_e32 v1, 0x3f7fffff, v0
+; GFX8-NEXT:    ; implicit-def: $vgpr0
+; GFX8-NEXT:  ; %bb.2: ; %Flow
+; GFX8-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
+; GFX8-NEXT:  ; %bb.3: ; %edge_cases
 ; GFX8-NEXT:    s_mov_b32 s6, 0x7f800000
+; GFX8-NEXT:    v_fract_f32_e32 v1, v0
 ; GFX8-NEXT:    v_cmp_neq_f32_e64 vcc, |v0|, s6
 ; GFX8-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; GFX8-NEXT:    v_cmp_o_f32_e32 vcc, v0, v0
-; GFX8-NEXT:    v_cndmask_b32_e32 v1, v0, v1, vcc
-; GFX8-NEXT:  ; %bb.2: ; %UnifiedReturnBlock
+; GFX8-NEXT:  ; %bb.4: ; %UnifiedReturnBlock
 ; GFX8-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX8-NEXT:    v_mov_b32_e32 v0, v1
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
@@ -5404,23 +5358,34 @@ define float @safe_math_fract_f32_swapped_edge_case_split_block(float %x, i1 %co
 ; GFX11-LABEL: safe_math_fract_f32_swapped_edge_case_split_block:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_floor_f32_e32 v2, v0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-NEXT:    v_dual_sub_f32 v2, v0, v2 :: v_dual_and_b32 v1, 1, v1
-; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v1
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX11-NEXT:    v_min_f32_e32 v1, 0x3f7fffff, v2
+; GFX11-NEXT:    v_mov_b32_e32 v2, v0
+; GFX11-NEXT:    v_and_b32_e32 v0, 1, v1
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX11-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 1, v0
+; GFX11-NEXT:    ; implicit-def: $vgpr0
 ; GFX11-NEXT:    s_and_saveexec_b32 s0, vcc_lo
-; GFX11-NEXT:  ; %bb.1: ; %edge_cases
-; GFX11-NEXT:    v_cmp_neq_f32_e64 vcc_lo, 0x7f800000, |v0|
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_2)
-; GFX11-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc_lo
-; GFX11-NEXT:    v_cmp_o_f32_e32 vcc_lo, v0, v0
-; GFX11-NEXT:    v_cndmask_b32_e32 v1, v0, v1, vcc_lo
-; GFX11-NEXT:  ; %bb.2: ; %UnifiedReturnBlock
+; GFX11-NEXT:    s_xor_b32 s0, exec_lo, s0
+; GFX11-NEXT:    s_cbranch_execnz .LBB58_3
+; GFX11-NEXT:  ; %bb.1: ; %Flow
+; GFX11-NEXT:    s_and_not1_saveexec_b32 s0, s0
+; GFX11-NEXT:    s_cbranch_execnz .LBB58_4
+; GFX11-NEXT:  .LBB58_2: ; %UnifiedReturnBlock
 ; GFX11-NEXT:    s_or_b32 exec_lo, exec_lo, s0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT:    v_mov_b32_e32 v0, v1
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-NEXT:  .LBB58_3: ; %ret
+; GFX11-NEXT:    v_floor_f32_e32 v0, v2
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    v_sub_f32_e32 v0, v2, v0
+; GFX11-NEXT:    ; implicit-def: $vgpr2
+; GFX11-NEXT:    v_min_f32_e32 v0, 0x3f7fffff, v0
+; GFX11-NEXT:    s_and_not1_saveexec_b32 s0, s0
+; GFX11-NEXT:    s_cbranch_execz .LBB58_2
+; GFX11-NEXT:  .LBB58_4: ; %edge_cases
+; GFX11-NEXT:    v_fract_f32_e32 v0, v2
+; GFX11-NEXT:    v_cmp_neq_f32_e64 vcc_lo, 0x7f800000, |v2|
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX11-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc_lo
+; GFX11-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-LABEL: safe_math_fract_f32_swapped_edge_case_split_block:
@@ -5430,42 +5395,70 @@ define float @safe_math_fract_f32_swapped_edge_case_split_block(float %x, i1 %co
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_floor_f32_e32 v2, v0
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX12-NEXT:    v_dual_sub_f32 v2, v0, v2 :: v_dual_and_b32 v1, 1, v1
-; GFX12-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v1
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX12-NEXT:    v_min_num_f32_e32 v1, 0x3f7fffff, v2
+; GFX12-NEXT:    v_mov_b32_e32 v2, v0
+; GFX12-NEXT:    v_and_b32_e32 v0, 1, v1
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 1, v0
+; GFX12-NEXT:    ; implicit-def: $vgpr0
 ; GFX12-NEXT:    s_and_saveexec_b32 s0, vcc_lo
-; GFX12-NEXT:  ; %bb.1: ; %edge_cases
-; GFX12-NEXT:    v_cmp_neq_f32_e64 vcc_lo, 0x7f800000, |v0|
-; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(VALU_DEP_2)
-; GFX12-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc_lo
-; GFX12-NEXT:    v_cmp_o_f32_e32 vcc_lo, v0, v0
-; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX12-NEXT:    v_cndmask_b32_e32 v1, v0, v1, vcc_lo
-; GFX12-NEXT:  ; %bb.2: ; %UnifiedReturnBlock
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-NEXT:    s_xor_b32 s0, exec_lo, s0
+; GFX12-NEXT:    s_cbranch_execnz .LBB58_3
+; GFX12-NEXT:  ; %bb.1: ; %Flow
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-NEXT:    s_and_not1_saveexec_b32 s0, s0
+; GFX12-NEXT:    s_cbranch_execnz .LBB58_4
+; GFX12-NEXT:  .LBB58_2: ; %UnifiedReturnBlock
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_or_b32 exec_lo, exec_lo, s0
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-NEXT:    v_mov_b32_e32 v0, v1
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
-; IR-LABEL: define float @safe_math_fract_f32_swapped_edge_case_split_block(
-; IR-SAME: float [[X:%.*]], i1 [[COND:%.*]]) #[[ATTR1]] {
-; IR-NEXT:    [[FLOOR:%.*]] = call float @llvm.floor.f32(float [[X]])
-; IR-NEXT:    [[SUB:%.*]] = fsub float [[X]], [[FLOOR]]
-; IR-NEXT:    [[MIN:%.*]] = call float @llvm.minnum.f32(float [[SUB]], float 0x3FEFFFFFE0000000)
-; IR-NEXT:    [[X_FABS:%.*]] = call float @llvm.fabs.f32(float [[X]])
-; IR-NEXT:    br i1 [[COND]], label %[[EDGE_CASES:.*]], label %[[RET:.*]]
-; IR:       [[EDGE_CASES]]:
-; IR-NEXT:    [[NOT_INF:%.*]] = fcmp une float [[X_FABS]], 0x7FF0000000000000
-; IR-NEXT:    [[CLAMP_INF:%.*]] = select i1 [[NOT_INF]], float [[MIN]], float 0.000000e+00
-; IR-NEXT:    [[NOT_NAN:%.*]] = fcmp ord float [[X]], 0.000000e+00
-; IR-NEXT:    [[COND8:%.*]] = select i1 [[NOT_NAN]], float [[CLAMP_INF]], float [[X]]
-; IR-NEXT:    ret float [[COND8]]
-; IR:       [[RET]]:
-; IR-NEXT:    ret float [[MIN]]
+; GFX12-NEXT:  .LBB58_3: ; %ret
+; GFX12-NEXT:    v_floor_f32_e32 v0, v2
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX12-NEXT:    v_sub_f32_e32 v0, v2, v0
+; GFX12-NEXT:    ; implicit-def: $vgpr2
+; GFX12-NEXT:    v_min_num_f32_e32 v0, 0x3f7fffff, v0
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-NEXT:    s_and_not1_saveexec_b32 s0, s0
+; GFX12-NEXT:    s_cbranch_execz .LBB58_2
+; GFX12-NEXT:  .LBB58_4: ; %edge_cases
+; GFX12-NEXT:    v_fract_f32_e32 v0, v2
+; GFX12-NEXT:    v_cmp_neq_f32_e64 vcc_lo, 0x7f800000, |v2|
+; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX12-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc_lo
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-NEXT:    s_or_b32 exec_lo, exec_lo, s0
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+; GFX6-IR-LABEL: define float @safe_math_fract_f32_swapped_edge_case_split_block(
+; GFX6-IR-SAME: float [[X:%.*]], i1 [[COND:%.*]]) #[[ATTR1]] {
+; GFX6-IR-NEXT:    [[FLOOR:%.*]] = call float @llvm.floor.f32(float [[X]])
+; GFX6-IR-NEXT:    [[SUB:%.*]] = fsub float [[X]], [[FLOOR]]
+; GFX6-IR-NEXT:    [[MIN:%.*]] = call float @llvm.minnum.f32(float [[SUB]], float 0x3FEFFFFFE0000000)
+; GFX6-IR-NEXT:    [[X_FABS:%.*]] = call float @llvm.fabs.f32(float [[X]])
+; GFX6-IR-NEXT:    br i1 [[COND]], label %[[EDGE_CASES:.*]], label %[[RET:.*]]
+; GFX6-IR:       [[EDGE_CASES]]:
+; GFX6-IR-NEXT:    [[NOT_INF:%.*]] = fcmp une float [[X_FABS]], 0x7FF0000000000000
+; GFX6-IR-NEXT:    [[CLAMP_INF:%.*]] = select i1 [[NOT_INF]], float [[MIN]], float 0.000000e+00
+; GFX6-IR-NEXT:    [[NOT_NAN:%.*]] = fcmp ord float [[X]], 0.000000e+00
+; GFX6-IR-NEXT:    [[COND8:%.*]] = select i1 [[NOT_NAN]], float [[CLAMP_INF]], float [[X]]
+; GFX6-IR-NEXT:    ret float [[COND8]]
+; GFX6-IR:       [[RET]]:
+; GFX6-IR-NEXT:    ret float [[MIN]]
+; IR-FRACT-LABEL: define float @safe_math_fract_f32_swapped_edge_case_split_block(
+; IR-FRACT-SAME: float [[X:%.*]], i1 [[COND:%.*]]) #[[ATTR1]] {
+; IR-FRACT-NEXT:    [[FLOOR:%.*]] = call float @llvm.floor.f32(float [[X]])
+; IR-FRACT-NEXT:    [[SUB:%.*]] = fsub float [[X]], [[FLOOR]]
+; IR-FRACT-NEXT:    [[MIN:%.*]] = call float @llvm.minnum.f32(float [[SUB]], float 0x3FEFFFFFE0000000)
+; IR-FRACT-NEXT:    [[CLAMP_INF:%.*]] = call float @llvm.amdgcn.fract.f32(float [[X]])
+; IR-FRACT-NEXT:    [[X_FABS:%.*]] = call float @llvm.fabs.f32(float [[X]])
+; IR-FRACT-NEXT:    br i1 [[COND]], label %[[EDGE_CASES:.*]], label %[[RET:.*]]
+; IR-FRACT:       [[EDGE_CASES]]:
+; IR-FRACT-NEXT:    [[NOT_INF:%.*]] = fcmp une float [[X_FABS]], 0x7FF0000000000000
+; IR-FRACT-NEXT:    [[COND8:%.*]] = select i1 [[NOT_INF]], float [[CLAMP_INF]], float 0.000000e+00
+; IR-FRACT-NEXT:    ret float [[COND8]]
+; IR-FRACT:       [[RET]]:
+; IR-FRACT-NEXT:    ret float [[MIN]]
   %floor = call float @llvm.floor.f32(float %x)
   %sub = fsub float %x, %floor
   %min = call float @llvm.minnum.f32(float %sub, float 0x3FEFFFFFE0000000)
@@ -5507,61 +5500,40 @@ define <3 x float> @safe_math_fract_f32_swapped_edge_case_vector(<3 x float> %x)
 ; GFX7-LABEL: safe_math_fract_f32_swapped_edge_case_vector:
 ; GFX7:       ; %bb.0: ; %entry
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    v_floor_f32_e32 v4, v2
-; GFX7-NEXT:    v_floor_f32_e32 v3, v0
-; GFX7-NEXT:    v_sub_f32_e32 v4, v2, v4
 ; GFX7-NEXT:    v_mov_b32_e32 v5, 0x1fb
-; GFX7-NEXT:    v_sub_f32_e32 v3, v0, v3
-; GFX7-NEXT:    v_min_f32_e32 v4, 0x3f7fffff, v4
-; GFX7-NEXT:    v_cmp_class_f32_e32 vcc, v2, v5
-; GFX7-NEXT:    v_min_f32_e32 v3, 0x3f7fffff, v3
-; GFX7-NEXT:    v_cndmask_b32_e32 v4, 0, v4, vcc
+; GFX7-NEXT:    v_fract_f32_e32 v3, v0
 ; GFX7-NEXT:    v_cmp_class_f32_e32 vcc, v0, v5
-; GFX7-NEXT:    v_cndmask_b32_e32 v3, 0, v3, vcc
-; GFX7-NEXT:    v_cmp_o_f32_e32 vcc, v0, v0
-; GFX7-NEXT:    v_cndmask_b32_e32 v0, v0, v3, vcc
-; GFX7-NEXT:    v_cmp_o_f32_e32 vcc, v2, v2
-; GFX7-NEXT:    v_cndmask_b32_e32 v2, v2, v4, vcc
+; GFX7-NEXT:    v_fract_f32_e32 v4, v2
+; GFX7-NEXT:    v_cndmask_b32_e32 v0, 0, v3, vcc
+; GFX7-NEXT:    v_cmp_class_f32_e32 vcc, v2, v5
+; GFX7-NEXT:    v_fract_f32_e32 v1, v1
+; GFX7-NEXT:    v_cndmask_b32_e32 v2, 0, v4, vcc
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-LABEL: safe_math_fract_f32_swapped_edge_case_vector:
 ; GFX8:       ; %bb.0: ; %entry
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_floor_f32_e32 v4, v2
-; GFX8-NEXT:    v_floor_f32_e32 v3, v0
-; GFX8-NEXT:    v_sub_f32_e32 v4, v2, v4
 ; GFX8-NEXT:    v_mov_b32_e32 v5, 0x1fb
-; GFX8-NEXT:    v_sub_f32_e32 v3, v0, v3
-; GFX8-NEXT:    v_min_f32_e32 v4, 0x3f7fffff, v4
-; GFX8-NEXT:    v_cmp_class_f32_e32 vcc, v2, v5
-; GFX8-NEXT:    v_min_f32_e32 v3, 0x3f7fffff, v3
-; GFX8-NEXT:    v_cndmask_b32_e32 v4, 0, v4, vcc
+; GFX8-NEXT:    v_fract_f32_e32 v3, v0
 ; GFX8-NEXT:    v_cmp_class_f32_e32 vcc, v0, v5
-; GFX8-NEXT:    v_cndmask_b32_e32 v3, 0, v3, vcc
-; GFX8-NEXT:    v_cmp_o_f32_e32 vcc, v0, v0
-; GFX8-NEXT:    v_cndmask_b32_e32 v0, v0, v3, vcc
-; GFX8-NEXT:    v_cmp_o_f32_e32 vcc, v2, v2
-; GFX8-NEXT:    v_cndmask_b32_e32 v2, v2, v4, vcc
+; GFX8-NEXT:    v_fract_f32_e32 v4, v2
+; GFX8-NEXT:    v_cndmask_b32_e32 v0, 0, v3, vcc
+; GFX8-NEXT:    v_cmp_class_f32_e32 vcc, v2, v5
+; GFX8-NEXT:    v_fract_f32_e32 v1, v1
+; GFX8-NEXT:    v_cndmask_b32_e32 v2, 0, v4, vcc
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: safe_math_fract_f32_swapped_edge_case_vector:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_floor_f32_e32 v3, v0
-; GFX11-NEXT:    v_floor_f32_e32 v4, v2
+; GFX11-NEXT:    v_fract_f32_e32 v3, v0
 ; GFX11-NEXT:    v_cmp_class_f32_e64 vcc_lo, v0, 0x1fb
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-NEXT:    v_dual_sub_f32 v3, v0, v3 :: v_dual_sub_f32 v4, v2, v4
-; GFX11-NEXT:    v_dual_min_f32 v3, 0x3f7fffff, v3 :: v_dual_min_f32 v4, 0x3f7fffff, v4
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_3)
-; GFX11-NEXT:    v_cndmask_b32_e32 v3, 0, v3, vcc_lo
-; GFX11-NEXT:    v_cmp_class_f32_e64 vcc_lo, v2, 0x1fb
-; GFX11-NEXT:    v_cndmask_b32_e32 v4, 0, v4, vcc_lo
-; GFX11-NEXT:    v_cmp_o_f32_e32 vcc_lo, v0, v0
+; GFX11-NEXT:    v_fract_f32_e32 v4, v2
+; GFX11-NEXT:    v_fract_f32_e32 v1, v1
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_1) | instid1(VALU_DEP_4)
-; GFX11-NEXT:    v_cndmask_b32_e32 v0, v0, v3, vcc_lo
-; GFX11-NEXT:    v_cmp_o_f32_e32 vcc_lo, v2, v2
-; GFX11-NEXT:    v_cndmask_b32_e32 v2, v2, v4, vcc_lo
+; GFX11-NEXT:    v_cndmask_b32_e32 v0, 0, v3, vcc_lo
+; GFX11-NEXT:    v_cmp_class_f32_e64 vcc_lo, v2, 0x1fb
+; GFX11-NEXT:    v_cndmask_b32_e32 v2, 0, v4, vcc_lo
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-LABEL: safe_math_fract_f32_swapped_edge_case_vector:
@@ -5571,37 +5543,44 @@ define <3 x float> @safe_math_fract_f32_swapped_edge_case_vector(<3 x float> %x)
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_floor_f32_e32 v3, v0
-; GFX12-NEXT:    v_floor_f32_e32 v4, v2
+; GFX12-NEXT:    v_fract_f32_e32 v3, v0
 ; GFX12-NEXT:    v_cmp_class_f32_e64 vcc_lo, v0, 0x1fb
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX12-NEXT:    v_dual_sub_f32 v3, v0, v3 :: v_dual_sub_f32 v4, v2, v4
-; GFX12-NEXT:    v_dual_min_num_f32 v3, 0x3f7fffff, v3 :: v_dual_min_num_f32 v4, 0x3f7fffff, v4
+; GFX12-NEXT:    v_fract_f32_e32 v4, v2
+; GFX12-NEXT:    v_fract_f32_e32 v1, v1
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-NEXT:    v_cndmask_b32_e32 v3, 0, v3, vcc_lo
+; GFX12-NEXT:    v_cndmask_b32_e32 v0, 0, v3, vcc_lo
 ; GFX12-NEXT:    v_cmp_class_f32_e64 vcc_lo, v2, 0x1fb
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX12-NEXT:    v_cndmask_b32_e32 v4, 0, v4, vcc_lo
-; GFX12-NEXT:    v_cmp_o_f32_e32 vcc_lo, v0, v0
-; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX12-NEXT:    v_cndmask_b32_e32 v0, v0, v3, vcc_lo
-; GFX12-NEXT:    v_cmp_o_f32_e32 vcc_lo, v2, v2
-; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX12-NEXT:    v_cndmask_b32_e32 v2, v2, v4, vcc_lo
+; GFX12-NEXT:    v_cndmask_b32_e32 v2, 0, v4, vcc_lo
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
-; IR-LABEL: define <3 x float> @safe_math_fract_f32_swapped_edge_case_vector(
-; IR-SAME: <3 x float> [[X:%.*]]) #[[ATTR1]] {
-; IR-NEXT:  [[ENTRY:.*:]]
-; IR-NEXT:    [[FLOOR:%.*]] = call <3 x float> @llvm.floor.v3f32(<3 x float> [[X]])
-; IR-NEXT:    [[SUB:%.*]] = fsub <3 x float> [[X]], [[FLOOR]]
-; IR-NEXT:    [[MIN:%.*]] = call <3 x float> @llvm.minnum.v3f32(<3 x float> [[SUB]], <3 x float> <float 0x3FEFFFFFE0000000, float poison, float 0x3FEFFFFFE0000000>)
-; IR-NEXT:    [[X_FABS:%.*]] = call <3 x float> @llvm.fabs.v3f32(<3 x float> [[X]])
-; IR-NEXT:    [[NOT_INF:%.*]] = fcmp une <3 x float> [[X_FABS]], <float 0x7FF0000000000000, float poison, float 0x7FF0000000000000>
-; IR-NEXT:    [[COND:%.*]] = select <3 x i1> [[NOT_INF]], <3 x float> [[MIN]], <3 x float> <float 0.000000e+00, float poison, float 0.000000e+00>
-; IR-NEXT:    [[NOT_NAN:%.*]] = fcmp ord <3 x float> [[X]], <float 0.000000e+00, float poison, float 0.000000e+00>
-; IR-NEXT:    [[COND8:%.*]] = select <3 x i1> [[NOT_NAN]], <3 x float> [[COND]], <3 x float> [[X]]
-; IR-NEXT:    ret <3 x float> [[COND8]]
+; GFX6-IR-LABEL: define <3 x float> @safe_math_fract_f32_swapped_edge_case_vector(
+; GFX6-IR-SAME: <3 x float> [[X:%.*]]) #[[ATTR1]] {
+; GFX6-IR-NEXT:  [[ENTRY:.*:]]
+; GFX6-IR-NEXT:    [[FLOOR:%.*]] = call <3 x float> @llvm.floor.v3f32(<3 x float> [[X]])
+; GFX6-IR-NEXT:    [[SUB:%.*]] = fsub <3 x float> [[X]], [[FLOOR]]
+; GFX6-IR-NEXT:    [[MIN:%.*]] = call <3 x float> @llvm.minnum.v3f32(<3 x float> [[SUB]], <3 x float> <float 0x3FEFFFFFE0000000, float poison, float 0x3FEFFFFFE0000000>)
+; GFX6-IR-NEXT:    [[X_FABS:%.*]] = call <3 x float> @llvm.fabs.v3f32(<3 x float> [[X]])
+; GFX6-IR-NEXT:    [[NOT_INF:%.*]] = fcmp une <3 x float> [[X_FABS]], <float 0x7FF0000000000000, float poison, float 0x7FF0000000000000>
+; GFX6-IR-NEXT:    [[COND:%.*]] = select <3 x i1> [[NOT_INF]], <3 x float> [[MIN]], <3 x float> <float 0.000000e+00, float poison, float 0.000000e+00>
+; GFX6-IR-NEXT:    [[NOT_NAN:%.*]] = fcmp ord <3 x float> [[X]], <float 0.000000e+00, float poison, float 0.000000e+00>
+; GFX6-IR-NEXT:    [[COND8:%.*]] = select <3 x i1> [[NOT_NAN]], <3 x float> [[COND]], <3 x float> [[X]]
+; GFX6-IR-NEXT:    ret <3 x float> [[COND8]]
+; IR-FRACT-LABEL: define <3 x float> @safe_math_fract_f32_swapped_edge_case_vector(
+; IR-FRACT-SAME: <3 x float> [[X:%.*]]) #[[ATTR1]] {
+; IR-FRACT-NEXT:  [[ENTRY:.*:]]
+; IR-FRACT-NEXT:    [[TMP0:%.*]] = extractelement <3 x float> [[X]], i64 0
+; IR-FRACT-NEXT:    [[TMP1:%.*]] = extractelement <3 x float> [[X]], i64 1
+; IR-FRACT-NEXT:    [[TMP2:%.*]] = extractelement <3 x float> [[X]], i64 2
+; IR-FRACT-NEXT:    [[TMP3:%.*]] = call float @llvm.amdgcn.fract.f32(float [[TMP0]])
+; IR-FRACT-NEXT:    [[TMP4:%.*]] = call float @llvm.amdgcn.fract.f32(float [[TMP1]])
+; IR-FRACT-NEXT:    [[TMP5:%.*]] = call float @llvm.amdgcn.fract.f32(float [[TMP2]])
+; IR-FRACT-NEXT:    [[TMP6:%.*]] = insertelement <3 x float> poison, float [[TMP3]], i64 0
+; IR-FRACT-NEXT:    [[TMP7:%.*]] = insertelement <3 x float> [[TMP6]], float [[TMP4]], i64 1
+; IR-FRACT-NEXT:    [[COND:%.*]] = insertelement <3 x float> [[TMP7]], float [[TMP5]], i64 2
+; IR-FRACT-NEXT:    [[X_FABS:%.*]] = call <3 x float> @llvm.fabs.v3f32(<3 x float> [[X]])
+; IR-FRACT-NEXT:    [[NOT_INF:%.*]] = fcmp une <3 x float> [[X_FABS]], <float 0x7FF0000000000000, float poison, float 0x7FF0000000000000>
+; IR-FRACT-NEXT:    [[COND8:%.*]] = select <3 x i1> [[NOT_INF]], <3 x float> [[COND]], <3 x float> <float 0.000000e+00, float poison, float 0.000000e+00>
+; IR-FRACT-NEXT:    ret <3 x float> [[COND8]]
 entry:
   %floor = call <3 x float> @llvm.floor.v3f32(<3 x float> %x)
   %sub = fsub <3 x float> %x, %floor

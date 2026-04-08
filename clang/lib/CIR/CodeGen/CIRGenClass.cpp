@@ -185,6 +185,25 @@ struct CallBaseDtor final : EHScopeStack::Cleanup {
   }
 };
 
+/// If the delegating constructor's body throws after the delegated-to
+/// constructor completes, destroy the object (mirrors CGClass.cpp's
+/// CallDelegatingCtorDtor).
+struct CallDelegatingCtorDtor final : EHScopeStack::Cleanup {
+  const CXXDestructorDecl *dtor;
+  Address addr;
+  CXXDtorType type;
+
+  CallDelegatingCtorDtor(const CXXDestructorDecl *dtor, Address addr,
+                         CXXDtorType type)
+      : dtor(dtor), addr(addr), type(type) {}
+
+  void emit(CIRGenFunction &cgf, Flags flags) override {
+    QualType thisTy = dtor->getFunctionObjectParameterType();
+    cgf.emitCXXDestructorCall(dtor, type, /*forVirtualBase=*/false,
+                              /*delegating=*/true, addr, thisTy);
+  }
+};
+
 /// A visitor which checks whether an initializer uses 'this' in a
 /// way which requires the vtable to be properly set.
 struct DynamicThisUseChecker
@@ -716,31 +735,22 @@ void CIRGenFunction::emitCXXAggrConstructorCall(
   // are probably legitimate places where we could assume that this
   // doesn't happen, but it's not clear that it's worth it.
 
-  auto arrayTy = mlir::cast<cir::ArrayType>(arrayBase.getElementType());
-  mlir::Type elementType = arrayTy.getElementType();
-
-  // This might be a multi-dimensional array. Find the innermost element type.
+  // Peel any array types wrapped in the address element type down to the CIR
+  // type of a single constructed object.
+  mlir::Type elementType = arrayBase.getElementType();
   while (auto maybeArrayTy = mlir::dyn_cast<cir::ArrayType>(elementType))
     elementType = maybeArrayTy.getElementType();
   cir::PointerType ptrToElmType = builder.getPointerTo(elementType);
 
-  // Optimize for a constant count.
-  if (auto constantCount = numElements.getDefiningOp<cir::ConstantOp>()) {
-    if (auto constIntAttr = constantCount.getValueAttr<cir::IntAttr>()) {
-      // Just skip out if the constant count is zero.
-      if (constIntAttr.getUInt() == 0)
-        return;
-
-      arrayTy = cir::ArrayType::get(elementType, constIntAttr.getUInt());
-      // Otherwise, emit the check.
-    }
-
-    if (constantCount.use_empty())
-      constantCount.erase();
-  } else {
-    // Otherwise, emit the check.
-    cgm.errorNYI(e->getSourceRange(),
-                 "emitCXXAggrConstructorCall: dynamic-length array expression");
+  bool useDynamicArrayCtor = true;
+  uint64_t constElementCount = 0;
+  if (auto constantOp = numElements.getDefiningOp<cir::ConstantOp>()) {
+    constElementCount = CIRGenFunction::getZExtIntValueFromConstOp(constantOp);
+    if (constElementCount == 0)
+      return;
+    if (constantOp.use_empty())
+      constantOp.erase();
+    useDynamicArrayCtor = false;
   }
 
   // Traditional LLVM codegen emits a loop here. CIR lowers to a loop as part of
@@ -755,6 +765,13 @@ void CIRGenFunction::emitCXXAggrConstructorCall(
   CanQualType type = getContext().getCanonicalTagType(ctor->getParent());
   CharUnits eltAlignment = arrayBase.getAlignment().alignmentOfArrayElement(
       getContext().getTypeSizeInChars(type));
+
+  mlir::Location loc = *currSrcLoc;
+
+  mlir::Value dynamicElPtr;
+  if (useDynamicArrayCtor)
+    dynamicElPtr =
+        builder.createPtrBitcast(arrayBase.getPointer(), elementType);
 
   // C++ [class.temporary]p4:
   // There are two contexts in which temporaries are destroyed at a different
@@ -773,30 +790,36 @@ void CIRGenFunction::emitCXXAggrConstructorCall(
       cgm.errorNYI(e->getSourceRange(), "partial array cleanups");
     }
 
-    // Emit the constructor call that will execute for every array element.
-    mlir::Value arrayOp =
-        builder.createPtrBitcast(arrayBase.getPointer(), arrayTy);
-    cir::ArrayCtor::create(
-        builder, *currSrcLoc, arrayOp,
-        [&](mlir::OpBuilder &b, mlir::Location loc) {
-          mlir::BlockArgument arg =
-              b.getInsertionBlock()->addArgument(ptrToElmType, loc);
-          Address curAddr = Address(arg, elementType, eltAlignment);
-          assert(!cir::MissingFeatures::sanitizers());
-          // Zero-initialize each element before invoking its constructor,
-          // matching CGClass::EmitCXXAggrConstructorCall which does per-element
-          // zero-init inside the array ctor loop.
-          if (zeroInitialize)
-            emitNullInitialization(loc, curAddr, type);
-          auto currAVS = AggValueSlot::forAddr(
-              curAddr, type.getQualifiers(), AggValueSlot::IsDestructed,
-              AggValueSlot::IsNotAliased, AggValueSlot::DoesNotOverlap,
-              AggValueSlot::IsNotZeroed);
-          emitCXXConstructorCall(ctor, Ctor_Complete,
-                                 /*ForVirtualBase=*/false,
-                                 /*Delegating=*/false, currAVS, e);
-          cir::YieldOp::create(b, loc);
-        });
+    auto emitCtorBody = [&](mlir::OpBuilder &b, mlir::Location l) {
+      mlir::BlockArgument arg =
+          b.getInsertionBlock()->addArgument(ptrToElmType, l);
+      Address curAddr = Address(arg, elementType, eltAlignment);
+      assert(!cir::MissingFeatures::sanitizers());
+      // Match CGClass::EmitCXXAggrConstructorCall: zero-initialize each element
+      // in the array-ctor loop before invoking the constructor for that slot.
+      if (zeroInitialize)
+        emitNullInitialization(l, curAddr, type);
+      auto currAVS = AggValueSlot::forAddr(
+          curAddr, type.getQualifiers(), AggValueSlot::IsDestructed,
+          AggValueSlot::IsNotAliased, AggValueSlot::DoesNotOverlap,
+          AggValueSlot::IsNotZeroed);
+      emitCXXConstructorCall(ctor, Ctor_Complete,
+                             /*ForVirtualBase=*/false,
+                             /*Delegating=*/false, currAVS, e);
+      cir::YieldOp::create(b, l);
+    };
+
+    // Emit the per-element initialization.
+    if (useDynamicArrayCtor) {
+      cir::ArrayCtor::create(builder, loc, dynamicElPtr, numElements,
+                             emitCtorBody);
+    } else {
+      cir::ArrayType arrayTy =
+          cir::ArrayType::get(elementType, constElementCount);
+      mlir::Value arrayOp =
+          builder.createPtrBitcast(arrayBase.getPointer(), arrayTy);
+      cir::ArrayCtor::create(builder, loc, arrayOp, emitCtorBody);
+    }
   }
 }
 
@@ -1110,9 +1133,10 @@ void CIRGenFunction::emitDelegatingCXXConstructorCall(
 
   const CXXRecordDecl *classDecl = ctor->getParent();
   if (cgm.getLangOpts().Exceptions && !classDecl->hasTrivialDestructor()) {
-    cgm.errorNYI(ctor->getSourceRange(),
-                 "emitDelegatingCXXConstructorCall: exception");
-    return;
+    CXXDtorType dtorType =
+        curGD.getCtorType() == Ctor_Complete ? Dtor_Complete : Dtor_Base;
+    ehStack.pushCleanup<CallDelegatingCtorDtor>(
+        EHCleanup, classDecl->getDestructor(), thisPtr, dtorType);
   }
 }
 
@@ -1286,19 +1310,27 @@ void CIRGenFunction::emitCXXConstructorCall(const clang::CXXConstructorDecl *d,
                                             bool delegating,
                                             AggValueSlot thisAVS,
                                             const clang::CXXConstructExpr *e) {
-  CallArgList args;
   Address thisAddr = thisAVS.getAddress();
   QualType thisType = d->getThisType();
   mlir::Value thisPtr = thisAddr.getPointer();
 
   assert(!cir::MissingFeatures::addressSpace());
 
-  args.add(RValue::get(thisPtr), thisType);
+  // If this is a trivial constructor, just emit what's needed. If this is a
+  // union copy constructor, we must emit a memcpy, because the AST does not
+  // model that copy.
+  if (d->isMemcpyEquivalentSpecialMember(getContext())) {
+    assert(e->getNumArgs() == 1 && "unexpected argcount for trivial ctor");
+    const Expr *arg = e->getArg(0);
+    LValue src = emitLValue(arg);
+    CanQualType destTy = getContext().getCanonicalTagType(d->getParent());
+    LValue dest = makeAddrLValue(thisAddr, destTy);
+    emitAggregateCopy(dest, src, src.getType(), thisAVS.mayOverlap());
+    return;
+  }
 
-  // In LLVM Codegen: If this is a trivial constructor, just emit what's needed.
-  // If this is a union copy constructor, we must emit a memcpy, because the AST
-  // does not model that copy.
-  assert(!cir::MissingFeatures::isMemcpyEquivalentSpecialMember());
+  CallArgList args;
+  args.add(RValue::get(thisPtr), thisType);
 
   const FunctionProtoType *fpt = d->getType()->castAs<FunctionProtoType>();
 
@@ -1324,7 +1356,8 @@ void CIRGenFunction::emitCXXConstructorCall(
   // ctor call into trivial initialization.
   assert(!cir::MissingFeatures::isTrivialCtorOrDtor());
 
-  assert(!cir::MissingFeatures::isMemcpyEquivalentSpecialMember());
+  // Note: memcpy-equivalent special members are handled in the
+  // emitCXXConstructorCall overload that takes a CXXConstructExpr.
 
   bool passPrototypeArgs = true;
 

@@ -16,6 +16,7 @@ add_fp_unittest(
     libc.src.__support.math.acospif
     libc.src.__support.math.acospif16
     libc.src.__support.math.asin
+    libc.src.__support.math.asinbf16
     libc.src.__support.math.asinf
     libc.src.__support.math.asinf16
     libc.src.__support.math.asinhf
@@ -266,5 +267,40 @@ add_fp_unittest(
   SRCS
     shared_math_constexpr_test.cpp
   DEPENDS
-    .shared_math_test
+    libc.src.__support.math.asinbf16
+    libc.src.__support.math.ceil
+    libc.src.__support.math.ceilbf16
+    libc.src.__support.math.ceilf
+    libc.src.__support.math.ceilf128
+    libc.src.__support.math.ceilf16
+    libc.src.__support.math.ceill
+    libc.src.__support.math.log
 )
+
+add_fp_unittest(
+  shared_str_to_num_test
+  SUITE
+    libc-shared-tests
+  SRCS
+    shared_str_to_num_test.cpp
+  DEPENDS
+    libc.src.__support.str_to_float
+    libc.src.__support.str_to_integer
+)
+
+# FIXME: The LLVM libc full build does not support 'system' yet.
+if(NOT LLVM_LIBC_FULL_BUILD)
+add_libc_test(
+  shared_rpc_test
+  UNIT_TEST_ONLY
+  SUITE
+    libc-shared-tests
+  SRCS
+    shared_rpc_test.cpp
+  DEPENDS
+    libc.src.stdio.printf_core.converter
+    libc.src.stdio.printf_core.parser
+    libc.src.stdio.printf_core.writer
+    libc.src.__support.arg_list
+)
+endif()
