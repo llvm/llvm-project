@@ -18,8 +18,7 @@ define i32 @f0(i32 %a) #0 {
 ; CHECK-NO-PAUTH-NEXT:    mov x8, x30
 ; CHECK-NO-PAUTH-NEXT:    hint #7
 ; CHECK-NO-PAUTH-NEXT:    ldr w30, [x30]
-; CHECK-NO-PAUTH-NEXT:    mov x30, x8
-; CHECK-NO-PAUTH-NEXT:    ret{{$}}
+; CHECK-NO-PAUTH-NEXT:    ret x8
 ;
 ; CHECK-PAUTH-LABEL: f0:
 ; CHECK-PAUTH:       // %bb.0: // %entry
@@ -47,8 +46,7 @@ define i32 @f1(i32 %a) #1 {
 ; CHECK-NO-PAUTH-NEXT:    mov x8, x30
 ; CHECK-NO-PAUTH-NEXT:    hint #7
 ; CHECK-NO-PAUTH-NEXT:    ldr w30, [x30]
-; CHECK-NO-PAUTH-NEXT:    mov x30, x8
-; CHECK-NO-PAUTH-NEXT:    ret{{$}}
+; CHECK-NO-PAUTH-NEXT:    ret x8
 ;
 ; CHECK-PAUTH-LABEL: f1:
 ; CHECK-PAUTH:       // %bb.0: // %entry
@@ -80,8 +78,7 @@ define i32 @f2(i32 %a) #2 {
 ; CHECK-NO-PAUTH-NEXT:    mov x8, x30
 ; CHECK-NO-PAUTH-NEXT:    hint #7
 ; CHECK-NO-PAUTH-NEXT:    ldr w30, [x30]
-; CHECK-NO-PAUTH-NEXT:    mov x30, x8
-; CHECK-NO-PAUTH-NEXT:    ret{{$}}
+; CHECK-NO-PAUTH-NEXT:    ret x8
 ;
 ; CHECK-PAUTH-LABEL: f2:
 ; CHECK-PAUTH:       // %bb.0: // %entry
@@ -117,8 +114,7 @@ define i32 @f3(i32 %a) #3 {
 ; CHECK-NO-PAUTH-NEXT:    mov x8, x30
 ; CHECK-NO-PAUTH-NEXT:    hint #7
 ; CHECK-NO-PAUTH-NEXT:    ldr w30, [x30]
-; CHECK-NO-PAUTH-NEXT:    mov x30, x8
-; CHECK-NO-PAUTH-NEXT:    ret{{$}}
+; CHECK-NO-PAUTH-NEXT:    ret x8
 ;
 ; CHECK-PAUTH-LABEL: f3:
 ; CHECK-PAUTH:       // %bb.0: // %entry
@@ -261,8 +257,7 @@ define void @stackprotector() #6 {
 ; CHECK-NO-PAUTH-NEXT:    mov x8, x30
 ; CHECK-NO-PAUTH-NEXT:    hint #7
 ; CHECK-NO-PAUTH-NEXT:    ldr w30, [x30]
-; CHECK-NO-PAUTH-NEXT:    mov x30, x8
-; CHECK-NO-PAUTH-NEXT:    ret{{$}}
+; CHECK-NO-PAUTH-NEXT:    ret x8
 ; CHECK-NO-PAUTH-NEXT:  .LBB8_2:
 ; CHECK-NO-PAUTH-NEXT:    bl __stack_chk_fail
 ;
@@ -308,8 +303,7 @@ define i32 @f8(i32 %a) #7 {
 ; CHECK-NO-PAUTH-NEXT:    mov x8, x30
 ; CHECK-NO-PAUTH-NEXT:    hint #7
 ; CHECK-NO-PAUTH-NEXT:    ldr w30, [x30]
-; CHECK-NO-PAUTH-NEXT:    mov x30, x8
-; CHECK-NO-PAUTH-NEXT:    ret
+; CHECK-NO-PAUTH-NEXT:    ret x8
 ;
 ; CHECK-PAUTH-LABEL: f8:
 ; CHECK-PAUTH:       // %bb.0: // %entry
@@ -325,7 +319,7 @@ define i32 @f8(i32 %a) #7 {
 ; CHECK-PAUTH-NEXT:    mov x8, x30
 ; CHECK-PAUTH-NEXT:    xpaci x8
 ; CHECK-PAUTH-NEXT:    ldr w8, [x8]
-; CHECK-PAUTH-NEXT:    ret
+; CHECK-PAUTH-NEXT:    ret{{$}}
 entry:
   %call = call i32 @foo(i32 %a)
   ret i32 %call
@@ -359,6 +353,21 @@ define i32 @f9(i32 %a) #8 {
 entry:
   %call = call i32 @foo(i32 %a)
   ret i32 %call
+}
+
+define i32 @f10(i32 %a) #2 {
+; CHECK-NO-PAUTH-LABEL: f10:
+; CHECK-NO-PAUTH:       // %bb.0: // %entry
+; CHECK-NO-PAUTH-NEXT:    add w0, w0, #1
+; CHECK-NO-PAUTH-NEXT:    ret{{$}}
+;
+; CHECK-PAUTH-LABEL: f10:
+; CHECK-PAUTH:       // %bb.0: // %entry
+; CHECK-PAUTH-NEXT:    add w0, w0, #1
+; CHECK-PAUTH-NEXT:    ret{{$}}
+entry:
+  %add = add nsw i32 %a, 1
+  ret i32 %add
 }
 
 attributes #0 = { "sign-return-address"="all" "sign-return-address-harden"="load-return-address" "sign-return-address-key"="a_key" }

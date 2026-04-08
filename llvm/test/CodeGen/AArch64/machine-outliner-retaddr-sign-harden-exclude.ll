@@ -9,8 +9,7 @@ define void @a() "sign-return-address"="all" "sign-return-address-key"="a_key" "
 ; V8A-NEXT:      mov x8, x30
 ; V8A-NEXT:      hint #7
 ; V8A-NEXT:      ldr w30, [x30]
-; V8A-NEXT:      mov x30, x8
-; V8A-NEXT:      ret{{$}}
+; V8A-NEXT:      ret x8
 
 ; V83A-LABEL:    a:
 ; V83A:          paciasp
@@ -42,7 +41,7 @@ define void @b() "sign-return-address"="all" "sign-return-address-key"="a_key" n
 ; V8A-NEXT:      bl OUTLINED_FUNCTION_0
 ; V8A-NEXT:      mov x30, x0
 ; V8A-NEXT:      hint #29
-; V8A-NEXT:      ret
+; V8A-NEXT:      ret{{$}}
 
 ; V83A-LABEL:    b:
 ; V83A:          paciasp
@@ -72,7 +71,7 @@ define void @c() "sign-return-address"="all" "sign-return-address-key"="a_key" n
 ; V8A-NEXT:      bl OUTLINED_FUNCTION_0
 ; V8A-NEXT:      mov x30, x0
 ; V8A-NEXT:      hint #29
-; V8A-NEXT:      ret
+; V8A-NEXT:      ret{{$}}
 
 ; V83A-LABEL:    c:
 ; V83A:          paciasp
@@ -98,7 +97,7 @@ define void @c() "sign-return-address"="all" "sign-return-address-key"="a_key" n
 ; V8A-LABEL:     OUTLINED_FUNCTION_0:
 ; V8A:           hint #25
 ; V8A:           hint #29
-; V8A:           ret
+; V8A:           ret{{$}}
 
 ; V83A-LABEL:    OUTLINED_FUNCTION_0:
 ; V83A:          paciasp

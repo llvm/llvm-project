@@ -315,7 +315,6 @@ bool AArch64PointerAuth::emitSignReturnAddressHardening(MachineFunction &MF) {
     if (XReg == AArch64::NoRegister)
       // Couldn't find a free register to use for the hardening. Skip.
       continue;
-    RS.setRegUsed(XReg);
 
     DebugLoc DL = MBBI->getDebugLoc();
 
@@ -350,15 +349,9 @@ bool AArch64PointerAuth::emitSignReturnAddressHardening(MachineFunction &MF) {
           .addUse(AArch64::LR)
           .addImm(0)
           .setMIFlag(MachineInstr::FrameDestroy);
-      BuildMI(MBB, MBBI, DL, TII->get(AArch64::ORRXrs), AArch64::LR)
-          .addUse(AArch64::XZR)
-          .addUse(XReg)
-          .addImm(0)
-          .setMIFlag(MachineInstr::FrameDestroy);
-      if (MBBI != MBB.end() && (MBBI->getOpcode() == AArch64::RET_ReallyLR ||
-                                MBBI->getOpcode() == AArch64::RET)) {
+      if (MBBI != MBB.end() && MBBI->getOpcode() == AArch64::RET) {
         BuildMI(MBB, MBBI, DL, TII->get(AArch64::RET))
-            .addUse(AArch64::LR)
+            .addUse(XReg)
             .copyImplicitOps(*MBBI);
         MBB.erase(MBBI);
       }

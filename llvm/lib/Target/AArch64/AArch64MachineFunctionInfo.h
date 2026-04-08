@@ -622,8 +622,7 @@ public:
   bool isMTETagged() const { return IsMTETagged; }
 
   bool shouldHardenSignReturnAddress() const {
-    return SignReturnAddressHardening ==
-           SignReturnAddressHardeningKind::LoadReturnAddress;
+    return SignReturnAddressHardening != SignReturnAddressHardeningKind::None;
   }
 
   bool branchTargetEnforcement() const { return BranchTargetEnforcement; }
