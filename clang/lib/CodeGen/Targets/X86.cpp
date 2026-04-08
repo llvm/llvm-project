@@ -2084,8 +2084,12 @@ void X86_64ABIInfo::classify(QualType Ty, uint64_t OffsetBase, Class &Lo,
         assert(!I.isVirtual() && !I.getType()->isDependentType() &&
                "Unexpected base class!");
         const auto *Base = I.getType()->castAsCXXRecordDecl();
-        bool IsEmptyBase = isEmptyRecord(getContext(), I.getType(), true) &&
-                           properlyIgnoreEmptyCXXFieldsAndBases();
+
+        // If it is an empty base skip it
+        if (isEmptyRecord(getContext(), I.getType(), true) &&
+            properlyIgnoreEmptyCXXFieldsAndBases())
+          continue;
+
         // Classify this field.
         //
         // AMD64-ABI 3.2.3p2: Rule 3. If the size of the aggregate exceeds a
@@ -2097,7 +2101,7 @@ void X86_64ABIInfo::classify(QualType Ty, uint64_t OffsetBase, Class &Lo,
         classify(I.getType(), Offset, FieldLo, FieldHi, isNamedArg);
         Lo = merge(Lo, FieldLo);
         Hi = merge(Hi, FieldHi);
-        if (returnCXXRecordGreaterThan128InMem() && !IsEmptyBase &&
+        if (returnCXXRecordGreaterThan128InMem() &&
             (Size > 128 && (Size != getContext().getTypeSize(I.getType()) ||
                             Size > getNativeVectorSizeForAVXABI(AVXLevel)))) {
           // The only case a 256(or 512)-bit wide vector could be used to return
@@ -2127,6 +2131,11 @@ void X86_64ABIInfo::classify(QualType Ty, uint64_t OffsetBase, Class &Lo,
       if (BitField && i->isUnnamedBitField())
         continue;
 
+      // Ignore empty fields
+      if (isEmptyField(getContext(), *i, true) &&
+          properlyIgnoreEmptyCXXFieldsAndBases())
+        continue;
+
       // AMD64-ABI 3.2.3p2: Rule 1. If the size of an object is larger than
       // eight eightbytes, or it contains unaligned fields, it has class MEMORY.
       //
@@ -2136,9 +2145,9 @@ void X86_64ABIInfo::classify(QualType Ty, uint64_t OffsetBase, Class &Lo,
       //
       // FIXME: Extended the Lo and Hi logic properly to work for size wider
       // than 128.
-      bool IsEmptyField = isEmptyField(getContext(), *i, true) &&
-                          properlyIgnoreEmptyCXXFieldsAndBases();
-      if (Size > 128 && !IsEmptyField &&
+      // bool IsEmptyField = isEmptyField(getContext(), *i, true) &&
+      //                     properlyIgnoreEmptyCXXFieldsAndBases();
+      if (Size > 128 &&
           ((!IsUnion && Size != getContext().getTypeSize(i->getType())) ||
            Size > getNativeVectorSizeForAVXABI(AVXLevel))) {
         Lo = Memory;
