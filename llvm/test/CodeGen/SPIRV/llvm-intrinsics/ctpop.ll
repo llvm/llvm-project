@@ -11,9 +11,12 @@
 @g3 = addrspace(1) global i32 undef, align 4
 @g4 = addrspace(1) global i64 undef, align 8
 @g5 = addrspace(1) global <2 x i32> undef, align 4
+@g6 = addrspace(1) global <2 x i64> undef, align 8
+@g7 = addrspace(1) global <3 x i64> undef, align 8
+@g8 = addrspace(1) global <4 x i64> undef, align 8
 
 
-define dso_local spir_kernel void @test(i8 %x8, i16 %x16, i32 %x32, i64 %x64, <2 x i32> %x2i32) local_unnamed_addr {
+define dso_local spir_kernel void @test(i8 %x8, i16 %x16, i32 %x32, i64 %x64, <2 x i32> %x2i32, <2 x i64> %x2i64, <3 x i64> %x3i64, <4 x i64> %x4i64) local_unnamed_addr {
 entry:
   %0 = tail call i8 @llvm.ctpop.i8(i8 %x8)
   store i8 %0, ptr addrspace(1) @g1, align 4
@@ -25,7 +28,12 @@ entry:
   store i64 %3, ptr addrspace(1) @g4, align 8
   %4 = tail call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> %x2i32)
   store <2 x i32> %4, ptr addrspace(1) @g5, align 4
-
+  %5 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %x2i64)
+  store <2 x i64> %5, ptr addrspace(1) @g6, align 4
+  %6 = tail call <3 x i64> @llvm.ctpop.v3i64(<3 x i64> %x3i64)
+  store <3 x i64> %6, ptr addrspace(1) @g7, align 4
+  %7 = tail call <4 x i64> @llvm.ctpop.v4i64(<4 x i64> %x4i64)
+  store <4 x i64> %7, ptr addrspace(1) @g8, align 4
   ret void
 }
 
