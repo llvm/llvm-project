@@ -3797,12 +3797,10 @@ ElementCount LoopVectorizationCostModel::getMaximizedVFForTarget(
     MaxVF =
         clampVFByMaxTripCount(MaxVF, MaxTripCount, UserIC, FoldTailByMasking);
 
-    if (MaxVectorElementCount != MaxVF) {
-      // Invalidate any widening decisions we might have made, in case the loop
-      // requires prediction (decided later), but we have already made some
-      // load/store widening decisions.
-      invalidateCostModelingDecisions();
-    }
+    assert((MaxVectorElementCount == MaxVF ||
+            (WideningDecisions.empty() && CallWideningDecisions.empty() &&
+             Uniforms.empty() && Scalars.empty())) &&
+           "No decisions should have been taken at this point");
   }
   return MaxVF;
 }
