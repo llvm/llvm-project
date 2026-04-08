@@ -1667,7 +1667,7 @@ Example:
 
   // Denotes that my_malloc will return with a dynamically allocated piece of
   // memory using malloc().
-  void __attribute((ownership_returns(malloc))) *my_malloc(size_t);
+  void __attribute((ownership_returns(malloc))) *my_malloc(size_t sz);
 
   // 'sz' (parameter 1) is the allocation size.
   void __attribute((ownership_returns(malloc, 1))) *my_sized_malloc(size_t sz);
