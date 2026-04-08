@@ -7542,7 +7542,7 @@ BoUpSLP::LoadsState BoUpSLP::canVectorizeLoads(
   Align CommonAlignment = computeCommonAlignment<LoadInst>(VL);
   if (!IsSorted) {
     if (analyzeRtStrideCandidate(PointerOps, ScalarTy, CommonAlignment, Order,
-                                 SPtrInfo, /*isLoad*/ true))
+                                 SPtrInfo, /*isLoad=*/ true))
       return LoadsState::StridedVectorize;
 
     if (!TTI->isLegalMaskedGather(VecTy, CommonAlignment) ||
