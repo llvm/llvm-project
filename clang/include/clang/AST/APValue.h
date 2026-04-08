@@ -318,7 +318,7 @@ private:
     const AddrLabelExpr *RHSExpr;
   };
   struct ReflectionData {
-    const ReflectionKind OperandKind;
+    ReflectionKind OperandKind;
     const void *Operand;
   };
   struct MemberPointerData;
@@ -726,7 +726,7 @@ public:
     return ((const ReflectionData *)(const char *)&Data)->OperandKind;
   }
 
-  const void *getOpaqueReflectionOperand() const {
+  const void *getReflectionOpaqueOperand() const {
     assert(isReflection() && "Invalid accessor");
     return ((const ReflectionData *)(const char *)&Data)->Operand;
   }
@@ -783,7 +783,7 @@ private:
   void DestroyDataAndMakeUninit();
   void MakeReflection(ReflectionKind OperandKind, const void *Operand) {
     assert(isAbsent() && "Bad state change");
-    new ((void *)(char *)Data.buffer) ReflectionData(OperandKind, Operand);
+    new ((void *)(char *)Data.buffer) ReflectionData{OperandKind, Operand};
     Kind = Reflection;
   }
   void MakeInt() {

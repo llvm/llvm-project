@@ -12,11 +12,22 @@
 
 #ifndef LLVM_CLANG_AST_REFLECTION_H
 #define LLVM_CLANG_AST_REFLECTION_H
+
+#include "llvm/Support/raw_ostream.h"
+
 namespace clang {
 
 // TODO(Reflection): Add support for Template, Namespace and DeclRefExpr.
 enum class ReflectionKind { Type };
 
-} // namespace clang
+inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, ReflectionKind Kind) {
+  switch(Kind) {
+  case ReflectionKind::Type:
+    OS << "type";
+  }
 
+  return OS;
+}
+
+} // namespace clang
 #endif
