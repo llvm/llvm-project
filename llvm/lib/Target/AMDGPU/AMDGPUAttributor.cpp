@@ -1670,7 +1670,7 @@ PreservedAnalyses llvm::AMDGPUAttributorPass::run(Module &M,
 
   SetVector<Function *> Functions;
   for (Function &F : M) {
-    if (!F.isIntrinsic())
+    if (!F.isDeclaration())
       Functions.insert(&F);
   }
 
