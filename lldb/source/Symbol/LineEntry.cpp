@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Symbol/LineEntry.h"
+#include "lldb/Core/Address.h"
+#include "lldb/Core/PluginManager.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
@@ -242,8 +244,21 @@ AddressRange LineEntry::GetSameLineContiguousAddressRange(
   return complete_line_range;
 }
 
-void LineEntry::ApplyFileMappings(lldb::TargetSP target_sp) {
+void LineEntry::ApplyFileMappings(lldb::TargetSP target_sp,
+                                  lldb::ModuleSP module_sp) {
   if (target_sp) {
+    // Try SymbolLocator plugins for source file resolution. The plugin
+    // handles the fast path internally (returns immediately when no
+    // scripted locators are registered).
+    if (module_sp) {
+      FileSpec resolved = PluginManager::LocateSourceFile(
+          module_sp, original_file_sp->GetSpecOnly());
+      if (resolved) {
+        file_sp = std::make_shared<SupportFile>(resolved);
+        return;
+      }
+    }
+
     // Apply any file remappings to our file.
     if (auto new_file_spec = target_sp->GetSourcePathMap().FindFile(
             original_file_sp->GetSpecOnly())) {
