@@ -581,7 +581,8 @@ LIBC_INLINE double powf_double_double(int idx_x, double dx, double y6,
   //   -0x1.3ffcp-15 <= dx2 <= 0x1.3e3dp-15
   int idx2 = static_cast<int>(
       fputil::nearest_integer(fputil::multiply_add(dx, 0x1.0p14, 0x1.0p6)));
-  double dx2 = fputil::multiply_add(1.0 + dx, R2[idx2], -1.0); // Exact
+  double dx2 = fputil::multiply_add(
+      1.0 + dx, common_constants_internal::R2[idx2], -1.0); // Exact
 
   // Degree-5 polynomial approximation of log2(1 + x)/x in double-double
   // precision.  Generate by Solya with:
@@ -860,6 +861,7 @@ LIBC_INLINE float powf(float x, float y) {
     defined(LIBC_MATH_HAS_SMALL_TABLES)
   return powf_small_tables(x, ex, sign, y);
 #else
+  using namespace common_constants_internal;
 
   // x^y = 2^( y * log2(x) )
   //     = 2^( y * ( e_x + log2(m_x) ) )
