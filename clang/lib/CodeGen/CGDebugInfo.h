@@ -1011,8 +1011,6 @@ class ApplyBuiltinDebugLocation {
 
 public:
   ApplyBuiltinDebugLocation(CodeGenFunction &CGF, GlobalDecl BuiltinFn);
-  ApplyBuiltinDebugLocation(const ApplyBuiltinDebugLocation &) = delete;
-  ApplyBuiltinDebugLocation &operator=(ApplyBuiltinDebugLocation &) = delete;
 };
 
 class SanitizerDebugLocation {
