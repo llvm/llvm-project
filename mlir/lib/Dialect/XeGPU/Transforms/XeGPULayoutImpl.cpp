@@ -1541,12 +1541,14 @@ xegpu::inferSourceLayoutFromResult(OpOperand &operand,
     return inferred;
   }
 
-  // For elementwise operations, all operands must have the same layout as the
-  // result.
-  if (OpTrait::hasElementwiseMappableTraits(op) && op->getNumResults() == 1) {
-    LLVM_DEBUG(DBGS() << "  -> elementwise op, using resLayout="
+  if (isa<VectorType>(operand.get().getType()) &&
+      !dyn_cast<xegpu::AnchorLayoutInterface>(op)) {
+    // For elementwise operations, all operands must have the same layout as the
+    // result.
+    // if (OpTrait::hasElementwiseMappableTraits(op) && op->getNumResults() ==
+    // 1) {
+    LLVM_DEBUG(DBGS() << "  -> other vector or tensorDesc ops using resLayout="
                       << (resLayout ? resLayout : nullptr) << "\n");
-
     return resLayout;
   }
   return xegpu::DistributeLayoutAttr();

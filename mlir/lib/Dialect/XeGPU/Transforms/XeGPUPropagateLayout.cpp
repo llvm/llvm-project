@@ -1538,37 +1538,63 @@ static LogicalResult
 updateControlFlowOps(mlir::OpBuilder &builder,
                      mlir::RegionBranchTerminatorOpInterface terminator,
                      GetLayoutFnTy getLayoutOfValue) {
+  LLVM_DEBUG(DBGS() << "updateControlFlowOps: processing terminator: "
+                    << *terminator << "\n");
   // Only process if the terminator is inside a region branch op.
   auto branchOp = dyn_cast<RegionBranchOpInterface>(terminator->getParentOp());
-  if (!branchOp)
+  if (!branchOp) {
+    LLVM_DEBUG(
+        DBGS() << "  parent is not a RegionBranchOpInterface, skipping\n");
     return success();
+  }
+  LLVM_DEBUG(DBGS() << "  parent branch op: " << *branchOp << "\n");
 
   RegionBranchSuccessorMapping mapping;
   branchOp.getSuccessorOperandInputMapping(mapping,
                                            RegionBranchPoint(terminator));
+  LLVM_DEBUG(DBGS() << "  successor mapping has " << mapping.size()
+                    << " entries\n");
   for (const auto &[successorOperand, successorInputs] : mapping) {
+    LLVM_DEBUG(DBGS() << "  processing successor operand: "
+                      << successorOperand->get()
+                      << " (type: " << successorOperand->get().getType()
+                      << "), num successor inputs: " << successorInputs.size()
+                      << "\n");
     for (Value successorInput : successorInputs) {
       Type inputType = successorInput.getType();
+      LLVM_DEBUG(DBGS() << "    successor input: " << successorInput
+                        << ", type: " << inputType << "\n");
       // We only need to operate on tensor descriptor or vector types.
-      if (!isa<xegpu::TensorDescType, VectorType>(inputType))
+      if (!isa<xegpu::TensorDescType, VectorType>(inputType)) {
+        LLVM_DEBUG(
+            DBGS() << "    skipping: not a TensorDescType or VectorType\n");
         continue;
+      }
       xegpu::DistributeLayoutAttr successorInputLayout =
           getLayoutOfValue(successorInput);
       xegpu::DistributeLayoutAttr successorOperandLayout =
           getLayoutOfValue(successorOperand->get());
 
+      LLVM_DEBUG(DBGS() << "    successor input layout: ");
+      LLVM_DEBUG(if (successorInputLayout) llvm::dbgs() << successorInputLayout;
+                 else llvm::dbgs() << "<<NULL>>"; llvm::dbgs() << "\n");
+      LLVM_DEBUG(DBGS() << "    successor operand layout: ");
+      LLVM_DEBUG(if (successorOperandLayout) llvm::dbgs()
+                     << successorOperandLayout;
+                 else llvm::dbgs() << "<<NULL>>"; llvm::dbgs() << "\n");
+
       // If either of the layouts is not assigned, we cannot proceed.
       if (!successorOperandLayout) {
-        LLVM_DEBUG(DBGS() << "No layout assigned for forwarded operand in "
-                             "branch terminator: "
+        LLVM_DEBUG(DBGS() << "    FAILURE: No layout assigned for forwarded "
+                             "operand in branch terminator: "
                           << successorOperand->get() << "\n");
         return failure();
       }
       // We expect the layouts to match.
       if (successorInputLayout &&
           successorInputLayout != successorOperandLayout) {
-        LLVM_DEBUG(DBGS() << "Conflicting layouts for region argument and "
-                             "operand forwarded as the argument: "
+        LLVM_DEBUG(DBGS() << "    FAILURE: Conflicting layouts for region "
+                             "argument and operand forwarded as the argument: "
                           << successorInputLayout << " vs "
                           << successorOperandLayout << "\n");
         return failure();
@@ -1578,15 +1604,26 @@ updateControlFlowOps(mlir::OpBuilder &builder,
         auto newTdescTy = xegpu::TensorDescType::get(
             tdescTy.getContext(), tdescTy.getShape(), tdescTy.getElementType(),
             tdescTy.getEncoding(), successorOperandLayout);
+        LLVM_DEBUG(DBGS() << "    updating tensor desc type: " << tdescTy
+                          << " -> " << newTdescTy << "\n");
         successorInput.setType(newTdescTy);
         continue;
       }
       // If the type is a vector type and this region argument is an OpResult,
       // set the layout attribute on the OpResult.
-      if (auto result = dyn_cast<OpResult>(successorInput))
+      if (auto result = dyn_cast<OpResult>(successorInput)) {
+        LLVM_DEBUG(DBGS() << "    setting layout on OpResult #"
+                          << result.getResultNumber() << " of "
+                          << *result.getOwner() << " to "
+                          << successorOperandLayout << "\n");
         xegpu::setDistributeLayoutAttr(result, successorOperandLayout);
+      } else {
+        LLVM_DEBUG(DBGS() << "    successor input is a BlockArgument, "
+                             "not setting layout attribute\n");
+      }
     }
   }
+  LLVM_DEBUG(DBGS() << "  updateControlFlowOps: success\n");
   return success();
 }
 
