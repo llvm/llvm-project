@@ -10281,8 +10281,8 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
   // parameters (address and length of additional arguments) into an outgoing
   // stack area.
   bool IsArm64ECVarArgExitThunk = CallConv == CallingConv::ARM64EC_Thunk_X64 &&
-                                   IsVarArg &&
-                                   !(CLI.CB && CLI.CB->isMustTailCall());
+                                  IsVarArg &&
+                                  !(CLI.CB && CLI.CB->isMustTailCall());
   SDValue ThunkVarArgSrc;
   SDValue ThunkVarArgSize;
   SDValue ThunkVarArgDst;
