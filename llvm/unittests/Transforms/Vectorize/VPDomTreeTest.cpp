@@ -232,13 +232,19 @@ TEST_F(VPDominatorTreeTest, DominanceRegionsTest) {
     //
     VPlan &Plan = getPlan();
     VPBasicBlock *R1BB1 = Plan.createVPBasicBlock("R1BB1");
+    VPInstruction *R1BB1I = new VPInstruction(VPInstruction::VScale, {});
+    R1BB1->appendRecipe(R1BB1I);
     VPBasicBlock *R1BB2 = Plan.createVPBasicBlock("R1BB2");
+    VPInstruction *R1BB2I = new VPInstruction(VPInstruction::VScale, {});
+    R1BB2->appendRecipe(R1BB2I);
     VPBasicBlock *R1BB3 = Plan.createVPBasicBlock("R1BB3");
+    VPInstruction *R1BB3I = new VPInstruction(VPInstruction::VScale, {});
+    R1BB3->appendRecipe(R1BB3I);
     VPRegionBlock *R1 = Plan.createReplicateRegion(R1BB1, R1BB3, "R1");
 
     VPBasicBlock *R2BB1 = Plan.createVPBasicBlock("R2BB1");
     VPInstruction *R2BB1I = new VPInstruction(VPInstruction::VScale, {});
-    R1BB1->appendRecipe(R2BB1I);
+    R2BB1->appendRecipe(R2BB1I);
     VPBasicBlock *R2BB2 = Plan.createVPBasicBlock("R2BB2");
     VPInstruction *R2BB2I = new VPInstruction(VPInstruction::VScale, {});
     R2BB2->appendRecipe(R2BB2I);
@@ -266,8 +272,14 @@ TEST_F(VPDominatorTreeTest, DominanceRegionsTest) {
     VPBlockUtils::connectBlocks(VPBB2, Plan.getScalarHeader());
     VPDominatorTree VPDT(Plan);
 
+    EXPECT_TRUE(VPDT.properlyDominates(R1BB1I, R2BB1I));
+    EXPECT_TRUE(VPDT.properlyDominates(R1BB1I, R2BB2I));
+    EXPECT_TRUE(VPDT.properlyDominates(R1BB1I, R2BB3I));
+    EXPECT_TRUE(VPDT.properlyDominates(R1BB1I, R1BB3I));
+    EXPECT_FALSE(VPDT.properlyDominates(R1BB2I, R1BB3I));
     EXPECT_TRUE(VPDT.properlyDominates(R2BB1I, R2BB2I));
     EXPECT_TRUE(VPDT.properlyDominates(R2BB1I, R2BB3I));
+    EXPECT_FALSE(VPDT.properlyDominates(R2BB1I, R1BB3I));
     EXPECT_FALSE(VPDT.properlyDominates(R2BB3I, R2BB2I));
     EXPECT_FALSE(VPDT.properlyDominates(R2BB1I, R2BB1I));
   }
