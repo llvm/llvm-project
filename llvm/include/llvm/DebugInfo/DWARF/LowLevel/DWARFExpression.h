@@ -124,6 +124,7 @@ public:
     }
 
   public:
+    /// Get the byte offset of the current operation within the expression.
     uint64_t getOffset() const { return Offset; }
 
     iterator &operator++() {
