@@ -721,7 +721,7 @@ public:
     return ((const ReflectionData *)(const char *)&Data)->OperandKind;
   }
 
-  const void* getOpaqueReflectionOperand() const {
+  const void* getReflectionOpaqueOperand() const {
     assert(isReflection() && "Invalid accessor");
     return ((const ReflectionData *)(const char *)&Data)->Operand;
   }
