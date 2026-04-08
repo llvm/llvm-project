@@ -67,6 +67,10 @@ std::optional<std::string> Library::readStringFromMemory(const Pointer &Ptr) {
 AnyValue Library::executeMalloc(StringRef Name, Type *Type,
                                 ArrayRef<AnyValue> Args,
                                 MemAllocKind AllocKind) {
+  assert(AllocKind == MemAllocKind::Malloc || AllocKind == MemAllocKind::New ||
+         AllocKind == MemAllocKind::NewArray &&
+             "Unexpected MemAllocKind for malloc()/new/new[]");
+
   const auto &SizeVal = Args[0];
 
   const uint64_t AllocSize = SizeVal.asInteger().getZExtValue();
@@ -75,8 +79,15 @@ AnyValue Library::executeMalloc(StringRef Name, Type *Type,
       Ctx.allocate(AllocSize, getMaxAlign(DL), Name, 0,
                    MemInitKind::Uninitialized, AllocKind);
 
-  if (!Obj)
+  if (!Obj) {
+    if (AllocKind == MemAllocKind::New || AllocKind == MemAllocKind::NewArray) {
+      // FIXME: As llubi doesn't support stack unwinding yet, we report an error
+      // when new/new[] fails.
+      Executor.reportError("Insufficient heap space.");
+      return AnyValue::poison();
+    }
     return AnyValue::getNullValue(Ctx, Type);
+  }
 
   return Ctx.deriveFromMemoryObject(Obj);
 }
@@ -84,6 +95,9 @@ AnyValue Library::executeMalloc(StringRef Name, Type *Type,
 AnyValue Library::executeCalloc(StringRef Name, Type *Type,
                                 ArrayRef<AnyValue> Args,
                                 MemAllocKind AllocKind) {
+  assert(AllocKind == MemAllocKind::Malloc &&
+         "Unexpected MemAllocKind for calloc()");
+
   const auto &CountVal = Args[0];
   const auto &SizeVal = Args[1];
 
