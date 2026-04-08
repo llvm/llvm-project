@@ -3675,7 +3675,8 @@ StmtResult Sema::ActOnCapScopeReturnStmt(SourceLocation ReturnLoc,
         // initializer list, because it is not an expression (even
         // though we represent it as one). We still deduce 'void'.
         Diag(ReturnLoc, diag::err_lambda_return_init_list)
-          << RetValExp->getSourceRange();
+            << RetValExp->getSourceRange();
+        RetValExp = nullptr;
       }
 
       FnRetType = Context.VoidTy;
@@ -3715,15 +3716,18 @@ StmtResult Sema::ActOnCapScopeReturnStmt(SourceLocation ReturnLoc,
     // Delay processing for now.  TODO: there are lots of dependent
     // types we can conclusively prove aren't void.
   } else if (FnRetType->isVoidType()) {
-    if (RetValExp && !isa<InitListExpr>(RetValExp) &&
-        !(getLangOpts().CPlusPlus &&
-          (RetValExp->isTypeDependent() ||
-           RetValExp->getType()->isVoidType()))) {
-      if (!getLangOpts().CPlusPlus &&
-          RetValExp->getType()->isVoidType())
+    if (isa_and_nonnull<InitListExpr>(RetValExp)) {
+      Diag(ReturnLoc, diag::err_return_block_has_expr)
+          << (CurLambda != nullptr);
+      RetValExp = nullptr;
+    } else if (RetValExp && !(getLangOpts().CPlusPlus &&
+                              (RetValExp->isTypeDependent() ||
+                               RetValExp->getType()->isVoidType()))) {
+      if (!getLangOpts().CPlusPlus && RetValExp->getType()->isVoidType())
         Diag(ReturnLoc, diag::ext_return_has_void_expr) << "literal" << 2;
       else {
-        Diag(ReturnLoc, diag::err_return_block_has_expr);
+        Diag(ReturnLoc, diag::err_return_block_has_expr)
+            << (CurLambda != nullptr);
         RetValExp = nullptr;
       }
     }

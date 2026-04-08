@@ -239,7 +239,7 @@ public:
                                   const MCInstrInfo &MCII);
 
   using MCLFIRewriterCtorTy =
-      MCLFIRewriter *(*)(MCStreamer & S,
+      MCLFIRewriter *(*)(MCContext & Ctx,
                          std::unique_ptr<MCRegisterInfo> &&RegInfo,
                          std::unique_ptr<MCInstrInfo> &&InstInfo);
 
@@ -576,11 +576,12 @@ public:
     return nullptr;
   }
 
-  void createMCLFIRewriter(MCStreamer &S,
-                           std::unique_ptr<MCRegisterInfo> &&RegInfo,
-                           std::unique_ptr<MCInstrInfo> &&InstInfo) const {
+  MCLFIRewriter *
+  createMCLFIRewriter(MCContext &Ctx, std::unique_ptr<MCRegisterInfo> &&RegInfo,
+                      std::unique_ptr<MCInstrInfo> &&InstInfo) const {
     if (MCLFIRewriterCtorFn)
-      MCLFIRewriterCtorFn(S, std::move(RegInfo), std::move(InstInfo));
+      return MCLFIRewriterCtorFn(Ctx, std::move(RegInfo), std::move(InstInfo));
+    return nullptr;
   }
 
   /// createMCRelocationInfo - Create a target specific MCRelocationInfo.
