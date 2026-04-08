@@ -215,7 +215,6 @@ void NonConstParameterCheck::markCanNotBeConst(const Expr *E,
       markCanNotBeConst(U->getSubExpr(), CanNotBeConst);
     }
   } else if (const auto *A = dyn_cast<ArraySubscriptExpr>(E)) {
-    markCanNotBeConst(A->getBase(), true);
     if (A->isInstantiationDependent()) {
       markCanNotBeConst(A->getLHS(), true);
       markCanNotBeConst(A->getRHS(), true);
