@@ -140,29 +140,21 @@ define <2 x i32> @promtz(<2 x i32> %a) nounwind {
 define <2 x i32> @promlz(<2 x i32> %a) nounwind {
 ; CHECK-LABEL: promlz:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[3,3,3,3]
-; CHECK-NEXT:    movd %xmm1, %eax
-; CHECK-NEXT:    xorps %xmm1, %xmm1
-; CHECK-NEXT:    cvtsi2sd %rax, %xmm1
-; CHECK-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[2,3,2,3]
-; CHECK-NEXT:    movd %xmm2, %eax
-; CHECK-NEXT:    xorps %xmm2, %xmm2
-; CHECK-NEXT:    cvtsi2sd %rax, %xmm2
-; CHECK-NEXT:    unpcklpd {{.*#+}} xmm2 = xmm2[0],xmm1[0]
+; CHECK-NEXT:    xorpd %xmm1, %xmm1
+; CHECK-NEXT:    movapd %xmm0, %xmm2
+; CHECK-NEXT:    unpckhps {{.*#+}} xmm2 = xmm2[2],xmm1[2],xmm2[3],xmm1[3]
+; CHECK-NEXT:    movapd {{.*#+}} xmm3 = [4.503599627370496E+15,4.503599627370496E+15]
+; CHECK-NEXT:    orpd %xmm3, %xmm2
+; CHECK-NEXT:    subpd %xmm3, %xmm2
 ; CHECK-NEXT:    psrlq $52, %xmm2
-; CHECK-NEXT:    movd %xmm0, %eax
-; CHECK-NEXT:    xorps %xmm1, %xmm1
-; CHECK-NEXT:    cvtsi2sd %rax, %xmm1
-; CHECK-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[1,1,1,1]
-; CHECK-NEXT:    movd %xmm3, %eax
-; CHECK-NEXT:    xorps %xmm3, %xmm3
-; CHECK-NEXT:    cvtsi2sd %rax, %xmm3
-; CHECK-NEXT:    unpcklpd {{.*#+}} xmm1 = xmm1[0],xmm3[0]
-; CHECK-NEXT:    psrlq $52, %xmm1
-; CHECK-NEXT:    packssdw %xmm2, %xmm1
+; CHECK-NEXT:    movapd %xmm0, %xmm4
+; CHECK-NEXT:    unpcklps {{.*#+}} xmm4 = xmm4[0],xmm1[0],xmm4[1],xmm1[1]
+; CHECK-NEXT:    orpd %xmm3, %xmm4
+; CHECK-NEXT:    subpd %xmm3, %xmm4
+; CHECK-NEXT:    psrlq $52, %xmm4
+; CHECK-NEXT:    packssdw %xmm2, %xmm4
 ; CHECK-NEXT:    movdqa {{.*#+}} xmm2 = [1054,1054,1054,1054]
-; CHECK-NEXT:    psubd %xmm1, %xmm2
-; CHECK-NEXT:    pxor %xmm1, %xmm1
+; CHECK-NEXT:    psubd %xmm4, %xmm2
 ; CHECK-NEXT:    pcmpeqd %xmm1, %xmm0
 ; CHECK-NEXT:    movdqa %xmm0, %xmm1
 ; CHECK-NEXT:    pandn %xmm2, %xmm1

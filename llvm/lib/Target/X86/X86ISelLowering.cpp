@@ -1356,6 +1356,11 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::STRICT_FSUB,        MVT::v2f64, Legal);
     setOperationAction(ISD::STRICT_FMUL,        MVT::v2f64, Legal);
     setOperationAction(ISD::STRICT_FDIV,        MVT::v2f64, Legal);
+
+    if (!Subtarget.hasSSSE3()) {
+      setOperationAction(ISD::CTLZ, MVT::v4i32, Custom);
+      setOperationAction(ISD::CTLZ_ZERO_UNDEF, MVT::v4i32, Custom);
+    }
   }
 
   if (!Subtarget.useSoftFloat() && Subtarget.hasGFNI()) {
@@ -1388,12 +1393,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::ADD,                MVT::i32, Custom);
     setOperationAction(ISD::SUB,                MVT::i16, Custom);
     setOperationAction(ISD::SUB,                MVT::i32, Custom);
-  }
-
-  if (!Subtarget.useSoftFloat() && Subtarget.hasSSE2() &&
-      !Subtarget.hasSSSE3()) {
-    setOperationAction(ISD::CTLZ, MVT::v4i32, Custom);
-    setOperationAction(ISD::CTLZ_ZERO_UNDEF, MVT::v4i32, Custom);
   }
 
   if (!Subtarget.useSoftFloat() && Subtarget.hasSSE41()) {
@@ -29713,8 +29712,7 @@ static SDValue LowerVectorCTLZ(SDValue Op, const SDLoc &DL,
 
   if (VT == MVT::v4i32 && Subtarget.hasSSE2() && !Subtarget.hasSSSE3()) {
     const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-    SDValue New = TLI.expandCTLZWithFP(Op.getNode(), DAG);
-    if (New)
+    if (SDValue New = TLI.expandCTLZWithFP(Op.getNode(), DAG))
       return New;
   }
 
