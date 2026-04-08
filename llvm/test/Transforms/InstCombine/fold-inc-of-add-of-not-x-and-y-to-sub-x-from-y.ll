@@ -2,9 +2,9 @@
 ; RUN: opt -passes=instcombine -S < %s | FileCheck %s
 
 ; Given:
-;   add (add (xor %x, -1), %y), 1
+;   add (add (xor %x, -1), %y), C
 ; Transform it to:
-;   sub %y, %x
+;   add (sub %y, %x), C-1
 
 ;------------------------------------------------------------------------------;
 ; Scalar tests
