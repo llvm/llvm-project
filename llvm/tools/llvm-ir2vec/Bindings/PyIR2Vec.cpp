@@ -43,7 +43,7 @@ private:
   std::shared_ptr<Vocabulary> Vocab;
 
 public:
-  PyVocab(const std::string &VocabPath) {
+  explicit PyVocab(const std::string &VocabPath) {
     if (VocabPath.empty())
       throw nb::value_error("Empty vocabulary path not allowed");
     auto VocabOrErr = ir2vec::loadVocabulary(VocabPath);
