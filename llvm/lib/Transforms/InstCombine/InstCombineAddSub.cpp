@@ -1535,7 +1535,7 @@ canonicalizeNestedAddSubWithConstant(BinaryOperator &I,
          "Expecting add/sub instruction");
 
   auto *Inner = dyn_cast<BinaryOperator>(I.getOperand(0));
-  if (!Inner || !Inner->hasOneUse())
+  if (!Inner || !Inner->hasOneUse() || isa<Constant>(I.getOperand(1)))
     return nullptr;
 
   Value *X, *Y = I.getOperand(1);
