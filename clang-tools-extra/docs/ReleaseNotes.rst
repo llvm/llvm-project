@@ -125,6 +125,13 @@ New checks
   Finds functions where throwing exceptions is unsafe but the function is still
   marked as potentially throwing.
 
+- New :doc:`llvm-redundant-casting
+  <clang-tidy/checks/llvm/redundant-casting>` check.
+
+  Points out uses of ``cast<>``, ``dyn_cast<>`` and their ``or_null`` variants
+  that are unnecessary because the argument already is of the target type, or a
+  derived type thereof.
+
 - New :doc:`llvm-type-switch-case-types
   <clang-tidy/checks/llvm/type-switch-case-types>` check.
 
