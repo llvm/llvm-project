@@ -3360,13 +3360,13 @@ LogicalResult TaskgroupOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
-// TaskloopOp
+// TaskloopContextOp
 //===----------------------------------------------------------------------===//
 
-void TaskloopOp::build(OpBuilder &builder, OperationState &state,
-                       const TaskloopOperands &clauses) {
+void TaskloopContextOp::build(OpBuilder &builder, OperationState &state,
+                              const TaskloopContextOperands &clauses) {
   MLIRContext *ctx = builder.getContext();
-  TaskloopOp::build(
+  TaskloopContextOp::build(
       builder, state, clauses.allocateVars, clauses.allocatorVars,
       clauses.final, clauses.grainsizeMod, clauses.grainsize, clauses.ifExpr,
       clauses.inReductionVars,
@@ -3380,7 +3380,14 @@ void TaskloopOp::build(OpBuilder &builder, OperationState &state,
       makeArrayAttr(ctx, clauses.reductionSyms), clauses.untied);
 }
 
-LogicalResult TaskloopOp::verify() {
+TaskloopWrapperOp TaskloopContextOp::getLoopOp() {
+  return cast<TaskloopWrapperOp>(
+      *llvm::find_if(getRegion().front(), [](mlir::Operation &op) {
+        return isa<TaskloopWrapperOp>(op);
+      }));
+}
+
+LogicalResult TaskloopContextOp::verify() {
   if (getAllocateVars().size() != getAllocatorVars().size())
     return emitError(
         "expected equal sizes for allocate and allocator variables");
@@ -3409,7 +3416,66 @@ LogicalResult TaskloopOp::verify() {
   return success();
 }
 
-LogicalResult TaskloopOp::verifyRegions() {
+LogicalResult TaskloopContextOp::verifyRegions() {
+  Region &region = getRegion();
+  if (region.empty())
+    return emitOpError() << "expected non-empty region";
+
+  auto count = llvm::count_if(region.front(), [](mlir::Operation &op) {
+    return isa<TaskloopWrapperOp>(op);
+  });
+  if (count != 1)
+    return emitOpError()
+           << "expected exactly 1 TaskloopWrapperOp directly nested in "
+              "the region, but "
+           << count << " were found";
+  TaskloopWrapperOp loopWrapperOp = getLoopOp();
+
+  auto loopNestOp = dyn_cast<LoopNestOp>(loopWrapperOp.getWrappedLoop());
+  // This will fail the verifier for TaskloopWrapperOp and print an error
+  // message there.
+  if (!loopNestOp)
+    return failure();
+
+  auto isDefinedInTaskloopContext = [&](Value value) {
+    // A region is considered an ancestor of itself
+    return region.isAncestor(value.getParentRegion());
+  };
+  auto hasTaskloopLocalBound = [&](OperandRange range) {
+    return llvm::any_of(range, isDefinedInTaskloopContext);
+  };
+
+  if (hasTaskloopLocalBound(loopNestOp.getLoopLowerBounds()) ||
+      hasTaskloopLocalBound(loopNestOp.getLoopUpperBounds()) ||
+      hasTaskloopLocalBound(loopNestOp.getLoopSteps())) {
+    return emitOpError() << "expects loop bounds and steps to be defined "
+                            "outside of the taskloop.context region";
+  }
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// TaskloopWrapperOp
+//===----------------------------------------------------------------------===//
+
+void TaskloopWrapperOp::build(OpBuilder &builder, OperationState &state,
+                              const TaskloopWrapperOperands &clauses) {
+  TaskloopWrapperOp::build(builder, state);
+}
+
+TaskloopContextOp TaskloopWrapperOp::getTaskloopContext() {
+  return dyn_cast<TaskloopContextOp>(getOperation()->getParentOp());
+}
+
+LogicalResult TaskloopWrapperOp::verify() {
+  TaskloopContextOp context = getTaskloopContext();
+  if (!context)
+    return emitOpError() << "expected to be nested in a taskloop context op";
+  return success();
+}
+
+LogicalResult TaskloopWrapperOp::verifyRegions() {
   if (LoopWrapperInterface nested = getNestedWrapper()) {
     if (!isComposite())
       return emitError()
@@ -4371,7 +4437,7 @@ LogicalResult CancelOp::verify() {
   }
   if ((cct == ClauseCancellationConstructType::Taskgroup) &&
       (!mlir::isa<omp::TaskOp>(structuralParent) &&
-       !mlir::isa<omp::TaskloopOp>(structuralParent->getParentOp()))) {
+       !mlir::isa<omp::TaskloopWrapperOp>(structuralParent->getParentOp()))) {
     return emitOpError() << "cancel taskgroup must appear "
                          << "inside a task region";
   }
@@ -4413,7 +4479,7 @@ LogicalResult CancellationPointOp::verify() {
   }
   if ((cct == ClauseCancellationConstructType::Taskgroup) &&
       (!mlir::isa<omp::TaskOp>(structuralParent) &&
-       !mlir::isa<omp::TaskloopOp>(structuralParent->getParentOp()))) {
+       !mlir::isa<omp::TaskloopWrapperOp>(structuralParent->getParentOp()))) {
     return emitOpError() << "cancellation point taskgroup must appear "
                          << "inside a task region";
   }

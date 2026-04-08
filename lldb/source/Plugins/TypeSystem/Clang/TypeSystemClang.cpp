@@ -13,6 +13,7 @@
 #include "clang/Frontend/ASTConsumers.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/ErrorExtras.h"
 #include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/FormatVariadic.h"
 
@@ -1344,6 +1345,8 @@ QualType GetValueParamType(const clang::TemplateArgument &argument) {
     return argument.getIntegralType();
   case TemplateArgument::StructuralValue:
     return argument.getStructuralValueType();
+  case TemplateArgument::Declaration:
+    return argument.getParamTypeForDecl();
   default:
     return {};
   }
@@ -7020,8 +7023,7 @@ TypeSystemClang::GetIndexOfChildWithName(lldb::opaque_compiler_type_t type,
       break;
     }
   }
-  return llvm::createStringError("Type has no child named '%s'",
-                                 name.str().c_str());
+  return llvm::createStringErrorV("type has no child named '{0}'", name);
 }
 
 CompilerType

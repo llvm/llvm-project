@@ -18,12 +18,12 @@ define amdgpu_kernel void @_Z6kernelILi4000ELi1EEvPd(ptr addrspace(1) %x.coerce)
 ; CHECK-NEXT:    s_load_dwordx2 s[6:7], s[2:3], 0x0
 ; CHECK-NEXT:    s_mov_b64 s[0:1], 0
 ; CHECK-NEXT:    s_load_dword s0, s[0:1], 0x0
+; CHECK-NEXT:    s_mov_b32 s1, 0
 ; CHECK-NEXT:    s_mov_b32 s2, 0
-; CHECK-NEXT:    s_mov_b32 s4, 0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s6
-; CHECK-NEXT:    s_mov_b32 s1, 0
 ; CHECK-NEXT:    s_mov_b32 s3, 0x40260000
+; CHECK-NEXT:    s_mov_b32 s4, 0
 ; CHECK-NEXT:    s_mov_b32 s5, 0x40280000
 ; CHECK-NEXT:    v_mov_b32_e32 v1, s7
 ; CHECK-NEXT:  .LBB0_1: ; %for.cond4.preheader
