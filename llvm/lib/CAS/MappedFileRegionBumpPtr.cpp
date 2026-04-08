@@ -234,6 +234,12 @@ void MappedFileRegionBumpPtr::destroyImpl() {
 
       if (Logger)
         Logger->log_MappedFileRegionBumpPtr_resizeFile(Path, Capacity, Size);
+    } else {
+#if defined(_WIN32) && (defined(__aarch64__) || defined(_M_ARM64))
+      // A workaround for intermittent data corruption bug on Windows
+      // ARM64 https://github.com/swiftlang/llvm-project/issues/12605
+      (void)Region.sync();
+#endif
     }
   }
 
