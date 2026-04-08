@@ -452,12 +452,12 @@ Code Generation Options
     due to the surprising behavior of an optimization flag changing the
     observable behavior of correct code.
 
-    If :option:`-Ofast` has been specified and is the effective optimisation
+    If :option:`-Ofast` has been specified and is the effective optimization
     level (i.e. there is no later `-O` option specified), then the option can be
     replaced in the option string with `-O3 -ffast-math -fstrict-aliasing`.
     (:option:`-fstrict-aliasing` is the default on non-Windows, non-UEFI
     platforms). If :option:`-Ofast` has been specified but is not the effective
-    optimisation level, then it can be removed or replaced with :option:`-O3`.
+    optimization level, then it can be removed or replaced with :option:`-O3`.
 
     :option:`-Os` Like :option:`-O2` with extra optimizations to reduce code
     size.
