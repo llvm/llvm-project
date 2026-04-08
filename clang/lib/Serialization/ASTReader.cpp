@@ -242,9 +242,10 @@ bool ChainedASTReaderListener::needsSystemInputFileVisitation() {
 }
 
 void ChainedASTReaderListener::visitModuleFile(ModuleFileName Filename,
-                                               ModuleKind Kind) {
-  First->visitModuleFile(Filename, Kind);
-  Second->visitModuleFile(Filename, Kind);
+                                               ModuleKind Kind,
+                                               bool DirectlyImported) {
+  First->visitModuleFile(Filename, Kind, DirectlyImported);
+  Second->visitModuleFile(Filename, Kind, DirectlyImported);
 }
 
 bool ChainedASTReaderListener::visitInputFile(StringRef Filename,
@@ -496,7 +497,10 @@ static bool checkTargetOptions(const TargetOptions &TargetOpts,
   SmallVector<StringRef, 4> ReadFeatures(TargetOpts.FeaturesAsWritten.begin(),
                                          TargetOpts.FeaturesAsWritten.end());
   llvm::sort(ExistingFeatures);
+  ExistingFeatures.erase(llvm::unique(ExistingFeatures),
+                         ExistingFeatures.end());
   llvm::sort(ReadFeatures);
+  ReadFeatures.erase(llvm::unique(ReadFeatures), ReadFeatures.end());
 
   // We compute the set difference in both directions explicitly so that we can
   // diagnose the differences differently.
@@ -3308,7 +3312,7 @@ ASTReader::ReadControlBlock(ModuleFile &F,
       }
 
       if (Listener)
-        Listener->visitModuleFile(F.FileName, F.Kind);
+        Listener->visitModuleFile(F.FileName, F.Kind, F.isDirectlyImported());
 
       if (Listener && Listener->needsInputFileVisitation()) {
         unsigned N = Listener->needsSystemInputFileVisitation() ? NumInputs
@@ -5902,7 +5906,7 @@ namespace {
     bool ReadTargetOptions(const TargetOptions &TargetOpts,
                            StringRef ModuleFilename, bool Complain,
                            bool AllowCompatibleDifferences) override {
-      return checkTargetOptions(ExistingTargetOpts, TargetOpts, ModuleFilename,
+      return checkTargetOptions(TargetOpts, ExistingTargetOpts, ModuleFilename,
                                 nullptr, AllowCompatibleDifferences);
     }
 

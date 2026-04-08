@@ -1024,6 +1024,11 @@ int CodeCoverageTool::doShow(int argc, const char **argv,
       cl::desc("Show the MCDC Coverage for each applicable boolean expression"),
       cl::cat(ViewCategory));
 
+  cl::opt<bool> ShowMCDCNonExecutedVectors(
+      "show-mcdc-non-executed-vectors", cl::Optional,
+      cl::desc("Show MC/DC test vectors that were not executed"),
+      cl::cat(ViewCategory));
+
   cl::opt<bool> ShowBestLineRegionsCounts(
       "show-line-counts-or-regions", cl::Optional,
       cl::desc("Show the execution counts for each line, or the execution "
@@ -1130,6 +1135,7 @@ int CodeCoverageTool::doShow(int argc, const char **argv,
   ViewOpts.ShowBranchCounts =
       ShowBranches == CoverageViewOptions::BranchOutputType::Count;
   ViewOpts.ShowMCDC = ShowMCDC;
+  ViewOpts.ShowMCDCNonExecutedVectors = ShowMCDCNonExecutedVectors;
   ViewOpts.ShowBranchPercents =
       ShowBranches == CoverageViewOptions::BranchOutputType::Percent;
   ViewOpts.ShowFunctionInstantiations = ShowInstantiations;
@@ -1321,6 +1327,12 @@ int CodeCoverageTool::doExport(int argc, const char **argv,
                                     cl::desc("Unify function instantiations"),
                                     cl::init(true), cl::cat(ExportCategory));
 
+  cl::opt<bool> ShowMCDCNonExecutedVectors(
+      "show-mcdc-non-executed-vectors", cl::Optional,
+      cl::desc("Include MC/DC test vectors that were not executed in the "
+               "export"),
+      cl::cat(ExportCategory));
+
   auto Err = commandLineParser(argc, argv);
   if (Err)
     return Err;
@@ -1329,6 +1341,7 @@ int CodeCoverageTool::doExport(int argc, const char **argv,
   ViewOpts.SkipFunctions = SkipFunctions;
   ViewOpts.SkipBranches = SkipBranches;
   ViewOpts.UnifyFunctionInstantiations = UnifyInstantiations;
+  ViewOpts.ShowMCDCNonExecutedVectors = ShowMCDCNonExecutedVectors;
 
   if (ViewOpts.Format != CoverageViewOptions::OutputFormat::Text &&
       ViewOpts.Format != CoverageViewOptions::OutputFormat::Lcov) {

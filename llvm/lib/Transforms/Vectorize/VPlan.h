@@ -3535,6 +3535,9 @@ protected:
   /// Whether the accessed addresses are consecutive.
   bool Consecutive;
 
+  /// Whether the consecutive accessed addresses are in reverse order.
+  bool Reverse;
+
   /// Whether the memory access is masked.
   bool IsMasked = false;
 
@@ -3548,10 +3551,15 @@ protected:
 
   VPWidenMemoryRecipe(const char unsigned SC, Instruction &I,
                       std::initializer_list<VPValue *> Operands,
-                      bool Consecutive, const VPIRMetadata &Metadata,
-                      DebugLoc DL)
+                      bool Consecutive, bool Reverse,
+                      const VPIRMetadata &Metadata, DebugLoc DL)
       : VPRecipeBase(SC, Operands, DL), VPIRMetadata(Metadata), Ingredient(I),
-        Alignment(getLoadStoreAlignment(&I)), Consecutive(Consecutive) {}
+        Alignment(getLoadStoreAlignment(&I)), Consecutive(Consecutive),
+        Reverse(Reverse) {
+    assert((Consecutive || !Reverse) && "Reverse implies consecutive");
+    assert((isa<VPVectorEndPointerRecipe>(getAddr()) || !Reverse) &&
+           "Reversed acccess without VPVectorEndPointerRecipe address?");
+  }
 
 public:
   VPWidenMemoryRecipe *clone() override {
@@ -3572,6 +3580,10 @@ public:
 
   /// Return whether the loaded-from / stored-to addresses are consecutive.
   bool isConsecutive() const { return Consecutive; }
+
+  /// Return whether the consecutive loaded/stored addresses are in reverse
+  /// order.
+  bool isReverse() const { return Reverse; }
 
   /// Return the address accessed by this recipe.
   VPValue *getAddr() const { return getOperand(0); }
@@ -3606,16 +3618,18 @@ public:
 struct LLVM_ABI_FOR_TEST VPWidenLoadRecipe final : public VPWidenMemoryRecipe,
                                                    public VPRecipeValue {
   VPWidenLoadRecipe(LoadInst &Load, VPValue *Addr, VPValue *Mask,
-                    bool Consecutive, const VPIRMetadata &Metadata, DebugLoc DL)
+                    bool Consecutive, bool Reverse,
+                    const VPIRMetadata &Metadata, DebugLoc DL)
       : VPWidenMemoryRecipe(VPRecipeBase::VPWidenLoadSC, Load, {Addr},
-                            Consecutive, Metadata, DL),
+                            Consecutive, Reverse, Metadata, DL),
         VPRecipeValue(this, &Load) {
     setMask(Mask);
   }
 
   VPWidenLoadRecipe *clone() override {
     return new VPWidenLoadRecipe(cast<LoadInst>(Ingredient), getAddr(),
-                                 getMask(), Consecutive, *this, getDebugLoc());
+                                 getMask(), Consecutive, Reverse, *this,
+                                 getDebugLoc());
   }
 
   VP_CLASSOF_IMPL(VPRecipeBase::VPWidenLoadSC);
@@ -3648,7 +3662,7 @@ struct VPWidenLoadEVLRecipe final : public VPWidenMemoryRecipe,
   VPWidenLoadEVLRecipe(VPWidenLoadRecipe &L, VPValue *Addr, VPValue &EVL,
                        VPValue *Mask)
       : VPWidenMemoryRecipe(VPRecipeBase::VPWidenLoadEVLSC, L.getIngredient(),
-                            {Addr, &EVL}, L.isConsecutive(), L,
+                            {Addr, &EVL}, L.isConsecutive(), L.isReverse(), L,
                             L.getDebugLoc()),
         VPRecipeValue(this, &getIngredient()) {
     setMask(Mask);
@@ -3687,17 +3701,18 @@ protected:
 /// to store to and an optional mask.
 struct LLVM_ABI_FOR_TEST VPWidenStoreRecipe final : public VPWidenMemoryRecipe {
   VPWidenStoreRecipe(StoreInst &Store, VPValue *Addr, VPValue *StoredVal,
-                     VPValue *Mask, bool Consecutive,
+                     VPValue *Mask, bool Consecutive, bool Reverse,
                      const VPIRMetadata &Metadata, DebugLoc DL)
       : VPWidenMemoryRecipe(VPRecipeBase::VPWidenStoreSC, Store,
-                            {Addr, StoredVal}, Consecutive, Metadata, DL) {
+                            {Addr, StoredVal}, Consecutive, Reverse, Metadata,
+                            DL) {
     setMask(Mask);
   }
 
   VPWidenStoreRecipe *clone() override {
     return new VPWidenStoreRecipe(cast<StoreInst>(Ingredient), getAddr(),
                                   getStoredValue(), getMask(), Consecutive,
-                                  *this, getDebugLoc());
+                                  Reverse, *this, getDebugLoc());
   }
 
   VP_CLASSOF_IMPL(VPRecipeBase::VPWidenStoreSC);
@@ -3732,8 +3747,8 @@ struct VPWidenStoreEVLRecipe final : public VPWidenMemoryRecipe {
   VPWidenStoreEVLRecipe(VPWidenStoreRecipe &S, VPValue *Addr,
                         VPValue *StoredVal, VPValue &EVL, VPValue *Mask)
       : VPWidenMemoryRecipe(VPRecipeBase::VPWidenStoreEVLSC, S.getIngredient(),
-                            {Addr, StoredVal, &EVL}, S.isConsecutive(), S,
-                            S.getDebugLoc()) {
+                            {Addr, StoredVal, &EVL}, S.isConsecutive(),
+                            S.isReverse(), S, S.getDebugLoc()) {
     setMask(Mask);
   }
 
@@ -4136,90 +4151,53 @@ protected:
 #endif
 };
 
-/// Casting from VPRecipeBase -> VPPhiAccessors is supported for all recipe
-/// types implementing VPPhiAccessors. Used by isa<> & co.
-template <> struct CastIsPossible<VPPhiAccessors, const VPRecipeBase *> {
-  static inline bool isPossible(const VPRecipeBase *f) {
-    // TODO: include VPPredInstPHIRecipe too, once it implements VPPhiAccessors.
-    return isa<VPIRPhi, VPHeaderPHIRecipe, VPWidenPHIRecipe, VPPhi>(f);
-  }
-};
-/// Support casting from VPRecipeBase -> VPPhiAccessors, by down-casting to the
-/// recipe types implementing VPPhiAccessors. Used by cast<>, dyn_cast<> & co.
-template <typename SrcTy>
-struct CastInfoVPPhiAccessors : public CastIsPossible<VPPhiAccessors, SrcTy> {
-
-  using Self = CastInfo<VPPhiAccessors, SrcTy>;
-
-  /// doCast is used by cast<>.
-  static inline VPPhiAccessors *doCast(SrcTy R) {
-    return const_cast<VPPhiAccessors *>([R]() -> const VPPhiAccessors * {
-      switch (R->getVPRecipeID()) {
-      case VPRecipeBase::VPInstructionSC:
-        return cast<VPPhi>(R);
-      case VPRecipeBase::VPIRInstructionSC:
-        return cast<VPIRPhi>(R);
-      case VPRecipeBase::VPWidenPHISC:
-        return cast<VPWidenPHIRecipe>(R);
-      default:
-        return cast<VPHeaderPHIRecipe>(R);
-      }
-    }());
-  }
-
-  /// doCastIfPossible is used by dyn_cast<>.
-  static inline VPPhiAccessors *doCastIfPossible(SrcTy f) {
-    if (!Self::isPossible(f))
-      return nullptr;
-    return doCast(f);
-  }
-};
+/// Support casting from VPRecipeBase -> VPPhiAccessors.
 template <>
 struct CastInfo<VPPhiAccessors, VPRecipeBase *>
-    : CastInfoVPPhiAccessors<VPRecipeBase *> {};
+    : DefaultDoCastIfPossible<VPPhiAccessors *, VPRecipeBase *,
+                              CastInfo<VPPhiAccessors, VPRecipeBase *>> {
+  /// Used by isa.
+  static inline bool isPossible(VPRecipeBase *R) {
+    // TODO: include VPPredInstPHIRecipe too, once it implements VPPhiAccessors.
+    return isa<VPPhi, VPIRPhi, VPWidenPHIRecipe, VPHeaderPHIRecipe>(R);
+  }
+
+  /// Used by cast.
+  static inline VPPhiAccessors *doCast(VPRecipeBase *R) {
+    switch (R->getVPRecipeID()) {
+    case VPRecipeBase::VPInstructionSC:
+      return cast<VPPhi>(R);
+    case VPRecipeBase::VPIRInstructionSC:
+      return cast<VPIRPhi>(R);
+    case VPRecipeBase::VPWidenPHISC:
+      return cast<VPWidenPHIRecipe>(R);
+    default:
+      return cast<VPHeaderPHIRecipe>(R);
+    }
+  }
+
+  /// Used by inherited doCastIfPossible to dyn_cast.
+  static inline VPPhiAccessors *castFailed() { return nullptr; }
+};
+
 template <>
 struct CastInfo<VPPhiAccessors, const VPRecipeBase *>
-    : CastInfoVPPhiAccessors<const VPRecipeBase *> {};
+    : public ConstStrippingForwardingCast<
+          VPPhiAccessors, const VPRecipeBase *,
+          CastInfo<VPPhiAccessors, VPRecipeBase *>> {};
+template <>
+struct CastInfo<VPPhiAccessors, VPRecipeBase>
+    : public ForwardToPointerCast<VPPhiAccessors, VPRecipeBase *,
+                                  CastInfo<VPPhiAccessors, VPRecipeBase *>> {};
 
-/// Casting from (const) VPRecipeBase -> (const) VPIRMetadata is supported for
-/// all recipe types implementing VPIRMetadata. Used by isa<> & co.
-namespace detail {
-template <typename DstTy, typename RecipeBasePtrTy>
-static inline auto castToVPIRMetadata(RecipeBasePtrTy R) -> DstTy {
-  switch (R->getVPRecipeID()) {
-  case VPRecipeBase::VPInstructionSC:
-    return cast<VPInstruction>(R);
-  case VPRecipeBase::VPWidenSC:
-    return cast<VPWidenRecipe>(R);
-  case VPRecipeBase::VPWidenCastSC:
-    return cast<VPWidenCastRecipe>(R);
-  case VPRecipeBase::VPWidenIntrinsicSC:
-    return cast<VPWidenIntrinsicRecipe>(R);
-  case VPRecipeBase::VPWidenCallSC:
-    return cast<VPWidenCallRecipe>(R);
-  case VPRecipeBase::VPReplicateSC:
-    return cast<VPReplicateRecipe>(R);
-  case VPRecipeBase::VPInterleaveSC:
-  case VPRecipeBase::VPInterleaveEVLSC:
-    return cast<VPInterleaveBase>(R);
-  case VPRecipeBase::VPWidenLoadSC:
-  case VPRecipeBase::VPWidenLoadEVLSC:
-  case VPRecipeBase::VPWidenStoreSC:
-  case VPRecipeBase::VPWidenStoreEVLSC:
-    return cast<VPWidenMemoryRecipe>(R);
-  default:
-    llvm_unreachable("invalid recipe for VPIRMetadata cast");
-  }
-}
-} // namespace detail
-
-/// Support casting from VPRecipeBase -> VPIRMetadata, by down-casting to the
-/// recipe types implementing VPIRMetadata. Used by cast<>, dyn_cast<> & co.
-template <typename DstTy, typename SrcTy>
-struct CastInfoVPIRMetadata : public CastIsPossible<DstTy, SrcTy> {
-  static inline bool isPossible(SrcTy R) {
-    // NOTE: Each recipe inheriting from VPIRMetadata must be listed here and
-    // also handled in castToVPIRMetadata.
+/// Support casting from VPRecipeBase -> VPIRMetadata.
+template <>
+struct CastInfo<VPIRMetadata, VPRecipeBase *>
+    : public DefaultDoCastIfPossible<VPIRMetadata *, VPRecipeBase *,
+                                     CastInfo<VPIRMetadata, VPRecipeBase *>> {
+  /// Used by isa.
+  static inline bool isPossible(VPRecipeBase *R) {
+    // NOTE: Each recipe inheriting from VPIRMetadata must be listed here.
     return isa<VPInstruction, VPWidenRecipe, VPWidenCastRecipe,
                VPWidenIntrinsicRecipe, VPWidenCallRecipe, VPReplicateRecipe,
                VPInterleaveRecipe, VPInterleaveEVLRecipe, VPWidenLoadRecipe,
@@ -4227,26 +4205,47 @@ struct CastInfoVPIRMetadata : public CastIsPossible<DstTy, SrcTy> {
         R);
   }
 
-  using RetTy = DstTy *;
-
-  /// doCast is used by cast<>.
-  static inline RetTy doCast(SrcTy R) {
-    return detail::castToVPIRMetadata<RetTy, SrcTy>(R);
+  /// Used by cast.
+  static inline VPIRMetadata *doCast(VPRecipeBase *R) {
+    switch (R->getVPRecipeID()) {
+    case VPRecipeBase::VPInstructionSC:
+      return cast<VPInstruction>(R);
+    case VPRecipeBase::VPWidenSC:
+      return cast<VPWidenRecipe>(R);
+    case VPRecipeBase::VPWidenCastSC:
+      return cast<VPWidenCastRecipe>(R);
+    case VPRecipeBase::VPWidenIntrinsicSC:
+      return cast<VPWidenIntrinsicRecipe>(R);
+    case VPRecipeBase::VPWidenCallSC:
+      return cast<VPWidenCallRecipe>(R);
+    case VPRecipeBase::VPReplicateSC:
+      return cast<VPReplicateRecipe>(R);
+    case VPRecipeBase::VPInterleaveSC:
+    case VPRecipeBase::VPInterleaveEVLSC:
+      return cast<VPInterleaveBase>(R);
+    case VPRecipeBase::VPWidenLoadSC:
+    case VPRecipeBase::VPWidenLoadEVLSC:
+    case VPRecipeBase::VPWidenStoreSC:
+    case VPRecipeBase::VPWidenStoreEVLSC:
+      return cast<VPWidenMemoryRecipe>(R);
+    default:
+      llvm_unreachable("Illegal recipe for VPIRMetadata cast");
+    }
   }
 
-  /// doCastIfPossible is used by dyn_cast<>.
-  static inline RetTy doCastIfPossible(SrcTy R) {
-    if (!isPossible(R))
-      return nullptr;
-    return doCast(R);
-  }
+  /// Used by inherited doCastIfPossible to dyn_cast.
+  static inline VPIRMetadata *castFailed() { return nullptr; }
 };
-template <>
-struct CastInfo<VPIRMetadata, VPRecipeBase *>
-    : CastInfoVPIRMetadata<VPIRMetadata, VPRecipeBase *> {};
+
 template <>
 struct CastInfo<VPIRMetadata, const VPRecipeBase *>
-    : CastInfoVPIRMetadata<const VPIRMetadata, const VPRecipeBase *> {};
+    : public ConstStrippingForwardingCast<
+          VPIRMetadata, const VPRecipeBase *,
+          CastInfo<VPIRMetadata, VPRecipeBase *>> {};
+template <>
+struct CastInfo<VPIRMetadata, VPRecipeBase>
+    : public ForwardToPointerCast<VPIRMetadata, VPRecipeBase *,
+                                  CastInfo<VPIRMetadata, VPRecipeBase *>> {};
 
 /// VPBasicBlock serves as the leaf of the Hierarchical Control-Flow Graph. It
 /// holds a sequence of zero or more VPRecipe's each representing a sequence of

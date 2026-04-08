@@ -189,6 +189,21 @@ public:
   Result operator()(const ArrayConstructor<T> &aconst) const {
     return Shape{GetArrayConstructorExtent(aconst)};
   }
+  template <typename T>
+  Result operator()(const ConditionalExpr<T> &conditional) const {
+    // Per F2023 10.1.4(7), the shape is that of the selected branch.
+    // When all branches have identical static extents, return the common shape.
+    int rank{conditional.thenValue().Rank()};
+    Result thenShape{(*this)(conditional.thenValue())};
+    if (!thenShape) {
+      return Shape(rank, std::nullopt);
+    }
+    Result elseShape{(*this)(conditional.elseValue())};
+    if (thenShape != elseShape) {
+      return Shape(rank, std::nullopt);
+    }
+    return thenShape;
+  }
   template <typename D, typename R, typename LO, typename RO>
   Result operator()(const Operation<D, R, LO, RO> &operation) const {
     if (int rr{operation.right().Rank()}; rr > 0) {

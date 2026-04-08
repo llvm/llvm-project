@@ -682,9 +682,10 @@ ModuleSpecList ObjectFileELF::GetModuleSpecifications(
           uint32_t core_notes_crc = 0;
 
           if (!gnu_debuglink_crc) {
-            LLDB_SCOPED_TIMERF(
-                "Calculating module crc32 %s with size %" PRIu64 " KiB",
-                file.GetFilename().AsCString(), (length - file_offset) / 1024);
+            LLDB_SCOPED_TIMERF("Calculating module crc32 %s with size %" PRIu64
+                               " KiB",
+                               file.GetFilename().AsCString(""),
+                               (length - file_offset) / 1024);
 
             // For core files - which usually don't happen to have a
             // gnu_debuglink, and are pretty bulky - calculating whole
@@ -2216,7 +2217,7 @@ std::shared_ptr<ObjectFileELF> ObjectFileELF::GetGnuDebugDataObjectFile() {
   if (err) {
     GetModule()->ReportWarning(
         "An error occurred while decompression the section {0}: {1}",
-        section->GetName().AsCString(), llvm::toString(std::move(err)).c_str());
+        section->GetName(), llvm::toString(std::move(err)).c_str());
     return nullptr;
   }
 
@@ -3043,7 +3044,7 @@ unsigned ObjectFileELF::ApplyRelocations(
   for (unsigned i = 0; i < num_relocations; ++i) {
     if (!rel.Parse(rel_data, &offset)) {
       GetModule()->ReportError(".rel{0}[{1:d}] failed to parse relocation",
-                               rel_section->GetName().AsCString(), i);
+                               rel_section->GetName(), i);
       break;
     }
     const Symbol *symbol = nullptr;
@@ -3058,8 +3059,7 @@ unsigned ObjectFileELF::ApplyRelocations(
         case R_ARM_REL32:
           GetModule()->ReportError("unsupported AArch32 relocation:"
                                    " .rel{0}[{1}], type {2}",
-                                   rel_section->GetName().AsCString(), i,
-                                   reloc_type(rel));
+                                   rel_section->GetName(), i, reloc_type(rel));
           break;
         default:
           assert(false && "unexpected relocation type");
@@ -3088,16 +3088,15 @@ unsigned ObjectFileELF::ApplyRelocations(
             *dst = value;
           } else {
             GetModule()->ReportError(".rel{0}[{1}] unknown symbol id: {2:d}",
-                                    rel_section->GetName().AsCString(), i,
-                                    reloc_symbol(rel));
+                                     rel_section->GetName(), i,
+                                     reloc_symbol(rel));
           }
           break;
         case R_386_NONE:
         case R_386_PC32:
           GetModule()->ReportError("unsupported i386 relocation:"
                                    " .rel{0}[{1}], type {2}",
-                                   rel_section->GetName().AsCString(), i,
-                                   reloc_type(rel));
+                                   rel_section->GetName(), i, reloc_type(rel));
           break;
         default:
           assert(false && "unexpected relocation type");
@@ -3333,7 +3332,7 @@ void ObjectFileELF::ParseSymtab(Symtab &lldb_symtab) {
           /*is_trampoline=*/false,
           /*is_artificial=*/true,
           /*section_sp=*/section_sp,
-          /*offset=*/0,
+          /*offset=*/entry_point_addr.GetOffset(),
           /*size=*/0, // FDE can span multiple symbols so don't use its size.
           /*size_is_valid=*/false,
           /*contains_linker_annotations=*/false,
@@ -3344,8 +3343,8 @@ void ObjectFileELF::ParseSymtab(Symtab &lldb_symtab) {
       // address.
       if (arch.GetMachine() == llvm::Triple::arm &&
           (entry_point_file_addr & 1)) {
-        symbol.GetAddressRef().SetOffset(entry_point_addr.GetOffset() ^ 1);
-        m_address_class_map[entry_point_file_addr ^ 1] =
+        symbol.GetAddressRef().Slide(-1);
+        m_address_class_map[entry_point_file_addr - 1] =
             AddressClass::eCodeAlternateISA;
       } else {
         m_address_class_map[entry_point_file_addr] = AddressClass::eCode;

@@ -2025,7 +2025,7 @@ void IfOp::build(OpBuilder &builder, OperationState &result, Value cond,
   MLIRContext *ctx = builder.getContext();
   auto attrDict = DictionaryAttr::get(ctx, result.attributes);
   if (succeeded(inferReturnTypes(ctx, std::nullopt, result.operands, attrDict,
-                                 /*properties=*/nullptr, result.regions,
+                                 /*properties=*/PropertyRef{}, result.regions,
                                  inferredReturnTypes))) {
     result.addTypes(inferredReturnTypes);
   }

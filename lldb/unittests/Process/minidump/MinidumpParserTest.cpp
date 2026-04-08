@@ -337,9 +337,9 @@ TEST_F(MinidumpParserTest, FindMemoryRangeWithFullMemoryMinidump) {
   EXPECT_FALSE(parser->FindMemoryRange(0x7ffe0000 + 4096).has_value());
 }
 
-constexpr auto yes = MemoryRegionInfo::eYes;
-constexpr auto no = MemoryRegionInfo::eNo;
-constexpr auto unknown = MemoryRegionInfo::eDontKnow;
+constexpr auto yes = eLazyBoolYes;
+constexpr auto no = eLazyBoolNo;
+constexpr auto unknown = eLazyBoolDontKnow;
 
 TEST_F(MinidumpParserTest, GetMemoryRegionInfo) {
   ASSERT_THAT_ERROR(SetUpFromYaml(R"(
