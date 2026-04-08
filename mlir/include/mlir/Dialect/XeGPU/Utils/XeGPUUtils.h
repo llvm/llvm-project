@@ -145,7 +145,8 @@ Value subgroupReduction(Location loc, OpBuilder &builder, Value input,
 Value lowerToVectorReductions(TypedValue<VectorType> src,
                               TypedValue<VectorType> acc,
                               vector::CombiningKind kind, int64_t reductionDim,
-                              Location loc, PatternRewriter &rewriter);
+                              Location loc, PatternRewriter &rewriter,
+                              bool setLayout = true);
 
 /// Creates a constant filled with the neutral (identity) value for the
 /// given reduction kind. For example: 0 for ADD/OR/XOR, 1 for MUL/AND,
