@@ -6583,16 +6583,8 @@ const char *Driver::GetNamedOutputPath(Compilation &C, const JobAction &JA,
         C.getArgs()
             .getLastArg(options::OPT__SLASH_Fo, options::OPT__SLASH_o)
             ->getValue();
-    types::ID OutputFileTy = types::TY_Object;
-    if (JA.getType() == types::TY_LLVM_BC ||
-        JA.getType() == types::TY_LLVM_IR) {
-      // As discussed in PR #189977, this prevents intermediate files from
-      // receiving an incorrect object extension and unintentionally overwriting
-      // the final object file.
-      OutputFileTy = JA.getType();
-    }
     NamedOutput =
-        MakeCLOutputFilename(C.getArgs(), Val, BaseName, OutputFileTy);
+        MakeCLOutputFilename(C.getArgs(), Val, BaseName, JA.getType());
   } else if (JA.getType() == types::TY_Image &&
              C.getArgs().hasArg(options::OPT__SLASH_Fe,
                                 options::OPT__SLASH_o)) {
