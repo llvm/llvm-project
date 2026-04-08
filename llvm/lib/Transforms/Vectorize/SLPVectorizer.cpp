@@ -29162,7 +29162,7 @@ bool SLPVectorizerPass::vectorizeNonTriviallyVectrizableIntrinsicCallOperand(
     SmallVector<Value *, 4> Ops =
         getNonTriviallyVectorizableIntrinsicCallOperand(II);
     for (Value *Op : Ops)
-      if (auto *OpI = dyn_cast<Instruction>(Op))
+      if (isa<Instruction>(Op))
         CandidateSeeds.push_back(Op);
   }
 
@@ -29455,11 +29455,11 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
   InstSetVector PostProcessInserts;
   SmallSetVector<CmpInst *, 8> PostProcessCmps;
   InstSetVector PostProcessIntrinsicCalls;
-  // Vectorizes Inserts in `PostProcessInserts` and if `VectorizeCmps` is true
-  // also vectorizes `PostProcessCmps`.
-  auto VectorizeInsertsAndCmps = [&](bool VectorizeCmps) {
+  // Vectorizes Inserts in `PostProcessInserts` and if `AtTerminator` is true
+  // also vectorizes `PostProcessCmps` and `PostProcessIntrinsicCalls`.
+  auto VectorizeInsertsAndCmps = [&](bool AtTerminator) {
     bool Changed = vectorizeInserts(PostProcessInserts, BB, R);
-    if (VectorizeCmps) {
+    if (AtTerminator) {
       Changed |= vectorizeCmpInsts(reverse(PostProcessCmps), BB, R);
       PostProcessCmps.clear();
       Changed |= vectorizeNonTriviallyVectrizableIntrinsicCallOperand(
